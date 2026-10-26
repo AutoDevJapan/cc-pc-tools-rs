@@ -1,0 +1,17 @@
+{
+  "job": "20261026-214717-todo-3080",
+  "creator": "20261026-175504-todo-3080",
+  "current_instruction_buffers": 2,
+  "bytes": 5698,
+  "current_ID_and_bytehash_match": true,
+  "producer": {
+    "sha256": "02c8cad70e44f2bc4cd4e5a70dfdaf581a7ee6896eb63449fe1606eb28f5b5be",
+    "revision": "f30f9e763e25884fa48d1cce0cac22da1cebfb69"
+  },
+  "new_creations": 0,
+  "old7_whole_aggregate_not_repeated": true,
+  "general_access": false,
+  "old_registry_recovered": false,
+  "actual_files_read_at_own_times": true,
+  "new_OS_writer_asserted": false
+}

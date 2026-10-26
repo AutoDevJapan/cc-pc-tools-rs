@@ -39,6 +39,9 @@ func (r *Runner) conversationSourceReacquire(ctx context.Context, q Conversation
 		}
 	}
 	old := r.conversationRequest(reply.Message)
+	if old != nil && len(old.ConversationAttachmentMetadata) != 0 {
+		return nil, errImplementation
+	}
 	if old != nil && (old.Conversation != q.RequestID || old.Thread != q.Thread || old.Message != reply.Message || old.Author != reply.Author || (old.Todo != 0 && old.Todo != conversationRecipient(q))) {
 		return nil, errImplementation
 	}

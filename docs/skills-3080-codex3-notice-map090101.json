@@ -1,0 +1,75 @@
+{
+  "job": "20261026-090101-todo-3080",
+  "source_repo": "MengTo/Skills",
+  "commit": "398cd41c86ba42fbb30e944ae507f463648f08b7",
+  "tree_sha256": "78e159cb1fabd9072bf8a6c667fe55aed8d1525cfffb2a5d2b94932e1faefc59",
+  "tree_entries": 1915,
+  "truncated": false,
+  "selected_procedure_texts": 5,
+  "rows": [
+    {
+      "source_path": "agent-skills/codex/build-daily-inspiration-sites/SKILL.md",
+      "source_sha256": "ba888108ec029d796484d8f18f600763bbf18d9313f1da2a48b5031a944d429c",
+      "source_blob": "29c622cc1e68d6b3fa56314ddefbf57b89f366ea",
+      "exact_applicable_author_notice_path": "LICENSE",
+      "notice_git_blob": "b3a5f823a69b4b010f92930ac09e8a776daf65c6",
+      "notice_sha256": "b2a071ba22fefd803f4e9d1f5c777dd79c62d191695586a1a73fd4d0ebd051c6",
+      "scope": "Selected author text only; no third-party artwork/fonts/brands/service rights or unread scripts",
+      "package_blob_paths": 4,
+      "copied_scope_does_not_include_whole_package": true,
+      "source_body_literal_read_by": "20261026-090101-todo-3080"
+    },
+    {
+      "source_path": "agent-skills/codex/build-daily-inspiration-sites/references/thread-brief-contract.md",
+      "source_sha256": "3a169c5f20c9046c2f5120738b116619ef843c6b990673446de5bac138a3e801",
+      "source_blob": "7c94f878cc2d130a463bc55a2b2641092fd0004a",
+      "exact_applicable_author_notice_path": "LICENSE",
+      "notice_git_blob": "b3a5f823a69b4b010f92930ac09e8a776daf65c6",
+      "notice_sha256": "b2a071ba22fefd803f4e9d1f5c777dd79c62d191695586a1a73fd4d0ebd051c6",
+      "scope": "Selected author text only; no third-party artwork/fonts/brands/service rights or unread scripts",
+      "package_blob_paths": 4,
+      "copied_scope_does_not_include_whole_package": true,
+      "source_body_literal_read_by": "20261026-090101-todo-3080"
+    },
+    {
+      "source_path": "agent-skills/codex/generate-reference-inspired-brand-worlds/SKILL.md",
+      "source_sha256": "ac378caa7a2093d1f34c0d96b0e21739b6826526ce58b0afe57adebc888fd363",
+      "source_blob": "706eb71f5620a264cdab12f2f095c0dbf6d9db15",
+      "exact_applicable_author_notice_path": "LICENSE",
+      "notice_git_blob": "b3a5f823a69b4b010f92930ac09e8a776daf65c6",
+      "notice_sha256": "b2a071ba22fefd803f4e9d1f5c777dd79c62d191695586a1a73fd4d0ebd051c6",
+      "scope": "Selected author text only; no third-party artwork/fonts/brands/service rights or unread scripts",
+      "package_blob_paths": 8,
+      "copied_scope_does_not_include_whole_package": true,
+      "source_body_literal_read_by": "20261026-090101-todo-3080"
+    },
+    {
+      "source_path": "agent-skills/codex/generate-reference-inspired-brand-worlds/references/example-prompts.md",
+      "source_sha256": "4c9633c7e0b93c39eb836ef75b70f9ad9e3646ddbe951c688dfa38861c3e1328",
+      "source_blob": "149aecb60009a44656ac38cda738064559116795",
+      "exact_applicable_author_notice_path": "LICENSE",
+      "notice_git_blob": "b3a5f823a69b4b010f92930ac09e8a776daf65c6",
+      "notice_sha256": "b2a071ba22fefd803f4e9d1f5c777dd79c62d191695586a1a73fd4d0ebd051c6",
+      "scope": "Selected author text only; no third-party artwork/fonts/brands/service rights or unread scripts",
+      "package_blob_paths": 8,
+      "copied_scope_does_not_include_whole_package": true,
+      "source_body_literal_read_by": "20261026-090101-todo-3080"
+    },
+    {
+      "source_path": "agent-skills/codex/web-technique-to-skill/SKILL.md",
+      "source_sha256": "8868b6b6940ef886cff768d2bf3227d5e96db2bce148e796c827d9f711ed284b",
+      "source_blob": "138503814f93547482f1acf70e9e6a792c9d7393",
+      "exact_applicable_author_notice_path": "LICENSE",
+      "notice_git_blob": "b3a5f823a69b4b010f92930ac09e8a776daf65c6",
+      "notice_sha256": "b2a071ba22fefd803f4e9d1f5c777dd79c62d191695586a1a73fd4d0ebd051c6",
+      "scope": "Selected author text only; no third-party artwork/fonts/brands/service rights or unread scripts",
+      "package_blob_paths": 7,
+      "copied_scope_does_not_include_whole_package": true,
+      "source_body_literal_read_by": "20261026-090101-todo-3080"
+    }
+  ],
+  "rootMIT_not_all_assets": true,
+  "new_fetches": 0,
+  "source_execution": 0,
+  "central_operations": 0
+}

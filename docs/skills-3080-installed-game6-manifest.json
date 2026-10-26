@@ -1,0 +1,222 @@
+{
+  "targets": [
+    {
+      "name": "design-action-combat",
+      "new": true,
+      "before_sha256": "absent",
+      "positive": "攻撃一回で同じ敵に二重ダメージが入り、描画の到達時刻でも命中が変わる。",
+      "negative": "戦闘のない操作説明へ、攻撃状態や必須のボス戦を追加する。",
+      "files": [
+        {
+          "path": "SKILL.md",
+          "sha256": "63854a47342048716be2691e41ce2848c66bf9391f0f450176ec325214bb2194"
+        },
+        {
+          "path": "references/guide.md",
+          "sha256": "5107177ff91cb84098bef3987ddd999a1355b134f6285ce1ff6eab864b9b95c7"
+        },
+        {
+          "path": "references/upstream-original.txt",
+          "sha256": "0b6289f0c651987554e2c82dda45e18582eb2a21412672778ed76cd1a214df17"
+        },
+        {
+          "path": "references/LICENSE.txt",
+          "sha256": "b2a071ba22fefd803f4e9d1f5c777dd79c62d191695586a1a73fd4d0ebd051c6"
+        },
+        {
+          "path": "references/source.json",
+          "sha256": "cf558f0ef67f018ae48da67edaf35a29d8eabc26b106abdbb8a5d8918b02e679"
+        },
+        {
+          "path": "references/sources.md",
+          "sha256": "521095eb5fba325a0e89d267522af11fbe1208766b8f49d8b612bb83f3cfa00f"
+        }
+      ],
+      "sources": [
+        "https://github.com/MengTo/Skills/blob/398cd41c86ba42fbb30e944ae507f463648f08b7/agent-skills/game-development/design-action-combat/SKILL.md"
+      ]
+    },
+    {
+      "name": "tune-enemy-ai",
+      "new": true,
+      "before_sha256": "absent",
+      "positive": "標的が遮蔽へ消えると追跡と攻撃を毎frame往復し、経路失敗でも到達扱いになる。",
+      "negative": "敵や行動選択のない表示へ、新しいAI状態機械を導入する。",
+      "files": [
+        {
+          "path": "SKILL.md",
+          "sha256": "ffdc39fb174415ec762661cd8ada0f4546490ee022abca83eaef29d53b58ee3b"
+        },
+        {
+          "path": "references/guide.md",
+          "sha256": "902e04255af8180c5a2307e696d70b937fc55c1339c0d6bec4edbf55888cb4b7"
+        },
+        {
+          "path": "references/upstream-original.txt",
+          "sha256": "13bcd0294240d0520bb1e132871ffe6f1ab36ff7c00868483f2f3490dab4e360"
+        },
+        {
+          "path": "references/LICENSE.txt",
+          "sha256": "b2a071ba22fefd803f4e9d1f5c777dd79c62d191695586a1a73fd4d0ebd051c6"
+        },
+        {
+          "path": "references/source.json",
+          "sha256": "b878b09dbea15e97be674bc775e9f03afc652d158cd83edfab32557b7612d480"
+        },
+        {
+          "path": "references/sources.md",
+          "sha256": "b9511d779c2cb2594845b5ab530e9d4d162033f7d19bcc522129553d122d4b1d"
+        }
+      ],
+      "sources": [
+        "https://github.com/MengTo/Skills/blob/398cd41c86ba42fbb30e944ae507f463648f08b7/agent-skills/game-development/tune-enemy-ai/SKILL.md"
+      ]
+    },
+    {
+      "name": "build-threejs-enemy-systems",
+      "new": true,
+      "before_sha256": "absent",
+      "positive": "敵ごとにscaleやclip名を補正し、同じ定義を使う2体でcooldownとhealthが混ざる。",
+      "negative": "既存の敵データに値を一つ足すだけで、不要なengineや汎用plugin基盤を作る。",
+      "files": [
+        {
+          "path": "SKILL.md",
+          "sha256": "7d2fb047c7ab7032f24e243560166c63da4d41f53eb12a0a7e2d610c9f680216"
+        },
+        {
+          "path": "references/guide.md",
+          "sha256": "3ef280f9a1706190e58c58dc5b464695dd57248633f5fce9e534e67647c43726"
+        },
+        {
+          "path": "references/upstream-original.txt",
+          "sha256": "b33c08b3296ea1a39d37705be29d773db428ef8a337a92f3640eb2cb6792bbb8"
+        },
+        {
+          "path": "references/LICENSE.txt",
+          "sha256": "b2a071ba22fefd803f4e9d1f5c777dd79c62d191695586a1a73fd4d0ebd051c6"
+        },
+        {
+          "path": "references/source.json",
+          "sha256": "8cd2b5355e92d9a0364d26f8a58083eedd205646fa5a4de3b4329fd5c5d9128c"
+        },
+        {
+          "path": "references/sources.md",
+          "sha256": "41f3e1fb20179d3f47034254d6ac06f10bf7cbc9de7a2835f040bf785a14c301"
+        }
+      ],
+      "sources": [
+        "https://github.com/MengTo/Skills/blob/398cd41c86ba42fbb30e944ae507f463648f08b7/agent-skills/game-development/build-threejs-enemy-systems/SKILL.md"
+      ]
+    },
+    {
+      "name": "design-game-encounters",
+      "new": true,
+      "before_sha256": "absent",
+      "positive": "敵数を増やすだけで、画面外から回避不能な連鎖damageが入り、再挑戦で報酬が重複する。",
+      "negative": "戦闘のない画面や依頼へ、敵waveや同時攻撃数の規則を一律追加する。",
+      "files": [
+        {
+          "path": "SKILL.md",
+          "sha256": "67bef3c967e938367f4c9d8ed0316fff6966cd6f2b915b5393daa11e0ba768cd"
+        },
+        {
+          "path": "references/guide.md",
+          "sha256": "41f20929d0ad9f2ce47df5c70813433c644f18ac87e1a155c6b8c1714e58d368"
+        },
+        {
+          "path": "references/upstream-original.txt",
+          "sha256": "0cb2da5d4fbc25815fbd57b4627b9fafb1b3cc050712e7103476b214f7514a61"
+        },
+        {
+          "path": "references/LICENSE.txt",
+          "sha256": "b2a071ba22fefd803f4e9d1f5c777dd79c62d191695586a1a73fd4d0ebd051c6"
+        },
+        {
+          "path": "references/source.json",
+          "sha256": "e8ac5f85102901215d3631d9e7f34c80b56970c1db2af66ffa124b5abc9891a9"
+        },
+        {
+          "path": "references/sources.md",
+          "sha256": "4040eb180e861dc5514360353e48cc260a027983d306063017bd1653977058d7"
+        }
+      ],
+      "sources": [
+        "https://github.com/MengTo/Skills/blob/398cd41c86ba42fbb30e944ae507f463648f08b7/agent-skills/game-development/design-game-encounters/SKILL.md"
+      ]
+    },
+    {
+      "name": "author-game-levels",
+      "new": true,
+      "before_sha256": "absent",
+      "positive": "装飾を動かすと通路とgateの参照がずれ、retry地点から出口へ進めなくなる。",
+      "negative": "高低差を要求したゲームにも、資料の平面制約を一律の禁止として適用する。",
+      "files": [
+        {
+          "path": "SKILL.md",
+          "sha256": "9f35297638b35f15df6328900cf547795057b9651474b4cc707888db66f415f4"
+        },
+        {
+          "path": "references/guide.md",
+          "sha256": "0b867151bcb96749c554e5fbc7c34b69b74091301d3d54e7536b04a967c458f1"
+        },
+        {
+          "path": "references/upstream-original.txt",
+          "sha256": "df8da94bf505ed20f3d9062151354a5c6901ca4dc3d5b0c6f493a700277c3644"
+        },
+        {
+          "path": "references/LICENSE.txt",
+          "sha256": "b2a071ba22fefd803f4e9d1f5c777dd79c62d191695586a1a73fd4d0ebd051c6"
+        },
+        {
+          "path": "references/source.json",
+          "sha256": "6853a3cbba3e9d6ca217066b24d09b567422eb9767106281f3e666bcc43351a0"
+        },
+        {
+          "path": "references/sources.md",
+          "sha256": "9824d1241cda9bdfe3c90b9ea14c3251fd88810dc083b2ded1bfee66bc6f971d"
+        }
+      ],
+      "sources": [
+        "https://github.com/MengTo/Skills/blob/398cd41c86ba42fbb30e944ae507f463648f08b7/agent-skills/game-development/author-game-levels/SKILL.md"
+      ]
+    },
+    {
+      "name": "optimize-threejs-games",
+      "new": true,
+      "before_sha256": "absent",
+      "positive": "敵の多い場面で遅くなるが、解像度を下げても改善せず、当たり判定まで間引かれている。",
+      "negative": "測定のない静的説明へ、常時GPU処理や新しい品質設定・benchmarkを追加する。",
+      "files": [
+        {
+          "path": "SKILL.md",
+          "sha256": "4a40dba0e9da1f9c3f49cdfdca392bd3328310f3eb8128c793ac528a2b98d421"
+        },
+        {
+          "path": "references/guide.md",
+          "sha256": "0ad9560c8d5b7941a39f25c30e8e633e066ef21f9b430222074d870427fece52"
+        },
+        {
+          "path": "references/upstream-original.txt",
+          "sha256": "d50e8c26ae8130b5cb37da32835024ab281090f107bd52caa476b80a60f2e2b5"
+        },
+        {
+          "path": "references/LICENSE.txt",
+          "sha256": "b2a071ba22fefd803f4e9d1f5c777dd79c62d191695586a1a73fd4d0ebd051c6"
+        },
+        {
+          "path": "references/source.json",
+          "sha256": "6d7a75f6bfe8b5f0499a6ca2172d57bab8b8718700514050083b0f4a98c6494a"
+        },
+        {
+          "path": "references/sources.md",
+          "sha256": "ba638edbf4de5d7e761548a4772e7e2788d382058066e5e12ce660df510d1449"
+        }
+      ],
+      "sources": [
+        "https://github.com/MengTo/Skills/blob/398cd41c86ba42fbb30e944ae507f463648f08b7/agent-skills/game-development/optimize-threejs-games/SKILL.md"
+      ]
+    }
+  ],
+  "absence_receipts": "Same request revalidated by game-next6-purpose-preflight074042.json and successful game-next6-purpose-create074042.json",
+  "creation_request_sha256": "a7a92aed62f572ecff390d785f7360b0db740ce2a676da94cdea86d74b724e28"
+}

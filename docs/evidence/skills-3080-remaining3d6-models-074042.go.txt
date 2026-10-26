@@ -1,0 +1,236 @@
+package main
+
+// Bounded arithmetic/state applications only: no upstream module, browser,
+// shader, GPU, scene appearance, collision or performance claim.
+import (
+	"errors"
+	"math"
+	"testing"
+)
+
+func r6Need(t *testing.T, v bool, s string) {
+	t.Helper()
+	if !v {
+		t.Fatal(s)
+	}
+}
+func r6Near(a, b float64) bool { return math.Abs(a-b) < 1e-8 }
+func r6LeafDisplacement(slip, phase, omega, elapsed float64) float64 {
+	u := omega * elapsed / 2
+	sinc := 1.0
+	if math.Abs(u) > 1e-7 {
+		sinc = math.Sin(u) / u
+	} else {
+		sinc = 1 - u*u/6
+	}
+	return slip * elapsed * math.Sin(phase+u) * sinc
+}
+
+type r6LeafClock struct {
+	previous float64
+	hidden   bool
+	reset    bool
+}
+
+func (c *r6LeafClock) hide()   { c.hidden = true }
+func (c *r6LeafClock) resume() { c.hidden = false; c.reset = true }
+func (c *r6LeafClock) tick(now float64) float64 {
+	if c.hidden {
+		return 0
+	}
+	if c.reset {
+		c.previous = now
+		c.reset = false
+		return 0
+	}
+	dt := math.Max(0, math.Min(0.05, now-c.previous))
+	c.previous = now
+	return dt
+}
+
+type r6Inspect struct {
+	DownID       string
+	DownX        float64
+	Frozen       bool
+	Open         bool
+	Capture      bool
+	OriginalPose float64
+	CurrentPose  float64
+	Focus        string
+}
+
+func (s *r6Inspect) down(id string, x float64) {
+	s.DownID = id
+	s.DownX = x
+	s.Frozen = true
+	s.Capture = true
+}
+func (s *r6Inspect) up(id string, x float64) {
+	if s.Capture && s.DownID == id && math.Abs(x-s.DownX) < 6 {
+		s.Open = true
+	}
+	s.Capture = false
+}
+func (s *r6Inspect) cancel() {
+	s.Capture = false
+	s.Open = false
+	s.Frozen = false
+	s.CurrentPose = s.OriginalPose
+}
+func r6SkyAverage(samples int, inside bool) float64 {
+	sum, wSum, w := 0.0, 0.0, 1.0
+	for i := 0; i < samples; i++ {
+		if inside {
+			sum += 2 * w
+		}
+		wSum += w
+		w *= 0.96
+	}
+	return sum / wSum
+}
+func r6ProjectSun(forwardZ float64) (float64, error) {
+	if math.IsNaN(forwardZ) || math.IsInf(forwardZ, 0) || forwardZ <= 0 {
+		return 0, errors.New("behind or singular source")
+	}
+	return 1 / forwardZ, nil
+}
+func r6InverseWave(x, a, k, phase, tolerance float64, maxSteps int) (float64, float64, bool) {
+	if k <= 0 || math.Abs(a*k) >= 1 || tolerance <= 0 || maxSteps < 1 {
+		return 0, math.Inf(1), false
+	}
+	u := x
+	for i := 0; i < maxSteps; i++ {
+		u = x - a*math.Sin(k*u+phase)
+		res := math.Abs(u + a*math.Sin(k*u+phase) - x)
+		if res <= tolerance {
+			return u, res, true
+		}
+	}
+	return u, math.Abs(u + a*math.Sin(k*u+phase) - x), false
+}
+func r6PowInt(x float64, n int) float64 {
+	out := 1.0
+	for i := 0; i < n; i++ {
+		out *= x
+	}
+	return out
+}
+func r6OriginalPhase(mu float64) float64 { return 0.7 + 1.1*r6PowInt(mu, 5) + 0.9*r6PowInt(mu, 40) }
+func r6NonnegativeApproximation(mu float64) float64 {
+	m := math.Max(0, math.Min(1, mu))
+	return 0.7 + 1.1*r6PowInt(m, 5) + 0.9*r6PowInt(m, 40)
+}
+
+func r6WorldLightFromView(cameraX, viewX float64) float64 { return math.Sin(1.3*(cameraX+viewX) + 0.4) }
+
+type r6Capture struct {
+	Camera, Time  string
+	Width, Height int
+	DPR           float64
+}
+
+func r6Scores(a, b r6Capture, scores []float64, target float64) (float64, bool, error) {
+	if a != b || a.Camera == "" || a.Time == "" || a.Width < 1 || a.Height < 1 || a.DPR <= 0 || len(scores) == 0 || math.IsNaN(target) {
+		return 0, false, errors.New("same capture and defined metrics required")
+	}
+	sum := 0.0
+	all := true
+	for _, v := range scores {
+		if math.IsNaN(v) || math.IsInf(v, 0) {
+			return 0, false, errors.New("unknown metric is not a passing number")
+		}
+		sum += v
+		if v < target {
+			all = false
+		}
+	}
+	return sum / float64(len(scores)), all, nil
+}
+func TestRemaining3DBoundedPlanning(t *testing.T) {
+	t.Run("leaves-finite-zero-limit-and-velocity", func(t *testing.T) {
+		phase := 0.8
+		slip := 0.2
+		dt := 2.0
+		want := slip * dt * math.Sin(phase)
+		for _, omega := range []float64{0, 1e-12, -1e-12} {
+			r6Need(t, r6Near(r6LeafDisplacement(slip, phase, omega, dt), want), "near-zero tumble produced an unbounded offset")
+		}
+		w := 0.4
+		x := 1.3
+		h := 1e-5
+		derivative := (r6LeafDisplacement(slip, phase, w, x+h) - r6LeafDisplacement(slip, phase, w, x-h)) / (2 * h)
+		r6Need(t, r6Near(derivative, slip*math.Sin(phase+w*x)), "drift no longer follows tumble phase")
+		clock := r6LeafClock{previous: 1}
+		clock.hide()
+		r6Need(t, clock.tick(10000) == 0, "hidden updates continued")
+		clock.resume()
+		r6Need(t, clock.tick(10000) == 0 && r6Near(clock.tick(10000.02), 0.02), "resume integrated the hidden interval")
+		r6Need(t, clock.tick(20000) == 0.05, "synthetic update budget allowed unbounded catch-up")
+	})
+	t.Run("inspect-click-drag-cancel-and-preserved-pose", func(t *testing.T) {
+		s := r6Inspect{OriginalPose: 1.2, CurrentPose: 1.2, Focus: "opener"}
+		s.down("joint", 100)
+		r6Need(t, s.Frozen, "camera lean moved during click")
+		s.up("joint", 102)
+		r6Need(t, s.Open, "same target click did not open")
+		s.CurrentPose = 2.5
+		s.cancel()
+		r6Need(t, r6Near(s.CurrentPose, 1.2) && s.Focus == "opener" && !s.Open, "cancel lost original pose or focus intent")
+		s.down("joint", 100)
+		s.up("joint", 110)
+		r6Need(t, !s.Open, "drag opened inspect")
+		s.down("joint", 100)
+		s.up("different", 101)
+		r6Need(t, !s.Open, "different target opened inspect")
+		s.down("joint", 100)
+		s.cancel()
+		s.up("joint", 101)
+		r6Need(t, !s.Open, "lost capture later opened inspect")
+	})
+	t.Run("sky-weights-and-behind-camera", func(t *testing.T) {
+		r6Need(t, r6Near(r6SkyAverage(24, true), 2) && r6Near(r6SkyAverage(48, true), 2), "sample count changed constant-energy exposure")
+		r6Need(t, r6SkyAverage(24, false) == 0, "outside mask samples were clamped into bright edge energy")
+		for _, z := range []float64{-1, 0, math.NaN()} {
+			_, e := r6ProjectSun(z)
+			r6Need(t, e != nil, "invalid source projected before rejection")
+		}
+	})
+	t.Run("ocean-residual-and-floating-origin", func(t *testing.T) {
+		x, a, k, p := 1.1, 0.4, 2.0, 0.3
+		_, fourResidual, ok4 := r6InverseWave(x, a, k, p, 1e-10, 4)
+		u, res, ok := r6InverseWave(x, a, k, p, 1e-10, 160)
+		r6Need(t, !ok4 && fourResidual > 1e-10 && ok && res <= 1e-10, "four iterations were treated as a general accuracy guarantee")
+		shift := 1200.0
+		rebasedU := u - shift
+		rebasedPhase := math.Mod(p+k*shift, 2*math.Pi)
+		before := u + a*math.Sin(k*u+p)
+		after := rebasedU + a*math.Sin(k*rebasedU+rebasedPhase) + shift
+		r6Need(t, math.Abs(before-after) < 1e-8, "floating-origin phase lost the world wave")
+		_, _, bad := r6InverseWave(x, 1, k, p, 1e-4, 4)
+		r6Need(t, !bad, "unverified inverse-wave regime accepted")
+	})
+	t.Run("underwater-world-field-and-phase-domain", func(t *testing.T) {
+		point := 2.3
+		cameraA, cameraB := 0.0, 1.0
+		r6Need(t, r6Near(r6WorldLightFromView(cameraA, point-cameraA), r6WorldLightFromView(cameraB, point-cameraB)) && !r6Near(r6WorldLightFromView(cameraA, 2), r6WorldLightFromView(cameraB, 2)), "same-world-point stability and shifted view samples collapsed")
+		r6Need(t, r6OriginalPhase(-0.94) < 0, "negative-domain phase risk was hidden")
+		for i := 0; i <= 200; i++ {
+			mu := -1 + float64(i)/100
+			r6Need(t, r6NonnegativeApproximation(mu) >= 0, "declared CPU approximation negative")
+		}
+		r6Need(t, r6PowInt(-0.5, 5) < 0, "integer signed power lost its sign")
+	})
+	t.Run("scorecard-average-minimum-and-capture-scope", func(t *testing.T) {
+		capture := r6Capture{"fixed-camera", "frozen-5.2", 1440, 900, 1}
+		mean, all, e := r6Scores(capture, capture, []float64{10, 10, 10, 6.5}, 8)
+		r6Need(t, e == nil && mean > 8 && !all, "high average erased an unmet criterion")
+		changed := capture
+		changed.DPR = 2
+		_, _, e = r6Scores(capture, changed, []float64{9}, 8)
+		r6Need(t, e != nil, "different capture conditions treated as the same improvement")
+		_, _, e = r6Scores(capture, capture, nil, 8)
+		r6Need(t, e != nil, "no metrics treated as success")
+		_, _, e = r6Scores(capture, capture, []float64{math.NaN()}, 8)
+		r6Need(t, e != nil, "missing metric treated as passing")
+	})
+}

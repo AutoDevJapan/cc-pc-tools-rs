@@ -1,0 +1,10 @@
+{
+  "bundle": "skills-3080-design-reference-actual-bundle090101.json",
+  "bundle_sha256": "f5a2612f0cdc1c782f3007b9dff447bd6bbc81e833affd22ab1b2cc62d9b8fe6",
+  "method": "Existing3048 checker on actual current53 returned buffers; target1 and all references/SHA/positive-negative checks",
+  "exit": 0,
+  "stdout": "PASS: 1 explicit skills; structure, descriptions, references, hashes, scenario pairs; in-memory bundle only; no deployment implied\n",
+  "stderr": "",
+  "physical_placement_proved_separately": true,
+  "new_sources_semantically_read": 0
+}

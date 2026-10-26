@@ -1,0 +1,65 @@
+{
+  "todo": 3080,
+  "job": "20261026-090101-todo-3080",
+  "new_targets_created": 6,
+  "files_readback_verified": 40,
+  "bytes": 205759,
+  "operation_manifest": "skills-3080-operations/create-combat6-090101.json",
+  "operation_manifest_sha256": "8078d9521ba61039000c915c7e904fd1aff9def8a832a19de377c4c0ac6c0758",
+  "operation_manifest_main_commit": "82d2a96075fb312f4535eacb006a23f313719144",
+  "referenced_artifacts": {
+    "bundle": {
+      "file": "skills-3080-combat6-actual-bundle090101.json",
+      "sha256": "548cdc53769c0b94266eee4fa5d518a1877fd2c9832c5d1da1a833885589a0e8"
+    },
+    "structure": {
+      "file": "skills-3080-combat6-actual-structure090101.json",
+      "sha256": "c7053d30c9e86b9932cd01ab600eced5b1a40dcce4e570710754da0eebc6cbef"
+    },
+    "installed_manifest": {
+      "file": "skills-3080-installed-combat6-manifest090101.json",
+      "sha256": "5794b0ec18a8c94c4979e186d7a21a95d3669631910908846f82efa75ce23480"
+    },
+    "application": {
+      "file": "skills-3080-combat6-application-result090101.json",
+      "sha256": "d1af45320e0065841bf502fb53f2de237cb9292f0421a1e3f73b0ef082200245"
+    },
+    "discovery": {
+      "file": "skills-3080-combat6-discovery-receipt090101.json",
+      "sha256": "abc4c2b89564eddfdfabe96e07adeb87811ce59e081604677af2f23bb95efc41"
+    },
+    "independent_use": {
+      "file": "skills-3080-combat6-independent-use3927-evidence090101.json",
+      "sha256": "864fc184ddf1544f94a6a0a64e9c1a544e4507f0aeb89dc22c09af4c4618e6ec"
+    },
+    "context": {
+      "file": "skills-3080-combat6-context-observation090101.json",
+      "sha256": "5382e41d81f8dbff1cbb9ab44531af4d5f6cc7bdd93031848f6c90c9d33f526c"
+    },
+    "independent_models": {
+      "file": "skills-3080-combat6-model-test-receipt090101.json",
+      "sha256": "e901107f2574e6a6492a37e2f710ea37f2229ea57f51dc6c2566e2d84dd58bcc"
+    },
+    "creation": {
+      "file": "skills-3080-combat6-create-evidence090101.json",
+      "sha256": "9af436e256ce06bdecb0c4e9dd31d40ec429410426511f28d83c6ed12bd6a456"
+    },
+    "consumption": {
+      "file": "skills-3080-combat6-consume-evidence090101.json",
+      "sha256": "f5ad02131c952e10f22deda1054eb462efaa544302937d65645f8b878db65424"
+    },
+    "designs": {
+      "file": "skills-3080-combat6-designs090101.json",
+      "sha256": "a65cbaf5b421874c2422b2f3b6abbe861fba6dedf5cec0af4adda5b302771ebd"
+    }
+  },
+  "content_review_task": 3925,
+  "content_review_spec_frozen": true,
+  "content_review_must": 0,
+  "review_raw_sha256": "6043ec992df1ad04c93231210ec622788a7340340df24ca4f8cff827eab773f3",
+  "new_global_raw_read_credit": 0,
+  "third_party_rights_accepted": false,
+  "real_rig_or_renderer_acceptance": false,
+  "UI_implemented": false,
+  "whole16_complete": false
+}

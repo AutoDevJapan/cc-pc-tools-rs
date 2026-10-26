@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"os"
 	"path/filepath"
+	"reflect"
 	"strings"
 	"testing"
 )
@@ -16,10 +17,23 @@ func loadPublicReceipt(t *testing.T, name string, v any) []byte {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if err = json.Unmarshal(b, v); err != nil {
+	if err = decodePublicReceipt(b, v); err != nil {
 		t.Fatal(err)
 	}
 	return b
+}
+
+func decodePublicReceipt(raw []byte, v any) error {
+	// Check the original token stream before struct projection loses duplicate
+	// keys, including nested keys whose last value happens to look canonical.
+	value, err := uniqueEvidenceJSON(raw)
+	if err != nil {
+		return err
+	}
+	if err := rejectReceiptProjectionAliases(value, reflect.TypeOf(v), 0); err != nil {
+		return err
+	}
+	return json.Unmarshal(raw, v)
 }
 
 func TestDeploymentCountersDoNotCountUninstalledPlansOrDuplicateDraft(t *testing.T) {

@@ -1,0 +1,452 @@
+package main
+
+// Explicit applications of the reviewed instructions to bounded data examples
+// and a synthetic encoded video. This is not a browser/game/device benchmark.
+// Run only after the qualified CreateNew and independent readback of all48.
+import (
+	"bytes"
+	"crypto/sha256"
+	"encoding/base64"
+	"encoding/hex"
+	"encoding/json"
+	"encoding/xml"
+	"errors"
+	"fmt"
+	"image/png"
+	"io"
+	"os"
+	"path/filepath"
+	"regexp"
+	"strings"
+	"syscall"
+	"testing"
+	"time"
+)
+
+const utility8P = "D:/CC/Work/unattended-operations-20261013-wt/todo-3080-16-skills-3048/.ci-work/todo3080"
+const utility8ManifestSHA = "7e95c0cac90d6a5e0b83c3236b5320da95fe6b600798abd41c75fb0a0e8f734d"
+
+func u8Need(t *testing.T, ok bool, why string) {
+	t.Helper()
+	if !ok {
+		t.Fatal(why)
+	}
+}
+func u8SHA(b []byte) string { v := sha256.Sum256(b); return hex.EncodeToString(v[:]) }
+func u8Read(p string) ([]byte, error) {
+	i, e := os.Lstat(p)
+	if e != nil {
+		return nil, e
+	}
+	if !i.Mode().IsRegular() || i.Size() > 2<<20 {
+		return nil, errors.New("bounded regular file required")
+	}
+	w, e := syscall.UTF16PtrFromString(p)
+	if e != nil {
+		return nil, e
+	}
+	h, e := syscall.CreateFile(w, syscall.GENERIC_READ, syscall.FILE_SHARE_READ|syscall.FILE_SHARE_WRITE|syscall.FILE_SHARE_DELETE, nil, syscall.OPEN_EXISTING, syscall.FILE_FLAG_OPEN_REPARSE_POINT, 0)
+	if e != nil {
+		return nil, e
+	}
+	f := os.NewFile(uintptr(h), p)
+	defer f.Close()
+	st, e := f.Stat()
+	var info syscall.ByHandleFileInformation
+	if e != nil || !os.SameFile(i, st) || syscall.GetFileInformationByHandle(h, &info) != nil || info.FileAttributes&syscall.FILE_ATTRIBUTE_REPARSE_POINT != 0 || info.NumberOfLinks != 1 {
+		return nil, errors.New("identity/reparse/link boundary differs")
+	}
+	b, e := io.ReadAll(io.LimitReader(f, 2<<20+1))
+	if e != nil || len(b) > 2<<20 {
+		return nil, errors.New("bounded read failed")
+	}
+	return b, nil
+}
+func u8Save(t *testing.T, name string, v any) {
+	t.Helper()
+	b, e := json.MarshalIndent(v, "", "  ")
+	if e != nil {
+		t.Fatal(e)
+	}
+	f, e := os.OpenFile(filepath.Join(utility8P, name), os.O_CREATE|os.O_EXCL|os.O_WRONLY, 0600)
+	if e != nil {
+		t.Fatal(e)
+	}
+	_, w := f.Write(append(b, '\n'))
+	s := f.Sync()
+	c := f.Close()
+	if e = errors.Join(w, s, c); e != nil {
+		t.Fatal(e)
+	}
+}
+
+type u8Installed struct {
+	Files        map[string][]byte
+	Hashes       map[string]string
+	Sources      map[string]string
+	SourceCommit string
+}
+
+const u8CreateWrapperSHA = "405af6d191692d68855cfb43cfa4e261cf0bb916518d186cb50372509cd55e5b"
+const u8ProbeWrapperSHA = "6c1badd61cf0ac18cf422fec3300d7382bdc6905a5605576d529cf0351b0b9b2"
+
+// Required observations distinguish missing from false/zero. Live callers pin
+// the authentic original bytes before decoding; tests can inject fixture hashes.
+func u8DecodeReceipt(raw []byte, v any) error {
+	d := json.NewDecoder(bytes.NewReader(raw))
+	d.DisallowUnknownFields()
+	if e := d.Decode(v); e != nil {
+		return e
+	}
+	var extra any
+	if e := d.Decode(&extra); e != io.EOF {
+		return errors.New("unexpected trailing receipt")
+	}
+	return nil
+}
+func u8CommandReceipt(raw []byte, wantSHA string) (string, error) {
+	if len(wantSHA) != 64 || u8SHA(raw) != wantSHA {
+		return "", errors.New("original command receipt hash differs")
+	}
+	var w struct {
+		Exit  *int    `json:"exit"`
+		Timed *bool   `json:"timed_out"`
+		Out   *string `json:"stdout"`
+		Err   *string `json:"stderr"`
+	}
+	if u8DecodeReceipt(raw, &w) != nil || w.Exit == nil || w.Timed == nil || w.Out == nil || w.Err == nil || *w.Exit != 0 || *w.Timed || *w.Out == "" || *w.Err != "" {
+		return "", errors.New("required command outcome missing, failed or timed out")
+	}
+	return *w.Out, nil
+}
+func u8CreationCommit(raw []byte) (string, error) {
+	var c struct {
+		Todo      *int   `json:"todo_id"`
+		Domain    string `json:"domain"`
+		Operation string `json:"operation"`
+		Qualified *bool  `json:"qualified"`
+		Files     *int   `json:"file_count"`
+		Created   *int   `json:"created_files"`
+		SHA       string `json:"manifest_sha256"`
+		Request   string `json:"request_sha256"`
+		Commit    string `json:"source_commit"`
+		General   *bool  `json:"general_access_granted"`
+		Registry  *bool  `json:"original_registry_recovered"`
+	}
+	if u8DecodeReceipt(raw, &c) != nil || c.Todo == nil || *c.Todo != 3080 || c.Domain != "skills-3080-purpose-v1" || c.Operation != "CreateNew" || c.Qualified == nil || !*c.Qualified || c.Files == nil || *c.Files != 48 || c.Created == nil || *c.Created != 48 || c.SHA != utility8ManifestSHA || c.Request != "d4294453c880d53072054253550b192fc9c141d935ee225f71ad854e02508e5b" || c.Commit != "a815e8e5d67a13cdc54cd95e6df5f0c2aa434e05" || c.General == nil || *c.General || c.Registry == nil || *c.Registry {
+		return "", errors.New("required creation identity or false boundary missing/different")
+	}
+	return c.Commit, nil
+}
+func u8Instructions(t *testing.T) u8Installed {
+	u8Need(t, os.Getenv("CC_JOB_ID") == "20261025-074042-todo-3080", "actual caller differs")
+	raw, e := u8Read(filepath.Join(utility8P, "utility8-purpose-create074042.json"))
+	if e != nil {
+		t.Fatal(e)
+	}
+	stdout, e := u8CommandReceipt(raw, u8CreateWrapperSHA)
+	if e != nil {
+		t.Fatal(e)
+	}
+	commit, e := u8CreationCommit([]byte(stdout))
+	if e != nil {
+		t.Fatal(e)
+	}
+	manifest, e := u8Read(filepath.Join(utility8P, "..", "..", "docs", "skills-3080-operations", "create-utility8-074042.json"))
+	if e != nil {
+		t.Fatal(e)
+	}
+	u8Need(t, u8SHA(manifest) == utility8ManifestSHA, "reviewed manifest changed")
+	var m struct {
+		Files []struct {
+			Target  string
+			SHA     string `json:"sha256"`
+			Content string `json:"content_base64"`
+		}
+		Sources []struct {
+			Path string
+			SHA  string `json:"sha256"`
+		}
+	}
+	u8Need(t, json.Unmarshal(manifest, &m) == nil && len(m.Files) == 48 && len(m.Sources) == 8, "manifest scope differs")
+	allowed := map[string]bool{"build-game-changelog": true, "test-playable-web-games": true, "audit-reference-originality": true, "browser-video-recording": true, "stitched-full-page-capture": true, "video-to-superprompt": true, "html-to-interaction-prompts": true, "optimize-web-animations": true}
+	out := u8Installed{map[string][]byte{}, map[string]string{}, map[string]string{}, commit}
+	root := filepath.Clean("D:/CC/Skills")
+	for _, s := range m.Sources {
+		parts := strings.Split(s.Path, "/")
+		u8Need(t, len(parts) > 2 && allowed[parts[len(parts)-2]], "unexpected original source")
+		out.Sources[parts[len(parts)-2]] = s.SHA
+	}
+	for _, r := range m.Files {
+		parts := strings.SplitN(r.Target, "/", 2)
+		u8Need(t, len(parts) == 2 && allowed[parts[0]] && !strings.ContainsAny(r.Target, "\\:") && out.Files[r.Target] == nil, "unexpected/duplicate target")
+		full := filepath.Join(root, filepath.FromSlash(r.Target))
+		rel, e := filepath.Rel(root, full)
+		u8Need(t, e == nil && rel != ".." && !strings.HasPrefix(rel, ".."+string(filepath.Separator)), "target outside root")
+		for dir := filepath.Dir(full); ; dir = filepath.Dir(dir) {
+			st, e := os.Lstat(dir)
+			u8Need(t, e == nil && st.IsDir() && st.Mode()&os.ModeSymlink == 0, "physical parent differs")
+			if strings.EqualFold(dir, root) {
+				break
+			}
+			u8Need(t, filepath.Dir(dir) != dir, "root not reached")
+		}
+		b, e := u8Read(full)
+		if e != nil {
+			t.Fatal(e)
+		}
+		expected, e := base64.StdEncoding.DecodeString(r.Content)
+		u8Need(t, e == nil && u8SHA(b) == r.SHA && bytes.Equal(b, expected), "installed instruction bytes changed")
+		out.Files[r.Target] = b
+		out.Hashes[r.Target] = r.SHA
+	}
+	return out
+}
+
+type u8Deployment struct{ ID, Version, Source, Date, State string }
+
+func u8Ledger(in []u8Deployment) ([]u8Deployment, error) {
+	versions, ids := map[string]bool{}, map[string]bool{}
+	out := []u8Deployment{}
+	for _, r := range in {
+		if r.State != "succeeded" {
+			continue
+		}
+		if r.ID == "" || r.Version == "" || ids[r.ID] || versions[r.Version] {
+			return nil, errors.New("duplicate/missing release identity")
+		}
+		if r.Date != "" {
+			if _, e := time.Parse("2006-01-02", r.Date); e != nil {
+				return nil, e
+			}
+		}
+		if r.Source != "" && !regexp.MustCompile(`^[0-9a-f]{40}$`).MatchString(r.Source) {
+			return nil, errors.New("invalid source identity")
+		}
+		ids[r.ID] = true
+		versions[r.Version] = true
+		out = append([]u8Deployment{r}, out...)
+	}
+	return out, nil
+}
+func u8Release(t *testing.T) any {
+	a, c := strings.Repeat("a", 40), strings.Repeat("c", 40)
+	rows := []u8Deployment{{"d100", "2.5.1", a, "2026-10-01", "succeeded"}, {"d101", "2.5.2", c, "2026-10-02", "failed"}, {"d102", "2.5.2", c, "2026-10-03", "succeeded"}, {"d103", "2.5.3", a, "2026-10-04", "succeeded"}, {"d104", "2.5.4", "", "", "draft"}}
+	ledger, e := u8Ledger(rows)
+	u8Need(t, e == nil && len(ledger) == 3 && ledger[0].Version == "2.5.3" && ledger[0].Source == ledger[2].Source, "rollback/failed/draft release mapping differs")
+	_, e = u8Ledger(append(rows, u8Deployment{"d105", "2.5.3", a, "2026-10-05", "succeeded"}))
+	u8Need(t, e != nil, "duplicate version accepted")
+	_, e = u8Ledger([]u8Deployment{{"bad", "existing-v", a, "2026-02-30", "succeeded"}})
+	u8Need(t, e != nil, "impossible date accepted")
+	unknown, e := u8Ledger([]u8Deployment{{"unknown", "existing-v", "", "", "succeeded"}})
+	u8Need(t, e == nil && unknown[0].Source == "" && unknown[0].Date == "", "unknown provenance invented")
+	return map[string]any{"fixture_ledger": ledger, "latest_shipped_version": "2.5.3", "draft_not_shipped": true, "rollback_same_source_retained": true, "unknown_provenance_kept": true, "negative_duplicate_and_invalid_date_rejected": true, "real_deployment_or_menu_UI": false}
+}
+
+type u8Evidence struct {
+	Journey, Kind string
+	Passed        bool
+}
+
+func u8Satisfied(journey, required string, observations []u8Evidence) bool {
+	for _, v := range observations {
+		if v.Journey == journey && v.Kind == required && v.Passed {
+			return true
+		}
+	}
+	return false
+}
+func u8QA(t *testing.T) any {
+	obs := []u8Evidence{{"save-migration", "deterministic-fixture", true}, {"render-feedback", "mock", true}}
+	u8Need(t, u8Satisfied("save-migration", "deterministic-fixture", obs), "actual fixture evidence not accepted for its declared kind")
+	u8Need(t, !u8Satisfied("save-migration", "real-browser", obs) && !u8Satisfied("render-feedback", "real-browser", obs), "fixture/mock promoted to real play")
+	return map[string]any{"fixture_scope_satisfied": true, "real_browser_scope_satisfied": false, "unperformed_real_play_explicit": true, "selected_journeys": []string{"save-migration", "render-feedback"}, "no_nonexistent_boss_or_mobile_requirement_added": true}
+}
+func u8Originality(t *testing.T, in u8Installed) any {
+	rows := []map[string]any{}
+	for name, source := range in.Sources {
+		original := in.Files[name+"/references/upstream-original.txt"]
+		notice := in.Files[name+"/references/LICENSE.txt"]
+		active := in.Files[name+"/SKILL.md"]
+		u8Need(t, u8SHA(original) == source && u8SHA(notice) == "b2a071ba22fefd803f4e9d1f5c777dd79c62d191695586a1a73fd4d0ebd051c6", "original/notice mismatch")
+		u8Need(t, !bytes.Equal(original, active), "active entry was copied verbatim")
+		rows = append(rows, map[string]any{"target": name, "current_evidence": name + "/references/upstream-original.txt", "reference_evidence": "fixed manifest source SHA256 " + source, "exact_bytes": true, "role": "retained upstream procedure for audit", "exact_author_notice_retained": true, "active_is_not_identical": true, "legal_conclusion": false})
+	}
+	classify := func(exact, noticeKnown, published bool) string {
+		if exact && published && !noticeKnown {
+			return "conditions_unknown_requires_review"
+		}
+		if exact && noticeKnown {
+			return "recorded_exact_copy_with_notice"
+		}
+		return "no_exact_match_in_checked_bytes"
+	}
+	u8Need(t, classify(true, true, false) == "recorded_exact_copy_with_notice" && classify(true, false, true) != "clear", "exact match/permission/context conflated")
+	return map[string]any{"actual_installed_archive_comparisons": rows, "matching_bytes_not_automatic_violation": true, "unknown_conditions_not_passed": true, "legal_verdict_or_automatic_deletion": false, "scope": "Only the eight newly created packages; no unknown central bodies or supplied third-party media."}
+}
+
+type u8Shot struct {
+	Click, Result float64
+	X, Y          float64
+}
+
+func u8ShotPoint(s u8Shot) ([2]float64, error) {
+	if s.Result < s.Click || s.X < 50 || s.X >= 250 || s.Y < 20 || s.Y >= 170 {
+		return [2]float64{}, errors.New("timeline/crop mismatch")
+	}
+	return [2]float64{(s.X - 50) * 2, (s.Y - 20) * 2}, nil
+}
+func u8Recording(t *testing.T) any {
+	p, e := u8ShotPoint(u8Shot{.5, .75, 150, 80})
+	u8Need(t, e == nil && p == [2]float64{200, 120}, "source/crop/output coordinates differ")
+	_, e = u8ShotPoint(u8Shot{.5, .25, 150, 80})
+	u8Need(t, e != nil, "result before click accepted")
+	_, e = u8ShotPoint(u8Shot{.5, .75, 500, 80})
+	u8Need(t, e != nil, "out-of-crop cursor silently clamped")
+	return map[string]any{"data_model_output_point": p, "cursor_top_left_for_output_pixel_hotspot_2_3": [2]float64{198, 117}, "result_before_click_and_outside_crop_rejected": true, "actual_cursor_asset_or_browser_recording": false, "synthetic_video_is_not_continuous_browser_recording": true}
+}
+
+type u8Segment struct{ From, Through, Width int }
+
+func u8Coverage(parts []u8Segment, height, width int) bool {
+	next := 0
+	for _, p := range parts {
+		if p.From != next || p.Through <= p.From || p.Width != width {
+			return false
+		}
+		next = p.Through
+	}
+	return next == height
+}
+func u8Stitch(t *testing.T) any {
+	good := []u8Segment{{0, 600, 1280}, {600, 1200, 1280}, {1200, 1440, 1280}}
+	u8Need(t, u8Coverage(good, 1440, 1280), "contiguous half-open coverage rejected")
+	gap := append([]u8Segment{}, good...)
+	gap[1].From = 601
+	u8Need(t, !u8Coverage(gap, 1440, 1280), "missing row passed")
+	width := append([]u8Segment{}, good...)
+	width[1].Width = 1440
+	u8Need(t, !u8Coverage(width, 1440, 1280), "mixed viewport passed")
+	return map[string]any{"declared_document_ranges": good, "range_coverage_valid": true, "gap_and_mixed_width_rejected": true, "image_content_sticky_header_DPR_or_real_page_proved": false}
+}
+func u8Video(t *testing.T) any {
+	video, e := u8Read(filepath.Join(utility8P, "utility8-fixture-color-transition074042.mp4"))
+	if e != nil {
+		t.Fatal(e)
+	}
+	u8Need(t, len(video) == 3023 && u8SHA(video) == "7d5dfb92886e4e667aae3f47ae4f2707aa1da87620e8c808eed73e677d452536", "synthetic encoded clip differs")
+	raw, e := u8Read(filepath.Join(utility8P, "utility8-fixture-probe074042.json"))
+	if e != nil {
+		t.Fatal(e)
+	}
+	stdout, e := u8CommandReceipt(raw, u8ProbeWrapperSHA)
+	if e != nil {
+		t.Fatal(e)
+	}
+	var probe struct {
+		Streams []struct {
+			Type          string `json:"codec_type"`
+			Width, Height int
+			Rate          string `json:"avg_frame_rate"`
+			Duration      string
+			Frames        string `json:"nb_frames"`
+		}
+		Format struct{ Duration string }
+	}
+	u8Need(t, json.Unmarshal([]byte(stdout), &probe) == nil && len(probe.Streams) == 1, "video stream not identified")
+	s := probe.Streams[0]
+	u8Need(t, s.Type == "video" && s.Width == 320 && s.Height == 240 && s.Rate == "24/1" && s.Duration == "2.000000" && s.Frames == "48", "measured visual stream differs")
+	for _, sample := range []struct {
+		Name, SHA string
+		Red       bool
+	}{{"red", "8de9d1da9b7175de21c0e229d8a2d784d96301a0637c48f58e2dfa5b2be78726", true}, {"blue", "f704434ecccf2e94de73bf72e72e55efbded0726ba2aaf4dabeb1083b8d44399", false}} {
+		b, e := u8Read(filepath.Join(utility8P, "utility8-fixture-"+sample.Name+"074042.png"))
+		if e != nil {
+			t.Fatal(e)
+		}
+		u8Need(t, u8SHA(b) == sample.SHA, "sample frame changed")
+		im, e := png.Decode(bytes.NewReader(b))
+		if e != nil {
+			t.Fatal(e)
+		}
+		r, g, blue, _ := im.At(160, 120).RGBA()
+		if sample.Red {
+			u8Need(t, r > 50000 && g < 10000 && blue < 10000, "red sample not observed")
+		} else {
+			u8Need(t, blue > 50000 && r < 10000 && g < 10000, "blue sample not observed")
+		}
+	}
+	prompt := "解析用の自己生成動画は2秒、320x240、24fps。0.5秒のsampleは赤、1.5秒は青。二つのsampleから切替時刻や全中間frameの動きは断定しない。元HTML・scroll入力・cursorはなく、pinやlibraryの同定は推論としても根拠がない。素材はこの自己生成fixtureで、外部の素材取得やUI実装の依頼ではない。"
+	return map[string]any{"actual_encoded_video_sha256": u8SHA(video), "video_seconds": 2, "width": 320, "height": 240, "fps": "24/1", "frames_reported": 48, "decoded_sample_times_seconds": []float64{.5, 1.5}, "sample_colors": []string{"red", "blue"}, "actual_prompt": prompt, "all_intermediate_frames_or_exact_transition_inspected": false, "browser_input_or_source_library_inferred": false}
+}
+func u8HTML(t *testing.T) any {
+	fixture := []byte("<html><style id=\"motion\">.card:hover,.card:focus-visible{opacity:.8}</style><button id=\"card\" class=\"card\">Fixture</button></html>")
+	decoder := xml.NewDecoder(bytes.NewReader(fixture))
+	style, button := false, false
+	for {
+		token, e := decoder.Token()
+		if e == io.EOF {
+			break
+		}
+		if e != nil {
+			t.Fatal(e)
+		}
+		if s, ok := token.(xml.StartElement); ok {
+			if s.Name.Local == "style" {
+				style = true
+			}
+			if s.Name.Local == "button" {
+				button = true
+			}
+		}
+	}
+	u8Need(t, style && button && bytes.Contains(fixture, []byte(":hover")) && bytes.Contains(fixture, []byte(":focus-visible")), "bounded inert source not inspected")
+	return map[string]any{"inert_fixture_sha256": u8SHA(fixture), "source_locations": []string{"style#motion selector .card:hover/.card:focus-visible", "button#card"}, "prompt": "同じcardにhoverまたはkeyboard focusがある時のopacity変化を対象とする。元sourceはCSSで、GSAP等の追加根拠はない。実browserの応答は未観測。対象へ移す時は元の許可と同範囲の画像回答を保持する。", "static_source_inspected": true, "runtime_observed": false, "HTML_or_script_executed": false, "screenshot_only_not_runtime_or_library_proof": true}
+}
+
+type u8Animation struct {
+	Visible, Disposed, Frame                   bool
+	Generation, SimulationTicks, DiscardedLate int
+	SharedAlive                                bool
+}
+
+func (s *u8Animation) visibility(v bool) { s.Visible = v; s.Frame = v && !s.Disposed }
+func (s *u8Animation) dispose()          { s.Disposed = true; s.Generation++; s.Frame = false }
+func (s *u8Animation) load(g int) {
+	if s.Disposed || g != s.Generation {
+		s.DiscardedLate++
+		return
+	}
+	s.Frame = s.Visible
+}
+func u8Animations(t *testing.T) any {
+	s := u8Animation{Generation: 1, SharedAlive: true}
+	s.visibility(true)
+	s.visibility(true)
+	u8Need(t, s.Frame, "visible loop did not start")
+	s.visibility(false)
+	s.SimulationTicks++
+	u8Need(t, !s.Frame && s.SimulationTicks == 1, "decorative stop changed required simulation")
+	s.visibility(true)
+	u8Need(t, s.Frame, "re-entry not resumed")
+	s.dispose()
+	s.load(1)
+	u8Need(t, !s.Frame && s.DiscardedLate == 1 && s.SharedAlive, "late result resurrected disposed owner or destroyed another owner resource")
+	return map[string]any{"bounded_state_model": s, "negative_late_loader_rejected": true, "shared_other_owner_resource_preserved": true, "real_CSS_RAF_or_GPU_profile": false, "heap_leak_ruled_out": false}
+}
+func TestUtility8ExplicitApplications(t *testing.T) {
+	installed := u8Instructions(t)
+	cases := map[string]any{"build-game-changelog": u8Release(t), "test-playable-web-games": u8QA(t), "audit-reference-originality": u8Originality(t, installed), "browser-video-recording": u8Recording(t), "stitched-full-page-capture": u8Stitch(t), "video-to-superprompt": u8Video(t), "html-to-interaction-prompts": u8HTML(t), "optimize-web-animations": u8Animations(t)}
+	u8Need(t, len(cases) == 8 && len(installed.Hashes) == 48, "application scope differs")
+	out := map[string]any{"domain": "skills3080-utility8-explicit-use-v1", "actual_job": os.Getenv("CC_JOB_ID"), "source_commit": installed.SourceCommit, "manifest_sha256": utility8ManifestSHA, "installed_output_hashes": installed.Hashes, "explicit_current_worker_application": true, "new_separate_model_turn_or_implicit_selection": false, "cases": cases, "all_bounded_cases_passed": true, "real_browser_game_UI_or_GPU_execution": false, "source_scripts_executed": false, "network_requests": 0, "new_central_writes": 0, "overall16_complete": false, "limits": "Only eight newly installed known packages. Actual byte/notice comparison and an encoded synthetic video/frame inspection accompany bounded data models; real browser capture/play, full-page image content, CSS/RAF runtime and heap were not tested."}
+	source, e := u8Read(filepath.Join(utility8P, "utility8_use_v2074042_test.go"))
+	if e != nil {
+		t.Fatal(e)
+	}
+	out["application_source_sha256"] = u8SHA(source)
+	out["creation_wrapper_sha256"] = u8CreateWrapperSHA
+	out["probe_receipt_sha256"] = u8ProbeWrapperSHA
+	out["revalidates_original_result_after_review3789"] = true
+	u8Save(t, "utility8-explicit-use-v2074042.json", out)
+	fmt.Println("8 explicit applications passed; actual new-package evidence + synthetic video; browser/game/GPU/runtime claims remain false")
+}

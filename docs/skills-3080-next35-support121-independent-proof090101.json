@@ -1,0 +1,29 @@
+{
+  "acknowledged_parent_authorities": 27,
+  "consumer_job": "20261026-090101-todo-3080",
+  "domain": "research153-independent-support-reuse-verification-v1",
+  "expanded_records_sha256": "aa8360087a72a6c2c0f811162f119966f78357cab1ea33b9e5b49e51a88a6970",
+  "full_index_sha256": "799bd907887120d83b82e64fbf37094c653a5144b764fef0b70dd4d5e2219607",
+  "legacy_missing_lastline_or_profile_not_independently_verified": true,
+  "network_calls": 0,
+  "new_adoptions": 0,
+  "new_raw_support_credit": 0,
+  "new_rights_grants": 0,
+  "old_initial_unread_states_not_rewritten": true,
+  "parent_receipts_and_concrete_evidence_values_verified": true,
+  "profile_counts": {
+    "0": 2,
+    "1": 108,
+    "2": 3,
+    "3": 1,
+    "4": 3,
+    "5": 1,
+    "6": 2,
+    "7": 1
+  },
+  "row": 153,
+  "same_full_SHA_blob_bytes_and_content_path": true,
+  "upstream_body_reads": 0,
+  "verified_reuse_rows": 121,
+  "original_private_summary_sha256": "7a515fdf3e0edcfbf186d93d31f7ac1023279cbf17ab8b20d77a25ad183c02fb"
+}

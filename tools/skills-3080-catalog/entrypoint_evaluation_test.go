@@ -14,11 +14,11 @@ import (
 	"time"
 )
 
-var primaryCoverageProjection = regexp.MustCompile(`固定([0-9]+)\+別枠mizchi([0-9]+)\+MengTo全入口([0-9]+)\+6mile部分([0-9]+)=([0-9]+)source paths`)
+var primaryCoverageProjection = regexp.MustCompile(`固定([0-9]+)\+別枠mizchi([0-9]+)\+MengTo全入口([0-9]+)\+6mile部分([0-9]+)\+VoltAgent設計raw([0-9]+)=([0-9]+)source paths`)
 
 func validatePrimaryCoverageProjection(definition string, components []int) error {
 	matches := primaryCoverageProjection.FindAllStringSubmatch(definition, -1)
-	if len(matches) != 1 || len(components) != 5 {
+	if len(matches) != 1 || len(components) != 6 {
 		return errors.New("primary coverage projection is missing or ambiguous")
 	}
 	for i, want := range components {
@@ -46,9 +46,12 @@ func TestPrimaryCoverageDescriptionMatchesCanonicalComponentCounts(t *testing.T)
 		Sixmile struct {
 			Read int `json:"full_body_read"`
 		} `json:"sixmile_body_read_coverage"`
+		Design struct {
+			Read int `json:"full_body_read"`
+		} `json:"voltagent_design24_evaluation"`
 	}
 	loadPublicReceipt(t, "skills-3080-progress.json", &p)
-	want := []int{p.Complete.Paths, p.Mizchi.Read, p.Mengto.Read, p.Sixmile.Read, p.Total}
+	want := []int{p.Complete.Paths, p.Mizchi.Read, p.Mengto.Read, p.Sixmile.Read, p.Design.Read, p.Total}
 	for _, kind := range []string{"valid", "stale_sixmile", "stale_total", "missing", "ambiguous"} {
 		t.Run(kind, func(t *testing.T) {
 			reported := p.Definition
@@ -317,8 +320,11 @@ func TestCoverageSeparatesCompleteSourcesMizchiAndAuthoredDrafts(t *testing.T) {
 	var p struct {
 		Candidates int `json:"candidate_designs"`
 		TotalRead  int `json:"all_fulltext_primary_paths_including_partial_sources"`
-		SkillRead  int `json:"total_skill_named_body_read"`
-		Coverage   struct {
+		Design     struct {
+			Read int `json:"full_body_read"`
+		} `json:"voltagent_design24_evaluation"`
+		SkillRead int `json:"total_skill_named_body_read"`
+		Coverage  struct {
 			Repos  int            `json:"repos"`
 			Paths  int            `json:"case_insensitive_skill_named_paths"`
 			ByRepo map[string]int `json:"by_repo"`
@@ -346,7 +352,7 @@ func TestCoverageSeparatesCompleteSourcesMizchiAndAuthoredDrafts(t *testing.T) {
 		}
 		sum += n
 	}
-	if sum != 137 || len(p.Coverage.ByRepo) != p.Coverage.Repos || p.SkillRead != sum || p.Coverage.Paths != sum || p.Mizchi.Read != 76 || p.Mengto.Read < 127 || p.TotalRead != sum+p.Mizchi.Read+p.Mengto.Read+p.Sixmile.Read {
+	if sum != 137 || len(p.Coverage.ByRepo) != p.Coverage.Repos || p.SkillRead != sum || p.Coverage.Paths != sum || p.Mizchi.Read != 76 || p.Mengto.Read < 127 || p.TotalRead != sum+p.Mizchi.Read+p.Mengto.Read+p.Sixmile.Read+p.Design.Read {
 		t.Fatal("body read coverage does not conserve source paths")
 	}
 	var sql struct {

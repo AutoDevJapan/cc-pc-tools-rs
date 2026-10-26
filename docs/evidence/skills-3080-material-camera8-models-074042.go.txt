@@ -1,0 +1,259 @@
+package main
+
+// These bounded planning examples exercise the authored procedures. They do not
+// run upstream code, create a UI, compile a shader or claim GPU/scene realism.
+import (
+	"crypto/sha256"
+	"encoding/binary"
+	"errors"
+	"math"
+	"testing"
+)
+
+func mc8Near(a, b float64) bool { return math.Abs(a-b) < 1e-9 }
+func mc8Need(t *testing.T, ok bool, why string) {
+	t.Helper()
+	if !ok {
+		t.Fatal(why)
+	}
+}
+
+type mc8Vec struct{ X, Y, Z float64 }
+
+func (a mc8Vec) length() float64 { return math.Sqrt(a.X*a.X + a.Y*a.Y + a.Z*a.Z) }
+func mc8Weave(threads int, pitchMetres, clothWidthMetres float64) (float64, float64, error) {
+	if threads <= 0 || !mc8Finite(pitchMetres) || !mc8Finite(clothWidthMetres) || pitchMetres <= 0 || clothWidthMetres <= 0 {
+		return 0, 0, errors.New("positive rest-metre dimensions required")
+	}
+	tile := float64(threads) * pitchMetres
+	return tile, clothWidthMetres / tile, nil
+}
+func mc8Finite(v float64) bool { return !math.IsNaN(v) && !math.IsInf(v, 0) }
+
+func mc8Drawn(unique, instances, passes int) (int, error) {
+	if unique < 0 || instances < 0 || passes < 0 || (unique != 0 && instances > int(^uint(0)>>1)/unique) {
+		return 0, errors.New("invalid geometry budget")
+	}
+	n := unique * instances
+	if n != 0 && passes > int(^uint(0)>>1)/n {
+		return 0, errors.New("invalid pass budget")
+	}
+	return n * passes, nil
+}
+func mc8LOD(previousHigh bool, projected float64) (bool, error) {
+	if !mc8Finite(projected) || projected < 0 {
+		return false, errors.New("invalid projected size")
+	}
+	if previousHigh {
+		return projected >= 0.95, nil
+	}
+	return projected > 1.05, nil
+}
+func mc8MipRGBA8(width, height, layers, faces int) (uint64, error) {
+	if width <= 0 || height <= 0 || width > 16384 || height > 16384 || layers < 1 || layers > 2048 || (faces != 1 && faces != 6) {
+		return 0, errors.New("bounded dimensions/layers/faces required")
+	}
+	var n uint64
+	for {
+		n += uint64(width) * uint64(height) * 4
+		if width == 1 && height == 1 {
+			break
+		}
+		width = max(1, width/2)
+		height = max(1, height/2)
+	}
+	return n * uint64(layers) * uint64(faces), nil
+}
+
+type mc8Metal struct {
+	Conductor, DielectricCoating bool
+	F0, Diffuse                  [3]float64
+}
+
+func mc8MetalPlan(m mc8Metal) error {
+	for i := 0; i < 3; i++ {
+		if !mc8Finite(m.F0[i]) || !mc8Finite(m.Diffuse[i]) || m.F0[i] < 0 || m.F0[i] > 1 || m.Diffuse[i] < 0 || m.Diffuse[i] > 1 {
+			return errors.New("linear bounded values required")
+		}
+	}
+	if m.Conductor && m.DielectricCoating {
+		return errors.New("split conductor and coating layer responsibilities")
+	}
+	if m.Conductor && m.Diffuse != [3]float64{} {
+		return errors.New("pure conductor example has no diffuse lobe")
+	}
+	return nil
+}
+func mc8PaperCoverage(low, high, x float64) (float64, error) {
+	if !mc8Finite(low) || !mc8Finite(high) || !mc8Finite(x) || low >= high {
+		return 0, errors.New("ordered distinct edges required")
+	}
+	t := math.Max(0, math.Min(1, (x-low)/(high-low)))
+	return 1 - t*t*(3-2*t), nil
+}
+
+type mc8SkyPlan struct {
+	Background, Environment, Direct bool
+	FullPanorama, FreeOrbit         bool
+	Sun                             mc8Vec
+	Fallback                        string
+}
+
+func mc8ValidateSky(s mc8SkyPlan) error {
+	if !s.Background || !s.Environment || !s.Direct || !mc8Near(s.Sun.length(), 1) || s.Fallback == "" {
+		return errors.New("separate light roles, one normalized sun and failure alternative required")
+	}
+	if s.FreeOrbit && !s.FullPanorama {
+		return errors.New("partial image cannot certify full orbit")
+	}
+	return nil
+}
+
+type mc8Bookmark struct {
+	Stop    string
+	Route   float64
+	Playing bool
+	Focus   string
+	Scroll  float64
+}
+type mc8Tour struct {
+	Generation    int
+	Room          string
+	CameraWriters int
+	Saved         mc8Bookmark
+}
+
+func (s *mc8Tour) request(room string) int        { s.Generation++; s.Room = room; return s.Generation }
+func (s *mc8Tour) acceptLoad(generation int) bool { return generation == s.Generation }
+func (s *mc8Tour) resume() (mc8Bookmark, error) {
+	if s.CameraWriters != 1 || s.Saved.Stop == "" || s.Saved.Focus == "" {
+		return mc8Bookmark{}, errors.New("one final camera writer and navigation bookmark required")
+	}
+	return s.Saved, nil
+}
+func mc8PathClear(samples []mc8Vec, wallMin, wallMax mc8Vec, nearRadius float64) (bool, error) {
+	if len(samples) < 2 || !mc8Finite(nearRadius) || nearRadius < 0 {
+		return false, errors.New("bounded sample path and radius required")
+	}
+	// Samples establish only this synthetic path. No claim about continuous
+	// splines or the full scene can be inferred from these few points.
+	for _, p := range samples {
+		if p.X >= wallMin.X-nearRadius && p.X <= wallMax.X+nearRadius && p.Y >= wallMin.Y-nearRadius && p.Y <= wallMax.Y+nearRadius && p.Z >= wallMin.Z-nearRadius && p.Z <= wallMax.Z+nearRadius {
+			return false, nil
+		}
+	}
+	return true, nil
+}
+func mc8WoodSeed(stableID string) uint64 {
+	h := sha256.Sum256([]byte("wood/rest-metres/v1/" + stableID))
+	return binary.BigEndian.Uint64(h[:8])
+}
+func mc8WoodSignals(stableID string, restMetres, periodMetres float64) (float64, float64, float64, error) {
+	if stableID == "" || !mc8Finite(restMetres) || !mc8Finite(periodMetres) || periodMetres <= 0 {
+		return 0, 0, 0, errors.New("stable part identity and rest units required")
+	}
+	phase := float64(mc8WoodSeed(stableID)%65536) / 65536
+	grain := 0.5 + 0.5*math.Sin(2*math.Pi*(restMetres/periodMetres+phase))
+	return 0.25 + 0.35*grain, 0.6 - 0.2*grain, 0.0001 * grain, nil
+}
+
+func TestMaterialCamera8BoundedPlanning(t *testing.T) {
+	t.Run("cloth-rest-units-and-directional-length", func(t *testing.T) {
+		tile, repeats, e := mc8Weave(32, 0.0016, 2)
+		mc8Need(t, e == nil && mc8Near(tile, 0.0512) && mc8Near(repeats, 39.0625), "weave dimensions differ")
+		_, _, e = mc8Weave(32, 0, 2)
+		mc8Need(t, e != nil, "zero pitch accepted")
+		ds := 0.01
+		angle := 0.8
+		planar := mc8Vec{ds * math.Cos(angle), ds * math.Sin(angle), 0}
+		deformed := planar
+		deformed.Z = ds
+		mc8Need(t, mc8Near(planar.length(), ds) && deformed.length() > ds, "one constructed direction must not certify an arbitrary3D surface")
+	})
+	t.Run("geometry-unique-drawn-passes-and-hysteresis", func(t *testing.T) {
+		drawn, e := mc8Drawn(2000, 50, 3)
+		mc8Need(t, e == nil && drawn == 300000 && drawn != 2000, "unique and drawn costs collapsed")
+		_, e = mc8Drawn(2000, -1, 3)
+		mc8Need(t, e != nil, "invalid instance budget accepted")
+		high := true
+		for _, p := range []float64{0.99, 1.01, 0.99, 1.01} {
+			var err error
+			high, err = mc8LOD(high, p)
+			mc8Need(t, err == nil && high, "near-boundary high LOD flickered")
+		}
+		low := false
+		for _, p := range []float64{0.99, 1.01} {
+			v, err := mc8LOD(low, p)
+			mc8Need(t, err == nil && !v, "near-boundary low LOD flickered")
+		}
+	})
+	t.Run("texture-network-CPU-GPU-and-upgrade-peak", func(t *testing.T) {
+		four, e := mc8MipRGBA8(4096, 4096, 1, 1)
+		mc8Need(t, e == nil && four == 89478484, "full4K mip bytes differ")
+		two, e := mc8MipRGBA8(2048, 2048, 1, 1)
+		mc8Need(t, e == nil && two == 22369620, "full2K mip bytes differ")
+		peak := four + two
+		mc8Need(t, peak == 111848104 && peak > four, "old/new upgrade overlap missing")
+		networkBytes := uint64(512000)
+		mc8Need(t, networkBytes != four, "network compression treated as GPU allocation")
+		_, e = mc8MipRGBA8(4096, 4096, 1, 2)
+		mc8Need(t, e != nil, "unsupported face count accepted")
+	})
+	t.Run("metal-tinted-conductor-and-separate-patina", func(t *testing.T) {
+		copper := mc8Metal{Conductor: true, F0: [3]float64{0.95, 0.64, 0.54}}
+		mc8Need(t, mc8MetalPlan(copper) == nil && copper.F0[0] != copper.F0[2], "tinted conductor example lost")
+		patina := mc8Metal{DielectricCoating: true, F0: [3]float64{0.04, 0.04, 0.04}, Diffuse: [3]float64{0.08, 0.3, 0.2}}
+		mc8Need(t, mc8MetalPlan(patina) == nil, "dielectric coating was forced into conductor model")
+		patina.Conductor = true
+		mc8Need(t, mc8MetalPlan(patina) != nil, "mixed layer responsibilities accepted")
+	})
+	t.Run("paper-ordered-coverage-and-undefined-negative", func(t *testing.T) {
+		for _, v := range []struct{ x, want float64 }{{0, 1}, {0.12, 1}, {0.31, 0.5}, {0.5, 0}, {1, 0}} {
+			got, e := mc8PaperCoverage(0.12, 0.5, v.x)
+			mc8Need(t, e == nil && mc8Near(got, v.want), "ordered complement coverage differs")
+		}
+		_, e := mc8PaperCoverage(0.5, 0.12, 0.3)
+		mc8Need(t, e != nil, "reversed GLSL edges were accepted")
+		_, e = mc8PaperCoverage(0.12, 0.12, 0.3)
+		mc8Need(t, e != nil, "equal edges were accepted")
+	})
+	t.Run("sky-roles-shared-sun-and-panorama-boundary", func(t *testing.T) {
+		s := mc8SkyPlan{true, true, true, true, true, mc8Vec{0, 1, 0}, "gradient"}
+		mc8Need(t, mc8ValidateSky(s) == nil, "complete synthetic role plan rejected")
+		s.Environment = false
+		mc8Need(t, mc8ValidateSky(s) != nil, "background alone certified PBR lighting")
+		s.Environment = true
+		s.FullPanorama = false
+		mc8Need(t, mc8ValidateSky(s) != nil, "partial photograph certified full orbit")
+	})
+	t.Run("tour-bookmark-intent-and-late-load", func(t *testing.T) {
+		bookmark := mc8Bookmark{"room-west", 0.3, false, "room-button", 180}
+		s := mc8Tour{CameraWriters: 1, Saved: bookmark}
+		a := s.request("A")
+		b := s.request("B")
+		mc8Need(t, !s.acceptLoad(a) && s.acceptLoad(b) && s.Room == "B", "late load replaced current room")
+		got, e := s.resume()
+		mc8Need(t, e == nil && got == bookmark && !got.Playing, "return lost saved pause/focus/scroll intent")
+		s.CameraWriters = 2
+		_, e = s.resume()
+		mc8Need(t, e != nil, "competing final camera writers accepted")
+		wallMin, wallMax := mc8Vec{-0.1, -1, -1}, mc8Vec{0.1, 1, 1}
+		clear, e := mc8PathClear([]mc8Vec{{-2, 0, 0}, {0, 0, 0}, {2, 0, 0}}, wallMin, wallMax, 0.05)
+		mc8Need(t, e == nil && !clear, "safe endpoints incorrectly certified the sampled intervening wall")
+	})
+	t.Run("wood-stable-identities-rest-units-and-coherent-signal", func(t *testing.T) {
+		before := map[string]uint64{}
+		for _, id := range []string{"board-A", "board-B"} {
+			before[id] = mc8WoodSeed(id)
+		}
+		for _, id := range []string{"inserted", "board-B", "board-A"} {
+			if old, ok := before[id]; ok {
+				mc8Need(t, old == mc8WoodSeed(id), "construction order changed existing grain seed")
+			}
+		}
+		c, r, h, e := mc8WoodSignals("board-A", 0.25, 0.01)
+		mc8Need(t, e == nil && mc8Near((c-0.25)/0.35, (0.6-r)/0.2) && mc8Near(h/0.0001, (c-0.25)/0.35), "color roughness and relief lost common grain")
+		_, _, _, e = mc8WoodSignals("", 0.25, 0.01)
+		mc8Need(t, e != nil, "missing stable identity accepted")
+	})
+}

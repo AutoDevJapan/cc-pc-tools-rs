@@ -11,6 +11,10 @@ mod finished_work_handoff;
 mod finite_owner_wait_repair;
 #[path = "support/quota_recovery.rs"]
 mod quota_recovery_tests;
+#[path = "support/initial_review.rs"]
+mod initial_review_tests;
+#[path = "support/pretool_failure.rs"]
+mod pretool_failure;
 #[path = "support/no_action.rs"]
 mod no_action;
 #[cfg(windows)]
@@ -2077,6 +2081,49 @@ mod capacity_regressions {
             t.run(&["--model-recovery-from", "unknown-model"], b"Invalid hint")
                 .is_err()
         );
+    }
+
+    #[test]
+    fn grok_recovery_hint_preserves_the_real_failed_model() {
+        let t = Test::new();
+        t.run(&["--auto-model", "gpt-6-astra", "--model-origin", "policy",
+            "--model-recovery-from", "grok-4.7", "--effort", "max"], b"Recover once").unwrap();
+        let saved = t.ctx.list_jobs(&HashSet::new()).into_iter().find(|job| s(job, "name") == "x").unwrap();
+        assert_eq!(saved["model_recovery_from"], "grok-4.7");
+        assert!(saved["review_excluded_models"].is_null());
+    }
+
+    #[test]
+    fn no_action_state_contention_defers_without_reading_proof_or_cancelling() {
+        let t = Test::new();
+        let original = t.put(job(json!({"id":"held","status":"running"})));
+        let state = FileLock::acquire(&t.ctx.job_dir("held").join("state.lock")).unwrap();
+        let missing = t.ctx.root.join("unread-proof.json");
+        let (result, out, _) = t.cli(&["cancel", "held", "--if-todo-ready", "--recovery",
+            "--todo-id", "2", "--cancel-key", "state-contention", "--no-action-check", missing.to_str().unwrap()]);
+        assert_eq!(result.unwrap(), 0);
+        assert_eq!(serde_json::from_str::<Value>(&out).unwrap()["reason"], "state_lock_busy");
+        assert_eq!(t.ctx.load("held").unwrap(), original);
+        drop(state);
+    }
+
+    #[test]
+    fn grok_remote_compaction_quota_is_protocol_evidence_and_survives_a_generic_terminal() {
+        let message = "Error running remote compact task: unexpected status 402 Payment Required: Provider error 402: {\"error\":\"Grok Build usage balance exhausted\"}, url: http://127.0.0.1:10101/v1/responses";
+        let mut j = json!({});
+        apply_event(&mut j, &json!({"type":"error","message":message}));
+        apply_event(&mut j, &json!({"type":"turn.failed","error":{"message":"Remote compaction failed"}}));
+        assert_eq!(j["last_failure_kind"], "quota");
+        for (event, kind) in [
+            (json!({"type":"turn.failed","error":{"message":message}}), Some("quota")),
+            (json!({"type":"error","message":"HTTP 402 Payment Required"}), Some("transient")),
+            (json!({"type":"error","message":"remote compaction connection reset"}), Some("transient")),
+            (json!({"type":"error","code":"cancelled","message":message}), Some("cancel")),
+            (json!({"type":"error","code":"authentication_failed","message":message}), Some("auth")),
+            (json!({"type":"item.completed","message":message}), None),
+        ] {
+            assert_eq!(cc_jobs::capacity::failure_kind(&event), kind, "{event}");
+        }
     }
 
     #[test]
@@ -6433,6 +6480,7 @@ fn saved_discord_settings_are_given_only_to_the_notifier_and_inherited_values_wi
     );
 }
 struct Fake {
+    initial_review_workspace: Mutex<Value>,
     quota_recovery_samples: AtomicUsize,
     quota_recovery_inventory: Mutex<Value>,
     epoch_base: Mutex<Option<f64>>,
@@ -6458,6 +6506,8 @@ struct Fake {
     pause_allowed: AtomicBool,
     pause_calls: AtomicUsize,
     paused_stop_failure: Arc<AtomicBool>,
+    kept_failed_pause: Arc<AtomicUsize>,
+    resumed_failed_pause: Arc<AtomicUsize>,
     paused_stop_failure_pid: Arc<AtomicU32>,
     pause_recoveries: Mutex<Vec<String>>,
     fail_queued_save: AtomicBool,
@@ -6489,6 +6539,7 @@ struct Fake {
 impl Fake {
     fn new() -> Self {
         Self {
+            initial_review_workspace: Mutex::new(Value::Null),
             quota_recovery_samples: AtomicUsize::new(0),
             quota_recovery_inventory: Mutex::new(Value::Null),
             epoch_base: Mutex::new(None),
@@ -6521,6 +6572,8 @@ impl Fake {
             pause_allowed: AtomicBool::new(false),
             pause_calls: AtomicUsize::new(0),
             paused_stop_failure: Arc::new(AtomicBool::new(false)),
+            kept_failed_pause: Arc::new(AtomicUsize::new(0)),
+            resumed_failed_pause: Arc::new(AtomicUsize::new(0)),
             paused_stop_failure_pid: Arc::new(AtomicU32::new(0)),
             pause_recoveries: Mutex::new(Vec::new()),
             fail_queued_save: AtomicBool::new(false),
@@ -6597,6 +6650,9 @@ impl Read for BadReader {
     }
 }
 impl Runtime for Fake {
+    fn initial_review_inventory(&self)->Value {self.quota_recovery_inventory()}
+    fn initial_review_workspace(&self,_row:&Value)->Value {self.initial_review_workspace.lock().unwrap().clone()}
+    fn initial_review_spec(&self,row:&Value)->io::Result<Vec<u8>> {fs::read(s(row,"spec"))}
     fn quota_recovery_inventory(&self) -> Value {
         self.quota_recovery_samples.fetch_add(1,Ordering::Relaxed);
         self.quota_recovery_inventory.lock().unwrap().clone()
@@ -6717,9 +6773,23 @@ impl Runtime for Fake {
             alive: Arc<AtomicBool>,
             fail: Arc<AtomicBool>,
             fail_pid: Arc<AtomicU32>,
+            kept: Arc<AtomicUsize>,
+            resumed: Arc<AtomicUsize>,
+            failed: bool,
+            keep: bool,
+        }
+        impl Drop for Guard {
+            fn drop(&mut self) {
+                if self.failed && !self.keep {
+                    self.resumed.fetch_add(1, Ordering::Relaxed);
+                }
+            }
         }
         impl Paused for Guard {
-            fn keep_paused(&mut self) {}
+            fn keep_paused(&mut self) {
+                self.keep = true;
+                if self.failed { self.kept.fetch_add(1, Ordering::Relaxed); }
+            }
             fn arm_process(&mut self, _: u32, _: u64) -> io::Result<()> {
                 Ok(())
             }
@@ -6731,6 +6801,7 @@ impl Runtime for Fake {
                     || self.fail_pid.load(Ordering::Relaxed) == self.pid)
                     && self.fail.swap(false, Ordering::Relaxed)
                 {
+                    self.failed = true;
                     return Err(io::Error::other("fixture stop failed"));
                 }
                 self.kills.lock().unwrap().push(self.pid);
@@ -6748,6 +6819,10 @@ impl Runtime for Fake {
             alive: self.child_alive.clone(),
             fail: self.paused_stop_failure.clone(),
             fail_pid: self.paused_stop_failure_pid.clone(),
+            kept: self.kept_failed_pause.clone(),
+            resumed: self.resumed_failed_pause.clone(),
+            failed: false,
+            keep: false,
         }))
     }
     fn diagnostic(&self, message: &str) {
@@ -10485,6 +10560,39 @@ mod task_notifier {
 mod end_to_end {
     use super::*;
     #[test]
+    fn windows_pretool_protocol_429_drains_the_real_controller_tree_within_its_deadline() {
+        let t = E2e::new();
+        // An opt-in deployment probe consumes an exact copy of the installed
+        // executable. It still uses only isolated synthetic fixture processes.
+        if let Ok(exe) = std::env::var("CC_JOBS_PROTOCOL_PROBE_EXE") {
+            fs::copy(exe, &t.exe).unwrap();
+        }
+        fs::copy(env!("CARGO_BIN_EXE_cc_jobs_fixture"), t.tmp.0.join("bin/codex.exe")).unwrap();
+        fs::write(t.tmp.0.join("bin/codex.cmd"), b"@echo off\r\n\"%~dp0codex.exe\" %*\r\n").unwrap();
+        let jid = t.start("pretool-429-hold", &t.tmp.0, b"synthetic pretool failure");
+        t.until_phase("protocol_error", || {
+            t.rec.join("pretool.identity.json").exists() && t.job(&jid)["last_failure_kind"] == "quota"
+        });
+        let running = t.job(&jid);
+        let native: Value = serde_json::from_slice(&fs::read(t.rec.join("pretool.identity.json")).unwrap()).unwrap();
+        t.until_phase_for("protocol_drained", Duration::from_secs(50), || {
+            TERMINAL.contains(&s(&t.job(&jid), "status"))
+        });
+        let result = t.job(&jid);
+        assert_eq!(result["status"], "failed");
+        assert_eq!(result["last_failure_kind"], "quota");
+        assert_eq!(result["protocol_stall"]["stage"], "drained");
+        assert_eq!(result["protocol_stall"]["grace_seconds"], 30.);
+        assert_eq!(result["steps"], 0);
+        assert!(result["cancel_requested"] != true);
+        assert!(result["retry_count"].as_u64().unwrap_or(0) == 0);
+        assert_ne!(proc_created(native["pid"].as_u64().unwrap() as u32), native["created"].as_u64());
+        assert_ne!(proc_created(running["codex_pid"].as_u64().unwrap() as u32), running["codex_pid_created"].as_u64());
+        t.until_phase("protocol_supervisor_exit", || {
+            proc_created(running["pid"].as_u64().unwrap() as u32) != running["pid_created"].as_u64()
+        });
+    }
+    #[test]
     fn windows_snapshot_sharing_keeps_the_native_child_alive_and_delivers_its_result() {
         use std::os::windows::fs::OpenOptionsExt;
         use windows_sys::Win32::Storage::FileSystem::{FILE_SHARE_READ, FILE_SHARE_WRITE};
@@ -12088,10 +12196,22 @@ mod end_to_end {
             "--no-action-check",
             proof.to_str().unwrap(),
         ];
+        // The controller publishes progress under state.lock. The public
+        // guarded cancel now correctly defers that race instead of failing.
+        // Retry only this observed transient reason, within the fixture's
+        // normal deadline; every other outcome still fails the assertions.
+        let cancel_when_state_ready = || {
+            let mut result = Value::Null;
+            t.until(|| {
+                let out = t.cli(&cancel, "report-only");
+                assert!(out.status.success(), "{}", String::from_utf8_lossy(&out.stderr));
+                result = serde_json::from_slice::<Value>(&out.stdout).unwrap();
+                !(result["outcome"] == "deferred" && result["reason"] == "state_lock_busy")
+            });
+            result
+        };
         let held = FileLock::acquire(&store.with_file_name("todo.lock")).unwrap();
-        let deferred = t.cli(&cancel, "report-only");
-        assert!(deferred.status.success());
-        let deferred: Value = serde_json::from_slice(&deferred.stdout).unwrap();
+        let deferred = cancel_when_state_ready();
         assert_eq!(deferred["reason"], "todo_lock_busy");
         let pause: Value = serde_json::from_slice(
             &fs::read(events.parent().unwrap().join("yield-paused.json")).unwrap(),
@@ -12101,17 +12221,11 @@ mod end_to_end {
         let length = fs::metadata(&events).unwrap().len();
         t.until(|| fs::metadata(&events).unwrap().len() > length);
         drop(held);
-        let out = t.cli(&cancel, "report-only");
-        assert!(
-            out.status.success(),
-            "{}",
-            String::from_utf8_lossy(&out.stderr)
-        );
+        let cancelled = cancel_when_state_ready();
         assert_eq!(
-            serde_json::from_slice::<Value>(&out.stdout).unwrap()["outcome"],
+            cancelled["outcome"],
             "cancelled",
-            "{}",
-            String::from_utf8_lossy(&out.stdout)
+            "{cancelled}"
         );
         t.until(|| {
             proc_created(source["pid"].as_u64().unwrap() as u32) != source["pid_created"].as_u64()

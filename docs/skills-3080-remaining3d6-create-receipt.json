@@ -1,0 +1,6 @@
+{
+  "exit": 0,
+  "timed_out": false,
+  "stdout": "{\"created_files\":36,\"domain\":\"skills-3080-purpose-v1\",\"file_count\":36,\"general_access_granted\":false,\"manifest_sha256\":\"12d0b617a97c9a11eadc815628c55982442e828f4817fdf8a09e604b4ce9dc34\",\"operation\":\"CreateNew\",\"original_registry_recovered\":false,\"qualified\":true,\"request_sha256\":\"6f569c8f3ce8cc7b5015a7bcaebf5e7148c9866271fac3a995905ec79186e6c8\",\"source_commit\":\"d5c04f9dd0e5d90c286b013139ab37f2a0d76c50\",\"todo_id\":3080}\n",
+  "stderr": ""
+}

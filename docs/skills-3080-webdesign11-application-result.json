@@ -1,0 +1,287 @@
+{
+  "domain": "skills-3080-bounded-live-model-use-v1",
+  "job": "20261025-074042-todo-3080",
+  "actor": "same live parent assistant after actual qualified CLI stdout content, not another spawned model",
+  "case_origin": "synthetic acceptance scenarios for this requested Skills installation task; not real product requests or owner approvals",
+  "case_count": 11,
+  "positive_count": 11,
+  "negative_count": 11,
+  "cases": [
+    {
+      "name": "add-mouse-driven-orbit",
+      "positive": "400x200 CSS領域がleft100/top50、client(300,150)、DPR2。sizeを変えずleftだけ80へ移動する。",
+      "model_response": "最初は(0,0)、移動後は(0.1,0)。DPRを正規化に混ぜない。size監視だけでは位置変更が分からないのでlayout/scrollで矩形をdirtyにし、次の読取段階で更新する。zero矩形では更新を止める。",
+      "negative": "裏面をdrag/zoomで直接検査する商品viewerを作る。",
+      "negative_response": "この受動parallaxを操作controllerとして適用しない。対象の直接操作と遮蔽/zoomに合う既存controllerを確認する。",
+      "check": "座標/DPRと時間減衰の独立した数式確認。実描画・性能は対象で別確認。",
+      "consumed_instruction_sources": [
+        {
+          "index": 0,
+          "sha256": "fb7b10bcc4bf72f1d45f50e891ac3e136aedd7c6cc78f1f78f86cc7ca1c8a16f",
+          "bytes": 1714,
+          "captured_actual_response": 1
+        },
+        {
+          "index": 1,
+          "sha256": "9c1c4df0b81248ff23aa61a6644f7b63c309d3e3ead7a2fd763dd8527531f1e1",
+          "bytes": 2113,
+          "captured_actual_response": 1
+        }
+      ],
+      "actual_model_application_completed": true,
+      "automatic_text_assertion_used": false
+    },
+    {
+      "name": "add-shader-cursor-trail",
+      "positive": "navigator.gpuは存在するがadapter=null。別時点のimportがunmount後に解決し、本文とlinkは利用可能でなければならない。",
+      "model_response": "入口の存在で成功にしない。静的内容を残し、不適格時は重い読込を始めない。遅い完了は世代と生存条件を再確認し、終了したownerを再mountしない。device loss後も同じ条件で停止/破棄し、対象版の失敗通知が未確認ならその限界を残す。",
+      "negative": "一般的な2D cursor装飾に同じWebGPU SDKと固定graphを必須にする。",
+      "negative_response": "特定graph再現の依頼ではないためSDK/graphを強制しない。必要な表現と既存構成から選ぶ。",
+      "check": "世代/終了の抽象的な順序モデル。実SDK・adapter・GPU停止の成功とは区別。",
+      "consumed_instruction_sources": [
+        {
+          "index": 6,
+          "sha256": "cccec1ea030d8131fdf40e8627e9f494e2106b0777c43a7135381c064c518d03",
+          "bytes": 1605,
+          "captured_actual_response": 1
+        },
+        {
+          "index": 7,
+          "sha256": "541f9c659652681e7bb036aba522b91fae2bc3380f0f72b5efe177d7b24303ec",
+          "bytes": 2901,
+          "captured_actual_response": 1
+        }
+      ],
+      "actual_model_application_completed": true,
+      "automatic_text_assertion_used": false
+    },
+    {
+      "name": "agency-grid-layout-minimal",
+      "positive": "紹介用の構成案を、実際の長い日本語見出しとservice行、375px幅で検討する。",
+      "model_response": "実在する実績と行動を先に整理し、補助列を畳んでも読み順とservice linkを残す。大きい見出しと空きspanは画像案で比較し、極小文字や架空のclient logoを洗練の条件にしない。実装は同じ画像への回答後。",
+      "negative": "毎日使う設定formと数値tableを、この空白中心の美術方向へ置き換える。",
+      "negative_response": "対象の情報密度と業務導線を優先し、紹介用の構図を全体へ広げない。",
+      "check": "具体的な構成判断として適用。実UI変更/画像回答を捏造しない。",
+      "consumed_instruction_sources": [
+        {
+          "index": 13,
+          "sha256": "b00077d1177860638f8e603e29a88c54e8a26f9bd05d2fba945e8196f05a7b9a",
+          "bytes": 1397,
+          "captured_actual_response": 1
+        },
+        {
+          "index": 14,
+          "sha256": "5443a37958a7569d0fdf7f95a1ffadb3fdf6193f07dd063e892b10d45fc7277b",
+          "bytes": 1558,
+          "captured_actual_response": 1
+        }
+      ],
+      "actual_model_application_completed": true,
+      "automatic_text_assertion_used": false
+    },
+    {
+      "name": "ambient-section-particles",
+      "positive": "CSS幅400、高さ200と600の2section。80000px2に20粒の密度、上限100、DPR2。",
+      "model_response": "それぞれ20粒と60粒。DPRでは個数を増やさない。recycle/exit/settle/staticを別の終端にし、settleも上限内へ収める。復帰で新loopを足さず、時計を戻す。",
+      "negative": "見た目の浅い堆積を、物理衝突の正しさの受入に使う。",
+      "negative_response": "この装飾手順から物理シミュレーションの成功を導かない。",
+      "check": "面積比例/上限の数値確認と抽象的なloop所有。実renderer負荷は未検証。",
+      "consumed_instruction_sources": [
+        {
+          "index": 19,
+          "sha256": "28c5e3a5de3609696f504858c11967e8e031945d13f99dab951cfd0e2757c70b",
+          "bytes": 1615,
+          "captured_actual_response": 2
+        },
+        {
+          "index": 20,
+          "sha256": "438f6ae53c1d79069e55ec1bcb89d1f148fad1fc01a5e007bf6bc1b5cbc0a2af",
+          "bytes": 1764,
+          "captured_actual_response": 2
+        }
+      ],
+      "actual_model_application_completed": true,
+      "automatic_text_assertion_used": false
+    },
+    {
+      "name": "atmosphere-background",
+      "positive": "背景の光の幕だけを調整し、最明状態でも既存headlineとfocusを読めるようにする構成案。",
+      "model_response": "光帯の数/幅/集中点/合成を一つずつ比較する。静止で足りるならCSS等を選び、全面の明るさや無条件cyanに頼らない。本文・layoutを変えず静的fallbackを保つ。",
+      "negative": "背景の依頼を根拠に、copy・全layout・写真やbrandを再設計する。",
+      "negative_response": "対象を背景層へ限定し、未承認の全体変更や素材転用へ進まない。",
+      "check": "範囲と判読の比較計画。実pixel contrast/描画/性能の成功は未主張。",
+      "consumed_instruction_sources": [
+        {
+          "index": 25,
+          "sha256": "c58185e34806d6c1c207d09a6131a584af5551ec32e50b272aa423caf05f97cb",
+          "bytes": 1380,
+          "captured_actual_response": 2
+        },
+        {
+          "index": 26,
+          "sha256": "0dde9896f4c41e4ca75cf78003d2b2cfe9267b08e4b4928b84ed9674636494e5",
+          "bytes": 1415,
+          "captured_actual_response": 2
+        }
+      ],
+      "actual_model_application_completed": true,
+      "automatic_text_assertion_used": false
+    },
+    {
+      "name": "background-grid-webgl",
+      "positive": "装飾gridの周期1の移動を、正/負の速度と境界越えで検討する。",
+      "model_response": "phaseを[0,1)へ保つと-0.1は0.9、1.05は0.05。再配置はgeometry/spacing/camera/fadeと結び、数式だけで継ぎ目が消えたとしない。",
+      "negative": "正確な測定gridへ遠景fadeと周期移動を使う。",
+      "negative_response": "装飾用の退色/移動を計測の意味へ移さない。",
+      "check": "符号を含む周期の独立した不変条件。見た目の継ぎ目は実表示が必要。",
+      "consumed_instruction_sources": [
+        {
+          "index": 31,
+          "sha256": "54f15ce3a0b96731f006a08604e5802a4c637e3cf7360a4ef68add7e2248637d",
+          "bytes": 1368,
+          "captured_actual_response": 2
+        },
+        {
+          "index": 32,
+          "sha256": "be91290f1fb1f0332629717eecdebff8dda36337e04e48855814ee190ed128fc",
+          "bytes": 1415,
+          "captured_actual_response": 2
+        }
+      ],
+      "actual_model_application_completed": true,
+      "automatic_text_assertion_used": false
+    },
+    {
+      "name": "beam-glow-states",
+      "positive": "処理Aが成功し装飾はfade中。その間に再試行Bが始まり、Aの古い完了callbackが遅れて届く。",
+      "model_response": "業務成功Aはfade待ちで遅らせず、BのpendingはB自身の世代で表示する。古いAの装飾callbackをBの状態へ適用しない。busy/selected/current/pressedとfocusはroleと実状態へ結ぶ。",
+      "negative": "onDeactivateを業務完了や元ToDo全体の成功の証拠にする。",
+      "negative_response": "装飾callbackと実処理の完了条件を分ける。",
+      "check": "業務/装飾と世代の抽象的な順序確認。package1.3.0の実動作は未検証。",
+      "consumed_instruction_sources": [
+        {
+          "index": 37,
+          "sha256": "f6abeb65b7fc64df88c21fa3201828aae746c17328372359a5582e747859e765",
+          "bytes": 1696,
+          "captured_actual_response": 3
+        },
+        {
+          "index": 38,
+          "sha256": "baa66403e83b2ca8196aba7df43e52f82ee9dcf7c923344a328223a3ab6dc73d",
+          "bytes": 1856,
+          "captured_actual_response": 3
+        }
+      ],
+      "actual_model_application_completed": true,
+      "automatic_text_assertion_used": false
+    },
+    {
+      "name": "blue-cloudy-clean-modern",
+      "positive": "白いheadline/CTAが明るい雲と重なる構成案を比較する。",
+      "model_response": "青い背景だけでなく雲の最明状態も比較する。CTAの暗い面や光の位置を選択肢にし、静止・雲なしでも内容と操作を残す。白文字や細いfocusだけを品質保証にしない。",
+      "negative": "高密度の業務画面に方向と架空実績・logo列を丸ごと適用する。",
+      "negative_response": "その用途へ無断で広げず、実在する素材と必要な構成だけを扱う。",
+      "check": "具体的なcontrast比較の判断。実表示/画像回答/素材権利は別に確認。",
+      "consumed_instruction_sources": [
+        {
+          "index": 43,
+          "sha256": "b271aaf190a76f5b725db34447a1ddb60ca1d0d9b7cb0cf37b02c154cea46d4c",
+          "bytes": 1391,
+          "captured_actual_response": 3
+        },
+        {
+          "index": 44,
+          "sha256": "a4fef80f1e25039c69b4846be749cc2b6d8d3bb87709be870a33baac56b7f9d3",
+          "bytes": 1330,
+          "captured_actual_response": 3
+        }
+      ],
+      "actual_model_application_completed": true,
+      "automatic_text_assertion_used": false
+    },
+    {
+      "name": "blue-laser-clean-glass-layout",
+      "positive": "細いbeam/halo背景の上をtableとsticky navがscrollする構成案。",
+      "model_response": "core幅/halo量とglassの塗り/blurを分け、重なる最明状態でも文字とfocusを比較する。不透過の静的fallbackも用意し、背景だけの依頼を全type変更へ広げない。",
+      "negative": "装飾のlive dotやbeamのfadeだけで実稼働・処理成功を示す。",
+      "negative_response": "実dataと装飾を分け、観測のないlive/成功を作らない。",
+      "check": "重なりとscopeの判断。GPU停止/性能を実測したとはしない。",
+      "consumed_instruction_sources": [
+        {
+          "index": 49,
+          "sha256": "b1b6ebc47b1679cd02fe2cee76294e43a3cc9636a99ec494cf2d33d6c2a880b4",
+          "bytes": 1330,
+          "captured_actual_response": 3
+        },
+        {
+          "index": 50,
+          "sha256": "fd4bad453dd65d8bccb4afdb321f4f1c5fed852e25857b52c91bfb9218d6935d",
+          "bytes": 1363,
+          "captured_actual_response": 3
+        }
+      ],
+      "actual_model_application_completed": true,
+      "automatic_text_assertion_used": false
+    },
+    {
+      "name": "book-serif-index",
+      "positive": "長い日本語本文と欄外注・引用・章indexを、狭幅と拡大で読む構成案。",
+      "model_response": "本文/注釈/引用元のDOM順を保ち、見開きとsidebarを自然に畳む。引用への移動と戻りfocusを設計し、index現在位置を読了率と混同しない。textureや字詰めが判読を損なえば弱める。",
+      "negative": "装飾folioやactive markerから読了・引用の実在を作る。",
+      "negative_response": "実section/引用と対応しない情報を補わない。",
+      "check": "読む順/現在位置/引用の判断。font/texture権利や実組版は別。",
+      "consumed_instruction_sources": [
+        {
+          "index": 55,
+          "sha256": "f805af95e7cf9147cbf8c6c59aa8041b9c406e2fda8ce4f1e07c1d63fe6f572d",
+          "bytes": 1264,
+          "captured_actual_response": 4
+        },
+        {
+          "index": 56,
+          "sha256": "8b2f8fc9fd53ebe00fa08be526a26eab85b6b0de29f4698ab5bf9d6806b1f53e",
+          "bytes": 1345,
+          "captured_actual_response": 4
+        }
+      ],
+      "actual_model_application_completed": true,
+      "automatic_text_assertion_used": false
+    },
+    {
+      "name": "bright-green-tech-system-webgl",
+      "positive": "split構成の可視化案で実測dataがまだ無く、登録/処理/計測の状態を説明する。",
+      "model_response": "動くpercentageやliveを加えず、未計測を正確に示す。dataがある場合だけ単位・時点・観測範囲を付ける。緑以外の文字/形でも状態を区別し、静止表示を保つ。",
+      "negative": "緑のanimationや粒子を実worker稼働・進捗の証拠として表示する。",
+      "negative_response": "装飾と実状態を切り離し、未確認の成果を作らない。",
+      "check": "実状態と表現の判断。既存Console/UIの無承認変更は行わない。",
+      "consumed_instruction_sources": [
+        {
+          "index": 61,
+          "sha256": "9dfb83d60d8ef57064f03749e503e6f3dffe1efb1a6480a3fd0dffbc99acfab1",
+          "bytes": 1289,
+          "captured_actual_response": 4
+        },
+        {
+          "index": 62,
+          "sha256": "5ca9513980a29ef697ca1a3766440709abebadfa8fa62efbd4728244db4f8519",
+          "bytes": 1365,
+          "captured_actual_response": 4
+        }
+      ],
+      "actual_model_application_completed": true,
+      "automatic_text_assertion_used": false
+    }
+  ],
+  "instruction_read_method": "same-buffer content_utf8 immediately shown by actual consume CLI; saved response is evidence only, never a replacement permission",
+  "recorded_source_hashes_bound_to_actual_returned_files": true,
+  "unrelated_or_unknown_central_bodies_read": 0,
+  "real_product_UI_changes": 0,
+  "real_owner_image_approvals_invented": 0,
+  "real_questions_or_external_messages_for_fixtures": 0,
+  "upstream_source_script_execution": 0,
+  "renderer_GPU_or_third_party_SDK_success_claimed": false,
+  "new_model_or_metered_AI_API_calls": 0,
+  "whole16_complete": false,
+  "public_adoption_increment_not_yet_recorded": 0,
+  "recorded_at": "2026-10-25T14:58:17.8453810+00:00"
+}

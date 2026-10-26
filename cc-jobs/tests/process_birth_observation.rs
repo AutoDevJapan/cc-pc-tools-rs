@@ -15,6 +15,9 @@ struct Probe {
     mutations: AtomicUsize,
 }
 impl Runtime for Probe {
+    fn now(&self) -> String {
+        "2026-10-27T00:00:00+09:00".into()
+    }
     fn mono(&self) -> f64 {
         0.
     }
@@ -86,6 +89,125 @@ fn matching_or_unknown_observation_never_grants_a_mutation_handle() {
         assert!(ctx.is_ours_checked(&job(), "codex_pid").is_err());
         assert!(rt.kill_owned_tree(77, 100).is_err());
         assert_eq!(rt.mutations.load(Ordering::Relaxed), 0);
+    }
+}
+
+#[test]
+fn retention_snapshot_disproves_only_a_kernel_birth_after_a_valid_terminal_interval() {
+    let end = parse_iso("2026-10-26T00:00:00+09:00").unwrap();
+    let filetime = |epoch: f64| ((epoch + 11_644_473_600.) * 10_000_000.) as u64;
+    for (case, observed, status, finish, expected) in [
+        (
+            "reused",
+            Some(Some(filetime(end + 120.))),
+            "succeeded",
+            "2026-10-26T00:00:00+09:00",
+            false,
+        ),
+        (
+            "earlier",
+            Some(Some(filetime(end - 120.))),
+            "succeeded",
+            "2026-10-26T00:00:00+09:00",
+            true,
+        ),
+        (
+            "close",
+            Some(Some(filetime(end + 30.))),
+            "succeeded",
+            "2026-10-26T00:00:00+09:00",
+            true,
+        ),
+        (
+            "no-birth",
+            Some(Some(0)),
+            "succeeded",
+            "2026-10-26T00:00:00+09:00",
+            true,
+        ),
+        (
+            "missing",
+            Some(None),
+            "succeeded",
+            "2026-10-26T00:00:00+09:00",
+            true,
+        ),
+        (
+            "denied",
+            None,
+            "succeeded",
+            "2026-10-26T00:00:00+09:00",
+            true,
+        ),
+        (
+            "bad-end",
+            Some(Some(filetime(end + 120.))),
+            "succeeded",
+            "unknown",
+            true,
+        ),
+        (
+            "reversed",
+            Some(Some(filetime(end + 120.))),
+            "succeeded",
+            "2020-01-01T00:00:00Z",
+            true,
+        ),
+        (
+            "future",
+            Some(Some(filetime(end + 1_000_000_000.))),
+            "succeeded",
+            "2026-10-26T00:00:00+09:00",
+            true,
+        ),
+        (
+            "running",
+            Some(Some(filetime(end + 120.))),
+            "running",
+            "2026-10-26T00:00:00+09:00",
+            true,
+        ),
+        (
+            "queued",
+            Some(Some(filetime(end + 120.))),
+            "queued",
+            "2026-10-26T00:00:00+09:00",
+            true,
+        ),
+    ] {
+        let temp = tempfile::tempdir().unwrap();
+        let rt = probe(None, observed);
+        let ctx = context(temp.path(), rt.clone());
+        std::fs::create_dir(&ctx.jobs).unwrap();
+        let _lock = FileLock::try_acquire(&ctx.root.join("queue.lock")).unwrap();
+        let id = "20261026-000001-todo-1";
+        let dir = ctx.job_dir(id);
+        std::fs::create_dir(&dir).unwrap();
+        let record = json!({"id":id,"status":status,"created_at":"2026-10-25T00:00:00+09:00","finished_at":finish,"codex_pid":77});
+        let original = serde_json::to_vec(&record).unwrap();
+        std::fs::write(dir.join("job.json"), &original).unwrap();
+        let index = serde_json::to_vec(
+            &json!({"scan_complete":true,"scanned_at":ctx.rt.epoch(),"ids":[id]}),
+        )
+        .unwrap();
+        std::fs::write(ctx.jobs.join(".queue-index.json"), &index).unwrap();
+        assert_eq!(
+            ctx.active_job_ids_snapshot()
+                .unwrap()
+                .contains(&id.to_owned()),
+            expected,
+            "{case}"
+        );
+        assert_eq!(std::fs::read(dir.join("job.json")).unwrap(), original);
+        assert_eq!(
+            std::fs::read(ctx.jobs.join(".queue-index.json")).unwrap(),
+            index
+        );
+        assert!(ctx.is_ours_checked(&record, "codex_pid").is_err());
+        assert_eq!(rt.mutations.load(Ordering::Relaxed), 0);
+        if case == "reused" {
+            assert!(rt.observations.load(Ordering::Relaxed) > 0);
+        }
     }
 }
 

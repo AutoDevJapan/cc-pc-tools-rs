@@ -1,0 +1,6 @@
+{
+  "exit": 0,
+  "timed_out": false,
+  "stdout": "=== RUN   TestRemaining3D6ActualExplicitUse\n=== RUN   TestRemaining3D6ActualExplicitUse/leaves-finite-zero-limit-and-velocity\n=== RUN   TestRemaining3D6ActualExplicitUse/inspect-click-drag-cancel-and-preserved-pose\n=== RUN   TestRemaining3D6ActualExplicitUse/sky-weights-and-behind-camera\n=== RUN   TestRemaining3D6ActualExplicitUse/ocean-residual-and-floating-origin\n=== RUN   TestRemaining3D6ActualExplicitUse/underwater-world-field-and-phase-domain\n=== RUN   TestRemaining3D6ActualExplicitUse/scorecard-average-minimum-and-capture-scope\n--- PASS: TestRemaining3D6ActualExplicitUse (0.06s)\n    --- PASS: TestRemaining3D6ActualExplicitUse/leaves-finite-zero-limit-and-velocity (0.00s)\n    --- PASS: TestRemaining3D6ActualExplicitUse/inspect-click-drag-cancel-and-preserved-pose (0.00s)\n    --- PASS: TestRemaining3D6ActualExplicitUse/sky-weights-and-behind-camera (0.00s)\n    --- PASS: TestRemaining3D6ActualExplicitUse/ocean-residual-and-floating-origin (0.00s)\n    --- PASS: TestRemaining3D6ActualExplicitUse/underwater-world-field-and-phase-domain (0.00s)\n    --- PASS: TestRemaining3D6ActualExplicitUse/scorecard-average-minimum-and-capture-scope (0.00s)\nPASS\nok  \tcommand-line-arguments\t0.077s\n",
+  "stderr": ""
+}

@@ -1,0 +1,31 @@
+{
+  "domain": "official-ci3387-ci-fixture-correction-3894-v1",
+  "pull_request": 528,
+  "failed_head": "50a5e30e55cbf987a7a3424e719660d650a900d3",
+  "failed_run": 40239164583,
+  "failed_job": 121307058038,
+  "tested_source": "c4231656d20c8d07627c929672b07f0ec8e63302",
+  "tested_guard_tree": "2c6d38231ac9428c9fca47412b56381a56b9637e",
+  "causes": [
+    "Native journal fixture paths were not canonicalized when TEMP used an 8.3 alias. The same failure was reproduced locally before the correction.",
+    "The fallback native fixture inherited the intentionally non-ASCII archive subtest name as a parent directory name. A new process-owned ASCII anchor now separates archive validation from fixture placement."
+  ],
+  "corrections": [
+    "Canonicalize only the already newly created synthetic journal fixture directory; production path checks stay strict.",
+    "Formal CI uses one new synthetic ASCII anchor under its existing job TEMP. PC development may supply the existing safe-delete-owned test anchor.",
+    "Every live observation revalidates the original issuer fields, creation time and parent identity, and rejects legacy block states."
+  ],
+  "verification_environment": "Windows/amd64, existing LLVM-MinGW UCRT, actual 8.3 alias TEMP, no CC_3893_FIXTURE_ROOT override",
+  "checks": [
+    {"scope": "affected guard regressions and adapters", "race": true, "pass_events_including_subcases": 108, "exit": 0},
+    {"scope": "internal/officialci3893", "race": true, "pass_events_including_subcases": 103, "exit": 0},
+    {"scope": "go vet -p=2 . ./internal/officialci3893", "exit": 0}
+  ],
+  "old_ci_failure_preserved": true,
+  "new_formal_ci_verified": false,
+  "installed_update_performed": false,
+  "sdk_downloads": 0,
+  "sdk_preparations": 0,
+  "general_access_granted": false,
+  "original_registry_recovered": false
+}

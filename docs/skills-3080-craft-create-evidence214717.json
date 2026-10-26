@@ -1,0 +1,19 @@
+{
+  "central_file_reads_by_capture": 0,
+  "created_files": 7,
+  "created_targets": 1,
+  "creator_runtime_revision": "f30f9e763e25884fa48d1cce0cac22da1cebfb69",
+  "creator_runtime_sha256": "02c8cad70e44f2bc4cd4e5a70dfdaf581a7ee6896eb63449fe1606eb28f5b5be",
+  "exact_unmodified_invocation_sha256": "cb2f262d73da3719b814cbbfb747f2986cdddbef484d255c9c1618d80ce36e60",
+  "job": "20261026-175504-todo-3080",
+  "native_call_id": "call_183eb93d62314857ac45e22e1052655d",
+  "native_call_timestamp": "2026-10-26T11:34:08.198Z",
+  "new_adoptions": 0,
+  "original_CLI_stdout_sha256": "fa0c1b3ed55b2352fae6d884fabd349c41c4715b9ceba7bfe7e06ca11c9690ee",
+  "original_tool_blocks_sha256": "394669014706d6e2327a023eedf1751b0280cded82874ceded935ce75adb94fe",
+  "other_native_bodies_returned": false,
+  "prior_failed_exact_invocation_attempts": [],
+  "request_sha256": "902778e95aa634fd028f3dee0ae443dd79e8efbfa5d948f8c0ad5790d737df4f",
+  "successful_CreateNew_count": 1,
+  "thread_id": "01a16bab-c238-7293-953d-d0f447cf2c05"
+}

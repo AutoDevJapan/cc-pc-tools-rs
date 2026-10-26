@@ -1,0 +1,11 @@
+{
+  "input": "skills-3080-combat6-actual-bundle090101.json",
+  "input_sha256": "548cdc53769c0b94266eee4fa5d518a1877fd2c9832c5d1da1a833885589a0e8",
+  "method": "existing3048 checker; actual40 in-memory buffers",
+  "exit": 0,
+  "stdout": "PASS: 6 explicit skills; structure, descriptions, references, hashes, scenario pairs; in-memory bundle only; no deployment implied\n",
+  "stderr": "",
+  "new_flag_explained": true,
+  "central_file_reads_by_checker": 0,
+  "actual_GPU_tested": false
+}

@@ -363,6 +363,7 @@ type sixmileCohortIndex struct {
 	Workflow        int    `json:"workflow_primary_full_read"`
 	Masked          int    `json:"masked_workflow_primary"`
 	Metadata        int    `json:"metadata_only_primary"`
+	PrimaryPartial  int    `json:"partial_primary"`
 	Comparison      int    `json:"comparison_only_primary"`
 	NotRaw          int    `json:"primary_not_raw_full_read"`
 	NotCap          *bool  `json:"no_adoption_cap"`
@@ -383,6 +384,8 @@ type sixmileCohortIndex struct {
 		Paths           int    `json:"candidate_paths"`
 		Raw             int    `json:"raw_unmasked_primary_full_read"`
 		Workflow        int    `json:"workflow_primary_full_read"`
+		Metadata        int    `json:"metadata_only_primary"`
+		PrimaryPartial  int    `json:"partial_primary"`
 		Support         int    `json:"support"`
 		Saved           int    `json:"support_saved"`
 		Read            int    `json:"support_raw_unmasked_full_read"`
@@ -622,6 +625,10 @@ func TestHistoricalThreeCohortIndexPreservesItsReadingCategoriesAndBoundedSource
 type sixmileReadProjection struct {
 	Raw      int `json:"all_fulltext_primary_paths_including_partial_sources"`
 	Workflow int `json:"all_workflow_primary_paths_including_partial_sources"`
+	Design   struct {
+		Raw      int `json:"full_body_read"`
+		Workflow int `json:"workflow_body_read"`
+	} `json:"voltagent_design24_evaluation"`
 	Complete struct {
 		Read int `json:"case_insensitive_skill_named_paths"`
 	} `json:"full_source_body_read_coverage"`
@@ -677,7 +684,7 @@ func validateSixmileReadProjection(p sixmileReadProjection, index sixmileCohortI
 		return errors.New("sixmile read projection: next20 is missing or conflated with another cohort")
 	}
 	other := p.Complete.Read + p.Mizchi.Read + p.Mengto.Read
-	if p.Raw != other+index.Raw || p.Workflow != other+index.Workflow {
+	if p.Raw != other+index.Raw+p.Design.Raw || p.Workflow != other+index.Workflow+p.Design.Workflow {
 		return errors.New("sixmile read projection: all-source raw and workflow totals differ")
 	}
 	return nil

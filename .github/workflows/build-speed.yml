@@ -2,9 +2,9 @@ name: Build speed
 on:
   push:
     branches: [main]
-    paths: ['localai-web-rs/**', 'cc-jobs/**', 'cc-scheduler/**', 'cc-todo/**', 'cc-shepherd/**', 'cc-ask/**', 'cc-live/**', 'cc-local-llm/**', 'cc-chrome/**', 'cc-job-policy/**', 'cc-task-title/**', 'cc-redact/**', 'cc-gh-gate/**', 'cc-ocx-watchdog/**', 'cc-bookmark-queue/**', 'cc-channel-watch/**', 'chatgpt-web/**', 'cleanup-8h/**', 'tools/linux-runner-bridge/**', 'tools/product-ci/**', 'tools/test-scope/**', 'Cargo.toml', 'Cargo.lock', 'rust-toolchain', 'rust-toolchain.toml', '.cargo/**', '.github/workflows/build-speed.yml', '.config/nextest.toml']
+    paths: ['localai-web-rs/**', 'cc-jobs/**', 'cc-scheduler/**', 'cc-todo/**', 'cc-shepherd/**', 'cc-ask/**', 'cc-live/**', 'cc-local-llm/**', 'cc-chrome/**', 'cc-job-policy/**', 'cc-task-title/**', 'cc-redact/**', 'cc-gh-gate/**', 'cc-ocx-watchdog/**', 'cc-bookmark-queue/**', 'cc-channel-watch/**', 'chatgpt-web/**', 'cleanup-8h/**', 'safe-delete/**', 'tools/linux-runner-bridge/**', 'tools/product-ci/**', 'tools/test-scope/**', 'Cargo.toml', 'Cargo.lock', 'rust-toolchain', 'rust-toolchain.toml', '.cargo/**', '.github/workflows/build-speed.yml', '.config/nextest.toml']
   pull_request:
-    paths: ['localai-web-rs/**', 'cc-jobs/**', 'cc-scheduler/**', 'cc-todo/**', 'cc-shepherd/**', 'cc-ask/**', 'cc-live/**', 'cc-local-llm/**', 'cc-chrome/**', 'cc-job-policy/**', 'cc-task-title/**', 'cc-redact/**', 'cc-gh-gate/**', 'cc-ocx-watchdog/**', 'cc-bookmark-queue/**', 'cc-channel-watch/**', 'chatgpt-web/**', 'cleanup-8h/**', 'tools/linux-runner-bridge/**', 'tools/product-ci/**', 'tools/test-scope/**', 'Cargo.toml', 'Cargo.lock', 'rust-toolchain', 'rust-toolchain.toml', '.cargo/**', '.github/workflows/build-speed.yml', '.config/nextest.toml']
+    paths: ['localai-web-rs/**', 'cc-jobs/**', 'cc-scheduler/**', 'cc-todo/**', 'cc-shepherd/**', 'cc-ask/**', 'cc-live/**', 'cc-local-llm/**', 'cc-chrome/**', 'cc-job-policy/**', 'cc-task-title/**', 'cc-redact/**', 'cc-gh-gate/**', 'cc-ocx-watchdog/**', 'cc-bookmark-queue/**', 'cc-channel-watch/**', 'chatgpt-web/**', 'cleanup-8h/**', 'safe-delete/**', 'tools/linux-runner-bridge/**', 'tools/product-ci/**', 'tools/test-scope/**', 'Cargo.toml', 'Cargo.lock', 'rust-toolchain', 'rust-toolchain.toml', '.cargo/**', '.github/workflows/build-speed.yml', '.config/nextest.toml']
 # Superseded PR heads need no second verification; preserve every main run.
 # New PR workflows must also isolate reruns and legacy workflow revisions.
 concurrency:
@@ -76,10 +76,12 @@ jobs:
           exit $LASTEXITCODE
   package-tools:
     # Only this finite repair needs downloadable PC binaries; do not grow storage on every PR.
-    if: github.event_name == 'pull_request' && (github.event.pull_request.head.ref == 'fix/todo1139-timed-retry' || github.event.pull_request.head.ref == 'fix/console-todo-capacity-1460' || github.event.pull_request.head.ref == 'fix/question-state-capacity-2444') && github.event.pull_request.head.repo.full_name == github.repository
+    if: github.event_name == 'pull_request' && (github.event.pull_request.head.ref == 'fix/todo1139-timed-retry' || github.event.pull_request.head.ref == 'fix/console-todo-capacity-1460' || github.event.pull_request.head.ref == 'fix/question-state-capacity-2444' || github.event.pull_request.head.ref == 'scheduler/todo-3255-unstarted-fallback') && github.event.pull_request.head.repo.full_name == github.repository
     needs: cc-jobs
     runs-on: [self-hosted, Windows, X64, cc-pc-tools-windows]
     timeout-minutes: 90
+    env:
+      PACKAGE_UNSTARTED_REVIEW: ${{ github.event.pull_request.head.ref == 'scheduler/todo-3255-unstarted-fallback' }}
     steps:
       - name: Admit current Windows source before checkout
         env:
@@ -96,7 +98,16 @@ jobs:
           persist-credentials: false
       - uses: ilammy/msvc-dev-cmd@0b201ec74fa43914dc39ae48a89fd1d8cb592756 # v1
         if: runner.os == 'Windows'
-      - run: cargo build --locked --release --target-dir target -p cc-todo -p cc-jobs -p cc-scheduler -p cc-ask -p localai-web-rs --bins
+      - name: Build only the requested distribution tools
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $packages = @('cc-todo', 'cc-jobs', 'cc-scheduler', 'cc-ask', 'localai-web-rs')
+          if ($env:PACKAGE_UNSTARTED_REVIEW -eq 'true') { $packages = @('cc-jobs', 'cc-scheduler') }
+          $packageArgs = @()
+          foreach ($name in $packages) { $packageArgs += @('-p', $name) }
+          & cargo build --locked --release --target-dir target @packageArgs --bins
+          exit $LASTEXITCODE
       - name: Record the exact checked-out source and binary hashes
         shell: pwsh
         run: |
@@ -105,22 +116,21 @@ jobs:
           if ($LASTEXITCODE -ne 0 -or $revision -ne '${{ github.event.pull_request.head.sha || github.sha }}') { throw 'Checked-out source differs from the fixed source revision' }
           $tree = git rev-parse 'HEAD^{tree}'
           if ($LASTEXITCODE -ne 0 -or $tree -notmatch '^[0-9a-f]{40}$') { throw 'Source tree is unavailable' }
-          $files = foreach ($name in @('todo.exe', 'codex_jobs.exe', 'scheduler.exe', 'discord_ask.exe', 'localai-web-rs.exe')) {
+          $names = @('todo.exe', 'codex_jobs.exe', 'scheduler.exe', 'discord_ask.exe', 'localai-web-rs.exe')
+          if ($env:PACKAGE_UNSTARTED_REVIEW -eq 'true') { $names = @('codex_jobs.exe', 'scheduler.exe') }
+          $package = "target/release/pc-tool-package-$env:GITHUB_RUN_ID-$env:GITHUB_RUN_ATTEMPT"
+          New-Item -ItemType Directory -Path $package | Out-Null
+          $files = foreach ($name in $names) {
             $path = Join-Path 'target/release' $name
             $file = Get-Item -LiteralPath $path
+            Copy-Item -LiteralPath $path -Destination (Join-Path $package $name)
             @{ name = $name; bytes = $file.Length; sha256 = (Get-FileHash -LiteralPath $path -Algorithm SHA256).Hash }
           }
           @{ revision = $revision; tree = $tree; run_id = $env:GITHUB_RUN_ID; files = @($files) } |
-            ConvertTo-Json -Depth 5 | Set-Content -LiteralPath target/release/tools-manifest.json -Encoding utf8
+            ConvertTo-Json -Depth 5 | Set-Content -LiteralPath (Join-Path $package 'tools-manifest.json') -Encoding utf8
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
           name: windows-tools-${{ github.event.pull_request.head.sha || github.sha }}
           retention-days: 1
           if-no-files-found: error
-          path: |
-            target/release/todo.exe
-            target/release/codex_jobs.exe
-            target/release/scheduler.exe
-            target/release/discord_ask.exe
-            target/release/localai-web-rs.exe
-            target/release/tools-manifest.json
+          path: target/release/pc-tool-package-${{ github.run_id }}-${{ github.run_attempt }}/

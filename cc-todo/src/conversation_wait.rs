@@ -7,7 +7,7 @@ use sha2::{Digest, Sha256};
 use std::{fs, io::Read, path::Path};
 
 mod continued;
-pub use continued::deliver;
+pub use continued::{deliver, deliver_preserving_wait};
 
 const MAX_BYTES: u64 = 1024 * 1024;
 const QUESTION: &str = "discord-conversation-question-v1";
@@ -1158,7 +1158,13 @@ pub fn answer(
     } else {
         answered_note(row, &wait)?
     };
-    clear(db, row, at)?;
+    let delivered_instruction =
+        continued::preserved_answer_instruction(row, id, &wait, &answer, &sha, at)?;
+    let retry_view = delivered_instruction
+        .as_ref()
+        .and_then(|_| continued::retry_wait_view(row, at));
+    let retry_pending = retry_view.is_some();
+    clear(db, retry_view.as_ref().unwrap_or(row), at)?;
     let owner = owner_record(paths, row)?;
     // No worker id at all: nothing can be taken over, so the answer is stored
     // for the first launch. A recorded but unreadable owner keeps the note-only
@@ -1196,10 +1202,16 @@ pub fn answer(
         // Only the incoming note is producer-formatted reply history. Do not
         // scan or rewrite earlier owner instructions, which can quote markers.
         let latest_note = continued::latest_blocks_only(&note);
-        let instruction = format!(
-            "{}\n元ToDo {id}の質問への本人回答を正規経路で適用しました。次の私的参照から回答原文と元質問・判断範囲を読み、元の履行を続けてください。同じ判断を再質問しないでください。\n{latest_note}",
-            text(&row["scheduler"], "owner_instruction")
-        );
+        let instruction = if let Some(delivered) = delivered_instruction {
+            format!(
+                "{delivered}\n元ToDo {id}の同じ質問への本人回答を正規経路で適用しました。保存済みの全文を一度だけ引き継ぎ、元の履行を続けてください。"
+            )
+        } else {
+            format!(
+                "{}\n元ToDo {id}の質問への本人回答を正規経路で適用しました。次の私的参照から回答原文と元質問・判断範囲を読み、元の履行を続けてください。同じ判断を再質問しないでください。\n{latest_note}",
+                text(&row["scheduler"], "owner_instruction")
+            )
+        };
         // The note keeps every version of an edited reply as history; the
         // prompt carries only the newest block of each reply.
         if instruction.len() as u64 > MAX_BYTES {
@@ -1243,7 +1255,7 @@ pub fn answer(
     } else {
         row.as_object_mut().unwrap().remove("note");
     }
-    row["status"] = json!("todo");
+    row["status"] = json!(if retry_pending { "wait" } else { "todo" });
     row["updated"] = json!(applied_at);
     if let Some(instruction) = resume_instruction {
         // A new answer supersedes any earlier session proof, whichever way this
@@ -1267,7 +1279,7 @@ pub fn answer(
         text(&wait, "question_receipt_sha256"),
         true,
         true,
-        true,
+        !retry_pending,
     ))
 }
 

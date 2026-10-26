@@ -1,0 +1,121 @@
+{
+  "checked_at": "2026-10-25T19:56:32.3952070+00:00",
+  "method": "fresh installed Codex app-server initialize + skills/list forceReload",
+  "model_called": false,
+  "label": "installed",
+  "targets": 14,
+  "total_discovered_metadata": 401,
+  "found_count": 14,
+  "parse_error_count": 0,
+  "notification_count": 2,
+  "same_names_other_paths": 0,
+  "found": [
+    {
+      "name": "build-threejs-scroll-worlds",
+      "selected_central_path": true,
+      "enabled_present": true,
+      "enabled": true,
+      "description_matches": true
+    },
+    {
+      "name": "build-wireframe-scan-reveal",
+      "selected_central_path": true,
+      "enabled_present": true,
+      "enabled": true,
+      "description_matches": true
+    },
+    {
+      "name": "clean-minimal-beige-light-mode",
+      "selected_central_path": true,
+      "enabled_present": true,
+      "enabled": true,
+      "description_matches": true
+    },
+    {
+      "name": "cobejs",
+      "selected_central_path": true,
+      "enabled_present": true,
+      "enabled": true,
+      "description_matches": true
+    },
+    {
+      "name": "corner-lasers",
+      "selected_central_path": true,
+      "enabled_present": true,
+      "enabled": true,
+      "description_matches": true
+    },
+    {
+      "name": "dark-blue-contrasting-clean",
+      "selected_central_path": true,
+      "enabled_present": true,
+      "enabled": true,
+      "description_matches": true
+    },
+    {
+      "name": "dark-glass-clean-layout",
+      "selected_central_path": true,
+      "enabled_present": true,
+      "enabled": true,
+      "description_matches": true
+    },
+    {
+      "name": "dither-background",
+      "selected_central_path": true,
+      "enabled_present": true,
+      "enabled": true,
+      "description_matches": true
+    },
+    {
+      "name": "dither-laser-dark-mode",
+      "selected_central_path": true,
+      "enabled_present": true,
+      "enabled": true,
+      "description_matches": true
+    },
+    {
+      "name": "documentary-brutalist-agency",
+      "selected_central_path": true,
+      "enabled_present": true,
+      "enabled": true,
+      "description_matches": true
+    },
+    {
+      "name": "editorial-portfolio-chapters",
+      "selected_central_path": true,
+      "enabled_present": true,
+      "enabled": true,
+      "description_matches": true
+    },
+    {
+      "name": "editorial-service-booking",
+      "selected_central_path": true,
+      "enabled_present": true,
+      "enabled": true,
+      "description_matches": true
+    },
+    {
+      "name": "falling-leaves",
+      "selected_central_path": true,
+      "enabled_present": true,
+      "enabled": true,
+      "description_matches": true
+    },
+    {
+      "name": "fire-paper-loader",
+      "selected_central_path": true,
+      "enabled_present": true,
+      "enabled": true,
+      "description_matches": true
+    }
+  ],
+  "process_tree_exit_confirmed": true,
+  "pending_stdout_read_drained": true,
+  "failure": null,
+  "diagnostic": {
+    "scan_traversal_limit_count": 2,
+    "context_budget_marker_count": 0,
+    "raw_stderr_not_saved": true
+  },
+  "limit": "Only requested target metadata is retained. No full private catalog or unknown body text is saved. No model turn or context-budget proof; discovery-internal file parsing is not a semantic body review."
+}

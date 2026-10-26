@@ -1,0 +1,406 @@
+{
+  "targets": [
+    {
+      "name": "add-mouse-driven-orbit",
+      "new": true,
+      "before_sha256": "absent",
+      "positive": "埋め込んだ3D heroでpointerを動かすと主役が見出しから滑り、復帰時に構図が跳ぶ。",
+      "negative": "製品の裏面を自由に検査する回転・zoomや、ゲームcameraの遮蔽解決だけを実装する。",
+      "files": [
+        {
+          "path": "SKILL.md",
+          "sha256": "fb7b10bcc4bf72f1d45f50e891ac3e136aedd7c6cc78f1f78f86cc7ca1c8a16f"
+        },
+        {
+          "path": "references/guide.md",
+          "sha256": "9c1c4df0b81248ff23aa61a6644f7b63c309d3e3ead7a2fd763dd8527531f1e1"
+        },
+        {
+          "path": "references/upstream-original.txt",
+          "sha256": "1f470eb9a8086d1083d20d9c8bc3558ad9d6e4207d9e5bedb3560d7ddac494d7"
+        },
+        {
+          "path": "references/LICENSE.txt",
+          "sha256": "b2a071ba22fefd803f4e9d1f5c777dd79c62d191695586a1a73fd4d0ebd051c6"
+        },
+        {
+          "path": "references/source.json",
+          "sha256": "a1e1a5502c8076bceaa88c993a544007179246f16f2d5f9a822964396de6f6f6"
+        },
+        {
+          "path": "references/sources.md",
+          "sha256": "15d772415d60dcc8d13109566d63534c2fa389d3441053e3ed0fa8c0788b0e88"
+        }
+      ],
+      "sources": [
+        "https://github.com/MengTo/Skills/blob/398cd41c86ba42fbb30e944ae507f463648f08b7/agent-skills/web-design/add-mouse-driven-orbit/SKILL.md"
+      ]
+    },
+    {
+      "name": "add-shader-cursor-trail",
+      "new": true,
+      "before_sha256": "absent",
+      "positive": "SSRのheroが非対応端末にも重いshaderを読み込み、画面外でもGPU処理を続ける。",
+      "negative": "一般的なCSS hoverへ特定のshader graphとpackageを必須にする。",
+      "files": [
+        {
+          "path": "SKILL.md",
+          "sha256": "cccec1ea030d8131fdf40e8627e9f494e2106b0777c43a7135381c064c518d03"
+        },
+        {
+          "path": "references/guide.md",
+          "sha256": "541f9c659652681e7bb036aba522b91fae2bc3380f0f72b5efe177d7b24303ec"
+        },
+        {
+          "path": "references/upstream-original.txt",
+          "sha256": "b2d32575e2a433145200c3f466d46aa4692f726efbfe32db39c0524caa7e107d"
+        },
+        {
+          "path": "references/LICENSE.txt",
+          "sha256": "b2a071ba22fefd803f4e9d1f5c777dd79c62d191695586a1a73fd4d0ebd051c6"
+        },
+        {
+          "path": "references/upstream-support-1.txt",
+          "sha256": "614796c67477d5b3cab564023ba7284c92fc0ad1f9acaa6eed3c368666324b91"
+        },
+        {
+          "path": "references/source.json",
+          "sha256": "b9f0c390a3554798b2cb8cf090a49ae6b9cec95a64a9e451b5b71b1f41a3c15c"
+        },
+        {
+          "path": "references/sources.md",
+          "sha256": "170f2ded5384259c95ccd182539f32a4d29809d42737ef345e00712c17c356e4"
+        }
+      ],
+      "sources": [
+        "https://github.com/MengTo/Skills/blob/398cd41c86ba42fbb30e944ae507f463648f08b7/agent-skills/web-design/add-shader-cursor-trail/SKILL.md"
+      ]
+    },
+    {
+      "name": "agency-grid-layout-minimal",
+      "new": true,
+      "before_sha256": "absent",
+      "positive": "建築事務所のサイトで、見出し・補助列・大きい写真の比重を画像案として比べる。",
+      "negative": "密な管理画面を、本人の方向確認なしで余白中心のagencyサイトへ作り替える。",
+      "files": [
+        {
+          "path": "SKILL.md",
+          "sha256": "b00077d1177860638f8e603e29a88c54e8a26f9bd05d2fba945e8196f05a7b9a"
+        },
+        {
+          "path": "references/guide.md",
+          "sha256": "5443a37958a7569d0fdf7f95a1ffadb3fdf6193f07dd063e892b10d45fc7277b"
+        },
+        {
+          "path": "references/upstream-original.txt",
+          "sha256": "1787eba87fef34cf72219d0016de89910e19e383f6b01d250a11e9490a93018e"
+        },
+        {
+          "path": "references/LICENSE.txt",
+          "sha256": "b2a071ba22fefd803f4e9d1f5c777dd79c62d191695586a1a73fd4d0ebd051c6"
+        },
+        {
+          "path": "references/source.json",
+          "sha256": "5faf2ed0076b162f6f01f41ea19b5eea14bc6bdb27927813a03bac1181bac046"
+        },
+        {
+          "path": "references/sources.md",
+          "sha256": "12e4eee50c7a113004a90733c2d184a0053055b8c89ebd4f783a58c400866463"
+        }
+      ],
+      "sources": [
+        "https://github.com/MengTo/Skills/blob/398cd41c86ba42fbb30e944ae507f463648f08b7/agent-skills/web-design/agency-grid-layout-minimal/SKILL.md"
+      ]
+    },
+    {
+      "name": "ambient-section-particles",
+      "new": true,
+      "before_sha256": "absent",
+      "positive": "section外でも粒子が動き、再表示するたびに粒子数やframe loopが増える。",
+      "negative": "本格的な粒子の衝突物理や3Dの葉の材質を、この装飾layerだけで完成扱いする。",
+      "files": [
+        {
+          "path": "SKILL.md",
+          "sha256": "28c5e3a5de3609696f504858c11967e8e031945d13f99dab951cfd0e2757c70b"
+        },
+        {
+          "path": "references/guide.md",
+          "sha256": "438f6ae53c1d79069e55ec1bcb89d1f148fad1fc01a5e007bf6bc1b5cbc0a2af"
+        },
+        {
+          "path": "references/upstream-original.txt",
+          "sha256": "b6fcbde40049c0bae9a8b0e5a9249717b828bb7d64b816fd4ac1d29c5318bb48"
+        },
+        {
+          "path": "references/LICENSE.txt",
+          "sha256": "b2a071ba22fefd803f4e9d1f5c777dd79c62d191695586a1a73fd4d0ebd051c6"
+        },
+        {
+          "path": "references/source.json",
+          "sha256": "e56d328fe22c527a4a2528f9bd9728c0c92c3a1a0e9eb08dcc1919e00c8a101d"
+        },
+        {
+          "path": "references/sources.md",
+          "sha256": "2b6b37462d4db0a8fcb77fe745beeef861e6342e35199d13cfc1ec42333f8454"
+        }
+      ],
+      "sources": [
+        "https://github.com/MengTo/Skills/blob/398cd41c86ba42fbb30e944ae507f463648f08b7/agent-skills/web-design/ambient-section-particles/SKILL.md"
+      ]
+    },
+    {
+      "name": "atmosphere-background",
+      "new": true,
+      "before_sha256": "absent",
+      "positive": "光の幕が全面同じ明るさになり、見出しよりも背景が目立つ。",
+      "negative": "背景層の手順だけを根拠に、ページ全体のlayoutとtypeを一括再設計する。",
+      "files": [
+        {
+          "path": "SKILL.md",
+          "sha256": "c58185e34806d6c1c207d09a6131a584af5551ec32e50b272aa423caf05f97cb"
+        },
+        {
+          "path": "references/guide.md",
+          "sha256": "0dde9896f4c41e4ca75cf78003d2b2cfe9267b08e4b4928b84ed9674636494e5"
+        },
+        {
+          "path": "references/upstream-original.txt",
+          "sha256": "ded4a155cf5676f2aab3f1873634e08766ad31aa6ae1107e5a29c114dc1cf213"
+        },
+        {
+          "path": "references/LICENSE.txt",
+          "sha256": "b2a071ba22fefd803f4e9d1f5c777dd79c62d191695586a1a73fd4d0ebd051c6"
+        },
+        {
+          "path": "references/source.json",
+          "sha256": "772138f27701190ff3bccd0bb55ad7cb0061d2a27cd462b4d0335a2590446cf0"
+        },
+        {
+          "path": "references/sources.md",
+          "sha256": "39b855a17e4c383442f3608704102b5db53ec93b21afdadf1aadbebea9a86c3c"
+        }
+      ],
+      "sources": [
+        "https://github.com/MengTo/Skills/blob/398cd41c86ba42fbb30e944ae507f463648f08b7/agent-skills/web-design/atmosphere-background/SKILL.md"
+      ]
+    },
+    {
+      "name": "background-grid-webgl",
+      "new": true,
+      "before_sha256": "absent",
+      "positive": "背景gridの遠景が文字と競合し、周期移動の継ぎ目が見える。",
+      "negative": "正確な座標入力や科学的な計測gridを、装飾用の遠景gridへ置き換える。",
+      "files": [
+        {
+          "path": "SKILL.md",
+          "sha256": "54f15ce3a0b96731f006a08604e5802a4c637e3cf7360a4ef68add7e2248637d"
+        },
+        {
+          "path": "references/guide.md",
+          "sha256": "be91290f1fb1f0332629717eecdebff8dda36337e04e48855814ee190ed128fc"
+        },
+        {
+          "path": "references/upstream-original.txt",
+          "sha256": "07c155855b67a96cbb4d51d82696fe9550c2670a13a30fb6b71506d5c0685457"
+        },
+        {
+          "path": "references/LICENSE.txt",
+          "sha256": "b2a071ba22fefd803f4e9d1f5c777dd79c62d191695586a1a73fd4d0ebd051c6"
+        },
+        {
+          "path": "references/source.json",
+          "sha256": "c534276006c272b5d0ba5958459af2e47bfcd878cf5f3599d49d88026c2c6baf"
+        },
+        {
+          "path": "references/sources.md",
+          "sha256": "389b3d8e65d274b6178683cffdff7a35b8a888737f0917bf415359e798ac563e"
+        }
+      ],
+      "sources": [
+        "https://github.com/MengTo/Skills/blob/398cd41c86ba42fbb30e944ae507f463648f08b7/agent-skills/web-design/background-grid-webgl/SKILL.md"
+      ]
+    },
+    {
+      "name": "beam-glow-states",
+      "new": true,
+      "before_sha256": "absent",
+      "positive": "処理中と選択の発光が競合し、取消後も光だけが動き続ける。",
+      "negative": "装飾のfade-out callbackが来るまで、処理の成功確定や取消を待たせる。",
+      "files": [
+        {
+          "path": "SKILL.md",
+          "sha256": "f6abeb65b7fc64df88c21fa3201828aae746c17328372359a5582e747859e765"
+        },
+        {
+          "path": "references/guide.md",
+          "sha256": "baa66403e83b2ca8196aba7df43e52f82ee9dcf7c923344a328223a3ab6dc73d"
+        },
+        {
+          "path": "references/upstream-original.txt",
+          "sha256": "64f45d22ad8288e2716fddc4375df9f34e9655a26e3cbb3d1ed6da3fd25d3f49"
+        },
+        {
+          "path": "references/LICENSE.txt",
+          "sha256": "b2a071ba22fefd803f4e9d1f5c777dd79c62d191695586a1a73fd4d0ebd051c6"
+        },
+        {
+          "path": "references/source.json",
+          "sha256": "83e4a20fb896bdc512249ea69437000cd5379d81527f6ea6c84263c565c0a9a6"
+        },
+        {
+          "path": "references/sources.md",
+          "sha256": "d314044700c6c5cf9cd8ebff3d8309b93cbb752ec698166004100344ac784ba2"
+        }
+      ],
+      "sources": [
+        "https://github.com/MengTo/Skills/blob/398cd41c86ba42fbb30e944ae507f463648f08b7/agent-skills/web-design/beam-glow-states/SKILL.md"
+      ]
+    },
+    {
+      "name": "blue-cloudy-clean-modern",
+      "new": true,
+      "before_sha256": "absent",
+      "positive": "空色heroの明るい雲の上で、白いCTAや見出しが読めなくなる。",
+      "negative": "情報密度の高い業務画面へ、本人の方向確認なしで雲と大きい余白を広げる。",
+      "files": [
+        {
+          "path": "SKILL.md",
+          "sha256": "b271aaf190a76f5b725db34447a1ddb60ca1d0d9b7cb0cf37b02c154cea46d4c"
+        },
+        {
+          "path": "references/guide.md",
+          "sha256": "a4fef80f1e25039c69b4846be749cc2b6d8d3bb87709be870a33baac56b7f9d3"
+        },
+        {
+          "path": "references/upstream-original.txt",
+          "sha256": "212618080012349f13e1c8819048e62e9c6193b8b2d2a5e33d219ce487c5e305"
+        },
+        {
+          "path": "references/LICENSE.txt",
+          "sha256": "b2a071ba22fefd803f4e9d1f5c777dd79c62d191695586a1a73fd4d0ebd051c6"
+        },
+        {
+          "path": "references/source.json",
+          "sha256": "a81b063297a4c3a5f4231d15bb87884075f0d197b1744029e9be39f69ac96e61"
+        },
+        {
+          "path": "references/sources.md",
+          "sha256": "5f6bf7b70df8a759c0e7f6fee5e8f7290539735ebbf3667ff6b635e568a05444"
+        }
+      ],
+      "sources": [
+        "https://github.com/MengTo/Skills/blob/398cd41c86ba42fbb30e944ae507f463648f08b7/agent-skills/web-design/blue-cloudy-clean-modern/SKILL.md"
+      ]
+    },
+    {
+      "name": "blue-laser-clean-glass-layout",
+      "new": true,
+      "before_sha256": "absent",
+      "positive": "laserのhaloとglassのblurが重なり、表の文字やfocusが霧に埋もれる。",
+      "negative": "単体laserの依頼を、navや表、sidebarまで新設する全体変更へ広げる。",
+      "files": [
+        {
+          "path": "SKILL.md",
+          "sha256": "b1b6ebc47b1679cd02fe2cee76294e43a3cc9636a99ec494cf2d33d6c2a880b4"
+        },
+        {
+          "path": "references/guide.md",
+          "sha256": "fd4bad453dd65d8bccb4afdb321f4f1c5fed852e25857b52c91bfb9218d6935d"
+        },
+        {
+          "path": "references/upstream-original.txt",
+          "sha256": "63cbabae394a24c1b8c4cc98dafc3bfe8c045652b20713f8a3d8edc1061530e0"
+        },
+        {
+          "path": "references/LICENSE.txt",
+          "sha256": "b2a071ba22fefd803f4e9d1f5c777dd79c62d191695586a1a73fd4d0ebd051c6"
+        },
+        {
+          "path": "references/source.json",
+          "sha256": "3839d4b0f2a22490d7caf1ac2929e01725a04970ca6db8ed8160fbdf68741db9"
+        },
+        {
+          "path": "references/sources.md",
+          "sha256": "3ee32d04c88fc4d56b5b664111cb799813deb3627e25099fdf23dff00d9e3f50"
+        }
+      ],
+      "sources": [
+        "https://github.com/MengTo/Skills/blob/398cd41c86ba42fbb30e944ae507f463648f08b7/agent-skills/web-design/blue-laser-clean-glass-layout/SKILL.md"
+      ]
+    },
+    {
+      "name": "book-serif-index",
+      "new": true,
+      "before_sha256": "absent",
+      "positive": "資料を読む画面で、紙の表情と章の索引を保ちながら長文や注釈を読みやすくする。",
+      "negative": "装飾的な見開きや古紙の汚れで、実際の本文・引用元・読み順を分かりにくくする。",
+      "files": [
+        {
+          "path": "SKILL.md",
+          "sha256": "f805af95e7cf9147cbf8c6c59aa8041b9c406e2fda8ce4f1e07c1d63fe6f572d"
+        },
+        {
+          "path": "references/guide.md",
+          "sha256": "8b2f8fc9fd53ebe00fa08be526a26eab85b6b0de29f4698ab5bf9d6806b1f53e"
+        },
+        {
+          "path": "references/upstream-original.txt",
+          "sha256": "d53a95a47bb0fc7b047445a15e59a2b4bb126d6c8d9caac163378b19bf3948be"
+        },
+        {
+          "path": "references/LICENSE.txt",
+          "sha256": "b2a071ba22fefd803f4e9d1f5c777dd79c62d191695586a1a73fd4d0ebd051c6"
+        },
+        {
+          "path": "references/source.json",
+          "sha256": "f15178279ab10f3aa361fc54c3f31df3ab80f328090de67c167482be708c7ddb"
+        },
+        {
+          "path": "references/sources.md",
+          "sha256": "2eb42fceb57b58a724875fbbce8dc1adc05f8a1ac1f7adc8221509c89719cd4e"
+        }
+      ],
+      "sources": [
+        "https://github.com/MengTo/Skills/blob/398cd41c86ba42fbb30e944ae507f463648f08b7/agent-skills/web-design/book-serif-index/SKILL.md"
+      ]
+    },
+    {
+      "name": "bright-green-tech-system-webgl",
+      "new": true,
+      "before_sha256": "absent",
+      "positive": "説明と可視化が分離した技術画面で、実際の状態・操作とsignal色の役割を揃える。",
+      "negative": "装飾のlive dotやpercentageを、実稼働や計測の結果として捏造する。",
+      "files": [
+        {
+          "path": "SKILL.md",
+          "sha256": "9dfb83d60d8ef57064f03749e503e6f3dffe1efb1a6480a3fd0dffbc99acfab1"
+        },
+        {
+          "path": "references/guide.md",
+          "sha256": "5ca9513980a29ef697ca1a3766440709abebadfa8fa62efbd4728244db4f8519"
+        },
+        {
+          "path": "references/upstream-original.txt",
+          "sha256": "ba4cf84328189502dbd9c95f42bba68346d303f9b3f41cbc6c922f52fdec2fbf"
+        },
+        {
+          "path": "references/LICENSE.txt",
+          "sha256": "b2a071ba22fefd803f4e9d1f5c777dd79c62d191695586a1a73fd4d0ebd051c6"
+        },
+        {
+          "path": "references/source.json",
+          "sha256": "df6d2158af39f31883abab6c8beef15c3313c1480da0527046bc474b14f0a55f"
+        },
+        {
+          "path": "references/sources.md",
+          "sha256": "1697e42b0088c3e8542106b78008ca439a34b10c9c4f519cee40cc08d451ca32"
+        }
+      ],
+      "sources": [
+        "https://github.com/MengTo/Skills/blob/398cd41c86ba42fbb30e944ae507f463648f08b7/agent-skills/web-design/bright-green-tech-system-webgl/SKILL.md"
+      ]
+    }
+  ],
+  "root": "D:/CC/Skills",
+  "snapshot_definition": "At successful qualified consume; no claim of immutable filesystem state after handles closed."
+}

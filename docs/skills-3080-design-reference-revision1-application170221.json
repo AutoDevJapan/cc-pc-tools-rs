@@ -1,0 +1,23 @@
+{
+  "job": "20261026-170221-todo-3080",
+  "actual_current_metadata_index": 27,
+  "actual_current_metadata_SHA": "e0607f086fd394bc0399c99e4101cef48e56c509272741cde81dba029778d8f4",
+  "actual_current_metadata_bytes": 10097,
+  "misleading_unqualified_old_flag_removed": true,
+  "earlier_stage_is_explicit": true,
+  "original24_preservation_bytes": 691839,
+  "original_file_count": 24,
+  "originals_not_redacted_or_deleted": true,
+  "mask_scope_is_original_reader_not_file_redaction": "Case masked/unread fields describe the original model display/semantic reading. They do not mean the preserved original files were redacted or deleted. Read a needed case first, do not automatically load all originals, and keep the actual source/privacy/scope rules.",
+  "original_reader_state_not_promoted": true,
+  "before_metadata_history": "references/history/sources-before-revision1.json",
+  "before_metadata_bytes": 8896,
+  "qualified_current53_proof": "design-reference-revision53-current-proof170221.json",
+  "structure_PASS1": true,
+  "Must3930_actual_file_fixed": true,
+  "Suggestion1_actual_manifest_reconstruction_prepared": true,
+  "Suggestion2_current_file_and_guide_scope_disclosed": true,
+  "new_source_semantic_read_credit": 0,
+  "new_installed_count": 0,
+  "UI_implemented": false
+}

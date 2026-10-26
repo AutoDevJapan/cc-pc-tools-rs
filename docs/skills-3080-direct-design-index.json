@@ -12,6 +12,66 @@
       "sha256": "5728557c6eadf8e346a289445cfeda0541251b84f421c6cbc592d284b79a0035",
       "file": "skills-3080-rss-season-designs.json",
       "target_count": 2
+    },
+    {
+      "file": "skills-3080-four-designs.json",
+      "sha256": "2b757dc85534c7cfc007583e8524df9171c5d31b3ccbdaf4825ec6a524403cf6",
+      "target_count": 4
+    },
+    {
+      "file": "skills-3080-game6-designs.json",
+      "sha256": "a13525c510e92f10dd5d7bb5daf6e06f6f0096113bb45c1b23e2fdfae2ea7fe8",
+      "target_count": 6
+    },
+    {
+      "file": "skills-3080-utility8-designs.json",
+      "sha256": "96818107c2c604c5298aeb86c1c7b23ee1b23eb593fcb0f7e4489793701c2951",
+      "target_count": 8
+    },
+    {
+      "file": "skills-3080-material-camera8-designs.json",
+      "sha256": "8a9ced2e88f39f7f0c3b159e588eefd2d761fed84836028bac680f398de4b900",
+      "target_count": 8
+    },
+    {
+      "file": "skills-3080-remaining3d6-designs.json",
+      "sha256": "d2a44bbe5dbcdbf61c4b3d897c1dd9e8efdab6d715a2178b8bb54e2c8072f5d6",
+      "target_count": 6
+    },
+    {
+      "file": "skills-3080-webdesign11-designs.json",
+      "sha256": "275703bd7cefa93c6e0e18c87c1a2e1800503861870d0dc906b15f148059250c",
+      "target_count": 11
+    },
+    {
+      "file": "skills-3080-webdesign-next14-designs.json",
+      "sha256": "b7a11ebf3020ef5afaf75c921dcdc33f3b4174a9ee6c2492f615c486fef02410",
+      "target_count": 14
+    },
+    {
+      "file": "skills-3080-webdesign-next20-designs.json",
+      "sha256": "96452ee15a98b87d4fc31ed273fb7620b36aca82059e8e86d3520f2cd2095813",
+      "target_count": 20
+    },
+    {
+      "file": "skills-3080-design-reference-designs090101.json",
+      "sha256": "462436b68ee68609e0139654969681697f6b526876c8f11f4dee012701a606d7",
+      "target_count": 1
+    },
+    {
+      "file": "skills-3080-combat6-designs090101.json",
+      "sha256": "a65cbaf5b421874c2422b2f3b6abbe861fba6dedf5cec0af4adda5b302771ebd",
+      "target_count": 6
+    },
+    {
+      "file": "skills-3080-codex3-designs090101.json",
+      "sha256": "4b129b864db55045666eb20fb54774da44234cd28f044c795f748f2eb278216c",
+      "target_count": 3
+    },
+    {
+      "file": "skills-3080-craft-designs214717.json",
+      "sha256": "2613f893169141fd17579fa2b44dcb1620632baefa4d7c670043c2999cda7682",
+      "target_count": 1
     }
   ]
 }

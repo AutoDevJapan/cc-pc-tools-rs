@@ -8,7 +8,7 @@
   "entrypoints_expected": 177,
   "entrypoints_fulltext_read": 177,
   "entrypoints_unread": 0,
-  "installed": 2,
+  "installed": 87,
   "integrated": 2,
   "excluded": 0,
   "central_write": 22,
@@ -90,12 +90,18 @@
           "executed": false
         }
       ],
-      "installed_by_todo3080": false,
+      "installed_by_todo3080": true,
       "integrated_by_todo3080": false,
       "excluded_by_todo3080": false,
       "independent_review_complete": false,
       "source_notice_scope_correction": "全treeには別範囲のTHREE-LICENSE.txtもある。選択した手順文と未使用の第三者デモ/素材を分ける。",
-      "git_blob": "99f5f0fde214812e597b56671b529e7868d5e5ac"
+      "git_blob": "99f5f0fde214812e597b56671b529e7868d5e5ac",
+      "installation_before_this_delta": {
+        "installed_by_todo3080": false,
+        "baseline_commit": "c397910d3fc560ca61a31c6382494ac43c866852",
+        "historical_evaluation_sha256": "f849ee0bfe0925532a0f40bd58393a916c403103b940d3d05beb9e03568b3fc2"
+      },
+      "current_installation_evidence": "skills-3080-material-camera8-installation-evidence.json"
     },
     {
       "inventory_id": "github:fab88427bee2bdceb455b105d4cc67286c5137688358e999728494f258e7bd3a",
@@ -154,12 +160,18 @@
           "executed": false
         }
       ],
-      "installed_by_todo3080": false,
+      "installed_by_todo3080": true,
       "integrated_by_todo3080": false,
       "excluded_by_todo3080": false,
       "independent_review_complete": false,
       "source_notice_scope_correction": "全treeには別範囲のTHREE-LICENSE.txtもある。選択した手順文と未使用の第三者デモ/素材を分ける。",
-      "git_blob": "db90d0355b97254de7997fd295dd0f05ba62508b"
+      "git_blob": "db90d0355b97254de7997fd295dd0f05ba62508b",
+      "installation_before_this_delta": {
+        "installed_by_todo3080": false,
+        "baseline_commit": "d5c04f9dd0e5d90c286b013139ab37f2a0d76c50",
+        "historical_evaluation_sha256": "46d84980dec41c58f087967df59dc16171e2e2de79f51c3d7c9deb31de41d759"
+      },
+      "current_installation_evidence": "skills-3080-remaining3d6-installation-evidence.json"
     },
     {
       "inventory_id": "github:29a0ba0843498fe31de765752ffa07dfd7835d47f3ac062d641e41169e601167",
@@ -315,12 +327,18 @@
           "executed": false
         }
       ],
-      "installed_by_todo3080": false,
+      "installed_by_todo3080": true,
       "integrated_by_todo3080": false,
       "excluded_by_todo3080": false,
       "independent_review_complete": false,
       "source_notice_scope_correction": "全treeには別範囲のTHREE-LICENSE.txtもある。選択した手順文と未使用の第三者デモ/素材を分ける。",
-      "git_blob": "fe827ab0fb1ad78f5cfc86d57015212f0bc4145d"
+      "git_blob": "fe827ab0fb1ad78f5cfc86d57015212f0bc4145d",
+      "installation_before_this_delta": {
+        "installed_by_todo3080": false,
+        "baseline_commit": "c397910d3fc560ca61a31c6382494ac43c866852",
+        "historical_evaluation_sha256": "f849ee0bfe0925532a0f40bd58393a916c403103b940d3d05beb9e03568b3fc2"
+      },
+      "current_installation_evidence": "skills-3080-material-camera8-installation-evidence.json"
     },
     {
       "inventory_id": "github:57934e4f29ef479db656c2b1371bde1c4bc66382e9920b868b0576badda6e0e5",
@@ -379,12 +397,18 @@
           "executed": false
         }
       ],
-      "installed_by_todo3080": false,
+      "installed_by_todo3080": true,
       "integrated_by_todo3080": false,
       "excluded_by_todo3080": false,
       "independent_review_complete": false,
       "source_notice_scope_correction": "全treeには別範囲のTHREE-LICENSE.txtもある。選択した手順文と未使用の第三者デモ/素材を分ける。",
-      "git_blob": "fb1830c755d4a46e40067f815f4ff67284498a86"
+      "git_blob": "fb1830c755d4a46e40067f815f4ff67284498a86",
+      "installation_before_this_delta": {
+        "installed_by_todo3080": false,
+        "baseline_commit": "c397910d3fc560ca61a31c6382494ac43c866852",
+        "historical_evaluation_sha256": "f849ee0bfe0925532a0f40bd58393a916c403103b940d3d05beb9e03568b3fc2"
+      },
+      "current_installation_evidence": "skills-3080-material-camera8-installation-evidence.json"
     },
     {
       "inventory_id": "github:31c71080ac741cb3feeaa3bb3dbb57ac6a76efc26ab8dc75ab5c62cf03075bb1",
@@ -461,12 +485,18 @@
           "executed": false
         }
       ],
-      "installed_by_todo3080": false,
+      "installed_by_todo3080": true,
       "integrated_by_todo3080": false,
       "excluded_by_todo3080": false,
       "independent_review_complete": false,
       "source_notice_scope_correction": "全treeには別範囲のTHREE-LICENSE.txtもある。選択した手順文と未使用の第三者デモ/素材を分ける。",
-      "git_blob": "83ee5d94164b8ef13910195405890005e6036de9"
+      "git_blob": "83ee5d94164b8ef13910195405890005e6036de9",
+      "installation_before_this_delta": {
+        "installed_by_todo3080": false,
+        "baseline_commit": "c397910d3fc560ca61a31c6382494ac43c866852",
+        "historical_evaluation_sha256": "f849ee0bfe0925532a0f40bd58393a916c403103b940d3d05beb9e03568b3fc2"
+      },
+      "current_installation_evidence": "skills-3080-material-camera8-installation-evidence.json"
     },
     {
       "inventory_id": "github:7954413ce35f01682a5e1d2323dbd97230efe385a21df4f86c7040bfa845485c",
@@ -553,12 +583,18 @@
           "executed": false
         }
       ],
-      "installed_by_todo3080": false,
+      "installed_by_todo3080": true,
       "integrated_by_todo3080": false,
       "excluded_by_todo3080": false,
       "independent_review_complete": false,
       "source_notice_scope_correction": "全treeには別範囲のTHREE-LICENSE.txtもある。選択した手順文と未使用の第三者デモ/素材を分ける。",
-      "git_blob": "e56030894f5a7ec438a89675610b6b22e162847d"
+      "git_blob": "e56030894f5a7ec438a89675610b6b22e162847d",
+      "installation_before_this_delta": {
+        "installed_by_todo3080": false,
+        "baseline_commit": "d5c04f9dd0e5d90c286b013139ab37f2a0d76c50",
+        "historical_evaluation_sha256": "46d84980dec41c58f087967df59dc16171e2e2de79f51c3d7c9deb31de41d759"
+      },
+      "current_installation_evidence": "skills-3080-remaining3d6-installation-evidence.json"
     },
     {
       "inventory_id": "github:3d98ac5b5f881acf71e673a93b79049d696259c36a80fd92a25d8f8a2ee24489",
@@ -635,7 +671,7 @@
           "executed": false
         }
       ],
-      "installed_by_todo3080": false,
+      "installed_by_todo3080": true,
       "integrated_by_todo3080": false,
       "excluded_by_todo3080": false,
       "independent_review_complete": false,
@@ -643,7 +679,13 @@
         0
       ],
       "source_notice_scope_correction": "全treeには別範囲のTHREE-LICENSE.txtもある。選択した手順文と未使用の第三者デモ/素材を分ける。",
-      "git_blob": "a70f649db07daa376364eb273c184b343539667b"
+      "git_blob": "a70f649db07daa376364eb273c184b343539667b",
+      "installation_before_this_delta": {
+        "installed_by_todo3080": false,
+        "baseline_commit": "c397910d3fc560ca61a31c6382494ac43c866852",
+        "historical_evaluation_sha256": "f849ee0bfe0925532a0f40bd58393a916c403103b940d3d05beb9e03568b3fc2"
+      },
+      "current_installation_evidence": "skills-3080-material-camera8-installation-evidence.json"
     },
     {
       "inventory_id": "github:8d45c064b59f58146ec2cd435cc55a71f835c1936934715b8b4a0cc231aac696",
@@ -802,12 +844,18 @@
           "executed": false
         }
       ],
-      "installed_by_todo3080": false,
+      "installed_by_todo3080": true,
       "integrated_by_todo3080": false,
       "excluded_by_todo3080": false,
       "independent_review_complete": false,
       "source_notice_scope_correction": "全treeには別範囲のTHREE-LICENSE.txtもある。選択した手順文と未使用の第三者デモ/素材を分ける。",
-      "git_blob": "d36fb3d21af5f09ee4f8a8ef9892355eda99f45a"
+      "git_blob": "d36fb3d21af5f09ee4f8a8ef9892355eda99f45a",
+      "installation_before_this_delta": {
+        "installed_by_todo3080": false,
+        "baseline_commit": "c397910d3fc560ca61a31c6382494ac43c866852",
+        "historical_evaluation_sha256": "f849ee0bfe0925532a0f40bd58393a916c403103b940d3d05beb9e03568b3fc2"
+      },
+      "current_installation_evidence": "skills-3080-material-camera8-installation-evidence.json"
     },
     {
       "inventory_id": "github:32b954e6fb09280ec5b99faf879afdbbfdd5c7ca20ccedc3d59ba01b5ad9c856",
@@ -866,12 +914,18 @@
           "executed": false
         }
       ],
-      "installed_by_todo3080": false,
+      "installed_by_todo3080": true,
       "integrated_by_todo3080": false,
       "excluded_by_todo3080": false,
       "independent_review_complete": false,
       "source_notice_scope_correction": "全treeには別範囲のTHREE-LICENSE.txtもある。選択した手順文と未使用の第三者デモ/素材を分ける。",
-      "git_blob": "ff55d90a82645808eb97280495c348777da75f1b"
+      "git_blob": "ff55d90a82645808eb97280495c348777da75f1b",
+      "installation_before_this_delta": {
+        "installed_by_todo3080": false,
+        "baseline_commit": "d5c04f9dd0e5d90c286b013139ab37f2a0d76c50",
+        "historical_evaluation_sha256": "46d84980dec41c58f087967df59dc16171e2e2de79f51c3d7c9deb31de41d759"
+      },
+      "current_installation_evidence": "skills-3080-remaining3d6-installation-evidence.json"
     },
     {
       "inventory_id": "github:896c34ba4a99ae3711407ba96fda39996823607f6a3b2e6ddd456f62af1b19a6",
@@ -1002,7 +1056,7 @@
           "executed": false
         }
       ],
-      "installed_by_todo3080": false,
+      "installed_by_todo3080": true,
       "integrated_by_todo3080": false,
       "excluded_by_todo3080": false,
       "independent_review_complete": false,
@@ -1010,7 +1064,13 @@
         0
       ],
       "source_notice_scope_correction": "全treeには別範囲のTHREE-LICENSE.txtもある。選択した手順文と未使用の第三者デモ/素材を分ける。",
-      "git_blob": "4c11350bd80c7db6e89140e6f1e2425eebc58257"
+      "git_blob": "4c11350bd80c7db6e89140e6f1e2425eebc58257",
+      "installation_before_this_delta": {
+        "installed_by_todo3080": false,
+        "baseline_commit": "d5c04f9dd0e5d90c286b013139ab37f2a0d76c50",
+        "historical_evaluation_sha256": "46d84980dec41c58f087967df59dc16171e2e2de79f51c3d7c9deb31de41d759"
+      },
+      "current_installation_evidence": "skills-3080-remaining3d6-installation-evidence.json"
     },
     {
       "inventory_id": "github:902a0a522b75574bc5a87780cf16f5ea986493124e4bdb578182b36bf6f21df5",
@@ -1141,12 +1201,18 @@
           "executed": false
         }
       ],
-      "installed_by_todo3080": false,
+      "installed_by_todo3080": true,
       "integrated_by_todo3080": false,
       "excluded_by_todo3080": false,
       "independent_review_complete": false,
       "source_notice_scope_correction": "全treeには別範囲のTHREE-LICENSE.txtもある。選択した手順文と未使用の第三者デモ/素材を分ける。",
-      "git_blob": "fb61f257950a9499c2861c1e30403eae9ffeab5a"
+      "git_blob": "fb61f257950a9499c2861c1e30403eae9ffeab5a",
+      "installation_before_this_delta": {
+        "installed_by_todo3080": false,
+        "baseline_commit": "d5c04f9dd0e5d90c286b013139ab37f2a0d76c50",
+        "historical_evaluation_sha256": "46d84980dec41c58f087967df59dc16171e2e2de79f51c3d7c9deb31de41d759"
+      },
+      "current_installation_evidence": "skills-3080-remaining3d6-installation-evidence.json"
     },
     {
       "inventory_id": "github:4626a28f6ca9f66b3a74b43507b256211a1cf0fae273355b0cbb4f7ec2ea0e69",
@@ -1206,12 +1272,18 @@
           "executed": false
         }
       ],
-      "installed_by_todo3080": false,
+      "installed_by_todo3080": true,
       "integrated_by_todo3080": false,
       "excluded_by_todo3080": false,
       "independent_review_complete": false,
       "source_notice_scope_correction": "全treeには別範囲のTHREE-LICENSE.txtもある。選択した手順文と未使用の第三者デモ/素材を分ける。",
-      "git_blob": "69a0d661c0ded474a0d35734e62270e726fbbb3c"
+      "git_blob": "69a0d661c0ded474a0d35734e62270e726fbbb3c",
+      "installation_before_this_delta": {
+        "installed_by_todo3080": false,
+        "baseline_commit": "c397910d3fc560ca61a31c6382494ac43c866852",
+        "historical_evaluation_sha256": "f849ee0bfe0925532a0f40bd58393a916c403103b940d3d05beb9e03568b3fc2"
+      },
+      "current_installation_evidence": "skills-3080-material-camera8-installation-evidence.json"
     },
     {
       "inventory_id": "github:796ba2120ce77e2b5a8f6eeba65b7e3367cc775594bdb59dbf4cf527094c069a",
@@ -1325,12 +1397,18 @@
           "executed": false
         }
       ],
-      "installed_by_todo3080": false,
+      "installed_by_todo3080": true,
       "integrated_by_todo3080": false,
       "excluded_by_todo3080": false,
       "independent_review_complete": false,
       "source_notice_scope_correction": "全treeには別範囲のTHREE-LICENSE.txtもある。選択した手順文と未使用の第三者デモ/素材を分ける。",
-      "git_blob": "a394a37904a9691d9acbede0fa11bc461ac14d38"
+      "git_blob": "a394a37904a9691d9acbede0fa11bc461ac14d38",
+      "installation_before_this_delta": {
+        "installed_by_todo3080": false,
+        "baseline_commit": "d5c04f9dd0e5d90c286b013139ab37f2a0d76c50",
+        "historical_evaluation_sha256": "46d84980dec41c58f087967df59dc16171e2e2de79f51c3d7c9deb31de41d759"
+      },
+      "current_installation_evidence": "skills-3080-remaining3d6-installation-evidence.json"
     },
     {
       "inventory_id": "github:2f1222d0143baefe038638b6325bac4b1aa4a9c9989daa3ffcaf655e7f050715",
@@ -1407,12 +1485,18 @@
           "executed": false
         }
       ],
-      "installed_by_todo3080": false,
+      "installed_by_todo3080": true,
       "integrated_by_todo3080": false,
       "excluded_by_todo3080": false,
       "independent_review_complete": false,
       "source_notice_scope_correction": "全treeには別範囲のTHREE-LICENSE.txtもある。選択した手順文と未使用の第三者デモ/素材を分ける。",
-      "git_blob": "7667ae5c0388465d6ca64273791f213f0a0592ee"
+      "git_blob": "7667ae5c0388465d6ca64273791f213f0a0592ee",
+      "installation_before_this_delta": {
+        "installed_by_todo3080": false,
+        "baseline_commit": "c397910d3fc560ca61a31c6382494ac43c866852",
+        "historical_evaluation_sha256": "f849ee0bfe0925532a0f40bd58393a916c403103b940d3d05beb9e03568b3fc2"
+      },
+      "current_installation_evidence": "skills-3080-material-camera8-installation-evidence.json"
     },
     {
       "inventory_id": "github:77f491d4d72871f2c31152c773d92fe3ee2377d8a0993b9673d562a01250c8e2",
@@ -1458,13 +1542,19 @@
           "executed": false
         }
       ],
-      "installed_by_todo3080": false,
+      "installed_by_todo3080": true,
       "integrated_by_todo3080": false,
       "excluded_by_todo3080": false,
       "independent_review_complete": false,
       "source_notice_scope_correction": "全treeには別範囲のTHREE-LICENSE.txtもある。選択した手順文と未使用の第三者デモ/素材を分ける。",
       "git_blob": "72f8da8da8b980e3e4768fd4264c9c2b34015257",
-      "third_party_assets_or_support_rights_accepted": false
+      "third_party_assets_or_support_rights_accepted": false,
+      "installation_before_this_delta": {
+        "installed_by_todo3080": false,
+        "baseline_commit": "affcc70d2d9a329128120402c6500409b3d81abf",
+        "historical_evaluation_sha256": "5b84006c1d653f41e97e28e1cf849112ed3ce9f3cbf41a127bef1c1238c0afa7"
+      },
+      "current_installation_evidence": "skills-3080-game6-installation-evidence.json"
     },
     {
       "inventory_id": "github:423793c2062917a1dadbabd18843c3a0d29c2f91f6465b953dcce98fb680dceb",
@@ -1623,13 +1713,19 @@
           "executed": false
         }
       ],
-      "installed_by_todo3080": false,
+      "installed_by_todo3080": true,
       "integrated_by_todo3080": false,
       "excluded_by_todo3080": false,
       "independent_review_complete": false,
       "source_notice_scope_correction": "全treeには別範囲のTHREE-LICENSE.txtもある。選択した手順文と未使用の第三者デモ/素材を分ける。",
       "git_blob": "8623d997621ba31235563d2d8b36e5637ab404ce",
-      "third_party_assets_or_support_rights_accepted": false
+      "third_party_assets_or_support_rights_accepted": false,
+      "installation_before_this_delta": {
+        "installed_by_todo3080": false,
+        "baseline_commit": "a815e8e5d67a13cdc54cd95e6df5f0c2aa434e05",
+        "historical_evaluation_sha256": "abefee8bcb0da8a91f22505a02feb68880c015f57d16001ef523bd951c9c954b"
+      },
+      "current_installation_evidence": "skills-3080-utility8-installation-evidence.json"
     },
     {
       "inventory_id": "github:dcfad5899bfe731a670bd01b4cfafa5a4aa3d03303f40df2b562279b41baf405",
@@ -1675,13 +1771,19 @@
           "executed": false
         }
       ],
-      "installed_by_todo3080": false,
+      "installed_by_todo3080": true,
       "integrated_by_todo3080": false,
       "excluded_by_todo3080": false,
       "independent_review_complete": false,
       "source_notice_scope_correction": "全treeには別範囲のTHREE-LICENSE.txtもある。選択した手順文と未使用の第三者デモ/素材を分ける。",
       "git_blob": "f37702249f566e84486aef54ffb5a36a81624a9f",
-      "third_party_assets_or_support_rights_accepted": false
+      "third_party_assets_or_support_rights_accepted": false,
+      "installation_before_this_delta": {
+        "installed_by_todo3080": false,
+        "baseline_commit": "67e7e9c9dc41b5afd0c0e62ba1e476f44f5f477e",
+        "historical_evaluation_sha256": "68b0eefb50760f952ea86ac738ce0cab2d183500076515f9f186bc2e539af232"
+      },
+      "current_installation_evidence": "skills-3080-four-installation-evidence.json"
     },
     {
       "inventory_id": "github:8566a813be1a3b67e72e430142ee4dc7c6dd89426f30e08be72396659bb93d74",
@@ -2102,13 +2204,19 @@
           "executed": false
         }
       ],
-      "installed_by_todo3080": false,
+      "installed_by_todo3080": true,
       "integrated_by_todo3080": false,
       "excluded_by_todo3080": false,
       "independent_review_complete": false,
       "source_notice_scope_correction": "全treeには別範囲のTHREE-LICENSE.txtもある。選択した手順文と未使用の第三者デモ/素材を分ける。",
       "git_blob": "313552370f071d00326ff2e7ef5273009e006c84",
-      "third_party_assets_or_support_rights_accepted": false
+      "third_party_assets_or_support_rights_accepted": false,
+      "installation_before_this_delta": {
+        "installed_by_todo3080": false,
+        "baseline_commit": "affcc70d2d9a329128120402c6500409b3d81abf",
+        "historical_evaluation_sha256": "5b84006c1d653f41e97e28e1cf849112ed3ce9f3cbf41a127bef1c1238c0afa7"
+      },
+      "current_installation_evidence": "skills-3080-game6-installation-evidence.json"
     },
     {
       "inventory_id": "github:264a83ece383f6be22f64bba371a4c31a1234b1035722320cfdff4ce4c02a62a",
@@ -2276,13 +2384,19 @@
           "executed": false
         }
       ],
-      "installed_by_todo3080": false,
+      "installed_by_todo3080": true,
       "integrated_by_todo3080": false,
       "excluded_by_todo3080": false,
       "independent_review_complete": false,
       "source_notice_scope_correction": "全treeには別範囲のTHREE-LICENSE.txtもある。選択した手順文と未使用の第三者デモ/素材を分ける。",
       "git_blob": "dffd12790216e2739728e270753ba8b60d85ce04",
-      "third_party_assets_or_support_rights_accepted": false
+      "third_party_assets_or_support_rights_accepted": false,
+      "installation_before_this_delta": {
+        "installed_by_todo3080": false,
+        "baseline_commit": "affcc70d2d9a329128120402c6500409b3d81abf",
+        "historical_evaluation_sha256": "5b84006c1d653f41e97e28e1cf849112ed3ce9f3cbf41a127bef1c1238c0afa7"
+      },
+      "current_installation_evidence": "skills-3080-game6-installation-evidence.json"
     },
     {
       "inventory_id": "github:382998d3830f6337c6f2838a64421601e482aaf2ac3cb66841051d81e443cf6b",
@@ -2328,13 +2442,19 @@
           "executed": false
         }
       ],
-      "installed_by_todo3080": false,
+      "installed_by_todo3080": true,
       "integrated_by_todo3080": false,
       "excluded_by_todo3080": false,
       "independent_review_complete": false,
       "source_notice_scope_correction": "全treeには別範囲のTHREE-LICENSE.txtもある。選択した手順文と未使用の第三者デモ/素材を分ける。",
       "git_blob": "5b2c61192a885acb3f1d822561fb23b4985e99e3",
-      "third_party_assets_or_support_rights_accepted": false
+      "third_party_assets_or_support_rights_accepted": false,
+      "installation_before_this_delta": {
+        "installed_by_todo3080": false,
+        "baseline_commit": "affcc70d2d9a329128120402c6500409b3d81abf",
+        "historical_evaluation_sha256": "5b84006c1d653f41e97e28e1cf849112ed3ce9f3cbf41a127bef1c1238c0afa7"
+      },
+      "current_installation_evidence": "skills-3080-game6-installation-evidence.json"
     },
     {
       "inventory_id": "github:153988a15c1b7cf16741074f845ee57b203ee0315654f9f5d76196982b339d0e",
@@ -2380,13 +2500,19 @@
           "executed": false
         }
       ],
-      "installed_by_todo3080": false,
+      "installed_by_todo3080": true,
       "integrated_by_todo3080": false,
       "excluded_by_todo3080": false,
       "independent_review_complete": false,
       "source_notice_scope_correction": "全treeには別範囲のTHREE-LICENSE.txtもある。選択した手順文と未使用の第三者デモ/素材を分ける。",
       "git_blob": "52ee36731d7aa820658b15a6f0783b80227ad446",
-      "third_party_assets_or_support_rights_accepted": false
+      "third_party_assets_or_support_rights_accepted": false,
+      "installation_before_this_delta": {
+        "installed_by_todo3080": false,
+        "baseline_commit": "affcc70d2d9a329128120402c6500409b3d81abf",
+        "historical_evaluation_sha256": "5b84006c1d653f41e97e28e1cf849112ed3ce9f3cbf41a127bef1c1238c0afa7"
+      },
+      "current_installation_evidence": "skills-3080-game6-installation-evidence.json"
     },
     {
       "inventory_id": "github:7bcda1fac6b466079da1784e652e600a58437fe518711d1b3f9fc706d912edc6",
@@ -2484,13 +2610,19 @@
           "executed": false
         }
       ],
-      "installed_by_todo3080": false,
+      "installed_by_todo3080": true,
       "integrated_by_todo3080": false,
       "excluded_by_todo3080": false,
       "independent_review_complete": false,
       "source_notice_scope_correction": "全treeには別範囲のTHREE-LICENSE.txtもある。選択した手順文と未使用の第三者デモ/素材を分ける。",
       "git_blob": "49b7ac030d822ae4543e8f022882415119b4cc24",
-      "third_party_assets_or_support_rights_accepted": false
+      "third_party_assets_or_support_rights_accepted": false,
+      "installation_before_this_delta": {
+        "installed_by_todo3080": false,
+        "baseline_commit": "a815e8e5d67a13cdc54cd95e6df5f0c2aa434e05",
+        "historical_evaluation_sha256": "abefee8bcb0da8a91f22505a02feb68880c015f57d16001ef523bd951c9c954b"
+      },
+      "current_installation_evidence": "skills-3080-utility8-installation-evidence.json"
     },
     {
       "inventory_id": "github:7e7b86ab5a899b4639cffd87d65ca9184dedb899d1ba98d46b6a74f2a49860ca",
@@ -2536,13 +2668,19 @@
           "executed": false
         }
       ],
-      "installed_by_todo3080": false,
+      "installed_by_todo3080": true,
       "integrated_by_todo3080": false,
       "excluded_by_todo3080": false,
       "independent_review_complete": false,
       "source_notice_scope_correction": "全treeには別範囲のTHREE-LICENSE.txtもある。選択した手順文と未使用の第三者デモ/素材を分ける。",
       "git_blob": "bc4e1b97ee46b2b3cf71e7f02d64ed8673155e1e",
-      "third_party_assets_or_support_rights_accepted": false
+      "third_party_assets_or_support_rights_accepted": false,
+      "installation_before_this_delta": {
+        "installed_by_todo3080": false,
+        "baseline_commit": "affcc70d2d9a329128120402c6500409b3d81abf",
+        "historical_evaluation_sha256": "5b84006c1d653f41e97e28e1cf849112ed3ce9f3cbf41a127bef1c1238c0afa7"
+      },
+      "current_installation_evidence": "skills-3080-game6-installation-evidence.json"
     },
     {
       "inventory_id": "github:342ad2a939322fb3fc06620b83e8472b22e8bef2cd8e40584dcd3b05b7079060",
@@ -3525,7 +3663,7 @@
       },
       "positive_candidate": "炎が橙の霧や均一な櫛に見える。浮力・帯域制限・seam・煙合成を要因別に調べる。",
       "name": "fire-smoke-skill-vfx",
-      "installed_by_todo3080": false,
+      "installed_by_todo3080": true,
       "read_range_unit": "UTF16 code units",
       "negative_candidate": "一般的な攻撃判定・AI・外部画像の権利確認を炎描画だけで完了にしない。",
       "integrated_by_todo3080": false,
@@ -3688,7 +3826,8 @@
       "commit": "398cd41c86ba42fbb30e944ae507f463648f08b7",
       "body_read_by": "20261024-041741-todo-3080",
       "git_blob": "8dd1160a6128420740f96e55228a41f1789f0d38",
-      "third_party_assets_or_support_rights_accepted": false
+      "third_party_assets_or_support_rights_accepted": false,
+      "current_installation_evidence": "skills-3080-combat6-installation-evidence090101.json"
     },
     {
       "required_changes": [
@@ -3731,7 +3870,7 @@
       },
       "positive_candidate": "弓のanchorがカメラ別に首の後ろへ見え、手首が捻れる。実rigのframeとviewを照合する。",
       "name": "game-dev-combat-animation",
-      "installed_by_todo3080": false,
+      "installed_by_todo3080": true,
       "read_range_unit": "UTF16 code units",
       "negative_candidate": "別rigの数値制限だけを人間全般の可動域や頭上攻撃の禁止にしない。",
       "integrated_by_todo3080": false,
@@ -4004,7 +4143,8 @@
       "commit": "398cd41c86ba42fbb30e944ae507f463648f08b7",
       "body_read_by": "20261024-041741-todo-3080",
       "git_blob": "3176811d6a3d400224fd5275301491d0086802c0",
-      "third_party_assets_or_support_rights_accepted": false
+      "third_party_assets_or_support_rights_accepted": false,
+      "current_installation_evidence": "skills-3080-combat6-installation-evidence090101.json"
     },
     {
       "required_changes": [
@@ -4047,7 +4187,7 @@
       },
       "positive_candidate": "敵の反応がmissile到達前に始まり、castの身体と効果が別のscheduleに乗る。到達frame/姿勢/反応を同時計で照合する。",
       "name": "game-dev-combat-skill-polish",
-      "installed_by_todo3080": false,
+      "installed_by_todo3080": true,
       "read_range_unit": "UTF16 code units",
       "negative_candidate": "参考作品の点数や単発の高いjudge点だけを本人の見た目承認や本PCの実受入としない。",
       "integrated_by_todo3080": false,
@@ -4180,7 +4320,8 @@
       "commit": "398cd41c86ba42fbb30e944ae507f463648f08b7",
       "body_read_by": "20261024-041741-todo-3080",
       "git_blob": "6f3b53f078091f65c21dfd65dec4174c865cb033",
-      "third_party_assets_or_support_rights_accepted": false
+      "third_party_assets_or_support_rights_accepted": false,
+      "current_installation_evidence": "skills-3080-combat6-installation-evidence090101.json"
     },
     {
       "inventory_id": "github:41f804392ff42c56ba7a05d1b269efdbb80f189a55b8979ccae5eb67771d05ed",
@@ -4414,7 +4555,7 @@
           "scan_only": false
         }
       ],
-      "installed_by_todo3080": false,
+      "installed_by_todo3080": true,
       "integrated_by_todo3080": false,
       "excluded_by_todo3080": false,
       "independent_review_complete": false,
@@ -4434,7 +4575,13 @@
         "final_disposition_accepted": false,
         "raw_sha256": "bc66608b036b8d2e072cad3e5717fb2e2a9e300479fb266b6abd72de289722a0",
         "scope": "公開上流由来の候補提案。中央の内部比較や私的な例は原応答へ保全し公開へ転載しない。"
-      }
+      },
+      "installation_before_this_delta": {
+        "installed_by_todo3080": false,
+        "baseline_commit": "a815e8e5d67a13cdc54cd95e6df5f0c2aa434e05",
+        "historical_evaluation_sha256": "abefee8bcb0da8a91f22505a02feb68880c015f57d16001ef523bd951c9c954b"
+      },
+      "current_installation_evidence": "skills-3080-utility8-installation-evidence.json"
     },
     {
       "inventory_id": "github:458307c33cb5b98f8ad6c9340ad5f1668ffb3c0683daf715a34277712ef6b177",
@@ -4677,7 +4824,7 @@
           "scan_only": false
         }
       ],
-      "installed_by_todo3080": false,
+      "installed_by_todo3080": true,
       "integrated_by_todo3080": false,
       "excluded_by_todo3080": false,
       "independent_review_complete": false,
@@ -4697,7 +4844,13 @@
         "final_disposition_accepted": false,
         "raw_sha256": "bc66608b036b8d2e072cad3e5717fb2e2a9e300479fb266b6abd72de289722a0",
         "scope": "公開上流由来の候補提案。中央の内部比較や私的な例は原応答へ保全し公開へ転載しない。"
-      }
+      },
+      "installation_before_this_delta": {
+        "installed_by_todo3080": false,
+        "baseline_commit": "a815e8e5d67a13cdc54cd95e6df5f0c2aa434e05",
+        "historical_evaluation_sha256": "abefee8bcb0da8a91f22505a02feb68880c015f57d16001ef523bd951c9c954b"
+      },
+      "current_installation_evidence": "skills-3080-utility8-installation-evidence.json"
     },
     {
       "inventory_id": "github:c87324cb088076b4914c3d5b89f3bcaea02a41d1f3e52302444ab262a4023097",
@@ -4775,7 +4928,7 @@
           "scan_only": false
         }
       ],
-      "installed_by_todo3080": false,
+      "installed_by_todo3080": true,
       "integrated_by_todo3080": false,
       "excluded_by_todo3080": false,
       "independent_review_complete": false,
@@ -4796,7 +4949,8 @@
         "final_disposition_accepted": false,
         "raw_sha256": "bc66608b036b8d2e072cad3e5717fb2e2a9e300479fb266b6abd72de289722a0",
         "scope": "公開上流由来の候補提案。中央の内部比較や私的な例は原応答へ保全し公開へ転載しない。"
-      }
+      },
+      "current_installation_evidence": "skills-3080-codex3-installation-evidence090101.json"
     },
     {
       "inventory_id": "github:81c0d1fc229eee7483f38692fa31acb1bcf44060d104e51b728c9b47c9e40a43",
@@ -5269,7 +5423,7 @@
           "scan_only": false
         }
       ],
-      "installed_by_todo3080": false,
+      "installed_by_todo3080": true,
       "integrated_by_todo3080": false,
       "excluded_by_todo3080": false,
       "independent_review_complete": false,
@@ -5289,7 +5443,8 @@
         "final_disposition_accepted": false,
         "raw_sha256": "bc66608b036b8d2e072cad3e5717fb2e2a9e300479fb266b6abd72de289722a0",
         "scope": "公開上流由来の候補提案。中央の内部比較や私的な例は原応答へ保全し公開へ転載しない。"
-      }
+      },
+      "current_installation_evidence": "skills-3080-codex3-installation-evidence090101.json"
     },
     {
       "inventory_id": "github:4e9631ebafe558782152a55e70d44f8e87d4080b542c738bccd5ad28fa9e492c",
@@ -5402,7 +5557,7 @@
           "scan_only": false
         }
       ],
-      "installed_by_todo3080": false,
+      "installed_by_todo3080": true,
       "integrated_by_todo3080": false,
       "excluded_by_todo3080": false,
       "independent_review_complete": false,
@@ -5422,7 +5577,13 @@
         "final_disposition_accepted": false,
         "raw_sha256": "bc66608b036b8d2e072cad3e5717fb2e2a9e300479fb266b6abd72de289722a0",
         "scope": "公開上流由来の候補提案。中央の内部比較や私的な例は原応答へ保全し公開へ転載しない。"
-      }
+      },
+      "installation_before_this_delta": {
+        "installed_by_todo3080": false,
+        "baseline_commit": "a815e8e5d67a13cdc54cd95e6df5f0c2aa434e05",
+        "historical_evaluation_sha256": "abefee8bcb0da8a91f22505a02feb68880c015f57d16001ef523bd951c9c954b"
+      },
+      "current_installation_evidence": "skills-3080-utility8-installation-evidence.json"
     },
     {
       "inventory_id": "github:c51dc53e6bbbd50fb36e0dc24236e430698fe779352ac996e34115a0cbc5c882",
@@ -5499,7 +5660,7 @@
           "scan_only": false
         }
       ],
-      "installed_by_todo3080": false,
+      "installed_by_todo3080": true,
       "integrated_by_todo3080": false,
       "excluded_by_todo3080": false,
       "independent_review_complete": false,
@@ -5519,7 +5680,13 @@
         "final_disposition_accepted": false,
         "raw_sha256": "bc66608b036b8d2e072cad3e5717fb2e2a9e300479fb266b6abd72de289722a0",
         "scope": "公開上流由来の候補提案。中央の内部比較や私的な例は原応答へ保全し公開へ転載しない。"
-      }
+      },
+      "installation_before_this_delta": {
+        "installed_by_todo3080": false,
+        "baseline_commit": "67e7e9c9dc41b5afd0c0e62ba1e476f44f5f477e",
+        "historical_evaluation_sha256": "68b0eefb50760f952ea86ac738ce0cab2d183500076515f9f186bc2e539af232"
+      },
+      "current_installation_evidence": "skills-3080-four-installation-evidence.json"
     },
     {
       "inventory_id": "github:768b376fa6ffcb2f3a96fa46ac10d3684ba464e41742059ae48386e1a24a684c",
@@ -5729,7 +5896,7 @@
           "scan_only": false
         }
       ],
-      "installed_by_todo3080": false,
+      "installed_by_todo3080": true,
       "integrated_by_todo3080": false,
       "excluded_by_todo3080": false,
       "independent_review_complete": false,
@@ -5749,7 +5916,13 @@
         "final_disposition_accepted": false,
         "raw_sha256": "bc66608b036b8d2e072cad3e5717fb2e2a9e300479fb266b6abd72de289722a0",
         "scope": "公開上流由来の候補提案。中央の内部比較や私的な例は原応答へ保全し公開へ転載しない。"
-      }
+      },
+      "installation_before_this_delta": {
+        "installed_by_todo3080": false,
+        "baseline_commit": "a815e8e5d67a13cdc54cd95e6df5f0c2aa434e05",
+        "historical_evaluation_sha256": "abefee8bcb0da8a91f22505a02feb68880c015f57d16001ef523bd951c9c954b"
+      },
+      "current_installation_evidence": "skills-3080-utility8-installation-evidence.json"
     },
     {
       "inventory_id": "github:208c134d07c6432f69318e9a83f9b745af5ed0476e4c2f81f12eead9598ca6db",
@@ -6161,7 +6334,7 @@
           "scan_only": false
         }
       ],
-      "installed_by_todo3080": false,
+      "installed_by_todo3080": true,
       "integrated_by_todo3080": false,
       "excluded_by_todo3080": false,
       "independent_review_complete": false,
@@ -6181,7 +6354,13 @@
         "final_disposition_accepted": false,
         "raw_sha256": "bc66608b036b8d2e072cad3e5717fb2e2a9e300479fb266b6abd72de289722a0",
         "scope": "公開上流由来の候補提案。中央の内部比較や私的な例は原応答へ保全し公開へ転載しない。"
-      }
+      },
+      "installation_before_this_delta": {
+        "installed_by_todo3080": false,
+        "baseline_commit": "a815e8e5d67a13cdc54cd95e6df5f0c2aa434e05",
+        "historical_evaluation_sha256": "abefee8bcb0da8a91f22505a02feb68880c015f57d16001ef523bd951c9c954b"
+      },
+      "current_installation_evidence": "skills-3080-utility8-installation-evidence.json"
     },
     {
       "inventory_id": "github:47eaf17ef451cbe3e1435dce403be55f89a48c416b943671e48541380b005028",
@@ -6305,7 +6484,7 @@
           "scan_only": false
         }
       ],
-      "installed_by_todo3080": false,
+      "installed_by_todo3080": true,
       "integrated_by_todo3080": false,
       "excluded_by_todo3080": false,
       "independent_review_complete": false,
@@ -6325,7 +6504,13 @@
         "final_disposition_accepted": false,
         "raw_sha256": "bc66608b036b8d2e072cad3e5717fb2e2a9e300479fb266b6abd72de289722a0",
         "scope": "公開上流由来の候補提案。中央の内部比較や私的な例は原応答へ保全し公開へ転載しない。"
-      }
+      },
+      "installation_before_this_delta": {
+        "installed_by_todo3080": false,
+        "baseline_commit": "a815e8e5d67a13cdc54cd95e6df5f0c2aa434e05",
+        "historical_evaluation_sha256": "abefee8bcb0da8a91f22505a02feb68880c015f57d16001ef523bd951c9c954b"
+      },
+      "current_installation_evidence": "skills-3080-utility8-installation-evidence.json"
     },
     {
       "inventory_id": "github:e356efe1da77694b896e38273195eb56a9308917ceee70da0e8f0e8f251bb5d9",
@@ -6438,7 +6623,7 @@
           "scan_only": false
         }
       ],
-      "installed_by_todo3080": false,
+      "installed_by_todo3080": true,
       "integrated_by_todo3080": false,
       "excluded_by_todo3080": false,
       "independent_review_complete": false,
@@ -6457,7 +6642,8 @@
         "final_disposition_accepted": false,
         "raw_sha256": "bc66608b036b8d2e072cad3e5717fb2e2a9e300479fb266b6abd72de289722a0",
         "scope": "公開上流由来の候補提案。中央の内部比較や私的な例は原応答へ保全し公開へ転載しない。"
-      }
+      },
+      "current_installation_evidence": "skills-3080-codex3-installation-evidence090101.json"
     },
     {
       "inventory_id": "github:d1addf6726ef6e57c8c23d268c78b571e7808e45e3190621301aea970f9515e1",
@@ -6800,7 +6986,7 @@
       "body_read_complete": true,
       "third_party_assets_or_support_rights_accepted": false,
       "git_blob": "e045843d41df7bd8e3aa00eab8e51b19ae85bb5d",
-      "installed_by_todo3080": false,
+      "installed_by_todo3080": true,
       "required_changes": [
         "pointer例はviewport原点を仮定する。埋込canvasではcached rectのleft/topとCSS寸法へ直し、各辺/DPRと混同しない。",
         "0.055、1/30秒、26/16、3桁丸め、reduced時x.28/y-.12、DPR2は作者場面の値。全機器の性能/1px保証や固定200%（既存の解像度規則）の上書きにしない。",
@@ -6818,7 +7004,13 @@
         "third_party_assets_or_support_rights_accepted": false,
         "scope": "作者の既読手順文の評価のみ。外部ブランド/画像/元サイト/第三者package/配布コードと未読supportの許諾受入ではない。",
         "author_text": "Root MIT / Copyright(c)2026 Meng To. Selected subtree notice checked by fixed tree; no separate notice found."
-      }
+      },
+      "installation_before_forward11": {
+        "installed_by_todo3080": false,
+        "baseline_commit": "3b15b7a5843c6a41dd030124fc0ce3fa4042e9f3",
+        "historical_evaluation_sha256": "ebdf3fe6a0a8b15f7c0beb5b8e1e0c33ce0db986b39eb3f5001c7c79c3210c4c"
+      },
+      "current_installation_evidence": "skills-3080-webdesign11-installation-evidence.json"
     },
     {
       "source_sha256": "b2d32575e2a433145200c3f466d46aa4692f726efbfe32db39c0524caa7e107d",
@@ -6902,7 +7094,7 @@
       "body_read_complete": true,
       "third_party_assets_or_support_rights_accepted": false,
       "git_blob": "8292c5e8518d3d547f1cda690408f69c7c6ca4e3",
-      "installed_by_todo3080": false,
+      "installed_by_todo3080": true,
       "required_changes": [
         "shaders packageの実版/各frameworkのexport/第三者graphと資産の許諾は未確認。installやassets/helperのコピーを読取から実行しない。",
         "6node/不可視driver/ID結線の実装契約は全文読了。assets/helper/実package APIと権利は未確認。特定graph以外へWebGL/Threeを一律に禁じない。",
@@ -6920,7 +7112,13 @@
         "third_party_assets_or_support_rights_accepted": false,
         "scope": "作者の既読手順文の評価のみ。外部ブランド/画像/元サイト/第三者package/配布コードと未読supportの許諾受入ではない。",
         "author_text": "Root MIT / Copyright(c)2026 Meng To. Selected subtree notice checked by fixed tree; no separate notice found."
-      }
+      },
+      "installation_before_forward11": {
+        "installed_by_todo3080": false,
+        "baseline_commit": "3b15b7a5843c6a41dd030124fc0ce3fa4042e9f3",
+        "historical_evaluation_sha256": "ebdf3fe6a0a8b15f7c0beb5b8e1e0c33ce0db986b39eb3f5001c7c79c3210c4c"
+      },
+      "current_installation_evidence": "skills-3080-webdesign11-installation-evidence.json"
     },
     {
       "source_sha256": "1787eba87fef34cf72219d0016de89910e19e383f6b01d250a11e9490a93018e",
@@ -7003,7 +7201,7 @@
       "body_read_complete": true,
       "third_party_assets_or_support_rights_accepted": false,
       "git_blob": "2731b7a5aec6177e4162f2ab1e54c0793434c96b",
-      "installed_by_todo3080": false,
+      "installed_by_todo3080": true,
       "required_changes": [
         "このagency方向を汎用の既定UIにしない。本人の具体画像への同対象回答後に見た目を実装する。",
         "tiny/small uppercaseのラベルや本文をそのまま日本語へ強制しない。実文字/zoom/狭い画面/contrast/focusで可読性を確認する。",
@@ -7021,7 +7219,13 @@
         "third_party_assets_or_support_rights_accepted": false,
         "scope": "作者の既読手順文の評価のみ。外部ブランド/画像/元サイト/第三者package/配布コードと未読supportの許諾受入ではない。",
         "author_text": "Root MIT / Copyright(c)2026 Meng To. Selected subtree notice checked by fixed tree; no separate notice found."
-      }
+      },
+      "installation_before_forward11": {
+        "installed_by_todo3080": false,
+        "baseline_commit": "3b15b7a5843c6a41dd030124fc0ce3fa4042e9f3",
+        "historical_evaluation_sha256": "ebdf3fe6a0a8b15f7c0beb5b8e1e0c33ce0db986b39eb3f5001c7c79c3210c4c"
+      },
+      "current_installation_evidence": "skills-3080-webdesign11-installation-evidence.json"
     },
     {
       "source_sha256": "b6fcbde40049c0bae9a8b0e5a9249717b828bb7d64b816fd4ac1d29c5318bb48",
@@ -7096,7 +7300,7 @@
       "body_read_complete": true,
       "third_party_assets_or_support_rights_accepted": false,
       "git_blob": "4beca95ab7da396a3aeb8cbe0a1dc192751bd48d",
-      "installed_by_todo3080": false,
+      "installed_by_todo3080": true,
       "required_changes": [
         "canvas40個/WebGL数千個、54粒、DPR2等は出発点であり性能閾値ではない。形状・更新・機器・実測でrendererを選ぶ。",
         "CanvasのCSS寸法/実bufferとpointerのrectを分け、再開dtとone-loop/停止/解放を確認する。settleはcollisionの正しさを保証しない。",
@@ -7114,7 +7318,13 @@
         "third_party_assets_or_support_rights_accepted": false,
         "scope": "作者の既読手順文の評価のみ。外部ブランド/画像/元サイト/第三者package/配布コードと未読supportの許諾受入ではない。",
         "author_text": "Root MIT / Copyright(c)2026 Meng To. Selected subtree notice checked by fixed tree; no separate notice found."
-      }
+      },
+      "installation_before_forward11": {
+        "installed_by_todo3080": false,
+        "baseline_commit": "3b15b7a5843c6a41dd030124fc0ce3fa4042e9f3",
+        "historical_evaluation_sha256": "ebdf3fe6a0a8b15f7c0beb5b8e1e0c33ce0db986b39eb3f5001c7c79c3210c4c"
+      },
+      "current_installation_evidence": "skills-3080-webdesign11-installation-evidence.json"
     },
     {
       "source_sha256": "4c9c795a9d5d8f7baf0b141394ebc0a4fd30e22234b37ff63fbf38e7cceefadf",
@@ -7318,7 +7528,7 @@
       "body_read_complete": true,
       "third_party_assets_or_support_rights_accepted": false,
       "git_blob": "e2c6893fd8ee9d944ebf70f072e66567fda512c3",
-      "installed_by_todo3080": false,
+      "installed_by_todo3080": true,
       "required_changes": [
         "canvas/shaderの優先を全ページの必須方式にせず、必要な動き・静的fallback・実測で選ぶ。loop/visibility/解放、CSS寸法とbufferを補う。",
         "暗いcyanの既定を本人の美術方向へしない。foregroundの可読性、reduced/forced colors、狭い画面を確認し、具体画像の同対象回答後に実装する。"
@@ -7335,7 +7545,13 @@
         "third_party_assets_or_support_rights_accepted": false,
         "scope": "作者の既読手順文の評価のみ。外部ブランド/画像/元サイト/第三者package/配布コードと未読supportの許諾受入ではない。",
         "author_text": "Root MIT / Copyright(c)2026 Meng To. Selected subtree notice checked by fixed tree; no separate notice found."
-      }
+      },
+      "installation_before_forward11": {
+        "installed_by_todo3080": false,
+        "baseline_commit": "3b15b7a5843c6a41dd030124fc0ce3fa4042e9f3",
+        "historical_evaluation_sha256": "ebdf3fe6a0a8b15f7c0beb5b8e1e0c33ce0db986b39eb3f5001c7c79c3210c4c"
+      },
+      "current_installation_evidence": "skills-3080-webdesign11-installation-evidence.json"
     },
     {
       "source_sha256": "07c155855b67a96cbb4d51d82696fe9550c2670a13a30fb6b71506d5c0685457",
@@ -7445,7 +7661,7 @@
       "body_read_complete": true,
       "third_party_assets_or_support_rights_accepted": false,
       "git_blob": "8bd40421adcbaf7600550d252e1c7618dd272be0",
-      "installed_by_todo3080": false,
+      "installed_by_todo3080": true,
       "required_changes": [
         "Three.jsやWebGLの新導入を資料だけで実行せず、実際のrenderer版・資源所有・buffer/resize/停止を確認する。周期移動の継ぎ目も実表示で確かめる。",
         "特定色や視点を普遍仕様にせず、装飾が文字/操作を覆わないstatic/reduced fallbackを補う。本人Chromeと同対象画像回答を維持する。"
@@ -7462,7 +7678,13 @@
         "third_party_assets_or_support_rights_accepted": false,
         "scope": "作者の既読手順文の評価のみ。外部ブランド/画像/元サイト/第三者package/配布コードと未読supportの許諾受入ではない。",
         "author_text": "Root MIT / Copyright(c)2026 Meng To. Selected subtree notice checked by fixed tree; no separate notice found."
-      }
+      },
+      "installation_before_forward11": {
+        "installed_by_todo3080": false,
+        "baseline_commit": "3b15b7a5843c6a41dd030124fc0ce3fa4042e9f3",
+        "historical_evaluation_sha256": "ebdf3fe6a0a8b15f7c0beb5b8e1e0c33ce0db986b39eb3f5001c7c79c3210c4c"
+      },
+      "current_installation_evidence": "skills-3080-webdesign11-installation-evidence.json"
     },
     {
       "source_sha256": "64f45d22ad8288e2716fddc4375df9f34e9655a26e3cbb3d1ed6da3fd25d3f49",
@@ -7510,7 +7732,7 @@
       "body_read_complete": true,
       "third_party_assets_or_support_rights_accepted": false,
       "git_blob": "aa65bee487b9733c748795f79b6b27895bb5640b",
-      "installed_by_todo3080": false,
+      "installed_by_todo3080": true,
       "required_changes": [
         "border-beam1.3.0のAPI/React要件/第三者licenseは作者の主張であり本担当は未検証。未読packageをinstallせず、現行版のREADME/型と個別許諾を実装前に確認する。",
         "150ms/400-600ms/1viewport1個等を全操作の性能規則にしない。実処理や成功状態を装飾の終了callbackへ依存させず、取消/エラー/再試行と実際の状態を保つ。",
@@ -7528,7 +7750,13 @@
         "third_party_assets_or_support_rights_accepted": false,
         "scope": "作者の既読手順文の評価のみ。外部ブランド/画像/元サイト/第三者package/配布コードと未読supportの許諾受入ではない。",
         "author_text": "Root MIT / Copyright(c)2026 Meng To. Selected subtree notice checked by fixed tree; no separate notice found."
-      }
+      },
+      "installation_before_forward11": {
+        "installed_by_todo3080": false,
+        "baseline_commit": "3b15b7a5843c6a41dd030124fc0ce3fa4042e9f3",
+        "historical_evaluation_sha256": "ebdf3fe6a0a8b15f7c0beb5b8e1e0c33ce0db986b39eb3f5001c7c79c3210c4c"
+      },
+      "current_installation_evidence": "skills-3080-webdesign11-installation-evidence.json"
     },
     {
       "source_sha256": "10b6cc0964919118218ffe0845e4a00954f39788d89d4ec29827d100f254e135",
@@ -7694,7 +7922,7 @@
       "body_read_complete": true,
       "third_party_assets_or_support_rights_accepted": false,
       "git_blob": "c738b8edbcd5efebfe0cc3f180e5cf1a75eb2b87",
-      "installed_by_todo3080": false,
+      "installed_by_todo3080": true,
       "required_changes": [
         "青白の方向を全製品の既定にせず、具体画像の同対象回答後に実装する。明るい雲と白文字の局所contrast、細字/小ラベル、日本語とzoomを確認する。",
         "canvas/WebGLを一律に要求せず、静的/低負荷/reduced表示と実測を補う。avatar/trust/logo/実績を架空の本人実績へ流用せず、素材の権利と表示の真実性を照合する。"
@@ -7711,7 +7939,13 @@
         "third_party_assets_or_support_rights_accepted": false,
         "scope": "作者の既読手順文の評価のみ。外部ブランド/画像/元サイト/第三者package/配布コードと未読supportの許諾受入ではない。",
         "author_text": "Root MIT / Copyright(c)2026 Meng To. Selected subtree notice checked by fixed tree; no separate notice found."
-      }
+      },
+      "installation_before_forward11": {
+        "installed_by_todo3080": false,
+        "baseline_commit": "3b15b7a5843c6a41dd030124fc0ce3fa4042e9f3",
+        "historical_evaluation_sha256": "ebdf3fe6a0a8b15f7c0beb5b8e1e0c33ce0db986b39eb3f5001c7c79c3210c4c"
+      },
+      "current_installation_evidence": "skills-3080-webdesign11-installation-evidence.json"
     },
     {
       "source_sha256": "63cbabae394a24c1b8c4cc98dafc3bfe8c045652b20713f8a3d8edc1061530e0",
@@ -7768,7 +8002,7 @@
       "body_read_complete": true,
       "third_party_assets_or_support_rights_accepted": false,
       "git_blob": "0720e0f192220d4d96379530e43e81caf39851fa",
-      "installed_by_todo3080": false,
+      "installed_by_todo3080": true,
       "required_changes": [
         "特定の色/ダッシュボード構成を現行製品へ自動適用せず、同対象の具体画像回答後に実装する。実データの状態表示を装飾のlive dotで捏造しない。",
         "backdrop blur/固定canvasの費用、重なり/overflow/keyboard/contrast、狭い画面とreduced/forced colors/static fallback、renderer/RAFの解放を実測する。"
@@ -7785,7 +8019,13 @@
         "third_party_assets_or_support_rights_accepted": false,
         "scope": "作者の既読手順文の評価のみ。外部ブランド/画像/元サイト/第三者package/配布コードと未読supportの許諾受入ではない。",
         "author_text": "Root MIT / Copyright(c)2026 Meng To. Selected subtree notice checked by fixed tree; no separate notice found."
-      }
+      },
+      "installation_before_forward11": {
+        "installed_by_todo3080": false,
+        "baseline_commit": "3b15b7a5843c6a41dd030124fc0ce3fa4042e9f3",
+        "historical_evaluation_sha256": "ebdf3fe6a0a8b15f7c0beb5b8e1e0c33ce0db986b39eb3f5001c7c79c3210c4c"
+      },
+      "current_installation_evidence": "skills-3080-webdesign11-installation-evidence.json"
     },
     {
       "source_sha256": "d53a95a47bb0fc7b047445a15e59a2b4bb126d6c8d9caac163378b19bf3948be",
@@ -7877,7 +8117,7 @@
       "body_read_complete": true,
       "third_party_assets_or_support_rights_accepted": false,
       "git_blob": "48dfcfeb20e99051f326ec696c40365484a1142e",
-      "installed_by_todo3080": false,
+      "installed_by_todo3080": true,
       "required_changes": [
         "古色やcrease/textureで文字を読みにくくせず、日本語の書体・行間・長文・狭い画面・zoom・keyboard索引を確認する。引用や章番号を架空の出典の証拠へしない。",
         "書体/紙素材/画像の個別許諾を照合し、全製品の既定方向にせず、具体画像の同対象回答後に実装する。動きの静的/reduced fallbackを補う。"
@@ -7894,7 +8134,13 @@
         "third_party_assets_or_support_rights_accepted": false,
         "scope": "作者の既読手順文の評価のみ。外部ブランド/画像/元サイト/第三者package/配布コードと未読supportの許諾受入ではない。",
         "author_text": "Root MIT / Copyright(c)2026 Meng To. Selected subtree notice checked by fixed tree; no separate notice found."
-      }
+      },
+      "installation_before_forward11": {
+        "installed_by_todo3080": false,
+        "baseline_commit": "3b15b7a5843c6a41dd030124fc0ce3fa4042e9f3",
+        "historical_evaluation_sha256": "ebdf3fe6a0a8b15f7c0beb5b8e1e0c33ce0db986b39eb3f5001c7c79c3210c4c"
+      },
+      "current_installation_evidence": "skills-3080-webdesign11-installation-evidence.json"
     },
     {
       "source_sha256": "ba4cf84328189502dbd9c95f42bba68346d303f9b3f41cbc6c922f52fdec2fbf",
@@ -7950,7 +8196,7 @@
       "body_read_complete": true,
       "third_party_assets_or_support_rights_accepted": false,
       "git_blob": "b83858a6f5e82162ac9434ef7718843de075f5dd",
-      "installed_by_todo3080": false,
+      "installed_by_todo3080": true,
       "required_changes": [
         "緑のlive dot/進捗/compile段階を実データなしに稼働や成功の表示へしない。特定製品への全体方向の適用は具体画像の同対象回答後。",
         "WebGL/blur/粒子を必須にせず、必要な意味・実測・static/reduced fallback、文字/contrast/focus、資源の停止/解放を確認する。"
@@ -7967,7 +8213,13 @@
         "third_party_assets_or_support_rights_accepted": false,
         "scope": "作者の既読手順文の評価のみ。外部ブランド/画像/元サイト/第三者package/配布コードと未読supportの許諾受入ではない。",
         "author_text": "Root MIT / Copyright(c)2026 Meng To. Selected subtree notice checked by fixed tree; no separate notice found."
-      }
+      },
+      "installation_before_forward11": {
+        "installed_by_todo3080": false,
+        "baseline_commit": "3b15b7a5843c6a41dd030124fc0ce3fa4042e9f3",
+        "historical_evaluation_sha256": "ebdf3fe6a0a8b15f7c0beb5b8e1e0c33ce0db986b39eb3f5001c7c79c3210c4c"
+      },
+      "current_installation_evidence": "skills-3080-webdesign11-installation-evidence.json"
     },
     {
       "source_sha256": "1568e003d112e72df0ea2ec925829a5039b762c27174e063c192d7ccf7f4f9e6",
@@ -8390,7 +8642,7 @@
       "body_read_complete": true,
       "third_party_assets_or_support_rights_accepted": false,
       "git_blob": "8996aca04d8d0df3311e0b1e2d1208176a18ede9",
-      "installed_by_todo3080": false,
+      "installed_by_todo3080": true,
       "required_changes": [
         "外部scroll-world71cc36dやKageの実装/素材/未読supportは作者の参照であり本担当は未確認。root MITで包括受入せず、copy conductorを未読のまま実行しない。",
         "chapters4-8、triangle/drawcall/transfer/frame値は仮の予算で実成功や全製品の上限ではない。Auto governorと明示固定200%（既存の解像度規則）を分け、固定倍率を黙って下げない。",
@@ -8409,7 +8661,13 @@
         "third_party_assets_or_support_rights_accepted": false,
         "scope": "作者の既読手順文の評価のみ。外部ブランド/画像/元サイト/第三者package/配布コードと未読supportの許諾受入ではない。",
         "author_text": "Root MIT / Copyright(c)2026 Meng To. Selected subtree notice checked by fixed tree; no separate notice found."
-      }
+      },
+      "installation_before_next14": {
+        "installed_by_todo3080": false,
+        "baseline_commit": "71dab890939306e5b31977e9a2f968807af3a704",
+        "historical_evaluation_sha256": "19ddb546f498889b49b8d69c6492aeaac06ec8e8d569ef7db58cdd5ca7d08e26"
+      },
+      "current_installation_evidence": "skills-3080-webdesign-next14-installation-evidence.json"
     },
     {
       "source_sha256": "daaa8ef15435580ae7934fb1c9d8797d2d71038b90be707e3edd49e9c8c1cb54",
@@ -8502,7 +8760,7 @@
       "body_read_complete": true,
       "third_party_assets_or_support_rights_accepted": false,
       "git_blob": "a89ba27aafc449f3da1c65fdfd24a733dfd07af8",
-      "installed_by_todo3080": false,
+      "installed_by_todo3080": true,
       "required_changes": [
         "trailのsmoothstep(radius,radius-950,distance)は逆順edgeで、前のGLSL照合と整合しない。昇順edgeによる1-smoothstep等へ直し、対象仕様と実表示で確認する。",
         "world座標/親matrix/変形後の範囲、lagとwobbleの最大幅、originからの最遠点を確認する。3.4秒/520/135/950/62%/DPR2は元場面の値で、到達や性能の普遍保証にしない。",
@@ -8521,7 +8779,13 @@
         "scope": "作者の既読手順文の評価のみ。外部ブランド/画像/元サイト/第三者package/配布コードと未読supportの許諾受入ではない。",
         "author_text": "Root MIT / Copyright(c)2026 Meng To. Selected subtree notice checked by fixed tree; no separate notice found."
       },
-      "api_correction_evidence": "skills-3080-mengto-shader-api-evidence.json"
+      "api_correction_evidence": "skills-3080-mengto-shader-api-evidence.json",
+      "installation_before_next14": {
+        "installed_by_todo3080": false,
+        "baseline_commit": "71dab890939306e5b31977e9a2f968807af3a704",
+        "historical_evaluation_sha256": "19ddb546f498889b49b8d69c6492aeaac06ec8e8d569ef7db58cdd5ca7d08e26"
+      },
+      "current_installation_evidence": "skills-3080-webdesign-next14-installation-evidence.json"
     },
     {
       "source_sha256": "7b8f5745f34ef4ba507e19fabd6acf9cd3b8d70efda81746d0f4090af0f84e06",
@@ -8815,7 +9079,7 @@
       "body_read_complete": true,
       "third_party_assets_or_support_rights_accepted": false,
       "git_blob": "2c3b15e7941c7f9f399d4e8bef97249777ee6229",
-      "installed_by_todo3080": false,
+      "installed_by_todo3080": true,
       "required_changes": [
         "低contrast/小ラベルを無条件に採らず、文字/部品境界/focus/zoom/狭い画面で読む・操作する条件を確認する。",
         "進捗や承認cardを実状態のない実績表示へしない。全製品の既定方向にせず、具体画像の同対象回答後に実装する。"
@@ -8832,7 +9096,13 @@
         "third_party_assets_or_support_rights_accepted": false,
         "scope": "作者の既読手順文の評価のみ。外部ブランド/画像/元サイト/第三者package/配布コードと未読supportの許諾受入ではない。",
         "author_text": "Root MIT / Copyright(c)2026 Meng To. Selected subtree notice checked by fixed tree; no separate notice found."
-      }
+      },
+      "installation_before_next14": {
+        "installed_by_todo3080": false,
+        "baseline_commit": "71dab890939306e5b31977e9a2f968807af3a704",
+        "historical_evaluation_sha256": "19ddb546f498889b49b8d69c6492aeaac06ec8e8d569ef7db58cdd5ca7d08e26"
+      },
+      "current_installation_evidence": "skills-3080-webdesign-next14-installation-evidence.json"
     },
     {
       "source_sha256": "4f050b7495a5b19d05fb89736c6c61df4feacab07f23aae20cf8a8a79a53bbef",
@@ -8897,7 +9167,7 @@
       "body_read_complete": true,
       "third_party_assets_or_support_rights_accepted": false,
       "git_blob": "3abc281324065dbaf8fee51b7de3d44b7995875d",
-      "installed_by_todo3080": false,
+      "installed_by_todo3080": true,
       "required_changes": [
         "COBEの実版・個別license・toggle/destroy/onRenderと寸法APIは未確認。Three.jsのsetSize規約を別libraryへ移さず、width/heightとDPRを対象版で照合する。",
         "phi+=.01のframe依存、CSS寸法未指定時のintrinsic拡大、0サイズ/親resize/復帰、anonymous resize listenerの終了と再作成費用を確認する。",
@@ -8915,7 +9185,13 @@
         "third_party_assets_or_support_rights_accepted": false,
         "scope": "作者の既読手順文の評価のみ。外部ブランド/画像/元サイト/第三者package/配布コードと未読supportの許諾受入ではない。",
         "author_text": "Root MIT / Copyright(c)2026 Meng To. Selected subtree notice checked by fixed tree; no separate notice found."
-      }
+      },
+      "installation_before_next14": {
+        "installed_by_todo3080": false,
+        "baseline_commit": "71dab890939306e5b31977e9a2f968807af3a704",
+        "historical_evaluation_sha256": "19ddb546f498889b49b8d69c6492aeaac06ec8e8d569ef7db58cdd5ca7d08e26"
+      },
+      "current_installation_evidence": "skills-3080-webdesign-next14-installation-evidence.json"
     },
     {
       "source_sha256": "d089dd870e8f4012acc3bc1bf55855346a7e39fa4e975868f6ed2d495eb82729",
@@ -9343,7 +9619,7 @@
       "body_read_complete": true,
       "third_party_assets_or_support_rights_accepted": false,
       "git_blob": "725234a45f59ff3d382c9cda93d3bd9ad217af5f",
-      "installed_by_todo3080": false,
+      "installed_by_todo3080": true,
       "required_changes": [
         "raw WebGLを全依頼に必須化せず、静的表現や既存rendererも比較する。line-distance/SDF/bloomの実装・単位・資源所有/停止は未検証。",
         "色/beam数/点滅を普遍仕様にせず、文字/操作を隠さないstatic/reduced表示、実測、同対象の具体画像回答を補う。"
@@ -9360,7 +9636,13 @@
         "third_party_assets_or_support_rights_accepted": false,
         "scope": "作者の既読手順文の評価のみ。外部ブランド/画像/元サイト/第三者package/配布コードと未読supportの許諾受入ではない。",
         "author_text": "Root MIT / Copyright(c)2026 Meng To. Selected subtree notice checked by fixed tree; no separate notice found."
-      }
+      },
+      "installation_before_next14": {
+        "installed_by_todo3080": false,
+        "baseline_commit": "71dab890939306e5b31977e9a2f968807af3a704",
+        "historical_evaluation_sha256": "19ddb546f498889b49b8d69c6492aeaac06ec8e8d569ef7db58cdd5ca7d08e26"
+      },
+      "current_installation_evidence": "skills-3080-webdesign-next14-installation-evidence.json"
     },
     {
       "source_sha256": "049241d4c086b0f95af2ab68857435f604fee07e5744a856b385e3c212a638e1",
@@ -9633,7 +9915,7 @@
       "body_read_complete": true,
       "third_party_assets_or_support_rights_accepted": false,
       "git_blob": "f8ce4815ef7cd50852c5b85b4a90416d211fc75c",
-      "installed_by_todo3080": false,
+      "installed_by_todo3080": true,
       "required_changes": [
         "thin/小uppercaseを日本語や低contrastのまま強制せず、実際の背景/文字/zoom/focusを確認する。live dotやsection counterは実データか明示的な見本へ結び付ける。",
         "全製品の既定方向にせず、同対象の具体画像回答後に実装し、背景効果の静的/reduced fallbackと費用を確認する。"
@@ -9650,7 +9932,13 @@
         "third_party_assets_or_support_rights_accepted": false,
         "scope": "作者の既読手順文の評価のみ。外部ブランド/画像/元サイト/第三者package/配布コードと未読supportの許諾受入ではない。",
         "author_text": "Root MIT / Copyright(c)2026 Meng To. Selected subtree notice checked by fixed tree; no separate notice found."
-      }
+      },
+      "installation_before_next14": {
+        "installed_by_todo3080": false,
+        "baseline_commit": "71dab890939306e5b31977e9a2f968807af3a704",
+        "historical_evaluation_sha256": "19ddb546f498889b49b8d69c6492aeaac06ec8e8d569ef7db58cdd5ca7d08e26"
+      },
+      "current_installation_evidence": "skills-3080-webdesign-next14-installation-evidence.json"
     },
     {
       "source_sha256": "e51661080ce76a5386f2490406c95d5ad8e50f0d44ef55b0d972fb87a0baa560",
@@ -9707,7 +9995,7 @@
       "body_read_complete": true,
       "third_party_assets_or_support_rights_accepted": false,
       "git_blob": "756e9e4012f3353f3176dc7307dc1da2d0986f8c",
-      "installed_by_todo3080": false,
+      "installed_by_todo3080": true,
       "required_changes": [
         "monoの小IDやtelemetry風の見た目を、実際の処理/計測/知識の証拠へしない。元の画面の方向を変える場合は同対象の具体画像回答を先に得る。",
         "blur/transparencyは文字/contrast/focusや狭い画面の順序を損なわないよう確認し、opaque/static/reduced fallbackとGPU/CPU費用、背景RAFの停止/解放を補う。"
@@ -9724,7 +10012,13 @@
         "third_party_assets_or_support_rights_accepted": false,
         "scope": "作者の既読手順文の評価のみ。外部ブランド/画像/元サイト/第三者package/配布コードと未読supportの許諾受入ではない。",
         "author_text": "Root MIT / Copyright(c)2026 Meng To. Selected subtree notice checked by fixed tree; no separate notice found."
-      }
+      },
+      "installation_before_next14": {
+        "installed_by_todo3080": false,
+        "baseline_commit": "71dab890939306e5b31977e9a2f968807af3a704",
+        "historical_evaluation_sha256": "19ddb546f498889b49b8d69c6492aeaac06ec8e8d569ef7db58cdd5ca7d08e26"
+      },
+      "current_installation_evidence": "skills-3080-webdesign-next14-installation-evidence.json"
     },
     {
       "source_sha256": "aa6520dc7dcb8dc3dc9a382a4363b57cad01a6745fbc05ce609539d38663c40b",
@@ -9799,7 +10093,7 @@
       "body_read_complete": true,
       "third_party_assets_or_support_rights_accepted": false,
       "git_blob": "68b847c28b4c9b54b3871662f6b385af11a4f502",
-      "installed_by_todo3080": false,
+      "installed_by_todo3080": true,
       "required_changes": [
         "ここで定義されたJavaScript smoothstepは逆順edgeでも数式が定義され、GLSL組込みの未定義条件をそのまま当てはめない。edge同値やcell/palette等の不正値は別に確認する。",
         "field計算のcell数はCSS面積/cellSizeで決まり、DPRを下げるだけではCPUのnoise評価回数は減らない。time0再描画/復帰のjump、visibility、media query変更と停止/解放を補う。",
@@ -9817,7 +10111,13 @@
         "third_party_assets_or_support_rights_accepted": false,
         "scope": "作者の既読手順文の評価のみ。外部ブランド/画像/元サイト/第三者package/配布コードと未読supportの許諾受入ではない。",
         "author_text": "Root MIT / Copyright(c)2026 Meng To. Selected subtree notice checked by fixed tree; no separate notice found."
-      }
+      },
+      "installation_before_next14": {
+        "installed_by_todo3080": false,
+        "baseline_commit": "71dab890939306e5b31977e9a2f968807af3a704",
+        "historical_evaluation_sha256": "19ddb546f498889b49b8d69c6492aeaac06ec8e8d569ef7db58cdd5ca7d08e26"
+      },
+      "current_installation_evidence": "skills-3080-webdesign-next14-installation-evidence.json"
     },
     {
       "source_sha256": "afbf1b3161ea8c5b92f69fef0abdeb299f128aaa055730998cae32d1896d7e57",
@@ -9963,7 +10263,7 @@
       "body_read_complete": true,
       "third_party_assets_or_support_rights_accepted": false,
       "git_blob": "48978533806319c89082d157015be624f80df040",
-      "installed_by_todo3080": false,
+      "installed_by_todo3080": true,
       "required_changes": [
         "全UIに同じtextureやWebGLを必須にしない。背景/文字/操作のcontrast、静的/reduced表示とGPU/CPU費用を確認する。",
         "status chipや進捗は実状態を示し、装飾から成功や稼働を捏造しない。元の色/名称を勝手に変えず、同対象の具体画像回答後に実装する。"
@@ -9980,7 +10280,13 @@
         "third_party_assets_or_support_rights_accepted": false,
         "scope": "作者の既読手順文の評価のみ。外部ブランド/画像/元サイト/第三者package/配布コードと未読supportの許諾受入ではない。",
         "author_text": "Root MIT / Copyright(c)2026 Meng To. Selected subtree notice checked by fixed tree; no separate notice found."
-      }
+      },
+      "installation_before_next14": {
+        "installed_by_todo3080": false,
+        "baseline_commit": "71dab890939306e5b31977e9a2f968807af3a704",
+        "historical_evaluation_sha256": "19ddb546f498889b49b8d69c6492aeaac06ec8e8d569ef7db58cdd5ca7d08e26"
+      },
+      "current_installation_evidence": "skills-3080-webdesign-next14-installation-evidence.json"
     },
     {
       "source_sha256": "0659ce40f776437f419ed66506e318c38ac8003bb735cfaff12664899dfa903b",
@@ -10054,7 +10360,7 @@
       "body_read_complete": true,
       "third_party_assets_or_support_rights_accepted": false,
       "git_blob": "4f29ed300937970996af719935f1abd4f50cce65",
-      "installed_by_todo3080": false,
+      "installed_by_todo3080": true,
       "required_changes": [
         "実作品/写真/quote/awardの出所と表示の真実性を個別確認し、元の本人の名称や提供素材を一律に置換しない。具体画像の同対象回答後に実装する。",
         "5%parallax/160-760msや小書体を普遍基準にせず、zoom/JPの折返し/keyboard/touch/failed media/reduced、真のmodalだけのfocus trapを確認する。"
@@ -10071,7 +10377,13 @@
         "third_party_assets_or_support_rights_accepted": false,
         "scope": "作者の既読手順文の評価のみ。外部ブランド/画像/元サイト/第三者package/配布コードと未読supportの許諾受入ではない。",
         "author_text": "Root MIT / Copyright(c)2026 Meng To. Selected subtree notice checked by fixed tree; no separate notice found."
-      }
+      },
+      "installation_before_next14": {
+        "installed_by_todo3080": false,
+        "baseline_commit": "71dab890939306e5b31977e9a2f968807af3a704",
+        "historical_evaluation_sha256": "19ddb546f498889b49b8d69c6492aeaac06ec8e8d569ef7db58cdd5ca7d08e26"
+      },
+      "current_installation_evidence": "skills-3080-webdesign-next14-installation-evidence.json"
     },
     {
       "source_sha256": "763b2eb851228aee7af65914b2f45f062677e03a17f8d2dd50441bdd733b5d8e",
@@ -10272,7 +10584,7 @@
       "body_read_complete": true,
       "third_party_assets_or_support_rights_accepted": false,
       "git_blob": "db7a77571ecbeea09ccb4fb6d218618071328d15",
-      "installed_by_todo3080": false,
+      "installed_by_todo3080": true,
       "required_changes": [
         "ARTICLE.mdのworked exampleと参照先identity/文章/素材の権利は未読/未確認。root MITから包括受入せず、作者の一般手順との部分統合を比べる。",
         "12column/40-64px/scale1.02/5%/秒数は選ぶ方向の初期値。本文/keyboard/touch/日本語/縮小/画像失敗/reducedの実表示と、同対象の具体画像回答を保持する。"
@@ -10289,7 +10601,13 @@
         "third_party_assets_or_support_rights_accepted": false,
         "scope": "作者の既読手順文の評価のみ。外部ブランド/画像/元サイト/第三者package/配布コードと未読supportの許諾受入ではない。",
         "author_text": "Root MIT / Copyright(c)2026 Meng To. Selected subtree notice checked by fixed tree; no separate notice found."
-      }
+      },
+      "installation_before_next14": {
+        "installed_by_todo3080": false,
+        "baseline_commit": "71dab890939306e5b31977e9a2f968807af3a704",
+        "historical_evaluation_sha256": "19ddb546f498889b49b8d69c6492aeaac06ec8e8d569ef7db58cdd5ca7d08e26"
+      },
+      "current_installation_evidence": "skills-3080-webdesign-next14-installation-evidence.json"
     },
     {
       "source_sha256": "a02695cff83e0c419f17a9ace237ac543f677a75e3242c51ce9f16c801eccbd2",
@@ -10364,7 +10682,7 @@
       "body_read_complete": true,
       "third_party_assets_or_support_rights_accepted": false,
       "git_blob": "02eac7b8c0f910e14b6df6799232f526ad1355b6",
-      "installed_by_todo3080": false,
+      "installed_by_todo3080": true,
       "required_changes": [
         "価格/資格/場所/口コミ/空き枠は実データか明確な仮例で扱い、root MITで写真や実績を受入しない。同対象の具体画像回答後にUIを実装する。",
         "serverの直前確認/競合/重複送信/支払と再試行を実結果で確かめ、見た目だけで予約確定にしない。tabのactivation/focusとreduced表示、値の保持は対象の実装で選ぶ。",
@@ -10382,7 +10700,13 @@
         "third_party_assets_or_support_rights_accepted": false,
         "scope": "作者の既読手順文の評価のみ。外部ブランド/画像/元サイト/第三者package/配布コードと未読supportの許諾受入ではない。",
         "author_text": "Root MIT / Copyright(c)2026 Meng To. Selected subtree notice checked by fixed tree; no separate notice found."
-      }
+      },
+      "installation_before_next14": {
+        "installed_by_todo3080": false,
+        "baseline_commit": "71dab890939306e5b31977e9a2f968807af3a704",
+        "historical_evaluation_sha256": "19ddb546f498889b49b8d69c6492aeaac06ec8e8d569ef7db58cdd5ca7d08e26"
+      },
+      "current_installation_evidence": "skills-3080-webdesign-next14-installation-evidence.json"
     },
     {
       "source_sha256": "9f032de321c81b2e7ae7fa451d6b3c7bdb7dfbf082ff735e5af4868e3a0b9300",
@@ -10566,7 +10890,7 @@
       "body_read_complete": true,
       "third_party_assets_or_support_rights_accepted": false,
       "git_blob": "ad257dd19843298c91b0fb253cdf3cb44a29abc3",
-      "installed_by_todo3080": false,
+      "installed_by_todo3080": true,
       "required_changes": [
         "countがareaに比例する説明とsqrt(area)の例を区別する。画面上密度はcamera/frustum/分布にも依存し、count増加による費用を単純な線形や無料とはしない。",
         "cameraの水平方向が0の場合、quads/alpha-test/透過/深度とearly-Z、色空間/光/tonemapの実版を確認。赤が必ずpinkになる、gb0が常に正しい等を共通規則にしない。",
@@ -10584,7 +10908,13 @@
         "third_party_assets_or_support_rights_accepted": false,
         "scope": "作者の既読手順文の評価のみ。外部ブランド/画像/元サイト/第三者package/配布コードと未読supportの許諾受入ではない。",
         "author_text": "Root MIT / Copyright(c)2026 Meng To. Selected subtree notice checked by fixed tree; no separate notice found."
-      }
+      },
+      "installation_before_next14": {
+        "installed_by_todo3080": false,
+        "baseline_commit": "71dab890939306e5b31977e9a2f968807af3a704",
+        "historical_evaluation_sha256": "19ddb546f498889b49b8d69c6492aeaac06ec8e8d569ef7db58cdd5ca7d08e26"
+      },
+      "current_installation_evidence": "skills-3080-webdesign-next14-installation-evidence.json"
     },
     {
       "source_sha256": "d8ff1f0e60ea73f1a98e3c4991e1a3ffa9484e989fb175c2410058dfdc93d30b",
@@ -10650,7 +10980,7 @@
       "body_read_complete": true,
       "third_party_assets_or_support_rights_accepted": false,
       "git_blob": "63adf402edac635f79e279f6c16aa304260c5007",
-      "installed_by_todo3080": false,
+      "installed_by_todo3080": true,
       "required_changes": [
         "sourceの『owner』やKIBORIの測定9ms/450ms/Metal値を本PCの本人や実績へしない。Worker起動条件/実版/CSP/blob/eval/transferと失敗時canvasを確認し、共有module等の方法も比較する。",
         "KHR_parallel_shader_compileの完了確認とlink errorを落とさず、readPixels warmupが別のqueue待ちを生まないか実測する。進捗のcreepや安全timerを本当のasset完了/aria100と混同しない。",
@@ -10668,7 +10998,13 @@
         "third_party_assets_or_support_rights_accepted": false,
         "scope": "作者の既読手順文の評価のみ。外部ブランド/画像/元サイト/第三者package/配布コードと未読supportの許諾受入ではない。",
         "author_text": "Root MIT / Copyright(c)2026 Meng To. Selected subtree notice checked by fixed tree; no separate notice found."
-      }
+      },
+      "installation_before_next14": {
+        "installed_by_todo3080": false,
+        "baseline_commit": "71dab890939306e5b31977e9a2f968807af3a704",
+        "historical_evaluation_sha256": "19ddb546f498889b49b8d69c6492aeaac06ec8e8d569ef7db58cdd5ca7d08e26"
+      },
+      "current_installation_evidence": "skills-3080-webdesign-next14-installation-evidence.json"
     },
     {
       "source_sha256": "0888e311ada1a4d8967a26a3650b5a521cce54bb2aad627f6c32ff12b3b03da9",
@@ -10979,7 +11315,7 @@
       "body_read_complete": true,
       "third_party_assets_or_support_rights_accepted": false,
       "git_blob": "57b3d88eb995748c9a781e5e5449bfcb54bd13ce",
-      "installed_by_todo3080": false,
+      "installed_by_todo3080": true,
       "required_changes": [
         "calibration/degree/時刻の見た目が科学的計測の証拠であるとしない。実機能なら単位/基準/現在値を本当に接続し、装飾なら意味と区別する。",
         "小label/回転文字/blurの可読性、keyboard/contrast/狭い画面、静的/reduced表示と費用を確認し、同対象の具体画像回答後に実装する。"
@@ -10996,7 +11332,13 @@
         "third_party_assets_or_support_rights_accepted": false,
         "scope": "作者の既読手順文の評価のみ。外部ブランド/画像/元サイト/第三者package/配布コードと未読supportの許諾受入ではない。",
         "author_text": "Root MIT / Copyright(c)2026 Meng To. Selected subtree notice checked by fixed tree; no separate notice found."
-      }
+      },
+      "installation_before_next20": {
+        "installed_by_todo3080": false,
+        "baseline_commit": "25407d5a12256f1cfce9edbb2f3466fb7de5491c",
+        "historical_evaluation_sha256": "2404589f8671c9620faf2801bdf7975a847c8f90c46260ad01da64ac1ddc3265"
+      },
+      "current_installation_evidence": "skills-3080-webdesign-next20-installation-evidence.json"
     },
     {
       "inventory_id": "github:111f61a743f00016888dd5af3f84365b176fef4f9814219563830c1e0cb0985a",
@@ -11048,7 +11390,7 @@
       "positive_candidate": "手のひらから霜が地面へ広がり、氷柱が立って砕けるまでを、Three.jsの3Dスキル演出として作る。",
       "negative_candidate": "CSSだけで画面の縁に霜の飾りを付ける。または、UnityやGodotへ氷スキルを移植する。",
       "support_read_complete": false,
-      "installed_by_todo3080": false,
+      "installed_by_todo3080": true,
       "integrated_by_todo3080": false,
       "excluded_by_todo3080": false,
       "independent_review_complete": false,
@@ -11253,7 +11595,8 @@
           "executed": false
         }
       ],
-      "parent_policy_correction": "本文のパレット・被写体・機器・採点は作者スタイルの条件であり本人の一般禁止ではない。未保存kitを待たず有用な原則の統合は検討できる。新規自作Go/GoDD Rust、配布Python無改変利用、本人Chromeと同対象画像回答を保持。"
+      "parent_policy_correction": "本文のパレット・被写体・機器・採点は作者スタイルの条件であり本人の一般禁止ではない。未保存kitを待たず有用な原則の統合は検討できる。新規自作Go/GoDD Rust、配布Python無改変利用、本人Chromeと同対象画像回答を保持。",
+      "current_installation_evidence": "skills-3080-combat6-installation-evidence090101.json"
     },
     {
       "inventory_id": "github:d39033e6b74f59b0cc3eba37363bf7229fbfb4b06d8b098bf52ff27a01f2e0b2",
@@ -11306,7 +11649,7 @@
       "positive_candidate": "近接攻撃のスキルで、雷雲のオーブ、段階的に伸びる雷、着弾の衝撃フレームを3Dで作る。",
       "negative_candidate": "炎と煙の演出だけを作る（兄弟入口の範囲）。または、画面全体が連続して点滅する雷を作る。",
       "support_read_complete": false,
-      "installed_by_todo3080": false,
+      "installed_by_todo3080": true,
       "integrated_by_todo3080": false,
       "excluded_by_todo3080": false,
       "independent_review_complete": false,
@@ -11499,7 +11842,8 @@
           "executed": false
         }
       ],
-      "parent_policy_correction": "本文のパレット・被写体・機器・採点は作者スタイルの条件であり本人の一般禁止ではない。未保存kitを待たず有用な原則の統合は検討できる。新規自作Go/GoDD Rust、配布Python無改変利用、本人Chromeと同対象画像回答を保持。"
+      "parent_policy_correction": "本文のパレット・被写体・機器・採点は作者スタイルの条件であり本人の一般禁止ではない。未保存kitを待たず有用な原則の統合は検討できる。新規自作Go/GoDD Rust、配布Python無改変利用、本人Chromeと同対象画像回答を保持。",
+      "current_installation_evidence": "skills-3080-combat6-installation-evidence090101.json"
     },
     {
       "inventory_id": "github:90a19e838b7573f4315714f7472a269c8d41f9dddd1f2f6e8f8e35522c5ae66b",
@@ -11552,7 +11896,7 @@
       "positive_candidate": "水球から水縄が伸び、結晶が砕けて水へ落ちるスキル演出を、月光の岩場で3Dで作る。",
       "negative_candidate": "炎・雷・氷の演出を作る（兄弟入口の範囲）。または、2Dの静止画で水面を描く。",
       "support_read_complete": false,
-      "installed_by_todo3080": false,
+      "installed_by_todo3080": true,
       "integrated_by_todo3080": false,
       "excluded_by_todo3080": false,
       "independent_review_complete": false,
@@ -11781,7 +12125,8 @@
           "executed": false
         }
       ],
-      "parent_policy_correction": "本文のパレット・被写体・機器・採点は作者スタイルの条件であり本人の一般禁止ではない。未保存kitを待たず有用な原則の統合は検討できる。新規自作Go/GoDD Rust、配布Python無改変利用、本人Chromeと同対象画像回答を保持。"
+      "parent_policy_correction": "本文のパレット・被写体・機器・採点は作者スタイルの条件であり本人の一般禁止ではない。未保存kitを待たず有用な原則の統合は検討できる。新規自作Go/GoDD Rust、配布Python無改変利用、本人Chromeと同対象画像回答を保持。",
+      "current_installation_evidence": "skills-3080-combat6-installation-evidence090101.json"
     },
     {
       "inventory_id": "github:cb7ea1494e0f217b25369cebd5c2b52b9f39f7999e5a9cb81ba1683e017920ae",
@@ -11834,7 +12179,7 @@
       "positive_candidate": "404ページ用に、PCの前で作業する人物を、太い紺の輪郭と押し出しで描いたSVGを新規に作る。",
       "negative_candidate": "輪郭なしの平塗りで人物を描く（別スタイルの入口の範囲）。または、既存のロゴやキャラクターを模写する。",
       "support_read_complete": false,
-      "installed_by_todo3080": false,
+      "installed_by_todo3080": true,
       "integrated_by_todo3080": false,
       "excluded_by_todo3080": false,
       "independent_review_complete": false,
@@ -11991,7 +12336,9 @@
           "executed": false
         }
       ],
-      "parent_policy_correction": "本文のパレット・被写体・機器・採点は作者スタイルの条件であり本人の一般禁止ではない。未保存kitを待たず有用な原則の統合は検討できる。新規自作Go/GoDD Rust、配布Python無改変利用、本人Chromeと同対象画像回答を保持。"
+      "parent_policy_correction": "本文のパレット・被写体・機器・採点は作者スタイルの条件であり本人の一般禁止ではない。未保存kitを待たず有用な原則の統合は検討できる。新規自作Go/GoDD Rust、配布Python無改変利用、本人Chromeと同対象画像回答を保持。",
+      "current_installation_evidence": "skills-3080-craft-installation-evidence214717.json",
+      "current_adopted_scope": "Construction/grip/contact and comparison procedure from primary plus its shared craft reference; not the entire style kit or package"
     },
     {
       "inventory_id": "github:f469addd0f561499f4fdeb93411076dc7e316761d7fa8bea56083d0e2db1216e",
@@ -14998,7 +15345,7 @@
       "selected_scope_notice_verified": true,
       "third_party_assets_or_support_rights_accepted": false,
       "support_read_complete": false,
-      "installed_by_todo3080": false,
+      "installed_by_todo3080": true,
       "integrated_by_todo3080": false,
       "excluded_by_todo3080": false,
       "independent_review_complete": false,
@@ -15106,7 +15453,13 @@
           "body_read": false
         }
       ],
-      "parent_policy_correction": "上流の好み/機器/採点/測定値を本人方針へ昇格しない。本文作者のMITと第三者素材の権利を区別。未保存支持の一律取得・全支持監査を新義務にせず、有用な原則の適用範囲を限定して検討する。既存本人回答・通常操作・既存契約内の利用を再承認待ちにしない。"
+      "parent_policy_correction": "上流の好み/機器/採点/測定値を本人方針へ昇格しない。本文作者のMITと第三者素材の権利を区別。未保存支持の一律取得・全支持監査を新義務にせず、有用な原則の適用範囲を限定して検討する。既存本人回答・通常操作・既存契約内の利用を再承認待ちにしない。",
+      "installation_before_next20": {
+        "installed_by_todo3080": false,
+        "baseline_commit": "25407d5a12256f1cfce9edbb2f3466fb7de5491c",
+        "historical_evaluation_sha256": "2404589f8671c9620faf2801bdf7975a847c8f90c46260ad01da64ac1ddc3265"
+      },
+      "current_installation_evidence": "skills-3080-webdesign-next20-installation-evidence.json"
     },
     {
       "inventory_id": "github:8cf19f6fea1a18266d92303a84e52cf30b3a97ce1918c425b9e9aaff01966b8b",
@@ -15597,7 +15950,7 @@
       "selected_scope_notice_verified": true,
       "third_party_assets_or_support_rights_accepted": false,
       "support_read_complete": false,
-      "installed_by_todo3080": false,
+      "installed_by_todo3080": true,
       "integrated_by_todo3080": false,
       "excluded_by_todo3080": false,
       "independent_review_complete": false,
@@ -15730,7 +16083,13 @@
           "body_read": false
         }
       ],
-      "parent_policy_correction": "上流の好み/機器/採点/測定値を本人方針へ昇格しない。本文作者のMITと第三者素材の権利を区別。未保存支持の一律取得・全支持監査を新義務にせず、有用な原則の適用範囲を限定して検討する。既存本人回答・通常操作・既存契約内の利用を再承認待ちにしない。"
+      "parent_policy_correction": "上流の好み/機器/採点/測定値を本人方針へ昇格しない。本文作者のMITと第三者素材の権利を区別。未保存支持の一律取得・全支持監査を新義務にせず、有用な原則の適用範囲を限定して検討する。既存本人回答・通常操作・既存契約内の利用を再承認待ちにしない。",
+      "installation_before_next20": {
+        "installed_by_todo3080": false,
+        "baseline_commit": "25407d5a12256f1cfce9edbb2f3466fb7de5491c",
+        "historical_evaluation_sha256": "2404589f8671c9620faf2801bdf7975a847c8f90c46260ad01da64ac1ddc3265"
+      },
+      "current_installation_evidence": "skills-3080-webdesign-next20-installation-evidence.json"
     },
     {
       "inventory_id": "github:2faf356398886a7b385fccc1aaf02ac143060374a09ef1f042876b0dcedf61d6",
@@ -15775,7 +16134,7 @@
       "selected_scope_notice_verified": true,
       "third_party_assets_or_support_rights_accepted": false,
       "support_read_complete": false,
-      "installed_by_todo3080": false,
+      "installed_by_todo3080": true,
       "integrated_by_todo3080": false,
       "excluded_by_todo3080": false,
       "independent_review_complete": false,
@@ -15835,7 +16194,13 @@
           "body_read": false
         }
       ],
-      "parent_policy_correction": "上流の好み/機器/採点/測定値を本人方針へ昇格しない。本文作者のMITと第三者素材の権利を区別。未保存支持の一律取得・全支持監査を新義務にせず、有用な原則の適用範囲を限定して検討する。既存本人回答・通常操作・既存契約内の利用を再承認待ちにしない。"
+      "parent_policy_correction": "上流の好み/機器/採点/測定値を本人方針へ昇格しない。本文作者のMITと第三者素材の権利を区別。未保存支持の一律取得・全支持監査を新義務にせず、有用な原則の適用範囲を限定して検討する。既存本人回答・通常操作・既存契約内の利用を再承認待ちにしない。",
+      "installation_before_next20": {
+        "installed_by_todo3080": false,
+        "baseline_commit": "25407d5a12256f1cfce9edbb2f3466fb7de5491c",
+        "historical_evaluation_sha256": "2404589f8671c9620faf2801bdf7975a847c8f90c46260ad01da64ac1ddc3265"
+      },
+      "current_installation_evidence": "skills-3080-webdesign-next20-installation-evidence.json"
     },
     {
       "inventory_id": "github:9fa942d1c78b077fb57c059fceb8d5ee735902dbc2eba7691b7b5236ee2e9835",
@@ -15880,7 +16245,7 @@
       "selected_scope_notice_verified": true,
       "third_party_assets_or_support_rights_accepted": false,
       "support_read_complete": false,
-      "installed_by_todo3080": false,
+      "installed_by_todo3080": true,
       "integrated_by_todo3080": false,
       "excluded_by_todo3080": false,
       "independent_review_complete": false,
@@ -16084,7 +16449,13 @@
           "body_read": false
         }
       ],
-      "parent_policy_correction": "上流の好み/機器/採点/測定値を本人方針へ昇格しない。本文作者のMITと第三者素材の権利を区別。未保存支持の一律取得・全支持監査を新義務にせず、有用な原則の適用範囲を限定して検討する。既存本人回答・通常操作・既存契約内の利用を再承認待ちにしない。"
+      "parent_policy_correction": "上流の好み/機器/採点/測定値を本人方針へ昇格しない。本文作者のMITと第三者素材の権利を区別。未保存支持の一律取得・全支持監査を新義務にせず、有用な原則の適用範囲を限定して検討する。既存本人回答・通常操作・既存契約内の利用を再承認待ちにしない。",
+      "installation_before_next20": {
+        "installed_by_todo3080": false,
+        "baseline_commit": "25407d5a12256f1cfce9edbb2f3466fb7de5491c",
+        "historical_evaluation_sha256": "2404589f8671c9620faf2801bdf7975a847c8f90c46260ad01da64ac1ddc3265"
+      },
+      "current_installation_evidence": "skills-3080-webdesign-next20-installation-evidence.json"
     },
     {
       "inventory_id": "github:3e8d90ce2de515921e52d52993f9de342b9664a910a50131648291525c128e11",
@@ -16126,7 +16497,7 @@
       "selected_scope_notice_verified": true,
       "third_party_assets_or_support_rights_accepted": false,
       "support_read_complete": false,
-      "installed_by_todo3080": false,
+      "installed_by_todo3080": true,
       "integrated_by_todo3080": false,
       "excluded_by_todo3080": false,
       "independent_review_complete": false,
@@ -16270,7 +16641,13 @@
           "body_read": false
         }
       ],
-      "parent_policy_correction": "上流の好み/機器/採点/測定値を本人方針へ昇格しない。本文作者のMITと第三者素材の権利を区別。未保存支持の一律取得・全支持監査を新義務にせず、有用な原則の適用範囲を限定して検討する。既存本人回答・通常操作・既存契約内の利用を再承認待ちにしない。"
+      "parent_policy_correction": "上流の好み/機器/採点/測定値を本人方針へ昇格しない。本文作者のMITと第三者素材の権利を区別。未保存支持の一律取得・全支持監査を新義務にせず、有用な原則の適用範囲を限定して検討する。既存本人回答・通常操作・既存契約内の利用を再承認待ちにしない。",
+      "installation_before_next20": {
+        "installed_by_todo3080": false,
+        "baseline_commit": "25407d5a12256f1cfce9edbb2f3466fb7de5491c",
+        "historical_evaluation_sha256": "2404589f8671c9620faf2801bdf7975a847c8f90c46260ad01da64ac1ddc3265"
+      },
+      "current_installation_evidence": "skills-3080-webdesign-next20-installation-evidence.json"
     },
     {
       "inventory_id": "github:2bbfd89edc8bc5f62ea869ca251b2cd0d70d6b32cbe9fac2fd268d107402f463",
@@ -16414,7 +16791,7 @@
       "selected_scope_notice_verified": true,
       "third_party_assets_or_support_rights_accepted": false,
       "support_read_complete": false,
-      "installed_by_todo3080": false,
+      "installed_by_todo3080": true,
       "integrated_by_todo3080": false,
       "excluded_by_todo3080": false,
       "independent_review_complete": false,
@@ -16535,7 +16912,13 @@
           "body_read": false
         }
       ],
-      "parent_policy_correction": "上流の好み/機器/採点/測定値を本人方針へ昇格しない。本文作者のMITと第三者素材の権利を区別。未保存支持の一律取得・全支持監査を新義務にせず、有用な原則の適用範囲を限定して検討する。既存本人回答・通常操作・既存契約内の利用を再承認待ちにしない。"
+      "parent_policy_correction": "上流の好み/機器/採点/測定値を本人方針へ昇格しない。本文作者のMITと第三者素材の権利を区別。未保存支持の一律取得・全支持監査を新義務にせず、有用な原則の適用範囲を限定して検討する。既存本人回答・通常操作・既存契約内の利用を再承認待ちにしない。",
+      "installation_before_next20": {
+        "installed_by_todo3080": false,
+        "baseline_commit": "25407d5a12256f1cfce9edbb2f3466fb7de5491c",
+        "historical_evaluation_sha256": "2404589f8671c9620faf2801bdf7975a847c8f90c46260ad01da64ac1ddc3265"
+      },
+      "current_installation_evidence": "skills-3080-webdesign-next20-installation-evidence.json"
     },
     {
       "inventory_id": "github:44fb8bb92bf509be3a1357ac1a69657b189e50508a1e61e18f8bba1d5b55cbe8",
@@ -17043,7 +17426,7 @@
       "selected_scope_notice_verified": true,
       "third_party_assets_or_support_rights_accepted": false,
       "support_read_complete": false,
-      "installed_by_todo3080": false,
+      "installed_by_todo3080": true,
       "integrated_by_todo3080": false,
       "excluded_by_todo3080": false,
       "independent_review_complete": false,
@@ -17091,7 +17474,13 @@
           "body_read": false
         }
       ],
-      "parent_policy_correction": "上流の好み/機器/採点/測定値を本人方針へ昇格しない。本文作者のMITと第三者素材の権利を区別。未保存支持の一律取得・全支持監査を新義務にせず、有用な原則の適用範囲を限定して検討する。既存本人回答・通常操作・既存契約内の利用を再承認待ちにしない。"
+      "parent_policy_correction": "上流の好み/機器/採点/測定値を本人方針へ昇格しない。本文作者のMITと第三者素材の権利を区別。未保存支持の一律取得・全支持監査を新義務にせず、有用な原則の適用範囲を限定して検討する。既存本人回答・通常操作・既存契約内の利用を再承認待ちにしない。",
+      "installation_before_next20": {
+        "installed_by_todo3080": false,
+        "baseline_commit": "25407d5a12256f1cfce9edbb2f3466fb7de5491c",
+        "historical_evaluation_sha256": "2404589f8671c9620faf2801bdf7975a847c8f90c46260ad01da64ac1ddc3265"
+      },
+      "current_installation_evidence": "skills-3080-webdesign-next20-installation-evidence.json"
     },
     {
       "inventory_id": "github:d56d4412c11b169e6708f534340217792a827edd83987232bb0c0f4913c09a3b",
@@ -17134,7 +17523,7 @@
       "selected_scope_notice_verified": true,
       "third_party_assets_or_support_rights_accepted": false,
       "support_read_complete": false,
-      "installed_by_todo3080": false,
+      "installed_by_todo3080": true,
       "integrated_by_todo3080": false,
       "excluded_by_todo3080": false,
       "independent_review_complete": false,
@@ -17207,7 +17596,13 @@
           "body_read": false
         }
       ],
-      "parent_policy_correction": "上流の好み/機器/採点/測定値を本人方針へ昇格しない。本文作者のMITと第三者素材の権利を区別。未保存支持の一律取得・全支持監査を新義務にせず、有用な原則の適用範囲を限定して検討する。既存本人回答・通常操作・既存契約内の利用を再承認待ちにしない。"
+      "parent_policy_correction": "上流の好み/機器/採点/測定値を本人方針へ昇格しない。本文作者のMITと第三者素材の権利を区別。未保存支持の一律取得・全支持監査を新義務にせず、有用な原則の適用範囲を限定して検討する。既存本人回答・通常操作・既存契約内の利用を再承認待ちにしない。",
+      "installation_before_next20": {
+        "installed_by_todo3080": false,
+        "baseline_commit": "25407d5a12256f1cfce9edbb2f3466fb7de5491c",
+        "historical_evaluation_sha256": "2404589f8671c9620faf2801bdf7975a847c8f90c46260ad01da64ac1ddc3265"
+      },
+      "current_installation_evidence": "skills-3080-webdesign-next20-installation-evidence.json"
     },
     {
       "inventory_id": "github:7cbbee11d2ebc0c15fd9b0d36ef7f850847ddacffafb5f4a1fff9c0c7a5c8c64",
@@ -17783,7 +18178,7 @@
       "selected_scope_notice_verified": true,
       "third_party_assets_or_support_rights_accepted": false,
       "support_read_complete": false,
-      "installed_by_todo3080": false,
+      "installed_by_todo3080": true,
       "integrated_by_todo3080": false,
       "excluded_by_todo3080": false,
       "independent_review_complete": false,
@@ -17855,7 +18250,13 @@
           "body_read": false
         }
       ],
-      "parent_policy_correction": "上流の好み/機器/採点/測定値を本人方針へ昇格しない。本文作者のMITと第三者素材の権利を区別。未保存支持の一律取得・全支持監査を新義務にせず、有用な原則の適用範囲を限定して検討する。既存本人回答・通常操作・既存契約内の利用を再承認待ちにしない。"
+      "parent_policy_correction": "上流の好み/機器/採点/測定値を本人方針へ昇格しない。本文作者のMITと第三者素材の権利を区別。未保存支持の一律取得・全支持監査を新義務にせず、有用な原則の適用範囲を限定して検討する。既存本人回答・通常操作・既存契約内の利用を再承認待ちにしない。",
+      "installation_before_next20": {
+        "installed_by_todo3080": false,
+        "baseline_commit": "25407d5a12256f1cfce9edbb2f3466fb7de5491c",
+        "historical_evaluation_sha256": "2404589f8671c9620faf2801bdf7975a847c8f90c46260ad01da64ac1ddc3265"
+      },
+      "current_installation_evidence": "skills-3080-webdesign-next20-installation-evidence.json"
     },
     {
       "inventory_id": "github:d069b46afe20612b0a7740204ef71f0a4d55da7dd92293978eb60ad2c84b1128",
@@ -18012,7 +18413,7 @@
       "selected_scope_notice_verified": true,
       "third_party_assets_or_support_rights_accepted": false,
       "support_read_complete": false,
-      "installed_by_todo3080": false,
+      "installed_by_todo3080": true,
       "integrated_by_todo3080": false,
       "excluded_by_todo3080": false,
       "independent_review_complete": false,
@@ -18072,7 +18473,13 @@
           "body_read": false
         }
       ],
-      "parent_policy_correction": "上流の好み/機器/採点/測定値を本人方針へ昇格しない。本文作者のMITと第三者素材の権利を区別。未保存支持の一律取得・全支持監査を新義務にせず、有用な原則の適用範囲を限定して検討する。既存本人回答・通常操作・既存契約内の利用を再承認待ちにしない。"
+      "parent_policy_correction": "上流の好み/機器/採点/測定値を本人方針へ昇格しない。本文作者のMITと第三者素材の権利を区別。未保存支持の一律取得・全支持監査を新義務にせず、有用な原則の適用範囲を限定して検討する。既存本人回答・通常操作・既存契約内の利用を再承認待ちにしない。",
+      "installation_before_next20": {
+        "installed_by_todo3080": false,
+        "baseline_commit": "25407d5a12256f1cfce9edbb2f3466fb7de5491c",
+        "historical_evaluation_sha256": "2404589f8671c9620faf2801bdf7975a847c8f90c46260ad01da64ac1ddc3265"
+      },
+      "current_installation_evidence": "skills-3080-webdesign-next20-installation-evidence.json"
     },
     {
       "inventory_id": "github:a89e967becb119a2e1fde4392aaeb0c034ff9c683290947db8c690624fc9887e",
@@ -18359,7 +18766,7 @@
       "selected_scope_notice_verified": true,
       "third_party_assets_or_support_rights_accepted": false,
       "support_read_complete": false,
-      "installed_by_todo3080": false,
+      "installed_by_todo3080": true,
       "integrated_by_todo3080": false,
       "excluded_by_todo3080": false,
       "independent_review_complete": false,
@@ -18432,7 +18839,13 @@
           "body_read": false
         }
       ],
-      "parent_policy_correction": "上流の好み/機器/採点/測定値を本人方針へ昇格しない。本文作者のMITと第三者素材の権利を区別。未保存支持の一律取得・全支持監査を新義務にせず、有用な原則の適用範囲を限定して検討する。既存本人回答・通常操作・既存契約内の利用を再承認待ちにしない。"
+      "parent_policy_correction": "上流の好み/機器/採点/測定値を本人方針へ昇格しない。本文作者のMITと第三者素材の権利を区別。未保存支持の一律取得・全支持監査を新義務にせず、有用な原則の適用範囲を限定して検討する。既存本人回答・通常操作・既存契約内の利用を再承認待ちにしない。",
+      "installation_before_next20": {
+        "installed_by_todo3080": false,
+        "baseline_commit": "25407d5a12256f1cfce9edbb2f3466fb7de5491c",
+        "historical_evaluation_sha256": "2404589f8671c9620faf2801bdf7975a847c8f90c46260ad01da64ac1ddc3265"
+      },
+      "current_installation_evidence": "skills-3080-webdesign-next20-installation-evidence.json"
     },
     {
       "inventory_id": "github:f53514a69ef4dc7566022ec01fdc6a143dc5d6df7fad40ec89bfa4212d9a9a54",
@@ -18784,7 +19197,7 @@
       "selected_scope_notice_verified": true,
       "third_party_assets_or_support_rights_accepted": false,
       "support_read_complete": false,
-      "installed_by_todo3080": false,
+      "installed_by_todo3080": true,
       "integrated_by_todo3080": false,
       "excluded_by_todo3080": false,
       "independent_review_complete": false,
@@ -18892,7 +19305,13 @@
           "body_read": false
         }
       ],
-      "parent_policy_correction": "上流の好み/機器/採点/測定値を本人方針へ昇格しない。本文作者のMITと第三者素材の権利を区別。未保存支持の一律取得・全支持監査を新義務にせず、有用な原則の適用範囲を限定して検討する。既存本人回答・通常操作・既存契約内の利用を再承認待ちにしない。"
+      "parent_policy_correction": "上流の好み/機器/採点/測定値を本人方針へ昇格しない。本文作者のMITと第三者素材の権利を区別。未保存支持の一律取得・全支持監査を新義務にせず、有用な原則の適用範囲を限定して検討する。既存本人回答・通常操作・既存契約内の利用を再承認待ちにしない。",
+      "installation_before_next20": {
+        "installed_by_todo3080": false,
+        "baseline_commit": "25407d5a12256f1cfce9edbb2f3466fb7de5491c",
+        "historical_evaluation_sha256": "2404589f8671c9620faf2801bdf7975a847c8f90c46260ad01da64ac1ddc3265"
+      },
+      "current_installation_evidence": "skills-3080-webdesign-next20-installation-evidence.json"
     },
     {
       "inventory_id": "github:0cec10b6427507c5c85d8c86f1997207a32436dca358aa7698d428e1c3124e05",
@@ -19051,7 +19470,7 @@
       "selected_scope_notice_verified": true,
       "third_party_assets_or_support_rights_accepted": false,
       "support_read_complete": false,
-      "installed_by_todo3080": false,
+      "installed_by_todo3080": true,
       "integrated_by_todo3080": false,
       "excluded_by_todo3080": false,
       "independent_review_complete": false,
@@ -19124,7 +19543,13 @@
           "body_read": false
         }
       ],
-      "parent_policy_correction": "上流の好み/機器/採点/測定値を本人方針へ昇格しない。本文作者のMITと第三者素材の権利を区別。未保存支持の一律取得・全支持監査を新義務にせず、有用な原則の適用範囲を限定して検討する。既存本人回答・通常操作・既存契約内の利用を再承認待ちにしない。"
+      "parent_policy_correction": "上流の好み/機器/採点/測定値を本人方針へ昇格しない。本文作者のMITと第三者素材の権利を区別。未保存支持の一律取得・全支持監査を新義務にせず、有用な原則の適用範囲を限定して検討する。既存本人回答・通常操作・既存契約内の利用を再承認待ちにしない。",
+      "installation_before_next20": {
+        "installed_by_todo3080": false,
+        "baseline_commit": "25407d5a12256f1cfce9edbb2f3466fb7de5491c",
+        "historical_evaluation_sha256": "2404589f8671c9620faf2801bdf7975a847c8f90c46260ad01da64ac1ddc3265"
+      },
+      "current_installation_evidence": "skills-3080-webdesign-next20-installation-evidence.json"
     },
     {
       "inventory_id": "github:ea2e2086ef1a7d6aa21fcb8e7b51a4f76419046be30539edae5dcffd921582c7",
@@ -20012,7 +20437,7 @@
       "selected_scope_notice_verified": true,
       "third_party_assets_or_support_rights_accepted": false,
       "support_read_complete": false,
-      "installed_by_todo3080": false,
+      "installed_by_todo3080": true,
       "integrated_by_todo3080": false,
       "excluded_by_todo3080": false,
       "independent_review_complete": false,
@@ -20157,7 +20582,13 @@
           "body_read": false
         }
       ],
-      "parent_policy_correction": "上流の好み/機器/採点/測定値を本人方針へ昇格しない。本文作者のMITと第三者素材の権利を区別。未保存支持の一律取得・全支持監査を新義務にせず、有用な原則の適用範囲を限定して検討する。既存本人回答・通常操作・既存契約内の利用を再承認待ちにしない。"
+      "parent_policy_correction": "上流の好み/機器/採点/測定値を本人方針へ昇格しない。本文作者のMITと第三者素材の権利を区別。未保存支持の一律取得・全支持監査を新義務にせず、有用な原則の適用範囲を限定して検討する。既存本人回答・通常操作・既存契約内の利用を再承認待ちにしない。",
+      "installation_before_next20": {
+        "installed_by_todo3080": false,
+        "baseline_commit": "25407d5a12256f1cfce9edbb2f3466fb7de5491c",
+        "historical_evaluation_sha256": "2404589f8671c9620faf2801bdf7975a847c8f90c46260ad01da64ac1ddc3265"
+      },
+      "current_installation_evidence": "skills-3080-webdesign-next20-installation-evidence.json"
     },
     {
       "inventory_id": "github:e12287c016fc22599eea7b2bc8045de2efed262488fc2d489fd579465e1fd9a5",
@@ -20488,7 +20919,7 @@
       "selected_scope_notice_verified": true,
       "third_party_assets_or_support_rights_accepted": false,
       "support_read_complete": false,
-      "installed_by_todo3080": false,
+      "installed_by_todo3080": true,
       "integrated_by_todo3080": false,
       "excluded_by_todo3080": false,
       "independent_review_complete": false,
@@ -20573,7 +21004,13 @@
           "body_read": false
         }
       ],
-      "parent_policy_correction": "上流の好み/機器/採点/測定値を本人方針へ昇格しない。本文作者のMITと第三者素材の権利を区別。未保存支持の一律取得・全支持監査を新義務にせず、有用な原則の適用範囲を限定して検討する。既存本人回答・通常操作・既存契約内の利用を再承認待ちにしない。"
+      "parent_policy_correction": "上流の好み/機器/採点/測定値を本人方針へ昇格しない。本文作者のMITと第三者素材の権利を区別。未保存支持の一律取得・全支持監査を新義務にせず、有用な原則の適用範囲を限定して検討する。既存本人回答・通常操作・既存契約内の利用を再承認待ちにしない。",
+      "installation_before_next20": {
+        "installed_by_todo3080": false,
+        "baseline_commit": "25407d5a12256f1cfce9edbb2f3466fb7de5491c",
+        "historical_evaluation_sha256": "2404589f8671c9620faf2801bdf7975a847c8f90c46260ad01da64ac1ddc3265"
+      },
+      "current_installation_evidence": "skills-3080-webdesign-next20-installation-evidence.json"
     },
     {
       "inventory_id": "github:6704464c96be39590ad1209dda34dd1b5cbc5c1181c0afe7ea532d8681bdc3b9",
@@ -20696,7 +21133,7 @@
       "selected_scope_notice_verified": true,
       "third_party_assets_or_support_rights_accepted": false,
       "support_read_complete": false,
-      "installed_by_todo3080": false,
+      "installed_by_todo3080": true,
       "integrated_by_todo3080": false,
       "excluded_by_todo3080": false,
       "independent_review_complete": false,
@@ -20769,7 +21206,13 @@
           "body_read": false
         }
       ],
-      "parent_policy_correction": "上流の好み/機器/採点/測定値を本人方針へ昇格しない。本文作者のMITと第三者素材の権利を区別。未保存支持の一律取得・全支持監査を新義務にせず、有用な原則の適用範囲を限定して検討する。既存本人回答・通常操作・既存契約内の利用を再承認待ちにしない。"
+      "parent_policy_correction": "上流の好み/機器/採点/測定値を本人方針へ昇格しない。本文作者のMITと第三者素材の権利を区別。未保存支持の一律取得・全支持監査を新義務にせず、有用な原則の適用範囲を限定して検討する。既存本人回答・通常操作・既存契約内の利用を再承認待ちにしない。",
+      "installation_before_next20": {
+        "installed_by_todo3080": false,
+        "baseline_commit": "25407d5a12256f1cfce9edbb2f3466fb7de5491c",
+        "historical_evaluation_sha256": "2404589f8671c9620faf2801bdf7975a847c8f90c46260ad01da64ac1ddc3265"
+      },
+      "current_installation_evidence": "skills-3080-webdesign-next20-installation-evidence.json"
     },
     {
       "inventory_id": "github:b3b7129158683314ca6108daf2c872031b36e12abd78797f03d3e93c29143a08",
@@ -20813,7 +21256,7 @@
       "selected_scope_notice_verified": true,
       "third_party_assets_or_support_rights_accepted": false,
       "support_read_complete": false,
-      "installed_by_todo3080": false,
+      "installed_by_todo3080": true,
       "integrated_by_todo3080": false,
       "excluded_by_todo3080": false,
       "independent_review_complete": false,
@@ -20886,7 +21329,13 @@
           "body_read": false
         }
       ],
-      "parent_policy_correction": "上流の好み/機器/採点/測定値を本人方針へ昇格しない。本文作者のMITと第三者素材の権利を区別。未保存支持の一律取得・全支持監査を新義務にせず、有用な原則の適用範囲を限定して検討する。既存本人回答・通常操作・既存契約内の利用を再承認待ちにしない。"
+      "parent_policy_correction": "上流の好み/機器/採点/測定値を本人方針へ昇格しない。本文作者のMITと第三者素材の権利を区別。未保存支持の一律取得・全支持監査を新義務にせず、有用な原則の適用範囲を限定して検討する。既存本人回答・通常操作・既存契約内の利用を再承認待ちにしない。",
+      "installation_before_next20": {
+        "installed_by_todo3080": false,
+        "baseline_commit": "25407d5a12256f1cfce9edbb2f3466fb7de5491c",
+        "historical_evaluation_sha256": "2404589f8671c9620faf2801bdf7975a847c8f90c46260ad01da64ac1ddc3265"
+      },
+      "current_installation_evidence": "skills-3080-webdesign-next20-installation-evidence.json"
     },
     {
       "inventory_id": "github:4e7104772752cf2f9454e3a2fe750cb3989d1e58b883736334fcf1f122d7f852",
@@ -20930,7 +21379,7 @@
       "selected_scope_notice_verified": true,
       "third_party_assets_or_support_rights_accepted": false,
       "support_read_complete": false,
-      "installed_by_todo3080": false,
+      "installed_by_todo3080": true,
       "integrated_by_todo3080": false,
       "excluded_by_todo3080": false,
       "independent_review_complete": false,
@@ -21003,7 +21452,13 @@
           "body_read": false
         }
       ],
-      "parent_policy_correction": "上流の好み/機器/採点/測定値を本人方針へ昇格しない。本文作者のMITと第三者素材の権利を区別。未保存支持の一律取得・全支持監査を新義務にせず、有用な原則の適用範囲を限定して検討する。既存本人回答・通常操作・既存契約内の利用を再承認待ちにしない。"
+      "parent_policy_correction": "上流の好み/機器/採点/測定値を本人方針へ昇格しない。本文作者のMITと第三者素材の権利を区別。未保存支持の一律取得・全支持監査を新義務にせず、有用な原則の適用範囲を限定して検討する。既存本人回答・通常操作・既存契約内の利用を再承認待ちにしない。",
+      "installation_before_next20": {
+        "installed_by_todo3080": false,
+        "baseline_commit": "25407d5a12256f1cfce9edbb2f3466fb7de5491c",
+        "historical_evaluation_sha256": "2404589f8671c9620faf2801bdf7975a847c8f90c46260ad01da64ac1ddc3265"
+      },
+      "current_installation_evidence": "skills-3080-webdesign-next20-installation-evidence.json"
     },
     {
       "inventory_id": "github:3b90542dbc103555cee97fc61ad13435a0dc00f7aaebb1bffe82b6be5e0e08c2",
@@ -21648,7 +22103,7 @@
       "selected_scope_notice_verified": true,
       "third_party_assets_or_support_rights_accepted": false,
       "support_read_complete": false,
-      "installed_by_todo3080": false,
+      "installed_by_todo3080": true,
       "integrated_by_todo3080": false,
       "excluded_by_todo3080": false,
       "independent_review_complete": false,
@@ -21768,7 +22223,13 @@
           "body_read": false
         }
       ],
-      "parent_policy_correction": "上流の好み/機器/採点/測定値を本人方針へ昇格しない。本文作者のMITと第三者素材の権利を区別。未保存支持の一律取得・全支持監査を新義務にせず、有用な原則の適用範囲を限定して検討する。既存本人回答・通常操作・既存契約内の利用を再承認待ちにしない。"
+      "parent_policy_correction": "上流の好み/機器/採点/測定値を本人方針へ昇格しない。本文作者のMITと第三者素材の権利を区別。未保存支持の一律取得・全支持監査を新義務にせず、有用な原則の適用範囲を限定して検討する。既存本人回答・通常操作・既存契約内の利用を再承認待ちにしない。",
+      "installation_before_next20": {
+        "installed_by_todo3080": false,
+        "baseline_commit": "25407d5a12256f1cfce9edbb2f3466fb7de5491c",
+        "historical_evaluation_sha256": "2404589f8671c9620faf2801bdf7975a847c8f90c46260ad01da64ac1ddc3265"
+      },
+      "current_installation_evidence": "skills-3080-webdesign-next20-installation-evidence.json"
     }
   ],
   "pending_entrypoint_paths": [],
@@ -22156,5 +22617,83 @@
   },
   "amended_at": "2026-10-24T08:15:09.0197014+00:00",
   "amendment_job": "20261024-123649-todo-3080",
-  "amendment_definition": "Document amendment time; individual source retrieval and reading times remain in their own receipts."
+  "amendment_definition": "Document amendment time; individual source retrieval and reading times remain in their own receipts.",
+  "current_installation_update": {
+    "evidence": "skills-3080-craft-installation-evidence214717.json",
+    "added": 1,
+    "current_installed": 87,
+    "original_readers_masks_and_unknown_profiles_unchanged": true,
+    "source_scope": "Selected construction/contact procedure; unacquired style kit/resources and unknown central comparisons remain unresolved"
+  },
+  "previous_installation_updates": [
+    {
+      "evidence": "skills-3080-four-installation-evidence.json",
+      "added": 2,
+      "source_body_reading_and_notice_support_states_unchanged": true,
+      "definition": "Only the current installation projection changed. Earlier proposal, raw source identities, actors, rights/support limitations and original Git snapshot are retained."
+    },
+    {
+      "evidence": "skills-3080-game6-installation-evidence.json",
+      "added": 6,
+      "current_installed": 10,
+      "source_body_reading_and_notice_support_states_unchanged": true,
+      "definition": "Current installation flags only. The previous current projection and original readers/identities/support/rights limitations remain retained."
+    },
+    {
+      "evidence": "skills-3080-utility8-installation-evidence.json",
+      "added": 8,
+      "current_installed": 18,
+      "source_body_reading_and_notice_support_states_unchanged": true,
+      "definition": "Only current installed projection changes; all previous installation updates and original reader/support/rights records are retained."
+    },
+    {
+      "evidence": "skills-3080-material-camera8-installation-evidence.json",
+      "added": 8,
+      "current_installed": 26,
+      "source_body_reading_and_notice_support_states_unchanged": true,
+      "definition": "Current installation projection only; all earlier source reading/support/rights/installation records retained"
+    },
+    {
+      "evidence": "skills-3080-remaining3d6-installation-evidence.json",
+      "added": 6,
+      "current_installed": 32,
+      "source_body_reading_and_notice_support_states_unchanged": true,
+      "definition": "Current installation projection only; all earlier source reading/support/rights/installation records retained"
+    },
+    {
+      "evidence": "skills-3080-webdesign11-installation-evidence.json",
+      "added": 11,
+      "current_installed": 43,
+      "source_body_reading_and_notice_support_states_unchanged": true,
+      "definition": "Installation projection only; original177 source assessments and prior updates retained"
+    },
+    {
+      "evidence": "skills-3080-webdesign-next14-installation-evidence.json",
+      "added": 14,
+      "current_installed": 57,
+      "source_body_reading_and_notice_support_states_unchanged": true,
+      "definition": "Installation projection only; original177 source assessments and prior updates retained"
+    },
+    {
+      "evidence": "skills-3080-webdesign-next20-installation-evidence.json",
+      "added": 20,
+      "current_installed": 77,
+      "source_body_reading_and_notice_support_states_unchanged": true,
+      "definition": "Installation projection only; original177 source assessments and prior updates retained"
+    },
+    {
+      "evidence": "skills-3080-combat6-installation-evidence090101.json",
+      "added": 6,
+      "current_installed": 83,
+      "source_body_reading_and_notice_support_states_unchanged": true,
+      "definition": "Six actual new procedures; shared VFX source is reference only, not seventh adoption or new source reading"
+    },
+    {
+      "evidence": "skills-3080-codex3-installation-evidence090101.json",
+      "added": 3,
+      "current_installed": 86,
+      "source_body_reading_and_notice_support_states_unchanged": true,
+      "definition": "Three actual procedures from already parent-read177 sources; five author source texts include two supports, not additional adoptions"
+    }
+  ]
 }

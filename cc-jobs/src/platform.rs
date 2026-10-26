@@ -172,16 +172,35 @@ mod notifier_config_tests {
 }
 /// All network-facing programs (OpenCodex, Docker/Jev and GTO) and process actions
 /// cross this boundary. Tests substitute fakes and never call Discord.
-pub trait Runtime: Send + Sync {
-    fn quota_recovery_inventory(&self) -> Value {
-        let mut inventory=json!({});
-        for provider in ["openai","anthropic"] {
-            let raw=crate::pool_retry::query(self,&["account","list",provider,"--quota","--refresh","--json"])
-                .unwrap_or(Value::Null);
-            inventory[provider]=cc_job_policy::quota_recovery::aggregate(&raw,provider,self.epoch());
+fn normal_quota_inventory(rt: &(impl Runtime+?Sized), unstarted: bool, preflight: bool) -> Value {
+    let mut inventory=json!({});
+    for provider in ["openai","anthropic"] {
+        if preflight {
+            let raw=crate::pool_retry::query(rt,&["account","list",provider,"--json"]).unwrap_or(Value::Null);
+            if !cc_job_policy::initial_review::oauth_only(&raw) {continue;}
         }
-        inventory["at"]=json!(self.epoch());
-        inventory
+        let raw=crate::pool_retry::query(rt,&["account","list",provider,"--quota","--refresh","--json"]).unwrap_or(Value::Null);
+        if preflight && !cc_job_policy::initial_review::oauth_only(&raw) {continue;}
+        inventory[provider]=cc_job_policy::quota_recovery::aggregate(&raw,provider,rt.epoch());
+        if unstarted && provider=="openai" {
+            let namespaces=crate::pool_retry::query(rt,&["config","get","codexAccountNamespaces","--json"]).unwrap_or(Value::Null);
+            inventory[provider]["safe_routes"]=cc_job_policy::quota_recovery::safe_openai_routes(&raw,&namespaces,rt.epoch());
+        }
+    }
+    inventory["at"]=json!(rt.epoch());inventory
+}
+
+pub trait Runtime: Send + Sync {
+    fn initial_review_inventory(&self) -> Value {normal_quota_inventory(self,true,true)}
+    fn initial_review_workspace(&self, _row: &Value) -> Value {Value::Null}
+    fn initial_review_spec(&self, row: &Value) -> io::Result<Vec<u8>> {
+        cc_job_policy::initial_review::read_spec(Path::new(s(row,"spec")))
+    }
+    fn unstarted_review_inventory(&self) -> Value {normal_quota_inventory(self,true,false)}
+    fn unstarted_review_workspace(&self) -> bool { false }
+    fn unstarted_review_registration(&self) -> Value { Value::Null }
+    fn quota_recovery_inventory(&self) -> Value {
+        normal_quota_inventory(self,false,false)
     }
     fn supports_process_tree_job(&self) -> bool {
         false
@@ -435,6 +454,7 @@ pub trait Runtime: Send + Sync {
         fs::rename(src, dst)
     }
 }
+
 /// A failed/deferred transition automatically resumes all frozen processes.
 pub trait Paused: Send {
     fn stop(&mut self) -> io::Result<()>;
@@ -512,6 +532,34 @@ impl Running for Child {
     }
 }
 impl Runtime for System {
+    fn initial_review_workspace(&self, row: &Value) -> Value {
+        let repo="D:/CC/Work/unattended-operations-20261013";
+        if self.recovery_protected(repo).unwrap_or(true)
+            || self.recovery_protected(s(&row["scheduler"],"worktree")).unwrap_or(true) {return Value::Null;}
+        cc_job_policy::initial_review::workspace(row,repo).unwrap_or(Value::Null)
+    }
+    fn unstarted_review_workspace(&self) -> bool {
+        let repo="D:/CC/Work/local-ai-console-3339";
+        let cwd="D:/CC/Work/local-ai-console-3339-wt/todo-3649-work";
+        if self.recovery_protected(repo).unwrap_or(true) || self.recovery_protected(cwd).unwrap_or(true) {return false;}
+        let metadata=self.work_checkout(cwd);
+        if metadata["repository"]!="autodevjapan/local-ai-console" || metadata["branch"]!="scheduler/todo-3649-work"
+            || cc_job_policy::work_owner::norm(Path::new(s(&metadata,"git_common"))) != cc_job_policy::work_owner::norm(&Path::new(repo).join(".git")) {return false;}
+        let read=|args:Vec<String>| self.call(Call::new(args,vec![],3.)).ok()
+            .filter(|r|r.code==0).and_then(|r|String::from_utf8(r.stdout).ok());
+        let review=format!("{}^{{tree}}",cc_job_policy::unstarted_review_state::SOURCE_HEAD);
+        let Some(heads)=read(vec!["git".into(),"--no-replace-objects".into(),"-C".into(),cwd.into(),"rev-parse".into(),"HEAD".into(),review]) else{return false;};
+        heads.lines().collect::<Vec<_>>() == [cc_job_policy::unstarted_review_state::CHECKOUT_HEAD,cc_job_policy::unstarted_review_state::REVIEW_TREE]
+            && read(vec!["git".into(),"-C".into(),cwd.into(),"status".into(),"--porcelain".into()]).is_some_and(|s|s.trim().is_empty())
+    }
+    fn unstarted_review_registration(&self) -> Value {
+        let producer = cc_job_policy::unstarted_review_state::PRODUCER;
+        if self.recovery_protected(producer).unwrap_or(true) { return Value::Null; }
+        let mut call = Call::new(vec![producer.into(), "review-registration-metadata".into()], vec![], 50.);
+        call.cwd = Some(PathBuf::from("D:/CC/Work/unattended-operations-20261013-wt/todo-3255-godd"));
+        self.call(call).ok().filter(|r| r.code == 0 && r.stdout.len() <= 8192)
+            .and_then(|r| serde_json::from_slice(&r.stdout).ok()).unwrap_or(Value::Null)
+    }
     fn proc_created_checked(&self, pid: u32) -> io::Result<Option<u64>> {
         proc_created_checked(pid)
     }
@@ -1147,3 +1195,7 @@ fn spawn_supervisor_closed_handles(
         Ok((false, pid))
     }
 }
+
+#[cfg(test)]
+#[path = "initial_review_preflight_tests.rs"]
+mod initial_review_preflight_tests;

@@ -254,6 +254,316 @@ fn continued_delivery_preserves_everything_except_its_note_time_and_receipt() {
     );
 }
 
+fn deliver_preserving(f: &Fixture, answer: &Path, expected: &Value) -> Output {
+    deliver_preserving_scoped(f, answer, expected, None)
+}
+
+fn deliver_preserving_scoped(
+    f: &Fixture,
+    answer: &Path,
+    expected: &Value,
+    scope: Option<&Path>,
+) -> Output {
+    let expected_file = f.file("parked-delivery-expected.json", expected);
+    let note_file = f.temp.path().join("parked-delivery-note.txt");
+    fs::write(
+        &note_file,
+        format!(
+            "{}\n\nprivate reply full instruction",
+            expected["note"].as_str().unwrap()
+        ),
+    )
+    .unwrap();
+    let mut command = f.command(&[
+        "question-answer",
+        "1",
+        "--delivery-only",
+        "--preserve-question-wait",
+        "--answer-file",
+        answer.to_str().unwrap(),
+        "--delivery-note-file",
+        note_file.to_str().unwrap(),
+        "--expected-state-file",
+        expected_file.to_str().unwrap(),
+    ]);
+    if let Some(scope) = scope {
+        command.args(["--scope-file", scope.to_str().unwrap()]);
+    }
+    command.output().unwrap()
+}
+
+#[test]
+fn original_delivery_keeps_wait_owner_generation_and_finished_worker() {
+    for status in ["running", "succeeded"] {
+        let f = Fixture::new();
+        let (_, answer_file, _) = f.park();
+        fs::create_dir(f.paths.jobs.join("original-worker")).unwrap();
+        let job = f.paths.jobs.join("original-worker/job.json");
+        fs::write(&job, serde_json::to_vec(&json!({"id":"original-worker", "todo_id":1, "launch_key":"original-key", "status":status})).unwrap()).unwrap();
+        let job_before = fs::read(&job).unwrap();
+        let before = f.read();
+        let out = deliver_preserving(&f, &answer_file, &before["items"][0]);
+        assert!(
+            out.status.success(),
+            "{}",
+            String::from_utf8_lossy(&out.stderr)
+        );
+        let meta: Value = serde_json::from_slice(&out.stdout).unwrap();
+        assert_eq!(meta["wait_preserved"], true);
+        assert_eq!(meta["resumed"], false);
+        assert_eq!(meta["answered"], false);
+        let mut after = f.read();
+        assert_eq!(after["items"][0][DELIVERIES][0]["preserved_wait"], true);
+        assert_eq!(after["items"][0][DELIVERIES].as_array().unwrap().len(), 1);
+        assert!(after["items"][0][ANSWERS].is_null());
+        assert_eq!(fs::read(&job).unwrap(), job_before);
+        let replay_before = f.raw();
+        let replay = deliver_preserving(&f, &answer_file, &after["items"][0]);
+        assert!(
+            replay.status.success(),
+            "{}",
+            String::from_utf8_lossy(&replay.stderr)
+        );
+        assert_eq!(f.raw(), replay_before);
+        after["items"][0]["scheduler"]
+            .as_object_mut()
+            .unwrap()
+            .remove("owner_instruction");
+        for key in ["note", "updated", DELIVERIES] {
+            let row = after["items"][0].as_object_mut().unwrap();
+            match before["items"][0].get(key) {
+                Some(value) => {
+                    row.insert(key.into(), value.clone());
+                }
+                None => {
+                    row.remove(key);
+                }
+            }
+        }
+        assert_eq!(
+            after, before,
+            "delivery released the wait, retired its worker or changed unrelated state"
+        );
+    }
+}
+
+#[test]
+fn original_delivery_rejects_other_generations_waits_and_holds() {
+    for change in [
+        "generation",
+        "worker",
+        "question",
+        "scope",
+        "stop",
+        "stale",
+        "status",
+        "legacy",
+    ] {
+        let f = Fixture::new();
+        let (_, answer_file, _) = f.park();
+        let mut db = f.read();
+        let expected = db["items"][0].clone();
+        match change {
+            "generation" => db["items"][0]["resume_generation"] = json!(8),
+            "worker" => db["items"][0]["worker_receipt"] = json!({"job":"another-worker"}),
+            "question" => {
+                db["items"][0][WAIT]["question"]["request_id"] = json!("another-question")
+            }
+            "scope" => db["items"][0]["project"] = json!("owner"),
+            "stop" => db["items"][0]["owner_stopped"] = json!(true),
+            "stale" => db["items"][0]["note"] = json!("a later direct instruction"),
+            "status" => db["items"][0]["status"] = json!("doing"),
+            "legacy" => {
+                db["items"][0][WAIT]
+                    .as_object_mut()
+                    .unwrap()
+                    .remove("origin");
+            }
+            _ => unreachable!(),
+        }
+        f.write(&db);
+        let before = f.raw();
+        let snapshot = if change == "stale" {
+            &expected
+        } else {
+            &db["items"][0]
+        };
+        let out = deliver_preserving(&f, &answer_file, snapshot);
+        assert!(!out.status.success(), "accepted {change}");
+        assert_eq!(f.raw(), before, "changed {change}");
+    }
+}
+
+#[test]
+fn original_delivery_rejects_changed_registered_scope_before_writing() {
+    let f = Fixture::new();
+    let (_, answer_file, _) = f.park();
+    let scope=f.file("original-delivery-scope.json",&json!({"domain":"discord-conversation-todo-scope-v1","todo_id":"1","project":"cc-pc-tools-rs","project_path_sha256":sha(f.temp.path().to_str().unwrap().as_bytes())}));
+    let mut db = f.read();
+    db["projects"]["synthetic-other"] = db["projects"]["cc-pc-tools-rs"].clone();
+    db["items"][0]["project"] = json!("synthetic-other");
+    f.write(&db);
+    let before = f.raw();
+    let out = deliver_preserving_scoped(&f, &answer_file, &db["items"][0], Some(&scope));
+    assert!(!out.status.success());
+    assert_eq!(
+        String::from_utf8_lossy(&out.stderr).trim(),
+        "conversation_scope_changed"
+    );
+    assert_eq!(f.raw(), before);
+}
+
+#[test]
+fn normal_answer_consumes_only_the_exact_preserved_instruction_once() {
+    for change in ["none", "note", "instruction", "wait", "hold"] {
+        let f = Fixture::new();
+        let (_, answer_file, _) = f.park();
+        fs::create_dir(f.paths.jobs.join("original-worker")).unwrap();
+        fs::write(f.paths.jobs.join("original-worker/job.json"), serde_json::to_vec(&json!({"id":"original-worker", "todo_id":1, "launch_key":"original-key", "status":"succeeded"})).unwrap()).unwrap();
+        let before = f.read();
+        assert!(
+            deliver_preserving(&f, &answer_file, &before["items"][0])
+                .status
+                .success()
+        );
+        let mut db = f.read();
+        match change {
+            "note" => {
+                db["items"][0]["note"] = json!(format!(
+                    "{}\nlater note",
+                    db["items"][0]["note"].as_str().unwrap()
+                ))
+            }
+            "instruction" => {
+                db["items"][0]["scheduler"]["owner_instruction"] = json!("later instruction")
+            }
+            "wait" => db["items"][0][WAIT]["previous_note"] = json!("later wait"),
+            "hold" => db["items"][0]["owner_stopped"] = json!(true),
+            _ => (),
+        }
+        f.write(&db);
+        let before = f.raw();
+        let out = f
+            .command(&[
+                "question-answer",
+                "1",
+                "--answer-file",
+                answer_file.to_str().unwrap(),
+            ])
+            .output()
+            .unwrap();
+        if change != "none" {
+            assert!(!out.status.success(), "accepted changed {change}");
+            assert_eq!(f.raw(), before, "changed {change}");
+            continue;
+        }
+        assert!(
+            out.status.success(),
+            "{}",
+            String::from_utf8_lossy(&out.stderr)
+        );
+        let after = f.read();
+        assert_eq!(
+            after["items"][0]["scheduler"]["owner_instruction"]
+                .as_str()
+                .unwrap()
+                .matches("private reply full instruction")
+                .count(),
+            1
+        );
+        assert_eq!(after["items"][0][ANSWERS].as_array().unwrap().len(), 1);
+        assert!(after["items"][0][WAIT].is_null());
+        let before = f.raw();
+        assert!(
+            f.command(&[
+                "question-answer",
+                "1",
+                "--answer-file",
+                answer_file.to_str().unwrap()
+            ])
+            .output()
+            .unwrap()
+            .status
+            .success()
+        );
+        assert_eq!(f.raw(), before, "normal answer replay changed state");
+    }
+}
+
+#[test]
+fn preserved_delivery_and_answer_keep_the_independent_retry_timer() {
+    for condition in ["due", "future", "malformed", "other", "stopped"] {
+        let f = Fixture::new();
+        let (_, answer_file, _) = f.park();
+        fs::create_dir(f.paths.jobs.join("original-worker")).unwrap();
+        fs::write(f.paths.jobs.join("original-worker/job.json"), serde_json::to_vec(&json!({"id":"original-worker", "todo_id":1, "launch_key":"original-key", "status":"succeeded"})).unwrap()).unwrap();
+        let now = std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .unwrap()
+            .as_secs();
+        let mut timer = json!({"condition":"retry-time", "since":now-120, "not_before":now-60,"reason":"synthetic retry"});
+        match condition {
+            "future" => timer["not_before"] = json!(now + 300),
+            "malformed" => timer["not_before"] = json!(now - 121),
+            "other" => timer["condition"] = json!("chatgpt-plus"),
+            _ => (),
+        }
+        let mut db = f.read();
+        db["items"][0]["wait_ready"] = timer.clone();
+        if condition == "stopped" {
+            db["items"][0]["owner_stopped"] = json!(true);
+        }
+        f.write(&db);
+        let before = f.raw();
+        let out = deliver_preserving(&f, &answer_file, &db["items"][0]);
+        if !matches!(condition, "due" | "future") {
+            assert!(!out.status.success(), "accepted {condition}");
+            assert_eq!(f.raw(), before);
+            continue;
+        }
+        assert!(
+            out.status.success(),
+            "{}",
+            String::from_utf8_lossy(&out.stderr)
+        );
+        assert_eq!(f.read()["items"][0]["wait_ready"], timer);
+        let out = f
+            .command(&[
+                "question-answer",
+                "1",
+                "--answer-file",
+                answer_file.to_str().unwrap(),
+            ])
+            .output()
+            .unwrap();
+        assert!(
+            out.status.success(),
+            "{}",
+            String::from_utf8_lossy(&out.stderr)
+        );
+        let meta: Value = serde_json::from_slice(&out.stdout).unwrap();
+        assert_eq!(meta["answered"], true);
+        assert_eq!(meta["resumed"], false);
+        let after = f.read();
+        assert!(after["items"][0][WAIT].is_null());
+        assert_eq!(after["items"][0]["wait_ready"], timer);
+        assert_eq!(after["items"][0]["status"], "wait");
+        let out = f
+            .command(&["resume-ready", "1", "--condition", "retry-time"])
+            .output()
+            .unwrap();
+        assert!(out.status.success());
+        let after = f.read();
+        if condition == "due" {
+            assert!(after["items"][0]["wait_ready"].is_null());
+            assert_eq!(after["items"][0]["status"], "todo");
+        } else {
+            assert_eq!(after["items"][0]["wait_ready"], timer);
+            assert_eq!(after["items"][0]["status"], "wait");
+        }
+    }
+}
+
 #[test]
 fn continued_delivery_keeps_prior_instructions_and_future_time_holds_for_the_next_worker() {
     let f = Fixture::new();

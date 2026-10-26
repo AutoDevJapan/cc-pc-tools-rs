@@ -1,0 +1,211 @@
+{
+  "schema": 1,
+  "origin_todo_id": 3628,
+  "observed_at": "2026-10-27T04:37:52.3298023+09:00",
+  "inventory_status": "complete_device_inventory",
+  "volume_count": 5,
+  "partition_count": 7,
+  "disk_count": 3,
+  "volumes": [
+    {
+      "drive": null,
+      "total_bytes": 886042624,
+      "free_bytes": 60854272,
+      "health": "healthy",
+      "status": "available",
+      "comparison_time": "2026-10-26T16:43:40.7568207+09:00",
+      "free_change_bytes": 0,
+      "delta_is_reclaimed_bytes": false
+    },
+    {
+      "drive": "C",
+      "total_bytes": 3999776370688,
+      "free_bytes": 352531103744,
+      "health": "healthy",
+      "status": "available",
+      "comparison_time": "2026-10-26T16:43:40.7568207+09:00",
+      "free_change_bytes": -7797694464,
+      "delta_is_reclaimed_bytes": false
+    },
+    {
+      "drive": null,
+      "total_bytes": 100663296,
+      "free_bytes": 64386048,
+      "health": "unknown",
+      "status": "available",
+      "comparison_time": "2026-10-26T16:43:40.7568207+09:00",
+      "free_change_bytes": 0,
+      "delta_is_reclaimed_bytes": false
+    },
+    {
+      "drive": "D",
+      "total_bytes": 4000768323584,
+      "free_bytes": 2145466339328,
+      "health": "healthy",
+      "status": "available",
+      "comparison_time": "2026-10-26T16:43:40.7568207+09:00",
+      "free_change_bytes": -13572833280,
+      "delta_is_reclaimed_bytes": false
+    },
+    {
+      "drive": "E",
+      "total_bytes": 2000395272192,
+      "free_bytes": 858052489216,
+      "health": "healthy",
+      "status": "available",
+      "comparison_time": "2026-10-26T16:43:40.7568207+09:00",
+      "free_change_bytes": 0,
+      "delta_is_reclaimed_bytes": false
+    }
+  ],
+  "latest_periodic_sample": "2026-10-26T18:06:49Z",
+  "whole_drive_scan": false,
+  "scan_status": [
+    {
+      "drive": "E",
+      "status": "partial_protected",
+      "logical_bytes": null
+    },
+    {
+      "drive": "D",
+      "status": "partial_protected",
+      "logical_bytes": null
+    },
+    {
+      "drive": "C",
+      "status": "partial_protected",
+      "logical_bytes": null
+    }
+  ],
+  "new_implementation": {
+    "todo_id": 3942,
+    "pr": 556,
+    "merged_source": "2fc2b4aa0a76daac42a0fecb954028283e3478f6",
+    "merge_commit": "59c40352b8bea4366a58ec85de2e5f44f7404583",
+    "installed_cleanup_sha256": "64309eade35838560970175f4052d925d7443818856e40524c082a0f565b10c0",
+    "recorded_initial_acceptance": {
+      "actor": "3942 worker and existing hourly task",
+      "removed_sets": 2,
+      "actual_removed_bytes": 74051309,
+      "log_verified_nonzero_rows": 1,
+      "free_before": {
+        "C": 352652017664,
+        "D": 2145544343552,
+        "E": 858052489216
+      },
+      "free_after": {
+        "C": 352587751424,
+        "D": 2144432652288,
+        "E": 858052489216
+      },
+      "net_free_change": {
+        "C": -64266240,
+        "D": -1111691264,
+        "E": 0
+      }
+    },
+    "parent_verification_runs": [
+      {
+        "time_unix": 1793043651,
+        "mode": "apply",
+        "logical_bytes_removed": 0,
+        "completed_builds": {
+          "scope": "registered_done_cc_pc_tools_target_debug",
+          "inspected": 512,
+          "candidates": 0,
+          "candidate_logical_bytes": 0,
+          "actual_removed_bytes": 0,
+          "artifact_sets_verified_absent": 0,
+          "already_absent_or_empty": 449,
+          "retained": 63,
+          "retained_measured_remaining_bytes": 0,
+          "retained_bytes_unmeasured": 63,
+          "partial_deletions": 0,
+          "limit_or_deadline": true,
+          "cursor_unverified": false,
+          "active_job_records_max": null,
+          "self_handle_observation": "available",
+          "self_kernel_observation": "available",
+          "retention_reasons": {
+            "GUARD_UNKNOWN_OR_PROTECTED": 2,
+            "WORKTREE_BOUNDARY": 61
+          },
+          "profile_lock_scaffolding_retained": true,
+          "whole_pc_scan": false
+        },
+        "failures": 0,
+        "partial": true,
+        "e_files_touched": false,
+        "net_free_change_bytes": {
+          "C": 3645440,
+          "D": -10178560,
+          "E": 0
+        }
+      },
+      {
+        "time_unix": 1793043790,
+        "mode": "apply",
+        "logical_bytes_removed": 0,
+        "completed_builds": {
+          "scope": "registered_done_cc_pc_tools_target_debug",
+          "inspected": 75,
+          "candidates": 0,
+          "candidate_logical_bytes": 0,
+          "actual_removed_bytes": 0,
+          "artifact_sets_verified_absent": 0,
+          "already_absent_or_empty": 47,
+          "retained": 28,
+          "retained_measured_remaining_bytes": 0,
+          "retained_bytes_unmeasured": 28,
+          "partial_deletions": 0,
+          "limit_or_deadline": false,
+          "cursor_unverified": false,
+          "active_job_records_max": null,
+          "self_handle_observation": "available",
+          "self_kernel_observation": "available",
+          "retention_reasons": {
+            "WORKTREE_BOUNDARY": 28
+          },
+          "profile_lock_scaffolding_retained": true,
+          "whole_pc_scan": false
+        },
+        "failures": 0,
+        "partial": true,
+        "e_files_touched": false,
+        "net_free_change_bytes": {
+          "C": -39022592,
+          "D": -132177920,
+          "E": 0
+        }
+      }
+    ],
+    "numeric_cursor": {
+      "before": 2564,
+      "after": 2199,
+      "final_rows_inspected": 75,
+      "row_limit_reached_on_final_pass": false,
+      "cursor_confers_deletion_permission": false
+    },
+    "new_tasks_created": 0,
+    "new_monitors_created": 0
+  },
+  "classification": {
+    "os_recovery": "retained; EFI latest health unknown; restore-point issue remains with existing4011",
+    "active_unfinished": "retained; original3796 awaits4011",
+    "owner_data": "pre-existing E data unchanged; exceeds500GiB free",
+    "regenerable_candidates": "same strict canonical completion, source, process, artifact, dependency and guard checks",
+    "finished_unnecessary": "initial3942 2sets74051309bytes verified; parent verification runs removed0 new bytes",
+    "owner_decision_pending": "existing2467 protection-scope question pending; no duplicate question or assumed approval",
+    "protection_unverified": "C/D/E detailed scopes remainpartial_protected; unmeasured retained bytes stay unknown"
+  },
+  "previous_reclamation": {
+    "parent_3roots_logical_bytes": 28052766519,
+    "all_still_absent": true,
+    "source_git_preserved": true,
+    "recounted": false
+  },
+  "full_cleanup_complete": false,
+  "new_owner_question_created": false,
+  "protection_policy_changed": false,
+  "new_cargo_gpu_civ6_used_by_parent": false
+}

@@ -215,22 +215,30 @@ func acquirePrivateReviewRuntime() omb3255RuntimeAcquisition {
 	return omb3255AcquireRuntimeFor(privateReviewRuntimeRoots())
 }
 
+func acquireConsumerReviewRuntime() omb3255RuntimeAcquisition {
+	return omb3255AcquireRuntimeAt(consumerReviewRuntimeRoots(), consumerReviewSourceRoot)
+}
+
 func omb3255AcquireRuntimeFor(expected []omb3255ExpectedRoot) (result omb3255RuntimeAcquisition) {
+	return omb3255AcquireRuntimeAt(expected, omb3255SourceRoot)
+}
+
+func omb3255AcquireRuntimeAt(expected []omb3255ExpectedRoot, sourceRoot string) (result omb3255RuntimeAcquisition) {
 	ctx, cancel := context.WithTimeout(context.Background(), 45*time.Second)
 	defer cancel()
 	revision, commitMS := omb3255BuildIdentity()
 	location, err := os.Getwd()
-	if err != nil || revision == "" || !omb3255SamePath(location, omb3255SourceRoot) {
+	if err != nil || revision == "" || !omb3255SamePath(location, sourceRoot) {
 		return omb3255RuntimeAcquisition{state: "source_identity_unavailable"}
 	}
-	git := exec.CommandContext(ctx, "git", "-C", omb3255SourceRoot, "rev-parse", "HEAD")
+	git := exec.CommandContext(ctx, "git", "-C", sourceRoot, "rev-parse", "HEAD")
 	hideCommand(git)
 	git.WaitDelay = time.Second
 	head, err := git.Output()
 	if err != nil || strings.TrimSpace(string(head)) != revision {
 		return omb3255RuntimeAcquisition{state: "source_identity_unavailable"}
 	}
-	anchor := filepath.Join(omb3255SourceRoot, "record-recovery", "main.go")
+	anchor := filepath.Join(sourceRoot, "record-recovery", "main.go")
 	sourceGuard, err := omb3255Guard(ctx, anchor)
 	if err != nil || !sourceGuard.codeClear() {
 		return omb3255RuntimeAcquisition{state: "source_guard_unavailable"}
@@ -255,7 +263,7 @@ func omb3255AcquireRuntimeFor(expected []omb3255ExpectedRoot) (result omb3255Run
 	if err != nil || size <= 0 || size > 512<<20 || hex.EncodeToString(hash.Sum(nil)) != omb3255CodexSHA || !binary.Unchanged() {
 		return omb3255RuntimeAcquisition{state: "binary_identity_unavailable"}
 	}
-	rpc, err := omb3255StartMetadataRPC(ctx)
+	rpc, err := omb3255StartMetadataRPCAt(ctx, sourceRoot)
 	if err != nil {
 		return omb3255RuntimeAcquisition{state: "metadata_reader_unavailable"}
 	}
@@ -267,9 +275,13 @@ func omb3255AcquireRuntimeFor(expected []omb3255ExpectedRoot) (result omb3255Run
 	var admitted []omb3255RuntimeRef
 	var nativePath string
 	collect := func() ([]omb3255RuntimeRef, string, error) {
-		return omb3255CollectRefsFrom(func(endpoint string) (obj, error) {
+		choose := omb3255ChooseRootsFor
+		if omb3255SamePath(sourceRoot, consumerReviewSourceRoot) && reflect.DeepEqual(expected, consumerReviewRuntimeRoots()) {
+			choose = consumerReviewChooseNodes
+		}
+		return omb3255CollectRefsWithChooser(func(endpoint string) (obj, error) {
 			return omb3255NormalGET(ctx, endpoint)
-		}, rpc.Call, revision, commitMS, expected)
+		}, rpc.Call, revision, commitMS, expected, choose)
 	}
 	recheckProtection := func() bool {
 		source, err := omb3255Guard(ctx, anchor)

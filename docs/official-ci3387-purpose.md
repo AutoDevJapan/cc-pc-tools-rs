@@ -48,6 +48,8 @@ and `launch_performed:false`.
 | Complete receipt, exact original CI and registered provider actor | Consume | One callback sees the same verified public bytes; concurrent/repeated consumers fail |
 | Interrupted writes or callback failure | Restart | Preserve explicit pending/consuming/failed state; do not adopt or replay |
 | Unrelated original source/path | Existing guard | Existing classification remains unchanged |
+| Original CI provider in its own repository and current branch | Verify/consume | Do not borrow the public Skills repository rule; another repository or branch still fails |
+| Existing v1 receipt from the accepted producer and a repaired reader | Verify/consume | Keep the original producer and registration; independently require both revisions merged and the retained producer inputs unchanged |
 
 ## Required evidence
 
@@ -108,8 +110,8 @@ commit failure after output still returns nonzero and never appends a second
 JSON document. This is a one-shot handoff, not a retryable delivery queue.
 
 `--verify-official-ci3387-update` takes no arguments. After normal source merge
-and actual implementation-actor qualification it compares only the single
-PR525 publisher's previously accepted guard SHA/build revision, returning its
+and actual implementation-actor or original-parent qualification it compares only the single
+accepted publisher's guard SHA/build revision, returning its
 current physical identity for the existing AdminBroker update CAS. Unknown
 software fails without disclosing or adopting its observed digest. It creates
 no SDK/journal, updates nothing, and grants no general path or data access.
@@ -124,11 +126,34 @@ contents, notes and history are not decoded into the authority projection. The
 existing Skills reader keeps its prior consumer contract through the unchanged
 default entry point.
 
-The comparison pin follows the independent producer's actual installed-runtime
-verification for PR525 (`038bc257`, SHA `ccb5e797…`). The earlier PR524 receipt
-describes a superseded installation and is retained as historical evidence.
+The comparison pin follows the original SDK publisher's accepted installed-runtime
+verification (`f5f846a8`, SHA `f3927b88…`). The earlier PR524 and PR525 receipts
+describe superseded installations and remain historical evidence.
 The new pin is projected from the producer's normal metadata, source/merge and
 formal CI; an observed mismatch never becomes an authority or a fallback pin.
 
 Implementation evidence is attached to Issue 526 and its PR. At specification
 time no formal CI, merge, installed update or real SDK acceptance is claimed.
+
+## Prepared-receipt reader repair (Issue 535)
+
+The CI provider's repository check is purpose-specific. The existing public
+Skills source check keeps its original contract. An authenticated v1 receipt
+prepared by `f5f846a8470b544846e4c9ce43306061bf5668f9` may be read by a repaired,
+clean, merged build. Its producer head, registration, creator, ownership,
+physical objects, expiry and one-shot state are not rewritten. The retained
+creator inputs are compared with that original producer. The executing reader
+and original producer must independently be ancestors of current main; an
+unknown producer or changed creator inputs still fail. Fresh creation continues
+to bind to its own clean build, and the fixed journal still prohibits preparing
+a replacement for this existing receipt.
+
+The original parent may use the software-comparison operation only through its
+current normal assignment, original source lineage, native process ancestry,
+registered public worktree/common directory and branch. Review/check or stale
+jobs cannot supply it. This comparison can proceed while the CI provider is in
+its technical retry wait; it does not release that wait, consume SDK bytes or
+grant the parent any SDK operation. Preparation, verification and consumption
+retain their existing implementation/provider actor checks. A successful
+software comparison is separate from review, CI, actual distribution and the
+provider's real receipt acceptance.

@@ -22,8 +22,10 @@ the visual direction still needs its own concrete image review.
   encoded audio separately before deciding whether a correction is necessary.
 - Preserve the full supplied performances, including short tracks, and record
   the track order from the owner's supplied material. Derive chapter boundaries
-  from cumulative decoded audio sample counts with an explicit sample-rate
-  timebase, then verify them against the final encoded video timeline.
+  from decoded sample counts and their sample rates. For a shared rate, retain
+  an explicit sample-rate timebase; for different rates, accumulate rational
+  durations before conversion to the final timebase. Record the rounding rule
+  and permitted timing error, then verify the encoded video timeline.
 
 ## Visual review and production
 
@@ -35,11 +37,18 @@ and question text before treating a request as delivered. Record visual approval
 only from the owner's verified answer to that question; a failed send is
 neither delivery nor approval.
 
-Apply the current anonymity rules throughout production. Use abstract imagery,
-text and lyrics for this album; do not invent or expose a member's identity,
-appearance, animal counterpart or character. Keep the previously supplied
-recordings and do not create new songs for the videos. Confirm audible playback
-by measurement and listening, rather than accepting a silent audio stream.
+Apply the current owner rules throughout production: do not research, infer or
+expose The Empire of Cats members' real identities, appearance or background.
+Do not portray members as animals or invented characters without the owner's
+explicit permission. Use only the supplied credit names, preserving their
+spelling without seeking or inferring the people behind them. Keep the existing
+recordings, and do not publish newly created songs or silent videos. Confirm
+audible playback by measurement and documented listening; an audio stream's
+presence alone does not prove that it contains audible sound.
+
+Abstract imagery, text and lyrics are the current visual proposal for this
+album, subject to the image approval above. This proposal is not an additional
+owner prohibition on other compliant visual styles.
 
 If an attachment prerequisite is unavailable, retain the same request and
 images, report the technical condition without an owner notification, and

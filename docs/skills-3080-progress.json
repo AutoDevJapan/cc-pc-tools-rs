@@ -2166,12 +2166,16 @@
   "design_reference_installation": {
     "source": "skills-3080-design-reference-installation-evidence090101.json",
     "new_targets": 1,
-    "verified_output_files": 52,
+    "verified_output_files": 53,
     "case_references": 24,
     "reference_cases_not24_skills": true,
     "unknown_existing_bodies_read": 0,
     "public_delta_review_pending": true,
-    "new_UI_implementation": 0
+    "new_UI_implementation": 0,
+    "metadata_revision": 1,
+    "old_metadata_history_bytes": 8896,
+    "new_target_count_unchanged": 1,
+    "new_global_source_read_credit": 0
   },
   "combat6_installation": {
     "source": "skills-3080-combat6-installation-evidence090101.json",
@@ -2232,5 +2236,17 @@
     "new_dispositions": 0,
     "central_operations": 0,
     "definition": "Additional received source assessments with original masked/reuse and support-state evidence. Public reading-count credit remains at its earlier accepted scope; physical hash verification does not establish a model reading or permission."
+  },
+  "recovery542_parent_actual_acceptance": {
+    "PR": 542,
+    "merge": "f30f9e763e25884fa48d1cce0cac22da1cebfb69",
+    "Windows_SHA": "02c8cad70e44f2bc4cd4e5a70dfdaf581a7ee6896eb63449fe1606eb28f5b5be",
+    "formal_delta_review_Must": 0,
+    "all16_CI_ended_failure0": true,
+    "parent_actual_apply": 1,
+    "parent_current53_files": 53,
+    "parent_current53_bytes": 790965,
+    "new3_after_update_current20_verified": true,
+    "whole16_complete": false
   }
 }

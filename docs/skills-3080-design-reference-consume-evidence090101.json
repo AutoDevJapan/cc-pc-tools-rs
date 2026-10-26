@@ -773,5 +773,8 @@
   "current_OS_writer": "unproved",
   "historical_physical_continuity_proven": false,
   "general_access_granted": false,
-  "original_registry_recovered": false
+  "original_registry_recovered": false,
+  "snapshot_role": "Historical52 successful read buffers before metadata revision1; index27 now exists unchanged in the history file, not as the current metadata. Original file/actor/hash observations are not rewritten.",
+  "current_metadata_after_revision": "skills-3080-design-reference-revision1-consume-evidence090101.json",
+  "current_revision": 1
 }

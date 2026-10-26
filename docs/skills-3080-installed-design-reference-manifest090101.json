@@ -1,6 +1,6 @@
 {
   "central_operations": 0,
-  "definition": "Private authored procedure and24 source-informed case references. No central presence, old-body comparison, permission or installation is claimed.",
+  "definition": "Actual created-once target after own metadata revision1;53 current returned buffers. The earlier private/in-memory flags are historical input records only.",
   "targets": [
     {
       "files": [
@@ -114,7 +114,7 @@
         },
         {
           "path": "references/sources.json",
-          "sha256": "50a6aa009b0cc2d84147d300f7b1cdca5abf9b6003e36c4e004c67240ac439a7"
+          "sha256": "e0607f086fd394bc0399c99e4101cef48e56c509272741cde81dba029778d8f4"
         },
         {
           "path": "references/upstream/1win.txt",
@@ -211,6 +211,10 @@
         {
           "path": "references/upstream/framer.txt",
           "sha256": "a5d47dddacf5a04577cec0be6fe0fc53b7402254c7686874af3e59bcc7588cb4"
+        },
+        {
+          "path": "references/history/sources-before-revision1.json",
+          "sha256": "50a6aa009b0cc2d84147d300f7b1cdca5abf9b6003e36c4e004c67240ac439a7"
         }
       ],
       "sources": [
@@ -239,13 +243,19 @@
         "https://github.com/VoltAgent/awesome-design-md/blob/3b605329240ce735b510037cca322f1831fdd7f8/design-md/figma/DESIGN.md",
         "https://github.com/VoltAgent/awesome-design-md/blob/3b605329240ce735b510037cca322f1831fdd7f8/design-md/framer/DESIGN.md"
       ],
-      "before_sha256": "not_checked_in_memory_only",
+      "before_sha256": "absent",
       "positive": "提供したデザイン分析資料の観測・推定・派生例を分け、採用条件を根拠に結ぶ。",
       "name": "design-reference-evidence",
-      "new": false,
+      "new": true,
       "negative": "mockupやroot MITだけで実処理の成功、AA/AAA適合、素材の利用権を確定する。"
     }
   ],
+  "snapshot_definition": "Each file at its individual qualified read time; not an atomic53 snapshot or a future immutability guarantee",
+  "original_creation_files": 52,
+  "revision1_current_files": 53,
+  "new_CreateNew_calls_for_revision": 0,
   "root": "D:/CC/Skills",
-  "snapshot_definition": "Each file at its own successful purpose-bound read time; not an atomic52 snapshot or immutable future state."
+  "earlier_in_memory_definition": "Private authored procedure and24 source-informed case references. No central presence, old-body comparison, permission or installation is claimed.",
+  "earlier_not_checked_flag_is_not_current_presence": true,
+  "original_creation_target_absent_proved_by_exact_CreateNew": true
 }

@@ -1,0 +1,104 @@
+{
+  "native": {
+    "central_file_reads_by_capture": 0,
+    "job": "20261026-170221-todo-3080",
+    "native_call_id": "call_2169c0933d7d490f80fa4479407f9b18",
+    "native_call_timestamp": "2026-10-26T08:06:10.147Z",
+    "new_source_read_credit": 0,
+    "no_replace_renames": 2,
+    "old_prepare_mismatch_preserved": true,
+    "original_CLI_stdout_sha256": "af33b40285e6881f8495b041e96dfbaf4bf64e4882c34ac19f3288d4282d30b7",
+    "original_tool_blocks_sha256": "88087c581abbe25774bbb62e983ca6258f8136062851b5caa54e59469966acd8",
+    "other_native_bodies_returned": false,
+    "preflight_invocation_sha256": "5bf3eeaff40a121510a7736b79fa0a958a610392481d19cbc349bbd7425eda61",
+    "prepare_repeated": 0,
+    "producer_revision": "f30f9e763e25884fa48d1cce0cac22da1cebfb69",
+    "producer_sha": "02c8cad70e44f2bc4cd4e5a70dfdaf581a7ee6896eb63449fe1606eb28f5b5be",
+    "request_sha256": "3b663be6bfe183c743d60f801fc2b3a40b3d7637cdde1a8987e2a45ef24c5f02",
+    "same_decoded_six_literal_command_fields": true,
+    "successful_apply_count": 1,
+    "thread_id": "01a16bab-c238-7293-953d-d0f447cf2c05"
+  },
+  "actual_result": {
+    "already_applied": false,
+    "domain": "skills-3080-purpose-v1",
+    "general_access_granted": false,
+    "manifest_sha256": "3d27a7072716df74d1edab8eb3187afba9c8a7f6a315260e4ed8fc54e04d9a91",
+    "operation": "apply-skills3080-revision",
+    "original_registry_recovered": false,
+    "qualified": true,
+    "renames_performed": 2,
+    "request_sha256": "3b663be6bfe183c743d60f801fc2b3a40b3d7637cdde1a8987e2a45ef24c5f02",
+    "revision_evidence": {
+      "domain": "skills-3080-own-revision1-v1",
+      "writer": {
+        "task": 3080,
+        "job": "20261026-170221-todo-3080",
+        "spec_sha256": "91a65cb17d2e5c4b18655ecb3126ea1a212ad655e716a6c349321876071a9435",
+        "workspace": "D:\\CC\\Work\\unattended-operations-20261013-wt\\todo-3080-16-skills-3048"
+      },
+      "request_sha256": "3b663be6bfe183c743d60f801fc2b3a40b3d7637cdde1a8987e2a45ef24c5f02",
+      "manifest_commit": "53fcf35c8fc58161e739cb2b9c543607b63b6420",
+      "manifest_path": "docs/skills-3080-operations/revise-design-reference1-proposed090101.json",
+      "manifest_sha256": "3d27a7072716df74d1edab8eb3187afba9c8a7f6a315260e4ed8fc54e04d9a91",
+      "creation_request_sha256": "50a697af5013beb3b4f9e45087a5915e2593333ab60512a8668ce44a22f31166",
+      "creation_native_call_id": "call_c8e903093277429c87d06622d240f64f",
+      "review": {
+        "task": 3931,
+        "job": "20261026-132742-todo-3931",
+        "spec_sha256": "e0cb21ef45e15d8427ff0af86be88297a62a05efaa5b69e48e30244cf4c136d0",
+        "final_sha256": "c42b1027b212c04676585045fabfcd22ccdd8b66df05e749832123743778da38"
+      },
+      "producer": {
+        "sha256": "02c8cad70e44f2bc4cd4e5a70dfdaf581a7ee6896eb63449fe1606eb28f5b5be",
+        "revision": "f30f9e763e25884fa48d1cce0cac22da1cebfb69"
+      },
+      "original": {
+        "target": "design-reference-evidence/references/sources.json",
+        "sha256": "50a6aa009b0cc2d84147d300f7b1cdca5abf9b6003e36c4e004c67240ac439a7",
+        "bytes": 8896,
+        "object": {
+          "volume": "10829039763474491743",
+          "file_id_128": "07e67d00000014000000000000000000"
+        }
+      },
+      "pending": {
+        "target": "design-reference-evidence/references/sources-revision1.pending.json",
+        "sha256": "e0607f086fd394bc0399c99e4101cef48e56c509272741cde81dba029778d8f4",
+        "bytes": 10097,
+        "object": {
+          "volume": "10829039763474491743",
+          "file_id_128": "396f7e00000007000000000000000000"
+        }
+      },
+      "history_directory": {
+        "relative": "design-reference-evidence/references/history",
+        "object": {
+          "volume": "10829039763474491743",
+          "file_id_128": "b86e7e00000017000000000000000000"
+        }
+      },
+      "native_recovery": {
+        "original_native_call_id": "call_31fa406e37984d8c8b532a62dd25b922",
+        "original_input_sha256": "f49660100a01d8ad27abe051042f11d3edaf63b427465ffa3bd18ef2d6b25628",
+        "canonical_input_sha256": "e8fbaf8ef72e16902e70f98e75120280f8393c9e083de4f48341d0c8ff529588",
+        "original_tool_blocks_sha256": "37b20cca9ffa6a1c274951695a13c2dca49dc83a58cc73d2ca5cc456b9154049",
+        "original_stdout_sha256": "c68b627e8b2c3f802c385152f1eb1b3f0392f7215ecf2fb30e1c17ae02e2a4fa",
+        "original_call_was_canonical": false
+      }
+    }
+  },
+  "original_prepare_was_not_canonical": true,
+  "fixed_original_native_recovery": {
+    "original_native_call_id": "call_31fa406e37984d8c8b532a62dd25b922",
+    "original_input_sha256": "f49660100a01d8ad27abe051042f11d3edaf63b427465ffa3bd18ef2d6b25628",
+    "canonical_input_sha256": "e8fbaf8ef72e16902e70f98e75120280f8393c9e083de4f48341d0c8ff529588",
+    "original_tool_blocks_sha256": "37b20cca9ffa6a1c274951695a13c2dca49dc83a58cc73d2ca5cc456b9154049",
+    "original_stdout_sha256": "c68b627e8b2c3f802c385152f1eb1b3f0392f7215ecf2fb30e1c17ae02e2a4fa",
+    "original_call_was_canonical": false
+  },
+  "no_original_native_or_owner_record_edited": true,
+  "prepare_repeated": 0,
+  "new_CreateNew_calls": 0,
+  "actual_apply_successes": 1
+}

@@ -659,3 +659,72 @@ func TestConversationExplicitWaitPostAnswerFailureReportsActualTaskState(t *test
 		}
 	})
 }
+
+func TestConversationExplicitWaitRetryDeliversAnswerAndRefreshesStatus(t *testing.T) {
+	explicitWaitVariants(t, func(t *testing.T, f *conversationFixture) {
+		if _, err := f.r.conversationWait(context.Background(), f.q.RequestID, false); err != nil {
+			t.Fatal(err)
+		}
+		f.reply(t, 8, "answer before the next minute poll")
+		result, err := f.r.conversationWait(context.Background(), f.q.RequestID, false)
+		row, _ := f.r.todo(42)
+		if err != nil || result["outcome"] != "owner_reply_delivered" || result["task_status"] != "todo" || row.Status != "todo" || len(row.QuestionAnswers) != 1 {
+			t.Fatalf("successful answer kept the old block status: %v %v", result, err)
+		}
+	})
+}
+
+func TestConversationExplicitWaitCLIAnswerCommitDeadlineKeepsReceipt(t *testing.T) {
+	explicitWaitVariants(t, func(t *testing.T, f *conversationFixture) {
+		backend := f.r.Run
+		f.r.Run = func(ctx context.Context, path string, args ...string) (string, error) {
+			out, err := backend(ctx, path, args...)
+			if path == conversationTodo && err == nil {
+				if args[0] == "question-wait" {
+					f.reply(t, 8, "answer committed at the CLI deadline")
+				}
+				if args[0] == "question-answer" {
+					<-ctx.Done()
+					return "", ctx.Err()
+				}
+			}
+			return out, err
+		}
+		var out bytes.Buffer
+		code := conversationCLIWithTimeout([]string{"wait", "--request-id=" + f.q.RequestID}, &out,
+			func(string) (conversationCLIBackend, func(), error) { return f.r, func() {}, nil },
+			func(context.Context, string) bool { return true }, 2*time.Second)
+		var ack map[string]any
+		row, _ := f.r.todo(42)
+		if code != 0 || json.Unmarshal(out.Bytes(), &ack) != nil || ack["deadline"] != "after_answer_commit" || ack["outcome"] != "question_answered" || ack["task_status"] != "todo" || ack["reply_processing"] != "deferred" || row.Status != "todo" {
+			t.Fatalf("CLI lost its committed answer: code=%d output=%s", code, out.String())
+		}
+	})
+}
+
+func TestConversationExplicitWaitCancellationDoesNotExtendReadback(t *testing.T) {
+	explicitWaitVariants(t, func(t *testing.T, f *conversationFixture) {
+		ctx, cancel := context.WithCancel(context.Background())
+		defer cancel()
+		backend := f.r.Run
+		cancelled, extended := false, false
+		f.r.Run = func(call context.Context, path string, args ...string) (string, error) {
+			if cancelled && call.Err() == nil {
+				extended = true
+			}
+			out, err := backend(call, path, args...)
+			if path == conversationTodo && args[0] == "question-wait" && err == nil {
+				cancelled = true
+				cancel()
+			}
+			return out, err
+		}
+		if _, err := f.r.conversationWait(ctx, f.q.RequestID, false); err == nil || !cancelled || extended {
+			t.Fatal("explicit cancellation was ignored by the readback")
+		}
+		row, _ := f.r.todo(42)
+		if row.Status != "block" || !conversationWaitRecorded(row, f.q) {
+			t.Fatal("cancellation rewrote the already committed wait")
+		}
+	})
+}

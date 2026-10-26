@@ -92,3 +92,17 @@ native turn_contextでOpus5.5/maxを照合した。
 4009はRust120件・doctest・統合候補のGo race/native（190トップ＋443サブ、skip 0）・
 go vetを実行した。sourceはe31df774のまま保ち、証拠だけを284169b4へ保存した。
 631ed63e以後は同じRust候補でGoの修正範囲を確認し、最終差分レビューで解消を照合する。
+
+## 最終差分4016の受領
+
+固定e31df774→ba9ccb32はMust 0。実job20261027-042523-todo-4016と対応する
+native turn_contextでOpus5.5/maxを照合した。
+原応答SHA256は4a4f47c1db8ec0e4146e849dd67fbf91421a63284a06ffc630c939f0f6e3d6ac。
+読取と書式の対照確認であり、Goテスト・vetを同担当が実行した結果ではない。
+
+付随の指摘に対応し、回答の配送結果は二つの成功経路を同じ処理へ集め、
+どちらも配送後の状態を読み返す。読めない状態は古いblock等として返さない。
+また、answer commit後のCLI期限と、Canceledでは読戻しを延長しないケースを
+合成/nativeの両方で追加し、関連raceテストに成功した（8.094秒）。
+この追加の動作変更はconversation_wait.goの1ファイルに限定し、単独の別モデル確認へ渡す。
+CIのWindows/Linuxで180秒のテスト期限に収まることは実CIの結果で確認する。

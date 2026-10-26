@@ -3,7 +3,7 @@
 質問の再送・元InputSHA/Waitの手修正なしで、同じ質問を後から回答待ちへ移す修復。
 Issue561 / PR562。元の制作担当3684は3992と3995の依存待ちであり、解除しない。
 
-- branch scheduler/todo-3992-3684、Go実装head 5a078715c41758d3983dae0ef642f865b5652718。
+- branch scheduler/todo-3992-3684、初期Go実装headは5a078715c41758d3983dae0ef642f865b5652718。
 - Rust: question-wait --expected-state-fileで通常ロック内の行全体CAS。
 - Go: conversation wait --request-id [--check-only]、正規receiptの全質問項目と
   現担当の一致でwait=falseの回答配送もquestion-answerへ接続。元Waitはfalseのまま。
@@ -43,6 +43,11 @@ Issue561 / PR562。元の制作担当3684は3992と3995の依存待ちであり�
   再開tempのdeploy.ps1は2実行物だけをrunner.lock内で差し替え、前後SHAを照合する
   配布用の準備。構文確認のみで未実行。Go候補e31版は旧候補なので、その後の修正を含む
   最終ソースから作り直す。稼働Goのb0fef3c1はe31に含まれることを確認済み。
+- 4016のe31→ba9最終差分レビューを受領し、実Opus/maxとMust0を確認した。
+  付随の実害（配送成功後も古いtask_statusを返す）を1ファイルで修正し、
+  関連3ケースを合成/nativeのraceで確認した。追加の単独コード確認と最終CIが残る。
+  旧temp4a0はplan→通常削除→finish(source_absent)済み。
+  最新の実行情報・配布候補・配布計画はgitignore対象todo3992-resume.private.jsonを参照。
 
 親の現在の原質問・画像・私的本文は親worktreeと正規senderに保持する。
 公開fixtureやレビューにはコピーしていない。画像への承認・動画完成は本修復の完了条件ではない。

@@ -22,6 +22,20 @@ ToDo3992。質問を `ask --wait=false` で送った担当が独立工程を終�
   ToDoの変更もしない。私的本文や実データをテスト・公開文書へコピーしない。
   登録可能かの最終確認は通常ToDoロック内で行う。
 
+## CLIが返す結果
+
+- `waiting` は、同じ質問の正規待機を保存・読戻しできたことを示す。
+  `wait_requested=false` は元の登録内容として保持する。
+- `question_answered` と `reply_processing=deferred` は、正規回答receiptを確認したが、
+  後続の返信・編集・保存等に未完了が残る可能性を示す。全配送や実反映完了ではない。
+- `deadline=after_wait_commit` または `after_answer_commit` は、その正規receiptを
+  確認した後に期限を迎えた部分成功で、終了コードは0。通常の毎分処理を続ける。
+- `owner_reply_delivered` の `task_status` は配送後に読み返す。
+  読めない場合は古い状態を返さず、項目を省いて `task_readback=deferred` を返す。
+- `task_held` は既存の依存・停止等を保持した結果であり、新しい待機登録ではない。
+  別の受信担当へ結ばれたActor質問は、この元ToDo用操作では `actor_scope` で拒否する。
+  その質問の専用経路・ToDo・index・待機入力を変更しない。
+
 ## テスト範囲
 
 Rustはquestion-waitのオプション追加と既存ロック下CASだけを変更する。

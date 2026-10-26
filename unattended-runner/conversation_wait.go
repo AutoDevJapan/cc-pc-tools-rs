@@ -193,6 +193,16 @@ func (r *Runner) conversationWait(ctx context.Context, requestID string, checkOn
 	}
 	result := conversationQuestionPublic(q)
 	result["check_only"], result["task_status"], result["replies_verified"] = checkOnly, row.Status, len(proof.Replies)
+	deliveredResult := func() (map[string]any, error) {
+		result["outcome"], result["phase"] = "owner_reply_delivered", index.Questions[requestID].Phase
+		if current, err := r.todo(q.Todo); err == nil && current.Project == q.Project {
+			result["task_status"] = current.Status
+		} else {
+			delete(result, "task_status")
+			result["task_readback"] = "deferred"
+		}
+		return result, nil
+	}
 	if len(proof.Replies) != 0 {
 		result["outcome"] = "owner_reply_requires_delivery"
 		if checkOnly {
@@ -208,8 +218,7 @@ func (r *Runner) conversationWait(ctx context.Context, requestID string, checkOn
 			}
 			return nil, errConversationWait
 		}
-		result["outcome"], result["phase"] = "owner_reply_delivered", index.Questions[requestID].Phase
-		return result, nil
+		return deliveredResult()
 	}
 	for _, req := range r.conversationRequests() {
 		if req != nil && req.Conversation == q.RequestID {
@@ -296,10 +305,7 @@ func (r *Runner) conversationWait(ctx context.Context, requestID string, checkOn
 			}
 			return result, nil
 		}
-		result["outcome"], result["phase"] = "owner_reply_delivered", index.Questions[requestID].Phase
-		if current, err := r.todo(q.Todo); err == nil {
-			result["task_status"] = current.Status
-		}
+		return deliveredResult()
 	}
 	return result, nil
 }

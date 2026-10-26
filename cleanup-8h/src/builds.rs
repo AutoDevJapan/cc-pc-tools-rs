@@ -2765,6 +2765,93 @@ mod tests {
         assert!(!json.to_string().contains("private user path"));
         assert!(!json.to_string().contains("credential text"));
     }
+
+    #[test]
+    fn remaining_scope_failure_codes_preserve_real_candidate_foreign_source_and_records() {
+        let f = Fixture::new();
+        let id = "20261026-000002-legacy";
+        let other = f.root.join("existing-scope");
+        fs::create_dir(&other).unwrap();
+        fs::write(other.join("source.txt"), b"foreign source stays").unwrap();
+        fs::create_dir(f.ctx.job_dir(id)).unwrap();
+        for (case, expected) in [
+            ("raw", "OTHER_SCOPE_RAW_UNAVAILABLE"),
+            ("status", "OTHER_SCOPE_STATUS_UNVERIFIED"),
+            ("cwd", "OTHER_SCOPE_CWD_UNVERIFIED"),
+            ("created", "OTHER_SCOPE_CREATED_UNVERIFIED"),
+            ("directory", "OTHER_SCOPE_DIRECTORY_UNVERIFIED"),
+            ("history", "OTHER_SCOPE_HISTORY_UNVERIFIED"),
+        ] {
+            let mut raw =
+                json!({"id":id,"status":"running","cwd":other,"created_at":"2026-10-26T00:00:00Z"});
+            let mut scope = json!({"cwd":other,"created_at":raw["created_at"],"work_owner":{}});
+            match case {
+                "raw" => raw = Value::Null,
+                "status" => raw["status"] = json!("unclassified"),
+                "cwd" => {
+                    raw["cwd"] = json!("D:relative");
+                    scope["cwd"] = raw["cwd"].clone();
+                }
+                "created" => {
+                    raw["created_at"] = Value::Null;
+                    scope["created_at"] = Value::Null;
+                }
+                "directory" => {
+                    raw["cwd"] = json!(f.root.join("absent-directory"));
+                    scope["cwd"] = raw["cwd"].clone();
+                }
+                "history" => {
+                    scope["todo_id"] = json!(2);
+                    scope["work_owner"] = json!({"repository":"autodevjapan/cc-pc-tools-rs","git_common":f.work.join(".git"),"worktree":other,"branch":"scheduler/todo-2-fixture"});
+                }
+                _ => unreachable!(),
+            }
+            let record = serde_json::to_vec(&raw).unwrap();
+            let index=serde_json::to_vec(&json!({"scan_complete":true,"scanned_at":f.ctx.rt.epoch(),"ids":[id],"owners":{id:scope}})).unwrap();
+            fs::write(f.ctx.job_dir(id).join("job.json"), &record).unwrap();
+            fs::write(f.ctx.jobs.join(".queue-index.json"), &index).unwrap();
+            assert_eq!(
+                state_with_scope_guard(
+                    &f.ctx,
+                    &f.store,
+                    &f.row,
+                    &f.work,
+                    &f.origin,
+                    f.budget().until,
+                    &[id.into()],
+                    &|_| Ok(false)
+                ),
+                Err(expected),
+                "{case}"
+            );
+            assert_eq!(
+                fs::read(f.ctx.job_dir(id).join("job.json")).unwrap(),
+                record
+            );
+            assert_eq!(
+                fs::read(f.ctx.jobs.join(".queue-index.json")).unwrap(),
+                index
+            );
+            assert_eq!(
+                fs::read(other.join("source.txt")).unwrap(),
+                b"foreign source stays"
+            );
+            assert!(
+                f.work
+                    .join("target/debug/deps/libfixture-0123456789abcdef.rmeta")
+                    .is_file()
+            );
+            assert_eq!(
+                fs::read(
+                    f.work
+                        .join("target/debug/deps/libfixture-0123456789abcdef.rmeta")
+                )
+                .unwrap(),
+                [7; 17]
+            );
+            f.kept();
+        }
+    }
     #[test]
     fn cargo_hardlinks_inside_the_plan_are_removed_once_and_external_links_are_retained() {
         let f = Fixture::new();

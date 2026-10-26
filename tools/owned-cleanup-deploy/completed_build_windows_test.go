@@ -124,9 +124,15 @@ func TestCurrentGenerationCannotSkipThePreviousInstallChain(t *testing.T) {
 		t.Fatal("current record adopted as earlier original")
 	}
 	for _, b := range [][]byte{encode(completedCurrentHead, leaves[1].New, completedCurrentSHA), encode(completedPreviousHead, completedPreviousSHA, completedCurrentSHA), encode(completedCurrentHead, completedPreviousSHA, "unknown")} {
-		if completedCurrentGeneration(b) == nil {
+		if e := completedCurrentGeneration(b); e == nil || e.Error() != "COMPLETED_CURRENT_INSTALL_UNVERIFIED" {
 			t.Fatal("broken install chain accepted")
 		}
+	}
+	if e := completedCurrentGeneration([]byte("invalid broker")); e == nil || e.Error() != "COMPLETED_CURRENT_BROKER_UNVERIFIED" {
+		t.Fatal("current broker error mislabeled")
+	}
+	if e := completedPreviousGeneration([]byte("invalid broker")); e == nil || e.Error() != "COMPLETED_PREVIOUS_BROKER_UNVERIFIED" {
+		t.Fatal("previous broker error mislabeled")
 	}
 }
 

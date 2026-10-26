@@ -167,3 +167,12 @@ Goの次回oldは現用7d1をnormal broker原proofで検証し、元3757と初�
 まだこの観測版は未配布。別モデルMust0/同HEAD CI後に追加PRを通常mergeし、source/cas/aclを照合して
 suffix todo3942-observeで反映、既存S4U taskの同一実行でretention理由/active最大件数/自己handle-kernelを得る。
 元の実対象2件と自分のdebug回収は未完了、実回収0を保持。本人判断やPC操作は不要。
+review3979（job20261026-235758-todo-3979/37steps、native01a178b8-882a-7ca0-9d5e-d6bba5742b05、
+原SHA41a638ba659bec8ab5e2655ef23bce9e3715a337a9df43cd4e24a5421d7af063）は固定fe70→2057の5対象読了。
+Must1は新保持コードのraw/status/CWD/created/directory/history6経路の回帰不足で、synthetic実FSを使い
+各固定code・候補payload・foreign source・元job/index保持を検証する表形式回帰を追加し成功。
+Suggestionの前/現配布世代エラー混同もstatic phase別codeへ分離し、両世代の誤表示を検出する回帰追加、
+Go race/vetとClippy成功。許可述語とprivacy/新規data所有/guard/元recordは不変更。
+この差分はまだ別modelの確認前。Rust test sourceが配布票の入力へ含まれるため、新しいclean releaseと
+manifestを作り直してpinを更新する。51既存関連成功+追加6経路の回帰成功、full workspaceを再度要求しない。
+現用7d1/実回収0/元2件と自己debug未回収、元record/必要release保持、owner入力不要を維持。

@@ -134,18 +134,18 @@ func completedTodoReference(b []byte) error {
 }
 
 func completedPreviousGeneration(b []byte) error {
-	return verifiedCompletedGeneration(b, completedPreviousHead, leaves[1].New, completedPreviousSHA)
+	return verifiedCompletedGeneration(b, completedPreviousHead, leaves[1].New, completedPreviousSHA, "COMPLETED_PREVIOUS")
 }
 func completedCurrentGeneration(b []byte) error {
-	return verifiedCompletedGeneration(b, completedCurrentHead, completedPreviousSHA, completedCurrentSHA)
+	return verifiedCompletedGeneration(b, completedCurrentHead, completedPreviousSHA, completedCurrentSHA, "COMPLETED_CURRENT")
 }
-func verifiedCompletedGeneration(b []byte, expectedHead, expectedOld, expectedNew string) error {
+func verifiedCompletedGeneration(b []byte, expectedHead, expectedOld, expectedNew, phase string) error {
 	var broker struct {
 		Exit   int    `json:"exit"`
 		Stdout string `json:"stdout"`
 	}
 	if json.Unmarshal(b, &broker) != nil || broker.Exit != 0 {
-		return errCode("COMPLETED_PREVIOUS_BROKER_UNVERIFIED")
+		return errCode(phase + "_BROKER_UNVERIFIED")
 	}
 	var result struct {
 		Domain    string `json:"domain"`
@@ -167,11 +167,11 @@ func verifiedCompletedGeneration(b []byte, expectedHead, expectedOld, expectedNe
 		} `json:"results"`
 	}
 	if json.Unmarshal([]byte(broker.Stdout), &result) != nil || result.Domain != "completed-build-cleanup-software-3942" || result.Head != expectedHead || !result.Qualified || result.Data || result.Guard || len(result.Results) != 1 {
-		return errCode("COMPLETED_PREVIOUS_INSTALL_UNVERIFIED")
+		return errCode(phase + "_INSTALL_UNVERIFIED")
 	}
 	r := result.Results[0]
 	if r.Kind != "cleanup-8h" || !r.Updated || !r.Verified || r.Old != expectedOld || r.New != expectedNew || !r.Steps.OldRetired || !r.Steps.Published || !r.Steps.Verified {
-		return errCode("COMPLETED_PREVIOUS_INSTALL_UNVERIFIED")
+		return errCode(phase + "_INSTALL_UNVERIFIED")
 	}
 	return nil
 }

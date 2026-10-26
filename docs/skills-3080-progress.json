@@ -286,9 +286,9 @@
   "site_entries_with_body": 9862,
   "site_entries_without_body": 428,
   "execution_held_shapes": 647,
-  "candidate_designs": 119,
-  "independently_accepted": 119,
-  "installed": 119,
+  "candidate_designs": 120,
+  "independently_accepted": 120,
+  "installed": 120,
   "integrated": 3,
   "excluded": 15,
   "units": {
@@ -346,15 +346,15 @@
     "actual_installed": 8
   },
   "candidate_count_definitions": {
-    "candidate_designs": "Legacy28 plus directly sourced actual designs91; pending drafts and catalog rows are not installations;119 is not a cap",
+    "candidate_designs": "Legacy28 plus directly sourced actual designs92; pending drafts and catalog rows are not installations;120 is not a cap",
     "additional_authored_drafts_not_in_plans": 3,
-    "authored_total": 122,
-    "installed": 119,
+    "authored_total": 123,
+    "installed": 120,
     "pending_plan_targets": 0,
     "archived_draft_targets": 8,
     "archived_draft_is_subset_of_batch03": true,
     "independently_accepted": "Legacy acceptances plus individually scoped direct designs. For the six game outputs, original3775 reading and3777 source-specific correction acceptance were bound to exact manifest bytes. Actual creation, metadata discovery and bounded explicit use are separately evidenced; no whole-catalog, renderer or full-context acceptance is implied. The newest public result delta still requires review/CI/merge.",
-    "not_semantically_disposed_occurrences": 73083,
+    "not_semantically_disposed_occurrences": 73082,
     "additional_draft_sources": [
       "skills-3080-mizchi-sql-draft.json",
       "skills-3080-mizchi-mutation-draft.json"
@@ -700,7 +700,7 @@
     "fixed_roster": "skills-3080-mengto-fixed-entrypoints.json",
     "expected": 177,
     "complete": true,
-    "installed": 86,
+    "installed": 87,
     "complete_definition": "本文path読取と評価の受領。支持/第三者権利/実導入/実適用は未完。",
     "source": "skills-3080-mengto-partial-evaluation.json",
     "unread": 0,
@@ -1699,7 +1699,7 @@
     "current_individual_rights_entries": 5,
     "main_accepted_excluded_before_this_delta": 8,
     "branch_excluded": 15,
-    "branch_pending": 73083,
+    "branch_pending": 73082,
     "primary_and_support_read_states_unchanged": true,
     "existing_primary_amendment_separate": true,
     "source_scripts_executed": false,
@@ -2286,6 +2286,26 @@
     "installed": 0,
     "operation": "skills-3080-operations/create-illustration-craft-175504.json",
     "new_source_reading_credit": 0,
-    "unknown_central_comparison": false
+    "unknown_central_comparison": false,
+    "status": "Original input accepted in PR549; actual placement verified and working adoption recorded separately"
+  },
+  "craft_installation": {
+    "evidence": "skills-3080-craft-installation-evidence214717.json",
+    "actual_created": 1,
+    "files_original_readback": 7,
+    "bytes": 40753,
+    "creator": "20261026-175504-todo-3080",
+    "resumed_consumer": "20261026-214717-todo-3080",
+    "current_instruction_buffers": 2,
+    "current_instruction_bytes": 5698,
+    "fresh_discovered": 1,
+    "parse_errors": 0,
+    "discovery_metadata_total": 432,
+    "real_currentturn_text_scenarios": 3,
+    "new_source_read_credit": 0,
+    "actual_images_or_anatomy_validated": false,
+    "implicit_selection_proven": false,
+    "public_result_review_pending": true,
+    "whole16_complete": false
   }
 }

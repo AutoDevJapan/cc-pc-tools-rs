@@ -1,0 +1,10 @@
+{
+  "bundle": "skills-3080-craft-actual-bundle214717.json",
+  "bundle_sha256": "0fe27b47fd0a6a264c6d3df22f77a65e0645254fc7607c30c96f62e878bb2fd2",
+  "method": "Existing3048 explicit bundle checker using qualified actual content",
+  "exit": 0,
+  "stdout": "PASS: 1 explicit skills; structure, descriptions, references, hashes, scenario pairs; in-memory bundle only; no deployment implied\n",
+  "stderr": "",
+  "new_central_file_creation": 0,
+  "actual_image_or_anatomy_success": false
+}

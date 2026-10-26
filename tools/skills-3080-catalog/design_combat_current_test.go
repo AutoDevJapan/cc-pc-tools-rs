@@ -42,11 +42,13 @@ func TestDesignAndCombatCurrentBuffersBindEveryReviewedOutput(t *testing.T) {
 	for _, spec := range []struct {
 		group, operation, manifest string
 		count                      int
+		evidence                   string
 	}{
-		{"design-reference", "create-design-reference-090101.json", "fc92df3fdb1338c8de904691161eeccacf8c31256dd5e5fd7a5a4eb9fad48f85", 52},
-		{"combat6", "create-combat6-090101.json", "8078d9521ba61039000c915c7e904fd1aff9def8a832a19de377c4c0ac6c0758", 40},
-		{"codex3", "create-codex3-090101.json", "e79f958f08c7ab4a28607ec29869d99b1fdc645758989dfa6cb08a5145cf5b06", 20},
-		{"design-reference-revision1", "revise-design-reference1-proposed090101.json", "3d27a7072716df74d1edab8eb3187afba9c8a7f6a315260e4ed8fc54e04d9a91", 53},
+		{"design-reference", "create-design-reference-090101.json", "fc92df3fdb1338c8de904691161eeccacf8c31256dd5e5fd7a5a4eb9fad48f85", 52, ""},
+		{"combat6", "create-combat6-090101.json", "8078d9521ba61039000c915c7e904fd1aff9def8a832a19de377c4c0ac6c0758", 40, ""},
+		{"codex3", "create-codex3-090101.json", "e79f958f08c7ab4a28607ec29869d99b1fdc645758989dfa6cb08a5145cf5b06", 20, ""},
+		{"design-reference-revision1", "revise-design-reference1-proposed090101.json", "3d27a7072716df74d1edab8eb3187afba9c8a7f6a315260e4ed8fc54e04d9a91", 53, ""},
+		{"craft", "create-illustration-craft-175504.json", "ed9da837d40f2d48bc129a445eea1c820460fcb2aa7e4cb9a6b7062136aa1541", 7, "skills-3080-craft-consume7-evidence214717.json"},
 	} {
 		t.Run(spec.group, func(t *testing.T) {
 			var op struct {
@@ -84,7 +86,11 @@ func TestDesignAndCombatCurrentBuffersBindEveryReviewedOutput(t *testing.T) {
 				General    *bool                   `json:"general_access_granted"`
 				Registry   *bool                   `json:"original_registry_recovered"`
 			}
-			loadPublicReceipt(t, "skills-3080-"+spec.group+"-consume-evidence090101.json", &result)
+			evidence := spec.evidence
+			if evidence == "" {
+				evidence = "skills-3080-" + spec.group + "-consume-evidence090101.json"
+			}
+			loadPublicReceipt(t, evidence, &result)
 			if result.Count != spec.count || result.Writer != "unproved" || !recordedFalse(result.Historical) || !recordedFalse(result.General) || !recordedFalse(result.Registry) {
 				t.Fatal("current evidence promoted historical or general access")
 			}

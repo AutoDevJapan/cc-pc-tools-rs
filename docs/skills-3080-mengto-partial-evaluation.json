@@ -8,7 +8,7 @@
   "entrypoints_expected": 177,
   "entrypoints_fulltext_read": 177,
   "entrypoints_unread": 0,
-  "installed": 86,
+  "installed": 87,
   "integrated": 2,
   "excluded": 0,
   "central_write": 22,
@@ -12179,7 +12179,7 @@
       "positive_candidate": "404ページ用に、PCの前で作業する人物を、太い紺の輪郭と押し出しで描いたSVGを新規に作る。",
       "negative_candidate": "輪郭なしの平塗りで人物を描く（別スタイルの入口の範囲）。または、既存のロゴやキャラクターを模写する。",
       "support_read_complete": false,
-      "installed_by_todo3080": false,
+      "installed_by_todo3080": true,
       "integrated_by_todo3080": false,
       "excluded_by_todo3080": false,
       "independent_review_complete": false,
@@ -12336,7 +12336,9 @@
           "executed": false
         }
       ],
-      "parent_policy_correction": "本文のパレット・被写体・機器・採点は作者スタイルの条件であり本人の一般禁止ではない。未保存kitを待たず有用な原則の統合は検討できる。新規自作Go/GoDD Rust、配布Python無改変利用、本人Chromeと同対象画像回答を保持。"
+      "parent_policy_correction": "本文のパレット・被写体・機器・採点は作者スタイルの条件であり本人の一般禁止ではない。未保存kitを待たず有用な原則の統合は検討できる。新規自作Go/GoDD Rust、配布Python無改変利用、本人Chromeと同対象画像回答を保持。",
+      "current_installation_evidence": "skills-3080-craft-installation-evidence214717.json",
+      "current_adopted_scope": "Construction/grip/contact and comparison procedure from primary plus its shared craft reference; not the entire style kit or package"
     },
     {
       "inventory_id": "github:f469addd0f561499f4fdeb93411076dc7e316761d7fa8bea56083d0e2db1216e",
@@ -22617,11 +22619,11 @@
   "amendment_job": "20261024-123649-todo-3080",
   "amendment_definition": "Document amendment time; individual source retrieval and reading times remain in their own receipts.",
   "current_installation_update": {
-    "evidence": "skills-3080-codex3-installation-evidence090101.json",
-    "added": 3,
-    "current_installed": 86,
-    "source_body_reading_and_notice_support_states_unchanged": true,
-    "definition": "Three actual procedures from already parent-read177 sources; five author source texts include two supports, not additional adoptions"
+    "evidence": "skills-3080-craft-installation-evidence214717.json",
+    "added": 1,
+    "current_installed": 87,
+    "original_readers_masks_and_unknown_profiles_unchanged": true,
+    "source_scope": "Selected construction/contact procedure; unacquired style kit/resources and unknown central comparisons remain unresolved"
   },
   "previous_installation_updates": [
     {
@@ -22685,6 +22687,13 @@
       "current_installed": 83,
       "source_body_reading_and_notice_support_states_unchanged": true,
       "definition": "Six actual new procedures; shared VFX source is reference only, not seventh adoption or new source reading"
+    },
+    {
+      "evidence": "skills-3080-codex3-installation-evidence090101.json",
+      "added": 3,
+      "current_installed": 86,
+      "source_body_reading_and_notice_support_states_unchanged": true,
+      "definition": "Three actual procedures from already parent-read177 sources; five author source texts include two supports, not additional adoptions"
     }
   ]
 }

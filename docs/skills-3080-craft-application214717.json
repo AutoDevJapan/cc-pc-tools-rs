@@ -1,0 +1,42 @@
+{
+  "job": "20261026-214717-todo-3080",
+  "creator": "20261026-175504-todo-3080",
+  "skill": "illustration-craft",
+  "method": "Current real Codex turn explicitly consumed2 qualified instruction buffers and applied them to bounded textual scenarios",
+  "instruction_files": 2,
+  "instruction_bytes": 5698,
+  "current_read_proof": "craft-current-instruction2-proof214717.json",
+  "scenarios": [
+    {
+      "kind": "positive",
+      "input": "架空の確認依頼: 承認済み人物画でカップを持つ手の前後関係を確認したい。現在の実画像・原vectorはこのテストには与えていない。",
+      "applied_steps": [
+        "対象版と承認済み画像、実物の持ち方の参照を対応させる。",
+        "肩→上腕→肘→前腕→手首→掌→指を追い、左右と掌背を視点から判定する。",
+        "指の回り込みと親指が支える面、手と容器の重なり・接触を確認する。",
+        "元vector等から接写を作る工程と納品寸法の読みやすさ、局所修正前後を分ける。"
+      ],
+      "result": "適用対象を選び、必要な証拠と順序を具体化した。実画像が無いので特定の手の破綻や修復成功は断定していない。"
+    },
+    {
+      "kind": "negative",
+      "input": "風景写真の色温度だけを変える依頼",
+      "result": "このSkillは発動対象から外す。人物・手の生成や新しいUI制作を追加せず、指定された画像編集の範囲へ戻す。"
+    },
+    {
+      "kind": "negative",
+      "input": "右向きの人物だから右手が手前で親指はこの側、8点だったので実物確認や画像回答を省けるという提案",
+      "result": "向きだけで手の左右・掌背・隠れ方を確定しない。採点と実物照合・本人が回答した画像の範囲は別に確認する。"
+    }
+  ],
+  "all3_scenario_meanings_applied": true,
+  "actual_images_generated": 0,
+  "actual_UI_implementation": 0,
+  "actual_renders": 0,
+  "physical_anatomy_validated": false,
+  "owner_image_approval_inferred": false,
+  "raw_source_scripts_executed": 0,
+  "new_models_directly_spawned": 0,
+  "new_creations": 0,
+  "scope_limit": "This proves bounded explicit use of the readable procedure, not implicit model selection, actual rendered/anatomical success or whole16 completion"
+}

@@ -1,0 +1,3792 @@
+{
+  "all_original_selected_chunks_losslessly_reconstructed": true,
+  "central_operations": 0,
+  "context_resolution": "Each record.original_chunk_sha256 selects shared_original_contexts[sha].common; add that chunk's ordered original_assessment values as entries and canonical-JSON SHA256 must equal sha. All common fields, including definitions, input_validation, privacy, notice and boundaries, are preserved once.",
+  "domain": "skills3080-other12-shared-received-v3",
+  "first_ordinal": 238,
+  "last_ordinal": 249,
+  "limits": "This shares complete already acknowledged structured evidence, not original source bodies. Original actors, masks, unknown/partial/unread states and opaque path references remain unchanged; no grant, execution, adoption, current physical continuity or new reading is established.",
+  "materializer_job": "20261026-214717-todo-3080",
+  "new_copy_grants": 0,
+  "new_final_dispositions": 0,
+  "new_raw_or_unique_credit": 0,
+  "new_source_body_reads": 0,
+  "parent_acknowledged_through_at_materialization": 249,
+  "parent_journal_sha256": "a54aae57764dd23f929fd3b5d0a8f5cd28f015c2a2301ca7b906af7e4489198e",
+  "roster_sha256": "460219790c088b33e6044c6a97c68a882549c608c3de46ea536aa990a2c1adac",
+  "shared_original_contexts": {
+    "09c50be961fa7d49fcad0a547f36bbc3e58f8e208ad9fe01fede4e9376638e78": {
+      "actual_assessment_reader": "20261026-174104-todo-3778",
+      "all_original_chunk_fields_reconstructed": true,
+      "common": {
+        "boundaries": {
+          "central_operations": 0,
+          "copy_license_accepted": false,
+          "new_final_dispositions": 0,
+          "source_executed": false,
+          "whole16_complete": false
+        },
+        "chunk_id": "6f1c9042b7a94e5ca3860d21e8f53ab4",
+        "definitions": {
+          "actors": {
+            "0": "今回の実assistant",
+            "1": "前回同じToDo3778の実assistant: 20261026-065106-todo-3778"
+          },
+          "prior_assessment": {
+            "path": "docs/skills-3080-mengto-partial-evaluation.json",
+            "sha256": "4f8cce1504589195706b5392f4de08b4766b6269c1acfdd8c3eaa28aeee5eb55"
+          },
+          "prior_skill_profile": {
+            "actual_reader_job": "20261024-081950-todo-3535",
+            "assessment_ref": "definitions.prior_assessment",
+            "method": "prior_semantic_assessment_reuse",
+            "original_privacy_profile": null,
+            "original_range": null,
+            "read": null,
+            "recorded_body_read_complete": true,
+            "recorded_method": "child full primary read; parent all semantic assessments/headers/prose read and fixed metadata/gzip identity verification; parent did not reread all original primary bodies"
+          },
+          "reader_namespace": "20261026-174104-todo-3778/current",
+          "readers": {
+            "current": {
+              "actor": 0,
+              "actual_reader_job": "20261026-174104-todo-3778"
+            },
+            "prior3535": {
+              "actual_reader_job": "20261024-081950-todo-3535",
+              "mapping_assessment_sha256": "4f8cce1504589195706b5392f4de08b4766b6269c1acfdd8c3eaa28aeee5eb55",
+              "mapping_pointer": "/reader3535_3536/0/job"
+            },
+            "prior3778": {
+              "actor": 1,
+              "actual_reader_job": "20261026-065106-todo-3778"
+            }
+          },
+          "reuse": "旧固定SKILLの意味評価と既読主張は原reader/methodのまま、原mask/range不明はnull。今回primary全行表示/伏字とbyte照合だけを区別し、他人/過去の読取を新raw/新global uniqueへ加算しない。",
+          "states": {
+            "1": "saved_unread",
+            "2": "direct_raw_full",
+            "3": "direct_masked_full",
+            "6": "partial",
+            "7": "scan"
+          },
+          "support_columns": [
+            "relative_path_or_fixed_tree_path_ref",
+            "sha256",
+            "git_blob",
+            "bytes",
+            "saved",
+            "method",
+            "reader_ref",
+            "mask",
+            "read",
+            "tree_git_blob",
+            "tree_bytes",
+            "evidence_ref"
+          ],
+          "support_path_rule": "stringならfull Git path = entry.package.root + '/' + support[0]。objectならinput_validation.tree_sha256に固定したC/github/MengTo__Skills/tree-recursive.jsonのtree[repo_tree_entry_index].pathを使い、そのUTF8 SHA256をpath_utf8_sha256で照合する。opaque locatorを含むpathの原値/断片はmodel表示しない。primary alias除外、全blob列挙、未保存本文SHA/blob/bytes/reader/mask/readはnullでtree metadataは別欄。saved gzipは同repoのobjects/{sha256}.gz。"
+        },
+        "domain": "othergit373-chunk-v1",
+        "existing_relationship": {
+          "comparison": "起動catalogの名前/descriptionと固定public評価だけ。未知中央本文の一括読取/同一性・重複除外の確定0。",
+          "new_unique_coverage_not_claimed": true,
+          "primary_history_limit": "244/248/249と249支持の旧body_read=true、他5primaryの旧scan_onlyを保持。原mask/range/profile不明はnullで、新global uniqueへ足さない。旧SKILL本文は固定SHAの意味評価再利用だけ。"
+        },
+        "first_ordinal": 242,
+        "input_validation": {
+          "batching": "context単位で8件。373を縮小せず次250。",
+          "catalog_sha256": "2d73c9a038a41cc220a9687b935bfa1e0b315b65d9bd6d3e54ddb4111972876c",
+          "commit": "398cd41c86ba42fbb30e944ae507f463648f08b7",
+          "commit_json_sha256": "56f6dde2851c2f35f7deb6c19df65dae34dadba16b0363beda82ac202016e17e",
+          "index_sha256": "1a9fa91b6ac4e9156b2f3548ca6cf3cdcb4377c6c52cc1bfb315fcb3efb90643",
+          "metadata_path_reference_count": 43,
+          "metadata_path_reference_identity_verified": true,
+          "notice_filename_census": {
+            "current_package_notice_named_paths": [
+              "LICENSE"
+            ],
+            "embedded_notice_bodies_not_verified": true,
+            "repo_total_notice_named_candidates": 2,
+            "tree_entries": 1915,
+            "truncated": false
+          },
+          "notice_paths": [
+            "LICENSE"
+          ],
+          "repo": "MengTo/Skills",
+          "root_tree": "8afedc8719f37d2026b55aef282ac27d8d873d76",
+          "same_buffer_sha_bytes_gitblob_strict_utf8": true,
+          "source_support_identity_validation_not_model_reread": true,
+          "tree_entries": 1915,
+          "tree_sha256": "78e159cb1fabd9072bf8a6c667fe55aed8d1525cfffb2a5d2b94932e1faefc59",
+          "truncated": false,
+          "tuple_unit_catalog_exact": true
+        },
+        "notice_evidence": {
+          "root": {
+            "actual_reader_job": "20261026-065106-todo-3778",
+            "bytes": 1064,
+            "copy_license_accepted": false,
+            "git_blob": "b3a5f823a69b4b010f92930ac09e8a776daf65c6",
+            "identifier": "MIT",
+            "mask": 1,
+            "masked_lines": [
+              3
+            ],
+            "method": "same-byte-reuse",
+            "original_notice_gzip": "github/MengTo__Skills/objects/b2a071ba22fefd803f4e9d1f5c777dd79c62d191695586a1a73fd4d0ebd051c6.gz",
+            "original_read": [
+              3,
+              1,
+              0,
+              false,
+              true,
+              21
+            ],
+            "original_reader_namespace": "20261026-065106-todo-3778/current",
+            "path": "LICENSE",
+            "ranges": [
+              [
+                1,
+                21
+              ]
+            ],
+            "read": [
+              3,
+              1,
+              1,
+              false,
+              true,
+              21
+            ],
+            "reader": 1,
+            "representative": {
+              "chunk_id": "6b52f801c93a4ec78d0f167a24e5b309",
+              "chunk_sha256": "7af97d67feec9be6f4b4ea404c3909a053b0eb500c15fbfb469f5dbcda216a92",
+              "pointer": "notice_evidence.root"
+            },
+            "saved": true,
+            "scope": "242..249の祖先root LICENSE。固定complete treeのnotice名候補を全1915entryで確認、この8packageに別の祖先/入れ子notice名なし。未保存bodyの埋込notice/個別権利の不存在は主張しない。",
+            "sha256": "b2a071ba22fefd803f4e9d1f5c777dd79c62d191695586a1a73fd4d0ebd051c6"
+          }
+        },
+        "privacy_limits": {
+          "mask": "今回の全行表示前にwhole-line伏字。各entryのmasked_linesに範囲を保持し、原値/断片を復元しない。mask数は秘密の実個数/不存在の証明ではない。",
+          "metadata_path_masks": {
+            "contextual_reference_identity_source_sha256": "8a8f5895b6df25810f09e58f8d3100a099acec0b129cafca6e67c38e28f7a256",
+            "count": 43,
+            "metadata_path_mask_count_not_body_mask_count": true,
+            "metadata_path_policy": "v2 structural asset/media path references; no raw media basename display",
+            "prior_limit_ref": {
+              "chunk_id": "e47b029a6c584f7e93512a8d760cb4f1",
+              "pointer": "privacy_limits.metadata_path_display"
+            },
+            "raw_values_displayed_by_this_transform": false,
+            "scope": [
+              {
+                "row": 242,
+                "support_index": 1
+              },
+              {
+                "row": 242,
+                "support_index": 2
+              },
+              {
+                "row": 242,
+                "support_index": 3
+              },
+              {
+                "row": 242,
+                "support_index": 4
+              },
+              {
+                "row": 242,
+                "support_index": 5
+              },
+              {
+                "row": 242,
+                "support_index": 6
+              },
+              {
+                "row": 242,
+                "support_index": 7
+              },
+              {
+                "row": 242,
+                "support_index": 8
+              },
+              {
+                "row": 242,
+                "support_index": 10
+              },
+              {
+                "row": 243,
+                "support_index": 1
+              },
+              {
+                "row": 243,
+                "support_index": 2
+              },
+              {
+                "row": 243,
+                "support_index": 3
+              },
+              {
+                "row": 243,
+                "support_index": 4
+              },
+              {
+                "row": 243,
+                "support_index": 5
+              },
+              {
+                "row": 243,
+                "support_index": 6
+              },
+              {
+                "row": 243,
+                "support_index": 7
+              },
+              {
+                "row": 243,
+                "support_index": 9
+              },
+              {
+                "row": 244,
+                "support_index": 2
+              },
+              {
+                "row": 245,
+                "support_index": 1
+              },
+              {
+                "row": 245,
+                "support_index": 3
+              },
+              {
+                "row": 246,
+                "support_index": 1
+              },
+              {
+                "row": 246,
+                "support_index": 2
+              },
+              {
+                "row": 246,
+                "support_index": 3
+              },
+              {
+                "row": 246,
+                "support_index": 4
+              },
+              {
+                "row": 246,
+                "support_index": 5
+              },
+              {
+                "row": 246,
+                "support_index": 7
+              },
+              {
+                "row": 247,
+                "support_index": 1
+              },
+              {
+                "row": 247,
+                "support_index": 2
+              },
+              {
+                "row": 247,
+                "support_index": 3
+              },
+              {
+                "row": 247,
+                "support_index": 4
+              },
+              {
+                "row": 247,
+                "support_index": 5
+              },
+              {
+                "row": 247,
+                "support_index": 7
+              },
+              {
+                "row": 248,
+                "support_index": 1
+              },
+              {
+                "row": 248,
+                "support_index": 2
+              },
+              {
+                "row": 248,
+                "support_index": 3
+              },
+              {
+                "row": 248,
+                "support_index": 4
+              },
+              {
+                "row": 248,
+                "support_index": 5
+              },
+              {
+                "row": 248,
+                "support_index": 6
+              },
+              {
+                "row": 248,
+                "support_index": 7
+              },
+              {
+                "row": 248,
+                "support_index": 8
+              },
+              {
+                "row": 248,
+                "support_index": 9
+              },
+              {
+                "row": 248,
+                "support_index": 11
+              },
+              {
+                "row": 249,
+                "support_index": 4
+              }
+            ],
+            "source_body_profiles_unchanged": true,
+            "support_indices_zero_based": true
+          },
+          "prior_limit_ref": {
+            "chunk_id": "4c80e1a7d59249c2b63f08e114a7d9e5",
+            "pointer": "privacy_limits.outside_package_preparation"
+          },
+          "rights": "旧rights reviewは原fieldを表示前に省略。個人名の原値/断片を再掲せず、原profile不明をnullで保持。"
+        },
+        "reader_job": "20261026-174104-todo-3778",
+        "reader_todo": 3778,
+        "resource_evidence": {
+          "p242_SKILL_md": {
+            "meaning_ref": "/entries/140/reason",
+            "pointer": "/entries/140",
+            "profile_ref": "definitions.prior_skill_profile"
+          },
+          "p243_SKILL_md": {
+            "meaning_ref": "/entries/141/reason",
+            "pointer": "/entries/141",
+            "profile_ref": "definitions.prior_skill_profile"
+          },
+          "p244_SKILL_md": {
+            "meaning_ref": "/entries/142/reason",
+            "pointer": "/entries/142",
+            "profile_ref": "definitions.prior_skill_profile"
+          },
+          "p245_SKILL_md": {
+            "meaning_ref": "/entries/143/reason",
+            "pointer": "/entries/143",
+            "profile_ref": "definitions.prior_skill_profile"
+          },
+          "p246_SKILL_md": {
+            "meaning_ref": "/entries/144/reason",
+            "pointer": "/entries/144",
+            "profile_ref": "definitions.prior_skill_profile"
+          },
+          "p247_SKILL_md": {
+            "meaning_ref": "/entries/145/reason",
+            "pointer": "/entries/145",
+            "profile_ref": "definitions.prior_skill_profile"
+          },
+          "p248_SKILL_md": {
+            "meaning_ref": "/entries/146/reason",
+            "pointer": "/entries/146",
+            "profile_ref": "definitions.prior_skill_profile"
+          },
+          "p249_REFERENCES_md": {
+            "actual_reader_job": "20261026-174104-todo-3778",
+            "mask": 0,
+            "masked_lines": [],
+            "masking_version": "v15",
+            "meaning": [
+              "Intelli公開参考サイトとFramer template listingの2 URLだけ。リンク先本文・利用条件/派生関係・現在の掲載状態は未取得/未検証。"
+            ],
+            "method": "direct_raw_full",
+            "new_global_unique_coverage_not_claimed": true,
+            "previous_history": {
+              "assessment_sha256": "4f8cce1504589195706b5392f4de08b4766b6269c1acfdd8c3eaa28aeee5eb55",
+              "body_read": true,
+              "history_limit": "旧read主張と今回の直接読取を区別。新global uniqueへ加算しない。",
+              "original_mask_range_profile": null,
+              "original_method": null,
+              "original_reader_label": "20261024-081950-todo-3535",
+              "pointer": "/entries/147/supporting_resources/0",
+              "scan_note": null
+            },
+            "ranges": [
+              [
+                1,
+                2
+              ]
+            ],
+            "read": [
+              2,
+              0,
+              0,
+              true,
+              true,
+              2
+            ],
+            "reader_namespace": "20261026-174104-todo-3778/current"
+          },
+          "p249_SKILL_md": {
+            "meaning_ref": "/entries/147/reason",
+            "pointer": "/entries/147",
+            "profile_ref": "definitions.prior_skill_profile"
+          }
+        },
+        "resume_validation": {
+          "acknowledged_through": 241,
+          "generation": 55,
+          "journal_sha256": "f058f2750c8964eb539bc3ef9945bed819bc631651c9eccc7160d3af2f08307f",
+          "parent_semantic_assessments_read": true,
+          "previous_chunk_id": "d46a9e875c014afeb0286d793f1ca204",
+          "previous_chunk_sha256": "edc68c278462f59f74c4c62c15a71cab7614d08ddf0f9fddf6374c9b4910d27e",
+          "validated_receipts": 55
+        },
+        "roster_sha256": "460219790c088b33e6044c6a97c68a882549c608c3de46ea536aa990a2c1adac"
+      },
+      "original_chunk_id": "6f1c9042b7a94e5ca3860d21e8f53ab4",
+      "original_receipt_sha256": "74c918ed854f30ed66761e5059b1133971362911496bf4fdf64e9e8d26ce193f"
+    },
+    "edc68c278462f59f74c4c62c15a71cab7614d08ddf0f9fddf6374c9b4910d27e": {
+      "actual_assessment_reader": "20261026-174104-todo-3778",
+      "all_original_chunk_fields_reconstructed": true,
+      "common": {
+        "boundaries": {
+          "central_operations": 0,
+          "copy_license_accepted": false,
+          "new_final_dispositions": 0,
+          "source_executed": false,
+          "whole16_complete": false
+        },
+        "chunk_id": "d46a9e875c014afeb0286d793f1ca204",
+        "definitions": {
+          "actors": {
+            "0": "今回の実assistant",
+            "1": "前回同じToDo3778の実assistant: 20261026-065106-todo-3778"
+          },
+          "prior_assessment": {
+            "path": "docs/skills-3080-mengto-partial-evaluation.json",
+            "sha256": "4f8cce1504589195706b5392f4de08b4766b6269c1acfdd8c3eaa28aeee5eb55"
+          },
+          "prior_skill_profile": {
+            "actual_reader_job": "20261024-081950-todo-3535",
+            "assessment_ref": "definitions.prior_assessment",
+            "method": "prior_semantic_assessment_reuse",
+            "original_privacy_profile": null,
+            "original_range": null,
+            "read": null,
+            "recorded_body_read_complete": true,
+            "recorded_method": "child full primary read; parent all semantic assessments/headers/prose read and fixed metadata/gzip identity verification; parent did not reread all original primary bodies"
+          },
+          "reader_namespace": "20261026-174104-todo-3778/current",
+          "readers": {
+            "current": {
+              "actor": 0,
+              "actual_reader_job": "20261026-174104-todo-3778"
+            },
+            "prior3535": {
+              "actual_reader_job": "20261024-081950-todo-3535",
+              "mapping_assessment_sha256": "4f8cce1504589195706b5392f4de08b4766b6269c1acfdd8c3eaa28aeee5eb55",
+              "mapping_pointer": "/reader3535_3536/0/job"
+            },
+            "prior3778": {
+              "actor": 1,
+              "actual_reader_job": "20261026-065106-todo-3778"
+            }
+          },
+          "reuse": "旧固定SKILLの意味評価と既読主張は原reader/methodのまま、原mask/range不明はnull。今回primary全行表示/伏字とbyte照合だけを区別し、他人/過去の読取を新raw/新global uniqueへ加算しない。",
+          "states": {
+            "1": "saved_unread",
+            "2": "direct_raw_full",
+            "3": "direct_masked_full",
+            "6": "partial",
+            "7": "scan"
+          },
+          "support_columns": [
+            "relative_path_or_fixed_tree_path_ref",
+            "sha256",
+            "git_blob",
+            "bytes",
+            "saved",
+            "method",
+            "reader_ref",
+            "mask",
+            "read",
+            "tree_git_blob",
+            "tree_bytes",
+            "evidence_ref"
+          ],
+          "support_path_rule": "stringならfull Git path = entry.package.root + '/' + support[0]。objectならinput_validation.tree_sha256に固定したC/github/MengTo__Skills/tree-recursive.jsonのtree[repo_tree_entry_index].pathを使い、そのUTF8 SHA256をpath_utf8_sha256で照合する。opaque locatorを含むpathの原値/断片はmodel表示しない。primary alias除外、全blob列挙、未保存本文SHA/blob/bytes/reader/mask/readはnullでtree metadataは別欄。saved gzipは同repoのobjects/{sha256}.gz。"
+        },
+        "domain": "othergit373-chunk-v1",
+        "existing_relationship": {
+          "comparison": "起動catalogの名前/descriptionと固定public評価だけ。未知中央本文の一括読取/同一性・重複除外の確定0。",
+          "new_unique_coverage_not_claimed": true,
+          "primary_history_limit": "238/239/240と4支持の旧body_read=trueを保持。原range/mask/method/個別支持note欠落はnull、今回の実読を新global uniqueへ加算しない。旧SKILL本文は再表示せず固定SHAの意味評価を再利用。"
+        },
+        "first_ordinal": 238,
+        "input_validation": {
+          "batching": "context単位で4件。373を縮小せず次242。",
+          "catalog_sha256": "2d73c9a038a41cc220a9687b935bfa1e0b315b65d9bd6d3e54ddb4111972876c",
+          "commit": "398cd41c86ba42fbb30e944ae507f463648f08b7",
+          "commit_json_sha256": "56f6dde2851c2f35f7deb6c19df65dae34dadba16b0363beda82ac202016e17e",
+          "index_sha256": "1a9fa91b6ac4e9156b2f3548ca6cf3cdcb4377c6c52cc1bfb315fcb3efb90643",
+          "metadata_path_reference_count": 19,
+          "metadata_path_reference_identity_verified": true,
+          "notice_paths": [
+            "LICENSE"
+          ],
+          "repo": "MengTo/Skills",
+          "root_tree": "8afedc8719f37d2026b55aef282ac27d8d873d76",
+          "same_buffer_sha_bytes_gitblob_strict_utf8": true,
+          "source_support_identity_validation_not_model_reread": true,
+          "tree_entries": 1915,
+          "tree_sha256": "78e159cb1fabd9072bf8a6c667fe55aed8d1525cfffb2a5d2b94932e1faefc59",
+          "truncated": false,
+          "tuple_unit_catalog_exact": true
+        },
+        "notice_evidence": {
+          "root": {
+            "actual_reader_job": "20261026-065106-todo-3778",
+            "bytes": 1064,
+            "copy_license_accepted": false,
+            "git_blob": "b3a5f823a69b4b010f92930ac09e8a776daf65c6",
+            "identifier": "MIT",
+            "mask": 1,
+            "masked_lines": [
+              3
+            ],
+            "method": "same-byte-reuse",
+            "original_notice_gzip": "github/MengTo__Skills/objects/b2a071ba22fefd803f4e9d1f5c777dd79c62d191695586a1a73fd4d0ebd051c6.gz",
+            "original_read": [
+              3,
+              1,
+              0,
+              false,
+              true,
+              21
+            ],
+            "original_reader_namespace": "20261026-065106-todo-3778/current",
+            "path": "LICENSE",
+            "ranges": [
+              [
+                1,
+                21
+              ]
+            ],
+            "read": [
+              3,
+              1,
+              1,
+              false,
+              true,
+              21
+            ],
+            "reader": 1,
+            "representative": {
+              "chunk_id": "6b52f801c93a4ec78d0f167a24e5b309",
+              "chunk_sha256": "7af97d67feec9be6f4b4ea404c3909a053b0eb500c15fbfb469f5dbcda216a92",
+              "pointer": "notice_evidence.root"
+            },
+            "saved": true,
+            "scope": "238..241の祖先root LICENSE。固定complete treeに別の祖先/入れ子noticeなし。作者文と画像/書体/モデル/サービス等の個別条件を区別。",
+            "sha256": "b2a071ba22fefd803f4e9d1f5c777dd79c62d191695586a1a73fd4d0ebd051c6"
+          }
+        },
+        "privacy_limits": {
+          "mask": "今回の全行表示前にwhole-line伏字。各entryのmasked_linesに範囲を保持し、原値/断片を復元しない。mask数は秘密の実個数/不存在の証明ではない。",
+          "metadata_path_masks": {
+            "contextual_reference_identity_source_sha256": "8a8f5895b6df25810f09e58f8d3100a099acec0b129cafca6e67c38e28f7a256",
+            "count": 19,
+            "metadata_path_mask_count_not_body_mask_count": true,
+            "metadata_path_policy": "v2 structural asset/media path references; no raw media basename display",
+            "prior_limit_ref": {
+              "chunk_id": "e47b029a6c584f7e93512a8d760cb4f1",
+              "pointer": "privacy_limits.metadata_path_display"
+            },
+            "raw_values_displayed_by_this_transform": false,
+            "scope": [
+              {
+                "row": 238,
+                "support_index": 2
+              },
+              {
+                "row": 238,
+                "support_index": 3
+              },
+              {
+                "row": 238,
+                "support_index": 5
+              },
+              {
+                "row": 238,
+                "support_index": 6
+              },
+              {
+                "row": 239,
+                "support_index": 1
+              },
+              {
+                "row": 239,
+                "support_index": 2
+              },
+              {
+                "row": 239,
+                "support_index": 3
+              },
+              {
+                "row": 239,
+                "support_index": 4
+              },
+              {
+                "row": 239,
+                "support_index": 5
+              },
+              {
+                "row": 239,
+                "support_index": 6
+              },
+              {
+                "row": 239,
+                "support_index": 7
+              },
+              {
+                "row": 239,
+                "support_index": 9
+              },
+              {
+                "row": 240,
+                "support_index": 3
+              },
+              {
+                "row": 241,
+                "support_index": 1
+              },
+              {
+                "row": 241,
+                "support_index": 2
+              },
+              {
+                "row": 241,
+                "support_index": 3
+              },
+              {
+                "row": 241,
+                "support_index": 4
+              },
+              {
+                "row": 241,
+                "support_index": 5
+              },
+              {
+                "row": 241,
+                "support_index": 7
+              }
+            ],
+            "source_body_profiles_unchanged": true,
+            "support_indices_zero_based": true
+          },
+          "primary_238": {
+            "fixed_prose_recovery": false,
+            "identity_or_private_status_verified": false,
+            "limit": "原値/断片は復元せず、その行の内容は未確認。mask数は秘密の実個数ではない。",
+            "line": 24,
+            "mask_count": 1,
+            "matched_own_filter_class": "capitalized two-word possessive heuristic",
+            "method": "v15 whole-line mask before display",
+            "raw_line_or_fragments_displayed": false,
+            "same_bytes_reason_classification_only": true
+          },
+          "prior_limit_ref": {
+            "chunk_id": "4c80e1a7d59249c2b63f08e114a7d9e5",
+            "pointer": "privacy_limits.outside_package_preparation"
+          },
+          "prior_projection": {
+            "assessment_sha256": "4f8cce1504589195706b5392f4de08b4766b6269c1acfdd8c3eaa28aeee5eb55",
+            "field": "/entries/137/required_changes/1",
+            "field_mask_count": 1,
+            "original_source_line_or_privacy_profile": null,
+            "raw_field_displayed": false,
+            "row": 240,
+            "unmet": "旧評価の当該fieldの意味は未確認。今回primaryのraw mask countへ混ぜない。"
+          },
+          "rights": "旧rights reviewは原fieldを表示前に省略。個人名の原値/断片を再掲せず、原profile不明をnullで保持。"
+        },
+        "reader_job": "20261026-174104-todo-3778",
+        "reader_todo": 3778,
+        "resource_evidence": {
+          "p238_SKILL_md": {
+            "meaning_ref": "/entries/135/reason",
+            "pointer": "/entries/135",
+            "profile_ref": "definitions.prior_skill_profile"
+          },
+          "p238_references_brief_md": {
+            "actual_reader_job": "20261026-174104-todo-3778",
+            "mask": 0,
+            "masked_lines": [],
+            "masking_version": "v15",
+            "meaning": [
+              "一窓一担当の共通brief。engine/一窓を先に作りstyleguideと実UI資料を渡す。step順序/秒数/共有example/CSS-keyframe prefix/二ファイル・scratch・既存asset範囲・多時刻3回比較・不足報告・共有部importを定義する。",
+              "並列helperを直接起動/同じcheckout共用/usage resetで再開/既存previewとshoot scriptを前提にする原文は、このPCの共有ToDo --spec/所有分離/本人Chrome・資源割当の手順へ再設計する対象。今回起動/実行0。"
+            ],
+            "method": "direct_raw_full",
+            "new_global_unique_coverage_not_claimed": true,
+            "previous_history": {
+              "assessment_sha256": "4f8cce1504589195706b5392f4de08b4766b6269c1acfdd8c3eaa28aeee5eb55",
+              "body_read": true,
+              "history_limit": "旧read主張を保持。原range/mask/個別意味noteが欠落するため今回必要支持を直接評価し、新global uniqueへ加算しない。",
+              "original_mask_range_profile": null,
+              "original_method": null,
+              "original_reader_label": "20261024-081950-todo-3535",
+              "pointer": "/entries/135/supporting_resources/7",
+              "scan_note": null
+            },
+            "ranges": [
+              [
+                1,
+                62
+              ]
+            ],
+            "read": [
+              2,
+              0,
+              0,
+              true,
+              true,
+              62
+            ],
+            "reader_namespace": "20261026-174104-todo-3778/current"
+          },
+          "p238_references_contract_md": {
+            "actual_reader_job": "20261026-174104-todo-3778",
+            "mask": 0,
+            "masked_lines": [],
+            "masking_version": "v15",
+            "meaning": [
+              "step id/name/dur/Viewと1200×750、一scale/ResizeObserver、useStepClockのplay/seek/pause/reduced/30%可視かつ!hidden、ease/typed/cue/held/glide/Cursor、click前後の時刻を定義。",
+              "Viewの純粋な時刻依存とhistory依存CSSを明示して分ける。freeze/scrub時はCSSの最長遷移を待つか時刻計算へ。実DOMから座標をscale補正して測る。macOS cursor/Playwright一回測定は対象OS/現在の操作へ対応づける。"
+            ],
+            "method": "direct_raw_full",
+            "new_global_unique_coverage_not_claimed": true,
+            "previous_history": {
+              "assessment_sha256": "4f8cce1504589195706b5392f4de08b4766b6269c1acfdd8c3eaa28aeee5eb55",
+              "body_read": true,
+              "history_limit": "旧read主張を保持。原range/mask/個別意味noteが欠落するため今回必要支持を直接評価し、新global uniqueへ加算しない。",
+              "original_mask_range_profile": null,
+              "original_method": null,
+              "original_reader_label": "20261024-081950-todo-3535",
+              "pointer": "/entries/135/supporting_resources/8",
+              "scan_note": null
+            },
+            "ranges": [
+              [
+                1,
+                101
+              ]
+            ],
+            "read": [
+              2,
+              0,
+              0,
+              true,
+              true,
+              101
+            ],
+            "reader_namespace": "20261026-174104-todo-3778/current"
+          },
+          "p238_references_film_md": {
+            "actual_reader_job": "20261026-174104-todo-3778",
+            "mask": 0,
+            "masked_lines": [],
+            "masking_version": "v15",
+            "meaning": [
+              "frameAt(t)からworkflow/DAGでrun開始時刻とdepthを導き、beatのbase→cueを時刻までfold、flowごとにcamera transformを結び、seenの旧frameを300ms保持して切り替える。threadはnode配置から測定しreduced時は一frame。",
+              "SHOWN=18で表示時間を拡大しspend/balance/publishまで演じる記述は実生成/課金/投稿の証拠でない。50msでframeAt/serialize比較する費用は残るのでmost ticks cost nothingをゼロ負荷としない。CSS camera遷移のhistory依存も残る。"
+            ],
+            "method": "direct_raw_full",
+            "new_global_unique_coverage_not_claimed": true,
+            "previous_history": {
+              "assessment_sha256": "4f8cce1504589195706b5392f4de08b4766b6269c1acfdd8c3eaa28aeee5eb55",
+              "body_read": true,
+              "history_limit": "旧read主張を保持。原range/mask/個別意味noteが欠落するため今回必要支持を直接評価し、新global uniqueへ加算しない。",
+              "original_mask_range_profile": null,
+              "original_method": null,
+              "original_reader_label": "20261024-081950-todo-3535",
+              "pointer": "/entries/135/supporting_resources/9",
+              "scan_note": null
+            },
+            "ranges": [
+              [
+                1,
+                71
+              ]
+            ],
+            "read": [
+              2,
+              0,
+              0,
+              true,
+              true,
+              71
+            ],
+            "reader_namespace": "20261026-174104-todo-3778/current"
+          },
+          "p239_SKILL_md": {
+            "meaning_ref": "/entries/136/reason",
+            "pointer": "/entries/136",
+            "profile_ref": "definitions.prior_skill_profile"
+          },
+          "p240_REFERENCES_md": {
+            "actual_reader_job": "20261026-174104-todo-3778",
+            "mask": 0,
+            "masked_lines": [],
+            "masking_version": "v15",
+            "meaning": [
+              "任意のcopywriting構成例とGoogle FAQ schema overviewの2 URLを列挙する。参照先本文/利用条件・派生関係/現行の構造化データ要件は未取得・未検証。"
+            ],
+            "method": "direct_raw_full",
+            "new_global_unique_coverage_not_claimed": true,
+            "previous_history": {
+              "assessment_sha256": "4f8cce1504589195706b5392f4de08b4766b6269c1acfdd8c3eaa28aeee5eb55",
+              "body_read": true,
+              "history_limit": "旧read主張を保持。原range/mask/個別意味noteが欠落するため今回必要支持を直接評価し、新global uniqueへ加算しない。",
+              "original_mask_range_profile": null,
+              "original_method": null,
+              "original_reader_label": "20261024-081950-todo-3535",
+              "pointer": "/entries/137/supporting_resources/0",
+              "scan_note": null
+            },
+            "ranges": [
+              [
+                1,
+                3
+              ]
+            ],
+            "read": [
+              2,
+              0,
+              0,
+              true,
+              true,
+              3
+            ],
+            "reader_namespace": "20261026-174104-todo-3778/current"
+          },
+          "p240_SKILL_md": {
+            "meaning_ref": "/entries/137/reason",
+            "pointer": "/entries/137",
+            "profile_ref": "definitions.prior_skill_profile"
+          },
+          "p241_SKILL_md": {
+            "meaning_ref": "/entries/138/reason",
+            "pointer": "/entries/138",
+            "profile_ref": "definitions.prior_skill_profile"
+          }
+        },
+        "resume_validation": {
+          "acknowledged_through": 237,
+          "generation": 54,
+          "journal_sha256": "677c78bdaf2778edd74adf00c8709f3fc9992c78b433f6f3c9cd9ca2dfa49795",
+          "parent_semantic_assessments_read": true,
+          "previous_chunk_id": "b27ed4a6c8154e2ab3609f17840ce95d",
+          "previous_chunk_sha256": "3b72e7d61e88837759cb9498c575139be63f027b81af7fb9dc8e842b176da0ac",
+          "validated_receipts": 54
+        },
+        "roster_sha256": "460219790c088b33e6044c6a97c68a882549c608c3de46ea536aa990a2c1adac"
+      },
+      "original_chunk_id": "d46a9e875c014afeb0286d793f1ca204",
+      "original_receipt_sha256": "2472b8e35e686e9bbf820f7378c8e346a6e6d00243103cd45d4bfce7d7cc4c2a"
+    }
+  },
+  "source_counts": {
+    "MengTo/Skills": 12
+  },
+  "whole16_complete": false,
+  "entries": [
+    {
+      "actual_assessment_reader": "20261026-174104-todo-3778",
+      "bytes": 3549,
+      "inventory_id": "github:d84c300baf098a6630e85ca4dfca32cd51e71ed6efb4518572d9e1f83d298eca",
+      "inventory_unit": "github_prompt_material",
+      "original_assessment": {
+        "candidate_disposition": "時刻契約・支持brief/filmを保持して改訂するvariant候補。最終採否は親へ。",
+        "classification": "variant",
+        "findings": [
+          "primaryは3..5step/1200×750/18秒scrubber/press.16秒/slider値をpause前に読む順序を指定する。engine/CSS・画像・原indexは未保存。Fil/Mac/7credits/画像生成は参照例で、本人の製品や実課金・実生成の証明ではない。",
+          "contractはView(t)を純粋にする一方、CSS transition/keyed animationは履歴依存と明記。filmのcameraもCSS1.3秒遷移であり、frameAtの同じ値だけで実描画frameの同一性を保証できない。",
+          "briefの一窓一担当/共通例/資料照合/prefix/import/不足報告は有用。直接helper起動・共有checkout・既存preview/shootの前提をこのPCの実行命令にしない。filmのDAG時刻導出/beat fold/flow-keyed transform/旧frame保持は独立の支持手順。"
+        ],
+        "negative": "生成したHTMLの結果/残高/投稿演出を実サービスの実行成功や実録として示す。",
+        "notices": [
+          {
+            "notice_ref": "root"
+          }
+        ],
+        "package": {
+          "blob_count": 17,
+          "complete_tree": true,
+          "primary_alias_excluded": 1,
+          "root": "agent-skills/web-design/html-demo",
+          "support_file_occurrences": 16
+        },
+        "positive": "許可された実UI語句と自分の例で、3..5stepを任意時刻へseekできる説明窓を設計する。",
+        "prior_primary_read": {
+          "actual_reader_job": "20261024-081950-todo-3535",
+          "assessment_ref": "definitions.prior_assessment",
+          "original_mask_range_profile": null,
+          "original_method": null,
+          "pointer": "/entries/135/supporting_resources/1",
+          "recorded_body_read": true,
+          "recorded_scan_only": false
+        },
+        "read": [
+          3,
+          1,
+          0,
+          false,
+          true,
+          38
+        ],
+        "read_evidence": {
+          "masked_lines": [
+            24
+          ],
+          "masking_version": "v15",
+          "method": "direct_masked_full",
+          "ranges": [
+            [
+              1,
+              38
+            ]
+          ],
+          "strict_utf8": true
+        },
+        "reason": "primary L6/15..18/22..26/37とbrief62L/contract101L/film71Lを評価。",
+        "required_changes": [
+          "HTML walkthroughと実録・実生成/投稿/課金を明確に分ける。SHOWN=18や架空spendを実測時間/残高へ流用せず、実UI語句・利用可能な自分の例・媒体/キャラ/字体の個別条件を確認する。authorのowned主張を本人の権利確認としない。",
+          "seek/reverse/freezeで必要な描画はt計算に揃えるか、CSSの履歴/待機を検証条件へ明示する。visibility/paused/reduced/resizeの時計条件、sliderの順序、DOM測定/単一scaleとfocus/操作を検査し、数字の予算や3回比較だけで成功としない。",
+          "engine/preview plugin/撮影script未保存を取得審査647の迂回で補わない。並列作業は正規の共有ToDo --spec/所有分離へ、OS/cursorは実対象/Windows優先へ、撮影は現在の本人Chrome/CUAへ対応させる。原preview絶対entry pathの提案は必要な範囲への制限を検討し、実装脆弱性を確認済みとはしない。",
+          "frameAt/JSON比較には毎tick費用がありzero costとしない。DAGの不正/循環や遅延完了を検査する。表示frameと画面下のlive状態を対応させ、同画像の本人回答前に実装/配備へ進めない。"
+        ],
+        "row": 238,
+        "source": [
+          "github:d84c300baf098a6630e85ca4dfca32cd51e71ed6efb4518572d9e1f83d298eca",
+          "MengTo/Skills",
+          "398cd41c86ba42fbb30e944ae507f463648f08b7",
+          "agent-skills/web-design/html-demo/demo/PROMPT.md",
+          "af82a75f0804736fdd702c8b36e9d10a4c4be710618f04f779dd3b35d7836120",
+          "3411b6562c28d02890a66f035d61e7c4748aa37c",
+          3549
+        ],
+        "support": [
+          [
+            "SKILL.md",
+            "e0c8a5e1cd371be0cd499118cd8de8419ad43709a5e502897f7a44b877f3f276",
+            "78864efdfb1ced6ddac73e553d5c2731e45bd278",
+            14485,
+            true,
+            "prior_semantic_assessment_reuse",
+            "prior3535",
+            null,
+            null,
+            "78864efdfb1ced6ddac73e553d5c2731e45bd278",
+            14485,
+            "p238_SKILL_md"
+          ],
+          [
+            "agents/openai.yaml",
+            null,
+            null,
+            null,
+            false,
+            "unsaved",
+            null,
+            null,
+            null,
+            "c89b8fbe6c147ae50bc5338250940dc0f7b87204",
+            381,
+            null
+          ],
+          [
+            {
+              "path_display_redacted": true,
+              "path_utf8_sha256": "efd7cec0f1437bc941257f9c193ff9d713674682ffe6d112b2afc674c86e6b52",
+              "repo_tree_entry_index": 1412
+            },
+            null,
+            null,
+            null,
+            false,
+            "unsaved",
+            null,
+            null,
+            null,
+            "75a59bef5df582c543bfa9431add13c04aca666a",
+            3006,
+            null
+          ],
+          [
+            {
+              "path_display_redacted": true,
+              "path_utf8_sha256": "8a5f0614ea4bac8a429199824c4e99a3b0a9d54dde45d4b954e354d630341397",
+              "repo_tree_entry_index": 1413
+            },
+            null,
+            null,
+            null,
+            false,
+            "unsaved",
+            null,
+            null,
+            null,
+            "4799e876ba2c32949c032e19cf75ef98d85f8c3b",
+            51958,
+            null
+          ],
+          [
+            "demo/index.html",
+            null,
+            null,
+            null,
+            false,
+            "unsaved",
+            null,
+            null,
+            null,
+            "5c4d48dd9bb487a1b0757b7e7e2ee9825821b85c",
+            46008,
+            null
+          ],
+          [
+            {
+              "path_display_redacted": true,
+              "path_utf8_sha256": "3d0133bccbce66a0b21588b2aedb94a9630ea7ca6c238d42885fa8f474dbfb73",
+              "repo_tree_entry_index": 1415
+            },
+            null,
+            null,
+            null,
+            false,
+            "unsaved",
+            null,
+            null,
+            null,
+            "242096b781cb0be32141bfe7aa0d4b8d7d26d101",
+            32420,
+            null
+          ],
+          [
+            {
+              "path_display_redacted": true,
+              "path_utf8_sha256": "9a31c05332a3f8ef53eae020044737bd552e35569aad26856eaba4b95578faec",
+              "repo_tree_entry_index": 1416
+            },
+            null,
+            null,
+            null,
+            false,
+            "unsaved",
+            null,
+            null,
+            null,
+            "fd0dda701f4015dbee7328c920952b14eb336f35",
+            78219,
+            null
+          ],
+          [
+            "references/brief.md",
+            "b1f62bcdcb11a5b0bc79b4ab5daa52bedf5a52966ed8bb8f952288b68206740d",
+            "eeb79f890c443b252e2a5f9f5bb03abe60ff7d58",
+            5428,
+            true,
+            "direct_raw_full",
+            "current",
+            0,
+            [
+              2,
+              0,
+              0,
+              true,
+              true,
+              62
+            ],
+            "eeb79f890c443b252e2a5f9f5bb03abe60ff7d58",
+            5428,
+            "p238_references_brief_md"
+          ],
+          [
+            "references/contract.md",
+            "182196110ac7fa905721b6e27f92549ef5c10618fb0027926cad236b32c7cc3a",
+            "2ec7fe87e6f0851a4a2d12a7bf5800a2bc2b9401",
+            5173,
+            true,
+            "direct_raw_full",
+            "current",
+            0,
+            [
+              2,
+              0,
+              0,
+              true,
+              true,
+              101
+            ],
+            "2ec7fe87e6f0851a4a2d12a7bf5800a2bc2b9401",
+            5173,
+            "p238_references_contract_md"
+          ],
+          [
+            "references/film.md",
+            "b97e2e3d97b03aa23cd17c4693c9d22944c3c37f528a4b809b33c069904134ef",
+            "7f1fc619db03aa0b0bab3bac8961e4fb0f697c41",
+            5048,
+            true,
+            "direct_raw_full",
+            "current",
+            0,
+            [
+              2,
+              0,
+              0,
+              true,
+              true,
+              71
+            ],
+            "7f1fc619db03aa0b0bab3bac8961e4fb0f697c41",
+            5048,
+            "p238_references_film_md"
+          ],
+          [
+            "scripts/StepWindow.jsx",
+            null,
+            null,
+            null,
+            false,
+            "unsaved",
+            null,
+            null,
+            null,
+            "3d0e643bae645bc6a9f0663940099fea9b7bee67",
+            9892,
+            null
+          ],
+          [
+            "scripts/example-steps.jsx",
+            null,
+            null,
+            null,
+            false,
+            "unsaved",
+            null,
+            null,
+            null,
+            "e1f5024190b821d1140ee372cf4404714cac3d14",
+            4044,
+            null
+          ],
+          [
+            "scripts/preview-plugin.mjs",
+            null,
+            null,
+            null,
+            false,
+            "unsaved",
+            null,
+            null,
+            null,
+            "fef08fbd88c5dc5d8e5b6d0df047dd68499920dc",
+            2001,
+            null
+          ],
+          [
+            "scripts/shoot.mjs",
+            null,
+            null,
+            null,
+            false,
+            "unsaved",
+            null,
+            null,
+            null,
+            "eaba36ad8b7117a79b9f9f32c3424d3fdbb5961e",
+            2356,
+            null
+          ],
+          [
+            "scripts/step-window.css",
+            null,
+            null,
+            null,
+            false,
+            "unsaved",
+            null,
+            null,
+            null,
+            "82fc214f81c45f5d94bbf95b988e5627c59b21b4",
+            5411,
+            null
+          ],
+          [
+            "scripts/step-window.js",
+            null,
+            null,
+            null,
+            false,
+            "unsaved",
+            null,
+            null,
+            null,
+            "605771574f43f7a34e838d4970323c76d37704a7",
+            8424,
+            null
+          ]
+        ],
+        "unit": "github_prompt_material",
+        "unmet": [
+          "未保存engine/CSS/preview/shoot/原demo/画像本文、実scrub/clock/描画/実UI照合。",
+          "primary L24の保守的whole-line伏字は未復元。第三者キャラ/媒体/字体と対象UI画像回答・未知中央本文比較。"
+        ],
+        "use": "実UIの資料から、時刻で再現できるHTML操作デモを組むprompt。",
+        "value": "step/window/filmの責任とscrub/静止/表示範囲、pointerと結果の時刻を具体化できる。"
+      },
+      "original_chunk_id": "d46a9e875c014afeb0286d793f1ca204",
+      "original_chunk_sha256": "edc68c278462f59f74c4c62c15a71cab7614d08ddf0f9fddf6374c9b4910d27e",
+      "path": "agent-skills/web-design/html-demo/demo/PROMPT.md",
+      "previous_parent_semantic_read": true,
+      "source_commit": "398cd41c86ba42fbb30e944ae507f463648f08b7",
+      "source_git_blob": "3411b6562c28d02890a66f035d61e7c4748aa37c",
+      "source_path": "agent-skills/web-design/html-demo/demo/PROMPT.md",
+      "source_repo": "MengTo/Skills",
+      "source_sha256": "af82a75f0804736fdd702c8b36e9d10a4c4be710618f04f779dd3b35d7836120"
+    },
+    {
+      "actual_assessment_reader": "20261026-174104-todo-3778",
+      "bytes": 3489,
+      "inventory_id": "github:b8bd4c5c8dc1bf20c8383990a4796e13e84b56577825628f77c9eba8fb2ebd8a",
+      "inventory_unit": "github_prompt_material",
+      "original_assessment": {
+        "candidate_disposition": "image-first-grid-layoutのdemo variant候補。",
+        "classification": "variant",
+        "findings": [
+          "原題材はlogin/validation/securityと説明されるが、認証処理の正しさを検証した資料ではない。",
+          "旧SKILL評価はlow-contrast body copyの問題を記録。写真/動画/画面位置で変わる実背景上の読みやすさと素材条件を別に確認する必要がある。"
+        ],
+        "negative": "背景写真を敷いたlogin画面だけで認証・可読性・写真利用権が成立とする。",
+        "notices": [
+          {
+            "notice_ref": "root"
+          }
+        ],
+        "package": {
+          "blob_count": 12,
+          "complete_tree": true,
+          "primary_alias_excluded": 1,
+          "root": "agent-skills/web-design/image-first-grid-layout",
+          "support_file_occurrences": 11
+        },
+        "positive": "合意した建築写真の上でoverlayの読み順/判読とcropを比較する。",
+        "prior_primary_read": {
+          "actual_reader_job": "20261024-081950-todo-3535",
+          "assessment_ref": "definitions.prior_assessment",
+          "original_mask_range_profile": null,
+          "original_method": null,
+          "pointer": "/entries/136/supporting_resources/0",
+          "recorded_body_read": true,
+          "recorded_scan_only": false
+        },
+        "read": [
+          2,
+          0,
+          0,
+          true,
+          true,
+          47
+        ],
+        "read_evidence": {
+          "masked_lines": [],
+          "masking_version": "v15",
+          "method": "direct_raw_full",
+          "ranges": [
+            [
+              1,
+              47
+            ]
+          ],
+          "strict_utf8": true
+        },
+        "reason": "L20..28のfull-bleed/guide/anchor/gradient washとL35の操作条件。",
+        "required_changes": [
+          "wash後の実背景・各responsive cropで本文/labels/focusのcontrastとDOM順/keyboardを検査する。補助文を小さな装飾へしない。",
+          "写真の出所/権利/代替説明/重量を確認し、referenceのlogin外観を実認証完了や肖像の許諾へ昇格させない。画像方向の同じ本人回答を保持する。"
+        ],
+        "row": 239,
+        "source": [
+          "github:b8bd4c5c8dc1bf20c8383990a4796e13e84b56577825628f77c9eba8fb2ebd8a",
+          "MengTo/Skills",
+          "398cd41c86ba42fbb30e944ae507f463648f08b7",
+          "agent-skills/web-design/image-first-grid-layout/demo/PROMPT.md",
+          "877479a156a0d6928233c055b2e8660ae2f1e69fda358ff06d6743a9501390d8",
+          "e5b00fcfce2130431bb047e26e5e2195fd910652",
+          3489
+        ],
+        "support": [
+          [
+            "SKILL.md",
+            "76aa7e263f9c5b81920622c6c9e175a09eef10bf3d8c11a7d3edf5c95fe58abf",
+            "0db1d1e9a06c9967cebfafbc3885d7e71123300f",
+            4551,
+            true,
+            "prior_semantic_assessment_reuse",
+            "prior3535",
+            null,
+            null,
+            "0db1d1e9a06c9967cebfafbc3885d7e71123300f",
+            4551,
+            "p239_SKILL_md"
+          ],
+          [
+            {
+              "path_display_redacted": true,
+              "path_utf8_sha256": "e14cfd3ed8d1999e2738523adedb06d3844cda2e57c45a598e37651bb44b225e",
+              "repo_tree_entry_index": 1433
+            },
+            null,
+            null,
+            null,
+            false,
+            "unsaved",
+            null,
+            null,
+            null,
+            "14c17545abe76f947ee8bf0df2c35fb5e6d37adc",
+            536390,
+            null
+          ],
+          [
+            {
+              "path_display_redacted": true,
+              "path_utf8_sha256": "7acb670b3aafdee48f64dd345d291156d7519339c824d836b33d549ff46f08dc",
+              "repo_tree_entry_index": 1434
+            },
+            null,
+            null,
+            null,
+            false,
+            "unsaved",
+            null,
+            null,
+            null,
+            "735c2baf4929acbcd8cf0b63a975870a5de418a7",
+            989406,
+            null
+          ],
+          [
+            {
+              "path_display_redacted": true,
+              "path_utf8_sha256": "4411363ae3f6e2168d19f46165d21b983616bfca4170d0310af384903f86388f",
+              "repo_tree_entry_index": 1435
+            },
+            null,
+            null,
+            null,
+            false,
+            "unsaved",
+            null,
+            null,
+            null,
+            "ebf14e0f6e4547525ebdf610a29ebca420fec70e",
+            44753,
+            null
+          ],
+          [
+            {
+              "path_display_redacted": true,
+              "path_utf8_sha256": "96a0bc249c68be348dd495825a78ac3743b22f039a8dd50e36b0e31159ff1d93",
+              "repo_tree_entry_index": 1436
+            },
+            null,
+            null,
+            null,
+            false,
+            "unsaved",
+            null,
+            null,
+            null,
+            "bf5d1b2112d445fa92dc7a48efe810e7d5698cf5",
+            728581,
+            null
+          ],
+          [
+            {
+              "path_display_redacted": true,
+              "path_utf8_sha256": "de2d68c33f31630fdc5ed8dd9ffdbe4f23f256d490697cd91f48a8feddd5fc69",
+              "repo_tree_entry_index": 1437
+            },
+            null,
+            null,
+            null,
+            false,
+            "unsaved",
+            null,
+            null,
+            null,
+            "8e519cedbdd3976485487aea85409c434129ea3b",
+            85289,
+            null
+          ],
+          [
+            {
+              "path_display_redacted": true,
+              "path_utf8_sha256": "5bf63af4b7f4dbc9f237d705c0d619dba8fff18866352a794127589aa285b496",
+              "repo_tree_entry_index": 1438
+            },
+            null,
+            null,
+            null,
+            false,
+            "unsaved",
+            null,
+            null,
+            null,
+            "c17c9ed9481fe26fe7fdfca9a0a8dab4dd3a771d",
+            201962,
+            null
+          ],
+          [
+            {
+              "path_display_redacted": true,
+              "path_utf8_sha256": "2ff6b22e7e9ac632e97d20640ede700b852bd2dfd566de76fce308ef5718bd0b",
+              "repo_tree_entry_index": 1439
+            },
+            null,
+            null,
+            null,
+            false,
+            "unsaved",
+            null,
+            null,
+            null,
+            "f77fe5bede25677fe105589063c8b434ac5215e2",
+            139542,
+            null
+          ],
+          [
+            "demo/index.html",
+            null,
+            null,
+            null,
+            false,
+            "unsaved",
+            null,
+            null,
+            null,
+            "ea0c87673cd6f78aa82acd6bcbacfb81d4c24047",
+            45479,
+            null
+          ],
+          [
+            {
+              "path_display_redacted": true,
+              "path_utf8_sha256": "eab2a120a06fe6a58822fae93321e9f2a0d00129ecdefe03cf0cb65919760eb6",
+              "repo_tree_entry_index": 1441
+            },
+            null,
+            null,
+            null,
+            false,
+            "unsaved",
+            null,
+            null,
+            null,
+            "f2ea35d29c64fa36635ad78123be5627f1035be0",
+            98145,
+            null
+          ],
+          [
+            "demo/source.json",
+            null,
+            null,
+            null,
+            false,
+            "unsaved",
+            null,
+            null,
+            null,
+            "ced21324228048bb32e25c85f91ab9a733d80247",
+            4541,
+            null
+          ]
+        ],
+        "unit": "github_prompt_material",
+        "unmet": [
+          "未保存demo/写真/素材本文、実crop/contrast/認証操作と画像回答。",
+          "個別素材条件/外部snapshot現在値・未知中央比較。"
+        ],
+        "use": "全面写真をstageにしてgridとoverlayで内容を支えるprompt。",
+        "value": "画像優位でも見出し/補助文/操作の読み順と判読を評価できる。"
+      },
+      "original_chunk_id": "d46a9e875c014afeb0286d793f1ca204",
+      "original_chunk_sha256": "edc68c278462f59f74c4c62c15a71cab7614d08ddf0f9fddf6374c9b4910d27e",
+      "path": "agent-skills/web-design/image-first-grid-layout/demo/PROMPT.md",
+      "previous_parent_semantic_read": true,
+      "source_commit": "398cd41c86ba42fbb30e944ae507f463648f08b7",
+      "source_git_blob": "e5b00fcfce2130431bb047e26e5e2195fd910652",
+      "source_path": "agent-skills/web-design/image-first-grid-layout/demo/PROMPT.md",
+      "source_repo": "MengTo/Skills",
+      "source_sha256": "877479a156a0d6928233c055b2e8660ae2f1e69fda358ff06d6743a9501390d8"
+    },
+    {
+      "actual_assessment_reader": "20261026-174104-todo-3778",
+      "bytes": 1894,
+      "inventory_id": "github:1b83aef08354752224a107d6a31bf62f8cef57b03927bb6f2ed8c78f6ab00d32",
+      "inventory_unit": "github_prompt_material",
+      "original_assessment": {
+        "candidate_disposition": "単一offerの構成を比較するvariant候補。",
+        "classification": "variant",
+        "findings": [
+          "high-convertingは意図/作者の説明で、conversion実測の結果ではない。題材のheadlineとproof数は例。",
+          "REFERENCESは任意のcopywriting構成例とGoogle FAQ overviewのURLだけ。派生関係/個別許諾/現行FAQ要件と順位効果は未検証。旧required_changesの1fieldは表示前に伏字となり内容未確認。"
+        ],
+        "negative": "三つの捏造したproofや装飾の数字で成約改善を実証したとする。",
+        "notices": [
+          {
+            "notice_ref": "root"
+          }
+        ],
+        "package": {
+          "blob_count": 5,
+          "complete_tree": true,
+          "primary_alias_excluded": 1,
+          "root": "agent-skills/web-design/landing-page",
+          "support_file_occurrences": 4
+        },
+        "positive": "単一offerのheroで主CTAと実根拠の関係を整理する。",
+        "prior_primary_read": {
+          "actual_reader_job": "20261024-081950-todo-3535",
+          "assessment_ref": "definitions.prior_assessment",
+          "original_mask_range_profile": null,
+          "original_method": null,
+          "pointer": "/entries/137/supporting_resources/1",
+          "recorded_body_read": true,
+          "recorded_scan_only": false
+        },
+        "read": [
+          2,
+          0,
+          0,
+          true,
+          true,
+          43
+        ],
+        "read_evidence": {
+          "masked_lines": [],
+          "masking_version": "v15",
+          "method": "direct_raw_full",
+          "ranges": [
+            [
+              1,
+              43
+            ]
+          ],
+          "strict_utf8": true
+        },
+        "reason": "L11/15/21..22/34..39と旧SKILL評価・REFERENCES3L。",
+        "required_changes": [
+          "証言/ロゴ/数値/効果は実根拠へ結び、架空proofや新しい顧客約束を作らない。主CTA/補助CTAの実挙動と小画面/keyboardを確認する。",
+          "参考copywritingの近い表現を未確認のまま採らず、FAQや検索効果を保証しない。原local/standalone制約をdemoに限定し、個別素材条件と同画像回答を保持する。"
+        ],
+        "row": 240,
+        "source": [
+          "github:1b83aef08354752224a107d6a31bf62f8cef57b03927bb6f2ed8c78f6ab00d32",
+          "MengTo/Skills",
+          "398cd41c86ba42fbb30e944ae507f463648f08b7",
+          "agent-skills/web-design/landing-page/demo/PROMPT.md",
+          "a227949e046224a9aa99961b48e57fc4265e71fc040639f0c768141093e9eee3",
+          "e1e24df731f6667957ebcd6b3cd96e717e346eec",
+          1894
+        ],
+        "support": [
+          [
+            "REFERENCES.md",
+            "c9a30602bd550f0db3716a48873660397901bfb498914ed332f6b036f7add57d",
+            "5185573c128cd68886cae436f7f94168067499a2",
+            288,
+            true,
+            "direct_raw_full",
+            "current",
+            0,
+            [
+              2,
+              0,
+              0,
+              true,
+              true,
+              3
+            ],
+            "5185573c128cd68886cae436f7f94168067499a2",
+            288,
+            "p240_REFERENCES_md"
+          ],
+          [
+            "SKILL.md",
+            "6ad9965bc6b8f682340998ddd17c7700f5529ae40603d47c3b4610892c459cad",
+            "ba43c9b98417818daf21bbeab7a460a49e416750",
+            5275,
+            true,
+            "prior_semantic_assessment_reuse",
+            "prior3535",
+            null,
+            null,
+            "ba43c9b98417818daf21bbeab7a460a49e416750",
+            5275,
+            "p240_SKILL_md"
+          ],
+          [
+            "demo/index.html",
+            null,
+            null,
+            null,
+            false,
+            "unsaved",
+            null,
+            null,
+            null,
+            "bb904555ba5d69186892810a879a08a59a7227c3",
+            16513,
+            null
+          ],
+          [
+            {
+              "path_display_redacted": true,
+              "path_utf8_sha256": "b4930a696082b440d79c46d4c1934fdb800c1afe9655d5fa48bddfd5ae3b81ef",
+              "repo_tree_entry_index": 1449
+            },
+            null,
+            null,
+            null,
+            false,
+            "unsaved",
+            null,
+            null,
+            null,
+            "bf675b44f5525adc47345f4f9b684fe0ad0a7948",
+            57720,
+            null
+          ]
+        ],
+        "unit": "github_prompt_material",
+        "unmet": [
+          "未保存demo/素材本文、実CTA/計測・参照先本文/利用条件/現行FAQ要件。",
+          "旧評価の伏字1field、画像回答と未知中央本文比較。"
+        ],
+        "use": "一つのofferにbenefit proofと主CTAを組むlanding-page prompt。",
+        "value": "headline/主従CTA/三proofの階層を検討できる。"
+      },
+      "original_chunk_id": "d46a9e875c014afeb0286d793f1ca204",
+      "original_chunk_sha256": "edc68c278462f59f74c4c62c15a71cab7614d08ddf0f9fddf6374c9b4910d27e",
+      "path": "agent-skills/web-design/landing-page/demo/PROMPT.md",
+      "previous_parent_semantic_read": true,
+      "source_commit": "398cd41c86ba42fbb30e944ae507f463648f08b7",
+      "source_git_blob": "e1e24df731f6667957ebcd6b3cd96e717e346eec",
+      "source_path": "agent-skills/web-design/landing-page/demo/PROMPT.md",
+      "source_repo": "MengTo/Skills",
+      "source_sha256": "a227949e046224a9aa99961b48e57fc4265e71fc040639f0c768141093e9eee3"
+    },
+    {
+      "actual_assessment_reader": "20261026-174104-todo-3778",
+      "bytes": 3389,
+      "inventory_id": "github:7959812fcfd94f314410c52a37b429c3619e4c602d6b0011ee483d16bd243972",
+      "inventory_unit": "github_prompt_material",
+      "original_assessment": {
+        "candidate_disposition": "light-mode-paper-technicalの方向比較variant候補。",
+        "classification": "variant",
+        "findings": [
+          "背景効果の題材・同期時の人気値は現在の実機能/性能の証拠ではない。",
+          "旧SKILL評価は具体token/code不足と斜線上の補助文contrastを挙げる。同じ参照画像の共有だけで他styleとの重複確定にはしない。"
+        ],
+        "negative": "一つの斜線背景の依頼から全体のbrand/画面体系を変更する。",
+        "notices": [
+          {
+            "notice_ref": "root"
+          }
+        ],
+        "package": {
+          "blob_count": 10,
+          "complete_tree": true,
+          "primary_alias_excluded": 1,
+          "root": "agent-skills/web-design/light-mode-paper-technical",
+          "support_file_occurrences": 9
+        },
+        "positive": "合意した操作画面で紙面と外枠の階層や補助情報を比較する。",
+        "prior_primary_read": {
+          "actual_reader_job": null,
+          "assessment_ref": "definitions.prior_assessment",
+          "original_mask_range_profile": null,
+          "original_method": null,
+          "pointer": "/entries/138/supporting_resources/0",
+          "recorded_body_read": false,
+          "recorded_scan_only": true
+        },
+        "read": [
+          2,
+          0,
+          0,
+          true,
+          true,
+          47
+        ],
+        "read_evidence": {
+          "masked_lines": [],
+          "masking_version": "v15",
+          "method": "direct_raw_full",
+          "ranges": [
+            [
+              1,
+              47
+            ]
+          ],
+          "strict_utf8": true
+        },
+        "reason": "L20..28のwarm surface/outer frameとL32..36のfidelity/操作条件。",
+        "required_changes": [
+          "紙色/外枠/texture/mono補助文を具体tokenと実媒体へ対応させ、拡大/小画面/contrast/focus/reducedを検査する。",
+          "対象全体を変更する場合は同画像の本人回答を保持し、原demo/素材/依存の条件と観測範囲を区別する。"
+        ],
+        "row": 241,
+        "source": [
+          "github:7959812fcfd94f314410c52a37b429c3619e4c602d6b0011ee483d16bd243972",
+          "MengTo/Skills",
+          "398cd41c86ba42fbb30e944ae507f463648f08b7",
+          "agent-skills/web-design/light-mode-paper-technical/demo/PROMPT.md",
+          "ff92b60f13c5783a354f1a0dbe1e85878f3e4429300220e19e7f71026dde3e9e",
+          "72bd0a681c023100d0dd2184a6243f2642c105d4",
+          3389
+        ],
+        "support": [
+          [
+            "SKILL.md",
+            "f09d5b7cb8263b19d0aecc2e305a4d5f249a71187004860b8ff72272026a3f31",
+            "97ae8257385b0b6346b511cd68f05e01bec51573",
+            4189,
+            true,
+            "prior_semantic_assessment_reuse",
+            "prior3535",
+            null,
+            null,
+            "97ae8257385b0b6346b511cd68f05e01bec51573",
+            4189,
+            "p241_SKILL_md"
+          ],
+          [
+            {
+              "path_display_redacted": true,
+              "path_utf8_sha256": "6501f92b35cf10461f3b6dfaea384e88c9eccd45be717bb2045acfd0209184b3",
+              "repo_tree_entry_index": 1455
+            },
+            null,
+            null,
+            null,
+            false,
+            "unsaved",
+            null,
+            null,
+            null,
+            "74b6044b7a373ebbb73626a00905fc0b2b292d9a",
+            298959,
+            null
+          ],
+          [
+            {
+              "path_display_redacted": true,
+              "path_utf8_sha256": "e7ea3d8070c4d3644641929d80fac6f9684b8c93270cb448ddc6521e8cd01bd0",
+              "repo_tree_entry_index": 1456
+            },
+            null,
+            null,
+            null,
+            false,
+            "unsaved",
+            null,
+            null,
+            null,
+            "3cd794d1e0e7989a2970cb4a945098fd1a83e13f",
+            217369,
+            null
+          ],
+          [
+            {
+              "path_display_redacted": true,
+              "path_utf8_sha256": "08ff0cba1fb88e8b46bd888e3152e3a4ed37ac6b6520dbe8c4fa8fcd939fbe1a",
+              "repo_tree_entry_index": 1457
+            },
+            null,
+            null,
+            null,
+            false,
+            "unsaved",
+            null,
+            null,
+            null,
+            "764233ff37fe552c54ee65be0329754f008a9577",
+            362749,
+            null
+          ],
+          [
+            {
+              "path_display_redacted": true,
+              "path_utf8_sha256": "dfa5fd0aa9149b971475b025a1b996a5a4b786444f20d559feee0d4d9b468c8e",
+              "repo_tree_entry_index": 1458
+            },
+            null,
+            null,
+            null,
+            false,
+            "unsaved",
+            null,
+            null,
+            null,
+            "9197184ae879083d916ddf6934acfc2a2ee1f35b",
+            214106,
+            null
+          ],
+          [
+            {
+              "path_display_redacted": true,
+              "path_utf8_sha256": "79c669188a854aa610e8dc2507477fe9ec561dd6d4b77e5a97d9535c55c16f52",
+              "repo_tree_entry_index": 1459
+            },
+            null,
+            null,
+            null,
+            false,
+            "unsaved",
+            null,
+            null,
+            null,
+            "072de2e20e298844fb880a2cf82fec2cca237d75",
+            73780,
+            null
+          ],
+          [
+            "demo/index.html",
+            null,
+            null,
+            null,
+            false,
+            "unsaved",
+            null,
+            null,
+            null,
+            "c038b784376e3d3e62eb2dbcfc1133ff787344c9",
+            21909,
+            null
+          ],
+          [
+            {
+              "path_display_redacted": true,
+              "path_utf8_sha256": "86414849f5b66cc592fb2b698d7a4afe3f1be1fecb21d5e9d95d719865262333",
+              "repo_tree_entry_index": 1461
+            },
+            null,
+            null,
+            null,
+            false,
+            "unsaved",
+            null,
+            null,
+            null,
+            "6f8c9bb5e0aae0e546c890db29bd26d47aa32411",
+            55563,
+            null
+          ],
+          [
+            "demo/source.json",
+            null,
+            null,
+            null,
+            false,
+            "unsaved",
+            null,
+            null,
+            null,
+            "72bf523d8d450533593cea934b0758ac734ac172",
+            3306,
+            null
+          ]
+        ],
+        "unit": "github_prompt_material",
+        "unmet": [
+          "未保存demo/素材本文、token/描画/可読操作と画像回答。",
+          "個別条件・未知中央本文比較。"
+        ],
+        "use": "暖色の紙面と暗い外枠/技術的bracketを組むprompt。",
+        "value": "紙面/外枠/斜線texture/信号accentの関係を比較できる。"
+      },
+      "original_chunk_id": "d46a9e875c014afeb0286d793f1ca204",
+      "original_chunk_sha256": "edc68c278462f59f74c4c62c15a71cab7614d08ddf0f9fddf6374c9b4910d27e",
+      "path": "agent-skills/web-design/light-mode-paper-technical/demo/PROMPT.md",
+      "previous_parent_semantic_read": true,
+      "source_commit": "398cd41c86ba42fbb30e944ae507f463648f08b7",
+      "source_git_blob": "72bd0a681c023100d0dd2184a6243f2642c105d4",
+      "source_path": "agent-skills/web-design/light-mode-paper-technical/demo/PROMPT.md",
+      "source_repo": "MengTo/Skills",
+      "source_sha256": "ff92b60f13c5783a354f1a0dbe1e85878f3e4429300220e19e7f71026dde3e9e"
+    },
+    {
+      "actual_assessment_reader": "20261026-174104-todo-3778",
+      "bytes": 2511,
+      "inventory_id": "github:d501fbe901e97978d9cc0da637308604da53ce330b5b7ed2d78ed0ae32025a13",
+      "inventory_unit": "github_prompt_material",
+      "original_assessment": {
+        "candidate_disposition": "marqueeの小さな実装/検査variant候補。",
+        "classification": "variant",
+        "findings": [
+          "coreの指示は短く、全文の大半はLPの再現/素材/操作/同期時の人気snapshot条件。実ループ成功や社会的証明の検証ではない。",
+          "旧SKILL評価は0→-50%だけではviewport幅やgap/末尾余白で継ぎ目がずれる点と、複製側の読上げ・停止手段を挙げる。"
+        ],
+        "negative": "重要な固有文章を止められない無限帯へ入れ、複製も二重に読上げる。",
+        "notices": [
+          {
+            "notice_ref": "root"
+          }
+        ],
+        "package": {
+          "blob_count": 13,
+          "complete_tree": true,
+          "primary_alias_excluded": 1,
+          "root": "agent-skills/web-design/marquee-loop",
+          "support_file_occurrences": 12
+        },
+        "positive": "装飾的なlogo帯で継ぎ目と停止/静止表示を比較する。",
+        "prior_primary_read": {
+          "actual_reader_job": null,
+          "assessment_ref": "definitions.prior_assessment",
+          "original_mask_range_profile": null,
+          "original_method": null,
+          "pointer": "/entries/140/supporting_resources/0",
+          "recorded_body_read": false,
+          "recorded_scan_only": true
+        },
+        "read": [
+          2,
+          0,
+          0,
+          true,
+          true,
+          40
+        ],
+        "read_evidence": {
+          "masked_lines": [],
+          "masking_version": "v15",
+          "method": "direct_raw_full",
+          "ranges": [
+            [
+              1,
+              40
+            ]
+          ],
+          "strict_utf8": true
+        },
+        "reason": "L20..21のduplicated items、L25..29と固定SKILLの旧評価。",
+        "required_changes": [
+          "実item組の幅/viewport/spacing/font画像読込後の幅を照合して必要複製数と移動距離を決める。装飾コピーを読上げやtab順へ重複させない。",
+          "自動移動を止める手段とreduced時の静止/折返しを検査する。必読の固有文章を流し続けず、logo/証言/素材の条件と同画像の本人回答を保持する。"
+        ],
+        "row": 242,
+        "source": [
+          "github:d501fbe901e97978d9cc0da637308604da53ce330b5b7ed2d78ed0ae32025a13",
+          "MengTo/Skills",
+          "398cd41c86ba42fbb30e944ae507f463648f08b7",
+          "agent-skills/web-design/marquee-loop/demo/PROMPT.md",
+          "7391e21c1a42248dcbc48b1abe0a36fff670acf41ae4cb5e6f1a76b810b0943e",
+          "eb062cde353dbda144f6cd2edda3d690483a4c59",
+          2511
+        ],
+        "support": [
+          [
+            "SKILL.md",
+            "53f705e5f245f414d4e88b88e5f997b3201d8f782d407a2f2b5794e7b2aea8ed",
+            "55843c8b5600acd6f527f40676acab3fa072b094",
+            818,
+            true,
+            "prior_semantic_assessment_reuse",
+            "prior3535",
+            null,
+            null,
+            "55843c8b5600acd6f527f40676acab3fa072b094",
+            818,
+            "p242_SKILL_md"
+          ],
+          [
+            {
+              "path_display_redacted": true,
+              "path_utf8_sha256": "7ab060f08faca948e12891acc1bff847c1f52641f58492faa7d90a8252c5c252",
+              "repo_tree_entry_index": 1473
+            },
+            null,
+            null,
+            null,
+            false,
+            "unsaved",
+            null,
+            null,
+            null,
+            "75fadc390dfeccd9cba4d6da61e9496efee3ddec",
+            1315224,
+            null
+          ],
+          [
+            {
+              "path_display_redacted": true,
+              "path_utf8_sha256": "b78fff9552ed3f69af108dd3b67771bfcc41bbf50326a353c602ad82be89e92f",
+              "repo_tree_entry_index": 1474
+            },
+            null,
+            null,
+            null,
+            false,
+            "unsaved",
+            null,
+            null,
+            null,
+            "804fd3e34fb45557223682142b40eff9364bcac9",
+            1056637,
+            null
+          ],
+          [
+            {
+              "path_display_redacted": true,
+              "path_utf8_sha256": "f08d28c15ad19e8d27b960b930da2fccbceed3f20cb8c2f40a64a22cf42061fa",
+              "repo_tree_entry_index": 1475
+            },
+            null,
+            null,
+            null,
+            false,
+            "unsaved",
+            null,
+            null,
+            null,
+            "575ab18abd03c273a6dd892da700e65750090812",
+            55122,
+            null
+          ],
+          [
+            {
+              "path_display_redacted": true,
+              "path_utf8_sha256": "2f22880d9e152b1e32117f584e8702b2bbd5d2b54918cf726bbf159ccba321a1",
+              "repo_tree_entry_index": 1476
+            },
+            null,
+            null,
+            null,
+            false,
+            "unsaved",
+            null,
+            null,
+            null,
+            "3cd794d1e0e7989a2970cb4a945098fd1a83e13f",
+            217369,
+            null
+          ],
+          [
+            {
+              "path_display_redacted": true,
+              "path_utf8_sha256": "f5b08a98e61e0e0b0de2821b80e8f2c2c47d20b5a58deb4130c62145e601f453",
+              "repo_tree_entry_index": 1477
+            },
+            null,
+            null,
+            null,
+            false,
+            "unsaved",
+            null,
+            null,
+            null,
+            "cdf6c6c9ecf59ff40b8f605c9a70dd4b22308373",
+            33767,
+            null
+          ],
+          [
+            {
+              "path_display_redacted": true,
+              "path_utf8_sha256": "d0dfe4c7fc45784d1d8f235916f32213fcc2d9c205d20bad398de3c83d27df5f",
+              "repo_tree_entry_index": 1478
+            },
+            null,
+            null,
+            null,
+            false,
+            "unsaved",
+            null,
+            null,
+            null,
+            "046d6c9a108c52a281892441f69dafc69894c89a",
+            57726,
+            null
+          ],
+          [
+            {
+              "path_display_redacted": true,
+              "path_utf8_sha256": "3637aaea544c7896a128bad8db3d88476495c3bca7cde1c328fea9b73e85234b",
+              "repo_tree_entry_index": 1479
+            },
+            null,
+            null,
+            null,
+            false,
+            "unsaved",
+            null,
+            null,
+            null,
+            "9b8e72b8307a2366ef0c8769e05c89414169c30b",
+            2271761,
+            null
+          ],
+          [
+            {
+              "path_display_redacted": true,
+              "path_utf8_sha256": "5d51d35e08d0923a03c962a2e48f726512a40d5fb3ea783cf05650abfa1396f9",
+              "repo_tree_entry_index": 1480
+            },
+            null,
+            null,
+            null,
+            false,
+            "unsaved",
+            null,
+            null,
+            null,
+            "659dd6fded853dee50d7846218bcfc471a3f1788",
+            122918,
+            null
+          ],
+          [
+            "demo/index.html",
+            null,
+            null,
+            null,
+            false,
+            "unsaved",
+            null,
+            null,
+            null,
+            "01d710178b0acd85c6d9349720b38d9c005f9a7f",
+            29559,
+            null
+          ],
+          [
+            {
+              "path_display_redacted": true,
+              "path_utf8_sha256": "a7c1f6e6a6c6485bbf0e210b6797a6a3ec2a9e79801d491bae9bfe2cb3b68f82",
+              "repo_tree_entry_index": 1482
+            },
+            null,
+            null,
+            null,
+            false,
+            "unsaved",
+            null,
+            null,
+            null,
+            "c40d8eeef1382c72e8b99023921591aa71cf1a5a",
+            116930,
+            null
+          ],
+          [
+            "demo/source.json",
+            null,
+            null,
+            null,
+            false,
+            "unsaved",
+            null,
+            null,
+            null,
+            "69bdf74da865e43a97edd05f0d58fb70534a64a5",
+            4484,
+            null
+          ]
+        ],
+        "unit": "github_prompt_material",
+        "unmet": [
+          "未保存demo/素材本文、実幅/継ぎ目/停止/読上げと対象版。",
+          "個別logo等の条件/画像回答・未知中央本文比較。"
+        ],
+        "use": "複製したitemsで途切れないmarqueeを作るprompt。",
+        "value": "移動の継ぎ目・内容の重複と静止時の読め方を評価できる。"
+      },
+      "original_chunk_id": "6f1c9042b7a94e5ca3860d21e8f53ab4",
+      "original_chunk_sha256": "09c50be961fa7d49fcad0a547f36bbc3e58f8e208ad9fe01fede4e9376638e78",
+      "path": "agent-skills/web-design/marquee-loop/demo/PROMPT.md",
+      "previous_parent_semantic_read": true,
+      "source_commit": "398cd41c86ba42fbb30e944ae507f463648f08b7",
+      "source_git_blob": "eb062cde353dbda144f6cd2edda3d690483a4c59",
+      "source_path": "agent-skills/web-design/marquee-loop/demo/PROMPT.md",
+      "source_repo": "MengTo/Skills",
+      "source_sha256": "7391e21c1a42248dcbc48b1abe0a36fff670acf41ae4cb5e6f1a76b810b0943e"
+    },
+    {
+      "actual_assessment_reader": "20261026-174104-todo-3778",
+      "bytes": 2521,
+      "inventory_id": "github:375be3e08b23fab18e6cbcd0e0a6462fb9df849796d3829798bcbca9890a8bf1",
+      "inventory_unit": "github_prompt_material",
+      "original_assessment": {
+        "candidate_disposition": "masked-revealの分割/初期状態を明確化するvariant候補。",
+        "classification": "variant",
+        "findings": [
+          "原題材のlogin/security説明は実認証を検証した証拠ではない。primary自体に分割コードやライブラリ版の指定はない。",
+          "旧SKILLの空白分割は日本語を一塊にし、CSS初期transformとGSAP yPercentの二重offsetを懸念する記録がある。版/実描画は未検証のまま保持。"
+        ],
+        "negative": "日本語長文やcontrolsを空白で一括分割し、初期hiddenのまま残す。",
+        "notices": [
+          {
+            "notice_ref": "root"
+          }
+        ],
+        "package": {
+          "blob_count": 12,
+          "complete_tree": true,
+          "primary_alias_excluded": 1,
+          "root": "agent-skills/web-design/masked-reveal",
+          "support_file_occurrences": 11
+        },
+        "positive": "短い見出しを到達時に見せ、静止/初期化失敗時も読める。",
+        "prior_primary_read": {
+          "actual_reader_job": null,
+          "assessment_ref": "definitions.prior_assessment",
+          "original_mask_range_profile": null,
+          "original_method": null,
+          "pointer": "/entries/141/supporting_resources/0",
+          "recorded_body_read": false,
+          "recorded_scan_only": true
+        },
+        "read": [
+          2,
+          0,
+          0,
+          true,
+          true,
+          39
+        ],
+        "read_evidence": {
+          "masked_lines": [],
+          "masking_version": "v15",
+          "method": "direct_raw_full",
+          "ranges": [
+            [
+              1,
+              39
+            ]
+          ],
+          "strict_utf8": true
+        },
+        "reason": "L20のmasked staggered word revealと旧SKILLの分割/ARIA/後始末評価。",
+        "required_changes": [
+          "対象言語の行/分節と折返しを選び、DOM/読上げ用の本来の文章を保つ。リンク/controlsを含む要素の一括分割を避ける。",
+          "transformと初期hiddenの責任を一つにし、初期化失敗/JS無効/reducedでも内容が読めるよう検査する。React DOMとの競合・局所cleanupと対象版を確認し、SplitTextの費用を未確認の旧文で断定しない。"
+        ],
+        "row": 243,
+        "source": [
+          "github:375be3e08b23fab18e6cbcd0e0a6462fb9df849796d3829798bcbca9890a8bf1",
+          "MengTo/Skills",
+          "398cd41c86ba42fbb30e944ae507f463648f08b7",
+          "agent-skills/web-design/masked-reveal/demo/PROMPT.md",
+          "000eb5cde67d8f0487c27ccc735509cc9ef949104928f3a511a5f75f14773f34",
+          "7b78ad44268a24cc3247d9f27d875e4c563d1e34",
+          2521
+        ],
+        "support": [
+          [
+            "SKILL.md",
+            "a3e4fb96f6092ac382530db24fdd15da559e959c5b7e02d0503918c1358dcf03",
+            "b5e7cb70462f9fcea2b2fbc45760b896785314de",
+            3959,
+            true,
+            "prior_semantic_assessment_reuse",
+            "prior3535",
+            null,
+            null,
+            "b5e7cb70462f9fcea2b2fbc45760b896785314de",
+            3959,
+            "p243_SKILL_md"
+          ],
+          [
+            {
+              "path_display_redacted": true,
+              "path_utf8_sha256": "6a870189b7edf7970858a4bc261c1280f82119b7c804c12c8318f2e017308240",
+              "repo_tree_entry_index": 1489
+            },
+            null,
+            null,
+            null,
+            false,
+            "unsaved",
+            null,
+            null,
+            null,
+            "14c17545abe76f947ee8bf0df2c35fb5e6d37adc",
+            536390,
+            null
+          ],
+          [
+            {
+              "path_display_redacted": true,
+              "path_utf8_sha256": "b9ee3028eaf78ee1eabe1515119939c3bdc406c3497208c153e7fb8f11dfe37e",
+              "repo_tree_entry_index": 1490
+            },
+            null,
+            null,
+            null,
+            false,
+            "unsaved",
+            null,
+            null,
+            null,
+            "735c2baf4929acbcd8cf0b63a975870a5de418a7",
+            989406,
+            null
+          ],
+          [
+            {
+              "path_display_redacted": true,
+              "path_utf8_sha256": "780ef0414d14bfb8f294f28e944bd69d7d0dd98b9203a9c4962fa8234ab40cff",
+              "repo_tree_entry_index": 1491
+            },
+            null,
+            null,
+            null,
+            false,
+            "unsaved",
+            null,
+            null,
+            null,
+            "ebf14e0f6e4547525ebdf610a29ebca420fec70e",
+            44753,
+            null
+          ],
+          [
+            {
+              "path_display_redacted": true,
+              "path_utf8_sha256": "b3c6054095808bbd64f620d00f4e64c12a2dd9361396a6ec429e458b8b5519b1",
+              "repo_tree_entry_index": 1492
+            },
+            null,
+            null,
+            null,
+            false,
+            "unsaved",
+            null,
+            null,
+            null,
+            "bf5d1b2112d445fa92dc7a48efe810e7d5698cf5",
+            728581,
+            null
+          ],
+          [
+            {
+              "path_display_redacted": true,
+              "path_utf8_sha256": "1e97a7def25074d577660d91ce96ef57526e7c15e4cdce68613f45ef42766b54",
+              "repo_tree_entry_index": 1493
+            },
+            null,
+            null,
+            null,
+            false,
+            "unsaved",
+            null,
+            null,
+            null,
+            "8e519cedbdd3976485487aea85409c434129ea3b",
+            85289,
+            null
+          ],
+          [
+            {
+              "path_display_redacted": true,
+              "path_utf8_sha256": "5126c603efaeecf8b11ea53c0f805f0a83477459a8abf166fc4bd609311d01b8",
+              "repo_tree_entry_index": 1494
+            },
+            null,
+            null,
+            null,
+            false,
+            "unsaved",
+            null,
+            null,
+            null,
+            "c17c9ed9481fe26fe7fdfca9a0a8dab4dd3a771d",
+            201962,
+            null
+          ],
+          [
+            {
+              "path_display_redacted": true,
+              "path_utf8_sha256": "bb7a26900025527508b04fbbf8b0e852d8a4609f917b9f4d579e722fa0fa05dc",
+              "repo_tree_entry_index": 1495
+            },
+            null,
+            null,
+            null,
+            false,
+            "unsaved",
+            null,
+            null,
+            null,
+            "f77fe5bede25677fe105589063c8b434ac5215e2",
+            139542,
+            null
+          ],
+          [
+            "demo/index.html",
+            null,
+            null,
+            null,
+            false,
+            "unsaved",
+            null,
+            null,
+            null,
+            "ea0c87673cd6f78aa82acd6bcbacfb81d4c24047",
+            45479,
+            null
+          ],
+          [
+            {
+              "path_display_redacted": true,
+              "path_utf8_sha256": "26c501109e2abcf8a90179acb13bc2288530e3106912dbe7864a57964cc5824b",
+              "repo_tree_entry_index": 1497
+            },
+            null,
+            null,
+            null,
+            false,
+            "unsaved",
+            null,
+            null,
+            null,
+            "f2ea35d29c64fa36635ad78123be5627f1035be0",
+            98145,
+            null
+          ],
+          [
+            "demo/source.json",
+            null,
+            null,
+            null,
+            false,
+            "unsaved",
+            null,
+            null,
+            null,
+            "a9856faa2d77be9de8d1c0ed6daa2cec0d9f2d31",
+            4513,
+            null
+          ]
+        ],
+        "unit": "github_prompt_material",
+        "unmet": [
+          "未保存demo/素材本文、実分割/offset/初期化/fallback・対象版/利用条件。",
+          "実認証/画像回答と未知中央本文比較。"
+        ],
+        "use": "GSAP ScrollTriggerで単語がmaskから現れる見出しのprompt。",
+        "value": "初期表示/言語別分割/transform所有と読める静止表示を評価できる。"
+      },
+      "original_chunk_id": "6f1c9042b7a94e5ca3860d21e8f53ab4",
+      "original_chunk_sha256": "09c50be961fa7d49fcad0a547f36bbc3e58f8e208ad9fe01fede4e9376638e78",
+      "path": "agent-skills/web-design/masked-reveal/demo/PROMPT.md",
+      "previous_parent_semantic_read": true,
+      "source_commit": "398cd41c86ba42fbb30e944ae507f463648f08b7",
+      "source_git_blob": "7b78ad44268a24cc3247d9f27d875e4c563d1e34",
+      "source_path": "agent-skills/web-design/masked-reveal/demo/PROMPT.md",
+      "source_repo": "MengTo/Skills",
+      "source_sha256": "000eb5cde67d8f0487c27ccc735509cc9ef949104928f3a511a5f75f14773f34"
+    },
+    {
+      "actual_assessment_reader": "20261026-174104-todo-3778",
+      "bytes": 1902,
+      "inventory_id": "github:163d1cd7ed8125a058188ebf8f068c7aa3453d0b5dd464990f3ce581aaa530b7",
+      "inventory_unit": "github_prompt_material",
+      "original_assessment": {
+        "candidate_disposition": "Matter.jsの局所physics/reset variant候補。",
+        "classification": "variant",
+        "findings": [
+          "14個・抑えたbounce/frictionは例の条件。描画やresetを実検査したものではない。",
+          "旧SKILL評価はRunnerとRenderの別ループ、engine/world/mouseのcleanup不足とwheel占有/pixelRatioを指摘する。公式/対象版の実照合は今回行っていない。"
+        ],
+        "negative": "Runnerだけ止めて描画/eventが残る状態や、全ゲーム物理を14個の例だけで保証する。",
+        "notices": [
+          {
+            "notice_ref": "root"
+          }
+        ],
+        "package": {
+          "blob_count": 4,
+          "complete_tree": true,
+          "primary_alias_excluded": 1,
+          "root": "agent-skills/web-design/matterjs",
+          "support_file_occurrences": 3
+        },
+        "positive": "境界内の少数bodyを動かし、同じreset結果へ戻す局所canvas。",
+        "prior_primary_read": {
+          "actual_reader_job": "20261024-081950-todo-3535",
+          "assessment_ref": "definitions.prior_assessment",
+          "original_mask_range_profile": null,
+          "original_method": null,
+          "pointer": "/entries/142/supporting_resources/0",
+          "recorded_body_read": true,
+          "recorded_scan_only": false
+        },
+        "read": [
+          2,
+          0,
+          0,
+          true,
+          true,
+          43
+        ],
+        "read_evidence": {
+          "masked_lines": [],
+          "masking_version": "v15",
+          "method": "direct_raw_full",
+          "ranges": [
+            [
+              1,
+              43
+            ]
+          ],
+          "strict_utf8": true
+        },
+        "reason": "L11/15/21..22/38..39のphysics/境界/reset/hidden条件と旧SKILL評価。",
+        "required_changes": [
+          "対象版の更新・描画clockを把握し、hidden時のpause/throttle/再開、resize後の境界・seed/初期状態からのresetを検査する。",
+          "利用者のscrollをmouse constraintが奪わないか、keyboard/touch/reducedで代替を保つか確認する。解放は描画/更新/event/engineと所有範囲を対応させ、local vendorでも個別配布条件を照合する。"
+        ],
+        "row": 244,
+        "source": [
+          "github:163d1cd7ed8125a058188ebf8f068c7aa3453d0b5dd464990f3ce581aaa530b7",
+          "MengTo/Skills",
+          "398cd41c86ba42fbb30e944ae507f463648f08b7",
+          "agent-skills/web-design/matterjs/demo/PROMPT.md",
+          "d114d5b7fdc36d6f7009dad70a418a95cb07fc108be8e8d515dcfe191c5cc654",
+          "8d14128a510e81bde7658c4f64b28cdb261c871b",
+          1902
+        ],
+        "support": [
+          [
+            "SKILL.md",
+            "eeb1d2f6521e337dd5a5f0743ba00c00dd81f6e22b22a6f26c5d77fc44f16be4",
+            "b6938096a87c7a0cbdef6deef00d6b7efb1cc203",
+            2227,
+            true,
+            "prior_semantic_assessment_reuse",
+            "prior3535",
+            null,
+            null,
+            "b6938096a87c7a0cbdef6deef00d6b7efb1cc203",
+            2227,
+            "p244_SKILL_md"
+          ],
+          [
+            "demo/index.html",
+            null,
+            null,
+            null,
+            false,
+            "unsaved",
+            null,
+            null,
+            null,
+            "a42dbab5f1073f2c8fb2477827d3eb6c0d62b033",
+            16293,
+            null
+          ],
+          [
+            {
+              "path_display_redacted": true,
+              "path_utf8_sha256": "dffcea5c4327b2697acb53fa9300bb3d74510f1963459679c09379dbf911ddab",
+              "repo_tree_entry_index": 1504
+            },
+            null,
+            null,
+            null,
+            false,
+            "unsaved",
+            null,
+            null,
+            null,
+            "843b3a7f1f2c2372b34e12c09c73510f93a15620",
+            37965,
+            null
+          ]
+        ],
+        "unit": "github_prompt_material",
+        "unmet": [
+          "未保存demo/vendor本文、対象版/条件と実reset/時計/scroll/cleanup。",
+          "同画像回答と未知中央本文比較。"
+        ],
+        "use": "Matter.jsで14剛体の有限canvasとresetを比較するprompt。",
+        "value": "境界/収束/再開/再現できるresetと実行時計を分けて確認できる。"
+      },
+      "original_chunk_id": "6f1c9042b7a94e5ca3860d21e8f53ab4",
+      "original_chunk_sha256": "09c50be961fa7d49fcad0a547f36bbc3e58f8e208ad9fe01fede4e9376638e78",
+      "path": "agent-skills/web-design/matterjs/demo/PROMPT.md",
+      "previous_parent_semantic_read": true,
+      "source_commit": "398cd41c86ba42fbb30e944ae507f463648f08b7",
+      "source_git_blob": "8d14128a510e81bde7658c4f64b28cdb261c871b",
+      "source_path": "agent-skills/web-design/matterjs/demo/PROMPT.md",
+      "source_repo": "MengTo/Skills",
+      "source_sha256": "d114d5b7fdc36d6f7009dad70a418a95cb07fc108be8e8d515dcfe191c5cc654"
+    },
+    {
+      "actual_assessment_reader": "20261026-174104-todo-3778",
+      "bytes": 3296,
+      "inventory_id": "github:20070305158b58043f3b47722ffac041844d7635082e17433d8cf4c2c032b2be",
+      "inventory_unit": "github_prompt_material",
+      "original_assessment": {
+        "candidate_disposition": "mesh-gradient-dark-blue-cleanの構成variant候補。",
+        "classification": "variant",
+        "findings": [
+          "shader-likeは見た目の指定。primaryから実WebGL使用/実性能は分からず、旧SKILLはCanvas2D例を評価している。",
+          "旧評価のmuted色の自作contrast算術や半透明padding-boxからのborder色透過は、実合成背景での測定/画像確認ではない。"
+        ],
+        "negative": "背景meshが動くだけで全画面の読みやすさや性能を成功とする。",
+        "notices": [
+          {
+            "notice_ref": "root"
+          }
+        ],
+        "package": {
+          "blob_count": 6,
+          "complete_tree": true,
+          "primary_alias_excluded": 1,
+          "root": "agent-skills/web-design/mesh-gradient-dark-blue-clean",
+          "support_file_occurrences": 5
+        },
+        "positive": "合意した紺heroでmesh光・枠・本文を独立に比較する。",
+        "prior_primary_read": {
+          "actual_reader_job": null,
+          "assessment_ref": "definitions.prior_assessment",
+          "original_mask_range_profile": null,
+          "original_method": null,
+          "pointer": "/entries/143/supporting_resources/0",
+          "recorded_body_read": false,
+          "recorded_scan_only": true
+        },
+        "read": [
+          2,
+          0,
+          0,
+          true,
+          true,
+          47
+        ],
+        "read_evidence": {
+          "masked_lines": [],
+          "masking_version": "v15",
+          "method": "direct_raw_full",
+          "ranges": [
+            [
+              1,
+              47
+            ]
+          ],
+          "strict_utf8": true
+        },
+        "reason": "L20..28のmesh/shell/nav/node構成と旧SKILLのtoken/Canvas2D評価。",
+        "required_changes": [
+          "本文と装飾mutedを分け、実合成背景/各状態で判読を検査する。透過が意図か、枠だけ光らせたいかを明記し、surface/maskを選ぶ。",
+          "container resize/hidden-offscreen/解放/静止と対象browserのblur/viewport条件を検査する。参照の人気値を保証にせず、素材条件/同画像回答を保持する。"
+        ],
+        "row": 245,
+        "source": [
+          "github:20070305158b58043f3b47722ffac041844d7635082e17433d8cf4c2c032b2be",
+          "MengTo/Skills",
+          "398cd41c86ba42fbb30e944ae507f463648f08b7",
+          "agent-skills/web-design/mesh-gradient-dark-blue-clean/demo/PROMPT.md",
+          "0eed0e642d4b09ea32b5fd23453c72ccdf12a76944e4ef309ea3ed68e06d2e4c",
+          "65b0ab1c36b9a14cd2963858aca646b36fde0ffc",
+          3296
+        ],
+        "support": [
+          [
+            "SKILL.md",
+            "4c91c0ba4ccd73389f6bd0fc15b5065dc6c64866ee829249f98fb669c152ce33",
+            "f8997859ac5df2c8f44275d9875bad607124c19d",
+            9875,
+            true,
+            "prior_semantic_assessment_reuse",
+            "prior3535",
+            null,
+            null,
+            "f8997859ac5df2c8f44275d9875bad607124c19d",
+            9875,
+            "p245_SKILL_md"
+          ],
+          [
+            {
+              "path_display_redacted": true,
+              "path_utf8_sha256": "97ec76d52e113fc86e7b901d112ea64639b3049769cb5ca7b023d5b24d9d3a3e",
+              "repo_tree_entry_index": 1510
+            },
+            null,
+            null,
+            null,
+            false,
+            "unsaved",
+            null,
+            null,
+            null,
+            "b1fbd79f1cbb72b4908bf956970bd18537ef80b7",
+            26881,
+            null
+          ],
+          [
+            "demo/index.html",
+            null,
+            null,
+            null,
+            false,
+            "unsaved",
+            null,
+            null,
+            null,
+            "2803ba602bc466b0ebcae2fa8e7921a98ca701ed",
+            27066,
+            null
+          ],
+          [
+            {
+              "path_display_redacted": true,
+              "path_utf8_sha256": "92e8461c68165ee6e9079fd97572da40ddd4307f3af83ad2caa82b25721de65b",
+              "repo_tree_entry_index": 1512
+            },
+            null,
+            null,
+            null,
+            false,
+            "unsaved",
+            null,
+            null,
+            null,
+            "07e0aa0b0b77f641c7b98034b936ba950951836d",
+            27865,
+            null
+          ],
+          [
+            "demo/source.json",
+            null,
+            null,
+            null,
+            false,
+            "unsaved",
+            null,
+            null,
+            null,
+            "bff67d3b0e4ac6d4e9d915d6682545411861a359",
+            2041,
+            null
+          ]
+        ],
+        "unit": "github_prompt_material",
+        "unmet": [
+          "未保存demo/素材本文、実合成contrast/負荷/対象版・操作。",
+          "画像回答/個別条件・未知中央比較。"
+        ],
+        "use": "紺のmesh光とglass-border shellを全体方向として比較するprompt。",
+        "value": "背景fieldと内容面/枠/補助文の責任を分けられる。"
+      },
+      "original_chunk_id": "6f1c9042b7a94e5ca3860d21e8f53ab4",
+      "original_chunk_sha256": "09c50be961fa7d49fcad0a547f36bbc3e58f8e208ad9fe01fede4e9376638e78",
+      "path": "agent-skills/web-design/mesh-gradient-dark-blue-clean/demo/PROMPT.md",
+      "previous_parent_semantic_read": true,
+      "source_commit": "398cd41c86ba42fbb30e944ae507f463648f08b7",
+      "source_git_blob": "65b0ab1c36b9a14cd2963858aca646b36fde0ffc",
+      "source_path": "agent-skills/web-design/mesh-gradient-dark-blue-clean/demo/PROMPT.md",
+      "source_repo": "MengTo/Skills",
+      "source_sha256": "0eed0e642d4b09ea32b5fd23453c72ccdf12a76944e4ef309ea3ed68e06d2e4c"
+    },
+    {
+      "actual_assessment_reader": "20261026-174104-todo-3778",
+      "bytes": 3499,
+      "inventory_id": "github:cc5787a9750f14134cbe4ed754dfa18cba8007e4f1c59fadb78db010afb924e3",
+      "inventory_unit": "github_prompt_material",
+      "original_assessment": {
+        "candidate_disposition": "全体系のvariant候補。247と統合/相互参照を親へ提案、出現を削除しない。",
+        "classification": "variant",
+        "findings": [
+          "247と同じSquish snapshotを参照するが、こちらは全体方向と暗いfeature block/rounded cardの階層を主題とする。",
+          "旧SKILLの統合案は提案であり、未知中央比較や両出現の同一性/採否確定ではない。実nested layoutは未検証。"
+        ],
+        "negative": "単なる枠paddingの修復から全体のagency方向へ変更し、全箱を同じ重みにする。",
+        "notices": [
+          {
+            "notice_ref": "root"
+          }
+        ],
+        "package": {
+          "blob_count": 10,
+          "complete_tree": true,
+          "primary_alias_excluded": 1,
+          "root": "agent-skills/web-design/nested-container-clean-agency",
+          "support_file_occurrences": 9
+        },
+        "positive": "合意したサービスページのsection/pricing/CTAに強弱のある入れ子を設計する。",
+        "prior_primary_read": {
+          "actual_reader_job": null,
+          "assessment_ref": "definitions.prior_assessment",
+          "original_mask_range_profile": null,
+          "original_method": null,
+          "pointer": "/entries/144/supporting_resources/0",
+          "recorded_body_read": false,
+          "recorded_scan_only": true
+        },
+        "read": [
+          2,
+          0,
+          0,
+          true,
+          true,
+          47
+        ],
+        "read_evidence": {
+          "masked_lines": [],
+          "masking_version": "v15",
+          "method": "direct_raw_full",
+          "ranges": [
+            [
+              1,
+              47
+            ]
+          ],
+          "strict_utf8": true
+        },
+        "reason": "L20..28はfull design-systemと単なるframing utilityの差を明示。",
+        "required_changes": [
+          "外殻/暗いzone/cardの意味と余白・tokenを示し、階層を増やし過ぎない。小画面/zoom/DOM順/focus/contrastを対象で確認する。",
+          "247の局所手順との再利用関係を保って親へ提案し、全体見た目の変更は同画像の本人回答へ結ぶ。媒体/書体/依存条件を個別に確認する。"
+        ],
+        "row": 246,
+        "source": [
+          "github:cc5787a9750f14134cbe4ed754dfa18cba8007e4f1c59fadb78db010afb924e3",
+          "MengTo/Skills",
+          "398cd41c86ba42fbb30e944ae507f463648f08b7",
+          "agent-skills/web-design/nested-container-clean-agency/demo/PROMPT.md",
+          "0ff79aa025fcf28e821db4dfd5874c959810db228e3eff0f423e021e0f2a6eb1",
+          "f0fa0fcb59d2954d70187b50f13ab757333e55b5",
+          3499
+        ],
+        "support": [
+          [
+            "SKILL.md",
+            "99a761f4c95316a649b54782bbb23666882c98ec2eddce393f86a5601c270e23",
+            "3eacd5daed078c97f5ec952988efb4df5f157835",
+            4010,
+            true,
+            "prior_semantic_assessment_reuse",
+            "prior3535",
+            null,
+            null,
+            "3eacd5daed078c97f5ec952988efb4df5f157835",
+            4010,
+            "p246_SKILL_md"
+          ],
+          [
+            {
+              "path_display_redacted": true,
+              "path_utf8_sha256": "506663bcb3241cb98123e563085b8d3ba5418a90399b147dc0f80f03087cacc4",
+              "repo_tree_entry_index": 1519
+            },
+            null,
+            null,
+            null,
+            false,
+            "unsaved",
+            null,
+            null,
+            null,
+            "74b6044b7a373ebbb73626a00905fc0b2b292d9a",
+            298959,
+            null
+          ],
+          [
+            {
+              "path_display_redacted": true,
+              "path_utf8_sha256": "58017ef081b6d5b18a11c8515276f4c42cfc3e48da3cb67f0352ec85239ee88b",
+              "repo_tree_entry_index": 1520
+            },
+            null,
+            null,
+            null,
+            false,
+            "unsaved",
+            null,
+            null,
+            null,
+            "3cd794d1e0e7989a2970cb4a945098fd1a83e13f",
+            217369,
+            null
+          ],
+          [
+            {
+              "path_display_redacted": true,
+              "path_utf8_sha256": "b942616eb9db561edc7f3227f2fd7542ede5278d21772f956cb06037b08fbffe",
+              "repo_tree_entry_index": 1521
+            },
+            null,
+            null,
+            null,
+            false,
+            "unsaved",
+            null,
+            null,
+            null,
+            "764233ff37fe552c54ee65be0329754f008a9577",
+            362749,
+            null
+          ],
+          [
+            {
+              "path_display_redacted": true,
+              "path_utf8_sha256": "b9a52eeffadac4ee61a37c0fd0057435bf36fef151e0bd55b212a16cdc906891",
+              "repo_tree_entry_index": 1522
+            },
+            null,
+            null,
+            null,
+            false,
+            "unsaved",
+            null,
+            null,
+            null,
+            "9197184ae879083d916ddf6934acfc2a2ee1f35b",
+            214106,
+            null
+          ],
+          [
+            {
+              "path_display_redacted": true,
+              "path_utf8_sha256": "14530e834d653d259cc55037abf94a87dd4d30f766803656321a1d240bccb708",
+              "repo_tree_entry_index": 1523
+            },
+            null,
+            null,
+            null,
+            false,
+            "unsaved",
+            null,
+            null,
+            null,
+            "072de2e20e298844fb880a2cf82fec2cca237d75",
+            73780,
+            null
+          ],
+          [
+            "demo/index.html",
+            null,
+            null,
+            null,
+            false,
+            "unsaved",
+            null,
+            null,
+            null,
+            "c038b784376e3d3e62eb2dbcfc1133ff787344c9",
+            21909,
+            null
+          ],
+          [
+            {
+              "path_display_redacted": true,
+              "path_utf8_sha256": "1ed8b537f5e028844d3ccd04bbe2a30d6c6b5b86d0ec74227254956a06e16b61",
+              "repo_tree_entry_index": 1525
+            },
+            null,
+            null,
+            null,
+            false,
+            "unsaved",
+            null,
+            null,
+            null,
+            "b6ed49e4b847395f2501dc0777aba959bb8422be",
+            55601,
+            null
+          ],
+          [
+            "demo/source.json",
+            null,
+            null,
+            null,
+            false,
+            "unsaved",
+            null,
+            null,
+            null,
+            "e6890def8a7024a75057adca4ab81f97b12ab943",
+            3315,
+            null
+          ]
+        ],
+        "unit": "github_prompt_material",
+        "unmet": [
+          "未保存demo/素材本文、実階層/小画面/操作と画像回答。",
+          "個別条件・未知中央本文比較。"
+        ],
+        "use": "明るい外殻と暗いfeature zoneでagency全体の階層を組むprompt。",
+        "value": "shell/section/card/pricing/CTAを入れ子の強弱で整理する。"
+      },
+      "original_chunk_id": "6f1c9042b7a94e5ca3860d21e8f53ab4",
+      "original_chunk_sha256": "09c50be961fa7d49fcad0a547f36bbc3e58f8e208ad9fe01fede4e9376638e78",
+      "path": "agent-skills/web-design/nested-container-clean-agency/demo/PROMPT.md",
+      "previous_parent_semantic_read": true,
+      "source_commit": "398cd41c86ba42fbb30e944ae507f463648f08b7",
+      "source_git_blob": "f0fa0fcb59d2954d70187b50f13ab757333e55b5",
+      "source_path": "agent-skills/web-design/nested-container-clean-agency/demo/PROMPT.md",
+      "source_repo": "MengTo/Skills",
+      "source_sha256": "0ff79aa025fcf28e821db4dfd5874c959810db228e3eff0f423e021e0f2a6eb1"
+    },
+    {
+      "actual_assessment_reader": "20261026-174104-todo-3778",
+      "bytes": 2931,
+      "inventory_id": "github:76ab7937a9469a0f41b0430a0c28154b55a355b7458429f0f6bc2250bd7f67f4",
+      "inventory_unit": "github_prompt_material",
+      "original_assessment": {
+        "candidate_disposition": "局所framing variant候補。246との関連を保持し最終採否は親へ。",
+        "classification": "variant",
+        "findings": [
+          "同じSquish題材でも246の全体系に対し、罫線/corner/inner frameの具体的配置手順をまとめる。",
+          "snapshot/タグのbilling等は請求機能や実契約を検証した意味ではない。"
+        ],
+        "negative": "カード内へカードを際限なく重ね、枠線を重要な文章より強くする。",
+        "notices": [
+          {
+            "notice_ref": "root"
+          }
+        ],
+        "package": {
+          "blob_count": 10,
+          "complete_tree": true,
+          "primary_alias_excluded": 1,
+          "root": "agent-skills/web-design/nested-container-frames",
+          "support_file_occurrences": 9
+        },
+        "positive": "既存sectionの外殻と内枠の基準がずれた箇所を整理する。",
+        "prior_primary_read": {
+          "actual_reader_job": null,
+          "assessment_ref": "definitions.prior_assessment",
+          "original_mask_range_profile": null,
+          "original_method": null,
+          "pointer": "/entries/145/supporting_resources/0",
+          "recorded_body_read": false,
+          "recorded_scan_only": true
+        },
+        "read": [
+          2,
+          0,
+          0,
+          true,
+          true,
+          39
+        ],
+        "read_evidence": {
+          "masked_lines": [],
+          "masking_version": "v15",
+          "method": "direct_raw_full",
+          "ranges": [
+            [
+              1,
+              39
+            ]
+          ],
+          "strict_utf8": true
+        },
+        "reason": "L20のouter bounds/inner padding/layered frame/consistent spacing。",
+        "required_changes": [
+          "一つのglobal boundsと内側paddingの所有を明記し、corner/罫線は装飾としてDOM読み順やfocusを妨げないようにする。小画面の罫線/余白縮小と日本語の折返しを検査する。",
+          "246との共通部を親の統合候補として示し、独立した局所用途を保持する。素材条件/同画像回答を照合する。"
+        ],
+        "row": 247,
+        "source": [
+          "github:76ab7937a9469a0f41b0430a0c28154b55a355b7458429f0f6bc2250bd7f67f4",
+          "MengTo/Skills",
+          "398cd41c86ba42fbb30e944ae507f463648f08b7",
+          "agent-skills/web-design/nested-container-frames/demo/PROMPT.md",
+          "6bf453a3aa71cb8f1069c52a8d8bba4125f7b27b4aa970470fa82e2814a16188",
+          "49526aa912b8e326c85bf0be31cfb183297cdeea",
+          2931
+        ],
+        "support": [
+          [
+            "SKILL.md",
+            "02fde1df60f9d13015a4a25a2d935831da78f665c263b5d166117e1889c151b0",
+            "5bcc248674802518011cae8a14e8d2cc1ed12b76",
+            1280,
+            true,
+            "prior_semantic_assessment_reuse",
+            "prior3535",
+            null,
+            null,
+            "5bcc248674802518011cae8a14e8d2cc1ed12b76",
+            1280,
+            "p247_SKILL_md"
+          ],
+          [
+            {
+              "path_display_redacted": true,
+              "path_utf8_sha256": "221bc9429096980514eb14116e627c3db86a9e89371337a976c9b5dbe675f6de",
+              "repo_tree_entry_index": 1532
+            },
+            null,
+            null,
+            null,
+            false,
+            "unsaved",
+            null,
+            null,
+            null,
+            "74b6044b7a373ebbb73626a00905fc0b2b292d9a",
+            298959,
+            null
+          ],
+          [
+            {
+              "path_display_redacted": true,
+              "path_utf8_sha256": "b560fa70390f142378ffebdf31808a015366c1bad27e5ab5c621d2a0fad39709",
+              "repo_tree_entry_index": 1533
+            },
+            null,
+            null,
+            null,
+            false,
+            "unsaved",
+            null,
+            null,
+            null,
+            "3cd794d1e0e7989a2970cb4a945098fd1a83e13f",
+            217369,
+            null
+          ],
+          [
+            {
+              "path_display_redacted": true,
+              "path_utf8_sha256": "673a620f2f88a7d869e05081ed4d28c02041b2c1aaa9c8cb2622a8c839425cf4",
+              "repo_tree_entry_index": 1534
+            },
+            null,
+            null,
+            null,
+            false,
+            "unsaved",
+            null,
+            null,
+            null,
+            "764233ff37fe552c54ee65be0329754f008a9577",
+            362749,
+            null
+          ],
+          [
+            {
+              "path_display_redacted": true,
+              "path_utf8_sha256": "41702274cbec14069ed553ae188d41e51d4feaafb7bfd13dae8cc56167fb7117",
+              "repo_tree_entry_index": 1535
+            },
+            null,
+            null,
+            null,
+            false,
+            "unsaved",
+            null,
+            null,
+            null,
+            "9197184ae879083d916ddf6934acfc2a2ee1f35b",
+            214106,
+            null
+          ],
+          [
+            {
+              "path_display_redacted": true,
+              "path_utf8_sha256": "4d189eff724158d1acd92abf2de40d5fb361783cfdb44fecfc3e653a5777f849",
+              "repo_tree_entry_index": 1536
+            },
+            null,
+            null,
+            null,
+            false,
+            "unsaved",
+            null,
+            null,
+            null,
+            "072de2e20e298844fb880a2cf82fec2cca237d75",
+            73780,
+            null
+          ],
+          [
+            "demo/index.html",
+            null,
+            null,
+            null,
+            false,
+            "unsaved",
+            null,
+            null,
+            null,
+            "c038b784376e3d3e62eb2dbcfc1133ff787344c9",
+            21909,
+            null
+          ],
+          [
+            {
+              "path_display_redacted": true,
+              "path_utf8_sha256": "86e766dc36e6c745c780eb37f63206d8a444cf34df34fa2eec0de331291e3813",
+              "repo_tree_entry_index": 1538
+            },
+            null,
+            null,
+            null,
+            false,
+            "unsaved",
+            null,
+            null,
+            null,
+            "2c79e0648caf063e1a8ed19b9511b596e92619da",
+            55597,
+            null
+          ],
+          [
+            "demo/source.json",
+            null,
+            null,
+            null,
+            false,
+            "unsaved",
+            null,
+            null,
+            null,
+            "f7ee4be998a25610fc1f664edd151ec574a4fd81",
+            3297,
+            null
+          ]
+        ],
+        "unit": "github_prompt_material",
+        "unmet": [
+          "未保存demo/素材本文、実padding/grid/focus/小画面。",
+          "個別条件/画像回答と未知中央本文比較。"
+        ],
+        "use": "外側でglobal bounds、内側paddingでinsetを作る局所frame手順のprompt。",
+        "value": "外殻/内枠/余白の基準を同じgridへ結べる。"
+      },
+      "original_chunk_id": "6f1c9042b7a94e5ca3860d21e8f53ab4",
+      "original_chunk_sha256": "09c50be961fa7d49fcad0a547f36bbc3e58f8e208ad9fe01fede4e9376638e78",
+      "path": "agent-skills/web-design/nested-container-frames/demo/PROMPT.md",
+      "previous_parent_semantic_read": true,
+      "source_commit": "398cd41c86ba42fbb30e944ae507f463648f08b7",
+      "source_git_blob": "49526aa912b8e326c85bf0be31cfb183297cdeea",
+      "source_path": "agent-skills/web-design/nested-container-frames/demo/PROMPT.md",
+      "source_repo": "MengTo/Skills",
+      "source_sha256": "6bf453a3aa71cb8f1069c52a8d8bba4125f7b27b4aa970470fa82e2814a16188"
+    },
+    {
+      "actual_assessment_reader": "20261026-174104-todo-3778",
+      "bytes": 2592,
+      "inventory_id": "github:eb72e3e1b7227a195a771e7b63bd3971dafce379c15e1fec1f5f674802e77859",
+      "inventory_unit": "github_prompt_material",
+      "original_assessment": {
+        "candidate_disposition": "number-detailsの小さな補助variant候補。",
+        "classification": "variant",
+        "findings": [
+          "宿泊施設/8人等の題材は例で、実在施設の人数/予約/サービスの確認ではない。",
+          "primaryは装飾番号と明示するが、順序情報を持つ場合のsemantic markupは別に必要。"
+        ],
+        "negative": "実手順番号や稼働件数を装飾扱いして隠す、架空人数を実施設の保証へ使う。",
+        "notices": [
+          {
+            "notice_ref": "root"
+          }
+        ],
+        "package": {
+          "blob_count": 14,
+          "complete_tree": true,
+          "primary_alias_excluded": 1,
+          "root": "agent-skills/web-design/number-details",
+          "support_file_occurrences": 13
+        },
+        "positive": "三工程cardの装飾番号を揃え、実順序はsemanticに保つ。",
+        "prior_primary_read": {
+          "actual_reader_job": "20261024-081950-todo-3535",
+          "assessment_ref": "definitions.prior_assessment",
+          "original_mask_range_profile": null,
+          "original_method": null,
+          "pointer": "/entries/146/supporting_resources/0",
+          "recorded_body_read": true,
+          "recorded_scan_only": false
+        },
+        "read": [
+          2,
+          0,
+          0,
+          true,
+          true,
+          40
+        ],
+        "read_evidence": {
+          "masked_lines": [],
+          "masking_version": "v15",
+          "method": "direct_raw_full",
+          "ranges": [
+            [
+              1,
+              40
+            ]
+          ],
+          "strict_utf8": true
+        },
+        "reason": "L20..21のdecorative numeric detail markersと旧SKILLの位置/桁/意味の評価。",
+        "required_changes": [
+          "純装飾だけを読上げから外し、意味ある順序なら実テキスト/ordered listと読み順を保つ。桁数/位置/日本語表記と小画面を揃える。",
+          "原題材の人数や約束を実サービスへコピーせず、素材条件と同画像回答を保持する。"
+        ],
+        "row": 248,
+        "source": [
+          "github:eb72e3e1b7227a195a771e7b63bd3971dafce379c15e1fec1f5f674802e77859",
+          "MengTo/Skills",
+          "398cd41c86ba42fbb30e944ae507f463648f08b7",
+          "agent-skills/web-design/number-details/demo/PROMPT.md",
+          "a5cfb46687b49a55928b6b455d9231f80badc0f78d6e0bb954090530b792b40d",
+          "27c2e5f2d460c2f25a1b9f2e6ed50331baf5eaed",
+          2592
+        ],
+        "support": [
+          [
+            "SKILL.md",
+            "bd526d953244b8f05a578892640a86e550d062094866e4d9958b538313ef271a",
+            "65111ea0e3884a455b586eab46a7ded06bf9c21a",
+            793,
+            true,
+            "prior_semantic_assessment_reuse",
+            "prior3535",
+            null,
+            null,
+            "65111ea0e3884a455b586eab46a7ded06bf9c21a",
+            793,
+            "p248_SKILL_md"
+          ],
+          [
+            {
+              "path_display_redacted": true,
+              "path_utf8_sha256": "ca80b8f5f7a20a5a9256c5b1ad7f6003f38f288dc0a7862eebe3695e2ea52d9b",
+              "repo_tree_entry_index": 1545
+            },
+            null,
+            null,
+            null,
+            false,
+            "unsaved",
+            null,
+            null,
+            null,
+            "ec725394ac8fc953053a5e0b7b15ab16bff39047",
+            1238234,
+            null
+          ],
+          [
+            {
+              "path_display_redacted": true,
+              "path_utf8_sha256": "aff5cb55636c1e05bf9582b743f6282827edde37703d425a7748abcdbdaedc4e",
+              "repo_tree_entry_index": 1546
+            },
+            null,
+            null,
+            null,
+            false,
+            "unsaved",
+            null,
+            null,
+            null,
+            "2395f1899e90eb8f5ff25fb033dda15e1f334f5f",
+            186731,
+            null
+          ],
+          [
+            {
+              "path_display_redacted": true,
+              "path_utf8_sha256": "fda9fe1bcad49a27c5f4c33d60476ae84a14e20343cc445186c379b68397fe76",
+              "repo_tree_entry_index": 1547
+            },
+            null,
+            null,
+            null,
+            false,
+            "unsaved",
+            null,
+            null,
+            null,
+            "f2456d9dad368297149f3a3c9c73b6e33391c7d0",
+            262867,
+            null
+          ],
+          [
+            {
+              "path_display_redacted": true,
+              "path_utf8_sha256": "1d69fb8573b9e6abeaae6345dddad3e34d663bc9e2f7518b277f8b0524224261",
+              "repo_tree_entry_index": 1548
+            },
+            null,
+            null,
+            null,
+            false,
+            "unsaved",
+            null,
+            null,
+            null,
+            "85f1f0e3234310e144f735a9c3fc497b875ab153",
+            533313,
+            null
+          ],
+          [
+            {
+              "path_display_redacted": true,
+              "path_utf8_sha256": "7cebadbae21b7229530b4b76680af5677b74a87e9934a00d76afc4ee2291e584",
+              "repo_tree_entry_index": 1549
+            },
+            null,
+            null,
+            null,
+            false,
+            "unsaved",
+            null,
+            null,
+            null,
+            "2e2f489743cd3526b2250f8ef66aabaf07cf46f6",
+            238376,
+            null
+          ],
+          [
+            {
+              "path_display_redacted": true,
+              "path_utf8_sha256": "0967bbc026c6f5395ead8bb8e768f1d705ede4a49045786e2502f8918bd9946f",
+              "repo_tree_entry_index": 1550
+            },
+            null,
+            null,
+            null,
+            false,
+            "unsaved",
+            null,
+            null,
+            null,
+            "492dd971afac789fee9f029417382b71fdab0d6e",
+            439306,
+            null
+          ],
+          [
+            {
+              "path_display_redacted": true,
+              "path_utf8_sha256": "4cf3ccdf47e5dfc68796228fef9a551cfa3cfa0de55964e5eb69a36098bae0cc",
+              "repo_tree_entry_index": 1551
+            },
+            null,
+            null,
+            null,
+            false,
+            "unsaved",
+            null,
+            null,
+            null,
+            "c5f52fd0b620fe766373d6018ea2935fe17c9e35",
+            192865,
+            null
+          ],
+          [
+            {
+              "path_display_redacted": true,
+              "path_utf8_sha256": "d51ff2e65349fe58d1e2c67de28a9bc544174387c3a686fb2817ba8f288b66b6",
+              "repo_tree_entry_index": 1552
+            },
+            null,
+            null,
+            null,
+            false,
+            "unsaved",
+            null,
+            null,
+            null,
+            "95da7ef5e7a4c6d5d94abe108078e9b4cc0b0b79",
+            576747,
+            null
+          ],
+          [
+            {
+              "path_display_redacted": true,
+              "path_utf8_sha256": "2db1019ed37b02544569fee207c877c5df9035423dac96f39d70ccd6f33c61d1",
+              "repo_tree_entry_index": 1553
+            },
+            null,
+            null,
+            null,
+            false,
+            "unsaved",
+            null,
+            null,
+            null,
+            "6f25cf15f118ef1f6b8e8cc19d4f8088334c4e23",
+            27628,
+            null
+          ],
+          [
+            "demo/index.html",
+            null,
+            null,
+            null,
+            false,
+            "unsaved",
+            null,
+            null,
+            null,
+            "fbf2c8bd9298d6167655e74f16ea93b197ec2def",
+            60416,
+            null
+          ],
+          [
+            {
+              "path_display_redacted": true,
+              "path_utf8_sha256": "2b027f4f8e13e91b3ac6a8a27818a1675855bcc7d3e15370c2023a44403bd3c7",
+              "repo_tree_entry_index": 1555
+            },
+            null,
+            null,
+            null,
+            false,
+            "unsaved",
+            null,
+            null,
+            null,
+            "856078ae7e24df8ff2abc75ec29322007be64e66",
+            141654,
+            null
+          ],
+          [
+            "demo/source.json",
+            null,
+            null,
+            null,
+            false,
+            "unsaved",
+            null,
+            null,
+            null,
+            "868f62ffac42809a95cbf4ebe3defd49c153663a",
+            4809,
+            null
+          ]
+        ],
+        "unit": "github_prompt_material",
+        "unmet": [
+          "未保存demo/素材本文、実順序/読上げ/桁/小画面。",
+          "個別条件/画像回答・未知中央比較。"
+        ],
+        "use": "01/02/03の装飾番号を一貫した位置へ添えるprompt。",
+        "value": "装飾と実際の順序・件数を区別し、小さな視覚的手がかりを評価できる。"
+      },
+      "original_chunk_id": "6f1c9042b7a94e5ca3860d21e8f53ab4",
+      "original_chunk_sha256": "09c50be961fa7d49fcad0a547f36bbc3e58f8e208ad9fe01fede4e9376638e78",
+      "path": "agent-skills/web-design/number-details/demo/PROMPT.md",
+      "previous_parent_semantic_read": true,
+      "source_commit": "398cd41c86ba42fbb30e944ae507f463648f08b7",
+      "source_git_blob": "27c2e5f2d460c2f25a1b9f2e6ed50331baf5eaed",
+      "source_path": "agent-skills/web-design/number-details/demo/PROMPT.md",
+      "source_repo": "MengTo/Skills",
+      "source_sha256": "a5cfb46687b49a55928b6b455d9231f80badc0f78d6e0bb954090530b792b40d"
+    },
+    {
+      "actual_assessment_reader": "20261026-174104-todo-3778",
+      "bytes": 1974,
+      "inventory_id": "github:6ebb101dc03603683923e5d3c6546d85154f7369fcced9ad469ac6d1e565b807",
+      "inventory_unit": "github_prompt_material",
+      "original_assessment": {
+        "candidate_disposition": "実proofとsampleを分けるoperational-enterprise-aiのvariant候補。",
+        "classification": "variant",
+        "findings": [
+          "sample workflowを明示し、summary/permissions/action/approval/output/audit/exception/rollback、Enter/Spaceで開くrowと図のtext同等物を求める。",
+          "loading/unavailable/権限不足/stale/denied/partial/rollback/network/successを列挙し、metric/customer/badge/complianceはverifiedまたはremoved。localの架空データによる説明で、実制御の成功証拠ではない。",
+          "Intelli参考サイトとFramer listingは2リンクのみ。参照先の本文/条件・テンプレートの派生範囲は未検証。"
+        ],
+        "negative": "架空audit packetやhuman gateの見た目だけで実セキュリティ/統制が完成とする。",
+        "notices": [
+          {
+            "notice_ref": "root"
+          }
+        ],
+        "package": {
+          "blob_count": 6,
+          "complete_tree": true,
+          "primary_alias_excluded": 1,
+          "root": "agent-skills/web-design/operational-enterprise-ai",
+          "support_file_occurrences": 5
+        },
+        "positive": "合意したautomation製品のsampleと実証拠を分け、権限不足やrollbackも説明する。",
+        "prior_primary_read": {
+          "actual_reader_job": "20261024-081950-todo-3535",
+          "assessment_ref": "definitions.prior_assessment",
+          "original_mask_range_profile": null,
+          "original_method": null,
+          "pointer": "/entries/147/supporting_resources/2",
+          "recorded_body_read": true,
+          "recorded_scan_only": false
+        },
+        "read": [
+          2,
+          0,
+          0,
+          true,
+          true,
+          19
+        ],
+        "read_evidence": {
+          "masked_lines": [],
+          "masking_version": "v15",
+          "method": "direct_raw_full",
+          "ranges": [
+            [
+              1,
+              19
+            ]
+          ],
+          "strict_utf8": true
+        },
+        "reason": "L11..15のsample trace/semantic disclosure/全状態/主張検証とREFERENCES2L。",
+        "required_changes": [
+          "sample/実行証拠/製品の実機能を区別し、監査・rollback表示を実制御や成功検証へ昇格させない。原approval gateを承認済みの通常技術操作の新たな人待ちへ一般化せず、本人判断や実権限の必要範囲へ対応させる。",
+          "検証できない数値/顧客/認証badgeを作らず、架空traceと実traceを混ぜない。全列挙状態/200% zoom/keyboard/reduced/図の同等textを検査する。",
+          "sourcebrand差替えだけで元templateの文言/画像/構図の権利が解決とはせず、独自内容/個別条件と同画像の本人回答を保持する。"
+        ],
+        "row": 249,
+        "source": [
+          "github:6ebb101dc03603683923e5d3c6546d85154f7369fcced9ad469ac6d1e565b807",
+          "MengTo/Skills",
+          "398cd41c86ba42fbb30e944ae507f463648f08b7",
+          "agent-skills/web-design/operational-enterprise-ai/demo/PROMPT.md",
+          "ea722c38530383caef7297970175c00d854a946eaa7153ac056a42b52dba8dd1",
+          "e13289bcb9bb2ad121d779211a3bf8af0ed3c859",
+          1974
+        ],
+        "support": [
+          [
+            "REFERENCES.md",
+            "91c92f2d1c5fd82a821af1cff492e51905c7086746d45d64c62d5864070153ee",
+            "0d3d04c1bc674feda9ea6cbfcd6d59b1766d5555",
+            154,
+            true,
+            "direct_raw_full",
+            "current",
+            0,
+            [
+              2,
+              0,
+              0,
+              true,
+              true,
+              2
+            ],
+            "0d3d04c1bc674feda9ea6cbfcd6d59b1766d5555",
+            154,
+            "p249_REFERENCES_md"
+          ],
+          [
+            "SKILL.md",
+            "fbbf4387d16cfb23c95eec0caacb4f204e51ad9fcc2bf2c9e9db9dd451fec566",
+            "22fd9b0f1daca4dbc5c2d3975d42b59ac2c42dee",
+            4641,
+            true,
+            "prior_semantic_assessment_reuse",
+            "prior3535",
+            null,
+            null,
+            "22fd9b0f1daca4dbc5c2d3975d42b59ac2c42dee",
+            4641,
+            "p249_SKILL_md"
+          ],
+          [
+            "agents/openai.yaml",
+            null,
+            null,
+            null,
+            false,
+            "unsaved",
+            null,
+            null,
+            null,
+            "dc6f476e835a7ebf74291ca4680fc23e7ae57493",
+            267,
+            null
+          ],
+          [
+            "demo/index.html",
+            null,
+            null,
+            null,
+            false,
+            "unsaved",
+            null,
+            null,
+            null,
+            "4c9fca5c1dfe2aad6b1bfa528579d7d8fec8205e",
+            7555,
+            null
+          ],
+          [
+            {
+              "path_display_redacted": true,
+              "path_utf8_sha256": "5a7ae0f3cc2d457ab0f5580781e06fc4dd57005303d2f53f175a617b29910faf",
+              "repo_tree_entry_index": 1565
+            },
+            null,
+            null,
+            null,
+            false,
+            "unsaved",
+            null,
+            null,
+            null,
+            "46ae37f1960d824c666a2174698cf6a1d0d79538",
+            151364,
+            null
+          ]
+        ],
+        "unit": "github_prompt_material",
+        "unmet": [
+          "未保存demo/素材本文、実権限/監査/rollbackと各状態/操作の検査。",
+          "参考template/媒体条件・画像回答/未知中央本文比較。"
+        ],
+        "use": "権限/承認/監査/例外/rollbackを製品効果とともに示すautomation-page prompt。",
+        "value": "sampleと実proofを分け、失敗状態や境界も説明する画面契約を評価できる。"
+      },
+      "original_chunk_id": "6f1c9042b7a94e5ca3860d21e8f53ab4",
+      "original_chunk_sha256": "09c50be961fa7d49fcad0a547f36bbc3e58f8e208ad9fe01fede4e9376638e78",
+      "path": "agent-skills/web-design/operational-enterprise-ai/demo/PROMPT.md",
+      "previous_parent_semantic_read": true,
+      "source_commit": "398cd41c86ba42fbb30e944ae507f463648f08b7",
+      "source_git_blob": "e13289bcb9bb2ad121d779211a3bf8af0ed3c859",
+      "source_path": "agent-skills/web-design/operational-enterprise-ai/demo/PROMPT.md",
+      "source_repo": "MengTo/Skills",
+      "source_sha256": "ea722c38530383caef7297970175c00d854a946eaa7153ac056a42b52dba8dd1"
+    }
+  ],
+  "working_public_reflection": true,
+  "main_acceptance_pending": true,
+  "new_body_or_literal_read_credit": 0,
+  "physical_evidence": "skills-3080-other12-238249-physical214717.json",
+  "read_counting": "Received original12 meanings and two entire shared contexts; parent literal/global-unique reading and all grants/dispositions remain unchanged. Old profile nulls/partial/withheld fields and per-observation actors are not filled in."
+}

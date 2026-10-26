@@ -1,0 +1,43 @@
+{
+  "todo": 3080,
+  "author_job": "20261026-214717-todo-3080",
+  "operation": {
+    "file": "skills-3080-operations/create-motion4-214717.json",
+    "sha256": "73d2cf157d48a7c9e9f02477db0d74d2498e6ccaaff0fb782a27eb3e6bad340d"
+  },
+  "bundle": {
+    "file": "skills-3080-motion4-reviewed-bundle214717.json",
+    "sha256": "5abbe45c6b062344458b768dc0e775813a5b99f7edefb359027fdd3b5d06da9e"
+  },
+  "meaning": {
+    "file": "skills-3080-motion4-source-meaning214717.json",
+    "sha256": "bfc5c7fde76beb43c705d9b7b170baafb55cdb8fc8f0e3cd96748b342cc2d6e9"
+  },
+  "notices": {
+    "file": "skills-3080-motion4-notice-map214717.json",
+    "sha256": "27f436fcbc85a29fde08ecc4a0ba45ddac1766b8e9db82c51f402eefca8e928d"
+  },
+  "structure": {
+    "file": "skills-3080-motion4-structure214717.json",
+    "sha256": "b67d2658ea61e96cef3d0978102330020e061ece5c8e89ba39e424a8669c447f"
+  },
+  "proposal_discovery": {
+    "method": "fresh installed Codex app-server initialize + skills/list forceReload",
+    "metadata_total": 433,
+    "targets": 4,
+    "found": 0,
+    "parse_errors": 0,
+    "actual_absence_proven": false,
+    "unknown_existing_bodies_read": 0,
+    "process_tree_exit": true,
+    "context_budget_not_proven": true
+  },
+  "full_content_review_required_before_new_creation": true,
+  "proposed_targets": 4,
+  "virtual_files": 24,
+  "output_bytes": 35622,
+  "current_live_design_index_or_adoption_ledger_includes_this_proposal": false,
+  "central_operations": 0,
+  "new_adoptions": 0,
+  "whole16_complete": false
+}

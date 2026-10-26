@@ -77,6 +77,11 @@
       "file": "skills-3080-security-coverage-designs214717.json",
       "sha256": "6f41426182a445ab390a732809cba88c3c484a508ee8c5f11771509b1bfd8e65",
       "target_count": 1
+    },
+    {
+      "file": "skills-3080-motion4-designs214717.json",
+      "sha256": "080ccec3ceca4feef1c95f51197f947327e524e6264758ecebda7d72e4a72794",
+      "target_count": 4
     }
   ]
 }

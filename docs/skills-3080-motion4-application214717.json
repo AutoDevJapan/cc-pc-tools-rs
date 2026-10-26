@@ -1,0 +1,124 @@
+{
+  "todo": 3080,
+  "actual_parent_job": "20261026-214717-todo-3080",
+  "applied_at": "2026-10-26T20:28:06.6115827+00:00",
+  "actual_model": "gpt-6.1-sol",
+  "effort": "max",
+  "method": "The current real Codex turn explicitly read all8 qualified current instruction buffers then made the following bounded decisions. No new model, source script, browser rendering or application deployment was invoked.",
+  "instruction_files": 8,
+  "instruction_bytes": 14121,
+  "instruction_pins": [
+    {
+      "target": "marquee-loop/SKILL.md",
+      "sha256": "acf7c94c086184feeeee276d9b2ba0ab8ec44347d678f8fd9bbe79cab73d973b",
+      "bytes": 1778
+    },
+    {
+      "target": "marquee-loop/references/guide.md",
+      "sha256": "a49969c7bdaea19c6377af1e977f88e8003c2737046e7a36d91fdb55ad91ef37",
+      "bytes": 1946
+    },
+    {
+      "target": "masked-reveal/SKILL.md",
+      "sha256": "d2c47dcb537517e1aa2e7853b7d3851d74221129a2fce2cea5c796602b9cb345",
+      "bytes": 1818
+    },
+    {
+      "target": "masked-reveal/references/guide.md",
+      "sha256": "4c45d16730373a5451a4676af6a306d2502df442c77dac13b11ad011435dc261",
+      "bytes": 1922
+    },
+    {
+      "target": "gooey-blob-system/SKILL.md",
+      "sha256": "0fbc0dc943f5393abfa6f7e8e297f27df0abc2e20512bac027b675a50a9cffc7",
+      "bytes": 1807
+    },
+    {
+      "target": "gooey-blob-system/references/guide.md",
+      "sha256": "eeb5b3ae0f224e62cdc6f9c4c4d9037435bf96ca1a3ba6101d4ea95d9d5591b0",
+      "bytes": 1666
+    },
+    {
+      "target": "nested-container-frames/SKILL.md",
+      "sha256": "8201f348009bbe30184df2eac5610d90858c37e97907f5097d8c5f51c49dff22",
+      "bytes": 1643
+    },
+    {
+      "target": "nested-container-frames/references/guide.md",
+      "sha256": "82d5d42b17c0422a3f3f840835a8058fba9dd5ab9425d934ba22f3a35e82e82b",
+      "bytes": 1541
+    }
+  ],
+  "scenarios": [
+    {
+      "target": "marquee-loop",
+      "kind": "positive textual geometry",
+      "input": "One measured period720px, viewport1000px, three identical groups2160px track",
+      "decision": "Use periodic shift720px and compare coverage at both ends. Half the entire track is1080px and is not the period. Keep only canonical semantic content and independently operable pause/static state.",
+      "result": "Geometry acceptance condition corrected; no render, logo licence, browser or assistive technology result claimed"
+    },
+    {
+      "target": "marquee-loop",
+      "kind": "negative applicability",
+      "input": "Mandatory instructions or controls are placed in an endlessly moving duplicated strip",
+      "decision": "Keep mandatory content and controls in a readable stationary source; do not turn every duplicate into focusable/readable repeated content. Retain pause/reduced and lifecycle requirements.",
+      "result": "No cloned mandatory interaction or unattended source script executed"
+    },
+    {
+      "target": "masked-reveal",
+      "kind": "positive textual ownership",
+      "input": "A short Japanese heading must remain readable if dependency loading fails",
+      "decision": "Preserve readable baseline, language-aware segmentation and one owner for initial/replay transforms. A global js class is not sufficient readiness. Restore manual split DOM separately from an animation revert.",
+      "result": "Readiness, failure and cleanup conditions are separate; no current SplitText price or browser support asserted"
+    },
+    {
+      "target": "masked-reveal",
+      "kind": "negative applicability",
+      "input": "Split a long paragraph containing links and buttons using innerHTML and two independent110% transforms",
+      "decision": "Reject blanket splitting and duplicate transform ownership; preserve semantic inline controls and events. Do not claim aria-label by itself proves all screen-reader roles.",
+      "result": "No application DOM changed; actual accessibility remains to be tested in a separately approved implementation"
+    },
+    {
+      "target": "gooey-blob-system",
+      "kind": "positive textual mechanism",
+      "input": "Two local decorative circles should connect when close and separate at a larger distance",
+      "decision": "Compare blur followed by alpha threshold with near/far/single-circle states, local filter region and unique instance IDs. Keep text/controls outside that filter.",
+      "result": "Topology and scope acceptance are explicit; no invented matrix coefficient, fluid simulation or measured GPU performance"
+    },
+    {
+      "target": "gooey-blob-system",
+      "kind": "negative applicability",
+      "input": "Blur all page text, use a shared SVG filter ID across components and call it a proven fluid effect",
+      "decision": "Reject the expanded scope and unproved effect. Require local ownership, distinct IDs, readable foreground, static/reduced state and stop/disposal before implementation acceptance.",
+      "result": "No renderer/GPU/paid service started"
+    },
+    {
+      "target": "nested-container-frames",
+      "kind": "positive textual geometry",
+      "input": "Shell edges24..1176 and intended inner inset24 on each side",
+      "decision": "Inner content edges are48..1152. Give shell width and inset distinct owners; do not add an unrequested second24px padding at the child. Preserve DOM order, focus and popup overflow.",
+      "result": "Arithmetic and owner responsibilities recorded, not a measured live screen"
+    },
+    {
+      "target": "nested-container-frames",
+      "kind": "negative applicability",
+      "input": "A local edge alignment repair is used to rename the product and replace the entire agency direction",
+      "decision": "Keep the original product and approved image scope. A related reference does not prove equal content or authorize exclusion/integration of an unknown existing Skill.",
+      "result": "No product/UI or unknown central body changed"
+    },
+    {
+      "target": "all4",
+      "kind": "real current result publication",
+      "input": "Actual creation24, current same-ID readback35622B, Codex target metadata4 found among437; two scan-traversal warnings and no context-budget marker",
+      "decision": "Record newly placed4 separately from input-only PR574 and from the whole16/catalog73220 scope. Report only four requested metadata matches; do not infer all catalog discovery, implicit model selection or global context-budget success. Retain mandatory same-image approval for later UI work.",
+      "result": "These limits are included in the actual result manifest, discovery receipt and adoption publication"
+    }
+  ],
+  "all_scenario_meanings_applied": true,
+  "explicit_skill_use": true,
+  "implicit_selection_proven": false,
+  "actual_UI_implementation": false,
+  "actual_browser_render": false,
+  "new_source_primary_read_credit": 0,
+  "whole16_complete": false
+}

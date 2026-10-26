@@ -1,0 +1,59 @@
+{
+  "todo": 3080,
+  "writer": "20261026-214717-todo-3080",
+  "selected": [
+    {
+      "name": "orange-clean-paper-saas",
+      "source": {
+        "repository": "MengTo/Skills",
+        "commit": "398cd41c86ba42fbb30e944ae507f463648f08b7",
+        "path": "agent-skills/web-design/orange-clean-paper-saas/SKILL.md",
+        "sha256": "4f532470971c92edd7407dfba5ec6656e0377c213903bd68bd82281b7ea39788",
+        "acquisition": "already-acquired",
+        "license": {
+          "path": "LICENSE",
+          "sha256": "b2a071ba22fefd803f4e9d1f5c777dd79c62d191695586a1a73fd4d0ebd051c6",
+          "scope": "Only this selected authored workflow text and preserved root MIT notice; no demo/media/fonts/template/vendor distribution or service rights; no source code execution",
+          "accepted": true
+        }
+      },
+      "source_git_blob": "2aefa1604a5699c81135d5e99efa2b33d6584845",
+      "source_bytes": 4038,
+      "current_original_full_reader": "20261026-214717-todo-3080",
+      "source_current_read_mask0": true,
+      "scope": "Only this selected authored workflow text and preserved root MIT notice; no demo/media/fonts/template/vendor distribution or service rights; no source code execution",
+      "embedded_third_party_materials_accepted": false,
+      "central_existence_or_unknown_body_not_checked": true,
+      "actual_browser_render_or_performance_not_proven": true
+    },
+    {
+      "name": "pricing-page",
+      "source": {
+        "repository": "MengTo/Skills",
+        "commit": "398cd41c86ba42fbb30e944ae507f463648f08b7",
+        "path": "agent-skills/web-design/pricing-page/SKILL.md",
+        "sha256": "9b3af6174e379042ea1579f5d62b6fb0030fe6298d35b417488ac1e5ef8159db",
+        "acquisition": "already-acquired",
+        "license": {
+          "path": "LICENSE",
+          "sha256": "b2a071ba22fefd803f4e9d1f5c777dd79c62d191695586a1a73fd4d0ebd051c6",
+          "scope": "Only this selected authored workflow text and preserved root MIT notice; no demo/media/fonts/template/vendor distribution or service rights; no source code execution",
+          "accepted": true
+        }
+      },
+      "source_git_blob": "6b05068ccaebafc8d991d352f1ba7dcd446e8806",
+      "source_bytes": 5858,
+      "current_original_full_reader": "20261026-214717-todo-3080",
+      "source_current_read_mask0": true,
+      "scope": "Only this selected authored workflow text and preserved root MIT notice; no demo/media/fonts/template/vendor distribution or service rights; no source code execution",
+      "embedded_third_party_materials_accepted": false,
+      "central_existence_or_unknown_body_not_checked": true,
+      "actual_browser_render_or_performance_not_proven": true
+    }
+  ],
+  "not_a_count_or_scope_cap": true,
+  "new_grants_for_unselected_material": 0,
+  "central_operations": 0,
+  "new_adoptions": 0,
+  "whole16_complete": false
+}

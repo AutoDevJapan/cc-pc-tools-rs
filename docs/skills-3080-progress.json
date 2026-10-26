@@ -286,9 +286,9 @@
   "site_entries_with_body": 9862,
   "site_entries_without_body": 428,
   "execution_held_shapes": 647,
-  "candidate_designs": 121,
-  "independently_accepted": 121,
-  "installed": 121,
+  "candidate_designs": 125,
+  "independently_accepted": 125,
+  "installed": 125,
   "integrated": 3,
   "excluded": 15,
   "units": {
@@ -346,15 +346,15 @@
     "actual_installed": 8
   },
   "candidate_count_definitions": {
-    "candidate_designs": "Legacy28 plus directly sourced actual designs93; pending drafts and catalog rows are not installations;121 is not a cap",
+    "candidate_designs": "Legacy28 plus directly sourced actual designs97; pending drafts and catalog rows are not installations;125 is not a cap",
     "additional_authored_drafts_not_in_plans": 3,
-    "authored_total": 124,
-    "installed": 121,
+    "authored_total": 128,
+    "installed": 125,
     "pending_plan_targets": 0,
     "archived_draft_targets": 8,
     "archived_draft_is_subset_of_batch03": true,
     "independently_accepted": "Legacy acceptances plus individually scoped direct designs. For the six game outputs, original3775 reading and3777 source-specific correction acceptance were bound to exact manifest bytes. Actual creation, metadata discovery and bounded explicit use are separately evidenced; no whole-catalog, renderer or full-context acceptance is implied. The newest public result delta still requires review/CI/merge.",
-    "not_semantically_disposed_occurrences": 73081,
+    "not_semantically_disposed_occurrences": 73077,
     "additional_draft_sources": [
       "skills-3080-mizchi-sql-draft.json",
       "skills-3080-mizchi-mutation-draft.json"
@@ -612,7 +612,7 @@
     "guard_client_resource": true,
     "state": "classification_unverified"
   },
-  "recorded_at": "2026-10-26T19:58:27.2332522+00:00",
+  "recorded_at": "2026-10-26T20:34:39.8750069+00:00",
   "total_skill_named_body_read_definition": "This field preserves the historical complete-source subset only. Current raw/workflow primary coverage is projected from the canonical source components and sixmile evaluation index in all_fulltext_primary_paths_including_partial_sources/all_workflow_primary_paths_including_partial_sources, not copied here.",
   "openai_entrypoint_evaluation": {
     "rights_accepted": false,
@@ -700,7 +700,7 @@
     "fixed_roster": "skills-3080-mengto-fixed-entrypoints.json",
     "expected": 177,
     "complete": true,
-    "installed": 87,
+    "installed": 91,
     "complete_definition": "本文path読取と評価の受領。支持/第三者権利/実導入/実適用は未完。",
     "source": "skills-3080-mengto-partial-evaluation.json",
     "unread": 0,
@@ -1699,7 +1699,7 @@
     "current_individual_rights_entries": 5,
     "main_accepted_excluded_before_this_delta": 8,
     "branch_excluded": 15,
-    "branch_pending": 73081,
+    "branch_pending": 73077,
     "primary_and_support_read_states_unchanged": true,
     "existing_primary_amendment_separate": true,
     "source_scripts_executed": false,
@@ -2381,7 +2381,9 @@
     "initial_result_review": "skills-3080-security-coverage-final-review214717.json",
     "main_accepted_PR": 560,
     "counter_definition_clarification_pending_review": false,
-    "counter_definition_accepted_PR": 563
+    "counter_definition_accepted_PR": 563,
+    "result_accepted_PR": 560,
+    "result_accepted_merge": "461e0ab5fcd6b65fa2a1be74b299707320b07f81"
   },
   "received_other20_194213": {
     "evaluation": "skills-3080-other20-194213-evaluation214717.json",
@@ -2437,7 +2439,8 @@
     "central_creation": 0,
     "new_adoptions": 0,
     "not_part_of_live_design_index": true,
-    "whole16_complete": false
+    "whole16_complete": false,
+    "status": "Fixed input accepted by fullLuna/max review3971 and mergedPR574; actual placement is separately evidenced"
   },
   "received_other12_238249": {
     "evaluation": "skills-3080-other12-238249-evaluation214717.json",
@@ -2456,7 +2459,63 @@
     "new_grants": 0,
     "new_final_decisions": 0,
     "central_operations": 0,
+    "main_acceptance_pending": false,
+    "whole16_complete": false,
+    "main_accepted_PR": 574,
+    "main_accepted_merge": "cf7ed154e569e8237c51389dd45528de536b7f1e"
+  },
+  "motion4_installation": {
+    "evidence": "skills-3080-motion4-installation-evidence214717.json",
+    "actual_created": 4,
+    "current_readback_files": 24,
+    "bytes": 35622,
+    "creator": "20261026-214717-todo-3080",
+    "consumer": "20261026-214717-todo-3080",
+    "bounded_read_batches": 1,
+    "instruction_buffers": 8,
+    "instruction_bytes": 14121,
+    "fresh_discovered": 4,
+    "parse_errors": 0,
+    "discovery_metadata_total": 437,
+    "real_currentturn_explicit_decisions": 9,
+    "new_source_read_credit": 0,
+    "actual_browser_render_or_UI_implemented": false,
+    "implicit_selection_proven": false,
+    "public_result_review_pending": true,
+    "whole16_complete": false
+  },
+  "received_other4_250253": {
+    "evaluation": "skills-3080-other4-250253-evaluation214717.json",
+    "evaluation_sha256": "7f8c57d2db03d02fa256a2a1b4eea332678ea474aa30fe0a3e615aaaf89adb5a",
+    "physical": "skills-3080-other4-250253-physical214717.json",
+    "physical_sha256": "bfe1d25a44102b45496e9a3122e35a176f507308e6402246836151175fcec828",
+    "records": 4,
+    "whole_original_contexts": 1,
+    "whole_original_ACK_SHA_reconstruction": true,
+    "previous_current_queue_needs_assessment": 4,
+    "source_counts": {
+      "MengTo/Skills": 4
+    },
+    "new_literal_body_reads": 0,
+    "legacy_global_raw_workflow_credit": 0,
+    "new_grants": 0,
+    "new_final_decisions": 0,
+    "central_operations": 0,
     "main_acceptance_pending": true,
+    "whole16_complete": false
+  },
+  "pricing2_preparation": {
+    "input": {
+      "file": "skills-3080-pricing2-input214717.json",
+      "sha256": "d1d72289f55c6d883b2ca4f4c878b8eeaa6e8156dd464aedc55bc0b7f2a28952"
+    },
+    "proposed": 2,
+    "virtual_files": 12,
+    "bytes": 25048,
+    "full_content_review_pending": true,
+    "central_creation": 0,
+    "new_adoptions": 0,
+    "not_part_of_live_design_index": true,
     "whole16_complete": false
   }
 }

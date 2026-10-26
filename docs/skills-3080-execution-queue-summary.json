@@ -1,21 +1,21 @@
 {
   "state": "complete",
   "catalog_sha256": "2d73c9a038a41cc220a9687b935bfa1e0b315b65d9bd6d3e54ddb4111972876c",
-  "manifest_sha256": "19f27514ac5d72634d88169ff4a1d89665836abc83d7a4ef3be438aa65f5312b",
-  "queue_sha256": "f0a97d1804f068cc4d92c3c3f9b21402b088b4a3876df5f35823020e25723a5f",
+  "manifest_sha256": "a6195dd626bf75190bc8b6ee5f81e6516c24cd2b84ec1a7ae72bd0941d433a4b",
+  "queue_sha256": "7bce222ea1639d196f778dced3fa5ab139df9efe42da04d312cacad7debcd4b2",
   "occurrences": 73220,
-  "occurrences_with_assessment_records": 1080,
-  "recorded_final_occurrences": 139,
+  "occurrences_with_assessment_records": 1084,
+  "recorded_final_occurrences": 143,
   "stages": {
     "assessed_needs_current_disposition": 947,
     "held_body_unavailable": 428,
     "held_execution_review": 647,
-    "needs_semantic_and_individual_rights_review": 71059,
-    "recorded_final_disposition": 139
+    "needs_semantic_and_individual_rights_review": 71055,
+    "recorded_final_disposition": 143
   },
   "recorded_final_dispositions": {
     "excluded": 15,
-    "installed_new_adaptation": 121,
+    "installed_new_adaptation": 125,
     "integrated_existing": 3
   },
   "limits": [

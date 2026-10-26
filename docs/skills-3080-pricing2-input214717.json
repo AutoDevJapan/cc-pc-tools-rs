@@ -1,0 +1,43 @@
+{
+  "todo": 3080,
+  "author_job": "20261026-214717-todo-3080",
+  "operation": {
+    "file": "skills-3080-operations/create-pricing2-214717.json",
+    "sha256": "de445f6cec7b8e0d8a50f69791017e067a077fd59fdc23d740b535bb8d6e4f1a"
+  },
+  "bundle": {
+    "file": "skills-3080-pricing2-reviewed-bundle214717.json",
+    "sha256": "35bbda7df09a46ae05291e9317b30fe073979384dadb92e04df80f0eac6c5c81"
+  },
+  "meaning": {
+    "file": "skills-3080-pricing2-source-meaning214717.json",
+    "sha256": "bf8e8f743d516b80218e06c0ff2f5f25a56e5b42dd7f2a2712ff58c5940839eb"
+  },
+  "notices": {
+    "file": "skills-3080-pricing2-notice-map214717.json",
+    "sha256": "e0c3625573db79e7d037d55b439e2ac0b7539f958841c27cb86ab3147f2f5006"
+  },
+  "structure": {
+    "file": "skills-3080-pricing2-structure214717.json",
+    "sha256": "5856b7625fd136edcc4ab290306bb5d0463aecaf58045dfbe060ebb1f839689a"
+  },
+  "proposal_discovery": {
+    "method": "fresh installed Codex app-server initialize + skills/list forceReload",
+    "metadata_total": 437,
+    "targets": 2,
+    "found": 0,
+    "parse_errors": 0,
+    "actual_absence_proven": false,
+    "unknown_existing_bodies_read": 0,
+    "process_tree_exit": true,
+    "context_budget_not_proven": true
+  },
+  "full_content_review_required_before_new_creation": true,
+  "proposed_targets": 2,
+  "virtual_files": 12,
+  "output_bytes": 25048,
+  "current_live_design_index_or_adoption_ledger_includes_this_proposal": false,
+  "central_operations": 0,
+  "new_adoptions": 0,
+  "whole16_complete": false
+}

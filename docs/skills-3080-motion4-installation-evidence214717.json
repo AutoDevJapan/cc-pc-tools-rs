@@ -1,0 +1,98 @@
+{
+  "todo": 3080,
+  "result_publisher_job": "20261026-214717-todo-3080",
+  "creator_job": "20261026-214717-todo-3080",
+  "new_targets_created": 4,
+  "successful_CreateNew_count": 1,
+  "current_files_readback_verified": 24,
+  "bytes": 35622,
+  "normal_read_batches": 1,
+  "instruction_buffers": 8,
+  "instruction_bytes": 14121,
+  "input_PR": 574,
+  "input_PR_merge": "cf7ed154e569e8237c51389dd45528de536b7f1e",
+  "creation_manifest": "skills-3080-operations/create-motion4-214717.json",
+  "creation_manifest_sha": "73d2cf157d48a7c9e9f02477db0d74d2498e6ccaaff0fb782a27eb3e6bad340d",
+  "creation_input_head": "46e4cbb97fdb9818dcd0a5890396cdf89e15604f",
+  "frozen_full_content_review": {
+    "task": 3971,
+    "job": "20261027-050630-todo-3971",
+    "spec": "D:/CC/Tools/todo/specs/3971-b9f438d6e5d543fa8002de889aff754a.md",
+    "spec_sha256": "8c97186cb2c896f4c6f3cbfddfcd8db409efa7aaf84f0d1a19783224d766ea75",
+    "final_sha256": "2eccc26e7952896cafb2ffa0bc134b9379fa20cfa2ac6caf887ab0ee548c0a8b",
+    "manifest_sha256": "73d2cf157d48a7c9e9f02477db0d74d2498e6ccaaff0fb782a27eb3e6bad340d",
+    "creator": "20261026-214717-todo-3080",
+    "successful_creation_file_count": 24,
+    "full_content_no_comparison": true,
+    "Must": 0,
+    "frozen": true,
+    "never_edit_spec_or_restart_this_task": true
+  },
+  "qualified_independent_review_native": {
+    "todo": 3971,
+    "job": "20261027-050630-todo-3971",
+    "parent_job": "20261026-214717-todo-3080",
+    "spec_sha256": "8c97186cb2c896f4c6f3cbfddfcd8db409efa7aaf84f0d1a19783224d766ea75",
+    "raw_sha256": "2eccc26e7952896cafb2ffa0bc134b9379fa20cfa2ac6caf887ab0ee548c0a8b",
+    "raw_bytes": 1430,
+    "parent_full_original_read": true,
+    "native": [
+      {
+        "timestamp": "2026-10-26T20:07:16.848Z",
+        "model": "gpt-6-luna",
+        "effort": "max",
+        "service_tier": null
+      }
+    ],
+    "both_origins_owner_request": true,
+    "Must": 0,
+    "Suggestion": 1,
+    "Nit": 0,
+    "runtime_use_not_implied": true,
+    "native_output_bodies_returned": false
+  },
+  "referenced_artifacts": {
+    "bundle": {
+      "file": "skills-3080-motion4-actual-bundle214717.json",
+      "sha256": "ae43732373ea4626c28176e58977ecee29adc1c72ee6e8b24b1576809fb59583"
+    },
+    "manifest": {
+      "file": "skills-3080-installed-motion4-manifest214717.json",
+      "sha256": "8f494857885a85b62316c61ffe6697767366c1a20a46e4524f22aff168354a1a"
+    },
+    "creation": {
+      "file": "skills-3080-motion4-create-evidence214717.json",
+      "sha256": "d8aded931a73b838cad575b79b3778865c07a5b0f1282836a235066194bb81f8"
+    },
+    "readback": {
+      "file": "skills-3080-motion4-consume-evidence214717.json",
+      "sha256": "791f9962aff3092f9aeeb6884ec6cf827e36ee078f2de0fbe287cede36527d75"
+    },
+    "structure": {
+      "file": "skills-3080-motion4-actual-structure214717.json",
+      "sha256": "fc487615a33c16b1bee377257374b524160f932d12ad152cb30114b49ec89492"
+    },
+    "discovery": {
+      "file": "skills-3080-motion4-discovery214717.json",
+      "sha256": "105923e96ed1e5ebe7776302709ec20f8fccc6fc7c581de9cad54eb5f8b2ac3d"
+    },
+    "application": {
+      "file": "skills-3080-motion4-application214717.json",
+      "sha256": "79e58d965d61240cbab366341fc7577b6518a1aed38e28bc72eac7d71f51084a"
+    },
+    "design": {
+      "file": "skills-3080-motion4-designs214717.json",
+      "sha256": "080ccec3ceca4feef1c95f51197f947327e524e6264758ecebda7d72e4a72794"
+    }
+  },
+  "creation_binding": "Exact current canonical native call_a7fc92ef7c9d4f3ebb055cc729651aa9 and original CLI stdout; no caller-only receipt",
+  "time_scope": "Actual newly created4; contents derived only from24 current qualified buffers in one normal bounded batch; not an atomic snapshot across files or historical continuity proof",
+  "model_application": "Real current turn explicitly read8 instruction buffers then applied8 textual positive/negative decisions plus one real current result-publication decision. No live UI/browser/GPU or implicit selection proof.",
+  "new_global_source_raw_credit": 0,
+  "implicit_skill_selection_proven": false,
+  "new_UI_implementation": 0,
+  "originals_are_records_not_owner_instructions": true,
+  "third_party_assets_services_or_unknown_central_rights_accepted": false,
+  "public_result_review_pending_at_recording": true,
+  "whole16_complete": false
+}

@@ -12196,10 +12196,22 @@ mod end_to_end {
             "--no-action-check",
             proof.to_str().unwrap(),
         ];
+        // The controller publishes progress under state.lock. The public
+        // guarded cancel now correctly defers that race instead of failing.
+        // Retry only this observed transient reason, within the fixture's
+        // normal deadline; every other outcome still fails the assertions.
+        let cancel_when_state_ready = || {
+            let mut result = Value::Null;
+            t.until(|| {
+                let out = t.cli(&cancel, "report-only");
+                assert!(out.status.success(), "{}", String::from_utf8_lossy(&out.stderr));
+                result = serde_json::from_slice::<Value>(&out.stdout).unwrap();
+                !(result["outcome"] == "deferred" && result["reason"] == "state_lock_busy")
+            });
+            result
+        };
         let held = FileLock::acquire(&store.with_file_name("todo.lock")).unwrap();
-        let deferred = t.cli(&cancel, "report-only");
-        assert!(deferred.status.success());
-        let deferred: Value = serde_json::from_slice(&deferred.stdout).unwrap();
+        let deferred = cancel_when_state_ready();
         assert_eq!(deferred["reason"], "todo_lock_busy");
         let pause: Value = serde_json::from_slice(
             &fs::read(events.parent().unwrap().join("yield-paused.json")).unwrap(),
@@ -12209,17 +12221,11 @@ mod end_to_end {
         let length = fs::metadata(&events).unwrap().len();
         t.until(|| fs::metadata(&events).unwrap().len() > length);
         drop(held);
-        let out = t.cli(&cancel, "report-only");
-        assert!(
-            out.status.success(),
-            "{}",
-            String::from_utf8_lossy(&out.stderr)
-        );
+        let cancelled = cancel_when_state_ready();
         assert_eq!(
-            serde_json::from_slice::<Value>(&out.stdout).unwrap()["outcome"],
+            cancelled["outcome"],
             "cancelled",
-            "{}",
-            String::from_utf8_lossy(&out.stdout)
+            "{cancelled}"
         );
         t.until(|| {
             proc_created(source["pid"].as_u64().unwrap() as u32) != source["pid_created"].as_u64()

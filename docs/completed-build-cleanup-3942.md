@@ -84,3 +84,10 @@ runnerのTemp短縮名とGitの長い名前の比較不一致が原因。新し�
 149入力manifest SHA86a858825aea27f929b8dcb45e6fab3d4d1c66ec97e2ba23964033fce93b5be8、
 Go pin commit0da6b8ac。上の旧pin未確定という記載は当時の履歴であり、現在の候補へ流用しない。
 49関連Windowsテスト/ClippyとGo race/vet成功。必要な追加固定レビュー/新head CI/マージ/反映/実発火は継続中。
+
+3961の追加Must（不完全jobの所有情報、過去終了jobのdirectory-only相対参照）は4da310a3で修正。
+51関連Windowsテスト/Clippy、Go race/vet成功。実3960で観測したMSVC script PDBの別名は
+検証済みcustom-build unit内の正確な名前だけ許容し、同bytes内部hardlinkを1回計上する。
+最新delivery SHA2424d6e21755b1f44e831a143c64ed530c030ae71df907797264b3c9ac387b8f、
+149入力manifest SHA5c9dd7cbb245f12655d1714898c05bb180c1f45c57d645c18f3cc0cad1751756。
+旧pinは履歴であり、最新sourceの審査・実更新へ流用しない。

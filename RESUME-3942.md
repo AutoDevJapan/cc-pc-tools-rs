@@ -49,5 +49,16 @@ Root3570 rawjobは保持、normal published work claimと同じToDo job履歴で
 次: 最新追加review Must0/CI成功→通常merge→正規Go updater --completed-build-check/applyをAdminBrokerで
 実施→現用SHA/ACL/元backup一致確認→既存1h task実発火→3960等の実回収と不在/空き前後→自分のdebug回収。
 未知Rootや他担当のraw recordは修復目的へ拡大しない。現用更新/本件実回収はまだ0。
+
+20:31最新: review3961（20261026-201707-todo-3961/gpt-6-sol/max/41steps/終了0）は
+92e19517の5対象読了、partial job所有と過去jobのdirectory-only参照のMust2。
+不完全jobはpublished claim+ToDo履歴でunknown扱い、target/debugと末尾slashの参照も保持へ修正。
+実3960はdone/元job20261026-200655-todo-3960/source7da2b12b、正規check1回成功/保持なし。
+実layoutのMSVC build_script_build.pdb別名を3本確認し、検証済みcustom-build unit内だけへ対応。
+最新source4da310a3a87a4a6485e228619f2ea3e62bcb988e、51件/Clippy/Go race/vet成功。
+single-link delivery SHA2424d6e21755b1f44e831a143c64ed530c030ae71df907797264b3c9ac387b8f。
+manifest同証拠dir/build-manifest-4da310a3a87a4a6485e228619f2ea3e62bcb988e.private.json、
+SHA5c9dd7cbb245f12655d1714898c05bb180c1f45c57d645c18f3cc0cad1751756、149入力。
+この最新pinを含む最終差分review/CI後にmerge/配布/通常task実発火へ進む。古い候補は実配布しない。
 safe-delete/3757、3939、元3628/3796/3815/3816のソース/状態/原scopeは変更しない。
 既削除8件を再回収・二重計上しない。本人回答とPC操作は不要。

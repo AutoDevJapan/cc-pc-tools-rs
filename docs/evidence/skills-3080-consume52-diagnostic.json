@@ -1,0 +1,61 @@
+{
+  "domain": "skills-3080-finite-consume-diagnostic-v1",
+  "task": 3686,
+  "actual_job": "20261026-113308-todo-3686",
+  "original_creation": {
+    "author_job": "20261026-090101-todo-3080",
+    "manifest_commit": "7d3ff5c3f5da3c762c4bec0670db2164eb7b0b00",
+    "manifest_sha256": "fc92df3fdb1338c8de904691161eeccacf8c31256dd5e5fd7a5a4eb9fad48f85",
+    "request_sha256": "50a697af5013beb3b4f9e45087a5915e2593333ab60512a8668ce44a22f31166",
+    "native_call_id": "call_c8e903093277429c87d06622d240f64f",
+    "created_outputs": 52,
+    "reported_successful_reads_corrected": 38,
+    "reported_remaining_reads": 14,
+    "recreated_outputs": 0
+  },
+  "original_failures": [
+    "review",
+    "source",
+    "source",
+    "review"
+  ],
+  "original_four_failures_exact_cause": "unresolved: coarse reasons did not identify the failing subcheck; originals are retained",
+  "independent_initial_checks": {
+    "source_count": 24,
+    "source_proof_passed": true,
+    "source_seconds": 0.4938358,
+    "public_review_inputs_passed": true,
+    "public_review_input_count": 6,
+    "runtime_public_main_check_passed": true,
+    "does_not_claim_original_network_timeout_or_rate_limit": true
+  },
+  "independently_reproduced_current_defect": {
+    "original_native_producer_sha256": "ccb5e797e6b5627d98ade2a562f2f98f3c121a5403e1523071afc07f73af4556",
+    "original_native_producer_revision": "038bc2570014132321919bf6758d68979506b741",
+    "observed_later_runtime_sha256": "f3927b8850258098d54dae87196ae382960dc83a5b6e7dd11354ab97ffd07cdf",
+    "observed_later_runtime_revision": "f5f846a8470b544846e4c9ce43306061bf5668f9",
+    "exact_native_file_count": 52,
+    "original_header_bound_before_fix": false,
+    "synthetic_regression_failed_before_fix": true,
+    "observation_does_not_itself_accept_later_runtime": true
+  },
+  "repair": "Preserve the independently accepted PR525 issuer and use one original-native publication/review proof boundary for creator and admitted readers. Retain complete local source/notice verification and current same-handle bytes. New creation retains live public/main/content-review gates. Expose only fixed finite failure stages.",
+  "related_go_race_passed": true,
+  "related_go_vet_passed": true,
+  "actual_postfix_parent_consumption": "pending",
+  "review_ci_merge_windows_distribution": "pending",
+  "central_IO_by_diagnostic": 0,
+  "raw_review_final_or_unrelated_native_recovery": 0,
+  "general_access_granted": false,
+  "original_registry_recovered": false,
+  "candidate_phase": "before formal distinct-model review, CI and deployment",
+  "actual_postfix_component": {
+    "original_native_files": 52,
+    "original_header_bound": true,
+    "shared_provenance_stage": "",
+    "current_PE_bound_to_independent_pair": true,
+    "central_opens": 0,
+    "raw_final_opened": false,
+    "actual_parent_purpose_consumption": false
+  }
+}

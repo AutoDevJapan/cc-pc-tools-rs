@@ -60,6 +60,7 @@ func skillsSourcesBound(m skillsManifest, fs *skillsFS) bool {
 // The alternative root/anchors are a unit-test seam, never request fields or a
 // new CLI. Production always supplies the original fixed acquired collection.
 func skillsSourcesBoundAt(m skillsManifest, fs *skillsFS, corpus, catalogSHA string, anchors map[string]skillsSourceAnchor) bool {
+	fs.failureStage = "source_claims"
 	if !skillsSourceClaimsPreserved(m) || len(m.Sources) == 0 {
 		return false
 	}
@@ -71,11 +72,13 @@ func skillsSourcesBoundAt(m skillsManifest, fs *skillsFS, corpus, catalogSHA str
 		}
 		wanted[key] = source
 	}
+	fs.failureStage = "source_catalog_open"
 	catalog, ok := fs.open(filepath.Join(corpus, "phase-a-catalog.jsonl"), 256<<20)
 	if !ok {
 		return false
 	}
 	found := map[string]skillsSavedSource{}
+	fs.failureStage = "source_catalog_integrity"
 	ok = skillsSourceLines(catalog, catalogSHA, func(raw []byte) bool {
 		var row struct {
 			skillsSavedSource
@@ -107,11 +110,13 @@ func skillsSourcesBoundAt(m skillsManifest, fs *skillsFS, corpus, catalogSHA str
 		byRepo[source.Repository] = append(byRepo[source.Repository], source)
 	}
 	for repo, sources := range byRepo {
+		fs.failureStage = "source_anchor"
 		anchor, exists := anchors[repo]
 		if !exists || !skillsDigest(anchor.IndexSHA) || !skillsDigest(anchor.TreeSHA) || !skillsDigest(anchor.CommitSHA) {
 			return false
 		}
 		root := filepath.Join(corpus, "github", strings.ReplaceAll(repo, "/", "__"))
+		fs.failureStage = "source_commit"
 		commit, ok := fs.read(filepath.Join(root, "commit.json"), 1<<20)
 		value, parsed := conversationJSON(commit)
 		treeSHA := str(obj(obj(value["commit"])["tree"])["sha"])
@@ -126,11 +131,13 @@ func skillsSourcesBoundAt(m skillsManifest, fs *skillsFS, corpus, catalogSHA str
 				missing = append(missing, source)
 			}
 		}
+		fs.failureStage = "source_index_open"
 		index, ok := fs.open(filepath.Join(root, "content-index.jsonl"), 128<<20)
 		if !ok {
 			return false
 		}
 		selected := map[string]skillsSavedSource{}
+		fs.failureStage = "source_index_integrity"
 		ok = skillsSourceLines(index, anchor.IndexSHA, func(raw []byte) bool {
 			var row skillsSavedSource
 			if json.Unmarshal(raw, &row) != nil {
@@ -152,6 +159,7 @@ func skillsSourcesBoundAt(m skillsManifest, fs *skillsFS, corpus, catalogSHA str
 		if !ok {
 			return false
 		}
+		fs.failureStage = "source_selected_paths"
 		for p := range paths {
 			if _, exists := selected[p]; !exists {
 				return false
@@ -160,6 +168,7 @@ func skillsSourcesBoundAt(m skillsManifest, fs *skillsFS, corpus, catalogSHA str
 		// First validate actual catalog candidates. A support row cannot make
 		// itself a primary merely by claiming acquisition or a favorable role.
 		primaries := map[string]skillsSource{}
+		fs.failureStage = "source_notice_or_catalog"
 		for _, source := range sources {
 			original, notice := selected[source.Path], selected[source.License.Path]
 			if original.SHA != source.SHA || notice.SHA != source.License.SHA || notice.Role != "license_or_notice" {
@@ -175,6 +184,7 @@ func skillsSourcesBoundAt(m skillsManifest, fs *skillsFS, corpus, catalogSHA str
 			}
 		}
 		packages := map[string]string{}
+		fs.failureStage = "source_support_package"
 		for _, support := range missing {
 			if selected[support.Path].Role != "support_text" || !strings.HasSuffix(support.Path, ".md") {
 				return false
@@ -191,17 +201,20 @@ func skillsSourcesBoundAt(m skillsManifest, fs *skillsFS, corpus, catalogSHA str
 			}
 			packages[support.Path] = primary
 		}
+		fs.failureStage = "source_tree"
 		if !skillsSourceTree(root, anchor, treeSHA, selected, packages, fs) {
 			return false
 		}
 		// The complete tree may contain additional applicable root/package
 		// notices. They too must be acquired and retained byte-for-byte.
 		for _, retained := range selected {
+			fs.failureStage = "source_object"
 			if !skillsSourceObject(root, retained, m.Files, fs) {
 				return false
 			}
 		}
 	}
+	fs.failureStage = ""
 	return true
 }
 

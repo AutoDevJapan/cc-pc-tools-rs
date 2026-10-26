@@ -5,6 +5,36 @@ import (
 	"testing"
 )
 
+func TestSkills3080AcceptedPR525IssuerSurvivesLaterRuntime(t *testing.T) {
+	_, r, e, _ := skillsForwardFixture(t)
+	e.Producer = skillsProducer{"ccb5e797e6b5627d98ade2a562f2f98f3c121a5403e1523071afc07f73af4556", "038bc2570014132321919bf6758d68979506b741"}
+	current := skillsProducer{strings.Repeat("1", 64), strings.Repeat("2", 40)}
+	if !skillsCreationHeaderBound(e, r, e.RequestSHA, current) {
+		t.Fatal("independently accepted PR525 native issuer was lost after runtime update")
+	}
+	e.Producer.Revision = strings.Repeat("3", 40)
+	if skillsCreationHeaderBound(e, r, e.RequestSHA, current) {
+		t.Fatal("same digest with another revision accepted")
+	}
+}
+
+func TestSkills3080LaterOfficialRuntimeRemainsAnExactSoftwarePair(t *testing.T) {
+	p := skillsProducer{"f3927b8850258098d54dae87196ae382960dc83a5b6e7dd11354ab97ffd07cdf", "f5f846a8470b544846e4c9ce43306061bf5668f9"}
+	current := skillsProducer{strings.Repeat("1", 64), strings.Repeat("2", 40)}
+	if !skillsAcceptedProducer(p, current) {
+		t.Fatal("independently reproduced current software pair lost")
+	}
+	p.Revision = strings.Repeat("3", 40)
+	if skillsAcceptedProducer(p, current) {
+		t.Fatal("other source revision accepted for the same observed digest")
+	}
+	p.SHA = strings.Repeat("4", 64)
+	p.Revision = "f5f846a8470b544846e4c9ce43306061bf5668f9"
+	if skillsAcceptedProducer(p, current) {
+		t.Fatal("unobserved build with a claimed accepted revision admitted")
+	}
+}
+
 func TestSkills3080CreatedPublicationNeedsNativeIssuingIdentityBeforeBlob(t *testing.T) {
 	for _, kind := range []string{"valid_network_disabled", "private_root", "unknown_producer", "different_producer_revision", "other_manifest", "other_commit", "other_request", "other_writer", "no_review", "other_review", "empty_creation", "old_receipt", "changed_bytes", "missing_local_object", "alias_manifest"} {
 		t.Run(kind, func(t *testing.T) {

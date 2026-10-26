@@ -94,13 +94,21 @@ func skillsRevisionPendingCall(input io.Reader, thread, cwd, path string, start,
 			return false
 		}
 		if env.Type == "session_meta" {
-			if session || p.ID != thread || !same(p.Cwd, cwd) {
+			_, canonical := conversationJSON(scan.Bytes())
+			if !canonical || session || p.ID != thread || !same(p.Cwd, cwd) {
 				return false
 			}
 			session = true
 			continue
 		}
 		pending = false
+		// A matching output/message before the call is also unreceivable. Keep
+		// identities across the original session, including previous job windows;
+		// never decode or return those unrelated message/output bodies.
+		previous := seen[p.CallID]
+		if p.CallID != "" {
+			seen[p.CallID] = true
+		}
 		if p.Type != "custom_tool_call" || p.Name != "exec" {
 			continue
 		}
@@ -108,10 +116,10 @@ func skillsRevisionPendingCall(input io.Reader, thread, cwd, path string, start,
 		if err == nil && at.Before(start) {
 			continue
 		}
-		if !session || err != nil || at.After(end) || !skillsCallID.MatchString(p.CallID) || seen[p.CallID] {
+		_, canonical := conversationJSON(scan.Bytes())
+		if !canonical || !session || err != nil || at.After(end) || !skillsCallID.MatchString(p.CallID) || previous {
 			return false
 		}
-		seen[p.CallID] = true
 		pending = skillsRevisionCall(p.Input, "prepare-skills3080-revision", path, cwd)
 	}
 	return scan.Err() == nil && session && pending

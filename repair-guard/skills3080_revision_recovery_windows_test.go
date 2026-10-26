@@ -173,6 +173,52 @@ func TestSkills3080PrepareChecksInFlightCanonicalCall(t *testing.T) {
 	}
 }
 
+func TestSkills3080PreparePreflightMustMatchReceipt(t *testing.T) {
+	for _, kind := range []string{"valid", "old_same_call_id", "old_orphan_output", "orphan_output", "duplicate_envelope_key", "duplicate_payload_key"} {
+		t.Run(kind, func(t *testing.T) {
+			_, c, start, end := skillsKnownPrepareFixture(t)
+			evidence := skillsRevisionEvidence{Writer: c.Creator, RequestSHA: c.RequestSHA, ManifestSHA: skillsRevisionManifestSHA}
+			records := skillsRevisionNativeFixture(evidence, c, "prepare-skills3080-revision")
+			if kind == "old_same_call_id" || kind == "old_orphan_output" || kind == "orphan_output" {
+				older := object{"type": "response_item", "timestamp": start.Add(-time.Minute).Format(time.RFC3339), "payload": object{"type": "custom_tool_call", "name": "exec", "call_id": c.CallID, "input": "old call"}}
+				if kind != "old_same_call_id" {
+					obj(older["payload"])["type"] = "custom_tool_call_output"
+				}
+				if kind == "orphan_output" {
+					older["timestamp"] = start.Add(time.Second).Format(time.RFC3339)
+				}
+				records = []object{records[0], older, records[1], records[2]}
+			}
+			var pending bytes.Buffer
+			for _, r := range records[:len(records)-1] {
+				b, err := json.Marshal(r)
+				if err != nil {
+					t.Fatal(err)
+				}
+				if obj(r["payload"])["type"] == "custom_tool_call" && obj(r["payload"])["input"] != "old call" {
+					if kind == "duplicate_envelope_key" {
+						b = bytes.Replace(b, []byte(`"timestamp":`), []byte(`"timestamp":"2026-10-26T00:00:00Z","timestamp":`), 1)
+					}
+					if kind == "duplicate_payload_key" {
+						b = bytes.Replace(b, []byte(`"call_id":`), []byte(`"call_id":"call_earlier","call_id":`), 1)
+					}
+				}
+				pending.Write(b)
+				pending.WriteByte('\n')
+			}
+			preflight := skillsRevisionPendingCall(bytes.NewReader(pending.Bytes()), "synthetic-thread", c.Creator.Workspace, c.RequestPath, start, end)
+			complete := append([]byte(nil), pending.Bytes()...)
+			b, _ := json.Marshal(records[len(records)-1])
+			complete = append(complete, b...)
+			complete = append(complete, '\n')
+			_, receivable := skillsRevisionNativeProjection(bytes.NewReader(complete), "synthetic-thread", c.Creator.Workspace, start, end, c, "prepare-skills3080-revision")
+			if preflight != (kind == "valid") || preflight != receivable {
+				t.Fatalf("preflight=%v but complete receipt=%v", preflight, receivable)
+			}
+		})
+	}
+}
+
 func TestSkills3080RecoveredStateAndUnchangedFiles(t *testing.T) {
 	for _, kind := range []string{"prepared", "archived", "published", "changed_unaffected", "replaced_unaffected", "pending_bytes", "pending_id", "pending_hardlink", "history_id", "protected", "stopped"} {
 		t.Run(kind, func(t *testing.T) {

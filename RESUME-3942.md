@@ -176,3 +176,10 @@ Go race/vetとClippy成功。許可述語とprivacy/新規data所有/guard/元re
 この差分はまだ別modelの確認前。Rust test sourceが配布票の入力へ含まれるため、新しいclean releaseと
 manifestを作り直してpinを更新する。51既存関連成功+追加6経路の回帰成功、full workspaceを再度要求しない。
 現用7d1/実回収0/元2件と自己debug未回収、元record/必要release保持、owner入力不要を維持。
+3979修正後source9e1d0186707f49a61f9f56a1a6644e56bbf8de1bでclean通常release終了0。
+delivery SHAdde2d2856c204eb094d77b9e9688996ead292843ecf8cff1d6f8fc3dedf931b0、
+149入力manifest SHA2f489a2ba87083d4448d2ce243d57ff9ca34043011f3c2c573d3b24e5b47fd90。
+元edc/be3/manifestは履歴として保持し、最新資格へ流用しない。
+52関連のうち既存51成功と新6経路表形式回帰1件（6入力）を最終sourceで成功、Clippy/Go race/vet成功。
+このpin差分と追加test/phase codeだけを限定別model reviewし、同HEAD CI後に観測版を通常反映する。
+現用7d1、実回収0、元2対象/自己debug未回収を保持。本人の判断・PC操作は不要。

@@ -17,10 +17,10 @@ import (
 )
 
 const completedRoot = "D:/CC/Work/unattended-operations-20261013-wt/todo-3942-work"
-const completedHead = "edc9c11c1b0d68198d46f9cbedd5ba718b7e3e1f"
+const completedHead = "9e1d0186707f49a61f9f56a1a6644e56bbf8de1b"
 const completedBuildJob = "20261026-205513-todo-3942"
-const completedManifestPath = "C:/Users/makhmeto/AppData/Local/Temp/codex-owned-5249eb2a5e0382b871074f454633ec84/build-manifest-edc9c11c1b0d68198d46f9cbedd5ba718b7e3e1f.private.json"
-const completedManifestSHA = "9fb4805deee9147f420612c0745dc7dc08a7c8789c36222ac9146712d445fc04"
+const completedManifestPath = "C:/Users/makhmeto/AppData/Local/Temp/codex-owned-5249eb2a5e0382b871074f454633ec84/build-manifest-9e1d0186707f49a61f9f56a1a6644e56bbf8de1b.private.json"
+const completedManifestSHA = "2f489a2ba87083d4448d2ce243d57ff9ca34043011f3c2c573d3b24e5b47fd90"
 const completedPreviousProof = "D:/CC/Tools/admin-broker/results/20261026-124621-7006f98d9abcd959c150132e6f3bcea1.json"
 const completedPreviousProofSHA = "c0e1455fd8acd3e9ca61d8f3d84f5299db31868da9cce1310e501bfc66747722"
 const completedPreviousHead = "5c9fce950d30c682e5f36fca3506af72aeb352a5"
@@ -30,7 +30,7 @@ const completedCurrentProofSHA = "31a4bdf4486f8175b96f1fe8ec2ab9d51aa302551f52fb
 const completedCurrentHead = "c2ea7b0b7c81b05789d46dc76eb0b1fd4c8eb7bd"
 const completedCurrentSHA = "7d1d86f361eba1a05e7c21b8c37077836fe56f3b209871064a2c930040772bba"
 
-var completedLeaf = leaf{"cleanup-8h", completedRoot + "/target/release/cleanup-8h-delivery-" + completedHead + ".exe", "D:/CC/Tools/cleanup-8h/cleanup-8h.exe", completedCurrentSHA, "be3d6dcc4ee2c43db9259c777f3a9faf03e970a84a05aa37b4da6dba15a69af1"}
+var completedLeaf = leaf{"cleanup-8h", completedRoot + "/target/release/cleanup-8h-delivery-" + completedHead + ".exe", "D:/CC/Tools/cleanup-8h/cleanup-8h.exe", completedCurrentSHA, "dde2d2856c204eb094d77b9e9688996ead292843ecf8cff1d6f8fc3dedf931b0"}
 var completedInputs = []string{"Cargo.toml", "Cargo.lock", "cleanup-8h", "cc-jobs", "cc-job-policy", "cc-chrome", "cc-task-title", "cc-redact"}
 
 type completedManifest struct {

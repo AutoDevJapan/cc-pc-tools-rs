@@ -246,7 +246,9 @@ fn original(ctx: &Context, row: &Value, work: &Path) -> Check<(Value, Vec<HeldLo
         }
         held.push(lock(&ctx.job_dir(jid).join("state.lock"))?);
         let j = job(ctx, jid)?;
-        if build_reference(&j, &work.join("target/debug")) {
+        if build_reference(&j, &work.join("target/debug"))
+            || same(Path::new(field(&j, "cwd")), work) && relative_build_reference(&j)
+        {
             return Err("SAVED_BUILD_REFERENCE_RETAINED");
         }
         if j["todo_id"] != row["id"] || live(ctx, &j)? {
@@ -381,7 +383,27 @@ fn state(
         if Instant::now() >= until {
             return Err("JOB_SCAN_LIMIT");
         }
-        let j = job(ctx, id)?;
+        let (j, unknown) = match job(ctx, id) {
+            Ok(j) => (j, false),
+            Err(_) => {
+                let claim = ctx
+                    .published_job_work_claim(id)
+                    .map_err(|_| "OTHER_OWNER_SCOPE_UNVERIFIED")?;
+                let owners: Vec<_> = rows
+                    .iter()
+                    .filter(|row| {
+                        row["id"] == claim["todo_id"]
+                            && row["jobs"]
+                                .as_array()
+                                .is_some_and(|ids| ids.iter().any(|j| j == id))
+                    })
+                    .collect();
+                if owners.len() != 1 {
+                    return Err("OTHER_OWNER_SCOPE_UNVERIFIED");
+                }
+                (claim, true)
+            }
+        };
         if same(Path::new(field(&j, "cwd")), work) && relative_build_reference(&j) {
             return Err("SAVED_BUILD_REFERENCE_RETAINED");
         }
@@ -401,7 +423,7 @@ fn state(
             || (!field(owner, "branch").is_empty()
                 && owner["branch"] == expected["scheduler"]["branch"]
                 && owner["git_common"] == origin["work_owner"]["git_common"]);
-        if touches && live(ctx, &j)? {
+        if touches && (unknown || live(ctx, &j)?) {
             return Err("OTHER_JOB_ACTIVE_OR_WAITING");
         }
     }
@@ -568,11 +590,30 @@ struct Artifacts {
     fingerprints: BTreeMap<String, BTreeSet<String>>,
     build_dirs: BTreeSet<String>,
     out_dirs: BTreeSet<String>,
+    roots: BTreeSet<String>,
+    examples: BTreeSet<String>,
 }
 fn base36(s: &str, min: usize, max: usize) -> bool {
     (min..=max).contains(&s.len())
         && s.bytes()
             .all(|b| b.is_ascii_digit() || b.is_ascii_lowercase())
+}
+fn marker_kind(prefix: &str, target: &Value) -> bool {
+    let Some(kinds) = target["kind"].as_array() else {
+        return false;
+    };
+    let has = |kind: &str| kinds.iter().any(|v| v == kind);
+    match prefix {
+        "lib-" | "test-lib-" => ["lib", "rlib", "proc-macro", "dylib", "cdylib", "staticlib"]
+            .iter()
+            .any(|k| has(k)),
+        "bin-" | "test-bin-" => has("bin"),
+        "example-" | "test-example-" => has("example"),
+        "test-integration-test-" => has("test"),
+        "test-bench-" => has("bench"),
+        "run-build-script-" | "build-script-" => has("custom-build"),
+        _ => false,
+    }
 }
 impl Artifacts {
     fn load(ctx: &Context, work: &Path, until: Instant) -> Check<Self> {
@@ -622,6 +663,8 @@ impl Artifacts {
         let mut fingerprints: BTreeMap<String, BTreeSet<String>> = BTreeMap::new();
         let mut build_dirs = BTreeSet::new();
         let mut out_dirs = BTreeSet::new();
+        let mut roots = BTreeSet::new();
+        let mut examples = BTreeSet::new();
         let mut units: BTreeMap<String, BTreeSet<String>> = BTreeMap::new();
         for (count, entry) in fs::read_dir(&fingerprint)
             .map_err(|_| "CARGO_FINGERPRINT_UNVERIFIED")?
@@ -670,6 +713,7 @@ impl Artifacts {
                     && [
                         "lib-",
                         "bin-",
+                        "example-",
                         "test-",
                         "build-script-",
                         "run-build-script-",
@@ -699,9 +743,21 @@ impl Artifacts {
                                 "build-script-",
                                 "lib-",
                                 "bin-",
+                                "example-",
                             ] {
                                 if let Some(unit) = marker.strip_prefix(prefix).filter(|unit| {
                                     package_targets.contains(&unit.replace('-', "_"))
+                                        && packages
+                                            .iter()
+                                            .filter(|p| p["name"] == package)
+                                            .flat_map(|p| {
+                                                p["targets"].as_array().into_iter().flatten()
+                                            })
+                                            .any(|t| {
+                                                t["name"].as_str().is_some_and(|name| {
+                                                    name.replace('-', "_") == unit.replace('-', "_")
+                                                }) && marker_kind(prefix, t)
+                                            })
                                 }) {
                                     let files = fingerprints.entry(name.to_owned()).or_default();
                                     files.extend([
@@ -715,6 +771,63 @@ impl Artifacts {
                                         .entry(hash.to_ascii_lowercase())
                                         .or_default()
                                         .insert(unit.replace('-', "_"));
+                                    let unit_name = unit.replace('-', "_");
+                                    if prefix == "bin-" || prefix == "lib-" {
+                                        for target in packages
+                                            .iter()
+                                            .filter(|p| p["name"] == package)
+                                            .flat_map(|p| {
+                                                p["targets"].as_array().into_iter().flatten()
+                                            })
+                                            .filter(|t| {
+                                                t["name"].as_str().is_some_and(|n| {
+                                                    n.replace('-', "_") == unit_name
+                                                })
+                                            })
+                                        {
+                                            let Some(raw) = target["name"].as_str() else {
+                                                continue;
+                                            };
+                                            let kinds = target["kind"]
+                                                .as_array()
+                                                .ok_or("CARGO_METADATA_UNVERIFIED")?;
+                                            if prefix == "bin-" && kinds.iter().any(|k| k == "bin")
+                                            {
+                                                for ext in ["exe", "pdb", "d"] {
+                                                    roots.insert(format!("{raw}.{ext}"));
+                                                }
+                                            }
+                                            if prefix == "lib-"
+                                                && kinds.iter().any(|k| {
+                                                    k == "lib"
+                                                        || k == "rlib"
+                                                        || k == "proc-macro"
+                                                        || k == "cdylib"
+                                                        || k == "dylib"
+                                                        || k == "staticlib"
+                                                })
+                                            {
+                                                for ext in ["rlib", "rmeta", "d"] {
+                                                    roots.insert(format!("lib{unit_name}.{ext}"));
+                                                }
+                                                roots.insert(format!("{unit_name}.d"));
+                                                if kinds.iter().any(|k| {
+                                                    k == "proc-macro"
+                                                        || k == "cdylib"
+                                                        || k == "dylib"
+                                                }) {
+                                                    for ext in ["dll", "pdb", "lib", "exp"] {
+                                                        roots.insert(format!("{unit_name}.{ext}"));
+                                                    }
+                                                }
+                                            }
+                                        }
+                                    }
+                                    if prefix == "example-" || prefix == "test-example-" {
+                                        for ext in ["exe", "pdb", "d"] {
+                                            examples.insert(format!("{unit_name}.{ext}"));
+                                        }
+                                    }
                                     if unit == "build-script-build" {
                                         build_dirs.insert(name.to_owned());
                                         if prefix == "run-build-script-" {
@@ -769,6 +882,8 @@ impl Artifacts {
             fingerprints,
             build_dirs,
             out_dirs,
+            roots,
+            examples,
         })
     }
     fn known(&self, relative: &Path, directory: bool) -> bool {
@@ -818,12 +933,7 @@ impl Artifacts {
                 ["deps", "build", ".fingerprint", "incremental", "examples"]
                     .contains(&name.as_str())
             } else {
-                PROFILE_LOCKS.contains(&name.as_str())
-                    || binary
-                        && (self.targets.contains(&stem.replace('-', "_"))
-                            || self.targets.contains(
-                                &stem.strip_prefix("lib").unwrap_or(stem).replace('-', "_"),
-                            ))
+                PROFILE_LOCKS.contains(&name.as_str()) || self.roots.contains(name)
             };
         }
         match parts[0].as_str() {
@@ -832,7 +942,7 @@ impl Artifacts {
                 !directory
                     && parts.len() == 2
                     && binary
-                    && (unit(stem) || self.targets.contains(&stem.replace('-', "_")))
+                    && (unit(stem) || self.examples.contains(name))
             }
             ".fingerprint" => {
                 if parts.len() == 2 {
@@ -856,8 +966,9 @@ impl Artifacts {
                     return if directory {
                         name == "out" && self.out_dirs.contains(&parts[1])
                     } else {
-                        ["output", "stderr", "root-output", "invoked.timestamp"]
-                            .contains(&name.as_str())
+                        self.out_dirs.contains(&parts[1])
+                            && ["output", "stderr", "root-output", "invoked.timestamp"]
+                                .contains(&name.as_str())
                             || binary
                                 && (stem == "build-script-build"
                                     || stem.starts_with("build_script_build-") && unit(stem))
@@ -1377,6 +1488,12 @@ mod tests {
             ));
             let work = root.join("work");
             fs::create_dir_all(&work).unwrap();
+            // Hosted Windows TEMP may use an 8.3 spelling. Canonicalize only
+            // this newly created fixture, without relaxing production boundaries.
+            let root = PathBuf::from(normalized(
+                &fs::canonicalize(&root).unwrap().to_string_lossy(),
+            ));
+            let work = root.join("work");
             let mut ctx = Context::installed().unwrap();
             ctx.root = root.join("tools/codex-jobs");
             ctx.jobs = ctx.root.join("jobs");
@@ -1486,6 +1603,18 @@ mod tests {
                 [],
             )
             .unwrap();
+            fs::create_dir_all(work.join("target/debug/.fingerprint/fixture-fedcba9876543210"))
+                .unwrap();
+            fs::write(
+                work.join("target/debug/.fingerprint/fixture-fedcba9876543210/bin-fixture.json"),
+                FINGERPRINT_JSON,
+            )
+            .unwrap();
+            fs::write(
+                work.join("target/debug/.fingerprint/fixture-fedcba9876543210/bin-fixture"),
+                [],
+            )
+            .unwrap();
             fs::create_dir_all(work.join("target/release")).unwrap();
             fs::write(work.join("target/debug/.cargo-lock"), []).unwrap();
             fs::write(
@@ -1512,7 +1641,7 @@ mod tests {
             }
         }
         fn artifacts(&self) -> Artifacts {
-            Artifacts {
+            let mut artifacts = Artifacts {
                 targets: BTreeSet::from(["fixture".into()]),
                 fingerprints: BTreeMap::from([(
                     "fixture-0123456789abcdef".into(),
@@ -1526,14 +1655,37 @@ mod tests {
                 )]),
                 build_dirs: BTreeSet::new(),
                 out_dirs: BTreeSet::new(),
+                roots: BTreeSet::from([
+                    "fixture.exe".into(),
+                    "fixture.pdb".into(),
+                    "fixture.d".into(),
+                    "libfixture.rmeta".into(),
+                    "libfixture.rlib".into(),
+                ]),
+                examples: BTreeSet::new(),
                 units: BTreeMap::from([(
                     "0123456789abcdef".into(),
                     BTreeSet::from(["fixture".into()]),
                 )]),
-            }
+            };
+            artifacts.fingerprints.insert(
+                "fixture-fedcba9876543210".into(),
+                BTreeSet::from([
+                    "bin-fixture".into(),
+                    "bin-fixture.json".into(),
+                    "dep-bin-fixture".into(),
+                    "output-bin-fixture".into(),
+                    "invoked.timestamp".into(),
+                ]),
+            );
+            artifacts.units.insert(
+                "fedcba9876543210".into(),
+                BTreeSet::from(["fixture".into()]),
+            );
+            artifacts
         }
         fn bytes(&self) -> u64 {
-            17 + FINGERPRINT_JSON.len() as u64
+            17 + 2 * FINGERPRINT_JSON.len() as u64
         }
         fn run(&self, apply: bool, guard: bool, stats: &mut Stats) -> Check<()> {
             candidate(
@@ -1722,6 +1874,59 @@ mod tests {
             ),
             Err("SAVED_BUILD_REFERENCE_RETAINED")
         );
+    }
+    #[test]
+    fn prior_finished_job_relative_build_reference_still_retains_the_resource() {
+        let f = Fixture::new();
+        let id = "20261025-000001-todo-1";
+        let dir = f.ctx.job_dir(id);
+        fs::create_dir(&dir).unwrap();
+        fs::write(dir.join("state.lock"), []).unwrap();
+        fs::write(dir.join("job.json"),serde_json::to_vec(&json!({"id":id,"todo_id":1,"status":"succeeded","cwd":f.work,"last_message":"runtime source target/debug/fixture.exe"})).unwrap()).unwrap();
+        let mut row = f.row.clone();
+        row["jobs"].as_array_mut().unwrap().push(json!(id));
+        fs::write(
+            &f.store,
+            serde_json::to_vec(&json!({"projects":{"cc-pc-tools-rs":f.work},"items":[row]}))
+                .unwrap(),
+        )
+        .unwrap();
+        assert_eq!(
+            candidate(
+                &f.ctx,
+                &f.store,
+                &row,
+                &f.work,
+                true,
+                &f.budget(),
+                &mut Stats::default(),
+                |_| Ok(false)
+            ),
+            Err("SAVED_BUILD_REFERENCE_RETAINED")
+        );
+        assert!(
+            f.work
+                .join("target/debug/deps/libfixture-0123456789abcdef.rmeta")
+                .exists()
+        );
+        f.kept();
+    }
+    #[test]
+    fn a_metadata_target_without_its_kind_marker_does_not_qualify_a_root_output() {
+        let f = Fixture::new();
+        fs::remove_dir_all(
+            f.work
+                .join("target/debug/.fingerprint/fixture-fedcba9876543210"),
+        )
+        .unwrap();
+        let output = f.work.join("target/debug/fixture.exe");
+        fs::write(&output, b"unique source data").unwrap();
+        assert_eq!(
+            f.run(true, false, &mut Stats::default()),
+            Err("UNKNOWN_BUILD_CONTENT")
+        );
+        assert_eq!(fs::read(output).unwrap(), b"unique source data");
+        f.kept();
     }
     #[test]
     fn dependencies_dirty_source_and_changed_ownership_are_retained() {
@@ -2006,6 +2211,43 @@ mod tests {
                 .join("target/debug/deps/libfixture-0123456789abcdef.rmeta")
                 .exists()
         );
+        f.kept();
+    }
+    #[test]
+    fn unreadable_registered_worker_retains_its_published_scope_without_blocking_an_independent_tree()
+     {
+        let f = Fixture::new();
+        let id = "20261026-000002-todo-2";
+        let dir = f.ctx.job_dir(id);
+        fs::create_dir(&dir).unwrap();
+        fs::write(dir.join("job.json"), b"null").unwrap();
+        let other = f.root.join("independent");
+        for same_scope in [false, true] {
+            let tree = if same_scope { &f.work } else { &other };
+            let claim = json!({"todo_id":2,"work_owner":{"repository":"autodevjapan/cc-pc-tools-rs","git_common":f.work.join(".git"),"worktree":tree,"branch":if same_scope {"scheduler/todo-1-fixture"} else {"scheduler/todo-2-fixture"}}});
+            fs::write(f.ctx.jobs.join(".queue-index.json"),serde_json::to_vec(&json!({"scan_complete":true,"scanned_at":f.ctx.rt.epoch(),"ids":[id],"owners":{id:claim}})).unwrap()).unwrap();
+            fs::write(
+                &f.store,
+                serde_json::to_vec(&json!({"items":[f.row,{"id":2,"status":"todo","jobs":[id]}]}))
+                    .unwrap(),
+            )
+            .unwrap();
+            let result = state(
+                &f.ctx,
+                &f.store,
+                &f.row,
+                &f.work,
+                &f.origin,
+                f.budget().until,
+                &[id.into()],
+            );
+            if same_scope {
+                assert_eq!(result, Err("OTHER_JOB_ACTIVE_OR_WAITING"));
+            } else {
+                assert_eq!(result, Ok(()));
+            }
+            assert_eq!(fs::read(dir.join("job.json")).unwrap(), b"null");
+        }
         f.kept();
     }
     #[test]

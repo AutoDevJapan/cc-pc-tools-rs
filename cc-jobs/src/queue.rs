@@ -834,6 +834,18 @@ impl Context {
             .diagnostic(&format!("history scan metrics: {metrics}"));
         Ok(())
     }
+    /// Preserve the normally published immutable work claim when execution
+    /// metadata is unavailable. This observation cannot prove exit or qualify
+    /// that job's own data for deletion; callers can only retain its scope.
+    pub fn published_job_work_claim(&self,id:&str)->Result<Value> {
+        if !valid_job_id(id) {return Err(Error::new("invalid work claim id"));}
+        let index=self.read_admission_index()?;
+        if !self.index_ids(&index)?.contains(&id) {return Err(Error::new("work claim is not published"));}
+        let claim=index["owners"][id].clone();
+        if !claim.is_object() || ["repository","git_common","worktree","branch"].iter().any(|key|s(&claim["work_owner"],key).is_empty()) || claim["todo_id"].as_u64().is_none() {return Err(Error::new("work claim incomplete"));}
+        if !std::path::Path::new(s(&claim["work_owner"],"worktree")).is_absolute() || !std::path::Path::new(s(&claim["work_owner"],"git_common")).is_absolute() {return Err(Error::new("work claim paths unverified"));}
+        Ok(claim)
+    }
     /// Called under the gate after preparation. Never reads terminal history.
     pub(crate) fn admission_jobs(&self) -> Result<Vec<Value>> {
         self.indexed_admission_jobs(false)

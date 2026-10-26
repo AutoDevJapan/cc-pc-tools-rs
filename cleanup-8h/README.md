@@ -46,6 +46,10 @@ Published unknown IDs are preserved. Jobs/index remain unchanged; no prompt or
 event history is read.
 An unavailable or incomplete observation retains the candidate. Explicit saved
 debug-build references in canonical metadata also retain their original artifacts.
+An unreadable published job remains unknown. Its complete, normally published
+work claim may only retain that scope; it never proves exit or authorizes deletion
+there. The claim must match the canonical ToDo's job history. Independent trees
+can continue without modifying the original unavailable job record.
 
 Existing queue/state/ToDo byte locks, the exact shared Cargo target lock and Cargo's
 own profile locks are held from qualification through deletion. Ancestors and all
@@ -63,6 +67,9 @@ Fingerprint directories and marker names are bound individually to real Cargo
 package/target metadata. Incremental sessions use known rustc names; build OUT_DIR
 also requires Cargo's matching root-output record. A profile lock is allowed only
 as the same pinned regular zero-length file, never just a matching basename.
+Root/example outputs require the corresponding output-kind marker, rather than
+a metadata target name alone. All original jobs' relative references are checked
+against the same registered worktree, including earlier finished jobs.
 Hardlinks are accepted only when every physical link is inside this complete
 qualified plan. A unique exclusive handle protects each object before deletion;
 all aliases are rechecked, and bytes count once when the final link is removed.

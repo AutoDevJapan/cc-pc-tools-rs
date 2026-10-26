@@ -29,5 +29,13 @@ Go配布票に元Rust出力とsingle-linkコピー一致を追加。まだpinは
 現在のtarget/release/cleanup-8h.exeはe7f0b893 sourceの未配布v3。初期v1/v2は証拠フォルダーへ保存。
 次は全関連テスト/Clippyの結果を確認してcommit、修正後releaseと149入力manifestの作成、
 Go pin確定と追加レビュー/CI/PR/merge/実配布/通常task実発火/実回収、最後に自分のdebug生成物を回収する。
+
+20時前の追記: PR548 https://github.com/AutoDevJapan/cc-pc-tools-rs/pull/548 。
+3957のMust2を修正中。root/exampleにkind markerを要求し、以前の終了jobも相対参照を確認。
+CI663834fcは7fixtureで短縮Temp名比較が失敗。fixtureのみcanonicalizeで修正。
+元3570の欠けたjob.json/公開claimは触らず、normal claim+元ToDo履歴で保持範囲を比較するAPIを追加。
+最新版の49関連テストとClippyを確認後commit/build/pin更新して限定追加レビューとCIを行う。
+c550be8f/22951fb0のsingle-link deliveryと149入力manifestは履歴（配布0）。
+現用は依然7fbc49...。新sourceでbyteを生成してから新しいmanifestとGo pinへ確定する。
 safe-delete/3757、3939、元3628/3796/3815/3816のソース/状態/原scopeは変更しない。
 既削除8件を再回収・二重計上しない。本人回答とPC操作は不要。

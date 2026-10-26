@@ -36,7 +36,9 @@ func skillsRevisionCall(input, op, path, cwd string) bool {
 		return false
 	}
 	var cmd skillsCreationCommand
-	return skillsStrict([]byte(strings.TrimSuffix(strings.TrimPrefix(input, prefix), suffix)), &cmd) && cmd == skillsRevisionCommand(op, path, cwd)
+	raw := []byte(strings.TrimSuffix(strings.TrimPrefix(input, prefix), suffix))
+	fields, ok := conversationJSON(raw)
+	return ok && len(fields) == 6 && fields["login"] == false && skillsStrict(raw, &cmd) && cmd == skillsRevisionCommand(op, path, cwd)
 }
 
 // Only the exact non-yielded native tool result can issue a transaction ID.
@@ -49,6 +51,7 @@ func skillsRevisionNativeProjection(input io.Reader, thread, cwd string, start, 
 	scan := bufio.NewScanner(input)
 	scan.Buffer(make([]byte, 64<<10), 16<<20)
 	session, called, returned := false, false, false
+	recovered := false
 	var callAt time.Time
 	for scan.Scan() {
 		var env struct {
@@ -92,7 +95,9 @@ func skillsRevisionNativeProjection(input io.Reader, thread, cwd string, start, 
 		}
 		switch p.Type {
 		case "custom_tool_call":
-			if called || returned || p.Name != "exec" || !skillsRevisionCall(p.Input, op, c.RequestPath, cwd) {
+			strict := skillsRevisionCall(p.Input, op, c.RequestPath, cwd)
+			recovered = !strict && skillsRevisionRecoveryInvocation(p.Input, op, cwd, at, c)
+			if called || returned || p.Name != "exec" || (!strict && !recovered) {
 				return evidence, false
 			}
 			called, callAt = true, at
@@ -115,6 +120,13 @@ func skillsRevisionNativeProjection(input io.Reader, thread, cwd string, start, 
 			b, err := json.Marshal(result["revision_evidence"])
 			if err != nil || !skillsStrict(b, &evidence) || evidence.Writer != c.Creator || evidence.RequestSHA != c.RequestSHA || result["manifest_sha256"] != evidence.ManifestSHA {
 				return evidence, false
+			}
+			if recovered {
+				if !skillsRevisionRecoveryOutput(p.Output, str(wrapper["output"]), at, evidence) {
+					return evidence, false
+				}
+				audit := skillsRevisionRecoveryAudit()
+				evidence.Recovery = &audit
 			}
 			returned = true
 		default:
@@ -161,6 +173,9 @@ func skillsReadRevisionReceipt(s *skillsFS, c skillsConsumeRequest, op string, r
 	e, ok := skillsRevisionNativeProjection(input, str(job["thread_id"]), c.Creator.Workspace, start, end, c, op)
 	if !ok || !skillsRevisionEvidenceBound(e, r, original, current) {
 		return empty, "creation_evidence"
+	}
+	if reason := skillsRevisionRecoveryFiles(e, original, skillsCentralRoot, s); reason != "" {
+		return empty, reason
 	}
 	return e, ""
 }

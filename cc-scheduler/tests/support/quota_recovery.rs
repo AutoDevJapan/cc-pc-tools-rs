@@ -242,6 +242,96 @@ fn fixture() -> (Fixture, subwork_support::Fixture) {
     (f, sub)
 }
 
+fn gpt_research_fixture() -> (Fixture, subwork_support::Fixture) {
+    let (mut f, mut sub) = grok_fixture();
+    let row = &mut sub.db["items"][1];
+    row["subwork"]["kind"] = json!("research");
+    row["task_type"] = json!("research");
+    row["model"] = json!("gpt-6.1-sol");
+    let source = &mut f.e.backend.records[1];
+    source["model"] = row["model"].clone();
+    source["task_type"] = row["task_type"].clone();
+    source["subwork"] = row["subwork"].clone();
+    source["finite_subwork"] = source["finite_review"].take();
+    source["capacity_same_model_retry_count"] = json!(1);
+    source["capacity_account_selector"] = json!("p000001");
+    source["capacity_tried_accounts"] = json!(["p000001"]);
+    source["capacity_history"] = json!([{"kind":"same_model_account_retry","account_selector":"p000001"}]);
+    f.e.backend.quota_inventory["openai"]["safe_routes"] = json!([
+        {"selector":"p000001","aliases":["p000001"],"at":T,"verified":true},
+        {"selector":"p000002","aliases":["p000002"],"at":T,"verified":true}
+    ]);
+    write_json(&f.e.todo_path, &sub.db, 1).unwrap();
+    (f, sub)
+}
+
+#[test]
+fn gpt_quota_research_uses_another_verified_oauth_route_with_the_original_budget() {
+    let (mut f, sub) = gpt_research_fixture();
+    let original = f.e.backend.records[1].clone();
+    let prepared = f.e.prepare(&sub.db["items"][1], sub.repo.to_str().unwrap()).unwrap().unwrap();
+    let selected = &prepared["scheduler"]["selection"];
+    assert_eq!(selected["model"], "gpt-6.1-sol");
+    assert_eq!(selected["effort"], "max");
+    assert_eq!(selected["capacity_account_selector"], "p000002");
+    assert_eq!(selected["quota_recovery"]["retry"]["same_model_count"], 2);
+    assert_eq!(prepared["subwork"], original["subwork"]);
+    assert_eq!(f.e.backend.records[1], original);
+}
+
+#[test]
+fn gpt_quota_rechecks_only_an_expired_source_and_its_automatic_preparation_wait() {
+    for blocked in [false, true] {
+        let (mut f, mut sub) = gpt_research_fixture();
+        let row = &mut sub.db["items"][1];
+        row["scheduler"]["phase"] = json!("preparing");
+        row["scheduler"]["not_before"] = json!(T + 3600.);
+        row["scheduler"]["resource_wait"] = json!({"reason":"http_429","until":T+3600.});
+        row["scheduler"]["preparation_failure"] = json!({"reason":"resource_wait","at":T-30.,"retry_at":T+3600.});
+        if blocked { f.e.backend.records[1]["rate_limit_reset_at"] = json!(T+900.); }
+        write_json(&f.e.todo_path, &sub.db, 1).unwrap();
+        let prepared = f.e.prepare(&sub.db["items"][1], sub.repo.to_str().unwrap()).unwrap();
+        assert_eq!(prepared.is_some(), !blocked);
+        assert_eq!(f.get(2)["scheduler"]["not_before"], T+3600.);
+    }
+}
+
+#[test]
+fn gpt_quota_does_not_admit_unknown_routes_reused_aliases_stops_or_exhausted_budgets() {
+    for case in ["unknown", "no_routes", "used_alias", "stale", "budget", "history", "stop", "dependency"] {
+        let (mut f, mut sub) = gpt_research_fixture();
+        match case {
+            "unknown" => f.e.backend.quota_inventory["openai"]["verified"] = json!(false),
+            "no_routes" => f.e.backend.quota_inventory["openai"]["safe_routes"] = json!([]),
+            "used_alias" => f.e.backend.quota_inventory["openai"]["safe_routes"][1]["aliases"] = json!(["p000001","p000002"]),
+            "stale" => f.e.backend.quota_inventory["openai"]["safe_routes"][1]["at"] = json!(T-61.),
+            "budget" => f.e.backend.records[1]["capacity_same_model_retry_count"] = json!(3),
+            "history" => f.e.backend.records[1]["capacity_same_model_retry_count"] = json!(0),
+            "stop" => sub.db["items"][1]["owner_stopped"] = json!(true),
+            "dependency" => sub.db["items"][1]["wait_on"] = json!([99]),
+            _ => unreachable!(),
+        }
+        write_json(&f.e.todo_path, &sub.db, 1).unwrap();
+        let result = f.e.prepare(&sub.db["items"][1], sub.repo.to_str().unwrap());
+        assert!(result.is_err() || result.unwrap().is_none(), "{case}");
+        assert!(f.e.backend.launched.is_empty());
+    }
+}
+
+#[test]
+fn historic_quota_failure_never_moves_its_deadline_on_each_observation() {
+    use cc_scheduler::preparation::resource_deadline;
+    let source = json!({"status":"failed","finished_at":iso(T-7200.),
+        "last_error":"429 Too Many Requests: usage limit reached","retry_not_before":T-7100.});
+    assert_eq!(resource_deadline(&source, T-7000.), Some(T-3600.));
+    assert_eq!(resource_deadline(&source, T), None);
+    assert_eq!(resource_deadline(&source, T+3600.), None);
+    let mut reset = source;
+    reset["rate_limit_reset_at"] = json!(T+900.);
+    assert_eq!(resource_deadline(&reset, T), Some(T+900.));
+    assert_eq!(resource_deadline(&reset, T+901.), None);
+}
+
 #[test]
 fn verified_quota_review_keeps_policy_luna_in_scheduler_preparation() {
     let (mut f, sub) = fixture();

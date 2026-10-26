@@ -1,0 +1,50 @@
+{
+  "domain": "skills-3080-owner-direction-public-projection-v1",
+  "todo": 3080,
+  "source": "discord-api-v10",
+  "inspection_read_only": true,
+  "canonical_current": true,
+  "selected_option": "a",
+  "question_kind": "direction",
+  "original_decision_scope": {
+    "blocked_fetches_remain_unread": true,
+    "choice_a": "all-useful-verified-skills-without-an-arbitrary-count-cap",
+    "choice_b": "owner-selected-use-cases-only",
+    "current_todo_id": 3080,
+    "license_quality_and_instruction_checks_required": true,
+    "no_new_ai_api_fees": true,
+    "origin_todo_id": 3048,
+    "preserve_existing_skills": true,
+    "source_count": 16
+  },
+  "question_snapshot_sha256": "6c9aa560e426dff2b59582ea55adb6dd45204a0821b6bf93a6ec8721e3a669db",
+  "reply_sha256": "dd073c0306f116b5b06f8fd091398b211a832879416e9f52f06db9e7abaa340a",
+  "source_receipt_sha256": "7ec6165edf7959753f735e338eb524489b5349e2e233fe42a3e63af93f205df3",
+  "reply_body_sha256": "f59556458e358828ede912b7edaae5039505622be6b24e6f7f3b150fc852442a",
+  "captured_at": "2026-10-26T00:26:58.4672095Z",
+  "reply_created_at": "2026-10-20T09:59:14.225000+00:00",
+  "reply_edited": false,
+  "verification": {
+    "ordinary_owner_message_count": 1,
+    "configured_owner_and_question_and_reply_exactly_matched": true,
+    "source_API_current_and_saved_canonical_matched": true,
+    "selected_option_extracted_from_verified_API_message_after_removing_bot_mention": true,
+    "decision_semantics_taken_from_same_original_question_scope": true,
+    "normal_source_verify_command_output_sha256": "dfbb94ce8504163e99a938cecb4c72c3543aabd3d9d541cb04432b851edeea84",
+    "normal_replies_command_output_sha256": "2e2ede4635cefc76ae73a69b3f93faf4111a74306b504a7cef1a8779ac45be38",
+    "private_API_inspection_sha256": "84c1dbd47d380e8d3860e31dfcb2486a463a1c479b338ce1bb4c3938f6e7a86f"
+  },
+  "redaction": {
+    "private_owner_and_message_and_thread_ids_published": false,
+    "raw_private_question_or_reply_published": false,
+    "raw_source_or_API_file_published": false,
+    "meaning": "The machine decision identifier and selected option are a projection, not a verbatim publication of the private conversation. Exact unmodified API question/answer and both original captures remain private."
+  },
+  "scope_limits": [
+    "The decision is broad source coverage, with per-candidate usefulness/license/quality/conflict checks; it is not unconditional adoption of every catalog row.",
+    "Limited guard repair is a different answer and does not supply this direction decision.",
+    "No new expense, API key, hidden existing-body access, original registry restoration, 647 retry or override.",
+    "This is supplied requirement evidence for the bounded public implementation review. A reader without access to the private Discord account cannot authenticate the private account directly; the original task owner and normal API tooling perform that boundary check.",
+    "The API inspection is not a deployment or whole16 completion receipt. Public execution evidence separately records the20 outputs and remaining work."
+  ]
+}

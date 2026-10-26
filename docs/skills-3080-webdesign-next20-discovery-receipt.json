@@ -1,0 +1,163 @@
+{
+  "checked_at": "2026-10-25T22:20:16.8647775+00:00",
+  "method": "fresh installed Codex app-server initialize + skills/list forceReload",
+  "model_called": false,
+  "label": "installed",
+  "targets": 20,
+  "total_discovered_metadata": 421,
+  "found_count": 20,
+  "parse_error_count": 0,
+  "notification_count": 2,
+  "same_names_other_paths": 0,
+  "found": [
+    {
+      "name": "glass-dark-mode-clock",
+      "selected_central_path": true,
+      "enabled_present": true,
+      "enabled": true,
+      "description_matches": true
+    },
+    {
+      "name": "globe-particles",
+      "selected_central_path": true,
+      "enabled_present": true,
+      "enabled": true,
+      "description_matches": true
+    },
+    {
+      "name": "high-contrast-skeuomorphic-clean",
+      "selected_central_path": true,
+      "enabled_present": true,
+      "enabled": true,
+      "description_matches": true
+    },
+    {
+      "name": "horizontal-scroll-scenes",
+      "selected_central_path": true,
+      "enabled_present": true,
+      "enabled": true,
+      "description_matches": true
+    },
+    {
+      "name": "html-demo",
+      "selected_central_path": true,
+      "enabled_present": true,
+      "enabled": true,
+      "description_matches": true
+    },
+    {
+      "name": "image-first-grid-layout",
+      "selected_central_path": true,
+      "enabled_present": true,
+      "enabled": true,
+      "description_matches": true
+    },
+    {
+      "name": "light-mode-paper-technical",
+      "selected_central_path": true,
+      "enabled_present": true,
+      "enabled": true,
+      "description_matches": true
+    },
+    {
+      "name": "matterjs",
+      "selected_central_path": true,
+      "enabled_present": true,
+      "enabled": true,
+      "description_matches": true
+    },
+    {
+      "name": "mesh-gradient-dark-blue-clean",
+      "selected_central_path": true,
+      "enabled_present": true,
+      "enabled": true,
+      "description_matches": true
+    },
+    {
+      "name": "operational-enterprise-ai",
+      "selected_central_path": true,
+      "enabled_present": true,
+      "enabled": true,
+      "description_matches": true
+    },
+    {
+      "name": "paper-cinder-transition",
+      "selected_central_path": true,
+      "enabled_present": true,
+      "enabled": true,
+      "description_matches": true
+    },
+    {
+      "name": "product-proof-saas",
+      "selected_central_path": true,
+      "enabled_present": true,
+      "enabled": true,
+      "description_matches": true
+    },
+    {
+      "name": "reveal-hover-effect",
+      "selected_central_path": true,
+      "enabled_present": true,
+      "enabled": true,
+      "description_matches": true
+    },
+    {
+      "name": "scroll-scrubbed-visual-sequence",
+      "selected_central_path": true,
+      "enabled_present": true,
+      "enabled": true,
+      "description_matches": true
+    },
+    {
+      "name": "split-layout-technical",
+      "selected_central_path": true,
+      "enabled_present": true,
+      "enabled": true,
+      "description_matches": true
+    },
+    {
+      "name": "technical-wireframe-info-layout",
+      "selected_central_path": true,
+      "enabled_present": true,
+      "enabled": true,
+      "description_matches": true
+    },
+    {
+      "name": "threejs-landscape",
+      "selected_central_path": true,
+      "enabled_present": true,
+      "enabled": true,
+      "description_matches": true
+    },
+    {
+      "name": "threejs-towers",
+      "selected_central_path": true,
+      "enabled_present": true,
+      "enabled": true,
+      "description_matches": true
+    },
+    {
+      "name": "threejs-weather",
+      "selected_central_path": true,
+      "enabled_present": true,
+      "enabled": true,
+      "description_matches": true
+    },
+    {
+      "name": "webgl-laser",
+      "selected_central_path": true,
+      "enabled_present": true,
+      "enabled": true,
+      "description_matches": true
+    }
+  ],
+  "process_tree_exit_confirmed": true,
+  "pending_stdout_read_drained": true,
+  "failure": null,
+  "diagnostic": {
+    "scan_traversal_limit_count": 2,
+    "context_budget_marker_count": 0,
+    "raw_stderr_not_saved": true
+  },
+  "limit": "Only requested target metadata is retained. No full private catalog or unknown body text is saved. No model turn or context-budget proof; discovery-internal file parsing is not a semantic body review."
+}

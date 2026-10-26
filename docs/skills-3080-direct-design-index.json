@@ -47,6 +47,11 @@
       "file": "skills-3080-webdesign-next14-designs.json",
       "sha256": "b7a11ebf3020ef5afaf75c921dcdc33f3b4174a9ee6c2492f615c486fef02410",
       "target_count": 14
+    },
+    {
+      "file": "skills-3080-webdesign-next20-designs.json",
+      "sha256": "96452ee15a98b87d4fc31ed273fb7620b36aca82059e8e86d3520f2cd2095813",
+      "target_count": 20
     }
   ]
 }

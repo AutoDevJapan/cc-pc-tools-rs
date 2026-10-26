@@ -8,7 +8,7 @@
   "entrypoints_expected": 177,
   "entrypoints_fulltext_read": 177,
   "entrypoints_unread": 0,
-  "installed": 57,
+  "installed": 77,
   "integrated": 2,
   "excluded": 0,
   "central_write": 22,
@@ -11309,7 +11309,7 @@
       "body_read_complete": true,
       "third_party_assets_or_support_rights_accepted": false,
       "git_blob": "57b3d88eb995748c9a781e5e5449bfcb54bd13ce",
-      "installed_by_todo3080": false,
+      "installed_by_todo3080": true,
       "required_changes": [
         "calibration/degree/時刻の見た目が科学的計測の証拠であるとしない。実機能なら単位/基準/現在値を本当に接続し、装飾なら意味と区別する。",
         "小label/回転文字/blurの可読性、keyboard/contrast/狭い画面、静的/reduced表示と費用を確認し、同対象の具体画像回答後に実装する。"
@@ -11326,7 +11326,13 @@
         "third_party_assets_or_support_rights_accepted": false,
         "scope": "作者の既読手順文の評価のみ。外部ブランド/画像/元サイト/第三者package/配布コードと未読supportの許諾受入ではない。",
         "author_text": "Root MIT / Copyright(c)2026 Meng To. Selected subtree notice checked by fixed tree; no separate notice found."
-      }
+      },
+      "installation_before_next20": {
+        "installed_by_todo3080": false,
+        "baseline_commit": "25407d5a12256f1cfce9edbb2f3466fb7de5491c",
+        "historical_evaluation_sha256": "2404589f8671c9620faf2801bdf7975a847c8f90c46260ad01da64ac1ddc3265"
+      },
+      "current_installation_evidence": "skills-3080-webdesign-next20-installation-evidence.json"
     },
     {
       "inventory_id": "github:111f61a743f00016888dd5af3f84365b176fef4f9814219563830c1e0cb0985a",
@@ -15328,7 +15334,7 @@
       "selected_scope_notice_verified": true,
       "third_party_assets_or_support_rights_accepted": false,
       "support_read_complete": false,
-      "installed_by_todo3080": false,
+      "installed_by_todo3080": true,
       "integrated_by_todo3080": false,
       "excluded_by_todo3080": false,
       "independent_review_complete": false,
@@ -15436,7 +15442,13 @@
           "body_read": false
         }
       ],
-      "parent_policy_correction": "上流の好み/機器/採点/測定値を本人方針へ昇格しない。本文作者のMITと第三者素材の権利を区別。未保存支持の一律取得・全支持監査を新義務にせず、有用な原則の適用範囲を限定して検討する。既存本人回答・通常操作・既存契約内の利用を再承認待ちにしない。"
+      "parent_policy_correction": "上流の好み/機器/採点/測定値を本人方針へ昇格しない。本文作者のMITと第三者素材の権利を区別。未保存支持の一律取得・全支持監査を新義務にせず、有用な原則の適用範囲を限定して検討する。既存本人回答・通常操作・既存契約内の利用を再承認待ちにしない。",
+      "installation_before_next20": {
+        "installed_by_todo3080": false,
+        "baseline_commit": "25407d5a12256f1cfce9edbb2f3466fb7de5491c",
+        "historical_evaluation_sha256": "2404589f8671c9620faf2801bdf7975a847c8f90c46260ad01da64ac1ddc3265"
+      },
+      "current_installation_evidence": "skills-3080-webdesign-next20-installation-evidence.json"
     },
     {
       "inventory_id": "github:8cf19f6fea1a18266d92303a84e52cf30b3a97ce1918c425b9e9aaff01966b8b",
@@ -15927,7 +15939,7 @@
       "selected_scope_notice_verified": true,
       "third_party_assets_or_support_rights_accepted": false,
       "support_read_complete": false,
-      "installed_by_todo3080": false,
+      "installed_by_todo3080": true,
       "integrated_by_todo3080": false,
       "excluded_by_todo3080": false,
       "independent_review_complete": false,
@@ -16060,7 +16072,13 @@
           "body_read": false
         }
       ],
-      "parent_policy_correction": "上流の好み/機器/採点/測定値を本人方針へ昇格しない。本文作者のMITと第三者素材の権利を区別。未保存支持の一律取得・全支持監査を新義務にせず、有用な原則の適用範囲を限定して検討する。既存本人回答・通常操作・既存契約内の利用を再承認待ちにしない。"
+      "parent_policy_correction": "上流の好み/機器/採点/測定値を本人方針へ昇格しない。本文作者のMITと第三者素材の権利を区別。未保存支持の一律取得・全支持監査を新義務にせず、有用な原則の適用範囲を限定して検討する。既存本人回答・通常操作・既存契約内の利用を再承認待ちにしない。",
+      "installation_before_next20": {
+        "installed_by_todo3080": false,
+        "baseline_commit": "25407d5a12256f1cfce9edbb2f3466fb7de5491c",
+        "historical_evaluation_sha256": "2404589f8671c9620faf2801bdf7975a847c8f90c46260ad01da64ac1ddc3265"
+      },
+      "current_installation_evidence": "skills-3080-webdesign-next20-installation-evidence.json"
     },
     {
       "inventory_id": "github:2faf356398886a7b385fccc1aaf02ac143060374a09ef1f042876b0dcedf61d6",
@@ -16105,7 +16123,7 @@
       "selected_scope_notice_verified": true,
       "third_party_assets_or_support_rights_accepted": false,
       "support_read_complete": false,
-      "installed_by_todo3080": false,
+      "installed_by_todo3080": true,
       "integrated_by_todo3080": false,
       "excluded_by_todo3080": false,
       "independent_review_complete": false,
@@ -16165,7 +16183,13 @@
           "body_read": false
         }
       ],
-      "parent_policy_correction": "上流の好み/機器/採点/測定値を本人方針へ昇格しない。本文作者のMITと第三者素材の権利を区別。未保存支持の一律取得・全支持監査を新義務にせず、有用な原則の適用範囲を限定して検討する。既存本人回答・通常操作・既存契約内の利用を再承認待ちにしない。"
+      "parent_policy_correction": "上流の好み/機器/採点/測定値を本人方針へ昇格しない。本文作者のMITと第三者素材の権利を区別。未保存支持の一律取得・全支持監査を新義務にせず、有用な原則の適用範囲を限定して検討する。既存本人回答・通常操作・既存契約内の利用を再承認待ちにしない。",
+      "installation_before_next20": {
+        "installed_by_todo3080": false,
+        "baseline_commit": "25407d5a12256f1cfce9edbb2f3466fb7de5491c",
+        "historical_evaluation_sha256": "2404589f8671c9620faf2801bdf7975a847c8f90c46260ad01da64ac1ddc3265"
+      },
+      "current_installation_evidence": "skills-3080-webdesign-next20-installation-evidence.json"
     },
     {
       "inventory_id": "github:9fa942d1c78b077fb57c059fceb8d5ee735902dbc2eba7691b7b5236ee2e9835",
@@ -16210,7 +16234,7 @@
       "selected_scope_notice_verified": true,
       "third_party_assets_or_support_rights_accepted": false,
       "support_read_complete": false,
-      "installed_by_todo3080": false,
+      "installed_by_todo3080": true,
       "integrated_by_todo3080": false,
       "excluded_by_todo3080": false,
       "independent_review_complete": false,
@@ -16414,7 +16438,13 @@
           "body_read": false
         }
       ],
-      "parent_policy_correction": "上流の好み/機器/採点/測定値を本人方針へ昇格しない。本文作者のMITと第三者素材の権利を区別。未保存支持の一律取得・全支持監査を新義務にせず、有用な原則の適用範囲を限定して検討する。既存本人回答・通常操作・既存契約内の利用を再承認待ちにしない。"
+      "parent_policy_correction": "上流の好み/機器/採点/測定値を本人方針へ昇格しない。本文作者のMITと第三者素材の権利を区別。未保存支持の一律取得・全支持監査を新義務にせず、有用な原則の適用範囲を限定して検討する。既存本人回答・通常操作・既存契約内の利用を再承認待ちにしない。",
+      "installation_before_next20": {
+        "installed_by_todo3080": false,
+        "baseline_commit": "25407d5a12256f1cfce9edbb2f3466fb7de5491c",
+        "historical_evaluation_sha256": "2404589f8671c9620faf2801bdf7975a847c8f90c46260ad01da64ac1ddc3265"
+      },
+      "current_installation_evidence": "skills-3080-webdesign-next20-installation-evidence.json"
     },
     {
       "inventory_id": "github:3e8d90ce2de515921e52d52993f9de342b9664a910a50131648291525c128e11",
@@ -16456,7 +16486,7 @@
       "selected_scope_notice_verified": true,
       "third_party_assets_or_support_rights_accepted": false,
       "support_read_complete": false,
-      "installed_by_todo3080": false,
+      "installed_by_todo3080": true,
       "integrated_by_todo3080": false,
       "excluded_by_todo3080": false,
       "independent_review_complete": false,
@@ -16600,7 +16630,13 @@
           "body_read": false
         }
       ],
-      "parent_policy_correction": "上流の好み/機器/採点/測定値を本人方針へ昇格しない。本文作者のMITと第三者素材の権利を区別。未保存支持の一律取得・全支持監査を新義務にせず、有用な原則の適用範囲を限定して検討する。既存本人回答・通常操作・既存契約内の利用を再承認待ちにしない。"
+      "parent_policy_correction": "上流の好み/機器/採点/測定値を本人方針へ昇格しない。本文作者のMITと第三者素材の権利を区別。未保存支持の一律取得・全支持監査を新義務にせず、有用な原則の適用範囲を限定して検討する。既存本人回答・通常操作・既存契約内の利用を再承認待ちにしない。",
+      "installation_before_next20": {
+        "installed_by_todo3080": false,
+        "baseline_commit": "25407d5a12256f1cfce9edbb2f3466fb7de5491c",
+        "historical_evaluation_sha256": "2404589f8671c9620faf2801bdf7975a847c8f90c46260ad01da64ac1ddc3265"
+      },
+      "current_installation_evidence": "skills-3080-webdesign-next20-installation-evidence.json"
     },
     {
       "inventory_id": "github:2bbfd89edc8bc5f62ea869ca251b2cd0d70d6b32cbe9fac2fd268d107402f463",
@@ -16744,7 +16780,7 @@
       "selected_scope_notice_verified": true,
       "third_party_assets_or_support_rights_accepted": false,
       "support_read_complete": false,
-      "installed_by_todo3080": false,
+      "installed_by_todo3080": true,
       "integrated_by_todo3080": false,
       "excluded_by_todo3080": false,
       "independent_review_complete": false,
@@ -16865,7 +16901,13 @@
           "body_read": false
         }
       ],
-      "parent_policy_correction": "上流の好み/機器/採点/測定値を本人方針へ昇格しない。本文作者のMITと第三者素材の権利を区別。未保存支持の一律取得・全支持監査を新義務にせず、有用な原則の適用範囲を限定して検討する。既存本人回答・通常操作・既存契約内の利用を再承認待ちにしない。"
+      "parent_policy_correction": "上流の好み/機器/採点/測定値を本人方針へ昇格しない。本文作者のMITと第三者素材の権利を区別。未保存支持の一律取得・全支持監査を新義務にせず、有用な原則の適用範囲を限定して検討する。既存本人回答・通常操作・既存契約内の利用を再承認待ちにしない。",
+      "installation_before_next20": {
+        "installed_by_todo3080": false,
+        "baseline_commit": "25407d5a12256f1cfce9edbb2f3466fb7de5491c",
+        "historical_evaluation_sha256": "2404589f8671c9620faf2801bdf7975a847c8f90c46260ad01da64ac1ddc3265"
+      },
+      "current_installation_evidence": "skills-3080-webdesign-next20-installation-evidence.json"
     },
     {
       "inventory_id": "github:44fb8bb92bf509be3a1357ac1a69657b189e50508a1e61e18f8bba1d5b55cbe8",
@@ -17373,7 +17415,7 @@
       "selected_scope_notice_verified": true,
       "third_party_assets_or_support_rights_accepted": false,
       "support_read_complete": false,
-      "installed_by_todo3080": false,
+      "installed_by_todo3080": true,
       "integrated_by_todo3080": false,
       "excluded_by_todo3080": false,
       "independent_review_complete": false,
@@ -17421,7 +17463,13 @@
           "body_read": false
         }
       ],
-      "parent_policy_correction": "上流の好み/機器/採点/測定値を本人方針へ昇格しない。本文作者のMITと第三者素材の権利を区別。未保存支持の一律取得・全支持監査を新義務にせず、有用な原則の適用範囲を限定して検討する。既存本人回答・通常操作・既存契約内の利用を再承認待ちにしない。"
+      "parent_policy_correction": "上流の好み/機器/採点/測定値を本人方針へ昇格しない。本文作者のMITと第三者素材の権利を区別。未保存支持の一律取得・全支持監査を新義務にせず、有用な原則の適用範囲を限定して検討する。既存本人回答・通常操作・既存契約内の利用を再承認待ちにしない。",
+      "installation_before_next20": {
+        "installed_by_todo3080": false,
+        "baseline_commit": "25407d5a12256f1cfce9edbb2f3466fb7de5491c",
+        "historical_evaluation_sha256": "2404589f8671c9620faf2801bdf7975a847c8f90c46260ad01da64ac1ddc3265"
+      },
+      "current_installation_evidence": "skills-3080-webdesign-next20-installation-evidence.json"
     },
     {
       "inventory_id": "github:d56d4412c11b169e6708f534340217792a827edd83987232bb0c0f4913c09a3b",
@@ -17464,7 +17512,7 @@
       "selected_scope_notice_verified": true,
       "third_party_assets_or_support_rights_accepted": false,
       "support_read_complete": false,
-      "installed_by_todo3080": false,
+      "installed_by_todo3080": true,
       "integrated_by_todo3080": false,
       "excluded_by_todo3080": false,
       "independent_review_complete": false,
@@ -17537,7 +17585,13 @@
           "body_read": false
         }
       ],
-      "parent_policy_correction": "上流の好み/機器/採点/測定値を本人方針へ昇格しない。本文作者のMITと第三者素材の権利を区別。未保存支持の一律取得・全支持監査を新義務にせず、有用な原則の適用範囲を限定して検討する。既存本人回答・通常操作・既存契約内の利用を再承認待ちにしない。"
+      "parent_policy_correction": "上流の好み/機器/採点/測定値を本人方針へ昇格しない。本文作者のMITと第三者素材の権利を区別。未保存支持の一律取得・全支持監査を新義務にせず、有用な原則の適用範囲を限定して検討する。既存本人回答・通常操作・既存契約内の利用を再承認待ちにしない。",
+      "installation_before_next20": {
+        "installed_by_todo3080": false,
+        "baseline_commit": "25407d5a12256f1cfce9edbb2f3466fb7de5491c",
+        "historical_evaluation_sha256": "2404589f8671c9620faf2801bdf7975a847c8f90c46260ad01da64ac1ddc3265"
+      },
+      "current_installation_evidence": "skills-3080-webdesign-next20-installation-evidence.json"
     },
     {
       "inventory_id": "github:7cbbee11d2ebc0c15fd9b0d36ef7f850847ddacffafb5f4a1fff9c0c7a5c8c64",
@@ -18113,7 +18167,7 @@
       "selected_scope_notice_verified": true,
       "third_party_assets_or_support_rights_accepted": false,
       "support_read_complete": false,
-      "installed_by_todo3080": false,
+      "installed_by_todo3080": true,
       "integrated_by_todo3080": false,
       "excluded_by_todo3080": false,
       "independent_review_complete": false,
@@ -18185,7 +18239,13 @@
           "body_read": false
         }
       ],
-      "parent_policy_correction": "上流の好み/機器/採点/測定値を本人方針へ昇格しない。本文作者のMITと第三者素材の権利を区別。未保存支持の一律取得・全支持監査を新義務にせず、有用な原則の適用範囲を限定して検討する。既存本人回答・通常操作・既存契約内の利用を再承認待ちにしない。"
+      "parent_policy_correction": "上流の好み/機器/採点/測定値を本人方針へ昇格しない。本文作者のMITと第三者素材の権利を区別。未保存支持の一律取得・全支持監査を新義務にせず、有用な原則の適用範囲を限定して検討する。既存本人回答・通常操作・既存契約内の利用を再承認待ちにしない。",
+      "installation_before_next20": {
+        "installed_by_todo3080": false,
+        "baseline_commit": "25407d5a12256f1cfce9edbb2f3466fb7de5491c",
+        "historical_evaluation_sha256": "2404589f8671c9620faf2801bdf7975a847c8f90c46260ad01da64ac1ddc3265"
+      },
+      "current_installation_evidence": "skills-3080-webdesign-next20-installation-evidence.json"
     },
     {
       "inventory_id": "github:d069b46afe20612b0a7740204ef71f0a4d55da7dd92293978eb60ad2c84b1128",
@@ -18342,7 +18402,7 @@
       "selected_scope_notice_verified": true,
       "third_party_assets_or_support_rights_accepted": false,
       "support_read_complete": false,
-      "installed_by_todo3080": false,
+      "installed_by_todo3080": true,
       "integrated_by_todo3080": false,
       "excluded_by_todo3080": false,
       "independent_review_complete": false,
@@ -18402,7 +18462,13 @@
           "body_read": false
         }
       ],
-      "parent_policy_correction": "上流の好み/機器/採点/測定値を本人方針へ昇格しない。本文作者のMITと第三者素材の権利を区別。未保存支持の一律取得・全支持監査を新義務にせず、有用な原則の適用範囲を限定して検討する。既存本人回答・通常操作・既存契約内の利用を再承認待ちにしない。"
+      "parent_policy_correction": "上流の好み/機器/採点/測定値を本人方針へ昇格しない。本文作者のMITと第三者素材の権利を区別。未保存支持の一律取得・全支持監査を新義務にせず、有用な原則の適用範囲を限定して検討する。既存本人回答・通常操作・既存契約内の利用を再承認待ちにしない。",
+      "installation_before_next20": {
+        "installed_by_todo3080": false,
+        "baseline_commit": "25407d5a12256f1cfce9edbb2f3466fb7de5491c",
+        "historical_evaluation_sha256": "2404589f8671c9620faf2801bdf7975a847c8f90c46260ad01da64ac1ddc3265"
+      },
+      "current_installation_evidence": "skills-3080-webdesign-next20-installation-evidence.json"
     },
     {
       "inventory_id": "github:a89e967becb119a2e1fde4392aaeb0c034ff9c683290947db8c690624fc9887e",
@@ -18689,7 +18755,7 @@
       "selected_scope_notice_verified": true,
       "third_party_assets_or_support_rights_accepted": false,
       "support_read_complete": false,
-      "installed_by_todo3080": false,
+      "installed_by_todo3080": true,
       "integrated_by_todo3080": false,
       "excluded_by_todo3080": false,
       "independent_review_complete": false,
@@ -18762,7 +18828,13 @@
           "body_read": false
         }
       ],
-      "parent_policy_correction": "上流の好み/機器/採点/測定値を本人方針へ昇格しない。本文作者のMITと第三者素材の権利を区別。未保存支持の一律取得・全支持監査を新義務にせず、有用な原則の適用範囲を限定して検討する。既存本人回答・通常操作・既存契約内の利用を再承認待ちにしない。"
+      "parent_policy_correction": "上流の好み/機器/採点/測定値を本人方針へ昇格しない。本文作者のMITと第三者素材の権利を区別。未保存支持の一律取得・全支持監査を新義務にせず、有用な原則の適用範囲を限定して検討する。既存本人回答・通常操作・既存契約内の利用を再承認待ちにしない。",
+      "installation_before_next20": {
+        "installed_by_todo3080": false,
+        "baseline_commit": "25407d5a12256f1cfce9edbb2f3466fb7de5491c",
+        "historical_evaluation_sha256": "2404589f8671c9620faf2801bdf7975a847c8f90c46260ad01da64ac1ddc3265"
+      },
+      "current_installation_evidence": "skills-3080-webdesign-next20-installation-evidence.json"
     },
     {
       "inventory_id": "github:f53514a69ef4dc7566022ec01fdc6a143dc5d6df7fad40ec89bfa4212d9a9a54",
@@ -19114,7 +19186,7 @@
       "selected_scope_notice_verified": true,
       "third_party_assets_or_support_rights_accepted": false,
       "support_read_complete": false,
-      "installed_by_todo3080": false,
+      "installed_by_todo3080": true,
       "integrated_by_todo3080": false,
       "excluded_by_todo3080": false,
       "independent_review_complete": false,
@@ -19222,7 +19294,13 @@
           "body_read": false
         }
       ],
-      "parent_policy_correction": "上流の好み/機器/採点/測定値を本人方針へ昇格しない。本文作者のMITと第三者素材の権利を区別。未保存支持の一律取得・全支持監査を新義務にせず、有用な原則の適用範囲を限定して検討する。既存本人回答・通常操作・既存契約内の利用を再承認待ちにしない。"
+      "parent_policy_correction": "上流の好み/機器/採点/測定値を本人方針へ昇格しない。本文作者のMITと第三者素材の権利を区別。未保存支持の一律取得・全支持監査を新義務にせず、有用な原則の適用範囲を限定して検討する。既存本人回答・通常操作・既存契約内の利用を再承認待ちにしない。",
+      "installation_before_next20": {
+        "installed_by_todo3080": false,
+        "baseline_commit": "25407d5a12256f1cfce9edbb2f3466fb7de5491c",
+        "historical_evaluation_sha256": "2404589f8671c9620faf2801bdf7975a847c8f90c46260ad01da64ac1ddc3265"
+      },
+      "current_installation_evidence": "skills-3080-webdesign-next20-installation-evidence.json"
     },
     {
       "inventory_id": "github:0cec10b6427507c5c85d8c86f1997207a32436dca358aa7698d428e1c3124e05",
@@ -19381,7 +19459,7 @@
       "selected_scope_notice_verified": true,
       "third_party_assets_or_support_rights_accepted": false,
       "support_read_complete": false,
-      "installed_by_todo3080": false,
+      "installed_by_todo3080": true,
       "integrated_by_todo3080": false,
       "excluded_by_todo3080": false,
       "independent_review_complete": false,
@@ -19454,7 +19532,13 @@
           "body_read": false
         }
       ],
-      "parent_policy_correction": "上流の好み/機器/採点/測定値を本人方針へ昇格しない。本文作者のMITと第三者素材の権利を区別。未保存支持の一律取得・全支持監査を新義務にせず、有用な原則の適用範囲を限定して検討する。既存本人回答・通常操作・既存契約内の利用を再承認待ちにしない。"
+      "parent_policy_correction": "上流の好み/機器/採点/測定値を本人方針へ昇格しない。本文作者のMITと第三者素材の権利を区別。未保存支持の一律取得・全支持監査を新義務にせず、有用な原則の適用範囲を限定して検討する。既存本人回答・通常操作・既存契約内の利用を再承認待ちにしない。",
+      "installation_before_next20": {
+        "installed_by_todo3080": false,
+        "baseline_commit": "25407d5a12256f1cfce9edbb2f3466fb7de5491c",
+        "historical_evaluation_sha256": "2404589f8671c9620faf2801bdf7975a847c8f90c46260ad01da64ac1ddc3265"
+      },
+      "current_installation_evidence": "skills-3080-webdesign-next20-installation-evidence.json"
     },
     {
       "inventory_id": "github:ea2e2086ef1a7d6aa21fcb8e7b51a4f76419046be30539edae5dcffd921582c7",
@@ -20342,7 +20426,7 @@
       "selected_scope_notice_verified": true,
       "third_party_assets_or_support_rights_accepted": false,
       "support_read_complete": false,
-      "installed_by_todo3080": false,
+      "installed_by_todo3080": true,
       "integrated_by_todo3080": false,
       "excluded_by_todo3080": false,
       "independent_review_complete": false,
@@ -20487,7 +20571,13 @@
           "body_read": false
         }
       ],
-      "parent_policy_correction": "上流の好み/機器/採点/測定値を本人方針へ昇格しない。本文作者のMITと第三者素材の権利を区別。未保存支持の一律取得・全支持監査を新義務にせず、有用な原則の適用範囲を限定して検討する。既存本人回答・通常操作・既存契約内の利用を再承認待ちにしない。"
+      "parent_policy_correction": "上流の好み/機器/採点/測定値を本人方針へ昇格しない。本文作者のMITと第三者素材の権利を区別。未保存支持の一律取得・全支持監査を新義務にせず、有用な原則の適用範囲を限定して検討する。既存本人回答・通常操作・既存契約内の利用を再承認待ちにしない。",
+      "installation_before_next20": {
+        "installed_by_todo3080": false,
+        "baseline_commit": "25407d5a12256f1cfce9edbb2f3466fb7de5491c",
+        "historical_evaluation_sha256": "2404589f8671c9620faf2801bdf7975a847c8f90c46260ad01da64ac1ddc3265"
+      },
+      "current_installation_evidence": "skills-3080-webdesign-next20-installation-evidence.json"
     },
     {
       "inventory_id": "github:e12287c016fc22599eea7b2bc8045de2efed262488fc2d489fd579465e1fd9a5",
@@ -20818,7 +20908,7 @@
       "selected_scope_notice_verified": true,
       "third_party_assets_or_support_rights_accepted": false,
       "support_read_complete": false,
-      "installed_by_todo3080": false,
+      "installed_by_todo3080": true,
       "integrated_by_todo3080": false,
       "excluded_by_todo3080": false,
       "independent_review_complete": false,
@@ -20903,7 +20993,13 @@
           "body_read": false
         }
       ],
-      "parent_policy_correction": "上流の好み/機器/採点/測定値を本人方針へ昇格しない。本文作者のMITと第三者素材の権利を区別。未保存支持の一律取得・全支持監査を新義務にせず、有用な原則の適用範囲を限定して検討する。既存本人回答・通常操作・既存契約内の利用を再承認待ちにしない。"
+      "parent_policy_correction": "上流の好み/機器/採点/測定値を本人方針へ昇格しない。本文作者のMITと第三者素材の権利を区別。未保存支持の一律取得・全支持監査を新義務にせず、有用な原則の適用範囲を限定して検討する。既存本人回答・通常操作・既存契約内の利用を再承認待ちにしない。",
+      "installation_before_next20": {
+        "installed_by_todo3080": false,
+        "baseline_commit": "25407d5a12256f1cfce9edbb2f3466fb7de5491c",
+        "historical_evaluation_sha256": "2404589f8671c9620faf2801bdf7975a847c8f90c46260ad01da64ac1ddc3265"
+      },
+      "current_installation_evidence": "skills-3080-webdesign-next20-installation-evidence.json"
     },
     {
       "inventory_id": "github:6704464c96be39590ad1209dda34dd1b5cbc5c1181c0afe7ea532d8681bdc3b9",
@@ -21026,7 +21122,7 @@
       "selected_scope_notice_verified": true,
       "third_party_assets_or_support_rights_accepted": false,
       "support_read_complete": false,
-      "installed_by_todo3080": false,
+      "installed_by_todo3080": true,
       "integrated_by_todo3080": false,
       "excluded_by_todo3080": false,
       "independent_review_complete": false,
@@ -21099,7 +21195,13 @@
           "body_read": false
         }
       ],
-      "parent_policy_correction": "上流の好み/機器/採点/測定値を本人方針へ昇格しない。本文作者のMITと第三者素材の権利を区別。未保存支持の一律取得・全支持監査を新義務にせず、有用な原則の適用範囲を限定して検討する。既存本人回答・通常操作・既存契約内の利用を再承認待ちにしない。"
+      "parent_policy_correction": "上流の好み/機器/採点/測定値を本人方針へ昇格しない。本文作者のMITと第三者素材の権利を区別。未保存支持の一律取得・全支持監査を新義務にせず、有用な原則の適用範囲を限定して検討する。既存本人回答・通常操作・既存契約内の利用を再承認待ちにしない。",
+      "installation_before_next20": {
+        "installed_by_todo3080": false,
+        "baseline_commit": "25407d5a12256f1cfce9edbb2f3466fb7de5491c",
+        "historical_evaluation_sha256": "2404589f8671c9620faf2801bdf7975a847c8f90c46260ad01da64ac1ddc3265"
+      },
+      "current_installation_evidence": "skills-3080-webdesign-next20-installation-evidence.json"
     },
     {
       "inventory_id": "github:b3b7129158683314ca6108daf2c872031b36e12abd78797f03d3e93c29143a08",
@@ -21143,7 +21245,7 @@
       "selected_scope_notice_verified": true,
       "third_party_assets_or_support_rights_accepted": false,
       "support_read_complete": false,
-      "installed_by_todo3080": false,
+      "installed_by_todo3080": true,
       "integrated_by_todo3080": false,
       "excluded_by_todo3080": false,
       "independent_review_complete": false,
@@ -21216,7 +21318,13 @@
           "body_read": false
         }
       ],
-      "parent_policy_correction": "上流の好み/機器/採点/測定値を本人方針へ昇格しない。本文作者のMITと第三者素材の権利を区別。未保存支持の一律取得・全支持監査を新義務にせず、有用な原則の適用範囲を限定して検討する。既存本人回答・通常操作・既存契約内の利用を再承認待ちにしない。"
+      "parent_policy_correction": "上流の好み/機器/採点/測定値を本人方針へ昇格しない。本文作者のMITと第三者素材の権利を区別。未保存支持の一律取得・全支持監査を新義務にせず、有用な原則の適用範囲を限定して検討する。既存本人回答・通常操作・既存契約内の利用を再承認待ちにしない。",
+      "installation_before_next20": {
+        "installed_by_todo3080": false,
+        "baseline_commit": "25407d5a12256f1cfce9edbb2f3466fb7de5491c",
+        "historical_evaluation_sha256": "2404589f8671c9620faf2801bdf7975a847c8f90c46260ad01da64ac1ddc3265"
+      },
+      "current_installation_evidence": "skills-3080-webdesign-next20-installation-evidence.json"
     },
     {
       "inventory_id": "github:4e7104772752cf2f9454e3a2fe750cb3989d1e58b883736334fcf1f122d7f852",
@@ -21260,7 +21368,7 @@
       "selected_scope_notice_verified": true,
       "third_party_assets_or_support_rights_accepted": false,
       "support_read_complete": false,
-      "installed_by_todo3080": false,
+      "installed_by_todo3080": true,
       "integrated_by_todo3080": false,
       "excluded_by_todo3080": false,
       "independent_review_complete": false,
@@ -21333,7 +21441,13 @@
           "body_read": false
         }
       ],
-      "parent_policy_correction": "上流の好み/機器/採点/測定値を本人方針へ昇格しない。本文作者のMITと第三者素材の権利を区別。未保存支持の一律取得・全支持監査を新義務にせず、有用な原則の適用範囲を限定して検討する。既存本人回答・通常操作・既存契約内の利用を再承認待ちにしない。"
+      "parent_policy_correction": "上流の好み/機器/採点/測定値を本人方針へ昇格しない。本文作者のMITと第三者素材の権利を区別。未保存支持の一律取得・全支持監査を新義務にせず、有用な原則の適用範囲を限定して検討する。既存本人回答・通常操作・既存契約内の利用を再承認待ちにしない。",
+      "installation_before_next20": {
+        "installed_by_todo3080": false,
+        "baseline_commit": "25407d5a12256f1cfce9edbb2f3466fb7de5491c",
+        "historical_evaluation_sha256": "2404589f8671c9620faf2801bdf7975a847c8f90c46260ad01da64ac1ddc3265"
+      },
+      "current_installation_evidence": "skills-3080-webdesign-next20-installation-evidence.json"
     },
     {
       "inventory_id": "github:3b90542dbc103555cee97fc61ad13435a0dc00f7aaebb1bffe82b6be5e0e08c2",
@@ -21978,7 +22092,7 @@
       "selected_scope_notice_verified": true,
       "third_party_assets_or_support_rights_accepted": false,
       "support_read_complete": false,
-      "installed_by_todo3080": false,
+      "installed_by_todo3080": true,
       "integrated_by_todo3080": false,
       "excluded_by_todo3080": false,
       "independent_review_complete": false,
@@ -22098,7 +22212,13 @@
           "body_read": false
         }
       ],
-      "parent_policy_correction": "上流の好み/機器/採点/測定値を本人方針へ昇格しない。本文作者のMITと第三者素材の権利を区別。未保存支持の一律取得・全支持監査を新義務にせず、有用な原則の適用範囲を限定して検討する。既存本人回答・通常操作・既存契約内の利用を再承認待ちにしない。"
+      "parent_policy_correction": "上流の好み/機器/採点/測定値を本人方針へ昇格しない。本文作者のMITと第三者素材の権利を区別。未保存支持の一律取得・全支持監査を新義務にせず、有用な原則の適用範囲を限定して検討する。既存本人回答・通常操作・既存契約内の利用を再承認待ちにしない。",
+      "installation_before_next20": {
+        "installed_by_todo3080": false,
+        "baseline_commit": "25407d5a12256f1cfce9edbb2f3466fb7de5491c",
+        "historical_evaluation_sha256": "2404589f8671c9620faf2801bdf7975a847c8f90c46260ad01da64ac1ddc3265"
+      },
+      "current_installation_evidence": "skills-3080-webdesign-next20-installation-evidence.json"
     }
   ],
   "pending_entrypoint_paths": [],
@@ -22488,9 +22608,9 @@
   "amendment_job": "20261024-123649-todo-3080",
   "amendment_definition": "Document amendment time; individual source retrieval and reading times remain in their own receipts.",
   "current_installation_update": {
-    "evidence": "skills-3080-webdesign-next14-installation-evidence.json",
-    "added": 14,
-    "current_installed": 57,
+    "evidence": "skills-3080-webdesign-next20-installation-evidence.json",
+    "added": 20,
+    "current_installed": 77,
     "source_body_reading_and_notice_support_states_unchanged": true,
     "definition": "Installation projection only; original177 source assessments and prior updates retained"
   },
@@ -22533,6 +22653,13 @@
       "evidence": "skills-3080-webdesign11-installation-evidence.json",
       "added": 11,
       "current_installed": 43,
+      "source_body_reading_and_notice_support_states_unchanged": true,
+      "definition": "Installation projection only; original177 source assessments and prior updates retained"
+    },
+    {
+      "evidence": "skills-3080-webdesign-next14-installation-evidence.json",
+      "added": 14,
+      "current_installed": 57,
       "source_body_reading_and_notice_support_states_unchanged": true,
       "definition": "Installation projection only; original177 source assessments and prior updates retained"
     }

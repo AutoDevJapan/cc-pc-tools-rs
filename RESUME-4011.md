@@ -1,5 +1,44 @@
 # 元4011の再開情報
 
+## 最新：10月27日07:16の保持確認、次は同日10:00の有限な再確認
+
+job20261027-071223-todo-4011、開始bf2462cd/同branch/未コミット0から再開。
+現在もMinDiffAreaFileSize=3200 DWORD、通常AdminBrokerの正規APIで
+3,355,443,200B/HRESULT0を再取得。新しい設定適用・point作成・削除は0。
+point262/263とtoken305F3E2D8D193BBC/EFA3F28F34D9899Bの両方がpersistent/state12で存続。
+07:16使用18,427,707,392B/割当18,842,140,672B/上限53,687,091,200B、C→C不変。
+06:24の設定直前から使用+10,450,452,480B/割当+10,334,765,056B。同token集合の区間であり、
+初期予約の実反映やMinDiffによる拡張抑制・25防止の因果へ読み替えない。
+設定時刻21:24:57.8094956Z以後のvolsnapは0件/上限100未達/complete true/errors0。
+実空きC339,110,768,640/D2,096,728,371,200/E858,052,489,216B、並行IOを含み回収量ではない。
+原過去pointは復旧していない。夜間01:45/02:40をまだ経ておらず、全体完了ではない。
+
+最初の読取では、呼出側PS7のConvertFrom-JsonがUTCをDateTimeへ変え、文字列展開でoffsetを
+失ったためvolsnap照会だけが拒否された。その票を0件として使わず保持し、-DateKind Stringで
+原UTCを保持した別launcher/別出力で正常再照会した。observerのoffset必須条件は緩めていない。
+comparisonの最初の表示もOrderedDictionaryへのSelect-Objectでnullとなったが、保存JSON原値は
+正常で、ConvertFrom-Json後の再表示で照合済み。query内のjob nullはBrokerが環境変数を
+引き継がないためであり、元launcher/normal Broker応答/実行manifestに同担当の対応を保持した。
+
+次は既存todo wait-retryで**10/27 10:00 JST**に1回再開し、同じread-only observerと必要APIで
+token/point、使用/割当/上限、設定、イベント照会の成否を確認する。容量の増加を確認したための
+固定した受入区切りであり、毎時の監視ループは追加しない。異常がなければ次の固定区切りは
+**10/28 03:00 JST**（01:45/02:40を通過した後）。48h/2夜の最終期限は**10/29 06:25 JST**。
+新tokenがある区間を既存拡張と合算せず、正常33による上限世代交代と25の全消失を区別する。
+受入未達/異常時は前節どおりreactivate-minimum.ps1 -Mode Undoで自己DWORDだけを戻す。
+StageA/B、Apply、旧rollbackを再実行しない。新pointや監視・定期task・常駐を追加しない。
+同じworktreeとos-v2の原request/resultを保持し、設定復帰判断まで消さない。
+
+原観測は.ci-work/4011/retention-071223-first.private.json（イベント照会失敗）と
+retention-071223-correct-offset.private.json（正常）、比較はretention-comparison-071223.private.json。
+Go queryはminimum-query-071223.private.json、source/実行物SHAはminimum-build-071223.private.json。
+自己Temp所有ID4c9016c28bb1a3b7b942b6bb0ad254ef。回収結果と次回タイマーの実登録は
+同担当のCURRENT票と正常ToDo返却で照合し、記述だけで登録成功と扱わない。
+開始bf2462cdのCodeQL全5チェックSUCCESS。現用設定/機能受入を未完としてPR568はdraftを保持。
+親3628の依存を変更せず、既存6h容量/1h清掃の指定と結果を正規noteへ返す。
+
+以下は06:24～06:33時点と、それ以前の原履歴。現在値と次の時刻は上の節を優先する。
+
 ## 最新：06:24にprovider minimum3200MiBの実反映を確認、有限な保持確認へ
 
 現在registryは**MinDiffAreaFileSize=3200 DWORD**、正規provider値3,355,443,200B。

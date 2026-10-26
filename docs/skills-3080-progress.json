@@ -353,12 +353,16 @@
     "pending_plan_targets": 0,
     "archived_draft_targets": 8,
     "archived_draft_is_subset_of_batch03": true,
-    "independently_accepted": "Legacy acceptances plus individually scoped direct designs. For the six game outputs, original3775 reading and3777 source-specific correction acceptance were bound to exact manifest bytes. Actual creation, metadata discovery and bounded explicit use are separately evidenced; no whole-catalog, renderer or full-context acceptance is implied. The newest public result delta still requires review/CI/merge.",
+    "independently_accepted": "Legacy acceptances and individually scoped actual designs with exact creation, current readback, structure, metadata discovery and bounded explicit use. Latest OpenAI6 result accepted by comparison4033/LunaMax/Must0 and all7CI, normal mergedPR579. New11 proposed inputs remain uninstalled and require their own full review; no whole16 or renderer/context-budget completion implied.",
     "not_semantically_disposed_occurrences": 73069,
     "additional_draft_sources": [
       "skills-3080-mizchi-sql-draft.json",
       "skills-3080-mizchi-mutation-draft.json"
-    ]
+    ],
+    "authored_total_definition": "Existing actual-plan designs plus3 legacy pending drafts only; separately published new uninstalled proposals are counted below, not as installations",
+    "new_proposed_uninstalled_targets": 11,
+    "authored_including_new_proposals": 147,
+    "authored_including_new_proposals_definition": "133actual installed designs +3legacy pending drafts +11new uninstalled proposed targets. Archived draft variants remain subsets; catalog rows and source-only hatch hold are not authored new targets."
   },
   "kepano_entrypoint_assessment": {
     "pinned_entrypoints": 6,
@@ -612,7 +616,7 @@
     "guard_client_resource": true,
     "state": "classification_unverified"
   },
-  "recorded_at": "2026-10-26T22:31:20.7327698+00:00",
+  "recorded_at": "2026-10-26T23:14:35.4795414+00:00",
   "total_skill_named_body_read_definition": "This field preserves the historical complete-source subset only. Current raw/workflow primary coverage is projected from the canonical source components and sixmile evaluation index in all_fulltext_primary_paths_including_partial_sources/all_workflow_primary_paths_including_partial_sources, not copied here.",
   "openai_entrypoint_evaluation": {
     "rights_accepted": false,
@@ -2602,11 +2606,13 @@
     "new_source_read_credit": 0,
     "actual_browser_render_or_UI_implemented": false,
     "implicit_selection_proven": false,
-    "public_result_review_pending": true,
+    "public_result_review_pending": false,
     "whole16_complete": false,
     "historical44_read_evaluation_not_overwritten": true,
     "historical_evaluation_installed_at_recording": 0,
-    "current6_adoptions_and_notices_evidenced_separately": true
+    "current6_adoptions_and_notices_evidenced_separately": true,
+    "result_accepted_PR": 579,
+    "result_accepted_merge": "9f1c0dd8ccf429a76818cb76bda5e67a8b027ef4"
   },
   "received_other4_260263": {
     "evaluation": "skills-3080-other4-260263-evaluation214717.json",
@@ -2625,7 +2631,73 @@
     "new_grants": 0,
     "new_final_decisions": 0,
     "central_operations": 0,
-    "main_acceptance_pending": true,
+    "main_acceptance_pending": false,
+    "whole16_complete": false,
+    "main_accepted_PR": 579,
+    "main_accepted_merge": "9f1c0dd8ccf429a76818cb76bda5e67a8b027ef4"
+  },
+  "openai11_preparation": {
+    "input": "skills-3080-openai11-input214717.json",
+    "input_sha256": "716cae7b3cdfe709eed438ebc6adfa45d67cd5c4db0206ee472274224926f118",
+    "proposed_uninstalled": 11,
+    "virtual_files": 66,
+    "virtual_bytes": 223979,
+    "current_parent_source_read": 12,
+    "current_parent_source_bytes": 103318,
+    "selected_primary_bytes": 66022,
+    "unique_notices": 4,
+    "notice_bytes": 24253,
+    "notice_new_literal": 2,
+    "notice_exact_reuse_same_parent": 2,
+    "unread_support_metadata_occurrences": 438,
+    "support_rights_accepted": false,
+    "not_part_of_live_design_index": true,
+    "full_content_review_pending": true,
+    "fresh_requested_metadata_found": 0,
+    "physical_absence_unproven": true,
+    "normal_read_plan_batches": 4,
+    "held_hatch_duplicate_comparison_guard_unverified": true,
+    "new_adoptions": 0,
+    "central_operations": 0,
     "whole16_complete": false
-  }
+  },
+  "received_other8_264271": {
+    "evaluation": "skills-3080-other8-264271-evaluation214717.json",
+    "evaluation_sha256": "a791e68fd370c92695295ac9d4d5d93acd59dc750daa99e829978f9598e7fc9e",
+    "records": 8,
+    "source_occurrence_bytes": 20194,
+    "whole_original_contexts": 1,
+    "whole_original_ACK_SHA_reconstruction": true,
+    "retained339_and34_tuples_matched": true,
+    "current_raw_reported": 8,
+    "support_saved": 9,
+    "support_unsaved": 43,
+    "new_global_raw_workflow_credit": 0,
+    "new_grants": 0,
+    "new_final_decisions": 0,
+    "central_operations": 0,
+    "main_acceptance_pending": true
+  },
+  "received_sixmile6_175180": {
+    "evaluation": "skills-3080-sixmile-next6-175180-evaluation214717.json",
+    "evaluation_sha256": "fd93b96c3e157afbdf9e9ea6a9eb83934158815be3270215784e4fc2a079a52c",
+    "records": 6,
+    "source_occurrence_bytes": 99170,
+    "whole_original_contexts": 6,
+    "whole_original_ACK_SHA_reconstruction": true,
+    "fixed_index_metadata_bindings_verified": true,
+    "fresh_source_byte_observation": false,
+    "original_direct_masked": 5,
+    "original_exact_reuse": 1,
+    "old_and_new_actual_readers_preserved": true,
+    "primary_cursor": 180,
+    "support37_ACK_separate": true,
+    "current180_reader": "20261027-072935-todo-3719",
+    "new_global_raw_workflow_credit": 0,
+    "new_grants": 0,
+    "new_final_decisions": 0,
+    "central_operations": 0,
+    "main_acceptance_pending": true
+  },
+  "current_exclusion_record_definition": "15 current exclusion records retain review_pending=true and license_accepted=0; recorded disposition count is not completed exclusion or rights review"
 }

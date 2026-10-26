@@ -215,3 +215,12 @@ client/不明scopeを削除可能にせず、declared scopeと使用中資源を
 Go race/vet成功、normal latest installの原broker SHA4787670b8a7e8bade25dd3c7bdf59ce2652fe5843f20d3c1fc48c9128d003d2dも
 旧3世代の証明へ追加して鎖を保持し、suffix todo3942-legacyでold dde2 backupを上書きせず反映予定。
 現用dde2/初期実対象2件と自己debug未回収/実回収0/owner対応不要を維持。
+legacy保持修正版source306468c703fe2546428764b543c3718840e92b84でclean通常release終了0。
+producerは現job20261027-002106-todo-3942。single-link delivery SHAccf3c7d10158157f50a0e695524b552ff3ec3bff1b19c3e3ff6d85c45865a27a、
+149入力manifest SHAd4f8f65cb5fb6ff4ac2551d4f9480b1dc46573e4b16c9be04d944e24cd914242。
+fresh55 regression/0skip（特別なreal probeを含まない）とClippy/Go race/vetが成功。
+元record/normalregistered scopeとdirectory name leaseに基づく保持照合だけを変え、candidate自身の
+削除資格/guard/元Root-jobの成功終了/物理inode/適用前再照合/原台帳不変更は維持する。
+次はこの固定RCの別model reviewと同HEAD CI、normal merge/原proof鎖-CAS-ACLでlegacy suffix配布、
+既存S4U task実発火/実回収・不在/sourceGitRelease/free前後/保留/自己debug回収を完遂する。
+現用はまだdde2、実回収0。過去8件の二重計上なし、ownerの操作・判断は不要。

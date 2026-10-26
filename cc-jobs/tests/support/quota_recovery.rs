@@ -70,6 +70,9 @@ fn register(t: &Test) -> Result<i32> {
     register_prompt(t, prompt.as_bytes())
 }
 fn register_prompt(t: &Test, prompt: &[u8]) -> Result<i32> {
+    register_prompt_model(t,prompt,"gpt-6-luna")
+}
+fn register_prompt_model(t: &Test, prompt: &[u8],model:&str) -> Result<i32> {
     t.run(
         &[
             "--todo-id",
@@ -77,7 +80,7 @@ fn register_prompt(t: &Test, prompt: &[u8]) -> Result<i32> {
             "--launch-key",
             "22222222222222222222222222222222",
             "--model",
-            "gpt-6-luna",
+            model,
             "--model-origin",
             "policy",
             "--effort",
@@ -169,9 +172,39 @@ fn grok_existing_research_is_admitted_through_registration_start_and_final_queue
 
 #[test]
 fn gpt_quota_research_preserves_its_selected_route_and_budget_through_final_queue_admission() {
-    for case in ["normal", "capacity_same", "capacity_switch", "capacity_wait", "selected_unknown", "budget_changed", "history_changed", "source_changed"] {
+    for case in ["normal", "capacity_same", "capacity_switch", "capacity_anthropic", "capacity_wait", "selected_unknown", "budget_changed", "history_changed", "source_changed"] {
         research_admission(true, case);
     }
+}
+
+#[test]
+fn quota_metadata_episodes_reset_after_verified_admission_without_resetting_native_budget() {
+    research_admission(true,"capacity_metadata");
+}
+
+#[test]
+fn legacy_claude_reentry_checks_its_current_health_after_the_old_provider_recovers() {
+    let (t,mut row,mut source)=setup();let at=t.rt.epoch();
+    source["model"]=json!("gpt-6-luna");t.put(source.clone());
+    row["model"]=json!("anthropic/claude-opus-5-5");
+    let health=json!({"at":at,"openai":{"at":at,"verified":true,"exhausted":true,"available":false},
+        "anthropic":{"at":at,"verified":true,"exhausted":false,"available":true}});
+    *t.rt.quota_recovery_inventory.lock().unwrap()=health.clone();
+    let mut target=row["scheduler"]["selection"].clone();target["model"]=row["model"].clone();
+    let mut old=cc_job_policy::quota_recovery::receipt(&row,&source,&target,&health,at).unwrap();
+    // Synthetic historical v1 serialization, never a production record edit.
+    old["version"]=json!(1);old.as_object_mut().unwrap().remove("retry");old.as_object_mut().unwrap().remove("retry_source_sha256");
+    old["health"]["openai"].as_object_mut().unwrap().remove("safe_routes");
+    target["quota_recovery"]=old.clone();row["scheduler"]["selection"]=target;save(&t,&row);
+    let prompt=format!("Scheduler prompt\n依頼:\n{}",fs::read_to_string(t.ctx.root.join("review-spec.md")).unwrap());
+    register_prompt_model(&t,prompt.as_bytes(),"anthropic/claude-opus-5-5").unwrap();let j=child(&t);
+    let slot=t.ctx.admit(s(&j,"id")).unwrap();assert!(slot.is_some());drop(slot);
+    let mut next=t.ctx.load(s(&j,"id")).unwrap();cc_jobs::queue::prepare_resume(&mut next,"",&t.rt.now());t.put(next);
+    let now=at+31.;*t.rt.epoch_base.lock().unwrap()=Some(now);
+    {let mut fresh=t.rt.quota_recovery_inventory.lock().unwrap();fresh["at"]=json!(now);fresh["openai"]=json!({"at":now,"verified":true,"available":true,"exhausted":false});fresh["anthropic"]["at"]=json!(now);}
+    let slot=t.ctx.admit(s(&j,"id")).unwrap();assert!(slot.is_some());drop(slot);
+    let result=t.ctx.load(s(&j,"id")).unwrap();assert_eq!(result["quota_recovery"],old);assert_eq!(result["capacity_retry_count"],1);
+    assert_eq!(t.ctx.load("quota-reader").unwrap(),source);
 }
 
 fn research_admission(gpt: bool, case: &str) {
@@ -300,8 +333,17 @@ fn research_admission(gpt: bool, case: &str) {
             _ => (),
         }
     }
+    if case=="capacity_metadata" {
+        let at=t.rt.epoch();t.rt.quota_recovery_inventory.lock().unwrap()["openai"]["available"]=json!(false);
+        assert!(t.ctx.admit(s(&j,"id")).unwrap().is_none());
+        assert_eq!(t.ctx.load(s(&j,"id")).unwrap()["quota_recovery_recheck_count"],1);
+        *t.rt.epoch_base.lock().unwrap()=Some(at+901.);
+        let mut health=t.rt.quota_recovery_inventory.lock().unwrap();let now=t.rt.epoch();
+        health["at"]=json!(now);health["openai"]["at"]=json!(now);health["openai"]["available"]=json!(true);
+        for route in health["openai"]["safe_routes"].as_array_mut().unwrap(){route["at"]=json!(now);}
+    }
     let slot = t.ctx.admit(s(&j, "id"));
-    if !["normal","capacity_same","capacity_switch","capacity_wait"].contains(&case) {
+    if !["normal","capacity_same","capacity_switch","capacity_anthropic","capacity_metadata","capacity_wait"].contains(&case) {
         assert!(slot.is_err() || slot.unwrap().is_none(), "{case}");
         assert_ne!(t.ctx.load(s(&j, "id")).unwrap()["status"], "running");
         return;
@@ -318,7 +360,7 @@ fn research_admission(gpt: bool, case: &str) {
     drop(slot);
     if case.starts_with("capacity_") {
         let mut current=t.ctx.load(s(&j,"id")).unwrap();
-        let cycles=if case=="capacity_switch" {2}else{1};
+        let cycles=if case=="capacity_anthropic" {3}else if case=="capacity_switch" {2}else{1};
         for step in 0..cycles {
             let at=t.rt.epoch();
             current["status"]=json!("failed");current["last_failure_kind"]=json!("capacity");
@@ -341,14 +383,37 @@ fn research_admission(gpt: bool, case: &str) {
                 for route in health["openai"]["safe_routes"].as_array_mut().unwrap(){route["at"]=json!(next);}
             }
             t.put(current.clone());
+            if case=="capacity_metadata" {
+                assert!(current["quota_recovery_recheck_count"].is_null());
+                for expected in 1..=2 {
+                    t.rt.quota_recovery_inventory.lock().unwrap()["openai"]["available"]=json!(false);
+                    assert!(t.ctx.admit(s(&j,"id")).unwrap().is_none());
+                    let waiting=t.ctx.load(s(&j,"id")).unwrap();assert_eq!(waiting["status"],"queued");
+                    assert_eq!(waiting["quota_recovery_recheck_count"],expected);
+                    let now=t.rt.epoch()+901.;*t.rt.epoch_base.lock().unwrap()=Some(now);
+                    let mut health=t.rt.quota_recovery_inventory.lock().unwrap();health["at"]=json!(now);health["openai"]["at"]=json!(now);
+                    for route in health["openai"]["safe_routes"].as_array_mut().unwrap(){route["at"]=json!(now);}
+                }
+                t.rt.quota_recovery_inventory.lock().unwrap()["openai"]["available"]=json!(true);
+            }
             let slot=t.ctx.admit(s(&j,"id")).unwrap();assert!(slot.is_some(),"{case} step {step}: {}",t.ctx.load(s(&j,"id")).unwrap());drop(slot);
             current=t.ctx.load(s(&j,"id")).unwrap();
             assert_eq!(current["status"],"running");
         }
         assert_eq!(current["capacity_same_model_retry_count"],3);
         if case=="capacity_switch" {assert!(s(&current,"model").starts_with("anthropic/"));assert_eq!(current["capacity_retry_count"],1);}
+        if case=="capacity_anthropic" {assert_eq!(current["model"],"anthropic/claude-opus-5-5");assert_eq!(current["capacity_retry_count"],2);}
+        if case=="capacity_metadata" {assert!(current["quota_recovery_recheck_count"].is_null());assert_eq!(current["quota_recovery_recheck_total"],3);}
         assert_eq!(t.ctx.load("quota-reader").unwrap(),source);
     }
+}
+
+#[test]
+fn quota_registration_rejects_a_different_actual_model_before_creating_a_worker() {
+    let (t,_,_)=setup();
+    let prompt=format!("Scheduler prompt\n依頼:\n{}",fs::read_to_string(t.ctx.root.join("review-spec.md")).unwrap());
+    assert!(register_prompt_model(&t,prompt.as_bytes(),"gpt-6-astra").is_err());
+    assert_eq!(t.ctx.list_jobs(&HashSet::new()).into_iter().filter(|j|j["todo_id"]==2).count(),1);
 }
 
 #[test]

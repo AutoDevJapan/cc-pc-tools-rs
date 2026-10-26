@@ -478,9 +478,18 @@ fn gpt_quota_unavailable_health_is_paced_without_extending_the_saved_deadline() 
 
 #[test]
 fn gpt_quota_terminal_budget_is_recorded_without_a_fresh_job_or_refresh_loop() {
+    terminal_quota_model("gpt-6.1-sol",3);
+}
+
+#[test]
+fn non_gpt_quota_terminal_switch_budget_does_not_refresh_forever() {
+    for model in ["anthropic/claude-opus-5-5","grok-4.7"] {terminal_quota_model(model,1);}
+}
+fn terminal_quota_model(model:&str,same:u64) {
     let (mut f, sub)=gpt_research_fixture();
     for j in &mut f.e.backend.records {j["created_at"]=json!(iso(T-300.));}
-    f.e.backend.records[1]["capacity_same_model_retry_count"]=json!(3);
+    f.e.backend.records[1]["model"]=json!(model);
+    f.e.backend.records[1]["capacity_same_model_retry_count"]=json!(same);
     f.e.backend.records[1]["capacity_retry_count"]=json!(3);
     write_json(&f.e.todo_path,&sub.db,1).unwrap();
     let _=f.e.dispatch_for(&f.cfg,&f.pri,Some(2));

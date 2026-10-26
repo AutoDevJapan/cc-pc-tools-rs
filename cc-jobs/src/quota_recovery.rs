@@ -212,6 +212,10 @@ impl Context {
             return Err(Error::new("quota recovery source has not drained"));
         }
         let now = self.rt.epoch();
+        if registration && (!cc_job_policy::same_model(s(job,"model"),s(proof,"model"))
+            || job["effort"]!=proof["effort"] || job["model_origin"]!="policy") {
+            return Err(Error::new("quota recovery registered model or effort differs from preparation"));
+        }
         // At registration both the original prepared observation and a fresh
         // independent observation must agree. Queue waits recheck fresh health.
         let mut initial=job.clone();
@@ -224,7 +228,8 @@ impl Context {
             let old_at = proof["health"]["at"].as_f64().unwrap_or(f64::NAN);
             cc_job_policy::quota_recovery::verify(proof, row, &source, &initial, old_at)
         };
-        let current = if proof["version"]==1 && job["capacity_account_selector"].is_null() && job["model"]==proof["model"] {
+        let current = if proof["version"]==1 && job["capacity_account_selector"].is_null() && job["model"]==proof["model"]
+            && (job["quota_retry_initial_admitted"]!=true || cc_job_policy::quota_recovery::provider(s(job,"model"))==Some("openai")) {
             cc_job_policy::quota_recovery::healthy_transition(inventory,s(&source,"model"),s(job,"model"),now)
         } else {cc_job_policy::quota_retry::current_available(job,inventory,now)};
         if !verified

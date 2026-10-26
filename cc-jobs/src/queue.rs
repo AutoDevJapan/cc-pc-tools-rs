@@ -1445,6 +1445,7 @@ impl Context {
                     .and_then(|row| self.recheck_quota_recovery(row,&mut job,&quota_inventory));
                 if result.is_err() {
                     let checks=job["quota_recovery_recheck_count"].as_u64().unwrap_or(0)+1;
+                    job["quota_recovery_recheck_total"]=json!(job["quota_recovery_recheck_total"].as_u64().unwrap_or(0).saturating_add(1));
                     job["quota_recovery_recheck_count"]=json!(checks);
                     let exhausted=checks >= 3;
                     if exhausted {
@@ -1457,6 +1458,10 @@ impl Context {
                     self.save_admission_wait(&mut job,&json!({"code":"quota_recovery_recheck","text":"元の実行とOAuth枠の再確認待ち","terminal":exhausted}))?;
                     return Ok(None);
                 }
+                // A verified source/spec/scope and fresh health end this
+                // metadata episode. Keep native retry budgets and total history.
+                job.as_object_mut().unwrap().remove("quota_recovery_recheck_count");
+                job.as_object_mut().unwrap().remove("quota_recovery_recheck_after");
             }
             let reason = self.dependency_reason(&db, &job, &jobs);
             if let Some(reason) = reason {

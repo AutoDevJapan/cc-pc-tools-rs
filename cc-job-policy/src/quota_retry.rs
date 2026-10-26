@@ -319,8 +319,10 @@ pub fn inherited(job: &Value, source: &Value, proof: &Value) -> bool {
             same += 1;
             selector = entry["account_selector"].clone();
         } else {
-            if crate::quota_recovery::provider(model)
-                == crate::quota_recovery::provider(text(&entry["to_model"]))
+            let to = text(&entry["to_model"]);
+            if crate::same_model(model, to)
+                || (crate::quota_recovery::provider(model) == Some("openai")
+                    && crate::quota_recovery::provider(to) == Some("openai"))
             {
                 return false;
             }
@@ -417,5 +419,8 @@ pub fn terminal_reason(source: &Value) -> Option<&'static str> {
     let Some((same, switches)) = budget(source) else {
         return Some("invalid_or_exhausted_history");
     };
-    (same >= MAX && switches >= MAX).then_some("finite_retry_budget_exhausted")
+    (switches >= MAX
+        && (same >= MAX
+            || crate::quota_recovery::provider(text(&source["model"])) != Some("openai")))
+    .then_some("finite_retry_budget_exhausted")
 }

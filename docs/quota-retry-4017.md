@@ -89,3 +89,26 @@ fd3f03d1の正式CIでは2872件中、ヘルプの旧互換oracleだけが失敗
 元oracleのバイト列を保持し、今回の`--job-id`の追加箇所だけを明示的に取り除いて比較する
 既存の拡張方式へ合わせた。同テストは上の49件に含めて成功した。
 修正後の別モデル確認・同一headの正式CI・Windows配布と実研究再開は、引き続き未完了。
+
+## 再確認4034の境界修正
+
+4034は固定725fb9c5を実Opus5.5/maxで読了した。元Must2・3・5の解消と、1・4の
+主要経路の改善を確認し、残る境界をMust A〜Cで返した。
+Anthropic内の異なるモデルへの切替も有限switchとして数え、同一モデルやGPT間の
+切替とは区別する。成功した厳密なsource/spec/scope/health照合でmetadataの連続失敗
+回数だけを解除し、nativeの同GPT回数・切替回数・待機予算・履歴は解除しない。
+metadata失敗の累計は別に保持する。非GPT sourceがswitch3回を使い切れば、同GPT回数が
+3未満でも技術終了になり、在庫照会を繰り返さない。
+
+GPT→Sonnet→Opus、成功を挟むmetadata失敗1回＋2回、非GPTのswitch終了を追加した。
+旧runtimeでAnthropic内切替と非GPT終端のRedを確認し、metadataと旧v1再受付の別2回帰も
+それぞれRedを確認した。修正後の関連52件は成功した。
+v1 Claudeの再受付は、初回の厳密な証拠を維持し、実行後は現在のClaudeの健康情報で
+照合する。旧GPTが回復したことだけで、そのClaudeを拒否しない。
+登録時の実モデル・effortも準備と直接比べ、異なるworkerを作らない。
+
+配布はjobsを先に、schedulerを後に同じ候補から更新する。二つの既存deployment.lockを
+同じ順序で確保し、旧SHA・元ACL・候補SHAを確認して旧版を保全する。新jobsはv1/v2を
+読み、新schedulerがv2を作る前に新jobsを配置する。古いschedulerの準備済みv1や、
+稼働中の健康な担当は書き換え・一斉停止せず、通常のSource/世代/停止/依存照合を保つ。
+実際の配布・旧SHA・新SHA・通常CLI・新3719の実操作は別の証拠で確認する。

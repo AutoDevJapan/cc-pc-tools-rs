@@ -1,0 +1,386 @@
+{
+  "notice_bytes": 1066,
+  "cases": [
+    {
+      "reading": [
+        2,
+        0,
+        0,
+        true,
+        true,
+        463
+      ],
+      "source_path": "design-md/1win/DESIGN.md",
+      "inventory_id": "github:81073e22fb3daee089be78165ebc5f631bd78d9eb9feda51eda44b6ba1075926",
+      "reader_row": 66,
+      "file": "cases/1win.json"
+    },
+    {
+      "reading": [
+        3,
+        1,
+        0,
+        false,
+        true,
+        545
+      ],
+      "source_path": "design-md/airbnb/DESIGN.md",
+      "inventory_id": "github:2ea5661b6fc6abeffad371d7874e26ea8d28e51b0c82cebf5da54faac8c3c062",
+      "reader_row": 67,
+      "file": "cases/airbnb.json"
+    },
+    {
+      "reading": [
+        3,
+        2,
+        0,
+        false,
+        true,
+        554
+      ],
+      "source_path": "design-md/airtable/DESIGN.md",
+      "inventory_id": "github:58a04e40485ac999821844a9ee119fe0fbfaa7c7a15bba37273f8ede7ba05cdc",
+      "reader_row": 68,
+      "file": "cases/airtable.json"
+    },
+    {
+      "reading": [
+        2,
+        0,
+        0,
+        true,
+        true,
+        594
+      ],
+      "source_path": "design-md/aljazeera/DESIGN.md",
+      "inventory_id": "github:91832bf4a629eefc77bac18b30c6f041894000265b6c7d5ba2b77d11f032329c",
+      "reader_row": 69,
+      "file": "cases/aljazeera.json"
+    },
+    {
+      "reading": [
+        3,
+        1,
+        0,
+        false,
+        true,
+        562
+      ],
+      "source_path": "design-md/apple/DESIGN.md",
+      "inventory_id": "github:1f357778021c7d35e72cf64acd84924abe22965eaea3467e60df94e9f83354f7",
+      "reader_row": 70,
+      "file": "cases/apple.json"
+    },
+    {
+      "reading": [
+        3,
+        2,
+        0,
+        false,
+        true,
+        634
+      ],
+      "source_path": "design-md/binance/DESIGN.md",
+      "inventory_id": "github:9ba7125a9147052a845fd3d4fefefd3ea6af5f1545d07fead6b57dbdbc5ac8c5",
+      "reader_row": 71,
+      "file": "cases/binance.json"
+    },
+    {
+      "reading": [
+        3,
+        1,
+        0,
+        false,
+        true,
+        503
+      ],
+      "source_path": "design-md/bmw-m/DESIGN.md",
+      "inventory_id": "github:169083a07928c0f6dca015b7d57e5ae25d563bd28dc66b23c518d6b0530d7389",
+      "reader_row": 72,
+      "file": "cases/bmw-m.json"
+    },
+    {
+      "reading": [
+        3,
+        2,
+        0,
+        false,
+        true,
+        544
+      ],
+      "source_path": "design-md/bmw/DESIGN.md",
+      "inventory_id": "github:ada8f5d06a46b5490ff8c6c566fbad297f9395ddf6acf05d9f9830270b83f172",
+      "reader_row": 73,
+      "file": "cases/bmw.json"
+    },
+    {
+      "reading": [
+        3,
+        1,
+        0,
+        false,
+        true,
+        454
+      ],
+      "source_path": "design-md/bugatti/DESIGN.md",
+      "inventory_id": "github:bb7403bd5252cb9cbfe98be9a1efc6c909a41c40189d21b5dd6c39b374930596",
+      "reader_row": 74,
+      "file": "cases/bugatti.json"
+    },
+    {
+      "reading": [
+        3,
+        10,
+        0,
+        false,
+        true,
+        542
+      ],
+      "source_path": "design-md/cal/DESIGN.md",
+      "inventory_id": "github:1eb19dc8bf4445417775e1ef347a9c7c6e2ea62a0357d6da060e18d481a6f7cf",
+      "reader_row": 75,
+      "file": "cases/cal.json"
+    },
+    {
+      "reading": [
+        3,
+        2,
+        0,
+        false,
+        true,
+        589
+      ],
+      "source_path": "design-md/claude/DESIGN.md",
+      "inventory_id": "github:d0910107ad6c4882fe15f6f0069f9afaef596b68894ee6f472a1d421d5513d99",
+      "reader_row": 76,
+      "file": "cases/claude.json"
+    },
+    {
+      "reading": [
+        3,
+        1,
+        0,
+        false,
+        true,
+        541
+      ],
+      "source_path": "design-md/clay/DESIGN.md",
+      "inventory_id": "github:e6c1e34949481f232f2e1daca565b39050924feb8ff27adc0c00489eaca3b094",
+      "reader_row": 77,
+      "file": "cases/clay.json"
+    },
+    {
+      "reading": [
+        3,
+        1,
+        0,
+        false,
+        true,
+        544
+      ],
+      "source_path": "design-md/clickhouse/DESIGN.md",
+      "inventory_id": "github:0ac90c94668115079d0d70fe3f091f8ce2a803705f2883432e05ad90027413ac",
+      "reader_row": 78,
+      "file": "cases/clickhouse.json"
+    },
+    {
+      "reading": [
+        2,
+        0,
+        0,
+        true,
+        true,
+        451
+      ],
+      "source_path": "design-md/cohere/DESIGN.md",
+      "inventory_id": "github:1fcc1ee174142e05a21a3533a565f2663b7be4a4693be38e0c5b4a68030d8ba9",
+      "reader_row": 79,
+      "file": "cases/cohere.json"
+    },
+    {
+      "reading": [
+        3,
+        1,
+        0,
+        false,
+        true,
+        570
+      ],
+      "source_path": "design-md/coinbase/DESIGN.md",
+      "inventory_id": "github:1d9ed2644de30f3939c093d95afc8d1d7c3b0da2e31cf3d97095aac1262aeb31",
+      "reader_row": 80,
+      "file": "cases/coinbase.json"
+    },
+    {
+      "reading": [
+        3,
+        1,
+        0,
+        false,
+        true,
+        506
+      ],
+      "source_path": "design-md/composio/DESIGN.md",
+      "inventory_id": "github:2fb5055c1983fc0115552c26bc8e654e7f64547be814d552d23ca525917bcb88",
+      "reader_row": 81,
+      "file": "cases/composio.json"
+    },
+    {
+      "reading": [
+        3,
+        1,
+        0,
+        false,
+        true,
+        537
+      ],
+      "source_path": "design-md/cursor/DESIGN.md",
+      "inventory_id": "github:c360adc5d2ca8fdb2ff7077b16d9512ac72844afd7de9e1c70109cca98c8503b",
+      "reader_row": 82,
+      "file": "cases/cursor.json"
+    },
+    {
+      "reading": [
+        3,
+        4,
+        0,
+        false,
+        true,
+        632
+      ],
+      "source_path": "design-md/dell-1996/DESIGN.md",
+      "inventory_id": "github:37022ef72fed3ce5dd509de586daa6faa23e92ed64eb874548ff84997af04c7b",
+      "reader_row": 83,
+      "file": "cases/dell-1996.json"
+    },
+    {
+      "reading": [
+        3,
+        1,
+        0,
+        false,
+        true,
+        882
+      ],
+      "source_path": "design-md/dji/DESIGN.md",
+      "inventory_id": "github:85184591aa1737236b5775a50417b25fb8c9d3eb245a6189489137d81e01ba4a",
+      "reader_row": 84,
+      "file": "cases/dji.json"
+    },
+    {
+      "reading": [
+        3,
+        2,
+        0,
+        false,
+        true,
+        504
+      ],
+      "source_path": "design-md/elevenlabs/DESIGN.md",
+      "inventory_id": "github:9715a93ba760329dd7a641a793323236042ccab442ddecf5cee43eb5df0fd559",
+      "reader_row": 85,
+      "file": "cases/elevenlabs.json"
+    },
+    {
+      "reading": [
+        3,
+        1,
+        0,
+        false,
+        true,
+        526
+      ],
+      "source_path": "design-md/expo/DESIGN.md",
+      "inventory_id": "github:132c1a2e6a42f923d4ec0d0159859ac473d2999d493dc1b39cab2dbdc35998c8",
+      "reader_row": 86,
+      "file": "cases/expo.json"
+    },
+    {
+      "reading": [
+        3,
+        1,
+        0,
+        false,
+        true,
+        531
+      ],
+      "source_path": "design-md/ferrari/DESIGN.md",
+      "inventory_id": "github:09222baac6148b9fd751ac5e31c52e4d527e90efdb014d0db93f9bcd6a958110",
+      "reader_row": 87,
+      "file": "cases/ferrari.json"
+    },
+    {
+      "reading": [
+        3,
+        2,
+        0,
+        false,
+        true,
+        578
+      ],
+      "source_path": "design-md/figma/DESIGN.md",
+      "inventory_id": "github:493603f56dd6b7c39087cd61159a9aabb47dd0343be91eb15d6c62d3cd2243ef",
+      "reader_row": 88,
+      "file": "cases/figma.json"
+    },
+    {
+      "reading": [
+        3,
+        2,
+        0,
+        false,
+        true,
+        544
+      ],
+      "source_path": "design-md/framer/DESIGN.md",
+      "inventory_id": "github:8b685589079c90a64733fcee5e18f6589a2f4beb84b9904f4eedae03750d5374",
+      "reader_row": 89,
+      "file": "cases/framer.json"
+    }
+  ],
+  "notice_sha256": "6d4bdc9a9cf30e7beb593475fdcdbf29f981ea6bd7923f202866145409f87b44",
+  "case_count": 24,
+  "parent_reuses_acknowledged_semantic_reports_not_new_direct_body_reads": true,
+  "repository": "VoltAgent/awesome-design-md",
+  "all_source_masked_unread_states_preserved": true,
+  "new_final_decisions": 0,
+  "parent_journal_sha256": "8cc4c7b2235ea847fac976f8028c907403db7e19cf9e8aa146d0c89c04492cf1",
+  "notice_scope": "Author analysis only; no font/image/brand artwork/voice/service rights",
+  "notice_path": "LICENSE",
+  "source_code_executed": false,
+  "central_operations": 0,
+  "original_sources_retained_in_existing_acquired_cache": true,
+  "commit": "3b605329240ce735b510037cca322f1831fdd7f8",
+  "all84_or_whole16_coverage_not_claimed": true,
+  "new_rights_grants": 0,
+  "upstream_originals_preserved_after_individual_clear_guard": {
+    "files": 24,
+    "bytes": 691839,
+    "machine_same_buffer_sha_git_blob_length_UTF8_verified": true,
+    "new_parent_literal_semantic_read_claim": false,
+    "cases_keep_prior_child_raw3_masked21": true,
+    "third_party_asset_copy": 0
+  },
+  "semantic_derivation_stage": {
+    "name": "earlier local semantic draft",
+    "original_source_bytes_newly_copied_in_that_stage": false,
+    "parent_reused_acknowledged_semantic_reports": true,
+    "not_the_current_package_storage_state": true
+  },
+  "current_package_original_preservation": {
+    "exact_original_files": 24,
+    "uncompressed_original_bytes": 691839,
+    "originals_are_byte_preserving_not_redacted": true,
+    "copying_is_not_a_new_semantic_read": true
+  },
+  "reading_mask_scope": "Case masked/unread fields describe the original model display/semantic reading. They do not mean the preserved original files were redacted or deleted. Read a needed case first, do not automatically load all originals, and keep the actual source/privacy/scope rules.",
+  "metadata_revision": {
+    "revision": 1,
+    "reason": "Correct misleading stage flag identified by formal review3930; preserve exact v1 separately",
+    "before_source_json_sha256": "50a6aa009b0cc2d84147d300f7b1cdca5abf9b6003e36c4e004c67240ac439a7",
+    "before_source_json_bytes": 8896,
+    "previous_metadata": "references/history/sources-before-revision1.json",
+    "original_reader_and_source_states_unchanged": true,
+    "new_global_primary_read_credit": 0
+  }
+}

@@ -1,0 +1,141 @@
+{
+  "domain": "skills-3080-site-canonical-duplicate-preparation-v1",
+  "job": "20261026-090101-todo-3080",
+  "inventory_id": "site:mcp-builder-6a45e1",
+  "site_url": "https://agent-skills.jp/skill/mcp-builder-6a45e1",
+  "fixed_upstream": {
+    "repository": "anthropics/skills",
+    "commit": "dbd4588f9e1033efb41dad4bef2f7947c8993d44",
+    "path": "skills/mcp-builder/SKILL.md",
+    "source_sha256": "0f4592dcb53cf2b5d6b7febee6b4152018b565551a1c29e3c612f57b218ab295",
+    "bytes": 9092,
+    "scope": "The catalog records this exact upstream version, not an independently different publisher package."
+  },
+  "canonical_inventory_id": "github:e4ade76a7932447efe3dd6e777ab300a5a9a6f1cf13a392614b31c621906a016",
+  "canonical_manifest": "skills-3080-installed-mcp-pointer-manifest.json",
+  "canonical_acceptance": {
+    "accepted_head": "bca16b76c51b68223f84a31aaa9a960ca15f5787",
+    "merge": "0801af4a04d9fb15b2772a5336f84f66ca2fd175",
+    "original_review": {
+      "todo": 3590,
+      "head": "ebb023f2b04f4551037fd5bf746819466e96a4b4",
+      "base": "6905b890d7b280c659e2073c6b561c903c1ed955",
+      "must": 1
+    },
+    "pr": 428,
+    "correction_review": {
+      "todo": 3599,
+      "head": "bca16b76c51b68223f84a31aaa9a960ca15f5787",
+      "base": "ebb023f2b04f4551037fd5bf746819466e96a4b4",
+      "must": 0
+    }
+  },
+  "actual_site_original_guard_clear": true,
+  "actual_site_bytes_equal_accepted_canonical_original": true,
+  "official_fixed_version_support_paths": 8,
+  "official_support_fingerprint": "484bdc219079d5764d67e22bee92807b0c49da6889c439fbb3ed03e534874448",
+  "official_complete_package_blob_paths": 10,
+  "different_sibling_notice_or_service_rights_not_inferred": true,
+  "site_index_license_claim": "unknown, retained",
+  "copy_from_site": 0,
+  "unread_helper_safety_or_license_accepted": false,
+  "new_owner_rights_grants": 0,
+  "new_raw_semantic_primary_credit": 0,
+  "source_meaning_reused_from_existing_adopted_procedure": true,
+  "proposed_disposition": "excluded",
+  "proposed_scope": "Only the duplicate primary occurrence at this exact site/upstream pin; not exclusion of unseen helpers or a transfer of rights. Retain official/canonical source and notice once.",
+  "new_final_dispositions": 0,
+  "central_operations": 0,
+  "phase": "public proposal; final disposition not yet applied",
+  "catalog_sha256": "2d73c9a038a41cc220a9687b935bfa1e0b315b65d9bd6d3e54ddb4111972876c",
+  "catalog_entry_effective_pin": {
+    "repository": "anthropics/skills",
+    "commit": "dbd4588f9e1033efb41dad4bef2f7947c8993d44",
+    "path": "skills/mcp-builder/SKILL.md",
+    "sha256": "0f4592dcb53cf2b5d6b7febee6b4152018b565551a1c29e3c612f57b218ab295",
+    "bytes": 9092,
+    "index_license_claim": "unknown",
+    "commit_verified": true
+  },
+  "canonical_package_metadata": {
+    "all_support_mode_path_blob_equal_canonical_hxl": true,
+    "central_read_write": 0,
+    "definition": "New fixed official metadata only. Full parent/contents linkage is saved in separate receipts; three tree object SHA1 values are reconstructed. Support byte identity follows Git blob identity, not a claim that unread scripts are safe or licensed. The canonical official notice differs from the historical mirror placeholder notice and remains separately preserved.",
+    "final_disposition_applied": false,
+    "git_tree_hashes_reconstructed": 3,
+    "held647_fetches": 0,
+    "job": "20261024-123649-todo-3080",
+    "official_commit": "dbd4588f9e1033efb41dad4bef2f7947c8993d44",
+    "official_package_tree": "b866bcfb57b780c10b587c7b543e871a91661ce0",
+    "package_blob_paths": 10,
+    "semantic_body_reread": false,
+    "source_code_executed": false,
+    "source_text_body_fetches": 0,
+    "support": [
+      {
+        "path": "reference/evaluation.md",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "87e9bb78840fac113d93b4a27ab5b229a18cf226",
+        "size": 21663
+      },
+      {
+        "path": "reference/mcp_best_practices.md",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "b9d343cc3ae89b1fc139dae96bdb2b7e29ba3648",
+        "size": 7330
+      },
+      {
+        "path": "reference/node_mcp_server.md",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "f6e5df982adc0848bf261c47ab8d65a1e0469391",
+        "size": 28550
+      },
+      {
+        "path": "reference/python_mcp_server.md",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "cf7ec996d2e6e3655bc75ff6902738d03a37334e",
+        "size": 25099
+      },
+      {
+        "path": "scripts/connections.py",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "ffcd0da3fbe1539320d022017ae83b61a9587a5c",
+        "size": 4875
+      },
+      {
+        "path": "scripts/evaluation.py",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "41778569c45a458e0eea839b8917692ad65be2d5",
+        "size": 12579
+      },
+      {
+        "path": "scripts/example_evaluation.xml",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "41e4459b5af861e61f1ca87d2f8f5ab5543dc054",
+        "size": 1194
+      },
+      {
+        "path": "scripts/requirements.txt",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "e73e5d1e356edafadb9dc9243e6f300f2c5529b3",
+        "size": 29
+      }
+    ],
+    "support_fingerprint": "484bdc219079d5764d67e22bee92807b0c49da6889c439fbb3ed03e534874448",
+    "support_paths": 8,
+    "todo": 3080,
+    "support_fingerprint_definition": "Sort support entries by relative path bytes; concatenate UTF-8 mode + space + type + space + git_blob_sha1 + space + relative_path + LF; SHA-256 of the concatenation. Size is metadata verified by the preserved official tree proof, outside this fingerprint.",
+    "package_blob_paths_definition": "Primary SKILL.md1 + official individual LICENSE.txt1 + support8 = package blob paths10; there is no publication identity entry in this official package."
+  },
+  "stage": "Public assessment proposal for one exact duplicate occurrence; ledger disposition, independent result review, CI and main acceptance remain",
+  "support_fingerprint_independently_recomputed": true,
+  "package_metadata_is_not_helper_semantic_or_license_acceptance": true
+}

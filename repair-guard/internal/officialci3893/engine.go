@@ -22,6 +22,74 @@ const ReceiptLifetime = 24 * time.Hour
 
 var ErrDenied = errors.New("official CI purpose denied")
 
+type validationStage uint8
+
+const (
+	validationIdentity validationStage = iota + 1
+	validationLoad
+	validationBinding
+	validationAsset
+	validationState
+	validationFuture
+	validationExpiry
+	validationLifetime
+	validationManifest
+	validationParent
+	validationPhysical
+	validationEvidence
+)
+
+func (s validationStage) reason() string {
+	switch s {
+	case validationIdentity:
+		return "receipt_identity_invalid"
+	case validationLoad:
+		return "receipt_load_failed"
+	case validationBinding:
+		return "receipt_binding_changed"
+	case validationAsset:
+		return "receipt_asset_changed"
+	case validationState:
+		return "receipt_not_complete"
+	case validationFuture:
+		return "receipt_created_in_future"
+	case validationExpiry:
+		return "receipt_expired"
+	case validationLifetime:
+		return "receipt_lifetime_changed"
+	case validationManifest:
+		return "receipt_manifest_missing"
+	case validationParent:
+		return "receipt_parent_changed"
+	case validationPhysical:
+		return "physical_tree_not_verified"
+	case validationEvidence:
+		return "authority_evidence_changed"
+	default:
+		return "validation_not_verified"
+	}
+}
+
+// Keep the original error relation, but never format an underlying OS path,
+// journal detail or authority response into the diagnostic.
+type validationFailure struct {
+	stage validationStage
+	cause error
+}
+
+func (e validationFailure) Error() string   { return "official CI: " + e.stage.reason() }
+func (e validationFailure) Unwrap() error   { return e.cause }
+func invalidAt(stage validationStage) error { return validationFailure{stage, ErrDenied} }
+
+// Only a closed stage emitted by this engine crosses the metadata boundary.
+func ValidationReason(err error) string {
+	var failure validationFailure
+	if errors.As(err, &failure) {
+		return failure.stage.reason()
+	}
+	return ""
+}
+
 // Binding is supplied by trusted wiring, never decoded from a caller request.
 // SourceRegistration is the digest of the independent normal self-source proof.
 type Binding struct {
@@ -181,7 +249,7 @@ func (e *Engine) authorize(ctx context.Context) error {
 	if o.Binding != e.binding || o.Asset != e.asset || age < 0 || age > time.Minute ||
 		!o.SourceVerified || !o.JobVerified || !o.Active || !o.OfficialPublicAsset ||
 		!o.FreshOwnedAnchor || o.Parent != e.fs.ParentIdentity() {
-		return ErrDenied
+		return invalidAt(validationEvidence)
 	}
 	return ctx.Err()
 }
@@ -266,17 +334,42 @@ func (e *Engine) fail(r Receipt, why error) (Receipt, error) {
 func (e *Engine) load(ctx context.Context, id string) (Receipt, error) {
 	var r Receipt
 	if !hexN(id, 32) {
-		return r, ErrDenied
+		return r, invalidAt(validationIdentity)
 	}
 	if err := e.authorize(ctx); err != nil {
 		return r, err
 	}
 	r, err := e.journal.Load(id)
 	now := e.now()
-	if err != nil || r.Domain != Domain || r.ID != id || r.Binding != e.binding || r.Asset != e.asset ||
-		r.State != Complete || r.Created.After(now) || !now.Before(r.Expires) ||
-		r.Expires.Sub(r.Created) != ReceiptLifetime || len(r.Files) == 0 || r.Parent != e.fs.ParentIdentity() {
-		return Receipt{}, ErrDenied
+	if err != nil {
+		return Receipt{}, invalidAt(validationLoad)
+	}
+	if r.Domain != Domain || r.ID != id {
+		return Receipt{}, invalidAt(validationIdentity)
+	}
+	if r.Binding != e.binding {
+		return Receipt{}, invalidAt(validationBinding)
+	}
+	if r.Asset != e.asset {
+		return Receipt{}, invalidAt(validationAsset)
+	}
+	if r.State != Complete {
+		return Receipt{}, invalidAt(validationState)
+	}
+	if r.Created.After(now) {
+		return Receipt{}, invalidAt(validationFuture)
+	}
+	if !now.Before(r.Expires) {
+		return Receipt{}, invalidAt(validationExpiry)
+	}
+	if r.Expires.Sub(r.Created) != ReceiptLifetime {
+		return Receipt{}, invalidAt(validationLifetime)
+	}
+	if len(r.Files) == 0 {
+		return Receipt{}, invalidAt(validationManifest)
+	}
+	if r.Parent != e.fs.ParentIdentity() {
+		return Receipt{}, invalidAt(validationParent)
 	}
 	return r, nil
 }
@@ -290,12 +383,22 @@ func (e *Engine) Resume(ctx context.Context, id string) error {
 	if err != nil {
 		return err
 	}
-	return e.fs.WithVerified(r, func([]Payload) error {
+	var callbackError error
+	err = e.fs.WithVerified(r, func([]Payload) error {
 		if !e.now().Before(r.Expires) {
-			return ErrDenied
+			callbackError = invalidAt(validationExpiry)
+		} else {
+			callbackError = e.authorize(ctx)
 		}
-		return e.authorize(ctx)
+		return callbackError
 	})
+	if err != nil && callbackError == nil {
+		if ctx.Err() != nil {
+			return ctx.Err()
+		}
+		return validationFailure{validationPhysical, err}
+	}
+	return err
 }
 
 // Consume is one-shot. The callback receives only verified public byte snapshots

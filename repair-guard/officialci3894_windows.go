@@ -37,6 +37,12 @@ const official3894OriginalCreator = "20261026-064014-todo-3894"
 const official3894PreviousGuardSHA = "02c8cad70e44f2bc4cd4e5a70dfdaf581a7ee6896eb63449fe1606eb28f5b5be"
 const official3894PreviousGuardHead = "f30f9e763e25884fa48d1cce0cac22da1cebfb69"
 
+// The reviewed PR567 build and its normal deployment are recorded on PR567.
+// This is the known software created by that repair, not an observed unknown
+// hash. The original SDK producer, receipt and registration remain unchanged.
+const official3894RepairGuardSHA = "434832534d43cbe954aa1c2e573879556bb840818e830a489b744e6e2744740f"
+const official3894RepairGuardHead = "521c4c4dddd7abbb0135d13bffb380ec984374b8"
+
 type official3894Source struct {
 	Head, Registration, CreatorJob, Workspace, Branch, SpecSHA string
 }
@@ -145,8 +151,12 @@ func runOfficial3894CLI(args []string, out io.Writer, operation func(context.Con
 		var boundary official3894Error
 		if errors.As(e, &boundary) {
 			r["reason"] = string(boundary)
+		} else if reason := oc.ValidationReason(e); reason != "" {
+			r["reason"] = "sdk_" + reason
 		} else if errors.Is(e, context.DeadlineExceeded) {
 			r["reason"] = "deadline"
+		} else if errors.Is(e, context.Canceled) {
+			r["reason"] = "cancelled"
 		}
 		r["purpose_verified"] = false
 		delete(r, "files")
@@ -509,30 +519,49 @@ func official3894SourceCheck(ctx context.Context, saved *official3894Source, con
 		return result, official3894Error("native_actor_identity_required")
 	}
 	if saved == nil && actorID != 3894 {
-		return result, oc.ErrDenied
+		return result, official3894Error("original_creator_required")
 	}
 	creatorJob := caller
 	if saved != nil {
 		creatorJob = saved.CreatorJob
 	}
 	if !skillsHasJob(creator, creatorJob) || !strings.HasPrefix(creator.Scheduler.Branch, "scheduler/todo-3894-") || !within(roots[3]+"-wt", creator.Scheduler.Worktree) {
-		return result, oc.ErrDenied
+		return result, official3894Error("original_creator_assignment_required")
 	}
-	if actorID == 3888 && (!ownerRegisteredSource(row.Scheduler.Worktree).AccessAllowed || !sourceOriginVerified(row.Scheduler.Worktree, "autodevjapan/local-ai-console") || !official3894ProviderSource(row.Scheduler.Worktree, row.Scheduler.Branch)) {
-		return result, oc.ErrDenied
+	if actorID == 3888 {
+		verdict, expired := ownerRegisteredSourceStatus(row.Scheduler.Worktree)
+		if !verdict.AccessAllowed {
+			if expired {
+				return result, official3894Error("provider_registered_source_deadline")
+			}
+			return result, official3894Error("provider_registered_source_required")
+		}
+		if !sourceOriginVerified(row.Scheduler.Worktree, "autodevjapan/local-ai-console") {
+			return result, official3894Error("provider_source_origin_required")
+		}
+		if !official3894ProviderSource(row.Scheduler.Worktree, row.Scheduler.Branch) {
+			return result, official3894Error("provider_source_binding_required")
+		}
 	}
 	if !within(currentTodoSpecsRoot, creator.Spec) || !strings.HasPrefix(filepath.Base(creator.Spec), "3894-") || !currentSubworkSpecName.MatchString(filepath.Base(creator.Spec)) {
-		return result, oc.ErrDenied
+		return result, official3894Error("original_creator_spec_scope_required")
 	}
 	spec, ok := s.read(creator.Spec, 1<<20)
 	if !ok {
-		return result, oc.ErrDenied
+		return result, official3894Error("original_creator_spec_unavailable")
 	}
 	specSHA := official3894Hash(spec)
 	// Source registration qualifies only the actual source. The SDK anchor is
 	// never sent to this function or made into a Git source.
-	if !ownerRegisteredSource(creator.Scheduler.Worktree).AccessAllowed || !sourceVerified(creator.Scheduler.Worktree) {
+	verdict, expired := ownerRegisteredSourceStatus(creator.Scheduler.Worktree)
+	if !verdict.AccessAllowed {
+		if expired {
+			return result, official3894Error("creator_registered_source_deadline")
+		}
 		return result, official3894Error("normal_registered_source_required")
+	}
+	if !sourceVerified(creator.Scheduler.Worktree) {
+		return result, official3894Error("creator_source_origin_required")
 	}
 	head, ok := official3894BuildHead()
 	if !ok {
@@ -551,7 +580,7 @@ func official3894SourceCheck(ctx context.Context, saved *official3894Source, con
 	proof, _ := json.Marshal(struct{ Root, Spec, SpecSHA, Workspace, Branch, ParentJob, ProviderJob, OriginalJobs string }{reg.Root, creator.Spec, specSHA, creator.Scheduler.Worktree, creator.Scheduler.Branch, b.ParentJob, b.OriginalProviderJob, origins})
 	result = official3894Source{head, official3894Hash(proof), creatorJob, creator.Scheduler.Worktree, creator.Scheduler.Branch, specSHA}
 	if saved != nil && result != *saved {
-		return result, oc.ErrDenied
+		return result, official3894Error("original_source_registration_changed")
 	}
 	return result, ctx.Err()
 }
@@ -635,10 +664,10 @@ func (a official3894Authority) Observe(ctx context.Context) (oc.Evidence, error)
 	var out oc.Evidence
 	observed := time.Now()
 	if _, e := official3894OwnedCheck(a.raw, a.source, a.started); e != nil {
-		return out, e
+		return out, official3894Error("original_owned_receipt_metadata_invalid")
 	}
 	if a.fs.ParentIdentity() != (oc.Identity{Volume: a.owned.Volume, FileID: a.owned.FileID, Birth: a.owned.Birth}) {
-		return out, oc.ErrDenied
+		return out, official3894Error("sdk_anchor_identity_changed")
 	}
 	if _, e := official3894SourceCheck(ctx, &a.source, a.consume); e != nil {
 		return out, e
@@ -652,12 +681,18 @@ func (a official3894Authority) Observe(ctx context.Context) (oc.Evidence, error)
 	defer s.close()
 	path := filepath.Join("D:/CC/Tools/safe-delete/receipts-go", a.owned.ID+".json")
 	b, ok := s.read(path, 8192)
-	if !ok || !bytes.Equal(b, a.raw) {
-		return out, oc.ErrDenied
+	if !ok {
+		return out, official3894Error("original_issuer_receipt_unavailable")
+	}
+	if !bytes.Equal(b, a.raw) {
+		return out, official3894Error("original_issuer_receipt_bytes_changed")
 	}
 	identity, e := official3894Identity(s.files[len(s.files)-1])
-	if e != nil || identity != a.issuerIdentity || identity.FileID == 0 {
-		return out, oc.ErrDenied
+	if e != nil {
+		return out, official3894Error("original_issuer_identity_unavailable")
+	}
+	if identity != a.issuerIdentity || identity.FileID == 0 {
+		return out, official3894Error("original_issuer_identity_changed")
 	}
 	binding := oc.FixedBinding(a.source.Head, a.source.Registration, official3894Hash(a.raw), a.source.CreatorJob)
 	out = oc.Evidence{Parent: a.fs.ParentIdentity(), FreshOwnedAnchor: true, Binding: binding, Asset: oc.OfficialAsset(), Observed: observed, SourceVerified: true, JobVerified: true, Active: true, OfficialPublicAsset: true}
@@ -796,20 +831,20 @@ func official3894Operation(ctx context.Context, op, id string, handoff func(obje
 	}
 	t := store.ticket
 	if t.Receipt == nil || t.Receipt.ID != id || t.Domain != official3894Domain {
-		return nil, oc.ErrDenied
+		return nil, official3894Error("original_creation_receipt_required")
 	}
 	var owned official3894Owned
 	if !skillsStrict(t.Owned, &owned) {
-		return nil, oc.ErrDenied
+		return nil, official3894Error("saved_owned_receipt_invalid")
 	}
 	fs, e := oc.NewNativeFS(filepath.Clean(owned.Path), t.Receipt.Parent)
 	if e != nil {
-		return official3894Summary(t), e
+		return official3894Summary(t), official3894Error("sdk_parent_identity_or_open_failed")
 	}
 	a := official3894Authority{source: t.Source, owned: owned, raw: t.Owned, issuerIdentity: t.IssuerIdentity, started: t.Started, fs: fs, consume: op == "consume"}
 	engine, e := oc.New(oc.FixedBinding(t.Source.Head, t.Source.Registration, official3894Hash(t.Owned), t.Source.CreatorJob), a, official3894Archive(nil), store, fs)
 	if e != nil {
-		return official3894Summary(t), e
+		return official3894Summary(t), official3894Error("sdk_engine_binding_invalid")
 	}
 	if op == "verify" {
 		e = engine.Resume(ctx, id)
@@ -828,7 +863,8 @@ func official3894Operation(ctx context.Context, op, id string, handoff func(obje
 }
 
 func official3894InstalledBaseline(sha, head string) bool {
-	return sha == official3894PreviousGuardSHA && head == official3894PreviousGuardHead
+	return (sha == official3894PreviousGuardSHA && head == official3894PreviousGuardHead) ||
+		(sha == official3894RepairGuardSHA && head == official3894RepairGuardHead)
 }
 
 // Qualifies only comparison of the single previously published guard software.
@@ -854,7 +890,8 @@ func official3894Update(ctx context.Context) (object, error) {
 		return nil, official3894Error("known_guard_software_unavailable")
 	}
 	head, ok := skillsBuildRevision(raw)
-	if !ok || !official3894InstalledBaseline(official3894Hash(raw), head) {
+	currentSHA := official3894Hash(raw)
+	if !ok || !official3894InstalledBaseline(currentSHA, head) {
 		// Never return or adopt an unknown observed hash as the new baseline.
 		return nil, official3894Error("known_guard_software_mismatch")
 	}
@@ -863,7 +900,7 @@ func official3894Update(ctx context.Context) (object, error) {
 		return nil, e
 	}
 	return object{"purpose_verified": true, "access_allowed": false, "original_registry_recovered": false, "launch_performed": false,
-		"domain": "official-ci3387-software-comparison-v1", "todo_id": 3894, "current_sha256": official3894PreviousGuardSHA,
+		"domain": "official-ci3387-software-comparison-v1", "todo_id": 3894, "current_sha256": currentSHA,
 		"current_source_head": head, "current_identity": identity, "source_head": source.Head, "source_registration_sha256": source.Registration,
 		"sdk_created": false, "update_performed": false, "general_access_granted": false}, nil
 }

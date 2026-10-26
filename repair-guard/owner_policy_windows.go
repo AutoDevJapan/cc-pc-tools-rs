@@ -316,6 +316,13 @@ func ownerGitHubIdentityWith(ctx context.Context, repository string) (int64, str
 }
 
 func ownerRegisteredSource(path string) ownerPathVerdict {
+	result, _ := ownerRegisteredSourceStatus(path)
+	return result
+}
+
+// Expose only whether the existing qualification deadline expired. The path
+// verdict, 750ms budget, snapshot checks and refresh behavior are unchanged.
+func ownerRegisteredSourceStatus(path string) (ownerPathVerdict, bool) {
 	// This is the existing normal internal metadata reader. Never print project
 	// names/paths, initialize a missing store, or use registration as permission.
 	ctx, cancel := context.WithTimeout(context.Background(), 750*time.Millisecond)
@@ -329,10 +336,11 @@ func ownerRegisteredSource(path string) ownerPathVerdict {
 		return id, name, owner, ok
 	}, plain: currentPlain, denied: legacyMatch, membership: ownerDepartmentMembership}
 	result := ownerSourceQuery(ctx, path, access)
+	expired := ctx.Err() == context.DeadlineExceeded
 	if refreshRepo != "" && ctx.Err() == nil {
 		ownerRequestIdentityRefresh(path, refreshRepo)
 	}
-	return result
+	return result, expired
 }
 
 func ownerSourceQuery(ctx context.Context, path string, access ownerSourceAccess) ownerPathVerdict {

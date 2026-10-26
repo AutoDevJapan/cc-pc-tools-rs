@@ -158,8 +158,15 @@ func official3894ParentUpdateSource(ctx context.Context) (official3894Source, er
 	if !ok || !commonOK || !official3894ParentUpdaterBound(reg, caller, job, common) || !official3894Descendant(job) {
 		return result, official3894Error("native_parent_software_updater_required")
 	}
-	if !ownerRegisteredSource(row.Scheduler.Worktree).AccessAllowed || !skillsActorSource(row.Scheduler.Worktree, row.Scheduler.Branch) {
+	verdict, expired := ownerRegisteredSourceStatus(row.Scheduler.Worktree)
+	if !verdict.AccessAllowed {
+		if expired {
+			return result, official3894Error("parent_registered_source_deadline")
+		}
 		return result, official3894Error("normal_registered_source_required")
+	}
+	if !skillsActorSource(row.Scheduler.Worktree, row.Scheduler.Branch) {
+		return result, official3894Error("parent_source_binding_required")
 	}
 	head, ok := official3894BuildHead()
 	if !ok || !official3894InputsUnchanged(row.Scheduler.Worktree, head) || !official3894Merged(ctx, head) {

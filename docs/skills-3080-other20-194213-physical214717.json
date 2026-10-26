@@ -1,0 +1,19 @@
+{
+  "domain": "other20-retained-physical-proof-binding-v1",
+  "consumer": "20261026-214717-todo-3080",
+  "snapshot_sha256": "9fdb7c460f07c7de1597e587b46450e87a030f41de6f0a84da20d748f5139d9a",
+  "records": 20,
+  "source_bytes": 52365,
+  "prior339_sha": "971cc94fbed7d5aa599a8dc3cc1eb9417a5e51fce1513cbab628777a508f85c9",
+  "supplement34_sha": "be50c0498fcb67b0fcd0e31c49f985041aa49461c4bd6a54e5417ef41e893ac9",
+  "all_source_tuples_match": true,
+  "source_objects_reopened": 0,
+  "new_semantic_source_reads": 0,
+  "new_grants": 0,
+  "new_adoptions": 0,
+  "public_added": 20,
+  "limit": "Prior physical observations at their original times only; does not establish current continuity, current OS writer, body reread, complete support/rights or adoption.",
+  "original_private_snapshot_sha256": "e859fa0df48fb61f42a846a27ae322bdfdf6d79ead00d33693fbf5864d923eea",
+  "snapshot_file": "skills-3080-other20-194213-evaluation214717.json",
+  "working_public_reflection": true
+}

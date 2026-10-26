@@ -1,0 +1,12 @@
+{
+  "bundle": {
+    "file": "skills-3080-security-coverage-actual-bundle214717.json",
+    "sha256": "0b7e4419ba53dc1cd98539dad184370742b938b5c807ff2a86689b1cc465490f"
+  },
+  "method": "Existing3048 explicit in-memory checker using only qualified actual buffers",
+  "exit": 0,
+  "stdout": "PASS: 1 explicit skills; structure, descriptions, references, hashes, scenario pairs; in-memory bundle only; no deployment implied\n",
+  "stderr": "",
+  "additional_central_writes": 0,
+  "live_security_audit_or_exploit_executed": false
+}

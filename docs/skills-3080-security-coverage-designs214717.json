@@ -1,0 +1,27 @@
+{
+  "todo": 3080,
+  "targets": [
+    {
+      "name": "security-audit-coverage",
+      "inventory_id": "github:37cb72b7fc5bc095b6f3995906cca3d61f9f3dc9c959b272c7c6d9c9feb3be95",
+      "source_repo": "cloudflare/security-audit-skill",
+      "source_commit": "c1c8a8c1471069fb0e188eeaff69b8e8db6564a8",
+      "source_path": "skills/security-audit/SKILL.md",
+      "source_sha256": "5e3e96a1e438d8f35fef0a1e38f02d4f00e2bdf910401b7dfe00e6779c6dac85",
+      "entrypoint_sha256": "538433afee453c330990ba66a31faa00f4cced1768e590fc60a689b53fd30cdc",
+      "primary_license": "MIT",
+      "individual_notice_sha256": "e598e694aa506650c7192d5ea3be0e50aca0d356ea00551c53429f0b01eb6391",
+      "selected_scope": "Coverage-unit and evidence bookkeeping from four authored texts and fixed MIT notice; no full audit engine, validators, schema, unreviewed companions or third-party target rights",
+      "positive": "前回の監査と今回変わったbatch/retryを比べ、入口と権限境界ごとの調査済み/未確認を追いたい。",
+      "negative": "一ファイルの誤字修正や単発の一般質問に、監査全工程・新しい担当やファイルを強制する。",
+      "actual_manifest": "skills-3080-installed-security-coverage-manifest214717.json",
+      "source_primary_current_parent_amendment": "skills-3080-other193-evaluation214717.json",
+      "unknown_central_body_not_compared": true,
+      "rights_scope": "Fixed MIT authored primary and three workflow chapters with preserved notice; no third-party target code/data/assets/services, unreviewed companions, schema or validator execution rights"
+    }
+  ],
+  "not_an_adoption_cap": true,
+  "new_global_source_read_credit": 0,
+  "whole16_complete": false,
+  "batch_is_not_total_scope_or_count_cap": true
+}

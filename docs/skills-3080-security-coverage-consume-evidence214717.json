@@ -1,0 +1,175 @@
+{
+  "job": "20261026-214717-todo-3080",
+  "manifest_sha256": "88ca069ea9a21cdfdbf0a97aac6d28a449012f99cf62e1a1f7d21265caaa064b",
+  "qualified_current_buffers": 9,
+  "bytes": 92804,
+  "bounded_batches": 2,
+  "SDK_batch_limit_bytes": 65536,
+  "batches": [
+    {
+      "batch": 1,
+      "indices": [
+        0,
+        1,
+        2,
+        3
+      ],
+      "expected_bytes": 51940,
+      "producer": {
+        "sha256": "02c8cad70e44f2bc4cd4e5a70dfdaf581a7ee6896eb63449fe1606eb28f5b5be",
+        "revision": "f30f9e763e25884fa48d1cce0cac22da1cebfb69"
+      },
+      "runtime_producer": {
+        "sha256": "02c8cad70e44f2bc4cd4e5a70dfdaf581a7ee6896eb63449fe1606eb28f5b5be",
+        "revision": "f30f9e763e25884fa48d1cce0cac22da1cebfb69"
+      },
+      "response_sha256": "8d403e79f0dd47c2f4b4832ea2180fcc1dcea25a749fcf970627041abbd147f8"
+    },
+    {
+      "batch": 2,
+      "indices": [
+        4,
+        5,
+        6,
+        7,
+        8
+      ],
+      "expected_bytes": 40864,
+      "producer": {
+        "sha256": "02c8cad70e44f2bc4cd4e5a70dfdaf581a7ee6896eb63449fe1606eb28f5b5be",
+        "revision": "f30f9e763e25884fa48d1cce0cac22da1cebfb69"
+      },
+      "runtime_producer": {
+        "sha256": "02c8cad70e44f2bc4cd4e5a70dfdaf581a7ee6896eb63449fe1606eb28f5b5be",
+        "revision": "f30f9e763e25884fa48d1cce0cac22da1cebfb69"
+      },
+      "response_sha256": "32f40e692d2213c7028d17849c1747702480f68365900441de149f1a6e868f84"
+    }
+  ],
+  "instruction_files": 2,
+  "instruction_bytes": 7468,
+  "current_IDs_match_creation": true,
+  "all_same_read_buffers_match_manifest": true,
+  "each_file_at_its_successful_read_time": true,
+  "atomic_snapshot_across_batches": false,
+  "historical_physical_continuity_proven": false,
+  "current_OS_writer": "unproved",
+  "general_access_granted": false,
+  "original_registry_recovered": false,
+  "new_creations": 0,
+  "new_ledger_adoptions": 0,
+  "new_global_primary_credit": 0,
+  "prior_oversized_request_retained": "security-coverage-consume9-exact-native-response214717.json",
+  "prior_failure_reason": "request/current_snapshot:92804 exceeds65536 before leaf reads",
+  "files": [
+    {
+      "index": 0,
+      "target": "security-audit-coverage/SKILL.md",
+      "sha256": "538433afee453c330990ba66a31faa00f4cced1768e590fc60a689b53fd30cdc",
+      "bytes": 2713,
+      "created_and_current_object_identity_sha256": "41eaaa3cd768a9069de6956ec7a02da58d5b0fd2272c89572898236fed5a2656",
+      "creation_ID_matches_current": true,
+      "same_handle_buffer_returned": true,
+      "reviewed_bytes_equal": true,
+      "actual_read_consumer": "20261026-214717-todo-3080",
+      "batch": 1
+    },
+    {
+      "index": 1,
+      "target": "security-audit-coverage/references/coverage-guide.md",
+      "sha256": "e55bfb07c14b57bab7805359effa8445e39fc69a9dab0ac2db663b809fb77f95",
+      "bytes": 4755,
+      "created_and_current_object_identity_sha256": "054ea2084a1e70870aa7f955c2146a03fcabf524894d61942392ae0f25886255",
+      "creation_ID_matches_current": true,
+      "same_handle_buffer_returned": true,
+      "reviewed_bytes_equal": true,
+      "actual_read_consumer": "20261026-214717-todo-3080",
+      "batch": 1
+    },
+    {
+      "index": 2,
+      "target": "security-audit-coverage/references/original-core.txt",
+      "sha256": "5e3e96a1e438d8f35fef0a1e38f02d4f00e2bdf910401b7dfe00e6779c6dac85",
+      "bytes": 22026,
+      "created_and_current_object_identity_sha256": "fdfdd15c09c9cbb01de60955b3e713367f17e178b29f35a7bab70986f898725b",
+      "creation_ID_matches_current": true,
+      "same_handle_buffer_returned": true,
+      "reviewed_bytes_equal": true,
+      "actual_read_consumer": "20261026-214717-todo-3080",
+      "batch": 1
+    },
+    {
+      "index": 3,
+      "target": "security-audit-coverage/references/original-hunting.txt",
+      "sha256": "71c121decea1322c47c718f6e110f1a892980bb4266bd7ac55ef043a213ade09",
+      "bytes": 22446,
+      "created_and_current_object_identity_sha256": "a900f791db73e5749ce13f25c3e03b830461b7c9ffbadc145d325b3749987c40",
+      "creation_ID_matches_current": true,
+      "same_handle_buffer_returned": true,
+      "reviewed_bytes_equal": true,
+      "actual_read_consumer": "20261026-214717-todo-3080",
+      "batch": 1
+    },
+    {
+      "index": 4,
+      "target": "security-audit-coverage/references/original-reconnaissance.txt",
+      "sha256": "02ca887aca84de8ae137f1891bd2f0a54f28d3fa6da92a27f54734382b3381a2",
+      "bytes": 15902,
+      "created_and_current_object_identity_sha256": "18228ff47c2374a51b14199ca9fdadd30ebdbcf80e69d942baccdb7664c8c8ee",
+      "creation_ID_matches_current": true,
+      "same_handle_buffer_returned": true,
+      "reviewed_bytes_equal": true,
+      "actual_read_consumer": "20261026-214717-todo-3080",
+      "batch": 2
+    },
+    {
+      "index": 5,
+      "target": "security-audit-coverage/references/original-validation.txt",
+      "sha256": "b892470cb89bb31f33403e050d4bdfbe2cdaef940ade1496fa65e32b2e129449",
+      "bytes": 17843,
+      "created_and_current_object_identity_sha256": "4afbd2a524a097c7c6846727067247a6a7946456f20326532510959eef439e12",
+      "creation_ID_matches_current": true,
+      "same_handle_buffer_returned": true,
+      "reviewed_bytes_equal": true,
+      "actual_read_consumer": "20261026-214717-todo-3080",
+      "batch": 2
+    },
+    {
+      "index": 6,
+      "target": "security-audit-coverage/references/LICENSE.txt",
+      "sha256": "e598e694aa506650c7192d5ea3be0e50aca0d356ea00551c53429f0b01eb6391",
+      "bytes": 1078,
+      "created_and_current_object_identity_sha256": "5eca435a38dff6ecdd0b5dd26a74b4c8d56ef0ef5324292c8611ec7e613ce413",
+      "creation_ID_matches_current": true,
+      "same_handle_buffer_returned": true,
+      "reviewed_bytes_equal": true,
+      "actual_read_consumer": "20261026-214717-todo-3080",
+      "batch": 2
+    },
+    {
+      "index": 7,
+      "target": "security-audit-coverage/references/source.json",
+      "sha256": "f06aecae5ea88c1b386507e918ac478d17b57338b06c5afb81ff607e6509d72d",
+      "bytes": 4805,
+      "created_and_current_object_identity_sha256": "bc377a87beafa39e9789ec192f05dc7a5e7f23250b4a8f4378d4bbce43f33f1e",
+      "creation_ID_matches_current": true,
+      "same_handle_buffer_returned": true,
+      "reviewed_bytes_equal": true,
+      "actual_read_consumer": "20261026-214717-todo-3080",
+      "batch": 2
+    },
+    {
+      "index": 8,
+      "target": "security-audit-coverage/references/sources.md",
+      "sha256": "15c6c9eaeb6fd08ef1933fea309eddee852cda836157439b5505846f5a721ecf",
+      "bytes": 1236,
+      "created_and_current_object_identity_sha256": "ab39884326098f3d65d2adbf66f2909d8231ad5aff27b00c06d03856b856a5f1",
+      "creation_ID_matches_current": true,
+      "same_handle_buffer_returned": true,
+      "reviewed_bytes_equal": true,
+      "actual_read_consumer": "20261026-214717-todo-3080",
+      "batch": 2
+    }
+  ],
+  "identity_digest_definition": "SHA256 UTF8(volume + LF + file_id_128) from equal original/current objects; raw platform IDs remain private"
+}

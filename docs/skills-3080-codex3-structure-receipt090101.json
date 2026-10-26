@@ -1,0 +1,19 @@
+{
+  "bundle": "skills-3080-codex3-reviewed-bundle090101.json",
+  "bundle_sha256": "6907cd83d1fb8d9e8b897ca42594b0c5bf5c9e5aeee38d5e730b198bc1e2bdef",
+  "method": "existing3048 checker in-memory bundle",
+  "arguments": [
+    "go",
+    "-C",
+    "tools/skills-3048-check",
+    "run",
+    ".",
+    "-bundle",
+    "-manifest",
+    "<absolute path to docs/skills-3080-codex3-reviewed-bundle090101.json>"
+  ],
+  "exit": 0,
+  "stdout": "PASS: 3 explicit skills; structure, descriptions, references, hashes, scenario pairs; in-memory bundle only; no deployment implied\n",
+  "stderr": "",
+  "actual_deployment_implied": false
+}

@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"os"
 	"testing"
+	"time"
 )
 
 func originReferenceFixture(t *testing.T) (*actorFixture, conversationOriginContract) {
@@ -115,4 +116,17 @@ func TestConversationSenderFailureProtocolDoesNotExposeRawDiagnostics(t *testing
 	if conversationOriginReferenceCLI([]string{"--request-id", "private-secret-value"}, &out) != 1 || out.String() != "conversation source reference unverified\n" {
 		t.Fatal("invalid input echoed or reached production loader")
 	}
+}
+
+func TestConversationSourceSenderBudgetIsFiniteAndRequestScoped(t *testing.T) {
+	args := []string{"recovery-ask", "--conversation-source-request", fixedConversationOrigin.RequestID}
+	budget := commandBudget(conversationSender, args)
+	if budget <= 20*time.Second || budget >= conversationCLIDeadline { t.Fatal("sender budget cannot contain its bounded reader and HTTP work", budget) }
+	for _, input := range []struct{ path string; args []string }{
+		{conversationSender, []string{"recovery-ask"}},
+		{conversationSender, []string{"recovery-ask", "--conversation-source-request", "unrelated"}},
+		{conversationSender, []string{"recovery-log", "--conversation-source-request", fixedConversationOrigin.RequestID}},
+		{"other", args},
+	} { if commandBudget(input.path,input.args) != 20*time.Second { t.Fatal("unrelated subprocess budget expanded") } }
+	if conversationFailureStage(conversationSenderFailure(`{"domain":"new-owner-recovery-messages","delivery":"not_verified","failure_stage":"operation_pending"}`)) != "send_pending" { t.Fatal("unconfirmed sender result lost its public pending stage") }
 }

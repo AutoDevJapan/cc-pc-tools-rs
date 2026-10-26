@@ -3874,6 +3874,7 @@ mod tests {
         bot_override: Option<String>,
         source_reference_proof: Option<Value>,
         source_reference_checks: usize,
+        transport_failure: Option<(String, String)>,
     }
 
     struct Mock {
@@ -3982,6 +3983,9 @@ mod tests {
                 return Err("unexpected recovery effect".into());
             }
             self.check_pending(&mut state, method, body);
+            if state.transport_failure.as_ref().is_some_and(|(m, p)| m == method && p == path) {
+                return Err("URLError: fixture-private-network-detail".into());
+            }
             if method == "GET" && state.blocked {
                 return Err("simulated interrupted GET".into());
             }

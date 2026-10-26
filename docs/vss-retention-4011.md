@@ -2,6 +2,11 @@
 
 Issue: https://github.com/AutoDevJapan/cc-pc-tools-rs/issues/565
 
+**現在（10/27 06時台）**：実適用と1回のpoint作成を実行したが、即時の登録・割当の受入に
+未達だったため自分のminimumを元へ戻した。後の正常再照合では新point263が登録済みで、
+元のpoint262と2世代が残っている。現在のregistryは未設定、provider minimumは320MiB。
+Volsnap25の再発防止は未実証であり、作成/設定保存だけで修復完了にはしない。
+
 ## 対象と受入条件
 
 既存Windows VSSの保持だけを修復する。元3796の約71GiB全増加原因、保護台帳2467、
@@ -175,3 +180,85 @@ C352,599,576,576/D2,115,095,773,184/E858,052,489,216B free。OS変更はまだ0�
 対応する同providerイベントなし。両方をSystemRestore/全volume保護と断定せず、原本を保持する。
 System-Restoreのprovider正式名をcorrelateへ追加し、2回の25の前後5分の既存結論不変を実確認した。
 この修正後の固定レビュー/Must0と実適用は、まだこれからである。
+
+## 4028の受領と実OS適用（05:53～05:59）
+
+4028は固定e1c3ffef→d2a3aaf3の9対象全文を読了、旧Must解消/新Must0。
+実job20261027-053028-todo-4028、succeeded/exit0/32steps、execution_observedは
+native_turn_context/anthropic/claude-opus-5-5/max。原応答3506字/SHA256
+C6E06B8DD21CAC5282A7B2FF9F480991D770E39EF0851C6FC7B5CFE04A519A3Aを保持。
+後続の1344aa13はRESUMEだけの変更で、実装byteは同じ。CodeQLの全5チェック成功も確認した。
+通常AdminBroker内でcommon読込と10guard成功を確認し、設定/作成/rollbackを各1依頼へ分けた。
+観測・rollback判断が終わるまでこのworktreeと無視対象のos-v2を保持し、別checkoutから実行しない。
+observerの出力先にはos-v2を指定しない。原request/resultを上書き・削除しない。
+
+05:53直前にはWindowsが05:43作成point262とpersistent C snapshotを1件持っていたため、
+以前の0件観測を流用せず、新たな既存世代として保持した。05:54:19のconfigureは終了0で
+3200DWORDの保存・型・readbackを確認。C→C/50GiBは不変。
+05:54:32のA要求BEGIN/ENDは共に0だが、05:54:46直後のCIM登録はまだ旧1件のみだった。
+
+| 同じA要求の実測 | BEGIN直前 | END直後 | 差 |
+| --- | ---: | ---: | ---: |
+| 使用B | 2,671,165,440 | 2,871,148,544 | +199,983,104 |
+| 割当B | 3,154,116,608 | 6,158,565,376 | +3,004,448,768 |
+| 上限B | 53,687,091,200 | 53,687,091,200 | 0 |
+
+未使用の増分2,804,465,664Bは受入の2880MiBに未達、割当増も3200MiBに未達だった。
+不成立receiptを当時のまま保存し、05:55:24に自己DWORDだけを正常rollback/終了0で未設定へ戻した。
+snapshot削除/上限変更/関連付け変更/サービス停止/OS再起動は0、Bを作成・Aを再試行していない。
+この保守的な未達は「設定は絶対に効かない」という証明ではない。
+
+rollback時には新tokenが現れ、05:56の正常再照合でown description完全一致point263/type12と
+新persistent/state12 snapshot（作成05:54:41.991208）を確認。SystemRestore8194成功05:54:42.052986、
+8300 scoping05:54:53.010932とも整合する。元の262と新263は両方存続した。
+要求の成功戻り値とCIMで読めるまでの時間差が実証されたので、非0/unresolved票だけで未作成と断定しない。
+新しいreconcile票へ結果を保存し、Aの原resultを成功へ書き換えていない。
+
+05:55:53の使用3,513,860,096B/割当6,158,565,376B/max50GiB。
+空きC351,853,670,400/D2,121,461,518,336/E858,052,489,216B。並行I/Oを含み回収量ではない。
+設定開始後のvolsnap新イベント0、complete true/errors0だが、短期の保持に限る。
+Goの有限・読取専用`minimum_windows.go`で正規IVssSnapshotMgmt2.GetMinDiffAreaSizeを照会し、
+05:58:56 HRESULT0/335,544,320B（320MiB）を実取得した。登録やdriver全体の復旧の証明ではない。
+Go通常build/vet成功。API GUID・vtableはMicrosoft WinSDK vsmgmt.hと照合し、
+snapshotの作成/削除/移動/resize、volume内容の読み取り機能は持たない。
+
+別の有限匿名診断では、最新2件の25のIO_ERROR_LOG_PACKET固定ヘッダはFinalStatus0/Unique0xA8、
+24のみFinalStatus0xC000007F、35は0/Unique0xA5。可変dump/生binary/挿入文字列/Messageは非出力。
+optional FinalStatus0は成功や具体IO障害不存在の証明ではなく、原因の直接経路は従来の拡張遅延のまま。
+
+## 次の限定是正候補：既存2世代を保ったままminimumを正規APIで確認する
+
+旧Aの即時gateを緩めたり、失敗claimを消したり、新しいpathでAをやり直したりしない。
+現在は必要2世代が実際に存在するため、次の候補は**新しいpointを一切作らず**minimumの
+正規provider値と、既存2世代の通常I/O中の割当拡張を確認する一度きりの設定工程である。
+3200がCIMの厳密な初期差へ現れるかと、現在のprovider報告値は別の証拠として扱う。
+
+`reactivate-minimum.ps1 -Mode Apply -QueryExe ... -QueryExeSha256 ...`は、既存os-v2へ
+新しいreactivation-requestを追記する。元configuration/request・rollback/result・A不成立票があること、
+現在minimum未設定/provider320MiB、MS provider1、C→C/50GiB、他volume snapshot0、
+明示DisableSRなし、空き>=3200MiB+200GiB、既存point263と原2token/persistent/state12を確認する。
+新しい同段階のrequestがあれば実行しない。読み取りhelperは直前に作った自分のGo byteのSHAを照合。
+DWORD3200を一度設定し、正規provider値が3200MiB/readback型値一致/全旧token存続を確認して記録する。
+未達/例外時は自分が書いた同型同値だけを元の未設定へ戻す。初期割当の成功には読み替えない。
+
+以後の通常I/Oで、既存2tokenとpoint262/263、上限不変、新24/25/33/35/36なし、
+provider minimumと実割当の拡張量/増加速度を観測する。default時と大きなminimum時を
+区別し、少なくとも実割当増1回/使用増1GiBと次の01:45・02:40両時刻を含む1夜を必要とする。
+新しいsnapshot/pointは追加しない。最大48h/2夜、条件未達または異常なら
+`-Mode Undo`でこの追記requestに対応する自分の3200DWORDだけを未設定へ戻す。
+別の値や型なら保持し、registryが不存在でも区別して記録する。必要pointを消して見かけ上改善しない。
+記録は同じworktree/os-v2のまま保持し、原結果を消す再試行・審査拒否の迂回は行わない。
+この限定候補はまだ未実行で、実データ保持と証拠の十分性を別モデルへ確認してから適用する。
+
+PS5.1/7で8source構文確認とA判定receiptのJSON往復テスト成功。新しいsettingの実適用/
+途中停止後の動作はまだ未検証。既存claimの維持と新phaseを明示し、新たなpoint作成loopを作らない。
+
+追加一次資料：
+
+- [Microsoft: GetMinDiffAreaSize](https://learn.microsoft.com/en-us/windows/win32/api/vsmgmt/nf-vsmgmt-ivsssnapshotmgmt2-getmindiffareasize)
+- [Microsoft WinSDK: COM interface GUIDとvtable](https://github.com/microsoft/win32metadata/blob/main/generation/WinSDK/RecompiledIdlHeaders/um/vsmgmt.h)
+- [Microsoft: IO_ERROR_LOG_PACKETの固定フィールドとoptional status](https://learn.microsoft.com/en-us/windows-hardware/drivers/ddi/wdm/ns-wdm-_io_error_log_packet)
+
+親への最初の実適用結果note保存は共有ToDoの64MiB上限で失敗したため、自己4011の過去メモ7件だけを
+正規archive-historyで原文21,443B/ハッシュ/通常history読返しを保って別保管し、3796/3628への
+同結果保存を成功させた。他担当の履歴や状態を清掃/改変せず、この修復を容量清掃成功に加算しない。

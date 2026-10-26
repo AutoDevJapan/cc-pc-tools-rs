@@ -1,5 +1,41 @@
 # 元4011の再開情報
 
+## 2026-10-27 05:52再開：実適用/point作成/原設定復帰まで実施
+
+実job20261027-055203-todo-4011、開始1344aa13/同branch、未コミット0から継続。
+4028のMust0を原応答とnative_turn_context Opus5.5 max/succeeded32stepsで受領し、
+同実装/1344aa13の全CI成功、AdminBroker内10guard成功を確認後、実OS設定とpoint Aを実行した。
+詳細の時刻/実数/返却はdocs/vss-retention-4011.md末尾と.ci-work/4011の055203票。
+原os-v2/configuration/request-resultとpoint-A/request-begin-end-request-resultを保持する。
+設定は3200DWORD追加成功→Aの即時CIM登録/割当gate未達→05:55:24自己DWORDを未設定へ戻した。
+AのBEGIN/ENDは0、後の正常reconcileで新point263/type12/tokenEFA3...が登録済みと確認。
+元のWindows自動point262/token305F...を失わず両世代persistent/state12が存続した。
+Bは未実行。Aの原resultは当時の不成立のまま、新しい成功票へ改竄せず別reconcile票を保持。
+OS再起動・snapshot削除・関連付け変更・上限変更0。Volsnap25修復の全体完了にはしない。
+
+現在MinDiffAreaFileSizeは未設定。正規VSS APIのGo読取helperで現在minimum320MiB/HRESULT0を取得。
+新source minimum_windows.goは通常Go build/vet/実API成功、runtime changes0。
+同じpoint要求を再試行せず、現2世代のままprovider minimumと実IO拡張を確認する限定候補
+reactivate-minimum.ps1を用意した（**未実行、次の別モデル確認前に適用しない**）。
+前のconfiguration/rollback/A不成立票を同os-v2に保持し、新phase/requestでbefore未設定/
+provider320→target3200MiB/原2token存続を確認する。一度きりで新point作成0、条件未達は自己値だけ復帰。
+既存StageA/Bのclaimや厳密gateを緩めて通す操作ではなく、登録遅延という実測を保持した別の確認工程。
+候補の全条件/Undo/観測最大48h2夜はdocs末尾。MinDiffの再適用自体を保持成功と扱わない。
+PS5.1/7で8source parse/JSON往復、Go vet成功。実setting新phase/夜間保持は未検証。
+
+親3796/3628へ正規note実適用結果保存成功。途中のtodo_store_too_large/64MiBは
+自己4011のhistory7件だけ正規archive-history --applyで原文21,443Bを別保管し復旧、
+SHA ceeff947a07671670b3cd34cbcfc8d48aeffa0b094cef86a636f2745bd21cfe4/通常history total7読返し。
+他担当の履歴/状態を変更せず、通常の返却は完了、親の実読了/Discord配送は親側で追う。
+
+新自己Temp所有IDb1eb802a589236fccb3f585951053174はTemp直下codex-owned-b1eb802a589236fccb3f585951053174。
+原launcher/読み取り診断source/Goexeを保持中。片付け前に必要source/原値を.ci-workへ保全し、
+plan→別exec→finishを実行する。旧Tempの9f17.../4cb6...はsource_absent、再使用しない。
+観測・設定復帰判断が終わるまでこのworktreeとos-v2を消さず、別checkoutのscriptsから実行しない。
+新snapshotを作るA/B再試行、os-v2の旧claim/resultの削除/書換え、原pointの削除は行わない。
+
+以下は旧時点の未適用/未読/待ちの履歴。現在は実操作済みだがregistry元設定/全体未完である。
+
 ## 2026-10-27 05:03再開担当の現在値
 
 05:32の最終読返し：4028は通常schedulerから**job20261027-053028-todo-4028**でdoingへ進んだ。

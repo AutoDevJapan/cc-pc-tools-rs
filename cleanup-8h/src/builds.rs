@@ -36,7 +36,7 @@ impl BuildStats {
         *self.reasons.entry(reason).or_default() += 1;
     }
     pub(super) fn partial(&self) -> bool {
-        self.bounded || self.retained > 0 || self.partial_deletions > 0
+        self.bounded || self.cursor_unverified || self.retained > 0 || self.partial_deletions > 0
     }
     pub(super) fn json(&self) -> Value {
         json!({"scope":"registered_done_cc_pc_tools_target_debug", "inspected":self.inspected,
@@ -110,6 +110,60 @@ fn lock(path: &Path) -> Check<HeldLock> {
         _pin: pin,
         _parents: parents,
     })
+}
+
+struct Profiles(BTreeMap<String, HeldLock>);
+impl Profiles {
+    fn load(root: &Path) -> Check<Self> {
+        let mut locks = BTreeMap::new();
+        for name in PROFILE_LOCKS {
+            match fs::symlink_metadata(root.join(name)) {
+                Ok(_) => {
+                    let held = lock(&root.join(name))?;
+                    let info = &held._pin.info;
+                    if info.attributes & 3 != 0 || info.size_low != 0 || info.size_high != 0 {
+                        return Err("CARGO_PROFILE_LOCK_UNVERIFIED");
+                    }
+                    locks.insert(name.to_owned(), held);
+                }
+                Err(e) if e.kind() == io::ErrorKind::NotFound && name != ".cargo-lock" => (),
+                Err(_) => return Err("CARGO_PROFILE_LOCK_UNVERIFIED"),
+            }
+        }
+        Ok(Self(locks))
+    }
+    fn validate(&self, root: &Path) -> Check<()> {
+        for name in PROFILE_LOCKS {
+            match (self.0.get(name), fs::symlink_metadata(root.join(name))) {
+                (None, Err(e)) if e.kind() == io::ErrorKind::NotFound => (),
+                (Some(held), Ok(_)) => {
+                    let current = Pinned::open(&root.join(name), false)
+                        .map_err(|_| "PROFILE_LOCKS_CHANGED")?;
+                    if current.directory() || stamp(&current) != stamp(&held._pin) {
+                        return Err("PROFILE_LOCKS_CHANGED");
+                    }
+                }
+                _ => return Err("PROFILE_LOCKS_CHANGED"),
+            }
+        }
+        Ok(())
+    }
+    fn only(&self, root: &Path) -> Check<bool> {
+        self.validate(root)?;
+        for (n, entry) in fs::read_dir(root)
+            .map_err(|_| "CONTENTS_UNVERIFIED")?
+            .enumerate()
+        {
+            if n >= 40_000 {
+                return Err("ENTRY_LIMIT");
+            }
+            let name = entry.map_err(|_| "CONTENTS_UNVERIFIED")?.file_name();
+            if !self.0.keys().any(|expected| name == OsStr::new(expected)) {
+                return Ok(false);
+            }
+        }
+        Ok(true)
+    }
 }
 
 fn read(ctx: &Context, path: &Path, max: u64) -> Check<Value> {
@@ -272,6 +326,27 @@ fn build_reference(value: &Value, debug: &Path) -> bool {
         _ => false,
     }
 }
+fn relative_build_reference(value: &Value) -> bool {
+    match value {
+        Value::String(s) => {
+            let text = s.replace('/', "\\").to_lowercase();
+            text.match_indices("target\\debug\\").any(|(offset, _)| {
+                let before = &text[..offset];
+                let before = before.strip_suffix(".\\").unwrap_or(before);
+                let boundary = before.chars().next_back().is_none_or(|c| {
+                    c.is_whitespace() || matches!(c, '\'' | '"' | '`' | '(' | '[' | '=')
+                });
+                boundary
+                    && text[offset + 13..].chars().next().is_some_and(|c| {
+                        !c.is_whitespace() && !matches!(c, '\'' | '"' | '`' | ')' | ']')
+                    })
+            })
+        }
+        Value::Array(xs) => xs.iter().any(relative_build_reference),
+        Value::Object(xs) => xs.values().any(relative_build_reference),
+        _ => false,
+    }
+}
 fn state(
     ctx: &Context,
     store: &Path,
@@ -291,7 +366,13 @@ fn state(
         return Err("DEPENDENT_WORK_RETAINED");
     }
     let debug = work.join("target/debug");
-    if build_reference(&db, &debug) {
+    if build_reference(&db, &debug)
+        || rows.iter().any(|row| {
+            same(Path::new(field(&row["scheduler"], "worktree")), work)
+                && relative_build_reference(row)
+        })
+        || relative_build_reference(origin)
+    {
         return Err("SAVED_BUILD_REFERENCE_RETAINED");
     }
     // The existing owner index was freshly reconciled under the queue lock.
@@ -301,6 +382,9 @@ fn state(
             return Err("JOB_SCAN_LIMIT");
         }
         let j = job(ctx, id)?;
+        if same(Path::new(field(&j, "cwd")), work) && relative_build_reference(&j) {
+            return Err("SAVED_BUILD_REFERENCE_RETAINED");
+        }
         if build_reference(&j, &debug) {
             return Err("SAVED_BUILD_REFERENCE_RETAINED");
         }
@@ -456,6 +540,7 @@ struct Stamp {
     written: u64,
     size: u64,
     attributes: u32,
+    links: u32,
 }
 fn stamp(p: &Pinned) -> Stamp {
     let i = &p.info;
@@ -466,6 +551,7 @@ fn stamp(p: &Pinned) -> Stamp {
         written: u64::from(i.written.high) << 32 | u64::from(i.written.low),
         size: u64::from(i.size_high) << 32 | u64::from(i.size_low),
         attributes: i.attributes,
+        links: i.links,
     }
 }
 struct Node {
@@ -478,8 +564,15 @@ struct Plan {
 }
 struct Artifacts {
     targets: BTreeSet<String>,
-    hashes: BTreeSet<String>,
     units: BTreeMap<String, BTreeSet<String>>,
+    fingerprints: BTreeMap<String, BTreeSet<String>>,
+    build_dirs: BTreeSet<String>,
+    out_dirs: BTreeSet<String>,
+}
+fn base36(s: &str, min: usize, max: usize) -> bool {
+    (min..=max).contains(&s.len())
+        && s.bytes()
+            .all(|b| b.is_ascii_digit() || b.is_ascii_lowercase())
 }
 impl Artifacts {
     fn load(ctx: &Context, work: &Path, until: Instant) -> Check<Self> {
@@ -491,7 +584,6 @@ impl Artifacts {
                 "metadata".into(),
                 "--locked".into(),
                 "--offline".into(),
-                "--no-deps".into(),
                 "--format-version".into(),
                 "1".into(),
             ],
@@ -514,6 +606,9 @@ impl Artifacts {
         ) {
             return Err("CARGO_TARGET_CHANGED");
         }
+        let packages = metadata["packages"]
+            .as_array()
+            .ok_or("CARGO_METADATA_UNVERIFIED")?;
         let targets = metadata["packages"]
             .as_array()
             .ok_or("CARGO_METADATA_UNVERIFIED")?
@@ -524,7 +619,9 @@ impl Artifacts {
             .collect();
         let fingerprint = work.join("target/debug/.fingerprint");
         let _pins = pin_ancestors(&fingerprint).map_err(|_| "CARGO_FINGERPRINT_UNVERIFIED")?;
-        let mut hashes = BTreeSet::new();
+        let mut fingerprints: BTreeMap<String, BTreeSet<String>> = BTreeMap::new();
+        let mut build_dirs = BTreeSet::new();
+        let mut out_dirs = BTreeSet::new();
         let mut units: BTreeMap<String, BTreeSet<String>> = BTreeMap::new();
         for (count, entry) in fs::read_dir(&fingerprint)
             .map_err(|_| "CARGO_FINGERPRINT_UNVERIFIED")?
@@ -542,14 +639,31 @@ impl Artifacts {
                 .file_name()
                 .and_then(|n| n.to_str())
                 .ok_or("CARGO_FINGERPRINT_UNVERIFIED")?;
-            let hash = name.rsplit('-').next().unwrap_or("");
+            let (package, hash) = name
+                .rsplit_once('-')
+                .ok_or("CARGO_FINGERPRINT_UNVERIFIED")?;
             if hash.len() != 16 || !hash.bytes().all(|b| b.is_ascii_hexdigit()) {
+                return Err("CARGO_FINGERPRINT_UNVERIFIED");
+            }
+            let package_targets: BTreeSet<_> = packages
+                .iter()
+                .filter(|p| p["name"] == package)
+                .flat_map(|p| p["targets"].as_array().into_iter().flatten())
+                .filter_map(|t| t["name"].as_str())
+                .map(|n| n.replace('-', "_"))
+                .collect();
+            if package_targets.is_empty() {
                 return Err("CARGO_FINGERPRINT_UNVERIFIED");
             }
             // Cargo owns a unit only when its corresponding marker and JSON
             // metadata both exist. An arbitrary file copied into deps is not proof.
-            let mut proof = false;
-            for e in fs::read_dir(&path).map_err(|_| "CARGO_FINGERPRINT_UNVERIFIED")? {
+            for (entry_count, e) in fs::read_dir(&path)
+                .map_err(|_| "CARGO_FINGERPRINT_UNVERIFIED")?
+                .enumerate()
+            {
+                if entry_count >= 256 || Instant::now() >= until {
+                    return Err("ENTRY_LIMIT");
+                }
                 let e = e.map_err(|_| "CARGO_FINGERPRINT_UNVERIFIED")?;
                 let n = e.file_name().to_string_lossy().into_owned();
                 if n.ends_with(".json")
@@ -563,7 +677,7 @@ impl Artifacts {
                     .iter()
                     .any(|prefix| n.starts_with(prefix))
                 {
-                    let marker = path.join(n.trim_end_matches(".json"));
+                    let marker = path.join(n.strip_suffix(".json").unwrap());
                     if let (Ok(pin), Ok(metadata)) = (
                         Pinned::open(&marker, false),
                         read(ctx, &e.path(), 256 * 1024),
@@ -573,9 +687,8 @@ impl Artifacts {
                             && metadata["rustc"].is_u64()
                             && metadata["deps"].is_array()
                             && metadata["local"].is_array();
-                        proof |= valid;
                         if valid {
-                            let marker = n.trim_end_matches(".json");
+                            let marker = n.strip_suffix(".json").unwrap();
                             for prefix in [
                                 "test-integration-test-",
                                 "test-example-",
@@ -587,11 +700,61 @@ impl Artifacts {
                                 "lib-",
                                 "bin-",
                             ] {
-                                if let Some(unit) = marker.strip_prefix(prefix) {
+                                if let Some(unit) = marker.strip_prefix(prefix).filter(|unit| {
+                                    package_targets.contains(&unit.replace('-', "_"))
+                                }) {
+                                    let files = fingerprints.entry(name.to_owned()).or_default();
+                                    files.extend([
+                                        marker.to_owned(),
+                                        n.clone(),
+                                        format!("dep-{marker}"),
+                                        format!("output-{marker}"),
+                                        "invoked.timestamp".into(),
+                                    ]);
                                     units
                                         .entry(hash.to_ascii_lowercase())
                                         .or_default()
                                         .insert(unit.replace('-', "_"));
+                                    if unit == "build-script-build" {
+                                        build_dirs.insert(name.to_owned());
+                                        if prefix == "run-build-script-" {
+                                            let output = work
+                                                .join("target/debug/build")
+                                                .join(name)
+                                                .join("root-output");
+                                            let _parents = pin_ancestors(
+                                                output.parent().ok_or("CARGO_OUTPUT_UNVERIFIED")?,
+                                            )
+                                            .map_err(|_| "CARGO_OUTPUT_UNVERIFIED")?;
+                                            let file = Pinned::open(&output, false)
+                                                .map_err(|_| "CARGO_OUTPUT_UNVERIFIED")?;
+                                            if file.directory()
+                                                || file.info.links != 1
+                                                || file.info.size_high != 0
+                                                || file.info.size_low > 4096
+                                            {
+                                                return Err("CARGO_OUTPUT_UNVERIFIED");
+                                            }
+                                            let mut bytes = Vec::new();
+                                            fs::File::open(&output)
+                                                .map_err(|_| "CARGO_OUTPUT_UNVERIFIED")?
+                                                .take(4097)
+                                                .read_to_end(&mut bytes)
+                                                .map_err(|_| "CARGO_OUTPUT_UNVERIFIED")?;
+                                            if bytes.len() > 4096 {
+                                                return Err("CARGO_OUTPUT_UNVERIFIED");
+                                            }
+                                            let text = String::from_utf8(bytes)
+                                                .map_err(|_| "CARGO_OUTPUT_UNVERIFIED")?;
+                                            if !same(
+                                                Path::new(text.trim()),
+                                                &output.parent().unwrap().join("out"),
+                                            ) {
+                                                return Err("CARGO_OUTPUT_UNVERIFIED");
+                                            }
+                                            out_dirs.insert(name.to_owned());
+                                        }
+                                    }
                                     break;
                                 }
                             }
@@ -599,14 +762,13 @@ impl Artifacts {
                     }
                 }
             }
-            if proof {
-                hashes.insert(hash.to_ascii_lowercase());
-            }
         }
         Ok(Self {
             targets,
-            hashes,
             units,
+            fingerprints,
+            build_dirs,
+            out_dirs,
         })
     }
     fn known(&self, relative: &Path, directory: bool) -> bool {
@@ -626,11 +788,6 @@ impl Artifacts {
             .file_stem()
             .and_then(|x| x.to_str())
             .unwrap_or("");
-        let hashed = |text: &str| {
-            text.rsplit('-')
-                .next()
-                .is_some_and(|hash| self.hashes.contains(hash))
-        };
         let unit = |text: &str| {
             text.rsplit_once('-').is_some_and(|(name, hash)| {
                 self.units.get(hash).is_some_and(|units| {
@@ -664,9 +821,9 @@ impl Artifacts {
                 PROFILE_LOCKS.contains(&name.as_str())
                     || binary
                         && (self.targets.contains(&stem.replace('-', "_"))
-                            || self
-                                .targets
-                                .contains(&stem.trim_start_matches("lib").replace('-', "_")))
+                            || self.targets.contains(
+                                &stem.strip_prefix("lib").unwrap_or(stem).replace('-', "_"),
+                            ))
             };
         }
         match parts[0].as_str() {
@@ -679,72 +836,77 @@ impl Artifacts {
             }
             ".fingerprint" => {
                 if parts.len() == 2 {
-                    return directory && hashed(name);
+                    return directory && self.fingerprints.contains_key(name);
                 }
                 parts.len() == 3
                     && !directory
-                    && hashed(&parts[1])
-                    && (name == "invoked.timestamp"
-                        || extension.is_empty()
-                            && [
-                                "lib-",
-                                "bin-",
-                                "test-",
-                                "dep-",
-                                "output-",
-                                "build-script-",
-                                "run-build-script-",
-                            ]
-                            .iter()
-                            .any(|prefix| name.starts_with(prefix))
-                        || extension == "json"
-                            && [
-                                "lib-",
-                                "bin-",
-                                "test-",
-                                "build-script-",
-                                "run-build-script-",
-                            ]
-                            .iter()
-                            .any(|prefix| name.starts_with(prefix)))
+                    && self
+                        .fingerprints
+                        .get(&parts[1])
+                        .is_some_and(|files| files.contains(name))
             }
             "build" => {
                 if parts.len() == 2 {
-                    return directory && hashed(name);
+                    return directory && self.build_dirs.contains(name);
                 }
-                if !hashed(&parts[1]) {
+                if !self.build_dirs.contains(&parts[1]) {
                     return false;
                 }
                 if parts.len() == 3 {
                     return if directory {
-                        name == "out"
+                        name == "out" && self.out_dirs.contains(&parts[1])
                     } else {
                         ["output", "stderr", "root-output", "invoked.timestamp"]
                             .contains(&name.as_str())
                             || binary
                                 && (stem == "build-script-build"
-                                    || stem.starts_with("build_script_build-") && hashed(stem))
+                                    || stem.starts_with("build_script_build-") && unit(stem))
                     };
                 }
                 parts[2] == "out"
-                    && (directory
-                        || binary
-                        || matches!(extension, "rs" | "c" | "cpp" | "h" | "bin"))
+                    && self.out_dirs.contains(&parts[1])
+                    && (directory || matches!(extension, "rs" | "o" | "a" | "lib"))
             }
             "incremental" => {
-                self.targets
-                    .iter()
-                    .any(|target| parts[1].starts_with(&format!("{target}-")))
-                    && (directory
-                        || matches!(
-                            name.as_str(),
-                            "dep-graph.bin"
-                                | "query-cache.bin"
-                                | "work-products.bin"
-                                | "metadata.rmeta"
-                                | "thin-lto-past-keys.bin"
-                        )
-                        || matches!(extension, "o" | "obj" | "bc" | "lock"))
+                let Some((target, key)) = parts[1].rsplit_once('-') else {
+                    return false;
+                };
+                if !base36(key, 13, 13)
+                    || !self.targets.contains(target)
+                    || !self.units.values().any(|names| names.contains(target))
+                {
+                    return false;
+                }
+                if parts.len() == 2 {
+                    return directory;
+                }
+                let session = parts[2].strip_suffix(".lock").unwrap_or(&parts[2]);
+                let tokens: Vec<_> = session.split('-').collect();
+                let session_base = tokens.len() >= 3
+                    && tokens[0] == "s"
+                    && base36(tokens[1], 8, 12)
+                    && base36(tokens[2], 7, 7);
+                if parts.len() == 3 {
+                    return session_base
+                        && (directory && tokens.len() == 4 && base36(tokens[3], 25, 25)
+                            || !directory && tokens.len() == 3 && name.ends_with(".lock"));
+                }
+                parts.len() == 4
+                    && !directory
+                    && session_base
+                    && tokens.len() == 4
+                    && base36(tokens[3], 25, 25)
+                    && (matches!(
+                        name.as_str(),
+                        "dep-graph.bin"
+                            | "query-cache.bin"
+                            | "work-products.bin"
+                            | "metadata.rmeta"
+                            | "thin-lto-past-keys.bin"
+                    ) || extension == "o" && base36(stem, 25, 25)
+                        || name
+                            .strip_suffix(".pre-lto.bc")
+                            .is_some_and(|stem| base36(stem, 25, 25)))
             }
             _ => false,
         }
@@ -792,7 +954,7 @@ fn inventory(
             return Err("SOURCE_OR_EVIDENCE_RETAINED");
         }
         let p = Pinned::open(path, false).map_err(|_| "LINK_OR_BUSY")?;
-        if p.info.links != 1 || p.info.attributes & 3 != 0 {
+        if p.info.links == 0 || p.directory() && p.info.links != 1 || p.info.attributes & 3 != 0 {
             return Err("LINK_OR_ATTRIBUTES");
         }
         if !artifacts.known(rel, p.directory()) {
@@ -850,36 +1012,112 @@ fn inventory(
         bytes: 0,
     };
     visit(root, root, &mut plan, artifacts, budget, stats, 0)?;
+    let mut groups: BTreeMap<(u32, u64, u64), u32> = BTreeMap::new();
+    for node in plan
+        .nodes
+        .iter()
+        .filter(|node| node.stamp.attributes & DIRECTORY == 0)
+    {
+        *groups
+            .entry((node.stamp.volume, node.stamp.id, node.stamp.birth))
+            .or_default() += 1;
+    }
+    plan.bytes = 0;
+    let mut seen = BTreeSet::new();
+    for node in plan
+        .nodes
+        .iter()
+        .filter(|node| node.stamp.attributes & DIRECTORY == 0)
+    {
+        let identity = (node.stamp.volume, node.stamp.id, node.stamp.birth);
+        if groups.get(&identity) != Some(&node.stamp.links) {
+            return Err("LINK_OR_ATTRIBUTES");
+        }
+        if seen.insert(identity) {
+            plan.bytes = plan
+                .bytes
+                .checked_add(node.stamp.size)
+                .ok_or("SIZE_OVERFLOW")?;
+        }
+    }
     Ok(plan)
 }
 impl Plan {
-    fn hold(&self, budget: &Budget, stats: &mut Stats) -> Check<Vec<Pinned>> {
-        let mut pins = Vec::with_capacity(self.nodes.len());
-        for n in &self.nodes {
+    fn hold(&self, budget: &Budget, stats: &mut Stats) -> Check<Vec<Option<Pinned>>> {
+        let mut pins: Vec<Option<Pinned>> = self.nodes.iter().map(|_| None).collect();
+        // Pin all directory names first. One exclusive handle per physical
+        // file then protects every hardlink; duplicate names use metadata only.
+        for (index, n) in self
+            .nodes
+            .iter()
+            .enumerate()
+            .filter(|(_, n)| n.stamp.attributes & DIRECTORY != 0)
+        {
             budget.check(stats).map_err(|_| "DEADLINE_OR_ENTRY_LIMIT")?;
-            // Directory readers pin names while leaving child metadata APIs usable.
-            // Every file is already exclusive before the first deletion.
-            let p = Pinned::open(&n.path, n.stamp.attributes & DIRECTORY == 0)
-                .map_err(|_| "RUNTIME_OR_OPEN_FILE")?;
+            let p = Pinned::open(&n.path, false).map_err(|_| "RUNTIME_OR_OPEN_FILE")?;
             if stamp(&p) != n.stamp {
                 return Err("BUILD_CONTENT_CHANGED");
             }
-            pins.push(p);
+            pins[index] = Some(p);
+        }
+        let mut seen = BTreeSet::new();
+        for (index, n) in self
+            .nodes
+            .iter()
+            .enumerate()
+            .rev()
+            .filter(|(_, n)| n.stamp.attributes & DIRECTORY == 0)
+        {
+            budget.check(stats).map_err(|_| "DEADLINE_OR_ENTRY_LIMIT")?;
+            let first = seen.insert((n.stamp.volume, n.stamp.id, n.stamp.birth));
+            let p = if first {
+                Pinned::open(&n.path, true)
+            } else {
+                Pinned::attributes(&n.path)
+            }
+            .map_err(|_| "RUNTIME_OR_OPEN_FILE")?;
+            if stamp(&p) != n.stamp {
+                return Err("BUILD_CONTENT_CHANGED");
+            }
+            if first {
+                pins[index] = Some(p);
+            }
         }
         Ok(pins)
     }
     fn remove(
         &self,
         root: &Path,
-        mut pins: Vec<Pinned>,
+        mut pins: Vec<Option<Pinned>>,
         budget: &Budget,
         stats: &mut Stats,
+        profiles: &Profiles,
     ) -> Check<()> {
         // Postorder from our complete immutable set of exclusive handles.
+        let mut removed_links: BTreeMap<(u32, u64, u64), u32> = BTreeMap::new();
         for n in self.nodes.iter().rev() {
-            let p = pins.pop().ok_or("BUILD_CONTENT_CHANGED")?;
+            let held = pins.pop().ok_or("BUILD_CONTENT_CHANGED")?;
             budget.check(stats).map_err(|_| "DEADLINE_OR_ENTRY_LIMIT")?;
-            let dir = p.directory();
+            let dir = n.stamp.attributes & DIRECTORY != 0;
+            let identity = (n.stamp.volume, n.stamp.id, n.stamp.birth);
+            let removed = *removed_links.get(&identity).unwrap_or(&0);
+            let remaining = n
+                .stamp
+                .links
+                .checked_sub(removed)
+                .ok_or("BUILD_CONTENT_CHANGED")?;
+            let p = match held {
+                Some(p) => p,
+                None => {
+                    let p = Pinned::open(&n.path, true).map_err(|_| "RUNTIME_OR_OPEN_FILE")?;
+                    let mut current = stamp(&p);
+                    current.links = n.stamp.links;
+                    if current != n.stamp || p.info.links != remaining {
+                        return Err("BUILD_CONTENT_CHANGED");
+                    }
+                    p
+                }
+            };
             let p = if dir {
                 drop(p);
                 let p = Pinned::open(&n.path, true).map_err(|_| "DELETE_INCOMPLETE")?;
@@ -895,7 +1133,12 @@ impl Plan {
             } else {
                 p
             };
-            let bytes = p.remove().map_err(|_| "DELETE_INCOMPLETE")?;
+            let bytes = p
+                .remove_verified_links(if dir { 1 } else { remaining })
+                .map_err(|_| "DELETE_INCOMPLETE")?;
+            if !dir {
+                *removed_links.entry(identity).or_default() += 1;
+            }
             stats.logical_bytes = stats.logical_bytes.saturating_add(bytes);
             stats.builds.removed_bytes = stats.builds.removed_bytes.saturating_add(bytes);
             if dir {
@@ -905,21 +1148,26 @@ impl Plan {
             }
         }
         if self.nodes.iter().any(|n| !matches!(fs::symlink_metadata(&n.path), Err(e) if e.kind()==io::ErrorKind::NotFound)) { return Err("ABSENCE_UNVERIFIED"); }
-        for entry in fs::read_dir(root).map_err(|_| "ABSENCE_UNVERIFIED")? {
-            budget.check(stats).map_err(|_| "DEADLINE_OR_ENTRY_LIMIT")?;
-            let entry = entry.map_err(|_| "ABSENCE_UNVERIFIED")?;
-            if !PROFILE_LOCKS
-                .iter()
-                .any(|name| entry.file_name() == OsStr::new(name))
-            {
-                return Err("ARTIFACT_SET_NOT_EMPTY");
-            }
+        if !profiles.only(root)? {
+            return Err("ARTIFACT_SET_NOT_EMPTY");
         }
         Ok(())
     }
-    fn apply(&self, root: &Path, pins: Vec<Pinned>, budget: &Budget, stats: &mut Stats) {
-        if let Err(e) = self.remove(root, pins, budget, stats) {
-            stats.builds.partial_deletions += 1;
+    fn apply(
+        &self,
+        root: &Path,
+        pins: Vec<Option<Pinned>>,
+        budget: &Budget,
+        stats: &mut Stats,
+        profiles: &Profiles,
+    ) {
+        let before = stats.removed_files + stats.removed_directories;
+        if let Err(e) = profiles
+            .validate(root)
+            .and_then(|()| self.remove(root, pins, budget, stats, profiles))
+        {
+            stats.builds.partial_deletions +=
+                u64::from(stats.removed_files + stats.removed_directories > before);
             stats.failures += 1;
             // The old plan does not measure added/replaced/otherwise changed data.
             stats.builds.retain(e, None);
@@ -968,28 +1216,13 @@ fn candidate(
     let gatekey =
         cc_jobs::cache::resolved(root.parent().ok_or("BUILD_BOUNDARY")?).ok_or("BUILD_BOUNDARY")?;
     let _cargo = lock(&cc_jobs::gate::target_lock(&ctx.root, &gatekey))?;
-    let mut _profiles = Vec::new();
-    for name in PROFILE_LOCKS {
-        match fs::symlink_metadata(root.join(name)) {
-            Ok(_) => _profiles.push(lock(&root.join(name))?),
-            Err(e) if e.kind() == io::ErrorKind::NotFound && name != ".cargo-lock" => (),
-            Err(_) => return Err("CARGO_PROFILE_LOCK_UNVERIFIED"),
-        }
-    }
-    let children = fs::read_dir(&root)
-        .map_err(|_| "CONTENTS_UNVERIFIED")?
-        .collect::<io::Result<Vec<_>>>()
-        .map_err(|_| "CONTENTS_UNVERIFIED")?;
-    if children.iter().all(|e| {
-        PROFILE_LOCKS
-            .iter()
-            .any(|name| e.file_name() == OsStr::new(name))
-    }) {
+    let profiles = Profiles::load(&root)?;
+    if profiles.only(&root)? {
         stats.builds.absent += 1;
         return Ok(());
     }
     let _queue = lock(&ctx.root.join("queue.lock"))?;
-    let _jobs=pin_ancestors(&ctx.jobs).map_err(|_|"JOBS_UNVERIFIED")?;
+    let _jobs = pin_ancestors(&ctx.jobs).map_err(|_| "JOBS_UNVERIFIED")?;
     let active = ctx
         .active_job_ids_snapshot()
         .map_err(|_| "ACTIVE_JOB_INDEX_UNVERIFIED")?;
@@ -1028,7 +1261,7 @@ fn candidate(
         stats.builds.retain(e, None);
         return Ok(());
     }
-    plan.apply(&root, pins, budget, stats);
+    plan.apply(&root, pins, budget, stats, &profiles);
     Ok(())
 }
 
@@ -1043,6 +1276,19 @@ pub(super) fn run(apply: bool, outer: &Budget, stats: &mut Stats) {
         candidates.sort_by_key(|r| std::cmp::Reverse(r["id"].as_u64().unwrap()));
         let cursor = Path::new(RUNTIME).join("completed-build-cursor.json");
         let after = cursor_after(&ctx, &cursor, &mut stats.builds);
+        // Preserve a damaged original and advance the same finite sweep with a
+        // separate numeric position. Neither cursor supplies deletion authority.
+        let (after, cursor) = if stats.builds.cursor_unverified {
+            let recovery = cursor.with_file_name("completed-build-cursor-recovery.json");
+            let mut state = BuildStats::default();
+            let after = cursor_after(&ctx, &recovery, &mut state);
+            if state.cursor_unverified {
+                return Err("CURSOR_RECOVERY_UNVERIFIED");
+            }
+            (after, recovery)
+        } else {
+            (after, cursor)
+        };
         if !candidates.iter().any(|r| r["id"].as_u64().unwrap() < after) { /* start a new finite pass */
         } else {
             candidates.retain(|r| r["id"].as_u64().unwrap() < after);
@@ -1085,10 +1331,7 @@ pub(super) fn run(apply: bool, outer: &Budget, stats: &mut Stats) {
             }
         }
         stats.builds.bounded |= candidates.len() > MAX_ROWS;
-        if apply
-            && !stats.builds.cursor_unverified
-            && let Some(last) = last
-        {
+        if apply && let Some(last) = last {
             // Cursor is scheduling only, never evidence of ownership/completion.
             let tmp = cursor.with_extension(format!("{}.tmp", std::process::id()));
             let mut f = OpenOptions::new()
@@ -1246,7 +1489,7 @@ mod tests {
             fs::create_dir_all(work.join("target/release")).unwrap();
             fs::write(work.join("target/debug/.cargo-lock"), []).unwrap();
             fs::write(
-                work.join("target/debug/deps/fixture-0123456789abcdef.rmeta"),
+                work.join("target/debug/deps/libfixture-0123456789abcdef.rmeta"),
                 [7; 17],
             )
             .unwrap();
@@ -1271,7 +1514,18 @@ mod tests {
         fn artifacts(&self) -> Artifacts {
             Artifacts {
                 targets: BTreeSet::from(["fixture".into()]),
-                hashes: BTreeSet::from(["0123456789abcdef".into()]),
+                fingerprints: BTreeMap::from([(
+                    "fixture-0123456789abcdef".into(),
+                    BTreeSet::from([
+                        "lib-fixture".into(),
+                        "lib-fixture.json".into(),
+                        "dep-lib-fixture".into(),
+                        "output-lib-fixture".into(),
+                        "invoked.timestamp".into(),
+                    ]),
+                )]),
+                build_dirs: BTreeSet::new(),
+                out_dirs: BTreeSet::new(),
                 units: BTreeMap::from([(
                     "0123456789abcdef".into(),
                     BTreeSet::from(["fixture".into()]),
@@ -1317,7 +1571,7 @@ mod tests {
         f.run(false, false, &mut stats).unwrap();
         assert!(
             f.work
-                .join("target/debug/deps/fixture-0123456789abcdef.rmeta")
+                .join("target/debug/deps/libfixture-0123456789abcdef.rmeta")
                 .is_file()
         );
         assert_eq!(stats.builds.candidate_bytes, f.bytes());
@@ -1351,7 +1605,7 @@ mod tests {
         b.run(true, false, &mut stats).unwrap();
         assert!(
             a.work
-                .join("target/debug/deps/fixture-0123456789abcdef.rmeta")
+                .join("target/debug/deps/libfixture-0123456789abcdef.rmeta")
                 .exists()
         );
         assert_eq!(stats.builds.removed_bytes, b.bytes());
@@ -1406,7 +1660,7 @@ mod tests {
         assert!(live(&f.ctx, &running).unwrap());
         assert!(
             f.work
-                .join("target/debug/deps/fixture-0123456789abcdef.rmeta")
+                .join("target/debug/deps/libfixture-0123456789abcdef.rmeta")
                 .exists()
         );
         f.kept();
@@ -1435,7 +1689,7 @@ mod tests {
         );
         assert!(
             f.work
-                .join("target/debug/deps/fixture-0123456789abcdef.rmeta")
+                .join("target/debug/deps/libfixture-0123456789abcdef.rmeta")
                 .exists()
         );
         f.kept();
@@ -1443,6 +1697,31 @@ mod tests {
             &json!(format!("{}-sibling/file", debug.display())),
             &debug
         ));
+        assert!(relative_build_reference(&json!(
+            "source .\\target\\debug\\fixture.exe"
+        )));
+        assert!(relative_build_reference(&json!(
+            "source target/debug/fixture.exe"
+        )));
+        assert!(!relative_build_reference(&json!(
+            "D:/other/target/debug/fixture.exe"
+        )));
+        assert!(!relative_build_reference(&json!(
+            "target/debug-sibling/fixture.exe"
+        )));
+        fs::write(&f.store,serde_json::to_vec(&json!({"items":[f.row,{"id":2,"status":"done","scheduler":{"worktree":f.work},"note":"runtime source target/debug/fixture.exe"}]})).unwrap()).unwrap();
+        assert_eq!(
+            state(
+                &f.ctx,
+                &f.store,
+                &f.row,
+                &f.work,
+                &f.origin,
+                f.budget().until,
+                &[]
+            ),
+            Err("SAVED_BUILD_REFERENCE_RETAINED")
+        );
     }
     #[test]
     fn dependencies_dirty_source_and_changed_ownership_are_retained() {
@@ -1471,7 +1750,7 @@ mod tests {
         );
         assert!(
             f.work
-                .join("target/debug/deps/fixture-0123456789abcdef.rmeta")
+                .join("target/debug/deps/libfixture-0123456789abcdef.rmeta")
                 .exists()
         );
     }
@@ -1499,7 +1778,7 @@ mod tests {
         );
         assert!(
             f.work
-                .join("target/debug/deps/fixture-0123456789abcdef.rmeta")
+                .join("target/debug/deps/libfixture-0123456789abcdef.rmeta")
                 .exists()
         );
         f.kept();
@@ -1509,7 +1788,7 @@ mod tests {
         let f = Fixture::new();
         let open = fs::File::open(
             f.work
-                .join("target/debug/deps/fixture-0123456789abcdef.rmeta"),
+                .join("target/debug/deps/libfixture-0123456789abcdef.rmeta"),
         )
         .unwrap();
         let mut stats = Stats::default();
@@ -1601,7 +1880,7 @@ mod tests {
         assert_eq!(stats.builds.removed_bytes, 0);
         assert!(
             f.work
-                .join("target/debug/deps/fixture-0123456789abcdef.rmeta")
+                .join("target/debug/deps/libfixture-0123456789abcdef.rmeta")
                 .exists()
         );
         assert!(exe.exists());
@@ -1621,12 +1900,13 @@ mod tests {
         let mut stats = Stats::default();
         let budget = f.budget();
         let plan = inventory(&root, &f.artifacts(), &budget, &mut stats).unwrap();
-        fs::write(root.join("deps/fixture-0123456789abcdef.rmeta"), [1; 18]).unwrap();
+        fs::write(root.join("deps/libfixture-0123456789abcdef.rmeta"), [1; 18]).unwrap();
         assert!(plan.hold(&budget, &mut stats).is_err());
         let plan = inventory(&root, &f.artifacts(), &budget, &mut stats).unwrap();
         let pins = plan.hold(&budget, &mut stats).unwrap();
         fs::write(root.join("deps/new.bin"), [2; 7]).unwrap();
-        plan.apply(&root, pins, &budget, &mut stats);
+        let profiles = Profiles::load(&root).unwrap();
+        plan.apply(&root, pins, &budget, &mut stats, &profiles);
         assert_eq!(stats.builds.removed_bytes, 18);
         assert_eq!(stats.builds.completed, 0);
         assert_eq!(stats.builds.unmeasured, 1);
@@ -1652,12 +1932,106 @@ mod tests {
             );
             assert!(
                 f.work
-                    .join("target/debug/deps/fixture-0123456789abcdef.rmeta")
+                    .join("target/debug/deps/libfixture-0123456789abcdef.rmeta")
                     .exists()
             );
             fs::remove_file(path).unwrap();
         }
         f.kept();
+    }
+    #[test]
+    fn fingerprint_directory_aliases_and_arbitrary_incremental_objects_are_unknown() {
+        let f = Fixture::new();
+        let root = f.work.join("target/debug");
+        for relative in [
+            ".fingerprint/notes-0123456789abcdef/invoked.timestamp",
+            ".fingerprint/fixture-0123456789abcdef/lib-notes",
+            "incremental/fixture-arbitrary/saved.obj",
+            "incremental/fixture-123456789abcd/s-0123456789-0123456-0123456789abcdef012345678/saved.obj",
+            "build/notes-0123456789abcdef/out/private.rs",
+        ] {
+            let path = root.join(relative);
+            fs::create_dir_all(path.parent().unwrap()).unwrap();
+            fs::write(&path, b"unique data").unwrap();
+            assert_eq!(
+                inventory(&root, &f.artifacts(), &f.budget(), &mut Stats::default()).err(),
+                Some("UNKNOWN_BUILD_CONTENT")
+            );
+            fs::remove_file(&path).unwrap();
+            // Keep only the pre-existing normal Cargo fixture layout.
+            let top = relative.split('/').next().unwrap();
+            if top == "incremental" || top == "build" {
+                fs::remove_dir_all(root.join(top)).unwrap();
+            } else if relative.contains("notes-") {
+                fs::remove_dir(root.join(".fingerprint/notes-0123456789abcdef")).unwrap();
+            }
+        }
+        f.kept();
+    }
+    #[test]
+    fn a_new_optional_profile_name_is_never_an_allowed_lock_directory() {
+        let f = Fixture::new();
+        let root = f.work.join("target/debug");
+        let budget = f.budget();
+        let mut stats = Stats::default();
+        let profiles = Profiles::load(&root).unwrap();
+        let plan = inventory(&root, &f.artifacts(), &budget, &mut stats).unwrap();
+        let pins = plan.hold(&budget, &mut stats).unwrap();
+        fs::create_dir(root.join(".cargo-artifact-lock")).unwrap();
+        fs::write(root.join(".cargo-artifact-lock/original.bin"), b"keep").unwrap();
+        assert_eq!(profiles.only(&root), Err("PROFILE_LOCKS_CHANGED"));
+        plan.apply(&root, pins, &budget, &mut stats, &profiles);
+        assert_eq!(stats.builds.completed, 0);
+        assert_eq!(stats.builds.removed_bytes, 0);
+        assert_eq!(stats.builds.unmeasured, 1);
+        assert_eq!(
+            fs::read(root.join(".cargo-artifact-lock/original.bin")).unwrap(),
+            b"keep"
+        );
+    }
+    #[test]
+    fn a_terminal_sibling_with_a_live_pid_keeps_unopened_artifacts() {
+        let f = Fixture::new();
+        let id = "20261026-000002-todo-2";
+        let dir = f.ctx.job_dir(id);
+        fs::create_dir(&dir).unwrap();
+        let pid = std::process::id();
+        fs::write(dir.join("job.json"),serde_json::to_vec(&json!({"id":id,"todo_id":2,"status":"succeeded","cwd":f.work,"pid":pid,"pid_created":f.ctx.rt.proc_created(pid)})).unwrap()).unwrap();
+        assert_eq!(
+            f.run(true, false, &mut Stats::default()),
+            Err("OTHER_JOB_ACTIVE_OR_WAITING")
+        );
+        assert!(
+            f.work
+                .join("target/debug/deps/libfixture-0123456789abcdef.rmeta")
+                .exists()
+        );
+        f.kept();
+    }
+    #[test]
+    fn cargo_hardlinks_inside_the_plan_are_removed_once_and_external_links_are_retained() {
+        let f = Fixture::new();
+        let root = f.work.join("target/debug");
+        let source = root.join("deps/libfixture-0123456789abcdef.rmeta");
+        fs::hard_link(&source, root.join("libfixture.rmeta")).unwrap();
+        let mut stats = Stats::default();
+        f.run(true, false, &mut stats).unwrap();
+        assert_eq!(stats.builds.completed, 1);
+        assert_eq!(stats.builds.removed_bytes, f.bytes());
+        assert!(!source.exists());
+        assert!(!root.join("libfixture.rmeta").exists());
+        f.kept();
+        let external = Fixture::new();
+        let file = external
+            .work
+            .join("target/debug/deps/libfixture-0123456789abcdef.rmeta");
+        fs::hard_link(&file, external.root.join("retained.rmeta")).unwrap();
+        assert_eq!(
+            external.run(true, false, &mut Stats::default()),
+            Err("LINK_OR_ATTRIBUTES")
+        );
+        assert!(file.exists());
+        external.kept();
     }
     #[test]
     fn a_new_root_file_prevents_absence_and_marks_remaining_bytes_unmeasured() {
@@ -1668,7 +2042,8 @@ mod tests {
         let plan = inventory(&root, &f.artifacts(), &budget, &mut stats).unwrap();
         let pins = plan.hold(&budget, &mut stats).unwrap();
         fs::write(root.join("new-notes.md"), b"new original").unwrap();
-        plan.apply(&root, pins, &budget, &mut stats);
+        let profiles = Profiles::load(&root).unwrap();
+        plan.apply(&root, pins, &budget, &mut stats, &profiles);
         assert_eq!(stats.builds.completed, 0);
         assert_eq!(stats.builds.partial_deletions, 1);
         assert_eq!(stats.builds.unmeasured, 1);
@@ -1715,7 +2090,7 @@ mod tests {
         );
         assert!(
             f.work
-                .join("target/debug/deps/fixture-0123456789abcdef.rmeta")
+                .join("target/debug/deps/libfixture-0123456789abcdef.rmeta")
                 .exists()
         );
     }

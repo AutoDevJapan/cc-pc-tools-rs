@@ -74,3 +74,33 @@ fn stale_index_inspection_finds_unindexed_waiters_without_mutating_the_old_index
     );
     assert_eq!(fs::read(index).unwrap(), stale);
 }
+
+#[cfg(windows)]
+#[test]
+fn terminal_job_with_live_supervisor_is_kept_even_when_a_fresh_index_omits_it() {
+    let root = tempfile::tempdir().unwrap();
+    let mut ctx = Context::installed().unwrap();
+    ctx.root = root.path().to_path_buf();
+    ctx.jobs = ctx.root.join("jobs");
+    fs::create_dir(&ctx.jobs).unwrap();
+    let _queue = FileLock::try_acquire(&ctx.root.join("queue.lock")).unwrap();
+    let index = ctx.jobs.join(".queue-index.json");
+    let bytes =
+        serde_json::to_vec(&json!({"scan_complete":true,"scanned_at":ctx.rt.epoch(),"ids":[]}))
+            .unwrap();
+    fs::write(&index, &bytes).unwrap();
+    let id = "20261026-000001-todo-1";
+    let dir = ctx.job_dir(id);
+    fs::create_dir(&dir).unwrap();
+    let pid = std::process::id();
+    fs::write(
+        dir.join("job.json"),
+        serde_json::to_vec(
+            &json!({"id":id,"status":"succeeded","pid":pid,"pid_created":ctx.rt.proc_created(pid)}),
+        )
+        .unwrap(),
+    )
+    .unwrap();
+    assert_eq!(ctx.active_job_ids_snapshot().unwrap(), vec![id]);
+    assert_eq!(fs::read(&index).unwrap(), bytes);
+}

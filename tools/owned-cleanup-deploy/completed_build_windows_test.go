@@ -31,7 +31,7 @@ func TestCompletedBuildGenerationUsesTheSameCASACLAndNoReplace(t *testing.T) {
 }
 
 func TestCompletedBuildIdentityDoesNotAdoptUnknownOrOtherSoftware(t *testing.T) {
-	base := completedManifest{Schema: 1, Todo: 3942, Job: completedBuildJob, Head: completedHead, Root: completedRoot, Command: "cargo build --release --locked -p cleanup-8h", Candidate: completedLeaf.Source, New: completedLeaf.New, Old: completedLeaf.Old}
+	base := completedManifest{BuildOutput: completedRoot + "/target/release/cleanup-8h.exe", OutputSHA: completedLeaf.New, CopyVerified: true, Schema: 1, Todo: 3942, Job: completedBuildJob, Head: completedHead, Root: completedRoot, Command: "cargo build --release --locked -p cleanup-8h", Candidate: completedLeaf.Source, New: completedLeaf.New, Old: completedLeaf.Old}
 	for _, kind := range []string{"valid", "other-todo", "other-job", "other-root", "other-head", "debug-command", "other-candidate", "unknown-current", "unknown-new", "schema"} {
 		t.Run(kind, func(t *testing.T) {
 			m := base

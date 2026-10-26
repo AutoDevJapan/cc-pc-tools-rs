@@ -114,6 +114,12 @@ struct Pinned {
 }
 impl Pinned {
     fn open(path: &Path, deleting: bool) -> io::Result<Self> {
+        Self::open_mode(path, deleting, false)
+    }
+    fn attributes(path: &Path) -> io::Result<Self> {
+        Self::open_mode(path, false, true)
+    }
+    fn open_mode(path: &Path, deleting: bool, attributes_only: bool) -> io::Result<Self> {
         if !path.is_absolute() {
             return Err(invalid());
         }
@@ -123,8 +129,16 @@ impl Pinned {
         let raw = unsafe {
             CreateFileW(
                 name.as_ptr(),
-                READ_ATTRIBUTES | 1 | if deleting { DELETE } else { 0 },
-                if deleting { 0 } else { 3 },
+                READ_ATTRIBUTES
+                    | if attributes_only { 0 } else { 1 }
+                    | if deleting { DELETE } else { 0 },
+                if attributes_only {
+                    7
+                } else if deleting {
+                    0
+                } else {
+                    3
+                },
                 ptr::null(),
                 3,
                 0x02000000 | 0x00200000,
@@ -180,7 +194,12 @@ impl Pinned {
         self.info.attributes & DIRECTORY != 0
     }
     fn remove(self) -> io::Result<u64> {
-        if !self.directory() && self.info.links > 1 {
+        self.remove_verified_links(1)
+    }
+    // Only the build planner can prove every remaining hardlink is in its
+    // pinned, qualified plan. Existing deletion/retirement callers still use 1.
+    fn remove_verified_links(self, remaining: u32) -> io::Result<u64> {
+        if !self.directory() && (remaining == 0 || self.info.links != remaining) {
             return Err(invalid());
         }
         let disposition = Disposition { delete_file: 1 };
@@ -195,7 +214,7 @@ impl Pinned {
         {
             return Err(io::Error::last_os_error());
         }
-        let bytes = if self.directory() {
+        let bytes = if self.directory() || remaining > 1 {
             0
         } else {
             (u64::from(self.info.size_high) << 32) | u64::from(self.info.size_low)

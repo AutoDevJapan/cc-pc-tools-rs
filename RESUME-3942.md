@@ -19,5 +19,15 @@ cc-jobsに既存キューのfresh complete active IDを無変更で読むAPIを�
 Go更新補助はcleanupのみの新世代を追加したがpinは初期候補で未確定、実配布禁止ではなく資格未成立で保持。
 残り: 修正差分の追加レビュー、修正後release/build manifest/pinの確定、同head CI/PR/merge、
 cleanupだけCAS/ACL保持配布、通常1時間タスク実発火、実測と後片付け。実回収/現用更新は0。
+
+19時台の区切り: 3954のMust3件をさらに修正。通常metadata全件を有限に読み、生存supervisor PIDも保護する。
+fingerprint package/markerをディレクトリごとに固定、incremental/session/OUT_DIRの形式を絞った。
+profile名は保持済み通常ファイルの同一性で確認。相対参照・破損cursor回復位置も追加。
+Cargoの内部hardlinkを実測（release名2、library名1）。同じ計画内に全リンクがある場合のみ
+既存handle削除で処理し、bytesは最終リンクで1回。外部リンクは保持。実Windowsの回帰成功。
+Go配布票に元Rust出力とsingle-linkコピー一致を追加。まだpinは初期候補であり配布未成立。
+現在のtarget/release/cleanup-8h.exeはe7f0b893 sourceの未配布v3。初期v1/v2は証拠フォルダーへ保存。
+次は全関連テスト/Clippyの結果を確認してcommit、修正後releaseと149入力manifestの作成、
+Go pin確定と追加レビュー/CI/PR/merge/実配布/通常task実発火/実回収、最後に自分のdebug生成物を回収する。
 safe-delete/3757、3939、元3628/3796/3815/3816のソース/状態/原scopeは変更しない。
 既削除8件を再回収・二重計上しない。本人回答とPC操作は不要。

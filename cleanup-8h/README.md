@@ -39,10 +39,11 @@ job and its exact registered Git worktree qualify. Current remote ownership,
 common directory, branch, saved/pushed source and ignored/untracked debug data are
 checked. A waiting/live sibling, dependent unfinished work or live resource marker
 retains that target. No arbitrary path or ownership registration is accepted.
-The existing queue's active-ID snapshot is read under queue.lock; it includes
-queued siblings. A fresh complete index is reused. Otherwise the normal admission
-rules inspect current canonical job metadata with a deadline, preserving published
-unknown IDs and leaving jobs/index unchanged. No prompt or event history is read.
+The existing queue's active-ID snapshot is read under queue.lock. Current canonical
+job metadata is inspected with a deadline, including queued siblings and terminal
+jobs whose supervisors remain alive, even when the admission index omits them.
+Published unknown IDs are preserved. Jobs/index remain unchanged; no prompt or
+event history is read.
 An unavailable or incomplete observation retains the candidate. Explicit saved
 debug-build references in canonical metadata also retain their original artifacts.
 
@@ -50,7 +51,7 @@ Existing queue/state/ToDo byte locks, the exact shared Cargo target lock and Car
 own profile locks are held from qualification through deletion. Ancestors and all
 artifact files are pinned. Every file must acquire exclusive deletion access
 before the first removal, so a running executable or open dependency retains the
-whole set. Reparse points, hardlinks, source/evidence and unknown top-level content
+whole set. Reparse points, external hardlinks, source/evidence and unknown top-level content
 are retained. Generated source under Cargo build-script OUT_DIR remains rebuildable.
 Cargo metadata supplies real target names. Hashed dependency outputs must match
 the unit name and hash of Cargo fingerprint markers plus their valid JSON metadata.
@@ -58,6 +59,14 @@ Only known Cargo output forms are accepted; an arbitrary file in deps or another
 unknown child retains the whole set. Final absence also requires that re-enumerating
 the root finds only pinned profile locks. Changed/partial contents have unmeasured
 remaining bytes, rather than subtracting from an obsolete plan.
+Fingerprint directories and marker names are bound individually to real Cargo
+package/target metadata. Incremental sessions use known rustc names; build OUT_DIR
+also requires Cargo's matching root-output record. A profile lock is allowed only
+as the same pinned regular zero-length file, never just a matching basename.
+Hardlinks are accepted only when every physical link is inside this complete
+qualified plan. A unique exclusive handle protects each object before deletion;
+all aliases are rechecked, and bytes count once when the final link is removed.
+Existing deletion-request and retirement entry points still reject hardlinks.
 The profile directory and its lock files stay in place to prevent a direct Cargo
 start during reclamation; receipts report artifact absence separately from that
 scaffolding. Source, Git, release and original records are never deletion targets.
@@ -65,8 +74,8 @@ scaffolding. Source, Git, release and original records are never deletion target
 The new stage runs after the older independent stages, for at most 90 seconds,
 512 canonical rows and four measured artifact sets per hourly invocation. It uses
 a numeric scheduling cursor only in apply mode; the cursor never grants authority.
-An unreadable/corrupt cursor is preserved and reported; the in-memory pass restarts
-at the beginning and independent qualified targets can still run.
+An unreadable/corrupt cursor is preserved and reported. A separate numeric recovery
+position advances the same finite pass without replacing that original.
 Default/dry-run changes no target, cursor or durable receipt. Schema 3 adds anonymous
 candidate/removed/retained/unmeasured/partial/absence statistics. Empty or previously
 removed artifacts are not reclaimed twice. No Discord sender, new task, ownership

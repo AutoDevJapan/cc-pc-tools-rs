@@ -22,20 +22,23 @@ const completedBuildJob = "20261026-164814-todo-3942"
 const completedManifestPath = "C:/Users/makhmeto/AppData/Local/Temp/codex-owned-5249eb2a5e0382b871074f454633ec84/build-manifest.private.json"
 const completedManifestSHA = "407ef0f4d9a90e1122be7a213cf23d2ba3e159b17b75cea92c527afa6807e566"
 
-var completedLeaf = leaf{"cleanup-8h", completedRoot + "/target/release/cleanup-8h.exe", "D:/CC/Tools/cleanup-8h/cleanup-8h.exe", leaves[1].New, "99e0c0ec161e930eb762e6fa74e5df7254fbbdc9f3eed338a6e35e29f6018ec3"}
+var completedLeaf = leaf{"cleanup-8h", completedRoot + "/target/release/cleanup-8h-delivery-" + completedHead + ".exe", "D:/CC/Tools/cleanup-8h/cleanup-8h.exe", leaves[1].New, "99e0c0ec161e930eb762e6fa74e5df7254fbbdc9f3eed338a6e35e29f6018ec3"}
 var completedInputs = []string{"Cargo.toml", "Cargo.lock", "cleanup-8h", "cc-jobs", "cc-job-policy", "cc-chrome", "cc-task-title", "cc-redact"}
 
 type completedManifest struct {
-	Schema    int    `json:"schema"`
-	Todo      int    `json:"todo"`
-	Job       string `json:"job"`
-	Head      string `json:"source_head"`
-	Root      string `json:"source_root"`
-	Command   string `json:"build_command"`
-	Candidate string `json:"candidate"`
-	New       string `json:"candidate_sha256"`
-	Old       string `json:"existing_cleanup_sha256"`
-	Inputs    []struct {
+	BuildOutput  string `json:"build_output"`
+	OutputSHA    string `json:"build_output_sha256"`
+	CopyVerified bool   `json:"copy_verified"`
+	Schema       int    `json:"schema"`
+	Todo         int    `json:"todo"`
+	Job          string `json:"job"`
+	Head         string `json:"source_head"`
+	Root         string `json:"source_root"`
+	Command      string `json:"build_command"`
+	Candidate    string `json:"candidate"`
+	New          string `json:"candidate_sha256"`
+	Old          string `json:"existing_cleanup_sha256"`
+	Inputs       []struct {
 		Path string `json:"path"`
 		SHA  string `json:"sha256"`
 	} `json:"inputs"`
@@ -54,6 +57,9 @@ func completedGit(args ...string) ([]byte, error) {
 	return out, nil
 }
 func completedManifestIdentity(m completedManifest) error {
+	if !same(m.BuildOutput, completedRoot+"/target/release/cleanup-8h.exe") || m.OutputSHA != m.New || !m.CopyVerified {
+		return errCode("COMPLETED_BUILD_COPY_UNVERIFIED")
+	}
 	if m.Schema != 1 || m.Todo != 3942 || m.Job != completedBuildJob || m.Head != completedHead || !same(m.Root, completedRoot) || m.Command != "cargo build --release --locked -p cleanup-8h" || !same(m.Candidate, completedLeaf.Source) || m.New != completedLeaf.New || m.Old != completedLeaf.Old {
 		return errCode("COMPLETED_MANIFEST_CHANGED")
 	}

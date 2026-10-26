@@ -692,9 +692,9 @@ impl Context {
     /// Read current active/queued IDs without changing jobs or their index.
     /// The caller holds queue.lock until it finishes using this snapshot, so
     /// registration/requeue cannot introduce an unobserved owner in between.
-    /// Reuse a fresh complete index, or inspect canonical metadata using the
-    /// same occupied/unknown rules as admission. The fallback is bounded and
-    /// never writes/reconciles the persistent index or starts workers.
+    /// Inspect canonical metadata with admission's occupied/unknown rules plus
+    /// live supervisors, which admission may have already removed from its index.
+    /// Never write/reconcile the persistent index or start workers.
     pub fn active_job_ids_snapshot(&self) -> Result<Vec<String>> {
         #[cfg(windows)]
         {
@@ -708,11 +708,6 @@ impl Context {
             }
         }
         let index = self.read_admission_index()?;
-        if self.index_fresh(&index) {
-            let ids = self.index_ids(&index)?;
-            if ids.len() > 4096 {return Err(Error::new("active job snapshot limit"));}
-            return Ok(ids.into_iter().map(str::to_owned).collect());
-        }
         let until=std::time::Instant::now()+std::time::Duration::from_secs(30);
         let mut ids=Vec::new();
         for (count,entry) in fs::read_dir(&self.jobs)?.enumerate() {
@@ -742,12 +737,14 @@ impl Context {
                     if !metadata.is_file() {return Err(Error::new("active job metadata is not a file"));}
                 }
             }
-            if self.admission_active(&self.admission_record(&id)) {ids.push(id);}
+            let job=self.admission_record(&id);
+            if self.admission_active(&job) || self.is_ours(&job,"pid") {ids.push(id);}
             if ids.len()>4096 {return Err(Error::new("active job snapshot limit"));}
         }
         if let Ok(published)=self.index_ids(&index) {
             for id in published {
-                if !ids.iter().any(|known|known==id) && self.admission_active(&self.admission_record(id)) {ids.push(id.to_owned());}
+                let job=self.admission_record(id);
+                if !ids.iter().any(|known|known==id) && (self.admission_active(&job) || self.is_ours(&job,"pid")) {ids.push(id.to_owned());}
                 if ids.len()>4096 {return Err(Error::new("active job snapshot limit"));}
             }
         }

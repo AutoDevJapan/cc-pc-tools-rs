@@ -48,3 +48,18 @@ Cargo metadataとfingerprint照合、最終再列挙、変化時の残量未測�
 対象はcleanup-8hだけ。safe-deleteのソース・配布byteは変更しない。
 配布pinは初期0d90458a候補のままで、レビュー修正後のbuild/manifestへ差し替えるまでは実配布しない。
 現用版更新・通常タスク発火・本実装による実物の回収はまだ0。
+
+追加レビュー3954: 実job20261026-175927-todo-3954、native
+01a17770-2289-7962-bf63-3760f67419fe、gpt-6-sol/max、50 steps、終了0。
+固定0d90458a→89b9eeb2の9対象読了。原応答SHA256
+9d53f29f76133e3130bac6ceeb49783ddcd0d812fb69df977eb44443e12cde2e。
+fingerprintディレクトリと実unitの対応、終了状態でも生存する別job PID、後から現れる
+profile lock名についてMust3件を受け、個別Cargo package/marker照合、全canonical metadataの
+無変更・有限なPID照合、保持した通常lock実体の再確認へ修正した。相対build出所参照と、
+破損cursor原本を保持しながら有限な位置を進めるSuggestionも反映。
+
+自分のCargo出力で内部hardlinkを実測したため、全リンクが同じ資格済み計画内にある場合だけ
+既存ハンドル削除を再利用する。外部リンクは保持、候補/実削除bytesは物理ファイルごとに1回。
+初回・追加レビューの旧範囲を最新sourceの承認へ流用しない。追加修正は別途固定レビューする。
+配布候補は既知の自分のRust出力を単一リンクへbyte一致コピーし、元出力と一致を配布票へ残す。
+コピーを再ビルドや回収量に数えない。

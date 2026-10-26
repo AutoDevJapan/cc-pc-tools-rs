@@ -5,6 +5,15 @@
 元creatorが終了していても、元producerが更新されていても照合できる。
 原台帳・未知9・旧14/28・647、継続性と現在OS writerが未証明であることは保つ。
 
+元creatorの`--consume-skills3080`も同じ原作成証拠の照合を使う。現在の正規実行版、
+原nativeの厳密な時間窓・call/request、受入済み発行元のSHA/revision、元manifestと
+review tupleを先に結び、その発行元が作成時に確認したPUBLIC/main/reviewを再利用する。
+現在の読戻しを、改めてGitHubへ接続したり元review本文を開いたりする条件にはしない。
+新しいCreateNewの公開性・main包含・内容reviewの確認は従来どおり行う。
+元の出典・個別noticeの全hash照合と、現在handle/ID/実bufferの確認も維持する。
+失敗時の`reason`は保持し、creator経路の`failure_stage`に固定した段階名だけを返す。
+パス・原文・OSエラー本文・認証情報は診断へ含めず、失敗した読戻しから本文は返さない。
+
 通常の共有ToDoへ登録する読み取り専用reviewの**全仕様**を、以下のJSONにする。
 将来のcaller job IDや任意のwriterを仕様に書かない。実callerは現在の
 `CC_JOB_ID`、登録・最新世代、admission、実PID、生存、source/cwdから導く。

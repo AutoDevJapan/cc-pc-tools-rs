@@ -1,0 +1,45 @@
+{
+  "todo": 3080,
+  "actual_parent_job": "20261026-214717-todo-3080",
+  "applied_at": "2026-10-26T17:04:40.6143456+00:00",
+  "method": "Current real Codex turn explicitly read both qualified instruction buffers, the notice and provenance; then made these bounded decisions. No additional model invocation or target-system execution.",
+  "target": "security-audit-coverage",
+  "instruction_sha256": [
+    "538433afee453c330990ba66a31faa00f4cced1768e590fc60a689b53fd30cdc",
+    "e55bfb07c14b57bab7805359effa8445e39fc69a9dab0ac2db663b809fb77f95"
+  ],
+  "scenarios": [
+    {
+      "kind": "real current evidence application",
+      "input": "One CreateNew produced9 files; current CLI returned the9 same-ID/hash buffers in two successful batches after rejecting an oversized request.",
+      "decision": "Keep issuance, batch1 four files, batch2 five files and metadata discovery as separate observations. All9 current buffers match the original issuance at their respective read times. Do not claim one atomic cross-batch snapshot, historical continuity, current OS writer, semantic reading of every discovered Skill or completion of all16 sources.",
+      "actual_effect": "This limit is carried into the result manifest and ledger; failed oversized read retained, creation not replayed."
+    },
+    {
+      "kind": "positive textual scenario",
+      "input": "A scoped notes audit covers ordinary update plus a changed batch-retry path; old evidence covers the ordinary path, while cancellation behavior has not yet been established.",
+      "decision": "Use two established entry/boundary units; bind the previous observation only to its source and unchanged conditions, and keep the changed retry ownership check pending. First establish whether a cancellation transition exists rather than inventing a third implemented path. A cross-user impact claim needs the lower-privilege principal, passed control, selected resource, downstream behavior and observed result.",
+      "actual_effect": "Produced a bounded audit plan; no vulnerability severity, exploit success or code execution asserted."
+    },
+    {
+      "kind": "prior evidence and changed conditions",
+      "input": "The prior audit used the same top-level commit but a dependency or runtime setting now differs.",
+      "decision": "Preserve the old actor, method, outcome and unresolved work. Reuse only evidence whose actual source and conditions still match; inspect the changed dependency or setting through the available normal tools. Do not erase the old incomplete unit or require the owner to operate this PC.",
+      "actual_effect": "No blanket full-text reread or whole-repository success inferred from a commit match."
+    },
+    {
+      "kind": "negative applicability",
+      "input": "A single typo correction or general question cites the original audit package containing four agents, six phases, budgets and validator instructions.",
+      "decision": "Apply only relevant reasoning; do not launch a full audit, new agents, scripts, network probes or paid services. Original budgets and validator size limits do not cap the original3080 scope. New UI direction or owner-only rights/fees still follows its existing decision route.",
+      "actual_effect": "No new worker, execution permission, source acquisition, UI change or fee introduced."
+    }
+  ],
+  "all4_scenario_meanings_applied": true,
+  "explicit_skill_use": true,
+  "implicit_skill_selection_proven": false,
+  "source_four_originals_reused_by_exact_hash": true,
+  "new_source_primary_read_credit": 0,
+  "actual_target_security_audit_executed": false,
+  "actual_exploit_proven": false,
+  "whole16_complete": false
+}

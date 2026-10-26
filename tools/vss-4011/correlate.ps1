@@ -12,7 +12,7 @@ foreach($anchor in $anchors) {
         $evs=@(Get-WinEvent -FilterHashtable @{LogName=$log;StartTime=$at.LocalDateTime.AddMinutes(-5);EndTime=$at.LocalDateTime.AddMinutes(5);Level=@(1,2,3)} -MaxEvents 200 -ErrorAction SilentlyContinue)
         $result.window_counts+=@([ordered]@{anchor_record_id=$anchor.RecordId;window_utc=$at.UtcDateTime.ToString('o');log=$log;all_warning_error_count=$evs.Count;limit_partial_possible=($evs.Count -ge 200)})
         foreach($event in $evs) {
-            if(($log -eq 'System' -and $event.ProviderName -in $providers) -or ($log -eq 'Application' -and $event.ProviderName -in @('VSS','Microsoft-Windows-Backup','System Restore','Microsoft-Windows-SystemRestore'))) {
+            if(($log -eq 'System' -and $event.ProviderName -in $providers) -or ($log -eq 'Application' -and $event.ProviderName -in @('VSS','Microsoft-Windows-Backup','System Restore','Microsoft-Windows-System-Restore','Microsoft-Windows-SystemRestore'))) {
                 $rows.Add([ordered]@{window_utc=$at.UtcDateTime.ToString('o');log=$log;provider=$event.ProviderName;id=$event.Id;utc=$event.TimeCreated.ToUniversalTime().ToString('o');level=$event.Level;record_id=$event.RecordId})
             }
         }

@@ -1,5 +1,30 @@
 # 元4011の再開情報
 
+## 2026-10-27 05:03再開担当の現在値
+
+実job20261027-050328-todo-4011、同branch/開始bdf1337c、未コミット先行変更0から再開。
+4020の原応答を受領：succeeded/exit0/16steps/native_turn_context Opus5.5 max、
+固定6対象読了/Must1・Suggestion7。原文3810字、SHA CD695B03DFF92A130A3BCCA28965C9B284EFBCB02992EEB1F27E032F7E0ACF10。
+`.ci-work/4011/review-4020-final.md`に保持し、終了済み4020を再待機/再登録しない。
+
+MustのA直前/END直後storage差記録、Bの再計算前提を修正。共通helperに実判定とCreateNew永続
+requestをまとめ、固定os-v2 pathで途中停止時も二重作成を拒否する。成功result保存前のrollbackを
+requestから可能とし、他の値・既にrollback後に再出現した値は保持。writerは任意/offset必須/2夜上限。
+sourceはtools/vss-4011、具体条件はdocs/vss-retention-4011.mdの最新版。OS操作はまだ0。
+実PS5.1/7で10件のguard回帰成功、7source parse成功。Get-FileHash不在は.NET hashへ修正。
+読み取り専用AdminBrokerで最新baseline/未来空窓/offset拒否/writer省略/修正correlateを実確認。
+未来空窓を保持成功の証拠にせず、私的結果と原Brokerを.ci-work/4011に保存。
+
+新自己Temp所有ID9f17db42b7c7cbfb59873578f2b0fadf、Temp直下codex-owned-9f17db42b7c7cbfb59873578f2b0fadf。
+旧4cb6...はsource_absentなので再利用0。新TempはPS5のlauncher/架空guard fixtureのみ。
+実適用前の次の固定レビュー後、通常AdminBrokerでconfigure→A→即時割当確認→Bを実行する。
+それぞれfixed `.ci-work/4011/os-v2`へ追記専用claim/result。未反映/失敗/新24・25・33・35・36/
+世代消失なら自分の3200 DWORDだけrollbackしpoint/関連付けは保持する。重複再作成しない。
+実保持確認と夜間条件はdocsの最大48h/2夜のまま、必要ならwait-retryで再開。
+PR568は引き続きdraft。現用OS適用/最終CI/merge/完了返却は未完、branch変更0。
+
+以下の旧受付/待ち/未読の表示は各時点の履歴。現在は4020受領済みで修正を継続している。
+
 ## 最新：4014の最終回答を受領し、修正候補を保存（OS未適用）
 
 修正候補の固定HEADは`e1c3ffefdf1a7fae3b24c31c1f7e4c5c5104f259`。

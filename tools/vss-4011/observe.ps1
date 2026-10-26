@@ -1,4 +1,4 @@
-param([Parameter(Mandatory=$true)][string]$OutputPath,[string]$SinceUtc)
+param([Parameter(Mandatory=$true)][string]$OutputPath,[string]$SinceUtc,[switch]$IncludeWriters)
 $ErrorActionPreference = 'Stop'
 trap {
     [Console]::Error.WriteLine(('observer_failure line={0} id={1}' -f $_.InvocationInfo.ScriptLineNumber,$_.FullyQualifiedErrorId))
@@ -41,7 +41,7 @@ try {
         [ordered]@{microsoft_software=($_.Name -eq 'Microsoft Software Shadow Copy provider 1.0');version=$_.Version;type=$_.Type}
     })
 } catch { ErrorCode 'providers' $_ }
-try {
+if($IncludeWriters) { try {
     $writerText = (& "$env:SystemRoot/System32/vssadmin.exe" list writers 2>&1 | Out-String)
     $writerExit = $LASTEXITCODE
     $states = @([regex]::Matches($writerText, '(?m)^\s*(?:State|状態)\s*:\s*\[(\d+)\]') | ForEach-Object {[int]$_.Groups[1].Value})
@@ -51,7 +51,7 @@ try {
         [ordered]@{writer=if($writerName -in $knownWriters){$writerName}else{'other'};state=[int]$match.Groups[2].Value;last_error_none=($match.Groups[4].Value -match '^(No error|エラーなし)\s*$')}
     })
     $result.writers = [ordered]@{exit=$writerExit;parsed_count=$states.Count;states=$states;rows=$writerRows;all_parsed_stable=($states.Count -gt 0 -and @($states | Where-Object {$_ -ne 1}).Count -eq 0);raw_exported=$false}
-} catch { ErrorCode 'writers' $_ }
+} catch { ErrorCode 'writers' $_ } } else { $result.writers=[ordered]@{requested=$false;executed=$false} }
 $result.services = @(Get-CimInstance Win32_Service -Filter "Name='VSS' OR Name='swprv' OR Name='wbengine' OR Name='SDRSVC'" -Property Name,State,StartMode | ForEach-Object {[ordered]@{name=$_.Name;state=$_.State;start_mode=$_.StartMode}})
 $reg = @(
     @{key='HKLM:\SYSTEM\CurrentControlSet\Services\VolSnap';values=@('MinDiffAreaFileSize','TimeOut','Start')},
@@ -94,7 +94,8 @@ try {
     $cGuid = if($cVolume -match '\{[^}]+\}') {$Matches[0]} else {''}
     $fltmcText=(& "$env:SystemRoot/System32/fltmc.exe" volumes 2>&1 | Out-String)
     $cKernel=if($fltmcText -match '(?m)^\s*C:\s+(\S+)') {$Matches[1]} else {''}
-    $start=if($SinceUtc){[DateTimeOffset]::Parse($SinceUtc).LocalDateTime}else{[DateTime]::Now.AddDays(-3)}
+    if($SinceUtc -and $SinceUtc -notmatch '(Z|[+-][0-9]{2}:[0-9]{2})$') {throw 'EVENT_START_EXPLICIT_OFFSET_REQUIRED'}
+    $start=if($SinceUtc){[DateTimeOffset]::Parse($SinceUtc,[Globalization.CultureInfo]::InvariantCulture).LocalDateTime}else{[DateTime]::Now.AddDays(-3)}
     try {
         $events = @(Get-WinEvent -FilterHashtable @{LogName='System';ProviderName='volsnap';StartTime=$start} -MaxEvents 100 -ErrorAction Stop)
     } catch {

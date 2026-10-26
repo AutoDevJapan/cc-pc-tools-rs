@@ -56,8 +56,9 @@ Cの回収0。C空き差とVSS割当差の残り約7.185GBは元3796の未解明
 
 初回の51200MiB案は適用しない。初期確保がsnapshotごとなら2世代が既存上限へ
 収まらない可能性を指摘されたため、**3200MiB（3.125GiB）**へ候補を修正した。
-2世代の初期確保合計は6.25GiBで、50GiB上限に対し43.75GiBの余地を残す。
-これは小さな初期割当による拡張の頻度を減らす候補であり、その後の拡張をなくす保証ではない。
+snapshotごとに初期確保される場合の2世代分は6.25GiBで、50GiB上限に対し43.75GiBを残す。
+初期割当を大きくして拡張頻度を減らせるかは、増分単位が未確認の仮説として実測する。
+以前の失敗は使用約45.8GBで発生しており、3.125GiBの設定だけで解消する保証ではない。
 通常の世代保持と実際の拡張を確認してから効果を判定する。旧50GiBのminimumは未適用である。
 
 `configure.ps1`は既存C→C/50GiB、MS provider 1、他volume snapshotなし、明示DisableSRなし、
@@ -74,21 +75,26 @@ Cの回収0。C空き差とVSS割当差の残り約7.185GBは元3796の未解明
 2. `create-point.ps1 -Stage A`で通常SystemRestore BEGIN/ENDを一度実行する。
    既存creation frequencyは0のまま。事前token/実戻り値/登録されたown descriptionと
    sequence/作成後tokenを保存する。新snapshotを1件に絞れなければ対応不明として全て保持する。
-3. 実割当が少なくとも3200MiBへ増えたこと、persistent/state12、事前token保持を確認する。
-   割当が320MiB等のままなら即時反映を証明できないので次のpointを作らずrollbackする。
+3. AのBEGIN直前/END直後のused/allocated/maxを同じreceiptへ保存し、割当増3200MiB以上かつ
+   割当増−使用増2880MiB以上、上限50GiB不変をコードで確認する。自然な通常書込の増加を
+   minimum反映と誤認しない。BもAの実測から同条件を再計算し、不成立ならBを作らずrollbackする。
+   Bの前後差も記録し、初期確保がsnapshotごとかを断定せず実測する。
 4. `-Stage B -FirstReceiptPath <Aの実receipt>`で2件目を一度実行する。
    Aのtokenが残っていることと、quota内に新しい初期割当+1GiBの余地があることを直前確認する。
    A/B両方のpoint・token・persistent/state12・既存世代不減を確認する。
 5. 新しい24/25/33/35/36、取得失敗、部分取得、作成失敗がないことを確認する。
    33も「正常なcleaning成功」とせず、今回の新規作成で保持世代を押し出していないか判定する。
-6. 通常I/Oで差分が増えて初期割当を超える拡張を観測し、2token保持と上限50GiB不変を確認する。
-   01:45/02:40の障害時間帯か、障害前に相当する実使用増を含む有限な観測まで継続する。
-   短い低負荷区間だけで「25を解消」と完了しない。時間が必要なら既存ToDoの正規
-   `wait-retry --after ... --reason ...`を使い、新しい監視/task/point作成loopを追加しない。
+6. 通常I/Oで少なくとも初期割当を超える拡張1回と、A後からの使用増1GiB以上を観測する。
+   さらに01:45/02:40の両時間を含む次の1夜を経て、2token保持/上限50GiB/新25なしを確認する。
+   これは以前の約45.8GB全負荷の再現ではないので、観測差分・増加速度と限界を併記する。
+   観測は適用から最大48時間・最大2夜。最大値まで上の実拡張/使用増に届かなければ
+   「新しい保持は確認、25対策の効果は未検証」とし、担当がminimumだけrollbackして再調査する。
+   次の夜間確認には既存ToDoの`wait-retry --after ... --reason ...`を使い、
+   新しい監視/task/point作成loopを追加しない。未完を全体完了にしない。
 
 rollbackの実行担当も元4011とし、条件は割当が想定と違う、24/25/33/35/36の新規発生、
 point作成失敗（既存SRの実行結果を含む）、保持対象token/世代数の減少である。
-`rollback.ps1 -AppliedReceiptPath ...`は4011のbefore不存在/target3200/成功readback/現在DWORDを
+`rollback.ps1`は4011のbefore不存在/target3200/永続request/現在DWORDを
 照合し、**本担当が加えたMinDiffAreaFileSize値だけ**を元の未設定へ戻す。
 値が変わっていたら他担当の変更を保持して止め、snapshot・関連付け・上限を削除/縮小しない。
 registry readbackの不存在とdriverの実効値復帰は区別し、即時の効果を未確認のまま断定しない。
@@ -97,7 +103,13 @@ registry readbackの不存在とdriverの実効値復帰は区別し、即時の
 
 作成呼出し前は「要求結果不明」のphaseを先に保存し、タイムアウトを未作成と断定しない。
 BEGIN/ENDの非0でも実登録を読める場合は先に記録し、同名/既存receiptがあれば自動再作成しない。
-各point作成の前後にwriterを観測し、自分の作成呼出し中にlist writersを重ねない。
+実操作のrequest/begin/end-request/resultは`.ci-work/4011/os-v2`の固定名へCreateNew/Flush(true)で
+追記専用に保存する。部分ファイルでも次の実行を拒否し、任意OutputPathでstage再作成を回避できない。
+configurationのrequestは値を書いた直後のクラッシュにも残り、成功result保存前でも自分の値を戻せる。
+既に未設定ならrollbackで変更せず区別し、driver実効値は未確認と明記して現在token/割当も保存する。
+成功したBEGINはbegin結果票の保存失敗時もfinallyで通常ENDを呼び、OS変更中の単純な中断を減らす。
+writerは`observe.ps1 -IncludeWriters`で作成の前後だけ取得し、通常観測は実行しない。
+SinceUtcにはZまたは明示offsetを要求し、volsnap_query欠落/complete false/errorsありは取得失敗とする。
 SystemRestoreの選択的追跡を一般VSSの全ユーザーファイル保護と同一視せず、未分類Cファイルや
 snapshot内容を別path/コピーで回避して読まない。過去point復旧/実OS rollbackは未実施のまま区別する。
 
@@ -109,6 +121,12 @@ snapshot内容を別path/コピーで回避して読まない。過去point復�
 - [Microsoft: 実値を置換してイベント定義を取得](https://learn.microsoft.com/en-us/dotnet/api/system.diagnostics.eventing.reader.eventlogrecord.formatdescription)
 - [Microsoft: writer state 5はbackup complete待ち](https://learn.microsoft.com/en-us/windows/win32/api/vss/ne-vss-vss_writer_state)
 - [Microsoft: SystemRestoreが追跡するファイルの範囲](https://learn.microsoft.com/en-us/windows/win32/sr/calling-srsetrestorepoint)
+- [Microsoft: 同時snapshot作成のVSS排他](https://learn.microsoft.com/en-us/windows/win32/api/vsbackup/nf-vsbackup-ivssbackupcomponents-startsnapshotset)
+
+MinDiffAreaFileSizeの現行記述は32MBの倍数・3200の例を含む一方、Vista/Server2008等の
+古い版には300～3000MB/300MB単位の注記がある。このPCのbuild26300への実効は実割当で判断する。
+minimumが上限を超えるとshadow copyが正しく機能しない場合があるため、将来の小さい
+別volume/backup設定まで検証済みとせず、現在の1関連付けだけで適用を判断する。
 
 私的な匿名実測とBroker request/戻り値は自分の`.ci-work/4011/`へ保存し、公開ソースには
 volume GUID、ホスト名、元ファイルpath、タスクの引数、実データ、認証情報を含めない。
@@ -133,3 +151,27 @@ OSファイルを直接hashする案はそのC pathの通常guardが分類未確
 既存backup関連taskの限定metadataでは10件中9件Microsoft namespace、他1件CC namespace。
 後者のVSS使用/保持仕様は未確認であり、他のbackupが存在しないとは断定しない。
 指摘と実保持への影響を解消してから設定を適用する。
+
+## 4020の結果と実適用前の追加修正（2026-10-27 05時台）
+
+元4020は固定a229c070→e1c3ffefの6対象を全文読了、Must1/Suggestion7。
+実job20261027-044913-todo-4020、succeeded/exit0/16steps、execution_observedは
+native_turn_context/anthropic/claude-opus-5-5/max。原応答3810字/SHA256
+CD695B03DFF92A130A3BCCA28965C9B284EFBCB02992EEB1F27E032F7E0ACF10を保持した。
+Mustの実割当前後差の保存とB前提の再計算、Suggestionの固定request/クラッシュ復帰/空時刻/
+writer任意/有限2夜/上限注意をソースと上の手順へ反映した。
+
+同じ保持確認で2回指摘されたため、receiptを上書きする方式をやめ、固定名の永続requestを
+通常CreateNewで確保する設計へ整理した。common.ps1で実割当判定を共有し、通常書込増・
+既に大きい割当・不足未使用量・上限変化・減少を拒否する8ケースと、固定path/二重claimの
+2ケースを実PS5.1/PS7で成功。PS5.1でGet-FileHashが使用不能だった問題は.NET SHA256で修正。
+observerの未来の空窓/offsetなし拒否/writer省略は読み取り専用AdminBrokerで確認したが、
+未来の空窓を保持成功の根拠にはしていない。現7sourceは構文確認成功。
+
+05:18の改めての匿名観測でもC→C/50GiB・used/allocated0・snapshot/point0・writer11No error。
+C352,599,576,576/D2,115,095,773,184/E858,052,489,216B free。OS変更はまだ0。
+過去の04:00:22snapshotには0.14秒後のSystem Restore8194成功、11秒後のscoping8300があり、
+少なくともこの1件はSystemRestore作成との時刻相関がある。13:10:57のもう1件は前後3分に
+対応する同providerイベントなし。両方をSystemRestore/全volume保護と断定せず、原本を保持する。
+System-Restoreのprovider正式名をcorrelateへ追加し、2回の25の前後5分の既存結論不変を実確認した。
+この修正後の固定レビュー/Must0と実適用は、まだこれからである。

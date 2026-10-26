@@ -1,0 +1,28 @@
+{
+  "central_file_reads_by_capture": 0,
+  "created_files": 20,
+  "created_targets": 3,
+  "creator_runtime_revision": "a067ff63db64a88fc218fc4c8400552454d5d691",
+  "creator_runtime_sha256": "3a0f5065eb6ae56fdcc0a1f0ef78131f999e2331a0412b01faea91260adffeaa",
+  "exact_unmodified_invocation_sha256": "b17f55620c87bc7f740ef0ed5ed19d804ec8e40043d19c5d7da7ef03e4444137",
+  "job": "20261026-090101-todo-3080",
+  "native_call_id": "call_ef3920e552374259aa22d4153ece2ddf",
+  "native_call_timestamp": "2026-10-26T05:50:55.156Z",
+  "new_adoptions": 0,
+  "original_CLI_stdout_sha256": "c932dbf587577277de840ba6b78fc2f6bba1a981954d8d535894ad458d4c92ad",
+  "original_tool_blocks_sha256": "4cfb4e9e66b598c824f4a232d18302ea07eb1500c8a8400c56db7aad2479a631",
+  "other_native_bodies_returned": false,
+  "prior_failed_exact_invocation_attempts": [
+    {
+      "CLI_stdout_sha256": "4b60a379ae45156ca8115328dbe320e450147dbfcf94f6a3c3fbf1b3c993c0a5",
+      "created_evidence_returned": false,
+      "native_call_id": "call_c4696a62c20440d38aafc998c1ebe41a",
+      "reason": "manifest",
+      "rejection_stage_precedes_creation_in_reviewed_a067_source": true,
+      "timestamp": "2026-10-26T05:48:50.364Z"
+    }
+  ],
+  "request_sha256": "635a109b3d1351606a5ed6210ec71365537bb768dde997c6e0fe4d3b1a752a49",
+  "successful_CreateNew_count": 1,
+  "thread_id": "01a16bab-c238-7293-953d-d0f447cf2c05"
+}

@@ -1,0 +1,842 @@
+{
+  "job": "20261026-170221-todo-3080",
+  "original_creator": "20261026-090101-todo-3080",
+  "manifest_sha256": "3d27a7072716df74d1edab8eb3187afba9c8a7f6a315260e4ed8fc54e04d9a91",
+  "qualified_files": 53,
+  "bytes": 790965,
+  "batches": [
+    {
+      "batch": 1,
+      "indices": [
+        0,
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8,
+        9,
+        10,
+        11,
+        12,
+        13,
+        14,
+        15,
+        16,
+        17,
+        18,
+        19,
+        20,
+        21
+      ],
+      "bytes": 63741,
+      "response_sha256": "b96d10d862db3587ad3f5d39f068821bf332702689c40479914772bd933bcde3",
+      "revision_producer": {
+        "sha256": "02c8cad70e44f2bc4cd4e5a70dfdaf581a7ee6896eb63449fe1606eb28f5b5be",
+        "revision": "f30f9e763e25884fa48d1cce0cac22da1cebfb69"
+      }
+    },
+    {
+      "batch": 2,
+      "indices": [
+        22,
+        23,
+        24,
+        25,
+        26,
+        27,
+        28
+      ],
+      "bytes": 50395,
+      "response_sha256": "98ec107541b95e1dfe8742e663e60b125a8b2bc537dce7e89de102ba520ad45e",
+      "revision_producer": {
+        "sha256": "02c8cad70e44f2bc4cd4e5a70dfdaf581a7ee6896eb63449fe1606eb28f5b5be",
+        "revision": "f30f9e763e25884fa48d1cce0cac22da1cebfb69"
+      }
+    },
+    {
+      "batch": 3,
+      "indices": [
+        29
+      ],
+      "bytes": 30517,
+      "response_sha256": "bfd5fb400653a1dd96bfa3011b1a4e9fa8f240822d74482ca3dc2e1bcf162f15",
+      "revision_producer": {
+        "sha256": "02c8cad70e44f2bc4cd4e5a70dfdaf581a7ee6896eb63449fe1606eb28f5b5be",
+        "revision": "f30f9e763e25884fa48d1cce0cac22da1cebfb69"
+      }
+    },
+    {
+      "batch": 4,
+      "indices": [
+        30,
+        31
+      ],
+      "bytes": 63297,
+      "response_sha256": "f6abc95a67bfd6094ed0a6d987725ddbf55678b93edec73d4b2cc0254ef191fb",
+      "revision_producer": {
+        "sha256": "02c8cad70e44f2bc4cd4e5a70dfdaf581a7ee6896eb63449fe1606eb28f5b5be",
+        "revision": "f30f9e763e25884fa48d1cce0cac22da1cebfb69"
+      }
+    },
+    {
+      "batch": 5,
+      "indices": [
+        32
+      ],
+      "bytes": 37096,
+      "response_sha256": "f68b0d00c6699d5e0c1abcbab249d89f1b095ac74ec7c06174b5fb4e5e896273",
+      "revision_producer": {
+        "sha256": "02c8cad70e44f2bc4cd4e5a70dfdaf581a7ee6896eb63449fe1606eb28f5b5be",
+        "revision": "f30f9e763e25884fa48d1cce0cac22da1cebfb69"
+      }
+    },
+    {
+      "batch": 6,
+      "indices": [
+        33
+      ],
+      "bytes": 39918,
+      "response_sha256": "5e0e7fed288f2064abfdc0e3c35a0a8b1de193b0120762659495d059c39d7e37",
+      "revision_producer": {
+        "sha256": "02c8cad70e44f2bc4cd4e5a70dfdaf581a7ee6896eb63449fe1606eb28f5b5be",
+        "revision": "f30f9e763e25884fa48d1cce0cac22da1cebfb69"
+      }
+    },
+    {
+      "batch": 7,
+      "indices": [
+        34,
+        35
+      ],
+      "bytes": 58604,
+      "response_sha256": "5afc999952046a2e0d3a06c00153e08b9993093fb78821f6581bdafbf9c0cf15",
+      "revision_producer": {
+        "sha256": "02c8cad70e44f2bc4cd4e5a70dfdaf581a7ee6896eb63449fe1606eb28f5b5be",
+        "revision": "f30f9e763e25884fa48d1cce0cac22da1cebfb69"
+      }
+    },
+    {
+      "batch": 8,
+      "indices": [
+        36,
+        37
+      ],
+      "bytes": 59711,
+      "response_sha256": "dece891ce81950d29c21d1cbf9a7491a94f2da199f75fffe34b7e8448e3d154f",
+      "revision_producer": {
+        "sha256": "02c8cad70e44f2bc4cd4e5a70dfdaf581a7ee6896eb63449fe1606eb28f5b5be",
+        "revision": "f30f9e763e25884fa48d1cce0cac22da1cebfb69"
+      }
+    },
+    {
+      "batch": 9,
+      "indices": [
+        38,
+        39
+      ],
+      "bytes": 59291,
+      "response_sha256": "9aae8593d3fa08dbb21b2ff9e1ab05c1e101263f8b9e4d8cd03375b9aebc0676",
+      "revision_producer": {
+        "sha256": "02c8cad70e44f2bc4cd4e5a70dfdaf581a7ee6896eb63449fe1606eb28f5b5be",
+        "revision": "f30f9e763e25884fa48d1cce0cac22da1cebfb69"
+      }
+    },
+    {
+      "batch": 10,
+      "indices": [
+        40,
+        41
+      ],
+      "bytes": 46006,
+      "response_sha256": "186ee9e11f312cf33787e6b8748460b82bf461072416d7c99d12c420f61ad921",
+      "revision_producer": {
+        "sha256": "02c8cad70e44f2bc4cd4e5a70dfdaf581a7ee6896eb63449fe1606eb28f5b5be",
+        "revision": "f30f9e763e25884fa48d1cce0cac22da1cebfb69"
+      }
+    },
+    {
+      "batch": 11,
+      "indices": [
+        42,
+        43
+      ],
+      "bytes": 46459,
+      "response_sha256": "87bcff9d25e3cad9ae920c4cd491191ce0b52cb030655e909c46688d772f831d",
+      "revision_producer": {
+        "sha256": "02c8cad70e44f2bc4cd4e5a70dfdaf581a7ee6896eb63449fe1606eb28f5b5be",
+        "revision": "f30f9e763e25884fa48d1cce0cac22da1cebfb69"
+      }
+    },
+    {
+      "batch": 12,
+      "indices": [
+        44,
+        45
+      ],
+      "bytes": 56363,
+      "response_sha256": "41b09cbc752ba10b2cbeb42f65202b22ead45e3b5b00dd6190a26d9b80edd3da",
+      "revision_producer": {
+        "sha256": "02c8cad70e44f2bc4cd4e5a70dfdaf581a7ee6896eb63449fe1606eb28f5b5be",
+        "revision": "f30f9e763e25884fa48d1cce0cac22da1cebfb69"
+      }
+    },
+    {
+      "batch": 13,
+      "indices": [
+        46,
+        47
+      ],
+      "bytes": 63211,
+      "response_sha256": "faa44e2470a136f25de2795f2eaf03e4d6f2802e80f7830aa7f1fcf7a24e3624",
+      "revision_producer": {
+        "sha256": "02c8cad70e44f2bc4cd4e5a70dfdaf581a7ee6896eb63449fe1606eb28f5b5be",
+        "revision": "f30f9e763e25884fa48d1cce0cac22da1cebfb69"
+      }
+    },
+    {
+      "batch": 14,
+      "indices": [
+        48,
+        49
+      ],
+      "bytes": 46025,
+      "response_sha256": "a31a5ea6005fdbf76a7e977c9dcdeaa79ea7babb163392f94a1ef86fbf5f41fe",
+      "revision_producer": {
+        "sha256": "02c8cad70e44f2bc4cd4e5a70dfdaf581a7ee6896eb63449fe1606eb28f5b5be",
+        "revision": "f30f9e763e25884fa48d1cce0cac22da1cebfb69"
+      }
+    },
+    {
+      "batch": 15,
+      "indices": [
+        50,
+        51
+      ],
+      "bytes": 61435,
+      "response_sha256": "731c4d7c66564128ac1c6db5c2f3ac2130a065a01248f50e972aca4fa013cc2a",
+      "revision_producer": {
+        "sha256": "02c8cad70e44f2bc4cd4e5a70dfdaf581a7ee6896eb63449fe1606eb28f5b5be",
+        "revision": "f30f9e763e25884fa48d1cce0cac22da1cebfb69"
+      }
+    },
+    {
+      "batch": 16,
+      "indices": [
+        52
+      ],
+      "bytes": 8896,
+      "response_sha256": "4108549f14af9251806a6a506c48fe106c60640acfc20a4892f02328f34516ba",
+      "revision_producer": {
+        "sha256": "02c8cad70e44f2bc4cd4e5a70dfdaf581a7ee6896eb63449fe1606eb28f5b5be",
+        "revision": "f30f9e763e25884fa48d1cce0cac22da1cebfb69"
+      }
+    }
+  ],
+  "unchanged_51_original_ID_and_bytes_match": true,
+  "new_metadata_index": 27,
+  "new_metadata_ID_matches_pending": true,
+  "old_history_index": 52,
+  "old_history_ID_matches_original_metadata": true,
+  "old_metadata_bytes_preserved": 8896,
+  "new_metadata_bytes": 10097,
+  "successful_apply_count": 1,
+  "new_prepare_calls": 0,
+  "new_CreateNew_calls": 0,
+  "historical_physical_continuity_proven": false,
+  "current_OS_writer": "unproved",
+  "general_access_granted": false,
+  "original_registry_recovered": false,
+  "new_semantic_source_reads": 0,
+  "all_current_returned_buffers_match_frozen_manifest": true,
+  "each_file_at_its_own_read_time_not_atomic_snapshot": true,
+  "files": [
+    {
+      "index": 0,
+      "target": "design-reference-evidence/SKILL.md",
+      "sha256": "46d27821c8690cb0c35d91949c459a14778c685f501b9626df47d041d8343a77",
+      "bytes": 1983,
+      "created_and_current_object_identity_sha256": "4b7de9835abaccec5b9966b9465d0741eeed7fd1bac87bf2ae52090148f310b1",
+      "creation_ID_matches_current": true,
+      "same_handle_buffer_returned": true,
+      "reviewed_bytes_equal": true,
+      "identity_origin": "original52 creation issuance"
+    },
+    {
+      "index": 1,
+      "target": "design-reference-evidence/references/guide.md",
+      "sha256": "6b108a0400ea82859cdc8dcd3083e7cc0562b57c121e2d0c3c26cb6ed9c0e127",
+      "bytes": 1704,
+      "created_and_current_object_identity_sha256": "fe4bce4079f9a8c0a9c5e9df4a1a16f9b325b133924ab1f0d7a86f45a79aaf35",
+      "creation_ID_matches_current": true,
+      "same_handle_buffer_returned": true,
+      "reviewed_bytes_equal": true,
+      "identity_origin": "original52 creation issuance"
+    },
+    {
+      "index": 2,
+      "target": "design-reference-evidence/references/LICENSE.txt",
+      "sha256": "6d4bdc9a9cf30e7beb593475fdcdbf29f981ea6bd7923f202866145409f87b44",
+      "bytes": 1066,
+      "created_and_current_object_identity_sha256": "dfb6e1d7597d398c2f0fb3ef311a86a1f0378c2e17e952d03c032bb5bdeb4a99",
+      "creation_ID_matches_current": true,
+      "same_handle_buffer_returned": true,
+      "reviewed_bytes_equal": true,
+      "identity_origin": "original52 creation issuance"
+    },
+    {
+      "index": 3,
+      "target": "design-reference-evidence/references/cases/1win.json",
+      "sha256": "daa5a650409e702566e680ad261d7f03baaf9edabeeb10f0c2f926a82d23ae1f",
+      "bytes": 2855,
+      "created_and_current_object_identity_sha256": "67f014ca79dd37fc1cdca044080ea303a9039d283f26c1222d233cfc02c8fb90",
+      "creation_ID_matches_current": true,
+      "same_handle_buffer_returned": true,
+      "reviewed_bytes_equal": true,
+      "identity_origin": "original52 creation issuance"
+    },
+    {
+      "index": 4,
+      "target": "design-reference-evidence/references/cases/airbnb.json",
+      "sha256": "f1cf467ab065754dad1ac244c133ade75173b698da4d2519e4469b1da2791139",
+      "bytes": 2821,
+      "created_and_current_object_identity_sha256": "e22c4e9d30ad619b4c980cd02b46f78a89d07e4c0d64480f2a5dcd3374305fd4",
+      "creation_ID_matches_current": true,
+      "same_handle_buffer_returned": true,
+      "reviewed_bytes_equal": true,
+      "identity_origin": "original52 creation issuance"
+    },
+    {
+      "index": 5,
+      "target": "design-reference-evidence/references/cases/airtable.json",
+      "sha256": "7f3eff7d42119d78f8a2c56fb7b42a145b9541a584dfcb6fffec53b7bb3dcc78",
+      "bytes": 2914,
+      "created_and_current_object_identity_sha256": "e05281f2e2ec359446ea0494f5232178c0d09e3f463192e37720206e7b6abbf9",
+      "creation_ID_matches_current": true,
+      "same_handle_buffer_returned": true,
+      "reviewed_bytes_equal": true,
+      "identity_origin": "original52 creation issuance"
+    },
+    {
+      "index": 6,
+      "target": "design-reference-evidence/references/cases/aljazeera.json",
+      "sha256": "0c55cf11a17414aa4789819725e1f5642196b8bd9429df98cd92901024787989",
+      "bytes": 2812,
+      "created_and_current_object_identity_sha256": "cc72fb5fe8d55f2eded11cff4f993c4700cfe16e047816ac2a3755b57c1c5287",
+      "creation_ID_matches_current": true,
+      "same_handle_buffer_returned": true,
+      "reviewed_bytes_equal": true,
+      "identity_origin": "original52 creation issuance"
+    },
+    {
+      "index": 7,
+      "target": "design-reference-evidence/references/cases/apple.json",
+      "sha256": "685b8fa14151af9d941d81e0fa978cb40d462ce4985a15e9add413e3ee3a2932",
+      "bytes": 3335,
+      "created_and_current_object_identity_sha256": "6376f83484c9bf59e34c5635f98135471285d578b69af988574f90a391816d6e",
+      "creation_ID_matches_current": true,
+      "same_handle_buffer_returned": true,
+      "reviewed_bytes_equal": true,
+      "identity_origin": "original52 creation issuance"
+    },
+    {
+      "index": 8,
+      "target": "design-reference-evidence/references/cases/binance.json",
+      "sha256": "b7a8ded43ad68c18e1bc00bc57ea51c93e8daa49351b35b6333d92713b83b908",
+      "bytes": 3203,
+      "created_and_current_object_identity_sha256": "ff8021b6fef25e807388da488a5c100989e5500311358afc923be616bd2dd161",
+      "creation_ID_matches_current": true,
+      "same_handle_buffer_returned": true,
+      "reviewed_bytes_equal": true,
+      "identity_origin": "original52 creation issuance"
+    },
+    {
+      "index": 9,
+      "target": "design-reference-evidence/references/cases/bmw-m.json",
+      "sha256": "bb31ccfe7e44558a42111ca31d89ef14041ef6e09d60231ca963aad3f740599e",
+      "bytes": 3199,
+      "created_and_current_object_identity_sha256": "c9fc25cc773892dd89a67cd3a525d7bc00c4ed5579bf4d7dc7609ebc99363894",
+      "creation_ID_matches_current": true,
+      "same_handle_buffer_returned": true,
+      "reviewed_bytes_equal": true,
+      "identity_origin": "original52 creation issuance"
+    },
+    {
+      "index": 10,
+      "target": "design-reference-evidence/references/cases/bmw.json",
+      "sha256": "ebaee2d618535d1d0bbf8abc32d5d490e54434b637a3ed8cf1c7ca33cd6c35e3",
+      "bytes": 3188,
+      "created_and_current_object_identity_sha256": "32fc57fd8029e07b2703f762412d703da6f6492232517e84838c1800d9b05de4",
+      "creation_ID_matches_current": true,
+      "same_handle_buffer_returned": true,
+      "reviewed_bytes_equal": true,
+      "identity_origin": "original52 creation issuance"
+    },
+    {
+      "index": 11,
+      "target": "design-reference-evidence/references/cases/bugatti.json",
+      "sha256": "5438f3875c881600ddf2df5b671498af9a04977b311f5ee5774f8dd3279ba731",
+      "bytes": 3096,
+      "created_and_current_object_identity_sha256": "ee55d58da134b98fcb4bb446897d15c5d5c27a925da8f2f426ebe5fbba1b8552",
+      "creation_ID_matches_current": true,
+      "same_handle_buffer_returned": true,
+      "reviewed_bytes_equal": true,
+      "identity_origin": "original52 creation issuance"
+    },
+    {
+      "index": 12,
+      "target": "design-reference-evidence/references/cases/cal.json",
+      "sha256": "c2161796cd139938ad1fda85e8dd30c794c5153f546935f88454077791f1ee17",
+      "bytes": 3208,
+      "created_and_current_object_identity_sha256": "e7703a1f3cd276339d900a91322f6ffa9cb97bcb12bbf02a2a78cc6363f526dc",
+      "creation_ID_matches_current": true,
+      "same_handle_buffer_returned": true,
+      "reviewed_bytes_equal": true,
+      "identity_origin": "original52 creation issuance"
+    },
+    {
+      "index": 13,
+      "target": "design-reference-evidence/references/cases/claude.json",
+      "sha256": "4f78e69275e146b78a8acc6f939284b5f1b4085d91e798f3fe95a8b1395c3212",
+      "bytes": 3058,
+      "created_and_current_object_identity_sha256": "55f0ca545aff8d30795c5d9c62ad0810780827f2f0f7ebbf379e17f097d61482",
+      "creation_ID_matches_current": true,
+      "same_handle_buffer_returned": true,
+      "reviewed_bytes_equal": true,
+      "identity_origin": "original52 creation issuance"
+    },
+    {
+      "index": 14,
+      "target": "design-reference-evidence/references/cases/clay.json",
+      "sha256": "1feb5c099023ac21615605f3d56aea67d30f4134bb769f8f490128601234bf72",
+      "bytes": 3077,
+      "created_and_current_object_identity_sha256": "0216cad0ff03a6a1ba0db17b56fc86a4d5ceb4cc6aa62fa7b3431739c0e1205b",
+      "creation_ID_matches_current": true,
+      "same_handle_buffer_returned": true,
+      "reviewed_bytes_equal": true,
+      "identity_origin": "original52 creation issuance"
+    },
+    {
+      "index": 15,
+      "target": "design-reference-evidence/references/cases/clickhouse.json",
+      "sha256": "0e5f54f8c93b95fe1273d89455454fdccd334ca5ff856008923f97ef6221d1bd",
+      "bytes": 3120,
+      "created_and_current_object_identity_sha256": "9db13f4dfae9727dd4d24e76671a68d725f237cdb6100899c2c8571132086068",
+      "creation_ID_matches_current": true,
+      "same_handle_buffer_returned": true,
+      "reviewed_bytes_equal": true,
+      "identity_origin": "original52 creation issuance"
+    },
+    {
+      "index": 16,
+      "target": "design-reference-evidence/references/cases/cohere.json",
+      "sha256": "0be12084ec15aec1ccd4ae9c8527de63f086ea97f46bb02afcbd4b4ec0e09b58",
+      "bytes": 3157,
+      "created_and_current_object_identity_sha256": "a0e19fa08d99a2baa2626f485d7469bd2d772247d20dfdfdfead8e18b74a5f6d",
+      "creation_ID_matches_current": true,
+      "same_handle_buffer_returned": true,
+      "reviewed_bytes_equal": true,
+      "identity_origin": "original52 creation issuance"
+    },
+    {
+      "index": 17,
+      "target": "design-reference-evidence/references/cases/coinbase.json",
+      "sha256": "d6f61047fc051fbb8113dd03c89ed5b98471d88022aefdca9892a76afea870d3",
+      "bytes": 3013,
+      "created_and_current_object_identity_sha256": "ff92a80d7d91069d8deb235a12d72294b4e58a14b4b3e30f589eda58d9be1867",
+      "creation_ID_matches_current": true,
+      "same_handle_buffer_returned": true,
+      "reviewed_bytes_equal": true,
+      "identity_origin": "original52 creation issuance"
+    },
+    {
+      "index": 18,
+      "target": "design-reference-evidence/references/cases/composio.json",
+      "sha256": "336926e751e7e7f73056a1396845458eee536f1a0f3e111ea1473af203ec8c32",
+      "bytes": 3076,
+      "created_and_current_object_identity_sha256": "1b7172e1fb9a57c172d7e2d2e9c22c0de30f6b290682f7532f62d3bb1f603df2",
+      "creation_ID_matches_current": true,
+      "same_handle_buffer_returned": true,
+      "reviewed_bytes_equal": true,
+      "identity_origin": "original52 creation issuance"
+    },
+    {
+      "index": 19,
+      "target": "design-reference-evidence/references/cases/cursor.json",
+      "sha256": "d80eece307fcf210a4b1aa18ac43ff9a9088b634a9fe50b905a99391c3d5d91b",
+      "bytes": 3067,
+      "created_and_current_object_identity_sha256": "20a06ade351121b8d7e1128b1f83997d21ca26c111833e76ff83a7b79b04ddf4",
+      "creation_ID_matches_current": true,
+      "same_handle_buffer_returned": true,
+      "reviewed_bytes_equal": true,
+      "identity_origin": "original52 creation issuance"
+    },
+    {
+      "index": 20,
+      "target": "design-reference-evidence/references/cases/dell-1996.json",
+      "sha256": "4289624e80876912c381b3927d3194222007ffd659dda11815bc83d313aeee3d",
+      "bytes": 3455,
+      "created_and_current_object_identity_sha256": "9bca56ee0031f2ab9d01f7d4961314f8a810bf8fd0f03a35a6ec43891fd6f831",
+      "creation_ID_matches_current": true,
+      "same_handle_buffer_returned": true,
+      "reviewed_bytes_equal": true,
+      "identity_origin": "original52 creation issuance"
+    },
+    {
+      "index": 21,
+      "target": "design-reference-evidence/references/cases/dji.json",
+      "sha256": "ff6b1fc8af07b7804974f1e4658531d3939de4eaa95474bd07a435f005613a5d",
+      "bytes": 3334,
+      "created_and_current_object_identity_sha256": "e42fa41ebaee9e67093d7a81f6d5f7637774d330efd9ac11760cfdc4c5b6c9d9",
+      "creation_ID_matches_current": true,
+      "same_handle_buffer_returned": true,
+      "reviewed_bytes_equal": true,
+      "identity_origin": "original52 creation issuance"
+    },
+    {
+      "index": 22,
+      "target": "design-reference-evidence/references/cases/elevenlabs.json",
+      "sha256": "b676d5369bfdd770c0e9292de240628f3d725e4975ed87ff781210e10df5d9dc",
+      "bytes": 3195,
+      "created_and_current_object_identity_sha256": "d5f559bff5ab407d7546f7dcc37270841b7b2d23cda0b395b6dbcb1c66e2abf2",
+      "creation_ID_matches_current": true,
+      "same_handle_buffer_returned": true,
+      "reviewed_bytes_equal": true,
+      "identity_origin": "original52 creation issuance"
+    },
+    {
+      "index": 23,
+      "target": "design-reference-evidence/references/cases/expo.json",
+      "sha256": "42d42209df17b7c7ea95f0122d8a30d44cb7165545fdaff89ba6d0c584d58e3d",
+      "bytes": 3186,
+      "created_and_current_object_identity_sha256": "aee926343deacff9e74f91a550a668749c59488dc508b035197eda42f742b6a9",
+      "creation_ID_matches_current": true,
+      "same_handle_buffer_returned": true,
+      "reviewed_bytes_equal": true,
+      "identity_origin": "original52 creation issuance"
+    },
+    {
+      "index": 24,
+      "target": "design-reference-evidence/references/cases/ferrari.json",
+      "sha256": "3e1b5cd573b4736b994f7c052751bbe2c57f18f7e1f4f513264393c9b61adad7",
+      "bytes": 3148,
+      "created_and_current_object_identity_sha256": "ec79158f89dc41af2f4a42fa290aead54e106964f057ac1bb17e0b6f06e51bd1",
+      "creation_ID_matches_current": true,
+      "same_handle_buffer_returned": true,
+      "reviewed_bytes_equal": true,
+      "identity_origin": "original52 creation issuance"
+    },
+    {
+      "index": 25,
+      "target": "design-reference-evidence/references/cases/figma.json",
+      "sha256": "14782aa29109a0a3560834bd447e3c8a899c04cb1714e38a227e4f430c08bd90",
+      "bytes": 3428,
+      "created_and_current_object_identity_sha256": "7cb16a1aa0e95783721b90869ed00cdb9111af3913e64e380d2088b43b16cae3",
+      "creation_ID_matches_current": true,
+      "same_handle_buffer_returned": true,
+      "reviewed_bytes_equal": true,
+      "identity_origin": "original52 creation issuance"
+    },
+    {
+      "index": 26,
+      "target": "design-reference-evidence/references/cases/framer.json",
+      "sha256": "9ecdc862756e4f3743da83079fbdcb1397927428323e8494c2dc4ce46b294e12",
+      "bytes": 3435,
+      "created_and_current_object_identity_sha256": "238f9935b664ef6756b5280b607f0e89ce18cb5492660d89322c8ea0162eb03a",
+      "creation_ID_matches_current": true,
+      "same_handle_buffer_returned": true,
+      "reviewed_bytes_equal": true,
+      "identity_origin": "original52 creation issuance"
+    },
+    {
+      "index": 27,
+      "target": "design-reference-evidence/references/sources.json",
+      "sha256": "e0607f086fd394bc0399c99e4101cef48e56c509272741cde81dba029778d8f4",
+      "bytes": 10097,
+      "created_and_current_object_identity_sha256": "ce635f6ade568538c2e860d95f9f8e42280bea34a84af1283999ab2141f5ad04",
+      "creation_ID_matches_current": true,
+      "same_handle_buffer_returned": true,
+      "reviewed_bytes_equal": true,
+      "identity_origin": "actual new metadata pending issuance"
+    },
+    {
+      "index": 28,
+      "target": "design-reference-evidence/references/upstream/1win.txt",
+      "sha256": "64d02d344cb16d68b6882054f35e3bfb7241ad60dc8b7f84f6636a7d1379496a",
+      "bytes": 23906,
+      "created_and_current_object_identity_sha256": "93bcfe74146a749804eb3cc4c3e889f0f99223274bc29f639098f4411eb62868",
+      "creation_ID_matches_current": true,
+      "same_handle_buffer_returned": true,
+      "reviewed_bytes_equal": true,
+      "identity_origin": "original52 creation issuance"
+    },
+    {
+      "index": 29,
+      "target": "design-reference-evidence/references/upstream/airbnb.txt",
+      "sha256": "add34130d67209ad105346d60fe2b290728b9711683969db4b7760e29477a5fe",
+      "bytes": 30517,
+      "created_and_current_object_identity_sha256": "55879234dafc513f0256a4bd80edc0cb7539bbd4f77c749322a065c848734b0a",
+      "creation_ID_matches_current": true,
+      "same_handle_buffer_returned": true,
+      "reviewed_bytes_equal": true,
+      "identity_origin": "original52 creation issuance"
+    },
+    {
+      "index": 30,
+      "target": "design-reference-evidence/references/upstream/airtable.txt",
+      "sha256": "1d225e511213044d3c705bde50265ad010932bfd8a15740a144dd4f480128889",
+      "bytes": 35266,
+      "created_and_current_object_identity_sha256": "1df5e704d895d777883fb9bb9fa5b4c70069dcfd0763b27f79285d79a5158155",
+      "creation_ID_matches_current": true,
+      "same_handle_buffer_returned": true,
+      "reviewed_bytes_equal": true,
+      "identity_origin": "original52 creation issuance"
+    },
+    {
+      "index": 31,
+      "target": "design-reference-evidence/references/upstream/aljazeera.txt",
+      "sha256": "37614fc72658ffa30faca01049bd1efa8a9baafa4750501405eeea66f149466a",
+      "bytes": 28031,
+      "created_and_current_object_identity_sha256": "b2e4aec9745be1108ff0554102aa30b0ad32d2024dbde91822b09288a8604fa1",
+      "creation_ID_matches_current": true,
+      "same_handle_buffer_returned": true,
+      "reviewed_bytes_equal": true,
+      "identity_origin": "original52 creation issuance"
+    },
+    {
+      "index": 32,
+      "target": "design-reference-evidence/references/upstream/apple.txt",
+      "sha256": "83fbc614443a9b3d7569e9956a43e7b8740f9d0f939f58b8154f7a7cec3002b2",
+      "bytes": 37096,
+      "created_and_current_object_identity_sha256": "3a38f4b8476d9a898d067b36751c3242c7121a5426184d71219506841d0b4fad",
+      "creation_ID_matches_current": true,
+      "same_handle_buffer_returned": true,
+      "reviewed_bytes_equal": true,
+      "identity_origin": "original52 creation issuance"
+    },
+    {
+      "index": 33,
+      "target": "design-reference-evidence/references/upstream/binance.txt",
+      "sha256": "378ff97d568ccbc316519b9d45a29d6649ed8961c9c486c3ed4cea7501d72371",
+      "bytes": 39918,
+      "created_and_current_object_identity_sha256": "8673525ddcd930d4c743fa2ea9f2c13a3e794760fd487251b3830a78dcc17762",
+      "creation_ID_matches_current": true,
+      "same_handle_buffer_returned": true,
+      "reviewed_bytes_equal": true,
+      "identity_origin": "original52 creation issuance"
+    },
+    {
+      "index": 34,
+      "target": "design-reference-evidence/references/upstream/bmw-m.txt",
+      "sha256": "824a1707c0a8d1609d72477d0fa211b9ebe4bdeb3e1fd701790af7b7bb669a4a",
+      "bytes": 30697,
+      "created_and_current_object_identity_sha256": "54fcf35ac837f229b919f077b21d2616e339ee1cd0a6a6a5feeff982ff165cb8",
+      "creation_ID_matches_current": true,
+      "same_handle_buffer_returned": true,
+      "reviewed_bytes_equal": true,
+      "identity_origin": "original52 creation issuance"
+    },
+    {
+      "index": 35,
+      "target": "design-reference-evidence/references/upstream/bmw.txt",
+      "sha256": "b7268279e7c98e85fb80890e06765f4ee8340ba1ea1ccb5a8a5b134de43dac3e",
+      "bytes": 27907,
+      "created_and_current_object_identity_sha256": "db4c1e19db9d01034418f2e634536873e21bb7267c05c9a827bf60ef9d2d65a6",
+      "creation_ID_matches_current": true,
+      "same_handle_buffer_returned": true,
+      "reviewed_bytes_equal": true,
+      "identity_origin": "original52 creation issuance"
+    },
+    {
+      "index": 36,
+      "target": "design-reference-evidence/references/upstream/bugatti.txt",
+      "sha256": "375f0a20ada88cdee5e995ca7edcfbd584ddf5f887024deebd1bc75bfd55b1bc",
+      "bytes": 28535,
+      "created_and_current_object_identity_sha256": "18c4fa955b9849d27e9c6a4f24f178dff02ee7806ffeb7bbd939d7f435253cb1",
+      "creation_ID_matches_current": true,
+      "same_handle_buffer_returned": true,
+      "reviewed_bytes_equal": true,
+      "identity_origin": "original52 creation issuance"
+    },
+    {
+      "index": 37,
+      "target": "design-reference-evidence/references/upstream/cal.txt",
+      "sha256": "8cd21b7d67e94c899843d517f4b426e4fee33d47354a433d6a63ebcf79d5a654",
+      "bytes": 31176,
+      "created_and_current_object_identity_sha256": "409cad7002f4a548dd963ace05825192a0ae288fb47ecbf6583119328687a347",
+      "creation_ID_matches_current": true,
+      "same_handle_buffer_returned": true,
+      "reviewed_bytes_equal": true,
+      "identity_origin": "original52 creation issuance"
+    },
+    {
+      "index": 38,
+      "target": "design-reference-evidence/references/upstream/claude.txt",
+      "sha256": "3d972f34f8d4f33b442fa28220cf3b7ca2f13c0a97c468e3988148f82521f9df",
+      "bytes": 33586,
+      "created_and_current_object_identity_sha256": "a1316866ad7219ab056a4c5ecf8f3c19f6e4965c46e34e1a2b7a59afb1a959d0",
+      "creation_ID_matches_current": true,
+      "same_handle_buffer_returned": true,
+      "reviewed_bytes_equal": true,
+      "identity_origin": "original52 creation issuance"
+    },
+    {
+      "index": 39,
+      "target": "design-reference-evidence/references/upstream/clay.txt",
+      "sha256": "1abd803a207fbe950a06e155adcd6013c2e149b13e7b88844f5069f9d3d99eb3",
+      "bytes": 25705,
+      "created_and_current_object_identity_sha256": "131a3494bc09fa47fa8e0dfe61021c5ee2047e2cc0b9827af7ed094fc31d25c2",
+      "creation_ID_matches_current": true,
+      "same_handle_buffer_returned": true,
+      "reviewed_bytes_equal": true,
+      "identity_origin": "original52 creation issuance"
+    },
+    {
+      "index": 40,
+      "target": "design-reference-evidence/references/upstream/clickhouse.txt",
+      "sha256": "50987e29b603cc7503ebe724af810fcf43845e96fdd4083e0fbe5fe00d2cdd2e",
+      "bytes": 25986,
+      "created_and_current_object_identity_sha256": "7add7f2ec7bb1930e4221d22d3bbbd2abd77f15b0dbdaee9d1c80b900ef7e2fb",
+      "creation_ID_matches_current": true,
+      "same_handle_buffer_returned": true,
+      "reviewed_bytes_equal": true,
+      "identity_origin": "original52 creation issuance"
+    },
+    {
+      "index": 41,
+      "target": "design-reference-evidence/references/upstream/cohere.txt",
+      "sha256": "1c49a5a5f88d43841d4f4afa33831328d47a5715048700a3b75086a822575883",
+      "bytes": 20020,
+      "created_and_current_object_identity_sha256": "486f16cdde0651bdfc6472e8636698a3f0647d6d704156c9cc9d9405ef47a424",
+      "creation_ID_matches_current": true,
+      "same_handle_buffer_returned": true,
+      "reviewed_bytes_equal": true,
+      "identity_origin": "original52 creation issuance"
+    },
+    {
+      "index": 42,
+      "target": "design-reference-evidence/references/upstream/coinbase.txt",
+      "sha256": "c8c67800dd7f58fcc87ed7d267a3bba862e3419e499e8a66d67731a69d2de1d6",
+      "bytes": 25853,
+      "created_and_current_object_identity_sha256": "b06d9827e7ae41d4ef845d73c520bcfdd2d99ab8780d1a306569b6079e4d9b69",
+      "creation_ID_matches_current": true,
+      "same_handle_buffer_returned": true,
+      "reviewed_bytes_equal": true,
+      "identity_origin": "original52 creation issuance"
+    },
+    {
+      "index": 43,
+      "target": "design-reference-evidence/references/upstream/composio.txt",
+      "sha256": "e7db886dabecca61f29b83e8f46d7a1e8a43889d30b81bc6e48162ccaafcbb2f",
+      "bytes": 20606,
+      "created_and_current_object_identity_sha256": "d11ebe2773f1c3ae9e82ba5720fd860ee28b66e856af8057262bc84393c99092",
+      "creation_ID_matches_current": true,
+      "same_handle_buffer_returned": true,
+      "reviewed_bytes_equal": true,
+      "identity_origin": "original52 creation issuance"
+    },
+    {
+      "index": 44,
+      "target": "design-reference-evidence/references/upstream/cursor.txt",
+      "sha256": "a3db9b3019dc2f514fdee7cd0ca0a5232c0bd0119e23178e8eebaf6916258d9d",
+      "bytes": 21771,
+      "created_and_current_object_identity_sha256": "c049d2d082d57554bc5452448be7485ef7776f65485bc8f5f0783bcd82b9b2d7",
+      "creation_ID_matches_current": true,
+      "same_handle_buffer_returned": true,
+      "reviewed_bytes_equal": true,
+      "identity_origin": "original52 creation issuance"
+    },
+    {
+      "index": 45,
+      "target": "design-reference-evidence/references/upstream/dell-1996.txt",
+      "sha256": "e186c614b1223fe7015670472ac6bc84b5b3fdd5de5325b3ce5bfb7fbe9c8d6e",
+      "bytes": 34592,
+      "created_and_current_object_identity_sha256": "e97d5591f0e42667aee7a8ffd7717caf3e3f6e8c440b921c2d814b5cc36f60ec",
+      "creation_ID_matches_current": true,
+      "same_handle_buffer_returned": true,
+      "reviewed_bytes_equal": true,
+      "identity_origin": "original52 creation issuance"
+    },
+    {
+      "index": 46,
+      "target": "design-reference-evidence/references/upstream/dji.txt",
+      "sha256": "c8a57520b87286869a88cdd2c07f21080ebda9fb3eee315b11d95c752582c1a9",
+      "bytes": 42268,
+      "created_and_current_object_identity_sha256": "d26a5137f3554855cf84124de9df3f64ad3f0c62987014c849d57589bc054207",
+      "creation_ID_matches_current": true,
+      "same_handle_buffer_returned": true,
+      "reviewed_bytes_equal": true,
+      "identity_origin": "original52 creation issuance"
+    },
+    {
+      "index": 47,
+      "target": "design-reference-evidence/references/upstream/elevenlabs.txt",
+      "sha256": "3b359acfaafadbb499c7ed3eebe813a76e0be497a7157b77de207fe275068a66",
+      "bytes": 20943,
+      "created_and_current_object_identity_sha256": "a4efa0fa139d6eb09a9276d30a8902132d0aecf462ee1075bdcfac6c3eea7689",
+      "creation_ID_matches_current": true,
+      "same_handle_buffer_returned": true,
+      "reviewed_bytes_equal": true,
+      "identity_origin": "original52 creation issuance"
+    },
+    {
+      "index": 48,
+      "target": "design-reference-evidence/references/upstream/expo.txt",
+      "sha256": "1be7e129b6f75afaa12318a7c51ab22f6f74a214dec22c4827cecc519f112363",
+      "bytes": 21660,
+      "created_and_current_object_identity_sha256": "6488c71b6d5a0a8c1da6980739faec3f7ce240888f615afc26f038d996f6a4d4",
+      "creation_ID_matches_current": true,
+      "same_handle_buffer_returned": true,
+      "reviewed_bytes_equal": true,
+      "identity_origin": "original52 creation issuance"
+    },
+    {
+      "index": 49,
+      "target": "design-reference-evidence/references/upstream/ferrari.txt",
+      "sha256": "1199e2832641cac7e384aaf3b1f3db87f992240cea5d3d1eee04d9dc00acb17c",
+      "bytes": 24365,
+      "created_and_current_object_identity_sha256": "a30bdf4b90b9c99c8c3f6f96831a94a28e16f1d795857c9181af8a5ab838a6f2",
+      "creation_ID_matches_current": true,
+      "same_handle_buffer_returned": true,
+      "reviewed_bytes_equal": true,
+      "identity_origin": "original52 creation issuance"
+    },
+    {
+      "index": 50,
+      "target": "design-reference-evidence/references/upstream/figma.txt",
+      "sha256": "716ce8431f47eb8b8135552710e3c4d538bccccf1202e4ceac5428c9aada9972",
+      "bytes": 32316,
+      "created_and_current_object_identity_sha256": "f83f5677f1bd1eb2c863d13b3e27ab89d9453457806024871e1a99dd6d479d58",
+      "creation_ID_matches_current": true,
+      "same_handle_buffer_returned": true,
+      "reviewed_bytes_equal": true,
+      "identity_origin": "original52 creation issuance"
+    },
+    {
+      "index": 51,
+      "target": "design-reference-evidence/references/upstream/framer.txt",
+      "sha256": "a5d47dddacf5a04577cec0be6fe0fc53b7402254c7686874af3e59bcc7588cb4",
+      "bytes": 29119,
+      "created_and_current_object_identity_sha256": "a00cd13292f4ba72efe58eaa731e55b1e7def17597f4197af528c97ceab64d8b",
+      "creation_ID_matches_current": true,
+      "same_handle_buffer_returned": true,
+      "reviewed_bytes_equal": true,
+      "identity_origin": "original52 creation issuance"
+    },
+    {
+      "index": 52,
+      "target": "design-reference-evidence/references/history/sources-before-revision1.json",
+      "sha256": "50a6aa009b0cc2d84147d300f7b1cdca5abf9b6003e36c4e004c67240ac439a7",
+      "bytes": 8896,
+      "created_and_current_object_identity_sha256": "538ce3e6c92383abf1fa8024fe7d17e6ac49f8ae67de16a7c239f6411dab0409",
+      "creation_ID_matches_current": true,
+      "same_handle_buffer_returned": true,
+      "reviewed_bytes_equal": true,
+      "identity_origin": "original metadata issuance, moved without replacement"
+    }
+  ],
+  "metadata_revision": 1,
+  "original_issuer_and_current_consumer_are_distinct": true
+}

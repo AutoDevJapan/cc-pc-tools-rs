@@ -238,6 +238,33 @@
       "public_disposition_changed": true,
       "review_pending": true,
       "package_evidence": "skills-3080-mcp-sibling-duplicate-evidence.json"
+    },
+    {
+      "inventory_id": "site:mcp-builder-6a45e1",
+      "source_repo": "anthropics/skills",
+      "source_commit": "dbd4588f9e1033efb41dad4bef2f7947c8993d44",
+      "source_path": "skills/mcp-builder/SKILL.md",
+      "source_sha256": "0f4592dcb53cf2b5d6b7febee6b4152018b565551a1c29e3c612f57b218ab295",
+      "source_body_bytes": 9092,
+      "source_url": "https://agent-skills.jp/skill/mcp-builder-6a45e1",
+      "disposition": "excluded",
+      "exclusion_type": "exact_body_duplicate_of_existing_catalog_adoption",
+      "duplicate_of_inventory_id": "github:e4ade76a7932447efe3dd6e777ab300a5a9a6f1cf13a392614b31c621906a016",
+      "duplicate_of_source_repo": "6mile/skills",
+      "duplicate_of_source_commit": "920714f17d81e0a95c7a9bc51faf0a7921cd982d",
+      "duplicate_of_source_path": "skills/aabbcc456aa/hxl-code-reviewer/SKILL.md",
+      "canonical_existing_target": "mcp-builder",
+      "canonical_existing_manifest": "skills-3080-installed-mcp-pointer-manifest.json",
+      "reason": "The site occurrence resolves to the exact fixed official upstream primary already used for the accepted canonical adaptation. Its primary bytes and pinned upstream package are independently linked; retain the canonical once rather than add an identical procedure.",
+      "decision_scope": "Only this exact listed site primary occurrence. Preserve the site unknown license claim and official individual notice separately; no unseen helper, package-copy, service-safety or rights equivalence is asserted.",
+      "individual_license_status": "Site index claim unknown retained; no site body is copied and no canonical license grant is transferred to another publisher.",
+      "copy_license_accepted": false,
+      "new_body_copied": false,
+      "source_scripts_executed": false,
+      "canonical_current_disk_hash_rechecked": false,
+      "public_disposition_changed": true,
+      "review_pending": true,
+      "package_evidence": "skills-3080-mcp-site-duplicate-evidence090101.json"
     }
   ],
   "job": "20261024-012344-todo-3080",
@@ -255,5 +282,12 @@
   "live_ledger": "skills-3080-adoptions.json",
   "live_ledger_definition": "Read current pending from the adoption ledger. This historical duplicate receipt deliberately contains no duplicated current pending scalar.",
   "original_seven_entries_canonical_sha256": "e08f794faa99ab467326dc0e05cc0e9ac5e6b0dde79bb01fd24688dbe1cc7c7f",
-  "current_duplicate_entries": 9
+  "current_duplicate_entries": 10,
+  "latest_working_site_delta": {
+    "inventory_id": "site:mcp-builder-6a45e1",
+    "added": 1,
+    "old_nine_unchanged": true,
+    "main_acceptance_pending": true,
+    "source": "skills-3080-mcp-site-duplicate-evidence090101.json"
+  }
 }

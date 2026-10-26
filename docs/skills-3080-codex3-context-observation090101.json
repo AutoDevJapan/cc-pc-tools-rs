@@ -1,0 +1,34 @@
+{
+  "domain": "skills3080-fresh-consumer-context-observation-v1",
+  "job": "20261026-145902-todo-3935",
+  "actual_model": "gpt-6-luna/max",
+  "requested_instruction_buffers": 6,
+  "requested_instruction_bytes": 10406,
+  "token_count_events": 6,
+  "structured_warning_events": 0,
+  "structured_compaction_events": 0,
+  "latest_usage": {
+    "timestamp": "2026-10-26T06:02:27.275Z",
+    "model_context_window": 828400,
+    "last_token_usage": {
+      "input_tokens": 91852,
+      "cached_input_tokens": 89984,
+      "cache_write_input_tokens": 0,
+      "output_tokens": 1182,
+      "reasoning_output_tokens": 617,
+      "total_tokens": 93034
+    },
+    "total_token_usage": {
+      "input_tokens": 483729,
+      "cached_input_tokens": 399360,
+      "cache_write_input_tokens": 0,
+      "output_tokens": 6726,
+      "reasoning_output_tokens": 5103,
+      "total_tokens": 490455
+    }
+  },
+  "observation_scope": "Only structured event_msg metadata in this exact admitted job time window; no prompt/private catalog/stderr or arbitrary warning text is returned",
+  "all_future_catalog_context_fit_proved": false,
+  "implicit_skill_selection_proved": false,
+  "cost_or_billing_inferred": false
+}

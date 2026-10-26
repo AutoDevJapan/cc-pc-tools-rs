@@ -625,6 +625,10 @@ func TestHistoricalThreeCohortIndexPreservesItsReadingCategoriesAndBoundedSource
 type sixmileReadProjection struct {
 	Raw      int `json:"all_fulltext_primary_paths_including_partial_sources"`
 	Workflow int `json:"all_workflow_primary_paths_including_partial_sources"`
+	Design   struct {
+		Raw      int `json:"full_body_read"`
+		Workflow int `json:"workflow_body_read"`
+	} `json:"voltagent_design24_evaluation"`
 	Complete struct {
 		Read int `json:"case_insensitive_skill_named_paths"`
 	} `json:"full_source_body_read_coverage"`
@@ -680,7 +684,7 @@ func validateSixmileReadProjection(p sixmileReadProjection, index sixmileCohortI
 		return errors.New("sixmile read projection: next20 is missing or conflated with another cohort")
 	}
 	other := p.Complete.Read + p.Mizchi.Read + p.Mengto.Read
-	if p.Raw != other+index.Raw || p.Workflow != other+index.Workflow {
+	if p.Raw != other+index.Raw+p.Design.Raw || p.Workflow != other+index.Workflow+p.Design.Workflow {
 		return errors.New("sixmile read projection: all-source raw and workflow totals differ")
 	}
 	return nil

@@ -1,0 +1,47 @@
+{
+  "source_repo": "VoltAgent/awesome-design-md",
+  "source_commit": "3b605329240ce735b510037cca322f1831fdd7f8",
+  "tree_sha256": "18d4012d7c5ea4ba2117f4d9dfcd25646d1a6bc6df1eefbd5a73551bba5bbd6e",
+  "root_tree": "0f1e83e1619f72ebd7b72f2f39188dee9cdb161e",
+  "tree_entries": 260,
+  "truncated": false,
+  "all_applicable_notice_paths": [
+    {
+      "path": "LICENSE",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "5cea5d78a41df83eafe1fb9fc0710675a5b7acf6",
+      "size": 1066,
+      "url": "https://api.github.com/repos/VoltAgent/awesome-design-md/git/blobs/5cea5d78a41df83eafe1fb9fc0710675a5b7acf6"
+    }
+  ],
+  "complete_notice_enumeration_checked": true,
+  "author_scope_only": true,
+  "third_party_asset_or_service_grants": 0,
+  "selected24_source_paths": [
+    "design-md/1win/DESIGN.md",
+    "design-md/airbnb/DESIGN.md",
+    "design-md/airtable/DESIGN.md",
+    "design-md/aljazeera/DESIGN.md",
+    "design-md/apple/DESIGN.md",
+    "design-md/binance/DESIGN.md",
+    "design-md/bmw-m/DESIGN.md",
+    "design-md/bmw/DESIGN.md",
+    "design-md/bugatti/DESIGN.md",
+    "design-md/cal/DESIGN.md",
+    "design-md/claude/DESIGN.md",
+    "design-md/clay/DESIGN.md",
+    "design-md/clickhouse/DESIGN.md",
+    "design-md/cohere/DESIGN.md",
+    "design-md/coinbase/DESIGN.md",
+    "design-md/composio/DESIGN.md",
+    "design-md/cursor/DESIGN.md",
+    "design-md/dell-1996/DESIGN.md",
+    "design-md/dji/DESIGN.md",
+    "design-md/elevenlabs/DESIGN.md",
+    "design-md/expo/DESIGN.md",
+    "design-md/ferrari/DESIGN.md",
+    "design-md/figma/DESIGN.md",
+    "design-md/framer/DESIGN.md"
+  ]
+}

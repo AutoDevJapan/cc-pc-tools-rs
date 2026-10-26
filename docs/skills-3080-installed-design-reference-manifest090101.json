@@ -1,0 +1,261 @@
+{
+  "central_operations": 0,
+  "definition": "Actual created-once target after own metadata revision1;53 current returned buffers. The earlier private/in-memory flags are historical input records only.",
+  "targets": [
+    {
+      "files": [
+        {
+          "path": "SKILL.md",
+          "sha256": "46d27821c8690cb0c35d91949c459a14778c685f501b9626df47d041d8343a77"
+        },
+        {
+          "path": "references/guide.md",
+          "sha256": "6b108a0400ea82859cdc8dcd3083e7cc0562b57c121e2d0c3c26cb6ed9c0e127"
+        },
+        {
+          "path": "references/LICENSE.txt",
+          "sha256": "6d4bdc9a9cf30e7beb593475fdcdbf29f981ea6bd7923f202866145409f87b44"
+        },
+        {
+          "path": "references/cases/1win.json",
+          "sha256": "daa5a650409e702566e680ad261d7f03baaf9edabeeb10f0c2f926a82d23ae1f"
+        },
+        {
+          "path": "references/cases/airbnb.json",
+          "sha256": "f1cf467ab065754dad1ac244c133ade75173b698da4d2519e4469b1da2791139"
+        },
+        {
+          "path": "references/cases/airtable.json",
+          "sha256": "7f3eff7d42119d78f8a2c56fb7b42a145b9541a584dfcb6fffec53b7bb3dcc78"
+        },
+        {
+          "path": "references/cases/aljazeera.json",
+          "sha256": "0c55cf11a17414aa4789819725e1f5642196b8bd9429df98cd92901024787989"
+        },
+        {
+          "path": "references/cases/apple.json",
+          "sha256": "685b8fa14151af9d941d81e0fa978cb40d462ce4985a15e9add413e3ee3a2932"
+        },
+        {
+          "path": "references/cases/binance.json",
+          "sha256": "b7a8ded43ad68c18e1bc00bc57ea51c93e8daa49351b35b6333d92713b83b908"
+        },
+        {
+          "path": "references/cases/bmw-m.json",
+          "sha256": "bb31ccfe7e44558a42111ca31d89ef14041ef6e09d60231ca963aad3f740599e"
+        },
+        {
+          "path": "references/cases/bmw.json",
+          "sha256": "ebaee2d618535d1d0bbf8abc32d5d490e54434b637a3ed8cf1c7ca33cd6c35e3"
+        },
+        {
+          "path": "references/cases/bugatti.json",
+          "sha256": "5438f3875c881600ddf2df5b671498af9a04977b311f5ee5774f8dd3279ba731"
+        },
+        {
+          "path": "references/cases/cal.json",
+          "sha256": "c2161796cd139938ad1fda85e8dd30c794c5153f546935f88454077791f1ee17"
+        },
+        {
+          "path": "references/cases/claude.json",
+          "sha256": "4f78e69275e146b78a8acc6f939284b5f1b4085d91e798f3fe95a8b1395c3212"
+        },
+        {
+          "path": "references/cases/clay.json",
+          "sha256": "1feb5c099023ac21615605f3d56aea67d30f4134bb769f8f490128601234bf72"
+        },
+        {
+          "path": "references/cases/clickhouse.json",
+          "sha256": "0e5f54f8c93b95fe1273d89455454fdccd334ca5ff856008923f97ef6221d1bd"
+        },
+        {
+          "path": "references/cases/cohere.json",
+          "sha256": "0be12084ec15aec1ccd4ae9c8527de63f086ea97f46bb02afcbd4b4ec0e09b58"
+        },
+        {
+          "path": "references/cases/coinbase.json",
+          "sha256": "d6f61047fc051fbb8113dd03c89ed5b98471d88022aefdca9892a76afea870d3"
+        },
+        {
+          "path": "references/cases/composio.json",
+          "sha256": "336926e751e7e7f73056a1396845458eee536f1a0f3e111ea1473af203ec8c32"
+        },
+        {
+          "path": "references/cases/cursor.json",
+          "sha256": "d80eece307fcf210a4b1aa18ac43ff9a9088b634a9fe50b905a99391c3d5d91b"
+        },
+        {
+          "path": "references/cases/dell-1996.json",
+          "sha256": "4289624e80876912c381b3927d3194222007ffd659dda11815bc83d313aeee3d"
+        },
+        {
+          "path": "references/cases/dji.json",
+          "sha256": "ff6b1fc8af07b7804974f1e4658531d3939de4eaa95474bd07a435f005613a5d"
+        },
+        {
+          "path": "references/cases/elevenlabs.json",
+          "sha256": "b676d5369bfdd770c0e9292de240628f3d725e4975ed87ff781210e10df5d9dc"
+        },
+        {
+          "path": "references/cases/expo.json",
+          "sha256": "42d42209df17b7c7ea95f0122d8a30d44cb7165545fdaff89ba6d0c584d58e3d"
+        },
+        {
+          "path": "references/cases/ferrari.json",
+          "sha256": "3e1b5cd573b4736b994f7c052751bbe2c57f18f7e1f4f513264393c9b61adad7"
+        },
+        {
+          "path": "references/cases/figma.json",
+          "sha256": "14782aa29109a0a3560834bd447e3c8a899c04cb1714e38a227e4f430c08bd90"
+        },
+        {
+          "path": "references/cases/framer.json",
+          "sha256": "9ecdc862756e4f3743da83079fbdcb1397927428323e8494c2dc4ce46b294e12"
+        },
+        {
+          "path": "references/sources.json",
+          "sha256": "e0607f086fd394bc0399c99e4101cef48e56c509272741cde81dba029778d8f4"
+        },
+        {
+          "path": "references/upstream/1win.txt",
+          "sha256": "64d02d344cb16d68b6882054f35e3bfb7241ad60dc8b7f84f6636a7d1379496a"
+        },
+        {
+          "path": "references/upstream/airbnb.txt",
+          "sha256": "add34130d67209ad105346d60fe2b290728b9711683969db4b7760e29477a5fe"
+        },
+        {
+          "path": "references/upstream/airtable.txt",
+          "sha256": "1d225e511213044d3c705bde50265ad010932bfd8a15740a144dd4f480128889"
+        },
+        {
+          "path": "references/upstream/aljazeera.txt",
+          "sha256": "37614fc72658ffa30faca01049bd1efa8a9baafa4750501405eeea66f149466a"
+        },
+        {
+          "path": "references/upstream/apple.txt",
+          "sha256": "83fbc614443a9b3d7569e9956a43e7b8740f9d0f939f58b8154f7a7cec3002b2"
+        },
+        {
+          "path": "references/upstream/binance.txt",
+          "sha256": "378ff97d568ccbc316519b9d45a29d6649ed8961c9c486c3ed4cea7501d72371"
+        },
+        {
+          "path": "references/upstream/bmw-m.txt",
+          "sha256": "824a1707c0a8d1609d72477d0fa211b9ebe4bdeb3e1fd701790af7b7bb669a4a"
+        },
+        {
+          "path": "references/upstream/bmw.txt",
+          "sha256": "b7268279e7c98e85fb80890e06765f4ee8340ba1ea1ccb5a8a5b134de43dac3e"
+        },
+        {
+          "path": "references/upstream/bugatti.txt",
+          "sha256": "375f0a20ada88cdee5e995ca7edcfbd584ddf5f887024deebd1bc75bfd55b1bc"
+        },
+        {
+          "path": "references/upstream/cal.txt",
+          "sha256": "8cd21b7d67e94c899843d517f4b426e4fee33d47354a433d6a63ebcf79d5a654"
+        },
+        {
+          "path": "references/upstream/claude.txt",
+          "sha256": "3d972f34f8d4f33b442fa28220cf3b7ca2f13c0a97c468e3988148f82521f9df"
+        },
+        {
+          "path": "references/upstream/clay.txt",
+          "sha256": "1abd803a207fbe950a06e155adcd6013c2e149b13e7b88844f5069f9d3d99eb3"
+        },
+        {
+          "path": "references/upstream/clickhouse.txt",
+          "sha256": "50987e29b603cc7503ebe724af810fcf43845e96fdd4083e0fbe5fe00d2cdd2e"
+        },
+        {
+          "path": "references/upstream/cohere.txt",
+          "sha256": "1c49a5a5f88d43841d4f4afa33831328d47a5715048700a3b75086a822575883"
+        },
+        {
+          "path": "references/upstream/coinbase.txt",
+          "sha256": "c8c67800dd7f58fcc87ed7d267a3bba862e3419e499e8a66d67731a69d2de1d6"
+        },
+        {
+          "path": "references/upstream/composio.txt",
+          "sha256": "e7db886dabecca61f29b83e8f46d7a1e8a43889d30b81bc6e48162ccaafcbb2f"
+        },
+        {
+          "path": "references/upstream/cursor.txt",
+          "sha256": "a3db9b3019dc2f514fdee7cd0ca0a5232c0bd0119e23178e8eebaf6916258d9d"
+        },
+        {
+          "path": "references/upstream/dell-1996.txt",
+          "sha256": "e186c614b1223fe7015670472ac6bc84b5b3fdd5de5325b3ce5bfb7fbe9c8d6e"
+        },
+        {
+          "path": "references/upstream/dji.txt",
+          "sha256": "c8a57520b87286869a88cdd2c07f21080ebda9fb3eee315b11d95c752582c1a9"
+        },
+        {
+          "path": "references/upstream/elevenlabs.txt",
+          "sha256": "3b359acfaafadbb499c7ed3eebe813a76e0be497a7157b77de207fe275068a66"
+        },
+        {
+          "path": "references/upstream/expo.txt",
+          "sha256": "1be7e129b6f75afaa12318a7c51ab22f6f74a214dec22c4827cecc519f112363"
+        },
+        {
+          "path": "references/upstream/ferrari.txt",
+          "sha256": "1199e2832641cac7e384aaf3b1f3db87f992240cea5d3d1eee04d9dc00acb17c"
+        },
+        {
+          "path": "references/upstream/figma.txt",
+          "sha256": "716ce8431f47eb8b8135552710e3c4d538bccccf1202e4ceac5428c9aada9972"
+        },
+        {
+          "path": "references/upstream/framer.txt",
+          "sha256": "a5d47dddacf5a04577cec0be6fe0fc53b7402254c7686874af3e59bcc7588cb4"
+        },
+        {
+          "path": "references/history/sources-before-revision1.json",
+          "sha256": "50a6aa009b0cc2d84147d300f7b1cdca5abf9b6003e36c4e004c67240ac439a7"
+        }
+      ],
+      "sources": [
+        "https://github.com/VoltAgent/awesome-design-md/blob/3b605329240ce735b510037cca322f1831fdd7f8/design-md/1win/DESIGN.md",
+        "https://github.com/VoltAgent/awesome-design-md/blob/3b605329240ce735b510037cca322f1831fdd7f8/design-md/airbnb/DESIGN.md",
+        "https://github.com/VoltAgent/awesome-design-md/blob/3b605329240ce735b510037cca322f1831fdd7f8/design-md/airtable/DESIGN.md",
+        "https://github.com/VoltAgent/awesome-design-md/blob/3b605329240ce735b510037cca322f1831fdd7f8/design-md/aljazeera/DESIGN.md",
+        "https://github.com/VoltAgent/awesome-design-md/blob/3b605329240ce735b510037cca322f1831fdd7f8/design-md/apple/DESIGN.md",
+        "https://github.com/VoltAgent/awesome-design-md/blob/3b605329240ce735b510037cca322f1831fdd7f8/design-md/binance/DESIGN.md",
+        "https://github.com/VoltAgent/awesome-design-md/blob/3b605329240ce735b510037cca322f1831fdd7f8/design-md/bmw-m/DESIGN.md",
+        "https://github.com/VoltAgent/awesome-design-md/blob/3b605329240ce735b510037cca322f1831fdd7f8/design-md/bmw/DESIGN.md",
+        "https://github.com/VoltAgent/awesome-design-md/blob/3b605329240ce735b510037cca322f1831fdd7f8/design-md/bugatti/DESIGN.md",
+        "https://github.com/VoltAgent/awesome-design-md/blob/3b605329240ce735b510037cca322f1831fdd7f8/design-md/cal/DESIGN.md",
+        "https://github.com/VoltAgent/awesome-design-md/blob/3b605329240ce735b510037cca322f1831fdd7f8/design-md/claude/DESIGN.md",
+        "https://github.com/VoltAgent/awesome-design-md/blob/3b605329240ce735b510037cca322f1831fdd7f8/design-md/clay/DESIGN.md",
+        "https://github.com/VoltAgent/awesome-design-md/blob/3b605329240ce735b510037cca322f1831fdd7f8/design-md/clickhouse/DESIGN.md",
+        "https://github.com/VoltAgent/awesome-design-md/blob/3b605329240ce735b510037cca322f1831fdd7f8/design-md/cohere/DESIGN.md",
+        "https://github.com/VoltAgent/awesome-design-md/blob/3b605329240ce735b510037cca322f1831fdd7f8/design-md/coinbase/DESIGN.md",
+        "https://github.com/VoltAgent/awesome-design-md/blob/3b605329240ce735b510037cca322f1831fdd7f8/design-md/composio/DESIGN.md",
+        "https://github.com/VoltAgent/awesome-design-md/blob/3b605329240ce735b510037cca322f1831fdd7f8/design-md/cursor/DESIGN.md",
+        "https://github.com/VoltAgent/awesome-design-md/blob/3b605329240ce735b510037cca322f1831fdd7f8/design-md/dell-1996/DESIGN.md",
+        "https://github.com/VoltAgent/awesome-design-md/blob/3b605329240ce735b510037cca322f1831fdd7f8/design-md/dji/DESIGN.md",
+        "https://github.com/VoltAgent/awesome-design-md/blob/3b605329240ce735b510037cca322f1831fdd7f8/design-md/elevenlabs/DESIGN.md",
+        "https://github.com/VoltAgent/awesome-design-md/blob/3b605329240ce735b510037cca322f1831fdd7f8/design-md/expo/DESIGN.md",
+        "https://github.com/VoltAgent/awesome-design-md/blob/3b605329240ce735b510037cca322f1831fdd7f8/design-md/ferrari/DESIGN.md",
+        "https://github.com/VoltAgent/awesome-design-md/blob/3b605329240ce735b510037cca322f1831fdd7f8/design-md/figma/DESIGN.md",
+        "https://github.com/VoltAgent/awesome-design-md/blob/3b605329240ce735b510037cca322f1831fdd7f8/design-md/framer/DESIGN.md"
+      ],
+      "before_sha256": "absent",
+      "positive": "提供したデザイン分析資料の観測・推定・派生例を分け、採用条件を根拠に結ぶ。",
+      "name": "design-reference-evidence",
+      "new": true,
+      "negative": "mockupやroot MITだけで実処理の成功、AA/AAA適合、素材の利用権を確定する。"
+    }
+  ],
+  "snapshot_definition": "Each file at its individual qualified read time; not an atomic53 snapshot or a future immutability guarantee",
+  "original_creation_files": 52,
+  "revision1_current_files": 53,
+  "new_CreateNew_calls_for_revision": 0,
+  "root": "D:/CC/Skills",
+  "earlier_in_memory_definition": "Private authored procedure and24 source-informed case references. No central presence, old-body comparison, permission or installation is claimed.",
+  "earlier_not_checked_flag_is_not_current_presence": true,
+  "original_creation_target_absent_proved_by_exact_CreateNew": true
+}

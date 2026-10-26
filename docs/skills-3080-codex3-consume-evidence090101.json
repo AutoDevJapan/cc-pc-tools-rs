@@ -1,0 +1,231 @@
+{
+  "job": "20261026-090101-todo-3080",
+  "manifest_sha256": "e79f958f08c7ab4a28607ec29869d99b1fdc645758989dfa6cb08a5145cf5b06",
+  "qualified_current_buffers": 20,
+  "bytes": 61129,
+  "bounded_batches": 1,
+  "instruction_files": 6,
+  "instruction_bytes": 10406,
+  "producer": {
+    "sha256": "3a0f5065eb6ae56fdcc0a1f0ef78131f999e2331a0412b01faea91260adffeaa",
+    "revision": "a067ff63db64a88fc218fc4c8400552454d5d691"
+  },
+  "runtime_producer": {
+    "sha256": "3a0f5065eb6ae56fdcc0a1f0ef78131f999e2331a0412b01faea91260adffeaa",
+    "revision": "a067ff63db64a88fc218fc4c8400552454d5d691"
+  },
+  "current_IDs_match_creation": true,
+  "all_same_read_buffers_match_manifest": true,
+  "each_file_at_successful_read_time": true,
+  "historical_physical_continuity_proven": false,
+  "current_OS_writer": "unproved",
+  "general_access_granted": false,
+  "original_registry_recovered": false,
+  "new_creations": 0,
+  "new_ledger_adoptions": 0,
+  "new_global_primary_credit": 0,
+  "response_sha256": "82295e2a73e2d63eb9047752f9306dfb842f49256b30f6bd6408142d3fb3be4c",
+  "qualified_files": 20,
+  "files": [
+    {
+      "index": 0,
+      "target": "build-daily-inspiration-sites/SKILL.md",
+      "sha256": "6a2436f390902ac6dfd5738cd71d34298daddd5da9e716cf08386bc22b95eaee",
+      "bytes": 1927,
+      "created_and_current_object_identity_sha256": "0bbfc22aba755b85483ed499bca4569d149c4d6dfc9b3349d430b36bbc1c66bf",
+      "creation_ID_matches_current": true,
+      "same_handle_buffer_returned": true,
+      "reviewed_bytes_equal": true
+    },
+    {
+      "index": 1,
+      "target": "build-daily-inspiration-sites/references/guide.md",
+      "sha256": "e4c80cc7d3150fac202b0b327ebd3e01a3452d486afd7334a27941b153c71088",
+      "bytes": 1587,
+      "created_and_current_object_identity_sha256": "01bf407031b4fc9e6205995e400224caf8d3c7dcbcd6820f6bcd33ec2cbf347f",
+      "creation_ID_matches_current": true,
+      "same_handle_buffer_returned": true,
+      "reviewed_bytes_equal": true
+    },
+    {
+      "index": 2,
+      "target": "build-daily-inspiration-sites/references/upstream-original.txt",
+      "sha256": "ba888108ec029d796484d8f18f600763bbf18d9313f1da2a48b5031a944d429c",
+      "bytes": 7534,
+      "created_and_current_object_identity_sha256": "5d368feda8dad13406e2d2643a9ee9a5be4cad792ef0d952d3871a15c4048c3e",
+      "creation_ID_matches_current": true,
+      "same_handle_buffer_returned": true,
+      "reviewed_bytes_equal": true
+    },
+    {
+      "index": 3,
+      "target": "build-daily-inspiration-sites/references/LICENSE.txt",
+      "sha256": "b2a071ba22fefd803f4e9d1f5c777dd79c62d191695586a1a73fd4d0ebd051c6",
+      "bytes": 1064,
+      "created_and_current_object_identity_sha256": "7c3a9cca1d97bee6dd355b82094d9b56288556c7ed1b54e4693bc4067fc289d5",
+      "creation_ID_matches_current": true,
+      "same_handle_buffer_returned": true,
+      "reviewed_bytes_equal": true
+    },
+    {
+      "index": 4,
+      "target": "build-daily-inspiration-sites/references/source.json",
+      "sha256": "605cb11f3e7e1e5477a2e64199100910cce59a11f0604aaa41f14b167b924f65",
+      "bytes": 723,
+      "created_and_current_object_identity_sha256": "23d447dbb7c9e703a2c1bd85bfb7c1a7684ef3eec14377863e74879e2e431d17",
+      "creation_ID_matches_current": true,
+      "same_handle_buffer_returned": true,
+      "reviewed_bytes_equal": true
+    },
+    {
+      "index": 5,
+      "target": "build-daily-inspiration-sites/references/sources.md",
+      "sha256": "e3c1f75dfbc5672a292bcc5ed5a5cd8b14ab2908ef957b4e63c869a5d4ab1297",
+      "bytes": 424,
+      "created_and_current_object_identity_sha256": "d8a81082442ce476b2a69a6cb9b29d7a3e2e9d7173222bc13687d3883cd2699b",
+      "creation_ID_matches_current": true,
+      "same_handle_buffer_returned": true,
+      "reviewed_bytes_equal": true
+    },
+    {
+      "index": 6,
+      "target": "build-daily-inspiration-sites/references/upstream-support-original.txt",
+      "sha256": "3a169c5f20c9046c2f5120738b116619ef843c6b990673446de5bac138a3e801",
+      "bytes": 5361,
+      "created_and_current_object_identity_sha256": "81a0a72e84c64c679bf42fa58c2283cc65f3222e7c8b7500e30f0affd679467b",
+      "creation_ID_matches_current": true,
+      "same_handle_buffer_returned": true,
+      "reviewed_bytes_equal": true
+    },
+    {
+      "index": 7,
+      "target": "generate-reference-inspired-brand-worlds/SKILL.md",
+      "sha256": "3dd7ced115a62c30464b63a9db680a79d65397d2f4464a22fc199262f8e14f2c",
+      "bytes": 1931,
+      "created_and_current_object_identity_sha256": "41884455c7f6f525d1b51f3505cf0492859ef7ebf07344a5a8550c00621efe2e",
+      "creation_ID_matches_current": true,
+      "same_handle_buffer_returned": true,
+      "reviewed_bytes_equal": true
+    },
+    {
+      "index": 8,
+      "target": "generate-reference-inspired-brand-worlds/references/guide.md",
+      "sha256": "87ef45aba21eb1a1cbd952c2cb76a2faf90239579548e1a33455ea4d4a3f213a",
+      "bytes": 1459,
+      "created_and_current_object_identity_sha256": "7114aa665594cf36a36f4250ac650489c0265036dcd364c2b9f7af0575f7b215",
+      "creation_ID_matches_current": true,
+      "same_handle_buffer_returned": true,
+      "reviewed_bytes_equal": true
+    },
+    {
+      "index": 9,
+      "target": "generate-reference-inspired-brand-worlds/references/upstream-original.txt",
+      "sha256": "ac378caa7a2093d1f34c0d96b0e21739b6826526ce58b0afe57adebc888fd363",
+      "bytes": 7835,
+      "created_and_current_object_identity_sha256": "f3482d859e71bf9a12e32e7f56c90ef84acdcfa766dd5b161ac4a9161d985ad0",
+      "creation_ID_matches_current": true,
+      "same_handle_buffer_returned": true,
+      "reviewed_bytes_equal": true
+    },
+    {
+      "index": 10,
+      "target": "generate-reference-inspired-brand-worlds/references/LICENSE.txt",
+      "sha256": "b2a071ba22fefd803f4e9d1f5c777dd79c62d191695586a1a73fd4d0ebd051c6",
+      "bytes": 1064,
+      "created_and_current_object_identity_sha256": "103833fc847fe39c292cb007e98a47e603c0cf7cbc25975497072f8fbc3372f7",
+      "creation_ID_matches_current": true,
+      "same_handle_buffer_returned": true,
+      "reviewed_bytes_equal": true
+    },
+    {
+      "index": 11,
+      "target": "generate-reference-inspired-brand-worlds/references/source.json",
+      "sha256": "3102d6f0a650b3c346268cd1e04d41a91a03306582564195853825ff3bb24026",
+      "bytes": 734,
+      "created_and_current_object_identity_sha256": "84f1a3eb1c21435395f5445ff0aaa518ea1ad9b9cdb66b3cd1edf0ba3bf18b8c",
+      "creation_ID_matches_current": true,
+      "same_handle_buffer_returned": true,
+      "reviewed_bytes_equal": true
+    },
+    {
+      "index": 12,
+      "target": "generate-reference-inspired-brand-worlds/references/sources.md",
+      "sha256": "474123c80a6d8c65d654de37bbd85fe39b5434f191ccaabfb9f03929434be32e",
+      "bytes": 435,
+      "created_and_current_object_identity_sha256": "9057ce16c34782fc2a7bcc3fb6cd3079ab789ba5897db44e933581d01240a4ad",
+      "creation_ID_matches_current": true,
+      "same_handle_buffer_returned": true,
+      "reviewed_bytes_equal": true
+    },
+    {
+      "index": 13,
+      "target": "generate-reference-inspired-brand-worlds/references/upstream-support-original.txt",
+      "sha256": "4c9633c7e0b93c39eb836ef75b70f9ad9e3646ddbe951c688dfa38861c3e1328",
+      "bytes": 6244,
+      "created_and_current_object_identity_sha256": "c27e3d8df50f37654885576d9e55798168ea8c50bfea4ce424c37246cb6ddc18",
+      "creation_ID_matches_current": true,
+      "same_handle_buffer_returned": true,
+      "reviewed_bytes_equal": true
+    },
+    {
+      "index": 14,
+      "target": "web-technique-to-skill/SKILL.md",
+      "sha256": "77273321cb99977de3698ba98b6a868f7b93d63f26b8a0329740558d09bec697",
+      "bytes": 1992,
+      "created_and_current_object_identity_sha256": "372e5c2dc99df9a73a4e0210713896a556630e48f9c39dcda03ad26654dc31a0",
+      "creation_ID_matches_current": true,
+      "same_handle_buffer_returned": true,
+      "reviewed_bytes_equal": true
+    },
+    {
+      "index": 15,
+      "target": "web-technique-to-skill/references/guide.md",
+      "sha256": "51409efb207abaa0bff9a2f3dbcf80e22510170c098c1f7c38a6da1722910627",
+      "bytes": 1510,
+      "created_and_current_object_identity_sha256": "818888caefde2c0f96c9735baac7fef965407cc3e6189f70feefd8fd0872caa4",
+      "creation_ID_matches_current": true,
+      "same_handle_buffer_returned": true,
+      "reviewed_bytes_equal": true
+    },
+    {
+      "index": 16,
+      "target": "web-technique-to-skill/references/upstream-original.txt",
+      "sha256": "8868b6b6940ef886cff768d2bf3227d5e96db2bce148e796c827d9f711ed284b",
+      "bytes": 17107,
+      "created_and_current_object_identity_sha256": "b113e069abc3d0e1f57b2f6a0090f9dcd7ab0efcd01e06e02f6a307d269824bd",
+      "creation_ID_matches_current": true,
+      "same_handle_buffer_returned": true,
+      "reviewed_bytes_equal": true
+    },
+    {
+      "index": 17,
+      "target": "web-technique-to-skill/references/LICENSE.txt",
+      "sha256": "b2a071ba22fefd803f4e9d1f5c777dd79c62d191695586a1a73fd4d0ebd051c6",
+      "bytes": 1064,
+      "created_and_current_object_identity_sha256": "6e923cd3c5506352ffa75ef1b6c67c98ce4e865ffa3b5c8c424fb0233eeacc70",
+      "creation_ID_matches_current": true,
+      "same_handle_buffer_returned": true,
+      "reviewed_bytes_equal": true
+    },
+    {
+      "index": 18,
+      "target": "web-technique-to-skill/references/source.json",
+      "sha256": "7b2a331dfb6ba3f113ff91be79406d0a71f492d508e683fead5f704c867eb035",
+      "bytes": 717,
+      "created_and_current_object_identity_sha256": "b0a77da51b0e2e8ee9747700d89519706160366fab615c2b8c9d11ec139eec9e",
+      "creation_ID_matches_current": true,
+      "same_handle_buffer_returned": true,
+      "reviewed_bytes_equal": true
+    },
+    {
+      "index": 19,
+      "target": "web-technique-to-skill/references/sources.md",
+      "sha256": "0bba18abac44775c2c5c2afd7d4e16ffb3c5e28b89ab85ff06066b308b0bbbd2",
+      "bytes": 417,
+      "created_and_current_object_identity_sha256": "937f84e0b659ce2d37cf8eef425fe47eb8d03f77945d2b7b677e86df4ef57865",
+      "creation_ID_matches_current": true,
+      "same_handle_buffer_returned": true,
+      "reviewed_bytes_equal": true
+    }
+  ]
+}

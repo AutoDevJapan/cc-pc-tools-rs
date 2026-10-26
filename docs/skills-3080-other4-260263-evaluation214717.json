@@ -1,0 +1,1287 @@
+{
+  "all_original_selected_chunks_losslessly_reconstructed": true,
+  "central_operations": 0,
+  "context_resolution": "Each record.original_chunk_sha256 selects shared_original_contexts[sha].common; add that chunk's ordered original_assessment values as entries and canonical-JSON SHA256 must equal sha. All common fields, including definitions, input_validation, privacy, notice and boundaries, are preserved once.",
+  "domain": "skills3080-other4-shared-received-v3",
+  "first_ordinal": 260,
+  "last_ordinal": 263,
+  "limits": "This shares complete already acknowledged structured evidence, not original source bodies. Original actors, masks, unknown/partial/unread states and opaque path references remain unchanged; no grant, execution, adoption, current physical continuity or new reading is established.",
+  "materializer_job": "20261026-214717-todo-3080",
+  "new_copy_grants": 0,
+  "new_final_dispositions": 0,
+  "new_raw_or_unique_credit": 0,
+  "new_source_body_reads": 0,
+  "parent_acknowledged_through_at_materialization": 263,
+  "parent_journal_sha256": "db3e48f27db32aa627f2978a903056037a118b174ec567a100a6f65597b5dab9",
+  "roster_sha256": "460219790c088b33e6044c6a97c68a882549c608c3de46ea536aa990a2c1adac",
+  "shared_original_contexts": {
+    "05d92487f14940ba7f1a9e3cb6ceca435699f1410aa7309467072cfe2aafc8bb": {
+      "actual_assessment_reader": "20261026-174104-todo-3778",
+      "all_original_chunk_fields_reconstructed": true,
+      "common": {
+        "boundaries": {
+          "central_operations": 0,
+          "copy_license_accepted": false,
+          "new_final_dispositions": 0,
+          "source_executed": false,
+          "whole16_complete": false
+        },
+        "chunk_id": "a8193c4d60584afba27e1d9c3f70b256",
+        "definitions": {
+          "actors": {
+            "0": "今回の実assistant",
+            "1": "前回同じToDo3778の実assistant: 20261026-065106-todo-3778"
+          },
+          "primary_alias_rule": "4primaryは各entryで1回だけ直接読取。support_tableに残り15blobを完全列挙し、各entryは同じs番号を参照する。共有SKILL/3支持の同じbytes/読取を4出現へ対応させ新raw/support uniqueを重複加算しない。",
+          "prior_assessment": {
+            "path": "docs/skills-3080-mengto-partial-evaluation.json",
+            "sha256": "98e88e29c6dba09a2ae327ceeb93dbc291a096f021378ca482dc07a7a1f56878"
+          },
+          "prior_assessment_snapshot_change": {
+            "fixed_C_roster_catalog_commit_unchanged": true,
+            "observed_sha256": "98e88e29c6dba09a2ae327ceeb93dbc291a096f021378ca482dc07a7a1f56878",
+            "previous_sha256": "4f8cce1504589195706b5392f4de08b4766b6269c1acfdd8c3eaa28aeee5eb55",
+            "scope": "親の可変assessment snapshot。原reader/個別固定source対応で再利用し、全doc不変を主張しない。"
+          },
+          "prior_skill_profile": {
+            "actual_reader_job": "20261024-082550-todo-3536",
+            "assessment_ref": "definitions.prior_assessment",
+            "method": "prior_semantic_assessment_reuse",
+            "original_privacy_profile": null,
+            "original_range": null,
+            "read": null,
+            "recorded_body_read_complete": true,
+            "recorded_method": "child full primary read; parent all semantic assessments/headers/prose read and fixed metadata/gzip identity verification; parent did not reread all original primary bodies"
+          },
+          "reader_namespace": "20261026-174104-todo-3778/current",
+          "readers": {
+            "current": {
+              "actor": 0,
+              "actual_reader_job": "20261026-174104-todo-3778"
+            },
+            "prior3536": {
+              "actual_reader_job": "20261024-082550-todo-3536",
+              "mapping_assessment_sha256": "4f8cce1504589195706b5392f4de08b4766b6269c1acfdd8c3eaa28aeee5eb55",
+              "mapping_pointer": "/reader3535_3536/1/job"
+            },
+            "prior3778": {
+              "actor": 1,
+              "actual_reader_job": "20261026-065106-todo-3778"
+            }
+          },
+          "reuse": "旧固定SKILLの意味評価と既読主張は原reader/methodのまま、原mask/range不明はnull。今回primary全行表示/伏字とbyte照合だけを区別し、他人/過去の読取を新raw/新global uniqueへ加算しない。",
+          "states": {
+            "1": "saved_unread",
+            "2": "direct_raw_full",
+            "3": "direct_masked_full",
+            "6": "partial",
+            "7": "scan"
+          },
+          "support_path_rule": "stringならfull Git path = entry.package.root + '/' + support[0]。objectならinput_validation.tree_sha256に固定したC/github/MengTo__Skills/tree-recursive.jsonのtree[repo_tree_entry_index].pathを使い、そのUTF8 SHA256をpath_utf8_sha256で照合する。opaque locatorを含むpathの原値/断片はmodel表示しない。support_tableは全4primaryを除外して15blob、4primaryはentriesのsource/readへ参照、全blob列挙、未保存本文SHA/blob/bytes/reader/mask/readはnullでtree metadataは別欄。saved gzipは同repoのobjects/{sha256}.gz。",
+          "support_reference_rule": "各entry.supportのs番号はsupport_tableの同名12tupleを1段展開する。全entryのpackage.rootは同じ。4primaryはentries.sourceとpackage.primary_alias_metadata_refsに保持しsupport数/本文readへ重複加算しない。table15+primary4=complete tree19blobs。",
+          "support_table_columns": [
+            "relative_path_or_fixed_tree_path_ref",
+            "sha256",
+            "git_blob",
+            "bytes",
+            "saved",
+            "method",
+            "reader_ref",
+            "mask",
+            "read",
+            "tree_git_blob",
+            "tree_bytes",
+            "evidence_ref"
+          ]
+        },
+        "domain": "othergit373-chunk-v1",
+        "existing_relationship": {
+          "comparison": "起動catalogの名前/descriptionと固定public評価だけ。未知中央本文の一括読取/同一性・重複除外の確定0。",
+          "new_unique_coverage_not_claimed": true,
+          "primary_history_limit": "260/262/263と3共有支持の旧body_read=true、261の旧scan_onlyを保持。原method/range/mask/個別note欠落はnull。今回読取を新global uniqueへ足さない。4同package variantsを一括除外しない。"
+        },
+        "first_ordinal": 260,
+        "input_validation": {
+          "batching": "context単位で4件。373を縮小せず次264。",
+          "catalog_sha256": "2d73c9a038a41cc220a9687b935bfa1e0b315b65d9bd6d3e54ddb4111972876c",
+          "commit": "398cd41c86ba42fbb30e944ae507f463648f08b7",
+          "commit_json_sha256": "56f6dde2851c2f35f7deb6c19df65dae34dadba16b0363beda82ac202016e17e",
+          "index_sha256": "1a9fa91b6ac4e9156b2f3548ca6cf3cdcb4377c6c52cc1bfb315fcb3efb90643",
+          "metadata_path_reference_count": 8,
+          "metadata_path_reference_identity_verified": true,
+          "metadata_path_reference_occurrences": 32,
+          "notice_filename_census": {
+            "embedded_notice_bodies_not_verified": true,
+            "nested_support_notice_paths": [
+              "agent-skills/web-design/scroll-world-storytelling/demo/threejs/assets/THREE-LICENSE.txt"
+            ],
+            "primary_ancestor_notice_paths": [
+              "LICENSE"
+            ],
+            "repo_total_notice_named_candidates": 2,
+            "tree_entries": 1915,
+            "truncated": false
+          },
+          "notice_paths": [
+            "LICENSE",
+            "agent-skills/web-design/scroll-world-storytelling/demo/threejs/assets/THREE-LICENSE.txt"
+          ],
+          "repo": "MengTo/Skills",
+          "root_tree": "8afedc8719f37d2026b55aef282ac27d8d873d76",
+          "same_buffer_sha_bytes_gitblob_strict_utf8": true,
+          "source_support_identity_validation_not_model_reread": true,
+          "tree_entries": 1915,
+          "tree_sha256": "78e159cb1fabd9072bf8a6c667fe55aed8d1525cfffb2a5d2b94932e1faefc59",
+          "truncated": false,
+          "tuple_unit_catalog_exact": true
+        },
+        "notice_evidence": {
+          "root": {
+            "actual_reader_job": "20261026-065106-todo-3778",
+            "bytes": 1064,
+            "copy_license_accepted": false,
+            "git_blob": "b3a5f823a69b4b010f92930ac09e8a776daf65c6",
+            "identifier": "MIT",
+            "mask": 1,
+            "masked_lines": [
+              3
+            ],
+            "method": "same-byte-reuse",
+            "original_notice_gzip": "github/MengTo__Skills/objects/b2a071ba22fefd803f4e9d1f5c777dd79c62d191695586a1a73fd4d0ebd051c6.gz",
+            "original_read": [
+              3,
+              1,
+              0,
+              false,
+              true,
+              21
+            ],
+            "original_reader_namespace": "20261026-065106-todo-3778/current",
+            "path": "LICENSE",
+            "ranges": [
+              [
+                1,
+                21
+              ]
+            ],
+            "read": [
+              3,
+              1,
+              1,
+              false,
+              true,
+              21
+            ],
+            "reader": 1,
+            "representative": {
+              "chunk_id": "6b52f801c93a4ec78d0f167a24e5b309",
+              "chunk_sha256": "7af97d67feec9be6f4b4ea404c3909a053b0eb500c15fbfb469f5dbcda216a92",
+              "pointer": "notice_evidence.root"
+            },
+            "saved": true,
+            "scope": "260..263の祖先root LICENSE。package内に別のTHREE-LICENSE.txtがあるためnotice_evidence.threeへ分離。固定1915entry/truncated=falseで2notice名候補、未保存bodyの埋込notice/第三者条件の不存在は主張しない。",
+            "sha256": "b2a071ba22fefd803f4e9d1f5c777dd79c62d191695586a1a73fd4d0ebd051c6"
+          },
+          "three": {
+            "actual_reader_job": "20261026-174104-todo-3778",
+            "bytes": 1081,
+            "copy_license_accepted": false,
+            "git_blob": "cf781430404b0ae0ba7d8dea3457a3515dd7c9b9",
+            "identifier": "MIT",
+            "mask": 0,
+            "masked_lines": [],
+            "meaning": [
+              "three.js authorsのMIT notice。ソフト/関連文書の利用・複製/改変/配布等は帰属/許諾文包含条件付き、無保証/責任限定。固定gzipに原文保持し、導入/許諾受諾/実配布は0。",
+              "個別noticeはbundled Three.js相当の対象に結ぶ。動画/外部参照/書体/他sourceを包括せず、vendor実体のbyte/version/license対応は未保存のため未検証。"
+            ],
+            "method": "direct_raw_full",
+            "original_notice_gzip": "github/MengTo__Skills/objects/bfe119ea4fd413f5f7ca3fcd63adb0c4a073ed39daa2fe7d3e6b769e21272601.gz",
+            "path": "agent-skills/web-design/scroll-world-storytelling/demo/threejs/assets/THREE-LICENSE.txt",
+            "previous_history": {
+              "assessment_sha256": "4f8cce1504589195706b5392f4de08b4766b6269c1acfdd8c3eaa28aeee5eb55",
+              "body_read": true,
+              "history_limit": "旧3536読取主張を保持。今回必要支持の個別意味を直接評価し新global uniqueへ加算しない。",
+              "original_mask_range_profile": null,
+              "original_method": null,
+              "original_reader_label": "20261024-082550-todo-3536",
+              "pointer": "/entries/158/supporting_resources/8",
+              "scan_note": null
+            },
+            "ranges": [
+              [
+                1,
+                21
+              ]
+            ],
+            "read": [
+              2,
+              0,
+              0,
+              true,
+              true,
+              21
+            ],
+            "reader": 0,
+            "saved": true,
+            "scope": "260..263共有package内のdemo/threejs/assetsにある個別Three.js notice。primary各PROMPTの直接祖先noticeではなく、bundled vendor支持へ対応する。vendor module実体は未保存で版/bytes適用照合未達。外部動画/字体/参照素材へ包括しない。",
+            "sha256": "bfe119ea4fd413f5f7ca3fcd63adb0c4a073ed39daa2fe7d3e6b769e21272601"
+          }
+        },
+        "privacy_limits": {
+          "mask": "今回の全行表示前にwhole-line伏字。各entryのmasked_linesに範囲を保持し、原値/断片を復元しない。mask数は秘密の実個数/不存在の証明ではない。",
+          "metadata_path_masks": {
+            "applies_to_entry_rows": [
+              260,
+              261,
+              262,
+              263
+            ],
+            "contextual_reference_identity_source_sha256": "8a8f5895b6df25810f09e58f8d3100a099acec0b129cafca6e67c38e28f7a256",
+            "count": 8,
+            "metadata_path_mask_count_is_unique_table_paths": true,
+            "metadata_path_mask_count_not_body_mask_count": true,
+            "metadata_path_policy": "v2 structural asset/media path references; no raw media basename display",
+            "prior_limit_ref": {
+              "chunk_id": "e47b029a6c584f7e93512a8d760cb4f1",
+              "pointer": "privacy_limits.metadata_path_display"
+            },
+            "raw_values_displayed_by_this_transform": false,
+            "scope": [
+              {
+                "support_ref": "s006"
+              },
+              {
+                "support_ref": "s007"
+              },
+              {
+                "support_ref": "s008"
+              },
+              {
+                "support_ref": "s009"
+              },
+              {
+                "support_ref": "s011"
+              },
+              {
+                "support_ref": "s012"
+              },
+              {
+                "support_ref": "s013"
+              },
+              {
+                "support_ref": "s014"
+              }
+            ],
+            "source_body_profiles_unchanged": true
+          },
+          "prior_limit_ref": {
+            "chunk_id": "4c80e1a7d59249c2b63f08e114a7d9e5",
+            "pointer": "privacy_limits.outside_package_preparation"
+          },
+          "prior_projection": {
+            "assessment_sha256": "98e88e29c6dba09a2ae327ceeb93dbc291a096f021378ca482dc07a7a1f56878",
+            "field": "/entries/158/reason",
+            "field_mask_count": 1,
+            "original_source_line_or_privacy_profile": null,
+            "raw_field_displayed": false,
+            "rows": [
+              260,
+              261,
+              262,
+              263
+            ],
+            "unmet": "共通旧reasonはwhole-field伏字で意味未確認。原source/今回read maskへ混ぜない。"
+          },
+          "rights": "旧rights reviewは原fieldを表示前に省略。個人名の原値/断片を再掲せず、原profile不明をnullで保持。",
+          "shared_reference": {
+            "limit": "当該reference行は未確認。mask数は実秘密数/不存在の証明ではない。",
+            "mask_count": 1,
+            "masked_lines": [
+              2
+            ],
+            "path": "agent-skills/web-design/scroll-world-storytelling/REFERENCES.md",
+            "raw_fragment_recovery": false
+          }
+        },
+        "reader_job": "20261026-174104-todo-3778",
+        "reader_todo": 3778,
+        "resource_evidence": {
+          "p260_REFERENCES_md": {
+            "new_raw_or_support_unique_credit": 0,
+            "profile_ref": "shared_support_evidence.REFERENCES_md",
+            "read_once_same_bytes_reused_for_occurrences": true
+          },
+          "p260_SKILL_md": {
+            "meaning_ref": "/entries/158/reason",
+            "pointer": "/entries/158",
+            "profile_ref": "definitions.prior_skill_profile"
+          },
+          "p260_demo_threejs_assets_THREE_LICENSE_txt": {
+            "new_raw_or_support_unique_credit": 0,
+            "profile_ref": "shared_support_evidence.demo_threejs_assets_THREE_LICENSE_txt",
+            "read_once_same_bytes_reused_for_occurrences": true
+          },
+          "p260_demo_video_assets_README_md": {
+            "new_raw_or_support_unique_credit": 0,
+            "profile_ref": "shared_support_evidence.demo_video_assets_README_md",
+            "read_once_same_bytes_reused_for_occurrences": true
+          }
+        },
+        "resume_validation": {
+          "acknowledged_through": 259,
+          "generation": 58,
+          "journal_sha256": "e68cd4f729b6cf6fa776e586b8d5fef8f9785417681b71f37e26bd137a0b9c8f",
+          "parent_semantic_assessments_read": true,
+          "previous_chunk_id": "74b3d986ca2541e8a0639f5c102e7bd4",
+          "previous_chunk_sha256": "2730f1d894501f6d249cc5d456c9f07b50e923bc9d90fcf15d0941d34ecb9ae0",
+          "validated_receipts": 58
+        },
+        "roster_sha256": "460219790c088b33e6044c6a97c68a882549c608c3de46ea536aa990a2c1adac",
+        "shared_support_evidence": {
+          "REFERENCES_md": {
+            "actual_reader_job": "20261026-174104-todo-3778",
+            "mask": 1,
+            "masked_lines": [
+              2
+            ],
+            "masking_version": "v15",
+            "meaning": [
+              "11行のreference索引。scroll-world repository、MDN currentTime/RAF/reduced/SVG、Three/docs-responsive、ffmpeg、x.ai videoのURL。L2はv15でwhole-line伏字1で内容未確認。リンク先本文/利用条件・最新API/実動作は未検証。"
+            ],
+            "method": "direct_masked_full",
+            "new_global_unique_coverage_not_claimed": true,
+            "previous_history": {
+              "assessment_sha256": "4f8cce1504589195706b5392f4de08b4766b6269c1acfdd8c3eaa28aeee5eb55",
+              "body_read": true,
+              "history_limit": "旧3536読取主張を保持。今回必要支持の個別意味を直接評価し新global uniqueへ加算しない。",
+              "original_mask_range_profile": null,
+              "original_method": null,
+              "original_reader_label": "20261024-082550-todo-3536",
+              "pointer": "/entries/158/supporting_resources/0",
+              "scan_note": null
+            },
+            "ranges": [
+              [
+                1,
+                11
+              ]
+            ],
+            "read": [
+              3,
+              1,
+              0,
+              false,
+              true,
+              11
+            ],
+            "reader_namespace": "20261026-174104-todo-3778/current"
+          },
+          "demo_threejs_assets_THREE_LICENSE_txt": {
+            "actual_reader_job": "20261026-174104-todo-3778",
+            "mask": 0,
+            "masked_lines": [],
+            "masking_version": "v15",
+            "meaning": [
+              "three.js authorsのMIT notice。ソフト/関連文書の利用・複製/改変/配布等は帰属/許諾文包含条件付き、無保証/責任限定。固定gzipに原文保持し、導入/許諾受諾/実配布は0。",
+              "個別noticeはbundled Three.js相当の対象に結ぶ。動画/外部参照/書体/他sourceを包括せず、vendor実体のbyte/version/license対応は未保存のため未検証。"
+            ],
+            "method": "direct_raw_full",
+            "new_global_unique_coverage_not_claimed": true,
+            "previous_history": {
+              "assessment_sha256": "4f8cce1504589195706b5392f4de08b4766b6269c1acfdd8c3eaa28aeee5eb55",
+              "body_read": true,
+              "history_limit": "旧3536読取主張を保持。今回必要支持の個別意味を直接評価し新global uniqueへ加算しない。",
+              "original_mask_range_profile": null,
+              "original_method": null,
+              "original_reader_label": "20261024-082550-todo-3536",
+              "pointer": "/entries/158/supporting_resources/8",
+              "scan_note": null
+            },
+            "ranges": [
+              [
+                1,
+                21
+              ]
+            ],
+            "read": [
+              2,
+              0,
+              0,
+              true,
+              true,
+              21
+            ],
+            "reader_namespace": "20261026-174104-todo-3778/current"
+          },
+          "demo_video_assets_README_md": {
+            "actual_reader_job": "20261026-174104-todo-3778",
+            "mask": 0,
+            "masked_lines": [],
+            "masking_version": "v15",
+            "meaning": [
+              "原video assetはsourceSVGからの局所手続き生成、8s/30fps/1920×1080/H264yuv420p/keyframe8/音声無し/2400×1350 rasterize→zoompan/smallGOP/faststartという作者側provenance説明。",
+              "MP4/SVG/poster実bodyは未保存で、秒数/codec/rights/seekは実測未検証。263のGrok3本6秒生成手順と、この8秒procedural同梱assetの由来は別。置換のfilename保持提案を今回の上書き/生成許可にしない。"
+            ],
+            "method": "direct_raw_full",
+            "new_global_unique_coverage_not_claimed": true,
+            "previous_history": {
+              "assessment_sha256": "4f8cce1504589195706b5392f4de08b4766b6269c1acfdd8c3eaa28aeee5eb55",
+              "body_read": true,
+              "history_limit": "旧3536読取主張を保持。今回必要支持の個別意味を直接評価し新global uniqueへ加算しない。",
+              "original_mask_range_profile": null,
+              "original_method": null,
+              "original_reader_label": "20261024-082550-todo-3536",
+              "pointer": "/entries/158/supporting_resources/13",
+              "scan_note": null
+            },
+            "ranges": [
+              [
+                1,
+                13
+              ]
+            ],
+            "read": [
+              2,
+              0,
+              0,
+              true,
+              true,
+              13
+            ],
+            "reader_namespace": "20261026-174104-todo-3778/current"
+          }
+        },
+        "support_table": {
+          "s001": [
+            "REFERENCES.md",
+            "13eb9828382d2aff33f7bec37ecae92dc02e91efc3f8a4bb4f29304bb6f3fc21",
+            "4b4e490ce83e504c23debccaf27ee1b3e2313b9d",
+            610,
+            true,
+            "direct_masked_full",
+            "current",
+            1,
+            [
+              3,
+              1,
+              0,
+              false,
+              true,
+              11
+            ],
+            "4b4e490ce83e504c23debccaf27ee1b3e2313b9d",
+            610,
+            "p260_REFERENCES_md"
+          ],
+          "s002": [
+            "SKILL.md",
+            "505caf90b92ac6d9e6aecda1d79df36adc96fe5cbeb8eaac5c45b6cdefee7eab",
+            "6777dcf9d80f48de243eb314bfcb81ef3afd813a",
+            11889,
+            true,
+            "prior_semantic_assessment_reuse",
+            "prior3536",
+            null,
+            null,
+            "6777dcf9d80f48de243eb314bfcb81ef3afd813a",
+            11889,
+            "p260_SKILL_md"
+          ],
+          "s003": [
+            "agents/openai.yaml",
+            null,
+            null,
+            null,
+            false,
+            "unsaved",
+            null,
+            null,
+            null,
+            "d862ee48e12cc3fbf7cbfc2e6b742cb545546afb",
+            321,
+            null
+          ],
+          "s004": [
+            "demo/html-data/index.html",
+            null,
+            null,
+            null,
+            false,
+            "unsaved",
+            null,
+            null,
+            null,
+            "6754dcdd5be201c281bdfda91dd4a69fd921eca7",
+            14236,
+            null
+          ],
+          "s005": [
+            "demo/index.html",
+            null,
+            null,
+            null,
+            false,
+            "unsaved",
+            null,
+            null,
+            null,
+            "a1841a05fd039f33b92559d255b940b94debafd8",
+            11456,
+            null
+          ],
+          "s006": [
+            {
+              "path_display_redacted": true,
+              "path_utf8_sha256": "fe20a67463cbdd33bde688d167231321ac95519bd84556129c4b56c91199e935",
+              "repo_tree_entry_index": 1682
+            },
+            null,
+            null,
+            null,
+            false,
+            "unsaved",
+            null,
+            null,
+            null,
+            "db2c07289fabbfb43d04e0f8c1b8d857ff7f4948",
+            51984,
+            null
+          ],
+          "s007": [
+            {
+              "path_display_redacted": true,
+              "path_utf8_sha256": "a166bad25312984bdd4ac1c4064a398117edd7e78960b2dea11c6844cc7243ee",
+              "repo_tree_entry_index": 1686
+            },
+            "bfe119ea4fd413f5f7ca3fcd63adb0c4a073ed39daa2fe7d3e6b769e21272601",
+            "cf781430404b0ae0ba7d8dea3457a3515dd7c9b9",
+            1081,
+            true,
+            "direct_raw_full",
+            "current",
+            0,
+            [
+              2,
+              0,
+              0,
+              true,
+              true,
+              21
+            ],
+            "cf781430404b0ae0ba7d8dea3457a3515dd7c9b9",
+            1081,
+            "p260_demo_threejs_assets_THREE_LICENSE_txt"
+          ],
+          "s008": [
+            {
+              "path_display_redacted": true,
+              "path_utf8_sha256": "871499452dd03db044d90950968348f3a72aeebb4172bdf151d7eeb815c23cef",
+              "repo_tree_entry_index": 1687
+            },
+            null,
+            null,
+            null,
+            false,
+            "unsaved",
+            null,
+            null,
+            null,
+            "db045ec27f549562a59fa5b4697ad9f04f04f782",
+            380922,
+            null
+          ],
+          "s009": [
+            {
+              "path_display_redacted": true,
+              "path_utf8_sha256": "5b15d777e847bcd7e60a15f4e765604d001b1d6e46e25ca1724ea90da13f174d",
+              "repo_tree_entry_index": 1688
+            },
+            null,
+            null,
+            null,
+            false,
+            "unsaved",
+            null,
+            null,
+            null,
+            "261543eb54d196334b22c22e446734d253e9eb86",
+            355116,
+            null
+          ],
+          "s010": [
+            "demo/threejs/index.html",
+            null,
+            null,
+            null,
+            false,
+            "unsaved",
+            null,
+            null,
+            null,
+            "1089b14741fadb9e892fca89170a3cc790c0ead6",
+            25725,
+            null
+          ],
+          "s011": [
+            {
+              "path_display_redacted": true,
+              "path_utf8_sha256": "b81fb9dd0adfd632fbbfa563a99a82eb6ee3e3385c41bb1972a292432590acf0",
+              "repo_tree_entry_index": 1693
+            },
+            "a35dd4d9399008974932357ed5518e2e5025c8f6c7a54c3c1aeae56b842e0df9",
+            "2213aab407645614be7790d711da51f5a3d7e56a",
+            666,
+            true,
+            "direct_raw_full",
+            "current",
+            0,
+            [
+              2,
+              0,
+              0,
+              true,
+              true,
+              13
+            ],
+            "2213aab407645614be7790d711da51f5a3d7e56a",
+            666,
+            "p260_demo_video_assets_README_md"
+          ],
+          "s012": [
+            {
+              "path_display_redacted": true,
+              "path_utf8_sha256": "0b177a92549ffb978497e6e54449f8d4cde1a39b448b082725c8d695d159cdf5",
+              "repo_tree_entry_index": 1694
+            },
+            null,
+            null,
+            null,
+            false,
+            "unsaved",
+            null,
+            null,
+            null,
+            "a2cabf456a3c4c0f787f434a722bb9d0aecbc4ee",
+            5641,
+            null
+          ],
+          "s013": [
+            {
+              "path_display_redacted": true,
+              "path_utf8_sha256": "fcd6dce8295f94ded0b9a11753a9dbccd82dd5c37043d06b80b0de5f9c6bb0ea",
+              "repo_tree_entry_index": 1695
+            },
+            null,
+            null,
+            null,
+            false,
+            "unsaved",
+            null,
+            null,
+            null,
+            "8747fc82ead187eea4b0a5c11ce1d7710b6f652f",
+            3829930,
+            null
+          ],
+          "s014": [
+            {
+              "path_display_redacted": true,
+              "path_utf8_sha256": "cdc8305f6791a0612ff673a97c4444732c467221acc110655160f0069b7bd5ea",
+              "repo_tree_entry_index": 1696
+            },
+            null,
+            null,
+            null,
+            false,
+            "unsaved",
+            null,
+            null,
+            null,
+            "ab39989de1406535cb635f5d19031601a4ce8e8a",
+            50124,
+            null
+          ],
+          "s015": [
+            "demo/video/index.html",
+            null,
+            null,
+            null,
+            false,
+            "unsaved",
+            null,
+            null,
+            null,
+            "498bce4c8f068cef22b0e8e7f53ea63a83e31fee",
+            10820,
+            null
+          ]
+        }
+      },
+      "original_chunk_id": "a8193c4d60584afba27e1d9c3f70b256",
+      "original_receipt_sha256": "d8cfa7285eddc4dfd7c6da3bfc2287f0e22ee3e4b4bfa2b3bf7414cd2859e662"
+    }
+  },
+  "source_counts": {
+    "MengTo/Skills": 4
+  },
+  "whole16_complete": false,
+  "entries": [
+    {
+      "actual_assessment_reader": "20261026-174104-todo-3778",
+      "bytes": 2288,
+      "inventory_id": "github:30e218e9495deed9d3930de5d5c53d3dff30a58806eb99ddda1baf682da20b6b",
+      "inventory_unit": "github_prompt_material",
+      "original_assessment": {
+        "candidate_disposition": "HTML/data/typeの独立variant候補。採否は親へ。",
+        "classification": "variant",
+        "findings": [
+          "18/31/48/63/81/94は明示されたillustrative seriesで実顧客主張ではない。重要情報をHTML/選択可能label/tableへ残す。",
+          "HTML/data/typeではcanvas/WebGL/video/library/framework/CDN/buildを使わない原variantの条件。六章の逆状態/CTA/console等は受入期待で実検査ではない。"
+        ],
+        "negative": "sample seriesを実顧客の効果に使う、chartだけに数値を閉じ込め、原条件を省いて完了とする。",
+        "notices": [
+          {
+            "notice_ref": "root"
+          },
+          {
+            "notice_ref": "three",
+            "relation": "package_support_notice_not_primary_ancestor"
+          }
+        ],
+        "package": {
+          "blob_count": 19,
+          "complete_tree": true,
+          "other_primary_aliases_excluded_from_support_count": 3,
+          "primary_alias_excluded": 4,
+          "primary_alias_metadata_refs": [
+            {
+              "ordinal": 260,
+              "pointer": "entries/0",
+              "read_ref": "entries/0/read",
+              "source_ref": "entries/0/source"
+            },
+            {
+              "ordinal": 261,
+              "pointer": "entries/1",
+              "read_ref": "entries/1/read",
+              "source_ref": "entries/1/source"
+            },
+            {
+              "ordinal": 262,
+              "pointer": "entries/2",
+              "read_ref": "entries/2/read",
+              "source_ref": "entries/2/source"
+            },
+            {
+              "ordinal": 263,
+              "pointer": "entries/3",
+              "read_ref": "entries/3/read",
+              "source_ref": "entries/3/source"
+            }
+          ],
+          "root": "agent-skills/web-design/scroll-world-storytelling",
+          "support_file_occurrences": 15,
+          "support_reference_count": 15
+        },
+        "positive": "許可されたdatasetを六章の説明とtableへ結び、逆scrollで同じ値を出す。",
+        "prior_primary_read": {
+          "actual_reader_job": "20261024-082550-todo-3536",
+          "assessment_ref": "definitions.prior_assessment",
+          "original_mask_range_profile": null,
+          "original_method": null,
+          "pointer": "/entries/158/supporting_resources/3",
+          "recorded_body_read": true,
+          "recorded_scan_only": false
+        },
+        "read": [
+          2,
+          0,
+          0,
+          true,
+          true,
+          35
+        ],
+        "read_evidence": {
+          "masked_lines": [],
+          "masking_version": "v15",
+          "method": "direct_raw_full",
+          "ranges": [
+            [
+              1,
+              35
+            ]
+          ],
+          "strict_utf8": true
+        },
+        "reason": "L9/13..20/28..35の六章・illustrative series・native scroll/可読table/noJS/reduced。",
+        "required_changes": [
+          "原dataset/根拠/単位とchart/tableの一致を保ち、例の数字を実効果/進捗へ流用しない。0/1章・短section/resize/font/逆戻り/直jumpで正規化の分母/座標と値を検査する。",
+          "全記事の意味/事実を5..7beatsへ落とす際に消した条件を明示する。架空題材名は本人製品の新命名へ流用せず、同画像回答/文章の個別条件を保持する。"
+        ],
+        "row": 260,
+        "source": [
+          "github:30e218e9495deed9d3930de5d5c53d3dff30a58806eb99ddda1baf682da20b6b",
+          "MengTo/Skills",
+          "398cd41c86ba42fbb30e944ae507f463648f08b7",
+          "agent-skills/web-design/scroll-world-storytelling/demo/html-data/PROMPT.md",
+          "0ab7e675422ca3bfb78ec845b26a12112c2f7cc5f30b7693d5669fb7ac1504bb",
+          "ec260eac53ccc45cbc7c867e91686170792c891d",
+          2288
+        ],
+        "support": [
+          "s001",
+          "s002",
+          "s003",
+          "s004",
+          "s005",
+          "s006",
+          "s007",
+          "s008",
+          "s009",
+          "s010",
+          "s011",
+          "s012",
+          "s013",
+          "s014",
+          "s015"
+        ],
+        "unit": "github_prompt_material",
+        "unmet": [
+          "未保存demo HTML/原SVG等本文、実chart/table/正規化/CTA/操作。",
+          "対象文章の条件/画像回答・未知中央比較。"
+        ],
+        "use": "記事/データをsemantic HTMLとSVG chartで可逆なscroll storyにする手順。",
+        "value": "単一progressからchart/棒/文章/値を導き、同じseriesをtableへ載せる契約が具体。"
+      },
+      "original_chunk_id": "a8193c4d60584afba27e1d9c3f70b256",
+      "original_chunk_sha256": "05d92487f14940ba7f1a9e3cb6ceca435699f1410aa7309467072cfe2aafc8bb",
+      "path": "agent-skills/web-design/scroll-world-storytelling/demo/html-data/PROMPT.md",
+      "previous_parent_semantic_read": true,
+      "source_commit": "398cd41c86ba42fbb30e944ae507f463648f08b7",
+      "source_git_blob": "ec260eac53ccc45cbc7c867e91686170792c891d",
+      "source_path": "agent-skills/web-design/scroll-world-storytelling/demo/html-data/PROMPT.md",
+      "source_repo": "MengTo/Skills",
+      "source_sha256": "0ab7e675422ca3bfb78ec845b26a12112c2f7cc5f30b7693d5669fb7ac1504bb"
+    },
+    {
+      "actual_assessment_reader": "20261026-174104-todo-3778",
+      "bytes": 1718,
+      "inventory_id": "github:df2534c6a629d6d22b89898d93fa21be11a431cb3744935f8a3de41bc556cadd",
+      "inventory_unit": "github_prompt_material",
+      "original_assessment": {
+        "candidate_disposition": "三方式選択の入口variant候補。260/262/263を個別に保持。",
+        "classification": "variant",
+        "findings": [
+          "実案件では一方式を選ぶ条件と、reference demoでは三フォルダを比較する条件を分ける。同じ六beatsでも各rendererを意味ある違いにする。",
+          "before codeのledger/style/mode提示とapproved modeという原文を、未確認画像の本人承認が済んだ証拠にしない。root MITも外部動画/字体等を包括しない。"
+        ],
+        "negative": "比較用三方式を本案件で全部混在させる、5..7beatsへ圧縮して重要条件まで消す。",
+        "notices": [
+          {
+            "notice_ref": "root"
+          },
+          {
+            "notice_ref": "three",
+            "relation": "package_support_notice_not_primary_ancestor"
+          }
+        ],
+        "package": {
+          "blob_count": 19,
+          "complete_tree": true,
+          "other_primary_aliases_excluded_from_support_count": 3,
+          "primary_alias_excluded": 4,
+          "primary_alias_metadata_refs": [
+            {
+              "ordinal": 260,
+              "pointer": "entries/0",
+              "read_ref": "entries/0/read",
+              "source_ref": "entries/0/source"
+            },
+            {
+              "ordinal": 261,
+              "pointer": "entries/1",
+              "read_ref": "entries/1/read",
+              "source_ref": "entries/1/source"
+            },
+            {
+              "ordinal": 262,
+              "pointer": "entries/2",
+              "read_ref": "entries/2/read",
+              "source_ref": "entries/2/source"
+            },
+            {
+              "ordinal": 263,
+              "pointer": "entries/3",
+              "read_ref": "entries/3/read",
+              "source_ref": "entries/3/source"
+            }
+          ],
+          "root": "agent-skills/web-design/scroll-world-storytelling",
+          "support_file_occurrences": 15,
+          "support_reference_count": 15
+        },
+        "positive": "同じ記事にHTMLか映像が向く理由を示して、承認された範囲のrendererを一つ選ぶ。",
+        "prior_primary_read": {
+          "actual_reader_job": null,
+          "assessment_ref": "definitions.prior_assessment",
+          "original_mask_range_profile": null,
+          "original_method": null,
+          "pointer": "/entries/158/supporting_resources/2",
+          "recorded_body_read": false,
+          "recorded_scan_only": true
+        },
+        "read": [
+          2,
+          0,
+          0,
+          true,
+          true,
+          29
+        ],
+        "read_evidence": {
+          "masked_lines": [],
+          "masking_version": "v15",
+          "method": "direct_raw_full",
+          "ranges": [
+            [
+              1,
+              29
+            ]
+          ],
+          "strict_utf8": true
+        },
+        "reason": "L5..13/17..25/29の一方式選択と三方式参考launcher。",
+        "required_changes": [
+          "全記事の事実と必要な条件を保ち、一方式の理由を要件/媒体/権利/能力/予算へ結ぶ。既存の通常技術操作を独自の承認待ちへ増やさず、見た目は同画像の本人回答を保持する。",
+          "native/reverse/mobile/reduced/local assets/consoleを実対象で検査する。原demo未保存から再現/portableと断定せず、source内の一般upload/archive提案や既存Content参照を本研究の新scopeへ広げない。"
+        ],
+        "row": 261,
+        "source": [
+          "github:df2534c6a629d6d22b89898d93fa21be11a431cb3744935f8a3de41bc556cadd",
+          "MengTo/Skills",
+          "398cd41c86ba42fbb30e944ae507f463648f08b7",
+          "agent-skills/web-design/scroll-world-storytelling/demo/PROMPT.md",
+          "4f88af79f782cdeae74930d4e95befc3894ca9753f462c7f6dcf18e61e48edf6",
+          "4aa554d461dd2755ac101f156bd9b238ae19fe05",
+          1718
+        ],
+        "support": [
+          "s001",
+          "s002",
+          "s003",
+          "s004",
+          "s005",
+          "s006",
+          "s007",
+          "s008",
+          "s009",
+          "s010",
+          "s011",
+          "s012",
+          "s013",
+          "s014",
+          "s015"
+        ],
+        "unit": "github_prompt_material",
+        "unmet": [
+          "未保存launcher/三方式HTML/素材本文、実選択後の検査。",
+          "対象原資料/個別条件と画像回答、旧reason伏字field・未知中央比較。"
+        ],
+        "use": "全資料を読んでbeat/styleを定め、video/Three.js/HTMLの一方式を選ぶ入口prompt。",
+        "value": "thesisを保ちながらrenderer選択の理由と実受入を結べる。"
+      },
+      "original_chunk_id": "a8193c4d60584afba27e1d9c3f70b256",
+      "original_chunk_sha256": "05d92487f14940ba7f1a9e3cb6ceca435699f1410aa7309467072cfe2aafc8bb",
+      "path": "agent-skills/web-design/scroll-world-storytelling/demo/PROMPT.md",
+      "previous_parent_semantic_read": true,
+      "source_commit": "398cd41c86ba42fbb30e944ae507f463648f08b7",
+      "source_git_blob": "4aa554d461dd2755ac101f156bd9b238ae19fe05",
+      "source_path": "agent-skills/web-design/scroll-world-storytelling/demo/PROMPT.md",
+      "source_repo": "MengTo/Skills",
+      "source_sha256": "4f88af79f782cdeae74930d4e95befc3894ca9753f462c7f6dcf18e61e48edf6"
+    },
+    {
+      "actual_assessment_reader": "20261026-174104-todo-3778",
+      "bytes": 3719,
+      "inventory_id": "github:15fc1c1e909cb334a801f8498fbe3c2df3bd9abba3ba106bb5af7e69fc5f8ecb",
+      "inventory_unit": "github_prompt_material",
+      "original_assessment": {
+        "candidate_disposition": "Three.js worldの独立variant候補。",
+        "classification": "variant",
+        "findings": [
+          "最新のContent資料の閲覧やJuly17の外部参照はsourceの提案。本研究で範囲外のContentを走査したり外部へアクセスしていない。",
+          "instanced bead/core/rings/knot/六nodes、camera orbit/distance/rotation/alignment/ring/章をscrollへ対応させる一world。ambient rotationもあるため、絶対時刻を固定しない全画素一致は原文から保証できない。",
+          "DPR2/resize/hidden pause/dispose、no orbitcontrols/wheel hijack、WebGL無しのCSS/SVG/静止ordered fallbackを要求する。bundledTHREE個別noticeは読んだがvendor module実体は未保存。"
+        ],
+        "negative": "paletteだけ変えて三studyとする、範囲外Content走査やbundle存在だけで実描画/権利確認済みとする。",
+        "notices": [
+          {
+            "notice_ref": "root"
+          },
+          {
+            "notice_ref": "three",
+            "relation": "package_support_notice_not_primary_ancestor"
+          }
+        ],
+        "package": {
+          "blob_count": 19,
+          "complete_tree": true,
+          "other_primary_aliases_excluded_from_support_count": 3,
+          "primary_alias_excluded": 4,
+          "primary_alias_metadata_refs": [
+            {
+              "ordinal": 260,
+              "pointer": "entries/0",
+              "read_ref": "entries/0/read",
+              "source_ref": "entries/0/source"
+            },
+            {
+              "ordinal": 261,
+              "pointer": "entries/1",
+              "read_ref": "entries/1/read",
+              "source_ref": "entries/1/source"
+            },
+            {
+              "ordinal": 262,
+              "pointer": "entries/2",
+              "read_ref": "entries/2/read",
+              "source_ref": "entries/2/source"
+            },
+            {
+              "ordinal": 263,
+              "pointer": "entries/3",
+              "read_ref": "entries/3/read",
+              "source_ref": "entries/3/source"
+            }
+          ],
+          "root": "agent-skills/web-design/scroll-world-storytelling",
+          "support_file_occurrences": 15,
+          "support_reference_count": 15
+        },
+        "positive": "合意した非具象sculptureで同じsceneの材質/照明/文章可読性を三方向で比較する。",
+        "prior_primary_read": {
+          "actual_reader_job": "20261024-082550-todo-3536",
+          "assessment_ref": "definitions.prior_assessment",
+          "original_mask_range_profile": null,
+          "original_method": null,
+          "pointer": "/entries/158/supporting_resources/7",
+          "recorded_body_read": true,
+          "recorded_scan_only": false
+        },
+        "read": [
+          2,
+          0,
+          0,
+          true,
+          true,
+          52
+        ],
+        "read_evidence": {
+          "masked_lines": [],
+          "masking_version": "v15",
+          "method": "direct_raw_full",
+          "ranges": [
+            [
+              1,
+              52
+            ]
+          ],
+          "strict_utf8": true
+        },
+        "reason": "L13..32/36..48/52の参照原則・三study・pin local module・世界state/停止/代替。",
+        "required_changes": [
+          "scope内の既存許可資料だけから原則を抽出し、markup/固有layout/写真を複製しない。三studyと同画像の本人回答を対応させ、参考製品名を自社の命名や権利へ流用しない。",
+          "scrollで決まるcamera/worldとambient時刻を区別し、逆戻り/skip/resize/hidden復帰で何を同一にするか定義する。mobile controls/focus/文章衝突、WebGL無し/reducedのfallbackと解放を検査する。",
+          "local pinの実module版/byte/個別notice包含を照合する。THREE-LICENSEのMITを画像/字体/動画/外部参照へ広げず、作者の選んだSoft pearlを本人の採用済み方向としない。"
+        ],
+        "row": 262,
+        "source": [
+          "github:15fc1c1e909cb334a801f8498fbe3c2df3bd9abba3ba106bb5af7e69fc5f8ecb",
+          "MengTo/Skills",
+          "398cd41c86ba42fbb30e944ae507f463648f08b7",
+          "agent-skills/web-design/scroll-world-storytelling/demo/threejs/PROMPT.md",
+          "0b3eb26e57a7d4ba93aeb5cb7cae33aaf8053c359e9cb24742b2306bd97fbda5",
+          "98b9ecb96781b7f015023e4b3c72d3c2aaa1b383",
+          3719
+        ],
+        "support": [
+          "s001",
+          "s002",
+          "s003",
+          "s004",
+          "s005",
+          "s006",
+          "s007",
+          "s008",
+          "s009",
+          "s010",
+          "s011",
+          "s012",
+          "s013",
+          "s014",
+          "s015"
+        ],
+        "unit": "github_prompt_material",
+        "unmet": [
+          "未保存Three module/原demo/assets本文、版/notice対応と実canvas/3study/逆状態/負荷。",
+          "参照素材条件/同画像回答・未知中央比較。"
+        ],
+        "use": "一つのThree.js worldで六章と三つの材質/照明方向を比較するprompt。",
+        "value": "同じ構造/物語で背景/材質/光/contrast/paletteを実質的に変える条件。"
+      },
+      "original_chunk_id": "a8193c4d60584afba27e1d9c3f70b256",
+      "original_chunk_sha256": "05d92487f14940ba7f1a9e3cb6ceca435699f1410aa7309467072cfe2aafc8bb",
+      "path": "agent-skills/web-design/scroll-world-storytelling/demo/threejs/PROMPT.md",
+      "previous_parent_semantic_read": true,
+      "source_commit": "398cd41c86ba42fbb30e944ae507f463648f08b7",
+      "source_git_blob": "98b9ecb96781b7f015023e4b3c72d3c2aaa1b383",
+      "source_path": "agent-skills/web-design/scroll-world-storytelling/demo/threejs/PROMPT.md",
+      "source_repo": "MengTo/Skills",
+      "source_sha256": "0b3eb26e57a7d4ba93aeb5cb7cae33aaf8053c359e9cb24742b2306bd97fbda5"
+    },
+    {
+      "actual_assessment_reader": "20261026-174104-todo-3778",
+      "bytes": 3904,
+      "inventory_id": "github:3fb9d587e03b0893dc0ee6989b42cd3660e54eb8ca09816a4f197de27927480a",
+      "inventory_unit": "github_prompt_material",
+      "original_assessment": {
+        "candidate_disposition": "video-scrubの工程/来歴を保持して改訂する独立variant候補。",
+        "classification": "variant",
+        "findings": [
+          "sourceはGrok Imagine Videoで3本6秒16:9/720p、三art方向を試し一つをextend/regenerateしprovider/model/prompt/露出seed/duration/resolution/rightsを記録する。本人の実model/service契約や新費用許可ではない。今回は生成/送信0。",
+          "video currentTimeをnative進行へ結びRAFでseekをまとめsettledで止める。fast flick/reverse/実尺/request/consoleを検査し、reducedはposterと通常の章順を保持する。",
+          "同梱READMEは別のproceduralSVG由来8秒MP4を説明する。6秒Grok手順が同梱assetの実来歴とはしない。MP4/SVG/posterは未保存、原claimsは未検証。"
+        ],
+        "negative": "sourceのprovider名から新しい有料生成を始める、8秒procedural同梱動画を6秒Grok生成済みと報告する。",
+        "notices": [
+          {
+            "notice_ref": "root"
+          },
+          {
+            "notice_ref": "three",
+            "relation": "package_support_notice_not_primary_ancestor"
+          }
+        ],
+        "package": {
+          "blob_count": 19,
+          "complete_tree": true,
+          "other_primary_aliases_excluded_from_support_count": 3,
+          "primary_alias_excluded": 4,
+          "primary_alias_metadata_refs": [
+            {
+              "ordinal": 260,
+              "pointer": "entries/0",
+              "read_ref": "entries/0/read",
+              "source_ref": "entries/0/source"
+            },
+            {
+              "ordinal": 261,
+              "pointer": "entries/1",
+              "read_ref": "entries/1/read",
+              "source_ref": "entries/1/source"
+            },
+            {
+              "ordinal": 262,
+              "pointer": "entries/2",
+              "read_ref": "entries/2/read",
+              "source_ref": "entries/2/source"
+            },
+            {
+              "ordinal": 263,
+              "pointer": "entries/3",
+              "read_ref": "entries/3/read",
+              "source_ref": "entries/3/source"
+            }
+          ],
+          "root": "agent-skills/web-design/scroll-world-storytelling",
+          "support_file_occurrences": 15,
+          "support_reference_count": 15
+        },
+        "positive": "許可された連続clipをseek用へ準備し、前後scrollの実frame/章/静止posterを照合する。",
+        "prior_primary_read": {
+          "actual_reader_job": "20261024-082550-todo-3536",
+          "assessment_ref": "definitions.prior_assessment",
+          "original_mask_range_profile": null,
+          "original_method": null,
+          "pointer": "/entries/158/supporting_resources/12",
+          "recorded_body_read": true,
+          "recorded_scan_only": false
+        },
+        "read": [
+          2,
+          0,
+          0,
+          true,
+          true,
+          44
+        ],
+        "read_evidence": {
+          "masked_lines": [],
+          "masking_version": "v15",
+          "method": "direct_raw_full",
+          "ranges": [
+            [
+              1,
+              44
+            ]
+          ],
+          "strict_utf8": true
+        },
+        "reason": "L5/9..25/31..40/44の三calibrationとencoding/映像受入条件。",
+        "required_changes": [
+          "本人の既存動画サービス方針と元依頼で許可された手段・素材/生成/実尺要件に結び、新費用/APIキー/新契約/範囲外uploadをsourceから許可しない。通常の許可済み素材準備を新たな一律禁止にせず、必要な画像方向の同じ本人回答を保持する。",
+          "露出metadataと権利を原masterへ結び、secret/個人値をログ/出力しない。GOPは対象decoder/seek/容量との両立を実測し、currentTime変更と実decoded frameの一致/最終seekがstaleに戻らないことを確認する。",
+          "duration/metadata/readiness/zero/短section/resize/poster/逆再生・rapid seek/keyboard/reducedと終了時のRAF/media解放を検査する。READMEの同filename置換提案を原資料の上書き命令にせず、原本と出所を保持する。"
+        ],
+        "row": 263,
+        "source": [
+          "github:3fb9d587e03b0893dc0ee6989b42cd3660e54eb8ca09816a4f197de27927480a",
+          "MengTo/Skills",
+          "398cd41c86ba42fbb30e944ae507f463648f08b7",
+          "agent-skills/web-design/scroll-world-storytelling/demo/video/PROMPT.md",
+          "f06dd72ff35d30c1b6bc70ec3be454eeb08c00b57e292448afd625f0525a4ddd",
+          "c250d911b5de4907c53576b7531b047c66135cde",
+          3904
+        ],
+        "support": [
+          "s001",
+          "s002",
+          "s003",
+          "s004",
+          "s005",
+          "s006",
+          "s007",
+          "s008",
+          "s009",
+          "s010",
+          "s011",
+          "s012",
+          "s013",
+          "s014",
+          "s015"
+        ],
+        "unit": "github_prompt_material",
+        "unmet": [
+          "未保存MP4/SVG/poster/原HTML本文、生成/個別権利/encoding/実尺・frame seek検査。",
+          "対象サービス条件/画像回答・未知中央比較。"
+        ],
+        "use": "連続camera clipの生成・記録・seek向けencodingからnative-scroll動画へ結ぶprompt。",
+        "value": "calibration/来歴metadata/currentTime/settled/静止poster/逆scrollの工程を分けられる。"
+      },
+      "original_chunk_id": "a8193c4d60584afba27e1d9c3f70b256",
+      "original_chunk_sha256": "05d92487f14940ba7f1a9e3cb6ceca435699f1410aa7309467072cfe2aafc8bb",
+      "path": "agent-skills/web-design/scroll-world-storytelling/demo/video/PROMPT.md",
+      "previous_parent_semantic_read": true,
+      "source_commit": "398cd41c86ba42fbb30e944ae507f463648f08b7",
+      "source_git_blob": "c250d911b5de4907c53576b7531b047c66135cde",
+      "source_path": "agent-skills/web-design/scroll-world-storytelling/demo/video/PROMPT.md",
+      "source_repo": "MengTo/Skills",
+      "source_sha256": "f06dd72ff35d30c1b6bc70ec3be454eeb08c00b57e292448afd625f0525a4ddd"
+    }
+  ],
+  "working_public_reflection": true,
+  "main_acceptance_pending": true,
+  "new_body_or_literal_read_credit": 0,
+  "physical_evidence": "skills-3080-other4-260263-physical214717.json",
+  "read_counting": "All4 semantic assessments and their entire original common context were received; the full original chunk reconstructs to its independently accepted SHA. Original actors and missing range/privacy profiles remain unchanged. No new body/global reading or permission credit."
+}

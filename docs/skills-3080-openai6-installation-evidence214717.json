@@ -1,0 +1,103 @@
+{
+  "todo": 3080,
+  "result_publisher_job": "20261026-214717-todo-3080",
+  "creator_job": "20261026-214717-todo-3080",
+  "new_targets_created": 6,
+  "successful_CreateNew_count": 1,
+  "current_files_readback_verified": 36,
+  "bytes": 167248,
+  "normal_read_batches": 3,
+  "instruction_buffers": 12,
+  "instruction_bytes": 21416,
+  "input_PR": 578,
+  "input_PR_merge": "e89b115ef307bf9d672f28778836e9841b63d523",
+  "creation_manifest": "skills-3080-operations/create-openai6-214717.json",
+  "creation_manifest_sha": "af55ac1965aa0ba6796898f23c9e231d045b88f3eff9424314ed57bdcaa8b8b5",
+  "creation_input_head": "9ccca94d78e97c71ed79e1ec4d60239772c4fe25",
+  "frozen_full_content_review": {
+    "task": 4049,
+    "job": "20261027-065619-todo-4049",
+    "spec": "D:/CC/Tools/todo/specs/4049-91ef7e678673496d9ffe0e0ee8ea2cfb.md",
+    "spec_sha256": "dcbd2c1d3dbf8834aa95b0fdbb25fdf19cd13dd6fa2faa2c27897d0d404a1112",
+    "final_sha256": "c152477596f0c050f40e7700a2eef6d46f319d6c6027857c84ec60f009897be2",
+    "manifest_sha256": "af55ac1965aa0ba6796898f23c9e231d045b88f3eff9424314ed57bdcaa8b8b5",
+    "request_sha256": "f08056b836c189dceb98deac45c87b1d394c33905b6b94445feabfdb6fb36d29",
+    "creator": "20261026-214717-todo-3080",
+    "successful_creation_file_count": 36,
+    "full_content_no_comparison": true,
+    "Must": 0,
+    "frozen": true,
+    "never_edit_spec_or_restart_this_task": true
+  },
+  "qualified_independent_review_native": {
+    "todo": 4049,
+    "job": "20261027-065619-todo-4049",
+    "parent_job": "20261026-214717-todo-3080",
+    "spec_sha256": "dcbd2c1d3dbf8834aa95b0fdbb25fdf19cd13dd6fa2faa2c27897d0d404a1112",
+    "raw_sha256": "c152477596f0c050f40e7700a2eef6d46f319d6c6027857c84ec60f009897be2",
+    "raw_bytes": 2167,
+    "parent_full_original_read": true,
+    "native": [
+      {
+        "timestamp": "2026-10-26T21:57:02.551Z",
+        "model": "gpt-6-luna",
+        "effort": "max",
+        "service_tier": null
+      }
+    ],
+    "both_origins_owner_request": true,
+    "Must": 0,
+    "Suggestion": 1,
+    "Nit": 0,
+    "runtime_use_not_implied": true,
+    "native_output_bodies_returned": false
+  },
+  "referenced_artifacts": {
+    "bundle": {
+      "file": "skills-3080-openai6-actual-bundle214717.json",
+      "sha256": "060df262a1c17faa484beabd07a689fb4693903dadedc5206cec39aed7dbf08a"
+    },
+    "manifest": {
+      "file": "skills-3080-installed-openai6-manifest214717.json",
+      "sha256": "e7712637982662d32762238b313be6d9ca60cbc5f25a23ea281995f8045bcc26"
+    },
+    "creation": {
+      "file": "skills-3080-openai6-create-evidence214717.json",
+      "sha256": "f009451eb7d8cd5ebed30dc53a1f93968c9799c4e65051e23d4a680445fea6bf"
+    },
+    "readback": {
+      "file": "skills-3080-openai6-consume-evidence214717.json",
+      "sha256": "4cef181e2fb994f426d6d08c5f37c57c39ad142bc5bc55820e5658d5aaaa241d"
+    },
+    "structure": {
+      "file": "skills-3080-openai6-actual-structure214717.json",
+      "sha256": "e64aed3494a4196c0338008dd93020fcf0422a9d1b47e38ad68583af4009b72e"
+    },
+    "discovery": {
+      "file": "skills-3080-openai6-discovery214717.json",
+      "sha256": "dc986959d5b341620d5e3c42ec88ad8cb48ee7ba9fb545cfb2a1191d802156be"
+    },
+    "application": {
+      "file": "skills-3080-openai6-application214717.json",
+      "sha256": "ea98e695d79b77bc4d6b90bf0249df71724d3aad06f65b40d2363cd838eb069d"
+    },
+    "design": {
+      "file": "skills-3080-openai6-designs214717.json",
+      "sha256": "c5b3cff3ed6e8f4f0f2505fa3f559bbbeb6ad89e9aba1f0806adcad345e5a86e"
+    }
+  },
+  "current_runtime": {
+    "file": "skills-3080-guard-current4348-observation214717.json",
+    "sha256": "deb8ee337747216552a342f1ce06f43926e1077aead5e23ee0e7a16856c2054e"
+  },
+  "creation_binding": "Exact current canonical native call_7e3cd035c2bd458f94f744abae0ef5ce and original CLI stdout; no caller-only receipt",
+  "time_scope": "Actual newly created6,36 current qualified buffers across3 normal batches; no cross-file/batch atomic or historical continuity claim",
+  "model_application": "Real current turn explicitly read12 instruction buffers then applied12 textual positive/negative decisions plus one real current producer-evidence decision. No live UI/browser/GPU or implicit selection proof.",
+  "new_global_source_raw_credit": 0,
+  "implicit_skill_selection_proven": false,
+  "new_UI_implementation": 0,
+  "originals_are_records_not_owner_instructions": true,
+  "third_party_assets_services_or_unknown_central_rights_accepted": false,
+  "public_result_review_pending_at_recording": true,
+  "whole16_complete": false
+}

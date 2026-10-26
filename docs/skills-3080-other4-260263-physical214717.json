@@ -1,0 +1,19 @@
+{
+  "all_source_tuples_match": true,
+  "consumer": "20261026-214717-todo-3080",
+  "domain": "other373-retained-range-physical-binding-v1",
+  "limit": "Prior physical observations only; no source reread, historical continuity, current OS writer, complete support/rights or adoption established",
+  "new_adoptions": 0,
+  "new_grants": 0,
+  "new_semantic_source_reads": 0,
+  "prior339_sha": "971cc94fbed7d5aa599a8dc3cc1eb9417a5e51fce1513cbab628777a508f85c9",
+  "public_added": 4,
+  "records": 4,
+  "snapshot_file": "skills-3080-other4-260263-evaluation214717.json",
+  "snapshot_sha256": "e9b7a232898cdd1b5b54b7c9f6ff6f6e3545911a759d8bb842a51520e4c02923",
+  "source_bytes": 11629,
+  "source_objects_reopened": 0,
+  "supplement34_sha": "be50c0498fcb67b0fcd0e31c49f985041aa49461c4bd6a54e5417ef41e893ac9",
+  "original_private_snapshot_sha256": "94b0656d25bca4222ab706e2afd19f9339f5bb6e7684c46011c132790452d030",
+  "working_public_reflection": true
+}

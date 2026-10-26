@@ -286,9 +286,9 @@
   "site_entries_with_body": 9862,
   "site_entries_without_body": 428,
   "execution_held_shapes": 647,
-  "candidate_designs": 127,
-  "independently_accepted": 127,
-  "installed": 127,
+  "candidate_designs": 133,
+  "independently_accepted": 133,
+  "installed": 133,
   "integrated": 3,
   "excluded": 15,
   "units": {
@@ -346,15 +346,15 @@
     "actual_installed": 8
   },
   "candidate_count_definitions": {
-    "candidate_designs": "Legacy28 plus directly sourced actual designs99; pending drafts and catalog rows are not installations;127 is not a cap",
+    "candidate_designs": "Legacy28 plus directly sourced actual designs105; pending drafts and catalog rows are not installations;133 is not a cap",
     "additional_authored_drafts_not_in_plans": 3,
-    "authored_total": 130,
-    "installed": 127,
+    "authored_total": 136,
+    "installed": 133,
     "pending_plan_targets": 0,
     "archived_draft_targets": 8,
     "archived_draft_is_subset_of_batch03": true,
     "independently_accepted": "Legacy acceptances plus individually scoped direct designs. For the six game outputs, original3775 reading and3777 source-specific correction acceptance were bound to exact manifest bytes. Actual creation, metadata discovery and bounded explicit use are separately evidenced; no whole-catalog, renderer or full-context acceptance is implied. The newest public result delta still requires review/CI/merge.",
-    "not_semantically_disposed_occurrences": 73075,
+    "not_semantically_disposed_occurrences": 73069,
     "additional_draft_sources": [
       "skills-3080-mizchi-sql-draft.json",
       "skills-3080-mizchi-mutation-draft.json"
@@ -612,7 +612,7 @@
     "guard_client_resource": true,
     "state": "classification_unverified"
   },
-  "recorded_at": "2026-10-26T21:47:51.6388847+00:00",
+  "recorded_at": "2026-10-26T22:31:20.7327698+00:00",
   "total_skill_named_body_read_definition": "This field preserves the historical complete-source subset only. Current raw/workflow primary coverage is projected from the canonical source components and sixmile evaluation index in all_fulltext_primary_paths_including_partial_sources/all_workflow_primary_paths_including_partial_sources, not copied here.",
   "openai_entrypoint_evaluation": {
     "rights_accepted": false,
@@ -1699,7 +1699,7 @@
     "current_individual_rights_entries": 5,
     "main_accepted_excluded_before_this_delta": 8,
     "branch_excluded": 15,
-    "branch_pending": 73075,
+    "branch_pending": 73069,
     "primary_and_support_read_states_unchanged": true,
     "existing_primary_amendment_separate": true,
     "source_scripts_executed": false,
@@ -2540,8 +2540,10 @@
     "new_source_read_credit": 0,
     "actual_browser_render_or_UI_implemented": false,
     "implicit_selection_proven": false,
-    "public_result_review_pending": true,
-    "whole16_complete": false
+    "public_result_review_pending": false,
+    "whole16_complete": false,
+    "result_accepted_PR": 578,
+    "result_accepted_merge": "e89b115ef307bf9d672f28778836e9841b63d523"
   },
   "openai6_preparation": {
     "input": {
@@ -2558,7 +2560,8 @@
     "full_content_review_pending": true,
     "new_adoptions": 0,
     "central_operations": 0,
-    "whole16_complete": false
+    "whole16_complete": false,
+    "status": "Fixed input accepted by fullLuna/max review4049 and mergedPR578; actual placement is separately evidenced"
   },
   "received_other6_254259": {
     "evaluation": "skills-3080-other6-254259-evaluation214717.json",
@@ -2571,6 +2574,51 @@
     "previous_current_queue_needs_assessment": 6,
     "source_counts": {
       "MengTo/Skills": 6
+    },
+    "new_literal_body_reads": 0,
+    "legacy_global_raw_workflow_credit": 0,
+    "new_grants": 0,
+    "new_final_decisions": 0,
+    "central_operations": 0,
+    "main_acceptance_pending": false,
+    "whole16_complete": false,
+    "main_accepted_PR": 578,
+    "main_accepted_merge": "e89b115ef307bf9d672f28778836e9841b63d523"
+  },
+  "openai6_installation": {
+    "evidence": "skills-3080-openai6-installation-evidence214717.json",
+    "actual_created": 6,
+    "current_readback_files": 36,
+    "bytes": 167248,
+    "creator": "20261026-214717-todo-3080",
+    "consumer": "20261026-214717-todo-3080",
+    "bounded_read_batches": 3,
+    "instruction_buffers": 12,
+    "instruction_bytes": 21416,
+    "fresh_discovered": 6,
+    "parse_errors": 0,
+    "discovery_metadata_total": 445,
+    "real_currentturn_explicit_decisions": 13,
+    "new_source_read_credit": 0,
+    "actual_browser_render_or_UI_implemented": false,
+    "implicit_selection_proven": false,
+    "public_result_review_pending": true,
+    "whole16_complete": false,
+    "historical44_read_evaluation_not_overwritten": true,
+    "historical_evaluation_installed_at_recording": 0,
+    "current6_adoptions_and_notices_evidenced_separately": true
+  },
+  "received_other4_260263": {
+    "evaluation": "skills-3080-other4-260263-evaluation214717.json",
+    "evaluation_sha256": "e9b7a232898cdd1b5b54b7c9f6ff6f6e3545911a759d8bb842a51520e4c02923",
+    "physical": "skills-3080-other4-260263-physical214717.json",
+    "physical_sha256": "ff9f61c6a5c441df9fa17cf07b02ea97c9076b91ab077fccf9dd744706235fd0",
+    "records": 4,
+    "whole_original_contexts": 1,
+    "whole_original_ACK_SHA_reconstruction": true,
+    "previous_current_queue_needs_assessment": 4,
+    "source_counts": {
+      "MengTo/Skills": 4
     },
     "new_literal_body_reads": 0,
     "legacy_global_raw_workflow_credit": 0,

@@ -1,0 +1,19 @@
+# 同じパッケージの4案と共通支持の受領
+
+260〜263番のHTML/data・方式選択・Three.js world・video-scrubの4案を、親が全意味・notice・共有支持の定義と限界まで読んで受領した。
+同じpackageの19blobは4つのprimaryと15の固有支持へ分かれ、各primaryは一度だけ扱う。
+支持tableは保存4・未保存11で、各案が同じ15参照を持つ60出現を新しい支持読取60件へ加算していない。
+原本文11,629バイト・160行と固定tupleは既存339件と追加34件の証拠へ結び、原chunk全体を独立した受領SHA05d92487へ復元できる形を保った。
+
+同じscroll進行と読む意味を保ち、架空seriesを実顧客の効果へ転用せず、比較用の三方式と実案件で選ぶ一方式を分ける。
+Three.jsのambient時刻とscroll状態、動画のcurrentTimeと実decoded frame、静止poster・逆戻り・零分母・resize・解放は、それぞれ必要な実受入として保持した。
+sourceのGrok3本6秒の提案は、同梱READMEの手続き生成SVGからの8秒動画という作者説明とは別で、生成・実尺・権利・codec・seekを実測した意味ではない。
+sourceのサービス名やscope外Content参照、filename置換を、このPCの新費用・APIキー・上書き・外部送信の許可へしない。
+
+root MIT1,064バイトは旧065106の伏字1行の再利用記録のまま保持する。
+個別Three.js MIT1,081バイトは子が別に読んだvendor支持のnoticeで、primaryの直接祖先ではなく、未保存moduleの版・byte適用や動画・字体・画像の条件を包括しない。
+共有REF610バイトのL2の伏字と旧共通reasonの1field未確認を保持し、8固有metadata pathの32参照を本文の伏字数へ混ぜない。
+旧3536の既読主張、scan_onlyと原method/range/maskの不明を補わず、可変の親評価snapshotの4f8から98eへの更新も原source/catalogの変更と誤認していない。
+
+新しい本文読取・許諾・採否・中央操作は0である。
+全16資料・647取得審査・428本文未取得と過去の未確認・保留を維持する。

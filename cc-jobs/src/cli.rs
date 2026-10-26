@@ -911,7 +911,8 @@ impl Context {
         // This fixed prepared review has an explicit minimal profile. The
         // injected unattended instructions mention Chrome; that generic text
         // must not widen its scope before the independent admission check.
-        let unstarted_review = quota_inventory["unstarted_registration"]["state"] == "observed";
+        let unstarted_review = quota_inventory["unstarted_registration"]["state"] == "observed"
+            || quota_inventory["initial_review"]==true;
         if retry_key.is_none() && !unstarted_review {
             job["mcp_profile"] = json!(cc_chrome::profile(
                 s(&job, "mcp_profile"),
@@ -1293,7 +1294,9 @@ impl Context {
                         || cc_job_policy::product_retry::digest(&spec) != expected
                         || !std::str::from_utf8(&bytes).unwrap()
                             .contains(&format!("\n依頼:\n{spec_text}"))
-                        || (quota_choice && if job["unstarted_review"].is_object() {
+                        || (quota_choice && if job["initial_review"].is_object() {
+                            job["initial_review"]["spec_sha256"] != expected
+                        } else if job["unstarted_review"].is_object() {
                             job["unstarted_review"]["spec_sha256"] != expected
                         } else { job["quota_recovery"]["spec_sha256"] != expected })
                     {

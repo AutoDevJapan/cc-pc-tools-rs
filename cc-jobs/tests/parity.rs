@@ -11,6 +11,8 @@ mod finished_work_handoff;
 mod finite_owner_wait_repair;
 #[path = "support/quota_recovery.rs"]
 mod quota_recovery_tests;
+#[path = "support/initial_review.rs"]
+mod initial_review_tests;
 #[path = "support/pretool_failure.rs"]
 mod pretool_failure;
 #[path = "support/no_action.rs"]
@@ -6435,6 +6437,7 @@ fn saved_discord_settings_are_given_only_to_the_notifier_and_inherited_values_wi
     );
 }
 struct Fake {
+    initial_review_workspace: Mutex<Value>,
     quota_recovery_samples: AtomicUsize,
     quota_recovery_inventory: Mutex<Value>,
     epoch_base: Mutex<Option<f64>>,
@@ -6493,6 +6496,7 @@ struct Fake {
 impl Fake {
     fn new() -> Self {
         Self {
+            initial_review_workspace: Mutex::new(Value::Null),
             quota_recovery_samples: AtomicUsize::new(0),
             quota_recovery_inventory: Mutex::new(Value::Null),
             epoch_base: Mutex::new(None),
@@ -6603,6 +6607,9 @@ impl Read for BadReader {
     }
 }
 impl Runtime for Fake {
+    fn initial_review_inventory(&self)->Value {self.quota_recovery_inventory()}
+    fn initial_review_workspace(&self,_row:&Value)->Value {self.initial_review_workspace.lock().unwrap().clone()}
+    fn initial_review_spec(&self,row:&Value)->io::Result<Vec<u8>> {fs::read(s(row,"spec"))}
     fn quota_recovery_inventory(&self) -> Value {
         self.quota_recovery_samples.fetch_add(1,Ordering::Relaxed);
         self.quota_recovery_inventory.lock().unwrap().clone()

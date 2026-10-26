@@ -16,6 +16,11 @@ pub(crate) const BIRTH_FALLBACK_MARGIN: u64 = 10_000_000;
 pub(crate) const BIRTH_FALLBACK_MAX_SPAN: u64 = BIRTH_FALLBACK_MARGIN * 2;
 
 pub trait Backend {
+    fn initial_review_inventory(&mut self) -> Result<Value> { Ok(Value::Null) }
+    fn initial_review_workspace(&mut self, _repo: &str, _row: &Value) -> Result<Value> { Ok(Value::Null) }
+    fn initial_review_spec(&mut self, row: &Value) -> Result<Vec<u8>> {
+        cc_job_policy::initial_review::read_spec(Path::new(s(&row["spec"]))).map_err(Into::into)
+    }
     fn unstarted_review_inventory(&mut self) -> Result<Value> {Ok(Value::Null)}
     fn unstarted_review_registration(&mut self) -> Result<Value> { Ok(Value::Null) }
     fn unstarted_review_workspace(&mut self, _repo: &str, _item: &Value) -> Result<bool> { Ok(false) }
@@ -316,11 +321,18 @@ pub struct RealBackend {
     pub config_path: PathBuf,
 }
 impl RealBackend {
-    fn collected_quota_inventory(&mut self, unstarted: bool) -> Result<Value> {
+    fn collected_quota_inventory(&mut self, unstarted: bool, preflight: bool) -> Result<Value> {
         let mut inventory=json!({});
         let Some(appdata)=std::env::var_os("APPDATA") else { return Ok(inventory); };
         let package=PathBuf::from(appdata).join("npm/node_modules/@bitkyc08/opencodex");
         for provider in ["openai","anthropic"] {
+            if preflight {
+                let command=invocation(&[package.join("node_modules/bun/bin/bun.exe").to_str().ok_or(Error("InputRejected"))?,
+                    package.join("bin/ocx.mjs").to_str().ok_or(Error("InputRejected"))?,"account","list",provider,"--json"],Some(15));
+                let raw=self.runner.run(&command).ok().filter(|r|r.code==0 && r.stdout.len()<=2_000_000)
+                    .and_then(|r|serde_json::from_str::<Value>(&r.stdout).ok()).unwrap_or(Value::Null);
+                if !cc_job_policy::initial_review::oauth_only(&raw) {continue;}
+            }
             let mut command=invocation(&[
                 package.join("node_modules/bun/bin/bun.exe").to_str().ok_or(Error("InputRejected"))?,
                 package.join("bin/ocx.mjs").to_str().ok_or(Error("InputRejected"))?,
@@ -328,6 +340,7 @@ impl RealBackend {
             ],Some(15));command.git_prompt_off=true;
             let raw=self.runner.run(&command).ok().filter(|r|r.code==0 && r.stdout.len()<=2_000_000)
                 .and_then(|r|serde_json::from_str::<Value>(&r.stdout).ok()).unwrap_or(Value::Null);
+            if preflight && !cc_job_policy::initial_review::oauth_only(&raw) {continue;}
             inventory[provider]=cc_job_policy::quota_recovery::aggregate(&raw,provider,self.clock());
             if unstarted && provider=="openai" {
                 command.args=vec![package.join("bin/ocx.mjs").to_string_lossy().into_owned(),"config".into(),"get".into(),"codexAccountNamespaces".into(),"--json".into()];
@@ -542,7 +555,13 @@ impl RealBackend {
     }
 }
 impl Backend for RealBackend {
-    fn unstarted_review_inventory(&mut self) -> Result<Value> {self.collected_quota_inventory(true)}
+    fn initial_review_inventory(&mut self) -> Result<Value> {self.collected_quota_inventory(true,true)}
+    fn initial_review_workspace(&mut self, repo: &str, row: &Value) -> Result<Value> {
+        self.guard_workspace_path(repo)?;
+        self.guard_workspace_path(s(&row["scheduler"]["worktree"]))?;
+        Ok(cc_job_policy::initial_review::workspace(row,repo).unwrap_or(Value::Null))
+    }
+    fn unstarted_review_inventory(&mut self) -> Result<Value> {self.collected_quota_inventory(true,false)}
     fn unstarted_review_registration(&mut self) -> Result<Value> {
         let producer = PathBuf::from(cc_job_policy::unstarted_review_state::PRODUCER);
         self.guard_workspace_path(producer.to_str().ok_or(Error("InputRejected"))?)?;
@@ -572,7 +591,7 @@ impl Backend for RealBackend {
             && heads==[cc_job_policy::unstarted_review_state::CHECKOUT_HEAD,cc_job_policy::unstarted_review_state::REVIEW_TREE])
     }
     fn quota_recovery_inventory(&mut self) -> Result<Value> {
-        self.collected_quota_inventory(false)
+        self.collected_quota_inventory(false,false)
     }
     fn action_progress(
         &mut self,

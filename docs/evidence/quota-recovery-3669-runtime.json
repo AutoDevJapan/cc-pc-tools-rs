@@ -1,6 +1,6 @@
 {
   "todo": 3669,
-  "status": "implementation_deployed_live_automatic_recovery_not_verified",
+  "status": "implementation_deployed_postrun_recovery_capsule_observed_native_acceptance_pending",
   "implementation": {
     "pr": "https://github.com/AutoDevJapan/cc-pc-tools-rs/pull/454",
     "reviewed_head": "a35c7aaba7ad47dc8d4d14f776d411c8ee84eb85",
@@ -98,7 +98,7 @@
     "old_runtime_backups_reason": "Rollback for the two runtime files; no global process termination or unverified removal."
   },
   "remaining_acceptance": [
-    "Observe a genuine eligible same-scope quota transition through normal preparation, CLI, admission and native execution. Existing accepted owner-request reviews are separate evidence and are not relabelled as a policy recovery."
+    "Receive and qualify the already-recorded scheduler/CLI/admission/native and runtime distribution evidence for the observed real postrun3815 recovery from producer3939. Direct native/prompt/spec reads remain unverified by guard and were not attempted; no substitute owner-request or startup proof is accepted."
   ],
   "runtime_successor": {
     "pr": "https://github.com/AutoDevJapan/cc-pc-tools-rs/pull/516",
@@ -126,6 +126,70 @@
     "unread_or_out_of_scope_records_inferred": false,
     "owner_request_or_startup_switch_used_as_postrun_proof": false,
     "new_model_execution_or_build_or_deployment": false
+  },
+  "postrun_recovery_observed_20261026": {
+    "observed_at": "2026-10-26T18:16:08+09:00",
+    "source": "normal installed jobs status metadata for the exact public-project lineage",
+    "todo": 3815,
+    "source_job": "20261026-163757-todo-3815",
+    "source_model": "grok-4.7",
+    "source_saved_failure_kind": "transient",
+    "source_exact_balance_exhaustion_marker": true,
+    "source_error_or_account_identifiers_retained": false,
+    "source_record_modified": false,
+    "source_spec_sha_backfilled": false,
+    "source_worker_processes_currently_absent": true,
+    "process_identity_unknown": false,
+    "target_job": "20261026-174913-todo-3815",
+    "target_model": "gpt-6-astra",
+    "target_model_origin": "policy",
+    "target_effort": "max",
+    "target_task_type": "review",
+    "target_status": "succeeded",
+    "target_exit_code": 0,
+    "target_steps": 24,
+    "target_finished_at": "2026-10-26T17:57:15+09:00",
+    "same_original_spec_sha256": "e337605151440b6c40ba7116782a47f08e9367bc3e494a8ae57d43bb097984a4",
+    "same_worktree_parent_and_permissions": true,
+    "author_model": "gpt-6.1-sol",
+    "author_exclusion_preserved": true,
+    "source_digest_independently_reproduced": "fb22cbe3f9b2e01a41a274927be3f2608b6cb9c275c7c12cb227a8a3d03bdacd",
+    "scope_digest_independently_reproduced": "e6c8dd93a7e5e92c3413cf56ca748a7c006104ac9935e5057a67a535c11bff93",
+    "digest_serialization": "serde_json preserve_order; an initial sorted-key comparison was invalid and corrected before accepting the match",
+    "capsule_version": 1,
+    "capsule_legacy_unreceived_source": true,
+    "source_planned_generation": 1,
+    "capsule_prepared_generation": 0,
+    "target_received_generation": 1,
+    "source_generation_rewritten": false,
+    "openai_health_verified_available": true,
+    "anthropic_health_verified_exhausted": true,
+    "recorded_health_age_at_target_start_seconds": 44.51411771774292,
+    "accepted_followups": [
+      {
+        "pr": 544,
+        "head": "7293dee6aa1aaa8777f1c9756f180cd1d0347312",
+        "merge": "a46543ecc2d850a2ea1c3f39626f8408002e5cfb"
+      },
+      {
+        "pr": 547,
+        "head": "64470087dfe85441107fdb3a8bfbb928963cb1f2",
+        "merge": "5c97b72ecb4073f081d972fa3105ff009bf455ab",
+        "same_lineage_as_pr454": true,
+        "review_receipt_url": "https://github.com/AutoDevJapan/cc-pc-tools-rs/pull/547#issuecomment-6411915209",
+        "reported_review_model": "Gemini3.8Flash",
+        "reported_review_effort": "high",
+        "reported_must_count": 0,
+        "reported_original_response_sha256": "8bdc1e8563a406460734d1e1e23e158e98ca2294020ea1c8e491996938e91925"
+      }
+    ],
+    "followup_pr_checks_observed": "each PR: 8 SUCCESS, 1 NEUTRAL, 1 SKIPPED; no pending/failure",
+    "old_native_directory_prompt_and_spec_guard": "unverified; content, attributes and alternate paths were not inspected",
+    "native_direct_model_effort_input_correspondence_verified": false,
+    "upstream_fast_or_max_effective_amount_verified": false,
+    "existing_producer_results_requested_from": 3939,
+    "new_model_execution_or_build_or_deployment": false,
+    "full_runtime_acceptance_complete": false
   },
   "parent_skills_complete": false,
   "guard_settings_queue_accounts_credentials_changed": false

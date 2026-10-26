@@ -86,3 +86,14 @@ safe-delete/3757、3939、元3628/3796/3815/3816のソース/状態/原scopeは�
 59関連Windowsテスト/0skipとClippy成功（legacy-pid-related-tests.log、legacy-pid-clippy.log）。
 次はこの最小差分の固定別モデルreview、最新source release/149入力配布票/Go pin、同HEAD CI、
 通常merge/CAS配布/既存1h task実発火/実3960回収/自分のdebug回収。現用更新/実回収はまだ0。
+21時台の実機確認: 最新Rust source5c9fce950d30c682e5f36fca3506af72aeb352a5から正常release終了0。
+単一リンクのbyte一致delivery SHA11cd5c8bbe855065ea27788543a79a70b4d63827f18e7bed918856e3526e2bd7、
+149入力manifest SHA933aaed6f7a1c4e108c5e2d75c81b9d9b0c534469db6ee9594282350b1b696dc。
+build jobはcurrent20261026-205513-todo-3942。Go cleanup専用pinを更新、race/vet成功。
+正規AdminBroker request20261026-121506-12b138121f0305afb340ecde52c384e1の無変更dry-runは38秒、
+512行/候補2件/論理74,051,309B/実削除0、既不在478、境界不明保持32（容量未測定）。
+実空き変化は別処理を含むため回収実績に数えない。原broker結果は保持し、匿名rawを
+証拠dir/actual-admin-dry-run-5c9fce95.jsonへ保存。先行dry-runの同名キャプチャは上書きされたため、
+旧4da候補の原記録には元AdminBroker結果を使い、今回のrawを旧実績へ流用しない。
+別モデルreview3967は固定35163d70→5c9fce95の3対象を通常schedulerで受付済み、起動待ち。
+実モデルと結果を受領しMust0/最終pinの差分照合/同head CIを確認後、通常merge/現用配布/実発火へ進む。

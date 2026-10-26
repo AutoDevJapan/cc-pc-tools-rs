@@ -17,12 +17,12 @@ import (
 )
 
 const completedRoot = "D:/CC/Work/unattended-operations-20261013-wt/todo-3942-work"
-const completedHead = "4da310a3a87a4a6485e228619f2ea3e62bcb988e"
-const completedBuildJob = "20261026-174601-todo-3942"
-const completedManifestPath = "C:/Users/makhmeto/AppData/Local/Temp/codex-owned-5249eb2a5e0382b871074f454633ec84/build-manifest-4da310a3a87a4a6485e228619f2ea3e62bcb988e.private.json"
-const completedManifestSHA = "5c9dd7cbb245f12655d1714898c05bb180c1f45c57d645c18f3cc0cad1751756"
+const completedHead = "5c9fce950d30c682e5f36fca3506af72aeb352a5"
+const completedBuildJob = "20261026-205513-todo-3942"
+const completedManifestPath = "C:/Users/makhmeto/AppData/Local/Temp/codex-owned-5249eb2a5e0382b871074f454633ec84/build-manifest-5c9fce950d30c682e5f36fca3506af72aeb352a5.private.json"
+const completedManifestSHA = "933aaed6f7a1c4e108c5e2d75c81b9d9b0c534469db6ee9594282350b1b696dc"
 
-var completedLeaf = leaf{"cleanup-8h", completedRoot + "/target/release/cleanup-8h-delivery-" + completedHead + ".exe", "D:/CC/Tools/cleanup-8h/cleanup-8h.exe", leaves[1].New, "2424d6e21755b1f44e831a143c64ed530c030ae71df907797264b3c9ac387b8f"}
+var completedLeaf = leaf{"cleanup-8h", completedRoot + "/target/release/cleanup-8h-delivery-" + completedHead + ".exe", "D:/CC/Tools/cleanup-8h/cleanup-8h.exe", leaves[1].New, "11cd5c8bbe855065ea27788543a79a70b4d63827f18e7bed918856e3526e2bd7"}
 var completedInputs = []string{"Cargo.toml", "Cargo.lock", "cleanup-8h", "cc-jobs", "cc-job-policy", "cc-chrome", "cc-task-title", "cc-redact"}
 
 type completedManifest struct {

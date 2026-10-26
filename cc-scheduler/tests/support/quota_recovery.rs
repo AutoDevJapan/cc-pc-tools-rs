@@ -1,5 +1,22 @@
 use super::*;
 
+#[test]
+fn grok_quota_selects_a_healthy_independent_model_for_existing_subwork() {
+    let (mut f, mut sub) = fixture();
+    f.e.backend.records[1]["model"] = json!("grok-4.7");
+    sub.db["items"][1]["model"] = json!("grok-4.7");
+    write_json(&f.e.todo_path, &sub.db, 1).unwrap();
+    let prepared = f.e.prepare(&sub.db["items"][1], sub.repo.to_str().unwrap()).unwrap().unwrap();
+    let selection = &prepared["scheduler"]["selection"];
+    assert_eq!(selection["model"], "gpt-6-astra");
+    assert_eq!(selection["review_excluded_models"], json!(["gpt-6.1-sol"]));
+    assert!(selection["quota_recovery"].is_object());
+    assert!(prepared["scheduler"]["resume_session"].is_null());
+    assert_eq!(prepared["subwork"], sub.db["items"][1]["subwork"]);
+    assert_eq!(prepared["spec"], sub.db["items"][1]["spec"]);
+    assert_eq!(f.e.backend.records[1]["model"], "grok-4.7");
+}
+
 pub(super) fn inventory(at: f64) -> Value {
     json!({"at":at,"anthropic":{"at":at,"verified":true,"exhausted":true,"available":false},
         "openai":{"at":at,"verified":true,"exhausted":false,"available":true}})

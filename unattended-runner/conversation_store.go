@@ -517,6 +517,9 @@ func (r *Runner) conversationAsk(ctx context.Context, input ConversationAskInput
 			return zero, errors.New("conversation reserved task is held")
 		}
 		args := []string{"recovery-ask", "--request-id", q.SenderID, "--todo-id", fmt.Sprint(q.Todo), "--origin-thread", q.OriginThread, "--body-file", q.BodyFile, "--decision-file", q.DecisionFile}
+		if q.Actor != nil && q.RequestID == fixedConversationOrigin.RequestID {
+			args = append(args, "--conversation-source-request", q.RequestID)
+		}
 		if q.Title != "" {
 			args = append(args, "--title", q.Title)
 		}
@@ -528,6 +531,9 @@ func (r *Runner) conversationAsk(ctx context.Context, input ConversationAskInput
 		}
 		raw, callErr := r.Run(ctx, conversationSender, args...)
 		if callErr != nil {
+			if strings.HasPrefix(callErr.Error(), "conversation sender ") {
+				return zero, callErr
+			}
 			return zero, errors.New("conversation send pending; retry the same request")
 		}
 		var report struct {

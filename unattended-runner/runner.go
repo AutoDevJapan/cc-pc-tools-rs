@@ -685,6 +685,16 @@ func runCommandBounded(ctx context.Context, budget time.Duration, path string, a
 	command.Stderr = &stderr
 	err := command.Run()
 	if err != nil {
+		if path == conversationSender && len(args) > 0 && args[0] == "recovery-ask" {
+			if child.Err() != nil {
+				return "", errors.New("conversation sender deadline")
+			}
+			if !stdout.Overflow {
+				if failure := conversationSenderFailure(stdout.String()); failure != nil {
+					return "", failure
+				}
+			}
+		}
 		return "", errors.New("command unavailable or timed out")
 	}
 	if stdout.Overflow {
@@ -916,6 +926,9 @@ func (r *Runner) recheckOriginBlocked(ctx context.Context, health *Health) {
 }
 
 func main() {
+	if len(os.Args) > 1 && os.Args[1] == "--check-conversation-origin-reference" {
+		os.Exit(conversationOriginReferenceCLI(os.Args[2:], os.Stdout))
+	}
 	if len(os.Args) > 1 && os.Args[1] == "--register-program-question-replay" {
 		os.Exit(programReplayRegisterCLI(os.Args[2:], os.Stdout))
 	}

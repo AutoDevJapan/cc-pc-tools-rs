@@ -401,9 +401,15 @@ fn run(command: Commands) -> Result<()> {
             };
             println!("{result}");
         }
-        Commands::RecoveryAsk(args) => {
-            println!("{}", cc_ask::recovery_messages::ask(&mut ctx, &args)?)
-        }
+        Commands::RecoveryAsk(args) => match cc_ask::recovery_messages::ask(&mut ctx, &args) {
+            Ok(result) => println!("{result}"),
+            Err(error) => {
+                println!("{}", cc_ask::recovery_messages::ask_failure_report(&error));
+                return Err(
+                    "recovery question delivery is unverified; retain the same request".into(),
+                );
+            }
+        },
         Commands::RecoveryRepairOrigin(args) => {
             println!(
                 "{}",

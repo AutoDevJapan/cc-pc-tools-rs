@@ -28,6 +28,8 @@ use std::{
 const API: &str = "https://discord.com/api/v10";
 mod clarification;
 mod program_question;
+mod source_reference;
+pub use source_reference::failure_report as ask_failure_report;
 const LEDGER: &str = "recovery-messages.json";
 const LOCK: &str = "recovery-messages.lock";
 const DOMAIN: &str = "new-owner-recovery-messages";
@@ -85,6 +87,9 @@ pub struct AskArgs {
     /// Read-only native Go drawing evidence for this exact question only.
     #[arg(long)]
     pub program_evidence: Option<PathBuf>,
+    /// Internal normal-conversation source qualification; never a write target.
+    #[arg(long, hide = true)]
+    pub conversation_source_request: Option<String>,
 }
 
 /// Rebind only a not-yet-sent ask to an exact previously verified progress post.
@@ -2680,7 +2685,7 @@ pub fn log_clarification(ctx: &mut Context, args: &LogArgs, manifest: &Path) -> 
     let binding = clarification::Binding::read(manifest)?;
     let (request, _) = prepare_clarification(ctx, args)?;
     binding.check_input(&request)?;
-    execute_inner(ctx, Some(request), None, &[], Some(&binding))
+    execute_inner(ctx, Some(request), None, &[], Some(&binding), None)
 }
 
 fn prepare_clarification(ctx: &mut Context, args: &LogArgs) -> Result<(Request, String)> {
@@ -2771,7 +2776,14 @@ pub fn ask(ctx: &mut Context, args: &AskArgs) -> Result<Value> {
             images
         };
     incoming.fingerprint = incoming.fingerprint()?;
-    execute(ctx, incoming, &images)
+    execute_inner(
+        ctx,
+        Some(incoming),
+        None,
+        &images,
+        None,
+        args.conversation_source_request.as_deref(),
+    )
 }
 
 // A durable question:0 effect grants GET recovery only. Before its first
@@ -3045,7 +3057,7 @@ pub fn repair_origin(ctx: &mut Context, args: &RepairOriginArgs) -> Result<Value
 }
 
 fn execute(ctx: &mut Context, incoming: Request, images: &[Image]) -> Result<Value> {
-    execute_inner(ctx, Some(incoming), None, images, None)
+    execute_inner(ctx, Some(incoming), None, images, None, None)
 }
 
 // --notify requests attention, but a report alone never requires owner action.
@@ -3113,7 +3125,7 @@ fn execute_saved(
     todo_id: u64,
     images: &[Image],
 ) -> Result<Value> {
-    execute_inner(ctx, None, Some((request_id, todo_id)), images, None)
+    execute_inner(ctx, None, Some((request_id, todo_id)), images, None, None)
 }
 
 fn execute_inner(
@@ -3122,6 +3134,7 @@ fn execute_inner(
     saved: Option<(&str, u64)>,
     images: &[Image],
     clarification: Option<&clarification::Binding>,
+    source_request: Option<&str>,
 ) -> Result<Value> {
     let home = ctx.here.clone();
     ensure_storage(&home)?;
@@ -3191,7 +3204,7 @@ fn execute_inner(
     let request = ledger.effective_request(&reserved)?;
     // Use the canonical intent's retained binding, never the retry's optional
     // flag. Normal wait/stop updates share this lock through delivery.
-    let _task_control = if request.program_evidence.is_some() {
+    let _task_control = if request.program_evidence.is_some() || source_request.is_some() {
         Some(program_question::task_lock(ctx)?)
     } else {
         None
@@ -3200,7 +3213,13 @@ fn execute_inner(
         Some(evidence) => program_question::revalidate(ctx, &request, evidence).is_ok(),
         None => true,
     };
+    let reference = source_request
+        .map(|normal| source_reference::qualify(ctx, &request, normal))
+        .transpose()?;
     let mut api = RecoveryApi::bind(ctx, &mut ledger, &request)?;
+    if let Some(proof) = &reference {
+        source_reference::verify_source(&mut api, proof)?;
+    }
     // Historical effects can still be recovered by authenticated GET. A
     // failed current qualification must not reserve or POST a new phase.
     api.allow_new_posts = allow_new_posts;
@@ -3268,7 +3287,9 @@ fn execute_inner(
             }
         }
         Kind::Ask { origin_thread, .. } => {
-            api.assert_origin(&ledger, origin_thread)?;
+            if reference.is_none() {
+                api.assert_origin(&ledger, origin_thread)?;
+            }
             let first = format!(
                 "{}\n\n元の投稿: <{}>",
                 text[0],
@@ -3379,29 +3400,31 @@ fn execute_inner(
                 links,
                 &[],
             )?;
-            let origin_links = format!(
-                "新しい質問: <{}>\n進捗: <{}>",
-                request.destination.url(&question.thread_id),
-                request.destination.url(&progress.thread_id)
-            );
-            ensure(
-                &mut api,
-                &mut ledger,
-                &home,
-                &request,
-                "origin-links",
-                effect(
+            if reference.is_none() {
+                let origin_links = format!(
+                    "新しい質問: <{}>\n進捗: <{}>",
+                    request.destination.url(&question.thread_id),
+                    request.destination.url(&progress.thread_id)
+                );
+                ensure(
+                    &mut api,
+                    &mut ledger,
+                    &home,
                     &request,
                     "origin-links",
-                    Target::Thread {
-                        thread: origin_thread.clone(),
-                    },
-                    &origin_links,
-                    false,
-                    false,
-                )?,
-                &[],
-            )?;
+                    effect(
+                        &request,
+                        "origin-links",
+                        Target::Thread {
+                            thread: origin_thread.clone(),
+                        },
+                        &origin_links,
+                        false,
+                        false,
+                    )?,
+                    &[],
+                )?;
+            }
         }
     }
     if !ledger.complete(&request.request_id) {
@@ -3412,7 +3435,11 @@ fn execute_inner(
             },
         )?;
     }
-    Ok(report(&ledger, &request, reused))
+    let mut result = report(&ledger, &request, reused);
+    if reference.is_some() {
+        result["origin_reference_only"] = json!(true);
+    }
+    Ok(result)
 }
 
 // A semantic image conflict is terminal for this new input, including when the
@@ -3845,6 +3872,8 @@ mod tests {
         close_reject_patch: bool,
         close_no_effect: bool,
         bot_override: Option<String>,
+        source_reference_proof: Option<Value>,
+        source_reference_checks: usize,
     }
 
     struct Mock {
@@ -3898,7 +3927,25 @@ mod tests {
     }
 
     impl Effects for Mock {
-        fn run(&mut self, _: &[String], _: u64) -> Result<Output> {
+        fn run(&mut self, args: &[String], _: u64) -> Result<Output> {
+            if args.len() == 4
+                && args[0] == "D:/CC/Tools/discord-ask/unattended-runner.exe"
+                && args[1] == "--check-conversation-origin-reference"
+                && args[2] == "--request-id"
+                && args[3]
+                    == "normal-ask-9620ba9f12adf45e1a01ee67010dafe616750231a1625ffcca0c7ed470a6a862"
+            {
+                let mut state = self.server.lock().unwrap();
+                state.source_reference_checks += 1;
+                if let Some(proof) = &state.source_reference_proof {
+                    return Ok(Output {
+                        code: 0,
+                        stdout: proof.to_string(),
+                        stderr: String::new(),
+                    });
+                }
+                return Err("current source qualification refused".into());
+            }
             self.server.lock().unwrap().forbidden_effects += 1;
             Err("no subprocess is part of recovery messages".into())
         }
@@ -4203,6 +4250,7 @@ mod tests {
                 attach: vec![],
                 expected_image_sha256: vec![],
                 program_evidence: None,
+                conversation_source_request: None,
             }
         }
         fn unchanged(&self) {
@@ -4265,6 +4313,9 @@ mod tests {
 
     mod decision_lookup_tests {
         include!("recovery_messages/decision_lookup_tests.rs");
+    }
+    mod source_reference_tests {
+        include!("recovery_messages/source_reference_tests.rs");
     }
 
     fn clarification_fixture(f: &Fixture, ctx: &mut Context) -> (LogArgs, PathBuf, Value) {

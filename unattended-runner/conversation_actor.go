@@ -388,6 +388,18 @@ func conversationFailureStage(err error) string {
 		return "deadline"
 	}
 	switch err.Error() {
+	case "conversation sender origin_scope":
+		return "sender_origin_scope"
+	case "conversation sender source_scope":
+		return "sender_source_scope"
+	case "conversation sender busy":
+		return "sender_busy"
+	case "conversation sender network":
+		return "sender_network"
+	case "conversation sender rate_limited":
+		return "sender_rate_limited"
+	case "conversation sender deadline":
+		return "sender_deadline"
 	case "conversation actor unverified", "conversation actor differs", "conversation actor receipt differs", "conversation actor held":
 		return "actor_scope"
 	case "conversation task scope unavailable", "conversation task scope unverified", "conversation original project differs":

@@ -1,0 +1,108 @@
+{
+  "sources": [
+    {
+      "repository": "cloudflare/security-audit-skill",
+      "commit": "c1c8a8c1471069fb0e188eeaff69b8e8db6564a8",
+      "path": "skills/security-audit/SKILL.md",
+      "sha256": "5e3e96a1e438d8f35fef0a1e38f02d4f00e2bdf910401b7dfe00e6779c6dac85",
+      "git_blob": "92178dad304d3f63e37582a297026a7874e12c62",
+      "bytes": 22026,
+      "url": "https://github.com/cloudflare/security-audit-skill/blob/c1c8a8c1471069fb0e188eeaff69b8e8db6564a8/skills/security-audit/SKILL.md",
+      "original_reader_job": "20261026-214717-todo-3080",
+      "masked_lines": 0,
+      "acquisition": "already-acquired",
+      "license": {
+        "path": "LICENSE",
+        "sha256": "e598e694aa506650c7192d5ea3be0e50aca0d356ea00551c53429f0b01eb6391",
+        "scope": "Only selected authored workflow text and this fixed MIT notice; third-party target data/code/assets/services and unreviewed tools excluded",
+        "accepted": true
+      }
+    },
+    {
+      "repository": "cloudflare/security-audit-skill",
+      "commit": "c1c8a8c1471069fb0e188eeaff69b8e8db6564a8",
+      "path": "skills/security-audit/HUNTING.md",
+      "sha256": "71c121decea1322c47c718f6e110f1a892980bb4266bd7ac55ef043a213ade09",
+      "git_blob": "377d4dcfbe88a049379448cd7892717185401597",
+      "bytes": 22446,
+      "url": "https://github.com/cloudflare/security-audit-skill/blob/c1c8a8c1471069fb0e188eeaff69b8e8db6564a8/skills/security-audit/HUNTING.md",
+      "original_reader_job": "20261026-214717-todo-3080",
+      "masked_lines": 0,
+      "acquisition": "already-acquired",
+      "license": {
+        "path": "LICENSE",
+        "sha256": "e598e694aa506650c7192d5ea3be0e50aca0d356ea00551c53429f0b01eb6391",
+        "scope": "Only selected authored workflow text and this fixed MIT notice; third-party target data/code/assets/services and unreviewed tools excluded",
+        "accepted": true
+      }
+    },
+    {
+      "repository": "cloudflare/security-audit-skill",
+      "commit": "c1c8a8c1471069fb0e188eeaff69b8e8db6564a8",
+      "path": "skills/security-audit/RECONNAISSANCE.md",
+      "sha256": "02ca887aca84de8ae137f1891bd2f0a54f28d3fa6da92a27f54734382b3381a2",
+      "git_blob": "1a170a93ab76b93dc5ac268a5b690beb423a8aa9",
+      "bytes": 15902,
+      "url": "https://github.com/cloudflare/security-audit-skill/blob/c1c8a8c1471069fb0e188eeaff69b8e8db6564a8/skills/security-audit/RECONNAISSANCE.md",
+      "original_reader_job": "20261026-214717-todo-3080",
+      "masked_lines": 0,
+      "acquisition": "already-acquired",
+      "license": {
+        "path": "LICENSE",
+        "sha256": "e598e694aa506650c7192d5ea3be0e50aca0d356ea00551c53429f0b01eb6391",
+        "scope": "Only selected authored workflow text and this fixed MIT notice; third-party target data/code/assets/services and unreviewed tools excluded",
+        "accepted": true
+      }
+    },
+    {
+      "repository": "cloudflare/security-audit-skill",
+      "commit": "c1c8a8c1471069fb0e188eeaff69b8e8db6564a8",
+      "path": "skills/security-audit/VALIDATION-AND-REPORTING.md",
+      "sha256": "b892470cb89bb31f33403e050d4bdfbe2cdaef940ade1496fa65e32b2e129449",
+      "git_blob": "5e200d7387e665e53e0e4190fa4a5814c334c507",
+      "bytes": 17843,
+      "url": "https://github.com/cloudflare/security-audit-skill/blob/c1c8a8c1471069fb0e188eeaff69b8e8db6564a8/skills/security-audit/VALIDATION-AND-REPORTING.md",
+      "original_reader_job": "20261026-214717-todo-3080",
+      "masked_lines": 0,
+      "acquisition": "already-acquired",
+      "license": {
+        "path": "LICENSE",
+        "sha256": "e598e694aa506650c7192d5ea3be0e50aca0d356ea00551c53429f0b01eb6391",
+        "scope": "Only selected authored workflow text and this fixed MIT notice; third-party target data/code/assets/services and unreviewed tools excluded",
+        "accepted": true
+      }
+    }
+  ],
+  "license": {
+    "name": "MIT",
+    "path": "LICENSE",
+    "sha256": "e598e694aa506650c7192d5ea3be0e50aca0d356ea00551c53429f0b01eb6391",
+    "bytes": 1078,
+    "copyright": "2025-2026 Cloudflare, Inc."
+  },
+  "tree_sha256": "c37547841bcb1429eb2243535f9d4438b1bd4f9b387d00d2476469869690d3bc",
+  "tree_entries": 24,
+  "truncated": false,
+  "only_applicable_notice": "LICENSE",
+  "originals_are_source_records_not_adopted_instructions": true,
+  "changed_for_owner": "Focused coverage bookkeeping; no automatic fullaudit or subjobs, forced files, invocation cap or owner PC task; source claimed validators/schema/companion code not included",
+  "nearby_metadata_only": [
+    "security-review",
+    "bounded-code-review-prompt",
+    "validate-consume-same-bytes"
+  ],
+  "distinction": "Tracks audit units, prior evidence/changed conditions and separate coverage states, rather than general vulnerability patterns or a single PR review",
+  "unknown_central_body_not_compared": true,
+  "parent_core_and_three_chapters_literal_read": true,
+  "primary_lines": 193,
+  "support_lines": [
+    252,
+    157,
+    187
+  ],
+  "notice_lines": 22,
+  "masked_lines": 0,
+  "mask0_not_secret_absence_proof": true,
+  "new_central_files": 0,
+  "new_final_dispositions": 0
+}

@@ -132,6 +132,11 @@
       "file": "skills-3080-other24-214237-evaluation214717.json",
       "sha256": "411e44b7f9d7d4dc4d36313d64d99554d3b9ba1308b8c0d683e0dc550cf5a91f",
       "rows": 24
+    },
+    {
+      "file": "skills-3080-other12-238249-evaluation214717.json",
+      "sha256": "6a4f3fc73a22ab22197e19ec9b655a3f7e554d9b7f3a78909f1ceacdb0f1bdb0",
+      "rows": 12
     }
   ],
   "adoption_ledger": {

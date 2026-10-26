@@ -1,0 +1,86 @@
+{
+  "todo": 3080,
+  "actual_author": "20261026-214717-todo-3080",
+  "records": [
+    {
+      "name": "marquee-loop",
+      "inventory_id": "github:4824331027a63940d86036fafb9930bf3f2ff45fba23402090cbcfd3d9d0eaef",
+      "inventory_unit": "github_skill_entry",
+      "repo": "MengTo/Skills",
+      "commit": "398cd41c86ba42fbb30e944ae507f463648f08b7",
+      "path": "agent-skills/web-design/marquee-loop/SKILL.md",
+      "sha256": "53f705e5f245f414d4e88b88e5f997b3201d8f782d407a2f2b5794e7b2aea8ed",
+      "git_blob": "55843c8b5600acd6f527f40676acab3fa072b094",
+      "bytes": 818,
+      "actual_parent_reader": "20261026-214717-todo-3080",
+      "current_read": "raw full/mask0, selected exact buffer verified; secret absence not proven",
+      "previous3535_read_profiles_not_relabelled": true,
+      "source_execution": 0
+    },
+    {
+      "name": "masked-reveal",
+      "inventory_id": "github:dd274bda8665432ad11aaef6e5ea8fd5308cfa8b7ae2d1111d44b693f9248f8d",
+      "inventory_unit": "github_skill_entry",
+      "repo": "MengTo/Skills",
+      "commit": "398cd41c86ba42fbb30e944ae507f463648f08b7",
+      "path": "agent-skills/web-design/masked-reveal/SKILL.md",
+      "sha256": "a3e4fb96f6092ac382530db24fdd15da559e959c5b7e02d0503918c1358dcf03",
+      "git_blob": "b5e7cb70462f9fcea2b2fbc45760b896785314de",
+      "bytes": 3959,
+      "actual_parent_reader": "20261026-214717-todo-3080",
+      "current_read": "raw full/mask0, selected exact buffer verified; secret absence not proven",
+      "previous3535_read_profiles_not_relabelled": true,
+      "source_execution": 0
+    },
+    {
+      "name": "gooey-blob-system",
+      "inventory_id": "github:8cf19f6fea1a18266d92303a84e52cf30b3a97ce1918c425b9e9aaff01966b8b",
+      "inventory_unit": "github_skill_entry",
+      "repo": "MengTo/Skills",
+      "commit": "398cd41c86ba42fbb30e944ae507f463648f08b7",
+      "path": "agent-skills/web-design/gooey-blob-system/SKILL.md",
+      "sha256": "48cef691946621cb90b0891a19b9bf9076fddfe54961847f78223515475894bd",
+      "git_blob": "2ade4f58afd81bb00c55a62d8c1144788b5b5e29",
+      "bytes": 1361,
+      "actual_parent_reader": "20261026-214717-todo-3080",
+      "current_read": "raw full/mask0, selected exact buffer verified; secret absence not proven",
+      "previous3535_read_profiles_not_relabelled": true,
+      "source_execution": 0
+    },
+    {
+      "name": "nested-container-frames",
+      "inventory_id": "github:481f63a0a69369082dab48a741123f1cfb799c35b664551015c236dd4564fc32",
+      "inventory_unit": "github_skill_entry",
+      "repo": "MengTo/Skills",
+      "commit": "398cd41c86ba42fbb30e944ae507f463648f08b7",
+      "path": "agent-skills/web-design/nested-container-frames/SKILL.md",
+      "sha256": "02fde1df60f9d13015a4a25a2d935831da78f665c263b5d166117e1889c151b0",
+      "git_blob": "5bcc248674802518011cae8a14e8d2cc1ed12b76",
+      "bytes": 1280,
+      "actual_parent_reader": "20261026-214717-todo-3080",
+      "current_read": "raw full/mask0, selected exact buffer verified; secret absence not proven",
+      "previous3535_read_profiles_not_relabelled": true,
+      "source_execution": 0
+    }
+  ],
+  "current_full_original_bytes": 7418,
+  "current_original_read_credit_is_separate_from_legacy_global_counts": true,
+  "new_global_unique_credit": 0,
+  "publisher": {
+    "owner": "MengTo",
+    "repository": "MengTo/Skills",
+    "repository_id": 1148744000,
+    "public": true,
+    "current_default_branch": "main",
+    "fixed_source_commit": "398cd41c86ba42fbb30e944ae507f463648f08b7"
+  },
+  "meaning": [
+    "marquee: measured repeat period and clone coverage, one readable semantic sequence and accessible stop/static display instead of unconditional-50percent",
+    "masked reveal: visible failure baseline, language/DOM ownership and one transform owner; old paid-plugin claim not current pricing and cleanup includes splitDOM",
+    "gooey: actual blur-plus-alpha-threshold topology, local filter region/id/lifecycle and static fallback; no invented coefficients or real simulation/performance claim",
+    "nested frames: one global bounds and explicit insets, semantic/focus/clipping ownership distinct from related full agency style"
+  ],
+  "nearby_relationship": "Only provided/current metadata used; unknown existing Skill bodies and same-reference similarity are not proof of identical contents",
+  "actual_adoption_or_UI_implementation": 0,
+  "whole16_complete": false
+}

@@ -506,6 +506,16 @@ fn hold_independent_scope(
     allow_missing: bool,
     leases: &mut Vec<Pinned>,
 ) -> Check<bool> {
+    if !absolute(path)
+        || path.components().any(|c| {
+            matches!(
+                c,
+                std::path::Component::ParentDir | std::path::Component::CurDir
+            )
+        })
+    {
+        return Err("OTHER_SCOPE_HINT_UNVERIFIED");
+    }
     let pins = pin_retention_ancestors(path, allow_missing)
         .map_err(|_| "OTHER_SCOPE_DIRECTORY_UNVERIFIED")?;
     let Some(work_leaf) = work.last() else {
@@ -527,6 +537,28 @@ fn hold_independent_scope(
         || (complete && work.iter().any(|p| identity(p) == identity(scope_leaf)));
     leases.extend(pins);
     Ok(touches)
+}
+
+fn positive_scope_paths(v: &Value) -> Check<[&str; 5]> {
+    for parent in [&v["work_owner"], &v["subwork"], &v["subwork"]["owner"]] {
+        if !parent.is_null() && !parent.is_object() {
+            return Err("OTHER_SCOPE_HINT_UNVERIFIED");
+        }
+    }
+    let values = [
+        &v["cwd"],
+        &v["registered_cwd"],
+        &v["work_owner"]["worktree"],
+        &v["work_owner"]["git_common"],
+        &v["subwork"]["owner"]["worktree"],
+    ];
+    let mut paths = [""; 5];
+    for (path, value) in paths.iter_mut().zip(values) {
+        if !value.is_null() {
+            *path = value.as_str().ok_or("OTHER_SCOPE_HINT_UNVERIFIED")?;
+        }
+    }
+    Ok(paths)
 }
 
 #[cfg(test)]
@@ -593,6 +625,9 @@ fn state_holding_scopes(
             return Err("JOB_SCAN_LIMIT");
         }
         let raw = job(ctx, id);
+        if let Ok(raw) = &raw {
+            positive_scope_paths(raw)?;
+        }
         if let Ok(raw) = &raw
             && (build_reference(raw, &debug)
                 || raw["related_todo_ids"]
@@ -601,11 +636,26 @@ fn state_holding_scopes(
         {
             return Err("SAVED_BUILD_REFERENCE_RETAINED");
         }
-        let published = ctx.published_job_scope_observation(id);
-        if let Ok(Some(scope)) = &published
+        let published = ctx
+            .published_job_scope_observation(id)
+            .map_err(|_| "OTHER_SCOPE_INDEX_UNAVAILABLE")?;
+        if let Some(scope) = &published
             && (scope_touches(scope, expected, work, origin) || build_reference(scope, &debug))
         {
             return Err("OTHER_JOB_ACTIVE_OR_WAITING");
+        }
+        // Published declarations remain positive retention evidence even when
+        // the mutable raw record is complete and now points somewhere else.
+        // Do not let record selection shadow either observation's scope.
+        if let Some(scope) = &published {
+            for hint in positive_scope_paths(scope)?
+                .into_iter()
+                .filter(|hint| !hint.is_empty())
+            {
+                if hold_independent_scope(&work_pins, Path::new(hint), false, scope_leases)? {
+                    return Err("OTHER_JOB_ACTIVE_OR_WAITING");
+                }
+            }
         }
         let complete = raw.as_ref().is_ok_and(|j| {
             !field(j, "status").is_empty()
@@ -629,7 +679,6 @@ fn state_holding_scopes(
                 {
                     return Err("OTHER_JOB_ACTIVE_OR_WAITING");
                 }
-                let published = published.map_err(|_| "OTHER_SCOPE_INDEX_UNAVAILABLE")?;
                 let claim = match ctx.published_job_work_claim(id) {
                     Ok(claim) => claim,
                     Err(_) => {
@@ -773,15 +822,9 @@ fn state_holding_scopes(
                                 return Err("OTHER_SCOPE_GUARD_UNVERIFIED");
                             }
                             for observation in [raw, scope] {
-                                for hint in [
-                                    field(observation, "cwd"),
-                                    field(observation, "registered_cwd"),
-                                    field(&observation["work_owner"], "worktree"),
-                                    field(&observation["work_owner"], "git_common"),
-                                    field(&observation["subwork"]["owner"], "worktree"),
-                                ]
-                                .into_iter()
-                                .filter(|hint| !hint.is_empty())
+                                for hint in positive_scope_paths(observation)?
+                                    .into_iter()
+                                    .filter(|hint| !hint.is_empty())
                                 {
                                     if !absolute(Path::new(hint)) {
                                         return Err("OTHER_SCOPE_HINT_UNVERIFIED");
@@ -837,15 +880,9 @@ fn state_holding_scopes(
             || (!field(owner, "branch").is_empty()
                 && owner["branch"] == expected["scheduler"]["branch"]
                 && owner["git_common"] == origin["work_owner"]["git_common"]);
-        for hint in [
-            field(&j, "cwd"),
-            field(&j, "registered_cwd"),
-            field(owner, "worktree"),
-            field(owner, "git_common"),
-            field(&j["subwork"]["owner"], "worktree"),
-        ]
-        .into_iter()
-        .filter(|hint| !hint.is_empty())
+        for hint in positive_scope_paths(&j)?
+            .into_iter()
+            .filter(|hint| !hint.is_empty())
         {
             if !absolute(Path::new(hint)) {
                 return Err("OTHER_SCOPE_HINT_UNVERIFIED");
@@ -2911,6 +2948,7 @@ mod tests {
         let original = serde_json::to_vec(&raw).unwrap();
         fs::write(f.ctx.job_dir(id).join("job.json"), &original).unwrap();
         let published = json!({"cwd":other,"created_at":raw["created_at"],"work_owner":{}});
+        fs::create_dir(f.root.join("another-execution-directory")).unwrap();
         for case in [
             "valid",
             "wrong-cwd",
@@ -3321,6 +3359,9 @@ mod tests {
     #[test]
     fn short_name_scope_aliases_keep_ancestor_equal_and_descendant_artifacts() {
         fn short(path: &Path) -> PathBuf {
+            // This Windows acceptance fixture requires an NTFS volume that
+            // generates 8.3 names. An unsupported fixture volume is an explicit
+            // environment failure, never a silently skipped safety acceptance.
             let name = wide(path.as_os_str());
             let mut value = vec![0u16; 32_768];
             let len =
@@ -3330,7 +3371,7 @@ mod tests {
             let result = PathBuf::from(String::from_utf16(&value[..len]).unwrap());
             assert!(
                 !same(path, &result),
-                "fixture must have a real short-name alias"
+                "Windows acceptance fixture volume must generate NTFS 8.3 aliases"
             );
             result
         }
@@ -3346,6 +3387,7 @@ mod tests {
         let independent = short(&other);
         for case in [
             "independent",
+            "independent-complete-published",
             "raw-project",
             "root-project",
             "scheduler",
@@ -3362,6 +3404,14 @@ mod tests {
             "full-cwd",
             "full-owner",
             "published-claim",
+            "full-published-cwd",
+            "full-published-registration",
+            "full-published-worktree",
+            "full-published-git-common",
+            "full-published-subwork",
+            "full-published-ancestor",
+            "full-published-descendant",
+            "full-published-unavailable",
         ] {
             let mut raw = json!({"id":id,"todo_id":2,"project":"legacy-original","status":"running","cwd":other,"created_at":"2026-10-26T00:00:00Z"});
             let mut db = json!({"projects":{"cc-pc-tools-rs":f.work,"legacy-original":other,"legacy-display":other},"items":[f.row,{"id":2,"project":"legacy-display","status":"done","jobs":[id]}]});
@@ -3396,9 +3446,36 @@ mod tests {
                     raw = Value::Null;
                     published = json!({"todo_id":2,"work_owner":{"repository":"autodevjapan/cc-pc-tools-rs","git_common":other,"worktree":alias,"branch":"scheduler/todo-2-fixture"}});
                 }
+                "independent-complete-published" => {
+                    raw["work_owner"] = json!({"repository":"autodevjapan/cc-pc-tools-rs","git_common":other,"worktree":other,"branch":"scheduler/todo-2-fixture"});
+                    published = json!({"cwd":other,"registered_cwd":independent});
+                }
+                case if case.starts_with("full-published-") => {
+                    raw["work_owner"] = json!({"repository":"autodevjapan/cc-pc-tools-rs","git_common":other,"worktree":other,"branch":"scheduler/todo-2-fixture"});
+                    published = json!({"cwd":other,"created_at":raw["created_at"],"work_owner":{}});
+                    match case {
+                        "full-published-cwd" => published["cwd"] = json!(alias),
+                        "full-published-registration" => published["registered_cwd"] = json!(alias),
+                        "full-published-worktree" => {
+                            published["work_owner"]["worktree"] = json!(alias)
+                        }
+                        "full-published-git-common" => {
+                            published["work_owner"]["git_common"] = json!(alias)
+                        }
+                        "full-published-subwork" => {
+                            published["subwork"] = json!({"owner":{"worktree":alias}})
+                        }
+                        "full-published-ancestor" => published["registered_cwd"] = json!(ancestor),
+                        "full-published-descendant" => {
+                            published["registered_cwd"] = json!(descendant)
+                        }
+                        "full-published-unavailable" => published = Value::Null,
+                        _ => unreachable!(),
+                    }
+                }
                 _ => unreachable!(),
             }
-            let index = if published.is_null() {
+            let index = if published.is_null() && case != "full-published-unavailable" {
                 json!({"scan_complete":true,"scanned_at":f.ctx.rt.epoch(),"ids":[],"owners":{}})
             } else {
                 json!({"scan_complete":true,"scanned_at":f.ctx.rt.epoch(),"ids":[id],"owners":{id:published}})
@@ -3410,12 +3487,21 @@ mod tests {
             fs::write(&f.store, &store).unwrap();
             fs::write(f.ctx.jobs.join(".queue-index.json"), &index).unwrap();
             let mut stats = Stats::default();
-            let result = f.run(case != "independent", false, &mut stats);
-            if case == "independent" {
+            let independent_case = case.starts_with("independent");
+            let result = f.run(!independent_case, false, &mut stats);
+            if independent_case {
                 assert_eq!(result, Ok(()));
                 assert_eq!(stats.builds.candidates, 1);
             } else {
-                assert_eq!(result, Err("OTHER_JOB_ACTIVE_OR_WAITING"), "{case}");
+                assert_eq!(
+                    result,
+                    Err(if case == "full-published-unavailable" {
+                        "OTHER_SCOPE_INDEX_UNAVAILABLE"
+                    } else {
+                        "OTHER_JOB_ACTIVE_OR_WAITING"
+                    }),
+                    "{case}"
+                );
                 assert_eq!(stats.builds.candidates, 0, "{case}");
             }
             assert_eq!(stats.builds.removed_bytes, 0, "{case}");
@@ -3441,6 +3527,88 @@ mod tests {
                 [7; 17]
             );
             f.kept();
+        }
+    }
+
+    #[test]
+    fn malformed_scope_hints_are_not_treated_as_empty_independent_observations() {
+        let f = Fixture::new();
+        let id = "20261026-000002-legacy";
+        let other = f.root.join("valid-independent-scope");
+        fs::create_dir(&other).unwrap();
+        fs::write(other.join("source.txt"), b"foreign source stays").unwrap();
+        fs::create_dir(f.ctx.job_dir(id)).unwrap();
+        fs::write(&f.store, serde_json::to_vec(&json!({"projects":{"cc-pc-tools-rs":f.work,"legacy":other},"items":[f.row,{"id":2,"project":"legacy","status":"done","jobs":[id]}]})).unwrap()).unwrap();
+        for mode in ["published-complete", "published-partial", "raw-unpublished"] {
+            for case in [
+                "registration",
+                "cwd",
+                "worktree",
+                "git-common",
+                "subwork-tree",
+                "owner-container",
+                "subwork-container",
+                "subwork-owner",
+            ] {
+                let mut raw = json!({"id":id,"todo_id":2,"project":"legacy","status":"running","cwd":other,"created_at":"2026-10-26T00:00:00Z"});
+                if mode == "published-complete" {
+                    raw["work_owner"] = json!({"repository":"autodevjapan/cc-pc-tools-rs","git_common":other,"worktree":other,"branch":"scheduler/todo-2-fixture"});
+                }
+                let mut published =
+                    json!({"cwd":other,"created_at":raw["created_at"],"work_owner":{}});
+                let observation = if mode == "raw-unpublished" {
+                    &mut raw
+                } else {
+                    &mut published
+                };
+                match case {
+                    "registration" => observation["registered_cwd"] = json!([f.work]),
+                    "cwd" => observation["cwd"] = json!([f.work]),
+                    "worktree" => observation["work_owner"] = json!({"worktree":[f.work]}),
+                    "git-common" => observation["work_owner"] = json!({"git_common":true}),
+                    "subwork-tree" => {
+                        observation["subwork"] = json!({"owner":{"worktree":{"path":f.work}}})
+                    }
+                    "owner-container" => observation["work_owner"] = json!("unknown"),
+                    "subwork-container" => observation["subwork"] = json!(42),
+                    "subwork-owner" => observation["subwork"] = json!({"owner":[]}),
+                    _ => unreachable!(),
+                }
+                let index = if mode == "raw-unpublished" {
+                    json!({"scan_complete":true,"scanned_at":f.ctx.rt.epoch(),"ids":[],"owners":{}})
+                } else {
+                    json!({"scan_complete":true,"scanned_at":f.ctx.rt.epoch(),"ids":[id],"owners":{id:published}})
+                };
+                let raw = serde_json::to_vec(&raw).unwrap();
+                let index = serde_json::to_vec(&index).unwrap();
+                fs::write(f.ctx.job_dir(id).join("job.json"), &raw).unwrap();
+                fs::write(f.ctx.jobs.join(".queue-index.json"), &index).unwrap();
+                let mut stats = Stats::default();
+                assert_eq!(
+                    f.run(true, false, &mut stats),
+                    Err("OTHER_SCOPE_HINT_UNVERIFIED"),
+                    "{mode}/{case}"
+                );
+                assert_eq!(stats.builds.removed_bytes, 0);
+                assert_eq!(fs::read(f.ctx.job_dir(id).join("job.json")).unwrap(), raw);
+                assert_eq!(
+                    fs::read(f.ctx.jobs.join(".queue-index.json")).unwrap(),
+                    index
+                );
+                assert_eq!(
+                    fs::read(other.join("source.txt")).unwrap(),
+                    b"foreign source stays"
+                );
+                assert_eq!(
+                    fs::read(
+                        f.work
+                            .join("target/debug/deps/libfixture-0123456789abcdef.rmeta")
+                    )
+                    .unwrap(),
+                    [7; 17]
+                );
+                f.kept();
+            }
         }
     }
 
@@ -3571,7 +3739,6 @@ mod tests {
                 "status" => raw["status"] = json!("unclassified"),
                 "cwd" => {
                     raw["cwd"] = json!("D:relative");
-                    scope["cwd"] = raw["cwd"].clone();
                 }
                 "created" => {
                     raw["created_at"] = Value::Null;
@@ -3583,7 +3750,7 @@ mod tests {
                 }
                 "history" => {
                     scope["todo_id"] = json!(2);
-                    scope["work_owner"] = json!({"repository":"autodevjapan/cc-pc-tools-rs","git_common":f.work.join(".git"),"worktree":other,"branch":"scheduler/todo-2-fixture"});
+                    scope["work_owner"] = json!({"repository":"autodevjapan/cc-pc-tools-rs","git_common":other,"worktree":other,"branch":"scheduler/todo-2-fixture"});
                 }
                 _ => unreachable!(),
             }

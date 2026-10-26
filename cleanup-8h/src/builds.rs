@@ -332,15 +332,17 @@ fn relative_build_reference(value: &Value) -> bool {
     match value {
         Value::String(s) => {
             let text = s.replace('/', "\\").to_lowercase();
-            text.match_indices("target\\debug\\").any(|(offset, _)| {
+            text.match_indices("target\\debug").any(|(offset, _)| {
                 let before = &text[..offset];
                 let before = before.strip_suffix(".\\").unwrap_or(before);
                 let boundary = before.chars().next_back().is_none_or(|c| {
                     c.is_whitespace() || matches!(c, '\'' | '"' | '`' | '(' | '[' | '=')
                 });
                 boundary
-                    && text[offset + 13..].chars().next().is_some_and(|c| {
-                        !c.is_whitespace() && !matches!(c, '\'' | '"' | '`' | ')' | ']')
+                    && text[offset + 12..].chars().next().is_none_or(|c| {
+                        c == '\\'
+                            || c.is_whitespace()
+                            || matches!(c, '\'' | '"' | '`' | ')' | ']' | ';' | ',')
                     })
             })
         }
@@ -383,9 +385,29 @@ fn state(
         if Instant::now() >= until {
             return Err("JOB_SCAN_LIMIT");
         }
-        let (j, unknown) = match job(ctx, id) {
-            Ok(j) => (j, false),
-            Err(_) => {
+        let raw = job(ctx, id);
+        let complete = raw.as_ref().is_ok_and(|j| {
+            !field(j, "status").is_empty()
+                && Path::new(field(j, "cwd")).is_absolute()
+                && ["repository", "git_common", "worktree", "branch"]
+                    .iter()
+                    .all(|key| !field(&j["work_owner"], key).is_empty())
+                && Path::new(field(&j["work_owner"], "worktree")).is_absolute()
+        });
+        let (j, unknown) = match raw {
+            Ok(j) if complete => (j, false),
+            observed => {
+                if let Ok(j) = &observed
+                    && (j["todo_id"] == expected["id"]
+                        || [field(j, "cwd"), field(&j["work_owner"], "worktree")]
+                            .iter()
+                            .any(|p| {
+                                !p.is_empty()
+                                    && (inside(work, Path::new(p)) || inside(Path::new(p), work))
+                            }))
+                {
+                    return Err("OTHER_JOB_ACTIVE_OR_WAITING");
+                }
                 let claim = ctx
                     .published_job_work_claim(id)
                     .map_err(|_| "OTHER_OWNER_SCOPE_UNVERIFIED")?;
@@ -1930,6 +1952,44 @@ mod tests {
         f.kept();
     }
     #[test]
+    fn prior_finished_job_directory_only_references_are_retained() {
+        let f = Fixture::new();
+        let id = "20261025-000002-todo-1";
+        let dir = f.ctx.job_dir(id);
+        fs::create_dir(&dir).unwrap();
+        fs::write(dir.join("state.lock"), []).unwrap();
+        let mut row = f.row.clone();
+        row["jobs"].as_array_mut().unwrap().push(json!(id));
+        fs::write(
+            &f.store,
+            serde_json::to_vec(&json!({"projects":{"cc-pc-tools-rs":f.work},"items":[row]}))
+                .unwrap(),
+        )
+        .unwrap();
+        for reference in ["target/debug", "target/debug/", ".\\target\\debug"] {
+            fs::write(dir.join("job.json"),serde_json::to_vec(&json!({"id":id,"todo_id":1,"status":"succeeded","cwd":f.work,"last_message":reference})).unwrap()).unwrap();
+            assert_eq!(
+                candidate(
+                    &f.ctx,
+                    &f.store,
+                    &row,
+                    &f.work,
+                    true,
+                    &f.budget(),
+                    &mut Stats::default(),
+                    |_| Ok(false)
+                ),
+                Err("SAVED_BUILD_REFERENCE_RETAINED")
+            );
+        }
+        assert!(
+            f.work
+                .join("target/debug/deps/libfixture-0123456789abcdef.rmeta")
+                .exists()
+        );
+        f.kept();
+    }
+    #[test]
     fn dependencies_dirty_source_and_changed_ownership_are_retained() {
         let f = Fixture::new();
         let db = read(&f.ctx, &f.store, 64 * 1024 * 1024).unwrap();
@@ -2257,6 +2317,7 @@ mod tests {
         fs::write(dir.join("job.json"), b"null").unwrap();
         let other = f.root.join("independent");
         for same_scope in [false, true] {
+            fs::write(dir.join("job.json"), b"null").unwrap();
             let tree = if same_scope { &f.work } else { &other };
             let claim = json!({"todo_id":2,"work_owner":{"repository":"autodevjapan/cc-pc-tools-rs","git_common":f.work.join(".git"),"worktree":tree,"branch":if same_scope {"scheduler/todo-1-fixture"} else {"scheduler/todo-2-fixture"}}});
             fs::write(f.ctx.jobs.join(".queue-index.json"),serde_json::to_vec(&json!({"scan_complete":true,"scanned_at":f.ctx.rt.epoch(),"ids":[id],"owners":{id:claim}})).unwrap()).unwrap();
@@ -2281,6 +2342,25 @@ mod tests {
                 assert_eq!(result, Ok(()));
             }
             assert_eq!(fs::read(dir.join("job.json")).unwrap(), b"null");
+            let partial =
+                serde_json::to_vec(&json!({"id":id,"todo_id":2,"status":"running","cwd":other}))
+                    .unwrap();
+            fs::write(dir.join("job.json"), &partial).unwrap();
+            let result = state(
+                &f.ctx,
+                &f.store,
+                &f.row,
+                &f.work,
+                &f.origin,
+                f.budget().until,
+                &[id.into()],
+            );
+            if same_scope {
+                assert_eq!(result, Err("OTHER_JOB_ACTIVE_OR_WAITING"));
+            } else {
+                assert_eq!(result, Ok(()));
+            }
+            assert_eq!(fs::read(dir.join("job.json")).unwrap(), partial);
         }
         f.kept();
     }

@@ -1,7 +1,9 @@
 # 元3757の既存ソフト2本の配布
 
 既存のsafe-deleteとcleanup-8hだけを更新する有限なGo補助。
-引数は`--check`と`--apply`だけで、callerのpath・hash・manifestを受け付けない。
+初回の2本更新は`--check`/`--apply`、追加世代は
+`--native-proof-check`/`--native-proof-apply`を使う。
+どちらもcallerのpath・hash・manifestを受け付けない。
 一般guard、原保護台帳、清掃対象、既存タスクの設定は変更しない。
 
 原safe-deleteの根拠は元3650の正規成功イベントitem_174を、その原JSON行のSHAで

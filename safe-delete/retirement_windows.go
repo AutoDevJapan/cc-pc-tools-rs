@@ -460,16 +460,31 @@ func retiredDirect(command, tool, action string) bool {
 			command = command[1:]
 		}
 		n := 0
-		for n < len(command) && ((q != 0 && command[n] != q) || (q == 0 && command[n] != ' ' && command[n] != '\t')) {
+		closed := q == 0
+		var literal strings.Builder
+		for n < len(command) {
+			if q == 0 && (command[n] == ' ' || command[n] == '\t') {
+				break
+			}
+			if q != 0 && command[n] == q {
+				// PowerShell single-quoted literals represent one apostrophe by
+				// doubling it. Keep the entire literal as one argv value.
+				if q == '\'' && n+1 < len(command) && command[n+1] == q {
+					literal.WriteByte(q)
+					n += 2
+					continue
+				}
+				n++
+				closed = true
+				break
+			}
+			literal.WriteByte(command[n])
 			n++
 		}
-		if q != 0 && n == len(command) {
+		if !closed || q != 0 && n < len(command) && command[n] != ' ' && command[n] != '\t' {
 			return false
 		}
-		parts = append(parts, command[:n])
-		if q != 0 {
-			n++
-		}
+		parts = append(parts, literal.String())
 		command = command[n:]
 	}
 	if len(parts) < 2 || !same(parts[0], tool) || parts[1] != action {

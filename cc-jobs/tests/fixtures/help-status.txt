@@ -1,7 +1,8 @@
-usage: codex_jobs.py status [-h] [--all] [--json] [--summary]
+usage: codex_jobs.py status [-h] [--all] [--json] [--summary] [--job-id ID]
 
 options:
   -h, --help  show this help message and exit
   --all
   --json
   --summary  one-line summary; with --json, return {summary, jobs}
+  --job-id ID  with --json only, read one job's fixed metadata without bodies or refresh

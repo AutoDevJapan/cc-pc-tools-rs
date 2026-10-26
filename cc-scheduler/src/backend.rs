@@ -321,7 +321,7 @@ pub struct RealBackend {
     pub config_path: PathBuf,
 }
 impl RealBackend {
-    fn collected_quota_inventory(&mut self, unstarted: bool, preflight: bool) -> Result<Value> {
+    fn collected_quota_inventory(&mut self, _unstarted: bool, preflight: bool) -> Result<Value> {
         let mut inventory=json!({});
         let Some(appdata)=std::env::var_os("APPDATA") else { return Ok(inventory); };
         let package=PathBuf::from(appdata).join("npm/node_modules/@bitkyc08/opencodex");
@@ -342,11 +342,15 @@ impl RealBackend {
                 .and_then(|r|serde_json::from_str::<Value>(&r.stdout).ok()).unwrap_or(Value::Null);
             if preflight && !cc_job_policy::initial_review::oauth_only(&raw) {continue;}
             inventory[provider]=cc_job_policy::quota_recovery::aggregate(&raw,provider,self.clock());
-            if unstarted && provider=="openai" {
+            if provider=="openai" {
                 command.args=vec![package.join("bin/ocx.mjs").to_string_lossy().into_owned(),"config".into(),"get".into(),"codexAccountNamespaces".into(),"--json".into()];
                 let namespaces=self.runner.run(&command).ok().filter(|r|r.code==0 && r.stdout.len()<=2_000_000)
                     .and_then(|r|serde_json::from_str::<Value>(&r.stdout).ok()).unwrap_or(Value::Null);
                 inventory[provider]["safe_routes"]=cc_job_policy::quota_recovery::safe_openai_routes(&raw,&namespaces,self.clock());
+                command.args=vec![package.join("bin/ocx.mjs").to_string_lossy().into_owned(),"config".into(),"get".into(),"codexAccounts".into(),"--json".into()];
+                let records=self.runner.run(&command).ok().filter(|r|r.code==0 && r.stdout.len()<=2_000_000)
+                    .and_then(|r|serde_json::from_str::<Value>(&r.stdout).ok()).unwrap_or(Value::Null);
+                cc_job_policy::quota_recovery::label_openai_routes(&mut inventory[provider]["safe_routes"],&namespaces,&records);
             }
         }
         inventory["at"]=json!(self.clock());Ok(inventory)

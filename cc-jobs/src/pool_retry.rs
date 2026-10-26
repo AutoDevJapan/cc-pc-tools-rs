@@ -191,6 +191,14 @@ pub fn todo_owns_attempt(db: &Value, job: &Value) -> bool {
     else {
         return false;
     };
+    // A launcher publishes the same prepared reservation before scheduler link
+    // consumes the next generation. Quota admission below still verifies its
+    // source/spec/scope and history under these same locks.
+    let prepared_quota = row["status"]=="todo" && row["scheduler"]["phase"]=="prepared"
+        && row["scheduler"]["key"]==job["launch_key"] && !s(job,"launch_key").is_empty()
+        && job["quota_recovery"].is_object()
+        && row["scheduler"]["selection"]["quota_recovery"]==job["quota_recovery"]
+        && row["resume_generation"].as_u64().unwrap_or(0).checked_add(1)==job["todo_resume_generation"].as_u64();
     if !["todo", "doing"].contains(&s(row, "status"))
         || cc_job_policy::cancellation::owner_stopped(row, job)
         || row["owner_stopped"] == true
@@ -198,13 +206,14 @@ pub fn todo_owns_attempt(db: &Value, job: &Value) -> bool {
         || !row["decision_wait"].is_null()
         || row["wait_on"].as_array().is_some_and(|v| !v.is_empty())
         || (job["todo_resume_generation"].is_u64()
-            && row["resume_generation"] != job["todo_resume_generation"])
+            && row["resume_generation"] != job["todo_resume_generation"] && !prepared_quota)
         || !s(&row["scheduler"], "owner_stop_job").is_empty()
         || row["dependency_generation"].as_u64().unwrap_or(0)
             != job["todo_dependency_generation"].as_u64().unwrap_or(0)
     {
         return false;
     }
+    if prepared_quota {return true;}
     if !s(&row["scheduler"], "job").is_empty() {
         return row["scheduler"]["job"] == job["id"];
     }

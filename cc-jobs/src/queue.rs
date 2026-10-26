@@ -1313,6 +1313,7 @@ impl Context {
         self.record_work_owner(&mut job);
         if job["todo_id"].is_number()
             && (job["capacity_history"].is_array() || job["capacity_owner_recheck"] == true)
+            && (!job["quota_recovery"].is_object() || job["quota_retry_initial_admitted"]==true)
         {
             let temporary_lock = if _subwork_store_lock.is_none() {
                 match FileLock::try_acquire(&self.todo_store().with_file_name("todo.lock")) {
@@ -1444,6 +1445,7 @@ impl Context {
                     .and_then(|row| self.recheck_quota_recovery(row,&mut job,&quota_inventory));
                 if result.is_err() {
                     let checks=job["quota_recovery_recheck_count"].as_u64().unwrap_or(0)+1;
+                    job["quota_recovery_recheck_total"]=json!(job["quota_recovery_recheck_total"].as_u64().unwrap_or(0).saturating_add(1));
                     job["quota_recovery_recheck_count"]=json!(checks);
                     let exhausted=checks >= 3;
                     if exhausted {
@@ -1456,6 +1458,10 @@ impl Context {
                     self.save_admission_wait(&mut job,&json!({"code":"quota_recovery_recheck","text":"元の実行とOAuth枠の再確認待ち","terminal":exhausted}))?;
                     return Ok(None);
                 }
+                // A verified source/spec/scope and fresh health end this
+                // metadata episode. Keep native retry budgets and total history.
+                job.as_object_mut().unwrap().remove("quota_recovery_recheck_count");
+                job.as_object_mut().unwrap().remove("quota_recovery_recheck_after");
             }
             let reason = self.dependency_reason(&db, &job, &jobs);
             if let Some(reason) = reason {
@@ -1464,6 +1470,7 @@ impl Context {
             }
             if job["todo_id"].is_number()
                 && (job["capacity_history"].is_array() || job["capacity_owner_recheck"] == true)
+                && (!job["quota_recovery"].is_object() || job["quota_retry_initial_admitted"]==true)
             {
                 if let Some(_row) = db["items"]
                     .as_array()
@@ -1528,6 +1535,7 @@ impl Context {
             job["model_route_reason"] = json!("Codexの週の利用ペースを抑えてClaudeへ割り当て");
         }
         job["status"] = json!("running");
+        if job["quota_recovery"].is_object() {job["quota_retry_initial_admitted"]=json!(true);}
         job["started_at"] = json!(self.rt.now());
         job["last_event_at"] = json!(self.rt.now());
         job["activity"] = json!("starting");

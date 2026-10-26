@@ -225,7 +225,14 @@ pub fn safe_openai_routes(raw: &Value, namespaces: &Value, now: f64) -> Value {
         let single = json!({"accounts":[rows[0]]});
         let q = aggregate(&single, "openai", now);
         if q["verified"] == true && q["available"] == true {
-            routes.push(json!({"selector":selector,"at":checked,"verified":true}));
+            // Multiple public aliases still name just one subscription. Keep
+            // only public aliases so recovery cannot retry the failed account
+            // under another namespace. The private relation never leaves here.
+            let aliases: Vec<_> = namespaces.iter().filter_map(|(alias, id)| {
+                let same = id.as_str().map(|id| if id == "@main" { "__main__" } else { id }) == Some(target);
+                (same && crate::quota_retry::public_selector(alias)).then_some(alias)
+            }).collect();
+            routes.push(json!({"selector":selector,"aliases":aliases,"at":checked,"verified":true}));
         }
     }
     routes.sort_by(|a, b| s(a, "selector").cmp(s(b, "selector")));
@@ -259,6 +266,20 @@ pub fn safe_openai_selector<'a>(
                     .is_some_and(|at| at <= now + 1. && now - at <= 60.))
             .then_some(selector)
         })
+}
+
+/// Match only public routing log labels; the private ID map is temporary.
+pub fn label_openai_routes(routes: &mut Value, namespaces: &Value, records: &Value) {
+    let Some(rows) = routes.as_array_mut() else { return; };
+    for route in rows {
+        let Some(id) = namespaces[s(route,"selector")].as_str() else {continue;};
+        let label = if id == "@main" {"main".to_owned()} else {
+            records.as_array().into_iter().flatten().find(|r|r["id"]==id)
+                .and_then(|r|r["logLabel"].as_str()).filter(|s|crate::quota_retry::public_selector(s))
+                .map(str::to_owned).unwrap_or_else(||format!("p{}",&crate::product_retry::digest(id.as_bytes())[..6]))
+        };
+        route["label"] = json!(label);
+    }
 }
 
 fn review(job: &Value) -> bool {
@@ -435,6 +456,9 @@ pub fn receipt(
     health: &Value,
     now: f64,
 ) -> Option<Value> {
+    receipt_version(item,source,target,health,now,None)
+}
+fn receipt_version(item:&Value,source:&Value,target:&Value,health:&Value,now:f64,version:Option<u64>) -> Option<Value> {
     if !eligible_source(item, source)
         || !["todo", "doing"].contains(&s(item, "status"))
         || item["dispatchable"] != true
@@ -450,7 +474,7 @@ pub fn receipt(
         || (source["recovery_cancel"].is_object()
             && timestamp(&source["recovery_cancel"]["committed_at"])
                 .is_some_and(|at| at > now + 1.))
-        || !healthy_transition(health, s(source, "model"), s(target, "model"), now)
+        || !(if version==Some(1) {healthy_transition(health,s(source,"model"),s(target,"model"),now)} else {transition(source, target, health, now)})
     {
         return None;
     }
@@ -477,6 +501,10 @@ pub fn receipt(
         let q = &health[provider];
         safe_health[provider] = json!({"at":q["at"],"verified":q["verified"],"exhausted":q["exhausted"],"available":q["available"]});
     }
+    let tracked = version != Some(1) && crate::quota_retry::tracked(source);
+    if tracked {
+        safe_health["openai"]["safe_routes"] = health["openai"]["safe_routes"].clone();
+    }
     let mut proof = json!({"version":1,"source_job":source["id"],"source_sha256":digest(&source_binding(source)),
         "resume_generation":generation(item,"resume_generation"),
         "request_sha256":digest(&request(item)),"launch_key":target["launch_key"],
@@ -485,7 +513,20 @@ pub fn receipt(
     if legacy_unreceived_source(item, source) {
         proof["legacy_unreceived_source"] = json!(true);
     }
+    if tracked {
+        proof["version"] = json!(2);
+        proof["retry"] = crate::quota_retry::plan(source, target, health, now)?;
+        proof["retry_source_sha256"] = json!(crate::quota_retry::binding(source));
+    }
     Some(proof)
+}
+
+pub fn transition(source: &Value, target: &Value, health: &Value, now: f64) -> bool {
+    if crate::quota_retry::tracked(source) {
+        crate::quota_retry::plan(source, target, health, now).is_some()
+    } else {
+        healthy_transition(health, s(source, "model"), s(target, "model"), now)
+    }
 }
 
 pub fn verify(proof: &Value, item: &Value, source: &Value, target: &Value, now: f64) -> bool {
@@ -509,7 +550,7 @@ pub fn verify(proof: &Value, item: &Value, source: &Value, target: &Value, now: 
             prepared["worker_receipt"] = Value::Null;
         }
     }
-    receipt(&prepared, source, target, &proof["health"], now).is_some_and(|p| p == *proof)
+    receipt_version(&prepared, source, target, &proof["health"], now,proof["version"].as_u64()).is_some_and(|p| p == *proof)
 }
 
 #[cfg(test)]
@@ -524,7 +565,7 @@ mod unstarted_routes_tests {
         let routes = safe_openai_routes(&raw, &namespaces, 1000.);
         assert_eq!(
             routes,
-            json!([{"selector":"pabcdef","at":1000.,"verified":true}])
+            json!([{"selector":"pabcdef","aliases":["pabcdef"],"at":1000.,"verified":true}])
         );
         assert!(
             !serde_json::to_string(&routes)

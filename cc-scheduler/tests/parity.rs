@@ -1718,6 +1718,7 @@ fn test_orphan_minimum_age_and_missing_job() {
 }
 
 struct Fake {
+    quota_inventory_calls: usize,
     quota_spec_edit: Option<(PathBuf,String)>,
     quota_inventory: Value,
     real_workspaces: bool,
@@ -1772,6 +1773,7 @@ struct Fake {
 impl Default for Fake {
     fn default() -> Self {
         Self {
+            quota_inventory_calls: 0,
             quota_spec_edit: None,
             quota_inventory: Value::Null,
             real_workspaces: false,
@@ -1835,6 +1837,7 @@ impl Backend for Fake {
         } else { cc_scheduler::preparation::resource_deadline(job,self.clock) })
     }
     fn quota_recovery_inventory(&mut self) -> Result<Value> {
+        self.quota_inventory_calls += 1;
         if let Some((path,text))=self.quota_spec_edit.take() { fs::write(path,text)?; }
         Ok(self.quota_inventory.clone())
     }

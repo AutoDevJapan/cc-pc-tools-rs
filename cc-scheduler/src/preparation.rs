@@ -456,27 +456,59 @@ pub fn resource_deadline(job: &Value, now: f64) -> Option<f64> {
     if job["status"] == "succeeded" {
         return None;
     }
-    let explicit = job["resource_wait"]["until"]
-        .as_f64()
-        .filter(|until| until.is_finite() && *until > now);
+    let explicit = job["resource_wait"]["until"].as_f64().filter(|until| until.is_finite());
     let out = Output {
         code: 1,
         stdout: String::new(),
         stderr: s(&job["last_error"]).into(),
     };
-    if explicit.is_none() && classify_output(&out).0 != "ResourceWait" {
+    let classified = classify_output(&out).0 == "ResourceWait";
+    let terminal = matches!(s(&job["status"]), "failed" | "lost" | "cancelled" | "canceled");
+    if explicit.is_none() && !classified && (!terminal || (n(&job["retry_not_before"]) <= now && n(&job["rate_limit_reset_at"]) <= now)) {
         return None;
     }
-    Some(
+    // A historical failure is a fixed observation. Re-reading its text must
+    // not manufacture another hour of exhaustion after its deadline elapsed.
+    let observed = epoch(&job["finished_at"]);
+    let fallback = if classified && observed > 0. && observed.is_finite() { observed + 3600. } else { 0. };
+    let until =
         [
-            explicit.unwrap_or(now + 3600.),
+            explicit.unwrap_or(fallback),
             n(&job["retry_not_before"]),
             n(&job["rate_limit_reset_at"]),
         ]
         .into_iter()
         .filter(|t| t.is_finite())
-        .fold(now, f64::max),
-    )
+        .fold(0., f64::max);
+    (now.is_finite() && until > now).then_some(until)
+}
+
+/// Candidate selection only. prepare must still prove fresh quota, exact
+/// scope/spec and source drain before this automatic wait can reach a launch.
+pub fn quota_recheck_candidate(item: &Value, jobs: &[Value], now: f64) -> bool {
+    let m = &item["scheduler"];
+    let preparation = m["phase"] == "preparing"
+        && m["preparation_failure"]["reason"] == "resource_wait"
+        && m["resource_wait"]["reason"] == "http_429"
+        && m["resource_wait"]["until"] == m["not_before"]
+        && m["preparation_failure"]["retry_at"] == m["not_before"];
+    let retry = m["phase"] == "retry" && m["last_stop"] == "failed"
+        && m["resource_wait"].is_null() && m["preparation_failure"].is_null();
+    n(&m["not_before"]) > now && item["subwork"].is_object()
+        && !truth(&m["question_close_pending"])
+        && n(&m["quota_recheck_after"]) <= now
+        && (m["preparation_failure"]["reason"] != "resource_wait"
+            || n(&m["preparation_failure"]["at"]) + 300. <= now)
+        && (retry || preparation) && !crate::targeted_dispatch::held(item)
+        && jobs.iter().any(|source| {
+            source["id"] == m["last_job"] && owns_workspace(item, source)
+                && source["status"] == "failed"
+                && cc_job_policy::quota_recovery::quota_source(source)
+                && ((retry && cc_job_policy::quota_recovery::provider(s(&source["model"])) == Some("xai"))
+                    || (cc_job_policy::quota_recovery::provider(s(&source["model"])) == Some("openai")
+                        && cc_job_policy::quota_recovery::eligible_source(item, source)
+                        && resource_deadline(source, now).is_none()))
+        })
 }
 
 /// Reuse recorded quota evidence; never probe a depleted subscription on every scheduler tick.

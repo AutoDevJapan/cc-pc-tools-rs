@@ -172,7 +172,7 @@ mod notifier_config_tests {
 }
 /// All network-facing programs (OpenCodex, Docker/Jev and GTO) and process actions
 /// cross this boundary. Tests substitute fakes and never call Discord.
-fn normal_quota_inventory(rt: &(impl Runtime+?Sized), unstarted: bool, preflight: bool) -> Value {
+fn normal_quota_inventory(rt: &(impl Runtime+?Sized), _unstarted: bool, preflight: bool) -> Value {
     let mut inventory=json!({});
     for provider in ["openai","anthropic"] {
         if preflight {
@@ -182,9 +182,11 @@ fn normal_quota_inventory(rt: &(impl Runtime+?Sized), unstarted: bool, preflight
         let raw=crate::pool_retry::query(rt,&["account","list",provider,"--quota","--refresh","--json"]).unwrap_or(Value::Null);
         if preflight && !cc_job_policy::initial_review::oauth_only(&raw) {continue;}
         inventory[provider]=cc_job_policy::quota_recovery::aggregate(&raw,provider,rt.epoch());
-        if unstarted && provider=="openai" {
+        if provider=="openai" {
             let namespaces=crate::pool_retry::query(rt,&["config","get","codexAccountNamespaces","--json"]).unwrap_or(Value::Null);
             inventory[provider]["safe_routes"]=cc_job_policy::quota_recovery::safe_openai_routes(&raw,&namespaces,rt.epoch());
+            let records=crate::pool_retry::query(rt,&["config","get","codexAccounts","--json"]).unwrap_or(Value::Null);
+            cc_job_policy::quota_recovery::label_openai_routes(&mut inventory[provider]["safe_routes"],&namespaces,&records);
         }
     }
     inventory["at"]=json!(rt.epoch());inventory

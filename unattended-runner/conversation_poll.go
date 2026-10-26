@@ -53,7 +53,8 @@ func (r *Runner) conversationCanonicalWaits() (map[uint64]*TodoRow, error) {
 	rows := make(map[uint64]*TodoRow)
 	for _, row := range db.Items {
 		if _, duplicate := rows[row.ID]; duplicate {
-			return nil, errors.New("conversation duplicate task")
+			rows[row.ID] = nil // only this task's ambiguous hint is unusable
+			continue
 		}
 		rows[row.ID] = &TodoRow{ID: row.ID, Project: row.Project, QuestionWait: row.Wait}
 	}
@@ -100,7 +101,7 @@ func (r *Runner) processConversations(ctx context.Context, health *Health) {
 					health.Errors = append(health.Errors, "conversation_wait_readback_deferred")
 				}
 			}
-			if row := canonicalWaits[q.Todo]; row != nil && row.Project == q.Project && r.conversationExactWait(row.QuestionWait, q) {
+			if row := canonicalWaits[q.Todo]; row != nil && row.Project == q.Project && len(row.QuestionWait) != 0 && string(row.QuestionWait) != "null" && r.conversationExactWait(row.QuestionWait, q) {
 				var wait struct {
 					Origin json.RawMessage `json:"origin"`
 				}

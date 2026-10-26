@@ -324,12 +324,16 @@ func conversationCLIWithLoader(args []string, out io.Writer, load func(string) (
 }
 
 func conversationCLIWithGuard(args []string, out io.Writer, load func(string) (conversationCLIBackend, func(), error), guard func(context.Context, string) bool) int {
+	return conversationCLIWithTimeout(args, out, load, guard, conversationCLIDeadline)
+}
+
+func conversationCLIWithTimeout(args []string, out io.Writer, load func(string) (conversationCLIBackend, func(), error), guard func(context.Context, string) bool, budget time.Duration) int {
 	opts, err := parseConversationCLI(args)
 	if err != nil {
 		_, _ = io.WriteString(out, "invalid conversation arguments\n")
 		return 1
 	}
-	ctx, cancel := context.WithTimeout(context.Background(), conversationCLIDeadline)
+	ctx, cancel := context.WithTimeout(context.Background(), budget)
 	defer cancel()
 	if opts.Output != "" && !conversationRepliesOutput(ctx, opts.Output, guard) {
 		_, _ = io.WriteString(out, "conversation unavailable\n")
@@ -422,7 +426,17 @@ func conversationCLIWithGuard(args []string, out io.Writer, load func(string) (c
 			result, err = runner.conversationStatus()
 		}
 	}
-	if err != nil || ctx.Err() != nil {
+	committedWait := false
+	if opts.Command == "wait" && err == nil {
+		if ack, ok := result.(map[string]any); ok && ack["outcome"] == "waiting" && ack["task_status"] == "block" {
+			sha, _ := ack["wait_receipt_sha256"].(string)
+			committedWait = shaPattern.MatchString(sha)
+			if committedWait && ctx.Err() != nil {
+				ack["deadline"] = "after_wait_commit"
+			}
+		}
+	}
+	if err != nil || (ctx.Err() != nil && !committedWait) {
 		_, _ = io.WriteString(out, "conversation unavailable\n")
 		return 1
 	}

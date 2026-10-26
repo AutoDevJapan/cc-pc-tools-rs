@@ -1,14 +1,17 @@
 package main
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
 	"net/http"
 	"os"
+	"path/filepath"
 	"strings"
 	"testing"
+	"time"
 )
 
 // Same synthetic Discord question in both the fast runner tests and the actual
@@ -218,8 +221,8 @@ func TestConversationExplicitWaitConcurrentOwnerChangeRejectsCAS(t *testing.T) {
 			t.Fatal("CAS rejection mutated current task")
 		}
 		f.r.Run = backend
-		if _, err := f.r.conversationWait(context.Background(), f.q.RequestID, false); err == nil {
-			t.Fatal("retry silently rebound the old wait intent to another generation")
+		if result, err := f.r.conversationWait(context.Background(), f.q.RequestID, false); err != nil || result["outcome"] != "waiting" {
+			t.Fatalf("precommit failure froze an obsolete owner: %v %v", result, err)
 		}
 	})
 }
@@ -310,5 +313,196 @@ func TestConversationExplicitWaitNativeRefusesDifferentQuestionOwnerAndHolds(t *
 				t.Fatalf("released a different hold: %v", health.Errors)
 			}
 		})
+	}
+}
+
+func TestConversationExplicitWaitNativeReplyToAnotherQuestionKeepsCurrentWait(t *testing.T) {
+	f := explicitWaitTest(t, true)
+	ctx := context.Background()
+	first := f.q
+	stamp, _ := time.Parse(time.RFC3339Nano, f.created)
+	f.created = stamp.Add(time.Second).Format(time.RFC3339Nano)
+	f.question = snowflake(stamp.Add(time.Second))
+	f.input.RequestID = "another-independent-question"
+	f.decision = json.RawMessage(`{"action":"second-question","todo_id":42}`)
+	if err := os.WriteFile(f.input.DecisionFile, f.decision, 0600); err != nil {
+		t.Fatal(err)
+	}
+	f.ask(t)
+	// Both real synthetic questions were posted while work was runnable.
+	// Register A through the actual locked CLI before B's answer arrives.
+	row, _ := f.r.conversationTask(ctx, 42)
+	scope, _ := f.r.conversationScopeFile(row, first)
+	snapshot, _ := f.r.conversationSnapshotFile(row, first, "second-question")
+	if _, err := f.r.Run(ctx, conversationTodo, "question-wait", "42", "--question-file", first.ReceiptFile, "--scope-file", scope, "--expected-state-file", snapshot); err != nil {
+		t.Fatal(err)
+	}
+	row, _ = f.r.todo(42)
+	wait := canonicalHash(row.QuestionWait)
+	reply := f.reply(t, 8, "answer for independent question B")
+	result, err := f.r.conversationWait(ctx, f.q.RequestID, false)
+	row, _ = f.r.todo(42)
+	if err != nil || result["outcome"] != "owner_reply_delivered" || row.Status != "block" || canonicalHash(row.QuestionWait) != wait || len(row.QuestionAnswers) != 0 || !strings.Contains(row.Note, reply.Body) {
+		t.Fatalf("independent answer was lost or current wait changed: %v %v", result, err)
+	}
+}
+
+func TestConversationExplicitWaitNativeContinuedDeliveryKeepsNewGeneration(t *testing.T) {
+	f := explicitWaitTest(t, true)
+	f.mutateTodo(t, func(row map[string]any) { row["resume_generation"] = 1 })
+	if _, err := f.r.conversationWait(context.Background(), f.q.RequestID, false); err != nil {
+		t.Fatal(err)
+	}
+	f.mutateTodo(t, func(row map[string]any) {
+		row["status"], row["resume_generation"] = "doing", 2
+		row["worker_receipt"] = map[string]any{"job": nil, "generation": 2}
+		row["note"] = "New direct instruction and current work remain."
+	})
+	reply := f.reply(t, 8, "owner answer retained across continued work")
+	health := Health{}
+	f.r.processConversations(context.Background(), &health)
+	row, _ := f.r.todo(42)
+	if len(health.Errors) != 0 || row.Status != "doing" || len(row.QuestionAnswers) != 0 || len(row.QuestionDeliveries) != 1 || !strings.Contains(row.Note, reply.Body) || string(row.ResumeGeneration) != "2" || !conversationWaitRecorded(row, f.q) {
+		t.Fatalf("continued answer lost or new generation released: %v", health.Errors)
+	}
+}
+
+func TestConversationExplicitWaitLargeSnapshotCanRetryBeforeCommit(t *testing.T) {
+	explicitWaitVariants(t, func(t *testing.T, f *conversationFixture) {
+		f.mutateTodo(t, func(row map[string]any) {
+			row["note"] = strings.Repeat("n", 700<<10)
+			row["note_history"] = []any{strings.Repeat("h", 500<<10)}
+		})
+		backend := f.r.Run
+		calls := 0
+		f.r.Run = func(ctx context.Context, path string, args ...string) (string, error) {
+			if path == conversationTodo && args[0] == "question-wait" {
+				calls++
+				if calls == 1 {
+					return "", errors.New("synthetic deadline before canonical commit")
+				}
+			}
+			return backend(ctx, path, args...)
+		}
+		if _, err := f.r.conversationWait(context.Background(), f.q.RequestID, false); err == nil {
+			t.Fatal("precommit failure was reported successful")
+		}
+		result, err := f.r.conversationWait(context.Background(), f.q.RequestID, false)
+		if err != nil || result["outcome"] != "waiting" || calls != 2 {
+			t.Fatalf("large row retry stuck before commit: %v %v, calls=%d", result, err, calls)
+		}
+	})
+}
+
+func TestConversationExplicitWaitPostcommitReplyCheckReportsDurableWait(t *testing.T) {
+	explicitWaitVariants(t, func(t *testing.T, f *conversationFixture) {
+		backend := f.r.Run
+		reads := 0
+		f.r.Run = func(ctx context.Context, path string, args ...string) (string, error) {
+			if args[0] == "recovery-replies" {
+				reads++
+				if reads == 2 {
+					return "", errors.New("synthetic postcommit API timeout")
+				}
+			}
+			return backend(ctx, path, args...)
+		}
+		result, err := f.r.conversationWait(context.Background(), f.q.RequestID, false)
+		row, _ := f.r.todo(42)
+		if err != nil || result["outcome"] != "waiting" || result["reply_check"] != "deferred" || row.Status != "block" || !conversationWaitRecorded(row, f.q) {
+			t.Fatalf("committed wait was reported lost: %v %v", result, err)
+		}
+		f.reply(t, 8, "answer after temporary API failure")
+		health := Health{}
+		f.r.processConversations(context.Background(), &health)
+		row, _ = f.r.todo(42)
+		if len(health.Errors) != 0 || row.Status != "todo" || len(row.QuestionAnswers) != 1 {
+			t.Fatalf("durable wait did not resume delivery: %v", health.Errors)
+		}
+	})
+}
+
+func TestConversationExplicitWaitInspectionAndAliasCreateNoArtifacts(t *testing.T) {
+	explicitWaitVariants(t, func(t *testing.T, f *conversationFixture) {
+		index, _ := f.r.loadConversations()
+		index.Aliases["same-posted-question-alias"] = conversationAlias{Target: f.q.RequestID, InputSHA: f.q.InputSHA}
+		if err := publish(f.r.conversationPath(), index); err != nil {
+			t.Fatal(err)
+		}
+		snapshot := func() map[string]string {
+			files := map[string]string{}
+			err := filepath.WalkDir(f.r.Config.Home, func(path string, entry os.DirEntry, err error) error {
+				if err != nil {
+					return err
+				}
+				if !entry.IsDir() {
+					b, err := os.ReadFile(path)
+					if err != nil {
+						return err
+					}
+					files[path] = bytesHash(b)
+				}
+				return nil
+			})
+			if err != nil {
+				t.Fatal(err)
+			}
+			return files
+		}
+		for _, answered := range []bool{false, true} {
+			if answered {
+				f.reply(t, 8, "owner answer inspected without writes")
+			}
+			before := snapshot()
+			result, err := f.r.conversationWait(context.Background(), "same-posted-question-alias", true)
+			if err != nil || result["request_id"] != f.q.RequestID || canonicalHash(before) != canonicalHash(snapshot()) {
+				t.Fatalf("inspection created/changed artifacts or lost alias: %v %v", result, err)
+			}
+		}
+	})
+}
+
+func TestConversationExplicitWaitNativeWithdrawalPreservesAskAndReplays(t *testing.T) {
+	w := withdrawalTestWithWait(t, true, false)
+	f := w.f
+	if _, err := f.r.conversationWait(context.Background(), f.q.RequestID, false); err != nil {
+		t.Fatal(err)
+	}
+	for attempt := 0; attempt < 2; attempt++ {
+		result, err := f.r.conversationWithdraw(context.Background(), f.q.RequestID, w.reason)
+		if err != nil || result["archived"] != true || result["withdrawn"] != true {
+			t.Fatalf("explicit wait withdrawal failed: %v %v", result, err)
+		}
+	}
+	index, _ := f.r.loadConversations()
+	q := index.Questions[f.q.RequestID]
+	row, _ := f.r.todo(42)
+	if q.Wait || q.InputSHA != f.q.InputSHA || q.Phase != "withdrawn" || row.Status != "todo" || len(row.QuestionAnswers) != 0 || w.patches != 1 {
+		t.Fatal("withdrawal changed ask input, manufactured answer or repeated archive")
+	}
+}
+
+func TestConversationExplicitWaitNativeCLIDeadlineAfterCommitKeepsReceipt(t *testing.T) {
+	f := explicitWaitTest(t, true)
+	backend := f.r.Run
+	reads := 0
+	f.r.Run = func(ctx context.Context, path string, args ...string) (string, error) {
+		if args[0] == "recovery-replies" {
+			reads++
+			if reads == 2 {
+				<-ctx.Done() // deadline only after the actual canonical commit/readback
+				return "", ctx.Err()
+			}
+		}
+		return backend(ctx, path, args...)
+	}
+	var out bytes.Buffer
+	code := conversationCLIWithTimeout([]string{"wait", "--request-id=" + f.q.RequestID}, &out,
+		func(string) (conversationCLIBackend, func(), error) { return f.r, func() {}, nil },
+		func(context.Context, string) bool { return true }, 2*time.Second)
+	var ack map[string]any
+	row, _ := f.r.todo(42)
+	if code != 0 || json.Unmarshal(out.Bytes(), &ack) != nil || ack["deadline"] != "after_wait_commit" || ack["reply_check"] != "deferred" || ack["outcome"] != "waiting" || row.Status != "block" || !conversationWaitRecorded(row, f.q) {
+		t.Fatalf("CLI hid the durable wait after deadline: code=%d output=%s", code, out.String())
 	}
 }

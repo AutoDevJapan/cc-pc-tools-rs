@@ -202,6 +202,7 @@ func (r *Runner) conversationWithdraw(ctx context.Context, requestID, reasonFile
 		original.Phase, current.Phase = "", ""
 		original.Wait, current.Wait = false, false
 		original.ReplyCursor, current.ReplyCursor = "", ""
+		original.ExplicitWait, current.ExplicitWait = nil, nil
 		if !reflect.DeepEqual(original, current) {
 			return nil, errConversationWithdraw
 		}
@@ -210,7 +211,7 @@ func (r *Runner) conversationWithdraw(ctx context.Context, requestID, reasonFile
 		default:
 			return nil, errConversationWithdraw
 		}
-	} else if !q.Wait || q.Phase != "waiting" {
+	} else if (!q.Wait && q.ExplicitWait == nil) || q.Phase != "waiting" {
 		return nil, errConversationWithdraw
 	}
 	validateFiles := func() error {
@@ -229,7 +230,7 @@ func (r *Runner) conversationWithdraw(ctx context.Context, requestID, reasonFile
 		}
 		// Preserve the original wait=true in the immutable intent and canonical
 		// receipt. Future real replies use ordinary delivery to the same task.
-		if q.Wait {
+		if q.Wait || q.Phase != "withdrawn" {
 			q.Wait, q.Phase = false, "withdrawn"
 			index.Questions[q.RequestID] = q
 			if publish(r.conversationPath(), index) != nil {

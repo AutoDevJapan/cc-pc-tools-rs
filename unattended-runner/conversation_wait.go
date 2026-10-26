@@ -82,7 +82,21 @@ func (r *Runner) conversationReplyUsesWait(row *TodoRow, q ConversationQuestion)
 	if len(row.QuestionWait) == 0 || string(row.QuestionWait) == "null" {
 		return false, nil
 	}
-	if !r.conversationExactWait(row.QuestionWait, q) || !conversationWaitOwnerUnchanged(row) {
+	if !conversationWaitRecorded(row, q) {
+		var other struct {
+			SHA      string `json:"question_receipt_sha256"`
+			Question struct {
+				Request string `json:"request_id"`
+			} `json:"question"`
+		}
+		if json.Unmarshal(row.QuestionWait, &other) != nil || other.SHA == q.ReceiptSHA || other.Question.Request == q.SenderID {
+			return false, errConversationWait
+		}
+		// Another real question's wait is retained. This independent reply
+		// still belongs in the original task's note, without any wait release.
+		return false, nil
+	}
+	if !r.conversationExactWait(row.QuestionWait, q) {
 		return false, errConversationWait
 	}
 	var wait struct {
@@ -110,6 +124,9 @@ func (r *Runner) conversationWait(ctx context.Context, requestID string, checkOn
 	if err != nil {
 		return nil, err
 	}
+	if alias, ok := index.Aliases[requestID]; ok {
+		requestID = alias.Target
+	}
 	q, exists := index.Questions[requestID]
 	if !exists || !conversationID.MatchString(requestID) || q.Phase == "reserved" || q.Phase == "withdrawn" || q.Phase == "closed" || q.Phase == "applied" {
 		return nil, errConversationWait
@@ -118,7 +135,7 @@ func (r *Runner) conversationWait(ctx context.Context, requestID string, checkOn
 	if err != nil || row.Project != q.Project {
 		return nil, errConversationWait
 	}
-	proof, err := r.conversationProof(ctx, q) // sender verifies current body, decision and uploaded image bytes
+	proof, err := r.conversationProof(ctx, q) // sender checks current body, decision and saved attachment metadata
 	if err != nil {
 		return nil, err
 	}
@@ -188,18 +205,15 @@ func (r *Runner) conversationWait(ctx context.Context, requestID string, checkOn
 		return nil, errConversationWait
 	}
 	intentBytes, _ := json.Marshal(intent)
-	if err = writeConversationOnce(filepath.Join(r.Config.Home, "conversations", requestID, "wait-intent.json"), intentBytes); err != nil {
-		return nil, errConversationWait
-	}
 	if !active {
 		scope, err := r.conversationScopeFile(row, q)
 		if err != nil {
 			return nil, err
 		}
-		// Immutable per-snapshot input; a same-owner retry may inspect a newer
-		// note, but it cannot rebind the original intent to a different worker.
-		path := filepath.Join(r.Config.Home, "conversations", requestID, "wait-state-"+bytesHash(row.conversationState)+".json")
-		if err = writeConversationOnce(path, row.conversationState); err != nil {
+		// One CAS input under runner.lock, with the canonical store's row
+		// ceiling rather than the small immutable question-envelope ceiling.
+		path := filepath.Join(r.Config.Home, "conversations", requestID, "wait-state.json")
+		if err = writeText(path, string(row.conversationState)); err != nil {
 			return nil, err
 		}
 		_, _ = r.Run(ctx, conversationTodo, "question-wait", fmt.Sprint(q.Todo), "--question-file", q.ReceiptFile, "--scope-file", scope, "--expected-state-file", path)
@@ -210,27 +224,38 @@ func (r *Runner) conversationWait(ctx context.Context, requestID string, checkOn
 		}
 		row = current
 	}
+	// A rejected/precommit attempt must not freeze the question to that
+	// worker forever. Only a verified canonical wait creates this intent.
+	if err = writeConversationOnce(filepath.Join(r.Config.Home, "conversations", requestID, "wait-intent.json"), intentBytes); err != nil {
+		result["intent_save"] = "deferred"
+	}
 	q.Phase = "waiting"
 	q.ExplicitWait = &conversationExplicitWaitReceipt{WaitSHA: canonicalHash(row.QuestionWait), OriginSHA: canonicalHash(intent.Origin)}
 	index.Questions[requestID] = q
-	if err = publish(r.conversationPath(), index); err != nil {
-		return nil, err
-	}
 	result["phase"], result["outcome"], result["task_status"], result["wait_receipt_sha256"] = q.Phase, "waiting", row.Status, q.ExplicitWait.WaitSHA
+	if err = publish(r.conversationPath(), index); err != nil {
+		result["index_save"] = "deferred"
+		return result, nil // minute polling also reads the committed canonical wait
+	}
 	// A reply may have arrived between the first API read and the locked
 	// registration. The durable waiting phase also keeps minute polling live
 	// if this second API read or its delivery cannot finish in this call.
 	fresh, err := r.conversationProof(ctx, q)
 	if err != nil {
-		return nil, errConversationWait
+		result["reply_check"] = "deferred"
+		return result, nil
 	}
 	if len(fresh.Replies) != 0 {
 		health := Health{}
 		r.processConversationReplies(ctx, index, requestID, q, fresh, &health)
 		if len(health.Errors) != 0 || ctx.Err() != nil {
-			return nil, errConversationWait
+			result["reply_delivery"] = "deferred"
+			return result, nil
 		}
 		result["outcome"], result["phase"] = "owner_reply_delivered", index.Questions[requestID].Phase
+		if current, err := r.todo(q.Todo); err == nil {
+			result["task_status"] = current.Status
+		}
 	}
 	return result, nil
 }

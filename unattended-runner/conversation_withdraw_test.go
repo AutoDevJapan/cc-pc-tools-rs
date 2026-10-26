@@ -28,6 +28,10 @@ type withdrawalFixture struct {
 }
 
 func withdrawalTest(t *testing.T, native bool) *withdrawalFixture {
+	return withdrawalTestWithWait(t, native, true)
+}
+
+func withdrawalTestWithWait(t *testing.T, native, askWait bool) *withdrawalFixture {
 	t.Helper()
 	var f *conversationFixture
 	if native {
@@ -35,6 +39,7 @@ func withdrawalTest(t *testing.T, native bool) *withdrawalFixture {
 	} else {
 		f = conversationTest(t, true)
 	}
+	f.input.Wait = askWait
 	f.mutateTodo(t, func(row map[string]any) {
 		row["resume_generation"] = 7
 		row["worker_receipt"] = map[string]any{"job": "worker-42", "generation": 7}

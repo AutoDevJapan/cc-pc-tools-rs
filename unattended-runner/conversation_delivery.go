@@ -184,6 +184,10 @@ func (r *Runner) captureConversationReply(ctx context.Context, q ConversationQue
 }
 
 func (r *Runner) deliverConversationReply(ctx context.Context, q ConversationQuestion, reply conversationReply, req *Request) error {
+	complete := req.Phase == "conversation_reply_delivered" || req.Phase == "conversation_reply_applied" || req.Phase == "conversation_direction_recorded" || req.Phase == "conversation_implementation_recorded" || req.Phase == "conversation_source_verified"
+	if complete && q.Wait && len(req.ConversationAttachmentMetadata) == 0 {
+		return nil
+	}
 	row, err := r.conversationTask(ctx, q.Todo)
 	if err != nil {
 		return err
@@ -192,7 +196,7 @@ func (r *Runner) deliverConversationReply(ctx context.Context, q ConversationQue
 	if err != nil {
 		return err
 	}
-	if req.Phase == "conversation_reply_delivered" || req.Phase == "conversation_reply_applied" || req.Phase == "conversation_direction_recorded" || req.Phase == "conversation_implementation_recorded" || req.Phase == "conversation_source_verified" {
+	if complete {
 		if len(req.ConversationAttachmentMetadata) == 0 && !(wait && !q.Wait && r.conversationExactWait(row.QuestionWait, q)) {
 			return nil
 		}

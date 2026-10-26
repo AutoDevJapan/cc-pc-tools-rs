@@ -85,6 +85,22 @@ BEGIN/END通常操作で「ToDo4011 VSS retention verification」を作る。Win
 - [Microsoft: resizeはsnapshot消失のおそれがある](https://learn.microsoft.com/en-us/windows-server/administration/windows-commands/vssadmin-resize-shadowstorage)
 - [Microsoft: CreateRestorePointの戻り値と作成頻度](https://learn.microsoft.com/en-us/windows/win32/sr/createrestorepoint-systemrestore)
 - [Microsoft: 実値を置換してイベント定義を取得](https://learn.microsoft.com/en-us/dotnet/api/system.diagnostics.eventing.reader.eventlogrecord.formatdescription)
+- [Microsoft: writer state 5はbackup complete待ち](https://learn.microsoft.com/en-us/windows/win32/api/vss/ne-vss-vss_writer_state)
+- [Microsoft: SystemRestoreが追跡するファイルの範囲](https://learn.microsoft.com/en-us/windows/win32/sr/calling-srsetrestorepoint)
 
 私的な匿名実測とBroker request/戻り値は自分の`.ci-work/4011/`へ保存し、公開ソースには
 volume GUID、ホスト名、元ファイルpath、タスクの引数、実データ、認証情報を含めない。
+
+## 適用前レビューの受付
+
+固定base461e0ab5→a229c070の6ファイルを、通常の独立レビュー4014へ登録した。
+実job20261027-041610-todo-4014、正常statusでOpus5.5/max/runningを確認。
+途中の6ファイル読了報告ではmin=maxの設定が世代数を減らすおそれを調査中であり、
+最終判断は未受領。OS変更はまだ0、候補を採用・適用・修復済みとは扱わない。
+
+SystemRestoreのScopeSnapshotsは未設定。Microsoftの仕様上、ユーザーTemp canaryの
+保持を一般VSS全volume保護やSystemRestoreの必須機能と同一視できない。
+OSファイルを直接hashする案はそのC pathの通常guardが分類未確認で実施していない。
+既存backup関連taskの限定metadataでは10件中9件Microsoft namespace、他1件CC namespace。
+後者のVSS使用/保持仕様は未確認であり、他のbackupが存在しないとは断定しない。
+指摘と実保持への影響を解消してから設定を適用する。

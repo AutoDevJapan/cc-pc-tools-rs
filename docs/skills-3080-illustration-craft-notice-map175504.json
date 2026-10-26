@@ -1,0 +1,45 @@
+{
+  "todo": 3080,
+  "job": "20261026-175504-todo-3080",
+  "rows": [
+    {
+      "source_path": "agent-skills/illustration/illustration-bold-pop/SKILL.md",
+      "source_sha256": "41d760636f5942d732b35d68ace26f99d62a75ad1bfd3bbe0326ae723378f45d",
+      "repository": "MengTo/Skills",
+      "commit": "398cd41c86ba42fbb30e944ae507f463648f08b7",
+      "individual_author_notice_path": "LICENSE",
+      "notice_sha256": "b2a071ba22fefd803f4e9d1f5c777dd79c62d191695586a1a73fd4d0ebd051c6",
+      "notice_git_blob": "b3a5f823a69b4b010f92930ac09e8a776daf65c6",
+      "notice_bytes": 1064,
+      "scope": "Selected authored shared procedure text only; no third-party art, font, service rights or unread code",
+      "copied_only_selected_author_text": true,
+      "unread_examples_images_fonts_scripts_not_copied": true,
+      "ancestor_notice_overrides": 0,
+      "parent_literal_reader": "20261026-175504-todo-3080"
+    },
+    {
+      "source_path": "agent-skills/illustration/illustration-bold-pop/references/craft.md",
+      "source_sha256": "bfc7480c0ca1228ad265f340727a698704f2df558c69f7e3bebf602000ca3430",
+      "repository": "MengTo/Skills",
+      "commit": "398cd41c86ba42fbb30e944ae507f463648f08b7",
+      "individual_author_notice_path": "LICENSE",
+      "notice_sha256": "b2a071ba22fefd803f4e9d1f5c777dd79c62d191695586a1a73fd4d0ebd051c6",
+      "notice_git_blob": "b3a5f823a69b4b010f92930ac09e8a776daf65c6",
+      "notice_bytes": 1064,
+      "scope": "Selected authored shared procedure text only; no third-party art, font, service rights or unread code",
+      "copied_only_selected_author_text": true,
+      "unread_examples_images_fonts_scripts_not_copied": true,
+      "ancestor_notice_overrides": 0,
+      "parent_literal_reader": "20261026-175504-todo-3080"
+    }
+  ],
+  "fixed_tree_sha256": "78e159cb1fabd9072bf8a6c667fe55aed8d1525cfffb2a5d2b94932e1faefc59",
+  "tree_entries": 1915,
+  "truncated": false,
+  "primary_inventory_id": "github:cb7ea1494e0f217b25369cebd5c2b52b9f39f7999e5a9cb81ba1683e017920ae",
+  "primary_bytes": 20422,
+  "shared_procedure_bytes": 10528,
+  "normal_guards_before_original_reads": true,
+  "new_global_primary_credit": 0,
+  "central_operations": 0
+}

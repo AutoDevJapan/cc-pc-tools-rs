@@ -2248,5 +2248,44 @@
     "parent_current53_bytes": 790965,
     "new3_after_update_current20_verified": true,
     "whole16_complete": false
+  },
+  "sixmile_next7_received_assessments": {
+    "source_slice": [
+      168,
+      174
+    ],
+    "records": 7,
+    "original_primary_bytes": 151295,
+    "direct_masked": 5,
+    "exact_reuse": 2,
+    "assessment_writer_jobs": {
+      "new180903": 3,
+      "old041905": 4
+    },
+    "original_body_reader_not_relabelled": true,
+    "physical_source_paths": 150,
+    "physical_distinct_gzip_objects": 145,
+    "support": 188,
+    "saved": 148,
+    "unsaved": 40,
+    "new_global_raw_read_credit": 0,
+    "new_global_workflow_read_credit": 0,
+    "new_license_grants": 0,
+    "new_final_dispositions": 0,
+    "new_central_writes": 0,
+    "file": "skills-3080-sixmile-next7-evaluation175504.json",
+    "public_result_delta_review_pending": true
+  },
+  "illustration_craft_preparation": {
+    "proposed": 1,
+    "outputs": 7,
+    "source_primary": "github:cb7ea1494e0f217b25369cebd5c2b52b9f39f7999e5a9cb81ba1683e017920ae",
+    "primary_and_support_parent_literal_read": true,
+    "structure_PASS1": true,
+    "target_absence": null,
+    "installed": 0,
+    "operation": "skills-3080-operations/create-illustration-craft-175504.json",
+    "new_source_reading_credit": 0,
+    "unknown_central_comparison": false
   }
 }

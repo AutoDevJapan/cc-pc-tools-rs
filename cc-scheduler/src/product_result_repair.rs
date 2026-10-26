@@ -298,8 +298,7 @@ impl<B: Backend> Scheduler<B> {
             row["scheduler"]["phase"] = json!("retry");
         }
         row["updated"] = json!(chrono::Local::now().format("%Y-%m-%d %H:%M").to_string());
-        cc_job_policy::todo_store::check_size(encode(&db, 1).len()).map_err(todo_store_error)?;
-        write_json(&self.todo_path, &db, 1)?;
+        write_todo(&self.todo_path, &db)?;
         self.report[if exhausted {
             "product_results_exhausted"
         } else {

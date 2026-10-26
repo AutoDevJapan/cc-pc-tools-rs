@@ -1,19 +1,12 @@
 use crate::preparation::{failure_reason, owns_workspace};
 use crate::{
-    backend::{Backend, safe_text, valid_effort, valid_model},
+    backend::{safe_text, valid_effort, valid_model, Backend},
     common::*,
     policy::*,
 };
 use cc_job_policy::{cancellation, todo_wait};
 #[path = "note_history.rs"]
 mod note_history;
-fn todo_store_error(error: cc_job_policy::todo_store::Error) -> Error {
-    match error {
-        cc_job_policy::todo_store::Error::TooLarge => Error("todo_store_too_large: limit 64 MiB"),
-        cc_job_policy::todo_store::Error::InvalidJson(_) => Error("todo_store_invalid_json"),
-        cc_job_policy::todo_store::Error::Io(e) => e.into(),
-    }
-}
 fn invalid_subwork(error: &str, stage: &'static str) -> Error {
     // Emit only fixed classifications. Never print a store value or an
     // unrecognized error, and preserve the caller's existing failure code.
@@ -265,6 +258,15 @@ impl<B: Backend> Scheduler<B> {
         expected_path: Option<&str>,
         action: impl FnOnce(&mut Value),
     ) -> Result<Value> {
+        self.edit_with_note_history(id, expected_path, true, action)
+    }
+    fn edit_with_note_history(
+        &mut self,
+        id: &Value,
+        expected_path: Option<&str>,
+        preserve_note: bool,
+        action: impl FnOnce(&mut Value),
+    ) -> Result<Value> {
         let _lock = ByteLock::acquire(
             &self.todo_path.with_file_name("todo.lock"),
             Duration::from_secs(2),
@@ -292,16 +294,19 @@ impl<B: Backend> Scheduler<B> {
         if *row == before {
             return Ok(before);
         }
-        let preserved = note_history::preserve(&before, row)?;
-        row["updated"] = json!(chrono::Local::now().format("%Y-%m-%d %H:%M").to_string());
-        let size = encode(&db, 1).len();
-        if preserved && size > cc_job_policy::todo_store::MAX_BYTES {
-            note_history::make_room(&self.todo_path, &mut db)?;
-        } else {
-            cc_job_policy::todo_store::check_size(size).map_err(todo_store_error)?;
+        if preserve_note {
+            note_history::preserve(&before, row)?;
         }
+        row["updated"] = json!(chrono::Local::now().format("%Y-%m-%d %H:%M").to_string());
         let out = db["items"][index].clone();
-        write_json(&self.todo_path, &db, 1)?;
+        let may_archive = encode(&db, 1).len() > cc_job_policy::todo_store::MAX_BYTES;
+        // Capacity planning and immutable publication belong to the shared 3651 writer.
+        write_todo(&self.todo_path, &db)?;
+        if may_archive {
+            // The shared writer compacts a clone. Return the persisted row so later
+            // whole-row CAS checks do not compare an unarchived in-memory history.
+            return Ok(self.todo()?["items"][index].clone());
+        }
         Ok(out)
     }
     pub fn sample(&mut self, cfg: &Value) -> Result<(Value, Processes, Vec<Value>)> {
@@ -406,7 +411,7 @@ impl<B: Backend> Scheduler<B> {
     ) -> Result<()> {
         let now = self.backend.clock();
         let mut applied = false;
-        self.edit(id, |i| {
+        self.edit_with_note_history(id, None, reason != "stale_review_spec", |i| {
             if expected.is_some_and(|expected| expected != i) || cancellation::owner_stopped(i, &Value::Null) { return; }
             if s(&i["status"]) != "doing" || i["scheduler"]["job"] != *jid {
                 return;
@@ -859,9 +864,7 @@ impl<B: Backend> Scheduler<B> {
                 && projects[s(&item["project"])] == snapshot["projects"][s(&item["project"])]
         });
         if !released.is_empty() {
-            cc_job_policy::todo_store::check_size(encode(&db, 1).len())
-                .map_err(todo_store_error)?;
-            write_json(&self.todo_path, &db, 1)?;
+            write_todo(&self.todo_path, &db)?;
             self.report["dependencies_released"] = json!(released);
         }
         Ok(())

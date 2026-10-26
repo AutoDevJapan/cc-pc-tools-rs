@@ -36,10 +36,6 @@ fn requeue_preserves_delivery_for_every_reason() {
             "30分間実操作がなく報告だけが続いたため担当を復旧します",
         ),
         ("unknown", "担当ジョブが停止しました"),
-        (
-            "stale_review_spec",
-            "レビュー中に仕様が更新されたため、旧結果を保管して新しい仕様から再開します",
-        ),
     ] {
         let mut f = Fixture::new();
         f.managed(1, 1, "other", 0);
@@ -48,16 +44,25 @@ fn requeue_preserves_delivery_for_every_reason() {
             .unwrap();
         retained(&f, &old);
         let row = f.get(1);
-        let expected = if reason == "stale_review_spec" {
-            format!("{DELIVERED}\n{message}。")
-        } else {
-            format!("{message}。原因を引き継ぎ、資源の空きを確認して自動で再開します。")
-        };
+        let expected = format!("{message}。原因を引き継ぎ、資源の空きを確認して自動で再開します。");
         assert_eq!(row["note"], expected);
         assert_eq!(row["status"], "todo");
         assert_eq!(row["scheduler"]["last_job"], "j1");
         assert!(row["scheduler"]["job"].is_null());
     }
+}
+
+#[test]
+fn stale_review_spec_keeps_its_existing_append_without_adding_history() {
+    let mut f = Fixture::new();
+    f.managed(1, 1, "other", 0);
+    let old = delivered(&f);
+    f.e.requeue(&json!(1), &json!("j1"), "stale_review_spec")
+        .unwrap();
+    let row = f.get(1);
+    assert_eq!(row["note"], format!("{DELIVERED}\nレビュー中に仕様が更新されたため、旧結果を保管して新しい仕様から再開します。"));
+    assert_eq!(row["note_history"], old["note_history"]);
+    assert_eq!(row["status"], "todo");
 }
 
 #[test]
@@ -180,7 +185,10 @@ fn malformed_history_fails_without_replacing_the_store() {
         db["items"][0]["note_history"] = malformed;
         write_json(&f.e.todo_path, &db, 1).unwrap();
         let bytes = fs::read(&f.e.todo_path).unwrap();
-        assert!(f.e.requeue(&json!(1), &json!("j1"), "lost").is_err());
+        assert_eq!(
+            f.e.requeue(&json!(1), &json!("j1"), "lost").unwrap_err().0,
+            "todo_history_invalid"
+        );
         assert_eq!(fs::read(&f.e.todo_path).unwrap(), bytes);
     }
 }
@@ -313,7 +321,7 @@ fn archive_failure_keeps_the_complete_canonical_snapshot() {
         f.e.requeue(&json!(1), &json!("j1"), "resource_wait")
             .unwrap_err()
             .0,
-        "todo_history_archive_failed"
+        "todo_store_archive_failed"
     );
     assert_eq!(
         cc_job_policy::product_retry::digest(&fs::read(&f.e.todo_path).unwrap()),
@@ -343,4 +351,155 @@ fn overflow_can_reclaim_another_history_without_changing_its_logical_row() {
         old_other
     );
     assert!(fs::metadata(&f.e.todo_path).unwrap().len() <= todo_store::MAX_BYTES as u64);
+}
+
+#[test]
+fn owner_answer_resume_and_stop_preserve_delivery_exactly_once() {
+    for stop in [false, true] {
+        let mut f = Fixture::new();
+        f.question();
+        let old = delivered(&f);
+        f.e.backend.owner_reply = Some(json!({"id":"answer","text":"回答の全文","stop":stop}));
+        f.e.answers().unwrap();
+        retained(&f, &old);
+        let row = f.get(1);
+        assert_eq!(row["status"], if stop { "block" } else { "todo" });
+        assert_eq!(
+            row["note"],
+            if stop {
+                "オーナーの回答に従い、停止したままにします。"
+            } else {
+                "オーナーの回答を受け、同じ worktree から再開します。"
+            }
+        );
+        f.e.answers().unwrap();
+        assert_eq!(f.get(1)["note_history"], row["note_history"]);
+    }
+}
+
+#[test]
+fn legacy_retry_release_preserves_the_note_before_an_owner_answer_or_stop() {
+    for stop in [false, true] {
+        let mut f = Fixture::new();
+        let mut row = item(1, "other", "block", &[]);
+        row["note"] = json!("ジョブが失敗。2回止まったため、オーナーに再開方法を確認します。");
+        row["updated"] = json!(UPDATED);
+        row["note_history"] = json!([]);
+        row["scheduler"] = json!({"retry_count":2,"phase":"blocked","question":"saved-question"});
+        f.put(row);
+        let old = f.get(1);
+        f.e.backend.owner_reply = Some(json!({"id":"answer","text":"回答の全文","stop":stop}));
+        f.reconcile();
+        retained(&f, &old);
+        assert_eq!(f.get(1)["status"], if stop { "block" } else { "todo" });
+        assert_eq!(
+            f.get(1)["note"],
+            if stop {
+                "オーナーの回答に従い、停止したままにします。"
+            } else {
+                "オーナーの回答: 回答の全文"
+            }
+        );
+    }
+}
+
+#[test]
+fn capacity_exhaustion_preserves_delivery_and_does_not_duplicate_it_on_retry() {
+    let mut f = Fixture::new();
+    f.managed(1, 1, "other", 0);
+    let old = delivered(&f);
+    f.e.backend.records[0]["status"] = json!("failed");
+    f.e.backend.records[0]["capacity_exhausted"] = json!(true);
+    f.e.backend.ps.clear();
+    f.reconcile();
+    retained(&f, &old);
+    let row = f.get(1);
+    assert_eq!(
+        row["note"],
+        "モデルの混雑による有限の再試行を終了しました。元担当と作業内容を保持しています。"
+    );
+    assert_eq!(row["scheduler"]["phase"], "capacity_exhausted");
+    assert_eq!(row["status"], "doing");
+    f.reconcile();
+    assert_eq!(f.get(1)["note_history"], row["note_history"]);
+}
+
+#[test]
+fn third_review_preparation_failure_preserves_the_last_delivery() {
+    let mut f = Fixture::new();
+    let mut row = item(1, "other", "todo", &[]);
+    row["task_type"] = json!("review");
+    row["sandbox"] = json!("read-only");
+    row["model"] = json!("gpt-6.1-sol");
+    row["model_origin"] = json!("owner_request");
+    row["effort"] = json!("max");
+    row["review_source_jobs"] = json!(["source-writer"]);
+    f.put(row);
+    let mut author = job("source-writer", 99, "succeeded");
+    author["model"] = json!("gpt-6.1-sol");
+    f.e.backend.records.push(author);
+    for _ in 0..2 {
+        assert_eq!(
+            f.e.dispatch(&f.cfg, &f.pri).unwrap_err().0,
+            "ReviewModelConflict"
+        );
+        f.e.backend.clock += 301.;
+    }
+    let old = delivered(&f);
+    assert_eq!(
+        f.e.dispatch(&f.cfg, &f.pri).unwrap_err().0,
+        "ReviewModelConflict"
+    );
+    retained(&f, &old);
+    assert_eq!(
+        f.get(1)["note"],
+        "レビューのモデルと作者の照合を3回で終了しました。記録または指定の変更後に再確認します。"
+    );
+    assert_eq!(
+        f.get(1)["scheduler"]["review_preparation_failure"]["count"],
+        3
+    );
+    assert_eq!(f.get(1)["status"], "todo");
+}
+
+#[test]
+fn irreducible_overflow_keeps_the_store_without_publishing_a_useless_segment() {
+    let mut f = Fixture::new();
+    f.managed(1, 1, "other", 0);
+    nearly_full(&f);
+    let hash = cc_job_policy::product_retry::digest(&fs::read(&f.e.todo_path).unwrap());
+    let error =
+        f.e.requeue(&json!(1), &json!("j1"), "resource_wait")
+            .unwrap_err();
+    assert_eq!(error.0, "todo_store_too_large: limit 64 MiB");
+    assert_eq!(
+        cc_job_policy::product_retry::digest(&fs::read(&f.e.todo_path).unwrap()),
+        hash
+    );
+    assert!(!f
+        .e
+        .todo_path
+        .parent()
+        .unwrap()
+        .join("note-history-v1")
+        .exists());
+}
+
+#[test]
+fn an_edit_that_archives_returns_the_persisted_row_for_the_next_cas() {
+    let mut f = Fixture::new();
+    f.managed(1, 1, "other", 0);
+    delivered(&f);
+    let mut db = f.e.todo().unwrap();
+    db["items"][0]["note_history"][0]["note"] = json!("先に届いた結果".repeat(1024));
+    todo_store::write(&f.e.todo_path, &db).unwrap();
+    nearly_full(&f);
+    let row =
+        f.e.edit(&json!(1), |row| row["note"] = json!("状態のメモ"))
+            .unwrap();
+    assert!(row["note_history_archives"].is_array());
+    assert_eq!(row, f.get(1));
+    f.e.requeue_if(&json!(1), &json!("j1"), "resource_wait", Some(&row))
+        .unwrap();
+    assert_eq!(f.get(1)["status"], "todo");
 }

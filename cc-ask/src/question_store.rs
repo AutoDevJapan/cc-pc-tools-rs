@@ -34,5 +34,6 @@ pub fn read(path: &Path) -> Result<Value, Error> {
         cc_job_policy::todo_store::Error::TooLarge => Error::TooLarge,
         cc_job_policy::todo_store::Error::Io(e) => Error::Io(e),
         cc_job_policy::todo_store::Error::InvalidJson(e) => Error::InvalidJson(e),
+        cc_job_policy::todo_store::Error::History(e) => Error::Io(io::Error::other(e)),
     })
 }

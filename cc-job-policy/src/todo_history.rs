@@ -282,18 +282,34 @@ fn publish(store: &Path, folder: &Path, path: &Path, bytes: &[u8]) -> Result<()>
         .map_err(fail)?;
     Ok(())
 }
-/// Preview by default. Applying changes only the selected item's note history
-/// and its immutable references. Persist the returned DB under the same lock.
-pub fn archive(store: &Path, db: &mut Value, id: i64, apply: bool) -> Result<Value> {
-    let item = db["items"]
-        .as_array()
-        .and_then(|items| items.iter().find(|i| i["id"] == id))
-        .ok_or_else(|| fail("item not found"))?;
+/// A pure plan: no file or live snapshot changes until publication succeeds.
+pub(crate) struct PendingArchive {
+    pub(crate) item: Value,
+    entry: Value,
+    bytes: Vec<u8>,
+}
+impl PendingArchive {
+    pub(crate) fn publish(&self, store: &Path) -> Result<()> {
+        let folder = root(store)?;
+        let file = self.entry["file"].as_str().unwrap();
+        publish(store, &folder, &folder.join(file), &self.bytes)?;
+        // Validate by independent read before any canonical reference is committed.
+        let document: Value = serde_json::from_slice(&self.bytes).map_err(fail)?;
+        if Value::Array(read_segment(store, &self.item, &self.entry)?) != document["entries"] {
+            return Err(fail("archive roundtrip differs"));
+        }
+        Ok(())
+    }
+}
+pub(crate) fn prepare(store: &Path, item: &Value) -> Result<Option<PendingArchive>> {
+    let id = item["id"]
+        .as_i64()
+        .filter(|id| *id > 0)
+        .ok_or_else(|| fail("invalid item id"))?;
     let entries = inline(item)?;
-    let existing_count = archived_count(item)?;
-    let mut result = json!({"id":id,"apply":apply,"saved":false,"inline_entries":entries.len(),"archived_entries":existing_count});
+    archived_count(item)?;
     if entries.is_empty() {
-        return Ok(result);
+        return Ok(None);
     }
     // Validate old references before adding another segment; never hide corruption.
     for r in refs(item)? {
@@ -305,26 +321,42 @@ pub fn archive(store: &Path, db: &mut Value, id: i64, apply: bool) -> Result<Val
     let hash = sha(&bytes);
     let file = format!("{id}-{hash}.json");
     let entry = json!({"domain":DOMAIN,"todo_id":id,"file":file,"sha256":hash,"bytes":bytes.len(),"entries":entries.len()});
-    result["archive"] = entry.clone();
+    let mut previous = refs(item)?.to_vec();
+    previous.push(entry.clone());
+    let mut compacted = item.clone();
+    compacted[FIELD] = Value::Array(previous);
+    compacted["note_history"] = json!([]);
+    Ok(Some(PendingArchive {
+        item: compacted,
+        entry,
+        bytes,
+    }))
+}
+/// Preview by default. Applying changes only the selected item's note history
+/// and its immutable references. Persist the returned DB under the same lock.
+pub fn archive(store: &Path, db: &mut Value, id: i64, apply: bool) -> Result<Value> {
+    let items = db["items"]
+        .as_array()
+        .ok_or_else(|| fail("invalid items"))?;
+    let matches: Vec<_> = items
+        .iter()
+        .enumerate()
+        .filter(|(_, i)| i["id"] == id)
+        .collect();
+    let [(index, item)] = matches.as_slice() else {
+        return Err(fail("item missing or ambiguous"));
+    };
+    let index = *index;
+    let mut result = json!({"id":id,"apply":apply,"saved":false,"inline_entries":inline(item)?.len(),"archived_entries":archived_count(item)?});
+    let Some(pending) = prepare(store, item)? else {
+        return Ok(result);
+    };
+    result["archive"] = pending.entry.clone();
     if !apply {
         return Ok(result);
     }
-    let folder = root(store)?;
-    publish(store, &folder, &folder.join(&file), &bytes)?;
-    // Independently reread the immutable file before the original history is removed.
-    if read_segment(store, item, &entry)? != entries {
-        return Err(fail("archive roundtrip differs"));
-    }
-    let item = db["items"]
-        .as_array_mut()
-        .unwrap()
-        .iter_mut()
-        .find(|i| i["id"] == id)
-        .unwrap();
-    let mut previous = refs(item)?.to_vec();
-    previous.push(entry);
-    item[FIELD] = Value::Array(previous);
-    item["note_history"] = json!([]);
+    pending.publish(store)?;
+    db["items"][index] = pending.item;
     result["saved"] = json!(true);
     Ok(result)
 }

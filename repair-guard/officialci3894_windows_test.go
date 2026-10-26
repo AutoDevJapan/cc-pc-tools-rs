@@ -39,6 +39,11 @@ func TestOfficialCI3894CLI(t *testing.T) {
 		{"--consume-official-ci3387", id, "--unknown"},
 		{"--guard-path", "synthetic", "--prepare-official-ci3387"},
 		{"--verify-omb-producer-3255", "--prepare-official-ci3387"},
+		{"--verify-official-ci3387-update", "--prepare-official-ci3387"},
+		{"--verify-official-ci3387-update", "--root", "synthetic"},
+		{"--verify-official-ci3387-update", "--hash", strings.Repeat("a", 64)},
+		{"--verify-official-ci3387-update", "--verify-official-ci3387-update"},
+		{"--verify-official-ci3387-update=true"},
 	} {
 		t.Run(strings.Join(args, " "), func(t *testing.T) {
 			var out bytes.Buffer
@@ -53,7 +58,7 @@ func TestOfficialCI3894CLI(t *testing.T) {
 			}
 		})
 	}
-	for _, args := range [][]string{{"--prepare-official-ci3387"}, {"--verify-official-ci3387", id}, {"--consume-official-ci3387", id}} {
+	for _, args := range [][]string{{"--prepare-official-ci3387"}, {"--verify-official-ci3387", id}, {"--consume-official-ci3387", id}, {"--verify-official-ci3387-update"}} {
 		var out bytes.Buffer
 		calls := 0
 		code := runOfficial3894CLI(args, &out, func(ctx context.Context, op, receipt string, handoff func(object) error) (object, error) {
@@ -61,7 +66,7 @@ func TestOfficialCI3894CLI(t *testing.T) {
 			if _, ok := ctx.Deadline(); !ok {
 				t.Error("missing finite deadline")
 			}
-			if op != "prepare" && receipt != id {
+			if op != "prepare" && op != "update" && receipt != id {
 				t.Error("receipt changed")
 			}
 			r := official3894Failure("")

@@ -310,6 +310,7 @@ func printGuardUsage(output io.Writer) {
 	fmt.Fprintln(output, "  --prepare-official-ci3387\n    \tprepare the one fixed official public Windows SDK using normal new ownership")
 	fmt.Fprintln(output, "  --verify-official-ci3387 <receipt-id>\n    \tverify original purpose, identities and public bytes; metadata only")
 	fmt.Fprintln(output, "  --consume-official-ci3387 <receipt-id>\n    \treturn verified public software byte snapshots once to the existing CI provider; no launch")
+	fmt.Fprintln(output, "  --verify-official-ci3387-update\n    \tcompare only the previously published guard software for this merged repair; no update or data access")
 	fmt.Fprintln(output, "  -guard-path string")
 	fmt.Fprintln(output, "    \tresource absolute path")
 	fmt.Fprintln(output, "  -verify-product-resume int")

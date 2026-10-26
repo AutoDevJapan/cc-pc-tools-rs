@@ -31,6 +31,11 @@ const official3894Safe = "D:/CC/Tools/safe-delete/safe-delete.exe"
 const official3894Temp = "C:/Users/makhmeto/AppData/Local/Temp"
 const official3894OriginalCreator = "20261026-064014-todo-3894"
 
+// Independent PR524 publisher receipt, not a hash learned from the target.
+// docs/evidence/skills-3080-guard-installed-60a1.json
+const official3894PreviousGuardSHA = "916bff404f54548814152efcd186dd772b33fd32872fd86fa88bc8d8718df9e3"
+const official3894PreviousGuardHead = "60a1b82b62d60cfcd66136aa4527041af643c4d6"
+
 type official3894Source struct {
 	Head, Registration, CreatorJob, Workspace, Branch, SpecSHA string
 }
@@ -68,7 +73,7 @@ func official3894Hex(s string, n int) bool {
 func official3894Flag(args []string) bool {
 	for _, a := range args {
 		a = strings.TrimLeft(a, "-")
-		for _, f := range []string{"prepare-official-ci3387", "verify-official-ci3387", "consume-official-ci3387"} {
+		for _, f := range []string{"prepare-official-ci3387", "verify-official-ci3387", "consume-official-ci3387", "verify-official-ci3387-update"} {
 			if a == f || strings.HasPrefix(a, f+"=") {
 				return true
 			}
@@ -78,6 +83,9 @@ func official3894Flag(args []string) bool {
 }
 
 func official3894Parse(args []string) (string, string, bool) {
+	if len(args) == 1 && args[0] == "--verify-official-ci3387-update" {
+		return "update", "", true
+	}
 	if len(args) == 1 && args[0] == "--prepare-official-ci3387" {
 		return "prepare", "", true
 	}
@@ -505,7 +513,7 @@ func official3894SourceCheck(ctx context.Context, saved *official3894Source, con
 	if !ok {
 		return result, official3894Error("clean_windows_source_build_required")
 	}
-	for _, path := range []string{"repair-guard", "tools/civ6-ci-contract"} {
+	for _, path := range []string{"repair-guard", "tools/civ6-ci-contract", "localai-web-rs/src/operations_catalog.rs", "localai-web-rs/src/operations.rs"} {
 		if _, e := permanentGitAt(creator.Scheduler.Worktree, "diff", "--quiet", "--no-ext-diff", "--no-textconv", head, "--", path); e != nil {
 			return result, official3894Error("current_source_inputs_changed")
 		}
@@ -665,6 +673,9 @@ func official3894Summary(t official3894Ticket) object {
 }
 
 func official3894Operation(ctx context.Context, op, id string, handoff func(object) error) (object, error) {
+	if op == "update" {
+		return official3894Update(ctx)
+	}
 	// These are purpose-specific native metadata records. No normal data path
 	// classification is modified by opening this fixed journal.
 	store, e := official3894OpenStore(official3894Store, op == "prepare")
@@ -786,6 +797,41 @@ func official3894Operation(ctx context.Context, op, id string, handoff func(obje
 	result["purpose_verified"] = true
 	delete(result, "reason")
 	return result, nil
+}
+
+func official3894InstalledBaseline(sha, head string) bool {
+	return sha == official3894PreviousGuardSHA && head == official3894PreviousGuardHead
+}
+
+// Qualifies only comparison of the single previously published guard software.
+// It performs no update, SDK creation, data read grant or general classification.
+// Review/CI acceptance and the existing AdminBroker CAS remain separate gates.
+func official3894Update(ctx context.Context) (object, error) {
+	source, e := official3894SourceCheck(ctx, nil, false)
+	if e != nil {
+		return nil, e
+	}
+	s := skillsFS{blocked: func(path string) bool {
+		return !same(path, skillsRuntimeTarget) || legacyMatch(path) || ownerCardPath(path)
+	}}
+	defer s.close()
+	raw, ok := s.read(skillsRuntimeTarget, 64<<20)
+	if !ok {
+		return nil, official3894Error("known_guard_software_unavailable")
+	}
+	head, ok := skillsBuildRevision(raw)
+	if !ok || !official3894InstalledBaseline(official3894Hash(raw), head) {
+		// Never return or adopt an unknown observed hash as the new baseline.
+		return nil, official3894Error("known_guard_software_mismatch")
+	}
+	identity, e := official3894Identity(s.files[len(s.files)-1])
+	if e != nil {
+		return nil, e
+	}
+	return object{"purpose_verified": true, "access_allowed": false, "original_registry_recovered": false, "launch_performed": false,
+		"domain": "official-ci3387-software-comparison-v1", "todo_id": 3894, "current_sha256": official3894PreviousGuardSHA,
+		"current_source_head": head, "current_identity": identity, "source_head": source.Head, "source_registration_sha256": source.Registration,
+		"sdk_created": false, "update_performed": false, "general_access_granted": false}, nil
 }
 
 // Pins are from the original finite publisher in tools/owned-cleanup-deploy,

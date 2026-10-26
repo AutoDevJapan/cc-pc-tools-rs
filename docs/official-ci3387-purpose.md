@@ -106,5 +106,15 @@ require process exit zero, which follows the durable `consumed` commit. A final
 commit failure after output still returns nonzero and never appends a second
 JSON document. This is a one-shot handoff, not a retryable delivery queue.
 
+`--verify-official-ci3387-update` takes no arguments. After normal source merge
+and actual implementation-actor qualification it compares only the single
+PR524 publisher's previously accepted guard SHA/build revision, returning its
+current physical identity for the existing AdminBroker update CAS. Unknown
+software fails without disclosing or adopting its observed digest. It creates
+no SDK/journal, updates nothing, and grants no general path or data access.
+Actual distinct-model review, same-head formal CI and current ACL/CAS checks
+remain required before deployment. This is the 3894 software comparison path;
+the separate 3686-specific update qualification is not reused.
+
 Implementation evidence is attached to Issue 526 and its PR. At specification
 time no formal CI, merge, installed update or real SDK acceptance is claimed.

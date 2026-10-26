@@ -191,6 +191,28 @@ func TestOfficialCI3894ExactWriter(t *testing.T) {
 	}
 }
 
+func TestOfficialCI3894InstalledSoftwarePin(t *testing.T) {
+	if !official3894InstalledBaseline(official3894PreviousGuardSHA, official3894PreviousGuardHead) {
+		t.Fatal("independent published pair missing")
+	}
+	for _, pair := range [][2]string{
+		{strings.Repeat("a", 64), official3894PreviousGuardHead},
+		{official3894PreviousGuardSHA, strings.Repeat("a", 40)},
+		{strings.ToUpper(official3894PreviousGuardSHA), official3894PreviousGuardHead},
+		{"", ""},
+	} {
+		if official3894InstalledBaseline(pair[0], pair[1]) {
+			t.Fatal("unknown observed software adopted")
+		}
+	}
+	var out, errout bytes.Buffer
+	code := runGuardCLI([]string{"--verify-official-ci3387-update", "--guard-path", "synthetic"}, &out, &errout, nil)
+	var r object
+	if code != 2 || json.Unmarshal(out.Bytes(), &r) != nil || r["purpose_verified"] != false || errout.Len() != 0 {
+		t.Fatal("software comparison mixed CLI escaped machine refusal")
+	}
+}
+
 func TestOfficialCI3894HandoffSuccessOnce(t *testing.T) {
 	engine := &official3894HandoffFixture{}
 	var out bytes.Buffer

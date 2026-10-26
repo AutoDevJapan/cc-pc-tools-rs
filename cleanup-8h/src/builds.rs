@@ -971,6 +971,7 @@ impl Artifacts {
                                 .contains(&name.as_str())
                             || binary
                                 && (stem == "build-script-build"
+                                    || stem == "build_script_build" && extension == "pdb"
                                     || stem.starts_with("build_script_build-") && unit(stem))
                     };
                 }
@@ -2171,6 +2172,39 @@ mod tests {
                 fs::remove_dir(root.join(".fingerprint/notes-0123456789abcdef")).unwrap();
             }
         }
+        f.kept();
+    }
+    #[test]
+    fn only_the_exact_msvc_script_pdb_alias_is_allowed_in_a_verified_build_unit() {
+        let f = Fixture::new();
+        let root = f.work.join("target/debug");
+        let dir = root.join("build/fixture-0123456789abcdef");
+        fs::create_dir_all(&dir).unwrap();
+        let mut a = f.artifacts();
+        a.build_dirs.insert("fixture-0123456789abcdef".into());
+        a.units
+            .get_mut("0123456789abcdef")
+            .unwrap()
+            .insert("build_script_build".into());
+        fs::write(dir.join("build_script_build-0123456789abcdef.pdb"), [3; 37]).unwrap();
+        fs::hard_link(
+            dir.join("build_script_build-0123456789abcdef.pdb"),
+            dir.join("build_script_build.pdb"),
+        )
+        .unwrap();
+        let budget = f.budget();
+        let mut stats = Stats::default();
+        let profiles = Profiles::load(&root).unwrap();
+        let plan = inventory(&root, &a, &budget, &mut stats).unwrap();
+        let pins = plan.hold(&budget, &mut stats).unwrap();
+        plan.apply(&root, pins, &budget, &mut stats, &profiles);
+        assert_eq!(stats.builds.completed, 1);
+        assert_eq!(stats.builds.removed_bytes, f.bytes() + 37);
+        assert!(!a.known(
+            Path::new("build/notes-0123456789abcdef/build_script_build.pdb"),
+            false
+        ));
+        assert!(!a.known(Path::new("build/fixture-0123456789abcdef/saved.pdb"), false));
         f.kept();
     }
     #[test]

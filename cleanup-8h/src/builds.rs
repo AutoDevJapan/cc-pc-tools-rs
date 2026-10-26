@@ -989,6 +989,7 @@ fn candidate(
         return Ok(());
     }
     let _queue = lock(&ctx.root.join("queue.lock"))?;
+    let _jobs=pin_ancestors(&ctx.jobs).map_err(|_|"JOBS_UNVERIFIED")?;
     let active = ctx
         .active_job_ids_snapshot()
         .map_err(|_| "ACTIVE_JOB_INDEX_UNVERIFIED")?;

@@ -689,20 +689,50 @@ impl Context {
                 now >= at && now - at < 30.
             })
     }
-    /// Read the normally maintained, recently reconciled active/queued IDs.
+    /// Read current active/queued IDs without changing jobs or their index.
     /// The caller holds queue.lock until it finishes using this snapshot, so
     /// registration/requeue cannot introduce an unobserved owner in between.
-    /// Unlike admission preparation, this API never scans or writes history.
+    /// Reuse a fresh complete index, or inspect canonical metadata using the
+    /// same occupied/unknown rules as admission. The fallback is bounded and
+    /// never writes/reconciles the persistent index or starts workers.
     pub fn active_job_ids_snapshot(&self) -> Result<Vec<String>> {
+        #[cfg(windows)]
+        {
+            use std::os::windows::fs::MetadataExt;
+            for path in [&self.jobs,self.jobs.join(".queue-index.json").as_path()] {
+                match fs::symlink_metadata(path) {
+                    Ok(metadata) if metadata.file_attributes()&0x400!=0=>return Err(Error::new("active job metadata is redirected")),
+                    Err(e) if e.kind()==std::io::ErrorKind::NotFound=>(),
+                    Err(e)=>return Err(e.into()),_=>(),
+                }
+            }
+        }
         let index = self.read_admission_index()?;
-        if !self.index_fresh(&index) {
-            return Err(Error::new("active job index is not fresh and complete"));
+        if self.index_fresh(&index) {
+            let ids = self.index_ids(&index)?;
+            if ids.len() > 4096 {return Err(Error::new("active job snapshot limit"));}
+            return Ok(ids.into_iter().map(str::to_owned).collect());
         }
-        let ids = self.index_ids(&index)?;
-        if ids.len() > 4096 {
-            return Err(Error::new("active job snapshot limit"));
+        let until=std::time::Instant::now()+std::time::Duration::from_secs(30);
+        let mut ids=Vec::new();
+        for (count,entry) in fs::read_dir(&self.jobs)?.enumerate() {
+            if count>=100_000 || std::time::Instant::now()>=until {return Err(Error::new("active job inspection limit"));}
+            let entry=entry?;let kind=entry.file_type()?;
+            let id=entry.file_name().to_string_lossy().into_owned();
+            if !valid_job_id(&id) {continue;}
+            #[cfg(windows)]
+            {
+                use std::os::windows::fs::MetadataExt;
+                if fs::symlink_metadata(entry.path())?.file_attributes()&0x400!=0 {return Err(Error::new("active job record is redirected"));}
+            }
+            // A redirected canonical record is unknown, never an omitted owner.
+            if kind.is_symlink() {return Err(Error::new("active job record is redirected"));}
+            if !kind.is_dir() {continue;}
+            if self.admission_active(&self.admission_record(&id)) {ids.push(id);}
+            if ids.len()>4096 {return Err(Error::new("active job snapshot limit"));}
         }
-        Ok(ids.into_iter().map(str::to_owned).collect())
+        ids.sort();
+        Ok(ids)
     }
     /// Prepare history WITHOUT the queue gate. One scanner serves concurrent
     /// launchers; only active candidates and registrations are reread at commit.

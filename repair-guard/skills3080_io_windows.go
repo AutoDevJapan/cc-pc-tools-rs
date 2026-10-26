@@ -37,6 +37,12 @@ func skillsOpenAt(parent syscall.Handle, name string, directory, create bool) (s
 // Only canonical append logs use write sharing. Central outputs always retain
 // the original deny-write/deny-delete handle through validation and consumption.
 func skillsOpenAtSharing(parent syscall.Handle, name string, directory, create, appendLog bool) (syscall.Handle, bool) {
+	return skillsOpenAtAccess(parent, name, directory, create, appendLog, false)
+}
+
+// DELETE access is only used by the exact own-revision operation. It does not
+// grant write access to an existing leaf or change normal read sharing.
+func skillsOpenAtAccess(parent syscall.Handle, name string, directory, create, appendLog, rename bool) (syscall.Handle, bool) {
 	if name == "" || name == "." || name == ".." || strings.ContainsAny(name, `/\:`) {
 		return 0, false
 	}
@@ -50,6 +56,9 @@ func skillsOpenAtSharing(parent syscall.Handle, name string, directory, create, 
 	var status skillsIOStatus
 	var h syscall.Handle
 	access := uint32(syscall.GENERIC_READ | 0x100000) // explicit SYNCHRONIZE for native synchronous I/O
+	if rename {
+		access |= 0x10000
+	}
 	share := uint32(syscall.FILE_SHARE_READ)
 	if appendLog && !directory && !create {
 		share |= syscall.FILE_SHARE_WRITE

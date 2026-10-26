@@ -4,6 +4,7 @@
 /tools/codex-progress-tui/activation/*.cmd text eol=crlf
 /repair-guard/civ6-ci-2962-contract.json text eol=lf
 /repair-guard/owner_catalog.json text eol=lf
+/repair-guard/testdata/skills3080-revision1-*.json -text
 /docs/skills-3080-upstream-MIT.txt -text
 /docs/skills-3080-humanlayer-MIT.txt -text
 /docs/skills-3080-docker-APACHE.txt -text
@@ -148,6 +149,9 @@ docs/skills-3080-combat6-notice-map090101.json text eol=lf
 docs/skills-3080-combat6-source-evaluation090101.json text eol=lf
 docs/skills-3080-combat6-structure-receipt090101.json text eol=lf
 docs/skills-3080-combat6-input-acceptance090101.md text eol=lf
+/docs/skills-3080-operations/revise-design-reference1-proposed090101.json text eol=lf
+/docs/skills-3080-design-reference-own-revision1-plan090101.json text eol=lf
+/docs/skills-3080-design-reference-own-revision1-acceptance090101.md text eol=lf
 /docs/skills-3080-operations/create-codex3-090101.json text eol=lf
 /docs/skills-3080-codex3-reviewed-bundle090101.json text eol=lf
 /docs/skills-3080-codex3-notice-map090101.json text eol=lf

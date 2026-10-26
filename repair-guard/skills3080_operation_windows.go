@@ -206,6 +206,12 @@ func skillsOperation(op, path string) object {
 		return fail("writer")
 	}
 	reg.writer = r.Writer
+	if strings.HasSuffix(op, "-skills3080-revision") {
+		return skillsRevisionOperation(op, path, raw, r, reg, &fs)
+	}
+	if r.Revision != nil {
+		return fail("request")
+	}
 	result := object{"qualified": true, "domain": "skills-3080-purpose-v1", "todo_id": 3080, "general_access_granted": false, "original_registry_recovered": false, "request_sha256": hashBytes(raw)}
 	if op == "receive-skills3080-result" {
 		if r.Consume != nil || r.Runtime != nil || r.Result == nil || r.Review != nil || r.ManifestCommit != "" || r.ManifestPath != "" || r.ManifestSHA != "" || !skillsResultID(*r.Result) {

@@ -31,6 +31,8 @@ type skillsPublicReviewComparison struct {
 }
 type skillsPublicReviewScope struct {
 	Domain              string                        `json:"domain"`
+	PurposePath         string                        `json:"purpose_path,omitempty"`
+	Purpose             string                        `json:"purpose,omitempty"`
 	Instructions        string                        `json:"instructions"`
 	Todo                int                           `json:"todo_id"`
 	Repository          string                        `json:"repository"`
@@ -53,7 +55,7 @@ var skillsPublicValidatorGo = regexp.MustCompile(`^[a-z0-9_]+\.go$`)
 
 func skillsParsePublicReview(raw []byte) (skillsPublicReviewScope, bool) {
 	var c skillsPublicReviewScope
-	ok := skillsStrict(raw, &c) && skillsPublicReviewShape(c)
+	ok := skillsStrict(raw, &c) && skillsPublicPurposeEncoding(raw, false) && skillsPublicReviewShape(c)
 	return c, ok
 }
 
@@ -68,8 +70,23 @@ func skillsPublicReviewShape(c skillsPublicReviewScope) bool {
 
 func skillsParsePublicRepair(raw []byte) (skillsPublicReviewScope, bool) {
 	var c skillsPublicReviewScope
-	ok := skillsStrict(raw, &c) && skillsPublicSourceShape(c, true)
+	ok := skillsStrict(raw, &c) && skillsPublicPurposeEncoding(raw, true) && skillsPublicSourceShape(c, true)
 	return c, ok
+}
+
+func skillsPublicPurposeEncoding(raw []byte, repair bool) bool {
+	v, ok := conversationJSON(raw)
+	if !ok {
+		return false
+	}
+	a, path := v["purpose_path"]
+	b, body := v["purpose"]
+	if !path && !body {
+		return true
+	}
+	pa, paOK := a.(string)
+	pb, pbOK := b.(string)
+	return repair && path && body && paOK && pbOK && pa != "" && pb != ""
 }
 
 func skillsPublicRepairPath(path string) bool {
@@ -86,6 +103,23 @@ func skillsPublicSourceShape(c skillsPublicReviewScope, repair bool) bool {
 	if repair {
 		domain, wantInstructions, pathAllowed = "skills-3080-public-repair-v1", skillsPublicRepairInstructions, skillsPublicRepairPath
 		if c.Comparison != nil {
+			return false
+		}
+	}
+	// Delivery only: the complete UTF-8 body must itself be a selected public
+	// Git object. Its remote publication is checked with every other input.
+	// A review cannot acquire repair instructions or a new reading namespace.
+	if c.Purpose != "" || c.PurposePath != "" {
+		if !repair || !skillsPublicReviewPath(c.PurposePath) || len(c.Purpose) == 0 || len(c.Purpose) > 64<<10 {
+			return false
+		}
+		found := false
+		for _, f := range c.Files {
+			if f.Path == c.PurposePath && f.Bytes == int64(len(c.Purpose)) && f.SHA == hashBytes([]byte(c.Purpose)) && f.Blob == skillsGitBlobID([]byte(c.Purpose)) {
+				found = true
+			}
+		}
+		if !found {
 			return false
 		}
 	}

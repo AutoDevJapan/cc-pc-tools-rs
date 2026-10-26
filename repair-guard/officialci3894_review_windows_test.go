@@ -193,7 +193,7 @@ func TestOfficialCI3894ExactWriter(t *testing.T) {
 }
 
 func TestOfficialCI3894InstalledSoftwarePin(t *testing.T) {
-	raw, e := os.ReadFile("../docs/evidence/official-ci3387-known-guard-baseline-038bc.json")
+	raw, e := os.ReadFile("../docs/evidence/official-ci3387-known-guard-baseline-f5f846a8.json")
 	if e != nil {
 		t.Fatal(e)
 	}
@@ -210,6 +210,7 @@ func TestOfficialCI3894InstalledSoftwarePin(t *testing.T) {
 		t.Fatal("independent published pair missing")
 	}
 	for _, pair := range [][2]string{
+		{"ccb5e797e6b5627d98ade2a562f2f98f3c121a5403e1523071afc07f73af4556", "038bc2570014132321919bf6758d68979506b741"},
 		{"916bff404f54548814152efcd186dd772b33fd32872fd86fa88bc8d8718df9e3", "60a1b82b62d60cfcd66136aa4527041af643c4d6"},
 		{strings.Repeat("a", 64), official3894PreviousGuardHead},
 		{official3894PreviousGuardSHA, strings.Repeat("a", 40)},

@@ -14,6 +14,47 @@ const ANSWERS: &str = "owner_question_answer_receipts";
 const DELIVERIES: &str = "owner_question_delivery_receipts";
 
 #[test]
+fn explicit_wait_snapshot_rejects_changed_owner_and_holds_before_register_or_replay() {
+    let f = Fixture::new();
+    let original = f.read();
+    let question_file = f.file("question.json", &question());
+    let expected = f.file("explicit-wait-origin.json", &original["items"][0]);
+    let call = || {
+        f.command(&[
+            "question-wait", "1", "--question-file", question_file.to_str().unwrap(),
+            "--expected-state-file", expected.to_str().unwrap(),
+        ]).output().unwrap()
+    };
+    for (key, value) in [
+        ("resume_generation", json!(8)),
+        ("worker_receipt", json!({"job":"another","generation":7})),
+        ("scheduler", json!({"job":"another","key":"another"})),
+        ("status", json!("wait")),
+        ("wait_on", json!([2])),
+        ("owner_stopped", json!(true)),
+        ("note", json!("a newer instruction")),
+    ] {
+        let mut changed = original.clone();
+        changed["items"][0][key] = value;
+        f.write(&changed);
+        let before = f.raw();
+        let out = call();
+        assert!(!out.status.success(), "accepted changed {key}");
+        assert_eq!(String::from_utf8_lossy(&out.stderr).trim(), "conversation_state_changed");
+        assert_eq!(before, f.raw());
+    }
+    f.write(&original);
+    assert!(call().status.success());
+    let parked = f.read();
+    let before = f.raw();
+    assert!(!call().status.success(), "stale snapshot accepted an idempotent replay");
+    assert_eq!(before, f.raw());
+    f.file("explicit-wait-origin.json", &parked["items"][0]);
+    assert!(call().status.success());
+    assert_eq!(before, f.raw());
+}
+
+#[test]
 fn conversation_scope_rejects_project_or_root_changes_before_any_mutation() {
     for command in [
         "edit",

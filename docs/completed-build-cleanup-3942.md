@@ -1,7 +1,9 @@
 # 完了したPCツール作業のビルド生成物を1時間清掃で回収する
 
 元3942。既存Rust cleanup-8hを拡張する。新しい常駐・Windowsタスク・所有登録は作らない。
-3757は通常ToDoでdoneを確認し、`todo.exe wait 3942 --on 3757`で依存を保持した。
+3757は2026-10-26 16:25にdone。旧jobの不要なwait再登録で依存世代が変わったため、
+通常のcancel/再割当で復旧した。現在job20261026-164814-todo-3942とRootの世代2が一致。
+完了済み3757へのwaitは再登録しない。
 safe-deleteのソース・配布対象は本件で変更しない。
 
 ## 受入条件
@@ -27,4 +29,9 @@ safe-deleteのソース・配布対象は本件で変更しない。
 
 ## 実装・検証記録
 
-実装中。元の管理caseと3757の原記録は変更しない。詳細な原結果は本担当の所有証拠フォルダーへ保存する。
+Issue: https://github.com/AutoDevJapan/cc-pc-tools-rs/issues/545 。
+変更範囲のWindows nextestは35件成功、Clippyも成功。実行中exe、別プロセスのCargo lock競合、
+未知guard、未pushソース、原状態変化、junction/hardlink、置換・部分失敗を含む。
+cleanup-8hはbinaryのみでdoctest対象なし。既存cc-jobs依存を追加したため、最終CIはロック変更の
+通常選択規則に従って全workspace/doctestを1回実行する。PCでは同じ全件を重ねない。
+元の管理caseと3757の原記録は変更しない。詳細な原結果は本担当の所有証拠フォルダーへ保存する。

@@ -2,7 +2,7 @@
 
 The historical task name `CC-CleanupDeletionRequests-8h` is retained, but it runs **hourly**. Production roots are compiled in: `C:\Users\makhmeto\Downloads\削除希望` and `D:\削除希望`. No option expands those roots. No arguments and `--dry-run` inspect only; the task passes `--apply`.
 
-The previous automatic scans of workspaces, desktop development trees and temporary receipt trees were removed after the unexplained source/settings loss. This replacement never scans or deletes those trees, and never prunes Docker or AI models.
+The previous broad scans of workspaces, desktop development trees and temporary receipt trees were removed after the unexplained source/settings loss. A separate finite entry now considers only registered completed PC-tool worktrees' ignored `target/debug` artifacts, as described below. It never prunes Docker or AI models.
 
 Physical ancestors are pinned; reparse points and mismatched physical names are rejected. Source, repository markers, verification records and recovery material including ToDo 2467 are retained. Unknown resources use the real scrub391 guard. Unavailable protection or `classification_unverified` retains a candidate before descending. The original registry is not synthesized or replaced with an empty list.
 
@@ -32,3 +32,28 @@ The Windows integration test compiles the Go test producer and exercises the act
 Go/Rust process protocol with synthetic canonical records and disposable data.
 It also checks canonical finish and evidence retention. Go is required for this
 affected test; the existing Windows CI already provisions it.
+
+Completed-build reclamation (Issue 545 / ToDo3942) reads the canonical ToDo and job
+APIs. Only project `cc-pc-tools-rs`, status `done`, the recorded successful final
+job and its exact registered Git worktree qualify. Current remote ownership,
+common directory, branch, saved/pushed source and ignored/untracked debug data are
+checked. A waiting/live sibling, dependent unfinished work or live resource marker
+retains that target. No arbitrary path or ownership registration is accepted.
+
+Existing queue/state/ToDo byte locks, the exact shared Cargo target lock and Cargo's
+own profile locks are held from qualification through deletion. Ancestors and all
+artifact files are pinned. Every file must acquire exclusive deletion access
+before the first removal, so a running executable or open dependency retains the
+whole set. Reparse points, hardlinks, source/evidence and unknown top-level content
+are retained. Generated source under Cargo build-script OUT_DIR remains rebuildable.
+The profile directory and its lock files stay in place to prevent a direct Cargo
+start during reclamation; receipts report artifact absence separately from that
+scaffolding. Source, Git, release and original records are never deletion targets.
+
+The new stage runs after the older independent stages, for at most 90 seconds,
+512 canonical rows and four measured artifact sets per hourly invocation. It uses
+a numeric scheduling cursor only in apply mode; the cursor never grants authority.
+Default/dry-run changes no target, cursor or durable receipt. Schema 3 adds anonymous
+candidate/removed/retained/unmeasured/partial/absence statistics. Empty or previously
+removed artifacts are not reclaimed twice. No Discord sender, new task, ownership
+exception or whole-PC completion claim is added.

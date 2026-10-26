@@ -22,6 +22,9 @@ const NO_WINDOW: u32 = 0x08000000;
 #[path = "owned.rs"]
 mod owned;
 
+#[path = "builds.rs"]
+mod builds;
+
 #[repr(C)]
 #[derive(Default)]
 struct FileTime {
@@ -227,6 +230,7 @@ fn pin_ancestors(path: &Path) -> io::Result<Vec<Pinned>> {
 
 #[derive(Default)]
 struct Stats {
+    builds: builds::BuildStats,
     candidates: u64,
     removed_files: u64,
     removed_directories: u64,
@@ -623,7 +627,7 @@ pub fn run() -> i32 {
             0x80000000 | 0x40000000,
             0,
             ptr::null(),
-            4,
+            if apply { 4 } else { 3 },
             0x00200000,
             0,
         )
@@ -658,6 +662,9 @@ pub fn run() -> i32 {
         }
         Err(_) => stats.failures += 1,
     }
+    // A failed new candidate must never bypass the older deletion/recycle work.
+    // Keep a separate finite budget after those independent stages.
+    builds::run(apply, &budget, &mut stats);
     let after = snapshot();
     let delta: Vec<_> = before
         .iter()
@@ -665,7 +672,7 @@ pub fn run() -> i32 {
         .map(|(b, a)| b.zip(a).map(|(b, a)| i128::from(a) - i128::from(b)))
         .collect();
     let row = json!({
-        "schema": 2, "time_unix": SystemTime::now().duration_since(UNIX_EPOCH).unwrap_or_default().as_secs(),
+        "schema": 3, "time_unix": SystemTime::now().duration_since(UNIX_EPOCH).unwrap_or_default().as_secs(),
         "mode": if apply {"apply"} else {"dry_run"}, "roots": ["C_deletion_requests", "D_deletion_requests", "C_owner_recycle", "D_owner_recycle"],
         "free_bytes_before": {"C":before[0],"D":before[1],"E":before[2]},
         "free_bytes_after": {"C":after[0],"D":after[1],"E":after[2]},
@@ -679,29 +686,31 @@ pub fn run() -> i32 {
         "owned_completed":stats.owned_completed,"owned_retained":stats.owned_retained,
         "owned_finish_failed":stats.owned_finish_failed,"owned_retention_reasons":stats.owned_reasons,
         "owned_retained_plan_remaining_bytes":stats.owned_retained_bytes,"owned_retained_bytes_unmeasured":stats.owned_retained_unmeasured,
-        "partial":stats.expired || stats.retained_unknown > 0 || stats.failures > 0 || stats.retained_links_or_busy > 0 || stats.owned_retained > 0 || stats.owned_finish_failed > 0,
-        "elapsed_ms": start.elapsed().as_millis(), "workspace_scan": "not_performed", "e_files_touched":false,
+        "completed_builds":stats.builds.json(),
+        "partial":stats.expired || stats.retained_unknown > 0 || stats.failures > 0 || stats.retained_links_or_busy > 0 || stats.owned_retained > 0 || stats.owned_finish_failed > 0 || stats.builds.partial(),
+        "elapsed_ms": start.elapsed().as_millis(), "workspace_scan": "registered_completed_pc_tools_debug_only", "all_pc_cleanup_complete":false,"e_files_touched":false,
     });
     let log = Path::new(RUNTIME).join("owned-target-runs.jsonl");
-    let log_ok = OpenOptions::new()
-        .append(true)
-        .create(true)
-        .share_mode(1)
-        .custom_flags(0x00200000)
-        .open(log)
-        .and_then(|mut f| {
-            let mut info = FileInfo::default();
-            if unsafe { GetFileInformationByHandle(f.as_raw_handle() as isize, &mut info) } == 0
-                || info.attributes & (REPARSE | DIRECTORY) != 0
-                || info.links > 1
-            {
-                return Err(invalid());
-            }
-            serde_json::to_writer(&mut f, &row).map_err(|_| invalid())?;
-            f.write_all(b"\n")?;
-            f.sync_all()
-        })
-        .is_ok();
+    let log_ok = !apply
+        || OpenOptions::new()
+            .append(true)
+            .create(true)
+            .share_mode(1)
+            .custom_flags(0x00200000)
+            .open(log)
+            .and_then(|mut f| {
+                let mut info = FileInfo::default();
+                if unsafe { GetFileInformationByHandle(f.as_raw_handle() as isize, &mut info) } == 0
+                    || info.attributes & (REPARSE | DIRECTORY) != 0
+                    || info.links > 1
+                {
+                    return Err(invalid());
+                }
+                serde_json::to_writer(&mut f, &row).map_err(|_| invalid())?;
+                f.write_all(b"\n")?;
+                f.sync_all()
+            })
+            .is_ok();
     println!("{row}");
     if log_ok && stats.failures == 0 && before[0].is_some() && before[1].is_some() {
         0

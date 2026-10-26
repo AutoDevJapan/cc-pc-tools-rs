@@ -225,6 +225,30 @@ fn system_host_bounds_regular_files_and_rejects_hardlinks() {
     assert_eq!(host.read(&path, 5).unwrap_err().0, "link_rejected");
     assert_eq!(host.read(&alias, 5).unwrap_err().0, "link_rejected");
 }
+
+#[test]
+fn actual_managed_sandbox_and_fixed_review_guidance_are_preserved() {
+    let (mut f, r) = fixture();
+    update_json(&mut f, layout().jobs.join(job_id()).join("job.json"), |v| {
+        v["sandbox"] = json!("danger-full-access")
+    });
+    assert!(query(&mut f, &r).is_ok());
+    update_json(&mut f, layout().jobs.join(job_id()).join("job.json"), |v| {
+        v["fixed_review_requalification"] = json!({"state":"registered"})
+    });
+    assert_eq!(query(&mut f, &r).unwrap_err().0, "received_mismatch");
+    let original = f.files[&layout()
+        .prompts
+        .join("7-bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb.md")]
+        .clone();
+    f.files.insert(
+        layout().jobs.join(job_id()).join("prompt.md"),
+        [original.as_slice(), cc_job_policy::READ_GUIDANCE.as_bytes()].concat(),
+    );
+    let report = query(&mut f, &r).unwrap();
+    assert_eq!(report["human_identity_attested"], false);
+    assert_eq!(report["source_kind"], "scheduler_dispatch");
+}
 fn update_json(f: &mut Fixture, path: PathBuf, edit: impl FnOnce(&mut Value)) {
     let mut v: Value = serde_json::from_slice(&f.files[&path]).unwrap();
     edit(&mut v);

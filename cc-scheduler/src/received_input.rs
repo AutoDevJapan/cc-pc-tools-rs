@@ -340,11 +340,14 @@ fn observe(host: &mut impl Host, l: &Layout, r: &Value) -> Result<Value> {
     if !text.contains(&header) {
         return reject("scope_mismatch");
     }
-    let guidance = match s(&j["sandbox"]) {
+    let mut guidance = match s(&j["sandbox"]) {
         "read-only" => cc_job_policy::READ_GUIDANCE,
-        "workspace-write" => cc_job_policy::WRITE_GUIDANCE,
+        "workspace-write" | "danger-full-access" => cc_job_policy::WRITE_GUIDANCE,
         _ => return reject("invalid_record"),
     };
+    if j["fixed_review_requalification"].is_object() {
+        guidance = cc_job_policy::READ_GUIDANCE;
+    }
     let expected_received = if text.contains(guidance.trim()) {
         dispatch.clone()
     } else {
@@ -378,6 +381,7 @@ fn observe(host: &mut impl Host, l: &Layout, r: &Value) -> Result<Value> {
         "spec_paths":paths,"subwork":row["subwork"],"parent_records":parent_records,"job":{
             "id":j["id"],"todo_id":j["todo_id"],"project":j["project"],"cwd":j["cwd"],
             "registered_cwd":j["registered_cwd"],"work_owner":j["work_owner"],"subwork_spec":j["subwork_spec"],
+            "fixed_review_requalification":j["fixed_review_requalification"],
             "scope_source":j["scope_source"],"sandbox":j["sandbox"],"launch_key":j["launch_key"],
             "prompt_source":j["prompt_source"],"prompt":j["prompt"],"subwork":j["subwork"],"parent_origin":j["parent_origin"],"parent_job_id":j["parent_job_id"]}});
     let digest = cc_job_policy::product_retry::digest;

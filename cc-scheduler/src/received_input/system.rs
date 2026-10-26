@@ -44,6 +44,22 @@ fn capture(stream: impl Read + Send + 'static) -> mpsc::Receiver<io::Result<Vec<
     });
     rx
 }
+fn guard_verdict(stdout: &[u8]) -> Result<bool> {
+    let report = strict::parse(stdout).map_err(|_| ReadError("guard_unavailable"))?;
+    if report["ok"] != true {
+        return Err(ReadError("guard_unavailable"));
+    }
+    match (
+        report["access_allowed"].as_bool(),
+        report["client_resource"].as_bool(),
+        report["classification_unverified"].as_bool(),
+    ) {
+        (Some(true), Some(false), Some(false)) => Ok(true),
+        (Some(false), Some(true), Some(false)) => Ok(false),
+        (Some(false), Some(true), Some(true)) => Err(ReadError("classification_unverified")),
+        _ => Err(ReadError("guard_unavailable")),
+    }
+}
 impl Host for SystemHost {
     fn read(&mut self, path: &Path, limit: usize) -> Result<Vec<u8>> {
         no_links(path)?;
@@ -85,6 +101,10 @@ impl Host for SystemHost {
             .stdin(Stdio::null())
             .stdout(Stdio::piped())
             .stderr(Stdio::piped());
+        // The installed guard verifies Git origins through `git`. Keep that
+        // normal dependency available even when the caller has an empty PATH.
+        // Never inherit an arbitrary tool search path or a different host/profile.
+        command.env("PATH", "C:/Program Files/Git/cmd");
         for key in [
             "SYSTEMROOT",
             "WINDIR",
@@ -124,13 +144,23 @@ impl Host for SystemHost {
         if !status.success() || stdout.len() > 16384 || stderr.len() > 16384 {
             return Err(ReadError("guard_unavailable"));
         }
-        let report = strict::parse(&stdout).map_err(|_| ReadError("guard_unavailable"))?;
-        Ok(report["ok"] == true
-            && report["access_allowed"] == true
-            && report["client_resource"] == false
-            && report["classification_unverified"] == false)
+        guard_verdict(&stdout)
     }
     fn now(&self) -> String {
         chrono::Utc::now().to_rfc3339()
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    #[test]
+    fn guard_classification_failure_is_not_an_observed_permission_deny() {
+        assert_eq!(guard_verdict(br#"{"ok":true,"access_allowed":true,"client_resource":false,"classification_unverified":false}"#),Ok(true));
+        assert_eq!(guard_verdict(br#"{"ok":true,"access_allowed":false,"client_resource":true,"classification_unverified":false}"#),Ok(false));
+        assert_eq!(guard_verdict(br#"{"ok":true,"access_allowed":false,"client_resource":true,"classification_unverified":true}"#),Err(ReadError("classification_unverified")));
+        for bytes in [br#"{}"#.as_slice(),br#"{"ok":true,"access_allowed":true,"client_resource":true,"classification_unverified":false}"#] {
+            assert_eq!(guard_verdict(bytes),Err(ReadError("guard_unavailable")));
+        }
     }
 }

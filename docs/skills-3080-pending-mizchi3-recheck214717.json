@@ -1,0 +1,47 @@
+{
+  "todo": 3080,
+  "current_parent_job": "20261026-214717-todo-3080",
+  "recorded_at": "2026-10-26T22:30:51.2275261+00:00",
+  "sources": [
+    "skills-3080-mizchi-sql-draft.json",
+    "skills-3080-mizchi-mutation-draft.json"
+  ],
+  "original_content_and_review_receipts_unchanged": true,
+  "SQL2_authored_content_digest": "119786b834b0114244e413de9633f49fbda9e66815c626831d0818b27f10beb2",
+  "existing_limited_body_review": "3368 body2/cases12 with displayMust1,3378 displaycorrectionM0; not a new full rights/deployment acceptance",
+  "fixed_repository": "mizchi/skills",
+  "commit": "ab4eb2f7a92a13fb37c225ab427f2f492143ace1",
+  "root_readme": {
+    "path": "README.md",
+    "sha256": "f6cf85dee46f1e10efb5efedf06cbfb46261f4927a41427c8b78c05980cafedb",
+    "bytes": 19120,
+    "read_method": "Current parent targeted licence/provenance and selected SQL/Stryker lines only; remainingREADME not modelread",
+    "licence_statement_line": 268,
+    "statement_scope": "Per-skill LICENSE overrides; otherwise repo-owner discretion defaultMIT declaration. No originalMITtext/copyright notice invented.",
+    "cache_role": "support_text",
+    "source_original_retained": true
+  },
+  "concrete_qualification_gap": {
+    "source": "repair-guard/skills3080_source_windows.go",
+    "predicate": "Selected license source currently must have rolelicense_or_notice; fixedMizchiREADME has rolesupport_text",
+    "actual_new_qualification_attempts": 0,
+    "not_an_automatic_approval_rejection": true,
+    "normal_source_type_extension_and_source_specific_rights_acceptance_required_before_SQL2_placement": true,
+    "no_index_rewrite_or_fake_licence_file_or_generic_guard_exception": true
+  },
+  "mutation1": {
+    "body_source": "stryker-js/SKILL.md",
+    "body_sha": "83c93a09550891503d8b6d511d326d4c2d02b77880b3ae6f5e9b9cc7e5d446c3",
+    "support_source": "stryker-js/references/evaluate-tests.md",
+    "support_sha": "6009ce5dfd634025526258b06b9c65107983f2e29014fc0ee8616cea0b4ed830",
+    "integration_value_and_qualified_existing_target_still_unconfirmed": true,
+    "unknown_existing_body_read": 0,
+    "no_alternative_target_name_used_to_avoid_hold": true
+  },
+  "new_installs": 0,
+  "new_global_literal_primary_credit": 0,
+  "source_scripts_executed": 0,
+  "all3_still_separate_from_live_adoptions": true,
+  "owner_same_decision_not_reasked": true,
+  "whole16_complete": false
+}

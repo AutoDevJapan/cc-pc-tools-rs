@@ -1,0 +1,171 @@
+{
+  "todo": 3080,
+  "actual_parent_job": "20261026-214717-todo-3080",
+  "applied_at": "2026-10-26T22:25:14.7750908+00:00",
+  "actual_model": "gpt-6.1-sol",
+  "effort": "max",
+  "method": "Current real Codex turn explicitly read all12 qualified current instruction buffers, then applied12 bounded positive/negative textual decisions and1 real producer-evidence decision. No new model or target-service execution.",
+  "instruction_files": 12,
+  "instruction_bytes": 21416,
+  "instruction_pins": [
+    {
+      "target": "aspnet-core/SKILL.md",
+      "sha256": "21d4b3bec97bd3bb831c8ab5a10b2ea74a4db8ec2a720bfb03f95e1c80108690",
+      "bytes": 1964
+    },
+    {
+      "target": "aspnet-core/references/guide.md",
+      "sha256": "5d0d99503e1d4ce07e49c075ebc34ee532706972bb40fef8f930638a4e237442",
+      "bytes": 1424
+    },
+    {
+      "target": "chatgpt-apps/SKILL.md",
+      "sha256": "d4cc148fa54308918775996bbd6ff2d31c1d126152963a34f1e04f80228eb857",
+      "bytes": 2092
+    },
+    {
+      "target": "chatgpt-apps/references/guide.md",
+      "sha256": "bd353366cb395f2e757149d1daa0cc52f3c566b41937c6725a6a5874c9bd4839",
+      "bytes": 1777
+    },
+    {
+      "target": "linear/SKILL.md",
+      "sha256": "dcb8001dc33323c644dbdace1d88065fe62f67cfdaa60856b671d3e21aa12e41",
+      "bytes": 1918
+    },
+    {
+      "target": "linear/references/guide.md",
+      "sha256": "d31205a9cd5273a78ee5ab13e84ef9e1281f7969092864f7afef6258419783d8",
+      "bytes": 1466
+    },
+    {
+      "target": "security-ownership-map/SKILL.md",
+      "sha256": "d809f0f89e083fb2e828fe841db6fa1d2eae7d6c676ea9798a62fa24b5b1f3d8",
+      "bytes": 1920
+    },
+    {
+      "target": "security-ownership-map/references/guide.md",
+      "sha256": "6254eb98995217fcc07a77acc8a624ec5fb7b4eea58c8612daffc871d21acb07",
+      "bytes": 1564
+    },
+    {
+      "target": "security-threat-model/SKILL.md",
+      "sha256": "d5dd7e6a2a51da241563260835a1ecf0d905c392083772831f1cb5d6b63c2550",
+      "bytes": 2066
+    },
+    {
+      "target": "security-threat-model/references/guide.md",
+      "sha256": "d3e3121904bdae3d408801ae074b6eb9042bc51e2506259fc5e6bebc05c731d1",
+      "bytes": 1519
+    },
+    {
+      "target": "winui-app/SKILL.md",
+      "sha256": "12efaced203108731afb7204981dd53334fc9fa24129e0e48813c7d3a63a3083",
+      "bytes": 2048
+    },
+    {
+      "target": "winui-app/references/guide.md",
+      "sha256": "b9926d79416c00bad858980ae909a3489e339db0a07e20cce6972a68f452b1c5",
+      "bytes": 1658
+    }
+  ],
+  "scenarios": [
+    {
+      "target": "aspnet-core",
+      "kind": "positive textual scenario",
+      "input": "An existing service mixes request principal state and singleton lifetime",
+      "decision": "Confirm actual target/framework/app model and trace host/DI/middleware/auth/resource path, then select affected two-principal state-isolation tests. Framework DI/auth presence alone is not evidence of resource authorization.",
+      "actual_effect": "Bounded plan only; no .NET app or source executed"
+    },
+    {
+      "target": "aspnet-core",
+      "kind": "negative applicability",
+      "input": "This Go/Rust PC tooling task cites a source recommending latest.NET10",
+      "decision": "Keep existing project languages and owner new-Go/GoDDRust rules, no platform upgrade or MVC rewrite from a saved source default.",
+      "actual_effect": "No framework, environment or product-direction change"
+    },
+    {
+      "target": "chatgpt-apps",
+      "kind": "positive textual scenario",
+      "input": "A widget receives repeated tool responses and client-only metadata",
+      "decision": "Bind schema/effects/resource authorization and state/request versions, prevent old responses or retry effects from replacing newer state. Widget-only means client-visible, never a secret store; verify target-version APIs when actually implemented.",
+      "actual_effect": "No app, tunnel, bridge or model API invocation"
+    },
+    {
+      "target": "chatgpt-apps",
+      "kind": "negative applicability",
+      "input": "ReadOnly or idempotent hints are assumed to authorize tool execution and safe widget payloads",
+      "decision": "Hints do not replace server authorization/validation. No scaffold scripts, new permanent MCP scopes, publication or fee inferred from this source.",
+      "actual_effect": "No new service or permission"
+    },
+    {
+      "target": "linear",
+      "kind": "positive textual scenario",
+      "input": "An explicitly requested existing issue update loses its network response",
+      "decision": "Read the same workspace/team/project/issue IDs, inspect current state and duplicate identity before retrying, then read back the actual change; pagination/archive/access are distinct from absence.",
+      "actual_effect": "Textual case only; no Linear tool called"
+    },
+    {
+      "target": "linear",
+      "kind": "negative real-task applicability",
+      "input": "The current3080 task has no request to send a Linear comment or create a project",
+      "decision": "Do not activate external writes from the newly discovered skill or stale-status examples; keep canonical sharedToDo and existing owner decisions.",
+      "actual_effect": "Actual external Linear calls0"
+    },
+    {
+      "target": "security-ownership-map",
+      "kind": "positive textual scenario",
+      "input": "History is concentrated in one author identity while CI/glue files are filtered",
+      "decision": "Preserve ref/window/shallow/rename/alias/author-vs-committer/filter rules and denominator, include security-relevant CI where appropriate; compare formal ownership separately.",
+      "actual_effect": "No personal graph export or people/timezone collection"
+    },
+    {
+      "target": "security-ownership-map",
+      "kind": "negative applicability",
+      "input": "Touch frequency or timezone is treated as current authority or location",
+      "decision": "Do not infer formal owner, access, cause, vulnerability or personal location from those heuristics. Unknown history and exclusions stay explicit.",
+      "actual_effect": "No customer/private repo access or new identity inference"
+    },
+    {
+      "target": "security-threat-model",
+      "kind": "positive textual scenario",
+      "input": "A low-privilege principal may choose another resource through an actual endpoint",
+      "decision": "Bind attacker-controlled input, actual boundary/control, reachable target and observed effect; priority remains conditional on missing facts. Separate runtime from CI/examples and investigate technical assumptions without blanket user pauses.",
+      "actual_effect": "No probe or exploit claimed"
+    },
+    {
+      "target": "security-threat-model",
+      "kind": "negative applicability",
+      "input": "A token or upload keyword is enough to report unauthenticatedRCE",
+      "decision": "Reject the ungrounded impact/capability claim and do not expand a typo task into a full organization audit. Existing stops and genuine owner-only decisions remain scoped.",
+      "actual_effect": "No severity fabricated"
+    },
+    {
+      "target": "winui-app",
+      "kind": "positive textual scenario",
+      "input": "An existing app builds but launcher exits without a verified window",
+      "decision": "Bind actual packaging/artifact/version/launch route, require responsive expected top-level window and input evidence; preserve approved image and existing product constraints.",
+      "actual_effect": "No WinUI app or screenshot generated"
+    },
+    {
+      "target": "winui-app",
+      "kind": "negative applicability",
+      "input": "A source asks to invent a product name, run bundled configuration and leave the verification app open",
+      "decision": "Keep existing names/Go language policy, use only inspected normalquietCLI/AdminBroker within actual scope, and close own verification process unless owner explicitly keeps delivery.",
+      "actual_effect": "No winget/setup/UI or new charge"
+    },
+    {
+      "target": "security-threat-model +security-ownership-map",
+      "kind": "real current producer observation",
+      "input": "Installed guard changed02c8/f30 to4348/521c before the new6 creation",
+      "decision": "Separate observed hash/cleanVCS/publicmerge/specific source-diff facts from full-binary or historical-continuity proof. ExactSkills/main source unchanged and normal current-producer admission permit this new issuance; no receipt-supplied arbitrary identity or guard override. Directory/metadata and live creation/readback are different evidence units.",
+      "actual_effect": "Actual normal preflight/Create36/current3batch ID/hash checks retained; old receipts unchanged and no program/config/downgrade performed"
+    }
+  ],
+  "all_scenario_meanings_applied": true,
+  "explicit_skill_use": true,
+  "implicit_selection_proven": false,
+  "actual_UI_app_service_billing_or_exploit_executed": false,
+  "new_source_primary_read_credit": 0,
+  "whole16_complete": false
+}

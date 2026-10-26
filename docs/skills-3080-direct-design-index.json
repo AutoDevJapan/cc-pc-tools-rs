@@ -87,6 +87,11 @@
       "file": "skills-3080-pricing2-designs214717.json",
       "sha256": "c8a04ab89cda4670919e01e254e18886a1eb8a68fb255a8b4af2f52139aa445b",
       "target_count": 2
+    },
+    {
+      "file": "skills-3080-openai6-designs214717.json",
+      "sha256": "c5b3cff3ed6e8f4f0f2505fa3f559bbbeb6ad89e9aba1f0806adcad345e5a86e",
+      "target_count": 6
     }
   ]
 }

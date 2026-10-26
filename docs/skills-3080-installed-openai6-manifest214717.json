@@ -1,0 +1,242 @@
+{
+  "definition": "Actual newly created6,36 current qualified buffers across3 normal batches; no cross-file/batch atomic or historical continuity claim",
+  "targets": [
+    {
+      "name": "aspnet-core",
+      "new": true,
+      "before_sha256": "absent",
+      "positive": "既存のASP.NET Core APIで認証後の状態やmiddlewareの順序を直したい。",
+      "negative": "一つのAPI修復を理由に未確認の新版へ上げ、既存MVC全体を別方式へ書き換える。",
+      "sources": [
+        "https://github.com/openai/skills/blob/49f948faa9258a0c61caceaf225e179651397431/skills/.curated/aspnet-core/SKILL.md",
+        "https://github.com/openai/skills/blob/49f948faa9258a0c61caceaf225e179651397431/skills/.curated/aspnet-core/LICENSE.txt"
+      ],
+      "files": [
+        {
+          "path": "SKILL.md",
+          "sha256": "21d4b3bec97bd3bb831c8ab5a10b2ea74a4db8ec2a720bfb03f95e1c80108690"
+        },
+        {
+          "path": "references/guide.md",
+          "sha256": "5d0d99503e1d4ce07e49c075ebc34ee532706972bb40fef8f930638a4e237442"
+        },
+        {
+          "path": "references/original-skill.txt",
+          "sha256": "1f487ef3565e5ac1ee6c93cbeb9ac666292b30285877c82ddb0a77c9777fe92f"
+        },
+        {
+          "path": "references/LICENSE.txt",
+          "sha256": "58d1e17ffe5109a7ae296caafcadfdbe6a7d176f0bc4ab01e12a689b0499d8bd"
+        },
+        {
+          "path": "references/source.json",
+          "sha256": "f61779fcfe02cbd70e8f459a200174248ae6eca48d098ba8a6c55928f55c9408"
+        },
+        {
+          "path": "references/sources.md",
+          "sha256": "ed45496a0612183927ac2658727f8797ccb3d4753ba111ee569795166f23e2bd"
+        }
+      ],
+      "target_state": "actual_once_created_and_current_readback_verified"
+    },
+    {
+      "name": "chatgpt-apps",
+      "new": true,
+      "before_sha256": "absent",
+      "positive": "既存ChatGPTアプリでtoolの結果とwidgetの状態がずれる原因を直したい。",
+      "negative": "例を丸ごと実行し、新しいMCP権限・公開tunnel・APIキーを追加して完成とする。",
+      "sources": [
+        "https://github.com/openai/skills/blob/49f948faa9258a0c61caceaf225e179651397431/skills/.curated/chatgpt-apps/SKILL.md",
+        "https://github.com/openai/skills/blob/49f948faa9258a0c61caceaf225e179651397431/skills/.curated/chatgpt-apps/LICENSE.txt"
+      ],
+      "files": [
+        {
+          "path": "SKILL.md",
+          "sha256": "d4cc148fa54308918775996bbd6ff2d31c1d126152963a34f1e04f80228eb857"
+        },
+        {
+          "path": "references/guide.md",
+          "sha256": "bd353366cb395f2e757149d1daa0cc52f3c566b41937c6725a6a5874c9bd4839"
+        },
+        {
+          "path": "references/original-skill.txt",
+          "sha256": "c3a13a659ce26e9d067b5a97c321e8abec6d8e878afce31b7e841dfcf2635c3a"
+        },
+        {
+          "path": "references/LICENSE.txt",
+          "sha256": "a7f55b2cb68997f729e6199720d4d3cae47633aba0254a84b2d36ab284be9d45"
+        },
+        {
+          "path": "references/source.json",
+          "sha256": "fcffec0f5d5126ba7ea49e313a6c6b4e92910466bcdffec6d81239e1736bcaee"
+        },
+        {
+          "path": "references/sources.md",
+          "sha256": "02cc617edcda68cbb342ddea22198c5a160aee41b7e2a36e2ddce7f632ecb58b"
+        }
+      ],
+      "target_state": "actual_once_created_and_current_readback_verified"
+    },
+    {
+      "name": "linear",
+      "new": true,
+      "before_sha256": "absent",
+      "positive": "依頼されたLinearの既存issueを読み、特定のteamで重複を避けて更新したい。",
+      "negative": "古い更新があるだけで本人に代わって外部コメントを送り、共有ブラウザのcookieを消す。",
+      "sources": [
+        "https://github.com/openai/skills/blob/49f948faa9258a0c61caceaf225e179651397431/skills/.curated/linear/SKILL.md",
+        "https://github.com/openai/skills/blob/49f948faa9258a0c61caceaf225e179651397431/skills/.curated/linear/LICENSE.txt"
+      ],
+      "files": [
+        {
+          "path": "SKILL.md",
+          "sha256": "dcb8001dc33323c644dbdace1d88065fe62f67cfdaa60856b671d3e21aa12e41"
+        },
+        {
+          "path": "references/guide.md",
+          "sha256": "d31205a9cd5273a78ee5ab13e84ef9e1281f7969092864f7afef6258419783d8"
+        },
+        {
+          "path": "references/original-skill.txt",
+          "sha256": "ce0f39c95b6c9190f8ea33614393cdb556b2684dd8388ded394e9cb915f42601"
+        },
+        {
+          "path": "references/LICENSE.txt",
+          "sha256": "58d1e17ffe5109a7ae296caafcadfdbe6a7d176f0bc4ab01e12a689b0499d8bd"
+        },
+        {
+          "path": "references/source.json",
+          "sha256": "19dfe71acb6902591c02936007ceb985e8f7936ee5553d66dd8c9798081f131d"
+        },
+        {
+          "path": "references/sources.md",
+          "sha256": "76e3ab19a9934654819c9dc61cdebbdc2681259d73023c90b8bb07221cdd9f81"
+        }
+      ],
+      "target_state": "actual_once_created_and_current_readback_verified"
+    },
+    {
+      "name": "security-ownership-map",
+      "new": true,
+      "before_sha256": "absent",
+      "positive": "指定repoの機微な変更箇所で、履歴上の知識の集中と実際の担当定義の差を調べたい。",
+      "negative": "commitを触った比率だけで現在の権限・人の所在地・正式な担当を断定する。",
+      "sources": [
+        "https://github.com/openai/skills/blob/49f948faa9258a0c61caceaf225e179651397431/skills/.curated/security-ownership-map/SKILL.md",
+        "https://github.com/openai/skills/blob/49f948faa9258a0c61caceaf225e179651397431/skills/.curated/security-ownership-map/LICENSE.txt"
+      ],
+      "files": [
+        {
+          "path": "SKILL.md",
+          "sha256": "d809f0f89e083fb2e828fe841db6fa1d2eae7d6c676ea9798a62fa24b5b1f3d8"
+        },
+        {
+          "path": "references/guide.md",
+          "sha256": "6254eb98995217fcc07a77acc8a624ec5fb7b4eea58c8612daffc871d21acb07"
+        },
+        {
+          "path": "references/original-skill.txt",
+          "sha256": "f06c1a59247569326702c945f397af163ea96cf2ecfdf2dde280605bf89a3ec8"
+        },
+        {
+          "path": "references/LICENSE.txt",
+          "sha256": "4dd13869245e356246a5b770723247bbb80a8f07a181d1d3d873a1734297cdb9"
+        },
+        {
+          "path": "references/source.json",
+          "sha256": "505ac1a3dd039ec90ba56262e9c28fc99269b88befe16627c366251357b3ace8"
+        },
+        {
+          "path": "references/sources.md",
+          "sha256": "5b9a6be6d97a593c187a214cd4f4e05b17d9490e9ab915c1e4de869ba7c76d1b"
+        }
+      ],
+      "target_state": "actual_once_created_and_current_readback_verified"
+    },
+    {
+      "name": "security-threat-model",
+      "new": true,
+      "before_sha256": "absent",
+      "positive": "指定した機能のデータと認可の境界から、現実的な悪用経路と対策を整理したい。",
+      "negative": "単語の出現だけで入口や攻撃成功を作り、些細な修正へ全社の監査を追加する。",
+      "sources": [
+        "https://github.com/openai/skills/blob/49f948faa9258a0c61caceaf225e179651397431/skills/.curated/security-threat-model/SKILL.md",
+        "https://github.com/openai/skills/blob/49f948faa9258a0c61caceaf225e179651397431/skills/.curated/security-threat-model/LICENSE.txt"
+      ],
+      "files": [
+        {
+          "path": "SKILL.md",
+          "sha256": "d5dd7e6a2a51da241563260835a1ecf0d905c392083772831f1cb5d6b63c2550"
+        },
+        {
+          "path": "references/guide.md",
+          "sha256": "d3e3121904bdae3d408801ae074b6eb9042bc51e2506259fc5e6bebc05c731d1"
+        },
+        {
+          "path": "references/original-skill.txt",
+          "sha256": "1283c0dd62a8104d9edda4583569b5d8510b4ddaa45120687c999250fd96bad2"
+        },
+        {
+          "path": "references/LICENSE.txt",
+          "sha256": "4dd13869245e356246a5b770723247bbb80a8f07a181d1d3d873a1734297cdb9"
+        },
+        {
+          "path": "references/source.json",
+          "sha256": "0cf96287e266c08a6a4af74288c8397a0e18ef73183b579b88633698d143cc46"
+        },
+        {
+          "path": "references/sources.md",
+          "sha256": "29f992945150071e36db75af9b74c1e7b4f711772b065db504129e85cb18513c"
+        }
+      ],
+      "target_state": "actual_once_created_and_current_readback_verified"
+    },
+    {
+      "name": "winui-app",
+      "new": true,
+      "before_sha256": "absent",
+      "positive": "既存WinUIアプリでbuildは通るが画面が起動しない問題を、配布方式と実windowから調べたい。",
+      "negative": "launcherが終了したので起動成功とし、原configで環境全体を無条件に変更してアプリを残す。",
+      "sources": [
+        "https://github.com/openai/skills/blob/49f948faa9258a0c61caceaf225e179651397431/skills/.curated/winui-app/SKILL.md",
+        "https://github.com/openai/skills/blob/49f948faa9258a0c61caceaf225e179651397431/skills/.curated/winui-app/LICENSE.txt"
+      ],
+      "files": [
+        {
+          "path": "SKILL.md",
+          "sha256": "12efaced203108731afb7204981dd53334fc9fa24129e0e48813c7d3a63a3083"
+        },
+        {
+          "path": "references/guide.md",
+          "sha256": "b9926d79416c00bad858980ae909a3489e339db0a07e20cce6972a68f452b1c5"
+        },
+        {
+          "path": "references/original-skill.txt",
+          "sha256": "917341ec9eb688d73e21362910a7178a92b2ae49544b7d8f17ee9e19adfe2ea8"
+        },
+        {
+          "path": "references/LICENSE.txt",
+          "sha256": "58d1e17ffe5109a7ae296caafcadfdbe6a7d176f0bc4ab01e12a689b0499d8bd"
+        },
+        {
+          "path": "references/source.json",
+          "sha256": "01b1aba12e37d941e087d6350723d68fad145788821c0e41c696d72e17f247d3"
+        },
+        {
+          "path": "references/sources.md",
+          "sha256": "3c356bae529d46891c3bb3f33c4928465558326afd188a7175a37be2fde80d5d"
+        }
+      ],
+      "target_state": "actual_once_created_and_current_readback_verified"
+    }
+  ],
+  "central_operations": 0,
+  "new_adoptions": 0,
+  "new_adoptions_definition": "Serialization/checking performs no new adoption. Six actual placements and their separate ledger are evidenced by the installation record.",
+  "whole16_complete": false,
+  "new_boolean_definition": "new:true records actual once-only successfulCreateNew and qualified current readback, not an assumption from the earlierproposal",
+  "root": "D:/CC/Skills",
+  "creator_job": "20261026-214717-todo-3080",
+  "current_consumer_job": "20261026-214717-todo-3080",
+  "snapshot_definition": "Actual newly created6,36 current qualified buffers across3 normal batches; no cross-file/batch atomic or historical continuity claim"
+}

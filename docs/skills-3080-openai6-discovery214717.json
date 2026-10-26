@@ -1,0 +1,65 @@
+{
+  "checked_at": "2026-10-26T22:24:10.1216827+00:00",
+  "method": "fresh installed Codex app-server initialize + skills/list forceReload",
+  "model_called": false,
+  "label": "installed",
+  "targets": 6,
+  "total_discovered_metadata": 445,
+  "found_count": 6,
+  "parse_error_count": 0,
+  "notification_count": 2,
+  "same_names_other_paths": 0,
+  "found": [
+    {
+      "name": "aspnet-core",
+      "selected_central_path": true,
+      "enabled_present": true,
+      "enabled": true,
+      "description_matches": true
+    },
+    {
+      "name": "chatgpt-apps",
+      "selected_central_path": true,
+      "enabled_present": true,
+      "enabled": true,
+      "description_matches": true
+    },
+    {
+      "name": "linear",
+      "selected_central_path": true,
+      "enabled_present": true,
+      "enabled": true,
+      "description_matches": true
+    },
+    {
+      "name": "security-ownership-map",
+      "selected_central_path": true,
+      "enabled_present": true,
+      "enabled": true,
+      "description_matches": true
+    },
+    {
+      "name": "security-threat-model",
+      "selected_central_path": true,
+      "enabled_present": true,
+      "enabled": true,
+      "description_matches": true
+    },
+    {
+      "name": "winui-app",
+      "selected_central_path": true,
+      "enabled_present": true,
+      "enabled": true,
+      "description_matches": true
+    }
+  ],
+  "process_tree_exit_confirmed": true,
+  "pending_stdout_read_drained": true,
+  "failure": null,
+  "diagnostic": {
+    "scan_traversal_limit_count": 2,
+    "context_budget_marker_count": 0,
+    "raw_stderr_not_saved": true
+  },
+  "limit": "Only requested target metadata is retained. No full private catalog or unknown body text is saved. No model turn or context-budget proof; discovery-internal file parsing is not a semantic body review."
+}

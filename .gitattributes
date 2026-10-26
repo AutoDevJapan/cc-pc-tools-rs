@@ -27,12 +27,10 @@ docs/skills-3080-tencent-MIT.txt -text
 /docs/skills-3080-season-blend-model.go.txt text eol=lf
 /docs/skills-3080-sixmile-next20-evaluation.json text eol=lf
 /docs/skills-3080-body-alias-scan.json text eol=lf
-
 docs/skills-3080-sixmile-three-cohort-snapshot.json text eol=lf
 docs/skills-3080-sixmile-parent6-evaluation.json text eol=lf
 docs/skills-3080-primary-reading-amendments.json text eol=lf
 docs/skills-3080-mcp-sibling-duplicate-evidence.json text eol=lf
-
 docs/skills-3080-sixmile-next75-evaluation.json text eol=lf
 docs/skills-3080-reading-prose-history.json text eol=lf
 docs/skills-3080-sixmile-received50-evaluation.json text eol=lf
@@ -52,7 +50,6 @@ docs/skills-3080-execution-queue-summary.json text eol=lf
 /docs/skills-3080-sixmile-partial-evaluation.json text eol=lf
 /docs/skills-3080-adoptions.json text eol=lf
 docs/skills-3080-sixmile-received-next50-evaluation.json text eol=lf
-
 # Preserve exact reviewed operation bytes, including intentional JSON CRLF.
 /docs/skills-3080-operations/*.json -text whitespace=blank-at-eol,blank-at-eof,space-before-tab,cr-at-eol
 /docs/skills-3080-sixmile-stream90-evaluation.json -text whitespace=blank-at-eol,blank-at-eof,space-before-tab,cr-at-eol
@@ -185,3 +182,4 @@ docs/skills-3080-combat6-input-acceptance090101.md text eol=lf
 /docs/skills-3080-codex3-source-meaning090101.json text eol=lf
 /docs/skills-3080-codex3-structure-receipt090101.json text eol=lf
 /docs/skills-3080-codex3-input-acceptance090101.md text eol=lf
+/repair-guard/testdata/skills3080-revision1-*.json -text

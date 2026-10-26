@@ -1,0 +1,12 @@
+{
+  "domain": "official-ci3387-independent-guard-baseline-v1",
+  "repository_id": 1406818713,
+  "reported_current_sha256": "f3927b8850258098d54dae87196ae382960dc83a5b6e7dd11354ab97ffd07cdf",
+  "reported_current_source_head": "f5f846a8470b544846e4c9ce43306061bf5668f9",
+  "reported_current_bytes": 13105664,
+  "publisher_todo": 3894,
+  "publisher_job": "20261026-111905-todo-3894",
+  "source": "normal original-task handoff official-ci3387-sdk-acceptance-3894-v1",
+  "observed_utc": "2026-10-26T02:28:41.8153258Z",
+  "general_data_access_granted": false
+}

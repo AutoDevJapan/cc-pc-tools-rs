@@ -1,0 +1,17 @@
+{
+  "domain": "skills-3080-accepted-runtime-baseline-v1",
+  "sha256": "aaf16eac624c3b974835f28c35805c2670d5f51320a2f04d78a4de6edf19b2f9",
+  "revision": "52d417e60c20f9770d6bde2dde36092ab206ea01",
+  "accepted_distribution_todo": 3686,
+  "distribution_job": "20261026-113308-todo-3686",
+  "previous_closure_sha256": "292209e26c7b1712318b5ac094cbed826dcf48c89db098fbeaf49608893d6d42",
+  "original_request_sha256": "dd69b79cccf436daef25dab7210f14d976ac462f7eab3dccbe062c9438469ec9",
+  "independently_received_parent_acceptance_sha256": "4856a96dea7653b08507f5c45460be50ac62823d5c84cb9f3a0ad88626733884",
+  "parent_public_commit": "878a698c20a137ab79a95cbeb4af82dbf2164a49",
+  "parent_files": 92,
+  "parent_bytes": 986627,
+  "exact_same_buffer_claims_verified": true,
+  "historical_atomic_all92_snapshot_claimed": false,
+  "general_access_granted": false,
+  "original_registry_recovered": false
+}

@@ -875,6 +875,9 @@ func main() {
 	if os.Args[1] == "private-review-runtime-metadata" {
 		os.Exit(runOMB3255RuntimeCLI(os.Args[2:], os.Stdout, acquirePrivateReviewRuntime))
 	}
+	if os.Args[1] == "consumer-review-runtime-metadata" {
+		os.Exit(runOMB3255RuntimeCLI(os.Args[2:], os.Stdout, acquireConsumerReviewRuntime))
+	}
 	f := flag.NewFlagSet("recovery", flag.ContinueOnError)
 	f.SetOutput(io.Discard)
 	home := f.String("home", "D:/CC/Tools/discord-ask", "")

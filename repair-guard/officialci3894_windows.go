@@ -31,11 +31,11 @@ const official3894Safe = "D:/CC/Tools/safe-delete/safe-delete.exe"
 const official3894Temp = "C:/Users/makhmeto/AppData/Local/Temp"
 const official3894OriginalCreator = "20261026-064014-todo-3894"
 
-// Independent PR525 publisher's actual current-runtime verification, not a hash
-// learned from an unknown target. The older PR524 receipt remains historical.
-// docs/evidence/official-ci3387-known-guard-baseline-038bc.json
-const official3894PreviousGuardSHA = "ccb5e797e6b5627d98ade2a562f2f98f3c121a5403e1523071afc07f73af4556"
-const official3894PreviousGuardHead = "038bc2570014132321919bf6758d68979506b741"
+// Original SDK publisher's accepted software handoff, not a hash learned from
+// an unknown target. Earlier publisher receipts remain historical.
+// docs/evidence/official-ci3387-known-guard-baseline-f5f846a8.json
+const official3894PreviousGuardSHA = "f3927b8850258098d54dae87196ae382960dc83a5b6e7dd11354ab97ffd07cdf"
+const official3894PreviousGuardHead = "f5f846a8470b544846e4c9ce43306061bf5668f9"
 
 type official3894Source struct {
 	Head, Registration, CreatorJob, Workspace, Branch, SpecSHA string
@@ -494,7 +494,7 @@ func official3894SourceCheck(ctx context.Context, saved *official3894Source, con
 	if !skillsHasJob(creator, creatorJob) || !strings.HasPrefix(creator.Scheduler.Branch, "scheduler/todo-3894-") || !within(roots[3]+"-wt", creator.Scheduler.Worktree) {
 		return result, oc.ErrDenied
 	}
-	if actorID == 3888 && (!ownerRegisteredSource(row.Scheduler.Worktree).AccessAllowed || !sourceOriginVerified(row.Scheduler.Worktree, "autodevjapan/local-ai-console") || !skillsActorSource(row.Scheduler.Worktree, row.Scheduler.Branch)) {
+	if actorID == 3888 && (!ownerRegisteredSource(row.Scheduler.Worktree).AccessAllowed || !sourceOriginVerified(row.Scheduler.Worktree, "autodevjapan/local-ai-console") || !official3894ProviderSource(row.Scheduler.Worktree, row.Scheduler.Branch)) {
 		return result, oc.ErrDenied
 	}
 	if !within(currentTodoSpecsRoot, creator.Spec) || !strings.HasPrefix(filepath.Base(creator.Spec), "3894-") || !currentSubworkSpecName.MatchString(filepath.Base(creator.Spec)) {
@@ -514,14 +514,11 @@ func official3894SourceCheck(ctx context.Context, saved *official3894Source, con
 	if !ok {
 		return result, official3894Error("clean_windows_source_build_required")
 	}
-	for _, path := range []string{"repair-guard", "tools/civ6-ci-contract", "localai-web-rs/src/operations_catalog.rs", "localai-web-rs/src/operations.rs"} {
-		if _, e := permanentGitAt(creator.Scheduler.Worktree, "diff", "--quiet", "--no-ext-diff", "--no-textconv", head, "--", path); e != nil {
-			return result, official3894Error("current_source_inputs_changed")
-		}
-	}
-	merged, e := official3894Command(ctx, official3894Gate, "api", "repos/AutoDevJapan/cc-pc-tools-rs/compare/"+head+"...main", "--jq", ".status")
-	if e != nil || (strings.TrimSpace(string(merged)) != "ahead" && strings.TrimSpace(string(merged)) != "identical") {
-		return result, official3894Error("normal_source_merge_required")
+	head, e := official3894SourceRevision(head, saved,
+		func(revision string) bool { return official3894InputsUnchanged(creator.Scheduler.Worktree, revision) },
+		func(revision string) bool { return official3894Merged(ctx, revision) })
+	if e != nil {
+		return result, e
 	}
 	// Only immutable registration fields enter the binding. Normal progress,
 	// waiting and new provider jobs cannot silently replace the original purpose.
@@ -812,7 +809,13 @@ func official3894InstalledBaseline(sha, head string) bool {
 // It performs no update, SDK creation, data read grant or general classification.
 // Review/CI acceptance and the existing AdminBroker CAS remain separate gates.
 func official3894Update(ctx context.Context) (object, error) {
-	source, e := official3894SourceCheck(ctx, nil, false)
+	var source official3894Source
+	var e error
+	if m := currentSubworkJobName.FindStringSubmatch(os.Getenv("CC_JOB_ID")); len(m) == 3 && m[2] == "3387" {
+		source, e = official3894ParentUpdateSource(ctx)
+	} else {
+		source, e = official3894SourceCheck(ctx, nil, false)
+	}
 	if e != nil {
 		return nil, e
 	}

@@ -612,7 +612,7 @@
     "guard_client_resource": true,
     "state": "classification_unverified"
   },
-  "recorded_at": "2026-10-26T13:34:11.2534590+00:00",
+  "recorded_at": "2026-10-26T13:55:34.9749615+00:00",
   "total_skill_named_body_read_definition": "This field preserves the historical complete-source subset only. Current raw/workflow primary coverage is projected from the canonical source components and sixmile evaluation index in all_fulltext_primary_paths_including_partial_sources/all_workflow_primary_paths_including_partial_sources, not copied here.",
   "openai_entrypoint_evaluation": {
     "rights_accepted": false,
@@ -2307,5 +2307,41 @@
     "implicit_selection_proven": false,
     "public_result_review_pending": true,
     "whole16_complete": false
+  },
+  "received_other193": {
+    "evaluation": "skills-3080-other193-evaluation214717.json",
+    "evaluation_sha256": "0876f3bade4de4e4d7effaa3a3620c73267af5cb7b013aef71f97a2cb6f7dccf",
+    "physical": "skills-3080-other193-retained-physical214717.json",
+    "physical_sha256": "ac03072cce0b93911b5b8be0fabbeb4c5aa27db532595952c47baafd8edb2586",
+    "records": 193,
+    "previous_current_queue_needs_assessment": 169,
+    "previous_current_queue_already_assessed": 23,
+    "previous_current_queue_already_final": 1,
+    "source_counts": {
+      "MengTo/Skills": 44,
+      "Tencent/teamai-cli": 4,
+      "VoltAgent/awesome-design-md": 84,
+      "cloudflare/security-audit-skill": 1,
+      "docker/skills": 13,
+      "hirokaji/jp-ui-contracts": 7,
+      "mattpocock/skills": 2,
+      "mizchi/skills": 17,
+      "obra/superpowers": 1,
+      "x1xhlol/system-prompts-and-models-of-ai-tools": 20
+    },
+    "new_literal_body_reads": 1,
+    "legacy_global_raw_workflow_credit": 0,
+    "new_grants": 0,
+    "new_final_decisions": 0,
+    "central_operations": 0,
+    "main_acceptance_pending": true,
+    "whole16_complete": false,
+    "materialization_source_reads": 0,
+    "original_states": {
+      "raw96": 96,
+      "masked96": 96,
+      "original_unread": 1
+    },
+    "current_parent_primary_read_amendments": 1
   }
 }

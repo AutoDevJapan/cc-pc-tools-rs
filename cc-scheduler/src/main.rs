@@ -12,6 +12,20 @@ fn main() {
     }
     let args: Vec<String> = std::env::args().skip(1).collect();
     let command = args.first().map(String::as_str);
+    if command == Some("reevaluate-unstarted-review") {
+        if args.len()==2 && matches!(args[1].as_str(),"-h"|"--help") {
+            println!("usage: scheduler reevaluate-unstarted-review --id 3900 [--apply --expected-state-sha256 SHA256]\n\nReevaluate the same policy-origin unstarted review from normal inputs and fresh OAuth. Never launches.");
+            return;
+        }
+        let result=(|| -> Result<serde_json::Value> {
+            let expected=cc_job_policy::initial_review::arguments(&args).ok_or(Error("InputRejected"))?;
+            let root=PathBuf::from("D:/CC/Tools/scheduler");
+            let mut engine=Scheduler::new(root.clone(),PathBuf::from("D:/CC/Tools/todo/todo.json"),RealBackend::new(root))?;
+            cc_scheduler::initial_review::run(&mut engine,expected)
+        })();
+        match result {Ok(v)=>println!("{}",encode(&v,2)),Err(e)=>{eprintln!("review reevaluation failed {}",e.0);std::process::exit(1);}}
+        return;
+    }
     if command == Some("prepare-unstarted-review") {
         if args.len() == 2 && matches!(args[1].as_str(), "-h" | "--help") {
             println!("usage: scheduler prepare-unstarted-review --id 3649 [--apply --expected-state-sha256 SHA256]\n\nInspect or select the same unstarted review after normal registration evidence and fresh subscription quota. Preserves requested model/origins, reservation, scope and dependencies. Never launches.");

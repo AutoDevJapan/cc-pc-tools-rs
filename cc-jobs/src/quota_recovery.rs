@@ -18,16 +18,22 @@ impl Context {
             .find(|row| row["id"] == id);
         let unstarted =
             row.is_some_and(|row| row["scheduler"]["selection"]["unstarted_review"].is_object());
-        let prepared = unstarted
+        let initial = row.is_some_and(|row| row["scheduler"]["selection"]["initial_review"].is_object());
+        let prepared = unstarted || initial
             || row.is_some_and(|row| row["scheduler"]["selection"]["quota_recovery"].is_object());
         Ok(if prepared {
-            self.review_recovery_inventory(unstarted)
+            self.review_recovery_inventory(unstarted,initial)
         } else {
             Value::Null
         })
     }
 
-    pub(crate) fn review_recovery_inventory(&self, unstarted: bool) -> Value {
+    pub(crate) fn review_recovery_inventory(&self, unstarted: bool, initial: bool) -> Value {
+        if initial {
+            let mut inventory=self.rt.initial_review_inventory();
+            inventory["initial_review"]=json!(true);
+            return inventory;
+        }
         // Normal provenance reads precede the quota refresh, outside locks.
         let normal = if unstarted {
             self.rt.unstarted_review_registration()
@@ -108,6 +114,16 @@ impl Context {
         else {
             return Ok(false);
         };
+        let initial=&row["scheduler"]["selection"]["initial_review"];
+        if initial.is_object() {
+            if row["scheduler"]["phase"]!="prepared" || row["scheduler"]["key"]!=job["launch_key"] {
+                return Err(Error::new("initial review preparation generation changed"));
+            }
+            job["initial_review"]=initial.clone();
+            job["capacity_account_selector"]=initial["selector"].clone();
+            self.verify_initial_review(row,job,inventory)?;
+            return Ok(true);
+        }
         let unstarted = &row["scheduler"]["selection"]["unstarted_review"];
         if unstarted.is_object() {
             if row["scheduler"]["phase"] != "prepared"
@@ -186,6 +202,11 @@ impl Context {
         job: &mut Value,
         inventory: &Value,
     ) -> Result<()> {
+        if job["initial_review"].is_object() {
+            self.verify_initial_review(row,job,inventory)?;
+            job["review_source_verified"]=json!(false);
+            return self.validate_review_launch(job,true);
+        }
         if job["unstarted_review"].is_object() {
             self.verify_unstarted_review(row, job, inventory)?;
             job["review_source_verified"] = json!(false);
@@ -206,5 +227,18 @@ impl Context {
         self.verify_quota_recovery(&job["quota_recovery"], row, job, inventory, false)?;
         job["review_source_verified"] = json!(false);
         self.validate_review_launch(job, true)
+    }
+
+    fn verify_initial_review(&self, row: &Value, job: &Value, inventory: &Value) -> Result<()> {
+        let source=self.load(cc_job_policy::initial_review::AUTHOR)?;
+        let observed=cc_job_policy::initial_review::author(&[source])
+            .ok_or_else(||Error::new("initial review author execution changed"))?;
+        let bytes=self.rt.initial_review_spec(row)?;
+        let workspace=self.rt.initial_review_workspace(row);
+        if !workspace.is_object() || !cc_job_policy::initial_review::current(row,&observed,&workspace,
+            &cc_job_policy::product_retry::digest(&bytes),inventory,self.rt.epoch(),Some(job)) {
+            return Err(Error::new("initial review specification, scope, ownership, generation or OAuth changed"));
+        }
+        Ok(())
     }
 }

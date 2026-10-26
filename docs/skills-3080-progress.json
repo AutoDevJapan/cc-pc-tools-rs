@@ -612,7 +612,7 @@
     "guard_client_resource": true,
     "state": "classification_unverified"
   },
-  "recorded_at": "2026-10-25T20:43:11.2427901+00:00",
+  "recorded_at": "2026-10-25T21:58:34.6964664+00:00",
   "total_skill_named_body_read_definition": "This field preserves the historical complete-source subset only. Current raw/workflow primary coverage is projected from the canonical source components and sixmile evaluation index in all_fulltext_primary_paths_including_partial_sources/all_workflow_primary_paths_including_partial_sources, not copied here.",
   "openai_entrypoint_evaluation": {
     "rights_accepted": false,
@@ -1515,21 +1515,21 @@
     "excluded": 4
   },
   "sixmile_body_read_coverage": {
-    "metadata_only_primary": 1,
+    "metadata_only_primary": 3,
     "full_body_read": 195,
-    "workflow_body_read": 354,
-    "without_assessment": 55265,
+    "workflow_body_read": 393,
+    "without_assessment": 55223,
     "definition": "Registered disjoint source observations, explicit reading amendments and comparison-only occurrences. Raw, masked workflow, earlier literal reuse, saved-unread primary, partial primary, support state and actual reader are separate. A received observation or stored byte identity is not permission, adoption, original unmasked reading or completion.",
     "expected": 55623,
     "complete": false,
-    "masked_workflow_body": 159,
-    "candidate_paths_assessed_or_notice_read": 358,
+    "masked_workflow_body": 198,
+    "candidate_paths_assessed_or_notice_read": 400,
     "source": "skills-3080-sixmile-evaluation-index.json",
     "without_raw_full_read": 55428,
     "comparison_only_primary": 1,
-    "partial_primary": 2
+    "partial_primary": 3
   },
-  "all_workflow_primary_paths_including_partial_sources": 744,
+  "all_workflow_primary_paths_including_partial_sources": 783,
   "primary_coverage_definition_additional": "workflow集計はraw本文と伏字付き手順を区別した構造化件数に従う。原文/支持の受領評価と、親が全raw本文を再読した主張は別。旧notice-only本文の親全読は一度だけ別追補として加え、元childの状態と支持の担当は保持する。",
   "rss_season_installation": {
     "content_review": 3591,
@@ -1663,7 +1663,7 @@
   },
   "parent6_reflection_delta": {
     "current_branch_raw": 585,
-    "current_branch_workflow": 744,
+    "current_branch_workflow": 783,
     "main_accepted_snapshot": {
       "pr": 431,
       "merge": "ad8151c101a0820cbc365455ecfb85caef1d697a",
@@ -2064,10 +2064,33 @@
     "negative_examples": 14,
     "numeric_invariants": 40,
     "new_unique_source_readings": 0,
-    "public_result_delta_review_pending": true,
+    "public_result_delta_review_pending": false,
     "full_context_budget_proven": false,
     "warning_cause_linked": false,
-    "overall_complete": false
+    "overall_complete": false,
+    "current_public_result_acceptance": {
+      "todo": 3889,
+      "job": "20261026-062616-todo-3889",
+      "model": "gpt-6-luna",
+      "effort": "max",
+      "model_origin": "owner_request",
+      "effort_origin": "owner_request",
+      "spec_sha256": "7b1a16144cc041a3c3975693d029e57fd8b6403b8f137c51c86fab2698a27df3",
+      "raw_sha256": "96d62d0b5d6cc12a13224562fbb28192a96d0f7a6333040c9d1fe60f1844c110",
+      "raw_bytes": 1794,
+      "parent_full_original_read": true,
+      "independent_native_model_cwd_time_verified": true,
+      "Must": 0,
+      "Suggestion": 1,
+      "Nit": 0,
+      "head": "f34462dcd270df2ed79cc36fa8f4685819b0dfb6",
+      "base": "5d4a05597944d2db355fa09262051d551be8645a",
+      "accepted_pr": 523,
+      "merge": "329dbd43ab84bdf0894bb6e1df2ade1be67eb335",
+      "MERGED_readback": true,
+      "main_integrated": true,
+      "scope": "33 head/base files,20 changed; reviewed operation outputs151 and25 source procedures per original response; no tests rerun by reviewer"
+    }
   },
   "webdesign11_fresh_qualified_use": {
     "evidence": "skills-3080-webdesign11-fresh-qualified-use074042.json",
@@ -2080,5 +2103,23 @@
     "ordinary_all_agents_availability_proven": false,
     "whole_run_unconditional_scope_compliance_claimed": false,
     "extra_policy_read_audit_pending": true
+  },
+  "sixmile_next42_entrypoint_evaluation": {
+    "source": "skills-3080-sixmile-next42-evaluation.json",
+    "candidate_paths": 42,
+    "full_body_read": 0,
+    "workflow_body_read": 39,
+    "literal_masked_primary": 39,
+    "unread_primary": 2,
+    "partial_primary": 1,
+    "notice_paths": 42,
+    "support": 151,
+    "support_saved": 96,
+    "support_saved_unread": 6,
+    "support_unsaved": 55,
+    "installed": 0,
+    "integrated": 0,
+    "excluded": 0,
+    "definition": "Already received same-reader observations and independently verified original source/notice/package identity. Parent is receiver, not a new upstream raw reader. Late support and anonymous amendments do not rewrite original states."
   }
 }

@@ -92,11 +92,16 @@
       "file": "skills-3080-sixmile-stream90-evaluation.json",
       "sha256": "0c43d68d890419946dba55672fcb54ef8249ffd005f045705c38765696d39d6a",
       "rows": 90
+    },
+    {
+      "file": "skills-3080-sixmile-next42-evaluation.json",
+      "sha256": "8f8e2b5287983b8700519bca67d3a8a2e7e3f3ae0c145651b96df2457c7af2ed",
+      "rows": 42
     }
   ],
   "adoption_ledger": {
     "file": "skills-3080-adoptions.json",
-    "sha256": "8b62f8f7b90bc84d51d82a447387b0cbe8a8f4274e7644f4165b2c3a46ac1232",
+    "sha256": "33334b999de8e2eef012ba4549da09787e5eb32797f71957aa938eff93bb7753",
     "rows": 106
   },
   "definition": "Assessment record references and existing final decisions only. No semantic/individual licence approval is inherited through equal bytes. The fixed catalog remains the complete occurrence universe; all holds are retained."

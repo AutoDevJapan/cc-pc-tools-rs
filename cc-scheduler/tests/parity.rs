@@ -27,6 +27,8 @@ mod workspace_checkpoint_tests;
 mod workspace_relocation_tests;
 #[path = "support/quota_recovery.rs"]
 mod quota_recovery_tests;
+#[path = "support/initial_review.rs"]
+mod initial_review_tests;
 
 #[test]
 fn review_preparation_failures_stop_after_three_and_recover_on_new_evidence() {
@@ -1824,6 +1826,9 @@ impl Default for Fake {
     }
 }
 impl Backend for Fake {
+    fn initial_review_inventory(&mut self) -> Result<Value> {self.quota_recovery_inventory()}
+    fn initial_review_workspace(&mut self,_repo:&str,_row:&Value)->Result<Value>{Ok(self.m["initial_workspace"].clone())}
+    fn initial_review_spec(&mut self,row:&Value)->Result<Vec<u8>>{Ok(fs::read(s(&row["spec"]))?)}
     fn resource_until(&mut self, job: &Value) -> Result<Option<f64>> {
         Ok(if self.m["quota_block_model"].is_string() && self.m["quota_block_model"] == job["model"] {
             Some(self.clock+900.)

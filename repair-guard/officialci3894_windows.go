@@ -31,11 +31,11 @@ const official3894Safe = "D:/CC/Tools/safe-delete/safe-delete.exe"
 const official3894Temp = "C:/Users/makhmeto/AppData/Local/Temp"
 const official3894OriginalCreator = "20261026-064014-todo-3894"
 
-// Original SDK publisher's accepted software handoff, not a hash learned from
-// an unknown target. Earlier publisher receipts remain historical.
-// docs/evidence/official-ci3387-known-guard-baseline-f5f846a8.json
-const official3894PreviousGuardSHA = "f3927b8850258098d54dae87196ae382960dc83a5b6e7dd11354ab97ffd07cdf"
-const official3894PreviousGuardHead = "f5f846a8470b544846e4c9ce43306061bf5668f9"
+// Independent accepted runtime snapshots, not hashes learned from an unknown
+// target. The original SDK producer and its historical receipt stay unchanged.
+// docs/evidence/official-ci3387-known-guard-baseline-f30f9e76.json
+const official3894PreviousGuardSHA = "02c8cad70e44f2bc4cd4e5a70dfdaf581a7ee6896eb63449fe1606eb28f5b5be"
+const official3894PreviousGuardHead = "f30f9e763e25884fa48d1cce0cac22da1cebfb69"
 
 type official3894Source struct {
 	Head, Registration, CreatorJob, Workspace, Branch, SpecSHA string
@@ -264,9 +264,33 @@ func official3894Match(raw []byte, want object) bool {
 }
 
 func official3894GitHub(ctx context.Context) error {
+	return official3894GitHubWith(ctx, official3894Command)
+}
+
+func official3894GitHubWith(ctx context.Context, command func(context.Context, string, ...string) ([]byte, error)) error {
+	queueTimedOut := false
 	for i, p := range official3894Pins() {
-		b, e := official3894Command(ctx, official3894Gate, "api", "--hostname", "github.com", p.endpoint, "--jq", p.query)
-		if e != nil || !official3894Match(b, p.expected) {
+		b, e := command(ctx, official3894Gate, "api", "--hostname", "github.com", p.endpoint, "--jq", p.query)
+		if e != nil {
+			return official3894Error("github_metadata_pin_" + strconv.Itoa(i+1))
+		}
+		// Keep the receipt's original run/attempt/job binding. A normal retry
+		// may be prepared only when this exact original job never executed and
+		// GitHub independently reports its 24-hour unassigned-queue timeout.
+		if i == 4 && official3387CancelledQueueReply(b, p.expected) {
+			queueTimedOut = true
+			continue
+		}
+		if i == 6 && queueTimedOut {
+			if !official3387CancelledQueueReply(b, p.expected) {
+				return official3894Error("github_metadata_pin_7")
+			}
+			if err := official3387UnassignedTimeoutProof(ctx, command); err != nil {
+				return err
+			}
+			continue
+		}
+		if !official3894Match(b, p.expected) {
 			return official3894Error("github_metadata_pin_" + strconv.Itoa(i+1))
 		}
 	}
@@ -516,7 +540,9 @@ func official3894SourceCheck(ctx context.Context, saved *official3894Source, con
 	}
 	head, e := official3894SourceRevision(head, saved,
 		func(revision string) bool { return official3894InputsUnchanged(creator.Scheduler.Worktree, revision) },
-		func(revision string) bool { return official3894Merged(ctx, revision) })
+		func(revision string) official3894MergeOutcome {
+			return official3894MergeLookup(ctx, revision, official3894Command)
+		})
 	if e != nil {
 		return result, e
 	}

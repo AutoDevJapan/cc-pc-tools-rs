@@ -29,13 +29,47 @@ func official3894ProducerHead(reader string, saved *official3894Source) (string,
 	return "", false
 }
 
-func official3894SourceRevision(reader string, saved *official3894Source, unchanged, merged func(string) bool) (string, error) {
+type official3894MergeOutcome uint8
+
+const (
+	official3894MergeUnknown official3894MergeOutcome = iota
+	official3894MergeConfirmed
+	official3894MergeCommandFailed
+	official3894MergeNotMerged
+	official3894MergeResponseInvalid
+	official3894MergeDeadline
+	official3894MergeCancelled
+)
+
+func (m official3894MergeOutcome) reason() string {
+	switch m {
+	case official3894MergeCommandFailed:
+		return "command_failed"
+	case official3894MergeNotMerged:
+		return "not_merged"
+	case official3894MergeResponseInvalid:
+		return "response_invalid"
+	case official3894MergeDeadline:
+		return "deadline"
+	case official3894MergeCancelled:
+		return "cancelled"
+	default:
+		return "not_confirmed"
+	}
+}
+
+func official3894SourceRevision(reader string, saved *official3894Source, unchanged func(string) bool, merged func(string) official3894MergeOutcome) (string, error) {
 	producer, ok := official3894ProducerHead(reader, saved)
 	if !ok {
 		return "", official3894Error("prepared_source_revision_unrecognized")
 	}
-	if !merged(reader) || (producer != reader && !merged(producer)) {
-		return "", official3894Error("normal_source_merge_required")
+	if result := merged(reader); result != official3894MergeConfirmed {
+		return "", official3894Error("normal_reader_source_merge_" + result.reason() + "_" + reader)
+	}
+	if producer != reader {
+		if result := merged(producer); result != official3894MergeConfirmed {
+			return "", official3894Error("normal_producer_source_merge_" + result.reason() + "_" + producer)
+		}
 	}
 	// The retained creator worktree is compared with the original producer,
 	// while the executing clean reader must independently be merged.
@@ -55,12 +89,34 @@ func official3894InputsUnchanged(root, head string) bool {
 }
 
 func official3894Merged(ctx context.Context, head string) bool {
+	return official3894MergeLookup(ctx, head, official3894Command) == official3894MergeConfirmed
+}
+
+// Only fixed status classes and a previously validated revision leave the
+// boundary. Command output and errors may contain auth details and are never
+// included in the diagnostic.
+func official3894MergeLookup(ctx context.Context, head string, command func(context.Context, string, ...string) ([]byte, error)) official3894MergeOutcome {
 	if !official3894Hex(head, 40) {
-		return false
+		return official3894MergeUnknown
 	}
-	raw, e := official3894Command(ctx, official3894Gate, "api", "repos/AutoDevJapan/cc-pc-tools-rs/compare/"+head+"...main", "--jq", ".status")
-	status := strings.TrimSpace(string(raw))
-	return e == nil && (status == "ahead" || status == "identical")
+	raw, e := command(ctx, official3894Gate, "api", "repos/AutoDevJapan/cc-pc-tools-rs/compare/"+head+"...main", "--jq", ".status")
+	if e != nil {
+		switch ctx.Err() {
+		case context.DeadlineExceeded:
+			return official3894MergeDeadline
+		case context.Canceled:
+			return official3894MergeCancelled
+		}
+		return official3894MergeCommandFailed
+	}
+	switch strings.TrimSpace(string(raw)) {
+	case "ahead", "identical":
+		return official3894MergeConfirmed
+	case "behind", "diverged":
+		return official3894MergeNotMerged
+	default:
+		return official3894MergeResponseInvalid
+	}
 }
 
 // The original parent may compare the one independently known installed

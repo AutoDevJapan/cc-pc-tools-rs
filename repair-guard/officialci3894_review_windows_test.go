@@ -193,7 +193,7 @@ func TestOfficialCI3894ExactWriter(t *testing.T) {
 }
 
 func TestOfficialCI3894InstalledSoftwarePin(t *testing.T) {
-	raw, e := os.ReadFile("../docs/evidence/official-ci3387-known-guard-baseline-f5f846a8.json")
+	raw, e := os.ReadFile("../docs/evidence/official-ci3387-known-guard-baseline-f30f9e76.json")
 	if e != nil {
 		t.Fatal(e)
 	}
@@ -210,6 +210,7 @@ func TestOfficialCI3894InstalledSoftwarePin(t *testing.T) {
 		t.Fatal("independent published pair missing")
 	}
 	for _, pair := range [][2]string{
+		{"f3927b8850258098d54dae87196ae382960dc83a5b6e7dd11354ab97ffd07cdf", "f5f846a8470b544846e4c9ce43306061bf5668f9"},
 		{"ccb5e797e6b5627d98ade2a562f2f98f3c121a5403e1523071afc07f73af4556", "038bc2570014132321919bf6758d68979506b741"},
 		{"916bff404f54548814152efcd186dd772b33fd32872fd86fa88bc8d8718df9e3", "60a1b82b62d60cfcd66136aa4527041af643c4d6"},
 		{strings.Repeat("a", 64), official3894PreviousGuardHead},
@@ -226,6 +227,38 @@ func TestOfficialCI3894InstalledSoftwarePin(t *testing.T) {
 	var r object
 	if code != 2 || json.Unmarshal(out.Bytes(), &r) != nil || r["purpose_verified"] != false || errout.Len() != 0 {
 		t.Fatal("software comparison mixed CLI escaped machine refusal")
+	}
+}
+
+func TestOfficialCI3387UpdaterMatchesIndependentCurrentSoftware(t *testing.T) {
+	if !official3894InstalledBaseline("02c8cad70e44f2bc4cd4e5a70dfdaf581a7ee6896eb63449fe1606eb28f5b5be", "f30f9e763e25884fa48d1cce0cac22da1cebfb69") {
+		t.Fatal("the updater cannot compare the independently accepted current software")
+	}
+	for _, path := range []string{
+		"../docs/skills-3080-craft-create-evidence214717.json",
+		"../docs/skills-3080-codex3-after542-current20-evidence170221.json",
+	} {
+		raw, err := os.ReadFile(path)
+		if err != nil {
+			t.Fatal(err)
+		}
+		var reported struct {
+			SHA     string `json:"creator_runtime_sha256"`
+			Head    string `json:"creator_runtime_revision"`
+			Current struct {
+				SHA  string `json:"sha256"`
+				Head string `json:"revision"`
+			} `json:"current_runtime"`
+		}
+		if json.Unmarshal(raw, &reported) != nil {
+			t.Fatal("invalid independent software report")
+		}
+		if reported.Current.SHA != "" {
+			reported.SHA, reported.Head = reported.Current.SHA, reported.Current.Head
+		}
+		if !official3894InstalledBaseline(reported.SHA, reported.Head) {
+			t.Fatal("compiled software pair differs from the independent accepted reports")
+		}
 	}
 }
 

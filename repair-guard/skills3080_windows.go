@@ -62,15 +62,16 @@ type skillsResultRequest struct {
 	SpecPath string `json:"spec_path,omitempty"`
 }
 type skillsRequest struct {
-	Domain         string                `json:"domain"`
-	Writer         skillsWriter          `json:"writer"`
-	ManifestCommit string                `json:"manifest_commit,omitempty"`
-	ManifestPath   string                `json:"manifest_path,omitempty"`
-	ManifestSHA    string                `json:"manifest_sha256,omitempty"`
-	Review         *skillsResultRequest  `json:"review,omitempty"`
-	Result         *skillsResultRequest  `json:"result,omitempty"`
-	Runtime        *skillsRuntimeRequest `json:"runtime,omitempty"`
-	Consume        *skillsConsumeRequest `json:"consume,omitempty"`
+	Domain         string                 `json:"domain"`
+	Writer         skillsWriter           `json:"writer"`
+	ManifestCommit string                 `json:"manifest_commit,omitempty"`
+	ManifestPath   string                 `json:"manifest_path,omitempty"`
+	ManifestSHA    string                 `json:"manifest_sha256,omitempty"`
+	Review         *skillsResultRequest   `json:"review,omitempty"`
+	Result         *skillsResultRequest   `json:"result,omitempty"`
+	Runtime        *skillsRuntimeRequest  `json:"runtime,omitempty"`
+	Consume        *skillsConsumeRequest  `json:"consume,omitempty"`
+	Revision       *skillsRevisionRequest `json:"revision,omitempty"`
 }
 
 var skillsName = regexp.MustCompile(`^[a-z0-9]+(?:-[a-z0-9]+)*$`)
@@ -154,7 +155,7 @@ func skillsParseManifest(raw []byte) (skillsManifest, bool) {
 func skillsFlag(args []string) bool {
 	for _, a := range args {
 		a = strings.TrimLeft(a, "-")
-		for _, f := range []string{"qualify-skills3080", "create-skills3080", "create-skills3080-forward", "consume-skills3080", "consume-skills3080-admitted", "receive-skills3080-result", "verify-skills3080-update"} {
+		for _, f := range []string{"qualify-skills3080", "create-skills3080", "create-skills3080-forward", "consume-skills3080", "consume-skills3080-admitted", "receive-skills3080-result", "verify-skills3080-update", "qualify-skills3080-revision", "prepare-skills3080-revision", "apply-skills3080-revision", "consume-skills3080-revision"} {
 			if a == f || strings.HasPrefix(a, f+"=") {
 				return true
 			}
@@ -171,7 +172,7 @@ func runSkillsCLI(args []string, out io.Writer, run func(string, string) object)
 		op := strings.TrimPrefix(strings.TrimPrefix(args[0], "-"), "-")
 		if args[0] == "-"+op || args[0] == "--"+op {
 			switch op {
-			case "qualify-skills3080", "create-skills3080", "create-skills3080-forward", "consume-skills3080", "receive-skills3080-result", "verify-skills3080-update":
+			case "qualify-skills3080", "create-skills3080", "create-skills3080-forward", "consume-skills3080", "receive-skills3080-result", "verify-skills3080-update", "qualify-skills3080-revision", "prepare-skills3080-revision", "apply-skills3080-revision", "consume-skills3080-revision":
 				result = run(op, args[1])
 			}
 		}

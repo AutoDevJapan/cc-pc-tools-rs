@@ -20,6 +20,10 @@ const skillsGuardModule = "github.com/AutoDevJapan/cc-pc-tools-rs/repair-guard"
 // Independent previously accepted distribution facts (3258 and3686), not a caller
 // supplied baseline or an assertion made by the artifact being installed.
 var skillsGuardBaselines = map[string]string{
+	// PR536's independently accepted Windows distribution and original
+	// parent's 92-buffer receipt; never learned from the proposed new binary.
+	// Evidence: docs/evidence/skills-3080-guard-installed-52d417.json.
+	"aaf16eac624c3b974835f28c35805c2670d5f51320a2f04d78a4de6edf19b2f9": "52d417e60c20f9770d6bde2dde36092ab206ea01",
 	// The subsequent official-CI update is independently reproduced from its
 	// public merged source. Only its two Go build action-ID fields differ;
 	// both content IDs and every remaining byte match. No PE was rewritten.

@@ -331,6 +331,10 @@ func printGuardUsage(output io.Writer) {
 	fmt.Fprintln(output, "  --consume-skills3080-admitted\n    \tconsume only the actual registered readonly caller's immutable public Skill scope")
 	fmt.Fprintln(output, "  -receive-skills3080-result string\n    \treceive one registered public final response and bounded native model projection")
 	fmt.Fprintln(output, "  -verify-skills3080-update string\n    \tqualify the reviewed merged Windows guard update only; no data access")
+	fmt.Fprintln(output, "  -qualify-skills3080-revision string\n    \tqualify the exact own index27 revision; deliver its canonical native invocation")
+	fmt.Fprintln(output, "  -prepare-skills3080-revision string\n    \tstage the exact public revision1 bytes without changing the old metadata")
+	fmt.Fprintln(output, "  -apply-skills3080-revision string\n    \tpreserve old metadata and publish prepared bytes by collision-rejecting renames")
+	fmt.Fprintln(output, "  -consume-skills3080-revision string\n    \tread current public snapshot buffers bound to the original revision native")
 	fmt.Fprintln(output, "  --verify-omb-producer-3255")
 	fmt.Fprintln(output, "    \tcompare four original OMB software components; no source or data access grant")
 }

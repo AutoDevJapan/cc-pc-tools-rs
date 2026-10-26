@@ -10,7 +10,7 @@ import (
 
 func TestCompletedBuildGenerationUsesTheSameCASACLAndNoReplace(t *testing.T) {
 	l := fixture(t)
-	p, e := prepareAt(l, "todo3942-observe")
+	p, e := prepareAt(l, "todo3942-legacy")
 	if e != nil {
 		t.Fatal(e)
 	}
@@ -60,7 +60,7 @@ func TestCompletedBuildIdentityDoesNotAdoptUnknownOrOtherSoftware(t *testing.T) 
 			}
 		})
 	}
-	if completedLeaf.Target != leaves[1].Target || completedLeaf.Old != completedCurrentSHA || completedLeaf.Kind != "cleanup-8h" || completedLeaf.Target == nativeLeaf.Target {
+	if completedLeaf.Target != leaves[1].Target || completedLeaf.Old != completedObservedSHA || completedLeaf.Kind != "cleanup-8h" || completedLeaf.Target == nativeLeaf.Target {
 		t.Fatal("cleanup-only scope changed")
 	}
 }
@@ -133,6 +133,27 @@ func TestCurrentGenerationCannotSkipThePreviousInstallChain(t *testing.T) {
 	}
 	if e := completedPreviousGeneration([]byte("invalid broker")); e == nil || e.Error() != "COMPLETED_PREVIOUS_BROKER_UNVERIFIED" {
 		t.Fatal("previous broker error mislabeled")
+	}
+}
+
+func TestObservedGenerationKeepsBothEarlierOriginalInstallLinks(t *testing.T) {
+	encode := func(head, old, next string) []byte {
+		result := map[string]any{"domain": "completed-build-cleanup-software-3942", "source_head": head, "qualified": true, "results": []any{map[string]any{"kind": "cleanup-8h", "old_sha256": old, "new_sha256": next, "updated": true, "verified": true, "steps": map[string]any{"old_retired": true, "published": true, "verified": true}}}}
+		out, _ := json.Marshal(result)
+		b, _ := json.Marshal(map[string]any{"exit": 0, "stdout": string(out)})
+		return b
+	}
+	valid := encode(completedObservedHead, completedCurrentSHA, completedObservedSHA)
+	if completedObservedGeneration(valid) != nil {
+		t.Fatal("original observed install rejected")
+	}
+	if completedCurrentGeneration(valid) == nil || completedPreviousGeneration(valid) == nil {
+		t.Fatal("later install replaced an earlier link")
+	}
+	for _, b := range [][]byte{encode(completedCurrentHead, completedCurrentSHA, completedObservedSHA), encode(completedObservedHead, completedPreviousSHA, completedObservedSHA), encode(completedObservedHead, completedCurrentSHA, "unknown")} {
+		if e := completedObservedGeneration(b); e == nil || e.Error() != "COMPLETED_OBSERVED_INSTALL_UNVERIFIED" {
+			t.Fatal("broken observed chain accepted or mislabeled")
+		}
 	}
 }
 

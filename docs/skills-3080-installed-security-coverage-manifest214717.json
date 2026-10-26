@@ -1,0 +1,64 @@
+{
+  "definition": "Actual once-only new target; all9 contents came from current qualified same-read buffers in two normal SDK batches. Each read time is independent; no atomic cross-batch snapshot or continuity claim.",
+  "targets": [
+    {
+      "name": "security-audit-coverage",
+      "new": true,
+      "before_sha256": "absent",
+      "positive": "前回の監査と今回変わったbatch/retryを比べ、入口と権限境界ごとの調査済み/未確認を追いたい。",
+      "negative": "一ファイルの誤字修正や単発の一般質問に、監査全工程・新しい担当やファイルを強制する。",
+      "sources": [
+        "https://github.com/cloudflare/security-audit-skill/blob/c1c8a8c1471069fb0e188eeaff69b8e8db6564a8/skills/security-audit/SKILL.md",
+        "https://github.com/cloudflare/security-audit-skill/blob/c1c8a8c1471069fb0e188eeaff69b8e8db6564a8/skills/security-audit/HUNTING.md",
+        "https://github.com/cloudflare/security-audit-skill/blob/c1c8a8c1471069fb0e188eeaff69b8e8db6564a8/skills/security-audit/RECONNAISSANCE.md",
+        "https://github.com/cloudflare/security-audit-skill/blob/c1c8a8c1471069fb0e188eeaff69b8e8db6564a8/skills/security-audit/VALIDATION-AND-REPORTING.md"
+      ],
+      "files": [
+        {
+          "path": "SKILL.md",
+          "sha256": "538433afee453c330990ba66a31faa00f4cced1768e590fc60a689b53fd30cdc"
+        },
+        {
+          "path": "references/coverage-guide.md",
+          "sha256": "e55bfb07c14b57bab7805359effa8445e39fc69a9dab0ac2db663b809fb77f95"
+        },
+        {
+          "path": "references/original-core.txt",
+          "sha256": "5e3e96a1e438d8f35fef0a1e38f02d4f00e2bdf910401b7dfe00e6779c6dac85"
+        },
+        {
+          "path": "references/original-hunting.txt",
+          "sha256": "71c121decea1322c47c718f6e110f1a892980bb4266bd7ac55ef043a213ade09"
+        },
+        {
+          "path": "references/original-reconnaissance.txt",
+          "sha256": "02ca887aca84de8ae137f1891bd2f0a54f28d3fa6da92a27f54734382b3381a2"
+        },
+        {
+          "path": "references/original-validation.txt",
+          "sha256": "b892470cb89bb31f33403e050d4bdfbe2cdaef940ade1496fa65e32b2e129449"
+        },
+        {
+          "path": "references/LICENSE.txt",
+          "sha256": "e598e694aa506650c7192d5ea3be0e50aca0d356ea00551c53429f0b01eb6391"
+        },
+        {
+          "path": "references/source.json",
+          "sha256": "f06aecae5ea88c1b386507e918ac478d17b57338b06c5afb81ff607e6509d72d"
+        },
+        {
+          "path": "references/sources.md",
+          "sha256": "15c6c9eaeb6fd08ef1933fea309eddee852cda836157439b5505846f5a721ecf"
+        }
+      ]
+    }
+  ],
+  "central_operations": 0,
+  "new_adoptions": 0,
+  "whole16_complete": false,
+  "root": "D:/CC/Skills",
+  "creator_job": "20261026-214717-todo-3080",
+  "current_consumer_job": "20261026-214717-todo-3080",
+  "snapshot_definition": "Actual once-only new target; all9 contents came from current qualified same-read buffers in two normal SDK batches. Each read time is independent; no atomic cross-batch snapshot or continuity claim.",
+  "new_adoptions_definition": "new_adoptions=0は、このbundle/manifestの組立・検証自体が追加採用を行わないという操作単位の値。security-audit-coverageの実配置1件と採用状態はskills-3080-adoptions.jsonの対応entryとinstallation-evidenceで別に記録する。"
+}

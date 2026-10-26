@@ -1,0 +1,94 @@
+{
+  "todo": 3080,
+  "result_publisher_job": "20261026-214717-todo-3080",
+  "creator_job": "20261026-214717-todo-3080",
+  "new_targets_created": 1,
+  "successful_CreateNew_count": 1,
+  "current_files_readback_verified": 9,
+  "bytes": 92804,
+  "normal_read_batches": 2,
+  "instruction_buffers": 2,
+  "instruction_bytes": 7468,
+  "input_PR": 552,
+  "input_PR_merge": "54a566a98fb7f81ec5137aae3b8b67cdcffb5a68",
+  "creation_manifest": "skills-3080-operations/create-security-coverage-214717.json",
+  "creation_manifest_sha": "88ca069ea9a21cdfdbf0a97aac6d28a449012f99cf62e1a1f7d21265caaa064b",
+  "creation_input_head": "d7645627b56fd7a5b1fa3061dc90928fbaa1c71a",
+  "frozen_full_content_review": {
+    "domain": "skills3080-frozen-creation-content-review-v1",
+    "task": 3978,
+    "job": "20261027-013407-todo-3978",
+    "saved_spec": "D:/CC/Tools/todo/specs/3978-e4d6083d009d4d9ab942470132385e5f.md",
+    "saved_spec_sha": "539be2c7ecab1d896a1c2062dce257a8c42f4cbd0a2ddbb3d47ad240ba2bb978",
+    "head": "d7645627b56fd7a5b1fa3061dc90928fbaa1c71a",
+    "manifest_path": "docs/skills-3080-operations/create-security-coverage-214717.json",
+    "manifest_sha": "88ca069ea9a21cdfdbf0a97aac6d28a449012f99cf62e1a1f7d21265caaa064b",
+    "full_content_comparison": false,
+    "source9_output_bytes_unchanged_by_schema_fix": true,
+    "raw_bytes": 1023,
+    "raw_sha": "23733d35f91a34b385e082c8b13084a130a9eda1e9e0c1333eb422f58c85dd0f",
+    "parent_full_original_read": true,
+    "independent_native_LunaMax": true,
+    "Must": 0,
+    "Suggestion": 0,
+    "Nit": 0,
+    "DO_NOT_EDIT3978_SPEC_OR_START_NEW3978_JOB_AFTER_CREATION": true,
+    "unreceived_old_full14_full12_and_failed_progress_not_authority": true
+  },
+  "referenced_artifacts": {
+    "bundle": {
+      "file": "skills-3080-security-coverage-actual-bundle214717.json",
+      "sha256": "1980a2ed4071bd8df239efdedf17ab2b511e2278ef86eadbbf60c5880896df4b"
+    },
+    "manifest": {
+      "file": "skills-3080-installed-security-coverage-manifest214717.json",
+      "sha256": "1384be8ab78e70c938bb9407d3b001156fab01f16e435d9dd5ff76091cfa754f"
+    },
+    "creation": {
+      "file": "skills-3080-security-coverage-create-evidence214717.json",
+      "sha256": "353d19226bfb5ceed68c3741189db989291ffc0da1117e0e4b4346526fc314cf"
+    },
+    "readback": {
+      "file": "skills-3080-security-coverage-consume-evidence214717.json",
+      "sha256": "9d4d43d85cfdee30bad037b4081760b29ca93920069b5ab8190688f7df67198b"
+    },
+    "structure": {
+      "file": "skills-3080-security-coverage-actual-structure214717.json",
+      "sha256": "70267dd1d45a3b1047b1580e673eff39101c3fceebd014a74171552f040c29d1"
+    },
+    "discovery": {
+      "file": "skills-3080-security-coverage-discovery214717.json",
+      "sha256": "97fb32dad06c2f5ffbe229340199705d076308d51e4fcce2cf5cc46bf2998c79"
+    },
+    "application": {
+      "file": "skills-3080-security-coverage-application214717.json",
+      "sha256": "540768f45fb7391225a994fc9e7267498113f6afc4e24c69644c1370009e36b9"
+    },
+    "design": {
+      "file": "skills-3080-security-coverage-designs214717.json",
+      "sha256": "6f41426182a445ab390a732809cba88c3c484a508ee8c5f11771509b1bfd8e65"
+    }
+  },
+  "creation_binding": "Exact own canonical native call17a68 and original CLI stdout; not a caller-supplied receipt alone",
+  "initial_read_failure": "92804-byte batch exceeded normal SDK65536-byte limit before leaf reads; retained request/current_snapshot failure, then successful4+5 batches. No CreateNew repeated or guard changed.",
+  "discovery_initial_failure": "Windows PowerShell lacked DateKind before app-server startup; retained, then same script succeeded with installed pwsh",
+  "time_scope": "Actual once-only new target; all9 contents came from current qualified same-read buffers in two normal SDK batches. Each read time is independent; no atomic cross-batch snapshot or continuity claim.",
+  "model_application": "Real current turn explicit instruction use on actual readback claims and three textual scenarios; no live target audit",
+  "new_global_source_raw_credit": 0,
+  "implicit_skill_selection_proven": false,
+  "new_live_security_audit_or_exploit": 0,
+  "new_UI_implementation": 0,
+  "originals_are_records_not_owner_instructions": true,
+  "third_party_assets_services_or_unknown_central_rights_accepted": false,
+  "public_result_review_pending": true,
+  "whole16_complete": false,
+  "accepted_initial_result_review": {
+    "file": "skills-3080-security-coverage-final-review214717.json",
+    "sha256": "5ce92797263ddb21294592c512f2177439905a61192375f789479af9aa9d9d08",
+    "head": "bfbd4bf5476e3956f00600700bc9a03f3f562965",
+    "PR": 560,
+    "Must": 0,
+    "Suggestion": 2
+  },
+  "current_counter_definition_clarification_pending_review": true
+}

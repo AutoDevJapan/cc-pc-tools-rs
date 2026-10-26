@@ -821,6 +821,56 @@ fn conversation_bridge_ask_identity_is_stable_across_json_key_order_and_body_pat
 }
 
 #[test]
+fn conversation_bridge_resumed_actor_keeps_original_question_identity() {
+    let f = Fixture::new();
+    let mut fake = Fake::default();
+    let mut args = f.ask();
+    bridge::try_ask(f.root.path(), &mut fake, &args).unwrap();
+    let original = fake.calls[0].0.clone();
+    args.scheduler_item = Some(3277);
+    args.scheduler_job = Some("actual-job-3277".into());
+    bridge::try_ask(f.root.path(), &mut fake, &args).unwrap();
+    let resumed = &fake.calls[1].0;
+    for key in [
+        "--request-id",
+        "--todo-id",
+        "--body-file",
+        "--decision-file",
+    ] {
+        assert_eq!(argument(&original, key), argument(resumed, key));
+    }
+    assert_eq!(argument(resumed, "--scheduler-item"), "3277");
+    assert_eq!(argument(resumed, "--scheduler-job"), "actual-job-3277");
+    f.unchanged_legacy();
+}
+
+#[test]
+fn conversation_bridge_exposes_only_fixed_failure_stages() {
+    for stage in [
+        "actor_scope",
+        "task_scope",
+        "original_task",
+        "input_mismatch",
+        "send_pending",
+        "verification_pending",
+        "wait_pending",
+    ] {
+        let f = Fixture::new();
+        let mut fake = Fake {
+            output: Some(Output {
+                code: 1,
+                stdout: format!("conversation unavailable: {stage}\n"),
+                stderr: "private question and token".into(),
+            }),
+            ..Fake::default()
+        };
+        let error = bridge::try_ask(f.root.path(), &mut fake, &f.ask()).unwrap_err();
+        assert!(error.ends_with(&format!("[conversation:{stage}]")));
+        assert!(!error.contains("private"));
+    }
+}
+
+#[test]
 fn conversation_bridge_duplicate_returns_original_question_url_without_claiming_a_new_wait() {
     let f = Fixture::new();
     let mut fake=Fake{output:Some(Output{code:0,stdout:json!({"request_id":"original-question","todo_id":2823,"phase":"duplicate","wait_requested":false,"outcome":"existing_question_images_differ","thread_id":"600","url":"https://discord.com/channels/100/600"}).to_string(),stderr:String::new()}),..Default::default()};

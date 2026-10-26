@@ -1,0 +1,34 @@
+{
+  "todo": 3971,
+  "job": "20261027-031910-todo-3971",
+  "parent_job": "20261026-214717-todo-3080",
+  "spec_sha256": "da86f743c92d46743f8c5924a162f3127451449ce6741d197e807aadfcdb3b1d",
+  "raw_sha256": "83755cc8f694bc2840221d131bb1db8c23d0f9af967de2c4d010e6bacafb9f14",
+  "raw_bytes": 2079,
+  "parent_full_original_read": true,
+  "native": [
+    {
+      "timestamp": "2026-10-26T18:19:55.626Z",
+      "model": "gpt-6-luna",
+      "effort": "max",
+      "service_tier": null
+    }
+  ],
+  "both_origins_owner_request": true,
+  "Must": 0,
+  "Suggestion": 2,
+  "Nit": 0,
+  "runtime_use_not_implied": true,
+  "native_output_bodies_returned": false,
+  "reading_scope": {
+    "identity_checked_selected_paths": 31,
+    "changed_paths_reviewed": 20,
+    "unchanged_support_paths_selected": 11,
+    "unchanged_Go_files_not_literally_reread": 5,
+    "do_not_claim31_fresh_literal_reads": true
+  },
+  "accepted_PR": 560,
+  "accepted_head": "bfbd4bf5476e3956f00600700bc9a03f3f562965",
+  "normal_merge": "461e0ab5fcd6b65fa2a1be74b299707320b07f81",
+  "scope": "Accepted original deployment result at the fixed560 head; current counter-definition clarification and24 new assessments still require their own result review"
+}

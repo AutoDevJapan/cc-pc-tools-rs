@@ -1,0 +1,35 @@
+name: Generated question input reference
+
+on:
+  pull_request:
+    paths:
+      - 'tools/generated-question-input/**'
+      - '.github/workflows/generated-question-input.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'tools/generated-question-input/**'
+      - '.github/workflows/generated-question-input.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  input-reference:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: tools/generated-question-input/go.mod
+          cache: false
+      - name: Test source reference checks and protocol boundaries
+        working-directory: tools/generated-question-input
+        run: go test -count=1 ./...
+      - name: Vet source reference component
+        working-directory: tools/generated-question-input
+        run: go vet ./...
+      - name: Build Windows CLI
+        working-directory: tools/generated-question-input
+        run: go build -trimpath -o generated-question-input.exe .

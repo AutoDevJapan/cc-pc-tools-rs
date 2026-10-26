@@ -1290,6 +1290,7 @@ pub fn execute(db: &mut Value, cmd: &Command, paths: &Paths) -> Result<Vec<Strin
             note_file,
             spec,
             expected_note_sha256,
+            scope_file,
             ..
         } => {
             if let Some(expected) = expected_note_sha256 {
@@ -1308,7 +1309,23 @@ pub fn execute(db: &mut Value, cmd: &Command, paths: &Paths) -> Result<Vec<Strin
                     return Err("conversation_note_changed".into());
                 }
             }
+            let instruction = scope_file
+                .as_deref()
+                .map(|scope| {
+                    conversation_wait::actor_note_instruction(
+                        db,
+                        *id,
+                        scope,
+                        note_file.as_deref(),
+                        spec.is_some(),
+                    )
+                })
+                .transpose()?
+                .flatten();
             edit_item(db, *id, note_file.as_deref(), spec.as_deref(), paths)?;
+            if let Some(instruction) = instruction {
+                find(db, *id)?["scheduler"]["owner_instruction"] = json!(instruction);
+            }
         }
         Command::ImplementationRecord {
             input_file,

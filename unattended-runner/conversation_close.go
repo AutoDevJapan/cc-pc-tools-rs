@@ -111,7 +111,11 @@ func conversationCloseRead(path string, ceiling int64) ([]byte, bool, error) {
 }
 
 func (r *Runner) conversationCloseIdentity(q ConversationQuestion) string {
-	return canonicalHash([]any{q.RequestID, q.SenderID, q.Todo, q.Project, q.Thread, q.Message, q.Progress, q.OriginThread, q.Fingerprint, q.DecisionSHA, q.QuestionSHA, q.ReceiptSHA, r.State.Destination})
+	identity := []any{q.RequestID, q.SenderID, q.Todo, q.Project, q.Thread, q.Message, q.Progress, q.OriginThread, q.Fingerprint, q.DecisionSHA, q.QuestionSHA, q.ReceiptSHA, r.State.Destination}
+	if q.Actor != nil {
+		identity = append(identity, q.Actor)
+	}
+	return canonicalHash(identity)
 }
 
 func (r *Runner) conversationCloseProofHash(q ConversationQuestion, proof *conversationProof) (string, error) {
@@ -218,7 +222,7 @@ func (r *Runner) conversationReplySourceMessage(ctx context.Context, q Conversat
 	if req.Phase != "conversation_reply_saved" && req.Phase != "conversation_reply_delivered" && req.Phase != "conversation_reply_applied" && req.Phase != "conversation_direction_recorded" && req.Phase != "conversation_implementation_recorded" && req.Phase != "conversation_source_verified" {
 		return stamp, false, nil
 	}
-	if req.Conversation != q.RequestID || (req.Todo != 0 && req.Todo != q.Todo) || req.Source != "discord-api-v10" || req.RecordVersion != 2 || req.Guild != r.State.Destination.Guild || req.Thread != q.Thread || req.Message != reply.Message || req.Author != r.State.Destination.Owner || req.Created != reply.Created || req.Key != requestKey(q.Thread, reply.Message) {
+	if req.Conversation != q.RequestID || (req.Todo != 0 && req.Todo != conversationRecipient(q)) || req.Source != "discord-api-v10" || req.RecordVersion != 2 || req.Guild != r.State.Destination.Guild || req.Thread != q.Thread || req.Message != reply.Message || req.Author != r.State.Destination.Owner || req.Created != reply.Created || req.Key != requestKey(q.Thread, reply.Message) {
 		return stamp, false, errConversationCloseSource
 	}
 	if req.Text != reply.Body {
@@ -251,7 +255,7 @@ func (r *Runner) conversationReplySourceMessage(ctx context.Context, q Conversat
 		return stamp, false, errConversationCloseSource
 	}
 	var saved Request
-	if json.Unmarshal(source, &saved) != nil || saved.Conversation != req.Conversation || (saved.Todo != 0 && saved.Todo != q.Todo) || saved.Source != req.Source || saved.RecordVersion != req.RecordVersion || saved.Guild != req.Guild || saved.Thread != req.Thread || saved.Message != req.Message || saved.Author != req.Author || saved.Created != req.Created || saved.Edited != req.Edited || saved.Text != req.Text || saved.Acquired != req.Acquired || saved.Key != req.Key || saved.Context != req.Context || saved.ReplyTo != req.ReplyTo || saved.ReplyChannel != req.ReplyChannel || saved.ReplyGuild != req.ReplyGuild {
+	if json.Unmarshal(source, &saved) != nil || saved.Conversation != req.Conversation || (saved.Todo != 0 && saved.Todo != conversationRecipient(q)) || saved.Source != req.Source || saved.RecordVersion != req.RecordVersion || saved.Guild != req.Guild || saved.Thread != req.Thread || saved.Message != req.Message || saved.Author != req.Author || saved.Created != req.Created || saved.Edited != req.Edited || saved.Text != req.Text || saved.Acquired != req.Acquired || saved.Key != req.Key || saved.Context != req.Context || saved.ReplyTo != req.ReplyTo || saved.ReplyChannel != req.ReplyChannel || saved.ReplyGuild != req.ReplyGuild {
 		return stamp, false, errConversationCloseSource
 	}
 	var contextProof conversationProof
@@ -327,7 +331,7 @@ func (r *Runner) conversationCloseReply(ctx context.Context, q ConversationQuest
 	}
 	acquired, _ := time.Parse(time.RFC3339Nano, req.Acquired)
 	at, err := time.Parse(time.RFC3339Nano, applied.AppliedAt)
-	if err != nil || at.Before(acquired) || at.After(r.Now()) || applied.Source != "discord-api-v10" || applied.RequestID != q.SenderID || applied.OriginTodo != q.Todo || applied.Todo != q.Todo || applied.Thread != q.Thread || applied.Question != q.Message || applied.Message != reply.Message || applied.Author != req.Author || len(applied.Revision) != 40 || strings.Trim(applied.Revision, "0123456789abcdefABCDEF") != "" || strings.TrimSpace(applied.Completion) == "" || strings.TrimSpace(applied.Verification.Execution) == "" || strings.TrimSpace(applied.Verification.Origin) == "" || strings.TrimSpace(applied.Verification.Identity) == "" {
+	if err != nil || at.Before(acquired) || at.After(r.Now()) || applied.Source != "discord-api-v10" || applied.RequestID != q.SenderID || applied.OriginTodo != q.Todo || applied.Todo != conversationRecipient(q) || applied.Thread != q.Thread || applied.Question != q.Message || applied.Message != reply.Message || applied.Author != req.Author || len(applied.Revision) != 40 || strings.Trim(applied.Revision, "0123456789abcdefABCDEF") != "" || strings.TrimSpace(applied.Completion) == "" || strings.TrimSpace(applied.Verification.Execution) == "" || strings.TrimSpace(applied.Verification.Origin) == "" || strings.TrimSpace(applied.Verification.Identity) == "" {
 		return stamp, false, errConversationCloseApplied
 	}
 	for _, raw := range row.Jobs {
@@ -344,8 +348,18 @@ func (r *Runner) conversationCloseReply(ctx context.Context, q ConversationQuest
 
 func (r *Runner) conversationCloseSnapshot(ctx context.Context, q ConversationQuestion, proof *conversationProof, mark bool) (map[string]conversationCloseStamp, bool, error) {
 	stamps := make(map[string]conversationCloseStamp)
-	row, err := r.todo(q.Todo)
-	if err != nil || row.ID != q.Todo || row.Project == "owner" || strings.TrimSpace(q.Project) == "" || row.Project != q.Project {
+	var row *TodoRow
+	var err error
+	if q.Actor != nil {
+		var proof json.RawMessage
+		proof, err = r.conversationActorProof(q)
+		if err == nil {
+			row, err = r.conversationActorRowWithProof(ctx, q, proof, true)
+		}
+	} else {
+		row, err = r.todo(q.Todo)
+	}
+	if err != nil || row.ID != conversationRecipient(q) || row.Project == "owner" || strings.TrimSpace(q.Project) == "" || row.Project != q.Project {
 		return stamps, false, errConversationCloseApplied
 	}
 	all, dirty := len(proof.Replies) != 0, false

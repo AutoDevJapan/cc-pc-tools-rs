@@ -122,12 +122,27 @@
       "file": "skills-3080-other193-evaluation214717.json",
       "sha256": "0876f3bade4de4e4d7effaa3a3620c73267af5cb7b013aef71f97a2cb6f7dccf",
       "rows": 193
+    },
+    {
+      "file": "skills-3080-other20-194213-evaluation214717.json",
+      "sha256": "9fdb7c460f07c7de1597e587b46450e87a030f41de6f0a84da20d748f5139d9a",
+      "rows": 20
+    },
+    {
+      "file": "skills-3080-other24-214237-evaluation214717.json",
+      "sha256": "411e44b7f9d7d4dc4d36313d64d99554d3b9ba1308b8c0d683e0dc550cf5a91f",
+      "rows": 24
+    },
+    {
+      "file": "skills-3080-other12-238249-evaluation214717.json",
+      "sha256": "6a4f3fc73a22ab22197e19ec9b655a3f7e554d9b7f3a78909f1ceacdb0f1bdb0",
+      "rows": 12
     }
   ],
   "adoption_ledger": {
     "file": "skills-3080-adoptions.json",
-    "sha256": "6b3cd7dbb3ab2ebe4a7ea23d24895b277e3a351cb386dd26b3753e97ac3b4103",
-    "rows": 138
+    "sha256": "fd8a06095735cbd451d91f51aef04df5e46c85c8214b86f7a03db9972bb77078",
+    "rows": 139
   },
   "definition": "Assessment record references and existing final decisions only. No semantic/individual licence approval is inherited through equal bytes. The fixed catalog remains the complete occurrence universe; all holds are retained."
 }

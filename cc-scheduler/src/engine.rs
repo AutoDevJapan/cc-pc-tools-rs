@@ -940,6 +940,12 @@ impl<B: Backend> Scheduler<B> {
             })?;
             return Ok(());
         }
+        if j["last_failure_kind"]=="quota_recovery" && j["status"]=="failed" {
+            self.edit(&i["id"],|row| {if row["scheduler"]["job"]==j["id"] && row["status"]=="doing" {
+                row["scheduler"]["phase"]=json!("quota_recovery_ended");
+                row["note"]=json!("利用枠の回復確認を有限回で終了しました。元担当・履歴・作業範囲を保持しています。");
+            }})?;return Ok(());
+        }
         let saved_until = (i["scheduler"]["resource_wait"]["job"] == j["id"])
             .then(|| i["scheduler"]["resource_wait"]["until"].as_f64())
             .flatten();
@@ -1234,6 +1240,9 @@ if truth(&current["scheduler"]["question_close_pending"]){e.backend.close_questi
             return Err(Error("InputRejected"));
         }
         let cooldown = n(&i["scheduler"]["not_before"]) > self.backend.clock();
+        if n(&i["scheduler"]["quota_recheck_after"]) > self.backend.clock() {
+            return Ok(None);
+        }
         // Only a complete fresh capsule can reconsider the automatic delay
         // from this same drained quota source. Explicit source resets and
         // independent owner/resource/technical waits remain authoritative.
@@ -1957,6 +1966,8 @@ if !truth(&row["scheduler"]["key"]){let attempt=add_count(&row["scheduler"]["att
                     || !truth(&i["spec"])
                     || todo_wait::waiting(&db, i)
                     || (target.is_some() && crate::targeted_dispatch::held(i))
+                    || (i["scheduler"]["quota_retry_terminal"]["source_job"]==i["scheduler"]["last_job"]
+                        && i["scheduler"]["quota_retry_terminal"].is_object())
                 {
                     return false;
                 }
@@ -2207,8 +2218,22 @@ if !truth(&row["scheduler"]["key"]){let attempt=add_count(&row["scheduler"]["att
                             if !row["scheduler"].is_object() {
                                 row["scheduler"] = json!({});
                             }
+                            if e.0=="QuotaRetryEnded" {
+                                row["scheduler"]["phase"]=json!("quota_retry_ended");
+                                row["scheduler"]["quota_retry_terminal"]=json!({"source_job":i["scheduler"]["last_job"],"at":failed_at,"reason":"finite_or_invalid_retry_history"});
+                                row["note"]=json!("同じ担当の利用枠回復を有限予算で終了しました。元の仕様・履歴・停止状態を保持しています。");
+                                return;
+                            }
                             let until = n(&row["scheduler"]["not_before"]).max(until);
+                            let old = &row["scheduler"];
+                            let retained_quota = e.0 == "ResourceWait"
+                                && old["preparation_failure"]["reason"] == "resource_wait"
+                                && old["resource_wait"]["reason"] == "http_429"
+                                && old["last_job"] == i["scheduler"]["last_job"]
+                                && old["not_before"].is_number();
+                            let until = if retained_quota {n(&old["not_before"])} else {until};
                             row["scheduler"]["not_before"] = json!(until);
+                            if e.0 == "ResourceWait" {row["scheduler"]["quota_recheck_after"] = json!(failed_at+300.);}
                             let (reason, message) = failure_reason(e);
                             if e.0 == "ResourceWait" { row["scheduler"]["resource_wait"] = json!({"reason":"http_429","until":until}); }
                             row["scheduler"]["preparation_failure"] = json!({"reason":reason,"at":failed_at,"retry_at":until});

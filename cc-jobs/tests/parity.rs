@@ -12720,10 +12720,17 @@ mod additional_compatibility {
             } else {
                 out
             };
+            let strip_status_addition=|text:String| text.replace("[--summary] [--job-id ID]","[--summary]")
+                .replace("  --job-id ID  with --json only, read one job's fixed metadata without bodies or refresh\n","");
+            let legacy_out=if args.first()==Some(&"status") {
+                if args.iter().any(|arg|["-h","--help"].contains(arg)) {assert_eq!(legacy_out.matches("[--job-id ID]").count(),1);}
+                strip_status_addition(legacy_out)
+            }else{legacy_out};
             assert_eq!(legacy_out, s(&case, "stdout"), "{args:?} stdout");
             let legacy_err=if args.first()==Some(&"run"){
                 strip_run_additions(&err.replace("                         [--original-product-retry-key ORIGINAL_PRODUCT_RETRY_KEY]\n",""))
             }else{err};
+            let legacy_err=if args.first()==Some(&"status"){strip_status_addition(legacy_err)}else{legacy_err};
             assert_eq!(legacy_err, s(&case, "stderr"), "{args:?} stderr");
         }
         assert!(t.rt.calls.lock().unwrap().is_empty());

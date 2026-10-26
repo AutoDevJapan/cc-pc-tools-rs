@@ -33,6 +33,9 @@ pub(crate) fn prepare(
     if !cc_job_policy::quota_recovery::eligible_source(item, source) {
         return Err(Error("InputRejected"));
     }
+    if cc_job_policy::quota_retry::tracked(source) && cc_job_policy::quota_retry::terminal_reason(source).is_some() {
+        return Err(Error("QuotaRetryEnded"));
+    }
     let ps = backend.snapshot()?;
     if alive(source, &ps, now)
         || jobs.iter().any(|j| {
@@ -76,9 +79,10 @@ pub(crate) fn prepare(
         }
         selection["model_origin"] = json!("policy");
     } else if cc_job_policy::quota_retry::tracked(source)
+        && cc_job_policy::quota_recovery::provider(s(&source["model"])) != Some("xai")
         && cc_job_policy::quota_recovery::provider(s(&selection["model"])) == Some("openai")
     {
-        let selector = cc_job_policy::quota_recovery::safe_openai_selector(&health, None, backend.clock())
+        let selector = cc_job_policy::quota_retry::available_selector(source,&health, backend.clock())
             .ok_or(Error("ResourceWait"))?;
         selection["capacity_account_selector"] = json!(selector);
     }
@@ -92,20 +96,18 @@ pub(crate) fn prepare(
             "gpt-6-luna",
         ]
         .into_iter()
-        .find(|model| {
-            !excluded
-                .iter()
-                .any(|author| cc_job_policy::same_model(s(author), model))
-                && cc_job_policy::quota_recovery::healthy_transition(
-                    &health,
-                    s(&source["model"]),
-                    model,
-                    backend.clock(),
-                )
-                && backend.model_exists(model)
+        .find_map(|model| {
+            if excluded.iter().any(|author|cc_job_policy::same_model(s(author),model)) || !backend.model_exists(model) {return None;}
+            let mut target=selection.clone();target["model"]=json!(model);
+            let selector=if cc_job_policy::quota_retry::tracked(source) && cc_job_policy::quota_recovery::provider(model)==Some("openai") {
+                Some(cc_job_policy::quota_retry::available_selector(source,&health,backend.clock())?)
+            }else{None};
+            target["capacity_account_selector"]=json!(selector);
+            cc_job_policy::quota_recovery::transition(source,&target,&health,backend.clock()).then_some((model,selector))
         })
         .ok_or(Error("ResourceWait"))?;
-        selection["model"] = json!(next);
+        selection["model"] = json!(next.0);
+        selection["capacity_account_selector"] = json!(next.1);
         selection["model_recovery_from"] = source["model"].clone();
     }
     let mut target = selection.clone();

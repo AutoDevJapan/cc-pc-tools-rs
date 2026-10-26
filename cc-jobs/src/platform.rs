@@ -185,6 +185,8 @@ fn normal_quota_inventory(rt: &(impl Runtime+?Sized), _unstarted: bool, prefligh
         if provider=="openai" {
             let namespaces=crate::pool_retry::query(rt,&["config","get","codexAccountNamespaces","--json"]).unwrap_or(Value::Null);
             inventory[provider]["safe_routes"]=cc_job_policy::quota_recovery::safe_openai_routes(&raw,&namespaces,rt.epoch());
+            let records=crate::pool_retry::query(rt,&["config","get","codexAccounts","--json"]).unwrap_or(Value::Null);
+            cc_job_policy::quota_recovery::label_openai_routes(&mut inventory[provider]["safe_routes"],&namespaces,&records);
         }
     }
     inventory["at"]=json!(rt.epoch());inventory

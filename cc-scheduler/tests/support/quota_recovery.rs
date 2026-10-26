@@ -287,7 +287,7 @@ fn gpt_quota_rechecks_only_an_expired_source_and_its_automatic_preparation_wait(
         row["scheduler"]["phase"] = json!("preparing");
         row["scheduler"]["not_before"] = json!(T + 3600.);
         row["scheduler"]["resource_wait"] = json!({"reason":"http_429","until":T+3600.});
-        row["scheduler"]["preparation_failure"] = json!({"reason":"resource_wait","at":T-30.,"retry_at":T+3600.});
+        row["scheduler"]["preparation_failure"] = json!({"reason":"resource_wait","at":T-300.,"retry_at":T+3600.});
         if blocked { f.e.backend.records[1]["rate_limit_reset_at"] = json!(T+900.); }
         write_json(&f.e.todo_path, &sub.db, 1).unwrap();
         let prepared = f.e.prepare(&sub.db["items"][1], sub.repo.to_str().unwrap()).unwrap();
@@ -310,7 +310,7 @@ fn gpt_quota_automatic_wait_is_rechecked_through_normal_targeted_dispatch() {
     row["scheduler"]["phase"] = json!("preparing");
     row["scheduler"]["not_before"] = json!(now+3600.);
     row["scheduler"]["resource_wait"] = json!({"reason":"http_429","until":now+3600.});
-    row["scheduler"]["preparation_failure"] = json!({"reason":"resource_wait","at":now-60.,"retry_at":now+3600.});
+    row["scheduler"]["preparation_failure"] = json!({"reason":"resource_wait","at":now-300.,"retry_at":now+3600.});
     write_json(&f.e.todo_path, &sub.db, 1).unwrap();
     write_json(&f.e.root.join("config.json"), &f.cfg, 1).unwrap();
     write_json(&f.e.root.join("priorities.json"), &f.pri, 1).unwrap();
@@ -346,12 +346,13 @@ fn gpt_quota_normal_candidate_keeps_question_close_and_other_resource_deadlines(
 
 #[test]
 fn gpt_quota_does_not_admit_unknown_routes_reused_aliases_stops_or_exhausted_budgets() {
-    for case in ["unknown", "no_routes", "used_alias", "stale", "budget", "history", "stop", "dependency"] {
+    for case in ["unknown", "no_routes", "used_alias", "used_label", "stale", "budget", "history", "stop", "dependency"] {
         let (mut f, mut sub) = gpt_research_fixture();
         match case {
             "unknown" => f.e.backend.quota_inventory["openai"]["verified"] = json!(false),
             "no_routes" => f.e.backend.quota_inventory["openai"]["safe_routes"] = json!([]),
             "used_alias" => f.e.backend.quota_inventory["openai"]["safe_routes"][1]["aliases"] = json!(["p000001","p000002"]),
+            "used_label" => {f.e.backend.records[1]["capacity_tried_labels"]=json!(["pabcdef"]);f.e.backend.quota_inventory["openai"]["safe_routes"][1]["label"]=json!("pabcdef");},
             "stale" => f.e.backend.quota_inventory["openai"]["safe_routes"][1]["at"] = json!(T-61.),
             "budget" => f.e.backend.records[1]["capacity_same_model_retry_count"] = json!(3),
             "history" => f.e.backend.records[1]["capacity_same_model_retry_count"] = json!(0),
@@ -364,6 +365,20 @@ fn gpt_quota_does_not_admit_unknown_routes_reused_aliases_stops_or_exhausted_bud
         assert!(result.is_err() || result.unwrap().is_none(), "{case}");
         assert!(f.e.backend.launched.is_empty());
     }
+}
+
+#[test]
+fn tracked_grok_quota_chooses_the_route_after_the_model_and_keeps_switch_budget() {
+    let (mut f,mut sub)=grok_fixture();
+    sub.db["items"][1]["model"]=json!("grok-4.7");
+    let source=&mut f.e.backend.records[1];source["model"]=json!("grok-4.7");
+    source["capacity_retry_count"]=json!(1);source["capacity_history"]=json!([{"from_model":"gpt-6.1-sol","to_model":"grok-4.7"}]);
+    f.e.backend.quota_inventory["openai"]["safe_routes"]=json!([{"selector":"p000001","aliases":["p000001"],"at":T,"verified":true}]);
+    write_json(&f.e.todo_path,&sub.db,1).unwrap();
+    let p=f.e.prepare(&sub.db["items"][1],sub.repo.to_str().unwrap()).unwrap().unwrap();
+    assert_eq!(p["scheduler"]["selection"]["model"],"gpt-6-astra");
+    assert_eq!(p["scheduler"]["selection"]["quota_recovery"]["retry"]["switch_count"],2);
+    assert_eq!(p["scheduler"]["selection"]["capacity_account_selector"],"p000001");
 }
 
 #[test]
@@ -409,7 +424,7 @@ fn historic_quota_failure_never_moves_its_deadline_on_each_observation() {
 }
 
 #[test]
-fn gpt_quota_budget_survives_a_provider_change_and_cannot_start_over_on_a_new_source() {
+fn gpt_quota_budget_survives_a_provider_change_and_can_return_without_starting_over() {
     let (mut f, sub) = gpt_research_fixture();
     f.e.backend.records[1]["capacity_same_model_retry_count"] = json!(3);
     f.e.backend.quota_inventory["anthropic"] = json!({"at":T,"verified":true,"available":true,"exhausted":false});
@@ -426,9 +441,68 @@ fn gpt_quota_budget_survives_a_provider_change_and_cannot_start_over_on_a_new_so
     health["anthropic"]["exhausted"] = json!(true);
     health["anthropic"]["available"] = json!(false);
     let target = json!({"model":"gpt-6.1-sol","capacity_account_selector":"p000002"});
-    assert!(!cc_job_policy::quota_recovery::transition(&next, &target, &health, T));
+    assert!(cc_job_policy::quota_recovery::transition(&next, &target, &health, T));
     next["capacity_same_model_retry_count"] = json!(0);
     assert!(!cc_job_policy::quota_recovery::transition(&next, &target, &health, T));
+}
+
+#[test]
+fn gpt_quota_first_default_route_failure_can_use_fresh_verified_subscription() {
+    let (mut f, sub) = gpt_research_fixture();
+    let source=&mut f.e.backend.records[1];
+    for key in ["capacity_account_selector","capacity_same_model_retry_count","capacity_history","capacity_tried_accounts"] {source[key]=Value::Null;}
+    let p=f.e.prepare(&sub.db["items"][1],sub.repo.to_str().unwrap()).unwrap().unwrap();
+    assert_eq!(p["scheduler"]["selection"]["model"],"gpt-6.1-sol");
+    assert_eq!(p["scheduler"]["selection"]["quota_recovery"]["retry"]["same_model_count"],1);
+}
+
+#[test]
+fn gpt_quota_unavailable_health_is_paced_without_extending_the_saved_deadline() {
+    let (mut f, mut sub)=gpt_research_fixture();
+    for j in &mut f.e.backend.records {j["created_at"]=json!(iso(T-300.));}
+    let row=&mut sub.db["items"][1];
+    row["scheduler"]["phase"]=json!("preparing");
+    row["scheduler"]["not_before"]=json!(T+3600.);
+    row["scheduler"]["resource_wait"]=json!({"reason":"http_429","until":T+3600.});
+    row["scheduler"]["preparation_failure"]=json!({"reason":"resource_wait","at":T-300.,"retry_at":T+3600.});
+    f.e.backend.quota_inventory=Value::Null;
+    write_json(&f.e.todo_path,&sub.db,1).unwrap();
+    for offset in [0.,1.,299.,300.,301.] {
+        f.e.backend.clock=T+offset;
+        let _=f.e.dispatch_for(&f.cfg,&f.pri,Some(2));
+        assert_eq!(f.get(2)["scheduler"]["not_before"],T+3600.);
+        assert!(f.e.backend.launched.is_empty());
+        assert_eq!(f.e.backend.quota_inventory_calls,if offset>=300. {2}else{1});
+    }
+}
+
+#[test]
+fn gpt_quota_terminal_budget_is_recorded_without_a_fresh_job_or_refresh_loop() {
+    let (mut f, mut sub)=gpt_research_fixture();
+    for j in &mut f.e.backend.records {j["created_at"]=json!(iso(T-300.));}
+    f.e.backend.records[1]["capacity_same_model_retry_count"]=json!(3);
+    f.e.backend.records[1]["capacity_retry_count"]=json!(3);
+    write_json(&f.e.todo_path,&sub.db,1).unwrap();
+    let _=f.e.dispatch_for(&f.cfg,&f.pri,Some(2));
+    assert_eq!(f.get(2)["scheduler"]["phase"],"quota_retry_ended");
+    assert_eq!(f.e.backend.quota_inventory_calls,0);
+    f.e.backend.clock+=7200.;
+    let _=f.e.dispatch_for(&f.cfg,&f.pri,Some(2));
+    assert_eq!(f.e.backend.quota_inventory_calls,0);
+    assert!(f.e.backend.launched.is_empty());
+}
+
+#[test]
+fn queued_capacity_cooldown_is_never_cancelled_as_a_resource_failure() {
+    let mut f=Fixture::new();f.managed(1,1,"other",0);
+    f.e.backend.records[0]["status"]=json!("queued");
+    f.e.backend.records[0]["last_failure_kind"]=json!("capacity");
+    f.e.backend.records[0]["last_error"]=json!("Selected model is at capacity");
+    f.e.backend.records[0]["retry_not_before"]=json!(T+30.);
+    f.reconcile();
+    assert!(f.e.backend.cancelled.is_empty());
+    assert_eq!(f.get(1)["scheduler"]["job"],"j1");
+    assert!(f.get(1)["scheduler"]["resource_wait"].is_null());
 }
 
 #[test]

@@ -169,7 +169,7 @@ fn grok_existing_research_is_admitted_through_registration_start_and_final_queue
 
 #[test]
 fn gpt_quota_research_preserves_its_selected_route_and_budget_through_final_queue_admission() {
-    for case in ["normal", "selected_unknown", "budget_changed", "history_changed", "source_changed"] {
+    for case in ["normal", "capacity_same", "capacity_switch", "capacity_wait", "selected_unknown", "budget_changed", "history_changed", "source_changed"] {
         research_admission(true, case);
     }
 }
@@ -301,7 +301,7 @@ fn research_admission(gpt: bool, case: &str) {
         }
     }
     let slot = t.ctx.admit(s(&j, "id"));
-    if case != "normal" {
+    if !["normal","capacity_same","capacity_switch","capacity_wait"].contains(&case) {
         assert!(slot.is_err() || slot.unwrap().is_none(), "{case}");
         assert_ne!(t.ctx.load(s(&j, "id")).unwrap()["status"], "running");
         return;
@@ -315,6 +315,67 @@ fn research_admission(gpt: bool, case: &str) {
     assert_eq!(admitted["approval_policy"], source["approval_policy"]);
     assert_eq!(admitted["subwork_spec"], source["subwork_spec"]);
     assert_eq!(t.ctx.load("quota-reader").unwrap(), source);
+    drop(slot);
+    if case.starts_with("capacity_") {
+        let mut current=t.ctx.load(s(&j,"id")).unwrap();
+        let cycles=if case=="capacity_switch" {2}else{1};
+        for step in 0..cycles {
+            let at=t.rt.epoch();
+            current["status"]=json!("failed");current["last_failure_kind"]=json!("capacity");
+            current["last_error"]=json!("Selected model is at capacity");
+            current["capacity_inventory"]=json!({"at":at,"anthropic":true,"anthropic_at":at,"openai":true,"openai_at":at,
+                "pool":{"at":at,"verified":case!="capacity_wait","eligible":["p000003"],"failed":["p000002"]}});
+            assert!(t.ctx.retry_capacity(&mut current));
+            if case=="capacity_wait" {
+                assert_eq!(current["capacity_wait_pending"],true);
+                *t.rt.epoch_base.lock().unwrap()=Some(at+901.);
+                current["capacity_inventory"]["pool"]["at"]=json!(t.rt.epoch());
+                current["capacity_inventory"]["pool"]["verified"]=json!(true);
+                assert!(t.ctx.recheck_capacity_wait(&mut current));
+            }
+            let next=t.rt.epoch()+31.;*t.rt.epoch_base.lock().unwrap()=Some(next);
+            {
+                let mut health=t.rt.quota_recovery_inventory.lock().unwrap();health["at"]=json!(next);
+                for p in ["openai","anthropic"] {health[p]["at"]=json!(next);}
+                health["anthropic"]["available"]=json!(true);health["anthropic"]["exhausted"]=json!(false);
+                for route in health["openai"]["safe_routes"].as_array_mut().unwrap(){route["at"]=json!(next);}
+            }
+            t.put(current.clone());
+            let slot=t.ctx.admit(s(&j,"id")).unwrap();assert!(slot.is_some(),"{case} step {step}: {}",t.ctx.load(s(&j,"id")).unwrap());drop(slot);
+            current=t.ctx.load(s(&j,"id")).unwrap();
+            assert_eq!(current["status"],"running");
+        }
+        assert_eq!(current["capacity_same_model_retry_count"],3);
+        if case=="capacity_switch" {assert!(s(&current,"model").starts_with("anthropic/"));assert_eq!(current["capacity_retry_count"],1);}
+        assert_eq!(t.ctx.load("quota-reader").unwrap(),source);
+    }
+}
+
+#[test]
+fn registered_legacy_v1_capsule_keeps_its_proof_and_budget_after_capacity_retry() {
+    let (t,row,source)=setup();
+    let now=t.rt.epoch();
+    t.rt.quota_recovery_inventory.lock().unwrap()["openai"]["safe_routes"]=json!([
+        {"selector":"p000002","aliases":["p000002"],"at":now,"verified":true}]);
+    register(&t).unwrap();let mut job=child(&t);
+    assert_eq!(job["quota_recovery"]["version"],1);
+    for key in ["quota_retry_seeded_version","capacity_retry_count","capacity_same_model_retry_count","capacity_history","capacity_tried_accounts","requested_model"] {job.as_object_mut().unwrap().remove(key);}
+    t.put(job.clone());
+    let first=t.ctx.admit(s(&job,"id")).unwrap();assert!(first.is_some());drop(first);
+    let mut next=t.ctx.load(s(&job,"id")).unwrap();
+    assert_eq!(next["capacity_retry_count"],1);
+    next["status"]=json!("failed");next["last_failure_kind"]=json!("capacity");next["last_error"]=json!("Selected model is at capacity");
+    next["capacity_inventory"]=json!({"at":now,"pool":{"at":now,"verified":true,"eligible":["p000002"],"failed":["p000001"]}});
+    assert!(t.ctx.retry_capacity(&mut next));
+    *t.rt.epoch_base.lock().unwrap()=Some(now+31.);
+    t.rt.quota_recovery_inventory.lock().unwrap()["openai"]["at"]=json!(now+31.);
+    t.rt.quota_recovery_inventory.lock().unwrap()["openai"]["safe_routes"][0]["at"]=json!(now+31.);
+    t.put(next);
+    let slot=t.ctx.admit(s(&job,"id")).unwrap();assert!(slot.is_some());drop(slot);
+    let final_job=t.ctx.load(s(&job,"id")).unwrap();
+    assert_eq!(final_job["quota_recovery"],job["quota_recovery"]);
+    assert_eq!(final_job["capacity_retry_count"],1);assert_eq!(final_job["capacity_same_model_retry_count"],1);
+    assert_eq!(t.ctx.load("quota-reader").unwrap(),source);assert_eq!(row["resume_generation"],0);
 }
 
 #[test]

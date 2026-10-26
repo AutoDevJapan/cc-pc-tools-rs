@@ -463,7 +463,8 @@ pub fn resource_deadline(job: &Value, now: f64) -> Option<f64> {
         stderr: s(&job["last_error"]).into(),
     };
     let classified = classify_output(&out).0 == "ResourceWait";
-    if explicit.is_none() && !classified && n(&job["retry_not_before"]) <= now && n(&job["rate_limit_reset_at"]) <= now {
+    let terminal = matches!(s(&job["status"]), "failed" | "lost" | "cancelled" | "canceled");
+    if explicit.is_none() && !classified && (!terminal || (n(&job["retry_not_before"]) <= now && n(&job["rate_limit_reset_at"]) <= now)) {
         return None;
     }
     // A historical failure is a fixed observation. Re-reading its text must
@@ -495,6 +496,9 @@ pub fn quota_recheck_candidate(item: &Value, jobs: &[Value], now: f64) -> bool {
         && m["resource_wait"].is_null() && m["preparation_failure"].is_null();
     n(&m["not_before"]) > now && item["subwork"].is_object()
         && !truth(&m["question_close_pending"])
+        && n(&m["quota_recheck_after"]) <= now
+        && (m["preparation_failure"]["reason"] != "resource_wait"
+            || n(&m["preparation_failure"]["at"]) + 300. <= now)
         && (retry || preparation) && !crate::targeted_dispatch::held(item)
         && jobs.iter().any(|source| {
             source["id"] == m["last_job"] && owns_workspace(item, source)

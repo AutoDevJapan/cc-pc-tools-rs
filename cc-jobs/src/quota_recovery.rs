@@ -185,10 +185,8 @@ impl Context {
             job["capacity_account_selector"] = proof["retry"]["selector"].clone();
         }
         self.verify_quota_recovery(proof, row, job, inventory, true)?;
-        if proof["version"] == 2 {
-            let source = self.load(s(proof, "source_job"))?;
-            cc_job_policy::quota_retry::inherit(job, &source, proof);
-        }
+        let source = self.load(s(proof, "source_job"))?;
+        cc_job_policy::quota_retry::inherit(job, &source, proof);
         job["quota_recovery"] = proof.clone();
         Ok(true)
     }
@@ -216,15 +214,22 @@ impl Context {
         let now = self.rt.epoch();
         // At registration both the original prepared observation and a fresh
         // independent observation must agree. Queue waits recheck fresh health.
+        let mut initial=job.clone();
+        initial["model"]=proof["model"].clone();
+        initial["effort"]=proof["effort"].clone();
+        initial["capacity_account_selector"]=proof["retry"]["selector"].clone();
         let verified = if registration {
-            cc_job_policy::quota_recovery::verify(proof, row, &source, job, now)
+            cc_job_policy::quota_recovery::verify(proof, row, &source, &initial, now)
         } else {
             let old_at = proof["health"]["at"].as_f64().unwrap_or(f64::NAN);
-            cc_job_policy::quota_recovery::verify(proof, row, &source, job, old_at)
+            cc_job_policy::quota_recovery::verify(proof, row, &source, &initial, old_at)
         };
+        let current = if proof["version"]==1 && job["capacity_account_selector"].is_null() && job["model"]==proof["model"] {
+            cc_job_policy::quota_recovery::healthy_transition(inventory,s(&source,"model"),s(job,"model"),now)
+        } else {cc_job_policy::quota_retry::current_available(job,inventory,now)};
         if !verified
-            || !cc_job_policy::quota_recovery::transition(&source, job, inventory, now)
-            || (!registration && proof["version"] == 2
+            || !current
+            || (!registration
                 && !cc_job_policy::quota_retry::inherited(job, &source, proof))
         {
             return Err(Error::new(
@@ -254,6 +259,10 @@ impl Context {
         }
         if !job["quota_recovery"].is_object() {
             return Ok(());
+        }
+        if job["quota_recovery"]["version"]==1 && job["quota_retry_seeded_version"]!=1 {
+            let proof=job["quota_recovery"].clone();let source=self.load(s(&proof,"source_job"))?;
+            if !cc_job_policy::quota_retry::adopt_legacy(job,&source,&proof) {return Err(Error::new("legacy quota retry history cannot be preserved"));}
         }
         let linked = (row["scheduler"]["phase"] == "prepared"
             && row["scheduler"]["key"] == job["launch_key"])

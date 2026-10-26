@@ -1417,7 +1417,7 @@ impl Context {
                 return Err(Error {code:2,message:"status --job-id requires one valid id and --json only".into()});
             }
             // A finite metadata read, never the all-jobs reader or refresh.
-            let job = self.load(id)?;
+            let job = self.load(id).map_err(|_|Error::new("job metadata unavailable"))?;
             writeln!(out, "{}", crate::quota_recovery::status_metadata(&job))?;
             return Ok(0);
         }

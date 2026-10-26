@@ -268,6 +268,20 @@ pub fn safe_openai_selector<'a>(
         })
 }
 
+/// Match only public routing log labels; the private ID map is temporary.
+pub fn label_openai_routes(routes: &mut Value, namespaces: &Value, records: &Value) {
+    let Some(rows) = routes.as_array_mut() else { return; };
+    for route in rows {
+        let Some(id) = namespaces[s(route,"selector")].as_str() else {continue;};
+        let label = if id == "@main" {"main".to_owned()} else {
+            records.as_array().into_iter().flatten().find(|r|r["id"]==id)
+                .and_then(|r|r["logLabel"].as_str()).filter(|s|crate::quota_retry::public_selector(s))
+                .map(str::to_owned).unwrap_or_else(||format!("p{}",&crate::product_retry::digest(id.as_bytes())[..6]))
+        };
+        route["label"] = json!(label);
+    }
+}
+
 fn review(job: &Value) -> bool {
     crate::review_task(s(job, "name"), s(job, "task_type")) || job["subwork"]["kind"] == "review"
 }
@@ -442,6 +456,9 @@ pub fn receipt(
     health: &Value,
     now: f64,
 ) -> Option<Value> {
+    receipt_version(item,source,target,health,now,None)
+}
+fn receipt_version(item:&Value,source:&Value,target:&Value,health:&Value,now:f64,version:Option<u64>) -> Option<Value> {
     if !eligible_source(item, source)
         || !["todo", "doing"].contains(&s(item, "status"))
         || item["dispatchable"] != true
@@ -457,7 +474,7 @@ pub fn receipt(
         || (source["recovery_cancel"].is_object()
             && timestamp(&source["recovery_cancel"]["committed_at"])
                 .is_some_and(|at| at > now + 1.))
-        || !transition(source, target, health, now)
+        || !(if version==Some(1) {healthy_transition(health,s(source,"model"),s(target,"model"),now)} else {transition(source, target, health, now)})
     {
         return None;
     }
@@ -484,7 +501,7 @@ pub fn receipt(
         let q = &health[provider];
         safe_health[provider] = json!({"at":q["at"],"verified":q["verified"],"exhausted":q["exhausted"],"available":q["available"]});
     }
-    let tracked = crate::quota_retry::tracked(source);
+    let tracked = version != Some(1) && crate::quota_retry::tracked(source);
     if tracked {
         safe_health["openai"]["safe_routes"] = health["openai"]["safe_routes"].clone();
     }
@@ -533,7 +550,7 @@ pub fn verify(proof: &Value, item: &Value, source: &Value, target: &Value, now: 
             prepared["worker_receipt"] = Value::Null;
         }
     }
-    receipt(&prepared, source, target, &proof["health"], now).is_some_and(|p| p == *proof)
+    receipt_version(&prepared, source, target, &proof["health"], now,proof["version"].as_u64()).is_some_and(|p| p == *proof)
 }
 
 #[cfg(test)]

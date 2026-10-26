@@ -1313,6 +1313,7 @@ impl Context {
         self.record_work_owner(&mut job);
         if job["todo_id"].is_number()
             && (job["capacity_history"].is_array() || job["capacity_owner_recheck"] == true)
+            && (!job["quota_recovery"].is_object() || job["quota_retry_initial_admitted"]==true)
         {
             let temporary_lock = if _subwork_store_lock.is_none() {
                 match FileLock::try_acquire(&self.todo_store().with_file_name("todo.lock")) {
@@ -1464,6 +1465,7 @@ impl Context {
             }
             if job["todo_id"].is_number()
                 && (job["capacity_history"].is_array() || job["capacity_owner_recheck"] == true)
+                && (!job["quota_recovery"].is_object() || job["quota_retry_initial_admitted"]==true)
             {
                 if let Some(_row) = db["items"]
                     .as_array()
@@ -1528,6 +1530,7 @@ impl Context {
             job["model_route_reason"] = json!("Codexの週の利用ペースを抑えてClaudeへ割り当て");
         }
         job["status"] = json!("running");
+        if job["quota_recovery"].is_object() {job["quota_retry_initial_admitted"]=json!(true);}
         job["started_at"] = json!(self.rt.now());
         job["last_event_at"] = json!(self.rt.now());
         job["activity"] = json!("starting");

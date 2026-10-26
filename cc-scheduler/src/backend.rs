@@ -347,6 +347,10 @@ impl RealBackend {
                 let namespaces=self.runner.run(&command).ok().filter(|r|r.code==0 && r.stdout.len()<=2_000_000)
                     .and_then(|r|serde_json::from_str::<Value>(&r.stdout).ok()).unwrap_or(Value::Null);
                 inventory[provider]["safe_routes"]=cc_job_policy::quota_recovery::safe_openai_routes(&raw,&namespaces,self.clock());
+                command.args=vec![package.join("bin/ocx.mjs").to_string_lossy().into_owned(),"config".into(),"get".into(),"codexAccounts".into(),"--json".into()];
+                let records=self.runner.run(&command).ok().filter(|r|r.code==0 && r.stdout.len()<=2_000_000)
+                    .and_then(|r|serde_json::from_str::<Value>(&r.stdout).ok()).unwrap_or(Value::Null);
+                cc_job_policy::quota_recovery::label_openai_routes(&mut inventory[provider]["safe_routes"],&namespaces,&records);
             }
         }
         inventory["at"]=json!(self.clock());Ok(inventory)

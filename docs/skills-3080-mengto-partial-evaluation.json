@@ -8,7 +8,7 @@
   "entrypoints_expected": 177,
   "entrypoints_fulltext_read": 177,
   "entrypoints_unread": 0,
-  "installed": 77,
+  "installed": 83,
   "integrated": 2,
   "excluded": 0,
   "central_write": 22,
@@ -3663,7 +3663,7 @@
       },
       "positive_candidate": "炎が橙の霧や均一な櫛に見える。浮力・帯域制限・seam・煙合成を要因別に調べる。",
       "name": "fire-smoke-skill-vfx",
-      "installed_by_todo3080": false,
+      "installed_by_todo3080": true,
       "read_range_unit": "UTF16 code units",
       "negative_candidate": "一般的な攻撃判定・AI・外部画像の権利確認を炎描画だけで完了にしない。",
       "integrated_by_todo3080": false,
@@ -3826,7 +3826,8 @@
       "commit": "398cd41c86ba42fbb30e944ae507f463648f08b7",
       "body_read_by": "20261024-041741-todo-3080",
       "git_blob": "8dd1160a6128420740f96e55228a41f1789f0d38",
-      "third_party_assets_or_support_rights_accepted": false
+      "third_party_assets_or_support_rights_accepted": false,
+      "current_installation_evidence": "skills-3080-combat6-installation-evidence090101.json"
     },
     {
       "required_changes": [
@@ -3869,7 +3870,7 @@
       },
       "positive_candidate": "弓のanchorがカメラ別に首の後ろへ見え、手首が捻れる。実rigのframeとviewを照合する。",
       "name": "game-dev-combat-animation",
-      "installed_by_todo3080": false,
+      "installed_by_todo3080": true,
       "read_range_unit": "UTF16 code units",
       "negative_candidate": "別rigの数値制限だけを人間全般の可動域や頭上攻撃の禁止にしない。",
       "integrated_by_todo3080": false,
@@ -4142,7 +4143,8 @@
       "commit": "398cd41c86ba42fbb30e944ae507f463648f08b7",
       "body_read_by": "20261024-041741-todo-3080",
       "git_blob": "3176811d6a3d400224fd5275301491d0086802c0",
-      "third_party_assets_or_support_rights_accepted": false
+      "third_party_assets_or_support_rights_accepted": false,
+      "current_installation_evidence": "skills-3080-combat6-installation-evidence090101.json"
     },
     {
       "required_changes": [
@@ -4185,7 +4187,7 @@
       },
       "positive_candidate": "敵の反応がmissile到達前に始まり、castの身体と効果が別のscheduleに乗る。到達frame/姿勢/反応を同時計で照合する。",
       "name": "game-dev-combat-skill-polish",
-      "installed_by_todo3080": false,
+      "installed_by_todo3080": true,
       "read_range_unit": "UTF16 code units",
       "negative_candidate": "参考作品の点数や単発の高いjudge点だけを本人の見た目承認や本PCの実受入としない。",
       "integrated_by_todo3080": false,
@@ -4318,7 +4320,8 @@
       "commit": "398cd41c86ba42fbb30e944ae507f463648f08b7",
       "body_read_by": "20261024-041741-todo-3080",
       "git_blob": "6f3b53f078091f65c21dfd65dec4174c865cb033",
-      "third_party_assets_or_support_rights_accepted": false
+      "third_party_assets_or_support_rights_accepted": false,
+      "current_installation_evidence": "skills-3080-combat6-installation-evidence090101.json"
     },
     {
       "inventory_id": "github:41f804392ff42c56ba7a05d1b269efdbb80f189a55b8979ccae5eb67771d05ed",
@@ -11384,7 +11387,7 @@
       "positive_candidate": "手のひらから霜が地面へ広がり、氷柱が立って砕けるまでを、Three.jsの3Dスキル演出として作る。",
       "negative_candidate": "CSSだけで画面の縁に霜の飾りを付ける。または、UnityやGodotへ氷スキルを移植する。",
       "support_read_complete": false,
-      "installed_by_todo3080": false,
+      "installed_by_todo3080": true,
       "integrated_by_todo3080": false,
       "excluded_by_todo3080": false,
       "independent_review_complete": false,
@@ -11589,7 +11592,8 @@
           "executed": false
         }
       ],
-      "parent_policy_correction": "本文のパレット・被写体・機器・採点は作者スタイルの条件であり本人の一般禁止ではない。未保存kitを待たず有用な原則の統合は検討できる。新規自作Go/GoDD Rust、配布Python無改変利用、本人Chromeと同対象画像回答を保持。"
+      "parent_policy_correction": "本文のパレット・被写体・機器・採点は作者スタイルの条件であり本人の一般禁止ではない。未保存kitを待たず有用な原則の統合は検討できる。新規自作Go/GoDD Rust、配布Python無改変利用、本人Chromeと同対象画像回答を保持。",
+      "current_installation_evidence": "skills-3080-combat6-installation-evidence090101.json"
     },
     {
       "inventory_id": "github:d39033e6b74f59b0cc3eba37363bf7229fbfb4b06d8b098bf52ff27a01f2e0b2",
@@ -11642,7 +11646,7 @@
       "positive_candidate": "近接攻撃のスキルで、雷雲のオーブ、段階的に伸びる雷、着弾の衝撃フレームを3Dで作る。",
       "negative_candidate": "炎と煙の演出だけを作る（兄弟入口の範囲）。または、画面全体が連続して点滅する雷を作る。",
       "support_read_complete": false,
-      "installed_by_todo3080": false,
+      "installed_by_todo3080": true,
       "integrated_by_todo3080": false,
       "excluded_by_todo3080": false,
       "independent_review_complete": false,
@@ -11835,7 +11839,8 @@
           "executed": false
         }
       ],
-      "parent_policy_correction": "本文のパレット・被写体・機器・採点は作者スタイルの条件であり本人の一般禁止ではない。未保存kitを待たず有用な原則の統合は検討できる。新規自作Go/GoDD Rust、配布Python無改変利用、本人Chromeと同対象画像回答を保持。"
+      "parent_policy_correction": "本文のパレット・被写体・機器・採点は作者スタイルの条件であり本人の一般禁止ではない。未保存kitを待たず有用な原則の統合は検討できる。新規自作Go/GoDD Rust、配布Python無改変利用、本人Chromeと同対象画像回答を保持。",
+      "current_installation_evidence": "skills-3080-combat6-installation-evidence090101.json"
     },
     {
       "inventory_id": "github:90a19e838b7573f4315714f7472a269c8d41f9dddd1f2f6e8f8e35522c5ae66b",
@@ -11888,7 +11893,7 @@
       "positive_candidate": "水球から水縄が伸び、結晶が砕けて水へ落ちるスキル演出を、月光の岩場で3Dで作る。",
       "negative_candidate": "炎・雷・氷の演出を作る（兄弟入口の範囲）。または、2Dの静止画で水面を描く。",
       "support_read_complete": false,
-      "installed_by_todo3080": false,
+      "installed_by_todo3080": true,
       "integrated_by_todo3080": false,
       "excluded_by_todo3080": false,
       "independent_review_complete": false,
@@ -12117,7 +12122,8 @@
           "executed": false
         }
       ],
-      "parent_policy_correction": "本文のパレット・被写体・機器・採点は作者スタイルの条件であり本人の一般禁止ではない。未保存kitを待たず有用な原則の統合は検討できる。新規自作Go/GoDD Rust、配布Python無改変利用、本人Chromeと同対象画像回答を保持。"
+      "parent_policy_correction": "本文のパレット・被写体・機器・採点は作者スタイルの条件であり本人の一般禁止ではない。未保存kitを待たず有用な原則の統合は検討できる。新規自作Go/GoDD Rust、配布Python無改変利用、本人Chromeと同対象画像回答を保持。",
+      "current_installation_evidence": "skills-3080-combat6-installation-evidence090101.json"
     },
     {
       "inventory_id": "github:cb7ea1494e0f217b25369cebd5c2b52b9f39f7999e5a9cb81ba1683e017920ae",
@@ -22608,11 +22614,11 @@
   "amendment_job": "20261024-123649-todo-3080",
   "amendment_definition": "Document amendment time; individual source retrieval and reading times remain in their own receipts.",
   "current_installation_update": {
-    "evidence": "skills-3080-webdesign-next20-installation-evidence.json",
-    "added": 20,
-    "current_installed": 77,
+    "evidence": "skills-3080-combat6-installation-evidence090101.json",
+    "added": 6,
+    "current_installed": 83,
     "source_body_reading_and_notice_support_states_unchanged": true,
-    "definition": "Installation projection only; original177 source assessments and prior updates retained"
+    "definition": "Six actual new procedures; shared VFX source is reference only, not seventh adoption or new source reading"
   },
   "previous_installation_updates": [
     {
@@ -22660,6 +22666,13 @@
       "evidence": "skills-3080-webdesign-next14-installation-evidence.json",
       "added": 14,
       "current_installed": 57,
+      "source_body_reading_and_notice_support_states_unchanged": true,
+      "definition": "Installation projection only; original177 source assessments and prior updates retained"
+    },
+    {
+      "evidence": "skills-3080-webdesign-next20-installation-evidence.json",
+      "added": 20,
+      "current_installed": 77,
       "source_body_reading_and_notice_support_states_unchanged": true,
       "definition": "Installation projection only; original177 source assessments and prior updates retained"
     }

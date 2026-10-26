@@ -145,7 +145,10 @@ func TestPartialMizchiAssessmentConservesUnfinishedPathsAndAdoptions(t *testing.
 			Read int `json:"full_body_read"`
 		} `json:"sixmile_body_read_coverage"`
 		TotalRead int `json:"all_fulltext_primary_paths_including_partial_sources"`
-		Complete  struct {
+		Design    struct {
+			Read int `json:"full_body_read"`
+		} `json:"voltagent_design24_evaluation"`
+		Complete struct {
 			Paths int `json:"case_insensitive_skill_named_paths"`
 		} `json:"full_source_body_read_coverage"`
 		Repos []struct {
@@ -169,7 +172,7 @@ func TestPartialMizchiAssessmentConservesUnfinishedPathsAndAdoptions(t *testing.
 	if roster.Source != a.Source || roster.Commit != a.Commit || roster.Tree != "afbd6cabdc055717936a1c454627ccc62050705b" || len(roster.Paths) != 76 || roster.SHA != pinnedSHA || pathSetSHA(roster.Paths) != pinnedSHA {
 		t.Fatal("fixed entrypoint roster differs from its independent tree anchor")
 	}
-	if p.Partial.Expected != a.Expected || p.Partial.Read != a.Read || p.Partial.Unread != a.Unread || p.Partial.Complete != (a.Unread == 0) || p.Partial.Installed != a.Installed || p.Partial.Integrated != a.Integrated || p.Partial.Excluded != a.Excluded || p.TotalRead != p.Complete.Paths+a.Read+p.Mengto.Read+p.Sixmile.Read {
+	if p.Partial.Expected != a.Expected || p.Partial.Read != a.Read || p.Partial.Unread != a.Unread || p.Partial.Complete != (a.Unread == 0) || p.Partial.Installed != a.Installed || p.Partial.Integrated != a.Integrated || p.Partial.Excluded != a.Excluded || p.TotalRead != p.Complete.Paths+a.Read+p.Mengto.Read+p.Sixmile.Read+p.Design.Read {
 		t.Fatal("progress summary differs from the partial assessment")
 	}
 	matches := 0

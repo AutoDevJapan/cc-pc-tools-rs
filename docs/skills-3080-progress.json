@@ -286,9 +286,9 @@
   "site_entries_with_body": 9862,
   "site_entries_without_body": 428,
   "execution_held_shapes": 647,
-  "candidate_designs": 109,
-  "independently_accepted": 109,
-  "installed": 109,
+  "candidate_designs": 116,
+  "independently_accepted": 116,
+  "installed": 116,
   "integrated": 3,
   "excluded": 14,
   "units": {
@@ -346,15 +346,15 @@
     "actual_installed": 8
   },
   "candidate_count_definitions": {
-    "candidate_designs": "Legacy28 plus directly sourced actual designs81; pending drafts/catalog rows are not installations and109 is not a cap",
+    "candidate_designs": "Legacy28 plus directly sourced actual designs88; pending drafts/catalog rows are not installations and116 is not a cap",
     "additional_authored_drafts_not_in_plans": 3,
-    "authored_total": 112,
-    "installed": 109,
+    "authored_total": 119,
+    "installed": 116,
     "pending_plan_targets": 0,
     "archived_draft_targets": 8,
     "archived_draft_is_subset_of_batch03": true,
     "independently_accepted": "Legacy acceptances plus individually scoped direct designs. For the six game outputs, original3775 reading and3777 source-specific correction acceptance were bound to exact manifest bytes. Actual creation, metadata discovery and bounded explicit use are separately evidenced; no whole-catalog, renderer or full-context acceptance is implied. The newest public result delta still requires review/CI/merge.",
-    "not_semantically_disposed_occurrences": 73094,
+    "not_semantically_disposed_occurrences": 73087,
     "additional_draft_sources": [
       "skills-3080-mizchi-sql-draft.json",
       "skills-3080-mizchi-mutation-draft.json"
@@ -437,8 +437,8 @@
     "source": "skills-3080-mizchi-partial-evaluation.json",
     "complete_definition": "本文の全path読取のみ。個別許諾・支持・採否・実導入は未完。"
   },
-  "all_fulltext_primary_paths_including_partial_sources": 585,
-  "primary_coverage_definition": "既存10資料固定137+別枠mizchi76+MengTo全入口177+6mile部分195=585source paths。支持の全読/走査/部分読取・伏字付き手順・個別許諾・最終採否は別。全16資料は未完。",
+  "all_fulltext_primary_paths_including_partial_sources": 588,
+  "primary_coverage_definition": "既存10資料固定137+別枠mizchi76+MengTo全入口177+6mile部分195+VoltAgent設計raw3=588source paths。設計のmasked21はworkflow807へ含めるがrawへ含めない。保存した原文の複製/機械照合を新しい親の意味読取へ加算しない。全16資料は未完。",
   "external_revisions": {
     "count": 1,
     "target": "diagnosing-bugs",
@@ -700,7 +700,7 @@
     "fixed_roster": "skills-3080-mengto-fixed-entrypoints.json",
     "expected": 177,
     "complete": true,
-    "installed": 77,
+    "installed": 83,
     "complete_definition": "本文path読取と評価の受領。支持/第三者権利/実導入/実適用は未完。",
     "source": "skills-3080-mengto-partial-evaluation.json",
     "unread": 0,
@@ -1529,7 +1529,7 @@
     "comparison_only_primary": 1,
     "partial_primary": 3
   },
-  "all_workflow_primary_paths_including_partial_sources": 783,
+  "all_workflow_primary_paths_including_partial_sources": 807,
   "primary_coverage_definition_additional": "workflow集計はraw本文と伏字付き手順を区別した構造化件数に従う。原文/支持の受領評価と、親が全raw本文を再読した主張は別。旧notice-only本文の親全読は一度だけ別追補として加え、元childの状態と支持の担当は保持する。",
   "rss_season_installation": {
     "content_review": 3591,
@@ -1662,8 +1662,8 @@
     "original_child_and_support_actors_preserved": true
   },
   "parent6_reflection_delta": {
-    "current_branch_raw": 585,
-    "current_branch_workflow": 783,
+    "current_branch_raw": 588,
+    "current_branch_workflow": 807,
     "main_accepted_snapshot": {
       "pr": 431,
       "merge": "ad8151c101a0820cbc365455ecfb85caef1d697a",
@@ -1677,7 +1677,8 @@
     "new_final_dispositions": 0,
     "new_central_operations": 0,
     "independent_review_pending": true,
-    "definition": "This reading projection is independent of final decisions. Six new paths and one existing-primary reading upgrade are reflected on the branch; main acceptance waits for the new delta. Separate individual_rights_and_mcp_duplicates_delta records later copy/duplicate decisions without changing reader attribution."
+    "definition": "This reading projection is independent of final decisions. Six new paths and one existing-primary reading upgrade are reflected on the branch; main acceptance waits for the new delta. Separate individual_rights_and_mcp_duplicates_delta records later copy/duplicate decisions without changing reader attribution.",
+    "current_total_projection_definition": "Original parent6 cohort below is preserved; current_branch totals additionally project later disjoint cohorts including24 design references. These totals do not change original reader attribution."
   },
   "sixmile_comparison_only_evaluation": {
     "source": "skills-3080-mcp-sibling-duplicate-evidence.json",
@@ -1698,7 +1699,7 @@
     "current_individual_rights_entries": 5,
     "main_accepted_excluded_before_this_delta": 8,
     "branch_excluded": 14,
-    "branch_pending": 73094,
+    "branch_pending": 73087,
     "primary_and_support_read_states_unchanged": true,
     "existing_primary_amendment_separate": true,
     "source_scripts_executed": false,
@@ -2138,5 +2139,40 @@
     "full_context_budget_proven": false,
     "warning_cause_linked": false,
     "overall_complete": false
+  },
+  "voltagent_design24_evaluation": {
+    "source": "skills-3080-voltagent-design24-evaluation090101.json",
+    "expected_in_this_received_cohort": 24,
+    "full_body_read": 3,
+    "masked_workflow_body": 21,
+    "workflow_body_read": 24,
+    "primary_bytes": 691839,
+    "source_reader": "20261025-142809-todo-3778",
+    "new_current_parent_raw_reads": 0,
+    "source_collection_not_complete": true,
+    "newly_installed": 1,
+    "remaining23_are_references_not23_Skills": true
+  },
+  "design_reference_installation": {
+    "source": "skills-3080-design-reference-installation-evidence090101.json",
+    "new_targets": 1,
+    "verified_output_files": 52,
+    "case_references": 24,
+    "reference_cases_not24_skills": true,
+    "unknown_existing_bodies_read": 0,
+    "public_delta_review_pending": true,
+    "new_UI_implementation": 0
+  },
+  "combat6_installation": {
+    "source": "skills-3080-combat6-installation-evidence090101.json",
+    "new_targets": 6,
+    "verified_output_files": 40,
+    "actual_current_instruction_files": 12,
+    "parent_explicit_pairs": 6,
+    "admitted_independent_use_todo": 3927,
+    "independent_model_examples": 34,
+    "renderer_tested": false,
+    "source_body_reading_counts_unchanged": true,
+    "public_delta_review_pending": true
   }
 }

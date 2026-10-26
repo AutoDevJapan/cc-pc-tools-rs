@@ -1,0 +1,12 @@
+{
+  "input": "skills-3080-design-reference-actual-bundle090101.json",
+  "input_sha256": "bc1240935954b1dbd6e42f6462307aa9883db6c286cefd0dc3909c2ccd5ed155",
+  "input_origin": "52 actual qualified consumer buffers, each matched to exact reviewed output and original creation identity",
+  "method": "existing3048 in-memory bundle",
+  "exit": 0,
+  "stdout": "PASS: 1 explicit skills; structure, descriptions, references, hashes, scenario pairs; in-memory bundle only; no deployment implied\n",
+  "stderr": "",
+  "targets": 1,
+  "actual_files": 52,
+  "central_body_reads_by_checker": 0
+}

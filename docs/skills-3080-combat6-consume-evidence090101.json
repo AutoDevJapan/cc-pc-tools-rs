@@ -1,0 +1,568 @@
+{
+  "todo": 3080,
+  "qualified_files": 40,
+  "bytes": 205759,
+  "files": [
+    {
+      "index": 0,
+      "target": "fire-smoke-skill-vfx/SKILL.md",
+      "sha256": "a7c87feecb58a6e78a330c9d5109b4710016090a1d655e19d6c4810fe36077d5",
+      "bytes": 1691,
+      "created_and_current_object_identity_sha256": "be5ce56d31c7ca54678e24b2fdede7659f3766530b376092c5d27966386d5470",
+      "creation_ID_matches_current": true,
+      "regular_non_reparse_single_link_verified_by_qualified_consumer": true,
+      "same_handle_buffer_returned": true,
+      "reviewed_bytes_equal": true
+    },
+    {
+      "index": 1,
+      "target": "fire-smoke-skill-vfx/references/guide.md",
+      "sha256": "306549a91919153e56d4e2ec22376ab9e092eb8bb0f3f9a6517bf939e5f47b8b",
+      "bytes": 2516,
+      "created_and_current_object_identity_sha256": "8881ce89e8cda5b205bd4b1575ffa043b1296aba938c3041261398d0c545d9be",
+      "creation_ID_matches_current": true,
+      "regular_non_reparse_single_link_verified_by_qualified_consumer": true,
+      "same_handle_buffer_returned": true,
+      "reviewed_bytes_equal": true
+    },
+    {
+      "index": 2,
+      "target": "fire-smoke-skill-vfx/references/upstream-original.txt",
+      "sha256": "f883c371cbacdc7512510529206798ca5599b7fc4a8da54b2309de4e72924bca",
+      "bytes": 30506,
+      "created_and_current_object_identity_sha256": "ed175aa910e3107e2cf7a4496000eb896c1757214a06c370bfb79cd2fd66f65e",
+      "creation_ID_matches_current": true,
+      "regular_non_reparse_single_link_verified_by_qualified_consumer": true,
+      "same_handle_buffer_returned": true,
+      "reviewed_bytes_equal": true
+    },
+    {
+      "index": 3,
+      "target": "fire-smoke-skill-vfx/references/LICENSE.txt",
+      "sha256": "b2a071ba22fefd803f4e9d1f5c777dd79c62d191695586a1a73fd4d0ebd051c6",
+      "bytes": 1064,
+      "created_and_current_object_identity_sha256": "e0eac20b17c0eadb950ba4a0c798394fca97fe157974cd68c3842e2bb86d46ce",
+      "creation_ID_matches_current": true,
+      "regular_non_reparse_single_link_verified_by_qualified_consumer": true,
+      "same_handle_buffer_returned": true,
+      "reviewed_bytes_equal": true
+    },
+    {
+      "index": 4,
+      "target": "fire-smoke-skill-vfx/references/source.json",
+      "sha256": "8dc53bd6050ee35a6b1f58c4c9794387d4441fb6645f3d815cffaa1b51e3e7db",
+      "bytes": 1851,
+      "created_and_current_object_identity_sha256": "8e2c8f04acf55babc25242d3e58fd3402983f516ca6c3586332db97ec93e4fca",
+      "creation_ID_matches_current": true,
+      "regular_non_reparse_single_link_verified_by_qualified_consumer": true,
+      "same_handle_buffer_returned": true,
+      "reviewed_bytes_equal": true
+    },
+    {
+      "index": 5,
+      "target": "fire-smoke-skill-vfx/references/sources.md",
+      "sha256": "f280ff002729f64bde638fdbdf3bba12d28bd1aaeeff853f6f928914cea84449",
+      "bytes": 1666,
+      "created_and_current_object_identity_sha256": "74ab1f176e17a45d59152e73cd823400aa244de144b33c36b917a3ca402bfb01",
+      "creation_ID_matches_current": true,
+      "regular_non_reparse_single_link_verified_by_qualified_consumer": true,
+      "same_handle_buffer_returned": true,
+      "reviewed_bytes_equal": true
+    },
+    {
+      "index": 6,
+      "target": "fire-smoke-skill-vfx/references/shared-vfx-original.txt",
+      "sha256": "14579867468da3b065d1b8c9644f4e9a8cea552526936c2518f3c150e049b9b0",
+      "bytes": 1078,
+      "created_and_current_object_identity_sha256": "52e8f1e752aa41d2fd4b94ec5a618c6525af0aef39860d966effa7a5a37b5d0f",
+      "creation_ID_matches_current": true,
+      "regular_non_reparse_single_link_verified_by_qualified_consumer": true,
+      "same_handle_buffer_returned": true,
+      "reviewed_bytes_equal": true
+    },
+    {
+      "index": 7,
+      "target": "game-dev-combat-animation/SKILL.md",
+      "sha256": "b5f8b56f1598dab150f05b4ecfbe156599296ba97e8807723cb532666cdedc09",
+      "bytes": 1784,
+      "created_and_current_object_identity_sha256": "723fb3c2c55a5bd6de6da5accb7dfd9e98c1d56dfa4991b1bb333e3c71fe690e",
+      "creation_ID_matches_current": true,
+      "regular_non_reparse_single_link_verified_by_qualified_consumer": true,
+      "same_handle_buffer_returned": true,
+      "reviewed_bytes_equal": true
+    },
+    {
+      "index": 8,
+      "target": "game-dev-combat-animation/references/guide.md",
+      "sha256": "29d6ff8dd40791650f8c9ec530fb1e8765a1931a3e9155b56775a89c30cb3a02",
+      "bytes": 2205,
+      "created_and_current_object_identity_sha256": "34abba9edf86a7376ea02cceaf04f5b09858087ce049ee2febfb691565814be7",
+      "creation_ID_matches_current": true,
+      "regular_non_reparse_single_link_verified_by_qualified_consumer": true,
+      "same_handle_buffer_returned": true,
+      "reviewed_bytes_equal": true
+    },
+    {
+      "index": 9,
+      "target": "game-dev-combat-animation/references/upstream-original.txt",
+      "sha256": "a0ea4fcd84ac57673c16d8f7ad116f5d900d0556c4cecdd08b23fdb623181ac0",
+      "bytes": 7987,
+      "created_and_current_object_identity_sha256": "d7e750f16815f6410c73460c3cebd7ddbb65507ac7c2fd250f4afbcba693dbcf",
+      "creation_ID_matches_current": true,
+      "regular_non_reparse_single_link_verified_by_qualified_consumer": true,
+      "same_handle_buffer_returned": true,
+      "reviewed_bytes_equal": true
+    },
+    {
+      "index": 10,
+      "target": "game-dev-combat-animation/references/LICENSE.txt",
+      "sha256": "b2a071ba22fefd803f4e9d1f5c777dd79c62d191695586a1a73fd4d0ebd051c6",
+      "bytes": 1064,
+      "created_and_current_object_identity_sha256": "06c238006e25e431b8f73189f11f39de1da0125e7b90caf576087bb233435cc7",
+      "creation_ID_matches_current": true,
+      "regular_non_reparse_single_link_verified_by_qualified_consumer": true,
+      "same_handle_buffer_returned": true,
+      "reviewed_bytes_equal": true
+    },
+    {
+      "index": 11,
+      "target": "game-dev-combat-animation/references/source.json",
+      "sha256": "9a62d13e280284ccf94c3783a48673d555c50abf04301408beb169c95f961c8e",
+      "bytes": 1604,
+      "created_and_current_object_identity_sha256": "53796bc7c7e365b4355e818a7be25828cb3e310350a00878b8b80d9c4cbcf854",
+      "creation_ID_matches_current": true,
+      "regular_non_reparse_single_link_verified_by_qualified_consumer": true,
+      "same_handle_buffer_returned": true,
+      "reviewed_bytes_equal": true
+    },
+    {
+      "index": 12,
+      "target": "game-dev-combat-animation/references/sources.md",
+      "sha256": "1630672b4cc795463c1f3fb2cc26c9a9c032003d8dc743b4803a15862cea3a24",
+      "bytes": 1093,
+      "created_and_current_object_identity_sha256": "cd7535fce20a91140ed95c0738374bc81defe526aed929333b2bc5b8e6ba5f7e",
+      "creation_ID_matches_current": true,
+      "regular_non_reparse_single_link_verified_by_qualified_consumer": true,
+      "same_handle_buffer_returned": true,
+      "reviewed_bytes_equal": true
+    },
+    {
+      "index": 13,
+      "target": "game-dev-combat-skill-polish/SKILL.md",
+      "sha256": "fa81d132b2d8c65fd55a7183896013ddb5adea379f6dc613e5b0fa369321564a",
+      "bytes": 1756,
+      "created_and_current_object_identity_sha256": "5d4adb2f717aa04161c53a52e1a150558e814dd8169a9a50ef20e36bd7ee0b33",
+      "creation_ID_matches_current": true,
+      "regular_non_reparse_single_link_verified_by_qualified_consumer": true,
+      "same_handle_buffer_returned": true,
+      "reviewed_bytes_equal": true
+    },
+    {
+      "index": 14,
+      "target": "game-dev-combat-skill-polish/references/guide.md",
+      "sha256": "8b0a4bcb8f91c46e4110c11dda40a08dfec84aa4603533163b5132369f23a7bd",
+      "bytes": 2042,
+      "created_and_current_object_identity_sha256": "6c886787657b7e0d8adb23378173de5ed32d556ccde222570f1b042a5ee8eda2",
+      "creation_ID_matches_current": true,
+      "regular_non_reparse_single_link_verified_by_qualified_consumer": true,
+      "same_handle_buffer_returned": true,
+      "reviewed_bytes_equal": true
+    },
+    {
+      "index": 15,
+      "target": "game-dev-combat-skill-polish/references/upstream-original.txt",
+      "sha256": "df2e76fd2e4fee031f6692260f7af3f4dcb85104c6283a4d7fb402763ea56109",
+      "bytes": 9507,
+      "created_and_current_object_identity_sha256": "987ef933915eae6d1203e5a3f0cea535b3c281c533392255df0a7dbc74a554a1",
+      "creation_ID_matches_current": true,
+      "regular_non_reparse_single_link_verified_by_qualified_consumer": true,
+      "same_handle_buffer_returned": true,
+      "reviewed_bytes_equal": true
+    },
+    {
+      "index": 16,
+      "target": "game-dev-combat-skill-polish/references/LICENSE.txt",
+      "sha256": "b2a071ba22fefd803f4e9d1f5c777dd79c62d191695586a1a73fd4d0ebd051c6",
+      "bytes": 1064,
+      "created_and_current_object_identity_sha256": "0cafbc48924d7e1e60e41c85a5c87b0617f3dd98d16420b561de3af55df2ca81",
+      "creation_ID_matches_current": true,
+      "regular_non_reparse_single_link_verified_by_qualified_consumer": true,
+      "same_handle_buffer_returned": true,
+      "reviewed_bytes_equal": true
+    },
+    {
+      "index": 17,
+      "target": "game-dev-combat-skill-polish/references/source.json",
+      "sha256": "60e3822a162e8b5212473d24bee86c3fa6d2c6553726355c72e1b21f498a1538",
+      "bytes": 1607,
+      "created_and_current_object_identity_sha256": "e5fc0ae7b00f33c7ceb2eea64338a05b0c5244247d1aacc2446324f813e06670",
+      "creation_ID_matches_current": true,
+      "regular_non_reparse_single_link_verified_by_qualified_consumer": true,
+      "same_handle_buffer_returned": true,
+      "reviewed_bytes_equal": true
+    },
+    {
+      "index": 18,
+      "target": "game-dev-combat-skill-polish/references/sources.md",
+      "sha256": "5449e2ed07537e88a3f2408e30ccfa1d17380db6ee55e2dc47c082468db0cbae",
+      "bytes": 1096,
+      "created_and_current_object_identity_sha256": "99044d12ccf301f12565975dd05205e89aad9f469ce6be9c98d106a6a768d1b0",
+      "creation_ID_matches_current": true,
+      "regular_non_reparse_single_link_verified_by_qualified_consumer": true,
+      "same_handle_buffer_returned": true,
+      "reviewed_bytes_equal": true
+    },
+    {
+      "index": 19,
+      "target": "ice-frost-skill-vfx/SKILL.md",
+      "sha256": "5f9dea1dbccb8b80ee91e50b3a879b52a32e3714dc4d753e196d2bb96b5509f3",
+      "bytes": 1657,
+      "created_and_current_object_identity_sha256": "f245f4b31fbf962a892d0e68f786c775f4bbcdf7da27618fd4a4d54d2f662e1b",
+      "creation_ID_matches_current": true,
+      "regular_non_reparse_single_link_verified_by_qualified_consumer": true,
+      "same_handle_buffer_returned": true,
+      "reviewed_bytes_equal": true
+    },
+    {
+      "index": 20,
+      "target": "ice-frost-skill-vfx/references/guide.md",
+      "sha256": "fc1e7d7871b1a3851bbf80ddd108068192a0885e8349e91b62d8987736ce59b4",
+      "bytes": 2084,
+      "created_and_current_object_identity_sha256": "c5f8007ae947c9d90e565b07940ff6db680830de0a5d765318021ab27becaf3c",
+      "creation_ID_matches_current": true,
+      "regular_non_reparse_single_link_verified_by_qualified_consumer": true,
+      "same_handle_buffer_returned": true,
+      "reviewed_bytes_equal": true
+    },
+    {
+      "index": 21,
+      "target": "ice-frost-skill-vfx/references/upstream-original.txt",
+      "sha256": "597fea0f5a5086f8cf9dd76913268bd76d4040958d361be374bfec42a85020fb",
+      "bytes": 31556,
+      "created_and_current_object_identity_sha256": "77b62c5df4ac426a63824be032a0bcb4b250438f362b23baa43d1c141ae36cb3",
+      "creation_ID_matches_current": true,
+      "regular_non_reparse_single_link_verified_by_qualified_consumer": true,
+      "same_handle_buffer_returned": true,
+      "reviewed_bytes_equal": true
+    },
+    {
+      "index": 22,
+      "target": "ice-frost-skill-vfx/references/LICENSE.txt",
+      "sha256": "b2a071ba22fefd803f4e9d1f5c777dd79c62d191695586a1a73fd4d0ebd051c6",
+      "bytes": 1064,
+      "created_and_current_object_identity_sha256": "19d135afed55d316080a62cc417d4af82bc92f3cf40eaa7f5a57646b980899ef",
+      "creation_ID_matches_current": true,
+      "regular_non_reparse_single_link_verified_by_qualified_consumer": true,
+      "same_handle_buffer_returned": true,
+      "reviewed_bytes_equal": true
+    },
+    {
+      "index": 23,
+      "target": "ice-frost-skill-vfx/references/source.json",
+      "sha256": "acd718166e10ff556700b4d3515ad2870ebff0052743b5a221d0aac71b842ab1",
+      "bytes": 1850,
+      "created_and_current_object_identity_sha256": "6c32a20445ed2ff76bfcca0dd51d0fb85c632c3b1c44c4b0baa8c692d495f81c",
+      "creation_ID_matches_current": true,
+      "regular_non_reparse_single_link_verified_by_qualified_consumer": true,
+      "same_handle_buffer_returned": true,
+      "reviewed_bytes_equal": true
+    },
+    {
+      "index": 24,
+      "target": "ice-frost-skill-vfx/references/sources.md",
+      "sha256": "9e4108ac2d578a80a9bbde6877d72abc2305c1dc127beb9aa4f0eb3d02603e03",
+      "bytes": 1262,
+      "created_and_current_object_identity_sha256": "03301c38c38822bb5110463dc7e1ee92eb53e8e9a2ea8b4e24f671a1179a27cb",
+      "creation_ID_matches_current": true,
+      "regular_non_reparse_single_link_verified_by_qualified_consumer": true,
+      "same_handle_buffer_returned": true,
+      "reviewed_bytes_equal": true
+    },
+    {
+      "index": 25,
+      "target": "ice-frost-skill-vfx/references/shared-vfx-original.txt",
+      "sha256": "14579867468da3b065d1b8c9644f4e9a8cea552526936c2518f3c150e049b9b0",
+      "bytes": 1078,
+      "created_and_current_object_identity_sha256": "54322f537c99164c9fdc2d7a7127770a4a0f692a70b17190dd6bc84863ae441e",
+      "creation_ID_matches_current": true,
+      "regular_non_reparse_single_link_verified_by_qualified_consumer": true,
+      "same_handle_buffer_returned": true,
+      "reviewed_bytes_equal": true
+    },
+    {
+      "index": 26,
+      "target": "lightning-energy-skill-vfx/SKILL.md",
+      "sha256": "a330d750d711f1c10c28e45d729d7629dc794b699e30f2e03e3d8f1f4aac5cc5",
+      "bytes": 1600,
+      "created_and_current_object_identity_sha256": "a55d072d9b6bd154e252cc97df133e6d546d57446fa85e4abedb49b556e60a0f",
+      "creation_ID_matches_current": true,
+      "regular_non_reparse_single_link_verified_by_qualified_consumer": true,
+      "same_handle_buffer_returned": true,
+      "reviewed_bytes_equal": true
+    },
+    {
+      "index": 27,
+      "target": "lightning-energy-skill-vfx/references/guide.md",
+      "sha256": "278542ec379b14f89bb2767329df477fc23674b7475508e40590d3a8b02dfad4",
+      "bytes": 2187,
+      "created_and_current_object_identity_sha256": "4e9a42582ba2c1ec44a34c00257b96bc9ac9bc21dde91db4c49c02decf31e9ee",
+      "creation_ID_matches_current": true,
+      "regular_non_reparse_single_link_verified_by_qualified_consumer": true,
+      "same_handle_buffer_returned": true,
+      "reviewed_bytes_equal": true
+    },
+    {
+      "index": 28,
+      "target": "lightning-energy-skill-vfx/references/upstream-original.txt",
+      "sha256": "0d3a71982172236a29b8ebea9185f75fd72e46497f19589743274bd078877e31",
+      "bytes": 39312,
+      "created_and_current_object_identity_sha256": "4d8248c5fe6d6d11b1673119be3d9d7f2d12953c22e6c2bd40406320c5abe153",
+      "creation_ID_matches_current": true,
+      "regular_non_reparse_single_link_verified_by_qualified_consumer": true,
+      "same_handle_buffer_returned": true,
+      "reviewed_bytes_equal": true
+    },
+    {
+      "index": 29,
+      "target": "lightning-energy-skill-vfx/references/LICENSE.txt",
+      "sha256": "b2a071ba22fefd803f4e9d1f5c777dd79c62d191695586a1a73fd4d0ebd051c6",
+      "bytes": 1064,
+      "created_and_current_object_identity_sha256": "436bbb0d5cdccbe39c1079a96d49b4521de5f23b499c1b5fe28ebbf65888b0b0",
+      "creation_ID_matches_current": true,
+      "regular_non_reparse_single_link_verified_by_qualified_consumer": true,
+      "same_handle_buffer_returned": true,
+      "reviewed_bytes_equal": true
+    },
+    {
+      "index": 30,
+      "target": "lightning-energy-skill-vfx/references/source.json",
+      "sha256": "5294572eac864fc7302595ccd7fffd9c071c3dca1fea8b11cd2afc741a3829da",
+      "bytes": 1857,
+      "created_and_current_object_identity_sha256": "e362e348d1c4ae04946ae0f3cadd6dddc35d037a9fa1622ce66b17ca0752e9b0",
+      "creation_ID_matches_current": true,
+      "regular_non_reparse_single_link_verified_by_qualified_consumer": true,
+      "same_handle_buffer_returned": true,
+      "reviewed_bytes_equal": true
+    },
+    {
+      "index": 31,
+      "target": "lightning-energy-skill-vfx/references/sources.md",
+      "sha256": "95f5e0305307ac6fc51b3ed3242bc2bebcee34a8d2e7418b7f8a1fc77dae6f44",
+      "bytes": 1269,
+      "created_and_current_object_identity_sha256": "3edc8290ca21d8e079f816db549471472a674f7e14ae9823e201959a5d3a87ee",
+      "creation_ID_matches_current": true,
+      "regular_non_reparse_single_link_verified_by_qualified_consumer": true,
+      "same_handle_buffer_returned": true,
+      "reviewed_bytes_equal": true
+    },
+    {
+      "index": 32,
+      "target": "lightning-energy-skill-vfx/references/shared-vfx-original.txt",
+      "sha256": "14579867468da3b065d1b8c9644f4e9a8cea552526936c2518f3c150e049b9b0",
+      "bytes": 1078,
+      "created_and_current_object_identity_sha256": "8697e22a5fd0ba15da5d7054a81c1dc4895caa8f53c5dff3e63219cbffac0459",
+      "creation_ID_matches_current": true,
+      "regular_non_reparse_single_link_verified_by_qualified_consumer": true,
+      "same_handle_buffer_returned": true,
+      "reviewed_bytes_equal": true
+    },
+    {
+      "index": 33,
+      "target": "water-crystal-skill-vfx/SKILL.md",
+      "sha256": "5751697a8ffda466d3d908a4f491966485e92e919cca063dd847e00cde94dfc8",
+      "bytes": 1626,
+      "created_and_current_object_identity_sha256": "7a0616bf05a1cd642c020d85658ca6139b239a020ea5f1311f7d4887641237c2",
+      "creation_ID_matches_current": true,
+      "regular_non_reparse_single_link_verified_by_qualified_consumer": true,
+      "same_handle_buffer_returned": true,
+      "reviewed_bytes_equal": true
+    },
+    {
+      "index": 34,
+      "target": "water-crystal-skill-vfx/references/guide.md",
+      "sha256": "c7bafa027d7a851a5ee824b120b9fad7c904bf83b3aa54ed3adc99fe804ec4c7",
+      "bytes": 2497,
+      "created_and_current_object_identity_sha256": "75a321ceba7aadde0df01fa51c71f46a502cae5688a5fe2ebcfd006b6607300d",
+      "creation_ID_matches_current": true,
+      "regular_non_reparse_single_link_verified_by_qualified_consumer": true,
+      "same_handle_buffer_returned": true,
+      "reviewed_bytes_equal": true
+    },
+    {
+      "index": 35,
+      "target": "water-crystal-skill-vfx/references/upstream-original.txt",
+      "sha256": "d77efa11fa61ccaa875f269716f3da5417e48dd6f503aae5e6d43180e2630d45",
+      "bytes": 34275,
+      "created_and_current_object_identity_sha256": "d2c3955c57824e84eae5e331778981d447cb4cd99e9e3d0dd49f05ab0d30d2d3",
+      "creation_ID_matches_current": true,
+      "regular_non_reparse_single_link_verified_by_qualified_consumer": true,
+      "same_handle_buffer_returned": true,
+      "reviewed_bytes_equal": true
+    },
+    {
+      "index": 36,
+      "target": "water-crystal-skill-vfx/references/LICENSE.txt",
+      "sha256": "b2a071ba22fefd803f4e9d1f5c777dd79c62d191695586a1a73fd4d0ebd051c6",
+      "bytes": 1064,
+      "created_and_current_object_identity_sha256": "eafcca1962c5ab19e617b3d78636636e4981c1fe68d29d320cbddc0811f2564c",
+      "creation_ID_matches_current": true,
+      "regular_non_reparse_single_link_verified_by_qualified_consumer": true,
+      "same_handle_buffer_returned": true,
+      "reviewed_bytes_equal": true
+    },
+    {
+      "index": 37,
+      "target": "water-crystal-skill-vfx/references/source.json",
+      "sha256": "1b02a4a6ef4c9b72bfcda1a5ede553e9275e1ff4254fa1188ba083697eddd3f2",
+      "bytes": 1854,
+      "created_and_current_object_identity_sha256": "f70d4978998ff1fa36b19ddc1476ad1df01ff2cddf8a895d49fe4c089083cf38",
+      "creation_ID_matches_current": true,
+      "regular_non_reparse_single_link_verified_by_qualified_consumer": true,
+      "same_handle_buffer_returned": true,
+      "reviewed_bytes_equal": true
+    },
+    {
+      "index": 38,
+      "target": "water-crystal-skill-vfx/references/sources.md",
+      "sha256": "642ab56ed0aaf74a7fa81dd4792f6acb77351f6e1a49a8720c7f624387282e00",
+      "bytes": 1266,
+      "created_and_current_object_identity_sha256": "5a64c9fa35beb51291c2cf1ea554d4d4ec33aa9a225b8fffd5688a3648f2ef91",
+      "creation_ID_matches_current": true,
+      "regular_non_reparse_single_link_verified_by_qualified_consumer": true,
+      "same_handle_buffer_returned": true,
+      "reviewed_bytes_equal": true
+    },
+    {
+      "index": 39,
+      "target": "water-crystal-skill-vfx/references/shared-vfx-original.txt",
+      "sha256": "14579867468da3b065d1b8c9644f4e9a8cea552526936c2518f3c150e049b9b0",
+      "bytes": 1078,
+      "created_and_current_object_identity_sha256": "b1a1b36f1a8a09244e07e95e6284119637881bc432b5e5e397cb7164f945a13b",
+      "creation_ID_matches_current": true,
+      "regular_non_reparse_single_link_verified_by_qualified_consumer": true,
+      "same_handle_buffer_returned": true,
+      "reviewed_bytes_equal": true
+    }
+  ],
+  "proof": {
+    "job": "20261026-090101-todo-3080",
+    "manifest_sha256": "8078d9521ba61039000c915c7e904fd1aff9def8a832a19de377c4c0ac6c0758",
+    "qualified_current_buffers": 40,
+    "bytes": 205759,
+    "bounded_batches": 5,
+    "entrypoint_and_guide_indices": [
+      0,
+      1,
+      7,
+      8,
+      13,
+      14,
+      19,
+      20,
+      26,
+      27,
+      33,
+      34
+    ],
+    "producer": {
+      "sha256": "f3927b8850258098d54dae87196ae382960dc83a5b6e7dd11354ab97ffd07cdf",
+      "revision": "f5f846a8470b544846e4c9ce43306061bf5668f9"
+    },
+    "current_IDs_match_creation": true,
+    "all_same_read_buffers_match_fixed_manifest": true,
+    "each_file_at_its_own_successful_read_time": true,
+    "historical_physical_continuity_proven": false,
+    "current_OS_writer": "unproved",
+    "general_access_granted": false,
+    "original_registry_recovered": false,
+    "new_creations": 0,
+    "new_ledger_adoptions": 0,
+    "new_global_primary_credit": 0,
+    "receipts": [
+      {
+        "batch": 1,
+        "kind": "instructions",
+        "files": 12,
+        "bytes": 23645,
+        "response_sha256": "01652c02c8d969aa605d451bd327a41427111a128a0e255ea992af4f0beb3b95",
+        "runtime_producer": {
+          "sha256": "f3927b8850258098d54dae87196ae382960dc83a5b6e7dd11354ab97ffd07cdf",
+          "revision": "f5f846a8470b544846e4c9ce43306061bf5668f9"
+        },
+        "issuer_producer": {
+          "sha256": "f3927b8850258098d54dae87196ae382960dc83a5b6e7dd11354ab97ffd07cdf",
+          "revision": "f5f846a8470b544846e4c9ce43306061bf5668f9"
+        }
+      },
+      {
+        "batch": 2,
+        "kind": "audit",
+        "files": 13,
+        "bytes": 61187,
+        "response_sha256": "864bf9a2adcc56e28c37f4985ae7a1e6bd01c49c3b1b597d80323ad0a24f5cb8",
+        "runtime_producer": {
+          "sha256": "f3927b8850258098d54dae87196ae382960dc83a5b6e7dd11354ab97ffd07cdf",
+          "revision": "f5f846a8470b544846e4c9ce43306061bf5668f9"
+        },
+        "issuer_producer": {
+          "sha256": "f3927b8850258098d54dae87196ae382960dc83a5b6e7dd11354ab97ffd07cdf",
+          "revision": "f5f846a8470b544846e4c9ce43306061bf5668f9"
+        }
+      },
+      {
+        "batch": 3,
+        "kind": "audit",
+        "files": 5,
+        "bytes": 36810,
+        "response_sha256": "9a4b7f62da79c69aa395779be0b5020f4d07d9f3d953f9de95636a84a0404725",
+        "runtime_producer": {
+          "sha256": "f3927b8850258098d54dae87196ae382960dc83a5b6e7dd11354ab97ffd07cdf",
+          "revision": "f5f846a8470b544846e4c9ce43306061bf5668f9"
+        },
+        "issuer_producer": {
+          "sha256": "f3927b8850258098d54dae87196ae382960dc83a5b6e7dd11354ab97ffd07cdf",
+          "revision": "f5f846a8470b544846e4c9ce43306061bf5668f9"
+        }
+      },
+      {
+        "batch": 4,
+        "kind": "audit",
+        "files": 5,
+        "bytes": 44580,
+        "response_sha256": "5497a03b7256e66420e01532ac7401d94991e5252ee1e20d30f26c62966f9224",
+        "runtime_producer": {
+          "sha256": "aaf16eac624c3b974835f28c35805c2670d5f51320a2f04d78a4de6edf19b2f9",
+          "revision": "52d417e60c20f9770d6bde2dde36092ab206ea01"
+        },
+        "issuer_producer": {
+          "sha256": "f3927b8850258098d54dae87196ae382960dc83a5b6e7dd11354ab97ffd07cdf",
+          "revision": "f5f846a8470b544846e4c9ce43306061bf5668f9"
+        }
+      },
+      {
+        "batch": 5,
+        "kind": "audit",
+        "files": 5,
+        "bytes": 39537,
+        "response_sha256": "6c975cf4363430c41c3991f90144ee8940a87a4af3cff30d870376fa961f1d0f",
+        "runtime_producer": {
+          "sha256": "aaf16eac624c3b974835f28c35805c2670d5f51320a2f04d78a4de6edf19b2f9",
+          "revision": "52d417e60c20f9770d6bde2dde36092ab206ea01"
+        },
+        "issuer_producer": {
+          "sha256": "f3927b8850258098d54dae87196ae382960dc83a5b6e7dd11354ab97ffd07cdf",
+          "revision": "f5f846a8470b544846e4c9ce43306061bf5668f9"
+        }
+      }
+    ]
+  },
+  "parent_actual_instruction_files": 12,
+  "parent_explicit_positive_negative_pairs": 6,
+  "separate_actual_admitted_reader_instruction_files": 12,
+  "separate_actual_admitted_reader": "20261026-120411-todo-3927",
+  "current_OS_writer": "unproved",
+  "historical_physical_continuity_proven": false,
+  "general_access_granted": false,
+  "original_registry_recovered": false,
+  "all_originals_new_semantic_read": false
+}

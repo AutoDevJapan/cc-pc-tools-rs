@@ -1,0 +1,240 @@
+{
+  "targets": [
+    {
+      "name": "fire-smoke-skill-vfx",
+      "new": true,
+      "before_sha256": "absent",
+      "positive": "既存の3D戦闘場面で、煙が背景を遮らず明るい霧になる原因をblend契約と分離層で点検する。",
+      "negative": "未読moduleを取り込み、元デモのpool数・色・3回のflashを根拠に速度や安全性を保証する。",
+      "sources": [
+        "https://github.com/MengTo/Skills/blob/398cd41c86ba42fbb30e944ae507f463648f08b7/agent-skills/game-combat/fire-smoke-skill-vfx/SKILL.md"
+      ],
+      "files": [
+        {
+          "path": "SKILL.md",
+          "sha256": "a7c87feecb58a6e78a330c9d5109b4710016090a1d655e19d6c4810fe36077d5"
+        },
+        {
+          "path": "references/guide.md",
+          "sha256": "306549a91919153e56d4e2ec22376ab9e092eb8bb0f3f9a6517bf939e5f47b8b"
+        },
+        {
+          "path": "references/upstream-original.txt",
+          "sha256": "f883c371cbacdc7512510529206798ca5599b7fc4a8da54b2309de4e72924bca"
+        },
+        {
+          "path": "references/LICENSE.txt",
+          "sha256": "b2a071ba22fefd803f4e9d1f5c777dd79c62d191695586a1a73fd4d0ebd051c6"
+        },
+        {
+          "path": "references/source.json",
+          "sha256": "8dc53bd6050ee35a6b1f58c4c9794387d4441fb6645f3d815cffaa1b51e3e7db"
+        },
+        {
+          "path": "references/sources.md",
+          "sha256": "f280ff002729f64bde638fdbdf3bba12d28bd1aaeeff853f6f928914cea84449"
+        },
+        {
+          "path": "references/shared-vfx-original.txt",
+          "sha256": "14579867468da3b065d1b8c9644f4e9a8cea552526936c2518f3c150e049b9b0"
+        }
+      ]
+    },
+    {
+      "name": "game-dev-combat-animation",
+      "new": true,
+      "before_sha256": "absent",
+      "positive": "既存skinned characterの手首がゲームcameraだけで折れて見える問題を、骨軸・肩相対key・実meshと同時刻の両cameraで切り分ける。",
+      "negative": "別rigへ元の角度表を一律に課し、未読のscriptや元案件のmocap契約を使って正常だとする。",
+      "sources": [
+        "https://github.com/MengTo/Skills/blob/398cd41c86ba42fbb30e944ae507f463648f08b7/agent-skills/game-combat/game-dev-combat-animation/SKILL.md"
+      ],
+      "files": [
+        {
+          "path": "SKILL.md",
+          "sha256": "b5f8b56f1598dab150f05b4ecfbe156599296ba97e8807723cb532666cdedc09"
+        },
+        {
+          "path": "references/guide.md",
+          "sha256": "29d6ff8dd40791650f8c9ec530fb1e8765a1931a3e9155b56775a89c30cb3a02"
+        },
+        {
+          "path": "references/upstream-original.txt",
+          "sha256": "a0ea4fcd84ac57673c16d8f7ad116f5d900d0556c4cecdd08b23fdb623181ac0"
+        },
+        {
+          "path": "references/LICENSE.txt",
+          "sha256": "b2a071ba22fefd803f4e9d1f5c777dd79c62d191695586a1a73fd4d0ebd051c6"
+        },
+        {
+          "path": "references/source.json",
+          "sha256": "9a62d13e280284ccf94c3783a48673d555c50abf04301408beb169c95f961c8e"
+        },
+        {
+          "path": "references/sources.md",
+          "sha256": "1630672b4cc795463c1f3fb2cc26c9a9c032003d8dc743b4803a15862cea3a24"
+        }
+      ]
+    },
+    {
+      "name": "game-dev-combat-skill-polish",
+      "new": true,
+      "before_sha256": "absent",
+      "positive": "同じcastの接触前にtargetが押し出される問題を、動画の順序・game時刻・schedule利用側へ結んで直す。",
+      "negative": "art点数をreadabilityの合格に読み替え、元デモのscore上限を理由に有料asset生成や未承認の見た目変更を始める。",
+      "sources": [
+        "https://github.com/MengTo/Skills/blob/398cd41c86ba42fbb30e944ae507f463648f08b7/agent-skills/game-combat/game-dev-combat-skill-polish/SKILL.md"
+      ],
+      "files": [
+        {
+          "path": "SKILL.md",
+          "sha256": "fa81d132b2d8c65fd55a7183896013ddb5adea379f6dc613e5b0fa369321564a"
+        },
+        {
+          "path": "references/guide.md",
+          "sha256": "8b0a4bcb8f91c46e4110c11dda40a08dfec84aa4603533163b5132369f23a7bd"
+        },
+        {
+          "path": "references/upstream-original.txt",
+          "sha256": "df2e76fd2e4fee031f6692260f7af3f4dcb85104c6283a4d7fb402763ea56109"
+        },
+        {
+          "path": "references/LICENSE.txt",
+          "sha256": "b2a071ba22fefd803f4e9d1f5c777dd79c62d191695586a1a73fd4d0ebd051c6"
+        },
+        {
+          "path": "references/source.json",
+          "sha256": "60e3822a162e8b5212473d24bee86c3fa6d2c6553726355c72e1b21f498a1538"
+        },
+        {
+          "path": "references/sources.md",
+          "sha256": "5449e2ed07537e88a3f2408e30ccfa1d17380db6ee55e2dc47c082468db0cbae"
+        }
+      ]
+    },
+    {
+      "name": "ice-frost-skill-vfx",
+      "new": true,
+      "before_sha256": "absent",
+      "positive": "成長layoutを固定したまま霜の表示速度を変え、spike配置・arrival時刻・接地とfield精度が別に保たれるか検証する。",
+      "negative": "元の氷moduleやscanを未確認で導入し、same hashだけでCPU/GPU地形の完全一致や全破片の接地を保証する。",
+      "sources": [
+        "https://github.com/MengTo/Skills/blob/398cd41c86ba42fbb30e944ae507f463648f08b7/agent-skills/game-combat/ice-frost-skill-vfx/SKILL.md"
+      ],
+      "files": [
+        {
+          "path": "SKILL.md",
+          "sha256": "5f9dea1dbccb8b80ee91e50b3a879b52a32e3714dc4d753e196d2bb96b5509f3"
+        },
+        {
+          "path": "references/guide.md",
+          "sha256": "fc1e7d7871b1a3851bbf80ddd108068192a0885e8349e91b62d8987736ce59b4"
+        },
+        {
+          "path": "references/upstream-original.txt",
+          "sha256": "597fea0f5a5086f8cf9dd76913268bd76d4040958d361be374bfec42a85020fb"
+        },
+        {
+          "path": "references/LICENSE.txt",
+          "sha256": "b2a071ba22fefd803f4e9d1f5c777dd79c62d191695586a1a73fd4d0ebd051c6"
+        },
+        {
+          "path": "references/source.json",
+          "sha256": "acd718166e10ff556700b4d3515ad2870ebff0052743b5a221d0aac71b842ab1"
+        },
+        {
+          "path": "references/sources.md",
+          "sha256": "9e4108ac2d578a80a9bbde6877d72abc2305c1dc127beb9aa4f0eb3d02603e03"
+        },
+        {
+          "path": "references/shared-vfx-original.txt",
+          "sha256": "14579867468da3b065d1b8c9644f4e9a8cea552526936c2518f3c150e049b9b0"
+        }
+      ]
+    },
+    {
+      "name": "lightning-energy-skill-vfx",
+      "new": true,
+      "before_sha256": "absent",
+      "positive": "稲妻の先端が届く前に地面が光る問題を、junctionのarrival・tick・一意eventと有限bufferへ結んで検証する。",
+      "negative": "pool容量を同一視して生存pointを上書きし、hold中も最低速度で稲妻を動かし、safe option名で全画面の安全を保証する。",
+      "sources": [
+        "https://github.com/MengTo/Skills/blob/398cd41c86ba42fbb30e944ae507f463648f08b7/agent-skills/game-combat/lightning-energy-skill-vfx/SKILL.md"
+      ],
+      "files": [
+        {
+          "path": "SKILL.md",
+          "sha256": "a330d750d711f1c10c28e45d729d7629dc794b699e30f2e03e3d8f1f4aac5cc5"
+        },
+        {
+          "path": "references/guide.md",
+          "sha256": "278542ec379b14f89bb2767329df477fc23674b7475508e40590d3a8b02dfad4"
+        },
+        {
+          "path": "references/upstream-original.txt",
+          "sha256": "0d3a71982172236a29b8ebea9185f75fd72e46497f19589743274bd078877e31"
+        },
+        {
+          "path": "references/LICENSE.txt",
+          "sha256": "b2a071ba22fefd803f4e9d1f5c777dd79c62d191695586a1a73fd4d0ebd051c6"
+        },
+        {
+          "path": "references/source.json",
+          "sha256": "5294572eac864fc7302595ccd7fffd9c071c3dca1fea8b11cd2afc741a3829da"
+        },
+        {
+          "path": "references/sources.md",
+          "sha256": "95f5e0305307ac6fc51b3ed3242bc2bebcee34a8d2e7418b7f8a1fc77dae6f44"
+        },
+        {
+          "path": "references/shared-vfx-original.txt",
+          "sha256": "14579867468da3b065d1b8c9644f4e9a8cea552526936c2518f3c150e049b9b0"
+        }
+      ]
+    },
+    {
+      "name": "water-crystal-skill-vfx",
+      "new": true,
+      "before_sha256": "absent",
+      "positive": "結晶の後ろを通る水が古い背景だけを屈折する問題をrender graphへ、破片の浮きを実meshとCPU補間の差へ分けて検証する。",
+      "negative": "同じhashを根拠に地形と接地を完全一致とし、未確認module・scan・layoutを使って元のmillimeter結果やframe timeを保証する。",
+      "sources": [
+        "https://github.com/MengTo/Skills/blob/398cd41c86ba42fbb30e944ae507f463648f08b7/agent-skills/game-combat/water-crystal-skill-vfx/SKILL.md"
+      ],
+      "files": [
+        {
+          "path": "SKILL.md",
+          "sha256": "5751697a8ffda466d3d908a4f491966485e92e919cca063dd847e00cde94dfc8"
+        },
+        {
+          "path": "references/guide.md",
+          "sha256": "c7bafa027d7a851a5ee824b120b9fad7c904bf83b3aa54ed3adc99fe804ec4c7"
+        },
+        {
+          "path": "references/upstream-original.txt",
+          "sha256": "d77efa11fa61ccaa875f269716f3da5417e48dd6f503aae5e6d43180e2630d45"
+        },
+        {
+          "path": "references/LICENSE.txt",
+          "sha256": "b2a071ba22fefd803f4e9d1f5c777dd79c62d191695586a1a73fd4d0ebd051c6"
+        },
+        {
+          "path": "references/source.json",
+          "sha256": "1b02a4a6ef4c9b72bfcda1a5ede553e9275e1ff4254fa1188ba083697eddd3f2"
+        },
+        {
+          "path": "references/sources.md",
+          "sha256": "642ab56ed0aaf74a7fa81dd4792f6acb77351f6e1a49a8720c7f624387282e00"
+        },
+        {
+          "path": "references/shared-vfx-original.txt",
+          "sha256": "14579867468da3b065d1b8c9644f4e9a8cea552526936c2518f3c150e049b9b0"
+        }
+      ]
+    }
+  ],
+  "definition": "Actual40 buffers. new:true/absent follows the one successful collision-refusing CreateNew; predeployment new:false/not_checked scaffold is retained unchanged.",
+  "central_operations": 0,
+  "root": "D:/CC/Skills",
+  "snapshot_definition": "Each file at its own successful read time; no atomic40 or immutable future filesystem guarantee."
+}

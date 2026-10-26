@@ -63,7 +63,7 @@ func (r *Runner) processConversations(ctx context.Context, health *Health) {
 	var waiting []ConversationQuestion
 	for _, id := range orderedConversationKeys(index) {
 		q := index.Questions[id]
-		if q.Wait && (q.Phase == "waiting" || q.Phase == "answered") {
+		if q.Wait && (q.Phase == "waiting" || q.Phase == "answered" || (q.Actor != nil && q.Phase == "posted")) {
 			waiting = append(waiting, q)
 		}
 	}
@@ -143,6 +143,14 @@ func (r *Runner) processConversations(ctx context.Context, health *Health) {
 		// Captures and delivery remain sequential. An exhausted delivery budget
 		// is visible and retried from the same question and source version.
 		if ctx.Err() == nil {
+			if q.Actor != nil && q.Phase == "posted" && len(result.proof.Replies) == 0 {
+				updated, err := r.conversationActorWait(ctx, index, q)
+				if err != nil {
+					health.Errors = append(health.Errors, "conversation_wait_deferred")
+					continue
+				}
+				q = updated
+			}
 			r.processConversationReplies(ctx, index, result.id, q, result.proof, health)
 			check.DeliveryAt = r.Now().UTC().Format(time.RFC3339Nano)
 			snapshot.Checks[result.id] = check

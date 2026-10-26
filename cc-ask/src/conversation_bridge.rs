@@ -438,7 +438,7 @@ fn metadata(raw: &str, ask: bool, check_only: bool) -> Result<Value> {
                     && v.bytes()
                         .all(|b| b.is_ascii_alphanumeric() || b == b'-' || b == b'_')
             }),
-            "todo_id" => value.as_u64().is_some_and(|id| id != 0),
+            "todo_id" | "actor_todo_id" => value.as_u64().is_some_and(|id| id != 0),
             "origin_thread_id"
             | "thread_id"
             | "message_id"
@@ -457,7 +457,7 @@ fn metadata(raw: &str, ask: bool, check_only: bool) -> Result<Value> {
             "created_at" => value
                 .as_str()
                 .is_some_and(|v| chrono::DateTime::parse_from_rfc3339(v).is_ok()),
-            "wait_requested" | "reused" => value.is_boolean(),
+            "wait_requested" | "wait_deferred" | "reused" => value.is_boolean(),
             "check_only" | "original_intent_retained" => check_only && value == true,
             "phase" => matches!(
                 value.as_str(),
@@ -505,6 +505,24 @@ fn execute(
             continue;
         }
         if output.code != 0 {
+            let stage = output
+                .stdout
+                .trim()
+                .strip_prefix("conversation unavailable: ");
+            if let Some(
+                stage @ ("actor_scope"
+                | "task_scope"
+                | "original_task"
+                | "input_mismatch"
+                | "send_pending"
+                | "verification_pending"
+                | "wait_pending"
+                | "deadline"
+                | "operation_pending"),
+            ) = stage
+            {
+                return Err(format!("{CHILD_FAILED} [conversation:{stage}]"));
+            }
             return Err(CHILD_FAILED.into());
         }
         return Ok(Some(metadata(&output.stdout, ask, check_only)?));
@@ -574,6 +592,19 @@ pub fn try_ask(home: &Path, effects: &mut dyn Effects, args: &AskArgs) -> Result
         args.title.clone(),
         "--wait".into(),
     ]);
+    // Actor context is routing evidence, never part of the original question ID.
+    match (args.scheduler_item, args.scheduler_job.as_deref()) {
+        (None, None) => (),
+        (Some(item), Some(job)) if item > 0 && !job.is_empty() => {
+            argv.extend([
+                "--scheduler-item".into(),
+                item.to_string(),
+                "--scheduler-job".into(),
+                job.into(),
+            ]);
+        }
+        _ => return Err(INVALID_INPUT.into()),
+    }
     append_attachments(&root, &directory, snapshots, &mut argv)?;
     execute(effects, &argv, true, false)
 }

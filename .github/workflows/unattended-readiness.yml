@@ -66,9 +66,11 @@ jobs:
   repair-guard:
     if: github.repository == 'AutoDevJapan/cc-pc-tools-rs' && (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository)
     runs-on: [self-hosted, Windows, X64, cc-pc-tools-windows]
-    # Compilation plus the complete guard suite exceeded the former 5m bound
-    # even though tests, vet and build succeeded. Keep a finite job budget.
-    timeout-minutes: 10
+    # The expanded guard suite includes 333 top-level tests and serial real-Git
+    # lineage checks (one seven-product group takes several minutes). A 10m
+    # job canceled it while tests were still progressing, before Go could emit
+    # its own timeout trace. Keep all cases and a finite diagnostic deadline.
+    timeout-minutes: 25
     defaults:
       run:
         working-directory: repair-guard
@@ -90,6 +92,9 @@ jobs:
           go-version-file: repair-guard/go.mod
           cache: false
       - run: go run ./internal/cataloggen -check
-      - run: go test ./...
+      # The suite opens many real Git paths. Hashing those test-cache inputs
+      # took another 323s after its 429s PASS on Windows. Always run the cases
+      # and skip result-cache bookkeeping; the compilation cache stays enabled.
+      - run: go test -count=1 -v -timeout 20m ./...
       - run: go vet ./...
       - run: go build -trimpath .

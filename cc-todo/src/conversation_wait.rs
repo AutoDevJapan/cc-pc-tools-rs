@@ -354,6 +354,53 @@ fn row_index(db: &Value, id: i64) -> Result<usize> {
 /// A caller's guard result is not a Rust identity proof. Bind the exact project
 /// and registered path which that caller checked, under the canonical store lock.
 pub fn check_scope(db: &Value, id: i64, path: &Path) -> Result<()> {
+    // Recheck the retained original and both specs under the canonical lock.
+    if let Ok((scope, _)) = read(
+        path,
+        &[
+            "domain",
+            "todo_id",
+            "project",
+            "project_path_sha256",
+            "origin_state_file",
+            "actor_spec_sha256",
+            "origin_spec_sha256",
+        ],
+    ) {
+        let index = row_index(db, id)?;
+        let origin = row_index(db, 1171)?;
+        let row = &db["items"][index];
+        let original = &db["items"][origin];
+        let expected: Value = serde_json::from_slice(&snapshot_bytes(Path::new(text(
+            &scope,
+            "origin_state_file",
+        )))?)
+        .map_err(|_| "conversation_state_invalid")?;
+        if scope["domain"] != "discord-conversation-actor-todo-scope-v1"
+            || id != 3277
+            || text(&scope, "todo_id") != id.to_string()
+            || scope["project"] != "GitDo"
+            || row["project"] != scope["project"]
+            || original["project"] != scope["project"]
+            || *original != expected
+            || text(&scope, "project_path_sha256")
+                != digest(db["projects"]["GitDo"].as_str().unwrap().as_bytes())
+            || !hash(text(&scope, "actor_spec_sha256"))
+            || !hash(text(&scope, "origin_spec_sha256"))
+            || digest(&bytes(Path::new(text(row, "spec")))?) != text(&scope, "actor_spec_sha256")
+            || digest(&bytes(Path::new(text(original, "spec")))?)
+                != text(&scope, "origin_spec_sha256")
+            || !matches!(
+                text(original, "status"),
+                "recovery_unverified" | "todo" | "doing" | "wait"
+            )
+        {
+            return fail("scope_changed");
+        }
+        holds_clear_with(db, original, true)?;
+        holds_clear_with(db, row, true)?;
+        return Ok(());
+    }
     let (scope, _) = read(
         path,
         &["domain", "todo_id", "project", "project_path_sha256"],
@@ -370,6 +417,63 @@ pub fn check_scope(db: &Value, id: i64, path: &Path) -> Result<()> {
         return fail("scope_changed");
     }
     Ok(())
+}
+
+/// Only the new finite actor scope turns a metadata delivery into pending prompt
+/// input. Normal edits keep their historical behavior. The caller holds todo.lock.
+pub fn actor_note_instruction(
+    db: &Value,
+    id: i64,
+    scope_file: &Path,
+    note_file: Option<&Path>,
+    changes_spec: bool,
+) -> Result<Option<String>> {
+    let Ok((scope, _)) = read(
+        scope_file,
+        &[
+            "domain",
+            "todo_id",
+            "project",
+            "project_path_sha256",
+            "origin_state_file",
+            "actor_spec_sha256",
+            "origin_spec_sha256",
+        ],
+    ) else {
+        return Ok(None);
+    };
+    if scope["domain"] != "discord-conversation-actor-todo-scope-v1" {
+        return Ok(None);
+    }
+    check_scope(db, id, scope_file)?;
+    if changes_spec {
+        return fail("note_invalid");
+    }
+    let row = &db["items"][row_index(db, id)?];
+    // question-answer adds the complete reply after releasing this exact wait.
+    // Appending it during the preceding edit would duplicate it in the prompt.
+    if !row[WAIT_KEY].is_null() {
+        return Ok(None);
+    }
+    let data = bytes(note_file.ok_or("conversation_note_invalid")?)?;
+    let note = std::str::from_utf8(&data).map_err(|_| "conversation_note_invalid")?;
+    let note = note
+        .strip_prefix('\u{feff}')
+        .unwrap_or(note)
+        .replace("\r\n", "\n")
+        .replace('\r', "\n");
+    let previous = text(row, "note").replace("\r\n", "\n").replace('\r', "\n");
+    let suffix = note
+        .strip_prefix(&previous)
+        .and_then(|s| s.strip_prefix("\n\n"))
+        .filter(|s| s.starts_with("conversation-owner-reply:") && !s.contains('\0'))
+        .ok_or("conversation_note_invalid")?;
+    let (instruction, _) =
+        continued::merge_instruction(&row["scheduler"]["owner_instruction"], suffix)?;
+    if instruction.len() as u64 > MAX_BYTES {
+        return fail("file_too_large");
+    }
+    Ok(Some(instruction))
 }
 
 pub fn check_snapshot(db: &Value, id: i64, path: &Path) -> Result<()> {

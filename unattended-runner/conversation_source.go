@@ -42,7 +42,7 @@ func (r *Runner) conversationSourceReacquire(ctx context.Context, q Conversation
 	if old != nil && len(old.ConversationAttachmentMetadata) != 0 {
 		return nil, errImplementation
 	}
-	if old != nil && (old.Conversation != q.RequestID || old.Thread != q.Thread || old.Message != reply.Message || old.Author != reply.Author || (old.Todo != 0 && old.Todo != q.Todo)) {
+	if old != nil && (old.Conversation != q.RequestID || old.Thread != q.Thread || old.Message != reply.Message || old.Author != reply.Author || (old.Todo != 0 && old.Todo != conversationRecipient(q))) {
 		return nil, errImplementation
 	}
 	// Record the old intake separately; neither its hash nor an inspection hash

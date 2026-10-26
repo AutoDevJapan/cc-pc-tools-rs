@@ -31,10 +31,11 @@ const official3894Safe = "D:/CC/Tools/safe-delete/safe-delete.exe"
 const official3894Temp = "C:/Users/makhmeto/AppData/Local/Temp"
 const official3894OriginalCreator = "20261026-064014-todo-3894"
 
-// Independent PR524 publisher receipt, not a hash learned from the target.
-// docs/evidence/skills-3080-guard-installed-60a1.json
-const official3894PreviousGuardSHA = "916bff404f54548814152efcd186dd772b33fd32872fd86fa88bc8d8718df9e3"
-const official3894PreviousGuardHead = "60a1b82b62d60cfcd66136aa4527041af643c4d6"
+// Independent PR525 publisher's actual current-runtime verification, not a hash
+// learned from an unknown target. The older PR524 receipt remains historical.
+// docs/evidence/official-ci3387-known-guard-baseline-038bc.json
+const official3894PreviousGuardSHA = "ccb5e797e6b5627d98ade2a562f2f98f3c121a5403e1523071afc07f73af4556"
+const official3894PreviousGuardHead = "038bc2570014132321919bf6758d68979506b741"
 
 type official3894Source struct {
 	Head, Registration, CreatorJob, Workspace, Branch, SpecSHA string

@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"errors"
 	"io"
+	"os"
 	"strconv"
 	"strings"
 	"testing"
@@ -192,10 +193,24 @@ func TestOfficialCI3894ExactWriter(t *testing.T) {
 }
 
 func TestOfficialCI3894InstalledSoftwarePin(t *testing.T) {
+	raw, e := os.ReadFile("../docs/evidence/official-ci3387-known-guard-baseline-038bc.json")
+	if e != nil {
+		t.Fatal(e)
+	}
+	var published struct {
+		Domain       string `json:"domain"`
+		RepositoryID int64  `json:"repository_id"`
+		SHA          string `json:"reported_current_sha256"`
+		Head         string `json:"reported_current_source_head"`
+	}
+	if json.Unmarshal(raw, &published) != nil || published.Domain != "official-ci3387-independent-guard-baseline-v1" || published.RepositoryID != 1406818713 || !official3894InstalledBaseline(published.SHA, published.Head) {
+		t.Fatal("compiled pin differs from the independent producer's accepted software metadata")
+	}
 	if !official3894InstalledBaseline(official3894PreviousGuardSHA, official3894PreviousGuardHead) {
 		t.Fatal("independent published pair missing")
 	}
 	for _, pair := range [][2]string{
+		{"916bff404f54548814152efcd186dd772b33fd32872fd86fa88bc8d8718df9e3", "60a1b82b62d60cfcd66136aa4527041af643c4d6"},
 		{strings.Repeat("a", 64), official3894PreviousGuardHead},
 		{official3894PreviousGuardSHA, strings.Repeat("a", 40)},
 		{strings.ToUpper(official3894PreviousGuardSHA), official3894PreviousGuardHead},

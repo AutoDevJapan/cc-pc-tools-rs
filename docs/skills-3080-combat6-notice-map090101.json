@@ -1,0 +1,169 @@
+{
+  "todo": 3080,
+  "source_repo": "MengTo/Skills",
+  "source_commit": "398cd41c86ba42fbb30e944ae507f463648f08b7",
+  "fixed_metadata": [
+    {
+      "name": "tree-recursive.json",
+      "sha256": "78e159cb1fabd9072bf8a6c667fe55aed8d1525cfffb2a5d2b94932e1faefc59",
+      "bytes": 506744,
+      "normal_guard_clear": true
+    },
+    {
+      "name": "content-index.jsonl",
+      "sha256": "1a9fa91b6ac4e9156b2f3548ca6cf3cdcb4377c6c52cc1bfb315fcb3efb90643",
+      "bytes": 200820,
+      "normal_guard_clear": true
+    }
+  ],
+  "tree_entries": 1915,
+  "truncated": false,
+  "root_tree": "8afedc8719f37d2026b55aef282ac27d8d873d76",
+  "selected_procedure_sources": 7,
+  "rows": [
+    {
+      "source_path": "agent-skills/game-combat/fire-smoke-skill-vfx/SKILL.md",
+      "source_sha256": "f883c371cbacdc7512510529206798ca5599b7fc4a8da54b2309de4e72924bca",
+      "source_blob": "8dd1160a6128420740f96e55228a41f1789f0d38",
+      "author_procedure_applicable_notice": [
+        {
+          "path": "LICENSE",
+          "mode": "100644",
+          "type": "blob",
+          "sha": "b3a5f823a69b4b010f92930ac09e8a776daf65c6",
+          "size": 1064,
+          "url": "https://api.github.com/repos/MengTo/Skills/git/blobs/b3a5f823a69b4b010f92930ac09e8a776daf65c6"
+        }
+      ],
+      "package_tree_blob_paths": 16,
+      "acquired_index_paths": 3,
+      "unsaved_paths": 13,
+      "third_party_assets_or_helpers_not_accepted": true,
+      "no_additional_package_body_read": true
+    },
+    {
+      "source_path": "agent-skills/game-combat/game-dev-combat-animation/SKILL.md",
+      "source_sha256": "a0ea4fcd84ac57673c16d8f7ad116f5d900d0556c4cecdd08b23fdb623181ac0",
+      "source_blob": "3176811d6a3d400224fd5275301491d0086802c0",
+      "author_procedure_applicable_notice": [
+        {
+          "path": "LICENSE",
+          "mode": "100644",
+          "type": "blob",
+          "sha": "b3a5f823a69b4b010f92930ac09e8a776daf65c6",
+          "size": 1064,
+          "url": "https://api.github.com/repos/MengTo/Skills/git/blobs/b3a5f823a69b4b010f92930ac09e8a776daf65c6"
+        }
+      ],
+      "package_tree_blob_paths": 27,
+      "acquired_index_paths": 8,
+      "unsaved_paths": 19,
+      "third_party_assets_or_helpers_not_accepted": true,
+      "no_additional_package_body_read": true
+    },
+    {
+      "source_path": "agent-skills/game-combat/game-dev-combat-skill-polish/SKILL.md",
+      "source_sha256": "df2e76fd2e4fee031f6692260f7af3f4dcb85104c6283a4d7fb402763ea56109",
+      "source_blob": "6f3b53f078091f65c21dfd65dec4174c865cb033",
+      "author_procedure_applicable_notice": [
+        {
+          "path": "LICENSE",
+          "mode": "100644",
+          "type": "blob",
+          "sha": "b3a5f823a69b4b010f92930ac09e8a776daf65c6",
+          "size": 1064,
+          "url": "https://api.github.com/repos/MengTo/Skills/git/blobs/b3a5f823a69b4b010f92930ac09e8a776daf65c6"
+        }
+      ],
+      "package_tree_blob_paths": 13,
+      "acquired_index_paths": 4,
+      "unsaved_paths": 9,
+      "third_party_assets_or_helpers_not_accepted": true,
+      "no_additional_package_body_read": true
+    },
+    {
+      "source_path": "agent-skills/game-combat/ice-frost-skill-vfx/SKILL.md",
+      "source_sha256": "597fea0f5a5086f8cf9dd76913268bd76d4040958d361be374bfec42a85020fb",
+      "source_blob": "c29ca7b1bff2364eebb048333157c47ac4b541a4",
+      "author_procedure_applicable_notice": [
+        {
+          "path": "LICENSE",
+          "mode": "100644",
+          "type": "blob",
+          "sha": "b3a5f823a69b4b010f92930ac09e8a776daf65c6",
+          "size": 1064,
+          "url": "https://api.github.com/repos/MengTo/Skills/git/blobs/b3a5f823a69b4b010f92930ac09e8a776daf65c6"
+        }
+      ],
+      "package_tree_blob_paths": 17,
+      "acquired_index_paths": 3,
+      "unsaved_paths": 14,
+      "third_party_assets_or_helpers_not_accepted": true,
+      "no_additional_package_body_read": true
+    },
+    {
+      "source_path": "agent-skills/game-combat/lightning-energy-skill-vfx/SKILL.md",
+      "source_sha256": "0d3a71982172236a29b8ebea9185f75fd72e46497f19589743274bd078877e31",
+      "source_blob": "54c7cc21e72eb10f098d13d1ea281ba4eb61cf19",
+      "author_procedure_applicable_notice": [
+        {
+          "path": "LICENSE",
+          "mode": "100644",
+          "type": "blob",
+          "sha": "b3a5f823a69b4b010f92930ac09e8a776daf65c6",
+          "size": 1064,
+          "url": "https://api.github.com/repos/MengTo/Skills/git/blobs/b3a5f823a69b4b010f92930ac09e8a776daf65c6"
+        }
+      ],
+      "package_tree_blob_paths": 16,
+      "acquired_index_paths": 3,
+      "unsaved_paths": 13,
+      "third_party_assets_or_helpers_not_accepted": true,
+      "no_additional_package_body_read": true
+    },
+    {
+      "source_path": "agent-skills/game-combat/water-crystal-skill-vfx/SKILL.md",
+      "source_sha256": "d77efa11fa61ccaa875f269716f3da5417e48dd6f503aae5e6d43180e2630d45",
+      "source_blob": "95b54921ed28425f03e800a02e9dff8267b6220e",
+      "author_procedure_applicable_notice": [
+        {
+          "path": "LICENSE",
+          "mode": "100644",
+          "type": "blob",
+          "sha": "b3a5f823a69b4b010f92930ac09e8a776daf65c6",
+          "size": 1064,
+          "url": "https://api.github.com/repos/MengTo/Skills/git/blobs/b3a5f823a69b4b010f92930ac09e8a776daf65c6"
+        }
+      ],
+      "package_tree_blob_paths": 19,
+      "acquired_index_paths": 3,
+      "unsaved_paths": 16,
+      "third_party_assets_or_helpers_not_accepted": true,
+      "no_additional_package_body_read": true
+    },
+    {
+      "source_path": "agent-skills/game-development/create-game-vfx/SKILL.md",
+      "source_sha256": "14579867468da3b065d1b8c9644f4e9a8cea552526936c2518f3c150e049b9b0",
+      "source_blob": "8830855f033ccd6de2bf256cb7960e7d2ae24ebf",
+      "author_procedure_applicable_notice": [
+        {
+          "path": "LICENSE",
+          "mode": "100644",
+          "type": "blob",
+          "sha": "b3a5f823a69b4b010f92930ac09e8a776daf65c6",
+          "size": 1064,
+          "url": "https://api.github.com/repos/MengTo/Skills/git/blobs/b3a5f823a69b4b010f92930ac09e8a776daf65c6"
+        }
+      ],
+      "package_tree_blob_paths": 2,
+      "acquired_index_paths": 1,
+      "unsaved_paths": 1,
+      "third_party_assets_or_helpers_not_accepted": true,
+      "no_additional_package_body_read": true
+    }
+  ],
+  "notice_sha256": "b2a071ba22fefd803f4e9d1f5c777dd79c62d191695586a1a73fd4d0ebd051c6",
+  "scope": "Only the selected author procedure texts and explicit shared text; root MIT is not a grant for third-party images, fonts, models, SDKs, service accounts or unread modules",
+  "new_global_primary_credit": 0,
+  "source_scripts_executed": 0
+}

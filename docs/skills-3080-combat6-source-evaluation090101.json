@@ -1,0 +1,96 @@
+{
+  "todo": 3080,
+  "reader_job": "20261026-090101-todo-3080",
+  "complete_literal_sources": 8,
+  "selected_procedures": 7,
+  "new_global_unique_primary_credit": 0,
+  "source_texts_already_in_previous177_primary_coverage": true,
+  "source_packet_sha256": "5d720502d9ccdb5f227381e85a152330cd50c15f774b68024997e8706f56c56d",
+  "findings": {
+    "current_notice": {
+      "source": "MengTo/Skills",
+      "commit": "398cd41c86ba42fbb30e944ae507f463648f08b7",
+      "path": "LICENSE",
+      "bytes": 1064,
+      "sha256": "b2a071ba22fefd803f4e9d1f5c777dd79c62d191695586a1a73fd4d0ebd051c6",
+      "copyright": "Copyright (c) 2026 Meng To",
+      "literal_full_read": true,
+      "author_text_scope_only_no_assets_services": true
+    },
+    "animation_findings": [
+      "Shoulder-relative hand intent, world/local blade directions, per-frame real-skin and camera validation are useful.",
+      "Angle, skin-tail and no-overhead limits belong to the documented rig; do not impose them on all rigs.",
+      "Prior Tripo-only/Mixamo/Quaternius account decisions and scores/5of8 are original-project claims, not this owner facts.",
+      "Referenced scripts/project/rig/templates remain unverified; no automatic Python/module/service/asset execution or purchase."
+    ],
+    "polish_findings": [
+      "Readability/art rubrics, caster/effect/result and arrival/contact timing must remain distinct.",
+      "Stopped-clock pictures are controlled sample timing, not FPS or device proof; keep source stable while capturing.",
+      "Blind-score lower result and calibration are conditional scoring workflows; no automatic two-agent spawning.",
+      "Modelled assets and source numeric score ceilings are contextual reports, not universal quality/expense rules."
+    ],
+    "fire_findings": [
+      "Buoyant height coordinate and shared effect dt, per-feature random streams, band limit by reduced target footprint, pre-bound fade, light/density overlap separation.",
+      "Premultiplied over can attenuate the background; additive black contributes zero and cannot create coverage occlusion. Do not literalize source wording into a universal grey-output claim.",
+      "Source smoke-curtain smoothstep(2.4,0.7,y) has reversed edges. Retain original; any implementation should express descending fade with increasing edges and complement.",
+      "96cubed/noise/pool/buffer/performance figures are source configuration and best-of-six timer sampling, not PC runtime guarantees.",
+      "Three inverting events per instance or fixed counter is not an overall flash assessment. Prefer nonflashing alternatives, account for combined layers/window/area/color, and do not promise medical safety.",
+      "Assets, modules, demo, textures, optional references and actual render compatibility are unverified and unexecuted."
+    ],
+    "ice_findings": [
+      "Time-ordered seeded growth and frozen arrival atlas can separate layout from reveal; deterministic tie rules, bounded growth and post-transform constraint rechecks remain implementation acceptance conditions.",
+      "Convex half-space entry/exit, starts-inside/parallel rays, media-ratio total internal reflection and world-distance Beer-Lambert need explicit contracts. Original IOR1.31 and coefficients are demo settings.",
+      "Cracks and fragment cutting should share planes; one-contact landing/sleep/face tipping and six-mm separation are approximations to validate, not proof of full collision dynamics.",
+      "Distance-field MRT2x2048x1855 and 96cubed noise have measurable memory budgets before any GPU allocation. No buffers allocated here.",
+      "MSAA-HalfFloat failure, procedural-vs-scanned look and performance estimates belong to source backend/configuration; do not generalize them into PC-wide bans or guaranteed performance.",
+      "Source two sampling protocols show best-of-five redraws differ from live every-frame queries; retain both and do not claim this PC frame times.",
+      "Seed streams, framing, shared-vertex copy before recentering, separate fine/strong glint metrics and isolated mist view are useful validation criteria.",
+      "Old asset/SDK/renderer compatibility, geometry safety after leaning, anti-aliasing and all rendered claims remain unverified by this parent."
+    ],
+    "lightning_findings": [
+      "Branch/junction leader arrival, connection flare, held channel/afterglow and one outer discharge state machine give explicit event timing.",
+      "Store orb-owned geometry relative to a stable anchor; update uniforms per frame and rebuild bounded point/strip buffers only on deterministic tick changes. Ring capacity131072 and draw capacity60000 differ and require bounds/recycle generation checks.",
+      "Hit-stop must take precedence over a minimum ramp speed. Define simulation and presentation clocks; a global rolling real-time flash budget is separate from frozen simulation time.",
+      "Shared signed distortion and one tone-map/output conversion, premultiplied black coverage, zero-at-quad edges and measured post-composite color spaces are useful contracts.",
+      "Mirrored bolts with GreaterDepth and y0 floor are a planar reflection approximation; validate ground mask/occluders and actual depth convention, not every surface.",
+      "Noise texture defaults, sine/Perlin failures, CCW ribbon advice and ACES/performance reports belong to source implementation/backend; inspect project types/filter/coordinate/winding and use measured CPU/GPU reports.",
+      "The source has no body and its scanned floor/module/assets/runtime are unverified here. No copied shader, asset, code execution or GPU use.",
+      "Source budgets/colors/character brief/frame values and source user preferences are contextual examples. Image scope approval and original owner constraints remain."
+    ],
+    "water_findings": [
+      "Refraction frame copies, mirror layer/camera clipping and solid/water pass ordering need an explicit acyclic render graph and screen-edge/offscreen fallbacks.",
+      "Sphere-trace steps require a conservative field/step contract; warped procedural fields are not automatically exact SDFs.",
+      "Parallel-transport tube frames need zero/antiparallel tangent and closed-loop handling. Cull invalid/near/behind projection before perspective division.",
+      "Shared terrain math/hash is not proof of visible mesh vs CPU cache/interpolation equality. Compare the collision query to actual rendered geometry and all shard corners.",
+      "Corner-in-hull overlap tests can miss edge/edge convex intersections; use or validate the project collision method. Original240Hz/contact/114of120/1.9mm are measured source settings/results, not current guarantees.",
+      "Crystal IOR1.57/RGB dispersion/gain and water highlight rules include art-directed approximations; do not claim spectral transport or energy conservation.",
+      "Keep separate resonance pulse start times and sum bounded active pulses. Reserve hero/rain ripple slots rather than allow one class to evict the other.",
+      "Best-of-six redraw timing and claimed Metal timer failures are contextual; retain all-frame CPU/GPU distributions, disjoint/availability and contention conditions when actually measuring.",
+      "Source licensed images/layout.py/scanned textures/modules/helper code are unverified and unexecuted. Color, normal and ORM encoding/linearization require separate validation; do not force JPEG85 for all maps.",
+      "Source still reports murky orb/frosted crystals/cloud issues. Do not quote it as fully resolved visual/physical quality."
+    ],
+    "common_vfx_findings": [
+      "Owner/duration/meaning/cap/cleanup and reduced-motion equivalent are useful shared contract; do not create a duplicate generic module merely for entry counts."
+    ],
+    "technical_primary_sources": [
+      {
+        "topic": "smoothstep edge ordering",
+        "url": "https://registry.khronos.org/OpenGL/specs/gl/GLSLangSpec.4.60.html",
+        "claim": "Result undefined for nonincreasing edge order; decreasing masks use a complemented increasing transition",
+        "status": "official primary search result verified; registry xhtml endpoint unsupported, third-party docs not used as authority"
+      },
+      {
+        "topic": "flash criterion and scope",
+        "url": "https://www.w3.org/WAI/WCAG22/Understanding/three-flashes-or-below-threshold.html",
+        "claim": "Any one-second period and/or flash thresholds apply to whole-page content; full scale and looped content assessment differs from an instance event counter",
+        "status": "official primary page opened; no whole-guide or medical safety claim"
+      }
+    ]
+  },
+  "all_support_modules_read": false,
+  "third_party_rights_accepted": false,
+  "new_fetches": 0,
+  "source_scripts_executed": 0,
+  "rendered_or_deployed_UI": false,
+  "whole16_complete": false
+}

@@ -19,11 +19,20 @@ select another root, assignment, timestamp, response digest or output file.
 All arguments are rejected before any metadata acquisition. Non-Windows returns
 the existing explicit unavailable result.
 
-Only this review and, through the unchanged existing reader-review marker, one
+Only this review and, through the existing reader-review marker, one
 review of the exact clean adapter build may be projected. The latter must start
 after the build's commit, name that full revision and match the same normal
 thread/result/native turn. A duplicate or conflicting match fails; old proof
 is not used as current execution evidence.
+
+The supervisor's normal API identifies the consumer review as a delegated
+execution, with a distinct root and matching parent at depth 1. This purpose
+also pins that original parent ID. Its own build review may use the same
+single-execution delegated shape, with valid distinct IDs and matching
+parent/root, in the same fixed bot/thread. Its exact revision, post-commit time,
+result digest and unique native final must still match. Earlier commands keep
+their original root-only admission. A changed parent, rerun, duplicate or
+conflicting build review supplies no execution authority.
 
 Validation uses synthetic normal-result metadata, changed/duplicate fields,
 CLI override rejection, the existing runtime metadata tests, race and vet.

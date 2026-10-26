@@ -270,6 +270,10 @@ func omb3255ChooseRoots(job obj, revision string, commitMS int64) ([]omb3255Expe
 }
 
 func omb3255ChooseRootsFor(job obj, revision string, commitMS int64, wanted []omb3255ExpectedRoot) ([]omb3255ExpectedRoot, error) {
+	return omb3255ChooseNodesFor(job, revision, commitMS, wanted, omb3255RootValid)
+}
+
+func omb3255ChooseNodesFor(job obj, revision string, commitMS int64, wanted []omb3255ExpectedRoot, valid func(obj) bool) ([]omb3255ExpectedRoot, error) {
 	if omb3255Text(job["threadId"]) != omb3255Task {
 		return nil, omb3255RuntimeUnavailable
 	}
@@ -280,13 +284,13 @@ func omb3255ChooseRootsFor(job obj, revision string, commitMS int64, wanted []om
 		id := omb3255Text(row["id"])
 		byID[id] = append(byID[id], row)
 		result := omb3255Text(row["result"])
-		if revision != "" && commitMS > 0 && omb3255RootValid(row) && omb3255Int(row["startedAt"]) >= commitMS && strings.Contains(result, omb3255ReaderMarker) && strings.Contains(result, revision) {
+		if revision != "" && commitMS > 0 && valid(row) && omb3255Int(row["startedAt"]) >= commitMS && strings.Contains(result, omb3255ReaderMarker) && strings.Contains(result, revision) {
 			own = append(own, omb3255ExpectedRoot{id, omb3255Int(row["startedAt"]), omb3255Int(row["finishedAt"]), omb3255TextSHA(result)})
 		}
 	}
 	for _, expected := range wanted {
 		rows := byID[expected.ID]
-		if len(rows) != 1 || !omb3255RootValid(rows[0]) || omb3255Int(rows[0]["startedAt"]) != expected.Start || omb3255Int(rows[0]["finishedAt"]) != expected.Finish || omb3255TextSHA(omb3255Text(rows[0]["result"])) != expected.SHA {
+		if len(rows) != 1 || !valid(rows[0]) || omb3255Int(rows[0]["startedAt"]) != expected.Start || omb3255Int(rows[0]["finishedAt"]) != expected.Finish || omb3255TextSHA(omb3255Text(rows[0]["result"])) != expected.SHA {
 			return nil, omb3255RuntimeUnavailable
 		}
 	}
@@ -310,6 +314,10 @@ func omb3255CollectRefs(ctx context.Context, rpc *omb3255MetadataRPC, revision s
 }
 
 func omb3255CollectRefsFrom(get func(string) (obj, error), call func(string, obj) (obj, error), revision string, commitMS int64, expectedRoots []omb3255ExpectedRoot) ([]omb3255RuntimeRef, string, error) {
+	return omb3255CollectRefsWithChooser(get, call, revision, commitMS, expectedRoots, omb3255ChooseRootsFor)
+}
+
+func omb3255CollectRefsWithChooser(get func(string) (obj, error), call func(string, obj) (obj, error), revision string, commitMS int64, expectedRoots []omb3255ExpectedRoot, choose func(obj, string, int64, []omb3255ExpectedRoot) ([]omb3255ExpectedRoot, error)) ([]omb3255RuntimeRef, string, error) {
 	if get == nil || call == nil || len(expectedRoots) == 0 || len(expectedRoots) > 15 {
 		return nil, "", omb3255RuntimeUnavailable
 	}
@@ -343,7 +351,7 @@ func omb3255CollectRefsFrom(get func(string) (obj, error), call func(string, obj
 	if err != nil {
 		return nil, "", err
 	}
-	requested, err := omb3255ChooseRootsFor(job, revision, commitMS, expectedRoots)
+	requested, err := choose(job, revision, commitMS, expectedRoots)
 	if err != nil {
 		return nil, "", err
 	}

@@ -275,9 +275,13 @@ func omb3255AcquireRuntimeAt(expected []omb3255ExpectedRoot, sourceRoot string) 
 	var admitted []omb3255RuntimeRef
 	var nativePath string
 	collect := func() ([]omb3255RuntimeRef, string, error) {
-		return omb3255CollectRefsFrom(func(endpoint string) (obj, error) {
+		choose := omb3255ChooseRootsFor
+		if omb3255SamePath(sourceRoot, consumerReviewSourceRoot) && reflect.DeepEqual(expected, consumerReviewRuntimeRoots()) {
+			choose = consumerReviewChooseNodes
+		}
+		return omb3255CollectRefsWithChooser(func(endpoint string) (obj, error) {
 			return omb3255NormalGET(ctx, endpoint)
-		}, rpc.Call, revision, commitMS, expected)
+		}, rpc.Call, revision, commitMS, expected, choose)
 	}
 	recheckProtection := func() bool {
 		source, err := omb3255Guard(ctx, anchor)

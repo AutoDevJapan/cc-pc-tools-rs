@@ -1,5 +1,52 @@
 # 元4011の再開情報
 
+## 最新：06:24にprovider minimum3200MiBの実反映を確認、有限な保持確認へ
+
+現在registryは**MinDiffAreaFileSize=3200 DWORD**、正規provider値3,355,443,200B。
+source164fbeadaf9d420c3eb308ed102d36489a76c90eでApply実成功、request/resultは
+同`.ci-work/4011/os-v2/reactivation-request.private.json`と`reactivation-apply-result.private.json`。
+前者SHACC6F2AB3.../後者4BCDB1DE...。初回configuration/rollback/A票を一切上書きせず保持。
+StageA/Bを再実行しない。現原token305F3E2D8D193BBC/EFA3F28F34D9899Bとpoint262/263が必要対象。
+reactivate Applyも既存requestがあるので再実行しない。必要なsetting復帰は**reactivate -Mode Undo**を使う。
+昔のrollback.ps1は既に終了済み票があるため、今の再適用値を戻す窓口として流用しない。
+
+4039の最終原応答を受領：succeeded/exit0/20steps/native_turn_context Opus5.5 max、固定4対象全文読了。
+原文3151字/SHA9AD4FD5C999B3B1488B5F023ECDD30A658536C86269C99B03D88E1E4D3A12E92。
+方針とGo ABI/解放は妥当、Must3は失敗票/Undo helper依存/新世代と既存拡張の区別。
+164fbeadで具体修正し、PS5.1/7の8source parse/JSON往復成功後に実Applyを通常AdminBrokerで実行。
+Mode Undoはhelperが無くてもregistry復帰/結果保存を先に行い、その後query不能は区別して記録する。
+Apply異常経路とhelper欠落Undoの実registryテストは未実施のまま明示し、実施済みと偽らない。
+
+06:24:56→06:25:38の同token区間：used7977254912→8578416640/alloc8507375616→8977137664、
+max53687091200不変、2世代persistent/state12/points262263、new volsnap0/complete true/errors0。
+provider値反映と既存集合の割当変化を確認したが、初期予約/25防止効果/夜間保持はまだ未検証。
+06:25 free C349132865536/D2088747687936/E858052489216B、並行IOを含み回収量ではない。
+
+次は既存todo wait-retryで10/27 **07:00頃に1回**正常再開し、同じpoint/設定/provider/volsnapを確認する。
+現在の差分増加速度では夜間前に50GiBの正常33世代交代もあり得るので、25全消失と混同しない。
+新token出現区間の割当増を既存拡張と数えない。既存拡張だけで初期minimum効果を断定しない。
+次の夜間01:45/02:40両方を経た保持と、正常に現れる新世代の初期量を別の証拠で確認する。
+最大48h2夜/10月29日06:25を上限に、未達/異常ならreactivate Undoで自己DWORDだけ元へ戻し原4011未完を保つ。
+新監視/task/heartbeat/point作成loopを作らず、既存schedulerの有限なwait-retryだけを使う。
+同じworktree/os-v2を観測/復帰判断まで保ち、別checkoutから実行しない。
+Go helperはminimum-build-055203.private.jsonのsource/byteSHAで照合、次回必要なら新ownedTempへ通常Go build。
+Undo時は旧tempの不存在でもregistry復帰を妨げない（query結果だけ未確認として残す）。
+
+自己Temp b1eb802a589236fccb3f585951053174は必要launcher/診断sourceを
+`.ci-work/4011/temp-055203-sources`へ保存し、plan4,083,349論理B/20entries→別exec通常削除→
+finish source_absentを確認した。Go source/manifest/実値/原Broker/os-v2は保持済み。
+次回はこの終了Tempを再利用しない。正常queryが必要なら新しいsafe-delete createのownedTempへ
+同sourceを通常Go buildし、新しい自分のbyteSHAでquery/必要Undoを呼ぶ。
+自己Temp回収をVSSの容量回収や原C急変の解明に数えない。タブ/コンテナ/自作常駐0。
+
+06:28の最新端点も同じ2token/point262263、used9768173568/allocated10151542784/max53687091200、
+reactivation前からused+1790918656/allocated+1644167168B、新volsnap0/complete/errors0、registry3200。
+原`reactivation-first-comparison`とは別の`reactivation-followup-comparison.private.json`と
+`after-reactivation-followup-055203.private.json`へ保存し、最初の再適用後原観測を上書きしていない。
+free C347923210240/D2081290506240/E858052489216B。初期予約効果/夜間はまだ未検証。
+
+以下の「現在registry未設定/次のreview待ち」は以前の時点の履歴。現在の設定状態はこの節を正とする。
+
 ## 2026-10-27 05:52再開：実適用/point作成/原設定復帰まで実施
 
 実job20261027-055203-todo-4011、開始1344aa13/同branch、未コミット0から継続。

@@ -16,6 +16,10 @@ func TestMotionFourOperationUsesStrictCreationContract(t *testing.T) {
 	checkCreationInputContract(t, "skills-3080-operations/create-motion4-214717.json", "MengTo/Skills", "b2a071ba22fefd803f4e9d1f5c777dd79c62d191695586a1a73fd4d0ebd051c6", 4, 24)
 }
 
+func TestPricingTwoOperationUsesStrictCreationContract(t *testing.T) {
+	checkCreationInputContract(t, "skills-3080-operations/create-pricing2-214717.json", "MengTo/Skills", "b2a071ba22fefd803f4e9d1f5c777dd79c62d191695586a1a73fd4d0ebd051c6", 2, 12)
+}
+
 func checkCreationInputContract(t *testing.T, file, repo, notice string, sources, files int) {
 	t.Helper()
 	var operation struct {

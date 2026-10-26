@@ -1,0 +1,54 @@
+{
+  "todo": 3080,
+  "actual_author": "20261026-214717-todo-3080",
+  "records": [
+    {
+      "name": "orange-clean-paper-saas",
+      "inventory_id": "github:d069b46afe20612b0a7740204ef71f0a4d55da7dd92293978eb60ad2c84b1128",
+      "inventory_unit": "github_skill_entry",
+      "repo": "MengTo/Skills",
+      "commit": "398cd41c86ba42fbb30e944ae507f463648f08b7",
+      "path": "agent-skills/web-design/orange-clean-paper-saas/SKILL.md",
+      "sha256": "4f532470971c92edd7407dfba5ec6656e0377c213903bd68bd82281b7ea39788",
+      "git_blob": "2aefa1604a5699c81135d5e99efa2b33d6584845",
+      "bytes": 4038,
+      "actual_parent_reader": "20261026-214717-todo-3080",
+      "current_read": "raw full/mask0; same buffer SHA/bytes/Gitblob/strictUTF8 verified; not secret absence proof",
+      "prior_unknown_reader_privacy_profiles_not_replaced": true,
+      "source_execution": 0
+    },
+    {
+      "name": "pricing-page",
+      "inventory_id": "github:9c6a936947bd96735fc78821b61854f74ceef411c91ed8d0447bfc4a528b30e6",
+      "inventory_unit": "github_skill_entry",
+      "repo": "MengTo/Skills",
+      "commit": "398cd41c86ba42fbb30e944ae507f463648f08b7",
+      "path": "agent-skills/web-design/pricing-page/SKILL.md",
+      "sha256": "9b3af6174e379042ea1579f5d62b6fb0030fe6298d35b417488ac1e5ef8159db",
+      "git_blob": "6b05068ccaebafc8d991d352f1ba7dcd446e8806",
+      "bytes": 5858,
+      "actual_parent_reader": "20261026-214717-todo-3080",
+      "current_read": "raw full/mask0; same buffer SHA/bytes/Gitblob/strictUTF8 verified; not secret absence proof",
+      "prior_unknown_reader_privacy_profiles_not_replaced": true,
+      "source_execution": 0
+    }
+  ],
+  "current_full_original_bytes": 9896,
+  "new_global_unique_credit": 0,
+  "publisher": {
+    "owner": "MengTo",
+    "repository": "MengTo/Skills",
+    "repository_id": 1148744000,
+    "public": true,
+    "current_default_branch": "main",
+    "fixed_source_commit": "398cd41c86ba42fbb30e944ae507f463648f08b7",
+    "observation": "Same normal public GitHub API observation used for the immediately preceding motion4 input, no fresh query or default-branch-to-fixed-version equivalence inferred"
+  },
+  "meaning": [
+    "Orange paper: roles for surface/text/CTA/focus/error and form/product-panel hierarchy; contrast/accessibility/real data remain acceptance. Local repair is not a brand rewrite; demo names and metrics are not owner product claims.",
+    "Pricing: map approved price/currency/tax/cycle/usage limits/CTA and truthful FAQ; plan counts and guarantees are examples, not new prices/contracts. Annual total, monthly equivalent and discount denominators remain distinct. Current FAQ schema eligibility and conversion results not established."
+  ],
+  "nearby_relationship": "Provided/current name and description only; no unknown central body comparison or sameness assumption",
+  "actual_adoption_or_UI_implementation": 0,
+  "whole16_complete": false
+}

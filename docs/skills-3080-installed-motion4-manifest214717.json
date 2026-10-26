@@ -1,0 +1,160 @@
+{
+  "definition": "Actual newly created4; contents derived only from24 current qualified buffers in one normal bounded batch; not an atomic snapshot across files or historical continuity proof",
+  "targets": [
+    {
+      "name": "marquee-loop",
+      "new": true,
+      "before_sha256": "absent",
+      "positive": "装飾的なlogo帯の継ぎ目と停止・静止時の読め方を比較したい。",
+      "negative": "必読の文章や操作を止められない帯へ閉じ込め、複製も二重に読上げる。",
+      "sources": [
+        "https://github.com/MengTo/Skills/blob/398cd41c86ba42fbb30e944ae507f463648f08b7/agent-skills/web-design/marquee-loop/SKILL.md",
+        "https://github.com/MengTo/Skills/blob/398cd41c86ba42fbb30e944ae507f463648f08b7/LICENSE"
+      ],
+      "files": [
+        {
+          "path": "SKILL.md",
+          "sha256": "acf7c94c086184feeeee276d9b2ba0ab8ec44347d678f8fd9bbe79cab73d973b"
+        },
+        {
+          "path": "references/guide.md",
+          "sha256": "a49969c7bdaea19c6377af1e977f88e8003c2737046e7a36d91fdb55ad91ef37"
+        },
+        {
+          "path": "references/original-skill.txt",
+          "sha256": "53f705e5f245f414d4e88b88e5f997b3201d8f782d407a2f2b5794e7b2aea8ed"
+        },
+        {
+          "path": "references/LICENSE.txt",
+          "sha256": "b2a071ba22fefd803f4e9d1f5c777dd79c62d191695586a1a73fd4d0ebd051c6"
+        },
+        {
+          "path": "references/source.json",
+          "sha256": "07bdfb2c60d08094280a3420c080f8da011b4f44e8e54ab5de474212757d34ed"
+        },
+        {
+          "path": "references/sources.md",
+          "sha256": "d2b00db7dc907f24b5a1ca438dd7017b5c96c60ce15088d804c85b68aceef9f6"
+        }
+      ]
+    },
+    {
+      "name": "masked-reveal",
+      "new": true,
+      "before_sha256": "absent",
+      "positive": "短い日本語の見出しを見せ、初期化失敗や静止時も内容を読めるようにしたい。",
+      "negative": "linksやcontrolsを一括分割し、JS失敗時にhiddenのまま本文を残す。",
+      "sources": [
+        "https://github.com/MengTo/Skills/blob/398cd41c86ba42fbb30e944ae507f463648f08b7/agent-skills/web-design/masked-reveal/SKILL.md",
+        "https://github.com/MengTo/Skills/blob/398cd41c86ba42fbb30e944ae507f463648f08b7/LICENSE"
+      ],
+      "files": [
+        {
+          "path": "SKILL.md",
+          "sha256": "d2c47dcb537517e1aa2e7853b7d3851d74221129a2fce2cea5c796602b9cb345"
+        },
+        {
+          "path": "references/guide.md",
+          "sha256": "4c45d16730373a5451a4676af6a306d2502df442c77dac13b11ad011435dc261"
+        },
+        {
+          "path": "references/original-skill.txt",
+          "sha256": "a3e4fb96f6092ac382530db24fdd15da559e959c5b7e02d0503918c1358dcf03"
+        },
+        {
+          "path": "references/LICENSE.txt",
+          "sha256": "b2a071ba22fefd803f4e9d1f5c777dd79c62d191695586a1a73fd4d0ebd051c6"
+        },
+        {
+          "path": "references/source.json",
+          "sha256": "c3b3c0ea522a02c927b322cf5574daa1e2505f5d44b2f956d9bab587aedf99ec"
+        },
+        {
+          "path": "references/sources.md",
+          "sha256": "364769653a7318edf1eb8daf250c68427563a914c174221f7d44e0a7612996e3"
+        }
+      ]
+    },
+    {
+      "name": "gooey-blob-system",
+      "new": true,
+      "before_sha256": "absent",
+      "positive": "少数の円が近づくと一体化し離れる局所装飾を比較したい。",
+      "negative": "ぼかした円を重ねただけで融合や物理挙動を証明したことにする。",
+      "sources": [
+        "https://github.com/MengTo/Skills/blob/398cd41c86ba42fbb30e944ae507f463648f08b7/agent-skills/web-design/gooey-blob-system/SKILL.md",
+        "https://github.com/MengTo/Skills/blob/398cd41c86ba42fbb30e944ae507f463648f08b7/LICENSE"
+      ],
+      "files": [
+        {
+          "path": "SKILL.md",
+          "sha256": "0fbc0dc943f5393abfa6f7e8e297f27df0abc2e20512bac027b675a50a9cffc7"
+        },
+        {
+          "path": "references/guide.md",
+          "sha256": "eeb5b3ae0f224e62cdc6f9c4c4d9037435bf96ca1a3ba6101d4ea95d9d5591b0"
+        },
+        {
+          "path": "references/original-skill.txt",
+          "sha256": "48cef691946621cb90b0891a19b9bf9076fddfe54961847f78223515475894bd"
+        },
+        {
+          "path": "references/LICENSE.txt",
+          "sha256": "b2a071ba22fefd803f4e9d1f5c777dd79c62d191695586a1a73fd4d0ebd051c6"
+        },
+        {
+          "path": "references/source.json",
+          "sha256": "4b3c7e24ed942aaece3fd71f3c0a37aa5700c950cecac34b4cd64bbf15203d03"
+        },
+        {
+          "path": "references/sources.md",
+          "sha256": "fdb0141f97a6417e4e976469448f28ad9900c328483393ea6b556448820d9252"
+        }
+      ]
+    },
+    {
+      "name": "nested-container-frames",
+      "new": true,
+      "before_sha256": "absent",
+      "positive": "既存sectionの外殻と内側のpadding・枠線がずれた箇所を整理したい。",
+      "negative": "一箇所の余白修復から全体のbrandを変え、cardを際限なく重ねる。",
+      "sources": [
+        "https://github.com/MengTo/Skills/blob/398cd41c86ba42fbb30e944ae507f463648f08b7/agent-skills/web-design/nested-container-frames/SKILL.md",
+        "https://github.com/MengTo/Skills/blob/398cd41c86ba42fbb30e944ae507f463648f08b7/LICENSE"
+      ],
+      "files": [
+        {
+          "path": "SKILL.md",
+          "sha256": "8201f348009bbe30184df2eac5610d90858c37e97907f5097d8c5f51c49dff22"
+        },
+        {
+          "path": "references/guide.md",
+          "sha256": "82d5d42b17c0422a3f3f840835a8058fba9dd5ab9425d934ba22f3a35e82e82b"
+        },
+        {
+          "path": "references/original-skill.txt",
+          "sha256": "02fde1df60f9d13015a4a25a2d935831da78f665c263b5d166117e1889c151b0"
+        },
+        {
+          "path": "references/LICENSE.txt",
+          "sha256": "b2a071ba22fefd803f4e9d1f5c777dd79c62d191695586a1a73fd4d0ebd051c6"
+        },
+        {
+          "path": "references/source.json",
+          "sha256": "582590410333fef4a7be940c1f4cdb53fa414f70531a3af36db4171f414b89b0"
+        },
+        {
+          "path": "references/sources.md",
+          "sha256": "9a68983f6c1c4982622eabc080d282ea1a7ece0376652e682a5ec278a8c6c89e"
+        }
+      ]
+    }
+  ],
+  "central_operations": 0,
+  "new_adoptions": 0,
+  "new_adoptions_definition": "Serialization/checking performs no new adoption. Four actual placements and their separate ledger are evidenced by the installation record.",
+  "root": "D:/CC/Skills",
+  "creator_job": "20261026-214717-todo-3080",
+  "current_consumer_job": "20261026-214717-todo-3080",
+  "snapshot_definition": "Actual newly created4; contents derived only from24 current qualified buffers in one normal bounded batch; not an atomic snapshot across files or historical continuity proof"
+}

@@ -21,9 +21,15 @@ fn explicit_wait_snapshot_rejects_changed_owner_and_holds_before_register_or_rep
     let expected = f.file("explicit-wait-origin.json", &original["items"][0]);
     let call = || {
         f.command(&[
-            "question-wait", "1", "--question-file", question_file.to_str().unwrap(),
-            "--expected-state-file", expected.to_str().unwrap(),
-        ]).output().unwrap()
+            "question-wait",
+            "1",
+            "--question-file",
+            question_file.to_str().unwrap(),
+            "--expected-state-file",
+            expected.to_str().unwrap(),
+        ])
+        .output()
+        .unwrap()
     };
     for (key, value) in [
         ("resume_generation", json!(8)),
@@ -40,14 +46,20 @@ fn explicit_wait_snapshot_rejects_changed_owner_and_holds_before_register_or_rep
         let before = f.raw();
         let out = call();
         assert!(!out.status.success(), "accepted changed {key}");
-        assert_eq!(String::from_utf8_lossy(&out.stderr).trim(), "conversation_state_changed");
+        assert_eq!(
+            String::from_utf8_lossy(&out.stderr).trim(),
+            "conversation_state_changed"
+        );
         assert_eq!(before, f.raw());
     }
     f.write(&original);
     assert!(call().status.success());
     let parked = f.read();
     let before = f.raw();
-    assert!(!call().status.success(), "stale snapshot accepted an idempotent replay");
+    assert!(
+        !call().status.success(),
+        "stale snapshot accepted an idempotent replay"
+    );
     assert_eq!(before, f.raw());
     f.file("explicit-wait-origin.json", &parked["items"][0]);
     assert!(call().status.success());

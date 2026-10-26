@@ -37,5 +37,17 @@ CI663834fcは7fixtureで短縮Temp名比較が失敗。fixtureのみcanonicalize
 最新版の49関連テストとClippyを確認後commit/build/pin更新して限定追加レビューとCIを行う。
 c550be8f/22951fb0のsingle-link deliveryと149入力manifestは履歴（配布0）。
 現用は依然7fbc49...。新sourceでbyteを生成してから新しいmanifestとGo pinへ確定する。
+
+最新確定: Rust source a64372a6f1f1c969cb3b83c0cb39be22b433b924、clean通常release終了0。
+single-link delivery SHAa2658a6e60544a598a809ef85686e7ac87416ec57d042958865cdecdbddccb58。
+149入力manifestは証拠dir/build-manifest-a64372a6f1f1c969cb3b83c0cb39be22b433b924.private.json、
+SHA86a858825aea27f929b8dcb45e6fab3d4d1c66ec97e2ba23964033fce93b5be8。Go pinは0da6b8acで確定済み。
+最新49関連テスト/Clippy、Go race/vet成功。PR548新head CIと追加差分レビューを進める。
+CI旧6638の7失敗はfixtureの短縮名比較を修正済み。現在のcodeで正常Windows CI成功まで完了にしない。
+Root3570 rawjobは保持、normal published work claimと同じToDo job履歴で保持scopeだけ照合。
+3960は通常main sourceを1回Cargo checkし、正常done/元jobで実機回収を受入する独立builder。
+次: 最新追加review Must0/CI成功→通常merge→正規Go updater --completed-build-check/applyをAdminBrokerで
+実施→現用SHA/ACL/元backup一致確認→既存1h task実発火→3960等の実回収と不在/空き前後→自分のdebug回収。
+未知Rootや他担当のraw recordは修復目的へ拡大しない。現用更新/本件実回収はまだ0。
 safe-delete/3757、3939、元3628/3796/3815/3816のソース/状態/原scopeは変更しない。
 既削除8件を再回収・二重計上しない。本人回答とPC操作は不要。

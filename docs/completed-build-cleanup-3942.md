@@ -79,3 +79,8 @@ runnerのTemp短縮名とGitの長い名前の比較不一致が原因。新し�
 1回checkする。実際の生成元・終了jobを持つ不要な再生成物を用意し、正常Root done後に既存1hタスクで
 回収する。任意pathの所有登録・未知dataのコピー・Root/jobの手書きは行わない。
 正常な担当が作る既存Rust生成物の実受入であり、新しい常駐や清掃taskの追加ではない。
+
+配布pinの最新確定: source a64372a6、single-link delivery SHAa2658a6e60544a598a809ef85686e7ac87416ec57d042958865cdecdbddccb58。
+149入力manifest SHA86a858825aea27f929b8dcb45e6fab3d4d1c66ec97e2ba23964033fce93b5be8、
+Go pin commit0da6b8ac。上の旧pin未確定という記載は当時の履歴であり、現在の候補へ流用しない。
+49関連Windowsテスト/ClippyとGo race/vet成功。必要な追加固定レビュー/新head CI/マージ/反映/実発火は継続中。

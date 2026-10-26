@@ -2118,7 +2118,7 @@ mod tests {
         fs::hard_link(outside.join("original.bin"), root.join("deps/hard.bin")).unwrap();
         assert_eq!(
             inventory(&root, &f.artifacts(), &f.budget(), &mut Stats::default()).err(),
-            Some("LINK_OR_ATTRIBUTES")
+            Some("UNKNOWN_BUILD_CONTENT")
         );
         fs::remove_file(root.join("deps/hard.bin")).unwrap();
         let linked = root.join("deps/linked");

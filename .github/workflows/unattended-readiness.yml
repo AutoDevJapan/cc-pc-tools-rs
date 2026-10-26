@@ -92,6 +92,9 @@ jobs:
           go-version-file: repair-guard/go.mod
           cache: false
       - run: go run ./internal/cataloggen -check
-      - run: go test -v -timeout 20m ./...
+      # The suite opens many real Git paths. Hashing those test-cache inputs
+      # took another 323s after its 429s PASS on Windows. Always run the cases
+      # and skip result-cache bookkeeping; the compilation cache stays enabled.
+      - run: go test -count=1 -v -timeout 20m ./...
       - run: go vet ./...
       - run: go build -trimpath .

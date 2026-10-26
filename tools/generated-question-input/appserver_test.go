@@ -66,8 +66,10 @@ func TestInputTransportDisallowsModelMethodsAndAlreadyCancelledCalls(t *testing.
 	ctx, cancel := context.WithCancel(context.Background())
 	in := &recordingInput{}
 	rpc := &appServerRPC{ctx: ctx, cancel: cancel, in: in}
-	if _, err := rpc.Call(ctx, "turn/start", map[string]any{}); err != errInputSource || in.Len() != 0 {
-		t.Fatal("model method was written")
+	for _, method := range []string{"turn/start", "thread/start", "thread/resume", "thread/fork", "thread/archive", "account/login/start"} {
+		if _, err := rpc.Call(ctx, method, map[string]any{}); err != errInputSource || in.Len() != 0 {
+			t.Fatal("write or model method was written")
+		}
 	}
 	cancel()
 	if _, err := rpc.Call(ctx, "thread/read", map[string]any{}); err != errInputSource || in.Len() != 0 {
@@ -94,8 +96,11 @@ func TestInputDecoderStopsWhenConnectionIsCancelled(t *testing.T) {
 	frames := make(chan frameResult)
 	done := make(chan struct{})
 	go func() { decodeInputFrames(ctx, reader, frames); close(done) }()
+	wrote := make(chan struct{})
+	go func() { _, _ = io.WriteString(writer, "{\"id\":1,\"result\":{}}\n"); close(wrote) }()
+	<-wrote
 	cancel()
-	_ = writer.Close()
 	<-done
+	_ = writer.Close()
 	_ = reader.Close()
 }

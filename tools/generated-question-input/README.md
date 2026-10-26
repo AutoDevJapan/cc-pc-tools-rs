@@ -11,7 +11,9 @@ generated-question-input.exe --thread-id <UUID> --turn-id <UUID> --item-id <UUID
 画像名と画像SHAは少なくとも一方を指定する。
 このコマンドに画像のパス、実行ファイル、接続先、任意のAPI methodを渡すことはできない。
 本番の取得口は既存の `D:/CC/Tools/codex-progress-tui/codex-launch.exe app-server --listen stdio://` だけで、Windowsでは窓を表示しない。
-既存ログインを利用し、APIキーを選択する環境変数は子へ渡さない。
+Windowsの現在のトークンからprofileを取得して`CODEX_HOME`と標準のAppDataを固定し、PATHはWindowsのsystem directoryだけにする。
+呼出元の環境変数・APIキー・トークンは継承せず、正規profileの既存ログインを通常CLIが利用する。
+起動時にJob Objectへ原子的に所属させ、EOFで終了しないlauncherとその子孫も同じ保持ハンドルとJobのactive数で停止・終了を確認する。
 
 ## 照合順序
 
@@ -22,14 +24,16 @@ generated-question-input.exe --thread-id <UUID> --turn-id <UUID> --item-id <UUID
 5. 同じitemだけを`thread/items/read`で再取得し、turn・item・本文版の一致を確認する。
 6. 本文のSHAが引数と一致し、画像の識別子が一意で指定対象と一致することを確認する。
 
-スケジューラ起動文やToDo割当等の既知の自動入力は拒否するが、文頭検査で人間性を証明したとは扱わない。
+スケジューラ起動文やToDo割当等の既知の自動入力は拒否するが、文頭検査や`cli`/`vscode`の種別で人間性を証明したとは扱わない。
 同じOSユーザーの永続記録と正規AppServerは信頼境界であり、その環境の侵害や、user roleで記録された入力の作成者を証明する機能ではない。
 画像名とSHAがあっても、質問の意味・権限範囲との対応は別に確認する。
+画像名とSHAを両方指定した場合でも、本文が一方だけを一意に名指すなら入力参照の一致とするため、この結果は名前と画像SHAの対応を証明しない。
 
 本文版は、APIが返す単一textを正規化せずUTF-8へ符号化したSHA256とする。
 原native行のSHAや署名ではない。
 itemの発言時刻がnullでもturn開始時刻を発言時刻に代入せず、このコマンドでは利用期限を作らない。
 後続の用途検証は、元の保護条件、期限、元ToDo、生成イベント、原画像の同一バイト、質問scopeを別に検証する必要がある。
+古い履歴にrootTurnIdやturn開始時刻がない場合は、他の時刻やIDで補わず`root_turn_mismatch`で未成立を返す。
 
 ## 結果と限界
 

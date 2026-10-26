@@ -6,9 +6,7 @@ import (
 	"encoding/json"
 	"errors"
 	"io"
-	"os"
-	"os/exec"
-	"strings"
+	"path/filepath"
 	"time"
 )
 
@@ -58,13 +56,15 @@ func decodeInputFrames(ctx context.Context, in io.Reader, results chan<- frameRe
 }
 
 type appServerRPC struct {
-	ctx    context.Context
-	cancel context.CancelFunc
-	in     io.WriteCloser
-	frames <-chan frameResult
-	done   <-chan error
-	nextID int64
-	closed bool
+	ctx         context.Context
+	cancel      context.CancelFunc
+	in          io.WriteCloser
+	frames      <-chan frameResult
+	child       inputChild
+	output      io.ReadCloser
+	decoderDone <-chan struct{}
+	nextID      int64
+	closed      bool
 }
 
 func (r *appServerRPC) Call(ctx context.Context, method string, params any) (json.RawMessage, error) {
@@ -116,69 +116,72 @@ func (r *appServerRPC) Close() error {
 		return nil
 	}
 	r.closed = true
+	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+	defer cancel()
+	pinErr := r.child.PinMembers()
 	_ = r.in.Close()
-	grace := time.NewTimer(time.Second)
-	defer grace.Stop()
-	select {
-	case err := <-r.done:
-		r.cancel()
-		return err
-	case <-grace.C:
-		r.cancel()
-	case <-r.ctx.Done():
-		r.cancel()
+	grace, endGrace := context.WithTimeout(ctx, time.Second)
+	if r.ctx.Err() != nil {
+		endGrace()
 	}
-	deadline := time.NewTimer(2 * time.Second)
-	defer deadline.Stop()
-	select {
-	case <-r.done:
-	case <-deadline.C:
+	err := r.child.Wait(grace)
+	endGrace()
+	if err != nil {
+		_ = r.child.Stop(ctx)
 	}
-	return errInputSource
+	if pinErr != nil {
+		err = errInputSource
+	}
+	r.cancel()
+	_ = r.output.Close()
+	select {
+	case <-r.decoderDone:
+	case <-ctx.Done():
+		err = errInputSource
+	}
+	if r.child.Close() != nil {
+		err = errInputSource
+	}
+	return err
 }
 
-func inputSourceEnvironment(environ []string) []string {
-	result := make([]string, 0, len(environ))
-	for _, entry := range environ {
-		key, _, _ := strings.Cut(entry, "=")
-		switch strings.ToUpper(key) {
-		case "OPENAI_API_KEY", "ANTHROPIC_API_KEY", "AZURE_OPENAI_API_KEY", "CODEX_API_KEY", "OPENROUTER_API_KEY":
-			continue
-		}
-		result = append(result, entry)
+type inputPaths struct{ Profile, Windows string }
+
+// Values come from the current Windows token and directory APIs, never the
+// caller's home, executable search, token, endpoint or API-key variables.
+func inputSourceEnvironment(paths inputPaths) []string {
+	local := filepath.Join(paths.Profile, "AppData", "Local")
+	return []string{
+		"SYSTEMROOT=" + paths.Windows, "WINDIR=" + paths.Windows,
+		"PATH=" + filepath.Join(paths.Windows, "System32") + string(filepath.ListSeparator) + paths.Windows,
+		"USERPROFILE=" + paths.Profile, "HOME=" + paths.Profile,
+		"APPDATA=" + filepath.Join(paths.Profile, "AppData", "Roaming"), "LOCALAPPDATA=" + local,
+		"TEMP=" + filepath.Join(local, "Temp"), "TMP=" + filepath.Join(local, "Temp"),
+		"CODEX_HOME=" + filepath.Join(paths.Profile, ".codex"),
 	}
-	return result
 }
 
 func connectInstalledAppServer(ctx context.Context) (inputRPC, error) {
+	paths, err := nativeInputPaths()
+	if err != nil {
+		return nil, errInputSource
+	}
+	return connectInputCommand(ctx, installedLauncher, []string{"app-server", "--listen", "stdio://"}, inputSourceEnvironment(paths))
+}
+
+// A private Go test seam; the CLI never accepts an executable or environment.
+func connectInputCommand(ctx context.Context, path string, args, env []string) (inputRPC, error) {
 	life, cancel := context.WithCancel(ctx)
-	cmd := exec.CommandContext(life, installedLauncher, "app-server", "--listen", "stdio://")
-	hideInputProcess(cmd)
-	cmd.Env = inputSourceEnvironment(os.Environ())
-	cmd.Stderr = io.Discard
-	cmd.WaitDelay = time.Second
-	in, err := cmd.StdinPipe()
+	child, err := startInputChild(path, args, env)
 	if err != nil {
 		cancel()
 		return nil, errInputSource
 	}
-	out, err := cmd.StdoutPipe()
-	if err != nil {
-		_ = in.Close()
-		cancel()
-		return nil, errInputSource
-	}
-	if cmd.Start() != nil {
-		_ = in.Close()
-		_ = out.Close()
-		cancel()
-		return nil, errInputSource
-	}
+	in, out := child.Stdin(), child.Stdout()
 	frames := make(chan frameResult)
-	done := make(chan error, 1)
-	go decodeInputFrames(life, out, frames)
-	go func() { done <- cmd.Wait() }()
-	rpc := &appServerRPC{ctx: life, cancel: cancel, in: in, frames: frames, done: done}
+	decoderDone := make(chan struct{})
+	go func() { defer close(decoderDone); decodeInputFrames(life, out, frames) }()
+	rpc := &appServerRPC{ctx: life, cancel: cancel, in: in, frames: frames, child: child, output: out, decoderDone: decoderDone}
 	params := map[string]any{"clientInfo": map[string]string{"name": "cc_question_input_reference", "version": "1.0.0"}, "capabilities": map[string]bool{"experimentalApi": true}}
 	if _, err := rpc.Call(ctx, "initialize", params); err != nil {
 		_ = rpc.Close()
@@ -189,4 +192,13 @@ func connectInstalledAppServer(ctx context.Context) (inputRPC, error) {
 		return nil, errInputSource
 	}
 	return rpc, nil
+}
+
+type inputChild interface {
+	Stdin() io.WriteCloser
+	Stdout() io.ReadCloser
+	PinMembers() error
+	Wait(context.Context) error
+	Stop(context.Context) error
+	Close() error
 }

@@ -5,7 +5,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
-	"fmt"
+	"path/filepath"
 	"strings"
 	"testing"
 	"time"
@@ -79,10 +79,20 @@ func TestInputCLIWithGeneralPastInstructionIsNotAnImageGrant(t *testing.T) {
 	}
 }
 
-func TestInputSourceEnvironmentRetainsOAuthContextWithoutAPIKeys(t *testing.T) {
-	got := inputSourceEnvironment([]string{"PATH=synthetic", "OPENAI_API_KEY=private", "openrouter_api_key=private", "CODEX_API_KEY=private", "ANTHROPIC_API_KEY=private", "AZURE_OPENAI_API_KEY=private", "USERPROFILE=synthetic-profile", "CLAUDE_CODE_OAUTH_TOKEN=synthetic-oauth"})
-	want := "[PATH=synthetic USERPROFILE=synthetic-profile CLAUDE_CODE_OAUTH_TOKEN=synthetic-oauth]"
-	if fmt.Sprint(got) != want {
-		t.Fatal("API key environment or OAuth context changed unexpectedly")
+func TestInputSourceEnvironmentRejectsCallerSelectedRecordStoreAndExecutablePath(t *testing.T) {
+	paths := inputPaths{Profile: "D:/synthetic-profile", Windows: "C:/Windows"}
+	env := inputSourceEnvironment(paths)
+	values := map[string]string{}
+	for _, entry := range env {
+		key, value, _ := strings.Cut(entry, "=")
+		values[key] = value
+	}
+	if len(values) != 10 || values["CODEX_HOME"] != filepath.Join(paths.Profile, ".codex") || values["PATH"] != filepath.Join(paths.Windows, "System32")+string(filepath.ListSeparator)+paths.Windows || values["APPDATA"] != filepath.Join(paths.Profile, "AppData", "Roaming") {
+		t.Fatal("canonical source environment is not fixed")
+	}
+	for key := range values {
+		if strings.Contains(key, "TOKEN") || strings.Contains(key, "API_KEY") {
+			t.Fatal("credentials entered source environment")
+		}
 	}
 }

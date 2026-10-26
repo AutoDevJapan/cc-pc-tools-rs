@@ -22,13 +22,15 @@ func inputHash(s string) string {
 }
 
 type fakeInputRPC struct {
-	t          *testing.T
-	text       string
-	calls      []string
-	mutate     func(string, map[string]any) map[string]any
-	failMethod string
-	closeErr   error
-	closed     bool
+	t           *testing.T
+	text        string
+	calls       []string
+	mutate      func(string, map[string]any) map[string]any
+	failMethod  string
+	closeErr    error
+	closed      bool
+	wantCursors []string
+	turnPages   int
 }
 
 func (f *fakeInputRPC) Close() error { f.closed = true; return f.closeErr }
@@ -57,16 +59,29 @@ func (f *fakeInputRPC) Call(_ context.Context, method string, params any) (json.
 		}
 		result = map[string]any{"thread": map[string]any{"id": testThread, "source": "cli", "turns": []any{}}}
 	case "thread/turns/list":
-		if request["itemsView"] != "notLoaded" {
+		if request["itemsView"] != "notLoaded" || request["limit"] != float64(20) || request["sortDirection"] != "desc" {
 			f.t.Fatal("turn bodies requested")
+		}
+		if f.wantCursors != nil {
+			cursor, _ := request["cursor"].(string)
+			if f.turnPages >= len(f.wantCursors) || cursor != f.wantCursors[f.turnPages] {
+				f.t.Fatal("wrong turn continuation cursor")
+			}
+			f.turnPages++
 		}
 		result = map[string]any{"data": []any{map[string]any{"id": testTurn, "rootTurnId": testTurn, "startedAt": 100, "itemsView": "notLoaded", "items": []any{}}}}
 	case "thread/items/list", "thread/items/read":
 		if request["turnId"] != testTurn {
 			f.t.Fatal("wrong turn requested")
 		}
-		if method == "thread/items/list" && request["limit"] != float64(1) {
+		if method == "thread/items/list" && (request["limit"] != float64(1) || request["sortDirection"] != "asc") {
 			f.t.Fatal("more than the first item requested")
+		}
+		if method == "thread/items/read" {
+			ids, ok := request["itemIds"].([]any)
+			if !ok || len(ids) != 1 || ids[0] != testItem {
+				f.t.Fatal("wrong exact item requested")
+			}
 		}
 		result = map[string]any{"data": []any{map[string]any{"turnId": testTurn, "item": map[string]any{"id": testItem, "type": "userMessage", "content": []any{map[string]any{"type": "text", "text": f.text}}}}}}
 	default:
@@ -235,7 +250,7 @@ func TestInputReferenceAllowsOneSHAOrRepeatedSameImageButNoConflictingAlias(t *t
 func TestInputReferencePaginationIsBoundedAndDoesNotLoadItems(t *testing.T) {
 	text := "Review " + testImage
 	page := 0
-	f := &fakeInputRPC{t: t, text: text, mutate: func(m string, v map[string]any) map[string]any {
+	f := &fakeInputRPC{t: t, text: text, wantCursors: []string{"", "same-cursor"}, mutate: func(m string, v map[string]any) map[string]any {
 		if m == "thread/turns/list" {
 			page++
 			v["data"] = []any{}
@@ -253,6 +268,36 @@ func TestInputReferencePaginationIsBoundedAndDoesNotLoadItems(t *testing.T) {
 		if call == "thread/items/list" || call == "thread/items/read" {
 			t.Fatal("read item content without a root")
 		}
+	}
+}
+
+func TestInputReferenceFindsSecondPageAndCapsUniqueCursors(t *testing.T) {
+	text := "Review " + testImage
+	page := 0
+	f := &fakeInputRPC{t: t, text: text, wantCursors: []string{"", "second-page"}, mutate: func(m string, v map[string]any) map[string]any {
+		if m == "thread/turns/list" {
+			page++
+			if page == 1 {
+				v["data"] = []any{}
+				v["nextCursor"] = "second-page"
+			}
+		}
+		return v
+	}}
+	if r := inspectInputReference(context.Background(), f, validTestReference(text), 200); !r.SourceMatched || page != 2 {
+		t.Fatalf("second page was not accepted: %+v, pages=%d", r, page)
+	}
+	page = 0
+	f = &fakeInputRPC{t: t, text: text, wantCursors: []string{"", "1", "2", "3", "4", "5", "6", "7"}, mutate: func(m string, v map[string]any) map[string]any {
+		if m == "thread/turns/list" {
+			page++
+			v["data"] = []any{}
+			v["nextCursor"] = fmt.Sprint(page)
+		}
+		return v
+	}}
+	if r := inspectInputReference(context.Background(), f, validTestReference(text), 200); r.Code != "root_turn_not_found" || page != 8 {
+		t.Fatalf("unique cursors were not bounded: %+v, pages=%d", r, page)
 	}
 }
 

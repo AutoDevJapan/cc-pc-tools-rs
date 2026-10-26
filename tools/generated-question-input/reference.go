@@ -141,9 +141,11 @@ func inspectInputReference(ctx context.Context, rpc inputRPC, ref inputReference
 		}
 		var page struct {
 			Data []struct {
-				ID, RootTurnID, ItemsView string
-				StartedAt                 *int64
-				Items                     []json.RawMessage
+				ID         string            `json:"id"`
+				RootTurnID string            `json:"rootTurnId"`
+				ItemsView  string            `json:"itemsView"`
+				StartedAt  *int64            `json:"startedAt"`
+				Items      []json.RawMessage `json:"items"`
 			} `json:"data"`
 			NextCursor *string `json:"nextCursor"`
 		}

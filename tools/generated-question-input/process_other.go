@@ -1,7 +1,6 @@
-//go:build !windows
+//go:build !windows || !amd64
 
 package main
 
-import "os/exec"
-
-func hideInputProcess(_ *exec.Cmd) {}
+func nativeInputPaths() (inputPaths, error)                          { return inputPaths{}, errInputSource }
+func startInputChild(string, []string, []string) (inputChild, error) { return nil, errInputSource }

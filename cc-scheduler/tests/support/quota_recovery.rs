@@ -478,7 +478,7 @@ fn gpt_quota_unavailable_health_is_paced_without_extending_the_saved_deadline() 
 
 #[test]
 fn gpt_quota_terminal_budget_is_recorded_without_a_fresh_job_or_refresh_loop() {
-    let (mut f, mut sub)=gpt_research_fixture();
+    let (mut f, sub)=gpt_research_fixture();
     for j in &mut f.e.backend.records {j["created_at"]=json!(iso(T-300.));}
     f.e.backend.records[1]["capacity_same_model_retry_count"]=json!(3);
     f.e.backend.records[1]["capacity_retry_count"]=json!(3);

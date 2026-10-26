@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -98,9 +99,12 @@ func TestOfficialCI3387ProducerAndReaderEvidenceAreIndependent(t *testing.T) {
 			got, err := official3894SourceRevision(current, &saved, func(ref string) bool {
 				compared = append(compared, ref)
 				return failure != "producer-input-changed"
-			}, func(ref string) bool {
+			}, func(ref string) official3894MergeOutcome {
 				merges = append(merges, ref)
-				return !(failure == "reader-unmerged" && ref == reader) && !(failure == "producer-unmerged" && ref == producer)
+				if (failure == "reader-unmerged" && ref == reader) || (failure == "producer-unmerged" && ref == producer) {
+					return official3894MergeNotMerged
+				}
+				return official3894MergeConfirmed
 			})
 			if failure == "" {
 				if err != nil || got != producer || len(compared) != 1 || compared[0] != producer || len(merges) != 2 || merges[0] != reader || merges[1] != producer {
@@ -116,6 +120,103 @@ func TestOfficialCI3387ProducerAndReaderEvidenceAreIndependent(t *testing.T) {
 				t.Fatal("the original authenticated registration was replaced")
 			}
 		})
+	}
+}
+
+func TestOfficialCI3387MergeRefusalIdentifiesCheckedRevision(t *testing.T) {
+	reader := strings.Repeat("a", 40)
+	producer := official3387PreparedProducer
+	for _, side := range []string{"reader", "producer"} {
+		t.Run(side, func(t *testing.T) {
+			var checked []string
+			_, err := official3894SourceRevision(reader, &official3894Source{Head: producer}, func(string) bool {
+				t.Fatal("input inspection followed a failed merge check")
+				return false
+			}, func(head string) official3894MergeOutcome {
+				checked = append(checked, head)
+				if (side == "reader" && head == reader) || (side == "producer" && head == producer) {
+					return official3894MergeUnknown
+				}
+				return official3894MergeConfirmed
+			})
+			wantHead := reader
+			wantCalls := 1
+			if side == "producer" {
+				wantHead, wantCalls = producer, 2
+			}
+			want := "normal_" + side + "_source_merge_not_confirmed_" + wantHead
+			if err == nil || err.Error() != want || len(checked) != wantCalls {
+				t.Fatalf("merge failure lost its actual boundary: err=%v checks=%v want=%s", err, checked, want)
+			}
+		})
+	}
+}
+
+func TestOfficialCI3387MergeLookupKeepsFailureClassesAndFixedEndpoint(t *testing.T) {
+	head := strings.Repeat("a", 40)
+	for _, tc := range []struct {
+		name, output string
+		err          error
+		want         official3894MergeOutcome
+	}{
+		{"ahead", "ahead\n", nil, official3894MergeConfirmed},
+		{"identical", "identical\r\n", nil, official3894MergeConfirmed},
+		{"behind", "behind", nil, official3894MergeNotMerged},
+		{"diverged", "diverged", nil, official3894MergeNotMerged},
+		{"empty", "", nil, official3894MergeResponseInvalid},
+		{"extra-output", "ahead\nsynthetic-private-value", nil, official3894MergeResponseInvalid},
+		{"unknown", "synthetic-private-value", nil, official3894MergeResponseInvalid},
+		{"command-error", "ahead", errors.New("synthetic-private-value"), official3894MergeCommandFailed},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			calls := 0
+			got := official3894MergeLookup(context.Background(), head, func(_ context.Context, file string, args ...string) ([]byte, error) {
+				calls++
+				want := []string{"api", "repos/AutoDevJapan/cc-pc-tools-rs/compare/" + head + "...main", "--jq", ".status"}
+				if file != official3894Gate || strings.Join(args, "\x00") != strings.Join(want, "\x00") {
+					t.Fatal("merge query escaped the fixed endpoint")
+				}
+				return []byte(tc.output), tc.err
+			})
+			if got != tc.want || calls != 1 || strings.Contains(got.reason(), "synthetic-private-value") {
+				t.Fatalf("status classification changed: got=%v want=%v calls=%d", got, tc.want, calls)
+			}
+		})
+	}
+	for _, invalid := range []string{"", strings.Repeat("A", 40), head + "...other"} {
+		got := official3894MergeLookup(context.Background(), invalid, func(context.Context, string, ...string) ([]byte, error) {
+			t.Fatal("invalid revision triggered a command")
+			return nil, nil
+		})
+		if got != official3894MergeUnknown {
+			t.Fatal("invalid revision was accepted")
+		}
+	}
+}
+
+func TestOfficialCI3387MergeDiagnosticUsesOnlyBoundedClasses(t *testing.T) {
+	reader := strings.Repeat("a", 40)
+	for _, side := range []string{"reader", "producer"} {
+		for _, result := range []official3894MergeOutcome{official3894MergeUnknown, official3894MergeCommandFailed, official3894MergeNotMerged, official3894MergeResponseInvalid, 255} {
+			checked := 0
+			_, err := official3894SourceRevision(reader, &official3894Source{Head: official3387PreparedProducer}, func(string) bool {
+				t.Fatal("failed metadata lookup caused input inspection")
+				return false
+			}, func(head string) official3894MergeOutcome {
+				checked++
+				if side == "reader" || head == official3387PreparedProducer {
+					return result
+				}
+				return official3894MergeConfirmed
+			})
+			head, calls := reader, 1
+			if side == "producer" {
+				head, calls = official3387PreparedProducer, 2
+			}
+			if err == nil || err.Error() != "normal_"+side+"_source_merge_"+result.reason()+"_"+head || checked != calls {
+				t.Fatalf("lost bounded merge context: err=%v calls=%d", err, checked)
+			}
+		}
 	}
 }
 

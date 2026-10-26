@@ -516,7 +516,9 @@ func official3894SourceCheck(ctx context.Context, saved *official3894Source, con
 	}
 	head, e := official3894SourceRevision(head, saved,
 		func(revision string) bool { return official3894InputsUnchanged(creator.Scheduler.Worktree, revision) },
-		func(revision string) bool { return official3894Merged(ctx, revision) })
+		func(revision string) official3894MergeOutcome {
+			return official3894MergeLookup(ctx, revision, official3894Command)
+		})
 	if e != nil {
 		return result, e
 	}

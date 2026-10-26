@@ -1,0 +1,15 @@
+{
+  "GPU_or_UI_execution": false,
+  "basis": "Independent numeric boundary oracles for the live model planning cases; not a renderer, GLSL compiler, library, server or performance test",
+  "checks": 40,
+  "domain": "skills-3080-independent-procedure-math-v1",
+  "job": "20261025-074042-todo-3080",
+  "new_ledger_adoptions": 0,
+  "passed": true,
+  "source_originals_changed": false,
+  "todo": 3080,
+  "upstream_code_executed": false,
+  "implementation": "evidence/skills-3080-next14-independent-math074042.go.txt",
+  "implementation_sha256": "5c0e2c25fca35971f0997525862ac111e6df38995d91972d72f2fec458092e95",
+  "application_result_sha256": "345ca4621bad2d0ea19861d4eb7cc23244ac120ed292fc352e168a5be2153ce9"
+}

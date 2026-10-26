@@ -1,0 +1,48 @@
+{
+  "domain": "skills-3080-independent-software-correspondence-v1",
+  "source_repository": "AutoDevJapan/cc-pc-tools-rs",
+  "repository_id": 1406818713,
+  "public_pull_request": 533,
+  "public_reviewed_head": "f5f846a8470b544846e4c9ce43306061bf5668f9",
+  "merged_head": "f1385659ba18626a427e4a6ed1c0189bf86c3ca1",
+  "exact_head_completed_checks": 15,
+  "exact_head_failed_checks": 0,
+  "source_checkout_clean": true,
+  "guard_build_inputs_equal_merged_source": true,
+  "go_version": "go1.27.0",
+  "build_arguments": [
+    "build",
+    "-trimpath",
+    "-buildvcs=true"
+  ],
+  "cgo_enabled": false,
+  "platform": "windows/amd64",
+  "buildinfo_equal": true,
+  "vcs_modified": false,
+  "comparison": {
+    "all_other_bytes_equal": true,
+    "all_other_bytes_sha256": "becd2442140304b573e18a818bfa230993682bb4a7f042e97685752dd3645554",
+    "allowed_slots": [
+      [
+        1552,
+        20
+      ],
+      [
+        1573,
+        20
+      ]
+    ],
+    "build_id_offset": 1552,
+    "differences_outside_two_build_id_components": 0,
+    "differing_bytes": 39,
+    "executables_modified_or_written": false,
+    "file_bytes": 13105664,
+    "independent_sha256": "75f1a6b5e457ce947028c1fca514a9a254d1b448e67f5d43aa23b34f41877886",
+    "installed_sha256": "f3927b8850258098d54dae87196ae382960dc83a5b6e7dd11354ab97ffd07cdf",
+    "trailing_two_components_equal": true
+  },
+  "scope": "One exact observed SHA/revision pair supported by an independent public-source rebuild and comparison of the complete PE. Production checks the literal full SHA/revision; it does not mask build IDs, adopt unknown digests or rewrite executables.",
+  "go_build_id_reference": "https://go.dev/src/cmd/go/internal/work/buildid.go",
+  "independent_comparator_sha256": "1eeda53182c6871ca77ac29e68f7679f2e4959d030aac02a95c0b7d97f13f872",
+  "new_candidate_deployed": false
+}

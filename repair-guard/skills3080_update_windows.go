@@ -20,6 +20,47 @@ const skillsGuardModule = "github.com/AutoDevJapan/cc-pc-tools-rs/repair-guard"
 // Independent previously accepted distribution facts (3258 and3686), not a caller
 // supplied baseline or an assertion made by the artifact being installed.
 var skillsGuardBaselines = map[string]string{
+	// PR536's independently accepted Windows distribution and original
+	// parent's 92-buffer receipt; never learned from the proposed new binary.
+	// Evidence: docs/evidence/skills-3080-guard-installed-52d417.json.
+	"aaf16eac624c3b974835f28c35805c2670d5f51320a2f04d78a4de6edf19b2f9": "52d417e60c20f9770d6bde2dde36092ab206ea01",
+	// The subsequent official-CI update is independently reproduced from its
+	// public merged source. Only its two Go build action-ID fields differ;
+	// both content IDs and every remaining byte match. No PE was rewritten.
+	// Evidence: docs/evidence/skills-3080-guard-baseline-f5f.json.
+	"f3927b8850258098d54dae87196ae382960dc83a5b6e7dd11354ab97ffd07cdf": "f5f846a8470b544846e4c9ce43306061bf5668f9",
+	// PR525 was independently accepted and deployed before the later CI-tool
+	// update. Preserve its native issuance without rewriting the old receipt.
+	// Evidence: docs/evidence/skills-3080-guard-installed-038bc.json.
+	"ccb5e797e6b5627d98ade2a562f2f98f3c121a5403e1523071afc07f73af4556": "038bc2570014132321919bf6758d68979506b741",
+	// PR524's reviewed and accepted runtime, independently read back before
+	// repairing the creator-reader's handling of an older accepted issuer.
+	// Evidence: docs/evidence/skills-3080-guard-installed-60a1.json.
+	"916bff404f54548814152efcd186dd772b33fd32872fd86fa88bc8d8718df9e3": "60a1b82b62d60cfcd66136aa4527041af643c4d6",
+	// PR520's already accepted installation. The later canonical-key defect
+	// is a separate parser repair, not a retroactive claim about its inputs.
+	// Evidence: docs/evidence/skills-3080-guard-installed-bb1a.json.
+	"1eba87708c1d5ad8cccca60485ef2e78e9cdcee3db24852a914dd32dc2ef9b5c": "bb1a9df569b326bcfcaa14684243aa27479ad7fe",
+	// PR517's accepted Windows runtime and original backup were independently
+	// read back before the disconnected-reader regression was repaired.
+	// Evidence: docs/evidence/skills-3080-guard-installed-3154.json.
+	"03a2e0f115c8435b1a876eda3efba75ba6120a668bfed39539f6ef2503c5f165": "3154c8ac9135424e2caf2034dc24d4e7406d6368",
+	// PR514's independently completed Windows update. This software baseline
+	// neither classifies central data nor retrofits any historical creation ID.
+	// Evidence: docs/evidence/skills-3080-guard-installed-987f.json.
+	"aa3fdfe3e1c64262b224b4beb76e3d81f95dd5dca0bbc405927223691aa41a02": "987fe2459f33711bcfcfefd8ccb70eb4129fe768",
+	// PR510's already accepted Windows distribution, reobserved before this
+	// repair. This exact software pair grants no access to review/data paths.
+	// Evidence: docs/evidence/skills-3080-guard-installed-e1a4.json.
+	"29118cd151cc9ccec8bb6a371382e2a3cc2507d5b36e3837f6cc87793b5b21fb": "e1a4c21dc6241c140d4d7364d34f42b16d7005be",
+	// PR506's accepted installation, reobserved before this repair. This is
+	// one software identity, not a candidate-selected data-access exception.
+	// Evidence: docs/evidence/skills-3080-guard-installed-7ba6.json.
+	"f487106ad65a261fd0938fb8fd78e092388f7b76beebb12089d3f20e72730b51": "7ba61f9536c4e42ac8417f9e5f109cde39ecfec4",
+	// PR497's accepted Windows installation is the independent current
+	// baseline, not an arbitrary digest declared by the new candidate.
+	// Evidence: docs/evidence/skills-3080-guard-installed-c397.json.
+	"ea7cbb49d73a37e972c0072a500406ab1f7f0b62f2ea1926b9ef149ad1e36f12": "c397910d3fc560ca61a31c6382494ac43c866852",
 	// PR476 distribution was independently accepted before this revision. Its
 	// exact current hash and build revision were rechecked without changing it.
 	// Evidence: docs/evidence/skills-3080-guard-installed-a5da.json.

@@ -59,16 +59,19 @@ type skillsResultRequest struct {
 	Job      string `json:"job"`
 	SpecSHA  string `json:"spec_sha256"`
 	FinalSHA string `json:"final_sha256,omitempty"`
+	SpecPath string `json:"spec_path,omitempty"`
 }
 type skillsRequest struct {
-	Domain         string                `json:"domain"`
-	Writer         skillsWriter          `json:"writer"`
-	ManifestCommit string                `json:"manifest_commit,omitempty"`
-	ManifestPath   string                `json:"manifest_path,omitempty"`
-	ManifestSHA    string                `json:"manifest_sha256,omitempty"`
-	Review         *skillsResultRequest  `json:"review,omitempty"`
-	Result         *skillsResultRequest  `json:"result,omitempty"`
-	Runtime        *skillsRuntimeRequest `json:"runtime,omitempty"`
+	Domain         string                 `json:"domain"`
+	Writer         skillsWriter           `json:"writer"`
+	ManifestCommit string                 `json:"manifest_commit,omitempty"`
+	ManifestPath   string                 `json:"manifest_path,omitempty"`
+	ManifestSHA    string                 `json:"manifest_sha256,omitempty"`
+	Review         *skillsResultRequest   `json:"review,omitempty"`
+	Result         *skillsResultRequest   `json:"result,omitempty"`
+	Runtime        *skillsRuntimeRequest  `json:"runtime,omitempty"`
+	Consume        *skillsConsumeRequest  `json:"consume,omitempty"`
+	Revision       *skillsRevisionRequest `json:"revision,omitempty"`
 }
 
 var skillsName = regexp.MustCompile(`^[a-z0-9]+(?:-[a-z0-9]+)*$`)
@@ -92,7 +95,8 @@ func skillsStrict(data []byte, v any) bool {
 	if len(data) == 0 || len(data) > 16<<20 || !utf8.Valid(data) {
 		return false
 	}
-	if _, ok := conversationJSON(data); !ok {
+	tree, ok := conversationJSON(data)
+	if !ok || !skillsCanonicalJSON(tree, v) {
 		return false
 	}
 	d := json.NewDecoder(bytes.NewReader(data))
@@ -151,7 +155,7 @@ func skillsParseManifest(raw []byte) (skillsManifest, bool) {
 func skillsFlag(args []string) bool {
 	for _, a := range args {
 		a = strings.TrimLeft(a, "-")
-		for _, f := range []string{"qualify-skills3080", "create-skills3080", "receive-skills3080-result", "verify-skills3080-update"} {
+		for _, f := range []string{"qualify-skills3080", "create-skills3080", "create-skills3080-forward", "consume-skills3080", "consume-skills3080-admitted", "receive-skills3080-result", "verify-skills3080-update", "qualify-skills3080-revision", "prepare-skills3080-revision", "apply-skills3080-revision", "consume-skills3080-revision"} {
 			if a == f || strings.HasPrefix(a, f+"=") {
 				return true
 			}
@@ -161,11 +165,14 @@ func skillsFlag(args []string) bool {
 }
 func runSkillsCLI(args []string, out io.Writer, run func(string, string) object) int {
 	result := object{"qualified": false, "reason": "arguments"}
+	if len(args) == 1 && args[0] == "--consume-skills3080-admitted" {
+		result = run("consume-skills3080-admitted", "")
+	}
 	if len(args) == 2 && filepath.IsAbs(args[1]) {
 		op := strings.TrimPrefix(strings.TrimPrefix(args[0], "-"), "-")
 		if args[0] == "-"+op || args[0] == "--"+op {
 			switch op {
-			case "qualify-skills3080", "create-skills3080", "receive-skills3080-result", "verify-skills3080-update":
+			case "qualify-skills3080", "create-skills3080", "create-skills3080-forward", "consume-skills3080", "receive-skills3080-result", "verify-skills3080-update", "qualify-skills3080-revision", "prepare-skills3080-revision", "apply-skills3080-revision", "consume-skills3080-revision":
 				result = run(op, args[1])
 			}
 		}
@@ -173,11 +180,15 @@ func runSkillsCLI(args []string, out io.Writer, run func(string, string) object)
 	// Never leak callback error text, names, paths or arbitrary metadata on refusal.
 	if result["qualified"] != true {
 		created, partial := result["created_files"], result["partial_operation_possible"]
+		stage, _ := result["failure_stage"].(string)
 		reason := str(result["reason"])
 		if !skillsReason.MatchString(reason) {
 			reason = "unqualified"
 		}
 		result = object{"qualified": false, "reason": reason}
+		if skillsFixedFailureStage(stage) {
+			result["failure_stage"] = stage
+		}
 		if n, ok := created.(int); ok && n >= 0 && n <= 1024 && partial == true {
 			result["created_files"] = n
 			result["partial_operation_possible"] = true
@@ -189,7 +200,18 @@ func runSkillsCLI(args []string, out io.Writer, run func(string, string) object)
 	return 0
 }
 
-var skillsReason = regexp.MustCompile(`^(arguments|request|scope|writer|manifest|review|source|existing_target|physical_parent|protection|result_binding|result_unavailable|native_context|create_failed|unqualified)$`)
+var skillsReason = regexp.MustCompile(`^(arguments|request|scope|writer|manifest|review|source|existing_target|physical_parent|protection|result_binding|result_unavailable|native_context|creation_evidence|current_identity|current_bytes|create_failed|unqualified)$`)
+
+func skillsFixedFailureStage(stage string) bool {
+	switch stage {
+	case "creation_request", "installed_producer", "creation_native", "creation_header", "created_manifest", "manifest_shape",
+		"source_provenance", "source_claims", "source_catalog_open", "source_catalog_integrity", "source_anchor", "source_commit",
+		"source_index_open", "source_index_integrity", "source_selected_paths", "source_notice_or_catalog", "source_support_package",
+		"source_tree", "source_object", "creation_binding", "current_snapshot", "writer_recheck":
+		return true
+	}
+	return false
+}
 
 func skillsScopeBytes(raw []byte) bool {
 	if hashBytes(raw) != skillsScopeSHA {

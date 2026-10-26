@@ -1,0 +1,40 @@
+{
+  "prior_unversioned_reference_records_unchanged": true,
+  "creation_manifests_3dd_and_df3_unchanged": true,
+  "earlier_reads_not_relabelled_as_this_current_retrieval": true,
+  "domain": "skills-3080-external-reference-pins-v1",
+  "todo": 3080,
+  "new_owner_rights_grants": 0,
+  "job": "20261025-074042-todo-3080",
+  "central_operations": 0,
+  "references": [
+    {
+      "parent_full_source_read_in_this_pin_operation": false,
+      "original_mutable_url": "https://github.com/KhronosGroup/OpenGL-Refpages/blob/main/gl4/smoothstep.xml",
+      "git_blob": "2cf5e01c88fed0370080fa260df9e87400289244",
+      "sha256": "ae3b1485a641f50d82fb4961b4463089f7614b5e0a66c822f39bd08e05c3a14e",
+      "source_executed": false,
+      "commit": "ffef7cbc5a6568e6dc09a97ee1f0c964fe44bbb2",
+      "path": "gl4/smoothstep.xml",
+      "repository": "KhronosGroup/OpenGL-Refpages",
+      "fixed_url": "https://github.com/KhronosGroup/OpenGL-Refpages/blob/ffef7cbc5a6568e6dc09a97ee1f0c964fe44bbb2/gl4/smoothstep.xml",
+      "retrieved_at": "2026-10-25T18:17:25.6776028+00:00",
+      "bytes": 5635,
+      "scope": "Technical context only; not a seventeenth catalog source, current SDK compatibility, asset license or a new copied/executed dependency."
+    },
+    {
+      "parent_full_source_read_in_this_pin_operation": false,
+      "original_mutable_url": "https://github.com/liabru/matter-js/blob/master/src/core/Mouse.js",
+      "git_blob": "f97f27957c37c8a68b5380e4c1101f4fda64084f",
+      "sha256": "ebb5cc6cb5fd967e2b0e3c72f63bff499d65077fe44bbd495729415f6d2eade3",
+      "source_executed": false,
+      "commit": "272049ab0528380e0164ac55c7d70796c638ba15",
+      "path": "src/core/Mouse.js",
+      "repository": "liabru/matter-js",
+      "fixed_url": "https://github.com/liabru/matter-js/blob/272049ab0528380e0164ac55c7d70796c638ba15/src/core/Mouse.js",
+      "retrieved_at": "2026-10-25T18:17:27.1183471+00:00",
+      "bytes": 7050,
+      "scope": "Technical context only; not a seventeenth catalog source, current SDK compatibility, asset license or a new copied/executed dependency."
+    }
+  ]
+}

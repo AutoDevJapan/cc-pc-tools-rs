@@ -1,0 +1,22 @@
+{
+  "todo": 3080,
+  "method": "existing3048 checker, exact in-memory bundle; no central reads",
+  "source_revision": "bcac480137c3a09adf513d246a85f1d489165096",
+  "bundle": "skills-3080-combat6-reviewed-bundle090101.json",
+  "bundle_sha256": "d27a8e3c55feb2f7e803ebeedcb5e19eac9619004881a6b1b6f0a9128ee6d30f",
+  "arguments": [
+    "go",
+    "-C",
+    "tools/skills-3048-check",
+    "run",
+    ".",
+    "-bundle",
+    "-manifest",
+    "<absolute path to docs/skills-3080-combat6-reviewed-bundle090101.json>"
+  ],
+  "exit": 0,
+  "stdout": "PASS: 6 explicit skills; structure, descriptions, references, hashes, scenario pairs; in-memory bundle only; no deployment implied\n",
+  "stderr": "",
+  "deployment_implied": false,
+  "actualGPU_or_renderer_tested": false
+}

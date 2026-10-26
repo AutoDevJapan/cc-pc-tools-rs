@@ -1,0 +1,28 @@
+{
+  "domain": "skills-3080-independent-installed-runtime-v1",
+  "publisher_task": 3686,
+  "publisher_job": "20261026-062805-todo-3686",
+  "pull_request": 525,
+  "reviewed_head": "d0b6e6809b2e7d7f6b505ad9194484919aaa000b",
+  "source_head": "038bc2570014132321919bf6758d68979506b741",
+  "sha256": "ccb5e797e6b5627d98ade2a562f2f98f3c121a5403e1523071afc07f73af4556",
+  "review_task": 3896,
+  "review_final_sha256": "4b905b00427d51ca4b9ec97d8688b9347062e87fa504564a9423d9d2e2405735",
+  "actual_review_model": "gpt-6-luna",
+  "actual_review_effort": "max",
+  "review_must": 0,
+  "ci_completed": 16,
+  "ci_failures": 0,
+  "original_literal_runtime_verification": {
+    "exit_code": 0,
+    "qualified": true,
+    "already_current": true,
+    "data_access_granted": false,
+    "general_access_granted": false,
+    "original_registry_recovered": false
+  },
+  "owner_group_dacl_preserved": true,
+  "sacl_verified": false,
+  "independent_public_correspondence": "docs/evidence/official-ci3387-known-guard-baseline-038bc.json",
+  "scope": "One already accepted software SHA/revision pair. No new issuer, data classification, historical continuity or current OS writer claim."
+}

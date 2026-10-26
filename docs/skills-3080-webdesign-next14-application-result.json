@@ -1,0 +1,179 @@
+{
+  "domain": "skills-3080-bounded-live-model-use-v1",
+  "todo": 3080,
+  "job": "20261025-074042-todo-3080",
+  "model": "gpt-6.1-sol",
+  "effort": "max",
+  "Fast_proved": false,
+  "basis": "All28 qualified live instruction/guide buffers returned by normal consume; parent read every one before these decisions.",
+  "manifest_sha256": "3dd611655a517ac4734c53cdea296cd0f84070c612f0a88ef376880b262df7b5",
+  "actual_buffer_bundle_sha256": "817e013f0577aeb059e7fed371ee25996c2413fce8323d756acf61193fbf5ef0",
+  "positive_cases": 14,
+  "negative_cases": 14,
+  "cases": [
+    {
+      "manifest_instruction_index": 0,
+      "instruction_sha256": "9331240e9df283734e9889a71aed6f01d973b21ed6d94600143d7cc4cf640a46",
+      "guide_sha256": "952d97d35ae5aa11f63525f239bc67fc0c90e689ec72f99dfed2f6ec8a2e6bc2",
+      "positive_case": "scrollの途中reloadで、章の意味は20%へ即時復元したいがcameraは平滑化している。",
+      "decision_from_live_instruction_buffer": "正確なstory20%と描画cameraを分け、見えていないhotspotは操作対象から外す。遅いassetにも現在の章を照合し、DOMで必須操作を保つ。",
+      "negative_case": "同じscroll位置なら補間中のcameraも履歴と無関係に同一だと保証する。",
+      "excluded_behavior_reason": "平滑値は経過時間と履歴に依存する。正確な状態と収束後の構図、途中の見え方を別に検証する。",
+      "actual_model_instruction_use": true,
+      "actual_product_UI_or_API_execution": false
+    },
+    {
+      "manifest_instruction_index": 6,
+      "instruction_sha256": "7035bb2b3b83ba93cf74d123566226b2520d3622d0bfbb3fea51c5d02cc0f861",
+      "guide_sha256": "c536c3bcd9f80605f3facc538685c9dfd02b88bd106335b28b2dac7bc9074bbf",
+      "positive_case": "world変形した物体のscanで、originがboundsの外にありwireが先行する。",
+      "decision_from_live_instruction_buffer": "変形後の最遠点とlag/wobbleの幅を測り、正の幅・昇順smoothstepで前線を合わせる。一時wireの所有資源だけを解放する。",
+      "negative_case": "scene対角だけをradiusにし、逆順GLSL smoothstepを移し、共有geometryまでdisposeする。",
+      "excluded_behavior_reason": "originの位置とedge条件と所有が別々に誤る。radius計算だけでGPU性能改善とも言えない。",
+      "actual_model_instruction_use": true,
+      "actual_product_UI_or_API_execution": false
+    },
+    {
+      "manifest_instruction_index": 12,
+      "instruction_sha256": "5296e3b56f172147da7415c31baf2dea6652d926b9cd167d40c1c647f298fd88",
+      "guide_sha256": "544a15b849b03c27ac5dfa04653a555d99b94a49b781afc025496a38f3e389c9",
+      "positive_case": "暖色process gridで長い日本語と未完了の状態を見せる設計を比較したい。",
+      "decision_from_live_instruction_buffer": "内容長で列を畳み、面の明度差とは別に本文・境界・focusを確認する。表示は実状態に結び、画像への本人回答後に実装する。",
+      "negative_case": "整った小さいstatusを置いたので全工程を完了表示にする。",
+      "excluded_behavior_reason": "構図の例は実作業の達成や承認の証拠ではない。",
+      "actual_model_instruction_use": true,
+      "actual_product_UI_or_API_execution": false
+    },
+    {
+      "manifest_instruction_index": 18,
+      "instruction_sha256": "8e8046b4cbf2c336b9325f5e42ba81accf416617626fa4267699855838ff1190",
+      "guide_sha256": "c2675cd5fd28900aa2ddf7c910dfaca5a7285203f422059c684af774e3a907ec",
+      "positive_case": "装飾globeが親resize後にぼけ、60Hzと120Hzで回転速度が違う。",
+      "decision_from_live_instruction_buffer": "利用版のCSS/buffer/DPR規約を確認し二重適用を調べる。回転は時間へ結び、非表示復帰とlistener/instanceの所有を検証する。",
+      "negative_case": "資料のonRender/destroy名が今も同じと決め、marker例を本人や顧客の拠点へ流用する。",
+      "excluded_behavior_reason": "APIの版と位置情報の意味は実資料による別確認が要る。",
+      "actual_model_instruction_use": true,
+      "actual_product_UI_or_API_execution": false
+    },
+    {
+      "manifest_instruction_index": 24,
+      "instruction_sha256": "042fa78cfe8297343f3e9d70748281dc293f7cbe4196637daf5604b6802ac892",
+      "guide_sha256": "22080372a1c25bd2b2cb85fa6e596341fa2e5c45d5f8fefb98b31c43044196e0",
+      "positive_case": "角のemitterを保って、幅の違うcanvasでbeamとhaloを調整する。",
+      "decision_from_live_instruction_buffer": "CSS/canvas/worldの座標とaspectを揃え、core幅とhalo半径を別に比較する。前景とfocusを覆わず静止でも構図を保つ。",
+      "negative_case": "角の装飾の依頼から全画面の粒子・raw WebGLやUIの変更を必須にする。",
+      "excluded_behavior_reason": "局所構図の用途を超える。新しいrendererや未承認の見た目を追加しない。",
+      "actual_model_instruction_use": true,
+      "actual_product_UI_or_API_execution": false
+    },
+    {
+      "manifest_instruction_index": 30,
+      "instruction_sha256": "bbd2e2538c270f78f212db6256e433666d91f0b3a383c6b49d88299a0a0ebb01",
+      "guide_sha256": "0217d6bc0d304424643ab22ac0c7aa92e4967377726f54fda687952178a37eeb",
+      "positive_case": "濃紺の紹介面で重点領域と静かな索引を分け、実測できない状態も表示する。",
+      "decision_from_live_instruction_buffer": "cobaltの面積と明度、本文・境界・focusを別に比べ、実測がないlive dotやcounterを作らない。小画面のrailと読む順序を確認する。",
+      "negative_case": "濃い青とglowだけでcontrast適合や稼働中を保証する。",
+      "excluded_behavior_reason": "美術方向は可読性の実測や状態の根拠を代替しない。",
+      "actual_model_instruction_use": true,
+      "actual_product_UI_or_API_execution": false
+    },
+    {
+      "manifest_instruction_index": 36,
+      "instruction_sha256": "3e77b79a9f15b2432cf7cad9eb8c83591ef4679626273cfcdc198d05f95e8845",
+      "guide_sha256": "55e0b194845d31061a179bfafe66eba7a922150a51506f8547e5619e6d971603",
+      "positive_case": "3列のglass workspaceが狭い画面で重なり、blur非対応時に読めない。",
+      "decision_from_live_instruction_buffer": "読む順序とfocusを保って列を積み、中心の空白と情報欠落を分ける。fallbackの面・境界を設け、負荷は実測する。",
+      "negative_case": "blur量を増やしfloating cardで本文を覆い、現在のConsole全体へ適用する。",
+      "excluded_behavior_reason": "可読性と依頼範囲を損なう。新しいConsoleの画像承認にはならない。",
+      "actual_model_instruction_use": true,
+      "actual_product_UI_or_API_execution": false
+    },
+    {
+      "manifest_instruction_index": 42,
+      "instruction_sha256": "ddc58e5911ae3beeeb19154045ed7143c189a3064ff91e07ef135380c8c12c4b",
+      "guide_sha256": "91bf0d1218e655da664e4a47f69624f860c533f300c685100b915b7407314554",
+      "positive_case": "CSS600×300でcell10のditherを使い、DPRだけを2から1へ変える。",
+      "decision_from_live_instruction_buffer": "CPU反復は60×30=1800のまま、buffer pixel量は4分の1になる。どちらが負荷か測り、palette空・cell<=0や同じedgeのNaNを拒否する。",
+      "negative_case": "独自JS式が逆順edgeを計算できたのでGLSLにも逆順smoothstepを移す。",
+      "excluded_behavior_reason": "JavaScriptの独自式とGLSL組込の定義条件は同じではない。",
+      "actual_model_instruction_use": true,
+      "actual_product_UI_or_API_execution": false
+    },
+    {
+      "manifest_instruction_index": 48,
+      "instruction_sha256": "44af39ccb61528c5e1e90340f17ae192d1bc5af011376a2061d3bdedb2165503",
+      "guide_sha256": "3bde180d2cc222f573f204b61727f3ae74f442c821bf01dc33cecc392529aa94",
+      "positive_case": "承認した暗い構図へ、ordered patternと細いbeamを静かに加える。",
+      "decision_from_live_instruction_buffer": "grainとordered ditherを分け、texture密度・core/haloと前景の関係を一つずつ比較する。実statusは演出と別に残す。",
+      "negative_case": "元の複数候補を全部重ね、青を固定のアクセントにしてscanを実進捗にする。",
+      "excluded_behavior_reason": "資料の候補と調整例は全採用や実状態の根拠ではない。",
+      "actual_model_instruction_use": true,
+      "actual_product_UI_or_API_execution": false
+    },
+    {
+      "manifest_instruction_index": 54,
+      "instruction_sha256": "789788b9e9f6d3abca66c6624bad3ef7c675f961c03e46a9c628c7ee3c75fb47",
+      "guide_sha256": "1b7a6804454e7f909c6fb86c100debe91d35c43e773ef90b3f0f5cf54cd9e490",
+      "positive_case": "公開可能な実績の写真をcollageにし、FAQと非modal navigationを設計する。",
+      "decision_from_live_instruction_buffer": "画像boxとDOM順を保ち、native detailsの状態を二重管理せず、非modal menuへfocus trapを置かない。実績がない成果や推薦は補わない。",
+      "negative_case": "brutalismを理由に日本語を読めなくし、未提供の実績を作る。",
+      "excluded_behavior_reason": "美術方向は可読性や事実を省く理由にならない。",
+      "actual_model_instruction_use": true,
+      "actual_product_UI_or_API_execution": false
+    },
+    {
+      "manifest_instruction_index": 60,
+      "instruction_sha256": "7759a5991ce205561fc26b7a609733fbe33669cc210a917bbc765463889f9d6c",
+      "guide_sha256": "ed35a2d49c368742e041ca506b5b564a5fff6179c30116c1be86d7d2a29af610",
+      "positive_case": "作品を先に見せるportfolioで、hoverできない環境にもtitleと役割を残したい。",
+      "decision_from_live_instruction_buffer": "media層だけをclipし、title・metadata・actionは通常から読めるDOMに保つ。未読ARTICLEのprompt packは取り込まない。",
+      "negative_case": "元の作品写真・identity・claimを言い換えて再利用し、hover時だけ情報を出す。",
+      "excluded_behavior_reason": "素材の権利と作品の事実、情報への到達性の確認が欠ける。",
+      "actual_model_instruction_use": true,
+      "actual_product_UI_or_API_execution": false
+    },
+    {
+      "manifest_instruction_index": 66,
+      "instruction_sha256": "5deb701790cfdabeb2d352ab01a3a001470cbea73ec4e67bee427e3f1b8bac37",
+      "guide_sha256": "afe0396d9c231d59d6cb9cfc42650121fdacde6aa16dcef408f3b1b704d738fb",
+      "positive_case": "空き枠GET後に確定が409になり、通信再試行も起きる予約画面を考える。",
+      "decision_from_live_instruction_buffer": "選択を保持して競合を表示し、serverの期限/権限と一意性・冪等性の条件で確定する。未確定を成功にせず、失敗・再試行も受入へ入れる。",
+      "negative_case": "clientの完了表示か空き枠の取得だけで実予約成功とし、支払いを実課金で試す。",
+      "excluded_behavior_reason": "照会と確定、表示と実状態、テストmodeと実課金は別である。",
+      "actual_model_instruction_use": true,
+      "actual_product_UI_or_API_execution": false
+    },
+    {
+      "manifest_instruction_index": 72,
+      "instruction_sha256": "499e022b8ecce85b374ac1bfc94f21eb4327358236ab2f0389bf0ec0503caedf",
+      "guide_sha256": "d03ba4cbcba52a50f2d6e0fca0f80151a1632cc3a84df9e6e65fdd6db4a483da",
+      "positive_case": "同数の葉を一様な円形領域へ置き、半径を半分へ調整する。",
+      "decision_from_live_instruction_buffer": "近似の面密度N/(πr²)は4倍だが、実画面の密度はfrustum/深さにも依存する。tumbleとslipを結び、ゼロの水平方向を処理する。",
+      "negative_case": "密度式だけで見た目も必ず4倍、色の特定成分は常にゼロ、CPU更新は無料と保証する。",
+      "excluded_behavior_reason": "数学の近似と実描画・色管理・負荷は別で検証する。",
+      "actual_model_instruction_use": true,
+      "actual_product_UI_or_API_execution": false
+    },
+    {
+      "manifest_instruction_index": 78,
+      "instruction_sha256": "0cdaf31b1490c234c6e1587da207ef7bf51e5ca97c01a2f681ff12729dafe75d",
+      "guide_sha256": "77c46108ee06f237971672f56365263a40fb9ab699a8ee5ece9715c0bf7d3854",
+      "positive_case": "重い初期化中にOffscreenCanvasのtransferが成功した後でworkerが失敗する。",
+      "decision_from_live_instruction_buffer": "同じcanvasのgetContextへ必ず戻せるとはせず、静的表示等のfallbackを用意する。stop/解放の応答と有限期限を分け、古いmessageで再開しない。",
+      "negative_case": "creepした表示を100%や準備完了とし、terminateがすべての後始末を完走すると保証する。",
+      "excluded_behavior_reason": "補間と実ready、即時停止と正常な解放は別である。",
+      "actual_model_instruction_use": true,
+      "actual_product_UI_or_API_execution": false
+    }
+  ],
+  "limits": [
+    "These are synthetic planning acceptance cases, not user product requests or image approvals.",
+    "No renderer/GPU/SDK, source JS, booking server, payment or UI was executed.",
+    "Current creator use is separate from fresh other-job consumption and ordinary guard classification.",
+    "Historical physical continuity and current OS writer remain unproved."
+  ],
+  "source_code_executed": false,
+  "general_access_granted": false,
+  "new_ledger_adoption_increment": 0,
+  "whole16_complete": false
+}

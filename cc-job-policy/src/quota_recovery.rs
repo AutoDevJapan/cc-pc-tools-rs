@@ -157,6 +157,90 @@ pub fn healthy_transition(inventory: &Value, from: &str, to: &str, now: f64) -> 
         && inventory[to]["available"] == true
 }
 
+/// Public request-scoped namespaces only. Private account IDs and the namespace
+/// mapping stay in memory. Each returned route itself is fresh OAuth/no-overage;
+/// an unrelated available account can never qualify an unknown selected route.
+pub fn safe_openai_routes(raw: &Value, namespaces: &Value, now: f64) -> Value {
+    let (Some(rows), Some(namespaces)) = (raw["accounts"].as_array(), namespaces.as_object())
+    else {
+        return json!([]);
+    };
+    let mut routes = Vec::new();
+    for (selector, target) in namespaces {
+        let public = selector == "main"
+            || (selector.len() == 7
+                && selector.starts_with('p')
+                && selector[1..]
+                    .bytes()
+                    .all(|b| b.is_ascii_digit() || (b'a'..=b'f').contains(&b)));
+        let Some(target) = target.as_str().filter(|_| public) else {
+            continue;
+        };
+        let target = if target == "@main" {
+            "__main__"
+        } else {
+            target
+        };
+        let rows: Vec<_> = rows.iter().filter(|r| r["id"] == target).collect();
+        if rows.len() != 1
+            || rows[0]["type"] != "codex"
+            || rows[0]["creditsAfterLimit"] != false
+            || !match rows[0].get("hasCredential") {
+                Some(Value::Bool(true)) => true,
+                // The normal refreshed OpenCodex account-list schema omits
+                // hasCredential. Its explicit needsReauth=false, Healthy and
+                // successfully refreshed quota together establish the route.
+                None => rows[0]["needsReauth"] == false,
+                _ => false,
+            }
+        {
+            continue;
+        }
+        let Some(checked) = timestamp(&rows[0]["quota"]["updatedAt"])
+            .or_else(|| rows[0]["quota"]["updatedAt"].is_null().then_some(now))
+            .filter(|at| *at <= now + 1. && now - *at <= 60.)
+        else {
+            continue;
+        };
+        let single = json!({"accounts":[rows[0]]});
+        let q = aggregate(&single, "openai", now);
+        if q["verified"] == true && q["available"] == true {
+            routes.push(json!({"selector":selector,"at":checked,"verified":true}));
+        }
+    }
+    routes.sort_by(|a, b| s(a, "selector").cmp(s(b, "selector")));
+    json!(routes)
+}
+
+pub fn safe_openai_selector<'a>(
+    health: &'a Value,
+    expected: Option<&str>,
+    now: f64,
+) -> Option<&'a str> {
+    if !now.is_finite() {
+        return None;
+    }
+    health["openai"]["safe_routes"]
+        .as_array()?
+        .iter()
+        .find_map(|route| {
+            let selector = s(route, "selector");
+            let public = selector == "main"
+                || (selector.len() == 7
+                    && selector.starts_with('p')
+                    && selector[1..]
+                        .bytes()
+                        .all(|b| b.is_ascii_digit() || (b'a'..=b'f').contains(&b)));
+            (public
+                && expected.is_none_or(|e| e == selector)
+                && route["verified"] == true
+                && route["at"]
+                    .as_f64()
+                    .is_some_and(|at| at <= now + 1. && now - at <= 60.))
+            .then_some(selector)
+        })
+}
+
 fn review(job: &Value) -> bool {
     crate::review_task(s(job, "name"), s(job, "task_type")) || job["subwork"]["kind"] == "review"
 }
@@ -240,9 +324,14 @@ pub fn collection_pending(source: &Value) -> bool {
     intent["child_pid"].as_u64().is_some_and(|pid| pid > 0)
         && intent["child_created"].is_u64()
         && intent["stage"] != "drained"
-        && [("child_pid", "codex_pid"), ("child_created", "codex_pid_created"),
-            ("started_at", "started_at"), ("attempt_events_offset", "attempt_events_offset")]
-            .iter().all(|(saved, current)| intent[*saved] == source[*current])
+        && [
+            ("child_pid", "codex_pid"),
+            ("child_created", "codex_pid_created"),
+            ("started_at", "started_at"),
+            ("attempt_events_offset", "attempt_events_offset"),
+        ]
+        .iter()
+        .all(|(saved, current)| intent[*saved] == source[*current])
 }
 
 pub fn eligible_source(item: &Value, source: &Value) -> bool {
@@ -363,4 +452,67 @@ pub fn verify(proof: &Value, item: &Value, source: &Value, target: &Value, now: 
         prepared["resume_generation"] = json!(before);
     }
     receipt(&prepared, source, target, &proof["health"], now).is_some_and(|p| p == *proof)
+}
+
+#[cfg(test)]
+mod unstarted_routes_tests {
+    use super::*;
+    #[test]
+    fn public_route_is_bound_to_its_own_fresh_subscription_and_disabled_overage() {
+        let row = json!({"id":"private-one","type":"codex","creditsAfterLimit":false,"hasCredential":true,"health":"healthy","autoSelectable":true,
+            "quota":{"weeklyPercent":10.,"weeklyResetAt":2000.,"updatedAt":1000.}});
+        let raw = json!({"accounts":[row]});
+        let namespaces = json!({"pabcdef":"private-one","p000000":"unknown"});
+        let routes = safe_openai_routes(&raw, &namespaces, 1000.);
+        assert_eq!(
+            routes,
+            json!([{"selector":"pabcdef","at":1000.,"verified":true}])
+        );
+        assert!(
+            !serde_json::to_string(&routes)
+                .unwrap()
+                .contains("private-one")
+        );
+        let health = json!({"openai":{"safe_routes":routes}});
+        assert_eq!(
+            safe_openai_selector(&health, Some("pabcdef"), 1000.),
+            Some("pabcdef")
+        );
+        let mut normal_cli = raw.clone();
+        normal_cli["accounts"][0]
+            .as_object_mut()
+            .unwrap()
+            .remove("hasCredential");
+        normal_cli["accounts"][0]["needsReauth"] = json!(false);
+        assert_eq!(safe_openai_routes(&normal_cli, &namespaces, 1000.), routes);
+        normal_cli["accounts"][0]["hasCredential"] = Value::Null;
+        assert_eq!(
+            safe_openai_routes(&normal_cli, &namespaces, 1000.),
+            json!([])
+        );
+        assert_eq!(
+            safe_openai_selector(&health, Some("p000000"), 1000.),
+            None,
+            "another available route must not qualify the requested unknown route"
+        );
+        assert_eq!(safe_openai_selector(&health, None, 1061.), None);
+        for (key, value) in [
+            ("type", json!("api_key")),
+            ("creditsAfterLimit", json!(true)),
+            ("creditsAfterLimit", Value::Null),
+            ("hasCredential", json!(false)),
+            ("autoSelectable", json!(false)),
+        ] {
+            let mut changed = raw.clone();
+            changed["accounts"][0][key] = value;
+            assert_eq!(
+                safe_openai_routes(&changed, &namespaces, 1000.),
+                json!([]),
+                "{key}"
+            );
+        }
+        let mut stale = raw;
+        stale["accounts"][0]["quota"]["updatedAt"] = json!(500.);
+        assert_eq!(safe_openai_routes(&stale, &namespaces, 1000.), json!([]));
+    }
 }

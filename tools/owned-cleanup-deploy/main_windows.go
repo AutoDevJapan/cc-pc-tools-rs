@@ -70,6 +70,36 @@ func (p *pin) at(path string) bool {
 	n, _, _ := kernel.NewProc("GetFinalPathNameByHandleW").Call(p.f.Fd(), uintptr(unsafe.Pointer(&name[0])), uintptr(len(name)), 0)
 	return n > 0 && n < uintptr(len(name)) && same(strings.TrimPrefix(syscall.UTF16ToString(name[:n]), `\\?\`), path)
 }
+
+func (p *pin) namedAs(path string) bool {
+	return p.verifyName(path) == nil
+}
+
+func (p *pin) verifyName(path string) error {
+	// Reopen the public name while our original pin still excludes writers
+	// and removers. A cached name associated with a renamed handle is not a
+	// namespace lookup; compare the freshly named object's complete identity.
+	named, e := openPin(path, 0x80, 7, 3)
+	if e != nil {
+		return fmt.Errorf("NAME_PIN:%w", e)
+	}
+	defer named.close()
+	var current syscall.ByHandleFileInformation
+	if syscall.GetFileInformationByHandle(syscall.Handle(p.f.Fd()), &current) != nil {
+		return errCode("HELD_METADATA_READ_FAILED")
+	}
+	physical := func(a, b syscall.ByHandleFileInformation) bool {
+		return a.VolumeSerialNumber == b.VolumeSerialNumber && a.FileIndexHigh == b.FileIndexHigh && a.FileIndexLow == b.FileIndexLow
+	}
+	// The OS can change creation time during rename of this same held file.
+	// The original pin prevents ID reuse; require its volume/file ID to stay
+	// fixed. Creation time is diagnostic metadata, not additional evidence of
+	// sameness for our already-open object; different handles may cache it.
+	if !physical(current, p.info) || !physical(named.info, current) {
+		return errCode("PUBLIC_VOLUME_OR_FILE_ID_CHANGED")
+	}
+	return nil
+}
 func openPin(path string, access, share, disposition uint32) (*pin, error) {
 	if !filepath.IsAbs(path) || strings.ContainsAny(path, "\x00\r\n") {
 		return nil, errCode("INVALID_PATH")
@@ -202,7 +232,11 @@ func originalProofs() error {
 	if e != nil || cleanupReference(b) != nil {
 		return errCode("ORIGINAL_CLEANUP_REFERENCE_MISSING")
 	}
-	for _, args := range [][]string{{"remote", "get-url", "origin"}, {"merge-base", "--is-ancestor", sourceHead, "origin/main"}, {"diff", "--quiet", sourceHead, "HEAD", "--", "safe-delete", "cleanup-8h", "Cargo.toml", "Cargo.lock"}, {"diff", "--quiet", "HEAD", "--", "safe-delete", "cleanup-8h", "Cargo.toml", "Cargo.lock"}} {
+	return verifySource(sourceHead, leaves[0].Source)
+}
+
+func verifySource(head, artifact string) error {
+	for _, args := range [][]string{{"remote", "get-url", "origin"}, {"merge-base", "--is-ancestor", head, "origin/main"}, {"diff", "--quiet", head, "HEAD", "--", "safe-delete", "cleanup-8h", "Cargo.toml", "Cargo.lock"}, {"diff", "--quiet", "HEAD", "--", "safe-delete", "cleanup-8h", "Cargo.toml", "Cargo.lock"}} {
 		ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
 		c := exec.CommandContext(ctx, "git", append([]string{"-C", sourceRoot}, args...)...)
 		c.WaitDelay = 2 * time.Second
@@ -216,7 +250,7 @@ func originalProofs() error {
 			return errCode("SOURCE_OWNER_CHANGED")
 		}
 	}
-	i, e := buildinfo.ReadFile(leaves[0].Source)
+	i, e := buildinfo.ReadFile(artifact)
 	if e != nil {
 		return errCode("BUILD_INFO_MISSING")
 	}
@@ -229,7 +263,7 @@ func originalProofs() error {
 			modified = s.Value
 		}
 	}
-	if revision != sourceHead || modified != "false" {
+	if revision != head || modified != "false" {
 		return errCode("BUILD_SOURCE_CHANGED")
 	}
 	return nil
@@ -276,26 +310,54 @@ func cleanupReference(b []byte) error {
 // Rename the actual pinned object with ReplaceIfExists=false. A competing
 // destination is retained; path-based replacement never overwrites its bytes.
 func renameNoReplace(p *pin, destination string) error {
-	if unsafe.Sizeof(uintptr(0)) != 8 {
-		return errCode("UNSUPPORTED_PLATFORM")
-	}
-	words, e := syscall.UTF16FromString(filepath.Clean(destination))
+	buf, e := nativeRenameBuffer(destination)
 	if e != nil {
 		return e
 	}
-	words = words[:len(words)-1]
+	e = retrySharing(func() error {
+		ok, _, callErr := kernel.NewProc("SetFileInformationByHandle").Call(p.f.Fd(), 3, uintptr(unsafe.Pointer(&buf[0])), uintptr(len(buf)))
+		if ok != 0 {
+			return nil
+		}
+		return callErr
+	}, func() { time.Sleep(25 * time.Millisecond) })
+	runtime.KeepAlive(buf)
+	if e != nil {
+		return fmt.Errorf("RENAME_COLLISION_OR_BUSY:%w", e)
+	}
+	return nil
+}
+
+func nativeRenameBuffer(destination string) ([]byte, error) {
+	if unsafe.Sizeof(uintptr(0)) != 8 {
+		return nil, errCode("UNSUPPORTED_PLATFORM")
+	}
+	words, e := syscall.UTF16FromString(filepath.Clean(destination))
+	if e != nil {
+		return nil, e
+	}
+	// FileNameLength excludes NUL, while the Win32 DOS-path conversion also
+	// consumes a terminated wide string. Never rely on zeroed heap padding.
 	buf := make([]byte, 20+len(words)*2)
-	*(*uint32)(unsafe.Pointer(&buf[16])) = uint32(len(words) * 2)
+	*(*uint32)(unsafe.Pointer(&buf[16])) = uint32((len(words) - 1) * 2)
 	for i, w := range words {
 		buf[20+i*2] = byte(w)
 		buf[21+i*2] = byte(w >> 8)
 	}
-	ok, _, _ := kernel.NewProc("SetFileInformationByHandle").Call(p.f.Fd(), 3, uintptr(unsafe.Pointer(&buf[0])), uintptr(len(buf)))
-	runtime.KeepAlive(buf)
-	if ok == 0 {
-		return errCode("RENAME_COLLISION_OR_BUSY")
+	return buf, nil
+}
+
+// Windows may briefly hold a reader while scanning a just-written file. Keep
+// the same pinned object and no-replace destination. Only sharing violation
+// gets four finite attempts; collision/permission errors retain immediately.
+func retrySharing(operation func() error, pause func()) error {
+	for attempt := 0; ; attempt++ {
+		e := operation()
+		if !errors.Is(e, syscall.Errno(32)) || attempt == 3 {
+			return e
+		}
+		pause()
 	}
-	return nil
 }
 func copySecurity(from, to *pin) error {
 	var owner, group, dacl, sd uintptr
@@ -326,6 +388,7 @@ type prepared struct {
 	old, new *pin
 	parents  []*pin
 	state    installState
+	suffix   string
 }
 
 type installState struct {
@@ -350,6 +413,12 @@ func namespaceState(path string) string {
 }
 
 func prepare(l leaf) (*prepared, error) {
+	return prepareAt(l, "todo3757")
+}
+func prepareAt(l leaf, suffix string) (*prepared, error) {
+	if suffix != "todo3757" && suffix != "todo3757-native-proof" {
+		return nil, errCode("INVALID_UPDATE_GENERATION")
+	}
 	ps, e := parents(l.Target)
 	if e != nil {
 		return nil, e
@@ -374,20 +443,25 @@ func prepare(l leaf) (*prepared, error) {
 		closePins(ps)
 		return nil, e
 	}
-	p := &prepared{leaf: l, old: old, new: n, parents: ps}
+	p := &prepared{leaf: l, old: old, new: n, parents: ps, suffix: suffix}
 	a, e := old.hash()
 	b, be := n.hash()
 	if e != nil || be != nil || a != l.Old || b != l.New || old.info.FileAttributes&0x10 != 0 || n.info.FileAttributes&0x10 != 0 || old.info.FileSizeHigh != 0 || n.info.FileSizeHigh != 0 {
 		p.close()
 		return nil, errCode("PINNED_BYTES_DIFFER")
 	}
-	if !missing(l.Target+".before-todo3757") || !missing(l.Target+".stage-todo3757") {
+	if !missing(p.backupPath()) || !missing(p.stagePath()) {
 		p.close()
 		return nil, errCode("PREVIOUS_STAGE_RETAINED")
 	}
 	return p, nil
 }
-func (p *prepared) close() { p.old.close(); p.new.close(); closePins(p.parents) }
+func (p *prepared) close()             { p.old.close(); p.new.close(); closePins(p.parents) }
+func (p *prepared) backupPath() string { return p.leaf.Target + ".before-" + p.suffix }
+func (p *prepared) stagePath() string  { return p.leaf.Target + ".stage-" + p.suffix }
+func (p *prepared) result() map[string]any {
+	return map[string]any{"kind": p.leaf.Kind, "updated": p.state.Published, "verified": p.state.Verified, "steps": p.state, "old_sha256": p.leaf.Old, "new_sha256": p.leaf.New, "original_file_id": p.old.id()}
+}
 
 type hooks struct {
 	beforeRetire, beforeRename, beforePublish func()
@@ -401,8 +475,8 @@ func (p *prepared) install(test hooks) error {
 	if test.rename != nil {
 		rename = test.rename
 	}
-	stagePath := p.leaf.Target + ".stage-todo3757"
-	backup := p.leaf.Target + ".before-todo3757"
+	stagePath := p.stagePath()
+	backup := p.backupPath()
 	stage, e := openPin(stagePath, syscall.GENERIC_READ|syscall.GENERIC_WRITE|0x10000|0x40000|0x80000, 1, 1)
 	if e != nil {
 		return e
@@ -451,32 +525,45 @@ func (p *prepared) install(test hooks) error {
 		test.beforePublish()
 	}
 	if e = rename(stage, p.leaf.Target); e != nil {
+		publishErr := e
 		// Restore only this original object into an absent public name, never
 		// overwrite a concurrent writer or erase evidence after a partial step.
 		if missing(p.leaf.Target) {
 			p.state.RestoreAttempted = true
 			if restoreErr := rename(p.old, p.leaf.Target); restoreErr != nil {
-				return errCode("PUBLISH_FAILED_RESTORE_FAILED")
+				return fmt.Errorf("PUBLISH_FAILED_RESTORE_FAILED:%w (publish:%v)", restoreErr, publishErr)
 			}
 			p.state.Restored = true
-			if !p.old.at(p.leaf.Target) {
-				return errCode("PUBLISH_FAILED_RESTORE_UNVERIFIED")
+			if readbackErr := p.old.verifyName(p.leaf.Target); readbackErr != nil {
+				return fmt.Errorf("PUBLISH_FAILED_RESTORE_UNVERIFIED:%w (publish:%v)", readbackErr, publishErr)
 			}
-			return errCode("PUBLISH_FAILED_RESTORED")
+			return fmt.Errorf("PUBLISH_FAILED_RESTORED:%w", publishErr)
 		}
-		return errCode("PUBLISH_FAILED_TARGET_PRESENT_OR_UNVERIFIED")
+		return fmt.Errorf("PUBLISH_FAILED_TARGET_PRESENT_OR_UNVERIFIED:%w", publishErr)
 	}
 	p.state.Published = true
 	if test.afterPublish != nil {
 		test.afterPublish(stage)
 	}
 	h, e = stage.hash()
-	if e != nil || h != p.leaf.New || !stage.at(p.leaf.Target) {
-		return errCode("INSTALLED_READBACK_FAILED")
+	if e != nil {
+		return errCode("INSTALLED_READBACK_FAILED:READ_ERROR")
+	}
+	if h != p.leaf.New {
+		return errCode("INSTALLED_READBACK_FAILED:BYTES_CHANGED")
+	}
+	if e = stage.verifyName(p.leaf.Target); e != nil {
+		return fmt.Errorf("INSTALLED_READBACK_FAILED:PUBLIC_IDENTITY:%w", e)
 	}
 	old, e := p.old.hash()
-	if e != nil || old != p.leaf.Old || !p.old.at(backup) {
-		return errCode("BACKUP_CHANGED")
+	if e != nil {
+		return errCode("BACKUP_CHANGED:READ_ERROR")
+	}
+	if old != p.leaf.Old {
+		return errCode("BACKUP_CHANGED:BYTES_CHANGED")
+	}
+	if e = p.old.verifyName(backup); e != nil {
+		return fmt.Errorf("BACKUP_CHANGED:NAME:%w", e)
 	}
 	p.state.Verified = true
 	return nil
@@ -514,7 +601,7 @@ func run(apply bool) ([]map[string]any, error) {
 	for _, index := range []int{1, 0} {
 		p := ps[index]
 		e := p.install(hooks{})
-		row := map[string]any{"kind": p.leaf.Kind, "updated": p.state.Published, "verified": p.state.Verified, "steps": p.state, "old_sha256": p.leaf.Old, "new_sha256": p.leaf.New, "original_file_id": p.old.id()}
+		row := p.result()
 		if e != nil {
 			row["retained_reason"] = e.Error()
 			rows = append(rows, row)
@@ -525,12 +612,20 @@ func run(apply bool) ([]map[string]any, error) {
 	return rows, nil
 }
 func main() {
-	if len(os.Args) != 2 || (os.Args[1] != "--check" && os.Args[1] != "--apply") {
+	if len(os.Args) != 2 || (os.Args[1] != "--check" && os.Args[1] != "--apply" && os.Args[1] != "--native-proof-check" && os.Args[1] != "--native-proof-apply") {
 		fmt.Println(`{"qualified":false,"reason":"INVALID_ARGUMENTS"}`)
 		os.Exit(2)
 	}
-	rows, e := run(os.Args[1] == "--apply")
-	r := map[string]any{"domain": "owned-cleanup-software-3757", "source_head": sourceHead, "qualified": e == nil, "results": rows, "data_access_granted": false, "general_guard_changed": false, "at": time.Now().UTC().Format(time.RFC3339Nano)}
+	var rows []map[string]any
+	var e error
+	head := sourceHead
+	if strings.HasPrefix(os.Args[1], "--native-proof-") {
+		head = nativeSourceHead
+		rows, e = refreshNativeProof(os.Args[1] == "--native-proof-apply")
+	} else {
+		rows, e = run(os.Args[1] == "--apply")
+	}
+	r := map[string]any{"domain": "owned-cleanup-software-3757", "source_head": head, "qualified": e == nil, "results": rows, "data_access_granted": false, "general_guard_changed": false, "at": time.Now().UTC().Format(time.RFC3339Nano)}
 	if e != nil {
 		r["reason"] = e.Error()
 	}

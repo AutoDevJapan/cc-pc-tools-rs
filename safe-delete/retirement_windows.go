@@ -418,8 +418,30 @@ func retirementSavedSource(root string) (string, error) {
 // async sessions, failed executions and output embedded inside quoted JSON.
 func retiredDirect(command, tool, action string) bool {
 	command = strings.ReplaceAll(command, `\"'`, "'")
-	if p := strings.Index(command, " -Command '"); p >= 0 && strings.HasSuffix(command, "'") {
-		command = command[p+11 : len(command)-1]
+	command = strings.TrimSpace(command)
+	if p := strings.Index(command, " -Command "); p >= 0 {
+		// Native execution records render the one -Command argument with
+		// either quote delimiter. Only the installed shell's exact wrapper is
+		// accepted; an echo or arbitrary executable cannot supply this prefix.
+		shell := strings.TrimSpace(command[:p])
+		if len(shell) < 2 || shell[0] != '"' || shell[len(shell)-1] != '"' {
+			return false
+		}
+		shell = shell[1 : len(shell)-1]
+		if !same(shell, "C:/Program Files/PowerShell/7/pwsh.exe") && !same(shell, "C:/Windows/System32/WindowsPowerShell/v1.0/powershell.exe") {
+			return false
+		}
+		arg := strings.TrimSpace(command[p+10:])
+		if len(arg) < 2 || (arg[0] != '\'' && arg[0] != '"') || arg[len(arg)-1] != arg[0] {
+			return false
+		}
+		body := arg[1 : len(arg)-1]
+		// No interpolation, escaped quotes or concatenated arguments inside
+		// the double-quoted wrapper. The direct argv parser remains below.
+		if arg[0] == '"' && strings.ContainsRune(body, '"') {
+			return false
+		}
+		command = body
 	}
 	command = strings.TrimSpace(command)
 	if strings.ContainsAny(command, ";`\r\n|<>$(){}") || strings.Contains(command, "&&") {
@@ -438,16 +460,31 @@ func retiredDirect(command, tool, action string) bool {
 			command = command[1:]
 		}
 		n := 0
-		for n < len(command) && ((q != 0 && command[n] != q) || (q == 0 && command[n] != ' ' && command[n] != '\t')) {
+		closed := q == 0
+		var literal strings.Builder
+		for n < len(command) {
+			if q == 0 && (command[n] == ' ' || command[n] == '\t') {
+				break
+			}
+			if q != 0 && command[n] == q {
+				// PowerShell single-quoted literals represent one apostrophe by
+				// doubling it. Keep the entire literal as one argv value.
+				if q == '\'' && n+1 < len(command) && command[n+1] == q {
+					literal.WriteByte(q)
+					n += 2
+					continue
+				}
+				n++
+				closed = true
+				break
+			}
+			literal.WriteByte(command[n])
 			n++
 		}
-		if q != 0 && n == len(command) {
+		if !closed || q != 0 && n < len(command) && command[n] != ' ' && command[n] != '\t' {
 			return false
 		}
-		parts = append(parts, command[:n])
-		if q != 0 {
-			n++
-		}
+		parts = append(parts, literal.String())
 		command = command[n:]
 	}
 	if len(parts) < 2 || !same(parts[0], tool) || parts[1] != action {

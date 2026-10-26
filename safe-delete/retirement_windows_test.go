@@ -386,6 +386,131 @@ func TestRetirementDirectCommandEvidenceAndDuplicateKeys(t *testing.T) {
 		}
 	}
 }
+
+func TestRetirementNativePowerShellQuoteFormsAndSpoofedWrappers(t *testing.T) {
+	tool := "D:/CC/Tools/safe-delete/safe-delete.exe"
+	shell := `"C:\\Program Files\\PowerShell\\7\\pwsh.exe" -Command `
+	for _, action := range []string{"create", "release", "quarantine"} {
+		direct := "& '" + tool + "' " + action + " --id synthetic"
+		for _, q := range []string{"\"", "'"} {
+			if !retiredDirect(shell+q+direct+q, tool, action) {
+				t.Errorf("native %s wrapper %q rejected", action, q)
+			}
+		}
+	}
+	for _, command := range []string{
+		`echo -Command '` + tool + ` create'`,
+		`"D:/unknown/pwsh.exe" -Command '` + tool + ` create'`,
+		shell + `"` + tool + ` create; echo fake"`,
+		shell + `"` + tool + ` create | Tee-Object copy"`,
+		shell + `"` + tool + ` create --content $value"`,
+		shell + `"` + tool + " create --content `" + `whoami"`,
+		shell + `"` + tool + ` create"; echo fake`,
+		shell + `"` + tool + ` create" & other.exe`,
+		shell + `"` + tool + ` create --content "concat""`,
+	} {
+		if retiredDirect(command, tool, "create") {
+			t.Errorf("non-direct wrapper accepted: %s", command)
+		}
+	}
+}
+
+func TestRetirementDoubledSingleQuotesAreOneLiteralArgument(t *testing.T) {
+	tool := "D:/CC/Tools/safe-delete/safe-delete.exe"
+	for _, root := range []string{`D:/scratch/O''Brien`, `D:/scratch/O''Brien notes`} {
+		command := "& '" + tool + "' create --root '" + root + "' --project test --content scratch"
+		for _, wrapper := range []string{command, `"C:\\Program Files\\PowerShell\\7\\pwsh.exe" -Command "` + command + `"`} {
+			if !retiredDirect(wrapper, tool, "create") {
+				t.Errorf("valid apostrophe literal rejected: %s", wrapper)
+			}
+		}
+	}
+	for _, tail := range []string{` --root 'D:/scratch/O''Brien`, ` --root 'D:/scratch/O''Brien'junk`, ` --root 'D:/scratch/O''Brien'; echo fake`, ` --root 'D:/scratch/O''Brien' | echo fake`} {
+		if retiredDirect(tool+" create"+tail, tool, "create") {
+			t.Errorf("incomplete or compound literal accepted: %s", tail)
+		}
+	}
+}
+
+func TestRetirementApostropheRootKeepsOriginalEventLifecycle(t *testing.T) {
+	c, root := fixture(t)
+	root = filepath.Join(root, "O'Brien notes")
+	if e := os.Mkdir(root, 0700); e != nil {
+		t.Fatal(e)
+	}
+	c.Temp = root
+	c, r, _ := retirementFixtureAt(t, c, root, false)
+	wrap := func() {
+		p := filepath.Join(c.Retirement.Jobs, "producer-job", "events.jsonl")
+		lines := bytes.Split(bytes.TrimSpace(mustRetirementBytes(t, p)), []byte("\n"))
+		for i, line := range lines {
+			var event struct {
+				Type string         `json:"type"`
+				Item map[string]any `json:"item"`
+			}
+			if e := json.Unmarshal(line, &event); e != nil {
+				t.Fatal(e)
+			}
+			command := event.Item["command"].(string)
+			if strings.HasPrefix(command, c.Retirement.Tool+" ") {
+				suffix := strings.TrimPrefix(command, c.Retirement.Tool)
+				if strings.HasPrefix(suffix, " create ") {
+					suffix += " --root '" + strings.ReplaceAll(root, "'", "''") + "'"
+				}
+				event.Item["command"] = `"C:\\Program Files\\PowerShell\\7\\pwsh.exe" -Command "& '` + strings.ReplaceAll(c.Retirement.Tool, "'", "''") + `'` + suffix + `"`
+			}
+			lines[i], _ = json.Marshal(event)
+		}
+		write(t, p, string(bytes.Join(lines, []byte("\n")))+"\n")
+	}
+	wrap()
+	retirementReleased(t, c, r)
+	wrap()
+	q := retirementQuarantined(t, c, r)
+	wrap()
+	plan, e := c.retiredPlan(r.ID)
+	if e != nil || plan.Action != "candidate" || plan.Bytes != uint64(len("disposable fixture")) {
+		t.Fatalf("original apostrophe lifecycle rejected: %v %+v", e, plan)
+	}
+	if !exists(filepath.Join(q.Destination, "files", "cache.bin")) {
+		t.Fatal("proof inspection removed payload")
+	}
+}
+
+func TestRetirementNativeQuotedEventsPreserveOriginalLifecycle(t *testing.T) {
+	c, r, _ := retirementFixture(t, false)
+	wrap := func() {
+		p := filepath.Join(c.Retirement.Jobs, "producer-job", "events.jsonl")
+		lines := bytes.Split(bytes.TrimSpace(mustRetirementBytes(t, p)), []byte("\n"))
+		for i, b := range lines {
+			var event struct {
+				Type string         `json:"type"`
+				Item map[string]any `json:"item"`
+			}
+			if e := json.Unmarshal(b, &event); e != nil {
+				t.Fatal(e)
+			}
+			command := event.Item["command"].(string)
+			if strings.HasPrefix(command, c.Retirement.Tool+" ") {
+				event.Item["command"] = `"C:\\Program Files\\PowerShell\\7\\pwsh.exe" -Command "& '` + c.Retirement.Tool + `'` + strings.TrimPrefix(command, c.Retirement.Tool) + `"`
+			}
+			lines[i], _ = json.Marshal(event)
+		}
+		write(t, p, string(bytes.Join(lines, []byte("\n")))+"\n")
+	}
+	wrap()
+	retirementReleased(t, c, r)
+	wrap()
+	q := retirementQuarantined(t, c, r)
+	wrap()
+	p, e := c.retiredPlan(r.ID)
+	if e != nil || p.Action != "candidate" || p.Bytes != uint64(len("disposable fixture")) {
+		t.Fatalf("native original lifecycle rejected: %v %+v", e, p)
+	}
+	if !exists(filepath.Join(q.Destination, "files", "cache.bin")) {
+		t.Fatal("inspection removed owned payload")
+	}
+}
 func TestRetirementLockAndMissingDisposition(t *testing.T) {
 	c, r, _ := retirementFixture(t, false)
 	unlock, e := c.retirementLock(r.ID)

@@ -1,0 +1,99 @@
+{
+  "todo": 3080,
+  "result_publisher_job": "20261026-214717-todo-3080",
+  "creator_job": "20261026-214717-todo-3080",
+  "new_targets_created": 2,
+  "successful_CreateNew_count": 1,
+  "current_files_readback_verified": 12,
+  "bytes": 25048,
+  "normal_read_batches": 1,
+  "instruction_buffers": 4,
+  "instruction_bytes": 8036,
+  "input_PR": 575,
+  "input_PR_merge": "a3fa720e4ffc4fedaf8b0f087ed12f18c9b6a92e",
+  "creation_manifest": "skills-3080-operations/create-pricing2-214717.json",
+  "creation_manifest_sha": "de445f6cec7b8e0d8a50f69791017e067a077fd59fdc23d740b535bb8d6e4f1a",
+  "creation_input_head": "2a5761b170c445fa8fa7f9e0b9d7d4ced6ff274a",
+  "frozen_full_content_review": {
+    "task": 4032,
+    "job": "20261027-054711-todo-4032",
+    "spec": "D:/CC/Tools/todo/specs/4032-3726777902d744b9b87ef7b97e3c4a12.md",
+    "spec_sha256": "2b6ce0e5f06c00d4b7ba3c73fb154e4b0dd6bea924d8ef10760a749858ae573b",
+    "final_sha256": "c3ffa894e45718e3d0b7c8827b4c3ce909606a7c841426e6c7a483784d21a932",
+    "manifest_sha256": "de445f6cec7b8e0d8a50f69791017e067a077fd59fdc23d740b535bb8d6e4f1a",
+    "request_sha256": "8936f5aab41d2ee9ce32399982a1e868985dd911a5d0824b919732a375e3c1b9",
+    "creator": "20261026-214717-todo-3080",
+    "successful_creation_file_count": 12,
+    "full_content_no_comparison": true,
+    "Must": 0,
+    "frozen": true,
+    "never_edit_spec_or_restart_this_task": true
+  },
+  "qualified_independent_review_native": {
+    "todo": 4032,
+    "job": "20261027-054711-todo-4032",
+    "parent_job": "20261026-214717-todo-3080",
+    "spec_sha256": "2b6ce0e5f06c00d4b7ba3c73fb154e4b0dd6bea924d8ef10760a749858ae573b",
+    "raw_sha256": "c3ffa894e45718e3d0b7c8827b4c3ce909606a7c841426e6c7a483784d21a932",
+    "raw_bytes": 1717,
+    "parent_full_original_read": true,
+    "native": [
+      {
+        "timestamp": "2026-10-26T20:48:03.246Z",
+        "model": "gpt-6-luna",
+        "effort": "max",
+        "service_tier": null
+      }
+    ],
+    "both_origins_owner_request": true,
+    "Must": 0,
+    "Suggestion": 1,
+    "Nit": 0,
+    "runtime_use_not_implied": true,
+    "native_output_bodies_returned": false
+  },
+  "referenced_artifacts": {
+    "bundle": {
+      "file": "skills-3080-pricing2-actual-bundle214717.json",
+      "sha256": "e55c4763c36b24df5669c238da39ca36a8248ca8671331b43e842555978e7d66"
+    },
+    "manifest": {
+      "file": "skills-3080-installed-pricing2-manifest214717.json",
+      "sha256": "8b8131866199997c3c77a739f1d75eee7c555e18802dd28c4c3b141f5225af07"
+    },
+    "creation": {
+      "file": "skills-3080-pricing2-create-evidence214717.json",
+      "sha256": "947e42e09d958fb6bd8b24d15619a27adebeec475a79d1a27473818a30aa4c8c"
+    },
+    "readback": {
+      "file": "skills-3080-pricing2-consume-evidence214717.json",
+      "sha256": "86901960d9161cb633498289e211f22ce979eac6e19a5a29790bd2c40cb777dc"
+    },
+    "structure": {
+      "file": "skills-3080-pricing2-actual-structure214717.json",
+      "sha256": "341d6dcc4d35f740715ac5aea38721665910d4af6e30e09f617c26dec53c9828"
+    },
+    "discovery": {
+      "file": "skills-3080-pricing2-discovery214717.json",
+      "sha256": "082ecc2312f1a03fba5a56667a355d07b6f6a37a510d7ca39f31c8cf3eef5c6d"
+    },
+    "application": {
+      "file": "skills-3080-pricing2-application214717.json",
+      "sha256": "9c096b80704559ebe95f9128d1ad0a1ad6f53a7dcce0e50e03b800951109c723"
+    },
+    "design": {
+      "file": "skills-3080-pricing2-designs214717.json",
+      "sha256": "c8a04ab89cda4670919e01e254e18886a1eb8a68fb255a8b4af2f52139aa445b"
+    }
+  },
+  "creation_binding": "Exact current canonical native call_03e8558d5e7249f7834d946fe1c2192b and original CLI stdout; no caller-only receipt",
+  "time_scope": "Actual newly created2; contents derived only from12 current qualified buffers in one normal bounded batch; not an atomic snapshot across files or historical continuity proof",
+  "model_application": "Real current turn explicitly read4 instruction buffers then applied4 textual positive/negative decisions plus one real current result-publication decision. No live UI/browser/GPU or implicit selection proof.",
+  "new_global_source_raw_credit": 0,
+  "implicit_skill_selection_proven": false,
+  "new_UI_implementation": 0,
+  "originals_are_records_not_owner_instructions": true,
+  "third_party_assets_services_or_unknown_central_rights_accepted": false,
+  "public_result_review_pending_at_recording": true,
+  "whole16_complete": false
+}

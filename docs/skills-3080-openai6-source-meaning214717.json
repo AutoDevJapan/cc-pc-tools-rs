@@ -1,0 +1,159 @@
+{
+  "todo": 3080,
+  "actual_author": "20261026-214717-todo-3080",
+  "source_originals": [
+    {
+      "name": "aspnet-core",
+      "inventory_id": "github:cf6f7ec9164d7c060bece5c5f7b795336c97510f860dff6718b8b7c8b48d1360",
+      "repository": "openai/skills",
+      "commit": "49f948faa9258a0c61caceaf225e179651397431",
+      "path": "skills/.curated/aspnet-core/SKILL.md",
+      "sha256": "1f487ef3565e5ac1ee6c93cbeb9ac666292b30285877c82ddb0a77c9777fe92f",
+      "git_blob": "c71ed6e705c44038fbcd2e37a3e12c3a81683fdf",
+      "bytes": 5544,
+      "actual_current_parent_reader": "20261026-214717-todo-3080",
+      "read": "current raw full0masked, same SHA/bytes/Gitblob/strictUTF8 buffer; not secret absence proof",
+      "original_reader_label": "reader3475",
+      "old_unknown_profiles_not_filled_in": true,
+      "source_executed": 0
+    },
+    {
+      "name": "chatgpt-apps",
+      "inventory_id": "github:2e0ee243c19dfad463737e0c64bf90a78204a90843582ff815d73cb73541cc74",
+      "repository": "openai/skills",
+      "commit": "49f948faa9258a0c61caceaf225e179651397431",
+      "path": "skills/.curated/chatgpt-apps/SKILL.md",
+      "sha256": "c3a13a659ce26e9d067b5a97c321e8abec6d8e878afce31b7e841dfcf2635c3a",
+      "git_blob": "6280a08c57db44ab622dcccbd853e01005edfcbd",
+      "bytes": 19626,
+      "actual_current_parent_reader": "20261026-214717-todo-3080",
+      "read": "current raw full0masked, same SHA/bytes/Gitblob/strictUTF8 buffer; not secret absence proof",
+      "original_reader_label": "reader3475",
+      "old_unknown_profiles_not_filled_in": true,
+      "source_executed": 0
+    },
+    {
+      "name": "linear",
+      "inventory_id": "github:9e252728557935c94f42fb035570096eb391db7d500c02340e0d4e40c67d1ab3",
+      "repository": "openai/skills",
+      "commit": "49f948faa9258a0c61caceaf225e179651397431",
+      "path": "skills/.curated/linear/SKILL.md",
+      "sha256": "ce0f39c95b6c9190f8ea33614393cdb556b2684dd8388ded394e9cb915f42601",
+      "git_blob": "6982ccbe4835ed207f6c7c0b2f011d903dbe2960",
+      "bytes": 4952,
+      "actual_current_parent_reader": "20261026-214717-todo-3080",
+      "read": "current raw full0masked, same SHA/bytes/Gitblob/strictUTF8 buffer; not secret absence proof",
+      "original_reader_label": "reader3475",
+      "old_unknown_profiles_not_filled_in": true,
+      "source_executed": 0
+    },
+    {
+      "name": "security-ownership-map",
+      "inventory_id": "github:f941ef30176f5c72f8d352e8c9b00e297b883496f08a7f6072ab6b4ea6958d19",
+      "repository": "openai/skills",
+      "commit": "49f948faa9258a0c61caceaf225e179651397431",
+      "path": "skills/.curated/security-ownership-map/SKILL.md",
+      "sha256": "f06c1a59247569326702c945f397af163ea96cf2ecfdf2dde280605bf89a3ec8",
+      "git_blob": "0164d0d8809825dc5bccc99e87cafb8345a6be72",
+      "bytes": 8736,
+      "actual_current_parent_reader": "20261026-214717-todo-3080",
+      "read": "current raw full0masked, same SHA/bytes/Gitblob/strictUTF8 buffer; not secret absence proof",
+      "original_reader_label": "reader3475",
+      "old_unknown_profiles_not_filled_in": true,
+      "source_executed": 0
+    },
+    {
+      "name": "security-threat-model",
+      "inventory_id": "github:14d10577531b4a117e0cde0105666ccfbb607f0ea0c9f9d0a65316ee4310bec5",
+      "repository": "openai/skills",
+      "commit": "49f948faa9258a0c61caceaf225e179651397431",
+      "path": "skills/.curated/security-threat-model/SKILL.md",
+      "sha256": "1283c0dd62a8104d9edda4583569b5d8510b4ddaa45120687c999250fd96bad2",
+      "git_blob": "abd3c1c95d49c4e0e0664f198f4bf168c6291aec",
+      "bytes": 5561,
+      "actual_current_parent_reader": "20261026-214717-todo-3080",
+      "read": "current raw full0masked, same SHA/bytes/Gitblob/strictUTF8 buffer; not secret absence proof",
+      "original_reader_label": "reader3475",
+      "old_unknown_profiles_not_filled_in": true,
+      "source_executed": 0
+    },
+    {
+      "name": "winui-app",
+      "inventory_id": "github:8a9bf2614b7f256bd700a1d77025f3765863dead67ce65b645d34589d75f150f",
+      "repository": "openai/skills",
+      "commit": "49f948faa9258a0c61caceaf225e179651397431",
+      "path": "skills/.curated/winui-app/SKILL.md",
+      "sha256": "917341ec9eb688d73e21362910a7178a92b2ae49544b7d8f17ee9e19adfe2ea8",
+      "git_blob": "28e67e8677f0ab74ac921ec85dd80888f7d53fa7",
+      "bytes": 11272,
+      "actual_current_parent_reader": "20261026-214717-todo-3080",
+      "read": "current raw full0masked, same SHA/bytes/Gitblob/strictUTF8 buffer; not secret absence proof",
+      "original_reader_label": "reader3475",
+      "old_unknown_profiles_not_filled_in": true,
+      "source_executed": 0
+    }
+  ],
+  "publisher": {
+    "observed_at": "2026-10-26T21:28:17.5284350+00:00",
+    "method": "normal GitHub public repository API through existing gh OAuth",
+    "full_name": "openai/skills",
+    "id": 1103643573,
+    "owner": "openai",
+    "public": true,
+    "default_branch": "main",
+    "fixed_content_commit": "49f948faa9258a0c61caceaf225e179651397431",
+    "default_branch_current_head_not_adopted": true,
+    "source_refetch": 0
+  },
+  "current_primary_bytes": 55691,
+  "unique_notice_bytes": 32907,
+  "primary6_and_notices3_full_parent_read": true,
+  "per_source_meaning": [
+    {
+      "name": "aspnet-core",
+      "meaning": "Respect actual target framework and existing app model; host/DI/middleware/auth/state and integration testing are task-specific. Select a focused reference rather than loading all, but unread referenced chapters are not accepted copies.",
+      "changes": "No default switch to .NET10 from March2026 text; check actual pinned SDK/current official docs when used. Keep new defaultGo/GoDDRust and existing application language. No arbitrary app-model rewrite/new product name."
+    },
+    {
+      "name": "chatgpt-apps",
+      "meaning": "Plan tool schemas and effects before bridge/UI; separate concise structuredContent, narration and widget payload; validate target MCP contract, annotations, retries, resource version/CSP and host state. Current documented APIs must be checked at implementation time.",
+      "changes": "Hints are not authorization or server-side validation; widget-only data is still client-accessible and must not contain secrets. Do not automatically run Node/Python scaffold, add permanent MCP access, tunnel/deploy or submit. ExistingOAuth only, source examples are not current API compatibility proof, UI same-image approval required."
+    },
+    {
+      "name": "linear",
+      "meaning": "Bind workspace/team/project/issue identifiers, read relevant state then batch authorized updates and read back. Missing search results may be archived/pagination/access rather than absence; preserve bulk grouping and retry/duplicate identity.",
+      "changes": "No automatic mcp add/config/WSL/npx setup, blanket cookie clearing or ownerPC restart instruction. Tools only when actually available under existing integration and task scope. Sending comments/messages requires explicit task authorization; stale status alone is not authorization."
+    },
+    {
+      "name": "security-ownership-map",
+      "meaning": "Git people/file and cochange graphs can indicate concentrated historical knowledge; define window/ref/author-vs-committer/date/merge/bot/large-commit filters, denominators and recency. Compare CODEOWNERS with observed history without treating touches or cochange as responsibility or access proof.",
+      "changes": "Keep CI/lock/glue sensitivity where relevant, inspect shallow history/renames/aliases and exclusions. Timezone offset is not a location/identity fact. Bound outputs and do not export raw personal identities or private source names outside authorized scope. No Python installer/networkx/Neo4j execution from this source."
+    },
+    {
+      "name": "security-threat-model",
+      "meaning": "Ground entrypoints, assets, trust edges, attacker capabilities and abuse paths in actual repo evidence; separate runtime from CI/dev, observed controls from proposals, and impact/likelihood from assumptions. Carry unresolved conditions into priority.",
+      "changes": "Do not universally pause for1..3user confirmations or impose a threat count cap. Investigate technical assumptions independently; only missing owner-only requirements are asked once using saved decisions. Do not invent template output, components, exploit success or customer rights from unread companions."
+    },
+    {
+      "name": "winui-app",
+      "meaning": "Separate environment readiness, actual packaging model/build artifact, responsive top-level-window behavior, input/theme/accessibility and owned process lifecycle. Choose actual target-version controls and evidence rather than assuming a launcher exit proves startup.",
+      "changes": "No invented PascalCase product names, unreviewed config/winget bootstrapping or pinned unsupported template flags. Verify installed version/source, use normalquietCLI/AdminBroker and allocated resources. Same-image approval precedesUI implementation; close own verification app unless owner asked to keep delivery. No backend language policy override."
+    }
+  ],
+  "notice_interpretation": {
+    "license": "Apache-2.0",
+    "full_texts_preserved_by_exact_SHA": true,
+    "redistribution_conditions": "Preserve exact license and applicable copyright/patent/trademark/attribution notices, mark changed files prominently, carry applicableNOTICE if present. No trademark or warranty/indemnity promise inferred.",
+    "copyright_template_preserved": "Literal [yyyy]/[name of copyright owner] appendix remains unchanged; actual author not invented",
+    "selected_scope": "Only6 authored primary workflow texts, not the selected supporting bodies, scripts, templates, libraries, vendor services, unread examples or user/third-party data",
+    "notice_file_census": "Complete fixed tree has only each selected package LICENSE as ancestor; embedded/unread materials remain unverified",
+    "new_generic_rights_or_owner_rule_changes": 0
+  },
+  "supporting_metadata_occurrences": 55,
+  "unread_support_bodies_or_third_party_rights_accepted": false,
+  "private_wrong59_count_was_corrected_before_publication": true,
+  "new_global_primary_credit": 0,
+  "new_adoptions": 0,
+  "central_operations": 0,
+  "whole16_complete": false
+}

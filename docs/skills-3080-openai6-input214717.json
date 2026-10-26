@@ -1,0 +1,53 @@
+{
+  "todo": 3080,
+  "author_job": "20261026-214717-todo-3080",
+  "operation": {
+    "file": "skills-3080-operations/create-openai6-214717.json",
+    "sha256": "af55ac1965aa0ba6796898f23c9e231d045b88f3eff9424314ed57bdcaa8b8b5"
+  },
+  "bundle": {
+    "file": "skills-3080-openai6-reviewed-bundle214717.json",
+    "sha256": "15cebd153b38ddf24285198d12ee18902bb5ad16819f6266ca26dfb44c8bf211"
+  },
+  "meaning": {
+    "file": "skills-3080-openai6-source-meaning214717.json",
+    "sha256": "70ea2f95c9aca3a0932253dc408d3461e2096e15cc7b2bf730afe4589ba8f86b"
+  },
+  "notices": {
+    "file": "skills-3080-openai6-notice-map214717.json",
+    "sha256": "01f2bbc24f3271116a8ce45f2b45b8f43bb09fc3a3decc6e549fa735fe0730c2"
+  },
+  "structure": {
+    "file": "skills-3080-openai6-structure214717.json",
+    "sha256": "9ab84a7abfbe2b64cfecb835a0272ca76d630d9d2f1e61fd4293201f8adf3715"
+  },
+  "proposed_uninstalled_targets": 6,
+  "virtual_files": 36,
+  "virtual_bytes": 167248,
+  "proposal_discovery": {
+    "method": "fresh installed Codex app-server initialize + skills/list forceReload",
+    "metadata_total": 437,
+    "found_count": 0,
+    "parse_errors": 0,
+    "process_tree_exit_confirmed": true,
+    "physical_absence_unproved": true,
+    "implicit_selection_or_context_budget_unproved": true
+  },
+  "normal_readback_plan": {
+    "maximum_indices": 32,
+    "maximum_bytes": 65536,
+    "planned_batch_bytes": [
+      64312,
+      57838,
+      45098
+    ],
+    "planned_batches": 3,
+    "actual_readback": 0,
+    "historical_continuity_or_atomic_snapshot_not_implied": true
+  },
+  "full_content_review_required_before_create": true,
+  "not_part_of_live_designs_or_adoptions": true,
+  "new_adoptions": 0,
+  "central_operations": 0,
+  "whole16_complete": false
+}

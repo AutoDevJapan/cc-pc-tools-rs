@@ -31,11 +31,11 @@ const official3894Safe = "D:/CC/Tools/safe-delete/safe-delete.exe"
 const official3894Temp = "C:/Users/makhmeto/AppData/Local/Temp"
 const official3894OriginalCreator = "20261026-064014-todo-3894"
 
-// Original SDK publisher's accepted software handoff, not a hash learned from
-// an unknown target. Earlier publisher receipts remain historical.
-// docs/evidence/official-ci3387-known-guard-baseline-f5f846a8.json
-const official3894PreviousGuardSHA = "f3927b8850258098d54dae87196ae382960dc83a5b6e7dd11354ab97ffd07cdf"
-const official3894PreviousGuardHead = "f5f846a8470b544846e4c9ce43306061bf5668f9"
+// Independent accepted runtime snapshots, not hashes learned from an unknown
+// target. The original SDK producer and its historical receipt stay unchanged.
+// docs/evidence/official-ci3387-known-guard-baseline-f30f9e76.json
+const official3894PreviousGuardSHA = "02c8cad70e44f2bc4cd4e5a70dfdaf581a7ee6896eb63449fe1606eb28f5b5be"
+const official3894PreviousGuardHead = "f30f9e763e25884fa48d1cce0cac22da1cebfb69"
 
 type official3894Source struct {
 	Head, Registration, CreatorJob, Workspace, Branch, SpecSHA string

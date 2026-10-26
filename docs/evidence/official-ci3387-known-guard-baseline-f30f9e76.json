@@ -1,0 +1,15 @@
+{
+  "domain": "official-ci3387-independent-guard-baseline-v1",
+  "repository_id": 1406818713,
+  "reported_current_sha256": "02c8cad70e44f2bc4cd4e5a70dfdaf581a7ee6896eb63449fe1606eb28f5b5be",
+  "reported_current_source_head": "f30f9e763e25884fa48d1cce0cac22da1cebfb69",
+  "source": "independent accepted runtime snapshots already published by the original software users",
+  "source_public_files": [
+    "docs/skills-3080-craft-create-evidence214717.json",
+    "docs/skills-3080-codex3-after542-current20-evidence170221.json"
+  ],
+  "new_runtime_read_performed": false,
+  "original_sdk_producer_changed": false,
+  "software_comparison_only": true,
+  "general_data_access_granted": false
+}

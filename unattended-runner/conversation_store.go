@@ -44,6 +44,7 @@ type ConversationQuestion struct {
 	DecisionFile     string   `json:"decision_file"`
 	Title            string   `json:"title,omitempty"`
 	Wait             bool     `json:"wait_requested"`
+	RecoveredIntake  uint64   `json:"recovered_intake_todo_id,omitempty"`
 	Phase            string   `json:"phase"`
 	Created          string   `json:"created_at"`
 	Thread           string   `json:"thread_id,omitempty"`
@@ -108,6 +109,7 @@ type conversationProof struct {
 	RequestID        string                              `json:"request_id"`
 	Thread           string                              `json:"thread_id"`
 	Owner            string                              `json:"owner_id"`
+	Fingerprint      string                              `json:"question_fingerprint,omitempty"`
 	Question         string                              `json:"question_message_id"`
 	Created          string                              `json:"question_timestamp"`
 	Progress         string                              `json:"progress_thread_id"`
@@ -664,6 +666,9 @@ func (r *Runner) conversationProof(ctx context.Context, q ConversationQuestion) 
 	var proof conversationProof
 	if json.Unmarshal([]byte(raw), &proof) != nil || proof.Domain != "new-owner-recovery-messages" || !proof.ReadOnly || proof.Source != "discord-api-v10" || proof.RequestID != q.SenderID || proof.Thread != q.Thread || proof.Owner != r.State.Destination.Owner || proof.Question != q.Message || proof.Progress != q.Progress || canonicalHash(proof.Decision) != q.DecisionSHA || bytesHash([]byte(proof.Body)) != q.QuestionSHA {
 		return nil, errors.New("conversation question association differs")
+	}
+	if proof.Fingerprint != "" && proof.Fingerprint != q.Fingerprint {
+		return nil, errors.New("conversation question fingerprint differs")
 	}
 	stamp, err := time.Parse(time.RFC3339Nano, proof.Created)
 	if err != nil || stamp.After(r.Now().Add(time.Minute)) {

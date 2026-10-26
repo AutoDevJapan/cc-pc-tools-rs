@@ -205,8 +205,8 @@ fn assigned(body: &str, input: &Value) -> bool {
         })
     })
 }
-fn assignment_matches(actor: &Value, body: &str, input: &Value) -> bool {
-    assigned(body, input) || crate::ordinary_assignment::matches(actor, input, body)
+fn assignment_matches(paths: &Paths, actor: &Value, body: &str, input: &Value) -> bool {
+    assigned(body, input) || crate::ordinary_assignment::matches(paths, actor, input, body)
 }
 fn actor_identity(paths: &Paths, actor: &Value, input: &Value) -> Result<(Value, Vec<u8>)> {
     let job_id = text(input, "job_id");
@@ -223,7 +223,7 @@ fn actor_identity(paths: &Paths, actor: &Value, input: &Value) -> Result<(Value,
     }
     let prompt = bridge::bytes(&paths.jobs.join(job_id).join("prompt.md"))?;
     if !Path::new(text(&job, "cwd")).is_absolute()
-        || !std::str::from_utf8(&prompt).is_ok_and(|s| assignment_matches(actor, s, input))
+        || !std::str::from_utf8(&prompt).is_ok_and(|s| assignment_matches(paths, actor, s, input))
     {
         return fail("actor_identity_invalid");
     }
@@ -265,8 +265,8 @@ fn actor_proof(paths: &Paths, actor: &Value, input: &Value) -> Result<Value> {
         paths.store.parent().unwrap().join(spec)
     };
     let spec_bytes = bridge::bytes(&spec)?;
-    if !std::str::from_utf8(&spec_bytes).is_ok_and(|s| assignment_matches(actor, s, input))
-        || !std::str::from_utf8(&prompt).is_ok_and(|s| assignment_matches(actor, s, input))
+    if !std::str::from_utf8(&spec_bytes).is_ok_and(|s| assignment_matches(paths, actor, s, input))
+        || !std::str::from_utf8(&prompt).is_ok_and(|s| assignment_matches(paths, actor, s, input))
     {
         return fail("assignment_scope_mismatch");
     }
@@ -424,8 +424,13 @@ fn block(input: &Value, input_sha: &str, implementation: bool) -> String {
     } else {
         String::new()
     };
+    let actor_label = if implementation && input.get("intake_source_file").is_some() {
+        "記録担当"
+    } else {
+        "実担当"
+    };
     format!(
-        "[discord-{marker}-record-v1 sha256={input_sha}]\n{summary}\n実担当: ToDo {} / job {}\n元作業・保存先: ToDo {}\n出所: Discord API v10 / author {} / thread {} / question {} / reply {}\n質問日時: {} / 回答日時: {} / 編集日時: {} / 取得日時: {}\n原質問（原文）:\n{}\n本人回答（原文）:\n{}\nsource_receipt_sha256={}{execution}\n[/discord-{marker}-record-v1 sha256={input_sha}]",
+        "[discord-{marker}-record-v1 sha256={input_sha}]\n{summary}\n{actor_label}: ToDo {} / job {}\n元作業・保存先: ToDo {}\n出所: Discord API v10 / author {} / thread {} / question {} / reply {}\n質問日時: {} / 回答日時: {} / 編集日時: {} / 取得日時: {}\n原質問（原文）:\n{}\n本人回答（原文）:\n{}\nsource_receipt_sha256={}{execution}\n[/discord-{marker}-record-v1 sha256={input_sha}]",
         text(input, "actor_todo_id"),
         text(input, "job_id"),
         text(input, "origin_todo_id"),
@@ -519,7 +524,7 @@ fn record_for(
     }
     let ordinary = implementation && input.get("intake_source_file").is_some();
     if ordinary {
-        crate::ordinary_assignment::qualify(row(db, actor_id)?, &input)?;
+        crate::ordinary_assignment::qualify(paths, row(db, actor_id)?, &input)?;
     }
     for (id, scope, state) in [
         (origin_id, origin_scope, origin_state),

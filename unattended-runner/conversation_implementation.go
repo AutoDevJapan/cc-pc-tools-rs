@@ -82,6 +82,9 @@ func (r *Runner) implementationCommand(ctx context.Context, q ConversationQuesti
 		if err != nil || len(row.conversationState) == 0 {
 			return result, errImplementation
 		}
+		if selected.name == "actor" && row.Project == q.Project && (input.IntakeSourceFile != "" || input.IntakeSourceSHA != "") {
+			return result, errImplementation
+		}
 		if row.Project != q.Project {
 			path, sha, ok := r.ordinaryAssignment(q, input.Message, row)
 			if selected.name != "actor" || !ok || input.IntakeSourceFile != path || input.IntakeSourceSHA != sha {

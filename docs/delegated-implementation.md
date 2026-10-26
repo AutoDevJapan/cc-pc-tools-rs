@@ -51,6 +51,8 @@ Rust側も同じ原本と割当・別々のscope/snapshotを確認する。原�
 記録のapplied_atは、現在のcanonical sourceを取得してから実反映を照合した日時とする。
 
 ```text
+unattended-runner.exe conversation recover-question --request-id <元request> --message-id <本人reply>
+unattended-runner.exe conversation source-link --request-id <元request> --message-id <本人reply> --actor-todo-id <受付担当> --intake-todo-id <受付担当> --source-sha256 <通常受付原本のSHA> --revision <実commit>
 unattended-runner.exe conversation source-verify --request-id <元request> --message-id <本人reply>
 unattended-runner.exe conversation source-reacquire --request-id <元request> --message-id <本人reply>
 unattended-runner.exe conversation implementation-record --request-id <元request> --message-id <本人reply> --actor-todo-id <実担当> --source-sha256 <確認したcanonical SHA> --revision <実反映の40桁commit> --evidence-file <UTF-8 JSON>

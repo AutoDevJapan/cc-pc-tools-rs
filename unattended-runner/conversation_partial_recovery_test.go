@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
@@ -50,16 +51,24 @@ func prepareOrdinaryProjectFixture(t *testing.T, f *conversationFixture, args []
 	if readJSON(f.r.TodoPath, maxTodo, &db) != nil {
 		t.Fatal("todo fixture")
 	}
-	db["projects"].(map[string]any)["intake"] = f.r.Config.Home
+	intakeRoot := filepath.Join(f.r.Config.Home, "independent-intake")
+	if os.MkdirAll(intakeRoot, 0700) != nil {
+		t.Fatal("intake root fixture")
+	}
+	db["projects"].(map[string]any)["intake"] = intakeRoot
 	for _, raw := range db["items"].([]any) {
 		row := raw.(map[string]any)
 		if row["id"] == float64(43) {
 			row["project"] = "intake"
 			row["note"] = "unattended-owner-receipt:" + saved.Key
+			row["scheduler"].(map[string]any)["worktree"] = intakeRoot
 		}
 	}
 	if publish(f.r.TodoPath, db) != nil || f.r.save() != nil {
 		t.Fatal("save fixture")
+	}
+	if publish(filepath.Join(f.r.JobsPath, "link-worker", "job.json"), map[string]any{"id": "link-worker", "todo_id": 43, "status": "running", "cwd": intakeRoot}) != nil {
+		t.Fatal("intake job fixture")
 	}
 	return f, args, source
 }
@@ -145,16 +154,7 @@ func TestConversationPartialRecoveryKeepsTechnicalWaitAndNeverSends(t *testing.T
 		if path == conversationSender && args[0] == "recovery-ask" {
 			sends++
 		}
-		raw, err := backend(ctx, path, args...)
-		if err == nil && path == conversationSender && args[0] == "recovery-replies" {
-			var proof map[string]any
-			if json.Unmarshal([]byte(raw), &proof) == nil {
-				proof["question_fingerprint"] = f.q.Fingerprint
-				b, _ := json.Marshal(proof)
-				raw = string(b)
-			}
-		}
-		return raw, err
+		return backend(ctx, path, args...)
 	}
 	code, result := intakeLinkCLI(t, f, []string{"recover-question", "--request-id", q.RequestID, "--message-id", f.replies[0].Message})
 	after, _ := os.ReadFile(f.r.TodoPath)
@@ -253,7 +253,7 @@ func TestConversationOrdinaryCrossProjectAssignmentRejectsUnrelatedEvidence(t *t
 }
 
 func TestConversationPartialRecoveryRejectsChangedReplyAndQuestion(t *testing.T) {
-	for _, change := range []string{"reply-body", "same-text-edit", "question-owner", "question-body"} {
+	for _, change := range []string{"reply-body", "same-text-edit", "question-owner", "question-body", "missing-fingerprint", "wrong-fingerprint", "source-version", "receipt-marker"} {
 		t.Run(change, func(t *testing.T) {
 			f, _, _ := ordinaryProjectFixture(t)
 			index, err := f.r.loadConversations()
@@ -267,6 +267,22 @@ func TestConversationPartialRecoveryRejectsChangedReplyAndQuestion(t *testing.T)
 				t.Fatal("fixture")
 			}
 			message := f.replies[0].Message
+			if change == "source-version" {
+				f.r.State.Requests[message].RecordVersion = 1
+			}
+			if change == "receipt-marker" {
+				var db map[string]any
+				_ = readJSON(f.r.TodoPath, maxTodo, &db)
+				for _, raw := range db["items"].([]any) {
+					row := raw.(map[string]any)
+					if row["id"] == float64(43) {
+						row["note"] = "another receipt"
+					}
+				}
+				if publish(f.r.TodoPath, db) != nil {
+					t.Fatal("fixture")
+				}
+			}
 			if change == "reply-body" {
 				f.replies[0].Body = "changed answer"
 			}
@@ -279,7 +295,12 @@ func TestConversationPartialRecoveryRejectsChangedReplyAndQuestion(t *testing.T)
 				if err == nil && path == conversationSender && args[0] == "recovery-replies" {
 					var proof map[string]any
 					_ = json.Unmarshal([]byte(raw), &proof)
-					proof["question_fingerprint"] = f.q.Fingerprint
+					if change == "missing-fingerprint" {
+						delete(proof, "question_fingerprint")
+					}
+					if change == "wrong-fingerprint" {
+						proof["question_fingerprint"] = strings.Repeat("f", 64)
+					}
 					if change == "question-owner" {
 						proof["owner_id"] = "999"
 					}
@@ -297,6 +318,76 @@ func TestConversationPartialRecoveryRejectsChangedReplyAndQuestion(t *testing.T)
 			latest, err := f.r.loadConversations()
 			if code == 0 || err != nil || !bytes.Equal(before, after) || latest.Questions[q.RequestID].Phase != "reserved" || f.posts != 1 {
 				t.Fatal("changed source recovered or caused a send/task mutation", code, err)
+			}
+		})
+	}
+}
+
+func TestConversationRecoveredMaintenanceNeverResendsOrReleasesOrigin(t *testing.T) {
+	for _, wait := range []bool{false, true} {
+		t.Run(fmt.Sprint(wait), func(t *testing.T) {
+			f, args, _ := ordinaryProjectFixture(t)
+			index, err := f.r.loadConversations()
+			if err != nil {
+				t.Fatal(err)
+			}
+			q := index.Questions[f.q.RequestID]
+			q.Wait = wait
+			index.Questions[q.RequestID] = q
+			if publish(f.r.conversationPath(), index) != nil {
+				t.Fatal("fixture")
+			}
+			if code, result := intakeLinkCLI(t, f, args); code != 0 || result["linked"] != true {
+				t.Fatal("link failed", code, result)
+			}
+			for _, state := range []string{"wait", "todo", "doing"} {
+				f.mutateTodo(t, func(row map[string]any) {
+					row["status"] = state
+					if state == "wait" {
+						row["wait_ready"] = map[string]any{"condition": "retry-time"}
+					} else {
+						delete(row, "wait_ready")
+					}
+				})
+				before, _ := os.ReadFile(f.r.TodoPath)
+				commands := len(f.commands)
+				health := Health{}
+				f.r.processConversations(context.Background(), &health)
+				after, _ := os.ReadFile(f.r.TodoPath)
+				if !bytes.Equal(before, after) || f.posts != 1 || len(health.Errors) != 0 {
+					t.Fatal("maintenance changed original or failed", state, health.Errors)
+				}
+				for _, call := range f.commands[commands:] {
+					if call == "recovery-ask" || call == "question-wait" || call == "question-answer" || call == "edit" {
+						t.Fatal("maintenance reissued work", call)
+					}
+				}
+			}
+		})
+	}
+}
+
+func TestConversationOrdinaryProjectGuardsBothDistinctRoots(t *testing.T) {
+	for _, denyIntake := range []bool{false, true} {
+		t.Run(fmt.Sprint(denyIntake), func(t *testing.T) {
+			f, args, _ := ordinaryProjectFixture(t)
+			backend := f.r.Run
+			seen := map[string]bool{}
+			intakeRoot := filepath.Join(f.r.Config.Home, "independent-intake")
+			f.r.Run = func(ctx context.Context, path string, args ...string) (string, error) {
+				if strings.Contains(path, "scrub391") && len(args) == 2 && args[0] == "--guard-path" {
+					seen[args[1]] = true
+					if denyIntake && args[1] == intakeRoot {
+						return `{"client_resource":true,"classification_unverified":true}`, nil
+					}
+				}
+				return backend(ctx, path, args...)
+			}
+			before, _ := os.ReadFile(f.r.TodoPath)
+			code, _ := intakeLinkCLI(t, f, args)
+			after, _ := os.ReadFile(f.r.TodoPath)
+			if !seen[f.r.Config.Home] || !seen[intakeRoot] || !bytes.Equal(before, after) || ((code == 0) == denyIntake) {
+				t.Fatal("distinct guarded roots were not enforced", code, seen)
 			}
 		})
 	}

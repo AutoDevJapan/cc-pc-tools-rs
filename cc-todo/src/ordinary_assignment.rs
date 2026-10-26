@@ -1,5 +1,5 @@
 //! Bind an API-verified ordinary intake to its own independently guarded actor.
-use crate::{Result, conversation_wait};
+use crate::{Paths, Result, conversation_wait};
 use chrono::DateTime;
 use serde_json::Value;
 use sha2::{Digest, Sha256};
@@ -12,12 +12,33 @@ fn fail<T>() -> Result<T> {
     Err("implementation_ordinary_source_invalid".into())
 }
 
-pub(crate) fn qualify(actor: &Value, input: &Value) -> Result<()> {
-    if input["kind"] != "implementation" || text(actor, "project").eq_ignore_ascii_case("owner") {
+pub(crate) fn qualify(paths: &Paths, actor: &Value, input: &Value) -> Result<()> {
+    if input["kind"] != "implementation"
+        || text(actor, "project").eq_ignore_ascii_case("owner")
+        || actor["project"] == input["project"]
+    {
         return fail();
     }
     let path = Path::new(text(input, "intake_source_file"));
     let expected_name = format!("{}.json", text(input, "message_id"));
+    // Production reads the canonical runner namespace. Isolated CLI fixtures
+    // use their separate ToDo home, never an arbitrary source ancestor.
+    let home = if crate::normalized(&paths.store.to_string_lossy())
+        == crate::normalized(&Paths::production().store.to_string_lossy())
+    {
+        std::path::PathBuf::from("D:/CC/Tools/discord-ask/unattended")
+    } else {
+        paths
+            .store
+            .parent()
+            .ok_or("implementation_ordinary_source_invalid")?
+            .to_path_buf()
+    };
+    if crate::normalized(&path.to_string_lossy())
+        != crate::normalized(&home.join("requests").join(&expected_name).to_string_lossy())
+    {
+        return fail();
+    }
     if !path.is_absolute()
         || path.file_name().and_then(|s| s.to_str()) != Some(expected_name.as_str())
         || path
@@ -69,6 +90,13 @@ pub(crate) fn qualify(actor: &Value, input: &Value) -> Result<()> {
         || context["question_message_id"] != input["question_message_id"]
         || context["owner_id"] != input["author_id"]
         || context["original_question"] != input["original_question"]
+        || format!(
+            "{:x}",
+            Sha256::digest(
+                serde_json::to_vec(&context["decision_identity"])
+                    .map_err(|_| "implementation_ordinary_source_invalid")?
+            )
+        ) != text(input, "decision_identity_sha256")
     {
         return fail();
     }
@@ -90,8 +118,8 @@ pub(crate) fn qualify(actor: &Value, input: &Value) -> Result<()> {
     Ok(())
 }
 
-pub(crate) fn matches(actor: &Value, input: &Value, body: &str) -> bool {
-    if qualify(actor, input).is_err() {
+pub(crate) fn matches(paths: &Paths, actor: &Value, input: &Value, body: &str) -> bool {
+    if qualify(paths, actor, input).is_err() {
         return false;
     }
     let normal = body.replace('\\', "/").to_lowercase();
@@ -104,6 +132,18 @@ pub(crate) fn matches(actor: &Value, input: &Value, body: &str) -> bool {
         (i == 0 || normal[..i].chars().next_back().is_some_and(before))
             && (i + path.len() == normal.len()
                 || normal[i + path.len()..].chars().next().is_some_and(after))
-    }) && body.contains(text(input, "message_id"))
-        && body.contains(text(input, "thread_id"))
+    }) && decimal_token(&normal.replace(&path, ""), text(input, "message_id"))
+        && decimal_token(&normal.replace(&path, ""), text(input, "thread_id"))
+}
+
+fn decimal_token(body: &str, id: &str) -> bool {
+    body.match_indices(id).any(|(i, _)| {
+        (i == 0 || !body[..i].chars().next_back().unwrap().is_ascii_digit())
+            && (i + id.len() == body.len()
+                || !body[i + id.len()..]
+                    .chars()
+                    .next()
+                    .unwrap()
+                    .is_ascii_digit())
+    })
 }

@@ -241,7 +241,9 @@ fn ordinary_implementation() -> Fixture {
     let mut input: Value =
         serde_json::from_slice(&fs::read(f.temp.path().join("input.json")).unwrap()).unwrap();
     let key = sha(format!("unattended-owner-v1\0{}\0{}", "123", "124").as_bytes());
-    let context = json!({"source":"discord-api-v10","read_only":true,"request_id":"sender-question","thread_id":"123","question_message_id":"123","owner_id":"456","original_question":input["original_question"],
+    let decision = json!({"todo_id":1,"scope":{"original":"exact question"}});
+    input["decision_identity_sha256"] = json!(sha(&serde_json::to_vec(&decision).unwrap()));
+    let context = json!({"source":"discord-api-v10","read_only":true,"request_id":"sender-question","thread_id":"123","question_message_id":"123","owner_id":"456","original_question":input["original_question"],"decision_identity":decision,
         "owner_replies":[{"todo_id":1,"message_id":"124","author_id":"456","question_thread_id":"123","question_message_id":"123","body":input["owner_reply"],"timestamp":input["created_at"]}]});
     let source = json!({"source":"discord-api-v10","record_version":2,"key":&key[..32],"thread_id":"123","message_id":"124","author_id":"456","text":input["owner_reply"],"created_at":input["created_at"],"question_context":serde_json::to_string(&context).unwrap()});
     fs::create_dir_all(f.temp.path().join("requests")).unwrap();
@@ -305,21 +307,34 @@ fn implementation_accepts_only_source_bound_independent_project_assignment() {
 #[test]
 fn implementation_source_assignment_rejects_wrong_source_and_foreign_job() {
     for change in [
-        "hash", "copy", "owner", "origin", "reply", "key", "spec", "prompt", "job", "scope",
+        "hash",
+        "copy",
+        "copy-assigned",
+        "owner",
+        "origin",
+        "reply",
+        "key",
+        "decision",
+        "same-project",
+        "numeric-prefix",
+        "spec",
+        "prompt",
+        "job",
+        "scope",
     ] {
         let f = ordinary_implementation();
         let mut input: Value =
             serde_json::from_slice(&fs::read(f.temp.path().join("input.json")).unwrap()).unwrap();
         match change {
             "hash"=>input["intake_source_sha256"]=json!("0".repeat(64)),
-            "copy"=>{let p=f.temp.path().join("copy/requests");fs::create_dir_all(&p).unwrap();fs::copy(f.temp.path().join("requests/124.json"),p.join("124.json")).unwrap();input["intake_source_file"]=json!(p.join("124.json"));},
-            "owner"|"origin"|"reply"|"key"=>{
+            "copy"|"copy-assigned"=>{let p=f.temp.path().join("copy/requests");fs::create_dir_all(&p).unwrap();fs::copy(f.temp.path().join("requests/124.json"),p.join("124.json")).unwrap();input["intake_source_file"]=json!(p.join("124.json"));if change=="copy-assigned" {let body=format!("{} thread123 reply124",p.join("124.json").display());fs::write(f.temp.path().join("actor.md"),&body).unwrap();fs::write(f.temp.path().join("jobs/actual-worker/prompt.md"),body).unwrap();}},
+            "owner"|"origin"|"reply"|"key"|"decision"=>{
                 let p=f.temp.path().join("requests/124.json");
                 let mut raw:Value=serde_json::from_slice(&fs::read(&p).unwrap()).unwrap();
                 match change {
                     "owner"=>raw["author_id"]=json!("999"),
                     "key"=>raw["key"]=json!("0".repeat(32)),
-                    _=>{let mut context:Value=serde_json::from_str(raw["question_context"].as_str().unwrap()).unwrap();if change=="origin" {context["owner_replies"][0]["todo_id"]=json!(99);}else{context["owner_replies"][0]["body"]=json!("other answer");}raw["question_context"]=json!(serde_json::to_string(&context).unwrap());}
+                    _=>{let mut context:Value=serde_json::from_str(raw["question_context"].as_str().unwrap()).unwrap();if change=="origin" {context["owner_replies"][0]["todo_id"]=json!(99);}else if change=="decision" {context["decision_identity"]["scope"]=json!("unrelated");}else{context["owner_replies"][0]["body"]=json!("other answer");}raw["question_context"]=json!(serde_json::to_string(&context).unwrap());}
                 }
                 f.write("requests/124.json",&raw);input["intake_source_sha256"]=json!(sha(&fs::read(p).unwrap()));
             },
@@ -327,6 +342,8 @@ fn implementation_source_assignment_rejects_wrong_source_and_foreign_job() {
             "prompt"=>fs::write(f.temp.path().join("jobs/actual-worker/prompt.md"),"unrelated").unwrap(),
             "job"=>f.write("jobs/actual-worker/job.json",&json!({"id":"actual-worker","todo_id":99,"status":"running","cwd":f.temp.path().join("independent-intake")})),
             "scope"=>{let mut db=f.db();db["projects"]["intake"]=json!(f.temp.path());f.write("todo.json",&db);},
+            "same-project"=>{let mut db=f.db();db["items"][1]["project"]=json!("tools");f.write("todo.json",&db);f.snapshot();},
+            "numeric-prefix"=>{let body=format!("{} thread1239 reply1249",f.temp.path().join("requests/124.json").display());fs::write(f.temp.path().join("actor.md"),&body).unwrap();fs::write(f.temp.path().join("jobs/actual-worker/prompt.md"),body).unwrap();},
             _=>unreachable!()
         }
         f.write("input.json", &input);
@@ -645,7 +662,9 @@ fn direction_verification_rechecks_actual_note_and_preserves_new_control_state()
             _ => db["items"][0]["owner_direction_records"] = json!([]),
         }
         f.write("todo.json", &db);
-        f.snapshot();
+        if change != "project" {
+            f.snapshot();
+        }
         f.reject_unchanged(true);
     }
 }

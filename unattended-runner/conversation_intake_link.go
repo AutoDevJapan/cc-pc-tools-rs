@@ -124,7 +124,7 @@ func (r *Runner) linkActor(row *TodoRow, q ConversationQuestion, opts conversati
 		return true
 	}
 	path, _, verified := r.ordinaryAssignment(q, opts.Message, row)
-	return verified && opts.IntakeTodo == row.ID && ordinarySourceAssigned(string(b), path, opts.Message, q.Thread) && ordinarySourceAssigned(string(prompt), path, opts.Message, q.Thread)
+	return verified && row.Project != q.Project && opts.IntakeTodo == row.ID && ordinarySourceAssigned(string(b), path, opts.Message, q.Thread) && ordinarySourceAssigned(string(prompt), path, opts.Message, q.Thread)
 }
 
 func (r *Runner) conversationIntakeLink(ctx context.Context, opts conversationCLIOptions, q ConversationQuestion, proof *conversationProof, reply conversationReply) (map[string]any, error) {
@@ -232,6 +232,20 @@ func (r *Runner) conversationIntakeLink(ctx context.Context, opts conversationCL
 	if !crossProject {
 		if err := r.deliverConversationReply(ctx, q, reply, capture); err != nil {
 			return nil, err
+		}
+	} else {
+		index, err := r.loadConversations()
+		if err != nil {
+			return nil, err
+		}
+		current, ok := index.Questions[q.RequestID]
+		if !ok || r.conversationCloseIdentity(current) != r.conversationCloseIdentity(q) {
+			return nil, errImplementation
+		}
+		current.RecoveredIntake = opts.IntakeTodo
+		index.Questions[q.RequestID] = current
+		if publish(r.conversationPath(), index) != nil {
+			return nil, errImplementation
 		}
 	}
 	return map[string]any{"domain": link.Domain, "linked": true, "request_id": q.RequestID, "ordinary_intake_retained": true, "original_source_sha256": link.RawSHA, "ordinary_source_sha256": link.OrdinarySHA, "source_receipt_sha256": stamp.SourceSHA, "intake_todo_id": opts.IntakeTodo, "origin_todo_id": q.Todo, "actor_todo_id": opts.Todo, "application_inferred": false}, nil

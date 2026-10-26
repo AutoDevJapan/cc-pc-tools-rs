@@ -87,7 +87,7 @@ func conversationTest(t *testing.T, wait bool) *conversationFixture {
 				}
 				versions[reply.Message] = v
 			}
-			b, _ := json.Marshal(conversationProof{Domain: "new-owner-recovery-messages", ReadOnly: true, Source: "discord-api-v10", RequestID: sender, Thread: f.question, Owner: r.State.Destination.Owner, Question: f.question, Created: f.created, Progress: "610", Body: "aかbを選んでください。", Decision: f.decision, Replies: f.replies, ReplyVersions: versions})
+			b, _ := json.Marshal(conversationProof{Domain: "new-owner-recovery-messages", ReadOnly: true, Source: "discord-api-v10", RequestID: sender, Thread: f.question, Owner: r.State.Destination.Owner, Fingerprint: strings.Repeat("a", 64), Question: f.question, Created: f.created, Progress: "610", Body: "aかbを選んでください。", Decision: f.decision, Replies: f.replies, ReplyVersions: versions})
 			return string(b), nil
 		case "question-wait":
 			if f.waitFailure {

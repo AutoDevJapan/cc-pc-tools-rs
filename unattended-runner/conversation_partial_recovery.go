@@ -22,13 +22,24 @@ func (r *Runner) recoverConversationQuestion(ctx context.Context, opts conversat
 		return nil, errImplementation
 	}
 	if q.Phase != "reserved" {
-		if q.Thread != req.Thread {
+		if q.Thread != req.Thread || q.Phase == "withdrawn" {
 			return nil, errImplementation
 		}
-		if _, err := r.conversationProof(ctx, q); err != nil {
+		row, err := r.conversationTask(ctx, req.Todo)
+		if err != nil {
+			return nil, errImplementation
+		}
+		if _, _, verified := r.ordinaryAssignment(q, req.Message, row); !verified {
+			return nil, errImplementation
+		}
+		proof, err := r.conversationProof(ctx, q)
+		if err != nil {
 			return nil, err
 		}
-		return map[string]any{"recovered": true, "reused": true, "request_id": q.RequestID, "origin_resumed": false}, nil
+		if !recoveryReplyMatches(proof, req) {
+			return nil, errImplementation
+		}
+		return map[string]any{"recovered": true, "reused": true, "phase": q.Phase, "request_id": q.RequestID, "origin_resumed": false}, nil
 	}
 	origin, err := r.conversationTask(ctx, q.Todo)
 	if err != nil || origin.Project != q.Project {
@@ -43,10 +54,7 @@ func (r *Runner) recoverConversationQuestion(ctx context.Context, opts conversat
 	if err != nil {
 		return nil, errImplementation
 	}
-	var found struct {
-		conversationProof
-		Fingerprint string `json:"question_fingerprint"`
-	}
+	var found conversationProof
 	if json.Unmarshal([]byte(raw), &found) != nil || !shaPattern.MatchString(found.Fingerprint) {
 		return nil, errImplementation
 	}
@@ -61,6 +69,9 @@ func (r *Runner) recoverConversationQuestion(ctx context.Context, opts conversat
 	}
 	q.Progress, q.Fingerprint = found.Progress, found.Fingerprint
 	q.DecisionSHA, q.QuestionSHA = canonicalHash(found.Decision), bytesHash(body)
+	if _, _, verified := r.ordinaryAssignment(q, req.Message, intake); !verified {
+		return nil, errImplementation
+	}
 	if _, ok := number(q.Progress); !ok || q.Progress == q.Thread {
 		return nil, errImplementation
 	}
@@ -70,18 +81,7 @@ func (r *Runner) recoverConversationQuestion(ctx context.Context, opts conversat
 	if err != nil {
 		return nil, err
 	}
-	matched := false
-	for _, reply := range proof.Replies {
-		if reply.Message == req.Message && reply.Body == req.Text && sameLinkTime(reply.Created, req.Created) {
-			version, known := proof.ReplyVersions[reply.Message]
-			edited := ""
-			if version.Edited != nil {
-				edited = *version.Edited
-			}
-			matched = known && edited == req.Edited
-		}
-	}
-	if !matched {
+	if !recoveryReplyMatches(proof, req) {
 		return nil, errImplementation
 	}
 	for _, before := range []*TodoRow{origin, intake} {
@@ -98,6 +98,7 @@ func (r *Runner) recoverConversationQuestion(ctx context.Context, opts conversat
 		return nil, errImplementation
 	}
 	q.Phase = "posted" // Do not register a new question wait over an existing hold.
+	q.RecoveredIntake = req.Todo
 	index.Questions[q.RequestID] = q
 	if publish(r.conversationPath(), index) != nil {
 		return nil, errImplementation
@@ -105,21 +106,35 @@ func (r *Runner) recoverConversationQuestion(ctx context.Context, opts conversat
 	return map[string]any{"recovered": true, "request_id": q.RequestID, "question_thread_id": q.Thread, "origin_resumed": false, "new_question_sent": false}, nil
 }
 
+func recoveryReplyMatches(proof *conversationProof, req *Request) bool {
+	for _, reply := range proof.Replies {
+		if reply.Message == req.Message && reply.Body == req.Text && sameLinkTime(reply.Created, req.Created) {
+			version, known := proof.ReplyVersions[reply.Message]
+			edited := ""
+			if version.Edited != nil {
+				edited = *version.Edited
+			}
+			return known && edited == req.Edited
+		}
+	}
+	return false
+}
+
 // An ordinary intake's real source is a narrowly scoped assignment, not a
 // blanket cross-project permission. Both registered roots remain guarded.
 func (r *Runner) ordinaryAssignment(q ConversationQuestion, message string, row *TodoRow) (string, string, bool) {
 	old := r.State.Requests[message]
-	if old == nil || row == nil || old.Todo != row.ID || old.Todo == q.Todo || old.Conversation != "" || (old.Phase != "registered" && old.Phase != "reported") || old.Source != "discord-api-v10" || old.RecordVersion != 2 || old.Author != r.State.Destination.Owner || old.Guild != r.State.Destination.Guild || old.Thread != q.Thread || old.Key != requestKey(q.Thread, message) || !strings.Contains("\n"+row.Note+"\n", "\nunattended-owner-receipt:"+old.Key+"\n") {
+	if old == nil || row == nil || old.Todo != row.ID || old.Todo == q.Todo || old.Conversation != "" || (old.Phase != "registered" && old.Phase != "reported") || old.Source != "discord-api-v10" || old.RecordVersion != 2 || old.Author != r.State.Destination.Owner || old.Guild != r.State.Destination.Guild || old.Thread != q.Thread || old.Key != requestKey(q.Thread, message) || !hasNoteMarker(row.Note, "unattended-owner-receipt:"+old.Key) {
 		return "", "", false
 	}
 	path := filepath.Join(r.Config.Home, "requests", message+".json")
 	b, err := boundedRegular(path)
 	var saved Request
-	var context conversationProof
-	if err != nil || json.Unmarshal(b, &saved) != nil || ordinaryVersion(&saved) != ordinaryVersion(old) || saved.Key != old.Key || json.Unmarshal([]byte(saved.Context), &context) != nil || context.Source != "discord-api-v10" || !context.ReadOnly || context.Owner != old.Author || context.Thread != q.Thread || context.Question != q.Message || context.RequestID != q.SenderID || canonicalHash(context.Decision) != q.DecisionSHA || bytesHash([]byte(context.Body)) != q.QuestionSHA {
+	var sourceContext conversationProof
+	if err != nil || json.Unmarshal(b, &saved) != nil || ordinaryVersion(&saved) != ordinaryVersion(old) || saved.Key != old.Key || json.Unmarshal([]byte(saved.Context), &sourceContext) != nil || sourceContext.Source != "discord-api-v10" || !sourceContext.ReadOnly || sourceContext.Owner != old.Author || sourceContext.Thread != q.Thread || sourceContext.Question != q.Message || sourceContext.RequestID != q.SenderID || canonicalHash(sourceContext.Decision) != q.DecisionSHA || bytesHash([]byte(sourceContext.Body)) != q.QuestionSHA {
 		return "", "", false
 	}
-	for _, reply := range context.Replies {
+	for _, reply := range sourceContext.Replies {
 		if reply.Message == message && reply.Todo == q.Todo && reply.Author == old.Author && reply.Thread == q.Thread && reply.Question == q.Message && reply.Body == old.Text && sameLinkTime(reply.Created, old.Created) {
 			return path, bytesHash(b), true
 		}
@@ -131,5 +146,8 @@ func ordinarySourceAssigned(body, path, message, thread string) bool {
 	normalize := func(s string) string { return strings.ToLower(strings.ReplaceAll(s, `\`, "/")) }
 	// The full source path must be a token, not a prefix of a backup filename.
 	pattern := "(^|[\\s\"'`(])" + regexp.QuoteMeta(normalize(path)) + "($|[\\s\"'`),;。])"
-	return regexp.MustCompile(pattern).MatchString(normalize(body)) && strings.Contains(body, message) && strings.Contains(body, thread)
+	idToken := func(id string) bool {
+		return regexp.MustCompile(`(^|[^0-9])` + regexp.QuoteMeta(id) + `($|[^0-9])`).MatchString(strings.ReplaceAll(normalize(body), normalize(path), ""))
+	}
+	return regexp.MustCompile(pattern).MatchString(normalize(body)) && idToken(message) && idToken(thread)
 }

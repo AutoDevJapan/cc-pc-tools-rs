@@ -486,9 +486,21 @@ pub(super) fn validate_events(ledger: &Ledger) -> Result<()> {
                     || prefix.receipt(&q.request_id, PHASE).is_some()
                     || prefix.complete(&q.request_id)
                     || attempted(&prefix, &q.request_id)
-                    || qr.command_id != digest(&serde_json::to_value(for_command).map_err(|_| INVALID)?)?
-                    || [&qr.input_sha256, &qr.history_sha256, &q.journal_sha256, &q.registry_sha256]
-                        .iter().any(|s| s.len() != 64 || !s.bytes().all(|b| b.is_ascii_hexdigit() && !b.is_ascii_uppercase()))
+                    || qr.command_id
+                        != digest(&serde_json::to_value(for_command).map_err(|_| INVALID)?)?
+                    || [
+                        &qr.input_sha256,
+                        &qr.history_sha256,
+                        &q.journal_sha256,
+                        &q.registry_sha256,
+                    ]
+                    .iter()
+                    .any(|s| {
+                        s.len() != 64
+                            || !s
+                                .bytes()
+                                .all(|b| b.is_ascii_hexdigit() && !b.is_ascii_uppercase())
+                    })
                     || chrono::DateTime::parse_from_rfc3339(&q.lease.expires_at).is_err()
                     || qr.effect_sha256
                         != digest(&serde_json::to_value(effect).map_err(|_| INVALID)?)?
@@ -501,7 +513,10 @@ pub(super) fn validate_events(ledger: &Ledger) -> Result<()> {
                 {
                     return Err(INVALID.into());
                 }
-                latest.insert(q.request_id.clone(), sha(&serde_json::to_vec(qr).map_err(|_| INVALID)?));
+                latest.insert(
+                    q.request_id.clone(),
+                    sha(&serde_json::to_vec(qr).map_err(|_| INVALID)?),
+                );
             }
             Event::PendingRecoveryAttempt {
                 request_id,
@@ -509,7 +524,7 @@ pub(super) fn validate_events(ledger: &Ledger) -> Result<()> {
                 qualification_sha256,
                 attempt_id,
             } => {
-                if phase != PHASE
+                let invalid_attempt = phase != PHASE
                     || qualified.get(qualification_sha256) != Some(request_id)
                     || latest.get(request_id) != Some(qualification_sha256)
                     || ledger.events[..i].iter().any(|e| matches!(e,
@@ -518,8 +533,8 @@ pub(super) fn validate_events(ledger: &Ledger) -> Result<()> {
                     || attempt_id != qualification_sha256
                     || attempts
                         .insert(request_id.clone(), attempt_id.clone())
-                        .is_some()
-                {
+                        .is_some();
+                if invalid_attempt {
                     return Err("invalid or duplicate pending recovery attempt".into());
                 }
             }
@@ -529,11 +544,11 @@ pub(super) fn validate_events(ledger: &Ledger) -> Result<()> {
                 attempt_id,
                 outcome,
             } => {
-                if phase != PHASE
+                let invalid_result = phase != PHASE
                     || attempts.get(request_id) != Some(attempt_id)
                     || !["response_received", "unconfirmed"].contains(&outcome.as_str())
-                    || results.insert(request_id.clone(), true).is_some()
-                {
+                    || results.insert(request_id.clone(), true).is_some();
+                if invalid_result {
                     return Err("invalid pending recovery result".into());
                 }
             }

@@ -35,9 +35,26 @@ pub fn provider(model: &str) -> Option<&'static str> {
         .any(|m| crate::same_model(model, m))
     {
         Some("anthropic")
+    } else if crate::same_model(model, "grok-4.7") {
+        Some("xai")
     } else {
         None
     }
+}
+
+/// This exact provider error also appears inside remote-compaction HTTP402 errors.
+/// A status code alone is not evidence of exhausted subscription allowance.
+pub fn grok_balance_exhausted(message: &str) -> bool {
+    message
+        .to_ascii_lowercase()
+        .contains("grok build usage balance exhausted")
+}
+
+pub fn quota_source(source: &Value) -> bool {
+    source["last_failure_kind"] == "quota"
+        || (provider(s(source, "model")) == Some("xai")
+            && source["last_failure_kind"] == "transient"
+            && grok_balance_exhausted(s(source, "last_error")))
 }
 
 /// Consume the normal refreshed account-list reply in memory. Never return an
@@ -146,14 +163,17 @@ pub fn healthy_transition(inventory: &Value, from: &str, to: &str, now: f64) -> 
         return false;
     };
     from != to
-        && [from, to].iter().all(|p| {
+        && [from, to].iter().filter(|p| **p != "xai").all(|p| {
             let q = &inventory[*p];
             q["verified"] == true
                 && q["at"]
                     .as_f64()
                     .is_some_and(|at| at <= now + 1. && now - at <= 60.)
         })
-        && inventory[from]["exhausted"] == true
+        // Grok's explicit balance error is checked on the bound source by the
+        // caller. It has no refreshable quota window in the existing sampler.
+        && (from == "xai" || inventory[from]["exhausted"] == true)
+        && to != "xai"
         && inventory[to]["available"] == true
 }
 
@@ -244,6 +264,13 @@ pub fn safe_openai_selector<'a>(
 fn review(job: &Value) -> bool {
     crate::review_task(s(job, "name"), s(job, "task_type")) || job["subwork"]["kind"] == "review"
 }
+fn finite_spec(source: &Value) -> &Value {
+    if review(source) {
+        &source["finite_review"]
+    } else {
+        &source["finite_subwork"]
+    }
+}
 fn scope(job: &Value) -> Value {
     let mut dirs: Vec<String> = job["add_dirs"]
         .as_array()
@@ -311,6 +338,10 @@ fn source_binding(source: &Value) -> Value {
     ] {
         v[k] = source[k].clone();
     }
+    if provider(s(source, "model")) == Some("xai") || source["finite_subwork"].is_object() {
+        v["finite_subwork"] = source["finite_subwork"].clone();
+        v["failure_sha256"] = json!(digest(&source["last_error"]));
+    }
     // Do not change this v1 digest: a still-running installed scheduler can
     // prepare the capsule with the previous policy. eligible_source rechecks
     // the current collection record before any consumer accepts that capsule.
@@ -358,15 +389,16 @@ pub fn eligible_source(item: &Value, source: &Value) -> bool {
         && item["decision_wait"].is_null()
         && !collection_pending(source)
         && s(&item["scheduler"], "owner_stop_job").is_empty()
-        && source["last_failure_kind"] == "quota"
+        && quota_source(source)
         && source["model_origin"] != "owner_request"
-        && review(source)
+        && (review(source)
+            || (source["subwork"] == item["subwork"] && source["subwork"]["kind"] == "research"))
         && source["sandbox"] == "read-only"
         && !crate::launch_context::fixed_execution_contract(source)
-        && source["finite_review"]["todo_id"] == item["id"]
-        && source["finite_review"]["spec"] == item["spec"]
+        && finite_spec(source)["todo_id"] == item["id"]
+        && finite_spec(source)["spec"] == item["spec"]
         && !s(source, "launch_key").is_empty()
-        && source["finite_review"]["launch_key"] == source["launch_key"]
+        && finite_spec(source)["launch_key"] == source["launch_key"]
         && generation(item, "dependency_generation")
             == generation(source, "todo_dependency_generation")
         && source_generation == Some(generation(item, "resume_generation"))
@@ -389,7 +421,7 @@ pub fn receipt(
         || item["dispatchable"] != true
         || item["wait_on"].as_array().is_some_and(|v| !v.is_empty())
         || target["model_origin"] != "policy"
-        || !review(target)
+        || review(source) != review(target)
         || target["sandbox"] != "read-only"
         || target["effort"] != "max"
         || scope(source) != scope(target)
@@ -418,7 +450,7 @@ pub fn receipt(
     let spec_sha256 = crate::product_retry::digest(&spec);
     // A legacy path alone cannot prove which body the original reader ran.
     // Never manufacture that missing evidence from the current file.
-    if source["finite_review"]["spec_sha256"] != spec_sha256 {
+    if finite_spec(source)["spec_sha256"] != spec_sha256 {
         return None;
     }
     let mut safe_health = json!({"at":health["at"]});

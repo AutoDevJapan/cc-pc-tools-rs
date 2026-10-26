@@ -323,7 +323,7 @@ pub fn apply_event(job: &mut Value, ev: &Value) {
         // OpenCodex may emit a specific error then a generic terminal failure.
         // Keep that protocol evidence, while cancellation/auth/quota supersede it.
         if !(matches!(kind, "transient" | "request_failed")
-            && s(job, "last_failure_kind") == "capacity")
+            && ["capacity", "quota", "cancel", "auth"].contains(&s(job, "last_failure_kind")))
         {
             job["last_failure_kind"] = json!(kind);
         }

@@ -2,6 +2,41 @@ use cc_job_policy::quota_recovery::*;
 use serde_json::{Value, json};
 
 #[test]
+fn grok_protocol_evidence_requires_a_fresh_healthy_other_subscription() {
+    let health = json!({"at":1000.,"openai":{"at":1000.,"verified":true,"available":true}});
+    assert!(healthy_transition(
+        &health,
+        "grok-4.7",
+        "gpt-6-astra",
+        1000.
+    ));
+    for (field, value) in [
+        ("at", json!(900.)),
+        ("at", json!(1002.)),
+        ("verified", json!(false)),
+        ("available", json!(false)),
+    ] {
+        let mut bad = health.clone();
+        bad["openai"][field] = value;
+        assert!(
+            !healthy_transition(&bad, "grok-4.7", "gpt-6-astra", 1000.),
+            "{field}"
+        );
+    }
+    let original = json!({"model":"grok-4.7","last_failure_kind":"transient",
+        "last_error":"Error running remote compact task: unexpected status 402 Payment Required: Grok Build usage balance exhausted"});
+    assert!(quota_source(&original));
+    for kind in ["cancel", "auth", "capacity", "request_failed"] {
+        let mut stopped = original.clone();
+        stopped["last_failure_kind"] = json!(kind);
+        assert!(!quota_source(&stopped));
+    }
+    let mut transient = original;
+    transient["last_error"] = json!("remote compaction connection reset (HTTP402)");
+    assert!(!quota_source(&transient));
+}
+
+#[test]
 fn stop_intent_is_bound_to_the_same_native_attempt_and_requires_confirmed_drain() {
     let mut source = json!({"codex_pid":7,"codex_pid_created":8,"started_at":"attempt-A","attempt_events_offset":20,
         "protocol_stall":{"stage":"stopping","child_pid":7,"child_created":8,"started_at":"attempt-A","attempt_events_offset":20}});

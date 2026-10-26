@@ -2094,6 +2094,19 @@ mod capacity_regressions {
     }
 
     #[test]
+    fn no_action_state_contention_defers_without_reading_proof_or_cancelling() {
+        let t = Test::new();
+        let original = t.put(job(json!({"id":"held","status":"running"})));
+        let state = FileLock::acquire(&t.ctx.job_dir("held").join("state.lock")).unwrap();
+        let missing = t.ctx.root.join("unread-proof.json");
+        let (result, out, _) = t.cli(&["cancel", "held", "--recovery", "--no-action-check", missing.to_str().unwrap()]);
+        assert_eq!(result.unwrap(), 0);
+        assert_eq!(serde_json::from_str::<Value>(&out).unwrap()["reason"], "state_lock_busy");
+        assert_eq!(t.ctx.load("held").unwrap(), original);
+        drop(state);
+    }
+
+    #[test]
     fn grok_remote_compaction_quota_is_protocol_evidence_and_survives_a_generic_terminal() {
         let message = "Error running remote compact task: unexpected status 402 Payment Required: Provider error 402: {\"error\":\"Grok Build usage balance exhausted\"}, url: http://127.0.0.1:10101/v1/responses";
         let mut j = json!({});

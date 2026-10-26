@@ -1,5 +1,5 @@
 use crate::{backend::Backend, common::*, policy::*};
-use serde_json::{json, Value};
+use serde_json::{Value, json};
 
 pub(crate) fn prepare(
     backend: &mut impl Backend,
@@ -11,10 +11,22 @@ pub(crate) fn prepare(
 ) -> Result<bool> {
     // A cached capsule is not authority for a new launch generation.
     selection.as_object_mut().unwrap().remove("quota_recovery");
-    let Some(source) = source.filter(|s| s["last_failure_kind"] == "quota") else {
+    selection
+        .as_object_mut()
+        .unwrap()
+        .remove("model_recovery_from");
+    let Some(source) = source.filter(|s| cc_job_policy::quota_recovery::quota_source(s)) else {
         return Ok(false);
     };
     if selection["model_origin"] == "owner_request" {
+        return Ok(false);
+    }
+    // Legacy research has no proof of the originally executed body. Let its
+    // next ordinary attempt bind the real bytes; never backfill the old job.
+    if source["last_failure_kind"] == "transient"
+        && source["subwork"]["kind"] == "research"
+        && source["finite_subwork"].is_null()
+    {
         return Ok(false);
     }
     let now = backend.clock();
@@ -41,14 +53,44 @@ pub(crate) fn prepare(
             .unwrap_or(&source[k])
             .clone();
     }
-    selection["task_type"] = json!("review");
+    if source["subwork"]["kind"] == "research" {
+        selection["task_type"] = json!("research");
+    } else {
+        selection["task_type"] = json!("review");
+    }
+    let health = backend.quota_recovery_inventory()?;
+    if cc_job_policy::quota_recovery::provider(s(&source["model"])) == Some("xai") {
+        let excluded = arr(&selection["review_excluded_models"]);
+        let next = [
+            "anthropic/claude-opus-5-5",
+            "anthropic/claude-sonnet-5-5",
+            "gpt-6.1-sol",
+            "gpt-6-astra",
+            "gpt-6-luna",
+        ]
+        .into_iter()
+        .find(|model| {
+            !excluded
+                .iter()
+                .any(|author| cc_job_policy::same_model(s(author), model))
+                && cc_job_policy::quota_recovery::healthy_transition(
+                    &health,
+                    s(&source["model"]),
+                    model,
+                    backend.clock(),
+                )
+                && backend.model_exists(model)
+        })
+        .ok_or(Error("ResourceWait"))?;
+        selection["model"] = json!(next);
+        selection["model_recovery_from"] = source["model"].clone();
+    }
     let mut target = selection.clone();
     target["cwd"] = item["scheduler"]["worktree"].clone();
     target["launch_key"] = item["scheduler"]["key"].clone();
     let policy = cc_job_policy::for_sandbox(s(&target["sandbox"]));
     target["approval_policy"] = json!(policy.approval);
     target["approvals_reviewer"] = json!(policy.reviewer);
-    let health = backend.quota_recovery_inventory()?;
     let proof =
         cc_job_policy::quota_recovery::receipt(item, source, &target, &health, backend.clock())
             .ok_or(Error("ResourceWait"))?;

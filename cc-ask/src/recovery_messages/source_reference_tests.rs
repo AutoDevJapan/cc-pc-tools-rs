@@ -105,28 +105,55 @@ fn source_failure_diagnostics_are_only_fixed_codes() {
 
 #[test]
 fn real_http_boundaries_preserve_transport_stage_and_unknown_post_receipt() {
-    for (method, path) in [
-        ("GET", "/users/@me".to_owned()),
-        ("GET", format!("/channels/{FORUM}")),
-        ("GET", "/channels/106".to_owned()),
-        ("POST", format!("/channels/{FORUM}/threads")),
+    for (raw, stage) in [
+        ("URLError: fixture-private-network-detail", "network"),
+        ("TimeoutExpired: fixture-private-timeout-detail", "network"),
+        ("Discord API rate limited", "rate_limited"),
     ] {
-        let f = Fixture::new();
-        let args = qualified(&f);
-        f.server.lock().unwrap().transport_failure = Some((method.into(), path));
-        let error = ask(&mut f.context(), &args).unwrap_err();
-        assert_eq!(ask_failure_report(&error)["failure_stage"], "network", "{method}: {error}");
-        assert!(!error.contains("fixture-private"));
-        f.server.lock().unwrap().transport_failure = None;
-        if method == "POST" {
-            let ledger = Ledger::load(&f.home).unwrap();
-            assert!(ledger.effect(&args.request_id, "question:0").is_some());
-            assert!(ledger.receipt(&args.request_id, "question:0").is_none());
-            assert!(ask(&mut f.context(), &args).is_err());
-            assert!(f.server.lock().unwrap().posts.is_empty());
-        } else {
-            assert_eq!(ask(&mut f.context(), &args).unwrap()["delivery"], "verified");
+        for (method, path) in [
+            ("GET", "/users/@me".to_owned()),
+            ("GET", format!("/channels/{FORUM}")),
+            ("GET", "/channels/106".to_owned()),
+            ("POST", format!("/channels/{FORUM}/threads")),
+        ] {
+            let f = Fixture::new();
+            let args = qualified(&f);
+            f.server.lock().unwrap().transport_failure = Some((method.into(), path));
+            f.server.lock().unwrap().transport_error = Some(raw.into());
+            let error = ask(&mut f.context(), &args).unwrap_err();
+            assert_eq!(
+                ask_failure_report(&error)["failure_stage"],
+                stage,
+                "{method}: {error}"
+            );
+            assert!(!error.contains("fixture-private"));
+            f.server.lock().unwrap().transport_failure = None;
+            if method == "POST" {
+                let ledger = Ledger::load(&f.home).unwrap();
+                assert!(ledger.effect(&args.request_id, "question:0").is_some());
+                assert!(ledger.receipt(&args.request_id, "question:0").is_none());
+                assert!(ask(&mut f.context(), &args).is_err());
+                assert!(f.server.lock().unwrap().posts.is_empty());
+            } else {
+                assert_eq!(
+                    ask(&mut f.context(), &args).unwrap()["delivery"],
+                    "verified"
+                );
+            }
+            f.unchanged();
         }
-        f.unchanged();
     }
+}
+
+#[test]
+fn source_reader_deadline_is_distinct_from_scope_rejection_before_http() {
+    let f = Fixture::new();
+    let args = qualified(&f);
+    f.server.lock().unwrap().source_reference_timeout = true;
+    let error = ask(&mut f.context(), &args).unwrap_err();
+    assert_eq!(ask_failure_report(&error)["failure_stage"], "deadline");
+    assert!(!error.contains("private-checker"));
+    assert!(f.server.lock().unwrap().calls.is_empty());
+    assert!(f.server.lock().unwrap().posts.is_empty());
+    f.unchanged();
 }

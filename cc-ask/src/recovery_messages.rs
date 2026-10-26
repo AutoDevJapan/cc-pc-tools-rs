@@ -1949,7 +1949,9 @@ impl<'a> RecoveryApi<'a> {
         let me = ctx
             .effects
             .http("GET", &format!("{API}/users/@me"), None, true)
-            .map_err(|_| "cannot verify recovery bot identity")?;
+            .map_err(|error| {
+                source_reference::redact_http_error(&error, "cannot verify recovery bot identity")
+            })?;
         let bot = snowflake(core::s(&me["id"]))?;
         if me["bot"] != true
             || ledger
@@ -1986,7 +1988,12 @@ impl<'a> RecoveryApi<'a> {
     fn get(&mut self, path: &str) -> Result<Value> {
         self.effects
             .http("GET", &format!("{API}{path}"), None, true)
-            .map_err(|_| "recovery GET inspection failed; existing receipts retained".into())
+            .map_err(|error| {
+                source_reference::redact_http_error(
+                    &error,
+                    "recovery GET inspection failed; existing receipts retained",
+                )
+            })
     }
 
     fn channel(&mut self, thread: &str) -> Result<Value> {
@@ -2331,7 +2338,7 @@ impl<'a> RecoveryApi<'a> {
             return self
                 .effects
                 .http("POST", &format!("{API}{route}"), Some(&body), true)
-                .map_err(|_| PENDING.into());
+                .map_err(|error| source_reference::redact_http_error(&error, PENDING));
         }
         if effect.images
             != images
@@ -2366,7 +2373,7 @@ impl<'a> RecoveryApi<'a> {
                 &format!("multipart/form-data; boundary={boundary}"),
                 &bytes,
             )
-            .map_err(|_| PENDING.into())
+            .map_err(|error| source_reference::redact_http_error(&error, PENDING))
     }
 }
 
@@ -2492,6 +2499,10 @@ fn ensure(
         ids
     } else {
         let response = api.submit(ledger, request, phase, &effect, images);
+        let submit_failure = response
+            .as_ref()
+            .err()
+            .map(|error| source_reference::redact_http_error(error, PENDING));
         let ids = response.ok().and_then(|response| {
             let message = match &effect.target {
                 Target::Forum { .. } => &response["message"]["id"],
@@ -2522,7 +2533,7 @@ fn ensure(
             let found = api.candidates(&effect)?;
             match found.as_slice() {
                 [one] => one.clone(),
-                _ => return Err(PENDING.into()),
+                _ => return Err(submit_failure.unwrap_or_else(|| PENDING.into())),
             }
         }
     };
@@ -3875,6 +3886,8 @@ mod tests {
         source_reference_proof: Option<Value>,
         source_reference_checks: usize,
         transport_failure: Option<(String, String)>,
+        transport_error: Option<String>,
+        source_reference_timeout: bool,
     }
 
     struct Mock {
@@ -3938,6 +3951,9 @@ mod tests {
             {
                 let mut state = self.server.lock().unwrap();
                 state.source_reference_checks += 1;
+                if state.source_reference_timeout {
+                    return Err("TimeoutExpired: private-checker-detail".into());
+                }
                 if let Some(proof) = &state.source_reference_proof {
                     return Ok(Output {
                         code: 0,
@@ -3983,8 +3999,15 @@ mod tests {
                 return Err("unexpected recovery effect".into());
             }
             self.check_pending(&mut state, method, body);
-            if state.transport_failure.as_ref().is_some_and(|(m, p)| m == method && p == path) {
-                return Err("URLError: fixture-private-network-detail".into());
+            if state
+                .transport_failure
+                .as_ref()
+                .is_some_and(|(m, p)| m == method && p == path)
+            {
+                return Err(state
+                    .transport_error
+                    .clone()
+                    .unwrap_or_else(|| "URLError: fixture-private-network-detail".into()));
             }
             if method == "GET" && state.blocked {
                 return Err("simulated interrupted GET".into());

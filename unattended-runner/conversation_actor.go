@@ -408,7 +408,7 @@ func conversationFailureStage(err error) string {
 		return "original_task"
 	case "conversation retry input differs", "conversation alias retry input differs", "conversation decision task differs":
 		return "input_mismatch"
-	case "conversation send pending; retry the same request":
+	case "conversation send pending; retry the same request", "conversation sender operation_pending":
 		return "send_pending"
 	case "conversation send verification pending", "conversation reply verification deferred":
 		return "verification_pending"

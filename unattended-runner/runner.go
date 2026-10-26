@@ -671,6 +671,15 @@ func commandBudget(path string, args []string) time.Duration {
 	if path == "D:/CC/Tools/scheduler/scheduler.exe" && len(args) == 1 && args[0] == "repair-step" {
 		return 35 * time.Second
 	}
+	if path == conversationSender && len(args) > 2 && args[0] == "recovery-ask" {
+		for i := 1; i+1 < len(args); i++ {
+			if args[i] == "--conversation-source-request" && args[i+1] == fixedConversationOrigin.RequestID {
+				// Includes the bounded reader plus HTTP; the caller's context
+				// still caps this below the normal 60-second conversation.
+				return 55 * time.Second
+			}
+		}
+	}
 	return 20 * time.Second
 }
 

@@ -116,7 +116,7 @@ func conversationSenderFailure(raw string) error {
 	}
 	if json.Unmarshal([]byte(raw), &failure) == nil && failure.Domain == "new-owner-recovery-messages" && failure.Delivery == "not_verified" {
 		switch failure.Stage {
-		case "origin_scope", "source_scope", "busy", "network", "rate_limited", "operation_pending":
+		case "origin_scope", "source_scope", "busy", "network", "rate_limited", "deadline", "operation_pending":
 			return errors.New("conversation sender " + failure.Stage)
 		}
 	}

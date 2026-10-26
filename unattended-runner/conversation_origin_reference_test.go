@@ -101,7 +101,7 @@ func TestConversationOriginReferenceProductionContractIsFinite(t *testing.T) {
 }
 
 func TestConversationSenderFailureProtocolDoesNotExposeRawDiagnostics(t *testing.T) {
-	for _, stage := range []string{"origin_scope", "source_scope", "busy", "network", "rate_limited"} {
+	for _, stage := range []string{"origin_scope", "source_scope", "busy", "network", "rate_limited", "deadline"} {
 		b, _ := json.Marshal(map[string]string{"domain": "new-owner-recovery-messages", "delivery": "not_verified", "failure_stage": stage})
 		if err := conversationSenderFailure(string(b)); err == nil || conversationFailureStage(err) != "sender_"+stage {
 			t.Fatal("fixed sender cause collapsed", stage, err)
@@ -121,12 +121,23 @@ func TestConversationSenderFailureProtocolDoesNotExposeRawDiagnostics(t *testing
 func TestConversationSourceSenderBudgetIsFiniteAndRequestScoped(t *testing.T) {
 	args := []string{"recovery-ask", "--conversation-source-request", fixedConversationOrigin.RequestID}
 	budget := commandBudget(conversationSender, args)
-	if budget <= 20*time.Second || budget >= conversationCLIDeadline { t.Fatal("sender budget cannot contain its bounded reader and HTTP work", budget) }
-	for _, input := range []struct{ path string; args []string }{
+	if budget <= 20*time.Second || budget >= conversationCLIDeadline {
+		t.Fatal("sender budget cannot contain its bounded reader and HTTP work", budget)
+	}
+	for _, input := range []struct {
+		path string
+		args []string
+	}{
 		{conversationSender, []string{"recovery-ask"}},
 		{conversationSender, []string{"recovery-ask", "--conversation-source-request", "unrelated"}},
 		{conversationSender, []string{"recovery-log", "--conversation-source-request", fixedConversationOrigin.RequestID}},
 		{"other", args},
-	} { if commandBudget(input.path,input.args) != 20*time.Second { t.Fatal("unrelated subprocess budget expanded") } }
-	if conversationFailureStage(conversationSenderFailure(`{"domain":"new-owner-recovery-messages","delivery":"not_verified","failure_stage":"operation_pending"}`)) != "send_pending" { t.Fatal("unconfirmed sender result lost its public pending stage") }
+	} {
+		if commandBudget(input.path, input.args) != 20*time.Second {
+			t.Fatal("unrelated subprocess budget expanded")
+		}
+	}
+	if conversationFailureStage(conversationSenderFailure(`{"domain":"new-owner-recovery-messages","delivery":"not_verified","failure_stage":"operation_pending"}`)) != "send_pending" {
+		t.Fatal("unconfirmed sender result lost its public pending stage")
+	}
 }

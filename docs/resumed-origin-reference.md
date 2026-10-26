@@ -19,3 +19,9 @@ Issue478/ToDo3751の実配送で、質問の予約後に送信元の照合が失
 - 質問の回答と3277の既存依存待ちはPR479の対応をそのまま使う。
 - 旧投稿へのPOST/PATCH、一般の旧質問の再開、Stripe操作は許可しない。
 - 失敗の公表は固定段階だけとし、scope、busy、通信、期限を識別する。
+
+HTTPのbind/GET/POST境界でもtransport/timeout/rate limitの固定分類を保持し、
+生のURL・本文・下位エラーは公開しない。不明なPOSTは元のPending予約を保ち、GET確認だけを行う。
+未分類の送信結果は公開send_pendingとして残す。
+固定source要求のsenderだけは55秒を上限とし、readerの20秒とHTTP処理を含める。
+呼出し元の60秒またはperiodic処理の短いcontextは引き続き優先し、他のコマンドは延長しない。

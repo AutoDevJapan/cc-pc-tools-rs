@@ -4,6 +4,8 @@
 use super::*;
 
 const FAILED: &str = "conversation source reference is unverified";
+const SOURCE_DEADLINE: &str = "conversation source reference deadline";
+const TRANSPORT_PENDING: &str = "recovery transport unavailable; existing receipts retained";
 
 #[derive(Deserialize)]
 #[serde(deny_unknown_fields)]
@@ -54,7 +56,13 @@ pub(super) fn qualify(ctx: &mut Context, request: &Request, normal: &str) -> Res
             ],
             20,
         )
-        .map_err(|_| FAILED)?;
+        .map_err(|error| {
+            if error.starts_with("TimeoutExpired:") {
+                SOURCE_DEADLINE
+            } else {
+                FAILED
+            }
+        })?;
     if output.code != 0 || output.stdout.len() > 16 * 1024 {
         return Err(FAILED.into());
     }
@@ -116,10 +124,28 @@ pub(super) fn failure_stage(error: &str) -> &'static str {
     match error {
         "origin must be the exact owner request or a verified recovery post; legacy questions are excluded" => "origin_scope",
         FAILED => "source_scope",
+        SOURCE_DEADLINE => "deadline",
+        TRANSPORT_PENDING => "network",
         "recovery-messages.lock is busy" | "todo.lock is busy" => "busy",
         "Discord API rate limited" => "rate_limited",
         _ if error.starts_with("URLError:") => "network",
         _ => "operation_pending",
+    }
+}
+
+// Preserve transport categories at the HTTP boundary, never an HTTP body,
+// URL, credential, or arbitrary lower-level error. Pending POST reservations
+// remain authoritative even when this supplies a more specific diagnostic.
+pub(super) fn redact_http_error(error: &str, fallback: &str) -> String {
+    if error == TRANSPORT_PENDING
+        || error.starts_with("URLError:")
+        || error.starts_with("TimeoutExpired:")
+    {
+        TRANSPORT_PENDING.into()
+    } else if error == "Discord API rate limited" {
+        "Discord API rate limited".into()
+    } else {
+        fallback.into()
     }
 }
 

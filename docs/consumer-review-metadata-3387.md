@@ -1,10 +1,18 @@
 # Consumer repair review execution metadata
 
-`record-recovery consumer-review-runtime-metadata` admits only the original
-completed review of the prepared-SDK consumer repair. Its assignment, start,
-finish and original response SHA are fixed from the existing supervisor's
+`record-recovery consumer-review-runtime-metadata` admits only the two remaining
+completed adapter reviews in the prepared-SDK consumer repair chain. Their
+assignment, parent, start, finish and original response SHA are fixed from the existing supervisor's
 normal API receipt. It does not reuse or reacquire the previous private-case
 review or any other completed review scope.
+
+The original consumer review and the duplicate-record fix review were already
+observed by the preceding clean reader. Their immutable execution proofs are
+retained separately. This reader projects only the two missing executions and
+its own exact-build review; it does not repeat those successful acquisitions.
+One of the intermediate reviews found a Must which the later observed fix
+review resolved. Execution evidence does not turn that intermediate result
+into Must 0.
 
 The adapter reuses the existing metadata-only factory, fixed native thread,
 normal result/turn binding, binary/source qualification, pinned file handles,
@@ -19,15 +27,15 @@ select another root, assignment, timestamp, response digest or output file.
 All arguments are rejected before any metadata acquisition. Non-Windows returns
 the existing explicit unavailable result.
 
-Only this review and, through the existing reader-review marker, one
+Only these two reviews and, through the existing reader-review marker, one
 review of the exact clean adapter build may be projected. The latter must start
 after the build's commit, name that full revision and match the same normal
 thread/result/native turn. A duplicate or conflicting match fails; old proof
 is not used as current execution evidence.
 
-The supervisor's normal API identifies the consumer review as a delegated
-execution, with a distinct root and matching parent at depth 1. This purpose
-also pins that original parent ID. Its own build review may use the same
+The supervisor's normal API identifies the adapter reviews as delegated
+executions, with a distinct root and matching parent at depth 1. This purpose
+also pins both original parent IDs. Its own build review may use the same
 single-execution delegated shape, with valid distinct IDs and matching
 parent/root, in the same fixed bot/thread. Its exact revision, post-commit time,
 result digest and unique native final must still match. Earlier commands keep

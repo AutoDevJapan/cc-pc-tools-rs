@@ -2,6 +2,22 @@
 
 ## 2026-10-27 05:03再開担当の現在値
 
+固定実装d2a3aaf35be967edfe96eb4a06777a0357193da1を**追加レビュー4028**へ--spec/親4011/
+kind review/Opus5.5 maxで登録済み。spec `.ci-work/4011/review-3-spec.md`、固定e1c3ffef→d2a3aaf3の9対象。
+05:29の正規dispatch-subworkはexit0、status todo/activefalse/launchednull/**allowance_now0**。
+同じ受付は未起動であり、新しい担当/レビューを重複登録しない。通常statusはbusytrueで、
+実際のCPUやメモリを未取得なのに不足原因と断定しない。独立した実施済み工程は保存したので、
+4011だけを4028の正規完了待ちへ記録し、自分の実行枠を返す。
+次の担当は4028の原応答/実native model/9対象読了/Mustを照合し、Must解消後に実適用する。
+もし4028がdoneでないなら新規reviewを作らずその同じ結果を待つ。4020は既に受領済み。
+
+新Temp9f17...のPS5/架空fixtureと準備launcherは必要sourceを`.ci-work/4011/temp-v3-sources`へ保存し、
+plan3534論理B/14entries→別exec通常削除→finish source_absentを確認した。次回新しいcreateを使う。
+config/point/rollbackのlauncher原sourceは保持し、実OS適用0/実snapshot削除0のまま。
+05:30実空きC352535973888/D2108995960832/E858052489216B。並行IOを含むので回収量ではない。
+branch変更0。過去checkpoint共有lock TimeoutErrorの無限再試行をせず、原request/失敗を保持。
+PR568のd2a3aaf3はCodeQL actions/go/JS成功、Rust実行中、全成功やmerge済みとは扱わない。
+
 実job20261027-050328-todo-4011、同branch/開始bdf1337c、未コミット先行変更0から再開。
 4020の原応答を受領：succeeded/exit0/16steps/native_turn_context Opus5.5 max、
 固定6対象読了/Must1・Suggestion7。原文3810字、SHA CD695B03DFF92A130A3BCCA28965C9B284EFBCB02992EEB1F27E032F7E0ACF10。

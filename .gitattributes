@@ -199,3 +199,7 @@ docs/skills-3080-combat6-input-acceptance090101.md text eol=lf
 /docs/skills-3080-progress.json text eol=lf
 /docs/skills-3080-execution-evidence.json text eol=lf
 /docs/skills-3080-execution-queue-summary.json text eol=lf
+/docs/skills-3080-sixmile-next35-physical090101.json text eol=lf
+/docs/skills-3080-sixmile-next35-evaluation090101.json text eol=lf
+/docs/skills-3080-next35-support121-independent-proof090101.json text eol=lf
+/tools/skills-3080-catalog/received_next35_test.go text eol=lf

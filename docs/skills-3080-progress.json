@@ -2211,5 +2211,26 @@
     "implicit_selection_proven": false,
     "public_delta_review_pending": true,
     "whole16_complete": false
+  },
+  "sixmile_next35_received_assessments": {
+    "artifact": "skills-3080-sixmile-next35-evaluation090101.json",
+    "physical_evidence": "skills-3080-sixmile-next35-physical090101.json",
+    "source_slice": [
+      133,
+      167
+    ],
+    "received_assessments": 35,
+    "original_direct_masked_primary": 30,
+    "original_exact_primary_reuse": 5,
+    "original_primary_bytes": 501009,
+    "global_raw_and_workflow_count_credit_added": 0,
+    "physical_saved_source_paths": 391,
+    "physical_support_paths": 639,
+    "physical_support_saved": 356,
+    "physical_support_unsaved": 283,
+    "new_grants": 0,
+    "new_dispositions": 0,
+    "central_operations": 0,
+    "definition": "Additional received source assessments with original masked/reuse and support-state evidence. Public reading-count credit remains at its earlier accepted scope; physical hash verification does not establish a model reading or permission."
   }
 }

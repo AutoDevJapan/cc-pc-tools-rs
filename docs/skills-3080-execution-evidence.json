@@ -107,6 +107,11 @@
       "file": "skills-3080-mcp-site-duplicate-evidence090101.json",
       "sha256": "fe4547ae7954867716800ec6d8308d400a1be326ae4749d03d02a4227ab3defa",
       "rows": 1
+    },
+    {
+      "file": "skills-3080-sixmile-next35-evaluation090101.json",
+      "sha256": "f9f1ce7ea694c97c37a33ac51ff6d60af6a0b3544feb4ae8f72effd637da34b0",
+      "rows": 35
     }
   ],
   "adoption_ledger": {

@@ -703,7 +703,7 @@ func (r *Runner) processConversationMaintenance(ctx context.Context, health *Hea
 			health.Errors = append(health.Errors, "conversation_cursor_deferred")
 			return
 		}
-		if q.Phase == "reserved" || (q.Phase == "posted" && q.Wait) {
+		if q.Phase == "reserved" || (q.Phase == "posted" && q.Wait && q.RecoveredIntake == 0) {
 			input := ConversationAskInput{RequestID: q.RequestID, Todo: q.Todo, OriginThread: q.OriginThread, BodyFile: q.BodyFile, DecisionFile: q.DecisionFile, Title: q.Title, Wait: q.Wait, Attachments: q.Attachments}
 			if q.Actor != nil {
 				input.ActorTodo, input.ActorJob = q.Actor.Todo, q.Actor.Job
@@ -747,6 +747,20 @@ func (r *Runner) conversationReplyNeedsDelivery(q ConversationQuestion, proof *c
 }
 
 func (r *Runner) processConversationReplies(ctx context.Context, index *conversationIndex, id string, q ConversationQuestion, proof *conversationProof, health *Health) {
+	if q.RecoveredIntake != 0 {
+		// This question was already handled by the ordinary intake worker. A
+		// minute audit must never instruct the original worker to repeat it or
+		// replace its technical hold with a new question wait. Unlinked/edited
+		// replies remain visible for explicit canonical reconciliation.
+		for _, reply := range proof.Replies {
+			_, ready, err := r.conversationReplySource(ctx, q, proof, reply)
+			if err != nil || !ready {
+				health.Errors = append(health.Errors, "conversation_recovered_reply_pending")
+				return
+			}
+		}
+		return
+	}
 	sort.Slice(proof.Replies, func(i, j int) bool {
 		a, _ := number(proof.Replies[i].Message)
 		b, _ := number(proof.Replies[j].Message)

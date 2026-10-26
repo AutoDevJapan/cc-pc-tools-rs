@@ -205,6 +205,9 @@ fn assigned(body: &str, input: &Value) -> bool {
         })
     })
 }
+fn assignment_matches(paths: &Paths, actor: &Value, body: &str, input: &Value) -> bool {
+    assigned(body, input) || crate::ordinary_assignment::matches(paths, actor, input, body)
+}
 fn actor_identity(paths: &Paths, actor: &Value, input: &Value) -> Result<(Value, Vec<u8>)> {
     let job_id = text(input, "job_id");
     if !crate::job_refs::valid_id(job_id)
@@ -220,7 +223,7 @@ fn actor_identity(paths: &Paths, actor: &Value, input: &Value) -> Result<(Value,
     }
     let prompt = bridge::bytes(&paths.jobs.join(job_id).join("prompt.md"))?;
     if !Path::new(text(&job, "cwd")).is_absolute()
-        || !std::str::from_utf8(&prompt).is_ok_and(|s| assigned(s, input))
+        || !std::str::from_utf8(&prompt).is_ok_and(|s| assignment_matches(paths, actor, s, input))
     {
         return fail("actor_identity_invalid");
     }
@@ -262,8 +265,8 @@ fn actor_proof(paths: &Paths, actor: &Value, input: &Value) -> Result<Value> {
         paths.store.parent().unwrap().join(spec)
     };
     let spec_bytes = bridge::bytes(&spec)?;
-    if !std::str::from_utf8(&spec_bytes).is_ok_and(|s| assigned(s, input))
-        || !std::str::from_utf8(&prompt).is_ok_and(|s| assigned(s, input))
+    if !std::str::from_utf8(&spec_bytes).is_ok_and(|s| assignment_matches(paths, actor, s, input))
+        || !std::str::from_utf8(&prompt).is_ok_and(|s| assignment_matches(paths, actor, s, input))
     {
         return fail("assignment_scope_mismatch");
     }
@@ -292,7 +295,11 @@ fn validate(input: &Value, implementation: bool) -> Result<(i64, i64)> {
         "identity",
         "applied_at",
     ];
-    if obj.len() != FIELDS.len() + if implementation { extra.len() } else { 0 }
+    let ordinary = obj.contains_key("intake_source_file");
+    let expected_fields =
+        FIELDS.len() + if implementation { extra.len() } else { 0 } + if ordinary { 2 } else { 0 };
+    if (ordinary && !implementation)
+        || obj.len() != expected_fields
         || FIELDS
             .iter()
             .any(|k| !obj.contains_key(*k) || !input[*k].is_string())
@@ -314,6 +321,12 @@ fn validate(input: &Value, implementation: bool) -> Result<(i64, i64)> {
     }
     if implementation && extra.iter().any(|k| text(input, k).trim().is_empty()) {
         return fail("execution_evidence_required");
+    }
+    if ordinary
+        && (!Path::new(text(input, "intake_source_file")).is_absolute()
+            || !hex(text(input, "intake_source_sha256"), 64))
+    {
+        return fail("ordinary_source_invalid");
     }
     for k in ["request_id", "sender_request_id"] {
         let s = text(input, k);
@@ -411,8 +424,13 @@ fn block(input: &Value, input_sha: &str, implementation: bool) -> String {
     } else {
         String::new()
     };
+    let actor_label = if implementation && input.get("intake_source_file").is_some() {
+        "記録担当"
+    } else {
+        "実担当"
+    };
     format!(
-        "[discord-{marker}-record-v1 sha256={input_sha}]\n{summary}\n実担当: ToDo {} / job {}\n元作業・保存先: ToDo {}\n出所: Discord API v10 / author {} / thread {} / question {} / reply {}\n質問日時: {} / 回答日時: {} / 編集日時: {} / 取得日時: {}\n原質問（原文）:\n{}\n本人回答（原文）:\n{}\nsource_receipt_sha256={}{execution}\n[/discord-{marker}-record-v1 sha256={input_sha}]",
+        "[discord-{marker}-record-v1 sha256={input_sha}]\n{summary}\n{actor_label}: ToDo {} / job {}\n元作業・保存先: ToDo {}\n出所: Discord API v10 / author {} / thread {} / question {} / reply {}\n質問日時: {} / 回答日時: {} / 編集日時: {} / 取得日時: {}\n原質問（原文）:\n{}\n本人回答（原文）:\n{}\nsource_receipt_sha256={}{execution}\n[/discord-{marker}-record-v1 sha256={input_sha}]",
         text(input, "actor_todo_id"),
         text(input, "job_id"),
         text(input, "origin_todo_id"),
@@ -504,13 +522,17 @@ fn record_for(
     if origin_id == actor_id {
         return fail("actor_must_be_distinct");
     }
+    let ordinary = implementation && input.get("intake_source_file").is_some();
+    if ordinary {
+        crate::ordinary_assignment::qualify(paths, row(db, actor_id)?, &input)?;
+    }
     for (id, scope, state) in [
         (origin_id, origin_scope, origin_state),
         (actor_id, actor_scope, actor_state),
     ] {
         bridge::check_scope(db, id, scope)?;
         bridge::check_snapshot(db, id, state)?;
-        if row(db, id)?["project"] != input["project"] {
+        if row(db, id)?["project"] != input["project"] && !(ordinary && id == actor_id) {
             return fail("project_mismatch");
         }
     }
@@ -564,7 +586,7 @@ fn record_for(
             return fail("record_unavailable");
         }
         if implementation {
-            let project = text(&input, "project");
+            let project = text(row(db, actor_id)?, "project");
             let root = std::fs::canonicalize(text(&db["projects"], project))
                 .map_err(|_| "implementation_root_unavailable")?;
             let (job, _) = actor_identity(paths, row(db, actor_id)?, &input)?;

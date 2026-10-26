@@ -79,8 +79,17 @@ func (r *Runner) implementationCommand(ctx context.Context, q ConversationQuesti
 		id   uint64
 	}{{"origin", q.Todo}, {"actor", actor}} {
 		row, err := r.conversationTask(ctx, selected.id)
-		if err != nil || row.Project != q.Project || len(row.conversationState) == 0 {
+		if err != nil || len(row.conversationState) == 0 {
 			return result, errImplementation
+		}
+		if selected.name == "actor" && row.Project == q.Project && (input.IntakeSourceFile != "" || input.IntakeSourceSHA != "") {
+			return result, errImplementation
+		}
+		if row.Project != q.Project {
+			path, sha, ok := r.ordinaryAssignment(q, input.Message, row)
+			if selected.name != "actor" || !ok || input.IntakeSourceFile != path || input.IntakeSourceSHA != sha {
+				return result, errImplementation
+			}
 		}
 		base := implementationFile(r, q, input.Message, bytesHash(b)) + "-" + selected.name
 		scope, _ := json.Marshal(row.conversationScope)
@@ -124,6 +133,17 @@ func (r *Runner) conversationImplementationApplied(ctx context.Context, q Conver
 	}
 	expected := directionInput(q, proof, reply, req, stamp.SourceSHA, actor, input.Job, input.Revision)
 	expected.Domain, expected.Kind = "discord-conversation-implementation-v1", "implementation"
+	if input.IntakeSourceFile != "" {
+		row, err := r.conversationTask(ctx, actor)
+		if err != nil {
+			return stamp, false, errImplementation
+		}
+		path, sha, ok := r.ordinaryAssignment(q, reply.Message, row)
+		if !ok {
+			return stamp, false, errImplementation
+		}
+		expected.IntakeSourceFile, expected.IntakeSourceSHA = path, sha
+	}
 	if input.conversationDirectionInput != expected {
 		return stamp, false, errImplementation
 	}
@@ -161,6 +181,9 @@ func (r *Runner) implementationQuestion(ctx context.Context, opts conversationCL
 	return q, nil, nil, errImplementation
 }
 func (r *Runner) conversationImplementationCommand(ctx context.Context, opts conversationCLIOptions) (map[string]any, error) {
+	if opts.Command == "recover-question" {
+		return r.recoverConversationQuestion(ctx, opts)
+	}
 	q, proof, reply, err := r.implementationQuestion(ctx, opts)
 	if err != nil {
 		return nil, err
@@ -246,6 +269,17 @@ func (r *Runner) conversationImplementationCommand(ctx context.Context, opts con
 	}
 	input.conversationDirectionInput = directionInput(q, proof, *reply, r.conversationRequest(reply.Message), stamp.SourceSHA, opts.Todo, job, opts.Revision)
 	input.Domain, input.Kind = "discord-conversation-implementation-v1", "implementation"
+	actorRow, err := r.conversationTask(ctx, opts.Todo)
+	if err != nil {
+		return nil, errImplementation
+	}
+	if actorRow.Project != q.Project {
+		path, sha, ok := r.ordinaryAssignment(q, reply.Message, actorRow)
+		if !ok {
+			return nil, errImplementation
+		}
+		input.IntakeSourceFile, input.IntakeSourceSHA = path, sha
+	}
 	b, _ = json.Marshal(input)
 	if existing != nil && (input != existing.Input || bytesHash(b) != existing.InputSHA) {
 		return nil, errImplementation

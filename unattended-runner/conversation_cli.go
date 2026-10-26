@@ -130,7 +130,7 @@ func parseConversationCLI(args []string) (conversationCLIOptions, error) {
 		if opts.Command == "implementation-record" {
 			conversationStringFlag(fs, "evidence-file", &opts.EvidenceFile)
 		}
-	case "source-verify", "source-reacquire":
+	case "recover-question", "source-verify", "source-reacquire":
 		conversationStringFlag(fs, "request-id", &opts.RequestID)
 		conversationStringFlag(fs, "message-id", &opts.Message)
 	case "close":
@@ -207,7 +207,7 @@ func parseConversationCLI(args []string) (conversationCLIOptions, error) {
 				return opts, errConversationArguments
 			}
 		}
-	case "source-verify", "source-reacquire":
+	case "recover-question", "source-verify", "source-reacquire":
 		if _, ok := number(opts.Message); !ok || !conversationID.MatchString(opts.RequestID) {
 			return opts, errConversationArguments
 		}
@@ -401,7 +401,7 @@ func conversationCLIWithGuard(args []string, out io.Writer, load func(string) (c
 			} else {
 				result, err = backend.conversationWithdraw(ctx, opts.RequestID, opts.ReasonFile)
 			}
-		case "source-link", "source-repair", "source-verify", "source-reacquire", "implementation-record", "close":
+		case "recover-question", "source-link", "source-repair", "source-verify", "source-reacquire", "implementation-record", "close":
 			if backend, ok := runner.(interface {
 				conversationImplementationCommand(context.Context, conversationCLIOptions) (map[string]any, error)
 			}); ok {
@@ -445,6 +445,9 @@ func conversationCLIWithGuard(args []string, out io.Writer, load func(string) (c
 
 func conversationQuestionPublic(q ConversationQuestion) map[string]any {
 	result := map[string]any{"domain": conversationDomain, "request_id": q.RequestID, "todo_id": q.Todo, "phase": q.Phase, "wait_requested": q.Wait}
+	if q.RecoveredIntake != 0 {
+		result["recovered_intake_todo_id"] = q.RecoveredIntake
+	}
 	if q.Actor != nil {
 		result["actor_todo_id"] = q.Actor.Todo
 		result["wait_deferred"] = q.WaitDeferred

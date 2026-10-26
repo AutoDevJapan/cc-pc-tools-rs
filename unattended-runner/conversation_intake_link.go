@@ -118,7 +118,14 @@ func (r *Runner) linkActor(row *TodoRow, q ConversationQuestion, opts conversati
 	}
 	b, err := boundedRegular(spec)
 	prompt, e2 := boundedRegular(filepath.Join(root, jobID, "prompt.md"))
-	return err == nil && e2 == nil && linkAssigned(string(b), q, opts.Message) && linkAssigned(string(prompt), q, opts.Message)
+	if err != nil || e2 != nil {
+		return false
+	}
+	if linkAssigned(string(b), q, opts.Message) && linkAssigned(string(prompt), q, opts.Message) {
+		return true
+	}
+	path, _, verified := r.ordinaryAssignment(q, opts.Message, row)
+	return verified && row.Project != q.Project && opts.IntakeTodo == row.ID && ordinarySourceAssigned(string(b), path, opts.Message, q.Thread) && ordinarySourceAssigned(string(prompt), path, opts.Message, q.Thread)
 }
 
 func (r *Runner) conversationIntakeLink(ctx context.Context, opts conversationCLIOptions, q ConversationQuestion, proof *conversationProof, reply conversationReply) (map[string]any, error) {
@@ -135,13 +142,22 @@ func (r *Runner) conversationIntakeLink(ctx context.Context, opts conversationCL
 	rows := make([]*TodoRow, 0, 3)
 	for _, id := range []uint64{q.Todo, opts.IntakeTodo, opts.Todo} {
 		row, err := r.conversationTask(ctx, id)
-		if err != nil || row.Project != q.Project || linkStopped(row.conversationState) || row.Status == "done" || row.Status == "recovery_unverified" {
+		if err != nil || (id == q.Todo && row.Project != q.Project) || linkStopped(row.conversationState) || row.Status == "done" || row.Status == "recovery_unverified" {
 			return nil, errImplementation
 		}
 		rows = append(rows, row)
 	}
 	if !r.linkActor(rows[2], q, opts) {
 		return nil, errImplementation
+	}
+	crossProject := rows[1].Project != q.Project || rows[2].Project != q.Project
+	if crossProject {
+		if q.Phase != "posted" || !ordinaryRecoveryEligible(q, rows[0], rows[1]) {
+			return nil, errImplementation
+		}
+		if _, _, ok := r.ordinaryAssignment(q, opts.Message, rows[2]); !ok || opts.IntakeTodo != opts.Todo {
+			return nil, errImplementation
+		}
 	}
 	var live struct {
 		Message
@@ -214,8 +230,27 @@ func (r *Runner) conversationIntakeLink(ctx context.Context, opts conversationCL
 	if err != nil || !ready {
 		return nil, errImplementation
 	}
-	if err := r.deliverConversationReply(ctx, q, reply, capture); err != nil {
-		return nil, err
+	// A source bound to its actual ordinary intake is ready for the explicit
+	// implementation writer. Do not replace the original technical wait with a
+	// question wait or resume its worker as an incidental effect of linking.
+	if !crossProject {
+		if err := r.deliverConversationReply(ctx, q, reply, capture); err != nil {
+			return nil, err
+		}
+	} else {
+		index, err := r.loadConversations()
+		if err != nil {
+			return nil, err
+		}
+		current, ok := index.Questions[q.RequestID]
+		if !ok || r.conversationCloseIdentity(current) != r.conversationCloseIdentity(q) || (current.RecoveredIntake != 0 && current.RecoveredIntake != opts.IntakeTodo) {
+			return nil, errImplementation
+		}
+		current.RecoveredIntake = opts.IntakeTodo
+		index.Questions[q.RequestID] = current
+		if publish(r.conversationPath(), index) != nil {
+			return nil, errImplementation
+		}
 	}
 	return map[string]any{"domain": link.Domain, "linked": true, "request_id": q.RequestID, "ordinary_intake_retained": true, "original_source_sha256": link.RawSHA, "ordinary_source_sha256": link.OrdinarySHA, "source_receipt_sha256": stamp.SourceSHA, "intake_todo_id": opts.IntakeTodo, "origin_todo_id": q.Todo, "actor_todo_id": opts.Todo, "application_inferred": false}, nil
 }

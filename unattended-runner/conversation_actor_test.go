@@ -157,6 +157,14 @@ func TestConversationActorPreservesOriginDependencyAndFullReply(t *testing.T) {
 			if !strings.Contains(actor.Note, "<discord-owner-answer>\n"+reply.Body+"\n</discord-owner-answer>") || !strings.Contains(actor.conversationInstruction(), "<discord-owner-answer>\n"+reply.Body+"\n</discord-owner-answer>") || !strings.Contains(actor.Note, "origin_todo_id=1171, todo_id=3277") || f.r.State.Requests[reply.Message].Todo != 3277 {
 				t.Fatal("full reply did not reach the actual actor")
 			}
+			status, err := f.r.conversationStatus()
+			if err != nil {
+				t.Fatal(err)
+			}
+			stages := status["reply_stages"].([]map[string]any)
+			if len(stages) != 1 || stages[0]["todo_id"] != uint64(3277) || stages[0]["origin_todo_id"] != uint64(1171) {
+				t.Fatal("saved status dropped the bound actor delivery", stages)
+			}
 			f.r.NoticeAttempted = false
 			f.r.processConversations(context.Background(), &Health{})
 			again, _ := f.r.todo(3277)

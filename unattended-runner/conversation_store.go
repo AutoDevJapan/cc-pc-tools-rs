@@ -50,6 +50,7 @@ type ConversationQuestion struct {
 	DecisionFile     string             `json:"decision_file"`
 	Title            string             `json:"title,omitempty"`
 	Wait             bool               `json:"wait_requested"`
+	RecoveredIntake  uint64             `json:"recovered_intake_todo_id,omitempty"`
 	Phase            string             `json:"phase"`
 	Created          string             `json:"created_at"`
 	Thread           string             `json:"thread_id,omitempty"`
@@ -114,6 +115,7 @@ type conversationProof struct {
 	RequestID        string                              `json:"request_id"`
 	Thread           string                              `json:"thread_id"`
 	Owner            string                              `json:"owner_id"`
+	Fingerprint      string                              `json:"question_fingerprint,omitempty"`
 	Question         string                              `json:"question_message_id"`
 	Created          string                              `json:"question_timestamp"`
 	Progress         string                              `json:"progress_thread_id"`
@@ -245,6 +247,9 @@ func (r *Runner) loadConversations() (*conversationIndex, error) {
 		return nil, errors.New("conversation namespace differs")
 	}
 	for key, q := range index.Questions {
+		if q.RecoveredIntake != 0 && !ordinaryRecoveryRoute(q) {
+			return nil, errors.New("conversation recovery route differs")
+		}
 		if q.Actor != nil && (q.Todo != 1171 || q.Project != "GitDo" || q.Actor.Todo != 3277 || !validJob(q.Actor.Job) || !shaPattern.MatchString(q.Actor.SpecSHA) || !shaPattern.MatchString(q.Actor.OriginSpecSHA) || !shaPattern.MatchString(q.Actor.RootSHA) || !shaPattern.MatchString(q.Actor.SourceSHA)) {
 			return nil, errors.New("conversation actor unverified")
 		}
@@ -498,6 +503,15 @@ func (r *Runner) conversationAsk(ctx context.Context, input ConversationAskInput
 			return zero, err
 		}
 	}
+	if q.RecoveredIntake != 0 {
+		if q.Project != row.Project || q.Phase == "reserved" {
+			return zero, errors.New("conversation recovered question differs")
+		}
+		if _, err := r.conversationProof(ctx, q); err != nil {
+			return zero, err
+		}
+		return q, nil
+	}
 	if q.Phase != "reserved" && !(q.Wait && q.Phase == "posted") {
 		if q.Project != row.Project {
 			return zero, errors.New("conversation original project differs")
@@ -714,6 +728,9 @@ func (r *Runner) conversationProof(ctx context.Context, q ConversationQuestion) 
 	var proof conversationProof
 	if json.Unmarshal([]byte(raw), &proof) != nil || proof.Domain != "new-owner-recovery-messages" || !proof.ReadOnly || proof.Source != "discord-api-v10" || proof.RequestID != q.SenderID || proof.Thread != q.Thread || proof.Owner != r.State.Destination.Owner || proof.Question != q.Message || proof.Progress != q.Progress || canonicalHash(proof.Decision) != q.DecisionSHA || bytesHash([]byte(proof.Body)) != q.QuestionSHA {
 		return nil, errors.New("conversation question association differs")
+	}
+	if proof.Fingerprint != "" && proof.Fingerprint != q.Fingerprint {
+		return nil, errors.New("conversation question fingerprint differs")
 	}
 	stamp, err := time.Parse(time.RFC3339Nano, proof.Created)
 	if err != nil || stamp.After(r.Now().Add(time.Minute)) {
@@ -990,7 +1007,7 @@ func (r *Runner) conversationStatus() (map[string]any, error) {
 			continue
 		}
 		q, ok := index.Questions[req.Conversation]
-		if !ok || req.Thread != q.Thread || (req.Todo != q.Todo && !(req.Todo == 0 && (req.Phase == "conversation_implementation_recorded" || req.Phase == "conversation_reply_applied" || req.Phase == "conversation_source_verified"))) {
+		if !ok || req.Thread != q.Thread || (req.Todo != conversationRecipient(q) && !(req.Todo == 0 && (req.Phase == "conversation_implementation_recorded" || req.Phase == "conversation_reply_applied" || req.Phase == "conversation_source_verified"))) {
 			continue
 		}
 		replies = append(replies, map[string]any{"message_id": req.Message, "thread_id": req.Thread, "author_id": req.Author, "todo_id": req.Todo, "origin_todo_id": q.Todo, "request_id": req.Conversation, "phase": req.Phase, "source": req.Source, "created_at": req.Created, "edited_at": req.Edited, "acquired_at": req.Acquired})

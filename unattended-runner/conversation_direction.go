@@ -54,6 +54,8 @@ type conversationDirectionInput struct {
 	Created          string `json:"created_at"`
 	Edited           string `json:"edited_at"`
 	Acquired         string `json:"acquired_at"`
+	IntakeSourceFile string `json:"intake_source_file,omitempty"`
+	IntakeSourceSHA  string `json:"intake_source_sha256,omitempty"`
 }
 type conversationDirectionReceipt struct {
 	Domain   string                     `json:"domain"`

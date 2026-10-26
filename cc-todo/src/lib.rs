@@ -33,6 +33,7 @@ pub mod answered_wait;
 pub mod capacity_cycle;
 pub mod conversation_wait;
 pub mod direction_record;
+mod ordinary_assignment;
 pub mod product_resume;
 pub mod product_retry;
 pub mod ready;

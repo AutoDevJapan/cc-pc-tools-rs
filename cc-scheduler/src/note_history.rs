@@ -36,7 +36,7 @@ pub(super) fn make_room(store: &Path, db: &mut Value) -> Result<()> {
             Some((id, encode(&row["note_history"], 1).len()))
         })
         .collect();
-    candidates.sort_by(|a, b| b.1.cmp(&a.1));
+    candidates.sort_by_key(|entry| std::cmp::Reverse(entry.1));
     for (id, _) in candidates {
         // Keep errors classified, without emitting a note, archive path or store value.
         todo_history::archive(store, db, id, true)

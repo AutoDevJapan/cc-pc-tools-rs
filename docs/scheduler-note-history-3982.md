@@ -35,6 +35,12 @@ todo_historyテストも互換性の確認に利用する。
 - 専用一時領域の所有ID: `9724e0353c7fc771c07d04a94d709efa`。
 - Red: 変更前の関連8テストで履歴欠落・上限超過・不正履歴の保存を再現した。
   準備失敗のfixtureは、戻り値のエラーと旧保留文面を実装の既存条件に合わせて修正した。
+- Green: 追加3ケースを含むcc-scheduler/cc-todoのnextestは606件すべて成功
+  （run `76055ee2-ad5e-446a-ba87-2c3874396690`、223.492秒）。
+- 既存cc-job-policyのtodo_historyテスト5件と、cc-scheduler/cc-todoのdoctestは成功
+  （doctestは対象例0件）。Clippyが指摘した等価な降順ソートの書式を修正した。
+- PR: https://github.com/AutoDevJapan/cc-pc-tools-rs/pull/557 。別モデルレビューは
+  共有ToDo3985へ登録し、通常の割当を待っている。子ジョブは直接起動していない。
 - 残作業: Red/Green、関連nextest/doctest/Clippy、別モデルの固定差分レビュー、
   PR/CI/マージ、並行変更を照合した実行物の配布と稼働確認、所有一時領域の清掃。
 - 過去の紛失メモの復元、文面や表示の変更、上限や保護設定の変更は行わない。

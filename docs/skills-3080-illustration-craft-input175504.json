@@ -1,0 +1,23 @@
+{
+  "todo": 3080,
+  "job": "20261026-175504-todo-3080",
+  "stage": "Authored input only; current target absence, installation and adoption unverified",
+  "targets": 1,
+  "output_files": 7,
+  "inventory_id": "github:cb7ea1494e0f217b25369cebd5c2b52b9f39f7999e5a9cb81ba1683e017920ae",
+  "source_primary_bytes": 20422,
+  "shared_support_bytes": 10528,
+  "notice_bytes": 1064,
+  "primary_and_shared_text_literal_read": true,
+  "primary_is_fixed_catalog_candidate_not_invented_reference_ID": true,
+  "operation": "skills-3080-operations/create-illustration-craft-175504.json",
+  "operation_sha256": "ed9da837d40f2d48bc129a445eea1c820460fcb2aa7e4cb9a6b7062136aa1541",
+  "source_link_count": 2,
+  "meaning": "Extract general hand/arm/grip/contact and version comparison from the primary and its common craft reference; keep style-specific constants and author benchmarks scoped",
+  "unknown_existing_central_body_read_or_change": 0,
+  "new_render_or_UI": 0,
+  "new_global_reading_credit": 0,
+  "new_final_dispositions": 0,
+  "central_operations": 0,
+  "whole16_complete": false
+}

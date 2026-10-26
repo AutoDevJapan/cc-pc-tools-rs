@@ -112,6 +112,11 @@
       "file": "skills-3080-sixmile-next35-evaluation090101.json",
       "sha256": "f9f1ce7ea694c97c37a33ac51ff6d60af6a0b3544feb4ae8f72effd637da34b0",
       "rows": 35
+    },
+    {
+      "file": "skills-3080-sixmile-next7-evaluation175504.json",
+      "sha256": "fc0b959225aedbd8312e74b1897fd3eb069230fa43da380ba90bbd6327e25ecf",
+      "rows": 7
     }
   ],
   "adoption_ledger": {

@@ -1,0 +1,25 @@
+{
+  "job": "20261026-175504-todo-3080",
+  "inventory_id": "github:cb7ea1494e0f217b25369cebd5c2b52b9f39f7999e5a9cb81ba1683e017920ae",
+  "primary_sha256": "41d760636f5942d732b35d68ace26f99d62a75ad1bfd3bbe0326ae723378f45d",
+  "primary_bytes": 20422,
+  "parent_all177_lines_literal_read": true,
+  "shared105_lines_literal_read": true,
+  "root_MIT_fixed_notice_reused_and_retained": true,
+  "new_global_primary_credit": 0,
+  "source_style": "One slim figure, saturated palette, navy outlines/down-right extrusions, dense props; original examples and old42-card evaluation are author claims, not our render",
+  "adopted_draft_scope": "Shoulder/elbow/wrist tracing; independently identify hand side and palm; actual contact/grip; original-resolution crops plus delivery size; same-artist local repair and version comparison",
+  "not_adopted": [
+    "Fixed 480x360/4:3, exact palette or character counts as general policy",
+    "Elbow-up, shin20degrees, thumbs-business-end and hand-face ratio as universal anatomical claims",
+    "Source image examples, scripts or new Python/headless-only execution",
+    "8point/four-round/two-judge as automatic success or owner approval"
+  ],
+  "original_support_not_catalog_entry": "No invented occurrence ID; fixed primary is cb7ea149; secondary craft remains support",
+  "new_adoptions": 0,
+  "new_central_operations": 0,
+  "unknown_existing_body_reads_or_changes": 0,
+  "planned_targets": 1,
+  "planned_outputs": 7,
+  "whole16_complete": false
+}

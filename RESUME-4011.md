@@ -2,6 +2,25 @@
 
 ## 最新：4014の最終回答を受領し、修正候補を保存（OS未適用）
 
+修正候補の固定HEADは`e1c3ffefdf1a7fae3b24c31c1f7e4c5c5104f259`。
+追加review **4020** を同じ実行中Rootの正規資格で--spec/親4011/kind review登録済み。
+ToDoがtodoへ即時解放されても未完・同Root履歴・process作成時刻/実所有の資格が成立し、
+同じ担当からの受付が正常成功した。手動startや所有変更はせず、既存担当のまま続行した。
+specは`.ci-work/4011/review-2-spec.md`、固定a229c070→e1c3ffefの変更6対象。
+正規dispatch-subworkの個別呼出し1回はexit1/TimeoutError、engine.rs:1778-1779の
+通常共有scheduler.lock30秒取得待ちと照合した。原stdout/stderrを保存し、再試行/lock迂回0。
+同じ4020は通常schedulerから**job20261027-044913-todo-4020**で実起動、
+doing/running/Opus5.5 max/starting/0stepsをnormal list/tailで確認した。
+登録と起動は確認済み、実読了/最終応答/実nativeモデル照合はまだ未確認。
+新規登録や二重起動をせず、4011だけを4020の正規waitに記録して結果を受領する。
+次はこの4020の原応答/固定読了/実execution_observed/Mustを照合し、Must解消後に実適用する。
+新しい担当へ無条件に追加レビューを登録させたり、doneの4014を再待機したりしない。
+
+既存CC backup関連taskの限定metadata追加：実行先はCC Tools内だが現在不存在、
+名前はbackup系のみでrestore/VSS/shadowは含まず、引数にも該当語なし。
+2147942402の結果と一致するが、実VSS使用/保持仕様は未確認なので不存在と断定しない。
+その別backupをこのVSS修復で改変したり、未知のscript/認証設定を開いたりしていない。
+
 4014は04:30:59にsucceeded/exit0/16stepsで終了。固定6ファイル読了、Must2/Suggestion7。
 原応答`.ci-work/4011/review-4014-final.md`、6548字、SHA256
 E1E5F63F1297860FD36030C450EEA2C25D4BE39A231A59FEB5C40F34C6449BE1。

@@ -2335,6 +2335,7 @@ if !truth(&row["scheduler"]["key"]){let attempt=add_count(&row["scheduler"]["att
                 continue;
             }
             if self.report["launched"].is_object() {
+                observation.earlier_launch(&i["id"]);
                 break;
             }
         }

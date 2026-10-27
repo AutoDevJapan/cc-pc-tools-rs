@@ -157,7 +157,7 @@ fn resource_preparation_quota_and_not_reached_are_not_inferred_as_launches() {
     f.dispatch();
     assert_eq!(entry(&f, 1)["reason"], "resource_busy");
     assert_eq!(entry(&f, 2)["reason"], "launched");
-    assert_eq!(entry(&f, 3)["reason"], "not_reached");
+    assert_eq!(entry(&f, 3)["reason"], "earlier_candidate_launched");
     assert_eq!(entry(&f, 3)["stage"], "priority");
     assert_eq!(f.e.backend.launched.len(), 1);
 

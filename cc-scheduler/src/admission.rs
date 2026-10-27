@@ -53,6 +53,7 @@ pub enum Reason {
     Capacity,
     ResourceBusy,
     NotReached,
+    EarlierCandidateLaunched,
     PreparationDeferred,
     QuotaRecheckWait,
     QuotaExhausted,
@@ -301,6 +302,19 @@ impl Observation {
         {
             e.stage = Stage::Capacity;
             e.reason = Reason::Capacity;
+        }
+    }
+    pub fn earlier_launch(&mut self, id: &Value) {
+        let rank = id
+            .as_i64()
+            .and_then(|id| self.entries.get(&id))
+            .and_then(|e| e.queue_rank);
+        if let Some(rank) = rank {
+            for e in self.entries.values_mut().filter(|e| {
+                e.reason == Reason::NotReached && e.queue_rank.is_some_and(|r| r > rank)
+            }) {
+                e.reason = Reason::EarlierCandidateLaunched;
+            }
         }
     }
     pub fn failed(&mut self, id: &Value, error: &Error) {

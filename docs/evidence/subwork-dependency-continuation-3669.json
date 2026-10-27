@@ -157,5 +157,83 @@
         "sha256": "5413d900b63f8daf327b9002566f2482709bf713aba641209a296eb432584d94"
       }
     ]
+  },
+  "parent_generation_correction": {
+    "source_base": "0509dcf0ef33e54f9bf5d73d1abff50bd4de8fb4",
+    "self_review": {
+      "suggestion": 0,
+      "prior4164_findings_resolved": true,
+      "read_paths": 20,
+      "native_effort": "max",
+      "spec_sha256": "4e443d175e8828e5e2a34ce6b366e0342361aed67afd9b13b71dc5bcaa2128c5",
+      "job": "20261028-075024-todo-4163",
+      "nit": 0,
+      "native_model": "gpt-6-luna",
+      "must": 1,
+      "todo": 4163
+    },
+    "rubber": {
+      "suggestion": 0,
+      "read_paths": 20,
+      "native_effort": "max",
+      "spec_sha256": "fcfd9ecf657277a870d851868e254c7dc5d234a1b0b55ae821126c05d7302e1a",
+      "job": "20261028-075150-todo-4172",
+      "nit": 0,
+      "native_model": "gpt-6-luna",
+      "must": 0,
+      "todo": 4172
+    },
+    "red_commit": "711ae07c",
+    "red_failures": [
+      "CLI receipt and scheduler owner disagree",
+      "parent generation changes after intake before scheduler preparation",
+      "parent generation changes after registration before final admission"
+    ],
+    "green_passed": 63,
+    "skipped_outside_selected_scope": 1314,
+    "clippy_all_targets_packages": 4,
+    "clippy_warnings": 0,
+    "doctest_each": 0,
+    "shared_parent_check": "Require actor generation = current parent generation and scheduler worker, and exact worker receipt when present. Bind actor generation in request and actor digest.",
+    "final_independent_reconfirmation_pending": true,
+    "former0509_release_candidate_is_not_final_or_deployed": true,
+    "runtime_updated": false,
+    "logs": [
+      {
+        "file": "review4163-normal-result.txt",
+        "bytes": 3274,
+        "sha256": "20d4eb2335978cc655aa90fb73a3cc3a70d1028303204731f9e2111450306e2d"
+      },
+      {
+        "file": "review4172-normal-result.txt",
+        "bytes": 3561,
+        "sha256": "d9463ff1959abd3aa58683531b28ef78b7b4c5463db5a54ce16de3401958b893"
+      },
+      {
+        "file": "parent-generation-red.log",
+        "bytes": 4624,
+        "sha256": "26db3c2a23136ce323799bb36d3270930f5bfd3156f1199c5aff5591a935bdb2"
+      },
+      {
+        "file": "parent-generation-nextest-argument-error.log",
+        "bytes": 161,
+        "sha256": "5ebbc74864ae2c2af20140557f0d03b7800c55bc5131192f3c2ee6a32bca3f88"
+      },
+      {
+        "file": "parent-generation-green.log",
+        "bytes": 10185,
+        "sha256": "4abef62c1a71ba82f5a7429834c2c7aadc966cd1584c9e5df01930a9c770e532"
+      },
+      {
+        "file": "parent-generation-clippy.log",
+        "bytes": 717,
+        "sha256": "e9e3855882f864aa44123ce3ae722e2fbdd0b7767647500bd0ff4fb0809dc4d4"
+      },
+      {
+        "file": "parent-generation-doc.log",
+        "bytes": 620,
+        "sha256": "ae12d22390692cdfb5356d51f0022e00f5762122d0e45a96874690a514b86d4d"
+      }
+    ]
   }
 }

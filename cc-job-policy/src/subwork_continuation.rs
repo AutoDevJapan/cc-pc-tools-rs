@@ -12,8 +12,11 @@ fn hash(v: &Value) -> String {
     digest(&serde_json::to_vec(v).unwrap())
 }
 fn actor_binding(actor: &Value) -> Value {
-    json!({"id":actor["id"],"todo_id":actor["todo_id"],"cwd":actor["cwd"],"work_owner":actor["work_owner"]})
+    json!({"id":actor["id"],"todo_id":actor["todo_id"],"cwd":actor["cwd"],"work_owner":actor["work_owner"],
+        "todo_resume_generation":actor["todo_resume_generation"]})
 }
+// All three consumers use the same current-parent check. A historical job in
+// parent.jobs is provenance, not authority for a newer parent generation.
 pub fn parent_registered(db: &Value, item: &Value, actor: &Value) -> bool {
     db["items"].as_array().into_iter().flatten().any(|parent| {
         parent["id"] == actor["todo_id"]
@@ -26,6 +29,13 @@ pub fn parent_registered(db: &Value, item: &Value, actor: &Value) -> bool {
             && parent["jobs"]
                 .as_array()
                 .is_some_and(|ids| ids.contains(&actor["id"]))
+            && actor["todo_resume_generation"].is_u64()
+            && actor["todo_resume_generation"] == parent["resume_generation"]
+            && parent["scheduler"]["job"] == actor["id"]
+            && (parent["worker_receipt"].is_null()
+                || (parent["worker_receipt"].is_object()
+                    && parent["worker_receipt"]["job"] == actor["id"]
+                    && parent["worker_receipt"]["generation"] == parent["resume_generation"]))
             && ["repository", "git_common", "worktree"].iter().all(|k| {
                 !text(&actor["work_owner"], k).is_empty()
                     && actor["work_owner"][*k] == item["subwork"]["owner"][*k]
@@ -114,6 +124,7 @@ pub fn request(item: &Value, source: &Value, actor: &Value) -> Option<Value> {
             .is_none_or(|g| g >= dependency)
         || actor["todo_id"] != item["subwork"]["parent_todo_id"]
         || text(actor, "id").is_empty()
+        || !actor["todo_resume_generation"].is_u64()
         || source["sandbox"] != "read-only"
         || crate::launch_context::fixed_execution_contract(source)
         || quota::collection_pending(source)
@@ -151,6 +162,7 @@ pub fn request(item: &Value, source: &Value, actor: &Value) -> Option<Value> {
     }
     Some(
         json!({"version":1,"source_job":source["id"],"actor_job":actor["id"],
+        "actor_resume_generation":actor["todo_resume_generation"],
         "actor_sha256":hash(&actor_binding(actor)),"source_sha256":hash(&quota::source_binding(source)),
         "retry_source_sha256":crate::quota_retry::binding(source),
         "request_sha256":hash(&quota::request(item)),"resume_generation":generation,

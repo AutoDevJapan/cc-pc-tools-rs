@@ -15,6 +15,91 @@ const next3Actor = "20261027-175645-todo-3080"
 
 func next3RecordedZero(value *int) bool { return value != nil && *value == 0 }
 
+func validateNext3LifecycleHistory(raw []byte) error {
+	var value struct {
+		Stage           string `json:"stage"`
+		Operations      *int   `json:"central_operations"`
+		Adoptions       *int   `json:"new_adoptions"`
+		ExtraOperations *int   `json:"publication_additional_central_operations"`
+		ExtraAdoptions  *int   `json:"publication_additional_adoptions"`
+		History         *struct {
+			Stage       string `json:"stage"`
+			Operations  *int   `json:"central_operations"`
+			Adoptions   *int   `json:"new_adoptions"`
+			ProposalSHA string `json:"original_proposal_sha256"`
+		} `json:"pre_creation_history"`
+		Targets []struct {
+			Name       string `json:"name"`
+			Kind       string `json:"target_kind"`
+			Deployment string `json:"deployment_state"`
+			Qualified  *bool  `json:"pre_mutation_absence_qualification_completed"`
+			History    *struct {
+				Kind       string `json:"target_kind"`
+				Deployment string `json:"deployment_state"`
+				Qualified  *bool  `json:"pre_mutation_absence_qualification_completed"`
+				Before     string `json:"before_sha256"`
+				Presence   *struct {
+					At     string `json:"observed_at"`
+					Exists *bool  `json:"path_exists"`
+					Opened *bool  `json:"existing_contents_opened"`
+					Future *bool  `json:"future_absence_not_asserted"`
+				} `json:"directory_presence_observation"`
+			} `json:"pre_creation_history"`
+		} `json:"targets"`
+	}
+	if json.Unmarshal(raw, &value) != nil || value.Stage != "actual_created_readback_discovered_and_explicitly_applied" || !next3Value(value.Operations, 1) || !next3Value(value.Adoptions, 3) || !next3RecordedZero(value.ExtraOperations) || !next3RecordedZero(value.ExtraAdoptions) || value.History == nil || value.History.Stage != "proposal_not_qualified_or_placed" || !next3RecordedZero(value.History.Operations) || !next3RecordedZero(value.History.Adoptions) || value.History.ProposalSHA != "0e0ff688af3fbcd8042d88ab640b01b6e012be318561f58f2f24e1c55d71d151" || len(value.Targets) != 3 {
+		return errors.New("next3 current lifecycle or original preparation history lost")
+	}
+	seen := map[string]bool{}
+	for _, target := range value.Targets {
+		if seen[target.Name] || (target.Name != "aerobase-travel-hotels" && target.Name != "aerobase-travel-lounges" && target.Name != "aerobase-travel-wallet") || target.Kind != "newly_created_adaptation" || target.Deployment != "created_once_and_current_readback_verified" || !recordedTrue(target.Qualified) || target.History == nil {
+			return errors.New("next3 target current state or preparation history missing")
+		}
+		seen[target.Name] = true
+		h := target.History
+		if h.Kind != "new_adaptation_intent" || h.Deployment != "proposed_uninstalled" || !recordedFalse(h.Qualified) || h.Before != "absent" || h.Presence == nil || h.Presence.At != "2026-10-27T12:56:18Z" || !recordedFalse(h.Presence.Exists) || !recordedFalse(h.Presence.Opened) || !recordedTrue(h.Presence.Future) {
+			return errors.New("next3 original target observation erased or promoted to current absence")
+		}
+	}
+	return nil
+}
+
+func TestNext3RetainsBothRootAndTargetPreparationHistory(t *testing.T) {
+	for _, file := range []string{"skills-3080-next3-actual-bundle175645.json", "skills-3080-installed-next3-manifest175645.json"} {
+		for _, change := range []string{"valid", "root missing", "root null", "root state changed", "target missing", "target null", "old qualification promoted", "old presence erased"} {
+			t.Run(file+"/"+change, func(t *testing.T) {
+				var value map[string]any
+				loadPublicReceipt(t, file, &value)
+				target := received27Object(t, received27Array(t, value["targets"])[0])
+				switch change {
+				case "root missing":
+					delete(value, "pre_creation_history")
+				case "root null":
+					value["pre_creation_history"] = nil
+				case "root state changed":
+					received27Object(t, value["pre_creation_history"])["stage"] = "actual"
+				case "target missing":
+					delete(target, "pre_creation_history")
+				case "target null":
+					target["pre_creation_history"] = nil
+				case "old qualification promoted":
+					received27Object(t, target["pre_creation_history"])["pre_mutation_absence_qualification_completed"] = true
+				case "old presence erased":
+					delete(received27Object(t, target["pre_creation_history"]), "directory_presence_observation")
+				}
+				raw, e := json.Marshal(value)
+				if e != nil {
+					t.Fatal(e)
+				}
+				e = validateNext3LifecycleHistory(raw)
+				if (change == "valid") != (e == nil) {
+					t.Fatalf("%s: %v", change, e)
+				}
+			})
+		}
+	}
+}
+
 func TestNext3PublishedLifecycleIsCurrent(t *testing.T) {
 	for _, name := range []string{"skills-3080-next3-actual-bundle175645.json", "skills-3080-installed-next3-manifest175645.json"} {
 		var value struct {
@@ -251,6 +336,11 @@ func validatedNext3Dispositions(t *testing.T) map[string]cohortLedgerRow {
 	var read travel3Read
 	if json.Unmarshal(rawPins["creation"], &native) != nil || json.Unmarshal(rawPins["readback"], &read) != nil {
 		t.Fatal("travel3 actual evidence cannot decode")
+	}
+	for _, key := range []string{"bundle", "manifest"} {
+		if err := validateNext3LifecycleHistory(rawPins[key]); err != nil {
+			t.Fatal(err)
+		}
 	}
 	if err := validateNext3Precreation(rawPins["precreation"], rawPins["creation"], rawPins["readback"]); err != nil {
 		t.Fatal(err)

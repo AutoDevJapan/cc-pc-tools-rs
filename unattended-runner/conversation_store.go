@@ -250,7 +250,7 @@ func (r *Runner) loadConversations() (*conversationIndex, error) {
 		if q.RecoveredIntake != 0 && !ordinaryRecoveryRoute(q) {
 			return nil, errors.New("conversation recovery route differs")
 		}
-		if q.Actor != nil && (q.Todo != 1171 || q.Project != "GitDo" || q.Actor.Todo != 3277 || !validJob(q.Actor.Job) || !shaPattern.MatchString(q.Actor.SpecSHA) || !shaPattern.MatchString(q.Actor.OriginSpecSHA) || !shaPattern.MatchString(q.Actor.RootSHA) || !shaPattern.MatchString(q.Actor.SourceSHA)) {
+		if q.Actor != nil && (!((q.Todo == 1171 && q.Project == "GitDo" && q.Actor.Todo == 3277) || currentConversationPair(q.Todo, q.Actor.Todo, q.Project)) || !validJob(q.Actor.Job) || !shaPattern.MatchString(q.Actor.SpecSHA) || !shaPattern.MatchString(q.Actor.OriginSpecSHA) || !shaPattern.MatchString(q.Actor.RootSHA) || !shaPattern.MatchString(q.Actor.SourceSHA)) {
 			return nil, errors.New("conversation actor unverified")
 		}
 		if q.WaitDeferred && (q.Actor == nil || !q.Wait) {

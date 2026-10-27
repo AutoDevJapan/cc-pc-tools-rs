@@ -371,6 +371,12 @@ func (r *Runner) conversationReplyInstructions(q ConversationQuestion, reply con
 	instructions := fmt.Sprintf("%s\n本人の回答と元の質問: %s\n元ToDo %d、配送先担当 %d。取得元はDiscord正規API、本人IDと元質問・判断範囲を照合済みです。担当は原文と質問の範囲を読んで実作業へ反映し、受領と実反映を分けて記録してください。\n検証後の反映記録は %s へ保存します。必要項目: source=discord-api-v10, request_id=%s, origin_todo_id=%d, todo_id=%d, thread_id=%s, question_message_id=%s, message_id=%s, author_id=%s, job_id（実際の担当）, revision（40桁）, applied_at（RFC3339）, completion（反映した内容）, verification（execution/origin_saved/identityの各確認結果を文字列で）。追加費用など元質問を超える許可に拡大しないでください。\n", marker, path, conversationOrigin(q), conversationRecipient(q), filepath.Join(r.Config.Home, "applied", reply.Message+".json"), q.SenderID, conversationOrigin(q), conversationRecipient(q), q.Thread, q.Message, reply.Message, reply.Author)
 	instructions += fmt.Sprintf("返信版の照合: reply_sha256=%s, source_receipt_sha256=%s を反映記録へ含めてください。現在の私的原文を読み返してから記録し、編集前の証跡を新しい本文の反映証拠にしないでください。\n", canonicalHash(reply), bytesHash(receipt))
 	instructions += fmt.Sprintf("元回答時刻=%s、編集時刻=%s、取得時刻=%s。現在の直接指示・停止・依存・元仕様と許可範囲を保持し、古い回答で新しい指示を上書きしないでください。\n", req.Created, req.Edited, req.Acquired)
+	if currentConversationPair(conversationOrigin(q), conversationRecipient(q), q.Project) {
+		var proof conversationProof
+		if json.Unmarshal([]byte(req.Context), &proof) == nil && bytesHash([]byte(proof.Body)) == q.QuestionSHA {
+			instructions += "<discord-original-question>\n" + proof.Body + "\n</discord-original-question>\n"
+		}
+	}
 	instructions += "以下は、上の本人IDと元質問に対応するDiscord回答の全文です。要約や省略はしていません。\n<discord-owner-answer>\n" + reply.Body + "\n</discord-owner-answer>\n"
 	instructions += "conversation-owner-reply-end:" + strings.TrimPrefix(marker, "conversation-owner-reply:") + "\n"
 	return instructions

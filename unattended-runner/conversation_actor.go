@@ -1,7 +1,7 @@
 package main
 
 // A recipient binding does not alter the sender's original question identity.
-// This finite contract is the already verified 3638/3650 -> 3277 -> 1171 chain.
+// The historical succession and current registered assignment remain distinct.
 import (
 	"context"
 	"encoding/json"
@@ -134,7 +134,9 @@ func (r *Runner) conversationActorProof(q ConversationQuestion) (json.RawMessage
 // question, register a wait or deliver new instructions after work has ended.
 func (r *Runner) checkConversationActor(ctx context.Context, originID, actorID uint64, jobID string, origin *TodoRow, saved *conversationActor, historical json.RawMessage, readonly bool) (*conversationActor, error) {
 	fail := errors.New("conversation actor unverified")
-	if originID != 1171 || actorID != 3277 || origin.ID != originID || origin.Project != "GitDo" || (!readonly && origin.Status != "recovery_unverified" && origin.Status != "todo" && origin.Status != "doing" && origin.Status != "wait") || conversationActorHeld(origin.conversationState) || !validJob(jobID) {
+	current := currentConversationPair(originID, actorID, origin.Project)
+	legacy := originID == 1171 && actorID == 3277 && origin.Project == "GitDo"
+	if (!current && !legacy) || origin.ID != originID || (!readonly && origin.Status != "recovery_unverified" && origin.Status != "todo" && origin.Status != "doing" && origin.Status != "wait") || (current && origin.Status == "recovery_unverified") || conversationActorHeld(origin.conversationState) || !validJob(jobID) {
 		return nil, fail
 	}
 	actor, err := r.conversationTask(ctx, actorID)
@@ -171,6 +173,9 @@ func (r *Runner) checkConversationActor(ctx context.Context, originID, actorID u
 	}
 	if readJSON(filepath.Join(jobs, jobID, "job.json"), 1<<20, &job) != nil || job.ID != jobID || job.Todo != actorID || !filepath.IsAbs(job.Cwd) || actor.Scheduler.Worktree == "" || conversationPathSHA(job.Cwd) != conversationPathSHA(actor.Scheduler.Worktree) || job.Stopped || job.Cancel || job.Reason == "manual" || job.Reason == "person" || job.Status == "cancelled" || job.Status == "canceled" {
 		return nil, fail
+	}
+	if current {
+		return r.checkCurrentConversationActor(ctx, origin, actor, jobID, saved, historical, readonly)
 	}
 	raw := string(historical)
 	// Running/runnable recipients need today's admission for a wait or a new
@@ -329,6 +334,16 @@ func (r *Runner) deliverConversationActorReply(ctx context.Context, q Conversati
 	row, err := r.conversationActorRow(ctx, q)
 	if err != nil {
 		return err
+	}
+	if err = r.deliverCurrentConversationTracker(ctx, q, reply, req); err != nil {
+		return err
+	}
+	if currentConversationPair(q.Todo, q.Actor.Todo, q.Project) {
+		original, err := r.conversationTask(ctx, q.Todo)
+		if err != nil || original.Project != q.Project || original.conversationRoot != row.conversationRoot || conversationActorHeld(original.conversationState) {
+			return errors.New("conversation actor unverified")
+		}
+		row.conversationOriginState = original.conversationState
 	}
 	delivery, err := r.conversationActorQuestion(q)
 	if err != nil {

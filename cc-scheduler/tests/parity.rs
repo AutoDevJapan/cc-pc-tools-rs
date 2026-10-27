@@ -5884,3 +5884,5 @@ fn capacity_cooldown_preserves_the_existing_job_and_terminal_budget_is_not_reset
         }
     }
 }
+#[path = "support/launch_outcome.rs"]
+mod launch_outcome_tests;

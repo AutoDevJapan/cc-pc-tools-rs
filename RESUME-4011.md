@@ -1,5 +1,37 @@
 # 元4011の再開情報
 
+## 次は書込候補レビュー4092の同じ受付を受領する
+
+元4082は終了・受領・具体修正済み。別process排他と保持中のread-only事前照合まで実測した。
+書込候補は固定**ecc244067b55357f3bda7a951806b45ab981b51b**、base7d32592c、
+tools/vss-4011/cd-attemptのGo/test/preflight/run-onceとdocs/vss-cd-positive-attempt-4011.mdの5対象。
+**追加review4092**を--spec/親4011/kind review/Opus5.5 maxで登録済み。
+specは.ci-work/4011/review-cd-positive-104529.md。通常dispatch1回はTimeoutErrorで原応答保存。
+normal listで4092 todoを確認し、まだ実起動/最終応答/実native model/Mustは未受領。
+同じ4092を追い、追加登録・直接子起動・同じdispatch失敗の再試行/lock迂回をしない。
+元4011だけを正規wait --on4092へ登録し、完了すると同じ担当/branch/原値で再開する。
+
+次回は4092の原回答・固定5対象読了・native_turn_contextの別model・Mustを照合する。
+Must解消後に新ownedTempへreviewと同じGo sourceから通常buildし、実head/source/byte hashを記録して、
+既存Brokerからcd-attempt/run-once.ps1へActorJob/NativeExe/SHA/実SourceHead/ReviewTodoを渡す。
+source canonical SHAは0E204F7562B6091605E37D32F02A1EA588C02A8A5A3A571873817F60640D5B6C。
+code変更のMust修正でsourceが変わったら、固定hashとmanifestも正規に更新して同じ範囲を検証する。
+元inspect/emptyprobe/availabilityの固定票は再実行・上書きしない。
+**positive-cd-request/resultは現在不存在、--attempt-cdは未実行**。D変更済みと誤認しない。
+CLI拒否/異常/timeoutでも後状態を照合し、0縮小/Delete/保護停止で強制しない。
+関連付けが実反映しても、新2世代保持などの通常受入が終わるまで全体完了にしない。
+
+11:32最終観測はC→C/50GiB/使用割当0、snapshot0/point0、MinDiff未設定、新volsnap0/complete/errors0。
+free C438355906560/D2087543431168/E858052489216B。並行I/Oを含み本担当の回収量ではない。
+11:26にVSS12289/80070005の値が現れたが、inspect実行11:19:14～17の時間外である。
+通常権限のvssadmin resize /?のhelp保存時刻と25ms差で、関連は推測に留める（PID73380の実照合なし）。
+原Message/私的値は非出力。管理者の窓口の実診断/事前照合は正常であり、ACL/ログ/サービスを変更しない。
+
+自己Temp8b8319141682e25d4176dd37b616de73は必要source10件/原値/manifestを先に保全し、
+plan41,579,623論理B/19entries→別exec通常削除→finish source_absentを確認済み。終了Tempを再使用しない。
+次回は新createを使う。原os-v2/全result/必要sourceをこのworktreeに保持し、作業場を削除しない。
+branch変更0、重Cargo/GPU/Civ6/APIkeys/新費用/本人操作依頼/新監視/task/常駐/自分のtab/container0。
+
 ## 最新：4082受領、通常可用性と別process排他を実測、D書込候補は未実行
 
 job20261027-104529-todo-4011、開始04dcc367/同branch/未コミット0から再開。

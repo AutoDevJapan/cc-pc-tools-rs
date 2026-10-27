@@ -38,8 +38,8 @@
       "reason": "Dropping or relabelling the structured original actors/receipt references would break the required lossless response/ACK evidence. Those technical identifiers are not owner account identifiers or raw private conversation."
     }
   ],
-  "current_operation_sha256": "33857beb4e3e42ba3546f303e40f788a891e88b6cec52096cebe078aee41b7f4",
-  "current_bundle_sha256": "ce51b4e9d337db270512181051bcc1ce0a8916c69a260e71e1751cd12184da01",
+  "current_operation_sha256": "5df4ba1cf1946271e5d03d6b6e02009f0c29d2c8025a9b8be0161a3d8aefae70",
+  "current_bundle_sha256": "0e0ff688af3fbcd8042d88ab640b01b6e012be318561f58f2f24e1c55d71d151",
   "pointed_reviewer_resolution_not_yet_confirmed": true,
   "new_CreateNew_operations": 0,
   "central_operations": 0,
@@ -71,5 +71,31 @@
     "post_create_21_same_ID_buffers_discovery_and_use_required": true,
     "placement_or_recovery_already_executed": false,
     "pointed_rubber_recheck_pending": true
+  },
+  "self_full_round2": {
+    "task": 4129,
+    "job": "20261027-231955-todo-4129",
+    "registered_spec_sha256": "eb4b03863fb9e48222d39ce0ecffd6ef6f67307c714adce36e906ed32216da63",
+    "original_bytes": 1455,
+    "original_sha256": "f79ea3d260de74c8bceb4d7f860b290ac7bd352ebcf2d59c5bca6a39085c6ab3",
+    "manifest_sha256": "33857beb4e3e42ba3546f303e40f788a891e88b6cec52096cebe078aee41b7f4",
+    "comparison_only": false,
+    "Must": 0,
+    "Suggestion": 1,
+    "Nit": 0,
+    "original_input_and_response_retained": true
+  },
+  "source_prose_identifier_followup": {
+    "changed_outputs": [
+      "aerobase-travel-hotels/references/sources.md",
+      "aerobase-travel-lounges/references/sources.md",
+      "aerobase-travel-wallet/references/sources.md"
+    ],
+    "only_three_authored_source_descriptions_changed": true,
+    "all_six_structured_JSON_original_bytes_preserved": true,
+    "all_original_response_packets_and_reader_namespace_receipt_evidence_retained": true,
+    "private_owner_ids_or_private_conversation_added": false,
+    "general_identifier_prohibition_created": false,
+    "pointed_self_recheck_pending": true
   }
 }

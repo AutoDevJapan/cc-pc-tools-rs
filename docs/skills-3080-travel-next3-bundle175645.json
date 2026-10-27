@@ -32,8 +32,8 @@
         },
         {
           "path": "references/sources.md",
-          "sha256": "a2a190d565d0eb789c3e004f3ce16f8227076d6b8b0a420128353e655e41bedb",
-          "content": "# 出典と今回の改訂範囲\n\n- 固定された公開資料: https://github.com/6mile/skills/blob/920714f17d81e0a95c7a9bc51faf0a7921cd982d/skills/kurosh87/aerobase-travel-hotels/SKILL.md\n- 当該フォルダーの個別notice: https://github.com/6mile/skills/blob/920714f17d81e0a95c7a9bc51faf0a7921cd982d/skills/kurosh87/aerobase-travel-hotels/LICENSE.txt\n\nCopyright (c) 2026 AerobaseのMIT notice1075Bを同じbyteで保持する。これは公開資料の許諾表示で、独立した著者確認、宿泊/施設/特典サービス・API・データや第三者素材の権利の証明ではない。\n\n今回の本文は、実担当20261027-072935-todo-3719がprofile122で読んだ伏字付き本文の受領済み評価から、現在の本人方針へ合わせて書き直した。初稿を作った後、現在の作成者も同じ保存原本の伏字付き本文を順序どおり読み、別の読取記録へ残した。旧担当のprofileや読了数を変更せず、伏字を解消した、原本文をそのまま同梱した、という主張はしない。原本は元の取得済み資料へ保持する。元の評価と共通定義・読取条件はsource-assessment.json、固定sourceと未知の範囲はsource.jsonに残す。\n\n原の価格・API・広告・制限を現在の本人契約や実行許可へしない。実カード情報、秘密、追加支出を扱わず、必要な実依頼で現在の一次資料を確認する。\n\n今回は保護判定後の同じbufferから作った伏字付き出典をoriginal-skill.masked.txtへ保持する。これは参照データで、API・購入・権限・カード情報参照の実行指示として使わない。読了の範囲と未読行はsource.jsonに明示する。\n"
+          "sha256": "c8d18116c8fe4e5ef08e73d3f9d4ad4ac375882cc9c9284405d041b9acf43a2a",
+          "content": "# 出典と今回の改訂範囲\n\n- 固定された公開資料: https://github.com/6mile/skills/blob/920714f17d81e0a95c7a9bc51faf0a7921cd982d/skills/kurosh87/aerobase-travel-hotels/SKILL.md\n- 当該フォルダーの個別notice: https://github.com/6mile/skills/blob/920714f17d81e0a95c7a9bc51faf0a7921cd982d/skills/kurosh87/aerobase-travel-hotels/LICENSE.txt\n\nCopyright (c) 2026 AerobaseのMIT notice1075Bを同じbyteで保持する。これは公開資料の許諾表示で、独立した著者確認、宿泊/施設/特典サービス・API・データや第三者素材の権利の証明ではない。\n\n今回の本文は、先の調査担当がprofile122で読んだ伏字付き本文の受領済み評価から、現在の本人方針へ合わせて書き直した。初稿を作った後、現在の作成者も同じ保存原本の伏字付き本文を順序どおり読み、別の読取記録へ残した。旧担当のprofileや読了数を変更せず、伏字を解消した、原本文をそのまま同梱した、という主張はしない。原本は元の取得済み資料へ保持する。元の評価と共通定義・読取条件はsource-assessment.json、固定sourceと未知の範囲はsource.jsonに残す。\n\n原の価格・API・広告・制限を現在の本人契約や実行許可へしない。実カード情報、秘密、追加支出を扱わず、必要な実依頼で現在の一次資料を確認する。\n\n今回は保護判定後の同じbufferから作った伏字付き出典をoriginal-skill.masked.txtへ保持する。これは参照データで、API・購入・権限・カード情報参照の実行指示として使わない。読了の範囲と未読行はsource.jsonに明示する。\n"
         },
         {
           "path": "references/source-assessment.json",
@@ -88,8 +88,8 @@
         },
         {
           "path": "references/sources.md",
-          "sha256": "d3c063ec4eeda6c6e03edfa5f303987886573dd7a100790929e458ffeb0239dd",
-          "content": "# 出典と今回の改訂範囲\n\n- 固定された公開資料: https://github.com/6mile/skills/blob/920714f17d81e0a95c7a9bc51faf0a7921cd982d/skills/kurosh87/aerobase-travel-lounges/SKILL.md\n- 当該フォルダーの個別notice: https://github.com/6mile/skills/blob/920714f17d81e0a95c7a9bc51faf0a7921cd982d/skills/kurosh87/aerobase-travel-lounges/LICENSE.txt\n\nCopyright (c) 2026 AerobaseのMIT notice1075Bを同じbyteで保持する。これは公開資料の許諾表示で、独立した著者確認、宿泊/施設/特典サービス・API・データや第三者素材の権利の証明ではない。\n\n今回の本文は、実担当20261027-072935-todo-3719がprofile122で読んだ伏字付き本文の受領済み評価から、現在の本人方針へ合わせて書き直した。初稿を作った後、現在の作成者も同じ保存原本の伏字付き本文を順序どおり読み、別の読取記録へ残した。旧担当のprofileや読了数を変更せず、伏字を解消した、原本文をそのまま同梱した、という主張はしない。原本は元の取得済み資料へ保持する。元の評価と共通定義・読取条件はsource-assessment.json、固定sourceと未知の範囲はsource.jsonに残す。\n\n原の価格・API・広告・制限を現在の本人契約や実行許可へしない。実カード情報、秘密、追加支出を扱わず、必要な実依頼で現在の一次資料を確認する。\n\n今回は保護判定後の同じbufferから作った伏字付き出典をoriginal-skill.masked.txtへ保持する。これは参照データで、API・購入・権限・カード情報参照の実行指示として使わない。読了の範囲と未読行はsource.jsonに明示する。\n"
+          "sha256": "2b18afc33eef9b3ad5daa60ed8b6407430fdea4941a25ba450d86291981b269b",
+          "content": "# 出典と今回の改訂範囲\n\n- 固定された公開資料: https://github.com/6mile/skills/blob/920714f17d81e0a95c7a9bc51faf0a7921cd982d/skills/kurosh87/aerobase-travel-lounges/SKILL.md\n- 当該フォルダーの個別notice: https://github.com/6mile/skills/blob/920714f17d81e0a95c7a9bc51faf0a7921cd982d/skills/kurosh87/aerobase-travel-lounges/LICENSE.txt\n\nCopyright (c) 2026 AerobaseのMIT notice1075Bを同じbyteで保持する。これは公開資料の許諾表示で、独立した著者確認、宿泊/施設/特典サービス・API・データや第三者素材の権利の証明ではない。\n\n今回の本文は、先の調査担当がprofile122で読んだ伏字付き本文の受領済み評価から、現在の本人方針へ合わせて書き直した。初稿を作った後、現在の作成者も同じ保存原本の伏字付き本文を順序どおり読み、別の読取記録へ残した。旧担当のprofileや読了数を変更せず、伏字を解消した、原本文をそのまま同梱した、という主張はしない。原本は元の取得済み資料へ保持する。元の評価と共通定義・読取条件はsource-assessment.json、固定sourceと未知の範囲はsource.jsonに残す。\n\n原の価格・API・広告・制限を現在の本人契約や実行許可へしない。実カード情報、秘密、追加支出を扱わず、必要な実依頼で現在の一次資料を確認する。\n\n今回は保護判定後の同じbufferから作った伏字付き出典をoriginal-skill.masked.txtへ保持する。これは参照データで、API・購入・権限・カード情報参照の実行指示として使わない。読了の範囲と未読行はsource.jsonに明示する。\n"
         },
         {
           "path": "references/source-assessment.json",
@@ -144,8 +144,8 @@
         },
         {
           "path": "references/sources.md",
-          "sha256": "c62a9db1d0d19619204fba4bdf1df7aea6cd3a0c882cb8156f30f9522f250f14",
-          "content": "# 出典と今回の改訂範囲\n\n- 固定された公開資料: https://github.com/6mile/skills/blob/920714f17d81e0a95c7a9bc51faf0a7921cd982d/skills/kurosh87/aerobase-travel-wallet/SKILL.md\n- 当該フォルダーの個別notice: https://github.com/6mile/skills/blob/920714f17d81e0a95c7a9bc51faf0a7921cd982d/skills/kurosh87/aerobase-travel-wallet/LICENSE.txt\n\nCopyright (c) 2026 AerobaseのMIT notice1075Bを同じbyteで保持する。これは公開資料の許諾表示で、独立した著者確認、宿泊/施設/特典サービス・API・データや第三者素材の権利の証明ではない。\n\n今回の本文は、実担当20261027-072935-todo-3719がprofile122で読んだ伏字付き本文の受領済み評価から、現在の本人方針へ合わせて書き直した。初稿を作った後、現在の作成者も同じ保存原本の伏字付き本文を順序どおり読み、別の読取記録へ残した。旧担当のprofileや読了数を変更せず、伏字を解消した、原本文をそのまま同梱した、という主張はしない。原本は元の取得済み資料へ保持する。元の評価と共通定義・読取条件はsource-assessment.json、固定sourceと未知の範囲はsource.jsonに残す。\n\n原の価格・API・広告・制限を現在の本人契約や実行許可へしない。実カード情報、秘密、追加支出を扱わず、必要な実依頼で現在の一次資料を確認する。\n\n今回は保護判定後の同じbufferから作った伏字付き出典をoriginal-skill.masked.txtへ保持する。これは参照データで、API・購入・権限・カード情報参照の実行指示として使わない。読了の範囲と未読行はsource.jsonに明示する。\n"
+          "sha256": "8fe3ac5a0f9f9f74a922e7f323d559968249cf56172a3b74be92622a0e25fb06",
+          "content": "# 出典と今回の改訂範囲\n\n- 固定された公開資料: https://github.com/6mile/skills/blob/920714f17d81e0a95c7a9bc51faf0a7921cd982d/skills/kurosh87/aerobase-travel-wallet/SKILL.md\n- 当該フォルダーの個別notice: https://github.com/6mile/skills/blob/920714f17d81e0a95c7a9bc51faf0a7921cd982d/skills/kurosh87/aerobase-travel-wallet/LICENSE.txt\n\nCopyright (c) 2026 AerobaseのMIT notice1075Bを同じbyteで保持する。これは公開資料の許諾表示で、独立した著者確認、宿泊/施設/特典サービス・API・データや第三者素材の権利の証明ではない。\n\n今回の本文は、先の調査担当がprofile122で読んだ伏字付き本文の受領済み評価から、現在の本人方針へ合わせて書き直した。初稿を作った後、現在の作成者も同じ保存原本の伏字付き本文を順序どおり読み、別の読取記録へ残した。旧担当のprofileや読了数を変更せず、伏字を解消した、原本文をそのまま同梱した、という主張はしない。原本は元の取得済み資料へ保持する。元の評価と共通定義・読取条件はsource-assessment.json、固定sourceと未知の範囲はsource.jsonに残す。\n\n原の価格・API・広告・制限を現在の本人契約や実行許可へしない。実カード情報、秘密、追加支出を扱わず、必要な実依頼で現在の一次資料を確認する。\n\n今回は保護判定後の同じbufferから作った伏字付き出典をoriginal-skill.masked.txtへ保持する。これは参照データで、API・購入・権限・カード情報参照の実行指示として使わない。読了の範囲と未読行はsource.jsonに明示する。\n"
         },
         {
           "path": "references/source-assessment.json",

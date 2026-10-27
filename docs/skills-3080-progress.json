@@ -616,7 +616,7 @@
     "guard_client_resource": true,
     "state": "classification_unverified"
   },
-  "recorded_at": "2026-10-27T12:46:58.3448924+00:00",
+  "recorded_at": "2026-10-27T14:39:37.9106230+00:00",
   "total_skill_named_body_read_definition": "This field preserves the historical complete-source subset only. Current raw/workflow primary coverage is projected from the canonical source components and sixmile evaluation index in all_fulltext_primary_paths_including_partial_sources/all_workflow_primary_paths_including_partial_sources, not copied here.",
   "openai_entrypoint_evaluation": {
     "rights_accepted": false,
@@ -2883,9 +2883,9 @@
     "targets": 3,
     "virtual_files": 21,
     "operation": "skills-3080-operations/create-travel-next3-175645.json",
-    "operation_sha256": "33857beb4e3e42ba3546f303e40f788a891e88b6cec52096cebe078aee41b7f4",
+    "operation_sha256": "5df4ba1cf1946271e5d03d6b6e02009f0c29d2c8025a9b8be0161a3d8aefae70",
     "bundle": "skills-3080-travel-next3-bundle175645.json",
-    "bundle_sha256": "ce51b4e9d337db270512181051bcc1ce0a8916c69a260e71e1751cd12184da01",
+    "bundle_sha256": "0e0ff688af3fbcd8042d88ab640b01b6e012be318561f58f2f24e1c55d71d151",
     "source_meaning": "skills-3080-travel-next3-source-meaning175645.json",
     "source_meaning_sha256": "dab3ab13d06cab64da11ee882e90861955a9ae701ab9637806f3609129fe2381",
     "parent_current_masked_reads": 3,
@@ -2901,7 +2901,7 @@
     "new_adoptions": 0,
     "review_resolution": {
       "file": "skills-3080-next-travel3-review-resolution175645.json",
-      "sha256": "320de053d625f96b62140b5e1807a0e324ad8d0346540ba55dfeb33381c83a51",
+      "sha256": "e5396d83c4b0b132d55e38df443712a73835f517404ecb6a1e6cff4017d9118f",
       "old_Must": 0,
       "old_Suggestion": 3,
       "pointed_reviewer_recheck_pending": true

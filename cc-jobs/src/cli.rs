@@ -733,11 +733,18 @@ impl Context {
         }
     }
 
-    fn write_launch_outcome(&self, a: &Args, out: &mut dyn Write, job: &Value,
-        kind: cc_job_policy::launch_outcome::Kind) -> Result<()> {
+    fn write_launch_outcome(
+        &self,
+        a: &Args,
+        out: &mut dyn Write,
+        job: &Value,
+        kind: cc_job_policy::launch_outcome::Kind,
+    ) -> Result<()> {
         if a.flag("launch-outcome") {
             let result = cc_job_policy::launch_outcome::Outcome::from_job(kind, job);
-            if !result.valid() { return Err(Error::new("invalid launch outcome")); }
+            if !result.valid() {
+                return Err(Error::new("invalid launch outcome"));
+            }
             writeln!(out, "{}", serde_json::to_string(&result)?)?;
         } else {
             writeln!(out, "{}", s(job, "id"))?;
@@ -794,7 +801,7 @@ impl Context {
             .iter()
             .map(|p| abs(Path::new(p)))
             .collect::<std::io::Result<Vec<_>>>()?;
-        let flags: std::collections::BTreeSet<_> = a.flags.iter().collect();
+        let flags: std::collections::BTreeSet<_> = a.flags.iter().filter(|flag|flag.as_str()!="launch-outcome").collect();
         let request = json!({"options":values,"add_dirs":dirs,"flags":flags,
             "model_explicit":a.model_explicit,"prompt_sha256":cc_job_policy::product_retry::digest(bytes)});
         Ok(cc_job_policy::product_retry::digest(&serde_json::to_vec(

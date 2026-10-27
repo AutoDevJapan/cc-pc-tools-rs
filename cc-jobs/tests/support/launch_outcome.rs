@@ -204,3 +204,90 @@ fn failed_spawn_preserves_canonical_receipt_and_replay_has_no_second_effect() {
     assert_eq!(t.rt.supervisors.load(Ordering::Relaxed), 1);
     assert_eq!(t.ctx.list_jobs(&HashSet::new()).len(), 1);
 }
+
+#[test]
+fn normal_registration_preserves_request_generation_attempt_and_reserved_worker_generation() {
+    let t = Test::new();
+    fs::write(
+        t.ctx.root.join("todo.json"),
+        json!({"projects":{"fixture":t.ctx.root},"items":[
+        {"id":77,"project":"fixture","status":"todo","dispatchable":true,"resume_generation":6,
+        "jobs":[],"wait_on":[],"scheduler":{"attempt":4}}]})
+        .to_string(),
+    )
+    .unwrap();
+    t.run(
+        &[
+            "--todo-id",
+            "77",
+            "--launch-key",
+            &"fa".repeat(16),
+            "--launch-outcome",
+        ],
+        b"fixture",
+    )
+    .unwrap();
+    let job = t
+        .ctx
+        .list_jobs(&HashSet::new())
+        .into_iter()
+        .find(|j| j["todo_id"] == 77)
+        .unwrap();
+    let outcome = Outcome::from_job(Kind::Queued, &job);
+    assert_eq!(outcome.registration_generation, Some(6));
+    assert_eq!(outcome.registration_attempt, Some(4));
+    assert_eq!(outcome.job_resume_generation, Some(7));
+}
+
+#[test]
+fn registration_cancelled_before_supervisor_issue_returns_accepted() {
+    let t = Test::new();
+    *t.rt.load_hook.lock().unwrap() = Some(Box::new(|path, _| {
+        if path.file_name().is_some_and(|name| name == "job.json") && path.is_file() {
+            let mut value: Value = serde_json::from_slice(&fs::read(path).unwrap()).unwrap();
+            value["status"] = json!("cancelled");
+            value["cancel_requested"] = json!(true);
+            fs::write(path, serde_json::to_vec(&value).unwrap()).unwrap();
+        }
+    }));
+    let outcome = typed(&t, &"fb".repeat(16));
+    assert_eq!(outcome.kind, Kind::Accepted);
+    assert_eq!(outcome.job_state, JobState::Terminal);
+    assert_eq!(t.rt.supervisors.load(Ordering::Relaxed), 0);
+}
+
+#[cfg(windows)]
+#[test]
+fn actual_cmd_run_canonicalizes_junction_cwd_before_fingerprinting() {
+    use std::os::windows::process::CommandExt;
+    let t = Test::new();
+    let real = t.ctx.root.join("real-cwd");
+    let alias = t.ctx.root.join("alias-cwd");
+    fs::create_dir(&real).unwrap();
+    let output = std::process::Command::new("cmd.exe")
+        .creation_flags(0x08000000)
+        .args(["/d", "/c", "mklink", "/J"])
+        .arg(&alias)
+        .arg(&real)
+        .output()
+        .unwrap();
+    assert!(output.status.success(), "{output:?}");
+    t.run(
+        &[
+            "--cwd",
+            alias.to_str().unwrap(),
+            "--launch-key",
+            &"fc".repeat(16),
+            "--launch-outcome",
+        ],
+        b"fixture",
+    )
+    .unwrap();
+    let job = t.ctx.list_jobs(&HashSet::new()).into_iter().next().unwrap();
+    assert_eq!(
+        Outcome::from_job(Kind::Queued, &job).cwd_sha256,
+        cc_job_policy::launch_outcome::path_fingerprint(
+            &fs::canonicalize(&real).unwrap().to_string_lossy()
+        )
+    );
+}

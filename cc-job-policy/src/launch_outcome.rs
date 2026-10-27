@@ -1,6 +1,7 @@
 //! The effect of this invocation, separate from the existing job's saved state.
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
+pub const TERMINAL_JOB_STATES: &[&str] = &["succeeded", "failed", "cancelled", "lost"];
 
 #[derive(Clone, Copy, Debug, Serialize, Deserialize, PartialEq, Eq)]
 #[serde(rename_all = "snake_case")]
@@ -22,7 +23,6 @@ pub enum JobState {
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize, PartialEq, Eq)]
-#[serde(deny_unknown_fields)]
 pub struct Outcome {
     pub schema: u32,
     pub kind: Kind,
@@ -46,7 +46,15 @@ pub struct Outcome {
 pub fn path_fingerprint(path: &str) -> Option<String> {
     (!path.is_empty()).then(|| {
         let path = path.replace('\\', "/");
-        let path = path.trim_start_matches("//?/").trim_end_matches('/');
+        let unc = path
+            .strip_prefix("//?/UNC/")
+            .or_else(|| path.strip_prefix("//?/unc/"));
+        let path = if let Some(unc) = unc {
+            format!("//{unc}")
+        } else {
+            path.trim_start_matches("//?/").to_string()
+        };
+        let path = path.trim_end_matches('/');
         let path = if cfg!(windows) {
             path.to_lowercase()
         } else {
@@ -82,7 +90,7 @@ impl Outcome {
                 Some("queued") => JobState::Queued,
                 Some("starting") => JobState::Starting,
                 Some("running") => JobState::Running,
-                Some("succeeded" | "failed" | "cancelled" | "lost") => JobState::Terminal,
+                Some(status) if TERMINAL_JOB_STATES.contains(&status) => JobState::Terminal,
                 _ => JobState::Unknown,
             },
             queue_restart_pending: job["queue_restart_pending"].as_bool(),
@@ -146,5 +154,57 @@ mod tests {
         }
         job["queue_restart_pending"] = json!(true);
         assert!(Outcome::from_job(Kind::ExistingJobNoAction, &job).reserved());
+    }
+
+    #[test]
+    fn saved_states_and_invalid_shapes_have_explicit_domains() {
+        for (state, expected) in [
+            ("queued", JobState::Queued),
+            ("starting", JobState::Starting),
+            ("running", JobState::Running),
+            ("failed", JobState::Terminal),
+            ("succeeded", JobState::Terminal),
+            ("cancelled", JobState::Terminal),
+            ("lost", JobState::Terminal),
+            ("other", JobState::Unknown),
+        ] {
+            assert_eq!(
+                Outcome::from_job(
+                    Kind::ExistingJobNoAction,
+                    &json!({"id":"job","status":state})
+                )
+                .job_state,
+                expected
+            );
+        }
+        let valid = Outcome::from_job(
+            Kind::Queued,
+            &json!({"id":"job","status":"queued","launch_key":"ab".repeat(16)}),
+        );
+        assert!(valid.valid());
+        for variant in 0..5 {
+            let mut value = valid.clone();
+            match variant {
+                0 => value.schema = 2,
+                1 => value.job_id = "bad/id".into(),
+                2 => value.launch_key = Some("AB".repeat(16)),
+                3 => value.cwd_sha256 = Some("short".into()),
+                _ => value.owner_sha256 = Some("CD".repeat(32)),
+            };
+            assert!(!value.valid());
+        }
+    }
+
+    #[cfg(windows)]
+    #[test]
+    fn lexical_windows_path_variants_share_the_same_fingerprint() {
+        for (left, right) in [
+            (r"D:\Fixture\Tree", "d:/fixture/tree/"),
+            (r"\\?\D:\Fixture\Tree", "d:/fixture/tree"),
+            (r"\\?\UNC\server\share\tree", r"\\server\share\tree"),
+        ] {
+            assert_eq!(path_fingerprint(left), path_fingerprint(right), "{left}");
+        }
+        assert_eq!(path_fingerprint(""), None);
     }
 }

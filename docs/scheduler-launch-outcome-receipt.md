@@ -46,6 +46,8 @@ Red/Greenの実コマンドと結果、最終headのレビュー2件・CI・配�
 
 `codex_jobs run --launch-outcome` は共有Rust型`launch_outcome::Outcome`をJSONで返す。
 この関数が発行するeffectは`existing_job_no_action`、`queued`、`accepted`のみ。
+`accepted`はjob登録を終えたがsupervisorを発行しなかった返却であり、保存直後の
+cancelなどを含む。新しい実行の証拠にはしない。
 旧IDだけの返却は`unknown`。jobのqueued/running/terminalと、再起動/rebootの
 pendingは別の保存状態であり、この呼出がRestartRequested/NewExecutionを行ったとはしない。
 
@@ -54,6 +56,10 @@ pendingは別の保存状態であり、この呼出がRestartRequested/NewExecu
 24時間の期限で保存する。通常の走査へ新しい全件走査を足さず、返却があった対象だけ
 置き換える。専用の短い排他と既存admissionの原子置換を共用する。
 古いsnapshotより前の一時ファイルをcrash後の正本へ昇格させない。
+期限切れは次の通常保存まで`expired`として読める。次の保存時に期限切れを除き、
+件数とbytesの両方へ収まるまで古い順に除く。不正・切断・上限超過の副snapshotは
+新しい実返却だけで原子的に作り直し、固定のrecovery理由と時刻を残す。
+未知のschemaは上書きしない。これは副記録の再生成であり、Root/jobの復旧ではない。
 
 receiptは明示的なcycle ID・receipt ID・target ID・launch_key・保存世代/試行番号と
 返却job IDを持ち、所有tupleは本文を含まない指紋で保持する。
@@ -62,6 +68,21 @@ admissionのentryにも同じcycle/receipt/job/effectを結ぶ。
 Root/jobへのlink成功と返却成功は別で、返却直後に未linkのreceiptを先に保存する。
 副記録が失敗しても通常のRoot/job操作は続け、`launch_receipt_recorded=false`を返す。
 起動受付後のjob読取などが失敗した場合はエラーを保持し、同じcycleで次を起動しない。
+型は返ったがowner等を照合できない場合は、同じcycleを止め、同じkeyのまま
+`launch_outcome_unverified`を記録して300秒の技術保留へ置く。通常走査中に既に読んだ
+jobの状態・key・本文を含まない要求metadataが同じ間は再返却を繰り返さず、
+後続候補を通常の全gateへ通す。入力資格・世代・keyを診断目的で作り直さない。
+
+terminal NoActionはlinkしない。通常stepの既存reconcileが採用と結果処理を担当する。
+採用しないrepair/targeted経路でも、同じkey/job/状態のNoActionは初回時刻と回数を
+有界に記録し、3回で同じ技術保留へ置く。保留へ入るcycleの後続候補も止めない。
+世代は登録時Gと予約されたworker世代G+1を区別し、再返却で現世代が進んでいても、
+同じjobへ結び付く明示worker_receiptとjob保存世代が一致した場合だけ同じ登録とする。
+不一致はgeneration/attempt/branch/owner/keyごとの固定分類を返す。
+
+互換用`launched`は新しいqueued登録だけを表す。対象指定/独立作業の応答にも
+`launch_return`（kind/job/receipt_id/linked）を返す。link保留は
+`launch_return_error=launch_outcome_unverified`として分け、受付を実行開始と読まない。
 
 通常prepareで既に読んだspec/dispatch、通常registrationで既に読んだdispatch/保存する
 receivedのバイトからだけSHAを保存する。過去jobの未記録SHAはnullのままとし、
@@ -71,6 +92,15 @@ replayと診断のためにSource/spec/promptを開かない。
 `current_source_bytes_checked=false`と照合範囲を常に返す。
 世代・key・control入力変更、所有不一致、保存済み入力の不一致、未知、欠落、破損、
 期限切れを別の分類で示す。
+
+## 配布と版の混在
+
+最終HEADの全指摘処理と必要CIの成功後、稼働版のsource/provenanceと並行producerを
+通常deployment lockの中で照合し、**codex_jobsを先に、schedulerを後に**更新する。
+旧schedulerは新codex_jobsから従来のIDを受け取れる。逆の順で置き換えない。
+未対応の旧launcherは`LaunchOutcomeUnsupported`で保留し、別形式で起動を再試行しない。
+同じschema内の追加JSON項目は無視して固定項目だけを読む。schema不一致は別に扱う。
+実行中の健康なcontrollerやworkerをこの更新のために停止しない。
 
 ## 検証の途中記録
 

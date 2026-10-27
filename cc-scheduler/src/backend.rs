@@ -802,28 +802,46 @@ impl Backend for RealBackend {
             .run(&c)
             .map_err(crate::preparation::tool_error)?;
         if output.code != 0 {
+            if output.code == 2
+                && output.stderr.contains("--launch-outcome")
+                && output.stderr.contains("unrecognized arguments")
+            {
+                return Err(Error("LaunchOutcomeUnsupported"));
+            }
             return Err(crate::preparation::classify_output(&output));
         }
-        if output.stdout.len() > 16384 { return Err(Error("LaunchOutcomeTooLarge")); }
-        if let Ok(result) = serde_json::from_str::<LaunchOutcome>(output.stdout.trim()) {
-            if !result.valid() { return Err(Error("LaunchOutcomeInvalid")); }
+        if output.stdout.len() > 16384 {
+            return Err(Error("LaunchOutcomeTooLarge"));
+        }
+        let returned = output
+            .stdout
+            .lines()
+            .rev()
+            .find(|line| !line.trim().is_empty())
+            .unwrap_or("")
+            .trim();
+        if let Ok(result) = serde_json::from_str::<LaunchOutcome>(returned) {
+            if result.schema != 1 {
+                return Err(Error("LaunchOutcomeSchemaUnsupported"));
+            }
+            if !result.valid() {
+                return Err(Error("LaunchOutcomeInvalid"));
+            }
             return Ok(result);
         }
-        let jid = output
-            .stdout
-            .trim()
-            .lines()
-            .last()
-            .unwrap_or("")
-            .to_string();
+        let jid = returned.to_string();
         if !regex::Regex::new(r"^[A-Za-z0-9_-]+$")
             .unwrap()
             .is_match(&jid)
         {
             return Err(Error("ValueError"));
         }
-        Ok(LaunchOutcome::from_job(LaunchKind::Unknown, &json!({"id":jid})))
+        Ok(LaunchOutcome::from_job(
+            LaunchKind::Unknown,
+            &json!({"id":jid}),
+        ))
     }
+
     fn cancel(&mut self, j: &mut Value) -> Result<bool> {
         self.cancel_job(j, false)
     }

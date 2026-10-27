@@ -15,8 +15,6 @@ usage: codex_jobs.py run [-h] --name NAME [--model MODEL] [--effort EFFORT]
                          [--model-origin {policy,owner_request}]
 
 options:
-  --launch-outcome      return typed registration effect and saved job metadata;
-                        Queued is not proof that a worker execution has started
   -h, --help            show this help message and exit
   --name NAME
   --model MODEL         default: Opus for review, Sol for other tasks;
@@ -35,6 +33,8 @@ options:
   --launch-key LAUNCH_KEY
                         idempotent launch identifier (32 lowercase hex
                         characters)
+  --launch-outcome      return typed registration effect and saved job metadata;
+                        Queued is not proof that a worker execution has started
   --resume-session RESUME_SESSION
                         continue a recorded Codex session UUID instead of
                         starting a new one

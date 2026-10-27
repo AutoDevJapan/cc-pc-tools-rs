@@ -14,6 +14,21 @@ pub(crate) mod metadata;
 pub(crate) fn result_fingerprint(item: &Value, root: &Value) -> String {
     metadata::fingerprint(&metadata::project(item), root)
 }
+pub(crate) fn defer_fingerprint(item: &Value, root: &Value) -> String {
+    let mut projected = metadata::project(item);
+    if let Some(fields) = projected["scheduler"].as_object_mut() {
+        for name in [
+            "not_before",
+            "preparation_failure",
+            "launch_outcome_deferred",
+            "launch_outcome_replay",
+        ] {
+            fields.remove(name);
+        }
+    }
+    metadata::fingerprint(&projected, root)
+}
+
 pub const MAX_ENTRIES: usize = 8192;
 pub const MAX_BYTES: u64 = 4 * 1024 * 1024;
 pub const TTL: f64 = 180.;
@@ -81,6 +96,7 @@ pub enum Reason {
     Queued,
     Accepted,
     LaunchOutcomeUnknown,
+    LaunchOutcomeDeferred,
 }
 #[derive(Clone, Copy, Debug, Serialize, Deserialize, PartialEq)]
 #[serde(rename_all = "snake_case")]
@@ -101,10 +117,12 @@ pub enum Failure {
     ReviewSourceUnavailable,
     Interrupted,
     Other,
+    LaunchReturnUnverified,
 }
 impl Failure {
     pub fn from_error(e: &Error) -> Self {
         match e.0 {
+            "LaunchOutcomeUnverified" => Self::LaunchReturnUnverified,
             "KeyboardInterrupt" => Self::Interrupted,
             "QuotaRetryEnded" => Self::QuotaRetryEnded,
             "ReviewModelConflict" => Self::ReviewModelConflict,
@@ -359,6 +377,7 @@ impl Observation {
             e.reason = match (e.stage, e.reason) {
                 (Stage::Launch, Reason::LaunchedUnlinked) => Reason::LaunchedUnlinked,
                 (Stage::Launch, Reason::QueuedUnlinked) => Reason::QueuedUnlinked,
+                (Stage::Launch, reason) if e.returned_job_id.is_some() => reason,
                 (Stage::Launch, _) => Reason::LaunchFailed,
                 (Stage::Preparation, _) => Reason::PreparationFailed,
                 _ => Reason::StageFailed,
@@ -393,76 +412,86 @@ impl Observation {
 
 /// Caller bounds the bytes and holds its ordinary writer lock.
 pub(crate) fn atomic_publish(root: &Path, name: &str, bytes: &[u8]) -> Result<()> {
-        // Fixed sidecar, no backup series or append-only diagnostic log.
-        let temp = root.join(format!("{name}.tmp"));
-        let mut file = fs::File::create(&temp)?;
-        file.write_all(bytes)?;
-        file.sync_all()?;
-        drop(file);
-        use std::os::windows::ffi::OsStrExt;
-        let wide = |path: &Path| {
-            path.as_os_str()
-                .encode_wide()
-                .chain(Some(0))
-                .collect::<Vec<_>>()
-        };
-        use windows_sys::Win32::Storage::FileSystem::{
-            MoveFileExW, ReplaceFileW, MOVEFILE_REPLACE_EXISTING,
-        };
-        let target_wide = wide(&root.join(name));
-        let temp_wide = wide(&temp);
-        let error = unsafe {
-            let ok = ReplaceFileW(
-                target_wide.as_ptr(),
+    // Fixed sidecar, no backup series or append-only diagnostic log.
+    let temp = root.join(if name == FILE {
+        "admission.tmp".to_string()
+    } else {
+        format!("{name}.tmp")
+    });
+    let mut file = fs::File::create(&temp)?;
+    file.write_all(bytes)?;
+    file.sync_all()?;
+    drop(file);
+    use std::os::windows::ffi::OsStrExt;
+    let wide = |path: &Path| {
+        path.as_os_str()
+            .encode_wide()
+            .chain(Some(0))
+            .collect::<Vec<_>>()
+    };
+    use windows_sys::Win32::Storage::FileSystem::{
+        MOVEFILE_REPLACE_EXISTING, MoveFileExW, ReplaceFileW,
+    };
+    let target_wide = wide(&root.join(name));
+    let temp_wide = wide(&temp);
+    let error = unsafe {
+        let ok = ReplaceFileW(
+            target_wide.as_ptr(),
+            temp_wide.as_ptr(),
+            std::ptr::null(),
+            0,
+            std::ptr::null(),
+            std::ptr::null(),
+        );
+        if ok != 0 {
+            None
+        } else {
+            Some(std::io::Error::last_os_error().raw_os_error().unwrap_or(0))
+        }
+    };
+    // ReplaceFile supports a reader retaining the previous file handle.
+    // These documented ReplaceFile failures can also leave the old name
+    // absent. Finish publishing the already-flushed bounded replacement.
+    let error = if error.is_some_and(|e| matches!(e, 2 | 1176 | 1177)) {
+        unsafe {
+            let ok = MoveFileExW(
                 temp_wide.as_ptr(),
-                std::ptr::null(),
-                0,
-                std::ptr::null(),
-                std::ptr::null(),
+                target_wide.as_ptr(),
+                MOVEFILE_REPLACE_EXISTING,
             );
             if ok != 0 {
                 None
             } else {
                 Some(std::io::Error::last_os_error().raw_os_error().unwrap_or(0))
             }
-        };
-        // ReplaceFile supports a reader retaining the previous file handle.
-        // These documented ReplaceFile failures can also leave the old name
-        // absent. Finish publishing the already-flushed bounded replacement.
-        let error = if error.is_some_and(|e| matches!(e, 2 | 1176 | 1177)) {
-            unsafe {
-                let ok = MoveFileExW(
-                    temp_wide.as_ptr(),
-                    target_wide.as_ptr(),
-                    MOVEFILE_REPLACE_EXISTING,
-                );
-                if ok != 0 {
-                    None
-                } else {
-                    Some(std::io::Error::last_os_error().raw_os_error().unwrap_or(0))
-                }
-            }
-        } else {
-            error
-        };
-        if let Some(code) = error {
-            if code == 2 {
-                if let Ok(file) = fs::File::open(root.join(name)) {
-                    let mut current = vec![];
-                    if file.take(bytes.len() as u64 + 1).read_to_end(&mut current).is_ok()
-                        && current == bytes
-                    {
-                        return Ok(());
-                    }
-                }
-            }
-            return Err(Error(match code {
-                32 | 33 => "AdmissionSharingViolation",
-                5 => "AdmissionAccessDenied",
-                _ => "AdmissionWriteFailed",
-            }));
         }
-        Ok(())
+    } else {
+        error
+    };
+    if let Some(code) = error {
+        if code == 2 {
+            if let Ok(file) = fs::File::open(root.join(name)) {
+                let mut current = vec![];
+                if file
+                    .take(bytes.len() as u64 + 1)
+                    .read_to_end(&mut current)
+                    .is_ok()
+                    && current == bytes
+                {
+                    return Ok(());
+                }
+            }
+        }
+        return Err(Error(match (name == FILE, code) {
+            (true, 32 | 33) => "AdmissionSharingViolation",
+            (true, 5) => "AdmissionAccessDenied",
+            (true, _) => "AdmissionWriteFailed",
+            (false, 32 | 33) => "LaunchReceiptSharingViolation",
+            (false, 5) => "LaunchReceiptAccessDenied",
+            (false, _) => "LaunchReceiptWriteFailed",
+        }));
+    }
+    Ok(())
 }
 
 /// No Scheduler/RealBackend, locks, directory creation, backups, guards or processes.
@@ -486,14 +515,14 @@ pub fn explain(root: &Path, todo: &Path, id: i64, now: f64) -> Value {
             || !snapshot.at.is_finite()
             || snapshot.recorded_at < snapshot.at
             || snapshot.expires_at != snapshot.recorded_at + TTL
-            || snapshot.cycle_id.as_ref().is_some_and(|id| id.len()!=32 || !id.bytes().all(|b|b.is_ascii_hexdigit()))
+            || snapshot.cycle_id.as_ref().is_some_and(|id| id.len()!=32 || !id.bytes().all(|b|b.is_ascii_digit() || (b'a'..=b'f').contains(&b)))
             || snapshot.entries.iter().any(|(id, e)| {
                 *id <= 0
                     || *id != e.id
                     || [&e.metadata_fingerprint, &e.input_metadata_fingerprint]
                         .iter()
-                        .any(|fp| fp.len() != 64 || !fp.bytes().all(|b| b.is_ascii_hexdigit()))
-                    || e.launch_receipt_id.as_ref().is_some_and(|id|id.len()!=32 || !id.bytes().all(|b|b.is_ascii_hexdigit()))
+                        .any(|fp| fp.len() != 64 || !fp.bytes().all(|b| b.is_ascii_digit() || (b'a'..=b'f').contains(&b)))
+                    || e.launch_receipt_id.as_ref().is_some_and(|id|id.len()!=32 || !id.bytes().all(|b|b.is_ascii_digit() || (b'a'..=b'f').contains(&b)))
                     || e.returned_job_id.as_ref().is_some_and(|id|id.is_empty() || id.len()>128 || !id.bytes().all(|b|b.is_ascii_alphanumeric() || b"_-".contains(&b)))
             })
         {

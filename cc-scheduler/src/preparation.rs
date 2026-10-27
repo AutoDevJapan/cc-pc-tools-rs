@@ -429,6 +429,8 @@ pub fn classify_output(out: &Output) -> Error {
 
 pub fn failure_reason(e: &Error) -> (&'static str, &'static str) {
     match e.0 {
+        "LaunchOutcomeUnverified" => ("launch_outcome_unverified","返却は記録しましたが起動の照合が未確認です"),
+        "LaunchOutcomeUnsupported" => ("launch_outcome_unsupported","起動ツールを先に更新する必要があります"),
         "CwdMissing" => ("cwd_missing", "作業フォルダがありません"),
         "NonGit" => ("non_git", "Gitの作業場所として確認できません"),
         "OriginMissing" => ("origin_missing", "Gitの取得元がありません"),

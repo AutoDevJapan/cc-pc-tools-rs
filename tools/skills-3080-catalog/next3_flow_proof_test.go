@@ -186,3 +186,27 @@ func TestNext3FlowProofRejectsLostFailureOrBatchFacts(t *testing.T) {
 		})
 	}
 }
+
+func TestNext3ReadBatchValuesRejectIndependentCorruption(t *testing.T) {
+	for index, name := range []string{"hotels", "lounges", "wallet"} {
+		for field, bad := range map[string]any{
+			"bytes":           float64(1),
+			"response_sha256": "0000000000000000000000000000000000000000000000000000000000000000",
+		} {
+			t.Run(name+"/"+field, func(t *testing.T) {
+				var install, native, read map[string]any
+				i := loadPublicReceipt(t, "skills-3080-next3-installation-evidence175645.json", &install)
+				n := loadPublicReceipt(t, "skills-3080-next3-create-evidence175645.json", &native)
+				loadPublicReceipt(t, "skills-3080-next3-consume-evidence175645.json", &read)
+				received27Object(t, received27Array(t, read["batches"])[index])[field] = bad
+				r, err := json.Marshal(read)
+				if err != nil {
+					t.Fatal(err)
+				}
+				if validateNext3FlowProof(i, n, r) == nil {
+					t.Fatal("individually corrupted read batch accepted")
+				}
+			})
+		}
+	}
+}

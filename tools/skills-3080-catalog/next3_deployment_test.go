@@ -84,7 +84,7 @@ func validateNext3LifecycleHistory(raw, precreation, readback []byte) error {
 
 func TestNext3RetainsBothRootAndTargetPreparationHistory(t *testing.T) {
 	for _, file := range []string{"skills-3080-next3-actual-bundle175645.json", "skills-3080-installed-next3-manifest175645.json"} {
-		for _, change := range []string{"valid", "root missing", "root null", "root state changed", "target missing", "target null", "old qualification promoted", "old presence erased", "root qualification ref missing", "target qualification ref changed", "target readback ref changed"} {
+		for _, change := range []string{"valid", "root missing", "root null", "root state changed", "target missing", "target null", "old qualification promoted", "old presence erased", "root qualification ref missing", "target qualification ref changed", "target readback ref changed", "target readback SHA changed"} {
 			t.Run(file+"/"+change, func(t *testing.T) {
 				var value map[string]any
 				loadPublicReceipt(t, file, &value)
@@ -110,6 +110,8 @@ func TestNext3RetainsBothRootAndTargetPreparationHistory(t *testing.T) {
 					received27Object(t, target["precreation_qualification"])["sha256"] = "changed"
 				case "target readback ref changed":
 					received27Object(t, target["recorded_current_readback"])["file"] = "changed"
+				case "target readback SHA changed":
+					received27Object(t, target["recorded_current_readback"])["sha256"] = strings.Repeat("0", 64)
 				}
 				raw, e := json.Marshal(value)
 				if e != nil {

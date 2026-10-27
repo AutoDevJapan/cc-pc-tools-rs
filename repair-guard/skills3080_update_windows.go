@@ -20,6 +20,10 @@ const skillsGuardModule = "github.com/AutoDevJapan/cc-pc-tools-rs/repair-guard"
 // Independent previously accepted distribution facts (3258 and3686), not a caller
 // supplied baseline or an assertion made by the artifact being installed.
 var skillsGuardBaselines = map[string]string{
+	// Same accepted PR596 software as the other existing updater, from normal
+	// publisher deployment and its parent's independent installed readback.
+	// docs/evidence/official-ci3387-known-guard-baseline-444eae87.json
+	official3894MaskedDistributionSHA: official3894MaskedDistributionHead,
 	// PR589 was normally reviewed, merged, built and installed by the prior
 	// execution of this updater. Its independent current readback was published
 	// before generating the masked-source successor candidate.

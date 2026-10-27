@@ -46,6 +46,8 @@ and `launch_performed:false`.
 | Caller-supplied root, repeated/mixed/unknown flags | CLI | One bounded machine JSON refusal; no side effects |
 | Modified/copied ticket, pending receipt, replaced physical object, unknown sibling or altered public bytes | Verify/consume | Deny; no general access grant |
 | Complete receipt, exact original CI and registered provider actor | Consume | One callback sees the same verified public bytes; concurrent/repeated consumers fail |
+| Expired original complete receipt, exact current CI/provider and all original objects | Explicit requalify-consume | Recheck authority while snapshots are pinned; retain original expiry and durably consume once in this execution |
+| Expired original with insufficient journal space for start and terminal frames | Explicit requalify-consume | Refuse before creating a consumption marker or handing off bytes |
 | Interrupted writes or callback failure | Restart | Preserve explicit pending/consuming/failed state; do not adopt or replay |
 | Unrelated original source/path | Existing guard | Existing classification remains unchanged |
 | Original CI provider in its own repository and current branch | Verify/consume | Do not borrow the public Skills repository rule; another repository or branch still fails |
@@ -157,3 +159,37 @@ grant the parent any SDK operation. Preparation, verification and consumption
 retain their existing implementation/provider actor checks. A successful
 software comparison is separate from review, CI, actual distribution and the
 provider's real receipt acceptance.
+
+## Expired original: immediate requalification and consumption
+
+The original creation deadline remains creation plus 24 hours. Ordinary verify
+and consume still refuse an expired receipt, without changing its journal or
+reading its software. An expired, unconsumed original may instead be submitted
+by the current normal CI provider through the explicit
+`--requalify-consume-official-ci3387 <receipt-id>` operation. This operation is
+new behavior, not a claim that the old receipt remained valid.
+
+This operation independently checks the same original creator, ownership,
+registration, producer inputs, current provider assignment, exact CI purpose,
+official asset and complete physical tree. After verifying and pinning the
+original snapshots, it rechecks live authority and durably appends its evidence,
+actual actor, acceptance time and original receipt digest together with
+`consuming`. The existing CreateNew consumption marker prevents replay even if
+an earlier authenticated journal prefix is restored. It then hands off those
+same public snapshots once during this bounded execution. Only successful
+output followed by a durable `consumed` commit produces exit zero.
+
+The new evidence has no reusable validity window or new expiry. The original
+receipt's creation time, expiry, ID, binding, manifest and physical identities
+are preserved; no replacement SDK or creation reservation is made. Interrupted
+consumption, writer failure and terminal-save failure retain their ordinary
+non-replayable states. Invalid or changed evidence and physical objects are
+refused before this consumption is claimed. Response metadata explicitly
+retains the original expiry and records that the deadline was not extended.
+
+Acceptance covers an actually expired synthetic original, unchanged ordinary
+expiry refusal, same-snapshot one-shot output, pre-expiry refusal, altered
+authority or receipt, cancelled execution, missing physical files, native
+journal restart, torn frames, restored-prefix replay and a failed durable
+handoff. A synthetic success does not establish real SDK acceptance or CI
+execution; those remain the original provider's separate normal operations.

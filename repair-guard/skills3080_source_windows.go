@@ -347,5 +347,5 @@ func skillsSourceObject(root string, row skillsSavedSource, outputs []skillsOutp
 			return true
 		}
 	}
-	return false
+	return skillsMaskedSourceObject(row, raw, outputs)
 }

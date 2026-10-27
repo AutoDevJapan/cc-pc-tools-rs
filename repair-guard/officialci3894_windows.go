@@ -61,6 +61,13 @@ const official3894ConcurrentGuardHead = "817004120a458b3a37830478512da0aa8040c9d
 const official3894SharedGuardSHA = "ad5d37c7b216264d2e99007a2e6f3468e7529803454d88f1954cc74a7beb4783"
 const official3894SharedGuardHead = "0d97c1952ff6f8b47a3d40939941639b35309408"
 
+// PR589's accepted distribution was independently read back before the
+// masked-source successor. This is the same software fact as the Skills table;
+// it changes no SDK receipt, producer, expiry or data-access qualification.
+// docs/evidence/skills-3080-guard-before-masked-source-9f914.json
+const official3894MaskedPredecessorSHA = "9f914c724231886438515c5ed3831a13eca3d8fbec09e4d3d6edb1d0113c6dd8"
+const official3894MaskedPredecessorHead = "4e117a2d813e4a989d1c3085d2734963d9c198a3"
+
 type official3894Source struct {
 	Head, Registration, CreatorJob, Workspace, Branch, SpecSHA string
 }
@@ -923,7 +930,8 @@ func official3894InstalledBaseline(sha, head string) bool {
 		(sha == official3894RepairGuardSHA && head == official3894RepairGuardHead) ||
 		(sha == official3894DiagnosticGuardSHA && head == official3894DiagnosticGuardHead) ||
 		(sha == official3894ConcurrentGuardSHA && head == official3894ConcurrentGuardHead) ||
-		(sha == official3894SharedGuardSHA && head == official3894SharedGuardHead)
+		(sha == official3894SharedGuardSHA && head == official3894SharedGuardHead) ||
+		(sha == official3894MaskedPredecessorSHA && head == official3894MaskedPredecessorHead)
 }
 
 // Qualifies only comparison of the known previously published guard software.

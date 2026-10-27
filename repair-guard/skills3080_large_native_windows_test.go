@@ -11,7 +11,10 @@ import (
 )
 
 func TestSkills3080LargeCanonicalNativeKeepsOriginalProofs(t *testing.T) {
-	nativeRoot := t.TempDir()
+	// The Windows service runner can expose a temporary directory through an
+	// alias. Use the existing physical-root fixture, as the native reader must
+	// continue to reject a handle whose resolved path differs from its input.
+	nativeRoot := skillsFixtureRoot(t)
 	t.Setenv("USERPROFILE", nativeRoot)
 	_, _, e, _ := skillsForwardFixture(t)
 	thread := "11111111-1111-4111-8111-111111111111"

@@ -709,6 +709,15 @@ func (r *Runner) processConversationMaintenance(ctx context.Context, health *Hea
 			health.Errors = append(health.Errors, "conversation_cursor_deferred")
 			return
 		}
+		if q.Phase == "reserved" && q.Actor != nil && q.RequestID == fixedConversationOrigin.RequestID {
+			budget := commandBudget(conversationSender, []string{"recovery-ask", "--conversation-source-request", q.RequestID})
+			if deadline, ok := ctx.Deadline(); ok && time.Until(deadline) < budget {
+				// The ordinary 60-second CLI owns this finite send. A short
+				// periodic turn must not kill it between reservation and POST.
+				health.Errors = append(health.Errors, "conversation_source_send_budget_deferred")
+				return
+			}
+		}
 		if q.Phase == "reserved" || (q.Phase == "posted" && q.Wait && q.RecoveredIntake == 0) {
 			input := ConversationAskInput{RequestID: q.RequestID, Todo: q.Todo, OriginThread: q.OriginThread, BodyFile: q.BodyFile, DecisionFile: q.DecisionFile, Title: q.Title, Wait: q.Wait, Attachments: q.Attachments}
 			if q.Actor != nil {

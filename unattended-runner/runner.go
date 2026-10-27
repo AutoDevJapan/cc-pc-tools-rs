@@ -671,6 +671,15 @@ func commandBudget(path string, args []string) time.Duration {
 	if path == "D:/CC/Tools/scheduler/scheduler.exe" && len(args) == 1 && args[0] == "repair-step" {
 		return 35 * time.Second
 	}
+	if path == conversationSender && len(args) > 2 && args[0] == "recovery-ask" {
+		for i := 1; i+1 < len(args); i++ {
+			if args[i] == "--conversation-source-request" && args[i+1] == fixedConversationOrigin.RequestID {
+				// Includes the bounded reader plus HTTP; the caller's context
+				// still caps this below the normal 60-second conversation.
+				return 55 * time.Second
+			}
+		}
+	}
 	return 20 * time.Second
 }
 
@@ -685,6 +694,16 @@ func runCommandBounded(ctx context.Context, budget time.Duration, path string, a
 	command.Stderr = &stderr
 	err := command.Run()
 	if err != nil {
+		if path == conversationSender && len(args) > 0 && args[0] == "recovery-ask" {
+			if child.Err() != nil {
+				return "", errors.New("conversation sender deadline")
+			}
+			if !stdout.Overflow {
+				if failure := conversationSenderFailure(stdout.String()); failure != nil {
+					return "", failure
+				}
+			}
+		}
 		return "", errors.New("command unavailable or timed out")
 	}
 	if stdout.Overflow {
@@ -916,6 +935,9 @@ func (r *Runner) recheckOriginBlocked(ctx context.Context, health *Health) {
 }
 
 func main() {
+	if len(os.Args) > 1 && os.Args[1] == "--check-conversation-origin-reference" {
+		os.Exit(conversationOriginReferenceCLI(os.Args[2:], os.Stdout))
+	}
 	if len(os.Args) > 1 && os.Args[1] == "--register-program-question-replay" {
 		os.Exit(programReplayRegisterCLI(os.Args[2:], os.Stdout))
 	}

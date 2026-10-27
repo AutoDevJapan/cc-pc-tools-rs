@@ -4,6 +4,7 @@
 //! General termination requires kill_enabled. Verified no-action recovery is separate.
 //! Activity reads only event type/id/status; no payloads, commands or credentials are retained.
 pub mod backend;
+pub mod admission;
 pub mod common;
 pub mod dispatch_receipt;
 pub mod engine;

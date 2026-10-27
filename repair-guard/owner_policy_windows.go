@@ -344,31 +344,61 @@ func ownerRegisteredSourceStatus(path string) (ownerPathVerdict, bool) {
 }
 
 func ownerSourceQuery(ctx context.Context, path string, access ownerSourceAccess) ownerPathVerdict {
-	var snapshot *ownerProjectSnapshot
-	access.stable = func() bool { return snapshot != nil && snapshot.current() }
-	return ownerRegisteredSourceAt(ctx, path, func(ctx context.Context) (object, bool) {
-		var ok bool
-		snapshot, ok = ownerReadProjectSnapshot(ctx, productStore, legacyMatch)
-		if !ok {
-			return nil, false
+	return ownerSourceQueryWith(ctx, path, access, func(ctx context.Context) (*ownerProjectSnapshot, bool) {
+		return ownerReadProjectSnapshot(ctx, productStore, legacyMatch)
+	})
+}
+
+func ownerSourceQueryWith(ctx context.Context, path string, access ownerSourceAccess, read func(context.Context) (*ownerProjectSnapshot, bool)) ownerPathVerdict {
+	// Only a changed normal snapshot with otherwise successful qualification
+	// permits a second complete attempt, under the SAME existing deadline.
+	// No verdict or Git result is cached, and the old view never grants access.
+	for attempt := 0; attempt < 2; attempt++ {
+		var snapshot *ownerProjectSnapshot
+		changed := false
+		access.stable = func() bool {
+			if snapshot == nil {
+				return false
+			}
+			if snapshot.current() {
+				return true
+			}
+			changed = snapshot.replaced()
+			return false
 		}
-		return snapshot.projects, true
-	}, access)
+		result, qualified := ownerRegisteredSourceAttempt(ctx, path, func(ctx context.Context) (object, bool) {
+			var ok bool
+			snapshot, ok = read(ctx)
+			if !ok {
+				return nil, false
+			}
+			return snapshot.projects, true
+		}, access)
+		if !qualified || !changed || attempt == 1 || ctx.Err() != nil {
+			return result
+		}
+	}
+	return ownerUnverified()
 }
 
 func ownerRegisteredSourceAt(ctx context.Context, path string, read func(context.Context) (object, bool), access ownerSourceAccess) ownerPathVerdict {
+	result, _ := ownerRegisteredSourceAttempt(ctx, path, read, access)
+	return result
+}
+
+func ownerRegisteredSourceAttempt(ctx context.Context, path string, read func(context.Context) (object, bool), access ownerSourceAccess) (ownerPathVerdict, bool) {
 	if !ownerRepositoryCandidate(path) {
-		return ownerUnverified()
+		return ownerUnverified(), false
 	}
 	projects, ok := read(ctx)
 	if !ok {
-		return ownerUnverified()
+		return ownerUnverified(), false
 	}
 	result := ownerRegisteredSourceWith(path, object{"projects": projects}, access)
 	if access.stable == nil || !access.stable() || ctx.Err() != nil {
-		return ownerUnverified()
+		return ownerUnverified(), result.AccessAllowed
 	}
-	return result
+	return result, result.AccessAllowed
 }
 
 func ownerRegisteredSourceWith(path string, db object, access ownerSourceAccess) ownerPathVerdict {

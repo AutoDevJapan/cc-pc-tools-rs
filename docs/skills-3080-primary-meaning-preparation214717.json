@@ -1,0 +1,42 @@
+{
+  "domain": "skills3080-primary-meaning-preparation-summary-v2",
+  "todo": 3080,
+  "parent_job": "20261026-214717-todo-3080",
+  "catalog_occurrences": 73220,
+  "catalog_sha256": "2d73c9a038a41cc220a9687b935bfa1e0b315b65d9bd6d3e54ddb4111972876c",
+  "queue_sha256": "9694c7a9caa07d5f9f1392eef532f1f016c54f45be2c4387a20e9c343e788e1d",
+  "all_needs_semantic_and_individual_rights": 71009,
+  "unreserved_sixmile_primary_occurrences": 54757,
+  "existing_evidence_hash_deferred": 50,
+  "descriptor_empty_or_missing_deferred": 18,
+  "planned_primary_occurrences": 54689,
+  "planned_unique_body_hash_length_groups": 51030,
+  "cohorts": [
+    {
+      "cohort": 0,
+      "file": "primaryflow-cohort0-v2-214717.json",
+      "sha256": "edb8069e0564eb3b95fd0863865b66c4e0b1d3fb994990c6701bcc624678cabf",
+      "bytes": 20711454,
+      "groups": 25452,
+      "occurrences": 27412
+    },
+    {
+      "cohort": 1,
+      "file": "primaryflow-cohort1-v2-214717.json",
+      "sha256": "9ebe1d51eef54663c578687b103e69eeb6fe687709def40b790faa104184195a",
+      "bytes": 20654231,
+      "groups": 25578,
+      "occurrences": 27277
+    }
+  ],
+  "old_reserved_IDs": 971,
+  "protected_metadata_hashes": 6222,
+  "source_bodies_opened": 0,
+  "new_primary_semantic_assessments": 0,
+  "new_grants": 0,
+  "new_adoptions": 0,
+  "new_workers_registered": 0,
+  "actual_source_current_existence_unverified": true,
+  "old_v1_and_failed_prep_retained": true,
+  "limits": "Nested and leaf-case variants retained in v2. Input sharing uses fixed descriptors, never grants permission through equality. Plan read window is not a finite total adoption cap. Existing971 reservations/API121/108/acknowledged source hashes remain deferred; original nulls/readers/masks not filled. Every source read still needs normal exact-path guard and bounded same-buffer checks. No new code or worker is executed from source text; original647/428/unknown9 held."
+}

@@ -1,0 +1,17 @@
+{
+  "schema": "official-ci3387-known-guard-software-v1",
+  "repository_id": 1406818713,
+  "repository": "AutoDevJapan/cc-pc-tools-rs",
+  "source_head": "444eae8714ee8b6199c9ed95208ac40272aeb8ce",
+  "reviewed_head": "ab52e73918fb053bc2bb5d52f73647280d774d70",
+  "pull_request": 596,
+  "sha256": "c80d60ab470e52ef9fbe53c1e039d1fcdc31429e291c3f156a953b9b6059d02f",
+  "build": "clean Windows amd64 merged-source build; vcs.modified=false",
+  "published_distribution_result": "https://github.com/AutoDevJapan/cc-pc-tools-rs/pull/596#issuecomment-6434364602",
+  "verification_scope": "Normal publisher deployment report and original parent's independent installed readback, received through normal task records before this successor candidate was generated",
+  "deployment": "Existing AdminBroker single replacement, previous software backup and owner/group/DACL readback; SACL not verified",
+  "comparison_scope": "Fixed software identity only; normal actor/source qualification and immediate pre-update physical comparison remain required",
+  "sdk_created": false,
+  "general_access_granted": false,
+  "original_registry_recovered": false
+}

@@ -236,6 +236,19 @@ func validateExpandedSixmileIndex(current, snapshot sixmileCohortIndex, old lega
 			}
 		}
 	}
+	// A later actual placement may come from a separately received primary
+	// cohort. Its independent full-review/Create/current-buffer/discovery/use
+	// acceptance is required; never rewrite the historic reading index.
+	for id, r := range accepted {
+		if _, exists := known[id]; exists || r.Source != "6mile/skills" {
+			continue
+		}
+		if id != r.ID || paths[r.Path] || r.Disposition != "installed_new_adaptation" || r.Commit != current.Commit || r.Path == "" || r.SHA == "" {
+			return errors.New("expanded sixmile index: separate current acceptance identity differs")
+		}
+		known[id] = extra45Entry{ID: id, Commit: r.Commit, Path: r.Path, SHA: r.SHA}
+		paths[r.Path] = true
+	}
 	for _, r := range rows {
 		e, ok := known[r.ID]
 		if r.Source != "6mile/skills" {
@@ -411,6 +424,12 @@ func TestExpandedSixmileIndexAddsNewCohortAndReadingAmendmentExactlyOnce(t *test
 			}
 			received := loadRegisteredReceivedIndex(t)
 			accepted := validatedPurposeFourDispositions(t)
+			for id, row := range validatedTravel3Dispositions(t) {
+				if _, duplicate := accepted[id]; duplicate {
+					t.Fatal("separate current acceptances overlap")
+				}
+				accepted[id] = row
+			}
 			switch name {
 			case "received_without_current_acceptance":
 				accepted = nil

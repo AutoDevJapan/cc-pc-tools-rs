@@ -12,6 +12,21 @@ fn main() {
     }
     let args: Vec<String> = std::env::args().skip(1).collect();
     let command = args.first().map(String::as_str);
+    if command == Some("explain-admission") {
+        if args.len() == 2 && matches!(args[1].as_str(), "-h" | "--help") {
+            println!("usage: scheduler explain-admission --id <ID>\n\nRead the last ordinary dispatch observation (read-only). Never dispatches, initializes Scheduler, inspects models/auth, or reads spec/Source/note bodies.");
+            return;
+        }
+        let id = match cc_scheduler::targeted_dispatch::parse_id(&args[1..]) {
+            Ok(id) => id,
+            Err(_) => { eprintln!("admission input rejected"); std::process::exit(2); }
+        };
+        let report = cc_scheduler::admission::explain(
+            std::path::Path::new("D:/CC/Tools/scheduler"),
+            std::path::Path::new("D:/CC/Tools/todo/todo.json"), id, now());
+        println!("{}", encode(&report, 2));
+        return;
+    }
     if command == Some("reevaluate-unstarted-review") {
         if args.len()==2 && matches!(args[1].as_str(),"-h"|"--help") {
             println!("usage: scheduler reevaluate-unstarted-review --id 3900 [--apply --expected-state-sha256 SHA256]\n\nReevaluate the same policy-origin unstarted review from normal inputs and fresh OAuth. Never launches.");

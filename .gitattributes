@@ -498,3 +498,33 @@ docs/skills-3080-openai11-installation-evidence214717.json -text
 docs/skills-3080-openai11-result-acceptance214717.md -text
 
 docs/skills-3080-operations/openai11-result-review-snapshot214717.json -text
+repair-guard/testdata/skills3080-runtime-issuer-repair-scope.json -text
+docs/skills-3080-travel3-reviewed-bundle214717.json -text
+docs/skills-3080-operations/create-travel3-214717.json -text
+docs/skills-3080-travel3-source-meaning214717.json -text
+docs/skills-3080-travel3-notice-map214717.json -text
+docs/skills-3080-travel3-structure214717.json -text
+docs/skills-3080-travel3-input214717.json -text
+docs/skills-3080-travel3-input-acceptance214717.md -text
+docs/skills-3080-other9-272280-evaluation214717.json -text
+docs/skills-3080-other9-272280-physical214717.json -text
+docs/skills-3080-sixmile-next4-181184-evaluation214717.json -text
+docs/skills-3080-sixmile-next4-181184-index-binding214717.json -text
+docs/skills-3080-next13-received-181184-272280-reception214717.md -text
+docs/skills-3080-masked-source-preservation-spec214717.md -text
+
+docs/skills-3080-sixmile-next2-185186-evaluation214717.json -text
+docs/skills-3080-other7-281287-evaluation214717.json -text
+docs/skills-3080-research3719-support6-received214717.json -text
+docs/skills-3080-next9-received-185186-281287-reception214717.md -text
+docs/skills-3080-travel3-actual-bundle214717.json -text
+docs/skills-3080-installed-travel3-manifest214717.json -text
+docs/skills-3080-travel3-create-evidence214717.json -text
+docs/skills-3080-travel3-consume-evidence214717.json -text
+docs/skills-3080-travel3-actual-structure214717.json -text
+docs/skills-3080-travel3-discovery214717.json -text
+docs/skills-3080-travel3-application214717.json -text
+docs/skills-3080-travel3-designs214717.json -text
+docs/skills-3080-travel3-installation-evidence214717.json -text
+docs/skills-3080-operations/travel3-result-review-snapshot214717.json -text
+tools/skills-3080-catalog/internal/primaryflow/protection_manifest.json -text

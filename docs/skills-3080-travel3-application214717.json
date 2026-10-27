@@ -1,0 +1,123 @@
+{
+  "domain": "skills3080-real-current-turn-explicit-text-application-v1",
+  "actor": "20261026-214717-todo-3080",
+  "actual_model": "gpt-6.1-sol",
+  "effort": "max",
+  "Fast_independently_proved": false,
+  "instruction_buffers": 6,
+  "instruction_bytes": 11285,
+  "instruction_pins": [
+    {
+      "target": "aerobase-flight-awards/SKILL.md",
+      "sha256": "5cacbe17530920440d47e48841a8abda69f3d1374345d0971eb62a8b759946ea",
+      "bytes": 2165,
+      "read_buffer_source": "normal qualified current same-ID buffer",
+      "actual_semantic_reader": "20261026-214717-todo-3080"
+    },
+    {
+      "target": "aerobase-flight-awards/references/guide.md",
+      "sha256": "0c602d574f06c44792622946ad0c92f15de127ef670bbf16e8515c2ddc4befde",
+      "bytes": 1770,
+      "read_buffer_source": "normal qualified current same-ID buffer",
+      "actual_semantic_reader": "20261026-214717-todo-3080"
+    },
+    {
+      "target": "aerobase-flight-deals/SKILL.md",
+      "sha256": "b25746d0852f39f34362ef77c904a16177c2ca81253b76a9f6891c4c42e93748",
+      "bytes": 1999,
+      "read_buffer_source": "normal qualified current same-ID buffer",
+      "actual_semantic_reader": "20261026-214717-todo-3080"
+    },
+    {
+      "target": "aerobase-flight-deals/references/guide.md",
+      "sha256": "dea66595039bcdbae977b8750e91e875c291eb549918a5dc782d8b72b35f9350",
+      "bytes": 1684,
+      "read_buffer_source": "normal qualified current same-ID buffer",
+      "actual_semantic_reader": "20261026-214717-todo-3080"
+    },
+    {
+      "target": "aerobase-travel-activities/SKILL.md",
+      "sha256": "ea4a5e0ec173392123664b4da1dfa6d2212ccbc805254b23fbe818e2ef6a61c0",
+      "bytes": 2053,
+      "read_buffer_source": "normal qualified current same-ID buffer",
+      "actual_semantic_reader": "20261026-214717-todo-3080"
+    },
+    {
+      "target": "aerobase-travel-activities/references/guide.md",
+      "sha256": "a1db41f526c7cde3c4c4faba13ba213ca3bf52405c3d03486518373f25119269",
+      "bytes": 1614,
+      "read_buffer_source": "normal qualified current same-ID buffer",
+      "actual_semantic_reader": "20261026-214717-todo-3080"
+    }
+  ],
+  "current_instructions_literally_read_before_decisions": true,
+  "all_scenario_meanings_applied": true,
+  "decisions": [
+    {
+      "skill": "aerobase-flight-awards",
+      "case": "同じ人数・日付帯・クラスの現金500USDと40000マイル、別払い100USD",
+      "decision": "単純値は1.25cpp、現金500USDが同等条件の税込総額なら別払いを差し引いた参考値は1.00cppと分ける。取消・移行feeや現在の席が不明なら未確認とし、最得/確保済みとは結論しない。",
+      "applied": "positive",
+      "service_calls": 0
+    },
+    {
+      "skill": "aerobase-flight-awards",
+      "case": "必要マイル0、現金額欠損、古い残席1、回復日数0",
+      "decision": "0で割らず、欠損を0にせず、古い残席を現在の確保へ変えない。回復スコアから医学的安全を保証しない。",
+      "applied": "negative",
+      "service_calls": 0
+    },
+    {
+      "skill": "aerobase-flight-deals",
+      "case": "同じ税込往復・荷物・取消条件で60000円から55000円。設定保存済み、tick/配送receiptなし",
+      "decision": "観測上5000円の変化を取得時刻と出典へ結ぶ。設定済みと報告し、監視稼働や通知成功は未確認のまま残す。",
+      "applied": "positive",
+      "service_calls": 0
+    },
+    {
+      "skill": "aerobase-flight-deals",
+      "case": "片道最安値と荷物込み往復、古いcache価格、HTTP200の設定受付",
+      "decision": "比較条件が違うため最安の順位を作らない。200は設定受付であり実tick/価格観測/配送成功の証拠ではない。",
+      "applied": "negative",
+      "service_calls": 0
+    },
+    {
+      "skill": "aerobase-travel-activities",
+      "case": "利用可能180分、往路45分・集合余裕15分・活動45分・復路45分・手続60分・遅延余裕30分",
+      "decision": "合計240分で60分不足するため、近い/活動45分という属性で成立とはしない。休憩や空港内の案を残し、現在の営業時間や予約確認は別に必要とする。",
+      "applied": "positive",
+      "service_calls": 0
+    },
+    {
+      "skill": "aerobase-travel-activities",
+      "case": "空港近く、90分以内、recovery-safeという検索属性だけの候補",
+      "decision": "移動・保安・締切・時刻帯・現在の営業が未確認なので安全な乗継/予約済みとは断言しない。原のprovider広告を本人の利用制限へしない。",
+      "applied": "negative",
+      "service_calls": 0
+    },
+    {
+      "skill": "all3 current boundary",
+      "case": "原資料のAPI-only、429でPro追加、401/403、全候補より小さいlimit",
+      "decision": "追加購入やAPIキー利用へ進まず、通常の公開情報で解ける工程を続ける。正規拒否の別経路迂回は行わず、1回のlimitを元依頼全体の上限にしない。",
+      "applied": "current-task-boundary",
+      "service_calls": 0
+    },
+    {
+      "skill": "all3 current boundary",
+      "case": "初回canonical Createのsource失敗と次の正常18作成・読戻し",
+      "decision": "失敗を履歴として保持し、事前の正常再資格/不在確認後の一度の再試行だけを行った。成功後は再Createせず、原full4083を凍結し、現在18buffer/ID/hash/PASS3/fresh3と全16未完を別に記録する。",
+      "applied": "current-task-boundary",
+      "service_calls": 0
+    }
+  ],
+  "explicit_decision_count": 8,
+  "actual_travel_or_medical_advice_delivered": false,
+  "current_service_API_prices_verified": false,
+  "new_service_or_booking_payment_monitoring_or_notification_operations": 0,
+  "new_UI_or_API_keys_or_fees": 0,
+  "implicit_skill_selection_proven": false,
+  "full_catalog_context_budget_proven": false,
+  "global_original_raw_credit_added": 0,
+  "third_party_service_or_data_rights_accepted": false,
+  "whole16_complete": false
+}

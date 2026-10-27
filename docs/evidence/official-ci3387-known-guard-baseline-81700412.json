@@ -1,0 +1,18 @@
+{
+  "domain": "official-ci3387-known-guard-baseline-v1",
+  "repository": "AutoDevJapan/cc-pc-tools-rs",
+  "repository_id": 1406818713,
+  "pull_request": 585,
+  "source_head": "817004120a458b3a37830478512da0aa8040c9d0",
+  "software_sha256": "94c08be91776df277a6a3442e71f291103345641558657e1872e36520ad924e0",
+  "evidence_source": "normal-todo-note-3686",
+  "reported": {
+    "normal_qualification": true,
+    "admin_broker_deployed": true,
+    "software_and_backup_hash_verified": true,
+    "owner_group_dacl_preserved": true,
+    "after_install_qualified": true
+  },
+  "verification_scope": "Software deployment received from the existing publisher via its normal task record. Parent3387 has not directly read its private deployment file or adopted an unknown observed executable hash.",
+  "public_source_review": "https://github.com/AutoDevJapan/cc-pc-tools-rs/pull/585#issuecomment-6431489691"
+}

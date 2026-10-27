@@ -2,8 +2,9 @@ package main
 
 import (
 	"bufio"
+	"bytes"
 	"context"
-	"encoding/json"
+	"encoding/json/jsontext"
 	"errors"
 	"io"
 	"os"
@@ -101,95 +102,135 @@ func (*ownerDiscardJSON) UnmarshalJSON(data []byte) error {
 	return nil
 }
 
-// Decode only projects. Unrelated arrays are skipped one element at a time,
-// without maps, arrays or field tokens. Duplicate top-level/project keys are
-// rejected; item content is never used as authority, returned or logged.
-func ownerProjectProjection(ctx context.Context, input io.Reader) (object, bool) {
-	d := json.NewDecoder(bufio.NewReaderSize(ownerDeadlineReader{ctx, input}, 64<<10))
-	d.UseNumber()
-	skip := func() bool {
-		if ctx.Err() != nil {
-			return false
-		}
-		token, err := d.Token()
-		if err != nil {
-			return false
-		}
-		delim, compound := token.(json.Delim)
-		if !compound {
-			return true
-		}
-		if delim != '{' && delim != '[' {
-			return false
-		}
-		for d.More() {
-			if delim == '{' {
-				key, err := d.Token()
-				if err != nil {
-					return false
-				}
-				if _, ok := key.(string); !ok {
-					return false
-				}
+// Retain the previous ignored-item depth bound while the standard streaming
+// decoder discards values without holding a whole history element. The old
+// bound was 127 item containers plus the document and ignored outer container.
+// Syntax remains the standard decoder's responsibility; this reader retains
+// only nesting/string state across bounded chunks, never item values.
+type ownerProjectNestingReader struct {
+	input           io.Reader
+	depth           int
+	quoted, escaped bool
+}
+
+func (r *ownerProjectNestingReader) Read(p []byte) (int, error) {
+	n, err := r.input.Read(p)
+	for i := 0; i < n; {
+		if r.quoted {
+			if r.escaped {
+				r.escaped = false
+				i++
+				continue
 			}
-			var ignored ownerDiscardJSON
-			if ctx.Err() != nil || d.Decode(&ignored) != nil {
-				return false
+			at := bytes.IndexAny(p[i:n], "\\\"")
+			if at < 0 {
+				break
+			}
+			i += at
+			if p[i] == '\\' {
+				if i+1 == n {
+					r.escaped = true
+					i++
+				} else {
+					i += 2
+				}
+			} else {
+				r.quoted = false
+				i++
+			}
+			continue
+		}
+		at := bytes.IndexAny(p[i:n], "\"[{]}")
+		if at < 0 {
+			break
+		}
+		i += at
+		switch p[i] {
+		case '"':
+			r.quoted = true
+		case '[', '{':
+			r.depth++
+			if r.depth > 129 {
+				return 0, errors.New("registration nesting exceeds bound")
+			}
+		case ']', '}':
+			r.depth--
+			if r.depth < 0 {
+				return 0, errors.New("registration nesting is invalid")
 			}
 		}
-		end, err := d.Token()
-		return err == nil && (delim == '{' && end == json.Delim('}') || delim == '[' && end == json.Delim(']'))
+		i++
 	}
-	first, err := d.Token()
-	if err != nil || first != json.Delim('{') {
+	return n, err
+}
+
+// Decode only projects. SkipValue validates unrelated compound history as a
+// stream without retaining whole objects/arrays. Atomic strings still use the
+// standard decoder's buffering. Keep the v1 handling
+// of ignored duplicate/invalid-Unicode content, while explicitly rejecting
+// duplicate top-level/project keys and invalid project strings as before.
+func ownerProjectProjection(ctx context.Context, input io.Reader) (object, bool) {
+	r := &ownerProjectNestingReader{input: ownerDeadlineReader{ctx, input}}
+	d := jsontext.NewDecoder(bufio.NewReaderSize(r, 64<<10), jsontext.AllowDuplicateNames(true), jsontext.AllowInvalidUTF8(true))
+	first, err := d.ReadToken()
+	if err != nil || first.Kind() != '{' {
 		return nil, false
 	}
 	seen := map[string]bool{}
 	projects := object(nil)
-	for d.More() {
-		key, err := d.Token()
-		name, ok := key.(string)
-		if err != nil || !ok || seen[name] {
+	for d.PeekKind() != '}' {
+		key, err := d.ReadToken()
+		if err != nil || key.Kind() != '"' || ctx.Err() != nil {
+			return nil, false
+		}
+		name := strings.Clone(key.String())
+		if seen[name] {
 			return nil, false
 		}
 		seen[name] = true
 		if name != "projects" {
-			if !skip() {
+			if d.SkipValue() != nil {
 				return nil, false
 			}
 			continue
 		}
-		start, err := d.Token()
-		if err != nil || start != json.Delim('{') {
+		start, err := d.ReadToken()
+		if err != nil || start.Kind() != '{' {
 			return nil, false
 		}
 		projects = object{}
-		for d.More() {
-			key, err := d.Token()
-			name, ok := key.(string)
-			if err != nil || !ok || len(name) > 4096 || strings.ContainsRune(name, utf8.RuneError) || len(projects) >= 4096 {
+		for d.PeekKind() != '}' {
+			key, err := d.ReadToken()
+			if err != nil || key.Kind() != '"' {
+				return nil, false
+			}
+			name := strings.Clone(key.String())
+			if len(name) > 4096 || strings.ContainsRune(name, utf8.RuneError) || len(projects) >= 4096 {
 				return nil, false
 			}
 			if _, duplicate := projects[name]; duplicate {
 				return nil, false
 			}
-			value, err := d.Token()
-			path, ok := value.(string)
-			if err != nil || !ok || len(path) > 32768 || strings.ContainsRune(path, utf8.RuneError) {
+			value, err := d.ReadToken()
+			if err != nil || value.Kind() != '"' {
+				return nil, false
+			}
+			path := strings.Clone(value.String())
+			if len(path) > 32768 || strings.ContainsRune(path, utf8.RuneError) {
 				return nil, false
 			}
 			projects[name] = path
 		}
-		end, err := d.Token()
-		if err != nil || end != json.Delim('}') {
+		end, err := d.ReadToken()
+		if err != nil || end.Kind() != '}' {
 			return nil, false
 		}
 	}
-	end, err := d.Token()
-	if err != nil || end != json.Delim('}') || projects == nil {
+	end, err := d.ReadToken()
+	if err != nil || end.Kind() != '}' || projects == nil {
 		return nil, false
 	}
-	if _, err = d.Token(); err != io.EOF || ctx.Err() != nil {
+	if _, err = d.ReadToken(); err != io.EOF || ctx.Err() != nil {
 		return nil, false
 	}
 	return projects, true
@@ -209,6 +250,18 @@ func (s *ownerProjectSnapshot) current() bool {
 	}
 	named, err := os.Lstat(s.path)
 	return err == nil && os.SameFile(s.info, named) && s.info.Size() == named.Size() && s.info.ModTime().Equal(named.ModTime()) && currentPlain(s.path, false) && !s.denied(s.path)
+}
+
+// Only an observable change of the ordinary, still-admissible registration
+// file permits one new complete qualification attempt. A denied/missing/aliased
+// file or an expired deadline is not a retry signal and never becomes access.
+func (s *ownerProjectSnapshot) replaced() bool {
+	if s == nil || s.ctx.Err() != nil || s.denied(s.path) || !currentPlain(s.path, false) {
+		return false
+	}
+	named, err := os.Lstat(s.path)
+	return err == nil && !named.IsDir() && plainEntry(named) &&
+		(!os.SameFile(s.info, named) || s.info.Size() != named.Size() || !s.info.ModTime().Equal(named.ModTime()))
 }
 
 // Cache the read file's native identity, then close it promptly so the normal

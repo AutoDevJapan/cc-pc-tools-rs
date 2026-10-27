@@ -70,6 +70,86 @@ type travel3Install struct {
 	} `json:"referenced_artifacts"`
 }
 
+type travel3DiscoveryRow struct {
+	Name        string `json:"name"`
+	Central     *bool  `json:"selected_central_path"`
+	Enabled     *bool  `json:"enabled"`
+	Description *bool  `json:"description_matches"`
+}
+type travel3Decision struct {
+	Skill    string `json:"skill"`
+	Case     string `json:"case"`
+	Decision string `json:"decision"`
+	Applied  string `json:"applied"`
+	Calls    *int   `json:"service_calls"`
+}
+type travel3Application struct {
+	Actor    string `json:"actor"`
+	Read     *bool  `json:"current_instructions_literally_read_before_decisions"`
+	Applied  *bool  `json:"all_scenario_meanings_applied"`
+	Buffers  int    `json:"instruction_buffers"`
+	Bytes    int    `json:"instruction_bytes"`
+	Count    int    `json:"explicit_decision_count"`
+	Service  int    `json:"new_service_or_booking_payment_monitoring_or_notification_operations"`
+	Implicit *bool  `json:"implicit_skill_selection_proven"`
+	Pins     []struct {
+		Target string `json:"target"`
+		SHA    string `json:"sha256"`
+		Bytes  int    `json:"bytes"`
+		Reader string `json:"actual_semantic_reader"`
+	} `json:"instruction_pins"`
+	Rows []travel3Decision `json:"decisions"`
+}
+
+func validateTravel3DiscoveryRow(r travel3DiscoveryRow, bodies map[string][]byte) error {
+	if bodies[r.Name+"/SKILL.md"] == nil || !recordedTrue(r.Central) || !recordedTrue(r.Enabled) || !recordedTrue(r.Description) {
+		return errors.New("travel3 discovery target or selected central root differs")
+	}
+	return nil
+}
+
+func validateTravel3Application(a travel3Application, bodies map[string][]byte) error {
+	if a.Actor != travel3Actor || !recordedTrue(a.Read) || !recordedTrue(a.Applied) || a.Buffers != 6 || a.Bytes != 11285 || a.Count != 8 || len(a.Rows) != 8 || a.Service != 0 || !recordedFalse(a.Implicit) || len(a.Pins) != 6 {
+		return errors.New("travel3 actual bounded text application differs")
+	}
+	seen := map[string]bool{}
+	for _, p := range a.Pins {
+		b, ok := bodies[p.Target]
+		if !ok || seen[p.Target] || p.Reader != travel3Actor || len(b) != p.Bytes || travel3Digest(b) != p.SHA || !(strings.HasSuffix(p.Target, "/SKILL.md") || strings.HasSuffix(p.Target, "/references/guide.md")) {
+			return errors.New("travel3 actual instruction pin differs")
+		}
+		seen[p.Target] = true
+	}
+	// This is acceptance of eight fixed, actually recorded scenarios, not a
+	// language judge for arbitrary future advice. Check their decisive facts
+	// and boundaries instead of accepting any eight unrelated strings.
+	want := []struct {
+		skill, applied, scenario string
+		facts                    []string
+	}{
+		{"aerobase-flight-awards", "positive", "40000マイル", []string{"1.25cpp", "1.00cpp", "未確認"}},
+		{"aerobase-flight-awards", "negative", "必要マイル0", []string{"0で割らず", "欠損を0にせず", "医学的安全を保証しない"}},
+		{"aerobase-flight-deals", "positive", "60000円から55000円", []string{"5000円", "取得時刻", "通知成功は未確認"}},
+		{"aerobase-flight-deals", "negative", "HTTP200", []string{"順位を作らない", "設定受付", "配送成功の証拠ではない"}},
+		{"aerobase-travel-activities", "positive", "利用可能180分", []string{"240分", "60分不足", "予約確認は別"}},
+		{"aerobase-travel-activities", "negative", "recovery-safe", []string{"未確認", "断言しない", "本人の利用制限へしない"}},
+		{"all3 current boundary", "current-task-boundary", "API-only", []string{"APIキー利用へ進まず", "別経路迂回は行わず", "全体の上限にしない"}},
+		{"all3 current boundary", "current-task-boundary", "初回canonical Create", []string{"成功後は再Createせず", "原full4083を凍結", "全16未完"}},
+	}
+	for i, w := range want {
+		r := a.Rows[i]
+		if r.Skill != w.skill || r.Applied != w.applied || r.Calls == nil || *r.Calls != 0 || !strings.Contains(r.Case, w.scenario) {
+			return fmt.Errorf("travel3 scenario %d differs", i+1)
+		}
+		for _, fact := range w.facts {
+			if !strings.Contains(r.Decision, fact) {
+				return fmt.Errorf("travel3 scenario %d lost its recorded decision boundary", i+1)
+			}
+		}
+	}
+	return nil
+}
+
 func travel3Digest(b []byte) string { h := sha256.Sum256(b); return hex.EncodeToString(h[:]) }
 func validateTravel3Header(i travel3Install, n travel3Native, r travel3Read) error {
 	if i.New != 3 || i.Created != 1 || i.Files != 18 || i.Bytes != 36454 || i.Instructions != 6 || i.InstructionBytes != 11285 || i.Creator != travel3Actor || i.Manifest != travel3OperationSHA || !recordedFalse(i.Done) || !recordedFalse(i.Implicit) || !recordedFalse(i.ThirdParty) || i.Raw != 0 {
@@ -194,38 +274,24 @@ func validatedTravel3Dispositions(t *testing.T) map[string]cohortLedgerRow {
 		t.Fatal("travel3 actual bundle file count")
 	}
 	var discovery struct {
-		Found     int   `json:"found_count"`
-		Parse     int   `json:"parse_error_count"`
-		Elsewhere int   `json:"same_names_other_paths"`
-		Exited    *bool `json:"process_tree_exit_confirmed"`
-		Rows      []struct {
-			Name        string `json:"name"`
-			Enabled     *bool  `json:"enabled"`
-			Description *bool  `json:"description_matches"`
-		} `json:"found"`
+		Found     int                   `json:"found_count"`
+		Parse     int                   `json:"parse_error_count"`
+		Elsewhere int                   `json:"same_names_other_paths"`
+		Exited    *bool                 `json:"process_tree_exit_confirmed"`
+		Rows      []travel3DiscoveryRow `json:"found"`
 	}
 	if json.Unmarshal(rawPins["discovery"], &discovery) != nil || discovery.Found != 3 || discovery.Parse != 0 || discovery.Elsewhere != 0 || !recordedTrue(discovery.Exited) || len(discovery.Rows) != 3 {
 		t.Fatal("travel3 fresh metadata incomplete")
 	}
 	found := map[string]bool{}
 	for _, r := range discovery.Rows {
-		if found[r.Name] || bodies[r.Name+"/SKILL.md"] == nil || !recordedTrue(r.Enabled) || !recordedTrue(r.Description) {
+		if found[r.Name] || validateTravel3DiscoveryRow(r, bodies) != nil {
 			t.Fatal("travel3 discovery target mismatch")
 		}
 		found[r.Name] = true
 	}
-	var application struct {
-		Actor    string            `json:"actor"`
-		Read     *bool             `json:"current_instructions_literally_read_before_decisions"`
-		Applied  *bool             `json:"all_scenario_meanings_applied"`
-		Buffers  int               `json:"instruction_buffers"`
-		Bytes    int               `json:"instruction_bytes"`
-		Count    int               `json:"explicit_decision_count"`
-		Service  int               `json:"new_service_or_booking_payment_monitoring_or_notification_operations"`
-		Implicit *bool             `json:"implicit_skill_selection_proven"`
-		Rows     []json.RawMessage `json:"decisions"`
-	}
-	if json.Unmarshal(rawPins["application"], &application) != nil || application.Actor != travel3Actor || !recordedTrue(application.Read) || !recordedTrue(application.Applied) || application.Buffers != 6 || application.Bytes != 11285 || application.Count != 8 || len(application.Rows) != 8 || application.Service != 0 || !recordedFalse(application.Implicit) {
+	var application travel3Application
+	if json.Unmarshal(rawPins["application"], &application) != nil || validateTravel3Application(application, bodies) != nil {
 		t.Fatal("travel3 actual bounded text application differs")
 	}
 	var structure struct {
@@ -264,6 +330,64 @@ func validatedTravel3Dispositions(t *testing.T) map[string]cohortLedgerRow {
 		t.Fatal("travel3 actual acceptance missing live row")
 	}
 	return result
+}
+
+func TestTravel3RejectsWrongCentralRootAndUnrelatedDecisions(t *testing.T) {
+	var op struct {
+		Files []struct {
+			Target string `json:"target"`
+			Body   string `json:"content_base64"`
+		} `json:"files"`
+	}
+	loadPublicReceipt(t, "skills-3080-operations/create-travel3-214717.json", &op)
+	bodies := map[string][]byte{}
+	for _, f := range op.Files {
+		b, e := base64.StdEncoding.DecodeString(f.Body)
+		if e != nil {
+			t.Fatal(e)
+		}
+		bodies[f.Target] = b
+	}
+	var d struct {
+		Rows []travel3DiscoveryRow `json:"found"`
+	}
+	loadPublicReceipt(t, "skills-3080-travel3-discovery214717.json", &d)
+	for _, row := range d.Rows {
+		if e := validateTravel3DiscoveryRow(row, bodies); e != nil {
+			t.Fatal(e)
+		}
+		row.Central = nil
+		if validateTravel3DiscoveryRow(row, bodies) == nil {
+			t.Fatal("missing selected central root accepted")
+		}
+		v := false
+		row.Central = &v
+		if validateTravel3DiscoveryRow(row, bodies) == nil {
+			t.Fatal("different selected central root accepted")
+		}
+	}
+	for _, kind := range []string{"unrelated decision", "wrong skill", "different instruction", "missing per-case call count"} {
+		t.Run(kind, func(t *testing.T) {
+			var a travel3Application
+			loadPublicReceipt(t, "skills-3080-travel3-application214717.json", &a)
+			if e := validateTravel3Application(a, bodies); e != nil {
+				t.Fatal(e)
+			}
+			switch kind {
+			case "unrelated decision":
+				a.Rows[0].Decision = "現在の予約が確定した。"
+			case "wrong skill":
+				a.Rows[4].Skill = "aerobase-flight-deals"
+			case "different instruction":
+				a.Pins[0].Target = a.Pins[1].Target
+			case "missing per-case call count":
+				a.Rows[7].Calls = nil
+			}
+			if validateTravel3Application(a, bodies) == nil {
+				t.Fatal("invalid recorded application accepted")
+			}
+		})
+	}
 }
 func TestTravel3RejectsMissingOrInflatedIssuanceAndBoundaryClaims(t *testing.T) {
 	for _, kind := range []string{"missing frozen", "different full review", "replayed creation", "different native call", "grant escalation", "current IDs unverified"} {

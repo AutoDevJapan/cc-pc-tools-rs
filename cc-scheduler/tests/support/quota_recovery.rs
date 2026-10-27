@@ -328,6 +328,20 @@ fn dependency_continuation_is_consumed_once_and_later_work_uses_its_own_result()
 }
 
 #[test]
+fn dependency_continuation_retains_the_ordinary_independent_review_default() {
+    let (mut f,mut sub)=grok_fixture();
+    let row=&mut sub.db["items"][1];row["resume_generation"]=json!(3);row["dependency_generation"]=json!(1);
+    f.e.backend.records[1]["todo_resume_generation"]=json!(2);
+    row["subwork_continuation"]=cc_job_policy::subwork_continuation::request(row,&f.e.backend.records[1],&f.e.backend.records[0]).unwrap();
+    f.e.backend.quota_inventory["anthropic"]=json!({"at":T,"verified":true,"available":true,"exhausted":false});
+    write_json(&f.e.todo_path,&sub.db,1).unwrap();
+    let prepared=f.e.prepare(&sub.db["items"][1],sub.repo.to_str().unwrap()).unwrap().unwrap();
+    let selection=&prepared["scheduler"]["selection"];
+    assert_eq!(selection["model"],"anthropic/claude-opus-5-5");assert_eq!(selection["review_excluded_models"],json!(["gpt-6.1-sol"]));
+    assert!(selection["quota_recovery"].is_null());assert!(selection["subwork_continuation"].is_object());
+}
+
+#[test]
 fn gpt_quota_research_uses_another_verified_oauth_route_with_the_original_budget() {
     let (mut f, sub) = gpt_research_fixture();
     let original = f.e.backend.records[1].clone();

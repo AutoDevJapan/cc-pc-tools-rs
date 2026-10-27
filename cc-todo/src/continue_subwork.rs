@@ -36,6 +36,21 @@ pub(crate) fn record(
     if parent.as_deref() != Some(actor_id) {
         return Err("subwork_continuation_parent_not_current".into());
     }
+    let parent_row = db["items"]
+        .as_array()
+        .into_iter()
+        .flatten()
+        .find(|p| p["id"] == row["subwork"]["parent_todo_id"])
+        .ok_or("subwork_continuation_parent_missing")?;
+    let current_actor = if parent_row["worker_receipt"].is_object() {
+        parent_row["worker_receipt"]["job"] == actor_id
+            && parent_row["worker_receipt"]["generation"] == parent_row["resume_generation"]
+    } else {
+        parent_row["scheduler"]["job"] == actor_id
+    };
+    if !current_actor {
+        return Err("subwork_continuation_parent_generation_changed".into());
+    }
     if jobs.iter().any(|j| {
         (j["todo_id"] == id
             || row["jobs"]

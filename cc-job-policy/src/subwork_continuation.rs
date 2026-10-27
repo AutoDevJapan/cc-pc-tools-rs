@@ -18,6 +18,9 @@ pub fn parent_registered(db: &Value, item: &Value, actor: &Value) -> bool {
     db["items"].as_array().into_iter().flatten().any(|parent| {
         parent["id"] == actor["todo_id"]
             && parent["id"] == item["subwork"]["parent_todo_id"]
+            && !cancellation::owner_stopped(parent, actor)
+            && parent["owner_stopped"] != true
+            && text(&parent["scheduler"], "owner_stop_job").is_empty()
             && actor["subwork"].is_null()
             && text(actor, "parent_job_id").is_empty()
             && parent["jobs"]
@@ -190,6 +193,13 @@ pub fn receipt(
         || target["task_type"] != item["subwork"]["kind"]
         || text(target, "launch_key").is_empty()
         || target["launch_key"] == source["launch_key"]
+        || (quota::provider(text(target, "model")) == Some("openai")
+            && quota::safe_openai_selector(
+                health,
+                Some(text(target, "capacity_account_selector")),
+                now,
+            )
+            .is_none())
     {
         return None;
     }
@@ -199,10 +209,11 @@ pub fn receipt(
             safe_health[provider][field] = health[provider][field].clone();
         }
     }
+    safe_health["openai"]["safe_routes"] = health["openai"]["safe_routes"].clone();
     Some(
         json!({"version":1,"request":request,"launch_key":target["launch_key"],"scope_sha256":hash(&quota::scope(target)),
         "model":target["model"],"effort":target["effort"],"model_origin":target["model_origin"],"effort_origin":target["effort_origin"],
-        "health":safe_health,"at":now}),
+        "selector":target["capacity_account_selector"],"health":safe_health,"at":now}),
     )
 }
 /// Link may transfer exactly once to the next generation. No historical record is edited.
@@ -235,6 +246,7 @@ pub fn verify(
     for field in ["model", "effort", "model_origin", "effort_origin"] {
         initial[field] = proof[field].clone();
     }
+    initial["capacity_account_selector"] = proof["selector"].clone();
     let original_at = proof["at"].as_f64().unwrap_or(f64::NAN);
     item["subwork_continuation"] == *request
         && target["subwork"] == item["subwork"]

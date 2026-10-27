@@ -104,6 +104,8 @@ fn forged_or_stale_continuation_is_rejected_without_modifying_the_store() {
         "owner",
         "pending",
         "stop",
+        "parent_stop",
+        "parent_generation",
         "live",
         "cancel",
         "relation",
@@ -116,6 +118,8 @@ fn forged_or_stale_continuation_is_rejected_without_modifying_the_store() {
             "owner" => f.jobs[0]["work_owner"]["worktree"] = json!("elsewhere"),
             "pending" => f.db["items"][1]["wait_on"] = json!([99]),
             "stop" => f.db["items"][1]["owner_stopped"] = json!(true),
+            "parent_stop" => f.db["items"][0]["stopped"] = json!(true),
+            "parent_generation" => f.db["items"][0]["scheduler"]["job"] = json!("new-owner"),
             "live" => {
                 f.jobs[1]["pid"] = f.jobs[0]["pid"].clone();
                 f.jobs[1]["pid_created"] = f.jobs[0]["pid_created"].clone();

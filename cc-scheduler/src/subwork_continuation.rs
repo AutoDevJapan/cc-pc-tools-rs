@@ -61,6 +61,12 @@ pub(crate) fn finalize(
         return Err(Error("InputRejected"));
     }
     let health = backend.quota_recovery_inventory()?;
+    if cc_job_policy::quota_recovery::provider(s(&selection["model"])) == Some("openai") {
+        let selector =
+            cc_job_policy::quota_recovery::safe_openai_selector(&health, None, backend.clock())
+                .ok_or(Error("ResourceWait"))?;
+        selection["capacity_account_selector"] = json!(selector);
+    }
     let mut target = selection.clone();
     target["cwd"] = item["scheduler"]["worktree"].clone();
     target["launch_key"] = item["scheduler"]["key"].clone();

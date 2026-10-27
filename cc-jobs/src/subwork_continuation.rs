@@ -27,6 +27,7 @@ impl Context {
             return Err(Error::new("subwork continuation preparation changed"));
         }
         job["subwork_continuation"] = proof.clone();
+        job["capacity_account_selector"] = proof["selector"].clone();
         let source = self.load(s(&proof["request"], "source_job"))?;
         if job["model"] != proof["model"]
             || job["model_origin"] != proof["model_origin"]

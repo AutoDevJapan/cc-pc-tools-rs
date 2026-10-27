@@ -244,6 +244,7 @@ fn research_admission(gpt: bool, case: &str) {
             {"selector":"p000003","aliases":["p000003"],"at":t.rt.epoch(),"verified":true}
         ]);
     }
+    if case=="continuation_legacy" {for key in cc_job_policy::subwork_continuation::RETRY_FIELDS {source.as_object_mut().unwrap().remove(key);}source.as_object_mut().unwrap().remove("capacity_account_selector");}
     t.put(source.clone());
     let mut target = row["scheduler"]["selection"].clone();
     target["cwd"] = source["cwd"].clone();
@@ -255,7 +256,6 @@ fn research_admission(gpt: bool, case: &str) {
         source["todo_resume_generation"]=json!(2);t.put(source.clone());
         target["effort_origin"]=json!("policy");
         target.as_object_mut().unwrap().remove("quota_recovery");
-        target.as_object_mut().unwrap().remove("capacity_account_selector");
         let actor=&f.jobs[0];
         let request=cc_job_policy::subwork_continuation::request(&row,&source,actor).unwrap();
         target["subwork_continuation"]=cc_job_policy::subwork_continuation::receipt(&request,&row,&source,actor,&target,
@@ -334,6 +334,7 @@ fn research_admission(gpt: bool, case: &str) {
         assert!(j["quota_recovery"].is_null());assert!(j["subwork_continuation"].is_object());
         match case {
             "continuation_health"=>t.rt.quota_recovery_inventory.lock().unwrap()["openai"]["verified"]=json!(false),
+            "continuation_selected_unknown"=>t.rt.quota_recovery_inventory.lock().unwrap()["openai"]["safe_routes"][0]["verified"]=json!(false),
             "continuation_source"=>{let mut changed=source.clone();changed["finite_subwork"]["spec_sha256"]=json!("wrong");t.put(changed);},
             "continuation_generation"=>{db["items"][1]["resume_generation"]=json!(5);fs::write(&paths.store,db.to_string()).unwrap();},
             "continuation_stop"=>{db["items"][1]["owner_stopped"]=json!(true);fs::write(&paths.store,db.to_string()).unwrap();},
@@ -371,7 +372,7 @@ fn research_admission(gpt: bool, case: &str) {
         for route in health["openai"]["safe_routes"].as_array_mut().unwrap(){route["at"]=json!(now);}
     }
     let slot = t.ctx.admit(s(&j, "id"));
-    if !["normal","continuation_normal","capacity_same","capacity_switch","capacity_anthropic","capacity_metadata","capacity_wait"].contains(&case) {
+    if !["normal","continuation_normal","continuation_legacy","capacity_same","capacity_switch","capacity_anthropic","capacity_metadata","capacity_wait"].contains(&case) {
         assert!(slot.is_err() || slot.unwrap().is_none(), "{case}");
         assert_ne!(t.ctx.load(s(&j, "id")).unwrap()["status"], "running");
         return;
@@ -438,7 +439,7 @@ fn research_admission(gpt: bool, case: &str) {
 
 #[test]
 fn dependency_continuation_registers_links_and_rechecks_before_real_queue_admission() {
-    for case in ["continuation_normal","continuation_health","continuation_source","continuation_generation","continuation_stop","continuation_scope"] {
+    for case in ["continuation_normal","continuation_legacy","continuation_health","continuation_selected_unknown","continuation_source","continuation_generation","continuation_stop","continuation_scope"] {
         research_admission(true,case);
     }
 }

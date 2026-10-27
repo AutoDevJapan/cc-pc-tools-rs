@@ -157,3 +157,24 @@ func TestOfficialCI3387UpdaterRecognizesDeployedDiagnostic(t *testing.T) {
 		t.Fatal("known diagnostic software accepted with another source or hash")
 	}
 }
+
+func TestOfficialCI3387UpdaterRecognizesConcurrentPublishedSoftware(t *testing.T) {
+	raw, err := os.ReadFile("../docs/evidence/official-ci3387-known-guard-baseline-81700412.json")
+	if err != nil {
+		t.Fatal(err)
+	}
+	var record struct {
+		Domain       string `json:"domain"`
+		RepositoryID int64  `json:"repository_id"`
+		Source       string `json:"source_head"`
+		SHA          string `json:"software_sha256"`
+		PR           int    `json:"pull_request"`
+		Evidence     string `json:"evidence_source"`
+	}
+	if json.Unmarshal(raw, &record) != nil || record.Domain != "official-ci3387-known-guard-baseline-v1" || record.RepositoryID != 1406818713 || record.PR != 585 || record.Evidence != "normal-todo-note-3686" || record.SHA != official3894ConcurrentGuardSHA || record.Source != official3894ConcurrentGuardHead || !official3894InstalledBaseline(record.SHA, record.Source) {
+		t.Fatal("normal concurrent software distribution cannot be compared")
+	}
+	if official3894InstalledBaseline(record.SHA, official3894DiagnosticGuardHead) || official3894InstalledBaseline(official3894DiagnosticGuardSHA, record.Source) || official3894InstalledBaseline(strings.Repeat("c", 64), record.Source) {
+		t.Fatal("unknown or mismatched concurrent software identity accepted")
+	}
+}

@@ -3,7 +3,7 @@
   "issue": "https://github.com/AutoDevJapan/cc-pc-tools-rs/issues/283",
   "observed_at": "2026-10-24T08:15:09.0197014+00:00",
   "phase_a": "partial; 647 additional text shapes held by execution review",
-  "phase_b": "有用候補の実配置・統合と個別評価を継続する。現在の評価参照と採否のcoverageはskills-3080-execution-evidence.json/処理表のsummary、採否はskills-3080-adoptions.jsonへ結ぶ。本記録の古いraw/workflow数とsixmile-evaluation-indexは記載された各cohortまでの履歴値で、新しい全読総数ではない。最新の27評価はlatest_received27_assessmentsに全原応答の参照を保存した。全16資料の評価・個別許諾・必要な実導入は未完。",
+  "phase_b": "有用候補の実配置・統合と個別評価を継続する。現在の評価参照と採否のcoverageはskills-3080-execution-evidence.json/処理表のsummary、採否はskills-3080-adoptions.jsonへ結ぶ。本記録の古いraw/workflow数とsixmile-evaluation-indexは記載された各cohortまでの履歴値で、新しい全読総数ではない。最新の35評価はlatest_received35_assessmentsに全原応答の参照を保存した。全16資料の評価・個別許諾・必要な実導入は未完。",
   "catalog_sha256": "2d73c9a038a41cc220a9687b935bfa1e0b315b65d9bd6d3e54ddb4111972876c",
   "source_count": 16,
   "fixed_public_repos": [
@@ -616,7 +616,7 @@
     "guard_client_resource": true,
     "state": "classification_unverified"
   },
-  "recorded_at": "2026-10-27T11:37:51.5113005+00:00",
+  "recorded_at": "2026-10-27T12:46:58.3448924+00:00",
   "total_skill_named_body_read_definition": "This field preserves the historical complete-source subset only. Current raw/workflow primary coverage is projected from the canonical source components and sixmile evaluation index in all_fulltext_primary_paths_including_partial_sources/all_workflow_primary_paths_including_partial_sources, not copied here.",
   "openai_entrypoint_evaluation": {
     "rights_accepted": false,
@@ -2883,9 +2883,9 @@
     "targets": 3,
     "virtual_files": 21,
     "operation": "skills-3080-operations/create-travel-next3-175645.json",
-    "operation_sha256": "c6c69da31049cccd9cc43bbb3df7f3e258453e6fddbf99d0246ab0ee5614aa28",
+    "operation_sha256": "33857beb4e3e42ba3546f303e40f788a891e88b6cec52096cebe078aee41b7f4",
     "bundle": "skills-3080-travel-next3-bundle175645.json",
-    "bundle_sha256": "613fcb7d5fb29aff8c5950a09f344c2b3a79719ca2de94da8635f4b18d881c9e",
+    "bundle_sha256": "f13a94800db4509c5d6d7c01de0640eeebd7b84eb61dc8755977c9867812296c",
     "source_meaning": "skills-3080-travel-next3-source-meaning175645.json",
     "source_meaning_sha256": "dab3ab13d06cab64da11ee882e90861955a9ae701ab9637806f3609129fe2381",
     "parent_current_masked_reads": 3,
@@ -2893,11 +2893,47 @@
     "parent_current_withheld_lines": 47,
     "original_child_profiles_retained": true,
     "existing3048_in_memory_PASS": 3,
-    "normal_source_binding_test_seconds": 3.341,
+    "normal_source_binding_test_seconds": 2.0,
     "new_raw_or_unique_credit": 0,
     "full_content_review_accepted": false,
     "central_existence_checked": false,
     "central_operations": 0,
-    "new_adoptions": 0
+    "new_adoptions": 0,
+    "review_resolution": {
+      "file": "skills-3080-next-travel3-review-resolution175645.json",
+      "sha256": "c29506eae43b00a21c544b5775bfb45a1328a21e43f372e9e2827794c6cfd281",
+      "old_Must": 0,
+      "old_Suggestion": 3,
+      "pointed_reviewer_recheck_pending": true
+    },
+    "previous_source_binding_test_seconds": 3.341
+  },
+  "latest_received35_assessments": {
+    "publisher_job": "20261027-175645-todo-3080",
+    "sixmile": [
+      187,
+      196
+    ],
+    "other": [
+      288,
+      312
+    ],
+    "primary_occurrences": 35,
+    "source_primary_bytes": 723434,
+    "whole_original_contexts": 10,
+    "newest_other8_file": "skills-3080-other8-305312-evaluation175645.json",
+    "newest_other8_sha256": "9988b0d450e6c5d6d54536976f7191b26245dc1ca143494f31ddf2bdf6909855",
+    "actual_newest_reader": "20261027-194701-todo-3778",
+    "old_105225_through304_kept": true,
+    "current_job_resolved_from_normal_task_metadata_before_reception": true,
+    "source_bodies_reopened_for_reception": 0,
+    "new_global_raw_or_workflow_credit": 0,
+    "new_permissions": 0,
+    "new_final_dispositions": 0,
+    "separate_support_records": 43,
+    "original_unknowns_privacy_profiles_and_alias_reuse_preserved": true,
+    "whole16_complete": false,
+    "current_related_main_test_seconds": 8.416,
+    "current_vet_exit": 0
   }
 }

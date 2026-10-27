@@ -38,7 +38,7 @@ func received27Digest(t *testing.T, v any) string {
 
 // Reconstruct complete original packets, including unknown/null/privacy and
 // support fields. Identity-only execution projections cannot replace them.
-func TestReceived27RetainsEveryOriginalPacketAndReader(t *testing.T) {
+func TestReceivedAssessmentPacketsRetainOriginalActorsAndFields(t *testing.T) {
 	files := []struct {
 		name               string
 		rows, sourceFields int
@@ -48,6 +48,7 @@ func TestReceived27RetainsEveryOriginalPacketAndReader(t *testing.T) {
 		{"skills-3080-sixmile-next2-195196-evaluation175645.json", 2, 5},
 		{"skills-3080-other16-288303-evaluation175645.json", 16, 7},
 		{"skills-3080-other1-304304-evaluation175645.json", 1, 7},
+		{"skills-3080-other8-305312-evaluation175645.json", 8, 7},
 	}
 	seen := map[string]bool{}
 	contexts := 0
@@ -105,8 +106,8 @@ func TestReceived27RetainsEveryOriginalPacketAndReader(t *testing.T) {
 				if source[pathAt] != r["path"] || source[shaAt] != r["source_sha256"] || projection["path"] != r["path"] || projection["source_sha256"] != r["source_sha256"] {
 					t.Fatal("normalized identity differs from original source")
 				}
-				if reader != "20261027-072935-todo-3719" && reader != "20261027-105225-todo-3778" {
-					t.Fatal("source reader inferred from publisher or missing")
+				if reader != "20261027-072935-todo-3719" && reader != "20261027-105225-todo-3778" && reader != "20261027-194701-todo-3778" {
+					t.Fatal("original assessment actor inferred from publisher or missing")
 				}
 				if file.sourceFields == 5 {
 					if !reflect.DeepEqual(r["original_read_tuple"], original["read"]) || r["actual_body_reader_inferred_from_assessment_writer"] != false || r["copy_license_accepted"] != false || r["new_final_disposition"] != false {
@@ -177,7 +178,7 @@ func TestReceived27RetainsEveryOriginalPacketAndReader(t *testing.T) {
 			}
 		})
 	}
-	if len(seen) != 27 || contexts != 9 {
+	if len(seen) != 35 || contexts != 10 {
 		t.Fatalf("received coverage differs: %d primaries, %d original packets", len(seen), contexts)
 	}
 }

@@ -4,10 +4,19 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"regexp"
+	"strconv"
 	"time"
 )
 
 const RequalificationDomain = "official-ci3387-expired-original-consumption-v1"
+
+var requalificationProviderJob = regexp.MustCompile(`^[0-9]{8}-[0-9]{6}-todo-([1-9][0-9]*)$`)
+
+func requalificationActor(job string, provider int) bool {
+	m := requalificationProviderJob.FindStringSubmatch(job)
+	return len(m) == 2 && m[1] == strconv.Itoa(provider)
+}
 
 // Requalification records the new live evidence for one in-flight consumption.
 // It has no expiry or reusable grant. The original receipt is retained verbatim
@@ -51,7 +60,7 @@ func (q Requalification) ValidFor(r Receipt) bool {
 		!o.Observed.IsZero() && age >= 0 && age <= time.Minute &&
 		o.Binding == r.Binding && o.Asset == r.Asset && o.Parent == r.Parent &&
 		o.FreshOwnedAnchor && o.SourceVerified && o.JobVerified && o.Active && o.OfficialPublicAsset &&
-		o.ActorJob != "" && len(o.ActorJob) <= 256
+		requalificationActor(o.ActorJob, r.Binding.ProviderTodo)
 }
 
 // RequalifyConsume is an explicit one-shot operation on the original expired
@@ -78,7 +87,7 @@ func (e *Engine) RequalifyConsume(ctx context.Context, id string, use func([]Pay
 		}
 		q := Requalification{RequalificationDomain, originalReceiptDigest(r), o, e.now().UTC()}
 		if !q.ValidFor(r) {
-			return ErrDenied
+			return invalidAt(validationEvidence)
 		}
 		if err = ctx.Err(); err != nil {
 			return err
@@ -102,7 +111,7 @@ func (e *Engine) RequalifyConsume(ctx context.Context, id string, use func([]Pay
 		return err
 	}
 	if !claimed {
-		return ErrDenied
+		return invalidAt(validationPhysical)
 	}
 	if err = ctx.Err(); err != nil {
 		_, err = e.fail(r, err)

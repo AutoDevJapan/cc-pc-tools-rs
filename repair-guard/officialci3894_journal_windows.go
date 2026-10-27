@@ -48,6 +48,9 @@ type official3894Journal struct {
 	closed   bool
 }
 
+var _ oc.Journal = (*official3894Journal)(nil)
+var _ oc.RequalificationJournal = (*official3894Journal)(nil)
+
 func official3894Identity(f *os.File) (oc.Identity, error) {
 	var i syscall.ByHandleFileInformation
 	if syscall.GetFileInformationByHandle(syscall.Handle(f.Fd()), &i) != nil || i.FileAttributes&0x400 != 0 || i.NumberOfLinks != 1 || oc.DefaultStreamOnly(f.Name()) != nil {
@@ -291,7 +294,9 @@ func (s *official3894Journal) Replace(old, next oc.Receipt) error {
 
 func official3894RequalificationTransition(before, next official3894Ticket) bool {
 	if before.Requalification != nil {
-		return reflect.DeepEqual(before.Requalification, next.Requalification) && next.Receipt != nil && next.Requalification.ValidFor(*next.Receipt)
+		return before.Receipt != nil && before.Receipt.State == oc.Consuming &&
+			next.Receipt != nil && (next.Receipt.State == oc.Consumed || next.Receipt.State == oc.Failed) &&
+			reflect.DeepEqual(before.Requalification, next.Requalification) && next.Requalification.ValidFor(*next.Receipt)
 	}
 	if next.Requalification == nil {
 		return true
@@ -335,7 +340,7 @@ func (s *official3894Journal) markConsuming(id string) error {
 
 func (s *official3894Journal) RequalifyForConsumption(old oc.Receipt, q oc.Requalification) error {
 	if s.read() != nil || s.ticket.Receipt == nil || !reflect.DeepEqual(*s.ticket.Receipt, old) ||
-		old.State != oc.Complete || s.ticket.Requalification != nil || !q.ValidFor(old) {
+		old.State != oc.Complete || s.ticket.Requalification != nil || !q.ValidFor(old) || s.sequence+2 > 16 {
 		return oc.ErrDenied
 	}
 	if e := s.markConsuming(old.ID); e != nil {

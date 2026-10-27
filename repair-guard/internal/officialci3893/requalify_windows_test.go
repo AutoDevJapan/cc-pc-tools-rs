@@ -36,7 +36,7 @@ func expiredFixture(t *testing.T) (*fixture, Receipt, *requalificationFixtureJou
 	r := f.create(t)
 	f.now = r.Expires.Add(time.Hour)
 	f.authority.evidence.Observed = f.now
-	f.authority.evidence.ActorJob = "synthetic-current-3888-job"
+	f.authority.evidence.ActorJob = "20261027-000001-todo-3888"
 	j := &requalificationFixtureJournal{fixtureJournal: f.journal}
 	f.engine.journal = j
 	return f, r, j
@@ -84,7 +84,7 @@ func TestExpiredOriginalRequalificationConsumesSameSnapshotsOnce(t *testing.T) {
 }
 
 func TestExpiredOriginalRequalificationRejectsBeforeWriting(t *testing.T) {
-	for _, change := range []string{"not-expired", "pending", "consuming", "consumed", "failed", "binding", "asset", "parent", "lifetime", "manifest", "evidence-stale", "evidence-future", "evidence-binding", "stopped", "actor-missing", "physical", "cancelled", "no-journal-capability", "corrupt"} {
+	for _, change := range []string{"not-expired", "pending", "consuming", "consumed", "failed", "binding", "asset", "parent", "lifetime", "manifest", "evidence-stale", "evidence-future", "evidence-binding", "stopped", "actor-missing", "other-actor", "physical", "cancelled", "no-journal-capability", "corrupt"} {
 		t.Run(change, func(t *testing.T) {
 			f, r, j := expiredFixture(t)
 			ctx, cancel := context.WithCancel(context.Background())
@@ -121,6 +121,8 @@ func TestExpiredOriginalRequalificationRejectsBeforeWriting(t *testing.T) {
 				f.authority.evidence.Active = false
 			case "actor-missing":
 				f.authority.evidence.ActorJob = ""
+			case "other-actor":
+				f.authority.evidence.ActorJob = "20261027-000001-todo-3894"
 			case "physical":
 				if err := os.Remove(f.path(r, "readme.txt")); err != nil {
 					t.Fatal(err)

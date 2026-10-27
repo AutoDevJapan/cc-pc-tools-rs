@@ -514,8 +514,25 @@ func official3894IndependentJob(job object) bool {
 // Only the normal metadata reader projects these three existing tasks. It
 // neither creates a registry nor returns notes, original prompts or credentials.
 func official3894SourceCheck(ctx context.Context, saved *official3894Source, consume bool) (official3894Source, error) {
-	var result official3894Source
+	source, _, err := official3894SourceCheckWithActor(ctx, saved, consume)
+	return source, err
+}
+
+type official3894VerifiedActor string
+
+func official3894SourceCheckWithActor(ctx context.Context, saved *official3894Source, consume bool) (official3894Source, official3894VerifiedActor, error) {
+	// Capture once. The actor persisted by Observe is exactly the caller passed
+	// through the normal source/assignment/process checks, never a later read.
 	caller := os.Getenv("CC_JOB_ID")
+	source, err := official3894SourceCheckCaller(ctx, saved, consume, caller)
+	if err != nil {
+		return source, "", err
+	}
+	return source, official3894VerifiedActor(caller), nil
+}
+
+func official3894SourceCheckCaller(ctx context.Context, saved *official3894Source, consume bool, caller string) (official3894Source, error) {
+	var result official3894Source
 	m := currentSubworkJobName.FindStringSubmatch(caller)
 	if len(m) != 3 || (m[2] != "3894" && m[2] != "3888") || (consume && m[2] != "3888") {
 		return result, official3894Error("registered_actor_required")
@@ -695,7 +712,8 @@ func (a official3894Authority) Observe(ctx context.Context) (oc.Evidence, error)
 	if a.fs.ParentIdentity() != (oc.Identity{Volume: a.owned.Volume, FileID: a.owned.FileID, Birth: a.owned.Birth}) {
 		return out, official3894Error("sdk_anchor_identity_changed")
 	}
-	if _, e := official3894SourceCheck(ctx, &a.source, a.consume); e != nil {
+	_, caller, e := official3894SourceCheckWithActor(ctx, &a.source, a.consume)
+	if e != nil {
 		return out, e
 	}
 	if e := official3894GitHub(ctx); e != nil {
@@ -721,7 +739,7 @@ func (a official3894Authority) Observe(ctx context.Context) (oc.Evidence, error)
 		return out, official3894Error("original_issuer_identity_changed")
 	}
 	binding := oc.FixedBinding(a.source.Head, a.source.Registration, official3894Hash(a.raw), a.source.CreatorJob)
-	out = oc.Evidence{Parent: a.fs.ParentIdentity(), FreshOwnedAnchor: true, Binding: binding, Asset: oc.OfficialAsset(), Observed: observed, SourceVerified: true, JobVerified: true, Active: true, OfficialPublicAsset: true, ActorJob: os.Getenv("CC_JOB_ID")}
+	out = oc.Evidence{Parent: a.fs.ParentIdentity(), FreshOwnedAnchor: true, Binding: binding, Asset: oc.OfficialAsset(), Observed: observed, SourceVerified: true, JobVerified: true, Active: true, OfficialPublicAsset: true, ActorJob: string(caller)}
 	return out, nil
 }
 

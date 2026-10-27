@@ -46,6 +46,8 @@ and `launch_performed:false`.
 | Caller-supplied root, repeated/mixed/unknown flags | CLI | One bounded machine JSON refusal; no side effects |
 | Modified/copied ticket, pending receipt, replaced physical object, unknown sibling or altered public bytes | Verify/consume | Deny; no general access grant |
 | Complete receipt, exact original CI and registered provider actor | Consume | One callback sees the same verified public bytes; concurrent/repeated consumers fail |
+| Expired original complete receipt, exact current CI/provider and all original objects | Explicit requalify-consume | Recheck authority while snapshots are pinned; retain original expiry and durably consume once in this execution |
+| Expired original with insufficient journal space for start and terminal frames | Explicit requalify-consume | Refuse before creating a consumption marker or handing off bytes |
 | Interrupted writes or callback failure | Restart | Preserve explicit pending/consuming/failed state; do not adopt or replay |
 | Unrelated original source/path | Existing guard | Existing classification remains unchanged |
 | Original CI provider in its own repository and current branch | Verify/consume | Do not borrow the public Skills repository rule; another repository or branch still fails |

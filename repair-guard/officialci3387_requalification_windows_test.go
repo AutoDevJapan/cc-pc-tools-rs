@@ -33,7 +33,7 @@ func expiredJournalFixture(t *testing.T) (*official3894Journal, oc.Receipt, oc.R
 	b, _ := json.Marshal(r)
 	now := time.Now().UTC()
 	q := oc.Requalification{Domain: oc.RequalificationDomain, OriginalReceiptSHA256: official3894Hash(b), AcceptedAt: now, Evidence: oc.Evidence{
-		Parent: r.Parent, Binding: r.Binding, Asset: r.Asset, Observed: now, FreshOwnedAnchor: true, SourceVerified: true, JobVerified: true, Active: true, OfficialPublicAsset: true, ActorJob: "synthetic-current-3888-job",
+		Parent: r.Parent, Binding: r.Binding, Asset: r.Asset, Observed: now, FreshOwnedAnchor: true, SourceVerified: true, JobVerified: true, Active: true, OfficialPublicAsset: true, ActorJob: "20261027-000001-todo-3888",
 	}}
 	return s, r, q
 }
@@ -128,7 +128,7 @@ func TestOfficialCI3387RequalificationNativePersistenceAndReplay(t *testing.T) {
 }
 
 func TestOfficialCI3387RequalificationRejectsChangedProofBeforeClaim(t *testing.T) {
-	for _, kind := range []string{"digest", "id", "domain", "binding", "asset", "time", "stale", "future", "actor", "stopped", "original-lifetime"} {
+	for _, kind := range []string{"digest", "id", "domain", "binding", "asset", "time", "stale", "future", "actor", "other-actor", "stopped", "original-lifetime"} {
 		t.Run(kind, func(t *testing.T) {
 			s, r, q := expiredJournalFixture(t)
 			before := journalBytes(t, s)
@@ -152,6 +152,8 @@ func TestOfficialCI3387RequalificationRejectsChangedProofBeforeClaim(t *testing.
 				q.Evidence.Observed = q.AcceptedAt.Add(time.Nanosecond)
 			case "actor":
 				q.Evidence.ActorJob = ""
+			case "other-actor":
+				q.Evidence.ActorJob = "20261027-000001-todo-3894"
 			case "stopped":
 				q.Evidence.Active = false
 			case "original-lifetime":
@@ -171,11 +173,15 @@ func TestOfficialCI3387RequalificationRejectsChangedProofBeforeClaim(t *testing.
 }
 
 func TestOfficialCI3387RequalificationRetainsProofAndInterruptedClaim(t *testing.T) {
-	for _, kind := range []string{"proof-change", "proof-removal", "frame-limit"} {
+	for _, kind := range []string{"proof-change", "proof-removal", "frame-limit", "one-frame-left"} {
 		t.Run(kind, func(t *testing.T) {
 			s, r, q := expiredJournalFixture(t)
-			if kind == "frame-limit" {
-				for s.sequence < 16 {
+			if kind == "frame-limit" || kind == "one-frame-left" {
+				limit := 16
+				if kind == "one-frame-left" {
+					limit = 15
+				}
+				for s.sequence < limit {
 					if err := s.append(s.ticket); err != nil {
 						t.Fatal(err)
 					}
@@ -187,8 +193,11 @@ func TestOfficialCI3387RequalificationRetainsProofAndInterruptedClaim(t *testing
 				if !bytes.Equal(before, journalBytes(t, s)) {
 					t.Fatal("full journal was changed")
 				}
-				if _, err := s.Load(r.ID); err == nil {
-					t.Fatal("interrupted claim replayed complete prefix")
+				if _, err := os.Lstat(s.path + ".consuming"); !os.IsNotExist(err) {
+					t.Fatal("insufficient terminal frame space irreversibly claimed consumption")
+				}
+				if loaded, err := s.Load(r.ID); err != nil || !reflect.DeepEqual(loaded, r) {
+					t.Fatal("capacity refusal did not retain the original unclaimed receipt")
 				}
 				return
 			}
@@ -214,7 +223,7 @@ func TestOfficialCI3387RequalificationRetainsProofAndInterruptedClaim(t *testing
 	}
 }
 
-func TestOfficialCI3387SourceBudgetKnownSoftwarePair(t *testing.T) {
+func TestOfficialCI3387RequalificationRejectsMixedSoftwarePairs(t *testing.T) {
 	if !official3894InstalledBaseline("ad5d37c7b216264d2e99007a2e6f3468e7529803454d88f1954cc74a7beb4783", "0d97c1952ff6f8b47a3d40939941639b35309408") {
 		t.Fatal("accepted PR586 software cannot be compared by its successor")
 	}
@@ -222,6 +231,61 @@ func TestOfficialCI3387SourceBudgetKnownSoftwarePair(t *testing.T) {
 		if official3894InstalledBaseline(p[0], p[1]) {
 			t.Fatal("unknown or mixed software pair was adopted")
 		}
+	}
+}
+
+func TestOfficialCI3387RequalificationPreservesAcceptedMaskedDistribution(t *testing.T) {
+	const acceptedSHA = "c80d60ab470e52ef9fbe53c1e039d1fcdc31429e291c3f156a953b9b6059d02f"
+	const acceptedHead = "444eae8714ee8b6199c9ed95208ac40272aeb8ce"
+	if !official3894InstalledBaseline(acceptedSHA,acceptedHead) {t.Fatal("normally deployed PR596 software cannot be compared by this successor")}
+	for _, p:=range [][2]string{{acceptedSHA,official3894SharedGuardHead},{official3894SharedGuardSHA,acceptedHead},{strings.Repeat("0",64),acceptedHead}} {
+		if official3894InstalledBaseline(p[0],p[1]) {t.Fatal("unknown or mixed masked-distribution software pair was adopted")}
+	}
+}
+
+func TestOfficialCI3387RequalificationTerminalFramesOnlyMoveForward(t *testing.T) {
+	for _, terminal := range []oc.State{oc.Consumed, oc.Failed} {
+		for _, nextState := range []oc.State{oc.Complete, oc.Consuming, oc.Consumed, oc.Failed} {
+			t.Run(string(terminal)+"-to-"+string(nextState), func(t *testing.T) {
+				s, r, q := expiredJournalFixture(t)
+				if err := s.RequalifyForConsumption(r, q); err != nil {
+					t.Fatal(err)
+				}
+				next := *s.ticket.Receipt
+				next.State = terminal
+				if err := s.Replace(*s.ticket.Receipt, next); err != nil {
+					t.Fatal(err)
+				}
+				before := journalBytes(t, s)
+				changed := s.ticket
+				copy := *changed.Receipt
+				copy.State = nextState
+				changed.Receipt = &copy
+				if err := s.append(changed); err == nil {
+					t.Fatal("terminal requalification state moved or repeated")
+				}
+				if !bytes.Equal(before, journalBytes(t, s)) {
+					t.Fatal("invalid terminal state frame was written")
+				}
+			})
+		}
+	}
+}
+
+func TestOfficialCI3387RequalificationReservesBothFrames(t *testing.T) {
+	s, r, q := expiredJournalFixture(t)
+	for s.sequence < 14 {
+		if err := s.append(s.ticket); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if err := s.RequalifyForConsumption(r, q); err != nil {
+		t.Fatal(err)
+	}
+	next := *s.ticket.Receipt
+	next.State = oc.Consumed
+	if err := s.Replace(*s.ticket.Receipt, next); err != nil || s.sequence != 16 {
+		t.Fatal("capacity reservation did not allow terminal commit", err)
 	}
 }
 

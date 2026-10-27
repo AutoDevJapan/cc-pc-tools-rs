@@ -1,0 +1,57 @@
+# 4011：データを変更せずVSSの作成排他を照合する
+
+Volsnap25が07:25に再発したため、本担当の3200DWORDは10:10に元の未設定へ戻した。
+C→C/50GiBは保持し、復元用データの消失を清掃成功へ分類しない。
+次の保存先分離案には、新しいsnapshotとの競合を防ぐ通常VSSの排他が必要である。
+現在0件を何度読んでも、その後の作成との競合は防げない。
+
+この段階で追加するGo helperは**空のsnapshot setの排他を1回調べるだけ**である。
+保存先/上限/レジストリ/保護設定の変更、volumeの追加、snapshot作成/削除、writer metadata取得、
+private fileの読取を行う関数やモードは含めない。別モデルでABI/排他の解釈/後始末を確認してから
+通常AdminBrokerで実行する。新製品・監視・常駐・定期taskではなく4011の一度きりの診断である。
+
+## 実際に確かめる条件
+
+1. 同一process内の異なるIVssBackupComponentsを2つ作成する。COMは同じOS threadで扱う。
+2. InitializeForBackup、no-writersのclient-accessible context、copyのbackup stateを設定する。
+3. 最初のStartSnapshotSetがS_OKのときだけ、その空集合を自分の所有として記録する。
+4. 次のobjectがVSS_E_SNAPSHOT_SET_IN_PROGRESSを返すかを記録する。
+   両方S_OK、別のerror、timeoutなら排他が確認できたことにしない。
+5. 自分のStartがS_OKだった空集合だけにAbortBackupを呼び、両objectをReleaseしてから
+   CoUninitializeする。既存の他担当のbackupの中止・service停止はしない。
+6. 前後の通常observerでsnapshot/point/storage設定/イベントを照合する。
+   既存snapshotが現れた場合は保持し、Dへ切り替えるために削除しない。
+
+helperのJSONは実HRESULT、所有空集合の件数、Abort結果、Release件数を返す。
+成功したgetterやCOM呼出しだけで排他を成立扱いにしない。
+`exclusion_observed`は同一processの2object間の観測に限り、保存先移行の原子性を証明しない。
+従ってこのprobeだけを根拠にD変更を実行しない。GUIDやwriter名/ファイル一覧は出力しない。
+
+呼出側はCREATE_NO_WINDOW、stdout/stderr非同期回収、90秒の有限期限で起動する。
+期限切れはこの呼出しで作ったhelperだけを停止して原結果を保存し、同じprobeの無限再試行をしない。
+helperには子processがなく、AddToSnapshotSet/DoSnapshotSet/PrepareForBackupを呼ばない。
+中断時も「Abort成功」とは記録せず、通常observerと次の正規VSS状態確認で照合する。
+
+候補sourceはgofmt/Go vet/通常Go buildを成功確認し、引数なしは期待どおりexit2で拒否した。
+取得したMicrosoftの公式vsbackup.hからinterface順を独立に数え、使用する5メソッドの
+slot（5/6/15/35/36）がすべてsourceと一致することも確認した。実probeは未実行である。
+
+## 次の保存先分離の候補と未確認点
+
+CとDは異なるdisk番号のNVMe、DはNTFS/Healthy/Online、空き約2.1TBで、Dを源・保存先にする
+既存VSS関連付け/snapshotは現観測にない。私的ファイルを一括移動する案ではない。
+別物理ドライブの識別、実所有、既存の依存/保持設定を必要な匿名metadataで確認し、
+変更に必要な排他とproviderの保持条件を説明できた場合だけ、正の50GiBを使う既存APIを検討する。
+
+候補APIのChangeDiffAreaMaximumSize(C,D,50GiB)は、成功した場合にどの関連付けが残るか、
+既存C→Cがある場合やVSS排他中に呼べるか、client OSでどう動くかをまだ実証していない。
+この候補の実装・実適用は本probeに含めない。0への縮小・Delete・保護停止で切替を強制しない。
+条件未達なら原C→C/50GiBを保持し、既存の担当4011を未完了のまま技術修復を続ける。
+
+一次資料：
+
+- [StartSnapshotSet](https://learn.microsoft.com/en-us/windows/win32/api/vsbackup/nf-vsbackup-ivssbackupcomponents-startsnapshotset)
+- [AbortBackup](https://learn.microsoft.com/en-us/windows/win32/api/vsbackup/nf-vsbackup-ivssbackupcomponents-abortbackup)
+- [Microsoft WinSDKのinterface順とCreateのinline](https://github.com/microsoft/win32metadata/blob/main/generation/WinSDK/RecompiledIdlHeaders/um/vsbackup.h)
+- [ChangeDiffAreaMaximumSize](https://learn.microsoft.com/en-us/windows/win32/api/vsmgmt/nf-vsmgmt-ivssdifferentialsoftwaresnapshotmgmt-changediffareamaximumsize)
+- [AddDiffArea](https://learn.microsoft.com/en-us/windows/win32/api/vsmgmt/nf-vsmgmt-ivssdifferentialsoftwaresnapshotmgmt-adddiffarea)

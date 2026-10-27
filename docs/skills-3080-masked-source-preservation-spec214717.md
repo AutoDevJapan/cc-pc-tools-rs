@@ -12,6 +12,7 @@
 - When: そのSkillの出力に、原文を行順のまま保った`<source-directory-name>/references/original-skill.masked.txt`があり、伏字は`[WITHHELD physical line N]`という該当行番号のmarkerだけである。
 - Then: 原本は元archiveに残したまま、実際の出力byteを原本から計算した表示へ照合し、他のactor/review/Must0・CreateNew・現在ID/hashの条件へ進める。callerの「安全な要約」という自己申告だけでは受け入れない。
 - 見えている行の変更、行の欠落・追加・並替え、別行番号、別target、全行伏字、個別noticeの省略・伏字、support/notice等の別role、原本/tuple/hash・未取得647等の条件違反は拒否する。伏字表示には少なくとも1つの伏字と空白以外の見えている行を必要とする。
+- 原文に元からあるmarkerと表示が同一なら、新しい伏字に数えない。markerそのものしか見えていない表示も可視内容の条件を満たさない。元markerと新しい実伏字が混在する場合は、本当に置き換えた行だけを数える。
 - この表示形式はLFを用い、元のLF/CRLFの物理行と終端改行の有無を照合する。元SHAはraw原本のまま、表示SHAとは分ける。元のrawコピーがある従来の受入は保つ。
 
 新しい分岐は既存の固定取得済みsourceの`skill_entry`で、名前が正確に`SKILL.md`のprimaryだけに限る。原本の内部検証、notice全byte、登録者・別モデル全文review・出力SHA、中央の不在/新規作成、元の秘密・顧客・未分類保護を変更しない。

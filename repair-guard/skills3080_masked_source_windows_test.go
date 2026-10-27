@@ -120,3 +120,26 @@ func TestSkills3080MaskedViewCannotReplaceNoticeOrSupportingScript(t *testing.T)
 		})
 	}
 }
+
+func TestSkills3080OriginalMarkerIsNotNewRedaction(t *testing.T) {
+	for _, c := range []struct {
+		name, original, view string
+		accepted             bool
+	}{
+		{"literal_marker_no_redaction", "visible\r\n[WITHHELD physical line 2]\r\nunread bytes\r\n", "visible\n[WITHHELD physical line 2]\nunread bytes\n", false},
+		{"literal_marker_is_not_visible_content", "fixture-only hidden\r\n[WITHHELD physical line 2]\r\n", "[WITHHELD physical line 1]\n[WITHHELD physical line 2]\n", false},
+		{"real_mask_and_literal_marker", "visible\r\n[WITHHELD physical line 2]\r\nfixture-only hidden\r\n", "visible\n[WITHHELD physical line 2]\n[WITHHELD physical line 3]\n", true},
+	} {
+		t.Run(c.name, func(t *testing.T) {
+			original, notice := []byte(c.original), []byte("synthetic exact notice\n")
+			f := skillsAcquiredFixture(t, original, notice, true)
+			m := skillsManifestWithOriginals(t, original, notice)
+			m.Files[1] = skillsMaskedFixtureOutput([]byte(c.view))
+			fs := skillsFS{blocked: func(string) bool { return false }}
+			defer fs.close()
+			if got := skillsSourcesBoundAt(m, &fs, f.root, f.catalogSHA, f.anchors); got != c.accepted {
+				t.Fatalf("original literal marker path accepted=%v, want%v", got, c.accepted)
+			}
+		})
+	}
+}

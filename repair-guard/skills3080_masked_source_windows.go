@@ -49,16 +49,20 @@ func skillsMaskedSourceBytes(raw, view []byte) bool {
 	}
 	masked, visible := 0, 0
 	for i, line := range lines {
+		// A marker already present in the source hides nothing. It also cannot
+		// serve as the sole visible content in an otherwise all-marker view.
+		if displayed[i] == line {
+			reserved := strings.HasPrefix(line, "[WITHHELD physical line ") && strings.HasSuffix(line, "]")
+			if strings.TrimSpace(line) != "" && !reserved {
+				visible++
+			}
+			continue
+		}
 		if displayed[i] == "[WITHHELD physical line "+strconv.Itoa(i+1)+"]" {
 			masked++
 			continue
 		}
-		if displayed[i] != line {
-			return false
-		}
-		if strings.TrimSpace(line) != "" {
-			visible++
-		}
+		return false
 	}
 	return masked > 0 && visible > 0
 }

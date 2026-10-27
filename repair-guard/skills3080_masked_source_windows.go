@@ -1,0 +1,80 @@
+package main
+
+import (
+	"bytes"
+	"path"
+	"strconv"
+	"strings"
+	"unicode/utf8"
+)
+
+func skillsMaskedSourceTarget(sourcePath string) (string, bool) {
+	if !skillsRelative(sourcePath) || path.Base(sourcePath) != "SKILL.md" {
+		return "", false
+	}
+	name := path.Base(path.Dir(sourcePath))
+	if !skillsName.MatchString(name) || len(name) > 80 {
+		return "", false
+	}
+	return name + "/references/original-skill.masked.txt", true
+}
+
+// This is a shape check only. The saved catalog/index/tree/commit and raw
+// source object still bind the original SHA, role, bytes and exact view below.
+func skillsHasMaskedSourceOutput(sourcePath string, outputs []skillsOutput) bool {
+	target, ok := skillsMaskedSourceTarget(sourcePath)
+	if !ok {
+		return false
+	}
+	for _, output := range outputs {
+		if output.Target == target && len(output.body) > 0 && hashBytes(output.body) == output.SHA {
+			return true
+		}
+	}
+	return false
+}
+
+func skillsMaskedSourceBytes(raw, view []byte) bool {
+	if !utf8.Valid(raw) || !utf8.Valid(view) || bytes.IndexByte(raw, 0) >= 0 || bytes.IndexByte(view, 0) >= 0 || bytes.IndexByte(view, '\r') >= 0 {
+		return false
+	}
+	original := strings.ReplaceAll(string(raw), "\r\n", "\n")
+	if strings.ContainsRune(original, '\r') || strings.HasSuffix(original, "\n") != bytes.HasSuffix(view, []byte{'\n'}) {
+		return false
+	}
+	lines := strings.Split(strings.TrimSuffix(original, "\n"), "\n")
+	displayed := strings.Split(strings.TrimSuffix(string(view), "\n"), "\n")
+	if len(lines) != len(displayed) {
+		return false
+	}
+	masked, visible := 0, 0
+	for i, line := range lines {
+		if displayed[i] == "[WITHHELD physical line "+strconv.Itoa(i+1)+"]" {
+			masked++
+			continue
+		}
+		if displayed[i] != line {
+			return false
+		}
+		if strings.TrimSpace(line) != "" {
+			visible++
+		}
+	}
+	return masked > 0 && visible > 0
+}
+
+func skillsMaskedSourceObject(row skillsSavedSource, raw []byte, outputs []skillsOutput) bool {
+	if row.Role != "skill_entry" {
+		return false
+	}
+	target, ok := skillsMaskedSourceTarget(row.Path)
+	if !ok {
+		return false
+	}
+	for _, output := range outputs {
+		if output.Target == target && hashBytes(output.body) == output.SHA && skillsMaskedSourceBytes(raw, output.body) {
+			return true
+		}
+	}
+	return false
+}

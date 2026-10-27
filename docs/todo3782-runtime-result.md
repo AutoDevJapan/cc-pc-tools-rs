@@ -47,12 +47,17 @@ safe-delete planが返す通常削除を別呼出しで実施し、finishで元�
 `obsolete branch revision rejected`となり、製品テストは実行されなかった。
 受付を迂回したり古い版を強制再実行せず、5ccfe53aを含む最新mainの後続実行を追う。
 後続版f79f8f75のCodeQLは成功したが、Build speedは新しいmainへの更新でキャンセルされた。
-キャンセルを成功には数えず、現在は8a876b57の既存実行を追っている。
+キャンセルを成功には数えず、8a876b57の既存実行を確認した。
 この版は5ccfe53aを含み、cc-askの報告回復処理など4ファイルが追加で変わっているため、
 実行版の全依存が同一とは扱わない。検証済み5ccfe53aの配布結果は保持する。
-Windows実行機はオンラインで別のジョブを実行し、現在版の正規受付通過とcheckoutの進行を確認した。
-後続CIは通常の順番待ちで、実行枠・他ジョブ・受付規則を変更していない。
+2026-10-27、同じ8a876b57の[Build speed](https://github.com/AutoDevJapan/cc-pc-tools-rs/actions/runs/40421944858)と
+[CodeQL PC](https://github.com/AutoDevJapan/cc-pc-tools-rs/actions/runs/40421944794)のcompleted/successを確認した。
+Windowsの正規受付・checkout・テスト選択境界を通過し、選択パッケージのテスト2674件が成功、8件が省略され、lintも成功した。
+CodeQLもRust・Go・JavaScript/TypeScript・Actionsの4件すべて成功した。
+package-toolsは特定の修復PR専用のため、このmain実行では対象外のskipだった。
+実行枠・他ジョブ・受付規則は変更していない。
 
 閉鎖後の結果と4060の清掃保留、自分の一時データの後片付けは、既存の同一送信IDと本文で
 通知・メンションなしに配送し、正規CLIによるAPI読戻しを確認した。再送は不要。
-残る確認は後続CIだけで、本人の回答やPC操作は不要。
+この受付に残っていた後続CIの確認も完了した。
+元作業の未完了と原資料は保持しており、本人の回答やPC操作は不要。

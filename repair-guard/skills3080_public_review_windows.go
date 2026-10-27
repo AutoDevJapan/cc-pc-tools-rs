@@ -93,6 +93,20 @@ func skillsPublicRepairPath(path string) bool {
 	return skillsPublicReviewPath(path) || (skillsRelative(path) && filepath.ToSlash(filepath.Dir(path)) == "repair-guard" && (filepath.Base(path) == "go.mod" || skillsPublicValidatorGo.MatchString(filepath.Base(path))) && !ownerCardPath(path) && !ownerNonSourcePath(path))
 }
 
+// The original, unedited issuer-continuity assignment explicitly includes this
+// already-public software observation. Admit only that declared Git tuple in
+// that exact purpose; do not open an official-CI namespace to other repairs or
+// to ordinary Skill-content reviewers. Native author/spec/result checks remain
+// in the normal original-result receiver after this shape check.
+func skillsAssignedIssuerSoftwareEvidence(c skillsPublicReviewScope, f skillsPublicReviewFile) bool {
+	return c.Commit == "97b17cd59381342110e1b7998cc42e1dbb067dd2" &&
+		c.PurposePath == "docs/skills-3080-runtime-issuer-continuity-spec214717.md" &&
+		hashBytes([]byte(c.Purpose)) == "ee7e122fd1c7c96bb135869c5e7dafed6f85f212cc24ac6fb2be8f2f1e8ac222" &&
+		f.Path == "docs/evidence/official-ci3387-known-guard-baseline-f30f9e76.json" &&
+		f.Blob == "473e6d7475232539273f394292580a33374543d4" && f.Bytes == 688 &&
+		f.SHA == "30c63f2b20e35e0b02a99c5c63f387af95913c716680f6df10b965d76c37244e"
+}
+
 func skillsPublicSourceShape(c skillsPublicReviewScope, repair bool) bool {
 	domain := "skills-3080-public-review-v1"
 	pathAllowed := skillsPublicReviewPath
@@ -133,7 +147,7 @@ func skillsPublicSourceShape(c skillsPublicReviewScope, repair bool) bool {
 	var total int64
 	for _, f := range c.Files {
 		key := strings.ToLower(f.Path)
-		if !pathAllowed(f.Path) || seen[key] || !skillsGitObjectID(f.Blob) || !skillsDigest(f.SHA) || f.Bytes < 1 || f.Bytes > 16<<20 {
+		if (!pathAllowed(f.Path) && !(repair && skillsAssignedIssuerSoftwareEvidence(c, f))) || seen[key] || !skillsGitObjectID(f.Blob) || !skillsDigest(f.SHA) || f.Bytes < 1 || f.Bytes > 16<<20 {
 			return false
 		}
 		seen[key] = true

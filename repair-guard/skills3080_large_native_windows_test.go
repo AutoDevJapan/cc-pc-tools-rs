@@ -100,6 +100,30 @@ func TestSkills3080LargeCanonicalNativeKeepsOriginalProofs(t *testing.T) {
 			t.Fatal("ordinary registered review rejected a canonical log above 256MiB")
 		}
 	})
+	t.Run("completed_review_holds_read_only_snapshot", func(t *testing.T) {
+		fs := skillsFS{blocked: func(string) bool { return false }}
+		defer fs.close()
+		if _, ok := skillsNativeJob(&fs, job); !ok {
+			t.Fatal("completed review snapshot unavailable")
+		}
+		writer, err := os.OpenFile(path, os.O_WRONLY, 0600)
+		if err == nil {
+			writer.Close()
+			t.Fatal("completed review allowed concurrent rewriting of its held bytes")
+		}
+	})
+	t.Run("completed_review_refuses_existing_writer", func(t *testing.T) {
+		writer, err := os.OpenFile(path, os.O_WRONLY, 0600)
+		if err != nil {
+			t.Fatal(err)
+		}
+		defer writer.Close()
+		fs := skillsFS{blocked: func(string) bool { return false }}
+		defer fs.close()
+		if _, ok := skillsNativeJob(&fs, job); ok {
+			t.Fatal("completed review accepted bytes held by a concurrent writer")
+		}
+	})
 	t.Run("snapshot_rejects_truncated_duplicate_call", func(t *testing.T) {
 		fs := skillsFS{blocked: func(string) bool { return false }}
 		defer fs.close()

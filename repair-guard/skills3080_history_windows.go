@@ -163,7 +163,13 @@ func skillsNativeWindow(s *skillsFS, job object, proof *skillsNativeResultProof,
 	if e != nil || end.Before(start) || !skillsUUID.MatchString(id) {
 		return nil, false
 	}
-	input, ok := skillsNativeSnapshot(s, job)
+	var input io.Reader
+	var ok bool
+	if proof != nil && proof.frozen {
+		input, ok = skillsNativeFrozenSnapshot(s, job)
+	} else {
+		input, ok = skillsNativeSnapshot(s, job)
+	}
 	if !ok {
 		return nil, false
 	}
@@ -181,6 +187,20 @@ func skillsNativeWindow(s *skillsFS, job object, proof *skillsNativeResultProof,
 // One exact append-log snapshot. Bootstrap identity is separate session
 // metadata; task input/final projection still uses the original job window.
 func skillsNativeSnapshot(s *skillsFS, job object) (io.Reader, bool) {
+	return skillsNativeSnapshotWithSharing(s, job, true)
+}
+
+// Completed ordinary software reviews retain the old deny-write guarantee.
+// Live and resumed historical append-log paths keep their existing sharing
+// contract; no public request can choose the mode for a completed code review.
+func skillsNativeFrozenSnapshot(s *skillsFS, job object) (io.Reader, bool) {
+	if job["status"] != "succeeded" {
+		return nil, false
+	}
+	return skillsNativeSnapshotWithSharing(s, job, false)
+}
+
+func skillsNativeSnapshotWithSharing(s *skillsFS, job object, appendLog bool) (io.Reader, bool) {
 	id := str(job["thread_id"])
 	start, e := time.Parse(time.RFC3339Nano, str(job["started_at"]))
 	if e != nil || !skillsUUID.MatchString(id) {
@@ -214,7 +234,7 @@ func skillsNativeSnapshot(s *skillsFS, job object) (io.Reader, bool) {
 	if !ok {
 		return nil, false
 	}
-	h, ok := skillsOpenAtSharing(parent, filepath.Base(p), false, false, true)
+	h, ok := skillsOpenAtSharing(parent, filepath.Base(p), false, false, appendLog)
 	if !ok {
 		return nil, false
 	}
@@ -265,6 +285,7 @@ type skillsNativeResultProof struct {
 	bootstrapSHA, cwd             string
 	userSeen                      bool
 	bootstrapSeen, bootstrapBound bool
+	frozen                        bool
 }
 
 func (p *skillsNativeResultProof) observe(raw []byte, at time.Time) bool {

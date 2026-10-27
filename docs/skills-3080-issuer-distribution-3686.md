@@ -153,3 +153,17 @@ code acceptanceは実nativeと一致するLuna/maxだけを受け入れる。
 必要なmetadataの復旧または正規の再配置を既存brokerから行い、再度読み戻す。
 未知のバイトや未照合のtargetへforce rollbackせず、実backup・原結果・次の手を
 親へ記録する。この手順は未発生の障害を復旧済みと主張するものではない。
+
+再確認では、完了済みの通常レビューのログを読む間の書き換えを防ぐため、
+通常受領とコードレビューの証明に、書き込みを共有しない専用snapshotを使う。
+既存の追記中・再開済み履歴・作成callの読み方は保ち、公開入力からこのモードを
+変更できない。実Windows上で、読み取り中のwrite handle取得と、先行write handleを
+保持した受領が拒否されることを確認する。
+
+配布用scriptの原v2は保持し、v3の失敗出力には取得できたtarget/backupのSHAと
+owner/group/DACLの一致・不一致を残す。取得不能な値はnullとし、推測しない。
+既存brokerは実clean buildinfoのb7cd724dと公開sourceが一致し、このmoduleに差分は
+ない。今回の送信期限180秒は実行にも適用され、Windows Job Objectが子孫を管理する。
+bridgeだけを途中で独立終了させる別の期限は加えず、既存brokerの期限・cleanup_pending
+記録を使う。期限切れを配布成功へ読み替えず、実物・backupと終了結果を再照合する。
+この確認はsourceと現用metadataに基づくもので、新しい実timeout試験は行っていない。

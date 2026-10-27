@@ -561,7 +561,7 @@ func skillsReceive(r skillsResultRequest, reg skillsRegistry, s *skillsFS, revie
 	if codeInput {
 		// The normal registered software review must also prove its unchanged
 		// launch prompt and native final digest before the canonical body opens.
-		native, ok = skillsPublicReviewNative(s, job, spec, r.FinalSHA)
+		native, ok = skillsCodeReviewNative(s, job, spec, r.FinalSHA)
 		if !ok {
 			return out, "native_context"
 		}
@@ -607,7 +607,7 @@ func skillsNativeJob(s *skillsFS, job object) ([]object, bool) {
 	if e != nil || end.Before(start) {
 		return nil, false
 	}
-	stream, ok := skillsNativeSnapshot(s, job)
+	stream, ok := skillsNativeFrozenSnapshot(s, job)
 	if !ok {
 		return nil, false
 	}

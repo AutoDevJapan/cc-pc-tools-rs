@@ -19,7 +19,7 @@
   "old_backup_and_owner_group_dacl_verified": true,
   "sacl_verified": false,
   "independent_readback_job": "20261027-134717-todo-3686",
-  "independent_readback_utc": "2026-10-27T04:48:00Z",
+  "independent_readback_utc": "2026-10-27T04:54:19.0027899+00:00",
   "actual_installed_sha256": "9f914c724231886438515c5ed3831a13eca3d8fbec09e4d3d6edb1d0113c6dd8",
   "actual_installed_source_head": "4e117a2d813e4a989d1c3085d2734963d9c198a3",
   "actual_goos": "windows",

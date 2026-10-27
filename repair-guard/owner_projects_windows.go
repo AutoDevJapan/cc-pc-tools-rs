@@ -269,6 +269,10 @@ func (s *ownerProjectSnapshot) replaced() bool {
 // detects normal replacement/observable mutation; it is not a transaction or
 // proof that adversarial in-place changes and metadata restoration never occur.
 func ownerReadProjectSnapshot(ctx context.Context, path string, denied func(string) bool) (*ownerProjectSnapshot, bool) {
+	return ownerReadProjectSnapshotUsing(ctx, path, denied, func(input io.Reader) (object, bool) { return ownerProjectProjection(ctx, input) })
+}
+
+func ownerReadProjectSnapshotUsing(ctx context.Context, path string, denied func(string) bool, project func(io.Reader) (object, bool)) (*ownerProjectSnapshot, bool) {
 	if ctx.Err() != nil || denied(path) || !currentPlain(path, false) {
 		return nil, false
 	}
@@ -294,7 +298,7 @@ func ownerReadProjectSnapshot(ctx context.Context, path string, denied func(stri
 		return nil, false
 	}
 	s := &ownerProjectSnapshot{path: path, info: info, ctx: ctx, denied: denied}
-	projects, equal := ownerProjectProjection(ctx, io.LimitReader(f, 1<<30))
+	projects, equal := project(io.LimitReader(f, 1<<30))
 	s.projects = projects
 	if !equal || !s.current() {
 		return nil, false

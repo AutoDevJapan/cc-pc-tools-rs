@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"io"
 	"os"
 	"path/filepath"
 	"strings"
@@ -18,6 +19,8 @@ type ownerRuleConfig struct {
 	promptStore    string
 	todoStore      string
 	mixedStores    []string
+	taskMetadata   *ownerRecordMetadata // only the current validated snapshot
+	recordProducer bool                 // a producer receipt, not qualification of source bytes
 }
 
 type ownerRuleTool struct {
@@ -120,6 +123,12 @@ func ownerRuleWith(ctx context.Context, path string, projects object, access own
 			return ownerRuleProtected("owner_rule_unattributed_repository")
 		}
 		for _, root := range worktreeRoots {
+			// For stored output, the bound original producer and real GitHub
+			// identity establish provenance. It does not admit this source tree
+			// for editing, which still needs the normal common-directory proof.
+			if config.recordProducer {
+				break
+			}
 			registered, ok := access.git(root, "rev-parse", "--path-format=absolute", "--show-toplevel", "--git-common-dir")
 			linked, otherOK := access.git(top, "rev-parse", "--path-format=absolute", "--show-toplevel", "--git-common-dir")
 			a := strings.Split(strings.ReplaceAll(registered, "\r\n", "\n"), "\n")
@@ -294,7 +303,26 @@ func ownerOrganizationQuery(ctx context.Context, path string, access ownerSource
 		}
 	}
 	for attempt := 0; attempt < 2; attempt++ {
-		snapshot, ok := ownerReadProjectSnapshot(ctx, productStore, legacyMatch)
+		config.taskMetadata = nil
+		var snapshot *ownerProjectSnapshot
+		var ok bool
+		inputID := ""
+		for _, store := range []string{config.specStore, config.promptStore} {
+			if same(filepath.Dir(path), store) {
+				inputID, _, _ = strings.Cut(filepath.Base(path), "-")
+			}
+		}
+		if inputID != "" {
+			snapshot, ok = ownerReadProjectSnapshotUsing(ctx, productStore, legacyMatch, func(input io.Reader) (object, bool) {
+				projects, m, valid := ownerTaskRegistrationProjection(ctx, input, inputID)
+				if valid {
+					config.taskMetadata = &m
+				}
+				return projects, valid && projects != nil
+			})
+		} else {
+			snapshot, ok = ownerReadProjectSnapshot(ctx, productStore, legacyMatch)
+		}
 		if ctx.Err() != nil {
 			return ownerRuleUnknown("classification_deadline")
 		}

@@ -9,13 +9,15 @@ Must5件ほかの原結果を正規のジョブ結果受領で取得した。
 mainの台帳stream射影と有限retryを取り込んだ。
 20時の修正コードは`81d7da7f`と、その後の一時所有のtyped分類の追加。
 
-容量監査のrace/vetは成功。guard全件raceは81d7da7fのコード内容で実行中。
-その後のOwner関連差分もraceで確認中。コード追加後は無効になった範囲だけを確認する。
+容量監査のrace/vetは成功。guard全件raceは81d7da7fで389.824秒で成功。
+その後のOwner関連差分も33.533秒でrace成功、vet終了0。合成fixtureと実物メタデータも確認済み。
 Rustの画像添付互換性テストはCargo割当の子4125へ固定81d7da7fとして登録した。
 cc-askのコードはその後変更していない。
 
 最新方針により、修正後の同じ固定コミットについて別モデルmaxのセルフレビューと
 独立したラバーダックを受け、すべての修正指摘を解消する。
+再レビュー4126（Opus5.5/max）、ラバーダック4127（Sonnet5.5/max）を通常登録済み。
+両者はまだ未着手のため、最終候補の実読と実モデルは未確認。
 同じブランチのCIを成功させて通常マージし、最新マージソースから配布する。
 senderの画像互換性を先に配布し、その後guard・容量監査を配布する。
 senderの実ビルドにもCargo割当を使い、元担当は直接Cargoを起動しない。
@@ -24,6 +26,20 @@ senderの実ビルドにもCargo割当を使い、元担当は直接Cargoを起�
 今回の所有付き検証フォルダーID: `176cb5e621bca702f5fe23dfd3def46c`（作業先直下）。
 Goのテスト出力、Cargo検証の依頼を保持する。前のCの一時フォルダーの一般分類は未確認のため、
 旧入力一覧・スクリプトを別経路で読まない。配布時はこの依頼の正規メタデータから入力を再確認する。
+新しいDの所有フォルダーへ実物の対象メタデータを再取得した。
+`live-targets.private.json`は対象対応、`reviewed-live-result.private.json`は匿名結果。
+通常CLIの最終候補では6対象すべてclearだが、配布後に再確認する。
+登録の旧boolean specは参照にせず読み飛ばし、projectsと対象入力metadataの1回の射影を追加した。
+
+配布準備: `distribution-before.private.json`に現在のsender/容量監査/guardのSHAとACLを保存。
+現用guardは444eae87、SHA `c80d60ab470e52ef9fbe53c1e039d1fcdc31429e291c3f156a953b9b6059d02f`。
+この版は取り込んだmainの祖先で、旧81700412の版に戻さない。
+新しい`install-reviewed.ps1`はsender→容量監査→guardの順に、旧版保持・atomic replaceと
+SHA/所有者・グループ・DACLを確認する。SACLは未検証と記録する。まだ実行していない。
+スクリプトSHAは`1e82d55f483157ebc49966c656a8898981bc1201b3e1599f5cfa494f6e4dd031`。
+入力`distribution-builds.private.json`はmerge commit、review_and_ci_verified、artifacts配列。
+各artifactはname(sender/capacity/guard)、path（この所有フォルダー内のexe）、sha256、source_commit。
+review/CIを実確認してからtrueを書く。最新マージ版のビルド以外を配らない。
 `.godd/`は現在の起動処理が作った未追跡物として保持し、コミットや清掃に含めない。
 
 以下は11時の記録として保持する。

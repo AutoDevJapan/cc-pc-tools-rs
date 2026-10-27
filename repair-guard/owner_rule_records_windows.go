@@ -37,6 +37,11 @@ func ownerReadRecordObject(ctx context.Context, d *jsontext.Decoder, kind string
 			if err == nil && token.Kind() == 'n' && name != "id" && name != "todo_id" {
 				continue
 			}
+			// Older unrelated registrations used boolean spec markers. They are
+			// never a path reference and must not invalidate every other input.
+			if err == nil && name == "spec" && (token.Kind() == 't' || token.Kind() == 'f') {
+				continue
+			}
 			if err != nil || token.Kind() != '"' && !((name == "id" || name == "todo_id") && token.Kind() == '0') {
 				return m, false
 			}
@@ -105,32 +110,61 @@ func ownerReadRecordObject(ctx context.Context, d *jsontext.Decoder, kind string
 }
 
 func ownerTaskRecordProjection(ctx context.Context, input io.Reader, id string) (ownerRecordMetadata, bool) {
+	_, m, ok := ownerTaskRegistrationProjection(ctx, input, id)
+	return m, ok
+}
+
+func ownerTaskRegistrationProjection(ctx context.Context, input io.Reader, id string) (object, ownerRecordMetadata, bool) {
 	d := jsontext.NewDecoder(&ownerProjectNestingReader{input: ownerDeadlineReader{ctx, input}})
 	start, err := d.ReadToken()
 	if err != nil || start.Kind() != '{' {
-		return ownerRecordMetadata{}, false
+		return nil, ownerRecordMetadata{}, false
 	}
 	var found ownerRecordMetadata
+	var projects object
 	count := 0
 	for d.PeekKind() != '}' {
 		key, err := d.ReadToken()
 		if err != nil || key.Kind() != '"' {
-			return found, false
+			return nil, found, false
+		}
+		if key.String() == "projects" {
+			start, err := d.ReadToken()
+			if err != nil || start.Kind() != '{' {
+				return nil, found, false
+			}
+			projects = object{}
+			for d.PeekKind() != '}' {
+				name, err := d.ReadToken()
+				if err != nil || name.Kind() != '"' {
+					return nil, found, false
+				}
+				n := strings.Clone(name.String())
+				value, err := d.ReadToken()
+				if err != nil || value.Kind() != '"' || len(n) > 4096 || len(value.String()) > 32768 || strings.ContainsRune(n, '\ufffd') || strings.ContainsRune(value.String(), '\ufffd') || len(projects) >= 4096 {
+					return nil, found, false
+				}
+				projects[n] = strings.Clone(value.String())
+			}
+			if _, err := d.ReadToken(); err != nil {
+				return nil, found, false
+			}
+			continue
 		}
 		if key.String() != "items" {
 			if d.SkipValue() != nil {
-				return found, false
+				return nil, found, false
 			}
 			continue
 		}
 		start, err := d.ReadToken()
 		if err != nil || start.Kind() != '[' {
-			return found, false
+			return nil, found, false
 		}
 		for d.PeekKind() != ']' {
 			m, ok := ownerReadRecordObject(ctx, d, "record")
 			if !ok {
-				return found, false
+				return nil, found, false
 			}
 			if m.id == id {
 				found = m
@@ -138,14 +172,14 @@ func ownerTaskRecordProjection(ctx context.Context, input io.Reader, id string) 
 			}
 		}
 		if _, err := d.ReadToken(); err != nil {
-			return found, false
+			return nil, found, false
 		}
 	}
 	if _, err := d.ReadToken(); err != nil {
-		return found, false
+		return nil, found, false
 	}
 	_, err = d.ReadToken()
-	return found, err == io.EOF && count == 1 && ctx.Err() == nil
+	return projects, found, err == io.EOF && count == 1 && ctx.Err() == nil
 }
 
 func ownerReadMetadataFile(ctx context.Context, path string, read func(io.Reader) (ownerRecordMetadata, bool)) (ownerRecordMetadata, bool) {
@@ -212,7 +246,12 @@ func ownerRuleStoredContent(ctx context.Context, path string, projects object, a
 		if _, err := strconv.ParseUint(id, 10, 64); err != nil || !ok {
 			return ownerRuleUnknown("stored_record_reference_unverified"), true
 		}
-		m, ok := ownerReadMetadataFile(ctx, config.todoStore, func(input io.Reader) (ownerRecordMetadata, bool) { return ownerTaskRecordProjection(ctx, input, id) })
+		var m ownerRecordMetadata
+		if config.taskMetadata != nil && config.taskMetadata.id == id {
+			m, ok = *config.taskMetadata, true
+		} else {
+			m, ok = ownerReadMetadataFile(ctx, config.todoStore, func(input io.Reader) (ownerRecordMetadata, bool) { return ownerTaskRecordProjection(ctx, input, id) })
+		}
 		if !ok {
 			return ownerRuleUnknown("stored_record_metadata_unavailable"), true
 		}
@@ -260,7 +299,9 @@ func ownerRuleRecordOrigin(ctx context.Context, m ownerRecordMetadata, projects 
 			return ownerRuleProtected("client_repository_id")
 		}
 	}
-	v := ownerRuleWith(ctx, m.cwd, projects, access, config, nil)
+	producerConfig := config
+	producerConfig.recordProducer = true
+	v := ownerRuleWith(ctx, m.cwd, projects, access, producerConfig, nil)
 	if v.AccessAllowed {
 		return ownerRuleClear("verified_self_record_producer")
 	}

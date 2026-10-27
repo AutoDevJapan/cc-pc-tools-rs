@@ -152,7 +152,7 @@ func TestOwnerRule4088MixedRecordsUseProducerMetadata(t *testing.T) {
 
 func TestOwnerRule4088MetadataProjectionSkipsBodiesAndRejectsDuplicates(t *testing.T) {
 	ctx := context.Background()
-	for _, body := range []string{`{"items":[{"id":1,"project":"self","note":"ignored","spec":"fixture"}]}`, `{"items":[{"note":{"nested":[1,true]},"id":1,"project":"self","spec_history":[{"spec":"old"}],"spec":"fixture"}]}`} {
+	for _, body := range []string{`{"items":[{"id":1,"project":"self","note":"ignored","spec":"fixture"}]}`, `{"items":[{"note":{"nested":[1,true]},"id":1,"project":"self","spec_history":[{"spec":"old"}],"spec":"fixture"}]}`, `{"items":[{"id":2,"spec":false},{"id":3,"spec":true},{"id":1,"project":"self","spec":"fixture"}]}`} {
 		m, ok := ownerTaskRecordProjection(ctx, strings.NewReader(body), "1")
 		if !ok || m.project != "self" || m.spec != "fixture" {
 			t.Fatal("metadata projection differs")
@@ -162,6 +162,13 @@ func TestOwnerRule4088MetadataProjectionSkipsBodiesAndRejectsDuplicates(t *testi
 		if _, ok := ownerTaskRecordProjection(ctx, strings.NewReader(body), "1"); ok {
 			t.Fatal("invalid or ambiguous metadata accepted")
 		}
+	}
+	projects, m, ok := ownerTaskRegistrationProjection(ctx, strings.NewReader(`{"projects":{"self":"C:/fixture"},"items":[{"id":1,"project":"self","spec":"fixture"}]}`), "1")
+	if !ok || projects["self"] != "C:/fixture" || m.spec != "fixture" {
+		t.Fatal("single snapshot did not bind registration and input metadata")
+	}
+	if _, _, ok := ownerTaskRegistrationProjection(ctx, strings.NewReader(`{"projects":{"self":"C:/fixture","self":"D:/other"},"items":[{"id":1}]}`), "1"); ok {
+		t.Fatal("ambiguous source registration admitted")
 	}
 }
 

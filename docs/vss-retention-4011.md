@@ -364,3 +364,39 @@ normal Brokerの依頼/応答との対応を同担当のmanifestと比較票へ�
 sourceを変えていないbf2462cdのCodeQL全5チェックがSUCCESSであることを確認した。
 今回の変更は実測と再開情報の文書だけであり、製品全体のビルドは追加していない。
 PR568は現用設定の受入未完を示すdraftのままであり、merge/全体完了とは報告しない。
+
+## 07:25の再発と10:10の自己設定復帰
+
+10月27日10:10の通常AdminBroker観測は、C→C/使用0B/割当0B/上限50GiB、
+C snapshot0/restore point0をerrors0で返した。設定適用以後の新イベントは、
+**07:25:22.7070176 JST**のC一致Volsnap25/error（UTC22:25:22.7070176Z、record186112）1件だった。
+照会上限100未達/complete true。07:16に確認した2世代は失われ、33の正常世代交代ではない。
+PID4はevent処理元であり、削除要求者や書込元を証明しない。
+過去のpointと今回の2世代の消失は、どちらも正常な清掃成功へ分類しない。
+
+10:10:49の正規GetMinDiffAreaSizeは3,355,443,200B/HRESULT0だったため、既定の
+受入不成立条件に従い、reactivate-minimum.ps1 -Mode Undoを同じos-v2から一度だけ実行した。
+10:10:57に本担当のDWORD3200だけを元の未設定へ戻し、320MiB/HRESULT0を確認した。
+元request/apply-resultと旧configuration/A票を保持し、Undo結果を新しい追記票へ保存した。
+snapshot削除・上限縮小・保存先変更・VSS/System Protection停止・OS再起動は0。
+現在のC→C/50GiBも保持する。設定読返しと短期の保持は、修復成功の証明にならなかった。
+既存世代への今回の再適用で再発を防げなかったことは実証されたが、未実証の新世代の
+初期予約効果まで不存在と断定しない。同じ設定実験の再試行やpointの反復作成はしない。
+
+再発前後5分の既存System/Applicationログを有限に照合し、対象のstorage-driver/VSS関連の
+追加warning/errorは見つからなかった（件数上限未達）。10:12の3つの現在IOサンプルは
+低遅延だったが、07:25のIOピーク・実プロセス・直接の下位ドライバ障害は未特定のまま。
+元からdisabledのTaskScheduler Operationalを新しく有効にしていない。
+10:10実空きC439,135,739,904/D2,105,684,430,848/E858,052,489,216B。
+並行I/Oや他の清掃を含み、C空きの変化をVSS解放の総量や本担当の回収量にはしない。
+
+保存先分離の検討に必要な通常metadataとして、C=disk0、D=disk1、両方NTFS/NVMe/
+Healthy/Onlineを確認した。Dはboot/systemでなく、Dに関する既存shadow storage/snapshotはない。
+Dの既存ファイルや私的データは閲覧・移動しない。この確認だけでDへの変更を実行しない。
+通常VSSの排他とAPIの保持条件を、一次資料と別モデルの確認を含めて具体化する。
+現在0件を二度読んだだけの手順、0への縮小・Delete・保護停止で切替を強制する手順は採用しない。
+
+参考にした一次資料は、[StartSnapshotSetの単一作成操作](https://learn.microsoft.com/en-us/windows/win32/api/vsbackup/nf-vsbackup-ivssbackupcomponents-startsnapshotset)、
+[ChangeDiffAreaMaximumSizeの条件と戻り値](https://learn.microsoft.com/en-us/windows/win32/api/vsmgmt/nf-vsmgmt-ivssdifferentialsoftwaresnapshotmgmt-changediffareamaximumsize)、
+[AddDiffAreaの既存関連付け・既存shadow制約](https://learn.microsoft.com/en-us/windows/win32/api/vsmgmt/nf-vsmgmt-ivssdifferentialsoftwaresnapshotmgmt-adddiffarea)。
+これらを移行の実成功や原子的な切替の実証として引用せず、実施前の条件確認に使う。

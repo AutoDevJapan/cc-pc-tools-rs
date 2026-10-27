@@ -1,5 +1,41 @@
 # 元4011の再開情報
 
+## 最新：07:25に25が再発、10:10に自己設定だけ復帰済み
+
+job20261027-100836-todo-4011、開始e6547d03/同branch/未コミット0から再開。
+10:10の通常AdminBroker観測はC→C/使用0B/割当0B/上限50GiB、C snapshot0/restore point0、
+errors0を返した。新Volsnap25は**10/27 07:25:22.7070176 JST**（UTC22:25:22、record186112）、
+C一致/error/PID4。設定適用後の照会はこの1件、上限100未達/complete true。正常33世代交代ではない。
+07:16時点で存続していた2世代は失われた。元の消失も今回の消失も清掃成功・本担当回収量へ数えない。
+
+10:10:49の正規APIはまだ3200MiBを返したので、保存済みの復帰条件に従い同じos-v2の
+reactivate-minimum.ps1 -Mode Undoを一度だけ通常Brokerから実行した。
+10:10:57に**MinDiffAreaFileSizeを元の未設定へ復帰**、API320MiB/HRESULT0を確認。
+原reactivation-request/apply-resultを保持し、新reactivation-undo-result.private.jsonを追記。
+旧rollbackやApply、A/Bの再実行0。snapshot削除/上限変更/保存先変更/OS再起動0。
+現在もC→C/50GiB、原データ・OS・未完了・E既存データを保持する。修復は未完了。
+
+原観測retention-100836-first.private.json、minimum-before-undo-100836.private.json、
+broker-undo-100836.stdout.txt、after-undo-100836.private.jsonを同.ci-workへ保存。
+再発前後5分のcorrelateは上限未達で、対象のstorage-driver/VSS追加warning/error0。
+現在の3IOサンプルが低遅延でも、07:25の原因プロセスや実IOピークを証明しない。
+TaskScheduler Operationalは元からdisabledのまま。ログを新しく有効にしていない。
+10:10実空きC439,135,739,904/D2,105,684,430,848/E858,052,489,216B。
+この差をVSS解放の総量や本担当の回収量へ読み替えない。
+
+Dの限定metadataはdisk1/NTFS/NVMe/Healthy/Online、Cはdisk0なので別の物理disk。
+Dはboot/systemでなく、現在Dを源・保存先とするVSS関連付け/snapshotはない。
+これは保存先分離の候補の確認であり、Dへ変更した結果ではない。私的ファイルを移動/閲覧0。
+次は通常VSSの空集合StartSnapshotSet/AbortBackupの排他を一次資料・別モデル・必要な有限probeで
+照合し、既存snapshotの作成競合を防げる具体手順を作る。二度読みによる0件確認だけでは移行しない。
+候補は同じ50GiBの正の最大値を使う正規APIだけとし、0への縮小・Delete・全プロセス停止・
+保護停止でDへの切替を強制しない。排他/既存設定保持を説明できるまでD変更を実施しない。
+新監視/task/point作成loopは追加しない。旧03:00待ちを、今回再発の解決待ちへ流用して終えない。
+
+e6547d03はCodeQLのactions/Go/JS/RustすべてSUCCESS、集約CodeQLはNEUTRAL。
+正常neutralをCI失敗とせず、PR568は実保持不成立のdraftとして結果を更新する。
+以下の3200現在値・夜間受入待ちは以前の時点の履歴であり、現在は復帰済みである。
+
 ## 最新：10月27日07:16の保持確認、次は同日10:00の有限な再確認
 
 job20261027-071223-todo-4011、開始bf2462cd/同branch/未コミット0から再開。

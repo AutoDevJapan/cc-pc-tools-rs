@@ -101,6 +101,64 @@ type travel3Application struct {
 	Rows []travel3Decision `json:"decisions"`
 }
 
+type travel3ReviewResolution struct {
+	Domain   string `json:"domain"`
+	Original struct {
+		Task       int    `json:"task"`
+		Job        string `json:"job"`
+		Spec       string `json:"spec_sha256"`
+		Final      string `json:"final_sha256"`
+		Bytes      int    `json:"final_bytes"`
+		Manifest   string `json:"manifest_sha256"`
+		Must       *int   `json:"Must"`
+		Suggestion *int   `json:"Suggestion"`
+		Nit        *int   `json:"Nit"`
+		Frozen     *bool  `json:"frozen"`
+	} `json:"original_review"`
+	Resolution struct {
+		Action          string `json:"action"`
+		Flag            string `json:"required_existing_source_flag"`
+		FlagValue       *bool  `json:"required_existing_source_flag_value"`
+		Files           int    `json:"source_metadata_files_checked"`
+		SpecChanged     *bool  `json:"original_full_review_spec_changed"`
+		Restarted       *bool  `json:"original_full_review_restarted"`
+		Reclassified    *bool  `json:"historical_findings_reclassified_as_zero"`
+		ManifestChanged *bool  `json:"original_creation_manifest_changed"`
+		Central         int    `json:"central_files_changed"`
+		Create          int    `json:"new_CreateNew_operations"`
+		Authorship      *bool  `json:"independent_authorship_claimed"`
+		Promoted        *bool  `json:"unseen_source_meanings_or_rights_promoted"`
+	} `json:"resolution"`
+}
+
+const travel3NonAuthorshipFlag = "notice_statement_is_source_published_license_not_independent_authorship_verification"
+
+func validateTravel3FindingResolution(r travel3ReviewResolution, i travel3Install) error {
+	f := r.Original
+	zero := func(p *int, want int) bool { return p != nil && *p == want }
+	if r.Domain != "skills3080-travel3-frozen-review-finding-resolution-v1" || f.Task != i.Frozen.Task || f.Job != i.Frozen.Job || f.Spec != i.Frozen.Spec || f.Final != i.Frozen.Raw || f.Bytes != 1448 || f.Manifest != i.Manifest || !zero(f.Must, 0) || !zero(f.Suggestion, 1) || !zero(f.Nit, 0) || !recordedTrue(f.Frozen) {
+		return errors.New("travel3 original full-review findings must remain frozen and explicit")
+	}
+	a := r.Resolution
+	if a.Action != "clarify_published_notice_scope_and_enforce_explicit_non_authorship_evidence" || a.Flag != travel3NonAuthorshipFlag || !recordedTrue(a.FlagValue) || a.Files != 3 || !recordedFalse(a.SpecChanged) || !recordedFalse(a.Restarted) || !recordedFalse(a.Reclassified) || !recordedFalse(a.ManifestChanged) || a.Central != 0 || a.Create != 0 || !recordedFalse(a.Authorship) || !recordedFalse(a.Promoted) {
+		return errors.New("travel3 historical Suggestion needs a bounded current resolution")
+	}
+	return nil
+}
+
+func validateTravel3NonAuthorshipSource(raw []byte) error {
+	var s struct {
+		NonAuthorship *bool `json:"notice_statement_is_source_published_license_not_independent_authorship_verification"`
+		Raw           *bool `json:"primary_raw_full_read_claimed"`
+		Masked        *bool `json:"public_original_copy_is_masked"`
+		MetaUnread    *bool `json:"source_meta_json_body_unread"`
+	}
+	if json.Unmarshal(raw, &s) != nil || !recordedTrue(s.NonAuthorship) || !recordedFalse(s.Raw) || !recordedTrue(s.Masked) || !recordedTrue(s.MetaUnread) {
+		return errors.New("travel3 source notice cannot establish authorship or hidden source meaning")
+	}
+	return nil
+}
+
 func validateTravel3DiscoveryRow(r travel3DiscoveryRow, bodies map[string][]byte) error {
 	if bodies[r.Name+"/SKILL.md"] == nil || !recordedTrue(r.Central) || !recordedTrue(r.Enabled) || !recordedTrue(r.Description) {
 		return errors.New("travel3 discovery target or selected central root differs")
@@ -198,6 +256,11 @@ func validatedTravel3Dispositions(t *testing.T) map[string]cohortLedgerRow {
 		t.Fatal("travel3 actual evidence cannot decode")
 	}
 	if e := validateTravel3Header(install, native, read); e != nil {
+		t.Fatal(e)
+	}
+	var resolution travel3ReviewResolution
+	loadPublicReceipt(t, "skills-3080-travel3-review-resolution175645.json", &resolution)
+	if e := validateTravel3FindingResolution(resolution, install); e != nil {
 		t.Fatal(e)
 	}
 	var operation struct {
@@ -311,6 +374,9 @@ func validatedTravel3Dispositions(t *testing.T) map[string]cohortLedgerRow {
 		if travel3Digest(bodies[name+"/references/LICENSE.txt"]) != s.License.SHA || bodies[name+"/references/original-skill.masked.txt"] == nil {
 			t.Fatal("travel3 notice or declared masked view missing")
 		}
+		if e := validateTravel3NonAuthorshipSource(bodies[name+"/references/source.json"]); e != nil {
+			t.Fatal(e)
+		}
 		result[expectedIDs[name]] = cohortLedgerRow{ID: expectedIDs[name], Source: s.Repository, Commit: s.Commit, Path: s.Path, SHA: s.SHA, Disposition: "installed_new_adaptation"}
 	}
 	var ledger struct {
@@ -330,6 +396,46 @@ func validatedTravel3Dispositions(t *testing.T) map[string]cohortLedgerRow {
 		t.Fatal("travel3 actual acceptance missing live row")
 	}
 	return result
+}
+
+func TestTravel3HistoricalSuggestionCannotDisappearOrGrantAuthorship(t *testing.T) {
+	for _, kind := range []string{"historical count erased", "resolution missing", "original review restarted", "authorship promoted"} {
+		t.Run(kind, func(t *testing.T) {
+			var i travel3Install
+			loadPublicReceipt(t, "skills-3080-travel3-installation-evidence214717.json", &i)
+			var r travel3ReviewResolution
+			loadPublicReceipt(t, "skills-3080-travel3-review-resolution175645.json", &r)
+			if e := validateTravel3FindingResolution(r, i); e != nil {
+				t.Fatal(e)
+			}
+			switch kind {
+			case "historical count erased":
+				v := 0
+				r.Original.Suggestion = &v
+			case "resolution missing":
+				r.Resolution.Action = ""
+			case "original review restarted":
+				v := true
+				r.Resolution.Restarted = &v
+			case "authorship promoted":
+				v := true
+				r.Resolution.Authorship = &v
+			}
+			if validateTravel3FindingResolution(r, i) == nil {
+				t.Fatal("invalid historical finding resolution accepted")
+			}
+		})
+	}
+	for _, value := range []any{nil, false} {
+		meta := map[string]any{travel3NonAuthorshipFlag: value, "primary_raw_full_read_claimed": false, "public_original_copy_is_masked": true, "source_meta_json_body_unread": true}
+		raw, e := json.Marshal(meta)
+		if e != nil {
+			t.Fatal(e)
+		}
+		if validateTravel3NonAuthorshipSource(raw) == nil {
+			t.Fatal("missing or false non-authorship evidence accepted")
+		}
+	}
 }
 
 func TestTravel3RejectsWrongCentralRootAndUnrelatedDecisions(t *testing.T) {

@@ -2,7 +2,15 @@ use clap::Parser;
 #[path = "../../cc-job-policy/tests/support/mod.rs"]
 mod support;
 use serde_json::{Value, json};
-use std::{fs, os::windows::process::CommandExt, process::Command};
+use std::{fs, os::windows::process::CommandExt, process::{Child, Command, Stdio}};
+
+struct LiveSibling(Child);
+impl Drop for LiveSibling {
+    fn drop(&mut self) {
+        let _ = self.0.kill();
+        let _ = self.0.wait();
+    }
+}
 
 fn fixture() -> support::Fixture {
     let mut f = support::Fixture::new();
@@ -106,6 +114,9 @@ fn forged_or_stale_continuation_is_rejected_without_modifying_the_store() {
         "stop",
         "parent_stop",
         "parent_generation",
+        "parent_birth",
+        "legacy_unseeded",
+        "legacy_missing_history",
         "live",
         "cancel",
         "relation",
@@ -120,6 +131,15 @@ fn forged_or_stale_continuation_is_rejected_without_modifying_the_store() {
             "stop" => f.db["items"][1]["owner_stopped"] = json!(true),
             "parent_stop" => f.db["items"][0]["stopped"] = json!(true),
             "parent_generation" => f.db["items"][0]["scheduler"]["job"] = json!("new-owner"),
+            "parent_birth" => f.jobs[0]["pid_created"] = json!(1),
+            "legacy_unseeded" => {
+                f.jobs[1]["quota_recovery"] = json!({"version":1,"source_job":"previous","model":"gpt-6.1-sol"});
+            }
+            "legacy_missing_history" => {
+                f.jobs[1]["quota_recovery"] = json!({"version":1,"source_job":"previous","model":"gpt-6.1-sol"});
+                f.jobs[1]["quota_retry_seeded_version"] = json!(1);
+                f.jobs[1]["capacity_retry_count"] = json!(1);
+            }
             "live" => {
                 f.jobs[1]["pid"] = f.jobs[0]["pid"].clone();
                 f.jobs[1]["pid_created"] = f.jobs[0]["pid_created"].clone();
@@ -139,6 +159,24 @@ fn forged_or_stale_continuation_is_rejected_without_modifying_the_store() {
             "{case}"
         );
     }
+}
+
+#[test]
+fn another_process_cannot_impersonate_a_live_parent_with_its_environment() {
+    // The real registered parent is alive, but is a sibling of this CLI caller.
+    let parent = LiveSibling(Command::new("powershell.exe")
+        .args(["-NoProfile", "-NonInteractive", "-Command", "[Console]::In.ReadLine() | Out-Null"])
+        .stdin(Stdio::piped()).stdout(Stdio::null()).stderr(Stdio::null())
+        .creation_flags(0x08000000).spawn().unwrap());
+    let mut f = fixture();
+    f.jobs[0]["pid"] = json!(parent.0.id());
+    f.jobs[0]["pid_created"] = json!(cc_scheduler::native::process_birth(parent.0.id()).unwrap());
+    save(&f);
+    let before = fs::read(f.dir.path().join("todo.json")).unwrap();
+    let out = call(&f, "parent");
+    assert!(!out.status.success(), "a live sibling accepted the forged parent environment");
+    assert!(String::from_utf8_lossy(&out.stderr).contains("subwork_continuation_caller_not_parent"));
+    assert_eq!(fs::read(f.dir.path().join("todo.json")).unwrap(), before);
 }
 
 #[test]

@@ -244,7 +244,16 @@ fn research_admission(gpt: bool, case: &str) {
             {"selector":"p000003","aliases":["p000003"],"at":t.rt.epoch(),"verified":true}
         ]);
     }
-    if case=="continuation_legacy" {for key in cc_job_policy::subwork_continuation::RETRY_FIELDS {source.as_object_mut().unwrap().remove(key);}source.as_object_mut().unwrap().remove("capacity_account_selector");}
+    if case=="continuation_no_retry" {for key in cc_job_policy::subwork_continuation::RETRY_FIELDS {source.as_object_mut().unwrap().remove(key);}source.as_object_mut().unwrap().remove("capacity_account_selector");}
+    if case=="continuation_legacy" {
+        // v1's already restored provider switch remains spent in the new contract.
+        source["quota_recovery"]=json!({"version":1,"source_job":"previous-quota","model":"gpt-6.1-sol"});
+        source["quota_retry_seeded_version"]=json!(1);
+        source["capacity_retry_count"]=json!(1);
+        source["capacity_history"].as_array_mut().unwrap().push(json!({"kind":"provider_switch",
+            "from_model":"anthropic/claude-opus-5-5","to_model":"gpt-6.1-sol",
+            "failure_kind":"quota","source_job":"previous-quota"}));
+    }
     t.put(source.clone());
     let mut target = row["scheduler"]["selection"].clone();
     target["cwd"] = source["cwd"].clone();
@@ -329,6 +338,7 @@ fn research_admission(gpt: bool, case: &str) {
     fs::write(&paths.store, db.to_string()).unwrap();
     if continuation {
         assert_eq!(j["capacity_same_model_retry_count"],source["capacity_same_model_retry_count"]);
+        assert_eq!(j["capacity_retry_count"],source["capacity_retry_count"]);
         assert_eq!(j["capacity_wait_count"],source["capacity_wait_count"]);
         assert_eq!(j["capacity_history"],source["capacity_history"]);
         assert!(j["quota_recovery"].is_null());assert!(j["subwork_continuation"].is_object());
@@ -372,7 +382,7 @@ fn research_admission(gpt: bool, case: &str) {
         for route in health["openai"]["safe_routes"].as_array_mut().unwrap(){route["at"]=json!(now);}
     }
     let slot = t.ctx.admit(s(&j, "id"));
-    if !["normal","continuation_normal","continuation_legacy","capacity_same","capacity_switch","capacity_anthropic","capacity_metadata","capacity_wait"].contains(&case) {
+    if !["normal","continuation_normal","continuation_legacy","continuation_no_retry","capacity_same","capacity_switch","capacity_anthropic","capacity_metadata","capacity_wait"].contains(&case) {
         assert!(slot.is_err() || slot.unwrap().is_none(), "{case}");
         assert_ne!(t.ctx.load(s(&j, "id")).unwrap()["status"], "running");
         return;
@@ -439,7 +449,7 @@ fn research_admission(gpt: bool, case: &str) {
 
 #[test]
 fn dependency_continuation_registers_links_and_rechecks_before_real_queue_admission() {
-    for case in ["continuation_normal","continuation_legacy","continuation_health","continuation_selected_unknown","continuation_source","continuation_generation","continuation_stop","continuation_scope"] {
+    for case in ["continuation_normal","continuation_legacy","continuation_no_retry","continuation_health","continuation_selected_unknown","continuation_source","continuation_generation","continuation_stop","continuation_scope"] {
         research_admission(true,case);
     }
 }

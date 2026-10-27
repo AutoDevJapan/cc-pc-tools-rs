@@ -171,7 +171,7 @@ func TestSkills3080SourcesAndCodeAcceptance(t *testing.T) {
 		t.Fatal("missing preserved license accepted")
 	}
 	head := strings.Repeat("b", 40)
-	review := skillsReceived{Spec: []byte("SKILLS3080_IMPLEMENTATION_REVIEW " + head), Metadata: object{"model": "anthropic/claude-sonnet-5-5", "effort": "max"}, Native: []object{{"model": "claude-sonnet-5-5", "effort": "max"}}, Body: []byte("SKILLS3080_CODE_ACCEPTANCE " + `{"domain":"skills-3080-code-review-v1","head":"` + head + `","accepted":true,"must":0}`)}
+	review := skillsReceived{Spec: []byte("SKILLS3080_IMPLEMENTATION_REVIEW " + head), Metadata: object{"model": "gpt-6-luna", "effort": "max", "model_origin": "owner_request", "effort_origin": "owner_request"}, Native: []object{{"model": "gpt-6-luna", "effort": "max"}}, Body: []byte("SKILLS3080_CODE_ACCEPTANCE " + `{"domain":"skills-3080-code-review-v1","head":"` + head + `","accepted":true,"must":0}`)}
 	if !skillsCodeReviewAccepted(review, head) {
 		t.Fatal("code acceptance positive rejected")
 	}
@@ -223,11 +223,11 @@ func TestSkills3080RetainsOwnerStopsAndBoundedIdentifiers(t *testing.T) {
 	}
 }
 
-func TestSkills3080AlternativeOAuthReviewKeepsActualEffort(t *testing.T) {
+func TestSkills3080AlternativeOAuthDoesNotReplaceOwnerSelectedCodeReview(t *testing.T) {
 	head := strings.Repeat("c", 40)
 	r := skillsReceived{Spec: []byte("SKILLS3080_IMPLEMENTATION_REVIEW " + head), Metadata: object{"model": "google-antigravity/gemini-3.1-pro", "effort": "high"}, Native: []object{{"model": "google-antigravity/gemini-3.1-pro", "effort": "high"}}, Body: []byte("SKILLS3080_CODE_ACCEPTANCE " + `{"domain":"skills-3080-code-review-v1","head":"` + head + `","accepted":true,"must":0}`)}
-	if !skillsModelIdentifier(str(r.Metadata["model"])) || !skillsCodeReviewAccepted(r, head) {
-		t.Fatal("existing OAuth model's highest actual effort rejected")
+	if !skillsModelIdentifier(str(r.Metadata["model"])) || skillsReviewEffort("gemini-3.1-pro") != "high" || skillsCodeReviewAccepted(r, head) {
+		t.Fatal("an available alternate model replaced the owner-selected code review")
 	}
 	r.Metadata["effort"] = "max"
 	if skillsCodeReviewAccepted(r, head) {

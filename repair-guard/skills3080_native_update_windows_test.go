@@ -22,9 +22,16 @@ func TestSkills3080Accepted594DistributionSurvivesNativeLogUpdate(t *testing.T) 
 		Candidate *bool  `json:"candidate_generated"`
 		General   *bool  `json:"general_access_granted"`
 		Registry  *bool  `json:"original_registry_recovered"`
+		GoOS      string `json:"goos"`
+		GoArch    string `json:"goarch"`
+		Modified  *bool  `json:"vcs_modified"`
+		Module    string `json:"build_module"`
 	}
 	if json.Unmarshal(raw, &observation) != nil || observation.SHA != "16386d55e418ce271cfed923edede1e7472bb93aa691b15409bcdb99753b9899" || observation.Head != "61de98373f8cb481302394be11d7d75cfef08a52" || observation.Observed != observation.SHA || observation.Bytes != 13315072 || observation.Published != "https://github.com/AutoDevJapan/cc-pc-tools-rs/pull/594#issuecomment-6442689917" || observation.Candidate == nil || *observation.Candidate || observation.General == nil || *observation.General || observation.Registry == nil || *observation.Registry {
 		t.Fatal("independently published pre-candidate software observation changed")
+	}
+	if observation.GoOS != "windows" || observation.GoArch != "amd64" || observation.Modified == nil || *observation.Modified || observation.Module != skillsGuardModule {
+		t.Fatal("independently observed build metadata differs from the software pair")
 	}
 	current := skillsProducer{strings.Repeat("7", 64), strings.Repeat("8", 40)}
 	for _, tc := range []struct {

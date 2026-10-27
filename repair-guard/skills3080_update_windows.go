@@ -138,7 +138,10 @@ func skillsCodeReviewAccepted(received skillsReceived, head string) bool {
 		return false
 	}
 	model := skillsModel(str(received.Metadata["model"]))
-	if model == "" || model == "gpt-6.1-sol" {
+	// The remaining multi-file reviews for this finite repair were explicitly
+	// assigned to Luna/max by the owner. Derive origins from the real job, not
+	// the reviewer body or caller. Other OAuth models remain valid elsewhere.
+	if model != "gpt-6-luna" || received.Metadata["model_origin"] != "owner_request" || received.Metadata["effort_origin"] != "owner_request" {
 		return false
 	}
 	wantEffort := skillsReviewEffort(model)

@@ -229,7 +229,31 @@ func skillsNativeSnapshot(s *skillsFS, job object) (io.Reader, bool) {
 	// Freeze the observed length through this same handle. Bootstrap extraction
 	// separately stops at 4 MiB; full projections retain per-record bounds and the
 	// original task window, exact input/final/call checks and duplicate detection.
-	return io.LimitReader(f, info.Size()), true
+	return &skillsNativeSnapshotReader{reader: f, remaining: info.Size()}, true
+}
+
+// Unlike LimitReader, an early underlying EOF must not authenticate a shortened
+// prefix that hides a duplicate proof from the frozen snapshot. Bootstrap may
+// deliberately stop at its separate 4MiB prefix bound; full projections drain
+// this reader and retain ErrUnexpectedEOF through their scanner error check.
+type skillsNativeSnapshotReader struct {
+	reader    io.Reader
+	remaining int64
+}
+
+func (s *skillsNativeSnapshotReader) Read(p []byte) (int, error) {
+	if s.remaining == 0 {
+		return 0, io.EOF
+	}
+	if int64(len(p)) > s.remaining {
+		p = p[:s.remaining]
+	}
+	n, err := s.reader.Read(p)
+	s.remaining -= int64(n)
+	if err == io.EOF && s.remaining > 0 {
+		err = io.ErrUnexpectedEOF
+	}
+	return n, err
 }
 
 type skillsNativeResultProof struct {

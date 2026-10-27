@@ -499,6 +499,7 @@ docs/skills-3080-openai11-result-acceptance214717.md -text
 
 docs/skills-3080-operations/openai11-result-review-snapshot214717.json -text
 repair-guard/testdata/skills3080-runtime-issuer-repair-scope.json -text
+repair-guard/testdata/skills3080-native609-purpose.md -text
 docs/skills-3080-travel3-reviewed-bundle214717.json -text
 docs/skills-3080-operations/create-travel3-214717.json -text
 docs/skills-3080-travel3-source-meaning214717.json -text

@@ -5,7 +5,6 @@ import (
 	"bytes"
 	"encoding/json"
 	"io"
-	"os"
 	"path/filepath"
 	"regexp"
 	"strconv"
@@ -535,6 +534,7 @@ func skillsReceive(r skillsResultRequest, reg skillsRegistry, s *skillsFS, revie
 	// and acceptance checks.
 	publicScope, publicInput := skillsPublicReviewScopeFor(r, spec)
 	consumerScope, consumerInput := skillsParseConsumer(spec)
+	codeInput := row.Subwork.Parent == 3686 && row.Subwork.Kind == "review" && strings.Contains(string(spec), "SKILLS3080_IMPLEMENTATION_REVIEW ")
 	var native []object
 	if publicInput {
 		if !skillsPublicReviewAuthor(publicScope, reg, row, job, s) || !skillsPublicReviewInputs(publicScope, reg.writer.Workspace, s) {
@@ -558,17 +558,25 @@ func skillsReceive(r skillsResultRequest, reg skillsRegistry, s *skillsFS, revie
 			return out, "native_context"
 		}
 	}
+	if codeInput {
+		// The normal registered software review must also prove its unchanged
+		// launch prompt and native final digest before the canonical body opens.
+		native, ok = skillsPublicReviewNative(s, job, spec, r.FinalSHA)
+		if !ok {
+			return out, "native_context"
+		}
+	}
 	body, ok := s.read(filepath.Join(skillsJobsRoot, r.Job, "last_message.md"), 2<<20)
 	if !ok || !bytes.Equal(body, []byte(str(job["last_message"]))) || (r.FinalSHA != "" && hashBytes(body) != r.FinalSHA) || (r.Task == 3709 && hashBytes(body) != skillsReplacementReviewFinal) || (r == skillsPublicReview3850 && len(body) != 4020) {
 		return out, "result_unavailable"
 	}
-	if !publicInput && !consumerInput {
+	if !publicInput && !consumerInput && !codeInput {
 		native, ok = skillsNativeJob(s, job)
 	}
 	if !ok || (r.Task == 3709 && !skillsReplacementNativeBound(native)) {
 		return out, "native_context"
 	}
-	out = skillsReceived{Body: body, Spec: spec, Native: native, Metadata: object{"id": r.Job, "task": r.Task, "status": job["status"], "model": job["model"], "effort": job["effort"], "exit_code": job["exit_code"], "thread_id": job["thread_id"], "spec_sha256": r.SpecSHA, "final_sha256": hashBytes(body)}}
+	out = skillsReceived{Body: body, Spec: spec, Native: native, Metadata: object{"id": r.Job, "task": r.Task, "status": job["status"], "model": job["model"], "effort": job["effort"], "model_origin": job["model_origin"], "effort_origin": job["effort_origin"], "exit_code": job["exit_code"], "thread_id": job["thread_id"], "spec_sha256": r.SpecSHA, "final_sha256": hashBytes(body)}}
 	if publicInput {
 		out.Metadata["public_input_commit"] = publicScope.Commit
 		out.Metadata["public_input_file_count"] = len(publicScope.Files)
@@ -586,8 +594,9 @@ func skillsReceive(r skillsResultRequest, reg skillsRegistry, s *skillsFS, revie
 
 var skillsUUID = regexp.MustCompile(`^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$`)
 
-// No recursive session/history search: only the start day and next day, exact
-// native thread identity. All other payloads are discarded and never returned.
+// Use the same exact native snapshot as historical results and creation calls;
+// never cap a normal registered review at the former 256MiB whole-file limit.
+// All unrelated payloads are discarded and never returned.
 func skillsNativeJob(s *skillsFS, job object) ([]object, bool) {
 	id := str(job["thread_id"])
 	start, e := time.Parse(time.RFC3339Nano, str(job["started_at"]))
@@ -598,34 +607,11 @@ func skillsNativeJob(s *skillsFS, job object) ([]object, bool) {
 	if e != nil || end.Before(start) {
 		return nil, false
 	}
-	home, e := os.UserHomeDir()
-	if e != nil {
-		return nil, false
-	}
-	paths := []string{}
-	for _, offset := range []int{0, 1} {
-		dir := filepath.Join(home, ".codex/sessions", start.AddDate(0, 0, offset).Format("2006/01/02"))
-		if _, ok := s.directory(dir); !ok {
-			continue
-		}
-		entries, e := os.ReadDir(dir)
-		if e != nil {
-			return nil, false
-		}
-		for _, entry := range entries {
-			if strings.HasPrefix(entry.Name(), "rollout-") && strings.HasSuffix(entry.Name(), "-"+id+".jsonl") {
-				paths = append(paths, filepath.Join(dir, entry.Name()))
-			}
-		}
-	}
-	if len(paths) != 1 {
-		return nil, false
-	}
-	stream, ok := s.open(paths[0], 256<<20)
+	stream, ok := skillsNativeSnapshot(s, job)
 	if !ok {
 		return nil, false
 	}
-	return skillsNativeProjection(io.LimitReader(stream, (256<<20)+1), id, str(job["cwd"]), start, end)
+	return skillsNativeProjection(stream, id, str(job["cwd"]), start, end)
 }
 func skillsNativeProjection(input io.Reader, id, cwd string, start, end time.Time) ([]object, bool) {
 	return skillsNativeProjectionBound(input, id, cwd, start, end, nil)

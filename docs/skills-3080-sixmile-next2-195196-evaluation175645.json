@@ -1,0 +1,943 @@
+{
+  "all2_primary_and2_individual_notice_metadata_match": true,
+  "all_original_selected_chunks_losslessly_reconstructed": true,
+  "central_operations": 0,
+  "consumer_job": "20261027-175645-todo-3080",
+  "definition": "Whole accepted original chunks, not selected prose. Original assessment writers, actual literal/reuse reader evidence, source states and all common/privacy/support definitions are retained. Independent fixed metadata match is not a fresh physical-byte observation or new reading/permission grant.",
+  "domain": "skills3080-sixmile-received-two-whole-original-v1",
+  "entries": [
+    {
+      "actual_body_reader_inferred_from_assessment_writer": false,
+      "assessment_writer_job": "20261027-072935-todo-3719",
+      "bytes": 4168,
+      "central_operations": 0,
+      "copy_license_accepted": false,
+      "git_blob": "60c5a2bee95b55783fe00e2c6cb3b5722d418614",
+      "individual_notice_metadata": [
+        {
+          "bytes": 1073,
+          "commit": "920714f17d81e0a95c7a9bc51faf0a7921cd982d",
+          "git_blob": "9a11700197a5a45b9df6b26316350d9707394038",
+          "path": "skills/lgvw3/debt-payoff-plan-comparison/LICENSE.txt",
+          "repo": "6mile/skills",
+          "role": "license_or_notice",
+          "sha256": "97c38a5576edc7a82086c29e271d07a8faf539e1b55f09e6f32f08dad9261132"
+        }
+      ],
+      "inventory_id": "github:cc69fe21ef209506c2b3e72ad76398b0a90ff088294d427390135dd6cd31e986",
+      "new_final_disposition": false,
+      "original_chunk_id": "fe720e2f0d4222388dbe818e729802ca",
+      "original_chunk_sha256": "a95d94cfece620cdba15be14619d7e91cb76e622fde8fb6f0f71928cde21b8f7",
+      "original_context_ref": "fe720e2f0d4222388dbe818e729802ca",
+      "original_read_tuple": [
+        3,
+        5,
+        0,
+        false,
+        true,
+        113
+      ],
+      "original_reader_assessment": {
+        "candidate_disposition": "入力/結果境界の改訂候補。金融助言/実送信/採否確定0。",
+        "findings": [
+          "APR/残高/利息超の月払額・住宅評価等をPOSTする案。rate/payment推定flagは債務種別の既定値で、実際の本人条件・融資適格性/節約額を保証しない。法/金利/料金/現在APIは未検証。",
+          "契約のauthなしと予約UNAUTHORIZED、success:true/空plansを区別。受付成功は有用な計画の証明でなく、Retry-Afterも任意。",
+          "--base-urlで送信先が変わる。HTTPS/許可hostのmarketing URL検査だけでは金融主張や実宛先の正当性は保証しない。script/testは未保存、送信/計算/検査0。"
+        ],
+        "nearby_metadata": [
+          "public-data-research",
+          "web-form-state",
+          "backend-correctness"
+        ],
+        "negative": "既定APRの節約を保証し、安全URL/成功だけで実債務dataを任意宛先へ送る。",
+        "notices": [
+          [
+            "LICENSE.txt",
+            3,
+            "当directoryのMITnotice21行を今回直接読了。",
+            "送信data/サービス/金融主張の権利や妥当性は別。"
+          ]
+        ],
+        "positive": "匿名の仮定を推定と明示して比較し、空plansとCTAを計算成功から分ける。",
+        "read": [
+          3,
+          5,
+          0,
+          false,
+          true,
+          113
+        ],
+        "reason": "113行とAPI契約99行、MITnotice21行を123版で直接全読。",
+        "required_changes": [
+          "実値・推定/単位/期間・費用を明示し感度を比較。空plans/partial/HTTPと業務errorを分け、errorやmarketingから秘密/不要識別子を報告しない。",
+          "元の許可済み目的/実宛先と最小dataを照合。実カード情報を収集/送信せず、sourceの同意案を本人の新禁止へせず、同じ承認を再質問しない。権利/契約は親が同対象で確認。"
+        ],
+        "row": 195,
+        "source": [
+          "github:cc69fe21ef209506c2b3e72ad76398b0a90ff088294d427390135dd6cd31e986",
+          "skills/lgvw3/debt-payoff-plan-comparison/SKILL.md",
+          "3fa321451c9786746432d32520d3a6c5f21c3f5647ebb10a4c666c9e123991b8",
+          "60c5a2bee95b55783fe00e2c6cb3b5722d418614",
+          4168
+        ],
+        "support": [
+          [
+            "LICENSE.txt",
+            1073,
+            "97c38a55",
+            "9a117001",
+            2,
+            0,
+            0,
+            "100644"
+          ],
+          [
+            "README.md",
+            1153,
+            "9f4f5cbd",
+            "bebbce14",
+            1,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "SKILL.md",
+            4168,
+            "3fa32145",
+            "60c5a2be",
+            3,
+            5,
+            0,
+            "100644"
+          ],
+          [
+            "_meta.json",
+            305,
+            "333d7724",
+            "8f0c5c87",
+            1,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "agents/openai.yaml",
+            null,
+            null,
+            "5f7e1d9a",
+            0,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "references/api-contract.md",
+            2413,
+            "63cb1afa",
+            "cf9b5d71",
+            2,
+            0,
+            0,
+            "100644"
+          ],
+          [
+            "scripts/call_get_plans.mjs",
+            null,
+            null,
+            "c7ea34e7",
+            0,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "scripts/call_get_plans.test.mjs",
+            null,
+            null,
+            "7728da18",
+            0,
+            null,
+            null,
+            "100644"
+          ]
+        ],
+        "use": "返済比較の入力仮定・推定と実測・結果/失敗を分ける設計参考。",
+        "value": "不足値を黙って埋めず、金融dataの宛先とマーケティングを別に扱える。"
+      },
+      "parent_all_semantics_received": true,
+      "path": "skills/lgvw3/debt-payoff-plan-comparison/SKILL.md",
+      "reader_row": 195,
+      "source_commit": "920714f17d81e0a95c7a9bc51faf0a7921cd982d",
+      "source_repo": "6mile/skills",
+      "source_sha256": "3fa321451c9786746432d32520d3a6c5f21c3f5647ebb10a4c666c9e123991b8"
+    },
+    {
+      "actual_body_reader_inferred_from_assessment_writer": false,
+      "assessment_writer_job": "20261027-072935-todo-3719",
+      "bytes": 33207,
+      "central_operations": 0,
+      "copy_license_accepted": false,
+      "git_blob": "aa70d64e6cb7be23533c42698787cd53f95eac34",
+      "individual_notice_metadata": [
+        {
+          "bytes": 11357,
+          "commit": "920714f17d81e0a95c7a9bc51faf0a7921cd982d",
+          "git_blob": "7a4a3ea2424c09fbe48d455aed1eaa94d9124835",
+          "path": "skills/limoxt/rex-skill-creator/LICENSE.txt",
+          "repo": "6mile/skills",
+          "role": "license_or_notice",
+          "sha256": "58d1e17ffe5109a7ae296caafcadfdbe6a7d176f0bc4ab01e12a689b0499d8bd"
+        }
+      ],
+      "inventory_id": "github:c3251ebc3f0768d67e8d1141f931743986b818a35388964cf1be8b3782b67120",
+      "new_final_disposition": false,
+      "original_chunk_id": "fe720e2f0d4222388dbe818e729802ca",
+      "original_chunk_sha256": "a95d94cfece620cdba15be14619d7e91cb76e622fde8fb6f0f71928cde21b8f7",
+      "original_context_ref": "fe720e2f0d4222388dbe818e729802ca",
+      "original_read_tuple": [
+        3,
+        16,
+        0,
+        false,
+        true,
+        487
+      ],
+      "original_reader_assessment": {
+        "candidate_disposition": "比較評価/発火検査の改訂候補。実導入/採否・許諾未確定。",
+        "findings": [
+          "有無/旧新版baselineと根拠付き判定を提案。20queryの60/40分割・各3回/最大5反復でtest最高点を選ぶため、最終未使用の検証集合が別途要る。数値/効果は未測定。",
+          "空feedbackを満足/終了とみなす、最新Downloadsから成果を探す手順は、明示承認や実runとの対応の証拠にならない。モデルIDをsystempromptから取る案やClaude.ai/Coworkの機能断定も現環境では未検証。",
+          "当packageのcomplete treeは8files。下記9依存参照を同梱せず、Python3支持は未保存。CLI/版・生成/実testは未検証、実行0。"
+        ],
+        "nearby_metadata": [
+          "skill-maintenance",
+          "ai-model-evaluation",
+          "test-quality"
+        ],
+        "negative": "繰返し使うtest最高点や空feedbackだけで完成/画像承認とし、未同梱helperを実行可能と断定。",
+        "notices": [
+          [
+            "LICENSE.txt",
+            1,
+            "同11357Bを旧134の直接伏字読取へ4。",
+            "旧157行の意味未読と公開版/作者・第三者権利を保持。"
+          ]
+        ],
+        "positive": "同一入力/版・実モデルと条件を固定し、未知の近接負例と成果物の根拠で改善を比較。",
+        "read": [
+          3,
+          16,
+          0,
+          false,
+          true,
+          487
+        ],
+        "reason": "487行/123版/3範囲を直接全読、16行未読。支持2件は原193の同bytes読取へ4。",
+        "referenced_not_in_package_tree": [
+          "references/schemas.md",
+          "agents/grader.md",
+          "agents/comparator.md",
+          "agents/analyzer.md",
+          "eval-viewer/generate_review.py",
+          "assets/eval_review.html",
+          "scripts/aggregate_benchmark.py",
+          "scripts/run_loop.py",
+          "scripts/run_eval.py"
+        ],
+        "required_changes": [
+          "基準/baseline版・入力/seed/実job/native model/予算を固定し、最終検証を最適化から分離。順次runでも条件をそろえ、件数/全件再実行は一律義務にしない。",
+          "空欄を承認にせずrunID/hashでfeedbackを結ぶ。本人判断はDiscordの具体画像/範囲へ。子直起動・readonly回避コピー・恒久MCP/新支出を実行せず、欠落依存は親の正規範囲で確認。"
+        ],
+        "row": 196,
+        "source": [
+          "github:c3251ebc3f0768d67e8d1141f931743986b818a35388964cf1be8b3782b67120",
+          "skills/limoxt/rex-skill-creator/SKILL.md",
+          "e46b35ca0e7746f2e6e088d4016486516c0762e54b70d988ac07e194e7419ce5",
+          "aa70d64e6cb7be23533c42698787cd53f95eac34",
+          33207
+        ],
+        "support": [
+          [
+            "LICENSE.txt",
+            11357,
+            "58d1e17f",
+            "7a4a3ea2",
+            4,
+            157,
+            1,
+            "100644"
+          ],
+          [
+            "SKILL.md",
+            33207,
+            "e46b35ca",
+            "aa70d64e",
+            3,
+            16,
+            0,
+            "100644"
+          ],
+          [
+            "_meta.json",
+            282,
+            "f30b55e8",
+            "9b0dbd30",
+            1,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "references/output-patterns.md",
+            1813,
+            "d6027800",
+            "073ddda5",
+            4,
+            1,
+            0,
+            "100644"
+          ],
+          [
+            "references/workflows.md",
+            818,
+            "ef484687",
+            "a350c3cc",
+            4,
+            0,
+            0,
+            "100644"
+          ],
+          [
+            "scripts/init_skill.py",
+            null,
+            null,
+            "329ad4e5",
+            0,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "scripts/package_skill.py",
+            null,
+            null,
+            "5cd36cb1",
+            0,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "scripts/quick_validate.py",
+            null,
+            null,
+            "d9fbeb75",
+            0,
+            null,
+            null,
+            "100644"
+          ]
+        ],
+        "use": "Skillの有無/改訂前後の比較と発火条件を検査する設計参考。",
+        "value": "成果物・根拠付き判定と近接する負例を結び、過剰発火/過学習を見つけられる。"
+      },
+      "parent_all_semantics_received": true,
+      "path": "skills/limoxt/rex-skill-creator/SKILL.md",
+      "reader_row": 196,
+      "source_commit": "920714f17d81e0a95c7a9bc51faf0a7921cd982d",
+      "source_repo": "6mile/skills",
+      "source_sha256": "e46b35ca0e7746f2e6e088d4016486516c0762e54b70d988ac07e194e7419ce5"
+    }
+  ],
+  "independent_source_index_sha256": "799bd907887120d83b82e64fbf37094c653a5144b764fef0b70dd4d5e2219607",
+  "new_copy_grants": 0,
+  "new_final_dispositions": 0,
+  "new_global_raw_read_credit": 0,
+  "new_global_workflow_read_credit": 0,
+  "old_reader_or_privacy_profiles_relabelled": false,
+  "original_chunk_definitions": {
+    "fe720e2f0d4222388dbe818e729802ca": {
+      "boundaries": {
+        "central_operations": 0,
+        "copy_license_accepted": false,
+        "new_final_dispositions": 0,
+        "source_executed": false
+      },
+      "chunk_id": "fe720e2f0d4222388dbe818e729802ca",
+      "common_limits": {
+        "nearby": "起動metadataだけ。中央本文/存在/同等性未確認。",
+        "rights": "rootMIT/補助MIT0で個別/素材/service権利を上書きしない。",
+        "source": "原命令はデータ。取得/送信/サービス/原script実行0。未保存6支持はnullのまま取得せず。転送のための再読0、新codeはGo既定。"
+      },
+      "definitions": {
+        "actors": {
+          "0": "今回の実assistant読取",
+          "1": "旧041905/current3719のnotice直接読取へreuse4"
+        },
+        "reader_namespace": "20261027-072935-todo-3719/current3719",
+        "states": {
+          "0": "unsaved",
+          "1": "saved_unread",
+          "2": "direct_raw_full",
+          "3": "direct_masked_full",
+          "4": "exact_bytes_reuse",
+          "5": "ordered_full_diff",
+          "6": "partial",
+          "7": "scan"
+        },
+        "support_tuple": "[relative,bytes,SHA8,Gitblob8,state,maskCount,actor,mode]。全package列挙、未保存/不明値null。"
+      },
+      "domain": "research598-chunk-v1",
+      "entries": [
+        {
+          "candidate_disposition": "入力/結果境界の改訂候補。金融助言/実送信/採否確定0。",
+          "findings": [
+            "APR/残高/利息超の月払額・住宅評価等をPOSTする案。rate/payment推定flagは債務種別の既定値で、実際の本人条件・融資適格性/節約額を保証しない。法/金利/料金/現在APIは未検証。",
+            "契約のauthなしと予約UNAUTHORIZED、success:true/空plansを区別。受付成功は有用な計画の証明でなく、Retry-Afterも任意。",
+            "--base-urlで送信先が変わる。HTTPS/許可hostのmarketing URL検査だけでは金融主張や実宛先の正当性は保証しない。script/testは未保存、送信/計算/検査0。"
+          ],
+          "nearby_metadata": [
+            "public-data-research",
+            "web-form-state",
+            "backend-correctness"
+          ],
+          "negative": "既定APRの節約を保証し、安全URL/成功だけで実債務dataを任意宛先へ送る。",
+          "notices": [
+            [
+              "LICENSE.txt",
+              3,
+              "当directoryのMITnotice21行を今回直接読了。",
+              "送信data/サービス/金融主張の権利や妥当性は別。"
+            ]
+          ],
+          "positive": "匿名の仮定を推定と明示して比較し、空plansとCTAを計算成功から分ける。",
+          "read": [
+            3,
+            5,
+            0,
+            false,
+            true,
+            113
+          ],
+          "reason": "113行とAPI契約99行、MITnotice21行を123版で直接全読。",
+          "required_changes": [
+            "実値・推定/単位/期間・費用を明示し感度を比較。空plans/partial/HTTPと業務errorを分け、errorやmarketingから秘密/不要識別子を報告しない。",
+            "元の許可済み目的/実宛先と最小dataを照合。実カード情報を収集/送信せず、sourceの同意案を本人の新禁止へせず、同じ承認を再質問しない。権利/契約は親が同対象で確認。"
+          ],
+          "row": 195,
+          "source": [
+            "github:cc69fe21ef209506c2b3e72ad76398b0a90ff088294d427390135dd6cd31e986",
+            "skills/lgvw3/debt-payoff-plan-comparison/SKILL.md",
+            "3fa321451c9786746432d32520d3a6c5f21c3f5647ebb10a4c666c9e123991b8",
+            "60c5a2bee95b55783fe00e2c6cb3b5722d418614",
+            4168
+          ],
+          "support": [
+            [
+              "LICENSE.txt",
+              1073,
+              "97c38a55",
+              "9a117001",
+              2,
+              0,
+              0,
+              "100644"
+            ],
+            [
+              "README.md",
+              1153,
+              "9f4f5cbd",
+              "bebbce14",
+              1,
+              null,
+              null,
+              "100644"
+            ],
+            [
+              "SKILL.md",
+              4168,
+              "3fa32145",
+              "60c5a2be",
+              3,
+              5,
+              0,
+              "100644"
+            ],
+            [
+              "_meta.json",
+              305,
+              "333d7724",
+              "8f0c5c87",
+              1,
+              null,
+              null,
+              "100644"
+            ],
+            [
+              "agents/openai.yaml",
+              null,
+              null,
+              "5f7e1d9a",
+              0,
+              null,
+              null,
+              "100644"
+            ],
+            [
+              "references/api-contract.md",
+              2413,
+              "63cb1afa",
+              "cf9b5d71",
+              2,
+              0,
+              0,
+              "100644"
+            ],
+            [
+              "scripts/call_get_plans.mjs",
+              null,
+              null,
+              "c7ea34e7",
+              0,
+              null,
+              null,
+              "100644"
+            ],
+            [
+              "scripts/call_get_plans.test.mjs",
+              null,
+              null,
+              "7728da18",
+              0,
+              null,
+              null,
+              "100644"
+            ]
+          ],
+          "use": "返済比較の入力仮定・推定と実測・結果/失敗を分ける設計参考。",
+          "value": "不足値を黙って埋めず、金融dataの宛先とマーケティングを別に扱える。"
+        },
+        {
+          "candidate_disposition": "比較評価/発火検査の改訂候補。実導入/採否・許諾未確定。",
+          "findings": [
+            "有無/旧新版baselineと根拠付き判定を提案。20queryの60/40分割・各3回/最大5反復でtest最高点を選ぶため、最終未使用の検証集合が別途要る。数値/効果は未測定。",
+            "空feedbackを満足/終了とみなす、最新Downloadsから成果を探す手順は、明示承認や実runとの対応の証拠にならない。モデルIDをsystempromptから取る案やClaude.ai/Coworkの機能断定も現環境では未検証。",
+            "当packageのcomplete treeは8files。下記9依存参照を同梱せず、Python3支持は未保存。CLI/版・生成/実testは未検証、実行0。"
+          ],
+          "nearby_metadata": [
+            "skill-maintenance",
+            "ai-model-evaluation",
+            "test-quality"
+          ],
+          "negative": "繰返し使うtest最高点や空feedbackだけで完成/画像承認とし、未同梱helperを実行可能と断定。",
+          "notices": [
+            [
+              "LICENSE.txt",
+              1,
+              "同11357Bを旧134の直接伏字読取へ4。",
+              "旧157行の意味未読と公開版/作者・第三者権利を保持。"
+            ]
+          ],
+          "positive": "同一入力/版・実モデルと条件を固定し、未知の近接負例と成果物の根拠で改善を比較。",
+          "read": [
+            3,
+            16,
+            0,
+            false,
+            true,
+            487
+          ],
+          "reason": "487行/123版/3範囲を直接全読、16行未読。支持2件は原193の同bytes読取へ4。",
+          "referenced_not_in_package_tree": [
+            "references/schemas.md",
+            "agents/grader.md",
+            "agents/comparator.md",
+            "agents/analyzer.md",
+            "eval-viewer/generate_review.py",
+            "assets/eval_review.html",
+            "scripts/aggregate_benchmark.py",
+            "scripts/run_loop.py",
+            "scripts/run_eval.py"
+          ],
+          "required_changes": [
+            "基準/baseline版・入力/seed/実job/native model/予算を固定し、最終検証を最適化から分離。順次runでも条件をそろえ、件数/全件再実行は一律義務にしない。",
+            "空欄を承認にせずrunID/hashでfeedbackを結ぶ。本人判断はDiscordの具体画像/範囲へ。子直起動・readonly回避コピー・恒久MCP/新支出を実行せず、欠落依存は親の正規範囲で確認。"
+          ],
+          "row": 196,
+          "source": [
+            "github:c3251ebc3f0768d67e8d1141f931743986b818a35388964cf1be8b3782b67120",
+            "skills/limoxt/rex-skill-creator/SKILL.md",
+            "e46b35ca0e7746f2e6e088d4016486516c0762e54b70d988ac07e194e7419ce5",
+            "aa70d64e6cb7be23533c42698787cd53f95eac34",
+            33207
+          ],
+          "support": [
+            [
+              "LICENSE.txt",
+              11357,
+              "58d1e17f",
+              "7a4a3ea2",
+              4,
+              157,
+              1,
+              "100644"
+            ],
+            [
+              "SKILL.md",
+              33207,
+              "e46b35ca",
+              "aa70d64e",
+              3,
+              16,
+              0,
+              "100644"
+            ],
+            [
+              "_meta.json",
+              282,
+              "f30b55e8",
+              "9b0dbd30",
+              1,
+              null,
+              null,
+              "100644"
+            ],
+            [
+              "references/output-patterns.md",
+              1813,
+              "d6027800",
+              "073ddda5",
+              4,
+              1,
+              0,
+              "100644"
+            ],
+            [
+              "references/workflows.md",
+              818,
+              "ef484687",
+              "a350c3cc",
+              4,
+              0,
+              0,
+              "100644"
+            ],
+            [
+              "scripts/init_skill.py",
+              null,
+              null,
+              "329ad4e5",
+              0,
+              null,
+              null,
+              "100644"
+            ],
+            [
+              "scripts/package_skill.py",
+              null,
+              null,
+              "5cd36cb1",
+              0,
+              null,
+              null,
+              "100644"
+            ],
+            [
+              "scripts/quick_validate.py",
+              null,
+              null,
+              "d9fbeb75",
+              0,
+              null,
+              null,
+              "100644"
+            ]
+          ],
+          "use": "Skillの有無/改訂前後の比較と発火条件を検査する設計参考。",
+          "value": "成果物・根拠付き判定と近接する負例を結び、過剰発火/過学習を見つけられる。"
+        }
+      ],
+      "first_ordinal": 195,
+      "notice_bodies": [
+        {
+          "bytes": 11357,
+          "fresh_raw": false,
+          "git_blob": "7a4a3ea2424c09fbe48d455aed1eaa94d9124835",
+          "id": 1,
+          "mask_unit": "outer_physical_lines",
+          "mask_version": 95,
+          "parent_chunk_sha256": "b0eea33a62b1d85c17964aa3530639f7253767a6151f8c9e9e436054d9c9403b",
+          "parent_receipt": "research3719-chunk-b34ebdb95c3fe69d7e1a64a4642870d4.json",
+          "read": [
+            4,
+            157,
+            1,
+            false,
+            true,
+            202
+          ],
+          "reader_job": "20261025-041905-todo-3719",
+          "reader_namespace": "20261025-041905-todo-3719/current3719",
+          "representative_path": "skills/chindden/skill-creator/LICENSE.txt",
+          "representative_read": [
+            3,
+            157,
+            0,
+            false,
+            true,
+            202
+          ],
+          "representative_row": 134,
+          "sha256": "58d1e17ffe5109a7ae296caafcadfdbe6a7d176f0bc4ab01e12a689b0499d8bd"
+        },
+        {
+          "bytes": 1073,
+          "git_blob": "9a11700197a5a45b9df6b26316350d9707394038",
+          "id": 3,
+          "mask_version": 123,
+          "read": [
+            2,
+            0,
+            0,
+            true,
+            true,
+            21
+          ],
+          "reader_job": "20261027-072935-todo-3719",
+          "reader_namespace": "20261027-072935-todo-3719/current3719",
+          "representative_path": "skills/lgvw3/debt-payoff-plan-comparison/LICENSE.txt",
+          "representative_row": 195,
+          "sha256": "97c38a5576edc7a82086c29e271d07a8faf539e1b55f09e6f32f08dad9261132",
+          "view": [
+            [
+              1,
+              21,
+              "0c4307873e2dd739b30f571033e0afc73edb14ad74258d9f8a6a56557d8a9b9c",
+              21,
+              0
+            ]
+          ]
+        }
+      ],
+      "prior_journal_sha256": "4e36c819611edb6b4ef68ff14535a3f31407a4cbaacd6c93ad77f5d37b483a67",
+      "reader_job": "20261027-072935-todo-3719",
+      "reader_todo": 3719,
+      "reading_integrity": {
+        "files": [
+          [
+            195,
+            "SKILL.md",
+            [
+              3,
+              5,
+              0,
+              false,
+              true,
+              113
+            ],
+            [
+              [
+                1,
+                4
+              ],
+              [
+                8,
+                8
+              ]
+            ],
+            [
+              [
+                1,
+                113,
+                "ce2ac392a117e5eac68568bf43ba678b8d2e86f2229e1cf94df618e223e6acd8",
+                108,
+                5
+              ]
+            ]
+          ],
+          [
+            195,
+            "references/api-contract.md",
+            [
+              2,
+              0,
+              0,
+              true,
+              true,
+              99
+            ],
+            [],
+            [
+              [
+                1,
+                99,
+                "041384d8055ca0ede8f38411052b37fb4e229b823897919ffd4527e78f116c4e",
+                99,
+                0
+              ]
+            ]
+          ],
+          [
+            196,
+            "SKILL.md",
+            [
+              3,
+              16,
+              0,
+              false,
+              true,
+              487
+            ],
+            [
+              [
+                1,
+                5
+              ],
+              [
+                15,
+                15
+              ],
+              [
+                235,
+                235
+              ],
+              [
+                264,
+                264
+              ],
+              [
+                275,
+                277
+              ],
+              [
+                367,
+                369
+              ],
+              [
+                386,
+                386
+              ],
+              [
+                477,
+                477
+              ]
+            ],
+            [
+              [
+                1,
+                170,
+                "adf9beef61e850bd479107bc4afc5f9db2c0629f1da4dd8ef5c852ffc295aa45",
+                164,
+                6
+              ],
+              [
+                171,
+                340,
+                "d7f9ea88a38e13400110777a8ecca33302a71d8f54d074c872f5b31652f5055b",
+                165,
+                5
+              ],
+              [
+                341,
+                487,
+                "3146d7c119d5789d6c12185beb65530763a81a38bc6a35b183992f25e67b1783",
+                142,
+                5
+              ]
+            ]
+          ]
+        ],
+        "mask_unit": "outer_physical_lines",
+        "mask_version": 123,
+        "method": "同123版。0は秘密不在の保証でない。",
+        "proof_tuple": "[row,relative,read,withheld_ranges,ordered_ranges]。rangeはfrom/to/viewSHA/visible/mask。",
+        "same_buffer": {
+          "bytes": true,
+          "git_blob": true,
+          "same_buffer": true,
+          "sha256": true,
+          "strict_utf8": true
+        },
+        "source_original_text_included": false
+      },
+      "roster_sha256": "f9c6b2e44c5e3aa8947f758f864eaa0d5edc396d622359826bca848cd96f9901",
+      "support_reuse": {
+        "consumer_row": 196,
+        "fresh_raw": false,
+        "mask_version": 123,
+        "new_literal_reads": 0,
+        "parent_receipt": "research3719-chunk-50d20bb89875d6c52cdc676d3a1dd408.json",
+        "reader_job": "20261027-072935-todo-3719",
+        "reader_namespace": "20261027-072935-todo-3719/current3719",
+        "records": [
+          [
+            "references/output-patterns.md",
+            "d6027800b9d8c26589edba85b42901a41ac36d753b4e9cebc7f4cbb03cdcf0a4",
+            "073ddda5f03989b1731ad29b9df7248279e9eef0",
+            1813,
+            [
+              3,
+              1,
+              0,
+              false,
+              true,
+              83
+            ]
+          ],
+          [
+            "references/workflows.md",
+            "ef4846877d5dab47511a01a6cf31476ad64f5bc5945635459295794575338980",
+            "a350c3cc81367fda7acfea9084aaa13a5d83c054",
+            818,
+            [
+              2,
+              0,
+              0,
+              true,
+              true,
+              28
+            ]
+          ]
+        ],
+        "representative_directory": "skills/lbbniu/lbbniu-skill-creator/",
+        "representative_row": 193,
+        "tuple": "[relative,fullSHA,fullGitblob,bytes,actual_read]"
+      }
+    }
+  },
+  "parent_acknowledged_through": 196,
+  "parent_journal_sha256": "54705208f12e77fec767e95a65db58744a00ec30a37f6d4cc37d8022f50f4759",
+  "publication_preparation": {
+    "central_operations": 0,
+    "new_final_dispositions": 0,
+    "new_global_raw_or_workflow_credit": 0,
+    "new_permissions": 0,
+    "new_source_body_reads": 0,
+    "publisher_job": "20261027-175645-todo-3080",
+    "retained_private_snapshot_sha256": "1c080f31aecf353926579ff7defbfcc322f3333909f49697dfb359247c807d95",
+    "whole_original_contexts_reconstructed_now": 1
+  },
+  "registered_spec_sha256": "4f6fe32f62db56bed2acb4d378147ff952ad06230243fb45f7674f3158313fc3",
+  "roster_sha256": "f9c6b2e44c5e3aa8947f758f864eaa0d5edc396d622359826bca848cd96f9901",
+  "source_commit": "920714f17d81e0a95c7a9bc51faf0a7921cd982d",
+  "source_gzip_or_original_body_reopened": 0,
+  "source_primary_bytes": 37375,
+  "source_slice": [
+    195,
+    196
+  ],
+  "todo": 3080,
+  "whole16_complete": false,
+  "whole_original_ACK_pins": [
+    {
+      "all_original_fields_reconstructed": true,
+      "chunk_id": "fe720e2f0d4222388dbe818e729802ca",
+      "chunk_sha256": "a95d94cfece620cdba15be14619d7e91cb76e622fde8fb6f0f71928cde21b8f7",
+      "first": 195,
+      "last": 196,
+      "original_message_sha256": "604dfbb87627b9d773c5d7bcc7ebbc0b1edd0dd36fa1ec638d5a89c8cbfd80b8",
+      "reader_job": "20261027-072935-todo-3719"
+    }
+  ]
+}

@@ -92,6 +92,66 @@ func TestSkills3080LargeCanonicalNativeKeepsOriginalProofs(t *testing.T) {
 			t.Fatal("canonical creation call after former size boundary was rejected")
 		}
 	})
+	t.Run("ordinary_registered_review", func(t *testing.T) {
+		fs := skillsFS{blocked: func(string) bool { return false }}
+		defer fs.close()
+		got, ok := skillsNativeJob(&fs, job)
+		if !ok || len(got) != 1 {
+			t.Fatal("ordinary registered review rejected a canonical log above 256MiB")
+		}
+	})
+	t.Run("completed_review_holds_read_only_snapshot", func(t *testing.T) {
+		fs := skillsFS{blocked: func(string) bool { return false }}
+		defer fs.close()
+		if _, ok := skillsNativeJob(&fs, job); !ok {
+			t.Fatal("completed review snapshot unavailable")
+		}
+		writer, err := os.OpenFile(path, os.O_WRONLY, 0600)
+		if err == nil {
+			writer.Close()
+			t.Fatal("completed review allowed concurrent rewriting of its held bytes")
+		}
+	})
+	t.Run("completed_review_refuses_existing_writer", func(t *testing.T) {
+		writer, err := os.OpenFile(path, os.O_WRONLY, 0600)
+		if err != nil {
+			t.Fatal(err)
+		}
+		defer writer.Close()
+		fs := skillsFS{blocked: func(string) bool { return false }}
+		defer fs.close()
+		if _, ok := skillsNativeJob(&fs, job); ok {
+			t.Fatal("completed review accepted bytes held by a concurrent writer")
+		}
+	})
+	t.Run("snapshot_rejects_truncated_duplicate_call", func(t *testing.T) {
+		fs := skillsFS{blocked: func(string) bool { return false }}
+		defer fs.close()
+		writer, err := os.OpenFile(path, os.O_WRONLY, 0600)
+		if err != nil {
+			t.Fatal(err)
+		}
+		defer writer.Close()
+		defer writer.Truncate(info.Size())
+		if _, err := writer.Seek(0, io.SeekEnd); err != nil {
+			t.Fatal(err)
+		}
+		if err := json.NewEncoder(writer).Encode(records[1]); err != nil {
+			t.Fatal(err)
+		}
+		reader, ok := skillsNativeSnapshot(&fs, job)
+		if !ok {
+			t.Fatal("initial snapshot unavailable")
+		}
+		// Remove a duplicate call after freezing the longer size. The remaining
+		// prefix contains every otherwise valid proof and must still be denied.
+		if err := writer.Truncate(info.Size()); err != nil {
+			t.Fatal(err)
+		}
+		if _, ok := skillsCreationNativeProjection(reader, thread, cwd, start, end, c); ok {
+			t.Fatal("truncation hid the frozen duplicate call behind a valid prefix")
+		}
+	})
 	t.Run("same_snapshot_ignores_later_append", func(t *testing.T) {
 		fs := skillsFS{blocked: func(string) bool { return false }}
 		defer fs.close()

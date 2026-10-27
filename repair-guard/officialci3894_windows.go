@@ -74,6 +74,12 @@ const official3894MaskedPredecessorHead = "4e117a2d813e4a989d1c3085d2734963d9c19
 const official3894MaskedDistributionSHA = "c80d60ab470e52ef9fbe53c1e039d1fcdc31429e291c3f156a953b9b6059d02f"
 const official3894MaskedDistributionHead = "444eae8714ee8b6199c9ed95208ac40272aeb8ce"
 
+// PR594's accepted normal distribution was independently read back before the
+// native-log successor. Preserve only this software pair in both updaters.
+// docs/evidence/skills-3080-guard-before-native609-16386.json
+const official3894NativePredecessorSHA = "16386d55e418ce271cfed923edede1e7472bb93aa691b15409bcdb99753b9899"
+const official3894NativePredecessorHead = "61de98373f8cb481302394be11d7d75cfef08a52"
+
 type official3894Source struct {
 	Head, Registration, CreatorJob, Workspace, Branch, SpecSHA string
 }
@@ -938,7 +944,8 @@ func official3894InstalledBaseline(sha, head string) bool {
 		(sha == official3894ConcurrentGuardSHA && head == official3894ConcurrentGuardHead) ||
 		(sha == official3894SharedGuardSHA && head == official3894SharedGuardHead) ||
 		(sha == official3894MaskedPredecessorSHA && head == official3894MaskedPredecessorHead) ||
-		(sha == official3894MaskedDistributionSHA && head == official3894MaskedDistributionHead)
+		(sha == official3894MaskedDistributionSHA && head == official3894MaskedDistributionHead) ||
+		(sha == official3894NativePredecessorSHA && head == official3894NativePredecessorHead)
 }
 
 // Qualifies only comparison of the known previously published guard software.

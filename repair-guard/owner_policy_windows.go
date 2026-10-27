@@ -86,7 +86,7 @@ func ownerCardPath(path string) bool {
 		// A directory verdict qualifies the working location, not every child.
 		// Repository names below its marker are software metadata, but a marker
 		// must not conceal an outside storage location that needs classification.
-		if root, ok := ownerRepositoryRoot(path); ok {
+		if root, ok := ownerRepositoryRoot(path); ok && same(path, root) {
 			path = filepath.Dir(root)
 			codeLeaf = false
 		}
@@ -139,17 +139,17 @@ func ownerNonSourcePath(path string) bool {
 }
 
 type ownerPolicyAccess struct {
-	legacy   func(string) ownerLegacyState
-	repair   func(string) bool
-	source   func(string) ownerPathVerdict
-	physical func(string) (string, error)
+	legacy       func(string) ownerLegacyState
+	repair       func(string) bool
+	source       func(string) ownerPathVerdict
+	physical     func(string) (string, error)
 	organization func(string) ownerPathVerdict
 }
 
 func classifyOwnerPath(path string) ownerPathVerdict {
 	return ownerPolicyClassify(path, ownerPolicyAccess{
 		legacy: ownerLegacyProtection, repair: repairPathAllowed,
-		source: ownerRegisteredSource, physical: ownerPhysicalPath,
+		source: ownerRegisteredSource, physical: ownerRulePhysicalPath, organization: ownerOrganizationPath,
 	})
 }
 
@@ -176,18 +176,24 @@ func ownerPolicyClassify(path string, access ownerPolicyAccess) ownerPathVerdict
 		categories = append(categories, "client_project")
 	}
 	if len(categories) > 0 {
-		return ownerPathVerdict{Status: "protected", Categories: categories}
+		return ownerPathVerdict{Status: "protected", Categories: categories, Basis: "legacy_exclusion"}
 	}
 	// A filename is not evidence that real owner card information exists.
 	// Keep suspected data unknown and unread, without manufacturing a category
 	// or treating official test data as confirmed real card information.
 	if card {
-		return ownerUnverified()
+		return ownerRuleUnknown("card_name_or_storage_candidate")
 	}
 	for _, candidate := range paths {
 		if ownerWindowsAlias(candidate) || access.legacy(candidate) == ownerLegacyUnavailable {
-			return ownerUnverified()
+			return ownerRuleUnknown("windows_alias_or_exclusion_unavailable")
 		}
+	}
+	if len(paths) > 1 {
+		return ownerRuleUnknown("physical_identity_mismatch")
+	}
+	if access.organization != nil {
+		return access.organization(path)
 	}
 	if access.repair(path) {
 		if len(paths) > 1 && !access.repair(paths[1]) {

@@ -30,6 +30,30 @@ func ownerPhysicalPath(path string) (string, error) {
 	return ownerHandlePath(h)
 }
 
+// Creation paths still need their existing ancestor's final identity. A missing
+// leaf must not conceal a junction or a short-name alias in its parent.
+func ownerRulePhysicalPath(path string) (string, error) {
+	target := path
+	for {
+		resolved, err := ownerPhysicalPath(target)
+		if err == nil {
+			rel, e := filepath.Rel(target, path)
+			if e != nil {
+				return "", e
+			}
+			return filepath.Join(resolved, rel), nil
+		}
+		if !os.IsNotExist(err) {
+			return "", err
+		}
+		parent := filepath.Dir(target)
+		if parent == target {
+			return "", err
+		}
+		target = parent
+	}
+}
+
 func ownerHandlePath(h syscall.Handle) (string, error) {
 	buffer := make([]uint16, 32768)
 	n, _, callErr := syscall.NewLazyDLL("kernel32.dll").NewProc("GetFinalPathNameByHandleW").Call(uintptr(h), uintptr(unsafe.Pointer(&buffer[0])), uintptr(len(buffer)), 0)

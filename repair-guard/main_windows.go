@@ -479,6 +479,8 @@ func runGuardCLIWithVerifiers(args []string, stdout, stderr io.Writer, currentVe
 		verdict = ownerPathVerdict{AccessAllowed: true, Status: "clear", Categories: []string{}}
 	}
 	result := map[string]any{"ok": ok, "client_resource": !verdict.AccessAllowed, "classification_unverified": verdict.Status == "unverified", "ci_retirement_qualified": retirement, "original_registry_recovered": false, "scope": "owner protection policy: client projects and owner card information; verified sources and purpose-checked receipts", "access_allowed": verdict.AccessAllowed, "protection_status": verdict.Status, "protection_categories": verdict.Categories}
+	result["classification_policy"] = "owner-client-rule-20261027"
+	result["classification_basis"] = verdict.Basis
 	_ = json.NewEncoder(stdout).Encode(result)
 	if !ok {
 		return 2

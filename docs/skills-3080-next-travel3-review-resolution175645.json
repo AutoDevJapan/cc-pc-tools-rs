@@ -44,5 +44,32 @@
   "new_CreateNew_operations": 0,
   "central_operations": 0,
   "new_adoptions": 0,
-  "whole16_complete": false
+  "whole16_complete": false,
+  "rubber_original_review": {
+    "task": 4115,
+    "job": "20261027-213226-todo-4115",
+    "registered_spec_sha256": "60443f18a9c58b54fe8c004d1a090016337bd6ece1d04b587fe677e888642d82",
+    "original_bytes": 2829,
+    "original_sha256": "9d7e65bae6c5c4bc190225f364a11acc796453762d51e774b9ca0efca64305fa",
+    "Must": 1,
+    "Suggestion": 0,
+    "Nit": 0,
+    "original_input_and_response_retained": true
+  },
+  "rubber_M1_resolution": {
+    "file": "skills-3080-next-travel3-placement-plan175645.md",
+    "sha256": "4f33c14d045d664bbad1b9390698e7aedade5aa7b2bde39efac4659e53f9069e",
+    "old_target_label_ambiguity_removed": true,
+    "exact_three_directory_paths_absent_observed_at": "2026-10-27T12:56:18Z",
+    "observation_only_existing_contents_opened": 0,
+    "recheck_at_actual_mutation_required": true,
+    "exclusive_CreateNew_only": true,
+    "atomic_all_file_rollback_claimed": false,
+    "partial_failure_preserve_native_and_no_blind_retry": true,
+    "only_proven_new_objects_can_be_quarantined": true,
+    "uncertain_identity_retained_for_same_existing_qualified_repair": true,
+    "post_create_21_same_ID_buffers_discovery_and_use_required": true,
+    "placement_or_recovery_already_executed": false,
+    "pointed_rubber_recheck_pending": true
+  }
 }

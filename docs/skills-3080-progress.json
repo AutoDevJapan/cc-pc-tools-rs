@@ -2896,17 +2896,29 @@
     "normal_source_binding_test_seconds": 2.0,
     "new_raw_or_unique_credit": 0,
     "full_content_review_accepted": false,
-    "central_existence_checked": false,
+    "central_existence_checked": true,
     "central_operations": 0,
     "new_adoptions": 0,
     "review_resolution": {
       "file": "skills-3080-next-travel3-review-resolution175645.json",
-      "sha256": "c29506eae43b00a21c544b5775bfb45a1328a21e43f372e9e2827794c6cfd281",
+      "sha256": "2e49226c99eb748da9b14a00222a5a5259ca6f510bddc99d9342922e9580e6a6",
       "old_Must": 0,
       "old_Suggestion": 3,
       "pointed_reviewer_recheck_pending": true
     },
-    "previous_source_binding_test_seconds": 3.341
+    "previous_source_binding_test_seconds": 3.341,
+    "presence_observation": {
+      "observed_at": "2026-10-27T12:56:18Z",
+      "all3_directory_paths_absent": true,
+      "metadata_only": true,
+      "existing_body_reads": 0,
+      "future_absence_not_inferred": true,
+      "fresh_qualified_CreateNew_still_required": true
+    },
+    "placement_plan": {
+      "file": "skills-3080-next-travel3-placement-plan175645.md",
+      "sha256": "4f33c14d045d664bbad1b9390698e7aedade5aa7b2bde39efac4659e53f9069e"
+    }
   },
   "latest_received35_assessments": {
     "publisher_job": "20261027-175645-todo-3080",

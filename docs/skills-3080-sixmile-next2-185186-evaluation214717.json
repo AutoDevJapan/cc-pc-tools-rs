@@ -1,0 +1,738 @@
+{
+  "all2_primary_and2_individual_notice_metadata_match": true,
+  "all_original_selected_chunks_losslessly_reconstructed": true,
+  "central_operations": 0,
+  "consumer_job": "20261026-214717-todo-3080",
+  "definition": "Whole accepted original chunks, not selected prose. Original assessment writers, actual literal/reuse reader evidence, source states and all common/privacy/support definitions are retained. Independent fixed metadata match is not a fresh physical-byte observation or new reading/permission grant.",
+  "domain": "skills3080-sixmile-received-two-whole-original-v1",
+  "entries": [
+    {
+      "actual_body_reader_inferred_from_assessment_writer": false,
+      "assessment_writer_job": "20261027-072935-todo-3719",
+      "bytes": 4273,
+      "central_operations": 0,
+      "copy_license_accepted": false,
+      "git_blob": "d49c39db53031e773ae9b6209ac1fbffb7b29f24",
+      "individual_notice_metadata": [
+        {
+          "bytes": 1075,
+          "commit": "920714f17d81e0a95c7a9bc51faf0a7921cd982d",
+          "git_blob": "173e897dc0b825da210873c7209b1e27bceea077",
+          "path": "skills/kurosh87/aerobase-travel-concierge/LICENSE.txt",
+          "repo": "6mile/skills",
+          "role": "license_or_notice",
+          "sha256": "619bd2ca1801541f1923b1f5d343e59067030fb865eae56a207fdf32fc0f8e81"
+        }
+      ],
+      "inventory_id": "github:c6e76026dc10b4649b727891cb4d32baa63af4a2c5a134ad5e609e2e30d08880",
+      "new_final_disposition": false,
+      "original_chunk_id": "b0d037e4a42b5815d65cf8c8636095c5",
+      "original_chunk_sha256": "0e83cfcb5839afe1e7b1303fe6b75c7c40fd1eca959b257e05676ec1354f655b",
+      "original_context_ref": "b0d037e4a42b5815d65cf8c8636095c5",
+      "original_read_tuple": [
+        3,
+        14,
+        0,
+        false,
+        true,
+        108
+      ],
+      "original_reader_assessment": {
+        "candidate_disposition": "親への改訂知識候補。導入/最終採否・実test/許諾0。",
+        "findings": [
+          "料金/quota・401/403/5xx等は保存中の主張。現契約/API/医学的品質は未確認。新費用・実カード禁止と非AI通常鍵/AI課金の区別を保持し、研究内で実行しない。",
+          "flight/award/lounge/hotel/activity/deal/wallet/recoveryを統合。primaryのwallet/summary・user-loyalty経路と支持のv1/wallet・programs経路は同一契約/aliasか未確認。",
+          "保存支持2件を実読。5xx retryはbook/取消等の重複作用を防ぎ、prebookを確定予約へしない。Scraplingの200/challengepass/cachedやstealth宣言を実成果/正規拒否迂回へ変えない。",
+          "Pro check-in/追跡/外部比較は保存中の宣伝。実カード情報は参照/利用せず、非カードloyalty知識を一括除外もしない。wrapperは未保存で実動/安全未確認。"
+        ],
+        "nearby_metadata": [
+          "backend-correctness",
+          "oauth-least-privilege"
+        ],
+        "negative": "成功200やprebookを予約完了にし、5xxで支払再送/429で増額する。",
+        "notices": [
+          [
+            "LICENSE.txt",
+            1,
+            "同1075BをACK済182の実raw22へ結ぶ4。新表示0。",
+            "publisher/公開版・API/service/旅程data/第三者素材権利は別。"
+          ]
+        ],
+        "positive": "同旅程IDで検索・料金再確認・予約/取消を別stateにする設計へ参照。",
+        "read": [
+          3,
+          14,
+          0,
+          false,
+          true,
+          108
+        ],
+        "reason": "4273B/108行を122版/14行抑止で直接順序全読。下記の固有操作と限界を評価。",
+        "required_changes": [
+          "工程のID/主体/条件・宛先を結び、検索/予約/実決済・取消を別receiptへ。任意URL/scriptと秘密の送信先を限定し、正規拒否を別経路で回避しない。"
+        ],
+        "row": 185,
+        "source": [
+          "github:c6e76026dc10b4649b727891cb4d32baa63af4a2c5a134ad5e609e2e30d08880",
+          "skills/kurosh87/aerobase-travel-concierge/SKILL.md",
+          "e4f82d1e6406ca016f1e39fca6521fd5a90bdec62472590a25950aa36cde941d",
+          "d49c39db53031e773ae9b6209ac1fbffb7b29f24",
+          4273
+        ],
+        "support": [
+          [
+            "LICENSE.txt",
+            1075,
+            "619bd2ca",
+            "173e897d",
+            4,
+            0,
+            0,
+            "100644"
+          ],
+          [
+            "SKILL.md",
+            4273,
+            "e4f82d1e",
+            "d49c39db",
+            3,
+            14,
+            0,
+            "100644"
+          ],
+          [
+            "_meta.json",
+            1012,
+            "68916cde",
+            "7e6e5f23",
+            1,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "references/aerobase-api.md",
+            4667,
+            "bfe5e533",
+            "2cbf76f2",
+            3,
+            2,
+            0,
+            "100644"
+          ],
+          [
+            "references/scrapling.md",
+            2617,
+            "a84890a6",
+            "ea7ed3e4",
+            3,
+            1,
+            0,
+            "100644"
+          ],
+          [
+            "scripts/browser-tracking.mjs",
+            null,
+            null,
+            "78959bcd",
+            0,
+            null,
+            null,
+            "100644"
+          ]
+        ],
+        "use": "複数の旅行工程を一つの依頼へ結ぶ設計参考。",
+        "value": "検索/比較・保存・prebook/book/取消と実完了を区別する。"
+      },
+      "parent_all_semantics_received": true,
+      "path": "skills/kurosh87/aerobase-travel-concierge/SKILL.md",
+      "reader_row": 185,
+      "source_commit": "920714f17d81e0a95c7a9bc51faf0a7921cd982d",
+      "source_repo": "6mile/skills",
+      "source_sha256": "e4f82d1e6406ca016f1e39fca6521fd5a90bdec62472590a25950aa36cde941d"
+    },
+    {
+      "actual_body_reader_inferred_from_assessment_writer": false,
+      "assessment_writer_job": "20261027-072935-todo-3719",
+      "bytes": 4016,
+      "central_operations": 0,
+      "copy_license_accepted": false,
+      "git_blob": "dc87a5100b5570e6893537a800ac02708b5b235e",
+      "individual_notice_metadata": [
+        {
+          "bytes": 1075,
+          "commit": "920714f17d81e0a95c7a9bc51faf0a7921cd982d",
+          "git_blob": "173e897dc0b825da210873c7209b1e27bceea077",
+          "path": "skills/kurosh87/aerobase-travel-flights/LICENSE.txt",
+          "repo": "6mile/skills",
+          "role": "license_or_notice",
+          "sha256": "619bd2ca1801541f1923b1f5d343e59067030fb865eae56a207fdf32fc0f8e81"
+        }
+      ],
+      "inventory_id": "github:61281fbe8c82fc1d0fd1f049ab1c2ea335b91577743dd88dd1503cd876f6fb8d",
+      "new_final_disposition": false,
+      "original_chunk_id": "b0d037e4a42b5815d65cf8c8636095c5",
+      "original_chunk_sha256": "0e83cfcb5839afe1e7b1303fe6b75c7c40fd1eca959b257e05676ec1354f655b",
+      "original_context_ref": "b0d037e4a42b5815d65cf8c8636095c5",
+      "original_read_tuple": [
+        3,
+        15,
+        0,
+        false,
+        true,
+        99
+      ],
+      "original_reader_assessment": {
+        "candidate_disposition": "親への改訂知識候補。導入/最終採否・実test/許諾0。",
+        "findings": [
+          "T1",
+          "T2",
+          "searchはroute/date/return/stopsとprice/duration sort。無料5件/Concierge50件とmulti-provider検索を記述するが、表示上限/同一条件と全件/全provider実取得を区別する。",
+          "validateのavailable/currentPrice/priceChangedは価格・席の再確認で、book結果actionはbooked/redirect/re-search/confirm_price_change/failed。API受付やbooked文字列だけで発券・請求/全旅程確定としない。booking詳細のstatus/webhook・実receiptを別検証。",
+          "0〜2h差をminimal circadian disruptionと扱う規則は保存主張で個別の医学保証でない。Ask before any booking-related actionを通常の許可済み検索/検査の再承認待ちへ拡げず、実カード禁止・新費用/実購入の条件は保持する。"
+        ],
+        "nearby_metadata": [
+          "backend-correctness",
+          "timezone-helper"
+        ],
+        "negative": "validateやbooked文字列だけで発券/支払成功とし、5xxで予約を二重送信する。",
+        "notices": [
+          [
+            "LICENSE.txt",
+            1,
+            "当directoryの同1075BをACK182の実readへ結ぶ4。",
+            "publisher/公開版・航空/決済service・旅程data/第三者権利は別。"
+          ]
+        ],
+        "positive": "同条件の表示上限と価格時点を示し、redirectや価格再同意を未完了で保持する設計へ参照。",
+        "read": [
+          3,
+          15,
+          0,
+          false,
+          true,
+          99
+        ],
+        "reason": "4016B/99行を122版15行抑止で直接全読。検索上限とvalidate/book・webhookを具体評価。",
+        "required_changes": [
+          "検索/validate/予約request/価格再同意・発券/実課金を別stateへ。未知結果のwriteを再送せず、scope/主体・宛先/冪等性・webhook照合と有限回復を残す。"
+        ],
+        "row": 186,
+        "source": [
+          "github:61281fbe8c82fc1d0fd1f049ab1c2ea335b91577743dd88dd1503cd876f6fb8d",
+          "skills/kurosh87/aerobase-travel-flights/SKILL.md",
+          "87e13f54e175a6d0e431fa636bfdc9ecdcffff4cc65355b1ed8e56ee6d4d5770",
+          "dc87a5100b5570e6893537a800ac02708b5b235e",
+          4016
+        ],
+        "support": [
+          [
+            "LICENSE.txt",
+            1075,
+            "619bd2ca",
+            "173e897d",
+            4,
+            0,
+            0,
+            "100644"
+          ],
+          [
+            "SKILL.md",
+            4016,
+            "87e13f54",
+            "dc87a510",
+            3,
+            15,
+            0,
+            "100644"
+          ],
+          [
+            "_meta.json",
+            1358,
+            "a7831287",
+            "29052dac",
+            1,
+            null,
+            null,
+            "100644"
+          ]
+        ],
+        "use": "航空券の検索/料金検証と予約状態を分ける設計参考。",
+        "value": "booked/redirect/re-search/価格再同意/failedを別の結果として扱える。"
+      },
+      "parent_all_semantics_received": true,
+      "path": "skills/kurosh87/aerobase-travel-flights/SKILL.md",
+      "reader_row": 186,
+      "source_commit": "920714f17d81e0a95c7a9bc51faf0a7921cd982d",
+      "source_repo": "6mile/skills",
+      "source_sha256": "87e13f54e175a6d0e431fa636bfdc9ecdcffff4cc65355b1ed8e56ee6d4d5770"
+    }
+  ],
+  "independent_source_index_sha256": "799bd907887120d83b82e64fbf37094c653a5144b764fef0b70dd4d5e2219607",
+  "new_copy_grants": 0,
+  "new_final_dispositions": 0,
+  "new_global_raw_read_credit": 0,
+  "new_global_workflow_read_credit": 0,
+  "old_reader_or_privacy_profiles_relabelled": false,
+  "original_chunk_definitions": {
+    "b0d037e4a42b5815d65cf8c8636095c5": {
+      "boundaries": {
+        "central_operations": 0,
+        "copy_license_accepted": false,
+        "new_final_dispositions": 0,
+        "source_executed": false
+      },
+      "chunk_id": "b0d037e4a42b5815d65cf8c8636095c5",
+      "common_findings": {
+        "T1": "料金/無料5day・Pro等のquota/現API/医学的jetlag品質は保存主張で現在保証でない。新費用・実カード禁止/OAuth既存枠onlyを保持。非AI通常鍵をAI API課金禁止へ一括分類しない。",
+        "T2": "401/403をmissingkeyへ一律化せず、対象/認可/正規拒否を区別。5xx再試行には期限とwrite重複/元結果照合が必要。新HTTP/API/認証/ブラウザ/購入・予約・送信0。近接は起動metadataだけで中央本文/存在・同等性未照会。"
+      },
+      "definitions": {
+        "actors": {
+          "0": "今回実assistant。185は前の4件draftで実読済み3を再表示せず配送。186初回直接3。支持2件は同job先行direct3、noticeはACK182へ4。"
+        },
+        "proof_tuple": "primary=[row,withheldRanges,orderedRanges[from,through,SHA,visible,masked]]。support=[row,relative,fullSHA,fullGitblob,bytes,read,maskVersion,withheld,ordered]。同bufferでSHA/length/Gitblob/strictUTF8照合。",
+        "reader_namespace": "20261027-072935-todo-3719/current3719",
+        "states": {
+          "0": "unsaved",
+          "1": "saved_unread",
+          "2": "direct_raw_full",
+          "3": "direct_masked_full",
+          "4": "exact_bytes_reuse",
+          "5": "ordered_full_diff",
+          "6": "partial",
+          "7": "scan"
+        },
+        "support_tuple": "[relative,bytes,SHA8,Gitblob8,state,maskCount,actor,mode]。全tree6/3件。fulltupleは固定index799bd907/tree5782ae7dへ原caseで対応、未保存/未読mask/readerはnull。"
+      },
+      "domain": "research598-chunk-v1",
+      "entries": [
+        {
+          "candidate_disposition": "親への改訂知識候補。導入/最終採否・実test/許諾0。",
+          "findings": [
+            "料金/quota・401/403/5xx等は保存中の主張。現契約/API/医学的品質は未確認。新費用・実カード禁止と非AI通常鍵/AI課金の区別を保持し、研究内で実行しない。",
+            "flight/award/lounge/hotel/activity/deal/wallet/recoveryを統合。primaryのwallet/summary・user-loyalty経路と支持のv1/wallet・programs経路は同一契約/aliasか未確認。",
+            "保存支持2件を実読。5xx retryはbook/取消等の重複作用を防ぎ、prebookを確定予約へしない。Scraplingの200/challengepass/cachedやstealth宣言を実成果/正規拒否迂回へ変えない。",
+            "Pro check-in/追跡/外部比較は保存中の宣伝。実カード情報は参照/利用せず、非カードloyalty知識を一括除外もしない。wrapperは未保存で実動/安全未確認。"
+          ],
+          "nearby_metadata": [
+            "backend-correctness",
+            "oauth-least-privilege"
+          ],
+          "negative": "成功200やprebookを予約完了にし、5xxで支払再送/429で増額する。",
+          "notices": [
+            [
+              "LICENSE.txt",
+              1,
+              "同1075BをACK済182の実raw22へ結ぶ4。新表示0。",
+              "publisher/公開版・API/service/旅程data/第三者素材権利は別。"
+            ]
+          ],
+          "positive": "同旅程IDで検索・料金再確認・予約/取消を別stateにする設計へ参照。",
+          "read": [
+            3,
+            14,
+            0,
+            false,
+            true,
+            108
+          ],
+          "reason": "4273B/108行を122版/14行抑止で直接順序全読。下記の固有操作と限界を評価。",
+          "required_changes": [
+            "工程のID/主体/条件・宛先を結び、検索/予約/実決済・取消を別receiptへ。任意URL/scriptと秘密の送信先を限定し、正規拒否を別経路で回避しない。"
+          ],
+          "row": 185,
+          "source": [
+            "github:c6e76026dc10b4649b727891cb4d32baa63af4a2c5a134ad5e609e2e30d08880",
+            "skills/kurosh87/aerobase-travel-concierge/SKILL.md",
+            "e4f82d1e6406ca016f1e39fca6521fd5a90bdec62472590a25950aa36cde941d",
+            "d49c39db53031e773ae9b6209ac1fbffb7b29f24",
+            4273
+          ],
+          "support": [
+            [
+              "LICENSE.txt",
+              1075,
+              "619bd2ca",
+              "173e897d",
+              4,
+              0,
+              0,
+              "100644"
+            ],
+            [
+              "SKILL.md",
+              4273,
+              "e4f82d1e",
+              "d49c39db",
+              3,
+              14,
+              0,
+              "100644"
+            ],
+            [
+              "_meta.json",
+              1012,
+              "68916cde",
+              "7e6e5f23",
+              1,
+              null,
+              null,
+              "100644"
+            ],
+            [
+              "references/aerobase-api.md",
+              4667,
+              "bfe5e533",
+              "2cbf76f2",
+              3,
+              2,
+              0,
+              "100644"
+            ],
+            [
+              "references/scrapling.md",
+              2617,
+              "a84890a6",
+              "ea7ed3e4",
+              3,
+              1,
+              0,
+              "100644"
+            ],
+            [
+              "scripts/browser-tracking.mjs",
+              null,
+              null,
+              "78959bcd",
+              0,
+              null,
+              null,
+              "100644"
+            ]
+          ],
+          "use": "複数の旅行工程を一つの依頼へ結ぶ設計参考。",
+          "value": "検索/比較・保存・prebook/book/取消と実完了を区別する。"
+        },
+        {
+          "candidate_disposition": "親への改訂知識候補。導入/最終採否・実test/許諾0。",
+          "findings": [
+            "T1",
+            "T2",
+            "searchはroute/date/return/stopsとprice/duration sort。無料5件/Concierge50件とmulti-provider検索を記述するが、表示上限/同一条件と全件/全provider実取得を区別する。",
+            "validateのavailable/currentPrice/priceChangedは価格・席の再確認で、book結果actionはbooked/redirect/re-search/confirm_price_change/failed。API受付やbooked文字列だけで発券・請求/全旅程確定としない。booking詳細のstatus/webhook・実receiptを別検証。",
+            "0〜2h差をminimal circadian disruptionと扱う規則は保存主張で個別の医学保証でない。Ask before any booking-related actionを通常の許可済み検索/検査の再承認待ちへ拡げず、実カード禁止・新費用/実購入の条件は保持する。"
+          ],
+          "nearby_metadata": [
+            "backend-correctness",
+            "timezone-helper"
+          ],
+          "negative": "validateやbooked文字列だけで発券/支払成功とし、5xxで予約を二重送信する。",
+          "notices": [
+            [
+              "LICENSE.txt",
+              1,
+              "当directoryの同1075BをACK182の実readへ結ぶ4。",
+              "publisher/公開版・航空/決済service・旅程data/第三者権利は別。"
+            ]
+          ],
+          "positive": "同条件の表示上限と価格時点を示し、redirectや価格再同意を未完了で保持する設計へ参照。",
+          "read": [
+            3,
+            15,
+            0,
+            false,
+            true,
+            99
+          ],
+          "reason": "4016B/99行を122版15行抑止で直接全読。検索上限とvalidate/book・webhookを具体評価。",
+          "required_changes": [
+            "検索/validate/予約request/価格再同意・発券/実課金を別stateへ。未知結果のwriteを再送せず、scope/主体・宛先/冪等性・webhook照合と有限回復を残す。"
+          ],
+          "row": 186,
+          "source": [
+            "github:61281fbe8c82fc1d0fd1f049ab1c2ea335b91577743dd88dd1503cd876f6fb8d",
+            "skills/kurosh87/aerobase-travel-flights/SKILL.md",
+            "87e13f54e175a6d0e431fa636bfdc9ecdcffff4cc65355b1ed8e56ee6d4d5770",
+            "dc87a5100b5570e6893537a800ac02708b5b235e",
+            4016
+          ],
+          "support": [
+            [
+              "LICENSE.txt",
+              1075,
+              "619bd2ca",
+              "173e897d",
+              4,
+              0,
+              0,
+              "100644"
+            ],
+            [
+              "SKILL.md",
+              4016,
+              "87e13f54",
+              "dc87a510",
+              3,
+              15,
+              0,
+              "100644"
+            ],
+            [
+              "_meta.json",
+              1358,
+              "a7831287",
+              "29052dac",
+              1,
+              null,
+              null,
+              "100644"
+            ]
+          ],
+          "use": "航空券の検索/料金検証と予約状態を分ける設計参考。",
+          "value": "booked/redirect/re-search/価格再同意/failedを別の結果として扱える。"
+        }
+      ],
+      "first_ordinal": 185,
+      "limits": {
+        "central_body_or_existence_checks": 0,
+        "global_unique_support_read_credit": 0,
+        "old_reader_unknown_not_relabelled": true,
+        "source_bodies_refetched": 0,
+        "source_original_text_included": false,
+        "source_script_execution": 0
+      },
+      "notice_bodies": [
+        {
+          "bytes": 1075,
+          "git_blob": "173e897dc0b825da210873c7209b1e27bceea077",
+          "id": 1,
+          "meaning": "当各directoryの同一noticeを実182へ対応。MITsoftwareの表示保持/無保証と、publisher/公開版・各service/data/第三者権利は別。新表示/許諾0。",
+          "parent_chunk_sha256": "531a266ac1219fa41f56aed1c282a29d0b96a12213088fa2e3513cf24e33898c",
+          "parent_receipt": "research3719-chunk-e7c38fbd28735592addb878732df9261.json",
+          "read": [
+            4,
+            0,
+            0,
+            false,
+            true,
+            22
+          ],
+          "reader_job": "20261027-072935-todo-3719",
+          "reader_namespace": "20261027-072935-todo-3719/current3719",
+          "representative_path": "skills/kurosh87/aerobase-flight-awards/LICENSE.txt",
+          "representative_read": [
+            2,
+            0,
+            0,
+            true,
+            true,
+            22
+          ],
+          "representative_row": 182,
+          "sha256": "619bd2ca1801541f1923b1f5d343e59067030fb865eae56a207fdf32fc0f8e81"
+        }
+      ],
+      "pending_support_packets": [
+        "b21b137dfb66cb6690b7e70f5a14f166",
+        "3d0114f3d8d21d9ea66a19399789b6fc",
+        "111f72745d58c86fc1eb2541d7ff8e01",
+        "fd6b93b8444981051e656247955aee13"
+      ],
+      "prepared185_prior_delivery": {
+        "new_read_since_prepared": false,
+        "reason": "9586charsの未配送4件draftを182〜184/7054charsへ分割したため185だけ保持していた。今回ACK184後の正式配送。",
+        "request_id": "7b5cfbd11edc3c955153b15f9c5c90d7"
+      },
+      "prior_journal_sha256": "e1121e2610300ca37121b5c5f090785df7036807c7a54542df5e98efc0aacc45",
+      "reader_job": "20261027-072935-todo-3719",
+      "reader_todo": 3719,
+      "reading_integrity": {
+        "mask_unit": "outer_physical_lines",
+        "mask_version": 122,
+        "masked_primary_meanings_unread": 29,
+        "method": "whole header/private-key blocks; physical lines containing authorization/credentials/contact/private filesystem paths/token fields/opaque runs/UUID/card-shaped digits; code URL concrete media IDs held; zero not guarantee",
+        "primary_proofs": [
+          [
+            185,
+            [
+              [
+                1,
+                6
+              ],
+              [
+                14,
+                15
+              ],
+              [
+                20,
+                20
+              ],
+              [
+                23,
+                26
+              ],
+              [
+                91,
+                91
+              ]
+            ],
+            [
+              [
+                1,
+                108,
+                "8218eea8343afb5cf6fecb5b77ea0be305d105bc7d1948f9ea68ed9827317039",
+                94,
+                14
+              ]
+            ]
+          ],
+          [
+            186,
+            [
+              [
+                1,
+                6
+              ],
+              [
+                14,
+                15
+              ],
+              [
+                20,
+                20
+              ],
+              [
+                23,
+                26
+              ],
+              [
+                63,
+                63
+              ],
+              [
+                89,
+                89
+              ]
+            ],
+            [
+              [
+                1,
+                99,
+                "4640fc9a46d99efafb67bf9ab905523fe73c175a7fe88ee229424fed918cc994",
+                84,
+                15
+              ]
+            ]
+          ]
+        ],
+        "same_buffer_all": {
+          "bytes": true,
+          "git_blob": true,
+          "same_buffer": true,
+          "sha256": true,
+          "strict_utf8": true
+        }
+      },
+      "roster_sha256": "f9c6b2e44c5e3aa8947f758f864eaa0d5edc396d622359826bca848cd96f9901",
+      "support_prior_protocol": {
+        "meaning": "同jobの実支持read3。support原応答も保持し新raw/再表示・追加primary0。親の別support receipt/ACKは未確認。",
+        "parent_receipt": null,
+        "payload_sha256": "2cbb33c3f9810fe0201abc9deb0e9227774d08e147236ec30ab45c44c71203a5",
+        "support_id": "3d0114f3d8d21d9ea66a19399789b6fc"
+      },
+      "support_read_evidence": [
+        [
+          185,
+          "references/aerobase-api.md",
+          "bfe5e53371e6cd1d6dec7aa48330a48deccea7bb95baa8a3c1d31ae69fe7118f",
+          "2cbf76f2dabf35ed9cfe2202bd7c224e30ae6140",
+          4667,
+          [
+            3,
+            2,
+            0,
+            false,
+            true,
+            119
+          ],
+          122,
+          [
+            [
+              7,
+              7
+            ],
+            [
+              9,
+              9
+            ]
+          ],
+          [
+            [
+              1,
+              119,
+              "09d618351231fe532a949c6e07d10991537627e7ccb6fa3487a88de1885aa6f7",
+              117,
+              2
+            ]
+          ]
+        ],
+        [
+          185,
+          "references/scrapling.md",
+          "a84890a699ec38af2254c9b0c80b3829671781e867a53e05897f39fd2ad63bab",
+          "ea7ed3e42cce67f9b639ad435a149eaffc903f75",
+          2617,
+          [
+            3,
+            1,
+            0,
+            false,
+            true,
+            119
+          ],
+          122,
+          [
+            [
+              80,
+              80
+            ]
+          ],
+          [
+            [
+              1,
+              119,
+              "6a2c656ad5e3c3867fed3644a2732c9364e47f8bbc0bad2163e03ce331ff9860",
+              118,
+              1
+            ]
+          ]
+        ]
+      ]
+    }
+  },
+  "parent_acknowledged_through": 186,
+  "parent_journal_sha256": "b40b058e3ebd497bb6c44812320e1a61a8004068ff77ebcb42b3c3caf3cd38d3",
+  "registered_spec_sha256": "4f6fe32f62db56bed2acb4d378147ff952ad06230243fb45f7674f3158313fc3",
+  "roster_sha256": "f9c6b2e44c5e3aa8947f758f864eaa0d5edc396d622359826bca848cd96f9901",
+  "source_commit": "920714f17d81e0a95c7a9bc51faf0a7921cd982d",
+  "source_gzip_or_original_body_reopened": 0,
+  "source_primary_bytes": 8289,
+  "source_slice": [
+    185,
+    186
+  ],
+  "todo": 3080,
+  "whole16_complete": false,
+  "whole_original_ACK_pins": [
+    {
+      "all_original_fields_reconstructed": true,
+      "chunk_id": "b0d037e4a42b5815d65cf8c8636095c5",
+      "chunk_sha256": "0e83cfcb5839afe1e7b1303fe6b75c7c40fd1eca959b257e05676ec1354f655b",
+      "first": 185,
+      "last": 186,
+      "original_message_sha256": "67153b4ae8e273befb3621fb80f4b98d2f92c74677f774f92b305be81042a844",
+      "reader_job": "20261027-072935-todo-3719"
+    }
+  ]
+}

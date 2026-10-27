@@ -16,6 +16,8 @@ const currentConversationSourceJob = "20261027-104546-todo-4084"
 const currentConversationSourceSpec = "98c276cb0fd75854830f3736a810058a47b355b79b44d981990333fba6f85491"
 const receivedInputCLI = "D:/CC/Tools/received-input/received_input.exe"
 
+var currentConversationSpecName = regexp.MustCompile(`^([1-9][0-9]*)-[a-f0-9]{32}\.md$`)
+
 type currentActorRejection string
 
 func (currentActorRejection) Error() string { return "conversation actor unverified" }
@@ -24,24 +26,30 @@ func currentConversationPair(origin, actor uint64, project string) bool {
 	return origin == 3264 && actor == 3350 && project == "localai-web-rs"
 }
 
+type currentConversationVersion struct {
+	SpecRef  string          `json:"spec_ref"`
+	Spec     string          `json:"spec_sha256"`
+	Dispatch string          `json:"dispatch_sha256"`
+	Received string          `json:"received_sha256"`
+	Binding  string          `json:"binding_sha256"`
+	Parent   json.RawMessage `json:"parent_edge"`
+}
+
 type currentConversationInput struct {
-	Domain  string `json:"domain"`
-	OK      bool   `json:"ok"`
-	Todo    uint64 `json:"todo_id"`
-	Job     string `json:"job_id"`
-	Kind    string `json:"source_kind"`
-	Root    string `json:"registered_scope"`
-	Human   *bool  `json:"human_identity_attested"`
-	Asset   *bool  `json:"asset_qualified"`
-	Edge    *bool  `json:"delegation_edge_recorded"`
-	Version struct {
-		SpecRef  string          `json:"spec_ref"`
-		Spec     string          `json:"spec_sha256"`
-		Dispatch string          `json:"dispatch_sha256"`
-		Received string          `json:"received_sha256"`
-		Binding  string          `json:"binding_sha256"`
-		Parent   json.RawMessage `json:"parent_edge"`
-	} `json:"version"`
+	Domain  string                     `json:"domain"`
+	OK      bool                       `json:"ok"`
+	Todo    uint64                     `json:"todo_id"`
+	Job     string                     `json:"job_id"`
+	Kind    string                     `json:"source_kind"`
+	Root    string                     `json:"registered_scope"`
+	Human   *bool                      `json:"human_identity_attested"`
+	Asset   *bool                      `json:"asset_qualified"`
+	Edge    *bool                      `json:"delegation_edge_recorded"`
+	Version currentConversationVersion `json:"version"`
+}
+
+func sameCurrentConversationFiles(a, b currentConversationVersion) bool {
+	return a.SpecRef == b.SpecRef && a.Spec == b.Spec && a.Dispatch == b.Dispatch && a.Received == b.Received && string(a.Parent) == "null" && string(b.Parent) == "null"
 }
 
 func (r *Runner) currentConversationInput(ctx context.Context, row *TodoRow, job string) (currentConversationInput, error) {
@@ -87,13 +95,20 @@ func (r *Runner) currentConversationRepository(ctx context.Context, root string)
 
 func (r *Runner) currentConversationSpec(row *TodoRow) ([]byte, error) {
 	var path string
-	if json.Unmarshal(row.Spec, &path) != nil || !filepath.IsAbs(path) || !regexp.MustCompile(fmt.Sprintf(`^%d-[a-f0-9]{32}\.md$`, row.ID)).MatchString(filepath.Base(path)) || conversationPathSHA(filepath.Dir(path)) != conversationPathSHA(filepath.Join(filepath.Dir(r.TodoPath), "specs")) {
+	if json.Unmarshal(row.Spec, &path) != nil || !filepath.IsAbs(path) || conversationPathSHA(filepath.Dir(path)) != conversationPathSHA(filepath.Join(filepath.Dir(r.TodoPath), "specs")) {
+		return nil, errors.New("conversation actor unverified")
+	}
+	name := currentConversationSpecName.FindStringSubmatch(filepath.Base(path))
+	if len(name) != 2 || name[1] != fmt.Sprint(row.ID) {
 		return nil, errors.New("conversation actor unverified")
 	}
 	return boundedRegular(path)
 }
 
-func (r *Runner) checkCurrentConversationActor(ctx context.Context, origin, actor *TodoRow, job string, saved *conversationActor, historical json.RawMessage, readonly bool) (*conversationActor, error) {
+func (r *Runner) checkCurrentConversationActor(ctx context.Context, origin, actor *TodoRow, job string, saved *conversationActor, historical, reservedAnchor json.RawMessage, readonly bool) (*conversationActor, error) {
+	if reservedAnchor != nil && (readonly || actor.Status == "block") {
+		return nil, currentActorRejection("reservation_held")
+	}
 	if !currentConversationPair(origin.ID, actor.ID, origin.Project) || actor.Project != origin.Project || actor.conversationRoot != origin.conversationRoot || !r.repairGuard(ctx, actor.Scheduler.Worktree) || !r.currentConversationRepository(ctx, actor.conversationRoot) {
 		return nil, currentActorRejection("current_scope")
 	}
@@ -115,11 +130,17 @@ func (r *Runner) checkCurrentConversationActor(ctx context.Context, origin, acto
 			return nil, currentActorRejection("request_job")
 		}
 		anchor := job
-		if historical != nil {
-			var retained struct {
-				Job string `json:"actor_job_id"`
-			}
-			if json.Unmarshal(historical, &retained) != nil || !validJob(retained.Job) {
+		original := historical
+		if original == nil {
+			original = reservedAnchor
+		}
+		var retained struct {
+			Job    string                     `json:"actor_job_id"`
+			Source currentConversationVersion `json:"source_version"`
+			Actor  currentConversationVersion `json:"actor_version"`
+		}
+		if original != nil {
+			if json.Unmarshal(original, &retained) != nil || !validJob(retained.Job) {
 				return nil, currentActorRejection("anchor_job")
 			}
 			anchor = retained.Job
@@ -134,6 +155,14 @@ func (r *Runner) checkCurrentConversationActor(ctx context.Context, origin, acto
 			if err != nil || current.Version.Spec != work.Version.Spec {
 				return nil, currentActorRejection("resumed_input")
 			}
+		}
+		if original != nil {
+			if !sameCurrentConversationFiles(request.Version, retained.Source) || !sameCurrentConversationFiles(work.Version, retained.Actor) {
+				return nil, currentActorRejection("original_input_version")
+			}
+			// Live normal registration remains mandatory. Its bookkeeping hash
+			// may change without rewriting the immutable question's provenance.
+			request.Version, work.Version = retained.Source, retained.Actor
 		}
 		proof = map[string]any{"domain": "discord-current-assignment-v1", "origin_todo_id": origin.ID, "actor_todo_id": actor.ID, "actor_job_id": anchor, "project": actor.Project, "source_todo_id": source.ID, "source_job_id": currentConversationSourceJob, "source_kind": "scheduler_dispatch", "source_version": request.Version, "actor_version": work.Version, "delegation_edge_recorded": false, "human_identity_attested": false, "asset_qualified": false}
 	}
@@ -182,7 +211,9 @@ func (r *Runner) deliverCurrentConversationTracker(ctx context.Context, q Conver
 	if err != nil {
 		return err
 	}
-	note := row.Note + "\n\n" + r.conversationReplyInstructions(q, reply, req, receipt, marker)
+	instructions := r.conversationReplyInstructions(q, reply, req, receipt, marker)
+	instructions = strings.Replace(instructions, marker+"\n", marker+"\nこの写しは元ToDoでの保持用です。実装と反映は担当3350が行い、元3264から別のUI担当を起動しません。\n", 1)
+	note := row.Note + "\n\n" + instructions
 	if len(note) > 1<<20 {
 		return errors.New("conversation delivery note limit exceeded")
 	}

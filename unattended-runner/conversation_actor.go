@@ -90,6 +90,7 @@ func (r *Runner) conversationActorForAsk(ctx context.Context, input Conversation
 		q, exists = index.Questions[alias.Target]
 	}
 	var historical json.RawMessage
+	var anchor json.RawMessage
 	readonly := false
 	if exists {
 		saved = q.Actor
@@ -99,10 +100,17 @@ func (r *Runner) conversationActorForAsk(ctx context.Context, input Conversation
 			if err != nil {
 				return nil, err
 			}
+		} else if saved != nil && currentConversationPair(q.Todo, saved.Todo, q.Project) {
+			// A reserved question still needs live admission. Load its immutable
+			// proof only to retain the original job and input versions on retry.
+			anchor, err = r.conversationActorProof(q)
+			if err != nil {
+				return nil, err
+			}
 		}
 	}
 	if saved != nil && saved.Job != input.ActorJob {
-		current, err := r.checkConversationActor(ctx, input.Todo, input.ActorTodo, input.ActorJob, origin, nil, historical, readonly)
+		current, err := r.checkConversationActor(ctx, input.Todo, input.ActorTodo, input.ActorJob, origin, nil, historical, anchor, readonly)
 		if err != nil {
 			return nil, err
 		}
@@ -110,13 +118,13 @@ func (r *Runner) conversationActorForAsk(ctx context.Context, input Conversation
 		if !sameConversationActor(current, saved) {
 			return nil, errors.New("conversation actor differs")
 		}
-		return r.checkConversationActor(ctx, input.Todo, input.ActorTodo, saved.Job, origin, saved, historical, readonly)
+		return r.checkConversationActor(ctx, input.Todo, input.ActorTodo, saved.Job, origin, saved, historical, anchor, readonly)
 	}
-	return r.checkConversationActor(ctx, input.Todo, input.ActorTodo, input.ActorJob, origin, saved, historical, readonly)
+	return r.checkConversationActor(ctx, input.Todo, input.ActorTodo, input.ActorJob, origin, saved, historical, anchor, readonly)
 }
 
 func (r *Runner) verifyConversationActor(ctx context.Context, originID, actorID uint64, jobID string, origin *TodoRow, saved *conversationActor) (*conversationActor, error) {
-	return r.checkConversationActor(ctx, originID, actorID, jobID, origin, saved, nil, false)
+	return r.checkConversationActor(ctx, originID, actorID, jobID, origin, saved, nil, nil, false)
 }
 
 func (r *Runner) conversationActorProof(q ConversationQuestion) (json.RawMessage, error) {
@@ -132,7 +140,7 @@ func (r *Runner) conversationActorProof(q ConversationQuestion) (json.RawMessage
 
 // A retained proof confirms an existing question only; it can never reserve a
 // question, register a wait or deliver new instructions after work has ended.
-func (r *Runner) checkConversationActor(ctx context.Context, originID, actorID uint64, jobID string, origin *TodoRow, saved *conversationActor, historical json.RawMessage, readonly bool) (*conversationActor, error) {
+func (r *Runner) checkConversationActor(ctx context.Context, originID, actorID uint64, jobID string, origin *TodoRow, saved *conversationActor, historical, anchor json.RawMessage, readonly bool) (*conversationActor, error) {
 	fail := errors.New("conversation actor unverified")
 	current := currentConversationPair(originID, actorID, origin.Project)
 	legacy := originID == 1171 && actorID == 3277 && origin.Project == "GitDo"
@@ -175,7 +183,7 @@ func (r *Runner) checkConversationActor(ctx context.Context, originID, actorID u
 		return nil, fail
 	}
 	if current {
-		return r.checkCurrentConversationActor(ctx, origin, actor, jobID, saved, historical, readonly)
+		return r.checkCurrentConversationActor(ctx, origin, actor, jobID, saved, historical, anchor, readonly)
 	}
 	raw := string(historical)
 	// Running/runnable recipients need today's admission for a wait or a new
@@ -245,7 +253,14 @@ func (r *Runner) conversationActorRowWithProof(ctx context.Context, q Conversati
 	if err != nil {
 		return nil, err
 	}
-	if _, err = r.checkConversationActor(ctx, q.Todo, q.Actor.Todo, q.Actor.Job, origin, q.Actor, historical, readonly); err != nil {
+	var anchor json.RawMessage
+	if q.Phase == "reserved" && currentConversationPair(q.Todo, q.Actor.Todo, q.Project) {
+		anchor, err = r.conversationActorProof(q)
+		if err != nil {
+			return nil, err
+		}
+	}
+	if _, err = r.checkConversationActor(ctx, q.Todo, q.Actor.Todo, q.Actor.Job, origin, q.Actor, historical, anchor, readonly); err != nil {
 		return nil, err
 	}
 	row, err := r.conversationTask(ctx, q.Actor.Todo)

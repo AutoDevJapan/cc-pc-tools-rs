@@ -18,3 +18,11 @@
 - 一時領域所有ID: d8623961f7c8e84ae628c83bbddf6f6a。
 - 私的な入力・実結果は公開repoへ加えない。
 - Issue: https://github.com/AutoDevJapan/cc-pc-tools-rs/issues/588。
+
+## 別モデル4089の受領と再試行の修正
+
+固定e87f4208の19ファイルをFable/maxが読了、Must0。原応答と実jobを私的領域に保持。
+Suggestionのうち、予約中の正常再開と、正常なAPI再照合後の補助登録hash変化による
+拒否を2件のRedで再現した。予約証拠をanchorと現在の資格に分けて修正し、Greenを確認。
+元trackerのwaitとprivateリポジトリは元依頼の条件として保持し、仕様にも記載した。
+両修正の関連テストと差分レビュー、最終CI/配布を続ける。質問・画像はまだ送っていない。

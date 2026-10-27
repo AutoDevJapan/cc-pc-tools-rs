@@ -199,6 +199,127 @@ func TestCurrentConversationActorNormalResumeKeepsOriginalQuestion(t *testing.T)
 	}
 }
 
+func TestCurrentConversationActorReservedRetryAfterJobResume(t *testing.T) {
+	f := currentActorTest(t, false)
+	f.lost = true
+	if _, err := f.r.conversationAsk(context.Background(), f.input); err == nil {
+		t.Fatal("synthetic sender response was not lost")
+	}
+	index, err := f.r.loadConversations()
+	if err != nil || index.Questions[f.input.RequestID].Phase != "reserved" {
+		t.Fatal("same send reservation must survive the lost response", err)
+	}
+	first := index.Questions[f.input.RequestID]
+	f.mutate(t, 3350, func(row map[string]any) {
+		row["jobs"] = []string{"worker-3350", "resumed-3350"}
+		row["scheduler"].(map[string]any)["job"] = "resumed-3350"
+	})
+	if publish(filepath.Join(f.r.JobsPath, "resumed-3350", "job.json"), map[string]any{"id": "resumed-3350", "todo_id": 3350, "project": "localai-web-rs", "registered_cwd": f.r.Config.Home, "cwd": f.r.Config.Home, "status": "running"}) != nil {
+		t.Fatal("normal resumed worker")
+	}
+	f.input.ActorJob = "resumed-3350"
+	q := f.ask(t)
+	if q.RequestID != first.RequestID || !sameConversationActor(first.Actor, q.Actor) || f.posts != 1 {
+		t.Fatal("reserved retry changed the source anchor or sent a second question")
+	}
+}
+
+func TestCurrentConversationActorFreshRegistrationMetadataKeepsOriginalProof(t *testing.T) {
+	f := currentActorTest(t, false)
+	first := f.ask(t)
+	base := f.r.Run
+	f.r.Run = func(ctx context.Context, path string, args ...string) (string, error) {
+		raw, err := base(ctx, path, args...)
+		if err == nil && path == receivedInputCLI {
+			var report map[string]any
+			if json.Unmarshal([]byte(raw), &report) != nil {
+				t.Fatal("official input fixture")
+			}
+			// A fresh successful registration can have new bookkeeping in its
+			// selected projection while the admitted files and scope stay equal.
+			report["version"].(map[string]any)["binding_sha256"] = strings.Repeat("e", 64)
+			b, _ := json.Marshal(report)
+			return string(b), nil
+		}
+		return raw, err
+	}
+	q := f.ask(t)
+	if !sameConversationActor(first.Actor, q.Actor) || f.posts != 1 {
+		t.Fatal("fresh registration bookkeeping changed the original question")
+	}
+}
+
+func TestCurrentConversationActorRetriedProofStillNeedsFreshAdmissionAndSameFiles(t *testing.T) {
+	for _, state := range []string{"reserved", "posted"} {
+		for _, change := range []string{"unavailable", "dispatch", "received", "spec", "blocked", "owner-stop", "proof"} {
+			t.Run(state+"/"+change, func(t *testing.T) {
+				f := currentActorTest(t, false)
+				if state == "reserved" {
+					f.lost = true
+					if _, err := f.r.conversationAsk(context.Background(), f.input); err == nil {
+						t.Fatal("lost result control")
+					}
+				} else {
+					f.ask(t)
+				}
+				if change == "blocked" {
+					f.mutate(t, 3350, func(row map[string]any) {
+						row["status"] = "block"
+						row["owner_question_wait"] = map[string]any{"other": "question"}
+					})
+				}
+				if change == "owner-stop" {
+					f.mutate(t, 3350, func(row map[string]any) { row["owner_stopped"] = true })
+				}
+				if change == "proof" {
+					if err := os.WriteFile(filepath.Join(f.r.Config.Home, "conversations", f.input.RequestID, "actor-succession.json"), []byte(`{"domain":"invented"}`), 0600); err != nil {
+						t.Fatal(err)
+					}
+				}
+				base := f.r.Run
+				sends := 0
+				f.r.Run = func(ctx context.Context, path string, args ...string) (string, error) {
+					if len(args) > 0 && args[0] == "recovery-ask" {
+						sends++
+					}
+					if path == receivedInputCLI {
+						if change == "unavailable" {
+							return "", errors.New("synthetic normal input unavailable")
+						}
+						raw, err := base(ctx, path, args...)
+						if change == "dispatch" || change == "received" || change == "spec" {
+							var p map[string]any
+							if json.Unmarshal([]byte(raw), &p) != nil {
+								t.Fatal("input fixture")
+							}
+							p["version"].(map[string]any)[change+"_sha256"] = strings.Repeat("f", 64)
+							b, _ := json.Marshal(p)
+							return string(b), err
+						}
+						return raw, err
+					}
+					return base(ctx, path, args...)
+				}
+				before, _ := os.ReadFile(f.r.TodoPath)
+				q, err := f.r.conversationAsk(context.Background(), f.input)
+				// An already posted question can return its existing metadata
+				// while a different hold is kept. It must gain no new capability.
+				metadataOnly := state == "posted" && change == "blocked"
+				if metadataOnly && (err != nil || q.Phase != "posted" || q.Todo != 3264) {
+					t.Fatal("existing question metadata lost", err)
+				}
+				if !metadataOnly && err == nil {
+					t.Fatal("retained proof admitted changed or unavailable input")
+				}
+				after, _ := os.ReadFile(f.r.TodoPath)
+				if sends != 0 || string(before) != string(after) {
+					t.Fatal("refusal sent or mutated task")
+				}
+			})
+		}
+	}
+}
+
 func TestCurrentConversationRepairResumeKeepsAcceptedInputAnchor(t *testing.T) {
 	f := currentActorTest(t, false)
 	first := f.ask(t)
@@ -333,7 +454,7 @@ func TestCurrentConversationActorOfficialInputs(t *testing.T) {
 		t.Skip("explicit private acceptance workspace required")
 	}
 	r := &Runner{Config: Config{Home: home}, TodoPath: "D:/CC/Tools/todo/todo.json", JobsPath: "D:/CC/Tools/codex-jobs/jobs", Run: runCommand, Now: time.Now}
-	ctx, cancel := context.WithTimeout(context.Background(), 45*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
 	defer cancel()
 	origin, err := r.conversationTask(ctx, 3264)
 	if err != nil {
@@ -343,38 +464,7 @@ func TestCurrentConversationActorOfficialInputs(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if !r.repairGuard(ctx, actor.Scheduler.Worktree) {
-		t.Fatal("official worktree guard unverified")
-	}
-	if !r.currentConversationRepository(ctx, actor.conversationRoot) {
-		t.Fatal("official repository unverified")
-	}
-	source, err := r.conversationTask(ctx, 4084)
-	if err != nil {
-		t.Fatal("official request task unavailable")
-	}
-	if _, err = r.currentConversationInput(ctx, source, currentConversationSourceJob); err != nil {
-		t.Fatal("official request input unverified")
-	}
-	if _, err = r.currentConversationInput(ctx, actor, actor.Scheduler.Job); err != nil {
-		t.Fatal("official worker input unverified")
-	}
-	sj, se := r.repairJob(ctx, source, currentConversationSourceJob)
-	if se != nil {
-		t.Fatal("official source job projection unverified")
-	}
-	if sj.Status != "running" && sj.Status != "succeeded" {
-		t.Fatal("official source job state unverified")
-	}
-	if _, err = r.currentConversationSpec(origin); err != nil {
-		t.Fatal("official original spec reference unverified")
-	}
-	if _, err = r.currentConversationSpec(actor); err != nil {
-		t.Fatal("official actor spec reference unverified")
-	}
-	if _, err = r.checkCurrentConversationActor(ctx, origin, actor, actor.Scheduler.Job, nil, nil, false); err != nil {
-		t.Fatalf("official current handler unverified: %#v", err)
-	}
+	started := time.Now()
 	binding, err := r.verifyConversationActor(ctx, 3264, 3350, actor.Scheduler.Job, origin, nil)
 	if err != nil || binding == nil {
 		t.Fatal("official current registration unverified", err)
@@ -384,4 +474,9 @@ func TestCurrentConversationActorOfficialInputs(t *testing.T) {
 	if proof["domain"] != "discord-current-assignment-v1" || proof["delegation_edge_recorded"] != false {
 		t.Fatal("official current input misclassified")
 	}
+	// Measure both live admissions used before reservation and before send.
+	if _, err = r.checkConversationActor(ctx, 3264, 3350, actor.Scheduler.Job, origin, binding, nil, binding.proof, false); err != nil {
+		t.Fatalf("official reservation admission unverified: %#v", err)
+	}
+	t.Logf("two live actor admissions completed in %s within the 60-second CLI budget; no question input or send", time.Since(started).Round(time.Millisecond))
 }

@@ -39,6 +39,7 @@ const (
 	validationEvidence
 	validationEvidenceStale
 	validationEvidenceFuture
+	validationNotExpired
 )
 
 func (s validationStage) reason() string {
@@ -71,6 +72,8 @@ func (s validationStage) reason() string {
 		return "authority_evidence_stale"
 	case validationEvidenceFuture:
 		return "authority_evidence_in_future"
+	case validationNotExpired:
+		return "receipt_not_expired"
 	default:
 		return "validation_not_verified"
 	}
@@ -144,6 +147,7 @@ type Evidence struct {
 	Asset                                                    Asset
 	Observed                                                 time.Time
 	SourceVerified, JobVerified, Active, OfficialPublicAsset bool
+	ActorJob                                                 string
 }
 
 type Authority interface {
@@ -244,28 +248,33 @@ func newEngine(b Binding, pin Asset, a Authority, src ArchiveSource, j Journal, 
 }
 
 func (e *Engine) authorize(ctx context.Context) error {
+	_, err := e.observe(ctx)
+	return err
+}
+
+func (e *Engine) observe(ctx context.Context) (Evidence, error) {
 	if err := ctx.Err(); err != nil {
-		return err
+		return Evidence{}, err
 	}
 	o, err := e.authority.Observe(ctx)
 	if err != nil {
-		return err
+		return Evidence{}, err
 	}
 	age := e.now().Sub(o.Observed)
 	if o.Binding != e.binding || o.Asset != e.asset {
-		return invalidAt(validationEvidence)
+		return Evidence{}, invalidAt(validationEvidence)
 	}
 	if age < 0 {
-		return invalidAt(validationEvidenceFuture)
+		return Evidence{}, invalidAt(validationEvidenceFuture)
 	}
 	if age > time.Minute {
-		return invalidAt(validationEvidenceStale)
+		return Evidence{}, invalidAt(validationEvidenceStale)
 	}
 	if !o.SourceVerified || !o.JobVerified || !o.Active || !o.OfficialPublicAsset ||
 		!o.FreshOwnedAnchor || o.Parent != e.fs.ParentIdentity() {
-		return invalidAt(validationEvidence)
+		return Evidence{}, invalidAt(validationEvidence)
 	}
-	return ctx.Err()
+	return o, ctx.Err()
 }
 
 func (e *Engine) Construct(ctx context.Context) (Receipt, error) {
@@ -346,6 +355,10 @@ func (e *Engine) fail(r Receipt, why error) (Receipt, error) {
 }
 
 func (e *Engine) load(ctx context.Context, id string) (Receipt, error) {
+	return e.loadReceipt(ctx, id, false)
+}
+
+func (e *Engine) loadReceipt(ctx context.Context, id string, expiredOnly bool) (Receipt, error) {
 	var r Receipt
 	if !hexN(id, 32) {
 		return r, invalidAt(validationIdentity)
@@ -373,7 +386,10 @@ func (e *Engine) load(ctx context.Context, id string) (Receipt, error) {
 	if r.Created.After(now) {
 		return Receipt{}, invalidAt(validationFuture)
 	}
-	if !now.Before(r.Expires) {
+	if expiredOnly && now.Before(r.Expires) {
+		return Receipt{}, invalidAt(validationNotExpired)
+	}
+	if !expiredOnly && !now.Before(r.Expires) {
 		return Receipt{}, invalidAt(validationExpiry)
 	}
 	if r.Expires.Sub(r.Created) != ReceiptLifetime {

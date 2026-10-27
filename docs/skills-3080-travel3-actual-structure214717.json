@@ -1,0 +1,12 @@
+{
+  "bundle": {
+    "file": "skills-3080-travel3-actual-bundle214717.json",
+    "sha256": "c78d3c7f1640b24cac7a90ecd523a6f0a9f546744843b4ff581d3a2381eb2b58"
+  },
+  "method": "Existing3048 checker using only qualified actual current buffers",
+  "exit": 0,
+  "stdout": "PASS: 3 explicit skills; structure, descriptions, references, hashes, scenario pairs; in-memory bundle only; no deployment implied\n",
+  "stderr": "",
+  "additional_central_writes": 0,
+  "actual_service_or_UI_execution": false
+}

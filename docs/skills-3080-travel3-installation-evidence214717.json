@@ -1,0 +1,109 @@
+{
+  "todo": 3080,
+  "result_publisher_job": "20261026-214717-todo-3080",
+  "creator_job": "20261026-214717-todo-3080",
+  "new_targets_created": 3,
+  "successful_CreateNew_count": 1,
+  "current_files_readback_verified": 18,
+  "bytes": 36454,
+  "normal_read_batches": 1,
+  "instruction_buffers": 6,
+  "instruction_bytes": 11285,
+  "input_PR": 587,
+  "input_PR_merge": "4931ab79b70a653a29d2d3c875b1262c7544847b",
+  "creation_manifest": "skills-3080-operations/create-travel3-214717.json",
+  "creation_manifest_sha": "11070b772c86f7ffb459be2f75eaf6d0a436ce9dfdf0d9247eb81c6e433ede51",
+  "creation_input_head": "23fc57209ac773f4827eaab7cbbf07bfba3a2676",
+  "frozen_full_content_review": {
+    "task": 4083,
+    "job": "20261027-103930-todo-4083",
+    "spec": "D:/CC/Tools/todo/specs/4083-b346350f8f4041bb903fd9e9cebb1f1c.md",
+    "spec_sha256": "2ca4d1f6126c341b4971c5adb7fa4d2040023f72342705136ce533616ad73092",
+    "final_sha256": "b9def53ec95455af26f44ea1bbbbf24415a52b07ce3571ca491ab14b565ef000",
+    "manifest_sha256": "11070b772c86f7ffb459be2f75eaf6d0a436ce9dfdf0d9247eb81c6e433ede51",
+    "request_sha256": "b8bc23095da855e165cee11563dfb7d979d950a5693197e29517da17cfd5b7af",
+    "creator": "20261026-214717-todo-3080",
+    "actual_native_creation": "call_0ecb74f0b1ee4248ac9620f14020d78b",
+    "successful_creation_file_count": 18,
+    "full_content_no_comparison": true,
+    "Must": 0,
+    "frozen": true,
+    "never_edit_spec_or_restart_this_task": true,
+    "prior_source_failure_retained": true,
+    "earlier_nonexistent_freeze_review_CLI_not_used": true
+  },
+  "qualified_independent_review_native": {
+    "todo": 4083,
+    "job": "20261027-103930-todo-4083",
+    "parent_job": "20261026-214717-todo-3080",
+    "spec_sha256": "2ca4d1f6126c341b4971c5adb7fa4d2040023f72342705136ce533616ad73092",
+    "raw_sha256": "b9def53ec95455af26f44ea1bbbbf24415a52b07ce3571ca491ab14b565ef000",
+    "raw_bytes": 1448,
+    "parent_full_original_read": true,
+    "native": [
+      {
+        "timestamp": "2026-10-27T01:40:13.151Z",
+        "model": "gpt-6-luna",
+        "effort": "max",
+        "service_tier": null
+      }
+    ],
+    "both_origins_owner_request": true,
+    "Must": 0,
+    "Suggestion": 1,
+    "Nit": 0,
+    "runtime_use_not_implied": true,
+    "native_output_bodies_returned": false
+  },
+  "referenced_artifacts": {
+    "bundle": {
+      "file": "skills-3080-travel3-actual-bundle214717.json",
+      "sha256": "c78d3c7f1640b24cac7a90ecd523a6f0a9f546744843b4ff581d3a2381eb2b58"
+    },
+    "manifest": {
+      "file": "skills-3080-installed-travel3-manifest214717.json",
+      "sha256": "a0627d660199cd86cb27ad5b4bbc32ed4103dd85ba92cdb403c538abe3543c79"
+    },
+    "creation": {
+      "file": "skills-3080-travel3-create-evidence214717.json",
+      "sha256": "43ec751372f689f105660c29f032624c3c57fd64dc7ad32bac57a318f0d65be6"
+    },
+    "readback": {
+      "file": "skills-3080-travel3-consume-evidence214717.json",
+      "sha256": "75a946242f3f25dca9193e79c75358b586e7f63cf0f8e6e027f38e7dbf688fbd"
+    },
+    "structure": {
+      "file": "skills-3080-travel3-actual-structure214717.json",
+      "sha256": "7c729402ede37f1f533e928943ff888737d6dceba1388891cb972817b7c29b8b"
+    },
+    "discovery": {
+      "file": "skills-3080-travel3-discovery214717.json",
+      "sha256": "1ddbf80ff2b04771b96e910c11a55e895329aa0288936f613f27096c33c32f26"
+    },
+    "application": {
+      "file": "skills-3080-travel3-application214717.json",
+      "sha256": "f30916daa3319ca58f5e0aa71561cee02a7f4ee8b2ad8127d3e332200d03e35b"
+    },
+    "design": {
+      "file": "skills-3080-travel3-designs214717.json",
+      "sha256": "0eefcffd237fa2517e2cc83d7ca7cea21aab3cbf5aa6f67060ce9f77a5ca5c8c"
+    }
+  },
+  "creator_runtime_sha256": "c80d60ab470e52ef9fbe53c1e039d1fcdc31429e291c3f156a953b9b6059d02f",
+  "creator_runtime_revision": "444eae8714ee8b6199c9ed95208ac40272aeb8ce",
+  "software_fix_PR": 593,
+  "software_fix_merge": "b0d5727f2dddc782301c6abc4e11c74b2955551d",
+  "distribution_PR": 596,
+  "distribution_merge": "444eae8714ee8b6199c9ed95208ac40272aeb8ce",
+  "creation_binding": "Original canonical native call_0ecb74f0b1ee4248ac9620f14020d78b and originalCLI0185ef68. Firstfailedsourcecall retained, finite1normalretry after positive readonlysame-request qualification; exactfailurestage unknown.",
+  "model_application": "Current real Root turn read6qualified instruction buffers and applied8explicit text/scenario/boundary decisions; no live service/travel/medical operations",
+  "new_global_source_raw_credit": 0,
+  "implicit_skill_selection_proven": false,
+  "full_discovery_or_context_budget_proven": false,
+  "source_raw_archive_retained": true,
+  "installed_original_is_masked": true,
+  "withheld_meanings_remain_unread": true,
+  "third_party_assets_services_or_unknown_central_rights_accepted": false,
+  "public_result_review_pending_at_recording": true,
+  "whole16_complete": false
+}

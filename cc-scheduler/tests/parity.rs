@@ -1917,6 +1917,7 @@ impl Backend for Fake {
         self.clock
     }
     fn measure(&mut self, _: &mut Value) -> Result<(Value, Processes)> {
+        if self.m["measure_error"] == true {return Err(Error("OSError"));}
         self.measure_count += 1;
         if self.measure_count == 2 {
             if let Some((path, settings)) = self.settings_change.take() {
@@ -1931,6 +1932,7 @@ impl Backend for Fake {
         Ok(self.fresh.clone().unwrap_or(self.ps.clone()))
     }
     fn jobs(&mut self) -> Result<Vec<Value>> {
+        if self.m["jobs_error_after_launch"] == true && !self.launched.is_empty() {return Err(Error("OSError"));}
         if self.release_repair_lock_on_jobs {
             self.repair_held_lock.take();
         }

@@ -318,3 +318,273 @@ fn bounded_atomic_observations_and_targeted_dispatch_never_replace_ordinary_resu
     assert!(next.publish(&f.e.root).is_err());
     assert_eq!(fs::read(&path).unwrap(), good);
 }
+
+#[test]
+fn unrelated_recovered_job_references_do_not_hide_a_valid_target_observation() {
+    let mut f = Fixture::new();
+    f.put(item(4091, "other", "todo", &[]));
+    let mut recovered = item(2, "other", "todo", &[]);
+    recovered["jobs"] = json!([{"id":"legacy-recovered","Source":"BODY_MUST_BE_SKIPPED"}]);
+    f.put(recovered);
+    f.e.backend.m["cpu_percent"] = json!(99.);
+    f.dispatch();
+    let result = admission::explain(&f.e.root, &f.e.todo_path, 4091, T);
+    assert_eq!(result["validity"], "matching_task_metadata");
+    assert_eq!(result["observation"]["entry"]["reason"], "capacity");
+    assert!(!result.to_string().contains("BODY_MUST_BE_SKIPPED"));
+    // An unsupported shape on the selected row remains unknown rather than
+    // claiming that null and an arbitrary object are identical metadata.
+    assert_eq!(
+        admission::explain(&f.e.root, &f.e.todo_path, 2, T)["validity"],
+        "metadata_unavailable"
+    );
+}
+
+#[test]
+fn reservation_object_shape_changes_invalidate_the_recorded_metadata() {
+    let mut f = Fixture::new();
+    let mut row = item(4091, "other", "todo", &[]);
+    row["stall_recovery"] = json!({"pending":null});
+    f.put(row);
+    f.e.backend.m["cpu_percent"] = json!(99.);
+    f.dispatch();
+    let mut db = f.e.todo().unwrap();
+    // The normal predicate tests is_object(), including an empty object.
+    db["items"][0]["stall_recovery"]["pending"] = json!({});
+    write_json(&f.e.todo_path, &db, 1).unwrap();
+    assert_eq!(
+        admission::explain(&f.e.root, &f.e.todo_path, 4091, T)["validity"],
+        "metadata_changed"
+    );
+}
+
+#[test]
+fn normal_edits_publish_matching_result_metadata_and_retain_the_original_input() {
+    for gate in ["quota", "failure", "capacity", "launch"] {
+        let mut f = Fixture::new();
+        let mut row = item(4091, "other", "todo", &[]);
+        row["model"] = json!("gpt-6.1-sol");
+        f.put(row);
+        match gate {
+            "quota" => f.e.backend.m["quota_block_model"] = json!("gpt-6.1-sol"),
+            "failure" => f.e.backend.worktree_failure = Some(4091),
+            "capacity" => f.e.backend.prepare_pressure = true,
+            _ => {}
+        }
+        let _ = f.e.dispatch(&f.cfg, &f.pri);
+        let result = admission::explain(&f.e.root, &f.e.todo_path, 4091, T);
+        assert_eq!(result["validity"], "matching_task_metadata", "{gate}");
+        assert_ne!(
+            result["observation"]["entry"]["input_metadata_fingerprint"],
+            result["metadata_fingerprint"],
+            "{gate}"
+        );
+        assert_eq!(
+            result["current_metadata_fingerprint"],
+            result["metadata_fingerprint"]
+        );
+    }
+}
+
+#[test]
+fn all_normal_input_fields_invalidate_metadata_while_bodies_are_presence_only() {
+    for (path, value) in [
+        ("scheduler.last_stop", json!("resource_wait")),
+        ("decision_wait", json!(true)),
+        ("owner_question_wait", json!(true)),
+        ("product_review_allocation", json!({"generation":2})),
+        ("sandbox", json!("read-only")),
+        ("mcp_profile", json!("none")),
+        ("network", json!(true)),
+        ("add_dirs", json!(["extra"])),
+        ("review_source_jobs", json!(["author"])),
+        ("scheduler.workspace_receipt", json!({"head":"changed"})),
+        (
+            "scheduler.console_request",
+            json!({"options":{"model":"changed"}}),
+        ),
+        (
+            "scheduler.console_fresh_request",
+            json!({"request_id":"changed"}),
+        ),
+        ("scheduler.unstarted_review", json!({"generation":2})),
+        ("scheduler.initial_review", json!({"generation":2})),
+        (
+            "scheduler.review_preparation_failure.inputs.options",
+            json!({"sandbox":"read-only"}),
+        ),
+    ] {
+        let mut f = Fixture::new();
+        f.put(item(4091, "other", "todo", &[]));
+        f.e.backend.m["cpu_percent"] = json!(99.);
+        f.dispatch();
+        let mut db = f.e.todo().unwrap();
+        let parts: Vec<_> = path.split('.').collect();
+        let mut at = &mut db["items"][0];
+        for part in &parts[..parts.len() - 1] {
+            if !at[*part].is_object() {
+                at[*part] = json!({});
+            }
+            at = &mut at[*part];
+        }
+        at[parts[parts.len() - 1]] = value;
+        write_json(&f.e.todo_path, &db, 1).unwrap();
+        assert_eq!(
+            admission::explain(&f.e.root, &f.e.todo_path, 4091, T)["validity"],
+            "metadata_changed",
+            "{path}"
+        );
+    }
+    let mut f = Fixture::new();
+    let mut row = item(4091, "other", "todo", &[]);
+    row["title"] = json!("TITLE_A");
+    row["scheduler"] = json!({"console_request":{"prompt":"PROMPT_A"}});
+    f.put(row);
+    f.e.backend.m["cpu_percent"] = json!(99.);
+    f.dispatch();
+    let mut db = f.e.todo().unwrap();
+    db["items"][0]["title"] = json!("TITLE_B");
+    db["items"][0]["note"] = json!("NOTE_EDIT");
+    db["items"][0]["updated"] = json!("a note-only revision");
+    db["items"][0]["scheduler"]["console_request"]["prompt"] = json!("PROMPT_B");
+    write_json(&f.e.todo_path, &db, 1).unwrap();
+    let result = admission::explain(&f.e.root, &f.e.todo_path, 4091, T);
+    assert_eq!(result["validity"], "matching_task_metadata");
+    for body in ["TITLE_A", "TITLE_B", "PROMPT_A", "PROMPT_B", "NOTE_EDIT"] {
+        assert!(!result.to_string().contains(body));
+    }
+}
+
+#[test]
+fn every_explanation_validity_uses_the_same_top_level_schema() {
+    let mut f = Fixture::new();
+    f.put(item(4091, "other", "todo", &[]));
+    f.e.backend.m["cpu_percent"] = json!(99.);
+    f.dispatch();
+    let current = admission::explain(&f.e.root, &f.e.todo_path, 4091, T);
+    let expected: std::collections::BTreeSet<_> =
+        current.as_object().unwrap().keys().cloned().collect();
+    let missing = admission::explain(&f.temp.path().join("absent"), &f.e.todo_path, 4091, T);
+    let expired = admission::explain(&f.e.root, &f.e.todo_path, 4091, T + TTL + 1.);
+    fs::write(f.e.root.join("admission.json"), b"broken").unwrap();
+    let corrupt = admission::explain(&f.e.root, &f.e.todo_path, 4091, T);
+    for result in [missing, expired, corrupt] {
+        assert_eq!(
+            result
+                .as_object()
+                .unwrap()
+                .keys()
+                .cloned()
+                .collect::<std::collections::BTreeSet<_>>(),
+            expected,
+            "{}",
+            result["validity"]
+        );
+    }
+}
+
+#[test]
+fn observation_errors_keep_scan_and_launch_results_separate() {
+    let mut f = Fixture::new();
+    f.put(item(4091, "other", "todo", &[]));
+    f.e.backend.m["measure_error"] = json!(true);
+    assert!(f.e.dispatch(&f.cfg, &f.pri).is_err());
+    let result = admission::explain(&f.e.root, &f.e.todo_path, 4091, T);
+    assert_eq!(result["validity"], "incomplete");
+    assert_eq!(result["incomplete"], true);
+    assert_eq!(result["dispatch_error"], "tool_failed");
+    assert!(result["observation"].is_null());
+
+    let mut f = Fixture::new();
+    f.put(item(4091, "other", "todo", &[]));
+    f.e.backend.m["jobs_error_after_launch"] = json!(true);
+    assert!(f.e.dispatch(&f.cfg, &f.pri).is_err());
+    assert_eq!(f.e.backend.launched.len(), 1);
+    assert_eq!(entry(&f, 4091)["reason"], "launched_unlinked");
+    assert_eq!(entry(&f, 4091)["stage"], "launch");
+    assert_eq!(entry(&f, 4091)["failure_code"], "tool_failed");
+    assert!(entry(&f, 4091)["preparation_code"].is_null());
+}
+
+#[test]
+fn real_targeted_path_preserves_the_ordinary_snapshot_and_reader_cannot_write_inputs() {
+    let mut f = Fixture::new();
+    f.put(item(4091, "other", "todo", &[]));
+    f.e.backend.m["cpu_percent"] = json!(99.);
+    f.dispatch();
+    let before = fs::read(f.e.root.join("admission.json")).unwrap();
+    f.e.dispatch_for(&f.cfg, &f.pri, Some(4091)).unwrap();
+    assert_eq!(fs::read(f.e.root.join("admission.json")).unwrap(), before);
+    for name in ["state.json", "status.json", "config.json", "scheduler.log"] {
+        fs::write(f.e.root.join(name), b"CONTROL_SENTINEL").unwrap();
+    }
+    let paths = [
+        f.e.todo_path.clone(),
+        f.e.root.join("admission.json"),
+        f.e.root.join("state.json"),
+        f.e.root.join("status.json"),
+        f.e.root.join("config.json"),
+        f.e.root.join("scheduler.log"),
+    ];
+    let _locks: Vec<_> = paths
+        .iter()
+        .map(|p| {
+            fs::OpenOptions::new()
+                .read(true)
+                .share_mode(1)
+                .open(p)
+                .unwrap()
+        })
+        .collect();
+    let inventory = || {
+        let mut names = fs::read_dir(&f.e.root)
+            .unwrap()
+            .map(|e| e.unwrap().file_name())
+            .collect::<Vec<_>>();
+        names.sort();
+        names
+    };
+    let before = inventory();
+    assert_eq!(
+        admission::explain(&f.e.root, &f.e.todo_path, 4091, T)["validity"],
+        "matching_task_metadata"
+    );
+    assert_eq!(inventory(), before);
+}
+
+#[test]
+fn bom_and_an_unrelated_non_string_project_do_not_change_the_control_projection() {
+    let mut f = Fixture::new();
+    f.put(item(4091, "other", "todo", &[]));
+    let mut db = f.e.todo().unwrap();
+    db["projects"]["unrelated"] = json!({"Source":"DO_NOT_KEEP"});
+    write_json(&f.e.todo_path, &db, 1).unwrap();
+    f.e.backend.m["cpu_percent"] = json!(99.);
+    f.dispatch();
+    let mut bytes = vec![0xef, 0xbb, 0xbf];
+    bytes.extend(fs::read(&f.e.todo_path).unwrap());
+    fs::write(&f.e.todo_path, bytes).unwrap();
+    let result = admission::explain(&f.e.root, &f.e.todo_path, 4091, T);
+    assert_eq!(result["validity"], "matching_task_metadata");
+    assert!(!result.to_string().contains("DO_NOT_KEEP"));
+}
+
+#[test]
+fn saved_console_request_schema_is_metadata_only_and_supported() {
+    let mut f = Fixture::new();
+    let mut row = item(4091, "other", "todo", &[]);
+    row["scheduler"] = json!({"console_request":{"key":"manual:finite","launch_key":"key",
+        "prompt":"PROMPT_MUST_NOT_BE_KEPT","read_only":true,
+        "options":{"cwd":"worktree","model":"gpt-6.1-sol","effort":"max","sandbox":"read-only",
+            "mcp_profile":"none","network":false,"add_dirs":[],"resume_session":null,
+            "notes_hint":"NOTE_MUST_NOT_BE_KEPT"}}});
+    f.put(row);
+    f.e.backend.m["cpu_percent"] = json!(99.);
+    f.dispatch();
+    let result = admission::explain(&f.e.root, &f.e.todo_path, 4091, T);
+    assert_eq!(result["validity"], "matching_task_metadata");
+    for text in ["PROMPT_MUST_NOT_BE_KEPT", "NOTE_MUST_NOT_BE_KEPT"] {
+        assert!(!result.to_string().contains(text));
+        assert!(!snapshot(&f).to_string().contains(text));
+    }
+}

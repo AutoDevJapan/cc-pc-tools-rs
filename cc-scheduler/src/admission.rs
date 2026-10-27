@@ -9,7 +9,11 @@ use std::{
     path::Path,
 };
 
+pub(crate) mod inputs;
 mod metadata;
+pub(crate) fn result_fingerprint(item: &Value, root: &Value) -> String {
+    metadata::fingerprint(&metadata::project(item), root)
+}
 pub const MAX_ENTRIES: usize = 8192;
 pub const MAX_BYTES: u64 = 4 * 1024 * 1024;
 pub const TTL: f64 = 180.;
@@ -62,6 +66,9 @@ pub enum Reason {
     RootChanged,
     ModelSelectionChanged,
     PreparationFailed,
+    StageFailed,
+    LaunchFailed,
+    LaunchedUnlinked,
     Launched,
 }
 #[derive(Clone, Copy, Debug, Serialize, Deserialize, PartialEq)]
@@ -81,10 +88,13 @@ pub enum Failure {
     ReviewModelConflict,
     ReviewModelUnavailable,
     ReviewSourceUnavailable,
+    Interrupted,
+    Other,
 }
 impl Failure {
     pub fn from_error(e: &Error) -> Self {
         match e.0 {
+            "KeyboardInterrupt" => Self::Interrupted,
             "QuotaRetryEnded" => Self::QuotaRetryEnded,
             "ReviewModelConflict" => Self::ReviewModelConflict,
             "ReviewModelUnavailable" => Self::ReviewModelUnavailable,
@@ -99,7 +109,19 @@ impl Failure {
                 "resource_wait" => Self::ResourceWait,
                 "input_rejected" => Self::InputRejected,
                 "excluded_resource" => Self::ExcludedResource,
-                _ => Self::ToolFailed,
+                _ if [
+                    "OSError",
+                    "FileNotFoundError",
+                    "PermissionError",
+                    "JSONDecodeError",
+                    "TimeoutError",
+                    "RuntimeError",
+                ]
+                .contains(&e.0) =>
+                {
+                    Self::ToolFailed
+                }
+                _ => Self::Other,
             },
         }
     }
@@ -108,6 +130,7 @@ impl Failure {
 #[serde(deny_unknown_fields)]
 pub struct Entry {
     pub id: i64,
+    pub input_metadata_fingerprint: String,
     pub metadata_fingerprint: String,
     pub eligible: Option<bool>,
     pub candidate: Option<bool>,
@@ -117,6 +140,7 @@ pub struct Entry {
     pub root_guard_allowed: Option<bool>,
     pub root_excluded: Option<bool>,
     pub preparation_code: Option<Failure>,
+    pub failure_code: Option<Failure>,
     pub recheck_capacity: Option<Capacity>,
 }
 #[derive(Clone, Copy, Debug, Serialize, Deserialize)]
@@ -173,9 +197,11 @@ impl Capacity {
 pub struct Observation {
     schema: u32,
     at: f64,
+    recorded_at: f64,
     expires_at: f64,
     ordinary: bool,
     pub complete: bool,
+    pub scan_complete: bool,
     pub truncated: bool,
     pub dispatch_enabled: bool,
     pub capacity: Capacity,
@@ -187,9 +213,11 @@ impl Observation {
         Self {
             schema: 1,
             at,
+            recorded_at: at,
             expires_at: at + TTL,
             ordinary,
             complete: false,
+            scan_complete: false,
             truncated: false,
             dispatch_enabled: enabled,
             capacity: Capacity::default(),
@@ -204,7 +232,20 @@ impl Observation {
         }
         if self.entries.len() >= MAX_ENTRIES {
             self.truncated = true;
-            return;
+            // Old completed/held rows must not crowd out new runnable work.
+            let replace = (item["status"] == "todo")
+                .then(|| {
+                    self.entries
+                        .iter()
+                        .find(|(_, e)| e.reason == Reason::StatusNotTodo)
+                        .map(|(id, _)| *id)
+                })
+                .flatten();
+            if let Some(id) = replace {
+                self.entries.remove(&id);
+            } else {
+                return;
+            }
         }
         let Some(id) = item["id"].as_i64().filter(|id| *id > 0) else {
             return;
@@ -214,6 +255,7 @@ impl Observation {
             id,
             Entry {
                 id,
+                input_metadata_fingerprint: fingerprint.clone(),
                 metadata_fingerprint: fingerprint,
                 eligible: Some(false),
                 candidate: Some(false),
@@ -240,6 +282,7 @@ impl Observation {
         }
     }
     pub fn queue(&mut self, queue: &[Value], report: &Value) {
+        self.scan_complete = true;
         self.capacity = Capacity::observed(report);
         for (rank, item) in queue.iter().enumerate() {
             if let Some(e) = item["id"].as_i64().and_then(|id| self.entries.get_mut(&id)) {
@@ -262,15 +305,32 @@ impl Observation {
     }
     pub fn failed(&mut self, id: &Value, error: &Error) {
         if let Some(e) = id.as_i64().and_then(|id| self.entries.get_mut(&id)) {
-            e.preparation_code = Some(Failure::from_error(error));
-            // Errors can occur before preparation, or after the launch call.
-            e.reason = Reason::PreparationFailed;
+            let code = Failure::from_error(error);
+            e.failure_code = Some(code);
+            if e.stage == Stage::Preparation {
+                e.preparation_code = Some(code);
+            }
+            e.reason = match (e.stage, e.reason) {
+                (Stage::Launch, Reason::LaunchedUnlinked) => Reason::LaunchedUnlinked,
+                (Stage::Launch, _) => Reason::LaunchFailed,
+                (Stage::Preparation, _) => Reason::PreparationFailed,
+                _ => Reason::StageFailed,
+            };
         }
     }
     pub fn recheck(&mut self, id: &Value, report: &Value) {
         if let Some(e) = id.as_i64().and_then(|id| self.entries.get_mut(&id)) {
             e.recheck_capacity = Some(Capacity::observed(report));
         }
+    }
+    pub fn result(&mut self, id: i64, fingerprint: String) {
+        if let Some(e) = self.entries.get_mut(&id) {
+            e.metadata_fingerprint = fingerprint;
+        }
+    }
+    pub fn finish(&mut self, at: f64) {
+        self.recorded_at = at;
+        self.expires_at = at + TTL;
     }
     pub fn publish(&self, root: &Path) -> Result<()> {
         if !self.ordinary {
@@ -296,35 +356,58 @@ impl Observation {
         use windows_sys::Win32::Storage::FileSystem::{
             MoveFileExW, ReplaceFileW, MOVEFILE_REPLACE_EXISTING,
         };
-        let replaced = unsafe {
-            ReplaceFileW(
-                wide(&root.join(FILE)).as_ptr(),
-                wide(&temp).as_ptr(),
+        let target_wide = wide(&root.join(FILE));
+        let temp_wide = wide(&temp);
+        let error = unsafe {
+            let ok = ReplaceFileW(
+                target_wide.as_ptr(),
+                temp_wide.as_ptr(),
                 std::ptr::null(),
                 0,
                 std::ptr::null(),
                 std::ptr::null(),
-            )
-        } != 0;
+            );
+            if ok != 0 {
+                None
+            } else {
+                Some(std::io::Error::last_os_error().raw_os_error().unwrap_or(0))
+            }
+        };
         // ReplaceFile supports a reader retaining the previous file handle.
-        // Only the initial missing destination uses a rename.
-        if !replaced
-            && (std::io::Error::last_os_error().raw_os_error() != Some(2)
-                || unsafe {
-                    MoveFileExW(
-                        wide(&temp).as_ptr(),
-                        wide(&root.join(FILE)).as_ptr(),
-                        MOVEFILE_REPLACE_EXISTING,
-                    )
-                } == 0)
-        {
-            return Err(Error(
-                match std::io::Error::last_os_error().raw_os_error() {
-                    Some(32) | Some(33) => "AdmissionSharingViolation",
-                    Some(5) => "AdmissionAccessDenied",
-                    _ => "AdmissionWriteFailed",
-                },
-            ));
+        // These documented ReplaceFile failures can also leave the old name
+        // absent. Finish publishing the already-flushed bounded replacement.
+        let error = if error.is_some_and(|e| matches!(e, 2 | 1176 | 1177)) {
+            unsafe {
+                let ok = MoveFileExW(
+                    temp_wide.as_ptr(),
+                    target_wide.as_ptr(),
+                    MOVEFILE_REPLACE_EXISTING,
+                );
+                if ok != 0 {
+                    None
+                } else {
+                    Some(std::io::Error::last_os_error().raw_os_error().unwrap_or(0))
+                }
+            }
+        } else {
+            error
+        };
+        if let Some(code) = error {
+            if code == 2 {
+                if let Ok(file) = fs::File::open(root.join(FILE)) {
+                    let mut current = vec![];
+                    if file.take(MAX_BYTES + 1).read_to_end(&mut current).is_ok()
+                        && current == bytes
+                    {
+                        return Ok(());
+                    }
+                }
+            }
+            return Err(Error(match code {
+                32 | 33 => "AdmissionSharingViolation",
+                5 => "AdmissionAccessDenied",
+                _ => "AdmissionWriteFailed",
+            }));
         }
         Ok(())
     }
@@ -332,29 +415,30 @@ impl Observation {
 
 /// No Scheduler/RealBackend, locks, directory creation, backups, guards or processes.
 pub fn explain(root: &Path, todo: &Path, id: i64, now: f64) -> Value {
-    let mut out = json!({"id":id,"observed_at":null,"expires_at":null,
-        "metadata_scope":"task_control_metadata_and_registered_root",
+    let mut out = json!({"id":id,"observed_at":null,"recorded_at":null,"checked_at":now,"expires_at":null,
+        "metadata_scope":"body_free_control_projection_v1_and_registered_root",
         "metadata_fingerprint":null,"current_metadata_fingerprint":null,
+        "dispatch_enabled":null,"complete":null,"incomplete":null,"truncated":null,"dispatch_error":null,
         "validity":"missing","observation":null});
     let read = || -> Result<Observation> {
         let file = fs::File::open(root.join(FILE))?;
         if file.metadata()?.len() > MAX_BYTES {
             return Err(Error("AdmissionTooLarge"));
         }
-        let snapshot: Observation = serde_json::from_reader(file.take(MAX_BYTES + 1))?;
+        let snapshot: Observation =
+            serde_json::from_reader(std::io::BufReader::new(file.take(MAX_BYTES + 1)))?;
         if snapshot.schema != 1
             || !snapshot.ordinary
             || snapshot.entries.len() > MAX_ENTRIES
             || !snapshot.at.is_finite()
-            || snapshot.expires_at != snapshot.at + TTL
+            || snapshot.recorded_at < snapshot.at
+            || snapshot.expires_at != snapshot.recorded_at + TTL
             || snapshot.entries.iter().any(|(id, e)| {
                 *id <= 0
                     || *id != e.id
-                    || e.metadata_fingerprint.len() != 64
-                    || !e
-                        .metadata_fingerprint
-                        .bytes()
-                        .all(|b| b.is_ascii_hexdigit())
+                    || [&e.metadata_fingerprint, &e.input_metadata_fingerprint]
+                        .iter()
+                        .any(|fp| fp.len() != 64 || !fp.bytes().all(|b| b.is_ascii_hexdigit()))
             })
         {
             return Err(Error("AdmissionInvalid"));
@@ -371,10 +455,13 @@ pub fn explain(root: &Path, todo: &Path, id: i64, now: f64) -> Value {
         }
     };
     out["observed_at"] = json!(snapshot.at);
+    out["recorded_at"] = json!(snapshot.recorded_at);
     out["expires_at"] = json!(snapshot.expires_at);
     out["dispatch_enabled"] = json!(snapshot.dispatch_enabled);
     out["complete"] = json!(snapshot.complete);
     out["truncated"] = json!(snapshot.truncated);
+    out["incomplete"] = json!(!snapshot.scan_complete);
+    out["dispatch_error"] = json!(snapshot.dispatch_error);
     if now < snapshot.at || !now.is_finite() {
         out["validity"] = json!("clock_mismatch");
         return out;
@@ -384,6 +471,8 @@ pub fn explain(root: &Path, todo: &Path, id: i64, now: f64) -> Value {
             "expired"
         } else if !snapshot.dispatch_enabled {
             "dispatch_disabled"
+        } else if !snapshot.scan_complete {
+            "incomplete"
         } else if snapshot.truncated {
             "not_recorded_limit"
         } else {

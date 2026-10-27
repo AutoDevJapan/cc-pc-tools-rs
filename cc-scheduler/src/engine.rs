@@ -40,28 +40,11 @@ use std::{
     time::Duration,
 };
 fn launch_inputs(item: &Value) -> Value {
-    json!({"spec":item["spec"],"needs":item["needs"],"subwork":item["subwork"],
-        "title":item["title"],"project":item["project"],"dispatchable":item["dispatchable"],
-        "model":item["model"],"effort":item["effort"],"model_origin":item["model_origin"],"effort_origin":item["effort_origin"],
-        "sandbox":item["sandbox"],"mcp_profile":item["mcp_profile"],"network":item["network"],"add_dirs":item["add_dirs"],
-        "wait_on":item["wait_on"],"review_source_jobs":item["review_source_jobs"],"task_type":item["task_type"],"role":item["role"],
-        "worktree":item["scheduler"]["worktree"],"branch":item["scheduler"]["branch"],
-        "not_before":item["scheduler"]["not_before"],"resource_wait":item["scheduler"]["resource_wait"],
-        "workspace_receipt":item["scheduler"]["workspace_receipt"],"jobs":item["jobs"],
-        "subwork_workspace_migration":item["scheduler"]["subwork_workspace_migration"],
-        "resume_generation":item["resume_generation"],"worker_receipt":item["worker_receipt"],
-        "console_request":item["scheduler"]["console_request"],
-        "console_fresh_request":item["scheduler"]["console_fresh_request"],
-        "unstarted_review":item["scheduler"]["unstarted_review"],
-        "initial_review":item["scheduler"]["initial_review"],
-        "targeted_hold":crate::targeted_dispatch::held(item)})
+    crate::admission::inputs::launch(item)
 }
 
 fn review_request_inputs(item: &Value) -> Value {
-    json!({"spec":item["spec"],"model":item["model"],"effort":item["effort"],
-        "model_origin":item["model_origin"],"effort_origin":item["effort_origin"],
-        "options":item["scheduler"]["console_request"]["options"],
-        "subwork":item["subwork"],"review_source_jobs":item["review_source_jobs"],"task_type":item["task_type"],"role":item["role"]})
+    crate::admission::inputs::review(item)
 }
 
 fn selection_origin(
@@ -133,6 +116,7 @@ pub struct Scheduler<B: Backend> {
     pub state: Value,
     pub report: Value,
     pub failures: Vec<String>,
+    admission_updates: Option<std::collections::BTreeMap<i64, String>>,
 }
 impl<B: Backend> Scheduler<B> {
     pub fn civ6_home(&self) -> PathBuf {
@@ -148,6 +132,7 @@ impl<B: Backend> Scheduler<B> {
             state: json!({}),
             report: json!({}),
             failures: vec![],
+            admission_updates: None,
         })
     }
     pub fn log(&self, level: &str, message: &str) -> Result<()> {
@@ -294,6 +279,15 @@ impl<B: Backend> Scheduler<B> {
         let out = row.clone();
         cc_job_policy::todo_store::check_size(encode(&db, 1).len()).map_err(todo_store_error)?;
         write_json(&self.todo_path, &db, 1)?;
+        // Capture only the control projection after a successful normal write,
+        // while this same todo.lock still pins the written row and root.
+        if let Some(updates) = self.admission_updates.as_mut() {
+            if let Some(id) = out["id"].as_i64() {
+                if updates.len() < crate::admission::MAX_ENTRIES || updates.contains_key(&id) {
+                    updates.insert(id, crate::admission::result_fingerprint(&out, &db["projects"][s(&out["project"])]));
+                }
+            }
+        }
         Ok(out)
     }
     pub fn sample(&mut self, cfg: &Value) -> Result<(Value, Processes, Vec<Value>)> {
@@ -1947,7 +1941,12 @@ if !truth(&row["scheduler"]["key"]){let attempt=add_count(&row["scheduler"]["att
     /// A watchdog reservation can dispatch only its own item through normal capacity/resource gates.
     pub fn dispatch_for(&mut self, cfg: &Value, pri: &Value, target: Option<i64>) -> Result<()> {
         let mut observation = Observation::new(self.backend.clock(), target.is_none(), truth(&cfg["dispatch_enabled"]));
+        self.admission_updates = target.is_none().then(std::collections::BTreeMap::new);
         let result = self.dispatch_observed(cfg, pri, target, &mut observation);
+        if let Some(updates) = self.admission_updates.take() {
+            for (id,fingerprint) in updates { observation.result(id,fingerprint); }
+        }
+        observation.finish(self.backend.clock());
         observation.complete = result.is_ok();
         observation.dispatch_error = result.as_ref().err().map(crate::admission::Failure::from_error);
         if target.is_none() {
@@ -2144,6 +2143,7 @@ if !truth(&row["scheduler"]["key"]){let attempt=add_count(&row["scheduler"]["att
                     observation.decide(&i["id"], AdmissionStage::Preparation, AdmissionReason::PreparedStatusChanged);
                     return Ok(());
                 }
+                observation.decide(&i["id"], AdmissionStage::Recheck, AdmissionReason::Unknown);
                 let (_, ps, jobs) = self.sample(cfg)?;
                 let db = self.todo()?;
                 let busy = resources_busy_with_lock(
@@ -2242,6 +2242,7 @@ if !truth(&row["scheduler"]["key"]){let attempt=add_count(&row["scheduler"]["att
                     Path::new(s(&prepared["scheduler"]["prompt"])),
                     &prepared["scheduler"]["selection"],
                 )?;
+                observation.decide(&i["id"], AdmissionStage::Launch, AdmissionReason::LaunchedUnlinked);
                 let j = self
                     .backend
                     .jobs()?

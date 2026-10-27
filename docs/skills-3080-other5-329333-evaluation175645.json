@@ -1,0 +1,1092 @@
+{
+  "all_original_selected_chunks_losslessly_reconstructed": true,
+  "central_operations": 0,
+  "context_resolution": "Each record.original_chunk_sha256 selects shared_original_contexts[sha].common; add that chunk's ordered original_assessment values as entries and canonical-JSON SHA256 must equal sha. All common fields, including definitions, input_validation, privacy, notice and boundaries, are preserved once.",
+  "domain": "other373-parent-received-shared-snapshot-v3",
+  "first_ordinal": 329,
+  "last_ordinal": 333,
+  "limits": "This shares complete already acknowledged structured evidence, not original source bodies. Original actors, masks, unknown/partial/unread states and opaque path references remain unchanged; no grant, execution, adoption, current physical continuity or new reading is established.",
+  "materializer_job": "20261027-175645-todo-3080",
+  "new_copy_grants": 0,
+  "new_final_dispositions": 0,
+  "new_raw_or_unique_credit": 0,
+  "new_source_body_reads": 0,
+  "parent_acknowledged_through_at_materialization": 333,
+  "parent_journal_sha256": "a71969f43afd1ffb7845a138d6bf01c71e1197998d1d8455a5b409171601bb43",
+  "public_reflected": false,
+  "records": [
+    {
+      "actual_assessment_reader": "20261027-194701-todo-3778",
+      "bytes": 9648,
+      "inventory_id": "github:44190c27d978c4a33bb886f46306739676f0792d157a335c1287663d8bf7e63d",
+      "inventory_unit": "github_prompt_or_model_information",
+      "original_assessment": {
+        "candidate_disposition": "327と共通する可視手順のmetadata variantとして参照/改訂候補。全文重複/同一権利とは確定せず個別採否は親へ。",
+        "classification": "variant",
+        "findings": [
+          "可視のL1..96/98..99/102..114は327と同じ表示text。L97はmodel IDの宣言で、実binding/性能/価格を検証した結果ではない。",
+          "実依存・test commandの確認は参考だが、全lint/typecheck/不明commandを本人へ聞く、comment一律禁止、説明せず止まる、Taskへ検索を優先委譲という元規則を現在の必要検査/記録・同担当継続へ適合させる。",
+          "system-reminderタグや捕捉Git/OS/date・builtin Skill説明は、現在の本人指示/権限/環境を作らない。モデルのfreeや名称から専門能力/費用を決めない。"
+        ],
+        "negative": "model名の金融的な語やfreeだけで実能力/契約枠を認定し、Taskへ渡した時点で依頼を完了にする。",
+        "notices": [
+          {
+            "notice_ref": "root"
+          }
+        ],
+        "package_evidence": {
+          "complete_tree_enumerated": true,
+          "independent_support_blobs": 0,
+          "other_primary_aliases": 6,
+          "primary_alias_excluded": 1,
+          "root": "Open Source prompts/OpenCode",
+          "tree_blob_count": 7
+        },
+        "positive": "既存codeの依存/慣例と必要検査を調べ、実結果・未達を対応させる。",
+        "read": [
+          3,
+          2,
+          0,
+          false,
+          true,
+          114
+        ],
+        "read_evidence": {
+          "actual_reader_job": "20261027-194701-todo-3778",
+          "masked_lines": [
+            100,
+            101
+          ],
+          "masking_version": "v28-workspace-root-fields-20261027-194701",
+          "method": "direct_masked_full",
+          "new_source_read": true,
+          "ranges": [
+            [
+              1,
+              114
+            ]
+          ],
+          "strict_utf8": true
+        },
+        "reason": "全114行を伏字2行付きで直接読取。327との可視text比較は差L97、伏字L100..101は比較対象外。",
+        "required_changes": [
+          "元repoの実依存・影響する検査と実結果を照合し、通常の技術情報を本人へ戻さず必要な記録/未達を残す。",
+          "model/環境/タグの収録宣言と実観測を分け、Task再委譲や未知Skill/config操作を本研究で実行しない。"
+        ],
+        "row": 329,
+        "source": [
+          "github:44190c27d978c4a33bb886f46306739676f0792d157a335c1287663d8bf7e63d",
+          "x1xhlol/system-prompts-and-models-of-ai-tools",
+          "162db92f54d717d8ebd12292e155aeef32bb4b3c",
+          "Open Source prompts/OpenCode/Agent Prompt (ling.3.0.flash.fin-free) 2026-09-11.txt",
+          "f4d6699bf55a2c08e541d27263df302dee79c9bc3689749dc0e56f945f1cad53",
+          "374a8bb47188274c8338c9b130aad14ff6dc08a1",
+          9648
+        ],
+        "support": [
+          "r327",
+          "r328",
+          "r330",
+          "r331",
+          "r332",
+          "r333"
+        ],
+        "unit": "github_prompt_or_model_information",
+        "unmet": [
+          "伏字L100..101 raw、実model binding/性能/課金・現tool/Skill本文・runtime。",
+          "個別prompt/上流/サービスの真正性・権利、未知中央本文比較。"
+        ],
+        "use": "ling名義のOpenCode promptで、既存依存・周辺code・検査手順と報告の境界を比較する。",
+        "value": "共通workflowとmodelラベルを分離し、model名から金融機能/無料利用を推測せず既存慣例の手順だけを検討できる。"
+      },
+      "original_chunk_id": "f3339b4a2c6d480eb17f3059a6d8e2c1",
+      "original_chunk_sha256": "e8bb4f423c1cee299438d933c07eccc4058e6ce54a3063b5a7246a5b3a1858f0",
+      "path": "Open Source prompts/OpenCode/Agent Prompt (ling.3.0.flash.fin-free) 2026-09-11.txt",
+      "previous_parent_semantic_read": true,
+      "source_commit": "162db92f54d717d8ebd12292e155aeef32bb4b3c",
+      "source_git_blob": "374a8bb47188274c8338c9b130aad14ff6dc08a1",
+      "source_path": "Open Source prompts/OpenCode/Agent Prompt (ling.3.0.flash.fin-free) 2026-09-11.txt",
+      "source_repo": "x1xhlol/system-prompts-and-models-of-ai-tools",
+      "source_sha256": "f4d6699bf55a2c08e541d27263df302dee79c9bc3689749dc0e56f945f1cad53"
+    },
+    {
+      "actual_assessment_reader": "20261027-194701-todo-3778",
+      "bytes": 9630,
+      "inventory_id": "github:e81a614fcc9627d1e61c50bbeb12d26a37c99820f67e65d48c05651ad2b01c40",
+      "inventory_unit": "github_prompt_or_model_information",
+      "original_assessment": {
+        "candidate_disposition": "共通workflowの収録metadata variantとして参照/改訂候補。個別権利と実runtime/採否は親へ。",
+        "classification": "variant",
+        "findings": [
+          "可視のL1..96/98..99/102..103/105..114は327と同じ表示text。L97のmodel宣言とL104の収録日が異なる。現在のwriter/model/Fastや時刻へ付け替えない。",
+          "本文は依存/周辺code/実test commandの確認と並列読取を勧める一方、comment禁止/本人へcommand再質問/明示依頼なしcommit禁止/報告せず終了を含む。単に別model名だから新しい有効な手順とはしない。",
+          "326のMiMoCode名義資料とはharness/権限merge・memory/agent仕様が違う文書。似たmodel名だけでその能力や許可を継承しない。"
+        ],
+        "negative": "過去の収録日を現在時刻にし、MiMoという名前から別runtimeのmemory/agent権限も存在すると認定する。",
+        "notices": [
+          {
+            "notice_ref": "root"
+          }
+        ],
+        "package_evidence": {
+          "complete_tree_enumerated": true,
+          "independent_support_blobs": 0,
+          "other_primary_aliases": 6,
+          "primary_alias_excluded": 1,
+          "root": "Open Source prompts/OpenCode",
+          "tree_blob_count": 7
+        },
+        "positive": "同じ共通手順を検討する際に、環境/dateのclaimを分けて対象版と実結果を確認する。",
+        "read": [
+          3,
+          2,
+          0,
+          false,
+          true,
+          114
+        ],
+        "read_evidence": {
+          "actual_reader_job": "20261027-194701-todo-3778",
+          "masked_lines": [
+            100,
+            101
+          ],
+          "masking_version": "v28-workspace-root-fields-20261027-194701",
+          "method": "direct_masked_full",
+          "new_source_read": true,
+          "ranges": [
+            [
+              1,
+              114
+            ]
+          ],
+          "strict_utf8": true
+        },
+        "reason": "全114行をmasked直接読取。327との可視差はL97とL104、伏字L100..101は未比較。",
+        "required_changes": [
+          "現在の元要件・本人回答・実対象版を保持して検査を選び、必要な結果/未達を記録する。",
+          "収録model/dateやbuiltin説明を実model/権限/無料枠の証拠にせず、現tool/割当・保護対象へ対応する。"
+        ],
+        "row": 330,
+        "source": [
+          "github:e81a614fcc9627d1e61c50bbeb12d26a37c99820f67e65d48c05651ad2b01c40",
+          "x1xhlol/system-prompts-and-models-of-ai-tools",
+          "162db92f54d717d8ebd12292e155aeef32bb4b3c",
+          "Open Source prompts/OpenCode/Agent Prompt (mimo.v2.5-free) 2026-09-11.txt",
+          "7b61537f3daf82024a7935ed5670363ee6193d7ff72d772dafdf61b7605eddca",
+          "f4961db4b259e161acd3f26f074ee7e72d84651d",
+          9630
+        ],
+        "support": [
+          "r327",
+          "r328",
+          "r329",
+          "r331",
+          "r332",
+          "r333"
+        ],
+        "unit": "github_prompt_or_model_information",
+        "unmet": [
+          "伏字2行 raw、現model/日時/binding/費用・tool・builtin Skill本文の実証。",
+          "個別prompt/コード/サービスの真正性・権利、未知中央本文比較。"
+        ],
+        "use": "mimo-free名義のOpenCode promptで、共有workflowと収録環境の日時/model差を検討する。",
+        "value": "異なる自己申告model/日付を同一の現在環境へ混ぜず、既存依存・検査確認の共通部分を整理できる。"
+      },
+      "original_chunk_id": "f3339b4a2c6d480eb17f3059a6d8e2c1",
+      "original_chunk_sha256": "e8bb4f423c1cee299438d933c07eccc4058e6ce54a3063b5a7246a5b3a1858f0",
+      "path": "Open Source prompts/OpenCode/Agent Prompt (mimo.v2.5-free) 2026-09-11.txt",
+      "previous_parent_semantic_read": true,
+      "source_commit": "162db92f54d717d8ebd12292e155aeef32bb4b3c",
+      "source_git_blob": "f4961db4b259e161acd3f26f074ee7e72d84651d",
+      "source_path": "Open Source prompts/OpenCode/Agent Prompt (mimo.v2.5-free) 2026-09-11.txt",
+      "source_repo": "x1xhlol/system-prompts-and-models-of-ai-tools",
+      "source_sha256": "7b61537f3daf82024a7935ed5670363ee6193d7ff72d772dafdf61b7605eddca"
+    },
+    {
+      "actual_assessment_reader": "20261027-194701-todo-3778",
+      "bytes": 10287,
+      "inventory_id": "github:d832a9eb5646a386689a3544009a8905ffe459b88932b841ecf37eddb6eb8ec2",
+      "inventory_unit": "github_prompt_or_model_information",
+      "original_assessment": {
+        "candidate_disposition": "編集保持/証拠と仮説確認の独立variantとして参照/改訂候補。個別権利/実consumerと採否は親へ。",
+        "classification": "variant",
+        "findings": [
+          "327型とは異なるbodyで、実出力によるverification、安価な現物確認、矛盾するclaimと全仮説の結果、必要な全文読取を述べる。既読の版/範囲が対応する証拠の再利用と、見ていないものの再確認は分ける。",
+          "editは現在のoldString、狭い境界、omitted lineは削除、保持条件付きなら変更領域を再確認し違反を修復する。全文readは必要時というL18と小file/明示要求だけというL30の適用境界は目的で整合させる。",
+          "独立作業はTaskで専門子へ分け、TodoWriteを頻繁更新し一turnで終えるという記述。元3778の同担当/新ToDo・直接子job禁止やscheduler管理の状態へ無条件に移さない。",
+          "一度きりの計算にもpython3 -cを指定するL53は新Python禁止と衝突し、許可された現手段へ置き換える。数値を実コードで確認する目的は保持する。",
+          "WebFetchで別hostへのredirectをすぐ追うL57は、元scope/認証送信・Rakko等の対象制限を先に確認する必要がある。取得成功や許可を本文だけで認定しない。",
+          "planでは計画fileを含め一切編集せず、本人へbuild mode切替を頼む説明。現在の正規mode/readonlyを保持し、通常のPC操作を本人へ戻す手順にしない。model/Git/日時/builtinは収録宣言で実model/価格/権利の検証ではない。"
+        ],
+        "negative": "oldStringで省いた行の削除に気付かず、安価な再確認の語を理由に全既読を繰返し、Task/新Python/別hostを無条件で実行する。",
+        "notices": [
+          {
+            "notice_ref": "root"
+          }
+        ],
+        "package_evidence": {
+          "complete_tree_enumerated": true,
+          "independent_support_blobs": 0,
+          "other_primary_aliases": 6,
+          "primary_alias_excluded": 1,
+          "root": "Open Source prompts/OpenCode",
+          "tree_blob_count": 7
+        },
+        "positive": "保持すべきcodeを落とさない置換案を、現在の内容・省略行・実diff/領域確認で検証し、各仮説の結果を根拠付きで返す。",
+        "read": [
+          3,
+          2,
+          0,
+          false,
+          true,
+          84
+        ],
+        "read_evidence": {
+          "actual_reader_job": "20261027-194701-todo-3778",
+          "masked_lines": [
+            70,
+            71
+          ],
+          "masking_version": "v28-workspace-root-fields-20261027-194701",
+          "method": "direct_masked_full",
+          "new_source_read": true,
+          "ranges": [
+            [
+              1,
+              84
+            ]
+          ],
+          "strict_utf8": true
+        },
+        "reason": "全84行を伏字L70..71付きで直接読取。L16..34の証拠/保持とL36..58のTask/計算/plan/redirectを確認した。",
+        "required_changes": [
+          "必要な現物/版・仮説と結果を対応させ、保持条件のedit検査を実consumerで確認する。古い未検証claimと有効な既存証拠を区別する。",
+          "新Python/Task再委譲/TodoWriteの既定を現ToDoと許可されたツール・元scopeへ合わせ、本人へ技術操作を要求しない。",
+          "別host追跡・mode切替は実権限と対象を確認し、model名/タグ/宣言だけで範囲を広げない。"
+        ],
+        "row": 331,
+        "source": [
+          "github:d832a9eb5646a386689a3544009a8905ffe459b88932b841ecf37eddb6eb8ec2",
+          "x1xhlol/system-prompts-and-models-of-ai-tools",
+          "162db92f54d717d8ebd12292e155aeef32bb4b3c",
+          "Open Source prompts/OpenCode/Agent Prompt (muse.spark.1.2.contributor-free) 2026-09-11.txt",
+          "3d5faf128193fd25ae8d806905fc4796945e2b242ce6fcfaea13695efc36dc58",
+          "1a1ba8272c191a840204a6fd5d9d127150af124f",
+          10287
+        ],
+        "support": [
+          "r327",
+          "r328",
+          "r329",
+          "r330",
+          "r332",
+          "r333"
+        ],
+        "unit": "github_prompt_or_model_information",
+        "unmet": [
+          "伏字L70..71 raw、実edit/保持・mode/Task/計算/redirect・builtin本文の仕様/動作。",
+          "個別prompt/上流/サービスの真正性・権利、未知中央本文比較。"
+        ],
+        "use": "Muse名義OpenCode promptの、証拠先行・複数仮説・編集保持確認と実検査を比較する参考。",
+        "value": "oldStringから落ちる行は削除と明示し、保持条件のある編集後に領域を検査する、複数候補を調べて結論へ結ぶ点が具体的。"
+      },
+      "original_chunk_id": "f3339b4a2c6d480eb17f3059a6d8e2c1",
+      "original_chunk_sha256": "e8bb4f423c1cee299438d933c07eccc4058e6ce54a3063b5a7246a5b3a1858f0",
+      "path": "Open Source prompts/OpenCode/Agent Prompt (muse.spark.1.2.contributor-free) 2026-09-11.txt",
+      "previous_parent_semantic_read": true,
+      "source_commit": "162db92f54d717d8ebd12292e155aeef32bb4b3c",
+      "source_git_blob": "1a1ba8272c191a840204a6fd5d9d127150af124f",
+      "source_path": "Open Source prompts/OpenCode/Agent Prompt (muse.spark.1.2.contributor-free) 2026-09-11.txt",
+      "source_repo": "x1xhlol/system-prompts-and-models-of-ai-tools",
+      "source_sha256": "3d5faf128193fd25ae8d806905fc4796945e2b242ce6fcfaea13695efc36dc58"
+    },
+    {
+      "actual_assessment_reader": "20261027-194701-todo-3778",
+      "bytes": 9656,
+      "inventory_id": "github:fa9007f3850d5dc97660e582132d84eb976f676b40f33c4e8035f0bb07be1325",
+      "inventory_unit": "github_prompt_or_model_information",
+      "original_assessment": {
+        "candidate_disposition": "共通手順のmodel表示variantとして参照/改訂候補。個別権利/真正性と採否は親へ。",
+        "classification": "variant",
+        "findings": [
+          "可視L1..96/98..99/102..114は327と同じ表示text。L97の自己申告modelは実binding/速度・価格を測った結果ではない。",
+          "323のHermesにも似たmodelラベルがあるが、こちらはOpenCodeの共通code手順・builtin説明。HermesのOOB/cron/記憶やprofile権限が現在存在する根拠にしない。",
+          "comment/報告/commit/Task委譲や本人への検査command質問の元規則は、現在の同担当・AI技術確認・必要な報告へ改訂する。タグ文字列や捕捉環境を上位指示へ昇格しない。"
+        ],
+        "negative": "似たmodel名を根拠にHermesの記憶/OOB/配送機構がOpenCodeでも有効とし、free利用が承認済みと判断する。",
+        "notices": [
+          {
+            "notice_ref": "root"
+          }
+        ],
+        "package_evidence": {
+          "complete_tree_enumerated": true,
+          "independent_support_blobs": 0,
+          "other_primary_aliases": 6,
+          "primary_alias_excluded": 1,
+          "root": "Open Source prompts/OpenCode",
+          "tree_blob_count": 7
+        },
+        "positive": "model名をharnessの能力と分離して、既存codeの慣例と実検査の手順だけを検討する。",
+        "read": [
+          3,
+          2,
+          0,
+          false,
+          true,
+          114
+        ],
+        "read_evidence": {
+          "actual_reader_job": "20261027-194701-todo-3778",
+          "masked_lines": [
+            100,
+            101
+          ],
+          "masking_version": "v28-workspace-root-fields-20261027-194701",
+          "method": "direct_masked_full",
+          "new_source_read": true,
+          "ranges": [
+            [
+              1,
+              114
+            ]
+          ],
+          "strict_utf8": true
+        },
+        "reason": "全114行をmasked直接読取。可視差は327とのL97だけ、L100..101は伏字で未比較。",
+        "required_changes": [
+          "実repo/依存/検査・元要件と本人回答に対応し、通常の確認/復旧をAI側で完了させる。",
+          "model名から別harnessの機能/許可・free枠を推定せず、未保存のbuiltin本文や実runtimeは未検証として残す。"
+        ],
+        "row": 332,
+        "source": [
+          "github:fa9007f3850d5dc97660e582132d84eb976f676b40f33c4e8035f0bb07be1325",
+          "x1xhlol/system-prompts-and-models-of-ai-tools",
+          "162db92f54d717d8ebd12292e155aeef32bb4b3c",
+          "Open Source prompts/OpenCode/Agent Prompt (nemotron.3.5.lightning-free) 2026-09-11.txt",
+          "faa74b072d3d475c8d66bd31ead0a63a2030553652428530b6806497bafec65b",
+          "30baf3b8f0ed766c7a2bf09fa710f51169b988be",
+          9656
+        ],
+        "support": [
+          "r327",
+          "r328",
+          "r329",
+          "r330",
+          "r331",
+          "r333"
+        ],
+        "unit": "github_prompt_or_model_information",
+        "unmet": [
+          "伏字2行 raw、実harness/model/tool・memory/配送・課金・builtin本文。",
+          "個別prompt/上流/サービスの真正性・権利、未知中央本文比較。"
+        ],
+        "use": "nemotron-lightning名義のOpenCode promptで、同じmodelラベルでもagent/harnessを区別する参考。",
+        "value": "依存/検査の共通手順を利用候補に保ち、Hermes等の別harnessの記憶・配送・権限を誤って継承しない観点がある。"
+      },
+      "original_chunk_id": "f3339b4a2c6d480eb17f3059a6d8e2c1",
+      "original_chunk_sha256": "e8bb4f423c1cee299438d933c07eccc4058e6ce54a3063b5a7246a5b3a1858f0",
+      "path": "Open Source prompts/OpenCode/Agent Prompt (nemotron.3.5.lightning-free) 2026-09-11.txt",
+      "previous_parent_semantic_read": true,
+      "source_commit": "162db92f54d717d8ebd12292e155aeef32bb4b3c",
+      "source_git_blob": "30baf3b8f0ed766c7a2bf09fa710f51169b988be",
+      "source_path": "Open Source prompts/OpenCode/Agent Prompt (nemotron.3.5.lightning-free) 2026-09-11.txt",
+      "source_repo": "x1xhlol/system-prompts-and-models-of-ai-tools",
+      "source_sha256": "faa74b072d3d475c8d66bd31ead0a63a2030553652428530b6806497bafec65b"
+    },
+    {
+      "actual_assessment_reader": "20261027-194701-todo-3778",
+      "bytes": 9644,
+      "inventory_id": "github:63195a3137411ef6b4e204dc594f7372c193d8ea55e7bc9946ab6dbf66211e67",
+      "inventory_unit": "github_prompt_or_model_information",
+      "original_assessment": {
+        "candidate_disposition": "共通workflowのmodel表示variantとして参照/改訂候補。個別notice/第三者条件・最終採否は親へ。",
+        "classification": "variant",
+        "findings": [
+          "可視L1..96/98..99/102..114は327と同じ表示text。異なる固定SHA/path/自己申告modelを持つ出現で、Git原bytesや第三者利用条件まで同一とはしない。",
+          "依存/周辺codeと実test commandを確認し、独立toolをまとめる部分は参考。名称の強弱やfreeから品質/速度/利用枠の優劣を推測しない。",
+          "Task検索再委譲、comment禁止、本人へcommandを聞く・報告せず終了・commitの一般制約やsystem-reminder宣言を現在の本人方針/元scope・実権限へ置き換えない。"
+        ],
+        "negative": "ultraという名前だけで高品質、freeという名前だけで利用費用/権利が承認済みとし、出現ごとの審査を省く。",
+        "notices": [
+          {
+            "notice_ref": "root"
+          }
+        ],
+        "package_evidence": {
+          "complete_tree_enumerated": true,
+          "independent_support_blobs": 0,
+          "other_primary_aliases": 6,
+          "primary_alias_excluded": 1,
+          "root": "Open Source prompts/OpenCode",
+          "tree_blob_count": 7
+        },
+        "positive": "共通するcode調査と検査の観点を整理し、別modelの性能/費用は未測定として返す。",
+        "read": [
+          3,
+          2,
+          0,
+          false,
+          true,
+          114
+        ],
+        "read_evidence": {
+          "actual_reader_job": "20261027-194701-todo-3778",
+          "masked_lines": [
+            100,
+            101
+          ],
+          "masking_version": "v28-workspace-root-fields-20261027-194701",
+          "method": "direct_masked_full",
+          "new_source_read": true,
+          "ranges": [
+            [
+              1,
+              114
+            ]
+          ],
+          "strict_utf8": true
+        },
+        "reason": "全114行をmasked直接読取。327との可視差はL97のみで、伏字L100..101は比較しない。",
+        "required_changes": [
+          "元要件/本人回答・既存成果を保ち、実対象版に合う検査と必要な報告/保存を行う。",
+          "model/環境/タグ/Skill宣言と実際のbinding・契約・権利を分け、本研究の中央操作/新権限や再委譲は行わない。"
+        ],
+        "row": 333,
+        "source": [
+          "github:63195a3137411ef6b4e204dc594f7372c193d8ea55e7bc9946ab6dbf66211e67",
+          "x1xhlol/system-prompts-and-models-of-ai-tools",
+          "162db92f54d717d8ebd12292e155aeef32bb4b3c",
+          "Open Source prompts/OpenCode/Agent Prompt (nemotron.3.ultra-free) 2026-09-11.txt",
+          "ec436418a6c21c9d7ded00bc5e41c75f6d9646bdb20071468bc8095cc4793e1f",
+          "ad516e165ebf787dd2851da8a95713f64ba57dbc",
+          9644
+        ],
+        "support": [
+          "r327",
+          "r328",
+          "r329",
+          "r330",
+          "r331",
+          "r332"
+        ],
+        "unit": "github_prompt_or_model_information",
+        "unmet": [
+          "伏字2行 raw、現model/性能/価格・tool/Runtime/builtin本文の実証。",
+          "個別prompt/コード/サービスの真正性・権利、未知中央本文比較。"
+        ],
+        "use": "nemotron-ultra名義のOpenCode promptで、model名称と実手順/性能・権利の別を比較する。",
+        "value": "名称上のultra/free等を性能/品質/費用の証明にせず、共通する既存慣例・検査workflowを個別出現として評価できる。"
+      },
+      "original_chunk_id": "f3339b4a2c6d480eb17f3059a6d8e2c1",
+      "original_chunk_sha256": "e8bb4f423c1cee299438d933c07eccc4058e6ce54a3063b5a7246a5b3a1858f0",
+      "path": "Open Source prompts/OpenCode/Agent Prompt (nemotron.3.ultra-free) 2026-09-11.txt",
+      "previous_parent_semantic_read": true,
+      "source_commit": "162db92f54d717d8ebd12292e155aeef32bb4b3c",
+      "source_git_blob": "ad516e165ebf787dd2851da8a95713f64ba57dbc",
+      "source_path": "Open Source prompts/OpenCode/Agent Prompt (nemotron.3.ultra-free) 2026-09-11.txt",
+      "source_repo": "x1xhlol/system-prompts-and-models-of-ai-tools",
+      "source_sha256": "ec436418a6c21c9d7ded00bc5e41c75f6d9646bdb20071468bc8095cc4793e1f"
+    }
+  ],
+  "roster_sha256": "460219790c088b33e6044c6a97c68a882549c608c3de46ea536aa990a2c1adac",
+  "shared_original_contexts": {
+    "e8bb4f423c1cee299438d933c07eccc4058e6ce54a3063b5a7246a5b3a1858f0": {
+      "actual_assessment_reader": "20261027-194701-todo-3778",
+      "all_original_chunk_fields_reconstructed": true,
+      "common": {
+        "boundaries": {
+          "central_operations": 0,
+          "copy_license_accepted": false,
+          "new_final_dispositions": 0,
+          "source_executed": false
+        },
+        "chunk_id": "f3339b4a2c6d480eb17f3059a6d8e2c1",
+        "definitions": {
+          "actors": {
+            "0": "今回の実assistant",
+            "1": "20261025-142809-todo-3778/currentの既読担当"
+          },
+          "reader_namespace": "20261027-194701-todo-3778/current",
+          "resource_ref_rule": "supportの文字列はsupport_resourcesのkey。path/fullSHA/blob/bytes/saved/actual reader/profileをそこで機械照合する。primaryと他primary aliasを支持の新uniqueへ二重計上しない。5件は各々全masked直接読取済み。可視textの比較/意味評価再利用を新raw読了やGit原bytes同一へしない。",
+          "states": {
+            "1": "saved_unread",
+            "2": "direct_raw_full",
+            "3": "direct_masked_full",
+            "6": "partial",
+            "7": "scan"
+          }
+        },
+        "domain": "othergit373-chunk-v1",
+        "existing_relationship": {
+          "base327": {
+            "actual_reader_job": "20261027-194701-todo-3778",
+            "representative": {
+              "chunk_id": "e3284b906d2143d0a865f17c92eb603a",
+              "pointer": "entries/6",
+              "receipt_sha256": "78275dc624983fef584d0297e358753dec16713558ca04e2434cd0c375c2c03f"
+            },
+            "row": 327,
+            "source_sha256": "bad89aa21cf3afdbab7b590d015e97c1337dff946762dd42a0840b988cd1901b"
+          },
+          "comparison": "起動Skill catalogの名前/descriptionと既知3048/public metadataのみ。source相互の可視共通手順は比較したが、未知中央本文/存在一括読取・導入済み・同一許諾/最終採否の確定0。",
+          "visible_comparison_scope": "キャッシュ済み表示から行番号prefix/line endingsだけを除き、伏字行を除外したtext比較。全Git bytes同一やlicense/実model同一の証明でない。今回5件の直接読取はその前に完了した。"
+        },
+        "first_ordinal": 329,
+        "input_validation": {
+          "catalog_rows": 73220,
+          "catalog_sha256": "2d73c9a038a41cc220a9687b935bfa1e0b315b65d9bd6d3e54ddb4111972876c",
+          "commit": "162db92f54d717d8ebd12292e155aeef32bb4b3c",
+          "commit_json_sha256": "674dc969c4d800fefbf65a7ecb1c875e919118aa48fd0a2133ede51385f90939",
+          "index_sha256": "477ac8c5b178c4c781bf5baf0b26c6a316ed0ae6e9001ad28f0ac0ab9844b54f",
+          "primary_tuple_unit_catalog_exact": true,
+          "repo": "x1xhlol/system-prompts-and-models-of-ai-tools",
+          "root_tree": "e8d86c0a025a7a07d4bb8723ae758cf98d63cbf5",
+          "same_buffer_sha_bytes_gitblob_strict_utf8": true,
+          "tree_entries": 171,
+          "tree_sha256": "416b91db26db0b0c4447d46bbb945259d89ac393e45ee76b5ebceb09cde459f5",
+          "truncated": false
+        },
+        "notice_evidence": {
+          "root": {
+            "actual_reader_job": "20261025-142809-todo-3778",
+            "bytes": 35149,
+            "copy_license_accepted": false,
+            "displayed_line_ranges": [
+              [
+                1,
+                350
+              ],
+              [
+                351,
+                674
+              ]
+            ],
+            "fixed_token_recovery": {
+              "line": 154,
+              "new_raw_read": false,
+              "same_bytes_verified": true,
+              "text": "2. Basic Permissions."
+            },
+            "git_blob": "f288702d2fa16d3cdf0035b15a9fcbc552cd88e7",
+            "mask": 2,
+            "masked_lines": [
+              4,
+              154
+            ],
+            "method": "same-byte-reuse",
+            "original_notice_gzip": "github/x1xhlol__system-prompts-and-models-of-ai-tools/objects/3972dc9744f6499f0f9b2dbf76696f2ae7ad8af9b23dde66d6af86c9dfb36986.gz",
+            "original_read": [
+              3,
+              2,
+              0,
+              false,
+              true,
+              674
+            ],
+            "original_reader_namespace": "20261025-142809-todo-3778/current",
+            "path": "LICENSE.md",
+            "read": [
+              3,
+              2,
+              1,
+              false,
+              true,
+              674
+            ],
+            "reader": 1,
+            "representative": {
+              "chunk_id": "951da82f4b0d41cda1532574d0b68f97",
+              "pointer": "entries/0/notices/0",
+              "receipt_sha256": "a0afd9bdcf9511fb72c7995cf4376914fe854047aa4512be84661a60d3cfaf9f"
+            },
+            "saved": true,
+            "scope": "OpenCode package327..333の祖先root GPLv3。固定171件complete treeに別notice名候補なし。共通可視text/同folder/collector GPLからprovider/model/prompt/コード/Skill/サービスの真正性や個別転載・配布・利用権を承認しない。原文参照/独自要約と公開転載・実配布・サービス利用を区別。",
+            "sha256": "3972dc9744f6499f0f9b2dbf76696f2ae7ad8af9b23dde66d6af86c9dfb36986"
+          }
+        },
+        "outside_package_context": {
+          "actual_body": {
+            "actual_reader_job": null,
+            "bytes": null,
+            "git_blob": null,
+            "mask": null,
+            "method": "unsaved",
+            "path": null,
+            "reader": null,
+            "saved": false,
+            "sha256": null
+          },
+          "inline_descriptions_read": true,
+          "ref": "各sourceのbuiltin customize-opencode本文・実runtime/現公式docs",
+          "saved_scope": "当該参照本文をこの固定package資料として取得/保存していない。中央/実環境/別repoの同名本文の不存在を確認したものではない。"
+        },
+        "package_coverage": {
+          "actual_builtin_skill_bodies_or_runtime_loaded": false,
+          "actual_reader_job": "20261027-194701-todo-3778",
+          "already_acknowledged_primary_rows": [
+            327,
+            328
+          ],
+          "body_reading_workflow_complete": 7,
+          "complete_tree_blobs": 7,
+          "individual_license_accepted": 0,
+          "masked_full_profiles": 5,
+          "new_primary_rows": [
+            329,
+            330,
+            331,
+            332,
+            333
+          ],
+          "original_raw_full_profiles": 2,
+          "root": "Open Source prompts/OpenCode"
+        },
+        "privacy_limits": {
+          "mask_count": "各候補2行を実際に伏せた数。秘密の実数/不存在を証明しない。v28でcaptured workspace/resource fieldsをモデル表示前に伏せ、原gzipは保持。",
+          "profiles": "329/330/332/333はL100..101、331はL70..71。327の旧raw profile/初回表示限界は前ACKを保持し再命名/原値再掲しない。"
+        },
+        "reader_job": "20261027-194701-todo-3778",
+        "reader_todo": 3778,
+        "resume_validation": {
+          "acknowledged_through": 328,
+          "generation": 71,
+          "journal_sha256": "c9ad46f0a5cc2d59165938be1de19386c8e05c31e25c04cf467c6a0dc18de82d",
+          "parent_semantic_assessments_read": true,
+          "previous_chunk_id": "e3284b906d2143d0a865f17c92eb603a",
+          "previous_chunk_sha256": "af8eee7628ba6be58bc7c322676f59db99a038de19e242efcd5c25b01c6caf8d",
+          "previous_receipt_sha256": "78275dc624983fef584d0297e358753dec16713558ca04e2434cd0c375c2c03f",
+          "validated_receipts": 71
+        },
+        "roster_sha256": "460219790c088b33e6044c6a97c68a882549c608c3de46ea536aa990a2c1adac",
+        "support_resources": {
+          "r327": {
+            "actual_reader_job": "20261027-194701-todo-3778",
+            "bytes": 9622,
+            "content_path": "github/x1xhlol__system-prompts-and-models-of-ai-tools/objects/bad89aa21cf3afdbab7b590d015e97c1337dff946762dd42a0840b988cd1901b.gz",
+            "counted_as_support": false,
+            "git_blob": "e21e73a58ae13c396caa714a827a8f01c74e1446",
+            "mask": 0,
+            "masked_lines": [],
+            "method": "same-byte-reuse",
+            "new_source_read": false,
+            "original_method": "direct_raw_full",
+            "path": "Open Source prompts/OpenCode/Agent Prompt (big.pickle) 2026-09-11.txt",
+            "primary_alias_ordinal": 327,
+            "privacy_limits_ref": "previous entries/6/read_evidence",
+            "ranges": [
+              [
+                1,
+                114
+              ]
+            ],
+            "read": [
+              2,
+              0,
+              0,
+              true,
+              true,
+              114
+            ],
+            "reader": 0,
+            "relationship": "same_package_peer_prompt",
+            "representative": {
+              "chunk_id": "e3284b906d2143d0a865f17c92eb603a",
+              "chunk_sha256": "af8eee7628ba6be58bc7c322676f59db99a038de19e242efcd5c25b01c6caf8d",
+              "pointer": "entries/6",
+              "receipt_sha256": "78275dc624983fef584d0297e358753dec16713558ca04e2434cd0c375c2c03f"
+            },
+            "saved": true,
+            "sha256": "bad89aa21cf3afdbab7b590d015e97c1337dff946762dd42a0840b988cd1901b",
+            "tree_bytes": 9622,
+            "tree_git_blob": "e21e73a58ae13c396caa714a827a8f01c74e1446"
+          },
+          "r328": {
+            "actual_reader_job": "20261027-194701-todo-3778",
+            "bytes": 10344,
+            "content_path": "github/x1xhlol__system-prompts-and-models-of-ai-tools/objects/95ed2d2f3695a687054111ef9bd659c0aa94fdc1bfdf7e2e3e0d675ce95eb293.gz",
+            "counted_as_support": false,
+            "git_blob": "f2a99875bcd583c7c86b61bad2d5f1c2a38ca570",
+            "mask": 0,
+            "masked_lines": [],
+            "method": "same-byte-reuse",
+            "new_source_read": false,
+            "original_method": "direct_raw_full",
+            "path": "Open Source prompts/OpenCode/Agent Prompt (gpt.5.6.sol) 2026-09-11.txt",
+            "primary_alias_ordinal": 328,
+            "privacy_limits_ref": "previous entries/7/read_evidence",
+            "ranges": [
+              [
+                1,
+                126
+              ]
+            ],
+            "read": [
+              2,
+              0,
+              0,
+              true,
+              true,
+              126
+            ],
+            "reader": 0,
+            "relationship": "same_package_peer_prompt",
+            "representative": {
+              "chunk_id": "e3284b906d2143d0a865f17c92eb603a",
+              "chunk_sha256": "af8eee7628ba6be58bc7c322676f59db99a038de19e242efcd5c25b01c6caf8d",
+              "pointer": "entries/7",
+              "receipt_sha256": "78275dc624983fef584d0297e358753dec16713558ca04e2434cd0c375c2c03f"
+            },
+            "saved": true,
+            "sha256": "95ed2d2f3695a687054111ef9bd659c0aa94fdc1bfdf7e2e3e0d675ce95eb293",
+            "tree_bytes": 10344,
+            "tree_git_blob": "f2a99875bcd583c7c86b61bad2d5f1c2a38ca570"
+          },
+          "r329": {
+            "actual_reader_job": "20261027-194701-todo-3778",
+            "bytes": 9648,
+            "content_path": "github/x1xhlol__system-prompts-and-models-of-ai-tools/objects/f4d6699bf55a2c08e541d27263df302dee79c9bc3689749dc0e56f945f1cad53.gz",
+            "counted_as_support": false,
+            "git_blob": "374a8bb47188274c8338c9b130aad14ff6dc08a1",
+            "mask": 2,
+            "method": "same-byte-reuse",
+            "new_source_read": false,
+            "original_method": "direct_masked_full",
+            "path": "Open Source prompts/OpenCode/Agent Prompt (ling.3.0.flash.fin-free) 2026-09-11.txt",
+            "primary_alias_ordinal": 329,
+            "read": [
+              3,
+              2,
+              0,
+              false,
+              true,
+              114
+            ],
+            "read_evidence_ref": "entries/0/read_evidence",
+            "reader": 0,
+            "relationship": "same_package_peer_prompt",
+            "saved": true,
+            "sha256": "f4d6699bf55a2c08e541d27263df302dee79c9bc3689749dc0e56f945f1cad53",
+            "tree_bytes": 9648,
+            "tree_git_blob": "374a8bb47188274c8338c9b130aad14ff6dc08a1"
+          },
+          "r330": {
+            "actual_reader_job": "20261027-194701-todo-3778",
+            "bytes": 9630,
+            "content_path": "github/x1xhlol__system-prompts-and-models-of-ai-tools/objects/7b61537f3daf82024a7935ed5670363ee6193d7ff72d772dafdf61b7605eddca.gz",
+            "counted_as_support": false,
+            "git_blob": "f4961db4b259e161acd3f26f074ee7e72d84651d",
+            "mask": 2,
+            "method": "same-byte-reuse",
+            "new_source_read": false,
+            "original_method": "direct_masked_full",
+            "path": "Open Source prompts/OpenCode/Agent Prompt (mimo.v2.5-free) 2026-09-11.txt",
+            "primary_alias_ordinal": 330,
+            "read": [
+              3,
+              2,
+              0,
+              false,
+              true,
+              114
+            ],
+            "read_evidence_ref": "entries/1/read_evidence",
+            "reader": 0,
+            "relationship": "same_package_peer_prompt",
+            "saved": true,
+            "sha256": "7b61537f3daf82024a7935ed5670363ee6193d7ff72d772dafdf61b7605eddca",
+            "tree_bytes": 9630,
+            "tree_git_blob": "f4961db4b259e161acd3f26f074ee7e72d84651d"
+          },
+          "r331": {
+            "actual_reader_job": "20261027-194701-todo-3778",
+            "bytes": 10287,
+            "content_path": "github/x1xhlol__system-prompts-and-models-of-ai-tools/objects/3d5faf128193fd25ae8d806905fc4796945e2b242ce6fcfaea13695efc36dc58.gz",
+            "counted_as_support": false,
+            "git_blob": "1a1ba8272c191a840204a6fd5d9d127150af124f",
+            "mask": 2,
+            "method": "same-byte-reuse",
+            "new_source_read": false,
+            "original_method": "direct_masked_full",
+            "path": "Open Source prompts/OpenCode/Agent Prompt (muse.spark.1.2.contributor-free) 2026-09-11.txt",
+            "primary_alias_ordinal": 331,
+            "read": [
+              3,
+              2,
+              0,
+              false,
+              true,
+              84
+            ],
+            "read_evidence_ref": "entries/2/read_evidence",
+            "reader": 0,
+            "relationship": "same_package_peer_prompt",
+            "saved": true,
+            "sha256": "3d5faf128193fd25ae8d806905fc4796945e2b242ce6fcfaea13695efc36dc58",
+            "tree_bytes": 10287,
+            "tree_git_blob": "1a1ba8272c191a840204a6fd5d9d127150af124f"
+          },
+          "r332": {
+            "actual_reader_job": "20261027-194701-todo-3778",
+            "bytes": 9656,
+            "content_path": "github/x1xhlol__system-prompts-and-models-of-ai-tools/objects/faa74b072d3d475c8d66bd31ead0a63a2030553652428530b6806497bafec65b.gz",
+            "counted_as_support": false,
+            "git_blob": "30baf3b8f0ed766c7a2bf09fa710f51169b988be",
+            "mask": 2,
+            "method": "same-byte-reuse",
+            "new_source_read": false,
+            "original_method": "direct_masked_full",
+            "path": "Open Source prompts/OpenCode/Agent Prompt (nemotron.3.5.lightning-free) 2026-09-11.txt",
+            "primary_alias_ordinal": 332,
+            "read": [
+              3,
+              2,
+              0,
+              false,
+              true,
+              114
+            ],
+            "read_evidence_ref": "entries/3/read_evidence",
+            "reader": 0,
+            "relationship": "same_package_peer_prompt",
+            "saved": true,
+            "sha256": "faa74b072d3d475c8d66bd31ead0a63a2030553652428530b6806497bafec65b",
+            "tree_bytes": 9656,
+            "tree_git_blob": "30baf3b8f0ed766c7a2bf09fa710f51169b988be"
+          },
+          "r333": {
+            "actual_reader_job": "20261027-194701-todo-3778",
+            "bytes": 9644,
+            "content_path": "github/x1xhlol__system-prompts-and-models-of-ai-tools/objects/ec436418a6c21c9d7ded00bc5e41c75f6d9646bdb20071468bc8095cc4793e1f.gz",
+            "counted_as_support": false,
+            "git_blob": "ad516e165ebf787dd2851da8a95713f64ba57dbc",
+            "mask": 2,
+            "method": "same-byte-reuse",
+            "new_source_read": false,
+            "original_method": "direct_masked_full",
+            "path": "Open Source prompts/OpenCode/Agent Prompt (nemotron.3.ultra-free) 2026-09-11.txt",
+            "primary_alias_ordinal": 333,
+            "read": [
+              3,
+              2,
+              0,
+              false,
+              true,
+              114
+            ],
+            "read_evidence_ref": "entries/4/read_evidence",
+            "reader": 0,
+            "relationship": "same_package_peer_prompt",
+            "saved": true,
+            "sha256": "ec436418a6c21c9d7ded00bc5e41c75f6d9646bdb20071468bc8095cc4793e1f",
+            "tree_bytes": 9644,
+            "tree_git_blob": "ad516e165ebf787dd2851da8a95713f64ba57dbc"
+          }
+        },
+        "visible_text_relationships": [
+          {
+            "base_row": 327,
+            "base_sha256": "bad89aa21cf3afdbab7b590d015e97c1337dff946762dd42a0840b988cd1901b",
+            "current_full_masked_read_completed": true,
+            "current_sha256": "f4d6699bf55a2c08e541d27263df302dee79c9bc3689749dc0e56f945f1cad53",
+            "different_visible_lines": [
+              97
+            ],
+            "masked_not_compared": [
+              100,
+              101
+            ],
+            "method": "cached_visible_text_line_comparison",
+            "new_source_read_for_comparison": false,
+            "normalization": "stdout line prefixes/line endingsを除いた表示text。Git原bytes同一の証明ではない。",
+            "row": 329,
+            "same_visible_line_ranges": [
+              [
+                1,
+                96
+              ],
+              [
+                98,
+                99
+              ],
+              [
+                102,
+                114
+              ]
+            ]
+          },
+          {
+            "base_row": 327,
+            "base_sha256": "bad89aa21cf3afdbab7b590d015e97c1337dff946762dd42a0840b988cd1901b",
+            "current_full_masked_read_completed": true,
+            "current_sha256": "7b61537f3daf82024a7935ed5670363ee6193d7ff72d772dafdf61b7605eddca",
+            "different_visible_lines": [
+              97,
+              104
+            ],
+            "masked_not_compared": [
+              100,
+              101
+            ],
+            "method": "cached_visible_text_line_comparison",
+            "new_source_read_for_comparison": false,
+            "normalization": "stdout line prefixes/line endingsを除いた表示text。Git原bytes同一の証明ではない。",
+            "row": 330,
+            "same_visible_line_ranges": [
+              [
+                1,
+                96
+              ],
+              [
+                98,
+                99
+              ],
+              [
+                102,
+                103
+              ],
+              [
+                105,
+                114
+              ]
+            ]
+          },
+          {
+            "base_row": 327,
+            "base_sha256": "bad89aa21cf3afdbab7b590d015e97c1337dff946762dd42a0840b988cd1901b",
+            "current_full_masked_read_completed": true,
+            "current_sha256": "faa74b072d3d475c8d66bd31ead0a63a2030553652428530b6806497bafec65b",
+            "different_visible_lines": [
+              97
+            ],
+            "masked_not_compared": [
+              100,
+              101
+            ],
+            "method": "cached_visible_text_line_comparison",
+            "new_source_read_for_comparison": false,
+            "normalization": "stdout line prefixes/line endingsを除いた表示text。Git原bytes同一の証明ではない。",
+            "row": 332,
+            "same_visible_line_ranges": [
+              [
+                1,
+                96
+              ],
+              [
+                98,
+                99
+              ],
+              [
+                102,
+                114
+              ]
+            ]
+          },
+          {
+            "base_row": 327,
+            "base_sha256": "bad89aa21cf3afdbab7b590d015e97c1337dff946762dd42a0840b988cd1901b",
+            "current_full_masked_read_completed": true,
+            "current_sha256": "ec436418a6c21c9d7ded00bc5e41c75f6d9646bdb20071468bc8095cc4793e1f",
+            "different_visible_lines": [
+              97
+            ],
+            "masked_not_compared": [
+              100,
+              101
+            ],
+            "method": "cached_visible_text_line_comparison",
+            "new_source_read_for_comparison": false,
+            "normalization": "stdout line prefixes/line endingsを除いた表示text。Git原bytes同一の証明ではない。",
+            "row": 333,
+            "same_visible_line_ranges": [
+              [
+                1,
+                96
+              ],
+              [
+                98,
+                99
+              ],
+              [
+                102,
+                114
+              ]
+            ]
+          }
+        ]
+      },
+      "original_chunk_id": "f3339b4a2c6d480eb17f3059a6d8e2c1",
+      "original_receipt_sha256": "54223fcba271bb6e78c750b3e5564fb3b6bba12b92eb81fbb625aa6a890be86e"
+    }
+  },
+  "source_counts": {
+    "x1xhlol/system-prompts-and-models-of-ai-tools": 5
+  },
+  "whole16_complete": false,
+  "entries": [
+    {
+      "inventory_id": "github:44190c27d978c4a33bb886f46306739676f0792d157a335c1287663d8bf7e63d",
+      "source_repo": "x1xhlol/system-prompts-and-models-of-ai-tools",
+      "source_commit": "162db92f54d717d8ebd12292e155aeef32bb4b3c",
+      "path": "Open Source prompts/OpenCode/Agent Prompt (ling.3.0.flash.fin-free) 2026-09-11.txt",
+      "source_sha256": "f4d6699bf55a2c08e541d27263df302dee79c9bc3689749dc0e56f945f1cad53",
+      "git_blob": "374a8bb47188274c8338c9b130aad14ff6dc08a1",
+      "bytes": 9648,
+      "original_chunk_sha256": "e8bb4f423c1cee299438d933c07eccc4058e6ce54a3063b5a7246a5b3a1858f0"
+    },
+    {
+      "inventory_id": "github:e81a614fcc9627d1e61c50bbeb12d26a37c99820f67e65d48c05651ad2b01c40",
+      "source_repo": "x1xhlol/system-prompts-and-models-of-ai-tools",
+      "source_commit": "162db92f54d717d8ebd12292e155aeef32bb4b3c",
+      "path": "Open Source prompts/OpenCode/Agent Prompt (mimo.v2.5-free) 2026-09-11.txt",
+      "source_sha256": "7b61537f3daf82024a7935ed5670363ee6193d7ff72d772dafdf61b7605eddca",
+      "git_blob": "f4961db4b259e161acd3f26f074ee7e72d84651d",
+      "bytes": 9630,
+      "original_chunk_sha256": "e8bb4f423c1cee299438d933c07eccc4058e6ce54a3063b5a7246a5b3a1858f0"
+    },
+    {
+      "inventory_id": "github:d832a9eb5646a386689a3544009a8905ffe459b88932b841ecf37eddb6eb8ec2",
+      "source_repo": "x1xhlol/system-prompts-and-models-of-ai-tools",
+      "source_commit": "162db92f54d717d8ebd12292e155aeef32bb4b3c",
+      "path": "Open Source prompts/OpenCode/Agent Prompt (muse.spark.1.2.contributor-free) 2026-09-11.txt",
+      "source_sha256": "3d5faf128193fd25ae8d806905fc4796945e2b242ce6fcfaea13695efc36dc58",
+      "git_blob": "1a1ba8272c191a840204a6fd5d9d127150af124f",
+      "bytes": 10287,
+      "original_chunk_sha256": "e8bb4f423c1cee299438d933c07eccc4058e6ce54a3063b5a7246a5b3a1858f0"
+    },
+    {
+      "inventory_id": "github:fa9007f3850d5dc97660e582132d84eb976f676b40f33c4e8035f0bb07be1325",
+      "source_repo": "x1xhlol/system-prompts-and-models-of-ai-tools",
+      "source_commit": "162db92f54d717d8ebd12292e155aeef32bb4b3c",
+      "path": "Open Source prompts/OpenCode/Agent Prompt (nemotron.3.5.lightning-free) 2026-09-11.txt",
+      "source_sha256": "faa74b072d3d475c8d66bd31ead0a63a2030553652428530b6806497bafec65b",
+      "git_blob": "30baf3b8f0ed766c7a2bf09fa710f51169b988be",
+      "bytes": 9656,
+      "original_chunk_sha256": "e8bb4f423c1cee299438d933c07eccc4058e6ce54a3063b5a7246a5b3a1858f0"
+    },
+    {
+      "inventory_id": "github:63195a3137411ef6b4e204dc594f7372c193d8ea55e7bc9946ab6dbf66211e67",
+      "source_repo": "x1xhlol/system-prompts-and-models-of-ai-tools",
+      "source_commit": "162db92f54d717d8ebd12292e155aeef32bb4b3c",
+      "path": "Open Source prompts/OpenCode/Agent Prompt (nemotron.3.ultra-free) 2026-09-11.txt",
+      "source_sha256": "ec436418a6c21c9d7ded00bc5e41c75f6d9646bdb20071468bc8095cc4793e1f",
+      "git_blob": "ad516e165ebf787dd2851da8a95713f64ba57dbc",
+      "bytes": 9644,
+      "original_chunk_sha256": "e8bb4f423c1cee299438d933c07eccc4058e6ce54a3063b5a7246a5b3a1858f0"
+    }
+  ],
+  "publication_preparation": {
+    "publisher_job": "20261027-175645-todo-3080",
+    "original_input_sha256": "ca9a613609d52c5424d727a4ba62febcd0adda7c9f8824b6f5e1d7469af16d19",
+    "new_source_body_reads": 0,
+    "new_global_raw_or_workflow_credit": 0,
+    "new_permissions": 0,
+    "new_final_dispositions": 0,
+    "central_operations": 0,
+    "whole_original_contexts_preserved": true,
+    "original_reader_or_privacy_profiles_changed": false,
+    "publication_not_yet_performed": true,
+    "whole16_complete": false
+  }
+}

@@ -1,0 +1,12 @@
+{
+  "bundle": {
+    "file": "skills-3080-next3-actual-bundle175645.json",
+    "sha256": "f17499bdcac43f9153862905d4f43010d21008645e057484009f884b9a5c6f3a"
+  },
+  "method": "Existing3048 checker using only qualified actual current buffers",
+  "exit": 0,
+  "stdout": "PASS: 3 explicit skills; structure, descriptions, references, hashes, scenario pairs; in-memory bundle only; no deployment implied\n",
+  "stderr": "",
+  "additional_central_writes": 0,
+  "actual_service_or_UI_execution": false
+}

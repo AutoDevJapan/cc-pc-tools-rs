@@ -216,6 +216,11 @@ fn research_admission(gpt: bool, case: &str) {
     f.db["items"][0]["status"] = json!("wait");
     f.jobs[0]["status"] = json!("succeeded");
     f.jobs[0]["subwork_live"] = json!(false);
+    if continuation {
+        f.jobs[0]["todo_resume_generation"]=json!(1);
+        f.db["items"][0]["resume_generation"]=json!(1);
+        f.db["items"][0]["worker_receipt"]=json!({"job":"parent","generation":1});
+    }
     t.put(f.jobs[0].clone());
     let mut relation = f.db["items"][1]["subwork"].clone();
     relation["kind"] = json!("research");
@@ -315,6 +320,14 @@ fn research_admission(gpt: bool, case: &str) {
         ];
     if !gpt { args.extend(["--model-recovery-from", "grok-4.7"]); }
     if continuation {args.extend(["--effort-origin","policy"]);}
+    if case=="continuation_parent_before_registration" {
+        f.db["items"][0]["resume_generation"]=json!(2);
+        f.db["items"][0]["worker_receipt"]["generation"]=json!(2);
+        save(&f.db);
+        assert!(t.run(&args,prompt.as_bytes()).is_err(),"old parent contract registered a new worker");
+        assert_eq!(t.ctx.list_jobs(&HashSet::new()).into_iter().filter(|j|j["todo_id"]==2).count(),1);
+        return;
+    }
     t.run(&args, prompt.as_bytes()).unwrap();
     let j = child(&t);
     assert_eq!(j["subwork"], source["subwork"]);
@@ -350,6 +363,11 @@ fn research_admission(gpt: bool, case: &str) {
             "continuation_stop"=>{db["items"][1]["owner_stopped"]=json!(true);fs::write(&paths.store,db.to_string()).unwrap();},
             "continuation_scope"=>{let mut changed=j.clone();changed["network"]=json!(true);t.put(changed);},
             "continuation_legacy_reset"=>{let mut changed=j.clone();changed["capacity_retry_count"]=json!(0);t.put(changed);},
+            "continuation_parent_generation"=>{
+                db["items"][0]["resume_generation"]=json!(2);
+                db["items"][0]["worker_receipt"]["generation"]=json!(2);
+                fs::write(&paths.store,db.to_string()).unwrap();
+            },
             _=>(),
         }
     } else if gpt {
@@ -450,7 +468,7 @@ fn research_admission(gpt: bool, case: &str) {
 
 #[test]
 fn dependency_continuation_registers_links_and_rechecks_before_real_queue_admission() {
-    for case in ["continuation_normal","continuation_legacy","continuation_legacy_reset","continuation_no_retry","continuation_health","continuation_selected_unknown","continuation_source","continuation_generation","continuation_stop","continuation_scope"] {
+    for case in ["continuation_normal","continuation_legacy","continuation_legacy_reset","continuation_no_retry","continuation_health","continuation_selected_unknown","continuation_source","continuation_generation","continuation_parent_generation","continuation_parent_before_registration","continuation_stop","continuation_scope"] {
         research_admission(true,case);
     }
 }

@@ -19,6 +19,9 @@ impl Drop for LiveSibling {
 fn fixture() -> support::Fixture {
     let mut f = support::Fixture::new();
     f.register();
+    f.jobs[0]["todo_resume_generation"] = json!(1);
+    f.db["items"][0]["resume_generation"] = json!(1);
+    f.db["items"][0]["worker_receipt"] = json!({"job":"parent","generation":1});
     f.jobs[0]["pid"] = json!(std::process::id());
     f.jobs[0]["pid_created"] =
         json!(cc_scheduler::native::process_birth(std::process::id()).unwrap());

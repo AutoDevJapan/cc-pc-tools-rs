@@ -267,12 +267,35 @@ fn gpt_research_fixture() -> (Fixture, subwork_support::Fixture) {
 
 fn dependency_continuation_fixture() -> (Fixture, subwork_support::Fixture) {
     let (mut f,mut sub)=gpt_research_fixture();
+    current_continuation_parent(&mut f,&mut sub);
     let row=&mut sub.db["items"][1];
     row["resume_generation"]=json!(3);row["dependency_generation"]=json!(1);
     f.e.backend.records[1]["todo_resume_generation"]=json!(2);
     let request=cc_job_policy::subwork_continuation::request(row,&f.e.backend.records[1],&f.e.backend.records[0]).unwrap();
     row["subwork_continuation"]=request;
     write_json(&f.e.todo_path,&sub.db,1).unwrap();(f,sub)
+}
+fn current_continuation_parent(f:&mut Fixture,sub:&mut subwork_support::Fixture) {
+    f.e.backend.records[0]["todo_resume_generation"]=json!(1);
+    sub.db["items"][0]["resume_generation"]=json!(1);
+    sub.db["items"][0]["worker_receipt"]=json!({"job":f.e.backend.records[0]["id"],"generation":1});
+}
+#[test]
+fn dependency_continuation_rejects_parent_generation_replaced_after_intake() {
+    for case in ["generation","worker","receipt"] {
+        let (mut f,mut sub)=dependency_continuation_fixture();
+        let parent=&mut sub.db["items"][0];
+        match case {
+            "generation"=> {parent["resume_generation"]=json!(2);parent["worker_receipt"]["generation"]=json!(2);},
+            "worker"=> {parent["scheduler"]["job"]=json!("new-parent");parent["worker_receipt"]["job"]=json!("new-parent");},
+            "receipt"=>parent["worker_receipt"]["generation"]=json!(2),
+            _=>unreachable!(),
+        }
+        write_json(&f.e.todo_path,&sub.db,1).unwrap();
+        let out=f.e.prepare(&sub.db["items"][1],sub.repo.to_str().unwrap());
+        assert!(out.is_err() || out.unwrap().is_none(),"{case}: old parent request remained valid");
+        assert!(f.e.backend.launched.is_empty());
+    }
 }
 #[test]
 fn dependency_continuation_prepares_current_research_without_reviving_stale_quota() {
@@ -330,6 +353,7 @@ fn dependency_continuation_is_consumed_once_and_later_work_uses_its_own_result()
 #[test]
 fn dependency_continuation_retains_the_ordinary_independent_review_default() {
     let (mut f,mut sub)=grok_fixture();
+    current_continuation_parent(&mut f,&mut sub);
     let row=&mut sub.db["items"][1];row["resume_generation"]=json!(3);row["dependency_generation"]=json!(1);
     f.e.backend.records[1]["todo_resume_generation"]=json!(2);
     row["subwork_continuation"]=cc_job_policy::subwork_continuation::request(row,&f.e.backend.records[1],&f.e.backend.records[0]).unwrap();

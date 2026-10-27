@@ -418,3 +418,39 @@ succeeded/exit0/41stepsと原回答を照合した。pointerの渡し方等の�
 次の具体的な限定候補は[正の50GiBだけを使うC→Dの試行](vss-cd-positive-attempt-4011.md)。
 別モデルで書込手順とsourceを確認してから適用する。現在この書込は未実行であり、
 空の旧設定を新造したり、0への縮小/Delete/保護停止で関連付けを強制しない。
+
+## 21:52以降の再開と、現存snapshotを保持する分岐
+
+4092の再開実job20261027-212901-todo-4092は、固定ecc24406の5対象全文を確認してMust0と
+修正提案を返した。実Opus5.5/max/native_turn_context、succeeded/exit0/18stepsと原回答を受領し、
+初回195832のfailedを成功へ数えなかった。修正は[切替候補の文書](vss-cd-positive-attempt-4011.md)へ
+各指摘に対応して記録した。現用OSの保持修復成功とは別の結果である。
+
+21:52に本担当が作っていないC snapshot3件、SystemRestore point264/265が存在した。
+snapshot作成は12:35:24/12:35:55/13:28:13JST。3件ともpersistent/client-accessible/state12であり、
+最後の1件だけno-writersだった。元のpoint262/263や原3796の旧pointが復旧したとはしない。
+明示ToDo/ownA markerなし、CCの既知38taskでVSS command一致なしだが、実要求者は未特定のまま。
+これだけでWindows自動作成や他担当の修復成果とは断定しない。
+
+22:02:43～46に修正したrun-once -Mode Inspectを通常AdminBrokerで実実行し、
+実HEADとsourceの未変更・固定hash・pin後のfresh build・起動/回収を確認できた。
+別processのStart拒否とmetadata取得後の別objectのStart拒否は両方80042316、
+親は所有1/Abort完了1/Release1、timeoutなしで終了した。
+3snapshot/2point/既存割当を検出してlive_preflight_not_met_no_writeとなり、resizeの起動は0。
+原request/resultを同os-v2の別工程へ追記し、positive-cdの試行票は消費していない。
+snapshotを削除したり0件条件を緩めて書込へ進んだりしない。
+
+C→C/上限53,687,091,200B、MinDiff未設定を維持。22:02は使用13,475,987,456B/
+割当13,943,291,904B、保持中空きC428,950,200,320/D2,077,171,159,040B。
+Eの直近空き858,052,489,216B。並行I/Oを含み、本担当の清掃回収量ではない。
+21:52までの新volsnapは0件/complete true/errors0だが、現存世代の夜間保持や是正の因果は未証明。
+
+新しい[Point-in-time restore](https://learn.microsoft.com/en-us/windows/configuration/point-in-time-restore)は
+SystemRestoreと保持・保護範囲が異なるため、一般VSSと混同しない。今回の限定読取では、
+既知CSPのnumeric設定値とMDM_Recovery class metadataは得られず、このPCの有効状態の証明にはならない。
+元VerifyWinRE disabled/SR Readyは変更していない。原所有・保持仕様や不明な私的範囲を新造しない。
+
+現在の3件を保持したまま01:45/02:40を通過した事実を有限に確認し、
+データを失わない具体的な修復工程を継続する。設定変更や関連付け保存だけで全体完了にはしない。
+本日の最新owner-pr-review方針に従い、マージ前には別セッションのセルフレビューとラバーダックを
+同じ最終コミットへ実施し、修正指摘がすべて解消したことと必要CIの成功を確認する。

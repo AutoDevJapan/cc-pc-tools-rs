@@ -1,5 +1,45 @@
 # 元4011の再開情報
 
+## 最新：10月27日22:03、現存3snapshotを保持して切替を書き込まない
+
+job20261027-215031-todo-4011、開始3a8690cc/同branch/未コミット0から再開した。
+4092は再開job20261027-212901-todo-4092のsucceeded/exit0/18steps、native_turn_context
+Opus5.5 max、固定ecc24406の5対象全文読了、Must0/修正提案を受領した。初回195832のfailedは成功へ数えない。
+原回答6934字/SHA8D1C5B5B670928D7B9B3512A69C5DC53185688F1C362B51D4B8A0930E324CB85を保持。
+拒否理由保存、実HEAD/clean source照合からのfresh build、後段の排他再確認、全関連付けの匿名行、
+同じrunnerのInspect、timeout後の再読込、正確なバイト指定、native側の一度きりclaimを反映した。
+source/testは関連テスト成功、PS5.1構文成功。現在のrun-onceの呼出し仕様はdocとsourceを読む。
+
+21:52には本担当が作っていないC snapshot3件とSystemRestore point264/265が存在した。
+tokenE9E02D0A90DCC09D/DC2C4FCE126C098B/BAC591EA81AE5965、作成12:35:24/12:35:55/13:28:13JST。
+3件ともpersistent/client-accessible/state12、最後の1件だけno-writers。
+C→C/50GiB、MinDiff未設定、使用13415874560B/割当13943291904B。旧point復旧とは扱わない。
+明示ToDo/ownA markerなし、固定38件のCC task内に既知VSS command一致なし。要求者は未特定であり、
+Windows自動pointや別修復の成果と断定しない。元の2件とこれら新3件を混同しない。
+
+22:02:43～46、修正source69f18f43を通常Brokerのrun-once -Mode Inspectで実実行した。
+実HEAD/clean source/common-Go-PS hashをpinし、そのsourceから新exeをbuildして起動できた。
+別processのStart80042316と、事前metadata取得後の別object Start80042316を両方確認。
+親所有1/Abort完了1/Release1、timeoutなし/終了確認済み。
+結果はlive_preflight_not_met_no_write（exit1）で、3snapshot/2point/既存割当を検出した正常な保留。
+positive_resizeは無く、positive-cd-request/result/native-startはまだない。Attemptを実行しない。
+原os-v2/cd-runner-inspection-request/resultを保持し、元inspect/A/B/Apply/Undo票は上書きしていない。
+同じInspectを再試行したり、0件gateを緩めて切替を強制しない。現在C→Cと3世代を保持する。
+22:02保持中は使用13475987456B/割当13943291904B/max53687091200B、free C428950200320/D2077171159040B。
+Eは直近858052489216B。並行I/O込みで本担当の清掃回収量ではない。
+
+Point-in-time restoreとSystemRestoreの相違をMicrosoft一次資料で再確認したが、既知CSP numeric値の
+存在確認とMDM_Recovery class metadataは0件で、このPCの新feature有効/所有者を証明しない。
+VerifyWinREは元からdisabled、SRはReady。どちらも変更せず、他Org/私的データを開いていない。
+保持中3件のまま夜間01:45/02:40を経る有限確認も必要。設定の是正効果は未証明のまま全体未完了。
+
+最新owner-pr-review-20261027に従い、以後のPR mergeには**別セッションのselfreviewとrubberduck**を
+同じ最終base/headへ実施し、Must以外の修正提案も解消確認を得る。通常技術許可やOwner PC操作を待たない。
+修正後sourceの点検と、現在のsnapshotを失わない具体対処を次の通常--specレビューへ渡す。
+原共有ToDo/親の状態と6h容量/1h清掃は変更しない。
+
+以下は11時台までの旧4092待ち/空の状態の履歴。現在のsnapshot0という記述は採用しない。
+
 ## 次は書込候補レビュー4092の同じ受付を受領する
 
 元4082は終了・受領・具体修正済み。別process排他と保持中のread-only事前照合まで実測した。

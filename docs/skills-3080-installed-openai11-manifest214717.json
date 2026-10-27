@@ -1,0 +1,432 @@
+{
+  "definition": "Actual newly created11,66 current qualified buffers across4 normal batches; no cross-file/batch atomic or historical continuity claim",
+  "new_boolean_definition": "new:true records actual once-only successfulCreateNew and qualified current readback, not an assumption from the earlierproposal",
+  "targets": [
+    {
+      "name": "cloudflare-deploy",
+      "new": true,
+      "target_state": "actual_once_created_and_current_readback_verified",
+      "before_sha256": "absent",
+      "positive": "既存Cloudflare Workerの配備先とbindingを確認して本番へ反映する。",
+      "negative": "公開資料の製品一覧だけで有料AI機能や新しいDNS管理を追加する。",
+      "sources": [
+        "https://github.com/openai/skills/blob/49f948faa9258a0c61caceaf225e179651397431/skills/.curated/cloudflare-deploy/SKILL.md",
+        "https://github.com/openai/skills/blob/49f948faa9258a0c61caceaf225e179651397431/skills/.curated/cloudflare-deploy/LICENSE.txt"
+      ],
+      "files": [
+        {
+          "path": "SKILL.md",
+          "sha256": "b107b066b709b50b2027b8916697c3aeafaf6b63e8168b93354ea8db29731930"
+        },
+        {
+          "path": "references/guide.md",
+          "sha256": "9669dd153558671782646a8094a7619f45d0ed5007335f36c0807818f55041c4"
+        },
+        {
+          "path": "references/original-skill.txt",
+          "sha256": "d7632537cf19be17cf33d2c696b9d9c2ea3ee51026030e9b203d5b9255e75b15"
+        },
+        {
+          "path": "references/LICENSE.txt",
+          "sha256": "4dd13869245e356246a5b770723247bbb80a8f07a181d1d3d873a1734297cdb9"
+        },
+        {
+          "path": "references/source.json",
+          "sha256": "98631811d4bcd085e91db2688441cb55fc42fc4eb83325cd1c6a7086ade4af83"
+        },
+        {
+          "path": "references/sources.md",
+          "sha256": "db6c1b424b1dc806ba98bb99ce8f6864897655c03a92390a5e18c1f31100c097"
+        }
+      ]
+    },
+    {
+      "name": "define-goal",
+      "new": true,
+      "target_state": "actual_once_created_and_current_readback_verified",
+      "before_sha256": "absent",
+      "positive": "本人が明示した目標作成の依頼を、既存の受入条件と証拠へ整理する。",
+      "negative": "普通の修正依頼に新しい数値目標とtoken予算を付け、勝手にgoalを開始する。",
+      "sources": [
+        "https://github.com/openai/skills/blob/49f948faa9258a0c61caceaf225e179651397431/skills/.curated/define-goal/SKILL.md",
+        "https://github.com/openai/skills/blob/49f948faa9258a0c61caceaf225e179651397431/skills/.curated/define-goal/LICENSE.txt"
+      ],
+      "files": [
+        {
+          "path": "SKILL.md",
+          "sha256": "57b3b9896c456233eeba787eeae81166b4a177ac91eff4528a26c8c7bee6699a"
+        },
+        {
+          "path": "references/guide.md",
+          "sha256": "61e73ab3c4dd6a395aadfec4a7c5d9e856166a439ed7f735284fdcb3264b3d7e"
+        },
+        {
+          "path": "references/original-skill.txt",
+          "sha256": "708df89ff19cbae82a762efae036735d1914b5c7e44df1832e0b723f6cd9ee30"
+        },
+        {
+          "path": "references/LICENSE.txt",
+          "sha256": "4dd13869245e356246a5b770723247bbb80a8f07a181d1d3d873a1734297cdb9"
+        },
+        {
+          "path": "references/source.json",
+          "sha256": "749f2f4321429640550749a61b7fd7595aa1ad044e342bb6c7247c10c0177268"
+        },
+        {
+          "path": "references/sources.md",
+          "sha256": "1bfd3267197197e9765ba089ac23d432d58428dc039d6464671d13de32e1c531"
+        }
+      ]
+    },
+    {
+      "name": "jupyter-notebook",
+      "new": true,
+      "target_state": "actual_once_created_and_current_readback_verified",
+      "before_sha256": "absent",
+      "positive": "既存notebookのcell順・入力・実行結果を保ち、再現できる教材へ整える。",
+      "negative": "出力を消しただけで再実行成功とし、原notebookを丸ごと新しいPythonで書き直す。",
+      "sources": [
+        "https://github.com/openai/skills/blob/49f948faa9258a0c61caceaf225e179651397431/skills/.curated/jupyter-notebook/SKILL.md",
+        "https://github.com/openai/skills/blob/49f948faa9258a0c61caceaf225e179651397431/skills/.curated/jupyter-notebook/LICENSE.txt"
+      ],
+      "files": [
+        {
+          "path": "SKILL.md",
+          "sha256": "b8d832f5b839f7b270671af8b3013e33ece0a77fb64beb004bdd1d58210d3f1b"
+        },
+        {
+          "path": "references/guide.md",
+          "sha256": "204881599d5c030db7c980c9c861ff3215591091feae023d79cff03b8f4697f9"
+        },
+        {
+          "path": "references/original-skill.txt",
+          "sha256": "62f102e8554b25716dccef0ffab4572d4e3eaf05ccc76562d33a065bc9c521fb"
+        },
+        {
+          "path": "references/LICENSE.txt",
+          "sha256": "4dd13869245e356246a5b770723247bbb80a8f07a181d1d3d873a1734297cdb9"
+        },
+        {
+          "path": "references/source.json",
+          "sha256": "7a16a996eb4f8327d6bfdf0cfb1efc6b27e23144f24672dc572783b7f35a5eb2"
+        },
+        {
+          "path": "references/sources.md",
+          "sha256": "eb5ea9cebd7cbd3a6f9207d845992e313de029a92d445f8ead0f5641890a104a"
+        }
+      ]
+    },
+    {
+      "name": "migrate-to-codex",
+      "new": true,
+      "target_state": "actual_once_created_and_current_readback_verified",
+      "before_sha256": "absent",
+      "positive": "指定repoの既知の指示とhookを、意味の差を記録しCodexへ移行する。",
+      "negative": "ホーム全体を走査して秘密やMCP設定を移し、sandboxや中央Skillsのjunctionも置き換える。",
+      "sources": [
+        "https://github.com/openai/skills/blob/49f948faa9258a0c61caceaf225e179651397431/skills/.curated/migrate-to-codex/SKILL.md",
+        "https://github.com/openai/skills/blob/49f948faa9258a0c61caceaf225e179651397431/skills/.curated/migrate-to-codex/LICENSE.txt"
+      ],
+      "files": [
+        {
+          "path": "SKILL.md",
+          "sha256": "35d1c6ef1bd562fc5fc45b4a68b4ab0a8082183ab9ec26f968c709db1d408df1"
+        },
+        {
+          "path": "references/guide.md",
+          "sha256": "188a3c04f42beb289796fe5e6cecb428c623022ecf61ecd286b0c435676888d9"
+        },
+        {
+          "path": "references/original-skill.txt",
+          "sha256": "145b7fe48360642cb7a42bad3a817f10833fa8a387ffcb4c2df8a47c01a832e2"
+        },
+        {
+          "path": "references/LICENSE.txt",
+          "sha256": "58d1e17ffe5109a7ae296caafcadfdbe6a7d176f0bc4ab01e12a689b0499d8bd"
+        },
+        {
+          "path": "references/source.json",
+          "sha256": "c673ea9bc5085734ee8e8a63ecccfc4970fb92adfb7d7eeebfd84ca544b2176c"
+        },
+        {
+          "path": "references/sources.md",
+          "sha256": "5d86c0627aa58aae3e1ce684b7c95e02f7903768033e07bf666b7735b973a789"
+        }
+      ]
+    },
+    {
+      "name": "netlify-deploy",
+      "new": true,
+      "target_state": "actual_once_created_and_current_readback_verified",
+      "before_sha256": "absent",
+      "positive": "既存Netlify siteのIDと公開先を確認し、変更した版をPrdへ反映する。",
+      "negative": "リンク失敗だけで新しいsiteを作り、PreviewのURLを本番反映済みとして返す。",
+      "sources": [
+        "https://github.com/openai/skills/blob/49f948faa9258a0c61caceaf225e179651397431/skills/.curated/netlify-deploy/SKILL.md",
+        "https://github.com/openai/skills/blob/49f948faa9258a0c61caceaf225e179651397431/skills/.curated/netlify-deploy/LICENSE.txt"
+      ],
+      "files": [
+        {
+          "path": "SKILL.md",
+          "sha256": "58b744ad72aa7afd05208f59c422f8932206d40d97afcf10c2a31cce39fb5fae"
+        },
+        {
+          "path": "references/guide.md",
+          "sha256": "7ed4488e714e8a2ecd1870ed154e8097b30a9b5d92d8faafae0ab8f2b7680f99"
+        },
+        {
+          "path": "references/original-skill.txt",
+          "sha256": "bb2c29bf599a043cade932f60cc64f632ca100e8767ccdfa2ba1a42c8d43958f"
+        },
+        {
+          "path": "references/LICENSE.txt",
+          "sha256": "4dd13869245e356246a5b770723247bbb80a8f07a181d1d3d873a1734297cdb9"
+        },
+        {
+          "path": "references/source.json",
+          "sha256": "21f1e7b2972ca763f3399c48082bd8b4223c06ef8c59467331cc27666785f636"
+        },
+        {
+          "path": "references/sources.md",
+          "sha256": "54bc5440940500259b79643a0d74cc6d109e27100966c81dc0b8e8b9d1152b89"
+        }
+      ]
+    },
+    {
+      "name": "notion-knowledge-capture",
+      "new": true,
+      "target_state": "actual_once_created_and_current_readback_verified",
+      "before_sha256": "absent",
+      "positive": "指定した会話の決定と理由を、既存wikiのschemaへ合わせて保存する。",
+      "negative": "会話の提案を本人の決定へ変え、無関係な記録も別workspaceへ送る。",
+      "sources": [
+        "https://github.com/openai/skills/blob/49f948faa9258a0c61caceaf225e179651397431/skills/.curated/notion-knowledge-capture/SKILL.md",
+        "https://github.com/openai/skills/blob/49f948faa9258a0c61caceaf225e179651397431/skills/.curated/notion-knowledge-capture/LICENSE.txt"
+      ],
+      "files": [
+        {
+          "path": "SKILL.md",
+          "sha256": "710c9a5c3f91a304170c11e82da84e4ab4aba808dd15cbb2d50a1dca70ee1a5c"
+        },
+        {
+          "path": "references/guide.md",
+          "sha256": "f9abed9c7269e979e54e6ba22aee0ec4f84bab22c75d9b0155a17c3013a34486"
+        },
+        {
+          "path": "references/original-skill.txt",
+          "sha256": "b49383b229bc766190ea22bb58502cfcf7e08449f5fce55a104eef1e54e27f00"
+        },
+        {
+          "path": "references/LICENSE.txt",
+          "sha256": "0f377d9b2a1db642e4b0531ffa126e96d9bc6c085f8d9441f220fb25f723c6f8"
+        },
+        {
+          "path": "references/source.json",
+          "sha256": "4dd17b9339fcd790a339d614bf9b9d1a6b8d7914eafcc5d00265ff3f4dd42ff5"
+        },
+        {
+          "path": "references/sources.md",
+          "sha256": "d2fab6511a67bae340131f24d3037c242f13368141ae2717b69ecdf91802a9de"
+        }
+      ]
+    },
+    {
+      "name": "notion-meeting-intelligence",
+      "new": true,
+      "target_state": "actual_once_created_and_current_readback_verified",
+      "before_sha256": "absent",
+      "positive": "指定した会議の過去資料を読み、根拠と未決事項を含むagendaを作る。",
+      "negative": "古い議事録の担当や期限を新しい約束として外部参加者へ送る。",
+      "sources": [
+        "https://github.com/openai/skills/blob/49f948faa9258a0c61caceaf225e179651397431/skills/.curated/notion-meeting-intelligence/SKILL.md",
+        "https://github.com/openai/skills/blob/49f948faa9258a0c61caceaf225e179651397431/skills/.curated/notion-meeting-intelligence/LICENSE.txt"
+      ],
+      "files": [
+        {
+          "path": "SKILL.md",
+          "sha256": "0539a9a638705faab2add4fea8055406388c39a66026ce395891643ae2b51289"
+        },
+        {
+          "path": "references/guide.md",
+          "sha256": "326138458bcdd9a8d56afc5d34d270bedfb38d222037b86f95be62e7703ddb17"
+        },
+        {
+          "path": "references/original-skill.txt",
+          "sha256": "bad61faccbbe0f2cab53bcfbc4cb22f847ba8593ef14c2e37fea5b9b03346332"
+        },
+        {
+          "path": "references/LICENSE.txt",
+          "sha256": "0f377d9b2a1db642e4b0531ffa126e96d9bc6c085f8d9441f220fb25f723c6f8"
+        },
+        {
+          "path": "references/source.json",
+          "sha256": "1a306d09c1563a342d3947305ed2588b462d144773b00510315fe7332cbf50fb"
+        },
+        {
+          "path": "references/sources.md",
+          "sha256": "d665ccf8ba9684571a174c10af95668cd9ced150dbb99134005e87d2013c2c7c"
+        }
+      ]
+    },
+    {
+      "name": "notion-research-documentation",
+      "new": true,
+      "target_state": "actual_once_created_and_current_readback_verified",
+      "before_sha256": "absent",
+      "positive": "指定した複数pageの主張を根拠と日時へ結び、矛盾を残して比較する。",
+      "negative": "検索に無いpageを不存在と断定し、要約で未確認の主張を確定する。",
+      "sources": [
+        "https://github.com/openai/skills/blob/49f948faa9258a0c61caceaf225e179651397431/skills/.curated/notion-research-documentation/SKILL.md",
+        "https://github.com/openai/skills/blob/49f948faa9258a0c61caceaf225e179651397431/skills/.curated/notion-research-documentation/LICENSE.txt"
+      ],
+      "files": [
+        {
+          "path": "SKILL.md",
+          "sha256": "13cef84e9a6f022397f11ee18e6045abc387a717d05def0fbc01287997edc4ca"
+        },
+        {
+          "path": "references/guide.md",
+          "sha256": "89cd40c0bef678f462e1275ac5f3cc7b36138ab917e11486c606a09c2656e8b6"
+        },
+        {
+          "path": "references/original-skill.txt",
+          "sha256": "e88a46da978cf6f088a788fa92ee736df699a355a72f41f14bdc258bf3ef57e7"
+        },
+        {
+          "path": "references/LICENSE.txt",
+          "sha256": "0f377d9b2a1db642e4b0531ffa126e96d9bc6c085f8d9441f220fb25f723c6f8"
+        },
+        {
+          "path": "references/source.json",
+          "sha256": "aeaf47ac78138cf725903cca80392dee7ff0874bf1c65dd637a174fca08a8e30"
+        },
+        {
+          "path": "references/sources.md",
+          "sha256": "1b1358a46836f64227b41fa7b2a07b8add11898f39fd1666b01067bf58601550"
+        }
+      ]
+    },
+    {
+      "name": "notion-spec-to-implementation",
+      "new": true,
+      "target_state": "actual_once_created_and_current_readback_verified",
+      "before_sha256": "absent",
+      "positive": "指定PRDを受入条件と既存ToDoへ結び、実装・テスト・反映の証拠を追う。",
+      "negative": "仕様の曖昧な点を勝手に縮め、Notionのtask作成だけで実装済みにする。",
+      "sources": [
+        "https://github.com/openai/skills/blob/49f948faa9258a0c61caceaf225e179651397431/skills/.curated/notion-spec-to-implementation/SKILL.md",
+        "https://github.com/openai/skills/blob/49f948faa9258a0c61caceaf225e179651397431/skills/.curated/notion-spec-to-implementation/LICENSE.txt"
+      ],
+      "files": [
+        {
+          "path": "SKILL.md",
+          "sha256": "d4a5f2e73c071e0c0524eaf936b01f09797ea84260bae9fa9e137281475be520"
+        },
+        {
+          "path": "references/guide.md",
+          "sha256": "82251119ad01c8dcfdd6508cf3a96fa52f447014428005c445866fcdb5e63b7d"
+        },
+        {
+          "path": "references/original-skill.txt",
+          "sha256": "6e22c4c6df441e849fa6b4b825371b579c9bb4896f97bedca5f8536020427a81"
+        },
+        {
+          "path": "references/LICENSE.txt",
+          "sha256": "0f377d9b2a1db642e4b0531ffa126e96d9bc6c085f8d9441f220fb25f723c6f8"
+        },
+        {
+          "path": "references/source.json",
+          "sha256": "137dbe3b3342cdeb3c39239ddb9bc636577bdc64a54910a5d87311bd5a3e6eaf"
+        },
+        {
+          "path": "references/sources.md",
+          "sha256": "d19a0f9ea774c295b2d1c5c4e0a128391328941e957fe0d8157b6603cd2e4f39"
+        }
+      ]
+    },
+    {
+      "name": "render-deploy",
+      "new": true,
+      "target_state": "actual_once_created_and_current_readback_verified",
+      "before_sha256": "absent",
+      "positive": "既存Render serviceのsourceとBlueprintを照合し、反映した版の動作を確かめる。",
+      "negative": "資料のfree例だけでDBやcronを新設し、APIキーをMCPへ追加して本人へ操作を戻す。",
+      "sources": [
+        "https://github.com/openai/skills/blob/49f948faa9258a0c61caceaf225e179651397431/skills/.curated/render-deploy/SKILL.md",
+        "https://github.com/openai/skills/blob/49f948faa9258a0c61caceaf225e179651397431/skills/.curated/render-deploy/LICENSE.txt"
+      ],
+      "files": [
+        {
+          "path": "SKILL.md",
+          "sha256": "dd543170a2a17ba4c66c38f95ce5d35ca646ac265029cef0f8fbbd77b75df572"
+        },
+        {
+          "path": "references/guide.md",
+          "sha256": "da3c70f96bf4cd625eb472e55a1c89038e01db06a9f066ec2aedd6b772df9b9b"
+        },
+        {
+          "path": "references/original-skill.txt",
+          "sha256": "c17c75adeb1834ed5cee1e440a651ae476c4101cd63762fcd9a58eada917552d"
+        },
+        {
+          "path": "references/LICENSE.txt",
+          "sha256": "4dd13869245e356246a5b770723247bbb80a8f07a181d1d3d873a1734297cdb9"
+        },
+        {
+          "path": "references/source.json",
+          "sha256": "c090b4bac9e574a09f4b4f51caca9907bc1f34acd117458a56c78a253e63bc44"
+        },
+        {
+          "path": "references/sources.md",
+          "sha256": "3649033a8a1c76e906b4391825b6f97dfd1a439e675fa6aed3944bc12fb723db"
+        }
+      ]
+    },
+    {
+      "name": "vercel-deploy",
+      "new": true,
+      "target_state": "actual_once_created_and_current_readback_verified",
+      "before_sha256": "absent",
+      "positive": "既存Vercel projectへ承認済み版をPrd配備し、URLと必要な機能を確かめる。",
+      "negative": "認証失敗から無認証scriptへproject全体を送り、Preview URLだけで完了とする。",
+      "sources": [
+        "https://github.com/openai/skills/blob/49f948faa9258a0c61caceaf225e179651397431/skills/.curated/vercel-deploy/SKILL.md",
+        "https://github.com/openai/skills/blob/49f948faa9258a0c61caceaf225e179651397431/skills/.curated/vercel-deploy/LICENSE.txt"
+      ],
+      "files": [
+        {
+          "path": "SKILL.md",
+          "sha256": "3cc6c537db4d0ddb21b494dfbf5f073395f32c3f4d02f88710b200d8e721f818"
+        },
+        {
+          "path": "references/guide.md",
+          "sha256": "bd0fbf22a4eacf1293922d56758cf370606d7fd585a612d1385d5c19192a6220"
+        },
+        {
+          "path": "references/original-skill.txt",
+          "sha256": "f4a6cbfbb378a320fae179a79f727a881d19677e9b3db96ed49d2dc02a74fa46"
+        },
+        {
+          "path": "references/LICENSE.txt",
+          "sha256": "e0fad1e120e56b02bb8e65745ff5be6d3234368f2df9d0dd183183879e595fc1"
+        },
+        {
+          "path": "references/source.json",
+          "sha256": "63f52033bbb096dc82eeb687efdeddf93919bedf36d1c4f766bb9d5898c8270e"
+        },
+        {
+          "path": "references/sources.md",
+          "sha256": "4139cb9b9aeb53c400e9a6dcdc00be7d89f18981b064046f4c53d537089dfb17"
+        }
+      ]
+    }
+  ],
+  "central_operations": 0,
+  "new_adoptions": 0,
+  "new_adoptions_definition": "Serialization/checking performs no new adoption. Eleven actual placements and their separate ledger are evidenced by the installation record.",
+  "whole16_complete": false,
+  "root": "D:/CC/Skills",
+  "creator_job": "20261026-214717-todo-3080",
+  "current_consumer_job": "20261026-214717-todo-3080",
+  "snapshot_definition": "Actual newly created11,66 current qualified buffers across4 normal batches; no cross-file/batch atomic or historical continuity claim"
+}

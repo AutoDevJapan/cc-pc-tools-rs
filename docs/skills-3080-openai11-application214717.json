@@ -1,0 +1,310 @@
+{
+  "todo": 3080,
+  "actual_reader_job": "20261026-214717-todo-3080",
+  "actual_current_turn": true,
+  "instruction_buffers": [
+    {
+      "index": 0,
+      "target": "cloudflare-deploy/SKILL.md",
+      "sha256": "b107b066b709b50b2027b8916697c3aeafaf6b63e8168b93354ea8db29731930",
+      "bytes": 2415,
+      "current_qualified_buffer_fully_read_by_actual_parent": true
+    },
+    {
+      "index": 1,
+      "target": "cloudflare-deploy/references/guide.md",
+      "sha256": "9669dd153558671782646a8094a7619f45d0ed5007335f36c0807818f55041c4",
+      "bytes": 1284,
+      "current_qualified_buffer_fully_read_by_actual_parent": true
+    },
+    {
+      "index": 6,
+      "target": "define-goal/SKILL.md",
+      "sha256": "57b3b9896c456233eeba787eeae81166b4a177ac91eff4528a26c8c7bee6699a",
+      "bytes": 1933,
+      "current_qualified_buffer_fully_read_by_actual_parent": true
+    },
+    {
+      "index": 7,
+      "target": "define-goal/references/guide.md",
+      "sha256": "61e73ab3c4dd6a395aadfec4a7c5d9e856166a439ed7f735284fdcb3264b3d7e",
+      "bytes": 1258,
+      "current_qualified_buffer_fully_read_by_actual_parent": true
+    },
+    {
+      "index": 12,
+      "target": "jupyter-notebook/SKILL.md",
+      "sha256": "b8d832f5b839f7b270671af8b3013e33ece0a77fb64beb004bdd1d58210d3f1b",
+      "bytes": 2102,
+      "current_qualified_buffer_fully_read_by_actual_parent": true
+    },
+    {
+      "index": 13,
+      "target": "jupyter-notebook/references/guide.md",
+      "sha256": "204881599d5c030db7c980c9c861ff3215591091feae023d79cff03b8f4697f9",
+      "bytes": 1314,
+      "current_qualified_buffer_fully_read_by_actual_parent": true
+    },
+    {
+      "index": 18,
+      "target": "migrate-to-codex/SKILL.md",
+      "sha256": "35d1c6ef1bd562fc5fc45b4a68b4ab0a8082183ab9ec26f968c709db1d408df1",
+      "bytes": 2313,
+      "current_qualified_buffer_fully_read_by_actual_parent": true
+    },
+    {
+      "index": 19,
+      "target": "migrate-to-codex/references/guide.md",
+      "sha256": "188a3c04f42beb289796fe5e6cecb428c623022ecf61ecd286b0c435676888d9",
+      "bytes": 1304,
+      "current_qualified_buffer_fully_read_by_actual_parent": true
+    },
+    {
+      "index": 24,
+      "target": "netlify-deploy/SKILL.md",
+      "sha256": "58b744ad72aa7afd05208f59c422f8932206d40d97afcf10c2a31cce39fb5fae",
+      "bytes": 2028,
+      "current_qualified_buffer_fully_read_by_actual_parent": true
+    },
+    {
+      "index": 25,
+      "target": "netlify-deploy/references/guide.md",
+      "sha256": "7ed4488e714e8a2ecd1870ed154e8097b30a9b5d92d8faafae0ab8f2b7680f99",
+      "bytes": 1155,
+      "current_qualified_buffer_fully_read_by_actual_parent": true
+    },
+    {
+      "index": 30,
+      "target": "notion-knowledge-capture/SKILL.md",
+      "sha256": "710c9a5c3f91a304170c11e82da84e4ab4aba808dd15cbb2d50a1dca70ee1a5c",
+      "bytes": 1948,
+      "current_qualified_buffer_fully_read_by_actual_parent": true
+    },
+    {
+      "index": 31,
+      "target": "notion-knowledge-capture/references/guide.md",
+      "sha256": "f9abed9c7269e979e54e6ba22aee0ec4f84bab22c75d9b0155a17c3013a34486",
+      "bytes": 1250,
+      "current_qualified_buffer_fully_read_by_actual_parent": true
+    },
+    {
+      "index": 36,
+      "target": "notion-meeting-intelligence/SKILL.md",
+      "sha256": "0539a9a638705faab2add4fea8055406388c39a66026ce395891643ae2b51289",
+      "bytes": 1982,
+      "current_qualified_buffer_fully_read_by_actual_parent": true
+    },
+    {
+      "index": 37,
+      "target": "notion-meeting-intelligence/references/guide.md",
+      "sha256": "326138458bcdd9a8d56afc5d34d270bedfb38d222037b86f95be62e7703ddb17",
+      "bytes": 1188,
+      "current_qualified_buffer_fully_read_by_actual_parent": true
+    },
+    {
+      "index": 42,
+      "target": "notion-research-documentation/SKILL.md",
+      "sha256": "13cef84e9a6f022397f11ee18e6045abc387a717d05def0fbc01287997edc4ca",
+      "bytes": 2031,
+      "current_qualified_buffer_fully_read_by_actual_parent": true
+    },
+    {
+      "index": 43,
+      "target": "notion-research-documentation/references/guide.md",
+      "sha256": "89cd40c0bef678f462e1275ac5f3cc7b36138ab917e11486c606a09c2656e8b6",
+      "bytes": 1174,
+      "current_qualified_buffer_fully_read_by_actual_parent": true
+    },
+    {
+      "index": 48,
+      "target": "notion-spec-to-implementation/SKILL.md",
+      "sha256": "d4a5f2e73c071e0c0524eaf936b01f09797ea84260bae9fa9e137281475be520",
+      "bytes": 2043,
+      "current_qualified_buffer_fully_read_by_actual_parent": true
+    },
+    {
+      "index": 49,
+      "target": "notion-spec-to-implementation/references/guide.md",
+      "sha256": "82251119ad01c8dcfdd6508cf3a96fa52f447014428005c445866fcdb5e63b7d",
+      "bytes": 1193,
+      "current_qualified_buffer_fully_read_by_actual_parent": true
+    },
+    {
+      "index": 54,
+      "target": "render-deploy/SKILL.md",
+      "sha256": "dd543170a2a17ba4c66c38f95ce5d35ca646ac265029cef0f8fbbd77b75df572",
+      "bytes": 2229,
+      "current_qualified_buffer_fully_read_by_actual_parent": true
+    },
+    {
+      "index": 55,
+      "target": "render-deploy/references/guide.md",
+      "sha256": "da3c70f96bf4cd625eb472e55a1c89038e01db06a9f066ec2aedd6b772df9b9b",
+      "bytes": 1331,
+      "current_qualified_buffer_fully_read_by_actual_parent": true
+    },
+    {
+      "index": 60,
+      "target": "vercel-deploy/SKILL.md",
+      "sha256": "3cc6c537db4d0ddb21b494dfbf5f073395f32c3f4d02f88710b200d8e721f818",
+      "bytes": 2231,
+      "current_qualified_buffer_fully_read_by_actual_parent": true
+    },
+    {
+      "index": 61,
+      "target": "vercel-deploy/references/guide.md",
+      "sha256": "bd0fbf22a4eacf1293922d56758cf370606d7fd585a612d1385d5c19192a6220",
+      "bytes": 1189,
+      "current_qualified_buffer_fully_read_by_actual_parent": true
+    }
+  ],
+  "instruction_files": 22,
+  "instruction_bytes": 36895,
+  "bounded_scenario_decisions": 22,
+  "actual_scope_decisions": [
+    {
+      "name": "ordinary_task_not_goal_creation",
+      "decision": "今の本人依頼は通常のSkills拡張で、goalツールの明示依頼は無い。現turnで新goal・token予算を作らず、同じ元3080と完了条件を保って実作業を継続した。"
+    },
+    {
+      "name": "no_automatic_external_service_or_private_migration",
+      "decision": "今の依頼はSkillの作成/実利用検証で、外部会議・Notion保存・配備・私的設定移行ではない。原のMCP設定/キー/無認証送信を実行せず、現在の読戻し・出典・用途を検証した。"
+    }
+  ],
+  "total_real_text_and_current_boundary_decisions": 24,
+  "cases": [
+    {
+      "name": "cloudflare-deploy",
+      "entrypoint_index": 0,
+      "guide_index": 1,
+      "positive": "既存Cloudflare Workerの配備先とbindingを確認して本番へ反映する。",
+      "positive_decision": "条件と元の依頼が一致する場合にこのworkflowを適用すると、この実turnで判断した",
+      "negative": "公開資料の製品一覧だけで有料AI機能や新しいDNS管理を追加する。",
+      "negative_decision": "原要件・権限・実証に反するため、その操作や成功扱いを採用しないとこの実turnで判断した",
+      "applied_meaning": "cloudflare: 対象の実Worker/Pagesとbinding/依存/Prdを照合し、保存索引のAI機能やDNS・新費用を有効化しない。",
+      "mode": "Actual current model text decision from qualified current instruction buffers; no target service/app execution"
+    },
+    {
+      "name": "define-goal",
+      "entrypoint_index": 6,
+      "guide_index": 7,
+      "positive": "本人が明示した目標作成の依頼を、既存の受入条件と証拠へ整理する。",
+      "positive_decision": "条件と元の依頼が一致する場合にこのworkflowを適用すると、この実turnで判断した",
+      "negative": "普通の修正依頼に新しい数値目標とtoken予算を付け、勝手にgoalを開始する。",
+      "negative_decision": "原要件・権限・実証に反するため、その操作や成功扱いを採用しないとこの実turnで判断した",
+      "applied_meaning": "define-goal: 明示された目標作成時だけgoalを扱い、普通の今のSkills作業ではgoalや予算を追加しない。実証で完了を判断し元の範囲を縮めない。",
+      "mode": "Actual current model text decision from qualified current instruction buffers; no target service/app execution"
+    },
+    {
+      "name": "jupyter-notebook",
+      "entrypoint_index": 12,
+      "guide_index": 13,
+      "positive": "既存notebookのcell順・入力・実行結果を保ち、再現できる教材へ整える。",
+      "positive_decision": "条件と元の依頼が一致する場合にこのworkflowを適用すると、この実turnで判断した",
+      "negative": "出力を消しただけで再実行成功とし、原notebookを丸ごと新しいPythonで書き直す。",
+      "negative_decision": "原要件・権限・実証に反するため、その操作や成功扱いを採用しないとこの実turnで判断した",
+      "applied_meaning": "jupyter: cell/metadata/ID/kernelと原出力を保持し構造確認と実kernel実行を分ける。新規Pythonや仮の実行成功を作らない。",
+      "mode": "Actual current model text decision from qualified current instruction buffers; no target service/app execution"
+    },
+    {
+      "name": "migrate-to-codex",
+      "entrypoint_index": 18,
+      "guide_index": 19,
+      "positive": "指定repoの既知の指示とhookを、意味の差を記録しCodexへ移行する。",
+      "positive_decision": "条件と元の依頼が一致する場合にこのworkflowを適用すると、この実turnで判断した",
+      "negative": "ホーム全体を走査して秘密やMCP設定を移し、sandboxや中央Skillsのjunctionも置き換える。",
+      "negative_decision": "原要件・権限・実証に反するため、その操作や成功扱いを採用しないとこの実turnで判断した",
+      "applied_meaning": "migration: 指定した出所とtargetだけを差分化し、元私的設定やホーム全体を走査せず、junction/model/sandbox/MCP恒久権限を元例で上書きしない。",
+      "mode": "Actual current model text decision from qualified current instruction buffers; no target service/app execution"
+    },
+    {
+      "name": "netlify-deploy",
+      "entrypoint_index": 24,
+      "guide_index": 25,
+      "positive": "既存Netlify siteのIDと公開先を確認し、変更した版をPrdへ反映する。",
+      "positive_decision": "条件と元の依頼が一致する場合にこのworkflowを適用すると、この実turnで判断した",
+      "negative": "リンク失敗だけで新しいsiteを作り、PreviewのURLを本番反映済みとして返す。",
+      "negative_decision": "原要件・権限・実証に反するため、その操作や成功扱いを採用しないとこの実turnで判断した",
+      "applied_meaning": "netlify: 実site ID/owner/lock/build/publish directory/Prdを対応させ、link/auth失敗から新siteやpreviewを作って完成としない。",
+      "mode": "Actual current model text decision from qualified current instruction buffers; no target service/app execution"
+    },
+    {
+      "name": "notion-knowledge-capture",
+      "entrypoint_index": 30,
+      "guide_index": 31,
+      "positive": "指定した会話の決定と理由を、既存wikiのschemaへ合わせて保存する。",
+      "positive_decision": "条件と元の依頼が一致する場合にこのworkflowを適用すると、この実turnで判断した",
+      "negative": "会話の提案を本人の決定へ変え、無関係な記録も別workspaceへ送る。",
+      "negative_decision": "原要件・権限・実証に反するため、その操作や成功扱いを採用しないとこの実turnで判断した",
+      "applied_meaning": "notion capture: 宛先schemaとsource、本人回答の世代/対象、保存と実反映を分け、提案を承認や別workspace送信許可へ変えない。",
+      "mode": "Actual current model text decision from qualified current instruction buffers; no target service/app execution"
+    },
+    {
+      "name": "notion-meeting-intelligence",
+      "entrypoint_index": 36,
+      "guide_index": 37,
+      "positive": "指定した会議の過去資料を読み、根拠と未決事項を含むagendaを作る。",
+      "positive_decision": "条件と元の依頼が一致する場合にこのworkflowを適用すると、この実turnで判断した",
+      "negative": "古い議事録の担当や期限を新しい約束として外部参加者へ送る。",
+      "negative_decision": "原要件・権限・実証に反するため、その操作や成功扱いを採用しないとこの実turnで判断した",
+      "applied_meaning": "notion meeting: 会議の目的/時刻帯/必要な判断と根拠をagendaへ結び、仮案の担当/期限や資料作成を実参加・同意・会議実施へ変えない。",
+      "mode": "Actual current model text decision from qualified current instruction buffers; no target service/app execution"
+    },
+    {
+      "name": "notion-research-documentation",
+      "entrypoint_index": 42,
+      "guide_index": 43,
+      "positive": "指定した複数pageの主張を根拠と日時へ結び、矛盾を残して比較する。",
+      "positive_decision": "条件と元の依頼が一致する場合にこのworkflowを適用すると、この実turnで判断した",
+      "negative": "検索に無いpageを不存在と断定し、要約で未確認の主張を確定する。",
+      "negative_decision": "原要件・権限・実証に反するため、その操作や成功扱いを採用しないとこの実turnで判断した",
+      "applied_meaning": "notion research: 根拠page/時点/母数を主張へ結び、検索/権限/ページング不足を不存在へ変えず、古い数値と現在の事実を分ける。",
+      "mode": "Actual current model text decision from qualified current instruction buffers; no target service/app execution"
+    },
+    {
+      "name": "notion-spec-to-implementation",
+      "entrypoint_index": 48,
+      "guide_index": 49,
+      "positive": "指定PRDを受入条件と既存ToDoへ結び、実装・テスト・反映の証拠を追う。",
+      "positive_decision": "条件と元の依頼が一致する場合にこのworkflowを適用すると、この実turnで判断した",
+      "negative": "仕様の曖昧な点を勝手に縮め、Notionのtask作成だけで実装済みにする。",
+      "negative_decision": "原要件・権限・実証に反するため、その操作や成功扱いを採用しないとこの実turnで判断した",
+      "applied_meaning": "notion spec: 元仕様/Issue/共有ToDoと受入条件、実装/テスト/Prd結果を追い、Notion task作成で実装済みや元作業を新引継ぎで完了にしない。",
+      "mode": "Actual current model text decision from qualified current instruction buffers; no target service/app execution"
+    },
+    {
+      "name": "render-deploy",
+      "entrypoint_index": 54,
+      "guide_index": 55,
+      "positive": "既存Render serviceのsourceとBlueprintを照合し、反映した版の動作を確かめる。",
+      "positive_decision": "条件と元の依頼が一致する場合にこのworkflowを適用すると、この実turnで判断した",
+      "negative": "資料のfree例だけでDBやcronを新設し、APIキーをMCPへ追加して本人へ操作を戻す。",
+      "negative_decision": "原要件・権限・実証に反するため、その操作や成功扱いを採用しないとこの実turnで判断した",
+      "applied_meaning": "render: 実workspace/serviceとGit commit/image digestを対応させ、Blueprint/live表示と実HTTP/認証/データ・依存を分ける。未読script・free例から契約/キー/MCPを増やさない。",
+      "mode": "Actual current model text decision from qualified current instruction buffers; no target service/app execution"
+    },
+    {
+      "name": "vercel-deploy",
+      "entrypoint_index": 60,
+      "guide_index": 61,
+      "positive": "既存Vercel projectへ承認済み版をPrd配備し、URLと必要な機能を確かめる。",
+      "positive_decision": "条件と元の依頼が一致する場合にこのworkflowを適用すると、この実turnで判断した",
+      "negative": "認証失敗から無認証scriptへproject全体を送り、Preview URLだけで完了とする。",
+      "negative_decision": "原要件・権限・実証に反するため、その操作や成功扱いを採用しないとこの実turnで判断した",
+      "applied_meaning": "vercel: 実project/owner/承認版/Prdを照合し、無認証fallbackへの一括送信やpreview URLを本番動作確認の代わりにしない。",
+      "mode": "Actual current model text decision from qualified current instruction buffers; no target service/app execution"
+    }
+  ],
+  "all_scenario_meanings_applied": true,
+  "implicit_selection_proven": false,
+  "actual_Notion_or_deployment_calls": 0,
+  "actual_notebook_kernel_or_migration_runs": 0,
+  "UI_implemented": 0,
+  "new_goal_or_token_budget": 0,
+  "source_scripts_executed": 0,
+  "new_model_generation_calls": 0,
+  "new_grants_outside_primary": 0,
+  "new_central_writes_by_application": 0,
+  "new_ledger_adoptions_by_application": 0,
+  "whole16_complete": false
+}

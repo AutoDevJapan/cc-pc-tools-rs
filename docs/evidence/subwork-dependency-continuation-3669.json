@@ -1,0 +1,106 @@
+{
+  "schema_version": 1,
+  "todo_id": 3669,
+  "implementation_commit": "07357c2dd59bf6dc4120643a9414a92161902db1",
+  "issue": 611,
+  "pr": 612,
+  "scope": "PC tools current finite subwork continuation only",
+  "tests": {
+    "red_cli": {
+      "original_log_saved": false,
+      "observed": "InvalidSubcommand continue-subwork",
+      "commit": "3d959bd4"
+    },
+    "final_related": {
+      "passed": 61,
+      "source_product_code_matches_implementation_commit": true,
+      "filter": "test(quota) | test(dependency_continuation) | binary(continue_subwork)"
+    },
+    "clippy": {
+      "all_targets": true,
+      "warnings": 0,
+      "packages": 4
+    },
+    "full_affected": {
+      "passed": 1372,
+      "source_qualification": "Earlier compiled intermediate candidate before consumed/parent-stop/routing deltas; no exact final-head claim. Reused for unchanged code.",
+      "skipped": 1,
+      "packages": [
+        "cc-job-policy",
+        "cc-jobs",
+        "cc-scheduler",
+        "cc-todo"
+      ]
+    },
+    "additional_red": [
+      "Explicit parent stop",
+      "Ordinary continuation after accepted worker retains old quota classification"
+    ],
+    "doctests": {
+      "all_passed": true,
+      "each": 0,
+      "packages": 4
+    }
+  },
+  "reviews": {
+    "accepted_results": 0,
+    "native_verified": false,
+    "effort_requested": "max",
+    "latest_normal_observation": {
+      "candidate": true,
+      "validity": "matching_task_metadata",
+      "stage": "priority",
+      "reason": "earlier_candidate_launched",
+      "task": 4164,
+      "eligible": true,
+      "queue_rank": 26
+    },
+    "model_requested": "gpt-6-luna",
+    "self_todo": 4163,
+    "rubber_todo": 4164,
+    "origin": "Saved owner review choice for same3669, relayed in continuation request and parent3080 note"
+  },
+  "limits": {
+    "native_Sol_max_verified": false,
+    "actual3719_launched": false,
+    "merged": false,
+    "guard_or_global_settings_changed": false,
+    "owner_input_required": false,
+    "windows_updated": false,
+    "final_head_ci_accepted": false,
+    "parent_ack199_received": false,
+    "old_source_or_reply_rewritten": false
+  },
+  "logs": [
+    {
+      "file": "affected-tests.log",
+      "bytes": 184593,
+      "sha256": "ae084429572dc296259e9faf75a5d12115fb4fc2011c3b7fd77507e02bd3a7a4"
+    },
+    {
+      "file": "parent-stop-red.log",
+      "bytes": 1836,
+      "sha256": "57843067912a5961d5e4ec1ad2e7e49d74541bdfafc948a7c108850103f85554"
+    },
+    {
+      "file": "final-regression.log",
+      "bytes": 7114,
+      "sha256": "6486504c1d81445b0d448cd5a588f62bd799ed35333bef571ba252c807543280"
+    },
+    {
+      "file": "final-routing-tests.log",
+      "bytes": 9981,
+      "sha256": "de25e4a9ed0d90ab5a609f4e3bda4298e9c6a34d76af60d0e8531b22bd7b263f"
+    },
+    {
+      "file": "final-clippy.log",
+      "bytes": 723,
+      "sha256": "6e658f9cb9a8b19082cad6774e113fd50ba67ceb8647757a187aa6293f9a6692"
+    },
+    {
+      "file": "final-doctest.log",
+      "bytes": 645,
+      "sha256": "66d358c9cc5ee9c75d9cd852d13c8a6d775464b82f56b12f007729e6f5f8a8d6"
+    }
+  ]
+}

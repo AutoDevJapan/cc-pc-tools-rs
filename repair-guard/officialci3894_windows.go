@@ -54,10 +54,12 @@ const official3894DiagnosticGuardHead = "7cea2e8f12631aeb5584dab5bc8535b7cd984f8
 const official3894ConcurrentGuardSHA = "94c08be91776df277a6a3442e71f291103345641558657e1872e36520ad924e0"
 const official3894ConcurrentGuardHead = "817004120a458b3a37830478512da0aa8040c9d0"
 
-// The normally merged PR586 build was accepted through the existing updater.
-// Its public software-only deployment projection is retained independently.
-const official3894SourceBudgetGuardSHA = "ad5d37c7b216264d2e99007a2e6f3468e7529803454d88f1954cc74a7beb4783"
-const official3894SourceBudgetGuardHead = "0d97c1952ff6f8b47a3d40939941639b35309408"
+// The shared PR586 updater's normal distribution was independently recorded
+// before this successor. Preserve the same software fact in both consumers;
+// original SDK producer/receipt, qualification and data access remain separate.
+// docs/evidence/skills-3080-guard-before-scope589-ad5.json
+const official3894SharedGuardSHA = "ad5d37c7b216264d2e99007a2e6f3468e7529803454d88f1954cc74a7beb4783"
+const official3894SharedGuardHead = "0d97c1952ff6f8b47a3d40939941639b35309408"
 
 type official3894Source struct {
 	Head, Registration, CreatorJob, Workspace, Branch, SpecSHA string
@@ -903,7 +905,7 @@ func official3894InstalledBaseline(sha, head string) bool {
 		(sha == official3894RepairGuardSHA && head == official3894RepairGuardHead) ||
 		(sha == official3894DiagnosticGuardSHA && head == official3894DiagnosticGuardHead) ||
 		(sha == official3894ConcurrentGuardSHA && head == official3894ConcurrentGuardHead) ||
-		(sha == official3894SourceBudgetGuardSHA && head == official3894SourceBudgetGuardHead)
+		(sha == official3894SharedGuardSHA && head == official3894SharedGuardHead)
 }
 
 // Qualifies only comparison of the known previously published guard software.

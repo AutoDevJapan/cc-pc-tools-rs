@@ -218,7 +218,7 @@ func TestOfficialCI3387SourceBudgetKnownSoftwarePair(t *testing.T) {
 	if !official3894InstalledBaseline("ad5d37c7b216264d2e99007a2e6f3468e7529803454d88f1954cc74a7beb4783", "0d97c1952ff6f8b47a3d40939941639b35309408") {
 		t.Fatal("accepted PR586 software cannot be compared by its successor")
 	}
-	for _, p := range [][2]string{{official3894SourceBudgetGuardSHA, official3894ConcurrentGuardHead}, {official3894ConcurrentGuardSHA, official3894SourceBudgetGuardHead}, {strings.Repeat("0", 64), official3894SourceBudgetGuardHead}} {
+	for _, p := range [][2]string{{official3894SharedGuardSHA, official3894ConcurrentGuardHead}, {official3894ConcurrentGuardSHA, official3894SharedGuardHead}, {strings.Repeat("0", 64), official3894SharedGuardHead}} {
 		if official3894InstalledBaseline(p[0], p[1]) {
 			t.Fatal("unknown or mixed software pair was adopted")
 		}

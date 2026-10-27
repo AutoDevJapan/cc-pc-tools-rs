@@ -386,7 +386,7 @@ pub(crate) fn atomic_publish(root: &Path, name: &str, bytes: &[u8]) -> Result<()
         // Fixed sidecar, no backup series or append-only diagnostic log.
         let temp = root.join(format!("{name}.tmp"));
         let mut file = fs::File::create(&temp)?;
-        file.write_all(&bytes)?;
+        file.write_all(bytes)?;
         file.sync_all()?;
         drop(file);
         use std::os::windows::ffi::OsStrExt;

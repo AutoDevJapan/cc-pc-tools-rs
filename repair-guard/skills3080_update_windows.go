@@ -20,6 +20,10 @@ const skillsGuardModule = "github.com/AutoDevJapan/cc-pc-tools-rs/repair-guard"
 // Independent previously accepted distribution facts (3258 and3686), not a caller
 // supplied baseline or an assertion made by the artifact being installed.
 var skillsGuardBaselines = map[string]string{
+	// PR594's normally deployed runtime was independently matched to its public
+	// distribution record before the native-log successor was generated.
+	// Evidence: docs/evidence/skills-3080-guard-before-native609-16386.json.
+	"16386d55e418ce271cfed923edede1e7472bb93aa691b15409bcdb99753b9899": "61de98373f8cb481302394be11d7d75cfef08a52",
 	// Same accepted PR596 software as the other existing updater, from normal
 	// publisher deployment and its parent's independent installed readback.
 	// docs/evidence/official-ci3387-known-guard-baseline-444eae87.json
@@ -134,7 +138,10 @@ func skillsCodeReviewAccepted(received skillsReceived, head string) bool {
 		return false
 	}
 	model := skillsModel(str(received.Metadata["model"]))
-	if model == "" || model == "gpt-6.1-sol" {
+	// The remaining multi-file reviews for this finite repair were explicitly
+	// assigned to Luna/max by the owner. Derive origins from the real job, not
+	// the reviewer body or caller. Other OAuth models remain valid elsewhere.
+	if model != "gpt-6-luna" || received.Metadata["model_origin"] != "owner_request" || received.Metadata["effort_origin"] != "owner_request" {
 		return false
 	}
 	wantEffort := skillsReviewEffort(model)

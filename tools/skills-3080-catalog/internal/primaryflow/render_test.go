@@ -96,3 +96,14 @@ func TestBOMDoesNotExposeUnlabelledFrontmatter(t *testing.T) {
 		t.Fatal("BOM bypassed whole-frontmatter mask")
 	}
 }
+
+func TestPGPPrivateBlockUNCAndCompactOpaqueValuesAreWithheld(t *testing.T) {
+	raw := []byte("-----BEGIN PGP PRIVATE KEY BLOCK-----\nshort private fixture material\n-----END PGP PRIVATE KEY BLOCK-----\n\\\\fixture-host\\share\\user\\file\n0123456789abcdef0123456789abcdef\nvisible final paragraph\n")
+	v, e := CheckAndMask(raw, maskedGroup(raw))
+	if e != nil {
+		t.Fatal(e)
+	}
+	if len(v.Withheld) != 5 || strings.Contains(v.Visible, "short private fixture") || strings.Contains(v.Visible, "fixture-host") || strings.Contains(v.Visible, "0123456789abcdef") || !strings.Contains(v.Visible, "visible final paragraph") {
+		t.Fatal("PGP/UNC/compact opaque material escaped its whole-line mask")
+	}
+}

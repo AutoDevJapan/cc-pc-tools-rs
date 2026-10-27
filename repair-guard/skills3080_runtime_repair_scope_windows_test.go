@@ -124,8 +124,11 @@ func TestSkills3080AcceptedAd5DistributionSurvivesScopedSuccessor(t *testing.T) 
 	if !skillsAcceptedProducer(p, current) {
 		t.Fatal("the shared normal distribution was lost in its scoped successor")
 	}
+	if !official3894InstalledBaseline(p.SHA, p.Revision) {
+		t.Fatal("the other existing updater lost the same independently accepted shared distribution")
+	}
 	p.Revision = strings.Repeat("a", 40)
-	if skillsAcceptedProducer(p, current) {
+	if skillsAcceptedProducer(p, current) || official3894InstalledBaseline(p.SHA, p.Revision) {
 		t.Fatal("same shared software hash with a different source was trusted")
 	}
 }

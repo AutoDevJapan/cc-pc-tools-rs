@@ -166,8 +166,8 @@
   ],
   "adoption_ledger": {
     "file": "skills-3080-adoptions.json",
-    "sha256": "eae8dcf324ce79563a41abb4589794300c3be18acd5f015126a535e0701b38ae",
-    "rows": 151
+    "sha256": "e813a02e3f2eb807f9acf3b042af8ca629788cc4a47dcec175fae771509e0032",
+    "rows": 162
   },
   "definition": "Assessment record references and existing final decisions only. No semantic/individual licence approval is inherited through equal bytes. The fixed catalog remains the complete occurrence universe; all holds are retained."
 }

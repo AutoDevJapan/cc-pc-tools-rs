@@ -92,6 +92,11 @@
       "file": "skills-3080-openai6-designs214717.json",
       "sha256": "c5b3cff3ed6e8f4f0f2505fa3f559bbbeb6ad89e9aba1f0806adcad345e5a86e",
       "target_count": 6
+    },
+    {
+      "file": "skills-3080-openai11-designs214717.json",
+      "sha256": "0a34c8e49ac851d0302828b29d0b6c4c47f11ce0103dd756e8234f4b211a6644",
+      "target_count": 11
     }
   ]
 }

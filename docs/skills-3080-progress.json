@@ -286,9 +286,9 @@
   "site_entries_with_body": 9862,
   "site_entries_without_body": 428,
   "execution_held_shapes": 647,
-  "candidate_designs": 133,
-  "independently_accepted": 133,
-  "installed": 133,
+  "candidate_designs": 144,
+  "independently_accepted": 144,
+  "installed": 144,
   "integrated": 3,
   "excluded": 15,
   "units": {
@@ -346,23 +346,23 @@
     "actual_installed": 8
   },
   "candidate_count_definitions": {
-    "candidate_designs": "Legacy28 plus directly sourced actual designs105; pending drafts and catalog rows are not installations;133 is not a cap",
+    "candidate_designs": "Legacy28 plus directly sourced actual designs116; pending legacy drafts and catalog rows are not installations;144 is not a cap",
     "additional_authored_drafts_not_in_plans": 3,
-    "authored_total": 136,
-    "installed": 133,
+    "authored_total": 147,
+    "installed": 144,
     "pending_plan_targets": 0,
     "archived_draft_targets": 8,
     "archived_draft_is_subset_of_batch03": true,
-    "independently_accepted": "Legacy acceptances and individually scoped actual designs with exact creation, current readback, structure, metadata discovery and bounded explicit use. Latest OpenAI6 result accepted by comparison4033/LunaMax/Must0 and all7CI, normal mergedPR579. New11 proposed inputs remain uninstalled and require their own full review; no whole16 or renderer/context-budget completion implied.",
-    "not_semantically_disposed_occurrences": 73069,
+    "independently_accepted": "Legacy acceptances and individually scoped actual designs with exact creation, current readback, structure, metadata discovery and bounded explicit use. New11 inputs accepted by full4066/LunaMax/Must0, then actual66files/223979B/current4batch readback/PASS11/fresh11metadata and24 bounded text/boundary decisions. Their public result delta still requires separate review/CI/merge. No whole16, renderer, implicit selection or full-context acceptance implied.",
+    "not_semantically_disposed_occurrences": 73058,
     "additional_draft_sources": [
       "skills-3080-mizchi-sql-draft.json",
       "skills-3080-mizchi-mutation-draft.json"
     ],
     "authored_total_definition": "Existing actual-plan designs plus3 legacy pending drafts only; separately published new uninstalled proposals are counted below, not as installations",
-    "new_proposed_uninstalled_targets": 11,
+    "new_proposed_uninstalled_targets": 0,
     "authored_including_new_proposals": 147,
-    "authored_including_new_proposals_definition": "133actual installed designs +3legacy pending drafts +11new uninstalled proposed targets. Archived draft variants remain subsets; catalog rows and source-only hatch hold are not authored new targets."
+    "authored_including_new_proposals_definition": "144actual installed designs +3legacy pending drafts; the eleven proposed inputs now have separate actual placement/readback/discovery/application evidence. Archived variants remain subsets and source-only hatch hold is not a new target."
   },
   "kepano_entrypoint_assessment": {
     "pinned_entrypoints": 6,
@@ -616,7 +616,7 @@
     "guard_client_resource": true,
     "state": "classification_unverified"
   },
-  "recorded_at": "2026-10-26T23:14:35.4795414+00:00",
+  "recorded_at": "2026-10-27T00:17:23.9981437+00:00",
   "total_skill_named_body_read_definition": "This field preserves the historical complete-source subset only. Current raw/workflow primary coverage is projected from the canonical source components and sixmile evaluation index in all_fulltext_primary_paths_including_partial_sources/all_workflow_primary_paths_including_partial_sources, not copied here.",
   "openai_entrypoint_evaluation": {
     "rights_accepted": false,
@@ -1703,7 +1703,7 @@
     "current_individual_rights_entries": 5,
     "main_accepted_excluded_before_this_delta": 8,
     "branch_excluded": 15,
-    "branch_pending": 73069,
+    "branch_pending": 73058,
     "primary_and_support_read_states_unchanged": true,
     "existing_primary_amendment_separate": true,
     "source_scripts_executed": false,
@@ -2639,7 +2639,7 @@
   "openai11_preparation": {
     "input": "skills-3080-openai11-input214717.json",
     "input_sha256": "716cae7b3cdfe709eed438ebc6adfa45d67cd5c4db0206ee472274224926f118",
-    "proposed_uninstalled": 11,
+    "proposed_uninstalled": 0,
     "virtual_files": 66,
     "virtual_bytes": 223979,
     "current_parent_source_read": 12,
@@ -2652,14 +2652,19 @@
     "unread_support_metadata_occurrences": 438,
     "support_rights_accepted": false,
     "not_part_of_live_design_index": true,
-    "full_content_review_pending": true,
+    "full_content_review_pending": false,
     "fresh_requested_metadata_found": 0,
     "physical_absence_unproven": true,
     "normal_read_plan_batches": 4,
     "held_hatch_duplicate_comparison_guard_unverified": true,
     "new_adoptions": 0,
     "central_operations": 0,
-    "whole16_complete": false
+    "whole16_complete": false,
+    "status": "Fixed input accepted by fullLuna/max review4066 and mergedPR583; actual placement is separately evidenced",
+    "proposed_at_input_recording": 11,
+    "accepted_full_review_task": 4066,
+    "accepted_input_PR": 583,
+    "accepted_input_merge": "94d83d7a2c20de738c2c76588c2e08395a667186"
   },
   "received_other8_264271": {
     "evaluation": "skills-3080-other8-264271-evaluation214717.json",
@@ -2699,5 +2704,28 @@
     "central_operations": 0,
     "main_acceptance_pending": true
   },
-  "current_exclusion_record_definition": "15 current exclusion records retain review_pending=true and license_accepted=0; recorded disposition count is not completed exclusion or rights review"
+  "current_exclusion_record_definition": "15 current exclusion records all retain review_pending=true; zero entries claim accepted licensing. Missing per-record licence-acceptance fields remain absent/unknown; this count does not certify completed exclusion/rights review.",
+  "openai11_installation": {
+    "evidence": "skills-3080-openai11-installation-evidence214717.json",
+    "actual_created": 11,
+    "current_readback_files": 66,
+    "bytes": 223979,
+    "creator": "20261026-214717-todo-3080",
+    "consumer": "20261026-214717-todo-3080",
+    "bounded_read_batches": 4,
+    "instruction_buffers": 22,
+    "instruction_bytes": 36895,
+    "fresh_discovered": 11,
+    "parse_errors": 0,
+    "discovery_metadata_total": 456,
+    "real_currentturn_explicit_decisions": 24,
+    "new_source_read_credit": 0,
+    "actual_browser_render_or_UI_implemented": false,
+    "implicit_selection_proven": false,
+    "public_result_review_pending": true,
+    "whole16_complete": false,
+    "historical44_read_evaluation_not_overwritten": true,
+    "historical_evaluation_installed_at_recording": 0,
+    "current11_adoptions_and_notices_evidenced_separately": true
+  }
 }

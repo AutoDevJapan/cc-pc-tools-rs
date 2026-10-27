@@ -20,6 +20,17 @@ const skillsGuardModule = "github.com/AutoDevJapan/cc-pc-tools-rs/repair-guard"
 // Independent previously accepted distribution facts (3258 and3686), not a caller
 // supplied baseline or an assertion made by the artifact being installed.
 var skillsGuardBaselines = map[string]string{
+	// PR579 accepted the original OpenAI6 issuance/readback under this exact
+	// runtime before this repair was proposed. Preserve the software pair;
+	// all native, source, writer and current-object checks remain independent.
+	// Evidence: docs/skills-3080-openai6-create-evidence214717.json and
+	// docs/skills-3080-guard-current4348-observation214717.json.
+	"434832534d43cbe954aa1c2e573879556bb840818e830a489b744e6e2744740f": "521c4c4dddd7abbb0135d13bffb380ec984374b8",
+	// The original craft/codex3 users published this native runtime identity
+	// before the later official-CI update. Official CI already preserves the
+	// same pair; a different Skills consumer must not lose its original issuer.
+	// Evidence: docs/evidence/official-ci3387-known-guard-baseline-f30f9e76.json.
+	"02c8cad70e44f2bc4cd4e5a70dfdaf581a7ee6896eb63449fe1606eb28f5b5be": "f30f9e763e25884fa48d1cce0cac22da1cebfb69",
 	// PR540's accepted merged-source build, formal Luna reviews and the
 	// original parent's native prepare/20-buffer issuance, preserved as issued.
 	// Evidence: docs/evidence/skills-3080-guard-installed-a067.json.

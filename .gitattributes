@@ -476,3 +476,25 @@ docs/skills-3080-sixmile-next6-175180-evaluation214717.json -text
 docs/skills-3080-sixmile-next6-175180-index-binding214717.json -text
 
 .gitattributes -text
+
+docs/skills-3080-installed-openai11-manifest214717.json -text
+
+docs/skills-3080-openai11-actual-bundle214717.json -text
+
+docs/skills-3080-openai11-actual-structure214717.json -text
+
+docs/skills-3080-openai11-application214717.json -text
+
+docs/skills-3080-openai11-consume-evidence214717.json -text
+
+docs/skills-3080-openai11-create-evidence214717.json -text
+
+docs/skills-3080-openai11-designs214717.json -text
+
+docs/skills-3080-openai11-discovery214717.json -text
+
+docs/skills-3080-openai11-installation-evidence214717.json -text
+
+docs/skills-3080-openai11-result-acceptance214717.md -text
+
+docs/skills-3080-operations/openai11-result-review-snapshot214717.json -text

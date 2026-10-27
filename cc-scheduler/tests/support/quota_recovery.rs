@@ -265,6 +265,68 @@ fn gpt_research_fixture() -> (Fixture, subwork_support::Fixture) {
     (f, sub)
 }
 
+fn dependency_continuation_fixture() -> (Fixture, subwork_support::Fixture) {
+    let (mut f,mut sub)=gpt_research_fixture();
+    let row=&mut sub.db["items"][1];
+    row["resume_generation"]=json!(3);row["dependency_generation"]=json!(1);
+    f.e.backend.records[1]["todo_resume_generation"]=json!(2);
+    let request=cc_job_policy::subwork_continuation::request(row,&f.e.backend.records[1],&f.e.backend.records[0]).unwrap();
+    row["subwork_continuation"]=request;
+    write_json(&f.e.todo_path,&sub.db,1).unwrap();(f,sub)
+}
+#[test]
+fn dependency_continuation_prepares_current_research_without_reviving_stale_quota() {
+    let (mut f,sub)=dependency_continuation_fixture();let original=f.e.backend.records[1].clone();
+    assert!(!cc_job_policy::quota_recovery::eligible_source(&sub.db["items"][1],&original));
+    let prepared=f.e.prepare(&sub.db["items"][1],sub.repo.to_str().unwrap()).unwrap().unwrap();
+    let selected=&prepared["scheduler"]["selection"];
+    assert_eq!(selected["model"],"gpt-6.1-sol");assert_eq!(selected["effort"],"max");assert_eq!(selected["model_origin"],"policy");
+    assert!(selected["quota_recovery"].is_null());assert!(selected["subwork_continuation"].is_object());
+    assert!(prepared["scheduler"]["resume_session"].is_null());assert_eq!(f.e.backend.records[1],original);
+}
+#[test]
+fn dependency_continuation_rechecks_request_drain_and_current_oauth() {
+    for case in ["flag","generation","dependency","owner","source","scope","spec","stop","pending","live","unknown","exhausted","stale"] {
+        let (mut f,mut sub)=dependency_continuation_fixture();
+        let row=&mut sub.db["items"][1];
+        match case {
+            "flag"=>row["subwork_continuation"]=json!(true),
+            "generation"=>row["resume_generation"]=json!(4),
+            "dependency"=>row["dependency_generation"]=json!(2),
+            "owner"=>f.e.backend.records[0]["work_owner"]["repository"]=json!("different"),
+            "source"=>f.e.backend.records[1]["todo_id"]=json!(99),
+            "scope"=>row["network"]=json!(true),
+            "spec"=>std::fs::write(s(&row["spec"]),"Changed").unwrap(),
+            "stop"=>row["owner_stopped"]=json!(true),
+            "pending"=>row["wait_on"]=json!([99]),
+            "live"=>f.e.backend.records[1]["status"]=json!("running"),
+            "unknown"=>f.e.backend.quota_inventory["openai"]["verified"]=json!(false),
+            "exhausted"=>f.e.backend.quota_inventory["openai"]["available"]=json!(false),
+            "stale"=>f.e.backend.quota_inventory["openai"]["at"]=json!(T-61.),_=>unreachable!(),
+        }
+        write_json(&f.e.todo_path,&sub.db,1).unwrap();
+        let out=f.e.prepare(&sub.db["items"][1],sub.repo.to_str().unwrap());
+        assert!(out.is_err() || out.unwrap().is_none(),"{case}");assert!(f.e.backend.launched.is_empty());
+    }
+}
+
+#[test]
+fn dependency_continuation_is_consumed_once_and_later_work_uses_its_own_result() {
+    let (mut f,mut sub)=dependency_continuation_fixture();
+    let first=f.e.prepare(&sub.db["items"][1],sub.repo.to_str().unwrap()).unwrap().unwrap();
+    let proof=first["scheduler"]["selection"]["subwork_continuation"].clone();
+    let mut next=f.e.backend.records[1].clone();next["id"]=json!("new-current");next["status"]=json!("succeeded");
+    next["launch_key"]=first["scheduler"]["key"].clone();next["subwork_continuation"]=proof;
+    next["todo_resume_generation"]=json!(4);next["todo_dependency_generation"]=json!(1);
+    let row=&mut sub.db["items"][1];row["resume_generation"]=json!(4);row["worker_receipt"]=json!({"job":"new-current","generation":4});
+    row["jobs"].as_array_mut().unwrap().push(next["id"].clone());row["scheduler"]["last_job"]=next["id"].clone();
+    row["scheduler"]["key"]=Value::Null;f.e.backend.records.push(next);
+    write_json(&f.e.todo_path,&sub.db,1).unwrap();
+    let later=f.e.prepare(&sub.db["items"][1],sub.repo.to_str().unwrap()).unwrap().unwrap();
+    assert!(later["scheduler"]["selection"]["subwork_continuation"].is_null());
+    assert!(later["scheduler"]["selection"]["quota_recovery"].is_null());
+}
+
 #[test]
 fn gpt_quota_research_uses_another_verified_oauth_route_with_the_original_budget() {
     let (mut f, sub) = gpt_research_fixture();

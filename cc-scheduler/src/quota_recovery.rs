@@ -15,6 +15,12 @@ pub(crate) fn prepare(
         .as_object_mut()
         .unwrap()
         .remove("model_recovery_from");
+    if crate::subwork_continuation::requested(backend,item,source,jobs)? {
+        let source=source.ok_or(Error("InputRejected"))?;
+        for field in ["sandbox","mcp_profile","network","add_dirs"] {selection[field]=source[field].clone();}
+        selection["task_type"]=item["subwork"]["kind"].clone();
+        return Ok(false);
+    }
     let Some(source) = source.filter(|s| cc_job_policy::quota_recovery::quota_source(s)) else {
         return Ok(false);
     };

@@ -210,6 +210,7 @@ fn legacy_claude_reentry_checks_its_current_health_after_the_old_provider_recove
 fn research_admission(gpt: bool, case: &str) {
     use cc_job_policy::subwork;
     let (t, mut row, mut source) = setup();
+    let continuation=case.starts_with("continuation_");
     let mut f = subwork_support::Fixture::new();
     f.register();
     f.db["items"][0]["status"] = json!("wait");
@@ -249,6 +250,18 @@ fn research_admission(gpt: bool, case: &str) {
     target["model"] = row["model"].clone();
     target["task_type"] = json!("research");
     if gpt { target["capacity_account_selector"] = json!("p000002"); }
+    if continuation {
+        row["resume_generation"]=json!(3);row["dependency_generation"]=json!(1);
+        source["todo_resume_generation"]=json!(2);t.put(source.clone());
+        target["effort_origin"]=json!("policy");
+        target.as_object_mut().unwrap().remove("quota_recovery");
+        target.as_object_mut().unwrap().remove("capacity_account_selector");
+        let actor=&f.jobs[0];
+        let request=cc_job_policy::subwork_continuation::request(&row,&source,actor).unwrap();
+        target["subwork_continuation"]=cc_job_policy::subwork_continuation::receipt(&request,&row,&source,actor,&target,
+            &t.rt.quota_recovery_inventory.lock().unwrap(),t.rt.epoch()).unwrap();
+        row["subwork_continuation"]=request;
+    } else {
     target["quota_recovery"] = cc_job_policy::quota_recovery::receipt(
         &row,
         &source,
@@ -257,6 +270,7 @@ fn research_admission(gpt: bool, case: &str) {
         t.rt.epoch(),
     )
     .unwrap();
+    }
     row["scheduler"]["selection"] = target;
     row["scheduler"]["subwork_admission"] = subwork::admission(&row);
     f.db["items"][1] = row.clone();
@@ -291,6 +305,7 @@ fn research_admission(gpt: bool, case: &str) {
             "minimal",
         ];
     if !gpt { args.extend(["--model-recovery-from", "grok-4.7"]); }
+    if continuation {args.extend(["--effort-origin","policy"]);}
     t.run(&args, prompt.as_bytes()).unwrap();
     let j = child(&t);
     assert_eq!(j["subwork"], source["subwork"]);
@@ -312,7 +327,20 @@ fn research_admission(gpt: bool, case: &str) {
     )
     .unwrap();
     fs::write(&paths.store, db.to_string()).unwrap();
-    if gpt {
+    if continuation {
+        assert_eq!(j["capacity_same_model_retry_count"],source["capacity_same_model_retry_count"]);
+        assert_eq!(j["capacity_wait_count"],source["capacity_wait_count"]);
+        assert_eq!(j["capacity_history"],source["capacity_history"]);
+        assert!(j["quota_recovery"].is_null());assert!(j["subwork_continuation"].is_object());
+        match case {
+            "continuation_health"=>t.rt.quota_recovery_inventory.lock().unwrap()["openai"]["verified"]=json!(false),
+            "continuation_source"=>{let mut changed=source.clone();changed["finite_subwork"]["spec_sha256"]=json!("wrong");t.put(changed);},
+            "continuation_generation"=>{db["items"][1]["resume_generation"]=json!(5);fs::write(&paths.store,db.to_string()).unwrap();},
+            "continuation_stop"=>{db["items"][1]["owner_stopped"]=json!(true);fs::write(&paths.store,db.to_string()).unwrap();},
+            "continuation_scope"=>{let mut changed=j.clone();changed["network"]=json!(true);t.put(changed);},
+            _=>(),
+        }
+    } else if gpt {
         assert_eq!(j["capacity_same_model_retry_count"], 2);
         assert_eq!(j["capacity_wait_count"], 1);
         assert_eq!(j["capacity_history"].as_array().unwrap().len(), 2);
@@ -343,7 +371,7 @@ fn research_admission(gpt: bool, case: &str) {
         for route in health["openai"]["safe_routes"].as_array_mut().unwrap(){route["at"]=json!(now);}
     }
     let slot = t.ctx.admit(s(&j, "id"));
-    if !["normal","capacity_same","capacity_switch","capacity_anthropic","capacity_metadata","capacity_wait"].contains(&case) {
+    if !["normal","continuation_normal","capacity_same","capacity_switch","capacity_anthropic","capacity_metadata","capacity_wait"].contains(&case) {
         assert!(slot.is_err() || slot.unwrap().is_none(), "{case}");
         assert_ne!(t.ctx.load(s(&j, "id")).unwrap()["status"], "running");
         return;
@@ -405,6 +433,13 @@ fn research_admission(gpt: bool, case: &str) {
         if case=="capacity_anthropic" {assert_eq!(current["model"],"anthropic/claude-opus-5-5");assert_eq!(current["capacity_retry_count"],2);}
         if case=="capacity_metadata" {assert!(current["quota_recovery_recheck_count"].is_null());assert_eq!(current["quota_recovery_recheck_total"],3);}
         assert_eq!(t.ctx.load("quota-reader").unwrap(),source);
+    }
+}
+
+#[test]
+fn dependency_continuation_registers_links_and_rechecks_before_real_queue_admission() {
+    for case in ["continuation_normal","continuation_health","continuation_source","continuation_generation","continuation_stop","continuation_scope"] {
+        research_admission(true,case);
     }
 }
 

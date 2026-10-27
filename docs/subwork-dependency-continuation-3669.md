@@ -21,3 +21,29 @@ reviewの通常のモデル選択と作者除外は維持し、researchの指定
   Windowsの正規更新・読戻し、3719のnativeモデル/effortと親の正規受領を別々に確認する。
 
 PR454の完了と今回の追加受入は別である。今回の実受入はまだ未実施。
+
+## 受付と実行
+
+`todo continue-subwork` は、呼出元の `CC_JOB_ID` と指定した親jobが同じで、
+実processと現在の親所有が照合できた場合だけ、現在の依頼の指紋を保存する。
+元の親edgeは登録時のまま残す。sourceのresume/依存世代がともに現在より古く、
+同じspecの実行を有限契約で証明できる場合に限る。現在の停止や未完依存は解除しない。
+
+親3080が実行する入力例（各値が現在も一致することが前提）:
+
+```powershell
+todo.exe continue-subwork 3719 --source-job 20261026-180903-todo-3719 --parent-job-id $env:CC_JOB_ID --resume-generation 3 --dependency-generation 1 --spec-sha256 4f6fe32f62db56bed2acb4d378147ff952ad06230243fb45f7674f3158313fc3
+```
+
+別担当の環境変数を親のjobへ書き換えて実行しない。受付は起動しないため、
+その後の通常schedulerが優先順・待機期限・資源・所有を再検査する。
+準備時は通常のreview既定またはresearch指定を選び、現在のOAuth利用可を確認し、
+新しいlaunch keyとscopeへ結ぶ。jobsは登録時と最終受付時に元sourceと現在の世代・
+spec・停止・依存・scope・健康情報を再照合する。再試行回数と履歴も引き継ぐ。
+新workerへ移せるのは次の1世代だけで、後の継続はそのworker自身の結果を使う。
+保持した元の依頼を、何度でも使えるquota例外にはしない。
+
+健康情報を再取得する間は共有キューのロックを取らない。検査不能は既存の有限な
+metadata再検査へ戻し、期限が来ただけでは復旧と判定しない。
+登録specの原文と新workerの原返信を既存のreader/ACK手順で親が受け取るまでは、
+3719の継続作業を完了と報告しない。旧8486Bの不一致記録は証拠に流用しない。

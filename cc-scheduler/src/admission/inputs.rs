@@ -13,6 +13,7 @@ pub(crate) const LAUNCH: &[(&str, &str, Kind)] = &[
     ("spec", "spec", Scalar),
     ("needs", "needs", Scalar),
     ("subwork", "subwork", Tree),
+    ("subwork_continuation", "subwork_continuation", Tree),
     ("title", "title", Truth),
     ("project", "project", Scalar),
     ("dispatchable", "dispatchable", Scalar),

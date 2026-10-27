@@ -311,14 +311,19 @@ func ownerOrganizationQuery(ctx context.Context, path string, access ownerSource
 	access.legacy = ownerLegacyProtection
 	access.conversation = conversationPathAllowed
 	access.operational = func(p string) bool {
-		return (discordAskRuntime(p, legacyMatch) && sourceVerified(base)) || ombCaptureAllowed(p)
+		return discordAskRuntime(p, legacyMatch) || ombCaptureAllowed(p)
 	}
 	return ownerOrganizationQueryWith(ctx, path, access, ownerDefaultRuleConfig(), func(ctx context.Context, project func(io.Reader) (object, bool)) (*ownerProjectSnapshot, bool) {
 		return ownerReadProjectSnapshotUsing(ctx, productStore, legacyMatch, project)
 	})
 }
 
-func ownerOrganizationQueryWith(ctx context.Context, path string, access ownerSourceAccess, config ownerRuleConfig, read func(context.Context, func(io.Reader) (object, bool)) (*ownerProjectSnapshot, bool)) ownerPathVerdict {
+func ownerOrganizationQueryWith(ctx context.Context, path string, access ownerSourceAccess, config ownerRuleConfig, read func(context.Context, func(io.Reader) (object, bool)) (*ownerProjectSnapshot, bool)) (result ownerPathVerdict) {
+	defer func() {
+		if !result.AccessAllowed && ownerRuleRecordedPath(path, config) {
+			result.ReceiptRestricted = true
+		}
+	}()
 	if ownerRuleDevelopment(path, config.dev) == "client" {
 		return ownerRuleProtected("owner_rule_other_development_top")
 	}
@@ -395,6 +400,11 @@ func ownerOrganizationPath(path string) ownerPathVerdict {
 	if refresh != "" && ctx.Err() == nil {
 		ownerRequestIdentityRefresh(path, refresh)
 	}
+	// Exact legacy conversation proofs remain independent of generic producer
+	// inference. Unknown mixed producers cannot use the general repair fallback.
+	if result.ReceiptRestricted && result.Status == "unverified" && conversationPathAllowed(path) {
+		return ownerRuleClear("verified_conversation_record")
+	}
 	return ownerRuleReceiptFallback(result, path, repairPathAllowed)
 }
 
@@ -411,6 +421,9 @@ func ownerRuleReceiptFallback(result ownerPathVerdict, path string, receipt func
 }
 
 func ownerRuleIndependentReceiptEligible(v ownerPathVerdict) bool {
+	if v.ReceiptRestricted {
+		return false
+	}
 	if v.Status == "protected" {
 		return v.Basis == "owner_rule_unattributed_location" && len(v.Categories) == 1 && v.Categories[0] == "client_project"
 	}

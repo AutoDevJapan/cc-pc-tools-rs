@@ -21,10 +21,11 @@ import (
 )
 
 type ownerPathVerdict struct {
-	AccessAllowed bool
-	Status        string
-	Categories    []string
-	Basis         string
+	AccessAllowed     bool
+	Status            string
+	Categories        []string
+	Basis             string
+	ReceiptRestricted bool // mixed-record failures cannot use generic receipt fallback
 }
 
 func ownerUnverified() ownerPathVerdict {

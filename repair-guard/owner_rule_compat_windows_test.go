@@ -84,7 +84,7 @@ func TestOwnerRule4088QualifiedConversationAndMixedCopiesThroughPolicy(t *testin
 			t.Fatal("verified individual conversation receipt lost qualification")
 		}
 	}
-	for _, path := range []string{filepath.Join(f.a.home, "conversation-bridge", "request", "body.txt"), filepath.Join(f.a.home, "unattended-state.json"), filepath.Join(f.a.home, "unattended-state.json.bak-fixture"), filepath.Join(f.a.home, "state.json.42.tmp"), f.a.home + ".bak-fixture"} {
+	for _, path := range []string{filepath.Join(f.a.home, "conversation-bridge", "request", "body.txt"), filepath.Join(f.a.home, "unattended-state.json"), filepath.Join(f.a.home, "unattended-state.json.bak-fixture"), filepath.Join(f.a.home, "state.json.42.tmp"), f.a.home + ".bak-fixture", filepath.Join(f.a.home+".bak-fixture", "nested", "body.txt")} {
 		v := ownerCompatPolicy(path, config, access, object{}, nil)
 		if v.Status != "protected" || v.Basis != "mixed_client_record_store" {
 			t.Fatal("mixed conversation body or copy inherited infrastructure access")
@@ -93,6 +93,21 @@ func TestOwnerRule4088QualifiedConversationAndMixedCopiesThroughPolicy(t *testin
 	access.conversation = func(string) bool { return false }
 	if ownerCompatPolicy(f.replyPath, config, access, object{}, nil).AccessAllowed {
 		t.Fatal("unqualified reply admitted")
+	}
+	tool := filepath.Join(f.a.home, "discord_ask.exe")
+	if os.WriteFile(tool, []byte("synthetic tool"), 0600) != nil {
+		t.Fatal("fixture software")
+	}
+	access.operational = func(p string) bool { return discordAskRuntimeIn(p, f.a.home, func(string) bool { return false }) }
+	if !ownerCompatPolicy(tool, config, access, object{}, nil).AccessAllowed {
+		t.Fatal("known installed runtime lost metadata qualification")
+	}
+	if ownerCompatPolicy(tool, config, access, object{"contracted-fixture": f.a.home}, nil).AccessAllowed {
+		t.Fatal("positive client registration lost to runtime receipt")
+	}
+	config.jobStore = filepath.Join(f.a.home, "jobs")
+	if v := ownerCompatPolicy(filepath.Join(config.jobStore+".bak-fixture", "nested", "result.md"), config, access, object{}, nil); v.Status != "protected" {
+		t.Fatal("mixed job-store backup inherited infrastructure access")
 	}
 	config.mixedStores = []string{filepath.Join(config.infrastructure[0], "todo.json")}
 	for _, path := range []string{config.mixedStores[0] + ".bak-fixture", config.mixedStores[0] + ".42.tmp"} {
@@ -223,6 +238,10 @@ func TestOwnerRule4088ProductionInputSinglePassAndNoFallback(t *testing.T) {
 	cancel()
 	if v := ownerOrganizationQueryWith(ctx, path, access, config, read); v.AccessAllowed || v.Basis != "classification_deadline" {
 		t.Fatal("expired production query admitted input")
+	}
+	v = ownerOrganizationQueryWith(ctx, path, access, config, read)
+	if !v.ReceiptRestricted || ownerRuleIndependentReceiptEligible(v) {
+		t.Fatal("record deadline acquired generic receipt fallback")
 	}
 }
 

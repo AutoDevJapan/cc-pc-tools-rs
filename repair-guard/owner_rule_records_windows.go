@@ -255,6 +255,11 @@ func ownerReadMetadataFile(ctx context.Context, path string, read func(io.Reader
 }
 
 func ownerRuleStoredContent(ctx context.Context, path string, projects object, access ownerSourceAccess, config ownerRuleConfig) (ownerPathVerdict, bool) {
+	for _, root := range []string{config.jobStore, config.specStore, config.promptStore} {
+		if root != "" && !within(root, path) && ownerRuleMixedStorePath(root, path) {
+			return ownerRuleProtected("mixed_client_record_store"), true
+		}
+	}
 	for _, root := range config.mixedStores {
 		if ownerRuleMixedStorePath(root, path) {
 			if access.conversation != nil && access.conversation(path) {
@@ -332,7 +337,24 @@ func ownerRuleMixedStorePath(root, path string) bool {
 	if root == "" {
 		return false
 	}
-	return within(root, path) || same(filepath.Dir(root), filepath.Dir(path)) && strings.HasPrefix(strings.ToLower(filepath.Base(path)), strings.ToLower(filepath.Base(root))+".")
+	if within(root, path) {
+		return true
+	}
+	parent := filepath.Dir(root)
+	if !within(parent, path) {
+		return false
+	}
+	rel, err := filepath.Rel(parent, path)
+	return err == nil && strings.HasPrefix(strings.ToLower(strings.Split(rel, string(os.PathSeparator))[0]), strings.ToLower(filepath.Base(root))+".")
+}
+
+func ownerRuleRecordedPath(path string, config ownerRuleConfig) bool {
+	for _, root := range append(append([]string{}, config.mixedStores...), config.jobStore, config.specStore, config.promptStore) {
+		if ownerRuleMixedStorePath(root, path) {
+			return true
+		}
+	}
+	return false
 }
 
 func (m ownerRecordMetadata) matchesID(id string) bool {

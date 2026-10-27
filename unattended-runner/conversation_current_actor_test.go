@@ -199,6 +199,28 @@ func TestCurrentConversationActorNormalResumeKeepsOriginalQuestion(t *testing.T)
 	}
 }
 
+func TestCurrentConversationRepairResumeKeepsAcceptedInputAnchor(t *testing.T) {
+	f := currentActorTest(t, false)
+	first := f.ask(t)
+	f.mutate(t, 4084, func(row map[string]any) {
+		row["jobs"] = []string{currentConversationSourceJob, "resumed-repair-4084"}
+		row["scheduler"].(map[string]any)["job"] = "resumed-repair-4084"
+	})
+	var old map[string]any
+	path := filepath.Join(f.r.JobsPath, currentConversationSourceJob, "job.json")
+	if readJSON(path, 1<<20, &old) != nil {
+		t.Fatal("accepted repair job")
+	}
+	old["status"] = "succeeded"
+	if publish(path, old) != nil {
+		t.Fatal("finished repair job")
+	}
+	q := f.ask(t)
+	if !sameConversationActor(first.Actor, q.Actor) || f.posts != 1 {
+		t.Fatal("ordinary repair resume rewrote the source anchor")
+	}
+}
+
 func TestCurrentConversationActorNativeFullReplyReachesTrackerAndWorker(t *testing.T) {
 	f := currentActorTest(t, true)
 	q := f.ask(t)

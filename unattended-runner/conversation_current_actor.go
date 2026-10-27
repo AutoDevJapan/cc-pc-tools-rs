@@ -107,7 +107,7 @@ func (r *Runner) checkCurrentConversationActor(ctx context.Context, origin, acto
 		}
 	} else {
 		source, err := r.conversationTask(ctx, 4084)
-		if err != nil || source.Project != "cc-pc-tools-rs" || conversationActorHeld(source.conversationState) || source.Scheduler.Job != currentConversationSourceJob {
+		if err != nil || source.Project != "cc-pc-tools-rs" || conversationActorHeld(source.conversationState) {
 			return nil, currentActorRejection("request_scope")
 		}
 		sourceJob, err := r.repairJob(ctx, source, currentConversationSourceJob)

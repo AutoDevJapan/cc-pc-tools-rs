@@ -1,0 +1,125 @@
+{
+  "definition": "Once-only successful canonicalCreate3/18files, qualified same-ID/hash/buffer readback36454B in1normalbatch; no historical continuity, full raw original reading or third-party service/data rights implied",
+  "targets": [
+    {
+      "name": "aerobase-flight-awards",
+      "new": true,
+      "before_sha256": "absent",
+      "positive": "同じ日付帯/クラス/人数の特典を、必要40000マイル・現金500USD・別払い100USD・取得時点で比較し、cacheの残席と確保可否を分け、単純1.25cppを総費用比較と区別する。",
+      "negative": "古い残席や単純CPPだけで現在確保済み/最得とし、未設定の通知を稼働済み、recoveryDays0を医学的安全として報告する。",
+      "sources": [
+        "https://github.com/6mile/skills/blob/920714f17d81e0a95c7a9bc51faf0a7921cd982d/skills/kurosh87/aerobase-flight-awards/SKILL.md",
+        "https://github.com/6mile/skills/blob/920714f17d81e0a95c7a9bc51faf0a7921cd982d/skills/kurosh87/aerobase-flight-awards/LICENSE.txt"
+      ],
+      "files": [
+        {
+          "path": "SKILL.md",
+          "sha256": "5cacbe17530920440d47e48841a8abda69f3d1374345d0971eb62a8b759946ea"
+        },
+        {
+          "path": "references/guide.md",
+          "sha256": "0c602d574f06c44792622946ad0c92f15de127ef670bbf16e8515c2ddc4befde"
+        },
+        {
+          "path": "references/original-skill.masked.txt",
+          "sha256": "fdf6c9afc19068e5970a2ec85630886c08600a984ff5536e43af7fcdaeb2b3cf"
+        },
+        {
+          "path": "references/LICENSE.txt",
+          "sha256": "619bd2ca1801541f1923b1f5d343e59067030fb865eae56a207fdf32fc0f8e81"
+        },
+        {
+          "path": "references/source.json",
+          "sha256": "218cdf62258e8219a92eac090dd7bd0422668aee6df471e6068e48c771529b71"
+        },
+        {
+          "path": "references/sources.md",
+          "sha256": "a223a9a3eda11c3805c5cf51f0ce0865448dc19226aa9baddf9eecb979931cf6"
+        }
+      ],
+      "target_state": "actual_once_created_and_current_ID_hash_buffer_verified"
+    },
+    {
+      "name": "aerobase-flight-deals",
+      "new": true,
+      "before_sha256": "absent",
+      "positive": "同じ税込総額・荷物・往復/日付条件で6万円から5.5万円へ変化した観測を示し、設定/実tick/配送を分ける。",
+      "negative": "片道と往復、古いcacheと現在額を混ぜ、alert受付だけで毎日監視・通知済みとし、429を追加購入の許可にする。",
+      "sources": [
+        "https://github.com/6mile/skills/blob/920714f17d81e0a95c7a9bc51faf0a7921cd982d/skills/kurosh87/aerobase-flight-deals/SKILL.md",
+        "https://github.com/6mile/skills/blob/920714f17d81e0a95c7a9bc51faf0a7921cd982d/skills/kurosh87/aerobase-flight-deals/LICENSE.txt"
+      ],
+      "files": [
+        {
+          "path": "SKILL.md",
+          "sha256": "b25746d0852f39f34362ef77c904a16177c2ca81253b76a9f6891c4c42e93748"
+        },
+        {
+          "path": "references/guide.md",
+          "sha256": "dea66595039bcdbae977b8750e91e875c291eb549918a5dc782d8b72b35f9350"
+        },
+        {
+          "path": "references/original-skill.masked.txt",
+          "sha256": "0fd322b5dc019523e98e2bfc79645d3591fcc3f0fd5109c2db6638a6a1e2f031"
+        },
+        {
+          "path": "references/LICENSE.txt",
+          "sha256": "619bd2ca1801541f1923b1f5d343e59067030fb865eae56a207fdf32fc0f8e81"
+        },
+        {
+          "path": "references/source.json",
+          "sha256": "3888ea39757bcdda25c84bf9c8e1294a600bc1c4bd4d232831074deb300d4192"
+        },
+        {
+          "path": "references/sources.md",
+          "sha256": "37b1e80e4b86109488230088c6cb938ae22ffab851b054c3003e656afdb0aa37"
+        }
+      ],
+      "target_state": "actual_once_created_and_current_ID_hash_buffer_verified"
+    },
+    {
+      "name": "aerobase-travel-activities",
+      "new": true,
+      "before_sha256": "absent",
+      "positive": "活動45分に移動往復90分、集合/帰着手続、遅延余裕を加え、出発時刻帯と搭乗締切へ結んで候補や休憩案を比べる。",
+      "negative": "nearAirport/maxDuration属性だけで乗継可能や医学的に安全と断言し、未確認の営業・空席・予約を確定扱いする。",
+      "sources": [
+        "https://github.com/6mile/skills/blob/920714f17d81e0a95c7a9bc51faf0a7921cd982d/skills/kurosh87/aerobase-travel-activities/SKILL.md",
+        "https://github.com/6mile/skills/blob/920714f17d81e0a95c7a9bc51faf0a7921cd982d/skills/kurosh87/aerobase-travel-activities/LICENSE.txt"
+      ],
+      "files": [
+        {
+          "path": "SKILL.md",
+          "sha256": "ea4a5e0ec173392123664b4da1dfa6d2212ccbc805254b23fbe818e2ef6a61c0"
+        },
+        {
+          "path": "references/guide.md",
+          "sha256": "a1db41f526c7cde3c4c4faba13ba213ca3bf52405c3d03486518373f25119269"
+        },
+        {
+          "path": "references/original-skill.masked.txt",
+          "sha256": "571cd5b67d5a130ed0fab9326eaada562d840805cd899e7cce197a875375bd56"
+        },
+        {
+          "path": "references/LICENSE.txt",
+          "sha256": "619bd2ca1801541f1923b1f5d343e59067030fb865eae56a207fdf32fc0f8e81"
+        },
+        {
+          "path": "references/source.json",
+          "sha256": "cd50a501622a7ee984c8c536bf14f46c3d3bc8d06318df5b96794caab070a6ab"
+        },
+        {
+          "path": "references/sources.md",
+          "sha256": "0b07e3a7d6ceadb28135dc8111b488358bd6d64672a833c50a3c378fb3473c66"
+        }
+      ],
+      "target_state": "actual_once_created_and_current_ID_hash_buffer_verified"
+    }
+  ],
+  "central_operations": 0,
+  "new_adoptions": 0,
+  "new_adoptions_definition": "Serialization/checking adds0 new placements. Three actual once-only successful placements are recorded separately in the adoption ledger; original source archives remain outside Skills and original visible display stays masked.",
+  "root": "D:/CC/Skills",
+  "creator_job": "20261026-214717-todo-3080",
+  "current_consumer_job": "20261026-214717-todo-3080"
+}

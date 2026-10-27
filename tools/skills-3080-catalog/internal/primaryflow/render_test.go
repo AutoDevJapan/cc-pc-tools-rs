@@ -118,3 +118,18 @@ func TestOpaqueValueLexingIncludesPunctuationSeparators(t *testing.T) {
 		t.Fatal("punctuation split an opaque value into falsely visible fragments")
 	}
 }
+
+func TestOpaqueValueExact23And24CharacterBoundary(t *testing.T) {
+	short := "abcdefghijk.lmnopqrstuv"
+	long := short + "x"
+	if len(short) != 23 || len(long) != 24 {
+		t.Fatal("boundary fixture lengths differ")
+	}
+	v, e := CheckAndMask([]byte(short+"\n"+long+"\n"), maskedGroup([]byte(short+"\n"+long+"\n")))
+	if e != nil {
+		t.Fatal(e)
+	}
+	if len(v.Withheld) != 1 || v.Withheld[0] != 2 || v.Visible != short+"\n[WITHHELD physical line 2]\n" {
+		t.Fatal("opaque boundary hid the short value or exposed the 24-character value")
+	}
+}

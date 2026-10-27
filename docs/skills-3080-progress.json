@@ -286,9 +286,9 @@
   "site_entries_with_body": 9862,
   "site_entries_without_body": 428,
   "execution_held_shapes": 647,
-  "candidate_designs": 144,
-  "independently_accepted": 144,
-  "installed": 144,
+  "candidate_designs": 147,
+  "independently_accepted": 147,
+  "installed": 147,
   "integrated": 3,
   "excluded": 15,
   "units": {
@@ -346,23 +346,23 @@
     "actual_installed": 8
   },
   "candidate_count_definitions": {
-    "candidate_designs": "Legacy28 plus directly sourced actual designs116; pending legacy drafts and catalog rows are not installations;144 is not a cap",
+    "candidate_designs": "Legacy28 plus directly sourced actual designs119; pending legacy drafts and catalog rows are separate. Actual147 is not an adoption cap.",
     "additional_authored_drafts_not_in_plans": 3,
-    "authored_total": 147,
-    "installed": 144,
+    "authored_total": 150,
+    "installed": 147,
     "pending_plan_targets": 0,
     "archived_draft_targets": 8,
     "archived_draft_is_subset_of_batch03": true,
-    "independently_accepted": "The144 actual new designs include11 accepted by full4066 and actual result4033/M0/exact97b16CI/normalmerge584. New travel3 are separate uninstalled proposals; no full16/renderer/implicit-selection or full-context claim.",
-    "not_semantically_disposed_occurrences": 73058,
+    "independently_accepted": "147 actual new designs include frozen full4083 travel3 acceptance and actual3/18currentbuffers/3048/freshmetadata/explicittextapplication, with result-delta review pending. No whole16, service execution, implicit selection or full-context proof.",
+    "not_semantically_disposed_occurrences": 73055,
     "additional_draft_sources": [
       "skills-3080-mizchi-sql-draft.json",
       "skills-3080-mizchi-mutation-draft.json"
     ],
-    "authored_total_definition": "Existing actual-plan designs plus3 legacy pending drafts only; separately published new uninstalled proposals are counted below, not as installations",
-    "new_proposed_uninstalled_targets": 3,
+    "authored_total_definition": "147 actual new installed designs plus3 legacy pending drafts only. Catalog and primary-only body plans are not installations.",
+    "new_proposed_uninstalled_targets": 0,
     "authored_including_new_proposals": 150,
-    "authored_including_new_proposals_definition": "144 actual new installed designs +3legacy pending drafts +3new uninstalled travel proposals; no full universe cap or source-only hatch target counted"
+    "authored_including_new_proposals_definition": "147 actual new installed designs +3legacy pending drafts; travel3 moved from proposal to distinct actual placement/readback/discovery/text-application. No source-only holds or body aliases counted as new targets; no total adoption cap."
   },
   "kepano_entrypoint_assessment": {
     "pinned_entrypoints": 6,
@@ -616,7 +616,7 @@
     "guard_client_resource": true,
     "state": "classification_unverified"
   },
-  "recorded_at": "2026-10-27T04:02:52.1426943+00:00",
+  "recorded_at": "2026-10-27T05:40:45.5124473+00:00",
   "total_skill_named_body_read_definition": "This field preserves the historical complete-source subset only. Current raw/workflow primary coverage is projected from the canonical source components and sixmile evaluation index in all_fulltext_primary_paths_including_partial_sources/all_workflow_primary_paths_including_partial_sources, not copied here.",
   "openai_entrypoint_evaluation": {
     "rights_accepted": false,
@@ -1703,7 +1703,7 @@
     "current_individual_rights_entries": 5,
     "main_accepted_excluded_before_this_delta": 8,
     "branch_excluded": 15,
-    "branch_pending": 73058,
+    "branch_pending": 73055,
     "primary_and_support_read_states_unchanged": true,
     "existing_primary_amendment_separate": true,
     "source_scripts_executed": false,
@@ -2733,7 +2733,7 @@
   "travel3_preparation": {
     "input": "skills-3080-travel3-input214717.json",
     "operation": "skills-3080-operations/create-travel3-214717.json",
-    "uninstalled": 3,
+    "uninstalled": 0,
     "output_files": 18,
     "virtual_bytes": 36454,
     "structure": "PASS3",
@@ -2741,7 +2741,7 @@
     "target_found": 0,
     "parse_errors": 0,
     "full_content_review_pending": false,
-    "actual_central_operations": 0,
+    "actual_central_operations": 1,
     "full_content_review": {
       "todo": 4083,
       "job": "20261027-103930-todo-4083",
@@ -2752,7 +2752,11 @@
       "actual_Luna_max_verified": true,
       "manifest": "11070b772c86f7ffb459be2f75eaf6d0a436ce9dfdf0d9247eb81c6e433ede51",
       "frozen_after_actual_Create_only": true
-    }
+    },
+    "status": "Full4083 accepted/actualinput587merged; same original3/18manifest11070 now actuallycreated andcurrentreadbackverified; originalhistorical records stayunchanged",
+    "uninstalled_at_input_recording": 3,
+    "current_readback_files": 18,
+    "current_readback_bytes": 36454
   },
   "latest_received13_assessments": {
     "sixmile": [
@@ -2798,6 +2802,26 @@
     "total_separate_support_records": 43,
     "original_grouped_assessments_not_split": true,
     "old_missing_flags_not_filled": true,
+    "whole16_complete": false
+  },
+  "travel3_installation": {
+    "evidence": "skills-3080-travel3-installation-evidence214717.json",
+    "actual_created": 3,
+    "current_readback_files": 18,
+    "bytes": 36454,
+    "creator": "20261026-214717-todo-3080",
+    "consumer": "20261026-214717-todo-3080",
+    "bounded_read_batches": 1,
+    "instruction_buffers": 6,
+    "instruction_bytes": 11285,
+    "fresh_discovered": 3,
+    "parse_errors": 0,
+    "discovery_metadata_total": 461,
+    "explicit_real_currentturn_decisions": 8,
+    "new_global_source_read_credit": 0,
+    "actual_browser_service_or_booking_operations": 0,
+    "implicit_selection_proven": false,
+    "public_result_review_pending": true,
     "whole16_complete": false
   }
 }

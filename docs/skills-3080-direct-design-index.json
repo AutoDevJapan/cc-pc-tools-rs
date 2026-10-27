@@ -97,6 +97,11 @@
       "file": "skills-3080-openai11-designs214717.json",
       "sha256": "0a34c8e49ac851d0302828b29d0b6c4c47f11ce0103dd756e8234f4b211a6644",
       "target_count": 11
+    },
+    {
+      "file": "skills-3080-travel3-designs214717.json",
+      "sha256": "0eefcffd237fa2517e2cc83d7ca7cea21aab3cbf5aa6f67060ce9f77a5ca5c8c",
+      "target_count": 3
     }
   ]
 }

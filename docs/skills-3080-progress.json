@@ -353,16 +353,16 @@
     "pending_plan_targets": 0,
     "archived_draft_targets": 8,
     "archived_draft_is_subset_of_batch03": true,
-    "independently_accepted": "Legacy acceptances and individually scoped actual designs with exact creation, current readback, structure, metadata discovery and bounded explicit use. New11 inputs accepted by full4066/LunaMax/Must0, then actual66files/223979B/current4batch readback/PASS11/fresh11metadata and24 bounded text/boundary decisions. Their public result delta still requires separate review/CI/merge. No whole16, renderer, implicit selection or full-context acceptance implied.",
+    "independently_accepted": "The144 actual new designs include11 accepted by full4066 and actual result4033/M0/exact97b16CI/normalmerge584. New travel3 are separate uninstalled proposals; no full16/renderer/implicit-selection or full-context claim.",
     "not_semantically_disposed_occurrences": 73058,
     "additional_draft_sources": [
       "skills-3080-mizchi-sql-draft.json",
       "skills-3080-mizchi-mutation-draft.json"
     ],
     "authored_total_definition": "Existing actual-plan designs plus3 legacy pending drafts only; separately published new uninstalled proposals are counted below, not as installations",
-    "new_proposed_uninstalled_targets": 0,
-    "authored_including_new_proposals": 147,
-    "authored_including_new_proposals_definition": "144actual installed designs +3legacy pending drafts; the eleven proposed inputs now have separate actual placement/readback/discovery/application evidence. Archived variants remain subsets and source-only hatch hold is not a new target."
+    "new_proposed_uninstalled_targets": 3,
+    "authored_including_new_proposals": 150,
+    "authored_including_new_proposals_definition": "144 actual new installed designs +3legacy pending drafts +3new uninstalled travel proposals; no full universe cap or source-only hatch target counted"
   },
   "kepano_entrypoint_assessment": {
     "pinned_entrypoints": 6,
@@ -616,7 +616,7 @@
     "guard_client_resource": true,
     "state": "classification_unverified"
   },
-  "recorded_at": "2026-10-27T00:17:23.9981437+00:00",
+  "recorded_at": "2026-10-27T01:22:30.8756269+00:00",
   "total_skill_named_body_read_definition": "This field preserves the historical complete-source subset only. Current raw/workflow primary coverage is projected from the canonical source components and sixmile evaluation index in all_fulltext_primary_paths_including_partial_sources/all_workflow_primary_paths_including_partial_sources, not copied here.",
   "openai_entrypoint_evaluation": {
     "rights_accepted": false,
@@ -2722,10 +2722,47 @@
     "new_source_read_credit": 0,
     "actual_browser_render_or_UI_implemented": false,
     "implicit_selection_proven": false,
-    "public_result_review_pending": true,
+    "public_result_review_pending": false,
     "whole16_complete": false,
     "historical44_read_evaluation_not_overwritten": true,
     "historical_evaluation_installed_at_recording": 0,
-    "current11_adoptions_and_notices_evidenced_separately": true
+    "current11_adoptions_and_notices_evidenced_separately": true,
+    "result_accepted_pr": 584,
+    "result_main_commit": "0c1c1eda87c6b3213bf081aa27f626109acf9786"
+  },
+  "travel3_preparation": {
+    "input": "skills-3080-travel3-input214717.json",
+    "operation": "skills-3080-operations/create-travel3-214717.json",
+    "uninstalled": 3,
+    "output_files": 18,
+    "virtual_bytes": 36454,
+    "structure": "PASS3",
+    "fresh_metadata_total": 457,
+    "target_found": 0,
+    "parse_errors": 0,
+    "full_content_review_pending": true,
+    "actual_central_operations": 0
+  },
+  "latest_received13_assessments": {
+    "sixmile": [
+      181,
+      184
+    ],
+    "other": [
+      272,
+      280
+    ],
+    "primary_occurrences": 13,
+    "whole_original_contexts": 4,
+    "parent_meanings_read_and_ACKed": true,
+    "source_primary_bytes": [
+      41036,
+      75473
+    ],
+    "parent_reception_source_body_reopens": 0,
+    "new_raw_or_workflow_source_credit": 0,
+    "new_permissions": 0,
+    "new_final_dispositions": 0,
+    "all16_complete": false
   }
 }

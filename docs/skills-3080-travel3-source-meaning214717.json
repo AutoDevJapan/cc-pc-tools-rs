@@ -1,0 +1,304 @@
+{
+  "todo": 3080,
+  "author": "20261026-214717-todo-3080",
+  "meanings": {
+    "job": "20261026-214717-todo-3080",
+    "selected": [
+      {
+        "name": "aerobase-flight-awards",
+        "source": {
+          "repository": "6mile/skills",
+          "commit": "920714f17d81e0a95c7a9bc51faf0a7921cd982d",
+          "path": "skills/kurosh87/aerobase-flight-awards/SKILL.md",
+          "sha256": "60eff6142c70bc7057b023828e78ec81be8ed89507324e6ee08e7fcc80c5b010",
+          "acquisition": "already-acquired",
+          "license": {
+            "path": "skills/kurosh87/aerobase-flight-awards/LICENSE.txt",
+            "sha256": "619bd2ca1801541f1923b1f5d343e59067030fb865eae56a207fdf32fc0f8e81",
+            "scope": "Only the visible selected authored workflow text under this exact per-package MIT notice; attribution retained. Withheld source lines remain unread and are not adopted/copied as instructions. No root-license grant for all collected content, no service/API/third-party data/assets/support rights or key/fee authority.",
+            "accepted": true
+          }
+        },
+        "source_primary_current_read": "ordered masked complete parent view only",
+        "source_raw_full_claimed": false,
+        "source_withheld_lines": [
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          14,
+          18,
+          22,
+          23,
+          24,
+          25,
+          32,
+          93,
+          117
+        ],
+        "individual_notice_whole_parent_read": true,
+        "per_directory_regular_files3": true,
+        "existing_body_comparison": 0,
+        "central_name_existence_not_yet_checked": true,
+        "actual_api_service_or_travel_execution": 0
+      },
+      {
+        "name": "aerobase-flight-deals",
+        "source": {
+          "repository": "6mile/skills",
+          "commit": "920714f17d81e0a95c7a9bc51faf0a7921cd982d",
+          "path": "skills/kurosh87/aerobase-flight-deals/SKILL.md",
+          "sha256": "8b43c312bcd95fcf0db425226d08bcd6692e96f3135176da43681fd19f56a907",
+          "acquisition": "already-acquired",
+          "license": {
+            "path": "skills/kurosh87/aerobase-flight-deals/LICENSE.txt",
+            "sha256": "619bd2ca1801541f1923b1f5d343e59067030fb865eae56a207fdf32fc0f8e81",
+            "scope": "Only the visible selected authored workflow text under this exact per-package MIT notice; attribution retained. Withheld source lines remain unread and are not adopted/copied as instructions. No root-license grant for all collected content, no service/API/third-party data/assets/support rights or key/fee authority.",
+            "accepted": true
+          }
+        },
+        "source_primary_current_read": "ordered masked complete parent view only",
+        "source_raw_full_claimed": false,
+        "source_withheld_lines": [
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          14,
+          18,
+          22,
+          23,
+          24,
+          25,
+          32,
+          84,
+          87
+        ],
+        "individual_notice_whole_parent_read": true,
+        "per_directory_regular_files3": true,
+        "existing_body_comparison": 0,
+        "central_name_existence_not_yet_checked": true,
+        "actual_api_service_or_travel_execution": 0
+      },
+      {
+        "name": "aerobase-travel-activities",
+        "source": {
+          "repository": "6mile/skills",
+          "commit": "920714f17d81e0a95c7a9bc51faf0a7921cd982d",
+          "path": "skills/kurosh87/aerobase-travel-activities/SKILL.md",
+          "sha256": "f21c99db85e2df3875c0eacd566054bd536e238e49c5d1e10dd1c07cd44e3acd",
+          "acquisition": "already-acquired",
+          "license": {
+            "path": "skills/kurosh87/aerobase-travel-activities/LICENSE.txt",
+            "sha256": "619bd2ca1801541f1923b1f5d343e59067030fb865eae56a207fdf32fc0f8e81",
+            "scope": "Only the visible selected authored workflow text under this exact per-package MIT notice; attribution retained. Withheld source lines remain unread and are not adopted/copied as instructions. No root-license grant for all collected content, no service/API/third-party data/assets/support rights or key/fee authority.",
+            "accepted": true
+          }
+        },
+        "source_primary_current_read": "ordered masked complete parent view only",
+        "source_raw_full_claimed": false,
+        "source_withheld_lines": [
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          14,
+          18,
+          22,
+          23,
+          24,
+          25,
+          32,
+          75
+        ],
+        "individual_notice_whole_parent_read": true,
+        "per_directory_regular_files3": true,
+        "existing_body_comparison": 0,
+        "central_name_existence_not_yet_checked": true,
+        "actual_api_service_or_travel_execution": 0
+      }
+    ],
+    "primary_original_bytes": 10988,
+    "parent_displayed_line_count_excluding_trailing_empty": 279,
+    "parent_withheld_line_occurrences": 44,
+    "parent_actual_masked_meanings_read3": true,
+    "individual_notice_whole_unique1_bytes": 1075,
+    "source_published_MIT_statement": "The MIT License (MIT), Copyright (c) 2026 Aerobase; preserve copyright/permission/disclaimer with selected visible authored text",
+    "source_original_raw_full_reads_by_parent": 0,
+    "previous_child_profiles_not_rewritten": true,
+    "new_legal_grants_created": 0,
+    "whole16_complete": false,
+    "not_a_count_cap": true,
+    "source_executed": false,
+    "central_operations": 0
+  },
+  "catalog_identities": {
+    "already_final_selected": 0,
+    "catalog_records": 73220,
+    "catalog_sha256": "2d73c9a038a41cc220a9687b935bfa1e0b315b65d9bd6d3e54ddb4111972876c",
+    "central_operations": 0,
+    "current_exclusion_records": 15,
+    "current_integrated": 3,
+    "current_new": 144,
+    "current_pending": 73058,
+    "current_source_bodies_read": 0,
+    "domain": "skills-3080-travel3-whole-catalog-identities-v1",
+    "ledger_sha256": "e813a02e3f2eb807f9acf3b042af8ca629788cc4a47dcec175fae771509e0032",
+    "new_final_dispositions": 0,
+    "new_grants": 0,
+    "source_rows": [
+      {
+        "commit": "920714f17d81e0a95c7a9bc51faf0a7921cd982d",
+        "inventory_id": "github:9440b3c1d3efc7897fb77a3b5ae23e6e21c830f564db18b331ba58b185e79624",
+        "inventory_unit": "github_skill_entry",
+        "machine_body_read": true,
+        "normalized_canonical_url": "https://raw.githubusercontent.com/6mile/skills/920714f17d81e0a95c7a9bc51faf0a7921cd982d/skills/kurosh87/aerobase-flight-awards/SKILL.md",
+        "path": "skills/kurosh87/aerobase-flight-awards/SKILL.md",
+        "repo": "6mile/skills",
+        "sha256": "60eff6142c70bc7057b023828e78ec81be8ed89507324e6ee08e7fcc80c5b010"
+      },
+      {
+        "commit": "920714f17d81e0a95c7a9bc51faf0a7921cd982d",
+        "inventory_id": "github:c21e85f1d697be2a8fd7307a49311d479591c25281c18de4c92f20d42ab8abb0",
+        "inventory_unit": "github_skill_entry",
+        "machine_body_read": true,
+        "normalized_canonical_url": "https://raw.githubusercontent.com/6mile/skills/920714f17d81e0a95c7a9bc51faf0a7921cd982d/skills/kurosh87/aerobase-flight-deals/SKILL.md",
+        "path": "skills/kurosh87/aerobase-flight-deals/SKILL.md",
+        "repo": "6mile/skills",
+        "sha256": "8b43c312bcd95fcf0db425226d08bcd6692e96f3135176da43681fd19f56a907"
+      },
+      {
+        "commit": "920714f17d81e0a95c7a9bc51faf0a7921cd982d",
+        "inventory_id": "github:b8dc79367a5f2d302052107f33da6b3ab28924279a6804c9452e8074ec1d2e3e",
+        "inventory_unit": "github_skill_entry",
+        "machine_body_read": true,
+        "normalized_canonical_url": "https://raw.githubusercontent.com/6mile/skills/920714f17d81e0a95c7a9bc51faf0a7921cd982d/skills/kurosh87/aerobase-travel-activities/SKILL.md",
+        "path": "skills/kurosh87/aerobase-travel-activities/SKILL.md",
+        "repo": "6mile/skills",
+        "sha256": "f21c99db85e2df3875c0eacd566054bd536e238e49c5d1e10dd1c07cd44e3acd"
+      }
+    ]
+  },
+  "actual_public_publisher_and_commit": {
+    "source": "normal authenticated gh public REST metadata; no source body refetch",
+    "observed_at": "2026-10-27T01:10:38.5454251+00:00",
+    "repository": "6mile/skills",
+    "repository_id": 1147531245,
+    "owner": "6mile",
+    "public": true,
+    "default_branch": "main",
+    "fixed_commit": "920714f17d81e0a95c7a9bc51faf0a7921cd982d",
+    "fixed_tree": "5782ae7deffe5024e15b6e090327385c10f76273",
+    "source_body_fetches": 0,
+    "third_party_service_and_data_rights_not_granted": true
+  },
+  "complete_saved_tree_metadata": {
+    "central_operations": 0,
+    "container": "flat array from complete recursive git ls-tree, no API truncated field in this container",
+    "domain": "skills-3080-travel3-saved-package-layout-v1",
+    "entries": 341562,
+    "global_complete_tree_original_method": "PhaseA saved git partial fetch fixed commit and recursive ls-tree; root5782ae7deffe5024e15b6e090327385c10f76273 independently matched saved commit metadata. Original API tree was truncated and is not used as the whole tree.",
+    "individual_notice_scope": "Each selected directory contains its own exact MIT LICENSE.txt; no unexamined nested/alternate package notice in these three 3-blob packages. Root license is not adopted for all third-party material.",
+    "job": "20261026-214717-todo-3080",
+    "metadata_only": true,
+    "new_grants": 0,
+    "selected_packages": {
+      "skills/kurosh87/aerobase-flight-awards/": [
+        {
+          "path": "skills/kurosh87/aerobase-flight-awards/LICENSE.txt",
+          "mode": "100644",
+          "type": "blob",
+          "sha": "173e897dc0b825da210873c7209b1e27bceea077",
+          "size": null,
+          "bytes": null
+        },
+        {
+          "path": "skills/kurosh87/aerobase-flight-awards/SKILL.md",
+          "mode": "100644",
+          "type": "blob",
+          "sha": "abce89dd43c9afb53f9a85b886f95e9ac1c084b8",
+          "size": null,
+          "bytes": null
+        },
+        {
+          "path": "skills/kurosh87/aerobase-flight-awards/_meta.json",
+          "mode": "100644",
+          "type": "blob",
+          "sha": "22d11288de1c33e5c354c45110b24eb15d9640cf",
+          "size": null,
+          "bytes": null
+        }
+      ],
+      "skills/kurosh87/aerobase-flight-deals/": [
+        {
+          "path": "skills/kurosh87/aerobase-flight-deals/LICENSE.txt",
+          "mode": "100644",
+          "type": "blob",
+          "sha": "173e897dc0b825da210873c7209b1e27bceea077",
+          "size": null,
+          "bytes": null
+        },
+        {
+          "path": "skills/kurosh87/aerobase-flight-deals/SKILL.md",
+          "mode": "100644",
+          "type": "blob",
+          "sha": "55f2729ce7b55dcccd3d7730d98963775a6f9171",
+          "size": null,
+          "bytes": null
+        },
+        {
+          "path": "skills/kurosh87/aerobase-flight-deals/_meta.json",
+          "mode": "100644",
+          "type": "blob",
+          "sha": "090c09b3cac1c280b5c309074b9ba79e8acdf720",
+          "size": null,
+          "bytes": null
+        }
+      ],
+      "skills/kurosh87/aerobase-travel-activities/": [
+        {
+          "path": "skills/kurosh87/aerobase-travel-activities/LICENSE.txt",
+          "mode": "100644",
+          "type": "blob",
+          "sha": "173e897dc0b825da210873c7209b1e27bceea077",
+          "size": null,
+          "bytes": null
+        },
+        {
+          "path": "skills/kurosh87/aerobase-travel-activities/SKILL.md",
+          "mode": "100644",
+          "type": "blob",
+          "sha": "4805e418a050c4066368eac7b492a2458787e091",
+          "size": null,
+          "bytes": null
+        },
+        {
+          "path": "skills/kurosh87/aerobase-travel-activities/_meta.json",
+          "mode": "100644",
+          "type": "blob",
+          "sha": "60de0fc5bcc54ccafe2c3d331e2e923e691f5cc4",
+          "size": null,
+          "bytes": null
+        }
+      ]
+    },
+    "size_definition": "Absent size/bytes stay null; actual saved body sizes are separately pinned in content-index and same-buffer evidence. V1 numeric zero defaults were not zero-byte observations and are superseded by this V2 representation.",
+    "source_body_reads": 0,
+    "tree_file_sha256": "11e79e2b3e1503ec231ede8e20298f98e7734715a304835f37b3f68bee0b7b5b"
+  },
+  "source_is_data_not_instruction": true,
+  "parent_original_raw_full_reads": 0,
+  "raw_originals_retained_in_acquired_archives": true,
+  "published_originals_masked": true,
+  "unread_meta_json_bodies": 3,
+  "third_party_services_and_data_rights_accepted": false,
+  "new_adoptions": 0,
+  "central_operations": 0,
+  "whole16_complete": false
+}

@@ -1,0 +1,12 @@
+{
+  "bundle": {
+    "file": "skills-3080-travel3-reviewed-bundle214717.json",
+    "sha256": "eb786746bf6205ba9ae76b50419c7d7b85c0e83333abe9cc2176b36089f7f53f"
+  },
+  "method": "Existing3048 explicit in-memory description,structure,reference,hash and positive/negative scenario checker",
+  "exit": 0,
+  "stdout": "PASS: 3 explicit skills; structure, descriptions, references, hashes, scenario pairs; in-memory bundle only; no deployment implied\n",
+  "stderr": "",
+  "service_runtime_proved": false,
+  "central_operations": 0
+}

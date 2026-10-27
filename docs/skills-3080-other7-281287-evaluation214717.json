@@ -1,0 +1,2215 @@
+{
+  "all_original_selected_chunks_losslessly_reconstructed": true,
+  "central_operations": 0,
+  "context_resolution": "Each record.original_chunk_sha256 selects shared_original_contexts[sha].common; add that chunk's ordered original_assessment values as entries and canonical-JSON SHA256 must equal sha. All common fields, including definitions, input_validation, privacy, notice and boundaries, are preserved once.",
+  "domain": "other373-parent-received-shared-snapshot-v3",
+  "entries": [
+    {
+      "inventory_id": "github:d3bb43a200030f0f4efdf5e3732d64a3673ea59f7208182680e558b63dfeb093",
+      "original_assessment_pointer": "/records/0/original_assessment",
+      "original_chunk_sha256": "36aa3828d9966b01d7586fc91f9023ab75c83cbf66f6076c72f5484ac8dc81ce",
+      "original_record_index": 0,
+      "path": "Anthropic/Claude Code/Prompt.txt",
+      "source_commit": "162db92f54d717d8ebd12292e155aeef32bb4b3c",
+      "source_repo": "x1xhlol/system-prompts-and-models-of-ai-tools",
+      "source_sha256": "281b3455da9a49f1ca042601f2a1c1f4694137f06de09514762b6507f88af972"
+    },
+    {
+      "inventory_id": "github:9b4ec4b77c4664ebabe569fd81d2db60bf623b1a2e2a270814c87b3c3941e4b6",
+      "original_assessment_pointer": "/records/1/original_assessment",
+      "original_chunk_sha256": "18075b5f868d493fe8b5a45577d2bda8fac21f623efefd1eb044de359c3d972b",
+      "original_record_index": 1,
+      "path": "Anthropic/Claude Fable 5.txt",
+      "source_commit": "162db92f54d717d8ebd12292e155aeef32bb4b3c",
+      "source_repo": "x1xhlol/system-prompts-and-models-of-ai-tools",
+      "source_sha256": "920d838534e1d06c719f1748729a6b1bb9ac65657b0af511e4e34877f1a4f953"
+    },
+    {
+      "inventory_id": "github:d11484824be51c570ccb557a1d629f719cbff7b6855af1e1b97763886ab531da",
+      "original_assessment_pointer": "/records/2/original_assessment",
+      "original_chunk_sha256": "c7c0a28a1ab7c9723e7c383538a789b008ff616a5ce6a77847cf465fe727cb32",
+      "original_record_index": 2,
+      "path": "Anthropic/Claude for Chrome/Prompt.txt",
+      "source_commit": "162db92f54d717d8ebd12292e155aeef32bb4b3c",
+      "source_repo": "x1xhlol/system-prompts-and-models-of-ai-tools",
+      "source_sha256": "bcf1f1e1d1ad0d1a5c1089b8b9f92aa584b252ab1be426e352a946abeb310f03"
+    },
+    {
+      "inventory_id": "github:363a533e04fad88b372adf3501ae01dc528baaa24ea36be5c7d96730bdb24973",
+      "original_assessment_pointer": "/records/3/original_assessment",
+      "original_chunk_sha256": "c7c0a28a1ab7c9723e7c383538a789b008ff616a5ce6a77847cf465fe727cb32",
+      "original_record_index": 3,
+      "path": "Anthropic/Claude Sonnet 4.6.txt",
+      "source_commit": "162db92f54d717d8ebd12292e155aeef32bb4b3c",
+      "source_repo": "x1xhlol/system-prompts-and-models-of-ai-tools",
+      "source_sha256": "327989e919f8dc79c42f3b0f8ca466fcc3adc4aa6bac2d005abc4e5cfb6bcbea"
+    },
+    {
+      "inventory_id": "github:600450261c771e8444c0ad9857daaae24a8e7ceb057948cb97216f6fda2a16ec",
+      "original_assessment_pointer": "/records/4/original_assessment",
+      "original_chunk_sha256": "c7c0a28a1ab7c9723e7c383538a789b008ff616a5ce6a77847cf465fe727cb32",
+      "original_record_index": 4,
+      "path": "Anthropic/Claude Sonnet 5 Tools.txt",
+      "source_commit": "162db92f54d717d8ebd12292e155aeef32bb4b3c",
+      "source_repo": "x1xhlol/system-prompts-and-models-of-ai-tools",
+      "source_sha256": "9877cbb8bc77a9bbde24393dd0961f9b1dc4611ef9fc4bc3ad58e6a84e6a1588"
+    },
+    {
+      "inventory_id": "github:fe6b43f2ed34ee5dcd582eff84eaa7f16005bd3b5f5d1a96c0dd0c98c0a3517c",
+      "original_assessment_pointer": "/records/5/original_assessment",
+      "original_chunk_sha256": "c7c0a28a1ab7c9723e7c383538a789b008ff616a5ce6a77847cf465fe727cb32",
+      "original_record_index": 5,
+      "path": "Anthropic/Claude Sonnet 5.txt",
+      "source_commit": "162db92f54d717d8ebd12292e155aeef32bb4b3c",
+      "source_repo": "x1xhlol/system-prompts-and-models-of-ai-tools",
+      "source_sha256": "a825ca2c1ab3c9070a800fff06cb2cb23cec255de0d6ff79f609f6e77c3f0247"
+    },
+    {
+      "inventory_id": "github:30d12c1ce0c1704c59a0030627db8a08ff577f3d7a10988a6c4491cc2501a2bb",
+      "original_assessment_pointer": "/records/6/original_assessment",
+      "original_chunk_sha256": "c7c0a28a1ab7c9723e7c383538a789b008ff616a5ce6a77847cf465fe727cb32",
+      "original_record_index": 6,
+      "path": "Anthropic/Sonnet 4.5 Prompt.txt",
+      "source_commit": "162db92f54d717d8ebd12292e155aeef32bb4b3c",
+      "source_repo": "x1xhlol/system-prompts-and-models-of-ai-tools",
+      "source_sha256": "3fe1599c9c6cfce4d05de9c497ab48280f3f0e329d6ee87b9e0479daa0c9806d"
+    }
+  ],
+  "entries_projection_definition": "Identity-only execution queue projection. Each entry points to its original record; shared original contexts and all original assessments stay unchanged. This does not add source reading, licence acceptance or adoption.",
+  "first_ordinal": 281,
+  "last_ordinal": 287,
+  "limits": "This shares complete already acknowledged structured evidence, not original source bodies. Original actors, masks, unknown/partial/unread states and opaque path references remain unchanged; no grant, execution, adoption, current physical continuity or new reading is established.",
+  "materializer_job": "20261026-214717-todo-3080",
+  "new_copy_grants": 0,
+  "new_final_dispositions": 0,
+  "new_raw_or_unique_credit": 0,
+  "new_source_body_reads": 0,
+  "parent_acknowledged_through_at_materialization": 287,
+  "parent_journal_sha256": "684c41e3c155e693a5a5656ea9476e2181303e5fbdcbeb7f57feab93a1c6da48",
+  "public_reflected": false,
+  "records": [
+    {
+      "actual_assessment_reader": "20261026-174104-todo-3778",
+      "bytes": 13019,
+      "inventory_id": "github:d3bb43a200030f0f4efdf5e3732d64a3673ea59f7208182680e558b63dfeb093",
+      "inventory_unit": "github_prompt_or_model_information",
+      "original_assessment": {
+        "candidate_disposition": "全文導入を保留し、既存慣習/検査/出所に分けた改訂材料として親へ提案。280との文言重なりはあるがunit/個別権利を保ち一括重複除外しない。",
+        "classification": "prompt_or_model_info",
+        "findings": [
+          "L71..76は周辺コード/imports/dependencyを確認して変更する手順、L137はREADME等から検査方法を確認する手順を持つ。",
+          "L16..20の4行未満/1word志向や編集後stop、L79の全comments禁止は品質/必要な根拠・終了結果・未達報告を削りうる。短い回答の目安と完了の説明を分ける。",
+          "L130hookをuser扱い/L141タグを元inputでないものとして扱う記述、Task自動委譲/L149無条件redirectは出所/担当/権限を実際の正規経路へ照合する必要。",
+          "L138lint/typecheckは対象commandが実在する時の指示だが、不明commandを本人へ聞く/CLAUDEへ書く提案は通常の技術調査を人待ちへ戻す。L139explicitcommitonlyも本人の承認済み自律作業へ一般化しない。",
+          "Darwin/2025-08-19/Sonnet4/cutoff、main/clean/最近commit placeholderは出典の固定値で実writer/model/日付/現在Git状態ではない。L182はgitStatusが会話開始snapshotで更新されないことを明記。"
+        ],
+        "negative": "snapshotのmain/cleanを信じる、hookを本人の承認と扱う、検査commandやPC操作を本人へ求めて停止する。",
+        "notices": [
+          {
+            "notice_ref": "root"
+          }
+        ],
+        "package": {
+          "blob_count": 2,
+          "complete_tree": true,
+          "primary_alias_excluded_from_support_count": 2,
+          "primary_alias_rule": "support配列はcomplete tree metadata。primary出現は他ordinalへ参照してsupport/read/uniqueへ重複計上しない。",
+          "related_primary_metadata_records": 1,
+          "root": "Anthropic/Claude Code",
+          "support_file_occurrences": 0
+        },
+        "positive": "承認されたcoding変更の前に周辺importsと既存検査commandを調べ、根拠と実結果を保持する。",
+        "prior_primary_read": {
+          "actual_reader_job": null,
+          "history_limit": "この旧saved_unread/queue参照なしを全過去履歴の未読の証明にしない。今回の新global uniqueへ加算しない。",
+          "mask": null,
+          "read": [
+            1,
+            null,
+            null,
+            false,
+            false,
+            0
+          ],
+          "recorded_state": "saved_unread",
+          "representative": {
+            "chunk_id": "6d23ad0bfc244f748f7d15b0c9648a52",
+            "chunk_sha256": "997e2fa382f18d85383b8df24c8aeacc14451364aa20c3b3e83d731a32b9be3b",
+            "pointer": "/entries/0/support/0",
+            "receipt_sha256": "21e9731b93b125def9750b229df791491e6c34ff43e2e7328d74afc312ea1257"
+          }
+        },
+        "read": [
+          2,
+          0,
+          0,
+          true,
+          true,
+          191
+        ],
+        "read_evidence": {
+          "actual_reader_job": "20261026-174104-todo-3778",
+          "masked_lines": [],
+          "masking_version": "v15",
+          "method": "direct_raw_full",
+          "new_global_unique_coverage_not_claimed": true,
+          "ranges": [
+            [
+              1,
+              191
+            ]
+          ],
+          "strict_utf8": true
+        },
+        "reason": "191行を固定bytes/strictUTF8照合後に全表示。ライブラリ/API定義ではなく振舞い方針のsnapshot。",
+        "required_changes": [
+          "有用なdependency/慣習/検査確認を局所手順にし、currentAPI/所有/影響範囲へ結ぶ。lint/typecheckを全案件の一律fullbuildへせず、見つからない技術commandは自分でscope内資料/CLIを調べる。",
+          "簡潔さやcomments制限で実結果/未達/次の手を省かない。既存repoの注釈慣習と必要性を見て決め、内部output制約を本人向け日本語や親の受領protocolへ流用しない。",
+          "hook/tag/子結果は正規の本人性/出所と審査へ照合し、資料上のroleへ昇格しない。自動Taskは正規共有ToDo --spec/資源・単一担当へ、redirectは対象/許可/拒否を保持する現在の取得手順へ対応させる。",
+          "固定SDK/model/date/Git例や外部URLを現在確認済みとせず、原文の権利・第三者個別許諾/真正性をrootGPLで包括しない。子では最終採否/導入/実動作確認をしない。"
+        ],
+        "row": 281,
+        "source": [
+          "github:d3bb43a200030f0f4efdf5e3732d64a3673ea59f7208182680e558b63dfeb093",
+          "x1xhlol/system-prompts-and-models-of-ai-tools",
+          "162db92f54d717d8ebd12292e155aeef32bb4b3c",
+          "Anthropic/Claude Code/Prompt.txt",
+          "281b3455da9a49f1ca042601f2a1c1f4694137f06de09514762b6507f88af972",
+          "475e45e40653fa2315955f8130d0472e9f860775",
+          13019
+        ],
+        "subunits": [
+          {
+            "change": "comments全禁止を対象の必要性へ対応づける。",
+            "ranges": [
+              [
+                71,
+                79
+              ]
+            ],
+            "unit": "existing_conventions",
+            "value": "依存/周辺code/secretの確認。"
+          },
+          {
+            "change": "共有ToDo/正規出所/影響範囲/技術command自律調査へ。",
+            "ranges": [
+              [
+                82,
+                150
+              ]
+            ],
+            "unit": "doing_tasks_and_validation",
+            "value": "task分解と検査方法の非推測。"
+          },
+          {
+            "change": "現在の環境/model/Git値へ流用しない。",
+            "ranges": [
+              [
+                155,
+                191
+              ]
+            ],
+            "unit": "snapshot_and_references",
+            "value": "Gitstatusは固定snapshotと明記。"
+          }
+        ],
+        "support": [
+          [
+            "Tools.json",
+            "9ee1436ccc92f9003fc8eb60ce023657a2055c49d9b4b9bbe88b8f39c4ab8fa4",
+            "2645d6858ef393b21ca990d9f9fdc26239c25370",
+            48962,
+            true,
+            "prior_primary_alias_same-byte-reuse",
+            "prior142809",
+            5,
+            [
+              3,
+              5,
+              1,
+              false,
+              true,
+              508
+            ],
+            "2645d6858ef393b21ca990d9f9fdc26239c25370",
+            48962,
+            "a41",
+            41
+          ]
+        ],
+        "unit": "github_prompt_or_model_information",
+        "unmet": [
+          "原収録物の真正性/第三者個別権利・サービス条件と現在のSDK/model/APIの照合。",
+          "実code変更/検査/適用と未知中央本文比較。旧41toolsの読取はactualreader/代表packetまでで、自分の新rawにしない。"
+        ],
+        "use": "CLI coding agentの短い行動規則を、既存慣習/検査/出所の比較資料として評価する。",
+        "value": "既存dependency/周辺imports・component慣習の確認、秘密をlog/commitしないこと、test frameworkを推測しない手順が有用。"
+      },
+      "original_chunk_id": "45d39c710b8e4a2fb610d94e78a5cf03",
+      "original_chunk_sha256": "36aa3828d9966b01d7586fc91f9023ab75c83cbf66f6076c72f5484ac8dc81ce",
+      "path": "Anthropic/Claude Code/Prompt.txt",
+      "previous_parent_semantic_read": true,
+      "source_commit": "162db92f54d717d8ebd12292e155aeef32bb4b3c",
+      "source_git_blob": "475e45e40653fa2315955f8130d0472e9f860775",
+      "source_path": "Anthropic/Claude Code/Prompt.txt",
+      "source_repo": "x1xhlol/system-prompts-and-models-of-ai-tools",
+      "source_sha256": "281b3455da9a49f1ca042601f2a1c1f4694137f06de09514762b6507f88af972"
+    },
+    {
+      "actual_assessment_reader": "20261027-105225-todo-3778",
+      "bytes": 119995,
+      "inventory_id": "github:9b4ec4b77c4664ebabe569fd81d2db60bf623b1a2e2a270814c87b3c3941e4b6",
+      "inventory_unit": "github_prompt_or_model_information",
+      "original_assessment": {
+        "candidate_disposition": "全promptの直接採用は保留。状態保存/参照整合/質問抑制/tool契約を独自要約・改訂する参考候補として親へ返す。権利不明を重複/許諾済みへ置換しない。",
+        "classification": "prompt_or_model_info",
+        "findings": [
+          "L9..27/139..145/1348..1354のモデル階層、提供製品、cutoff、日付はsnapshotの主張。ファイル名を真正性や現在の提供状況、このwriterのmodel/Fast実値へ使わない。",
+          "L151..233のwindow.storageは共有可視性、5MB、last-write-winsを説明する。getの欠落はnullとする冒頭と、欠落もthrowする説明が混在する。L395のbrowser storage全面禁止との専用APIの適用境界も移植先では未確定。",
+          "L235..282/1182..1228のconnector検索→候補提示→選択は、既存の指名/継続選択を再利用する点が有用。現在の接続・権限・費用を証明せず、質問toolを常に本人の新しい判断待ちへ変える根拠ではない。",
+          "L288..417は全てのもっともらしいSkillを読む、文章もfile化、pipでsystem変更、原資料copy編集等を当該製品の既定にする。現PCの対象限定・Discord本文・言語・guardと同じ規則ではない。",
+          "L419..610は時間変化による検索、引用と要約の区別を扱う。静的話題の検索禁止と現在状態の検索必須が重なり、回数目安/20回で別機能へ誘導を373件の上限にしない。多数の著作権制限は原文収録の再配布許諾ではない。",
+          "L631..668の質問toolは既存回答/詳細な依頼を確認して再質問を避ける。L762..796の文案は戦略が異なる複数案と単純な一案を分ける。draftと実送信の許可は別である。",
+          "L798..1053の場所検索→mapは得たIDを改変せず結ぶ。説明ではlocations/daysの片方を要求するがschemaに必須/排他がない。image_searchの説明max4とschema max5、app推奨1..3とarray上限欠落にも差がある。",
+          "L1077..1159のrecipeは材料ID、工程、人数比例、待機timerを結ぶ。数量の型だけで負数/参照整合/調理の安全や完了を検査しない。sports/weather等もschemaは取得の実結果ではない。",
+          "L1197..1252は編集直前のviewと唯一一致を求めるが、view既定は16000文字を超えると中間省略。表示末尾だけを全読としない。readonly資料のcopy編集は実審査の回避許可ではない。",
+          "L1356..1514はkeyを渡さないAPI直送、固定model/1000token、base64添付、全履歴/状態再送を含む。key不要はOAuthサブスク内/費用不要/対象送信許可の証明ではない。textだけの連結はtool_use等を処理せず、fence除去とJSON.parseだけでは型/HTTP成功/副作用を検証できない。",
+          "L1516..1580のcitationタグ、位置placeholder、9Skill catalog、network許可先、readonly mountは原環境の宣言。現在の接続/読取権限やowner指示へ昇格しない。"
+        ],
+        "negative": "key不要のAPI例だから追加費用と送信許可も確認済みとし全履歴を再送する。sourceのモデル名やcopy編集指示を現在の権限として実行する。",
+        "notices": [
+          {
+            "notice_ref": "root"
+          }
+        ],
+        "package": {
+          "actual_non_primary_support": 0,
+          "other_primary_aliases": 9,
+          "primary_alias_not_double_counted": true,
+          "root": "Anthropic",
+          "total_tree_blobs": 10
+        },
+        "positive": "取得した場所IDを表示へ対応づけ、必須/排他条件と観測根拠を照合する設計レビュー。欠落と保存失敗を区別した状態復帰手順の比較。",
+        "read": [
+          3,
+          14,
+          0,
+          false,
+          true,
+          1580
+        ],
+        "read_evidence": {
+          "actual_reader_job": "20261027-105225-todo-3778",
+          "masked_lines": [
+            322,
+            329,
+            401,
+            423,
+            427,
+            437,
+            465,
+            477,
+            479,
+            485,
+            490,
+            551,
+            561,
+            574
+          ],
+          "masking_version": "v16-reconstructed-20261027",
+          "method": "direct_masked_full",
+          "new_global_unique_coverage_not_claimed": true,
+          "ranges": [
+            [
+              1,
+              250
+            ],
+            [
+              251,
+              500
+            ],
+            [
+              501,
+              800
+            ],
+            [
+              801,
+              1100
+            ],
+            [
+              1101,
+              1400
+            ],
+            [
+              1401,
+              1580
+            ]
+          ],
+          "reader_namespace": "20261027-105225-todo-3778/current",
+          "strict_utf8": true
+        },
+        "reason": "全1580行を6範囲でmasked表示して読取。製品説明、専用storage、MCP選択、成果物、検索/画像、18tool、artifact API、citationと環境宣言を分けて評価した。",
+        "required_changes": [
+          "再利用案では製品名・日付・提供状況・18toolを固定資料の主張と明記し、親の実適用工程で実環境/公式版/既存契約を照合する。",
+          "storageの欠落/失敗/共有境界と同時更新の上書き/復帰をconsumerへ合わせる。shared=falseやAPI名だけで秘密保護済みとしない。",
+          "Skill/file/依存追加は許可された必要対象へ絞る。文章は本人のDiscord本文指定へ合わせ、新Pythonやsystem package変更を自動で実行しない。新UIは同画像への本人回答を適用条件にする。",
+          "connectorの指名と既存回答を保持する。fallback URLや認証エラーから、Rakko以外のドメイン管理、未知秘密、新MCP権限へ進む案にしない。",
+          "mapの片方必須/排他、件数の説明と型、数量/参照整合、nullと省略を実consumerで検査する。view/web_fetchの切詰めを読了/不存在の証拠にしない。",
+          "API直送・全履歴/状態再送・base64添付は認証/費用/対象範囲の実証まで実適用案から分ける。各応答blockとtool往復、HTTP失敗、JSON型、秘密を含みうるログを別々に扱う。",
+          "root GPLの対象と第三者prompt/モデル/素材/サービスを分け、独自要約と公開転載/配布の可否を親へ残す。"
+        ],
+        "row": 282,
+        "source": [
+          "github:9b4ec4b77c4664ebabe569fd81d2db60bf623b1a2e2a270814c87b3c3941e4b6",
+          "x1xhlol/system-prompts-and-models-of-ai-tools",
+          "162db92f54d717d8ebd12292e155aeef32bb4b3c",
+          "Anthropic/Claude Fable 5.txt",
+          "920d838534e1d06c719f1748729a6b1bb9ac65657b0af511e4e34877f1a4f953",
+          "5206253f75c8cc59a501b156d1a367eb87fe4718",
+          119995
+        ],
+        "subunits": [
+          [
+            "conversation_product",
+            1,
+            148
+          ],
+          [
+            "memory_storage",
+            149,
+            233
+          ],
+          [
+            "connector_selection",
+            235,
+            282
+          ],
+          [
+            "computer_file_artifact",
+            284,
+            417
+          ],
+          [
+            "search_copyright_images",
+            419,
+            610
+          ],
+          [
+            "tool_definitions_18",
+            612,
+            1346
+          ],
+          [
+            "artifact_api_examples",
+            1348,
+            1514
+          ],
+          [
+            "citations_catalog_environment",
+            1516,
+            1580
+          ]
+        ],
+        "support": [
+          [
+            "Anthropic/Claude Code 2.0.txt",
+            "3faaec1c4aa292e433c00800546a80ae15a31560fc36a50691d707eeb6ca3767",
+            "ad39f48d2be095103240f3e7702d59d5f2ed2a0b",
+            57324,
+            true,
+            "same-byte-reuse",
+            "20261026-174104-todo-3778",
+            2,
+            6,
+            [
+              3,
+              6,
+              2,
+              false,
+              true,
+              1150
+            ],
+            [
+              3,
+              6,
+              0,
+              false,
+              true,
+              1150
+            ],
+            {
+              "chunk_id": "c12bd8094e6a4f178350db9f02a746ce",
+              "pointer": "entries/0"
+            },
+            280,
+            "ad39f48d2be095103240f3e7702d59d5f2ed2a0b",
+            57324
+          ],
+          [
+            "Anthropic/Claude Code/Prompt.txt",
+            "281b3455da9a49f1ca042601f2a1c1f4694137f06de09514762b6507f88af972",
+            "475e45e40653fa2315955f8130d0472e9f860775",
+            13019,
+            true,
+            "same-byte-reuse",
+            "20261026-174104-todo-3778",
+            2,
+            0,
+            [
+              2,
+              0,
+              2,
+              true,
+              true,
+              191
+            ],
+            [
+              2,
+              0,
+              0,
+              true,
+              true,
+              191
+            ],
+            {
+              "chunk_id": "45d39c710b8e4a2fb610d94e78a5cf03",
+              "pointer": "entries/0"
+            },
+            281,
+            "475e45e40653fa2315955f8130d0472e9f860775",
+            13019
+          ],
+          [
+            "Anthropic/Claude Code/Tools.json",
+            "9ee1436ccc92f9003fc8eb60ce023657a2055c49d9b4b9bbe88b8f39c4ab8fa4",
+            "2645d6858ef393b21ca990d9f9fdc26239c25370",
+            48962,
+            true,
+            "same-byte-reuse",
+            "20261025-142809-todo-3778",
+            1,
+            5,
+            [
+              3,
+              5,
+              1,
+              false,
+              true,
+              508
+            ],
+            [
+              3,
+              5,
+              0,
+              false,
+              true,
+              508
+            ],
+            {
+              "chunk_id": "6d23ad0bfc244f748f7d15b0c9648a52",
+              "pointer": "entries/0"
+            },
+            41,
+            "2645d6858ef393b21ca990d9f9fdc26239c25370",
+            48962
+          ],
+          [
+            "Anthropic/Claude Sonnet 4.6.txt",
+            "327989e919f8dc79c42f3b0f8ca466fcc3adc4aa6bac2d005abc4e5cfb6bcbea",
+            "c64ba22a30ba614b14daa65ae57cc1ba67ee399a",
+            98989,
+            true,
+            "saved_unread",
+            null,
+            null,
+            null,
+            [
+              1,
+              null,
+              null,
+              false,
+              false,
+              0
+            ],
+            null,
+            null,
+            284,
+            "c64ba22a30ba614b14daa65ae57cc1ba67ee399a",
+            98989
+          ],
+          [
+            "Anthropic/Claude Sonnet 5 Tools.txt",
+            "9877cbb8bc77a9bbde24393dd0961f9b1dc4611ef9fc4bc3ad58e6a84e6a1588",
+            "dc3378e183dc43c43a67586868d8b95cac6603a6",
+            33246,
+            true,
+            "saved_unread",
+            null,
+            null,
+            null,
+            [
+              1,
+              null,
+              null,
+              false,
+              false,
+              0
+            ],
+            null,
+            null,
+            285,
+            "dc3378e183dc43c43a67586868d8b95cac6603a6",
+            33246
+          ],
+          [
+            "Anthropic/Claude Sonnet 5.txt",
+            "a825ca2c1ab3c9070a800fff06cb2cb23cec255de0d6ff79f609f6e77c3f0247",
+            "a7e68cead718efcc6e04b0cf217fe8839b6cd0fe",
+            55746,
+            true,
+            "saved_unread",
+            null,
+            null,
+            null,
+            [
+              1,
+              null,
+              null,
+              false,
+              false,
+              0
+            ],
+            null,
+            null,
+            286,
+            "a7e68cead718efcc6e04b0cf217fe8839b6cd0fe",
+            55746
+          ],
+          [
+            "Anthropic/Claude for Chrome/Prompt.txt",
+            "bcf1f1e1d1ad0d1a5c1089b8b9f92aa584b252ab1be426e352a946abeb310f03",
+            "8492831a121667f111697c3edcdcf6de44c2308b",
+            43595,
+            true,
+            "saved_unread",
+            null,
+            null,
+            null,
+            [
+              1,
+              null,
+              null,
+              false,
+              false,
+              0
+            ],
+            null,
+            null,
+            283,
+            "8492831a121667f111697c3edcdcf6de44c2308b",
+            43595
+          ],
+          [
+            "Anthropic/Claude for Chrome/Tools.json",
+            "6980566027f6a3b83f2f0c381f4eb1b12cf50eb090147dd3e7667d36b6019b65",
+            "8b11d5919ca8e6e0c92c8b3fd1699caf19955b72",
+            24056,
+            true,
+            "same-byte-reuse",
+            "20261025-142809-todo-3778",
+            1,
+            1,
+            [
+              3,
+              1,
+              1,
+              false,
+              true,
+              506
+            ],
+            [
+              3,
+              1,
+              0,
+              false,
+              true,
+              506
+            ],
+            {
+              "chunk_id": "6d23ad0bfc244f748f7d15b0c9648a52",
+              "pointer": "entries/1"
+            },
+            42,
+            "8b11d5919ca8e6e0c92c8b3fd1699caf19955b72",
+            24056
+          ],
+          [
+            "Anthropic/Sonnet 4.5 Prompt.txt",
+            "3fe1599c9c6cfce4d05de9c497ab48280f3f0e329d6ee87b9e0479daa0c9806d",
+            "585ef7ed838b62d5f2a6a9fce250e532cfaa9f0e",
+            43200,
+            true,
+            "saved_unread",
+            null,
+            null,
+            null,
+            [
+              1,
+              null,
+              null,
+              false,
+              false,
+              0
+            ],
+            null,
+            null,
+            287,
+            "585ef7ed838b62d5f2a6a9fce250e532cfaa9f0e",
+            43200
+          ]
+        ],
+        "unit": "github_prompt_or_model_information",
+        "unmet": [
+          "伏字14行のraw内容、不透明な省略例2行が初回filterを通過した表示限界。mask数は実秘密数/不存在の証明ではない。",
+          "真正な公開版/現在のAPIとstorage実動作、MCP・費用・送信/復帰・実UI・個別権利・未知中央本文比較は未検証。",
+          "既存3048はREADME/root notice/構成の代表確認。282の旧全文意味評価は特定できていない。新global uniqueへ加算しない。"
+        ],
+        "use": "製品promptとされる固定資料から、会話、状態保存、接続先選択、file制作、検索と18種のtool契約を比較する。",
+        "value": "添付の実在確認、既存回答の再利用、欠落と保存失敗の区別、取得IDと表示の対応づけに用途がある。モデル情報だけで全体を除外せず、独立した手順とschemaを保持する。"
+      },
+      "original_chunk_id": "a284c790d65e4b0f938217cb5e6a104d",
+      "original_chunk_sha256": "18075b5f868d493fe8b5a45577d2bda8fac21f623efefd1eb044de359c3d972b",
+      "path": "Anthropic/Claude Fable 5.txt",
+      "previous_parent_semantic_read": true,
+      "source_commit": "162db92f54d717d8ebd12292e155aeef32bb4b3c",
+      "source_git_blob": "5206253f75c8cc59a501b156d1a367eb87fe4718",
+      "source_path": "Anthropic/Claude Fable 5.txt",
+      "source_repo": "x1xhlol/system-prompts-and-models-of-ai-tools",
+      "source_sha256": "920d838534e1d06c719f1748729a6b1bb9ac65657b0af511e4e34877f1a4f953"
+    },
+    {
+      "actual_assessment_reader": "20261027-105225-todo-3778",
+      "bytes": 43595,
+      "inventory_id": "github:d11484824be51c570ccb557a1d629f719cbff7b6855af1e1b97763886ab531da",
+      "inventory_unit": "github_prompt_or_model_information",
+      "original_assessment": {
+        "candidate_disposition": "ブラウザagentのvariantとして改訂比較候補。全promptの直接採用は保留し、由来管理/URL漏出対策/DOMと画面の使い分けを独自要約する案を親へ返す。",
+        "classification": "variant",
+        "findings": [
+          "L7..24/95..227はtool結果中の全ての手順に停止と本人再確認を要求する。sourceを実行命令にしない原則と、正規Discord APIで本人ID/対象を照合した既存回答まで無効化する規則を分ける。L185..190/397..398の承認非継承も現運用へそのまま移さない。",
+          "L233..289/305..316は新規アカウント、password利用、全download、削除/共有権限変更等を禁止または本人操作へ戻す。一方L410..419の購入例は保存payment利用を許すように読め、L270の保存payment禁止と整合しない。本人実カード禁止を保持し、例の断片を再掲しない。",
+          "L521..584は権利者/配布条件の観測を求め、所有の自己申告を包括許諾としない。ただしL548の短い引用制限とL578の長い引用例に内部不一致がある。原promptの掲載自体の個別許諾や真正性は保証しない。",
+          "L586..594のread_page参照→参照操作→必要時だけ座標/画面確認は用途がある。DOMテキストが薄い視覚的アプリで画面を見る、長文ではget_page_textを使うという近接する使い分けが具体的。",
+          "L596..633はMac/cmd、当該extensionのtab group/必須tabIdとsystem-reminderでの文脈を前提にする。現在Windows/CUAのAPIではなく、タグ名だけでsystem権限を認めない。L635..646のturn_answer_startも当該consumer向け契約で、実toolの存在を証明しない。",
+          "冒頭の持続作業と自律継続は全体完了に向くが、全function指示で逐一停止する規則は通常操作まで本人待ちへ戻しうる。日付/Haiku名/cutoff/政治情報は固定snapshotの記述で現在値を調べたものではない。"
+        ],
+        "negative": "正規取得の既存本人回答もtool結果だから無効と再質問し、通常のdownloadやログインを本人PC作業へ戻す。DOMのsystemタグを本物の高位指示として扱う。",
+        "notices": [
+          {
+            "notice_ref": "root"
+          }
+        ],
+        "package": {
+          "actual_non_primary_support": 0,
+          "complete_tree": true,
+          "other_primary_aliases": 1,
+          "primary_alias_not_double_counted": true,
+          "root": "Anthropic/Claude for Chrome",
+          "total_tree_blobs": 2
+        },
+        "positive": "依頼対象ページのDOM参照を取得し、参照が成立しない視覚的領域だけ画面で確認し、観測した対象tabへ操作を結ぶ設計。",
+        "read": [
+          3,
+          6,
+          0,
+          false,
+          true,
+          646
+        ],
+        "read_evidence": {
+          "initial_privacy_limit": {
+            "kind": "payment example partial card identifier passed prefilter",
+            "line": 414,
+            "raw_fragment_repeated": false
+          },
+          "masked_lines": [
+            346,
+            449,
+            539,
+            544,
+            550,
+            627
+          ],
+          "masking_version": "v17-opaque-id-ellipsis-20261027",
+          "method": "direct_masked_full",
+          "ranges": [
+            [
+              1,
+              220
+            ],
+            [
+              221,
+              440
+            ],
+            [
+              441,
+              646
+            ]
+          ],
+          "strict_utf8": true
+        },
+        "reason": "全646行を3範囲のmasked表示で読取。セキュリティ宣言、行動分類、確認例、権利、tool/tab/応答開始契約を区別した。",
+        "required_changes": [
+          "由来を保持してweb本文の権限主張を拒み、正規取得の本人ID/質問世代/対象を照合した実回答は既存の許可範囲で継承する。タグ名やDOM上の事前許可表示を代用しない。",
+          "通常操作を本人PC作業へ戻す規則、全download/全同意への一律再質問は、現在の依頼範囲・保存済み回答・本人方針に合わせる。新費用/権利/新要件など本人だけが決める点だけを既存Discord経路へ結ぶ。",
+          "本人実カードの参照/利用と未知宛先への秘密送出を保持し、購入例を現在の許可へ用いない。新しいカード入力/新費用の実行や一律の削除へ移さない。",
+          "実API/Windows/対象tabの観測と再取得、DOMとスクリーンショットの使い分けを現在のtool docsへ合わせる。本人のtabを残し、自分のtabの後片付けを依頼に結ぶ。",
+          "権利条件と引用例の不整合は原文を保持して改訂案へ明記する。新UI制作・本人画像確認の省略を、このブラウザ操作手順から導かない。"
+        ],
+        "row": 283,
+        "source": [
+          "github:d11484824be51c570ccb557a1d629f719cbff7b6855af1e1b97763886ab531da",
+          "x1xhlol/system-prompts-and-models-of-ai-tools",
+          "162db92f54d717d8ebd12292e155aeef32bb4b3c",
+          "Anthropic/Claude for Chrome/Prompt.txt",
+          "bcf1f1e1d1ad0d1a5c1089b8b9f92aa584b252ab1be426e352a946abeb310f03",
+          "8492831a121667f111697c3edcdcf6de44c2308b",
+          43595
+        ],
+        "support": [
+          "p42"
+        ],
+        "unit": "github_prompt_or_model_information",
+        "unmet": [
+          "原公開版の真正性、現在のextension/CUA、実browser動作/検索/認証/送信/削除/実権利/未知中央比較は未検証。",
+          "伏字6行のraw、L414の支払例にある部分識別子が初回filterを通過した限界。実値/断片を再掲せず、本人の実カード情報を読んだとは扱わない。"
+        ],
+        "use": "ブラウザagentの注入防御、本人確認の境界、DOM参照と画面fallback、tab指定の手順を比較する。",
+        "value": "web本文/DOM属性/メールにある権限主張を操作許可へ昇格させない点、URL経由の情報送出を防ぐ点、DOM参照から操作して必要時に画面へ切り替える点が有用。"
+      },
+      "original_chunk_id": "f2870c6d45a14b83b9e2067fc015a4d2",
+      "original_chunk_sha256": "c7c0a28a1ab7c9723e7c383538a789b008ff616a5ce6a77847cf465fe727cb32",
+      "path": "Anthropic/Claude for Chrome/Prompt.txt",
+      "previous_parent_semantic_read": true,
+      "source_commit": "162db92f54d717d8ebd12292e155aeef32bb4b3c",
+      "source_git_blob": "8492831a121667f111697c3edcdcf6de44c2308b",
+      "source_path": "Anthropic/Claude for Chrome/Prompt.txt",
+      "source_repo": "x1xhlol/system-prompts-and-models-of-ai-tools",
+      "source_sha256": "bcf1f1e1d1ad0d1a5c1089b8b9f92aa584b252ab1be426e352a946abeb310f03"
+    },
+    {
+      "actual_assessment_reader": "20261027-105225-todo-3778",
+      "bytes": 98989,
+      "inventory_id": "github:363a533e04fad88b372adf3501ae01dc528baaa24ea36be5c7d96730bdb24973",
+      "inventory_unit": "github_prompt_or_model_information",
+      "original_assessment": {
+        "candidate_disposition": "全promptの直接採用は保留。状態/エラー/出典範囲の扱いを独自要約・改訂する参考候補。原重複は同一候補内の事実で、別coverageや権利済みの重複除外へしない。",
+        "classification": "prompt_or_model_info",
+        "findings": [
+          "モデル/製品と日付/cutoffは固定sourceの主張で、現在値・writerモデルの証拠ではない。二つのclaude_behavior blockが同一bytesで重複する。",
+          "L142..202/498..570のwindow.storageは欠落nullとthrowが混在し、共有/5MB/rate/last-write-winsを説明する。L1168のANY browser storage禁止との専用APIの境界は未指定で、そのまま移植できない。",
+          "L205..355のAPI/state例は未閉鎖fence、L339の文字列delimiter欠落、L351の説明と異なるregex等を含む。L573..751ではより整った別表現があるため、早い断片を黙って修正済みとせず原rangeを保持する。",
+          "API keyを渡さない直接completion、固定model/1000token、base64添付、全履歴/状態再送はOAuthサブスク・費用・送信許可の証明ではない。全block処理という説明でもL271..274/645..648はtextだけを残す。JSON.parse/fence除去だけでは型/HTTP成功/実副作用は未検証。",
+          "検索L761..996は時変性/内部資料と外部情報の区別、実URL本文とsnippetの違いを扱うが、回数目安/20回で別機能を勧める条件を373件の上限にしない。検索例の相場/人事等は実測ではない。",
+          "L813のsource-user位置は初回filterを通過した。値/断片を再掲せず現在ownerの位置へ流用しない。L1189の末尾contextは伏せられた位置placeholderで、前方と同じ確認済み個人値として扱わない。",
+          "L1032..1191の7Skill catalog、Linux/ツール、network false、readonly-copy、pipのsystem変更、file出力の場所、artifact library等は原環境だけの宣言。現在のPCや権限・ツール登録へ昇格しない。",
+          "本文の引用/転載制限は第三者prompt原文の収録・再配布許諾を証明しない。原文や独自要約の参照と実配布/サービス利用権を分ける。"
+        ],
+        "internal_repeat": {
+          "bytes": 19797,
+          "exact_bytes_equal": true,
+          "method": "same-buffer internal repeated-block metadata check after full masked reading; no new read/unique credit",
+          "old_range": [
+            1,
+            133
+          ],
+          "repeat_range": [
+            357,
+            489
+          ],
+          "row": 284,
+          "sha256": "d2ab7243e45fd2ea56923e3d926166955addb2cffaf6c42ec0a136038830b212"
+        },
+        "negative": "重複した前半の壊れたregex例をそのまま実装し、key不要だから全履歴を送ってよい、root GPLだから原promptの配布も可能とする。",
+        "notices": [
+          {
+            "notice_ref": "root"
+          }
+        ],
+        "package": {
+          "actual_non_primary_support": 0,
+          "complete_tree": true,
+          "other_primary_aliases": 9,
+          "primary_alias_not_double_counted": true,
+          "root": "Anthropic",
+          "total_tree_blobs": 10
+        },
+        "positive": "状態復帰の設計で欠落とI/O失敗を区別し、source中の異なるコード例をrange付きで比較して必要なAPI契約を具体化する。",
+        "read": [
+          3,
+          15,
+          0,
+          false,
+          true,
+          1191
+        ],
+        "read_evidence": {
+          "initial_privacy_limit": {
+            "kind": "source-user location context passed initial prefilter",
+            "line": 813,
+            "raw_value_repeated": false
+          },
+          "masked_lines": [
+            764,
+            778,
+            805,
+            806,
+            818,
+            822,
+            826,
+            838,
+            917,
+            922,
+            983,
+            993,
+            1117,
+            1122,
+            1135
+          ],
+          "masking_version": "v18-payment-fragment-20261027",
+          "method": "direct_masked_full",
+          "ranges": [
+            [
+              1,
+              240
+            ],
+            [
+              241,
+              480
+            ],
+            [
+              481,
+              740
+            ],
+            [
+              741,
+              980
+            ],
+            [
+              981,
+              1191
+            ]
+          ],
+          "strict_utf8": true
+        },
+        "reason": "全1191行を5範囲のmasked表示で読取。1..133と357..489は同じ19797Bの完全一致を追加metadata照合したが、既に読んだ同じ出現でありcoverageを増やさない。",
+        "required_changes": [
+          "再利用案はsnapshotの主張と実際に確認した環境/版/費用を分け、重複blockと二つのコード例の位置・差を保持する。原sourceや不明な例を実行しない。",
+          "storageの欠落/失敗/共有・同時更新の契約、APIの全block/往復/HTTP失敗/JSON型を実consumerで確認する。初期regexと後半例を同一の検証済みコードにしない。",
+          "全履歴/状態やbase64の送信対象を限定し、key不要という語をOAuth/無料/許可の代わりにしない。既存依頼に必要な部分だけを再構成する。",
+          "sourceのSkill走査、copy編集、system package追加、本人network設定待ちをこの研究の操作へ移さない。実審査を保持し、現在の正規CLI/管理窓口と変更影響の検査を使う案へ合わせる。",
+          "文章のfile化は本人のDiscord本文指定へ合わせ、新Pythonを追加しない。新しいartifact UI/見た目は同画像の本人回答へ結ぶ。",
+          "source-user文脈をサンプル/匿名化した文脈へ置き換える案を分け、原値を公開改訂案へ残さない。引用制限やroot GPLを個別権利確認の代用にしない。"
+        ],
+        "row": 284,
+        "source": [
+          "github:363a533e04fad88b372adf3501ae01dc528baaa24ea36be5c7d96730bdb24973",
+          "x1xhlol/system-prompts-and-models-of-ai-tools",
+          "162db92f54d717d8ebd12292e155aeef32bb4b3c",
+          "Anthropic/Claude Sonnet 4.6.txt",
+          "327989e919f8dc79c42f3b0f8ca466fcc3adc4aa6bac2d005abc4e5cfb6bcbea",
+          "c64ba22a30ba614b14daa65ae57cc1ba67ee399a",
+          98989
+        ],
+        "support": [
+          "p280",
+          "p281",
+          "p41",
+          "p282",
+          "p285",
+          "p286",
+          "p283",
+          "p42",
+          "p287"
+        ],
+        "unit": "github_prompt_or_model_information",
+        "unmet": [
+          "伏字15行のraw、L813の位置文脈が初回filterを通過した限界。mask数は実秘密数/不存在の証明ではない。",
+          "共通未達はdefinitions.common_unmetを適用。実観測/実適用/権利確認を済ませたとはしない。"
+        ],
+        "use": "状態を持つartifact、API応答処理、検索/引用、環境・Skill宣言を含む製品prompt snapshotを比較する。",
+        "value": "保存の欠落/失敗、共有可視性、状態送信、応答blockの扱いと、原資料中の重複/壊れた例を区別するレビューに用途がある。重複段落だけで資料全体を除外せず、個別に有用な契約を残す。"
+      },
+      "original_chunk_id": "f2870c6d45a14b83b9e2067fc015a4d2",
+      "original_chunk_sha256": "c7c0a28a1ab7c9723e7c383538a789b008ff616a5ce6a77847cf465fe727cb32",
+      "path": "Anthropic/Claude Sonnet 4.6.txt",
+      "previous_parent_semantic_read": true,
+      "source_commit": "162db92f54d717d8ebd12292e155aeef32bb4b3c",
+      "source_git_blob": "c64ba22a30ba614b14daa65ae57cc1ba67ee399a",
+      "source_path": "Anthropic/Claude Sonnet 4.6.txt",
+      "source_repo": "x1xhlol/system-prompts-and-models-of-ai-tools",
+      "source_sha256": "327989e919f8dc79c42f3b0f8ca466fcc3adc4aa6bac2d005abc4e5cfb6bcbea"
+    },
+    {
+      "actual_assessment_reader": "20261027-105225-todo-3778",
+      "bytes": 33246,
+      "inventory_id": "github:600450261c771e8444c0ad9857daaae24a8e7ceb057948cb97216f6fda2a16ec",
+      "inventory_unit": "github_prompt_or_model_information",
+      "original_assessment": {
+        "candidate_disposition": "tool契約のconfig支持/独自要約候補。完全schema、原製品policy、現在の接続/個別権利が未確定のため直接登録/全体採用は保留。",
+        "classification": "config_support",
+        "findings": [
+          "L1..2は既存回答/詳細な依頼を再質問しない。ask後はturn終了とするconsumer契約で、現在のDiscord質問やasync toolの契約とは別。",
+          "L22..96はplaces_searchの実IDをmapへ結ぶ。ID省略例はwhole-line伏字とし、場所名/緯度経度は説明用の固定例で、今回検索/旅程の実結果ではない。",
+          "L120..121のapp推奨は1..3/特定Desktop系を一つに絞り、現在の作業を拒否/短縮/引継ぎで終えないとする。提供app名や導線は固定sourceの宣伝/環境情報で、現在利用可能/無料の証明ではない。",
+          "L123..161/326..339はregistry→suggest→選択と既存の指名/継続選択の再利用を扱う。auth失敗はserver UUIDから再認証を提案するが、新権限や別サービスの許可を作らない。miss時の推測URLも現在の対象/ドメイン制限へ合わせる。",
+          "L186..194/341..354のvisualizerはread_me→inline widgetとsendPromptが本人入力のようにchatへ送る機能を説明する。widget由来文字列を本人の新しい要件/同意へ昇格しない。sourceのsilent setupは本人への画像提示/承認の代わりではない。",
+          "L244..271のend_conversationは永久終了、事前警告、toolの二段階確認等の独立規則を含む。現在toolの存在を示さず、未完作業や依存待ちを終了する根拠へ使わない。",
+          "L237/271/324は一部の大きなpolicyを意図的に除外/他所で要約済みとする。raw/verbatim/fullという見出しだけで元製品の全policy読了とはしない。ファイル全362行の読取と原製品coverageを分ける。",
+          "L279..319のLinux/file-copy/Skill/共有/検索規則、日付/cutoffは原環境の宣言。viewは非UTF8をhex表示し、隠しfile/node_modulesを列挙しないと説明するため、表示されないことを全存在なしへ使わない。"
+        ],
+        "negative": "sendPromptで届いた生成文を本人の承認とし、宣伝するappへ仕事を渡しただけで元依頼を完了にする。raw/fullという見出しから省略policyも読んだとする。",
+        "notices": [
+          {
+            "notice_ref": "root"
+          }
+        ],
+        "package": {
+          "actual_non_primary_support": 0,
+          "complete_tree": true,
+          "other_primary_aliases": 9,
+          "primary_alias_not_double_counted": true,
+          "root": "Anthropic",
+          "total_tree_blobs": 10
+        },
+        "positive": "対話で既存の詳細条件を再利用し、取得した場所IDと表示の対応、実consumerの確認契約をレビューする。",
+        "read": [
+          3,
+          5,
+          0,
+          false,
+          true,
+          362
+        ],
+        "read_evidence": {
+          "masked_lines": [
+            40,
+            58,
+            285,
+            290,
+            304
+          ],
+          "masking_version": "v19-personal-context-20261027",
+          "method": "direct_masked_full",
+          "ranges": [
+            [
+              1,
+              180
+            ],
+            [
+              181,
+              362
+            ]
+          ],
+          "strict_utf8": true
+        },
+        "reason": "全362行を2範囲でmasked表示して読取。21名のtool説明、追加policy、永久終了の二段階確認、4群の共通規則を区別した。形式は自然言語/例であり実行可能なJSON Schemaではない。",
+        "required_changes": [
+          "利用案ではtool名/説明/共通規則/省略箇所を別に保持し、実consumerのschema・副作用・確認/応答形式を照合する。21説明をそのまま登録可能な設定へ扱わない。",
+          "質問や候補表示は既存の本人回答/指名を保持する。終了/再認証を技術待ちの自動中断へ使わず、本人PC操作や不必要な新規許可を前提にしない。",
+          "sendPrompt等の生成UI経由の内容の出所を保持し、正規の本人意思確認と分ける。新UIは同画像への本人回答と結び、原tool名を偽装して呼び出さない。",
+          "推測URL、file自動copy/出力、readonly資料copy編集は現在の対象・guard・本人の文章共有方針へ合わせる。候補appの存在/契約/費用は別に実証する。",
+          "省略policyの本文/hash/readerを作らず未達を明示する。元の権利/真正性と、独自要約/実配布/サービス利用権を分ける。"
+        ],
+        "row": 285,
+        "source": [
+          "github:600450261c771e8444c0ad9857daaae24a8e7ceb057948cb97216f6fda2a16ec",
+          "x1xhlol/system-prompts-and-models-of-ai-tools",
+          "162db92f54d717d8ebd12292e155aeef32bb4b3c",
+          "Anthropic/Claude Sonnet 5 Tools.txt",
+          "9877cbb8bc77a9bbde24393dd0961f9b1dc4611ef9fc4bc3ad58e6a84e6a1588",
+          "dc3378e183dc43c43a67586868d8b95cac6603a6",
+          33246
+        ],
+        "support": [
+          "p280",
+          "p281",
+          "p41",
+          "p282",
+          "p284",
+          "p286",
+          "p283",
+          "p42",
+          "p287"
+        ],
+        "unit": "github_prompt_or_model_information",
+        "unmet": [
+          "伏字5行のraw。意図的に省略された元policyの対応原典・範囲は未特定で、未特定refのbytes/hash/readerはnull。他の保存済みsourceに存在しない証明ではない。",
+          "共通未達はdefinitions.common_unmetを適用。実観測/実適用/権利確認を済ませたとはしない。"
+        ],
+        "use": "21toolの自然言語説明と共通の適用規則を、対話/接続/表示/file/終了操作の契約比較に使う。",
+        "value": "既存回答を先に確認する質問、場所IDと表示の対応、文案の戦略差、今の仕事を完遂した上で別appを案内する条件が具体的。tool名だけで一括除外せず個別に比較できる。"
+      },
+      "original_chunk_id": "f2870c6d45a14b83b9e2067fc015a4d2",
+      "original_chunk_sha256": "c7c0a28a1ab7c9723e7c383538a789b008ff616a5ce6a77847cf465fe727cb32",
+      "path": "Anthropic/Claude Sonnet 5 Tools.txt",
+      "previous_parent_semantic_read": true,
+      "source_commit": "162db92f54d717d8ebd12292e155aeef32bb4b3c",
+      "source_git_blob": "dc3378e183dc43c43a67586868d8b95cac6603a6",
+      "source_path": "Anthropic/Claude Sonnet 5 Tools.txt",
+      "source_repo": "x1xhlol/system-prompts-and-models-of-ai-tools",
+      "source_sha256": "9877cbb8bc77a9bbde24393dd0961f9b1dc4611ef9fc4bc3ad58e6a84e6a1588"
+    },
+    {
+      "actual_assessment_reader": "20261027-105225-todo-3778",
+      "bytes": 55746,
+      "inventory_id": "github:fe6b43f2ed34ee5dcd582eff84eaa7f16005bd3b5f5d1a96c0dd0c98c0a3517c",
+      "inventory_unit": "github_prompt_or_model_information",
+      "original_assessment": {
+        "candidate_disposition": "proactivity/出所管理/出力経路のvariantとして改訂比較候補。全promptの直接採用は保留し、個別権利と省略部の対応を未確定として親へ返す。",
+        "classification": "variant",
+        "findings": [
+          "L5..27/143..150のモデル階層・発売/輸出規制等の出来事・日付はsource内の主張。noticeだから確定とする文章を、公式確認済みやwriterのモデルへ昇格しない。リンク先/現在値は調べていない。",
+          "L78..83は利用可能なtoolで情報取得を進め、曖昧さを理由に全てを本人へ戻さない。一方、外部変更はconfirmとする規則を保存済みの対象別許可から切り離して一律再質問へしない。未指定の製品方向までAIのdefaultで決めない。",
+          "L163..188は永久終了toolの独立条件/二段階操作を説明する。現在のtool存在や、未完作業/依存待ちの終了を許可するものではない。",
+          "L190..262のstorageはgetのnull返却と欠落時throwの説明差、sharedの可視性、last-write-winsを含む。L418..420のbrowser storage禁止との専用APIの境界も移植先では未確定。",
+          "L264..311はregistry候補と既存の本人選択を分け、架空tool UIを作らず、未選択候補を繰り返し勧めない。接続権限/料金や推測URLの対象範囲は証明しない。",
+          "L313..443は文章もfile化、Linux/file出力、library/Skill走査、pip system変更等の原環境を前提にする。現在PC・guard・本人のDiscord本文指定と同じ規則ではない。",
+          "L446..491は視覚の必要性→MCPのcategory→file指定→inline visualizerという経路、read_me module、spec名詞からの自動描画を扱う。moduleのCSS制約や生成UIを本人の同画像への承認と扱わない。",
+          "L94/107/317/455/511/535/544/548..550は原文の省略・要約・他所参照を明記する。文件全読と元製品の全system-policy coverageは別。参照される別tool_descriptions_raw.txtの厳密な対応は未特定で、285は別名の関連保存資料として比較する。",
+          "L493..541の検索/画像は時変性と内部資料を優先し、必要量を選ぶが、30回の別機能誘導や3..4画像を全研究の件数/資料上限へしない。原copyright説明は収録promptの個別許諾を作らない。"
+        ],
+        "negative": "sourceのnoticeを現在の事実とし、categoryが合うMCPやvisualizerを使えば本人のUI画像承認も不要とする。省略された原policyまで読了とする。",
+        "notices": [
+          {
+            "notice_ref": "root"
+          }
+        ],
+        "package": {
+          "actual_non_primary_support": 0,
+          "complete_tree": true,
+          "other_primary_aliases": 9,
+          "primary_alias_not_double_counted": true,
+          "root": "Anthropic",
+          "total_tree_blobs": 10
+        },
+        "positive": "既知の依頼条件を使いread-onlyで不足情報を調べ、図の必要性とfile指定を確認して、同じ作業を完遂する設計。",
+        "read": [
+          3,
+          5,
+          0,
+          false,
+          true,
+          551
+        ],
+        "read_evidence": {
+          "masked_lines": [
+            337,
+            344,
+            426,
+            496,
+            519
+          ],
+          "masking_version": "v19-personal-context-20261027",
+          "method": "direct_masked_full",
+          "ranges": [
+            [
+              1,
+              200
+            ],
+            [
+              201,
+              380
+            ],
+            [
+              381,
+              551
+            ]
+          ],
+          "strict_utf8": true
+        },
+        "reason": "全551行を3範囲のmasked表示で読取。製品宣言、proactivity、終了、storage、MCP、file/visual routing、検索と省略noteを分けた。",
+        "required_changes": [
+          "製品/出来事/日付はsnapshotとして引用範囲を明示し、親の実適用工程で公式版・現在のtool/consumerを確認する。原noticesや省略部を推測で補わない。",
+          "proactivityは依頼範囲内の技術調査へ適用し、既存の本人許可/回答を保持する。未指定の要件・新費用・権利・新しい約束だけを正規の本人判断へ結ぶ。",
+          "storageの欠落/失敗/共有・同時更新/復帰を実consumerへ合わせ、既定shared名だけで秘密保護済みとしない。",
+          "Skill/依存/fileの範囲、原readonly-copy、system packageの変更や新Python追加を本人方針へ合わせる。本人PC操作や新MCP権限を原promptから要求しない。",
+          "visual routingは実在するtoolと本人の成果物指定に合わせる。新UI/見た目の実装前に同画像への本人回答を保持し、カテゴリ一致だけで製品方向を変えない。",
+          "本文中に明示的なAPI直送例はないため、他sourceのAPI例をこのvariantから除いたと記述しない。権利/真正性/既存本文比較は別に残す。"
+        ],
+        "row": 286,
+        "source": [
+          "github:fe6b43f2ed34ee5dcd582eff84eaa7f16005bd3b5f5d1a96c0dd0c98c0a3517c",
+          "x1xhlol/system-prompts-and-models-of-ai-tools",
+          "162db92f54d717d8ebd12292e155aeef32bb4b3c",
+          "Anthropic/Claude Sonnet 5.txt",
+          "a825ca2c1ab3c9070a800fff06cb2cb23cec255de0d6ff79f609f6e77c3f0247",
+          "a7e68cead718efcc6e04b0cf217fe8839b6cd0fe",
+          55746
+        ],
+        "support": [
+          "p280",
+          "p281",
+          "p41",
+          "p282",
+          "p284",
+          "p285",
+          "p283",
+          "p42",
+          "p287"
+        ],
+        "unit": "github_prompt_or_model_information",
+        "unmet": [
+          "伏字5行のraw。省略/要約された原policy・参照別fileの厳密対応は未特定で、未特定refのbytes/hash/readerはnull。",
+          "共通未達はdefinitions.common_unmetを適用。実観測/実適用/権利確認を済ませたとはしない。"
+        ],
+        "use": "会話のproactivity、状態保存、connector選択、fileとinline visualの経路を含むagent prompt variantを比較する。",
+        "value": "利用可能なread-only toolで先に調べる、既存情報から妥当な仮定を置いて作業を続ける、既存の指名/継続選択を保持する、図が必要かを最初に判断する手順に用途がある。"
+      },
+      "original_chunk_id": "f2870c6d45a14b83b9e2067fc015a4d2",
+      "original_chunk_sha256": "c7c0a28a1ab7c9723e7c383538a789b008ff616a5ce6a77847cf465fe727cb32",
+      "path": "Anthropic/Claude Sonnet 5.txt",
+      "previous_parent_semantic_read": true,
+      "source_commit": "162db92f54d717d8ebd12292e155aeef32bb4b3c",
+      "source_git_blob": "a7e68cead718efcc6e04b0cf217fe8839b6cd0fe",
+      "source_path": "Anthropic/Claude Sonnet 5.txt",
+      "source_repo": "x1xhlol/system-prompts-and-models-of-ai-tools",
+      "source_sha256": "a825ca2c1ab3c9070a800fff06cb2cb23cec255de0d6ff79f609f6e77c3f0247"
+    },
+    {
+      "actual_assessment_reader": "20261027-105225-todo-3778",
+      "bytes": 43200,
+      "inventory_id": "github:30d12c1ce0c1704c59a0030627db8a08ff577f3d7a10988a6c4491cc2501a2bb",
+      "inventory_unit": "github_prompt_or_model_information",
+      "original_assessment": {
+        "candidate_disposition": "制約確認/CSV/編集/検索契約のvariantとして改訂比較候補。全promptの直接採用は保留し、形式欠落・内部不一致・個別権利を親へ残す。",
+        "classification": "variant",
+        "findings": [
+          "L5/13はURLや検索を使えないとする一方、L193..286/295..297/369は検索/fetchを使う。現在のcapabilityは実環境から確認し、古い制限で本人へ貼付/PC操作を要求しない。",
+          "L31の問題制約確認、21の質問抑制、27の情報量調整は有用。L41の分割feedbackは373件の上限や引継ぎで終了する許可ではない。",
+          "L72..118/180..186は成果物をartifactへ出す、1件/回、4update、20行/5箇所の閾値を使う。実consumerの編集方式の説明であり、現在の依頼/資料/検査数の上限ではない。",
+          "L83..101はゲームの性能/操作性/アクセシビリティを挙げるが、marketingでは常に大胆/動的/新しい見た目へ寄せる既定が強い。本人の画像方向や既存見た目を省略する根拠にはならない。",
+          "L166..178のwindow.fsは渡された正確なfile名とI/O失敗を扱う。CSVには型推論/空白header除去/推定delimiter/lodashgroupingを勧めるが、headersは必ず別文脈にあると仮定する。実header・型・重複やID保持を観測する必要がある。",
+          "L51..68のcitation例にはtag名が欠け、L290は呼出し形式のplaceholder。3tool JSON行は解析できるが、artifacts.commandはstringだけでenumがなく、説明のcommand/回数制限を型だけで検査しない。実consumer/duplicate-key検査は未実施。",
+          "L238..244/279は引用自体を禁止するが、L265の検索例は引用を含む。ルールと例を一律に正しい運用として扱わない。root GPLもこの第三者promptの真正性/個別権利を保証しない。",
+          "日付/cutoff/モデル/製品数/政治情報はsourceの固定主張。現在値、writerのmodelや現在利用可能なlibraryの証明ではない。本文にcompletion API直送例はない。"
+        ],
+        "negative": "headersは必ず提供済みと仮定して型推論/trim後の列だけで集計し、原promptの大胆なUI既定を本人の画像承認とみなす。",
+        "notices": [
+          {
+            "notice_ref": "root"
+          }
+        ],
+        "package": {
+          "actual_non_primary_support": 0,
+          "complete_tree": true,
+          "other_primary_aliases": 9,
+          "primary_alias_not_double_counted": true,
+          "root": "Anthropic",
+          "total_tree_blobs": 10
+        },
+        "positive": "既存CSVを読む際、実headerと列の欠損/型を確認し、依頼のIDや集計単位を保持して処理契約をレビューする。",
+        "read": [
+          3,
+          2,
+          0,
+          false,
+          true,
+          382
+        ],
+        "read_evidence": {
+          "masked_lines": [
+            233,
+            280
+          ],
+          "masking_version": "v19-personal-context-20261027",
+          "method": "direct_masked_full",
+          "ranges": [
+            [
+              1,
+              170
+            ],
+            [
+              171,
+              382
+            ]
+          ],
+          "strict_utf8": true
+        },
+        "reason": "全382行を2範囲でmasked表示して読取。前半一般指示、artifact/CSV/編集、検索、3tool JSON行、後半製品説明を別に確認した。",
+        "required_changes": [
+          "実際のtool/API/OS/対象ファイルを確認する案へ合わせ、古い無能力宣言や原タグを本人操作の前提/権限へしない。",
+          "CSVのheader有無・trim衝突・型推論・欠損/ID列の保持を実データ/consumerで検査する。未表示のheadersをあるものとして計算しない。",
+          "artifactの閾値・命令名・一意一致と新規作成/更新の扱いを実consumerへ照合し、原資料/既存未知本文を上書きしない。文章は本人のDiscord本文指定へ合わせる。",
+          "新UIの大胆/動的な既定は同画像への本人回答と元要件へ結ぶ。必要な動きだけを選び、停止/reduced-motion/性能・操作性の確認を残す。",
+          "欠けたcitation/call形式を推測で復元せず、引用規則と例の不整合を改訂案へ明記する。原sourceを保持し、公開転載/実配布/サービス利用権は別に確認する。"
+        ],
+        "row": 287,
+        "source": [
+          "github:30d12c1ce0c1704c59a0030627db8a08ff577f3d7a10988a6c4491cc2501a2bb",
+          "x1xhlol/system-prompts-and-models-of-ai-tools",
+          "162db92f54d717d8ebd12292e155aeef32bb4b3c",
+          "Anthropic/Sonnet 4.5 Prompt.txt",
+          "3fe1599c9c6cfce4d05de9c497ab48280f3f0e329d6ee87b9e0479daa0c9806d",
+          "585ef7ed838b62d5f2a6a9fce250e532cfaa9f0e",
+          43200
+        ],
+        "support": [
+          "p280",
+          "p281",
+          "p41",
+          "p282",
+          "p284",
+          "p285",
+          "p286",
+          "p283",
+          "p42"
+        ],
+        "unit": "github_prompt_or_model_information",
+        "unmet": [
+          "伏字2行のraw、欠けたcitation/call形式の原典、3tool JSONのduplicate-key/consumer検証。",
+          "共通未達はdefinitions.common_unmetを適用。実観測/実適用/権利確認を済ませたとはしない。"
+        ],
+        "use": "旧artifact向けの応答、制約確認、CSV処理、編集契約、検索/引用を含むprompt variantを比較する。",
+        "value": "慣れた問題でも明示された条件を照合する、短い質問で不足だけを確認する、正確なfile名/一意old_str/undefined列を扱う手順に用途がある。見た目の既定やmodel情報だけで全体を除外しない。"
+      },
+      "original_chunk_id": "f2870c6d45a14b83b9e2067fc015a4d2",
+      "original_chunk_sha256": "c7c0a28a1ab7c9723e7c383538a789b008ff616a5ce6a77847cf465fe727cb32",
+      "path": "Anthropic/Sonnet 4.5 Prompt.txt",
+      "previous_parent_semantic_read": true,
+      "source_commit": "162db92f54d717d8ebd12292e155aeef32bb4b3c",
+      "source_git_blob": "585ef7ed838b62d5f2a6a9fce250e532cfaa9f0e",
+      "source_path": "Anthropic/Sonnet 4.5 Prompt.txt",
+      "source_repo": "x1xhlol/system-prompts-and-models-of-ai-tools",
+      "source_sha256": "3fe1599c9c6cfce4d05de9c497ab48280f3f0e329d6ee87b9e0479daa0c9806d"
+    }
+  ],
+  "roster_sha256": "460219790c088b33e6044c6a97c68a882549c608c3de46ea536aa990a2c1adac",
+  "shared_original_contexts": {
+    "18075b5f868d493fe8b5a45577d2bda8fac21f623efefd1eb044de359c3d972b": {
+      "actual_assessment_reader": "20261027-105225-todo-3778",
+      "all_original_chunk_fields_reconstructed": true,
+      "common": {
+        "boundaries": {
+          "central_operations": 0,
+          "copy_license_accepted": false,
+          "new_final_dispositions": 0,
+          "source_executed": false
+        },
+        "chunk_id": "a284c790d65e4b0f938217cb5e6a104d",
+        "definitions": {
+          "actors": {
+            "0": "今回の実assistant",
+            "1": "以前同じToDo3778の実assistant:20261025-142809-todo-3778",
+            "2": "以前同じToDo3778の実assistant:20261026-174104-todo-3778"
+          },
+          "reader_namespace": "20261027-105225-todo-3778/current",
+          "reuse": "actual reader/原profile/namespace/代表を保持。各旧namespaceはactual_reader_job/current。今回のbyte照合だけでは新raw/uniqueを作らず、primary aliasを支持数へ二重加算しない。",
+          "states": {
+            "1": "saved_unread",
+            "2": "direct_raw_full",
+            "3": "direct_masked_full",
+            "6": "partial",
+            "7": "scan"
+          },
+          "support_columns": [
+            "path",
+            "sha256",
+            "git_blob",
+            "bytes",
+            "saved",
+            "method",
+            "actual_reader_job",
+            "reader",
+            "mask",
+            "read",
+            "original_read",
+            "representative",
+            "related_primary_ordinal",
+            "tree_git_blob",
+            "tree_bytes"
+          ],
+          "support_saved_unread_reason": "固定名簿の別primary ordinalとしてcursor順に評価する。保存済みalias metadataだけを列挙し、未読本文を支持読了へ加えない。"
+        },
+        "domain": "othergit373-chunk-v1",
+        "existing_relationship": {
+          "additional_documents": [
+            {
+              "bytes": 4341,
+              "method": "targeted relationship scan, not whole-document semantic read",
+              "path": "docs/skills-3048-research.md",
+              "primary282_literal_present": false,
+              "repo_mentions": [
+                {
+                  "line": 9,
+                  "text": "|[x1xhlol/system-prompts-and-models-of-ai-tools](https://github.com/x1xhlol/system-prompts-and-models-of-ai-tools)|参考のみ||README、root GPL-3.0、構成を確認。収録promptの真正性・個別権利・技能形式を保証できず、本文を運用へ採らない。|"
+                }
+              ],
+              "sha256": "21cfe21818ae89ac8f283f67888a4a9daa1d1568cb46e818342438fde8c3dbc4"
+            },
+            {
+              "bytes": 7816,
+              "method": "targeted relationship scan, not whole-document semantic read",
+              "path": "docs/skills-3048-acceptance.md",
+              "primary282_literal_present": false,
+              "repo_mentions": [],
+              "sha256": "dfea693b642be2b3e90ba793debacd83b5592e12d3382f013dc1bd5029553ba2"
+            }
+          ],
+          "comparison": "起動catalogのai-workflow/mcp-builder/knowledge-to-skills等の名/descriptionと既知3048/public metadata。中央本文や全存在の同一性・重複確定0。",
+          "documents": [
+            {
+              "bytes": 22043,
+              "method": "structured metadata identity scan; not whole-document semantic/body read",
+              "path": "docs/skills-3048-sources.json",
+              "sha256": "03bfee8f3de8aec858e5567120375faaa5d63f80192f80e21937812e09a9caa1"
+            },
+            {
+              "bytes": 20442,
+              "method": "structured metadata identity scan; not whole-document semantic/body read",
+              "path": "docs/skills-3048-manifest.json",
+              "sha256": "c0d1116173c7bb95d8badadcd74438ab6a7fe6f6cef2ad2b2eaec59912206936"
+            },
+            {
+              "bytes": 6552,
+              "method": "structured metadata identity scan; not whole-document semantic/body read",
+              "path": "docs/skills-3080-execution-evidence.json",
+              "sha256": "4d8fc56a64380be381c2b3a21d1ba811cc4ba95cf79f1dfefdbb72550d797f00"
+            },
+            {
+              "bytes": 119358,
+              "method": "structured metadata identity scan; not whole-document semantic/body read",
+              "path": "docs/skills-3080-progress.json",
+              "sha256": "65f792ce511fae9e4dffe4abca10a0786f8112093d4435d14bb25ff82b9a72ba"
+            }
+          ],
+          "new_unique_coverage_claimed": false,
+          "read_order_limit": "今回の3048追加照合は282表示後。前回のrepo関係確認は保持するが、282の過去全文読取不存在の証明にはしない。"
+        },
+        "first_ordinal": 282,
+        "input_validation": {
+          "all_saved_package_aliases_byte_verified": true,
+          "catalog_rows": 73220,
+          "catalog_sha256": "2d73c9a038a41cc220a9687b935bfa1e0b315b65d9bd6d3e54ddb4111972876c",
+          "commit": "162db92f54d717d8ebd12292e155aeef32bb4b3c",
+          "commit_json_sha256": "674dc969c4d800fefbf65a7ecb1c875e919118aa48fd0a2133ede51385f90939",
+          "go_anchor": {
+            "fixed_file_hashes_present": true,
+            "path": "repair-guard/skills3080_source_anchors_windows.go",
+            "sha256": "335c531c06c7ea8e8d2a2b5176b93c5c2b5b01320c2e48789f075f027211c8f1"
+          },
+          "index_sha256": "477ac8c5b178c4c781bf5baf0b26c6a316ed0ae6e9001ad28f0ac0ab9844b54f",
+          "notice_paths": [
+            "LICENSE.md"
+          ],
+          "primary_tuple_unit_catalog_exact": true,
+          "repo": "x1xhlol/system-prompts-and-models-of-ai-tools",
+          "root_tree": "e8d86c0a025a7a07d4bb8723ae758cf98d63cbf5",
+          "same_buffer_sha_bytes_gitblob_strict_utf8": true,
+          "tree_entries": 171,
+          "tree_sha256": "416b91db26db0b0c4447d46bbb945259d89ac393e45ee76b5ebceb09cde459f5",
+          "truncated": false
+        },
+        "notice_evidence": {
+          "root": {
+            "actual_reader_job": "20261025-142809-todo-3778",
+            "bytes": 35149,
+            "copy_license_accepted": false,
+            "displayed_line_ranges": [
+              [
+                1,
+                350
+              ],
+              [
+                351,
+                674
+              ]
+            ],
+            "fixed_token_recovery": {
+              "line": 154,
+              "new_raw_read": false,
+              "same_bytes_verified": true,
+              "text": "2. Basic Permissions."
+            },
+            "git_blob": "f288702d2fa16d3cdf0035b15a9fcbc552cd88e7",
+            "last_line": 674,
+            "mask": 2,
+            "masked_lines": [
+              4,
+              154
+            ],
+            "method": "same-byte-reuse",
+            "notice_type": "GNU GPLv3 text; collector scope and individual third-party rights remain unconfirmed",
+            "original_notice_gzip": "github/x1xhlol__system-prompts-and-models-of-ai-tools/objects/3972dc9744f6499f0f9b2dbf76696f2ae7ad8af9b23dde66d6af86c9dfb36986.gz",
+            "original_read": [
+              3,
+              2,
+              0,
+              false,
+              true,
+              674
+            ],
+            "original_reader_namespace": "20261025-142809-todo-3778/current",
+            "path": "LICENSE.md",
+            "read": [
+              3,
+              2,
+              1,
+              false,
+              true,
+              674
+            ],
+            "reader": 1,
+            "representative": {
+              "chunk_id": "951da82f4b0d41cda1532574d0b68f97",
+              "pointer": "entries/0/notices/0",
+              "receipt_sha256": "a0afd9bdcf9511fb72c7995cf4376914fe854047aa4512be84661a60d3cfaf9f"
+            },
+            "saved": true,
+            "scope": "root GPLv3全文の旧masked読取を再利用。固定complete treeに別notice名候補なし。収集者のrootGPLをAnthropic等の第三者prompt/tool/サービスの真正性・転載/配布・利用権へ包括しない。原文参照/要約と公開転載/実配布/サービス利用を区別。",
+            "sha256": "3972dc9744f6499f0f9b2dbf76696f2ae7ad8af9b23dde66d6af86c9dfb36986"
+          }
+        },
+        "privacy_limits": {
+          "guard_limit": "起動入口、保存方針2件、報告用/Windows用Skillの再読はguard分類未確認で未実施。提供済み本人指示と既読チェック項目を適用し、別path/APIで迂回しない。",
+          "historical_limits_preserved": true,
+          "metadata_projection_limit": "起動時commit.jsonの投影がfiles.patchも含み出力切断。先頭metadataと末尾の一部だけが表示され、本文読了へ加算0。以後SHA/commit/treeへ投影を限定。",
+          "primary": "初回v16で14行をwhole-line伏字。過剰伏字を保持。不透明な省略例2行は初回filter未検出として原値/断片を再掲しない。"
+        },
+        "reader_job": "20261027-105225-todo-3778",
+        "reader_todo": 3778,
+        "resume_validation": {
+          "acknowledged_through": 281,
+          "current_reader_differs_from_prior_yield_target": true,
+          "generation": 63,
+          "journal_sha256": "b971c00bdeab6f284dec656ac132e988006072fb9d5e0f24a443a71afc9a3585",
+          "legacy_wire_limit_scope": "旧55..58 receiptは保存original_messageのredaction箇所でJSON parse不可。保存wireのSHA、受領canonical chunk、source7tuple/unitと一意journalは一致。原保存を改変せず、旧wireの意味的同値検証だけを未達として保持。",
+          "legacy_wire_parse_limit": [
+            "d72403e9c6604705a9af5fb40d4e9876"
+          ],
+          "parent_semantic_assessments_read": true,
+          "review4083_metadata_status": "done/finished",
+          "validated_receipts": 63
+        },
+        "roster_sha256": "460219790c088b33e6044c6a97c68a882549c608c3de46ea536aa990a2c1adac"
+      },
+      "original_chunk_id": "a284c790d65e4b0f938217cb5e6a104d",
+      "original_receipt_sha256": "f0ba60bd61843ae188fa282a29e893f5f4477e7836c0e4922bc9c1743f8f8d8b"
+    },
+    "36aa3828d9966b01d7586fc91f9023ab75c83cbf66f6076c72f5484ac8dc81ce": {
+      "actual_assessment_reader": "20261026-174104-todo-3778",
+      "all_original_chunk_fields_reconstructed": true,
+      "common": {
+        "boundaries": {
+          "central_operations": 0,
+          "copy_license_accepted": false,
+          "new_final_dispositions": 0,
+          "source_executed": false,
+          "whole16_complete": false
+        },
+        "chunk_id": "45d39c710b8e4a2fb610d94e78a5cf03",
+        "definitions": {
+          "actors": {
+            "0": "今回の実assistant",
+            "1": "以前同じToDo3778の実assistant:20261025-142809-todo-3778"
+          },
+          "reader_namespace": "20261026-174104-todo-3778/current",
+          "readers": {
+            "current": {
+              "actor": 0,
+              "actual_reader_job": "20261026-174104-todo-3778"
+            },
+            "prior142809": {
+              "actor": 1,
+              "actual_reader_job": "20261025-142809-todo-3778"
+            }
+          },
+          "reuse": "旧profileはactualreader/原namespace/代表/欠落範囲を保持し、今回byte照合や関連参照を新raw/uniqueへ加算しない。",
+          "states": {
+            "1": "saved_unread",
+            "2": "direct_raw_full",
+            "3": "direct_masked_full",
+            "6": "partial",
+            "7": "scan"
+          },
+          "support_columns": [
+            "relative_path",
+            "sha256",
+            "git_blob",
+            "bytes",
+            "saved",
+            "method",
+            "reader_ref",
+            "mask",
+            "read",
+            "tree_git_blob",
+            "tree_bytes",
+            "evidence_ref",
+            "related_primary_ordinal"
+          ],
+          "support_path_rule": "full Git path=entry.package.root+'/'+support[0]。saved gzipはCの固定catalog/roster content_path、通常Git indexなら同repo objects/{sha256}.gz、補助取得20件はcatalogの補助path。actualreader/read範囲は別に保持。primary aliasesはsupport数へ加算しない。"
+        },
+        "domain": "othergit373-chunk-v1",
+        "existing_relationship": {
+          "comparison": "起動catalogの名前/descriptionと既知3048/public metadataだけ。未知中央本文比較/導入済み同一性/重複確定0。",
+          "history_limit": "旧README/license/代表確認やqueue参照なしを、当該固定本文の全読了/全過去未読の根拠にしない。旧ACK/支持の実readerは個別に保持。",
+          "known3048_evidence_ref": {
+            "chunk_id": "c12bd8094e6a4f178350db9f02a746ce",
+            "expected_canonical_sha256": "b69905399f64104f22d448d3879b6755121e4fd6e821afa6ab3885ee68ef9b13",
+            "pointers": [
+              "existing_relationship.known3048_scan",
+              "existing_relationship.known3048_bindings"
+            ]
+          },
+          "new_unique_coverage_not_claimed": true
+        },
+        "first_ordinal": 281,
+        "input_validation": {
+          "batching": "context単位で1件。373を縮小せず次282。",
+          "catalog_sha256": "2d73c9a038a41cc220a9687b935bfa1e0b315b65d9bd6d3e54ddb4111972876c",
+          "commit": "162db92f54d717d8ebd12292e155aeef32bb4b3c",
+          "commit_json_sha256": "674dc969c4d800fefbf65a7ecb1c875e919118aa48fd0a2133ede51385f90939",
+          "commit_json_tree_pointer": "/commit/tree/sha",
+          "index_sha256": "477ac8c5b178c4c781bf5baf0b26c6a316ed0ae6e9001ad28f0ac0ab9844b54f",
+          "notice_paths": [
+            "LICENSE.md"
+          ],
+          "repo": "x1xhlol/system-prompts-and-models-of-ai-tools",
+          "root_tree": "e8d86c0a025a7a07d4bb8723ae758cf98d63cbf5",
+          "same_buffer_sha_bytes_gitblob_strict_utf8": true,
+          "saved_alias_metadata_correction": {
+            "corrected_publication_count": 0,
+            "files_written": 0,
+            "new_source_model_reads": 0,
+            "reason": "Git content-indexに無い補助取得済みsourceをunsavedとするのは不正確。固定roster/catalogのcontent_pathとgzip同一性へ照合しsaved trueを保持。未取得bodyの新取得/guard迂回なし。",
+            "scope": "metadata-only unpublished x1x package supports",
+            "source_executed": false
+          },
+          "tree_entries": 171,
+          "tree_sha256": "416b91db26db0b0c4447d46bbb945259d89ac393e45ee76b5ebceb09cde459f5",
+          "truncated": false,
+          "tuple_unit_catalog_exact": true
+        },
+        "notice_evidence": {
+          "root": {
+            "actual_reader_job": "20261025-142809-todo-3778",
+            "bytes": 35149,
+            "copy_license_accepted": false,
+            "displayed_line_ranges": [
+              [
+                1,
+                350
+              ],
+              [
+                351,
+                674
+              ]
+            ],
+            "fixed_token_recovery": {
+              "line": 154,
+              "new_raw_read": false,
+              "same_bytes_verified": true,
+              "text": "2. Basic Permissions."
+            },
+            "git_blob": "f288702d2fa16d3cdf0035b15a9fcbc552cd88e7",
+            "last_line": 674,
+            "mask": 2,
+            "masked_lines": [
+              4,
+              154
+            ],
+            "method": "same-byte-reuse",
+            "original_notice_gzip": "github/x1xhlol__system-prompts-and-models-of-ai-tools/objects/3972dc9744f6499f0f9b2dbf76696f2ae7ad8af9b23dde66d6af86c9dfb36986.gz",
+            "original_read": [
+              3,
+              2,
+              0,
+              false,
+              true,
+              674
+            ],
+            "original_reader_namespace": "20261025-142809-todo-3778/current",
+            "path": "LICENSE.md",
+            "read": [
+              3,
+              2,
+              1,
+              false,
+              true,
+              674
+            ],
+            "reader": 1,
+            "representative": {
+              "chunk_id": "951da82f4b0d41cda1532574d0b68f97",
+              "pointer": "entries/0/notices/0",
+              "receipt_sha256": "a0afd9bdcf9511fb72c7995cf4376914fe854047aa4512be84661a60d3cfaf9f"
+            },
+            "saved": true,
+            "scope": "root GPLv3全文の旧masked読取を再利用。固定complete treeに別notice名候補なし。収集者のrootGPLをAnthropic等の第三者prompt/tool/サービスの真正性・転載/配布・利用権へ包括しない。原文参照/要約と公開転載/実配布/サービス利用を区別。",
+            "sha256": "3972dc9744f6499f0f9b2dbf76696f2ae7ad8af9b23dde66d6af86c9dfb36986"
+          }
+        },
+        "privacy_limits": {
+          "limit": "原値/断片は再掲しない。mask数は表示前filterの行数で実秘密数/不存在ではない。原filter/profile欠落や初回限界は個別に保持。",
+          "masking_version": "v15",
+          "raw_value_or_fragment_recovery": false
+        },
+        "reader_job": "20261026-174104-todo-3778",
+        "reader_todo": 3778,
+        "resource_evidence": {
+          "a41": {
+            "actual_reader_job": "20261025-142809-todo-3778",
+            "method": "same-byte-reuse-primary-alias",
+            "new_current_raw_or_support_unique_credit": 0,
+            "new_raw_or_unique_credit": 0,
+            "original_actor": 0,
+            "original_masked_line_profile": null,
+            "original_range_profile": null,
+            "original_read": [
+              3,
+              5,
+              0,
+              false,
+              true,
+              508
+            ],
+            "original_reader_namespace": "20261025-142809-todo-3778/current",
+            "read": [
+              3,
+              5,
+              1,
+              false,
+              true,
+              508
+            ],
+            "reading_evidence": null,
+            "representative": {
+              "chunk_id": "6d23ad0bfc244f748f7d15b0c9648a52",
+              "chunk_sha256": "997e2fa382f18d85383b8df24c8aeacc14451364aa20c3b3e83d731a32b9be3b",
+              "pointer": "/entries/0",
+              "receipt_sha256": "21e9731b93b125def9750b229df791491e6c34ff43e2e7328d74afc312ea1257"
+            },
+            "scope": "以前ACK済みprimary/tool本文の出所参照。今回そのbodyを再表示しない。欠落range/masklineを原mask総数から推測しない。",
+            "source": [
+              "supplement:3d51fe3615ef361f2beed189ffc9830c4fffec6b5150523ce0c8f0788eeb4399",
+              "x1xhlol/system-prompts-and-models-of-ai-tools",
+              "162db92f54d717d8ebd12292e155aeef32bb4b3c",
+              "Anthropic/Claude Code/Tools.json",
+              "9ee1436ccc92f9003fc8eb60ce023657a2055c49d9b4b9bbe88b8f39c4ab8fa4",
+              "2645d6858ef393b21ca990d9f9fdc26239c25370",
+              48962
+            ],
+            "unit": "supplemental_non_md_procedure_or_configuration"
+          }
+        },
+        "resume_validation": {
+          "acknowledged_through": 280,
+          "generation": 62,
+          "journal_sha256": "8886990aa0b391fe6271f60f860de98786ed4597b5e8b7ae96faa4ae6a76c750",
+          "parent_semantic_assessments_read": true,
+          "previous_chunk_id": "c12bd8094e6a4f178350db9f02a746ce",
+          "previous_chunk_sha256": "b69905399f64104f22d448d3879b6755121e4fd6e821afa6ab3885ee68ef9b13",
+          "validated_receipts": 62
+        },
+        "roster_sha256": "460219790c088b33e6044c6a97c68a882549c608c3de46ea536aa990a2c1adac"
+      },
+      "original_chunk_id": "45d39c710b8e4a2fb610d94e78a5cf03",
+      "original_receipt_sha256": "db94a4f050fa8b0cec84f21c43eeb23a17dd85da56424cf88d4f738ec0e771b7"
+    },
+    "c7c0a28a1ab7c9723e7c383538a789b008ff616a5ce6a77847cf465fe727cb32": {
+      "actual_assessment_reader": "20261027-105225-todo-3778",
+      "all_original_chunk_fields_reconstructed": true,
+      "common": {
+        "boundaries": {
+          "central_operations": 0,
+          "copy_license_accepted": false,
+          "new_final_dispositions": 0,
+          "source_executed": false
+        },
+        "chunk_id": "f2870c6d45a14b83b9e2067fc015a4d2",
+        "corrections": [
+          {
+            "correct": "335c531c06c7ea8e8d2a2b5176b93c5c2c5b01320c2e48789f075f027211c8f1",
+            "current_go_matches_original_checked_value": true,
+            "original_receipt_preserved": true,
+            "pointer": "/input_validation/go_anchor/sha256",
+            "reason": "assistant commentaryへの転記でmetadata hashの1文字を誤った。原Goファイルとsource7tuple/notice/supportのnative照合は正しい固定値で実施済み。原packetを同IDで改変せず、受領後の次packetで訂正する。",
+            "reported": "335c531c06c7ea8e8d2a2b5176b93c5c2b5b01320c2e48789f075f027211c8f1",
+            "source_or_read_profile_changed": false,
+            "target_chunk_id": "a284c790d65e4b0f938217cb5e6a104d"
+          }
+        ],
+        "definitions": {
+          "actors": {
+            "0": "今回の実assistant",
+            "1": "以前同じToDo3778の実assistant:20261025-142809-todo-3778",
+            "2": "以前同じToDo3778の実assistant:20261026-174104-todo-3778"
+          },
+          "alias_identity_rule": "各aliasのtree git_blob/bytesは同列git_blob/bytesと独立照合して一致。正確なgzip pathは固定名簿rows[primary_ordinal-1].entry.content_pathを使用して照合済み。metadata-only byte検証を新rawへしない。",
+          "common_unmet": "全entryで現在の公式版/実consumer・API/サービス動作、個別の転載/配布/サービス利用権、未知中央本文比較は未検証。原snapshotの文言を実権限や現在値へ昇格せず、最終採否/配置0。",
+          "primary_alias_columns": [
+            "path",
+            "sha256",
+            "git_blob",
+            "bytes",
+            "saved",
+            "method",
+            "actual_reader_ref",
+            "mask",
+            "read",
+            "original_read",
+            "representative",
+            "primary_ordinal"
+          ],
+          "reader_namespace": "20261027-105225-todo-3778/current",
+          "readers": {
+            "current": {
+              "actor": 0,
+              "actual_reader_job": "20261027-105225-todo-3778",
+              "reader_namespace": "20261027-105225-todo-3778/current"
+            },
+            "r142809": {
+              "actor": 1,
+              "actual_reader_job": "20261025-142809-todo-3778",
+              "reader_namespace": "20261025-142809-todo-3778/current"
+            },
+            "r174104": {
+              "actor": 2,
+              "actual_reader_job": "20261026-174104-todo-3778",
+              "reader_namespace": "20261026-174104-todo-3778/current"
+            }
+          },
+          "states": {
+            "1": "saved_unread",
+            "2": "direct_raw_full",
+            "3": "direct_masked_full",
+            "6": "partial",
+            "7": "scan"
+          },
+          "support_rule": "supportはprimary_alias_inventoryの参照。各packageの全blobから当該primaryだけを除いたもの。全て保存済みの別primary aliasで、支持読了/新uniqueへ二重加算0。rawやmask/actorをbyte照合だけで作らない。"
+        },
+        "domain": "othergit373-chunk-v1",
+        "existing_relationship": {
+          "new_global_unique_coverage_claimed": false,
+          "reference_chunk_id": "a284c790d65e4b0f938217cb5e6a104d",
+          "reference_receipt_sha256": "f0ba60bd61843ae188fa282a29e893f5f4477e7836c0e4922bc9c1743f8f8d8b",
+          "scope": "前packetの既知3048/public metadataと、起動catalogのbrowser-automation/computer-use/mcp-builder/ai-workflow等の名/descriptionまで。未知中央の本文/存在や全過去の未読/重複を確定しない。"
+        },
+        "first_ordinal": 283,
+        "input_validation": {
+          "all_primary_and_package_aliases_same_buffer_verified": true,
+          "catalog_rows": 73220,
+          "catalog_sha256": "2d73c9a038a41cc220a9687b935bfa1e0b315b65d9bd6d3e54ddb4111972876c",
+          "commit": "162db92f54d717d8ebd12292e155aeef32bb4b3c",
+          "commit_json_sha256": "674dc969c4d800fefbf65a7ecb1c875e919118aa48fd0a2133ede51385f90939",
+          "index_sha256": "477ac8c5b178c4c781bf5baf0b26c6a316ed0ae6e9001ad28f0ac0ab9844b54f",
+          "notice_paths": [
+            "LICENSE.md"
+          ],
+          "primary_tuple_unit_catalog_exact": true,
+          "repo": "x1xhlol/system-prompts-and-models-of-ai-tools",
+          "root_tree": "e8d86c0a025a7a07d4bb8723ae758cf98d63cbf5",
+          "same_buffer_sha_bytes_gitblob_strict_utf8": true,
+          "tree_entries": 171,
+          "tree_sha256": "416b91db26db0b0c4447d46bbb945259d89ac393e45ee76b5ebceb09cde459f5",
+          "truncated": false
+        },
+        "notice_evidence": {
+          "root": {
+            "actual_reader_job": "20261025-142809-todo-3778",
+            "bytes": 35149,
+            "copy_license_accepted": false,
+            "displayed_line_ranges": [
+              [
+                1,
+                350
+              ],
+              [
+                351,
+                674
+              ]
+            ],
+            "fixed_token_recovery": {
+              "line": 154,
+              "new_raw_read": false,
+              "same_bytes_verified": true,
+              "text": "2. Basic Permissions."
+            },
+            "git_blob": "f288702d2fa16d3cdf0035b15a9fcbc552cd88e7",
+            "mask": 2,
+            "masked_lines": [
+              4,
+              154
+            ],
+            "method": "same-byte-reuse",
+            "original_notice_gzip": "github/x1xhlol__system-prompts-and-models-of-ai-tools/objects/3972dc9744f6499f0f9b2dbf76696f2ae7ad8af9b23dde66d6af86c9dfb36986.gz",
+            "original_read": [
+              3,
+              2,
+              0,
+              false,
+              true,
+              674
+            ],
+            "original_reader_namespace": "20261025-142809-todo-3778/current",
+            "path": "LICENSE.md",
+            "read": [
+              3,
+              2,
+              1,
+              false,
+              true,
+              674
+            ],
+            "reader": 1,
+            "representative": {
+              "chunk_id": "951da82f4b0d41cda1532574d0b68f97",
+              "pointer": "entries/0/notices/0",
+              "receipt_sha256": "a0afd9bdcf9511fb72c7995cf4376914fe854047aa4512be84661a60d3cfaf9f"
+            },
+            "saved": true,
+            "scope": "root GPLv3全文の旧masked読取を再利用。固定complete treeに別notice名候補なし。収集者のrootGPLをAnthropic等の第三者prompt/tool/サービスの真正性・転載/配布・利用権へ包括しない。原文参照/要約と公開転載/実配布/サービス利用を区別。",
+            "sha256": "3972dc9744f6499f0f9b2dbf76696f2ae7ad8af9b23dde66d6af86c9dfb36986"
+          }
+        },
+        "primary_alias_inventory": {
+          "p280": [
+            "Anthropic/Claude Code 2.0.txt",
+            "3faaec1c4aa292e433c00800546a80ae15a31560fc36a50691d707eeb6ca3767",
+            "ad39f48d2be095103240f3e7702d59d5f2ed2a0b",
+            57324,
+            true,
+            "same-byte-reuse",
+            "r174104",
+            6,
+            [
+              3,
+              6,
+              2,
+              false,
+              true,
+              1150
+            ],
+            [
+              3,
+              6,
+              0,
+              false,
+              true,
+              1150
+            ],
+            {
+              "chunk_id": "c12bd8094e6a4f178350db9f02a746ce",
+              "pointer": "entries/0"
+            },
+            280
+          ],
+          "p281": [
+            "Anthropic/Claude Code/Prompt.txt",
+            "281b3455da9a49f1ca042601f2a1c1f4694137f06de09514762b6507f88af972",
+            "475e45e40653fa2315955f8130d0472e9f860775",
+            13019,
+            true,
+            "same-byte-reuse",
+            "r174104",
+            0,
+            [
+              2,
+              0,
+              2,
+              true,
+              true,
+              191
+            ],
+            [
+              2,
+              0,
+              0,
+              true,
+              true,
+              191
+            ],
+            {
+              "chunk_id": "45d39c710b8e4a2fb610d94e78a5cf03",
+              "pointer": "entries/0"
+            },
+            281
+          ],
+          "p282": [
+            "Anthropic/Claude Fable 5.txt",
+            "920d838534e1d06c719f1748729a6b1bb9ac65657b0af511e4e34877f1a4f953",
+            "5206253f75c8cc59a501b156d1a367eb87fe4718",
+            119995,
+            true,
+            "same-byte-reuse",
+            "current",
+            14,
+            [
+              3,
+              14,
+              0,
+              false,
+              true,
+              1580
+            ],
+            [
+              3,
+              14,
+              0,
+              false,
+              true,
+              1580
+            ],
+            {
+              "chunk_id": "a284c790d65e4b0f938217cb5e6a104d",
+              "pointer": "entries/0"
+            },
+            282
+          ],
+          "p283": [
+            "Anthropic/Claude for Chrome/Prompt.txt",
+            "bcf1f1e1d1ad0d1a5c1089b8b9f92aa584b252ab1be426e352a946abeb310f03",
+            "8492831a121667f111697c3edcdcf6de44c2308b",
+            43595,
+            true,
+            "same-byte-reuse",
+            "current",
+            6,
+            [
+              3,
+              6,
+              0,
+              false,
+              true,
+              646
+            ],
+            [
+              3,
+              6,
+              0,
+              false,
+              true,
+              646
+            ],
+            {
+              "chunk_id": "f2870c6d45a14b83b9e2067fc015a4d2",
+              "pointer": "entries/0"
+            },
+            283
+          ],
+          "p284": [
+            "Anthropic/Claude Sonnet 4.6.txt",
+            "327989e919f8dc79c42f3b0f8ca466fcc3adc4aa6bac2d005abc4e5cfb6bcbea",
+            "c64ba22a30ba614b14daa65ae57cc1ba67ee399a",
+            98989,
+            true,
+            "same-byte-reuse",
+            "current",
+            15,
+            [
+              3,
+              15,
+              0,
+              false,
+              true,
+              1191
+            ],
+            [
+              3,
+              15,
+              0,
+              false,
+              true,
+              1191
+            ],
+            {
+              "chunk_id": "f2870c6d45a14b83b9e2067fc015a4d2",
+              "pointer": "entries/1"
+            },
+            284
+          ],
+          "p285": [
+            "Anthropic/Claude Sonnet 5 Tools.txt",
+            "9877cbb8bc77a9bbde24393dd0961f9b1dc4611ef9fc4bc3ad58e6a84e6a1588",
+            "dc3378e183dc43c43a67586868d8b95cac6603a6",
+            33246,
+            true,
+            "same-byte-reuse",
+            "current",
+            5,
+            [
+              3,
+              5,
+              0,
+              false,
+              true,
+              362
+            ],
+            [
+              3,
+              5,
+              0,
+              false,
+              true,
+              362
+            ],
+            {
+              "chunk_id": "f2870c6d45a14b83b9e2067fc015a4d2",
+              "pointer": "entries/2"
+            },
+            285
+          ],
+          "p286": [
+            "Anthropic/Claude Sonnet 5.txt",
+            "a825ca2c1ab3c9070a800fff06cb2cb23cec255de0d6ff79f609f6e77c3f0247",
+            "a7e68cead718efcc6e04b0cf217fe8839b6cd0fe",
+            55746,
+            true,
+            "same-byte-reuse",
+            "current",
+            5,
+            [
+              3,
+              5,
+              0,
+              false,
+              true,
+              551
+            ],
+            [
+              3,
+              5,
+              0,
+              false,
+              true,
+              551
+            ],
+            {
+              "chunk_id": "f2870c6d45a14b83b9e2067fc015a4d2",
+              "pointer": "entries/3"
+            },
+            286
+          ],
+          "p287": [
+            "Anthropic/Sonnet 4.5 Prompt.txt",
+            "3fe1599c9c6cfce4d05de9c497ab48280f3f0e329d6ee87b9e0479daa0c9806d",
+            "585ef7ed838b62d5f2a6a9fce250e532cfaa9f0e",
+            43200,
+            true,
+            "same-byte-reuse",
+            "current",
+            2,
+            [
+              3,
+              2,
+              0,
+              false,
+              true,
+              382
+            ],
+            [
+              3,
+              2,
+              0,
+              false,
+              true,
+              382
+            ],
+            {
+              "chunk_id": "f2870c6d45a14b83b9e2067fc015a4d2",
+              "pointer": "entries/4"
+            },
+            287
+          ],
+          "p41": [
+            "Anthropic/Claude Code/Tools.json",
+            "9ee1436ccc92f9003fc8eb60ce023657a2055c49d9b4b9bbe88b8f39c4ab8fa4",
+            "2645d6858ef393b21ca990d9f9fdc26239c25370",
+            48962,
+            true,
+            "same-byte-reuse",
+            "r142809",
+            5,
+            [
+              3,
+              5,
+              1,
+              false,
+              true,
+              508
+            ],
+            [
+              3,
+              5,
+              0,
+              false,
+              true,
+              508
+            ],
+            {
+              "chunk_id": "6d23ad0bfc244f748f7d15b0c9648a52",
+              "pointer": "entries/0"
+            },
+            41
+          ],
+          "p42": [
+            "Anthropic/Claude for Chrome/Tools.json",
+            "6980566027f6a3b83f2f0c381f4eb1b12cf50eb090147dd3e7667d36b6019b65",
+            "8b11d5919ca8e6e0c92c8b3fd1699caf19955b72",
+            24056,
+            true,
+            "same-byte-reuse",
+            "r142809",
+            1,
+            [
+              3,
+              1,
+              1,
+              false,
+              true,
+              506
+            ],
+            [
+              3,
+              1,
+              0,
+              false,
+              true,
+              506
+            ],
+            {
+              "chunk_id": "6d23ad0bfc244f748f7d15b0c9648a52",
+              "pointer": "entries/1"
+            },
+            42
+          ]
+        },
+        "privacy_limits": {
+          "guard_limit_inherited": "前packetの起動入口/保存方針/Skill再読の分類未確認を保持。今回、own/parent job metadataとown last_messageのtransport診断もguard分類未確認で未読。別path/APIで迂回していない。",
+          "initial_limits": "283 L414の支払例の部分識別子、284 L813のsource-user位置文脈が初回filterを通過。原値/断片を再掲せず、本人実カード/現在ownerの位置へ流用しない。",
+          "preparation_scope": "ACK待ちに同じAnthropic packageの必要な比較文脈として283..287を一度ずつ先行読取。元282packetのsaved_unreadは当時snapshotのまま保持。新chunk送信/cursor進行はACK282確認後。",
+          "profile": "283=v17 mask6、284=v18 mask15、285..287=v19 mask5/5/2。後からfilterを強化しても初回profileを塗替えない。maskは伏字行数で実秘密数/不存在の証明ではない。"
+        },
+        "reader_job": "20261027-105225-todo-3778",
+        "reader_todo": 3778,
+        "resume_validation": {
+          "acknowledged_through": 282,
+          "generation": 64,
+          "journal_sha256": "0ea3c4c8dcb942f10f13ce62fd3add4302696977c3172ab49c60f871bda15c49",
+          "parent_semantic_assessments_read": true,
+          "previous_chunk_id": "a284c790d65e4b0f938217cb5e6a104d",
+          "previous_chunk_sha256": "18075b5f868d493fe8b5a45577d2bda8fac21f623efefd1eb044de359c3d972b",
+          "previous_receipt_sha256": "f0ba60bd61843ae188fa282a29e893f5f4477e7836c0e4922bc9c1743f8f8d8b",
+          "validated_receipts": 64
+        },
+        "roster_sha256": "460219790c088b33e6044c6a97c68a882549c608c3de46ea536aa990a2c1adac"
+      },
+      "original_chunk_id": "f2870c6d45a14b83b9e2067fc015a4d2",
+      "original_receipt_sha256": "655957a23108640f9f91a0bdca12f71b044bc1ff429c663638bae577c9f5c221"
+    }
+  },
+  "source_counts": {
+    "x1xhlol/system-prompts-and-models-of-ai-tools": 7
+  },
+  "whole16_complete": false
+}

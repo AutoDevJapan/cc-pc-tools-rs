@@ -616,7 +616,7 @@
     "guard_client_resource": true,
     "state": "classification_unverified"
   },
-  "recorded_at": "2026-10-27T01:22:30.8756269+00:00",
+  "recorded_at": "2026-10-27T04:02:52.1426943+00:00",
   "total_skill_named_body_read_definition": "This field preserves the historical complete-source subset only. Current raw/workflow primary coverage is projected from the canonical source components and sixmile evaluation index in all_fulltext_primary_paths_including_partial_sources/all_workflow_primary_paths_including_partial_sources, not copied here.",
   "openai_entrypoint_evaluation": {
     "rights_accepted": false,
@@ -2740,8 +2740,19 @@
     "fresh_metadata_total": 457,
     "target_found": 0,
     "parse_errors": 0,
-    "full_content_review_pending": true,
-    "actual_central_operations": 0
+    "full_content_review_pending": false,
+    "actual_central_operations": 0,
+    "full_content_review": {
+      "todo": 4083,
+      "job": "20261027-103930-todo-4083",
+      "spec_sha256": "2ca4d1f6126c341b4971c5adb7fa4d2040023f72342705136ce533616ad73092",
+      "original_sha256": "b9def53ec95455af26f44ea1bbbbf24415a52b07ce3571ca491ab14b565ef000",
+      "Must": 0,
+      "Suggestion": 1,
+      "actual_Luna_max_verified": true,
+      "manifest": "11070b772c86f7ffb459be2f75eaf6d0a436ce9dfdf0d9247eb81c6e433ede51",
+      "frozen_after_actual_Create_only": true
+    }
   },
   "latest_received13_assessments": {
     "sixmile": [
@@ -2764,5 +2775,29 @@
     "new_permissions": 0,
     "new_final_dispositions": 0,
     "all16_complete": false
+  },
+  "latest_received9_assessments": {
+    "sixmile": [
+      185,
+      186
+    ],
+    "other": [
+      281,
+      287
+    ],
+    "primary_occurrences": 9,
+    "source_primary_bytes": 416079,
+    "whole_original_contexts": 4,
+    "parent_all_semantics_received": true,
+    "source_reopens_for_reception": 0,
+    "new_global_raw_or_workflow_credit": 0,
+    "new_permissions": 0,
+    "new_final_dispositions": 0,
+    "separate_support_file": "skills-3080-research3719-support6-received214717.json",
+    "new_separate_support_records": 6,
+    "total_separate_support_records": 43,
+    "original_grouped_assessments_not_split": true,
+    "old_missing_flags_not_filled": true,
+    "whole16_complete": false
   }
 }

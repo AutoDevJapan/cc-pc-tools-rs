@@ -29,3 +29,6 @@
   CIを確認し、通常配布の実所有/ロック/source receiptを照合して反映する。
 - 通常起動の観測を待ち、4091へ実CLIを使って具体的な候補/除外/保留を読み返す。
   4091等の本文、停止、依存、予約、model/account/routeは変更しない。
+
+Windowsの置換は[ReplaceFileW](https://learn.microsoft.com/en-us/windows/win32/api/winbase/nf-winbase-replacefilew)を使い、
+初回だけ[MoveFileExW](https://learn.microsoft.com/en-us/windows/win32/api/winbase/nf-winbase-movefileexw)で配置する。

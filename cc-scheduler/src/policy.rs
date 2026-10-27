@@ -194,14 +194,24 @@ pub fn priority(item: &Value, priorities: &Value) -> f64 {
     f64::from(cc_job_policy::priority::item_rank(item, priorities))
 }
 pub fn priority_queue(items: &[Value], priorities: &Value, now: f64) -> Vec<Value> {
+    priority_queue_observed(items, priorities, now, |_, _| {})
+}
+pub(crate) fn priority_queue_observed(
+    items: &[Value], priorities: &Value, now: f64,
+    mut observe: impl FnMut(&Value, Option<crate::admission::Reason>),
+) -> Vec<Value> {
+    use crate::admission::Reason;
     let mut q: Vec<Value> = items
         .iter()
         .filter(|i| {
-            s(&i["status"]) == "todo"
-                && truth(&i["dispatchable"])
-                && truth(&i["spec"])
-                && !truth(&i["scheduler"]["question_close_pending"])
-                && n(&i["scheduler"]["not_before"]) <= now
+            let reason = if s(&i["status"]) != "todo" { Some(Reason::StatusNotTodo) }
+                else if !truth(&i["dispatchable"]) { Some(Reason::NotDispatchable) }
+                else if !truth(&i["spec"]) { Some(Reason::MissingSpecMetadata) }
+                else if truth(&i["scheduler"]["question_close_pending"]) { Some(Reason::QuestionClosePending) }
+                else if n(&i["scheduler"]["not_before"]) <= now { None }
+                else { Some(Reason::NotBefore) };
+            observe(i, reason);
+            reason.is_none()
         })
         .cloned()
         .collect();

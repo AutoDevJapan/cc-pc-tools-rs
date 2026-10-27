@@ -12,7 +12,11 @@ fn admission_cli_has_a_read_only_entry_without_dispatch_initialization() {
     let help = String::from_utf8(output.stdout).unwrap();
     assert!(help.contains("--id <ID>"));
     assert!(help.contains("read-only"));
-    for args in [vec!["--id", "0"], vec!["--id", "4091", "--apply"], vec!["--all"]] {
+    for args in [
+        vec!["--id", "0"],
+        vec!["--id", "4091", "--apply"],
+        vec!["--all"],
+    ] {
         let output = Command::new(env!("CARGO_BIN_EXE_scheduler"))
             .creation_flags(0x08000000)
             .arg("explain-admission")

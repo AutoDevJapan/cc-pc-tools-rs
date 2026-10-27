@@ -29,6 +29,8 @@ mod workspace_relocation_tests;
 mod quota_recovery_tests;
 #[path = "support/initial_review.rs"]
 mod initial_review_tests;
+#[path = "support/admission.rs"]
+mod admission_tests;
 
 #[test]
 fn review_preparation_failures_stop_after_three_and_recover_on_new_evidence() {

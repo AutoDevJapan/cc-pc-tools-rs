@@ -406,7 +406,7 @@ func validatedTravel3Dispositions(t *testing.T) map[string]cohortLedgerRow {
 }
 
 func TestTravel3HistoricalSuggestionCannotDisappearOrGrantAuthorship(t *testing.T) {
-	for _, kind := range []string{"historical count erased", "resolution missing", "original review restarted", "authorship promoted", "publisher changed to creator", "publisher missing", "different finding", "different interpretation", "unrecorded effect count"} {
+	for _, kind := range []string{"historical count erased", "resolution missing", "original review restarted", "authorship promoted", "publisher changed to creator", "publisher missing", "different finding", "classification changed", "classification missing", "different interpretation", "unrecorded effect count"} {
 		t.Run(kind, func(t *testing.T) {
 			var i travel3Install
 			loadPublicReceipt(t, "skills-3080-travel3-installation-evidence214717.json", &i)
@@ -433,6 +433,10 @@ func TestTravel3HistoricalSuggestionCannotDisappearOrGrantAuthorship(t *testing.
 				r.Publisher = ""
 			case "different finding":
 				r.Finding.ID = "another-finding"
+			case "classification changed":
+				r.Finding.Class = "Nit"
+			case "classification missing":
+				r.Finding.Class = ""
 			case "different interpretation":
 				r.Resolution.Interpretation = "Independent authorship is confirmed."
 			case "unrecorded effect count":

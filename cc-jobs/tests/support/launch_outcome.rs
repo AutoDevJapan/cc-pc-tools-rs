@@ -81,6 +81,14 @@ fn typed_live_queued_and_restart_pending_replays_do_not_issue_another_supervisor
         job["status"] = json!(status);
         job["queue_restart_pending"] = json!(restart);
         job["reboot_launch_pending"] = json!(reboot);
+        if status == "running" {
+            job["pid"] = json!(std::process::id());
+            job["pid_created"] = json!(123);
+            assert!(
+                t.ctx.running_job(&job),
+                "the replay fixture must be a healthy live owner"
+            );
+        }
         t.ctx.save(&job).unwrap();
         let again = typed(&t, &key);
         assert_eq!(again.kind, Kind::ExistingJobNoAction);
@@ -172,4 +180,27 @@ fn typed_concurrent_same_key_has_one_queued_publication_and_no_duplicate_effect(
     );
     assert!(outcomes.iter().all(|o| o.job_id == outcomes[0].job_id));
     assert_eq!(t.rt.supervisors.load(Ordering::Relaxed), 1);
+}
+
+#[test]
+fn failed_spawn_preserves_canonical_receipt_and_replay_has_no_second_effect() {
+    let t = Test::new();
+    let key = "ef".repeat(16);
+    t.rt.supervisor_fail.store(true, Ordering::Relaxed);
+    assert!(
+        t.run(&["--launch-key", &key, "--launch-outcome"], b"fixture")
+            .is_err()
+    );
+    let canonical = t
+        .ctx
+        .read_json(&t.ctx.jobs.join(format!(".launch-{key}.json")))
+        .unwrap();
+    assert_eq!(t.rt.supervisors.load(Ordering::Relaxed), 1);
+    t.rt.supervisor_fail.store(false, Ordering::Relaxed);
+    let outcome = typed(&t, &key);
+    assert_eq!(outcome.job_id, canonical["id"]);
+    assert_eq!(outcome.kind, Kind::ExistingJobNoAction);
+    assert_eq!(outcome.job_state, JobState::Queued);
+    assert_eq!(t.rt.supervisors.load(Ordering::Relaxed), 1);
+    assert_eq!(t.ctx.list_jobs(&HashSet::new()).len(), 1);
 }

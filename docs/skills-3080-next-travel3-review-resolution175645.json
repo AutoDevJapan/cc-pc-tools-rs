@@ -97,5 +97,36 @@
     "private_owner_ids_or_private_conversation_added": false,
     "general_identifier_prohibition_created": false,
     "pointed_self_recheck_pending": true
+  },
+  "self_full_round3": {
+    "task": 4129,
+    "job": "20261028-000008-todo-4129",
+    "registered_spec_sha256": "b710a8e7437af24ff69109fa58b308890297e002c4df072ee276292388ee581e",
+    "original_bytes": 1679,
+    "original_sha256": "10d1ddd3656d7d0fde6c2e9399da3137c4dd3b6eb3bfef9676a0a52510055b08",
+    "input_commit": "fe77cfb30055104facef60a89bd67313bdc993bf",
+    "inputs": 20,
+    "manifest_sha256": "5df4ba1cf1946271e5d03d6b6e02009f0c29d2c8025a9b8be0161a3d8aefae70",
+    "comparison_only": false,
+    "Must": 0,
+    "Suggestion": 1,
+    "Nit": 0,
+    "normal_qualified_original_and_actual_Luna_max_verified": true,
+    "original_input_and_response_retained": true
+  },
+  "structured_identifier_followup": {
+    "finding": "round3 Suggestion1",
+    "parent_position": "The remaining exact technical actors, namespaces, receipt references and registered workspace are required by the current purpose/identity and lossless original-field/ACK contracts. Replacing them with opaque values would need a different storage/verification design; these values are not owner account IDs, private reply text, credentials or customer originals.",
+    "evidence": [
+      "skills-3080-next-travel3-review-scope175645.md",
+      "skills-3080-purpose-qualification.md",
+      "../tools/skills-3080-catalog/received27_fidelity_test.go"
+    ],
+    "unnecessary_source_prose_identifiers_already_removed": true,
+    "all21_output_bytes_unchanged_from_fe77": true,
+    "operation_schema_or_guard_changed": false,
+    "any_concrete_unnecessary_or_protected_field_must_still_be_fixed": true,
+    "pointed_reviewer_confirmation_pending": true,
+    "new_general_identifier_ban_created": false
   }
 }

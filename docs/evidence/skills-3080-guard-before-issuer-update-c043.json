@@ -1,0 +1,22 @@
+{
+  "domain": "skills-3080-independent-preupdate-software-observation-v1",
+  "observed_utc": "2026-10-27T01:03:23.1014736Z",
+  "observer_task": 3686,
+  "observer_job": "20261027-095706-todo-3686",
+  "repository_id": 1406818713,
+  "sha256": "c0439d9ccab874ac68e8f054a895cb7f5e50165d3adc5b7ae3e4fe8f92ce3081",
+  "source_head": "7cea2e8f12631aeb5584dab5bc8535b7cd984f8c",
+  "bytes": 13263360,
+  "module_matches": true,
+  "windows_amd64": true,
+  "vcs_clean": true,
+  "independent_deployment_task": 3387,
+  "independent_deployment_job": "20261027-093919-todo-3387",
+  "independent_deployment_note_marker": "[3387:093919:PR582DeployedC043ForOriginalSDKDiagnostic]",
+  "independent_deployment_note_sha256": "0bd82c51673055e2c6359eb23bc897f624399feaccc12a240c02eb9ae4d41cde",
+  "independent_deployment_note": "[3387:093919:PR582DeployedC043ForOriginalSDKDiagnostic]\n対応不要。親3387はPR582を09:42:06JSTに正常mergeしました。\nmerge e9674d8abe4167058c67117183ce7b481a311f00、配布source7cea2e8f12631aeb5584dab5bc8535b7cd984f8c。\n同sourceの正式15checksは14success/1neutral・失敗0、実Opus5.5maxの最終4071はMust0/Suggestion0です。\n自前154入力の実bytes/SHAとGit blob/modeを生成前後・merge後も一致確認し、同candidateを使い再buildしていません。\n\n09:44:40JSTに既存AdminBrokerで正常preflight後の単一Applyを完了しました。\n現用guardの全SHA256はc0439d9ccab874ac68e8f054a895cb7f5e50165d3adc5b7ae3e4fe8f92ce3081、13263360bytesです。\n実Apply request20261027-004439-bc528473afbe9879e98bb60d240ebd9d、exit0/oktrue/deployedtrue。\n元4348版を自分の復旧用backupへ保持し、現用new/backupold SHA一致、元owner/group/DACL保持・同SDDL SHAを実読返し済み。SACLは未検証です。\n正常用途の比較はmerge直後にnormal_registered_source_requiredを返したため、その失敗票を保持しました。\n同登録済みsourceの通常refresh→guard clearを確認した後の一回比較は成功し、元4348/source521c/実physicalidentityを一致確認してから配布しました。\nrefreshは元保護台帳の復旧や一般資格の付与ではありません。\n原配布票は3387作業場所 .ci-work/resume093919-installed.private.json、正常caller票同-prefix-admin-apply-caller.private.jsonです。\n\n親3387は09:40の通常再開でdoing/WaitReadynullを確認し、新配布票返却後はSDK実verify/consumeの途中で時刻待ちへ戻しません。\n元3888の同じ正規callerで、原SDK票3eb1173947e4a9c1f07281f40da2cf02の新版による正常verifyを一度行い、固定の段階/原因名と実exit/現在stateを親へ返してください。\n同じ原票/issuer/registration/所有50a805.../producerf5/Binding/原期限11:28頃を保持し、原因が残る場合はその同工程で修復します。\n同条件の無限verify、rawroot/storeの直接読取や別copy、再prepare/newroot/期限延長/Binding書換えは行いません。\n正常verifyが通る場合だけ、同じ正規callerによる一回consume/exit0と永続consumedを確認してから原CI40228177555の通常attempt2へ進む順序を保持してください。\n親のmetadata取得成功や今回のguard配布を、原SDKの受入・消費へ数えません。親のSDK操作代行0です。\n新causeはsdk_で始まる閉じた分類です。stale/futureと実evidence不一致を分け、物理失敗と取消の元error関係も保持します。\n750ms・1分・2分・24hの各制限と受入条件は不変で、原のpurpose_or_ioの実原因がstale等だったと推定で決めていません。\n\n元receiver4057等の工程は元3888が保持し、新4071のscopeと混ぜません。\n親の同branch/実e967/currentjobのcheckpointはsaved/全11true/launched0/source_files_changedfalseです。\n再開正本 .ci-work/3387-resume-093919.private.md。本人の新判断/PC操作/新質問/追加費用/mention/notifyは不要です。",
+  "new_candidate_generated": false,
+  "original_creation_receipts_rewritten": false,
+  "software_observation_only": true,
+  "general_data_access_granted": false
+}

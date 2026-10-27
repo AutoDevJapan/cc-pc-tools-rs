@@ -43,6 +43,11 @@ const official3894PreviousGuardHead = "f30f9e763e25884fa48d1cce0cac22da1cebfb69"
 const official3894RepairGuardSHA = "434832534d43cbe954aa1c2e573879556bb840818e830a489b744e6e2744740f"
 const official3894RepairGuardHead = "521c4c4dddd7abbb0135d13bffb380ec984374b8"
 
+// The normally merged and deployed PR582 diagnostic software, independently
+// projected in docs/evidence/official-ci3387-known-guard-baseline-7cea2e8f.json.
+const official3894DiagnosticGuardSHA = "c0439d9ccab874ac68e8f054a895cb7f5e50165d3adc5b7ae3e4fe8f92ce3081"
+const official3894DiagnosticGuardHead = "7cea2e8f12631aeb5584dab5bc8535b7cd984f8c"
+
 type official3894Source struct {
 	Head, Registration, CreatorJob, Workspace, Branch, SpecSHA string
 }
@@ -864,7 +869,8 @@ func official3894Operation(ctx context.Context, op, id string, handoff func(obje
 
 func official3894InstalledBaseline(sha, head string) bool {
 	return (sha == official3894PreviousGuardSHA && head == official3894PreviousGuardHead) ||
-		(sha == official3894RepairGuardSHA && head == official3894RepairGuardHead)
+		(sha == official3894RepairGuardSHA && head == official3894RepairGuardHead) ||
+		(sha == official3894DiagnosticGuardSHA && head == official3894DiagnosticGuardHead)
 }
 
 // Qualifies only comparison of the known previously published guard software.

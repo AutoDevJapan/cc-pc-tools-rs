@@ -344,11 +344,17 @@ func ownerRegisteredSourceStatus(path string) (ownerPathVerdict, bool) {
 }
 
 func ownerSourceQuery(ctx context.Context, path string, access ownerSourceAccess) ownerPathVerdict {
+	return ownerSourceQueryWith(ctx, path, access, func(ctx context.Context) (*ownerProjectSnapshot, bool) {
+		return ownerReadProjectSnapshot(ctx, productStore, legacyMatch)
+	})
+}
+
+func ownerSourceQueryWith(ctx context.Context, path string, access ownerSourceAccess, read func(context.Context) (*ownerProjectSnapshot, bool)) ownerPathVerdict {
 	var snapshot *ownerProjectSnapshot
 	access.stable = func() bool { return snapshot != nil && snapshot.current() }
 	return ownerRegisteredSourceAt(ctx, path, func(ctx context.Context) (object, bool) {
 		var ok bool
-		snapshot, ok = ownerReadProjectSnapshot(ctx, productStore, legacyMatch)
+		snapshot, ok = read(ctx)
 		if !ok {
 			return nil, false
 		}

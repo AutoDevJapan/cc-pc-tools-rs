@@ -1,6 +1,6 @@
 module github.com/AutoDevJapan/cc-pc-tools-rs/repair-guard
 
-go 1.26
+go 1.27
 
 require cc/civ6-ci-contract v0.0.0
 

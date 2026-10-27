@@ -136,3 +136,24 @@ func TestOfficialCI3387UpdaterRecognizesPreviousNormalRepair(t *testing.T) {
 		t.Fatal("observed hash accepted with unrelated source")
 	}
 }
+
+func TestOfficialCI3387UpdaterRecognizesDeployedDiagnostic(t *testing.T) {
+	raw, err := os.ReadFile("../docs/evidence/official-ci3387-known-guard-baseline-7cea2e8f.json")
+	if err != nil {
+		t.Fatal(err)
+	}
+	var published struct {
+		Domain       string `json:"domain"`
+		RepositoryID int64  `json:"repository_id"`
+		Source       string `json:"source_head"`
+		SHA          string `json:"software_sha256"`
+		Merge        string `json:"merge_commit"`
+		PR           int    `json:"pull_request"`
+	}
+	if json.Unmarshal(raw, &published) != nil || published.Domain != "official-ci3387-known-guard-baseline-v1" || published.RepositoryID != 1406818713 || published.PR != 582 || published.Merge != "e9674d8abe4167058c67117183ce7b481a311f00" || published.SHA != official3894DiagnosticGuardSHA || published.Source != official3894DiagnosticGuardHead || !official3894InstalledBaseline(published.SHA, published.Source) {
+		t.Fatal("the normally merged and deployed PR582 diagnostic cannot be compared")
+	}
+	if official3894InstalledBaseline(published.SHA, strings.Repeat("a", 40)) || official3894InstalledBaseline(strings.Repeat("b", 64), published.Source) || official3894InstalledBaseline(official3894RepairGuardSHA, published.Source) {
+		t.Fatal("known diagnostic software accepted with another source or hash")
+	}
+}

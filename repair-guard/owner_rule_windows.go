@@ -25,7 +25,7 @@ type ownerRuleTool struct {
 	command string
 }
 
-func ownerRuleWith(ctx context.Context, path string, projects object, access ownerSourceAccess, config ownerRuleConfig, owned func(string) bool) ownerPathVerdict {
+func ownerRuleWith(ctx context.Context, path string, projects object, access ownerSourceAccess, config ownerRuleConfig, owned func(string) ownerPathVerdict) ownerPathVerdict {
 	// These are classification facts supplied by the owner, not task grants.
 	development := ownerRuleDevelopment(path, config.dev)
 	if development == "client" {
@@ -180,8 +180,8 @@ func ownerRuleWith(ctx context.Context, path string, projects object, access own
 			return ownerRuleClear("operational_tool_installation")
 		}
 	}
-	if owned != nil && owned(path) {
-		return ownerRuleClear("self_owned_temporary_resource")
+	if owned != nil {
+		return owned(path)
 	}
 	return ownerRuleProtected("owner_rule_unattributed_location")
 }
@@ -301,7 +301,9 @@ func ownerOrganizationQuery(ctx context.Context, path string, access ownerSource
 		if !ok {
 			return ownerRuleUnknown("registration_snapshot_unavailable")
 		}
-		result := ownerRuleWith(ctx, path, snapshot.projects, access, config, func(p string) bool { return ownerRuleOwnedTemporary(ctx, p, snapshot.projects, access, config) })
+		result := ownerRuleWith(ctx, path, snapshot.projects, access, config, func(p string) ownerPathVerdict {
+			return ownerRuleOwnedTemporary(ctx, p, snapshot.projects, access, config)
+		})
 		if result.Status == "protected" && result.Basis != "owner_rule_unattributed_location" {
 			return result
 		}

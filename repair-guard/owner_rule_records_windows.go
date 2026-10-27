@@ -14,8 +14,8 @@ import (
 )
 
 type ownerRecordMetadata struct {
-	id, project, cwd, repository, worktree, spec, prompt string
-	refs                                                 []string
+	id, todo, project, cwd, repository, worktree, spec, prompt string
+	refs                                                       []string
 }
 
 func ownerReadRecordObject(ctx context.Context, d *jsontext.Decoder, kind string) (ownerRecordMetadata, bool) {
@@ -30,14 +30,14 @@ func ownerReadRecordObject(ctx context.Context, d *jsontext.Decoder, kind string
 			return m, false
 		}
 		name := key.String()
-		scalar := name == "id" || name == "project" || name == "cwd" || name == "spec" ||
+		scalar := name == "id" || name == "todo_id" || name == "project" || name == "cwd" || name == "spec" ||
 			kind == "work_owner" && (name == "repository" || name == "worktree") || kind == "scheduler" && (name == "prompt" || name == "worktree")
 		if scalar {
 			token, err := d.ReadToken()
-			if err == nil && token.Kind() == 'n' && name != "id" {
+			if err == nil && token.Kind() == 'n' && name != "id" && name != "todo_id" {
 				continue
 			}
-			if err != nil || token.Kind() != '"' && !(name == "id" && token.Kind() == '0') {
+			if err != nil || token.Kind() != '"' && !((name == "id" || name == "todo_id") && token.Kind() == '0') {
 				return m, false
 			}
 			value := token.String()
@@ -47,6 +47,8 @@ func ownerReadRecordObject(ctx context.Context, d *jsontext.Decoder, kind string
 			switch name {
 			case "id":
 				m.id = strings.Clone(value)
+			case "todo_id":
+				m.todo = strings.Clone(value)
 			case "project":
 				m.project = strings.Clone(value)
 			case "cwd":

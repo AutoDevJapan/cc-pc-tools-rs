@@ -3,6 +3,8 @@ package main
 import (
 	"context"
 	"encoding/json"
+	"encoding/json/jsontext"
+	"io"
 	"path/filepath"
 	"regexp"
 	"strconv"
@@ -44,95 +46,91 @@ type ownerOwnedReceipt struct {
 var ownerOwnedName = regexp.MustCompile(`^codex-owned-([a-f0-9]{32})$`)
 var ownerOwnedJob = regexp.MustCompile(`^[A-Za-z0-9_-]{1,160}$`)
 
-func ownerRuleOwnedTemporary(ctx context.Context, path string, projects object, access ownerSourceAccess, config ownerRuleConfig) bool {
-	return ownerRuleOwnedAt(ctx, path, "D:/CC/Tools/safe-delete/receipts-go", "D:/CC/Tools/codex-jobs/jobs", projects, access, config)
+func ownerRuleOwnedTemporary(ctx context.Context, path string, projects object, access ownerSourceAccess, config ownerRuleConfig) ownerPathVerdict {
+	return ownerRuleOwnedVerdictAt(ctx, path, "D:/CC/Tools/safe-delete/receipts-go", "D:/CC/Tools/codex-jobs/jobs", projects, access, config)
 }
 
 func ownerRuleOwnedAt(ctx context.Context, path, store, jobs string, projects object, access ownerSourceAccess, config ownerRuleConfig) bool {
+	return ownerRuleOwnedVerdictAt(ctx, path, store, jobs, projects, access, config).AccessAllowed
+}
+func ownerRuleOwnedVerdictAt(ctx context.Context, path, store, jobs string, projects object, access ownerSourceAccess, config ownerRuleConfig) ownerPathVerdict {
 	root := path
 	for depth := 0; depth < 64 && ctx.Err() == nil; depth++ {
 		if match := ownerOwnedName.FindStringSubmatch(filepath.Base(root)); match != nil {
 			if !currentPlain(root, true) {
-				return false
+				return ownerRuleUnknown("owned_resource_metadata_unavailable")
 			}
 			record := filepath.Join(store, match[1]+".json")
 			if !currentPlain(record, false) {
-				return false
+				return ownerRuleUnknown("owned_resource_metadata_unavailable")
 			}
 			b, err := readBounded(record, 8192)
 			if err != nil {
-				return false
+				return ownerRuleUnknown("owned_resource_metadata_unavailable")
 			}
 			if _, ok := conversationJSON(b); !ok {
-				return false
+				return ownerRuleUnknown("owned_resource_metadata_unavailable")
 			}
 			var r ownerOwnedReceipt
 			if json.Unmarshal(b, &r) != nil || r.Version != 3 || r.ID != match[1] || r.State != "owned" ||
 				!same(r.Path, root) || !same(filepath.Join(r.Root, "codex-owned-"+r.ID), root) ||
 				r.ProducerKind != "scheduler" || r.ProducerTodo == 0 || !ownerOwnedJob.MatchString(r.ProducerJob) ||
 				!strings.HasSuffix(r.ProducerJob, "-todo-"+strconv.FormatUint(r.ProducerTodo, 10)) {
-				return false
+				return ownerRuleUnknown("owned_resource_metadata_unavailable")
 			}
 			identity, err := json.Marshal(r.ownerOwnedIdentity)
 			if err != nil || hashBytes(identity) != r.Integrity || len(r.Ancestors) == 0 {
-				return false
+				return ownerRuleUnknown("owned_resource_metadata_unavailable")
 			}
 			if access.membership(r.Project, "") == "client_project" {
-				return false
+				return ownerRuleProtected("client_record_producer")
 			}
 			if !ownerOwnedNative(root, r.Volume, r.FileID, r.Birth) {
-				return false
+				return ownerRuleUnknown("owned_resource_metadata_unavailable")
 			}
 			ancestor := r.Root
 			for _, a := range r.Ancestors {
 				if !same(a.Path, ancestor) || !ownerOwnedNative(a.Path, a.Volume, a.ID, a.Birth) {
-					return false
+					return ownerRuleUnknown("owned_resource_metadata_unavailable")
 				}
 				ancestor = filepath.Dir(ancestor)
 			}
 			if !same(ancestor, filepath.VolumeName(root)+string(filepath.Separator)) || !same(r.Ancestors[len(r.Ancestors)-1].Path, ancestor) {
-				return false
+				return ownerRuleUnknown("owned_resource_metadata_unavailable")
 			}
 			jobPath := filepath.Join(jobs, r.ProducerJob, "job.json")
 			if !currentPlain(jobPath, false) {
-				return false
+				return ownerRuleUnknown("owned_resource_metadata_unavailable")
 			}
-			jobBytes, err := readBounded(jobPath, 4<<20)
-			if err != nil {
-				return false
+			job, ok := ownerReadMetadataFile(ctx, jobPath, func(input io.Reader) (ownerRecordMetadata, bool) {
+				d := jsontext.NewDecoder(ownerDeadlineReader{ctx, input})
+				m, ok := ownerReadRecordObject(ctx, d, "record")
+				_, err := d.ReadToken()
+				return m, ok && err == io.EOF
+			})
+			if !ok || job.id != r.ProducerJob || job.todo != strconv.FormatUint(r.ProducerTodo, 10) || !filepath.IsAbs(job.cwd) || !same(job.cwd, job.worktree) {
+				return ownerRuleUnknown("owned_resource_metadata_unavailable")
 			}
-			if _, ok := conversationJSON(jobBytes); !ok {
-				return false
+			if v := ownerRuleRecordOrigin(ctx, job, projects, access, config); !v.AccessAllowed {
+				return v
 			}
-			// Decode only producer metadata; prompts, outputs and credentials are
-			// neither interpreted as authority nor returned to the caller.
-			var job struct {
-				ID    string `json:"id"`
-				Todo  uint64 `json:"todo_id"`
-				CWD   string `json:"cwd"`
-				Owner struct {
-					Repository string `json:"repository"`
-					Worktree   string `json:"worktree"`
-				} `json:"work_owner"`
-			}
-			if json.Unmarshal(jobBytes, &job) != nil || job.ID != r.ProducerJob || job.Todo != r.ProducerTodo ||
-				!filepath.IsAbs(job.CWD) || !same(job.CWD, job.Owner.Worktree) {
-				return false
-			}
-			repository, valid := ownerOriginRepository("https://github.com/" + job.Owner.Repository)
+			repository, valid := ownerOriginRepository("https://github.com/" + job.repository)
 			if !valid {
-				return false
+				return ownerRuleUnknown("owned_resource_metadata_unavailable")
 			}
-			origin, ok := access.git(job.CWD, "remote", "get-url", "origin")
+			origin, ok := access.git(job.cwd, "remote", "get-url", "origin")
 			actual, self := ownerOriginRepository(origin)
 			if !ok || !self || !strings.EqualFold(repository, actual) {
-				return false
+				return ownerRuleUnknown("owned_resource_metadata_unavailable")
 			}
-			if !ownerRuleWith(ctx, job.CWD, projects, access, config, nil).AccessAllowed {
-				return false
+			if !ownerRuleWith(ctx, job.cwd, projects, access, config, nil).AccessAllowed {
+				return ownerRuleUnknown("owned_resource_metadata_unavailable")
 			}
 			// Classification does not retire the producer or authorize deletion.
-			return ctx.Err() == nil && ownerOwnedNative(root, r.Volume, r.FileID, r.Birth)
+			if ctx.Err() == nil && ownerOwnedNative(root, r.Volume, r.FileID, r.Birth) {
+				return ownerRuleClear("self_owned_temporary_resource")
+			}
+			return ownerRuleUnknown("owned_resource_metadata_unavailable")
 		}
 		parent := filepath.Dir(root)
 		if parent == root {
@@ -140,7 +138,7 @@ func ownerRuleOwnedAt(ctx context.Context, path, store, jobs string, projects ob
 		}
 		root = parent
 	}
-	return false
+	return ownerRuleProtected("owner_rule_unattributed_location")
 }
 
 func ownerOwnedNative(path string, volume uint32, id, birth uint64) bool {

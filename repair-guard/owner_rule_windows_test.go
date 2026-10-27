@@ -236,7 +236,12 @@ func TestOwnerRule4088ExternalEvidenceAndRedaction(t *testing.T) {
 	} {
 		t.Run(tc.label, func(t *testing.T) {
 			classify := func(p string) ownerPathVerdict {
-				return ownerRuleWith(context.Background(), p, tc.projects, access, config, func(string) bool { return tc.owned })
+				return ownerRuleWith(context.Background(), p, tc.projects, access, config, func(string) ownerPathVerdict {
+					if tc.owned {
+						return ownerRuleClear("self_owned_temporary_resource")
+					}
+					return ownerRuleProtected("owner_rule_unattributed_location")
+				})
 			}
 			var out, errout bytes.Buffer
 			code := runGuardCLIWithPath([]string{"--guard-path", root}, &out, &errout, nil, classify)

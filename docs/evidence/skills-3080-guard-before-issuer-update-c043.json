@@ -1,0 +1,22 @@
+{
+  "domain": "skills-3080-independent-preupdate-software-observation-v1",
+  "observed_utc": "2026-10-27T01:03:23.1014736Z",
+  "observer_task": 3686,
+  "observer_job": "20261027-095706-todo-3686",
+  "repository_id": 1406818713,
+  "sha256": "c0439d9ccab874ac68e8f054a895cb7f5e50165d3adc5b7ae3e4fe8f92ce3081",
+  "source_head": "7cea2e8f12631aeb5584dab5bc8535b7cd984f8c",
+  "bytes": 13263360,
+  "module_matches": true,
+  "windows_amd64": true,
+  "vcs_clean": true,
+  "independent_deployment_task": 3387,
+  "independent_deployment_job": "20261027-093919-todo-3387",
+  "independent_deployment_note_marker": "[3387:093919:PR582DeployedC043ForOriginalSDKDiagnostic]",
+  "independent_deployment_note_sha256": "0bd82c51673055e2c6359eb23bc897f624399feaccc12a240c02eb9ae4d41cde",
+  "new_candidate_generated": false,
+  "original_creation_receipts_rewritten": false,
+  "software_observation_only": true,
+  "general_data_access_granted": false,
+  "independent_deployment_software_excerpt": "[3387:093919:PR582DeployedC043ForOriginalSDKDiagnostic]\n対応不要。親3387はPR582を09:42:06JSTに正常mergeしました。\nmerge e9674d8abe4167058c67117183ce7b481a311f00、配布source7cea2e8f12631aeb5584dab5bc8535b7cd984f8c。\n同sourceの正式15checksは14success/1neutral・失敗0、実Opus5.5maxの最終4071はMust0/Suggestion0です。\n自前154入力の実bytes/SHAとGit blob/modeを生成前後・merge後も一致確認し、同candidateを使い再buildしていません。\n\n09:44:40JSTに既存AdminBrokerで正常preflight後の単一Applyを完了しました。\n現用guardの全SHA256はc0439d9ccab874ac68e8f054a895cb7f5e50165d3adc5b7ae3e4fe8f92ce3081、13263360bytesです。\n実Apply request20261027-004439-bc528473afbe9879e98bb60d240ebd9d、exit0/oktrue/deployedtrue。\n元4348版を自分の復旧用backupへ保持し、現用new/backupold SHA一致、元owner/group/DACL保持・同SDDL SHAを実読返し済み。SACLは未検証です。\n正常用途の比較はmerge直後にnormal_registered_source_requiredを返したため、その失敗票を保持しました。\n同登録済みsourceの通常refresh→guard clearを確認した後の一回比較は成功し、元4348/source521c/実physicalidentityを一致確認してから配布しました。\nrefreshは元保護台帳の復旧や一般資格の付与ではありません。"
+}

@@ -644,8 +644,11 @@ fn pending_reconcile_same_body_without_tag_or_with_a_different_tag_stops() {
     for tag in ["", "\n\n-# recovery:another-request:log:0"] {
         let mut c = Case::new();
         let original = c.saved();
-        c.f.add_reply(&c.thread, BOT, &format!("{}{tag}", c.body), true);
-        assert!(c.run().unwrap_err().contains("same bot body"));
+        let duplicate =
+            c.f.add_reply(&c.thread, BOT, &format!("{}{tag}", c.body), true);
+        let error = c.run().unwrap_err();
+        assert!(error.contains("same bot body"), "{error}");
+        assert!(error.contains(&duplicate), "missing candidate ID: {error}");
         assert_eq!(c.posts(), 0);
         assert_eq!(c.saved(), original);
     }
@@ -672,11 +675,8 @@ fn pending_reconcile_transformed_duplicate_body_never_authorizes_a_post() {
             _ => format!("{}\n\n-# recovery:another-request:log:0", c.body),
         };
         c.f.add_reply(&c.thread, BOT, &duplicate, true);
-        if let Ok(checked) = c.run() {
-            c.args.check_only = false;
-            c.args.expected_precheck = Some(core::s(&checked["command_id"]).to_owned());
-            let _ = c.run();
-        }
+        let error = c.run().unwrap_err();
+        assert!(error.contains("same bot body"), "shape {shape}: {error}");
         assert_eq!(
             c.posts(),
             0,
@@ -766,6 +766,57 @@ fn pending_reconcile_profile_and_attachment_urls_do_not_change_identity_evidence
     }
     assert_eq!(c.run().unwrap()["delivery"], "verified");
     assert_eq!(c.posts(), 1);
+}
+
+#[test]
+fn pending_reconcile_mention_or_attachment_identity_change_invalidates_precheck() {
+    for changed in [
+        "mention_id",
+        "attachment_id",
+        "filename",
+        "size",
+        "content_type",
+    ] {
+        let mut c = Case::new();
+        let other = c.f.add_reply(&c.thread, BOT, "別の通常投稿", true);
+        {
+            let mut state = c.f.server.lock().unwrap();
+            let message = state
+                .messages
+                .get_mut(&c.thread)
+                .unwrap()
+                .iter_mut()
+                .find(|m| m["id"] == other)
+                .unwrap();
+            message["mentions"] = json!([{"id":"900","username":"same-name"}]);
+            message["attachments"] =
+                json!([{"id":"901","filename":"public.png","size":10,"content_type":"image/png"}]);
+        }
+        c.precheck();
+        let original = c.saved();
+        {
+            let mut state = c.f.server.lock().unwrap();
+            let message = state
+                .messages
+                .get_mut(&c.thread)
+                .unwrap()
+                .iter_mut()
+                .find(|m| m["id"] == other)
+                .unwrap();
+            match changed {
+                "mention_id" => message["mentions"][0]["id"] = json!("902"),
+                "attachment_id" => message["attachments"][0]["id"] = json!("903"),
+                "filename" => message["attachments"][0]["filename"] = json!("other.png"),
+                "size" => message["attachments"][0]["size"] = json!(11),
+                "content_type" => message["attachments"][0]["content_type"] = json!("image/jpeg"),
+                _ => unreachable!(),
+            }
+        }
+        let error = c.run().unwrap_err();
+        assert!(error.contains("precheck CAS changed"), "{changed}: {error}");
+        assert_eq!(c.posts(), 0, "{changed}");
+        assert_eq!(c.saved(), original, "{changed}");
+    }
 }
 
 #[test]

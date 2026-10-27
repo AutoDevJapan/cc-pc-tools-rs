@@ -88,8 +88,13 @@ check-onlyは候補数・hash・lease確認・attempt有無を返すが投稿・
 保存済みreceiptの検証は当時のPendingのdigestに結び、現在の本文分割や表示形式で
 過去のeffectを再生成しない。履歴のCASはID・本文・author・quiet/media等の検証対象に結び、
 リアクションだけの変化は不一致の理由にしない。
-タグのないbot投稿の重複候補を探す場合だけCRと本文前後の空白を除き、前置きや本文内の
+正規tagを含まないbot投稿の重複候補を探す場合だけCRと本文前後の空白を除き、前置きや本文内の
 タグ区切りがあっても本文全体を含む候補があれば停止する。既存投稿の採用には引き続き
 元の本文・正規tag・author・quiet/media等の完全一致を要求し、この正規化を採用資格へ使わない。
 履歴hashのmentionsはID、attachmentsはID・filename・size・content_typeへ限定し、
 プロフィールや添付URLだけの変化では確認済みの同一性を変えない。
+
+同じbot本文を含む曖昧な候補で停止した場合は、エラーに候補のmessage IDを返す。
+本文自体はエラーへ出さず、元RelayはそのIDを正規GETで照合する。
+mention ID、添付ID・filename・size・content_typeの変化は履歴の同一性を変えるため、
+以前のprecheckによるapplyをCAS不一致で拒否し、journalと送信回数を変えない。

@@ -1,0 +1,18 @@
+{
+  "domain": "official-ci3387-known-guard-baseline-v1",
+  "repository_id": 1406818713,
+  "pull_request": 567,
+  "pull_request_url": "https://github.com/AutoDevJapan/cc-pc-tools-rs/pull/567",
+  "source_head": "521c4c4dddd7abbb0135d13bffb380ec984374b8",
+  "merge_head": "a61d924af0eb72ac544902cd28372f62bffbed31",
+  "software_sha256": "434832534d43cbe954aa1c2e573879556bb840818e830a489b744e6e2744740f",
+  "software_bytes": 13250048,
+  "installed_at": "2026-10-26T22:08:25.6064022Z",
+  "record_source": "Normal successful deployment verification for PR567",
+  "verification": {
+    "candidate_and_installed_sha256_match": true,
+    "original_backup_verified": true,
+    "owner_group_dacl_preserved": true,
+    "sacl_verified": false
+  }
+}

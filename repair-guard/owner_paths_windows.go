@@ -27,6 +27,10 @@ func ownerPhysicalPath(path string) (string, error) {
 		return "", &os.PathError{Op: "metadata", Path: "", Err: err}
 	}
 	defer syscall.CloseHandle(h)
+	var info syscall.ByHandleFileInformation
+	if syscall.GetFileInformationByHandle(h, &info) != nil || info.FileAttributes&syscall.FILE_ATTRIBUTE_DIRECTORY == 0 && info.NumberOfLinks != 1 {
+		return "", os.ErrInvalid
+	}
 	return ownerHandlePath(h)
 }
 

@@ -156,7 +156,7 @@ func classifyOwnerPath(path string) ownerPathVerdict {
 func ownerPolicyClassify(path string, access ownerPolicyAccess) ownerPathVerdict {
 	path, err := portable(path)
 	if err != nil || !filepath.IsAbs(path) {
-		return ownerUnverified()
+		return ownerRuleUnknown("invalid_absolute_path")
 	}
 	path = filepath.Clean(path)
 	// Check lexical and resolved names before admitting any source/receipt.
@@ -164,7 +164,7 @@ func ownerPolicyClassify(path string, access ownerPolicyAccess) ownerPathVerdict
 	if target, err := access.physical(path); err == nil && !same(path, target) {
 		paths = append(paths, target)
 	} else if err != nil && !os.IsNotExist(err) {
-		return ownerUnverified()
+		return ownerRuleUnknown("physical_metadata_unavailable")
 	}
 	categories := []string{}
 	card, client := false, false

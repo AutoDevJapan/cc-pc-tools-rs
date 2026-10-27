@@ -5,7 +5,7 @@ use crate::{
     core::{Effects, Result},
 };
 use serde::Deserialize;
-use serde_json::{json, Value};
+use serde_json::{Value, json};
 use sha2::{Digest, Sha256};
 use std::{
     fs,
@@ -239,7 +239,13 @@ fn attachments(
             .map_err(|_| "添付元の保護範囲を確認できません。画像は送信していません")?;
         let qualified = if guard.code == 0
             && proof["client_resource"] == true
-            && proof["classification_unverified"] == true
+            && (proof["classification_unverified"] == true
+                || (proof["classification_policy"] == "owner-client-rule-20261027"
+                    && proof["classification_basis"] == "owner_rule_unattributed_location"
+                    && proof["access_allowed"] == false
+                    && proof["protection_status"] == "protected"
+                    && proof["classification_unverified"] == false
+                    && proof["protection_categories"] == json!(["client_project"])))
         {
             Some(crate::question_images::preflight(
                 effects,
@@ -561,13 +567,12 @@ pub fn try_ask(home: &Path, effects: &mut dyn Effects, args: &AskArgs) -> Result
         origin
     ]);
     if !snapshots.is_empty() {
-        identity
-            .as_array_mut()
-            .ok_or(INVALID_INPUT)?
-            .push(json!(snapshots
+        identity.as_array_mut().ok_or(INVALID_INPUT)?.push(json!(
+            snapshots
                 .iter()
                 .map(|file| json!([file.hash, file.extension]))
-                .collect::<Vec<_>>()));
+                .collect::<Vec<_>>()
+        ));
     }
     let request = format!("normal-ask-{}", sha(identity.to_string().as_bytes()));
     let directory = root.join(&request);

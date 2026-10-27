@@ -128,9 +128,15 @@ func classifyPath(ctx context.Context, path string) string {
 	if err != nil || len(output) > 4096 {
 		return "guard_unavailable"
 	}
+	return classifyGuardResponse(output)
+}
+
+func classifyGuardResponse(output []byte) string {
 	var result struct {
-		Client     *bool `json:"client_resource"`
-		Unverified bool  `json:"classification_unverified"`
+		Client     *bool  `json:"client_resource"`
+		Unverified bool   `json:"classification_unverified"`
+		Policy     string `json:"classification_policy"`
+		Basis      string `json:"classification_basis"`
 	}
 	if json.Unmarshal(output, &result) != nil || result.Client == nil {
 		return "guard_unavailable"
@@ -139,6 +145,9 @@ func classifyPath(ctx context.Context, path string) string {
 		return "protected_unclassified"
 	}
 	if *result.Client {
+		if result.Policy == "owner-client-rule-20261027" && result.Basis == "owner_rule_unattributed_location" {
+			return "protected_owner_rule_unattributed"
+		}
 		return "protected"
 	}
 	return "clear"

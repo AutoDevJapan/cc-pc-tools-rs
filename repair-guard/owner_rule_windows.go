@@ -13,6 +13,11 @@ type ownerRuleConfig struct {
 	infrastructure []string
 	records        []string
 	tools          []ownerRuleTool
+	jobStore       string
+	specStore      string
+	promptStore    string
+	todoStore      string
+	mixedStores    []string
 }
 
 type ownerRuleTool struct {
@@ -43,13 +48,17 @@ func ownerRuleWith(ctx context.Context, path string, projects object, access own
 	if ownerWindowsAlias(path) {
 		return ownerRuleUnknown("windows_alias")
 	}
-	if ctx.Err() != nil || !ownerRulePlainPath(path, access.plain) {
+	if ctx.Err() != nil {
+		return ownerRuleUnknown("classification_deadline")
+	}
+	if !ownerRulePlainPath(path, access.plain) {
 		return ownerRuleUnknown("path_metadata_unavailable")
 	}
 	// Check every covering registration before any self evidence. This includes
 	// a client worktree whose registered source is outside the operations roots.
 	selfRegistration := false
 	worktreeRoots := []string{}
+	registrationUnavailable := false
 	for project, value := range projects {
 		root, ok := value.(string)
 		if !ok || !filepath.IsAbs(root) || (!within(root, path) && !within(root+"-wt", path)) {
@@ -60,7 +69,8 @@ func ownerRuleWith(ctx context.Context, path string, projects object, access own
 			return ownerRuleProtected("client_registration")
 		}
 		if !ownerRulePlainPath(root, access.plain) || access.denied(root) {
-			return ownerRuleUnknown("registration_metadata_unavailable")
+			registrationUnavailable = true
+			continue
 		}
 		selfRegistration = selfRegistration || membership == "self" || ownerRuleDevelopment(root, config.dev) == "self"
 		if within(root+"-wt", path) {
@@ -69,10 +79,16 @@ func ownerRuleWith(ctx context.Context, path string, projects object, access own
 	}
 	// Department declarations must also win for an unregistered product under
 	// an otherwise ordinary operations/self-development location.
-	for _, part := range strings.Split(strings.ReplaceAll(path, `\`, "/"), "/") {
+	if registrationUnavailable {
+		return ownerRuleUnknown("registration_metadata_unavailable")
+	}
+	for _, part := range ownerRuleProductNames(path, config) {
 		if access.membership(part, "") == "client_project" {
 			return ownerRuleProtected("client_department")
 		}
+	}
+	if result, handled := ownerRuleStoredContent(ctx, path, projects, access, config); handled {
+		return result
 	}
 	probe := path
 	for {
@@ -98,7 +114,7 @@ func ownerRuleWith(ctx context.Context, path string, projects object, access own
 			return ownerRuleProtected("client_department")
 		}
 		if !selfOrigin {
-			if development == "self" {
+			if development == "self" || selfRegistration || ownerRuleInfrastructure(path, config) {
 				return ownerRuleUnknown("owner_location_conflict")
 			}
 			return ownerRuleProtected("owner_rule_unattributed_repository")
@@ -125,7 +141,22 @@ func ownerRuleWith(ctx context.Context, path string, projects object, access own
 		return ownerRuleClear("verified_self_repository")
 	}
 	if len(worktreeRoots) != 0 {
-		return ownerRuleUnknown("worktree_identity_unavailable")
+		for _, root := range worktreeRoots {
+			// A non-Git registration still owns its ordinary sibling work area.
+			if !ownerRepositoryCandidate(root) {
+				continue
+			}
+			rel, err := filepath.Rel(root+"-wt", path)
+			_, absent := os.Lstat(path)
+			if err != nil || rel == "." || filepath.Dir(rel) != "." || !os.IsNotExist(absent) {
+				return ownerRuleUnknown("worktree_identity_unavailable")
+			}
+			v := ownerRuleWith(ctx, root, projects, access, config, nil)
+			if !v.AccessAllowed {
+				return v
+			}
+			return ownerRuleClear("verified_planned_worktree")
+		}
 	}
 	if ctx.Err() != nil {
 		return ownerRuleUnknown("classification_deadline")
@@ -153,6 +184,38 @@ func ownerRuleWith(ctx context.Context, path string, projects object, access own
 		return ownerRuleClear("self_owned_temporary_resource")
 	}
 	return ownerRuleProtected("owner_rule_unattributed_location")
+}
+
+func ownerRuleInfrastructure(path string, config ownerRuleConfig) bool {
+	for _, root := range config.infrastructure {
+		if within(root, path) {
+			return true
+		}
+	}
+	return false
+}
+
+// Only product/container boundaries name a product. A similarly named data
+// directory deep inside a self repository must not acquire client membership.
+func ownerRuleProductNames(path string, config ownerRuleConfig) []string {
+	roots := []string{}
+	for _, name := range []string{"ADJ", "BM1314", "misc"} {
+		roots = append(roots, filepath.Join(config.dev, name))
+	}
+	for _, root := range config.infrastructure {
+		roots = append(roots, root, filepath.Join(root, "Work"), filepath.Join(root, "RuntimeSources"))
+	}
+	names := []string{}
+	for _, root := range roots {
+		if !within(root, path) {
+			continue
+		}
+		rel, err := filepath.Rel(root, path)
+		if err == nil && rel != "." {
+			names = append(names, strings.TrimSuffix(strings.Split(rel, string(os.PathSeparator))[0], "-wt"))
+		}
+	}
+	return names
 }
 
 func ownerRuleDevelopment(path, root string) string {
@@ -204,12 +267,15 @@ func ownerRuleUnknown(basis string) ownerPathVerdict {
 }
 
 func ownerDefaultRuleConfig() ownerRuleConfig {
-	home, _ := os.UserHomeDir()
-	npm := filepath.Join(home, "AppData", "Roaming", "npm")
+	// Same fixed owner as the development root. Some regular consumers clear
+	// USERPROFILE/APPDATA; process environment must not change this identity.
+	npm := "C:/Users/makhmeto/AppData/Roaming/npm"
 	return ownerRuleConfig{
 		dev:            "C:/Users/makhmeto/Desktop/dev",
 		infrastructure: []string{"D:/CC", "D:/OMB"},
 		records:        []string{"D:/CC/Tools/client-records", "D:/CC/Tools/client-projects.txt"},
+		jobStore:       "D:/CC/Tools/codex-jobs/jobs", specStore: "D:/CC/Tools/todo/specs", promptStore: "D:/CC/Tools/scheduler/prompts", todoStore: productStore,
+		mixedStores: []string{productStore, "D:/CC/Tools/todo/history", "D:/CC/Tools/discord-ask/unattended/conversations", "D:/CC/Tools/discord-ask/unattended/conversation-logs", "D:/CC/Tools/discord-ask/unattended/conversation-clarifications", "D:/CC/Tools/discord-ask/unattended/conversation-questions.json"},
 		// Normal consumer declarations: cc-jobs/src/platform.rs and pool_retry.rs,
 		// cc-scheduler/src/backend.rs. The owner explicitly assigned this existing
 		// AI-agent tool's installed location for classification in 4088/2655.
@@ -227,17 +293,29 @@ func ownerOrganizationQuery(ctx context.Context, path string, access ownerSource
 			return ownerRuleProtected("client_record_store")
 		}
 	}
-	snapshot, ok := ownerReadProjectSnapshot(ctx, productStore, legacyMatch)
-	if !ok {
-		return ownerRuleUnknown("registration_snapshot_unavailable")
+	for attempt := 0; attempt < 2; attempt++ {
+		snapshot, ok := ownerReadProjectSnapshot(ctx, productStore, legacyMatch)
+		if ctx.Err() != nil {
+			return ownerRuleUnknown("classification_deadline")
+		}
+		if !ok {
+			return ownerRuleUnknown("registration_snapshot_unavailable")
+		}
+		result := ownerRuleWith(ctx, path, snapshot.projects, access, config, func(p string) bool { return ownerRuleOwnedTemporary(ctx, p, snapshot.projects, access, config) })
+		if result.Status == "protected" && result.Basis != "owner_rule_unattributed_location" {
+			return result
+		}
+		if ctx.Err() != nil {
+			return ownerRuleUnknown("classification_deadline")
+		}
+		if snapshot.current() {
+			return result
+		}
+		if attempt == 1 || !snapshot.replaced() {
+			return ownerRuleUnknown("registration_snapshot_changed")
+		}
 	}
-	result := ownerRuleWith(ctx, path, snapshot.projects, access, config, func(p string) bool {
-		return ownerRuleOwnedTemporary(ctx, p, snapshot.projects, access, config)
-	})
-	if !snapshot.current() || ctx.Err() != nil {
-		return ownerRuleUnknown("registration_snapshot_changed")
-	}
-	return result
+	return ownerRuleUnknown("registration_snapshot_changed")
 }
 
 func ownerOrganizationPath(path string) ownerPathVerdict {
@@ -257,10 +335,18 @@ func ownerOrganizationPath(path string) ownerPathVerdict {
 	if refresh != "" && ctx.Err() == nil {
 		ownerRequestIdentityRefresh(path, refresh)
 	}
-	// Existing independently checked operational receipts remain evidence. A
-	// positively classified client, conflict or I/O failure never takes this path.
-	if result.Basis == "owner_rule_unattributed_location" && repairPathAllowed(path) {
-		return ownerRuleClear("verified_operational_receipt")
+	return ownerRuleReceiptFallback(result, path, repairPathAllowed)
+}
+
+// A transient metadata failure does not erase an independently checked old
+// operational receipt. Positive client evidence, conflicts and mixed data
+// stores never acquire this fallback.
+func ownerRuleReceiptFallback(result ownerPathVerdict, path string, receipt func(string) bool) ownerPathVerdict {
+	switch result.Basis {
+	case "owner_rule_unattributed_location", "registration_snapshot_unavailable", "registration_snapshot_changed", "classification_deadline", "repository_identity_unavailable", "repository_metadata_unavailable":
+		if receipt(path) {
+			return ownerRuleClear("verified_operational_receipt")
+		}
 	}
 	return result
 }

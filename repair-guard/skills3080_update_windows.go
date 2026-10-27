@@ -20,6 +20,11 @@ const skillsGuardModule = "github.com/AutoDevJapan/cc-pc-tools-rs/repair-guard"
 // Independent previously accepted distribution facts (3258 and3686), not a caller
 // supplied baseline or an assertion made by the artifact being installed.
 var skillsGuardBaselines = map[string]string{
+	// PR582's separately reviewed distribution was already installed before
+	// this Skills update was built. Preserve that exact observed software pair;
+	// its diagnostics and every native/data boundary remain unchanged.
+	// Evidence: docs/evidence/skills-3080-guard-before-issuer-update-c043.json.
+	"c0439d9ccab874ac68e8f054a895cb7f5e50165d3adc5b7ae3e4fe8f92ce3081": "7cea2e8f12631aeb5584dab5bc8535b7cd984f8c",
 	// PR579 accepted the original OpenAI6 issuance/readback under this exact
 	// runtime before this repair was proposed. Preserve the software pair;
 	// all native, source, writer and current-object checks remain independent.

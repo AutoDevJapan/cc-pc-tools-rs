@@ -43,6 +43,31 @@ const official3894PreviousGuardHead = "f30f9e763e25884fa48d1cce0cac22da1cebfb69"
 const official3894RepairGuardSHA = "434832534d43cbe954aa1c2e573879556bb840818e830a489b744e6e2744740f"
 const official3894RepairGuardHead = "521c4c4dddd7abbb0135d13bffb380ec984374b8"
 
+// The normally merged and deployed PR582 diagnostic software, independently
+// projected in docs/evidence/official-ci3387-known-guard-baseline-7cea2e8f.json.
+const official3894DiagnosticGuardSHA = "c0439d9ccab874ac68e8f054a895cb7f5e50165d3adc5b7ae3e4fe8f92ce3081"
+const official3894DiagnosticGuardHead = "7cea2e8f12631aeb5584dab5bc8535b7cd984f8c"
+
+// The existing publisher's normal PR585 distribution superseded PR582 before
+// this update. Its source/review and normal delivery provenance are retained in
+// docs/evidence/official-ci3387-known-guard-baseline-81700412.json.
+const official3894ConcurrentGuardSHA = "94c08be91776df277a6a3442e71f291103345641558657e1872e36520ad924e0"
+const official3894ConcurrentGuardHead = "817004120a458b3a37830478512da0aa8040c9d0"
+
+// The shared PR586 updater's normal distribution was independently recorded
+// before this successor. Preserve the same software fact in both consumers;
+// original SDK producer/receipt, qualification and data access remain separate.
+// docs/evidence/skills-3080-guard-before-scope589-ad5.json
+const official3894SharedGuardSHA = "ad5d37c7b216264d2e99007a2e6f3468e7529803454d88f1954cc74a7beb4783"
+const official3894SharedGuardHead = "0d97c1952ff6f8b47a3d40939941639b35309408"
+
+// PR589's accepted distribution was independently read back before the
+// masked-source successor. This is the same software fact as the Skills table;
+// it changes no SDK receipt, producer, expiry or data-access qualification.
+// docs/evidence/skills-3080-guard-before-masked-source-9f914.json
+const official3894MaskedPredecessorSHA = "9f914c724231886438515c5ed3831a13eca3d8fbec09e4d3d6edb1d0113c6dd8"
+const official3894MaskedPredecessorHead = "4e117a2d813e4a989d1c3085d2734963d9c198a3"
+
 type official3894Source struct {
 	Head, Registration, CreatorJob, Workspace, Branch, SpecSHA string
 }
@@ -864,7 +889,11 @@ func official3894Operation(ctx context.Context, op, id string, handoff func(obje
 
 func official3894InstalledBaseline(sha, head string) bool {
 	return (sha == official3894PreviousGuardSHA && head == official3894PreviousGuardHead) ||
-		(sha == official3894RepairGuardSHA && head == official3894RepairGuardHead)
+		(sha == official3894RepairGuardSHA && head == official3894RepairGuardHead) ||
+		(sha == official3894DiagnosticGuardSHA && head == official3894DiagnosticGuardHead) ||
+		(sha == official3894ConcurrentGuardSHA && head == official3894ConcurrentGuardHead) ||
+		(sha == official3894SharedGuardSHA && head == official3894SharedGuardHead) ||
+		(sha == official3894MaskedPredecessorSHA && head == official3894MaskedPredecessorHead)
 }
 
 // Qualifies only comparison of the known previously published guard software.

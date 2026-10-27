@@ -1,0 +1,72 @@
+{
+  "todo": 3080,
+  "author_job": "20261026-214717-todo-3080",
+  "operation": {
+    "file": "skills-3080-operations/create-travel3-214717.json",
+    "sha256": "11070b772c86f7ffb459be2f75eaf6d0a436ce9dfdf0d9247eb81c6e433ede51"
+  },
+  "bundle": {
+    "file": "skills-3080-travel3-reviewed-bundle214717.json",
+    "sha256": "eb786746bf6205ba9ae76b50419c7d7b85c0e83333abe9cc2176b36089f7f53f"
+  },
+  "meaning": {
+    "file": "skills-3080-travel3-source-meaning214717.json",
+    "sha256": "3374a30ae527f7e15d17ca9f8f2f0d4fe5642e737405f270b14631ca4028c5d5"
+  },
+  "notices": {
+    "file": "skills-3080-travel3-notice-map214717.json",
+    "sha256": "55605bd20956c8053b61fac08b8eb32d510e07526f89fcfc672e1a6fbfcddeeb"
+  },
+  "structure": {
+    "file": "skills-3080-travel3-structure214717.json",
+    "sha256": "a31658b2598fc8d322d736e4b074af6babac61b36dc45faa669bf740e3fb5de2"
+  },
+  "proposed_uninstalled_targets": 3,
+  "virtual_files": 18,
+  "virtual_bytes": 36454,
+  "normal_readback_plan": {
+    "planned_output_files": 18,
+    "planned_output_bytes": 36454,
+    "planned_batches": [
+      {
+        "indices": [
+          0,
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7,
+          8,
+          9,
+          10,
+          11,
+          12,
+          13,
+          14,
+          15,
+          16,
+          17
+        ],
+        "bytes": 36454
+      }
+    ],
+    "limit": "Normal consume maximum32indices/65536bytes; one planned batch, not executed",
+    "actual_readbacks": 0
+  },
+  "proposal_discovery": {
+    "metadata_total": 457,
+    "target_found": 0,
+    "same_name_other_path": 0,
+    "parse_errors": 0,
+    "process_tree_exit_confirmed": true,
+    "warnings_scan_traversal": 2,
+    "physical_absence_unproven": true,
+    "context_or_implicit_selection_unproven": true
+  },
+  "full_content_review_required_before_CreateNew": true,
+  "adoptions": 0,
+  "central_operations": 0,
+  "whole16_complete": false
+}

@@ -5,6 +5,7 @@ use crate::{
     policy::*,
 };
 use cc_job_policy::{cancellation, todo_wait};
+use crate::admission::{Observation, Reason as AdmissionReason, Stage as AdmissionStage};
 fn todo_store_error(error: cc_job_policy::todo_store::Error) -> Error {
     match error {
         cc_job_policy::todo_store::Error::TooLarge => Error("todo_store_too_large: limit 64 MiB"),
@@ -39,28 +40,11 @@ use std::{
     time::Duration,
 };
 fn launch_inputs(item: &Value) -> Value {
-    json!({"spec":item["spec"],"needs":item["needs"],"subwork":item["subwork"],
-        "title":item["title"],"project":item["project"],"dispatchable":item["dispatchable"],
-        "model":item["model"],"effort":item["effort"],"model_origin":item["model_origin"],"effort_origin":item["effort_origin"],
-        "sandbox":item["sandbox"],"mcp_profile":item["mcp_profile"],"network":item["network"],"add_dirs":item["add_dirs"],
-        "wait_on":item["wait_on"],"review_source_jobs":item["review_source_jobs"],"task_type":item["task_type"],"role":item["role"],
-        "worktree":item["scheduler"]["worktree"],"branch":item["scheduler"]["branch"],
-        "not_before":item["scheduler"]["not_before"],"resource_wait":item["scheduler"]["resource_wait"],
-        "workspace_receipt":item["scheduler"]["workspace_receipt"],"jobs":item["jobs"],
-        "subwork_workspace_migration":item["scheduler"]["subwork_workspace_migration"],
-        "resume_generation":item["resume_generation"],"worker_receipt":item["worker_receipt"],
-        "console_request":item["scheduler"]["console_request"],
-        "console_fresh_request":item["scheduler"]["console_fresh_request"],
-        "unstarted_review":item["scheduler"]["unstarted_review"],
-        "initial_review":item["scheduler"]["initial_review"],
-        "targeted_hold":crate::targeted_dispatch::held(item)})
+    crate::admission::inputs::launch(item)
 }
 
 fn review_request_inputs(item: &Value) -> Value {
-    json!({"spec":item["spec"],"model":item["model"],"effort":item["effort"],
-        "model_origin":item["model_origin"],"effort_origin":item["effort_origin"],
-        "options":item["scheduler"]["console_request"]["options"],
-        "subwork":item["subwork"],"review_source_jobs":item["review_source_jobs"],"task_type":item["task_type"],"role":item["role"]})
+    crate::admission::inputs::review(item)
 }
 
 fn selection_origin(
@@ -132,6 +116,7 @@ pub struct Scheduler<B: Backend> {
     pub state: Value,
     pub report: Value,
     pub failures: Vec<String>,
+    admission_updates: Option<std::collections::BTreeMap<i64, String>>,
 }
 impl<B: Backend> Scheduler<B> {
     pub fn civ6_home(&self) -> PathBuf {
@@ -147,6 +132,7 @@ impl<B: Backend> Scheduler<B> {
             state: json!({}),
             report: json!({}),
             failures: vec![],
+            admission_updates: None,
         })
     }
     pub fn log(&self, level: &str, message: &str) -> Result<()> {
@@ -293,6 +279,15 @@ impl<B: Backend> Scheduler<B> {
         let out = row.clone();
         cc_job_policy::todo_store::check_size(encode(&db, 1).len()).map_err(todo_store_error)?;
         write_json(&self.todo_path, &db, 1)?;
+        // Capture only the control projection after a successful normal write,
+        // while this same todo.lock still pins the written row and root.
+        if let Some(updates) = self.admission_updates.as_mut() {
+            if let Some(id) = out["id"].as_i64() {
+                if updates.len() < crate::admission::MAX_ENTRIES || updates.contains_key(&id) {
+                    updates.insert(id, crate::admission::result_fingerprint(&out, &db["projects"][s(&out["project"])]));
+                }
+            }
+        }
         Ok(out)
     }
     pub fn sample(&mut self, cfg: &Value) -> Result<(Value, Processes, Vec<Value>)> {
@@ -1228,19 +1223,21 @@ if truth(&current["scheduler"]["question_close_pending"]){e.backend.close_questi
         Ok(())
     }
     pub fn prepare(&mut self, i: &Value, repo: &str) -> Result<Option<Value>> {
-        self.prepare_with_evidence(i, repo, None)
+        self.prepare_with_evidence(i, repo, None, &mut Observation::new(self.backend.clock(), false, true))
     }
     fn prepare_with_evidence(
         &mut self,
         i: &Value,
         repo: &str,
         evidence: Option<&Value>,
+        observation: &mut Observation,
     ) -> Result<Option<Value>> {
         if i["product_review_allocation"].is_object() && !self.backend.product_review_allowed(i) {
             return Err(Error("InputRejected"));
         }
         let cooldown = n(&i["scheduler"]["not_before"]) > self.backend.clock();
         if n(&i["scheduler"]["quota_recheck_after"]) > self.backend.clock() {
+            observation.decide(&i["id"], AdmissionStage::Preparation, AdmissionReason::QuotaRecheckWait);
             return Ok(None);
         }
         // Only a complete fresh capsule can reconsider the automatic delay
@@ -1249,6 +1246,7 @@ if truth(&current["scheduler"]["question_close_pending"]){e.backend.close_questi
         let quota_recheck = cooldown && crate::preparation::quota_recheck_candidate(
             i, &self.backend.jobs()?, self.backend.clock());
         if cooldown && !quota_recheck {
+            observation.decide(&i["id"], AdmissionStage::Preparation, AdmissionReason::NotBefore);
             return Ok(None);
         }
         let unstarted = crate::unstarted_review_runtime::prepare(self, i, repo)?;
@@ -1272,6 +1270,7 @@ if truth(&current["scheduler"]["question_close_pending"]){e.backend.close_questi
                         json!({"reason":"quota_exhausted","until":until});
                 }
             })?;
+            observation.decide(&i["id"], AdmissionStage::Preparation, AdmissionReason::QuotaExhausted);
             return Ok(None);
         }
         let base = resolve(Path::new(repo))?;
@@ -1321,6 +1320,7 @@ if !truth(&row["scheduler"]["key"]){let attempt=add_count(&row["scheduler"]["att
             || !truth(&item["scheduler"]["key"])
             || (n(&item["scheduler"]["not_before"]) > self.backend.clock() && !quota_recheck)
         {
+            observation.decide(&i["id"], AdmissionStage::Preparation, AdmissionReason::InputsChanged);
             return Ok(None);
         }
         self.backend.worktree(repo, &item)?;
@@ -1608,6 +1608,7 @@ if !truth(&row["scheduler"]["key"]){let attempt=add_count(&row["scheduler"]["att
                         row["scheduler"]["resource_wait"]=json!({"reason":"quota_exhausted","until":until});
                     }
                 })?;
+                observation.decide(&i["id"], AdmissionStage::Preparation, AdmissionReason::QuotaExhausted);
                 return Ok(None);
             }
         }
@@ -1616,6 +1617,7 @@ if !truth(&row["scheduler"]["key"]){let attempt=add_count(&row["scheduler"]["att
                 &cc_job_policy::product_retry::digest(text.as_bytes()))?;
         }
         if quota_recheck && !selection["quota_recovery"].is_object() {
+            observation.decide(&i["id"], AdmissionStage::Preparation, AdmissionReason::QuotaProofMissing);
             return Ok(None);
         }
         if !valid_model(s(&selection["model"])) {
@@ -1759,6 +1761,7 @@ if !truth(&row["scheduler"]["key"]){let attempt=add_count(&row["scheduler"]["att
             || launch_inputs(&prepared) != launch_inputs(&item)
             || prepared["scheduler"]["prompt"] != json!(target)
         {
+            observation.decide(&i["id"], AdmissionStage::Preparation, AdmissionReason::InputsChanged);
             return Ok(None);
         }
         Ok(Some(prepared))
@@ -1937,6 +1940,22 @@ if !truth(&row["scheduler"]["key"]){let attempt=add_count(&row["scheduler"]["att
     }
     /// A watchdog reservation can dispatch only its own item through normal capacity/resource gates.
     pub fn dispatch_for(&mut self, cfg: &Value, pri: &Value, target: Option<i64>) -> Result<()> {
+        let mut observation = Observation::new(self.backend.clock(), target.is_none(), truth(&cfg["dispatch_enabled"]));
+        self.admission_updates = target.is_none().then(std::collections::BTreeMap::new);
+        let result = self.dispatch_observed(cfg, pri, target, &mut observation);
+        if let Some(updates) = self.admission_updates.take() {
+            for (id,fingerprint) in updates { observation.result(id,fingerprint); }
+        }
+        observation.finish(self.backend.clock());
+        observation.complete = result.is_ok();
+        observation.dispatch_error = result.as_ref().err().map(crate::admission::Failure::from_error);
+        if target.is_none() {
+            // A failed diagnostic write must not change any dispatch result.
+            self.report["admission_recorded"] = json!(observation.publish(&self.root).is_ok());
+        }
+        result
+    }
+    fn dispatch_observed(&mut self, cfg: &Value, pri: &Value, target: Option<i64>, observation: &mut Observation) -> Result<()> {
         if !truth(&cfg["dispatch_enabled"]) {
             return Ok(());
         }
@@ -1960,17 +1979,23 @@ if !truth(&row["scheduler"]["key"]){let attempt=add_count(&row["scheduler"]["att
             .filter(|i| {
                 let project = s(&i["project"]);
                 let path = s(&db["projects"][project]);
-                if project == "owner"
-                    || s(&i["status"]) != "todo"
-                    || !truth(&i["dispatchable"])
-                    || !truth(&i["spec"])
-                    || todo_wait::waiting(&db, i)
-                    || (target.is_some() && crate::targeted_dispatch::held(i))
-                    || (i["scheduler"]["quota_retry_terminal"]["source_job"]==i["scheduler"]["last_job"]
-                        && i["scheduler"]["quota_retry_terminal"].is_object())
-                {
-                    return false;
+                observation.item(i, &db["projects"][project]);
+                macro_rules! reject {
+                    ($condition:expr, $reason:ident) => {
+                        if $condition {
+                            observation.decide(&i["id"], AdmissionStage::Filtering, AdmissionReason::$reason);
+                            return false;
+                        }
+                    }
                 }
+                reject!(project == "owner", OwnerProject);
+                reject!(s(&i["status"]) != "todo", StatusNotTodo);
+                reject!(!truth(&i["dispatchable"]), NotDispatchable);
+                reject!(!truth(&i["spec"]), MissingSpecMetadata);
+                reject!(todo_wait::waiting(&db, i), DependencyWait);
+                reject!(target.is_some() && crate::targeted_dispatch::held(i), TargetedHold);
+                reject!(i["scheduler"]["quota_retry_terminal"]["source_job"]==i["scheduler"]["last_job"]
+                    && i["scheduler"]["quota_retry_terminal"].is_object(), QuotaRetryEnded);
                 let review_failure = &i["scheduler"]["review_preparation_failure"];
                 if review_failure["exhausted"] == true
                     && review_failure["inputs"] == review_request_inputs(i)
@@ -1982,9 +2007,11 @@ if !truth(&row["scheduler"]["key"]){let attempt=add_count(&row["scheduler"]["att
                             .iter()
                             .all(|id| jobs.iter().any(|job| job["id"] == *id));
                     if !recovered {
+                        observation.decide(&i["id"], AdmissionStage::Filtering, AdmissionReason::ReviewPreparationExhausted);
                         return false;
                     }
                 }
+                let mut guard_allowed = None;
                 let excluded = match &exclusions {
                     Ok(names) => names
                         .trim_start_matches('\u{feff}')
@@ -1998,40 +2025,51 @@ if !truth(&row["scheduler"]["key"]){let attempt=add_count(&row["scheduler"]["att
                     Err(error)
                         if error.kind() == std::io::ErrorKind::NotFound && i["id"] == 2407 =>
                     {
-                        !self.backend.product_review_allowed(i)
+                        let allowed = self.backend.product_review_allowed(i);
+                        guard_allowed = Some(allowed);
+                        !allowed
                     }
                     Err(error)
                         if error.kind() == std::io::ErrorKind::NotFound
                             && ["cc-pc-tools-rs", "pc-capacity-audit", "localai-web-rs"]
                                 .contains(&project) =>
                     {
-                        !self.backend.repair_scope_allowed(path)
+                        let allowed = self.backend.repair_scope_allowed(path);
+                        guard_allowed = Some(allowed);
+                        !allowed
                     }
                     Err(error) if error.kind() == std::io::ErrorKind::NotFound => {
                         if let Some(receipt) = self.backend.current_product_admission(i, path) {
+                            guard_allowed = Some(true);
                             if let Some(id) = i["id"].as_u64() {
                                 resume_receipts.insert(id, receipt);
                             }
                             false
                         } else {
+                            guard_allowed = Some(false);
                             true
                         }
                     }
                     Err(_) => true,
                 };
-                project != "owner"
-                    && !todo_wait::waiting(&db, i)
-                    && !excluded
-                    && (target.is_some() || !i["stall_recovery"]["pending"].is_object())
-                    && !jobs.iter().any(|j| {
+                observation.root(&i["id"], guard_allowed, excluded);
+                reject!(project == "owner", OwnerProject);
+                reject!(todo_wait::waiting(&db, i), DependencyWait);
+                reject!(excluded, RootExcluded);
+                reject!(target.is_none() && i["stall_recovery"]["pending"].is_object(), RecoveryReservation);
+                reject!(jobs.iter().any(|j| {
                         live(j)
                             && (arr(&i["jobs"]).contains(&j["id"])
                                 || arr(&j["related_todo_ids"]).contains(&i["id"])
                                 || i["scheduler"]["job"] == j["id"])
-                    })
+                    }), RelatedOwner);
+                observation.eligible(&i["id"]);
+                true
             })
             .collect();
-        let mut queue = priority_queue(&eligible, pri, self.backend.clock());
+        let mut queue = priority_queue_observed(&eligible, pri, self.backend.clock(), |item, reason| {
+            if let Some(reason) = reason { observation.decide(&item["id"], AdmissionStage::Priority, reason); }
+        });
         // Reconsider only the same source's automatic quota delay. Do not
         // rewrite its stored deadline or make prepare's proof optional.
         queue.extend(eligible.iter().filter(|item| {
@@ -2059,7 +2097,9 @@ if !truth(&row["scheduler"]["key"]){let attempt=add_count(&row["scheduler"]["att
             &mut self.report,
             json!({"queue_length":queue.len(),"busy_resources":busy}),
         );
+        observation.queue(&queue, &self.report);
         if !truth(&self.report["allowance_now"]) {
+            observation.capacity_wait();
             return Ok(());
         }
         if let Some(target) = target {
@@ -2082,23 +2122,28 @@ if !truth(&row["scheduler"]["key"]){let attempt=add_count(&row["scheduler"]["att
             queue.retain(|i| i["id"].as_i64() == Some(target));
         }
         let mut first_failure = None;
-        for i in queue
-            .iter()
-            .filter(|i| !arr(&i["needs"]).iter().any(|v| busy.contains(s(v))))
-        {
+        for i in &queue {
+            if arr(&i["needs"]).iter().any(|v| busy.contains(s(v))) {
+                observation.decide(&i["id"], AdmissionStage::Resource, AdmissionReason::ResourceBusy);
+                continue;
+            }
+            observation.decide(&i["id"], AdmissionStage::Preparation, AdmissionReason::PreparationDeferred);
             let result: Result<()> = (|| {
                 let evidence = i["id"].as_u64().and_then(|id| resume_receipts.get(&id));
                 let Some(mut prepared) = self.prepare_with_evidence(
                     i,
                     s(&db["projects"][s(&i["project"])]),
                     evidence,
+                    observation,
                 )?
                 else {
                     return Ok(());
                 };
                 if s(&prepared["status"]) != "todo" {
+                    observation.decide(&i["id"], AdmissionStage::Preparation, AdmissionReason::PreparedStatusChanged);
                     return Ok(());
                 }
+                observation.decide(&i["id"], AdmissionStage::Recheck, AdmissionReason::Unknown);
                 let (_, ps, jobs) = self.sample(cfg)?;
                 let db = self.todo()?;
                 let busy = resources_busy_with_lock(
@@ -2108,9 +2153,13 @@ if !truth(&row["scheduler"]["key"]){let attempt=add_count(&row["scheduler"]["att
                     self.backend.clock(),
                     &self.civ6_home(),
                 )?;
-                if !truth(&self.report["allowance_now"])
-                    || arr(&prepared["needs"]).iter().any(|v| busy.contains(s(v)))
-                {
+                observation.recheck(&i["id"], &self.report);
+                if !truth(&self.report["allowance_now"]) {
+                    observation.decide(&i["id"], AdmissionStage::Recheck, AdmissionReason::CapacityChanged);
+                    return Ok(());
+                }
+                if arr(&prepared["needs"]).iter().any(|v| busy.contains(s(v))) {
+                    observation.decide(&i["id"], AdmissionStage::Recheck, AdmissionReason::ResourceChanged);
                     return Ok(());
                 }
                 let current = arr(&db["items"])
@@ -2118,15 +2167,18 @@ if !truth(&row["scheduler"]["key"]){let attempt=add_count(&row["scheduler"]["att
                     .find(|r| r["id"] == prepared["id"])
                     .ok_or(Error("ValueError"))?;
                 if todo_wait::waiting(&db, &current) {
+                    observation.decide(&i["id"], AdmissionStage::Recheck, AdmissionReason::DependencyChanged);
                     return Ok(());
                 }
                 if target.is_some() && crate::targeted_dispatch::held(&current) {
+                    observation.decide(&i["id"], AdmissionStage::Recheck, AdmissionReason::HoldChanged);
                     return Ok(());
                 }
                 if s(&current["status"]) != "todo"
                     || current["scheduler"]["key"] != prepared["scheduler"]["key"]
                     || launch_inputs(&current) != launch_inputs(&prepared)
                 {
+                    observation.decide(&i["id"], AdmissionStage::Recheck, AdmissionReason::InputsChanged);
                     return Ok(());
                 }
                 // Recheck the finite receipt after preparation and sampling.
@@ -2137,12 +2189,14 @@ if !truth(&row["scheduler"]["key"]){let attempt=add_count(&row["scheduler"]["att
                     && !self.current_product_without_registry(
                         &current, s(&db["projects"][s(&current["project"])]))
                 {
+                    observation.decide(&i["id"], AdmissionStage::Recheck, AdmissionReason::RootChanged);
                     return Ok(());
                 }
                 if current["subwork"].is_object() {
                     if current["product_review_allocation"].is_object()
                         && !self.backend.product_review_allowed(&current)
                     {
+                        observation.decide(&i["id"], AdmissionStage::Recheck, AdmissionReason::InputsChanged);
                         return Err(Error("InputRejected"));
                     }
                     let parent = cc_job_policy::subwork::resolve(&db, &current, &jobs, true)
@@ -2161,6 +2215,7 @@ if !truth(&row["scheduler"]["key"]){let attempt=add_count(&row["scheduler"]["att
                         || launch_inputs(&saved) != launch_inputs(&prepared)
                         || saved["scheduler"]["subwork_admission"] != receipt
                     {
+                        observation.decide(&i["id"], AdmissionStage::Recheck, AdmissionReason::InputsChanged);
                         return Ok(());
                     }
                     prepared["scheduler"]["subwork_parent_job"] = json!(parent);
@@ -2171,6 +2226,7 @@ if !truth(&row["scheduler"]["key"]){let attempt=add_count(&row["scheduler"]["att
                 if ["model", "effort"].iter().any(|field| {
                     current[*field] != prepared["scheduler"]["selection_input"][*field]
                 }) {
+                    observation.decide(&i["id"], AdmissionStage::Recheck, AdmissionReason::ModelSelectionChanged);
                     return Ok(());
                 }
                 self.state["last_launch"] = json!(self.backend.clock());
@@ -2180,11 +2236,13 @@ if !truth(&row["scheduler"]["key"]){let attempt=add_count(&row["scheduler"]["att
                 self.state["project_last_launch"][s(&prepared["project"])] =
                     json!(self.backend.clock());
                 self.persist()?;
+                observation.decide(&i["id"], AdmissionStage::Launch, AdmissionReason::Unknown);
                 let jid = self.backend.launch(
                     &prepared,
                     Path::new(s(&prepared["scheduler"]["prompt"])),
                     &prepared["scheduler"]["selection"],
                 )?;
+                observation.decide(&i["id"], AdmissionStage::Launch, AdmissionReason::LaunchedUnlinked);
                 let j = self
                     .backend
                     .jobs()?
@@ -2192,6 +2250,7 @@ if !truth(&row["scheduler"]["key"]){let attempt=add_count(&row["scheduler"]["att
                     .find(|r| s(&r["id"]) == jid)
                     .unwrap_or(json!({"id":jid,"created_at":self.backend.clock()}));
                 self.link(&prepared["id"], &j, &prepared["scheduler"]["key"])?;
+                observation.decide(&i["id"], AdmissionStage::Launch, AdmissionReason::Launched);
                 merge(
                     &mut self.report,
                     json!({"launched":{"item":i["id"],"job":jid},"allowance_now":0,"launch_wait_s":cfg["launch_interval_s"]}),
@@ -2208,6 +2267,7 @@ if !truth(&row["scheduler"]["key"]){let attempt=add_count(&row["scheduler"]["att
                 Ok(())
             })();
             if let Err(e) = &result {
+                observation.failed(&i["id"], e);
                 if e.0 != "KeyboardInterrupt" {
                     let until =
                         self.backend.clock() + if e.0 == "ResourceWait" { 3600. } else { 300. };
@@ -2275,6 +2335,7 @@ if !truth(&row["scheduler"]["key"]){let attempt=add_count(&row["scheduler"]["att
                 continue;
             }
             if self.report["launched"].is_object() {
+                observation.earlier_launch(&i["id"]);
                 break;
             }
         }

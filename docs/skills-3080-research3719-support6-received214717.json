@@ -1,0 +1,979 @@
+{
+  "central_operations": 0,
+  "domain": "skills3080-separate-support-reception-v1",
+  "missing_legacy_flags_remain_unknown": true,
+  "new_copy_grants": 0,
+  "new_final_dispositions": 0,
+  "new_global_raw_or_workflow_credit": 0,
+  "new_primary_coverage": 0,
+  "original_grouped_assessment_count_not_inflated": true,
+  "original_response_count": 4,
+  "original_responses_and_separate_ACKs": [
+    {
+      "independent_parent_semantic_ACK": {
+        "accepted_records": 1,
+        "all_original_metadata_reader_range_profiles_and_semantics_read": true,
+        "central_operations": 0,
+        "domain": "research598-support-ack-v1",
+        "findings": [
+          "row413 best-practices support37964B1056lines,6masked ranges/orderedSHAs/currentactualreader maintained; primary413 notadvanced orcredited",
+          "description+trigger/directshallowrefs/TOC/progressive-reading guidance does not replace entire598 roster enumeration and individual semantic audit",
+          "compare meaningful failure cases with/without skill and actual runtime/model;3cases/checklist pass not universalquality",
+          "file-not-found creating emptyoriginal and PermissionError empty-success example rejected; missing/denied/empty remain distinct, source and failures retained",
+          "originalPython/install/redirect/MCP/tool formatting/Windows slash/runtime assumptions are source data, no execution or owner policy changes; currentOAuth/no keys/no newfees preserved"
+        ],
+        "legacy_original_flags_absent_not_filled": [
+          "support_only",
+          "source_original_text_included",
+          "copy_license_accepted",
+          "new_primary_coverage",
+          "source_bodies_reread_for_delivery",
+          "new_primary_body_reads_for_delivery"
+        ],
+        "new_final_dispositions": 0,
+        "new_grants": 0,
+        "new_source_body_reads_by_parent": 0,
+        "original_message_sha256": "c06af2bf10988a7fd67432ab3bddaffe0c775c057f50ede21144efad655b3669",
+        "original_support_schema": "observed072935 fields retained; missing old support_only/originaltext/coverage/delivery flags remain unknown, not synthesized",
+        "parent_job": "20261026-214717-todo-3080",
+        "parent_primary_acknowledged_through": 186,
+        "parent_semantic_assessments_read": true,
+        "payload_sha256": "fcf8c9968800ce43abf3ae44af0bc8ac183988c1b88f6e2b0c04a19f4f6238b4",
+        "primary_cursor_advanced": false,
+        "reader_job": "20261027-072935-todo-3719",
+        "receipt_file": "research3719-support-b21b137dfb66cb6690b7e70f5a14f166.json",
+        "receipt_sha256": "772a7d42fe89ecaf540eca83bd82fb095f8dc4c07da6018377d61bbdd3f8b160",
+        "source_metadata_independently_verified": true,
+        "support_id": "b21b137dfb66cb6690b7e70f5a14f166"
+      },
+      "original_received": {
+        "all_exact_source_metadata_match": true,
+        "domain": "research598-support-observed072935-received-v1",
+        "legacy_flags_absent_not_filled": [
+          "support_only",
+          "source_original_text_included",
+          "copy_license_accepted",
+          "new_primary_coverage",
+          "source_bodies_reread_for_delivery",
+          "new_primary_body_reads_for_delivery"
+        ],
+        "limit": "Original observed support schema retained without adding missing historical/current reading claims. Explicit source_executed=false/newgrants0/final0/central0/cursorfalse and exact referenced fixed source metadata verified. This receipt does not mark semantic read, new raw body reading, licence acceptance or source original text absence.",
+        "native_model_verified": false,
+        "original_message": "RESEARCH598_SUPPORT_V1\n```json\n{\"domain\":\"research598-support-v1\",\"roster_sha256\":\"f9c6b2e44c5e3aa8947f758f864eaa0d5edc396d622359826bca848cd96f9901\",\"support_id\":\"b21b137dfb66cb6690b7e70f5a14f166\",\"reader_job\":\"20261027-072935-todo-3719\",\"reader_todo\":3719,\"definitions\":{\"reader_namespace\":\"20261027-072935-todo-3719/current3719\",\"actors\":{\"0\":\"今回の実assistant。413参照支持1件を直接伏字全読。primary加算0。\"},\"states\":{\"0\":\"unsaved\",\"1\":\"saved_unread\",\"2\":\"direct_raw_full\",\"3\":\"direct_masked_full\",\"4\":\"exact_bytes_reuse\",\"5\":\"ordered_full_diff\",\"6\":\"partial\",\"7\":\"scan\"}},\"records\":[{\"row\":413,\"relative\":\"references/best-practices.md\",\"path\":\"skills/tenequm/claude-skill-factory/references/best-practices.md\",\"sha256\":\"6d2ebd8f49b5b2eeabbec4d8e4c0552450b3f2d839b9a4e4e4a1576d6f16f68c\",\"git_blob\":\"25f4a854ee81f62eee2ba9dc8e856b5e41d80fe8\",\"bytes\":37964,\"content_path\":\"objects/6d2ebd8f49b5b2eeabbec4d8e4c0552450b3f2d839b9a4e4e4a1576d6f16f68c.gz\",\"reader_job\":\"20261027-072935-todo-3719\",\"reader_namespace\":\"20261027-072935-todo-3719/current3719\",\"read\":[3,6,0,false,true,1056],\"mask_version\":122,\"mask_unit\":\"outer_physical_lines\",\"method\":\"whole header/private-key blocks; physical lines containing authorization/credentials/contact/private filesystem paths/token fields/opaque runs/UUID/card-shaped digits; code URL concrete media IDs held; zero not guarantee\",\"withheld_ranges\":[[17,17],[24,24],[261,261],[281,281],[619,619],[1021,1021]],\"ordered_ranges\":[[1,180,\"2dad6685b9294f82442e9f13d44adb146b01d675110903b65c3dcd2a40aaded8\",178,2],[181,360,\"35f3f940eb43792ca4b7e0a2aae5ff9df00ae4b2f14f7da97f7290aa19195453\",178,2],[361,540,\"3f3d982f790e7d3d695ec55aae4dabac6002610e983488a307ae8c5dc977448a\",180,0],[541,720,\"937ce25245009c20c81b4df9ef0a3ccd699e1c9fa87a02307bbe995813aefc85\",179,1],[721,900,\"e93b53c58bb2657a14c6720f28010dd61c85edf3133142ab027ff8066cd83f9c\",180,0],[901,1056,\"18609b61161b9d9a0b21546087ce8bd865dfc338d7308076d7ec1d5ea187be50\",155,1]],\"same_buffer\":{\"sha256\":true,\"git_blob\":true,\"bytes\":true,\"strict_utf8\":true,\"same_buffer\":true}}],\"assessments\":[{\"row\":413,\"relative\":\"references/best-practices.md\",\"use\":\"Skillの発火条件・段階的読取と、実失敗からの小さな改訂/検証を設計する支持知識。\",\"findings\":[\"descriptionに用途と発火条件を示し、必要な参照へ浅く直接linkし、長い支持には目次を置く。全資料を毎回ロードせず必要支持へ進むという原資料の助言で、今回の全598 primary読了や全tree列挙の省略ではない。\",\"fragilityに応じ自由度を分け、三つ程度の代表失敗/without-skill baselineとwith-skillを比較する。モデル横断や実使用で観察し直す提案は有用だが、モデル名/能力の固定序列や三例合格を品質保証へしない。Luna独立review/本人指定writer・単数Haiku条件を維持する。\",\"plan→validate→execute→verifyと実行か参照かの明示が有用。原sourceのPython scripts実行・package導入・Claude A/B起動は評価対象のデータで、read-only/新Pythonなし/子jobなし/OAuth-onlyを変更しない。\",\"重大な欠陥はprocess_fileのFileNotFound時に空原本を作り、PermissionErrorで空文字を正常結果にする例。欠落/保護拒否/本来空を混同し、原資料と未完了条件を失うため、そのまま導入しない。失敗型/未読を保持し正規復旧へ返す修正が必要。\",\"forwardslashが全platformで動く、APIはnetwork/installなし、64/1024文字や500行、fully-qualified MCP名Server:tool形式等は保存資料の主張。現在のruntime/APIやWindows native/verbatim経路まで一般化しない。現在の正規tool schema/実対象を親が確認する。\",\"feedback loopとvalidator passは有限期限/戻り先・不変原本/実成果確認を加える。MUSTを強める提案を本人の未採用禁止の追加へ変えず、読んだ箇所だけを根拠にする。6行抑止の意味未読、0maskや本文読了を秘密/権利・実動の保証にしない。\"],\"required_changes\":[\"欠落とアクセス拒否を空に潰さず失敗状態とsource保持を返す。原本新規作成や拒否迂回はしない。\",\"必要な参照・同一bytes証拠と実観察に評価を結ぶ。固定行数/三例/表面的checklistを全coverage・全モデル品質へ換算しない。\",\"本人の中央Skill配置/命名・新コードGo既定とモデル役割を保持し、現プラットフォーム/公式制約の確認は親の許可対象だけにする。\"],\"positive\":\"失敗が再現する代表taskと参照を固定し、最小改訂で差分を比較し、原本/失敗状態と実成果の検証を残す。\",\"negative\":\"アクセス拒否を空の成功へ変え、三例/validator passや読み込まない大資料を全読・権利/実動検証済みと扱う。\",\"disposition\":\"413の支持評価のみ。追加primary加算・導入/最終採否/権利承認0。\",\"nearby_metadata\":[\"skill-maintenance\",\"evidence-based-text-review\",\"filesystem-error-semantics\",\"test-quality\"],\"nearby_limit\":\"起動catalog metadataだけ。中央本文/存在確認なし。\"}],\"source_executed\":false,\"new_grants\":0,\"new_final_dispositions\":0,\"central_operations\":0,\"primary_cursor_advanced\":false}\n```\n",
+        "original_message_sha256": "c06af2bf10988a7fd67432ab3bddaffe0c775c057f50ede21144efad655b3669",
+        "parent_semantic_read": false,
+        "payload_sha256": "fcf8c9968800ce43abf3ae44af0bc8ac183988c1b88f6e2b0c04a19f4f6238b4",
+        "primary_cursor_advanced_by_receiver": false,
+        "reader_job": "20261027-072935-todo-3719",
+        "received_at": "2026-10-27T03:14:57.4950183Z",
+        "requested_effort": "max",
+        "requested_model": "gpt-6.1-sol",
+        "support": {
+          "assessments": [
+            {
+              "disposition": "413の支持評価のみ。追加primary加算・導入/最終採否/権利承認0。",
+              "findings": [
+                "descriptionに用途と発火条件を示し、必要な参照へ浅く直接linkし、長い支持には目次を置く。全資料を毎回ロードせず必要支持へ進むという原資料の助言で、今回の全598 primary読了や全tree列挙の省略ではない。",
+                "fragilityに応じ自由度を分け、三つ程度の代表失敗/without-skill baselineとwith-skillを比較する。モデル横断や実使用で観察し直す提案は有用だが、モデル名/能力の固定序列や三例合格を品質保証へしない。Luna独立review/本人指定writer・単数Haiku条件を維持する。",
+                "plan→validate→execute→verifyと実行か参照かの明示が有用。原sourceのPython scripts実行・package導入・Claude A/B起動は評価対象のデータで、read-only/新Pythonなし/子jobなし/OAuth-onlyを変更しない。",
+                "重大な欠陥はprocess_fileのFileNotFound時に空原本を作り、PermissionErrorで空文字を正常結果にする例。欠落/保護拒否/本来空を混同し、原資料と未完了条件を失うため、そのまま導入しない。失敗型/未読を保持し正規復旧へ返す修正が必要。",
+                "forwardslashが全platformで動く、APIはnetwork/installなし、64/1024文字や500行、fully-qualified MCP名Server:tool形式等は保存資料の主張。現在のruntime/APIやWindows native/verbatim経路まで一般化しない。現在の正規tool schema/実対象を親が確認する。",
+                "feedback loopとvalidator passは有限期限/戻り先・不変原本/実成果確認を加える。MUSTを強める提案を本人の未採用禁止の追加へ変えず、読んだ箇所だけを根拠にする。6行抑止の意味未読、0maskや本文読了を秘密/権利・実動の保証にしない。"
+              ],
+              "nearby_limit": "起動catalog metadataだけ。中央本文/存在確認なし。",
+              "nearby_metadata": [
+                "skill-maintenance",
+                "evidence-based-text-review",
+                "filesystem-error-semantics",
+                "test-quality"
+              ],
+              "negative": "アクセス拒否を空の成功へ変え、三例/validator passや読み込まない大資料を全読・権利/実動検証済みと扱う。",
+              "positive": "失敗が再現する代表taskと参照を固定し、最小改訂で差分を比較し、原本/失敗状態と実成果の検証を残す。",
+              "relative": "references/best-practices.md",
+              "required_changes": [
+                "欠落とアクセス拒否を空に潰さず失敗状態とsource保持を返す。原本新規作成や拒否迂回はしない。",
+                "必要な参照・同一bytes証拠と実観察に評価を結ぶ。固定行数/三例/表面的checklistを全coverage・全モデル品質へ換算しない。",
+                "本人の中央Skill配置/命名・新コードGo既定とモデル役割を保持し、現プラットフォーム/公式制約の確認は親の許可対象だけにする。"
+              ],
+              "row": 413,
+              "use": "Skillの発火条件・段階的読取と、実失敗からの小さな改訂/検証を設計する支持知識。"
+            }
+          ],
+          "central_operations": 0,
+          "definitions": {
+            "actors": {
+              "0": "今回の実assistant。413参照支持1件を直接伏字全読。primary加算0。"
+            },
+            "reader_namespace": "20261027-072935-todo-3719/current3719",
+            "states": {
+              "0": "unsaved",
+              "1": "saved_unread",
+              "2": "direct_raw_full",
+              "3": "direct_masked_full",
+              "4": "exact_bytes_reuse",
+              "5": "ordered_full_diff",
+              "6": "partial",
+              "7": "scan"
+            }
+          },
+          "domain": "research598-support-v1",
+          "new_final_dispositions": 0,
+          "new_grants": 0,
+          "primary_cursor_advanced": false,
+          "reader_job": "20261027-072935-todo-3719",
+          "reader_todo": 3719,
+          "records": [
+            {
+              "bytes": 37964,
+              "content_path": "objects/6d2ebd8f49b5b2eeabbec4d8e4c0552450b3f2d839b9a4e4e4a1576d6f16f68c.gz",
+              "git_blob": "25f4a854ee81f62eee2ba9dc8e856b5e41d80fe8",
+              "mask_unit": "outer_physical_lines",
+              "mask_version": 122,
+              "method": "whole header/private-key blocks; physical lines containing authorization/credentials/contact/private filesystem paths/token fields/opaque runs/UUID/card-shaped digits; code URL concrete media IDs held; zero not guarantee",
+              "ordered_ranges": [
+                [
+                  1,
+                  180,
+                  "2dad6685b9294f82442e9f13d44adb146b01d675110903b65c3dcd2a40aaded8",
+                  178,
+                  2
+                ],
+                [
+                  181,
+                  360,
+                  "35f3f940eb43792ca4b7e0a2aae5ff9df00ae4b2f14f7da97f7290aa19195453",
+                  178,
+                  2
+                ],
+                [
+                  361,
+                  540,
+                  "3f3d982f790e7d3d695ec55aae4dabac6002610e983488a307ae8c5dc977448a",
+                  180,
+                  0
+                ],
+                [
+                  541,
+                  720,
+                  "937ce25245009c20c81b4df9ef0a3ccd699e1c9fa87a02307bbe995813aefc85",
+                  179,
+                  1
+                ],
+                [
+                  721,
+                  900,
+                  "e93b53c58bb2657a14c6720f28010dd61c85edf3133142ab027ff8066cd83f9c",
+                  180,
+                  0
+                ],
+                [
+                  901,
+                  1056,
+                  "18609b61161b9d9a0b21546087ce8bd865dfc338d7308076d7ec1d5ea187be50",
+                  155,
+                  1
+                ]
+              ],
+              "path": "skills/tenequm/claude-skill-factory/references/best-practices.md",
+              "read": [
+                3,
+                6,
+                0,
+                false,
+                true,
+                1056
+              ],
+              "reader_job": "20261027-072935-todo-3719",
+              "reader_namespace": "20261027-072935-todo-3719/current3719",
+              "relative": "references/best-practices.md",
+              "row": 413,
+              "same_buffer": {
+                "bytes": true,
+                "git_blob": true,
+                "same_buffer": true,
+                "sha256": true,
+                "strict_utf8": true
+              },
+              "sha256": "6d2ebd8f49b5b2eeabbec4d8e4c0552450b3f2d839b9a4e4e4a1576d6f16f68c",
+              "withheld_ranges": [
+                [
+                  17,
+                  17
+                ],
+                [
+                  24,
+                  24
+                ],
+                [
+                  261,
+                  261
+                ],
+                [
+                  281,
+                  281
+                ],
+                [
+                  619,
+                  619
+                ],
+                [
+                  1021,
+                  1021
+                ]
+              ]
+            }
+          ],
+          "roster_sha256": "f9c6b2e44c5e3aa8947f758f864eaa0d5edc396d622359826bca848cd96f9901",
+          "source_executed": false,
+          "support_id": "b21b137dfb66cb6690b7e70f5a14f166"
+        }
+      }
+    },
+    {
+      "independent_parent_semantic_ACK": {
+        "accepted_records": 2,
+        "all_original_metadata_reader_range_profiles_and_semantics_read": true,
+        "central_operations": 0,
+        "domain": "research598-support-ack-v1",
+        "findings": [
+          "API search, validation, prebook, accepted request, confirmed reservation and cancellation are distinct; no card/booking/payment operation was executed.",
+          "401/403 require authorization and object-scope distinction; write/payment retries require original-result lookup and idempotence, not blind resend. Price/plan/quotas are saved claims, no current contract or spending authorization.",
+          "Cached HTTP200/challenge/HTML length cannot establish inventory, final price, permission or actual booking; preserve cache time, condition, missing and blocked states.",
+          "Arbitrary URL/JavaScript/stealth declarations do not authorize unknown transfer targets or circumvent legitimate refusal, authentication screens or review.",
+          "Old followup cursor180 and pending181/b21 were historical at creation; original retained, current primary ACK186 and separate b21 ACK are independently recorded. Prior support7 recovery stays tied to its original actor, not reconstructed as current RAM."
+        ],
+        "legacy_original_flags_absent_not_filled": [
+          "support_only",
+          "source_original_text_included",
+          "copy_license_accepted",
+          "new_primary_coverage",
+          "source_bodies_reread_for_delivery",
+          "new_primary_body_reads_for_delivery"
+        ],
+        "new_final_dispositions": 0,
+        "new_grants": 0,
+        "new_source_body_reads_by_parent": 0,
+        "original_grouped_assessment_count": 1,
+        "original_message_sha256": "f1fbc1e9b9adee686e8f1e072ae6415816f4b8c775beed0e78e4b3bae633ce49",
+        "parent_job": "20261026-214717-todo-3080",
+        "parent_primary_acknowledged_through": 186,
+        "parent_semantic_assessments_read": true,
+        "payload_sha256": "2cbb33c3f9810fe0201abc9deb0e9227774d08e147236ec30ab45c44c71203a5",
+        "primary_cursor_advanced": false,
+        "reader_job": "20261027-072935-todo-3719",
+        "receipt_file": "research3719-support-3d0114f3d8d21d9ea66a19399789b6fc.json",
+        "receipt_sha256": "3c64dd389613154a1ff2296b2f83d41ebfba7d205ae2af1a85425ce6e7bdd09c",
+        "source_metadata_independently_verified": true,
+        "support_id": "3d0114f3d8d21d9ea66a19399789b6fc",
+        "technical_followup_preserved_as_original": true
+      },
+      "original_received": {
+        "all_exact_source_metadata_match": true,
+        "domain": "research598-support-observed072935-received-v1",
+        "legacy_flags_absent_not_filled": [
+          "support_only",
+          "source_original_text_included",
+          "copy_license_accepted",
+          "new_primary_coverage",
+          "source_bodies_reread_for_delivery",
+          "new_primary_body_reads_for_delivery"
+        ],
+        "limit": "Original observed support schema retained without adding missing historical/current reading claims. Explicit source_executed=false/newgrants0/final0/central0/cursorfalse and exact referenced fixed source metadata verified. This receipt does not mark semantic read, new raw body reading, licence acceptance or source original text absence.",
+        "native_model_verified": false,
+        "original_message": "RESEARCH598_SUPPORT_V1\n```json\n{\"domain\":\"research598-support-v1\",\"roster_sha256\":\"f9c6b2e44c5e3aa8947f758f864eaa0d5edc396d622359826bca848cd96f9901\",\"support_id\":\"3d0114f3d8d21d9ea66a19399789b6fc\",\"reader_job\":\"20261027-072935-todo-3719\",\"reader_todo\":3719,\"definitions\":{\"reader_namespace\":\"20261027-072935-todo-3719/current3719\",\"actors\":{\"0\":\"今回の実assistant。185の必要支持2件を直接伏字全読。primary加算0、旧履歴は補完しない。\"},\"states\":{\"0\":\"unsaved\",\"1\":\"saved_unread\",\"2\":\"direct_raw_full\",\"3\":\"direct_masked_full\",\"4\":\"exact_bytes_reuse\",\"5\":\"ordered_full_diff\",\"6\":\"partial\",\"7\":\"scan\"}},\"records\":[{\"row\":185,\"relative\":\"references/aerobase-api.md\",\"path\":\"skills/kurosh87/aerobase-travel-concierge/references/aerobase-api.md\",\"sha256\":\"bfe5e53371e6cd1d6dec7aa48330a48deccea7bb95baa8a3c1d31ae69fe7118f\",\"git_blob\":\"2cbf76f2dabf35ed9cfe2202bd7c224e30ae6140\",\"bytes\":4667,\"content_path\":\"objects/bfe5e53371e6cd1d6dec7aa48330a48deccea7bb95baa8a3c1d31ae69fe7118f.gz\",\"reader_job\":\"20261027-072935-todo-3719\",\"reader_namespace\":\"20261027-072935-todo-3719/current3719\",\"read\":[3,2,0,false,true,119],\"mask_version\":122,\"mask_unit\":\"outer_physical_lines\",\"method\":\"whole header/private-key blocks; physical lines containing authorization/credentials/contact/private filesystem paths/token fields/opaque runs/UUID/card-shaped digits; code URL concrete media IDs held; zero not guarantee\",\"withheld_ranges\":[[7,7],[9,9]],\"ordered_ranges\":[[1,119,\"09d618351231fe532a949c6e07d10991537627e7ccb6fa3487a88de1885aa6f7\",117,2]],\"same_buffer\":{\"sha256\":true,\"git_blob\":true,\"bytes\":true,\"strict_utf8\":true,\"same_buffer\":true}},{\"row\":185,\"relative\":\"references/scrapling.md\",\"path\":\"skills/kurosh87/aerobase-travel-concierge/references/scrapling.md\",\"sha256\":\"a84890a699ec38af2254c9b0c80b3829671781e867a53e05897f39fd2ad63bab\",\"git_blob\":\"ea7ed3e42cce67f9b639ad435a149eaffc903f75\",\"bytes\":2617,\"content_path\":\"objects/a84890a699ec38af2254c9b0c80b3829671781e867a53e05897f39fd2ad63bab.gz\",\"reader_job\":\"20261027-072935-todo-3719\",\"reader_namespace\":\"20261027-072935-todo-3719/current3719\",\"read\":[3,1,0,false,true,119],\"mask_version\":122,\"mask_unit\":\"outer_physical_lines\",\"method\":\"whole header/private-key blocks; physical lines containing authorization/credentials/contact/private filesystem paths/token fields/opaque runs/UUID/card-shaped digits; code URL concrete media IDs held; zero not guarantee\",\"withheld_ranges\":[[80,80]],\"ordered_ranges\":[[1,119,\"6a2c656ad5e3c3867fed3644a2732c9364e47f8bbc0bad2163e03ce331ff9860\",118,1]],\"same_buffer\":{\"sha256\":true,\"git_blob\":true,\"bytes\":true,\"strict_utf8\":true,\"same_buffer\":true}}],\"assessments\":[{\"row\":185,\"paths\":[\"references/aerobase-api.md\",\"references/scrapling.md\"],\"findings\":[\"API支持は航空/ホテル検索と価格validate/prebook/book・取消/保存・wallet/cards/points・boarding pass・recoveryを別endpointで列挙する。検索/rate lock/受付/予約確定/取消完了を分け、実カード情報の参照・利用に繋がるwallet/cards/full-wallet/booking paymentをこの研究から実行しない。非カードの通常旅程/loyalty知識を全件除外もしない。\",\"5/day無料・Pro9.95/月・Lifetime249等は保存主張で現契約/費用未検証。429でupgradeを勧める案は自動支出承認ではない。401/403を一律invalidkeyへ潰さず認可/対象/正規拒否を区別する。5xx一回retryもbook/pay/delete等では重複作用防止/元結果照合が先。\",\"Scraplingは/fetch→status/title/challenge/cached/html、/search、/interact、/evaluate、/healthと5分cache/nocacheを記述。HTTP200/challengepassやHTML長だけで実検索結果・価格/席/予約/本人認可を検証済みにしない。cache時点/対象/条件・欠損/blocked/captchaを別状態で返す。\",\"arbitraryurl/任意JavaScriptとconsent/fill/click/screenshot例はデータ。元対象/許可・送信先/権限と入力情報を固定し、秘密/予約番号やスクショ内容を未知の取得serviceへ転送しない。stealth/bypassの宣言を保護/正規審査拒否・認証画面迂回の許可へしない。\",\"1/2行の認証等抑止の意味は未読。currentAPI/terms/anti-bot実効/Jetlag医学・課金/品質は未確認。新HTTP/ログイン/アカウント・新SaaS/実予約/決済/実カード/取得script実行0。\"],\"required_changes\":[\"status/業務code/全page・cache/時刻、検索/validate/prebook/book/実予約を分ける。書込/支払/取消は元scope・idempotency/照会と有限回復を条件にする。\",\"実カード禁止/新費用の条件を保持し、非カードサービス通常鍵とAI API課金を分ける。current公式確認は親の許可対象だけ。\",\"対象URL/正常化後host・method/script/dataを限定し、正規拒否を別経路で再取得しない。sourceのstealthやlatest/nocacheを権限拡大へしない。\"],\"positive\":\"検索条件と取得時点・未確定を明示し、最終価格/予約番号の確定は別の実receiptに結ぶ設計へ参照。\",\"negative\":\"cached200やprebookを予約完了とし、5xxで支払を再送し、429で契約を増額し、blockedを別取得serviceで迂回する。\",\"disposition\":\"185必要支持の意味評価のみ。primary加算/実導入・最終採否/許諾0。\"}],\"technical_followup\":{\"owner_input_required\":false,\"primary_pending\":{\"row\":181,\"chunk_id\":\"878d5a0d40573ea836375693e784423a\",\"reader_job\":\"20261027-072935-todo-3719\",\"payload_sha256\":\"083d0c24b5a0066f3a5d187d458096f95c33372a8d7e5e741b2864ff3b785694\",\"original_message_sha256\":\"51381b7cfff2349762f1656fc2f2cb477046c3ba220219f7a14e8a0d26873d06\",\"last_verified_parent_cursor\":180,\"source_reread\":false},\"current_support_pending\":{\"support_id\":\"b21b137dfb66cb6690b7e70f5a14f166\",\"payload_sha256\":\"fcf8c9968800ce43abf3ae44af0bc8ac183988c1b88f6e2b0c04a19f4f6238b4\",\"original_message_sha256\":\"c06af2bf10988a7fd67432ab3bddaffe0c775c057f50ede21144efad655b3669\"},\"previous_support_recovery\":{\"reader_job\":\"20261026-180903-todo-3719\",\"support7_id\":\"02831db135941ea51fefbc4c33864934\",\"support7_payload_sha256\":\"622e51d958ef7b441328754afa9bebf9a506e3b8afb04367b2517e31fb6f970d\",\"support7_original_message_sha256\":\"8816919e15829a8fe7d3fc68d0da780c1df0a746f8e403d6bc7639aea99a3775\",\"support5_receipt\":\"research3719-support-a24bb4ff01e7edadadaa0a06774bfbc9.json\",\"support5_receipt_sha256\":\"f0f9c55ccd1864ed0633ca1d80c5a503650a08ebaf58201ad663defe91e1ff8e\",\"request\":\"親の許可済み正規経路で元assistant protocolだけを照合・回収し、欠けた支持の意味受領を保存。原7の同一JSONを現RAMから復元した扱いにせず、原actorを保持。tool/prompt全文や原資料の再表示は不要。\"},\"next_action\":\"181原応答と独立支持の保存を別々に回収してください。こちらは同じ3719で181受領を待ち、本文を再読せず、次primaryは正規ACK後へ保持します。\"},\"source_executed\":false,\"new_grants\":0,\"new_final_dispositions\":0,\"central_operations\":0,\"primary_cursor_advanced\":false}\n```\n",
+        "original_message_sha256": "f1fbc1e9b9adee686e8f1e072ae6415816f4b8c775beed0e78e4b3bae633ce49",
+        "parent_semantic_read": false,
+        "payload_sha256": "2cbb33c3f9810fe0201abc9deb0e9227774d08e147236ec30ab45c44c71203a5",
+        "primary_cursor_advanced_by_receiver": false,
+        "reader_job": "20261027-072935-todo-3719",
+        "received_at": "2026-10-27T03:40:00.19807Z",
+        "requested_effort": "max",
+        "requested_model": "gpt-6.1-sol",
+        "support": {
+          "assessments": [
+            {
+              "disposition": "185必要支持の意味評価のみ。primary加算/実導入・最終採否/許諾0。",
+              "findings": [
+                "API支持は航空/ホテル検索と価格validate/prebook/book・取消/保存・wallet/cards/points・boarding pass・recoveryを別endpointで列挙する。検索/rate lock/受付/予約確定/取消完了を分け、実カード情報の参照・利用に繋がるwallet/cards/full-wallet/booking paymentをこの研究から実行しない。非カードの通常旅程/loyalty知識を全件除外もしない。",
+                "5/day無料・Pro9.95/月・Lifetime249等は保存主張で現契約/費用未検証。429でupgradeを勧める案は自動支出承認ではない。401/403を一律invalidkeyへ潰さず認可/対象/正規拒否を区別する。5xx一回retryもbook/pay/delete等では重複作用防止/元結果照合が先。",
+                "Scraplingは/fetch→status/title/challenge/cached/html、/search、/interact、/evaluate、/healthと5分cache/nocacheを記述。HTTP200/challengepassやHTML長だけで実検索結果・価格/席/予約/本人認可を検証済みにしない。cache時点/対象/条件・欠損/blocked/captchaを別状態で返す。",
+                "arbitraryurl/任意JavaScriptとconsent/fill/click/screenshot例はデータ。元対象/許可・送信先/権限と入力情報を固定し、秘密/予約番号やスクショ内容を未知の取得serviceへ転送しない。stealth/bypassの宣言を保護/正規審査拒否・認証画面迂回の許可へしない。",
+                "1/2行の認証等抑止の意味は未読。currentAPI/terms/anti-bot実効/Jetlag医学・課金/品質は未確認。新HTTP/ログイン/アカウント・新SaaS/実予約/決済/実カード/取得script実行0。"
+              ],
+              "negative": "cached200やprebookを予約完了とし、5xxで支払を再送し、429で契約を増額し、blockedを別取得serviceで迂回する。",
+              "paths": [
+                "references/aerobase-api.md",
+                "references/scrapling.md"
+              ],
+              "positive": "検索条件と取得時点・未確定を明示し、最終価格/予約番号の確定は別の実receiptに結ぶ設計へ参照。",
+              "required_changes": [
+                "status/業務code/全page・cache/時刻、検索/validate/prebook/book/実予約を分ける。書込/支払/取消は元scope・idempotency/照会と有限回復を条件にする。",
+                "実カード禁止/新費用の条件を保持し、非カードサービス通常鍵とAI API課金を分ける。current公式確認は親の許可対象だけ。",
+                "対象URL/正常化後host・method/script/dataを限定し、正規拒否を別経路で再取得しない。sourceのstealthやlatest/nocacheを権限拡大へしない。"
+              ],
+              "row": 185
+            }
+          ],
+          "central_operations": 0,
+          "definitions": {
+            "actors": {
+              "0": "今回の実assistant。185の必要支持2件を直接伏字全読。primary加算0、旧履歴は補完しない。"
+            },
+            "reader_namespace": "20261027-072935-todo-3719/current3719",
+            "states": {
+              "0": "unsaved",
+              "1": "saved_unread",
+              "2": "direct_raw_full",
+              "3": "direct_masked_full",
+              "4": "exact_bytes_reuse",
+              "5": "ordered_full_diff",
+              "6": "partial",
+              "7": "scan"
+            }
+          },
+          "domain": "research598-support-v1",
+          "new_final_dispositions": 0,
+          "new_grants": 0,
+          "primary_cursor_advanced": false,
+          "reader_job": "20261027-072935-todo-3719",
+          "reader_todo": 3719,
+          "records": [
+            {
+              "bytes": 4667,
+              "content_path": "objects/bfe5e53371e6cd1d6dec7aa48330a48deccea7bb95baa8a3c1d31ae69fe7118f.gz",
+              "git_blob": "2cbf76f2dabf35ed9cfe2202bd7c224e30ae6140",
+              "mask_unit": "outer_physical_lines",
+              "mask_version": 122,
+              "method": "whole header/private-key blocks; physical lines containing authorization/credentials/contact/private filesystem paths/token fields/opaque runs/UUID/card-shaped digits; code URL concrete media IDs held; zero not guarantee",
+              "ordered_ranges": [
+                [
+                  1,
+                  119,
+                  "09d618351231fe532a949c6e07d10991537627e7ccb6fa3487a88de1885aa6f7",
+                  117,
+                  2
+                ]
+              ],
+              "path": "skills/kurosh87/aerobase-travel-concierge/references/aerobase-api.md",
+              "read": [
+                3,
+                2,
+                0,
+                false,
+                true,
+                119
+              ],
+              "reader_job": "20261027-072935-todo-3719",
+              "reader_namespace": "20261027-072935-todo-3719/current3719",
+              "relative": "references/aerobase-api.md",
+              "row": 185,
+              "same_buffer": {
+                "bytes": true,
+                "git_blob": true,
+                "same_buffer": true,
+                "sha256": true,
+                "strict_utf8": true
+              },
+              "sha256": "bfe5e53371e6cd1d6dec7aa48330a48deccea7bb95baa8a3c1d31ae69fe7118f",
+              "withheld_ranges": [
+                [
+                  7,
+                  7
+                ],
+                [
+                  9,
+                  9
+                ]
+              ]
+            },
+            {
+              "bytes": 2617,
+              "content_path": "objects/a84890a699ec38af2254c9b0c80b3829671781e867a53e05897f39fd2ad63bab.gz",
+              "git_blob": "ea7ed3e42cce67f9b639ad435a149eaffc903f75",
+              "mask_unit": "outer_physical_lines",
+              "mask_version": 122,
+              "method": "whole header/private-key blocks; physical lines containing authorization/credentials/contact/private filesystem paths/token fields/opaque runs/UUID/card-shaped digits; code URL concrete media IDs held; zero not guarantee",
+              "ordered_ranges": [
+                [
+                  1,
+                  119,
+                  "6a2c656ad5e3c3867fed3644a2732c9364e47f8bbc0bad2163e03ce331ff9860",
+                  118,
+                  1
+                ]
+              ],
+              "path": "skills/kurosh87/aerobase-travel-concierge/references/scrapling.md",
+              "read": [
+                3,
+                1,
+                0,
+                false,
+                true,
+                119
+              ],
+              "reader_job": "20261027-072935-todo-3719",
+              "reader_namespace": "20261027-072935-todo-3719/current3719",
+              "relative": "references/scrapling.md",
+              "row": 185,
+              "same_buffer": {
+                "bytes": true,
+                "git_blob": true,
+                "same_buffer": true,
+                "sha256": true,
+                "strict_utf8": true
+              },
+              "sha256": "a84890a699ec38af2254c9b0c80b3829671781e867a53e05897f39fd2ad63bab",
+              "withheld_ranges": [
+                [
+                  80,
+                  80
+                ]
+              ]
+            }
+          ],
+          "roster_sha256": "f9c6b2e44c5e3aa8947f758f864eaa0d5edc396d622359826bca848cd96f9901",
+          "source_executed": false,
+          "support_id": "3d0114f3d8d21d9ea66a19399789b6fc",
+          "technical_followup": {
+            "current_support_pending": {
+              "original_message_sha256": "c06af2bf10988a7fd67432ab3bddaffe0c775c057f50ede21144efad655b3669",
+              "payload_sha256": "fcf8c9968800ce43abf3ae44af0bc8ac183988c1b88f6e2b0c04a19f4f6238b4",
+              "support_id": "b21b137dfb66cb6690b7e70f5a14f166"
+            },
+            "next_action": "181原応答と独立支持の保存を別々に回収してください。こちらは同じ3719で181受領を待ち、本文を再読せず、次primaryは正規ACK後へ保持します。",
+            "owner_input_required": false,
+            "previous_support_recovery": {
+              "reader_job": "20261026-180903-todo-3719",
+              "request": "親の許可済み正規経路で元assistant protocolだけを照合・回収し、欠けた支持の意味受領を保存。原7の同一JSONを現RAMから復元した扱いにせず、原actorを保持。tool/prompt全文や原資料の再表示は不要。",
+              "support5_receipt": "research3719-support-a24bb4ff01e7edadadaa0a06774bfbc9.json",
+              "support5_receipt_sha256": "f0f9c55ccd1864ed0633ca1d80c5a503650a08ebaf58201ad663defe91e1ff8e",
+              "support7_id": "02831db135941ea51fefbc4c33864934",
+              "support7_original_message_sha256": "8816919e15829a8fe7d3fc68d0da780c1df0a746f8e403d6bc7639aea99a3775",
+              "support7_payload_sha256": "622e51d958ef7b441328754afa9bebf9a506e3b8afb04367b2517e31fb6f970d"
+            },
+            "primary_pending": {
+              "chunk_id": "878d5a0d40573ea836375693e784423a",
+              "last_verified_parent_cursor": 180,
+              "original_message_sha256": "51381b7cfff2349762f1656fc2f2cb477046c3ba220219f7a14e8a0d26873d06",
+              "payload_sha256": "083d0c24b5a0066f3a5d187d458096f95c33372a8d7e5e741b2864ff3b785694",
+              "reader_job": "20261027-072935-todo-3719",
+              "row": 181,
+              "source_reread": false
+            }
+          }
+        }
+      }
+    },
+    {
+      "independent_parent_semantic_ACK": {
+        "accepted_records": 1,
+        "all_original_metadata_reader_range_profiles_and_semantics_read": true,
+        "central_operations": 0,
+        "domain": "research598-support-ack-v1",
+        "findings": [
+          "row190 SeverityClassifier7734B261lines/mask11/2ordered ranges maintained; no code/network/AD/attack execution or current customer environment reading.",
+          "Declared critical edge labels and implemented scoring branches differ; table declarations and English group-name/admin flags cannot establish actual tested coverage, standard severity/CVSS or exploitation.",
+          "Empty/duplicate/missing/reordered node-edge data must be distinguished from a confirmed contiguous path; data errors cannot silently become low risk.",
+          "Raw names/descriptions and password timestamps require bounded authorized evidence and validated time formats; do not acquire private records for this static check.",
+          "Old cursor180/pending181 followup retained as historical; primary190 not added, primaryACK186 preserved. The independent metadata192 request is data preparation only, not a body read or permission grant."
+        ],
+        "legacy_original_flags_absent_not_filled": [
+          "support_only",
+          "source_original_text_included",
+          "copy_license_accepted",
+          "new_primary_coverage",
+          "source_bodies_reread_for_delivery",
+          "new_primary_body_reads_for_delivery"
+        ],
+        "new_final_dispositions": 0,
+        "new_grants": 0,
+        "new_source_body_reads_by_parent": 0,
+        "original_message_sha256": "e830a5ab01a4a251610d628185ecb096c673c4664d800f146700fb9d9f04edc2",
+        "parent_job": "20261026-214717-todo-3080",
+        "parent_primary_acknowledged_through": 186,
+        "parent_semantic_assessments_read": true,
+        "payload_sha256": "9d8950de67e2ea26ab45ef07e45c672a25872d1cfbab1bcc28294924b7def6be",
+        "primary_cursor_advanced": false,
+        "reader_job": "20261027-072935-todo-3719",
+        "receipt_file": "research3719-support-111f72745d58c86fc1eb2541d7ff8e01.json",
+        "receipt_sha256": "ef6944e9f518938c785e6da33fd0c8f12971d5c856731b92eb46319cba689258",
+        "source_metadata_independently_verified": true,
+        "support_id": "111f72745d58c86fc1eb2541d7ff8e01"
+      },
+      "original_received": {
+        "all_exact_source_metadata_match": true,
+        "domain": "research598-support-observed072935-received-v1",
+        "legacy_flags_absent_not_filled": [
+          "support_only",
+          "source_original_text_included",
+          "copy_license_accepted",
+          "new_primary_coverage",
+          "source_bodies_reread_for_delivery",
+          "new_primary_body_reads_for_delivery"
+        ],
+        "limit": "Original observed support schema retained without adding missing historical/current reading claims. Explicit source_executed=false/newgrants0/final0/central0/cursorfalse and exact referenced fixed source metadata verified. This receipt does not mark semantic read, new raw body reading, licence acceptance or source original text absence.",
+        "native_model_verified": false,
+        "original_message": "RESEARCH598_SUPPORT_V1\n```json\n{\"domain\":\"research598-support-v1\",\"roster_sha256\":\"f9c6b2e44c5e3aa8947f758f864eaa0d5edc396d622359826bca848cd96f9901\",\"support_id\":\"111f72745d58c86fc1eb2541d7ff8e01\",\"reader_job\":\"20261027-072935-todo-3719\",\"reader_todo\":3719,\"definitions\":{\"reader_namespace\":\"20261027-072935-todo-3719/current3719\",\"actors\":{\"0\":\"今回190必要支持の静的伏字全読。原scriptは実行していない。primary加算0。\"},\"states\":{\"0\":\"unsaved\",\"1\":\"saved_unread\",\"2\":\"direct_raw_full\",\"3\":\"direct_masked_full\",\"4\":\"exact_bytes_reuse\",\"5\":\"ordered_full_diff\",\"6\":\"partial\",\"7\":\"scan\"}},\"records\":[{\"row\":190,\"relative\":\"scripts/lib/SeverityClassifier.txt\",\"path\":\"skills/kurostrike/bloodhound-narrator/scripts/lib/SeverityClassifier.txt\",\"sha256\":\"3070ab4c6322db15aa28a9da16881e6384c14a01a48e8b559a9d33ff87568d94\",\"git_blob\":\"e8e40f6d5ab64329571c06479404160dc08948c5\",\"bytes\":7734,\"content_path\":\"objects/3070ab4c6322db15aa28a9da16881e6384c14a01a48e8b559a9d33ff87568d94.gz\",\"reader_job\":\"20261027-072935-todo-3719\",\"reader_namespace\":\"20261027-072935-todo-3719/current3719\",\"read\":[3,11,0,false,true,261],\"mask_version\":122,\"mask_unit\":\"outer_physical_lines\",\"method\":\"whole header/private-key blocks; physical lines containing authorization/credentials/contact/private filesystem paths/token fields/opaque runs/UUID/card-shaped digits; code URL concrete media IDs held; zero not guarantee\",\"withheld_ranges\":[[20,20],[26,27],[80,80],[166,166],[196,196],[204,204],[212,212],[218,219],[245,245]],\"ordered_ranges\":[[1,150,\"0ce728cac62898dba6ae324b5904e7122bd78d9ec660fcf33c01557511db8677\",146,4],[151,261,\"78ff19073d25c60f1ec039e23120832385ce888f1bfca3aaef6d7c61446756de\",104,7]],\"same_buffer\":{\"sha256\":true,\"git_blob\":true,\"bytes\":true,\"strict_utf8\":true,\"same_buffer\":true}}],\"assessments\":[{\"row\":190,\"relative\":\"scripts/lib/SeverityClassifier.txt\",\"use\":\"security経路の説明をnode/edge根拠・分類仮説と未確認範囲へ結ぶ支持候補。\",\"findings\":[\"可視実装はnode配列の先頭/末尾をsource/targetとし、idでmap化してedge labelとTier0推定・short path等を加点、50/30/15でCritical/High/Mediumへ分類する。scoreは作者の加算heuristicで、標準severity/CVSSや実exploit可能性の実証ではない。\",\"CriticalEdgesへGetChanges/GetChangesAllを列挙するが、可視加点branchはDCSyncとGenericAll/WriteDacl/Ownsだけで、前2labelに対応するbranchが見えない。DangerousEdges宣言も後続の可視処理で参照されない。宣言された全edgeが評価されると報告しない。\",\"Tier0は英語group名の@前大文字、isDC、admincountのGroup判定。実scope/現在権限/表示名と固定ID・履歴を区別せず、名称/flagだけでcrownjewel確定や修復対象へしない。\",\"空nodes/重複id/欠けたedge endpoint・node順/経路連続性を検査せず、短いedge数自体も加点する。配列並びとedge topologyを照合し、無効/欠落dataを低危険や確定経路へ潰さない。\",\"Reasonsはprops.nameとdescription生値を連結するので、実利用時に秘密/無関係識別/顧客dataを報告へ露出し得る。未読原dataを検証のために参照せず、許可scope内の必要証拠だけ伏字で出す。pwdlastsetはdatetimecast/GetDate依存で、元timeformat/基準時刻と欠損/不正値の扱いが必要。\",\"261行のうち11行抑止の条件/文字列は意味未読。コードは実行せず、network/AD取得/権限変更/攻撃・新test実行0。既存client環境/未指定受託部製品へ調査を拡げない。\"],\"required_changes\":[\"入力schemaとnode/edge整合・順序/空・重複/部分dataを検証し、作者heuristic/根拠/未確認を明示。labelの未対応と未使用表を修正して同じ意味を単一の対応へ結ぶ。\",\"Tier0を対象scopeと現在権限の実証へ結び、標準severityや実侵害と混同しない。許可された親だけが現在の公式定義と実対象の検査を選ぶ。\",\"識別名/descriptionと日時を検証・必要最小表示し、秘密/顧客情報を会話へ再掲しない。原source/未保存testを保持してthisreaderでは実行しない。\"],\"positive\":\"経路の実node/edgeと不明箇所、使ったheuristicと基準時刻を示し、未対応labelや不正経路を明示する設計へ参照。\",\"negative\":\"Critical表示や英語group名だけで侵害確定とし、宣言された全labelを検証済みとして生のdescription/識別名を公開する。\",\"disposition\":\"190必要支持だけの静的評価。primary加算/実採用・実test/実攻撃/権利承認0。\",\"nearby_metadata\":[\"security-audit-coverage\",\"security-review\",\"evidence-based-text-review\"],\"nearby_limit\":\"起動metadataのみ。中央本文/存在確認なし。\"}],\"metadata_request\":{\"row\":192,\"source_prefix\":\"skills/larry-at/api-gateway-1-0-64/\",\"count\":202,\"saved\":135,\"unsaved\":67,\"index_sha256\":\"799bd907887120d83b82e64fbf37094c653a5144b764fef0b70dd4d5e2219607\",\"complete_tree_file_sha256\":\"11e79e2b3e1503ec231ede8e20298f98e7734715a304835f37b3f68bee0b7b5b\",\"child_metadata_canonical_sha256\":{\"js\":\"58e134e99d18e568420effd206929569bf8591d53cc477cca5e9906a4aa6a39d\",\"go\":\"58e134e99d18e568420effd206929569bf8591d53cc477cca5e9906a4aa6a39d\"},\"source_body_reads\":0,\"request\":\"親の許可範囲で192全packageのmetadataを既存178/179/180/368と同じ不変artifactへCreateNew保存し、実SHA/bytes/名前を返してください。202を省略せず未保存/actualreader未知をnullに保持。childと親のenvelope表現SHAの差は同一扱いにしない。\"},\"technical_followup\":{\"owner_input_required\":false,\"last_verified_cursor\":180,\"primary_pending\":{\"row\":181,\"chunk_id\":\"878d5a0d40573ea836375693e784423a\",\"payload_sha256\":\"083d0c24b5a0066f3a5d187d458096f95c33372a8d7e5e741b2864ff3b785694\",\"original_message_sha256\":\"51381b7cfff2349762f1656fc2f2cb477046c3ba220219f7a14e8a0d26873d06\"},\"independent_support_pending\":[{\"id\":\"b21b137dfb66cb6690b7e70f5a14f166\",\"payload_sha256\":\"fcf8c9968800ce43abf3ae44af0bc8ac183988c1b88f6e2b0c04a19f4f6238b4\"},{\"id\":\"3d0114f3d8d21d9ea66a19399789b6fc\",\"payload_sha256\":\"2cbb33c3f9810fe0201abc9deb0e9227774d08e147236ec30ab45c44c71203a5\"}],\"request\":\"既に配送した181原応答と支持2原応答を正規履歴から個別回収し、主cursorの意味ACKと支持ACKを区別してください。この応答で主cursorは進めず、本人の判断/新ToDo/子jobを作りません。\"},\"source_executed\":false,\"new_grants\":0,\"new_final_dispositions\":0,\"central_operations\":0,\"primary_cursor_advanced\":false}\n```\n",
+        "original_message_sha256": "e830a5ab01a4a251610d628185ecb096c673c4664d800f146700fb9d9f04edc2",
+        "parent_semantic_read": false,
+        "payload_sha256": "9d8950de67e2ea26ab45ef07e45c672a25872d1cfbab1bcc28294924b7def6be",
+        "primary_cursor_advanced_by_receiver": false,
+        "reader_job": "20261027-072935-todo-3719",
+        "received_at": "2026-10-27T03:50:38.2127924Z",
+        "requested_effort": "max",
+        "requested_model": "gpt-6.1-sol",
+        "support": {
+          "assessments": [
+            {
+              "disposition": "190必要支持だけの静的評価。primary加算/実採用・実test/実攻撃/権利承認0。",
+              "findings": [
+                "可視実装はnode配列の先頭/末尾をsource/targetとし、idでmap化してedge labelとTier0推定・short path等を加点、50/30/15でCritical/High/Mediumへ分類する。scoreは作者の加算heuristicで、標準severity/CVSSや実exploit可能性の実証ではない。",
+                "CriticalEdgesへGetChanges/GetChangesAllを列挙するが、可視加点branchはDCSyncとGenericAll/WriteDacl/Ownsだけで、前2labelに対応するbranchが見えない。DangerousEdges宣言も後続の可視処理で参照されない。宣言された全edgeが評価されると報告しない。",
+                "Tier0は英語group名の@前大文字、isDC、admincountのGroup判定。実scope/現在権限/表示名と固定ID・履歴を区別せず、名称/flagだけでcrownjewel確定や修復対象へしない。",
+                "空nodes/重複id/欠けたedge endpoint・node順/経路連続性を検査せず、短いedge数自体も加点する。配列並びとedge topologyを照合し、無効/欠落dataを低危険や確定経路へ潰さない。",
+                "Reasonsはprops.nameとdescription生値を連結するので、実利用時に秘密/無関係識別/顧客dataを報告へ露出し得る。未読原dataを検証のために参照せず、許可scope内の必要証拠だけ伏字で出す。pwdlastsetはdatetimecast/GetDate依存で、元timeformat/基準時刻と欠損/不正値の扱いが必要。",
+                "261行のうち11行抑止の条件/文字列は意味未読。コードは実行せず、network/AD取得/権限変更/攻撃・新test実行0。既存client環境/未指定受託部製品へ調査を拡げない。"
+              ],
+              "nearby_limit": "起動metadataのみ。中央本文/存在確認なし。",
+              "nearby_metadata": [
+                "security-audit-coverage",
+                "security-review",
+                "evidence-based-text-review"
+              ],
+              "negative": "Critical表示や英語group名だけで侵害確定とし、宣言された全labelを検証済みとして生のdescription/識別名を公開する。",
+              "positive": "経路の実node/edgeと不明箇所、使ったheuristicと基準時刻を示し、未対応labelや不正経路を明示する設計へ参照。",
+              "relative": "scripts/lib/SeverityClassifier.txt",
+              "required_changes": [
+                "入力schemaとnode/edge整合・順序/空・重複/部分dataを検証し、作者heuristic/根拠/未確認を明示。labelの未対応と未使用表を修正して同じ意味を単一の対応へ結ぶ。",
+                "Tier0を対象scopeと現在権限の実証へ結び、標準severityや実侵害と混同しない。許可された親だけが現在の公式定義と実対象の検査を選ぶ。",
+                "識別名/descriptionと日時を検証・必要最小表示し、秘密/顧客情報を会話へ再掲しない。原source/未保存testを保持してthisreaderでは実行しない。"
+              ],
+              "row": 190,
+              "use": "security経路の説明をnode/edge根拠・分類仮説と未確認範囲へ結ぶ支持候補。"
+            }
+          ],
+          "central_operations": 0,
+          "definitions": {
+            "actors": {
+              "0": "今回190必要支持の静的伏字全読。原scriptは実行していない。primary加算0。"
+            },
+            "reader_namespace": "20261027-072935-todo-3719/current3719",
+            "states": {
+              "0": "unsaved",
+              "1": "saved_unread",
+              "2": "direct_raw_full",
+              "3": "direct_masked_full",
+              "4": "exact_bytes_reuse",
+              "5": "ordered_full_diff",
+              "6": "partial",
+              "7": "scan"
+            }
+          },
+          "domain": "research598-support-v1",
+          "metadata_request": {
+            "child_metadata_canonical_sha256": {
+              "go": "58e134e99d18e568420effd206929569bf8591d53cc477cca5e9906a4aa6a39d",
+              "js": "58e134e99d18e568420effd206929569bf8591d53cc477cca5e9906a4aa6a39d"
+            },
+            "complete_tree_file_sha256": "11e79e2b3e1503ec231ede8e20298f98e7734715a304835f37b3f68bee0b7b5b",
+            "count": 202,
+            "index_sha256": "799bd907887120d83b82e64fbf37094c653a5144b764fef0b70dd4d5e2219607",
+            "request": "親の許可範囲で192全packageのmetadataを既存178/179/180/368と同じ不変artifactへCreateNew保存し、実SHA/bytes/名前を返してください。202を省略せず未保存/actualreader未知をnullに保持。childと親のenvelope表現SHAの差は同一扱いにしない。",
+            "row": 192,
+            "saved": 135,
+            "source_body_reads": 0,
+            "source_prefix": "skills/larry-at/api-gateway-1-0-64/",
+            "unsaved": 67
+          },
+          "new_final_dispositions": 0,
+          "new_grants": 0,
+          "primary_cursor_advanced": false,
+          "reader_job": "20261027-072935-todo-3719",
+          "reader_todo": 3719,
+          "records": [
+            {
+              "bytes": 7734,
+              "content_path": "objects/3070ab4c6322db15aa28a9da16881e6384c14a01a48e8b559a9d33ff87568d94.gz",
+              "git_blob": "e8e40f6d5ab64329571c06479404160dc08948c5",
+              "mask_unit": "outer_physical_lines",
+              "mask_version": 122,
+              "method": "whole header/private-key blocks; physical lines containing authorization/credentials/contact/private filesystem paths/token fields/opaque runs/UUID/card-shaped digits; code URL concrete media IDs held; zero not guarantee",
+              "ordered_ranges": [
+                [
+                  1,
+                  150,
+                  "0ce728cac62898dba6ae324b5904e7122bd78d9ec660fcf33c01557511db8677",
+                  146,
+                  4
+                ],
+                [
+                  151,
+                  261,
+                  "78ff19073d25c60f1ec039e23120832385ce888f1bfca3aaef6d7c61446756de",
+                  104,
+                  7
+                ]
+              ],
+              "path": "skills/kurostrike/bloodhound-narrator/scripts/lib/SeverityClassifier.txt",
+              "read": [
+                3,
+                11,
+                0,
+                false,
+                true,
+                261
+              ],
+              "reader_job": "20261027-072935-todo-3719",
+              "reader_namespace": "20261027-072935-todo-3719/current3719",
+              "relative": "scripts/lib/SeverityClassifier.txt",
+              "row": 190,
+              "same_buffer": {
+                "bytes": true,
+                "git_blob": true,
+                "same_buffer": true,
+                "sha256": true,
+                "strict_utf8": true
+              },
+              "sha256": "3070ab4c6322db15aa28a9da16881e6384c14a01a48e8b559a9d33ff87568d94",
+              "withheld_ranges": [
+                [
+                  20,
+                  20
+                ],
+                [
+                  26,
+                  27
+                ],
+                [
+                  80,
+                  80
+                ],
+                [
+                  166,
+                  166
+                ],
+                [
+                  196,
+                  196
+                ],
+                [
+                  204,
+                  204
+                ],
+                [
+                  212,
+                  212
+                ],
+                [
+                  218,
+                  219
+                ],
+                [
+                  245,
+                  245
+                ]
+              ]
+            }
+          ],
+          "roster_sha256": "f9c6b2e44c5e3aa8947f758f864eaa0d5edc396d622359826bca848cd96f9901",
+          "source_executed": false,
+          "support_id": "111f72745d58c86fc1eb2541d7ff8e01",
+          "technical_followup": {
+            "independent_support_pending": [
+              {
+                "id": "b21b137dfb66cb6690b7e70f5a14f166",
+                "payload_sha256": "fcf8c9968800ce43abf3ae44af0bc8ac183988c1b88f6e2b0c04a19f4f6238b4"
+              },
+              {
+                "id": "3d0114f3d8d21d9ea66a19399789b6fc",
+                "payload_sha256": "2cbb33c3f9810fe0201abc9deb0e9227774d08e147236ec30ab45c44c71203a5"
+              }
+            ],
+            "last_verified_cursor": 180,
+            "owner_input_required": false,
+            "primary_pending": {
+              "chunk_id": "878d5a0d40573ea836375693e784423a",
+              "original_message_sha256": "51381b7cfff2349762f1656fc2f2cb477046c3ba220219f7a14e8a0d26873d06",
+              "payload_sha256": "083d0c24b5a0066f3a5d187d458096f95c33372a8d7e5e741b2864ff3b785694",
+              "row": 181
+            },
+            "request": "既に配送した181原応答と支持2原応答を正規履歴から個別回収し、主cursorの意味ACKと支持ACKを区別してください。この応答で主cursorは進めず、本人の判断/新ToDo/子jobを作りません。"
+          }
+        }
+      }
+    },
+    {
+      "independent_parent_semantic_ACK": {
+        "accepted_records": 2,
+        "all_original_metadata_reader_range_profiles_and_semantics_read": true,
+        "central_operations": 0,
+        "domain": "research598-support-ack-v1",
+        "findings": [
+          "row190 caller5607B148lines/mask1 and template11812B291lines/mask13 retained; one grouped assessment, not two copies.",
+          "Caller has Leaf/input JSON/severity checks; they do not establish graph topology, node uniqueness and endpoints. Retain both checks and gaps rather than claiming no caller validation at all.",
+          "Executable .txt modules are loaded via GetContent/ScriptBlock.Create and environment-derived path; no code executed or environment read/set here. Bind any later execution to authorized immutable code and actual source.",
+          "Unescaped domain/name/description/Markdown and default timestamp/output overwrite can leak identifiers or overwrite original results; preserve minimal authorized evidence, escaping and CreateNew/collision failure.",
+          "Heuristic paths are not verified exploitation or real incidents; remediation deadlines are proposals requiring actual scope/change constraints. Covered registration before guide lookup can suppress unknown-factor fallback; mapping keys and unknowns need explicit results. Masked mapping13 lines not filled.",
+          "No data left network claim is not proof of unread wrappers/tests/environment and arbitrary module loads. No AD/network/customer environment/permissions/remediation executed.",
+          "Related prior111 payload exact9d8950 is retained, not a new literal read; historicalcursor180 request181 is not currentcursor, which remains186."
+        ],
+        "legacy_original_flags_absent_not_filled": [
+          "support_only",
+          "source_original_text_included",
+          "copy_license_accepted",
+          "new_primary_coverage",
+          "source_bodies_reread_for_delivery",
+          "new_primary_body_reads_for_delivery"
+        ],
+        "new_final_dispositions": 0,
+        "new_grants": 0,
+        "new_source_body_reads_by_parent": 0,
+        "original_grouped_assessment_count": 1,
+        "original_message_sha256": "1f4381abc10ae1670560ecc184b935d0476944c9ac5c440c6e3a1e7941459e17",
+        "parent_job": "20261026-214717-todo-3080",
+        "parent_primary_acknowledged_through": 186,
+        "parent_semantic_assessments_read": true,
+        "payload_sha256": "3cc674d5b7f06eab6ee3d781363234ab49c7c87da42bd361e94484b0f6827bc3",
+        "primary_cursor_advanced": false,
+        "reader_job": "20261027-072935-todo-3719",
+        "receipt_file": "research3719-support-fd6b93b8444981051e656247955aee13.json",
+        "receipt_sha256": "18c96997129cbf97b5b80aeb1040bc28c1d738ff978736b5de955082f76945ad",
+        "source_metadata_independently_verified": true,
+        "support_id": "fd6b93b8444981051e656247955aee13"
+      },
+      "original_received": {
+        "all_exact_source_metadata_match": true,
+        "domain": "research598-support-observed072935-received-v1",
+        "legacy_flags_absent_not_filled": [
+          "support_only",
+          "source_original_text_included",
+          "copy_license_accepted",
+          "new_primary_coverage",
+          "source_bodies_reread_for_delivery",
+          "new_primary_body_reads_for_delivery"
+        ],
+        "limit": "Original observed support schema retained without adding missing historical/current reading claims. Explicit source_executed=false/newgrants0/final0/central0/cursorfalse and exact referenced fixed source metadata verified. This receipt does not mark semantic read, new raw body reading, licence acceptance or source original text absence.",
+        "native_model_verified": false,
+        "original_message": "RESEARCH598_SUPPORT_V1\n```json\n{\"domain\":\"research598-support-v1\",\"roster_sha256\":\"f9c6b2e44c5e3aa8947f758f864eaa0d5edc396d622359826bca848cd96f9901\",\"support_id\":\"fd6b93b8444981051e656247955aee13\",\"reader_job\":\"20261027-072935-todo-3719\",\"reader_todo\":3719,\"definitions\":{\"reader_namespace\":\"20261027-072935-todo-3719/current3719\",\"actors\":{\"0\":\"今回の実assistant。caller/報告templateをデータとして静的伏字全読。実行/primary加算0。\"},\"states\":{\"0\":\"unsaved\",\"1\":\"saved_unread\",\"2\":\"direct_raw_full\",\"3\":\"direct_masked_full\",\"4\":\"exact_bytes_reuse\",\"5\":\"ordered_full_diff\",\"6\":\"partial\",\"7\":\"scan\"}},\"records\":[{\"row\":190,\"relative\":\"scripts/Invoke-BHNarrator.txt\",\"path\":\"skills/kurostrike/bloodhound-narrator/scripts/Invoke-BHNarrator.txt\",\"sha256\":\"b4387b9eeaa5d4ef9696c6c9c4d454ecb257cea9ce81adf74c7f326f57060fe4\",\"git_blob\":\"aab9c69d9a87ffa5bb011c1bbdc03e5dbab6b5c2\",\"bytes\":5607,\"content_path\":\"objects/b4387b9eeaa5d4ef9696c6c9c4d454ecb257cea9ce81adf74c7f326f57060fe4.gz\",\"reader_job\":\"20261027-072935-todo-3719\",\"reader_namespace\":\"20261027-072935-todo-3719/current3719\",\"read\":[3,1,0,false,true,148],\"mask_version\":122,\"mask_unit\":\"outer_physical_lines\",\"method\":\"whole header/private-key blocks; physical lines containing authorization/credentials/contact/private filesystem paths/token fields/opaque runs/UUID/card-shaped digits; code URL concrete media IDs held; zero not guarantee\",\"withheld_ranges\":[[94,94]],\"ordered_ranges\":[[1,148,\"c9e01a4a47de9eae1f8192a90167e986157bd2ef66f4517fa181b6e4df077916\",147,1]],\"same_buffer\":{\"sha256\":true,\"git_blob\":true,\"bytes\":true,\"strict_utf8\":true,\"same_buffer\":true}},{\"row\":190,\"relative\":\"scripts/lib/NarrativeTemplates.txt\",\"path\":\"skills/kurostrike/bloodhound-narrator/scripts/lib/NarrativeTemplates.txt\",\"sha256\":\"207138bf01166e4a6d2665ec5efdc4cbbf646b769f5b8110edb6d9f7e43f6933\",\"git_blob\":\"cf37cb8fd3be0ade7d6582258e4c7501b285f951\",\"bytes\":11812,\"content_path\":\"objects/207138bf01166e4a6d2665ec5efdc4cbbf646b769f5b8110edb6d9f7e43f6933.gz\",\"reader_job\":\"20261027-072935-todo-3719\",\"reader_namespace\":\"20261027-072935-todo-3719/current3719\",\"read\":[3,13,0,false,true,291],\"mask_version\":122,\"mask_unit\":\"outer_physical_lines\",\"method\":\"whole header/private-key blocks; physical lines containing authorization/credentials/contact/private filesystem paths/token fields/opaque runs/UUID/card-shaped digits; code URL concrete media IDs held; zero not guarantee\",\"withheld_ranges\":[[84,84],[108,108],[141,141],[143,143],[152,152],[160,160],[180,181],[183,185],[198,198],[279,279]],\"ordered_ranges\":[[1,160,\"279cb2adbdb41aa751c206186d7d6542d81b470eae4ff634bb01ce735bea5849\",154,6],[161,291,\"c80d84b147089bd6d7727cd132853df13e686c1ba9339f35805c5f0b8e8eb7f4\",124,7]],\"same_buffer\":{\"sha256\":true,\"git_blob\":true,\"bytes\":true,\"strict_utf8\":true,\"same_buffer\":true}}],\"assessments\":[{\"row\":190,\"paths\":[\"scripts/Invoke-BHNarrator.txt\",\"scripts/lib/NarrativeTemplates.txt\"],\"findings\":[\"callerはLeaf存在とseverity enumを検査しJSONをparse、paths空とfilter空でreturnする。StrictMode/Stopを設定するが、nodes/edgesの空・ID重複/endpoint・連続性まで検査する処理は可視範囲にない。先のclassifier評価をcallerの存在/JSON検査が皆無だったという意味に広げない。\",\"scriptRootをenv/BHNARRATOR_DIR等から決め、.txt二つをGetContent→ScriptBlock.Createしてdot-sourceする。単なる説明txtではなく実行されるdataという境界が重要。今回は文字列として静的読取のみで、source実行・環境参照/設定0。許可済みの不変bytes/配置と実行対象を結び、未知env経路からコードを混ぜない。\",\"consoleにdomain/description/source/target/edgechainを直接表示し、MarkdownもDomain/description/reasons等をescapeせず埋める。秘密/顧客名や原data由来の見出し/link/命令を露出・上位指示へ昇格しない。timestamp既定とOutFileは既存pathへの上書き/同秒衝突を防ぐCreateNew指定が可視にないため、原本/既存成果を保持して明示失敗へ。\",\"templateは全件をexploitablepath、CriticalをTier0へ至り実悪用される経路と定型で断言する。分類器heuristic/入力経路だけで実侵害・悪用可・現実world事実を保証しない。High7日以内等のdeadlineも作者案で、本人/対象組織の合意や変更管理を代替しない。\",\"remediationはfactorをcoveredへ登録した後でguideを検索し、guideなしはcontinueする。その後fallbackはcovered.Count==0だけなので、未知factorしかない場合も未対応説明が出ない。可視classifierのGenericAllOnTier0等と可視guide keyGenericAllの結合も検査対象にする。抑止13行のmapping/文字列は補完しない。\",\"report header/footerのno data left networkという断言は、未保存shellwrapper/未読test・実環境/任意module loadまで実証したものではない。ADPermission/委譲/GPO/権限剥奪等の定型処置は保存中の参考で、現公式定義・依存/権限・正規scopeと実害の確認なく実行しない。rawsource/実入力/テスト/AD/network/変更/送信0。\"],\"required_changes\":[\"callerの入力検査を正確に残し、graph意味整合と欠損/未知を別状態へ拡張。未検証経路の断定を避け、根拠/heuristic/実確認・期限合意を分ける。\",\"guide未対応はキーを明示し、成功mappingの件数と未知を別集計する。重大factorが黙って消えない結合検査を親が同scopeで設計する。\",\"実行されるtxt/環境由来pathと許可済みbytesを照合。出力は秘密/識別dataを必要最小に伏せ、Markdownescapeと既存file保持・CreateNew/衝突時失敗を検討する。\"],\"positive\":\"存在/JSONチェックに加えgraph整合・未知mappingを記録し、定型severityと検証済み影響を分け、識別dataを伏せて既存成果へ上書きしない設計へ参照。\",\"negative\":\"unknownfactorをcovered扱いにして処置欄を空にし、heuristicだけでexploitableと断定して顧客dataを平文出力・既存reportを上書きする。\",\"disposition\":\"190の必要支持2件の静的評価。primary加算・実導入/最終採否/実test/実攻撃/権利承認0。\"}],\"related_prior_protocol\":{\"support_id\":\"111f72745d58c86fc1eb2541d7ff8e01\",\"payload_sha256\":\"9d8950de67e2ea26ab45ef07e45c672a25872d1cfbab1bcc28294924b7def6be\",\"reader_job\":\"20261027-072935-todo-3719\",\"new_literal_read_of_prior\":false},\"technical_followup\":{\"owner_input_required\":false,\"last_verified_cursor\":180,\"primary_pending\":{\"row\":181,\"chunk_id\":\"878d5a0d40573ea836375693e784423a\",\"payload_sha256\":\"083d0c24b5a0066f3a5d187d458096f95c33372a8d7e5e741b2864ff3b785694\",\"original_message_sha256\":\"51381b7cfff2349762f1656fc2f2cb477046c3ba220219f7a14e8a0d26873d06\"},\"request\":\"181原応答の意味受領を先に回収してください。新規支持のreceipt/意味ACKと主cursorを分け、再開時も各原ID/原reader/原hashを保持します。本文再読や新ToDo/子jobは不要です。\"},\"source_executed\":false,\"new_grants\":0,\"new_final_dispositions\":0,\"central_operations\":0,\"primary_cursor_advanced\":false}\n```\n",
+        "original_message_sha256": "1f4381abc10ae1670560ecc184b935d0476944c9ac5c440c6e3a1e7941459e17",
+        "parent_semantic_read": false,
+        "payload_sha256": "3cc674d5b7f06eab6ee3d781363234ab49c7c87da42bd361e94484b0f6827bc3",
+        "primary_cursor_advanced_by_receiver": false,
+        "reader_job": "20261027-072935-todo-3719",
+        "received_at": "2026-10-27T03:56:13.5394692Z",
+        "requested_effort": "max",
+        "requested_model": "gpt-6.1-sol",
+        "support": {
+          "assessments": [
+            {
+              "disposition": "190の必要支持2件の静的評価。primary加算・実導入/最終採否/実test/実攻撃/権利承認0。",
+              "findings": [
+                "callerはLeaf存在とseverity enumを検査しJSONをparse、paths空とfilter空でreturnする。StrictMode/Stopを設定するが、nodes/edgesの空・ID重複/endpoint・連続性まで検査する処理は可視範囲にない。先のclassifier評価をcallerの存在/JSON検査が皆無だったという意味に広げない。",
+                "scriptRootをenv/BHNARRATOR_DIR等から決め、.txt二つをGetContent→ScriptBlock.Createしてdot-sourceする。単なる説明txtではなく実行されるdataという境界が重要。今回は文字列として静的読取のみで、source実行・環境参照/設定0。許可済みの不変bytes/配置と実行対象を結び、未知env経路からコードを混ぜない。",
+                "consoleにdomain/description/source/target/edgechainを直接表示し、MarkdownもDomain/description/reasons等をescapeせず埋める。秘密/顧客名や原data由来の見出し/link/命令を露出・上位指示へ昇格しない。timestamp既定とOutFileは既存pathへの上書き/同秒衝突を防ぐCreateNew指定が可視にないため、原本/既存成果を保持して明示失敗へ。",
+                "templateは全件をexploitablepath、CriticalをTier0へ至り実悪用される経路と定型で断言する。分類器heuristic/入力経路だけで実侵害・悪用可・現実world事実を保証しない。High7日以内等のdeadlineも作者案で、本人/対象組織の合意や変更管理を代替しない。",
+                "remediationはfactorをcoveredへ登録した後でguideを検索し、guideなしはcontinueする。その後fallbackはcovered.Count==0だけなので、未知factorしかない場合も未対応説明が出ない。可視classifierのGenericAllOnTier0等と可視guide keyGenericAllの結合も検査対象にする。抑止13行のmapping/文字列は補完しない。",
+                "report header/footerのno data left networkという断言は、未保存shellwrapper/未読test・実環境/任意module loadまで実証したものではない。ADPermission/委譲/GPO/権限剥奪等の定型処置は保存中の参考で、現公式定義・依存/権限・正規scopeと実害の確認なく実行しない。rawsource/実入力/テスト/AD/network/変更/送信0。"
+              ],
+              "negative": "unknownfactorをcovered扱いにして処置欄を空にし、heuristicだけでexploitableと断定して顧客dataを平文出力・既存reportを上書きする。",
+              "paths": [
+                "scripts/Invoke-BHNarrator.txt",
+                "scripts/lib/NarrativeTemplates.txt"
+              ],
+              "positive": "存在/JSONチェックに加えgraph整合・未知mappingを記録し、定型severityと検証済み影響を分け、識別dataを伏せて既存成果へ上書きしない設計へ参照。",
+              "required_changes": [
+                "callerの入力検査を正確に残し、graph意味整合と欠損/未知を別状態へ拡張。未検証経路の断定を避け、根拠/heuristic/実確認・期限合意を分ける。",
+                "guide未対応はキーを明示し、成功mappingの件数と未知を別集計する。重大factorが黙って消えない結合検査を親が同scopeで設計する。",
+                "実行されるtxt/環境由来pathと許可済みbytesを照合。出力は秘密/識別dataを必要最小に伏せ、Markdownescapeと既存file保持・CreateNew/衝突時失敗を検討する。"
+              ],
+              "row": 190
+            }
+          ],
+          "central_operations": 0,
+          "definitions": {
+            "actors": {
+              "0": "今回の実assistant。caller/報告templateをデータとして静的伏字全読。実行/primary加算0。"
+            },
+            "reader_namespace": "20261027-072935-todo-3719/current3719",
+            "states": {
+              "0": "unsaved",
+              "1": "saved_unread",
+              "2": "direct_raw_full",
+              "3": "direct_masked_full",
+              "4": "exact_bytes_reuse",
+              "5": "ordered_full_diff",
+              "6": "partial",
+              "7": "scan"
+            }
+          },
+          "domain": "research598-support-v1",
+          "new_final_dispositions": 0,
+          "new_grants": 0,
+          "primary_cursor_advanced": false,
+          "reader_job": "20261027-072935-todo-3719",
+          "reader_todo": 3719,
+          "records": [
+            {
+              "bytes": 5607,
+              "content_path": "objects/b4387b9eeaa5d4ef9696c6c9c4d454ecb257cea9ce81adf74c7f326f57060fe4.gz",
+              "git_blob": "aab9c69d9a87ffa5bb011c1bbdc03e5dbab6b5c2",
+              "mask_unit": "outer_physical_lines",
+              "mask_version": 122,
+              "method": "whole header/private-key blocks; physical lines containing authorization/credentials/contact/private filesystem paths/token fields/opaque runs/UUID/card-shaped digits; code URL concrete media IDs held; zero not guarantee",
+              "ordered_ranges": [
+                [
+                  1,
+                  148,
+                  "c9e01a4a47de9eae1f8192a90167e986157bd2ef66f4517fa181b6e4df077916",
+                  147,
+                  1
+                ]
+              ],
+              "path": "skills/kurostrike/bloodhound-narrator/scripts/Invoke-BHNarrator.txt",
+              "read": [
+                3,
+                1,
+                0,
+                false,
+                true,
+                148
+              ],
+              "reader_job": "20261027-072935-todo-3719",
+              "reader_namespace": "20261027-072935-todo-3719/current3719",
+              "relative": "scripts/Invoke-BHNarrator.txt",
+              "row": 190,
+              "same_buffer": {
+                "bytes": true,
+                "git_blob": true,
+                "same_buffer": true,
+                "sha256": true,
+                "strict_utf8": true
+              },
+              "sha256": "b4387b9eeaa5d4ef9696c6c9c4d454ecb257cea9ce81adf74c7f326f57060fe4",
+              "withheld_ranges": [
+                [
+                  94,
+                  94
+                ]
+              ]
+            },
+            {
+              "bytes": 11812,
+              "content_path": "objects/207138bf01166e4a6d2665ec5efdc4cbbf646b769f5b8110edb6d9f7e43f6933.gz",
+              "git_blob": "cf37cb8fd3be0ade7d6582258e4c7501b285f951",
+              "mask_unit": "outer_physical_lines",
+              "mask_version": 122,
+              "method": "whole header/private-key blocks; physical lines containing authorization/credentials/contact/private filesystem paths/token fields/opaque runs/UUID/card-shaped digits; code URL concrete media IDs held; zero not guarantee",
+              "ordered_ranges": [
+                [
+                  1,
+                  160,
+                  "279cb2adbdb41aa751c206186d7d6542d81b470eae4ff634bb01ce735bea5849",
+                  154,
+                  6
+                ],
+                [
+                  161,
+                  291,
+                  "c80d84b147089bd6d7727cd132853df13e686c1ba9339f35805c5f0b8e8eb7f4",
+                  124,
+                  7
+                ]
+              ],
+              "path": "skills/kurostrike/bloodhound-narrator/scripts/lib/NarrativeTemplates.txt",
+              "read": [
+                3,
+                13,
+                0,
+                false,
+                true,
+                291
+              ],
+              "reader_job": "20261027-072935-todo-3719",
+              "reader_namespace": "20261027-072935-todo-3719/current3719",
+              "relative": "scripts/lib/NarrativeTemplates.txt",
+              "row": 190,
+              "same_buffer": {
+                "bytes": true,
+                "git_blob": true,
+                "same_buffer": true,
+                "sha256": true,
+                "strict_utf8": true
+              },
+              "sha256": "207138bf01166e4a6d2665ec5efdc4cbbf646b769f5b8110edb6d9f7e43f6933",
+              "withheld_ranges": [
+                [
+                  84,
+                  84
+                ],
+                [
+                  108,
+                  108
+                ],
+                [
+                  141,
+                  141
+                ],
+                [
+                  143,
+                  143
+                ],
+                [
+                  152,
+                  152
+                ],
+                [
+                  160,
+                  160
+                ],
+                [
+                  180,
+                  181
+                ],
+                [
+                  183,
+                  185
+                ],
+                [
+                  198,
+                  198
+                ],
+                [
+                  279,
+                  279
+                ]
+              ]
+            }
+          ],
+          "related_prior_protocol": {
+            "new_literal_read_of_prior": false,
+            "payload_sha256": "9d8950de67e2ea26ab45ef07e45c672a25872d1cfbab1bcc28294924b7def6be",
+            "reader_job": "20261027-072935-todo-3719",
+            "support_id": "111f72745d58c86fc1eb2541d7ff8e01"
+          },
+          "roster_sha256": "f9c6b2e44c5e3aa8947f758f864eaa0d5edc396d622359826bca848cd96f9901",
+          "source_executed": false,
+          "support_id": "fd6b93b8444981051e656247955aee13",
+          "technical_followup": {
+            "last_verified_cursor": 180,
+            "owner_input_required": false,
+            "primary_pending": {
+              "chunk_id": "878d5a0d40573ea836375693e784423a",
+              "original_message_sha256": "51381b7cfff2349762f1656fc2f2cb477046c3ba220219f7a14e8a0d26873d06",
+              "payload_sha256": "083d0c24b5a0066f3a5d187d458096f95c33372a8d7e5e741b2864ff3b785694",
+              "row": 181
+            },
+            "request": "181原応答の意味受領を先に回収してください。新規支持のreceipt/意味ACKと主cursorを分け、再開時も各原ID/原reader/原hashを保持します。本文再読や新ToDo/子jobは不要です。"
+          }
+        }
+      }
+    }
+  ],
+  "parent_job": "20261026-214717-todo-3080",
+  "primary_cursor": 186,
+  "primary_cursor_advanced": false,
+  "source_originals_reopened": 0,
+  "support_record_count": 6,
+  "total_separate_support_including_older37": 43,
+  "whole16_complete": false
+}

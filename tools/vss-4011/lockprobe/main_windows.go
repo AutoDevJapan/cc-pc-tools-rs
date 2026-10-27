@@ -46,6 +46,7 @@ type report struct {
 	StartedUTC            string       `json:"started_utc"`
 	FinishedUTC           string       `json:"finished_utc"`
 	Phase                 string       `json:"phase"`
+	PhaseBeforeCleanup    string       `json:"phase_before_cleanup"`
 	Calls                 []callResult `json:"calls"`
 	OwnedEmptySetsStarted int          `json:"owned_empty_sets_started"`
 	OwnAbortsSucceeded    int          `json:"own_aborts_succeeded"`
@@ -107,6 +108,7 @@ func run() (r report) {
 	var objects []*component
 	var started []*component
 	defer func() {
+		r.PhaseBeforeCleanup = r.Phase
 		// Only these empty sets are aborted, and only if our Start returned S_OK.
 		// No AddToSnapshotSet, PrepareForBackup, or DoSnapshotSet is invoked.
 		for i := len(started) - 1; i >= 0; i-- {
@@ -154,7 +156,11 @@ func run() (r report) {
 		var id guid
 		// Bounded caller must save stderr if a native RPC does not return.
 		fmt.Fprintln(os.Stderr, "calling StartSnapshotSet:", label)
-		hr := c.call(startSnapshotSetSlot, uintptr(unsafe.Pointer(&id)))
+		// Keep the output-pointer conversion inside the syscall expression so
+		// Go's uintptr escape handling pins its storage for the native call.
+		rawHR, _, _ := syscall.SyscallN(c.table[startSnapshotSetSlot], uintptr(unsafe.Pointer(c)), uintptr(unsafe.Pointer(&id)))
+		hr := uint32(rawHR)
+		runtime.KeepAlive(c)
 		runtime.KeepAlive(&id)
 		record(label, "StartSnapshotSet", hr)
 		if hr == 0 {

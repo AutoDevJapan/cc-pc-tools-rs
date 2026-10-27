@@ -24,6 +24,9 @@ private fileの読取を行う関数やモードは含めない。別モデル�
 
 helperのJSONは実HRESULT、所有空集合の件数、Abort結果、Release件数を返す。
 成功したgetterやCOM呼出しだけで排他を成立扱いにしない。
+終了コード0はprobeが最後まで動いたことだけを示し、排他の観測はJSONの
+exclusion_observedと全Start/AbortのHRESULTで別に判定する。
+cleanupの失敗でphaseが変わった場合も、phase_before_cleanupとcallsに元の結果を保持する。
 `exclusion_observed`は同一processの2object間の観測に限り、保存先移行の原子性を証明しない。
 従ってこのprobeだけを根拠にD変更を実行しない。GUIDやwriter名/ファイル一覧は出力しない。
 
@@ -31,10 +34,20 @@ helperのJSONは実HRESULT、所有空集合の件数、Abort結果、Release件
 期限切れはこの呼出しで作ったhelperだけを停止して原結果を保存し、同じprobeの無限再試行をしない。
 helperには子processがなく、AddToSnapshotSet/DoSnapshotSet/PrepareForBackupを呼ばない。
 中断時も「Abort成功」とは記録せず、通常observerと次の正規VSS状態確認で照合する。
+空集合を持つ短い間は、他のSystemRestore等の作成がIN_PROGRESSで拒否される可能性がある。
+前後の照合では実started_utc～finished_utc間の既存VSS/SystemRestoreの作成失敗も調べる。
+timeout/Abort未確認時は排他が解除されたと仮定せず、後続の通常作成が拒否されていないことを
+別に確認するまで保存先変更や修復成功の判断へ進まない。
 
 候補sourceはgofmt/Go vet/通常Go buildを成功確認し、引数なしは期待どおりexit2で拒否した。
 取得したMicrosoftの公式vsbackup.hからinterface順を独立に数え、使用する5メソッドの
 slot（5/6/15/35/36）がすべてsourceと一致することも確認した。実probeは未実行である。
+
+追加review4082は固定e5cacb9dの2対象を全文読了し、Must0/Suggestion3を返した。
+実Opus5.5/max/native_turn_context、succeeded/exit0/41stepsを照合し、原回答は別に保持した。
+実行前に、GUID出力先の変換を自作のuintptr中継からSyscallNの直接の引数式へ直し、
+cleanup前のphase保持、終了コードの意味、他の作成への一時的な影響の照合を補った。
+この具体修正後もGo vetと通常buildは成功し、APIの種類や診断の目的は変更していない。
 
 ## 次の保存先分離の候補と未確認点
 

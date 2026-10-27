@@ -1,0 +1,2009 @@
+{
+  "all_original_selected_chunks_losslessly_reconstructed": true,
+  "central_operations": 0,
+  "context_resolution": "Each record.original_chunk_sha256 selects shared_original_contexts[sha].common; add that chunk's ordered original_assessment values as entries and canonical-JSON SHA256 must equal sha. All common fields, including definitions, input_validation, privacy, notice and boundaries, are preserved once.",
+  "domain": "skills3080-other8-whole-original-received-v1",
+  "first_ordinal": 264,
+  "last_ordinal": 271,
+  "limits": "This shares complete already acknowledged structured evidence, not original source bodies. Original actors, masks, unknown/partial/unread states and opaque path references remain unchanged; no grant, execution, adoption, current physical continuity or new reading is established.",
+  "materializer_job": "20261026-214717-todo-3080",
+  "new_copy_grants": 0,
+  "new_final_dispositions": 0,
+  "new_raw_or_unique_credit": 0,
+  "new_source_body_reads": 0,
+  "parent_acknowledged_through_at_materialization": 271,
+  "parent_journal_sha256": "354e602a689a842d57c7ff66b05f951ab6c56ab938b4f6aa6df5175d88a192e4",
+  "roster_sha256": "460219790c088b33e6044c6a97c68a882549c608c3de46ea536aa990a2c1adac",
+  "shared_original_contexts": {
+    "affd7ff872a9af08feb5e14678850489bb7a26b108271fa43ef8b52e299340fb": {
+      "actual_assessment_reader": "20261026-174104-todo-3778",
+      "all_original_chunk_fields_reconstructed": true,
+      "common": {
+        "boundaries": {
+          "central_operations": 0,
+          "copy_license_accepted": false,
+          "new_final_dispositions": 0,
+          "source_executed": false,
+          "whole16_complete": false
+        },
+        "chunk_id": "e6504ad7b19f48238c72d0a6f9513eab",
+        "definitions": {
+          "actors": {
+            "0": "今回の実assistant",
+            "1": "前回同じToDo3778の実assistant: 20261026-065106-todo-3778"
+          },
+          "prior_assessment": {
+            "path": "docs/skills-3080-mengto-partial-evaluation.json",
+            "sha256": "e75544c2e62111a78760f1108bcb06f708b87c82c4d1364b655fb10776eec634"
+          },
+          "prior_assessment_snapshot_change": {
+            "fixed_C_roster_catalog_commit_unchanged": true,
+            "observed_sha256": "e75544c2e62111a78760f1108bcb06f708b87c82c4d1364b655fb10776eec634",
+            "previous_sha256": "98e88e29c6dba09a2ae327ceeb93dbc291a096f021378ca482dc07a7a1f56878"
+          },
+          "prior_skill_profile": {
+            "actual_reader_job": "20261024-082550-todo-3536",
+            "assessment_ref": "definitions.prior_assessment",
+            "method": "prior_semantic_assessment_reuse",
+            "original_privacy_profile": null,
+            "original_range": null,
+            "read": null,
+            "recorded_body_read_complete": true,
+            "recorded_method": "child full primary read; parent all semantic assessments/headers/prose read and fixed metadata/gzip identity verification; parent did not reread all original primary bodies"
+          },
+          "reader_namespace": "20261026-174104-todo-3778/current",
+          "readers": {
+            "current": {
+              "actor": 0,
+              "actual_reader_job": "20261026-174104-todo-3778"
+            },
+            "prior3536": {
+              "actual_reader_job": "20261024-082550-todo-3536",
+              "mapping_assessment_sha256": "4f8cce1504589195706b5392f4de08b4766b6269c1acfdd8c3eaa28aeee5eb55",
+              "mapping_pointer": "/reader3535_3536/1/job"
+            },
+            "prior3778": {
+              "actor": 1,
+              "actual_reader_job": "20261026-065106-todo-3778"
+            }
+          },
+          "reuse": "旧固定SKILLの意味評価と既読主張は原reader/methodのまま、原mask/range不明はnull。今回primary全行表示/伏字とbyte照合だけを区別し、他人/過去の読取を新raw/新global uniqueへ加算しない。",
+          "states": {
+            "1": "saved_unread",
+            "2": "direct_raw_full",
+            "3": "direct_masked_full",
+            "6": "partial",
+            "7": "scan"
+          },
+          "support_columns": [
+            "relative_path_or_fixed_tree_path_ref",
+            "sha256",
+            "git_blob",
+            "bytes",
+            "saved",
+            "method",
+            "reader_ref",
+            "mask",
+            "read",
+            "tree_git_blob",
+            "tree_bytes",
+            "evidence_ref"
+          ],
+          "support_path_rule": "stringならfull Git path = entry.package.root + '/' + support[0]。objectならinput_validation.tree_sha256に固定したC/github/MengTo__Skills/tree-recursive.jsonのtree[repo_tree_entry_index].pathを使い、そのUTF8 SHA256をpath_utf8_sha256で照合する。opaque locatorを含むpathの原値/断片はmodel表示しない。primary alias除外、全blob列挙、未保存本文SHA/blob/bytes/reader/mask/readはnullでtree metadataは別欄。saved gzipは同repoのobjects/{sha256}.gz。"
+        },
+        "domain": "othergit373-chunk-v1",
+        "existing_relationship": {
+          "comparison": "起動catalogの名前/descriptionと固定public評価だけ。未知中央本文の一括読取/同一性・重複除外の確定0。",
+          "new_unique_coverage_not_claimed": true,
+          "primary_history_limit": "264の旧primary body_read=true、他7の旧scan_only、268REFの旧body_read=trueを保持。原range/mask/method不明はnull。新global uniqueへ足さず旧SKILL本文は意味評価再利用。"
+        },
+        "first_ordinal": 264,
+        "input_validation": {
+          "batching": "context単位で8件。373を縮小せず次272。",
+          "catalog_sha256": "2d73c9a038a41cc220a9687b935bfa1e0b315b65d9bd6d3e54ddb4111972876c",
+          "commit": "398cd41c86ba42fbb30e944ae507f463648f08b7",
+          "commit_json_sha256": "56f6dde2851c2f35f7deb6c19df65dae34dadba16b0363beda82ac202016e17e",
+          "index_sha256": "1a9fa91b6ac4e9156b2f3548ca6cf3cdcb4377c6c52cc1bfb315fcb3efb90643",
+          "metadata_path_reference_count": 30,
+          "metadata_path_reference_identity_verified": true,
+          "notice_filename_census": {
+            "current_package_notice_named_paths": [
+              "LICENSE"
+            ],
+            "embedded_notice_bodies_not_verified": true,
+            "repo_total_notice_named_candidates": 2,
+            "tree_entries": 1915,
+            "truncated": false
+          },
+          "notice_paths": [
+            "LICENSE"
+          ],
+          "repo": "MengTo/Skills",
+          "root_tree": "8afedc8719f37d2026b55aef282ac27d8d873d76",
+          "same_buffer_sha_bytes_gitblob_strict_utf8": true,
+          "source_support_identity_validation_not_model_reread": true,
+          "tree_entries": 1915,
+          "tree_sha256": "78e159cb1fabd9072bf8a6c667fe55aed8d1525cfffb2a5d2b94932e1faefc59",
+          "truncated": false,
+          "tuple_unit_catalog_exact": true
+        },
+        "notice_evidence": {
+          "root": {
+            "actual_reader_job": "20261026-065106-todo-3778",
+            "bytes": 1064,
+            "copy_license_accepted": false,
+            "git_blob": "b3a5f823a69b4b010f92930ac09e8a776daf65c6",
+            "identifier": "MIT",
+            "mask": 1,
+            "masked_lines": [
+              3
+            ],
+            "method": "same-byte-reuse",
+            "original_notice_gzip": "github/MengTo__Skills/objects/b2a071ba22fefd803f4e9d1f5c777dd79c62d191695586a1a73fd4d0ebd051c6.gz",
+            "original_read": [
+              3,
+              1,
+              0,
+              false,
+              true,
+              21
+            ],
+            "original_reader_namespace": "20261026-065106-todo-3778/current",
+            "path": "LICENSE",
+            "ranges": [
+              [
+                1,
+                21
+              ]
+            ],
+            "read": [
+              3,
+              1,
+              1,
+              false,
+              true,
+              21
+            ],
+            "reader": 1,
+            "representative": {
+              "chunk_id": "6b52f801c93a4ec78d0f167a24e5b309",
+              "chunk_sha256": "7af97d67feec9be6f4b4ea404c3909a053b0eb500c15fbfb469f5dbcda216a92",
+              "pointer": "notice_evidence.root"
+            },
+            "saved": true,
+            "scope": "264..271の祖先root LICENSE。この8packageに別のnotice名候補なし。未保存bodyの埋込notice/第三者素材・icon集合の条件不存在は主張しない。",
+            "sha256": "b2a071ba22fefd803f4e9d1f5c777dd79c62d191695586a1a73fd4d0ebd051c6"
+          }
+        },
+        "privacy_limits": {
+          "mask": "今回の全行表示前にwhole-line伏字。各entryのmasked_linesに範囲を保持し、原値/断片を復元しない。mask数は秘密の実個数/不存在の証明ではない。",
+          "metadata_path_masks": {
+            "contextual_reference_identity_source_sha256": "8a8f5895b6df25810f09e58f8d3100a099acec0b129cafca6e67c38e28f7a256",
+            "count": 30,
+            "metadata_path_mask_count_not_body_mask_count": true,
+            "metadata_path_policy": "v2 structural asset/media path references; no raw media basename display",
+            "prior_limit_ref": {
+              "chunk_id": "e47b029a6c584f7e93512a8d760cb4f1",
+              "pointer": "privacy_limits.metadata_path_display"
+            },
+            "raw_values_displayed_by_this_transform": false,
+            "scope": [
+              {
+                "row": 264,
+                "support_index": 1
+              },
+              {
+                "row": 264,
+                "support_index": 2
+              },
+              {
+                "row": 264,
+                "support_index": 3
+              },
+              {
+                "row": 264,
+                "support_index": 4
+              },
+              {
+                "row": 264,
+                "support_index": 5
+              },
+              {
+                "row": 264,
+                "support_index": 6
+              },
+              {
+                "row": 264,
+                "support_index": 7
+              },
+              {
+                "row": 264,
+                "support_index": 9
+              },
+              {
+                "row": 265,
+                "support_index": 1
+              },
+              {
+                "row": 265,
+                "support_index": 2
+              },
+              {
+                "row": 265,
+                "support_index": 3
+              },
+              {
+                "row": 265,
+                "support_index": 4
+              },
+              {
+                "row": 265,
+                "support_index": 5
+              },
+              {
+                "row": 265,
+                "support_index": 7
+              },
+              {
+                "row": 266,
+                "support_index": 1
+              },
+              {
+                "row": 266,
+                "support_index": 2
+              },
+              {
+                "row": 266,
+                "support_index": 3
+              },
+              {
+                "row": 266,
+                "support_index": 4
+              },
+              {
+                "row": 266,
+                "support_index": 5
+              },
+              {
+                "row": 266,
+                "support_index": 6
+              },
+              {
+                "row": 266,
+                "support_index": 7
+              },
+              {
+                "row": 266,
+                "support_index": 9
+              },
+              {
+                "row": 267,
+                "support_index": 2
+              },
+              {
+                "row": 268,
+                "support_index": 3
+              },
+              {
+                "row": 269,
+                "support_index": 2
+              },
+              {
+                "row": 270,
+                "support_index": 1
+              },
+              {
+                "row": 270,
+                "support_index": 2
+              },
+              {
+                "row": 270,
+                "support_index": 4
+              },
+              {
+                "row": 271,
+                "support_index": 2
+              },
+              {
+                "row": 271,
+                "support_index": 4
+              }
+            ],
+            "source_body_profiles_unchanged": true,
+            "support_indices_zero_based": true
+          },
+          "prior_limit_ref": {
+            "chunk_id": "4c80e1a7d59249c2b63f08e114a7d9e5",
+            "pointer": "privacy_limits.outside_package_preparation"
+          },
+          "prior_projection": {
+            "assessment_sha256": "e75544c2e62111a78760f1108bcb06f708b87c82c4d1364b655fb10776eec634",
+            "field": "/entries/161/required_changes/1",
+            "field_mask_count": 1,
+            "raw_field_displayed": false,
+            "row": 265,
+            "unmet": "旧評価field意味未確認。今回primary mask0へ混ぜない。"
+          },
+          "rights": "旧rights reviewは原fieldを表示前に省略。個人名の原値/断片を再掲せず、原profile不明をnullで保持。"
+        },
+        "reader_job": "20261026-174104-todo-3778",
+        "reader_todo": 3778,
+        "resource_evidence": {
+          "p264_SKILL_md": {
+            "meaning_ref": "/entries/160/reason",
+            "pointer": "/entries/160",
+            "profile_ref": "definitions.prior_skill_profile"
+          },
+          "p265_SKILL_md": {
+            "meaning_ref": "/entries/161/reason",
+            "pointer": "/entries/161",
+            "profile_ref": "definitions.prior_skill_profile"
+          },
+          "p266_SKILL_md": {
+            "meaning_ref": "/entries/162/reason",
+            "pointer": "/entries/162",
+            "profile_ref": "definitions.prior_skill_profile"
+          },
+          "p267_SKILL_md": {
+            "meaning_ref": "/entries/163/reason",
+            "pointer": "/entries/163",
+            "profile_ref": "definitions.prior_skill_profile"
+          },
+          "p268_REFERENCES_md": {
+            "actual_reader_job": "20261026-174104-todo-3778",
+            "mask": 0,
+            "masked_lines": [],
+            "masking_version": "v15",
+            "meaning": [
+              "Tailwind installation docsの1 URL。リンク先本文/現在版/依存条件/実build・実動作は未検証。"
+            ],
+            "method": "direct_raw_full",
+            "new_global_unique_coverage_not_claimed": true,
+            "previous_history": {
+              "assessment_sha256": "4f8cce1504589195706b5392f4de08b4766b6269c1acfdd8c3eaa28aeee5eb55",
+              "body_read": true,
+              "history_limit": "原readerの既読主張を保持。今回直接読取を新global uniqueへ加算しない。",
+              "original_mask_range_profile": null,
+              "original_method": null,
+              "original_reader_label": "20261024-082550-todo-3536",
+              "pointer": "/entries/164/supporting_resources/0",
+              "scan_note": null
+            },
+            "ranges": [
+              [
+                1,
+                1
+              ]
+            ],
+            "read": [
+              2,
+              0,
+              0,
+              true,
+              true,
+              1
+            ],
+            "reader_namespace": "20261026-174104-todo-3778/current"
+          },
+          "p268_SKILL_md": {
+            "meaning_ref": "/entries/164/reason",
+            "pointer": "/entries/164",
+            "profile_ref": "definitions.prior_skill_profile"
+          },
+          "p269_SKILL_md": {
+            "meaning_ref": "/entries/165/reason",
+            "pointer": "/entries/165",
+            "profile_ref": "definitions.prior_skill_profile"
+          },
+          "p270_SKILL_md": {
+            "meaning_ref": "/entries/166/reason",
+            "pointer": "/entries/166",
+            "profile_ref": "definitions.prior_skill_profile"
+          },
+          "p271_SKILL_md": {
+            "meaning_ref": "/entries/168/reason",
+            "pointer": "/entries/168",
+            "profile_ref": "definitions.prior_skill_profile"
+          }
+        },
+        "resume_validation": {
+          "acknowledged_through": 263,
+          "generation": 59,
+          "journal_sha256": "db3e48f27db32aa627f2978a903056037a118b174ec567a100a6f65597b5dab9",
+          "parent_semantic_assessments_read": true,
+          "previous_chunk_id": "a8193c4d60584afba27e1d9c3f70b256",
+          "previous_chunk_sha256": "05d92487f14940ba7f1a9e3cb6ceca435699f1410aa7309467072cfe2aafc8bb",
+          "validated_receipts": 59
+        },
+        "roster_sha256": "460219790c088b33e6044c6a97c68a882549c608c3de46ea536aa990a2c1adac"
+      },
+      "original_chunk_id": "e6504ad7b19f48238c72d0a6f9513eab",
+      "original_receipt_sha256": "8df2e68a00f5bb418f9cbd2ffca61eae17998b5217074ffea4e28a504248b0a2"
+    }
+  },
+  "source_counts": {
+    "MengTo/Skills": 8
+  },
+  "whole16_complete": false,
+  "entries": [
+    {
+      "actual_assessment_reader": "20261026-174104-todo-3778",
+      "bytes": 3025,
+      "inventory_id": "github:0d4c184fd253e8fcafe76e66c63016b09f139b9beb04bc3ee359ddab94972e4a",
+      "inventory_unit": "github_prompt_material",
+      "original_assessment": {
+        "candidate_disposition": "skeuomorphic-uiのsurface variant候補。",
+        "classification": "variant",
+        "findings": [
+          "primaryはlayered shadows/1px wrapper/微細textureを述べるがコードや認証処理の実証ではない。",
+          "旧評価はgradient背景のtransition不成立、押下色のhardcode/unusedtoken、focus/disabled/contrast不足を記録。"
+        ],
+        "negative": "全要素を押せるように見せ、実disabled/focusを影の下へ隠す。",
+        "notices": [
+          {
+            "notice_ref": "root"
+          }
+        ],
+        "package": {
+          "blob_count": 12,
+          "complete_tree": true,
+          "primary_alias_excluded": 1,
+          "root": "agent-skills/web-design/skeuomorphic-ui",
+          "support_file_occurrences": 11
+        },
+        "positive": "合意した主buttonの浅い凹凸と実押下状態を比較する。",
+        "prior_primary_read": {
+          "actual_reader_job": "20261024-082550-todo-3536",
+          "assessment_ref": "definitions.prior_assessment",
+          "original_mask_range_profile": null,
+          "original_method": null,
+          "pointer": "/entries/160/supporting_resources/0",
+          "recorded_body_read": true,
+          "recorded_scan_only": false
+        },
+        "read": [
+          2,
+          0,
+          0,
+          true,
+          true,
+          39
+        ],
+        "read_evidence": {
+          "masked_lines": [],
+          "masking_version": "v15",
+          "method": "direct_raw_full",
+          "ranges": [
+            [
+              1,
+              39
+            ]
+          ],
+          "strict_utf8": true
+        },
+        "reason": "L20の具体CSS方向と旧SKILLのtoken/押下評価。",
+        "required_changes": [
+          "状態token/overlay opacity等を用いて意図した遷移を対象で検査し、装飾pressedと実button状態を一致させる。toggleならaria-pressed、通常buttonならその意味に従い、全buttonをtoggle扱いしない。",
+          "focus/disabled/forced-colors/小画面/読める影を確認し、参考loginの外観を認証完了としない。素材条件/同画像回答を保持する。"
+        ],
+        "row": 264,
+        "source": [
+          "github:0d4c184fd253e8fcafe76e66c63016b09f139b9beb04bc3ee359ddab94972e4a",
+          "MengTo/Skills",
+          "398cd41c86ba42fbb30e944ae507f463648f08b7",
+          "agent-skills/web-design/skeuomorphic-ui/demo/PROMPT.md",
+          "4ea972b5ff75805159fb7b375b5889b51932fa5451149989b1d65411e3fa360d",
+          "e3b7ecde492979fb5b8696b9f3f25ba390927b08",
+          3025
+        ],
+        "support": [
+          [
+            "SKILL.md",
+            "2de1673864f136b05b10a17fcf987f39864f30a716250b98e09ce669525292e4",
+            "c13194f30f4503b332124a532b03849e45fdd4d9",
+            4371,
+            true,
+            "prior_semantic_assessment_reuse",
+            "prior3536",
+            null,
+            null,
+            "c13194f30f4503b332124a532b03849e45fdd4d9",
+            4371,
+            "p264_SKILL_md"
+          ],
+          [
+            {
+              "path_display_redacted": true,
+              "path_utf8_sha256": "541065a2a3bca2a71c423a88e8445faa7d458fbd1bb8bea4cddc601e4e44b9ea",
+              "repo_tree_entry_index": 1712
+            },
+            null,
+            null,
+            null,
+            false,
+            "unsaved",
+            null,
+            null,
+            null,
+            "14c17545abe76f947ee8bf0df2c35fb5e6d37adc",
+            536390,
+            null
+          ],
+          [
+            {
+              "path_display_redacted": true,
+              "path_utf8_sha256": "3a68db142748df2121270b62c6397350b0f3cef6378060fb70387c94604d1fda",
+              "repo_tree_entry_index": 1713
+            },
+            null,
+            null,
+            null,
+            false,
+            "unsaved",
+            null,
+            null,
+            null,
+            "735c2baf4929acbcd8cf0b63a975870a5de418a7",
+            989406,
+            null
+          ],
+          [
+            {
+              "path_display_redacted": true,
+              "path_utf8_sha256": "22be0279e89c728caa39f7ee683dacdcb711bf03d59892a3f6fecccb2e346f7b",
+              "repo_tree_entry_index": 1714
+            },
+            null,
+            null,
+            null,
+            false,
+            "unsaved",
+            null,
+            null,
+            null,
+            "ebf14e0f6e4547525ebdf610a29ebca420fec70e",
+            44753,
+            null
+          ],
+          [
+            {
+              "path_display_redacted": true,
+              "path_utf8_sha256": "9845136388e15cc2f6b62f187d659c3a9bcd1ca13871ee582f9a43de396db645",
+              "repo_tree_entry_index": 1715
+            },
+            null,
+            null,
+            null,
+            false,
+            "unsaved",
+            null,
+            null,
+            null,
+            "bf5d1b2112d445fa92dc7a48efe810e7d5698cf5",
+            728581,
+            null
+          ],
+          [
+            {
+              "path_display_redacted": true,
+              "path_utf8_sha256": "7b73d6458ba46d9e47d83752ec5fed23a2a21be0edc82d0f6192619bde0f9c52",
+              "repo_tree_entry_index": 1716
+            },
+            null,
+            null,
+            null,
+            false,
+            "unsaved",
+            null,
+            null,
+            null,
+            "8e519cedbdd3976485487aea85409c434129ea3b",
+            85289,
+            null
+          ],
+          [
+            {
+              "path_display_redacted": true,
+              "path_utf8_sha256": "35aeff4f45f9cf759a3ee4c37c4a5462cf38bfc4ad67ee287320fcfaca3ef513",
+              "repo_tree_entry_index": 1717
+            },
+            null,
+            null,
+            null,
+            false,
+            "unsaved",
+            null,
+            null,
+            null,
+            "c17c9ed9481fe26fe7fdfca9a0a8dab4dd3a771d",
+            201962,
+            null
+          ],
+          [
+            {
+              "path_display_redacted": true,
+              "path_utf8_sha256": "0730a99ab2acd971fdd8af0ffe582ff390cb2e9cdd80b64475d739cf5e19991d",
+              "repo_tree_entry_index": 1718
+            },
+            null,
+            null,
+            null,
+            false,
+            "unsaved",
+            null,
+            null,
+            null,
+            "f77fe5bede25677fe105589063c8b434ac5215e2",
+            139542,
+            null
+          ],
+          [
+            "demo/index.html",
+            null,
+            null,
+            null,
+            false,
+            "unsaved",
+            null,
+            null,
+            null,
+            "ea0c87673cd6f78aa82acd6bcbacfb81d4c24047",
+            45479,
+            null
+          ],
+          [
+            {
+              "path_display_redacted": true,
+              "path_utf8_sha256": "a710bbdd7dc9b941b73fd4fa489cc92f459ecac996ffdc25fa8f65c04ef92678",
+              "repo_tree_entry_index": 1720
+            },
+            null,
+            null,
+            null,
+            false,
+            "unsaved",
+            null,
+            null,
+            null,
+            "93a8e3acd6e9c7faa1bc1f96dff4ea4b61759927",
+            98528,
+            null
+          ],
+          [
+            "demo/source.json",
+            null,
+            null,
+            null,
+            false,
+            "unsaved",
+            null,
+            null,
+            null,
+            "f8dfa8ce83bf14dbef94ea87d525d7c33e193067",
+            4518,
+            null
+          ]
+        ],
+        "unit": "github_prompt_material",
+        "unmet": [
+          "未保存demo/素材本文、実状態/遷移/対象版/操作。",
+          "画像回答/個別条件・未知中央比較。"
+        ],
+        "use": "gradient/影/縁/embossで触感のある面を作るprompt。",
+        "value": "raised/pressed/反射縁と操作状態の違いを比較できる。"
+      },
+      "original_chunk_id": "e6504ad7b19f48238c72d0a6f9513eab",
+      "original_chunk_sha256": "affd7ff872a9af08feb5e14678850489bb7a26b108271fa43ef8b52e299340fb",
+      "path": "agent-skills/web-design/skeuomorphic-ui/demo/PROMPT.md",
+      "previous_parent_semantic_read": true,
+      "source_commit": "398cd41c86ba42fbb30e944ae507f463648f08b7",
+      "source_git_blob": "e3b7ecde492979fb5b8696b9f3f25ba390927b08",
+      "source_path": "agent-skills/web-design/skeuomorphic-ui/demo/PROMPT.md",
+      "source_repo": "MengTo/Skills",
+      "source_sha256": "4ea972b5ff75805159fb7b375b5889b51932fa5451149989b1d65411e3fa360d"
+    },
+    {
+      "actual_assessment_reader": "20261026-174104-todo-3778",
+      "bytes": 2537,
+      "inventory_id": "github:9422155bfc342b0f8ce51b1fd9965aa232fb6d048581abc68315dafa0178999a",
+      "inventory_unit": "github_prompt_material",
+      "original_assessment": {
+        "candidate_disposition": "icon-family参照variant候補。個別権利未確定。",
+        "classification": "variant",
+        "findings": [
+          "集合名指定が中心。upstreamの既定を本人の標準へ昇格させない。",
+          "Iconifyと個別Solar素材の条件/帰属はroot MITで包括できない。旧required_changes1はwhole-field伏字1で未確認。"
+        ],
+        "negative": "名前だけから全製品へ標準採用し、未経験の操作をicon単体で説明する。",
+        "notices": [
+          {
+            "notice_ref": "root"
+          }
+        ],
+        "package": {
+          "blob_count": 10,
+          "complete_tree": true,
+          "primary_alias_excluded": 1,
+          "root": "agent-skills/web-design/solar-duotone-bold",
+          "support_file_occurrences": 9
+        },
+        "positive": "合意したfeature card群のicon体系を揃える案を比較する。",
+        "prior_primary_read": {
+          "actual_reader_job": null,
+          "assessment_ref": "definitions.prior_assessment",
+          "original_mask_range_profile": null,
+          "original_method": null,
+          "pointer": "/entries/161/supporting_resources/0",
+          "recorded_body_read": false,
+          "recorded_scan_only": true
+        },
+        "read": [
+          2,
+          0,
+          0,
+          true,
+          true,
+          40
+        ],
+        "read_evidence": {
+          "masked_lines": [],
+          "masking_version": "v15",
+          "method": "direct_raw_full",
+          "ranges": [
+            [
+              1,
+              40
+            ]
+          ],
+          "strict_utf8": true
+        },
+        "reason": "L20..21のfamily指定と旧SKILL評価。",
+        "required_changes": [
+          "対象の既存icon体系/意味/サイズ/線幅を確認して選択肢へ位置づけ、装飾は読み上げから外し操作にはlabel/text代替を保つ。",
+          "個別集合/取得形式/配布条件を確認し、未確定を許諾済みや重複除外にしない。同画像の本人回答と媒体条件を保持する。"
+        ],
+        "row": 265,
+        "source": [
+          "github:9422155bfc342b0f8ce51b1fd9965aa232fb6d048581abc68315dafa0178999a",
+          "MengTo/Skills",
+          "398cd41c86ba42fbb30e944ae507f463648f08b7",
+          "agent-skills/web-design/solar-duotone-bold/demo/PROMPT.md",
+          "8683b53870f2ab03bda6cbae358a46ee7fb47711c4d340d532a74516febc69ab",
+          "d98b66a0ecb328c2b21a15223f0549e2cece9970",
+          2537
+        ],
+        "support": [
+          [
+            "SKILL.md",
+            "fd99604acf317b21dea735558e3ac9ae98ab5751d4addbffe640bde79da41b51",
+            "1f78b8e82cdc7538427aac7ad2fd5edc19c79f54",
+            743,
+            true,
+            "prior_semantic_assessment_reuse",
+            "prior3536",
+            null,
+            null,
+            "1f78b8e82cdc7538427aac7ad2fd5edc19c79f54",
+            743,
+            "p265_SKILL_md"
+          ],
+          [
+            {
+              "path_display_redacted": true,
+              "path_utf8_sha256": "ed14b94d150cf6624cfe0475d5af63871332d6f105530ad0c96debe4cae3569f",
+              "repo_tree_entry_index": 1727
+            },
+            null,
+            null,
+            null,
+            false,
+            "unsaved",
+            null,
+            null,
+            null,
+            "74b6044b7a373ebbb73626a00905fc0b2b292d9a",
+            298959,
+            null
+          ],
+          [
+            {
+              "path_display_redacted": true,
+              "path_utf8_sha256": "5f92012d4f2edc1842dbb20d95b6133a26efc4fc59aca1fb4f26a0bace3a5ff7",
+              "repo_tree_entry_index": 1728
+            },
+            null,
+            null,
+            null,
+            false,
+            "unsaved",
+            null,
+            null,
+            null,
+            "3cd794d1e0e7989a2970cb4a945098fd1a83e13f",
+            217369,
+            null
+          ],
+          [
+            {
+              "path_display_redacted": true,
+              "path_utf8_sha256": "a874dc2e8361a8954aea50fca80b04029a979f18fc6bf973d16c2791cdfbd7ee",
+              "repo_tree_entry_index": 1729
+            },
+            null,
+            null,
+            null,
+            false,
+            "unsaved",
+            null,
+            null,
+            null,
+            "764233ff37fe552c54ee65be0329754f008a9577",
+            362749,
+            null
+          ],
+          [
+            {
+              "path_display_redacted": true,
+              "path_utf8_sha256": "ce1365497321c6ed35bf216f9efd53012ffd2cf8da6a7fc0a7e3f3eee1911618",
+              "repo_tree_entry_index": 1730
+            },
+            null,
+            null,
+            null,
+            false,
+            "unsaved",
+            null,
+            null,
+            null,
+            "9197184ae879083d916ddf6934acfc2a2ee1f35b",
+            214106,
+            null
+          ],
+          [
+            {
+              "path_display_redacted": true,
+              "path_utf8_sha256": "972e8fbf742d7d3b5bdcdbc202bb5e5be95800ccc309c9f0f9992539660a28e4",
+              "repo_tree_entry_index": 1731
+            },
+            null,
+            null,
+            null,
+            false,
+            "unsaved",
+            null,
+            null,
+            null,
+            "072de2e20e298844fb880a2cf82fec2cca237d75",
+            73780,
+            null
+          ],
+          [
+            "demo/index.html",
+            null,
+            null,
+            null,
+            false,
+            "unsaved",
+            null,
+            null,
+            null,
+            "c038b784376e3d3e62eb2dbcfc1133ff787344c9",
+            21909,
+            null
+          ],
+          [
+            {
+              "path_display_redacted": true,
+              "path_utf8_sha256": "de82ef8f601ba267d296939bd0ebecc0e3b6da79220a08a0391b5c6816bc6704",
+              "repo_tree_entry_index": 1733
+            },
+            null,
+            null,
+            null,
+            false,
+            "unsaved",
+            null,
+            null,
+            null,
+            "a446585f6b5fcebbd5cd0d5f88f0581ea83a437d",
+            55595,
+            null
+          ],
+          [
+            "demo/source.json",
+            null,
+            null,
+            null,
+            false,
+            "unsaved",
+            null,
+            null,
+            null,
+            "dcccb0e80e270672e84ff0dedb088a3e5b1381b0",
+            3282,
+            null
+          ]
+        ],
+        "unit": "github_prompt_material",
+        "unmet": [
+          "未保存demo/icon実体/ライセンス本文、旧伏字field。",
+          "実操作/同画像回答・未知中央比較。"
+        ],
+        "use": "Iconify Solar Duotone Boldを候補にするicon方向prompt。",
+        "value": "一つのicon familyの見た目と使用範囲を比較する小さな資料。"
+      },
+      "original_chunk_id": "e6504ad7b19f48238c72d0a6f9513eab",
+      "original_chunk_sha256": "affd7ff872a9af08feb5e14678850489bb7a26b108271fa43ef8b52e299340fb",
+      "path": "agent-skills/web-design/solar-duotone-bold/demo/PROMPT.md",
+      "previous_parent_semantic_read": true,
+      "source_commit": "398cd41c86ba42fbb30e944ae507f463648f08b7",
+      "source_git_blob": "d98b66a0ecb328c2b21a15223f0549e2cece9970",
+      "source_path": "agent-skills/web-design/solar-duotone-bold/demo/PROMPT.md",
+      "source_repo": "MengTo/Skills",
+      "source_sha256": "8683b53870f2ab03bda6cbae358a46ee7fb47711c4d340d532a74516febc69ab"
+    },
+    {
+      "actual_assessment_reader": "20261026-174104-todo-3778",
+      "bytes": 3464,
+      "inventory_id": "github:297b135bbf6c071ca83df60fb90ba67d81fe9207e4c96472133d3674b2e9719c",
+      "inventory_unit": "github_prompt_material",
+      "original_assessment": {
+        "candidate_disposition": "split-layout-technicalのlayout variant候補。",
+        "classification": "variant",
+        "findings": [
+          "desktopの等分/近い比率は原方向で、mobileのDOM順/landmarkは明示不足。",
+          "login/validation/securityは参照題材の説明で、実認証やlive状態の検証ではない。"
+        ],
+        "negative": "縦線だけ加え、mobileで説明が前提より先に来る。",
+        "notices": [
+          {
+            "notice_ref": "root"
+          }
+        ],
+        "package": {
+          "blob_count": 12,
+          "complete_tree": true,
+          "primary_alias_excluded": 1,
+          "root": "agent-skills/web-design/split-layout-technical",
+          "support_file_occurrences": 11
+        },
+        "positive": "左の媒体窓と右の仕様説明を、一つの意味ある読み順に組む。",
+        "prior_primary_read": {
+          "actual_reader_job": null,
+          "assessment_ref": "definitions.prior_assessment",
+          "original_mask_range_profile": null,
+          "original_method": null,
+          "pointer": "/entries/162/supporting_resources/0",
+          "recorded_body_read": false,
+          "recorded_scan_only": true
+        },
+        "read": [
+          2,
+          0,
+          0,
+          true,
+          true,
+          47
+        ],
+        "read_evidence": {
+          "masked_lines": [],
+          "masking_version": "v15",
+          "method": "direct_raw_full",
+          "ranges": [
+            [
+              1,
+              47
+            ]
+          ],
+          "strict_utf8": true
+        },
+        "reason": "L20..28のfull layout/別roleとL35のresponsive/操作。",
+        "required_changes": [
+          "各panelの役割とstack時の読順/headings/landmarksを定義し、両側を同密度に詰めない。小画面/zoom/keyboard/focusを検査する。",
+          "原demo未保存でinteraction再現を断定せず、媒体/書体/依存条件と同画像の本人回答を保持する。"
+        ],
+        "row": 266,
+        "source": [
+          "github:297b135bbf6c071ca83df60fb90ba67d81fe9207e4c96472133d3674b2e9719c",
+          "MengTo/Skills",
+          "398cd41c86ba42fbb30e944ae507f463648f08b7",
+          "agent-skills/web-design/split-layout-technical/demo/PROMPT.md",
+          "6965030c38881d181557959b808fc830cb654a4be606cf43c3866ddabcc9eb9f",
+          "e859de5c442cb4e84d842899cef4beab53c989e6",
+          3464
+        ],
+        "support": [
+          [
+            "SKILL.md",
+            "ae8e02a4461773e0d4c04a3ef367cad1a7b6933565549d3296e4a0e54a8b1c0b",
+            "406722079067f9f8d45069f727bdf28f9e582f71",
+            4258,
+            true,
+            "prior_semantic_assessment_reuse",
+            "prior3536",
+            null,
+            null,
+            "406722079067f9f8d45069f727bdf28f9e582f71",
+            4258,
+            "p266_SKILL_md"
+          ],
+          [
+            {
+              "path_display_redacted": true,
+              "path_utf8_sha256": "84f2769ef2802b1ca1727098c6f34442dfd954cc8721407a239aff3afb202e14",
+              "repo_tree_entry_index": 1740
+            },
+            null,
+            null,
+            null,
+            false,
+            "unsaved",
+            null,
+            null,
+            null,
+            "14c17545abe76f947ee8bf0df2c35fb5e6d37adc",
+            536390,
+            null
+          ],
+          [
+            {
+              "path_display_redacted": true,
+              "path_utf8_sha256": "9beb35e47e50e21864c2223ab5941b624f56f0211602a84996a61871954aae33",
+              "repo_tree_entry_index": 1741
+            },
+            null,
+            null,
+            null,
+            false,
+            "unsaved",
+            null,
+            null,
+            null,
+            "735c2baf4929acbcd8cf0b63a975870a5de418a7",
+            989406,
+            null
+          ],
+          [
+            {
+              "path_display_redacted": true,
+              "path_utf8_sha256": "254a3f423ec854f16026dca0be4d01d7d43611d159058cf5b878716d53012f59",
+              "repo_tree_entry_index": 1742
+            },
+            null,
+            null,
+            null,
+            false,
+            "unsaved",
+            null,
+            null,
+            null,
+            "ebf14e0f6e4547525ebdf610a29ebca420fec70e",
+            44753,
+            null
+          ],
+          [
+            {
+              "path_display_redacted": true,
+              "path_utf8_sha256": "713f3553fe08924644e79c213ea886bb07fcb18512373bf567095a3674e6f55a",
+              "repo_tree_entry_index": 1743
+            },
+            null,
+            null,
+            null,
+            false,
+            "unsaved",
+            null,
+            null,
+            null,
+            "bf5d1b2112d445fa92dc7a48efe810e7d5698cf5",
+            728581,
+            null
+          ],
+          [
+            {
+              "path_display_redacted": true,
+              "path_utf8_sha256": "c62ec55a603c542321aed17ffa1f91fdc88b2705ce80590a844e08ea8fbd0a63",
+              "repo_tree_entry_index": 1744
+            },
+            null,
+            null,
+            null,
+            false,
+            "unsaved",
+            null,
+            null,
+            null,
+            "8e519cedbdd3976485487aea85409c434129ea3b",
+            85289,
+            null
+          ],
+          [
+            {
+              "path_display_redacted": true,
+              "path_utf8_sha256": "ba01fc6f8b22f131fe3850d921c4a88b957d897c234e75052e47a3a5c28415eb",
+              "repo_tree_entry_index": 1745
+            },
+            null,
+            null,
+            null,
+            false,
+            "unsaved",
+            null,
+            null,
+            null,
+            "c17c9ed9481fe26fe7fdfca9a0a8dab4dd3a771d",
+            201962,
+            null
+          ],
+          [
+            {
+              "path_display_redacted": true,
+              "path_utf8_sha256": "5da6eb514084b9bd8238ce44ffb0295c92f8942abd4762398ecfb155148cd396",
+              "repo_tree_entry_index": 1746
+            },
+            null,
+            null,
+            null,
+            false,
+            "unsaved",
+            null,
+            null,
+            null,
+            "f77fe5bede25677fe105589063c8b434ac5215e2",
+            139542,
+            null
+          ],
+          [
+            "demo/index.html",
+            null,
+            null,
+            null,
+            false,
+            "unsaved",
+            null,
+            null,
+            null,
+            "ea0c87673cd6f78aa82acd6bcbacfb81d4c24047",
+            45479,
+            null
+          ],
+          [
+            {
+              "path_display_redacted": true,
+              "path_utf8_sha256": "3e7a6a45a709051d9c978dfb5257bfa8cdc792929d0445631c6a68ffc1666c00",
+              "repo_tree_entry_index": 1748
+            },
+            null,
+            null,
+            null,
+            false,
+            "unsaved",
+            null,
+            null,
+            null,
+            "c16648be772d8f66cc2893060abdf116f211756e",
+            98900,
+            null
+          ],
+          [
+            "demo/source.json",
+            null,
+            null,
+            null,
+            false,
+            "unsaved",
+            null,
+            null,
+            null,
+            "20ba1a66c095630a1eaa7cb5b8cc6d7e3fce7ef8",
+            4538,
+            null
+          ]
+        ],
+        "unit": "github_prompt_material",
+        "unmet": [
+          "未保存demo/素材本文、実DOM順/描画/認証操作。",
+          "画像回答/個別条件・未知中央比較。"
+        ],
+        "use": "左右の二panelへ媒体と説明を分担するlayout prompt。",
+        "value": "単なるdividerを超えたpanelの役割・余白・文字階層を評価できる。"
+      },
+      "original_chunk_id": "e6504ad7b19f48238c72d0a6f9513eab",
+      "original_chunk_sha256": "affd7ff872a9af08feb5e14678850489bb7a26b108271fa43ef8b52e299340fb",
+      "path": "agent-skills/web-design/split-layout-technical/demo/PROMPT.md",
+      "previous_parent_semantic_read": true,
+      "source_commit": "398cd41c86ba42fbb30e944ae507f463648f08b7",
+      "source_git_blob": "e859de5c442cb4e84d842899cef4beab53c989e6",
+      "source_path": "agent-skills/web-design/split-layout-technical/demo/PROMPT.md",
+      "source_repo": "MengTo/Skills",
+      "source_sha256": "6965030c38881d181557959b808fc830cb654a4be606cf43c3866ddabcc9eb9f"
+    },
+    {
+      "actual_assessment_reader": "20261026-174104-todo-3778",
+      "bytes": 2043,
+      "inventory_id": "github:f4e174090314689c698ccd982780d1d4b5735ff7874aba0cee313b9106dac2eb",
+      "inventory_unit": "github_prompt_material",
+      "original_assessment": {
+        "candidate_disposition": "staggered-word-revealの短文variant候補。",
+        "classification": "variant",
+        "findings": [
+          "4part timeline/replay controlを求めるが実装本文は未保存。旧SKILLのDOMContentLoaded後load時の永久hidden・長文の累積delay等は未解消。",
+          "旧評価のp/div namingやaria-label依存の懸念は過去所見で、現行AT/browserで今回検証した意味でない。"
+        ],
+        "negative": "長文を全語遅延させ、遅いscript loadで永遠に非表示にする。",
+        "notices": [
+          {
+            "notice_ref": "root"
+          }
+        ],
+        "package": {
+          "blob_count": 4,
+          "complete_tree": true,
+          "primary_alias_excluded": 1,
+          "root": "agent-skills/web-design/staggered-word-reveal",
+          "support_file_occurrences": 3
+        },
+        "positive": "短い見出しを一度見せ、keyboardで任意にreplayする。",
+        "prior_primary_read": {
+          "actual_reader_job": null,
+          "assessment_ref": "definitions.prior_assessment",
+          "original_mask_range_profile": null,
+          "original_method": null,
+          "pointer": "/entries/163/supporting_resources/0",
+          "recorded_body_read": false,
+          "recorded_scan_only": true
+        },
+        "read": [
+          2,
+          0,
+          0,
+          true,
+          true,
+          43
+        ],
+        "read_evidence": {
+          "masked_lines": [],
+          "masking_version": "v15",
+          "method": "direct_raw_full",
+          "ranges": [
+            [
+              1,
+              43
+            ]
+          ],
+          "strict_utf8": true
+        },
+        "reason": "L11/21..22/38..39と旧SKILLの初期化/分節/ARIA評価。",
+        "required_changes": [
+          "readyStateを含む初期化と例外時可読fallback、CJK分節/長さに応じたdelay上限を定義する。controls/linkを一括分割しない。",
+          "見出し/段落のsemantic copy/読上げ/selectionの所有と重複を検査し、replay/focus/reducedとobserver/RAF解放を確認する。同画像回答を保持する。"
+        ],
+        "row": 267,
+        "source": [
+          "github:f4e174090314689c698ccd982780d1d4b5735ff7874aba0cee313b9106dac2eb",
+          "MengTo/Skills",
+          "398cd41c86ba42fbb30e944ae507f463648f08b7",
+          "agent-skills/web-design/staggered-word-reveal/demo/PROMPT.md",
+          "6f4febc96eb3acc3bbaf91ff66c161383b0ded8ef33c2d4cd3afb6122a0d690c",
+          "14b3ef298297e72ba7abcc5884044a08f13ca2a4",
+          2043
+        ],
+        "support": [
+          [
+            "SKILL.md",
+            "79061529376810788b1d824e0f16a18c048d1c426d6909442888c9507ead08c9",
+            "339a182a139cce273d26c8d6a7b6db818a78bf39",
+            4925,
+            true,
+            "prior_semantic_assessment_reuse",
+            "prior3536",
+            null,
+            null,
+            "339a182a139cce273d26c8d6a7b6db818a78bf39",
+            4925,
+            "p267_SKILL_md"
+          ],
+          [
+            "demo/index.html",
+            null,
+            null,
+            null,
+            false,
+            "unsaved",
+            null,
+            null,
+            null,
+            "bab2e5b5a981a5eb01adb615094856c66af98e3c",
+            16531,
+            null
+          ],
+          [
+            {
+              "path_display_redacted": true,
+              "path_utf8_sha256": "1b7a8e94285795810485bc19bdaeb11331ccc0c81a78f30ba87e6269ae57a71b",
+              "repo_tree_entry_index": 1755
+            },
+            null,
+            null,
+            null,
+            false,
+            "unsaved",
+            null,
+            null,
+            null,
+            "5c12bf15c3ce58970d03935cda6262844217b3f9",
+            71323,
+            null
+          ]
+        ],
+        "unit": "github_prompt_material",
+        "unmet": [
+          "未保存demo本文、実初期化/CJK/ARIA/replay/cleanupと対象版。",
+          "画像回答/文章条件・未知中央比較。"
+        ],
+        "use": "短い見出しの一度だけのstaggered revealとreplayを示すprompt。",
+        "value": "進入開始/再演/静止/終了後の処理停止を分けて評価できる。"
+      },
+      "original_chunk_id": "e6504ad7b19f48238c72d0a6f9513eab",
+      "original_chunk_sha256": "affd7ff872a9af08feb5e14678850489bb7a26b108271fa43ef8b52e299340fb",
+      "path": "agent-skills/web-design/staggered-word-reveal/demo/PROMPT.md",
+      "previous_parent_semantic_read": true,
+      "source_commit": "398cd41c86ba42fbb30e944ae507f463648f08b7",
+      "source_git_blob": "14b3ef298297e72ba7abcc5884044a08f13ca2a4",
+      "source_path": "agent-skills/web-design/staggered-word-reveal/demo/PROMPT.md",
+      "source_repo": "MengTo/Skills",
+      "source_sha256": "6f4febc96eb3acc3bbaf91ff66c161383b0ded8ef33c2d4cd3afb6122a0d690c"
+    },
+    {
+      "actual_assessment_reader": "20261026-174104-todo-3778",
+      "bytes": 1885,
+      "inventory_id": "github:fe9b90aec0edccec829f60b344ba48a6cebcdad481eb71bcc6fdaf8c2f4f6212",
+      "inventory_unit": "github_prompt_material",
+      "original_assessment": {
+        "candidate_disposition": "Tailwind UIのdemo variant候補。",
+        "classification": "variant",
+        "findings": [
+          "primaryはTailwind CSSを題材名にする一方、inline/local/no buildを要求する。適切な生成済みCSS等での成立は未保存demoから未確認。",
+          "旧評価はv3語彙の設定に版指定が無い点、動的class連結の検出漏れ/focus outline不足を記録。installation URLを読んだだけで現在版確認済みとはしない。"
+        ],
+        "negative": "版を見ずv3設定を全案件へ貼る、text-+colorの連結だけでCSS生成を期待する。",
+        "notices": [
+          {
+            "notice_ref": "root"
+          }
+        ],
+        "package": {
+          "blob_count": 5,
+          "complete_tree": true,
+          "primary_alias_excluded": 1,
+          "root": "agent-skills/web-design/tailwindcss",
+          "support_file_occurrences": 4
+        },
+        "positive": "版確認後にcomponentの動的toneが出力CSSへ含まれるか確かめる。",
+        "prior_primary_read": {
+          "actual_reader_job": null,
+          "assessment_ref": "definitions.prior_assessment",
+          "original_mask_range_profile": null,
+          "original_method": null,
+          "pointer": "/entries/164/supporting_resources/1",
+          "recorded_body_read": false,
+          "recorded_scan_only": true
+        },
+        "read": [
+          2,
+          0,
+          0,
+          true,
+          true,
+          43
+        ],
+        "read_evidence": {
+          "masked_lines": [],
+          "masking_version": "v15",
+          "method": "direct_raw_full",
+          "ranges": [
+            [
+              1,
+              43
+            ]
+          ],
+          "strict_utf8": true
+        },
+        "reason": "L11/21..29/34..39と旧SKILL・REF1L。",
+        "required_changes": [
+          "既存依存の実版を確認し、その版の生成/scan/dark/focus設定へ対応させる。tone→完全なclassの対応表等で実CSSに含まれるか確認する。",
+          "no-build demoと本来projectのbuild手順を区別し、この研究ではインストール/buildを実行しない。titleを自社の新製品名にせず、素材条件/同画像回答を保持する。"
+        ],
+        "row": 268,
+        "source": [
+          "github:fe9b90aec0edccec829f60b344ba48a6cebcdad481eb71bcc6fdaf8c2f4f6212",
+          "MengTo/Skills",
+          "398cd41c86ba42fbb30e944ae507f463648f08b7",
+          "agent-skills/web-design/tailwindcss/demo/PROMPT.md",
+          "fcedabd00e30c99499bf7c74046061dbb53d19caa3eabe7e678c7d09b22294a4",
+          "6e75b48b6614e82d990c7311e2491a40b30b9236",
+          1885
+        ],
+        "support": [
+          [
+            "REFERENCES.md",
+            "f7145bc7d040b52fcfecc94809efc85094a530f05d30f9a044e6e601c79d8828",
+            "1335ef2d962a282fdd0e09056a5cf7db14414aa0",
+            72,
+            true,
+            "direct_raw_full",
+            "current",
+            0,
+            [
+              2,
+              0,
+              0,
+              true,
+              true,
+              1
+            ],
+            "1335ef2d962a282fdd0e09056a5cf7db14414aa0",
+            72,
+            "p268_REFERENCES_md"
+          ],
+          [
+            "SKILL.md",
+            "90d2150c24c7453d3f75914791d5356c87606a7c1b933d3371a6120624720c4e",
+            "fe522920fd8c8f534bf696dd3090d3d16dedbaf5",
+            2816,
+            true,
+            "prior_semantic_assessment_reuse",
+            "prior3536",
+            null,
+            null,
+            "fe522920fd8c8f534bf696dd3090d3d16dedbaf5",
+            2816,
+            "p268_SKILL_md"
+          ],
+          [
+            "demo/index.html",
+            null,
+            null,
+            null,
+            false,
+            "unsaved",
+            null,
+            null,
+            null,
+            "6e44b3d8592e4c0ecf0ebb7a28ab41f56cba946a",
+            16519,
+            null
+          ],
+          [
+            {
+              "path_display_redacted": true,
+              "path_utf8_sha256": "30315c4319a81d371dd0ac03d258922c11b93248009a88e7011d1048ed440b05",
+              "repo_tree_entry_index": 1762
+            },
+            null,
+            null,
+            null,
+            false,
+            "unsaved",
+            null,
+            null,
+            null,
+            "fc933055b21c3c29ca1b448f4fe77869420e5fc6",
+            50535,
+            null
+          ]
+        ],
+        "unit": "github_prompt_material",
+        "unmet": [
+          "未保存demo/CSS/vendor本文、実版/生成class/対象操作。",
+          "公式リンク先本文/条件、画像回答・未知中央比較。"
+        ],
+        "use": "Tailwindのlayout/文字/テーマをheroとcard群で示すprompt。",
+        "value": "class生成/設定版/実CSSの対応を比較できる。"
+      },
+      "original_chunk_id": "e6504ad7b19f48238c72d0a6f9513eab",
+      "original_chunk_sha256": "affd7ff872a9af08feb5e14678850489bb7a26b108271fa43ef8b52e299340fb",
+      "path": "agent-skills/web-design/tailwindcss/demo/PROMPT.md",
+      "previous_parent_semantic_read": true,
+      "source_commit": "398cd41c86ba42fbb30e944ae507f463648f08b7",
+      "source_git_blob": "6e75b48b6614e82d990c7311e2491a40b30b9236",
+      "source_path": "agent-skills/web-design/tailwindcss/demo/PROMPT.md",
+      "source_repo": "MengTo/Skills",
+      "source_sha256": "fcedabd00e30c99499bf7c74046061dbb53d19caa3eabe7e678c7d09b22294a4"
+    },
+    {
+      "actual_assessment_reader": "20261026-174104-todo-3778",
+      "bytes": 1942,
+      "inventory_id": "github:bb83b4aa84b84d5f7829c940ccb781c10747dc62e09ba193168343286eed75f8",
+      "inventory_unit": "github_prompt_material",
+      "original_assessment": {
+        "candidate_disposition": "tech-green-dark-mode-modernの方向variant候補。",
+        "classification": "variant",
+        "findings": [
+          "Frame/Rhythm/Signalや体系名は説明用題材。実稼働/安全性/製品名の証拠ではない。",
+          "低contrast装飾が本文/controlへ及ぶ場合のtoken/基準不足は旧SKILL所見。primaryのreduced条件と分ける。"
+        ],
+        "negative": "緑glowや架空signalで正常稼働を示したとする。",
+        "notices": [
+          {
+            "notice_ref": "root"
+          }
+        ],
+        "package": {
+          "blob_count": 4,
+          "complete_tree": true,
+          "primary_alias_excluded": 1,
+          "root": "agent-skills/web-design/tech-green-dark-mode-modern",
+          "support_file_occurrences": 3
+        },
+        "positive": "合意した運用画面で実状態dotと静かなpanel階層を比較する。",
+        "prior_primary_read": {
+          "actual_reader_job": null,
+          "assessment_ref": "definitions.prior_assessment",
+          "original_mask_range_profile": null,
+          "original_method": null,
+          "pointer": "/entries/165/supporting_resources/0",
+          "recorded_body_read": false,
+          "recorded_scan_only": true
+        },
+        "read": [
+          2,
+          0,
+          0,
+          true,
+          true,
+          43
+        ],
+        "read_evidence": {
+          "masked_lines": [],
+          "masking_version": "v15",
+          "method": "direct_raw_full",
+          "ranges": [
+            [
+              1,
+              43
+            ]
+          ],
+          "strict_utf8": true
+        },
+        "reason": "L11/15/21..22/35..39と旧SKILLの不足評価。",
+        "required_changes": [
+          "本文/境界/状態の役割とtokenを具体化し、色だけに依存せず実状態/labelを一致させる。glow下のcontrast/keyboard/zoom/reducedを検査する。",
+          "限定修復から全画面の見た目へ範囲を広げず、同画像回答と素材条件を保持する。"
+        ],
+        "row": 269,
+        "source": [
+          "github:bb83b4aa84b84d5f7829c940ccb781c10747dc62e09ba193168343286eed75f8",
+          "MengTo/Skills",
+          "398cd41c86ba42fbb30e944ae507f463648f08b7",
+          "agent-skills/web-design/tech-green-dark-mode-modern/demo/PROMPT.md",
+          "8f27208c3efcbd9672e200e70850696080be0cd5e7ffc96bbb92800c2db5abfa",
+          "ad26b4a5c12170ec3f2dc19f35c1126a8ebe2650",
+          1942
+        ],
+        "support": [
+          [
+            "SKILL.md",
+            "9c47f3929ebd3c3290b6d759f39a32a5ceada51f1a75404d90c391da862b9403",
+            "41c129a320fc2ed21074c27fb5c2bb76d6a0c223",
+            4028,
+            true,
+            "prior_semantic_assessment_reuse",
+            "prior3536",
+            null,
+            null,
+            "41c129a320fc2ed21074c27fb5c2bb76d6a0c223",
+            4028,
+            "p269_SKILL_md"
+          ],
+          [
+            "demo/index.html",
+            null,
+            null,
+            null,
+            false,
+            "unsaved",
+            null,
+            null,
+            null,
+            "4f08313e1ab04205688ba37563c9c787e47ff369",
+            16630,
+            null
+          ],
+          [
+            {
+              "path_display_redacted": true,
+              "path_utf8_sha256": "23cea38c9a7176ac084f2ebef6cc0f8d0ac15ee1d8dbefaac0e482aed43e19d6",
+              "repo_tree_entry_index": 1768
+            },
+            null,
+            null,
+            null,
+            false,
+            "unsaved",
+            null,
+            null,
+            null,
+            "ee9c910b012e7bbee0988b652732591380b66b25",
+            78811,
+            null
+          ]
+        ],
+        "unit": "github_prompt_material",
+        "unmet": [
+          "未保存demo/素材本文、token/実状態/contrastと操作。",
+          "同画像回答/個別条件・未知中央比較。"
+        ],
+        "use": "matte-blackとemerald signalのtech画面方向prompt。",
+        "value": "card/mono label/抑えたglowと状態情報の階層を比較できる。"
+      },
+      "original_chunk_id": "e6504ad7b19f48238c72d0a6f9513eab",
+      "original_chunk_sha256": "affd7ff872a9af08feb5e14678850489bb7a26b108271fa43ef8b52e299340fb",
+      "path": "agent-skills/web-design/tech-green-dark-mode-modern/demo/PROMPT.md",
+      "previous_parent_semantic_read": true,
+      "source_commit": "398cd41c86ba42fbb30e944ae507f463648f08b7",
+      "source_git_blob": "ad26b4a5c12170ec3f2dc19f35c1126a8ebe2650",
+      "source_path": "agent-skills/web-design/tech-green-dark-mode-modern/demo/PROMPT.md",
+      "source_repo": "MengTo/Skills",
+      "source_sha256": "8f27208c3efcbd9672e200e70850696080be0cd5e7ffc96bbb92800c2db5abfa"
+    },
+    {
+      "actual_assessment_reader": "20261026-174104-todo-3778",
+      "bytes": 3472,
+      "inventory_id": "github:ade100e022ba62d1809e73dbd6eed92c6e7b3e93c22b370f10a3e05def2627f3",
+      "inventory_unit": "github_prompt_material",
+      "original_assessment": {
+        "candidate_disposition": "technical-wireframe-info-layoutの図/注釈variant候補。",
+        "classification": "variant",
+        "findings": [
+          "Memory Allocation/Diagnostic Stream等は題材で実計測の証拠ではない。",
+          "図は装飾meshではなく主たる構造説明のため、旧SKILLのtext代替不足は重要。実図/注釈や3D方式は未検証。"
+        ],
+        "negative": "架空の診断数字を実稼働とする、label過多で構造を隠す。",
+        "notices": [
+          {
+            "notice_ref": "root"
+          }
+        ],
+        "package": {
+          "blob_count": 7,
+          "complete_tree": true,
+          "primary_alias_excluded": 1,
+          "root": "agent-skills/web-design/technical-wireframe-info-layout",
+          "support_file_occurrences": 6
+        },
+        "positive": "製品構造のwireframeと対応した注釈一覧を同時に読める。",
+        "prior_primary_read": {
+          "actual_reader_job": null,
+          "assessment_ref": "definitions.prior_assessment",
+          "original_mask_range_profile": null,
+          "original_method": null,
+          "pointer": "/entries/166/supporting_resources/0",
+          "recorded_body_read": false,
+          "recorded_scan_only": true
+        },
+        "read": [
+          2,
+          0,
+          0,
+          true,
+          true,
+          47
+        ],
+        "read_evidence": {
+          "masked_lines": [],
+          "masking_version": "v15",
+          "method": "direct_raw_full",
+          "ranges": [
+            [
+              1,
+              47
+            ]
+          ],
+          "strict_utf8": true
+        },
+        "reason": "L20..28のstructural diagram/annotationsとL35の可読操作条件。",
+        "required_changes": [
+          "部位IDと注釈の順序付きtext/keyboard導線を結び、図だけに情報を閉じ込めない。小画面/遮蔽/zoomでlabelが衝突しないか検査する。",
+          "実メモリ/診断値なら取得元/単位/遅延へ結び、架空値はsampleと明記する。静止reduced/媒体条件と同画像回答を保持する。"
+        ],
+        "row": 270,
+        "source": [
+          "github:ade100e022ba62d1809e73dbd6eed92c6e7b3e93c22b370f10a3e05def2627f3",
+          "MengTo/Skills",
+          "398cd41c86ba42fbb30e944ae507f463648f08b7",
+          "agent-skills/web-design/technical-wireframe-info-layout/demo/PROMPT.md",
+          "2ea0ce5924cd7caf6e6e07c3536aab2872ae8898649b58191a5c5db85221b83b",
+          "a9796cf8bb8926e98b735e71058f89c70ba47db7",
+          3472
+        ],
+        "support": [
+          [
+            "SKILL.md",
+            "1960e7805000cece8f3d5edd87d89232e31caa5d43a9000842bb29cad4de5597",
+            "d47a87edb1576d2a79b84989bcf8abbc30539f9d",
+            4272,
+            true,
+            "prior_semantic_assessment_reuse",
+            "prior3536",
+            null,
+            null,
+            "d47a87edb1576d2a79b84989bcf8abbc30539f9d",
+            4272,
+            "p270_SKILL_md"
+          ],
+          [
+            {
+              "path_display_redacted": true,
+              "path_utf8_sha256": "45c33776f510189b8e1f132280edd31e209c5a402f48bdd4ccd2abfa0bf5bed2",
+              "repo_tree_entry_index": 1774
+            },
+            null,
+            null,
+            null,
+            false,
+            "unsaved",
+            null,
+            null,
+            null,
+            "cb7656849d3d492e5a7dfbfc84a8ba4affb433d0",
+            47486,
+            null
+          ],
+          [
+            {
+              "path_display_redacted": true,
+              "path_utf8_sha256": "949dacb4556368725e6f275df75e5511a51f32b41caf0a12b5f49938e4c278c2",
+              "repo_tree_entry_index": 1775
+            },
+            null,
+            null,
+            null,
+            false,
+            "unsaved",
+            null,
+            null,
+            null,
+            "522064b02be114cad7931b97b8c7094f6d5769e6",
+            49327,
+            null
+          ],
+          [
+            "demo/index.html",
+            null,
+            null,
+            null,
+            false,
+            "unsaved",
+            null,
+            null,
+            null,
+            "bf103976c8779bab2a1da09701a2a44426ee1c42",
+            45410,
+            null
+          ],
+          [
+            {
+              "path_display_redacted": true,
+              "path_utf8_sha256": "8441860985a6dca373a2013f9e16d105e8b8802caa4b12a774716631ef3f1ba5",
+              "repo_tree_entry_index": 1777
+            },
+            null,
+            null,
+            null,
+            false,
+            "unsaved",
+            null,
+            null,
+            null,
+            "42f424dd46562390f05b4e17c61c6c2bcced8429",
+            56203,
+            null
+          ],
+          [
+            "demo/source.json",
+            null,
+            null,
+            null,
+            false,
+            "unsaved",
+            null,
+            null,
+            null,
+            "5477185de041bdab813ac8e2e6ab4d2b244a33ed",
+            2951,
+            null
+          ]
+        ],
+        "unit": "github_prompt_material",
+        "unmet": [
+          "未保存demo/図/素材本文、実注釈/計測/描画/代替text。",
+          "同画像回答/個別条件・未知中央比較。"
+        ],
+        "use": "分解wireframe構造と注釈connectorを一つの情報layoutにするprompt。",
+        "value": "図の部位とlabel/順序/補助情報の対応を評価できる。"
+      },
+      "original_chunk_id": "e6504ad7b19f48238c72d0a6f9513eab",
+      "original_chunk_sha256": "affd7ff872a9af08feb5e14678850489bb7a26b108271fa43ef8b52e299340fb",
+      "path": "agent-skills/web-design/technical-wireframe-info-layout/demo/PROMPT.md",
+      "previous_parent_semantic_read": true,
+      "source_commit": "398cd41c86ba42fbb30e944ae507f463648f08b7",
+      "source_git_blob": "a9796cf8bb8926e98b735e71058f89c70ba47db7",
+      "source_path": "agent-skills/web-design/technical-wireframe-info-layout/demo/PROMPT.md",
+      "source_repo": "MengTo/Skills",
+      "source_sha256": "2ea0ce5924cd7caf6e6e07c3536aab2872ae8898649b58191a5c5db85221b83b"
+    },
+    {
+      "actual_assessment_reader": "20261026-174104-todo-3778",
+      "bytes": 1826,
+      "inventory_id": "github:b55b1e7c84aa663b56aedf2a79123ef596b633ab7d10a28fb8aea55e4cf7f88d",
+      "inventory_unit": "github_prompt_material",
+      "original_assessment": {
+        "candidate_disposition": "threejs-landscapeのscene構成variant候補。",
+        "classification": "variant",
+        "findings": [
+          "ringが約同pixelという原文は近似。camera投影/視点で厳密には変わり、grassのdense主張も実検査前。",
+          "旧SKILL評価のx,z未定義/lerp重みの外挿/key色clone破棄/未宣言uniform・varyingsを保持。JS helperとGLSLのsmoothstepを区別し、今回compile/renderや最新API照合したとはしない。"
+        ],
+        "negative": "途中切替で基準色へ跳ぶ、未定義shaderのまま原作者の速度を実証済みとする。",
+        "notices": [
+          {
+            "notice_ref": "root"
+          }
+        ],
+        "package": {
+          "blob_count": 6,
+          "complete_tree": true,
+          "primary_alias_excluded": 1,
+          "root": "agent-skills/web-design/threejs-landscape",
+          "support_file_occurrences": 5
+        },
+        "positive": "建物等を主役にしたsceneで地平線と時間帯途中切替を比較する。",
+        "prior_primary_read": {
+          "actual_reader_job": null,
+          "assessment_ref": "definitions.prior_assessment",
+          "original_mask_range_profile": null,
+          "original_method": null,
+          "pointer": "/entries/168/supporting_resources/1",
+          "recorded_body_read": false,
+          "recorded_scan_only": true
+        },
+        "read": [
+          2,
+          0,
+          0,
+          true,
+          true,
+          37
+        ],
+        "read_evidence": {
+          "masked_lines": [],
+          "masking_version": "v15",
+          "method": "direct_raw_full",
+          "ranges": [
+            [
+              1,
+              37
+            ]
+          ],
+          "strict_utf8": true
+        },
+        "reason": "L15..27のpolar rings/noUV/instanced grass/elevation stars/途中切替。",
+        "required_changes": [
+          "固定SKILLの断片を導入するなら座標/色補間/重み範囲/uniform/varyingsを修正し、対象three版/texture colorSpaceを揃えてshader compile/描画を検査する。",
+          "連打時の現在補間状態を新startへ固定し、camera移動/zoom/patch境界/resize/hidden復帰/解放とreduced/staticを確認する。草/星の密度とDPR/性能を実対象で測り、作者数値を保証にしない。同画像回答を保持する。"
+        ],
+        "row": 271,
+        "source": [
+          "github:b55b1e7c84aa663b56aedf2a79123ef596b633ab7d10a28fb8aea55e4cf7f88d",
+          "MengTo/Skills",
+          "398cd41c86ba42fbb30e944ae507f463648f08b7",
+          "agent-skills/web-design/threejs-landscape/demo/PROMPT.md",
+          "aa23559b8f4c502e1dc05ea6fb10a77e40f3c30d849edb27106455b584a8c685",
+          "3b90ba55f3d47a6bd1b4f4c541291230a4dd99e0",
+          1826
+        ],
+        "support": [
+          [
+            "SKILL.md",
+            "fa361bdf1008be41e9447ebe1e9e195a6d0ecc9a781a8e8c63ac25cdc7aedc86",
+            "d2317169f082d7ee367e9f547069859c80c0d483",
+            8466,
+            true,
+            "prior_semantic_assessment_reuse",
+            "prior3536",
+            null,
+            null,
+            "d2317169f082d7ee367e9f547069859c80c0d483",
+            8466,
+            "p271_SKILL_md"
+          ],
+          [
+            "agents/openai.yaml",
+            null,
+            null,
+            null,
+            false,
+            "unsaved",
+            null,
+            null,
+            null,
+            "088b3e9c8eac12d3e9d6c74ff97a78e8d3a229ca",
+            280,
+            null
+          ],
+          [
+            {
+              "path_display_redacted": true,
+              "path_utf8_sha256": "0d2e96b2f8a58a8954300d516f11f242db644fc3ab984b638d0943d134f3f2cf",
+              "repo_tree_entry_index": 1791
+            },
+            null,
+            null,
+            null,
+            false,
+            "unsaved",
+            null,
+            null,
+            null,
+            "4494cf4e8d37049896b6051da6edfe44a83355af",
+            608081,
+            null
+          ],
+          [
+            "demo/index.html",
+            null,
+            null,
+            null,
+            false,
+            "unsaved",
+            null,
+            null,
+            null,
+            "0596646ee26bf7bba7393023f1bd748d732c3023",
+            27460,
+            null
+          ],
+          [
+            {
+              "path_display_redacted": true,
+              "path_utf8_sha256": "d7973279898522d9a22bc223345de548ae19de46cc0df1c78b9521b9b496ac69",
+              "repo_tree_entry_index": 1793
+            },
+            null,
+            null,
+            null,
+            false,
+            "unsaved",
+            null,
+            null,
+            null,
+            "e8058ea1f70fb5a6b30d28224e649307215ed2a4",
+            729506,
+            null
+          ]
+        ],
+        "unit": "github_prompt_material",
+        "unmet": [
+          "未保存demo本文、実shader/色/地形/密度/時間帯/資源検査。",
+          "対象版/素材条件・同画像回答/未知中央比較。"
+        ],
+        "use": "polar地形/草/空/星と時間帯を同じscene状態へ組むprompt。",
+        "value": "camera周辺の密度・地平線・四時間帯の中断補間を評価できる。"
+      },
+      "original_chunk_id": "e6504ad7b19f48238c72d0a6f9513eab",
+      "original_chunk_sha256": "affd7ff872a9af08feb5e14678850489bb7a26b108271fa43ef8b52e299340fb",
+      "path": "agent-skills/web-design/threejs-landscape/demo/PROMPT.md",
+      "previous_parent_semantic_read": true,
+      "source_commit": "398cd41c86ba42fbb30e944ae507f463648f08b7",
+      "source_git_blob": "3b90ba55f3d47a6bd1b4f4c541291230a4dd99e0",
+      "source_path": "agent-skills/web-design/threejs-landscape/demo/PROMPT.md",
+      "source_repo": "MengTo/Skills",
+      "source_sha256": "aa23559b8f4c502e1dc05ea6fb10a77e40f3c30d849edb27106455b584a8c685"
+    }
+  ],
+  "working_public_reflection": true,
+  "main_acceptance_pending": true,
+  "new_body_or_literal_read_credit": 0,
+  "physical_evidence": "skills-3080-other8-264271-physical214717.json"
+}

@@ -1,0 +1,321 @@
+{
+  "todo": 3080,
+  "writer": "20261026-214717-todo-3080",
+  "selected": [
+    {
+      "name": "cloudflare-deploy",
+      "inventory_id": "github:0ab793e37d3b44eaf3a16af08020907fd32239fbbafa1813a00f57d13497e095",
+      "source": {
+        "repository": "openai/skills",
+        "commit": "49f948faa9258a0c61caceaf225e179651397431",
+        "path": "skills/.curated/cloudflare-deploy/SKILL.md",
+        "sha256": "d7632537cf19be17cf33d2c696b9d9c2ea3ee51026030e9b203d5b9255e75b15",
+        "acquisition": "already-acquired",
+        "license": {
+          "path": "skills/.curated/cloudflare-deploy/LICENSE.txt",
+          "sha256": "4dd13869245e356246a5b770723247bbb80a8f07a181d1d3d873a1734297cdb9",
+          "scope": "Selected authored primary workflow text under its exact per-package Apache-2.0 notice only; no supporting scripts/templates/third-party documentation/assets/services or unknown original/private data rights; changed files marked and original text/license preserved",
+          "accepted": true
+        }
+      },
+      "source_git_blob": "e2d73abb7e5a550af3d9e40797a28259bddba97d",
+      "source_bytes": 7377,
+      "notice_git_blob": "13e25df86ce06eb6488e6a6bc5c5847f5dedc352",
+      "notice_bytes": 10776,
+      "notice_current_full_reader": "20261026-214717-todo-3080",
+      "scope": "Selected authored primary workflow text under its exact per-package Apache-2.0 notice only; no supporting scripts/templates/third-party documentation/assets/services or unknown original/private data rights; changed files marked and original text/license preserved",
+      "copyright_original_preserved": true,
+      "current_original_full_reader": "20261026-214717-todo-3080",
+      "current_mask0_is_not_secret_absence_proof": true,
+      "unknown_target_existence_and_body_unchecked": true,
+      "actual_service_or_product_execution": 0
+    },
+    {
+      "name": "define-goal",
+      "inventory_id": "github:ced9bda2a816c62210a3276fb9f6047f0374d8dd27767e33e49cb706d6853680",
+      "source": {
+        "repository": "openai/skills",
+        "commit": "49f948faa9258a0c61caceaf225e179651397431",
+        "path": "skills/.curated/define-goal/SKILL.md",
+        "sha256": "708df89ff19cbae82a762efae036735d1914b5c7e44df1832e0b723f6cd9ee30",
+        "acquisition": "already-acquired",
+        "license": {
+          "path": "skills/.curated/define-goal/LICENSE.txt",
+          "sha256": "4dd13869245e356246a5b770723247bbb80a8f07a181d1d3d873a1734297cdb9",
+          "scope": "Selected authored primary workflow text under its exact per-package Apache-2.0 notice only; no supporting scripts/templates/third-party documentation/assets/services or unknown original/private data rights; changed files marked and original text/license preserved",
+          "accepted": true
+        }
+      },
+      "source_git_blob": "87f111bd700e0d993465f7ac741847b5daee57d6",
+      "source_bytes": 5647,
+      "notice_git_blob": "13e25df86ce06eb6488e6a6bc5c5847f5dedc352",
+      "notice_bytes": 10776,
+      "notice_current_full_reader": "20261026-214717-todo-3080",
+      "scope": "Selected authored primary workflow text under its exact per-package Apache-2.0 notice only; no supporting scripts/templates/third-party documentation/assets/services or unknown original/private data rights; changed files marked and original text/license preserved",
+      "copyright_original_preserved": true,
+      "current_original_full_reader": "20261026-214717-todo-3080",
+      "current_mask0_is_not_secret_absence_proof": true,
+      "unknown_target_existence_and_body_unchecked": true,
+      "actual_service_or_product_execution": 0
+    },
+    {
+      "name": "jupyter-notebook",
+      "inventory_id": "github:ec2afa56b06ffef43cc10a5f574402efe16455d2d1ca43d950ba7f723c3ff4cf",
+      "source": {
+        "repository": "openai/skills",
+        "commit": "49f948faa9258a0c61caceaf225e179651397431",
+        "path": "skills/.curated/jupyter-notebook/SKILL.md",
+        "sha256": "62f102e8554b25716dccef0ffab4572d4e3eaf05ccc76562d33a065bc9c521fb",
+        "acquisition": "already-acquired",
+        "license": {
+          "path": "skills/.curated/jupyter-notebook/LICENSE.txt",
+          "sha256": "4dd13869245e356246a5b770723247bbb80a8f07a181d1d3d873a1734297cdb9",
+          "scope": "Selected authored primary workflow text under its exact per-package Apache-2.0 notice only; no supporting scripts/templates/third-party documentation/assets/services or unknown original/private data rights; changed files marked and original text/license preserved",
+          "accepted": true
+        }
+      },
+      "source_git_blob": "e1d1748cac9e9313c8229763751714628d1f6853",
+      "source_bytes": 4154,
+      "notice_git_blob": "13e25df86ce06eb6488e6a6bc5c5847f5dedc352",
+      "notice_bytes": 10776,
+      "notice_current_full_reader": "20261026-214717-todo-3080",
+      "scope": "Selected authored primary workflow text under its exact per-package Apache-2.0 notice only; no supporting scripts/templates/third-party documentation/assets/services or unknown original/private data rights; changed files marked and original text/license preserved",
+      "copyright_original_preserved": true,
+      "current_original_full_reader": "20261026-214717-todo-3080",
+      "current_mask0_is_not_secret_absence_proof": true,
+      "unknown_target_existence_and_body_unchecked": true,
+      "actual_service_or_product_execution": 0
+    },
+    {
+      "name": "migrate-to-codex",
+      "inventory_id": "github:2727f5145f982bb8c73274b551a07e9096170b534a2794076c48bc3488eea1c8",
+      "source": {
+        "repository": "openai/skills",
+        "commit": "49f948faa9258a0c61caceaf225e179651397431",
+        "path": "skills/.curated/migrate-to-codex/SKILL.md",
+        "sha256": "145b7fe48360642cb7a42bad3a817f10833fa8a387ffcb4c2df8a47c01a832e2",
+        "acquisition": "already-acquired",
+        "license": {
+          "path": "skills/.curated/migrate-to-codex/LICENSE.txt",
+          "sha256": "58d1e17ffe5109a7ae296caafcadfdbe6a7d176f0bc4ab01e12a689b0499d8bd",
+          "scope": "Selected authored primary workflow text under its exact per-package Apache-2.0 notice only; no supporting scripts/templates/third-party documentation/assets/services or unknown original/private data rights; changed files marked and original text/license preserved",
+          "accepted": true
+        }
+      },
+      "source_git_blob": "b1c001b70e8cf326b8196e153b87811a43b23d48",
+      "source_bytes": 7939,
+      "notice_git_blob": "7a4a3ea2424c09fbe48d455aed1eaa94d9124835",
+      "notice_bytes": 11357,
+      "notice_current_full_reader": "20261026-214717-todo-3080",
+      "scope": "Selected authored primary workflow text under its exact per-package Apache-2.0 notice only; no supporting scripts/templates/third-party documentation/assets/services or unknown original/private data rights; changed files marked and original text/license preserved",
+      "copyright_original_preserved": true,
+      "current_original_full_reader": "20261026-214717-todo-3080",
+      "current_mask0_is_not_secret_absence_proof": true,
+      "unknown_target_existence_and_body_unchecked": true,
+      "actual_service_or_product_execution": 0
+    },
+    {
+      "name": "netlify-deploy",
+      "inventory_id": "github:17350a87d59037557bf9e8c20b6ed1ebcefc4fac682f541e50445c77cc333a85",
+      "source": {
+        "repository": "openai/skills",
+        "commit": "49f948faa9258a0c61caceaf225e179651397431",
+        "path": "skills/.curated/netlify-deploy/SKILL.md",
+        "sha256": "bb2c29bf599a043cade932f60cc64f632ca100e8767ccdfa2ba1a42c8d43958f",
+        "acquisition": "already-acquired",
+        "license": {
+          "path": "skills/.curated/netlify-deploy/LICENSE.txt",
+          "sha256": "4dd13869245e356246a5b770723247bbb80a8f07a181d1d3d873a1734297cdb9",
+          "scope": "Selected authored primary workflow text under its exact per-package Apache-2.0 notice only; no supporting scripts/templates/third-party documentation/assets/services or unknown original/private data rights; changed files marked and original text/license preserved",
+          "accepted": true
+        }
+      },
+      "source_git_blob": "52075090a6644b104fc34837c9923b403d949369",
+      "source_bytes": 7011,
+      "notice_git_blob": "13e25df86ce06eb6488e6a6bc5c5847f5dedc352",
+      "notice_bytes": 10776,
+      "notice_current_full_reader": "20261026-214717-todo-3080",
+      "scope": "Selected authored primary workflow text under its exact per-package Apache-2.0 notice only; no supporting scripts/templates/third-party documentation/assets/services or unknown original/private data rights; changed files marked and original text/license preserved",
+      "copyright_original_preserved": true,
+      "current_original_full_reader": "20261026-214717-todo-3080",
+      "current_mask0_is_not_secret_absence_proof": true,
+      "unknown_target_existence_and_body_unchecked": true,
+      "actual_service_or_product_execution": 0
+    },
+    {
+      "name": "notion-knowledge-capture",
+      "inventory_id": "github:102bbbcf899769911780cad990c87af98f282abcc7453d437225f18747e1f898",
+      "source": {
+        "repository": "openai/skills",
+        "commit": "49f948faa9258a0c61caceaf225e179651397431",
+        "path": "skills/.curated/notion-knowledge-capture/SKILL.md",
+        "sha256": "b49383b229bc766190ea22bb58502cfcf7e08449f5fce55a104eef1e54e27f00",
+        "acquisition": "already-acquired",
+        "license": {
+          "path": "skills/.curated/notion-knowledge-capture/LICENSE.txt",
+          "sha256": "0f377d9b2a1db642e4b0531ffa126e96d9bc6c085f8d9441f220fb25f723c6f8",
+          "scope": "Selected authored primary workflow text under its exact per-package MIT notice only; no supporting scripts/templates/third-party documentation/assets/services or unknown original/private data rights; changed files marked and original text/license preserved",
+          "accepted": true
+        }
+      },
+      "source_git_blob": "5d347f66e6b494328a81f3ecb4fd7865f95b0067",
+      "source_bytes": 3316,
+      "notice_git_blob": "08717083b66cc66a7d45267fd9a6998e79bddf04",
+      "notice_bytes": 1057,
+      "notice_current_full_reader": "20261026-214717-todo-3080",
+      "scope": "Selected authored primary workflow text under its exact per-package MIT notice only; no supporting scripts/templates/third-party documentation/assets/services or unknown original/private data rights; changed files marked and original text/license preserved",
+      "copyright_original_preserved": true,
+      "current_original_full_reader": "20261026-214717-todo-3080",
+      "current_mask0_is_not_secret_absence_proof": true,
+      "unknown_target_existence_and_body_unchecked": true,
+      "actual_service_or_product_execution": 0
+    },
+    {
+      "name": "notion-meeting-intelligence",
+      "inventory_id": "github:7b658f121e9d4342e5b1cec58dd8ba332a665951c9865116d74c729c0411d362",
+      "source": {
+        "repository": "openai/skills",
+        "commit": "49f948faa9258a0c61caceaf225e179651397431",
+        "path": "skills/.curated/notion-meeting-intelligence/SKILL.md",
+        "sha256": "bad61faccbbe0f2cab53bcfbc4cb22f847ba8593ef14c2e37fea5b9b03346332",
+        "acquisition": "already-acquired",
+        "license": {
+          "path": "skills/.curated/notion-meeting-intelligence/LICENSE.txt",
+          "sha256": "0f377d9b2a1db642e4b0531ffa126e96d9bc6c085f8d9441f220fb25f723c6f8",
+          "scope": "Selected authored primary workflow text under its exact per-package MIT notice only; no supporting scripts/templates/third-party documentation/assets/services or unknown original/private data rights; changed files marked and original text/license preserved",
+          "accepted": true
+        }
+      },
+      "source_git_blob": "efc716839ee614cf57efb3858fcfb538e0c4a8d9",
+      "source_bytes": 3418,
+      "notice_git_blob": "08717083b66cc66a7d45267fd9a6998e79bddf04",
+      "notice_bytes": 1057,
+      "notice_current_full_reader": "20261026-214717-todo-3080",
+      "scope": "Selected authored primary workflow text under its exact per-package MIT notice only; no supporting scripts/templates/third-party documentation/assets/services or unknown original/private data rights; changed files marked and original text/license preserved",
+      "copyright_original_preserved": true,
+      "current_original_full_reader": "20261026-214717-todo-3080",
+      "current_mask0_is_not_secret_absence_proof": true,
+      "unknown_target_existence_and_body_unchecked": true,
+      "actual_service_or_product_execution": 0
+    },
+    {
+      "name": "notion-research-documentation",
+      "inventory_id": "github:6db0198e9c1a2218b74f7340ad30372e658f739cd06a3a80f4ca0ee1019579d5",
+      "source": {
+        "repository": "openai/skills",
+        "commit": "49f948faa9258a0c61caceaf225e179651397431",
+        "path": "skills/.curated/notion-research-documentation/SKILL.md",
+        "sha256": "e88a46da978cf6f088a788fa92ee736df699a355a72f41f14bdc258bf3ef57e7",
+        "acquisition": "already-acquired",
+        "license": {
+          "path": "skills/.curated/notion-research-documentation/LICENSE.txt",
+          "sha256": "0f377d9b2a1db642e4b0531ffa126e96d9bc6c085f8d9441f220fb25f723c6f8",
+          "scope": "Selected authored primary workflow text under its exact per-package MIT notice only; no supporting scripts/templates/third-party documentation/assets/services or unknown original/private data rights; changed files marked and original text/license preserved",
+          "accepted": true
+        }
+      },
+      "source_git_blob": "4bd40dbe0eb8d9d8920e3a4d705b38b4887623c7",
+      "source_bytes": 3404,
+      "notice_git_blob": "08717083b66cc66a7d45267fd9a6998e79bddf04",
+      "notice_bytes": 1057,
+      "notice_current_full_reader": "20261026-214717-todo-3080",
+      "scope": "Selected authored primary workflow text under its exact per-package MIT notice only; no supporting scripts/templates/third-party documentation/assets/services or unknown original/private data rights; changed files marked and original text/license preserved",
+      "copyright_original_preserved": true,
+      "current_original_full_reader": "20261026-214717-todo-3080",
+      "current_mask0_is_not_secret_absence_proof": true,
+      "unknown_target_existence_and_body_unchecked": true,
+      "actual_service_or_product_execution": 0
+    },
+    {
+      "name": "notion-spec-to-implementation",
+      "inventory_id": "github:3307d4e8f4e6bb71680f1564527adac34e41076362728ab92b7165f55f0ff7c3",
+      "source": {
+        "repository": "openai/skills",
+        "commit": "49f948faa9258a0c61caceaf225e179651397431",
+        "path": "skills/.curated/notion-spec-to-implementation/SKILL.md",
+        "sha256": "6e22c4c6df441e849fa6b4b825371b579c9bb4896f97bedca5f8536020427a81",
+        "acquisition": "already-acquired",
+        "license": {
+          "path": "skills/.curated/notion-spec-to-implementation/LICENSE.txt",
+          "sha256": "0f377d9b2a1db642e4b0531ffa126e96d9bc6c085f8d9441f220fb25f723c6f8",
+          "scope": "Selected authored primary workflow text under its exact per-package MIT notice only; no supporting scripts/templates/third-party documentation/assets/services or unknown original/private data rights; changed files marked and original text/license preserved",
+          "accepted": true
+        }
+      },
+      "source_git_blob": "d6a0a0e0fb358f56e1d4893c54a25c6c2e04fc65",
+      "source_bytes": 3521,
+      "notice_git_blob": "08717083b66cc66a7d45267fd9a6998e79bddf04",
+      "notice_bytes": 1057,
+      "notice_current_full_reader": "20261026-214717-todo-3080",
+      "scope": "Selected authored primary workflow text under its exact per-package MIT notice only; no supporting scripts/templates/third-party documentation/assets/services or unknown original/private data rights; changed files marked and original text/license preserved",
+      "copyright_original_preserved": true,
+      "current_original_full_reader": "20261026-214717-todo-3080",
+      "current_mask0_is_not_secret_absence_proof": true,
+      "unknown_target_existence_and_body_unchecked": true,
+      "actual_service_or_product_execution": 0
+    },
+    {
+      "name": "render-deploy",
+      "inventory_id": "github:a1627daf67cfce95b3702c81bfe6414a3612300cb6832ffd24e1b42cafe419bb",
+      "source": {
+        "repository": "openai/skills",
+        "commit": "49f948faa9258a0c61caceaf225e179651397431",
+        "path": "skills/.curated/render-deploy/SKILL.md",
+        "sha256": "c17c75adeb1834ed5cee1e440a651ae476c4101cd63762fcd9a58eada917552d",
+        "acquisition": "already-acquired",
+        "license": {
+          "path": "skills/.curated/render-deploy/LICENSE.txt",
+          "sha256": "4dd13869245e356246a5b770723247bbb80a8f07a181d1d3d873a1734297cdb9",
+          "scope": "Selected authored primary workflow text under its exact per-package Apache-2.0 notice only; no supporting scripts/templates/third-party documentation/assets/services or unknown original/private data rights; changed files marked and original text/license preserved",
+          "accepted": true
+        }
+      },
+      "source_git_blob": "a0f78c13b07df3def82c16bccf4a1c17c4d8e30d",
+      "source_bytes": 17582,
+      "notice_git_blob": "13e25df86ce06eb6488e6a6bc5c5847f5dedc352",
+      "notice_bytes": 10776,
+      "notice_current_full_reader": "20261026-214717-todo-3080",
+      "scope": "Selected authored primary workflow text under its exact per-package Apache-2.0 notice only; no supporting scripts/templates/third-party documentation/assets/services or unknown original/private data rights; changed files marked and original text/license preserved",
+      "copyright_original_preserved": true,
+      "current_original_full_reader": "20261026-214717-todo-3080",
+      "current_mask0_is_not_secret_absence_proof": true,
+      "unknown_target_existence_and_body_unchecked": true,
+      "actual_service_or_product_execution": 0
+    },
+    {
+      "name": "vercel-deploy",
+      "inventory_id": "github:059212fb5a1656ec6c064ad7a99b9df9b3cd4300aff43bf514a715d092963a00",
+      "source": {
+        "repository": "openai/skills",
+        "commit": "49f948faa9258a0c61caceaf225e179651397431",
+        "path": "skills/.curated/vercel-deploy/SKILL.md",
+        "sha256": "f4a6cbfbb378a320fae179a79f727a881d19677e9b3db96ed49d2dc02a74fa46",
+        "acquisition": "already-acquired",
+        "license": {
+          "path": "skills/.curated/vercel-deploy/LICENSE.txt",
+          "sha256": "e0fad1e120e56b02bb8e65745ff5be6d3234368f2df9d0dd183183879e595fc1",
+          "scope": "Selected authored primary workflow text under its exact per-package MIT notice only; no supporting scripts/templates/third-party documentation/assets/services or unknown original/private data rights; changed files marked and original text/license preserved",
+          "accepted": true
+        }
+      },
+      "source_git_blob": "a7e6faf3b999d31e8224e232d39fbf58952b7a5b",
+      "source_bytes": 2653,
+      "notice_git_blob": "94df5bf89dbb6210a707fb4edbf3aade96bc4318",
+      "notice_bytes": 1063,
+      "notice_current_full_reader": "20261026-214717-todo-3080",
+      "scope": "Selected authored primary workflow text under its exact per-package MIT notice only; no supporting scripts/templates/third-party documentation/assets/services or unknown original/private data rights; changed files marked and original text/license preserved",
+      "copyright_original_preserved": true,
+      "current_original_full_reader": "20261026-214717-todo-3080",
+      "current_mask0_is_not_secret_absence_proof": true,
+      "unknown_target_existence_and_body_unchecked": true,
+      "actual_service_or_product_execution": 0
+    }
+  ],
+  "new_global_primary_credit": 0,
+  "supporting_metadata_occurrences": 438,
+  "unread_support_rights_accepted": false,
+  "new_grants_outside_selected_primary": 0,
+  "central_operations": 0,
+  "new_adoptions": 0,
+  "whole16_complete": false
+}

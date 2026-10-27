@@ -152,6 +152,16 @@
       "file": "skills-3080-other4-260263-evaluation214717.json",
       "sha256": "e9b7a232898cdd1b5b54b7c9f6ff6f6e3545911a759d8bb842a51520e4c02923",
       "rows": 4
+    },
+    {
+      "file": "skills-3080-other8-264271-evaluation214717.json",
+      "sha256": "a791e68fd370c92695295ac9d4d5d93acd59dc750daa99e829978f9598e7fc9e",
+      "rows": 8
+    },
+    {
+      "file": "skills-3080-sixmile-next6-175180-evaluation214717.json",
+      "sha256": "fd93b96c3e157afbdf9e9ea6a9eb83934158815be3270215784e4fc2a079a52c",
+      "rows": 6
     }
   ],
   "adoption_ledger": {

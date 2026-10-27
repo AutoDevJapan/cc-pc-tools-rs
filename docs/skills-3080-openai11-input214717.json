@@ -1,0 +1,142 @@
+{
+  "todo": 3080,
+  "author_job": "20261026-214717-todo-3080",
+  "operation": {
+    "file": "skills-3080-operations/create-openai11-214717.json",
+    "sha256": "f2ac5a8415c2ad119aeb8fb49d34a07c341d7036e79d65d3bb96e898a3e7e1b4"
+  },
+  "bundle": {
+    "file": "skills-3080-openai11-reviewed-bundle214717.json",
+    "sha256": "dd8bb8053cbc0d21be9e07c904da7db3caf6431de3aa6e0be214aab680d390cf"
+  },
+  "meaning": {
+    "file": "skills-3080-openai11-source-meaning214717.json",
+    "sha256": "dc56c2ca93facfcc342a95f07bef6488057ab48a64af3acc34f44edda81cd041"
+  },
+  "notices": {
+    "file": "skills-3080-openai11-notice-map214717.json",
+    "sha256": "bd19ce1af8f7ca49999caf96c52d5cb9be89098777b444a491c5bf1c4c5a3bcc"
+  },
+  "structure": {
+    "file": "skills-3080-openai11-structure214717.json",
+    "sha256": "3d9e367382b529914120f9113e44b69dbe8f18b791c912df2c9649f420d3d275"
+  },
+  "proposed_uninstalled_targets": 11,
+  "virtual_files": 66,
+  "virtual_bytes": 223979,
+  "proposal_discovery": {
+    "method": "fresh installed Codex app-server initialize + skills/list forceReload",
+    "metadata_total": 445,
+    "found_count": 0,
+    "same_names_other_paths": 0,
+    "parse_errors": 0,
+    "process_tree_exit_confirmed": true,
+    "physical_absence_unproven": true,
+    "implicit_selection_or_context_budget_unproven": true
+  },
+  "normal_readback_plan": {
+    "files": 66,
+    "planned_output_bytes": 223979,
+    "normal_max_files": 128,
+    "normal_max_indices": 32,
+    "normal_max_bytes": 65536,
+    "planned_batches": [
+      {
+        "indices": [
+          0,
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7,
+          8,
+          9,
+          10,
+          11,
+          12,
+          13,
+          14
+        ],
+        "bytes": 58147
+      },
+      {
+        "indices": [
+          15,
+          16,
+          17,
+          18,
+          19,
+          20,
+          21,
+          22,
+          23,
+          24,
+          25,
+          26,
+          27
+        ],
+        "bytes": 63858
+      },
+      {
+        "indices": [
+          28,
+          29,
+          30,
+          31,
+          32,
+          33,
+          34,
+          35,
+          36,
+          37,
+          38,
+          39,
+          40,
+          41,
+          42,
+          43,
+          44,
+          45,
+          46,
+          47,
+          48,
+          49,
+          50,
+          51,
+          52,
+          53,
+          54,
+          55
+        ],
+        "bytes": 57437
+      },
+      {
+        "indices": [
+          56,
+          57,
+          58,
+          59,
+          60,
+          61,
+          62,
+          63,
+          64,
+          65
+        ],
+        "bytes": 44537
+      }
+    ],
+    "actual_readback": 0,
+    "actual_created": 0,
+    "source_of_limits": "Previously observed unchanged current guard source and the normal API, not a new policy or corpus cap",
+    "cross_batch_atomic_snapshot_or_historical_continuity_claimed": false
+  },
+  "held_hatch_purpose": "Technical comparison with existing bundled pet workflow remains held by normal unverified protection; no alternate body read, duplicate renamed target or new owner question",
+  "full_content_review_required_before_create": true,
+  "not_part_of_live_designs_or_adoptions": true,
+  "new_adoptions": 0,
+  "central_operations": 0,
+  "whole16_complete": false
+}

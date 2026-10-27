@@ -1,0 +1,4903 @@
+{
+  "all6_primary_and6_individual_notice_metadata_match": true,
+  "all_original_selected_chunks_losslessly_reconstructed": true,
+  "central_operations": 0,
+  "consumer_job": "20261026-214717-todo-3080",
+  "definition": "Whole accepted original chunks, not selected prose. Original assessment writers, actual literal/reuse reader evidence, source states and all common/privacy/support definitions are retained. Independent fixed metadata match is not a fresh physical-byte observation or new reading/permission grant.",
+  "domain": "skills3080-sixmile-received-six-whole-original-v1",
+  "entries": [
+    {
+      "actual_body_reader_inferred_from_assessment_writer": false,
+      "assessment_writer_job": "20261026-180903-todo-3719",
+      "bytes": 9024,
+      "central_operations": 0,
+      "copy_license_accepted": false,
+      "git_blob": "78ef0432d6c28b18952bd056d96dd480d94a468d",
+      "individual_notice_metadata": [
+        {
+          "repo": "6mile/skills",
+          "commit": "920714f17d81e0a95c7a9bc51faf0a7921cd982d",
+          "path": "skills/jeremyknows/x-bookmark-triage/LICENSE.txt",
+          "sha256": "ebaad8721bfc96deee323858ba427395f14445ff3bd84261ce5ebf5784400e86",
+          "git_blob": "057bff8ecf0d8e8dfecfb5c14e9e6832befd91a7",
+          "bytes": 1087,
+          "role": "license_or_notice"
+        }
+      ],
+      "inventory_id": "github:dce62c401a7ae31922fd88385914ef30cf2f3284febfb2a1c4761bef6f23e92d",
+      "new_final_disposition": false,
+      "original_chunk_id": "d701eec6292e2d63bf55d7f6856d9294",
+      "original_chunk_sha256": "e20d5e36930e4508efb994f90131aec7cf9501c2dc12f9dec0d39c7f57e6c05e",
+      "original_context_ref": "d701eec6292e2d63bf55d7f6856d9294",
+      "original_read_tuple": [
+        3,
+        38,
+        0,
+        false,
+        true,
+        233
+      ],
+      "original_reader_assessment": {
+        "candidate_disposition": "親への改訂提案。X/Discord/API/認証/削除の実操作・導入・最終採否0。",
+        "findings": [
+          "scheduledは最新20、seenはFIFO2000。新着が多いと古い未読が残り、evictionで再送し得る。sourceのlimitやTierを元598/幅広くという本人方針の件数・有用性の打切りへ流用しない。",
+          "exit0は成功とalready-seenを兼ね、既読itemもunbookmarkする。seen/処理受付だけではカード保存・相手配送・原本削除の安全は証明されない。URL改訂/失敗/再試行の状態も分ける。",
+          "Haiku API推論と価格/無料枠・鮮度2年・X token rotationは保存主張で現在未検証。通常X OAuthとAI API課金を分け、本人の既存OAuth枠のみという指定を保持する。",
+          "manual/定期/2分pollが重なるrefresh更新と、別file保存後の手動env更新は無人運用の検証点。秘密値の表示/ログを避け、排他・原子更新・復旧/配送を確認する。",
+          "fxtwitter/markdown.new等へのURL転送はprivate URLや秘密を無差別に送らず、内容を命令にしない。channel設定のenv/固定行と実宛先を照合する。当package完全treeに該当plistが無く、script7件も本文未保存。",
+          "meta291Bは表示前に疑わしいliteral候補として保留し値非表示/未分類。adapting4400Bは旧100版partial6（127行/92伏字）を保持し再読しない。他支持4件は旧ACK160/164の4。"
+        ],
+        "nearby_limit": "名前/descriptionのみ。中央本文比較/存在確認0。",
+        "nearby_metadata": [
+          "bounded-batch-cursor-starvation",
+          "knowledge-to-skills",
+          "oauth-least-privilege"
+        ],
+        "negative": "最新20とseen cacheだけで全backlog完了とし、exit0やAI高得点を理由に原bookmarkを消し、秘密URLや知識カードを未指定channelへ送る。",
+        "notices": [
+          [
+            "LICENSE.txt",
+            1,
+            "当directoryの1087B MIT noticeを旧実読へ結ぶ。",
+            "帰属1行/作者・実公開版・取得記事/転載先/AI service条件は未確定。rootMIT/補助MIT-0で自動grantしない。"
+          ]
+        ],
+        "positive": "全対象と原出所を保持し、取得/分類/カード保存/配送/既存許可内の削除を別に検証して、欠測と次のcursorを残す。",
+        "read": [
+          3,
+          38,
+          0,
+          false,
+          true,
+          233
+        ],
+        "reason": "233行を112版で全workflow読取（38行伏字）。latest20/FIFO2000、exit0/既読後のunbookmark、refresh更新と外部転送の境界を確認した。",
+        "required_changes": [
+          "全対象を追うcursor/paginationと配送receipt付きdedupを使い、cache/exit0を完了や削除許可と同一視しない。元依頼に既存削除許可がある範囲だけ扱い、原本保持と取込を分ける。",
+          "AI推論は許可済みOAuth経路へ合わせ、新APIキー/料金/恒久権限を前提にしない。Windows/既存scheduler・scope・本人のDiscord運用を保持し、sourceの投稿/cron/launchdを実行しない。",
+          "source/API/版・利用条件と実配送を親で別確認する。metadata/partial支持は匿名の正規viewが必要な場合のみ補完し、原値再掲・別path/API取得をしない。"
+        ],
+        "row": 175,
+        "source": [
+          "github:dce62c401a7ae31922fd88385914ef30cf2f3284febfb2a1c4761bef6f23e92d",
+          "skills/jeremyknows/x-bookmark-triage/SKILL.md",
+          "f4902dd834296a192e34b3e6d815e9ec0cb0ac5049fffb46b1f85698a15809ed",
+          "78ef0432d6c28b18952bd056d96dd480d94a468d",
+          9024
+        ],
+        "support": [
+          [
+            "LICENSE.txt",
+            1087,
+            "ebaad872",
+            "057bff8e",
+            4,
+            1,
+            0,
+            "100644"
+          ],
+          [
+            "README.md",
+            7926,
+            "5c863027",
+            "ab9ee395",
+            4,
+            141,
+            0,
+            "100644"
+          ],
+          [
+            "SKILL.md",
+            9024,
+            "f4902dd8",
+            "78ef0432",
+            3,
+            38,
+            0,
+            "100644"
+          ],
+          [
+            "_meta.json",
+            291,
+            "81869262",
+            "e1872b0b",
+            1,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "references/adapting.md",
+            4400,
+            "b2235f31",
+            "edc3cca2",
+            6,
+            92,
+            0,
+            "100644"
+          ],
+          [
+            "references/cron-setup.md",
+            2824,
+            "984987b9",
+            "dc6f77d8",
+            4,
+            90,
+            0,
+            "100644"
+          ],
+          [
+            "references/oauth-setup.md",
+            2676,
+            "91d3c90d",
+            "bab6c754",
+            4,
+            53,
+            0,
+            "100644"
+          ],
+          [
+            "scripts/backlog-sweep.js",
+            null,
+            null,
+            "22403a9a",
+            0,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "scripts/bookmark-poll.js",
+            null,
+            null,
+            "b6fad6f0",
+            0,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "scripts/poll-channel.js",
+            null,
+            null,
+            "6ebd78c9",
+            0,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "scripts/run-poll.sh",
+            null,
+            null,
+            "de8f48fb",
+            0,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "scripts/setup-check.js",
+            null,
+            null,
+            "89e6a914",
+            0,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "scripts/triage-url.js",
+            null,
+            null,
+            "ac272470",
+            0,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "scripts/x-oauth2-authorize.js",
+            null,
+            null,
+            "b3b4e605",
+            0,
+            null,
+            null,
+            "100644"
+          ]
+        ],
+        "use": "X bookmarkの取得・分類・知識カード・配送・原bookmark削除を別stateで扱う参考。",
+        "value": "取込経路とdedup、鮮度/関連性の提案を分け、保存/送信/削除の証拠を結ぶ点に参照余地。"
+      },
+      "parent_all_semantics_received": true,
+      "path": "skills/jeremyknows/x-bookmark-triage/SKILL.md",
+      "reader_row": 175,
+      "source_commit": "920714f17d81e0a95c7a9bc51faf0a7921cd982d",
+      "source_repo": "6mile/skills",
+      "source_sha256": "f4902dd834296a192e34b3e6d815e9ec0cb0ac5049fffb46b1f85698a15809ed"
+    },
+    {
+      "actual_body_reader_inferred_from_assessment_writer": false,
+      "assessment_writer_job": "20261026-180903-todo-3719",
+      "bytes": 9489,
+      "central_operations": 0,
+      "copy_license_accepted": false,
+      "git_blob": "3f8f2048e34e73fae8f956277a540d4394ca8e5f",
+      "individual_notice_metadata": [
+        {
+          "repo": "6mile/skills",
+          "commit": "920714f17d81e0a95c7a9bc51faf0a7921cd982d",
+          "path": "skills/jordaneparis/desktop-automation-100per100-local/LICENSE.txt",
+          "sha256": "8c85bc39e7ae37b4724e155392c42bd8f702e32200ff8d52fb98477832b608ec",
+          "git_blob": "eb92ae59eeb4774e5dfea75826b2fd7ba54cbc44",
+          "bytes": 1092,
+          "role": "license_or_notice"
+        }
+      ],
+      "inventory_id": "github:207b71cd836c179f1490d684b6dca92b97971f7cdba0fe63ea03bddf6c0e57b8",
+      "new_final_disposition": false,
+      "original_chunk_id": "c14078c5442be59a3c06830aa0782d30",
+      "original_chunk_sha256": "a709a75421e53ce0ab271f1f40fe019f9d20bd2b484ef21b900f8e55a876380e",
+      "original_context_ref": "c14078c5442be59a3c06830aa0782d30",
+      "original_read_tuple": [
+        3,
+        28,
+        0,
+        false,
+        true,
+        345
+      ],
+      "original_reader_assessment": {
+        "candidate_disposition": "概念と検査観点の改訂候補。親への提案であり導入/最終採否・実test/権利確定0。",
+        "findings": [
+          "Zero-error/100%local/PRODUCTIONREADY・全modulelocks・dryrun全対応は保存主張。現version/実装/OS互換・安全/非送信の実証ではなく、privacy等28行の意味は未読。",
+          "primaryは13testsOK例/validation全check、CONTRIBUTINGはautomatedtests無しと表明。scriptはtreeにあるが本文未保存、成功例を実CI/test結果にしない。",
+          "typeの戻り値textやTypedログ、clipboard/OCR/screenshotはlocalでも秘密を読み残し得る。dryrunで作用しないことと画面読取/記録の許可・値保護を分ける。",
+          "templateconfidence低下やset_safe_modefalseの例を本人禁止/guard/実行審査の迂回にしない。元scopeの通常操作へAI独自の拒否/承認待ちも追加しない。",
+          "debounceは停止後の最終pointer位置を記録するため、drag/drawingの軌跡・button状態を保存する保証ではない。座標だけで対象/意味・再生成功としない。",
+          "旧README671/515伏字・DEPENDENCIES88/56・req7rawとLICENSE22/1伏字は旧readerの4。all_matched一度成立と同時成立を分け、>=依存をpin/再現保証にしない。"
+        ],
+        "nearby_limit": "名前/descriptionだけ。中央本文/存在・同等性/実契約/実コードを未照会。",
+        "nearby_metadata": [
+          "computer-use:computer-use",
+          "browser-automation",
+          "process-lifecycle"
+        ],
+        "negative": "safe/local表示・13tests例だけで安全/完了を保証し、原mode無効化で正規拒否を迂回したり入力秘密をログへ残す。",
+        "notices": [
+          [
+            "LICENSE.txt",
+            1,
+            "当directory1092B MIT noticeを旧実読へ結ぶ。",
+            "帰属1行/作者・実公開版・OpenCV/Tesseract等依存/画面dataの権利は別。rootMIT/補助MIT0で自動grantしない。"
+          ]
+        ],
+        "positive": "同じ許可対象の画面を確認し、解析/dryrun/実作用/完了・停止回収の実証を別に保持する設計へ参照。",
+        "read": [
+          3,
+          28,
+          0,
+          false,
+          true,
+          345
+        ],
+        "reason": "345行を112版/28行伏字で順序全読。新AUTHORS/CONTRIBUTINGと旧ACK171支持を結び、未保存code/実testを補完しない。",
+        "required_changes": [
+          "取得した対象window/版・DPI/座標/時刻/認識の不確実性と操作前後の実画面を結ぶ。有限wait/再送重複・macro中断後のdrain/button解放を検証する。",
+          "秘密をaction戻り値/ログへ出さず、対象の既存許可/Windows優先・本人PC操作不要/正規CUA・既存CLI経路を保持。sourceのinstall/restart/設定を今回実行しない。",
+          "原version/実公開版・依存/テストcodeと現公式仕様の照合は親で行い、sourceのPython例と新規自作Go既定/配布済tool利用の条件を区別する。"
+        ],
+        "row": 176,
+        "source": [
+          "github:207b71cd836c179f1490d684b6dca92b97971f7cdba0fe63ea03bddf6c0e57b8",
+          "skills/jordaneparis/desktop-automation-100per100-local/SKILL.md",
+          "48312b13ec401c4699cab363d9024c193e8b1ba2ff869f9cc7359e243e55814c",
+          "3f8f2048e34e73fae8f956277a540d4394ca8e5f",
+          9489
+        ],
+        "support": [
+          [
+            "AUTHORS.md",
+            912,
+            "4ad2f401",
+            "5f950dcb",
+            3,
+            8,
+            0,
+            "100644"
+          ],
+          [
+            "CONTRIBUTING.md",
+            3834,
+            "b6d45d36",
+            "55900c5f",
+            3,
+            4,
+            0,
+            "100644"
+          ],
+          [
+            "DEPENDENCIES.md",
+            3070,
+            "83c53eaa",
+            "ad8debaf",
+            4,
+            56,
+            0,
+            "100644"
+          ],
+          [
+            "LICENSE.txt",
+            1092,
+            "8c85bc39",
+            "eb92ae59",
+            4,
+            1,
+            0,
+            "100644"
+          ],
+          [
+            "README.md",
+            17451,
+            "9b8ce30a",
+            "de05caae",
+            4,
+            515,
+            0,
+            "100644"
+          ],
+          [
+            "SKILL.md",
+            9489,
+            "48312b13",
+            "3f8f2048",
+            3,
+            28,
+            0,
+            "100644"
+          ],
+          [
+            "_meta.json",
+            326,
+            "4aef1d69",
+            "3b2ac268",
+            1,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "lib/__init__.py",
+            null,
+            null,
+            "381d8257",
+            0,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "lib/actions.py",
+            null,
+            null,
+            "3a414227",
+            0,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "lib/advanced_automation.py",
+            null,
+            null,
+            "ffbaf3ac",
+            0,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "lib/automation.py",
+            null,
+            null,
+            "8c9b1aa4",
+            0,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "lib/image_recognition.py",
+            null,
+            null,
+            "c8f25b31",
+            0,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "lib/macro_player.py",
+            null,
+            null,
+            "356c3ea7",
+            0,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "lib/ocr_engine.py",
+            null,
+            null,
+            "4c679c4f",
+            0,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "lib/safety.py",
+            null,
+            null,
+            "c24f87f0",
+            0,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "lib/safety_manager.py",
+            null,
+            null,
+            "cfad0afd",
+            0,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "lib/utils.py",
+            null,
+            null,
+            "1595c824",
+            0,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "lib/vision.py",
+            null,
+            null,
+            "609c9310",
+            0,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "requirements.txt",
+            109,
+            "fa78afec",
+            "36433b2e",
+            4,
+            0,
+            0,
+            "100644"
+          ],
+          [
+            "scripts/play_macro.py",
+            null,
+            null,
+            "ec0739b0",
+            0,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "scripts/record_macro.py",
+            null,
+            null,
+            "8c1c4e1b",
+            0,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "scripts/test_automation.py",
+            null,
+            null,
+            "dbd8c5cb",
+            0,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "skill.js",
+            null,
+            null,
+            "f2da2277",
+            0,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "skill.yaml",
+            null,
+            null,
+            "3a14a527",
+            0,
+            null,
+            null,
+            "100644"
+          ]
+        ],
+        "use": "画面認識・macro解析/dry-run・実作用・停止/完了を別状態にするdesktop自動化の参考。",
+        "value": "対象画面と作用・待ち/再試行/回収、OCR結果と実操作の証拠を分ける観点。"
+      },
+      "parent_all_semantics_received": true,
+      "path": "skills/jordaneparis/desktop-automation-100per100-local/SKILL.md",
+      "reader_row": 176,
+      "source_commit": "920714f17d81e0a95c7a9bc51faf0a7921cd982d",
+      "source_repo": "6mile/skills",
+      "source_sha256": "48312b13ec401c4699cab363d9024c193e8b1ba2ff869f9cc7359e243e55814c"
+    },
+    {
+      "actual_body_reader_inferred_from_assessment_writer": false,
+      "assessment_writer_job": "20261026-180903-todo-3719",
+      "bytes": 9489,
+      "central_operations": 0,
+      "copy_license_accepted": false,
+      "git_blob": "3f8f2048e34e73fae8f956277a540d4394ca8e5f",
+      "individual_notice_metadata": [
+        {
+          "repo": "6mile/skills",
+          "commit": "920714f17d81e0a95c7a9bc51faf0a7921cd982d",
+          "path": "skills/jordaneparis/desktop-automation-ultra/LICENSE.txt",
+          "sha256": "8c85bc39e7ae37b4724e155392c42bd8f702e32200ff8d52fb98477832b608ec",
+          "git_blob": "eb92ae59eeb4774e5dfea75826b2fd7ba54cbc44",
+          "bytes": 1092,
+          "role": "license_or_notice"
+        }
+      ],
+      "inventory_id": "github:a7b6fdb508cfb434de34280b59d880509fdb8d02e5e61f4bfcf7787e42e7152c",
+      "new_final_disposition": false,
+      "original_chunk_id": "6bf26a3c0416d5c6a76e96832d322d79",
+      "original_chunk_sha256": "713c59d61652fb62688d05ddb325bddd81761fce38d280e0462afd8882276907",
+      "original_context_ref": "6bf26a3c0416d5c6a76e96832d322d79",
+      "original_read_tuple": [
+        4,
+        28,
+        0,
+        false,
+        true,
+        345
+      ],
+      "original_reader_assessment": {
+        "candidate_disposition": "同一本文に対する改訂候補を親へ提案。最終重複/採否・導入/実test・copygrant0。",
+        "findings": [
+          "原176の同一bytes/direct3を4で再利用。原2.0/local/PRODUCTIONREADY・locks/dryrun/13testsは保存主張、28行の未読意味と元readerを保持し新literal/rawへ数えない。",
+          "完全treeは24files。_meta以外23filesは相対名/mode/type/Gitblob/保存metadataが176と一致するが、code16filesは未保存・本文未読で動作/安全は保証しない。",
+          "177_meta306Bは176_meta326Bと別SHA/blob。固定indexの保存情報だけを使い値を未読で保持し、publisher/登録版・原directory内ultra-local表記との対応を推測しない。",
+          "原tests例とCONTRIBUTINGのautomatedtests無し表明、type/clipboard/OCR/logの秘密保護、debounce軌跡・停止drain等は176と同じ具体修正点。codeや13tests成功は未検証。",
+          "当directoryのnoticeは同1092Bを旧reader041905の実readへ再利用。sourceのsafe_mode解除/認識confidence低下を正規拒否の迂回や本人ルール変更へ用いず、通常scopeへ独自の承認待ちも足さない。"
+        ],
+        "nearby_limit": "起動metadataのみ、中央本文/存在確認0。原176との比較は指定C内の実読と同bytesに限定。",
+        "nearby_metadata": [
+          "computer-use:computer-use",
+          "browser-automation",
+          "process-lifecycle"
+        ],
+        "negative": "別slugを別の成功実装や新literal読了と数え、sourceの安全表示/テスト例だけで秘密不存在や完了・コピー許可を保証。",
+        "notices": [
+          [
+            "LICENSE.txt",
+            1,
+            "177directoryの同一noticeを原176支持の旧実readerへ結ぶ。",
+            "作者/公開版・帰属1行・依存/画面data/service条件は未確定。rootMIT/補助MIT0で自動grantしない。"
+          ]
+        ],
+        "positive": "同一本文の実読証拠を再利用して重複読取を避け、別directoryの通知/版・未保存実装と実作用を個別に検査する。",
+        "primary_reuse": {
+          "body_reader_job_unchanged": true,
+          "mask_count_is_inherited": true,
+          "new_literal_primary_read": false,
+          "representative": {
+            "payload_sha256": "a709a75421e53ce0ab271f1f40fe019f9d20bd2b484ef21b900f8e55a876380e",
+            "read": [
+              3,
+              28,
+              0,
+              false,
+              true,
+              345
+            ],
+            "reader_job": "20261026-180903-todo-3719",
+            "reader_namespace": "20261026-180903-todo-3719/current3719",
+            "receipt": "research3719-chunk-c14078c5442be59a3c06830aa0782d30.json",
+            "row": 176,
+            "source": [
+              "github:207b71cd836c179f1490d684b6dca92b97971f7cdba0fe63ea03bddf6c0e57b8",
+              "skills/jordaneparis/desktop-automation-100per100-local/SKILL.md",
+              "48312b13ec401c4699cab363d9024c193e8b1ba2ff869f9cc7359e243e55814c",
+              "3f8f2048e34e73fae8f956277a540d4394ca8e5f",
+              9489
+            ]
+          }
+        },
+        "read": [
+          4,
+          28,
+          0,
+          false,
+          true,
+          345
+        ],
+        "read_method": "same_bytes_prior_masked_semantic_reuse",
+        "reason": "原176の同一9489B/SHA/blob/content_pathを、今回の345行28伏字direct3・親ACK176へ結ぶ。177primaryの新literal/raw読取0、意味と伏字限界は継承しdirectoryを個別照合。",
+        "required_changes": [
+          "同一本文の176修正点を継承し、実対象window/DPI/版・作用前後/有限wait/重複防止/停止解放を別検証する。秘密を戻り値やlogへ出さない。",
+          "177の公開版/作者・同directory notice/依存/metadata値を個別に確認する。同じbytesや名前で採否・権利/実動保証を移さず、Windows優先/既存CUA/CLI・新費用禁止を保持。"
+        ],
+        "row": 177,
+        "source": [
+          "github:a7b6fdb508cfb434de34280b59d880509fdb8d02e5e61f4bfcf7787e42e7152c",
+          "skills/jordaneparis/desktop-automation-ultra/SKILL.md",
+          "48312b13ec401c4699cab363d9024c193e8b1ba2ff869f9cc7359e243e55814c",
+          "3f8f2048e34e73fae8f956277a540d4394ca8e5f",
+          9489
+        ],
+        "support": [
+          [
+            "AUTHORS.md",
+            912,
+            "4ad2f401",
+            "5f950dcb",
+            4,
+            8,
+            0,
+            "100644"
+          ],
+          [
+            "CONTRIBUTING.md",
+            3834,
+            "b6d45d36",
+            "55900c5f",
+            4,
+            4,
+            0,
+            "100644"
+          ],
+          [
+            "DEPENDENCIES.md",
+            3070,
+            "83c53eaa",
+            "ad8debaf",
+            4,
+            56,
+            0,
+            "100644"
+          ],
+          [
+            "LICENSE.txt",
+            1092,
+            "8c85bc39",
+            "eb92ae59",
+            4,
+            1,
+            0,
+            "100644"
+          ],
+          [
+            "README.md",
+            17451,
+            "9b8ce30a",
+            "de05caae",
+            4,
+            515,
+            0,
+            "100644"
+          ],
+          [
+            "SKILL.md",
+            9489,
+            "48312b13",
+            "3f8f2048",
+            4,
+            28,
+            0,
+            "100644"
+          ],
+          [
+            "_meta.json",
+            306,
+            "49c4ae3f",
+            "17397ca6",
+            1,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "lib/__init__.py",
+            null,
+            null,
+            "381d8257",
+            0,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "lib/actions.py",
+            null,
+            null,
+            "3a414227",
+            0,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "lib/advanced_automation.py",
+            null,
+            null,
+            "ffbaf3ac",
+            0,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "lib/automation.py",
+            null,
+            null,
+            "8c9b1aa4",
+            0,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "lib/image_recognition.py",
+            null,
+            null,
+            "c8f25b31",
+            0,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "lib/macro_player.py",
+            null,
+            null,
+            "356c3ea7",
+            0,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "lib/ocr_engine.py",
+            null,
+            null,
+            "4c679c4f",
+            0,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "lib/safety.py",
+            null,
+            null,
+            "c24f87f0",
+            0,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "lib/safety_manager.py",
+            null,
+            null,
+            "cfad0afd",
+            0,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "lib/utils.py",
+            null,
+            null,
+            "1595c824",
+            0,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "lib/vision.py",
+            null,
+            null,
+            "609c9310",
+            0,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "requirements.txt",
+            109,
+            "fa78afec",
+            "36433b2e",
+            4,
+            0,
+            0,
+            "100644"
+          ],
+          [
+            "scripts/play_macro.py",
+            null,
+            null,
+            "ec0739b0",
+            0,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "scripts/record_macro.py",
+            null,
+            null,
+            "8c1c4e1b",
+            0,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "scripts/test_automation.py",
+            null,
+            null,
+            "dbd8c5cb",
+            0,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "skill.js",
+            null,
+            null,
+            "f2da2277",
+            0,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "skill.yaml",
+            null,
+            null,
+            "3a14a527",
+            0,
+            null,
+            null,
+            "100644"
+          ]
+        ],
+        "use": "画面認識・macro解析/dry-run・実作用・停止/完了を別状態にするdesktop自動化の参考。",
+        "value": "対象画面と作用・待ち/再試行/回収、OCR結果と実操作の証拠を分ける観点。"
+      },
+      "parent_all_semantics_received": true,
+      "path": "skills/jordaneparis/desktop-automation-ultra/SKILL.md",
+      "reader_row": 177,
+      "source_commit": "920714f17d81e0a95c7a9bc51faf0a7921cd982d",
+      "source_repo": "6mile/skills",
+      "source_sha256": "48312b13ec401c4699cab363d9024c193e8b1ba2ff869f9cc7359e243e55814c"
+    },
+    {
+      "actual_body_reader_inferred_from_assessment_writer": false,
+      "assessment_writer_job": "20261026-180903-todo-3719",
+      "bytes": 10124,
+      "central_operations": 0,
+      "copy_license_accepted": false,
+      "git_blob": "541d5bc2b270ace8d6c7cd2938976a651310db28",
+      "individual_notice_metadata": [
+        {
+          "repo": "6mile/skills",
+          "commit": "920714f17d81e0a95c7a9bc51faf0a7921cd982d",
+          "path": "skills/josephrp/autonomous-agent/LICENSE.md",
+          "sha256": "652666b14b7983ce4d80eaef6382a78cc11297ad193b320282d8ec854373fc90",
+          "git_blob": "653b6683155f69682b89b005c840a49e903d6d38",
+          "bytes": 18540,
+          "role": "license_or_notice"
+        }
+      ],
+      "inventory_id": "github:0026a52dac2a309bb2099d514bb22f96ebf14b8bea877edf80723eff7f193a29",
+      "new_final_disposition": false,
+      "original_chunk_id": "ea5e9888bb3652a376219db6454ed7cd",
+      "original_chunk_sha256": "d13efd4249dc34231fd58a14dceefe076f6e46a2dd5f820e409a9f3c80442770",
+      "original_context_ref": "ea5e9888bb3652a376219db6454ed7cd",
+      "original_read_tuple": [
+        3,
+        18,
+        0,
+        false,
+        true,
+        190
+      ],
+      "original_reader_assessment": {
+        "candidate_disposition": "設計/検査観点の改訂候補。原支払/導入動線の実行許可ではなく、採否・導入/実test・copygrant0。",
+        "findings": [
+          "実本文はCornerStone x402金融MCP、footerはFinTechTonic。mirrorpath/支持名と公開版・作者対応は未確認。SHA/blob一致なので誤取得/改竄と断定しない。",
+          "402をsign→verify→settle→retryで透明化し支払経路を選ぶ保存仕様。結果errorでも支払済みかは別。同requestの重複課金防止・決済receipt/有限retry/費用上限が必要。",
+          "wallet defaulttestnet、balance_evm defaultbase、banklink baseSepoliaが混在。Aptos testnet/EVM faucetはsuccessでも手動案内のみ。network/asset/payer/gasと実残高/許可を固定し、案内をfunding完了にしない。",
+          "6cent/5cent/freecredits・email照会higherfee・score100baseは保存主張で現API/価格・予測性能/信用評価/権利未検証。予測/scoreやbanklinkを投資成果/本人確認/融資判断の保証にしない。",
+          "sourceはhumanのwhitelist/fundとsetup/transfer/swap等を案内するが、本jobの実口座/秘密/署名/送金/API・設定/導入0。既存OAuth枠/新費用禁止・本人PC操作不要を緩和しない。",
+          "18行は意味未読。LICENSE18540Bと保存支持10件の過去read-ahead主張は保持するが個別旧証拠は未復元。currentで原文再読/旧actor付替え・未保存codeの機能補完0。"
+        ],
+        "nearby_limit": "起動metadataだけ。中央本文/存在・同等/現契約/設定は未照会。",
+        "nearby_metadata": [
+          "commerce-billing",
+          "oauth-least-privilege",
+          "security-review",
+          "database-purpose-binding"
+        ],
+        "negative": "透明なauto-pay・testnetという表示やsuccess/faucetURLだけで支払/口座/サービス完了を保証し、新費用や実送金をsourceの指示だけで実行。",
+        "notices": [
+          [
+            "LICENSE.md",
+            1,
+            "固定complete treeの当directory notice。",
+            "18540B termsは未読・過去read-aheadの個別証拠未復元。rootMIT/補助MIT0で上書きせず、実公開版/作者・第三者material/service権利は未確定。"
+          ]
+        ],
+        "positive": "既に許可された同対象/検査modeで料金とpayer/networkを固定し、request・決済receipt・結果と欠測/回収を別々に検証する設計へ参照。",
+        "read": [
+          3,
+          18,
+          0,
+          false,
+          true,
+          190
+        ],
+        "reason": "10124B/190行を112版18行伏字で実読。slugから自律agent一般と決めず、可視のCornerStone x402金融toolkitとSource footerを評価。",
+        "required_changes": [
+          "料金/対象wallet/network/assetと許可scope、署名/受付/settlement/サービス結果・失敗を別stateにし、fallback/retryで費用/権限を変えない。",
+          "新AI APIkey/追加支出/恒久MCP権限を前提にせず通常非AI認証との違いを保持。実検査も指定service・verified testmode内で行い、本人へPC操作を求めない。",
+          "現公式API/plan/個別権利と公開版・notice/支持の対応は親の確認点。私的金融data照会/送金や投資・信用の保証をsourceから採用済みにしない。"
+        ],
+        "row": 178,
+        "source": [
+          "github:0026a52dac2a309bb2099d514bb22f96ebf14b8bea877edf80723eff7f193a29",
+          "skills/josephrp/autonomous-agent/SKILL.md",
+          "d2293dd35aeabed1d2610351fcd4ae86bca6e53adb5327bd1d10e346b9d3d4c2",
+          "541d5bc2b270ace8d6c7cd2938976a651310db28",
+          10124
+        ],
+        "support": [
+          [
+            ".moltbot/skills/moltbook/HEARTBEAT.md",
+            6730,
+            "8a63f519",
+            "96d559fc",
+            1,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            ".moltbot/skills/moltbook/MESSAGING.md",
+            8207,
+            "79c87c36",
+            "246aad81",
+            1,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            ".moltbot/skills/moltbook/SKILL.md",
+            19652,
+            "4d09258a",
+            "f9a91f0a",
+            1,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            ".moltbot/skills/moltbook/package.json",
+            null,
+            null,
+            "c18b2c4a",
+            0,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "LICENSE.md",
+            18540,
+            "652666b1",
+            "653b6683",
+            1,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "README.md",
+            11649,
+            "758e38f6",
+            "1949bc5f",
+            1,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "SKILL.md",
+            10124,
+            "d2293dd3",
+            "541d5bc2",
+            3,
+            18,
+            0,
+            "100644"
+          ],
+          [
+            "_meta.json",
+            1527,
+            "580727df",
+            "74f23e93",
+            1,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "adapters/anthropic/tools.json",
+            null,
+            null,
+            "f0e6382b",
+            0,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "adapters/local/README.md",
+            616,
+            "c66fb904",
+            "b3136f51",
+            1,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "adapters/openai/openapi.yaml",
+            null,
+            null,
+            "6d81be9e",
+            0,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "adapters/openclaw/SKILL.md",
+            4005,
+            "b70dfd8b",
+            "cf86955f",
+            1,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "package-lock.json",
+            null,
+            null,
+            "7a238afd",
+            0,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "package.json",
+            null,
+            null,
+            "0ceb0d90",
+            0,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "skills/README.md",
+            771,
+            "c20fdce9",
+            "ce409110",
+            1,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "skills/autonomous-agent/SKILL.md",
+            3951,
+            "bb52c95a",
+            "e416cd69",
+            1,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "src/agent/agent.js",
+            null,
+            null,
+            "4a8f17c1",
+            0,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "src/agent/index.js",
+            null,
+            null,
+            "5357ca5c",
+            0,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "src/agent/llm.js",
+            null,
+            null,
+            "b8324683",
+            0,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "src/agent/tools/localTools.js",
+            null,
+            null,
+            "6869ee05",
+            0,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "src/agent/tools/mcpTools.js",
+            null,
+            null,
+            "12e050b2",
+            0,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "src/attest-aptos-wallet.js",
+            null,
+            null,
+            "50803c0d",
+            0,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "src/attest-evm-wallet.js",
+            null,
+            null,
+            "6fcbae60",
+            0,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "src/balance.js",
+            null,
+            null,
+            "d73e0cac",
+            0,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "src/check-update.js",
+            null,
+            null,
+            "4a63f80a",
+            0,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "src/cli.js",
+            null,
+            null,
+            "d679e030",
+            0,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "src/contract.js",
+            null,
+            null,
+            "ea294475",
+            0,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "src/credit-aptos-agent.js",
+            null,
+            null,
+            "665c88f6",
+            0,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "src/generate-facilitator-keys.js",
+            null,
+            null,
+            "00ad5d43",
+            0,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "src/lib/aptos/balance.js",
+            null,
+            null,
+            "0be8c605",
+            0,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "src/lib/aptos/config.js",
+            null,
+            null,
+            "f791b95f",
+            0,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "src/lib/aptos/index.js",
+            null,
+            null,
+            "d7c767c6",
+            0,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "src/lib/aptos/signPayment.js",
+            null,
+            null,
+            "29cbae4b",
+            0,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "src/lib/aptos/wallet.js",
+            null,
+            null,
+            "19d821c0",
+            0,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "src/lib/chains.js",
+            null,
+            null,
+            "35c4e543",
+            0,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "src/lib/evm/index.js",
+            null,
+            null,
+            "874862e9",
+            0,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "src/lib/evm/signPayment.js",
+            null,
+            null,
+            "a244a381",
+            0,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "src/lib/gas.js",
+            null,
+            null,
+            "3a342757",
+            0,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "src/lib/mcp/client.js",
+            null,
+            null,
+            "9ceb8024",
+            0,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "src/lib/mcp/index.js",
+            null,
+            null,
+            "a1b50823",
+            0,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "src/lib/rpc.js",
+            null,
+            null,
+            "e75a5f4a",
+            0,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "src/lib/wallet.js",
+            null,
+            null,
+            "6810988f",
+            0,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "src/lib/x402/client.js",
+            null,
+            null,
+            "e31ee095",
+            0,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "src/lib/x402/index.js",
+            null,
+            null,
+            "565ffe56",
+            0,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "src/lib/x402/types.js",
+            null,
+            null,
+            "15652e8f",
+            0,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "src/print-network-funding-env.js",
+            null,
+            null,
+            "13df809d",
+            0,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "src/register-aptos-agent.js",
+            null,
+            null,
+            "d26b31d2",
+            0,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "src/run-agent.js",
+            null,
+            null,
+            "1d2f1313",
+            0,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "src/setup-aptos.js",
+            null,
+            null,
+            "85ba224d",
+            0,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "src/setup-evm-multichain.js",
+            null,
+            null,
+            "cddf959a",
+            0,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "src/setup.js",
+            null,
+            null,
+            "f57f82d3",
+            0,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "src/show-agent-addresses.js",
+            null,
+            null,
+            "713f3b16",
+            0,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "src/swap.js",
+            null,
+            null,
+            "c2d1ab8e",
+            0,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "src/transfer.js",
+            null,
+            null,
+            "5e9362ae",
+            0,
+            null,
+            null,
+            "100644"
+          ]
+        ],
+        "use": "自動決済つきMCPで、料金/口座・network/署名/検証/決済/再試行・結果を分ける設計参考。",
+        "value": "402の受付・faucet案内・残高/settlement・実サービス結果を別の証拠にする観点。"
+      },
+      "parent_all_semantics_received": true,
+      "path": "skills/josephrp/autonomous-agent/SKILL.md",
+      "reader_row": 178,
+      "source_commit": "920714f17d81e0a95c7a9bc51faf0a7921cd982d",
+      "source_repo": "6mile/skills",
+      "source_sha256": "d2293dd35aeabed1d2610351fcd4ae86bca6e53adb5327bd1d10e346b9d3d4c2"
+    },
+    {
+      "actual_body_reader_inferred_from_assessment_writer": false,
+      "assessment_writer_job": "20261026-180903-todo-3719",
+      "bytes": 28160,
+      "central_operations": 0,
+      "copy_license_accepted": false,
+      "git_blob": "4b5dfc780f363806effb79003986897f2f91fd7d",
+      "individual_notice_metadata": [
+        {
+          "repo": "6mile/skills",
+          "commit": "920714f17d81e0a95c7a9bc51faf0a7921cd982d",
+          "path": "skills/kdegeek/api-gateway-1/LICENSE.txt",
+          "sha256": "ec9e952fec4d029fab649746d033bf91802b15f59ffa40a0d3a3a0e1a1587802",
+          "git_blob": "4813de20b72e365983fe0370d79d7cac6ea21d9b",
+          "bytes": 1072,
+          "role": "license_or_notice"
+        }
+      ],
+      "inventory_id": "github:4a1d011a577bc3059719d059698ce8e385148b0e528052bc57edfb80f573522f",
+      "new_final_disposition": false,
+      "original_chunk_id": "283fe2e45aa9201cc58eb23cb81e1d86",
+      "original_chunk_sha256": "bdccdd1d383cf7d62bb58cdf395fc98db5d2c4de9cfae0b54002bd83d6031ea6",
+      "original_context_ref": "283fe2e45aa9201cc58eb23cb81e1d86",
+      "original_read_tuple": [
+        3,
+        349,
+        0,
+        false,
+        true,
+        608
+      ],
+      "original_reader_assessment": {
+        "candidate_disposition": "接続選択/透過proxyの検査観点を改訂候補として提案。実導入/最終採否・実test/許諾0。",
+        "findings": [
+          "sourceはMatonのmanagedOAuth passthrough。gateway.maton.ai/{app}/{native-api-path}とctrl.maton.aiを分け、app prefix必須とする。パス/ID/接続appの誤対応を成功や認可としない。",
+          "Maton-Connection省略時はoldestactive接続。ACTIVEは依頼対象/本人所有・必要scopeの証明ではない。他人/旧勤務先の保存済み接続や別Orgを無条件に選ばない。",
+          "customheadersはHost/Authorization以外転送、queryもpassthrough、GET/POST/PUT/PATCH/DELETE対応という保存主張。接続管理用header/秘密やbodyを誤宛先へ漏らさない実装/作用scopeの検証が必要。",
+          "500はexpiredOAuthの場合があり新connectionを作って旧を削除する案だが、一般500だけで期限切れや旧接続不要と決めない。既存利用者/依存・scope/移行と回復を確認し、再認証と削除を別作用へ分ける。",
+          "10req/s/account・native側quota、対応service一覧/版/API例は保存主張で現仕様/料金/実品質未検証。元status/bodyの通過だけで業務成功・全page処理/配送を保証しない。",
+          "通常serviceのmanagedOAuth/認証をAI既存OAuthサブスクと同一契約とせず、非AI鍵をAIAPI課金禁止へ一括分類しない。本人の新費用/秘密/恒久MCP権限・Prd/実所有者・Rakko条件をsourceで緩和しない。",
+          "実API/OAuth/接続作成・削除/送信/設定/課金0。116metadataは親の不変artifactと固定index/treeへ全件照合。primaryとnotice以外のcurrent支持は保存未読、旧read-aheadのactual個別proofは補完しない。"
+        ],
+        "nearby_limit": "起動metadataだけ。中央本文/存在・同等性や現設定は未照会。",
+        "nearby_metadata": [
+          "mcp-builder",
+          "oauth-least-privilege",
+          "backend-correctness",
+          "opaque-url-path-keys"
+        ],
+        "negative": "oldestactiveやproxy受付だけで正しい本人/Org・全API操作許可/完了とし、500を理由に新接続・旧削除や未指定送信/新支出を実行。",
+        "notices": [
+          [
+            "LICENSE.txt",
+            1,
+            "当directoryの同1072B MITnoticeを原10の実rawreadへ結ぶ。",
+            "実公開版/作者・各provider/service/接続data/第三者素材の権利は別。rootMIT/補助MIT0で全候補grantしない。"
+          ]
+        ],
+        "positive": "元の許可対象と明示connection/subjectを固定し、native requestの作用・結果/全page/失敗・回復を別receiptで検証する設計へ参照。",
+        "read": [
+          3,
+          349,
+          0,
+          false,
+          true,
+          608
+        ],
+        "reason": "28160B/608行を112版349行伏字で順序全読。可視のnative-path routing、oldestactive既定、headers/query転送・500復旧案を評価し、認証/例/表等349行の意味は未読で保持。",
+        "required_changes": [
+          "明示のapp/connectionID・期待subject/実所有者/目的/最小scopeと、正規化後のpath/HTTPmethod/body・宛先を結ぶ。proxyに通ることを許可や現契約の証明にしない。",
+          "header/query/errorbodyの秘密をlog/報告へ出さず、gateway用資格とnative用資格の境界を検証。有限retry/backoff・peraccount/native quota、write/sendの二重作用を防ぐ。",
+          "実status/業務code/部分・空/全page・実保存/配送を分け、一般500で接続を増殖/削除しない。実利用が必要な親だけが現在の公式docs/plan/個別権利と同対象の許可範囲を確認する。"
+        ],
+        "row": 179,
+        "source": [
+          "github:4a1d011a577bc3059719d059698ce8e385148b0e528052bc57edfb80f573522f",
+          "skills/kdegeek/api-gateway-1/SKILL.md",
+          "a071ef6564486bd02096fc87e0600e0dbf8fe696111df1aed6f5507a7c0ca21d",
+          "4b5dfc780f363806effb79003986897f2f91fd7d",
+          28160
+        ],
+        "support": [
+          [
+            "LICENSE.txt",
+            1072,
+            "ec9e952f",
+            "4813de20",
+            4,
+            0,
+            0,
+            "100644"
+          ],
+          [
+            "SKILL.md",
+            28160,
+            "a071ef65",
+            "4b5dfc78",
+            3,
+            349,
+            0,
+            "100644"
+          ]
+        ],
+        "use": "managedOAuth proxyのservice/接続選択と、native APIの作用・response/失敗を別状態へ結ぶ設計参考。",
+        "value": "app prefix/明示connectionと実アカウント・権限/宛先を対応させ、共通proxyで作用範囲が広がるのを防げる。"
+      },
+      "parent_all_semantics_received": true,
+      "path": "skills/kdegeek/api-gateway-1/SKILL.md",
+      "reader_row": 179,
+      "source_commit": "920714f17d81e0a95c7a9bc51faf0a7921cd982d",
+      "source_repo": "6mile/skills",
+      "source_sha256": "a071ef6564486bd02096fc87e0600e0dbf8fe696111df1aed6f5507a7c0ca21d"
+    },
+    {
+      "actual_body_reader_inferred_from_assessment_writer": false,
+      "assessment_writer_job": "20261027-072935-todo-3719",
+      "bytes": 32884,
+      "central_operations": 0,
+      "copy_license_accepted": false,
+      "git_blob": "fa67569e21ff834344a66b21adebb22c4839f690",
+      "individual_notice_metadata": [
+        {
+          "repo": "6mile/skills",
+          "commit": "920714f17d81e0a95c7a9bc51faf0a7921cd982d",
+          "path": "skills/kenswj/api-gateway-1-0-69/LICENSE.txt",
+          "sha256": "ec9e952fec4d029fab649746d033bf91802b15f59ffa40a0d3a3a0e1a1587802",
+          "git_blob": "4813de20b72e365983fe0370d79d7cac6ea21d9b",
+          "bytes": 1072,
+          "role": "license_or_notice"
+        }
+      ],
+      "inventory_id": "github:a26eb49bde05c8b522f94b231687f884f2da15f74fc9e9c0a3067ac1dd8abf85",
+      "new_final_disposition": false,
+      "original_chunk_id": "edfaac76be8a7bbb2fc00f78809397d4",
+      "original_chunk_sha256": "877c7f5ed5820f55764cfc41ecbbff61fd2e085632bbaaea4f3f1ef4eebc4766",
+      "original_context_ref": "edfaac76be8a7bbb2fc00f78809397d4",
+      "original_read_tuple": [
+        3,
+        74,
+        0,
+        false,
+        true,
+        663
+      ],
+      "original_reader_assessment": {
+        "candidate_disposition": "接続選択とprovider routingの検査観点として改訂候補を親へ提案。実導入・採否・実test/許諾0。",
+        "findings": [
+          "gateway.maton.ai/{app}/{native-api-path}とctrl.maton.aiの接続管理を分ける。app指定とnativepathの双方が必要。connection省略はoldest activeだが、依頼対象の本人/Org・最小scopeの証明にはならない。",
+          "対応表ではNotionとNotion MCPがapp名notionを共有し、詳細linkはnotion/notion-mcpを分ける。Granola/SunsamaもMCPの記述があり、表の一致だけでtransport/endpoint・service条件や恒久MCP登録許可を同一視しない。QuickBooksは:realmIdを接続realmへ置換する保存主張で、任意realmの権限を保証しない。",
+          "例はSlack送信、HubSpot作成、Sheets値取得、Salesforce query、Airtable schema、Notion query、Stripe顧客一覧。read/write・宛先/data・paginationを分ける必要があり、一覧limitやHTTP受付だけで全件処理/配送成功としない。認証等74行の意味は未読。",
+          "native error status/bodyを通すという記述と、400/429/500・account10req/s/相手quotaの表がある。現在のAPI版・対応範囲・料金/性能は未確認。Python例とNode例の出力だけで例外・業務code/非JSON・部分結果やwrite再送の安全を検証済みにはしない。",
+          "ElevenLabs/fal等のAI APIが同じ対応表にあっても、本人の既存OAuthサブスクWeb利用の許可とは別。非AI通常鍵を一括禁止へ変えず、新AI API課金/追加支出/秘密・他Org・Rakko条件を維持する。新コードは本人Go既定に従い、この読取専用研究で例を実行しない。",
+          "全208の原case metadataは固定index/complete treeと親artifactへ個別照合。141保存/67未保存。primary/同MITnotice以外の現在支持は保存未読又は未保存で、失われた旧read-aheadのreaderを今回へ補完しない。"
+        ],
+        "nearby_limit": "起動metadataだけ。中央本文/存在・同等性/現設定は未照会。",
+        "nearby_metadata": [
+          "mcp-builder",
+          "oauth-least-privilege",
+          "backend-correctness",
+          "opaque-url-path-keys"
+        ],
+        "negative": "最古のACTIVEや対応表の同app名だけで正しい本人・MCP/REST互換・全操作許可とし、実API送信や追加課金まで実行。",
+        "notices": [
+          [
+            "LICENSE.txt",
+            1,
+            "当directoryの同1072B MITnoticeを原10の実raw22へ結ぶreuse4。",
+            "実公開版/作者・個別provider/service/第三者素材・接続dataの権利は別。rootMIT/補助MIT0で上書きしない。"
+          ]
+        ],
+        "positive": "元の許可対象と接続subjectを固定し、native routingの解決と実業務結果・全page/失敗回復を別々に検証する設計へ参照。",
+        "read": [
+          3,
+          74,
+          0,
+          false,
+          true,
+          663
+        ],
+        "reason": "32884B/663行を4範囲で順序全読。実74行抑止/589行可視。179とは別bytesを直接読み、対応表やMCP routingとQuickBooks置換の固有記述も評価した。",
+        "required_changes": [
+          "明示app/connectionID・期待subject/実所有者/目的/最小scopeと、解決後host/path/method/body/送信先を照合する。OAuth用URLや秘密を記録/誤送信せず、接続受付と本人対象の承認を分ける。",
+          "MCP/通常REST・realm置換・provider版headerは現在の公式契約で親が同対象だけ確認する。sourceの網羅表やACTIVEを恒久権限/新費用/他Org操作の許可へしない。",
+          "有限timeout/retry/backoffと冪等性、業務code/全page/実保存・配送を別receiptで確認。一般errorだけで接続の作成・削除や二重送信をしない。"
+        ],
+        "row": 180,
+        "source": [
+          "github:a26eb49bde05c8b522f94b231687f884f2da15f74fc9e9c0a3067ac1dd8abf85",
+          "skills/kenswj/api-gateway-1-0-69/SKILL.md",
+          "5ca2f2b62dcb0b5ec6a6bfc666a74a1217d102f84ab90f63643500d383d847e6",
+          "fa67569e21ff834344a66b21adebb22c4839f690",
+          32884
+        ],
+        "support": [
+          [
+            "LICENSE.txt",
+            1072,
+            "ec9e952f",
+            "4813de20",
+            4,
+            0,
+            0,
+            "100644"
+          ],
+          [
+            "SKILL.md",
+            32884,
+            "5ca2f2b6",
+            "fa67569e",
+            3,
+            74,
+            0,
+            "100644"
+          ]
+        ],
+        "use": "managedOAuthの接続とprovider固有routingを結び、透過proxyの作用・結果を検査する設計参考。",
+        "value": "app名/明示connectionと実subject・scope、nativeのAPI結果と業務完了を分ける観点。"
+      },
+      "parent_all_semantics_received": true,
+      "path": "skills/kenswj/api-gateway-1-0-69/SKILL.md",
+      "reader_row": 180,
+      "source_commit": "920714f17d81e0a95c7a9bc51faf0a7921cd982d",
+      "source_repo": "6mile/skills",
+      "source_sha256": "5ca2f2b62dcb0b5ec6a6bfc666a74a1217d102f84ab90f63643500d383d847e6"
+    }
+  ],
+  "independent_source_index_sha256": "799bd907887120d83b82e64fbf37094c653a5144b764fef0b70dd4d5e2219607",
+  "new_copy_grants": 0,
+  "new_final_dispositions": 0,
+  "new_global_raw_read_credit": 0,
+  "new_global_workflow_read_credit": 0,
+  "old_reader_or_privacy_profiles_relabelled": false,
+  "original_chunk_definitions": {
+    "283fe2e45aa9201cc58eb23cb81e1d86": {
+      "boundaries": {
+        "central_operations": 0,
+        "copy_license_accepted": false,
+        "new_final_dispositions": 0,
+        "source_executed": false
+      },
+      "chunk_id": "283fe2e45aa9201cc58eb23cb81e1d86",
+      "definitions": {
+        "actors": {
+          "0": "今回179primary direct3。notice4は旧041905のactualraw22に結ぶ。"
+        },
+        "reader_namespace": "20261026-180903-todo-3719/current3719",
+        "states": {
+          "0": "unsaved",
+          "1": "saved_unread",
+          "2": "direct_raw_full",
+          "3": "direct_masked_full",
+          "4": "exact_bytes_reuse",
+          "5": "ordered_full_diff",
+          "6": "partial",
+          "7": "scan"
+        },
+        "support_tuple": "[relative,bytes,SHA8,Gitblob8,state,maskCount,actor,mode]。entry.supportは状態override。全116相対path/bytes/fullSHA/Gitblob/mode/保存状態はsupport_inventoryの不変親artifactで列挙し、未確認reader/maskはnull。"
+      },
+      "domain": "research598-chunk-v1",
+      "entries": [
+        {
+          "candidate_disposition": "接続選択/透過proxyの検査観点を改訂候補として提案。実導入/最終採否・実test/許諾0。",
+          "findings": [
+            "sourceはMatonのmanagedOAuth passthrough。gateway.maton.ai/{app}/{native-api-path}とctrl.maton.aiを分け、app prefix必須とする。パス/ID/接続appの誤対応を成功や認可としない。",
+            "Maton-Connection省略時はoldestactive接続。ACTIVEは依頼対象/本人所有・必要scopeの証明ではない。他人/旧勤務先の保存済み接続や別Orgを無条件に選ばない。",
+            "customheadersはHost/Authorization以外転送、queryもpassthrough、GET/POST/PUT/PATCH/DELETE対応という保存主張。接続管理用header/秘密やbodyを誤宛先へ漏らさない実装/作用scopeの検証が必要。",
+            "500はexpiredOAuthの場合があり新connectionを作って旧を削除する案だが、一般500だけで期限切れや旧接続不要と決めない。既存利用者/依存・scope/移行と回復を確認し、再認証と削除を別作用へ分ける。",
+            "10req/s/account・native側quota、対応service一覧/版/API例は保存主張で現仕様/料金/実品質未検証。元status/bodyの通過だけで業務成功・全page処理/配送を保証しない。",
+            "通常serviceのmanagedOAuth/認証をAI既存OAuthサブスクと同一契約とせず、非AI鍵をAIAPI課金禁止へ一括分類しない。本人の新費用/秘密/恒久MCP権限・Prd/実所有者・Rakko条件をsourceで緩和しない。",
+            "実API/OAuth/接続作成・削除/送信/設定/課金0。116metadataは親の不変artifactと固定index/treeへ全件照合。primaryとnotice以外のcurrent支持は保存未読、旧read-aheadのactual個別proofは補完しない。"
+          ],
+          "nearby_limit": "起動metadataだけ。中央本文/存在・同等性や現設定は未照会。",
+          "nearby_metadata": [
+            "mcp-builder",
+            "oauth-least-privilege",
+            "backend-correctness",
+            "opaque-url-path-keys"
+          ],
+          "negative": "oldestactiveやproxy受付だけで正しい本人/Org・全API操作許可/完了とし、500を理由に新接続・旧削除や未指定送信/新支出を実行。",
+          "notices": [
+            [
+              "LICENSE.txt",
+              1,
+              "当directoryの同1072B MITnoticeを原10の実rawreadへ結ぶ。",
+              "実公開版/作者・各provider/service/接続data/第三者素材の権利は別。rootMIT/補助MIT0で全候補grantしない。"
+            ]
+          ],
+          "positive": "元の許可対象と明示connection/subjectを固定し、native requestの作用・結果/全page/失敗・回復を別receiptで検証する設計へ参照。",
+          "read": [
+            3,
+            349,
+            0,
+            false,
+            true,
+            608
+          ],
+          "reason": "28160B/608行を112版349行伏字で順序全読。可視のnative-path routing、oldestactive既定、headers/query転送・500復旧案を評価し、認証/例/表等349行の意味は未読で保持。",
+          "required_changes": [
+            "明示のapp/connectionID・期待subject/実所有者/目的/最小scopeと、正規化後のpath/HTTPmethod/body・宛先を結ぶ。proxyに通ることを許可や現契約の証明にしない。",
+            "header/query/errorbodyの秘密をlog/報告へ出さず、gateway用資格とnative用資格の境界を検証。有限retry/backoff・peraccount/native quota、write/sendの二重作用を防ぐ。",
+            "実status/業務code/部分・空/全page・実保存/配送を分け、一般500で接続を増殖/削除しない。実利用が必要な親だけが現在の公式docs/plan/個別権利と同対象の許可範囲を確認する。"
+          ],
+          "row": 179,
+          "source": [
+            "github:4a1d011a577bc3059719d059698ce8e385148b0e528052bc57edfb80f573522f",
+            "skills/kdegeek/api-gateway-1/SKILL.md",
+            "a071ef6564486bd02096fc87e0600e0dbf8fe696111df1aed6f5507a7c0ca21d",
+            "4b5dfc780f363806effb79003986897f2f91fd7d",
+            28160
+          ],
+          "support": [
+            [
+              "LICENSE.txt",
+              1072,
+              "ec9e952f",
+              "4813de20",
+              4,
+              0,
+              0,
+              "100644"
+            ],
+            [
+              "SKILL.md",
+              28160,
+              "a071ef65",
+              "4b5dfc78",
+              3,
+              349,
+              0,
+              "100644"
+            ]
+          ],
+          "use": "managedOAuth proxyのservice/接続選択と、native APIの作用・response/失敗を別状態へ結ぶ設計参考。",
+          "value": "app prefix/明示connectionと実アカウント・権限/宛先を対応させ、共通proxyで作用範囲が広がるのを防げる。"
+        }
+      ],
+      "first_ordinal": 179,
+      "limits": {
+        "central_body_or_existence_checks": 0,
+        "current_support_literal_reads": 0,
+        "notice_new_literal_reads": 0,
+        "old_reader_history_not_relabelled": true,
+        "primary_masked_meanings_unread": 349,
+        "source_bodies_refetched": 0,
+        "source_script_execution": 0
+      },
+      "notice_bodies": [
+        {
+          "bytes": 1072,
+          "consumer_path": "skills/kdegeek/api-gateway-1/LICENSE.txt",
+          "consumer_row": 179,
+          "fresh_raw": false,
+          "git_blob": "4813de20b72e365983fe0370d79d7cac6ea21d9b",
+          "id": 1,
+          "parent_chunk_sha256": "ec0b420bd8499c6a93e0cbe0d53795519b1334ac402c916dcacfb7b675ccc275",
+          "parent_receipt": "research3719-chunk-66b86047aca0b0294296e8329833ddb7.json",
+          "read": [
+            4,
+            0,
+            0,
+            false,
+            true,
+            22
+          ],
+          "reader_job": "20261025-041905-todo-3719",
+          "reader_namespace": "20261025-041905-todo-3719/current3719",
+          "representative_path": "skills/bobbyzzhao/gmail-1-0-6/LICENSE.txt",
+          "representative_read": [
+            2,
+            0,
+            0,
+            true,
+            true,
+            22
+          ],
+          "representative_row": 10,
+          "sha256": "ec9e952fec4d029fab649746d033bf91802b15f59ffa40a0d3a3a0e1a1587802"
+        }
+      ],
+      "prior_journal_sha256": "27d0db254bad9d873ccb15eb49b90b20d095432fedfe4ebcc303ab3df84c4dc7",
+      "reader_job": "20261026-180903-todo-3719",
+      "reader_todo": 3719,
+      "reading_integrity": {
+        "maskCount": 349,
+        "mask_unit": "outer_physical_lines",
+        "mask_version": 112,
+        "ordered_ranges": [
+          [
+            1,
+            160,
+            "6829bfd7a0d33e34aa1c2bce907c387ae0f369a8f7a7dca6dd5058118eb97663"
+          ],
+          [
+            161,
+            320,
+            "b9b2ff06501bd6834af618a8ee1747be0e87bb0472c6724f0b9ab983260d063e"
+          ],
+          [
+            321,
+            480,
+            "4b4a8263c44f55deecbd499cae1d6931bebab87c79156357bbe69d8f7333a18b"
+          ],
+          [
+            481,
+            608,
+            "99d16500f3cb23f2367fc7d8bc96795ec25514e70b47ec37a6eeadd2922015b7"
+          ]
+        ],
+        "same_buffer": {
+          "bytes": true,
+          "git_blob": true,
+          "same_buffer": true,
+          "sha256": true,
+          "strict_utf8": true
+        },
+        "source_original_text_included": false,
+        "withheld_ranges": [
+          [
+            1,
+            17
+          ],
+          [
+            25,
+            35
+          ],
+          [
+            50,
+            50
+          ],
+          [
+            52,
+            54
+          ],
+          [
+            58,
+            58
+          ],
+          [
+            60,
+            62
+          ],
+          [
+            64,
+            64
+          ],
+          [
+            66,
+            68
+          ],
+          [
+            76,
+            83
+          ],
+          [
+            89,
+            104
+          ],
+          [
+            108,
+            117
+          ],
+          [
+            121,
+            128
+          ],
+          [
+            130,
+            143
+          ],
+          [
+            149,
+            156
+          ],
+          [
+            162,
+            172
+          ],
+          [
+            178,
+            290
+          ],
+          [
+            410,
+            420
+          ],
+          [
+            424,
+            434
+          ],
+          [
+            438,
+            446
+          ],
+          [
+            450,
+            458
+          ],
+          [
+            462,
+            470
+          ],
+          [
+            474,
+            485
+          ],
+          [
+            489,
+            497
+          ],
+          [
+            503,
+            512
+          ],
+          [
+            520,
+            525
+          ],
+          [
+            529,
+            535
+          ],
+          [
+            539,
+            539
+          ],
+          [
+            541,
+            541
+          ],
+          [
+            543,
+            545
+          ],
+          [
+            547,
+            547
+          ],
+          [
+            549,
+            556
+          ],
+          [
+            567,
+            574
+          ],
+          [
+            587,
+            588
+          ],
+          [
+            604,
+            607
+          ]
+        ]
+      },
+      "roster_sha256": "f9c6b2e44c5e3aa8947f758f864eaa0d5edc396d622359826bca848cd96f9901",
+      "support_inventory": {
+        "all_116_metadata_equal_to_fixed_source": true,
+        "artifact": "research179-package116-metadata214717.private.json",
+        "artifact_bytes": 74984,
+        "artifact_sha256": "c58315f11c5c39631b136eba7227bf0221efad70105e2a851cab68982f188df5",
+        "count": 116,
+        "default_current_saved_read": [
+          1,
+          null,
+          null,
+          false,
+          false,
+          0
+        ],
+        "default_unsaved_read": [
+          0,
+          null,
+          null,
+          false,
+          false,
+          0
+        ],
+        "domain": "research598-parent-package-metadata-v1",
+        "index_sha256": "799bd907887120d83b82e64fbf37094c653a5144b764fef0b70dd4d5e2219607",
+        "materializer_body_reads": 0,
+        "metadata_is_not_primary_or_support_body_read": true,
+        "no_missing_or_duplicate_paths": true,
+        "overrides": "entries[0].support; other114 current supports saved_unread1, previous actual read-state unknown",
+        "records_field": "records",
+        "saved_in_index": 116,
+        "source_prefix": "skills/kdegeek/api-gateway-1/",
+        "tree_file_sha256": "11e79e2b3e1503ec231ede8e20298f98e7734715a304835f37b3f68bee0b7b5b"
+      }
+    },
+    "6bf26a3c0416d5c6a76e96832d322d79": {
+      "boundaries": {
+        "central_operations": 0,
+        "copy_license_accepted": false,
+        "new_final_dispositions": 0,
+        "source_executed": false
+      },
+      "chunk_id": "6bf26a3c0416d5c6a76e96832d322d79",
+      "definitions": {
+        "actors": {
+          "0": "同じassistant。primaryは実current176direct3の4、旧支持は原041905を保持。"
+        },
+        "reader_namespace": "20261026-180903-todo-3719/current3719",
+        "states": {
+          "0": "unsaved",
+          "1": "saved_unread",
+          "2": "direct_raw_full",
+          "3": "direct_masked_full",
+          "4": "exact_bytes_reuse",
+          "5": "ordered_full_diff",
+          "6": "partial",
+          "7": "scan"
+        },
+        "support_tuple": "[relative,bytes,SHA8,Gitblob8,state,maskCount,actor,mode]。全tree24files。未保存/保存未読reader・maskはnull、case保持index799bd907/tree5782ae7d。"
+      },
+      "domain": "research598-chunk-v1",
+      "entries": [
+        {
+          "candidate_disposition": "同一本文に対する改訂候補を親へ提案。最終重複/採否・導入/実test・copygrant0。",
+          "findings": [
+            "原176の同一bytes/direct3を4で再利用。原2.0/local/PRODUCTIONREADY・locks/dryrun/13testsは保存主張、28行の未読意味と元readerを保持し新literal/rawへ数えない。",
+            "完全treeは24files。_meta以外23filesは相対名/mode/type/Gitblob/保存metadataが176と一致するが、code16filesは未保存・本文未読で動作/安全は保証しない。",
+            "177_meta306Bは176_meta326Bと別SHA/blob。固定indexの保存情報だけを使い値を未読で保持し、publisher/登録版・原directory内ultra-local表記との対応を推測しない。",
+            "原tests例とCONTRIBUTINGのautomatedtests無し表明、type/clipboard/OCR/logの秘密保護、debounce軌跡・停止drain等は176と同じ具体修正点。codeや13tests成功は未検証。",
+            "当directoryのnoticeは同1092Bを旧reader041905の実readへ再利用。sourceのsafe_mode解除/認識confidence低下を正規拒否の迂回や本人ルール変更へ用いず、通常scopeへ独自の承認待ちも足さない。"
+          ],
+          "nearby_limit": "起動metadataのみ、中央本文/存在確認0。原176との比較は指定C内の実読と同bytesに限定。",
+          "nearby_metadata": [
+            "computer-use:computer-use",
+            "browser-automation",
+            "process-lifecycle"
+          ],
+          "negative": "別slugを別の成功実装や新literal読了と数え、sourceの安全表示/テスト例だけで秘密不存在や完了・コピー許可を保証。",
+          "notices": [
+            [
+              "LICENSE.txt",
+              1,
+              "177directoryの同一noticeを原176支持の旧実readerへ結ぶ。",
+              "作者/公開版・帰属1行・依存/画面data/service条件は未確定。rootMIT/補助MIT0で自動grantしない。"
+            ]
+          ],
+          "positive": "同一本文の実読証拠を再利用して重複読取を避け、別directoryの通知/版・未保存実装と実作用を個別に検査する。",
+          "primary_reuse": {
+            "body_reader_job_unchanged": true,
+            "mask_count_is_inherited": true,
+            "new_literal_primary_read": false,
+            "representative": {
+              "payload_sha256": "a709a75421e53ce0ab271f1f40fe019f9d20bd2b484ef21b900f8e55a876380e",
+              "read": [
+                3,
+                28,
+                0,
+                false,
+                true,
+                345
+              ],
+              "reader_job": "20261026-180903-todo-3719",
+              "reader_namespace": "20261026-180903-todo-3719/current3719",
+              "receipt": "research3719-chunk-c14078c5442be59a3c06830aa0782d30.json",
+              "row": 176,
+              "source": [
+                "github:207b71cd836c179f1490d684b6dca92b97971f7cdba0fe63ea03bddf6c0e57b8",
+                "skills/jordaneparis/desktop-automation-100per100-local/SKILL.md",
+                "48312b13ec401c4699cab363d9024c193e8b1ba2ff869f9cc7359e243e55814c",
+                "3f8f2048e34e73fae8f956277a540d4394ca8e5f",
+                9489
+              ]
+            }
+          },
+          "read": [
+            4,
+            28,
+            0,
+            false,
+            true,
+            345
+          ],
+          "read_method": "same_bytes_prior_masked_semantic_reuse",
+          "reason": "原176の同一9489B/SHA/blob/content_pathを、今回の345行28伏字direct3・親ACK176へ結ぶ。177primaryの新literal/raw読取0、意味と伏字限界は継承しdirectoryを個別照合。",
+          "required_changes": [
+            "同一本文の176修正点を継承し、実対象window/DPI/版・作用前後/有限wait/重複防止/停止解放を別検証する。秘密を戻り値やlogへ出さない。",
+            "177の公開版/作者・同directory notice/依存/metadata値を個別に確認する。同じbytesや名前で採否・権利/実動保証を移さず、Windows優先/既存CUA/CLI・新費用禁止を保持。"
+          ],
+          "row": 177,
+          "source": [
+            "github:a7b6fdb508cfb434de34280b59d880509fdb8d02e5e61f4bfcf7787e42e7152c",
+            "skills/jordaneparis/desktop-automation-ultra/SKILL.md",
+            "48312b13ec401c4699cab363d9024c193e8b1ba2ff869f9cc7359e243e55814c",
+            "3f8f2048e34e73fae8f956277a540d4394ca8e5f",
+            9489
+          ],
+          "support": [
+            [
+              "AUTHORS.md",
+              912,
+              "4ad2f401",
+              "5f950dcb",
+              4,
+              8,
+              0,
+              "100644"
+            ],
+            [
+              "CONTRIBUTING.md",
+              3834,
+              "b6d45d36",
+              "55900c5f",
+              4,
+              4,
+              0,
+              "100644"
+            ],
+            [
+              "DEPENDENCIES.md",
+              3070,
+              "83c53eaa",
+              "ad8debaf",
+              4,
+              56,
+              0,
+              "100644"
+            ],
+            [
+              "LICENSE.txt",
+              1092,
+              "8c85bc39",
+              "eb92ae59",
+              4,
+              1,
+              0,
+              "100644"
+            ],
+            [
+              "README.md",
+              17451,
+              "9b8ce30a",
+              "de05caae",
+              4,
+              515,
+              0,
+              "100644"
+            ],
+            [
+              "SKILL.md",
+              9489,
+              "48312b13",
+              "3f8f2048",
+              4,
+              28,
+              0,
+              "100644"
+            ],
+            [
+              "_meta.json",
+              306,
+              "49c4ae3f",
+              "17397ca6",
+              1,
+              null,
+              null,
+              "100644"
+            ],
+            [
+              "lib/__init__.py",
+              null,
+              null,
+              "381d8257",
+              0,
+              null,
+              null,
+              "100644"
+            ],
+            [
+              "lib/actions.py",
+              null,
+              null,
+              "3a414227",
+              0,
+              null,
+              null,
+              "100644"
+            ],
+            [
+              "lib/advanced_automation.py",
+              null,
+              null,
+              "ffbaf3ac",
+              0,
+              null,
+              null,
+              "100644"
+            ],
+            [
+              "lib/automation.py",
+              null,
+              null,
+              "8c9b1aa4",
+              0,
+              null,
+              null,
+              "100644"
+            ],
+            [
+              "lib/image_recognition.py",
+              null,
+              null,
+              "c8f25b31",
+              0,
+              null,
+              null,
+              "100644"
+            ],
+            [
+              "lib/macro_player.py",
+              null,
+              null,
+              "356c3ea7",
+              0,
+              null,
+              null,
+              "100644"
+            ],
+            [
+              "lib/ocr_engine.py",
+              null,
+              null,
+              "4c679c4f",
+              0,
+              null,
+              null,
+              "100644"
+            ],
+            [
+              "lib/safety.py",
+              null,
+              null,
+              "c24f87f0",
+              0,
+              null,
+              null,
+              "100644"
+            ],
+            [
+              "lib/safety_manager.py",
+              null,
+              null,
+              "cfad0afd",
+              0,
+              null,
+              null,
+              "100644"
+            ],
+            [
+              "lib/utils.py",
+              null,
+              null,
+              "1595c824",
+              0,
+              null,
+              null,
+              "100644"
+            ],
+            [
+              "lib/vision.py",
+              null,
+              null,
+              "609c9310",
+              0,
+              null,
+              null,
+              "100644"
+            ],
+            [
+              "requirements.txt",
+              109,
+              "fa78afec",
+              "36433b2e",
+              4,
+              0,
+              0,
+              "100644"
+            ],
+            [
+              "scripts/play_macro.py",
+              null,
+              null,
+              "ec0739b0",
+              0,
+              null,
+              null,
+              "100644"
+            ],
+            [
+              "scripts/record_macro.py",
+              null,
+              null,
+              "8c1c4e1b",
+              0,
+              null,
+              null,
+              "100644"
+            ],
+            [
+              "scripts/test_automation.py",
+              null,
+              null,
+              "dbd8c5cb",
+              0,
+              null,
+              null,
+              "100644"
+            ],
+            [
+              "skill.js",
+              null,
+              null,
+              "f2da2277",
+              0,
+              null,
+              null,
+              "100644"
+            ],
+            [
+              "skill.yaml",
+              null,
+              null,
+              "3a14a527",
+              0,
+              null,
+              null,
+              "100644"
+            ]
+          ],
+          "use": "画面認識・macro解析/dry-run・実作用・停止/完了を別状態にするdesktop自動化の参考。",
+          "value": "対象画面と作用・待ち/再試行/回収、OCR結果と実操作の証拠を分ける観点。"
+        }
+      ],
+      "first_ordinal": 177,
+      "notice_bodies": [
+        {
+          "bytes": 1092,
+          "consumer_path": "skills/jordaneparis/desktop-automation-ultra/LICENSE.txt",
+          "consumer_row": 177,
+          "fresh_raw": false,
+          "git_blob": "eb92ae59eeb4774e5dfea75826b2fd7ba54cbc44",
+          "id": 1,
+          "mask_version": 100,
+          "parent_chunk_sha256": "f36586397628f7750178ba1618a4fb0da62f0eddcfd05080bdeacb60c498844c",
+          "parent_receipt": "research3719-chunk-fc0b7467f4303ab17f31f2a1dc9cb4f6.json",
+          "read": [
+            4,
+            1,
+            0,
+            false,
+            true,
+            22
+          ],
+          "reader_job": "20261025-041905-todo-3719",
+          "reader_namespace": "20261025-041905-todo-3719/current3719",
+          "representative_path": "skills/jordaneparis/desktop-automation-100per100-local/LICENSE.txt",
+          "representative_read": [
+            3,
+            1,
+            0,
+            false,
+            true,
+            22
+          ],
+          "representative_row": 176,
+          "sha256": "8c85bc39e7ae37b4724e155392c42bd8f702e32200ff8d52fb98477832b608ec"
+        }
+      ],
+      "prior_journal_sha256": "6e4429fe8e833a0124ed07110ea6c5c12bbb7cd3abc02e79f568c0e49b22ea41",
+      "reader_job": "20261026-180903-todo-3719",
+      "reader_todo": 3719,
+      "reuse_validation": {
+        "guidance": "research3719-primary-reuse-guidance074042.md",
+        "guidance_sha256": "11c4aa85e9c1287dfa49591507af89ebda9aca266bc8963965ef97c168d78a47",
+        "new_primary_literal_reads": 0,
+        "new_primary_raw_reads": 0,
+        "new_unique_body_reads": 0
+      },
+      "roster_sha256": "f9c6b2e44c5e3aa8947f758f864eaa0d5edc396d622359826bca848cd96f9901",
+      "support_reuse_proofs": {
+        "current": {
+          "parent_chunk_sha256": "a709a75421e53ce0ab271f1f40fe019f9d20bd2b484ef21b900f8e55a876380e",
+          "parent_receipt": "research3719-chunk-c14078c5442be59a3c06830aa0782d30.json",
+          "reader_job": "20261026-180903-todo-3719",
+          "reader_namespace": "20261026-180903-todo-3719/current3719",
+          "records": [
+            [
+              "AUTHORS.md",
+              "4ad2f401a114ee3674fbc31b0d3f252c55f0784407da31bea3fd4e0d1eddda1c",
+              "5f950dcb5b22b711021e6d5545ae8d8eb6d9d5cc",
+              912,
+              [
+                3,
+                8,
+                0,
+                false,
+                true,
+                39
+              ],
+              112
+            ],
+            [
+              "CONTRIBUTING.md",
+              "b6d45d36cf4eb7cd44b20c100dcb2ab4897584c9c6ae1bab8dd19dbdd1c28e8b",
+              "55900c5f7d5af9d6bf18e513ee9b3a0a27f59e0f",
+              3834,
+              [
+                3,
+                4,
+                0,
+                false,
+                true,
+                134
+              ],
+              112
+            ]
+          ],
+          "representative_directory": "skills/jordaneparis/desktop-automation-100per100-local/"
+        },
+        "metadata": {
+          "body_opened": false,
+          "bytes": 306,
+          "git_blob": "17397ca61efc1f134786497995fc0b1a5be1e5b4",
+          "maskCount": null,
+          "reader": null,
+          "relative": "_meta.json",
+          "source_sha256": "49c4ae3f5db6ee435b7baf870470bd775103a3455a909f27d2df9c93a5c15b92",
+          "state": 1,
+          "values_unread": true
+        },
+        "old": {
+          "parent_chunk_sha256": "f36586397628f7750178ba1618a4fb0da62f0eddcfd05080bdeacb60c498844c",
+          "parent_receipt": "research3719-chunk-fc0b7467f4303ab17f31f2a1dc9cb4f6.json",
+          "reader_job": "20261025-041905-todo-3719",
+          "reader_namespace": "20261025-041905-todo-3719/current3719",
+          "records": [
+            [
+              "README.md",
+              "9b8ce30ab693534949855306c9e366ff283f157dc0a0fed8a53cfa64ebc2840d",
+              "de05caaed78462aa35cbd15b27aaa6bb209542af",
+              17451,
+              [
+                3,
+                515,
+                0,
+                false,
+                true,
+                671
+              ],
+              100
+            ],
+            [
+              "DEPENDENCIES.md",
+              "83c53eaa106b7095293f8536583aa73cabfe8992f8b7e22e5dc87c817d3f9785",
+              "ad8debaf5252073d148c24be8758fb844b40af00",
+              3070,
+              [
+                3,
+                56,
+                0,
+                false,
+                true,
+                88
+              ],
+              100
+            ],
+            [
+              "requirements.txt",
+              "fa78afec65a3ba68246bd9716a90b19c8a2f8c43ce9b9ccece528fba68c6ba6c",
+              "36433b2ea803ca189ed4b5215707daa65d23d5b7",
+              109,
+              [
+                2,
+                0,
+                0,
+                true,
+                true,
+                7
+              ],
+              100
+            ]
+          ],
+          "representative_directory": "skills/jordaneparis/desktop-automation-100per100-local/"
+        }
+      }
+    },
+    "c14078c5442be59a3c06830aa0782d30": {
+      "boundaries": {
+        "central_operations": 0,
+        "copy_license_accepted": false,
+        "new_final_dispositions": 0,
+        "source_executed": false
+      },
+      "chunk_id": "c14078c5442be59a3c06830aa0782d30",
+      "current_aux_support": {
+        "meaning": "AUTHORSはcreator/貢献・citationを説明しcitation8行未読。CONTRIBUTINGはPython3.10/venv/import・dryrun/GUImanual検査とautomatedtests無しを表明。実環境/CI成功ではない。",
+        "metadata_hold": {
+          "bytes": 326,
+          "maskCount": null,
+          "mask_version": 112,
+          "read": [
+            1,
+            null,
+            null,
+            false,
+            false,
+            0
+          ],
+          "reader": null,
+          "relative": "_meta.json",
+          "schema_values_unread": true,
+          "total_physical_lines": 12,
+          "withheld_physical_lines": 11
+        },
+        "reader_job": "20261026-180903-todo-3719",
+        "reader_namespace": "20261026-180903-todo-3719/current3719",
+        "records": [
+          [
+            "AUTHORS.md",
+            "4ad2f401a114ee3674fbc31b0d3f252c55f0784407da31bea3fd4e0d1eddda1c",
+            "5f950dcb5b22b711021e6d5545ae8d8eb6d9d5cc",
+            912,
+            [
+              3,
+              8,
+              0,
+              false,
+              true,
+              39
+            ],
+            112,
+            [
+              [
+                31,
+                38
+              ]
+            ],
+            [
+              [
+                1,
+                39,
+                "d48d2f3a4ee3a31996463eea139bcfa52cdacec7fcf7a0989a146720ba0d72c1"
+              ]
+            ]
+          ],
+          [
+            "CONTRIBUTING.md",
+            "b6d45d36cf4eb7cd44b20c100dcb2ab4897584c9c6ae1bab8dd19dbdd1c28e8b",
+            "55900c5f7d5af9d6bf18e513ee9b3a0a27f59e0f",
+            3834,
+            [
+              3,
+              4,
+              0,
+              false,
+              true,
+              134
+            ],
+            112,
+            [
+              [
+                112,
+                115
+              ]
+            ],
+            [
+              [
+                1,
+                134,
+                "af369b5eb6b6a8c3f3cf563bcb6c553385ae609fecfaa32a2a543eed92c60911"
+              ]
+            ]
+          ]
+        ],
+        "tuple": "[relative,fullSHA,fullGitblob,bytes,read,maskVersion,withheldRanges,orderedViewRanges]"
+      },
+      "definitions": {
+        "actors": {
+          "0": "今回assistant。state4の実readerはsupport_reuse/noticeの旧041905へ結ぶ。"
+        },
+        "reader_namespace": "20261026-180903-todo-3719/current3719",
+        "states": {
+          "0": "unsaved",
+          "1": "saved_unread",
+          "2": "direct_raw_full",
+          "3": "direct_masked_full",
+          "4": "exact_bytes_reuse",
+          "5": "ordered_full_diff",
+          "6": "partial",
+          "7": "scan"
+        },
+        "support_tuple": "[relative,bytes,SHA8,Gitblob8,state,maskCount,actor,mode]。index799bd907/completeTree5782ae7dに原caseで結ぶ。未保存/未読reader・maskはnull。"
+      },
+      "domain": "research598-chunk-v1",
+      "entries": [
+        {
+          "candidate_disposition": "概念と検査観点の改訂候補。親への提案であり導入/最終採否・実test/権利確定0。",
+          "findings": [
+            "Zero-error/100%local/PRODUCTIONREADY・全modulelocks・dryrun全対応は保存主張。現version/実装/OS互換・安全/非送信の実証ではなく、privacy等28行の意味は未読。",
+            "primaryは13testsOK例/validation全check、CONTRIBUTINGはautomatedtests無しと表明。scriptはtreeにあるが本文未保存、成功例を実CI/test結果にしない。",
+            "typeの戻り値textやTypedログ、clipboard/OCR/screenshotはlocalでも秘密を読み残し得る。dryrunで作用しないことと画面読取/記録の許可・値保護を分ける。",
+            "templateconfidence低下やset_safe_modefalseの例を本人禁止/guard/実行審査の迂回にしない。元scopeの通常操作へAI独自の拒否/承認待ちも追加しない。",
+            "debounceは停止後の最終pointer位置を記録するため、drag/drawingの軌跡・button状態を保存する保証ではない。座標だけで対象/意味・再生成功としない。",
+            "旧README671/515伏字・DEPENDENCIES88/56・req7rawとLICENSE22/1伏字は旧readerの4。all_matched一度成立と同時成立を分け、>=依存をpin/再現保証にしない。"
+          ],
+          "nearby_limit": "名前/descriptionだけ。中央本文/存在・同等性/実契約/実コードを未照会。",
+          "nearby_metadata": [
+            "computer-use:computer-use",
+            "browser-automation",
+            "process-lifecycle"
+          ],
+          "negative": "safe/local表示・13tests例だけで安全/完了を保証し、原mode無効化で正規拒否を迂回したり入力秘密をログへ残す。",
+          "notices": [
+            [
+              "LICENSE.txt",
+              1,
+              "当directory1092B MIT noticeを旧実読へ結ぶ。",
+              "帰属1行/作者・実公開版・OpenCV/Tesseract等依存/画面dataの権利は別。rootMIT/補助MIT0で自動grantしない。"
+            ]
+          ],
+          "positive": "同じ許可対象の画面を確認し、解析/dryrun/実作用/完了・停止回収の実証を別に保持する設計へ参照。",
+          "read": [
+            3,
+            28,
+            0,
+            false,
+            true,
+            345
+          ],
+          "reason": "345行を112版/28行伏字で順序全読。新AUTHORS/CONTRIBUTINGと旧ACK171支持を結び、未保存code/実testを補完しない。",
+          "required_changes": [
+            "取得した対象window/版・DPI/座標/時刻/認識の不確実性と操作前後の実画面を結ぶ。有限wait/再送重複・macro中断後のdrain/button解放を検証する。",
+            "秘密をaction戻り値/ログへ出さず、対象の既存許可/Windows優先・本人PC操作不要/正規CUA・既存CLI経路を保持。sourceのinstall/restart/設定を今回実行しない。",
+            "原version/実公開版・依存/テストcodeと現公式仕様の照合は親で行い、sourceのPython例と新規自作Go既定/配布済tool利用の条件を区別する。"
+          ],
+          "row": 176,
+          "source": [
+            "github:207b71cd836c179f1490d684b6dca92b97971f7cdba0fe63ea03bddf6c0e57b8",
+            "skills/jordaneparis/desktop-automation-100per100-local/SKILL.md",
+            "48312b13ec401c4699cab363d9024c193e8b1ba2ff869f9cc7359e243e55814c",
+            "3f8f2048e34e73fae8f956277a540d4394ca8e5f",
+            9489
+          ],
+          "support": [
+            [
+              "AUTHORS.md",
+              912,
+              "4ad2f401",
+              "5f950dcb",
+              3,
+              8,
+              0,
+              "100644"
+            ],
+            [
+              "CONTRIBUTING.md",
+              3834,
+              "b6d45d36",
+              "55900c5f",
+              3,
+              4,
+              0,
+              "100644"
+            ],
+            [
+              "DEPENDENCIES.md",
+              3070,
+              "83c53eaa",
+              "ad8debaf",
+              4,
+              56,
+              0,
+              "100644"
+            ],
+            [
+              "LICENSE.txt",
+              1092,
+              "8c85bc39",
+              "eb92ae59",
+              4,
+              1,
+              0,
+              "100644"
+            ],
+            [
+              "README.md",
+              17451,
+              "9b8ce30a",
+              "de05caae",
+              4,
+              515,
+              0,
+              "100644"
+            ],
+            [
+              "SKILL.md",
+              9489,
+              "48312b13",
+              "3f8f2048",
+              3,
+              28,
+              0,
+              "100644"
+            ],
+            [
+              "_meta.json",
+              326,
+              "4aef1d69",
+              "3b2ac268",
+              1,
+              null,
+              null,
+              "100644"
+            ],
+            [
+              "lib/__init__.py",
+              null,
+              null,
+              "381d8257",
+              0,
+              null,
+              null,
+              "100644"
+            ],
+            [
+              "lib/actions.py",
+              null,
+              null,
+              "3a414227",
+              0,
+              null,
+              null,
+              "100644"
+            ],
+            [
+              "lib/advanced_automation.py",
+              null,
+              null,
+              "ffbaf3ac",
+              0,
+              null,
+              null,
+              "100644"
+            ],
+            [
+              "lib/automation.py",
+              null,
+              null,
+              "8c9b1aa4",
+              0,
+              null,
+              null,
+              "100644"
+            ],
+            [
+              "lib/image_recognition.py",
+              null,
+              null,
+              "c8f25b31",
+              0,
+              null,
+              null,
+              "100644"
+            ],
+            [
+              "lib/macro_player.py",
+              null,
+              null,
+              "356c3ea7",
+              0,
+              null,
+              null,
+              "100644"
+            ],
+            [
+              "lib/ocr_engine.py",
+              null,
+              null,
+              "4c679c4f",
+              0,
+              null,
+              null,
+              "100644"
+            ],
+            [
+              "lib/safety.py",
+              null,
+              null,
+              "c24f87f0",
+              0,
+              null,
+              null,
+              "100644"
+            ],
+            [
+              "lib/safety_manager.py",
+              null,
+              null,
+              "cfad0afd",
+              0,
+              null,
+              null,
+              "100644"
+            ],
+            [
+              "lib/utils.py",
+              null,
+              null,
+              "1595c824",
+              0,
+              null,
+              null,
+              "100644"
+            ],
+            [
+              "lib/vision.py",
+              null,
+              null,
+              "609c9310",
+              0,
+              null,
+              null,
+              "100644"
+            ],
+            [
+              "requirements.txt",
+              109,
+              "fa78afec",
+              "36433b2e",
+              4,
+              0,
+              0,
+              "100644"
+            ],
+            [
+              "scripts/play_macro.py",
+              null,
+              null,
+              "ec0739b0",
+              0,
+              null,
+              null,
+              "100644"
+            ],
+            [
+              "scripts/record_macro.py",
+              null,
+              null,
+              "8c1c4e1b",
+              0,
+              null,
+              null,
+              "100644"
+            ],
+            [
+              "scripts/test_automation.py",
+              null,
+              null,
+              "dbd8c5cb",
+              0,
+              null,
+              null,
+              "100644"
+            ],
+            [
+              "skill.js",
+              null,
+              null,
+              "f2da2277",
+              0,
+              null,
+              null,
+              "100644"
+            ],
+            [
+              "skill.yaml",
+              null,
+              null,
+              "3a14a527",
+              0,
+              null,
+              null,
+              "100644"
+            ]
+          ],
+          "use": "画面認識・macro解析/dry-run・実作用・停止/完了を別状態にするdesktop自動化の参考。",
+          "value": "対象画面と作用・待ち/再試行/回収、OCR結果と実操作の証拠を分ける観点。"
+        }
+      ],
+      "first_ordinal": 176,
+      "notice_bodies": [
+        {
+          "bytes": 1092,
+          "fresh_raw": false,
+          "git_blob": "eb92ae59eeb4774e5dfea75826b2fd7ba54cbc44",
+          "id": 1,
+          "mask_version": 100,
+          "parent_chunk_sha256": "f36586397628f7750178ba1618a4fb0da62f0eddcfd05080bdeacb60c498844c",
+          "parent_receipt": "research3719-chunk-fc0b7467f4303ab17f31f2a1dc9cb4f6.json",
+          "read": [
+            4,
+            1,
+            0,
+            false,
+            true,
+            22
+          ],
+          "reader_job": "20261025-041905-todo-3719",
+          "reader_namespace": "20261025-041905-todo-3719/current3719",
+          "representative_path": "skills/jordaneparis/desktop-automation-100per100-local/LICENSE.txt",
+          "representative_read": [
+            3,
+            1,
+            0,
+            false,
+            true,
+            22
+          ],
+          "representative_row": 176,
+          "sha256": "8c85bc39e7ae37b4724e155392c42bd8f702e32200ff8d52fb98477832b608ec"
+        }
+      ],
+      "prior_journal_sha256": "775c3e83e95aa33c89338b7071b421db6e0743de7fd491e6fdb672ef6d1b683f",
+      "reader_job": "20261026-180903-todo-3719",
+      "reader_todo": 3719,
+      "reading_integrity": {
+        "maskCount": 28,
+        "mask_unit": "outer_physical_lines",
+        "mask_version": 112,
+        "ordered_ranges": [
+          [
+            1,
+            160,
+            "738783eb8feb9d2e184f465c1122b25452115d05fafb753ebce87feeb65b4724"
+          ],
+          [
+            161,
+            300,
+            "a27d9e2cef49a18241235d10df0703673a117f83cbe7aa6cd12e2c55c02083f4"
+          ],
+          [
+            301,
+            345,
+            "a5783df9b7458652f5bf1a261acdc3c11be40289a8904298e9aa99a740ae1e94"
+          ]
+        ],
+        "same_buffer": {
+          "bytes": true,
+          "git_blob": true,
+          "same_buffer": true,
+          "sha256": true,
+          "strict_utf8": true
+        },
+        "source_original_text_included": false,
+        "withheld_ranges": [
+          [
+            12,
+            17
+          ],
+          [
+            37,
+            41
+          ],
+          [
+            48,
+            49
+          ],
+          [
+            58,
+            61
+          ],
+          [
+            135,
+            140
+          ],
+          [
+            245,
+            245
+          ],
+          [
+            258,
+            261
+          ]
+        ]
+      },
+      "roster_sha256": "f9c6b2e44c5e3aa8947f758f864eaa0d5edc396d622359826bca848cd96f9901",
+      "support_reuse": {
+        "new_literal_displays": 0,
+        "new_raw_reads": 0,
+        "parent_chunk_sha256": "f36586397628f7750178ba1618a4fb0da62f0eddcfd05080bdeacb60c498844c",
+        "parent_receipt": "research3719-chunk-fc0b7467f4303ab17f31f2a1dc9cb4f6.json",
+        "reader_job": "20261025-041905-todo-3719",
+        "reader_namespace": "20261025-041905-todo-3719/current3719",
+        "records": [
+          [
+            "README.md",
+            "9b8ce30ab693534949855306c9e366ff283f157dc0a0fed8a53cfa64ebc2840d",
+            "de05caaed78462aa35cbd15b27aaa6bb209542af",
+            17451,
+            [
+              3,
+              515,
+              0,
+              false,
+              true,
+              671
+            ],
+            100
+          ],
+          [
+            "DEPENDENCIES.md",
+            "83c53eaa106b7095293f8536583aa73cabfe8992f8b7e22e5dc87c817d3f9785",
+            "ad8debaf5252073d148c24be8758fb844b40af00",
+            3070,
+            [
+              3,
+              56,
+              0,
+              false,
+              true,
+              88
+            ],
+            100
+          ],
+          [
+            "requirements.txt",
+            "fa78afec65a3ba68246bd9716a90b19c8a2f8c43ce9b9ccece528fba68c6ba6c",
+            "36433b2ea803ca189ed4b5215707daa65d23d5b7",
+            109,
+            [
+              2,
+              0,
+              0,
+              true,
+              true,
+              7
+            ],
+            100
+          ]
+        ]
+      },
+      "support_transport_request": {
+        "receipt_sha256": "6b80cd3f93ca54313885aeb000efecc6f55e9ffa571b46c10346525c0b40b627",
+        "request": "同じ3719の独立支持の受領形式、row368全228metadataのCreateNew保存、旧through334実読registryの正規回収を親へ依頼済み。新規HTTP/子job/本人入力0。",
+        "technical_receipt": "research3719-technical-hold-999690acf65908151182ad45e5f0f6ab-6575c88156e485b9.json"
+      }
+    },
+    "d701eec6292e2d63bf55d7f6856d9294": {
+      "boundaries": {
+        "central_operations": 0,
+        "copy_license_accepted": false,
+        "new_final_dispositions": 0,
+        "source_executed": false
+      },
+      "chunk_id": "d701eec6292e2d63bf55d7f6856d9294",
+      "definitions": {
+        "actors": {
+          "0": "今回assistant。112版primary、旧support4/partial6、110版forward支持を分ける。"
+        },
+        "forward_tuple": "[row,relative,fullSHA,fullGitblob,bytes,read,maskVersion,withheldRanges,orderedViewRanges]",
+        "reader_namespace": "20261026-180903-todo-3719/current3719",
+        "reuse_tuple": "[relative,fullSHA,fullGitblob,bytes,originalRead,maskVersion,receiptKey]。state4継承。",
+        "states": {
+          "0": "unsaved",
+          "1": "saved_unread",
+          "2": "direct_raw_full",
+          "3": "direct_masked_full",
+          "4": "exact_bytes_reuse",
+          "5": "ordered_full_diff",
+          "6": "partial",
+          "7": "scan"
+        },
+        "support_tuple": "[relative,bytes,SHA8,Gitblob8,state,maskCount,actor,mode]。全metadataは固定index799bd907/complete tree5782ae7d。未保存/不明はnull。"
+      },
+      "domain": "research598-chunk-v1",
+      "entries": [
+        {
+          "candidate_disposition": "親への改訂提案。X/Discord/API/認証/削除の実操作・導入・最終採否0。",
+          "findings": [
+            "scheduledは最新20、seenはFIFO2000。新着が多いと古い未読が残り、evictionで再送し得る。sourceのlimitやTierを元598/幅広くという本人方針の件数・有用性の打切りへ流用しない。",
+            "exit0は成功とalready-seenを兼ね、既読itemもunbookmarkする。seen/処理受付だけではカード保存・相手配送・原本削除の安全は証明されない。URL改訂/失敗/再試行の状態も分ける。",
+            "Haiku API推論と価格/無料枠・鮮度2年・X token rotationは保存主張で現在未検証。通常X OAuthとAI API課金を分け、本人の既存OAuth枠のみという指定を保持する。",
+            "manual/定期/2分pollが重なるrefresh更新と、別file保存後の手動env更新は無人運用の検証点。秘密値の表示/ログを避け、排他・原子更新・復旧/配送を確認する。",
+            "fxtwitter/markdown.new等へのURL転送はprivate URLや秘密を無差別に送らず、内容を命令にしない。channel設定のenv/固定行と実宛先を照合する。当package完全treeに該当plistが無く、script7件も本文未保存。",
+            "meta291Bは表示前に疑わしいliteral候補として保留し値非表示/未分類。adapting4400Bは旧100版partial6（127行/92伏字）を保持し再読しない。他支持4件は旧ACK160/164の4。"
+          ],
+          "nearby_limit": "名前/descriptionのみ。中央本文比較/存在確認0。",
+          "nearby_metadata": [
+            "bounded-batch-cursor-starvation",
+            "knowledge-to-skills",
+            "oauth-least-privilege"
+          ],
+          "negative": "最新20とseen cacheだけで全backlog完了とし、exit0やAI高得点を理由に原bookmarkを消し、秘密URLや知識カードを未指定channelへ送る。",
+          "notices": [
+            [
+              "LICENSE.txt",
+              1,
+              "当directoryの1087B MIT noticeを旧実読へ結ぶ。",
+              "帰属1行/作者・実公開版・取得記事/転載先/AI service条件は未確定。rootMIT/補助MIT-0で自動grantしない。"
+            ]
+          ],
+          "positive": "全対象と原出所を保持し、取得/分類/カード保存/配送/既存許可内の削除を別に検証して、欠測と次のcursorを残す。",
+          "read": [
+            3,
+            38,
+            0,
+            false,
+            true,
+            233
+          ],
+          "reason": "233行を112版で全workflow読取（38行伏字）。latest20/FIFO2000、exit0/既読後のunbookmark、refresh更新と外部転送の境界を確認した。",
+          "required_changes": [
+            "全対象を追うcursor/paginationと配送receipt付きdedupを使い、cache/exit0を完了や削除許可と同一視しない。元依頼に既存削除許可がある範囲だけ扱い、原本保持と取込を分ける。",
+            "AI推論は許可済みOAuth経路へ合わせ、新APIキー/料金/恒久権限を前提にしない。Windows/既存scheduler・scope・本人のDiscord運用を保持し、sourceの投稿/cron/launchdを実行しない。",
+            "source/API/版・利用条件と実配送を親で別確認する。metadata/partial支持は匿名の正規viewが必要な場合のみ補完し、原値再掲・別path/API取得をしない。"
+          ],
+          "row": 175,
+          "source": [
+            "github:dce62c401a7ae31922fd88385914ef30cf2f3284febfb2a1c4761bef6f23e92d",
+            "skills/jeremyknows/x-bookmark-triage/SKILL.md",
+            "f4902dd834296a192e34b3e6d815e9ec0cb0ac5049fffb46b1f85698a15809ed",
+            "78ef0432d6c28b18952bd056d96dd480d94a468d",
+            9024
+          ],
+          "support": [
+            [
+              "LICENSE.txt",
+              1087,
+              "ebaad872",
+              "057bff8e",
+              4,
+              1,
+              0,
+              "100644"
+            ],
+            [
+              "README.md",
+              7926,
+              "5c863027",
+              "ab9ee395",
+              4,
+              141,
+              0,
+              "100644"
+            ],
+            [
+              "SKILL.md",
+              9024,
+              "f4902dd8",
+              "78ef0432",
+              3,
+              38,
+              0,
+              "100644"
+            ],
+            [
+              "_meta.json",
+              291,
+              "81869262",
+              "e1872b0b",
+              1,
+              null,
+              null,
+              "100644"
+            ],
+            [
+              "references/adapting.md",
+              4400,
+              "b2235f31",
+              "edc3cca2",
+              6,
+              92,
+              0,
+              "100644"
+            ],
+            [
+              "references/cron-setup.md",
+              2824,
+              "984987b9",
+              "dc6f77d8",
+              4,
+              90,
+              0,
+              "100644"
+            ],
+            [
+              "references/oauth-setup.md",
+              2676,
+              "91d3c90d",
+              "bab6c754",
+              4,
+              53,
+              0,
+              "100644"
+            ],
+            [
+              "scripts/backlog-sweep.js",
+              null,
+              null,
+              "22403a9a",
+              0,
+              null,
+              null,
+              "100644"
+            ],
+            [
+              "scripts/bookmark-poll.js",
+              null,
+              null,
+              "b6fad6f0",
+              0,
+              null,
+              null,
+              "100644"
+            ],
+            [
+              "scripts/poll-channel.js",
+              null,
+              null,
+              "6ebd78c9",
+              0,
+              null,
+              null,
+              "100644"
+            ],
+            [
+              "scripts/run-poll.sh",
+              null,
+              null,
+              "de8f48fb",
+              0,
+              null,
+              null,
+              "100644"
+            ],
+            [
+              "scripts/setup-check.js",
+              null,
+              null,
+              "89e6a914",
+              0,
+              null,
+              null,
+              "100644"
+            ],
+            [
+              "scripts/triage-url.js",
+              null,
+              null,
+              "ac272470",
+              0,
+              null,
+              null,
+              "100644"
+            ],
+            [
+              "scripts/x-oauth2-authorize.js",
+              null,
+              null,
+              "b3b4e605",
+              0,
+              null,
+              null,
+              "100644"
+            ]
+          ],
+          "use": "X bookmarkの取得・分類・知識カード・配送・原bookmark削除を別stateで扱う参考。",
+          "value": "取込経路とdedup、鮮度/関連性の提案を分け、保存/送信/削除の証拠を結ぶ点に参照余地。"
+        }
+      ],
+      "first_ordinal": 175,
+      "notice_bodies": [
+        {
+          "bytes": 1087,
+          "fresh_raw": false,
+          "git_blob": "057bff8ecf0d8e8dfecfb5c14e9e6832befd91a7",
+          "id": 1,
+          "mask_version": 100,
+          "parent_chunk_sha256": "6a5bf9ad8e1c90de5531f9a1769a5598e628670dc912cfae8c69b70318d0d6d6",
+          "parent_receipt": "research3719-chunk-c50001096a340b198a040d3e61421757.json",
+          "read": [
+            4,
+            1,
+            0,
+            false,
+            true,
+            22
+          ],
+          "reader_job": "20261025-041905-todo-3719",
+          "reader_namespace": "20261025-041905-todo-3719/current3719",
+          "representative_path": "skills/jeremyknows/x-bookmark-triage/LICENSE.txt",
+          "representative_read": [
+            3,
+            1,
+            0,
+            false,
+            true,
+            22
+          ],
+          "representative_row": 175,
+          "sha256": "ebaad8721bfc96deee323858ba427395f14445ff3bd84261ce5ebf5784400e86"
+        }
+      ],
+      "prior_journal_sha256": "c988bc54c49c6a32b3bf8015bc7543d98e48ab836dedee062e797af0fe758612",
+      "prior_partial_support": {
+        "anonymous_reason": "prior_person_reference_display_boundary",
+        "mask_version": 100,
+        "parent_chunk_sha256": "68d6ea73455d9f473d4aa170e60bf74f9a7ea9f2bcdaac33deef0cf05c1d3cf0",
+        "parent_receipt": "research3719-chunk-24f192d40992a0c5c8dcd7e32424a351.json",
+        "read": [
+          6,
+          92,
+          0,
+          false,
+          false,
+          127
+        ],
+        "reader_job": "20261025-041905-todo-3719",
+        "reader_namespace": "20261025-041905-todo-3719/current3719",
+        "rendered_to_end": true,
+        "source": [
+          "skills/jeremyknows/x-bookmark-triage/references/adapting.md",
+          "b2235f31f837f7d6f765b22ed82f737ad52ae7297cf1574813c608d1a76497a7",
+          "edc3cca203f390ce69028c28b4a2f54fa6f7de98",
+          4400
+        ],
+        "source_values_replayed": false,
+        "unread_meaning_preserved": true,
+        "workflow_full": false
+      },
+      "prospective_support": {
+        "copy_grant": false,
+        "meaning": "BANK_CARDの銀行名/番号/期限/holderというfield説明のみ。実card値の表示・利用0。抽出schemaを本人確認/決済/権限やservice権利の証明にしない。",
+        "new_primary_credit": 0,
+        "primary_read": false,
+        "reader_job": "20261026-180903-todo-3719",
+        "reader_namespace": "20261026-180903-todo-3719/current3719",
+        "records": [
+          [
+            348,
+            "assets/templates/fields-summary.md",
+            "38f0ef85fefb9c2749f553112123d10fe5a9a07ee431ba052e1e22371d0177a3",
+            "985adce87adbac732a63586d7543c7d1939a2e18",
+            255,
+            [
+              2,
+              0,
+              0,
+              true,
+              true,
+              10
+            ],
+            110,
+            [],
+            [
+              [
+                1,
+                10,
+                "38f0ef85fefb9c2749f553112123d10fe5a9a07ee431ba052e1e22371d0177a3"
+              ]
+            ]
+          ]
+        ],
+        "related_future_primary": 348,
+        "same_buffer": {
+          "bytes": true,
+          "git_blob": true,
+          "sha256": true,
+          "strict_utf8": true
+        },
+        "source_executed": false
+      },
+      "reader_job": "20261026-180903-todo-3719",
+      "reader_todo": 3719,
+      "reading_integrity": {
+        "maskCount": 38,
+        "mask_unit": "outer_physical_lines",
+        "mask_version": 112,
+        "metadata_hold": {
+          "bytes": 291,
+          "maskCount": null,
+          "model_body_displayed": false,
+          "original_retained": true,
+          "reader": null,
+          "reason": "possible_sensitive_literal_pre_display",
+          "source_sha256": "81869262476608f1581254796c0ea5ebb6524d0768bea5033702a0cb07a0bb8a",
+          "state": 1,
+          "values_classified_as_real_test_owner": false
+        },
+        "ordered_ranges": [
+          [
+            1,
+            160,
+            "81f06494fc472d1d32e5852d95827bcff7f55d65553e828ee8ec85c392c3163b"
+          ],
+          [
+            161,
+            233,
+            "180906067696c04ccd2cf49c1e8d2aea5b5428b67fba0cce79103810bf98b2a2"
+          ]
+        ],
+        "same_buffer": {
+          "bytes": true,
+          "git_blob": true,
+          "sha256": true,
+          "strict_utf8": true
+        },
+        "source_original_text_included": false,
+        "withheld_ranges": [
+          [
+            1,
+            5
+          ],
+          [
+            34,
+            40
+          ],
+          [
+            44,
+            47
+          ],
+          [
+            51,
+            51
+          ],
+          [
+            55,
+            55
+          ],
+          [
+            75,
+            80
+          ],
+          [
+            82,
+            82
+          ],
+          [
+            109,
+            113
+          ],
+          [
+            168,
+            170
+          ],
+          [
+            182,
+            185
+          ],
+          [
+            226,
+            226
+          ]
+        ]
+      },
+      "roster_sha256": "f9c6b2e44c5e3aa8947f758f864eaa0d5edc396d622359826bca848cd96f9901",
+      "support_reuse": {
+        "new_literal_displays": 0,
+        "new_raw_reads": 0,
+        "reader_job": "20261025-041905-todo-3719",
+        "reader_namespace": "20261025-041905-todo-3719/current3719",
+        "receipts": {
+          "a": [
+            "research3719-chunk-67150f9b05565d1666811ae7d2bc91d1.json",
+            "527e5d6abb9abb622f710dec16162bb75cba0bc057a83279c1f08104466a0e42"
+          ],
+          "b": [
+            "research3719-chunk-c50001096a340b198a040d3e61421757.json",
+            "6a5bf9ad8e1c90de5531f9a1769a5598e628670dc912cfae8c69b70318d0d6d6"
+          ]
+        },
+        "records": [
+          [
+            "README.md",
+            "5c86302715c271095927c90c4424f63261cebce4c951171482170ddac73da605",
+            "ab9ee395721163ade4a3c6e781eb1fa78f2ba687",
+            7926,
+            [
+              3,
+              141,
+              0,
+              false,
+              true,
+              219
+            ],
+            100,
+            "a"
+          ],
+          [
+            "references/cron-setup.md",
+            "984987b9738786003c00a01a3ef018c34e46490723829c6c2c4cfa1bdb3ff29e",
+            "dc6f77d8fe3476963e010db534ea7ae701cf1199",
+            2824,
+            [
+              3,
+              90,
+              0,
+              false,
+              true,
+              97
+            ],
+            100,
+            "b"
+          ],
+          [
+            "references/oauth-setup.md",
+            "91d3c90dccccfc194e64455d673a38d3b9b02b527dcdf62f3dcd71d432983aaf",
+            "bab6c75441e5d6e86e9da02d1095946a6d643e6a",
+            2676,
+            [
+              3,
+              53,
+              0,
+              false,
+              true,
+              80
+            ],
+            100,
+            "b"
+          ]
+        ]
+      }
+    },
+    "ea5e9888bb3652a376219db6454ed7cd": {
+      "boundaries": {
+        "central_operations": 0,
+        "copy_license_accepted": false,
+        "new_final_dispositions": 0,
+        "source_executed": false
+      },
+      "chunk_id": "ea5e9888bb3652a376219db6454ed7cd",
+      "definitions": {
+        "actors": {
+          "0": "今回assistantの178primary direct3。支持はcurrent未読、旧read-aheadの未確認を保持。"
+        },
+        "reader_namespace": "20261026-180903-todo-3719/current3719",
+        "states": {
+          "0": "unsaved",
+          "1": "saved_unread",
+          "2": "direct_raw_full",
+          "3": "direct_masked_full",
+          "4": "exact_bytes_reuse",
+          "5": "ordered_full_diff",
+          "6": "partial",
+          "7": "scan"
+        },
+        "support_tuple": "[relative,bytes,SHA8,Gitblob8,state,maskCount,actor,mode]。index799bd907/complete tree5782ae7dの54filesを原caseで全列挙。未保存/未確認reader・maskはnull。"
+      },
+      "domain": "research598-chunk-v1",
+      "entries": [
+        {
+          "candidate_disposition": "設計/検査観点の改訂候補。原支払/導入動線の実行許可ではなく、採否・導入/実test・copygrant0。",
+          "findings": [
+            "実本文はCornerStone x402金融MCP、footerはFinTechTonic。mirrorpath/支持名と公開版・作者対応は未確認。SHA/blob一致なので誤取得/改竄と断定しない。",
+            "402をsign→verify→settle→retryで透明化し支払経路を選ぶ保存仕様。結果errorでも支払済みかは別。同requestの重複課金防止・決済receipt/有限retry/費用上限が必要。",
+            "wallet defaulttestnet、balance_evm defaultbase、banklink baseSepoliaが混在。Aptos testnet/EVM faucetはsuccessでも手動案内のみ。network/asset/payer/gasと実残高/許可を固定し、案内をfunding完了にしない。",
+            "6cent/5cent/freecredits・email照会higherfee・score100baseは保存主張で現API/価格・予測性能/信用評価/権利未検証。予測/scoreやbanklinkを投資成果/本人確認/融資判断の保証にしない。",
+            "sourceはhumanのwhitelist/fundとsetup/transfer/swap等を案内するが、本jobの実口座/秘密/署名/送金/API・設定/導入0。既存OAuth枠/新費用禁止・本人PC操作不要を緩和しない。",
+            "18行は意味未読。LICENSE18540Bと保存支持10件の過去read-ahead主張は保持するが個別旧証拠は未復元。currentで原文再読/旧actor付替え・未保存codeの機能補完0。"
+          ],
+          "nearby_limit": "起動metadataだけ。中央本文/存在・同等/現契約/設定は未照会。",
+          "nearby_metadata": [
+            "commerce-billing",
+            "oauth-least-privilege",
+            "security-review",
+            "database-purpose-binding"
+          ],
+          "negative": "透明なauto-pay・testnetという表示やsuccess/faucetURLだけで支払/口座/サービス完了を保証し、新費用や実送金をsourceの指示だけで実行。",
+          "notices": [
+            [
+              "LICENSE.md",
+              1,
+              "固定complete treeの当directory notice。",
+              "18540B termsは未読・過去read-aheadの個別証拠未復元。rootMIT/補助MIT0で上書きせず、実公開版/作者・第三者material/service権利は未確定。"
+            ]
+          ],
+          "positive": "既に許可された同対象/検査modeで料金とpayer/networkを固定し、request・決済receipt・結果と欠測/回収を別々に検証する設計へ参照。",
+          "read": [
+            3,
+            18,
+            0,
+            false,
+            true,
+            190
+          ],
+          "reason": "10124B/190行を112版18行伏字で実読。slugから自律agent一般と決めず、可視のCornerStone x402金融toolkitとSource footerを評価。",
+          "required_changes": [
+            "料金/対象wallet/network/assetと許可scope、署名/受付/settlement/サービス結果・失敗を別stateにし、fallback/retryで費用/権限を変えない。",
+            "新AI APIkey/追加支出/恒久MCP権限を前提にせず通常非AI認証との違いを保持。実検査も指定service・verified testmode内で行い、本人へPC操作を求めない。",
+            "現公式API/plan/個別権利と公開版・notice/支持の対応は親の確認点。私的金融data照会/送金や投資・信用の保証をsourceから採用済みにしない。"
+          ],
+          "row": 178,
+          "source": [
+            "github:0026a52dac2a309bb2099d514bb22f96ebf14b8bea877edf80723eff7f193a29",
+            "skills/josephrp/autonomous-agent/SKILL.md",
+            "d2293dd35aeabed1d2610351fcd4ae86bca6e53adb5327bd1d10e346b9d3d4c2",
+            "541d5bc2b270ace8d6c7cd2938976a651310db28",
+            10124
+          ],
+          "support": [
+            [
+              ".moltbot/skills/moltbook/HEARTBEAT.md",
+              6730,
+              "8a63f519",
+              "96d559fc",
+              1,
+              null,
+              null,
+              "100644"
+            ],
+            [
+              ".moltbot/skills/moltbook/MESSAGING.md",
+              8207,
+              "79c87c36",
+              "246aad81",
+              1,
+              null,
+              null,
+              "100644"
+            ],
+            [
+              ".moltbot/skills/moltbook/SKILL.md",
+              19652,
+              "4d09258a",
+              "f9a91f0a",
+              1,
+              null,
+              null,
+              "100644"
+            ],
+            [
+              ".moltbot/skills/moltbook/package.json",
+              null,
+              null,
+              "c18b2c4a",
+              0,
+              null,
+              null,
+              "100644"
+            ],
+            [
+              "LICENSE.md",
+              18540,
+              "652666b1",
+              "653b6683",
+              1,
+              null,
+              null,
+              "100644"
+            ],
+            [
+              "README.md",
+              11649,
+              "758e38f6",
+              "1949bc5f",
+              1,
+              null,
+              null,
+              "100644"
+            ],
+            [
+              "SKILL.md",
+              10124,
+              "d2293dd3",
+              "541d5bc2",
+              3,
+              18,
+              0,
+              "100644"
+            ],
+            [
+              "_meta.json",
+              1527,
+              "580727df",
+              "74f23e93",
+              1,
+              null,
+              null,
+              "100644"
+            ],
+            [
+              "adapters/anthropic/tools.json",
+              null,
+              null,
+              "f0e6382b",
+              0,
+              null,
+              null,
+              "100644"
+            ],
+            [
+              "adapters/local/README.md",
+              616,
+              "c66fb904",
+              "b3136f51",
+              1,
+              null,
+              null,
+              "100644"
+            ],
+            [
+              "adapters/openai/openapi.yaml",
+              null,
+              null,
+              "6d81be9e",
+              0,
+              null,
+              null,
+              "100644"
+            ],
+            [
+              "adapters/openclaw/SKILL.md",
+              4005,
+              "b70dfd8b",
+              "cf86955f",
+              1,
+              null,
+              null,
+              "100644"
+            ],
+            [
+              "package-lock.json",
+              null,
+              null,
+              "7a238afd",
+              0,
+              null,
+              null,
+              "100644"
+            ],
+            [
+              "package.json",
+              null,
+              null,
+              "0ceb0d90",
+              0,
+              null,
+              null,
+              "100644"
+            ],
+            [
+              "skills/README.md",
+              771,
+              "c20fdce9",
+              "ce409110",
+              1,
+              null,
+              null,
+              "100644"
+            ],
+            [
+              "skills/autonomous-agent/SKILL.md",
+              3951,
+              "bb52c95a",
+              "e416cd69",
+              1,
+              null,
+              null,
+              "100644"
+            ],
+            [
+              "src/agent/agent.js",
+              null,
+              null,
+              "4a8f17c1",
+              0,
+              null,
+              null,
+              "100644"
+            ],
+            [
+              "src/agent/index.js",
+              null,
+              null,
+              "5357ca5c",
+              0,
+              null,
+              null,
+              "100644"
+            ],
+            [
+              "src/agent/llm.js",
+              null,
+              null,
+              "b8324683",
+              0,
+              null,
+              null,
+              "100644"
+            ],
+            [
+              "src/agent/tools/localTools.js",
+              null,
+              null,
+              "6869ee05",
+              0,
+              null,
+              null,
+              "100644"
+            ],
+            [
+              "src/agent/tools/mcpTools.js",
+              null,
+              null,
+              "12e050b2",
+              0,
+              null,
+              null,
+              "100644"
+            ],
+            [
+              "src/attest-aptos-wallet.js",
+              null,
+              null,
+              "50803c0d",
+              0,
+              null,
+              null,
+              "100644"
+            ],
+            [
+              "src/attest-evm-wallet.js",
+              null,
+              null,
+              "6fcbae60",
+              0,
+              null,
+              null,
+              "100644"
+            ],
+            [
+              "src/balance.js",
+              null,
+              null,
+              "d73e0cac",
+              0,
+              null,
+              null,
+              "100644"
+            ],
+            [
+              "src/check-update.js",
+              null,
+              null,
+              "4a63f80a",
+              0,
+              null,
+              null,
+              "100644"
+            ],
+            [
+              "src/cli.js",
+              null,
+              null,
+              "d679e030",
+              0,
+              null,
+              null,
+              "100644"
+            ],
+            [
+              "src/contract.js",
+              null,
+              null,
+              "ea294475",
+              0,
+              null,
+              null,
+              "100644"
+            ],
+            [
+              "src/credit-aptos-agent.js",
+              null,
+              null,
+              "665c88f6",
+              0,
+              null,
+              null,
+              "100644"
+            ],
+            [
+              "src/generate-facilitator-keys.js",
+              null,
+              null,
+              "00ad5d43",
+              0,
+              null,
+              null,
+              "100644"
+            ],
+            [
+              "src/lib/aptos/balance.js",
+              null,
+              null,
+              "0be8c605",
+              0,
+              null,
+              null,
+              "100644"
+            ],
+            [
+              "src/lib/aptos/config.js",
+              null,
+              null,
+              "f791b95f",
+              0,
+              null,
+              null,
+              "100644"
+            ],
+            [
+              "src/lib/aptos/index.js",
+              null,
+              null,
+              "d7c767c6",
+              0,
+              null,
+              null,
+              "100644"
+            ],
+            [
+              "src/lib/aptos/signPayment.js",
+              null,
+              null,
+              "29cbae4b",
+              0,
+              null,
+              null,
+              "100644"
+            ],
+            [
+              "src/lib/aptos/wallet.js",
+              null,
+              null,
+              "19d821c0",
+              0,
+              null,
+              null,
+              "100644"
+            ],
+            [
+              "src/lib/chains.js",
+              null,
+              null,
+              "35c4e543",
+              0,
+              null,
+              null,
+              "100644"
+            ],
+            [
+              "src/lib/evm/index.js",
+              null,
+              null,
+              "874862e9",
+              0,
+              null,
+              null,
+              "100644"
+            ],
+            [
+              "src/lib/evm/signPayment.js",
+              null,
+              null,
+              "a244a381",
+              0,
+              null,
+              null,
+              "100644"
+            ],
+            [
+              "src/lib/gas.js",
+              null,
+              null,
+              "3a342757",
+              0,
+              null,
+              null,
+              "100644"
+            ],
+            [
+              "src/lib/mcp/client.js",
+              null,
+              null,
+              "9ceb8024",
+              0,
+              null,
+              null,
+              "100644"
+            ],
+            [
+              "src/lib/mcp/index.js",
+              null,
+              null,
+              "a1b50823",
+              0,
+              null,
+              null,
+              "100644"
+            ],
+            [
+              "src/lib/rpc.js",
+              null,
+              null,
+              "e75a5f4a",
+              0,
+              null,
+              null,
+              "100644"
+            ],
+            [
+              "src/lib/wallet.js",
+              null,
+              null,
+              "6810988f",
+              0,
+              null,
+              null,
+              "100644"
+            ],
+            [
+              "src/lib/x402/client.js",
+              null,
+              null,
+              "e31ee095",
+              0,
+              null,
+              null,
+              "100644"
+            ],
+            [
+              "src/lib/x402/index.js",
+              null,
+              null,
+              "565ffe56",
+              0,
+              null,
+              null,
+              "100644"
+            ],
+            [
+              "src/lib/x402/types.js",
+              null,
+              null,
+              "15652e8f",
+              0,
+              null,
+              null,
+              "100644"
+            ],
+            [
+              "src/print-network-funding-env.js",
+              null,
+              null,
+              "13df809d",
+              0,
+              null,
+              null,
+              "100644"
+            ],
+            [
+              "src/register-aptos-agent.js",
+              null,
+              null,
+              "d26b31d2",
+              0,
+              null,
+              null,
+              "100644"
+            ],
+            [
+              "src/run-agent.js",
+              null,
+              null,
+              "1d2f1313",
+              0,
+              null,
+              null,
+              "100644"
+            ],
+            [
+              "src/setup-aptos.js",
+              null,
+              null,
+              "85ba224d",
+              0,
+              null,
+              null,
+              "100644"
+            ],
+            [
+              "src/setup-evm-multichain.js",
+              null,
+              null,
+              "cddf959a",
+              0,
+              null,
+              null,
+              "100644"
+            ],
+            [
+              "src/setup.js",
+              null,
+              null,
+              "f57f82d3",
+              0,
+              null,
+              null,
+              "100644"
+            ],
+            [
+              "src/show-agent-addresses.js",
+              null,
+              null,
+              "713f3b16",
+              0,
+              null,
+              null,
+              "100644"
+            ],
+            [
+              "src/swap.js",
+              null,
+              null,
+              "c2d1ab8e",
+              0,
+              null,
+              null,
+              "100644"
+            ],
+            [
+              "src/transfer.js",
+              null,
+              null,
+              "5e9362ae",
+              0,
+              null,
+              null,
+              "100644"
+            ]
+          ],
+          "use": "自動決済つきMCPで、料金/口座・network/署名/検証/決済/再試行・結果を分ける設計参考。",
+          "value": "402の受付・faucet案内・残高/settlement・実サービス結果を別の証拠にする観点。"
+        }
+      ],
+      "first_ordinal": 178,
+      "notice_bodies": [
+        {
+          "bytes": 18540,
+          "copy_grant": false,
+          "git_blob": "653b6683155f69682b89b005c840a49e903d6d38",
+          "id": 1,
+          "mask_version": null,
+          "path": "skills/josephrp/autonomous-agent/LICENSE.md",
+          "read": [
+            1,
+            null,
+            null,
+            false,
+            false,
+            0
+          ],
+          "reader_job": null,
+          "reader_namespace": null,
+          "sha256": "652666b14b7983ce4d80eaef6382a78cc11297ad193b320282d8ec854373fc90",
+          "terms_unread": true
+        }
+      ],
+      "prior_journal_sha256": "904e2c7a3b3477d2b46d974465e5d6c538fee93e37bce0976239a6d47f9ba0c1",
+      "prior_support_history": {
+        "current_scope": "current保存未読1。旧actual read/mask未確認、原文再読/reader付替え0。",
+        "lookup_scope": "親の復元32ACK/50field索引で、この10支持のfullSHA/SHA8一致0",
+        "nested_SKILLs_added_as_primaries": 0,
+        "prior_maskCount": null,
+        "prior_reader": null,
+        "reader_claim": "20261025-041905-todo-3719/current3719 read-ahead"
+      },
+      "reader_job": "20261026-180903-todo-3719",
+      "reader_todo": 3719,
+      "reading_integrity": {
+        "maskCount": 18,
+        "mask_unit": "outer_physical_lines",
+        "mask_version": 112,
+        "ordered_ranges": [
+          [
+            1,
+            160,
+            "d9456ac6e15dbe3adaec406ee94e90833c8644adeb493db284e82864c9ff0701"
+          ],
+          [
+            161,
+            190,
+            "72bb1bf5b7cb4339a51d9bc3569abe90e5f5ee92ad612737908728530871645f"
+          ]
+        ],
+        "same_buffer": {
+          "bytes": true,
+          "git_blob": true,
+          "same_buffer": true,
+          "sha256": true,
+          "strict_utf8": true
+        },
+        "source_original_text_included": false,
+        "withheld_ranges": [
+          [
+            1,
+            5
+          ],
+          [
+            151,
+            160
+          ],
+          [
+            166,
+            168
+          ]
+        ]
+      },
+      "roster_sha256": "f9c6b2e44c5e3aa8947f758f864eaa0d5edc396d622359826bca848cd96f9901"
+    },
+    "edfaac76be8a7bbb2fc00f78809397d4": {
+      "boundaries": {
+        "central_operations": 0,
+        "copy_license_accepted": false,
+        "new_final_dispositions": 0,
+        "source_executed": false
+      },
+      "chunk_id": "edfaac76be8a7bbb2fc00f78809397d4",
+      "definitions": {
+        "actors": {
+          "0": "今回180primary直接伏字全読。notice4は原041905の実raw22へ結び、新表示0。"
+        },
+        "reader_namespace": "20261027-072935-todo-3719/current3719",
+        "states": {
+          "0": "unsaved",
+          "1": "saved_unread",
+          "2": "direct_raw_full",
+          "3": "direct_masked_full",
+          "4": "exact_bytes_reuse",
+          "5": "ordered_full_diff",
+          "6": "partial",
+          "7": "scan"
+        },
+        "support_tuple": "[relative,bytes,SHA8,Gitblob8,state,maskCount,actor,mode]。全208支持は不変support_inventoryで列挙しentry.supportは状態override。未知reader/maskはnull。"
+      },
+      "domain": "research598-chunk-v1",
+      "entries": [
+        {
+          "candidate_disposition": "接続選択とprovider routingの検査観点として改訂候補を親へ提案。実導入・採否・実test/許諾0。",
+          "findings": [
+            "gateway.maton.ai/{app}/{native-api-path}とctrl.maton.aiの接続管理を分ける。app指定とnativepathの双方が必要。connection省略はoldest activeだが、依頼対象の本人/Org・最小scopeの証明にはならない。",
+            "対応表ではNotionとNotion MCPがapp名notionを共有し、詳細linkはnotion/notion-mcpを分ける。Granola/SunsamaもMCPの記述があり、表の一致だけでtransport/endpoint・service条件や恒久MCP登録許可を同一視しない。QuickBooksは:realmIdを接続realmへ置換する保存主張で、任意realmの権限を保証しない。",
+            "例はSlack送信、HubSpot作成、Sheets値取得、Salesforce query、Airtable schema、Notion query、Stripe顧客一覧。read/write・宛先/data・paginationを分ける必要があり、一覧limitやHTTP受付だけで全件処理/配送成功としない。認証等74行の意味は未読。",
+            "native error status/bodyを通すという記述と、400/429/500・account10req/s/相手quotaの表がある。現在のAPI版・対応範囲・料金/性能は未確認。Python例とNode例の出力だけで例外・業務code/非JSON・部分結果やwrite再送の安全を検証済みにはしない。",
+            "ElevenLabs/fal等のAI APIが同じ対応表にあっても、本人の既存OAuthサブスクWeb利用の許可とは別。非AI通常鍵を一括禁止へ変えず、新AI API課金/追加支出/秘密・他Org・Rakko条件を維持する。新コードは本人Go既定に従い、この読取専用研究で例を実行しない。",
+            "全208の原case metadataは固定index/complete treeと親artifactへ個別照合。141保存/67未保存。primary/同MITnotice以外の現在支持は保存未読又は未保存で、失われた旧read-aheadのreaderを今回へ補完しない。"
+          ],
+          "nearby_limit": "起動metadataだけ。中央本文/存在・同等性/現設定は未照会。",
+          "nearby_metadata": [
+            "mcp-builder",
+            "oauth-least-privilege",
+            "backend-correctness",
+            "opaque-url-path-keys"
+          ],
+          "negative": "最古のACTIVEや対応表の同app名だけで正しい本人・MCP/REST互換・全操作許可とし、実API送信や追加課金まで実行。",
+          "notices": [
+            [
+              "LICENSE.txt",
+              1,
+              "当directoryの同1072B MITnoticeを原10の実raw22へ結ぶreuse4。",
+              "実公開版/作者・個別provider/service/第三者素材・接続dataの権利は別。rootMIT/補助MIT0で上書きしない。"
+            ]
+          ],
+          "positive": "元の許可対象と接続subjectを固定し、native routingの解決と実業務結果・全page/失敗回復を別々に検証する設計へ参照。",
+          "read": [
+            3,
+            74,
+            0,
+            false,
+            true,
+            663
+          ],
+          "reason": "32884B/663行を4範囲で順序全読。実74行抑止/589行可視。179とは別bytesを直接読み、対応表やMCP routingとQuickBooks置換の固有記述も評価した。",
+          "required_changes": [
+            "明示app/connectionID・期待subject/実所有者/目的/最小scopeと、解決後host/path/method/body/送信先を照合する。OAuth用URLや秘密を記録/誤送信せず、接続受付と本人対象の承認を分ける。",
+            "MCP/通常REST・realm置換・provider版headerは現在の公式契約で親が同対象だけ確認する。sourceの網羅表やACTIVEを恒久権限/新費用/他Org操作の許可へしない。",
+            "有限timeout/retry/backoffと冪等性、業務code/全page/実保存・配送を別receiptで確認。一般errorだけで接続の作成・削除や二重送信をしない。"
+          ],
+          "row": 180,
+          "source": [
+            "github:a26eb49bde05c8b522f94b231687f884f2da15f74fc9e9c0a3067ac1dd8abf85",
+            "skills/kenswj/api-gateway-1-0-69/SKILL.md",
+            "5ca2f2b62dcb0b5ec6a6bfc666a74a1217d102f84ab90f63643500d383d847e6",
+            "fa67569e21ff834344a66b21adebb22c4839f690",
+            32884
+          ],
+          "support": [
+            [
+              "LICENSE.txt",
+              1072,
+              "ec9e952f",
+              "4813de20",
+              4,
+              0,
+              0,
+              "100644"
+            ],
+            [
+              "SKILL.md",
+              32884,
+              "5ca2f2b6",
+              "fa67569e",
+              3,
+              74,
+              0,
+              "100644"
+            ]
+          ],
+          "use": "managedOAuthの接続とprovider固有routingを結び、透過proxyの作用・結果を検査する設計参考。",
+          "value": "app名/明示connectionと実subject・scope、nativeのAPI結果と業務完了を分ける観点。"
+        }
+      ],
+      "first_ordinal": 180,
+      "limits": {
+        "central_body_or_existence_checks": 0,
+        "common_policy_guard_unverified_unread": true,
+        "current_support_literal_reads": 0,
+        "notice_new_literal_reads": 0,
+        "old_reader_history_not_relabelled": true,
+        "source_bodies_refetched": 0,
+        "source_script_execution": 0
+      },
+      "notice_bodies": [
+        {
+          "bytes": 1072,
+          "consumer_path": "skills/kenswj/api-gateway-1-0-69/LICENSE.txt",
+          "consumer_row": 180,
+          "fresh_raw": false,
+          "git_blob": "4813de20b72e365983fe0370d79d7cac6ea21d9b",
+          "id": 1,
+          "parent_chunk_sha256": "ec0b420bd8499c6a93e0cbe0d53795519b1334ac402c916dcacfb7b675ccc275",
+          "parent_receipt": "research3719-chunk-66b86047aca0b0294296e8329833ddb7.json",
+          "read": [
+            4,
+            0,
+            0,
+            false,
+            true,
+            22
+          ],
+          "reader_job": "20261025-041905-todo-3719",
+          "reader_namespace": "20261025-041905-todo-3719/current3719",
+          "representative_path": "skills/bobbyzzhao/gmail-1-0-6/LICENSE.txt",
+          "representative_read": [
+            2,
+            0,
+            0,
+            true,
+            true,
+            22
+          ],
+          "representative_row": 10,
+          "sha256": "ec9e952fec4d029fab649746d033bf91802b15f59ffa40a0d3a3a0e1a1587802"
+        }
+      ],
+      "prior_journal_sha256": "d4ec9b87194857ebac2f0e5f92f40dc18537fa7bb1411a91473270b3b60b12b6",
+      "reader_job": "20261027-072935-todo-3719",
+      "reader_todo": 3719,
+      "reading_integrity": {
+        "actual_mask_count": 74,
+        "additional_rule_after170": "example channel/id-value holds added before later views; actual emitted metadata version stayed119, not retroactively relabelled",
+        "limits": "初回に短縮token例URLとsample識別値、後続に媒体ID例の一部が可視だった。原値は評価へ再掲せず、秘密不存在/完全事前抑止を保証しない。伏字74行の意味は未読。",
+        "mask_unit": "outer_physical_lines",
+        "mask_version": 119,
+        "method": "header frontmatter and whole private-key blocks; whole physical lines matching authorization/credentials/contact/private paths/opaque strings/UUID/encoded escapes/card-shaped long digits; prospective only; no secret-free guarantee",
+        "ordered_ranges": [
+          [
+            1,
+            170,
+            "c2c3521ee5bce2394db136d845d25f068693fad5ec1e3fdf5151769f458f1917",
+            138,
+            32
+          ],
+          [
+            171,
+            340,
+            "49b2a47acdda794255a81d76ac3bad7cb96cfebdc4e3f81b69d2b08bda9903b4",
+            158,
+            12
+          ],
+          [
+            341,
+            510,
+            "9ff222c885d2f7bbd30da3d85bea8d993a9ee88869e0e910ed0dfb9686681944",
+            160,
+            10
+          ],
+          [
+            511,
+            663,
+            "7fef0ea98260c659848c209dff5ef1dc751036a7924f01b72d37a1bfd78ca69d",
+            133,
+            20
+          ]
+        ],
+        "same_buffer": {
+          "bytes": true,
+          "git_blob": true,
+          "same_buffer": true,
+          "sha256": true,
+          "strict_utf8": true
+        },
+        "source_original_text_included": false,
+        "withheld_ranges": [
+          [
+            1,
+            17
+          ],
+          [
+            31,
+            31
+          ],
+          [
+            46,
+            46
+          ],
+          [
+            50,
+            50
+          ],
+          [
+            53,
+            53
+          ],
+          [
+            58,
+            58
+          ],
+          [
+            61,
+            61
+          ],
+          [
+            64,
+            64
+          ],
+          [
+            68,
+            68
+          ],
+          [
+            80,
+            80
+          ],
+          [
+            94,
+            94
+          ],
+          [
+            114,
+            114
+          ],
+          [
+            122,
+            122
+          ],
+          [
+            130,
+            130
+          ],
+          [
+            139,
+            139
+          ],
+          [
+            158,
+            158
+          ],
+          [
+            172,
+            172
+          ],
+          [
+            174,
+            174
+          ],
+          [
+            210,
+            210
+          ],
+          [
+            226,
+            226
+          ],
+          [
+            228,
+            229
+          ],
+          [
+            231,
+            231
+          ],
+          [
+            237,
+            237
+          ],
+          [
+            239,
+            239
+          ],
+          [
+            278,
+            278
+          ],
+          [
+            307,
+            307
+          ],
+          [
+            333,
+            333
+          ],
+          [
+            348,
+            348
+          ],
+          [
+            384,
+            384
+          ],
+          [
+            398,
+            398
+          ],
+          [
+            422,
+            422
+          ],
+          [
+            469,
+            469
+          ],
+          [
+            471,
+            471
+          ],
+          [
+            483,
+            483
+          ],
+          [
+            485,
+            485
+          ],
+          [
+            498,
+            498
+          ],
+          [
+            510,
+            510
+          ],
+          [
+            522,
+            522
+          ],
+          [
+            534,
+            535
+          ],
+          [
+            549,
+            549
+          ],
+          [
+            563,
+            563
+          ],
+          [
+            577,
+            578
+          ],
+          [
+            587,
+            587
+          ],
+          [
+            594,
+            594
+          ],
+          [
+            596,
+            596
+          ],
+          [
+            599,
+            599
+          ],
+          [
+            602,
+            602
+          ],
+          [
+            608,
+            608
+          ],
+          [
+            617,
+            618
+          ],
+          [
+            626,
+            626
+          ],
+          [
+            633,
+            633
+          ],
+          [
+            643,
+            643
+          ],
+          [
+            649,
+            649
+          ],
+          [
+            662,
+            662
+          ]
+        ]
+      },
+      "roster_sha256": "f9c6b2e44c5e3aa8947f758f864eaa0d5edc396d622359826bca848cd96f9901",
+      "support_inventory": {
+        "all_metadata_equal_to_fixed_source": true,
+        "artifact": "research180-package208-metadata214717.private.json",
+        "artifact_bytes": 131321,
+        "artifact_sha256": "f1ca76183c83dcc50a46ffae4c8f566ef72b44868f468943fe7dc32d5dab3325",
+        "count": 208,
+        "default_current_saved_read": [
+          1,
+          null,
+          null,
+          false,
+          false,
+          0
+        ],
+        "default_unsaved_read": [
+          0,
+          null,
+          null,
+          false,
+          false,
+          0
+        ],
+        "domain": "research598-parent-package-metadata-v1",
+        "index_sha256": "799bd907887120d83b82e64fbf37094c653a5144b764fef0b70dd4d5e2219607",
+        "materializer_body_reads": 0,
+        "no_missing_or_duplicate_paths": true,
+        "overrides": "entries[0].support; other139 stored supports current saved_unread, prior actual unknown",
+        "records_field": "records",
+        "saved_in_index": 141,
+        "tree_file_sha256": "11e79e2b3e1503ec231ede8e20298f98e7734715a304835f37b3f68bee0b7b5b",
+        "unsaved": 67
+      }
+    }
+  },
+  "parent_acknowledged_through": 180,
+  "parent_journal_sha256": "d9aaf4b3f2b72b430876104e76d3f71158eef7831b9f6e350c34b9af11c0d0a3",
+  "registered_spec_sha256": "4f6fe32f62db56bed2acb4d378147ff952ad06230243fb45f7674f3158313fc3",
+  "roster_sha256": "f9c6b2e44c5e3aa8947f758f864eaa0d5edc396d622359826bca848cd96f9901",
+  "source_commit": "920714f17d81e0a95c7a9bc51faf0a7921cd982d",
+  "source_gzip_or_original_body_reopened": 0,
+  "source_primary_bytes": 99170,
+  "source_slice": [
+    175,
+    180
+  ],
+  "todo": 3080,
+  "whole16_complete": false,
+  "whole_original_ACK_pins": [
+    {
+      "all_original_fields_reconstructed": true,
+      "chunk_id": "d701eec6292e2d63bf55d7f6856d9294",
+      "chunk_sha256": "e20d5e36930e4508efb994f90131aec7cf9501c2dc12f9dec0d39c7f57e6c05e",
+      "first": 175,
+      "last": 175,
+      "original_message_sha256": "802be6326e65643f3761fb918e8dc2f9b5b183a0823f75f227f01d980a30043c",
+      "reader_job": "20261026-180903-todo-3719"
+    },
+    {
+      "all_original_fields_reconstructed": true,
+      "chunk_id": "c14078c5442be59a3c06830aa0782d30",
+      "chunk_sha256": "a709a75421e53ce0ab271f1f40fe019f9d20bd2b484ef21b900f8e55a876380e",
+      "first": 176,
+      "last": 176,
+      "original_message_sha256": "1da4ed144d269a2ad6f7cb6b273c4d0e395d9bc993eb722ad81057592f44095a",
+      "reader_job": "20261026-180903-todo-3719"
+    },
+    {
+      "all_original_fields_reconstructed": true,
+      "chunk_id": "6bf26a3c0416d5c6a76e96832d322d79",
+      "chunk_sha256": "713c59d61652fb62688d05ddb325bddd81761fce38d280e0462afd8882276907",
+      "first": 177,
+      "last": 177,
+      "original_message_sha256": "46cf1102e28bd3986443ee44d793aaad0c9a4877036eb1e220d14cf2c9a8b74e",
+      "reader_job": "20261026-180903-todo-3719"
+    },
+    {
+      "all_original_fields_reconstructed": true,
+      "chunk_id": "ea5e9888bb3652a376219db6454ed7cd",
+      "chunk_sha256": "d13efd4249dc34231fd58a14dceefe076f6e46a2dd5f820e409a9f3c80442770",
+      "first": 178,
+      "last": 178,
+      "original_message_sha256": "fca32fdd61497199e7612d5a72efcebb41bb5548cc908893117681532d73c520",
+      "reader_job": "20261026-180903-todo-3719"
+    },
+    {
+      "all_original_fields_reconstructed": true,
+      "chunk_id": "283fe2e45aa9201cc58eb23cb81e1d86",
+      "chunk_sha256": "bdccdd1d383cf7d62bb58cdf395fc98db5d2c4de9cfae0b54002bd83d6031ea6",
+      "first": 179,
+      "last": 179,
+      "original_message_sha256": "1e31f51b64a4acd305af0f615a964b0b061c7ae638f78d4d0342f5bc1ef5673b",
+      "reader_job": "20261026-180903-todo-3719"
+    },
+    {
+      "all_original_fields_reconstructed": true,
+      "chunk_id": "edfaac76be8a7bbb2fc00f78809397d4",
+      "chunk_sha256": "877c7f5ed5820f55764cfc41ecbbff61fd2e085632bbaaea4f3f1ef4eebc4766",
+      "first": 180,
+      "last": 180,
+      "original_message_sha256": "0b157669462b4cf2e2af4982c9a0889396e133be345c6903ce516c2876426ace",
+      "reader_job": "20261027-072935-todo-3719"
+    }
+  ],
+  "publication": "Working received assessments, not final source/right acceptance or installation",
+  "main_acceptance_pending": true,
+  "evidence_definition": "Six whole acknowledged original chunks with all entry/common/support/privacy fields and immutable actual readers. Independent current fixed-index metadata correspondence only; no new source-byte observation, history continuity or OS-writer proof."
+}

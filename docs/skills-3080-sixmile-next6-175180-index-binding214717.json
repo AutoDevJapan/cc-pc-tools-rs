@@ -1,0 +1,16 @@
+{
+  "evaluation": "skills-3080-sixmile-next6-175180-evaluation214717.json",
+  "evaluation_sha256": "fd93b96c3e157afbdf9e9ea6a9eb83934158815be3270215784e4fc2a079a52c",
+  "independent_private_whole_original_snapshot_sha256": "7d267d7a29bbdb339375df8ee6e35d202f812a66a830ae9b86a0f7d1e665020c",
+  "source_occurrences": 6,
+  "source_bytes": 99170,
+  "whole_original_contexts": 6,
+  "all_original_chunk_ACK_SHA_reconstructed": true,
+  "fixed_source_index_sha256": "799bd907887120d83b82e64fbf37094c653a5144b764fef0b70dd4d5e2219607",
+  "all6_primary_and6_notice_metadata_matched": true,
+  "new_source_or_support_body_reads": 0,
+  "new_grants": 0,
+  "new_adoptions": 0,
+  "actual_support_read_states": "Preserved in each complete original context; unknown, partial, unread and old read-ahead claims are not promoted",
+  "current_literal_byte_or_support_license_coverage_proven": false
+}

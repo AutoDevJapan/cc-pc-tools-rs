@@ -8,9 +8,13 @@ import (
 	"testing"
 )
 
-func skillsPublishedNativeProducer(t *testing.T, name string) skillsProducer {
+type skillsNativeProducerAnchor struct {
+	name, sha, revision, job, call string
+}
+
+func skillsPublishedNativeProducer(t *testing.T, anchor skillsNativeProducerAnchor) skillsProducer {
 	t.Helper()
-	raw, err := os.ReadFile(filepath.Join("..", "docs", name))
+	raw, err := os.ReadFile(filepath.Join("..", "docs", anchor.name))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -20,17 +24,24 @@ func skillsPublishedNativeProducer(t *testing.T, name string) skillsProducer {
 		Call     string `json:"native_call_id"`
 		Original string `json:"original_CLI_stdout_sha256"`
 		Count    int    `json:"successful_CreateNew_count"`
+		Job      string `json:"job"`
 	}
 	if json.Unmarshal(raw, &receipt) != nil || !skillsDigest(receipt.SHA) || !skillsGitObjectID(receipt.Revision) || !skillsCallID.MatchString(receipt.Call) || !skillsDigest(receipt.Original) || receipt.Count != 1 {
 		t.Fatal("independently published original native issuance absent")
+	}
+	if receipt.SHA != anchor.sha || receipt.Revision != anchor.revision || receipt.Job != anchor.job || receipt.Call != anchor.call {
+		t.Fatal("published JSON changed the independently fixed original software/job/call anchor")
 	}
 	return skillsProducer{receipt.SHA, receipt.Revision}
 }
 
 func TestSkills3080PublishedNativeIssuersSurviveSoftwareUpdate(t *testing.T) {
-	for _, name := range []string{"skills-3080-craft-create-evidence214717.json", "skills-3080-openai6-create-evidence214717.json"} {
-		t.Run(name, func(t *testing.T) {
-			issuer := skillsPublishedNativeProducer(t, name)
+	for _, anchor := range []skillsNativeProducerAnchor{
+		{"skills-3080-craft-create-evidence214717.json", "02c8cad70e44f2bc4cd4e5a70dfdaf581a7ee6896eb63449fe1606eb28f5b5be", "f30f9e763e25884fa48d1cce0cac22da1cebfb69", "20261026-175504-todo-3080", "call_183eb93d62314857ac45e22e1052655d"},
+		{"skills-3080-openai6-create-evidence214717.json", "434832534d43cbe954aa1c2e573879556bb840818e830a489b744e6e2744740f", "521c4c4dddd7abbb0135d13bffb380ec984374b8", "20261026-214717-todo-3080", "call_7e3cd035c2bd458f94f744abae0ef5ce"},
+	} {
+		t.Run(anchor.name, func(t *testing.T) {
+			issuer := skillsPublishedNativeProducer(t, anchor)
 			for _, kind := range []string{"valid_public_object", "unknown_sha", "different_revision", "other_writer", "other_request", "unverified_root", "changed_public_bytes"} {
 				t.Run(kind, func(t *testing.T) {
 					m, r, e, _ := skillsForwardFixture(t)

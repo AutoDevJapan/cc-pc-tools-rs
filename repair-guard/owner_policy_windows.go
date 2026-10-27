@@ -24,6 +24,7 @@ type ownerPathVerdict struct {
 	AccessAllowed bool
 	Status        string
 	Categories    []string
+	Basis         string
 }
 
 func ownerUnverified() ownerPathVerdict {
@@ -142,6 +143,7 @@ type ownerPolicyAccess struct {
 	repair   func(string) bool
 	source   func(string) ownerPathVerdict
 	physical func(string) (string, error)
+	organization func(string) ownerPathVerdict
 }
 
 func classifyOwnerPath(path string) ownerPathVerdict {

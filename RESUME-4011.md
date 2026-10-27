@@ -1,5 +1,29 @@
 # 元4011の再開情報
 
+## 次の工程：追加レビュー4082の同じ受付を受領する
+
+再発後の復帰と原値は直下の節を参照。現在MinDiffは未設定/provider320MiB、C→C/50GiB。
+保存先変更や新point作成は0、復元ポイントの保持修復は未完了である。
+空集合の作成排他だけを調べるGo候補を`e5cacb9d3454b6c10a28748b6a9513cb41e6073e`へ
+commit/pushし、**追加review4082**を--spec/親4011/kind review/Opus5.5 maxで登録した。
+固定e134ce78→e5cacb9dの2対象はtools/vss-4011/lockprobe/main_windows.goと
+[診断手順](docs/vss-lock-probe-4011.md)。specは.ci-work/4011/review-lockprobe-100836.md。
+通常dispatchの受付はexit0/status todo/active false/launched null/**allowance_now0**。
+登録は成功しているがこの時点では未起動なので、実行中や実読了と報告しない。同じ受付を追い、
+追加reviewを重複登録せず、元4011だけを正規wait --on4082へ記録して通常枠から受領する。
+実応答・固定範囲読了・native model・Mustを照合し、Must解消後に通常AdminBrokerで有限probeする。
+
+gofmt/Go vet/単一file通常Go build、引数なしexit2、公式SDK由来の5slot独立照合は成功。
+**実probeは未実行**。Goにはvolume追加・DoSnapshotSet・保存先/上限/レジストリ変更・Delete・
+writer metadata取得の呼出しがない。probe結果は2object間に限り、D移行の原子性へ拡大しない。
+raw GUID/私的file/認証を取得せず、通常VSSの排他と必要な後始末だけを確認する。
+次回の外側launcherは診断手順どおりCREATE_NO_WINDOW/非同期stdout/stderr回収/90s期限/自己helperだけの停止。
+新しいpointや監視/taskを追加しない。MicrosoftのSDK sourceとbuild manifestは.ci-workに保持する。
+
+Dの追加ハードウェア照合では、識別値をメモリ内で比較してC/Dのhardware serialが両方有効で
+異なることを確認した。実値は出力・保存しない。二重読みによるsnapshot0だけでは切替しない。
+これまでのselfreview4028/4039は終了・受領済みで、4082とは別のものとして保持する。
+
 ## 最新：07:25に25が再発、10:10に自己設定だけ復帰済み
 
 job20261027-100836-todo-4011、開始e6547d03/同branch/未コミット0から再開。

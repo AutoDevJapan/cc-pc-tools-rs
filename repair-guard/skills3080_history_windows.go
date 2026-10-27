@@ -222,9 +222,13 @@ func skillsNativeSnapshot(s *skillsFS, job object) (io.Reader, bool) {
 	s.files = append(s.files, f)
 	info, e := f.Stat()
 	actual, e2 := ownerHandlePath(h)
-	if e != nil || e2 != nil || !same(actual, p) || !info.Mode().IsRegular() || info.Size() < 1 || info.Size() > 256<<20 {
+	if e != nil || e2 != nil || !same(actual, p) || !info.Mode().IsRegular() || info.Size() < 1 {
 		return nil, false
 	}
+	// A long, otherwise valid session does not change its identity or scope.
+	// Freeze the observed length through this same handle. Bootstrap extraction
+	// separately stops at 4 MiB; full projections retain per-record bounds and the
+	// original task window, exact input/final/call checks and duplicate detection.
 	return io.LimitReader(f, info.Size()), true
 }
 

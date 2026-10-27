@@ -5,7 +5,6 @@ import (
 	"bytes"
 	"encoding/json"
 	"io"
-	"os"
 	"path/filepath"
 	"regexp"
 	"strconv"
@@ -223,46 +222,9 @@ func skillsReadCreationNative(s *skillsFS, job object, c skillsConsumeRequest) (
 			return empty, false
 		}
 	}
-	home, err := os.UserHomeDir()
-	if err != nil {
-		return empty, false
-	}
-	paths := []string{}
-	for _, day := range skillsCreationSessionDays(id, start) {
-		dir := filepath.Join(home, ".codex/sessions", day)
-		if _, ok := s.directory(dir); !ok {
-			continue
-		}
-		entries, err := os.ReadDir(dir)
-		if err != nil {
-			return empty, false
-		}
-		for _, entry := range entries {
-			if strings.HasPrefix(entry.Name(), "rollout-") && strings.HasSuffix(entry.Name(), "-"+id+".jsonl") {
-				paths = append(paths, filepath.Join(dir, entry.Name()))
-			}
-		}
-	}
-	if len(paths) != 1 || s.blocked(paths[0]) {
-		return empty, false
-	}
-	path := paths[0]
-	ph, ok := s.directory(filepath.Dir(path))
+	input, ok := skillsNativeSnapshot(s, job)
 	if !ok {
 		return empty, false
 	}
-	h, ok := skillsOpenAtSharing(ph, filepath.Base(path), false, false, true)
-	if !ok {
-		return empty, false
-	}
-	f := os.NewFile(uintptr(h), path)
-	s.files = append(s.files, f)
-	info, err := f.Stat()
-	actual, pathErr := ownerHandlePath(h)
-	if err != nil || pathErr != nil || !same(actual, path) || !info.Mode().IsRegular() || info.Size() < 1 || info.Size() > 256<<20 {
-		return empty, false
-	}
-	// Snapshot only the initial length of this append log, through one handle.
-	// It may grow during the read; central output handles never use this mode.
-	return skillsCreationNativeProjection(io.LimitReader(f, info.Size()), id, c.Creator.Workspace, start, end, c)
+	return skillsCreationNativeProjection(input, id, c.Creator.Workspace, start, end, c)
 }

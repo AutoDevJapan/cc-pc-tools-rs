@@ -79,6 +79,7 @@ type attempt struct {
 	Phase               string    `json:"phase"`
 	CrossProcessBlocked bool      `json:"cross_process_blocked"`
 	Contender           outcome   `json:"contender"`
+	ContenderReport     *report   `json:"contender_report,omitempty"`
 	BeforeRead          outcome   `json:"before_read"`
 	Before              metadata  `json:"before"`
 	PositiveResize      *outcome  `json:"positive_resize,omitempty"`
@@ -182,7 +183,11 @@ func attemptCD(script string, apply bool) (a attempt) {
 	}
 	a.Contender = process(self, 10*time.Second, "--contender")
 	var child report
-	if !a.Contender.WaitVerified || a.Contender.Timeout || a.Contender.Truncated || a.Contender.Exit != 1 || json.Unmarshal(a.Contender.out, &child) != nil {
+	decoded := json.Unmarshal(a.Contender.out, &child) == nil
+	if decoded {
+		a.ContenderReport = &child
+	}
+	if !a.Contender.WaitVerified || a.Contender.Timeout || a.Contender.Truncated || a.Contender.Exit != 1 || !decoded {
 		a.Phase = "cross_process_exclusion_unverified_no_write"
 		return
 	}

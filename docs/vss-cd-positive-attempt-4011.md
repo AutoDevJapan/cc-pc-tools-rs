@@ -63,6 +63,21 @@ SystemRestoreの新しい2世代が保持されること、50GiB・C/D/E空き�
 現在のcandidateにpoint作成は実装していないため、登録/設定だけで全体完了としない。
 OS再起動や障害復元は未検証のまま区別し、本人のPC操作を依存にしない。
 
+## 現在の実測と検査
+
+gofmt/Go vet/通常build成功、保持条件の13種類の拒否例と出力上限の関連テスト成功。
+emptyなscript引数はexit2で拒否した。通常AdminBrokerのread-only preflightも全取得成功した。
+
+11:19:14～17の`--inspect-cd`は、別processのStartが0x80042316で拒否されることを
+実際に確認し、timeout/打切りなし、終了待ち確認済みで戻った。保持中のpreflightは全取得成功、
+C→C/50GiB/使用割当0、全snapshot0/point0、D実NVMe/空き2,074,361,589,760Bを返した。
+親のAbortは0x00040202、所有空集合1/Abort完了1/Release1で終わった。
+この実行のpositive_resize欄はなく、resize processは起動していない。
+inspectの原request/resultを追記保存し、元probeの未確認票を成功票へ書き換えていない。
+
+後続のsourceでは、別processの匿名call/HRESULT/所有数も結果へ残すようにした。
+書込モードは未実行であり、その別モデルレビューと実適用・通常保持の受入が残る。
+
 一次資料：
 
 - [StartSnapshotSet](https://learn.microsoft.com/en-us/windows/win32/api/vsbackup/nf-vsbackup-ivssbackupcomponents-startsnapshotset)

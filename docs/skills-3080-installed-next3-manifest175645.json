@@ -39,19 +39,33 @@
           "sha256": "ec6192f03df3dcd912ec15388ed14016fe9b06c352afc7f31efd74c7da60e8df"
         }
       ],
-      "target_kind": "new_adaptation_intent",
-      "deployment_state": "proposed_uninstalled",
-      "pre_mutation_absence_qualification_completed": false,
-      "directory_presence_observation": {
-        "observed_at": "2026-10-27T12:56:18Z",
-        "path_exists": false,
-        "method": "exact-directory GetAttributes returned FileNotFoundException",
-        "existing_contents_opened": false,
-        "future_absence_not_asserted": true
-      },
+      "target_kind": "newly_created_adaptation",
+      "deployment_state": "created_once_and_current_readback_verified",
+      "pre_mutation_absence_qualification_completed": true,
       "new": true,
       "before_sha256": "absent",
-      "target_state": "actual_once_created_and_current_ID_hash_buffer_verified"
+      "target_state": "actual_once_created_and_current_ID_hash_buffer_verified",
+      "pre_creation_history": {
+        "target_kind": "new_adaptation_intent",
+        "deployment_state": "proposed_uninstalled",
+        "pre_mutation_absence_qualification_completed": false,
+        "directory_presence_observation": {
+          "observed_at": "2026-10-27T12:56:18Z",
+          "path_exists": false,
+          "method": "exact-directory GetAttributes returned FileNotFoundException",
+          "existing_contents_opened": false,
+          "future_absence_not_asserted": true
+        },
+        "before_sha256": "absent"
+      },
+      "precreation_qualification": {
+        "file": "skills-3080-next3-precreation-qualification175645.json",
+        "sha256": "ceb05f9db7a6744332f79f40c98c71b6fe5545308ec74961346c798c1f68b323"
+      },
+      "recorded_current_readback": {
+        "file": "skills-3080-next3-consume-evidence175645.json",
+        "sha256": "9464d57dd3c3d158b51819977c14a1a5556cd0e85489280ff2eb0704f19a64fa"
+      }
     },
     {
       "name": "aerobase-travel-lounges",
@@ -91,19 +105,33 @@
           "sha256": "0526c423a5e48d348566233bcd63a6ee9d25fca1825ac7e331116885fbb8f391"
         }
       ],
-      "target_kind": "new_adaptation_intent",
-      "deployment_state": "proposed_uninstalled",
-      "pre_mutation_absence_qualification_completed": false,
-      "directory_presence_observation": {
-        "observed_at": "2026-10-27T12:56:18Z",
-        "path_exists": false,
-        "method": "exact-directory GetAttributes returned FileNotFoundException",
-        "existing_contents_opened": false,
-        "future_absence_not_asserted": true
-      },
+      "target_kind": "newly_created_adaptation",
+      "deployment_state": "created_once_and_current_readback_verified",
+      "pre_mutation_absence_qualification_completed": true,
       "new": true,
       "before_sha256": "absent",
-      "target_state": "actual_once_created_and_current_ID_hash_buffer_verified"
+      "target_state": "actual_once_created_and_current_ID_hash_buffer_verified",
+      "pre_creation_history": {
+        "target_kind": "new_adaptation_intent",
+        "deployment_state": "proposed_uninstalled",
+        "pre_mutation_absence_qualification_completed": false,
+        "directory_presence_observation": {
+          "observed_at": "2026-10-27T12:56:18Z",
+          "path_exists": false,
+          "method": "exact-directory GetAttributes returned FileNotFoundException",
+          "existing_contents_opened": false,
+          "future_absence_not_asserted": true
+        },
+        "before_sha256": "absent"
+      },
+      "precreation_qualification": {
+        "file": "skills-3080-next3-precreation-qualification175645.json",
+        "sha256": "ceb05f9db7a6744332f79f40c98c71b6fe5545308ec74961346c798c1f68b323"
+      },
+      "recorded_current_readback": {
+        "file": "skills-3080-next3-consume-evidence175645.json",
+        "sha256": "9464d57dd3c3d158b51819977c14a1a5556cd0e85489280ff2eb0704f19a64fa"
+      }
     },
     {
       "name": "aerobase-travel-wallet",
@@ -143,26 +171,55 @@
           "sha256": "25be7d44aa036825a0b82db0ff9fb8a629bfc5d48d9e5bbe459ffb8bf11f6741"
         }
       ],
-      "target_kind": "new_adaptation_intent",
-      "deployment_state": "proposed_uninstalled",
-      "pre_mutation_absence_qualification_completed": false,
-      "directory_presence_observation": {
-        "observed_at": "2026-10-27T12:56:18Z",
-        "path_exists": false,
-        "method": "exact-directory GetAttributes returned FileNotFoundException",
-        "existing_contents_opened": false,
-        "future_absence_not_asserted": true
-      },
+      "target_kind": "newly_created_adaptation",
+      "deployment_state": "created_once_and_current_readback_verified",
+      "pre_mutation_absence_qualification_completed": true,
       "new": true,
       "before_sha256": "absent",
-      "target_state": "actual_once_created_and_current_ID_hash_buffer_verified"
+      "target_state": "actual_once_created_and_current_ID_hash_buffer_verified",
+      "pre_creation_history": {
+        "target_kind": "new_adaptation_intent",
+        "deployment_state": "proposed_uninstalled",
+        "pre_mutation_absence_qualification_completed": false,
+        "directory_presence_observation": {
+          "observed_at": "2026-10-27T12:56:18Z",
+          "path_exists": false,
+          "method": "exact-directory GetAttributes returned FileNotFoundException",
+          "existing_contents_opened": false,
+          "future_absence_not_asserted": true
+        },
+        "before_sha256": "absent"
+      },
+      "precreation_qualification": {
+        "file": "skills-3080-next3-precreation-qualification175645.json",
+        "sha256": "ceb05f9db7a6744332f79f40c98c71b6fe5545308ec74961346c798c1f68b323"
+      },
+      "recorded_current_readback": {
+        "file": "skills-3080-next3-consume-evidence175645.json",
+        "sha256": "9464d57dd3c3d158b51819977c14a1a5556cd0e85489280ff2eb0704f19a64fa"
+      }
     }
   ],
-  "central_operations": 0,
-  "new_adoptions": 0,
-  "stage": "proposal_not_qualified_or_placed",
-  "new_adoptions_definition": "Serialization/checking adds0 new placements. Three actual once-only successful placements are recorded separately in the adoption ledger; original source archives remain outside Skills and original visible display stays masked.",
+  "central_operations": 1,
+  "new_adoptions": 3,
+  "stage": "actual_created_readback_discovered_and_explicitly_applied",
+  "new_adoptions_definition": "Three actual once-only placements are already included in ledger150. Serializing this record creates no additional Skill or adoption.",
   "root": "D:/CC/Skills",
   "creator_job": "20261027-175645-todo-3080",
-  "current_consumer_job": "20261027-175645-todo-3080"
+  "current_consumer_job": "20261027-175645-todo-3080",
+  "pre_creation_history": {
+    "stage": "proposal_not_qualified_or_placed",
+    "central_operations": 0,
+    "new_adoptions": 0,
+    "original_proposal_commit": "362836100dbbc1c855119a2fbc7356253b0a3b72",
+    "original_proposal": "docs/skills-3080-travel-next3-bundle175645.json",
+    "original_proposal_sha256": "0e0ff688af3fbcd8042d88ab640b01b6e012be318561f58f2f24e1c55d71d151",
+    "source_current_files_or_frozen_operation_changed": false
+  },
+  "publication_additional_central_operations": 0,
+  "publication_additional_adoptions": 0,
+  "precreation_qualification": {
+    "file": "skills-3080-next3-precreation-qualification175645.json",
+    "sha256": "ceb05f9db7a6744332f79f40c98c71b6fe5545308ec74961346c798c1f68b323"
+  }
 }

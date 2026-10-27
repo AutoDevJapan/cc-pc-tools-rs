@@ -74,11 +74,11 @@
   "referenced_artifacts": {
     "bundle": {
       "file": "skills-3080-next3-actual-bundle175645.json",
-      "sha256": "f17499bdcac43f9153862905d4f43010d21008645e057484009f884b9a5c6f3a"
+      "sha256": "780455fe1d59e36840ff4f8fbd82593c1cf4f9767fbd4ddd491e57d4d644477a"
     },
     "manifest": {
       "file": "skills-3080-installed-next3-manifest175645.json",
-      "sha256": "817ee69cae40ef216703078bc929134ae8ee494362ef1819fc5216b5eea07c89"
+      "sha256": "9a900280825944480c4c297e6b8c86a4706a31f52062a56233e444b45ffb341e"
     },
     "creation": {
       "file": "skills-3080-next3-create-evidence175645.json",
@@ -90,7 +90,7 @@
     },
     "structure": {
       "file": "skills-3080-next3-actual-structure175645.json",
-      "sha256": "0236ed2fc3d9bb419dfb14245b2efa2a7e20d6792bb2b0fe6953c07e58a3b10c"
+      "sha256": "5d544918b8ccc8af891a76584e2726e7bc7e92bd780fda41ad60ea6623f64a7c"
     },
     "discovery": {
       "file": "skills-3080-next3-discovery175645.json",
@@ -103,6 +103,10 @@
     "design": {
       "file": "skills-3080-next3-designs175645.json",
       "sha256": "452969e5ad67cbce06c33684fc8051b0e7e24016a0627f68eda92d0080b70f22"
+    },
+    "precreation": {
+      "file": "skills-3080-next3-precreation-qualification175645.json",
+      "sha256": "ceb05f9db7a6744332f79f40c98c71b6fe5545308ec74961346c798c1f68b323"
     }
   },
   "creator_runtime_sha256": "9be9a066053183a099e78133571d394ecbb2845372e3cf603e292c74dac1a8d3",

@@ -15,6 +15,55 @@ const next3Actor = "20261027-175645-todo-3080"
 
 func next3RecordedZero(value *int) bool { return value != nil && *value == 0 }
 
+func TestNext3PublishedLifecycleIsCurrent(t *testing.T) {
+	for _, name := range []string{"skills-3080-next3-actual-bundle175645.json", "skills-3080-installed-next3-manifest175645.json"} {
+		var value struct {
+			Stage   string `json:"stage"`
+			Targets []struct {
+				Deployment string `json:"deployment_state"`
+				Qualified  *bool  `json:"pre_mutation_absence_qualification_completed"`
+			} `json:"targets"`
+		}
+		loadPublicReceipt(t, name, &value)
+		if value.Stage != "actual_created_readback_discovered_and_explicitly_applied" || len(value.Targets) != 3 {
+			t.Fatalf("%s still mixes proposal and actual lifecycle", name)
+		}
+		for _, target := range value.Targets {
+			if target.Deployment != "created_once_and_current_readback_verified" || !recordedTrue(target.Qualified) {
+				t.Fatal("actual placement or completed pre-mutation qualification missing")
+			}
+		}
+	}
+}
+
+func TestNext3FullReviewRejectsChangedOrMissingOwnerOrigins(t *testing.T) {
+	for _, key := range []string{"model_origin", "effort_origin"} {
+		for _, change := range []string{"policy", "missing", "null"} {
+			t.Run(key+"/"+change, func(t *testing.T) {
+				var value map[string]any
+				loadPublicReceipt(t, "skills-3080-next3-installation-evidence175645.json", &value)
+				review := received27Object(t, value["qualified_independent_review_native"])
+				metadata := received27Object(t, review["metadata"])
+				switch change {
+				case "missing":
+					delete(metadata, key)
+				case "null":
+					metadata[key] = nil
+				default:
+					metadata[key] = change
+				}
+				raw, err := json.Marshal(value)
+				if err != nil {
+					t.Fatal(err)
+				}
+				if validateNext3CurrentReview(raw) == nil {
+					t.Fatal("owner-request origin was missing or changed but accepted")
+				}
+			})
+		}
+	}
+}
+
 func validateNext3Header(i travel3Install, n travel3Native, r travel3Read) error {
 	if i.New != 3 || i.Created != 1 || i.Files != 21 || i.Bytes != 65566 || i.Instructions != 6 || i.InstructionBytes != 9206 || i.Creator != next3Actor || i.Manifest != next3OperationSHA || !recordedFalse(i.Done) || !recordedFalse(i.Implicit) || !recordedFalse(i.ThirdParty) || i.Raw != 0 {
 		return errors.New("next3 actual installation boundary differs")
@@ -46,6 +95,8 @@ func validateNext3CurrentReview(raw []byte) error {
 			Metadata              struct {
 				Job           string `json:"id"`
 				Model, Effort string
+				ModelOrigin   string `json:"model_origin"`
+				EffortOrigin  string `json:"effort_origin"`
 				Spec          string `json:"spec_sha256"`
 				Final         string `json:"final_sha256"`
 			}
@@ -56,7 +107,7 @@ func validateNext3CurrentReview(raw []byte) error {
 		return errors.New("next3 explicit full review and limits absent")
 	}
 	m := extra.Review.Metadata
-	if m.Job != "20261028-054325-todo-4129" || m.Model != "gpt-6-luna" || m.Effort != "max" || m.Spec != "62dd891e54730d9b3a4daf82331b21fb3c05b3ea5efa508b1bdff632c8e58f44" || m.Final != "c593ea9e665a19a8ebd1bac348ba061b203a73b21b3ca6e7facc0fc299a94661" || len(extra.Review.Native) < 1 {
+	if m.Job != "20261028-054325-todo-4129" || m.Model != "gpt-6-luna" || m.Effort != "max" || m.ModelOrigin != "owner_request" || m.EffortOrigin != "owner_request" || m.Spec != "62dd891e54730d9b3a4daf82331b21fb3c05b3ea5efa508b1bdff632c8e58f44" || m.Final != "c593ea9e665a19a8ebd1bac348ba061b203a73b21b3ca6e7facc0fc299a94661" || len(extra.Review.Native) < 1 {
 		return errors.New("next3 actual native/spec/result differs")
 	}
 	for _, n := range extra.Review.Native {
@@ -179,7 +230,7 @@ func validatedNext3Dispositions(t *testing.T) map[string]cohortLedgerRow {
 	if err := validateNext3CurrentReview(installationRaw); err != nil {
 		t.Fatal(err)
 	}
-	wantNames := map[string]string{"bundle": "skills-3080-next3-actual-bundle175645.json", "manifest": "skills-3080-installed-next3-manifest175645.json", "creation": "skills-3080-next3-create-evidence175645.json", "readback": "skills-3080-next3-consume-evidence175645.json", "structure": "skills-3080-next3-actual-structure175645.json", "discovery": "skills-3080-next3-discovery175645.json", "application": "skills-3080-next3-application175645.json", "design": "skills-3080-next3-designs175645.json"}
+	wantNames := map[string]string{"precreation": "skills-3080-next3-precreation-qualification175645.json", "bundle": "skills-3080-next3-actual-bundle175645.json", "manifest": "skills-3080-installed-next3-manifest175645.json", "creation": "skills-3080-next3-create-evidence175645.json", "readback": "skills-3080-next3-consume-evidence175645.json", "structure": "skills-3080-next3-actual-structure175645.json", "discovery": "skills-3080-next3-discovery175645.json", "application": "skills-3080-next3-application175645.json", "design": "skills-3080-next3-designs175645.json"}
 	rawPins := map[string][]byte{}
 	for kind, file := range wantNames {
 		pin, ok := install.Pins[kind]
@@ -200,6 +251,12 @@ func validatedNext3Dispositions(t *testing.T) map[string]cohortLedgerRow {
 	var read travel3Read
 	if json.Unmarshal(rawPins["creation"], &native) != nil || json.Unmarshal(rawPins["readback"], &read) != nil {
 		t.Fatal("travel3 actual evidence cannot decode")
+	}
+	if err := validateNext3Precreation(rawPins["precreation"]); err != nil {
+		t.Fatal(err)
+	}
+	if err := validateNext3FlowProof(installationRaw, rawPins["creation"], rawPins["readback"]); err != nil {
+		t.Fatal(err)
 	}
 	if e := validateNext3Header(install, native, read); e != nil {
 		t.Fatal(e)

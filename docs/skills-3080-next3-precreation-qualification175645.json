@@ -1,0 +1,60 @@
+{
+  "domain": "skills3080-next3-precreation-qualification-history-v1",
+  "publisher_job": "20261027-175645-todo-3080",
+  "manifest_sha256": "5df4ba1cf1946271e5d03d6b6e02009f0c29d2c8025a9b8be0161a3d8aefae70",
+  "request_sha256": "b74fe84e8da49c63f75cfe41cb905c0493d60eeaa51edfa31fd9182874a0dda2",
+  "normal_readonly_qualification_observations": [
+    {
+      "phase": "before_first_native_attempt",
+      "original_complete_wrapper_sha256": "1d5a0a1b069ce61f8c3d0d563508e62f2bc740585df416c63975366ffec7d3db",
+      "original_CLI_stdout_sha256": "99f5856126e22f9dfacb24c12f0c88ec3bd602127670bfcedb853d1ff30d35bf",
+      "exact_forward_invocation_sha256": "2da7e9a8bf4388fac8b62cad5e6f920df5703d16796e568d87b80d5bbae402b0",
+      "response_projection": {
+        "qualified": true,
+        "domain": "skills-3080-purpose-v1",
+        "operation": "CreateNew",
+        "todo_id": 3080,
+        "request_sha256": "b74fe84e8da49c63f75cfe41cb905c0493d60eeaa51edfa31fd9182874a0dda2",
+        "manifest_sha256": "5df4ba1cf1946271e5d03d6b6e02009f0c29d2c8025a9b8be0161a3d8aefae70",
+        "source_commit": "362836100dbbc1c855119a2fbc7356253b0a3b72",
+        "file_count": 21,
+        "created_files": 0,
+        "general_access_granted": false,
+        "original_registry_recovered": false
+      },
+      "projection_is_not_a_new_issuer_receipt": true,
+      "original_complete_response_and_native_history_retained": true
+    },
+    {
+      "phase": "after_prewrite_failure_before_single_retry",
+      "original_complete_wrapper_sha256": "1d5a0a1b069ce61f8c3d0d563508e62f2bc740585df416c63975366ffec7d3db",
+      "original_CLI_stdout_sha256": "99f5856126e22f9dfacb24c12f0c88ec3bd602127670bfcedb853d1ff30d35bf",
+      "exact_forward_invocation_sha256": "2da7e9a8bf4388fac8b62cad5e6f920df5703d16796e568d87b80d5bbae402b0",
+      "response_projection": {
+        "qualified": true,
+        "domain": "skills-3080-purpose-v1",
+        "operation": "CreateNew",
+        "todo_id": 3080,
+        "request_sha256": "b74fe84e8da49c63f75cfe41cb905c0493d60eeaa51edfa31fd9182874a0dda2",
+        "manifest_sha256": "5df4ba1cf1946271e5d03d6b6e02009f0c29d2c8025a9b8be0161a3d8aefae70",
+        "source_commit": "362836100dbbc1c855119a2fbc7356253b0a3b72",
+        "file_count": 21,
+        "created_files": 0,
+        "general_access_granted": false,
+        "original_registry_recovered": false
+      },
+      "projection_is_not_a_new_issuer_receipt": true,
+      "original_complete_response_and_native_history_retained": true
+    }
+  ],
+  "failed_native_call_before_retry": "call_3f19872af67b4c598df946770bbc3381",
+  "successful_native_creation_call": "call_b3c15733a51840c3a0f58ba684ca3c1c",
+  "successful_original_CLI_stdout_sha256": "077c2cd83fb00b3c06577edd63cfcb2a2e8451b7e6474a1cd974b954fa6cb2c4",
+  "mutation_revalidated_before_CreateNew": true,
+  "current_absence_asserted": false,
+  "new_Create_calls_by_publication": 0,
+  "additional_central_operations": 0,
+  "original_complete_qualification_outputs_unchanged": true,
+  "definition": "Two actual normal read-only invocations returned identical bytes for unchanged inputs. Their original wrapper digests are therefore equal. Phase labels describe the original execution history, not independent signed receipts or a current absence assertion. The successful canonical Create revalidated all conditions at its mutation boundary.",
+  "whole16_complete": false
+}

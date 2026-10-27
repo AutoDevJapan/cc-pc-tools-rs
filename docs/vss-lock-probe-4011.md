@@ -49,6 +49,24 @@ slot（5/6/15/35/36）がすべてsourceと一致することも確認した。�
 cleanup前のphase保持、終了コードの意味、他の作成への一時的な影響の照合を補った。
 この具体修正後もGo vetと通常buildは成功し、APIの種類や診断の目的は変更していない。
 
+## 10:52の実probeと後始末の照合
+
+通常AdminBrokerで1回実行し、最初のStartはS_OK、2つ目は0x80042316を返した。
+Abortは0x00040202、2objectのReleaseは実行され、Goは約40msで終了した。
+元の厳密なS_OK判定ではAbortを未確認としてexit1になったため、この原結果を保持した。
+snapshot/point/使用/割当は前後とも0、C→C/50GiBと原MinDiff未設定を維持し、新volsnapは0件だった。
+
+0x00040202は[EVENT_S_NOSUBSCRIBERS](https://learn.microsoft.com/en-us/windows/win32/com/com-error-codes-1)で、
+イベントの購読者がいなかったことを示すCOMの成功値である。no-writersの空集合で返った実値を
+0以外すべて失敗とした診断側を修正し、0とこの値だけをAbort完了として扱う。
+購読者の部分失敗や未知の正値を成功へ広げず、6種類のHRESULTの実Red→Greenを確認した。
+古い原票のphaseやexitは書き換えない。
+
+`--available`はreviewの事後照合に対応する単一の空集合の通常Start/Abortだけを1回行う。
+元の2object probeの再試行ではなく、解除後に通常のVSS要求が受け付けられるかを照合する。
+`availability_observed`は単一Start・Abort完了・Releaseを確認したときだけtrueになる。
+保存先変更や実snapshot作成は含まない。これが確認できるまではDへの変更へ進まない。
+
 ## 次の保存先分離の候補と未確認点
 
 CとDは異なるdisk番号のNVMe、DはNTFS/Healthy/Online、空き約2.1TBで、Dを源・保存先にする

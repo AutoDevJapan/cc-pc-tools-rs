@@ -26,6 +26,12 @@ const (
 	setInProgress           = 0x80042316
 )
 
+func abortCompleted(hr uint32) bool {
+	// COM+ reports that Abort was delivered without any writer subscriber in
+	// the no-writers context. Do not treat partial subscriber failure as success.
+	return hr == 0 || hr == 0x00040202 // EVENT_S_NOSUBSCRIBERS, winerror.h
+}
+
 // Slot order comes from Microsoft's vsbackup.h IVssBackupComponents : IUnknown.
 // https://github.com/microsoft/win32metadata/blob/main/generation/WinSDK/RecompiledIdlHeaders/um/vsbackup.h
 type component struct{ table *[37]uintptr }
@@ -53,6 +59,7 @@ type report struct {
 	ObjectsReleased       int          `json:"objects_released"`
 	ContenderBlocked      bool         `json:"contender_blocked"`
 	ExclusionObserved     bool         `json:"exclusion_observed"`
+	AvailabilityObserved  bool         `json:"availability_observed"`
 	Scope                 string       `json:"scope"`
 	VolumeAddCalls        int          `json:"volume_add_calls"`
 	ShadowCreateCalls     int          `json:"shadow_create_calls"`
@@ -68,11 +75,14 @@ func (c *component) call(slot int, args ...uintptr) uint32 {
 	return uint32(h)
 }
 
-func run() (r report) {
+func run(contender bool) (r report) {
 	runtime.LockOSThread()
 	defer runtime.UnlockOSThread()
 	r.StartedUTC = time.Now().UTC().Format(time.RFC3339Nano)
 	r.Scope = "two components in one process; not proof that a storage relocation is atomic"
+	if !contender {
+		r.Scope = "one normal empty set after cleanup; no shadow or storage changes"
+	}
 	r.Phase = "entrypoints_unavailable"
 	defer func() { r.FinishedUTC = time.Now().UTC().Format(time.RFC3339Nano) }()
 	root := filepath.Join(os.Getenv("SystemRoot"), "System32")
@@ -114,7 +124,7 @@ func run() (r report) {
 		for i := len(started) - 1; i >= 0; i-- {
 			hr := started[i].call(abortBackupSlot)
 			record(fmt.Sprintf("owned-set-%d", i+1), "AbortBackup", hr)
-			if hr == 0 {
+			if abortCompleted(hr) {
 				r.OwnAbortsSucceeded++
 			}
 		}
@@ -124,11 +134,17 @@ func run() (r report) {
 		}
 		r.ExclusionObserved = r.ContenderBlocked && r.OwnedEmptySetsStarted == 1 &&
 			r.OwnAbortsSucceeded == 1 && r.ObjectsReleased == len(objects)
+		r.AvailabilityObserved = !contender && r.OwnedEmptySetsStarted == 1 &&
+			r.OwnAbortsSucceeded == 1 && r.ObjectsReleased == 1
 		if r.OwnAbortsSucceeded != r.OwnedEmptySetsStarted {
 			r.Phase = "own_empty_set_abort_unverified"
 		}
 	}()
-	for _, label := range []string{"first", "contender"} {
+	labels := []string{"first"}
+	if contender {
+		labels = append(labels, "contender")
+	}
+	for _, label := range labels {
 		var c *component
 		h, _, _ = create.Call(uintptr(unsafe.Pointer(&c)))
 		record(label, "CreateVssBackupComponents", uint32(h))
@@ -178,11 +194,11 @@ func run() (r report) {
 }
 
 func main() {
-	if len(os.Args) != 2 || os.Args[1] != "--probe" {
-		fmt.Fprintln(os.Stderr, "usage: vss-lockprobe --probe")
+	if len(os.Args) != 2 || (os.Args[1] != "--probe" && os.Args[1] != "--available") {
+		fmt.Fprintln(os.Stderr, "usage: vss-lockprobe --probe | --available")
 		os.Exit(2)
 	}
-	r := run()
+	r := run(os.Args[1] == "--probe")
 	if json.NewEncoder(os.Stdout).Encode(r) != nil {
 		os.Exit(1)
 	}

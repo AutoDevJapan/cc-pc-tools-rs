@@ -87,6 +87,21 @@ func TestCI3888RuntimePurposePositiveAndBoundary(t *testing.T) {
 	}
 }
 
+func TestCI3888RuntimeSystemAncestorOwner(t *testing.T) {
+	a, _, _, _, caller := ci3888RuntimeFixture()
+	original := a.identity
+	a.identity = func(path string) (audio2906Metadata, error) {
+		m, err := original(path)
+		if !same(path, ci3888RuntimeRoot) && !same(path, filepath.Dir(ci3888RuntimeRoot)) {
+			m.Owner = "S-1-5-18" // System ancestors need not be owned by the temp owner.
+		}
+		return m, err
+	}
+	if err := ci3888RuntimeVerifyWith(context.Background(), ci3888RuntimeRoot, caller, a); err != nil {
+		t.Fatalf("unchanged system ancestors rejected: %v", err)
+	}
+}
+
 func TestCI3888RuntimeIndependentEvidence(t *testing.T) {
 	for _, change := range []string{"registry", "current-job", "producer-job", "original-lineage", "source", "build", "process", "stdout", "creation", "issuer", "issuer-changed", "root-handle", "root-identity", "parent-identity", "owner", "reparse", "file", "protection", "ancestor-protection", "github", "cancelled", "physical-recheck", "source-recheck", "process-recheck"} {
 		t.Run(change, func(t *testing.T) {

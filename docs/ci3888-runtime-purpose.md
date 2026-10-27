@@ -18,8 +18,8 @@ directory verdictは作業場所の用途を示し、childの内容・SDK・cred
    所有票をこの実装担当が直接読むことはせず、正規CLIの内部で固定メタデータだけを確認する。
 2. version3/state owned/project/content/producerを型付きで照合し、uint64を丸めない。
    元作成jobは通常の独立した実装担当として、元ToDo・実worktree・branch・repositoryへ結び付く。
-3. root・Temp・作成時の全祖先のvolume/file ID/birth/owner、非reparseを現在の物理対象と照合し、
-   非追従のhandleを判定終了まで保持する。
+3. root・Tempのownerと、作成時の全祖先およびrootのvolume/file ID/birth・非reparseを現在の物理対象と照合し、
+   非追従のhandleを判定終了まで保持する。Windowsの上位祖先をユーザー所有とは仮定しない。
 4. 元3387/3888/3894の独立した登録・原job・停止条件を保持し、現在の3888の通常割当、
    実job、processの生存と出生時刻、実process ancestry、実ソースを確認する。
 5. 元repo/PR17/head/tree/run/workflow/labelsと公式公開SDK assetの通常GitHub metadataを再確認する。

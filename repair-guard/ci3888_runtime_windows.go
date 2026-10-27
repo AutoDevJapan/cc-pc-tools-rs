@@ -129,16 +129,19 @@ func ci3888RuntimeActorBound(reg skillsRegistry, caller string, job, producer ob
 }
 
 func ci3888RuntimePhysical(r official3894Owned, identity func(string) (audio2906Metadata, error)) bool {
-	check := func(path string, volume uint32, id, birth uint64) bool {
+	check := func(path string, volume uint32, id, birth uint64, owned bool) bool {
 		m, err := identity(path)
 		return err == nil && m.Volume == volume && m.ID == id && uint64(m.Created) == birth &&
-			m.Owner == civ6Owner && m.Attributes&syscall.FILE_ATTRIBUTE_REPARSE_POINT == 0 && m.Attributes&syscall.FILE_ATTRIBUTE_DIRECTORY != 0
+			(!owned || m.Owner == civ6Owner) && m.Attributes&syscall.FILE_ATTRIBUTE_REPARSE_POINT == 0 && m.Attributes&syscall.FILE_ATTRIBUTE_DIRECTORY != 0
 	}
-	if !check(r.Path, r.Volume, r.FileID, r.Birth) {
+	if !check(r.Path, r.Volume, r.FileID, r.Birth, true) {
 		return false
 	}
-	for _, ancestor := range r.Ancestors {
-		if !check(ancestor.Path, ancestor.Volume, ancestor.FileID, ancestor.Birth) {
+	for i, ancestor := range r.Ancestors {
+		// The normal create record pins ancestor identities, not their owners.
+		// Only this user-owned root and its Temp parent have an owner claim;
+		// Windows' C:/Users and volume root normally have system owners.
+		if !check(ancestor.Path, ancestor.Volume, ancestor.FileID, ancestor.Birth, i == 0) {
 			return false
 		}
 	}

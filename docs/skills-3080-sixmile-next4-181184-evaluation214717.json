@@ -1,0 +1,1601 @@
+{
+  "all4_primary_and6_individual_notice_metadata_match": true,
+  "all_original_selected_chunks_losslessly_reconstructed": true,
+  "central_operations": 0,
+  "consumer_job": "20261026-214717-todo-3080",
+  "definition": "Whole accepted original chunks, not selected prose. Original assessment writers, actual literal/reuse reader evidence, source states and all common/privacy/support definitions are retained. Independent fixed metadata match is not a fresh physical-byte observation or new reading/permission grant.",
+  "domain": "skills3080-sixmile-received-four-whole-original-v1",
+  "entries": [
+    {
+      "actual_body_reader_inferred_from_assessment_writer": false,
+      "assessment_writer_job": "20261027-072935-todo-3719",
+      "bytes": 30048,
+      "central_operations": 0,
+      "copy_license_accepted": false,
+      "git_blob": "4e360cd0cd14406bcba398a4e3fcadd3a0d44607",
+      "individual_notice_metadata": [
+        {
+          "repo": "6mile/skills",
+          "commit": "920714f17d81e0a95c7a9bc51faf0a7921cd982d",
+          "path": "skills/krunkosaurus/sogni-gen/LICENSE",
+          "sha256": "6d5461e7905ab9acc45d0454d189700bfb20d247d60411b5390414318ad1dec2",
+          "git_blob": "c1ca0de7172e39ffdeef3e1c97fbc94e18f23f98",
+          "bytes": 1071,
+          "role": "license_or_notice"
+        }
+      ],
+      "inventory_id": "github:4173aca8ce70035af912a8b9f9d95664b9b45ce12ba8234a72ad6e25bb9296c8",
+      "new_final_disposition": false,
+      "original_chunk_id": "878d5a0d40573ea836375693e784423a",
+      "original_chunk_sha256": "083d0c24b5a0066f3a5d187d458096f95c33372a8d7e5e741b2864ff3b785694",
+      "original_context_ref": "878d5a0d40573ea836375693e784423a",
+      "original_read_tuple": [
+        3,
+        81,
+        0,
+        false,
+        true,
+        653
+      ],
+      "original_reader_assessment": {
+        "candidate_disposition": "媒体検証と連続性/再寸法の観点を改訂候補として親へ提案。実導入・最終採否/実test/許諾0。",
+        "findings": [
+          "Sogni分散GPU networkで画像/動画・face transfer/複数角度/ControlNetを扱う保存資料。Spark消費と残高/費用見積、30s画像/300s動画のdefaultを記述するが、現契約/無料50daily・価格/品質/処理時間は未確認。本人の既存OAuthサブスク/指定neuralframesやElevenLabsを置換する許可ではない。",
+          "last-render.jsonの再利用・last-image・prompt-hash seed、inbound mediaの列挙、Downloadsへのcopyを記述する。直前の媒体やseedが今回の本人/依頼/素材とは限らず、同じ作業IDと許可対象/媒体hashへ結ぶ必要がある。原media/顔・音声の権利や外部提供はsoftware noticeと別。",
+          "8azimuth→隣接i2v→last-to-first→concat、元動画の最終frame抽出→targetへ補間→concatを案内。繋いだだけでseamless/本人同一/実尺・音声同期の成功を保証しない。JSONsuccess/URL/localPathと実媒体取得・再生/尺・配送を分ける。",
+          "4K要求を非3840x2160でも最高実用pathへ読み替える規則は、そのまま採用しない。HD例1920x1088、portrait1088x1920と、末尾i2v max1536/16倍数・参照fit-inside丸めの制約はmodel/workflow別に検証が必要。要求比率/解像度と実出力が違えば明示し、完成条件を勝手に縮めない。",
+          "elevation defaultをmediumと書くがflag表はeye-level等へmappingする。zoomをpush-inへ変える案もlens変化とcamera移動を混同し得る。技術defaultは元要件と具体画像の回答を保ち、photobooth keywordやSogni-only/ffmpeg禁止を本人の新しい優先/禁止へしない。",
+          "19files中5保存。README/_meta/llmは現在保存未読、14実装/config/manifest/lock等は未保存・未取得でbytes/SHA/reader/maskはnull。CLI wrapperのsafe宣言・bootstrapやMCP/plugin機能/出力を実コード検証済みにしない。原script/install/設定・GPU/認証/生成・課金/送信0。"
+        ],
+        "nearby_limit": "起動catalog metadataだけ。中央本文/存在・同等性/現契約は未照会。",
+        "nearby_metadata": [
+          "generative-media-tools",
+          "video-use",
+          "voice-and-video-production",
+          "image-generation-editing"
+        ],
+        "negative": "4Kを1920x1088の成功JSONで満たしたとし、last-imageやinboundの無関係素材を外部生成へ送り、無料日次枠を未確認のまま課金経路へ進める。",
+        "notices": [
+          [
+            "LICENSE",
+            1,
+            "当directoryの1071B MITを今回22行直接raw読取。許可/著作権表示保持と無保証を記述。",
+            "publisher/実公開版の対応・モデル/素材/顔音声/生成物・外部service条件は別。rootMIT/補助MIT0で上書きしない。"
+          ]
+        ],
+        "positive": "許可された素材・既存制作経路で、参照frameと期待寸法/尺を固定し、接続部・音声/映像・保存媒体と配送を実証で結ぶ設計へ参照。",
+        "read": [
+          3,
+          81,
+          0,
+          false,
+          true,
+          653
+        ],
+        "reason": "30048B/653行を4範囲/81行抑止で直接全読。CLI/費用/4Kと寸法の独自規則を具体的に評価し、未保存実装の動作・安全は推測しない。",
+        "required_changes": [
+          "本人の既存契約内OAuth制作経路と素材/顔・音声/宛先のscopeを優先。sourceのSpark手順を新AI API/追加購入・恒久MCP権限へ変えない。必要な現公式model/limits/termsだけ親が同対象内で確認。",
+          "jobと素材hash/seed/期待format・寸法/比率/尺を固定し、有限poll/timeout・失敗回収/再送重複防止と実媒体検査を残す。最後の画像・成功JSONだけを完成/配信扱いにしない。",
+          "4Kや比率の非同等な読み替え、camera意味変更、作者独自の全操作禁止を改訂する。元資料/実装を保持し、このread-only研究では新script実装・実行しない。"
+        ],
+        "row": 181,
+        "source": [
+          "github:4173aca8ce70035af912a8b9f9d95664b9b45ce12ba8234a72ad6e25bb9296c8",
+          "skills/krunkosaurus/sogni-gen/SKILL.md",
+          "c92fd277b454d4bcfa308d7f3e806bbaa2c29e10ac7d5bf5feaa8bc35f31028e",
+          "4e360cd0cd14406bcba398a4e3fcadd3a0d44607",
+          30048
+        ],
+        "support": [
+          [
+            "LICENSE",
+            1071,
+            "6d5461e7",
+            "c1ca0de7",
+            2,
+            0,
+            0,
+            "100644"
+          ],
+          [
+            "README.md",
+            17179,
+            "b65ee84b",
+            "a755d315",
+            1,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "SKILL.md",
+            30048,
+            "c92fd277",
+            "4e360cd0",
+            3,
+            81,
+            0,
+            "100644"
+          ],
+          [
+            "Support/Claude/claude_desktop_config.json",
+            null,
+            null,
+            "66f8a8cf",
+            0,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "_meta.json",
+            1513,
+            "bc9614fc",
+            "6184cb4e",
+            1,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "desktop-extension/manifest.json",
+            null,
+            null,
+            "78850289",
+            0,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "desktop-extension/server/mcp-server.mjs",
+            null,
+            null,
+            "0aa3761e",
+            0,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "desktop-extension/server/package.json",
+            null,
+            null,
+            "52a91f6f",
+            0,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "desktop-extension/server/sogni-gen.mjs",
+            null,
+            null,
+            "b39b7e45",
+            0,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "env.mjs",
+            null,
+            null,
+            "e33dec20",
+            0,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "llm.txt",
+            816,
+            "63571a3e",
+            "2b9bf4a3",
+            1,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "mcp-server.mjs",
+            null,
+            null,
+            "82923044",
+            0,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "openclaw-plugin.mjs",
+            null,
+            null,
+            "33d70875",
+            0,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "openclaw.plugin.json",
+            null,
+            null,
+            "0a8f5694",
+            0,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "package-lock.json",
+            null,
+            null,
+            "bebd3886",
+            0,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "package.json",
+            null,
+            null,
+            "6edf68df",
+            0,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "skill-package.json",
+            null,
+            null,
+            "0a607747",
+            0,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "sogni-gen.mjs",
+            null,
+            null,
+            "06dc2d49",
+            0,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "version.mjs",
+            null,
+            null,
+            "0dc9acd7",
+            0,
+            null,
+            null,
+            "100644"
+          ]
+        ],
+        "use": "参照媒体・seed/カメラ・format/尺と、生成/保存/連結/配信の状態を分ける制作workflowの知識候補。",
+        "value": "first/last-frame連続性、i2v再寸法の実確認、同一素材/seedと期限・費用を明示して検証する観点。"
+      },
+      "parent_all_semantics_received": true,
+      "path": "skills/krunkosaurus/sogni-gen/SKILL.md",
+      "reader_row": 181,
+      "source_commit": "920714f17d81e0a95c7a9bc51faf0a7921cd982d",
+      "source_repo": "6mile/skills",
+      "source_sha256": "c92fd277b454d4bcfa308d7f3e806bbaa2c29e10ac7d5bf5feaa8bc35f31028e"
+    },
+    {
+      "actual_body_reader_inferred_from_assessment_writer": false,
+      "assessment_writer_job": "20261027-072935-todo-3719",
+      "bytes": 4461,
+      "central_operations": 0,
+      "copy_license_accepted": false,
+      "git_blob": "abce89dd43c9afb53f9a85b886f95e9ac1c084b8",
+      "individual_notice_metadata": [
+        {
+          "repo": "6mile/skills",
+          "commit": "920714f17d81e0a95c7a9bc51faf0a7921cd982d",
+          "path": "skills/kurosh87/aerobase-flight-awards/LICENSE.txt",
+          "sha256": "619bd2ca1801541f1923b1f5d343e59067030fb865eae56a207fdf32fc0f8e81",
+          "git_blob": "173e897dc0b825da210873c7209b1e27bceea077",
+          "bytes": 1075,
+          "role": "license_or_notice"
+        }
+      ],
+      "inventory_id": "github:9440b3c1d3efc7897fb77a3b5ae23e6e21c830f564db18b331ba58b185e79624",
+      "new_final_disposition": false,
+      "original_chunk_id": "e7c38fbd28735592addb878732df9261",
+      "original_chunk_sha256": "531a266ac1219fa41f56aed1c282a29d0b96a12213088fa2e3513cf24e33898c",
+      "original_context_ref": "e7c38fbd28735592addb878732df9261",
+      "original_read_tuple": [
+        3,
+        15,
+        0,
+        false,
+        true,
+        118
+      ],
+      "original_reader_assessment": {
+        "candidate_disposition": "親への改訂知識候補。導入/最終採否・実test/許諾0。",
+        "findings": [
+          "T1",
+          "T2",
+          "cached award検索はfrom/to、cabin/date/range/limit<=100。miles/席数とrecovery指標を返し、alert作成/変更/削除とtrip detailを別endpointにする。",
+          "cashUSD*100/milesの単純CPPは税/移行費・利用条件を含まない。希少席を上位にする規則やrecoveryDays0を、現在の予約可能性/投資価値/医学的保証へしない。search戻り一覧に明記されないidをtrip照会へ使う契約も要確認。"
+        ],
+        "nearby_metadata": [
+          "public-data-research",
+          "timezone-helper"
+        ],
+        "negative": "cached席やCPPだけで確保/最得とし、未設定の日次追跡を稼働済みとする。",
+        "notices": [
+          [
+            "LICENSE.txt",
+            1,
+            "当directory MIT1075Bを同jobで直接22行読取。",
+            "publisher/公開版・API/service/旅程data/第三者素材権利は別。"
+          ]
+        ],
+        "positive": "同条件と取得時点を付け、総費用を留保した候補比較に参照。",
+        "read": [
+          3,
+          15,
+          0,
+          false,
+          true,
+          118
+        ],
+        "reason": "4461B/118行を122版/15行抑止で直接順序全読。下記の固有操作と限界を評価。",
+        "required_changes": [
+          "cache時点/税・条件/通貨と同日同cabinを明示。空結果の理由と有限再照会、alert受理/実監視を分ける。"
+        ],
+        "row": 182,
+        "source": [
+          "github:9440b3c1d3efc7897fb77a3b5ae23e6e21c830f564db18b331ba58b185e79624",
+          "skills/kurosh87/aerobase-flight-awards/SKILL.md",
+          "60eff6142c70bc7057b023828e78ec81be8ed89507324e6ee08e7fcc80c5b010",
+          "abce89dd43c9afb53f9a85b886f95e9ac1c084b8",
+          4461
+        ],
+        "support": [
+          [
+            "LICENSE.txt",
+            1075,
+            "619bd2ca",
+            "173e897d",
+            2,
+            0,
+            0,
+            "100644"
+          ],
+          [
+            "SKILL.md",
+            4461,
+            "60eff614",
+            "abce89dd",
+            3,
+            15,
+            0,
+            "100644"
+          ],
+          [
+            "_meta.json",
+            1180,
+            "b616d10b",
+            "22d11288",
+            1,
+            null,
+            null,
+            "100644"
+          ]
+        ],
+        "use": "特典航空券の候補を条件付きで比較する知識。",
+        "value": "同cabin/日付帯のmiles・席数・取得時点を分ける。"
+      },
+      "parent_all_semantics_received": true,
+      "path": "skills/kurosh87/aerobase-flight-awards/SKILL.md",
+      "reader_row": 182,
+      "source_commit": "920714f17d81e0a95c7a9bc51faf0a7921cd982d",
+      "source_repo": "6mile/skills",
+      "source_sha256": "60eff6142c70bc7057b023828e78ec81be8ed89507324e6ee08e7fcc80c5b010"
+    },
+    {
+      "actual_body_reader_inferred_from_assessment_writer": false,
+      "assessment_writer_job": "20261027-072935-todo-3719",
+      "bytes": 3380,
+      "central_operations": 0,
+      "copy_license_accepted": false,
+      "git_blob": "55f2729ce7b55dcccd3d7730d98963775a6f9171",
+      "individual_notice_metadata": [
+        {
+          "repo": "6mile/skills",
+          "commit": "920714f17d81e0a95c7a9bc51faf0a7921cd982d",
+          "path": "skills/kurosh87/aerobase-flight-deals/LICENSE.txt",
+          "sha256": "619bd2ca1801541f1923b1f5d343e59067030fb865eae56a207fdf32fc0f8e81",
+          "git_blob": "173e897dc0b825da210873c7209b1e27bceea077",
+          "bytes": 1075,
+          "role": "license_or_notice"
+        }
+      ],
+      "inventory_id": "github:c21e85f1d697be2a8fd7307a49311d479591c25281c18de4c92f20d42ab8abb0",
+      "new_final_disposition": false,
+      "original_chunk_id": "e7c38fbd28735592addb878732df9261",
+      "original_chunk_sha256": "531a266ac1219fa41f56aed1c282a29d0b96a12213088fa2e3513cf24e33898c",
+      "original_context_ref": "e7c38fbd28735592addb878732df9261",
+      "original_read_tuple": [
+        3,
+        14,
+        0,
+        false,
+        true,
+        88
+      ],
+      "original_reader_assessment": {
+        "candidate_disposition": "親への改訂知識候補。導入/最終採否・実test/許諾0。",
+        "findings": [
+          "T1",
+          "T2",
+          "GET dealsはUSD max_price、date帯、value/jetlag/recovery、sortとlimit<=50。POST/GET alertsの作成/一覧があり、watch設定でmonitoringがtriggerされると記述。",
+          "live/saved-route・Proの外部feed/Google Flights確認は保存主張。watch設定/受付は定期実行・値下がり判定/配送の証明でなく、jetlagと医学的回復も未確認。"
+        ],
+        "nearby_metadata": [
+          "observability-notifications",
+          "loop-me"
+        ],
+        "negative": "alert作成だけで監視完了、古い最低価格で今買えると報告。",
+        "notices": [
+          [
+            "LICENSE.txt",
+            1,
+            "同1075B noticeを当packet182の実readへ結ぶ4。",
+            "publisher/公開版・API/service/旅程data/第三者素材権利は別。"
+          ]
+        ],
+        "positive": "同旅程の時点付き価格と実通知receiptを別にする設計へ参照。",
+        "read": [
+          3,
+          14,
+          0,
+          false,
+          true,
+          88
+        ],
+        "reason": "3380B/88行を122版/14行抑止で直接順序全読。下記の固有操作と限界を評価。",
+        "required_changes": [
+          "同じ総額/日付/経由/条件で比較し、価格の再確認・cache/欠損を区別。alert scope/期限/重複・実tick/配送を検査。"
+        ],
+        "row": 183,
+        "source": [
+          "github:c21e85f1d697be2a8fd7307a49311d479591c25281c18de4c92f20d42ab8abb0",
+          "skills/kurosh87/aerobase-flight-deals/SKILL.md",
+          "8b43c312bcd95fcf0db425226d08bcd6692e96f3135176da43681fd19f56a907",
+          "55f2729ce7b55dcccd3d7730d98963775a6f9171",
+          3380
+        ],
+        "support": [
+          [
+            "LICENSE.txt",
+            1075,
+            "619bd2ca",
+            "173e897d",
+            4,
+            0,
+            0,
+            "100644"
+          ],
+          [
+            "SKILL.md",
+            3380,
+            "8b43c312",
+            "55f2729c",
+            3,
+            14,
+            0,
+            "100644"
+          ],
+          [
+            "_meta.json",
+            1178,
+            "14f5bf5e",
+            "090c09b3",
+            1,
+            null,
+            null,
+            "100644"
+          ]
+        ],
+        "use": "運賃候補の比較と価格通知の状態を分ける知識。",
+        "value": "価格だけでなく旅程条件・取得時点/通知実績を添える。"
+      },
+      "parent_all_semantics_received": true,
+      "path": "skills/kurosh87/aerobase-flight-deals/SKILL.md",
+      "reader_row": 183,
+      "source_commit": "920714f17d81e0a95c7a9bc51faf0a7921cd982d",
+      "source_repo": "6mile/skills",
+      "source_sha256": "8b43c312bcd95fcf0db425226d08bcd6692e96f3135176da43681fd19f56a907"
+    },
+    {
+      "actual_body_reader_inferred_from_assessment_writer": false,
+      "assessment_writer_job": "20261027-072935-todo-3719",
+      "bytes": 3147,
+      "central_operations": 0,
+      "copy_license_accepted": false,
+      "git_blob": "4805e418a050c4066368eac7b492a2458787e091",
+      "individual_notice_metadata": [
+        {
+          "repo": "6mile/skills",
+          "commit": "920714f17d81e0a95c7a9bc51faf0a7921cd982d",
+          "path": "skills/kurosh87/aerobase-travel-activities/LICENSE.txt",
+          "sha256": "619bd2ca1801541f1923b1f5d343e59067030fb865eae56a207fdf32fc0f8e81",
+          "git_blob": "173e897dc0b825da210873c7209b1e27bceea077",
+          "bytes": 1075,
+          "role": "license_or_notice"
+        }
+      ],
+      "inventory_id": "github:b8dc79367a5f2d302052107f33da6b3ab28924279a6804c9452e8074ec1d2e3e",
+      "new_final_disposition": false,
+      "original_chunk_id": "e7c38fbd28735592addb878732df9261",
+      "original_chunk_sha256": "531a266ac1219fa41f56aed1c282a29d0b96a12213088fa2e3513cf24e33898c",
+      "original_context_ref": "e7c38fbd28735592addb878732df9261",
+      "original_read_tuple": [
+        3,
+        14,
+        0,
+        false,
+        true,
+        76
+      ],
+      "original_reader_assessment": {
+        "candidate_disposition": "親への改訂知識候補。導入/最終採否・実test/許諾0。",
+        "findings": [
+          "T1",
+          "T2",
+          "attractions/slug tours/toursの3GETとcity/country/nearAirport、rating/duration・limit/offsetを列挙。短い乗継では回復と体力を優先する案。",
+          "唯一の推薦源をTours APIとしつつProでTripAdvisor/実空席確認を宣伝する。作者のprovider限定/upsellを本人の新規禁止・契約許可にせず、現在の営業/移動/出入国・予約可否は未確認。"
+        ],
+        "nearby_metadata": [
+          "geo-data-research",
+          "timezone-helper"
+        ],
+        "negative": "nearAirportやmaxDurationだけで乗継に間に合う/参加安全と断言。",
+        "notices": [
+          [
+            "LICENSE.txt",
+            1,
+            "同1075B noticeを当packet182の実readへ結ぶ4。",
+            "publisher/公開版・API/service/旅程data/第三者素材権利は別。"
+          ]
+        ],
+        "positive": "移動/帰着余裕と条件付き候補を並べる観点へ参照。",
+        "read": [
+          3,
+          14,
+          0,
+          false,
+          true,
+          76
+        ],
+        "reason": "3147B/76行を122版/14行抑止で直接順序全読。下記の固有操作と限界を評価。",
+        "required_changes": [
+          "offset全件/取得時点・移動/帰着余裕と本人の希望を明示。recovery-safeを医療安全保証にせず、source競合を親が同対象で確認。"
+        ],
+        "row": 184,
+        "source": [
+          "github:b8dc79367a5f2d302052107f33da6b3ab28924279a6804c9452e8074ec1d2e3e",
+          "skills/kurosh87/aerobase-travel-activities/SKILL.md",
+          "f21c99db85e2df3875c0eacd566054bd536e238e49c5d1e10dd1c07cd44e3acd",
+          "4805e418a050c4066368eac7b492a2458787e091",
+          3147
+        ],
+        "support": [
+          [
+            "LICENSE.txt",
+            1075,
+            "619bd2ca",
+            "173e897d",
+            4,
+            0,
+            0,
+            "100644"
+          ],
+          [
+            "SKILL.md",
+            3147,
+            "f21c99db",
+            "4805e418",
+            3,
+            14,
+            0,
+            "100644"
+          ],
+          [
+            "_meta.json",
+            1012,
+            "09d37f51",
+            "60de0fc5",
+            1,
+            null,
+            null,
+            "100644"
+          ]
+        ],
+        "use": "時間/体力/予算を考慮した現地活動の候補整理。",
+        "value": "滞在可能時間と移動の負担を選択条件にする。"
+      },
+      "parent_all_semantics_received": true,
+      "path": "skills/kurosh87/aerobase-travel-activities/SKILL.md",
+      "reader_row": 184,
+      "source_commit": "920714f17d81e0a95c7a9bc51faf0a7921cd982d",
+      "source_repo": "6mile/skills",
+      "source_sha256": "f21c99db85e2df3875c0eacd566054bd536e238e49c5d1e10dd1c07cd44e3acd"
+    }
+  ],
+  "independent_source_index_sha256": "799bd907887120d83b82e64fbf37094c653a5144b764fef0b70dd4d5e2219607",
+  "new_copy_grants": 0,
+  "new_final_dispositions": 0,
+  "new_global_raw_read_credit": 0,
+  "new_global_workflow_read_credit": 0,
+  "old_reader_or_privacy_profiles_relabelled": false,
+  "original_chunk_definitions": {
+    "878d5a0d40573ea836375693e784423a": {
+      "boundaries": {
+        "central_operations": 0,
+        "copy_license_accepted": false,
+        "new_final_dispositions": 0,
+        "source_executed": false
+      },
+      "chunk_id": "878d5a0d40573ea836375693e784423a",
+      "definitions": {
+        "actors": {
+          "0": "今回の実assistant読取。primary3/notice2。旧未復元支持のreaderを今回へ付替えない。"
+        },
+        "reader_namespace": "20261027-072935-todo-3719/current3719",
+        "states": {
+          "0": "unsaved",
+          "1": "saved_unread",
+          "2": "direct_raw_full",
+          "3": "direct_masked_full",
+          "4": "exact_bytes_reuse",
+          "5": "ordered_full_diff",
+          "6": "partial",
+          "7": "scan"
+        },
+        "support_tuple": "[relative,bytes,SHA8,Gitblob8,state,maskCount,actor,mode]。全tree19filesを列挙。保存支持fulltupleは固定index799bd907/tree5782ae7dの原caseへ結ぶ。未保存値/未読mask・readerはnull。"
+      },
+      "domain": "research598-chunk-v1",
+      "entries": [
+        {
+          "candidate_disposition": "媒体検証と連続性/再寸法の観点を改訂候補として親へ提案。実導入・最終採否/実test/許諾0。",
+          "findings": [
+            "Sogni分散GPU networkで画像/動画・face transfer/複数角度/ControlNetを扱う保存資料。Spark消費と残高/費用見積、30s画像/300s動画のdefaultを記述するが、現契約/無料50daily・価格/品質/処理時間は未確認。本人の既存OAuthサブスク/指定neuralframesやElevenLabsを置換する許可ではない。",
+            "last-render.jsonの再利用・last-image・prompt-hash seed、inbound mediaの列挙、Downloadsへのcopyを記述する。直前の媒体やseedが今回の本人/依頼/素材とは限らず、同じ作業IDと許可対象/媒体hashへ結ぶ必要がある。原media/顔・音声の権利や外部提供はsoftware noticeと別。",
+            "8azimuth→隣接i2v→last-to-first→concat、元動画の最終frame抽出→targetへ補間→concatを案内。繋いだだけでseamless/本人同一/実尺・音声同期の成功を保証しない。JSONsuccess/URL/localPathと実媒体取得・再生/尺・配送を分ける。",
+            "4K要求を非3840x2160でも最高実用pathへ読み替える規則は、そのまま採用しない。HD例1920x1088、portrait1088x1920と、末尾i2v max1536/16倍数・参照fit-inside丸めの制約はmodel/workflow別に検証が必要。要求比率/解像度と実出力が違えば明示し、完成条件を勝手に縮めない。",
+            "elevation defaultをmediumと書くがflag表はeye-level等へmappingする。zoomをpush-inへ変える案もlens変化とcamera移動を混同し得る。技術defaultは元要件と具体画像の回答を保ち、photobooth keywordやSogni-only/ffmpeg禁止を本人の新しい優先/禁止へしない。",
+            "19files中5保存。README/_meta/llmは現在保存未読、14実装/config/manifest/lock等は未保存・未取得でbytes/SHA/reader/maskはnull。CLI wrapperのsafe宣言・bootstrapやMCP/plugin機能/出力を実コード検証済みにしない。原script/install/設定・GPU/認証/生成・課金/送信0。"
+          ],
+          "nearby_limit": "起動catalog metadataだけ。中央本文/存在・同等性/現契約は未照会。",
+          "nearby_metadata": [
+            "generative-media-tools",
+            "video-use",
+            "voice-and-video-production",
+            "image-generation-editing"
+          ],
+          "negative": "4Kを1920x1088の成功JSONで満たしたとし、last-imageやinboundの無関係素材を外部生成へ送り、無料日次枠を未確認のまま課金経路へ進める。",
+          "notices": [
+            [
+              "LICENSE",
+              1,
+              "当directoryの1071B MITを今回22行直接raw読取。許可/著作権表示保持と無保証を記述。",
+              "publisher/実公開版の対応・モデル/素材/顔音声/生成物・外部service条件は別。rootMIT/補助MIT0で上書きしない。"
+            ]
+          ],
+          "positive": "許可された素材・既存制作経路で、参照frameと期待寸法/尺を固定し、接続部・音声/映像・保存媒体と配送を実証で結ぶ設計へ参照。",
+          "read": [
+            3,
+            81,
+            0,
+            false,
+            true,
+            653
+          ],
+          "reason": "30048B/653行を4範囲/81行抑止で直接全読。CLI/費用/4Kと寸法の独自規則を具体的に評価し、未保存実装の動作・安全は推測しない。",
+          "required_changes": [
+            "本人の既存契約内OAuth制作経路と素材/顔・音声/宛先のscopeを優先。sourceのSpark手順を新AI API/追加購入・恒久MCP権限へ変えない。必要な現公式model/limits/termsだけ親が同対象内で確認。",
+            "jobと素材hash/seed/期待format・寸法/比率/尺を固定し、有限poll/timeout・失敗回収/再送重複防止と実媒体検査を残す。最後の画像・成功JSONだけを完成/配信扱いにしない。",
+            "4Kや比率の非同等な読み替え、camera意味変更、作者独自の全操作禁止を改訂する。元資料/実装を保持し、このread-only研究では新script実装・実行しない。"
+          ],
+          "row": 181,
+          "source": [
+            "github:4173aca8ce70035af912a8b9f9d95664b9b45ce12ba8234a72ad6e25bb9296c8",
+            "skills/krunkosaurus/sogni-gen/SKILL.md",
+            "c92fd277b454d4bcfa308d7f3e806bbaa2c29e10ac7d5bf5feaa8bc35f31028e",
+            "4e360cd0cd14406bcba398a4e3fcadd3a0d44607",
+            30048
+          ],
+          "support": [
+            [
+              "LICENSE",
+              1071,
+              "6d5461e7",
+              "c1ca0de7",
+              2,
+              0,
+              0,
+              "100644"
+            ],
+            [
+              "README.md",
+              17179,
+              "b65ee84b",
+              "a755d315",
+              1,
+              null,
+              null,
+              "100644"
+            ],
+            [
+              "SKILL.md",
+              30048,
+              "c92fd277",
+              "4e360cd0",
+              3,
+              81,
+              0,
+              "100644"
+            ],
+            [
+              "Support/Claude/claude_desktop_config.json",
+              null,
+              null,
+              "66f8a8cf",
+              0,
+              null,
+              null,
+              "100644"
+            ],
+            [
+              "_meta.json",
+              1513,
+              "bc9614fc",
+              "6184cb4e",
+              1,
+              null,
+              null,
+              "100644"
+            ],
+            [
+              "desktop-extension/manifest.json",
+              null,
+              null,
+              "78850289",
+              0,
+              null,
+              null,
+              "100644"
+            ],
+            [
+              "desktop-extension/server/mcp-server.mjs",
+              null,
+              null,
+              "0aa3761e",
+              0,
+              null,
+              null,
+              "100644"
+            ],
+            [
+              "desktop-extension/server/package.json",
+              null,
+              null,
+              "52a91f6f",
+              0,
+              null,
+              null,
+              "100644"
+            ],
+            [
+              "desktop-extension/server/sogni-gen.mjs",
+              null,
+              null,
+              "b39b7e45",
+              0,
+              null,
+              null,
+              "100644"
+            ],
+            [
+              "env.mjs",
+              null,
+              null,
+              "e33dec20",
+              0,
+              null,
+              null,
+              "100644"
+            ],
+            [
+              "llm.txt",
+              816,
+              "63571a3e",
+              "2b9bf4a3",
+              1,
+              null,
+              null,
+              "100644"
+            ],
+            [
+              "mcp-server.mjs",
+              null,
+              null,
+              "82923044",
+              0,
+              null,
+              null,
+              "100644"
+            ],
+            [
+              "openclaw-plugin.mjs",
+              null,
+              null,
+              "33d70875",
+              0,
+              null,
+              null,
+              "100644"
+            ],
+            [
+              "openclaw.plugin.json",
+              null,
+              null,
+              "0a8f5694",
+              0,
+              null,
+              null,
+              "100644"
+            ],
+            [
+              "package-lock.json",
+              null,
+              null,
+              "bebd3886",
+              0,
+              null,
+              null,
+              "100644"
+            ],
+            [
+              "package.json",
+              null,
+              null,
+              "6edf68df",
+              0,
+              null,
+              null,
+              "100644"
+            ],
+            [
+              "skill-package.json",
+              null,
+              null,
+              "0a607747",
+              0,
+              null,
+              null,
+              "100644"
+            ],
+            [
+              "sogni-gen.mjs",
+              null,
+              null,
+              "06dc2d49",
+              0,
+              null,
+              null,
+              "100644"
+            ],
+            [
+              "version.mjs",
+              null,
+              null,
+              "0dc9acd7",
+              0,
+              null,
+              null,
+              "100644"
+            ]
+          ],
+          "use": "参照媒体・seed/カメラ・format/尺と、生成/保存/連結/配信の状態を分ける制作workflowの知識候補。",
+          "value": "first/last-frame連続性、i2v再寸法の実確認、同一素材/seedと期限・費用を明示して検証する観点。"
+        }
+      ],
+      "first_ordinal": 181,
+      "limits": {
+        "central_body_or_existence_checks": 0,
+        "global_unique_support_read_credit": 0,
+        "masked_meanings_unread": 81,
+        "old_readahead_history_unknown_not_erased": true,
+        "source_bodies_refetched": 0,
+        "support_saved_unread": 3,
+        "support_unsaved": 14
+      },
+      "notice_bodies": [
+        {
+          "bytes": 1071,
+          "git_blob": "c1ca0de7172e39ffdeef3e1c97fbc94e18f23f98",
+          "id": 1,
+          "mask_version": 122,
+          "meaning": "MITsoftware条件は当directoryに適用する候補資料。個別publisher/素材・service権利は未確定、copygrant0。",
+          "ordered_ranges": [
+            [
+              1,
+              22,
+              "9fd620a0aaad0532c3213f11187447a1b955d6eb87090cb9bd1a6ac0626dc034",
+              22,
+              0
+            ]
+          ],
+          "read": [
+            2,
+            0,
+            0,
+            true,
+            true,
+            22
+          ],
+          "reader_job": "20261027-072935-todo-3719",
+          "reader_namespace": "20261027-072935-todo-3719/current3719",
+          "representative_path": "skills/krunkosaurus/sogni-gen/LICENSE",
+          "representative_row": 181,
+          "same_buffer": {
+            "bytes": true,
+            "git_blob": true,
+            "same_buffer": true,
+            "sha256": true,
+            "strict_utf8": true
+          },
+          "sha256": "6d5461e7905ab9acc45d0454d189700bfb20d247d60411b5390414318ad1dec2"
+        }
+      ],
+      "prior_journal_sha256": "d9aaf4b3f2b72b430876104e76d3f71158eef7831b9f6e350c34b9af11c0d0a3",
+      "reader_job": "20261027-072935-todo-3719",
+      "reader_todo": 3719,
+      "reading_integrity": {
+        "mask_unit": "outer_physical_lines",
+        "mask_version": 122,
+        "method": "whole header/private-key blocks; physical lines containing authorization/credentials/contact/private filesystem paths/token fields/opaque runs/UUID/card-shaped digits; code URL concrete media IDs held; zero not guarantee",
+        "ordered_ranges": [
+          [
+            1,
+            160,
+            "4e41a084fcfb469140438578019a1f16598827c2f07600aee69311e7f10b5dee",
+            108,
+            52
+          ],
+          [
+            161,
+            320,
+            "4dbeb1157c64fe0dd8829ed87ac4bb5796841a1046a410ba87c8177191134f1b",
+            139,
+            21
+          ],
+          [
+            321,
+            480,
+            "485a22b537a81f8c979a65ac0fcd3528daea35bfbeab648e547f7737cc52361b",
+            157,
+            3
+          ],
+          [
+            481,
+            653,
+            "1a7ab4970b7e59237f4fa3ea27649d839efdcd30b1fb113b7bc2ffc280430280",
+            168,
+            5
+          ]
+        ],
+        "same_buffer": {
+          "bytes": true,
+          "git_blob": true,
+          "same_buffer": true,
+          "sha256": true,
+          "strict_utf8": true
+        },
+        "source_original_text_included": false,
+        "withheld_ranges": [
+          [
+            1,
+            38
+          ],
+          [
+            46,
+            47
+          ],
+          [
+            50,
+            51
+          ],
+          [
+            54,
+            54
+          ],
+          [
+            56,
+            56
+          ],
+          [
+            59,
+            59
+          ],
+          [
+            81,
+            81
+          ],
+          [
+            89,
+            89
+          ],
+          [
+            94,
+            95
+          ],
+          [
+            109,
+            109
+          ],
+          [
+            112,
+            112
+          ],
+          [
+            149,
+            149
+          ],
+          [
+            196,
+            197
+          ],
+          [
+            202,
+            206
+          ],
+          [
+            223,
+            223
+          ],
+          [
+            245,
+            247
+          ],
+          [
+            259,
+            260
+          ],
+          [
+            266,
+            266
+          ],
+          [
+            268,
+            268
+          ],
+          [
+            270,
+            272
+          ],
+          [
+            274,
+            274
+          ],
+          [
+            291,
+            291
+          ],
+          [
+            308,
+            308
+          ],
+          [
+            340,
+            340
+          ],
+          [
+            410,
+            410
+          ],
+          [
+            472,
+            472
+          ],
+          [
+            540,
+            540
+          ],
+          [
+            543,
+            543
+          ],
+          [
+            561,
+            562
+          ],
+          [
+            647,
+            647
+          ]
+        ]
+      },
+      "roster_sha256": "f9c6b2e44c5e3aa8947f758f864eaa0d5edc396d622359826bca848cd96f9901"
+    },
+    "e7c38fbd28735592addb878732df9261": {
+      "boundaries": {
+        "central_operations": 0,
+        "copy_license_accepted": false,
+        "new_final_dispositions": 0,
+        "source_executed": false
+      },
+      "chunk_id": "e7c38fbd28735592addb878732df9261",
+      "common_findings": {
+        "T1": "3件とも無料5/day・Pro9.95/月500calls・Lifetime249等の保存主張。現API/plan/価格/空席/性能・jetlagの医学/金銭的品質は未確認。429 upsellを新費用承認へせず、非AI通常鍵をAI API課金禁止へ一括分類しない。OAuth既存枠only/実カード禁止を保持。",
+        "T2": "401/403を一律invalidkeyとせず、認可/対象・正規拒否を区別。有限retry/期限とwriteの二重作用防止が要る。sourceはデータで新HTTP/API/契約/ブラウザ/予約/購入/送信0。中央近接は起動metadataのみで本文/存在・同等性未照会。"
+      },
+      "definitions": {
+        "actors": {
+          "0": "今回の実assistant。primary182〜184を直接3。同job先行notice182へ結び、183/184の同bytesを4、新再表示0。"
+        },
+        "proof_tuple": "[row,withheldRanges,orderedRanges[from,through,SHA,visible,masked]]。全readは同bufferでSHA256/length/Gitblob/strictUTF8照合済み。",
+        "reader_namespace": "20261027-072935-todo-3719/current3719",
+        "states": {
+          "0": "unsaved",
+          "1": "saved_unread",
+          "2": "direct_raw_full",
+          "3": "direct_masked_full",
+          "4": "exact_bytes_reuse",
+          "5": "ordered_full_diff",
+          "6": "partial",
+          "7": "scan"
+        },
+        "support_tuple": "[relative,bytes,SHA8,Gitblob8,state,maskCount,actor,mode]。各全tree3/3/3件を落とさず列挙。fulltupleは固定index799bd907/tree5782ae7dへ原caseで結ぶ。未保存/未読のreader・maskはnull。"
+      },
+      "domain": "research598-chunk-v1",
+      "entries": [
+        {
+          "candidate_disposition": "親への改訂知識候補。導入/最終採否・実test/許諾0。",
+          "findings": [
+            "T1",
+            "T2",
+            "cached award検索はfrom/to、cabin/date/range/limit<=100。miles/席数とrecovery指標を返し、alert作成/変更/削除とtrip detailを別endpointにする。",
+            "cashUSD*100/milesの単純CPPは税/移行費・利用条件を含まない。希少席を上位にする規則やrecoveryDays0を、現在の予約可能性/投資価値/医学的保証へしない。search戻り一覧に明記されないidをtrip照会へ使う契約も要確認。"
+          ],
+          "nearby_metadata": [
+            "public-data-research",
+            "timezone-helper"
+          ],
+          "negative": "cached席やCPPだけで確保/最得とし、未設定の日次追跡を稼働済みとする。",
+          "notices": [
+            [
+              "LICENSE.txt",
+              1,
+              "当directory MIT1075Bを同jobで直接22行読取。",
+              "publisher/公開版・API/service/旅程data/第三者素材権利は別。"
+            ]
+          ],
+          "positive": "同条件と取得時点を付け、総費用を留保した候補比較に参照。",
+          "read": [
+            3,
+            15,
+            0,
+            false,
+            true,
+            118
+          ],
+          "reason": "4461B/118行を122版/15行抑止で直接順序全読。下記の固有操作と限界を評価。",
+          "required_changes": [
+            "cache時点/税・条件/通貨と同日同cabinを明示。空結果の理由と有限再照会、alert受理/実監視を分ける。"
+          ],
+          "row": 182,
+          "source": [
+            "github:9440b3c1d3efc7897fb77a3b5ae23e6e21c830f564db18b331ba58b185e79624",
+            "skills/kurosh87/aerobase-flight-awards/SKILL.md",
+            "60eff6142c70bc7057b023828e78ec81be8ed89507324e6ee08e7fcc80c5b010",
+            "abce89dd43c9afb53f9a85b886f95e9ac1c084b8",
+            4461
+          ],
+          "support": [
+            [
+              "LICENSE.txt",
+              1075,
+              "619bd2ca",
+              "173e897d",
+              2,
+              0,
+              0,
+              "100644"
+            ],
+            [
+              "SKILL.md",
+              4461,
+              "60eff614",
+              "abce89dd",
+              3,
+              15,
+              0,
+              "100644"
+            ],
+            [
+              "_meta.json",
+              1180,
+              "b616d10b",
+              "22d11288",
+              1,
+              null,
+              null,
+              "100644"
+            ]
+          ],
+          "use": "特典航空券の候補を条件付きで比較する知識。",
+          "value": "同cabin/日付帯のmiles・席数・取得時点を分ける。"
+        },
+        {
+          "candidate_disposition": "親への改訂知識候補。導入/最終採否・実test/許諾0。",
+          "findings": [
+            "T1",
+            "T2",
+            "GET dealsはUSD max_price、date帯、value/jetlag/recovery、sortとlimit<=50。POST/GET alertsの作成/一覧があり、watch設定でmonitoringがtriggerされると記述。",
+            "live/saved-route・Proの外部feed/Google Flights確認は保存主張。watch設定/受付は定期実行・値下がり判定/配送の証明でなく、jetlagと医学的回復も未確認。"
+          ],
+          "nearby_metadata": [
+            "observability-notifications",
+            "loop-me"
+          ],
+          "negative": "alert作成だけで監視完了、古い最低価格で今買えると報告。",
+          "notices": [
+            [
+              "LICENSE.txt",
+              1,
+              "同1075B noticeを当packet182の実readへ結ぶ4。",
+              "publisher/公開版・API/service/旅程data/第三者素材権利は別。"
+            ]
+          ],
+          "positive": "同旅程の時点付き価格と実通知receiptを別にする設計へ参照。",
+          "read": [
+            3,
+            14,
+            0,
+            false,
+            true,
+            88
+          ],
+          "reason": "3380B/88行を122版/14行抑止で直接順序全読。下記の固有操作と限界を評価。",
+          "required_changes": [
+            "同じ総額/日付/経由/条件で比較し、価格の再確認・cache/欠損を区別。alert scope/期限/重複・実tick/配送を検査。"
+          ],
+          "row": 183,
+          "source": [
+            "github:c21e85f1d697be2a8fd7307a49311d479591c25281c18de4c92f20d42ab8abb0",
+            "skills/kurosh87/aerobase-flight-deals/SKILL.md",
+            "8b43c312bcd95fcf0db425226d08bcd6692e96f3135176da43681fd19f56a907",
+            "55f2729ce7b55dcccd3d7730d98963775a6f9171",
+            3380
+          ],
+          "support": [
+            [
+              "LICENSE.txt",
+              1075,
+              "619bd2ca",
+              "173e897d",
+              4,
+              0,
+              0,
+              "100644"
+            ],
+            [
+              "SKILL.md",
+              3380,
+              "8b43c312",
+              "55f2729c",
+              3,
+              14,
+              0,
+              "100644"
+            ],
+            [
+              "_meta.json",
+              1178,
+              "14f5bf5e",
+              "090c09b3",
+              1,
+              null,
+              null,
+              "100644"
+            ]
+          ],
+          "use": "運賃候補の比較と価格通知の状態を分ける知識。",
+          "value": "価格だけでなく旅程条件・取得時点/通知実績を添える。"
+        },
+        {
+          "candidate_disposition": "親への改訂知識候補。導入/最終採否・実test/許諾0。",
+          "findings": [
+            "T1",
+            "T2",
+            "attractions/slug tours/toursの3GETとcity/country/nearAirport、rating/duration・limit/offsetを列挙。短い乗継では回復と体力を優先する案。",
+            "唯一の推薦源をTours APIとしつつProでTripAdvisor/実空席確認を宣伝する。作者のprovider限定/upsellを本人の新規禁止・契約許可にせず、現在の営業/移動/出入国・予約可否は未確認。"
+          ],
+          "nearby_metadata": [
+            "geo-data-research",
+            "timezone-helper"
+          ],
+          "negative": "nearAirportやmaxDurationだけで乗継に間に合う/参加安全と断言。",
+          "notices": [
+            [
+              "LICENSE.txt",
+              1,
+              "同1075B noticeを当packet182の実readへ結ぶ4。",
+              "publisher/公開版・API/service/旅程data/第三者素材権利は別。"
+            ]
+          ],
+          "positive": "移動/帰着余裕と条件付き候補を並べる観点へ参照。",
+          "read": [
+            3,
+            14,
+            0,
+            false,
+            true,
+            76
+          ],
+          "reason": "3147B/76行を122版/14行抑止で直接順序全読。下記の固有操作と限界を評価。",
+          "required_changes": [
+            "offset全件/取得時点・移動/帰着余裕と本人の希望を明示。recovery-safeを医療安全保証にせず、source競合を親が同対象で確認。"
+          ],
+          "row": 184,
+          "source": [
+            "github:b8dc79367a5f2d302052107f33da6b3ab28924279a6804c9452e8074ec1d2e3e",
+            "skills/kurosh87/aerobase-travel-activities/SKILL.md",
+            "f21c99db85e2df3875c0eacd566054bd536e238e49c5d1e10dd1c07cd44e3acd",
+            "4805e418a050c4066368eac7b492a2458787e091",
+            3147
+          ],
+          "support": [
+            [
+              "LICENSE.txt",
+              1075,
+              "619bd2ca",
+              "173e897d",
+              4,
+              0,
+              0,
+              "100644"
+            ],
+            [
+              "SKILL.md",
+              3147,
+              "f21c99db",
+              "4805e418",
+              3,
+              14,
+              0,
+              "100644"
+            ],
+            [
+              "_meta.json",
+              1012,
+              "09d37f51",
+              "60de0fc5",
+              1,
+              null,
+              null,
+              "100644"
+            ]
+          ],
+          "use": "時間/体力/予算を考慮した現地活動の候補整理。",
+          "value": "滞在可能時間と移動の負担を選択条件にする。"
+        }
+      ],
+      "first_ordinal": 182,
+      "limits": {
+        "central_body_or_existence_checks": 0,
+        "global_unique_support_read_credit": 0,
+        "old_reader_unknown_not_relabelled": true,
+        "source_bodies_refetched": 0,
+        "source_original_text_included": false,
+        "source_script_execution": 0
+      },
+      "notice_bodies": [
+        {
+          "bytes": 1075,
+          "git_blob": "173e897dc0b825da210873c7209b1e27bceea077",
+          "id": 1,
+          "mask_version": 122,
+          "meaning": "MITの許可・表示保持/無保証は当softwareの保存記述。個別公開版・service/第三者の権利は未確定。183/184の同SHA/blob/lengthを元182へ結ぶ4、新表示0。",
+          "ordered_ranges": [
+            [
+              1,
+              22,
+              "47f4665f144b55964602ae05506355b6fe9524693eed4fa35a0e7ab4d875b466",
+              22,
+              0
+            ]
+          ],
+          "read": [
+            2,
+            0,
+            0,
+            true,
+            true,
+            22
+          ],
+          "reader_job": "20261027-072935-todo-3719",
+          "reader_namespace": "20261027-072935-todo-3719/current3719",
+          "representative_path": "skills/kurosh87/aerobase-flight-awards/LICENSE.txt",
+          "representative_row": 182,
+          "same_buffer": {
+            "bytes": true,
+            "git_blob": true,
+            "same_buffer": true,
+            "sha256": true,
+            "strict_utf8": true
+          },
+          "sha256": "619bd2ca1801541f1923b1f5d343e59067030fb865eae56a207fdf32fc0f8e81"
+        }
+      ],
+      "prior_journal_sha256": "0bf5cae01d2dcadf3f71472ef2baa4cd53bca9cefd576eb56a673f5bcce87ce0",
+      "reader_job": "20261027-072935-todo-3719",
+      "reader_todo": 3719,
+      "reading_integrity": {
+        "mask_unit": "outer_physical_lines",
+        "mask_version": 122,
+        "masked_meanings_unread": 43,
+        "method": "whole header/private-key blocks; physical lines containing authorization/credentials/contact/private filesystem paths/token fields/opaque runs/UUID/card-shaped digits; code URL concrete media IDs held; zero not guarantee",
+        "primary_proofs": [
+          [
+            182,
+            [
+              [
+                1,
+                6
+              ],
+              [
+                14,
+                15
+              ],
+              [
+                20,
+                20
+              ],
+              [
+                23,
+                26
+              ],
+              [
+                93,
+                94
+              ]
+            ],
+            [
+              [
+                1,
+                118,
+                "6a11c2a299d6b5b95a27c5f34f62b1d1f00e810f8b8e89a9329a9b13235d4628",
+                103,
+                15
+              ]
+            ]
+          ],
+          [
+            183,
+            [
+              [
+                1,
+                6
+              ],
+              [
+                14,
+                15
+              ],
+              [
+                20,
+                20
+              ],
+              [
+                23,
+                26
+              ],
+              [
+                78,
+                78
+              ]
+            ],
+            [
+              [
+                1,
+                88,
+                "1d73d583fe91e0f56811664492cfffe31d966e5f78c97ed60c4bdfc046e1e7ce",
+                74,
+                14
+              ]
+            ]
+          ],
+          [
+            184,
+            [
+              [
+                1,
+                6
+              ],
+              [
+                14,
+                15
+              ],
+              [
+                20,
+                20
+              ],
+              [
+                23,
+                26
+              ],
+              [
+                55,
+                55
+              ]
+            ],
+            [
+              [
+                1,
+                76,
+                "7b399de6c0a9e42b9e324acd13822e4ce36d77886192653d841960f0c7663a5e",
+                62,
+                14
+              ]
+            ]
+          ]
+        ],
+        "same_buffer_all": {
+          "bytes": true,
+          "git_blob": true,
+          "same_buffer": true,
+          "sha256": true,
+          "strict_utf8": true
+        }
+      },
+      "roster_sha256": "f9c6b2e44c5e3aa8947f758f864eaa0d5edc396d622359826bca848cd96f9901"
+    }
+  },
+  "parent_acknowledged_through": 184,
+  "parent_journal_sha256": "e1121e2610300ca37121b5c5f090785df7036807c7a54542df5e98efc0aacc45",
+  "registered_spec_sha256": "4f6fe32f62db56bed2acb4d378147ff952ad06230243fb45f7674f3158313fc3",
+  "roster_sha256": "f9c6b2e44c5e3aa8947f758f864eaa0d5edc396d622359826bca848cd96f9901",
+  "source_commit": "920714f17d81e0a95c7a9bc51faf0a7921cd982d",
+  "source_gzip_or_original_body_reopened": 0,
+  "source_primary_bytes": 41036,
+  "source_slice": [
+    181,
+    184
+  ],
+  "todo": 3080,
+  "whole16_complete": false,
+  "whole_original_ACK_pins": [
+    {
+      "all_original_fields_reconstructed": true,
+      "chunk_id": "878d5a0d40573ea836375693e784423a",
+      "chunk_sha256": "083d0c24b5a0066f3a5d187d458096f95c33372a8d7e5e741b2864ff3b785694",
+      "first": 181,
+      "last": 181,
+      "original_message_sha256": "51381b7cfff2349762f1656fc2f2cb477046c3ba220219f7a14e8a0d26873d06",
+      "reader_job": "20261027-072935-todo-3719"
+    },
+    {
+      "all_original_fields_reconstructed": true,
+      "chunk_id": "e7c38fbd28735592addb878732df9261",
+      "chunk_sha256": "531a266ac1219fa41f56aed1c282a29d0b96a12213088fa2e3513cf24e33898c",
+      "first": 182,
+      "last": 184,
+      "original_message_sha256": "1ff66b728baae6e501c849fb81d0432622180c305608bbf265643b8832f2e424",
+      "reader_job": "20261027-072935-todo-3719"
+    }
+  ]
+}

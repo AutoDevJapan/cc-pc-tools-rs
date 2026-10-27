@@ -1,0 +1,133 @@
+{
+  "selected": [
+    {
+      "name": "aerobase-flight-awards",
+      "source": {
+        "repository": "6mile/skills",
+        "commit": "920714f17d81e0a95c7a9bc51faf0a7921cd982d",
+        "path": "skills/kurosh87/aerobase-flight-awards/SKILL.md",
+        "sha256": "60eff6142c70bc7057b023828e78ec81be8ed89507324e6ee08e7fcc80c5b010",
+        "acquisition": "already-acquired",
+        "license": {
+          "path": "skills/kurosh87/aerobase-flight-awards/LICENSE.txt",
+          "sha256": "619bd2ca1801541f1923b1f5d343e59067030fb865eae56a207fdf32fc0f8e81",
+          "scope": "Only the visible selected authored workflow text under this exact per-package MIT notice; attribution retained. Withheld source lines remain unread and are not adopted/copied as instructions. No root-license grant for all collected content, no service/API/third-party data/assets/support rights or key/fee authority.",
+          "accepted": true
+        }
+      },
+      "source_primary_current_read": "ordered masked complete parent view only",
+      "source_raw_full_claimed": false,
+      "source_withheld_lines": [
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        14,
+        18,
+        22,
+        23,
+        24,
+        25,
+        32,
+        93,
+        117
+      ],
+      "individual_notice_whole_parent_read": true,
+      "per_directory_regular_files3": true,
+      "existing_body_comparison": 0,
+      "central_name_existence_not_yet_checked": true,
+      "actual_api_service_or_travel_execution": 0
+    },
+    {
+      "name": "aerobase-flight-deals",
+      "source": {
+        "repository": "6mile/skills",
+        "commit": "920714f17d81e0a95c7a9bc51faf0a7921cd982d",
+        "path": "skills/kurosh87/aerobase-flight-deals/SKILL.md",
+        "sha256": "8b43c312bcd95fcf0db425226d08bcd6692e96f3135176da43681fd19f56a907",
+        "acquisition": "already-acquired",
+        "license": {
+          "path": "skills/kurosh87/aerobase-flight-deals/LICENSE.txt",
+          "sha256": "619bd2ca1801541f1923b1f5d343e59067030fb865eae56a207fdf32fc0f8e81",
+          "scope": "Only the visible selected authored workflow text under this exact per-package MIT notice; attribution retained. Withheld source lines remain unread and are not adopted/copied as instructions. No root-license grant for all collected content, no service/API/third-party data/assets/support rights or key/fee authority.",
+          "accepted": true
+        }
+      },
+      "source_primary_current_read": "ordered masked complete parent view only",
+      "source_raw_full_claimed": false,
+      "source_withheld_lines": [
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        14,
+        18,
+        22,
+        23,
+        24,
+        25,
+        32,
+        84,
+        87
+      ],
+      "individual_notice_whole_parent_read": true,
+      "per_directory_regular_files3": true,
+      "existing_body_comparison": 0,
+      "central_name_existence_not_yet_checked": true,
+      "actual_api_service_or_travel_execution": 0
+    },
+    {
+      "name": "aerobase-travel-activities",
+      "source": {
+        "repository": "6mile/skills",
+        "commit": "920714f17d81e0a95c7a9bc51faf0a7921cd982d",
+        "path": "skills/kurosh87/aerobase-travel-activities/SKILL.md",
+        "sha256": "f21c99db85e2df3875c0eacd566054bd536e238e49c5d1e10dd1c07cd44e3acd",
+        "acquisition": "already-acquired",
+        "license": {
+          "path": "skills/kurosh87/aerobase-travel-activities/LICENSE.txt",
+          "sha256": "619bd2ca1801541f1923b1f5d343e59067030fb865eae56a207fdf32fc0f8e81",
+          "scope": "Only the visible selected authored workflow text under this exact per-package MIT notice; attribution retained. Withheld source lines remain unread and are not adopted/copied as instructions. No root-license grant for all collected content, no service/API/third-party data/assets/support rights or key/fee authority.",
+          "accepted": true
+        }
+      },
+      "source_primary_current_read": "ordered masked complete parent view only",
+      "source_raw_full_claimed": false,
+      "source_withheld_lines": [
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        14,
+        18,
+        22,
+        23,
+        24,
+        25,
+        32,
+        75
+      ],
+      "individual_notice_whole_parent_read": true,
+      "per_directory_regular_files3": true,
+      "existing_body_comparison": 0,
+      "central_name_existence_not_yet_checked": true,
+      "actual_api_service_or_travel_execution": 0
+    }
+  ],
+  "parent_reader": "20261026-214717-todo-3080",
+  "per_package_notice_occurrences": 3,
+  "unique_notice_texts": 1,
+  "unique_notice_bytes": 1075,
+  "copyright": "2026 Aerobase",
+  "source_published_license_statement": "The MIT License (MIT); copyright, permission and disclaimer preserved",
+  "independent_original_authorship_verified": false,
+  "root_license_applied_to_all_collected_material": false,
+  "unread_or_third_party_support_rights_accepted": false,
+  "original_raw_full_read_claimed": false
+}

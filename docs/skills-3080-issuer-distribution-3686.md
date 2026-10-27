@@ -34,3 +34,31 @@ Windows生成、正規の更新確認、既存AdminBrokerによるCAS・元ACL�
 配置後のSHA/source読戻し、親自身による元craftの正常CLIを実結果で確認する。
 再Create・prepare・apply、原spec/prompt/nativeの編集や別pathからのfinal回収は行わない。
 全16資料の拡張作業全体の完了とは区別する。
+
+## 同じ未編集の依頼書による原結果の受領
+
+PR585は正式3896のLuna/maxでMust0となり、同じ58de721dの16チェック終了・失敗0の後、
+81700412へ通常マージした。
+156入力の実バイト列がGit blobと生成前後で一致するcleanな同ソースからWindows版を生成し、
+正規の更新確認と既存AdminBrokerで配布した。
+現用SHAは94c08be91776df277a6a3442e71f291103345641558657e1872e36520ad924e0。
+現用の正常CLIはqualifiedとalready_currentがともにtrueで、新旧hashと元owner/group/DACLを
+読み戻した。SACLは未検証。元c043の実バックアップを保持する。
+この受入済み配布の観測も、次の候補を作る前に7f6e68f2で公開した。
+
+同じ担当の原依頼書の解析には別のRedが残っていた。
+依頼者が固定commit97b17cd5・blob473e6d74・688バイト・SHA30c63f2bとして明示した
+公開ソフトウェア証拠1件が、既存の修復用path判定に含まれていなかった。
+そのため、依頼書・実prompt・原finalを保持しても、親の原結果受領はshape判定で拒否された。
+原finalのコピーや依頼書の書換えでは回収しない。
+
+修復は元の固定commit、目的本文のSHA、ファイル名・blob・サイズ・SHAがすべて一致する
+この公開証拠1件だけを修復用の書式判定で認める。
+一般の公開レビューやほかの修復にofficial-CIのnamespaceを開かず、元author、現在consumer、
+manifest、native、原spec/prompt、厳密な時間窓、原結果ID/hashの検証を維持する。
+原依頼書そのもののfixtureによる正常例と、commit・目的・path・blob・SHA・サイズの
+改変、および通常のrepair/reviewへ流用する8負例で境界を確認する。
+既配布94c/817の保持にも別のRedを確認し、次の配布へ元のソフトウェア照合を引き継ぐ。
+
+原craftの7ファイルの現在ID/hash/bufferは、実際の親3080 consumerの正規CLIで確認する。
+本書やソフトウェアの観測を、その実確認の代わりにはしない。

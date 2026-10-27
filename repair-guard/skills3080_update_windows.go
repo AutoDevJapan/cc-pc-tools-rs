@@ -20,6 +20,12 @@ const skillsGuardModule = "github.com/AutoDevJapan/cc-pc-tools-rs/repair-guard"
 // Independent previously accepted distribution facts (3258 and3686), not a caller
 // supplied baseline or an assertion made by the artifact being installed.
 var skillsGuardBaselines = map[string]string{
+	// The normally reviewed, merged, built, qualified and installed PR585
+	// distribution was independently read back before its successor was built.
+	// Evidence was published first in commit 7f6e68f2; no proposed candidate
+	// supplies a predecessor identity or any data-access qualification.
+	// Evidence: docs/evidence/skills-3080-guard-installed-81700412.json.
+	"94c08be91776df277a6a3442e71f291103345641558657e1872e36520ad924e0": "817004120a458b3a37830478512da0aa8040c9d0",
 	// PR582's separately reviewed distribution was already installed before
 	// this Skills update was built. Preserve that exact observed software pair;
 	// its diagnostics and every native/data boundary remain unchanged.

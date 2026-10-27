@@ -237,9 +237,17 @@ func TestOfficialCI3387RequalificationRejectsMixedSoftwarePairs(t *testing.T) {
 func TestOfficialCI3387RequalificationPreservesAcceptedMaskedDistribution(t *testing.T) {
 	const acceptedSHA = "c80d60ab470e52ef9fbe53c1e039d1fcdc31429e291c3f156a953b9b6059d02f"
 	const acceptedHead = "444eae8714ee8b6199c9ed95208ac40272aeb8ce"
-	if !official3894InstalledBaseline(acceptedSHA,acceptedHead) {t.Fatal("normally deployed PR596 software cannot be compared by this successor")}
-	for _, p:=range [][2]string{{acceptedSHA,official3894SharedGuardHead},{official3894SharedGuardSHA,acceptedHead},{strings.Repeat("0",64),acceptedHead}} {
-		if official3894InstalledBaseline(p[0],p[1]) {t.Fatal("unknown or mixed masked-distribution software pair was adopted")}
+	current := skillsProducer{strings.Repeat("7", 64), strings.Repeat("8", 40)}
+	if !skillsAcceptedProducer(skillsProducer{acceptedSHA, acceptedHead}, current) {
+		t.Error("the existing Skills updater lost the same accepted software")
+	}
+	if !official3894InstalledBaseline(acceptedSHA, acceptedHead) {
+		t.Fatal("normally deployed PR596 software cannot be compared by this successor")
+	}
+	for _, p := range [][2]string{{acceptedSHA, official3894SharedGuardHead}, {official3894SharedGuardSHA, acceptedHead}, {strings.Repeat("0", 64), acceptedHead}} {
+		if official3894InstalledBaseline(p[0], p[1]) || skillsAcceptedProducer(skillsProducer{p[0], p[1]}, current) {
+			t.Fatal("unknown or mixed masked-distribution software pair was adopted")
+		}
 	}
 }
 

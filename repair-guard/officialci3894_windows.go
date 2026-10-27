@@ -68,6 +68,12 @@ const official3894SharedGuardHead = "0d97c1952ff6f8b47a3d40939941639b35309408"
 const official3894MaskedPredecessorSHA = "9f914c724231886438515c5ed3831a13eca3d8fbec09e4d3d6edb1d0113c6dd8"
 const official3894MaskedPredecessorHead = "4e117a2d813e4a989d1c3085d2734963d9c198a3"
 
+// The existing publisher completed PR596 before this successor. Both existing
+// updater comparisons retain the same independently published software pair.
+// docs/evidence/official-ci3387-known-guard-baseline-444eae87.json
+const official3894MaskedDistributionSHA = "c80d60ab470e52ef9fbe53c1e039d1fcdc31429e291c3f156a953b9b6059d02f"
+const official3894MaskedDistributionHead = "444eae8714ee8b6199c9ed95208ac40272aeb8ce"
+
 type official3894Source struct {
 	Head, Registration, CreatorJob, Workspace, Branch, SpecSHA string
 }
@@ -931,7 +937,8 @@ func official3894InstalledBaseline(sha, head string) bool {
 		(sha == official3894DiagnosticGuardSHA && head == official3894DiagnosticGuardHead) ||
 		(sha == official3894ConcurrentGuardSHA && head == official3894ConcurrentGuardHead) ||
 		(sha == official3894SharedGuardSHA && head == official3894SharedGuardHead) ||
-		(sha == official3894MaskedPredecessorSHA && head == official3894MaskedPredecessorHead)
+		(sha == official3894MaskedPredecessorSHA && head == official3894MaskedPredecessorHead) ||
+		(sha == official3894MaskedDistributionSHA && head == official3894MaskedDistributionHead)
 }
 
 // Qualifies only comparison of the known previously published guard software.

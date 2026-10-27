@@ -27,7 +27,9 @@ use std::{
 
 const API: &str = "https://discord.com/api/v10";
 mod clarification;
+mod pending_reconcile;
 mod program_question;
+pub use pending_reconcile::{reconcile_pending, ReconcilePendingArgs};
 const LEDGER: &str = "recovery-messages.json";
 const LOCK: &str = "recovery-messages.lock";
 const DOMAIN: &str = "new-owner-recovery-messages";
@@ -901,6 +903,21 @@ enum Event {
         phase: String,
         effect: Effect,
     },
+    PendingQualification {
+        qualification: Box<pending_reconcile::QualificationReceipt>,
+    },
+    PendingRecoveryAttempt {
+        request_id: String,
+        phase: String,
+        qualification_receipt_sha256: String,
+        attempt_id: String,
+    },
+    PendingRecoveryResult {
+        request_id: String,
+        phase: String,
+        attempt_id: String,
+        outcome: String,
+    },
     Posted {
         request_id: String,
         phase: String,
@@ -1286,8 +1303,12 @@ impl Ledger {
                         return Err("unconfirmed recovery delivery".into());
                     }
                 }
+                Event::PendingQualification { .. }
+                | Event::PendingRecoveryAttempt { .. }
+                | Event::PendingRecoveryResult { .. } => {}
             }
         }
+        pending_reconcile::validate_events(self)?;
         Ok(())
     }
 }
@@ -4265,6 +4286,10 @@ mod tests {
 
     mod decision_lookup_tests {
         include!("recovery_messages/decision_lookup_tests.rs");
+    }
+
+    mod pending_reconcile_tests {
+        include!("recovery_messages/pending_reconcile_tests.rs");
     }
 
     fn clarification_fixture(f: &Fixture, ctx: &mut Context) -> (LogArgs, PathBuf, Value) {

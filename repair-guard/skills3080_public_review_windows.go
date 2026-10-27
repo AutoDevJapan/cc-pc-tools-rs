@@ -446,14 +446,14 @@ func skillsPublicReviewAuthor(c skillsPublicReviewScope, reg skillsRegistry, row
 // Keep metadata/final/prompt/native on the real admitted child. The consumer is
 // validated separately and never impersonates the historical author.
 func skillsPublicReviewNative(s *skillsFS, job object, spec []byte, finalSHA string) ([]object, bool) {
-	return skillsReviewNative(s, job, spec, finalSHA, false)
+	return skillsReviewNative(s, job, spec, finalSHA)
 }
 
 func skillsCodeReviewNative(s *skillsFS, job object, spec []byte, finalSHA string) ([]object, bool) {
-	return skillsReviewNative(s, job, spec, finalSHA, true)
+	return skillsReviewNative(s, job, spec, finalSHA)
 }
 
-func skillsReviewNative(s *skillsFS, job object, spec []byte, finalSHA string, frozen bool) ([]object, bool) {
+func skillsReviewNative(s *skillsFS, job object, spec []byte, finalSHA string) ([]object, bool) {
 	if !skillsDigest(finalSHA) {
 		return nil, false
 	}
@@ -483,7 +483,14 @@ func skillsReviewNative(s *skillsFS, job object, spec []byte, finalSHA string, f
 			return nil, false
 		}
 	}
-	native, ok := skillsHistoricalNative(s, job, &skillsNativeResultProof{prompt: prompt, finalSHA: finalSHA, exactInput: reviewTyped || consumerTyped, bootstrapSHA: bootstrap, cwd: str(job["cwd"]), frozen: frozen})
+	return skillsCompletedReviewNative(s, job, prompt, finalSHA, reviewTyped || consumerTyped, bootstrap)
+}
+
+// Every completed review/consumer result uses one deny-write proof engine.
+// Input/source/author validation above remains specific to its registered type;
+// live creation and resumed historical results retain their separate contract.
+func skillsCompletedReviewNative(s *skillsFS, job object, prompt []byte, finalSHA string, exactInput bool, bootstrap string) ([]object, bool) {
+	native, ok := skillsHistoricalNative(s, job, &skillsNativeResultProof{prompt: prompt, finalSHA: finalSHA, exactInput: exactInput, bootstrapSHA: bootstrap, cwd: str(job["cwd"]), frozen: true})
 	if !ok {
 		return nil, false
 	}

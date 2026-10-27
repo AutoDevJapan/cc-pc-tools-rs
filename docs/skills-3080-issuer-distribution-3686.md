@@ -167,3 +167,10 @@ owner/group/DACLの一致・不一致を残す。取得不能な値はnullとし
 bridgeだけを途中で独立終了させる別の期限は加えず、既存brokerの期限・cleanup_pending
 記録を使う。期限切れを配布成功へ読み替えず、実物・backupと終了結果を再照合する。
 この確認はsourceと現用metadataに基づくもので、新しい実timeout試験は行っていない。
+
+PUBLIC・consumer形式の完了結果も同じ凍結証明処理へ統一し、形式ごとの呼出しで
+書き込み共有を選べる引数をなくす。入力・source・authorの形式別検証後は、通常・
+コード・PUBLIC・consumerの全完了レビューが同じdeny-write処理を通る。
+PUBLICとconsumerの実native証明段階について、それぞれ先行writerを拒否し、
+証明中のwrite handle取得も拒否するWindows回帰を追加した。
+既存の追記中・再開済みの歴史的ログ・作成callは別の契約として保持する。

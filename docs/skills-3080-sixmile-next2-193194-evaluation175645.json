@@ -1,0 +1,911 @@
+{
+  "all2_primary_and2_individual_notice_metadata_match": true,
+  "all_original_selected_chunks_losslessly_reconstructed": true,
+  "central_operations": 0,
+  "consumer_job": "20261027-175645-todo-3080",
+  "definition": "Whole accepted original chunks, not selected prose. Original assessment writers, actual literal/reuse reader evidence, source states and all common/privacy/support definitions are retained. Independent fixed metadata match is not a fresh physical-byte observation or new reading/permission grant.",
+  "domain": "skills3080-sixmile-received-two-whole-original-v1",
+  "entries": [
+    {
+      "actual_body_reader_inferred_from_assessment_writer": false,
+      "assessment_writer_job": "20261027-072935-todo-3719",
+      "bytes": 18086,
+      "central_operations": 0,
+      "copy_license_accepted": false,
+      "git_blob": "158979709538a4c0de9c370f567917260e0141b2",
+      "individual_notice_metadata": [
+        {
+          "bytes": 11357,
+          "commit": "920714f17d81e0a95c7a9bc51faf0a7921cd982d",
+          "git_blob": "7a4a3ea2424c09fbe48d455aed1eaa94d9124835",
+          "path": "skills/lbbniu/lbbniu-skill-creator/LICENSE.txt",
+          "repo": "6mile/skills",
+          "role": "license_or_notice",
+          "sha256": "58d1e17ffe5109a7ae296caafcadfdbe6a7d176f0bc4ab01e12a689b0499d8bd"
+        }
+      ],
+      "inventory_id": "github:7b8189942910c7976b2de5fdb49aefbe62084768417da346e07270b258357c8a",
+      "new_final_disposition": false,
+      "original_chunk_id": "50d20bb89875d6c52cdc676d3a1dd408",
+      "original_chunk_sha256": "5cebfc6f5978955c16bbdd78ab5b2a42d5cc0801894bb9ed423e2a52d346b97c",
+      "original_context_ref": "50d20bb89875d6c52cdc676d3a1dd408",
+      "original_read_tuple": [
+        3,
+        7,
+        0,
+        false,
+        true,
+        358
+      ],
+      "original_reader_assessment": {
+        "candidate_disposition": "設計原則の改訂候補。採否/導入/実test未確定。",
+        "findings": [
+          "本文はname/descriptionに加えlicense/metadata/compatibilityも可と説明する一方、後段は他fieldを禁止し、冒頭にもlicenseがある。対象runtime/schemaを固定する必要がある。",
+          "出力支持は固定templateと柔軟な既定を分け、工程支持は作成/編集の分岐と検証工程を示す。ただし書式例・package成功は実処理の正しさの証明ではない。",
+          "README/変更履歴/検査資料の一律除外、未読scriptを実行できるからUnlimitedとの主張、類似scriptの代表検査だけで全件保証する扱いは過剰。3Python支持は未保存、生成・zip・実test未検証。"
+        ],
+        "nearby_metadata": [
+          "skill-creator",
+          "skill-maintenance",
+          "knowledge-to-skills"
+        ],
+        "negative": "package形式検査だけで品質を断定し、既存履歴/noticeを削除、未保存scriptを無確認実行。",
+        "notices": [
+          [
+            "LICENSE.txt",
+            1,
+            "同11357Bを旧134の直接伏字読取へ結ぶ。",
+            "旧157行の意味未読を維持。公開版/作者/他素材の権利は別。"
+          ]
+        ],
+        "positive": "新規と既存編集を分岐し、必要な参照だけ読み、出力と実使用の失敗を検証して改訂。",
+        "read": [
+          3,
+          7,
+          0,
+          false,
+          true,
+          358
+        ],
+        "reason": "358行を123版2範囲で順序全読し、出力/工程の支持2件も直接読了。",
+        "required_changes": [
+          "目的別の発火正例/負例、参照の到達性、失敗/作用範囲の検査を追加。必要な履歴/権利・検証記録は保持し、500行等は目安とする。",
+          "実装先runtimeのschema/許可済み配置を確認し、新codeはGo既定。sourceのinit/package/削除命令を今回の実行許可へしない。"
+        ],
+        "row": 193,
+        "source": [
+          "github:7b8189942910c7976b2de5fdb49aefbe62084768417da346e07270b258357c8a",
+          "skills/lbbniu/lbbniu-skill-creator/SKILL.md",
+          "d57b6e3a44535b9c0ef454dad5c86f5df78185fc80a65c7092885b4b5e10f81b",
+          "158979709538a4c0de9c370f567917260e0141b2",
+          18086
+        ],
+        "support": [
+          [
+            "LICENSE.txt",
+            11357,
+            "58d1e17f",
+            "7a4a3ea2",
+            4,
+            157,
+            1,
+            "100644"
+          ],
+          [
+            "SKILL.md",
+            18086,
+            "d57b6e3a",
+            "15897970",
+            3,
+            7,
+            0,
+            "100644"
+          ],
+          [
+            "_meta.json",
+            463,
+            "a2959012",
+            "78d27fa1",
+            1,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "references/output-patterns.md",
+            1813,
+            "d6027800",
+            "073ddda5",
+            3,
+            1,
+            0,
+            "100644"
+          ],
+          [
+            "references/workflows.md",
+            818,
+            "ef484687",
+            "a350c3cc",
+            2,
+            0,
+            0,
+            "100644"
+          ],
+          [
+            "scripts/init_skill.py",
+            null,
+            null,
+            "c544fc72",
+            0,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "scripts/package_skill.py",
+            null,
+            null,
+            "5cd36cb1",
+            0,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "scripts/quick_validate.py",
+            null,
+            null,
+            "ed8e1ddd",
+            0,
+            null,
+            null,
+            "100644"
+          ]
+        ],
+        "use": "Skillの発火条件・段階的読込・実使用からの改訂を設計する参考。",
+        "value": "脆さに応じて自由度を選び、本文と参照・出力用資産を分けられる。"
+      },
+      "parent_all_semantics_received": true,
+      "path": "skills/lbbniu/lbbniu-skill-creator/SKILL.md",
+      "reader_row": 193,
+      "source_commit": "920714f17d81e0a95c7a9bc51faf0a7921cd982d",
+      "source_repo": "6mile/skills",
+      "source_sha256": "d57b6e3a44535b9c0ef454dad5c86f5df78185fc80a65c7092885b4b5e10f81b"
+    },
+    {
+      "actual_body_reader_inferred_from_assessment_writer": false,
+      "assessment_writer_job": "20261027-072935-todo-3719",
+      "bytes": 13812,
+      "central_operations": 0,
+      "copy_license_accepted": false,
+      "git_blob": "3a9e294f89d955b542496af7fe3b9bc6edd065d4",
+      "individual_notice_metadata": [
+        {
+          "bytes": 1335,
+          "commit": "920714f17d81e0a95c7a9bc51faf0a7921cd982d",
+          "git_blob": "64dd41c540b90651e46ce3d968692c61f9c5c593",
+          "path": "skills/levdavid1/test-security/LICENSE.txt",
+          "repo": "6mile/skills",
+          "role": "license_or_notice",
+          "sha256": "19e14842cc9480043c3afad5f7aaafd28fe91a13267fe16adf8e7f07d047fa13"
+        }
+      ],
+      "inventory_id": "github:7a241976abc77bc85f1e2b185329dd86eb4d23c08f3bb22db306088f38c5f6ef",
+      "new_final_disposition": false,
+      "original_chunk_id": "50d20bb89875d6c52cdc676d3a1dd408",
+      "original_chunk_sha256": "5cebfc6f5978955c16bbdd78ab5b2a42d5cc0801894bb9ed423e2a52d346b97c",
+      "original_context_ref": "50d20bb89875d6c52cdc676d3a1dd408",
+      "original_read_tuple": [
+        3,
+        41,
+        0,
+        false,
+        true,
+        244
+      ],
+      "original_reader_assessment": {
+        "candidate_disposition": "一般的な画像工程は改訂候補。Bria実利用/許諾/最終採否0。",
+        "findings": [
+          "path名test-securityだが内容はBria画像API。画像に言及すれば常時使う発火は広すぎる。20超endpoint/商用安全/royalty-free・生成時間/画素/API版は保存主張で現保証なし。",
+          "device認証後のREADYならintrospection不要という近道と、後段のbilling/active確認を分ける必要がある。41行は伏字で意味未読。helper shellは未保存なのでauth/base64/pollingの実装保証なし。",
+          "noticeはMITの保持条件に加えBria API/モデルが商用品で別Terms/価格条件と明記。OAuthログイン自体を本人のAIサブスク枠の証明にしない。"
+        ],
+        "nearby_metadata": [
+          "image-generation-editing",
+          "generative-media-tools",
+          "oauth-least-privilege"
+        ],
+        "negative": "画像という語だけでBriaへ切替え、READY/商用安全という文言でAPI課金や素材権利を承認済みにする。",
+        "notices": [
+          [
+            "LICENSE.txt",
+            2,
+            "当directoryのMITnotice29行を今回直接読了。",
+            "API/モデルと入力/生成物の権利・費用は別条件。"
+          ]
+        ],
+        "positive": "許可された画像道具で背景除去と編集を分け、実画像の透過と寸法を確認。",
+        "read": [
+          3,
+          41,
+          0,
+          false,
+          true,
+          244
+        ],
+        "reason": "244行を123版2範囲で全読。個別notice29行は直接raw全読。",
+        "required_changes": [
+          "広い発火を明示の画像操作/対応serviceへ絞り、APIの新支出やAI API利用を今回に持ち込まない。既存OAuth画像道具へ一般的工程だけ対応。",
+          "画像の利用権/透過・寸法/結果物を検証。必要な親だけ現在の公式契約/endpointを確認し、billing本文・認証応答をそのまま報告しない。"
+        ],
+        "row": 194,
+        "source": [
+          "github:7a241976abc77bc85f1e2b185329dd86eb4d23c08f3bb22db306088f38c5f6ef",
+          "skills/levdavid1/test-security/SKILL.md",
+          "1bff96dd9add88649e7b86dd6d7631c011590979cad61e5fcec62e4834c9c66d",
+          "3a9e294f89d955b542496af7fe3b9bc6edd065d4",
+          13812
+        ],
+        "support": [
+          [
+            "LICENSE.txt",
+            1335,
+            "19e14842",
+            "64dd41c5",
+            2,
+            0,
+            0,
+            "100644"
+          ],
+          [
+            "SKILL.md",
+            13812,
+            "1bff96dd",
+            "3a9e294f",
+            3,
+            41,
+            0,
+            "100644"
+          ],
+          [
+            "_meta.json",
+            282,
+            "6d8fc512",
+            "ddfa580d",
+            1,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "references/api-endpoints.md",
+            13032,
+            "bff4dd58",
+            "7f3c3f0b",
+            1,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "references/code-examples/bria_client.sh",
+            null,
+            null,
+            "b7eed9ff",
+            0,
+            null,
+            null,
+            "100644"
+          ]
+        ],
+        "use": "画像処理の目的から生成/領域編集/背景/拡大の工程を選ぶ参考。",
+        "value": "image単体とimages配列、入出力と複数工程の境界を点検できる。"
+      },
+      "parent_all_semantics_received": true,
+      "path": "skills/levdavid1/test-security/SKILL.md",
+      "reader_row": 194,
+      "source_commit": "920714f17d81e0a95c7a9bc51faf0a7921cd982d",
+      "source_repo": "6mile/skills",
+      "source_sha256": "1bff96dd9add88649e7b86dd6d7631c011590979cad61e5fcec62e4834c9c66d"
+    }
+  ],
+  "independent_source_index_sha256": "799bd907887120d83b82e64fbf37094c653a5144b764fef0b70dd4d5e2219607",
+  "new_copy_grants": 0,
+  "new_final_dispositions": 0,
+  "new_global_raw_read_credit": 0,
+  "new_global_workflow_read_credit": 0,
+  "old_reader_or_privacy_profiles_relabelled": false,
+  "original_chunk_definitions": {
+    "50d20bb89875d6c52cdc676d3a1dd408": {
+      "boundaries": {
+        "central_operations": 0,
+        "copy_license_accepted": false,
+        "new_final_dispositions": 0,
+        "source_executed": false
+      },
+      "chunk_id": "50d20bb89875d6c52cdc676d3a1dd408",
+      "common_limits": {
+        "nearby": "起動metadataのみ。中央本文/存在・同等性は未照会。",
+        "rights": "rootMIT/補助MIT0で個別notice/第三者/service権利を上書きしない。copy grant/最終採否/実導入0。",
+        "source": "原命令は評価データ。network/原script実行/追加取得0。未保存4支持は取得せず、旧read-aheadの不明状態を今回へ付替えない。"
+      },
+      "definitions": {
+        "actors": {
+          "0": "今回の実assistant読取",
+          "1": "旧041905/current3719のnotice直接読取へreuse4"
+        },
+        "reader_namespace": "20261027-072935-todo-3719/current3719",
+        "states": {
+          "0": "unsaved",
+          "1": "saved_unread",
+          "2": "direct_raw_full",
+          "3": "direct_masked_full",
+          "4": "exact_bytes_reuse",
+          "5": "ordered_full_diff",
+          "6": "partial",
+          "7": "scan"
+        },
+        "support_tuple": "[relative,bytes,SHA8,Gitblob8,state,maskCount,actor,mode]。全package列挙。未保存bytes/SHAと不明reader/maskはnull。"
+      },
+      "domain": "research598-chunk-v1",
+      "entries": [
+        {
+          "candidate_disposition": "設計原則の改訂候補。採否/導入/実test未確定。",
+          "findings": [
+            "本文はname/descriptionに加えlicense/metadata/compatibilityも可と説明する一方、後段は他fieldを禁止し、冒頭にもlicenseがある。対象runtime/schemaを固定する必要がある。",
+            "出力支持は固定templateと柔軟な既定を分け、工程支持は作成/編集の分岐と検証工程を示す。ただし書式例・package成功は実処理の正しさの証明ではない。",
+            "README/変更履歴/検査資料の一律除外、未読scriptを実行できるからUnlimitedとの主張、類似scriptの代表検査だけで全件保証する扱いは過剰。3Python支持は未保存、生成・zip・実test未検証。"
+          ],
+          "nearby_metadata": [
+            "skill-creator",
+            "skill-maintenance",
+            "knowledge-to-skills"
+          ],
+          "negative": "package形式検査だけで品質を断定し、既存履歴/noticeを削除、未保存scriptを無確認実行。",
+          "notices": [
+            [
+              "LICENSE.txt",
+              1,
+              "同11357Bを旧134の直接伏字読取へ結ぶ。",
+              "旧157行の意味未読を維持。公開版/作者/他素材の権利は別。"
+            ]
+          ],
+          "positive": "新規と既存編集を分岐し、必要な参照だけ読み、出力と実使用の失敗を検証して改訂。",
+          "read": [
+            3,
+            7,
+            0,
+            false,
+            true,
+            358
+          ],
+          "reason": "358行を123版2範囲で順序全読し、出力/工程の支持2件も直接読了。",
+          "required_changes": [
+            "目的別の発火正例/負例、参照の到達性、失敗/作用範囲の検査を追加。必要な履歴/権利・検証記録は保持し、500行等は目安とする。",
+            "実装先runtimeのschema/許可済み配置を確認し、新codeはGo既定。sourceのinit/package/削除命令を今回の実行許可へしない。"
+          ],
+          "row": 193,
+          "source": [
+            "github:7b8189942910c7976b2de5fdb49aefbe62084768417da346e07270b258357c8a",
+            "skills/lbbniu/lbbniu-skill-creator/SKILL.md",
+            "d57b6e3a44535b9c0ef454dad5c86f5df78185fc80a65c7092885b4b5e10f81b",
+            "158979709538a4c0de9c370f567917260e0141b2",
+            18086
+          ],
+          "support": [
+            [
+              "LICENSE.txt",
+              11357,
+              "58d1e17f",
+              "7a4a3ea2",
+              4,
+              157,
+              1,
+              "100644"
+            ],
+            [
+              "SKILL.md",
+              18086,
+              "d57b6e3a",
+              "15897970",
+              3,
+              7,
+              0,
+              "100644"
+            ],
+            [
+              "_meta.json",
+              463,
+              "a2959012",
+              "78d27fa1",
+              1,
+              null,
+              null,
+              "100644"
+            ],
+            [
+              "references/output-patterns.md",
+              1813,
+              "d6027800",
+              "073ddda5",
+              3,
+              1,
+              0,
+              "100644"
+            ],
+            [
+              "references/workflows.md",
+              818,
+              "ef484687",
+              "a350c3cc",
+              2,
+              0,
+              0,
+              "100644"
+            ],
+            [
+              "scripts/init_skill.py",
+              null,
+              null,
+              "c544fc72",
+              0,
+              null,
+              null,
+              "100644"
+            ],
+            [
+              "scripts/package_skill.py",
+              null,
+              null,
+              "5cd36cb1",
+              0,
+              null,
+              null,
+              "100644"
+            ],
+            [
+              "scripts/quick_validate.py",
+              null,
+              null,
+              "ed8e1ddd",
+              0,
+              null,
+              null,
+              "100644"
+            ]
+          ],
+          "use": "Skillの発火条件・段階的読込・実使用からの改訂を設計する参考。",
+          "value": "脆さに応じて自由度を選び、本文と参照・出力用資産を分けられる。"
+        },
+        {
+          "candidate_disposition": "一般的な画像工程は改訂候補。Bria実利用/許諾/最終採否0。",
+          "findings": [
+            "path名test-securityだが内容はBria画像API。画像に言及すれば常時使う発火は広すぎる。20超endpoint/商用安全/royalty-free・生成時間/画素/API版は保存主張で現保証なし。",
+            "device認証後のREADYならintrospection不要という近道と、後段のbilling/active確認を分ける必要がある。41行は伏字で意味未読。helper shellは未保存なのでauth/base64/pollingの実装保証なし。",
+            "noticeはMITの保持条件に加えBria API/モデルが商用品で別Terms/価格条件と明記。OAuthログイン自体を本人のAIサブスク枠の証明にしない。"
+          ],
+          "nearby_metadata": [
+            "image-generation-editing",
+            "generative-media-tools",
+            "oauth-least-privilege"
+          ],
+          "negative": "画像という語だけでBriaへ切替え、READY/商用安全という文言でAPI課金や素材権利を承認済みにする。",
+          "notices": [
+            [
+              "LICENSE.txt",
+              2,
+              "当directoryのMITnotice29行を今回直接読了。",
+              "API/モデルと入力/生成物の権利・費用は別条件。"
+            ]
+          ],
+          "positive": "許可された画像道具で背景除去と編集を分け、実画像の透過と寸法を確認。",
+          "read": [
+            3,
+            41,
+            0,
+            false,
+            true,
+            244
+          ],
+          "reason": "244行を123版2範囲で全読。個別notice29行は直接raw全読。",
+          "required_changes": [
+            "広い発火を明示の画像操作/対応serviceへ絞り、APIの新支出やAI API利用を今回に持ち込まない。既存OAuth画像道具へ一般的工程だけ対応。",
+            "画像の利用権/透過・寸法/結果物を検証。必要な親だけ現在の公式契約/endpointを確認し、billing本文・認証応答をそのまま報告しない。"
+          ],
+          "row": 194,
+          "source": [
+            "github:7a241976abc77bc85f1e2b185329dd86eb4d23c08f3bb22db306088f38c5f6ef",
+            "skills/levdavid1/test-security/SKILL.md",
+            "1bff96dd9add88649e7b86dd6d7631c011590979cad61e5fcec62e4834c9c66d",
+            "3a9e294f89d955b542496af7fe3b9bc6edd065d4",
+            13812
+          ],
+          "support": [
+            [
+              "LICENSE.txt",
+              1335,
+              "19e14842",
+              "64dd41c5",
+              2,
+              0,
+              0,
+              "100644"
+            ],
+            [
+              "SKILL.md",
+              13812,
+              "1bff96dd",
+              "3a9e294f",
+              3,
+              41,
+              0,
+              "100644"
+            ],
+            [
+              "_meta.json",
+              282,
+              "6d8fc512",
+              "ddfa580d",
+              1,
+              null,
+              null,
+              "100644"
+            ],
+            [
+              "references/api-endpoints.md",
+              13032,
+              "bff4dd58",
+              "7f3c3f0b",
+              1,
+              null,
+              null,
+              "100644"
+            ],
+            [
+              "references/code-examples/bria_client.sh",
+              null,
+              null,
+              "b7eed9ff",
+              0,
+              null,
+              null,
+              "100644"
+            ]
+          ],
+          "use": "画像処理の目的から生成/領域編集/背景/拡大の工程を選ぶ参考。",
+          "value": "image単体とimages配列、入出力と複数工程の境界を点検できる。"
+        }
+      ],
+      "first_ordinal": 193,
+      "notice_bodies": [
+        {
+          "bytes": 11357,
+          "fresh_raw": false,
+          "git_blob": "7a4a3ea2424c09fbe48d455aed1eaa94d9124835",
+          "id": 1,
+          "mask_unit": "outer_physical_lines",
+          "mask_version": 95,
+          "parent_chunk_sha256": "b0eea33a62b1d85c17964aa3530639f7253767a6151f8c9e9e436054d9c9403b",
+          "parent_receipt": "research3719-chunk-b34ebdb95c3fe69d7e1a64a4642870d4.json",
+          "read": [
+            4,
+            157,
+            1,
+            false,
+            true,
+            202
+          ],
+          "reader_job": "20261025-041905-todo-3719",
+          "reader_namespace": "20261025-041905-todo-3719/current3719",
+          "representative_path": "skills/chindden/skill-creator/LICENSE.txt",
+          "representative_read": [
+            3,
+            157,
+            0,
+            false,
+            true,
+            202
+          ],
+          "representative_row": 134,
+          "sha256": "58d1e17ffe5109a7ae296caafcadfdbe6a7d176f0bc4ab01e12a689b0499d8bd"
+        },
+        {
+          "bytes": 1335,
+          "git_blob": "64dd41c540b90651e46ce3d968692c61f9c5c593",
+          "id": 2,
+          "mask_version": 123,
+          "read": [
+            2,
+            0,
+            0,
+            true,
+            true,
+            29
+          ],
+          "reader_job": "20261027-072935-todo-3719",
+          "reader_namespace": "20261027-072935-todo-3719/current3719",
+          "representative_path": "skills/levdavid1/test-security/LICENSE.txt",
+          "representative_row": 194,
+          "sha256": "19e14842cc9480043c3afad5f7aaafd28fe91a13267fe16adf8e7f07d047fa13",
+          "view": [
+            [
+              1,
+              29,
+              "1b080e5aab0bbee2cf64f8b1f8e05fb0928a720db93ea4a13b84f739f0dad477",
+              29,
+              0
+            ]
+          ]
+        }
+      ],
+      "prior_journal_sha256": "ad3f8fefa9e0898065e8d0cecbdefba9e376a2c25d92dc52b6e88ae558b82181",
+      "reader_job": "20261027-072935-todo-3719",
+      "reader_todo": 3719,
+      "reading_integrity": {
+        "files": [
+          [
+            193,
+            "SKILL.md",
+            [
+              3,
+              7,
+              0,
+              false,
+              true,
+              358
+            ],
+            [
+              [
+                1,
+                5
+              ],
+              [
+                31,
+                31
+              ],
+              [
+                80,
+                80
+              ]
+            ],
+            [
+              [
+                1,
+                180,
+                "e080e5b4835f6378e161fdae03a3a6797dd6878064d6a8b4824b46d3aa62f874",
+                173,
+                7
+              ],
+              [
+                181,
+                358,
+                "93abf54d41e585f59730ca8dc0a0da56f0020716648ae103ea09c0959a9db612",
+                178,
+                0
+              ]
+            ]
+          ],
+          [
+            194,
+            "SKILL.md",
+            [
+              3,
+              41,
+              0,
+              false,
+              true,
+              244
+            ],
+            [
+              [
+                1,
+                8
+              ],
+              [
+                44,
+                44
+              ],
+              [
+                46,
+                46
+              ],
+              [
+                49,
+                51
+              ],
+              [
+                53,
+                55
+              ],
+              [
+                58,
+                58
+              ],
+              [
+                63,
+                64
+              ],
+              [
+                66,
+                66
+              ],
+              [
+                68,
+                68
+              ],
+              [
+                79,
+                79
+              ],
+              [
+                90,
+                90
+              ],
+              [
+                94,
+                94
+              ],
+              [
+                97,
+                100
+              ],
+              [
+                102,
+                102
+              ],
+              [
+                114,
+                114
+              ],
+              [
+                116,
+                116
+              ],
+              [
+                119,
+                120
+              ],
+              [
+                128,
+                128
+              ],
+              [
+                131,
+                135
+              ],
+              [
+                142,
+                142
+              ],
+              [
+                171,
+                171
+              ]
+            ],
+            [
+              [
+                1,
+                180,
+                "8509d50e315524f4f43d74ab77d56e960bc2578a9d35df9e0698c3e8658bb2b9",
+                139,
+                41
+              ],
+              [
+                181,
+                244,
+                "708e5ac5a7c4c30abe92b11b56029a931829e6345e86fe30a4bc0fba7d76a6e9",
+                64,
+                0
+              ]
+            ]
+          ],
+          [
+            193,
+            "references/output-patterns.md",
+            [
+              3,
+              1,
+              0,
+              false,
+              true,
+              83
+            ],
+            [
+              [
+                67,
+                67
+              ]
+            ],
+            [
+              [
+                1,
+                83,
+                "0c96dcbbb3b8c4f8ef3d99d70436b6e7b8c17dbe528e4bbab87653eb27761350",
+                82,
+                1
+              ]
+            ]
+          ],
+          [
+            193,
+            "references/workflows.md",
+            [
+              2,
+              0,
+              0,
+              true,
+              true,
+              28
+            ],
+            [],
+            [
+              [
+                1,
+                28,
+                "b75c5ac3938ec01f12c22ee363c9c65a35647348afdd7106b2a097314770321d",
+                28,
+                0
+              ]
+            ]
+          ]
+        ],
+        "incidental_raw_partial": {
+          "correction": "以後prepareは値を出さず、本文は順序伏字表示。原値は評価へ再掲しない。",
+          "from": 1,
+          "masked_pass_seven_lines_already_visible": true,
+          "renderer": "prepare戻り値の配列冒頭を誤表示。全文ではない。",
+          "row": 193,
+          "through": 100,
+          "view_sha256": null
+        },
+        "mask_unit": "outer_physical_lines",
+        "mask_version": 123,
+        "method": "122版に加え短い具体resource URL/prefixed IDを将来分のみ抑止。0は秘密不存在証明でない。",
+        "proof_tuple": "[row,relative,read,withheld_ranges,ordered_ranges]。range=[from,through,viewSHA,visible,masked]。",
+        "same_buffer": {
+          "bytes": true,
+          "git_blob": true,
+          "same_buffer": true,
+          "sha256": true,
+          "strict_utf8": true
+        },
+        "source_original_text_included": false
+      },
+      "roster_sha256": "f9c6b2e44c5e3aa8947f758f864eaa0d5edc396d622359826bca848cd96f9901"
+    }
+  },
+  "parent_acknowledged_through": 194,
+  "parent_journal_sha256": "4e36c819611edb6b4ef68ff14535a3f31407a4cbaacd6c93ad77f5d37b483a67",
+  "publication_preparation": {
+    "central_operations": 0,
+    "new_final_dispositions": 0,
+    "new_global_raw_or_workflow_credit": 0,
+    "new_permissions": 0,
+    "new_source_body_reads": 0,
+    "publisher_job": "20261027-175645-todo-3080",
+    "retained_private_snapshot_sha256": "46e7401636560fd878d7d2db1542bc9addb3ff678fb89a98df93f0e277a0e570",
+    "whole_original_contexts_reconstructed_now": 1
+  },
+  "registered_spec_sha256": "4f6fe32f62db56bed2acb4d378147ff952ad06230243fb45f7674f3158313fc3",
+  "roster_sha256": "f9c6b2e44c5e3aa8947f758f864eaa0d5edc396d622359826bca848cd96f9901",
+  "source_commit": "920714f17d81e0a95c7a9bc51faf0a7921cd982d",
+  "source_gzip_or_original_body_reopened": 0,
+  "source_primary_bytes": 31898,
+  "source_slice": [
+    193,
+    194
+  ],
+  "todo": 3080,
+  "whole16_complete": false,
+  "whole_original_ACK_pins": [
+    {
+      "all_original_fields_reconstructed": true,
+      "chunk_id": "50d20bb89875d6c52cdc676d3a1dd408",
+      "chunk_sha256": "5cebfc6f5978955c16bbdd78ab5b2a42d5cc0801894bb9ed423e2a52d346b97c",
+      "first": 193,
+      "last": 194,
+      "original_message_sha256": "0666ed01748103abffda2c35e38c16c04147208bab4eecbcaee17db51947ba5b",
+      "reader_job": "20261027-072935-todo-3719"
+    }
+  ]
+}

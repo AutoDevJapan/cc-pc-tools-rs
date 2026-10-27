@@ -71,6 +71,11 @@ pub(crate) fn record(
         .iter()
         .find(|j| j["id"] == actor_id)
         .ok_or("subwork_continuation_actor_missing")?;
+    // An environment variable is only a comparison. The CLI itself must belong
+    // to the birth-verified process tree of this exact current parent worker.
+    if !policy::process_tree(actor, &ps).contains(&std::process::id()) {
+        return Err("subwork_continuation_caller_not_parent".into());
+    }
     if !continuation::parent_registered(db, &row, actor) {
         return Err("subwork_continuation_parent_invalid".into());
     }

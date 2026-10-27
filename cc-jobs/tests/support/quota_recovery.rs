@@ -245,7 +245,7 @@ fn research_admission(gpt: bool, case: &str) {
         ]);
     }
     if case=="continuation_no_retry" {for key in cc_job_policy::subwork_continuation::RETRY_FIELDS {source.as_object_mut().unwrap().remove(key);}source.as_object_mut().unwrap().remove("capacity_account_selector");}
-    if case=="continuation_legacy" {
+    if case.starts_with("continuation_legacy") {
         // v1's already restored provider switch remains spent in the new contract.
         source["quota_recovery"]=json!({"version":1,"source_job":"previous-quota","model":"gpt-6.1-sol"});
         source["quota_retry_seeded_version"]=json!(1);
@@ -349,6 +349,7 @@ fn research_admission(gpt: bool, case: &str) {
             "continuation_generation"=>{db["items"][1]["resume_generation"]=json!(5);fs::write(&paths.store,db.to_string()).unwrap();},
             "continuation_stop"=>{db["items"][1]["owner_stopped"]=json!(true);fs::write(&paths.store,db.to_string()).unwrap();},
             "continuation_scope"=>{let mut changed=j.clone();changed["network"]=json!(true);t.put(changed);},
+            "continuation_legacy_reset"=>{let mut changed=j.clone();changed["capacity_retry_count"]=json!(0);t.put(changed);},
             _=>(),
         }
     } else if gpt {
@@ -449,7 +450,7 @@ fn research_admission(gpt: bool, case: &str) {
 
 #[test]
 fn dependency_continuation_registers_links_and_rechecks_before_real_queue_admission() {
-    for case in ["continuation_normal","continuation_legacy","continuation_no_retry","continuation_health","continuation_selected_unknown","continuation_source","continuation_generation","continuation_stop","continuation_scope"] {
+    for case in ["continuation_normal","continuation_legacy","continuation_legacy_reset","continuation_no_retry","continuation_health","continuation_selected_unknown","continuation_source","continuation_generation","continuation_stop","continuation_scope"] {
         research_admission(true,case);
     }
 }

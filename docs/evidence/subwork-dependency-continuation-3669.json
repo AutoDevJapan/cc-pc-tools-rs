@@ -102,5 +102,60 @@
       "bytes": 645,
       "sha256": "66d358c9cc5ee9c75d9cd852d13c8a6d775464b82f56b12f007729e6f5f8a8d6"
     }
-  ]
+  ],
+  "review4164_corrections": {
+    "original_review_todo": 4164,
+    "original_review_job": "20261028-072254-todo-4164",
+    "original_review_head": "92cdb785fd8a5a1dcd8e85a9962e73b2669ef0f2",
+    "original_canonical_bytes": 2883,
+    "original_canonical_sha256": "6adfffea7188917ee890c498087f10db1c4624a447496691c7a9c72a5fc26810",
+    "canonical_hash_provenance": "Parent3080 qualified original; this worker read complete normal wait output and metadata/native projection",
+    "actual_native": {
+      "model": "gpt-6-luna",
+      "effort": "max"
+    },
+    "red_commit": "4d50740f",
+    "red_failures": [
+      "another_process_cannot_impersonate_a_live_parent_with_its_environment",
+      "forged_or_stale_continuation_is_rejected_without_modifying_the_store: legacy_unseeded"
+    ],
+    "green_passed": 62,
+    "green_skipped_outside_selected_scope": 1314,
+    "filter": "test(quota) | test(dependency_continuation) | binary(continue_subwork)",
+    "clippy_all_targets_packages": 4,
+    "clippy_warnings": 0,
+    "doctest_each": 0,
+    "final_independent_reconfirmation_pending": true,
+    "fixes": [
+      "Bind the actual CLI to the birth-verified current parent process tree",
+      "Preserve previously restored v1 spent retry history; reject unrestored or incomplete history without editing source"
+    ],
+    "logs": [
+      {
+        "file": "review-red.log",
+        "bytes": 8440,
+        "sha256": "c0683c0ca650751fb8aa467cbaf45ad7e6408e8d60c5d71a10f7ba3acb221705"
+      },
+      {
+        "file": "review-green.log",
+        "bytes": 10828,
+        "sha256": "38ef17703edd796c5b410dfc02430246891486fe82aca48955f9e8cb9ea7f0d8"
+      },
+      {
+        "file": "review-clippy.log",
+        "bytes": 5603,
+        "sha256": "db56a33ce4a64c9aa201d180a089dabfbf6dc05989c2517661f7d2706fe5cf23"
+      },
+      {
+        "file": "review-doctests.log",
+        "bytes": 1265,
+        "sha256": "365b326038a84d147420ed06e129a2f0dc19e7e536e29dfee64fdb5607e2c58f"
+      },
+      {
+        "file": "review4164-normal-result.txt",
+        "bytes": 3055,
+        "sha256": "5413d900b63f8daf327b9002566f2482709bf713aba641209a296eb432584d94"
+      }
+    ]
+  }
 }

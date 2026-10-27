@@ -59,6 +59,30 @@ pub fn unheld(item: &Value, source: &Value) -> bool {
             v.is_null() || v == false || v == ""
         })
 }
+fn retry_budget_known(source: &Value) -> bool {
+    let proof = &source["quota_recovery"];
+    // A v1 capsule predates retry details. Only an already restored snapshot
+    // proves its spent switch; this new-generation intake cannot validate the
+    // old capsule's predecessor from a caller flag or reconstruct missing data.
+    (proof["version"] != 1
+        || (source["quota_retry_seeded_version"] == 1
+            && source["capacity_retry_count"]
+                .as_u64()
+                .is_some_and(|n| n > 0)
+            && source["capacity_history"]
+                .as_array()
+                .is_some_and(|history| {
+                    history.iter().any(|entry| {
+                        entry["kind"] == "provider_switch"
+                            && entry["failure_kind"] == "quota"
+                            && entry["source_job"].is_string()
+                            && entry["source_job"] == proof["source_job"]
+                            && entry["to_model"].is_string()
+                            && entry["to_model"] == proof["model"]
+                    })
+                })))
+        && crate::quota_retry::terminal_reason(source).is_none()
+}
 /// Caller additionally checks actual parent ownership, real process drain and dependencies.
 pub fn request(item: &Value, source: &Value, actor: &Value) -> Option<Value> {
     let finite = if item["subwork"]["kind"] == "review" {
@@ -100,7 +124,7 @@ pub fn request(item: &Value, source: &Value, actor: &Value) -> Option<Value> {
         || finite["spec"] != item["spec"]
         || text(source, "launch_key").is_empty()
         || finite["launch_key"] != source["launch_key"]
-        || crate::quota_retry::terminal_reason(source).is_some()
+        || !retry_budget_known(source)
     {
         return None;
     }

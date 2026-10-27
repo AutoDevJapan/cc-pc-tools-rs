@@ -59,7 +59,7 @@ func validateNext3FlowProof(installation, creation, readback []byte) error {
 
 func next3Value(value *int, want int) bool { return value != nil && *value == want }
 
-func validateNext3Precreation(raw []byte) error {
+func validateNext3Precreation(raw, creation, readback []byte) error {
 	var proof struct {
 		Domain         string `json:"domain"`
 		Request        string `json:"request_sha256"`
@@ -67,9 +67,13 @@ func validateNext3Precreation(raw []byte) error {
 		CurrentAbsence *bool  `json:"current_absence_asserted"`
 		Revalidated    *bool  `json:"mutation_revalidated_before_CreateNew"`
 		Calls          *int   `json:"new_Create_calls_by_publication"`
+		FailedCall     string `json:"failed_native_call_before_retry"`
+		SuccessCall    string `json:"successful_native_creation_call"`
+		SuccessSHA     string `json:"successful_original_CLI_stdout_sha256"`
 		Observations   []struct {
 			Phase      string `json:"phase"`
 			Wrapper    string `json:"original_complete_wrapper_sha256"`
+			CLI        string `json:"original_CLI_stdout_sha256"`
 			Invocation string `json:"exact_forward_invocation_sha256"`
 			Projection *bool  `json:"projection_is_not_a_new_issuer_receipt"`
 			Response   struct {
@@ -86,14 +90,55 @@ func validateNext3Precreation(raw []byte) error {
 	if json.Unmarshal(raw, &proof) != nil || proof.Domain != "skills3080-next3-precreation-qualification-history-v1" || proof.Request != "b74fe84e8da49c63f75cfe41cb905c0493d60eeaa51edfa31fd9182874a0dda2" || proof.Manifest != next3OperationSHA || !recordedFalse(proof.CurrentAbsence) || !recordedTrue(proof.Revalidated) || !next3Value(proof.Calls, 0) || len(proof.Observations) != 2 {
 		return errors.New("next3 precreation history cannot become current absence or new creation authority")
 	}
+	var native struct {
+		Call    string `json:"native_call_id"`
+		SHA     string `json:"original_CLI_stdout_sha256"`
+		Request string `json:"request_sha256"`
+		Failed  []struct {
+			Call string `json:"native_call_id"`
+		} `json:"prior_failed_exact_invocation_attempts"`
+	}
+	var consumed struct {
+		Call     string `json:"creation_native_call"`
+		Request  string `json:"request_sha256"`
+		Manifest string `json:"manifest_sha256"`
+	}
+	if json.Unmarshal(creation, &native) != nil || json.Unmarshal(readback, &consumed) != nil || len(native.Failed) != 1 || proof.FailedCall != native.Failed[0].Call || proof.SuccessCall != native.Call || proof.SuccessCall != consumed.Call || proof.SuccessSHA != native.SHA || proof.Request != native.Request || proof.Request != consumed.Request || proof.Manifest != consumed.Manifest {
+		return errors.New("next3 precreation, original creation and readback links differ")
+	}
 	for i, observation := range proof.Observations {
 		phase := []string{"before_first_native_attempt", "after_prewrite_failure_before_single_retry"}[i]
 		r := observation.Response
-		if observation.Phase != phase || observation.Wrapper != "1d5a0a1b069ce61f8c3d0d563508e62f2bc740585df416c63975366ffec7d3db" || observation.Invocation != "2da7e9a8bf4388fac8b62cad5e6f920df5703d16796e568d87b80d5bbae402b0" || !recordedTrue(observation.Projection) || !recordedTrue(r.Qualified) || !next3Value(r.Files, 21) || !next3Value(r.Created, 0) || r.Request != proof.Request || r.Manifest != proof.Manifest || !recordedFalse(r.General) || !recordedFalse(r.Registry) {
+		if observation.Phase != phase || observation.Wrapper != "1d5a0a1b069ce61f8c3d0d563508e62f2bc740585df416c63975366ffec7d3db" || observation.CLI != "99f5856126e22f9dfacb24c12f0c88ec3bd602127670bfcedb853d1ff30d35bf" || observation.Invocation != "2da7e9a8bf4388fac8b62cad5e6f920df5703d16796e568d87b80d5bbae402b0" || !recordedTrue(observation.Projection) || !recordedTrue(r.Qualified) || !next3Value(r.Files, 21) || !next3Value(r.Created, 0) || r.Request != proof.Request || r.Manifest != proof.Manifest || !recordedFalse(r.General) || !recordedFalse(r.Registry) {
 			return errors.New("next3 original precreation projection changed")
 		}
 	}
 	return nil
+}
+
+func TestNext3PrecreationRejectsLostRecordedLinks(t *testing.T) {
+	for _, key := range []string{"failed_native_call_before_retry", "successful_native_creation_call", "successful_original_CLI_stdout_sha256", "original_CLI_stdout_sha256"} {
+		t.Run(key, func(t *testing.T) {
+			var value map[string]any
+			loadPublicReceipt(t, "skills-3080-next3-precreation-qualification175645.json", &value)
+			if key == "original_CLI_stdout_sha256" {
+				observations := received27Array(t, value["normal_readonly_qualification_observations"])
+				received27Object(t, observations[0])[key] = "changed"
+			} else {
+				value[key] = "changed"
+			}
+			raw, err := json.Marshal(value)
+			if err != nil {
+				t.Fatal(err)
+			}
+			var native, consumed any
+			creation := loadPublicReceipt(t, "skills-3080-next3-create-evidence175645.json", &native)
+			readback := loadPublicReceipt(t, "skills-3080-next3-consume-evidence175645.json", &consumed)
+			if validateNext3Precreation(raw, creation, readback) == nil {
+				t.Fatal("recorded precreation link changed but accepted")
+			}
+		})
+	}
 }
 
 func TestNext3FlowProofRejectsLostFailureOrBatchFacts(t *testing.T) {

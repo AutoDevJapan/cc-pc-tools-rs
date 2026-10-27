@@ -252,7 +252,7 @@ func validatedNext3Dispositions(t *testing.T) map[string]cohortLedgerRow {
 	if json.Unmarshal(rawPins["creation"], &native) != nil || json.Unmarshal(rawPins["readback"], &read) != nil {
 		t.Fatal("travel3 actual evidence cannot decode")
 	}
-	if err := validateNext3Precreation(rawPins["precreation"]); err != nil {
+	if err := validateNext3Precreation(rawPins["precreation"], rawPins["creation"], rawPins["readback"]); err != nil {
 		t.Fatal(err)
 	}
 	if err := validateNext3FlowProof(installationRaw, rawPins["creation"], rawPins["readback"]); err != nil {

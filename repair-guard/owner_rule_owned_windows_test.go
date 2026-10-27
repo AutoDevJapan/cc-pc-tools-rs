@@ -68,6 +68,18 @@ func TestOwnerRule4088OwnedReceiptNeedsOriginalProducerAndNativeIdentity(t *test
 	if check(object{"contracted-fixture": cwd}) {
 		t.Fatal("client producer admitted")
 	}
+	deniedAccess := access
+	deniedAccess.denied = func(p string) bool { return same(p, cwd) }
+	if ownerRuleOwnedAt(context.Background(), root, store, jobs, object{}, deniedAccess, config) {
+		t.Fatal("producer exclusion lost to an infrastructure root")
+	}
+	badProject := r
+	badProject.Project = "contracted-fixture"
+	writeReceipt(badProject)
+	if check(object{}) {
+		t.Fatal("known client-owned temporary resource admitted")
+	}
+	writeReceipt(r)
 	bad := r
 	bad.FileID++
 	writeReceipt(bad)

@@ -77,6 +77,9 @@ func ownerRuleOwnedAt(ctx context.Context, path, store, jobs string, projects ob
 			if err != nil || hashBytes(identity) != r.Integrity || len(r.Ancestors) == 0 {
 				return false
 			}
+			if access.membership(r.Project, "") == "client_project" {
+				return false
+			}
 			if !ownerOwnedNative(root, r.Volume, r.FileID, r.Birth) {
 				return false
 			}

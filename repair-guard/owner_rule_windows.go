@@ -31,6 +31,18 @@ func ownerRuleWith(ctx context.Context, path string, projects object, access own
 			return ownerRuleProtected("client_record_store")
 		}
 	}
+	// This routine is also used for an owned resource's original producer.
+	// Those internal calls must retain the same exclusions and name checks as
+	// the outer normal CLI, rather than inheriting an operations root's result.
+	if access.denied(path) {
+		return ownerRuleUnknown("existing_exclusion_unavailable_or_matched")
+	}
+	if ownerCardPath(path) {
+		return ownerRuleUnknown("card_name_or_storage_candidate")
+	}
+	if ownerWindowsAlias(path) {
+		return ownerRuleUnknown("windows_alias")
+	}
 	if ctx.Err() != nil || !ownerRulePlainPath(path, access.plain) {
 		return ownerRuleUnknown("path_metadata_unavailable")
 	}

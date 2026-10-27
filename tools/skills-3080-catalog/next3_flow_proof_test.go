@@ -7,6 +7,58 @@ import (
 	"time"
 )
 
+const next3CaptureAdoptionsScope = "additional_ledger_entries_written_by_capture_only"
+
+func validateNext3CreationCapture(raw []byte) error {
+	var value struct {
+		Targets      *int   `json:"created_targets"`
+		Files        *int   `json:"created_files"`
+		Added        *int   `json:"new_adoptions"`
+		Scope        string `json:"new_adoptions_scope"`
+		CentralReads *int   `json:"central_file_reads_by_capture"`
+		OtherBodies  *bool  `json:"other_native_bodies_returned"`
+		NewReceipt   *bool  `json:"scope_clarification_is_a_new_issuer_receipt"`
+	}
+	if json.Unmarshal(raw, &value) != nil || !recordedCount(value.Targets, 3) || !recordedCount(value.Files, 21) || !recordedCount(value.Added, 0) || value.Scope != next3CaptureAdoptionsScope || !recordedCount(value.CentralReads, 0) || !recordedFalse(value.OtherBodies) || !recordedFalse(value.NewReceipt) {
+		return errors.New("next3 creation and capture-only additional adoption counts differ")
+	}
+	return nil
+}
+
+func TestNext3CaptureSeparatesCreationFromPublicationCounts(t *testing.T) {
+	for _, field := range []string{"created_targets", "created_files", "new_adoptions", "new_adoptions_scope", "central_file_reads_by_capture", "other_native_bodies_returned", "scope_clarification_is_a_new_issuer_receipt"} {
+		for _, change := range []string{"valid", "missing", "null", "wrong"} {
+			t.Run(field+"/"+change, func(t *testing.T) {
+				var value map[string]any
+				loadPublicReceipt(t, "skills-3080-next3-create-evidence175645.json", &value)
+				switch change {
+				case "missing":
+					delete(value, field)
+				case "null":
+					value[field] = nil
+				case "wrong":
+					switch field {
+					case "new_adoptions_scope":
+						value[field] = "actual_created_skill_targets"
+					case "other_native_bodies_returned", "scope_clarification_is_a_new_issuer_receipt":
+						value[field] = true
+					default:
+						value[field] = float64(9)
+					}
+				}
+				raw, err := json.Marshal(value)
+				if err != nil {
+					t.Fatal(err)
+				}
+				err = validateNext3CreationCapture(raw)
+				if (change == "valid") != (err == nil) {
+					t.Fatalf("%s capture count: %v", change, err)
+				}
+			})
+		}
+	}
+}
+
 func validateNext3FlowProof(installation, creation, readback []byte) error {
 	var install struct {
 		Batches *int `json:"normal_read_batches"`

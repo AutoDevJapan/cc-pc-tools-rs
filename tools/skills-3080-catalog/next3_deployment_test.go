@@ -84,7 +84,7 @@ func validateNext3LifecycleHistory(raw, precreation, readback []byte) error {
 
 func TestNext3RetainsBothRootAndTargetPreparationHistory(t *testing.T) {
 	for _, file := range []string{"skills-3080-next3-actual-bundle175645.json", "skills-3080-installed-next3-manifest175645.json"} {
-		for _, change := range []string{"valid", "root missing", "root null", "root state changed", "target missing", "target null", "old qualification promoted", "old presence erased", "root qualification ref missing", "target qualification ref changed", "target readback ref changed", "target readback SHA changed"} {
+		for _, change := range []string{"valid", "root missing", "root null", "root state changed", "target missing", "target null", "old qualification promoted", "old presence erased", "root qualification ref missing", "root qualification file changed", "root qualification SHA changed", "all qualification files coherently changed", "all qualification SHAs coherently changed", "target qualification file changed", "target qualification ref changed", "target readback ref changed", "target readback SHA changed"} {
 			t.Run(file+"/"+change, func(t *testing.T) {
 				var value map[string]any
 				loadPublicReceipt(t, file, &value)
@@ -106,6 +106,21 @@ func TestNext3RetainsBothRootAndTargetPreparationHistory(t *testing.T) {
 					delete(received27Object(t, target["pre_creation_history"]), "directory_presence_observation")
 				case "root qualification ref missing":
 					delete(value, "precreation_qualification")
+				case "root qualification file changed":
+					received27Object(t, value["precreation_qualification"])["file"] = "changed"
+				case "root qualification SHA changed":
+					received27Object(t, value["precreation_qualification"])["sha256"] = strings.Repeat("0", 64)
+				case "all qualification files coherently changed", "all qualification SHAs coherently changed":
+					field, bad := "file", "changed"
+					if change == "all qualification SHAs coherently changed" {
+						field, bad = "sha256", strings.Repeat("0", 64)
+					}
+					received27Object(t, value["precreation_qualification"])[field] = bad
+					for _, row := range received27Array(t, value["targets"]) {
+						received27Object(t, received27Object(t, row)["precreation_qualification"])[field] = bad
+					}
+				case "target qualification file changed":
+					received27Object(t, target["precreation_qualification"])["file"] = "changed"
 				case "target qualification ref changed":
 					received27Object(t, target["precreation_qualification"])["sha256"] = "changed"
 				case "target readback ref changed":
@@ -179,11 +194,11 @@ func TestNext3FullReviewRejectsChangedOrMissingOwnerOrigins(t *testing.T) {
 }
 
 func validateNext3Header(i travel3Install, n travel3Native, r travel3Read) error {
-	if i.New != 3 || i.Created != 1 || i.Files != 21 || i.Bytes != 65566 || i.Instructions != 6 || i.InstructionBytes != 9206 || i.Creator != next3Actor || i.Manifest != next3OperationSHA || !recordedFalse(i.Done) || !recordedFalse(i.Implicit) || !recordedFalse(i.ThirdParty) || i.Raw != 0 {
+	if i.New != 3 || i.Created != 1 || i.Files != 21 || i.Bytes != 65566 || i.Instructions != 6 || i.InstructionBytes != 9206 || i.Creator != next3Actor || i.Manifest != next3OperationSHA || !recordedFalse(i.Done) || !recordedFalse(i.Implicit) || !recordedFalse(i.ThirdParty) || !recordedCount(i.Raw, 0) {
 		return errors.New("next3 actual installation boundary differs")
 	}
 	f := i.Frozen
-	if f.Task != 4129 || f.Job != "20261028-054325-todo-4129" || f.Spec != "62dd891e54730d9b3a4daf82331b21fb3c05b3ea5efa508b1bdff632c8e58f44" || f.Raw != "c593ea9e665a19a8ebd1bac348ba061b203a73b21b3ca6e7facc0fc299a94661" || f.Manifest != next3OperationSHA || f.Must != 0 || !recordedTrue(f.Frozen) {
+	if f.Task != 4129 || f.Job != "20261028-054325-todo-4129" || f.Spec != "62dd891e54730d9b3a4daf82331b21fb3c05b3ea5efa508b1bdff632c8e58f44" || f.Raw != "c593ea9e665a19a8ebd1bac348ba061b203a73b21b3ca6e7facc0fc299a94661" || f.Manifest != next3OperationSHA || !recordedCount(f.Must, 0) || !recordedTrue(f.Frozen) {
 		return errors.New("next3 original full reviewer must remain frozen")
 	}
 	if n.Count != 1 || n.Files != 21 || n.Call != "call_b3c15733a51840c3a0f58ba684ca3c1c" || n.Request != "b74fe84e8da49c63f75cfe41cb905c0493d60eeaa51edfa31fd9182874a0dda2" || n.CLI != "077c2cd83fb00b3c06577edd63cfcb2a2e8451b7e6474a1cd974b954fa6cb2c4" || n.Producer != "9be9a066053183a099e78133571d394ecbb2845372e3cf603e292c74dac1a8d3" || n.Revision != "deb430b8b089fde2391dbd243c01db48de48d493" {
@@ -251,7 +266,7 @@ func validateNext3NonAuthorshipSource(raw []byte) error {
 }
 
 func validateNext3Application(a travel3Application, bodies map[string][]byte) error {
-	if a.Actor != next3Actor || !recordedTrue(a.Read) || !recordedTrue(a.Applied) || a.Buffers != 6 || a.Bytes != 9206 || a.Count != 8 || len(a.Rows) != 8 || a.Service != 0 || !recordedFalse(a.Implicit) || len(a.Pins) != 6 {
+	if a.Actor != next3Actor || !recordedTrue(a.Read) || !recordedTrue(a.Applied) || a.Buffers != 6 || a.Bytes != 9206 || a.Count != 8 || len(a.Rows) != 8 || !recordedCount(a.Service, 0) || !recordedFalse(a.Implicit) || len(a.Pins) != 6 {
 		return errors.New("next3 actual bounded text application differs")
 	}
 	seen := map[string]bool{}
@@ -366,6 +381,9 @@ func validatedNext3Dispositions(t *testing.T) map[string]cohortLedgerRow {
 	if json.Unmarshal(rawPins["creation"], &native) != nil || json.Unmarshal(rawPins["readback"], &read) != nil {
 		t.Fatal("travel3 actual evidence cannot decode")
 	}
+	if err := validateNext3CreationCapture(rawPins["creation"]); err != nil {
+		t.Fatal(err)
+	}
 	for _, key := range []string{"bundle", "manifest"} {
 		if err := validateNext3LifecycleHistory(rawPins[key], rawPins["precreation"], rawPins["readback"]); err != nil {
 			t.Fatal(err)
@@ -453,14 +471,8 @@ func validatedNext3Dispositions(t *testing.T) map[string]cohortLedgerRow {
 	if count != 21 {
 		t.Fatal("travel3 actual bundle file count")
 	}
-	var discovery struct {
-		Found     int                   `json:"found_count"`
-		Parse     int                   `json:"parse_error_count"`
-		Elsewhere int                   `json:"same_names_other_paths"`
-		Exited    *bool                 `json:"process_tree_exit_confirmed"`
-		Rows      []travel3DiscoveryRow `json:"found"`
-	}
-	if json.Unmarshal(rawPins["discovery"], &discovery) != nil || discovery.Found != 3 || discovery.Parse != 0 || discovery.Elsewhere != 0 || !recordedTrue(discovery.Exited) || len(discovery.Rows) != 3 {
+	var discovery travel3Discovery
+	if json.Unmarshal(rawPins["discovery"], &discovery) != nil || validateTravel3DiscoveryBoundary(discovery) != nil {
 		t.Fatal("travel3 fresh metadata incomplete")
 	}
 	found := map[string]bool{}
@@ -474,12 +486,8 @@ func validatedNext3Dispositions(t *testing.T) map[string]cohortLedgerRow {
 	if json.Unmarshal(rawPins["application"], &application) != nil || validateNext3Application(application, bodies) != nil {
 		t.Fatal("travel3 actual bounded text application differs")
 	}
-	var structure struct {
-		Exit   int    `json:"exit"`
-		Stdout string `json:"stdout"`
-	}
-	if json.Unmarshal(rawPins["structure"], &structure) != nil || structure.Exit != 0 || !strings.HasPrefix(structure.Stdout, "PASS: 3 explicit skills;") {
-		t.Fatal("travel3 actual buffer structure check absent")
+	if err := validateTravel3Structure(rawPins["structure"]); err != nil {
+		t.Fatal(err)
 	}
 	expectedIDs := map[string]string{"aerobase-travel-hotels": "github:f753b00dede8c609f3f058adb0e80834db2b5d21ac1ab766e2b6226cb6882475", "aerobase-travel-lounges": "github:5f2060a1af74a008a8625912793220e95725198d9bfceb25f1efd49447c8cc0f", "aerobase-travel-wallet": "github:8eec7dd96fe7e61c15a53691cb3176ca1db6762a4e076690d38f40d7d1395b70"}
 	result := map[string]cohortLedgerRow{}

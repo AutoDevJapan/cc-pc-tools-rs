@@ -19,11 +19,11 @@ func TestSkills3080Accepted594DistributionSurvivesNativeLogUpdate(t *testing.T) 
 		Observed  string `json:"actual_installed_sha256"`
 		Bytes     int    `json:"bytes"`
 		Published string `json:"published_distribution_result"`
-		Candidate bool   `json:"candidate_generated"`
-		General   bool   `json:"general_access_granted"`
-		Registry  bool   `json:"original_registry_recovered"`
+		Candidate *bool  `json:"candidate_generated"`
+		General   *bool  `json:"general_access_granted"`
+		Registry  *bool  `json:"original_registry_recovered"`
 	}
-	if json.Unmarshal(raw, &observation) != nil || observation.SHA != "16386d55e418ce271cfed923edede1e7472bb93aa691b15409bcdb99753b9899" || observation.Head != "61de98373f8cb481302394be11d7d75cfef08a52" || observation.Observed != observation.SHA || observation.Bytes != 13315072 || observation.Published != "https://github.com/AutoDevJapan/cc-pc-tools-rs/pull/594#issuecomment-6442689917" || observation.Candidate || observation.General || observation.Registry {
+	if json.Unmarshal(raw, &observation) != nil || observation.SHA != "16386d55e418ce271cfed923edede1e7472bb93aa691b15409bcdb99753b9899" || observation.Head != "61de98373f8cb481302394be11d7d75cfef08a52" || observation.Observed != observation.SHA || observation.Bytes != 13315072 || observation.Published != "https://github.com/AutoDevJapan/cc-pc-tools-rs/pull/594#issuecomment-6442689917" || observation.Candidate == nil || *observation.Candidate || observation.General == nil || *observation.General || observation.Registry == nil || *observation.Registry {
 		t.Fatal("independently published pre-candidate software observation changed")
 	}
 	current := skillsProducer{strings.Repeat("7", 64), strings.Repeat("8", 40)}

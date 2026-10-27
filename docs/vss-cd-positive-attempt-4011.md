@@ -105,6 +105,13 @@ C→C/使用13,415,874,560B/割当13,943,291,904B/上限50GiB、MinDiff未設定
 2026-10-27の最新PR方針により、マージ前には別セッションのセルフレビューとラバーダックを
 同じ最終コミットへ行い、Must以外の修正指摘も含めて解消確認を得る。
 
+22:02:43～46に修正したrun-onceのMode Inspectを実行し、実HEAD/clean source照合と
+3sourceのhash/pin後のfresh build、子の起動/回収が同じ窓口で機能することを確認した。
+別processの拒否と取得後の別objectの拒否は両方80042316で、親所有1/Abort完了1/Release1。
+timeoutなし、preflight全取得成功の3snapshot/2pointのため、期待どおり
+live_preflight_not_met_no_write/exit1で終わった。書込process起動0、positive-cd票はまだない。
+この固定Inspect票も上書き・削除・再試行しない。現在のsnapshotを切替のために削除せず保持する。
+
 ## 現在の実測と検査
 
 gofmt/Go vet/通常build成功、保持条件の13種類の拒否例と出力上限の関連テスト成功。

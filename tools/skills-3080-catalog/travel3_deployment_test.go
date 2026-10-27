@@ -102,7 +102,13 @@ type travel3Application struct {
 }
 
 type travel3ReviewResolution struct {
-	Domain   string `json:"domain"`
+	Domain    string `json:"domain"`
+	Publisher string `json:"resolution_publisher_job"`
+	Finding   struct {
+		ID      string `json:"id"`
+		Class   string `json:"classification"`
+		Subject string `json:"subject"`
+	} `json:"original_finding"`
 	Original struct {
 		Task       int    `json:"task"`
 		Job        string `json:"job"`
@@ -117,15 +123,16 @@ type travel3ReviewResolution struct {
 	} `json:"original_review"`
 	Resolution struct {
 		Action          string `json:"action"`
+		Interpretation  string `json:"interpretation"`
 		Flag            string `json:"required_existing_source_flag"`
 		FlagValue       *bool  `json:"required_existing_source_flag_value"`
-		Files           int    `json:"source_metadata_files_checked"`
+		Files           *int   `json:"source_metadata_files_checked"`
 		SpecChanged     *bool  `json:"original_full_review_spec_changed"`
 		Restarted       *bool  `json:"original_full_review_restarted"`
 		Reclassified    *bool  `json:"historical_findings_reclassified_as_zero"`
 		ManifestChanged *bool  `json:"original_creation_manifest_changed"`
-		Central         int    `json:"central_files_changed"`
-		Create          int    `json:"new_CreateNew_operations"`
+		Central         *int   `json:"central_files_changed"`
+		Create          *int   `json:"new_CreateNew_operations"`
 		Authorship      *bool  `json:"independent_authorship_claimed"`
 		Promoted        *bool  `json:"unseen_source_meanings_or_rights_promoted"`
 	} `json:"resolution"`
@@ -136,11 +143,11 @@ const travel3NonAuthorshipFlag = "notice_statement_is_source_published_license_n
 func validateTravel3FindingResolution(r travel3ReviewResolution, i travel3Install) error {
 	f := r.Original
 	zero := func(p *int, want int) bool { return p != nil && *p == want }
-	if r.Domain != "skills3080-travel3-frozen-review-finding-resolution-v1" || f.Task != i.Frozen.Task || f.Job != i.Frozen.Job || f.Spec != i.Frozen.Spec || f.Final != i.Frozen.Raw || f.Bytes != 1448 || f.Manifest != i.Manifest || !zero(f.Must, 0) || !zero(f.Suggestion, 1) || !zero(f.Nit, 0) || !recordedTrue(f.Frozen) {
+	if r.Domain != "skills3080-travel3-frozen-review-finding-resolution-v1" || r.Publisher != "20261027-175645-todo-3080" || r.Publisher == i.Creator || r.Finding.ID != "full4083-S1" || r.Finding.Class != "Suggestion" || strings.TrimSpace(r.Finding.Subject) == "" || f.Task != i.Frozen.Task || f.Job != i.Frozen.Job || f.Spec != i.Frozen.Spec || f.Final != i.Frozen.Raw || f.Bytes != 1448 || f.Manifest != i.Manifest || !zero(f.Must, 0) || !zero(f.Suggestion, 1) || !zero(f.Nit, 0) || !recordedTrue(f.Frozen) {
 		return errors.New("travel3 original full-review findings must remain frozen and explicit")
 	}
 	a := r.Resolution
-	if a.Action != "clarify_published_notice_scope_and_enforce_explicit_non_authorship_evidence" || a.Flag != travel3NonAuthorshipFlag || !recordedTrue(a.FlagValue) || a.Files != 3 || !recordedFalse(a.SpecChanged) || !recordedFalse(a.Restarted) || !recordedFalse(a.Reclassified) || !recordedFalse(a.ManifestChanged) || a.Central != 0 || a.Create != 0 || !recordedFalse(a.Authorship) || !recordedFalse(a.Promoted) {
+	if a.Action != "clarify_published_notice_scope_and_enforce_explicit_non_authorship_evidence" || a.Interpretation != "Only the reviewed visible text published under the exact per-package notice is accepted; this does not establish independent authorship, unseen text or third-party service/data/support rights." || a.Flag != travel3NonAuthorshipFlag || !recordedTrue(a.FlagValue) || !zero(a.Files, 3) || !recordedFalse(a.SpecChanged) || !recordedFalse(a.Restarted) || !recordedFalse(a.Reclassified) || !recordedFalse(a.ManifestChanged) || !zero(a.Central, 0) || !zero(a.Create, 0) || !recordedFalse(a.Authorship) || !recordedFalse(a.Promoted) {
 		return errors.New("travel3 historical Suggestion needs a bounded current resolution")
 	}
 	return nil
@@ -399,7 +406,7 @@ func validatedTravel3Dispositions(t *testing.T) map[string]cohortLedgerRow {
 }
 
 func TestTravel3HistoricalSuggestionCannotDisappearOrGrantAuthorship(t *testing.T) {
-	for _, kind := range []string{"historical count erased", "resolution missing", "original review restarted", "authorship promoted"} {
+	for _, kind := range []string{"historical count erased", "resolution missing", "original review restarted", "authorship promoted", "publisher changed to creator", "publisher missing", "different finding", "different interpretation", "unrecorded effect count"} {
 		t.Run(kind, func(t *testing.T) {
 			var i travel3Install
 			loadPublicReceipt(t, "skills-3080-travel3-installation-evidence214717.json", &i)
@@ -420,6 +427,16 @@ func TestTravel3HistoricalSuggestionCannotDisappearOrGrantAuthorship(t *testing.
 			case "authorship promoted":
 				v := true
 				r.Resolution.Authorship = &v
+			case "publisher changed to creator":
+				r.Publisher = i.Creator
+			case "publisher missing":
+				r.Publisher = ""
+			case "different finding":
+				r.Finding.ID = "another-finding"
+			case "different interpretation":
+				r.Resolution.Interpretation = "Independent authorship is confirmed."
+			case "unrecorded effect count":
+				r.Resolution.Central = nil
 			}
 			if validateTravel3FindingResolution(r, i) == nil {
 				t.Fatal("invalid historical finding resolution accepted")

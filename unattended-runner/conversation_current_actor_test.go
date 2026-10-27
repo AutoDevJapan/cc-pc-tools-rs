@@ -201,6 +201,14 @@ func TestCurrentConversationActorNormalResumeKeepsOriginalQuestion(t *testing.T)
 
 func TestCurrentConversationActorReservedRetryAfterJobResume(t *testing.T) {
 	f := currentActorTest(t, false)
+	base := f.r.Run
+	var sendIDs []string
+	f.r.Run = func(ctx context.Context, path string, args ...string) (string, error) {
+		if len(args) > 0 && args[0] == "recovery-ask" {
+			sendIDs = append(sendIDs, argValue(args, "--request-id"))
+		}
+		return base(ctx, path, args...)
+	}
 	f.lost = true
 	if _, err := f.r.conversationAsk(context.Background(), f.input); err == nil {
 		t.Fatal("synthetic sender response was not lost")
@@ -222,13 +230,20 @@ func TestCurrentConversationActorReservedRetryAfterJobResume(t *testing.T) {
 	if q.RequestID != first.RequestID || !sameConversationActor(first.Actor, q.Actor) || f.posts != 1 {
 		t.Fatal("reserved retry changed the source anchor or sent a second question")
 	}
+	if len(sendIDs) != 2 || sendIDs[0] != first.SenderID || sendIDs[1] != first.SenderID {
+		t.Fatal("retry did not reuse the sender's same durable request identity")
+	}
 }
 
 func TestCurrentConversationActorFreshRegistrationMetadataKeepsOriginalProof(t *testing.T) {
 	f := currentActorTest(t, false)
 	first := f.ask(t)
 	base := f.r.Run
+	sends := 0
 	f.r.Run = func(ctx context.Context, path string, args ...string) (string, error) {
+		if len(args) > 0 && args[0] == "recovery-ask" {
+			sends++
+		}
 		raw, err := base(ctx, path, args...)
 		if err == nil && path == receivedInputCLI {
 			var report map[string]any
@@ -244,14 +259,14 @@ func TestCurrentConversationActorFreshRegistrationMetadataKeepsOriginalProof(t *
 		return raw, err
 	}
 	q := f.ask(t)
-	if !sameConversationActor(first.Actor, q.Actor) || f.posts != 1 {
+	if !sameConversationActor(first.Actor, q.Actor) || f.posts != 1 || sends != 0 {
 		t.Fatal("fresh registration bookkeeping changed the original question")
 	}
 }
 
 func TestCurrentConversationActorRetriedProofStillNeedsFreshAdmissionAndSameFiles(t *testing.T) {
 	for _, state := range []string{"reserved", "posted"} {
-		for _, change := range []string{"unavailable", "dispatch", "received", "spec", "blocked", "owner-stop", "proof"} {
+		for _, change := range []string{"unavailable", "dispatch", "received", "spec", "actor-spec", "blocked", "owner-stop", "proof"} {
 			t.Run(state+"/"+change, func(t *testing.T) {
 				f := currentActorTest(t, false)
 				if state == "reserved" {
@@ -287,12 +302,18 @@ func TestCurrentConversationActorRetriedProofStillNeedsFreshAdmissionAndSameFile
 							return "", errors.New("synthetic normal input unavailable")
 						}
 						raw, err := base(ctx, path, args...)
-						if change == "dispatch" || change == "received" || change == "spec" {
+						if change == "dispatch" || change == "received" || change == "spec" || change == "actor-spec" {
 							var p map[string]any
 							if json.Unmarshal([]byte(raw), &p) != nil {
 								t.Fatal("input fixture")
 							}
-							p["version"].(map[string]any)[change+"_sha256"] = strings.Repeat("f", 64)
+							if change == "actor-spec" {
+								if p["todo_id"] == float64(3350) {
+									p["version"].(map[string]any)["spec_sha256"] = strings.Repeat("f", 64)
+								}
+							} else {
+								p["version"].(map[string]any)[change+"_sha256"] = strings.Repeat("f", 64)
+							}
 							b, _ := json.Marshal(p)
 							return string(b), err
 						}
@@ -310,6 +331,19 @@ func TestCurrentConversationActorRetriedProofStillNeedsFreshAdmissionAndSameFile
 				}
 				if !metadataOnly && err == nil {
 					t.Fatal("retained proof admitted changed or unavailable input")
+				}
+				if !metadataOnly && change != "owner-stop" && change != "proof" {
+					want := "original_input_version"
+					if change == "unavailable" || change == "spec" {
+						want = "received_input"
+					}
+					if change == "blocked" {
+						want = "reservation_held"
+					}
+					var reason currentActorRejection
+					if !errors.As(err, &reason) || string(reason) != want {
+						t.Fatalf("wrong fixed refusal: got %#v, want %s", err, want)
+					}
 				}
 				after, _ := os.ReadFile(f.r.TodoPath)
 				if sends != 0 || string(before) != string(after) {
@@ -360,6 +394,9 @@ func TestCurrentConversationActorNativeFullReplyReachesTrackerAndWorker(t *testi
 		}
 		if id == 3264 && (len(row.Jobs) != 0 || canonicalHash(row.WaitOn) != canonicalHash([]uint64{3350})) {
 			t.Fatal("tracker became a writer or lost dependency")
+		}
+		if strings.Contains(row.Note, "この写しは元ToDoでの保持用です") != (id == 3264) {
+			t.Fatal("tracker-only copy instruction reached the wrong recipient")
 		}
 		if id == 3350 && (!strings.Contains(row.conversationInstruction(), reply.Body) || canonicalHash(row.WaitOn) != canonicalHash([]uint64{4084})) {
 			t.Fatal("worker prompt/dependency lost")
@@ -475,7 +512,7 @@ func TestCurrentConversationActorOfficialInputs(t *testing.T) {
 		t.Fatal("official current input misclassified")
 	}
 	// Measure both live admissions used before reservation and before send.
-	if _, err = r.checkConversationActor(ctx, 3264, 3350, actor.Scheduler.Job, origin, binding, nil, binding.proof, false); err != nil {
+	if _, err = r.checkConversationActor(ctx, 3264, 3350, actor.Scheduler.Job, origin, binding, nil, conversationReservedAnchor(binding.proof), false); err != nil {
 		t.Fatalf("official reservation admission unverified: %#v", err)
 	}
 	t.Logf("two live actor admissions completed in %s within the 60-second CLI budget; no question input or send", time.Since(started).Round(time.Millisecond))

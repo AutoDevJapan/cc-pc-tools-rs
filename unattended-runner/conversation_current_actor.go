@@ -105,7 +105,7 @@ func (r *Runner) currentConversationSpec(row *TodoRow) ([]byte, error) {
 	return boundedRegular(path)
 }
 
-func (r *Runner) checkCurrentConversationActor(ctx context.Context, origin, actor *TodoRow, job string, saved *conversationActor, historical, reservedAnchor json.RawMessage, readonly bool) (*conversationActor, error) {
+func (r *Runner) checkCurrentConversationActor(ctx context.Context, origin, actor *TodoRow, job string, saved *conversationActor, historical conversationRetainedProof, reservedAnchor conversationReservedAnchor, readonly bool) (*conversationActor, error) {
 	if reservedAnchor != nil && (readonly || actor.Status == "block") {
 		return nil, currentActorRejection("reservation_held")
 	}
@@ -130,9 +130,9 @@ func (r *Runner) checkCurrentConversationActor(ctx context.Context, origin, acto
 			return nil, currentActorRejection("request_job")
 		}
 		anchor := job
-		original := historical
+		original := json.RawMessage(historical)
 		if original == nil {
-			original = reservedAnchor
+			original = json.RawMessage(reservedAnchor)
 		}
 		var retained struct {
 			Job    string                     `json:"actor_job_id"`
@@ -162,7 +162,7 @@ func (r *Runner) checkCurrentConversationActor(ctx context.Context, origin, acto
 			}
 			// Live normal registration remains mandatory. Its bookkeeping hash
 			// may change without rewriting the immutable question's provenance.
-			request.Version, work.Version = retained.Source, retained.Actor
+			request.Version.Binding, work.Version.Binding = retained.Source.Binding, retained.Actor.Binding
 		}
 		proof = map[string]any{"domain": "discord-current-assignment-v1", "origin_todo_id": origin.ID, "actor_todo_id": actor.ID, "actor_job_id": anchor, "project": actor.Project, "source_todo_id": source.ID, "source_job_id": currentConversationSourceJob, "source_kind": "scheduler_dispatch", "source_version": request.Version, "actor_version": work.Version, "delegation_edge_recorded": false, "human_identity_attested": false, "asset_qualified": false}
 	}

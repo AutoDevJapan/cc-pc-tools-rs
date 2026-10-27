@@ -26,6 +26,11 @@ type conversationActor struct {
 	SourceSHA     string          `json:"succession_sha256"`
 }
 
+// A source retained after posting and a reserved job anchor confer different
+// rights. Named types prevent swapping these adjacent internal arguments.
+type conversationRetainedProof json.RawMessage
+type conversationReservedAnchor json.RawMessage
+
 func conversationRecipient(q ConversationQuestion) uint64 {
 	if q.Actor != nil {
 		return q.Actor.Todo
@@ -89,21 +94,25 @@ func (r *Runner) conversationActorForAsk(ctx context.Context, input Conversation
 	if alias, ok := index.Aliases[input.RequestID]; ok {
 		q, exists = index.Questions[alias.Target]
 	}
-	var historical json.RawMessage
-	var anchor json.RawMessage
+	var historical conversationRetainedProof
+	var anchor conversationReservedAnchor
 	readonly := false
 	if exists {
 		saved = q.Actor
 		readonly = q.Phase == "answered" || q.Phase == "applied" || q.Phase == "closed"
 		if saved != nil && q.Phase != "reserved" {
-			historical, err = r.conversationActorProof(q)
+			var proof json.RawMessage
+			proof, err = r.conversationActorProof(q)
+			historical = conversationRetainedProof(proof)
 			if err != nil {
 				return nil, err
 			}
 		} else if saved != nil && currentConversationPair(q.Todo, saved.Todo, q.Project) {
 			// A reserved question still needs live admission. Load its immutable
 			// proof only to retain the original job and input versions on retry.
-			anchor, err = r.conversationActorProof(q)
+			var proof json.RawMessage
+			proof, err = r.conversationActorProof(q)
+			anchor = conversationReservedAnchor(proof)
 			if err != nil {
 				return nil, err
 			}
@@ -140,7 +149,7 @@ func (r *Runner) conversationActorProof(q ConversationQuestion) (json.RawMessage
 
 // A retained proof confirms an existing question only; it can never reserve a
 // question, register a wait or deliver new instructions after work has ended.
-func (r *Runner) checkConversationActor(ctx context.Context, originID, actorID uint64, jobID string, origin *TodoRow, saved *conversationActor, historical, anchor json.RawMessage, readonly bool) (*conversationActor, error) {
+func (r *Runner) checkConversationActor(ctx context.Context, originID, actorID uint64, jobID string, origin *TodoRow, saved *conversationActor, historical conversationRetainedProof, anchor conversationReservedAnchor, readonly bool) (*conversationActor, error) {
 	fail := errors.New("conversation actor unverified")
 	current := currentConversationPair(originID, actorID, origin.Project)
 	legacy := originID == 1171 && actorID == 3277 && origin.Project == "GitDo"
@@ -253,14 +262,16 @@ func (r *Runner) conversationActorRowWithProof(ctx context.Context, q Conversati
 	if err != nil {
 		return nil, err
 	}
-	var anchor json.RawMessage
+	var anchor conversationReservedAnchor
 	if q.Phase == "reserved" && currentConversationPair(q.Todo, q.Actor.Todo, q.Project) {
-		anchor, err = r.conversationActorProof(q)
+		var proof json.RawMessage
+		proof, err = r.conversationActorProof(q)
+		anchor = conversationReservedAnchor(proof)
 		if err != nil {
 			return nil, err
 		}
 	}
-	if _, err = r.checkConversationActor(ctx, q.Todo, q.Actor.Todo, q.Actor.Job, origin, q.Actor, historical, anchor, readonly); err != nil {
+	if _, err = r.checkConversationActor(ctx, q.Todo, q.Actor.Todo, q.Actor.Job, origin, q.Actor, conversationRetainedProof(historical), anchor, readonly); err != nil {
 		return nil, err
 	}
 	row, err := r.conversationTask(ctx, q.Actor.Todo)

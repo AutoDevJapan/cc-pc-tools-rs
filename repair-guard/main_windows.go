@@ -164,6 +164,9 @@ func repairPathAllowed(path string) bool {
 	if owned2736PathAllowed(absolute) {
 		return true
 	}
+	if ci3888RuntimePathAllowed(absolute) {
+		return true
+	}
 	if requestedResumePathAllowed(absolute) {
 		return true
 	}
@@ -307,6 +310,7 @@ func parseCurrentSuccessionTask(value string) (int, bool) {
 
 func printGuardUsage(output io.Writer) {
 	fmt.Fprintln(output, "Usage of scrub391:")
+	fmt.Fprintln(output, "  --verify-ci3888-runtime <absolute-root>\n    \tverify the one existing receiver directory purpose; no child data, SDK or launch grant")
 	fmt.Fprintln(output, "  --prepare-official-ci3387\n    \tprepare the one fixed official public Windows SDK using normal new ownership")
 	fmt.Fprintln(output, "  --verify-official-ci3387 <receipt-id>\n    \tverify original purpose, identities and public bytes; metadata only")
 	fmt.Fprintln(output, "  --consume-official-ci3387 <receipt-id>\n    \treturn verified public software byte snapshots once to the existing CI provider; no launch")
@@ -359,6 +363,9 @@ func verifyCurrentSuccession(taskID int) object {
 }
 
 func runGuardCLI(args []string, stdout, stderr io.Writer, currentVerifier func(int) object) int {
+	if ci3888RuntimeFlagPresent(args) {
+		return runCI3888RuntimeCLI(args, stdout, ci3888RuntimeVerify)
+	}
 	if official3894Flag(args) {
 		return runOfficial3894CLI(args, stdout, official3894Operation)
 	}

@@ -194,6 +194,29 @@ func TestOwnerRule4088ExternalRepositoryAndDeadline(t *testing.T) {
 	}
 }
 
+func TestOwnerRule4088OperationalInstallationUsesDeclaredCommand(t *testing.T) {
+	config, access := ownerRuleFixture(t)
+	base := filepath.Join(filepath.Dir(config.dev), "installed-tools")
+	tool := ownerRuleTool{filepath.Join(base, "package"), filepath.Join(base, "command.cmd")}
+	if os.MkdirAll(tool.root, 0700) != nil || os.WriteFile(tool.command, []byte("synthetic command registration"), 0600) != nil {
+		t.Fatal("fixture install")
+	}
+	config.tools = []ownerRuleTool{tool}
+	if !ownerRuleWith(context.Background(), tool.root, object{}, access, config, nil).AccessAllowed {
+		t.Fatal("declared operational software rejected")
+	}
+	if ownerRuleWith(context.Background(), base, object{}, access, config, nil).AccessAllowed {
+		t.Fatal("operational installation widened to parent/account data")
+	}
+	if v := ownerRuleWith(context.Background(), tool.root, object{"contracted-fixture": tool.root}, access, config, nil); v.Status != "protected" {
+		t.Fatal("tool declaration overrode client registration")
+	}
+	config.tools[0].command = filepath.Join(base, "missing-command.cmd")
+	if ownerRuleWith(context.Background(), tool.root, object{}, access, config, nil).AccessAllowed {
+		t.Fatal("unregistered installed command admitted")
+	}
+}
+
 func TestOwnerRule4088ExternalEvidenceAndRedaction(t *testing.T) {
 	config, access := ownerRuleFixture(t)
 	root := filepath.Join(filepath.Dir(config.dev), "outside")

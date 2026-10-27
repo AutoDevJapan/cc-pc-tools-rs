@@ -12,6 +12,12 @@ type ownerRuleConfig struct {
 	dev            string
 	infrastructure []string
 	records        []string
+	tools          []ownerRuleTool
+}
+
+type ownerRuleTool struct {
+	root    string
+	command string
 }
 
 func ownerRuleWith(ctx context.Context, path string, projects object, access ownerSourceAccess, config ownerRuleConfig, owned func(string) bool) ownerPathVerdict {
@@ -123,6 +129,14 @@ func ownerRuleWith(ctx context.Context, path string, projects object, access own
 			return ownerRuleClear("owner_rule_operations_infrastructure")
 		}
 	}
+	// Existing PC-tool consumers declare this installed software location. This
+	// identifies its operational use; it does not verify the package's bytes or
+	// grant access to account/configuration data beside the installation.
+	for _, tool := range config.tools {
+		if within(tool.root, path) && access.plain(tool.root, true) && access.plain(tool.command, false) && !access.denied(tool.command) {
+			return ownerRuleClear("operational_tool_installation")
+		}
+	}
 	if owned != nil && owned(path) {
 		return ownerRuleClear("self_owned_temporary_resource")
 	}
@@ -178,10 +192,16 @@ func ownerRuleUnknown(basis string) ownerPathVerdict {
 }
 
 func ownerDefaultRuleConfig() ownerRuleConfig {
+	home, _ := os.UserHomeDir()
+	npm := filepath.Join(home, "AppData", "Roaming", "npm")
 	return ownerRuleConfig{
 		dev:            "C:/Users/makhmeto/Desktop/dev",
 		infrastructure: []string{"D:/CC", "D:/OMB"},
 		records:        []string{"D:/CC/Tools/client-records", "D:/CC/Tools/client-projects.txt"},
+		// Normal consumer declarations: cc-jobs/src/platform.rs and pool_retry.rs,
+		// cc-scheduler/src/backend.rs. The owner explicitly assigned this existing
+		// AI-agent tool's installed location for classification in 4088/2655.
+		tools: []ownerRuleTool{{filepath.Join(npm, "node_modules", "@bitkyc08", "opencodex"), filepath.Join(npm, "opencodex.cmd")}},
 	}
 }
 

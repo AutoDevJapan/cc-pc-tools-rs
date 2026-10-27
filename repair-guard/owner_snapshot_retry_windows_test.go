@@ -13,7 +13,13 @@ func TestOwnerSourceRequalifiesOneChangedSnapshotUnderSameDeadline(t *testing.T)
 	for _, mode := range []string{"one-replacement", "continuous-replacement", "projects-removed", "cancelled", "missing", "denied", "identity-denied"} {
 		t.Run(mode, func(t *testing.T) {
 			root, db, access := ownerSourceFixture(t)
-			path := filepath.Join(t.TempDir(), "registration.json")
+			// The ordinary reader rejects noncanonical aliases. Match the
+			// existing snapshot fixtures when Windows TEMP uses a short name.
+			directory, err := physical(t.TempDir())
+			if err != nil {
+				t.Fatal(err)
+			}
+			path := filepath.Join(directory, "registration.json")
 			encode := func(projects object) []byte {
 				raw, err := json.Marshal(object{"projects": projects, "items": []any{}})
 				if err != nil {

@@ -1744,7 +1744,7 @@ if !truth(&row["scheduler"]["key"]){let attempt=add_count(&row["scheduler"]["att
             s(&item["scheduler"]["key"])
         ));
         backup(&target)?;
-        fs::write(&target, prompt)?;
+        fs::write(&target, &prompt)?;
         let selection_input = json!({"model":item["model"],"effort":item["effort"]});
         let prepared = self.edit(&item["id"], |row| {
             if s(&row["status"]) == "todo"
@@ -1752,7 +1752,10 @@ if !truth(&row["scheduler"]["key"]){let attempt=add_count(&row["scheduler"]["att
                 && launch_inputs(row) == launch_inputs(&item) {
                 merge(
                     &mut row["scheduler"],
-                    json!({"phase":"prepared","selection":selection,"prompt":target,"resume_session":resume_session,"selection_input":selection_input}),
+                    json!({"phase":"prepared","selection":selection,"prompt":target,"resume_session":resume_session,"selection_input":selection_input,
+                        "launch_input":{"launch_key":item["scheduler"]["key"],
+                            "spec_sha256":cc_job_policy::product_retry::digest(text.as_bytes()),
+                            "dispatch_sha256":cc_job_policy::product_retry::digest(prompt.as_bytes())}}),
                 );
             }
         })?;
@@ -1940,6 +1943,7 @@ if !truth(&row["scheduler"]["key"]){let attempt=add_count(&row["scheduler"]["att
     }
     /// A watchdog reservation can dispatch only its own item through normal capacity/resource gates.
     pub fn dispatch_for(&mut self, cfg: &Value, pri: &Value, target: Option<i64>) -> Result<()> {
+        for field in ["launched", "launch_return", "launch_reserved"] { remove(&mut self.report, field); }
         let mut observation = Observation::new(self.backend.clock(), target.is_none(), truth(&cfg["dispatch_enabled"]));
         self.admission_updates = target.is_none().then(std::collections::BTreeMap::new);
         let result = self.dispatch_observed(cfg, pri, target, &mut observation);
@@ -2229,6 +2233,8 @@ if !truth(&row["scheduler"]["key"]){let attempt=add_count(&row["scheduler"]["att
                     observation.decide(&i["id"], AdmissionStage::Recheck, AdmissionReason::ModelSelectionChanged);
                     return Ok(());
                 }
+                let previous_spacing = self.state.get("last_launch").cloned();
+                let previous_projects = self.state.get("project_last_launch").cloned();
                 self.state["last_launch"] = json!(self.backend.clock());
                 if !self.state["project_last_launch"].is_object() {
                     self.state["project_last_launch"] = json!({});
@@ -2237,28 +2243,79 @@ if !truth(&row["scheduler"]["key"]){let attempt=add_count(&row["scheduler"]["att
                     json!(self.backend.clock());
                 self.persist()?;
                 observation.decide(&i["id"], AdmissionStage::Launch, AdmissionReason::Unknown);
-                let jid = self.backend.launch(
+                let outcome = self.backend.launch(
                     &prepared,
                     Path::new(s(&prepared["scheduler"]["prompt"])),
                     &prepared["scheduler"]["selection"],
                 )?;
-                observation.decide(&i["id"], AdmissionStage::Launch, AdmissionReason::LaunchedUnlinked);
-                let j = self
-                    .backend
-                    .jobs()?
-                    .into_iter()
-                    .find(|r| s(&r["id"]) == jid)
-                    .unwrap_or(json!({"id":jid,"created_at":self.backend.clock()}));
-                self.link(&prepared["id"], &j, &prepared["scheduler"]["key"])?;
-                observation.decide(&i["id"], AdmissionStage::Launch, AdmissionReason::Launched);
-                merge(
-                    &mut self.report,
-                    json!({"launched":{"item":i["id"],"job":jid},"allowance_now":0,"launch_wait_s":cfg["launch_interval_s"]}),
-                );
+                use cc_job_policy::launch_outcome::Kind;
+                use crate::launch_receipt::{Binding, Receipt};
+                let jid = outcome.job_id.clone();
+                let mut receipt = Receipt::new(&prepared, &db["projects"][s(&prepared["project"])],
+                    observation.cycle_id.as_deref().unwrap_or(""), target.is_none(), self.backend.clock(), outcome);
+                observation.launch(&i["id"], &receipt);
+                // Publish the actual return before canonical linking. A crash
+                // after publication does not manufacture a successful link.
+                self.report["launch_receipt_recorded"] = json!(crate::launch_receipt::publish(&self.root, &receipt).is_ok());
+                self.report["launch_return"] = json!({"item":i["id"],"job":jid,
+                    "kind":receipt.outcome.kind,"receipt_id":receipt.receipt_id,"new_execution":false});
+                if receipt.outcome.kind == Kind::ExistingJobNoAction {
+                    // The launch-key lock proved this invocation did not issue
+                    // a new supervisor. Preserve all existing job reservations.
+                    for (field, previous) in [("last_launch",previous_spacing),("project_last_launch",previous_projects)] {
+                        if let Some(previous) = previous {self.state[field]=previous;} else {remove(&mut self.state,field);}
+                    }
+                    self.persist()?;
+                    if receipt.binding == Binding::Matching && receipt.outcome.terminal_no_action() {
+                        observation.decide(&i["id"], AdmissionStage::Launch, AdmissionReason::ExistingJobNoAction);
+                        return Ok(());
+                    }
+                }
+                let reason = if receipt.binding != Binding::Matching {
+                    AdmissionReason::LaunchOutcomeUnknown
+                } else {
+                    match receipt.outcome.kind {
+                        Kind::Queued => AdmissionReason::Queued,
+                        Kind::Accepted => AdmissionReason::Accepted,
+                        Kind::ExistingJobNoAction if receipt.outcome.reserved() => AdmissionReason::ExistingJobReserved,
+                        _ => AdmissionReason::LaunchOutcomeUnknown,
+                    }
+                };
+                observation.decide(&i["id"], AdmissionStage::Launch, reason);
+                // Unknown/accepted/previously reserved outcomes stop this pass
+                // conservatively, without claiming new execution or allocating twice.
+                self.report["launch_reserved"] = self.report["launch_return"].clone();
+                if receipt.binding == Binding::Matching && receipt.outcome.reserved() {
+                    if receipt.outcome.kind == Kind::Queued {
+                        observation.decide(&i["id"], AdmissionStage::Launch, AdmissionReason::QueuedUnlinked);
+                    }
+                    let j = self.backend.jobs()?.into_iter().find(|r| s(&r["id"]) == jid)
+                        .ok_or(Error("LaunchJobMissing"))?;
+                    let actual = cc_job_policy::launch_outcome::Outcome::from_job(receipt.outcome.kind, &j);
+                    if actual.launch_key != receipt.outcome.launch_key || actual.todo_id != receipt.outcome.todo_id
+                        || actual.cwd_sha256 != receipt.outcome.cwd_sha256 {
+                        return Err(Error("LaunchJobChanged"));
+                    }
+                    self.link(&prepared["id"], &j, &prepared["scheduler"]["key"])?;
+                    let latest = self.todo()?;
+                    if let Some(row) = arr(&latest["items"]).iter().find(|row| row["id"] == prepared["id"]) {
+                        receipt.linked = row["scheduler"]["job"] == jid && row["scheduler"]["key"] == prepared["scheduler"]["key"];
+                        receipt.result_generation = row["resume_generation"].as_u64();
+                        receipt.result_metadata_fingerprint = crate::admission::result_fingerprint(row, &latest["projects"][s(&row["project"])]);
+                    }
+                    self.report["launch_receipt_recorded"] = json!(crate::launch_receipt::publish(&self.root, &receipt).is_ok());
+                    if receipt.linked { observation.decide(&i["id"], AdmissionStage::Launch, reason); }
+                }
+                if receipt.outcome.kind == Kind::Queued && receipt.binding == Binding::Matching {
+                    // Compatibility field means a new queued job was admitted;
+                    // typed evidence explicitly does not claim worker execution.
+                    merge(&mut self.report, json!({"launched":{"item":i["id"],"job":jid,
+                        "kind":receipt.outcome.kind,"new_execution":false},"allowance_now":0,"launch_wait_s":cfg["launch_interval_s"]}));
+                }
                 self.log(
                     "INFO",
                     &format!(
-                        "launched item {} job {} priority {}",
+                        "launch return item {} job {} priority {}",
                         i["id"],
                         jid,
                         priority(i, pri)
@@ -2328,18 +2385,18 @@ if !truth(&row["scheduler"]["key"]){let attempt=add_count(&row["scheduler"]["att
                         failure_reason(&e).0
                     ),
                 )?;
-                if target.is_some() {
+                if target.is_some() || self.report["launch_reserved"]["item"] == i["id"] {
                     return Err(e);
                 }
                 first_failure.get_or_insert(e);
                 continue;
             }
-            if self.report["launched"].is_object() {
+            if self.report["launch_reserved"].is_object() {
                 observation.earlier_launch(&i["id"]);
                 break;
             }
         }
-        if self.report["launched"].is_object() {
+        if self.report["launch_reserved"].is_object() {
             Ok(())
         } else {
             first_failure.map_or(Ok(()), Err)

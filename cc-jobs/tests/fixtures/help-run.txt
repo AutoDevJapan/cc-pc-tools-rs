@@ -4,6 +4,7 @@ usage: codex_jobs.py run [-h] --name NAME [--model MODEL] [--effort EFFORT]
                          [--mcp-profile {minimal,browser,full}] --prompt-file
                          PROMPT_FILE [--task-type TASK_TYPE]
                          [--notes-hint NOTES_HINT] [--launch-key LAUNCH_KEY]
+                         [--launch-outcome]
                          [--original-product-retry-key ORIGINAL_PRODUCT_RETRY_KEY]
                          [--resume-session RESUME_SESSION]
                          [--parent-job-id PARENT_JOB_ID]
@@ -14,6 +15,8 @@ usage: codex_jobs.py run [-h] --name NAME [--model MODEL] [--effort EFFORT]
                          [--model-origin {policy,owner_request}]
 
 options:
+  --launch-outcome      return typed registration effect and saved job metadata;
+                        Queued is not proof that a worker execution has started
   -h, --help            show this help message and exit
   --name NAME
   --model MODEL         default: Opus for review, Sol for other tasks;

@@ -143,7 +143,7 @@ pub fn parse(args: &[String]) -> Result<Args> {
             }
             let val = parts.next();
             let is_flag = match cmd.as_str() {
-                "run" => name == "network",
+                "run" => ["network", "launch-outcome"].contains(&name.as_str()),
                 "status" => ["all", "json", "summary"].contains(&name.as_str()),
                 "tail" => name == "follow",
                 "rate" => name == "force",
@@ -180,6 +180,7 @@ pub fn parse(args: &[String]) -> Result<Args> {
                     "task-type",
                     "notes-hint",
                     "launch-key",
+                    "launch-outcome",
                     "original-product-retry-key",
                     "resume-session",
                     "parent-job-id",
@@ -696,7 +697,7 @@ impl Context {
                         return Err(Error::new("invalid launch key receipt"));
                     }
                     self.validate_product_retry_replay(a, &job)?;
-                    writeln!(out, "{id}")?;
+                    self.write_launch_outcome(a, out, &job, cc_job_policy::launch_outcome::Kind::ExistingJobNoAction)?;
                     return Ok(0);
                 }
                 Err(error) if error.kind() == std::io::ErrorKind::NotFound => (),
@@ -720,7 +721,7 @@ impl Context {
             {
                 self.validate_product_retry_replay(a, &job)?;
                 self.write_json(&receipt_path, &json!({"id":job["id"]}))?;
-                writeln!(out, "{}", s(&job, "id"))?;
+                self.write_launch_outcome(a, out, &job, cc_job_policy::launch_outcome::Kind::ExistingJobNoAction)?;
                 return Ok(0);
             }
             fs::write(&pending_path, b"receipt pending").map_err(|error| {
@@ -730,6 +731,18 @@ impl Context {
         } else {
             self.run_new_job(a, out, err)
         }
+    }
+
+    fn write_launch_outcome(&self, a: &Args, out: &mut dyn Write, job: &Value,
+        kind: cc_job_policy::launch_outcome::Kind) -> Result<()> {
+        if a.flag("launch-outcome") {
+            let result = cc_job_policy::launch_outcome::Outcome::from_job(kind, job);
+            if !result.valid() { return Err(Error::new("invalid launch outcome")); }
+            writeln!(out, "{}", serde_json::to_string(&result)?)?;
+        } else {
+            writeln!(out, "{}", s(job, "id"))?;
+        }
+        Ok(())
     }
 
     // A launch receipt is reusable after a crash/bind/expiry, but only for the
@@ -871,6 +884,9 @@ impl Context {
             .map(|p| abs(Path::new(p)).map(|p| p.to_string_lossy().into_owned()))
             .collect::<std::io::Result<Vec<_>>>()?;
         let mut job = json!({"name":name,"model":a.required("model")?,"effort":a.required("effort")?,"sandbox":a.required("sandbox")?,"cwd":cwd.to_string_lossy(),"add_dirs":dirs,"network":a.flag("network"),"mcp_profile":a.required("mcp-profile")?,"task_type":a.value("task-type"),"notes_hint":a.value("notes-hint"),"prompt_source":abs(prompt)?.to_string_lossy(),"codex":codex,"created_at":self.rt.now(),"status":"queued","pid":null,"codex_pid":null,"started_at":null,"finished_at":null,"exit_code":null,"duration_ms":null,"tokens":usage_tokens(&json!({})),"steps":0,"activity":"queued","last_message":null,"last_error":null,"thread_id":null,"launch_key":a.value("launch-key"),"resume_session":resume});
+        // Only already-read ordinary registration bytes. Replay never reads
+        // a prompt to invent missing historical input evidence.
+        job["launch_dispatch_sha256"] = json!(cc_job_policy::product_retry::digest(&bytes));
         let mut policy = cc_job_policy::for_sandbox(s(&job, "sandbox"));
         if retry_key.is_some() && s(&job, "sandbox") == "workspace-write" {
             // The saved source scope, including a restricted writer, is exact.
@@ -1125,6 +1141,10 @@ impl Context {
                 .flatten()
                 .find(|i| i["id"] == job["todo_id"]);
             if let Some(item) = item {
+                // Actual normal registration generation, distinct from the
+                // worker generation reserved by the existing +1 contract.
+                job["launch_request_generation"] = item["resume_generation"].clone();
+                job["launch_request_attempt"] = item["scheduler"]["attempt"].clone();
                 job["todo_dependency_generation"] =
                     json!(item["dependency_generation"].as_u64().unwrap_or(0));
                 job["todo_resume_generation"] = json!(item["resume_generation"].as_u64().unwrap_or(0).checked_add(1));
@@ -1356,6 +1376,7 @@ impl Context {
             job["finite_research_approval"]["prompt_sha256"] =
                 json!(cc_job_policy::product_retry::digest(&stored_prompt));
         }
+        job["launch_received_sha256"] = json!(cc_job_policy::product_retry::digest(&stored_prompt));
         fs::write(&dst, stored_prompt).map_err(|e| Error::file_io("write prompt", &dst, e))?;
         let mut stored = json!({"id":jid});
         stored
@@ -1376,7 +1397,8 @@ impl Context {
         }
         drop(_queue);
         let mut stored = self.load(&jid)?;
-        let detached = if s(&stored, "status") == "queued" && stored["cancel_requested"] != true {
+        let issued = s(&stored, "status") == "queued" && stored["cancel_requested"] != true;
+        let detached = if issued {
             let (detached, pid) = self
                 .rt
                 .spawn_supervisor_identified(
@@ -1408,7 +1430,9 @@ impl Context {
                 "warning: could not detach from the caller's job object; this job is killed if the caller's job object closes"
             )?;
         }
-        writeln!(out, "{jid}")?;
+        self.write_launch_outcome(a, out, &stored, if issued {
+            cc_job_policy::launch_outcome::Kind::Queued
+        } else { cc_job_policy::launch_outcome::Kind::Accepted })?;
         Ok(0)
     }
     pub fn cmd_status(&self, a: &Args, out: &mut dyn Write) -> Result<i32> {

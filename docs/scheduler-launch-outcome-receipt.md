@@ -6,6 +6,7 @@ Namespace: `SchedulerLaunchOutcomeReceipt`。既存の通常schedulerだけが�
 ## 実装前の確認
 
 比較元: `86fc9f06ca01a6cb8a11720fcfb5a884c5209f56`。
+Issue: https://github.com/AutoDevJapan/cc-pc-tools-rs/issues/604 。
 `cc-jobs::Context::cmd_run` は同じlaunch_keyの保存済みIDを返し、terminalでも
 新しいsupervisorを生成しない。通常schedulerはIDだけを受け、無条件にlinkして
 `Launched`と記録し後続候補を打ち切っていた。既存admission診断には返却job IDがない。
@@ -40,3 +41,43 @@ Namespace: `SchedulerLaunchOutcomeReceipt`。既存の通常schedulerだけが�
 Red/Greenの実コマンドと結果、最終headのレビュー2件・CI・配布provenance・
 通常schedulerから自然に得た限定読戻しは作業記録と管理受領JSONへ残す。
 登録だけで完了とせず、未観測の実機受入は未完了とする。
+
+## 保存形式と読取
+
+`codex_jobs run --launch-outcome` は共有Rust型`launch_outcome::Outcome`をJSONで返す。
+この関数が発行するeffectは`existing_job_no_action`、`queued`、`accepted`のみ。
+旧IDだけの返却は`unknown`。jobのqueued/running/terminalと、再起動/rebootの
+pendingは別の保存状態であり、この呼出がRestartRequested/NewExecutionを行ったとはしない。
+
+`scheduler explain-launch-outcome --id <ID>` は新しい実行を伴わずに読める。
+既存のscheduler保存先の`launch-outcomes.json`へschema 1、最新128対象、256KiB以内、
+24時間の期限で保存する。通常の走査へ新しい全件走査を足さず、返却があった対象だけ
+置き換える。専用の短い排他と既存admissionの原子置換を共用する。
+古いsnapshotより前の一時ファイルをcrash後の正本へ昇格させない。
+
+receiptは明示的なcycle ID・receipt ID・target ID・launch_key・保存世代/試行番号と
+返却job IDを持ち、所有tupleは本文を含まない指紋で保持する。
+admissionのentryにも同じcycle/receipt/job/effectを結ぶ。
+古いcycleに新しい値を付け足さず、近い時刻や番号だけで対応を推定しない。
+Root/jobへのlink成功と返却成功は別で、返却直後に未linkのreceiptを先に保存する。
+副記録が失敗しても通常のRoot/job操作は続け、`launch_receipt_recorded=false`を返す。
+起動受付後のjob読取などが失敗した場合はエラーを保持し、同じcycleで次を起動しない。
+
+通常prepareで既に読んだspec/dispatch、通常registrationで既に読んだdispatch/保存する
+receivedのバイトからだけSHAを保存する。過去jobの未記録SHAはnullのままとし、
+replayと診断のためにSource/spec/promptを開かない。
+`input_binding`は保存済みの通常dispatchと返却jobのSHAの照合であり、
+診断時点のSource本文が同一であることを証明しない。
+`current_source_bytes_checked=false`と照合範囲を常に返す。
+世代・key・control入力変更、所有不一致、保存済み入力の不一致、未知、欠落、破損、
+期限切れを別の分類で示す。
+
+## 検証の途中記録
+
+Red: commit `22d2a96f`の`test(terminal_same_key_no_action)`は2件とも意図した理由で失敗。
+元行がdoingへ変わり、Launchedが記録され、後続が進まないことを実測した。
+同じ条件を含む最初のGreenは12件合格。追加の関連1084件は1083件合格、
+受付後のエラーを成功として隠す1件を検出し、通常の失敗返却を保持するよう修正した。
+この段階の実行は最終HEADのCI成功や実配布成功の証明には使わない。
+固定した最終HEADのテスト・別セッション2件・全指摘・CI・配布と限定実読戻しは
+PRと管理受領JSONで照合する。

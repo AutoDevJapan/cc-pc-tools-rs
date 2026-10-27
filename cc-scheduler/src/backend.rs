@@ -1,5 +1,6 @@
 use crate::{common::*, native, policy::*};
 use serde_json::{json, Value};
+use cc_job_policy::launch_outcome::{Kind as LaunchKind, Outcome as LaunchOutcome};
 use std::{
     collections::BTreeMap,
     fs,
@@ -84,7 +85,7 @@ pub trait Backend {
     fn jobs(&mut self) -> Result<Vec<Value>>;
     fn event_mtime(&mut self, job: &Value) -> Result<f64>;
     fn mark_lost(&mut self, job: &mut Value) -> Result<bool>;
-    fn launch(&mut self, item: &Value, prompt: &Path, selection: &Value) -> Result<String>;
+    fn launch(&mut self, item: &Value, prompt: &Path, selection: &Value) -> Result<LaunchOutcome>;
     fn cancel(&mut self, job: &mut Value) -> Result<bool>;
     fn cancel_for_recovery(&mut self, job: &mut Value) -> Result<bool> {
         self.cancel(job)
@@ -789,14 +790,24 @@ impl Backend for RealBackend {
         *j = fresh;
         Ok(true)
     }
-    fn launch(&mut self, i: &Value, p: &Path, sel: &Value) -> Result<String> {
-        let c = self.launch_command(i, p, sel);
+    fn launch(&mut self, i: &Value, p: &Path, sel: &Value) -> Result<LaunchOutcome> {
+        let mut c = self.launch_command(i, p, sel);
+        // The fixed historical review launcher is a separate retained binary.
+        // Its plain-ID response has no typed evidence and stays unknown.
+        if !i["product_review_allocation"].is_object() {
+            c.args.push("--launch-outcome".into());
+        }
         let output = self
             .runner
             .run(&c)
             .map_err(crate::preparation::tool_error)?;
         if output.code != 0 {
             return Err(crate::preparation::classify_output(&output));
+        }
+        if output.stdout.len() > 16384 { return Err(Error("LaunchOutcomeTooLarge")); }
+        if let Ok(result) = serde_json::from_str::<LaunchOutcome>(output.stdout.trim()) {
+            if !result.valid() { return Err(Error("LaunchOutcomeInvalid")); }
+            return Ok(result);
         }
         let jid = output
             .stdout
@@ -811,7 +822,7 @@ impl Backend for RealBackend {
         {
             return Err(Error("ValueError"));
         }
-        Ok(jid)
+        Ok(LaunchOutcome::from_job(LaunchKind::Unknown, &json!({"id":jid})))
     }
     fn cancel(&mut self, j: &mut Value) -> Result<bool> {
         self.cancel_job(j, false)

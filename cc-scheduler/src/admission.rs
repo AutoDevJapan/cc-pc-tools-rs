@@ -10,7 +10,7 @@ use std::{
 };
 
 pub(crate) mod inputs;
-mod metadata;
+pub(crate) mod metadata;
 pub(crate) fn result_fingerprint(item: &Value, root: &Value) -> String {
     metadata::fingerprint(&metadata::project(item), root)
 }
@@ -70,7 +70,13 @@ pub enum Reason {
     StageFailed,
     LaunchFailed,
     LaunchedUnlinked,
+    QueuedUnlinked,
     Launched,
+    ExistingJobNoAction,
+    ExistingJobReserved,
+    Queued,
+    Accepted,
+    LaunchOutcomeUnknown,
 }
 #[derive(Clone, Copy, Debug, Serialize, Deserialize, PartialEq)]
 #[serde(rename_all = "snake_case")]
@@ -143,6 +149,12 @@ pub struct Entry {
     pub preparation_code: Option<Failure>,
     pub failure_code: Option<Failure>,
     pub recheck_capacity: Option<Capacity>,
+    #[serde(default)]
+    pub launch_receipt_id: Option<String>,
+    #[serde(default)]
+    pub returned_job_id: Option<String>,
+    #[serde(default)]
+    pub launch_kind: Option<cc_job_policy::launch_outcome::Kind>,
 }
 #[derive(Clone, Copy, Debug, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
@@ -208,6 +220,8 @@ pub struct Observation {
     pub capacity: Capacity,
     pub entries: BTreeMap<i64, Entry>,
     pub dispatch_error: Option<Failure>,
+    #[serde(default)]
+    pub cycle_id: Option<String>,
 }
 impl Observation {
     pub fn new(at: f64, ordinary: bool, enabled: bool) -> Self {
@@ -224,6 +238,7 @@ impl Observation {
             capacity: Capacity::default(),
             entries: BTreeMap::new(),
             dispatch_error: None,
+            cycle_id: Some(uuid::Uuid::new_v4().simple().to_string()),
         }
     }
     /// Called only while dispatch is already iterating the original items.
@@ -269,6 +284,13 @@ impl Observation {
         if let Some(e) = id.as_i64().and_then(|id| self.entries.get_mut(&id)) {
             e.stage = stage;
             e.reason = reason;
+        }
+    }
+    pub fn launch(&mut self, id: &Value, receipt: &crate::launch_receipt::Receipt) {
+        if let Some(e) = id.as_i64().and_then(|id| self.entries.get_mut(&id)) {
+            e.launch_receipt_id = Some(receipt.receipt_id.clone());
+            e.returned_job_id = Some(receipt.outcome.job_id.clone());
+            e.launch_kind = Some(receipt.outcome.kind);
         }
     }
     pub fn root(&mut self, id: &Value, guard: Option<bool>, excluded: bool) {
@@ -326,6 +348,7 @@ impl Observation {
             }
             e.reason = match (e.stage, e.reason) {
                 (Stage::Launch, Reason::LaunchedUnlinked) => Reason::LaunchedUnlinked,
+                (Stage::Launch, Reason::QueuedUnlinked) => Reason::QueuedUnlinked,
                 (Stage::Launch, _) => Reason::LaunchFailed,
                 (Stage::Preparation, _) => Reason::PreparationFailed,
                 _ => Reason::StageFailed,
@@ -354,8 +377,14 @@ impl Observation {
         if bytes.len() as u64 > MAX_BYTES {
             return Err(Error("AdmissionTooLarge"));
         }
-        // One replaceable temp, no backup series or append-only diagnostic log.
-        let temp = root.join("admission.tmp");
+        atomic_publish(root, FILE, &bytes)
+    }
+}
+
+/// Caller bounds the bytes and holds its ordinary writer lock.
+pub(crate) fn atomic_publish(root: &Path, name: &str, bytes: &[u8]) -> Result<()> {
+        // Fixed sidecar, no backup series or append-only diagnostic log.
+        let temp = root.join(format!("{name}.tmp"));
         let mut file = fs::File::create(&temp)?;
         file.write_all(&bytes)?;
         file.sync_all()?;
@@ -370,7 +399,7 @@ impl Observation {
         use windows_sys::Win32::Storage::FileSystem::{
             MoveFileExW, ReplaceFileW, MOVEFILE_REPLACE_EXISTING,
         };
-        let target_wide = wide(&root.join(FILE));
+        let target_wide = wide(&root.join(name));
         let temp_wide = wide(&temp);
         let error = unsafe {
             let ok = ReplaceFileW(
@@ -408,9 +437,9 @@ impl Observation {
         };
         if let Some(code) = error {
             if code == 2 {
-                if let Ok(file) = fs::File::open(root.join(FILE)) {
+                if let Ok(file) = fs::File::open(root.join(name)) {
                     let mut current = vec![];
-                    if file.take(MAX_BYTES + 1).read_to_end(&mut current).is_ok()
+                    if file.take(bytes.len() as u64 + 1).read_to_end(&mut current).is_ok()
                         && current == bytes
                     {
                         return Ok(());
@@ -424,7 +453,6 @@ impl Observation {
             }));
         }
         Ok(())
-    }
 }
 
 /// No Scheduler/RealBackend, locks, directory creation, backups, guards or processes.
@@ -433,6 +461,7 @@ pub fn explain(root: &Path, todo: &Path, id: i64, now: f64) -> Value {
         "metadata_scope":"body_free_control_projection_v1_and_registered_root",
         "metadata_fingerprint":null,"current_metadata_fingerprint":null,
         "dispatch_enabled":null,"complete":null,"incomplete":null,"truncated":null,"dispatch_error":null,
+        "cycle_id":null,
         "validity":"missing","observation":null});
     let read = || -> Result<Observation> {
         let file = fs::File::open(root.join(FILE))?;
@@ -447,12 +476,15 @@ pub fn explain(root: &Path, todo: &Path, id: i64, now: f64) -> Value {
             || !snapshot.at.is_finite()
             || snapshot.recorded_at < snapshot.at
             || snapshot.expires_at != snapshot.recorded_at + TTL
+            || snapshot.cycle_id.as_ref().is_some_and(|id| id.len()!=32 || !id.bytes().all(|b|b.is_ascii_hexdigit()))
             || snapshot.entries.iter().any(|(id, e)| {
                 *id <= 0
                     || *id != e.id
                     || [&e.metadata_fingerprint, &e.input_metadata_fingerprint]
                         .iter()
                         .any(|fp| fp.len() != 64 || !fp.bytes().all(|b| b.is_ascii_hexdigit()))
+                    || e.launch_receipt_id.as_ref().is_some_and(|id|id.len()!=32 || !id.bytes().all(|b|b.is_ascii_hexdigit()))
+                    || e.returned_job_id.as_ref().is_some_and(|id|id.is_empty() || id.len()>128 || !id.bytes().all(|b|b.is_ascii_alphanumeric() || b"_-".contains(&b)))
             })
         {
             return Err(Error("AdmissionInvalid"));
@@ -469,6 +501,7 @@ pub fn explain(root: &Path, todo: &Path, id: i64, now: f64) -> Value {
         }
     };
     out["observed_at"] = json!(snapshot.at);
+    out["cycle_id"] = json!(snapshot.cycle_id);
     out["recorded_at"] = json!(snapshot.recorded_at);
     out["expires_at"] = json!(snapshot.expires_at);
     out["dispatch_enabled"] = json!(snapshot.dispatch_enabled);

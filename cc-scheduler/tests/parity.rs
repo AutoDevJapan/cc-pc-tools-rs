@@ -1951,13 +1951,14 @@ impl Backend for Fake {
         }
         Ok(true)
     }
-    fn launch(&mut self, i: &Value, p: &Path, _: &Value) -> Result<String> {
+    fn launch(&mut self, i: &Value, p: &Path, _: &Value) -> Result<cc_job_policy::launch_outcome::Outcome> {
         if let Some(j) = self
             .records
             .iter()
             .find(|j| j["launch_key"] == i["scheduler"]["key"])
         {
-            return Ok(s(&j["id"]).into());
+            return Ok(cc_job_policy::launch_outcome::Outcome::from_job(
+                cc_job_policy::launch_outcome::Kind::ExistingJobNoAction, j));
         }
         let jid = format!("launched{}", self.launched.len() + 1);
         self.launched
@@ -1966,7 +1967,9 @@ impl Backend for Fake {
         j["created_at"] = json!(T);
         j["launch_key"] = i["scheduler"]["key"].clone();
         j["todo_id"] = i["id"].clone();
-        self.records.push(j);
+        j["cwd"] = i["scheduler"]["worktree"].clone();
+        j["launch_dispatch_sha256"] = i["scheduler"]["launch_input"]["dispatch_sha256"].clone();
+        self.records.push(j.clone());
         if let Some(path) = &self.launch_start {
             let mut db = read_json(path, json!({}))?;
             let paths = cc_todo::Paths::at(path.parent().unwrap(), path.parent().unwrap());
@@ -1986,7 +1989,8 @@ impl Backend for Fake {
             self.crash_after_launch = false;
             return Err(Error("KeyboardInterrupt"));
         }
-        Ok(jid)
+        Ok(cc_job_policy::launch_outcome::Outcome::from_job(
+            cc_job_policy::launch_outcome::Kind::Queued, &j))
     }
     fn cancel(&mut self, j: &mut Value) -> Result<bool> {
         self.cancelled.push(j["id"].clone());
@@ -5305,7 +5309,7 @@ fn test_worker_launch_uses_windowless_existing_launcher() {
             Path::new("D:/fixture-prompt.md"),
             &json!({"model":"mock-model","effort":"high","task_type":"implementation"})
         )
-        .unwrap(),
+        .unwrap().job_id,
         "fixture-job"
     );
     let calls = calls.lock().unwrap();

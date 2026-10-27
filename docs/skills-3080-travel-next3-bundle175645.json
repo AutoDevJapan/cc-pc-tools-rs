@@ -48,7 +48,14 @@
       ],
       "target_kind": "new_adaptation_intent",
       "deployment_state": "proposed_uninstalled",
-      "central_existence_checked": false
+      "pre_mutation_absence_qualification_completed": false,
+      "directory_presence_observation": {
+        "observed_at": "2026-10-27T12:56:18Z",
+        "path_exists": false,
+        "method": "exact-directory GetAttributes returned FileNotFoundException",
+        "existing_contents_opened": false,
+        "future_absence_not_asserted": true
+      }
     },
     {
       "name": "aerobase-travel-lounges",
@@ -97,7 +104,14 @@
       ],
       "target_kind": "new_adaptation_intent",
       "deployment_state": "proposed_uninstalled",
-      "central_existence_checked": false
+      "pre_mutation_absence_qualification_completed": false,
+      "directory_presence_observation": {
+        "observed_at": "2026-10-27T12:56:18Z",
+        "path_exists": false,
+        "method": "exact-directory GetAttributes returned FileNotFoundException",
+        "existing_contents_opened": false,
+        "future_absence_not_asserted": true
+      }
     },
     {
       "name": "aerobase-travel-wallet",
@@ -146,7 +160,14 @@
       ],
       "target_kind": "new_adaptation_intent",
       "deployment_state": "proposed_uninstalled",
-      "central_existence_checked": false
+      "pre_mutation_absence_qualification_completed": false,
+      "directory_presence_observation": {
+        "observed_at": "2026-10-27T12:56:18Z",
+        "path_exists": false,
+        "method": "exact-directory GetAttributes returned FileNotFoundException",
+        "existing_contents_opened": false,
+        "future_absence_not_asserted": true
+      }
     }
   ],
   "central_operations": 0,

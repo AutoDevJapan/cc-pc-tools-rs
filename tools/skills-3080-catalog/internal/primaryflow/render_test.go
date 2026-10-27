@@ -107,3 +107,14 @@ func TestPGPPrivateBlockUNCAndCompactOpaqueValuesAreWithheld(t *testing.T) {
 		t.Fatal("PGP/UNC/compact opaque material escaped its whole-line mask")
 	}
 }
+
+func TestOpaqueValueLexingIncludesPunctuationSeparators(t *testing.T) {
+	raw := []byte("abcdefghijklmnop.qrstuvwx\nabcdefghijklmnop:qrstuvwx\nabcdefgh!ijklmnop?qrstuvwx\nshort ordinary words remain visible\n")
+	v, e := CheckAndMask(raw, maskedGroup(raw))
+	if e != nil {
+		t.Fatal(e)
+	}
+	if len(v.Withheld) != 3 || strings.Contains(v.Visible, "abcdefghijklmnop") || !strings.Contains(v.Visible, "short ordinary words remain visible") {
+		t.Fatal("punctuation split an opaque value into falsely visible fragments")
+	}
+}

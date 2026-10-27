@@ -20,7 +20,7 @@ import (
 )
 
 const MaxBodyBytes = 2 << 20
-const MaskVersion = "primaryflow-v3-fixed-closure-pgp-unc-opaque"
+const MaskVersion = "primaryflow-v4-opaque-lexical-boundaries"
 
 var sensitive = regexp.MustCompile(`(?i)authorization|api[\s_-]*key|password|passwd|credential|cookie|secret|token|bearer\s|\b[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\b|\b[0-9a-f]{32}\b|\\\\[^\s\\]+\\[^\s\\]+|[A-Z]:[\\/]|/Users/|/home/|[A-Za-z0-9_.+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}|[A-Za-z0-9_=/+-]{24,}|(?:[0-9][ -]?){8,19}|\b(?:card|cardholder|wallet|cvv|cvc|iban|account.number|phone|address|latitude|longitude|lat|lng|uuid|client.id)\b`)
 
@@ -67,7 +67,7 @@ func CheckAndMask(raw []byte, g Group) (SafeBody, error) {
 		if privateKeyBoundary(l, "-----BEGIN ") {
 			private = true
 		}
-		hide := front || private || sensitive.MatchString(l)
+		hide := front || private || sensitive.MatchString(l) || hasOpaqueValue(l)
 		// A genuine source line that resembles our reserved marker is held too,
 		// so it cannot be mistaken for content whose raw bytes were displayed.
 		if strings.HasPrefix(l, "[WITHHELD physical line ") {
@@ -97,6 +97,27 @@ func CheckAndMask(raw []byte, g Group) (SafeBody, error) {
 func privateKeyBoundary(line, prefix string) bool {
 	u := strings.ToUpper(strings.TrimSpace(line))
 	return strings.HasPrefix(u, prefix) && strings.Contains(u, "PRIVATE KEY") && strings.HasSuffix(u, "-----")
+}
+
+// A non-whitespace graphic ASCII run may contain separators in a credential
+// or identifier. Do not maintain a partial punctuation allowlist that splits
+// one value into individually short, falsely visible fragments.
+func hasOpaqueValue(line string) bool {
+	n := 0
+	alnum := false
+	for _, r := range line {
+		if r < 0x21 || r > 0x7e {
+			n = 0
+			alnum = false
+			continue
+		}
+		n++
+		alnum = alnum || (r >= 'a' && r <= 'z') || (r >= 'A' && r <= 'Z') || (r >= '0' && r <= '9')
+		if n >= 24 && alnum {
+			return true
+		}
+	}
+	return false
 }
 
 // Guard returns only the typed decision. Arbitrary command output is never

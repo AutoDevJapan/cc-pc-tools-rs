@@ -400,3 +400,21 @@ Dの既存ファイルや私的データは閲覧・移動しない。この確�
 [ChangeDiffAreaMaximumSizeの条件と戻り値](https://learn.microsoft.com/en-us/windows/win32/api/vsmgmt/nf-vsmgmt-ivssdifferentialsoftwaresnapshotmgmt-changediffareamaximumsize)、
 [AddDiffAreaの既存関連付け・既存shadow制約](https://learn.microsoft.com/en-us/windows/win32/api/vsmgmt/nf-vsmgmt-ivssdifferentialsoftwaresnapshotmgmt-adddiffarea)。
 これらを移行の実成功や原子的な切替の実証として引用せず、実施前の条件確認に使う。
+
+## 追加診断の実結果と次の候補（11時台）
+
+4082の固定2対象の別モデルレビューはMust0で完了し、実Opus5.5/max/native_turn_context/
+succeeded/exit0/41stepsと原回答を照合した。pointerの渡し方等の具体指摘を修正してから実診断した。
+元probeで2つ目のStartが80042316、Abortが00040202を返した原票は未確認phaseのまま保持し、
+後者がCOMのEVENT_S_NOSUBSCRIBERS成功値であることを一次資料と6種類のRed→Greenで確認した。
+10:58の別の単一Start/Abort/Releaseは通常に戻り、11:19には別processの拒否と、排他中の
+匿名preflightが正常に読み出せることを実測した。保存先変更やsnapshot作成/削除は行っていない。
+
+通常可用性の確認後もC→C/50GiB/使用割当0、snapshot0/point0。新volsnap0/照会complete true/errors0。
+11:00実空きC438,636,896,256/D2,098,001,723,392/E858,052,489,216B。
+既存VSS/SystemRestoreログの同窓にはwarning/errorがなく、情報8224が1件だった。
+これを復元用データの保持修復や原pointの復旧と扱わない。
+
+次の具体的な限定候補は[正の50GiBだけを使うC→Dの試行](vss-cd-positive-attempt-4011.md)。
+別モデルで書込手順とsourceを確認してから適用する。現在この書込は未実行であり、
+空の旧設定を新造したり、0への縮小/Delete/保護停止で関連付けを強制しない。

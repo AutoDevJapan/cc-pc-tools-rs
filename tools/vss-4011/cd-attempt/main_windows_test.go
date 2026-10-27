@@ -2,7 +2,10 @@
 
 package main
 
-import "testing"
+import (
+	"testing"
+	"time"
+)
 
 func liveEmptyC() metadata {
 	return metadata{Valid: true, Associations: 1, CC: true, Max: maxBytes, CFree: 300 << 30, DFree: 1 << 40, NTFS: true, DistinctNVMe: true, DReady: true, Provider: true, Protection: true, MinUnset: true}
@@ -44,5 +47,14 @@ func TestChildOutputIsBounded(t *testing.T) {
 	n, err := b.Write(p)
 	if err != nil || n != len(p) || len(b.buf) != 64<<10 || !b.truncated {
 		t.Fatal("bounded capture contract failed")
+	}
+}
+
+func TestExpiredOverallDeadlineStartsNoChild(t *testing.T) {
+	processDeadline = time.Now().Add(-time.Second)
+	defer func() { processDeadline = time.Time{} }()
+	r := process("not-a-real-vss-owned-child.exe", time.Second)
+	if r.Started || !r.Timeout || r.WaitVerified {
+		t.Fatal("expired overall deadline must not start a child")
 	}
 }

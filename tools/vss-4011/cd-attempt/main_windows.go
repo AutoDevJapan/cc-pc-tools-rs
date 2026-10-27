@@ -26,6 +26,8 @@ import (
 const maxBytes int64 = 50 << 30
 const preflightHash = "E0E37A1CC72036E2D3D1C147330735649563E691B28ED2D2A55318DA0ED2B3D7"
 
+var processDeadline time.Time
+
 type component struct{ table *[37]uintptr }
 type guid struct {
 	A    uint32
@@ -114,7 +116,13 @@ func (b *limited) Write(p []byte) (int, error) {
 	return n, nil
 }
 func process(exe string, limit time.Duration, args ...string) outcome {
-	ctx, cancel := context.WithTimeout(context.Background(), limit)
+	parent := context.Background()
+	if !processDeadline.IsZero() {
+		var done context.CancelFunc
+		parent, done = context.WithDeadline(parent, processDeadline)
+		defer done()
+	}
+	ctx, cancel := context.WithTimeout(parent, limit)
 	defer cancel()
 	cmd := exec.CommandContext(ctx, exe, args...)
 	cmd.SysProcAttr = &syscall.SysProcAttr{CreationFlags: 0x08000000, HideWindow: true}
@@ -232,6 +240,9 @@ func attemptCD(script string, apply bool) (a attempt) {
 }
 
 func run(script string, apply bool) (r report) {
+	// Start before native COM calls. All owned child deadlines end before the
+	// outer 90s caller deadline, even if COM initialization was slow.
+	processDeadline = time.Now().Add(70 * time.Second)
 	runtime.LockOSThread()
 	defer runtime.UnlockOSThread()
 	r.StartedUTC = time.Now().UTC().Format(time.RFC3339Nano)

@@ -1,5 +1,39 @@
 # 元4011の再開情報
 
+## 最新：4082受領、通常可用性と別process排他を実測、D書込候補は未実行
+
+job20261027-104529-todo-4011、開始04dcc367/同branch/未コミット0から再開。
+4082はsucceeded/exit0/41steps、native_turn_context Opus5.5 max、固定2対象全文読了、Must0/Suggestion3。
+原回答6915字/SHA9ABA295ADFBBD74308449C1750F832882E772A0D994654316E3AD2409C28778Eを保持した。
+S1の出力pointerを直接SyscallNへ渡す修正、元phase保持、終了コードと効果の区別、事後照合を反映。
+終了した4082を再待機・再登録しない。
+
+10:52の元probeはStart0→2つ目80042316→Abort00040202、原checkerがAbort未確認としたexit1票を保持。
+00040202はEVENT_S_NOSUBSCRIBERSというCOM成功値。6 HRESULTのRed→Greenで分類を修正した。
+10:58の別の単一要求はStart0/Abort00040202/Release1/availability_observed trueを実確認。
+11:19のread-only CD-inspectionは、**別process**が80042316で拒否されることと、空集合を保持中の
+preflight全取得成功を実証。親所有1/Abort完了1/Release1、timeout/打切りなし、resize起動0。
+原request/resultは同os-v2のempty-set-probe、empty-set-available、cd-inspectionの各固定票へ追記。
+元の未確認票を成功へ書き換えていない。新たなsnapshot/point/設定変更/保存先変更/削除0。
+
+現在MinDiff未設定、C→C/50GiB/使用割当0、snapshot0/point0、保持修復は未完了。
+11:00実空きC438636896256/D2098001723392/E858052489216B。11:19の保持中D空き2074361589760B。
+前後の観測errors0、新volsnap0。最初のprobe以降のVSS/SystemRestore既存ログにwarning/errorなし
+（情報8224が1件、complete true、errors0）。過去point復旧・OS再起動/復元を成功としない。
+
+次の[正の50GiBだけでC→Dを試す候補](docs/vss-cd-positive-attempt-4011.md)を用意した。
+通常VSS排他→別process拒否→保持中の匿名preflight→固定vssadminの正の50GiBを1回→後状態照合→
+自己Abort/Release。0縮小/Delete/保護停止/無限再試行/新監視/taskはない。
+codeはtools/vss-4011/cd-attemptのGo/test/preflight.ps1/run-once.ps1。固定CreateNew票とSource/Exe pin、
+子の総期限70s（COM前から）/外側90s、並行/各64KiB回収、未確認を成功にしない条件を含む。
+Go vet/build/13拒否条件・出力上限・期限切れ時の子未起動の関連テスト、PS5.1の2source parse成功。
+**--attempt-cdとrun-once.ps1は未実行、positive-cd-request/resultはまだない**。
+書込はこの新sourceと手順の別モデル確認/Must解消後に、元4011が同worktreeの既存Brokerで実行する。
+関連付け反映だけでは完了にせず、新2世代の通常保持・夜間等の必要受入と最終CI/mergeを追う。
+同じworktree/os-v2と原値を保持し、原A/B/Apply/Undo/旧rollback/元probeを再実行しない。
+
+以下の4082待ち・未実probeは過去時点の履歴。現在は受領と上記の実診断が終わっている。
+
 ## 次の工程：追加レビュー4082の同じ受付を受領する
 
 再発後の復帰と原値は直下の節を参照。現在MinDiffは未設定/provider320MiB、C→C/50GiB。

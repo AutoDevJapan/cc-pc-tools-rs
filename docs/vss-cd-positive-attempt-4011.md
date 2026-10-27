@@ -48,12 +48,16 @@ APIキー/新費用/重Cargo/GPU/Civ6を使わず、UI/UAC/Terminalを出さな�
 ## 期限・出力・再開
 
 子は自分が起動した単一processだけを管理し、contender10s、各metadata20s、resize20sを上限とする。
+全ての子の期限を、COM初期化より前から計測する共通の70秒以内に収める。
+外側の90秒期限より前に子を排出し、COMが遅れた分を子の起動期限へ上乗せしない。
 stdout/stderrを並行回収して各64KiBで打ち切り、wait未確認や打切りは先へ進む条件にしない。
 preflightの子は組込みのWindows読取cmdletだけ、contenderの子にはさらに子を起動する機能がない。
 原CLIの文章/Volume GUID/Hardware serialを出さず、終了コード・captureのhash・数値HRESULTだけを保存する。
 Windowsのサービスへ送った要求の結果が不明な場合は、後状態と未確定を残し、同じ書込を再試行しない。
 
 実行前には同worktree/os-v2へCreateNew/WriteThroughの固定requestを保存し、resultも追記専用とする。
+`cd-attempt/run-once.ps1`がreview番号・実source head・source/実行物hashを含む固定票を作り、
+実行物を読取専用共有で固定して、CREATE_NO_WINDOW/非同期回収/90秒期限で起動する。
 inspectとattemptは違う工程の別票にし、元のempty-set-probe/availability/A/rollback票は上書きしない。
 登録・起動・排他・コマンド実行・関連付けの実反映・復元point保持をそれぞれ区別して返す。
 

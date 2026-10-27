@@ -24,7 +24,7 @@ func skillsAssignedIssuerRepairScope(t *testing.T) skillsPublicReviewScope {
 	return c
 }
 
-func TestSkills3080AssignedIssuerRepairCanReturnItsOriginalResult(t *testing.T) {
+func TestSkills3080AssignedIssuerRepairScopeAcceptedWithoutRewrite(t *testing.T) {
 	c := skillsAssignedIssuerRepairScope(t)
 	raw, _ := json.Marshal(c)
 	if _, ok := skillsParsePublicRepair(raw); !ok {
@@ -103,5 +103,29 @@ func TestSkills3080Accepted817DistributionSurvivesItsSuccessor(t *testing.T) {
 	p.Revision = strings.Repeat("a", 40)
 	if skillsAcceptedProducer(p, current) {
 		t.Fatal("same software hash with an unaccepted source revision was trusted")
+	}
+}
+
+func TestSkills3080AcceptedAd5DistributionSurvivesScopedSuccessor(t *testing.T) {
+	raw, err := os.ReadFile(filepath.Join("..", "docs", "evidence", "skills-3080-guard-before-scope589-ad5.json"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	var evidence struct {
+		SHA  string `json:"sha256"`
+		Head string `json:"source_head"`
+		Job  string `json:"independent_deployment_job"`
+	}
+	if json.Unmarshal(raw, &evidence) != nil || evidence.SHA != "ad5d37c7b216264d2e99007a2e6f3468e7529803454d88f1954cc74a7beb4783" || evidence.Head != "0d97c1952ff6f8b47a3d40939941639b35309408" || evidence.Job != "20261027-093919-todo-3387" {
+		t.Fatal("the independently accepted shared distribution observation changed")
+	}
+	p := skillsProducer{evidence.SHA, evidence.Head}
+	current := skillsProducer{strings.Repeat("7", 64), strings.Repeat("8", 40)}
+	if !skillsAcceptedProducer(p, current) {
+		t.Fatal("the shared normal distribution was lost in its scoped successor")
+	}
+	p.Revision = strings.Repeat("a", 40)
+	if skillsAcceptedProducer(p, current) {
+		t.Fatal("same shared software hash with a different source was trusted")
 	}
 }

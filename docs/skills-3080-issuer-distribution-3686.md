@@ -63,3 +63,24 @@ manifest、native、原spec/prompt、厳密な時間窓、原結果ID/hashの検
 
 原craftの7ファイルの現在ID/hash/bufferは、実際の親3080 consumerの正規CLIで確認する。
 本書やソフトウェアの観測を、その実確認の代わりにはしない。
+
+## 共有実行物の並行更新との統合
+
+親214717は現用94c/817で元の正常consume requestを一度実行し、7buffer・40,753バイトを受領した。
+原creator175504・原producer02c8/f30と現在consumer214717を区別し、原ObjectIDとの一致、
+同bufferの全length/SHAと原manifest/main受入済みbundleとの一致を独立Go照合した。
+親の実証跡SHAはa4b8311870de0bde3fd0125e40d8a4078c75fac283e692766d2c57c09b393338。
+子は親の私的なrequest・本文・原finalを読まず、正常な親の結果記録から受領した。
+
+PR589のe80cb2ecは正式Luna/maxでMust0となり、同じheadの16CIがすべて終了・失敗0だった。
+その間に共有実行物の担当3387がPR586を通常マージして配布したため、古い817へ戻さず、
+現main ab069268とその既受入修復を統合した。
+新しい現用ad5d37c7b216264d2e99007a2e6f3468e7529803454d88f1954cc74a7beb4783と
+source0d97c1952ff6f8b47a3d40939941639b35309408は、他担当の正常配布票とこの担当の
+現物SHA/Go metadataが一致することを、後継の生成前に保存した。
+この固定一組も保持し、同hashで異なるsourceは拒否する。
+
+元のscope・native・物理ID・bufferの検証は変更しない。
+次の置換は同じ元3686が単一writerとして技術調整し、他担当のSDK票や期限は操作しない。
+無変更の他moduleのCIを再利用する場合は、source・共通依存・workflowと成功済みCIの
+同一性を個別に確認し、pendingを成功に読み替えない。

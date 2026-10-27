@@ -87,3 +87,54 @@ func TestSkills3080PublishedNativeIssuersSurviveSoftwareUpdate(t *testing.T) {
 		})
 	}
 }
+
+// This is a software transition observation, not a new native creation proof.
+// It was independently recorded and published before building this update.
+func TestSkills3080IndependentPreupdateRuntimeRemainsBound(t *testing.T) {
+	raw, err := os.ReadFile(filepath.Join("..", "docs", "evidence", "skills-3080-guard-before-issuer-update-c043.json"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	var observation struct {
+		SHA      string `json:"sha256"`
+		Revision string `json:"source_head"`
+		Job      string `json:"independent_deployment_job"`
+	}
+	if json.Unmarshal(raw, &observation) != nil || observation.SHA != "c0439d9ccab874ac68e8f054a895cb7f5e50165d3adc5b7ae3e4fe8f92ce3081" || observation.Revision != "7cea2e8f12631aeb5584dab5bc8535b7cd984f8c" || observation.Job != "20261027-093919-todo-3387" {
+		t.Fatal("independently accepted preupdate software observation changed")
+	}
+	issuer := skillsProducer{observation.SHA, observation.Revision}
+	current := skillsProducer{strings.Repeat("7", 64), strings.Repeat("8", 40)}
+	for _, kind := range []string{"accepted_preupdate", "unknown_sha", "different_revision"} {
+		t.Run(kind, func(t *testing.T) {
+			_, request, evidence, _ := skillsForwardFixture(t)
+			body := []byte("fixed public manifest bytes")
+			request.ManifestSHA = hashBytes(body)
+			evidence.ManifestSHA = request.ManifestSHA
+			evidence.Producer = issuer
+			switch kind {
+			case "unknown_sha":
+				evidence.Producer.SHA = strings.Repeat("9", 64)
+			case "different_revision":
+				evidence.Producer.Revision = strings.Repeat("a", 40)
+			}
+			reads := 0
+			got, ok := skillsCreatedPublicManifestWith(evidence, request, evidence.RequestSHA, current, func(root string) bool {
+				return same(root, request.Writer.Workspace)
+			}, func(root, commit, path string) ([]byte, bool) {
+				reads++
+				if !same(root, request.Writer.Workspace) || commit != request.ManifestCommit || path != request.ManifestPath {
+					t.Fatal("public manifest identity changed")
+				}
+				return body, true
+			})
+			if kind == "accepted_preupdate" {
+				if !ok || reads != 1 || hashBytes(got) != request.ManifestSHA {
+					t.Fatal("accepted preupdate software cannot reach its bound public manifest")
+				}
+			} else if ok || reads != 0 {
+				t.Fatal("unrecognized software reached public manifest bytes")
+			}
+		})
+	}
+}

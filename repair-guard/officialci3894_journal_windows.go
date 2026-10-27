@@ -19,14 +19,15 @@ import (
 // receipt bytes, signing inputs, or a phase. Authenticated frames are append-only
 // through the original exclusive handle; a torn tail is retained and refused.
 type official3894Ticket struct {
-	Domain         string
-	Source         official3894Source
-	Started        time.Time
-	CreatorPhase   string
-	IssuerOutput   []byte
-	IssuerIdentity oc.Identity
-	Owned          []byte
-	Receipt        *oc.Receipt
+	Domain          string
+	Source          official3894Source
+	Started         time.Time
+	CreatorPhase    string
+	IssuerOutput    []byte
+	IssuerIdentity  oc.Identity
+	Owned           []byte
+	Receipt         *oc.Receipt
+	Requalification *oc.Requalification `json:",omitempty"`
 }
 type official3894Frame struct {
 	Domain   string
@@ -138,7 +139,7 @@ func (s *official3894Journal) close() {
 }
 
 func (s *official3894Journal) start(t official3894Ticket) error {
-	if s.file != nil || t.Domain != official3894Domain || t.Receipt != nil || len(t.Owned) != 0 {
+	if s.file != nil || t.Domain != official3894Domain || t.Receipt != nil || t.Requalification != nil || len(t.Owned) != 0 {
 		return oc.ErrDenied
 	}
 	parent, ok := s.fs.directory(filepath.Dir(s.path))
@@ -199,6 +200,9 @@ func (s *official3894Journal) read() error {
 		if sequence > 0 && (f.Ticket.Source != ticket.Source || !f.Ticket.Started.Equal(ticket.Started) || (len(ticket.Owned) > 0 && (!bytes.Equal(f.Ticket.Owned, ticket.Owned) || f.Ticket.IssuerIdentity != ticket.IssuerIdentity))) {
 			return oc.ErrDenied
 		}
+		if !official3894RequalificationTransition(ticket, f.Ticket) {
+			return oc.ErrDenied
+		}
 		ticket = f.Ticket
 		sequence++
 		previous = official3894Hash(sealed)
@@ -218,6 +222,9 @@ func (s *official3894Journal) append(t official3894Ticket) error {
 		return oc.ErrDenied
 	}
 	if s.sequence > 0 && (t.Domain != s.ticket.Domain || t.Source != s.ticket.Source || !t.Started.Equal(s.ticket.Started) || (len(s.ticket.Owned) > 0 && (!bytes.Equal(t.Owned, s.ticket.Owned) || t.IssuerIdentity != s.ticket.IssuerIdentity))) {
+		return oc.ErrDenied
+	}
+	if !official3894RequalificationTransition(s.ticket, t) {
 		return oc.ErrDenied
 	}
 	plain, e := json.Marshal(official3894Frame{official3894Domain, s.sequence, s.previous, s.identity, t})
@@ -273,33 +280,70 @@ func (s *official3894Journal) Replace(old, next oc.Receipt) error {
 		return oc.ErrDenied
 	}
 	if old.State == oc.Complete && next.State == oc.Consuming {
-		// Independent CreateNew replay marker remains even after a torn terminal
-		// write or a restored old journal prefix. Never overwrite/adopt one.
-		parent, ok := s.fs.directory(filepath.Dir(s.path))
-		if !ok {
-			return oc.ErrDenied
-		}
-		h, ok := skillsOpenAt(parent, filepath.Base(s.path)+".consuming", false, true)
-		if !ok {
-			return oc.ErrDenied
-		}
-		f := os.NewFile(uintptr(h), s.path+".consuming")
-		b, e := json.Marshal(struct {
-			Journal oc.Identity
-			Receipt string
-		}{s.identity, old.ID})
-		if e == nil {
-			_, e = f.Write(b)
-		}
-		if e == nil {
-			e = f.Sync()
-		}
-		closed := f.Close()
-		if e != nil || closed != nil {
-			return oc.ErrDenied
+		if e := s.markConsuming(old.ID); e != nil {
+			return e
 		}
 	}
 	t := s.ticket
 	t.Receipt = &next
+	return s.append(t)
+}
+
+func official3894RequalificationTransition(before, next official3894Ticket) bool {
+	if before.Requalification != nil {
+		return reflect.DeepEqual(before.Requalification, next.Requalification) && next.Receipt != nil && next.Requalification.ValidFor(*next.Receipt)
+	}
+	if next.Requalification == nil {
+		return true
+	}
+	return before.Receipt != nil && next.Receipt != nil && before.Receipt.State == oc.Complete &&
+		next.Receipt.State == oc.Consuming && next.Requalification.ValidFor(*before.Receipt) && next.Requalification.ValidFor(*next.Receipt)
+}
+
+func (s *official3894Journal) markConsuming(id string) error {
+	// Independent CreateNew replay marker survives a torn terminal write or
+	// restoration of an older authenticated journal prefix. Never adopt one.
+	parent, ok := s.fs.directory(filepath.Dir(s.path))
+	if !ok {
+		return oc.ErrDenied
+	}
+	h, ok := skillsOpenAt(parent, filepath.Base(s.path)+".consuming", false, true)
+	if !ok {
+		return oc.ErrDenied
+	}
+	f := os.NewFile(uintptr(h), s.path+".consuming")
+	b, e := json.Marshal(struct {
+		Journal oc.Identity
+		Receipt string
+	}{s.identity, id})
+	if e == nil {
+		var n int
+		n, e = f.Write(b)
+		if e == nil && n != len(b) {
+			e = io.ErrShortWrite
+		}
+	}
+	if e == nil {
+		e = f.Sync()
+	}
+	closed := f.Close()
+	if e != nil || closed != nil {
+		return oc.ErrDenied
+	}
+	return nil
+}
+
+func (s *official3894Journal) RequalifyForConsumption(old oc.Receipt, q oc.Requalification) error {
+	if s.read() != nil || s.ticket.Receipt == nil || !reflect.DeepEqual(*s.ticket.Receipt, old) ||
+		old.State != oc.Complete || s.ticket.Requalification != nil || !q.ValidFor(old) {
+		return oc.ErrDenied
+	}
+	if e := s.markConsuming(old.ID); e != nil {
+		return e
+	}
+	next := old
+	next.State = oc.Consuming
+	t := s.ticket
+	t.Receipt, t.Requalification = &next, &q
 	return s.append(t)
 }

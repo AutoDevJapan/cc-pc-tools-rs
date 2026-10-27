@@ -157,3 +157,37 @@ grant the parent any SDK operation. Preparation, verification and consumption
 retain their existing implementation/provider actor checks. A successful
 software comparison is separate from review, CI, actual distribution and the
 provider's real receipt acceptance.
+
+## Expired original: immediate requalification and consumption
+
+The original creation deadline remains creation plus 24 hours. Ordinary verify
+and consume still refuse an expired receipt, without changing its journal or
+reading its software. An expired, unconsumed original may instead be submitted
+by the current normal CI provider through the explicit
+`--requalify-consume-official-ci3387 <receipt-id>` operation. This operation is
+new behavior, not a claim that the old receipt remained valid.
+
+This operation independently checks the same original creator, ownership,
+registration, producer inputs, current provider assignment, exact CI purpose,
+official asset and complete physical tree. After verifying and pinning the
+original snapshots, it rechecks live authority and durably appends its evidence,
+actual actor, acceptance time and original receipt digest together with
+`consuming`. The existing CreateNew consumption marker prevents replay even if
+an earlier authenticated journal prefix is restored. It then hands off those
+same public snapshots once during this bounded execution. Only successful
+output followed by a durable `consumed` commit produces exit zero.
+
+The new evidence has no reusable validity window or new expiry. The original
+receipt's creation time, expiry, ID, binding, manifest and physical identities
+are preserved; no replacement SDK or creation reservation is made. Interrupted
+consumption, writer failure and terminal-save failure retain their ordinary
+non-replayable states. Invalid or changed evidence and physical objects are
+refused before this consumption is claimed. Response metadata explicitly
+retains the original expiry and records that the deadline was not extended.
+
+Acceptance covers an actually expired synthetic original, unchanged ordinary
+expiry refusal, same-snapshot one-shot output, pre-expiry refusal, altered
+authority or receipt, cancelled execution, missing physical files, native
+journal restart, torn frames, restored-prefix replay and a failed durable
+handoff. A synthetic success does not establish real SDK acceptance or CI
+execution; those remain the original provider's separate normal operations.

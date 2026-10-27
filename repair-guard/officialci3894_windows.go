@@ -54,6 +54,11 @@ const official3894DiagnosticGuardHead = "7cea2e8f12631aeb5584dab5bc8535b7cd984f8
 const official3894ConcurrentGuardSHA = "94c08be91776df277a6a3442e71f291103345641558657e1872e36520ad924e0"
 const official3894ConcurrentGuardHead = "817004120a458b3a37830478512da0aa8040c9d0"
 
+// The normally merged PR586 build was accepted through the existing updater.
+// Its public software-only deployment projection is retained independently.
+const official3894SourceBudgetGuardSHA = "ad5d37c7b216264d2e99007a2e6f3468e7529803454d88f1954cc74a7beb4783"
+const official3894SourceBudgetGuardHead = "0d97c1952ff6f8b47a3d40939941639b35309408"
+
 type official3894Source struct {
 	Head, Registration, CreatorJob, Workspace, Branch, SpecSHA string
 }
@@ -91,7 +96,7 @@ func official3894Hex(s string, n int) bool {
 func official3894Flag(args []string) bool {
 	for _, a := range args {
 		a = strings.TrimLeft(a, "-")
-		for _, f := range []string{"prepare-official-ci3387", "verify-official-ci3387", "consume-official-ci3387", "verify-official-ci3387-update"} {
+		for _, f := range []string{"prepare-official-ci3387", "verify-official-ci3387", "consume-official-ci3387", "requalify-consume-official-ci3387", "verify-official-ci3387-update"} {
 			if a == f || strings.HasPrefix(a, f+"=") {
 				return true
 			}
@@ -113,6 +118,8 @@ func official3894Parse(args []string) (string, string, bool) {
 			return "verify", args[1], true
 		case "--consume-official-ci3387":
 			return "consume", args[1], true
+		case "--requalify-consume-official-ci3387":
+			return "requalify-consume", args[1], true
 		}
 	}
 	return "", "", false
@@ -136,7 +143,7 @@ func runOfficial3894CLI(args []string, out io.Writer, operation func(context.Con
 	defer cancel()
 	handed := false
 	handoff := func(result object) error {
-		if op != "consume" || handed {
+		if !official3894Consumes(op) || handed {
 			return oc.ErrDenied
 		}
 		handed = true
@@ -150,7 +157,7 @@ func runOfficial3894CLI(args []string, out io.Writer, operation func(context.Con
 		}
 		return 0
 	}
-	if op == "consume" && e == nil {
+	if official3894Consumes(op) && e == nil {
 		r, e = official3894Failure("consumer_handoff_required"), oc.ErrDenied
 	}
 	if e != nil {
@@ -194,8 +201,14 @@ type official3894Consumer interface {
 	Consume(context.Context, string, func([]oc.Payload) error) error
 }
 
+func official3894Consumes(op string) bool { return op == "consume" || op == "requalify-consume" }
+
 func official3894Consume(ctx context.Context, engine official3894Consumer, id string, summary func() object, handoff func(object) error) error {
-	return engine.Consume(ctx, id, func(p []oc.Payload) error {
+	return official3894ConsumeWith(ctx, engine.Consume, id, summary, handoff)
+}
+
+func official3894ConsumeWith(ctx context.Context, consume func(context.Context, string, func([]oc.Payload) error) error, id string, summary func() object, handoff func(object) error) error {
+	return consume(ctx, id, func(p []oc.Payload) error {
 		r := summary()
 		r["purpose_verified"] = true
 		delete(r, "reason")
@@ -706,7 +719,7 @@ func (a official3894Authority) Observe(ctx context.Context) (oc.Evidence, error)
 		return out, official3894Error("original_issuer_identity_changed")
 	}
 	binding := oc.FixedBinding(a.source.Head, a.source.Registration, official3894Hash(a.raw), a.source.CreatorJob)
-	out = oc.Evidence{Parent: a.fs.ParentIdentity(), FreshOwnedAnchor: true, Binding: binding, Asset: oc.OfficialAsset(), Observed: observed, SourceVerified: true, JobVerified: true, Active: true, OfficialPublicAsset: true}
+	out = oc.Evidence{Parent: a.fs.ParentIdentity(), FreshOwnedAnchor: true, Binding: binding, Asset: oc.OfficialAsset(), Observed: observed, SourceVerified: true, JobVerified: true, Active: true, OfficialPublicAsset: true, ActorJob: os.Getenv("CC_JOB_ID")}
 	return out, nil
 }
 
@@ -742,6 +755,16 @@ func official3894Summary(t official3894Ticket) object {
 			r["sdk_path"] = filepath.Join(owned.Path, t.Receipt.ID)
 		}
 		r["manifest_entries"] = len(t.Receipt.Files)
+		if t.Requalification != nil {
+			r["expired_at_requalification"] = true
+			r["receipt_deadline_extended"] = false
+			r["original_receipt_created_at"] = t.Receipt.Created
+			r["original_receipt_expires_at"] = t.Receipt.Expires
+			r["requalification_accepted_at"] = t.Requalification.AcceptedAt
+			r["requalification_actor_job"] = t.Requalification.Evidence.ActorJob
+			r["requalification_original_receipt_sha256"] = t.Requalification.OriginalReceiptSHA256
+			r["requalification_evidence_sha256"] = t.Requalification.EvidenceSHA256()
+		}
 	}
 	return r
 }
@@ -852,7 +875,7 @@ func official3894Operation(ctx context.Context, op, id string, handoff func(obje
 	if e != nil {
 		return official3894Summary(t), official3894Error("sdk_parent_identity_or_open_failed")
 	}
-	a := official3894Authority{source: t.Source, owned: owned, raw: t.Owned, issuerIdentity: t.IssuerIdentity, started: t.Started, fs: fs, consume: op == "consume"}
+	a := official3894Authority{source: t.Source, owned: owned, raw: t.Owned, issuerIdentity: t.IssuerIdentity, started: t.Started, fs: fs, consume: official3894Consumes(op)}
 	engine, e := oc.New(oc.FixedBinding(t.Source.Head, t.Source.Registration, official3894Hash(t.Owned), t.Source.CreatorJob), a, official3894Archive(nil), store, fs)
 	if e != nil {
 		return official3894Summary(t), official3894Error("sdk_engine_binding_invalid")
@@ -861,6 +884,8 @@ func official3894Operation(ctx context.Context, op, id string, handoff func(obje
 		e = engine.Resume(ctx, id)
 	} else if op == "consume" {
 		e = official3894Consume(ctx, engine, id, func() object { return official3894Summary(store.ticket) }, handoff)
+	} else if op == "requalify-consume" {
+		e = official3894ConsumeWith(ctx, engine.RequalifyConsume, id, func() object { return official3894Summary(store.ticket) }, handoff)
 	} else {
 		e = oc.ErrDenied
 	}
@@ -877,7 +902,8 @@ func official3894InstalledBaseline(sha, head string) bool {
 	return (sha == official3894PreviousGuardSHA && head == official3894PreviousGuardHead) ||
 		(sha == official3894RepairGuardSHA && head == official3894RepairGuardHead) ||
 		(sha == official3894DiagnosticGuardSHA && head == official3894DiagnosticGuardHead) ||
-		(sha == official3894ConcurrentGuardSHA && head == official3894ConcurrentGuardHead)
+		(sha == official3894ConcurrentGuardSHA && head == official3894ConcurrentGuardHead) ||
+		(sha == official3894SourceBudgetGuardSHA && head == official3894SourceBudgetGuardHead)
 }
 
 // Qualifies only comparison of the known previously published guard software.

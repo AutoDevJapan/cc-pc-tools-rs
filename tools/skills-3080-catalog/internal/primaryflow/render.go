@@ -20,9 +20,9 @@ import (
 )
 
 const MaxBodyBytes = 2 << 20
-const MaskVersion = "primaryflow-v1-whole-sensitive-lines"
+const MaskVersion = "primaryflow-v2-spaced-credentials-uuid-bom"
 
-var sensitive = regexp.MustCompile(`(?i)authorization|api[_-]?key|password|secret|access[_-]?token|bearer\s|[A-Z]:[\\/]|/Users/|/home/|[A-Za-z0-9_.+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}|[A-Za-z0-9_=/+-]{40,}|(?:[0-9][ -]?){8,19}|\b(?:card|cardholder|wallet|cvv|cvc|iban|account.number|phone|address|latitude|longitude|lat|lng|uuid|client.id)\b`)
+var sensitive = regexp.MustCompile(`(?i)authorization|api[\s_-]*key|password|secret|access[\s_-]*token|bearer\s|\b[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\b|[A-Z]:[\\/]|/Users/|/home/|[A-Za-z0-9_.+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}|[A-Za-z0-9_=/+-]{40,}|(?:[0-9][ -]?){8,19}|\b(?:card|cardholder|wallet|cvv|cvc|iban|account.number|phone|address|latitude|longitude|lat|lng|uuid|client.id)\b`)
 
 type SafeBody struct {
 	Ordinal               int    `json:"ordinal"`
@@ -60,7 +60,7 @@ func CheckAndMask(raw []byte, g Group) (SafeBody, error) {
 		lines = lines[:len(lines)-1]
 	}
 	out.Lines = len(lines)
-	front := len(lines) > 0 && lines[0] == "---"
+	front := len(lines) > 0 && strings.TrimPrefix(lines[0], "\ufeff") == "---"
 	private := false
 	shown := make([]string, len(lines))
 	for i, l := range lines {
@@ -100,6 +100,7 @@ func Guard(path string) error {
 	ctx, cancel := context.WithTimeout(context.Background(), 20*time.Second)
 	defer cancel()
 	cmd := exec.CommandContext(ctx, "D:/CC/Tools/client-records/scrub391.exe", "--guard-path", path)
+	cmd.WaitDelay = 2 * time.Second
 	hideWindow(cmd)
 	var out boundedOutput
 	cmd.Stdout = &out

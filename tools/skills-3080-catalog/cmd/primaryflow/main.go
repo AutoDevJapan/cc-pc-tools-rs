@@ -30,8 +30,16 @@ func run() error {
 			return errors.New("integer ordinal and physical range required")
 		}
 		v, e = primaryflow.Render(os.Args[2], os.Args[3], a, first, through)
+	case len(os.Args) == 7 && os.Args[1] == "members":
+		a, x := strconv.Atoi(os.Args[4])
+		first, y := strconv.Atoi(os.Args[5])
+		count, z := strconv.Atoi(os.Args[6])
+		if x != nil || y != nil || z != nil {
+			return errors.New("integer member metadata cursor required")
+		}
+		v, e = primaryflow.Members(os.Args[2], os.Args[3], a, first, count)
 	default:
-		return errors.New("prepare | slice <frozen-plan> <SHA> <first> <count1..16> | render <frozen-plan> <SHA> <ordinal> <firstLine> <throughLine>")
+		return errors.New("prepare | slice <frozen-plan> <SHA> <first> <count1..16> | render <frozen-plan> <SHA> <ordinal> <firstLine> <throughLine> | members <frozen-plan> <SHA> <ordinal> <first> <count1..32>")
 	}
 	if e != nil {
 		return e

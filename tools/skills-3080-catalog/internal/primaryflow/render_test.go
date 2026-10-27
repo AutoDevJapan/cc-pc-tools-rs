@@ -75,3 +75,24 @@ func TestDisjointPagesRetainEmptyPhysicalLineAndDoNotExposeOtherRanges(t *testin
 		t.Fatal("display window silently expanded")
 	}
 }
+
+func TestMaskCoversSpaceSeparatedCredentialLabelsAndBareUUID(t *testing.T) {
+	raw := []byte("API key: synthetic-example\nAccess token: [REDACTED]\n11111111-2222-4333-8444-555555555555\nvisible explanatory sentence\n")
+	v, e := CheckAndMask(raw, maskedGroup(raw))
+	if e != nil {
+		t.Fatal(e)
+	}
+	if len(v.Withheld) != 3 || strings.Contains(v.Visible, "synthetic-example") || strings.Contains(v.Visible, "11111111") || !strings.Contains(v.Visible, "visible explanatory sentence") {
+		t.Fatal("common credential label or unlabelled opaque ID was displayed")
+	}
+}
+func TestBOMDoesNotExposeUnlabelledFrontmatter(t *testing.T) {
+	raw := []byte("\ufeff---\nname: ordinary\ncustom_field: synthetic-frontmatter\n---\nvisible body\n")
+	v, e := CheckAndMask(raw, maskedGroup(raw))
+	if e != nil {
+		t.Fatal(e)
+	}
+	if len(v.Withheld) != 4 || strings.Contains(v.Visible, "synthetic-frontmatter") || !strings.Contains(v.Visible, "visible body") {
+		t.Fatal("BOM bypassed whole-frontmatter mask")
+	}
+}

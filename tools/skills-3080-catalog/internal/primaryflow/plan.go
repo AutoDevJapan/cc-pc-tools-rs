@@ -124,15 +124,12 @@ func Select(rows []Member, reserved, protected map[string]bool) ([2]Plan, []Memb
 	byBody := map[string][]Member{}
 	seen := map[string]bool{}
 	sizes := map[string]int64{}
+	blobs := map[string]string{}
 	for _, r := range rows {
 		if r.ID == "" || seen[r.ID] {
 			return plans, nil, errors.New("empty or duplicate occurrence")
 		}
 		seen[r.ID] = true
-		if reserved[r.ID] || protected[r.SHA] {
-			deferred = append(deferred, r)
-			continue
-		}
 		if r.Repo != "6mile/skills" || r.Commit != Commit || !validPrimaryPath(r.Path) || !digest.MatchString(r.SHA) || !blobID.MatchString(r.Blob) || r.Bytes <= 0 || r.Content != "github/6mile__skills/objects/"+r.SHA+".gz" {
 			return plans, nil, errors.New("outside fixed saved primary descriptor")
 		}
@@ -140,6 +137,14 @@ func Select(rows []Member, reserved, protected map[string]bool) ([2]Plan, []Memb
 			return plans, nil, errors.New("same digest has conflicting body lengths")
 		}
 		sizes[r.SHA] = r.Bytes
+		if b, ok := blobs[r.SHA]; ok && b != r.Blob {
+			return plans, nil, errors.New("same digest has conflicting Git blobs")
+		}
+		blobs[r.SHA] = r.Blob
+		if reserved[r.ID] || protected[r.SHA] {
+			deferred = append(deferred, r)
+			continue
+		}
 		key := r.SHA + fmt.Sprintf(":%d", r.Bytes)
 		byBody[key] = append(byBody[key], r)
 	}
@@ -336,6 +341,9 @@ func Prepare() (map[string]any, error) {
 	if e != nil {
 		return nil, e
 	}
+	if e = validateTotals(plans, [2]int{25452, 25578}, [2]int{27412, 27277}, len(deferred), len(unmapped), 50, 18, 54757); e != nil {
+		return nil, e
+	}
 	output := []map[string]any{}
 	for i, p := range plans {
 		b, e := json.MarshalIndent(p, "", "  ")
@@ -379,6 +387,46 @@ func Prepare() (map[string]any, error) {
 	defer f.Close()
 	_, e = f.Write(b)
 	return result, e
+}
+
+func validateTotals(plans [2]Plan, groups, occurrences [2]int, deferred, unmapped, wantDeferred, wantUnmapped, wantUniverse int) error {
+	total := deferred + unmapped
+	for i, p := range plans {
+		n := 0
+		for _, g := range p.Groups {
+			n += len(g.Members)
+		}
+		if len(p.Groups) != groups[i] || n != occurrences[i] || p.Header.TotalGroups != groups[i] || p.Header.TotalOccurrences != occurrences[i] {
+			return errors.New("fixed cohort group/occurrence counts differ before output")
+		}
+		total += n
+	}
+	if deferred != wantDeferred || unmapped != wantUnmapped || total != wantUniverse {
+		return errors.New("fixed unassigned primary universe is not conserved before output")
+	}
+	return nil
+}
+
+func memberPage(g Group, first, count int) (any, error) {
+	if first < 1 || count < 1 || count > 32 || first > len(g.Members) {
+		return nil, errors.New("finite member metadata page outside group")
+	}
+	through := first + count - 1
+	if through > len(g.Members) {
+		through = len(g.Members)
+	}
+	b, _ := json.Marshal(g.Members)
+	return map[string]any{"ordinal": g.Ordinal, "body_sha256": g.SHA, "total_members": len(g.Members), "first": first, "through": through, "next": through + 1, "members": g.Members[first-1 : through], "whole_member_metadata_sha256": Hash(b), "member_source_contexts_and_rights_pending": true, "source_bodies_opened": 0}, nil
+}
+func Members(path, expected string, ordinal, first, count int) (any, error) {
+	p, e := Load(path, expected)
+	if e != nil {
+		return nil, e
+	}
+	if ordinal < 1 || ordinal > len(p.Groups) {
+		return nil, errors.New("member group ordinal outside plan")
+	}
+	return memberPage(p.Groups[ordinal-1], first, count)
 }
 
 func Load(path, expected string) (Plan, error) {

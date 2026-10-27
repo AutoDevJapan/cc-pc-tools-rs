@@ -1,6 +1,7 @@
 package primaryflow
 
 import (
+	"fmt"
 	"strings"
 	"testing"
 )
@@ -96,5 +97,70 @@ func TestCaseVariantSkillLeafRemainsASeparateSourceOccurrence(t *testing.T) {
 	}
 	if plans[0].Header.TotalOccurrences+plans[1].Header.TotalOccurrences != 1 {
 		t.Fatal("case variant omitted")
+	}
+}
+
+func TestProtectedAndReservedRowsStillRequireValidConsistentDescriptors(t *testing.T) {
+	sha, blob := strings.Repeat("a", 64), strings.Repeat("1", 40)
+	a := memberForTest("github:a", "skills/u/name/SKILL.md", sha, blob)
+	b := a
+	b.ID = "github:b"
+	b.Path = "skills/v/name/SKILL.md"
+	for _, kind := range []string{"protected traversal", "protected blob conflict", "protected length conflict", "reserved namespace"} {
+		t.Run(kind, func(t *testing.T) {
+			x, y := a, b
+			rows := []Member{x, y}
+			reserved := map[string]bool{}
+			protected := map[string]bool{sha: true}
+			switch kind {
+			case "protected traversal":
+				rows[0].Path = "skills/u/../x/SKILL.md"
+			case "protected blob conflict":
+				rows[1].Blob = strings.Repeat("2", 40)
+			case "protected length conflict":
+				rows[1].Bytes++
+			case "reserved namespace":
+				rows[0].Repo = "other/source"
+				reserved[x.ID] = true
+			}
+			if _, _, e := Select(rows, reserved, protected); e == nil {
+				t.Fatal("defer hid an invalid source identity")
+			}
+		})
+	}
+}
+
+func TestFixedPlanTotalsRejectMissingGroupOrOccurrenceBeforeWrite(t *testing.T) {
+	sha, blob := strings.Repeat("a", 64), strings.Repeat("1", 40)
+	a := memberForTest("github:a", "skills/u/name/SKILL.md", sha, blob)
+	plans, _, e := Select([]Member{a}, nil, nil)
+	if e != nil {
+		t.Fatal(e)
+	}
+	groups, counts := [2]int{1, 0}, [2]int{1, 0}
+	if e = validateTotals(plans, groups, counts, 1, 1, 1, 1, 3); e != nil {
+		t.Fatal(e)
+	}
+	plans[0].Groups = nil
+	if e = validateTotals(plans, groups, counts, 1, 1, 1, 1, 3); e == nil {
+		t.Fatal("missing group accepted")
+	}
+}
+func TestMemberMetadataPagesPreserveEveryAliasTuple(t *testing.T) {
+	g := Group{Ordinal: 1, SHA: strings.Repeat("a", 64)}
+	for i := 0; i < 35; i++ {
+		g.Members = append(g.Members, Member{ID: fmt.Sprintf("github:%d", i), Path: fmt.Sprintf("skills/u/%d/SKILL.md", i), Commit: Commit, Blob: strings.Repeat("1", 40)})
+	}
+	one, e := memberPage(g, 1, 32)
+	if e != nil {
+		t.Fatal(e)
+	}
+	two, e := memberPage(g, 33, 32)
+	if e != nil {
+		t.Fatal(e)
+	}
+	a, b := one.(map[string]any), two.(map[string]any)
+	if len(a["members"].([]Member)) != 32 || len(b["members"].([]Member)) != 3 || b["members"].([]Member)[2].ID != "github:34" || a["whole_member_metadata_sha256"] != b["whole_member_metadata_sha256"] {
+		t.Fatal("alias page lost or rebound original source tuples")
 	}
 }

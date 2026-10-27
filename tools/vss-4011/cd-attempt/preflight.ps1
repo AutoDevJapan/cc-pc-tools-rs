@@ -1,5 +1,5 @@
 $ErrorActionPreference='Stop'
-$r=[ordered]@{schema=1;utc=[DateTime]::UtcNow.ToString('o');valid=$false;shadow_count=-1;c_shadow_count=-1;d_shadow_count=-1;restore_point_count=-1;association_count=-1;c_to_c=$false;c_to_d=$false;maximum_bytes=0;used_bytes=0;allocated_bytes=0;c_free_bytes=0;d_free_bytes=0;ntfs=$false;distinct_nvme=$false;d_online_writable_fixed=$false;only_microsoft_provider=$false;protection_not_disabled=$false;minimum_unset=$false;hresult=$null}
+$r=[ordered]@{schema=1;utc=[DateTime]::UtcNow.ToString('o');valid=$false;shadow_count=-1;c_shadow_count=-1;d_shadow_count=-1;restore_point_count=-1;association_count=-1;association_rows=@();association_rows_complete=$false;c_to_c=$false;c_to_d=$false;maximum_bytes=0;used_bytes=0;allocated_bytes=0;c_free_bytes=0;d_free_bytes=0;ntfs=$false;distinct_nvme=$false;d_online_writable_fixed=$false;only_microsoft_provider=$false;protection_not_disabled=$false;minimum_unset=$false;hresult=$null}
 try {
     $v=@(Get-CimInstance Win32_Volume -Filter "DriveLetter='C:' OR DriveLetter='D:'" -Property DeviceID,DriveLetter,FileSystem,FreeSpace,DriveType)
     $c=@($v|Where-Object {$_.DriveLetter -eq 'C:'})
@@ -15,6 +15,9 @@ try {
     $r.restore_point_count=@(Get-CimInstance -Namespace root/default -ClassName SystemRestore -Property SequenceNumber).Count
     $a=@(Get-CimInstance Win32_ShadowStorage)
     $r.association_count=$a.Count
+    function Alias($ref){if($ref.DeviceID -eq $c[0].DeviceID){return 'C:'};if($ref.DeviceID -eq $d[0].DeviceID){return 'D:'};return 'other'}
+    $r.association_rows=@($a|Select-Object -First 8|ForEach-Object{[ordered]@{source=(Alias $_.Volume);storage=(Alias $_.DiffVolume);maximum_bytes=[uint64]$_.MaxSpace;used_bytes=[uint64]$_.UsedSpace;allocated_bytes=[uint64]$_.AllocatedSpace}})
+    $r.association_rows_complete=$a.Count -le 8
     if($a.Count -eq 1){
         $r.c_to_c=$a[0].Volume.DeviceID -eq $c[0].DeviceID -and $a[0].DiffVolume.DeviceID -eq $c[0].DeviceID
         $r.c_to_d=$a[0].Volume.DeviceID -eq $c[0].DeviceID -and $a[0].DiffVolume.DeviceID -eq $d[0].DeviceID

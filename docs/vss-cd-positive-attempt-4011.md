@@ -17,7 +17,7 @@ Abortの非ゼロ成功値EVENT_S_NOSUBSCRIBERSを診断側が未確認とした
 - `--inspect-cd <preflight.ps1>`：自分の空集合を保持し、別processのcontenderがIN_PROGRESSで
   拒否されることと、保持中のWindows匿名metadataを読むだけ。resize分岐へ入らない。
 - `--attempt-cd <preflight.ps1>`：同じ排他と事前条件がすべて成立した場合だけ、既存の
-  `vssadmin.exe resize shadowstorage /for=C: /on=D: /maxsize=50GB`を1回実行する。
+  `vssadmin.exe resize shadowstorage /for=C: /on=D: /maxsize=53687091200`を1回実行する。
 
 書込モードは別モデルで手順とsourceのデータ保持を確認してから、既存CC-AdminBrokerで実行する。
 新製品/配布CLI/常駐/taskではなく、この4011の一時的な診断・是正工程である。
@@ -56,8 +56,10 @@ preflightの子は組込みのWindows読取cmdletだけ、contenderの子には�
 Windowsのサービスへ送った要求の結果が不明な場合は、後状態と未確定を残し、同じ書込を再試行しない。
 
 実行前には同worktree/os-v2へCreateNew/WriteThroughの固定requestを保存し、resultも追記専用とする。
-`cd-attempt/run-once.ps1`がreview番号・実source head・source/実行物hashを含む固定票を作り、
-実行物を読取専用共有で固定して、CREATE_NO_WINDOW/非同期回収/90秒期限で起動する。
+`cd-attempt/run-once.ps1`が実Git HEADとソースの未変更を確認し、共通関数・Go・preflightの
+固定hashと読取共有handleを照合した同じsourceから新しい実行物をビルドする。
+review番号・実source head・source/実行物hashを含む固定票を作り、実行物を読取専用共有で
+固定して、CREATE_NO_WINDOW/非同期回収/90秒期限で起動する。既存の実行物を渡して流用しない。
 inspectとattemptは違う工程の別票にし、元のempty-set-probe/availability/A/rollback票は上書きしない。
 登録・起動・排他・コマンド実行・関連付けの実反映・復元point保持をそれぞれ区別して返す。
 
@@ -66,6 +68,42 @@ SystemRestoreの新しい2世代が保持されること、50GiB・C/D/E空き�
 その機能確認は原A/Bの再試行ではなく、設定が異なる新しい是正工程の固定票で行い、point作成loopを作らない。
 現在のcandidateにpoint作成は実装していないため、登録/設定だけで全体完了としない。
 OS再起動や障害復元は未検証のまま区別し、本人のPC操作を依存にしない。
+
+## レビュー4092の指摘対応と現在の適用条件
+
+4092は固定ecc24406の5対象と共通票関数を読了し、Must0と修正案を返した。
+実Opus5.5/max/native_turn_context、再開実job212901のsucceeded/exit0/18stepsと原回答を照合した。
+初回job195832のfailedを成功へ数えず、最終原回答6934字/SHA8D1C5B5B670928D7B9B3512A69C5DC53185688F1C362B51D4B8A0930E324CB85を保持する。
+
+- S1：固定resizeの出力だけを対象に、Volume GUID等を除いた先頭4KiBをprivate票のbase64と
+  分類語で保持する。内容を公開文書やコンソールへ生出力せず、拒否理由をhashだけで失わない。
+- S2：実HEAD/clean sourceと固定hashを照合し、その読み取りhandleを保持したsourceから新exeへ
+  buildして実hashを票へ保存する。common.ps1も先に照合してから読み込む。
+- S3：後のmetadata取得から自己Abortまでの間にも、同じCOM threadの別objectのStartが
+  IN_PROGRESSになることを記録する。誤ってS_OKになればその自分の空集合だけをAbort/Releaseし、
+  保持が継続したとは扱わない。Inspectでもこの後段を確認する。
+- S4：関連付けが複数でも最大8行のC/D/otherと使用/割当/上限、列挙完了の有無を保存する。
+- S5：run-onceのMode Inspectを別固定票で先に通し、同じbuild/起動/回収経路を確認する。
+  既存snapshotがあればNoWriteで終わることも実結果として残す。失敗票を消して再試行しない。
+- S6：timeoutの場合はサービス側の要求が後で反映する可能性があるため、親の終了後に読み直した
+  状態を正とし、未確定を無変更・成功へ読み替えない。
+- S7：CLIの単位の解釈に依存せず、単位なしの正確な53,687,091,200バイトを指定する。
+
+軽微な指摘も反映し、Goの書込モード自身が固定request/byte hash/result不在を確認して
+native-start票をCreateNewで消費する。既に消費した票では直接の再呼出しも実行しない。
+Used/CFree/NTFS/DReadyの拒否テストを追加し、結果票の保存失敗でも正常Brokerの標準出力へ
+実結果を先に残す。保存成功と標準出力への出力は区別する。
+
+21:52の再開時には本担当が作っていないC snapshot3件・SystemRestore point264/265が存在した。
+C→C/使用13,415,874,560B/割当13,943,291,904B/上限50GiB、MinDiff未設定であり、
+この候補の現用の適用条件は満たさない。これらを切替のために削除せず、書込を実行しない。
+新しい保存元の数値metadataとして記録し、再発で失ったpointが復活したとは扱わない。
+実空きC429,004,951,552/D2,077,182,341,120/E858,052,489,216B、正常照会complete/errors0。
+固定の夜間確認までに同じsnapshotが存続すれば保持事実を追加できるが、修復の因果は未確定である。
+上限や保護仕様を変更せず、通常VSSのデータ保持条件を満たす範囲で修復を続ける。
+
+2026-10-27の最新PR方針により、マージ前には別セッションのセルフレビューとラバーダックを
+同じ最終コミットへ行い、Must以外の修正指摘も含めて解消確認を得る。
 
 ## 現在の実測と検査
 

@@ -20,6 +20,11 @@ const skillsGuardModule = "github.com/AutoDevJapan/cc-pc-tools-rs/repair-guard"
 // Independent previously accepted distribution facts (3258 and3686), not a caller
 // supplied baseline or an assertion made by the artifact being installed.
 var skillsGuardBaselines = map[string]string{
+	// PR589 was normally reviewed, merged, built and installed by the prior
+	// execution of this updater. Its independent current readback was published
+	// before generating the masked-source successor candidate.
+	// Evidence: docs/evidence/skills-3080-guard-before-masked-source-9f914.json.
+	"9f914c724231886438515c5ed3831a13eca3d8fbec09e4d3d6edb1d0113c6dd8": "4e117a2d813e4a989d1c3085d2734963d9c198a3",
 	// PR586's other real updater completed this shared distribution while the
 	// scoped result-reception repair was under review. Its normal deployment
 	// and our independent installed readback precede the successor candidate.

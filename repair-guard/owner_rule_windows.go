@@ -20,7 +20,8 @@ type ownerRuleConfig struct {
 	todoStore      string
 	mixedStores    []string
 	taskMetadata   *ownerRecordMetadata // only the current validated snapshot
-	recordProducer bool                 // a producer receipt, not qualification of source bytes
+	taskMetadataID string
+	recordProducer bool // a producer receipt, not qualification of source bytes
 }
 
 type ownerRuleTool struct {
@@ -42,8 +43,15 @@ func ownerRuleWith(ctx context.Context, path string, projects object, access own
 	// This routine is also used for an owned resource's original producer.
 	// Those internal calls must retain the same exclusions and name checks as
 	// the outer normal CLI, rather than inheriting an operations root's result.
-	if access.denied(path) {
-		return ownerRuleUnknown("existing_exclusion_unavailable_or_matched")
+	if access.legacy != nil {
+		switch access.legacy(path) {
+		case ownerLegacyClient:
+			return ownerRuleProtected("legacy_exclusion")
+		case ownerLegacyUnavailable:
+			return ownerRuleUnknown("existing_exclusion_unavailable")
+		}
+	} else if access.denied(path) {
+		return ownerRuleProtected("legacy_exclusion")
 	}
 	if ownerCardPath(path) {
 		return ownerRuleUnknown("card_name_or_storage_candidate")
@@ -111,6 +119,10 @@ func ownerRuleWith(ctx context.Context, path string, projects object, access own
 		origin, ok := access.git(top, "remote", "get-url", "origin")
 		repository, selfOrigin := ownerOriginRepository(origin)
 		if !ok {
+			remotes, listed := access.git(top, "remote")
+			if listed && strings.TrimSpace(remotes) == "" && (development == "self" || selfRegistration || ownerRuleInfrastructure(path, config)) {
+				return ownerRuleClear("self_location_without_remotes")
+			}
 			return ownerRuleUnknown("repository_metadata_unavailable")
 		}
 		if access.membership(filepath.Base(top), repository) == "client_project" {
@@ -133,7 +145,10 @@ func ownerRuleWith(ctx context.Context, path string, projects object, access own
 			linked, otherOK := access.git(top, "rev-parse", "--path-format=absolute", "--show-toplevel", "--git-common-dir")
 			a := strings.Split(strings.ReplaceAll(registered, "\r\n", "\n"), "\n")
 			b := strings.Split(strings.ReplaceAll(linked, "\r\n", "\n"), "\n")
-			if !ok || !otherOK || len(a) != 2 || len(b) != 2 || !same(a[0], root) || !same(b[0], top) || !same(a[1], b[1]) {
+			if !ok || !otherOK {
+				return ownerRuleUnknown("repository_metadata_unavailable")
+			}
+			if len(a) != 2 || len(b) != 2 || !same(a[0], root) || !same(b[0], top) || !same(a[1], b[1]) {
 				return ownerRuleUnknown("worktree_identity_mismatch")
 			}
 		}
@@ -284,7 +299,7 @@ func ownerDefaultRuleConfig() ownerRuleConfig {
 		infrastructure: []string{"D:/CC", "D:/OMB"},
 		records:        []string{"D:/CC/Tools/client-records", "D:/CC/Tools/client-projects.txt"},
 		jobStore:       "D:/CC/Tools/codex-jobs/jobs", specStore: "D:/CC/Tools/todo/specs", promptStore: "D:/CC/Tools/scheduler/prompts", todoStore: productStore,
-		mixedStores: []string{productStore, "D:/CC/Tools/todo/history", "D:/CC/Tools/discord-ask/unattended/conversations", "D:/CC/Tools/discord-ask/unattended/conversation-logs", "D:/CC/Tools/discord-ask/unattended/conversation-clarifications", "D:/CC/Tools/discord-ask/unattended/conversation-questions.json"},
+		mixedStores: []string{productStore, "D:/CC/Tools/todo/history", discordAskDirectory, "D:/OMB/workspace"},
 		// Normal consumer declarations: cc-jobs/src/platform.rs and pool_retry.rs,
 		// cc-scheduler/src/backend.rs. The owner explicitly assigned this existing
 		// AI-agent tool's installed location for classification in 4088/2655.
@@ -293,7 +308,17 @@ func ownerDefaultRuleConfig() ownerRuleConfig {
 }
 
 func ownerOrganizationQuery(ctx context.Context, path string, access ownerSourceAccess) ownerPathVerdict {
-	config := ownerDefaultRuleConfig()
+	access.legacy = ownerLegacyProtection
+	access.conversation = conversationPathAllowed
+	access.operational = func(p string) bool {
+		return (discordAskRuntime(p, legacyMatch) && sourceVerified(base)) || ombCaptureAllowed(p)
+	}
+	return ownerOrganizationQueryWith(ctx, path, access, ownerDefaultRuleConfig(), func(ctx context.Context, project func(io.Reader) (object, bool)) (*ownerProjectSnapshot, bool) {
+		return ownerReadProjectSnapshotUsing(ctx, productStore, legacyMatch, project)
+	})
+}
+
+func ownerOrganizationQueryWith(ctx context.Context, path string, access ownerSourceAccess, config ownerRuleConfig, read func(context.Context, func(io.Reader) (object, bool)) (*ownerProjectSnapshot, bool)) ownerPathVerdict {
 	if ownerRuleDevelopment(path, config.dev) == "client" {
 		return ownerRuleProtected("owner_rule_other_development_top")
 	}
@@ -304,6 +329,7 @@ func ownerOrganizationQuery(ctx context.Context, path string, access ownerSource
 	}
 	for attempt := 0; attempt < 2; attempt++ {
 		config.taskMetadata = nil
+		config.taskMetadataID = ""
 		var snapshot *ownerProjectSnapshot
 		var ok bool
 		inputID := ""
@@ -313,20 +339,24 @@ func ownerOrganizationQuery(ctx context.Context, path string, access ownerSource
 			}
 		}
 		if inputID != "" {
-			snapshot, ok = ownerReadProjectSnapshotUsing(ctx, productStore, legacyMatch, func(input io.Reader) (object, bool) {
+			snapshot, ok = read(ctx, func(input io.Reader) (object, bool) {
 				projects, m, valid := ownerTaskRegistrationProjection(ctx, input, inputID)
 				if valid {
 					config.taskMetadata = &m
+					config.taskMetadataID = inputID
 				}
 				return projects, valid && projects != nil
 			})
 		} else {
-			snapshot, ok = ownerReadProjectSnapshot(ctx, productStore, legacyMatch)
+			snapshot, ok = read(ctx, func(input io.Reader) (object, bool) { return ownerProjectProjection(ctx, input) })
 		}
 		if ctx.Err() != nil {
 			return ownerRuleUnknown("classification_deadline")
 		}
 		if !ok {
+			if attempt == 0 && snapshot != nil && snapshot.replaced() {
+				continue
+			}
 			return ownerRuleUnknown("registration_snapshot_unavailable")
 		}
 		result := ownerRuleWith(ctx, path, snapshot.projects, access, config, func(p string) ownerPathVerdict {
@@ -372,11 +402,24 @@ func ownerOrganizationPath(path string) ownerPathVerdict {
 // operational receipt. Positive client evidence, conflicts and mixed data
 // stores never acquire this fallback.
 func ownerRuleReceiptFallback(result ownerPathVerdict, path string, receipt func(string) bool) ownerPathVerdict {
-	switch result.Basis {
-	case "owner_rule_unattributed_location", "registration_snapshot_unavailable", "registration_snapshot_changed", "classification_deadline", "repository_identity_unavailable", "repository_metadata_unavailable":
+	if ownerRuleIndependentReceiptEligible(result) {
 		if receipt(path) {
 			return ownerRuleClear("verified_operational_receipt")
 		}
 	}
 	return result
+}
+
+func ownerRuleIndependentReceiptEligible(v ownerPathVerdict) bool {
+	if v.Status == "protected" {
+		return v.Basis == "owner_rule_unattributed_location" && len(v.Categories) == 1 && v.Categories[0] == "client_project"
+	}
+	if v.Status != "unverified" || len(v.Categories) != 0 {
+		return false
+	}
+	switch v.Basis {
+	case "", "owner_rule_unattributed_location", "registration_snapshot_unavailable", "registration_snapshot_changed", "classification_deadline", "repository_identity_unavailable", "repository_metadata_unavailable", "owned_resource_metadata_unavailable":
+		return true
+	}
+	return false
 }

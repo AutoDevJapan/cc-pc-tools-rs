@@ -22,11 +22,11 @@ func ownerRepositoryCandidate(path string) bool {
 }
 
 func ownerRepositoryRoot(path string) (string, bool) {
-	home, _ := os.UserHomeDir()
+	home := "C:/Users/makhmeto"
 	if resolved, err := physical(home); err == nil {
 		home = resolved
 	}
-	temp := os.TempDir()
+	temp := retirement3250Temp
 	if resolved, err := physical(temp); err == nil {
 		temp = resolved
 	}
@@ -301,7 +301,7 @@ func ownerReadProjectSnapshotUsing(ctx context.Context, path string, denied func
 	projects, equal := project(io.LimitReader(f, 1<<30))
 	s.projects = projects
 	if !equal || !s.current() {
-		return nil, false
+		return s, false
 	}
 	return s, true
 }

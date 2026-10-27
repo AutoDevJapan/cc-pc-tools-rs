@@ -221,12 +221,15 @@ func ownerWindowsAlias(path string) bool {
 }
 
 type ownerSourceAccess struct {
-	git        func(string, ...string) (string, bool)
-	identity   func(string) (int64, string, string, bool)
-	plain      func(string, bool) bool
-	denied     func(string) bool
-	membership func(string, string) string
-	stable     func() bool
+	git          func(string, ...string) (string, bool)
+	identity     func(string) (int64, string, string, bool)
+	plain        func(string, bool) bool
+	denied       func(string) bool
+	membership   func(string, string) string
+	stable       func() bool
+	legacy       func(string) ownerLegacyState
+	conversation func(string) bool
+	operational  func(string) bool
 }
 
 // The owner's normal department catalogue supplies positive membership. Hashes

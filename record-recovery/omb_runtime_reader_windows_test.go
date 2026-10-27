@@ -72,6 +72,31 @@ func TestOMB3255RuntimeMetadataPurposeKeepsProtection(t *testing.T) {
 	}
 }
 
+func TestOMB3255OwnerRuleDefaultKeepsOnlyNativeMetadataPurpose(t *testing.T) {
+	clear := omb3255GuardVerdict{Access: true, Status: "clear"}
+	wire := obj{"ok": true, "access_allowed": false, "client_resource": true, "classification_unverified": false, "protection_status": "protected", "protection_categories": []any{"client_project"}, "classification_policy": "owner-client-rule-20261027", "classification_basis": "owner_rule_unattributed_location"}
+	native, err := omb3255ParseGuard(wire)
+	if err != nil || !omb3255MetadataPurpose(clear, clear, native, true) || native.codeClear() {
+		t.Fatal("default attribution lost native-only metadata qualification")
+	}
+	if omb3255MetadataPurpose(native, clear, native, true) || omb3255MetadataPurpose(clear, native, native, true) || omb3255MetadataPurpose(clear, clear, native, false) {
+		t.Fatal("native metadata qualification widened to source, binary or unbound data")
+	}
+	for _, basis := range []string{"legacy_exclusion", "client_registration", "client_record_producer", "client_department", "client_repository_id", "owner_rule_other_development_top", "mixed_client_record_store"} {
+		wire["classification_basis"] = basis
+		v, err := omb3255ParseGuard(wire)
+		if err != nil || omb3255MetadataPurpose(clear, clear, v, true) {
+			t.Fatal("positive protection reached native metadata purpose")
+		}
+	}
+	wire["classification_basis"] = "owner_rule_unattributed_location"
+	wire["classification_policy"] = "other-policy"
+	v, err := omb3255ParseGuard(wire)
+	if err != nil || omb3255MetadataPurpose(clear, clear, v, true) {
+		t.Fatal("unknown policy reached native metadata purpose")
+	}
+}
+
 func TestOMB3255RuntimeGuardUsesProtectedStateNotOverloadedWireName(t *testing.T) {
 	clear := omb3255GuardVerdict{Access: true, Status: "clear"}
 	for _, state := range []string{"clear", "unverified", "protected"} {

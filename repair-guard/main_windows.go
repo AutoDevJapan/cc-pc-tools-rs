@@ -487,8 +487,7 @@ func runGuardCLIWithVerifiers(args []string, stdout, stderr io.Writer, currentVe
 }
 
 func ownerRuleRetirementVerdict(v ownerPathVerdict, path string, qualified bool) ownerPathVerdict {
-	eligible := v.Status == "unverified" && (v.Basis == "" || v.Basis == "repository_identity_unavailable" || v.Basis == "registration_snapshot_unavailable" || v.Basis == "registration_snapshot_changed" || v.Basis == "classification_deadline") || v.Basis == "owner_rule_unattributed_location"
-	if qualified && eligible && !ownerCardPath(path) && !ownerWindowsAlias(path) {
+	if qualified && ownerRuleIndependentReceiptEligible(v) && !ownerCardPath(path) && !ownerWindowsAlias(path) {
 		return ownerRuleClear("verified_retirement_receipt")
 	}
 	return v

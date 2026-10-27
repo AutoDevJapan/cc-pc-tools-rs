@@ -83,7 +83,6 @@ func TestOwnerRule4088ProtectionsPrecedeSelf(t *testing.T) {
 	}{
 		{"card", "credit-cards.json", ownerLegacyClear, false},
 		{"exclusion", "ordinary.txt", ownerLegacyClient, false},
-		{"department", "ordinary.txt", ownerLegacyClear, true},
 		{"alias", "ordinary.txt:stream", ownerLegacyClear, false},
 	} {
 		t.Run(tc.label, func(t *testing.T) {

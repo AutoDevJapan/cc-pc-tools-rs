@@ -48,16 +48,17 @@ type checkpoint struct {
 	Last     *report               `json:"last,omitempty"`
 }
 type categoryResult struct {
-	Category    string  `json:"category"`
-	Status      string  `json:"status"`
-	Bytes       *uint64 `json:"logical_bytes"`
-	Files       uint64  `json:"files"`
-	Directories uint64  `json:"directories"`
-	Links       uint64  `json:"reparse_points_skipped"`
-	Errors      uint64  `json:"errors"`
-	Started     string  `json:"scan_started,omitempty"`
-	Completed   string  `json:"scan_completed,omitempty"`
-	Increase    *int64  `json:"increase_since_previous_complete_bytes,omitempty"`
+	Category        string  `json:"category"`
+	Status          string  `json:"status"`
+	Bytes           *uint64 `json:"logical_bytes"`
+	Files           uint64  `json:"files"`
+	Directories     uint64  `json:"directories"`
+	Links           uint64  `json:"reparse_points_skipped"`
+	Errors          uint64  `json:"errors"`
+	Started         string  `json:"scan_started,omitempty"`
+	Completed       string  `json:"scan_completed,omitempty"`
+	Increase        *int64  `json:"increase_since_previous_complete_bytes,omitempty"`
+	ProtectionBasis string  `json:"protection_basis,omitempty"`
 }
 type report struct {
 	Schema           int                `json:"schema"`
@@ -412,10 +413,13 @@ func runAudit(home string, specs []rootSpec, deps auditDependencies) error {
 			delete(state.Scans, spec.Category)
 			continue
 		}
-		if !spec.PublicSystem && !privateAllowed(ctx, spec.Path) {
-			byCategory[spec.Category] = categoryResult{Category: spec.Category, Status: "protected_unclassified"}
-			delete(state.Scans, spec.Category)
-			continue
+		if !spec.PublicSystem {
+			classification := classifyPath(ctx, spec.Path)
+			if classification != "clear" {
+				byCategory[spec.Category] = protectedCategoryResult(spec, classification)
+				delete(state.Scans, spec.Category)
+				continue
+			}
 		}
 		st := state.Scans[spec.Category]
 		if st == nil || len(st.Pending) == 0 {
@@ -477,6 +481,10 @@ func runAudit(home string, specs []rootSpec, deps auditDependencies) error {
 		return errors.New("decision queue unavailable; measurements retained")
 	}
 	return allErr
+}
+
+func protectedCategoryResult(spec rootSpec, classification string) categoryResult {
+	return categoryResult{Category: spec.Category, Status: "protected_unclassified", ProtectionBasis: classification}
 }
 
 func main() {

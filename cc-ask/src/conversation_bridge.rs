@@ -5,7 +5,7 @@ use crate::{
     core::{Effects, Result},
 };
 use serde::Deserialize;
-use serde_json::{Value, json};
+use serde_json::{json, Value};
 use sha2::{Digest, Sha256};
 use std::{
     fs,
@@ -567,12 +567,13 @@ pub fn try_ask(home: &Path, effects: &mut dyn Effects, args: &AskArgs) -> Result
         origin
     ]);
     if !snapshots.is_empty() {
-        identity.as_array_mut().ok_or(INVALID_INPUT)?.push(json!(
-            snapshots
+        identity
+            .as_array_mut()
+            .ok_or(INVALID_INPUT)?
+            .push(json!(snapshots
                 .iter()
                 .map(|file| json!([file.hash, file.extension]))
-                .collect::<Vec<_>>()
-        ));
+                .collect::<Vec<_>>()));
     }
     let request = format!("normal-ask-{}", sha(identity.to_string().as_bytes()));
     let directory = root.join(&request);

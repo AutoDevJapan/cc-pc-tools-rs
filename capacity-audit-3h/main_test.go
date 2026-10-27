@@ -27,6 +27,14 @@ func TestOwnerRuleClassificationKeepsDefaultAttributionDistinct(t *testing.T) {
 	}
 }
 
+func TestOwnerRuleProtectionBasisReachesCategoryReport(t *testing.T) {
+	result := protectedCategoryResult(rootSpec{Category: "synthetic"}, "protected_owner_rule_unattributed")
+	encoded, err := json.Marshal(report{Schema: 1, Categories: []categoryResult{result}})
+	if err != nil || !strings.Contains(string(encoded), `"protection_basis":"protected_owner_rule_unattributed"`) || !strings.Contains(string(encoded), `"status":"protected_unclassified"`) {
+		t.Fatal("protection basis lost in category report")
+	}
+}
+
 func TestBoundary(t *testing.T) {
 	root := t.TempDir()
 	for _, path := range []string{"", filepath.Dir(root), root + "-sibling", root} {

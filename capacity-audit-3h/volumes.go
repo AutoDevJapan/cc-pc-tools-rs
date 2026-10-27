@@ -220,29 +220,31 @@ type driveCursor struct {
 }
 
 type driveScan struct {
-	Root        string        `json:"root"`
-	Pending     []driveCursor `json:"pending"`
-	Bytes       uint64        `json:"logical_bytes"`
-	Files       uint64        `json:"files"`
-	Directories uint64        `json:"directories"`
-	Links       uint64        `json:"reparse_points_skipped"`
-	Errors      uint64        `json:"read_errors"`
-	Blocked     uint64        `json:"protected_or_unclassified"`
-	Started     string        `json:"started"`
+	Root                  string            `json:"root"`
+	Pending               []driveCursor     `json:"pending"`
+	Bytes                 uint64            `json:"logical_bytes"`
+	Files                 uint64            `json:"files"`
+	Directories           uint64            `json:"directories"`
+	Links                 uint64            `json:"reparse_points_skipped"`
+	Errors                uint64            `json:"read_errors"`
+	Blocked               uint64            `json:"protected_or_unclassified"`
+	Started               string            `json:"started"`
+	ProtectionBasisCounts map[string]uint64 `json:"protection_basis_counts,omitempty"`
 }
 
 type driveResult struct {
-	ID             string  `json:"volume_id"`
-	Drive          string  `json:"drive"`
-	Status         string  `json:"status"`
-	Bytes          *uint64 `json:"observed_logical_bytes"`
-	Files          uint64  `json:"files"`
-	Directories    uint64  `json:"directories"`
-	Links          uint64  `json:"reparse_points_skipped"`
-	Errors         uint64  `json:"read_errors"`
-	Blocked        uint64  `json:"protected_or_unclassified"`
-	Started        string  `json:"scan_started,omitempty"`
-	Classification string  `json:"classification"`
+	ID                    string            `json:"volume_id"`
+	Drive                 string            `json:"drive"`
+	Status                string            `json:"status"`
+	Bytes                 *uint64           `json:"observed_logical_bytes"`
+	Files                 uint64            `json:"files"`
+	Directories           uint64            `json:"directories"`
+	Links                 uint64            `json:"reparse_points_skipped"`
+	Errors                uint64            `json:"read_errors"`
+	Blocked               uint64            `json:"protected_or_unclassified"`
+	Started               string            `json:"scan_started,omitempty"`
+	Classification        string            `json:"classification"`
+	ProtectionBasisCounts map[string]uint64 `json:"protection_basis_counts,omitempty"`
 }
 
 type allDriveState struct {
@@ -355,6 +357,10 @@ func scanDrive(ctx context.Context, root string, st *driveScan, max int, guard f
 		}
 		if classification != "clear" {
 			st.Blocked++
+			if st.ProtectionBasisCounts == nil {
+				st.ProtectionBasisCounts = map[string]uint64{}
+			}
+			st.ProtectionBasisCounts[classification]++
 			st.Pending = st.Pending[:i]
 			continue
 		}
@@ -386,6 +392,10 @@ func scanDrive(ctx context.Context, root string, st *driveScan, max int, guard f
 			}
 			if classification != "clear" {
 				st.Blocked++
+				if st.ProtectionBasisCounts == nil {
+					st.ProtectionBasisCounts = map[string]uint64{}
+				}
+				st.ProtectionBasisCounts[classification]++
 				continue
 			}
 			info, err := os.Lstat(path)
@@ -416,7 +426,7 @@ func scanDrive(ctx context.Context, root string, st *driveScan, max int, guard f
 			break
 		}
 	}
-	r := driveResult{Status: "partial", Files: st.Files, Directories: st.Directories, Links: st.Links, Errors: st.Errors, Blocked: st.Blocked, Started: st.Started, Classification: "not_assessed"}
+	r := driveResult{Status: "partial", Files: st.Files, Directories: st.Directories, Links: st.Links, Errors: st.Errors, Blocked: st.Blocked, Started: st.Started, Classification: "not_assessed", ProtectionBasisCounts: st.ProtectionBasisCounts}
 	if st.Files > 0 || st.Directories > 0 || st.Links > 0 {
 		n := st.Bytes
 		r.Bytes = &n

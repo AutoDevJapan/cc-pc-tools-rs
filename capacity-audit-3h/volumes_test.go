@@ -146,6 +146,39 @@ func TestProtectedWalkNeverReadsBelowUnclassifiedRoot(t *testing.T) {
 	}
 }
 
+func TestOwnerRuleProtectionCountsSurviveResumeAndReachDriveReport(t *testing.T) {
+	root := t.TempDir()
+	for _, name := range []string{"first", "second"} {
+		if os.WriteFile(filepath.Join(root, name), nil, 0600) != nil {
+			t.Fatal("fixture file")
+		}
+	}
+	st := &driveScan{Pending: []driveCursor{{Path: root}}}
+	guard := func(_ context.Context, path string) string {
+		if path == root {
+			return "clear"
+		}
+		if filepath.Base(path) == "first" {
+			return "protected_owner_rule_unattributed"
+		}
+		return "protected"
+	}
+	var result driveResult
+	for range 5 {
+		result = scanDrive(context.Background(), root, st, 1, guard)
+		if len(st.Pending) == 0 {
+			break
+		}
+	}
+	encoded, err := json.Marshal(result)
+	if err != nil || result.ProtectionBasisCounts["protected"] != 1 || result.ProtectionBasisCounts["protected_owner_rule_unattributed"] != 1 || strings.Contains(string(encoded), root) {
+		t.Fatal("protection evidence lost in resumed drive report")
+	}
+	if !strings.Contains(string(encoded), `"protection_basis_counts"`) || result.Classification != "protected_unclassified" {
+		t.Fatal("wire-compatible report omitted protection evidence")
+	}
+}
+
 func TestAllDriveCheckpointFailsClosedAndRetainsCursor(t *testing.T) {
 	path := filepath.Join(t.TempDir(), "state.json")
 	st, err := readAllDriveState(path)

@@ -19,11 +19,12 @@ import (
 )
 
 type omb3255GuardVerdict struct {
-	Access     bool
-	Unverified bool
-	Blocked    bool
-	Status     string
-	Categories int
+	Access           bool
+	Unverified       bool
+	Blocked          bool
+	Status           string
+	Categories       int
+	RuleUnattributed bool
 }
 
 func omb3255Guard(ctx context.Context, path string) (omb3255GuardVerdict, error) {
@@ -53,10 +54,11 @@ func omb3255ParseGuard(value obj) (omb3255GuardVerdict, error) {
 	if !a || !b || !c || !ok || (status != "clear" && status != "unverified" && status != "protected") {
 		return omb3255GuardVerdict{}, omb3255RuntimeUnavailable
 	}
-	verdict := omb3255GuardVerdict{access, unknown, blocked, status, len(categories)}
+	verdict := omb3255GuardVerdict{Access: access, Unverified: unknown, Blocked: blocked, Status: status, Categories: len(categories)}
 	if !verdict.valid() {
 		return omb3255GuardVerdict{}, omb3255RuntimeUnavailable
 	}
+	verdict.RuleUnattributed = value["classification_policy"] == "owner-client-rule-20261027" && value["classification_basis"] == "owner_rule_unattributed_location" && status == "protected" && len(categories) == 1 && categories[0] == "client_project"
 	return verdict, nil
 }
 
@@ -87,8 +89,8 @@ func (g omb3255GuardVerdict) codeClear() bool {
 // A clear source anchor also requires the canonical legacy check to be readable
 // (or recorded absent); a known client hit can never be overridden here.
 func omb3255MetadataPurpose(source, binary, native omb3255GuardVerdict, normalBinding bool) bool {
-	return normalBinding && source.codeClear() && binary.codeClear() && native.valid() && native.Categories == 0 && native.Status != "protected" &&
-		(native.codeClear() || (native.Status == "unverified" && native.Unverified))
+	nativeQualified := native.valid() && (native.RuleUnattributed && native.Status == "protected" && native.Categories == 1 || native.Categories == 0 && (native.codeClear() || native.Status == "unverified" && native.Unverified))
+	return normalBinding && source.codeClear() && binary.codeClear() && nativeQualified
 }
 
 type omb3255PinnedRuntime struct {

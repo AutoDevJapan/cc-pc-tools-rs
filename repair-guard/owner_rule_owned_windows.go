@@ -72,18 +72,27 @@ func ownerRuleOwnedVerdictAt(ctx context.Context, path, store, jobs string, proj
 				return ownerRuleUnknown("owned_resource_metadata_unavailable")
 			}
 			var r ownerOwnedReceipt
-			if json.Unmarshal(b, &r) != nil || r.Version != 3 || r.ID != match[1] || r.State != "owned" ||
+			if json.Unmarshal(b, &r) != nil {
+				return ownerRuleUnknown("owned_resource_metadata_unavailable")
+			}
+			if r.ID != match[1] || r.State != "owned" || !same(r.Path, root) || !same(filepath.Join(r.Root, "codex-owned-"+r.ID), root) {
+				return ownerRuleUnknown("owned_resource_metadata_unavailable")
+			}
+			identity, err := json.Marshal(r.ownerOwnedIdentity)
+			if err != nil || hashBytes(identity) != r.Integrity {
+				return ownerRuleUnknown("owned_resource_metadata_unavailable")
+			}
+			if access.membership(r.Project, "") == "client_project" {
+				return ownerRuleProtected("client_record_producer")
+			}
+			if r.Version != 3 || r.ID != match[1] || r.State != "owned" ||
 				!same(r.Path, root) || !same(filepath.Join(r.Root, "codex-owned-"+r.ID), root) ||
 				r.ProducerKind != "scheduler" || r.ProducerTodo == 0 || !ownerOwnedJob.MatchString(r.ProducerJob) ||
 				!strings.HasSuffix(r.ProducerJob, "-todo-"+strconv.FormatUint(r.ProducerTodo, 10)) {
 				return ownerRuleUnknown("owned_resource_metadata_unavailable")
 			}
-			identity, err := json.Marshal(r.ownerOwnedIdentity)
-			if err != nil || hashBytes(identity) != r.Integrity || len(r.Ancestors) == 0 {
+			if len(r.Ancestors) == 0 {
 				return ownerRuleUnknown("owned_resource_metadata_unavailable")
-			}
-			if access.membership(r.Project, "") == "client_project" {
-				return ownerRuleProtected("client_record_producer")
 			}
 			if !ownerOwnedNative(root, r.Volume, r.FileID, r.Birth) {
 				return ownerRuleUnknown("owned_resource_metadata_unavailable")
@@ -103,7 +112,7 @@ func ownerRuleOwnedVerdictAt(ctx context.Context, path, store, jobs string, proj
 				return ownerRuleUnknown("owned_resource_metadata_unavailable")
 			}
 			job, ok := ownerReadMetadataFile(ctx, jobPath, func(input io.Reader) (ownerRecordMetadata, bool) {
-				d := jsontext.NewDecoder(ownerDeadlineReader{ctx, input})
+				d := jsontext.NewDecoder(ownerDeadlineReader{ctx, input}, jsontext.AllowDuplicateNames(true), jsontext.AllowInvalidUTF8(true))
 				m, ok := ownerReadRecordObject(ctx, d, "record")
 				_, err := d.ReadToken()
 				return m, ok && err == io.EOF
@@ -114,18 +123,8 @@ func ownerRuleOwnedVerdictAt(ctx context.Context, path, store, jobs string, proj
 			if v := ownerRuleRecordOrigin(ctx, job, projects, access, config); !v.AccessAllowed {
 				return v
 			}
-			repository, valid := ownerOriginRepository("https://github.com/" + job.repository)
-			if !valid {
-				return ownerRuleUnknown("owned_resource_metadata_unavailable")
-			}
-			origin, ok := access.git(job.cwd, "remote", "get-url", "origin")
-			actual, self := ownerOriginRepository(origin)
-			if !ok || !self || !strings.EqualFold(repository, actual) {
-				return ownerRuleUnknown("owned_resource_metadata_unavailable")
-			}
-			if !ownerRuleWith(ctx, job.cwd, projects, access, config, nil).AccessAllowed {
-				return ownerRuleUnknown("owned_resource_metadata_unavailable")
-			}
+			// The typed producer check above already checked actual ownership,
+			// exclusions and source location. Do not repeat its Git subprocesses.
 			// Classification does not retire the producer or authorize deletion.
 			if ctx.Err() == nil && ownerOwnedNative(root, r.Volume, r.FileID, r.Birth) {
 				return ownerRuleClear("self_owned_temporary_resource")

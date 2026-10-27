@@ -180,106 +180,28 @@ func Prepare() (map[string]any, error) {
 	if os.Getenv("CC_JOB_ID") != "20261026-214717-todo-3080" {
 		return nil, errors.New("actual original parent required")
 	}
-	reserved := map[string]bool{}
-	protected := map[string]bool{}
-	pins := []Pin{}
-	for _, p := range [][2]string{{"sixmile-remaining-notice598-roster235901.json", "f9c6b2e44c5e3aa8947f758f864eaa0d5edc396d622359826bca848cd96f9901"}, {"othergit-all373-roster-v2074042.json", "460219790c088b33e6044c6a97c68a882549c608c3de46ea536aa990a2c1adac"}} {
-		b, e := frozen(filepath.Join(Parent, p[0]), p[1])
-		if e != nil {
-			return nil, e
-		}
-		var r struct {
-			Rows []Member `json:"rows"`
-		}
-		if e = Decode(b, &r); e != nil {
-			return nil, e
-		}
-		for _, m := range r.Rows {
-			if m.ID == "" || reserved[m.ID] {
-				return nil, errors.New("old reservation overlap")
-			}
-			reserved[m.ID] = true
-		}
-		pins = append(pins, Pin{Path: p[0], SHA: p[1], Bytes: int64(len(b))})
-	}
-	if len(reserved) != 971 {
-		return nil, errors.New("complete old reservations required")
-	}
-	for _, pin := range pins {
-		b, e := frozen(filepath.Join(Parent, pin.Path), pin.SHA)
-		if e != nil {
-			return nil, e
-		}
-		var v any
-		if e = Decode(b, &v); e != nil {
-			return nil, e
-		}
-		HashStrings(v, protected)
-	}
-	var manifestPath string
-	// Resolve from the known worktree, not from supplied metadata paths.
-	manifestPath = filepath.Join(filepath.Dir(filepath.Dir(Parent)), "docs/skills-3080-execution-evidence.json")
-	mb, e := frozen(manifestPath, "73d277034bc76ceb71eb012ea61e3184a275192827626d6943e0b7dcd5735d9e")
+	closure, protected, rawInputs, e := loadProtection()
 	if e != nil {
 		return nil, e
 	}
-	var manifest struct {
-		Artifacts []struct {
-			File string `json:"file"`
-			SHA  string `json:"sha256"`
-		} `json:"assessment_artifacts"`
-	}
-	if e = Decode(mb, &manifest); e != nil {
-		return nil, e
-	}
-	docs := filepath.Dir(manifestPath)
-	for _, a := range manifest.Artifacts {
-		if filepath.Base(a.File) != a.File || !strings.HasPrefix(a.File, "skills-3080-") {
-			return nil, errors.New("assessment artifact outside public evidence")
+	pins := closure.Pins
+	reserved := map[string]bool{}
+	for _, name := range []string{"sixmile-remaining-notice598-roster235901.json", "othergit-all373-roster-v2074042.json"} {
+		var rows struct {
+			Rows []Member `json:"rows"`
 		}
-		b, e := frozen(filepath.Join(docs, a.File), a.SHA)
-		if e != nil {
-			return nil, e
+		if Decode(rawInputs[name], &rows) != nil {
+			return nil, errors.New("fixed existing reservation roster absent")
 		}
-		var v any
-		if e = Decode(b, &v); e != nil {
-			return nil, e
-		}
-		HashStrings(v, protected)
-		pins = append(pins, Pin{Path: "docs/" + a.File, SHA: a.SHA, Bytes: int64(len(b))})
-	}
-	for _, name := range []string{"research153-support121-independent-proof090101.json", "research168-support108-independent-proof090101.json"} {
-		b, e := os.ReadFile(filepath.Join(Parent, name))
-		if e != nil {
-			return nil, e
-		}
-		var v any
-		if e = Decode(b, &v); e != nil {
-			return nil, e
-		}
-		HashStrings(v, protected)
-		pins = append(pins, Pin{Path: name, SHA: Hash(b), Bytes: int64(len(b))})
-	}
-	for _, pattern := range []string{"research3719-chunk-*.json", "research3719-support-*.json", "other373-chunk-*.json"} {
-		names, e := filepath.Glob(filepath.Join(Parent, pattern))
-		if e != nil {
-			return nil, e
-		}
-		for _, name := range names {
-			b, e := os.ReadFile(name)
-			if e != nil {
-				return nil, e
+		for _, m := range rows.Rows {
+			if m.ID == "" || reserved[m.ID] {
+				return nil, errors.New("fixed old reservation overlap")
 			}
-			if len(b) > 8<<20 {
-				return nil, errors.New("bounded prior structured receipt required")
-			}
-			var v any
-			if e = Decode(b, &v); e != nil {
-				return nil, e
-			}
-			HashStrings(v, protected)
-			pins = append(pins, Pin{Path: filepath.Base(name), SHA: Hash(b), Bytes: int64(len(b))})
+			reserved[m.ID] = true
 		}
+	}
+	if len(reserved) != 971 {
+		return nil, errors.New("fixed old reservations incomplete")
 	}
 	cf, e := os.Open(filepath.Join(Corpus, "phase-a-catalog.jsonl"))
 	if e != nil {
@@ -351,6 +273,9 @@ func Prepare() (map[string]any, error) {
 			return nil, e
 		}
 		b = append(b, '\n')
+		if Hash(b) != closure.Plans[i] {
+			return nil, errors.New("fixed admitted cohort bytes differ before output")
+		}
 		name := fmt.Sprintf("primaryflow-cohort%d-v2-214717.json", i)
 		path := filepath.Join(Parent, name)
 		if _, e = os.Lstat(path); !os.IsNotExist(e) {
@@ -434,6 +359,14 @@ func Load(path, expected string) (Plan, error) {
 	if filepath.Clean(filepath.Dir(path)) != filepath.Clean(Parent) || !regexp.MustCompile(`^primaryflow-cohort[01]-v2-214717\.json$`).MatchString(filepath.Base(path)) || !digest.MatchString(expected) {
 		return p, errors.New("only frozen task-owned plans allowed")
 	}
+	c, e := fixedProtectionClosure()
+	if e != nil {
+		return p, e
+	}
+	cohortIndex := int(filepath.Base(path)[len("primaryflow-cohort")] - '0')
+	if cohortIndex < 0 || cohortIndex > 1 || expected != c.Plans[cohortIndex] {
+		return p, errors.New("plan digest is not the fixed admitted cohort")
+	}
 	fi, e := os.Lstat(path)
 	if e != nil {
 		return p, e
@@ -448,7 +381,7 @@ func Load(path, expected string) (Plan, error) {
 	if e = Decode(b, &p); e != nil {
 		return p, e
 	}
-	if p.Header.Domain != "skills3080-primary-meaning-plan-v1" || p.Header.Catalog != CatalogSHA || p.Header.Queue != QueueSHA || p.Header.ParentJob != "20261026-214717-todo-3080" || p.Header.TotalGroups != len(p.Groups) || p.Header.Cohort < 0 || p.Header.Cohort > 1 {
+	if p.Header.Domain != "skills3080-primary-meaning-plan-v1" || p.Header.Catalog != CatalogSHA || p.Header.Queue != QueueSHA || p.Header.ParentJob != "20261026-214717-todo-3080" || p.Header.TotalGroups != len(p.Groups) || p.Header.Cohort != cohortIndex {
 		return p, errors.New("frozen plan header differs")
 	}
 	n := 0

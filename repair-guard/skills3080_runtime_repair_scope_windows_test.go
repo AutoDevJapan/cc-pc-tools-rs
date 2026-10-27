@@ -132,3 +132,31 @@ func TestSkills3080AcceptedAd5DistributionSurvivesScopedSuccessor(t *testing.T) 
 		t.Fatal("same shared software hash with a different source was trusted")
 	}
 }
+
+func TestSkills3080Accepted589DistributionSurvivesMaskedSuccessor(t *testing.T) {
+	raw, err := os.ReadFile(filepath.Join("..", "docs", "evidence", "skills-3080-guard-before-masked-source-9f914.json"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	var evidence struct {
+		SHA      string `json:"sha256"`
+		Head     string `json:"source_head"`
+		Job      string `json:"deployment_job"`
+		Observed string `json:"actual_installed_sha256"`
+	}
+	if json.Unmarshal(raw, &evidence) != nil || evidence.SHA != "9f914c724231886438515c5ed3831a13eca3d8fbec09e4d3d6edb1d0113c6dd8" || evidence.Head != "4e117a2d813e4a989d1c3085d2734963d9c198a3" || evidence.Job != "20261027-095706-todo-3686" || evidence.Observed != evidence.SHA {
+		t.Fatal("the accepted installed distribution observation changed")
+	}
+	p := skillsProducer{evidence.SHA, evidence.Head}
+	current := skillsProducer{strings.Repeat("7", 64), strings.Repeat("8", 40)}
+	if !skillsAcceptedProducer(p, current) {
+		t.Error("the accepted original issuer was lost after the masked-source update")
+	}
+	if !official3894InstalledBaseline(p.SHA, p.Revision) {
+		t.Error("the other existing updater lost the same accepted installed software")
+	}
+	p.Revision = strings.Repeat("a", 40)
+	if skillsAcceptedProducer(p, current) || official3894InstalledBaseline(p.SHA, p.Revision) {
+		t.Fatal("same software hash with a different source was trusted")
+	}
+}

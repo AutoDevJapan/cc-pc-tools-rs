@@ -113,6 +113,11 @@ Request、Threads、Scans、Discoveryに状態を持ち、別の受信registry�
 元投稿ID、本人ID、版hash、元ToDo、段階、`pending_owner: OMB`と次の手、
 配送版を含み、本人本文は出さない。設定と登録だけを実運用成功としない。
 
+旧形式の`origin_pending`で担当や次の手が空なら、状態の読取結果にだけOMBと
+元の文脈・既存taskとの対応の確認を補う。明示済みの担当と次の手は保持する。
+これは元taskの待ち・停止・完了を解除する指示でも、再配送や新規結合の指示でもない。
+元Request、source版、ToDo、担当、待機、質問や投稿はこの読取で変更しない。
+
 元task不明の追記・返信、他channelの入力、元taskが複数ある入力は元Requestに
 pendingを保持する。従来の依頼forumで本人が作った新規starterだけは従来の
 新規登録を使える。同じthreadの停止・完了済み元ToDoが分かる補足を、投稿ごとの

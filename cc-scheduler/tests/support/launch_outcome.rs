@@ -252,6 +252,8 @@ fn existing_pending_reservation_stops_without_second_slot_or_supervisor() {
         assert!(f.e.report["launched"].is_null());
         assert_eq!(f.e.state["last_launch"], before["last_launch"]);
         assert_eq!(f.get(2)["status"], "todo");
+        let observation=read_json(&f.e.root.join("admission.json"),Value::Null).unwrap();
+        assert_eq!(observation["entries"]["2"]["reason"],"earlier_candidate_reserved");
         let r = read_receipt(&f, 1);
         assert_eq!(r["receipt"]["outcome"][field], true);
         assert_eq!(r["receipt"]["outcome"]["kind"], "existing_job_no_action");

@@ -54,6 +54,10 @@ pub enum Reason {
     ResourceBusy,
     NotReached,
     EarlierCandidateLaunched,
+    EarlierCandidateQueued,
+    EarlierCandidateAccepted,
+    EarlierCandidateReserved,
+    EarlierOutcomeUnknown,
     PreparationDeferred,
     QuotaRecheckWait,
     QuotaExhausted,
@@ -327,6 +331,12 @@ impl Observation {
         }
     }
     pub fn earlier_launch(&mut self, id: &Value) {
+        let reason = match id.as_i64().and_then(|id| self.entries.get(&id)).map(|e|e.reason) {
+            Some(Reason::Queued | Reason::QueuedUnlinked) => Reason::EarlierCandidateQueued,
+            Some(Reason::Accepted) => Reason::EarlierCandidateAccepted,
+            Some(Reason::ExistingJobReserved) => Reason::EarlierCandidateReserved,
+            _ => Reason::EarlierOutcomeUnknown,
+        };
         let rank = id
             .as_i64()
             .and_then(|id| self.entries.get(&id))
@@ -335,7 +345,7 @@ impl Observation {
             for e in self.entries.values_mut().filter(|e| {
                 e.reason == Reason::NotReached && e.queue_rank.is_some_and(|r| r > rank)
             }) {
-                e.reason = Reason::EarlierCandidateLaunched;
+                e.reason = reason;
             }
         }
     }

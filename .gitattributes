@@ -196,7 +196,6 @@ docs/skills-3080-combat6-input-acceptance090101.md text eol=lf
 /docs/skills-3080-codex3-context-observation090101.json text eol=lf
 /docs/skills-3080-codex3-designs090101.json text eol=lf
 /docs/skills-3080-codex3-installation-evidence090101.json text eol=lf
-/docs/skills-3080-progress.json text eol=lf
 /docs/skills-3080-execution-evidence.json text eol=lf
 /docs/skills-3080-execution-queue-summary.json text eol=lf
 /docs/skills-3080-sixmile-next35-physical090101.json text eol=lf
@@ -608,3 +607,17 @@ docs/skills-3080-balance-next1-structure175645.json -text
 docs/skills-3080-original3719-next8-199206-evaluation175645.json -text
 docs/skills-3080-original3719-next3-207209-evaluation175645.json -text
 docs/skills-3080-source9-first4-visible-evaluation175645.json -text
+
+docs/skills-3080-next-four-bundle175645.json -text
+
+docs/skills-3080-operations/create-next-four-175645.json -text
+
+docs/skills-3080-next-four-source-scope175645.json -text
+
+docs/skills-3080-next-four-designs175645.json -text
+
+docs/skills-3080-next-four-review-task175645.md -text
+
+docs/skills-3080-next-four-structure175645.json -text
+
+docs/skills-3080-next-four-review-resolution175645.json -text

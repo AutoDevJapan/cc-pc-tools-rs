@@ -532,9 +532,6 @@
   "central_operations": 0,
   "new_adoptions": 0,
   "whole16_complete": false,
-  "current_proposal_version": 2,
-  "current_bundle_sha256": "7ae8f6d4565d5b3a420f2882fb1d437ec0e0743dc12262c95773adcfdde35f1f",
-  "current_operation_sha256": "d5cfe06e188434b6119e3f79fec880584f0884dff45010a7a532cc1fdf5654d9",
   "complete_specific_package_notice_filename_metadata": {
     "author_job": "20261027-175645-todo-3080",
     "tree_sha256": "11e79e2b3e1503ec231ede8e20298f98e7734715a304835f37b3f68bee0b7b5b",
@@ -552,12 +549,50 @@
     "new_HTTP": 0
   },
   "complete_specific_package_notice_metadata_sha256": "314cdac43ff374201ac77127549d176833c7355f780b0158b2ce5df26b9a90bf",
-  "current_stage": "proposal_not_qualified_or_placed",
-  "new_issuer_receipt": false,
-  "representation_repair_dependency": {
-    "existing_original_todo": 3686,
-    "reason": "Prominent legal modification notice prefix needs an exact wrapper around the unchanged line-preserving masked payload; known legacy support_text LICENCE.md requires exact-source-role compatibility. Neither is implemented by rewriting original inputs.",
-    "software_not_yet_updated": true,
-    "central_operations": 0
-  }
+  "historical_version2_snapshot": {
+    "current_proposal_version": 2,
+    "current_bundle_sha256": "7ae8f6d4565d5b3a420f2882fb1d437ec0e0743dc12262c95773adcfdde35f1f",
+    "current_operation_sha256": "d5cfe06e188434b6119e3f79fec880584f0884dff45010a7a532cc1fdf5654d9",
+    "current_stage": "proposal_not_qualified_or_placed",
+    "new_issuer_receipt": false,
+    "representation_repair_dependency": {
+      "existing_original_todo": 3686,
+      "reason": "Prominent legal modification notice prefix needs an exact wrapper around the unchanged line-preserving masked payload; known legacy support_text LICENCE.md requires exact-source-role compatibility. Neither is implemented by rewriting original inputs.",
+      "software_not_yet_updated": true,
+      "central_operations": 0
+    }
+  },
+  "historical_version2_snapshot_definition": {
+    "fixed_commit": "20e4f6836621aee73ebb18f6155fa3370ecec4b0",
+    "bundle_path": "docs/skills-3080-notice-next4-bundle175645.json",
+    "bundle_sha256": "7ae8f6d4565d5b3a420f2882fb1d437ec0e0743dc12262c95773adcfdde35f1f",
+    "target_names": [
+      "rlm-controller",
+      "parse-payment-qr",
+      "payroll-batch-reconciliation",
+      "payment-status-reconciliation"
+    ],
+    "scope": "Exact earlier proposal before Apache reference and runtime compatibility repairs. Retained history, not the next_four uninstalled proposal or a current software state.",
+    "manifest_path": "docs/skills-3080-operations/create-notice-next4-175645.json",
+    "manifest_sha256": "d5cfe06e188434b6119e3f79fec880584f0884dff45010a7a532cc1fdf5654d9"
+  },
+  "cohort_identity": {
+    "record_kind": "historical_source_scope_for_previous_installed4",
+    "target_names": [
+      "rlm-controller",
+      "parse-payment-qr",
+      "payroll-batch-reconciliation",
+      "payment-status-reconciliation"
+    ],
+    "accepted_creation_input_commit": "74f4eff6a10b5bf235e4028ada75232a5f348bb6",
+    "accepted_creation_manifest": "docs/skills-3080-operations/create-notice-next4-175645.json",
+    "accepted_creation_manifest_sha256": "5ab55cfca8778374e86862905e9c39d5bfe11bea2ae6e3e33ec82f82e7607f89",
+    "accepted_creation_bundle_path": "docs/skills-3080-notice-next4-bundle175645.json",
+    "accepted_creation_bundle_sha256": "cf2acf71099b334d800211622614768f3b0c2cba6d667fe9d140aac18a28ddae",
+    "actual_installation_evidence": "docs/skills-3080-notice-next4-installation-evidence175645.json",
+    "actual_result_PR": 619,
+    "actual_result_merge": "d3e91067842cf712590ede8dd6cf8d5e9812f71c",
+    "not_the_current_next_four_manifest": true
+  },
+  "counter_scope": "Top-level zero operations/adoptions describe the historical source-preparation observation. The linked accepted installation-evidence counts actual central creation; these are not counts for the current next_four proposal."
 }

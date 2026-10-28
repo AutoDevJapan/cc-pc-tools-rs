@@ -576,3 +576,5 @@ repair-guard/testdata/skills3080-rlm-controller-LICENCE.txt -text
 /docs/skills-3080-operations/create-notice-next4-175645.json text eol=lf
 /docs/evidence/skills-3080-guard-before-notice-representation175645.json -text
 /docs/skills-3080-notice-next4-review-resolution175645.json -text
+/docs/skills-3080-primaryflow-next36-evaluation175645.json -text
+/docs/skills-3080-parent-notice19-evaluation175645.json -text

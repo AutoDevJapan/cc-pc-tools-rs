@@ -104,3 +104,36 @@ func TestExecutionQueueRecordsExactExistingDecisionWithoutApplyingItToAliases(t 
 		t.Fatal("recorded decision transferred to another occurrence")
 	}
 }
+
+func TestExecutionSummarySeparatesAssessmentIntersectionAndFinalOnlyLegacy(t *testing.T) {
+	for _, mode := range []string{"assessment_only", "overlap", "legacy_only", "overlap_and_legacy"} {
+		t.Run(mode, func(t *testing.T) {
+			input, m, e := executionFixture()
+			if mode == "overlap" || mode == "overlap_and_legacy" {
+				d := e.Assessments["first"]
+				d.Disposition = "integrated_existing"
+				e.Decisions["first"] = d
+			}
+			if mode == "legacy_only" || mode == "overlap_and_legacy" {
+				e.Decisions["alias"] = executionIdentity{ID: "alias", SHA: strings.Repeat("a", 64), Disposition: "excluded"}
+			}
+			s, err := executionQueue(strings.NewReader(input), &bytes.Buffer{}, m, e)
+			if err != nil {
+				t.Fatal(err)
+			}
+			wantOverlap, wantLegacy := 0, 0
+			if mode == "overlap" || mode == "overlap_and_legacy" {
+				wantOverlap = 1
+			}
+			if mode == "legacy_only" || mode == "overlap_and_legacy" {
+				wantLegacy = 1
+			}
+			if s.AssessmentAndFinal != wantOverlap || s.FinalOnly != wantLegacy || s.AssessmentOrFinal != 1+wantLegacy || s.Assessments != s.Stages["assessed_needs_current_disposition"]+s.AssessmentAndFinal || s.Final != s.AssessmentAndFinal+s.FinalOnly {
+				t.Fatalf("assessment/final sets conflated: %+v", s)
+			}
+			if len(s.Limits) == 0 || !strings.Contains(s.Limits[len(s.Limits)-1], "assessment/final intersection") {
+				t.Fatal("generated summary omits denominator explanation")
+			}
+		})
+	}
+}

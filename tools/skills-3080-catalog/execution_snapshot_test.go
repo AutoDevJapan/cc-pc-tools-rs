@@ -44,6 +44,10 @@ func TestPublishedExecutionSnapshotMatchesPinnedEvidenceAndOccurrenceUnits(t *te
 			pending++
 		}
 	}
+	intersection := len(e.Assessments) - pending
+	if s.AssessmentAndFinal != intersection || s.FinalOnly != len(e.Decisions)-intersection || s.AssessmentOrFinal != pending+len(e.Decisions) {
+		t.Fatal("saved assessment/final intersection, final-only or union differs from pinned occurrence sets")
+	}
 	expected := map[string]int{"held_body_unavailable": p.Missing, "held_execution_review": p.Held, "recorded_final_disposition": s.Final, "assessed_needs_current_disposition": pending, "needs_semantic_and_individual_rights_review": s.Records - s.Final - p.Missing - p.Held - pending}
 	if !reflect.DeepEqual(s.Stages, expected) || s.Decisions["installed_new_adaptation"] != p.Installed || s.Decisions["integrated_existing"] != p.Integrated || s.Decisions["excluded"] != p.Excluded {
 		t.Fatal("current decisions or hold categories were conflated")

@@ -3,7 +3,7 @@
   "issue": "https://github.com/AutoDevJapan/cc-pc-tools-rs/issues/283",
   "observed_at": "2026-10-24T08:15:09.0197014+00:00",
   "phase_a": "partial; 647 additional text shapes held by execution review",
-  "phase_b": "新しい宿泊・ラウンジ・非カードの特典整理3件を実配置し、21ファイルのIDと同じ読取buffer・構造・新Codexでの3件の発見・現6手順による8文章例の適用を確認した。実導入150・統合3・要再確認の除外記録15。受領した追加63評価と47本文群は元記録を全復元して処理表へ結ぶが、本文だけの評価を各掲載元の支持・利用条件の確認済みにせず、73,220出現と16資料全体は継続する。",
+  "phase_b": "実導入150・既存統合3・要再確認の除外記録15を保持する。元返答8件に結ぶ次36本文群と、親が可視本文/個別noticeを読んだ別19候補を、未確定55評価として処理表へ結ぶ。元の全意味・担当・範囲・伏字/unknown・個別権利未確認を残し、公開済み47件は変更しない。PR614の新4案はソフト修復と実配置の確認前なので導入件数へ加算せず、指定16資料と73,220掲載全体を継続する。",
   "catalog_sha256": "2d73c9a038a41cc220a9687b935bfa1e0b315b65d9bd6d3e54ddb4111972876c",
   "source_count": 16,
   "fixed_public_repos": [
@@ -616,7 +616,7 @@
     "guard_client_resource": true,
     "state": "classification_unverified"
   },
-  "recorded_at": "2026-10-27T21:09:33.9824700+00:00",
+  "recorded_at": "2026-10-28T02:20:35.1936533+00:00",
   "total_skill_named_body_read_definition": "This field preserves the historical complete-source subset only. Current raw/workflow primary coverage is projected from the canonical source components and sixmile evaluation index in all_fulltext_primary_paths_including_partial_sources/all_workflow_primary_paths_including_partial_sources, not copied here.",
   "openai_entrypoint_evaluation": {
     "rights_accepted": false,
@@ -3084,6 +3084,33 @@
         "sha256": "7c2d4404e6b10589b037a5dd93955e88f16eb8c78d36d991cfd56c35807fbe31"
       }
     ],
+    "whole16_complete": false
+  },
+  "latest_received55": {
+    "publisher_job": "20261027-175645-todo-3080",
+    "next_primary_representative_meanings": 36,
+    "next_primary_complete_original_packets": 8,
+    "next_primary_member_metadata": 39,
+    "separate_parent_selected_workflow_meanings": 19,
+    "parent_displayed_group_metadata": 22,
+    "parent_primary_source_bytes": 91588,
+    "parent_primary_physical_lines": 2745,
+    "parent_primary_visible_lines": 2137,
+    "parent_primary_withheld_lines": 608,
+    "parent_notice_source_files": 7,
+    "parent_notice_bytes": 44745,
+    "parent_notice_physical_lines": 855,
+    "parent_notice_withheld_lines": 10,
+    "old_public47_original_records_unchanged": true,
+    "all_original_packets_and_original_parent_field_values_preserved": true,
+    "new_original_source_body_reads_from_publication": 0,
+    "new_global_raw_credit": 0,
+    "new_copy_permissions": 0,
+    "new_final_dispositions": 0,
+    "central_operations": 0,
+    "new4_from_merged_PR614_not_deployed": true,
+    "unavailable": 428,
+    "acquisition_review_hold": 647,
     "whole16_complete": false
   }
 }

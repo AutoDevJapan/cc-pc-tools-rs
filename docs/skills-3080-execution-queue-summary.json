@@ -6,6 +6,9 @@
   "occurrences": 73220,
   "occurrences_with_assessment_records": 1330,
   "recorded_final_occurrences": 168,
+  "occurrences_with_assessment_and_final_records": 162,
+  "final_records_without_assessment_record": 6,
+  "occurrences_with_assessment_or_final_records": 1336,
   "stages": {
     "assessed_needs_current_disposition": 1168,
     "held_body_unavailable": 428,
@@ -22,6 +25,7 @@
     "An assessment reference is not a full raw read, licence grant, current adoption or completed acceptance; consult its recorded actor, scope and state.",
     "Equal body bytes do not transfer source ownership, individual permission or support-resource review.",
     "No source body or URL is opened, no model or worker is launched, no permission is changed and nothing is installed.",
-    "The queue is complete only when its separate summary is complete and its recorded queue SHA256 matches the actual bytes."
+    "The queue is complete only when its separate summary is complete and its recorded queue SHA256 matches the actual bytes.",
+    "Assessment records 1330 = assessed without final disposition 1168 + assessment/final intersection 162. Final records 168 include 6 final-only legacy records without assessment. The assessment/final union is 1336 occurrences; these categories are not additive independent totals."
   ]
 }

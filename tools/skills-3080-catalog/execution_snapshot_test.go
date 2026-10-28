@@ -77,6 +77,9 @@ func publishedReceivedCursorCoverage(artifacts []ExecutionArtifact) error {
 	// Keep these independently received snapshots in the runtime cursor even
 	// if someone regenerates a self-consistent smaller manifest and summary.
 	for _, required := range []ExecutionArtifact{
+		{"skills-3080-original3719-next6-240245-evaluation175645.json", "c9face778d8c89d4832323ff6dabd508291a905b361c2788b70133460795603e", 6},
+		{"skills-3080-primaryflow-next15-evaluation175645.json", "e0d0d65c02bafd1157ebb03873f7f95dc3b2831cae787824338bbcb63023218b", 15},
+		{"skills-3080-source9-next2-7to8-visible-evaluation175645.json", "d5e2d1972f51d44fbd8b9ed32e50ec17a60f80fb13776de480c15ba357a4bcb3", 2},
 		{"skills-3080-original3719-next12-228239-evaluation175645.json", "c23a189ea75961f03bf43d492f2a872c3711a9a188913536feaea7f78b51e475", 12},
 		{"skills-3080-primaryflow-next5-evaluation175645.json", "59e231295f75004536f33de7d45a3369b3c9b55e5730ac11ab3fb99bf6927f19", 5},
 		{"skills-3080-original3719-next8-199206-evaluation175645.json", "0362991564c4bee6b86edc9b52cc934b94d5b47ef4b142985f39b5ed5d8280b2", 8},
@@ -127,6 +130,9 @@ func TestPublishedCursorRetainsOriginal3719AndSource9Received43(t *testing.T) {
 	var m ExecutionManifest
 	loadPublicReceipt(t, "skills-3080-execution-evidence.json", &m)
 	required := []ExecutionArtifact{
+		{"skills-3080-original3719-next6-240245-evaluation175645.json", "c9face778d8c89d4832323ff6dabd508291a905b361c2788b70133460795603e", 6},
+		{"skills-3080-primaryflow-next15-evaluation175645.json", "e0d0d65c02bafd1157ebb03873f7f95dc3b2831cae787824338bbcb63023218b", 15},
+		{"skills-3080-source9-next2-7to8-visible-evaluation175645.json", "d5e2d1972f51d44fbd8b9ed32e50ec17a60f80fb13776de480c15ba357a4bcb3", 2},
 		{"skills-3080-original3719-next12-228239-evaluation175645.json", "c23a189ea75961f03bf43d492f2a872c3711a9a188913536feaea7f78b51e475", 12},
 		{"skills-3080-primaryflow-next5-evaluation175645.json", "59e231295f75004536f33de7d45a3369b3c9b55e5730ac11ab3fb99bf6927f19", 5},
 		{"skills-3080-original3719-next8-199206-evaluation175645.json", "0362991564c4bee6b86edc9b52cc934b94d5b47ef4b142985f39b5ed5d8280b2", 8},

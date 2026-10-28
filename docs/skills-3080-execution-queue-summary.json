@@ -1,19 +1,19 @@
 {
   "state": "complete",
   "catalog_sha256": "2d73c9a038a41cc220a9687b935bfa1e0b315b65d9bd6d3e54ddb4111972876c",
-  "manifest_sha256": "69da125ffc552425ab122e403bab262f640557345d8f48f57c06ca8ade17842f",
-  "queue_sha256": "497359fb798e9f77cecb95ecf76c6c4eb2195494cb6d326d96ca4c6a36232db7",
+  "manifest_sha256": "d1468cfc55b0c01d31bc6b0f2c1a73b19ce87bc1c50c35342dbf3dca44ea7abe",
+  "queue_sha256": "054a4116b4091e7a4eaea8d4f33f5777f7c5e71feeb8ad2cd2cda82e1ea219e6",
   "occurrences": 73220,
-  "occurrences_with_assessment_records": 1469,
+  "occurrences_with_assessment_records": 1492,
   "recorded_final_occurrences": 176,
   "occurrences_with_assessment_and_final_records": 170,
   "final_records_without_assessment_record": 6,
-  "occurrences_with_assessment_or_final_records": 1475,
+  "occurrences_with_assessment_or_final_records": 1498,
   "stages": {
-    "assessed_needs_current_disposition": 1299,
+    "assessed_needs_current_disposition": 1322,
     "held_body_unavailable": 428,
     "held_execution_review": 647,
-    "needs_semantic_and_individual_rights_review": 70670,
+    "needs_semantic_and_individual_rights_review": 70647,
     "recorded_final_disposition": 176
   },
   "recorded_final_dispositions": {
@@ -26,6 +26,6 @@
     "Equal body bytes do not transfer source ownership, individual permission or support-resource review.",
     "No source body or URL is opened, no model or worker is launched, no permission is changed and nothing is installed.",
     "The queue is complete only when its separate summary is complete and its recorded queue SHA256 matches the actual bytes.",
-    "Assessment records 1469 = assessed without final disposition 1299 + assessment/final intersection 170. Final records 176 include 6 final-only legacy records without assessment. The assessment/final union is 1475 occurrences; these categories are not additive independent totals."
+    "Assessment records 1492 = assessed without final disposition 1322 + assessment/final intersection 170. Final records 176 include 6 final-only legacy records without assessment. The assessment/final union is 1498 occurrences; these categories are not additive independent totals."
   ]
 }

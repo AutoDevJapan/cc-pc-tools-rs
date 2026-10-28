@@ -1,5 +1,60 @@
 # 元4011の再開情報
 
+## 最新：10/28 15:45、C→Dの書込候補を撤回、現snapshot2件を保持
+
+job20261028-152815-todo-4011、開始9bc09cad/同branch/未コミット0から再開。
+4139の実job20261028-144802（28steps）と4140の実job20261028-145210（61steps）を受領した。
+両方succeeded/exit0/native_turn_context Opus5.5 max、base461e0ab5→head9bc09cadの全19対象読了。
+4139の初回111056 failedは成功へ数えない。原回答は同privateのreview-4139-final.md/4140-final.md。
+Must0だけで合格にせず、修正5件/8件の各対応を記録した。
+
+**C→Dの候補は0件待ちごと撤回。** 既存C→C関連付けを保持した正のresizeに文書化された成功経路がない。
+snapshot0であっても実行へ進まない。cd-attemptのGoは読取専用、run-onceもMode Inspectのみへ変更。
+旧--attempt-cdはCOM/子/票を読む前にexit2で拒否する。resize/結果分類/文章復号/書込claimはsourceから除去。
+このfolder名は履歴参照用。新CLI製品/常駐/taskではない。元claimやos-v2は保持する。
+Inspectの既存票も再実行しない。現在のsourceをOSのCOMで試す予定はなく、実ビルドと旧flag拒否だけ確認済み。
+17metadata拒否例・書込flag拒否・状態/出力上限、実在cmdの成功対照と期限切れ未起動のtest/vet/build成功。
+PS5.1構文/Mode Attemptのparameter拒否を別途確認する。古いテストの非実在exeによる未起動主張は撤回。
+
+MinDiff初期割当も結論を訂正。263は3200設定中の05:54:41.99に作成され、旧込み割当が
+3008.00→5873.25MiB、以後06:11まで6158565376Bのまま約2.5GiB使用が増えており、初期の大きい予約を支持する。
+旧世代の末尾解放を含む合計値の解釈であり、世代別直接実測ではない。旧gate passed=falseは原票のまま。
+これを初期予約不存在の証明にしない。07:25にはこの世代も25で失われたため、MinDiffは対策候補から外した。
+既に10:10に行った自己Undoを再実行しない。現在MinDiff未設定/C→C/50GiB。
+
+15:33の通常AdminBroker metadataはC snapshot2件、point266。token2373E6303558E865（11:16:07JST）と
+408A293D0ADE5607（13:43:06JST）、persistent/clientaccessible/state12。旧3token/point264265はない。
+前日22:08以後のC一致33は09:51:58に2件と11:16:08に1件。25は0/complete true/errors0/100上限未達。
+通常の上限による世代交代と整合するが、各旧tokenと各eventの一対一対応/実要求者は未特定。
+PITの72h期限未満なので、この削除を期限切れとはしない。昨夜01:45/02:40の窓に25再発はないが、
+是正の因果や2夜の保持を証明しない。旧point復旧・VSS修復完了とは扱わない。
+使用8347615232B/割当8791556096B/max53687091200B、free C754897608704/D1998602043392/E858052489216B。
+並行I/O・他清掃込みで本担当回収量ではない。
+
+15:35:11→15:36:43の2回のprocess IO counter比較は92.143s、matched690/開始730/終了709。
+VSS used+2916352B/割当不変。chrome/bunの大きいcounterもnetwork/pipe/全volume込みでC書込元を証明しない。
+15:41 Cwrite約2.69MB/s/queue0。現在低負荷は過去25のピークを否定しない。raw trace/private paths採取0。
+数値だけのPIT既知16値/MDM_PointInTimeRestore/MDM_Recoveryは取得0/errors0、有効状態未確認。
+Microsoft LearnのPIT/API一次資料を再取得して既定/共有上限/72h/既存関連付け制約を照合した。
+Computer UseのSystemSettings起動は「Computer Use was not approved to use systemsettings」で拒否。
+このアプリをCLI/別UIへ迂回しない。OwnerのPC操作や通常技術許可は依頼しない。
+
+次は、この変更後の同じheadへselfreview/rubberduckの解消確認を通常--spec付きToDoで登録し、受領する。
+読み残しがなければ既確認の無変更範囲を蒸し返さず、差分と各既存指摘の解消を確認する。
+元4011がC書込元/既存PIT設定の未解明点と、現存2件の次夜の保持を継続する。
+既存3942はdoneの清掃/再蓄積防止であり、同じVSS修復を重複登録しない。全C分類やprivate guestへ広げない。
+実際の書込元が限定できた場合だけ既知CCのI/O対処を設計し、別担当の変更は既存担当へ返す。
+上限増加・全process停止・保護無効化・snapshot削除・新point loopはしない。
+review受領が10/29 03:00より前なら既存wait-retryでその1回の夜間確認を登録し、後なら直ちに有限観測する。
+元48h/2夜の10/29 06:25期限は延ばさず、その時点で原因/効果未達なら具体的な未解明と次の一手を残す。
+これは自動的に完了にする期限ではない。失敗3200は既にUndo済みで、再Undoしない。
+
+元3796/親3628には通常noteで現値/候補撤回/技術残件を返す。親の状態/依存/6h容量/1h清掃は変えない。
+branch名変更0、checkpoint条件のbranch変更なし。必要source/原結果/再開票をcommit/pushして保持する。
+自分のTemp f3387f9fe32cb5faf1dd3d4b4783577bは必要sourceを先に保持し、plan→別exec削除→finishで片付ける。
+APIkeys/新費用/重Cargo/GPU/Civ6/新常駐/task/monitor/自分のtab/container/OwnerPC依頼/notify0。
+
+以下は前日までの履歴。current snapshot3/旧C→D候補/元review待ちは現在値として採用しない。
 ## 最新：10月27日22:03、現存3snapshotを保持して切替を書き込まない
 
 job20261027-215031-todo-4011、開始3a8690cc/同branch/未コミット0から再開した。

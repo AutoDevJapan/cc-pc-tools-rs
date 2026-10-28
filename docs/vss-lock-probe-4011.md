@@ -67,18 +67,15 @@ snapshot/point/使用/割当は前後とも0、C→C/50GiBと原MinDiff未設定
 `availability_observed`は単一Start・Abort完了・Releaseを確認したときだけtrueになる。
 保存先変更や実snapshot作成は含まない。これが確認できるまではDへの変更へ進まない。
 
-## 次の保存先分離の候補と未確認点
+## 保存先分離の候補は撤回
 
-CとDは異なるdisk番号のNVMe、DはNTFS/Healthy/Online、空き約2.1TBで、Dを源・保存先にする
-既存VSS関連付け/snapshotは現観測にない。私的ファイルを一括移動する案ではない。
-別物理ドライブの識別、実所有、既存の依存/保持設定を必要な匿名metadataで確認し、
-変更に必要な排他とproviderの保持条件を説明できた場合だけ、正の50GiBを使う既存APIを検討する。
-
-候補APIのChangeDiffAreaMaximumSize(C,D,50GiB)は、成功した場合にどの関連付けが残るか、
-既存C→Cがある場合やVSS排他中に呼べるか、client OSでどう動くかをまだ実証していない。
-この候補の実装・実適用は本probeに含めない。0への縮小・Delete・保護停止で切替を強制しない。
-条件未達なら原C→C/50GiBを保持し、既存の担当4011を未完了のまま技術修復を続ける。
-
+C/Dの異なるNVMe・NTFS・空き・他関連付けなしという実測は保持する。
+ただし既存C→Cを残した正のresizeには文書化された置換の成功経路がなく、
+snapshot0でも成立しない。10/28に書込候補を撤回し、実装も読取専用にした。
+詳細は[候補の撤回記録](vss-cd-positive-attempt-4011.md)を参照する。
+元のC→C/50GiBと現在のsnapshotを保持し、0縮小・Delete・保護停止で切替を強制しない。
+IN_PROGRESSの再取得だけでは空集合の所有同一性を証明しない点も明記する。
+元4011の修復全体は未完了であり、保持中のCへの書込みを有限に切り分ける。
 一次資料：
 
 - [StartSnapshotSet](https://learn.microsoft.com/en-us/windows/win32/api/vsbackup/nf-vsbackup-ivssbackupcomponents-startsnapshotset)

@@ -1,14 +1,14 @@
 //go:build windows && amd64
 
-// A one-shot, fixed C-to-D positive resize candidate. It never deletes a shadow,
-// shrinks storage, stops a service, or calls the reserved migration APIs.
+// Read-only inspection retained from the withdrawn C-to-D candidate.
+// No documented transition preserves the existing C-to-C association; this
+// program has no storage mutation mode, including when every snapshot is gone.
 package main
 
 import (
 	"bytes"
 	"context"
 	"crypto/sha256"
-	"encoding/base64"
 	"encoding/hex"
 	"encoding/json"
 	"errors"
@@ -19,7 +19,6 @@ import (
 	"path/filepath"
 	"regexp"
 	"runtime"
-	"strings"
 	"syscall"
 	"time"
 	"unsafe"
@@ -72,37 +71,32 @@ type association struct {
 	Allocated uint64 `json:"allocated_bytes"`
 }
 
-func permit(m metadata) bool {
+func emptyObservationMatches(m metadata) bool {
 	return m.Valid && m.ShadowCount == 0 && m.CShadowCount == 0 && m.DShadowCount == 0 && m.PointCount == 0 &&
 		m.Associations == 1 && m.CC && !m.CD && m.Max == maxBytes && m.Used == 0 && m.Allocated == 0 &&
 		m.CFree >= 200<<30 && m.DFree >= uint64(maxBytes)+(200<<30) && m.NTFS && m.DistinctNVMe && m.DReady && m.Provider && m.Protection && m.MinUnset
 }
 
 type outcome struct {
-	Started          bool     `json:"started"`
-	Exit             int      `json:"exit"`
-	Timeout          bool     `json:"timeout"`
-	Truncated        bool     `json:"truncated"`
-	WaitVerified     bool     `json:"wait_verified"`
-	OutHash          string   `json:"stdout_sha256"`
-	ErrHash          string   `json:"stderr_sha256"`
-	ErrorCodes       []string `json:"numeric_codes"`
-	ReasonCodes      []string `json:"reason_codes,omitempty"`
-	DiagnosticBase64 string   `json:"sanitized_diagnostic_base64,omitempty"`
-	out              []byte
-	errOut           []byte
+	Started      bool     `json:"started"`
+	Exit         int      `json:"exit"`
+	Timeout      bool     `json:"timeout"`
+	Truncated    bool     `json:"truncated"`
+	WaitVerified bool     `json:"wait_verified"`
+	OutHash      string   `json:"stdout_sha256"`
+	ErrHash      string   `json:"stderr_sha256"`
+	ErrorCodes   []string `json:"numeric_codes"`
+	out          []byte
+	errOut       []byte
 }
 type attempt struct {
-	Phase               string    `json:"phase"`
-	CrossProcessBlocked bool      `json:"cross_process_blocked"`
-	Contender           outcome   `json:"contender"`
-	ContenderReport     *report   `json:"contender_report,omitempty"`
-	BeforeRead          outcome   `json:"before_read"`
-	Before              metadata  `json:"before"`
-	PositiveResize      *outcome  `json:"positive_resize,omitempty"`
-	AfterRead           *outcome  `json:"after_read,omitempty"`
-	After               *metadata `json:"after,omitempty"`
-	ExclusionAfter      *report   `json:"exclusion_after,omitempty"`
+	Phase               string   `json:"phase"`
+	CrossProcessBlocked bool     `json:"cross_process_blocked"`
+	Contender           outcome  `json:"contender"`
+	ContenderReport     *report  `json:"contender_report,omitempty"`
+	BeforeRead          outcome  `json:"before_read"`
+	Before              metadata `json:"before"`
+	ExclusionAfter      *report  `json:"exclusion_after,omitempty"`
 }
 type report struct {
 	StartedUTC    string   `json:"started_utc"`
@@ -160,42 +154,6 @@ func process(exe string, limit time.Duration, args ...string) outcome {
 	return r
 }
 
-// Only fixed vssadmin resize output enters this function. It cannot contain
-// file contents; GUID/device references are removed before private retention.
-func resizeDiagnostic(p []byte) string {
-	s := strings.ToValidUTF8(string(p), "?")
-	s = regexp.MustCompile(`(?i)\\\\\?\\Volume\{[^}]*\}\\?`).ReplaceAllString(s, "[volume]")
-	s = regexp.MustCompile(`(?i)\{[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\}`).ReplaceAllString(s, "[id]")
-	if len(s) > 4096 {
-		s = s[:4096]
-	}
-	return base64.StdEncoding.EncodeToString([]byte(s))
-}
-
-func resizeReasons(p []byte) []string {
-	s := strings.ToLower(string(p))
-	var reasons []string
-	for _, v := range []struct {
-		tag   string
-		terms []string
-	}{
-		{"association_not_found", []string{"association was not found", "関連付けが見つかりません"}},
-		{"association_already_exists", []string{"already exists", "既に存在"}},
-		{"maximum_associations", []string{"maximum number", "最大数"}},
-		{"snapshot_in_progress", []string{"in progress", "進行中"}},
-		{"access_denied", []string{"access is denied", "アクセスが拒否"}},
-		{"insufficient_storage", []string{"insufficient", "十分な", "空き領域"}},
-	} {
-		for _, term := range v.terms {
-			if strings.Contains(s, term) {
-				reasons = append(reasons, v.tag)
-				break
-			}
-		}
-	}
-	return reasons
-}
-
 func blocked(r report) bool {
 	if r.Phase != "start_unavailable_no_retry" || r.Owned != 0 || r.Aborted != 0 || r.Released != 1 {
 		return false
@@ -242,7 +200,7 @@ func readMetadata(script string) (metadata, outcome) {
 	}
 	return m, p
 }
-func attemptCD(script string, apply bool) (a attempt) {
+func inspectCD(script string) (a attempt) {
 	a.Phase = "preflight_source_unverified_no_write"
 	f, err := pinScript(script)
 	if err != nil {
@@ -273,55 +231,23 @@ func attemptCD(script string, apply bool) (a attempt) {
 		return
 	}
 	a.Before, a.BeforeRead = readMetadata(script)
-	if !apply {
-		late := report{StartedUTC: time.Now().UTC().Format(time.RFC3339Nano)}
-		objectOperation(&late, "", false)
-		late.FinishedUTC = time.Now().UTC().Format(time.RFC3339Nano)
-		a.ExclusionAfter = &late
-		if !blocked(late) {
-			a.Phase = "post_read_exclusion_unverified_no_write"
-			return
-		}
-		if !permit(a.Before) {
-			a.Phase = "live_preflight_not_met_no_write"
-			return
-		}
-		a.Phase = "locked_preflight_verified_no_write"
+	late := report{StartedUTC: time.Now().UTC().Format(time.RFC3339Nano)}
+	objectOperation(&late, "")
+	late.FinishedUTC = time.Now().UTC().Format(time.RFC3339Nano)
+	a.ExclusionAfter = &late
+	if !blocked(late) {
+		a.Phase = "post_read_exclusion_unverified_no_write"
 		return
 	}
-	if !permit(a.Before) {
+	if !emptyObservationMatches(a.Before) {
 		a.Phase = "live_preflight_not_met_no_write"
 		return
 	}
-	// One fixed, positive 50GiB call while our normal VSS set is still held.
-	// There is no delete/shrink, service stop, fallback, or retry in this program.
-	cli := filepath.Join(os.Getenv("SystemRoot"), "System32", "vssadmin.exe")
-	p := process(cli, 20*time.Second, "resize", "shadowstorage", "/for=C:", "/on=D:", "/maxsize=53687091200")
-	p.ReasonCodes = resizeReasons(p.out)
-	p.DiagnosticBase64 = resizeDiagnostic(append(append([]byte{}, p.out...), p.errOut...))
-	a.PositiveResize = &p
-	m, post := readMetadata(script)
-	a.After = &m
-	a.AfterRead = &post
-	late := report{StartedUTC: time.Now().UTC().Format(time.RFC3339Nano)}
-	objectOperation(&late, "", false)
-	late.FinishedUTC = time.Now().UTC().Format(time.RFC3339Nano)
-	a.ExclusionAfter = &late
-	a.Phase = "positive_call_outcome_unverified_no_retry"
-	if !p.WaitVerified || p.Timeout || p.Truncated || !m.Valid || !blocked(late) {
-		return
-	}
-	if p.Exit != 0 {
-		a.Phase = "positive_call_failed_no_retry"
-		return
-	}
-	if m.Associations == 1 && m.CD && !m.CC && m.Max == maxBytes && m.ShadowCount == 0 && m.PointCount == 0 {
-		a.Phase = "c_d_association_verified_retention_unverified"
-	}
+	a.Phase = "locked_preflight_verified_no_write"
 	return
 }
 
-func run(script string, apply bool) (r report) {
+func run(script string) (r report) {
 	// Start before native COM calls. All owned child deadlines end before the
 	// outer 90s caller deadline, even if COM initialization was slow.
 	if processDeadline.IsZero() {
@@ -354,13 +280,14 @@ func run(script string, apply bool) (r report) {
 		r.Phase = "com_security_failed"
 		return
 	}
-	objectOperation(&r, script, apply)
+	objectOperation(&r, script)
 	return
 }
 
 // An additional object on the already initialized COM thread, also used for
-// the exclusion check immediately after the post-write observation.
-func objectOperation(r *report, script string, apply bool) {
+// the exclusion check immediately after the read-only observation. A rejected
+// Start proves some set is in progress, not the identity of that set's owner.
+func objectOperation(r *report, script string) {
 	create := syscall.NewLazyDLL(filepath.Join(os.Getenv("SystemRoot"), "System32", "vssapi.dll")).NewProc("CreateVssBackupComponentsInternal")
 	record := func(op string, h uintptr) { r.Calls = append(r.Calls, call{op, fmt.Sprintf("0x%08X", uint32(h))}) }
 	var c *component
@@ -411,95 +338,37 @@ func objectOperation(r *report, script string, apply bool) {
 	}()
 	r.Phase = "empty_set_available"
 	if script != "" {
-		a := attemptCD(script, apply)
+		a := inspectCD(script)
 		r.Attempt = &a
 		r.Phase = a.Phase
 	}
 	return
 }
 
-func consumeClaim(ledger string) error {
-	if !filepath.IsAbs(ledger) || filepath.Base(filepath.Clean(ledger)) != "os-v2" || filepath.Base(filepath.Dir(filepath.Clean(ledger))) != "4011" {
-		return fmt.Errorf("fixed ledger required")
+// Arguments are checked before COM, children, or receipt access. The retired
+// write flag remains rejected even if an older launcher or empty-set receipt
+// is accidentally supplied.
+func inspectionScript(args []string) (string, error) {
+	if len(args) == 1 && args[0] == "--contender" {
+		return "", nil
 	}
-	if _, e := os.Stat(filepath.Join(ledger, "positive-cd-result.private.json")); !os.IsNotExist(e) {
-		return fmt.Errorf("outcome exists or unknown")
+	if len(args) == 2 && args[0] == "--inspect-cd" && args[1] != "" {
+		return args[1], nil
 	}
-	b, e := os.ReadFile(filepath.Join(ledger, "positive-cd-request.private.json"))
-	if e != nil || len(b) > 64<<10 {
-		return fmt.Errorf("request unavailable")
-	}
-	var req struct {
-		Todo    int    `json:"todo"`
-		Phase   string `json:"phase"`
-		ExeSHA  string `json:"exe_sha256"`
-		Maximum int64  `json:"maximum_bytes"`
-	}
-	if json.Unmarshal(b, &req) != nil || req.Todo != 4011 || req.Phase != "positive_cd_call_pending_outcome_unknown" || req.Maximum != maxBytes {
-		return fmt.Errorf("request not eligible")
-	}
-	self, e := os.Executable()
-	if e != nil {
-		return e
-	}
-	f, e := os.Open(self)
-	if e != nil {
-		return e
-	}
-	defer f.Close()
-	h := sha256.New()
-	if _, e = io.Copy(h, f); e != nil {
-		return e
-	}
-	if strings.ToUpper(hex.EncodeToString(h.Sum(nil))) != req.ExeSHA {
-		return fmt.Errorf("request binary differs")
-	}
-	fixed, e := os.OpenFile(filepath.Join(ledger, "positive-cd-native-start.private.json"), os.O_WRONLY|os.O_CREATE|os.O_EXCL, 0600)
-	if e != nil {
-		return e
-	}
-	_, e = fmt.Fprintf(fixed, "{\"todo\":4011,\"phase\":\"native_attempt_consumed_no_retry\",\"utc\":%q}\n", time.Now().UTC().Format(time.RFC3339Nano))
-	if e == nil {
-		e = fixed.Sync()
-	}
-	ce := fixed.Close()
-	if e == nil {
-		e = ce
-	}
-	return e
+	return "", fmt.Errorf("read-only modes: --contender | --inspect-cd <fixed-preflight.ps1>; storage mutation candidate withdrawn")
 }
+
 func main() {
-	var script string
-	apply := false
-	if len(os.Args) == 2 && os.Args[1] == "--contender" {
-		// It starts no child process and performs no storage operation.
-	} else if (len(os.Args) == 4 && os.Args[1] == "--attempt-cd") || (len(os.Args) == 3 && os.Args[1] == "--inspect-cd") {
-		script = os.Args[2]
-		if script == "" {
-			fmt.Fprintln(os.Stderr, "fixed preflight script required")
-			os.Exit(2)
-		}
-		apply = os.Args[1] == "--attempt-cd"
-		if apply {
-			expected := filepath.Clean(filepath.Join(filepath.Dir(script), "../../../.ci-work/4011/os-v2"))
-			if !strings.EqualFold(expected, filepath.Clean(os.Args[3])) {
-				fmt.Fprintln(os.Stderr, "fixed worktree ledger required")
-				os.Exit(2)
-			}
-			if e := consumeClaim(os.Args[3]); e != nil {
-				fmt.Fprintln(os.Stderr, "fixed request unavailable or consumed; no retry")
-				os.Exit(2)
-			}
-		}
-	} else {
-		fmt.Fprintln(os.Stderr, "usage: cd-attempt --contender | --inspect-cd <fixed-preflight.ps1> | --attempt-cd <fixed-preflight.ps1> <ledger>")
+	script, err := inspectionScript(os.Args[1:])
+	if err != nil {
+		fmt.Fprintln(os.Stderr, err)
 		os.Exit(2)
 	}
-	r := run(script, apply)
+	r := run(script)
 	if json.NewEncoder(os.Stdout).Encode(r) != nil {
 		os.Exit(1)
 	}
-	if r.Owned != 1 || r.Aborted != 1 || r.Released != 1 || (r.Phase != "empty_set_available" && r.Phase != "locked_preflight_verified_no_write" && r.Phase != "c_d_association_verified_retention_unverified") {
+	if r.Owned != 1 || r.Aborted != 1 || r.Released != 1 || (r.Phase != "empty_set_available" && r.Phase != "locked_preflight_verified_no_write") {
 		os.Exit(1)
 	}
 }

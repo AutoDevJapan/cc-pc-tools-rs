@@ -3,8 +3,8 @@
 package main
 
 import (
-	"encoding/base64"
-	"strings"
+	"os"
+	"path/filepath"
 	"testing"
 	"time"
 )
@@ -12,9 +12,9 @@ import (
 func liveEmptyC() metadata {
 	return metadata{Valid: true, Associations: 1, CC: true, Max: maxBytes, CFree: 300 << 30, DFree: 1 << 40, NTFS: true, DistinctNVMe: true, DReady: true, Provider: true, Protection: true, MinUnset: true}
 }
-func TestPermitRequiresPreservedLiveEmptyAssociation(t *testing.T) {
-	if !permit(liveEmptyC()) {
-		t.Fatal("valid empty C-to-C 50GiB should be eligible after coordinator exclusion")
+func TestEmptyObservationRequiresUnchangedAssociation(t *testing.T) {
+	if !emptyObservationMatches(liveEmptyC()) {
+		t.Fatal("valid empty C-to-C observation should match; this grants no write capability")
 	}
 	for _, tc := range []struct {
 		name   string
@@ -41,30 +41,30 @@ func TestPermitRequiresPreservedLiveEmptyAssociation(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			m := liveEmptyC()
 			tc.change(&m)
-			if permit(m) {
+			if emptyObservationMatches(m) {
 				t.Fatal("must preserve changed or unverified state without writing")
 			}
 		})
 	}
 }
 
-func TestResizeReasonSurvivesWithoutIdentifiers(t *testing.T) {
-	raw := []byte(`Error: The specified shadow copy storage association was not found. \\?\Volume{12345678-1234-5678-9abc-123456789abc}\`)
-	x := resizeReasons(raw)
-	if len(x) != 1 || x[0] != "association_not_found" {
-		t.Fatal("refusal reason lost")
+func TestStorageMutationFlagIsRejectedBeforeAnyOperation(t *testing.T) {
+	for _, args := range [][]string{
+		{"--attempt-cd", "preflight.ps1", "4011/os-v2"},
+		{"--attempt-cd", "preflight.ps1"},
+		{"--inspect-cd", ""}, nil,
+	} {
+		if _, err := inspectionScript(args); err == nil {
+			t.Fatalf("unsupported arguments accepted: %q", args)
+		}
 	}
-	clean, e := base64.StdEncoding.DecodeString(resizeDiagnostic(raw))
-	if e != nil || strings.Contains(string(clean), "12345678") || !strings.Contains(string(clean), "association was not found") {
-		t.Fatal("diagnostic not preserved without identifiers")
+	if s, err := inspectionScript([]string{"--inspect-cd", "preflight.ps1"}); err != nil || s != "preflight.ps1" {
+		t.Fatal("read-only inspection not accepted")
 	}
-	long := resizeDiagnostic([]byte(strings.Repeat("x", 5000)))
-	b, e := base64.StdEncoding.DecodeString(long)
-	if e != nil || len(b) != 4096 {
-		t.Fatal("private diagnostic not bounded")
+	if s, err := inspectionScript([]string{"--contender"}); err != nil || s != "" {
+		t.Fatal("read-only contender not accepted")
 	}
 }
-
 func TestBlockedRequiresReleasedForeignObject(t *testing.T) {
 	r := report{Phase: "start_unavailable_no_retry", Released: 1, Calls: []call{{"StartSnapshotSet", "0x80042316"}}}
 	if !blocked(r) {
@@ -85,9 +85,18 @@ func TestChildOutputIsBounded(t *testing.T) {
 }
 
 func TestExpiredOverallDeadlineStartsNoChild(t *testing.T) {
-	processDeadline = time.Now().Add(-time.Second)
 	defer func() { processDeadline = time.Time{} }()
-	r := process("not-a-real-vss-owned-child.exe", time.Second)
+	cmd := filepath.Join(os.Getenv("SystemRoot"), "System32", "cmd.exe")
+	if _, err := os.Stat(cmd); err != nil {
+		t.Fatalf("real executable required to distinguish deadline from lookup failure: %v", err)
+	}
+	processDeadline = time.Time{}
+	control := process(cmd, time.Second, "/c", "exit", "0")
+	if !control.Started || !control.WaitVerified || control.Timeout || control.Exit != 0 {
+		t.Fatal("positive control executable did not complete")
+	}
+	processDeadline = time.Now().Add(-time.Second)
+	r := process(cmd, time.Second, "/c", "exit", "0")
 	if r.Started || !r.Timeout || r.WaitVerified {
 		t.Fatal("expired overall deadline must not start a child")
 	}

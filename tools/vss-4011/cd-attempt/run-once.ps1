@@ -3,7 +3,7 @@ param(
     [Parameter(Mandatory=$true)][string]$NativeExe,
     [Parameter(Mandatory=$true)][ValidatePattern('^[0-9a-f]{40}$')][string]$SourceHead,
     [Parameter(Mandatory=$true)][ValidateRange(1,2147483647)][int]$ReviewTodo,
-    [ValidateSet('Inspect','Attempt')][string]$Mode='Inspect',
+    [ValidateSet('Inspect')][string]$Mode='Inspect',
     [string]$GoExe='C:/Program Files/Go/bin/go.exe'
 )
 $ErrorActionPreference='Stop'
@@ -32,7 +32,7 @@ if($head.exit -ne 0 -or $head.stdout.Trim() -cne $SourceHead){throw 'ACTUAL_SOUR
 $dirty=RunHidden $git 'status --porcelain -- tools/vss-4011'
 if($dirty.exit -ne 0 -or $dirty.stdout.Trim()){throw 'TOOLS_SOURCE_NOT_CLEAN'}
 $ledger=Join-Path $work '.ci-work/4011/os-v2'
-$prefix=if($Mode -eq 'Attempt'){'positive-cd'}else{'cd-runner-inspection'}
+$prefix='cd-runner-inspection'
 $requestPath=Join-Path $ledger ($prefix+'-request.private.json')
 $resultPath=Join-Path $ledger ($prefix+'-result.private.json')
 if((Test-Path -LiteralPath $requestPath) -or (Test-Path -LiteralPath $resultPath)){throw 'STAGE_EXISTS_NO_RETRY'}
@@ -41,7 +41,7 @@ $pins=New-Object 'System.Collections.Generic.List[System.IO.FileStream]'
 try{
     $expected=@{
         'tools/vss-4011/common.ps1'='869C87C8DEA7E4A17FC72053126BC86EC6CADFFFDF0137AE793DE52E66F68142'
-        'tools/vss-4011/cd-attempt/main_windows.go'='33869F2ACDEA3F1AA8459A9962BE43946496EEA0B376250F924AA279B2E83EFC'
+        'tools/vss-4011/cd-attempt/main_windows.go'='E78185F6AF5AF41F7A8DC7073D146AA62D46D79B0CADAE44D2744F496D8AFB87'
         'tools/vss-4011/cd-attempt/preflight.ps1'='3C0E26FD7C7B93056AEBB64A7221760BC144218A5E88877DAF8B5BBD9C664E16'
     }
     foreach($entry in $expected.GetEnumerator()){
@@ -55,14 +55,14 @@ try{
     $exePin=[IO.File]::Open($NativeExe,[IO.FileMode]::Open,[IO.FileAccess]::Read,[IO.FileShare]::Read)
     $pins.Add($exePin)
     $actual=Get-Vss4011FileHash $NativeExe
-    $request=[ordered]@{todo=4011;actor_job=$ActorJob;phase=if($Mode -eq 'Attempt'){'positive_cd_call_pending_outcome_unknown'}else{'cd_runner_inspection_pending_no_write'};utc=[DateTime]::UtcNow.ToString('o');mode=$Mode;source_head=$SourceHead;source_hashes=$expected;exe_sha256=$actual;build_from_verified_source=$true;review_todo=$ReviewTodo;expected_source='C:';expected_old_storage='C:';target_storage='D:';maximum_bytes=[long](50GB);delete_or_shrink_calls=0;retry_allowed=$false}
+    $request=[ordered]@{todo=4011;actor_job=$ActorJob;phase='cd_runner_inspection_pending_no_write';utc=[DateTime]::UtcNow.ToString('o');mode=$Mode;source_head=$SourceHead;source_hashes=$expected;exe_sha256=$actual;build_from_verified_source=$true;review_todo=$ReviewTodo;expected_source='C:';expected_old_storage='C:';inspected_storage='D:';storage_changes_allowed=$false;maximum_bytes=[long](50GB);delete_or_shrink_calls=0;retry_allowed=$false}
     Write-Vss4011NewReceipt $requestPath $request
     $result=[ordered]@{todo=4011;actor_job=$ActorJob;phase='native_call_outcome_unresolved';utc=[DateTime]::UtcNow.ToString('o');process_started=$false;native_exit=$null;timed_out=$false;exit_confirmed=$false;native=$null;stdout='';stderr='';launcher_hresult=$null}
     $exitCode=1
     try{
         $si=New-Object Diagnostics.ProcessStartInfo
         $si.FileName=$NativeExe
-        $si.Arguments=if($Mode -eq 'Attempt'){'--attempt-cd "'+(Join-Path $PSScriptRoot 'preflight.ps1')+'" "'+$ledger+'"'}else{'--inspect-cd "'+(Join-Path $PSScriptRoot 'preflight.ps1')+'"'}
+        $si.Arguments='--inspect-cd "'+(Join-Path $PSScriptRoot 'preflight.ps1')+'"'
         $si.UseShellExecute=$false;$si.CreateNoWindow=$true;$si.RedirectStandardOutput=$true;$si.RedirectStandardError=$true
         $p=[Diagnostics.Process]::Start($si);$result.process_started=$true
         $out=$p.StandardOutput.ReadToEndAsync();$err=$p.StandardError.ReadToEndAsync()

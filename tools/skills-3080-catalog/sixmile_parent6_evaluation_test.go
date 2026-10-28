@@ -436,6 +436,12 @@ func TestExpandedSixmileIndexAddsNewCohortAndReadingAmendmentExactlyOnce(t *test
 				}
 				accepted[id] = row
 			}
+			for id, row := range validatedNoticeNext4Dispositions(t) {
+				if _, duplicate := accepted[id]; duplicate {
+					t.Fatal("separate current notice4 acceptances overlap")
+				}
+				accepted[id] = row
+			}
 			switch name {
 			case "received_without_current_acceptance":
 				accepted = nil

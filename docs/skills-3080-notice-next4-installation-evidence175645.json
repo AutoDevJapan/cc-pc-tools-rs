@@ -1,0 +1,183 @@
+{
+  "todo": 3080,
+  "result_publisher_job": "20261027-175645-todo-3080",
+  "creator_job": "20261027-175645-todo-3080",
+  "new_targets_created": 4,
+  "successful_CreateNew_count": 1,
+  "current_files_readback_verified": 28,
+  "bytes": 89144,
+  "normal_read_batches": 4,
+  "instruction_buffers": 8,
+  "instruction_bytes": 13040,
+  "input_PR": 614,
+  "input_PR_merge": "5210fefb9a54f892d0475eccdc87a9c4913f1b55",
+  "creation_manifest": "skills-3080-operations/create-notice-next4-175645.json",
+  "creation_manifest_sha256": "5ab55cfca8778374e86862905e9c39d5bfe11bea2ae6e3e33ec82f82e7607f89",
+  "creation_input_head": "74f4eff6a10b5bf235e4028ada75232a5f348bb6",
+  "frozen_full_content_review": {
+    "task": 4184,
+    "job": "20261028-105110-todo-4184",
+    "spec": "D:/CC/Tools/todo/specs/4184-b3403e948c7a408bb7334dafa4035483.md",
+    "spec_sha256": "3cb28efe25d36e48c426a0ca14ebaaf8f3e8cd1213f97758dfc0f95f1d9a24df",
+    "final_sha256": "204f8d4175e5158c71a73259252c16c8faedbf909d979f333ad8361554962a06",
+    "manifest_sha256": "5ab55cfca8778374e86862905e9c39d5bfe11bea2ae6e3e33ec82f82e7607f89",
+    "request_sha256": "758a78033f857c1cda0f25deeed5a18a89b16b5730caf3cd758fc3929a789167",
+    "creator": "20261027-175645-todo-3080",
+    "actual_native_creation": "call_9a5bc551506640e49f56dc88155e0eaf",
+    "successful_creation_file_count": 28,
+    "successful_target_count": 4,
+    "full_content_no_comparison": true,
+    "frozen": true,
+    "never_edit_spec_or_restart_this_task": true,
+    "old4129_and4083_unchanged": true
+  },
+  "qualified_full_review": {
+    "original_sha256": "204f8d4175e5158c71a73259252c16c8faedbf909d979f333ad8361554962a06",
+    "spec_sha256": "3cb28efe25d36e48c426a0ca14ebaaf8f3e8cd1213f97758dfc0f95f1d9a24df",
+    "actual_native": [
+      {
+        "effort": "max",
+        "model": "gpt-6-luna",
+        "source": "native_turn_context"
+      }
+    ],
+    "model": "gpt-6-luna",
+    "effort": "max",
+    "Must": 0,
+    "Suggestion": 0,
+    "Nit": 0,
+    "all13_inputs_and28_payloads": true,
+    "parent_full_original_read": true
+  },
+  "referenced_artifacts": {
+    "bundle": {
+      "sha256": "bc7a6bba253400328afbec5e5a4e012e91041d2aad1080e16456d330e7c99198",
+      "file": "skills-3080-notice-next4-actual-bundle175645.json"
+    },
+    "manifest": {
+      "sha256": "f1ff5b529dec2c34bac813dbdc281084ce772289d94f24e432088803b0e0cfae",
+      "file": "skills-3080-installed-notice-next4-manifest175645.json"
+    },
+    "creation": {
+      "sha256": "8fac2380eb3610eebf12e3f36f960368005ca871b86f4e9f00d6c5387024d9d9",
+      "file": "skills-3080-notice-next4-create-evidence175645.json"
+    },
+    "readback": {
+      "sha256": "0f6fc5a4d7ccbc8ef5bb6dc76d4aaee50697ad6074acfe0e578a25bf5bd97485",
+      "file": "skills-3080-notice-next4-consume-evidence175645.json"
+    },
+    "structure": {
+      "sha256": "c44aa3d86bf63d20154e63a409e09d4076fab635530219016175cf463eb63c85",
+      "file": "skills-3080-notice-next4-actual-structure175645.json"
+    },
+    "discovery": {
+      "sha256": "33f807a5477d0cc90b6f7a5d3d216fd4b6ad0a1cc21d41ddd7279972dd85f64c",
+      "file": "skills-3080-notice-next4-discovery175645.json"
+    },
+    "application": {
+      "sha256": "94f01cc1d68aae72c45948f4edd314d3e00e9ce09a17d30df873dff2e0300a01",
+      "file": "skills-3080-notice-next4-application175645.json"
+    },
+    "design": {
+      "sha256": "b7daa49c2c0db81a665e48e37841b6947cda4a9457bf43d08f16eadebec878cf",
+      "file": "skills-3080-notice-next4-actual-designs175645.json"
+    },
+    "precreation": {
+      "sha256": "2dee59b98cf302c277746bfb2014377c88f9f12f359d24a9e75eca897f7c73cc",
+      "file": "skills-3080-notice-next4-precreation-qualification175645.json"
+    }
+  },
+  "creator_runtime_sha256": "f8b2ba6e66e60b06bbbc46c2c0f3d6eedc0208d40444c30e37b70afe29db4fc7",
+  "creator_runtime_revision": "a71330f543969b4585f01b7359a84a2fa528c9f2",
+  "software_fix_PRs": [
+    615,
+    618
+  ],
+  "software_fix_merge": "a71330f543969b4585f01b7359a84a2fa528c9f2",
+  "original_implementation_reviews": [
+    {
+      "normal_task_status_at_reception": "done",
+      "scheduler_reconciliation_pending": false,
+      "consumer_job": "20261027-175645-todo-3080",
+      "producer_job": "20261028-140315-todo-3870",
+      "producer_task": 3870,
+      "immutable_coordination_origin": "20261026-023556-todo-3686",
+      "actual_author": "20261028-103853-todo-3686",
+      "registered_spec_sha256": "e3065efc22aec58d944bd73620fa68ed580c5eac33765fb70be533247320b2a5",
+      "source_proof_sha256": "da1dfb949b9a99ec0e31b1d73637cfc14ada21d9f6e4737bcc05efd70d68e411",
+      "fixed_head": "76a3133cee8be5a4a1f8b2b10714b6badb5f1967",
+      "fixed_base": "d890001631ae03d9c558363184a6278e5d9e9131",
+      "selected_PUBLIC_inputs": 4,
+      "typed_qualification": false,
+      "typed_classifier_called": false,
+      "current_scope": "Original3686 final4 PUBLIC implementation delta at76a; same actual new4 manifest source alias full source bytes/blob/writer binding and retained legacy compatibility. Formal code acceptance is the actual producer marker, not manufactured by Root.",
+      "reception_method": "configured auto_review of same exact canonical original after normal public scope and independent native verification",
+      "native": [
+        {
+          "timestamp": "2026-10-28T05:04:00.241Z",
+          "model": "gpt-6-luna",
+          "effort": "max",
+          "service_tier": null
+        }
+      ],
+      "thread_matches": true,
+      "cwd_matches": true,
+      "raw_bytes": 1196,
+      "raw_sha256": "50439e0715e6c33e61177aff07284102e75afbfbfb86e7c6d49d39c79610da5d",
+      "original_equals_job_last_message": true,
+      "original_byte_sequence_preserved": true,
+      "general_guard_or_classification_changed": false,
+      "other_result_or_native_event_bodies_returned": false,
+      "whole16_complete": false
+    },
+    {
+      "normal_task_status_at_reception": "done",
+      "scheduler_reconciliation_pending": false,
+      "consumer_job": "20261027-175645-todo-3080",
+      "producer_job": "20261028-141327-todo-3876",
+      "producer_task": 3876,
+      "immutable_coordination_origin": "20261026-023556-todo-3686",
+      "actual_author": "20261028-103853-todo-3686",
+      "registered_spec_sha256": "d6c84a50b477c6af39b6f64d9afbd385c90e544255c55e3d773e164debbf86ee",
+      "source_proof_sha256": "da1dfb949b9a99ec0e31b1d73637cfc14ada21d9f6e4737bcc05efd70d68e411",
+      "fixed_head": "76a3133cee8be5a4a1f8b2b10714b6badb5f1967",
+      "fixed_base": "d890001631ae03d9c558363184a6278e5d9e9131",
+      "selected_PUBLIC_inputs": 4,
+      "typed_qualification": false,
+      "typed_classifier_called": false,
+      "current_scope": "Original3686 final4 PUBLIC implementation delta at76a; same actual new4 manifest source alias full source bytes/blob/writer binding and retained legacy compatibility. Formal code acceptance is the actual producer marker, not manufactured by Root.",
+      "reception_method": "configured auto_review of same exact canonical original after normal public scope and independent native verification",
+      "native": [
+        {
+          "timestamp": "2026-10-28T05:14:09.480Z",
+          "model": "gpt-6-luna",
+          "effort": "max",
+          "service_tier": null
+        }
+      ],
+      "thread_matches": true,
+      "cwd_matches": true,
+      "raw_bytes": 1276,
+      "raw_sha256": "137e35d90ebf978d889f9da835551ade2ce306adb79936df399ebad9da1b3f4b",
+      "original_equals_job_last_message": true,
+      "original_byte_sequence_preserved": true,
+      "general_guard_or_classification_changed": false,
+      "other_result_or_native_event_bodies_returned": false,
+      "whole16_complete": false
+    }
+  ],
+  "software_review_scope": "Both originals independently received; code reviews cover4-file76a delta over d890, with prior unchanged implementation reviews retained by3686. CI/distribution and actual creation are separate proofs.",
+  "creation_binding": "Canonical actual native call_9a5bc551506640e49f56dc88155e0eaf; stdoutSHA96a3ba60 and exact reviewed request758a7803; one successful invocation28files, no overwrite/retry of this creation.",
+  "model_application": "Root actual Sol/max explicitly read8current instruction buffers and made2actual workflow plus6synthetic decisions; no QR image decoder, payroll/payment, external service or browser operations.",
+  "new_global_source_raw_credit": 0,
+  "implicit_skill_selection_proven": false,
+  "full_discovery_or_context_budget_proven": false,
+  "source_raw_archive_retained": true,
+  "installed_original_is_masked": true,
+  "withheld_meanings_remain_unread": true,
+  "third_party_assets_services_or_unknown_central_rights_accepted": false,
+  "historical_source_assessment_permission_false_preserved": true,
+  "parent_PR617_closed_superseded_original618_used": true,
+  "public_result_review_pending_at_recording": true,
+  "whole16_complete": false
+}

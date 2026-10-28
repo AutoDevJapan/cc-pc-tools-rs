@@ -11,10 +11,19 @@ import (
 )
 
 func TestPrimaryflow47RetainsOriginalMeaningAndPendingMemberRights(t *testing.T) {
+	checkPrimaryflowOriginalMeaning(t, "skills-3080-primaryflow47-evaluation175645.json", "7c2d4404e6b10589b037a5dd93955e88f16eb8c78d36d991cfd56c35807fbe31", 47, 10, 57)
+}
+
+func TestPrimaryflowNext36RetainsOriginalMeaningAndPendingMemberRights(t *testing.T) {
+	checkPrimaryflowOriginalMeaning(t, "skills-3080-primaryflow-next36-evaluation175645.json", "19ee72178b3b7e79feb9dd6521de0ab801ed3aad163c425c5a588a06fd97ccb7", 36, 8, 39)
+}
+
+func checkPrimaryflowOriginalMeaning(t *testing.T, file, expectedSHA string, recordsExpected, contextsExpected, membersExpected int) {
+	t.Helper()
 	var outer map[string]any
-	raw := loadPublicReceipt(t, "skills-3080-primaryflow47-evaluation175645.json", &outer)
+	raw := loadPublicReceipt(t, file, &outer)
 	digest := sha256.Sum256(raw)
-	if hex.EncodeToString(digest[:]) != "7c2d4404e6b10589b037a5dd93955e88f16eb8c78d36d991cfd56c35807fbe31" {
+	if hex.EncodeToString(digest[:]) != expectedSHA {
 		t.Fatal("independently materialized accepted snapshot differs")
 	}
 	if outer["all_original_packets_losslessly_reconstructed"] != true || outer["all_member_contexts_read"] != false || outer["all_member_rights_confirmed"] != false || outer["whole16_complete"] != false {
@@ -22,7 +31,7 @@ func TestPrimaryflow47RetainsOriginalMeaningAndPendingMemberRights(t *testing.T)
 	}
 	entries := received27Array(t, outer["entries"])
 	records := received27Array(t, outer["records"])
-	if len(entries) != 47 || len(records) != 47 {
+	if len(entries) != recordsExpected || len(records) != recordsExpected {
 		t.Fatal("representative record count differs")
 	}
 	groups := map[string][]any{}
@@ -58,7 +67,7 @@ func TestPrimaryflow47RetainsOriginalMeaningAndPendingMemberRights(t *testing.T)
 		groups[sha] = append(groups[sha], original)
 	}
 	contexts := received27Object(t, outer["shared_original_contexts"])
-	if len(contexts) != 10 || len(groups) != 10 {
+	if len(contexts) != contextsExpected || len(groups) != contextsExpected {
 		t.Fatal("whole accepted packet membership differs")
 	}
 	members := 0
@@ -124,7 +133,7 @@ func TestPrimaryflow47RetainsOriginalMeaningAndPendingMemberRights(t *testing.T)
 			members += len(list)
 		}
 	}
-	if members != 57 {
+	if members != membersExpected {
 		t.Fatal("metadata aliases became individual context reads")
 	}
 	correction := received27Object(t, outer["historical_parent_arithmetic_correction"])

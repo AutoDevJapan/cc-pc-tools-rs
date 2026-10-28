@@ -86,6 +86,10 @@ const official3894NativePredecessorHead = "61de98373f8cb481302394be11d7d75cfef08
 const official3894NoticePredecessorSHA = "9be9a066053183a099e78133571d394ecbb2845372e3cf603e292c74dac1a8d3"
 const official3894NoticePredecessorHead = "deb430b8b089fde2391dbd243c01db48de48d493"
 
+// Independent completed PR615 distribution, observed before its successor.
+const official3894AliasPredecessorSHA = "50c817a829ecb33c30e4ee2b129dee3716f822fc4627dd01df6f24cb98a7925b"
+const official3894AliasPredecessorHead = "34cd8877587596539e8b4a8847468fc74fca8e57"
+
 type official3894Source struct {
 	Head, Registration, CreatorJob, Workspace, Branch, SpecSHA string
 }
@@ -952,7 +956,8 @@ func official3894InstalledBaseline(sha, head string) bool {
 		(sha == official3894MaskedPredecessorSHA && head == official3894MaskedPredecessorHead) ||
 		(sha == official3894MaskedDistributionSHA && head == official3894MaskedDistributionHead) ||
 		(sha == official3894NativePredecessorSHA && head == official3894NativePredecessorHead) ||
-		(sha == official3894NoticePredecessorSHA && head == official3894NoticePredecessorHead)
+		(sha == official3894NoticePredecessorSHA && head == official3894NoticePredecessorHead) ||
+		(sha == official3894AliasPredecessorSHA && head == official3894AliasPredecessorHead)
 }
 
 // Qualifies only comparison of the known previously published guard software.

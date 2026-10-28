@@ -11,7 +11,7 @@ func skillsRuntimeApply(op, path string, raw []byte, r skillsRequest, reg skills
 		return object{"qualified": false, "reason": reason, "data_access_granted": false}
 	}
 	u := r.Runtime
-	if u == nil || u.PeerReview == nil || !regexp.MustCompile("^[0-9a-f]{32}$").MatchString(u.OperationNonce) {
+	if u == nil || !skillsRuntimeReviewTasks(r.Review, u.PeerReview) || !regexp.MustCompile("^[0-9a-f]{32}$").MatchString(u.OperationNonce) {
 		return fail("review")
 	}
 	recovery := op == "recover-skills3080-update"

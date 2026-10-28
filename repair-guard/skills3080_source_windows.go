@@ -81,6 +81,10 @@ func skillsSourcesBoundAt(m skillsManifest, fs *skillsFS, corpus, catalogSHA str
 	if !skillsSourceClaimsPreserved(m) || len(m.Sources) == 0 {
 		return false
 	}
+	bindings, bindingsOK := skillsMaskedBindings(m)
+	if !bindingsOK {
+		return false
+	}
 	wanted := map[string]skillsSource{}
 	for _, source := range m.Sources {
 		key := skillsSourceKey(source.Repository, source.Commit, source.Path)
@@ -226,7 +230,7 @@ func skillsSourcesBoundAt(m skillsManifest, fs *skillsFS, corpus, catalogSHA str
 		// notices. They too must be acquired and retained byte-for-byte.
 		for _, retained := range selected {
 			fs.failureStage = "source_object"
-			if !skillsSourceObject(root, retained, m.Files, fs) {
+			if !skillsSourceObject(root, retained, m.Files, fs, bindings) {
 				return false
 			}
 		}
@@ -339,7 +343,7 @@ func skillsSourceTree(root string, a skillsSourceAnchor, rootSHA string, selecte
 	return d.Decode(&extra) == io.EOF && hex.EncodeToString(h.Sum(nil)) == a.TreeSHA && len(seen) == len(selected)
 }
 
-func skillsSourceObject(root string, row skillsSavedSource, outputs []skillsOutput, fs *skillsFS) bool {
+func skillsSourceObject(root string, row skillsSavedSource, outputs []skillsOutput, fs *skillsFS, bindings ...map[string]string) bool {
 	compressed, ok := fs.open(filepath.Join(root, filepath.FromSlash(row.Content)), 4<<20)
 	if !ok {
 		return false
@@ -362,6 +366,11 @@ func skillsSourceObject(root string, row skillsSavedSource, outputs []skillsOutp
 	for _, output := range outputs {
 		if output.SHA == row.SHA && bytes.Equal(output.body, raw) {
 			return true
+		}
+	}
+	if len(bindings) == 1 {
+		if target, ok := bindings[0][skillsSourceKey(row.Repo, row.Commit, row.Path)]; ok {
+			return skillsMaskedSourceObjectTarget(row, raw, outputs, target)
 		}
 	}
 	return skillsMaskedSourceObject(row, raw, outputs)

@@ -66,8 +66,8 @@ func TestSkills3080OnlyRuntimeApplyRecoveryAcceptNewFlags(t *testing.T) {
 	}
 }
 func TestSkills3080RuntimePinsOriginalTwoReviewTasks(t *testing.T) {
-	a := &skillsResultRequest{Task: 3740, Job: "20261028-120305-todo-3740", SpecSHA: strings.Repeat("a", 64), FinalSHA: strings.Repeat("b", 64)}
-	b := &skillsResultRequest{Task: 3877, Job: "20261028-120558-todo-3877", SpecSHA: strings.Repeat("c", 64), FinalSHA: strings.Repeat("d", 64)}
+	a := &skillsResultRequest{Task: 3870, Job: "20261028-120305-todo-3870", SpecSHA: strings.Repeat("a", 64), FinalSHA: strings.Repeat("b", 64)}
+	b := &skillsResultRequest{Task: 3876, Job: "20261028-120558-todo-3876", SpecSHA: strings.Repeat("c", 64), FinalSHA: strings.Repeat("d", 64)}
 	if !skillsRuntimeReviewTasks(a, b) {
 		t.Fatal("original own reviews rejected")
 	}

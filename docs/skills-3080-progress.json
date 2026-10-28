@@ -3,7 +3,7 @@
   "issue": "https://github.com/AutoDevJapan/cc-pc-tools-rs/issues/283",
   "observed_at": "2026-10-24T08:15:09.0197014+00:00",
   "phase_a": "partial; 647 additional text shapes held by execution review",
-  "phase_b": "実導入154・既存統合3・再確認が残る除外記録15を保持する。元3719の199..209の原評価11件と、指定サイトの伏字付き表示可能全文を読んだ4件を追加する。既存1409件は変えず、評価記録1424件、未採否の評価1258件と最終記録との重複166件を分ける。原資料の担当・notice再利用・伏字・未保存・未確認を保持し、今回の15評価を許諾・新採用・全16資料の完了へ変えない。全73220掲載、未取得428、追加取得審査647を保持して続ける。",
+  "phase_b": "作業版では、元3719の210〜227の原評価18件、既読primary8群、指定サイトの次2評価を追加し、既受入1424件を保持して評価記録1452件とした。評価済み未採否1286件と最終記録との重複166件、最終のみ6件を区別する。実導入154・統合3・再確認が残る除外記録15は変えない。元の担当・個別notice再利用・伏字・未保存/null・未知を保持し、全73220掲載、未取得428、審査保留647を維持する。この作業版はまだmainの1424件へ受け入れていない。28評価を新たな許諾・採否・配置・全16資料の完了としない。",
   "catalog_sha256": "2d73c9a038a41cc220a9687b935bfa1e0b315b65d9bd6d3e54ddb4111972876c",
   "source_count": 16,
   "fixed_public_repos": [
@@ -3215,7 +3215,8 @@
     "assessment_final_intersection": 166,
     "final_only_legacy": 6,
     "assessment_or_final_union": 1430,
-    "whole16_complete": false
+    "whole16_complete": false,
+    "count_scope": "Historical PR622 accepted snapshot of1424; the next28 working snapshot below is separate."
   },
   "source9_first4_evaluation": {
     "artifact": "skills-3080-source9-first4-visible-evaluation175645.json",
@@ -3228,6 +3229,35 @@
     "source_text_republished": false,
     "individual_license_status": "pending; Amazon SEO has explicit All rights reserved; no index-label-only grants",
     "current_dispositions_recorded": 0,
+    "whole16_complete": false
+  },
+  "received28_current_execution_snapshot175645": {
+    "working_assessments": 1452,
+    "prior_main_accepted_assessments": 1424,
+    "working_not_yet_main_accepted": true,
+    "new_original3719_assessments": 18,
+    "new_primaryflow_groups": 8,
+    "new_primaryflow_member_metadata": 8,
+    "new_source9_visible_assessments": 2,
+    "original3719_whole_packets": 3,
+    "primaryflow_whole_packets": 3,
+    "original_support_metadata": 238,
+    "saved_support_metadata": 63,
+    "unsaved_support_metadata": 175,
+    "all_original_common_entries_actors_and_nulls_preserved": true,
+    "site_original_whole_parent_meaning_preserved": true,
+    "new_source_body_reads_by_publication": 0,
+    "new_parent_raw_credit": 0,
+    "new_copy_permissions": 0,
+    "new_final_dispositions": 0,
+    "central_operations": 0,
+    "execution_manifest_sha256": "41dcb55e96bd81a48d7b08c9ffa7994acfac4f809b9d07b0dd77c68614830015",
+    "execution_queue_sha256": "a0ddea52e7f4a679e95083ec233fd55acb3a886dc3ccb5e345901b4b391ef193",
+    "assessed_without_final": 1286,
+    "assessment_final_intersection": 166,
+    "final_only_legacy": 6,
+    "assessment_or_final_union": 1458,
+    "main_new_unchanged": 154,
     "whole16_complete": false
   }
 }

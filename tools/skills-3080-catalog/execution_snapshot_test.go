@@ -80,6 +80,9 @@ func publishedReceivedCursorCoverage(artifacts []ExecutionArtifact) error {
 		{"skills-3080-original3719-next8-199206-evaluation175645.json", "0362991564c4bee6b86edc9b52cc934b94d5b47ef4b142985f39b5ed5d8280b2", 8},
 		{"skills-3080-original3719-next3-207209-evaluation175645.json", "80f9eab15b84bd88006cde9d5a61dc438be2fb83259f9accac271ac057ddd442", 3},
 		{"skills-3080-source9-first4-visible-evaluation175645.json", "645df498826e6b38814f2e30ea322097400121df7b22b19b9ae299718c3c670f", 4},
+		{"skills-3080-original3719-next18-210227-evaluation175645.json", "729615f614ed7164363b412a6b0d1ff2ac52ea7b874114c3e7094b4490d2bbe5", 18},
+		{"skills-3080-primaryflow-next8-evaluation175645.json", "fa8670f53f66d72b1f4d9850e06241f583e44057a05037bdd296c55e5910aa7f", 8},
+		{"skills-3080-source9-next2-visible-evaluation175645.json", "8f9f22d4273a317acf5026dcfa791c9ad34695ad9fd84a544218d6e8545bb86a", 2},
 	} {
 		found := 0
 		for _, artifact := range artifacts {
@@ -99,13 +102,16 @@ func publishedReceivedCursorCoverage(artifacts []ExecutionArtifact) error {
 
 // Individually received snapshots also belong to the current occurrence
 // cursor. Their files existing on disk cannot substitute for manifest links.
-func TestPublishedCursorRetainsOriginal3719AndSource9Received15(t *testing.T) {
+func TestPublishedCursorRetainsOriginal3719AndSource9Received43(t *testing.T) {
 	var m ExecutionManifest
 	loadPublicReceipt(t, "skills-3080-execution-evidence.json", &m)
 	required := []ExecutionArtifact{
 		{"skills-3080-original3719-next8-199206-evaluation175645.json", "0362991564c4bee6b86edc9b52cc934b94d5b47ef4b142985f39b5ed5d8280b2", 8},
 		{"skills-3080-original3719-next3-207209-evaluation175645.json", "80f9eab15b84bd88006cde9d5a61dc438be2fb83259f9accac271ac057ddd442", 3},
 		{"skills-3080-source9-first4-visible-evaluation175645.json", "645df498826e6b38814f2e30ea322097400121df7b22b19b9ae299718c3c670f", 4},
+		{"skills-3080-original3719-next18-210227-evaluation175645.json", "729615f614ed7164363b412a6b0d1ff2ac52ea7b874114c3e7094b4490d2bbe5", 18},
+		{"skills-3080-primaryflow-next8-evaluation175645.json", "fa8670f53f66d72b1f4d9850e06241f583e44057a05037bdd296c55e5910aa7f", 8},
+		{"skills-3080-source9-next2-visible-evaluation175645.json", "8f9f22d4273a317acf5026dcfa791c9ad34695ad9fd84a544218d6e8545bb86a", 2},
 	}
 	for _, pin := range required {
 		t.Run(pin.File, func(t *testing.T) {
@@ -148,7 +154,7 @@ func TestPublishedCursorRetainsOriginal3719AndSource9Received15(t *testing.T) {
 	}
 	var summary ExecutionSummary
 	loadPublicReceipt(t, "skills-3080-execution-queue-summary.json", &summary)
-	if summary.Assessments < 1424 {
+	if summary.Assessments < 1452 {
 		t.Fatal("the published cursor lost already received assessments")
 	}
 }

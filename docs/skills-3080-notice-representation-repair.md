@@ -72,3 +72,35 @@ backupを動かす処理は廃止する。物理的に一度も不在になら�
 実Windows上で確認した。broker期限でprocessが終了した場合は自動で成功扱いせず、
 原operation/native ID journalと現物・backup・stageを同担当が照合して復旧する。
 未知の現物をforce rollbackしない。元16資料の取得・中央書込み・一般guardへ広げない。
+## 配置資格を本体へ統合する
+
+独立したinstallerの実行入口は廃止し、native処理は実行入口を持たないGo libraryにした。
+本体のapply-skills3080-updateとrecover-skills3080-updateだけが、現在の実writer、固定した
+公開source/merged source、候補byte、両方の正式なreviewを通常の処理で確認してから呼ぶ。
+helperを別の実行物として生成・配布する経路はない。旧v3/v4 scriptと原指摘は保持する。
+
+runtime requestは元のreviewとpeer_reviewを持ち、別task/job/thread、同じhead/domain、
+両方の実native Luna/max・両owner_request、Must/Suggestion/Nitの明示0を必須にする。
+片方だけで新しいsoftwareを更新する資格は成立しない。旧single-review requestは、
+既に同じbyteが配置済みの読戻しに限り保持し、変更や復旧には使わない。
+
+本体は資格確認した現物の実IDとmetadataを取得してから、そのread handleだけを解放する。
+同じID/SHA/SDDLをdeny-write/deleteのrename handleで再確認し、review/source/candidateの
+既存handleは保持したまま操作する。境界直前にも現在writerを再確認する。
+nonceは正規requestへ保存し、stage/backupは固定client-records内の同nonceに限る。
+未知の現物・別IDを新しいbaselineへ採用しない。
+
+v5 wrapperは本体の正規verify→apply→配置後verifyを使う。子の60秒打切りは廃止し、
+実終了まで待つ。全工程の180秒期限と子孫の停止・排出は、既存CC-AdminBrokerの
+Windows Job Objectが受け持つ。brokerが終了未確認を返したときは成功扱いにしない。
+
+復旧は同じ実actorと同じ元requestでrecover-skills3080-updateを実行し、両reviewとsourceを
+再確認した後、原native journalの実IDと現物を照合する。旧版が元位置にあるときは保持、
+旧backupが同IDでtargetが不在ならno-replaceで元へ戻し、同stage IDの候補が正常公開済みなら
+その実byte・backup・metadataを確認する。未知target/IDは全て残し、force rollbackしない。
+復旧後に更新を再試行する場合は元request/journalを保持し、新nonceの別requestと証跡場所を
+使う。target不在・未知なら、通常のデータ資格にはこの未確認実行物を使わない。
+
+実プロセスを検証後・旧版移動後・候補公開後の各境界で終了し、deferを動かさずに
+journalから同IDの旧版復旧または公開済み候補確認ができることをWindowsで確認した。
+unknown targetを残す負例も成功した。これ以外の全OSクラッシュ経路やSACLは未検証である。

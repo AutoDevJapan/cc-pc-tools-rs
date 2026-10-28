@@ -1,7 +1,7 @@
-// This finite installer is invoked only by the reviewed administrator wrapper,
-// after the existing scrub391 --verify-skills3080-update has accepted the build.
+// Native software transaction library; there is no standalone executable.
+// Only the guard invokes it after its complete dual-review qualification.
 // It grants no data access and exposes no arbitrary target or replace operation.
-package main
+package deploy3686
 
 import (
 	"bytes"
@@ -12,7 +12,7 @@ import (
 	"os"
 	"path/filepath"
 	"regexp"
-	"runtime/debug"
+
 	"strings"
 )
 
@@ -21,18 +21,19 @@ const fixedRecords = "D:/CC/Work/unattended-operations-20261013-wt/todo-3686-ski
 const modulePath = "github.com/AutoDevJapan/cc-pc-tools-rs/repair-guard/deploy3686"
 
 type operation struct {
-	ID       string "json:\"operation_id\""
-	Writer   string "json:\"writer_job\""
-	Target   string "json:\"target\""
-	Stage    string "json:\"stage\""
-	Backup   string "json:\"backup\""
-	Old      string "json:\"expected_old_sha256\""
-	New      string "json:\"expected_new_sha256\""
-	Source   string "json:\"source_head\""
-	Reviewed string "json:\"reviewed_head\""
-	SDDL     string "json:\"owner_group_dacl_before\""
-	State    string "json:\"state\""
-	SACL     bool   "json:\"sacl_verified\""
+	ExpectedOldID [3]uint32 "json:\"-\""
+	ID            string    "json:\"operation_id\""
+	Writer        string    "json:\"writer_job\""
+	Target        string    "json:\"target\""
+	Stage         string    "json:\"stage\""
+	Backup        string    "json:\"backup\""
+	Old           string    "json:\"expected_old_sha256\""
+	New           string    "json:\"expected_new_sha256\""
+	Source        string    "json:\"source_head\""
+	Reviewed      string    "json:\"reviewed_head\""
+	SDDL          string    "json:\"owner_group_dacl_before\""
+	State         string    "json:\"state\""
+	SACL          bool      "json:\"sacl_verified\""
 }
 type result struct {
 	Installed        bool      "json:\"installed\""
@@ -168,7 +169,7 @@ func applyAt(o operation, record string, h hooks) (r result) {
 	if e != nil {
 		return
 	}
-	if !oldOK || !newOK || oldSHA != o.Old || newSHA != o.New || oldSD != o.SDDL || newSD != o.SDDL || oldE != nil || newE != nil {
+	if (o.ExpectedOldID != [3]uint32{} && r.OriginalID != o.ExpectedOldID) || !oldOK || !newOK || oldSHA != o.Old || newSHA != o.New || oldSD != o.SDDL || newSD != o.SDDL || oldE != nil || newE != nil {
 		return
 	}
 	if !writeJournal(record, o, r) {
@@ -229,54 +230,4 @@ func applyAt(o operation, record string, h hooks) (r result) {
 	r.Installed = true
 	r.Reason = ""
 	return
-}
-func run(args []string) result {
-	bad := result{Reason: "operation_binding"}
-	if len(args) != 2 || args[0] != "--operation" || !filepath.IsAbs(args[1]) || filepath.Base(args[1]) != "deployment-operation.json" {
-		return bad
-	}
-	relative, e := filepath.Rel(fixedRecords, filepath.Dir(args[1]))
-	if e != nil || relative == ".." || strings.HasPrefix(relative, ".."+string(os.PathSeparator)) || filepath.IsAbs(relative) {
-		return bad
-	}
-	p, e := parentAt(filepath.Dir(args[1]))
-	if e != nil {
-		return bad
-	}
-	defer p.close()
-	f, e := openAt(p.last, filepath.Base(args[1]), false, false, false)
-	if e != nil {
-		return bad
-	}
-	defer f.Close()
-	raw, e := io.ReadAll(io.LimitReader(f, (64<<10)+1))
-	if e != nil || len(raw) > 64<<10 {
-		return bad
-	}
-	o, parsed := parseOperation(raw)
-	if !parsed || !validOperation(o) || o.Writer != os.Getenv("CC_JOB_ID") {
-		return bad
-	}
-	info, ok := debug.ReadBuildInfo()
-	if !ok || info.Path != modulePath {
-		return bad
-	}
-	settings := map[string]string{}
-	for _, s := range info.Settings {
-		if _, exists := settings[s.Key]; exists {
-			return bad
-		}
-		settings[s.Key] = s.Value
-	}
-	if settings["vcs.revision"] != o.Source || settings["vcs.modified"] != "false" || settings["vcs"] != "git" || settings["GOOS"] != "windows" || settings["GOARCH"] != "amd64" {
-		return bad
-	}
-	return applyAt(o, args[1], hooks{})
-}
-func main() {
-	r := run(os.Args[1:])
-	_ = json.NewEncoder(os.Stdout).Encode(r)
-	if !r.Installed {
-		os.Exit(1)
-	}
 }

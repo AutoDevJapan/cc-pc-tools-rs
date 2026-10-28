@@ -220,5 +220,20 @@
     "vet_exit": 0,
     "actual_queue_and4snapshots_supplied": true,
     "report_completeness_not_historical_authentication_certification": true
+  },
+  "canonical_explanation_correction": {
+    "reviewed_prior_head": "e1859fbd04a81d84b315572f1cf6e7a20f9310f2",
+    "rubber_original_sha256": "9683cb8f8055a17299e5990ae2b198158f2c47fe7656c9d62dac5a78ce502a36",
+    "rubber_M": 0,
+    "rubber_S": 1,
+    "rubber_N": 0,
+    "scope_and_limitation_checked_against_canonical_unknown_explanation": true,
+    "actual_two_contradictory_explanation_Red_cases_reproduced": true,
+    "affected_full_package_seconds": 6.389,
+    "vet_exit": 0,
+    "actual_queue_and4snapshots_supplied": true,
+    "historical_authentication_remains_unknown": true,
+    "new_central_operations": 0,
+    "frozen_Creators_payloads_and_original_results_unchanged": true
   }
 }

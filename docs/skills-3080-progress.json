@@ -3,7 +3,7 @@
   "issue": "https://github.com/AutoDevJapan/cc-pc-tools-rs/issues/283",
   "observed_at": "2026-10-24T17:15:09.0197014+09:00",
   "phase_a": "partial; 647 additional text shapes held by execution review",
-  "phase_b": "作業版は実導入158・統合3・再確認が残る除外記録15。新4件は一度の作成・通常読戻し28・構造・発見4・実instruction8の明示判断まで確認した。main受入154との差分4は実結果の二役レビュー/CI/merge待ちで、全16/73220は継続。",
+  "phase_b": "実導入158・既存統合3・要再確認の除外記録15を保持する。元3719の次6評価、一次本文の次15群と17掲載metadata、指定サイトの次2評価を、全原packet/担当/伏字/unknown/個別権利未確認を保って処理表へ追加する。旧175本文群の全recordは不変。新規採否や中央配置は行わず、指定16資料/73,220候補全体を継続する。",
   "catalog_sha256": "2d73c9a038a41cc220a9687b935bfa1e0b315b65d9bd6d3e54ddb4111972876c",
   "source_count": 16,
   "fixed_public_repos": [
@@ -616,7 +616,7 @@
     "guard_client_resource": true,
     "state": "classification_unverified"
   },
-  "recorded_at": "2026-10-29T04:13:00.4418474+09:00",
+  "recorded_at": "2026-10-28T20:11:21.4074740+00:00",
   "total_skill_named_body_read_definition": "This field preserves the historical complete-source subset only. Current raw/workflow primary coverage is projected from the canonical source components and sixmile evaluation index in all_fulltext_primary_paths_including_partial_sources/all_workflow_primary_paths_including_partial_sources, not copied here.",
   "openai_entrypoint_evaluation": {
     "rights_accepted": false,
@@ -3356,6 +3356,37 @@
     "working_new": 158,
     "new_raw_source_credit": 0,
     "public_result_review_pending": true,
+    "whole16_complete": false
+  },
+  "latest_received23": {
+    "publisher_job": "20261027-175645-todo-3080",
+    "original3719_rows": [
+      240,
+      245
+    ],
+    "original_assessments": 6,
+    "original_complete_chunks": 4,
+    "support_metadata": 48,
+    "saved_support_metadata": 18,
+    "unsaved_support_metadata": 30,
+    "original_primary_raw_full": 5,
+    "original_primary_masked_full": 1,
+    "primary_representative_meanings": 15,
+    "primary_complete_packets": 6,
+    "primary_member_metadata": 17,
+    "all_prior175_primary_records_unchanged": true,
+    "site_assessments": 2,
+    "site_physical_lines": 472,
+    "site_visible_lines": 434,
+    "site_withheld_lines": 38,
+    "all_original_parent_common21_and_entry_fields_retained": true,
+    "new_original_source_body_reads_from_publication": 0,
+    "new_global_raw_credit": 0,
+    "new_copy_permissions": 0,
+    "new_final_dispositions": 0,
+    "central_operations": 0,
+    "unavailable": 428,
+    "acquisition_review_hold": 647,
     "whole16_complete": false
   }
 }

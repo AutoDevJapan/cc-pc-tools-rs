@@ -448,6 +448,12 @@ func TestExpandedSixmileIndexAddsNewCohortAndReadingAmendmentExactlyOnce(t *test
 				}
 				accepted[id] = row
 			}
+			for id, row := range validatedRentalDispositions(t) {
+				if accepted[id].ID != "" {
+					t.Fatal("rental source already has a current acceptance")
+				}
+				accepted[id] = row
+			}
 			switch name {
 			case "received_without_current_acceptance":
 				accepted = nil

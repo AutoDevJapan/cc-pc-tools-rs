@@ -3,7 +3,7 @@
   "issue": "https://github.com/AutoDevJapan/cc-pc-tools-rs/issues/283",
   "observed_at": "2026-10-24T17:15:09.0197014+09:00",
   "phase_a": "partial; 647 additional text shapes held by execution review",
-  "phase_b": "実導入158・既存統合3・要再確認の除外記録15を保持する。元3719の次6評価、一次本文の次15群と17掲載metadata、指定サイトの次2評価を、全原packet/担当/伏字/unknown/個別権利未確認を保って処理表へ追加する。旧175本文群の全recordは不変。新規採否や中央配置は行わず、指定16資料/73,220候補全体を継続する。",
+  "phase_b": "作業版は実導入159・統合3・再確認が残る除外記録15。賃貸借記録Skillは一度の7作成/通常7読戻し/構造・発見1/現命令2の1実research+6合成まで確認。main158との差分1と追加9評価は最終二役review/CI/merge待ち、全16/73220は継続。",
   "catalog_sha256": "2d73c9a038a41cc220a9687b935bfa1e0b315b65d9bd6d3e54ddb4111972876c",
   "source_count": 16,
   "fixed_public_repos": [
@@ -286,9 +286,9 @@
   "site_entries_with_body": 9862,
   "site_entries_without_body": 428,
   "execution_held_shapes": 647,
-  "candidate_designs": 158,
-  "independently_accepted": 158,
-  "installed": 158,
+  "candidate_designs": 159,
+  "independently_accepted": 159,
+  "installed": 159,
   "integrated": 3,
   "excluded": 15,
   "units": {
@@ -346,22 +346,22 @@
     "actual_installed": 8
   },
   "candidate_count_definitions": {
-    "candidate_designs": "Legacy28 plus directly sourced actual designs130; legacy3 pending drafts and catalog rows remain separate;158 is not a cap.",
+    "candidate_designs": "Legacy28 plus directly sourced actual designs131; legacy3 pending drafts/catalog rows remain separate;159 is not a cap.",
     "additional_authored_drafts_not_in_plans": 3,
-    "authored_total": 161,
-    "installed": 158,
+    "authored_total": 162,
+    "installed": 159,
     "pending_plan_targets": 0,
     "archived_draft_targets": 8,
     "archived_draft_is_subset_of_batch03": true,
     "independently_accepted": "Includes frozen full4193 content acceptance and actual4/28 normal readback, structure/discovery and explicit model use. The public result delta still requires final2-role review/CI/merge; no implicit selection/full discovery/context budget/full16 proof.",
-    "not_semantically_disposed_occurrences": 73044,
+    "not_semantically_disposed_occurrences": 73043,
     "additional_draft_sources": [
       "skills-3080-mizchi-sql-draft.json",
       "skills-3080-mizchi-mutation-draft.json"
     ],
-    "authored_total_definition": "158 actually installed new designs plus3 legacy pending drafts; no catalog rows or aliases counted as installations.",
+    "authored_total_definition": "159 actually installed new adaptations plus3 legacy pending drafts; source aliases/catalog rows are not installation counts.",
     "new_proposed_uninstalled_targets": 0,
-    "authored_including_new_proposals": 161,
+    "authored_including_new_proposals": 162,
     "authored_including_new_proposals_definition": "158 actually installed new designs plus3 legacy pending drafts; the original next4 proposal remains historical and its actual placement is recorded separately."
   },
   "kepano_entrypoint_assessment": {
@@ -616,7 +616,7 @@
     "guard_client_resource": true,
     "state": "classification_unverified"
   },
-  "recorded_at": "2026-10-28T20:11:21.4074740+00:00",
+  "recorded_at": "2026-10-28T21:46:04.0926470+00:00",
   "total_skill_named_body_read_definition": "This field preserves the historical complete-source subset only. Current raw/workflow primary coverage is projected from the canonical source components and sixmile evaluation index in all_fulltext_primary_paths_including_partial_sources/all_workflow_primary_paths_including_partial_sources, not copied here.",
   "openai_entrypoint_evaluation": {
     "rights_accepted": false,
@@ -1703,7 +1703,7 @@
     "current_individual_rights_entries": 5,
     "main_accepted_excluded_before_this_delta": 8,
     "branch_excluded": 15,
-    "branch_pending": 73044,
+    "branch_pending": 73043,
     "primary_and_support_read_states_unchanged": true,
     "existing_primary_amendment_separate": true,
     "source_scripts_executed": false,
@@ -3405,5 +3405,38 @@
     "central_operations": 0,
     "not_a_total_candidate_cap": true,
     "canonical_alias_schema_used": true
+  },
+  "rental_ledger_installation": {
+    "evidence": "skills-3080-rental-ledger-installation-evidence175645.json",
+    "actual_created": 1,
+    "current_files": 7,
+    "bytes": 37868,
+    "normal_batches": 1,
+    "fresh_discovered": 1,
+    "parse_errors": 0,
+    "metadata_total": 478,
+    "scan_limit_diagnostics": 2,
+    "current_instruction_files": 2,
+    "current_instruction_bytes": 7895,
+    "actual_current_workflow_decisions": 1,
+    "synthetic_decisions": 6,
+    "accepted_main_new_before_result_merge": 158,
+    "working_new": 159,
+    "public_result_review_pending": true,
+    "whole16_complete": false
+  },
+  "latest_received9_after1492": {
+    "original3719_assessments": 4,
+    "complete_chunks": 3,
+    "support_metadata": 68,
+    "saved_support": 56,
+    "unsaved_support": 12,
+    "primary_representative_meanings": 5,
+    "primary_member_metadata": 9,
+    "complete_primary_packets": 3,
+    "all_prior190_records_exact": true,
+    "new_source_reads_grants_dispositions_from_publication": 0,
+    "central_operations": 0,
+    "whole16_complete": false
   }
 }

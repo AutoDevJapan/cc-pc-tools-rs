@@ -1,0 +1,157 @@
+{
+  "todo": 3080,
+  "publisher_job": "20261027-175645-todo-3080",
+  "creator_job": "20261027-175645-todo-3080",
+  "new_targets_created": 1,
+  "successful_CreateNew_count": 1,
+  "current_files_readback_verified": 7,
+  "bytes": 37868,
+  "manifest_path": "docs/skills-3080-operations/create-rental-ledger-175645.json",
+  "manifest_sha256": "9181080be684764ecc89a6c8a77138f45e79507b470fb76c66ecc0fb6c5a3572",
+  "request_sha256": "da7029cef27b8376970475710fbd1f49aedf2384a9f583657fe660b0436c88ba",
+  "creation_input_head": "f7032dff0bbe895960edbbe40a31f192b5c813f0",
+  "frozen_Creator": {
+    "Creator_task": 4208,
+    "Creator_job": "20261029-061701-todo-4208",
+    "Creator_saved_spec": "65385471dee9ea8ed2c9f364d430c728e36cb8601c5556d13cdeef541999eb29",
+    "full_original_sha256": "13e47ee941667e1c9334de75bedd50ef2826a4f7d7160c731f55c7929298e669",
+    "full_no_comparison": true,
+    "selected_PUBLIC_inputs": 12,
+    "payload_files": 7,
+    "manifest_sha256": "9181080be684764ecc89a6c8a77138f45e79507b470fb76c66ecc0fb6c5a3572",
+    "request_sha256": "da7029cef27b8376970475710fbd1f49aedf2384a9f583657fe660b0436c88ba",
+    "CreateNew_success_observed": true,
+    "created_files": 7,
+    "existing_overwrites": 0,
+    "successful_CreateNew_count": 1,
+    "never_edit_restart_or_recreate": true,
+    "native_receipt_capture_next": true,
+    "readback_discovery_and_application_not_yet_claimed": true,
+    "whole16_complete": false
+  },
+  "frozen_Creator_flags_are_historical_creation_time": true,
+  "qualified_full_review": {
+    "consumer_job": "20261027-175645-todo-3080",
+    "producer_job": "20261029-061701-todo-4208",
+    "producer_task": 4208,
+    "immutable_origin_job": "20261027-175645-todo-3080",
+    "actual_author": "20261027-175645-todo-3080",
+    "registered_spec_sha256": "65385471dee9ea8ed2c9f364d430c728e36cb8601c5556d13cdeef541999eb29",
+    "source_proof_sha256": "f256be5bf2712a0c700e9cd46b851e57213eece3beece8ec9ee48ba30c88ce12",
+    "fixed_head": "f7032dff0bbe895960edbbe40a31f192b5c813f0",
+    "full_no_comparison": true,
+    "selected_PUBLIC_inputs": 12,
+    "payload_files": 7,
+    "manifest_sha256": "9181080be684764ecc89a6c8a77138f45e79507b470fb76c66ecc0fb6c5a3572",
+    "normal_typed_qualified": true,
+    "native": [
+      {
+        "timestamp": "2026-10-28T21:17:41.706Z",
+        "model": "gpt-6-luna",
+        "effort": "max",
+        "service_tier": null
+      }
+    ],
+    "model_origin": "owner_request",
+    "effort_origin": "owner_request",
+    "thread_matches": true,
+    "cwd_matches": true,
+    "raw_bytes": 1076,
+    "raw_sha256": "13e47ee941667e1c9334de75bedd50ef2826a4f7d7160c731f55c7929298e669",
+    "original_equals_job_last_message": true,
+    "M": 0,
+    "S": 0,
+    "N": 0,
+    "acceptance_marker_present": true,
+    "not_frozen_until_real_Create_success": true,
+    "central_operations": 0,
+    "whole16_complete": false
+  },
+  "publication_review_coordination_origin_job": "20261026-214717-todo-3080",
+  "referenced_artifacts": {
+    "bundle": {
+      "file": "skills-3080-rental-ledger-actual-bundle175645.json",
+      "sha256": "059de27e05ca69df7f1345a6f934209ccde3958820305aeacd26ac4632a4e608"
+    },
+    "manifest": {
+      "file": "skills-3080-installed-rental-ledger-manifest175645.json",
+      "sha256": "005655cc8298acd4e80d58a1cc38931f0175e06d6b2e0109715a1424be20ba62"
+    },
+    "creation": {
+      "file": "skills-3080-rental-ledger-create-evidence175645.json",
+      "sha256": "34cb9757e549786db4a52bd5fea390fe02718acf965268d7c8408b0c944f17a3"
+    },
+    "readback": {
+      "file": "skills-3080-rental-ledger-consume-evidence175645.json",
+      "sha256": "4b46f6e31f38b193661566b72b67b679cfb8b506873bfc901c161903e050f42b"
+    },
+    "discovery": {
+      "file": "skills-3080-rental-ledger-discovery175645.json",
+      "sha256": "760baa9df78cf36f8964a516d67a20a5f3c1543f9ac9999d9e7fd50b1c2ea28c"
+    },
+    "application": {
+      "file": "skills-3080-rental-ledger-application175645.json",
+      "sha256": "c8b4142ec2cd1023e42bf953cf583f4d8120695db01c21fa5360ed0ed68f638c"
+    },
+    "design": {
+      "file": "skills-3080-rental-ledger-actual-designs175645.json",
+      "sha256": "4aff25d585839e19ad13713127f3cb904b305eaa80a598f737b7aed0f9b40e6d"
+    }
+  },
+  "original_precreation_qualification": {
+    "qualified": true,
+    "created_files": 0,
+    "payload_files": 7,
+    "request_sha256": "da7029cef27b8376970475710fbd1f49aedf2384a9f583657fe660b0436c88ba",
+    "historical_absence_only": true,
+    "current_absence_claim": false,
+    "original_receipt_sha256": "2a125395157f8ba16fe83ade5366b4307c79245cce0df9bbbab18e03a78580de"
+  },
+  "structure": {
+    "exit": 0,
+    "stdout": "PASS: 1 explicit skills; structure, descriptions, references, hashes, scenario pairs; in-memory bundle only; no deployment implied\n",
+    "actual_returned_buffers": 7,
+    "new_central_operations": 0
+  },
+  "native_invocation_literal_equal": false,
+  "native_invocation_only_outer_whitespace_differs": true,
+  "actual_invocation_characters": 434,
+  "rendered_invocation_characters": 433,
+  "source_and_original_native_not_rewritten": true,
+  "discovered_targets": 1,
+  "metadata_total": 478,
+  "parse_errors": 0,
+  "scan_limit_diagnostics": 2,
+  "current_instruction_files": 2,
+  "current_instruction_bytes": 7895,
+  "actual_current_workflow_decisions": 1,
+  "synthetic_decisions": 6,
+  "new_real_financial_customer_service_operations": 0,
+  "implicit_selection_full_discovery_context_budget_proven": false,
+  "new_global_raw_source_credit": 0,
+  "unknown_material_or_third_party_rights_accepted": false,
+  "historical_original_source_and_preparation_records_unchanged": true,
+  "publication_central_writes": 0,
+  "public_result_review_pending_at_recording": true,
+  "whole16_complete": false,
+  "catalog_validation": {
+    "affected_full_package_seconds": 7.919,
+    "vet_exit": 0,
+    "actual_queue_sha256": "a5db481191e811b758014bea137c648434900b8522e9ae633c3a83a83f877217",
+    "actual_all73220_queue_file_supplied": true,
+    "actual_four_pinned_primary_snapshots_supplied": true,
+    "actual_retention_comparisons": [
+      "170→175",
+      "175→190",
+      "190→195"
+    ],
+    "CI_without_private_files_must_skip_actual_byte_checks": true,
+    "working_assessments": 1501,
+    "working_final": 177,
+    "working_intersection": 171,
+    "working_legacy_final_only": 6,
+    "working_union": 1507,
+    "working_new": 159,
+    "main_accepted_new_before_result_merge": 158
+  }
+}

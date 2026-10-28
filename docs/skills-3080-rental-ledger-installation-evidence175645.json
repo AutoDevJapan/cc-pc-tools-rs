@@ -235,5 +235,20 @@
     "historical_authentication_remains_unknown": true,
     "new_central_operations": 0,
     "frozen_Creators_payloads_and_original_results_unchanged": true
+  },
+  "received_batch_test_name_correction": {
+    "self_reviewed_prior_head": "e1859fbd04a81d84b315572f1cf6e7a20f9310f2",
+    "self_original_sha256": "de1a9ba27c291b0d3959c87b190aa7944f38d2d2ed586124d62422ec59881534",
+    "self_M": 0,
+    "self_S": 0,
+    "self_N": 1,
+    "old_test_name": "TestPublishedCursorRetainsOriginal3719AndSource9Received43",
+    "current_test_name": "TestPublishedCursorRetainsReceivedBatchesWithIndependentPins",
+    "current_table_artifacts": 13,
+    "current_table_rows": 92,
+    "test_logic_and_table_unchanged": true,
+    "other_exact_name_references_found": 0,
+    "affected_renamed_test_passed": true,
+    "central_operations": 0
   }
 }

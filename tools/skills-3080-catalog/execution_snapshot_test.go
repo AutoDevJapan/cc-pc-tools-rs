@@ -128,7 +128,7 @@ func requireAssessmentInputRegistered(t *testing.T, file, sha string, rows int) 
 
 // Individually received snapshots also belong to the current occurrence
 // cursor. Their files existing on disk cannot substitute for manifest links.
-func TestPublishedCursorRetainsOriginal3719AndSource9Received43(t *testing.T) {
+func TestPublishedCursorRetainsReceivedBatchesWithIndependentPins(t *testing.T) {
 	var m ExecutionManifest
 	loadPublicReceipt(t, "skills-3080-execution-evidence.json", &m)
 	required := []ExecutionArtifact{

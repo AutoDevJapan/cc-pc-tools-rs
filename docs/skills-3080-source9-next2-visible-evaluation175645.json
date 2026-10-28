@@ -412,5 +412,24 @@
     "Two already read complete visible masked workflows, not raw full reads or permission grants. All40 withheld lines and unread reference bodies remain unknown.",
     "The fixed saved archive path/hash is not an upstream commit or publisher verification. No new HTTP/source/central/UI/service operation was performed.",
     "Prior source9 first4 are unchanged. The original all10290 metadata and held428 remain in scope; this next2 is not a total cap."
-  ]
+  ],
+  "original_parent_common": {
+    "domain": "skills3080-parent-source9-next2-visible-meaning-v1",
+    "consumer_job": "20261027-175645-todo-3080",
+    "observed_at": "2026-10-28T09:51:25.3212431+00:00",
+    "after_first4": 4,
+    "assessments": 2,
+    "physical_lines": 488,
+    "visible_lines": 448,
+    "withheld_lines": 40,
+    "new_raw_credit": 0,
+    "new_copy_permissions": 0,
+    "new_final_dispositions": 0,
+    "central_operations": 0,
+    "whole16_complete": false,
+    "limits": "Current original2026-10-20 saved source claims only. No new HTTP, reference acquisition, source script, UI or brand account changes. Independent publisher/version and individual notice scope remain unverified."
+  },
+  "original_parent_canonical_sha256": "167237aec76cb5a3d3374eab00fb63ab759b2305175fab20b6637c50d0454dde",
+  "all_original_parent_fields_losslessly_preserved": true,
+  "original_first_prepared_sha256": "46e7ddd3105251dde7ae3516b239fc234fff70647b4c18fabb3f700719bd9afc"
 }

@@ -1,0 +1,11 @@
+{
+  "qualified": true,
+  "request_sha256": "79f7fbc0694e435a597d9b4a24bbf7ca827bc6f872c8e568ce2f0bf39507ab77",
+  "manifest_sha256": "39ea776e81250f702902f53aa0e08df98df30d71a964edd9d4295317dcc1a209",
+  "created_files": 0,
+  "targets": 4,
+  "payload_files": 28,
+  "original_precreation_receipt_sha256": "6af6cb97f450d051e06b4127d2777c709b913a4bc018f2812eef6f70bc4addac",
+  "scope": "Original normal precreation only; not a new absence claim after placement",
+  "whole16_complete": false
+}

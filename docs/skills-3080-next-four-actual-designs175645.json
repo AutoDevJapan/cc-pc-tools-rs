@@ -1,0 +1,165 @@
+{
+  "todo": 3080,
+  "targets": [
+    {
+      "name": "balance-snapshot-reconciliation",
+      "source_urls": [
+        "https://github.com/6mile/skills/blob/920714f17d81e0a95c7a9bc51faf0a7921cd982d/skills/shawnmuggle/rozo-intents-skills/skills/check-balance/SKILL.md",
+        "https://github.com/6mile/skills/blob/920714f17d81e0a95c7a9bc51faf0a7921cd982d/skills/shawnmuggle/rozo-intents-skills/LICENSE.md"
+      ],
+      "positive": "同じchain・asset・decimalと取得時点を確認し、正しい0と未取得を区別して、通貨別の照合結果を示す。",
+      "negative": "0x形式だけでchainや所有を決め、欠損を0へ置き換え、別chain・別時点の数値を同じ残高として合算する。",
+      "entrypoint_sha256": "fa7f1bbdc852a7904f183137e5c38d914db0ac21a31b4c15627a12ce8bc6478a",
+      "target_kind": "new_adaptation",
+      "deployment_state": "actual_created_normal_readback_discovered_explicit_application",
+      "historical_proposal": {
+        "name": "balance-snapshot-reconciliation",
+        "source_urls": [
+          "https://github.com/6mile/skills/blob/920714f17d81e0a95c7a9bc51faf0a7921cd982d/skills/shawnmuggle/rozo-intents-skills/skills/check-balance/SKILL.md",
+          "https://github.com/6mile/skills/blob/920714f17d81e0a95c7a9bc51faf0a7921cd982d/skills/shawnmuggle/rozo-intents-skills/LICENSE.md"
+        ],
+        "positive": "同じchain・asset・decimalと取得時点を確認し、正しい0と未取得を区別して、通貨別の照合結果を示す。",
+        "negative": "0x形式だけでchainや所有を決め、欠損を0へ置き換え、別chain・別時点の数値を同じ残高として合算する。",
+        "new_intent": true,
+        "deployment_state": "proposed_uninstalled",
+        "real_deployment_or_discovery_or_application_confirmed": false,
+        "unknown_existing_bodies_compared": false,
+        "pre_mutation_absence_qualification_completed": false
+      },
+      "central_operations": 1,
+      "new_adoptions": 1,
+      "actual_manifest": "skills-3080-installed-next-four-manifest175645.json",
+      "actual_evidence": "skills-3080-next-four-installation-evidence175645.json",
+      "public_result_delta_review_pending_at_recording": true,
+      "inventory_id": "github:25e4fda6fe6264a4bd4ada96cac534c91ca9bec7c8c6bba333f9b16330eeb483",
+      "source_repo": "6mile/skills",
+      "source_commit": "920714f17d81e0a95c7a9bc51faf0a7921cd982d",
+      "source_path": "skills/shawnmuggle/rozo-intents-skills/skills/check-balance/SKILL.md",
+      "source_sha256": "0482c6bebe7343a01ec2d8ac83e93bab23f572655d6d4adc15480b1f1ff261d1",
+      "primary_license": "MIT-0",
+      "individual_notice_sha256": "07121e96b2e2b849fbcbdd53c78e25811f75d2c565b683eb9048d74d731470a0",
+      "rights_scope": "Only this directly read visible workflow and its exact line-preserving masked reference under the stated per-package MIT-0 notice, with original notice and modification attribution retained. Withheld source meanings, uninspected scripts/supports/metadata, independent authorship and third-party service/data/component rights are not adopted. No key/card/fee/MCP or service-execution authority."
+    },
+    {
+      "name": "browser-extraction-missingness",
+      "source_urls": [
+        "https://github.com/6mile/skills/blob/920714f17d81e0a95c7a9bc51faf0a7921cd982d/skills/pkiv/browse/skills/create/SKILL.md",
+        "https://github.com/6mile/skills/blob/920714f17d81e0a95c7a9bc51faf0a7921cd982d/skills/pkiv/browse/LICENSE.txt"
+      ],
+      "positive": "対象画面と項目の対応を確認し、明示された0と空欄・未取得・解析失敗を分けて、取得範囲と未解決を記録する。",
+      "negative": "見つからなかった価格を0へ変え、通信が止まったことやsuccessフラグだけで全件抽出が成功したとする。",
+      "entrypoint_sha256": "0c3bcca3bd306dcdc24e6d4c12ae69c652e8e3f46ff0e56a8008496672a2ae7e",
+      "target_kind": "new_adaptation",
+      "deployment_state": "actual_created_normal_readback_discovered_explicit_application",
+      "historical_proposal": {
+        "name": "browser-extraction-missingness",
+        "source_urls": [
+          "https://github.com/6mile/skills/blob/920714f17d81e0a95c7a9bc51faf0a7921cd982d/skills/pkiv/browse/skills/create/SKILL.md",
+          "https://github.com/6mile/skills/blob/920714f17d81e0a95c7a9bc51faf0a7921cd982d/skills/pkiv/browse/LICENSE.txt"
+        ],
+        "positive": "対象画面と項目の対応を確認し、明示された0と空欄・未取得・解析失敗を分けて、取得範囲と未解決を記録する。",
+        "negative": "見つからなかった価格を0へ変え、通信が止まったことやsuccessフラグだけで全件抽出が成功したとする。",
+        "new_intent": true,
+        "deployment_state": "proposed_uninstalled",
+        "real_deployment_or_discovery_or_application_confirmed": false,
+        "unknown_existing_bodies_compared": false,
+        "pre_mutation_absence_qualification_completed": false
+      },
+      "central_operations": 1,
+      "new_adoptions": 1,
+      "actual_manifest": "skills-3080-installed-next-four-manifest175645.json",
+      "actual_evidence": "skills-3080-next-four-installation-evidence175645.json",
+      "public_result_delta_review_pending_at_recording": true,
+      "inventory_id": "github:58702b56afec89eb19801b922c4a44c309d6caf773aa0036533f0e064914719e",
+      "source_repo": "6mile/skills",
+      "source_commit": "920714f17d81e0a95c7a9bc51faf0a7921cd982d",
+      "source_path": "skills/pkiv/browse/skills/create/SKILL.md",
+      "source_sha256": "4875de5de3e696c9082f4971387b506e790dd066cb432ab0347b7827841dd882",
+      "primary_license": "MIT",
+      "individual_notice_sha256": "a7f98ba58237657d1f06d32903af0e4ef28a757eed4f0cd01c72191e4220083c",
+      "rights_scope": "Only this directly read visible workflow and its exact line-preserving masked reference under the stated per-package MIT notice, with original notice and modification attribution retained. Withheld source meanings, uninspected scripts/supports/metadata, independent authorship and third-party service/data/component rights are not adopted. No key/card/fee/MCP or service-execution authority."
+    },
+    {
+      "name": "remote-run-result-reconciliation",
+      "source_urls": [
+        "https://github.com/6mile/skills/blob/920714f17d81e0a95c7a9bc51faf0a7921cd982d/skills/pkiv/browse/skills/functions/SKILL.md",
+        "https://github.com/6mile/skills/blob/920714f17d81e0a95c7a9bc51faf0a7921cd982d/skills/pkiv/browse/LICENSE.txt"
+      ],
+      "positive": "指定した公開版と実行IDを固定し、受付・実行中・終了と実結果を照合して、部分結果や応答不明を残す。",
+      "negative": "公開や実行の受付だけで完了とし、応答不明の実行を新しいIDで重ね、生成したsuccessフラグを実成果とする。",
+      "entrypoint_sha256": "6b686a6489c5f1784efd48a3f1bdfd4982cf3c2c5dcf64bc7c1537fb1965d850",
+      "target_kind": "new_adaptation",
+      "deployment_state": "actual_created_normal_readback_discovered_explicit_application",
+      "historical_proposal": {
+        "name": "remote-run-result-reconciliation",
+        "source_urls": [
+          "https://github.com/6mile/skills/blob/920714f17d81e0a95c7a9bc51faf0a7921cd982d/skills/pkiv/browse/skills/functions/SKILL.md",
+          "https://github.com/6mile/skills/blob/920714f17d81e0a95c7a9bc51faf0a7921cd982d/skills/pkiv/browse/LICENSE.txt"
+        ],
+        "positive": "指定した公開版と実行IDを固定し、受付・実行中・終了と実結果を照合して、部分結果や応答不明を残す。",
+        "negative": "公開や実行の受付だけで完了とし、応答不明の実行を新しいIDで重ね、生成したsuccessフラグを実成果とする。",
+        "new_intent": true,
+        "deployment_state": "proposed_uninstalled",
+        "real_deployment_or_discovery_or_application_confirmed": false,
+        "unknown_existing_bodies_compared": false,
+        "pre_mutation_absence_qualification_completed": false
+      },
+      "central_operations": 1,
+      "new_adoptions": 1,
+      "actual_manifest": "skills-3080-installed-next-four-manifest175645.json",
+      "actual_evidence": "skills-3080-next-four-installation-evidence175645.json",
+      "public_result_delta_review_pending_at_recording": true,
+      "inventory_id": "github:aa9395d1b8d7707cde0c3bc7c03691e142c478fabe947548504811085309d69a",
+      "source_repo": "6mile/skills",
+      "source_commit": "920714f17d81e0a95c7a9bc51faf0a7921cd982d",
+      "source_path": "skills/pkiv/browse/skills/functions/SKILL.md",
+      "source_sha256": "881ba4f730306f639cf0b7cf94f2ded53a40d7a929f7ba741becbabe36f7a716",
+      "primary_license": "MIT",
+      "individual_notice_sha256": "a7f98ba58237657d1f06d32903af0e4ef28a757eed4f0cd01c72191e4220083c",
+      "rights_scope": "Only this directly read visible workflow and its exact line-preserving masked reference under the stated per-package MIT notice, with original notice and modification attribution retained. Withheld source meanings, uninspected scripts/supports/metadata, independent authorship and third-party service/data/component rights are not adopted. No key/card/fee/MCP or service-execution authority."
+    },
+    {
+      "name": "codebase-impact-context",
+      "source_urls": [
+        "https://github.com/6mile/skills/blob/920714f17d81e0a95c7a9bc51faf0a7921cd982d/skills/joeavaib/cxm-neural-memory/docs/cxm-neural-memory/SKILL.md",
+        "https://github.com/6mile/skills/blob/920714f17d81e0a95c7a9bc51faf0a7921cd982d/skills/joeavaib/cxm-neural-memory/docs/LICENSE.md"
+      ],
+      "positive": "同じソース版の呼出し側・設定・利用経路を確認し、索引の不足を残して影響範囲に合うテストを選ぶ。",
+      "negative": "意味検索の上位だけで全依存を把握したとし、索引外の設定や実行時の参照を無視して影響なしと断定する。",
+      "entrypoint_sha256": "b03b0a2fffca5f232d232f57ba38aa15fc80e60eb16c92bfee782f65ce9cbdce",
+      "target_kind": "new_adaptation",
+      "deployment_state": "actual_created_normal_readback_discovered_explicit_application",
+      "historical_proposal": {
+        "name": "codebase-impact-context",
+        "source_urls": [
+          "https://github.com/6mile/skills/blob/920714f17d81e0a95c7a9bc51faf0a7921cd982d/skills/joeavaib/cxm-neural-memory/docs/cxm-neural-memory/SKILL.md",
+          "https://github.com/6mile/skills/blob/920714f17d81e0a95c7a9bc51faf0a7921cd982d/skills/joeavaib/cxm-neural-memory/docs/LICENSE.md"
+        ],
+        "positive": "同じソース版の呼出し側・設定・利用経路を確認し、索引の不足を残して影響範囲に合うテストを選ぶ。",
+        "negative": "意味検索の上位だけで全依存を把握したとし、索引外の設定や実行時の参照を無視して影響なしと断定する。",
+        "new_intent": true,
+        "deployment_state": "proposed_uninstalled",
+        "real_deployment_or_discovery_or_application_confirmed": false,
+        "unknown_existing_bodies_compared": false,
+        "pre_mutation_absence_qualification_completed": false
+      },
+      "central_operations": 1,
+      "new_adoptions": 1,
+      "actual_manifest": "skills-3080-installed-next-four-manifest175645.json",
+      "actual_evidence": "skills-3080-next-four-installation-evidence175645.json",
+      "public_result_delta_review_pending_at_recording": true,
+      "inventory_id": "github:192881db536eb8fa09e04f09aa051710b7540b92da63234eddecb424982996cc",
+      "source_repo": "6mile/skills",
+      "source_commit": "920714f17d81e0a95c7a9bc51faf0a7921cd982d",
+      "source_path": "skills/joeavaib/cxm-neural-memory/docs/cxm-neural-memory/SKILL.md",
+      "source_sha256": "1d838f736ef09ac06b965f1d540f86c52e001042ffeaf9e40609abba996f9f90",
+      "primary_license": "MIT",
+      "individual_notice_sha256": "5bceb2f2dcbf4d4f35ec6367998a98b689392c6c8caf1e12ad3d598885095fef",
+      "rights_scope": "Only this directly read visible workflow and its exact line-preserving masked reference under the stated per-package MIT notice, with original notice and modification attribution retained. Withheld source meanings, uninspected scripts/supports/metadata, independent authorship and third-party service/data/component rights are not adopted. No key/card/fee/MCP or service-execution authority."
+    }
+  ],
+  "historical_proposal": "skills-3080-next-four-designs175645.json",
+  "batch_is_not_total_scope_or_count_cap": true,
+  "new_global_source_raw_credit": 0,
+  "whole16_complete": false
+}

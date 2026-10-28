@@ -109,9 +109,9 @@ func assessmentInputRegistered(artifacts []ExecutionArtifact, required Execution
 	return nil
 }
 
-// Bind each explicit fidelity case to the runtime cursor as that case is
-// added. A file on disk cannot pass its fidelity check while omitted from the
-// execution manifest, even if a separate required-input list was overlooked.
+// Bind fidelity cases using this helper to the runtime cursor. Independent
+// tests that do not call it need their own manifest-registration assertion.
+// A checked file on disk cannot substitute for its execution-manifest link.
 func requireAssessmentInputRegistered(t *testing.T, file, sha string, rows int) {
 	t.Helper()
 	var m ExecutionManifest

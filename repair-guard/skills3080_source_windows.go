@@ -363,14 +363,14 @@ func skillsSourceObject(root string, row skillsSavedSource, outputs []skillsOutp
 	if hex.EncodeToString(blob.Sum(nil)) != row.Blob {
 		return false
 	}
-	for _, output := range outputs {
-		if output.SHA == row.SHA && bytes.Equal(output.body, raw) {
-			return true
-		}
-	}
 	if len(bindings) == 1 {
 		if target, ok := bindings[0][skillsSourceKey(row.Repo, row.Commit, row.Path)]; ok {
 			return skillsMaskedSourceObjectTarget(row, raw, outputs, target)
+		}
+	}
+	for _, output := range outputs {
+		if output.SHA == row.SHA && bytes.Equal(output.body, raw) {
+			return true
 		}
 	}
 	return skillsMaskedSourceObject(row, raw, outputs)

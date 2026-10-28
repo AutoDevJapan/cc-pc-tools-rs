@@ -166,6 +166,19 @@ func TestSkills3080RenamedReferenceStillUsesSameAcquiredObjectAndLines(t *testin
 	if !check(m) {
 		t.Fatal("same acquired source/object/notice with explicit renamed namespace rejected")
 	}
+	// Raw source in a different output cannot excuse missing alias metadata or
+	// a damaged masked reference. This is synthetic source, not acquired corpus.
+	m.Files = append(m.Files, skillsOutput{Target: "renamed/references/raw-fixture.txt", SHA: hashBytes(raw), body: raw})
+	missing := m
+	missing.Files = append([]skillsOutput(nil), m.Files[:len(m.Files)-2]...)
+	missing.Files = append(missing.Files, m.Files[len(m.Files)-1])
+	if check(missing) {
+		t.Fatal("raw copy bypassed missing explicit alias metadata")
+	}
+	wrongWriter:=m;wrongWriter.Files=append([]skillsOutput(nil),m.Files...)
+	badMeta,_:=json.Marshal(map[string]any{"source":m.Sources[0],"reformulation_writer":"20261028-103853-todo-3686"})
+	skillsAliasReplaceOutput(t,&wrongWriter,"renamed/references/source.json",badMeta)
+	if check(wrongWriter){t.Fatal("raw copy bypassed the original metadata writer")}
 	for _, view := range []string{skillsModificationNoticePrefix + "Changed\n[WITHHELD physical line 2]\n", skillsModificationNoticePrefix + "Visible\n[WITHHELD physical line 3]\n"} {
 		c := m
 		c.Files = append([]skillsOutput(nil), m.Files...)

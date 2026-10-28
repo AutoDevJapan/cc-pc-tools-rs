@@ -4,6 +4,7 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"errors"
+	"math"
 	"reflect"
 	"testing"
 )
@@ -71,21 +72,22 @@ func TestParentNotice19RetainsVisibleRangesAndIndividualUnknowns(t *testing.T) {
 		vsum, msum := 0.0, 0.0
 		for _, rv := range received27Array(t, r["ranges"]) {
 			rangeValue := received27Object(t, rv)
-			end := rangeValue["through"].(float64)
-			if rangeValue["first"] != first || end < first {
+			end, endOK := parent19PhysicalNumber(rangeValue["through"])
+			start, startOK := parent19PhysicalNumber(rangeValue["first"])
+			if !endOK || !startOK || start != first || end < first {
 				t.Fatal("primary visible ranges are not continuous")
 			}
 			withheld := received27Array(t, rangeValue["withheld_physical_lines"])
 			positions := map[float64]bool{}
 			for _, p := range withheld {
-				n := p.(float64)
-				if n < first || n > end || positions[n] {
+				n, ok := parent19PhysicalNumber(p)
+				if !ok || n < first || n > end || positions[n] {
 					t.Fatal("original withheld physical position differs")
 				}
 				positions[n] = true
 			}
-			v := rangeValue["visible_lines"].(float64)
-			if v+float64(len(withheld)) != end-first+1 {
+			v, ok := parent19PhysicalNumber(rangeValue["visible_lines"])
+			if !ok || v+float64(len(withheld)) != end-first+1 {
 				t.Fatal("visible and withheld positions do not conserve physical range")
 			}
 			vsum += v
@@ -159,6 +161,11 @@ func parent19SameDisplayedBody(a map[string]any) bool {
 }
 
 func parent19NoticeRanges(n map[string]any) error {
+	physical, physicalOK := parent19PhysicalNumber(n["physical_lines"])
+	withheldTotal, withheldTotalOK := parent19PhysicalNumber(n["withheld_lines"])
+	if !physicalOK || !withheldTotalOK {
+		return errors.New("notice whole counts not nonnegative integers")
+	}
 	ranges, ok := n["ranges"].([]any)
 	if !ok || len(ranges) == 0 {
 		return errors.New("notice ranges absent")
@@ -169,15 +176,16 @@ func parent19NoticeRanges(n map[string]any) error {
 		if !ok {
 			return errors.New("notice range not an object")
 		}
-		end, endOK := r["through"].(float64)
-		visible, visibleOK := r["visible_lines"].(float64)
+		end, endOK := parent19PhysicalNumber(r["through"])
+		visible, visibleOK := parent19PhysicalNumber(r["visible_lines"])
+		start, startOK := parent19PhysicalNumber(r["first"])
 		withheld, withheldOK := r["withheld_physical_lines"].([]any)
-		if !endOK || !visibleOK || !withheldOK || r["first"] != first || end < first {
+		if !endOK || !visibleOK || !startOK || !withheldOK || start != first || end < first {
 			return errors.New("notice ranges not continuous")
 		}
 		positions := map[float64]bool{}
 		for _, p := range withheld {
-			line, ok := p.(float64)
+			line, ok := parent19PhysicalNumber(p)
 			if !ok || line < first || line > end || positions[line] {
 				return errors.New("notice withheld position invalid or repeated")
 			}
@@ -189,7 +197,7 @@ func parent19NoticeRanges(n map[string]any) error {
 		totalWithheld += float64(len(withheld))
 		first = end + 1
 	}
-	if n["physical_lines"] != first-1 || n["withheld_lines"] != totalWithheld {
+	if physical != first-1 || withheldTotal != totalWithheld {
 		return errors.New("notice whole coverage differs")
 	}
 	unknown, ok := n["unseen_meanings_remain_unknown"].(bool)
@@ -201,6 +209,13 @@ func parent19NoticeRanges(n map[string]any) error {
 		return errors.New("withheld notice became full raw read")
 	}
 	return nil
+}
+
+// JSON numbers decode to float64 here. Physical line positions and counts must
+// be finite, nonnegative integers within the exact representation range.
+func parent19PhysicalNumber(value any) (float64, bool) {
+	n, ok := value.(float64)
+	return n, ok && !math.IsNaN(n) && !math.IsInf(n, 0) && n >= 0 && n <= 1<<53-1 && math.Trunc(n) == n
 }
 
 func TestParent19NoticeAndBodyChecksRejectCounterexamples(t *testing.T) {
@@ -223,6 +238,18 @@ func TestParent19NoticeAndBodyChecksRejectCounterexamples(t *testing.T) {
 		return map[string]any{"unseen_meanings_remain_unknown": true, "raw_full": false, "physical_lines": float64(3), "withheld_lines": float64(1), "ranges": []any{map[string]any{"first": float64(1), "through": float64(3), "visible_lines": float64(2), "withheld_physical_lines": []any{float64(2)}}}}
 	}
 	mutations := map[string]func(map[string]any){
+		"nonfinite":       func(n map[string]any) { n["physical_lines"] = math.Inf(1) },
+		"nan":             func(n map[string]any) { n["withheld_lines"] = math.NaN() },
+		"inexact-integer": func(n map[string]any) { n["physical_lines"] = float64(1 << 53) },
+		"fractional-position": func(n map[string]any) {
+			n["ranges"].([]any)[0].(map[string]any)["withheld_physical_lines"] = []any{float64(2.5)}
+		},
+		"fractional-balanced-range": func(n map[string]any) {
+			r := n["ranges"].([]any)[0].(map[string]any)
+			r["through"], r["visible_lines"] = float64(3.5), float64(2.5)
+			r["withheld_physical_lines"] = []any{float64(2.5)}
+			n["physical_lines"] = float64(3.5)
+		},
 		"missing": func(n map[string]any) { delete(n, "ranges") },
 		"gap":     func(n map[string]any) { n["ranges"].([]any)[0].(map[string]any)["first"] = float64(2) },
 		"out-of-range": func(n map[string]any) {

@@ -14,6 +14,7 @@ func TestSource9FourReadReceiptsKeepUnknownRightsAndFullMaskedRanges(t *testing.
 }
 func checkSource9VisibleReceipt(t *testing.T, file, expectedSHA string, want map[string]string, wantPhysical, wantVisible, wantWithheld int) {
 	t.Helper()
+	requireAssessmentInputRegistered(t, file, expectedSHA, len(want))
 	var v map[string]any
 	raw := loadPublicReceipt(t, file, &v)
 	if travel3Digest(raw) != expectedSHA || v["site_total"] != float64(10290) || v["site_saved_body_occurrences"] != float64(9862) || v["site_held_body_occurrences"] != float64(428) || v["whole16_complete"] != false {

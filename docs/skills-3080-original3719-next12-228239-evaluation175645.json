@@ -1,0 +1,2921 @@
+{
+  "after": 227,
+  "all_original_chunks_losslessly_reconstructed": true,
+  "all_original_fields_and_actor_namespaces_preserved": true,
+  "central_operations": 0,
+  "complete_original_chunks": 3,
+  "domain": "skills3080-original3719-parent-shared-snapshot-v1",
+  "entries": [
+    {
+      "bytes": 4611,
+      "git_blob": "b5875962f3916e8b402b6a559dbdbcface7c5ad4",
+      "inventory_id": "github:7c302cc90ae5d99771e7fd408bfc1b64a27cca5a8a88d1045871000e2e8697ee",
+      "path": "skills/mailnike/erpclaw-payroll/SKILL.md",
+      "source_commit": "920714f17d81e0a95c7a9bc51faf0a7921cd982d",
+      "source_repo": "6mile/skills",
+      "source_sha256": "45567d9f62ffc0e0344d2bee8dff2356ceaa927efa330c493c22c3610fcad094"
+    },
+    {
+      "bytes": 11395,
+      "git_blob": "1e178b3fe1b6990f5fadd1bc89abff5333baaa6b",
+      "inventory_id": "github:3a8426fe0fe0a2e13d41185fec8a356f27a4151333544f6726c7e04c776d5c48",
+      "path": "skills/mailnike/erpclaw-projects/SKILL.md",
+      "source_commit": "920714f17d81e0a95c7a9bc51faf0a7921cd982d",
+      "source_repo": "6mile/skills",
+      "source_sha256": "28002cb1a7f19fc82451cd42198603495c266c6df1c84ec35be20c66cf374371"
+    },
+    {
+      "bytes": 10738,
+      "git_blob": "4c9a50d1369124ef6575e1406e04d5ccb9fb3116",
+      "inventory_id": "github:57ca305da86a3068f362326b37cb39607f5817993d956d55a7aa6b254a8c2bdf",
+      "path": "skills/mailnike/erpclaw-region-ca/SKILL.md",
+      "source_commit": "920714f17d81e0a95c7a9bc51faf0a7921cd982d",
+      "source_repo": "6mile/skills",
+      "source_sha256": "9e112bed6dd5134898abb670790aa47a40487951b8da25cb6d6cef0ee04fdce8"
+    },
+    {
+      "bytes": 9853,
+      "git_blob": "702c58ac7116eb824dd9f9e114704e70ee0ab1b7",
+      "inventory_id": "github:9e1087b6327c690a7a4ce68da1ff667dc70f5b1f5b5d326f1b310b7eace24e19",
+      "path": "skills/mailnike/erpclaw-region-eu/SKILL.md",
+      "source_commit": "920714f17d81e0a95c7a9bc51faf0a7921cd982d",
+      "source_repo": "6mile/skills",
+      "source_sha256": "63f575393104db8c9c68b331cab76c7a84652c5b1381764f53132307716fd166"
+    },
+    {
+      "bytes": 13187,
+      "git_blob": "d22f63178e46f51d24131b05ba7bcf6e2385cba9",
+      "inventory_id": "github:5d07ce15e8f63c41d6f2cd9f251e4cf958e8a7bcaff3996981c2872ac44a415f",
+      "path": "skills/mailnike/erpclaw-region-in/SKILL.md",
+      "source_commit": "920714f17d81e0a95c7a9bc51faf0a7921cd982d",
+      "source_repo": "6mile/skills",
+      "source_sha256": "f6e580d6200d3da482ee631e0df08503c6c370adcfd081e50f918df25c40a921"
+    },
+    {
+      "bytes": 10321,
+      "git_blob": "bc7f734f28c8e6ce39f00a61180f832fae46e163",
+      "inventory_id": "github:4e7fef0c8a7ae990e4ce7605e4d288be6119bb5a51f9a27598de8e6d19540eba",
+      "path": "skills/mailnike/erpclaw-region-uk/SKILL.md",
+      "source_commit": "920714f17d81e0a95c7a9bc51faf0a7921cd982d",
+      "source_repo": "6mile/skills",
+      "source_sha256": "e6e49848cd8c386a25bc98c720683a8bac1cc0264f9b8c45077130cdef98c85d"
+    },
+    {
+      "bytes": 14413,
+      "git_blob": "6d8fee89692aab58da7619fc3595dd1068fb909d",
+      "inventory_id": "github:3bfd7a4430db011c77f49cc47e6134ddef4e4e7008fba7a65db3889840df97e7",
+      "path": "skills/mailnike/erpclaw-reports/SKILL.md",
+      "source_commit": "920714f17d81e0a95c7a9bc51faf0a7921cd982d",
+      "source_repo": "6mile/skills",
+      "source_sha256": "f383c314d03cb36f601a5e3ce369618e22e3bbbd3e55d9f76b29c67f3f3ea00a"
+    },
+    {
+      "bytes": 15024,
+      "git_blob": "75919b80d292e9199cf6b76691b8289b7ee5d33b",
+      "inventory_id": "github:07fd22abbfb963a1b0f72b738e8820d0c01510b24bae749a8e6d60669ec6cea6",
+      "path": "skills/mailnike/erpclaw-selling/SKILL.md",
+      "source_commit": "920714f17d81e0a95c7a9bc51faf0a7921cd982d",
+      "source_repo": "6mile/skills",
+      "source_sha256": "468198fae181a0e690a3c92be65ba564a9a399c7cd5865163604efd7fa6a915c"
+    },
+    {
+      "bytes": 13738,
+      "git_blob": "b45ef88bdff91b99e8c4739883f9bec4a93667ef",
+      "inventory_id": "github:d4c5e64955a84d8ae187d85bdd6bfe715e948bf575ac732002952539676c23d8",
+      "path": "skills/mailnike/erpclaw-setup/SKILL.md",
+      "source_commit": "920714f17d81e0a95c7a9bc51faf0a7921cd982d",
+      "source_repo": "6mile/skills",
+      "source_sha256": "888f34af65f63e1e2bfe232b9dae90ceffc795da611ee9492c00563a73725769"
+    },
+    {
+      "bytes": 10741,
+      "git_blob": "1aacf630d39d9a683ee9cc99161894630e2a5042",
+      "inventory_id": "github:2170f71604aed8fa15c51885defcd77050e21e4254963ddb96385e7796a2ff7b",
+      "path": "skills/mailnike/erpclaw-support/SKILL.md",
+      "source_commit": "920714f17d81e0a95c7a9bc51faf0a7921cd982d",
+      "source_repo": "6mile/skills",
+      "source_sha256": "42adc57afb4d411bc63309b8ab8d15d5da7629f401485a21f85a809582ea6163"
+    },
+    {
+      "bytes": 15323,
+      "git_blob": "708f1797632c085e9ba2bc4e46c5b69c082c4daf",
+      "inventory_id": "github:ee9cc158c91886f0ac1afc8700711e89d8a177d9f073f9eb17b408979e234094",
+      "path": "skills/mailnike/erpclaw-tax/SKILL.md",
+      "source_commit": "920714f17d81e0a95c7a9bc51faf0a7921cd982d",
+      "source_repo": "6mile/skills",
+      "source_sha256": "5803651510c3faed65f70db12928c7976f8d2047aeb27413a3942728169ffdae"
+    },
+    {
+      "bytes": 18252,
+      "git_blob": "065fd25c61bf0c308e231416885f82368ab4d84a",
+      "inventory_id": "github:abe3bd405fa0fc6e5a09f425b064ce6e5e57645bb0964ed4289f2e72bc6eaab7",
+      "path": "skills/mailnike/erpclaw/SKILL.md",
+      "source_commit": "920714f17d81e0a95c7a9bc51faf0a7921cd982d",
+      "source_repo": "6mile/skills",
+      "source_sha256": "debf82f27f487c2582aefea3489216eaa26ef040977340778ed93c0b7991fa69"
+    }
+  ],
+  "limits": [
+    "Parent received actual original twelve assessments and limits with independent native Sol/max metadata; source body/support raw reads remain the recorded original reader's work, not new parent raw reads.",
+    "Original notice reuse, ordered full-diff, fresh reads, saved-unread and unsaved null states and per-chunk actor namespaces are preserved, not converted into permissions.",
+    "This pending-assessment preparation does not install, accept third-party rights or complete598/51030/73220/16sources.",
+    "Row239 retains a102-path support metadata delta based on already accepted row215; counts here include only explicit per-entry support tuples, not inherited body-read credit."
+  ],
+  "new_copy_permissions": 0,
+  "new_final_dispositions": 0,
+  "new_parent_raw_body_read_credit": 0,
+  "new_source_or_support_reads_by_materializer": 0,
+  "original_journal_parent": "20261024-235901-todo-3080",
+  "original_primary_assessments": 12,
+  "original_support_state_counts": {
+    "0": 84,
+    "1": 15,
+    "2": 10,
+    "3": 2,
+    "4": 12
+  },
+  "parent_journal_sha256_at239": "0f4b229e32c0230d7b7453c6283d6b497cefd53dd9cb60620018ea05e7cf490d",
+  "publisher_job": "20261027-175645-todo-3080",
+  "records": [
+    {
+      "actual_assessment_reader": "20261028-171959-todo-3719",
+      "bytes": 4611,
+      "current_permission_or_adoption_granted": false,
+      "git_blob": "b5875962f3916e8b402b6a559dbdbcface7c5ad4",
+      "inventory_id": "github:7c302cc90ae5d99771e7fd408bfc1b64a27cca5a8a88d1045871000e2e8697ee",
+      "new_final_disposition": false,
+      "ordinal": 228,
+      "original_assessment": {
+        "candidate_disposition": "給与runの対象/明細・根拠版/実作用の整合を改訂候補として提案。採否・許諾・導入/実test0。",
+        "findings": [
+          "2026という表題だけで税率/控除・賃金上限が現年度に正しいとしない。rates例の省略記号を含むJSONもそのまま実行可能な設定ではない。",
+          "給与債務/源泉徴収の仕訳と、社員への実振込・納税/申告/受理は別。W-2 data生成だけで公式提出済みとはしない。",
+          "対象者の欠落/部分失敗・YTD/支払周期/州/税区分・有効日/丸め、再試行の二重計上と取消はprimaryだけでは検証できない。"
+        ],
+        "nearby_metadata": [
+          "payroll-batch-reconciliation",
+          "sql-data-integrity",
+          "payment-status-reconciliation",
+          "domain-modeling"
+        ],
+        "negative": "保存例の2026ラベルとsubmit成功だけで正しい控除/実振込・公式申告まで完了とする。",
+        "notices": [
+          [
+            "LICENSE.txt",
+            1,
+            "当該payrollの同1066B notice。",
+            "実公開版/作者・給与/税データと依存の権利は別。"
+          ]
+        ],
+        "positive": "固定した対象名簿と税/給与設定版で明細を照合し、runの計上/取消と実支払・申告を別に確認する。",
+        "read": [
+          2,
+          0,
+          0,
+          true,
+          true,
+          102
+        ],
+        "reason": "102行全読。US給与、2026とラベル付けされた税率/控除・FICA例、W-2と原子的GL/取消の主張を確認。実装/税計算は未検証。",
+        "required_changes": [
+          "会社/対象名簿・給与/税設定の年度/版と有効期間を固定し、公式の現条件・累計/上限/控除/按分/丸めを親の実利用時に照合する。",
+          "runの全対象/明細/仕訳・取消を一意かつ原子的に結び、実支払/申告は別receiptで確認する。原role/例から実給与や新支出を実行しない。"
+        ],
+        "row": 228,
+        "source": [
+          "github:7c302cc90ae5d99771e7fd408bfc1b64a27cca5a8a88d1045871000e2e8697ee",
+          "skills/mailnike/erpclaw-payroll/SKILL.md",
+          "45567d9f62ffc0e0344d2bee8dff2356ceaa927efa330c493c22c3610fcad094",
+          "b5875962f3916e8b402b6a559dbdbcface7c5ad4",
+          4611
+        ],
+        "support": [
+          [
+            "LICENSE.txt",
+            1066,
+            "6f6bb192",
+            "ff21cdae",
+            4,
+            0,
+            0,
+            "100644"
+          ],
+          [
+            "SKILL.md",
+            4611,
+            "45567d9f",
+            "b5875962",
+            2,
+            0,
+            0,
+            "100644"
+          ],
+          [
+            "UI.yaml",
+            null,
+            null,
+            "5d832d4d",
+            0,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "_meta.json",
+            284,
+            "8d638de3",
+            "1beca2fb",
+            1,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "pytest.ini",
+            null,
+            null,
+            "d47cc874",
+            0,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "scripts/db_query.py",
+            null,
+            null,
+            "dc908fc3",
+            0,
+            null,
+            null,
+            "100644"
+          ]
+        ],
+        "use": "給与構成/有効期間・対象名簿→明細→run承認/仕訳と、実支払/申告を分ける参考。",
+        "value": "全対象社員と各明細・税/控除/手取り・給与債務/取消を一つのrunへ対応させられる。"
+      },
+      "original_chunk_sha256": "d69d0b4cbed06f7d3aeef8de3f03f0f9eea34dc06d51b3be7492a8d35d5c8695",
+      "path": "skills/mailnike/erpclaw-payroll/SKILL.md",
+      "source_commit": "920714f17d81e0a95c7a9bc51faf0a7921cd982d",
+      "source_repo": "6mile/skills",
+      "source_sha256": "45567d9f62ffc0e0344d2bee8dff2356ceaa927efa330c493c22c3610fcad094"
+    },
+    {
+      "actual_assessment_reader": "20261028-171959-todo-3719",
+      "bytes": 11395,
+      "current_permission_or_adoption_granted": false,
+      "git_blob": "1e178b3fe1b6990f5fadd1bc89abff5333baaa6b",
+      "inventory_id": "github:3a8426fe0fe0a2e13d41185fec8a356f27a4151333544f6726c7e04c776d5c48",
+      "new_final_disposition": false,
+      "ordinal": 229,
+      "original_assessment": {
+        "candidate_disposition": "作業/成果と工数/請求の証拠分離を改訂候補として提案。採否・許諾・導入/実test0。",
+        "findings": [
+          "Billedはhours×billing_rateの計算/statusで、実invoice/送付/支払の証明ではない。billing rateを原価とするprofitabilityは実発生費用/認識収益と別。",
+          "依存FKとcircular dependency errorの説明だけで同案件/会社・循環/完了条件の検証済みとはしない。completed flagやGanttは成果受入・実進捗の証明ではない。",
+          "from/to/hours・重複/日跨ぎ・単価版、承認後の不変/訂正と再請求防止は未検証。会計認識をbillingへ委ねる記述は、同moduleのGLなし/販売委譲の説明と実契約を照合する必要がある。"
+        ],
+        "nearby_metadata": [
+          "domain-modeling",
+          "deterministic-graph-cycle-reporting",
+          "sql-data-integrity",
+          "payroll-batch-reconciliation"
+        ],
+        "negative": "completed/Billed flagだけで成果受入/請求完了とし、請求単価による金額を実原価/利益として保証する。",
+        "notices": [
+          [
+            "LICENSE.txt",
+            1,
+            "当該projectsの同1066B notice。",
+            "実公開版/作者・案件/工数データや依存の権利は別。"
+          ]
+        ],
+        "positive": "同案件の作業/依存と工数承認を実成果へ結び、単価版からの計算・実請求・入金を別に照合する。",
+        "read": [
+          2,
+          0,
+          0,
+          true,
+          true,
+          240
+        ],
+        "reason": "240行全読。18actions、depends_on、timesheet Draft→Submitted→Billedとstatus/detail原子性を確認。実装/算式・依存検出は未検証。",
+        "required_changes": [
+          "会社/案件/社員/作業と依存を固定し、実成果に基づく完了と測定範囲を記録する。時間帯/時間数/単価版・重複/承認/訂正を検査する。",
+          "工数計算・Billed/実invoice・売上/原価・入金を別に結び、status/detail原子性と再試行の一意性を確認する。元の共有ToDoや顧客約束をsourceから変更しない。"
+        ],
+        "row": 229,
+        "source": [
+          "github:3a8426fe0fe0a2e13d41185fec8a356f27a4151333544f6726c7e04c776d5c48",
+          "skills/mailnike/erpclaw-projects/SKILL.md",
+          "28002cb1a7f19fc82451cd42198603495c266c6df1c84ec35be20c66cf374371",
+          "1e178b3fe1b6990f5fadd1bc89abff5333baaa6b",
+          11395
+        ],
+        "support": [
+          [
+            "LICENSE.txt",
+            1066,
+            "6f6bb192",
+            "ff21cdae",
+            4,
+            0,
+            0,
+            "100644"
+          ],
+          [
+            "SKILL.md",
+            11395,
+            "28002cb1",
+            "1e178b3f",
+            2,
+            0,
+            0,
+            "100644"
+          ],
+          [
+            "UI.yaml",
+            null,
+            null,
+            "4bb097a9",
+            0,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "_meta.json",
+            286,
+            "2c3da862",
+            "1ed3e936",
+            1,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "pytest.ini",
+            null,
+            null,
+            "784f2837",
+            0,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "scripts/db_query.py",
+            null,
+            null,
+            "be7dda41",
+            0,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "scripts/requirements.txt",
+            137,
+            "db73144f",
+            "48e37f5e",
+            1,
+            null,
+            null,
+            "100644"
+          ]
+        ],
+        "use": "案件/作業/依存・milestoneと、工数/承認/請求額を対応させる設計参考。",
+        "value": "作業状態と実成果、記録時間/実稼働、請求単価/実原価・実請求を区別できる。"
+      },
+      "original_chunk_sha256": "d69d0b4cbed06f7d3aeef8de3f03f0f9eea34dc06d51b3be7492a8d35d5c8695",
+      "path": "skills/mailnike/erpclaw-projects/SKILL.md",
+      "source_commit": "920714f17d81e0a95c7a9bc51faf0a7921cd982d",
+      "source_repo": "6mile/skills",
+      "source_sha256": "28002cb1a7f19fc82451cd42198603495c266c6df1c84ec35be20c66cf374371"
+    },
+    {
+      "actual_assessment_reader": "20261028-171959-todo-3719",
+      "bytes": 10738,
+      "current_permission_or_adoption_granted": false,
+      "git_blob": "4c9a50d1369124ef6575e1406e04d5ccb9fb3116",
+      "inventory_id": "github:57ca305da86a3068f362326b37cb39607f5817993d956d55a7aa6b254a8c2bdf",
+      "new_final_disposition": false,
+      "ordinal": 230,
+      "original_assessment": {
+        "candidate_disposition": "地域/年度・形式/資格・計算/提出の境界を改訂候補として提案。採否・許諾・導入/実test0。",
+        "findings": [
+          "各provinceの税率・2026 YMPE等の額/上限・13地域網羅は保存主張。現年度/取引日・課税分類/場所/免税や給与累計の適合は保証しない。",
+          "pure overlay/所有tableなしでもaccounts/templates/componentsやcompany設定のseed/update作用がある。国がCAでない時にcountryを変える回復案は実適用事実を偽る根拠にしない。",
+          "BN/SINの形式/Luhnは発行/本人性/登録有効性の証明ではない。T4等の生成は公式提出・受理/納付と別。全actionの会社guardと会社指定のない計算actionの実対応も未確認。"
+        ],
+        "nearby_metadata": [
+          "domain-modeling",
+          "sql-data-integrity",
+          "evidence-based-text-review",
+          "payroll-batch-reconciliation"
+        ],
+        "negative": "countryをCAへ変えてguardを通し、保存税率とLuhn成功だけで制度適合/公式登録・提出済みとする。",
+        "notices": [
+          [
+            "LICENSE.txt",
+            1,
+            "当該region-caの同1066B notice。",
+            "実公開版/作者・asset/標準/個人データ等の権利は別。"
+          ]
+        ],
+        "positive": "実province/年度に対応した公式根拠と設定版で計算し、形式検査・帳票生成・実提出の証拠を分ける設計へ参照する。",
+        "read": [
+          2,
+          0,
+          0,
+          true,
+          true,
+          264
+        ],
+        "reason": "264行全読。30actions、GST/HST等・CPP/QPP/EI/給与税・forms/ASPEとCA guardを確認。8asset/実装は未保存で現制度/計算は未検証。",
+        "required_changes": [
+          "実会社/地域/取引日・税年度/支払周期と設定版を固定し、公式の現税率/閾値/控除・適用要件を親が必要時に確認する。",
+          "seed/configの差分と認可/DB用途、計算/帳票/提出の結果を別に確認する。sourceのcountry変更案やchecksumを実資格確認/新しい権限に使わない。"
+        ],
+        "row": 230,
+        "source": [
+          "github:57ca305da86a3068f362326b37cb39607f5817993d956d55a7aa6b254a8c2bdf",
+          "skills/mailnike/erpclaw-region-ca/SKILL.md",
+          "9e112bed6dd5134898abb670790aa47a40487951b8da25cb6d6cef0ee04fdce8",
+          "4c9a50d1369124ef6575e1406e04d5ccb9fb3116",
+          10738
+        ],
+        "support": [
+          [
+            "LICENSE.txt",
+            1066,
+            "6f6bb192",
+            "ff21cdae",
+            4,
+            0,
+            0,
+            "100644"
+          ],
+          [
+            "SKILL.md",
+            10738,
+            "9e112bed",
+            "4c9a50d1",
+            2,
+            0,
+            0,
+            "100644"
+          ],
+          [
+            "UI.yaml",
+            null,
+            null,
+            "be6fbdd6",
+            0,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "_meta.json",
+            466,
+            "99a75652",
+            "51ad34aa",
+            1,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "assets/ca_coa_aspe.json",
+            null,
+            null,
+            "57616ad1",
+            0,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "assets/ca_cpp_rates.json",
+            null,
+            null,
+            "7955f2a8",
+            0,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "assets/ca_ei_rates.json",
+            null,
+            null,
+            "8319ffee",
+            0,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "assets/ca_federal_tax_brackets.json",
+            null,
+            null,
+            "b6a8d857",
+            0,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "assets/ca_gst_hst_rates.json",
+            null,
+            null,
+            "dee7350c",
+            0,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "assets/ca_provinces.json",
+            null,
+            null,
+            "7fe8dbb1",
+            0,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "assets/ca_provincial_tax_brackets.json",
+            null,
+            null,
+            "de7e5a07",
+            0,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "assets/ca_pst_rates.json",
+            null,
+            null,
+            "3aaffb73",
+            0,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "scripts/db_query.py",
+            null,
+            null,
+            "386267dd",
+            0,
+            null,
+            null,
+            "100644"
+          ]
+        ],
+        "use": "カナダの地域/年度別税・給与設定、識別番号検査・帳票を分けるoverlay設計参考。",
+        "value": "適用地域と税率/算式版、入力形式と実資格、計算/帳票生成と公式提出を区別できる。"
+      },
+      "original_chunk_sha256": "d69d0b4cbed06f7d3aeef8de3f03f0f9eea34dc06d51b3be7492a8d35d5c8695",
+      "path": "skills/mailnike/erpclaw-region-ca/SKILL.md",
+      "source_commit": "920714f17d81e0a95c7a9bc51faf0a7921cd982d",
+      "source_repo": "6mile/skills",
+      "source_sha256": "9e112bed6dd5134898abb670790aa47a40487951b8da25cb6d6cef0ee04fdce8"
+    },
+    {
+      "actual_assessment_reader": "20261028-171959-todo-3719",
+      "bytes": 9853,
+      "current_permission_or_adoption_granted": false,
+      "git_blob": "702c58ac7116eb824dd9f9e114704e70ee0ab1b7",
+      "inventory_id": "github:9e1087b6327c690a7a4ce68da1ff667dc70f5b1f5b5d326f1b310b7eace24e19",
+      "new_final_disposition": false,
+      "ordinal": 231,
+      "original_assessment": {
+        "candidate_disposition": "地域適用/形式・標準profileと実提出の境界を改訂候補として提案。採否・許諾・導入/実test0。",
+        "findings": [
+          "国/売手買手だけの計算引数で、取引日/商品・service/登録・免税/閾値等の適用条件を網羅したとはしない。掲載税率/加盟国/閾値や標準版は現仕様未検証。",
+          "offlineとVIES lookupなしを明記。VAT/EORI形式・IBAN modulus97は公的登録や口座所有の証明ではない。EUR固定表示を別通貨の額へ無断適用しない。",
+          "seed/setupはaccounts/templates/company設定を変更する。非加盟国errorを実country変更で通す案を採用せず、EN16931等の生成を国別profile検証/実提出・受理に昇格させない。"
+        ],
+        "nearby_metadata": [
+          "domain-modeling",
+          "evidence-based-text-review",
+          "sql-data-integrity",
+          "validate-consume-same-bytes"
+        ],
+        "negative": "country/形式checkだけで全EU制度に適合とし、生成帳票を公的に提出/受理済みと報告する。",
+        "notices": [
+          [
+            "LICENSE.txt",
+            1,
+            "当該region-euの同1066B notice。",
+            "実公開版/作者・標準/assetや入力データの権利は別。"
+          ]
+        ],
+        "positive": "実取引条件と版を明示して計算し、VIES形式のみの確認やpayload生成の範囲を実登録/受理と分ける。",
+        "read": [
+          3,
+          2,
+          0,
+          false,
+          true,
+          245
+        ],
+        "reason": "245行を順序全読し103/113行の識別番号例を伏字。26actions、offline/VIES照会なし・VAT/OSS/EN16931等を確認。asset/実装は未保存・未検証。",
+        "required_changes": [
+          "実会社/取引・国/通貨/日付と適用条件・公式の規則/税率/帳票profile版を固定し、算式/丸めとschemaを親の実利用時に確認する。",
+          "形式検査/設定変更/計算・生成/実提出の証拠を分離し、実資格と会社/データscopeを保つ。sourceのguard回避や地域名から権限/費用を広げない。"
+        ],
+        "row": 231,
+        "source": [
+          "github:9e1087b6327c690a7a4ce68da1ff667dc70f5b1f5b5d326f1b310b7eace24e19",
+          "skills/mailnike/erpclaw-region-eu/SKILL.md",
+          "63f575393104db8c9c68b331cab76c7a84652c5b1381764f53132307716fd166",
+          "702c58ac7116eb824dd9f9e114704e70ee0ab1b7",
+          9853
+        ],
+        "support": [
+          [
+            "LICENSE.txt",
+            1066,
+            "6f6bb192",
+            "ff21cdae",
+            4,
+            0,
+            0,
+            "100644"
+          ],
+          [
+            "SKILL.md",
+            9853,
+            "63f57539",
+            "702c58ac",
+            3,
+            2,
+            0,
+            "100644"
+          ],
+          [
+            "UI.yaml",
+            null,
+            null,
+            "a8782435",
+            0,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "_meta.json",
+            466,
+            "ce3d0b35",
+            "17ed18cf",
+            1,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "assets/eu_coa_template.json",
+            null,
+            null,
+            "1bd9a8f5",
+            0,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "assets/eu_country_codes.json",
+            null,
+            null,
+            "caaa7f14",
+            0,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "assets/eu_intrastat_codes.json",
+            null,
+            null,
+            "da5bb985",
+            0,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "assets/eu_reverse_charge_rules.json",
+            null,
+            null,
+            "49fd97ce",
+            0,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "assets/eu_saft_mapping.json",
+            null,
+            null,
+            "ce0b973b",
+            0,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "assets/eu_vat_number_formats.json",
+            null,
+            null,
+            "909cd801",
+            0,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "assets/eu_vat_rates.json",
+            null,
+            null,
+            "3f78fef3",
+            0,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "scripts/db_query.py",
+            null,
+            null,
+            "2ba6eaba",
+            0,
+            null,
+            null,
+            "100644"
+          ]
+        ],
+        "use": "EU税/取引条件・識別形式/帳票profileと実提出を分ける地域overlayの参考。",
+        "value": "VAT/OSS等の計算に必要な実条件と、形式/登録・payload/公式受理を別に追跡できる。"
+      },
+      "original_chunk_sha256": "d69d0b4cbed06f7d3aeef8de3f03f0f9eea34dc06d51b3be7492a8d35d5c8695",
+      "path": "skills/mailnike/erpclaw-region-eu/SKILL.md",
+      "source_commit": "920714f17d81e0a95c7a9bc51faf0a7921cd982d",
+      "source_repo": "6mile/skills",
+      "source_sha256": "63f575393104db8c9c68b331cab76c7a84652c5b1381764f53132307716fd166"
+    },
+    {
+      "actual_assessment_reader": "20261028-171959-todo-3719",
+      "bytes": 13187,
+      "current_permission_or_adoption_granted": false,
+      "git_blob": "d22f63178e46f51d24131b05ba7bcf6e2385cba9",
+      "inventory_id": "github:5d07ce15e8f63c41d6f2cd9f251e4cf958e8a7bcaff3996981c2872ac44a415f",
+      "new_final_disposition": false,
+      "ordinal": 232,
+      "original_assessment": {
+        "candidate_disposition": "税/分類版と設定作用・実提出の境界を改訂候補として提案。採否・許諾・導入/実test0。",
+        "findings": [
+          "掲載率・上限/税制既定・州別tableと『全India要件』は保存主張。売手/買手stateやcountryだけで実取引日・分類/課税場所/免税・登録/年度を網羅したとはしない。",
+          "GSTIN/PAN/Aadhaar等の形式/checksumは実発行/登録・本人性の証明ではない。payload生成はIRN等の実発行・申告/受理/納付と別。",
+          "own tableなしでもGL/tax/payroll所有skillへのsubprocessで設定変更する。missing invoiceで新invoiceをsubmit、missing country/HSNを都合よく変更/追加する回復案は、正しいデータや実許可の証明にならない。"
+        ],
+        "nearby_metadata": [
+          "domain-modeling",
+          "sql-data-integrity",
+          "database-purpose-binding",
+          "evidence-based-text-review"
+        ],
+        "negative": "country/HSNやinvoiceをerror回避用に作り、checksumと生成JSONだけで税務適合/実申告を保証する。",
+        "notices": [
+          [
+            "LICENSE.txt",
+            1,
+            "当該region-inの同1066B notice。",
+            "実公開版/作者・asset/標準や識別/取引データの権利は別。"
+          ]
+        ],
+        "positive": "実州/取引日・分類/版と計算根拠を保持し、生成payloadと公的な発行/提出・受理を別に照合する。",
+        "read": [
+          2,
+          0,
+          0,
+          true,
+          true,
+          295
+        ],
+        "reason": "295行全読。GST2.0率構成/NICv1.1、PF/ESI/PT/TDS・forms・subprocessでのseed等を確認。7asset/実装は未保存で現制度/精度は未検証。",
+        "required_changes": [
+          "実会社/取引・州/分類・年度/税制版/給与期間と公式根拠を固定し、算式/丸め・適用条件・帳票schemaを親が必要時に確認する。",
+          "seed/設定変更・subprocessの部分失敗/重複とDB用途/認可を検査する。形式/計算/生成/実提出を分け、countryや取引を架空に変更してerrorを通さない。"
+        ],
+        "row": 232,
+        "source": [
+          "github:5d07ce15e8f63c41d6f2cd9f251e4cf958e8a7bcaff3996981c2872ac44a415f",
+          "skills/mailnike/erpclaw-region-in/SKILL.md",
+          "f6e580d6200d3da482ee631e0df08503c6c370adcfd081e50f918df25c40a921",
+          "d22f63178e46f51d24131b05ba7bcf6e2385cba9",
+          13187
+        ],
+        "support": [
+          [
+            "LICENSE.txt",
+            1066,
+            "6f6bb192",
+            "ff21cdae",
+            4,
+            0,
+            0,
+            "100644"
+          ],
+          [
+            "SKILL.md",
+            13187,
+            "f6e580d6",
+            "d22f6317",
+            2,
+            0,
+            0,
+            "100644"
+          ],
+          [
+            "UI.yaml",
+            null,
+            null,
+            "ee49aecc",
+            0,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "_meta.json",
+            466,
+            "1ca6a154",
+            "1566cb44",
+            1,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "assets/gst_hsn_codes.json",
+            null,
+            null,
+            "20655bfd",
+            0,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "assets/gst_rates.json",
+            null,
+            null,
+            "eed93d4f",
+            0,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "assets/income_tax_slabs.json",
+            null,
+            null,
+            "b9bffc66",
+            0,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "assets/indian_coa.json",
+            null,
+            null,
+            "af380820",
+            0,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "assets/indian_states.json",
+            null,
+            null,
+            "935b4efa",
+            0,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "assets/professional_tax_slabs.json",
+            null,
+            null,
+            "84ec9208",
+            0,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "assets/tds_sections.json",
+            null,
+            null,
+            "3d2e6ce3",
+            0,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "scripts/db_query.py",
+            null,
+            null,
+            "18dbd52a",
+            0,
+            null,
+            null,
+            "100644"
+          ]
+        ],
+        "use": "インド向け税/給与・分類code・地域設定と、算式/payload/実申告を分ける参考。",
+        "value": "原取引・HSN/SAC/州/年度・税制/給与版と帳票を結び、形式検査を実資格確認と分けられる。"
+      },
+      "original_chunk_sha256": "d69d0b4cbed06f7d3aeef8de3f03f0f9eea34dc06d51b3be7492a8d35d5c8695",
+      "path": "skills/mailnike/erpclaw-region-in/SKILL.md",
+      "source_commit": "920714f17d81e0a95c7a9bc51faf0a7921cd982d",
+      "source_repo": "6mile/skills",
+      "source_sha256": "f6e580d6200d3da482ee631e0df08503c6c370adcfd081e50f918df25c40a921"
+    },
+    {
+      "actual_assessment_reader": "20261028-171959-todo-3719",
+      "bytes": 10321,
+      "current_permission_or_adoption_granted": false,
+      "git_blob": "bc7f734f28c8e6ce39f00a61180f832fae46e163",
+      "inventory_id": "github:4e7fef0c8a7ae990e4ce7605e4d288be6119bb5a51f9a27598de8e6d19540eba",
+      "new_final_disposition": false,
+      "ordinal": 233,
+      "original_assessment": {
+        "candidate_disposition": "税年度/適用条件と生成/実受理の境界を改訂候補として提案。採否・許諾・導入/実test0。",
+        "findings": [
+          "掲載VAT category/率・NI率/閾値/PAYE控除・loan plan/pension/FRS102は現在未検証。annual-income等の引数だけで実税code/YTD/支払周期/region・加入/適用要件は確定しない。",
+          "RTI submissionという入力をgenerate-fpsへ対応させるが、本文はfully offline。設定でMTD有効やpayload生成だけではHMRCへの実提出/受理を証明しない。",
+          "VAT/UTR/NINO/CRN形式は公的登録や本人性の証明ではない。country=GBにする回復案で実会社の地域を偽らず、seed/configはデータ変更として扱う。"
+        ],
+        "nearby_metadata": [
+          "domain-modeling",
+          "payroll-batch-reconciliation",
+          "sql-data-integrity",
+          "evidence-based-text-review"
+        ],
+        "negative": "GB flagと形式検査・FPS生成だけで、正しい控除やRTI提出/受理まで完了とする。",
+        "notices": [
+          [
+            "LICENSE.txt",
+            1,
+            "当該region-ukの同1066B notice。",
+            "実公開版/作者・標準/asset/給与データの権利は別。"
+          ]
+        ],
+        "positive": "実税年度/regionと対象者の適用条件を保持し、帳票生成の範囲を明示して実提出/受理の証拠と分ける。",
+        "read": [
+          3,
+          2,
+          0,
+          false,
+          true,
+          259
+        ],
+        "reason": "259行を順序全読し106/116行の識別番号例を伏字。28actions、PAYE/NI/loan/pension/CIS・VAT/MTD/RTI等を確認。8asset/実装は未保存・未検証。",
+        "required_changes": [
+          "実会社/取引・税年度/region/税code/loan/pension適用と設定版を固定し、公式の現条件・丸め/累計・帳票profileを親が必要時に確認する。",
+          "形式/設定・計算/生成・実提出/受理/納付を別receiptへ結ぶ。原role/country変更/既定値を実権限や現適合の保証にしない。"
+        ],
+        "row": 233,
+        "source": [
+          "github:4e7fef0c8a7ae990e4ce7605e4d288be6119bb5a51f9a27598de8e6d19540eba",
+          "skills/mailnike/erpclaw-region-uk/SKILL.md",
+          "e6e49848cd8c386a25bc98c720683a8bac1cc0264f9b8c45077130cdef98c85d",
+          "bc7f734f28c8e6ce39f00a61180f832fae46e163",
+          10321
+        ],
+        "support": [
+          [
+            "LICENSE.txt",
+            1066,
+            "6f6bb192",
+            "ff21cdae",
+            4,
+            0,
+            0,
+            "100644"
+          ],
+          [
+            "SKILL.md",
+            10321,
+            "e6e49848",
+            "bc7f734f",
+            3,
+            2,
+            0,
+            "100644"
+          ],
+          [
+            "UI.yaml",
+            null,
+            null,
+            "57eb6cd1",
+            0,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "_meta.json",
+            466,
+            "f509cd0d",
+            "7966deac",
+            1,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "assets/uk_coa_frs102.json",
+            null,
+            null,
+            "5ec12ee2",
+            0,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "assets/uk_income_tax_bands.json",
+            null,
+            null,
+            "62c9d80b",
+            0,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "assets/uk_ni_rates.json",
+            null,
+            null,
+            "1f8aa952",
+            0,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "assets/uk_pension_rates.json",
+            null,
+            null,
+            "16a76282",
+            0,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "assets/uk_regions.json",
+            null,
+            null,
+            "0b7c764b",
+            0,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "assets/uk_student_loan_thresholds.json",
+            null,
+            null,
+            "aa315a67",
+            0,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "assets/uk_vat_categories.json",
+            null,
+            null,
+            "6476d736",
+            0,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "assets/uk_vat_rates.json",
+            null,
+            null,
+            "96e6e310",
+            0,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "scripts/db_query.py",
+            null,
+            null,
+            "d151a02a",
+            0,
+            null,
+            null,
+            "100644"
+          ]
+        ],
+        "use": "UK地域/税年度・給与区分とVAT/RTI帳票を根拠版へ結ぶoverlay設計参考。",
+        "value": "税率/区分と実適用、識別形式と登録、給与/帳票計算と実提出・納付を分けられる。"
+      },
+      "original_chunk_sha256": "d69d0b4cbed06f7d3aeef8de3f03f0f9eea34dc06d51b3be7492a8d35d5c8695",
+      "path": "skills/mailnike/erpclaw-region-uk/SKILL.md",
+      "source_commit": "920714f17d81e0a95c7a9bc51faf0a7921cd982d",
+      "source_repo": "6mile/skills",
+      "source_sha256": "e6e49848cd8c386a25bc98c720683a8bac1cc0264f9b8c45077130cdef98c85d"
+    },
+    {
+      "actual_assessment_reader": "20261028-171959-todo-3719",
+      "bytes": 14413,
+      "current_permission_or_adoption_granted": false,
+      "git_blob": "6d8fee89692aab58da7619fc3595dd1068fb909d",
+      "inventory_id": "github:3bfd7a4430db011c77f49cc47e6134ddef4e4e7008fba7a65db3889840df97e7",
+      "new_final_disposition": false,
+      "ordinal": 234,
+      "original_assessment": {
+        "candidate_disposition": "報告/書込の境界・集計精度/coverageの改訂候補として提案。採否・許諾・導入/実test0。",
+        "findings": [
+          "100%読取専用/所有tableなし/絶対書込なしの主張と、elimination_rule/entry所有、add-elimination-rule/run-eliminationの書込/GL生成が同じ本文にある。操作を一括read-onlyに分類しない。",
+          "TEXT Decimal保存とSQL SUM/GROUP BYの説明だけで正確な小数集計を保証しない。live databaseの複数集計は同一snapshot/通貨/会社/期間との対応を検証する必要がある。",
+          "借貸/BS等式一致は完全性/正しい元取引・実銀行残高の証明ではない。agingの『期限超過』とposting-date差の説明、空欄0/欠測・paginationの範囲を明確にする必要がある。",
+          "No GL時に取引を作る回復案は報告依頼からの追加業務作用。cron check-overdueも掲載action一覧に見当たらず、実装/参照を確認せず導入しない。"
+        ],
+        "nearby_metadata": [
+          "sql-data-integrity",
+          "double-read-snapshot-limits",
+          "evidence-based-text-review",
+          "backend-correctness"
+        ],
+        "negative": "100%read-onlyと信じてGLを作り、式が一致しただけで完全/正確・実残高とし、空データを架空取引で埋める。",
+        "notices": [
+          [
+            "LICENSE.txt",
+            1,
+            "当該reportsの同1066B notice。",
+            "実公開版/作者・共有lib/財務データ等の権利は別。"
+          ]
+        ],
+        "positive": "固定会社/期間と同snapshotで集計し、原帳簿との検証範囲・欠測/部分明細を明示し、消去仕訳は別作用で扱う。",
+        "read": [
+          2,
+          0,
+          0,
+          true,
+          true,
+          282
+        ],
+        "reason": "282行全読。TB/P\u0026L/BS/CF/aging等と20actions、消去仕訳/所有table、read-onlyの説明を確認。実装/精度・非更新は未検証。",
+        "required_changes": [
+          "純読取とrule/消去仕訳の作用を分け、実認可・会社/期間/通貨・原voucherと版を固定する。実DBのDecimal/丸めと一貫snapshot・全件/部分・欠測を検証する。",
+          "算式/aging基準・filters/coverageと限界を表示し、空データは診断して返す。reportを満たすため架空仕訳/取引やcron/通知を追加せず、消去仕訳は一意性/取消・全対象会社scopeを確認する。"
+        ],
+        "row": 234,
+        "source": [
+          "github:3bfd7a4430db011c77f49cc47e6134ddef4e4e7008fba7a65db3889840df97e7",
+          "skills/mailnike/erpclaw-reports/SKILL.md",
+          "f383c314d03cb36f601a5e3ce369618e22e3bbbd3e55d9f76b29c67f3f3ea00a",
+          "6d8fee89692aab58da7619fc3595dd1068fb909d",
+          14413
+        ],
+        "support": [
+          [
+            "LICENSE.txt",
+            1066,
+            "6f6bb192",
+            "ff21cdae",
+            4,
+            0,
+            0,
+            "100644"
+          ],
+          [
+            "SKILL.md",
+            14413,
+            "f383c314",
+            "6d8fee89",
+            2,
+            0,
+            0,
+            "100644"
+          ],
+          [
+            "UI.yaml",
+            null,
+            null,
+            "fe6b7745",
+            0,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "_meta.json",
+            284,
+            "5a0240e0",
+            "0eeed753",
+            1,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "pytest.ini",
+            null,
+            null,
+            "66054102",
+            0,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "scripts/db_query.py",
+            null,
+            null,
+            "a1c0c5b6",
+            0,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "scripts/requirements.txt",
+            121,
+            "2a4f9e9c",
+            "10deda1f",
+            1,
+            null,
+            null,
+            "100644"
+          ]
+        ],
+        "use": "財務報告の期間/filters・集計/整合性と、報告から発生する仕訳作用を分ける設計参考。",
+        "value": "会社/期間/対象範囲、完全帳票と部分明細、実測0/欠測、検証結果の限界を表示できる。"
+      },
+      "original_chunk_sha256": "d69d0b4cbed06f7d3aeef8de3f03f0f9eea34dc06d51b3be7492a8d35d5c8695",
+      "path": "skills/mailnike/erpclaw-reports/SKILL.md",
+      "source_commit": "920714f17d81e0a95c7a9bc51faf0a7921cd982d",
+      "source_repo": "6mile/skills",
+      "source_sha256": "f383c314d03cb36f601a5e3ce369618e22e3bbbd3e55d9f76b29c67f3f3ea00a"
+    },
+    {
+      "actual_assessment_reader": "20261028-171959-todo-3719",
+      "bytes": 15024,
+      "current_permission_or_adoption_granted": false,
+      "git_blob": "75919b80d292e9199cf6b76691b8289b7ee5d33b",
+      "inventory_id": "github:07fd22abbfb963a1b0f72b738e8820d0c01510b24bae749a8e6d60669ec6cea6",
+      "new_final_disposition": false,
+      "ordinal": 235,
+      "original_assessment": {
+        "candidate_disposition": "受注/在庫/請求・実作用と会社間/定期処理の整合を改訂候補として提案。採否・許諾・導入/実test0。",
+        "findings": [
+          "伝票のsubmit/配送noteは実契約・実出荷/受領/入金の証明ではない。credit note/会計取消と実返金・決済取消も別。",
+          "出荷とinvoiceの在庫/COGS・部分数量/税/売掛の一回限りの対応が必要。outstanding更新を支払台帳と独立に任意変更して実入金扱いしない。",
+          "credit limit超過で限度増加、在庫不足で新receipt、invoice取消でpayment先取消という回復案は実業務判断/既存取引への作用を増やす。単なる通過策として実行しない。",
+          "会社間mirrorは双方の会社/相手/勘定scopeと部分失敗/取消の整合、定期invoiceは発生回/料金税版・cutoff/再試行の一意性が必要。原cron/announceを本人許可へしない。"
+        ],
+        "nearby_metadata": [
+          "domain-modeling",
+          "sql-data-integrity",
+          "payment-status-reconciliation",
+          "bounded-batch-cursor-starvation"
+        ],
+        "negative": "submitだけで実出荷/入金完了とし、限度や在庫を都合よく変えて通し、再試行でinvoice/会社間mirrorを重複生成する。",
+        "notices": [
+          [
+            "LICENSE.txt",
+            1,
+            "当該sellingの同1066B notice。",
+            "実公開版/作者・共有lib/顧客取引や外部serviceの権利は別。"
+          ]
+        ],
+        "positive": "原受注の部分出荷/請求数量と在庫・COGS/売掛を照合し、credit/取消と実返金、定期発生回を別に確認する。",
+        "read": [
+          2,
+          0,
+          0,
+          true,
+          true,
+          301
+        ],
+        "reason": "301行全読。42actions、Draft/Submit/Cancel、credit limit・部分出荷/単独invoice、会社間mirror/定期生成を確認。実装/原子性や実作用は未検証。",
+        "required_changes": [
+          "会社/顧客・元見積/受注/部分出荷/invoice/creditと台帳を固定し、一意性・原子性/再試行/取消・税/通貨/期間を検証する。実配送/受領・決済は別receiptで確認する。",
+          "会社間双方の認可/対応と修復履歴、定期発生回/料金税版を保持する。限度変更・架空入庫/新約束/返金や新支出を原sourceから追加せず、既存許可の同対象/範囲を守る。"
+        ],
+        "row": 235,
+        "source": [
+          "github:07fd22abbfb963a1b0f72b738e8820d0c01510b24bae749a8e6d60669ec6cea6",
+          "skills/mailnike/erpclaw-selling/SKILL.md",
+          "468198fae181a0e690a3c92be65ba564a9a399c7cd5865163604efd7fa6a915c",
+          "75919b80d292e9199cf6b76691b8289b7ee5d33b",
+          15024
+        ],
+        "support": [
+          [
+            "LICENSE.txt",
+            1066,
+            "6f6bb192",
+            "ff21cdae",
+            4,
+            0,
+            0,
+            "100644"
+          ],
+          [
+            "SKILL.md",
+            15024,
+            "468198fa",
+            "75919b80",
+            2,
+            0,
+            0,
+            "100644"
+          ],
+          [
+            "UI.yaml",
+            null,
+            null,
+            "5538a07a",
+            0,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "_meta.json",
+            284,
+            "a89bacae",
+            "fae33c04",
+            1,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "pytest.ini",
+            null,
+            null,
+            "b0de3e5c",
+            0,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "scripts/db_query.py",
+            null,
+            null,
+            "1e242a95",
+            0,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "scripts/requirements.txt",
+            80,
+            "58033b43",
+            "236e5b82",
+            1,
+            null,
+            null,
+            "100644"
+          ]
+        ],
+        "use": "見積→受注→部分出荷→請求/credit・売掛/入金と定期/会社間伝票を対応させる参考。",
+        "value": "元見積/受注/出荷と、在庫/COGS/売上/売掛・取消/返金を別の作用/証拠に結べる。"
+      },
+      "original_chunk_sha256": "d69d0b4cbed06f7d3aeef8de3f03f0f9eea34dc06d51b3be7492a8d35d5c8695",
+      "path": "skills/mailnike/erpclaw-selling/SKILL.md",
+      "source_commit": "920714f17d81e0a95c7a9bc51faf0a7921cd982d",
+      "source_repo": "6mile/skills",
+      "source_sha256": "468198fae181a0e690a3c92be65ba564a9a399c7cd5865163604efd7fa6a915c"
+    },
+    {
+      "actual_assessment_reader": "20261028-171959-todo-3719",
+      "bytes": 13738,
+      "current_permission_or_adoption_granted": false,
+      "git_blob": "b45ef88bdff91b99e8c4739883f9bec4a93667ef",
+      "inventory_id": "github:d4c5e64955a84d8ae187d85bdd6bfe715e948bf575ac732002952539676c23d8",
+      "new_final_disposition": false,
+      "ordinal": 236,
+      "original_assessment": {
+        "candidate_disposition": "共通基盤/主体・初期化/復元の境界を改訂候補として提案。採否・許諾・導入/実test0。",
+        "findings": [
+          "get-company省略時first、OPENCLAW_USER既定system userは、正しい会社選択や認証済み実行主体の証明ではない。account存在だけで同会社/必要用途の正しさも保証しない。",
+          "missing tableで再初期化/共有lib再配置、seed既存skipは、正しいDB用途・schema/依存版や既存値の正しさの証明ではない。United States表記と地域moduleのISO国code判定の対応も未検証。",
+          "backup保存/verifyと、WAL整合snapshot・暗号/鍵保護・実復元は別。原cron/cleanup/FX HTTPは有効化許可ではなく、復元/清掃・権限追加の実範囲を分ける必要がある。"
+        ],
+        "nearby_limit": "起動metadataのみ。中央本文/存在・同等性・現設定は未照会。",
+        "nearby_metadata": [
+          "database-purpose-binding",
+          "database-migrations",
+          "security-review",
+          "sqlite-wal-snapshot",
+          "validate-consume-same-bytes"
+        ],
+        "negative": "first companyや環境変数を本人認証とし、missing tableで共有DBを再初期化、backup記録だけで復元済みとして原cleanupを有効化する。",
+        "notices": [
+          [
+            "LICENSE.txt",
+            1,
+            "当該setupの同1066B notice。",
+            "実公開版/作者・共有lib/assetと全依存資源の権利は別。"
+          ]
+        ],
+        "positive": "明示した会社/DB/依存版で設定差分を確認し、権限・監査とbackupの実保存/復元を別に検証する設計へ参照する。",
+        "read": [
+          2,
+          0,
+          0,
+          true,
+          true,
+          290
+        ],
+        "reason": "290行全読。初期化hook・共有lib配置、first company既定・RBAC、backup/cleanup/FX cronを確認。全30支持を列挙し実装/assetは未保存・未検証。",
+        "required_changes": [
+          "会社/DB用途・主体/権限と共有lib/schema/seed版を固定し、全利用側との整合、設定差分・冪等性/失敗回復を確認する。first/環境変数だけで認可を決めない。",
+          "backupは実bytes/整合・実復元と保持対象を検証し、鍵を引数/logへ露出させない。FXは出典/取得・有効日/通貨/有限retryを確認する。原install/cron/追加保管費や既存権限の変更は実行しない。"
+        ],
+        "row": 236,
+        "source": [
+          "github:d4c5e64955a84d8ae187d85bdd6bfe715e948bf575ac732002952539676c23d8",
+          "skills/mailnike/erpclaw-setup/SKILL.md",
+          "888f34af65f63e1e2bfe232b9dae90ceffc795da611ee9492c00563a73725769",
+          "b45ef88bdff91b99e8c4739883f9bec4a93667ef",
+          13738
+        ],
+        "support": [
+          [
+            "LICENSE.txt",
+            1066,
+            "6f6bb192",
+            "ff21cdae",
+            4,
+            0,
+            0,
+            "100644"
+          ],
+          [
+            "SKILL.md",
+            13738,
+            "888f34af",
+            "b45ef88b",
+            2,
+            0,
+            0,
+            "100644"
+          ],
+          [
+            "UI.yaml",
+            null,
+            null,
+            "f54e501b",
+            0,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "_meta.json",
+            458,
+            "0c1c8c6c",
+            "b57b8798",
+            1,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "assets/currencies.json",
+            null,
+            null,
+            "88846a8d",
+            0,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "assets/default_payment_terms.json",
+            null,
+            null,
+            "4f2d08ec",
+            0,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "assets/default_uom.json",
+            null,
+            null,
+            "83661731",
+            0,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "assets/us_gaap.json",
+            null,
+            null,
+            "125ecebc",
+            0,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "lib/erpclaw_lib/__init__.py",
+            null,
+            null,
+            "b9044b3c",
+            0,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "lib/erpclaw_lib/audit.py",
+            null,
+            null,
+            "ee399c42",
+            0,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "lib/erpclaw_lib/crypto.py",
+            null,
+            null,
+            "e8fee735",
+            0,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "lib/erpclaw_lib/csv_import.py",
+            null,
+            null,
+            "9b11a30d",
+            0,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "lib/erpclaw_lib/datetime_utils.py",
+            null,
+            null,
+            "d3aa354e",
+            0,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "lib/erpclaw_lib/db.py",
+            null,
+            null,
+            "f9149876",
+            0,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "lib/erpclaw_lib/decimal_utils.py",
+            null,
+            null,
+            "b68f93f2",
+            0,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "lib/erpclaw_lib/dependencies.py",
+            null,
+            null,
+            "fc2b2356",
+            0,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "lib/erpclaw_lib/fx_posting.py",
+            null,
+            null,
+            "332b529d",
+            0,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "lib/erpclaw_lib/gl_posting.py",
+            null,
+            null,
+            "9a154068",
+            0,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "lib/erpclaw_lib/naming.py",
+            null,
+            null,
+            "ebb7af5e",
+            0,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "lib/erpclaw_lib/passwords.py",
+            null,
+            null,
+            "bfe8d49a",
+            0,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "lib/erpclaw_lib/query_helpers.py",
+            null,
+            null,
+            "b68eff05",
+            0,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "lib/erpclaw_lib/rbac.py",
+            null,
+            null,
+            "a5c04c7a",
+            0,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "lib/erpclaw_lib/response.py",
+            null,
+            null,
+            "cf4e2c69",
+            0,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "lib/erpclaw_lib/stock_posting.py",
+            null,
+            null,
+            "4238720f",
+            0,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "lib/erpclaw_lib/tax_calculation.py",
+            null,
+            null,
+            "1d57e176",
+            0,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "lib/erpclaw_lib/validation.py",
+            null,
+            null,
+            "26370aef",
+            0,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "pytest.ini",
+            null,
+            null,
+            "b0de3e5c",
+            0,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "scripts/db_query.py",
+            null,
+            null,
+            "2d292527",
+            0,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "scripts/init_db.py",
+            null,
+            null,
+            "cfbc8227",
+            0,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "scripts/init_schema.py",
+            null,
+            null,
+            "ea39f59c",
+            0,
+            null,
+            null,
+            "100644"
+          ]
+        ],
+        "use": "共通DB/共有lib・会社/通貨/単位・権限/監査・backupの作用を分ける基盤設計参考。",
+        "value": "全moduleの依存版とデータ用途・主体/会社を固定し、初期化/設定/復元と通常照会を区別できる。"
+      },
+      "original_chunk_sha256": "891dba0efad9d1edf5622f5f1a3fada7c090272479c050450879d47e7bad42d4",
+      "path": "skills/mailnike/erpclaw-setup/SKILL.md",
+      "source_commit": "920714f17d81e0a95c7a9bc51faf0a7921cd982d",
+      "source_repo": "6mile/skills",
+      "source_sha256": "888f34af65f63e1e2bfe232b9dae90ceffc795da611ee9492c00563a73725769"
+    },
+    {
+      "actual_assessment_reader": "20261028-171959-todo-3719",
+      "bytes": 10741,
+      "current_permission_or_adoption_granted": false,
+      "git_blob": "1aacf630d39d9a683ee9cc99161894630e2a5042",
+      "inventory_id": "github:2170f71604aed8fa15c51885defcd77050e21e4254963ddb96385e7796a2ff7b",
+      "new_final_disposition": false,
+      "ordinal": 237,
+      "original_assessment": {
+        "candidate_disposition": "ticket/SLAと公開/実作業の境界を改訂候補として提案。採否・許諾・導入/実test0。",
+        "findings": [
+          "first employee commentで応答追跡とするが、internal commentは顧客への実応答ではない。working hours/待ち/再開・契約版やtimezoneの扱いは未検証。",
+          "resolve/statusやrepair/refund・visit記録は実解決/修理/返金/訪問の証明ではない。status直接updateが専用transitionと同じ検証/時刻履歴を通るかも未確認。",
+          "会社scopeはcustomer JOINで解決とする一方、customerは任意。未紐付けticket/内部commentの所属・閲覧範囲や公開誤りを確認する必要がある。新SLA作成を顧客への新約束として自動採用しない。"
+        ],
+        "nearby_limit": "起動metadataのみ。中央本文/存在・同等性・現設定は未照会。",
+        "nearby_metadata": [
+          "domain-modeling",
+          "sql-data-integrity",
+          "stale-request-ordering",
+          "observability-notifications"
+        ],
+        "negative": "内部commentでSLA応答済みとし、resolved/refund flagだけで実修理/返金まで完了と報告する。",
+        "notices": [
+          [
+            "LICENSE.txt",
+            1,
+            "当該supportの同1066B notice。",
+            "実公開版/作者・顧客/契約データや依存の権利は別。"
+          ]
+        ],
+        "positive": "同じticketの顧客への実応答と内部noteを分け、実解決・再開とSLA期限/版・超過履歴を残す。",
+        "read": [
+          2,
+          0,
+          0,
+          true,
+          true,
+          228
+        ],
+        "reason": "228行全読。18actions、first employee comment・永久breach flag、保証/保守とcronを確認。実装/時刻計算・権限は未検証。",
+        "required_changes": [
+          "実会社/顧客・契約/SLA版、公開/内部・実応答と状態/時刻を結び、営業calendar/待ち/再開・永続breach履歴を検査する。",
+          "解決/保証/保守の実証拠を記録と分け、全更新経路の認可/遷移と公開scopeを確認する。原cron/通知・保証費用/顧客との新約束を追加しない。"
+        ],
+        "row": 237,
+        "source": [
+          "github:2170f71604aed8fa15c51885defcd77050e21e4254963ddb96385e7796a2ff7b",
+          "skills/mailnike/erpclaw-support/SKILL.md",
+          "42adc57afb4d411bc63309b8ab8d15d5da7629f401485a21f85a809582ea6163",
+          "1aacf630d39d9a683ee9cc99161894630e2a5042",
+          10741
+        ],
+        "support": [
+          [
+            "LICENSE.txt",
+            1066,
+            "6f6bb192",
+            "ff21cdae",
+            4,
+            0,
+            0,
+            "100644"
+          ],
+          [
+            "SKILL.md",
+            10741,
+            "42adc57a",
+            "1aacf630",
+            2,
+            0,
+            0,
+            "100644"
+          ],
+          [
+            "UI.yaml",
+            null,
+            null,
+            "3d756686",
+            0,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "_meta.json",
+            284,
+            "b67856b6",
+            "941dc44e",
+            1,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "pytest.ini",
+            null,
+            null,
+            "6d5fa314",
+            0,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "scripts/__init__.py",
+            null,
+            null,
+            "e69de29b",
+            0,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "scripts/db_query.py",
+            null,
+            null,
+            "baee3cb9",
+            0,
+            null,
+            null,
+            "100644"
+          ]
+        ],
+        "use": "ticket・内部/顧客comment・応答/解決SLAと、保証/保守の実作業を分ける業務モデル参考。",
+        "value": "受付/対応/解決/再開と契約版・期限超過の履歴、記録と実顧客応答/修理/返金を区別できる。"
+      },
+      "original_chunk_sha256": "891dba0efad9d1edf5622f5f1a3fada7c090272479c050450879d47e7bad42d4",
+      "path": "skills/mailnike/erpclaw-support/SKILL.md",
+      "source_commit": "920714f17d81e0a95c7a9bc51faf0a7921cd982d",
+      "source_repo": "6mile/skills",
+      "source_sha256": "42adc57afb4d411bc63309b8ab8d15d5da7629f401485a21f85a809582ea6163"
+    },
+    {
+      "actual_assessment_reader": "20261028-171959-todo-3719",
+      "bytes": 15323,
+      "current_permission_or_adoption_granted": false,
+      "git_blob": "708f1797632c085e9ba2bc4e46c5b69c082c4daf",
+      "inventory_id": "github:ee9cc158c91886f0ac1afc8700711e89d8a177d9f073f9eb17b408979e234094",
+      "new_final_disposition": false,
+      "ordinal": 238,
+      "original_assessment": {
+        "candidate_disposition": "税選択/算式版・記録/実提出の境界を改訂候補として提案。採否・許諾・導入/実test0。",
+        "findings": [
+          "specificity優先のfirst-match説明と、priority→specificity説明の対応/同順位tieが不明。計算はDBを書かなくても可変templateを読むので、版/適用日の固定が必要。",
+          "CA税率例・W-9なし時24%・1099閾値等は保存主張で現在の法的適用/年度・対象条件は未確認。generate-1099-dataは実提出/受理や納税の証明ではない。",
+          "missing ruleへのdefault追加、使用中template削除のためrule除去は税設定/過去再現性を変える。複利charge順・actual額・割引/credit・端数やitem overrideの実効果も未検証。"
+        ],
+        "nearby_limit": "起動metadataのみ。中央本文/存在・同等性・現設定は未照会。",
+        "nearby_metadata": [
+          "domain-modeling",
+          "sql-data-integrity",
+          "sort-tiebreak-test-input",
+          "evidence-based-text-review"
+        ],
+        "negative": "任意defaultで計算を通し、保存税率と1099生成だけで現税務適合/提出・納付まで完了とする。",
+        "notices": [
+          [
+            "LICENSE.txt",
+            1,
+            "当該taxの同1066B notice。",
+            "実公開版/作者・共有lib/税データや標準の権利は別。"
+          ]
+        ],
+        "positive": "適用日/版と選択根拠を示して項目税を再現し、請求に使った結果・源泉記録と実提出/納付を分ける。",
+        "read": [
+          2,
+          0,
+          0,
+          true,
+          true,
+          298
+        ],
+        "reason": "298行全読。18actions、純計算と設定/記録、3charge types・解決順/源泉/1099を確認。実装/税制適合は未検証。",
+        "required_changes": [
+          "会社/party/取引日・課税条件とtemplate/rule/override版を固定し、優先/tie・税の順序/基準額/丸めを検査する。公式の現税率/源泉・申告条件は親の実利用時に確認する。",
+          "計算/設定変更・請求/源泉記録/実支払・公式提出を分け、原voucherとの一意性/訂正履歴・使用中版を保つ。errorを通すためruleや税率を勝手に変更しない。"
+        ],
+        "row": 238,
+        "source": [
+          "github:ee9cc158c91886f0ac1afc8700711e89d8a177d9f073f9eb17b408979e234094",
+          "skills/mailnike/erpclaw-tax/SKILL.md",
+          "5803651510c3faed65f70db12928c7976f8d2047aeb27413a3942728169ffdae",
+          "708f1797632c085e9ba2bc4e46c5b69c082c4daf",
+          15323
+        ],
+        "support": [
+          [
+            "LICENSE.txt",
+            1066,
+            "6f6bb192",
+            "ff21cdae",
+            4,
+            0,
+            0,
+            "100644"
+          ],
+          [
+            "SKILL.md",
+            15323,
+            "58036515",
+            "708f1797",
+            2,
+            0,
+            0,
+            "100644"
+          ],
+          [
+            "UI.yaml",
+            null,
+            null,
+            "d47a6f0a",
+            0,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "_meta.json",
+            276,
+            "f09b788c",
+            "159e9486",
+            1,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "pytest.ini",
+            null,
+            null,
+            "66054102",
+            0,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "scripts/db_query.py",
+            null,
+            null,
+            "0f5e8870",
+            0,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "scripts/requirements.txt",
+            121,
+            "2a4f9e9c",
+            "10deda1f",
+            1,
+            null,
+            null,
+            "100644"
+          ]
+        ],
+        "use": "税template/優先規則・item override/算式と、源泉/情報申告記録を分ける計算設計参考。",
+        "value": "選択理由・template版/適用日と項目別計算、請求/支払に使った税結果の追跡を設計できる。"
+      },
+      "original_chunk_sha256": "891dba0efad9d1edf5622f5f1a3fada7c090272479c050450879d47e7bad42d4",
+      "path": "skills/mailnike/erpclaw-tax/SKILL.md",
+      "source_commit": "920714f17d81e0a95c7a9bc51faf0a7921cd982d",
+      "source_repo": "6mile/skills",
+      "source_sha256": "5803651510c3faed65f70db12928c7976f8d2047aeb27413a3942728169ffdae"
+    },
+    {
+      "actual_assessment_reader": "20261028-171959-todo-3719",
+      "bytes": 18252,
+      "current_permission_or_adoption_granted": false,
+      "git_blob": "065fd25c61bf0c308e231416885f82368ab4d84a",
+      "inventory_id": "github:abe3bd405fa0fc6e5a09f425b064ce6e5e57645bb0964ed4289f2e72bc6eaab7",
+      "new_final_disposition": false,
+      "ordinal": 239,
+      "original_assessment": {
+        "candidate_disposition": "router/台帳と提案/実適用・外部作用の境界を改訂候補として提案。採否・許諾・導入/実test0。",
+        "findings": [
+          "DGM/改善/heartbeatをadvisory-only・auto-deployしないと明記する。提案/監査・schema rollback/権限/原子性/GAAP等は実装未検証で、本人方針や回復済みの証明ではない。",
+          "API鍵をCLI引数からDBへ保存する説明は、process情報/log・保管/鍵管理の安全性を保証しない。非AI service鍵をAI API課金禁止へ一括分類せず、今回は資格参照/実API0。",
+          "ネットワークをFX/installのみとする説明と、update-modulesやintegration/配備等の実作用は未読実装で照合が必要。GitHub owner制限やapproval文だけで依存/実宛先/新費用・Prd等の範囲を保証しない。",
+          "原cron・全submit等の確認規則は、本人の同対象の既存許可に合わせる。通常操作の再承認待ちや新しい公開/支出/権限を原roleから作らない。"
+        ],
+        "nearby_limit": "起動metadataだけ。中央本文/存在・同等性・現設定は未照会。",
+        "nearby_metadata": [
+          "domain-modeling",
+          "agent-system-design",
+          "sql-data-integrity",
+          "database-migrations",
+          "security-review"
+        ],
+        "negative": "advisory/監査やGAAP表記だけで安全/適合とし、原cron・module/鍵設定から公開や新支出を有効化する。",
+        "notices": [
+          [
+            "LICENSE.txt",
+            1,
+            "当該erpclawの1082B MIT本文。",
+            "vendor/各module・実作者/公開版/入力データやserviceの権利は別。"
+          ]
+        ],
+        "positive": "固定版のrouter/依存と原取引・台帳を結び、DGM等は提案として評価し、必要な実適用/復旧を別証拠で確認する。",
+        "read": [
+          2,
+          0,
+          0,
+          true,
+          true,
+          219
+        ],
+        "reason": "3.4.1の219行を順序全読。467actions/43optional modules、advisory-only DGM/改善、承認/ネットワーク境界の保存主張を確認。215の3.3.0と別primaryであり再利用完了扱いしない。全102支持metadataは完全差分で照合したが実装本文は未読。",
+        "required_changes": [
+          "会社/DB用途・domain・取引/台帳・依存/schema版を固定し、全writerの認可/一意性/原子性と訂正・会社間/定期発生回を検証する。",
+          "提案/検査と実適用・外部送信/公開/費用を分け、秘密を引数/logへ露出させない。実装/現制度/個別権利は親の実利用時に確認し、本人の禁止/承認範囲をsourceで変更しない。"
+        ],
+        "row": 239,
+        "source": [
+          "github:abe3bd405fa0fc6e5a09f425b064ce6e5e57645bb0964ed4289f2e72bc6eaab7",
+          "skills/mailnike/erpclaw/SKILL.md",
+          "debf82f27f487c2582aefea3489216eaa26ef040977340778ed93c0b7991fa69",
+          "065fd25c61bf0c308e231416885f82368ab4d84a",
+          18252
+        ],
+        "support": [
+          [
+            "LICENSE.txt",
+            1082,
+            "b84dde49",
+            "83ac5426",
+            4,
+            0,
+            0,
+            "100644"
+          ],
+          [
+            "SKILL.md",
+            18252,
+            "debf82f2",
+            "065fd25c",
+            2,
+            0,
+            0,
+            "100644"
+          ]
+        ],
+        "use": "ERP router/domain・会社間/定期処理と、module/移行/改訂提案を分ける基盤設計参考。",
+        "value": "元取引と台帳、機微情報/設定・外部作用、提案と実適用を別状態で追跡できる。"
+      },
+      "original_chunk_sha256": "04133cd4258510d10421df7b01ae9ab769fba34ea1e0c9f4eaca03e889a35bf7",
+      "path": "skills/mailnike/erpclaw/SKILL.md",
+      "source_commit": "920714f17d81e0a95c7a9bc51faf0a7921cd982d",
+      "source_repo": "6mile/skills",
+      "source_sha256": "debf82f27f487c2582aefea3489216eaa26ef040977340778ed93c0b7991fa69"
+    }
+  ],
+  "roster_sha256": "f9c6b2e44c5e3aa8947f758f864eaa0d5edc396d622359826bca848cd96f9901",
+  "saved_support_metadata": 39,
+  "shared_original_contexts": {
+    "04133cd4258510d10421df7b01ae9ab769fba34ea1e0c9f4eaca03e889a35bf7": {
+      "actual_assessment_reader": "20261028-171959-todo-3719",
+      "common": {
+        "boundaries": {
+          "central_operations": 0,
+          "copy_license_accepted": false,
+          "new_final_dispositions": 0,
+          "source_executed": false
+        },
+        "chunk_id": "e485f73a3b96a2cbf350e4939af20133",
+        "definitions": {
+          "actors": {
+            "0": "今回の実assistant読取"
+          },
+          "mask_method": "v5。今回のprimaryは置換行0。秘密不存在の証明ではない。",
+          "reader_namespace": "20261028-171959-todo-3719/current3719",
+          "states": {
+            "0": "unsaved",
+            "1": "saved_unread",
+            "2": "direct_raw_full",
+            "3": "direct_masked_full",
+            "4": "exact_bytes_reuse",
+            "5": "ordered_full_diff",
+            "6": "partial",
+            "7": "scan"
+          },
+          "support_tuple": "[relative,bytes,SHA8,Gitblob8,state,maskCount,actor,mode]。support_inventory_deltaは受領済み全100pathを継承して全102pathを列挙する完全metadata差分。本文読取の再利用ではない。"
+        },
+        "domain": "research598-chunk-v1",
+        "first_ordinal": 239,
+        "limits": {
+          "central_body_or_existence_checks": 0,
+          "prior_reader_states_not_relabelled": true,
+          "source_bodies_refetched": 0,
+          "source_script_execution": 0,
+          "whole16_complete": false
+        },
+        "notice_bodies": [
+          {
+            "bytes": 1082,
+            "consumer_path": "skills/mailnike/erpclaw/LICENSE.txt",
+            "consumer_row": 239,
+            "fresh_raw": false,
+            "git_blob": "83ac54265c2a9c5e824da850c0c4ea47d73fd976",
+            "id": 1,
+            "meaning": "同1082B MIT本文をbytes/SHA/Gitblobで照合。実公開版/作者・vendor/各moduleの権利は別。",
+            "parent_chunk_sha256": "a253ad1cefbe2bdea7ca5d7a151b90450f89de38866c15a6ae439b1c68a264c1",
+            "parent_receipt": "research3719-chunk-59f61fa511b35584aee8a697fc72ff55.json",
+            "read": [
+              4,
+              0,
+              0,
+              false,
+              true,
+              21
+            ],
+            "reader_job": "20261028-171959-todo-3719",
+            "reader_namespace": "20261028-171959-todo-3719/current3719",
+            "representative_path": "skills/mailnike/educlaw-finaid/LICENSE.txt",
+            "representative_read": [
+              2,
+              0,
+              0,
+              true,
+              true,
+              21
+            ],
+            "representative_row": 210,
+            "sha256": "b84dde49057a6d8a69d28c22e9854d86a9aee01e09a2d7498d0aebf20cd8f538"
+          }
+        ],
+        "prior_journal_sha256": "63f491c9cfaaa9984021c98347cd35f7695def8b4f8bdf135be40c3513d52a3d",
+        "reader_job": "20261028-171959-todo-3719",
+        "reader_todo": 3719,
+        "reading_integrity": {
+          "notice_new_literal_reads": 0,
+          "primary_lines": [
+            219
+          ],
+          "primary_mask_counts": [
+            0
+          ],
+          "primary_ordered_full_rows": [
+            239
+          ],
+          "same_buffer_sha256_gitblob_bytes_strict_utf8": true,
+          "source_original_text_included": false
+        },
+        "roster_sha256": "f9c6b2e44c5e3aa8947f758f864eaa0d5edc396d622359826bca848cd96f9901",
+        "support_inventory_delta": {
+          "added": [
+            [
+              "scripts/check_deps.sh",
+              null,
+              null,
+              "257ea18d",
+              0,
+              null,
+              null,
+              "100644"
+            ],
+            [
+              "scripts/install.sh",
+              null,
+              null,
+              "a01c4f92",
+              0,
+              null,
+              null,
+              "100644"
+            ]
+          ],
+          "all_102_reconstructed_equal_to_fixed_tree_and_index_inventory": true,
+          "base_count": 100,
+          "base_field": "entries[row=215].support",
+          "base_parent_chunk_sha256": "63de620fef81af98e5610ea00be2d4e1c7e13d574c5609ef65d7b68f33e3b467",
+          "base_parent_receipt": "research3719-chunk-f4596a7383208b5187c6475bc6c85133.json",
+          "base_row": 215,
+          "base_source_prefix": "skills/mailnike/erp-claw/",
+          "current_source_prefix": "skills/mailnike/erpclaw/",
+          "default_inventory_sha256": "924af88c22265065e76b80a02139783f6615c2e7b6dc085d167f5d3178c52582",
+          "digest_method": "上記default tuplesをrelativeのordinal順に整列した配列のJSON.stringify UTF8 bytesのSHA256。entries[0].supportの本文state overrideを適用する前の値。",
+          "final_count": 102,
+          "not_a_support_body_read": true,
+          "removed_paths": [],
+          "replacements": [
+            [
+              "SKILL.md",
+              18252,
+              "debf82f2",
+              "065fd25c",
+              1,
+              null,
+              null,
+              "100644"
+            ],
+            [
+              "_meta.json",
+              1502,
+              "4b9e8c7b",
+              "ac8393aa",
+              1,
+              null,
+              null,
+              "100644"
+            ],
+            [
+              "scripts/db_query.py",
+              null,
+              null,
+              "5109432d",
+              0,
+              null,
+              null,
+              "100644"
+            ],
+            [
+              "scripts/erpclaw-accounting-adv/revenue.py",
+              null,
+              null,
+              "276c0316",
+              0,
+              null,
+              null,
+              "100644"
+            ],
+            [
+              "scripts/erpclaw-os/db_query.py",
+              null,
+              null,
+              "2fb06b74",
+              0,
+              null,
+              null,
+              "100644"
+            ],
+            [
+              "scripts/erpclaw-os/deploy_pipeline.py",
+              null,
+              null,
+              "77c9be43",
+              0,
+              null,
+              null,
+              "100644"
+            ],
+            [
+              "scripts/erpclaw-os/dgm_engine.py",
+              null,
+              null,
+              "e66a8a88",
+              0,
+              null,
+              null,
+              "100644"
+            ],
+            [
+              "scripts/erpclaw-os/feature_matrix.py",
+              null,
+              null,
+              "aa83c46f",
+              0,
+              null,
+              null,
+              "100644"
+            ],
+            [
+              "scripts/erpclaw-os/gap_detector.py",
+              null,
+              null,
+              "10373675",
+              0,
+              null,
+              null,
+              "100644"
+            ],
+            [
+              "scripts/erpclaw-os/generate_module.py",
+              null,
+              null,
+              "c454bbc8",
+              0,
+              null,
+              null,
+              "100644"
+            ],
+            [
+              "scripts/erpclaw-os/in_module_generator.py",
+              null,
+              null,
+              "c72cccc3",
+              0,
+              null,
+              null,
+              "100644"
+            ],
+            [
+              "scripts/erpclaw-os/sandbox.py",
+              null,
+              null,
+              "278dad11",
+              0,
+              null,
+              null,
+              "100644"
+            ],
+            [
+              "scripts/erpclaw-os/schema_migrator.py",
+              null,
+              null,
+              "c9f07fe5",
+              0,
+              null,
+              null,
+              "100644"
+            ],
+            [
+              "scripts/erpclaw-os/tier_classifier.py",
+              null,
+              null,
+              "98c1c116",
+              0,
+              null,
+              null,
+              "100644"
+            ],
+            [
+              "scripts/erpclaw-os/validate_module.py",
+              null,
+              null,
+              "69a0742a",
+              0,
+              null,
+              null,
+              "100644"
+            ],
+            [
+              "scripts/module_manager.py",
+              null,
+              null,
+              "dc6c1d88",
+              0,
+              null,
+              null,
+              "100644"
+            ],
+            [
+              "scripts/module_registry.json",
+              null,
+              null,
+              "86a03677",
+              0,
+              null,
+              null,
+              "100644"
+            ]
+          ],
+          "reset_before_delta": "各base tupleのrelative/bytes/SHA8/Gitblob8/modeを保持し、bytes=nullなら[state,maskCount,actor]=[0,null,null]、保存済みなら[1,null,null]へする。旧本文読取stateは持ち越さない。"
+        }
+      },
+      "independent_native_metadata_sha256": "06a5d2ac19656021bbb52ee232abbeb79f26acfe7e8e02fc0b84ef2bcb5b18be",
+      "independent_parent_journal_record": {
+        "chunk_id": "e485f73a3b96a2cbf350e4939af20133",
+        "receipt_file": "research3719-chunk-e485f73a3b96a2cbf350e4939af20133.json",
+        "chunk_sha256": "04133cd4258510d10421df7b01ae9ab769fba34ea1e0c9f4eaca03e889a35bf7",
+        "reader_job": "20261028-171959-todo-3719",
+        "first_ordinal": 239,
+        "last_ordinal": 239,
+        "parent_semantic_assessments_read": true
+      },
+      "original_chunk_id": "e485f73a3b96a2cbf350e4939af20133",
+      "original_fields_losslessly_reconstructed": true,
+      "original_message_sha256": "514729ee14d35d546d2365baf5fdb3f30b57f6967d1f5ade19319339c2ac29be",
+      "original_receipt_sha256": "d725624a9756cf264f53187eb3acbdcba4a4e9ab2faaa927902265b9e4e4b1d5",
+      "parent_meaning": {
+        "actual_native_model": "pac24df/gpt-6.1-sol",
+        "actual_native_proof": "research3719-native-actual171959-through239175645.json",
+        "actual_native_sha256": "06a5d2ac19656021bbb52ee232abbeb79f26acfe7e8e02fc0b84ef2bcb5b18be",
+        "chunk_id": "e485f73a3b96a2cbf350e4939af20133",
+        "chunk_sha256": "04133cd4258510d10421df7b01ae9ab769fba34ea1e0c9f4eaca03e889a35bf7",
+        "consumer_job": "20261027-175645-todo-3080",
+        "effort": "max",
+        "first": 239,
+        "full_original_meanings_and_all_limits_read": true,
+        "limits": "219行direct_raw、maskv5置換0は秘密不存在の証明でない。MIT1082B/21行は以前の同byte再利用で新literal0。全102支持metadata差分の完全性は確認したが本文の再利用ではなく、未保存/未読のbytes/hash/reader等nullと原actorを保持。原script/DB/鍵参照/API/cron/費用/許諾/最終採否/中央は0。",
+        "meanings": [
+          "3.4.1のERP routerは467actions/43optional modulesとDGM/改善/heartbeatのadvisory-onlyを説明するが、提案・schema rollback/権限/原子性/GAAPは実装や適合の証明でない。旧3.3.0の別primaryへ読了を流用しない。",
+          "CLI引数から鍵をDBへ保存する案はprocess/log/保管の安全を保証せず、ネットワークFX/install限定という宣言と更新/統合/配備の作用も未読実装のまま。通常の許可を再質問へ戻さず、新支出/公開/権限/原cronをsourceから承認しない。",
+          "会社/DB用途・主体/元取引と台帳・module/schema/依存版を固定し、全writerの認可/一意性/訂正・会社間/定期回と原子性を検証する参考。advisoryと実適用/復旧は別の証拠で確認する。"
+        ],
+        "observed_at": "2026-10-28T16:53:30.2287259+00:00",
+        "original_actor_namespace_and_nulls_preserved": true,
+        "original_message_sha256": "514729ee14d35d546d2365baf5fdb3f30b57f6967d1f5ade19319339c2ac29be",
+        "producer_job": "20261028-171959-todo-3719",
+        "through": 239
+      },
+      "parent_meaning_sha256": "e906a24d9de0b80a1e74fc6b05d38469e7f2a79d0b6db60b05af9eb93f5a6f4e"
+    },
+    "891dba0efad9d1edf5622f5f1a3fada7c090272479c050450879d47e7bad42d4": {
+      "actual_assessment_reader": "20261028-171959-todo-3719",
+      "common": {
+        "boundaries": {
+          "central_operations": 0,
+          "copy_license_accepted": false,
+          "new_final_dispositions": 0,
+          "source_executed": false
+        },
+        "chunk_id": "ba9420a64b7ccd953a5f8653ae406fdc",
+        "definitions": {
+          "actors": {
+            "0": "今回の実assistant読取"
+          },
+          "mask_method": "v5：v4のメール/長数値/token/長hex/SSN/IPv4/電話/識別番号形式と識別用CLI引数値の置換に、password/secret等のCLI literal値置換を追加。今回のprimaryは0行。0は秘密不存在の証明ではない。",
+          "reader_namespace": "20261028-171959-todo-3719/current3719",
+          "states": {
+            "0": "unsaved",
+            "1": "saved_unread",
+            "2": "direct_raw_full",
+            "3": "direct_masked_full",
+            "4": "exact_bytes_reuse",
+            "5": "ordered_full_diff",
+            "6": "partial",
+            "7": "scan"
+          },
+          "support_tuple": "[relative,bytes,SHA8,Gitblob8,state,maskCount,actor,mode]。未保存bytes/SHA/reader/maskCountはnull。Gitblobは固定complete tree。"
+        },
+        "domain": "research598-chunk-v1",
+        "first_ordinal": 236,
+        "limits": {
+          "central_body_or_existence_checks": 0,
+          "current_legal_financial_standard_api_claims_not_verified": true,
+          "prior_reader_states_not_relabelled": true,
+          "source_bodies_refetched": 0,
+          "source_script_execution": 0,
+          "whole16_complete": false
+        },
+        "notice_bodies": [
+          {
+            "bytes": 1066,
+            "consumer_paths": [
+              "skills/mailnike/erpclaw-setup/LICENSE.txt",
+              "skills/mailnike/erpclaw-support/LICENSE.txt",
+              "skills/mailnike/erpclaw-tax/LICENSE.txt"
+            ],
+            "consumer_rows": [
+              236,
+              237,
+              238
+            ],
+            "fresh_raw": false,
+            "git_blob": "ff21cdae6e9e7e0ed7a376bfe989771b40831982",
+            "id": 1,
+            "meaning": "各consumerのbytes/SHA/Gitblobを検証して216の実全読へ結ぶ同1066B MIT本文。実公開版/作者、依存やデータ/serviceの権利は別確認。",
+            "parent_chunk_sha256": "63de620fef81af98e5610ea00be2d4e1c7e13d574c5609ef65d7b68f33e3b467",
+            "parent_receipt": "research3719-chunk-f4596a7383208b5187c6475bc6c85133.json",
+            "read": [
+              4,
+              0,
+              0,
+              false,
+              true,
+              21
+            ],
+            "reader_job": "20261028-171959-todo-3719",
+            "reader_namespace": "20261028-171959-todo-3719/current3719",
+            "representative_path": "skills/mailnike/erpclaw-ai-engine/LICENSE.txt",
+            "representative_read": [
+              2,
+              0,
+              0,
+              true,
+              true,
+              21
+            ],
+            "representative_row": 216,
+            "sha256": "6f6bb192fb5854c274ca1bd5f3705ad6d4577099d2db95f46c90d0657ffb830d"
+          }
+        ],
+        "prior_journal_sha256": "fd9a101c953c21fe98f3c457e940f32d1b07cbd048c433a89a8b4b06502d1ede",
+        "reader_job": "20261028-171959-todo-3719",
+        "reader_todo": 3719,
+        "reading_integrity": {
+          "notice_new_literal_reads": 0,
+          "primary_lines": [
+            290,
+            228,
+            298
+          ],
+          "primary_mask_counts": [
+            0,
+            0,
+            0
+          ],
+          "primary_ordered_full_rows": [
+            236,
+            237,
+            238
+          ],
+          "same_buffer_sha256_gitblob_bytes_strict_utf8": true,
+          "source_original_text_included": false,
+          "support_index_tree_mismatches": 0,
+          "support_inventory_complete_tree_counts": [
+            [
+              236,
+              30
+            ],
+            [
+              237,
+              7
+            ],
+            [
+              238,
+              7
+            ]
+          ]
+        },
+        "roster_sha256": "f9c6b2e44c5e3aa8947f758f864eaa0d5edc396d622359826bca848cd96f9901"
+      },
+      "independent_native_metadata_sha256": "d09834c2c14e228566acf724dc808876ea10a66a3a818260fcdde4f7c345f7d0",
+      "independent_parent_journal_record": {
+        "chunk_id": "ba9420a64b7ccd953a5f8653ae406fdc",
+        "receipt_file": "research3719-chunk-ba9420a64b7ccd953a5f8653ae406fdc.json",
+        "chunk_sha256": "891dba0efad9d1edf5622f5f1a3fada7c090272479c050450879d47e7bad42d4",
+        "reader_job": "20261028-171959-todo-3719",
+        "first_ordinal": 236,
+        "last_ordinal": 238,
+        "parent_semantic_assessments_read": true
+      },
+      "original_chunk_id": "ba9420a64b7ccd953a5f8653ae406fdc",
+      "original_fields_losslessly_reconstructed": true,
+      "original_message_sha256": "b7312aeb5c50045c92fc491c32194748a782bdc8d94b23ec6f6f4d4798a79ed4",
+      "original_receipt_sha256": "880c4f86efac50fdf0fc4d06caf65079103556771d5444ea8f1ae78589e0a2cc",
+      "parent_meaning": {
+        "actual_native_model": "pac24df/gpt-6.1-sol",
+        "actual_native_proof": "research3719-native-actual171959-through238175645.json",
+        "actual_native_sha256": "d09834c2c14e228566acf724dc808876ea10a66a3a818260fcdde4f7c345f7d0",
+        "chunk_id": "ba9420a64b7ccd953a5f8653ae406fdc",
+        "chunk_sha256": "891dba0efad9d1edf5622f5f1a3fada7c090272479c050450879d47e7bad42d4",
+        "consumer_job": "20261027-175645-todo-3080",
+        "effort": "max",
+        "first": 236,
+        "full_original_meanings_and_all_limits_read": true,
+        "limits": "全3raw primary816物理行、mask v5と0は秘密不存在の証明でない限界を保持。notice原216の1066B/21行再利用3で新literal0。支持44=saved10/unsaved34、未保存bytes/hash/mask/readerはnullのまま。支持/実装/asset・現法律財務API・原子性/権利は未検証。親の原本文/支持再open・新raw/許諾/採否/中央、原script/DB/cron/FX/清掃/backup/実復元・契約/費用0。次239へ継続。",
+        "meanings": [
+          "236共通setup。会社/DB用途・主体/RBACと共有lib/schema/seed版を固定する参考で、first companyやOPENCLAW_USER既定systemは正しい会社/認証主体の証明でない。account存在/seed既存skipは用途/値の正しさを保証せず、missing tableから再初期化/共有lib再配置を勝手に行わない。国表記と地域module ISO guardの整合は未検証。backup保存/verifyとWAL整合snapshot/暗号鍵保護/実復元を分け、原cleanup/install/cron/FX HTTP/追加保管費・権限変更を始めない。",
+          "237support。ticket/SLA契約版・実会社/顧客・公開/内部comment、実顧客応答・解決/再開と営業calendar/timezone/待ち/超過履歴を分ける。first employee internal commentは顧客への応答でなく、resolved/repair/refund/visitの記録は実解決/返金/訪問の証明でない。status直updateと専用transitionの認可/時刻整合、customer任意時の所属/内部公開scopeは未検証。原cron/通知・新SLA/保証費用/顧客との新約束を追加しない。",
+          "238tax。取引日/会社/party/課税条件とtemplate/rule/item override版を固定し、priorityとspecificityの順序/tie、charge順/基準額/割引credit/丸めを確認する。DB非更新の計算でも可変template版に依存する。保存税率/源泉/1099閾値は現行条件でなく、生成dataは公式提出/受理/納付でない。missing ruleにdefault追加、使用中template削除のためrule除去を単なる回復にせず、原voucherへの一意性/訂正・過去版再現を保つ。"
+        ],
+        "observed_at": "2026-10-28T16:04:35.8466690+00:00",
+        "original_actor_namespace_and_nulls_preserved": true,
+        "original_message_sha256": "b7312aeb5c50045c92fc491c32194748a782bdc8d94b23ec6f6f4d4798a79ed4",
+        "producer_job": "20261028-171959-todo-3719",
+        "requested_model": "gpt-6.1-sol",
+        "source_or_support_body_reopens_by_parent": 0,
+        "through": 238
+      },
+      "parent_meaning_sha256": "4f6a964443c06d90b541629176bc1d3ef5985d570bf1390617271b18723a0463"
+    },
+    "d69d0b4cbed06f7d3aeef8de3f03f0f9eea34dc06d51b3be7492a8d35d5c8695": {
+      "actual_assessment_reader": "20261028-171959-todo-3719",
+      "common": {
+        "boundaries": {
+          "central_operations": 0,
+          "copy_license_accepted": false,
+          "new_final_dispositions": 0,
+          "source_executed": false
+        },
+        "chunk_id": "673a1caa9f7c949b1ad293a2af739daa",
+        "definitions": {
+          "actors": {
+            "0": "今回の実assistant読取"
+          },
+          "mask_method": {
+            "primary_versions": [
+              [
+                228,
+                2
+              ],
+              [
+                229,
+                2
+              ],
+              [
+                230,
+                2
+              ],
+              [
+                231,
+                3
+              ],
+              [
+                232,
+                3
+              ],
+              [
+                233,
+                4
+              ],
+              [
+                234,
+                4
+              ],
+              [
+                235,
+                4
+              ]
+            ],
+            "v2": "表示前にメール・長い数値・token形式・長いhex・SSN形式・IPv4形式・長い国際電話形式を置換。",
+            "v3": "v2に国prefix付き長数字、9桁+program code+4桁形式を追加。",
+            "v4": "v3に識別番号用CLI引数のliteral値置換を追加。",
+            "zero_limit": "0は秘密不存在の証明ではない。"
+          },
+          "reader_namespace": "20261028-171959-todo-3719/current3719",
+          "states": {
+            "0": "unsaved",
+            "1": "saved_unread",
+            "2": "direct_raw_full",
+            "3": "direct_masked_full",
+            "4": "exact_bytes_reuse",
+            "5": "ordered_full_diff",
+            "6": "partial",
+            "7": "scan"
+          },
+          "support_tuple": "[relative,bytes,SHA8,Gitblob8,state,maskCount,actor,mode]。未保存bytes/SHA/reader/maskCountはnull、Gitblobは固定complete tree。"
+        },
+        "domain": "research598-chunk-v1",
+        "first_ordinal": 228,
+        "limits": {
+          "central_body_or_existence_checks": 0,
+          "prior_reader_states_not_relabelled": true,
+          "source_bodies_refetched": 0,
+          "source_script_execution": 0,
+          "whole16_complete": false
+        },
+        "notice_bodies": [
+          {
+            "bytes": 1066,
+            "consumer_paths": [
+              "skills/mailnike/erpclaw-payroll/LICENSE.txt",
+              "skills/mailnike/erpclaw-projects/LICENSE.txt",
+              "skills/mailnike/erpclaw-region-ca/LICENSE.txt",
+              "skills/mailnike/erpclaw-region-eu/LICENSE.txt",
+              "skills/mailnike/erpclaw-region-in/LICENSE.txt",
+              "skills/mailnike/erpclaw-region-uk/LICENSE.txt",
+              "skills/mailnike/erpclaw-reports/LICENSE.txt",
+              "skills/mailnike/erpclaw-selling/LICENSE.txt"
+            ],
+            "consumer_rows": [
+              228,
+              229,
+              230,
+              231,
+              232,
+              233,
+              234,
+              235
+            ],
+            "fresh_raw": false,
+            "git_blob": "ff21cdae6e9e7e0ed7a376bfe989771b40831982",
+            "id": 1,
+            "meaning": "各consumerの取得済みbytes/SHA/Gitblobを照合し216の実全読と同一。copyright/年付きMIT、notice保持・保証否認の保存本文。実作者/公開版と依存・標準/入力データ・serviceの権利は個別確認でgrant0。",
+            "parent_chunk_sha256": "63de620fef81af98e5610ea00be2d4e1c7e13d574c5609ef65d7b68f33e3b467",
+            "parent_receipt": "research3719-chunk-f4596a7383208b5187c6475bc6c85133.json",
+            "read": [
+              4,
+              0,
+              0,
+              false,
+              true,
+              21
+            ],
+            "reader_job": "20261028-171959-todo-3719",
+            "reader_namespace": "20261028-171959-todo-3719/current3719",
+            "representative_path": "skills/mailnike/erpclaw-ai-engine/LICENSE.txt",
+            "representative_read": [
+              2,
+              0,
+              0,
+              true,
+              true,
+              21
+            ],
+            "representative_row": 216,
+            "sha256": "6f6bb192fb5854c274ca1bd5f3705ad6d4577099d2db95f46c90d0657ffb830d"
+          }
+        ],
+        "prior_journal_sha256": "b6658d2c81200f0320c75abb66d5ad344df328d60e01cd4a872225759453ff3c",
+        "reader_job": "20261028-171959-todo-3719",
+        "reader_todo": 3719,
+        "reading_integrity": {
+          "notice_new_literal_reads": 0,
+          "primary_lines": [
+            102,
+            240,
+            264,
+            245,
+            295,
+            259,
+            282,
+            301
+          ],
+          "primary_mask_counts": [
+            0,
+            0,
+            0,
+            2,
+            0,
+            2,
+            0,
+            0
+          ],
+          "primary_ordered_full_rows": [
+            228,
+            229,
+            230,
+            231,
+            232,
+            233,
+            234,
+            235
+          ],
+          "same_buffer_sha256_gitblob_bytes_strict_utf8": true,
+          "source_original_text_included": false,
+          "support_index_tree_mismatches": 0,
+          "support_inventory_complete_tree_counts": [
+            [
+              228,
+              6
+            ],
+            [
+              229,
+              7
+            ],
+            [
+              230,
+              13
+            ],
+            [
+              231,
+              12
+            ],
+            [
+              232,
+              12
+            ],
+            [
+              233,
+              13
+            ],
+            [
+              234,
+              7
+            ],
+            [
+              235,
+              7
+            ]
+          ],
+          "withheld_ranges": [
+            [
+              231,
+              103,
+              103
+            ],
+            [
+              231,
+              113,
+              113
+            ],
+            [
+              233,
+              106,
+              106
+            ],
+            [
+              233,
+              116,
+              116
+            ]
+          ]
+        },
+        "roster_sha256": "f9c6b2e44c5e3aa8947f758f864eaa0d5edc396d622359826bca848cd96f9901",
+        "shared_limits": {
+          "current_tax_law_rates_years_thresholds_standards_and_api_claims_not_verified": true,
+          "implementation_and_asset_bodies_unread_unless_explicitly_read": true,
+          "nearby_limit": "起動metadataだけ。中央本文/存在・同等性・現設定は未照会。",
+          "regional_country_flags_and_checksums_do_not_prove_real_eligibility_or_registration": true,
+          "security_atomicity_immutability_and_action_counts_are_unverified_saved_claims": true,
+          "source_roles_install_cron_and_recovery_commands_are_data_not_authority": true
+        }
+      },
+      "independent_native_metadata_sha256": "8be657c18ff5f752e57e727ed07f58a843ec4ec68aec8ded9ffd5a38a6d5881c",
+      "independent_parent_journal_record": {
+        "chunk_id": "673a1caa9f7c949b1ad293a2af739daa",
+        "receipt_file": "research3719-chunk-673a1caa9f7c949b1ad293a2af739daa.json",
+        "chunk_sha256": "d69d0b4cbed06f7d3aeef8de3f03f0f9eea34dc06d51b3be7492a8d35d5c8695",
+        "reader_job": "20261028-171959-todo-3719",
+        "first_ordinal": 228,
+        "last_ordinal": 235,
+        "parent_semantic_assessments_read": true
+      },
+      "original_chunk_id": "673a1caa9f7c949b1ad293a2af739daa",
+      "original_fields_losslessly_reconstructed": true,
+      "original_message_sha256": "327f5d79ec19963fa1ab1337a656899ca078ea62768f31d1f8ce8ef3fb55d655",
+      "original_receipt_sha256": "08989972ac14fe335f9befba8111390a71a3bf82370d869aeb70e60bdbcb6d99",
+      "parent_meaning": {
+        "actual_native_model": "pac24df/gpt-6.1-sol",
+        "actual_native_proof": "research3719-native-actual171959-through235175645.json",
+        "actual_native_sha256": "8be657c18ff5f752e57e727ed07f58a843ec4ec68aec8ded9ffd5a38a6d5881c",
+        "chunk_id": "673a1caa9f7c949b1ad293a2af739daa",
+        "chunk_sha256": "d69d0b4cbed06f7d3aeef8de3f03f0f9eea34dc06d51b3be7492a8d35d5c8695",
+        "consumer_job": "20261027-175645-todo-3080",
+        "effort": "max",
+        "first": 228,
+        "full_original_meanings_and_all_limits_read": true,
+        "limits": "原primary全1988物理行、raw6/masked2（EUとUK各2行伏字）。v2/v3/v4の行別mask版とzero-limitを保持。notice1066B/21行は原216の同byte再利用8で新literal0。support77=saved27/unsaved50、未保存のbytes/hash/mask/readerはnullのまま。標準/asset・実装・原子性/不変・現税法/率/年度/閾値・APIは未検証。親の元本文/支持再open、新raw/権利/最終採否/中央、実給与/帳票提出/設定/実DB/サービス/費用0。全598/全16完了ではなく次236へ続ける。",
+        "meanings": [
+          "228給与。対象名簿・明細・給与/税設定の有効期間/年度版とrunの計上/取消を対応させ、実振込・納税/申告/受理は別receiptへ分離。表題2026、保存税率/控除/上限や省略記号を含むJSONを現行仕様・実行可能設定としない。YTD/周期/州/税区分・丸め、欠落/部分失敗・二重計上/取消は未検証。原role/例から実給与/新支出を実行しない。",
+          "229案件/工数。作業/依存・milestoneと実成果受入、記録時間と実稼働、請求単価と実原価/利益、Billed状態と実invoice/送付/入金を別にする。FK/circular errorやcompleted/Ganttは同会社・循環検出・実進捗の証明でない。重複/日跨ぎ/単価版・承認後訂正/再請求、billingへの委譲とGLなしの説明の整合は未検証。顧客との約束/共有ToDoをsourceから変えない。",
+          "230CA地域。province/取引日/税年度・適用条件・給与周期と公式根拠/設定版を結ぶ参考で、掲載率/2026 YMPE/13地域やASPEは現制度確認でない。own tableなしでもseed/config変更はある。countryをCAへ変えて実適用を偽らず、BN/SIN形式/Luhnを発行/本人性/登録有効性やT4提出/受理/納付の証明へしない。8assetと実装未保存。",
+          "231EU地域。実取引の日付/商品service/課税場所/登録/免税/閾値/通貨と標準profile版を確認し、国や売手買手だけで適合としない。offline/VIES照会なしなのでVAT/EORI形式やIBAN mod97は公的登録/口座所有の証明でない。EN16931等の生成と国別profile検査・実提出/受理を分ける。seed/setup作用と実会社countryを保ち、error回避に国を偽らない。識別番号2行はv3伏字のまま。",
+          "232India地域。実州/分類HSN/SAC/取引日/税年度/給与期間・設定版と公式根拠、算式/丸め/帳票schemaを結ぶ参考。保存GST2.0率/NIC版/給与税等と全India要件は未検証。形式/checksumは実発行/本人性/登録でなく、JSON生成はIRN実発行/申告/受理/納付と別。subprocessの設定変更/部分失敗/重複を確認し、missing invoiceやcountry/HSNを都合よく作って通さない。原v3・mask0を秘密不存在へしない。",
+          "233UK地域。実税年度/region/税code/YTD/周期・loan/pension適用と設定版を固定。掲載VAT/NI/PAYE/threshold/FRS102は現行確認でない。fully offlineで、MTD有効設定/FPS生成はHMRC実提出/受理ではない。識別形式を公的登録/本人性とせず、country=GBへ変える回復案で実地域を偽らない。識別番号例2行はv4伏字、8asset/実装未保存。",
+          "234報告。100%read-only/所有tableなしという自己申告と、消去rule/entry所有・rule作成/GL生成の併記を矛盾として保持。純読取と書込/消去仕訳を分け、会社/期間/通貨/原voucher・認可・同一snapshot、TEXT DecimalとSQL SUMの精度/丸め、全件/部分/欠測を実確認する。借貸/BS一致を完全性/実銀行残高とせず、agingの期限とposting date差を区別。空データのために架空取引/仕訳、未掲載cronを追加しない。",
+          "235販売。元見積/受注→部分出荷→請求/creditと在庫/COGS/売上/売掛/支払の一回限りの対応、原子性/取消と実配送/受領・決済/返金を別証拠へ結ぶ。submitやdelivery noteだけで実契約/出荷/入金とせず、outstandingを任意変更しない。信用限度増額・架空入庫・payment取消をerror回避で追加しない。会社間双方のscopeとpartial修復、定期発生回/料金税版・cutoff/再試行を検証し、原cron/announceを実許可にしない。"
+        ],
+        "observed_at": "2026-10-28T14:50:22.0399617+00:00",
+        "original_actor_namespace_and_nulls_preserved": true,
+        "original_message_sha256": "327f5d79ec19963fa1ab1337a656899ca078ea62768f31d1f8ce8ef3fb55d655",
+        "producer_job": "20261028-171959-todo-3719",
+        "requested_model": "gpt-6.1-sol",
+        "source_or_support_body_reopens_by_parent": 0,
+        "through": 235
+      },
+      "parent_meaning_sha256": "25d37e740e31924901963fef054f9497f8fc0bbca4c48f4bf1d5990380058ee3"
+    }
+  },
+  "spec_sha256": "4f6fe32f62db56bed2acb4d378147ff952ad06230243fb45f7674f3158313fc3",
+  "support_metadata_records": 123,
+  "through": 239,
+  "unsaved_support_metadata": 84,
+  "whole16_complete": false
+}

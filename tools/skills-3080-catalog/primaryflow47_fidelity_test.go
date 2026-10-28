@@ -24,6 +24,7 @@ func TestPrimaryflowNext79RetainsOriginalMeaningAndPendingMemberRights(t *testin
 
 func checkPrimaryflowOriginalMeaning(t *testing.T, file, expectedSHA string, recordsExpected, contextsExpected, membersExpected int) {
 	t.Helper()
+	requireAssessmentInputRegistered(t, file, expectedSHA, recordsExpected)
 	var outer map[string]any
 	raw := loadPublicReceipt(t, file, &outer)
 	digest := sha256.Sum256(raw)

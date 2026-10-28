@@ -3184,7 +3184,9 @@
     "new_adoptions": 0,
     "normal_mutation_qualification_and_current_discovery_or_use_pending": true,
     "independent_full_review_not_yet_accepted": true,
-    "whole16_complete": false
+    "whole16_complete": false,
+    "superseded_uninstalled_by": "skills-3080-next-four-bundle175645.json",
+    "original_payload_and_review_preserved": true
   },
   "latest_received15": {
     "publisher_job": "20261027-175645-todo-3080",
@@ -3228,6 +3230,23 @@
     "source_text_republished": false,
     "individual_license_status": "pending; Amazon SEO has explicit All rights reserved; no index-label-only grants",
     "current_dispositions_recorded": 0,
+    "whole16_complete": false
+  },
+  "next_four_preparation": {
+    "bundle": "skills-3080-next-four-bundle175645.json",
+    "manifest": "skills-3080-operations/create-next-four-175645.json",
+    "manifest_sha256": "39ea776e81250f702902f53aa0e08df98df30d71a964edd9d4295317dcc1a209",
+    "targets": 4,
+    "virtual_files": 28,
+    "actual_central_operations": 0,
+    "new_adoptions": 0,
+    "actual_installed": 154,
+    "assessments_main": 1424,
+    "historical_source_assessments_unchanged": true,
+    "prior_balance1_is_same_target_not_a_fifth_proposal": true,
+    "remaining_uninstalled_old3_proposals_preserved": true,
+    "current_full_creator_and_two_PR_roles_pending": true,
+    "normal_mutation_absence_qualification_discovery_and_use_pending": true,
     "whole16_complete": false
   }
 }

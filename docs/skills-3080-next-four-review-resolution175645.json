@@ -1,0 +1,42 @@
+{
+  "original_review": {
+    "task": 4193,
+    "job": "20261028-211001-todo-4193",
+    "spec_sha256": "e904ab99388a4a863b392d3bb27eeb528242f79a4456258c89aa3811a7f8b923",
+    "final_bytes": 1804,
+    "final_sha256": "55e7ac24b9c335bae3b2d81557254bb2e62c1a9c74bd30dfb8dd34dd9f43fd90",
+    "actual_native_model": "gpt-6-luna",
+    "actual_native_effort": "max",
+    "same_thread_cwd_time_window": true,
+    "received_via_normal_purpose_api": true,
+    "Must": 0,
+    "Suggestion": 1,
+    "Nit": 1,
+    "standalone_acceptance_present": true,
+    "Create_called": false,
+    "original_bytes_and_old_spec_preserved": true,
+    "new_full_review_required": true
+  },
+  "Suggestion": {
+    "subject": "Ambiguous source.license.accepted beside historical permission=false",
+    "changes": "Add explicit selected_notice_application to all four source.json payloads. Explain the required existing strict manifest field, the selected publisher notice scope and the unmodified historical assessment. Preserve all source/notice bytes and unknown third-party/authorship/service rights.",
+    "runtime_sources": [
+      "repair-guard/skills3080_operation_windows.go:skillsSourceClaimsPreserved",
+      "repair-guard/skills3080_alias_windows.go:skillsMaskedBindings"
+    ],
+    "runtime_protocol_unchanged": true,
+    "reviewer_resolution_not_yet_received": true
+  },
+  "Nit": {
+    "subject": "Duplicate text and -text attributes for progress JSON",
+    "change": "Remove the older text eol=lf line and preserve existing effective -text. Source bytes stay explicit.",
+    "reviewer_resolution_not_yet_received": true
+  },
+  "new_manifest": "docs/skills-3080-operations/create-next-four-175645.json",
+  "new_manifest_sha256": "39ea776e81250f702902f53aa0e08df98df30d71a964edd9d4295317dcc1a209",
+  "targets": 4,
+  "payloads": 28,
+  "actual_installed": 154,
+  "new_adoptions": 0,
+  "whole16_complete": false
+}

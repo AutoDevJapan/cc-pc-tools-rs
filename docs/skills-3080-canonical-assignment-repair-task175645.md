@@ -53,3 +53,12 @@ Creator4193の実job `20261028-193641-todo-4193` も正常終了し、元の不�
 Goの関連検査を使い、重いCargo・GPU・Civ6、APIキー・新費用、新しい恒久権限は使わない。
 console/UACを出さず、途中成果を同じ作業ブランチへcommitし、再開情報を保存する。
 通常の技術修復を本人の再判断・PC操作待ちにしない。
+
+## 2026-10-28の実結果と入力の訂正
+
+上の8fe/193641/2178Bは診断時点の履歴であり、受入へ使っていない。8feは親が標準instructionsへ補足を追加した不適合で、productionの厳密な比較を緩めず、親が同10入力の標準instructions版e904へ正規に改訂した。
+同4193の新実job211001は、正規結果request1c6eで実1804B/55e7ac24の原文を受領し、同じnativeのLuna/maxも独立照合できた。Must0/Suggestion1/Nit1が残ったのでCreateには使っていない。原文は実改行と独立したacceptance行を持ち、transport破損とは扱わない。
+
+Actor修復は原3686のPR624/最終4284eef/merge034520dへ通常反映された。親の同じ正規結果受領は、新Windows実行版SHA eab69e4fc8e52f2ad6858ef4e8498e8cc6030ac8ce7f788251a1aae476dc5d55でqualified:trueとなった。Windows更新全体の証跡受入は同じ修復担当の結果と別に追い、hashだけで全工程の成功とはしない。
+
+未配置の残高1案を、既読Root19から準備した3案と合わせ、next-fourの同28出力へ進める。旧manifest/元source/既存154件を保持し、source.jsonの限定notice適用を明示し、属性の重複を整理した。新しい同固定版の全文Creator、セルフレビューとラバーダック、CI/通常merge、正規CreateNew・ID/hash読戻し・発見・現在の指示による適用はまだ残る。全16資料の完了や一般guard解除を主張しない。

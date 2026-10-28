@@ -39,7 +39,7 @@ CI成功後だけ通常マージする。親の4184/4115はsoftware配布のレ�
 
 受入済みmerged sourceの全guardビルド入力を照合し、cleanなWindows CLIを一度生成する。
 実writer3686の `--verify-skills3080-update` が正常に通った同候補だけを、既存のCC-AdminBroker
-と既受入v3置換手順で更新する。現在SHAのCAS、旧実backup、owner/group/DACL、配置後の
+と同じソースでレビューしたハンドル保持の置換手順で更新する。現在SHAのCAS、旧実backup、owner/group/DACL、配置後の
 hash/buildinfoと実CLIを独立して読み戻す。SACLや歴史的物理連続性は証明しない。
 不明な現物を上書き・force rollbackせず、失敗時は同じ原operation記録と実backupを照合する。
 
@@ -47,3 +47,28 @@ source/レビュー/CI/mergeとWindows実配布・実CLIは別々の実結果と
 親自身による新4案のCreator-bound全文レビュー、28buffer/ID、不在、通常CreateNew、
 発見と現在指示の明示適用は別の受入工程であり、software修復だけで元16資料全体や
 中央配置の完了とは報告しない。旧source、作成時ID/hash、原spec/log/native、backupを保持する。
+
+## Windows置換の競合を同じ範囲で解消する
+
+ラバーダックが指摘した、旧SHA確認とFile.Replaceの間の競合は、合成Windowsファイルに
+別byteを差し込むRedで実再現した。旧v3 scriptと原レビューは変更せず保持する。
+新しいdeploy3686は通常のverifyが受け入れた同merged sourceから生成し、同じreviewed
+全guard入力へ含める。新しいデータの資格確認や任意ファイルの置換には使わない。
+
+v4 wrapperは実writer・既存の正常verify・候補byte・helperの実hash/sourceを照合する。
+Go helperは固定scrub391 target、そのnonceのstage/backup、同writer、同clean sourceと
+作業場所内のoperationだけに限定する。旧現物とstageをREAD+DELETE、書込み/削除共有なしで
+開き、全物理親を保持し、同じhandleのSHA・owner/group/DACL・実IDを照合する。
+初回renameの前に実IDをnative journalへCreateNew+Flushして残す。
+
+同じ旧handleをbackupへno-replace renameし、同じstage handleをtargetへno-replace rename
+する。公開の隙間で第三者がtargetを作ると衝突として失敗し、そのtargetを上書きせず、
+既知の旧backupとstageを保持する。正常時のbackup IDは元ID、新target IDはstage IDと一致する。
+異常時の復旧も同じhandleのno-replace renameだけで行い、PS側のpathでhash確認してから
+backupを動かす処理は廃止する。物理的に一度も不在にならない置換とは主張しない。
+
+独立したwrite/rename/親renameの拒否、公開直前のforeign CreateNew、old移動後・新公開後の
+注入失敗と同じ元IDへの復旧、未知current/stage、既存backup/journal、hardlink、先行readerを
+実Windows上で確認した。broker期限でprocessが終了した場合は自動で成功扱いせず、
+原operation/native ID journalと現物・backup・stageを同担当が照合して復旧する。
+未知の現物をforce rollbackしない。元16資料の取得・中央書込み・一般guardへ広げない。

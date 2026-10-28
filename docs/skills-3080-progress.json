@@ -3,7 +3,7 @@
   "issue": "https://github.com/AutoDevJapan/cc-pc-tools-rs/issues/283",
   "observed_at": "2026-10-24T08:15:09.0197014+00:00",
   "phase_a": "partial; 647 additional text shapes held by execution review",
-  "phase_b": "実導入154・既存統合3・再確認が残る除外記録15。新4件は元PR614の固定28出力を一度だけ作成し、読戻し・発見・明示適用まで確認した。元の未確定評価と伏字・権利未確認、追加取得647保留を保持し、指定16資料と73,220掲載全体を継続する。",
+  "phase_b": "実導入154・既存統合3・再確認が残る除外記録15を保持する。次79本文群と85掲載元metadataを、元の22原応答・実読担当・伏字/unknown・親の連続受領へ結ぶ未確定評価として追加する。元の公開83群を変えず、評価を許諾・採用・全16資料の完了へ変えない。全73,220掲載と未取得428・追加取得審査647を保持して続ける。",
   "catalog_sha256": "2d73c9a038a41cc220a9687b935bfa1e0b315b65d9bd6d3e54ddb4111972876c",
   "source_count": 16,
   "fixed_public_repos": [
@@ -616,7 +616,7 @@
     "guard_client_resource": true,
     "state": "classification_unverified"
   },
-  "recorded_at": "2026-10-28T06:08:30.2267552+00:00",
+  "recorded_at": "2026-10-28T07:45:19.7399192+00:00",
   "total_skill_named_body_read_definition": "This field preserves the historical complete-source subset only. Current raw/workflow primary coverage is projected from the canonical source components and sixmile evaluation index in all_fulltext_primary_paths_including_partial_sources/all_workflow_primary_paths_including_partial_sources, not copied here.",
   "openai_entrypoint_evaluation": {
     "rights_accepted": false,
@@ -3132,6 +3132,40 @@
     "actual_payment_QR_decoder_or_service_operations": 0,
     "new_global_source_raw_credit": 0,
     "public_result_review_pending_at_recording": true,
+    "whole16_complete": false
+  },
+  "latest_received79": {
+    "publisher_job": "20261027-175645-todo-3080",
+    "representative_body_meanings": 79,
+    "member_metadata": 85,
+    "original_complete_packets": 22,
+    "cohort0_after": 53,
+    "cohort0_through": 81,
+    "cohort1_after": 30,
+    "cohort1_through": 81,
+    "previous83_original_records_exactly_unchanged": true,
+    "original_reader_and_current_consumer_preserved": true,
+    "all_original_fields_and_parent_ACKs_retained": true,
+    "all_member_contexts_and_rights_pending": true,
+    "new_original_source_body_reads_by_publication": 0,
+    "new_global_raw_credit": 0,
+    "new_permissions": 0,
+    "new_final_dispositions": 0,
+    "central_operations": 0,
+    "whole16_complete": false
+  },
+  "machine_header_observation": {
+    "file": "skills-3080-machine-header-complete51030-175645.json",
+    "sha256": "8fa538f34778a32322c5ab0b942c481ad15a4fef0e3464d42cac18ca82e4da98",
+    "scope": "Only two fixed plans51030groups/54689metadata, not the whole16/73220 task",
+    "complete_machine_header_scope_only": true,
+    "header_SPDX_statements_not_grants": 6082,
+    "strict_text_same_buffer_verified": 50996,
+    "machine_opens": 51027,
+    "normal_guard_unavailable_unopened": 3,
+    "invalid_text": 31,
+    "source_raw_or_model_meaning_credit": 0,
+    "individual_grants_adoptions_or_final_dispositions": 0,
     "whole16_complete": false
   }
 }

@@ -20,6 +20,7 @@ type notice4Header struct {
 	Bytes    int    `json:"bytes"`
 	Manifest string `json:"creation_manifest_sha256"`
 	Runtime  string `json:"creator_runtime_sha256"`
+	Revision string `json:"creator_runtime_revision"`
 	Frozen   struct {
 		Task   int    `json:"task"`
 		Job    string `json:"job"`
@@ -28,6 +29,22 @@ type notice4Header struct {
 		Frozen *bool  `json:"frozen"`
 		Never  *bool  `json:"never_edit_spec_or_restart_this_task"`
 	} `json:"frozen_full_content_review"`
+	Review struct {
+		Raw        string `json:"original_sha256"`
+		Spec       string `json:"spec_sha256"`
+		Model      string `json:"model"`
+		Effort     string `json:"effort"`
+		Must       *int   `json:"Must"`
+		Suggestion *int   `json:"Suggestion"`
+		Nit        *int   `json:"Nit"`
+		All        *bool  `json:"all13_inputs_and28_payloads"`
+		ParentRead *bool  `json:"parent_full_original_read"`
+		Native     []struct {
+			Model  string `json:"model"`
+			Effort string `json:"effort"`
+			Source string `json:"source"`
+		} `json:"actual_native"`
+	} `json:"qualified_full_review"`
 	Pins map[string]struct {
 		File string `json:"file"`
 		SHA  string `json:"sha256"`
@@ -38,6 +55,42 @@ type notice4Header struct {
 	Done       *bool `json:"whole16_complete"`
 }
 
+type notice4Case struct {
+	Skill    string `json:"skill"`
+	Kind     string `json:"kind"`
+	Input    string `json:"input"`
+	Decision string `json:"decision"`
+}
+
+func validateNotice4Cases(rows []notice4Case) error {
+	if len(rows) != 8 {
+		return errors.New("notice4 case count differs")
+	}
+	// Preserve the already performed input/decision pairs, including the real
+	// workflow versus synthetic-payment boundary. These independent fixed pins
+	// check a historical record, not the quality of arbitrary future advice.
+	pins := []string{
+		"5b9f181ecc0f574e73ed1d94595d080063155f8d5aca721179845836e8087762",
+		"a960864ff7fbb6ac834922fc8e1868561cd5027eef3ba6de6fa7227e59f6ea71",
+		"085cb7a13099e6e738186207d29871653563de257bfc7a74683294417e424920",
+		"0ea864becce6c1f4409963d15a082829c1f59245ce4eb43837c64138e6eebaf4",
+		"2a27f378ffeeca4db9b006a9945d59d1956a04f2bf8dc9407ca712c41b10f4eb",
+		"c23b3904a3f38a15349c81af0c31dbe9abd75111551f2f098fd9dd32f43e18e4",
+		"849bece3c36017290846ba2c18af8d37f8c3f64c635a46c36ea69a2a204a7f0a",
+		"9dd090a72803ed94d8f61173bcc520eed24defc4d6ea3a68c1d87135b2c0fb37",
+	}
+	for j, r := range rows {
+		want := []string{"rlm-controller", "rlm-controller", "parse-payment-qr", "parse-payment-qr", "payroll-batch-reconciliation", "payroll-batch-reconciliation", "payment-status-reconciliation", "payment-status-reconciliation"}[j]
+		if r.Skill != want || r.Decision == "" || (j < 2) != strings.HasPrefix(r.Kind, "real current-workflow") || (j >= 2) != strings.HasPrefix(r.Kind, "synthetic text-only") {
+			return errors.New("notice4 application classification differs")
+		}
+		if r.Input == "" || travel3Digest([]byte(strings.Join([]string{r.Skill, r.Kind, r.Input, r.Decision}, "\n"))) != pins[j] {
+			return errors.New("notice4 actual recorded input or decision differs")
+		}
+	}
+	return nil
+}
+
 func validateNotice4Header(i notice4Header, n travel3Native, r travel3Read) error {
 	if i.Creator != next3Actor || i.Targets != 4 || i.Files != 28 || i.Bytes != 89144 || i.Manifest != notice4Manifest || i.Runtime != "f8b2ba6e66e60b06bbbc46c2c0f3d6eedc0208d40444c30e37b70afe29db4fc7" || !recordedFalse(i.Implicit) || !recordedFalse(i.Budget) || !recordedFalse(i.ThirdParty) || !recordedFalse(i.Done) {
 		return errors.New("notice4 actual scope, producer or boundaries differ")
@@ -45,6 +98,18 @@ func validateNotice4Header(i notice4Header, n travel3Native, r travel3Read) erro
 	f := i.Frozen
 	if f.Task != 4184 || f.Job != "20261028-105110-todo-4184" || f.Spec != "3cb28efe25d36e48c426a0ca14ebaaf8f3e8cd1213f97758dfc0f95f1d9a24df" || f.Final != "204f8d4175e5158c71a73259252c16c8faedbf909d979f333ad8361554962a06" || !recordedTrue(f.Frozen) || !recordedTrue(f.Never) || n.Call != notice4Call || n.Count != 1 || n.Request != notice4Request || r.Files != 28 || r.Bytes != 89144 || !recordedTrue(r.IDs) || !recordedTrue(r.Buffers) || !recordedFalse(r.General) {
 		return errors.New("notice4 full reviewer, once-only creation or current identity differs")
+	}
+	q := i.Review
+	if q.Raw != f.Final || q.Spec != f.Spec || q.Model != "gpt-6-luna" || q.Effort != "max" || !recordedCount(q.Must, 0) || !recordedCount(q.Suggestion, 0) || !recordedCount(q.Nit, 0) || !recordedTrue(q.All) || !recordedTrue(q.ParentRead) || len(q.Native) == 0 {
+		return errors.New("notice4 full review model, result or13/28 scope differs")
+	}
+	for _, ctx := range q.Native {
+		if ctx.Model != q.Model || ctx.Effort != q.Effort || ctx.Source != "native_turn_context" {
+			return errors.New("notice4 actual full-review native identity differs")
+		}
+	}
+	if i.Revision != "a71330f543969b4585f01b7359a84a2fa528c9f2" || n.Revision != i.Revision || n.Producer != i.Runtime || n.Files != 28 || n.CLI != "96a3ba604ad620a70b86cdb1eae108e4fb5b32e6dbc5eaf9c7626591d3994560" || !recordedFalse(r.Registry) {
+		return errors.New("notice4 original creation stdout, producer or recovery scope differs")
 	}
 	return nil
 }
@@ -174,11 +239,7 @@ func validatedNoticeNext4Dispositions(t *testing.T) map[string]cohortLedgerRow {
 			SHA    string `json:"sha256"`
 			Read   *bool  `json:"literal_current_buffer_read_in_actual_parent_turn"`
 		} `json:"instructions"`
-		Decisions []struct {
-			Skill    string `json:"skill"`
-			Kind     string `json:"kind"`
-			Decision string `json:"decision"`
-		} `json:"decisions"`
+		Decisions []notice4Case `json:"decisions"`
 	}
 	if json.Unmarshal(rawPins["application"], &app) != nil || app.Actor != next3Actor || !recordedTrue(app.Applied) || app.Files != 8 || app.Bytes != 13040 || app.Real != 2 || app.Synthetic != 6 || !recordedCount(app.Calls, 0) || len(app.Instructions) != 8 || len(app.Decisions) != 8 {
 		t.Fatal("notice4 explicit real/synthetic application differs")
@@ -196,11 +257,8 @@ func validatedNoticeNext4Dispositions(t *testing.T) map[string]cohortLedgerRow {
 	if nbytes != 13040 {
 		t.Fatal("notice4 instruction byte sum differs")
 	}
-	for j, r := range app.Decisions {
-		want := []string{"rlm-controller", "rlm-controller", "parse-payment-qr", "parse-payment-qr", "payroll-batch-reconciliation", "payroll-batch-reconciliation", "payment-status-reconciliation", "payment-status-reconciliation"}[j]
-		if r.Skill != want || r.Decision == "" || (j < 2) != strings.HasPrefix(r.Kind, "real current-workflow") || (j >= 2) != strings.HasPrefix(r.Kind, "synthetic text-only") {
-			t.Fatal("notice4 application classification differs")
-		}
+	if err := validateNotice4Cases(app.Decisions); err != nil {
+		t.Fatal(err)
 	}
 	var structure struct {
 		Exit   *int   `json:"exit"`
@@ -280,7 +338,7 @@ func validatedNoticeNext4Dispositions(t *testing.T) map[string]cohortLedgerRow {
 func TestNoticeNext4ActualAcceptance(t *testing.T) { validatedNoticeNext4Dispositions(t) }
 
 func TestNoticeNext4RejectsUnboundCurrentAcceptance(t *testing.T) {
-	for _, change := range []string{"valid", "reviewer", "review bytes", "extra creation", "current identity missing", "general access", "third party rights"} {
+	for _, change := range []string{"valid", "reviewer", "review bytes", "extra creation", "current identity missing", "general access", "third party rights", "review model", "review effort", "review suggestion", "review scope missing", "review native", "native stdout", "native revision", "native producer"} {
 		t.Run(change, func(t *testing.T) {
 			var i notice4Header
 			var n travel3Native
@@ -302,9 +360,48 @@ func TestNoticeNext4RejectsUnboundCurrentAcceptance(t *testing.T) {
 				r.General = &yes
 			case "third party rights":
 				i.ThirdParty = &yes
+			case "review model":
+				i.Review.Model = "gpt-6.1-sol"
+			case "review effort":
+				i.Review.Effort = "low"
+			case "review suggestion":
+				one := 1
+				i.Review.Suggestion = &one
+			case "review scope missing":
+				i.Review.All = nil
+			case "review native":
+				i.Review.Native[0].Model = "changed"
+			case "native stdout":
+				n.CLI = "changed"
+			case "native revision":
+				n.Revision = "changed"
+			case "native producer":
+				n.Producer = "changed"
 			}
 			if (change == "valid") != (validateNotice4Header(i, n, r) == nil) {
 				t.Fatal("unbound evidence was accepted or valid evidence rejected")
+			}
+		})
+	}
+}
+
+func TestNoticeNext4RetainsRecordedInputsAndDecisions(t *testing.T) {
+	for _, change := range []string{"valid", "missing input", "different input", "claimed real payment"} {
+		t.Run(change, func(t *testing.T) {
+			var app struct {
+				Rows []notice4Case `json:"decisions"`
+			}
+			loadPublicReceipt(t, "skills-3080-notice-next4-application175645.json", &app)
+			switch change {
+			case "missing input":
+				app.Rows[2].Input = ""
+			case "different input":
+				app.Rows[2].Input = "different amount"
+			case "claimed real payment":
+				app.Rows[2].Decision = "実サービスで送金を実行した。"
+			}
+			if (change == "valid") != (validateNotice4Cases(app.Rows) == nil) {
+				t.Fatal("recorded input/decision changed while classification stayed the same")
 			}
 		})
 	}

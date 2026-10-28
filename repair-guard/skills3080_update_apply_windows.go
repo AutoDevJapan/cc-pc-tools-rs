@@ -7,6 +7,9 @@ import (
 )
 
 func skillsRuntimeApply(op, path string, raw []byte, r skillsRequest, reg skillsRegistry, s *skillsFS, ids []int) object {
+	return skillsRuntimeApplyWithCI(op, path, raw, r, reg, s, ids, skillsRuntimeCI)
+}
+func skillsRuntimeApplyWithCI(op, path string, raw []byte, r skillsRequest, reg skillsRegistry, s *skillsFS, ids []int, loadCI func(*skillsRuntimeRequest) bool) object {
 	fail := func(reason string) object {
 		return object{"qualified": false, "reason": reason, "data_access_granted": false}
 	}
@@ -16,12 +19,16 @@ func skillsRuntimeApply(op, path string, raw []byte, r skillsRequest, reg skills
 	}
 	recovery := op == "recover-skills3080-update"
 	baselinePath := skillsRuntimeTarget
-	if recovery {
-		if _, e := os.Lstat(skillsUpdateBackupPath(u.OperationNonce)); e == nil {
-			baselinePath = skillsUpdateBackupPath(u.OperationNonce)
+	q := skillsRuntimeQualificationWithCI(r, reg, s, func() ([]byte, bool) {
+		// CI, source and both reviews were checked before even selecting the
+		// recovery object. A rejected request never inspects a backup path.
+		if recovery {
+			if _, e := os.Lstat(skillsUpdateBackupPath(u.OperationNonce)); e == nil {
+				baselinePath = skillsUpdateBackupPath(u.OperationNonce)
+			}
 		}
-	}
-	q := skillsRuntimeQualificationRead(r, reg, s, func() ([]byte, bool) { return s.read(baselinePath, 64<<20) })
+		return s.read(baselinePath, 64<<20)
+	}, loadCI)
 	if q["qualified"] != true {
 		return q
 	}

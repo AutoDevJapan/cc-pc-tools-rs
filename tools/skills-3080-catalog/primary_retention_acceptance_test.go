@@ -23,6 +23,7 @@ func TestPublishedActualPrimary170Retention(t *testing.T) {
 	}
 	var published map[string]any
 	loadPublicReceipt(t, "skills-3080-primaryflow-next5-evaluation175645.json", &published)
+	requireAssessmentInputRegistered(t, "skills-3080-primaryflow-next5-evaluation175645.json", "59e231295f75004536f33de7d45a3369b3c9b55e5730ac11ab3fb99bf6927f19", 5)
 	read := func(path string, expected any) []map[string]any {
 		t.Helper()
 		want, ok := expected.(string)

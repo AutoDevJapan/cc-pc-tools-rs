@@ -13,6 +13,7 @@ func TestOriginal3719Next8PreservesCompletePacketsAndOriginalActors(t *testing.T
 }
 func checkOriginal3719PendingSnapshot(t *testing.T, file, expectedSHA string, first, last, contextCount int, reader string, wantSupports, wantSaved, wantUnsaved int) {
 	t.Helper()
+	requireAssessmentInputRegistered(t, file, expectedSHA, last-first+1)
 	var value map[string]any
 	raw := loadPublicReceipt(t, file, &value)
 	if travel3Digest(raw) != expectedSHA || value["domain"] != "skills3080-original3719-parent-shared-snapshot-v1" || value["publisher_job"] != "20261027-175645-todo-3080" || value["original_journal_parent"] != "20261024-235901-todo-3080" || value["after"] != float64(first-1) || value["through"] != float64(last) || value["whole16_complete"] != false {

@@ -47,5 +47,18 @@
     "no_CI_actual_private_snapshot_read_claim": true,
     "source_body_reads_or_permissions_or_adoptions_or_central_operations": 0,
     "whole16_complete": false
+  },
+  "manifest_registration_regression": {
+    "finding": "Self S1: the two new inputs could be omitted while maintaining an otherwise self-consistent smaller queue",
+    "Red_reproduced": true,
+    "Red_failed_cases": 8,
+    "Red_seconds": 0.023,
+    "new2_required_pins_and_counts_added": true,
+    "omission_count_digest_duplicate_controls_rejected": true,
+    "shared_original_primaryflow_and_source9_fidelity_checks_require_manifest_registration": true,
+    "standalone_retention_check_also_requires_new5_manifest_binding": true,
+    "all_affected_catalog_tests_with_actual_full_queue_and_both_actual_snapshots_PASS": true,
+    "final_package_seconds": 8.442,
+    "new_source_body_reads_or_licence_or_final_or_central_operations": 0
   }
 }

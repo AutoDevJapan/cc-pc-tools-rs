@@ -123,7 +123,28 @@
       "original_snapshot_sha256": "a9b03f0ce2ac4695cb57447eec6638236d339f5de984981286e36cb324fd29cf",
       "independent_authorship_asserted": false,
       "source_or_service_operations": 0,
-      "central_operations": 0
+      "central_operations": 0,
+      "original_acquisition_role_interpretation": {
+        "original_saved_index_role": "support_text",
+        "original_role_unchanged": true,
+        "role_is_not_permission": true,
+        "actual_selected_content": "The exact co-located 190-line Apache-2.0 licence text, 10752 bytes / SHA120701352845f72eda11433beb40df387026e41c5a9c6b9c9cef0c6c624f6004 / Git blob0093542cc130c66e50a69f86839a5989484a6db3.",
+        "compatibility_required": "Normal source qualification must reconcile this one proved historical LICENCE.md record without relabelling the original index or accepting arbitrary support_text as a notice."
+      },
+      "distributed_masked_reference": {
+        "modification_notice_prefix": "Modification notice: The distributor changed this reference only by replacing withheld source lines with \"[WITHHELD physical line N]\" markers. All remaining source lines and their original positions are preserved below.\n\n",
+        "prefix_sha256": "98604a095cb4f3362c97a5c4a28f67acbe2cbd3d2b61198d3fd1489a5d02c1ed",
+        "payload_starts_at_line": 3,
+        "payload_original_physical_lines": 76,
+        "payload_original_masked_sha256": "f9d01d3bb8ba889dafce1854b0c86be7ad1b43699be040a9055bbf29bbe9a1fc",
+        "whole_distributed_file_sha256": "fb4c42765f345abb6fb29d65cb3b4b394ea74db4225c110866fcde6731fdb272",
+        "all_original_visible_and_masked_lines_preserved": true,
+        "new_raw_credit": 0
+      },
+      "modified_instruction_files_carry_their_own_notice": [
+        "rlm-controller/SKILL.md",
+        "rlm-controller/references/guide.md"
+      ]
     },
     {
       "name": "parse-payment-qr",
@@ -532,5 +553,11 @@
   },
   "complete_specific_package_notice_metadata_sha256": "314cdac43ff374201ac77127549d176833c7355f780b0158b2ce5df26b9a90bf",
   "current_stage": "proposal_not_qualified_or_placed",
-  "new_issuer_receipt": false
+  "new_issuer_receipt": false,
+  "representation_repair_dependency": {
+    "existing_original_todo": 3686,
+    "reason": "Prominent legal modification notice prefix needs an exact wrapper around the unchanged line-preserving masked payload; known legacy support_text LICENCE.md requires exact-source-role compatibility. Neither is implemented by rewriting original inputs.",
+    "software_not_yet_updated": true,
+    "central_operations": 0
+  }
 }

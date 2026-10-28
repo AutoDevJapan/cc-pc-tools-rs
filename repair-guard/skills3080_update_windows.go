@@ -22,6 +22,9 @@ const skillsGuardModule = "github.com/AutoDevJapan/cc-pc-tools-rs/repair-guard"
 // Independent previously accepted distribution facts (3258 and3686), not a caller
 // supplied baseline or an assertion made by the artifact being installed.
 var skillsGuardBaselines = map[string]string{
+	// PR618's normal update and same-handle readback precede this repair.
+	// docs/evidence/skills-3080-guard-before-canonical-assignment-f8b.json
+	official3894CanonicalAssignmentPredecessorSHA: official3894CanonicalAssignmentPredecessorHead,
 	// Normally deployed PR615, independently read back before the alias successor.
 	// docs/evidence/skills-3080-guard-before-source-alias-50c817.json
 	"50c817a829ecb33c30e4ee2b129dee3716f822fc4627dd01df6f24cb98a7925b": "34cd8877587596539e8b4a8847468fc74fca8e57",
@@ -193,11 +196,15 @@ func skillsCodeReviewPairAccepted(a, b skillsReceived, head string) bool {
 	return skillsCodeReviewAcceptedMode(a, head, true) && skillsCodeReviewAcceptedMode(b, head, true) && str(a.Metadata["id"]) != "" && a.Metadata["id"] != b.Metadata["id"] && str(a.Metadata["thread_id"]) != "" && str(b.Metadata["thread_id"]) != "" && a.Metadata["thread_id"] != b.Metadata["thread_id"]
 }
 func skillsRuntimeReviewTasks(a, b *skillsResultRequest) bool {
-	return a != nil && b != nil && a.Task == 3870 && b.Task == 3876 && skillsResultID(*a) && skillsResultID(*b)
+	return a != nil && b != nil && a.Task == 4198 && b.Task == 4199 && skillsResultID(*a) && skillsResultID(*b)
 }
 func skillsRuntimeHistoricalNoticePair(r skillsRequest) bool {
 	u := r.Runtime
-	return u != nil && r.Review != nil && u.PeerReview != nil && r.Review.Task == 3740 && u.PeerReview.Task == 3877 && u.SourceHead == "34cd8877587596539e8b4a8847468fc74fca8e57" && u.ReviewedHead == "3f6ed705d5908524caa3b02f9f0784f5d5320c93" && u.CandidateSHA == "50c817a829ecb33c30e4ee2b129dee3716f822fc4627dd01df6f24cb98a7925b"
+	if u == nil || r.Review == nil || u.PeerReview == nil {
+		return false
+	}
+	return (r.Review.Task == 3740 && u.PeerReview.Task == 3877 && u.SourceHead == "34cd8877587596539e8b4a8847468fc74fca8e57" && u.ReviewedHead == "3f6ed705d5908524caa3b02f9f0784f5d5320c93" && u.CandidateSHA == "50c817a829ecb33c30e4ee2b129dee3716f822fc4627dd01df6f24cb98a7925b") ||
+		(r.Review.Task == 3870 && u.PeerReview.Task == 3876 && u.SourceHead == official3894CanonicalAssignmentPredecessorHead && u.ReviewedHead == "76a3133cee8be5a4a1f8b2b10714b6badb5f1967" && u.CandidateSHA == official3894CanonicalAssignmentPredecessorSHA)
 }
 func skillsRuntimeQualification(r skillsRequest, reg skillsRegistry, s *skillsFS) object {
 	return skillsRuntimeQualificationRead(r, reg, s, nil)

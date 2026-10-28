@@ -89,6 +89,13 @@ func skillsMaskedBindings(m skillsManifest) (map[string]string, bool) {
 	}
 	// A supplied masked reference is never made optional by also retaining raw
 	// source elsewhere. Every such namespace must have exactly one owner.
+	byTarget := map[string]string{}
+	for key, target := range bound {
+		if prior, ok := byTarget[target]; ok && prior != key {
+			return nil, false
+		}
+		byTarget[target] = key
+	}
 	for target := range outputs {
 		if path.Base(target) != "original-skill.masked.txt" {
 			continue
@@ -97,15 +104,7 @@ func skillsMaskedBindings(m skillsManifest) (map[string]string, bool) {
 		if len(parts) != 3 || parts[1] != "references" || !skillsName.MatchString(parts[0]) {
 			return nil, false
 		}
-		owner := ""
-		for key, mapped := range bound {
-			if mapped == target {
-				if owner != "" && owner != key {
-					return nil, false
-				}
-				owner = key
-			}
-		}
+		owner := byTarget[target]
 		if owner == "" {
 			for key, s := range byKey {
 				legacy, ok := skillsMaskedSourceTarget(s.Path)
@@ -119,7 +118,11 @@ func skillsMaskedBindings(m skillsManifest) (map[string]string, bool) {
 			if owner == "" {
 				return nil, false
 			}
+			if existing, ok := bound[owner]; ok && existing != target {
+				return nil, false
+			}
 			bound[owner] = target
+			byTarget[target] = owner
 		}
 	}
 	return bound, true

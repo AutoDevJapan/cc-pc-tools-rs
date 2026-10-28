@@ -175,10 +175,24 @@ func TestSkills3080RenamedReferenceStillUsesSameAcquiredObjectAndLines(t *testin
 	if check(missing) {
 		t.Fatal("raw copy bypassed missing explicit alias metadata")
 	}
-	wrongWriter:=m;wrongWriter.Files=append([]skillsOutput(nil),m.Files...)
-	badMeta,_:=json.Marshal(map[string]any{"source":m.Sources[0],"reformulation_writer":"20261028-103853-todo-3686"})
-	skillsAliasReplaceOutput(t,&wrongWriter,"renamed/references/source.json",badMeta)
-	if check(wrongWriter){t.Fatal("raw copy bypassed the original metadata writer")}
+	wrongWriter := m
+	wrongWriter.Files = append([]skillsOutput(nil), m.Files...)
+	badMeta, _ := json.Marshal(map[string]any{"source": m.Sources[0], "reformulation_writer": "20261028-103853-todo-3686"})
+	skillsAliasReplaceOutput(t, &wrongWriter, "renamed/references/source.json", badMeta)
+	if check(wrongWriter) {
+		t.Fatal("raw copy bypassed the original metadata writer")
+	}
+	dual := m
+	dual.Files = append([]skillsOutput(nil), m.Files...)
+	entry := m.Files[0]
+	entry.Target = "sample/SKILL.md"
+	dual.Files = append(dual.Files, entry, skillsMaskedFixtureOutput([]byte("Visible\n[WITHHELD physical line 2]\n")))
+	skillsAliasReplaceOutput(t, &dual, "renamed/references/original-skill.masked.txt", []byte("Changed alias\n[WITHHELD physical line 2]\n"))
+	for i := 0; i < 32; i++ {
+		if _, ok := skillsMaskedBindings(dual); ok || check(dual) {
+			t.Fatal("legacy fallback overwrote explicit alias or permitted ambiguous dual references")
+		}
+	}
 	for _, view := range []string{skillsModificationNoticePrefix + "Changed\n[WITHHELD physical line 2]\n", skillsModificationNoticePrefix + "Visible\n[WITHHELD physical line 3]\n"} {
 		c := m
 		c.Files = append([]skillsOutput(nil), m.Files...)

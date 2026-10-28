@@ -3,9 +3,9 @@
   "actual_author_job": "20261027-175645-todo-3080",
   "target": "rental-ledger-reconciliation",
   "payload_files": 7,
-  "bundle_sha256": "b52679f4217ad54404b6de8f337fc14f2525fca4c2d76958852962818bb7fa15",
-  "operation_manifest_sha256": "4862a6fd4080829b724e194e878c804ce1ffcea6334f7d2f299eba94ba0230bd",
-  "source_selection_sha256": "0db6be7de1edc11844455b8b64dea4a536c9e23083f8f45b721bfee65d6fecd5",
+  "bundle_sha256": "3e47165b9c3ad0f2f300bab8aa139137eb2794c4c0bd7a6bacd71217de31a3b4",
+  "operation_manifest_sha256": "9181080be684764ecc89a6c8a77138f45e79507b470fb76c66ecc0fb6c5a3572",
+  "source_selection_sha256": "f30fc8aec78a38dd9faf54d6774b595933ca0a9296ac1b4f6a25e6d44fdacec9",
   "source_repo": "6mile/skills",
   "source_repository_id": 1147531245,
   "source_commit": "920714f17d81e0a95c7a9bc51faf0a7921cd982d",
@@ -49,5 +49,14 @@
   "created_files": 0,
   "new_adoptions": 0,
   "central_operations": 0,
-  "whole16_complete": false
+  "whole16_complete": false,
+  "canonical_source_and_masked_reference_alias_schema_preserved": true,
+  "historical_original245_and_common_fields_retained": true,
+  "initial_never_created_proposal": {
+    "commit": "d6a946f394c1641dbd41d5117d85f08d04e199e4",
+    "created": 0,
+    "reason": "Use the existing strict renamed-mask source/manifest protocol before Creator review; no guard/protocol change.",
+    "bundle_sha256": "b52679f4217ad54404b6de8f337fc14f2525fca4c2d76958852962818bb7fa15",
+    "manifest_sha256": "4862a6fd4080829b724e194e878c804ce1ffcea6334f7d2f299eba94ba0230bd"
+  }
 }

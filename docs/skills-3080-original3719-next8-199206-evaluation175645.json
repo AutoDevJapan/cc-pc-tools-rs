@@ -1,0 +1,2126 @@
+{
+  "after": 198,
+  "all_original_chunks_losslessly_reconstructed": true,
+  "all_original_fields_and_actor_namespaces_preserved": true,
+  "central_operations": 0,
+  "complete_original_chunks": 3,
+  "domain": "skills3080-original3719-parent-shared-snapshot-v1",
+  "entries": [
+    {
+      "bytes": 9182,
+      "git_blob": "df5000e17ef60ecf400e65bfcd3c58ff88b604c3",
+      "inventory_id": "github:fc9725b64eb50ff87b7de4488218014e7a9feed6f5efd0fc620f746299cf1648",
+      "path": "skills/liuyingduo/pptx-2/SKILL.md",
+      "source_commit": "920714f17d81e0a95c7a9bc51faf0a7921cd982d",
+      "source_repo": "6mile/skills",
+      "source_sha256": "e5b0df918cbe9d62508b3cf808d73899633f82fc19f6258a25ef9f0de7e62125"
+    },
+    {
+      "bytes": 17141,
+      "git_blob": "ad2e17500d9b77ba871e646054342f8f5a8c88a4",
+      "inventory_id": "github:9060e238265b193911bb9fdf20bfe897e776f5a709561a3f0b05034929dd5955",
+      "path": "skills/liyico/bettafish-opinion-analysis/subskills/docx/SKILL.md",
+      "source_commit": "920714f17d81e0a95c7a9bc51faf0a7921cd982d",
+      "source_repo": "6mile/skills",
+      "source_sha256": "71cfc398ee05221f21fddc797ea5523a59278feb3447c681db92fa9130ad2da3"
+    },
+    {
+      "bytes": 4440,
+      "git_blob": "5be498e2585843c7137bf9a74e262f57415de5ce",
+      "inventory_id": "github:15642630e5828eeb00dcca204584f2fe325c27c3df15a12879c4c527681acd4b",
+      "path": "skills/liyico/bettafish-opinion-analysis/subskills/frontend-design/SKILL.md",
+      "source_commit": "920714f17d81e0a95c7a9bc51faf0a7921cd982d",
+      "source_repo": "6mile/skills",
+      "source_sha256": "b81e2ff87ed8fa4d6c377ccb127a7254c9e6a77e3ae94f21e6b514f7bb2945a0"
+    },
+    {
+      "bytes": 8072,
+      "git_blob": "d3e046a5ae107a6cb23cfb16c219837094ab35d3",
+      "inventory_id": "github:6af5fec9d7d93072ee71892c7cb25f1aac7c900644f412543b00f6a5b49d03ba",
+      "path": "skills/liyico/bettafish-opinion-analysis/subskills/pdf/SKILL.md",
+      "source_commit": "920714f17d81e0a95c7a9bc51faf0a7921cd982d",
+      "source_repo": "6mile/skills",
+      "source_sha256": "9f78b8359fbd4943ad260a7a1e436e5a96503406d6c34e99f69223d647d85b9c"
+    },
+    {
+      "bytes": 17837,
+      "git_blob": "b7f86598b002c99a6be96026443217b6af3c561d",
+      "inventory_id": "github:102f3593bd9c8c79ede23a09f6f4e07d241c08d7226bc9aaad72487358845dc6",
+      "path": "skills/ljglover/skill-creator-0-1-0/SKILL.md",
+      "source_commit": "920714f17d81e0a95c7a9bc51faf0a7921cd982d",
+      "source_repo": "6mile/skills",
+      "source_sha256": "b2e3d83f60425c2d0b9d4162efb8f9aa322b45843497340f2289f42be422801c"
+    },
+    {
+      "bytes": 2444,
+      "git_blob": "a5fd5a2ea2bce19777116ff086c964e2f77b869f",
+      "inventory_id": "github:b4105d05434261429b1384b9577cf544ade6501856262c218ca944f9e4c286b8",
+      "path": "skills/lknik/news-feeds/SKILL.md",
+      "source_commit": "920714f17d81e0a95c7a9bc51faf0a7921cd982d",
+      "source_repo": "6mile/skills",
+      "source_sha256": "a373fd8b87dad479ee1b7c4d369debc993cc7f0604a7f84ffdae1506a30fdf49"
+    },
+    {
+      "bytes": 15329,
+      "git_blob": "b484a6de2f85ed2e27b116e92b4e7ff55acffefe",
+      "inventory_id": "github:199ea45e187db8521ff9adc8cccbe7a04e2eb3258d926b672fbd40ece40db908",
+      "path": "skills/lovensky1992-wk/seedance-video-gen/SKILL.md",
+      "source_commit": "920714f17d81e0a95c7a9bc51faf0a7921cd982d",
+      "source_repo": "6mile/skills",
+      "source_sha256": "f01fd7db9c5010d114bd6ac23a85ad4b5a5fba3556c341edeefa53af0034684b"
+    },
+    {
+      "bytes": 18452,
+      "git_blob": "369440fdba8dd20c71ffdf4c0c10ccb84ec1a334",
+      "inventory_id": "github:824243199de8e9e9aa34dfec8d873be59b8ff59e7caf84d7fde7e69937bb11ec",
+      "path": "skills/lucasgo24601/home-keeper/SKILL.md",
+      "source_commit": "920714f17d81e0a95c7a9bc51faf0a7921cd982d",
+      "source_repo": "6mile/skills",
+      "source_sha256": "4a9bb47629ca9ef89428c0c47c18fdff9765a03a2b42d908495c5075c918571a"
+    }
+  ],
+  "limits": [
+    "Parent received actual original eight assessments and limits with independent native Sol/max metadata; source body/support raw reads remain the recorded original reader's work, not new parent raw reads.",
+    "Original notice reuse, ordered full-diff, fresh reads, saved-unread and unsaved null states and per-chunk actor namespaces are preserved, not converted into permissions.",
+    "This pending-assessment preparation does not install, accept third-party rights or complete598/51030/73220/16sources."
+  ],
+  "new_copy_permissions": 0,
+  "new_final_dispositions": 0,
+  "new_parent_raw_body_read_credit": 0,
+  "new_source_or_support_reads_by_materializer": 0,
+  "original_journal_parent": "20261024-235901-todo-3080",
+  "original_primary_assessments": 8,
+  "original_support_state_counts": {
+    "0": 54,
+    "1": 12,
+    "2": 15,
+    "4": 4,
+    "5": 1
+  },
+  "parent_journal_sha256_at206": "58a57031882ba28d87b97c9e974411da097ad139fbab335f814b5537df98c694",
+  "publisher_job": "20261027-175645-todo-3080",
+  "records": [
+    {
+      "actual_assessment_reader": "20261028-154151-todo-3719",
+      "bytes": 9182,
+      "current_permission_or_adoption_granted": false,
+      "git_blob": "df5000e17ef60ecf400e65bfcd3c58ff88b604c3",
+      "inventory_id": "github:fc9725b64eb50ff87b7de4488218014e7a9feed6f5efd0fc620f746299cf1648",
+      "new_final_disposition": false,
+      "ordinal": 199,
+      "original_assessment": {
+        "candidate_disposition": "PPTX分岐とQA観点を改訂候補として提案。採用・複製許諾・導入・実testは未実施。",
+        "findings": [
+          "front matterはProprietaryと個別LICENSE参照。root MITやClawHub補助方針で当該noticeを上書きしない。",
+          "テンプレートはthumbnail→unpack→操作/編集→clean→pack、新規はpptxgenjs.mdへ分岐する。原slide・notes・relationshipや編集可能性の保持はprimaryだけでは保証できない。",
+          "各slideにvisual必須、特定fontや色の回避、見出し下線の全面禁止は作者の美的選好。本人の既定・画像回答・依頼目的を変更する規則にしない。",
+          "QAは抽出テキストの順序/残存placeholderと画像のoverflow/contrast/配置を確認する。ただし初回に必ず欠陥を見つけ最低1回修正せよという要求は、不具合の捏造や無意味な変更を誘発しうる。",
+          "Python製の既配布道具を実行する記述と、新Pythonの自作を区別する。今回はinstall/生成/変換/子job0。版・対応format・sandbox自動設定等は保存主張で現動作未検証。"
+        ],
+        "nearby_limit": "起動時metadataだけの近接候補。中央本文・存在・同等性・現設定は未照会。",
+        "nearby_metadata": [
+          "pptx",
+          "presentations:Presentations",
+          "documents-slides-data"
+        ],
+        "negative": "全slideへの装飾追加や必須修正を本人の要望として扱い、未読scriptで原本を上書きして変換終了だけで完成とする。",
+        "notices": [
+          [
+            "LICENSE.txt",
+            1,
+            "当該packageの同1467B notice。",
+            "実公開版/作者、利用契約、各guide/scriptや素材・fontの権利は別確認。"
+          ]
+        ],
+        "positive": "依頼済みテンプレートを保ち、内容抽出とslide画像を照合して実際のはみ出しだけを修正し、対象slideの再描画で確かめる。",
+        "read": [
+          2,
+          0,
+          0,
+          true,
+          true,
+          232
+        ],
+        "reason": "全232行を順序全読。読取/編集/新規の分岐、配色・書体・配置例、内容/画像QA、変換と依存を確認した。editing.md/pptxgenjs.mdとscript実装は未読・未実行で、実品質は未検証。",
+        "required_changes": [
+          "依頼対象と画像方向の回答を先に固定し、作者の配色/書体/装飾の好みを全用途の禁止へしない。用紙・閲覧端末・日本語字形とcontrastを実画像で確認する。",
+          "QAは実際の欠陥と受入条件に基づき、問題なしを許容する。修正後は影響slideと必要な全体整合だけを再検査し、子jobや無限の修正loopを必須にしない。",
+          "導入前に未読guide/未保存scriptの必要部分と個別権利を親が確認する。原本を保ち、変換成功・内容保持・見た目・実納品を別結果として記録する。"
+        ],
+        "row": 199,
+        "source": [
+          "github:fc9725b64eb50ff87b7de4488218014e7a9feed6f5efd0fc620f746299cf1648",
+          "skills/liuyingduo/pptx-2/SKILL.md",
+          "e5b0df918cbe9d62508b3cf808d73899633f82fc19f6258a25ef9f0de7e62125",
+          "df5000e17ef60ecf400e65bfcd3c58ff88b604c3",
+          9182
+        ],
+        "support": [
+          [
+            "LICENSE.txt",
+            1467,
+            "79f6d8f5",
+            "c55ab422",
+            4,
+            0,
+            1,
+            "100644"
+          ],
+          [
+            "SKILL.md",
+            9182,
+            "e5b0df91",
+            "df5000e1",
+            2,
+            0,
+            0,
+            "100644"
+          ],
+          [
+            "_meta.json",
+            266,
+            "2e8c2de2",
+            "83d95bcf",
+            1,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "editing.md",
+            6885,
+            "6cb47c3a",
+            "f873e8a0",
+            1,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "pptxgenjs.md",
+            12819,
+            "9539534d",
+            "6bfed908",
+            1,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "scripts/__init__.py",
+            null,
+            null,
+            "e69de29b",
+            0,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "scripts/add_slide.py",
+            null,
+            null,
+            "13700df0",
+            0,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "scripts/clean.py",
+            null,
+            null,
+            "3d13994c",
+            0,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "scripts/office/helpers/__init__.py",
+            null,
+            null,
+            "e69de29b",
+            0,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "scripts/office/helpers/merge_runs.py",
+            null,
+            null,
+            "ad7c25ee",
+            0,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "scripts/office/helpers/simplify_redlines.py",
+            null,
+            null,
+            "db963bb9",
+            0,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "scripts/office/pack.py",
+            null,
+            null,
+            "db29ed8b",
+            0,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "scripts/office/soffice.py",
+            null,
+            null,
+            "c7f7e328",
+            0,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "scripts/office/unpack.py",
+            null,
+            null,
+            "00152533",
+            0,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "scripts/office/validate.py",
+            null,
+            null,
+            "03b01f6e",
+            0,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "scripts/office/validators/__init__.py",
+            null,
+            null,
+            "db092ece",
+            0,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "scripts/office/validators/base.py",
+            null,
+            null,
+            "db4a06a2",
+            0,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "scripts/office/validators/docx.py",
+            null,
+            null,
+            "fec405e6",
+            0,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "scripts/office/validators/pptx.py",
+            null,
+            null,
+            "09842aa9",
+            0,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "scripts/office/validators/redlining.py",
+            null,
+            null,
+            "71c81b6b",
+            0,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "scripts/thumbnail.py",
+            null,
+            null,
+            "edcbdc0f",
+            0,
+            null,
+            null,
+            "100644"
+          ]
+        ],
+        "use": "PPTXの内容抽出・テンプレート編集・新規作成を分け、画像化して検査する制作手順の参考。",
+        "value": "内容の欠落・残存placeholderと、重なり・余白・contrast・改行等の見た目を別に検査し、修正したslideを再確認する観点が具体的。"
+      },
+      "original_chunk_sha256": "637a6a32e05f94216eb9ba1948468cef12210b214d268c239cbf602cee21a3d1",
+      "path": "skills/liuyingduo/pptx-2/SKILL.md",
+      "source_commit": "920714f17d81e0a95c7a9bc51faf0a7921cd982d",
+      "source_repo": "6mile/skills",
+      "source_sha256": "e5b0df918cbe9d62508b3cf808d73899633f82fc19f6258a25ef9f0de7e62125"
+    },
+    {
+      "actual_assessment_reader": "20261028-154151-todo-3719",
+      "bytes": 17141,
+      "current_permission_or_adoption_granted": false,
+      "git_blob": "ad2e17500d9b77ba871e646054342f8f5a8c88a4",
+      "inventory_id": "github:9060e238265b193911bb9fdf20bfe897e776f5a709561a3f0b05034929dd5955",
+      "new_final_disposition": false,
+      "ordinal": 200,
+      "original_assessment": {
+        "candidate_disposition": "DOCXのXML編集・履歴保持の検査観点を改訂候補として提案。最終採否・複製許諾・導入・実testは未実施。",
+        "findings": [
+          "front matterはProprietary、個別noticeは199と同bytesで原7の実readへ結ぶ。親directoryの別Skillやroot licenseでscopeを置換しない。",
+          "表width/columnWidths/cell widthをDXAで合わせる説明と、画像type/altText・PageBreakをParagraphへ入れる例がある。現docx-js版・Google Docsでの非対応断定は未検証の保存主張。",
+          "既存docはunpackでrun統合、packで検査/auto-repairを行うと主張する。原書式・field・変更履歴・コメントanchorを保つかは未保存scriptと実文書検査が必要。",
+          "追跡変更はw:del/w:insと元w:rPr保持、段落記号の削除、他者の変更の拒否/復元、コメントをrun外へ置く例を示す。全変更acceptは依頼による独立の内容変更であり、通常編集と自動で一括しない。",
+          "authorをClaudeへ既定化する記述は実作者の証明ではない。固定の架空日付/authorやXML直接置換を無条件に実文書へ転記しない。"
+        ],
+        "nearby_limit": "起動時metadataだけ。中央本文/存在や同等性・現設定は未照会。",
+        "nearby_metadata": [
+          "docx",
+          "documents:documents",
+          "docs",
+          "documents-slides-data"
+        ],
+        "negative": "任意のWord文書を全変更acceptし、Claudeというauthorと例の日付を付け、pack成功だけで原履歴も保持したとする。",
+        "notices": [
+          [
+            "LICENSE.txt",
+            1,
+            "当該subskills/docxの同1467B notice。",
+            "親の分析package全体・別subskill・実公開版/作者/文書内素材の権利は別。"
+          ]
+        ],
+        "positive": "指定段落の数値だけを変更履歴で直し、元runの書式と他者の履歴を保ち、再梱包後の内容・コメント範囲・頁画像を確かめる。",
+        "read": [
+          2,
+          0,
+          0,
+          true,
+          true,
+          481
+        ],
+        "reason": "全481行を順序全読。docx-js例とunpack/edit/pack、XMLの要素順・挿入/削除・コメント・画像を確認した。script/templateは未保存で本文の自動修復や互換性を実装から検証していない。",
+        "required_changes": [
+          "原文書と編集範囲を固定し、実行者/依頼で決まるauthor・実時刻/ID整合を用いる。変更履歴のaccept/rejectは元依頼の許可範囲で明示的に扱い、既存他者の履歴を消さない。",
+          "packの成功とXML/relationship整合、Wordで開く結果、画像での頁割/表/目次・notes相当の内容保持を分ける。validate無効化やauto-repairだけで合格にしない。",
+          "日本語font/用紙と依頼formatを優先し、Arial普遍対応・A4既定・Google Docsの全面非互換等は対象版で必要時に確認する。未保存scriptは取得拒否を迂回せず、必要部分を親の確認点に残す。"
+        ],
+        "row": 200,
+        "source": [
+          "github:9060e238265b193911bb9fdf20bfe897e776f5a709561a3f0b05034929dd5955",
+          "skills/liyico/bettafish-opinion-analysis/subskills/docx/SKILL.md",
+          "71cfc398ee05221f21fddc797ea5523a59278feb3447c681db92fa9130ad2da3",
+          "ad2e17500d9b77ba871e646054342f8f5a8c88a4",
+          17141
+        ],
+        "support": [
+          [
+            "LICENSE.txt",
+            1467,
+            "79f6d8f5",
+            "c55ab422",
+            4,
+            0,
+            1,
+            "100644"
+          ],
+          [
+            "SKILL.md",
+            17141,
+            "71cfc398",
+            "ad2e1750",
+            2,
+            0,
+            0,
+            "100644"
+          ],
+          [
+            "scripts/__init__.py",
+            null,
+            null,
+            "8b137891",
+            0,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "scripts/accept_changes.py",
+            null,
+            null,
+            "8e363161",
+            0,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "scripts/comment.py",
+            null,
+            null,
+            "36e1c935",
+            0,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "scripts/office/helpers/__init__.py",
+            null,
+            null,
+            "e69de29b",
+            0,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "scripts/office/helpers/merge_runs.py",
+            null,
+            null,
+            "ad7c25ee",
+            0,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "scripts/office/helpers/simplify_redlines.py",
+            null,
+            null,
+            "db963bb9",
+            0,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "scripts/office/pack.py",
+            null,
+            null,
+            "db29ed8b",
+            0,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "scripts/office/soffice.py",
+            null,
+            null,
+            "c7f7e328",
+            0,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "scripts/office/unpack.py",
+            null,
+            null,
+            "00152533",
+            0,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "scripts/office/validate.py",
+            null,
+            null,
+            "03b01f6e",
+            0,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "scripts/office/validators/__init__.py",
+            null,
+            null,
+            "db092ece",
+            0,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "scripts/office/validators/base.py",
+            null,
+            null,
+            "db4a06a2",
+            0,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "scripts/office/validators/docx.py",
+            null,
+            null,
+            "fec405e6",
+            0,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "scripts/office/validators/pptx.py",
+            null,
+            null,
+            "09842aa9",
+            0,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "scripts/office/validators/redlining.py",
+            null,
+            null,
+            "71c81b6b",
+            0,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "scripts/templates/comments.xml",
+            null,
+            null,
+            "cd01a7d7",
+            0,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "scripts/templates/commentsExtended.xml",
+            null,
+            null,
+            "411003cc",
+            0,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "scripts/templates/commentsExtensible.xml",
+            null,
+            null,
+            "f5572d71",
+            0,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "scripts/templates/commentsIds.xml",
+            null,
+            null,
+            "32f1629f",
+            0,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "scripts/templates/people.xml",
+            null,
+            null,
+            "3803d2de",
+            0,
+            null,
+            null,
+            "100644"
+          ]
+        ],
+        "use": "DOCXの作成と既存XML編集、変更履歴・コメント・画像relationship・内容/描画確認の参考。",
+        "value": "ページ寸法、表幅の整合、段落/番号付け、run単位の変更履歴、空白保持とコメントanchorの失敗箇所を具体化できる。"
+      },
+      "original_chunk_sha256": "637a6a32e05f94216eb9ba1948468cef12210b214d268c239cbf602cee21a3d1",
+      "path": "skills/liyico/bettafish-opinion-analysis/subskills/docx/SKILL.md",
+      "source_commit": "920714f17d81e0a95c7a9bc51faf0a7921cd982d",
+      "source_repo": "6mile/skills",
+      "source_sha256": "71cfc398ee05221f21fddc797ea5523a59278feb3447c681db92fa9130ad2da3"
+    },
+    {
+      "actual_assessment_reader": "20261028-154151-todo-3719",
+      "bytes": 4440,
+      "current_permission_or_adoption_granted": false,
+      "git_blob": "5be498e2585843c7137bf9a74e262f57415de5ce",
+      "inventory_id": "github:15642630e5828eeb00dcca204584f2fe325c27c3df15a12879c4c527681acd4b",
+      "new_final_disposition": false,
+      "ordinal": 201,
+      "original_assessment": {
+        "candidate_disposition": "目的と視覚方向の設計質問を改訂候補として提案。最終採否・複製許諾・導入・UI実装・実testは未実施。",
+        "findings": [
+          "本文は大胆な方向選択後すぐコード実装へ進む。本人の同じ画像/範囲に対する確認を省く根拠にはならない。",
+          "Arial/Inter/Roboto/systemfontや紫gradient等の全面回避、毎回異なる見た目を求める記述は作者の嗜好。本人の正式名・既存UI・可読性・brandの統一より優先しない。",
+          "CSS motion、hover/scroll、customcursor・noise・mesh等は候補例であり必須機能ではない。keyboard/touch、reduced motion、contrast・性能の受入条件は具体化されていない。",
+          "production-gradeという自己記述と、可動code/実browser検査/本人確認/Prd配備の成功は別。React等の現在の版や品質を保存本文だけで保証しない。"
+        ],
+        "nearby_limit": "起動時metadataだけ。中央本文・存在・同等性・現設定は未照会。",
+        "nearby_metadata": [
+          "web-design-process",
+          "ui-design-styles",
+          "ui-accessibility",
+          "frontend-node-engineering"
+        ],
+        "negative": "独創性だけを理由に承認済み画面やfontを置き換え、動きや装飾を足してproduction-readyと宣言する。",
+        "notices": [
+          [
+            "LICENSE.txt",
+            2,
+            "当該frontend-design subdirectoryの177行terms。",
+            "実公開版/作者、別subskill・第三者font/画像/serviceには自動適用しない。"
+          ]
+        ],
+        "positive": "既存UIと利用目的を示した具体画像で方向を確認し、選んだ書体・余白を一貫させ、keyboardと対象端末で操作を確かめる。",
+        "read": [
+          2,
+          0,
+          0,
+          true,
+          true,
+          42
+        ],
+        "reason": "全42行を順序全読し個別noticeも177行全読。意図的な方向選択と複雑さの調整は有用だが、具体的な実装・受入検査は本文にない。",
+        "required_changes": [
+          "目的と既存の正式名/仕様を保持し、具体的な画面画像を提示して同じ範囲の本人回答を反映してから実装する。美的嗜好を新たな禁止へ昇格させない。",
+          "font・色・動きは文脈と可読性から選び、必要なkeyboard/focus/touch/reduced-motion/contrastと対象端末の実確認を加える。効果を増やすことを品質と同一視しない。",
+          "親は当該10174B noticeと実公開版の対応・作者/素材の権利を確認し、再配布時の関連notice/変更表示を扱う。隣接proprietary subskillへこのnoticeを広げない。"
+        ],
+        "row": 201,
+        "source": [
+          "github:15642630e5828eeb00dcca204584f2fe325c27c3df15a12879c4c527681acd4b",
+          "skills/liyico/bettafish-opinion-analysis/subskills/frontend-design/SKILL.md",
+          "b81e2ff87ed8fa4d6c377ccb127a7254c9e6a77e3ae94f21e6b514f7bb2945a0",
+          "5be498e2585843c7137bf9a74e262f57415de5ce",
+          4440
+        ],
+        "support": [
+          [
+            "LICENSE.txt",
+            10174,
+            "0d542e0c",
+            "f433b1a5",
+            2,
+            0,
+            0,
+            "100644"
+          ],
+          [
+            "SKILL.md",
+            4440,
+            "b81e2ff8",
+            "5be498e2",
+            2,
+            0,
+            0,
+            "100644"
+          ]
+        ],
+        "use": "画面の目的・利用者・制約と、書体/配色/動き/余白の一貫した方向を整理する設計参考。",
+        "value": "見た目の細部を無関係な装飾の寄せ集めにせず、目的と選んだ方向へ結び付ける質問軸がある。"
+      },
+      "original_chunk_sha256": "637a6a32e05f94216eb9ba1948468cef12210b214d268c239cbf602cee21a3d1",
+      "path": "skills/liyico/bettafish-opinion-analysis/subskills/frontend-design/SKILL.md",
+      "source_commit": "920714f17d81e0a95c7a9bc51faf0a7921cd982d",
+      "source_repo": "6mile/skills",
+      "source_sha256": "b81e2ff87ed8fa4d6c377ccb127a7254c9e6a77e3ae94f21e6b514f7bb2945a0"
+    },
+    {
+      "actual_assessment_reader": "20261028-154151-todo-3719",
+      "bytes": 8072,
+      "current_permission_or_adoption_granted": false,
+      "git_blob": "d3e046a5ae107a6cb23cfb16c219837094ab35d3",
+      "inventory_id": "github:6af5fec9d7d93072ee71892c7cb25f1aac7c900644f412543b00f6a5b49d03ba",
+      "new_final_disposition": false,
+      "ordinal": 202,
+      "original_assessment": {
+        "candidate_disposition": "PDFの目的別分岐と抽出/変更の検査観点を改訂候補として提案。採用・許諾・導入・実testは未実施。",
+        "findings": [
+          "Proprietaryと個別notice参照を明示。隣接frontend-designのApache noticeやroot MITを当該PDFへ広げない。",
+          "本文のREFERENCE.md/FORMS.mdに対し固定treeはreference.md/forms.md。caseを保持して参照を修復する必要があり、Windowsで開けることだけで他環境の整合としない。",
+          "抽出テキストや表の配列をそのまま表示する例は、秘密/カード/顧客情報の無選別な出力へ転用しない。table[0]を見出しとする結合も、複数頁の見出し反復や異なるschemaを区別していない。",
+          "OCRは画像化→認識だが言語・解像度・信頼度・読み順/表・実頁画像との照合がない。抽出が空でも内容不存在や全頁成功とはしない。",
+          "encrypt/decrypt・透かし・page書換えは独立の作用で、原署名/注釈/添付/フォーム等の保持は本文から保証できない。掲載passwordは例であり実資格を使った検査ではない。",
+          "ReportLabのglyphや各library/CLIの現仕様は保存主張。新しいPythonの自作と既配布道具の利用を区別し、今回はいずれも実行していない。"
+        ],
+        "nearby_limit": "起動metadataだけ。中央本文/存在・同等性/現設定は未照会。",
+        "nearby_metadata": [
+          "pdf",
+          "pdf:pdf",
+          "poppler-pdf-text-encoding",
+          "documents-slides-data"
+        ],
+        "negative": "空抽出を内容なしとし、異なる表を無条件結合して全文をlogへ出し、保存成功だけで全注釈や署名を保持したとする。",
+        "notices": [
+          [
+            "LICENSE.txt",
+            1,
+            "当該PDF subdirectoryの同1467B notice。",
+            "実公開版・作者・別subskill・入力文書/素材の権利は別。"
+          ]
+        ],
+        "positive": "指定頁を抽出し、画像の頁範囲と表の列/見出しを照合して、必要なら日本語OCRの誤読を確認する。",
+        "read": [
+          2,
+          0,
+          0,
+          true,
+          true,
+          314
+        ],
+        "reason": "314行を順序全読。Python例、Poppler/qpdf/pdftk、OCR、透かし・暗号化等を確認した。forms/referenceと未保存scriptは未読で、処理結果や互換性は未検証。",
+        "required_changes": [
+          "依頼のPDF・頁/作用を固定し、原本を保って必要な抽出/変更だけを行う。出力前の必要部分選択と秘密の伏字、暗号化資格のlog/引数への露出防止を加える。",
+          "case参照を実treeへ合わせ、OCRの言語/頁coverage、表schema/見出し・数値/読み順、font埋込・実頁画像を照合する。受理/ファイル生成と内容保持を別結果にする。",
+          "フォーム・暗号化/復号等が必要な親だけが未読支持、対象権利と現在の道具の仕様を確認する。原署名や履歴の扱いを確認せず一般変換へ混ぜない。"
+        ],
+        "row": 202,
+        "source": [
+          "github:6af5fec9d7d93072ee71892c7cb25f1aac7c900644f412543b00f6a5b49d03ba",
+          "skills/liyico/bettafish-opinion-analysis/subskills/pdf/SKILL.md",
+          "9f78b8359fbd4943ad260a7a1e436e5a96503406d6c34e99f69223d647d85b9c",
+          "d3e046a5ae107a6cb23cfb16c219837094ab35d3",
+          8072
+        ],
+        "support": [
+          [
+            "LICENSE.txt",
+            1467,
+            "79f6d8f5",
+            "c55ab422",
+            4,
+            0,
+            1,
+            "100644"
+          ],
+          [
+            "SKILL.md",
+            8072,
+            "9f78b835",
+            "d3e046a5",
+            2,
+            0,
+            0,
+            "100644"
+          ],
+          [
+            "forms.md",
+            11854,
+            "9530b3f5",
+            "6e7e1e0d",
+            1,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "reference.md",
+            16692,
+            "03a5f964",
+            "41400bf4",
+            1,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "scripts/check_bounding_boxes.py",
+            null,
+            null,
+            "2cc5e348",
+            0,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "scripts/check_fillable_fields.py",
+            null,
+            null,
+            "36dfb951",
+            0,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "scripts/convert_pdf_to_images.py",
+            null,
+            null,
+            "7939cef5",
+            0,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "scripts/create_validation_image.py",
+            null,
+            null,
+            "10eadd81",
+            0,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "scripts/extract_form_field_info.py",
+            null,
+            null,
+            "64cd4703",
+            0,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "scripts/extract_form_structure.py",
+            null,
+            null,
+            "f219e7d5",
+            0,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "scripts/fill_fillable_fields.py",
+            null,
+            null,
+            "51c2600f",
+            0,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "scripts/fill_pdf_form_with_annotations.py",
+            null,
+            null,
+            "b430069f",
+            0,
+            null,
+            null,
+            "100644"
+          ]
+        ],
+        "use": "PDFの抽出・結合/分割・回転・生成・OCR・フォームを目的別に選ぶための参考。",
+        "value": "テキストPDFとscan、文と表、抽出と内容変更を分け、ページ範囲と使う道具を明示できる。"
+      },
+      "original_chunk_sha256": "836022e13bf344b5d03714a6da7abd82abd644b6170ae0767ed0648f267be8f1",
+      "path": "skills/liyico/bettafish-opinion-analysis/subskills/pdf/SKILL.md",
+      "source_commit": "920714f17d81e0a95c7a9bc51faf0a7921cd982d",
+      "source_repo": "6mile/skills",
+      "source_sha256": "9f78b8359fbd4943ad260a7a1e436e5a96503406d6c34e99f69223d647d85b9c"
+    },
+    {
+      "actual_assessment_reader": "20261028-154151-todo-3719",
+      "bytes": 17837,
+      "current_permission_or_adoption_granted": false,
+      "git_blob": "b7f86598b002c99a6be96026443217b6af3c561d",
+      "inventory_id": "github:102f3593bd9c8c79ede23a09f6f4e07d241c08d7226bc9aaad72487358845dc6",
+      "new_final_disposition": false,
+      "ordinal": 203,
+      "original_assessment": {
+        "candidate_disposition": "発火/参照分割・自由度・実使用での反復を改訂候補として提案。最終採否・許諾・中央変更・実testは未実施。",
+        "findings": [
+          "具体例→再利用物の計画→初期化→編集→梱包→実使用で反復という流れ。参照の浅い階層、長文参照の目次、重複削減は読み漏れを減らす設計参考。",
+          "支持2文書は作成/編集の条件分岐と順次検証、厳密/柔軟template・入出力例を示す。例の形式に従うことだけでAPI契約や成果の正しさを検証したことにはならない。",
+          "name/description以外のfront matter全面禁止は本文自身のlicense fieldとも一致しない。現実のSkill runtime/schema・既存metadataの削除規則へ転用しない。",
+          "init_skill.pyの必須実行、README/CHANGELOG/検査説明の一括排除、全file入り.skill ZIPの配布は、既存資源・原本/権利/秘密・中央junctionを守る運用へ調整が必要。",
+          "scriptは文脈未読でも実行可能、類似scriptは代表sampleだけ検査でよいとする。作用/失敗/入力が異なる部分のcoverageや外部作用の安全を保証しない。"
+        ],
+        "nearby_limit": "起動metadataだけで、同名skill-creatorの中央本文/存在や同等性は未比較。",
+        "nearby_metadata": [
+          "skill-creator",
+          "skill-maintenance",
+          "knowledge-to-skills",
+          "mcp-builder"
+        ],
+        "negative": "未読の初期化/梱包scriptを必ず実行し、全metadataと検査記録を削って全fileをZIPへ含め、format検査通過を有用性や許諾の証明にする。",
+        "notices": [
+          [
+            "LICENSE.txt",
+            2,
+            "当該packageの11357B terms/appendix。",
+            "未記入templateは作者特定ではなく、実公開版/作者・同梱第三者資源の権利は別。"
+          ]
+        ],
+        "positive": "実際の依頼例から発火/非発火を決め、作成と編集を分けた短い本文から必要参照へ導き、作用の違う境界を検査して実使用の不足を改訂する。",
+        "read": [
+          2,
+          0,
+          0,
+          true,
+          true,
+          356
+        ],
+        "reason": "356行のprimary、workflows.md28行、output-patterns.md82行、個別notice202行を順序全読。実装scriptは未保存で初期化/検査/梱包動作は未検証。",
+        "required_changes": [
+          "元の用途と既存metadataを保ち、runtimeの実schemaに合う発火条件/参照を設計する。原資料の命令を本人方針や他Skillの削除権限へしない。",
+          "新しい自作は許可された言語・中央配置へ合わせ、既配布Pythonを試す場合と分ける。既存を上書きせず必要なscript/依存と作用を確認し、差がある境界・異常系を実検査する。",
+          "梱包が必要な範囲だけ、秘密/未完了成果/無関係fileを除き、noticeを保持して内容を照合する。ZIP/コードをDiscord添付する手順を採用せず、既存の許可済み共有経路を使う。"
+        ],
+        "row": 203,
+        "source": [
+          "github:102f3593bd9c8c79ede23a09f6f4e07d241c08d7226bc9aaad72487358845dc6",
+          "skills/ljglover/skill-creator-0-1-0/SKILL.md",
+          "b2e3d83f60425c2d0b9d4162efb8f9aa322b45843497340f2289f42be422801c",
+          "b7f86598b002c99a6be96026443217b6af3c561d",
+          17837
+        ],
+        "support": [
+          [
+            "LICENSE.txt",
+            11357,
+            "58d1e17f",
+            "7a4a3ea2",
+            2,
+            0,
+            0,
+            "100644"
+          ],
+          [
+            "SKILL.md",
+            17837,
+            "b2e3d83f",
+            "b7f86598",
+            2,
+            0,
+            0,
+            "100644"
+          ],
+          [
+            "_meta.json",
+            292,
+            "829ac757",
+            "ee6499e5",
+            1,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "references/output-patterns.md",
+            1813,
+            "d6027800",
+            "073ddda5",
+            2,
+            0,
+            0,
+            "100644"
+          ],
+          [
+            "references/workflows.md",
+            818,
+            "ef484687",
+            "a350c3cc",
+            2,
+            0,
+            0,
+            "100644"
+          ],
+          [
+            "scripts/init_skill.py",
+            null,
+            null,
+            "329ad4e5",
+            0,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "scripts/package_skill.py",
+            null,
+            null,
+            "5cd36cb1",
+            0,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "scripts/quick_validate.py",
+            null,
+            null,
+            "d9fbeb75",
+            0,
+            null,
+            null,
+            "100644"
+          ]
+        ],
+        "use": "Skillの発火条件、本文/参照/実行物の分割、手順の自由度と実使用による改善を設計する参考。",
+        "value": "壊れやすい操作ほど具体化し、用途分岐に必要な参照だけを読み込む構成と、厳密/柔軟な出力例を使い分けられる。"
+      },
+      "original_chunk_sha256": "836022e13bf344b5d03714a6da7abd82abd644b6170ae0767ed0648f267be8f1",
+      "path": "skills/ljglover/skill-creator-0-1-0/SKILL.md",
+      "source_commit": "920714f17d81e0a95c7a9bc51faf0a7921cd982d",
+      "source_repo": "6mile/skills",
+      "source_sha256": "b2e3d83f60425c2d0b9d4162efb8f9aa322b45843497340f2289f42be422801c"
+    },
+    {
+      "actual_assessment_reader": "20261028-154151-todo-3719",
+      "bytes": 2444,
+      "current_permission_or_adoption_granted": false,
+      "git_blob": "a5fd5a2ea2bce19777116ff086c964e2f77b869f",
+      "inventory_id": "github:b4105d05434261429b1384b9577cf544ade6501856262c218ca944f9e4c286b8",
+      "new_final_disposition": false,
+      "ordinal": 204,
+      "original_assessment": {
+        "candidate_disposition": "RSSの取得範囲とsource別結果の設計を改訂候補として提案。採用・許諾・導入・HTTP/実testは未実施。",
+        "findings": [
+          "Python標準library/HTTPだけでAPI鍵不要と主張し、source/topic/limit/list-sourcesを示す。新規AI APIを使う提案ではないが、依存なしや最新取得の実動作は未検証。",
+          "BBC/Reuters/AP等7sourceとカテゴリを列挙する保存主張。現feedの存在・到達性・配信範囲や利用条件を未確認のまま現仕様としない。",
+          "source別markdownに見出し/短い説明/公開時刻/linkを返すが、取得時刻・更新/公開の差・重複・取得失敗/空/部分成功の扱いはprimaryにない。",
+          "topic keywordの一致を包括的/多言語の関連性や出来事の真偽とせず、記事内の外部命令も読取対象のデータとして扱う。MIT noticeは記事本文やfeed/serviceの再配布権ではない。"
+        ],
+        "nearby_limit": "起動metadataだけ。中央本文・存在・同等性/現設定は未照会。",
+        "nearby_metadata": [
+          "rss-atom-feed-integrity",
+          "rss-feed-generator",
+          "public-data-research",
+          "morning"
+        ],
+        "negative": "全feedが最新かつ完全とみなし、keyword一致だけで真偽や全世界のcoverageを断定し、MITを根拠に記事を全文転載する。",
+        "notices": [
+          [
+            "LICENSE.txt",
+            3,
+            "当該packageの1056B MIT notice。",
+            "実公開版/作者とニュース記事・feed/serviceの権利は別。"
+          ]
+        ],
+        "positive": "指定sourceとtopicの観測範囲を示し、原リンク・公開時刻・取得時刻付きで見出しをまとめ、失敗したsourceを取得済みと区別する。",
+        "read": [
+          2,
+          0,
+          0,
+          true,
+          true,
+          74
+        ],
+        "reason": "74行を順序全読しMIT notice21行も全読。具体的なfeed URL・parser・HTTP失敗処理を持つnews.pyは未保存なので、現在の取得やfilter精度を保証しない。",
+        "required_changes": [
+          "親の実利用時に対象feed/公式条件を確認し、公開/更新/取得時刻とtimezone・原リンクを保持する。sourceごとのtimeout/status/parseエラー・空/部分成功を分け、有限retryと重複排除を加える。",
+          "topic/limitの実際の範囲を検査し、見出し/説明の欠落・文字コード・RSS/Atom差を扱う。現在性・正確性が必要な記事は原出典を確認し、本文を過剰転載しない。",
+          "未保存scriptを取得拒否の別経路で補わない。既配布Pythonを利用する場合と新しい自作を分け、定期化や新しい送信/通知をこの評価から追加しない。"
+        ],
+        "row": 204,
+        "source": [
+          "github:b4105d05434261429b1384b9577cf544ade6501856262c218ca944f9e4c286b8",
+          "skills/lknik/news-feeds/SKILL.md",
+          "a373fd8b87dad479ee1b7c4d369debc993cc7f0604a7f84ffdae1506a30fdf49",
+          "a5fd5a2ea2bce19777116ff086c964e2f77b869f",
+          2444
+        ],
+        "support": [
+          [
+            "LICENSE.txt",
+            1056,
+            "1126322e",
+            "14fac913",
+            2,
+            0,
+            0,
+            "100644"
+          ],
+          [
+            "README.md",
+            189,
+            "376831c0",
+            "f2ef1b29",
+            1,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "SKILL.md",
+            2444,
+            "a373fd8b",
+            "a5fd5a2e",
+            2,
+            0,
+            0,
+            "100644"
+          ],
+          [
+            "_meta.json",
+            459,
+            "a2028aac",
+            "03e4ea76",
+            1,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "scripts/news.py",
+            null,
+            null,
+            "c8b91aac",
+            0,
+            null,
+            null,
+            "100644"
+          ]
+        ],
+        "use": "複数RSSからsource/topic/件数を指定して見出し・要約・時刻・原リンクを集める参考。",
+        "value": "source別出力と取得量の指定を分け、短いニュース一覧の出典を辿れる形にする。"
+      },
+      "original_chunk_sha256": "836022e13bf344b5d03714a6da7abd82abd644b6170ae0767ed0648f267be8f1",
+      "path": "skills/lknik/news-feeds/SKILL.md",
+      "source_commit": "920714f17d81e0a95c7a9bc51faf0a7921cd982d",
+      "source_repo": "6mile/skills",
+      "source_sha256": "a373fd8b87dad479ee1b7c4d369debc993cc7f0604a7f84ffdae1506a30fdf49"
+    },
+    {
+      "actual_assessment_reader": "20261028-154151-todo-3719",
+      "bytes": 15329,
+      "current_permission_or_adoption_granted": false,
+      "git_blob": "b484a6de2f85ed2e27b116e92b4e7ff55acffefe",
+      "inventory_id": "github:199ea45e187db8521ff9adc8cccbe7a04e2eb3258d926b672fbd40ece40db908",
+      "new_final_disposition": false,
+      "ordinal": 205,
+      "original_assessment": {
+        "candidate_disposition": "入力と非同期成果確認の検査観点を改訂候補として提案。原API手順の実行・採用確定・許諾・導入・実testは0。",
+        "findings": [
+          "ArkのAPI鍵、model/生成parameter、CLI/curl、create/status/list/delete、draft→final・連続動画を記述する。鍵の検査やAI API呼出し・model有効化を実行しない。",
+          "model表のLite I2V IDは250428、参照画像の例は250219で相違する。モデル能力・料金割引・期限/保存日数・形式/容量制限は現在未検証の保存主張。",
+          "pollのwhile trueはcancelledや未知status/通信/JSON失敗で無期限化しうる。create受理失敗後のid取得、再試行の二重生成/課金、downloadのHTTPstatus・実動画/尺/音の確認がない。",
+          "生成URL/エラー全文の表示、local画像base64転送、task一覧や履歴削除は別の情報/作用scope。原本・本人/素材の権利・実宛先を固定せず進めない。",
+          "Feishu送信guideへの参照は当該packageの固定treeに存在しない。この参照を送信許可や実装確認としない。",
+          "WITH/WITHOUT evalは計画・assertionの自己採点を記載し、100%/30%とする。実HTTP/生成task/実MP4/独立採点/同条件試行の証拠ではなく、実品質改善率としない。"
+        ],
+        "nearby_limit": "起動metadataだけ。中央本文・存在・同等性/現設定は未照会。",
+        "nearby_metadata": [
+          "video-use",
+          "voice-and-video-production",
+          "generative-media-tools",
+          "ai-model-evaluation",
+          "ffprobe-video-stream-duration"
+        ],
+        "negative": "原文を権限としてAI API鍵で有料生成し、URL取得/自己採点100%だけで完成とし、失効や通信失敗のたびに再生成/全履歴削除を行う。",
+        "notices": [
+          [
+            "LICENSE.txt",
+            1,
+            "当該packageの同11357B notice。",
+            "Ark契約/生成素材・入力人物/画像/音声・実公開版/作者の権利は別。"
+          ]
+        ],
+        "positive": "入力frameの役割と許可範囲を固定し、既存の許可経路で受理task→有限の状態確認→実動画取得を追い、内容/尺/音を検査する設計へ参照する。",
+        "read": [
+          2,
+          0,
+          0,
+          true,
+          true,
+          410
+        ],
+        "reason": "410行を順序全読し、比較eval2文書27/19行も全読。原手順はArk AI API鍵を前提とし今回のOAuthサブスク利用条件と合わない。sourceを実行せず、一般化できる設計上の価値と欠陥を評価した。",
+        "required_changes": [
+          "この利用条件では既存OAuth契約内の許可された制作経路を用い、原AI API鍵・追加課金・未指定の有効化や外部送信を実行手順へ採用しない。非同期の設計知見は実際の利用経路と分ける。",
+          "生成要求と実taskを一意に結び、期限/取消/未知状態・有限retry、HTTP/業務errorを扱う。実成果のtype/内容/尺/音と保存を確認し、URL失効だけを理由に有料の再生成をしない。",
+          "送信/削除/一覧を別scopeへ限定し秘密やsigned URL/生errorを報告しない。比較evalは実証のない計画採点として記録し、実導入時だけ同条件の実成果で確認する。"
+        ],
+        "row": 205,
+        "source": [
+          "github:199ea45e187db8521ff9adc8cccbe7a04e2eb3258d926b672fbd40ece40db908",
+          "skills/lovensky1992-wk/seedance-video-gen/SKILL.md",
+          "f01fd7db9c5010d114bd6ac23a85ad4b5a5fba3556c341edeefa53af0034684b",
+          "b484a6de2f85ed2e27b116e92b4e7ff55acffefe",
+          15329
+        ],
+        "support": [
+          [
+            "CHANGELOG.md",
+            873,
+            "bec88f67",
+            "7dd7e76f",
+            1,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "LICENSE.txt",
+            11357,
+            "58d1e17f",
+            "7a4a3ea2",
+            4,
+            0,
+            0,
+            "100644"
+          ],
+          [
+            "README.md",
+            1247,
+            "c41dbb00",
+            "23528078",
+            1,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "SKILL.md",
+            15329,
+            "f01fd7db",
+            "b484a6de",
+            2,
+            0,
+            0,
+            "100644"
+          ],
+          [
+            "_meta.json",
+            647,
+            "14729169",
+            "168d6ba9",
+            1,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "evals/results/text2video-with-skill.md",
+            1378,
+            "da41951a",
+            "5cb082de",
+            2,
+            0,
+            0,
+            "100644"
+          ],
+          [
+            "evals/results/text2video-without-skill.md",
+            860,
+            "86fdd7a6",
+            "54044648",
+            2,
+            0,
+            0,
+            "100644"
+          ],
+          [
+            "seedance.py",
+            null,
+            null,
+            "f0169586",
+            0,
+            null,
+            null,
+            "100644"
+          ]
+        ],
+        "use": "動画生成の入力mode、非同期taskの状態確認、成果downloadと削除/取消を分離する設計参考。",
+        "value": "文/首尾frame/参照画像等の入力の役割と、task受理・完了・実動画取得を別の段階として記録できる。"
+      },
+      "original_chunk_sha256": "789997317f8039359a6146c17f3f31ba02be4798279676d142af9fd6e967ab13",
+      "path": "skills/lovensky1992-wk/seedance-video-gen/SKILL.md",
+      "source_commit": "920714f17d81e0a95c7a9bc51faf0a7921cd982d",
+      "source_repo": "6mile/skills",
+      "source_sha256": "f01fd7db9c5010d114bd6ac23a85ad4b5a5fba3556c341edeefa53af0034684b"
+    },
+    {
+      "actual_assessment_reader": "20261028-154151-todo-3719",
+      "bytes": 18452,
+      "current_permission_or_adoption_granted": false,
+      "git_blob": "369440fdba8dd20c71ffdf4c0c10ccb84ec1a334",
+      "inventory_id": "github:824243199de8e9e9aa34dfec8d873be59b8ff59e7caf84d7fde7e69937bb11ec",
+      "new_final_disposition": false,
+      "ordinal": 206,
+      "original_assessment": {
+        "candidate_disposition": "用途不一致・参照欠落を明示したSkill作成手順の改訂候補。最終採否・許諾・中央改名/変更・導入・実testは0。",
+        "findings": [
+          "primaryはSkill Creatorで、住宅管理の手順を持たない。source pathとinventory IDは保持し、本人の製品/機能名を勝手に新設/改名しない。",
+          "内容は自由度/本文と参照/assetの分割、具体例→資源計画→init→編集→package→実使用の反復。203と近いが、Codex表記・命名説明・optional resources/examples・symlink拒否等の差がある。",
+          "本文が必読先とするreferences/workflows.md/output-patterns.mdは当package固定treeにない。203の支持を当packageで読了/存在するものへ移さない。",
+          "front matter2field限定、README/CHANGELOG/検査説明の一律排除、init必須、全file入りZIPはそのまま共通方針にしない。命名例も本人が付けた製品/機能名の変更許可ではない。",
+          "梱包はsymlinkがあれば拒否すると主張するがscript/test本文は未保存。Windows junction/reparse pointやリンク差替え・入力境界を実際に検出することは未検証。中央の既存junctionを削除/実体化する根拠にしない。"
+        ],
+        "nearby_limit": "起動metadataだけ。中央本文/存在/同等性と現junctionの状態は未照会。",
+        "nearby_metadata": [
+          "skill-creator",
+          "skill-maintenance",
+          "knowledge-to-skills",
+          "path-relative-containment-check",
+          "validate-consume-same-bytes"
+        ],
+        "negative": "住宅管理機能があると導入し、欠けた参照を存在/読了と扱い、symlink拒否の主張だけで中央junctionを削除し全fileをZIPへ送る。",
+        "notices": [
+          [
+            "license.txt",
+            2,
+            "小文字caseを保持した当packageの11358B notice。",
+            "既読203と末尾LFだけ異なるが、実公開版/作者・第三者資源の権利は個別確認。"
+          ]
+        ],
+        "positive": "home-keeperというpathに惑わされずSkill作成の候補として対応を記録し、必要資源だけの初期化と梱包境界を実scriptで確認する設計へ参照する。",
+        "read": [
+          2,
+          0,
+          0,
+          true,
+          true,
+          372
+        ],
+        "reason": "372行を順序全読。folder名home-keeperと本文name/題名skill-creatorの不一致を確認し、名だけで住宅管理機能と評価しなかった。licenseは既読203との全文bytes比較で末尾LF1byte差のみを確認した。",
+        "required_changes": [
+          "用途・name/description・pathの対応を親の候補台帳で明示し、不一致を隠さず実本文として評価する。原case/IDと既存の正式名を保つ。",
+          "runtimeの実schemaと既存metadata、必要な参照の存在/内容を確認して修復する。一律の削除や命名変更・任意pathへの初期化を採用せず、中央配置と原本/backup/junctionを守る。",
+          "実利用時に未保存の梱包script/関連testの必要部分だけを確認し、許可範囲の入力・リンク/junction・失敗/原本保持を検査する。全file梱包に秘密/無関係資源を混ぜず、ZIP配布を今回の結果にしない。"
+        ],
+        "row": 206,
+        "source": [
+          "github:824243199de8e9e9aa34dfec8d873be59b8ff59e7caf84d7fde7e69937bb11ec",
+          "skills/lucasgo24601/home-keeper/SKILL.md",
+          "4a9bb47629ca9ef89428c0c47c18fdff9765a03a2b42d908495c5075c918571a",
+          "369440fdba8dd20c71ffdf4c0c10ccb84ec1a334",
+          18452
+        ],
+        "support": [
+          [
+            "SKILL.md",
+            18452,
+            "4a9bb476",
+            "369440fd",
+            2,
+            0,
+            0,
+            "100644"
+          ],
+          [
+            "_meta.json",
+            326,
+            "7c8e1601",
+            "a40966ce",
+            1,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "license.txt",
+            11358,
+            "cfc7749b",
+            "d6456956",
+            5,
+            0,
+            0,
+            "100644"
+          ],
+          [
+            "scripts/init_skill.py",
+            null,
+            null,
+            "8633fe9e",
+            0,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "scripts/package_skill.py",
+            null,
+            null,
+            "aa4de896",
+            0,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "scripts/quick_validate.py",
+            null,
+            null,
+            "e8737b4f",
+            0,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "scripts/test_package_skill.py",
+            null,
+            null,
+            "503ba30c",
+            0,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "scripts/test_quick_validate.py",
+            null,
+            null,
+            "199fcb63",
+            0,
+            null,
+            null,
+            "100644"
+          ]
+        ],
+        "use": "実本文は住宅管理ではなく、Codex向けSkillの設計・初期化・梱包・実使用での改善手順の参考。",
+        "value": "具体例から必要資源だけを作る構成、発火条件・自由度、optional resources/examplesと梱包時のlink扱いを検査点にできる。"
+      },
+      "original_chunk_sha256": "789997317f8039359a6146c17f3f31ba02be4798279676d142af9fd6e967ab13",
+      "path": "skills/lucasgo24601/home-keeper/SKILL.md",
+      "source_commit": "920714f17d81e0a95c7a9bc51faf0a7921cd982d",
+      "source_repo": "6mile/skills",
+      "source_sha256": "4a9bb47629ca9ef89428c0c47c18fdff9765a03a2b42d908495c5075c918571a"
+    }
+  ],
+  "roster_sha256": "f9c6b2e44c5e3aa8947f758f864eaa0d5edc396d622359826bca848cd96f9901",
+  "saved_support_metadata": 32,
+  "shared_original_contexts": {
+    "637a6a32e05f94216eb9ba1948468cef12210b214d268c239cbf602cee21a3d1": {
+      "actual_assessment_reader": "20261028-154151-todo-3719",
+      "common": {
+        "boundaries": {
+          "central_operations": 0,
+          "copy_license_accepted": false,
+          "new_final_dispositions": 0,
+          "source_executed": false
+        },
+        "chunk_id": "ccac21cded4f92d42b6088555ac9a418",
+        "definitions": {
+          "actors": {
+            "0": "今回の実assistant読取",
+            "1": "20261025-041905-todo-3719/current3719の実notice読取"
+          },
+          "mask_method": "表示前にメール・長い数値・token形式・長いhexを置換するメモリ内検査。本chunkのprimaryと新規noticeの置換行0。0は秘密不存在の証明ではない。",
+          "reader_namespace": "20261028-154151-todo-3719/current3719",
+          "states": {
+            "0": "unsaved",
+            "1": "saved_unread",
+            "2": "direct_raw_full",
+            "3": "direct_masked_full",
+            "4": "exact_bytes_reuse",
+            "5": "ordered_full_diff",
+            "6": "partial",
+            "7": "scan"
+          },
+          "support_tuple": "[relative,bytes,SHA8,Gitblob8,state,maskCount,actor,mode]。未保存bytes/SHA/reader/maskCountはnull。未保存Gitblobは固定complete treeの値。"
+        },
+        "domain": "research598-chunk-v1",
+        "first_ordinal": 199,
+        "limits": {
+          "central_body_or_existence_checks": 0,
+          "common_policy_and_japanese_skill_body_guard_unverified_unread": true,
+          "new_support_literal_reads": 1,
+          "previous_readers_not_relabelled": true,
+          "prior_completed_1_through_198_not_reassessed": true,
+          "source_bodies_refetched": 0,
+          "source_script_execution": 0
+        },
+        "notice_bodies": [
+          {
+            "bytes": 1467,
+            "consumer_paths": [
+              "skills/liuyingduo/pptx-2/LICENSE.txt",
+              "skills/liyico/bettafish-opinion-analysis/subskills/docx/LICENSE.txt"
+            ],
+            "consumer_rows": [
+              199,
+              200
+            ],
+            "fresh_raw": false,
+            "git_blob": "c55ab42224874608473643de0a85736b7fec0730",
+            "id": 1,
+            "meaning": "Anthropic契約参照と追加制限を記載する個別notice。公開方針との対応・矛盾を親の確認点として保持する。",
+            "parent_chunk_sha256": "8ab87b1cc64e782270bbcfca75177c4e1cc12f41a1b453cfa72e253b3c8f6483",
+            "parent_receipt": "research3719-chunk-87912b9a9c5ed98bd263458bd902dfc6.json",
+            "parent_receipt_bytes_sha256": "479a5c4d465e3e8276291a68dcc196f094b97dcb97471916bfe8478c0e1db1d0",
+            "read": [
+              4,
+              0,
+              1,
+              false,
+              true,
+              31
+            ],
+            "reader_job": "20261025-041905-todo-3719",
+            "reader_namespace": "20261025-041905-todo-3719/current3719",
+            "representative_path": "skills/binbin/docx-cn-1-0-1/LICENSE.txt",
+            "representative_read": [
+              2,
+              0,
+              1,
+              true,
+              true,
+              31
+            ],
+            "representative_row": 7,
+            "sha256": "79f6d8f5b427252fa3b1c11ecdbdb6bf610b944f7530b4de78f770f38741cfaa"
+          },
+          {
+            "bytes": 10174,
+            "consumer_path": "skills/liyico/bettafish-opinion-analysis/subskills/frontend-design/LICENSE.txt",
+            "consumer_row": 201,
+            "fresh_raw": true,
+            "git_blob": "f433b1a53f5b830a205fd2df78e2b34974656c7b",
+            "id": 2,
+            "meaning": "177行の保存本文はApache License 2.0のterms。再配布時のlicense提供・変更表示・関連notice保持、特許条項、商標非許諾、保証否認等を確認。実公開版・作者の権利・第三者素材との対応は別であり、今回のcopy grantではない。",
+            "read": [
+              2,
+              0,
+              0,
+              true,
+              true,
+              177
+            ],
+            "reader_job": "20261028-154151-todo-3719",
+            "reader_namespace": "20261028-154151-todo-3719/current3719",
+            "representative_path": "skills/liyico/bettafish-opinion-analysis/subskills/frontend-design/LICENSE.txt",
+            "representative_row": 201,
+            "sha256": "0d542e0c8804e39aa7f37eb00da5a762149dc682d7829451287e11b938e94594"
+          }
+        ],
+        "prior_journal_sha256": "6f913b68dfdbd64cbab2b2e2f9b4cfa9b7b217526aa2279cbacf29b9b5dba086",
+        "reader_job": "20261028-154151-todo-3719",
+        "reader_todo": 3719,
+        "reading_integrity": {
+          "new_notice_ordered_ranges": [
+            [
+              201,
+              1,
+              110
+            ],
+            [
+              201,
+              111,
+              177
+            ]
+          ],
+          "primary_lines": [
+            232,
+            481,
+            42
+          ],
+          "primary_mask_counts": [
+            0,
+            0,
+            0
+          ],
+          "primary_ordered_full_rows": [
+            199,
+            200,
+            201
+          ],
+          "same_buffer_sha256_gitblob_bytes_strict_utf8": true,
+          "source_original_text_included": false,
+          "support_inventory_complete_tree_counts": [
+            [
+              199,
+              21
+            ],
+            [
+              200,
+              22
+            ],
+            [
+              201,
+              2
+            ]
+          ]
+        },
+        "roster_sha256": "f9c6b2e44c5e3aa8947f758f864eaa0d5edc396d622359826bca848cd96f9901"
+      },
+      "independent_native_metadata_sha256": "24316f829b80998cb428e9ed653763ef44e7a0fe076a3865ccc0e031f5e3a407",
+      "independent_parent_journal_record": {
+        "chunk_id": "ccac21cded4f92d42b6088555ac9a418",
+        "receipt_file": "research3719-chunk-ccac21cded4f92d42b6088555ac9a418.json",
+        "chunk_sha256": "637a6a32e05f94216eb9ba1948468cef12210b214d268c239cbf602cee21a3d1",
+        "reader_job": "20261028-154151-todo-3719",
+        "first_ordinal": 199,
+        "last_ordinal": 201,
+        "parent_semantic_assessments_read": true
+      },
+      "original_chunk_id": "ccac21cded4f92d42b6088555ac9a418",
+      "original_fields_losslessly_reconstructed": true,
+      "original_message_sha256": "47f3d5a8269e65959a09dacf371affd5e00a9bb1e40b5e3a971265d0374e4c25",
+      "original_receipt_sha256": "5654e8d66d7761e26ddc81ae8a8f29ff307132121fbdbed5b4f7d090b04b33a8",
+      "parent_meaning": {
+        "actual_native_model": "p5a4c66/gpt-6.1-sol",
+        "actual_native_proof": "research3719-native-actual154151-through201175645.json",
+        "actual_native_sha256": "24316f829b80998cb428e9ed653763ef44e7a0fe076a3865ccc0e031f5e3a407",
+        "chunk_id": "ccac21cded4f92d42b6088555ac9a418",
+        "chunk_sha256": "637a6a32e05f94216eb9ba1948468cef12210b214d268c239cbf602cee21a3d1",
+        "consumer_job": "20261027-175645-todo-3080",
+        "effort": "max",
+        "first": 199,
+        "full_original_meanings_and_all_limits_read": true,
+        "limits": "原1..198/actor/journal不変。元担当raw3本文/新notice1と再利用2を区別し、親元本文再読/新許諾/最終採否/導入/全16完了0。伏字0は秘密不存在の証明でない。素材script/サービス実行/取得/UI変更/鍵/費用0。",
+        "meanings": [
+          "199 PPTX全232行の元担当raw読取を受領。内容抽出/テンプレ編集/新規と画像QAを分け、元slide/notes/relationship保持を未読scriptから保証せず、font色の全面禁止/全slide装飾を本人方針へしない。初回必ず欠陥/1修正を捏造せず実受入に基づく影響slide確認を使う。Proprietary/1467B個別契約noticeは原row7の実読再利用でfreshでなくrootMITや別subskill許諾で上書きしない。支持21の未保存/未読/nullbytes/readerを保持。",
+          "200 DOCX全481行の元raw読取と元notice再利用を受領。DXA幅/画像/改頁/段落run/追跡変更/コメントanchorは参考だがunpack統合/pack自動修復で原書式field・他者履歴・関係/頁画像を保証しない。authorClaude/架空時刻を実作者へせず、依頼変更と全履歴accept/rejectを分ける。GoogleDocs全面非互換/A4/Arial等は必要時対象版で確認。支持22件/未保存scriptは未知、拒否647を迂回しない。",
+          "201 frontend-design全42行と当該Apache2 notice177行/10174Bの新原読を元担当として受領。license提供・改変表示・関連notice/特許/商標非許諾/免責と実公開版・著者/第三者font画像サービスを分け、隣接ProprietaryへApacheを広げない。大胆方針即コード/全面font紫禁止/毎回変える嗜好を同具体画像への本人回答や既存UIより優先せず、keyboard/focus/touch/reducedmotion/contrast性能/対象端末を確認する。production-grade自己記述は実受入/Prd反映でない。"
+        ],
+        "original_journal_origin_unchanged": "20261024-235901-todo-3080",
+        "original_message_sha256": "47f3d5a8269e65959a09dacf371affd5e00a9bb1e40b5e3a971265d0374e4c25",
+        "producer_job": "20261028-154151-todo-3719",
+        "requested_model": "gpt-6.1-sol",
+        "source_body_machine_or_new_parent_raw_reads": 0,
+        "through": 201
+      },
+      "parent_meaning_sha256": "76da343a8ed4c09dc3e8d16a7d1350b110a795ffc4155a0a13b42392c8e1a958"
+    },
+    "789997317f8039359a6146c17f3f31ba02be4798279676d142af9fd6e967ab13": {
+      "actual_assessment_reader": "20261028-154151-todo-3719",
+      "common": {
+        "boundaries": {
+          "central_operations": 0,
+          "copy_license_accepted": false,
+          "new_final_dispositions": 0,
+          "source_executed": false
+        },
+        "chunk_id": "26c33c1f1e216e59082f1a8b7c8de3f5",
+        "definitions": {
+          "actors": {
+            "0": "今回の実assistant読取"
+          },
+          "mask_method": "表示前のメール・長い数値・token形式・長いhex置換。新規実読の置換行0は秘密不存在の証明ではない。",
+          "reader_namespace": "20261028-154151-todo-3719/current3719",
+          "states": {
+            "0": "unsaved",
+            "1": "saved_unread",
+            "2": "direct_raw_full",
+            "3": "direct_masked_full",
+            "4": "exact_bytes_reuse",
+            "5": "ordered_full_diff",
+            "6": "partial",
+            "7": "scan"
+          },
+          "support_tuple": "[relative,bytes,SHA8,Gitblob8,state,maskCount,actor,mode]。未保存bytes/SHA/reader/maskCountはnull。Gitblobは固定complete tree。"
+        },
+        "domain": "research598-chunk-v1",
+        "first_ordinal": 205,
+        "limits": {
+          "central_body_or_existence_checks": 0,
+          "prior_reader_states_not_relabelled": true,
+          "source_bodies_refetched": 0,
+          "source_script_execution": 0,
+          "whole16_complete": false
+        },
+        "notice_bodies": [
+          {
+            "bytes": 11357,
+            "consumer_path": "skills/lovensky1992-wk/seedance-video-gen/LICENSE.txt",
+            "consumer_row": 205,
+            "fresh_raw": false,
+            "git_blob": "7a4a3ea2424c09fbe48d455aed1eaa94d9124835",
+            "id": 1,
+            "meaning": "203で実全読したApache2 terms/appendixと同bytes。各packageの実作者/実公開版・serviceや素材の権利は別。",
+            "parent_chunk_sha256": "836022e13bf344b5d03714a6da7abd82abd644b6170ae0767ed0648f267be8f1",
+            "parent_receipt": "research3719-chunk-b9336b076e4c4a69e92760629543c132.json",
+            "read": [
+              4,
+              0,
+              0,
+              false,
+              true,
+              202
+            ],
+            "reader_job": "20261028-154151-todo-3719",
+            "reader_namespace": "20261028-154151-todo-3719/current3719",
+            "representative_path": "skills/ljglover/skill-creator-0-1-0/LICENSE.txt",
+            "representative_read": [
+              2,
+              0,
+              0,
+              true,
+              true,
+              202
+            ],
+            "representative_row": 203,
+            "sha256": "58d1e17ffe5109a7ae296caafcadfdbe6a7d176f0bc4ab01e12a689b0499d8bd"
+          },
+          {
+            "baseline_bytes": 11357,
+            "baseline_git_blob": "7a4a3ea2424c09fbe48d455aed1eaa94d9124835",
+            "baseline_path": "skills/ljglover/skill-creator-0-1-0/LICENSE.txt",
+            "baseline_read": [
+              2,
+              0,
+              0,
+              true,
+              true,
+              202
+            ],
+            "baseline_reader_namespace": "20261028-154151-todo-3719/current3719",
+            "baseline_row": 203,
+            "baseline_sha256": "58d1e17ffe5109a7ae296caafcadfdbe6a7d176f0bc4ab01e12a689b0499d8bd",
+            "bytes": 11358,
+            "consumer_path": "skills/lucasgo24601/home-keeper/license.txt",
+            "consumer_row": 206,
+            "fresh_raw": false,
+            "git_blob": "d645695673349e3947e8e5ae42332d0ac3164cd7",
+            "id": 2,
+            "meaning": "203でraw全読した202行のterms/appendixと意味上の差は末尾改行のみ。206をfresh raw全読とはしない。実適用/作者・第三者権利は未確定。",
+            "ordered_diff": {
+              "added_bytes_hex": "0a",
+              "all_prefix_bytes_equal": true,
+              "changed_range_zero_based": [
+                11357,
+                11358
+              ],
+              "method": "同一検証済みbufferを先頭から末尾まで比較。全文既読baselineに末尾LF1byteだけ追加。206の先頭5行も表示照合。",
+              "other_changes": 0,
+              "unchanged_prefix_bytes": 11357
+            },
+            "parent_chunk_sha256": "836022e13bf344b5d03714a6da7abd82abd644b6170ae0767ed0648f267be8f1",
+            "parent_receipt": "research3719-chunk-b9336b076e4c4a69e92760629543c132.json",
+            "read": [
+              5,
+              0,
+              0,
+              false,
+              true,
+              202
+            ],
+            "reader_job": "20261028-154151-todo-3719",
+            "reader_namespace": "20261028-154151-todo-3719/current3719",
+            "representative_path": "skills/lucasgo24601/home-keeper/license.txt",
+            "representative_row": 206,
+            "sha256": "cfc7749b96f63bd31c3c42b5c471bf756814053e847c10f3eb003417bc523d30"
+          }
+        ],
+        "prior_journal_sha256": "41af2a152e72e1b38af949fd8a045d811569400822f1c21a139c3a8eb964b736",
+        "reader_job": "20261028-154151-todo-3719",
+        "reader_todo": 3719,
+        "reading_integrity": {
+          "new_support_full_reads": [
+            [
+              205,
+              "evals/results/text2video-with-skill.md",
+              27
+            ],
+            [
+              205,
+              "evals/results/text2video-without-skill.md",
+              19
+            ]
+          ],
+          "notice206_is_ordered_full_diff_not_fresh_raw": true,
+          "primary_lines": [
+            410,
+            372
+          ],
+          "primary_mask_counts": [
+            0,
+            0
+          ],
+          "primary_ordered_full_rows": [
+            205,
+            206
+          ],
+          "same_buffer_sha256_gitblob_bytes_strict_utf8": true,
+          "source_original_text_included": false,
+          "support_inventory_complete_tree_counts": [
+            [
+              205,
+              8
+            ],
+            [
+              206,
+              8
+            ]
+          ]
+        },
+        "roster_sha256": "f9c6b2e44c5e3aa8947f758f864eaa0d5edc396d622359826bca848cd96f9901"
+      },
+      "independent_native_metadata_sha256": "d4922914b8f7a942e53b72734af3ba5c076626c97743f86f4f42e106d778efd4",
+      "independent_parent_journal_record": {
+        "chunk_id": "26c33c1f1e216e59082f1a8b7c8de3f5",
+        "receipt_file": "research3719-chunk-26c33c1f1e216e59082f1a8b7c8de3f5.json",
+        "chunk_sha256": "789997317f8039359a6146c17f3f31ba02be4798279676d142af9fd6e967ab13",
+        "reader_job": "20261028-154151-todo-3719",
+        "first_ordinal": 205,
+        "last_ordinal": 206,
+        "parent_semantic_assessments_read": true
+      },
+      "original_chunk_id": "26c33c1f1e216e59082f1a8b7c8de3f5",
+      "original_fields_losslessly_reconstructed": true,
+      "original_message_sha256": "ae63f3eaaf3bfce605288d0c5ee565bff028b2b932dc55a65981f6e1245446c0",
+      "original_receipt_sha256": "6957be43efa43b5e83f22f38624217e77094aba6a7ec468e5e4d9768309cc9cb",
+      "parent_meaning": {
+        "actual_native_model": "p5a4c66/gpt-6.1-sol",
+        "actual_native_proof": "research3719-native-actual154151-through206175645.json",
+        "actual_native_sha256": "d4922914b8f7a942e53b72734af3ba5c076626c97743f86f4f42e106d778efd4",
+        "chunk_id": "26c33c1f1e216e59082f1a8b7c8de3f5",
+        "chunk_sha256": "789997317f8039359a6146c17f3f31ba02be4798279676d142af9fd6e967ab13",
+        "consumer_job": "20261027-175645-todo-3080",
+        "effort": "max",
+        "first": 205,
+        "full_original_meanings_and_all_limits_read": true,
+        "limits": "元担当raw2本文/支持2とnotice同bytes再利用1・全順序diff1を区別し、親の元本文再読/新rawcredit/許諾/最終採否/全16完了0。元3719は16:17JSTに利用枠理由でfailed、保存済み最終結果を回収したので同ACK206/次207から正規復旧する。",
+        "meanings": [
+          "205 seedance全410行rawとWITH/WITHOUT計27/19行の原読取を受領。文/首尾frame/参照画像の役割、受理task/完了/実動画取得を分ける参考で、Ark API鍵/課金/model有効化は現OAuth条件へ採用しない。LiteID250428と例250219の不一致/料金割引/保存期限format制限は未確認、whiletrueで取消未知status/通信JSON失敗の無限化・create二重課金やdownload status/type/尺音未確認を修正する必要。signedURL/生error/base64/一覧削除と素材権/実宛先を別scopeにし、固定treeにないFeishu参照や100%/30%計画自己採点を実配送・生成品質/改善率へしない。Apache noticeは203の実読同bytes再利用、service素材権別、実HTTP/生成/送信削除/許諾採否配置0。",
+          "206 home-keeper全372行rawは住宅でなくSkill Creator実本文としてID/path/用途不一致を保持。203に似てもCodex/命名/optional examples/symlink拒否の差を残し、固定treeにないworkflows/output-patternsを203から存在読了へ移さない。frontmatter2限定/README検査記録削除/必ずinit/全ZIP/自動命名を中央原本junction/秘密/既存正式名・Go既定へ適用しない。未保存script/testのsymlink拒否宣言はWindowsjunctionや競合検出の保証でない。小文字license.txtは203既読202行11357Bに末尾LF1byteを同一buffer全文順序diffした11358Bで、freshraw全読にせず旧baselineactor/原chunkを保持。実作者/公開版/第三者rights未確認、実script/梱包/中央変更/許諾採否配置0。"
+        ],
+        "original_actor_namespace_and_nulls_preserved": true,
+        "original_message_sha256": "ae63f3eaaf3bfce605288d0c5ee565bff028b2b932dc55a65981f6e1245446c0",
+        "producer_job": "20261028-154151-todo-3719",
+        "requested_model": "gpt-6.1-sol",
+        "source_or_support_body_reopens_by_parent": 0,
+        "through": 206
+      },
+      "parent_meaning_sha256": "ad8a9c333064b3e8826104d53d26b0b9ade4ee26c22f5e1bdbdf6c352d20a6c5"
+    },
+    "836022e13bf344b5d03714a6da7abd82abd644b6170ae0767ed0648f267be8f1": {
+      "actual_assessment_reader": "20261028-154151-todo-3719",
+      "common": {
+        "boundaries": {
+          "central_operations": 0,
+          "copy_license_accepted": false,
+          "new_final_dispositions": 0,
+          "source_executed": false
+        },
+        "chunk_id": "b9336b076e4c4a69e92760629543c132",
+        "definitions": {
+          "actors": {
+            "0": "今回の実assistant読取",
+            "1": "20261025-041905-todo-3719/current3719の実notice読取"
+          },
+          "mask_method": "表示前のメール・長い数値・token形式・長いhex置換。本chunkの新規実読の置換行0。秘密不存在の証明ではない。",
+          "reader_namespace": "20261028-154151-todo-3719/current3719",
+          "states": {
+            "0": "unsaved",
+            "1": "saved_unread",
+            "2": "direct_raw_full",
+            "3": "direct_masked_full",
+            "4": "exact_bytes_reuse",
+            "5": "ordered_full_diff",
+            "6": "partial",
+            "7": "scan"
+          },
+          "support_tuple": "[relative,bytes,SHA8,Gitblob8,state,maskCount,actor,mode]。未保存bytes/SHA/reader/maskCountはnull、Gitblobは固定complete tree。"
+        },
+        "domain": "research598-chunk-v1",
+        "first_ordinal": 202,
+        "limits": {
+          "central_body_or_existence_checks": 0,
+          "prior_reader_states_not_relabelled": true,
+          "source_bodies_refetched": 0,
+          "source_script_execution": 0,
+          "whole16_complete": false
+        },
+        "notice_bodies": [
+          {
+            "bytes": 1467,
+            "consumer_path": "skills/liyico/bettafish-opinion-analysis/subskills/pdf/LICENSE.txt",
+            "consumer_row": 202,
+            "fresh_raw": false,
+            "git_blob": "c55ab42224874608473643de0a85736b7fec0730",
+            "id": 1,
+            "meaning": "同1467BのAnthropic契約参照・追加制限。公開方針との矛盾や個別対応を未確定で保持。",
+            "parent_chunk_sha256": "8ab87b1cc64e782270bbcfca75177c4e1cc12f41a1b453cfa72e253b3c8f6483",
+            "parent_receipt": "research3719-chunk-87912b9a9c5ed98bd263458bd902dfc6.json",
+            "read": [
+              4,
+              0,
+              1,
+              false,
+              true,
+              31
+            ],
+            "reader_job": "20261025-041905-todo-3719",
+            "reader_namespace": "20261025-041905-todo-3719/current3719",
+            "representative_path": "skills/binbin/docx-cn-1-0-1/LICENSE.txt",
+            "representative_read": [
+              2,
+              0,
+              1,
+              true,
+              true,
+              31
+            ],
+            "representative_row": 7,
+            "sha256": "79f6d8f5b427252fa3b1c11ecdbdb6bf610b944f7530b4de78f770f38741cfaa"
+          },
+          {
+            "bytes": 11357,
+            "consumer_path": "skills/ljglover/skill-creator-0-1-0/LICENSE.txt",
+            "consumer_row": 203,
+            "fresh_raw": true,
+            "git_blob": "7a4a3ea2424c09fbe48d455aed1eaa94d9124835",
+            "id": 2,
+            "meaning": "Apache License 2.0のtermsと適用用appendixを全読。license提供・変更表示・関連notice保持、特許/商標/保証条項、未記入copyright templateを確認。実作者・実公開版との対応は別。過去134等の伏字読取をrawへ変更しない。",
+            "read": [
+              2,
+              0,
+              0,
+              true,
+              true,
+              202
+            ],
+            "reader_job": "20261028-154151-todo-3719",
+            "reader_namespace": "20261028-154151-todo-3719/current3719",
+            "representative_path": "skills/ljglover/skill-creator-0-1-0/LICENSE.txt",
+            "representative_row": 203,
+            "sha256": "58d1e17ffe5109a7ae296caafcadfdbe6a7d176f0bc4ab01e12a689b0499d8bd"
+          },
+          {
+            "bytes": 1056,
+            "consumer_path": "skills/lknik/news-feeds/LICENSE.txt",
+            "consumer_row": 204,
+            "fresh_raw": true,
+            "git_blob": "14fac913ccf80234b1848540089a3bbcb6e5283d",
+            "id": 3,
+            "meaning": "MIT License、copyright年2026、copyright/permission notice保持と保証否認を記載。記事本文・各feed/service・実作者の権利は別。",
+            "read": [
+              2,
+              0,
+              0,
+              true,
+              true,
+              21
+            ],
+            "reader_job": "20261028-154151-todo-3719",
+            "reader_namespace": "20261028-154151-todo-3719/current3719",
+            "representative_path": "skills/lknik/news-feeds/LICENSE.txt",
+            "representative_row": 204,
+            "sha256": "1126322e2cc8d165adc4c792eeb195717de2bcc7b39be1ce77959d78e87ef685"
+          }
+        ],
+        "prior_journal_sha256": "616cc1ddda7b090bebcb9f9258c4f4127ef4d5fca55f9c1e18ecea10d0c1478b",
+        "reader_job": "20261028-154151-todo-3719",
+        "reader_todo": 3719,
+        "reading_integrity": {
+          "new_notice_ordered_ranges": [
+            [
+              203,
+              1,
+              100
+            ],
+            [
+              203,
+              101,
+              202
+            ],
+            [
+              204,
+              1,
+              21
+            ]
+          ],
+          "new_support_full_reads": [
+            [
+              203,
+              "references/workflows.md",
+              28
+            ],
+            [
+              203,
+              "references/output-patterns.md",
+              82
+            ]
+          ],
+          "primary_lines": [
+            314,
+            356,
+            74
+          ],
+          "primary_mask_counts": [
+            0,
+            0,
+            0
+          ],
+          "primary_ordered_full_rows": [
+            202,
+            203,
+            204
+          ],
+          "same_buffer_sha256_gitblob_bytes_strict_utf8": true,
+          "source_original_text_included": false,
+          "support_inventory_complete_tree_counts": [
+            [
+              202,
+              12
+            ],
+            [
+              203,
+              8
+            ],
+            [
+              204,
+              5
+            ]
+          ]
+        },
+        "roster_sha256": "f9c6b2e44c5e3aa8947f758f864eaa0d5edc396d622359826bca848cd96f9901"
+      },
+      "independent_native_metadata_sha256": "f67b9eeb5f8df304bcd09f2b783793eeb9cae7771abcf1e6b341f166c96bcdab",
+      "independent_parent_journal_record": {
+        "chunk_id": "b9336b076e4c4a69e92760629543c132",
+        "receipt_file": "research3719-chunk-b9336b076e4c4a69e92760629543c132.json",
+        "chunk_sha256": "836022e13bf344b5d03714a6da7abd82abd644b6170ae0767ed0648f267be8f1",
+        "reader_job": "20261028-154151-todo-3719",
+        "first_ordinal": 202,
+        "last_ordinal": 204,
+        "parent_semantic_assessments_read": true
+      },
+      "original_chunk_id": "b9336b076e4c4a69e92760629543c132",
+      "original_fields_losslessly_reconstructed": true,
+      "original_message_sha256": "e499cc8e681a9dbe930fed2d381292b5bcb4c869e356760789f1ed5ad2fca24c",
+      "original_receipt_sha256": "16fe87202fe6665b8d0232ce1ac389d7d41d8ea65cce9c01092f48e8bd3c1b97",
+      "parent_meaning": {
+        "actual_native_model": "p5a4c66/gpt-6.1-sol",
+        "actual_native_proof": "research3719-native-actual154151-through204175645.json",
+        "actual_native_sha256": "f67b9eeb5f8df304bcd09f2b783793eeb9cae7771abcf1e6b341f166c96bcdab",
+        "chunk_id": "b9336b076e4c4a69e92760629543c132",
+        "chunk_sha256": "836022e13bf344b5d03714a6da7abd82abd644b6170ae0767ed0648f267be8f1",
+        "consumer_job": "20261027-175645-todo-3080",
+        "effort": "max",
+        "first": 202,
+        "full_original_meanings_and_all_limits_read": true,
+        "limits": "元body/notice/scriptは親未再読。元担当raw3本文/新notice2/支持2/原notice再利用1を別に保持、旧actor/namespaces/partial/nullsを保持。source/サービス実行・取得・新費用API鍵・全16完了0。",
+        "meanings": [
+          "202 PDF全314行の元raw読取とProprietary1467B原row7notice再利用を受領。隣接Apache/rootMITを広げず、REFERENCE/FORMSと実tree小文字参照の不一致はcase保持で修正する必要。抽出/scan/OCR/表と結合分割回転・暗号/透かし変更を分け、空抽出を内容不存在/全頁成功とせず日本語・解像度/信頼度/読み順/表schema見出しと画像を照合する。文書全体/秘密をlogへ出さず、原署名/注釈添付/フォーム保持を生成/pack成功だけで保証せず資格例を実値へしない。forms/referenceと未保存scriptは未読、実実行/導入/採否0。",
+          "203 SkillCreator全356行・workflows28行/output-patterns82行とApache2notice202行11357Bの新raw読取を受領。用途発火/作成編集/厳密柔軟template/手順自由度・参照分割と実使用反復は参考だが形式/自己checklistは成果・API契約の証明でない。name-description以外禁止が自身licensefieldと矛盾し、全metadata/README/検査説明削除や必ずinit.py/全file ZIPを現在の共通配置/junction/権利秘密とGo既定へ適用しない。未読script実行可/代表sampleだけで異なる作用境界のcoverageを保証しない。Apache未記入copyrighttemplateを著者証明へせず、過去134伏字読取をrawへ書換えない。新許諾/採否/配置/実行0。",
+          "204 newsfeeds全74行とMITnotice21行1056B新raw読取を受領。標準Python/HTTP/API鍵不要/7sourceの保存宣言を現free/到達性/全配信品質へせず、source-topic-limit範囲・取得/pub/update/timezone/link・timeout/status/parser/空/partial/有限retry/重複・文字コード/RSSAtom差を必要時確認する。keyword一致は包括性/多言語関連/真偽でなく、MITは記事・feedサービス再配布許諾でない。未保存news.pyを647拒否の別経路で取得せず、定期/外部配信を追加しない。新許諾/採否/HTTP/配置0。"
+        ],
+        "original_actor_namespace_and_nulls_preserved": true,
+        "original_message_sha256": "e499cc8e681a9dbe930fed2d381292b5bcb4c869e356760789f1ed5ad2fca24c",
+        "producer_job": "20261028-154151-todo-3719",
+        "requested_model": "gpt-6.1-sol",
+        "source_or_support_body_reopens_by_parent": 0,
+        "through": 204
+      },
+      "parent_meaning_sha256": "225f784109b0bd937b622194378e278af327c180266358838c9aaf9737e2d0d9"
+    }
+  },
+  "spec_sha256": "4f6fe32f62db56bed2acb4d378147ff952ad06230243fb45f7674f3158313fc3",
+  "support_metadata_records": 86,
+  "through": 206,
+  "unsaved_support_metadata": 54,
+  "whole16_complete": false
+}

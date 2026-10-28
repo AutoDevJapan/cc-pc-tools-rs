@@ -74,7 +74,83 @@ func publishedReceivedCursorCoverage(artifacts []ExecutionArtifact) error {
 			return fmt.Errorf("received cohort absent/repeated in cursor: %s", r.ID)
 		}
 	}
+	// Keep these independently received snapshots in the runtime cursor even
+	// if someone regenerates a self-consistent smaller manifest and summary.
+	for _, required := range []ExecutionArtifact{
+		{"skills-3080-original3719-next8-199206-evaluation175645.json", "0362991564c4bee6b86edc9b52cc934b94d5b47ef4b142985f39b5ed5d8280b2", 8},
+		{"skills-3080-original3719-next3-207209-evaluation175645.json", "80f9eab15b84bd88006cde9d5a61dc438be2fb83259f9accac271ac057ddd442", 3},
+		{"skills-3080-source9-first4-visible-evaluation175645.json", "645df498826e6b38814f2e30ea322097400121df7b22b19b9ae299718c3c670f", 4},
+	} {
+		found := 0
+		for _, artifact := range artifacts {
+			if artifact.File == required.File {
+				if artifact.Rows != required.Rows || artifact.SHA != required.SHA {
+					return fmt.Errorf("received snapshot pin/count differs: %s", required.File)
+				}
+				found++
+			}
+		}
+		if found != 1 {
+			return fmt.Errorf("received snapshot missing/repeated: %s", required.File)
+		}
+	}
 	return nil
+}
+
+// Individually received snapshots also belong to the current occurrence
+// cursor. Their files existing on disk cannot substitute for manifest links.
+func TestPublishedCursorRetainsOriginal3719AndSource9Received15(t *testing.T) {
+	var m ExecutionManifest
+	loadPublicReceipt(t, "skills-3080-execution-evidence.json", &m)
+	required := []ExecutionArtifact{
+		{"skills-3080-original3719-next8-199206-evaluation175645.json", "0362991564c4bee6b86edc9b52cc934b94d5b47ef4b142985f39b5ed5d8280b2", 8},
+		{"skills-3080-original3719-next3-207209-evaluation175645.json", "80f9eab15b84bd88006cde9d5a61dc438be2fb83259f9accac271ac057ddd442", 3},
+		{"skills-3080-source9-first4-visible-evaluation175645.json", "645df498826e6b38814f2e30ea322097400121df7b22b19b9ae299718c3c670f", 4},
+	}
+	for _, pin := range required {
+		t.Run(pin.File, func(t *testing.T) {
+			found := 0
+			for _, artifact := range m.Artifacts {
+				if artifact.File == pin.File {
+					if artifact.Rows != pin.Rows || artifact.SHA != pin.SHA {
+						t.Fatal("current received artifact no longer has its independent finalized pin/count")
+					}
+					found++
+				}
+			}
+			if found != 1 {
+				t.Fatal("current received artifact absent or repeated in actual manifest")
+			}
+			for _, mutation := range []string{"omit", "row_count", "digest", "duplicate"} {
+				t.Run(mutation, func(t *testing.T) {
+					changed := make([]ExecutionArtifact, 0, len(m.Artifacts)+1)
+					for _, artifact := range m.Artifacts {
+						if artifact.File == pin.File {
+							switch mutation {
+							case "omit":
+								continue
+							case "row_count":
+								artifact.Rows--
+							case "digest":
+								artifact.SHA = "0000000000000000000000000000000000000000000000000000000000000000"
+							case "duplicate":
+								changed = append(changed, artifact)
+							}
+						}
+						changed = append(changed, artifact)
+					}
+					if err := publishedReceivedCursorCoverage(changed); err == nil {
+						t.Fatal("current received observations disappeared or changed despite an otherwise self-consistent cursor")
+					}
+				})
+			}
+		})
+	}
+	var summary ExecutionSummary
+	loadPublicReceipt(t, "skills-3080-execution-queue-summary.json", &summary)
+	if summary.Assessments < 1424 {
+		t.Fatal("the published cursor lost already received assessments")
+	}
 }
 
 func TestPublishedCursorCannotOmitAnyRegisteredReceivedCohort(t *testing.T) {

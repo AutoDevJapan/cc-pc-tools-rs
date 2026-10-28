@@ -258,7 +258,7 @@
   "publication_review_coordination_origin_job": "20261026-214717-todo-3080",
   "review_origin_scope": "Publication reviewers4033/4076 retain coordination origin214717. Frozen Creator4193 has its distinct, genuine origin175645 and actual author175645; neither origin is rewritten or interchangeable.",
   "subscription_execution": {
-    "mode": "oauth_subscription_only",
+    "mode": "unknown_historical_execution",
     "source": "Normal job execution requirements, original producer metadata, current normal Codex login status and OpenCodex account metadata",
     "observed_at": "2026-10-28T19:45:55.1877170+00:00",
     "normal_login_status_chatgpt": true,
@@ -267,7 +267,7 @@
     "all_additional_credits_disabled": true,
     "raw_credentials_account_ids_labels_or_balances_returned_or_saved": false,
     "historical_per_request_billing_proven": false,
-    "scope": "Current mode and eligible account types/spending state plus original owner-selected job/model/effort metadata. Historical per-request credentials or billing were not inspected and are not claimed. No model request or account change was made for this observation.",
+    "scope": "Current OAuth login and eligible account/spending metadata are observed separately. Earlier producer authentication remains unknown. Model/effort/origin checks and operational file results are separate verified facts. No credentials, authentication files or billing secrets were inspected.",
     "original_producer_conditions": [
       {
         "producer_job": "20261029-000437-todo-4193",
@@ -293,7 +293,11 @@
         "effort_origin": "owner_request",
         "metadata_equals_independently_received_native_identity": true
       }
-    ]
+    ],
+    "current_observed_mode": "oauth_subscription_only",
+    "historical_execution_authentication_status": "unknown",
+    "historical_execution_authentication_proven": false,
+    "historical_execution_authentication_limitation": "Current login/account metadata and independently verified producer/model/effort do not identify the authentication used by earlier requests. The available records do not certify historical authentication or billing; unknown is retained rather than counted as verified OAuth."
   },
   "review_fix_validation": {
     "reviewed_prior_head": "17b744e7a1071705da2954635555c2c313a531d7",

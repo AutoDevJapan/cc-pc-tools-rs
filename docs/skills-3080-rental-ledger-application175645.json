@@ -1,0 +1,73 @@
+{
+  "consumer_job": "20261027-175645-todo-3080",
+  "actual_model": "gpt-6.1-sol",
+  "effort": "max",
+  "current_instruction_buffers_actually_read": true,
+  "instruction_files": 2,
+  "instruction_bytes": 7895,
+  "instructions": [
+    {
+      "path": "SKILL.md",
+      "sha256": "a12a1c304e1c84250316ab96ec25aa44f78dfd49ffa892b1db9f9b8db06747a3",
+      "bytes": 3094,
+      "normal_readback_buffer_actually_read": true
+    },
+    {
+      "path": "references/guide.md",
+      "sha256": "955ff5e6948ecbca87acc86b118be48a5e40de836662487d23addcf397cef871",
+      "bytes": 4801,
+      "normal_readback_buffer_actually_read": true
+    }
+  ],
+  "normal_readback_proof_sha256": "4e1f6e670caf562623e06cdad5801550ab5b525c278852d7b18751e67cae0528",
+  "actual_current_workflow_decisions": 1,
+  "synthetic_decisions": 6,
+  "decisions": [
+    {
+      "kind": "actual current research-workflow",
+      "input": "固定public source245/920714のGL trust分類、lease active・screening/complete操作と、読戻し済みsource.jsonの限定scopeを評価する。",
+      "decision": "分類名やstatusを現実の銀行分離/契約成立/同意・審査/実保守/支払へ昇格せず、原資料の記録と外部の実証拠を別にした評価/採用範囲を維持する。現在の元資料評価へこの指示を適用し、実顧客/契約/銀行/送信は参照・操作していない。",
+      "source_evidence": "prop245-primary-lines1-180-view175645.json and prop245-primary-lines181-360-view175645.json; current sources.json/reference bytes verified from normal consume"
+    },
+    {
+      "kind": "synthetic text-only",
+      "input": "lease-A、USD小数2桁、預り金1000.00、同じreturn-A 200.00が再送2件、銀行証拠なし。",
+      "decision": "元event return-Aを1件に統一し台帳残額800.00を示す。実返還/受領はunknown、銀行照会なしを0とせず、家賃未収や別通貨と合算しない。"
+    },
+    {
+      "kind": "synthetic text-only",
+      "input": "同名の相手、異なる住戸/契約ID、期間が一部重複。",
+      "decision": "相手名だけで契約を統合しない。契約版と期間/住戸を別に固定し、更新/共同契約/誤登録の根拠を未確認欄へ残す。"
+    },
+    {
+      "kind": "synthetic text-only",
+      "input": "支払照会timeout、amount=null、再送を提案する記録。",
+      "decision": "実支払を0/未実施/未支払へ確定せず、対象ID・時点・失敗を保持。同じ要求の実状態確認が先で、未依頼の新送信/支出は開始しない。"
+    },
+    {
+      "kind": "synthetic text-only",
+      "input": "trust=1、lease=active、consent=1、work-order=completeしかない。",
+      "decision": "銀行状態・署名/同意・外部審査/実通知・入室許可/実作業/実支払の証拠は別でunknown。flagだけの完了を実作用や適法性としない。"
+    },
+    {
+      "kind": "synthetic text-only",
+      "input": "source記載の14〜60日、州別fee/1099、Linux/Python setup、URL保存欄を使う案。",
+      "decision": "現行の管轄/契約版/一次資料を未確認のまま保存期限/料率/税務を適用しない。今回setup/script/URL取得・審査・請求・送金は0、実利用が依頼された範囲だけ現行条件へ照合する。"
+    },
+    {
+      "kind": "synthetic text-only",
+      "input": "Webの色/CSSだけの依頼、一般家計相談、未指定の全顧客照会。",
+      "decision": "この賃貸借照合Skillの対象へ広げず、元依頼に合う手順を選ぶ。通常の技術操作へ承認待ちを増やさず、本人だけが決める未指定対象等が残る場合だけ具体的に質問する。"
+    }
+  ],
+  "all_case_meanings_applied": true,
+  "implicit_skill_selection_proven": false,
+  "new_model_job_spawned": 0,
+  "new_actual_financial_customer_or_bank_operations": 0,
+  "new_service_API_UI_or_payment_operations": 0,
+  "new_keys_fees_permissions": 0,
+  "additional_Create_or_central_writes": 0,
+  "actual_source245_and_original_law_claims_not_promoted": true,
+  "whole16_complete": false,
+  "observed_at": "2026-10-28T21:42:45.7978556+00:00"
+}

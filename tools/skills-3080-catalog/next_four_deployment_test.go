@@ -30,7 +30,6 @@ func validateNext4Contract(h, n, r map[string]any) error {
 	checks := []struct{ got, want map[string]any }{
 		{h, map[string]any{"publication_review_coordination_origin_job": "20261026-214717-todo-3080", "result_publisher_job": next3Actor}},
 		{next4Object(h["qualified_full_review"]), map[string]any{"immutable_origin_job": next3Actor, "actual_author": next3Actor, "model_origin": "owner_request", "effort_origin": "owner_request"}},
-		{next4Object(h["subscription_execution"]), map[string]any{"mode": "oauth_subscription_only", "normal_login_status_chatgpt": true, "normal_login_status_api_key": false, "all_types_codex_or_oauth": true, "all_additional_credits_disabled": true, "raw_credentials_account_ids_labels_or_balances_returned_or_saved": false, "historical_per_request_billing_proven": false}},
 		{h, map[string]any{"creator_job": next3Actor, "new_targets_created": float64(4), "successful_CreateNew_count": float64(1), "current_files_readback_verified": float64(28), "bytes": float64(80712), "creation_manifest_sha256": next4Manifest, "creation_request_sha256": next4Request, "implicit_skill_selection_proven": false, "full_discovery_or_context_budget_proven": false, "third_party_assets_services_or_unknown_central_rights_accepted": false, "whole16_complete": false}},
 		{next4Object(h["frozen_full_content_review"]), map[string]any{"task": float64(4193), "job": "20261029-000437-todo-4193", "spec": "74728b7e206521ae607c518b438854976f09b9a93751e9ff467f73ff495315c8", "original_sha": "bd8a09b0f3f6dbcb629494a424ed90da5a6770841360d7b47dc57e9bd6d6b2fa", "manifest": next4Manifest, "request": next4Request, "created_once": float64(28), "existing_overwrites": float64(0), "M": float64(0), "S": float64(0), "N": float64(0)}},
 		{next4Object(h["qualified_full_review"]), map[string]any{"producer_job": "20261029-000437-todo-4193", "registered_spec_sha256": "74728b7e206521ae607c518b438854976f09b9a93751e9ff467f73ff495315c8", "source_proof_sha256": "9cb3b4bac029328138392fce8746cae0d801c5f061289286158ada04352a14bc", "raw_sha256": "bd8a09b0f3f6dbcb629494a424ed90da5a6770841360d7b47dc57e9bd6d6b2fa", "normal_typed_qualified": true, "full_no_comparison": true, "selected_PUBLIC_inputs": float64(14), "payload_files": float64(28), "M": float64(0), "S": float64(0), "N": float64(0), "original_equals_job_last_message": true, "thread_matches": true, "cwd_matches": true}},
@@ -41,6 +40,9 @@ func validateNext4Contract(h, n, r map[string]any) error {
 		if err := next4Fields(c.got, c.want); err != nil {
 			return err
 		}
+	}
+	if err := validateSubscriptionObservation(next4Object(h["subscription_execution"]), []string{"20261029-000437-todo-4193", "20261029-033138-todo-4203", "20261029-035105-todo-4204"}); err != nil {
+		return err
 	}
 	if err := next4Fields(h, map[string]any{"creator_runtime_sha256": "eab69e4fc8e52f2ad6858ef4e8498e8cc6030ac8ce7f788251a1aae476dc5d55", "creator_runtime_revision": "034520d84d52f76dcd7dc7ef371910d6acd8ae9f", "current_runtime_sha256": "7fb45b8a411ca2e1dd64a034b94c51ce5ca51324ad7c0c4b778eecb9f4538d36", "current_runtime_revision": "b78007695a7c5d73eb1f11118757e93918aa3234", "software_fix_reviewed_head": "f36bd74e131e29fcc2787ba5ea0a900f91912bd8", "software_fix_merge": "b78007695a7c5d73eb1f11118757e93918aa3234", "normal_current_ID_hash_buffers_verified": true}); err != nil {
 		return err

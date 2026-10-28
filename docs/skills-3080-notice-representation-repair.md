@@ -132,3 +132,6 @@ JSONの重複/case alias、競合する二重対応、別の出典/担当/namesp
 別namespaceにある対応付けを最初に検証し、対応するmasked referenceも元の原objectと比較する。
 正しい旧名/別名の同居とraw/別名の同居は認め、不正な担当や可視行が混ざった同居は拒否する。
 従来の同名metadata形式は保持し、aliasがない正規のraw保持も変更しない。
+旧3D入力8件/48ファイルのflatな出典metadataも、元のrepo/commit/path/SHAと
+license path/SHAが一致する本来の上流namespace内だけで従来形式として扱う。
+同じflat形式を新しい別名namespaceへ置いて、対応付けの検証を省くことはできない。

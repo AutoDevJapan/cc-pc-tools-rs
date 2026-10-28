@@ -40,6 +40,9 @@ func skillsManifestMaskedSourceTarget(source skillsSource, m skillsManifest) (st
 				}
 			}
 		}
+		if _, modern := meta["source"]; !modern && skillsLegacyFlatSourceMetadata(meta, parts[0], m) {
+			continue
+		}
 		encoded, err := json.Marshal(meta["source"])
 		var declared skillsSource
 		if err != nil || !skillsStrict(encoded, &declared) {
@@ -65,6 +68,19 @@ func skillsManifestMaskedSourceTarget(source skillsSource, m skillsManifest) (st
 		return legacy, nil, true
 	}
 	return target, metadata, true
+}
+
+// Earlier reviewed same-name packages stored their source tuple flat. This
+// recognizes that existing format only inside its own upstream namespace; it
+// cannot qualify a differently named target or replace a modern declaration.
+func skillsLegacyFlatSourceMetadata(meta object, name string, m skillsManifest) bool {
+	for _, source := range m.Sources {
+		legacy, ok := skillsMaskedSourceTarget(source.Path)
+		if ok && strings.Split(legacy, "/")[0] == name && meta["repository"] == source.Repository && meta["commit"] == source.Commit && meta["path"] == source.Path && meta["sha256"] == source.SHA && meta["license_path"] == source.License.Path && meta["license_sha256"] == source.License.SHA {
+			return true
+		}
+	}
+	return false
 }
 
 func skillsAliasOutputPresent(files []skillsOutput, target, sha string) bool {

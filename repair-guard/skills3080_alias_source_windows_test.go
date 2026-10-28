@@ -63,7 +63,7 @@ func skillsAliasSetBody(output *skillsOutput, body []byte) {
 
 func TestSkills3080AliasedReferenceKeepsOriginalObjectAndNamespace(t *testing.T) {
 	for _, flat := range []bool{false, true} {
-		for _, kind := range []string{"valid", "legacy_valid", "raw_valid", "missing_metadata", "different_repo", "different_commit", "different_path", "different_sha", "different_notice", "different_scope", "different_writer", "legacy_bad_writer", "raw_bad_writer", "legacy_bad_view", "raw_bad_view", "different_bytes", "fractional_bytes", "different_blob", "duplicate_key", "case_alias", "source_case_alias", "unknown_source_field", "duplicate_binding", "changed_metadata_hash", "other_metadata_namespace", "other_reference_namespace", "other_notice_namespace", "changed_visible_line", "wrong_marker", "all_withheld"} {
+		for _, kind := range []string{"valid", "legacy_valid", "raw_valid", "missing_metadata", "flat_alias_is_not_legacy", "different_repo", "different_commit", "different_path", "different_sha", "different_notice", "different_scope", "different_writer", "legacy_bad_writer", "raw_bad_writer", "legacy_bad_view", "raw_bad_view", "different_bytes", "fractional_bytes", "different_blob", "duplicate_key", "case_alias", "source_case_alias", "unknown_source_field", "duplicate_binding", "changed_metadata_hash", "other_metadata_namespace", "other_reference_namespace", "other_notice_namespace", "changed_visible_line", "wrong_marker", "all_withheld"} {
 			t.Run(strconv.FormatBool(flat)+"/"+kind, func(t *testing.T) {
 				m, f := skillsAliasedFixture(t, flat)
 				meta, ok := conversationJSON(m.Files[3].body)
@@ -72,6 +72,13 @@ func TestSkills3080AliasedReferenceKeepsOriginalObjectAndNamespace(t *testing.T)
 				}
 				source := obj(meta["source"])
 				switch kind {
+				case "flat_alias_is_not_legacy":
+					delete(meta, "source")
+					for _, key := range []string{"repository", "commit", "path", "sha256"} {
+						meta[key] = source[key]
+					}
+					meta["license_path"] = obj(source["license"])["path"]
+					meta["license_sha256"] = obj(source["license"])["sha256"]
 				case "different_repo":
 					source["repository"] = "other/public"
 				case "different_commit":

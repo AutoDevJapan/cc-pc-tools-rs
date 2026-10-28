@@ -1,0 +1,235 @@
+{
+  "todo": 3080,
+  "actual_author_job": "20261027-175645-todo-3080",
+  "purpose": "Proposed new three workflows only; not an installation receipt or full-catalog completion",
+  "prepared_targets": [
+    {
+      "target": "dynamic-action-authorization",
+      "ordinal": 246,
+      "files": 7,
+      "bytes": 29430,
+      "primary_physical_lines": 177,
+      "primary_visible_lines": 129,
+      "primary_withheld_lines": 48,
+      "parent_masked_reference_sha256": "b4a526741ed5e42d5f1a961889e04f3d5436d235d2174f37b883934462d82b46",
+      "original_primary_read_profile_preserved": true,
+      "notice_original_sha256": "6f6bb192fb5854c274ca1bd5f3705ad6d4577099d2db95f46c90d0657ffb830d",
+      "notice_original_bytes": 1066,
+      "notice_original_CRLF_pairs": 0,
+      "nearby_metadata_only": [
+        "mcp-builder",
+        "security-review",
+        "web-form-state"
+      ],
+      "capability_distinction": "動的metadataで列挙する操作とserver側の主体・tenant・資源・作用を結ぶ判定に集中する。MCP全体設計、一般セキュリティ監査、通常フォームの状態管理とは用途を分ける。",
+      "unknown_existing_bodies_read": 0,
+      "fresh_name_probe_completed": false,
+      "qualified_absence_completed": false,
+      "full_Creator_review_received": false,
+      "created_files": 0,
+      "whole16_complete": false
+    },
+    {
+      "target": "backup-restore-reconciliation",
+      "ordinal": 249,
+      "files": 7,
+      "bytes": 26129,
+      "primary_physical_lines": 140,
+      "primary_visible_lines": 117,
+      "primary_withheld_lines": 23,
+      "parent_masked_reference_sha256": "179e8404bc2ecfcdece13b75fb295fdbecc2ca81bddb26b8b9d084cd76dff5a3",
+      "original_primary_read_profile_preserved": true,
+      "notice_original_sha256": "152ff6b3b51acbae8d220f2ac81b1d0e31e5c8d1253721b8a1e7c3c71b994eb4",
+      "notice_original_bytes": 1086,
+      "notice_original_CRLF_pairs": 21,
+      "nearby_metadata_only": [
+        "crash-safe-file-updates",
+        "safe-session-handoff",
+        "rclone-rc-safe-copy"
+      ],
+      "capability_distinction": "復元するsnapshot・含有範囲・staging先と、実際に復元した内容・切替後の結果を対応させる。単一fileの原子的更新、会話の引継ぎ、転送だけの確認とは用途を分ける。",
+      "unknown_existing_bodies_read": 0,
+      "fresh_name_probe_completed": false,
+      "qualified_absence_completed": false,
+      "full_Creator_review_received": false,
+      "created_files": 0,
+      "whole16_complete": false
+    },
+    {
+      "target": "connection-scope-reconciliation",
+      "ordinal": 251,
+      "files": 7,
+      "bytes": 49240,
+      "primary_physical_lines": 607,
+      "primary_visible_lines": 360,
+      "primary_withheld_lines": 247,
+      "parent_masked_reference_sha256": "1a375a1ff2f70676ddc9a63de07275ab408147dc6610f9aaebdf9880278b907a",
+      "original_primary_read_profile_preserved": true,
+      "notice_original_sha256": "ec9e952fec4d029fab649746d033bf91802b15f59ffa40a0d3a3a0e1a1587802",
+      "notice_original_bytes": 1072,
+      "notice_original_CRLF_pairs": 0,
+      "nearby_metadata_only": [
+        "oauth-least-privilege",
+        "remote-run-result-reconciliation",
+        "opaque-url-path-keys"
+      ],
+      "capability_distinction": "同serviceの複数connectionから、期待するsubject/Org/目的に合う明示接続を選び、proxy受付とnative業務結果を対応させる。OAuth同意scopeの選択、遠隔job結果、URLキーencoding全般とは用途を分ける。",
+      "unknown_existing_bodies_read": 0,
+      "fresh_name_probe_completed": false,
+      "qualified_absence_completed": false,
+      "full_Creator_review_received": false,
+      "created_files": 0,
+      "whole16_complete": false
+    }
+  ],
+  "payload_files": 21,
+  "payload_bytes": 104799,
+  "bundle_sha256": "d4648ee3215ac971789b567554bcf663626c08fdcf781303cb0107eec81a5330",
+  "operation_manifest_sha256": "212e5645cd33a0ae0abe44b1b75fa2079826889b8c41f4857963808649d90c24",
+  "source_selections_sha256": "d34b3ebba464e23be167ccd3b0962464098396b21557ca638c01a3ed3b7498c3",
+  "source_repository_id": 1147531245,
+  "source_repo": "6mile/skills",
+  "source_commit": "920714f17d81e0a95c7a9bc51faf0a7921cd982d",
+  "source_tree": "5782ae7deffe5024e15b6e090327385c10f76273",
+  "actual_parent_physical_lines": 924,
+  "actual_parent_visible_lines": 606,
+  "actual_parent_withheld_lines": 318,
+  "actual_parent_current_mask": "primaryflow-v4-opaque-lexical-boundaries",
+  "individual_notice_words_read_full21_lines_each": true,
+  "individual_notice_original_bytes_and_line_endings_preserved": true,
+  "row249_original_CRLF_pairs": 21,
+  "original_assessments_and_reader_mask_namespaces_unchanged": true,
+  "independent_authorship_third_party_or_current_service_claims_proven": false,
+  "normal_guard_every_source_open_allowed_client_false_unverified_false": true,
+  "fixed_public_publisher_and6_blobs": {
+    "source": "normal GitHub GraphQL",
+    "observed_at": "2026-10-28T22:48:07.8792764+00:00",
+    "metadata": {
+      "nameWithOwner": "6mile/skills",
+      "databaseId": 1147531245,
+      "isPrivate": false,
+      "defaultBranchRef": {
+        "name": "main"
+      },
+      "fixed": {
+        "oid": "920714f17d81e0a95c7a9bc51faf0a7921cd982d",
+        "tree": {
+          "oid": "5782ae7deffe5024e15b6e090327385c10f76273"
+        }
+      },
+      "a": {
+        "oid": "5c62ad5056382591fefae4c6d07b74e9d0e31bf7",
+        "byteSize": 7265
+      },
+      "b": {
+        "oid": "ff21cdae6e9e7e0ed7a376bfe989771b40831982",
+        "byteSize": 1066
+      },
+      "c": {
+        "oid": "b83d51d660219689f2f2cd778fe0378daf0129ad",
+        "byteSize": 4934
+      },
+      "d": {
+        "oid": "0faefa7fb8c55dfa1dc124b91d11f00e6f78c852",
+        "byteSize": 1086
+      },
+      "e": {
+        "oid": "4b5dfc780f363806effb79003986897f2f91fd7d",
+        "byteSize": 28160
+      },
+      "f": {
+        "oid": "4813de20b72e365983fe0370d79d7cac6ea21d9b",
+        "byteSize": 1072
+      }
+    },
+    "all6_fixed_blobs_and_byte_sizes_match_saved_roster": true,
+    "publisher_not_independent_copyright_authorship_proof": true,
+    "source_content_refetched": 0,
+    "environments_changed": 0
+  },
+  "existing3048_in_memory_structure": {
+    "exit": 0,
+    "timed_out": false,
+    "stdout": "PASS: 3 explicit skills; structure, descriptions, references, hashes, scenario pairs; in-memory bundle only; no deployment implied\n",
+    "stderr": ""
+  },
+  "fresh_requested_names_metadata": {
+    "checked_at": "2026-10-28T22:55:24.0486752+00:00",
+    "method": "fresh installed Codex app-server initialize + skills/list forceReload",
+    "model_called": false,
+    "label": "proposal",
+    "targets": 3,
+    "total_discovered_metadata": 478,
+    "found_count": 0,
+    "parse_error_count": 0,
+    "notification_count": 2,
+    "same_names_other_paths": 0,
+    "found": [],
+    "process_tree_exit_confirmed": true,
+    "pending_stdout_read_drained": true,
+    "failure": null,
+    "diagnostic": {
+      "scan_traversal_limit_count": 2,
+      "context_budget_marker_count": 0,
+      "raw_stderr_not_saved": true
+    },
+    "limit": "Only requested target metadata is retained. No full private catalog or unknown body text is saved. No model turn or context-budget proof; discovery-internal file parsing is not a semantic body review."
+  },
+  "metadata0_is_not_physical_absence_qualification": true,
+  "qualified_target_absence_completed": false,
+  "full_Creator_review_received": false,
+  "created_files": 0,
+  "new_adoptions": 0,
+  "central_operations": 0,
+  "new_source_script_service_API_or_payment_operations": 0,
+  "whole16_complete": false,
+  "pre_review_field_scope_correction": {
+    "bundle_sha256": "d4648ee3215ac971789b567554bcf663626c08fdcf781303cb0107eec81a5330",
+    "operation_sha256": "212e5645cd33a0ae0abe44b1b75fa2079826889b8c41f4857963808649d90c24",
+    "sources_sha256": "d34b3ebba464e23be167ccd3b0962464098396b21557ca638c01a3ed3b7498c3",
+    "payload_bytes": 104799,
+    "per_target_bytes": {
+      "backup-restore-reconciliation": 26129,
+      "connection-scope-reconciliation": 49240,
+      "dynamic-action-authorization": 29430
+    },
+    "correction": "The current parent did read each individual notice; only other support bodies remain unread. Original assessments/reader states are unchanged.",
+    "original_v1_retained": true,
+    "created_files": 0,
+    "central_operations": 0
+  },
+  "existing3048_in_memory_structure_before_field_rename": {
+    "exit": 0,
+    "timed_out": false,
+    "stdout": "PASS: 3 explicit skills; structure, descriptions, references, hashes, scenario pairs; in-memory bundle only; no deployment implied\n",
+    "stderr": ""
+  },
+  "proposal_cross_file_contract_tests": {
+    "exit": 0,
+    "actual11_negative_cases": true,
+    "license_CRLF_mask_namespace_original_packet_target_writer_and_absence_boundaries_checked": true,
+    "actual_installation_not_claimed": true
+  },
+  "catalog_related_full_package_validation": {
+    "actual_source_stage": "New three proposed payloads on main7b0; no installation or adoption",
+    "go_test": {
+      "exit": 0,
+      "timed_out": false,
+      "stdout": "ok  \tcc-pc-tools-rs/skills-3080-catalog\t9.579s\n?   \tcc-pc-tools-rs/skills-3080-catalog/cmd/primaryflow\t[no test files]\nok  \tcc-pc-tools-rs/skills-3080-catalog/internal/primaryflow\t0.322s\n",
+      "stderr": ""
+    },
+    "go_vet_exit": 0,
+    "all73220_queue_supplied": true,
+    "four_pinned_primary_snapshots_supplied": true,
+    "three_original_retention_checks": [
+      "170→175",
+      "175→190",
+      "190→195"
+    ],
+    "actual11_negative_cases": true,
+    "source_selection_and_actual_payload_metadata_equal": true,
+    "source_original_251_packet_reconstructed_to_independent_sha": true,
+    "original246_and249_compared_with_published_fixed_values": true,
+    "new_central_operations": 0
+  }
+}

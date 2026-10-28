@@ -83,6 +83,9 @@ terminal NoActionはlinkしない。通常stepの既存reconcileが採用と結�
 互換用`launched`は新しいqueued登録だけを表す。対象指定/独立作業の応答にも
 `launch_return`（kind/job/receipt_id/linked）を返す。link保留は
 `launch_return_error=launch_outcome_unverified`として分け、受付を実行開始と読まない。
+対象指定と独立作業の応答は、既に保留中でも`launch_deferred_reason`でその理由を返す。
+同じschemaでも不正な返却、上限超過、未対応schemaは起動効果が不明なので、
+同じpassで別の起動依頼へ進まず、保存済みの通常keyによる後続照合へ任せる。
 
 通常prepareで既に読んだspec/dispatch、通常registrationで既に読んだdispatch/保存する
 receivedのバイトからだけSHAを保存する。過去jobの未記録SHAはnullのままとし、

@@ -799,7 +799,13 @@ fn link_success_survives_subwork_assignment_and_worker_start_consuming_the_key()
             f.e.backend.launch_start = Some(f.e.todo_path.clone());
             1
         };
-        f.dispatch();
+        let dispatched = f.e.dispatch(&f.cfg, &f.pri);
+        assert!(
+            dispatched.is_ok(),
+            "subwork={subwork}: {dispatched:?}, row={}, report={}",
+            f.get(id),
+            f.e.report
+        );
         let row = f.get(id);
         assert!(
             row["scheduler"]["key"].is_null(),
@@ -914,6 +920,34 @@ fn scheduler_worktree_junction_matches_the_canonical_producer_cwd() {
     );
     let linked = Receipt::new(&row, &json!(f.repo), &"ab".repeat(16), true, T, actual);
     assert_eq!(linked.binding, Binding::Matching);
+}
+
+#[test]
+fn fake_registration_matches_real_producer_when_the_workspace_is_a_junction() {
+    use std::os::windows::process::CommandExt;
+    let mut f = Fixture::new();
+    sample_receipt(&mut f, 1);
+    let real = PathBuf::from(s(&f.get(1)["scheduler"]["worktree"]));
+    fs::create_dir_all(&real).unwrap();
+    let alias = f.temp.path().join("producer-alias");
+    let output = std::process::Command::new("cmd.exe")
+        .creation_flags(NO_WINDOW)
+        .args(["/d", "/c", "mklink", "/J"])
+        .arg(&alias)
+        .arg(&real)
+        .output()
+        .unwrap();
+    assert!(output.status.success(), "{output:?}");
+    f.e.edit(&json!(1), |row| row["scheduler"]["worktree"] = json!(alias))
+        .unwrap();
+    let dispatched = f.e.dispatch(&f.cfg, &f.pri);
+    assert!(
+        dispatched.is_ok(),
+        "junction dispatch returned {dispatched:?}, receipt={}",
+        read_receipt(&f, 1)
+    );
+    assert_eq!(read_receipt(&f, 1)["receipt"]["binding"], "matching");
+    assert_eq!(f.e.report["launch_return"]["linked"], true);
 }
 
 #[test]
@@ -1048,9 +1082,7 @@ fn exact_protocol_failures_and_saved_diagnostics_are_not_generic_tool_errors() {
         );
         let observation = read_json(&f.e.root.join("admission.json"), Value::Null).unwrap();
         assert_eq!(observation["entries"]["1"]["failure_code"], expected);
-        if code == "unsupported" {
-            assert_eq!(f.e.backend.m["launch_calls"], 1);
-        }
+        assert_eq!(f.e.backend.m["launch_calls"], 1);
     }
 }
 
@@ -1102,7 +1134,7 @@ fn count_limit_keeps_the_newly_returned_receipt_when_the_clock_moves_back() {
 }
 
 #[test]
-fn historical_allocation_cannot_run_after_its_fixed_original_expiry() {
+fn historical_allocation_time_window_excludes_its_expiry_boundary() {
     assert!(cc_scheduler::product_review::in_scope(1792540799.));
     assert!(!cc_scheduler::product_review::in_scope(1792540800.));
     assert!(!cc_scheduler::product_review::in_scope(1793149200.));

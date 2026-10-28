@@ -1998,7 +1998,9 @@ impl Backend for Fake {
         j["created_at"] = json!(T);
         j["launch_key"] = i["scheduler"]["key"].clone();
         j["todo_id"] = i["id"].clone();
-        j["cwd"] = i["scheduler"]["worktree"].clone();
+        // Real cmd_run canonicalizes cwd before saving the job. Preserve that
+        // contract when the CI account's temporary root is a junction/alias.
+        j["cwd"] = json!(resolve(Path::new(s(&i["scheduler"]["worktree"])))?);
         j["launch_request_generation"] = i["resume_generation"].clone();
         j["launch_request_attempt"] = i["scheduler"]["attempt"].clone();
         j["todo_resume_generation"] = json!(i["resume_generation"].as_u64().unwrap_or(0) + 1);

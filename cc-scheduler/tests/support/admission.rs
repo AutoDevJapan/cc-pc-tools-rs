@@ -156,8 +156,8 @@ fn resource_preparation_quota_and_not_reached_are_not_inferred_as_launches() {
     f.e.backend.ps.insert(44, proc(44, 0, "CivilizationVI.exe"));
     f.dispatch();
     assert_eq!(entry(&f, 1)["reason"], "resource_busy");
-    assert_eq!(entry(&f, 2)["reason"], "launched");
-    assert_eq!(entry(&f, 3)["reason"], "earlier_candidate_launched");
+    assert_eq!(entry(&f, 2)["reason"], "queued");
+    assert_eq!(entry(&f, 3)["reason"], "earlier_candidate_queued");
     assert_eq!(entry(&f, 3)["stage"], "priority");
     assert_eq!(f.e.backend.launched.len(), 1);
 
@@ -500,7 +500,7 @@ fn observation_errors_keep_scan_and_launch_results_separate() {
     f.e.backend.m["jobs_error_after_launch"] = json!(true);
     assert!(f.e.dispatch(&f.cfg, &f.pri).is_err());
     assert_eq!(f.e.backend.launched.len(), 1);
-    assert_eq!(entry(&f, 4091)["reason"], "launched_unlinked");
+    assert_eq!(entry(&f, 4091)["reason"], "queued_unlinked");
     assert_eq!(entry(&f, 4091)["stage"], "launch");
     assert_eq!(entry(&f, 4091)["failure_code"], "tool_failed");
     assert!(entry(&f, 4091)["preparation_code"].is_null());

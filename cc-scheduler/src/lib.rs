@@ -7,6 +7,7 @@ pub mod backend;
 pub mod admission;
 pub mod common;
 pub mod dispatch_receipt;
+pub mod launch_receipt;
 pub mod engine;
 pub mod native;
 pub mod no_action;

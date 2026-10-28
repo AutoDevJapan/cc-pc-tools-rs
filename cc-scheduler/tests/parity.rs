@@ -1720,6 +1720,8 @@ fn test_orphan_minimum_age_and_missing_job() {
 }
 
 struct Fake {
+    replay_kind_override: Option<cc_job_policy::launch_outcome::Kind>,
+    pressure_after_replay: bool,
     quota_inventory_calls: usize,
     quota_spec_edit: Option<(PathBuf,String)>,
     quota_inventory: Value,
@@ -1775,6 +1777,8 @@ struct Fake {
 impl Default for Fake {
     fn default() -> Self {
         Self {
+            replay_kind_override: None,
+            pressure_after_replay: false,
             quota_inventory_calls: 0,
             quota_spec_edit: None,
             quota_inventory: Value::Null,
@@ -1932,12 +1936,18 @@ impl Backend for Fake {
         Ok(self.fresh.clone().unwrap_or(self.ps.clone()))
     }
     fn jobs(&mut self) -> Result<Vec<Value>> {
-        if self.m["jobs_error_after_launch"] == true && !self.launched.is_empty() {return Err(Error("OSError"));}
+        if self.m["jobs_error_after_replay"] == true && self.m["replayed"] == true {
+            return Err(Error("OSError"));
+        }
+        if self.m["jobs_error_after_launch"] == true && !self.launched.is_empty() {
+            return Err(Error("OSError"));
+        }
         if self.release_repair_lock_on_jobs {
             self.repair_held_lock.take();
         }
         Ok(self.records.clone())
     }
+
     fn event_mtime(&mut self, _: &Value) -> Result<f64> {
         Ok(self.event)
     }
@@ -1951,13 +1961,39 @@ impl Backend for Fake {
         }
         Ok(true)
     }
-    fn launch(&mut self, i: &Value, p: &Path, _: &Value) -> Result<String> {
+    fn launch(
+        &mut self,
+        i: &Value,
+        p: &Path,
+        _: &Value,
+    ) -> Result<cc_job_policy::launch_outcome::Outcome> {
+        self.m["launch_calls"] = json!(self.m["launch_calls"].as_u64().unwrap_or(0) + 1);
+        if let Some(code) = self.m["launch_error"].as_str().filter(|_| {
+            self.m["launch_error_item"].is_null() || self.m["launch_error_item"] == i["id"]
+        }) {
+            self.clock += n(&self.m["launch_error_clock_advance_s"]);
+            return Err(Error(match code {
+                "unsupported" => "LaunchOutcomeUnsupported",
+                "schema" => "LaunchOutcomeSchemaUnsupported",
+                "invalid" => "LaunchOutcomeInvalid",
+                "ordinary" => "RuntimeError",
+                _ => "LaunchOutcomeTooLarge",
+            }));
+        }
         if let Some(j) = self
             .records
             .iter()
             .find(|j| j["launch_key"] == i["scheduler"]["key"])
         {
-            return Ok(s(&j["id"]).into());
+            if self.pressure_after_replay {
+                self.m["cpu_percent"] = json!(99.);
+            }
+            self.m["replayed"] = json!(true);
+            return Ok(cc_job_policy::launch_outcome::Outcome::from_job(
+                self.replay_kind_override
+                    .unwrap_or(cc_job_policy::launch_outcome::Kind::ExistingJobNoAction),
+                j,
+            ));
         }
         let jid = format!("launched{}", self.launched.len() + 1);
         self.launched
@@ -1966,7 +2002,15 @@ impl Backend for Fake {
         j["created_at"] = json!(T);
         j["launch_key"] = i["scheduler"]["key"].clone();
         j["todo_id"] = i["id"].clone();
-        self.records.push(j);
+        // Real cmd_run canonicalizes cwd before saving the job. Preserve that
+        // contract when the CI account's temporary root is a junction/alias.
+        j["cwd"] = json!(resolve(Path::new(s(&i["scheduler"]["worktree"])))?);
+        j["launch_request_generation"] = i["resume_generation"].clone();
+        j["launch_request_attempt"] = i["scheduler"]["attempt"].clone();
+        j["todo_resume_generation"] = json!(i["resume_generation"].as_u64().unwrap_or(0) + 1);
+        j["work_owner"] = json!({"branch":i["scheduler"]["branch"]});
+        j["launch_dispatch_sha256"] = i["scheduler"]["launch_input"]["dispatch_sha256"].clone();
+        self.records.push(j.clone());
         if let Some(path) = &self.launch_start {
             let mut db = read_json(path, json!({}))?;
             let paths = cc_todo::Paths::at(path.parent().unwrap(), path.parent().unwrap());
@@ -1986,8 +2030,21 @@ impl Backend for Fake {
             self.crash_after_launch = false;
             return Err(Error("KeyboardInterrupt"));
         }
-        Ok(jid)
+        if self.m["launched_job_missing"] == true {
+            self.records.clear();
+        }
+        if self.m["launched_job_changed"] == true {
+            self.records.last_mut().unwrap()["cwd"] = json!("D:/different-fixture-owner");
+        }
+        if let Some(path) = self.m["hold_todo_on_launch"].as_str() {
+            self.repair_held_lock = ByteLock::acquire(Path::new(path), Duration::ZERO)?;
+        }
+        Ok(cc_job_policy::launch_outcome::Outcome::from_job(
+            cc_job_policy::launch_outcome::Kind::Queued,
+            &j,
+        ))
     }
+
     fn cancel(&mut self, j: &mut Value) -> Result<bool> {
         self.cancelled.push(j["id"].clone());
         if self.cancel_ok {
@@ -5305,7 +5362,7 @@ fn test_worker_launch_uses_windowless_existing_launcher() {
             Path::new("D:/fixture-prompt.md"),
             &json!({"model":"mock-model","effort":"high","task_type":"implementation"})
         )
-        .unwrap(),
+        .unwrap().job_id,
         "fixture-job"
     );
     let calls = calls.lock().unwrap();
@@ -5884,3 +5941,5 @@ fn capacity_cooldown_preserves_the_existing_job_and_terminal_budget_is_not_reset
         }
     }
 }
+#[path = "support/launch_outcome.rs"]
+mod launch_outcome_tests;

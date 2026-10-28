@@ -10,10 +10,25 @@ use std::{
 };
 
 pub(crate) mod inputs;
-mod metadata;
+pub(crate) mod metadata;
 pub(crate) fn result_fingerprint(item: &Value, root: &Value) -> String {
     metadata::fingerprint(&metadata::project(item), root)
 }
+pub(crate) fn defer_fingerprint(item: &Value, root: &Value) -> String {
+    let mut projected = metadata::project(item);
+    if let Some(fields) = projected["scheduler"].as_object_mut() {
+        for name in [
+            "not_before",
+            "preparation_failure",
+            "launch_outcome_deferred",
+            "launch_outcome_replay",
+        ] {
+            fields.remove(name);
+        }
+    }
+    metadata::fingerprint(&projected, root)
+}
+
 pub const MAX_ENTRIES: usize = 8192;
 pub const MAX_BYTES: u64 = 4 * 1024 * 1024;
 pub const TTL: f64 = 180.;
@@ -54,6 +69,10 @@ pub enum Reason {
     ResourceBusy,
     NotReached,
     EarlierCandidateLaunched,
+    EarlierCandidateQueued,
+    EarlierCandidateAccepted,
+    EarlierCandidateReserved,
+    EarlierOutcomeUnknown,
     PreparationDeferred,
     QuotaRecheckWait,
     QuotaExhausted,
@@ -70,7 +89,14 @@ pub enum Reason {
     StageFailed,
     LaunchFailed,
     LaunchedUnlinked,
+    QueuedUnlinked,
     Launched,
+    ExistingJobNoAction,
+    ExistingJobReserved,
+    Queued,
+    Accepted,
+    LaunchOutcomeUnknown,
+    LaunchOutcomeDeferred,
 }
 #[derive(Clone, Copy, Debug, Serialize, Deserialize, PartialEq)]
 #[serde(rename_all = "snake_case")]
@@ -91,10 +117,20 @@ pub enum Failure {
     ReviewSourceUnavailable,
     Interrupted,
     Other,
+    LaunchReturnUnverified,
+    LaunchOutcomeUnsupported,
+    LaunchOutcomeSchemaUnsupported,
+    LaunchOutcomeInvalid,
+    LaunchOutcomeTooLarge,
 }
 impl Failure {
     pub fn from_error(e: &Error) -> Self {
         match e.0 {
+            "LaunchOutcomeUnverified" => Self::LaunchReturnUnverified,
+            "LaunchOutcomeUnsupported" => Self::LaunchOutcomeUnsupported,
+            "LaunchOutcomeSchemaUnsupported" => Self::LaunchOutcomeSchemaUnsupported,
+            "LaunchOutcomeInvalid" => Self::LaunchOutcomeInvalid,
+            "LaunchOutcomeTooLarge" => Self::LaunchOutcomeTooLarge,
             "KeyboardInterrupt" => Self::Interrupted,
             "QuotaRetryEnded" => Self::QuotaRetryEnded,
             "ReviewModelConflict" => Self::ReviewModelConflict,
@@ -143,6 +179,12 @@ pub struct Entry {
     pub preparation_code: Option<Failure>,
     pub failure_code: Option<Failure>,
     pub recheck_capacity: Option<Capacity>,
+    #[serde(default)]
+    pub launch_receipt_id: Option<String>,
+    #[serde(default)]
+    pub returned_job_id: Option<String>,
+    #[serde(default)]
+    pub launch_kind: Option<cc_job_policy::launch_outcome::Kind>,
 }
 #[derive(Clone, Copy, Debug, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
@@ -208,6 +250,8 @@ pub struct Observation {
     pub capacity: Capacity,
     pub entries: BTreeMap<i64, Entry>,
     pub dispatch_error: Option<Failure>,
+    #[serde(default)]
+    pub cycle_id: Option<String>,
 }
 impl Observation {
     pub fn new(at: f64, ordinary: bool, enabled: bool) -> Self {
@@ -224,6 +268,7 @@ impl Observation {
             capacity: Capacity::default(),
             entries: BTreeMap::new(),
             dispatch_error: None,
+            cycle_id: Some(uuid::Uuid::new_v4().simple().to_string()),
         }
     }
     /// Called only while dispatch is already iterating the original items.
@@ -271,6 +316,13 @@ impl Observation {
             e.reason = reason;
         }
     }
+    pub fn launch(&mut self, id: &Value, receipt: &crate::launch_receipt::Receipt) {
+        if let Some(e) = id.as_i64().and_then(|id| self.entries.get_mut(&id)) {
+            e.launch_receipt_id = Some(receipt.receipt_id.clone());
+            e.returned_job_id = Some(receipt.outcome.job_id.clone());
+            e.launch_kind = Some(receipt.outcome.kind);
+        }
+    }
     pub fn root(&mut self, id: &Value, guard: Option<bool>, excluded: bool) {
         if let Some(e) = id.as_i64().and_then(|id| self.entries.get_mut(&id)) {
             e.root_guard_allowed = guard;
@@ -305,6 +357,12 @@ impl Observation {
         }
     }
     pub fn earlier_launch(&mut self, id: &Value) {
+        let reason = match id.as_i64().and_then(|id| self.entries.get(&id)).map(|e|e.reason) {
+            Some(Reason::Queued | Reason::QueuedUnlinked) => Reason::EarlierCandidateQueued,
+            Some(Reason::Accepted) => Reason::EarlierCandidateAccepted,
+            Some(Reason::ExistingJobReserved) => Reason::EarlierCandidateReserved,
+            _ => Reason::EarlierOutcomeUnknown,
+        };
         let rank = id
             .as_i64()
             .and_then(|id| self.entries.get(&id))
@@ -313,7 +371,7 @@ impl Observation {
             for e in self.entries.values_mut().filter(|e| {
                 e.reason == Reason::NotReached && e.queue_rank.is_some_and(|r| r > rank)
             }) {
-                e.reason = Reason::EarlierCandidateLaunched;
+                e.reason = reason;
             }
         }
     }
@@ -326,6 +384,8 @@ impl Observation {
             }
             e.reason = match (e.stage, e.reason) {
                 (Stage::Launch, Reason::LaunchedUnlinked) => Reason::LaunchedUnlinked,
+                (Stage::Launch, Reason::QueuedUnlinked) => Reason::QueuedUnlinked,
+                (Stage::Launch, reason) if e.returned_job_id.is_some() => reason,
                 (Stage::Launch, _) => Reason::LaunchFailed,
                 (Stage::Preparation, _) => Reason::PreparationFailed,
                 _ => Reason::StageFailed,
@@ -354,77 +414,92 @@ impl Observation {
         if bytes.len() as u64 > MAX_BYTES {
             return Err(Error("AdmissionTooLarge"));
         }
-        // One replaceable temp, no backup series or append-only diagnostic log.
-        let temp = root.join("admission.tmp");
-        let mut file = fs::File::create(&temp)?;
-        file.write_all(&bytes)?;
-        file.sync_all()?;
-        drop(file);
-        use std::os::windows::ffi::OsStrExt;
-        let wide = |path: &Path| {
-            path.as_os_str()
-                .encode_wide()
-                .chain(Some(0))
-                .collect::<Vec<_>>()
-        };
-        use windows_sys::Win32::Storage::FileSystem::{
-            MoveFileExW, ReplaceFileW, MOVEFILE_REPLACE_EXISTING,
-        };
-        let target_wide = wide(&root.join(FILE));
-        let temp_wide = wide(&temp);
-        let error = unsafe {
-            let ok = ReplaceFileW(
-                target_wide.as_ptr(),
+        atomic_publish(root, FILE, &bytes)
+    }
+}
+
+/// Caller bounds the bytes and holds its ordinary writer lock.
+pub(crate) fn atomic_publish(root: &Path, name: &str, bytes: &[u8]) -> Result<()> {
+    // Fixed sidecar, no backup series or append-only diagnostic log.
+    let temp = root.join(if name == FILE {
+        "admission.tmp".to_string()
+    } else {
+        format!("{name}.tmp")
+    });
+    let mut file = fs::File::create(&temp)?;
+    file.write_all(bytes)?;
+    file.sync_all()?;
+    drop(file);
+    use std::os::windows::ffi::OsStrExt;
+    let wide = |path: &Path| {
+        path.as_os_str()
+            .encode_wide()
+            .chain(Some(0))
+            .collect::<Vec<_>>()
+    };
+    use windows_sys::Win32::Storage::FileSystem::{
+        MOVEFILE_REPLACE_EXISTING, MoveFileExW, ReplaceFileW,
+    };
+    let target_wide = wide(&root.join(name));
+    let temp_wide = wide(&temp);
+    let error = unsafe {
+        let ok = ReplaceFileW(
+            target_wide.as_ptr(),
+            temp_wide.as_ptr(),
+            std::ptr::null(),
+            0,
+            std::ptr::null(),
+            std::ptr::null(),
+        );
+        if ok != 0 {
+            None
+        } else {
+            Some(std::io::Error::last_os_error().raw_os_error().unwrap_or(0))
+        }
+    };
+    // ReplaceFile supports a reader retaining the previous file handle.
+    // These documented ReplaceFile failures can also leave the old name
+    // absent. Finish publishing the already-flushed bounded replacement.
+    let error = if error.is_some_and(|e| matches!(e, 2 | 1176 | 1177)) {
+        unsafe {
+            let ok = MoveFileExW(
                 temp_wide.as_ptr(),
-                std::ptr::null(),
-                0,
-                std::ptr::null(),
-                std::ptr::null(),
+                target_wide.as_ptr(),
+                MOVEFILE_REPLACE_EXISTING,
             );
             if ok != 0 {
                 None
             } else {
                 Some(std::io::Error::last_os_error().raw_os_error().unwrap_or(0))
             }
-        };
-        // ReplaceFile supports a reader retaining the previous file handle.
-        // These documented ReplaceFile failures can also leave the old name
-        // absent. Finish publishing the already-flushed bounded replacement.
-        let error = if error.is_some_and(|e| matches!(e, 2 | 1176 | 1177)) {
-            unsafe {
-                let ok = MoveFileExW(
-                    temp_wide.as_ptr(),
-                    target_wide.as_ptr(),
-                    MOVEFILE_REPLACE_EXISTING,
-                );
-                if ok != 0 {
-                    None
-                } else {
-                    Some(std::io::Error::last_os_error().raw_os_error().unwrap_or(0))
-                }
-            }
-        } else {
-            error
-        };
-        if let Some(code) = error {
-            if code == 2 {
-                if let Ok(file) = fs::File::open(root.join(FILE)) {
-                    let mut current = vec![];
-                    if file.take(MAX_BYTES + 1).read_to_end(&mut current).is_ok()
-                        && current == bytes
-                    {
-                        return Ok(());
-                    }
-                }
-            }
-            return Err(Error(match code {
-                32 | 33 => "AdmissionSharingViolation",
-                5 => "AdmissionAccessDenied",
-                _ => "AdmissionWriteFailed",
-            }));
         }
-        Ok(())
+    } else {
+        error
+    };
+    if let Some(code) = error {
+        if code == 2 {
+            if let Ok(file) = fs::File::open(root.join(name)) {
+                let mut current = vec![];
+                if file
+                    .take(bytes.len() as u64 + 1)
+                    .read_to_end(&mut current)
+                    .is_ok()
+                    && current == bytes
+                {
+                    return Ok(());
+                }
+            }
+        }
+        return Err(Error(match (name == FILE, code) {
+            (true, 32 | 33) => "AdmissionSharingViolation",
+            (true, 5) => "AdmissionAccessDenied",
+            (true, _) => "AdmissionWriteFailed",
+            (false, 32 | 33) => "LaunchReceiptSharingViolation",
+            (false, 5) => "LaunchReceiptAccessDenied",
+            (false, _) => "LaunchReceiptWriteFailed",
+        }));
     }
+    Ok(())
 }
 
 /// No Scheduler/RealBackend, locks, directory creation, backups, guards or processes.
@@ -433,6 +508,7 @@ pub fn explain(root: &Path, todo: &Path, id: i64, now: f64) -> Value {
         "metadata_scope":"body_free_control_projection_v1_and_registered_root",
         "metadata_fingerprint":null,"current_metadata_fingerprint":null,
         "dispatch_enabled":null,"complete":null,"incomplete":null,"truncated":null,"dispatch_error":null,
+        "cycle_id":null,
         "validity":"missing","observation":null});
     let read = || -> Result<Observation> {
         let file = fs::File::open(root.join(FILE))?;
@@ -447,12 +523,15 @@ pub fn explain(root: &Path, todo: &Path, id: i64, now: f64) -> Value {
             || !snapshot.at.is_finite()
             || snapshot.recorded_at < snapshot.at
             || snapshot.expires_at != snapshot.recorded_at + TTL
+            || snapshot.cycle_id.as_ref().is_some_and(|id| id.len()!=32 || !id.bytes().all(|b|b.is_ascii_digit() || (b'a'..=b'f').contains(&b)))
             || snapshot.entries.iter().any(|(id, e)| {
                 *id <= 0
                     || *id != e.id
                     || [&e.metadata_fingerprint, &e.input_metadata_fingerprint]
                         .iter()
-                        .any(|fp| fp.len() != 64 || !fp.bytes().all(|b| b.is_ascii_hexdigit()))
+                        .any(|fp| fp.len() != 64 || !fp.bytes().all(|b| b.is_ascii_digit() || (b'a'..=b'f').contains(&b)))
+                    || e.launch_receipt_id.as_ref().is_some_and(|id|id.len()!=32 || !id.bytes().all(|b|b.is_ascii_digit() || (b'a'..=b'f').contains(&b)))
+                    || e.returned_job_id.as_ref().is_some_and(|id|id.is_empty() || id.len()>128 || !id.bytes().all(|b|b.is_ascii_alphanumeric() || b"_-".contains(&b)))
             })
         {
             return Err(Error("AdmissionInvalid"));
@@ -469,6 +548,7 @@ pub fn explain(root: &Path, todo: &Path, id: i64, now: f64) -> Value {
         }
     };
     out["observed_at"] = json!(snapshot.at);
+    out["cycle_id"] = json!(snapshot.cycle_id);
     out["recorded_at"] = json!(snapshot.recorded_at);
     out["expires_at"] = json!(snapshot.expires_at);
     out["dispatch_enabled"] = json!(snapshot.dispatch_enabled);

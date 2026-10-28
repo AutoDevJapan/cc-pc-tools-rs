@@ -12692,6 +12692,8 @@ mod additional_compatibility {
             let strip_run_additions = |text: &str| {
                 let mut text = text.to_owned();
                 for addition in [
+                    "                         [--launch-outcome]\n",
+                    "  --launch-outcome      return typed registration effect and saved job metadata;\n                        Queued is not proof that a worker execution has started\n",
                     "                         [--review-source-jobs IDS]\n",
                     "                         [--review-excluded-models MODELS]\n",
                     "                         [--model-recovery-from MODEL]\n",
@@ -12891,3 +12893,5 @@ mod additional_compatibility {
         assert!(t.ctx.load(s(&j, "id")).unwrap().get("gto").is_none());
     }
 }
+#[path = "support/launch_outcome.rs"]
+mod launch_outcome_tests;

@@ -1,6 +1,6 @@
 //! One explicit allocation through the existing dispatcher, without a global tick.
 use crate::{backend::Backend, common::*, engine::Scheduler};
-use serde_json::{json, Value};
+use serde_json::{Value, json};
 use std::time::Duration;
 
 pub fn parse_id(args: &[String]) -> Result<i64> {
@@ -72,7 +72,15 @@ fn run_with_wait<B: Backend>(engine: &mut Scheduler<B>, id: i64, wait: Duration)
     // source protection, ownership, declared resources and subwork admission.
     let result = engine.dispatch_for(&cfg, &pri, Some(id));
     engine.persist()?;
-    result?;
+    let launch_return_error = result
+        .as_ref()
+        .err()
+        .map(|e| crate::preparation::failure_reason(e).0);
+    if let Err(error) = result {
+        if error.0 != "LaunchOutcomeUnverified" {
+            return Err(error);
+        }
+    }
     let current = engine
         .todo()
         .ok()
@@ -90,12 +98,21 @@ fn run_with_wait<B: Backend>(engine: &mut Scheduler<B>, id: i64, wait: Duration)
         "input_rejected",
         "excluded_resource",
         "tool_failed",
+        "launch_outcome_unsupported",
+        "launch_outcome_schema_unsupported",
+        "launch_outcome_invalid",
+        "launch_outcome_too_large",
     ]
     .contains(&reason)
     .then_some(reason);
+    let launch_deferred_reason = (engine.report["launch_deferred"]["item"] == id)
+        .then(|| engine.report["launch_deferred"]["reason"].clone());
     // Do not return the sampled jobs, other task bodies or private source paths.
     Ok(
         json!({"id":id,"busy":false,"launched":engine.report["launched"]["job"],
+        "launch_return":engine.report["launch_return"],
+        "launch_return_error":launch_return_error,
+        "launch_deferred_reason":launch_deferred_reason,
         "dispatch_enabled":cfg["dispatch_enabled"],
         "priority_wait":engine.report["priority_wait"] == id,
         "allowance_now":engine.report["allowance_now"],

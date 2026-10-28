@@ -37,6 +37,16 @@ incompleteと固定errorで返し、launchの受付後に紐付けが失敗し�
 先順位の候補を受け付けて通常ループが終了した場合は、後順位の候補にその理由を
 記録する。後順位の準備・再確認は実行していないのでunknownのままとする。
 
+ToDo4119以降はcycle_idを持ち、返却に到達したentryはlaunch_receipt_id、returned_job_id、
+launch_kindで有界のlaunch-outcomes.jsonへ明示的に結び付く。旧cycleへ値を補わない。
+従来のlaunchedは、新しい記録ではqueued/queued_unlinked、existing_job_no_action、
+existing_job_reserved、accepted、launch_outcome_unknownへ分ける。
+後続はearlier_candidate_queued/accepted/reserved、earlier_outcome_unknownを区別する。
+同じ未知返却を保留している候補はlaunch_outcome_deferredとして記録する。
+型付き返却後の読取/link失敗は、元の返却理由とfailure_codeを別に保持する。
+ログのlaunch return/no_actionは返却の記録であり、workerの新規実行の証拠ではない。
+詳細は[scheduler launch outcome](scheduler-launch-outcome-receipt.md)を参照する。
+
 ## 固定67acaf23の別モデルレビューと修正
 
 ToDo4107はnative Opus5.5/maxで10差分を読了し、Must3件を返した。

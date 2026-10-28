@@ -102,6 +102,11 @@
       "file": "skills-3080-travel3-designs214717.json",
       "sha256": "0eefcffd237fa2517e2cc83d7ca7cea21aab3cbf5aa6f67060ce9f77a5ca5c8c",
       "target_count": 3
+    },
+    {
+      "file": "skills-3080-next3-designs175645.json",
+      "sha256": "452969e5ad67cbce06c33684fc8051b0e7e24016a0627f68eda92d0080b70f22",
+      "target_count": 3
     }
   ]
 }

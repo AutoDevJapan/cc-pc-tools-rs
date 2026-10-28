@@ -1,0 +1,33 @@
+{
+  "central_file_reads_by_capture": 0,
+  "created_files": 21,
+  "created_targets": 3,
+  "creator_runtime_revision": "deb430b8b089fde2391dbd243c01db48de48d493",
+  "creator_runtime_sha256": "9be9a066053183a099e78133571d394ecbb2845372e3cf603e292c74dac1a8d3",
+  "exact_unmodified_invocation_sha256": "2da7e9a8bf4388fac8b62cad5e6f920df5703d16796e568d87b80d5bbae402b0",
+  "job": "20261027-175645-todo-3080",
+  "native_call_id": "call_b3c15733a51840c3a0f58ba684ca3c1c",
+  "native_call_timestamp": "2026-10-27T21:01:17.624Z",
+  "new_adoptions": 0,
+  "original_CLI_stdout_sha256": "077c2cd83fb00b3c06577edd63cfcb2a2e8451b7e6474a1cd974b954fa6cb2c4",
+  "original_tool_blocks_sha256": "8269fc5c81188455c37fd40cd3126ff3366c2da69081119fe876868c7877ca13",
+  "other_native_bodies_returned": false,
+  "prior_failed_exact_invocation_attempts": [
+    {
+      "CLI_stdout_sha256": "cc7288e5b39781026d250a19148760bdd979bae563a5051b013200b4dd45d74c",
+      "created_evidence_returned": false,
+      "native_call_id": "call_3f19872af67b4c598df946770bbc3381",
+      "reason": "review",
+      "source_or_review_reason_branches_precede_skillsCreate_in_reviewed_deb430_code": true,
+      "timestamp": "2026-10-27T20:57:39.473Z"
+    }
+  ],
+  "request_sha256": "b74fe84e8da49c63f75cfe41cb905c0493d60eeaa51edfa31fd9182874a0dda2",
+  "successful_CreateNew_count": 1,
+  "thread_id": "01a16bab-c238-7293-953d-d0f447cf2c05",
+  "new_adoptions_scope": "additional_ledger_entries_written_by_capture_only",
+  "new_adoptions_definition": "The historical capture helper only saved evidence of an already completed creation and did not add adoption-ledger entries. Its new_adoptions:0 is an additional capture side-effect count, not the actual created_targets:3, and is not added again to the current manifest/bundle total of3.",
+  "scope_clarification_is_a_new_issuer_receipt": false,
+  "scope_clarification_publisher_job": "20261027-175645-todo-3080",
+  "original_capture_projection_sha256": "5796567884c1a0c60e01125faa52fb745d60eee15746daed7b1d4753f3ba328e"
+}

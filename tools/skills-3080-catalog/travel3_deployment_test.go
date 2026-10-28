@@ -54,14 +54,14 @@ type travel3Install struct {
 	Done             *bool  `json:"whole16_complete"`
 	Implicit         *bool  `json:"implicit_skill_selection_proven"`
 	ThirdParty       *bool  `json:"third_party_assets_services_or_unknown_central_rights_accepted"`
-	Raw              int    `json:"new_global_source_raw_credit"`
+	Raw              *int   `json:"new_global_source_raw_credit"`
 	Frozen           struct {
 		Task     int    `json:"task"`
 		Job      string `json:"job"`
 		Spec     string `json:"spec_sha256"`
 		Raw      string `json:"final_sha256"`
 		Manifest string `json:"manifest_sha256"`
-		Must     int    `json:"Must"`
+		Must     *int   `json:"Must"`
 		Frozen   *bool  `json:"frozen"`
 	} `json:"frozen_full_content_review"`
 	Pins map[string]struct {
@@ -76,6 +76,33 @@ type travel3DiscoveryRow struct {
 	Enabled     *bool  `json:"enabled"`
 	Description *bool  `json:"description_matches"`
 }
+
+type travel3Discovery struct {
+	Found     int                   `json:"found_count"`
+	Parse     *int                  `json:"parse_error_count"`
+	Elsewhere *int                  `json:"same_names_other_paths"`
+	Exited    *bool                 `json:"process_tree_exit_confirmed"`
+	Rows      []travel3DiscoveryRow `json:"found"`
+}
+
+func validateTravel3DiscoveryBoundary(d travel3Discovery) error {
+	if d.Found != 3 || !recordedCount(d.Parse, 0) || !recordedCount(d.Elsewhere, 0) || !recordedTrue(d.Exited) || len(d.Rows) != 3 {
+		return errors.New("travel3 fresh metadata incomplete")
+	}
+	return nil
+}
+
+func validateTravel3Structure(raw []byte) error {
+	var result struct {
+		Exit   *int   `json:"exit"`
+		Stdout string `json:"stdout"`
+	}
+	if json.Unmarshal(raw, &result) != nil || !recordedCount(result.Exit, 0) || !strings.HasPrefix(result.Stdout, "PASS: 3 explicit skills;") {
+		return errors.New("travel3 actual buffer structure check absent")
+	}
+	return nil
+}
+
 type travel3Decision struct {
 	Skill    string `json:"skill"`
 	Case     string `json:"case"`
@@ -90,7 +117,7 @@ type travel3Application struct {
 	Buffers  int    `json:"instruction_buffers"`
 	Bytes    int    `json:"instruction_bytes"`
 	Count    int    `json:"explicit_decision_count"`
-	Service  int    `json:"new_service_or_booking_payment_monitoring_or_notification_operations"`
+	Service  *int   `json:"new_service_or_booking_payment_monitoring_or_notification_operations"`
 	Implicit *bool  `json:"implicit_skill_selection_proven"`
 	Pins     []struct {
 		Target string `json:"target"`
@@ -174,7 +201,7 @@ func validateTravel3DiscoveryRow(r travel3DiscoveryRow, bodies map[string][]byte
 }
 
 func validateTravel3Application(a travel3Application, bodies map[string][]byte) error {
-	if a.Actor != travel3Actor || !recordedTrue(a.Read) || !recordedTrue(a.Applied) || a.Buffers != 6 || a.Bytes != 11285 || a.Count != 8 || len(a.Rows) != 8 || a.Service != 0 || !recordedFalse(a.Implicit) || len(a.Pins) != 6 {
+	if a.Actor != travel3Actor || !recordedTrue(a.Read) || !recordedTrue(a.Applied) || a.Buffers != 6 || a.Bytes != 11285 || a.Count != 8 || len(a.Rows) != 8 || !recordedCount(a.Service, 0) || !recordedFalse(a.Implicit) || len(a.Pins) != 6 {
 		return errors.New("travel3 actual bounded text application differs")
 	}
 	seen := map[string]bool{}
@@ -217,11 +244,11 @@ func validateTravel3Application(a travel3Application, bodies map[string][]byte) 
 
 func travel3Digest(b []byte) string { h := sha256.Sum256(b); return hex.EncodeToString(h[:]) }
 func validateTravel3Header(i travel3Install, n travel3Native, r travel3Read) error {
-	if i.New != 3 || i.Created != 1 || i.Files != 18 || i.Bytes != 36454 || i.Instructions != 6 || i.InstructionBytes != 11285 || i.Creator != travel3Actor || i.Manifest != travel3OperationSHA || !recordedFalse(i.Done) || !recordedFalse(i.Implicit) || !recordedFalse(i.ThirdParty) || i.Raw != 0 {
+	if i.New != 3 || i.Created != 1 || i.Files != 18 || i.Bytes != 36454 || i.Instructions != 6 || i.InstructionBytes != 11285 || i.Creator != travel3Actor || i.Manifest != travel3OperationSHA || !recordedFalse(i.Done) || !recordedFalse(i.Implicit) || !recordedFalse(i.ThirdParty) || !recordedCount(i.Raw, 0) {
 		return errors.New("travel3 actual installation boundary differs")
 	}
 	f := i.Frozen
-	if f.Task != 4083 || f.Job != "20261027-103930-todo-4083" || f.Spec != "2ca4d1f6126c341b4971c5adb7fa4d2040023f72342705136ce533616ad73092" || f.Raw != "b9def53ec95455af26f44ea1bbbbf24415a52b07ce3571ca491ab14b565ef000" || f.Manifest != travel3OperationSHA || f.Must != 0 || !recordedTrue(f.Frozen) {
+	if f.Task != 4083 || f.Job != "20261027-103930-todo-4083" || f.Spec != "2ca4d1f6126c341b4971c5adb7fa4d2040023f72342705136ce533616ad73092" || f.Raw != "b9def53ec95455af26f44ea1bbbbf24415a52b07ce3571ca491ab14b565ef000" || f.Manifest != travel3OperationSHA || !recordedCount(f.Must, 0) || !recordedTrue(f.Frozen) {
 		return errors.New("travel3 immutable full review differs")
 	}
 	if n.Count != 1 || n.Files != 18 || n.Call != "call_0ecb74f0b1ee4248ac9620f14020d78b" || n.Request != "b8bc23095da855e165cee11563dfb7d979d950a5693197e29517da17cfd5b7af" || n.CLI != "0185ef684d6a19040b9e3403782a6d6e06f43888fd17c60643cec2726fde8903" || n.Producer != "c80d60ab470e52ef9fbe53c1e039d1fcdc31429e291c3f156a953b9b6059d02f" || n.Revision != "444eae8714ee8b6199c9ed95208ac40272aeb8ce" {
@@ -343,14 +370,8 @@ func validatedTravel3Dispositions(t *testing.T) map[string]cohortLedgerRow {
 	if count != 18 {
 		t.Fatal("travel3 actual bundle file count")
 	}
-	var discovery struct {
-		Found     int                   `json:"found_count"`
-		Parse     int                   `json:"parse_error_count"`
-		Elsewhere int                   `json:"same_names_other_paths"`
-		Exited    *bool                 `json:"process_tree_exit_confirmed"`
-		Rows      []travel3DiscoveryRow `json:"found"`
-	}
-	if json.Unmarshal(rawPins["discovery"], &discovery) != nil || discovery.Found != 3 || discovery.Parse != 0 || discovery.Elsewhere != 0 || !recordedTrue(discovery.Exited) || len(discovery.Rows) != 3 {
+	var discovery travel3Discovery
+	if json.Unmarshal(rawPins["discovery"], &discovery) != nil || validateTravel3DiscoveryBoundary(discovery) != nil {
 		t.Fatal("travel3 fresh metadata incomplete")
 	}
 	found := map[string]bool{}
@@ -364,12 +385,8 @@ func validatedTravel3Dispositions(t *testing.T) map[string]cohortLedgerRow {
 	if json.Unmarshal(rawPins["application"], &application) != nil || validateTravel3Application(application, bodies) != nil {
 		t.Fatal("travel3 actual bounded text application differs")
 	}
-	var structure struct {
-		Exit   int    `json:"exit"`
-		Stdout string `json:"stdout"`
-	}
-	if json.Unmarshal(rawPins["structure"], &structure) != nil || structure.Exit != 0 || !strings.HasPrefix(structure.Stdout, "PASS: 3 explicit skills;") {
-		t.Fatal("travel3 actual buffer structure check absent")
+	if err := validateTravel3Structure(rawPins["structure"]); err != nil {
+		t.Fatal(err)
 	}
 	expectedIDs := map[string]string{"aerobase-flight-awards": "github:9440b3c1d3efc7897fb77a3b5ae23e6e21c830f564db18b331ba58b185e79624", "aerobase-flight-deals": "github:c21e85f1d697be2a8fd7307a49311d479591c25281c18de4c92f20d42ab8abb0", "aerobase-travel-activities": "github:b8dc79367a5f2d302052107f33da6b3ab28924279a6804c9452e8074ec1d2e3e"}
 	result := map[string]cohortLedgerRow{}

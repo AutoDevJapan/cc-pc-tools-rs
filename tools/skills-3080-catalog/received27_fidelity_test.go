@@ -49,6 +49,16 @@ func TestReceivedAssessmentPacketsRetainOriginalActorsAndFields(t *testing.T) {
 		{"skills-3080-other16-288303-evaluation175645.json", 16, 7},
 		{"skills-3080-other1-304304-evaluation175645.json", 1, 7},
 		{"skills-3080-other8-305312-evaluation175645.json", 8, 7},
+		{"skills-3080-sixmile-next2-197198-evaluation175645.json", 2, 5},
+		{"skills-3080-other8-313320-evaluation175645.json", 8, 7},
+		{"skills-3080-other8-321328-evaluation175645.json", 8, 7},
+		{"skills-3080-other5-329333-evaluation175645.json", 5, 7},
+		{"skills-3080-other5-334338-evaluation175645.json", 5, 7},
+		{"skills-3080-other7-339345-evaluation175645.json", 7, 7},
+		{"skills-3080-other7-346352-evaluation175645.json", 7, 7},
+		{"skills-3080-other7-353359-evaluation175645.json", 7, 7},
+		{"skills-3080-other7-360366-evaluation175645.json", 7, 7},
+		{"skills-3080-other7-367373-evaluation175645.json", 7, 7},
 	}
 	seen := map[string]bool{}
 	contexts := 0
@@ -178,7 +188,7 @@ func TestReceivedAssessmentPacketsRetainOriginalActorsAndFields(t *testing.T) {
 			}
 		})
 	}
-	if len(seen) != 35 || contexts != 10 {
+	if len(seen) != 98 || contexts != 20 {
 		t.Fatalf("received coverage differs: %d primaries, %d original packets", len(seen), contexts)
 	}
 }

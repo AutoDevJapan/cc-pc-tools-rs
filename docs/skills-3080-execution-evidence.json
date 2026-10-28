@@ -212,12 +212,67 @@
       "file": "skills-3080-other8-305312-evaluation175645.json",
       "sha256": "9988b0d450e6c5d6d54536976f7191b26245dc1ca143494f31ddf2bdf6909855",
       "rows": 8
+    },
+    {
+      "file": "skills-3080-sixmile-next2-197198-evaluation175645.json",
+      "sha256": "e41246221601b4e02a9fbaa2aa7724e13a74dc837f366f593ba204119b3d0db8",
+      "rows": 2
+    },
+    {
+      "file": "skills-3080-other8-313320-evaluation175645.json",
+      "sha256": "0d337a8df9d430b9ab6109bd919b606720d45f535f5d8aacb7616e327cf2ee85",
+      "rows": 8
+    },
+    {
+      "file": "skills-3080-other8-321328-evaluation175645.json",
+      "sha256": "8e3a160edde58753bacfc9047679d4787f1c915c7b225e10616715c2fd2ecbce",
+      "rows": 8
+    },
+    {
+      "file": "skills-3080-other5-329333-evaluation175645.json",
+      "sha256": "97e4f1ca9ce2b5fe99b379d7eeeeb8e1aef6629a1ce974831e608ac635619465",
+      "rows": 5
+    },
+    {
+      "file": "skills-3080-other5-334338-evaluation175645.json",
+      "sha256": "730815906b7f1a90dd7250b631f25566102a8985cd2875c9da287744d989786d",
+      "rows": 5
+    },
+    {
+      "file": "skills-3080-other7-339345-evaluation175645.json",
+      "sha256": "ea9b853f913979277aeed06645699b3fec615d5716eaa38be245a8b56510b985",
+      "rows": 7
+    },
+    {
+      "file": "skills-3080-other7-346352-evaluation175645.json",
+      "sha256": "7cd02539d87e41a247229f95b38b4b26b646bfaff0b2014d2310634384c6d302",
+      "rows": 7
+    },
+    {
+      "file": "skills-3080-other7-353359-evaluation175645.json",
+      "sha256": "f0722bae8c0956d79c49606b9daa848b6eafbb1a0cae836cac0f05084446d6cc",
+      "rows": 7
+    },
+    {
+      "file": "skills-3080-other7-360366-evaluation175645.json",
+      "sha256": "958083a5c2dd65431f4b005a53b2ef127595b77d07718f5257f3aea8c572c1ed",
+      "rows": 7
+    },
+    {
+      "file": "skills-3080-other7-367373-evaluation175645.json",
+      "sha256": "4183fa8b528dd4521ec2c83ca7042089ab6287b22b3a7da7293c603b4d4151fd",
+      "rows": 7
+    },
+    {
+      "file": "skills-3080-primaryflow47-evaluation175645.json",
+      "sha256": "7c2d4404e6b10589b037a5dd93955e88f16eb8c78d36d991cfd56c35807fbe31",
+      "rows": 47
     }
   ],
   "adoption_ledger": {
     "file": "skills-3080-adoptions.json",
-    "sha256": "c7e992e537a18a5fa7b699f952a1c80f738d541eb018513325dc087020381da0",
-    "rows": 165
+    "sha256": "23ddbd91af8873a7b766ccc850bb5eaf611927f6140204100138d79f4df4a303",
+    "rows": 168
   },
   "definition": "Assessment record references and existing final decisions only. No semantic/individual licence approval is inherited through equal bytes. The fixed catalog remains the complete occurrence universe; all holds are retained."
 }

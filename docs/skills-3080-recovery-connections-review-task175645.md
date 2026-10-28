@@ -38,6 +38,6 @@ new3のSKILL、guide、正負例、3つのsource metadataとmanifestの関係、
 既存3048の構造/参照/hash/正負例PASS3、関連Go package9.579s/vet成功と11反例を記録しているが、それを自分で再実行したとは書かない。
 metadata発見0を物理不在の資格や全catalogの発見保証へ変えず、3案の実配置・利用可能・全16完了は未確認のまま保持する。
 
-最終返信は日本語で「状態: 完了」から固定commit・全16PUBLIC資料と21出力の実読範囲・Must/Suggestion/Nit全件・3合成入力の適用結果を返す。
+最終返信は日本語で「状態: 完了」から固定commit・全13PUBLIC資料と21出力の実読範囲・Must/Suggestion/Nit全件・3合成入力の適用結果を返す。
 全出力を読み、Must0の時だけ、次の1行を実際の判定で付ける。Mustが残る場合はaccepted:falseと実数を返す。
 SKILLS3080_ACCEPTANCE {"domain":"skills-3080-review-v1","manifest_sha256":"212e5645cd33a0ae0abe44b1b75fa2079826889b8c41f4857963808649d90c24","accepted":true,"must":0}

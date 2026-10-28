@@ -72,3 +72,11 @@ Amazon SEOの末尾のAll rights reservedも記録し、一覧のライセンス
 全73220掲載、実導入154・統合3・除外記録15、未取得428・審査保留647は維持する。
 全件のqueueとsummaryのSHAを照合し、新3artifactの省略・件数・hash・重複を拒否する回帰確認も既存の仕組みへ追加した。
 公開評価の受入・新しい許諾/採否・配置や全16資料の完了とは区別し、同じ最終版の別モデル2役割・CI・通常mergeまで続ける。
+
+### 全件queueの実byte受入と元packet集合の確認
+
+公開summaryだけで全queueの実byte照合済みとは扱わない。
+公開前に担当が保持する全queueをSKILLS3080_QUEUE_SNAPSHOTで明示し、TestPublishedActualQueueBytesMatchRecordedSummaryを必ず実行する。
+今回の実73220行・64512087bytes・SHA a0ddea52の全読取と独立SHA測定は、対応するbyte-acceptance記録へ残した。
+CIに全queueを渡さない場合、その実byte確認だけは明示skipされる。CIはその成功を偽らず、公開source pin/summary・byte検証関数の古い内容/切断/行数/誤SHAの拒否を引き続き確認する。
+元3719の評価でも、entryから構成したpacket groupとshared contextはkey集合が完全一致することを追加し、余分なcontext・同件数の別key・欠落を拒否する。

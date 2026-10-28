@@ -73,6 +73,9 @@ func checkOriginal3719PendingSnapshot(t *testing.T, file, expectedSHA string, fi
 			}
 		}
 	}
+	if !original3719PacketKeySetsMatch(groups, contexts) {
+		t.Fatal("original packet groups and shared context key sets differ")
+	}
 	for sha, originals := range groups {
 		context := received27Object(t, contexts[sha])
 		common := received27Object(t, context["common"])
@@ -98,5 +101,30 @@ func checkOriginal3719PendingSnapshot(t *testing.T, file, expectedSHA string, fi
 	}
 	if supports != wantSupports || saved != wantSaved || unsaved != wantUnsaved {
 		t.Fatal("original support states or nulls changed")
+	}
+}
+
+func original3719PacketKeySetsMatch(groups map[string][]any, contexts map[string]any) bool {
+	if len(groups) != len(contexts) {
+		return false
+	}
+	for key := range groups {
+		if _, ok := contexts[key]; !ok {
+			return false
+		}
+	}
+	return true
+}
+func TestOriginal3719PacketContextSetRejectsOrphansAndWrongKeys(t *testing.T) {
+	groups := map[string][]any{"a": {}, "b": {}}
+	if !original3719PacketKeySetsMatch(groups, map[string]any{"a": true, "b": true}) {
+		t.Fatal("matching key sets rejected")
+	}
+	for name, contexts := range map[string]map[string]any{"orphan": {"a": true, "b": true, "c": true}, "same_count_wrong_key": {"a": true, "c": true}, "missing": {"a": true}} {
+		t.Run(name, func(t *testing.T) {
+			if original3719PacketKeySetsMatch(groups, contexts) {
+				t.Fatal("lost/extra/wrong original context accepted")
+			}
+		})
 	}
 }

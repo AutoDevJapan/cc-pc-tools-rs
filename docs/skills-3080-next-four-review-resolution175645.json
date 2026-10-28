@@ -38,5 +38,18 @@
   "payloads": 28,
   "actual_installed": 154,
   "new_adoptions": 0,
-  "whole16_complete": false
+  "whole16_complete": false,
+  "round2": {
+    "reviewer_task": 4033,
+    "job": "20261028-221749-todo-4033",
+    "spec": "8852a34fc2d179b03f39c04fe29f98a5c84be86b8f4574814a95110a4ee31a8e",
+    "final_sha": "09f37db3f1dfe050840c275b333a337b05722f3393098c2aeffb7c397515e9c8",
+    "M": 0,
+    "S": 2,
+    "N": 0,
+    "S1": "The7ae hash refers to the previous installed cohort version2 at fixed20e4, not to the new4 bundle1986. Move stale current_* fields into explicit historical_version2_snapshot; publish the exact old commit/path/hash and accepted5ab/current cf2 creation references.",
+    "S2": "Name both disjoint four-target cohorts explicitly. Previous PR619 installed4 is already included in154; the current PR625 four targets have actual_created/fresh_discovered/current_use0. Include the old central installation evidence as a fixed public input.",
+    "manifest_and_all28_payloads_changed": false,
+    "new_full_and_both_final_role_rechecks_pending": true
+  }
 }

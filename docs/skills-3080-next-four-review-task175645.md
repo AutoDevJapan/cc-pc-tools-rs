@@ -23,3 +23,12 @@ source.jsonの曖昧なaccepted表記へは、4案すべてにselected_notice_ap
 全16資料の完了、新しい一般的な権利付与、配置/発見/実適用の成功は主張しない。
 
 SKILLS3080_MANIFEST_SHA256 39ea776e81250f702902f53aa0e08df98df30d71a964edd9d4295317dcc1a209
+
+## 同じmanifestを保った旧4件の履歴表示の訂正
+
+ラバーダック4033/実221749は、前回導入した4件と今回の4案、履歴のhash対象にSuggestion2を返した。原文3153B/09f37を保持する。
+notice-next4-source-scopeの7ae8 hashは、旧20e4のversion2 bundleで、今回next-fourの1986 bundleではない。曖昧だったcurrent_*類を元値のままhistorical_version2_snapshotへ移し、旧commit/path/hashと対象4名、実採用74f/manifest5abとPR619の証拠を明記した。旧値や旧commit/Creator4184を編集していない。
+既導入4名はrlm-controller、parse-payment-qr、payroll-batch-reconciliation、payment-status-reconciliationで、中央作成/発見4は実154件に含まれる過去のPR619の結果。今回の4名とは別であり、今回の作成/発見/実適用はすべて0。追加した固定入力のinstallation-evidenceで当時の28file/89144B・原native/読戻し/発見/適用の区別を確認できる。
+修正は履歴と対象の定義だけで、今回manifest39eaと28出力・個別notice/原評価はすべて同byteのままである。最終headの変更4文書を再確認し、変更のない入力/本文を新しく読み直したとはしない。
+
+旧242を自分で全読したself/rubberは変更4文書と追加した旧導入証拠を確認し、変更なしの既読範囲を再利用できる。未起動だった全読Creatorは、他担当の既読を自分の全読へ流用せず、新しい同manifestの28内容をすべて読む。

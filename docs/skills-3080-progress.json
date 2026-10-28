@@ -3132,7 +3132,20 @@
     "actual_payment_QR_decoder_or_service_operations": 0,
     "new_global_source_raw_credit": 0,
     "public_result_review_pending_at_recording": true,
-    "whole16_complete": false
+    "whole16_complete": false,
+    "cohort_identity": "previous_installed4_from_PR619",
+    "target_names": [
+      "rlm-controller",
+      "parse-payment-qr",
+      "payroll-batch-reconciliation",
+      "payment-status-reconciliation"
+    ],
+    "accepted_creation_manifest_sha256": "5ab55cfca8778374e86862905e9c39d5bfe11bea2ae6e3e33ec82f82e7607f89",
+    "creation_input_commit": "74f4eff6a10b5bf235e4028ada75232a5f348bb6",
+    "actual_created_definition": "Four central D:/CC/Skills targets from the previous accepted PR619, not temporary review outputs and not the new next_four proposals.",
+    "accepted_result_PR": 619,
+    "accepted_result_merge": "d3e91067842cf712590ede8dd6cf8d5e9812f71c",
+    "public_result_review_pending_at_recording_definition": "Historical true at original publication, later accepted in PR619; not an unresolved current PR625 review."
   },
   "latest_received79": {
     "publisher_job": "20261027-175645-todo-3080",
@@ -3247,6 +3260,17 @@
     "remaining_uninstalled_old3_proposals_preserved": true,
     "current_full_creator_and_two_PR_roles_pending": true,
     "normal_mutation_absence_qualification_discovery_and_use_pending": true,
-    "whole16_complete": false
+    "whole16_complete": false,
+    "cohort_identity": "current_uninstalled4_PR625",
+    "target_names": [
+      "balance-snapshot-reconciliation",
+      "browser-extraction-missingness",
+      "remote-run-result-reconciliation",
+      "codebase-impact-context"
+    ],
+    "actual_created": 0,
+    "fresh_discovered": 0,
+    "current_usage_accepted": 0,
+    "counting_definition": "Existing154 already includes the previous installed4. These four different named targets remain uninstalled; the old balance1 proposal is the same first target and not an additional fifth."
   }
 }

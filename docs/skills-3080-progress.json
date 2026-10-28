@@ -360,9 +360,9 @@
       "skills-3080-mizchi-mutation-draft.json"
     ],
     "authored_total_definition": "154 actual new installed designs plus3legacy pending drafts. No aliases, catalog rows or machine declarations counted as installations.",
-    "new_proposed_uninstalled_targets": 0,
-    "authored_including_new_proposals": 157,
-    "authored_including_new_proposals_definition": "154actual new installed designs+3legacy pending drafts; original next4 proposal is now separately reflected as actual4, without altering its historical uninstalled state."
+    "new_proposed_uninstalled_targets": 1,
+    "authored_including_new_proposals": 158,
+    "authored_including_new_proposals_definition": "154 actual new installed designs+3legacy pending drafts+1new balance-snapshot-reconciliation proposal. Proposal is not an installation, source grant or adoption cap."
   },
   "kepano_entrypoint_assessment": {
     "pinned_entrypoints": 6,
@@ -616,7 +616,7 @@
     "guard_client_resource": true,
     "state": "classification_unverified"
   },
-  "recorded_at": "2026-10-28T07:45:19.7399192+00:00",
+  "recorded_at": "2026-10-28T08:12:21.9287450+00:00",
   "total_skill_named_body_read_definition": "This field preserves the historical complete-source subset only. Current raw/workflow primary coverage is projected from the canonical source components and sixmile evaluation index in all_fulltext_primary_paths_including_partial_sources/all_workflow_primary_paths_including_partial_sources, not copied here.",
   "openai_entrypoint_evaluation": {
     "rights_accepted": false,
@@ -3166,6 +3166,24 @@
     "invalid_text": 31,
     "source_raw_or_model_meaning_credit": 0,
     "individual_grants_adoptions_or_final_dispositions": 0,
+    "whole16_complete": false
+  },
+  "balance_next1_preparation": {
+    "bundle": "skills-3080-balance-next1-bundle175645.json",
+    "manifest": "skills-3080-operations/create-balance-next1-175645.json",
+    "manifest_sha256": "a02c1eac85a71f8b55369b8c45255143f7161fd1d6c1426ab3d6aa0729d61d15",
+    "targets": 1,
+    "virtual_files": 7,
+    "decoded_bytes": 16749,
+    "primary": "Original parent19/cohort0:514 visible41/physical67/withheld26, source/read profile unchanged",
+    "individual_notice": "Same exact per-package RozoMIT-0 notice3 byte-preserved; no independent authorship/third-party assertion",
+    "source_body_or_notice_reopens": 0,
+    "historical_source_assessment_permission_false_preserved": true,
+    "new_global_raw_credit": 0,
+    "actual_central_operations": 0,
+    "new_adoptions": 0,
+    "normal_mutation_qualification_and_current_discovery_or_use_pending": true,
+    "independent_full_review_not_yet_accepted": true,
     "whole16_complete": false
   }
 }

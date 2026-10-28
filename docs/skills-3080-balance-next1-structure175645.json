@@ -1,0 +1,14 @@
+{
+  "original_check": {
+    "exit": 0,
+    "timed_out": false,
+    "stdout": "PASS: 1 explicit skills; structure, descriptions, references, hashes, scenario pairs; in-memory bundle only; no deployment implied\n",
+    "stderr": ""
+  },
+  "input_private_bundle_sha256": "ca73c416c4ea318beba7f527d3318e98c46e385feea801c5db25ac7f956ce4b3",
+  "public_bundle_sha256": "30e47a7c9e066535785262b48c43385c21d9b2364bcd6369352fcb11edff3cfc",
+  "all7_output_payloads_unchanged": true,
+  "normal_structure_test_is_not_deployment": true,
+  "actual_central_operations": 0,
+  "new_adoptions": 0
+}

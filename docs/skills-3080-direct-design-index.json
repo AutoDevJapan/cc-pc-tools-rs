@@ -117,6 +117,11 @@
       "file": "skills-3080-next-four-actual-designs175645.json",
       "sha256": "fe7c4466eb9b4b1617ddb73cc889efb44496b1615f33bd2dc45420f498728fc7",
       "target_count": 4
+    },
+    {
+      "file": "skills-3080-rental-ledger-actual-designs175645.json",
+      "sha256": "4aff25d585839e19ad13713127f3cb904b305eaa80a598f737b7aed0f9b40e6d",
+      "target_count": 1
     }
   ]
 }

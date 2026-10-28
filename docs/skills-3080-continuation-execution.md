@@ -143,3 +143,21 @@ public recordのobject IDはdigestにし、原のplatform IDと全bufferは担�
 新規導入158・既存統合3・要再確認の除外記録15を保持し、この23評価を追加の許諾・採用・中央への配置とは扱わない。
 queueの実SHA256は054a4116b4091e7a4eaea8d4f33f5777f7c5e71feeb8ad2cd2cda82e1ea219e6。
 元の指定16資料全体は未完了で、取得済みの候補から評価と実採用を続ける。
+
+### 賃貸借記録Skillの実配置と次9評価の受領（2026-10-29）
+
+正式manifest9181080bと全文Creator4208の同じ受付を使い、fresh不在資格を得た後に一度だけCreateNewを行い、7file/37868Bを作成した。
+元native call_800d6a534c354a5fb1db2a2d455ae852とCLI stdout8596757bを保持し、原/currentの同じファイルID・buffer SHA/bytesを通常consume1回で全7照合した。
+実nativeの434文字とpreflightの433文字は外側whitespaceだけが異なり、literal false/Trim等価trueを原文のまま記録する。
+同じ7fb/b780の作成/読戻しを使い、一般guardの解除・既存上書き・追加Create・直接の中央本文openは行っていない。
+成功Creator4208はspec/実行/原結果を凍結した。
+
+既存3048チェックは実返却7でPASS1、新Codex metadataはfound1/enabled/description一致・parse0、478metadataと走査limit診断2を保持した。
+現SKILL/guide全7895Bを親が実読し、実際の固定資料評価への使い分け1例と合成6例を明示判断した。
+実銀行/顧客/契約/審査/支払は操作せず、暗黙のSkill選択や全discovery/context予算は証明していない。
+
+原246..249の4評価（3原chunk、支持68=saved56/unsaved12）とC0104..108の5代表群（3原packet、9member metadata）を全原field/actor/伏字/nullを保ったまま処理表へ追加した。
+旧190記録が195記録で不変である実byte比較も追加し、関連Go package全体7.919秒/vet成功を確認した。
+全73220queueの実SHAはa5db481191e811b758014bea137c648434900b8522e9ae633c3a83a83f877217、評価1501/最終177/交差171/旧6/和1507を保存した。
+作業版new159/統合3/再確認中除外15と、main受入new158/評価1492を区別し、この実結果の2役review・同CI・通常mergeを続ける。
+指定16資料全体、未取得428/取得審査647/意味・個別権利必要70638/未知中央9は未完。

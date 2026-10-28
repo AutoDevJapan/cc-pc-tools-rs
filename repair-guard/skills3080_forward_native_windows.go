@@ -141,6 +141,23 @@ func skillsCreationAuthorBound(creator, consumer skillsWriter, reg skillsRegistr
 
 var skillsCallID = regexp.MustCompile(`^call_[A-Za-z0-9_-]{1,160}$`)
 
+// Go's struct decoder matches case aliases. Check the protocol's exact header
+// names before decoding, while retaining unrelated payloads as raw JSON.
+func skillsCreationHeaderKeys(raw []byte, fields ...string) bool {
+	var header map[string]json.RawMessage
+	if json.Unmarshal(raw, &header) != nil || header == nil {
+		return false
+	}
+	for key := range header {
+		for _, field := range fields {
+			if key != field && strings.EqualFold(key, field) {
+				return false
+			}
+		}
+	}
+	return true
+}
+
 func skillsCreationSessionDays(thread string, start time.Time) []string {
 	days := []string{}
 	add := func(at time.Time) {
@@ -187,7 +204,7 @@ func skillsCreationNativeProjection(input io.Reader, thread, cwd string, start, 
 			Timestamp string          `json:"timestamp"`
 			Payload   json.RawMessage `json:"payload"`
 		}
-		if json.Unmarshal(scanner.Bytes(), &env) != nil {
+		if !skillsCreationHeaderKeys(scanner.Bytes(), "type", "timestamp", "payload") || json.Unmarshal(scanner.Bytes(), &env) != nil {
 			return evidence, false
 		}
 		if env.Type != "session_meta" && env.Type != "response_item" {
@@ -203,7 +220,7 @@ func skillsCreationNativeProjection(input io.Reader, thread, cwd string, start, 
 			Input  string          `json:"input"`
 			Output json.RawMessage `json:"output"`
 		}
-		if json.Unmarshal(env.Payload, &p) != nil {
+		if !skillsCreationHeaderKeys(env.Payload, "type", "id", "cwd", "name", "call_id", "input", "output") || json.Unmarshal(env.Payload, &p) != nil {
 			return evidence, false
 		}
 		if env.Type == "session_meta" {

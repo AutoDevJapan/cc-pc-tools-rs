@@ -15,6 +15,8 @@ UNC、相対/drive-relative、混在した連続区切りは新たに許可し�
 正規rendererの成功、異なる作用・option・対象の拒否、元証拠のbindingもテストする。
 セッションのheaderも再帰的な重複キー検査を通し、type/id/cwd/payload/timestampと
 入れ子の重複について、修正前の拒否不足と修正後の拒否を確認する。
+transportとpayloadの既知キーは大文字小文字の別名を拒否してからdecodeし、Goの
+case-insensitiveなfield選択でid/cwd/call IDを置き換えられないようにする。
 完全一致でも同じパス文法を検証し、rendererも同じ文法で読戻せる呼び出しだけを返す。
 dot segmentや末尾の点/空白、device、UNCを含む同一cmdの拒否を、実際のcall入口で確認する。
 
@@ -29,6 +31,10 @@ cleanな同merged sourceの全raw入力をGit blobと前後照合してWindows�
 生成前に、PR627の実MERGED状態、reviewed head、実merge commit、必須14チェックの
 SUCCESSと他のチェックの終了・失敗なしを照合して保存する。通常merge後も全build入力が
 reviewed headと同じであることを別に検証し、同じソースのCIをmerge SHAだけのために重ねない。
+新しい4203/4204のGo側verify/apply/recoverも、同じPRの現在のCIを公式CLIで直接確認する。
+呼出者の手書きCI証拠や配布準備の省略を資格とせず、片方だけを旧single-review扱いに
+落とすことも拒否する。CI不足ならcandidate/backupを開く前に止める。
+旧4198/4199など、正確な旧softwareだけのreadonly条件へこの新しいCI契約を適用しない。
 正常verify/applyと既存AdminBrokerで元Eabの実backup・ID/hash・owner/group/DACLを
 保持し、配置後の同buffer/CLIを照合する。SACLや過去の物理的連続性を証明とはしない。
 親が元request79f/native call64138の正常consumeで同じ28出力のID/hash/bufferを再確認し、

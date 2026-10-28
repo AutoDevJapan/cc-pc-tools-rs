@@ -212,3 +212,59 @@ func TestSkills3080CreationRejectsDuplicateSessionMetadata(t *testing.T) {
 		})
 	}
 }
+
+func TestSkills3080CreationRejectsCaseAliasedNativeHeaders(t *testing.T) {
+	_, _, e, _ := skillsForwardFixture(t)
+	c := skillsConsumeRequest{Creator: e.Writer, RequestPath: e.Writer.Workspace + "/.ci-work/forward-request.json", RequestSHA: e.RequestSHA, CallID: "call_meta_case_alias"}
+	start, _ := time.Parse(time.RFC3339, "2026-10-25T12:00:00Z")
+	for _, kind := range []string{"id", "cwd", "id_only", "cwd_only", "type", "timestamp", "payload", "call_id"} {
+		t.Run(kind, func(t *testing.T) {
+			records := skillsNativeCreationFixture(t, e, c)
+			index := 0
+			if kind == "call_id" {
+				index = 1
+			}
+			raw, err := json.Marshal(records[index])
+			if err != nil {
+				t.Fatal(err)
+			}
+			old, replacement := "", ""
+			switch kind {
+			case "id":
+				old, replacement = `"id":"synthetic-thread"`, `"id":"other","ID":"synthetic-thread"`
+			case "id_only":
+				old, replacement = `"id":"synthetic-thread"`, `"ID":"synthetic-thread"`
+			case "cwd":
+				v, _ := json.Marshal(e.Writer.Workspace)
+				old = `"cwd":` + string(v)
+				replacement = `"cwd":"D:/other","CWD":` + string(v)
+			case "cwd_only":
+				old, replacement = `"cwd":`, `"CWD":`
+			case "type":
+				old, replacement = `"type":"session_meta"`, `"type":"ignored","Type":"session_meta"`
+			case "timestamp":
+				old, replacement = `"timestamp":`, `"Timestamp":"ignored","timestamp":`
+			case "payload":
+				old, replacement = `"payload":`, `"Payload":{},"payload":`
+			case "call_id":
+				old, replacement = `"call_id":"call_meta_case_alias"`, `"call_id":"other","CALL_ID":"call_meta_case_alias"`
+			}
+			bad := bytes.Replace(raw, []byte(old), []byte(replacement), 1)
+			if bytes.Equal(raw, bad) {
+				t.Fatal("case alias mutation missing")
+			}
+			var stream bytes.Buffer
+			for i, r := range records {
+				if i == index {
+					stream.Write(bad)
+					stream.WriteByte('\n')
+				} else if json.NewEncoder(&stream).Encode(r) != nil {
+					t.Fatal("fixture encoding")
+				}
+			}
+			if _, ok := skillsCreationNativeProjection(&stream, "synthetic-thread", e.Writer.Workspace, start, start.Add(time.Minute), c); ok {
+				t.Fatal("case-aliased native header accepted")
+			}
+		})
+	}
+}

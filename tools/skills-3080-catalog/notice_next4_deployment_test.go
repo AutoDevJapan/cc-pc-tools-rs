@@ -13,6 +13,60 @@ const notice4Manifest = "5ab55cfca8778374e86862905e9c39d5bfe11bea2ae6e3e33ec82f8
 const notice4Request = "758a78033f857c1cda0f25deeed5a18a89b16b5730caf3cd758fc3929a789167"
 const notice4Call = "call_9a5bc551506640e49f56dc88155e0eaf"
 
+// This operation has its own issuer and readback contract. Do not project its
+// provenance through the older three-target shape, which discards these keys.
+type notice4Native struct {
+	Actor        string             `json:"job"`
+	Targets      int                `json:"created_targets"`
+	Count        int                `json:"successful_CreateNew_count"`
+	Files        int                `json:"created_files"`
+	Call         string             `json:"native_call_id"`
+	Request      string             `json:"request_sha256"`
+	CLI          string             `json:"original_CLI_stdout_sha256"`
+	Producer     string             `json:"creator_runtime_sha256"`
+	Revision     string             `json:"creator_runtime_revision"`
+	Invocation   string             `json:"exact_unmodified_invocation_sha256"`
+	Blocks       string             `json:"original_tool_blocks_sha256"`
+	At           string             `json:"native_call_timestamp"`
+	Thread       string             `json:"thread_id"`
+	CaptureReads *int               `json:"central_file_reads_by_capture"`
+	Added        *int               `json:"new_adoptions"`
+	AddedScope   string             `json:"new_adoptions_scope"`
+	OtherBodies  *bool              `json:"other_native_bodies_returned"`
+	NewReceipt   *bool              `json:"scope_clarification_is_a_new_issuer_receipt"`
+	Failed       *[]json.RawMessage `json:"prior_failed_exact_invocation_attempts"`
+}
+
+type notice4Read struct {
+	Actor      string `json:"job"`
+	Call       string `json:"creation_native_call"`
+	Manifest   string `json:"manifest_sha256"`
+	Request    string `json:"request_sha256"`
+	Producer   string `json:"current_observed_normally_admitted_producer"`
+	Revision   string `json:"current_revision"`
+	Files      int    `json:"qualified_current_files"`
+	Bytes      int    `json:"bytes"`
+	BatchCount int    `json:"bounded_normal_batches"`
+	NewCalls   *int   `json:"new_creation_calls_by_reader"`
+	RawCredit  *int   `json:"new_global_raw_source_read_credit"`
+	Atomic     *bool  `json:"atomic_snapshot_across_files_or_historical_continuity_proven"`
+	OSWriter   string `json:"current_OS_writer"`
+	IDs        *bool  `json:"current_IDs_match_creation"`
+	Buffers    *bool  `json:"all_same_read_buffers_match_manifest"`
+	General    *bool  `json:"general_access_granted"`
+	Registry   *bool  `json:"original_registry_recovered"`
+	Rows       []struct {
+		Index      int    `json:"index"`
+		Target     string `json:"target"`
+		SHA        string `json:"sha256"`
+		Bytes      int    `json:"bytes"`
+		ID         string `json:"created_and_current_object_identity_sha256"`
+		SameID     *bool  `json:"creation_ID_matches_current"`
+		SameBuffer *bool  `json:"same_handle_buffer_returned"`
+		Reviewed   *bool  `json:"reviewed_bytes_equal"`
+	} `json:"files"`
+}
+
 type notice4Header struct {
 	Creator  string `json:"creator_job"`
 	Targets  int    `json:"new_targets_created"`
@@ -22,12 +76,19 @@ type notice4Header struct {
 	Runtime  string `json:"creator_runtime_sha256"`
 	Revision string `json:"creator_runtime_revision"`
 	Frozen   struct {
-		Task   int    `json:"task"`
-		Job    string `json:"job"`
-		Spec   string `json:"spec_sha256"`
-		Final  string `json:"final_sha256"`
-		Frozen *bool  `json:"frozen"`
-		Never  *bool  `json:"never_edit_spec_or_restart_this_task"`
+		Task     int    `json:"task"`
+		Job      string `json:"job"`
+		Spec     string `json:"spec_sha256"`
+		Final    string `json:"final_sha256"`
+		Frozen   *bool  `json:"frozen"`
+		Never    *bool  `json:"never_edit_spec_or_restart_this_task"`
+		Creator  string `json:"creator"`
+		Manifest string `json:"manifest_sha256"`
+		Request  string `json:"request_sha256"`
+		Call     string `json:"actual_native_creation"`
+		Files    int    `json:"successful_creation_file_count"`
+		Targets  int    `json:"successful_target_count"`
+		Full     *bool  `json:"full_content_no_comparison"`
 	} `json:"frozen_full_content_review"`
 	Review struct {
 		Raw        string `json:"original_sha256"`
@@ -91,7 +152,7 @@ func validateNotice4Cases(rows []notice4Case) error {
 	return nil
 }
 
-func validateNotice4Header(i notice4Header, n travel3Native, r travel3Read) error {
+func validateNotice4Header(i notice4Header, n notice4Native, r notice4Read) error {
 	if i.Creator != next3Actor || i.Targets != 4 || i.Files != 28 || i.Bytes != 89144 || i.Manifest != notice4Manifest || i.Runtime != "f8b2ba6e66e60b06bbbc46c2c0f3d6eedc0208d40444c30e37b70afe29db4fc7" || !recordedFalse(i.Implicit) || !recordedFalse(i.Budget) || !recordedFalse(i.ThirdParty) || !recordedFalse(i.Done) {
 		return errors.New("notice4 actual scope, producer or boundaries differ")
 	}
@@ -111,6 +172,15 @@ func validateNotice4Header(i notice4Header, n travel3Native, r travel3Read) erro
 	if i.Revision != "a71330f543969b4585f01b7359a84a2fa528c9f2" || n.Revision != i.Revision || n.Producer != i.Runtime || n.Files != 28 || n.CLI != "96a3ba604ad620a70b86cdb1eae108e4fb5b32e6dbc5eaf9c7626591d3994560" || !recordedFalse(r.Registry) {
 		return errors.New("notice4 original creation stdout, producer or recovery scope differs")
 	}
+	if n.Actor != i.Creator || n.Targets != i.Targets || f.Creator != i.Creator || f.Targets != i.Targets || f.Files != i.Files || f.Manifest != i.Manifest || f.Request != n.Request || f.Call != n.Call || !recordedTrue(f.Full) {
+		return errors.New("notice4 actual issuer, target count or frozen review binding differs")
+	}
+	if r.Actor != i.Creator || r.Call != n.Call || r.Manifest != i.Manifest || r.Request != n.Request || r.Producer != n.Producer || r.Revision != n.Revision || r.BatchCount != 4 || !recordedCount(r.NewCalls, 0) || !recordedCount(r.RawCredit, 0) || !recordedFalse(r.Atomic) || r.OSWriter != "unproved" {
+		return errors.New("notice4 current readback issuer or provenance differs")
+	}
+	if n.Invocation != "5fa20e6bd8299e8c4c424878042dee788647e0c6deb01b708f0897aaf4fdd640" || n.Blocks != "5f29cb5ebf81a51937e0495b098a70b8c5b177a4e018bb38f83f3892a54040e7" || n.At != "2026-10-28T05:42:53.185Z" || n.Thread != "01a16bab-c238-7293-953d-d0f447cf2c05" || !recordedCount(n.CaptureReads, 0) || !recordedCount(n.Added, 0) || n.AddedScope != "additional_ledger_entries_written_by_capture_only" || !recordedFalse(n.OtherBodies) || !recordedFalse(n.NewReceipt) || n.Failed == nil || len(*n.Failed) != 0 {
+		return errors.New("notice4 original native capture identity or capture-only scope differs")
+	}
 	return nil
 }
 
@@ -121,6 +191,14 @@ func validatedNoticeNext4Dispositions(t *testing.T) map[string]cohortLedgerRow {
 	var install notice4Header
 	loadPublicReceipt(t, "skills-3080-notice-next4-installation-evidence175645.json", &install)
 	wantPins := map[string]string{"bundle": "skills-3080-notice-next4-actual-bundle175645.json", "manifest": "skills-3080-installed-notice-next4-manifest175645.json", "creation": "skills-3080-notice-next4-create-evidence175645.json", "readback": "skills-3080-notice-next4-consume-evidence175645.json", "structure": "skills-3080-notice-next4-actual-structure175645.json", "discovery": "skills-3080-notice-next4-discovery175645.json", "application": "skills-3080-notice-next4-application175645.json", "design": "skills-3080-notice-next4-actual-designs175645.json", "precreation": "skills-3080-notice-next4-precreation-qualification175645.json"}
+	// These are the independently received historical records for this one
+	// creation. A later observation needs a new record; updating the manifest's
+	// own pointer cannot silently change the accepted issuer or readback facts.
+	fixedRecords := map[string]string{
+		"creation":    "8fac2380eb3610eebf12e3f36f960368005ca871b86f4e9f00d6c5387024d9d9",
+		"readback":    "0f6fc5a4d7ccbc8ef5bb6dc76d4aaee50697ad6074acfe0e578a25bf5bd97485",
+		"application": "94f01cc1d68aae72c45948f4edd314d3e00e9ce09a17d30df873dff2e0300a01",
+	}
 	rawPins := map[string][]byte{}
 	for kind, file := range wantPins {
 		pin, ok := install.Pins[kind]
@@ -132,13 +210,16 @@ func validatedNoticeNext4Dispositions(t *testing.T) map[string]cohortLedgerRow {
 		if travel3Digest(b) != pin.SHA {
 			t.Fatal("notice4 artifact hash differs")
 		}
+		if fixed, exists := fixedRecords[kind]; exists && travel3Digest(b) != fixed {
+			t.Fatal("notice4 original historical record changed despite pointer update")
+		}
 		rawPins[kind] = b
 	}
 	if len(install.Pins) != len(wantPins) {
 		t.Fatal("notice4 artifact membership differs")
 	}
-	var native travel3Native
-	var read travel3Read
+	var native notice4Native
+	var read notice4Read
 	if json.Unmarshal(rawPins["creation"], &native) != nil || json.Unmarshal(rawPins["readback"], &read) != nil || validateNotice4Header(install, native, read) != nil {
 		t.Fatal("notice4 current acceptance incomplete")
 	}
@@ -338,11 +419,11 @@ func validatedNoticeNext4Dispositions(t *testing.T) map[string]cohortLedgerRow {
 func TestNoticeNext4ActualAcceptance(t *testing.T) { validatedNoticeNext4Dispositions(t) }
 
 func TestNoticeNext4RejectsUnboundCurrentAcceptance(t *testing.T) {
-	for _, change := range []string{"valid", "reviewer", "review bytes", "extra creation", "current identity missing", "general access", "third party rights", "review model", "review effort", "review suggestion", "review scope missing", "review native", "native stdout", "native revision", "native producer"} {
+	for _, change := range []string{"valid", "reviewer", "review bytes", "extra creation", "current identity missing", "general access", "third party rights", "review model", "review effort", "review suggestion", "review scope missing", "review native", "native stdout", "native revision", "native producer", "creation actor", "created targets", "read actor", "read call", "read manifest", "read request", "read producer", "read revision", "frozen actor", "frozen manifest", "frozen targets", "capture scope", "capture reads", "unknown writer promoted"} {
 		t.Run(change, func(t *testing.T) {
 			var i notice4Header
-			var n travel3Native
-			var r travel3Read
+			var n notice4Native
+			var r notice4Read
 			loadPublicReceipt(t, "skills-3080-notice-next4-installation-evidence175645.json", &i)
 			loadPublicReceipt(t, "skills-3080-notice-next4-create-evidence175645.json", &n)
 			loadPublicReceipt(t, "skills-3080-notice-next4-consume-evidence175645.json", &r)
@@ -377,6 +458,35 @@ func TestNoticeNext4RejectsUnboundCurrentAcceptance(t *testing.T) {
 				n.Revision = "changed"
 			case "native producer":
 				n.Producer = "changed"
+			case "creation actor":
+				n.Actor = "20261026-214717-todo-3080"
+			case "created targets":
+				n.Targets = 3
+			case "read actor":
+				r.Actor = "20261026-214717-todo-3080"
+			case "read call":
+				r.Call = "different"
+			case "read manifest":
+				r.Manifest = "different"
+			case "read request":
+				r.Request = "different"
+			case "read producer":
+				r.Producer = "different"
+			case "read revision":
+				r.Revision = "different"
+			case "frozen actor":
+				i.Frozen.Creator = "20261026-214717-todo-3080"
+			case "frozen manifest":
+				i.Frozen.Manifest = "different"
+			case "frozen targets":
+				i.Frozen.Targets = 3
+			case "capture scope":
+				n.AddedScope = "actual_creation_targets"
+			case "capture reads":
+				one := 1
+				n.CaptureReads = &one
+			case "unknown writer promoted":
+				r.OSWriter = "proved"
 			}
 			if (change == "valid") != (validateNotice4Header(i, n, r) == nil) {
 				t.Fatal("unbound evidence was accepted or valid evidence rejected")

@@ -11,18 +11,19 @@ import (
 func skillsManifestMaskedSourceTarget(source skillsSource, m skillsManifest) (string, object, bool) {
 	legacy, valid := skillsMaskedSourceTarget(source.Path)
 	if !valid {
-		return "", nil, false
+		return "", nil, true // Non-primary raw preservation is unchanged.
 	}
-	if skillsHasMaskedSourceOutput(source.Path, m.Files) {
-		return legacy, nil, true
-	}
-	if !skillsWriterValid(m.Writer) {
-		return "", nil, false
-	}
+	legacyPresent := skillsHasMaskedSourceOutput(source.Path, m.Files)
+	legacyName := strings.Split(legacy, "/")[0]
 	target, metadata := "", object(nil)
 	for _, output := range m.Files {
 		parts := strings.Split(output.Target, "/")
 		if len(parts) != 3 || parts[1] != "references" || parts[2] != "source.json" {
+			continue
+		}
+		// The old same-name metadata format is not an alias declaration. Still
+		// scan other namespaces before allowing any legacy/raw preservation.
+		if parts[0] == legacyName {
 			continue
 		}
 		if !skillsRelative(output.Target) || !skillsName.MatchString(parts[0]) || len(parts[0]) > 80 || hashBytes(output.body) != output.SHA {
@@ -50,7 +51,7 @@ func skillsManifestMaskedSourceTarget(source skillsSource, m skillsManifest) (st
 		count, countOK := meta["source_bytes"].(json.Number)
 		bytes, countErr := count.Int64()
 		blob, blobOK := meta["source_git_blob"].(string)
-		if declared != source || meta["reformulation_writer"] != m.Writer.Job || !countOK || countErr != nil || bytes <= 0 || !blobOK || !civ6Commit.MatchString(blob) || blob == strings.Repeat("0", 40) || target != "" {
+		if declared != source || !skillsWriterValid(m.Writer) || meta["reformulation_writer"] != m.Writer.Job || !countOK || countErr != nil || bytes <= 0 || !blobOK || !civ6Commit.MatchString(blob) || blob == strings.Repeat("0", 40) || target != "" {
 			return "", nil, false
 		}
 		name := parts[0]
@@ -60,7 +61,10 @@ func skillsManifestMaskedSourceTarget(source skillsSource, m skillsManifest) (st
 		}
 		metadata = meta
 	}
-	return target, metadata, target != ""
+	if target == "" && legacyPresent {
+		return legacy, nil, true
+	}
+	return target, metadata, true
 }
 
 func skillsAliasOutputPresent(files []skillsOutput, target, sha string) bool {
@@ -72,15 +76,7 @@ func skillsAliasOutputPresent(files []skillsOutput, target, sha string) bool {
 	return false
 }
 
-func skillsManifestHasMaskedSourceOutput(source skillsSource, m skillsManifest) bool {
-	_, _, ok := skillsManifestMaskedSourceTarget(source, m)
-	return ok
-}
-
 func skillsManifestMaskedSourceObject(row skillsSavedSource, raw []byte, m skillsManifest) bool {
-	if skillsMaskedSourceObject(row, raw, m.Files) {
-		return true
-	}
 	if row.Role != "skill_entry" {
 		return false
 	}
@@ -89,7 +85,13 @@ func skillsManifestMaskedSourceObject(row skillsSavedSource, raw []byte, m skill
 			continue
 		}
 		target, meta, ok := skillsManifestMaskedSourceTarget(source, m)
-		if !ok || meta == nil || meta["source_git_blob"] != row.Blob {
+		if !ok || target == "" {
+			return false
+		}
+		if meta == nil {
+			return skillsMaskedSourceObject(row, raw, m.Files)
+		}
+		if meta["source_git_blob"] != row.Blob || (skillsHasMaskedSourceOutput(row.Path, m.Files) && !skillsMaskedSourceObject(row, raw, m.Files)) {
 			return false
 		}
 		count, ok := meta["source_bytes"].(json.Number)

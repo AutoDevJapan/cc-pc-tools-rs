@@ -37,7 +37,8 @@ func skillsSourceClaimsPreserved(m skillsManifest) bool {
 		outputs[f.SHA] = true
 	}
 	for _, source := range m.Sources {
-		if skillsPublicSources[source.Repository] != source.Commit || source.Acquisition != "already-acquired" || !source.License.Accepted || strings.TrimSpace(source.License.Scope) == "" || (!outputs[source.SHA] && !skillsManifestHasMaskedSourceOutput(source, m)) || !outputs[source.License.SHA] {
+		target, _, bindingOK := skillsManifestMaskedSourceTarget(source, m)
+		if !bindingOK || skillsPublicSources[source.Repository] != source.Commit || source.Acquisition != "already-acquired" || !source.License.Accepted || strings.TrimSpace(source.License.Scope) == "" || (!outputs[source.SHA] && target == "") || !outputs[source.License.SHA] {
 			return false
 		}
 	}

@@ -359,10 +359,24 @@ func skillsSourceObject(root string, row skillsSavedSource, m skillsManifest, fs
 	if hex.EncodeToString(blob.Sum(nil)) != row.Blob {
 		return false
 	}
+	if row.Role == "skill_entry" {
+		for _, source := range m.Sources {
+			if source.Repository != row.Repo || source.Commit != row.Commit || source.Path != row.Path || source.SHA != row.SHA {
+				continue
+			}
+			target, _, bindingOK := skillsManifestMaskedSourceTarget(source, m)
+			if !bindingOK {
+				return false
+			}
+			if target != "" {
+				return skillsManifestMaskedSourceObject(row, raw, m)
+			}
+		}
+	}
 	for _, output := range m.Files {
 		if output.SHA == row.SHA && bytes.Equal(output.body, raw) {
 			return true
 		}
 	}
-	return skillsManifestMaskedSourceObject(row, raw, m)
+	return false
 }

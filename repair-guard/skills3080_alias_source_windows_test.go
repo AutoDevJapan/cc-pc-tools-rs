@@ -63,7 +63,7 @@ func skillsAliasSetBody(output *skillsOutput, body []byte) {
 
 func TestSkills3080AliasedReferenceKeepsOriginalObjectAndNamespace(t *testing.T) {
 	for _, flat := range []bool{false, true} {
-		for _, kind := range []string{"valid", "missing_metadata", "different_repo", "different_commit", "different_path", "different_sha", "different_notice", "different_scope", "different_writer", "different_bytes", "fractional_bytes", "different_blob", "duplicate_key", "case_alias", "source_case_alias", "unknown_source_field", "duplicate_binding", "changed_metadata_hash", "other_metadata_namespace", "other_reference_namespace", "other_notice_namespace", "changed_visible_line", "wrong_marker", "all_withheld"} {
+		for _, kind := range []string{"valid", "legacy_valid", "raw_valid", "missing_metadata", "different_repo", "different_commit", "different_path", "different_sha", "different_notice", "different_scope", "different_writer", "legacy_bad_writer", "raw_bad_writer", "legacy_bad_view", "raw_bad_view", "different_bytes", "fractional_bytes", "different_blob", "duplicate_key", "case_alias", "source_case_alias", "unknown_source_field", "duplicate_binding", "changed_metadata_hash", "other_metadata_namespace", "other_reference_namespace", "other_notice_namespace", "changed_visible_line", "wrong_marker", "all_withheld"} {
 			t.Run(strconv.FormatBool(flat)+"/"+kind, func(t *testing.T) {
 				m, f := skillsAliasedFixture(t, flat)
 				meta, ok := conversationJSON(m.Files[3].body)
@@ -84,7 +84,7 @@ func TestSkills3080AliasedReferenceKeepsOriginalObjectAndNamespace(t *testing.T)
 					obj(source["license"])["path"] = "foreign/LICENSE"
 				case "different_scope":
 					obj(source["license"])["scope"] = "different scope"
-				case "different_writer":
+				case "different_writer", "legacy_bad_writer", "raw_bad_writer":
 					meta["reformulation_writer"] = "20261024-000001-todo-3080"
 				case "different_bytes":
 					meta["source_bytes"] = 1
@@ -108,6 +108,14 @@ func TestSkills3080AliasedReferenceKeepsOriginalObjectAndNamespace(t *testing.T)
 				}
 				skillsAliasSetBody(&m.Files[3], b)
 				switch kind {
+				case "legacy_bad_writer", "legacy_valid", "legacy_bad_view":
+					legacy := m.Files[1]
+					legacy.Target = "sample/references/original-skill.masked.txt"
+					m.Files = append(m.Files, legacy)
+				case "raw_bad_writer", "raw_valid", "raw_bad_view":
+					original := skillsOutput{Target: "sample/references/upstream.txt"}
+					skillsAliasSetBody(&original, []byte("Visible procedure\nfixture-only withheld\nKeep the original conclusion.\n"))
+					m.Files = append(m.Files, original)
 				case "missing_metadata":
 					m.Files = m.Files[:3]
 				case "duplicate_binding":
@@ -130,10 +138,13 @@ func TestSkills3080AliasedReferenceKeepsOriginalObjectAndNamespace(t *testing.T)
 				case "all_withheld":
 					skillsAliasSetBody(&m.Files[1], []byte("[WITHHELD physical line 1]\n[WITHHELD physical line 2]\n[WITHHELD physical line 3]\n"))
 				}
+				if kind == "legacy_bad_view" || kind == "raw_bad_view" {
+					skillsAliasSetBody(&m.Files[1], []byte("Changed procedure\n[WITHHELD physical line 2]\nKeep the original conclusion.\n"))
+				}
 				fs := skillsFS{blocked: func(string) bool { return false }}
 				defer fs.close()
 				got := skillsSourcesBoundAt(m, &fs, f.root, f.catalogSHA, f.anchors)
-				if got != (kind == "valid") {
+				if got != (kind == "valid" || kind == "legacy_valid" || kind == "raw_valid") {
 					t.Fatalf("alias tuple/object/namespace case %s accepted=%v stage=%s", kind, got, fs.failureStage)
 				}
 			})

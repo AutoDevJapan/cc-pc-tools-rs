@@ -127,3 +127,8 @@ JSONの重複/case alias、競合する二重対応、別の出典/担当/namesp
 合成した取得済み原objectの正負例でも、出典・notice・担当・bytes/blob・namespaceと
 可視行の変更を拒否することを確認した。
 これは実manifestの配置、原コーパスの追加読取、Windows実行版の更新を証明するものではない。
+
+旧名のmasked referenceまたはraw原文の写しが同居しても、その存在だけでは先に成功しない。
+別namespaceにある対応付けを最初に検証し、対応するmasked referenceも元の原objectと比較する。
+正しい旧名/別名の同居とraw/別名の同居は認め、不正な担当や可視行が混ざった同居は拒否する。
+従来の同名metadata形式は保持し、aliasがない正規のraw保持も変更しない。

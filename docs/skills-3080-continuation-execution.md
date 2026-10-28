@@ -109,3 +109,26 @@ CIは引き続き比較処理の負例と公開artifactの原packet・pinを確�
 旧170件の実保持テストにも同じ登録確認を結んだ。
 変更が及ぶcatalogパッケージ全体を、実全queueと二つの実スナップショットを明示した条件で確認し、8.442秒で成功した。
 元の評価data・全73220queue・新しい権利や採否・配置は変更していない。
+
+### 新規4件の通常読戻し・発見・明示適用の作業結果
+
+balance-snapshot-reconciliation、browser-extraction-missingness、remote-run-result-reconciliation、codebase-impact-contextの4件は、凍結したfull4193の固定14入力/28出力の受入後に、一度だけCreateNewした。
+元のrequest79f・manifest39ea・native call64138と実入力450B/d843は改変せず、表示用入力14c7とのliteral不一致も保持する。
+修復PR627を両役レビューの全指摘解消とCI成功後に通常mergeし、実Windows版7fb45b/source b780から元と同じrequestで通常consumeした。
+全4batch・28file・80712Bで、作成時と現在のobject ID、元reviewed payloadと実返却bufferのSHA/bytesが一致した。
+Creator4193の仕様/原応答や旧作成記録・旧拒否は保持し、再作成や直接/別経路の中央本文取得はしていない。
+
+既存3048 checkerで全28の構造・description・参照・hashと正負例を確認し、fresh Codex0.164.0のskills/listでは4名称/description/有効状態一致・parse0を確認した。
+metadata総475と走査limit診断2は、その時点の発見結果であり、全discoveryや実model turnのcontext budgetを検証したものではない。
+親は通常返却された現行8instruction13640Bを実際に読み、現在の3workflowと合成5ケースで適用/非適用を判断した。
+この明示適用を、暗黙の自動選択や実balance照会・実browser E2E・別service実行の成功としない。
+
+作成時producer Eab/0345と、後の読戻しruntime7fb/b780は別の事実として記録する。
+public recordのobject IDはdigestにし、原のplatform IDと全bufferは担当が私的に保持する。
+履歴のsourceJSONや凍結時のpending/操作0は改変せず、現在の配置受入は別のevidenceへ結ぶ。
+原の4source occurrenceは同bufferでhash確認した全73220 catalogへ対応させ、各noticeは選んだ可視workflowへの限定適用にとどめ、未読support/伏字や実author/第三者の権利を承認しない。
+
+作業版の新規実績は158・統合3・除外記録15、最終記録176、保留73044で、main受入新154との差分4はこの実結果の二役レビュー/CI/通常merge待ちである。
+全73220を再生成し、評価1469=未採否1299+最終重複170、最終176=重複170+旧6、和集合1475を確認した。
+新4のcurrent acceptanceを既存live ledger検査へ結び、counter/source identityの初期失敗を修正した。全catalog packageは実queueと前後snapshotを明示した条件で5.623秒成功。
+指定16資料・未取得428・取得審査647・未知中央9と次の評価全体は継続する。

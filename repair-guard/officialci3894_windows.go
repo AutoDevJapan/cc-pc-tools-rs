@@ -90,6 +90,10 @@ const official3894NoticePredecessorHead = "deb430b8b089fde2391dbd243c01db48de48d
 const official3894AliasPredecessorSHA = "50c817a829ecb33c30e4ee2b129dee3716f822fc4627dd01df6f24cb98a7925b"
 const official3894AliasPredecessorHead = "34cd8877587596539e8b4a8847468fc74fca8e57"
 
+// The same independent PR618 software observation used by the Skills updater.
+const official3894CanonicalAssignmentPredecessorSHA = "f8b2ba6e66e60b06bbbc46c2c0f3d6eedc0208d40444c30e37b70afe29db4fc7"
+const official3894CanonicalAssignmentPredecessorHead = "a71330f543969b4585f01b7359a84a2fa528c9f2"
+
 type official3894Source struct {
 	Head, Registration, CreatorJob, Workspace, Branch, SpecSHA string
 }
@@ -957,7 +961,8 @@ func official3894InstalledBaseline(sha, head string) bool {
 		(sha == official3894MaskedDistributionSHA && head == official3894MaskedDistributionHead) ||
 		(sha == official3894NativePredecessorSHA && head == official3894NativePredecessorHead) ||
 		(sha == official3894NoticePredecessorSHA && head == official3894NoticePredecessorHead) ||
-		(sha == official3894AliasPredecessorSHA && head == official3894AliasPredecessorHead)
+		(sha == official3894AliasPredecessorSHA && head == official3894AliasPredecessorHead) ||
+		(sha == official3894CanonicalAssignmentPredecessorSHA && head == official3894CanonicalAssignmentPredecessorHead)
 }
 
 // Qualifies only comparison of the known previously published guard software.

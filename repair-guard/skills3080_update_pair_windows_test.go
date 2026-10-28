@@ -66,12 +66,12 @@ func TestSkills3080OnlyRuntimeApplyRecoveryAcceptNewFlags(t *testing.T) {
 	}
 }
 func TestSkills3080RuntimePinsOriginalTwoReviewTasks(t *testing.T) {
-	a := &skillsResultRequest{Task: 3870, Job: "20261028-120305-todo-3870", SpecSHA: strings.Repeat("a", 64), FinalSHA: strings.Repeat("b", 64)}
-	b := &skillsResultRequest{Task: 3876, Job: "20261028-120558-todo-3876", SpecSHA: strings.Repeat("c", 64), FinalSHA: strings.Repeat("d", 64)}
+	a := &skillsResultRequest{Task: 4198, Job: "20261028-210000-todo-4198", SpecSHA: strings.Repeat("a", 64), FinalSHA: strings.Repeat("b", 64)}
+	b := &skillsResultRequest{Task: 4199, Job: "20261028-210100-todo-4199", SpecSHA: strings.Repeat("c", 64), FinalSHA: strings.Repeat("d", 64)}
 	if !skillsRuntimeReviewTasks(a, b) {
 		t.Fatal("original own reviews rejected")
 	}
-	for _, id := range []int{3712, 3896, 4115, 4184, 9999} {
+	for _, id := range []int{3712, 3870, 3876, 3896, 4115, 4184, 9999} {
 		c := *b
 		c.Task = id
 		if skillsRuntimeReviewTasks(a, &c) {
@@ -88,5 +88,32 @@ func TestSkills3080RuntimeRequiresDurableOutcome(t *testing.T) {
 		if skillsUpdateOutcomeQualified(r, recovery, false) || !skillsUpdateOutcomeQualified(r, recovery, true) {
 			t.Fatal("success without durable outcome or durable success rejected")
 		}
+	}
+}
+
+func TestSkills3080FrozenAliasPairOnlyMatchesItsExactHistoricalSoftware(t *testing.T) {
+	r := skillsRequest{Review: &skillsResultRequest{Task: 3870}, Runtime: &skillsRuntimeRequest{SourceHead: official3894CanonicalAssignmentPredecessorHead, ReviewedHead: "76a3133cee8be5a4a1f8b2b10714b6badb5f1967", CandidateSHA: official3894CanonicalAssignmentPredecessorSHA, PeerReview: &skillsResultRequest{Task: 3876}}}
+	if !skillsRuntimeHistoricalNoticePair(r) || skillsRuntimeReviewTasks(r.Review, r.Runtime.PeerReview) {
+		t.Fatal("frozen pair lost its readback or gained new apply authority")
+	}
+	for _, field := range []string{"source", "reviewed", "sha"} {
+		u := *r.Runtime
+		switch field {
+		case "source":
+			u.SourceHead = strings.Repeat("a", 40)
+		case "reviewed":
+			u.ReviewedHead = strings.Repeat("b", 40)
+		case "sha":
+			u.CandidateSHA = strings.Repeat("c", 64)
+		}
+		r2 := r
+		r2.Runtime = &u
+		if skillsRuntimeHistoricalNoticePair(r2) {
+			t.Fatal("historical pair admitted different software")
+		}
+	}
+	sha, head := official3894CanonicalAssignmentPredecessorSHA, official3894CanonicalAssignmentPredecessorHead
+	if skillsGuardBaselines[sha] != head || !official3894InstalledBaseline(sha, head) || official3894InstalledBaseline(sha, strings.Repeat("a", 40)) {
+		t.Fatal("independent predecessor pair changed")
 	}
 }

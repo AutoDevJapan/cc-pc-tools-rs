@@ -91,6 +91,12 @@ func skillsMaskedSourceObject(row skillsSavedSource, raw []byte, outputs []skill
 	if !ok {
 		return false
 	}
+	return skillsMaskedSourceObjectTarget(row, raw, outputs, target)
+}
+func skillsMaskedSourceObjectTarget(row skillsSavedSource, raw []byte, outputs []skillsOutput, target string) bool {
+	if row.Role != "skill_entry" || !skillsRelative(row.Path) || path.Base(row.Path) != "SKILL.md" || !skillsRelative(target) {
+		return false
+	}
 	for _, output := range outputs {
 		if output.Target == target && hashBytes(output.body) == output.SHA && skillsMaskedSourceBytes(raw, output.body) {
 			return true

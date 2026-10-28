@@ -32,12 +32,16 @@ var skillsPublicSources = map[string]string{
 }
 
 func skillsSourceClaimsPreserved(m skillsManifest) bool {
+	bound, ok := skillsMaskedBindings(m)
+	if !ok {
+		return false
+	}
 	outputs := map[string]bool{}
 	for _, f := range m.Files {
 		outputs[f.SHA] = true
 	}
 	for _, source := range m.Sources {
-		if skillsPublicSources[source.Repository] != source.Commit || source.Acquisition != "already-acquired" || !source.License.Accepted || strings.TrimSpace(source.License.Scope) == "" || (!outputs[source.SHA] && !skillsHasMaskedSourceOutput(source.Path, m.Files)) || !outputs[source.License.SHA] {
+		if skillsPublicSources[source.Repository] != source.Commit || source.Acquisition != "already-acquired" || !source.License.Accepted || strings.TrimSpace(source.License.Scope) == "" || (!outputs[source.SHA] && !skillsBoundMaskedOutput(source, m.Files, bound)) || !outputs[source.License.SHA] {
 			return false
 		}
 	}

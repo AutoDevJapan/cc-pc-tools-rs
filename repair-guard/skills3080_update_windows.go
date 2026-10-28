@@ -22,6 +22,9 @@ const skillsGuardModule = "github.com/AutoDevJapan/cc-pc-tools-rs/repair-guard"
 // Independent previously accepted distribution facts (3258 and3686), not a caller
 // supplied baseline or an assertion made by the artifact being installed.
 var skillsGuardBaselines = map[string]string{
+	// Same pre-candidate accepted PR624 observation as the shared updater.
+	// docs/evidence/skills-3080-guard-before-native-path-eab175645.json
+	official3894CreationPathPredecessorSHA: official3894CreationPathPredecessorHead,
 	// PR618's normal update and same-handle readback precede this repair.
 	// docs/evidence/skills-3080-guard-before-canonical-assignment-f8b.json
 	official3894CanonicalAssignmentPredecessorSHA: official3894CanonicalAssignmentPredecessorHead,
@@ -195,8 +198,11 @@ func skillsCodeReviewAcceptedMode(received skillsReceived, head string, strict b
 func skillsCodeReviewPairAccepted(a, b skillsReceived, head string) bool {
 	return skillsCodeReviewAcceptedMode(a, head, true) && skillsCodeReviewAcceptedMode(b, head, true) && str(a.Metadata["id"]) != "" && a.Metadata["id"] != b.Metadata["id"] && str(a.Metadata["thread_id"]) != "" && str(b.Metadata["thread_id"]) != "" && a.Metadata["thread_id"] != b.Metadata["thread_id"]
 }
+
+const skillsRuntimeSelfReviewTask, skillsRuntimePeerReviewTask = 4203, 4204
+
 func skillsRuntimeReviewTasks(a, b *skillsResultRequest) bool {
-	return a != nil && b != nil && a.Task == 4198 && b.Task == 4199 && skillsResultID(*a) && skillsResultID(*b)
+	return a != nil && b != nil && a.Task == skillsRuntimeSelfReviewTask && b.Task == skillsRuntimePeerReviewTask && skillsResultID(*a) && skillsResultID(*b)
 }
 func skillsRuntimeHistoricalNoticePair(r skillsRequest) bool {
 	u := r.Runtime
@@ -204,15 +210,32 @@ func skillsRuntimeHistoricalNoticePair(r skillsRequest) bool {
 		return false
 	}
 	return (r.Review.Task == 3740 && u.PeerReview.Task == 3877 && u.SourceHead == "34cd8877587596539e8b4a8847468fc74fca8e57" && u.ReviewedHead == "3f6ed705d5908524caa3b02f9f0784f5d5320c93" && u.CandidateSHA == "50c817a829ecb33c30e4ee2b129dee3716f822fc4627dd01df6f24cb98a7925b") ||
-		(r.Review.Task == 3870 && u.PeerReview.Task == 3876 && u.SourceHead == official3894CanonicalAssignmentPredecessorHead && u.ReviewedHead == "76a3133cee8be5a4a1f8b2b10714b6badb5f1967" && u.CandidateSHA == official3894CanonicalAssignmentPredecessorSHA)
+		(r.Review.Task == 3870 && u.PeerReview.Task == 3876 && u.SourceHead == official3894CanonicalAssignmentPredecessorHead && u.ReviewedHead == "76a3133cee8be5a4a1f8b2b10714b6badb5f1967" && u.CandidateSHA == official3894CanonicalAssignmentPredecessorSHA) ||
+		(r.Review.Task == 4198 && u.PeerReview.Task == 4199 && u.SourceHead == official3894CreationPathPredecessorHead && u.ReviewedHead == "4284eef98c916358d68abe134ff057421e82a87d" && u.CandidateSHA == official3894CreationPathPredecessorSHA)
 }
 func skillsRuntimeQualification(r skillsRequest, reg skillsRegistry, s *skillsFS) object {
 	return skillsRuntimeQualificationRead(r, reg, s, nil)
 }
 func skillsRuntimeQualificationRead(r skillsRequest, reg skillsRegistry, s *skillsFS, loadInstalled func() ([]byte, bool)) object {
+	return skillsRuntimeQualificationWithCI(r, reg, s, loadInstalled, skillsRuntimeCI)
+}
+func skillsRuntimeQualificationWithCI(r skillsRequest, reg skillsRegistry, s *skillsFS, loadInstalled func() ([]byte, bool), loadCI func(*skillsRuntimeRequest) bool) object {
 	failure := object{"qualified": false, "reason": "source"}
 	u := r.Runtime
-	if u == nil || r.Writer.Task != 3686 || r.Result != nil || r.ManifestSHA != "" || r.ManifestPath != "" || r.ManifestCommit != "" || r.Review == nil || !skillsResultID(*r.Review) || !skillsDigest(u.CandidateSHA) || !within(r.Writer.Workspace, u.SourceRoot) || !within(r.Writer.Workspace, u.Candidate) || same(u.Candidate, skillsRuntimeTarget) || !skillsMerged(u.SourceHead) || !skillsMerged(u.ReviewedHead) || !sourceVerified(u.SourceRoot) || !modelSourceHead(u.SourceRoot, u.SourceHead) {
+	if u == nil || r.Writer.Task != 3686 || r.Result != nil || r.ManifestSHA != "" || r.ManifestPath != "" || r.ManifestCommit != "" || r.Review == nil || !skillsResultID(*r.Review) || !skillsDigest(u.CandidateSHA) || !within(r.Writer.Workspace, u.SourceRoot) || !within(r.Writer.Workspace, u.Candidate) || same(u.Candidate, skillsRuntimeTarget) {
+		return failure
+	}
+	// The same admission is used by verify, apply and recover. A caller-made
+	// candidate/request cannot bypass CI by omitting the preparation script.
+	if skillsRuntimeNewCIReview(r) {
+		if !skillsRuntimeReviewTasks(r.Review, u.PeerReview) {
+			return object{"qualified": false, "reason": "review", "data_access_granted": false}
+		}
+		if loadCI == nil || !loadCI(u) {
+			return object{"qualified": false, "reason": "ci", "data_access_granted": false}
+		}
+	}
+	if !skillsMerged(u.SourceHead) || !skillsMerged(u.ReviewedHead) || !sourceVerified(u.SourceRoot) || !modelSourceHead(u.SourceRoot, u.SourceHead) {
 		return failure
 	}
 	if _, ok := s.directory(u.SourceRoot); !ok {

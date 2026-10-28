@@ -30,7 +30,7 @@ func skillsForwardCommand(path, workspace string) skillsCreationCommand {
 // awaited tool call and one unmodified result. No echo, script file, environment
 // override, arbitrary JS, alternate executable, or copied receipt is accepted.
 func skillsForwardInvocation(path, workspace string) string {
-	if !filepath.IsAbs(path) || !within(workspace, path) || strings.ContainsAny(path, "'\r\n") {
+	if !filepath.IsAbs(path) || !within(workspace, path) || !skillsCreationPathEqual(path, path) || !skillsCreationPathEqual(workspace, workspace) {
 		return ""
 	}
 	var b bytes.Buffer
@@ -49,7 +49,69 @@ func skillsCreationCall(input, path, workspace string) bool {
 		return false
 	}
 	var cmd skillsCreationCommand
-	return skillsStrict([]byte(strings.TrimSuffix(strings.TrimPrefix(input, prefix), suffix)), &cmd) && cmd == skillsForwardCommand(path, workspace)
+	if !skillsStrict([]byte(strings.TrimSuffix(strings.TrimPrefix(input, prefix), suffix)), &cmd) {
+		return false
+	}
+	expected := skillsForwardCommand(path, workspace)
+	// Keep the executable, flag, quoting and every tool option exact. Only the
+	// quoted request path and workdir can contain repeated Windows separators.
+	const commandPrefix = "& '" + skillsRuntimeTarget + "' --create-skills3080-forward '"
+	if !strings.HasPrefix(cmd.Cmd, commandPrefix) || !strings.HasSuffix(cmd.Cmd, "'") {
+		return false
+	}
+	request := strings.TrimSuffix(strings.TrimPrefix(cmd.Cmd, commandPrefix), "'")
+	if !skillsCreationPathEqual(request, path) || !skillsCreationPathEqual(cmd.Workdir, workspace) {
+		return false
+	}
+	cmd.Cmd, cmd.Workdir = expected.Cmd, expected.Workdir
+	return cmd == expected
+}
+
+// This is a lexical comparison with the already bound request/workspace, not
+// filepath.Clean or an alias resolver. Do not clean dots, change slash style or
+// case, expand variables, or accept UNC, device, relative and drive-relative paths.
+func skillsCreationPathEqual(actual, expected string) bool {
+	a, ok := skillsCreationPath(actual)
+	b, ok2 := skillsCreationPath(expected)
+	return ok && ok2 && a == b
+}
+
+func skillsCreationPath(path string) (string, bool) {
+	if len(path) < 4 || !((path[0] >= 'A' && path[0] <= 'Z') || (path[0] >= 'a' && path[0] <= 'z')) || path[1] != ':' || (path[2] != '\\' && path[2] != '/') {
+		return "", false
+	}
+	var out strings.Builder
+	for i := 0; i < len(path); i++ {
+		c := path[i]
+		if c < 32 || c == 127 || strings.ContainsRune("<>\"|?*'", rune(c)) || (c == ':' && i != 1) {
+			return "", false
+		}
+		if i > 0 && (c == '\\' || c == '/') && (path[i-1] == '\\' || path[i-1] == '/') {
+			if c == '\\' && path[i-1] == '\\' {
+				continue
+			}
+			return "", false
+		}
+		out.WriteByte(c)
+	}
+	normal := out.String()
+	if strings.HasSuffix(normal, "\\") || strings.HasSuffix(normal, "/") {
+		return "", false
+	}
+	for _, segment := range strings.FieldsFunc(normal[3:], func(c rune) bool { return c == '\\' || c == '/' }) {
+		if strings.TrimRight(segment, ". ") != segment {
+			return "", false
+		}
+		// Use Windows' standard lexical reserved-base rules, including COM¹
+		// and CONIN$/CONOUT$. Test the bare base so extension aliases are
+		// consistently refused across Windows versions. Leading-dot names
+		// such as .ci-work have no device base and remain ordinary names.
+		base := strings.TrimRight(strings.SplitN(segment, ".", 2)[0], " ")
+		if base != "" && !filepath.IsLocal(base) {
+			return "", false
+		}
+	}
+	return normal, true
 }
 
 func skillsCreationAuthorBound(creator, consumer skillsWriter, reg skillsRegistry, job object) bool {
@@ -82,6 +144,23 @@ func skillsCreationAuthorBound(creator, consumer skillsWriter, reg skillsRegistr
 }
 
 var skillsCallID = regexp.MustCompile(`^call_[A-Za-z0-9_-]{1,160}$`)
+
+// Go's struct decoder matches case aliases. Check the protocol's exact header
+// names before decoding, while retaining unrelated payloads as raw JSON.
+func skillsCreationHeaderKeys(raw []byte, fields ...string) bool {
+	var header map[string]json.RawMessage
+	if json.Unmarshal(raw, &header) != nil || header == nil {
+		return false
+	}
+	for key := range header {
+		for _, field := range fields {
+			if key != field && strings.EqualFold(key, field) {
+				return false
+			}
+		}
+	}
+	return true
+}
 
 func skillsCreationSessionDays(thread string, start time.Time) []string {
 	days := []string{}
@@ -129,7 +208,7 @@ func skillsCreationNativeProjection(input io.Reader, thread, cwd string, start, 
 			Timestamp string          `json:"timestamp"`
 			Payload   json.RawMessage `json:"payload"`
 		}
-		if json.Unmarshal(scanner.Bytes(), &env) != nil {
+		if !skillsCreationHeaderKeys(scanner.Bytes(), "type", "timestamp", "payload") || json.Unmarshal(scanner.Bytes(), &env) != nil {
 			return evidence, false
 		}
 		if env.Type != "session_meta" && env.Type != "response_item" {
@@ -145,11 +224,13 @@ func skillsCreationNativeProjection(input io.Reader, thread, cwd string, start, 
 			Input  string          `json:"input"`
 			Output json.RawMessage `json:"output"`
 		}
-		if json.Unmarshal(env.Payload, &p) != nil {
+		if !skillsCreationHeaderKeys(env.Payload, "type", "id", "cwd", "name", "call_id", "input", "output") || json.Unmarshal(env.Payload, &p) != nil {
 			return evidence, false
 		}
 		if env.Type == "session_meta" {
-			if session || p.ID != thread || !same(p.Cwd, cwd) {
+			// Session identity has the same recursive duplicate-key rejection as
+			// the matched native call/result. Never use Unmarshal's last value.
+			if _, strict := conversationJSON(scanner.Bytes()); !strict || session || p.ID != thread || !same(p.Cwd, cwd) {
 				return evidence, false
 			}
 			session = true
@@ -174,6 +255,15 @@ func skillsCreationNativeProjection(input io.Reader, thread, cwd string, start, 
 		case "custom_tool_call_output":
 			if !called || returned || at.Before(callAt) {
 				return evidence, false
+			}
+			var rawBlocks []json.RawMessage
+			if json.Unmarshal(p.Output, &rawBlocks) != nil || len(rawBlocks) != 2 {
+				return evidence, false
+			}
+			for _, block := range rawBlocks {
+				if !skillsCreationHeaderKeys(block, "type", "text") {
+					return evidence, false
+				}
 			}
 			var blocks []struct {
 				Type string `json:"type"`

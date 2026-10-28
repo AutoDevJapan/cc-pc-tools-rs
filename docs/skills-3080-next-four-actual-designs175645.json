@@ -26,7 +26,6 @@
         "unknown_existing_bodies_compared": false,
         "pre_mutation_absence_qualification_completed": false
       },
-      "central_operations": 1,
       "new_adoptions": 1,
       "actual_manifest": "skills-3080-installed-next-four-manifest175645.json",
       "actual_evidence": "skills-3080-next-four-installation-evidence175645.json",
@@ -38,7 +37,8 @@
       "source_sha256": "0482c6bebe7343a01ec2d8ac83e93bab23f572655d6d4adc15480b1f1ff261d1",
       "primary_license": "MIT-0",
       "individual_notice_sha256": "07121e96b2e2b849fbcbdd53c78e25811f75d2c565b683eb9048d74d731470a0",
-      "rights_scope": "Only this directly read visible workflow and its exact line-preserving masked reference under the stated per-package MIT-0 notice, with original notice and modification attribution retained. Withheld source meanings, uninspected scripts/supports/metadata, independent authorship and third-party service/data/component rights are not adopted. No key/card/fee/MCP or service-execution authority."
+      "rights_scope": "Only this directly read visible workflow and its exact line-preserving masked reference under the stated per-package MIT-0 notice, with original notice and modification attribution retained. Withheld source meanings, uninspected scripts/supports/metadata, independent authorship and third-party service/data/component rights are not adopted. No key/card/fee/MCP or service-execution authority.",
+      "included_in_single_CreateNew": true
     },
     {
       "name": "browser-extraction-missingness",
@@ -65,7 +65,6 @@
         "unknown_existing_bodies_compared": false,
         "pre_mutation_absence_qualification_completed": false
       },
-      "central_operations": 1,
       "new_adoptions": 1,
       "actual_manifest": "skills-3080-installed-next-four-manifest175645.json",
       "actual_evidence": "skills-3080-next-four-installation-evidence175645.json",
@@ -77,7 +76,8 @@
       "source_sha256": "4875de5de3e696c9082f4971387b506e790dd066cb432ab0347b7827841dd882",
       "primary_license": "MIT",
       "individual_notice_sha256": "a7f98ba58237657d1f06d32903af0e4ef28a757eed4f0cd01c72191e4220083c",
-      "rights_scope": "Only this directly read visible workflow and its exact line-preserving masked reference under the stated per-package MIT notice, with original notice and modification attribution retained. Withheld source meanings, uninspected scripts/supports/metadata, independent authorship and third-party service/data/component rights are not adopted. No key/card/fee/MCP or service-execution authority."
+      "rights_scope": "Only this directly read visible workflow and its exact line-preserving masked reference under the stated per-package MIT notice, with original notice and modification attribution retained. Withheld source meanings, uninspected scripts/supports/metadata, independent authorship and third-party service/data/component rights are not adopted. No key/card/fee/MCP or service-execution authority.",
+      "included_in_single_CreateNew": true
     },
     {
       "name": "remote-run-result-reconciliation",
@@ -104,7 +104,6 @@
         "unknown_existing_bodies_compared": false,
         "pre_mutation_absence_qualification_completed": false
       },
-      "central_operations": 1,
       "new_adoptions": 1,
       "actual_manifest": "skills-3080-installed-next-four-manifest175645.json",
       "actual_evidence": "skills-3080-next-four-installation-evidence175645.json",
@@ -116,7 +115,8 @@
       "source_sha256": "881ba4f730306f639cf0b7cf94f2ded53a40d7a929f7ba741becbabe36f7a716",
       "primary_license": "MIT",
       "individual_notice_sha256": "a7f98ba58237657d1f06d32903af0e4ef28a757eed4f0cd01c72191e4220083c",
-      "rights_scope": "Only this directly read visible workflow and its exact line-preserving masked reference under the stated per-package MIT notice, with original notice and modification attribution retained. Withheld source meanings, uninspected scripts/supports/metadata, independent authorship and third-party service/data/component rights are not adopted. No key/card/fee/MCP or service-execution authority."
+      "rights_scope": "Only this directly read visible workflow and its exact line-preserving masked reference under the stated per-package MIT notice, with original notice and modification attribution retained. Withheld source meanings, uninspected scripts/supports/metadata, independent authorship and third-party service/data/component rights are not adopted. No key/card/fee/MCP or service-execution authority.",
+      "included_in_single_CreateNew": true
     },
     {
       "name": "codebase-impact-context",
@@ -143,7 +143,6 @@
         "unknown_existing_bodies_compared": false,
         "pre_mutation_absence_qualification_completed": false
       },
-      "central_operations": 1,
       "new_adoptions": 1,
       "actual_manifest": "skills-3080-installed-next-four-manifest175645.json",
       "actual_evidence": "skills-3080-next-four-installation-evidence175645.json",
@@ -155,11 +154,13 @@
       "source_sha256": "1d838f736ef09ac06b965f1d540f86c52e001042ffeaf9e40609abba996f9f90",
       "primary_license": "MIT",
       "individual_notice_sha256": "5bceb2f2dcbf4d4f35ec6367998a98b689392c6c8caf1e12ad3d598885095fef",
-      "rights_scope": "Only this directly read visible workflow and its exact line-preserving masked reference under the stated per-package MIT notice, with original notice and modification attribution retained. Withheld source meanings, uninspected scripts/supports/metadata, independent authorship and third-party service/data/component rights are not adopted. No key/card/fee/MCP or service-execution authority."
+      "rights_scope": "Only this directly read visible workflow and its exact line-preserving masked reference under the stated per-package MIT notice, with original notice and modification attribution retained. Withheld source meanings, uninspected scripts/supports/metadata, independent authorship and third-party service/data/component rights are not adopted. No key/card/fee/MCP or service-execution authority.",
+      "included_in_single_CreateNew": true
     }
   ],
   "historical_proposal": "skills-3080-next-four-designs175645.json",
   "batch_is_not_total_scope_or_count_cap": true,
   "new_global_source_raw_credit": 0,
-  "whole16_complete": false
+  "whole16_complete": false,
+  "successful_CreateNew_count": 1
 }

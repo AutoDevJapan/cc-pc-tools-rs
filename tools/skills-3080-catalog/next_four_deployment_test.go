@@ -28,6 +28,9 @@ func next4Fields(m map[string]any, want map[string]any) error {
 // through the older same-runtime receipt shape.
 func validateNext4Contract(h, n, r map[string]any) error {
 	checks := []struct{ got, want map[string]any }{
+		{h, map[string]any{"publication_review_coordination_origin_job": "20261026-214717-todo-3080", "result_publisher_job": next3Actor}},
+		{next4Object(h["qualified_full_review"]), map[string]any{"immutable_origin_job": next3Actor, "actual_author": next3Actor, "model_origin": "owner_request", "effort_origin": "owner_request"}},
+		{next4Object(h["subscription_execution"]), map[string]any{"mode": "oauth_subscription_only", "normal_login_status_chatgpt": true, "normal_login_status_api_key": false, "all_types_codex_or_oauth": true, "all_additional_credits_disabled": true, "raw_credentials_account_ids_labels_or_balances_returned_or_saved": false, "historical_per_request_billing_proven": false}},
 		{h, map[string]any{"creator_job": next3Actor, "new_targets_created": float64(4), "successful_CreateNew_count": float64(1), "current_files_readback_verified": float64(28), "bytes": float64(80712), "creation_manifest_sha256": next4Manifest, "creation_request_sha256": next4Request, "implicit_skill_selection_proven": false, "full_discovery_or_context_budget_proven": false, "third_party_assets_services_or_unknown_central_rights_accepted": false, "whole16_complete": false}},
 		{next4Object(h["frozen_full_content_review"]), map[string]any{"task": float64(4193), "job": "20261029-000437-todo-4193", "spec": "74728b7e206521ae607c518b438854976f09b9a93751e9ff467f73ff495315c8", "original_sha": "bd8a09b0f3f6dbcb629494a424ed90da5a6770841360d7b47dc57e9bd6d6b2fa", "manifest": next4Manifest, "request": next4Request, "created_once": float64(28), "existing_overwrites": float64(0), "M": float64(0), "S": float64(0), "N": float64(0)}},
 		{next4Object(h["qualified_full_review"]), map[string]any{"producer_job": "20261029-000437-todo-4193", "registered_spec_sha256": "74728b7e206521ae607c518b438854976f09b9a93751e9ff467f73ff495315c8", "source_proof_sha256": "9cb3b4bac029328138392fce8746cae0d801c5f061289286158ada04352a14bc", "raw_sha256": "bd8a09b0f3f6dbcb629494a424ed90da5a6770841360d7b47dc57e9bd6d6b2fa", "normal_typed_qualified": true, "full_no_comparison": true, "selected_PUBLIC_inputs": float64(14), "payload_files": float64(28), "M": float64(0), "S": float64(0), "N": float64(0), "original_equals_job_last_message": true, "thread_matches": true, "cwd_matches": true}},
@@ -60,6 +63,9 @@ func validateNext4Contract(h, n, r map[string]any) error {
 		record map[string]any
 		key    string
 	}{{code3, "native"}, {code4, "actual_native"}} {
+		if err := next4Fields(value.record, map[string]any{"model_origin": "owner_request", "effort_origin": "owner_request"}); err != nil {
+			return err
+		}
 		contexts, ok := value.record[value.key].([]any)
 		if !ok || len(contexts) == 0 {
 			return fmt.Errorf("next4 software actual native absent")
@@ -305,16 +311,18 @@ func validatedNextFourDispositions(t *testing.T) map[string]cohortLedgerRow {
 	var design struct {
 		Targets []struct {
 			directSkillDesign
-			Rights string `json:"rights_scope"`
+			Rights          string `json:"rights_scope"`
+			IncludedInBatch bool   `json:"included_in_single_CreateNew"`
 		}
+		BatchCalls int `json:"successful_CreateNew_count"`
 	}
-	if json.Unmarshal(raws["design"], &design) != nil || len(design.Targets) != 4 {
+	if json.Unmarshal(raws["design"], &design) != nil || len(design.Targets) != 4 || design.BatchCalls != 1 {
 		t.Fatal("next4 actual design membership differs")
 	}
 	designIDs := map[string]bool{}
 	for _, row := range design.Targets {
 		want, ok := result[row.ID]
-		if !ok || designIDs[row.ID] || names[row.Name] != row.ID || row.Repo != want.Source || row.Commit != want.Commit || row.Path != want.Path || row.SHA != want.SHA || row.EntrySHA != travel3Digest(bodies[row.Name+"/SKILL.md"]) || row.Rights == "" || row.NoticeSHA != travel3Digest(bodies[row.Name+"/references/LICENSE.txt"]) {
+		if !ok || !row.IncludedInBatch || designIDs[row.ID] || names[row.Name] != row.ID || row.Repo != want.Source || row.Commit != want.Commit || row.Path != want.Path || row.SHA != want.SHA || row.EntrySHA != travel3Digest(bodies[row.Name+"/SKILL.md"]) || row.Rights == "" || row.NoticeSHA != travel3Digest(bodies[row.Name+"/references/LICENSE.txt"]) {
 			t.Fatal("next4 design does not match independently bound source/output")
 		}
 		designIDs[row.ID] = true
@@ -361,7 +369,7 @@ func validateNext4Cases(rows []notice4Case) error {
 func TestNextFourCurrentAcceptance(t *testing.T) { validatedNextFourDispositions(t) }
 
 func TestNextFourRejectsRewrittenContractAndApplication(t *testing.T) {
-	for _, change := range []string{"valid", "manifest", "creator", "runtime conflated", "new Create", "literal rewritten", "general access", "unknown writer", "review scope", "review result"} {
+	for _, change := range []string{"valid", "manifest", "creator", "runtime conflated", "new Create", "literal rewritten", "general access", "unknown writer", "review scope", "review result", "coordination missing", "coordination conflated", "creator review origin conflated", "model origin missing", "model origin wrong", "effort origin missing", "effort origin wrong", "OAuth metadata missing", "OAuth metadata non subscription", "additional credits enabled", "historical billing invented"} {
 		t.Run(change, func(t *testing.T) {
 			var h, n, r map[string]any
 			loadPublicReceipt(t, "skills-3080-next-four-installation-evidence175645.json", &h)
@@ -386,6 +394,35 @@ func TestNextFourRejectsRewrittenContractAndApplication(t *testing.T) {
 				next4Object(h["qualified_full_review"])["selected_PUBLIC_inputs"] = float64(13)
 			case "review result":
 				next4Object(h["qualified_full_review"])["S"] = float64(1)
+			case "coordination missing":
+				delete(h, "publication_review_coordination_origin_job")
+			case "coordination conflated":
+				h["publication_review_coordination_origin_job"] = next3Actor
+			case "creator review origin conflated":
+				next4Object(h["qualified_full_review"])["immutable_origin_job"] = "20261026-214717-todo-3080"
+			case "model origin missing":
+				delete(next4Object(h["qualified_full_review"]), "model_origin")
+			case "model origin wrong":
+				next4Object(h["qualified_full_review"])["model_origin"] = "ai_hint"
+			case "effort origin missing":
+				delete(next4Object(h["qualified_full_review"]), "effort_origin")
+			case "effort origin wrong":
+				next4Object(h["qualified_full_review"])["effort_origin"] = "default"
+			case "OAuth metadata missing":
+				delete(h, "subscription_execution")
+			case "OAuth metadata non subscription", "additional credits enabled", "historical billing invented":
+				condition := next4Object(h["subscription_execution"])
+				if condition == nil {
+					condition = map[string]any{}
+					h["subscription_execution"] = condition
+				}
+				if change == "OAuth metadata non subscription" {
+					condition["mode"] = "api_key"
+				} else if change == "additional credits enabled" {
+					condition["all_additional_credits_disabled"] = false
+				} else {
+					condition["historical_per_request_billing_proven"] = true
+				}
 			}
 			err := validateNext4Contract(h, n, r)
 			if change == "valid" && err != nil || change != "valid" && err == nil {

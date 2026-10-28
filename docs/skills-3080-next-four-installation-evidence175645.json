@@ -85,7 +85,9 @@
     "acceptance_marker_present": true,
     "not_frozen_until_real_Create_success": true,
     "central_operations": 0,
-    "whole16_complete": false
+    "whole16_complete": false,
+    "model_origin": "owner_request",
+    "effort_origin": "owner_request"
   },
   "referenced_artifacts": {
     "bundle": {
@@ -118,7 +120,7 @@
     },
     "design": {
       "file": "skills-3080-next-four-actual-designs175645.json",
-      "sha256": "776b1d40067fc92de561b433ce4e7a6069b805177cc19740473d9bb6af46d339"
+      "sha256": "fe7c4466eb9b4b1617ddb73cc889efb44496b1615f33bd2dc45420f498728fc7"
     },
     "precreation": {
       "file": "skills-3080-next-four-precreation-qualification175645.json",
@@ -160,7 +162,9 @@
       "S": 0,
       "N": 0,
       "accepted": true,
-      "actual_Windows_apply_or_parent_consume_not_accepted": true
+      "actual_Windows_apply_or_parent_consume_not_accepted": true,
+      "model_origin": "owner_request",
+      "effort_origin": "owner_request"
     },
     {
       "consumer_job": "20261027-175645-todo-3080",
@@ -197,7 +201,9 @@
       "N": 0,
       "software_Windows_update_verification_is_separate": true,
       "general_guard_or_permissions_changed": false,
-      "whole16_complete": false
+      "whole16_complete": false,
+      "model_origin": "owner_request",
+      "effort_origin": "owner_request"
     }
   ],
   "old_actual_native_invocation_preserved": true,
@@ -248,5 +254,60 @@
     "held_acquisition": 647,
     "CI_does_not_claim_reading_private_full_queue_or_snapshots": true,
     "source_bodies_or_new_permissions_or_central_ops": 0
+  },
+  "publication_review_coordination_origin_job": "20261026-214717-todo-3080",
+  "review_origin_scope": "Publication reviewers4033/4076 retain coordination origin214717. Frozen Creator4193 has its distinct, genuine origin175645 and actual author175645; neither origin is rewritten or interchangeable.",
+  "subscription_execution": {
+    "mode": "oauth_subscription_only",
+    "source": "Normal job execution requirements, original producer metadata, current normal Codex login status and OpenCodex account metadata",
+    "observed_at": "2026-10-28T19:45:55.1877170+00:00",
+    "normal_login_status_chatgpt": true,
+    "normal_login_status_api_key": false,
+    "all_types_codex_or_oauth": true,
+    "all_additional_credits_disabled": true,
+    "raw_credentials_account_ids_labels_or_balances_returned_or_saved": false,
+    "historical_per_request_billing_proven": false,
+    "scope": "Current mode and eligible account types/spending state plus original owner-selected job/model/effort metadata. Historical per-request credentials or billing were not inspected and are not claimed. No model request or account change was made for this observation.",
+    "original_producer_conditions": [
+      {
+        "producer_job": "20261029-000437-todo-4193",
+        "model": "gpt-6-luna",
+        "effort": "max",
+        "model_origin": "owner_request",
+        "effort_origin": "owner_request",
+        "metadata_equals_independently_received_native_identity": true
+      },
+      {
+        "producer_job": "20261029-033138-todo-4203",
+        "model": "gpt-6-luna",
+        "effort": "max",
+        "model_origin": "owner_request",
+        "effort_origin": "owner_request",
+        "metadata_equals_independently_received_native_identity": true
+      },
+      {
+        "producer_job": "20261029-035105-todo-4204",
+        "model": "gpt-6-luna",
+        "effort": "max",
+        "model_origin": "owner_request",
+        "effort_origin": "owner_request",
+        "metadata_equals_independently_received_native_identity": true
+      }
+    ]
+  },
+  "review_fix_validation": {
+    "reviewed_prior_head": "17b744e7a1071705da2954635555c2c313a531d7",
+    "rubber4033_original_sha256": "07945e3c4af72a015f7f9f86caf678f9bc8285d3669c1c487178233f7925f45f",
+    "self4076_original_sha256": "4acd4e9c7e832f4e845d9c84f5baaea9086bbcbcc407a651253334cebb1941da",
+    "original_findings": "4033 M1;4076 M1 S1",
+    "new_negative_cases_reproduced": 11,
+    "current_related_full_package": "PASS6.727s",
+    "current_vet": "PASS",
+    "explicit_real_queue_sha256": "497359fb798e9f77cecb95ecf76c6c4eb2195494cb6d326d96ca4c6a36232db7",
+    "explicit_prior170_and_current175_snapshots_used": true,
+    "initial_design_index_pin_failure_fixed": true,
+    "normal_same_final_head_rechecks_still_required": true,
+    "central_operations_for_review_fix": 0,
+    "Creator4193_restarted_or_edited": false
   }
 }

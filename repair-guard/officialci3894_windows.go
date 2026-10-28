@@ -94,6 +94,10 @@ const official3894AliasPredecessorHead = "34cd8877587596539e8b4a8847468fc74fca8e
 const official3894CanonicalAssignmentPredecessorSHA = "f8b2ba6e66e60b06bbbc46c2c0f3d6eedc0208d40444c30e37b70afe29db4fc7"
 const official3894CanonicalAssignmentPredecessorHead = "a71330f543969b4585f01b7359a84a2fa528c9f2"
 
+// Independent completed PR624 distribution, observed before the path repair.
+const official3894CreationPathPredecessorSHA = "eab69e4fc8e52f2ad6858ef4e8498e8cc6030ac8ce7f788251a1aae476dc5d55"
+const official3894CreationPathPredecessorHead = "034520d84d52f76dcd7dc7ef371910d6acd8ae9f"
+
 type official3894Source struct {
 	Head, Registration, CreatorJob, Workspace, Branch, SpecSHA string
 }
@@ -962,7 +966,8 @@ func official3894InstalledBaseline(sha, head string) bool {
 		(sha == official3894NativePredecessorSHA && head == official3894NativePredecessorHead) ||
 		(sha == official3894NoticePredecessorSHA && head == official3894NoticePredecessorHead) ||
 		(sha == official3894AliasPredecessorSHA && head == official3894AliasPredecessorHead) ||
-		(sha == official3894CanonicalAssignmentPredecessorSHA && head == official3894CanonicalAssignmentPredecessorHead)
+		(sha == official3894CanonicalAssignmentPredecessorSHA && head == official3894CanonicalAssignmentPredecessorHead) ||
+		(sha == official3894CreationPathPredecessorSHA && head == official3894CreationPathPredecessorHead)
 }
 
 // Qualifies only comparison of the known previously published guard software.

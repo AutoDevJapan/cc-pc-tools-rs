@@ -66,12 +66,12 @@ func TestSkills3080OnlyRuntimeApplyRecoveryAcceptNewFlags(t *testing.T) {
 	}
 }
 func TestSkills3080RuntimePinsOriginalTwoReviewTasks(t *testing.T) {
-	a := &skillsResultRequest{Task: 4198, Job: "20261028-210000-todo-4198", SpecSHA: strings.Repeat("a", 64), FinalSHA: strings.Repeat("b", 64)}
-	b := &skillsResultRequest{Task: 4199, Job: "20261028-210100-todo-4199", SpecSHA: strings.Repeat("c", 64), FinalSHA: strings.Repeat("d", 64)}
+	a := &skillsResultRequest{Task: 4203, Job: "20261029-010000-todo-4203", SpecSHA: strings.Repeat("a", 64), FinalSHA: strings.Repeat("b", 64)}
+	b := &skillsResultRequest{Task: 4204, Job: "20261029-010100-todo-4204", SpecSHA: strings.Repeat("c", 64), FinalSHA: strings.Repeat("d", 64)}
 	if !skillsRuntimeReviewTasks(a, b) {
 		t.Fatal("original own reviews rejected")
 	}
-	for _, id := range []int{3712, 3870, 3876, 3896, 4115, 4184, 9999} {
+	for _, id := range []int{3712, 3870, 3876, 3896, 4115, 4184, 4198, 4199, 9999} {
 		c := *b
 		c.Task = id
 		if skillsRuntimeReviewTasks(a, &c) {
@@ -80,6 +80,35 @@ func TestSkills3080RuntimePinsOriginalTwoReviewTasks(t *testing.T) {
 	}
 	if skillsRuntimeReviewTasks(b, a) || skillsRuntimeReviewTasks(a, nil) {
 		t.Fatal("wrong role or missing peer accepted")
+	}
+}
+
+func TestSkills3080Frozen624PairOnlyReadsBackItsOriginalSoftware(t *testing.T) {
+	r := skillsRequest{Review: &skillsResultRequest{Task: 4198}, Runtime: &skillsRuntimeRequest{SourceHead: official3894CreationPathPredecessorHead, ReviewedHead: "4284eef98c916358d68abe134ff057421e82a87d", CandidateSHA: official3894CreationPathPredecessorSHA, PeerReview: &skillsResultRequest{Task: 4199}}}
+	if !skillsRuntimeHistoricalNoticePair(r) || skillsRuntimeReviewTasks(r.Review, r.Runtime.PeerReview) {
+		t.Fatal("frozen PR624 pair lost readback or gained new apply authority")
+	}
+	for _, field := range []string{"source", "reviewed", "sha", "self", "peer"} {
+		copy := r
+		u := *r.Runtime
+		a := *r.Review
+		b := *u.PeerReview
+		copy.Runtime, copy.Review, u.PeerReview = &u, &a, &b
+		switch field {
+		case "source":
+			u.SourceHead = strings.Repeat("a", 40)
+		case "reviewed":
+			u.ReviewedHead = strings.Repeat("b", 40)
+		case "sha":
+			u.CandidateSHA = strings.Repeat("c", 64)
+		case "self":
+			a.Task = 4203
+		case "peer":
+			b.Task = 4204
+		}
+		if skillsRuntimeHistoricalNoticePair(copy) || skillsRuntimeReviewTasks(copy.Review, copy.Runtime.PeerReview) {
+			t.Fatalf("frozen pair accepted mutation %s", field)
+		}
 	}
 }
 func TestSkills3080RuntimeRequiresDurableOutcome(t *testing.T) {

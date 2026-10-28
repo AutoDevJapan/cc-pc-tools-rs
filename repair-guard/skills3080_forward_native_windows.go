@@ -49,7 +49,68 @@ func skillsCreationCall(input, path, workspace string) bool {
 		return false
 	}
 	var cmd skillsCreationCommand
-	return skillsStrict([]byte(strings.TrimSuffix(strings.TrimPrefix(input, prefix), suffix)), &cmd) && cmd == skillsForwardCommand(path, workspace)
+	if !skillsStrict([]byte(strings.TrimSuffix(strings.TrimPrefix(input, prefix), suffix)), &cmd) {
+		return false
+	}
+	expected := skillsForwardCommand(path, workspace)
+	if cmd == expected {
+		return true
+	}
+	// Keep the executable, flag, quoting and every tool option exact. Only the
+	// quoted request path and workdir can contain repeated Windows separators.
+	const commandPrefix = "& '" + skillsRuntimeTarget + "' --create-skills3080-forward '"
+	if !strings.HasPrefix(cmd.Cmd, commandPrefix) || !strings.HasSuffix(cmd.Cmd, "'") {
+		return false
+	}
+	request := strings.TrimSuffix(strings.TrimPrefix(cmd.Cmd, commandPrefix), "'")
+	if !skillsCreationPathEqual(request, path) || !skillsCreationPathEqual(cmd.Workdir, workspace) {
+		return false
+	}
+	cmd.Cmd, cmd.Workdir = expected.Cmd, expected.Workdir
+	return cmd == expected
+}
+
+// This is a lexical comparison with the already bound request/workspace, not
+// filepath.Clean or an alias resolver. Do not clean dots, change slash style or
+// case, expand variables, or accept UNC, device, relative and drive-relative paths.
+func skillsCreationPathEqual(actual, expected string) bool {
+	a, ok := skillsCreationPath(actual)
+	b, ok2 := skillsCreationPath(expected)
+	return ok && ok2 && a == b
+}
+
+func skillsCreationPath(path string) (string, bool) {
+	if len(path) < 4 || !((path[0] >= 'A' && path[0] <= 'Z') || (path[0] >= 'a' && path[0] <= 'z')) || path[1] != ':' || (path[2] != '\\' && path[2] != '/') {
+		return "", false
+	}
+	var out strings.Builder
+	for i := 0; i < len(path); i++ {
+		c := path[i]
+		if c < 32 || c == 127 || strings.ContainsRune("<>\"|?*'", rune(c)) || (c == ':' && i != 1) {
+			return "", false
+		}
+		if i > 0 && (c == '\\' || c == '/') && (path[i-1] == '\\' || path[i-1] == '/') {
+			if c == '\\' && path[i-1] == '\\' {
+				continue
+			}
+			return "", false
+		}
+		out.WriteByte(c)
+	}
+	normal := out.String()
+	if strings.HasSuffix(normal, "\\") || strings.HasSuffix(normal, "/") {
+		return "", false
+	}
+	for _, segment := range strings.FieldsFunc(normal[3:], func(c rune) bool { return c == '\\' || c == '/' }) {
+		if strings.TrimRight(segment, ". ") != segment {
+			return "", false
+		}
+		device := strings.ToUpper(strings.SplitN(segment, ".", 2)[0])
+		if device == "CON" || device == "PRN" || device == "AUX" || device == "NUL" || (len(device) == 4 && (strings.HasPrefix(device, "COM") || strings.HasPrefix(device, "LPT")) && device[3] >= '1' && device[3] <= '9') {
+			return "", false
+		}
+	}
+	return normal, true
 }
 
 func skillsCreationAuthorBound(creator, consumer skillsWriter, reg skillsRegistry, job object) bool {

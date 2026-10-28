@@ -3,6 +3,7 @@ package main
 import (
 	"crypto/sha256"
 	"encoding/hex"
+	"errors"
 	"reflect"
 	"testing"
 )
@@ -51,6 +52,9 @@ func TestParentNotice19RetainsVisibleRangesAndIndividualUnknowns(t *testing.T) {
 		}
 		if a["reader_job"] != snapshot["assessor_job"] || a["all_visible_meanings_actually_read"] != true || a["body_SHA_bytes_blob_matched_to_selected_member"] != true || a["all_member_individual_context_rights_pending"] != true || a["individual_copy_permission_accepted"] != false || a["final_disposition"] != nil || a["source_or_support_scripts_executed"] != false || a["central_operations"] != float64(0) {
 			t.Fatal("body meaning promoted to individual rights or execution")
+		}
+		if !parent19SameDisplayedBody(a) {
+			t.Fatal("selected and displayed member body tuples differ")
 		}
 		if a["selected_member_is_representative"] == false {
 			nonRepresentative++
@@ -114,6 +118,9 @@ func TestParentNotice19RetainsVisibleRangesAndIndividualUnknowns(t *testing.T) {
 		if n["reader_job"] != snapshot["assessor_job"] || n["all_visible_notice_meaning_read"] != true || n["source_or_service_permission_not_added_by_read"] != true {
 			t.Fatal("notice reading gained blanket permission")
 		}
+		if err := parent19NoticeRanges(n); err != nil {
+			t.Fatal(err)
+		}
 		noticeBytes += s["bytes"].(float64)
 		noticePhysical += n["physical_lines"].(float64)
 		noticeWithheld += n["withheld_lines"].(float64)
@@ -130,5 +137,114 @@ func TestParentNotice19RetainsVisibleRangesAndIndividualUnknowns(t *testing.T) {
 				t.Fatal("a prior assessment was counted again as a new selected19")
 			}
 		}
+	}
+}
+
+func parent19SameDisplayedBody(a map[string]any) bool {
+	selected, ok := a["selected_notice_member"].(map[string]any)
+	if !ok {
+		return false
+	}
+	displayed, ok := a["displayed_representative"].(map[string]any)
+	if !ok {
+		return false
+	}
+	for _, key := range []string{"sha256", "bytes", "git_blob"} {
+		if selected[key] == nil || !reflect.DeepEqual(selected[key], displayed[key]) {
+			return false
+		}
+	}
+	flag, ok := a["selected_member_is_representative"].(bool)
+	return ok && selected["inventory_id"] != nil && displayed["inventory_id"] != nil && flag == (selected["inventory_id"] == displayed["inventory_id"])
+}
+
+func parent19NoticeRanges(n map[string]any) error {
+	ranges, ok := n["ranges"].([]any)
+	if !ok || len(ranges) == 0 {
+		return errors.New("notice ranges absent")
+	}
+	first, totalWithheld := 1.0, 0.0
+	for _, value := range ranges {
+		r, ok := value.(map[string]any)
+		if !ok {
+			return errors.New("notice range not an object")
+		}
+		end, endOK := r["through"].(float64)
+		visible, visibleOK := r["visible_lines"].(float64)
+		withheld, withheldOK := r["withheld_physical_lines"].([]any)
+		if !endOK || !visibleOK || !withheldOK || r["first"] != first || end < first {
+			return errors.New("notice ranges not continuous")
+		}
+		positions := map[float64]bool{}
+		for _, p := range withheld {
+			line, ok := p.(float64)
+			if !ok || line < first || line > end || positions[line] {
+				return errors.New("notice withheld position invalid or repeated")
+			}
+			positions[line] = true
+		}
+		if visible < 0 || visible+float64(len(withheld)) != end-first+1 {
+			return errors.New("notice visible/withheld range does not conserve lines")
+		}
+		totalWithheld += float64(len(withheld))
+		first = end + 1
+	}
+	if n["physical_lines"] != first-1 || n["withheld_lines"] != totalWithheld {
+		return errors.New("notice whole coverage differs")
+	}
+	unknown, ok := n["unseen_meanings_remain_unknown"].(bool)
+	if !ok || totalWithheld > 0 && !unknown {
+		return errors.New("unread notice meanings changed to known")
+	}
+	raw, ok := n["raw_full"].(bool)
+	if !ok || raw && totalWithheld != 0 {
+		return errors.New("withheld notice became full raw read")
+	}
+	return nil
+}
+
+func TestParent19NoticeAndBodyChecksRejectCounterexamples(t *testing.T) {
+	member := func() map[string]any {
+		return map[string]any{"inventory_id": "selected", "sha256": "same-source", "bytes": float64(7), "git_blob": "same-blob"}
+	}
+	for _, key := range []string{"sha256", "bytes", "git_blob", "inventory_id"} {
+		t.Run("body-"+key, func(t *testing.T) {
+			a := map[string]any{"selected_notice_member": member(), "displayed_representative": member(), "selected_member_is_representative": true}
+			if !parent19SameDisplayedBody(a) {
+				t.Fatal("positive identical member rejected")
+			}
+			a["displayed_representative"].(map[string]any)[key] = "changed"
+			if parent19SameDisplayedBody(a) {
+				t.Fatal("different selected/displayed body or identity accepted")
+			}
+		})
+	}
+	fixture := func() map[string]any {
+		return map[string]any{"unseen_meanings_remain_unknown": true, "raw_full": false, "physical_lines": float64(3), "withheld_lines": float64(1), "ranges": []any{map[string]any{"first": float64(1), "through": float64(3), "visible_lines": float64(2), "withheld_physical_lines": []any{float64(2)}}}}
+	}
+	mutations := map[string]func(map[string]any){
+		"missing": func(n map[string]any) { delete(n, "ranges") },
+		"gap":     func(n map[string]any) { n["ranges"].([]any)[0].(map[string]any)["first"] = float64(2) },
+		"out-of-range": func(n map[string]any) {
+			n["ranges"].([]any)[0].(map[string]any)["withheld_physical_lines"] = []any{float64(4)}
+		},
+		"duplicate": func(n map[string]any) {
+			n["ranges"].([]any)[0].(map[string]any)["withheld_physical_lines"] = []any{float64(2), float64(2)}
+		},
+		"visible": func(n map[string]any) { n["ranges"].([]any)[0].(map[string]any)["visible_lines"] = float64(3) },
+		"unknown": func(n map[string]any) { n["unseen_meanings_remain_unknown"] = false },
+		"raw":     func(n map[string]any) { n["raw_full"] = true },
+	}
+	for name, mutate := range mutations {
+		t.Run("notice-"+name, func(t *testing.T) {
+			n := fixture()
+			if err := parent19NoticeRanges(n); err != nil {
+				t.Fatal(err)
+			}
+			mutate(n)
+			if parent19NoticeRanges(n) == nil {
+				t.Fatal("broken notice preservation accepted")
+			}
+		})
 	}
 }

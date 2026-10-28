@@ -442,6 +442,12 @@ func TestExpandedSixmileIndexAddsNewCohortAndReadingAmendmentExactlyOnce(t *test
 				}
 				accepted[id] = row
 			}
+			for id, row := range validatedNextFourDispositions(t) {
+				if accepted[id].ID != "" {
+					t.Fatal("new current4 source repeats an already accepted purpose")
+				}
+				accepted[id] = row
+			}
 			switch name {
 			case "received_without_current_acceptance":
 				accepted = nil

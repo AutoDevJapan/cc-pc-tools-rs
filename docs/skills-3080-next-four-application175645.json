@@ -1,0 +1,132 @@
+{
+  "domain": "skills3080-current-instruction-application-v1",
+  "consumer_job": "20261027-175645-todo-3080",
+  "actual_model": "gpt-6.1-sol",
+  "actual_effort": "max",
+  "Fast_proven": false,
+  "source_of_application": "This actual parent model turn literally read8 current instruction buffers returned by normal creation-bound consume, and applied them to3 actual current workflows plus5 explicit synthetic text-only cases. These are actual model decisions, not programmatically asserted external service tests.",
+  "manifest_sha256": "39ea776e81250f702902f53aa0e08df98df30d71a964edd9d4295317dcc1a209",
+  "readback_proof_sha256": "8b9ca25ccd7665359289e36898f05598235ea11c206993dd13c0bc766a965d3e",
+  "instruction_files": 8,
+  "instruction_bytes": 13640,
+  "instructions": [
+    {
+      "index": 0,
+      "target": "balance-snapshot-reconciliation/SKILL.md",
+      "bytes": 2253,
+      "sha256": "fa7f1bbdc852a7904f183137e5c38d914db0ac21a31b4c15627a12ce8bc6478a",
+      "literal_current_buffer_read_in_actual_parent_turn": true
+    },
+    {
+      "index": 1,
+      "target": "balance-snapshot-reconciliation/references/guide.md",
+      "bytes": 1095,
+      "sha256": "6eda73b2df255e1b226bc81369d6028d57f895634b9ce6522b93369135f3bc34",
+      "literal_current_buffer_read_in_actual_parent_turn": true
+    },
+    {
+      "index": 7,
+      "target": "browser-extraction-missingness/SKILL.md",
+      "bytes": 2471,
+      "sha256": "0c3bcca3bd306dcdc24e6d4c12ae69c652e8e3f46ff0e56a8008496672a2ae7e",
+      "literal_current_buffer_read_in_actual_parent_turn": true
+    },
+    {
+      "index": 8,
+      "target": "browser-extraction-missingness/references/guide.md",
+      "bytes": 984,
+      "sha256": "a7c8b47a770b9214e8765a68285bb2fbbf052e1e3ba3ca96448266aacfc44333",
+      "literal_current_buffer_read_in_actual_parent_turn": true
+    },
+    {
+      "index": 14,
+      "target": "remote-run-result-reconciliation/SKILL.md",
+      "bytes": 2354,
+      "sha256": "6b686a6489c5f1784efd48a3f1bdfd4982cf3c2c5dcf64bc7c1537fb1965d850",
+      "literal_current_buffer_read_in_actual_parent_turn": true
+    },
+    {
+      "index": 15,
+      "target": "remote-run-result-reconciliation/references/guide.md",
+      "bytes": 976,
+      "sha256": "afa6a3d55777a263c0de585692e7019848d7736199be78ea8d00f4696e4590af",
+      "literal_current_buffer_read_in_actual_parent_turn": true
+    },
+    {
+      "index": 21,
+      "target": "codebase-impact-context/SKILL.md",
+      "bytes": 2465,
+      "sha256": "b03b0a2fffca5f232d232f57ba38aa15fc80e60eb16c92bfee782f65ce9cbdce",
+      "literal_current_buffer_read_in_actual_parent_turn": true
+    },
+    {
+      "index": 22,
+      "target": "codebase-impact-context/references/guide.md",
+      "bytes": 1042,
+      "sha256": "6236959d6322545c03e73406ddd2840d5afc4dc43b431411221eae0521abf338",
+      "literal_current_buffer_read_in_actual_parent_turn": true
+    }
+  ],
+  "all_scenario_meanings_applied": true,
+  "decision_count": 8,
+  "actual_current_workflow_decisions": 3,
+  "synthetic_decisions": 5,
+  "decisions": [
+    {
+      "skill": "balance-snapshot-reconciliation",
+      "kind": "synthetic text-only positive",
+      "input": "明示的に合成したchain SYN-A/asset SYN-ASSET、decimal6、同block100/T0。口座A raw2500000の同じsnapshotを2行、口座B raw0、口座Cは照会失敗という提供fixture。",
+      "decision": "Aは2.5を1回だけ数え、Bは確認済み0、Cは未取得を保つ。確認できた範囲2.5を全口座の完全な合計と呼ばず、所有や支払いの許可をfixture以外へ推測しない。外部照会/口座/送金0。"
+    },
+    {
+      "skill": "balance-snapshot-reconciliation",
+      "kind": "synthetic text-only negative",
+      "input": "仮のaddress風文字列だけ、chainとdecimalは欠損。同tickerの別contract/別時刻の残高と、出所不明の換算価格がある。",
+      "decision": "chainやdecimal6を補わずraw単位不明とし、別contract/別時刻を合算せず、換算価格を現在価値や送金可能額へしない。実カード/鍵/財布/サービスに触れない。"
+    },
+    {
+      "skill": "browser-extraction-missingness",
+      "kind": "actual current-workflow positive application",
+      "input": "取得済みサイト7/8の保存版を読み、全472物理行の可視434/伏字38を評価。原取得日は2026-10-20、実読時点は別、参考本文/個別notice/上流Git版は未取得。",
+      "decision": "保存版から得た可視範囲と取得日・原SHA/URLを結び、伏字38や参照未取得を空文字/0/読了へ変えない。現在の画面・カテゴリ仕様/法や全サイトを確認したとせず、値がないという説明を不存在へしない。実ブラウザ/DOM全取得テストの成功とはしない。"
+    },
+    {
+      "skill": "browser-extraction-missingness",
+      "kind": "synthetic text-only negative",
+      "input": "前日の仮ダウンロードは価格1000JPY、今回の別tabの欄は「-」で単位もなく、最新取得はtimeout。古い同名fileとsuccess:trueがある。",
+      "decision": "旧fileと現在tabを混ぜず、「-」を0や負数としない。対象/時刻/通貨が不足した未取得/解析不能として残し、通信の静止やsuccessだけで今回取得/全件完了としない。ブラウザ操作/外部送信0。"
+    },
+    {
+      "skill": "remote-run-result-reconciliation",
+      "kind": "actual current-workflow positive application",
+      "input": "PR627の同f36/run40742300590はattempt1のsetup bridge403を記録し、attempt2 completed/successと最新16check終了を照合。PR mergeはb780。Windows7fb/sourceb780と同79f/call64138/39eaの4batch28fileを通常consumeで実読。",
+      "decision": "旧失敗・再実行・最終CI/merge・Windows更新と現在buffer読戻しを別段階へ結び、登録/起動やPR作成だけで完了にしない。原実行IDと同Sourceを保ち、今回28読戻し成功も全16/73220や公開結果のレビュー完了へ広げない。新しい再起動/外部処理をこの確認のために追加しない。"
+    },
+    {
+      "skill": "remote-run-result-reconciliation",
+      "kind": "synthetic text-only negative",
+      "input": "合成実行R1/V2/入力Aの受付後timeout。後の応答は未知statusで7結果、仕様上必要な10件と対応しているか不明。",
+      "decision": "R1の作用不明を未実行とせず、新R2を作らない。元ID/版/入力で再照会する条件を保ち、未知statusを成功へ補わず、必要10件との欠落3又は対応未確認を終了状態と分ける。実ジョブ/API起動0。"
+    },
+    {
+      "skill": "codebase-impact-context",
+      "kind": "actual current-workflow positive application",
+      "input": "PR628で新17評価と共有manifestを変え、元/primary/source9のfidelity helperと独立snapshot保持testの呼出しを固定版で確認。登録漏れ8負例をRed、影響packageを実queue/snapshot付きでGreen8.442s/vet。その後は説明/comment2pathのみ。",
+      "decision": "共有dataと利用側の検証へ範囲を結び、実packageと負例/実byteを確認する。comment説明のみの後続では同じ実行コードの有効結果を再利用し、保存ごとの全Rust/Cargo buildを追加しない。異なるfinalheadのレビュー/CIを流用せず、同じ最終f635の2役0と6CI成功後に通常mergeした。動的参照/未知中央の比較まで網羅したとしない。"
+    },
+    {
+      "skill": "codebase-impact-context",
+      "kind": "synthetic text-only negative",
+      "input": "合成索引はソース関数Fの呼出し0件だが、索引版/除外が不明で設定K・生成物と動的参照を含まない。",
+      "decision": "F未使用/影響なしと断定して削除せず、対象版と設定Kを使う実経路・利用側を確認対象へ残す。索引を作った/検索0だけで全依存完了とせず、別サービスやFAISS/モデル取得を始めない。実索引/設定変更0。"
+    }
+  ],
+  "implicit_skill_selection_proven": false,
+  "new_model_job_spawned": 0,
+  "new_service_or_browser_or_payment_operations_for_these_cases": 0,
+  "actual_balance_or_private_financial_data_read": 0,
+  "new_keys_fees_permissions": 0,
+  "additional_central_writes_or_Create": 0,
+  "withheld_source_meanings_remain_unknown": true,
+  "all16_complete": false
+}

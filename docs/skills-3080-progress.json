@@ -3,7 +3,7 @@
   "issue": "https://github.com/AutoDevJapan/cc-pc-tools-rs/issues/283",
   "observed_at": "2026-10-24T17:15:09.0197014+09:00",
   "phase_a": "partial; 647 additional text shapes held by execution review",
-  "phase_b": "作業版では、元3719の210〜227の原評価18件、既読primary8群、指定サイトの次2評価を追加し、既受入1424件を保持して評価記録1452件とした。評価済み未採否1286件と最終記録との重複166件、最終のみ6件を区別する。実導入154・統合3・再確認が残る除外記録15は変えない。元の担当・個別notice再利用・伏字・未保存/null・未知を保持し、全73220掲載、未取得428、審査保留647を維持する。この作業版はまだmainの1424件へ受け入れていない。28評価を新たな許諾・採否・配置・全16資料の完了としない。",
+  "phase_b": "作業版は実導入158・統合3・再確認が残る除外記録15。新4件は一度の作成・通常読戻し28・構造・発見4・実instruction8の明示判断まで確認した。main受入154との差分4は実結果の二役レビュー/CI/merge待ちで、全16/73220は継続。",
   "catalog_sha256": "2d73c9a038a41cc220a9687b935bfa1e0b315b65d9bd6d3e54ddb4111972876c",
   "source_count": 16,
   "fixed_public_repos": [
@@ -286,9 +286,9 @@
   "site_entries_with_body": 9862,
   "site_entries_without_body": 428,
   "execution_held_shapes": 647,
-  "candidate_designs": 154,
-  "independently_accepted": 154,
-  "installed": 154,
+  "candidate_designs": 158,
+  "independently_accepted": 158,
+  "installed": 158,
   "integrated": 3,
   "excluded": 15,
   "units": {
@@ -346,23 +346,23 @@
     "actual_installed": 8
   },
   "candidate_count_definitions": {
-    "candidate_designs": "Legacy28 plus directly sourced actual designs126; legacy3 pending drafts and catalog rows are separate. Actual154 is not an adoption cap.",
+    "candidate_designs": "Legacy28 plus directly sourced actual designs130; legacy3 pending drafts and catalog rows remain separate;158 is not a cap.",
     "additional_authored_drafts_not_in_plans": 3,
-    "authored_total": 157,
-    "installed": 154,
+    "authored_total": 161,
+    "installed": 158,
     "pending_plan_targets": 0,
     "archived_draft_targets": 8,
     "archived_draft_is_subset_of_batch03": true,
-    "independently_accepted": "154actual new designs include frozen full4184 acceptance and actual4/28readback,3048,fresh4enabled and8instructions/2real+6synthetic decisions. Public result delta review pending at recording. No whole16, service execution, implicit selection, full discovery or context-budget proof.",
-    "not_semantically_disposed_occurrences": 73048,
+    "independently_accepted": "Includes frozen full4193 content acceptance and actual4/28 normal readback, structure/discovery and explicit model use. The public result delta still requires final2-role review/CI/merge; no implicit selection/full discovery/context budget/full16 proof.",
+    "not_semantically_disposed_occurrences": 73044,
     "additional_draft_sources": [
       "skills-3080-mizchi-sql-draft.json",
       "skills-3080-mizchi-mutation-draft.json"
     ],
-    "authored_total_definition": "154 actual new installed designs plus3legacy pending drafts. No aliases, catalog rows or machine declarations counted as installations.",
-    "new_proposed_uninstalled_targets": 1,
-    "authored_including_new_proposals": 158,
-    "authored_including_new_proposals_definition": "154 actual new installed designs+3legacy pending drafts+1new balance-snapshot-reconciliation proposal. Proposal is not an installation, source grant or adoption cap."
+    "authored_total_definition": "158 actually installed new designs plus3 legacy pending drafts; no catalog rows or aliases counted as installations.",
+    "new_proposed_uninstalled_targets": 0,
+    "authored_including_new_proposals": 161,
+    "authored_including_new_proposals_definition": "158 actually installed new designs plus3 legacy pending drafts; the original next4 proposal remains historical and its actual placement is recorded separately."
   },
   "kepano_entrypoint_assessment": {
     "pinned_entrypoints": 6,
@@ -616,7 +616,7 @@
     "guard_client_resource": true,
     "state": "classification_unverified"
   },
-  "recorded_at": "2026-10-28T17:02:38.9316133+00:00",
+  "recorded_at": "2026-10-29T04:13:00.4418474+09:00",
   "total_skill_named_body_read_definition": "This field preserves the historical complete-source subset only. Current raw/workflow primary coverage is projected from the canonical source components and sixmile evaluation index in all_fulltext_primary_paths_including_partial_sources/all_workflow_primary_paths_including_partial_sources, not copied here.",
   "openai_entrypoint_evaluation": {
     "rights_accepted": false,
@@ -1703,7 +1703,7 @@
     "current_individual_rights_entries": 5,
     "main_accepted_excluded_before_this_delta": 8,
     "branch_excluded": 15,
-    "branch_pending": 73048,
+    "branch_pending": 73044,
     "primary_and_support_read_states_unchanged": true,
     "existing_primary_amendment_separate": true,
     "source_scripts_executed": false,
@@ -3334,6 +3334,28 @@
     "central_operations": 0,
     "accepted_new_unchanged": 154,
     "extra4_once_created_current_readback_pending": true,
+    "whole16_complete": false
+  },
+  "next_four_installation": {
+    "evidence": "skills-3080-next-four-installation-evidence175645.json",
+    "actual_created": 4,
+    "current_readback_files": 28,
+    "bytes": 80712,
+    "creator": "20261027-175645-todo-3080",
+    "consumer": "20261027-175645-todo-3080",
+    "normal_batches": 4,
+    "instruction_buffers": 8,
+    "instruction_bytes": 13640,
+    "fresh_discovered": 4,
+    "parse_errors": 0,
+    "discovery_metadata_total": 475,
+    "scan_limit_diagnostics": 2,
+    "current_workflow_decisions": 3,
+    "synthetic_decisions": 5,
+    "accepted_main_new_before_result_merge": 154,
+    "working_new": 158,
+    "new_raw_source_credit": 0,
+    "public_result_review_pending": true,
     "whole16_complete": false
   }
 }

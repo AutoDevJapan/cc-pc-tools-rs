@@ -252,6 +252,15 @@ func skillsCreationNativeProjection(input io.Reader, thread, cwd string, start, 
 			if !called || returned || at.Before(callAt) {
 				return evidence, false
 			}
+			var rawBlocks []json.RawMessage
+			if json.Unmarshal(p.Output, &rawBlocks) != nil || len(rawBlocks) != 2 {
+				return evidence, false
+			}
+			for _, block := range rawBlocks {
+				if !skillsCreationHeaderKeys(block, "type", "text") {
+					return evidence, false
+				}
+			}
 			var blocks []struct {
 				Type string `json:"type"`
 				Text string `json:"text"`

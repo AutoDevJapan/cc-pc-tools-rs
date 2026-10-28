@@ -217,12 +217,15 @@ func TestSkills3080CreationRejectsCaseAliasedNativeHeaders(t *testing.T) {
 	_, _, e, _ := skillsForwardFixture(t)
 	c := skillsConsumeRequest{Creator: e.Writer, RequestPath: e.Writer.Workspace + "/.ci-work/forward-request.json", RequestSHA: e.RequestSHA, CallID: "call_meta_case_alias"}
 	start, _ := time.Parse(time.RFC3339, "2026-10-25T12:00:00Z")
-	for _, kind := range []string{"id", "cwd", "id_only", "cwd_only", "type", "timestamp", "payload", "call_id"} {
+	for _, kind := range []string{"id", "cwd", "id_only", "cwd_only", "type", "timestamp", "payload", "call_id", "block_type", "block_text_first", "block_text_result"} {
 		t.Run(kind, func(t *testing.T) {
 			records := skillsNativeCreationFixture(t, e, c)
 			index := 0
 			if kind == "call_id" {
 				index = 1
+			}
+			if strings.HasPrefix(kind, "block_") {
+				index = 2
 			}
 			raw, err := json.Marshal(records[index])
 			if err != nil {
@@ -248,6 +251,16 @@ func TestSkills3080CreationRejectsCaseAliasedNativeHeaders(t *testing.T) {
 				old, replacement = `"payload":`, `"Payload":{},"payload":`
 			case "call_id":
 				old, replacement = `"call_id":"call_meta_case_alias"`, `"call_id":"other","CALL_ID":"call_meta_case_alias"`
+			case "block_type":
+				old, replacement = `"type":"input_text"`, `"type":"ignored","Type":"input_text"`
+			case "block_text_first", "block_text_result":
+				block := 0
+				if kind == "block_text_result" {
+					block = 1
+				}
+				value, _ := json.Marshal(obj(records[2]["payload"])["output"].([]object)[block]["text"])
+				old = `"text":` + string(value)
+				replacement = `"text":"ignored","Text":` + string(value)
 			}
 			bad := bytes.Replace(raw, []byte(old), []byte(replacement), 1)
 			if bytes.Equal(raw, bad) {

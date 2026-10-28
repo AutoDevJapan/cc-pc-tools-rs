@@ -15,8 +15,8 @@ UNC、相対/drive-relative、混在した連続区切りは新たに許可し�
 正規rendererの成功、異なる作用・option・対象の拒否、元証拠のbindingもテストする。
 セッションのheaderも再帰的な重複キー検査を通し、type/id/cwd/payload/timestampと
 入れ子の重複について、修正前の拒否不足と修正後の拒否を確認する。
-transportとpayloadの既知キーは大文字小文字の別名を拒否してからdecodeし、Goの
-case-insensitiveなfield選択でid/cwd/call IDを置き換えられないようにする。
+transport・payload・結果blockの既知キーは大文字小文字の別名を拒否してからdecodeし、Goの
+case-insensitiveなfield選択でid/cwd/call ID/type/textを置き換えられないようにする。
 完全一致でも同じパス文法を検証し、rendererも同じ文法で読戻せる呼び出しだけを返す。
 dot segmentや末尾の点/空白、device、UNCを含む同一cmdの拒否を、実際のcall入口で確認する。
 

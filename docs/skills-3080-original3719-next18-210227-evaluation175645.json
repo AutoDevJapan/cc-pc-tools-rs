@@ -1,0 +1,4427 @@
+{
+  "after": 209,
+  "all_original_chunks_losslessly_reconstructed": true,
+  "all_original_fields_and_actor_namespaces_preserved": true,
+  "central_operations": 0,
+  "complete_original_chunks": 3,
+  "domain": "skills3080-original3719-parent-shared-snapshot-v1",
+  "entries": [
+    {
+      "bytes": 11169,
+      "git_blob": "9b028075f26082c1bb6b3ccbe541182193c44490",
+      "inventory_id": "github:247f92444e190607e51240ec6d61aeaf6bf65ab040ff8b53df07c69c3549cab9",
+      "path": "skills/mailnike/educlaw-finaid/SKILL.md",
+      "source_commit": "920714f17d81e0a95c7a9bc51faf0a7921cd982d",
+      "source_repo": "6mile/skills",
+      "source_sha256": "363e58feac64317b73a172799c6a7eecbb218e521f65187c0774abc3c4b6ac7b"
+    },
+    {
+      "bytes": 16176,
+      "git_blob": "5bf9ef3e6e3a9d94f2c0c516390a6daa0f6945e0",
+      "inventory_id": "github:377f6dcb735bab5277313177e9b87c8474385d15310cf738cb19fcb4c22156a7",
+      "path": "skills/mailnike/educlaw-lms/SKILL.md",
+      "source_commit": "920714f17d81e0a95c7a9bc51faf0a7921cd982d",
+      "source_repo": "6mile/skills",
+      "source_sha256": "3e639579a7fc156b5a1d41a8ee8931ba1cae1ee9b7de4617510139a3509b6593"
+    },
+    {
+      "bytes": 11469,
+      "git_blob": "f1ade4ada88714e78df5510f59e63d3f276d2b71",
+      "inventory_id": "github:f427953b261b14549bce75543fbed81753710d91feac53ba288b91e782f2f388",
+      "path": "skills/mailnike/educlaw-scheduling/SKILL.md",
+      "source_commit": "920714f17d81e0a95c7a9bc51faf0a7921cd982d",
+      "source_repo": "6mile/skills",
+      "source_sha256": "3b3f5494e04cb4364394bc337afcdfe275da53b0e8fee701759ca4da347a96e8"
+    },
+    {
+      "bytes": 13846,
+      "git_blob": "89553a891a479e1297ce24fbbf765b083e838752",
+      "inventory_id": "github:f7fe304c8bcd0f1164f028d4896f829b5fa137c04d92c4a77e2a26f1e6b23c9c",
+      "path": "skills/mailnike/educlaw-statereport/SKILL.md",
+      "source_commit": "920714f17d81e0a95c7a9bc51faf0a7921cd982d",
+      "source_repo": "6mile/skills",
+      "source_sha256": "fecee4679ccd55178377d3113302fcbd73a9ee0dc4ff1940524c105dd037495c"
+    },
+    {
+      "bytes": 16822,
+      "git_blob": "cbcb5729b14c6713d1c3f2d12859d17cf3fcb323",
+      "inventory_id": "github:2bf9114397aea87454d207fdf77a9fd69dcf43f873b81f11e0b4c17487c7f96d",
+      "path": "skills/mailnike/educlaw/SKILL.md",
+      "source_commit": "920714f17d81e0a95c7a9bc51faf0a7921cd982d",
+      "source_repo": "6mile/skills",
+      "source_sha256": "b3a70bfec2a4519fdf029fbf73026978de25117d614c23d8e224b618f11503dc"
+    },
+    {
+      "bytes": 20300,
+      "git_blob": "371c3584e6cbcb8896136339a75f5881b30e33cf",
+      "inventory_id": "github:d5522d59b315be11d8180f0f5a5533306b5e2ac653d06ff69ecd9374b1e8bd3a",
+      "path": "skills/mailnike/erp-claw/SKILL.md",
+      "source_commit": "920714f17d81e0a95c7a9bc51faf0a7921cd982d",
+      "source_repo": "6mile/skills",
+      "source_sha256": "d0d8173c3822e8d7865af5f7b4612d10c9c98ca07975b05c2dc3515f83c6d8bc"
+    },
+    {
+      "bytes": 10206,
+      "git_blob": "4d9688c9d380062a0d01b57c2f8578404c69967c",
+      "inventory_id": "github:21f3f9e8f75852527faf5401fcafc65cc79b6a9dd3dfa134c8c001f73f78617e",
+      "path": "skills/mailnike/erpclaw-ai-engine/SKILL.md",
+      "source_commit": "920714f17d81e0a95c7a9bc51faf0a7921cd982d",
+      "source_repo": "6mile/skills",
+      "source_sha256": "cfec3933ed060b8c58370c8a797a5cc4a93f7a355f7645106383091118c5f05e"
+    },
+    {
+      "bytes": 10092,
+      "git_blob": "1e95c7b1ecac9957fe29521033598a495a6725ef",
+      "inventory_id": "github:18e6d4807f0c62a42d216659fea4bfa545d26c4075e460e9d2722cfb21844631",
+      "path": "skills/mailnike/erpclaw-analytics/SKILL.md",
+      "source_commit": "920714f17d81e0a95c7a9bc51faf0a7921cd982d",
+      "source_repo": "6mile/skills",
+      "source_sha256": "9037f985547f9e8af15c998516757927d35735844db8caa197e04c5657a95c30"
+    },
+    {
+      "bytes": 13815,
+      "git_blob": "954c44dcfeb43c56d9e4491f7f72ddf463b24e03",
+      "inventory_id": "github:59bee50d5d2e82e8b1a34cbb5570b4e381d663da130b5160dbe8f631e54379c0",
+      "path": "skills/mailnike/erpclaw-assets/SKILL.md",
+      "source_commit": "920714f17d81e0a95c7a9bc51faf0a7921cd982d",
+      "source_repo": "6mile/skills",
+      "source_sha256": "1ff06faaf27cdd1d8b725b22f1960da215494cca305a68bf9d29f42b74d2e30a"
+    },
+    {
+      "bytes": 10920,
+      "git_blob": "86f586ed7a61a347ed08fd1df9ee67644caecb88",
+      "inventory_id": "github:d2e00cb7739dad437a5f41d58a8e95eddfcfe0167f51e151a067019506baf68c",
+      "path": "skills/mailnike/erpclaw-billing/SKILL.md",
+      "source_commit": "920714f17d81e0a95c7a9bc51faf0a7921cd982d",
+      "source_repo": "6mile/skills",
+      "source_sha256": "f8c6ef937657a9c12faf2758f6a9bf6dc6c3ff1dc3693e4dc4b48923e40b819f"
+    },
+    {
+      "bytes": 14938,
+      "git_blob": "1a4e37b536a8afd62e9458464f41b400b57daa8b",
+      "inventory_id": "github:6b6451e0b67649ca6028ebe7812aa6dae8610822d582594e4ca8c791d09f9700",
+      "path": "skills/mailnike/erpclaw-buying/SKILL.md",
+      "source_commit": "920714f17d81e0a95c7a9bc51faf0a7921cd982d",
+      "source_repo": "6mile/skills",
+      "source_sha256": "735d0113d6285fbef9c469c09d425983214cecaa1c662555306e01ba69798cd3"
+    },
+    {
+      "bytes": 12167,
+      "git_blob": "5406ada23d4cfa6a2a59409f598a8cda0f4507e4",
+      "inventory_id": "github:df9a82258f0a730c5dd2c6c9d932a3545d646f275ecb6a158e7dc702d3eca556",
+      "path": "skills/mailnike/erpclaw-crm/SKILL.md",
+      "source_commit": "920714f17d81e0a95c7a9bc51faf0a7921cd982d",
+      "source_repo": "6mile/skills",
+      "source_sha256": "891f3850546e06419f234470c5e91468fba263502cf3653d11221baf16ffb698"
+    },
+    {
+      "bytes": 12382,
+      "git_blob": "897aec7143803765fb9ad49cc78375928a7a1fd8",
+      "inventory_id": "github:a432066a511a55c4f6692fe231401017475e81cdd5d31157ba1b0c4a74f21ea0",
+      "path": "skills/mailnike/erpclaw-gl/SKILL.md",
+      "source_commit": "920714f17d81e0a95c7a9bc51faf0a7921cd982d",
+      "source_repo": "6mile/skills",
+      "source_sha256": "4d0be8122e632a7a62201de6e3115e4feb0844cebd2b5f0a49903478cb10f484"
+    },
+    {
+      "bytes": 14095,
+      "git_blob": "a6e1d214c698574bf174275099776a2b1d185762",
+      "inventory_id": "github:bf6e3181a1766ddbd0f790e623b565dc090c7f07029428b8df9aa202384c5c3c",
+      "path": "skills/mailnike/erpclaw-hr/SKILL.md",
+      "source_commit": "920714f17d81e0a95c7a9bc51faf0a7921cd982d",
+      "source_repo": "6mile/skills",
+      "source_sha256": "59aa52ba9c6e2073456ac55d0a56b8c6475b29aac325c0a35a30a70bd6930ae0"
+    },
+    {
+      "bytes": 9242,
+      "git_blob": "8d0c6e9c6292020ba393ff5e80db73ecba9b9ce3",
+      "inventory_id": "github:ef14d5e9e80898653eb3934a916c10f12075077248d8c2df5c3df9b8d2e82ca6",
+      "path": "skills/mailnike/erpclaw-integrations/SKILL.md",
+      "source_commit": "920714f17d81e0a95c7a9bc51faf0a7921cd982d",
+      "source_repo": "6mile/skills",
+      "source_sha256": "6df051933f1ebb8dd330c9052c649d94d1fe2892534e25098d27eae9f863cef4"
+    },
+    {
+      "bytes": 14981,
+      "git_blob": "ae18c4cbc7da304973700a8303d49adf65c3aed2",
+      "inventory_id": "github:ea98f1a0afc8f998fef0cda4a645982060ab3c09794813148bb60189c93b21e5",
+      "path": "skills/mailnike/erpclaw-inventory/SKILL.md",
+      "source_commit": "920714f17d81e0a95c7a9bc51faf0a7921cd982d",
+      "source_repo": "6mile/skills",
+      "source_sha256": "a8ef9b04f5406d610f74f25a3045adc203cd98159d196206e17992e99e5f9ebe"
+    },
+    {
+      "bytes": 13738,
+      "git_blob": "3165da09dec0f4f9bf9f49471db1a9cc65463c7d",
+      "inventory_id": "github:0c76ebf1fa8c0780a8b28dfb14e48055f0a9e7028090a4f915708b0297d40370",
+      "path": "skills/mailnike/erpclaw-journals/SKILL.md",
+      "source_commit": "920714f17d81e0a95c7a9bc51faf0a7921cd982d",
+      "source_repo": "6mile/skills",
+      "source_sha256": "943aec5bfa66680cf1a2c0a710cd3d3e52e2c611d0f849db7624a42b066c5905"
+    },
+    {
+      "bytes": 14900,
+      "git_blob": "8523bed1cdaa18bfbba0f92e282b0adbba036f8a",
+      "inventory_id": "github:3e54620cd2c191c7de6b34645eeab6b05c4bdec8335011876590a1b19c2d4e03",
+      "path": "skills/mailnike/erpclaw-manufacturing/SKILL.md",
+      "source_commit": "920714f17d81e0a95c7a9bc51faf0a7921cd982d",
+      "source_repo": "6mile/skills",
+      "source_sha256": "987a467d4fe3a2845aea8a7366dbd319835003e931566220ab989805fdfff105"
+    }
+  ],
+  "limits": [
+    "Parent received actual original eighteen assessments and limits with independent native Sol/max metadata; source body/support raw reads remain the recorded original reader's work, not new parent raw reads.",
+    "Original notice reuse, ordered full-diff, fresh reads, saved-unread and unsaved null states and per-chunk actor namespaces are preserved, not converted into permissions.",
+    "This pending-assessment preparation does not install, accept third-party rights or complete598/51030/73220/16sources."
+  ],
+  "new_copy_permissions": 0,
+  "new_final_dispositions": 0,
+  "new_parent_raw_body_read_credit": 0,
+  "new_source_or_support_reads_by_materializer": 0,
+  "original_journal_parent": "20261024-235901-todo-3080",
+  "original_primary_assessments": 18,
+  "original_support_state_counts": {
+    "0": 175,
+    "1": 27,
+    "2": 19,
+    "3": 2,
+    "4": 15
+  },
+  "parent_journal_sha256_at227": "b6658d2c81200f0320c75abb66d5ad344df328d60e01cd4a872225759453ff3c",
+  "publisher_job": "20261027-175645-todo-3080",
+  "records": [
+    {
+      "actual_assessment_reader": "20261028-171959-todo-3719",
+      "bytes": 11169,
+      "current_permission_or_adoption_granted": false,
+      "git_blob": "9b028075f26082c1bb6b3ccbe541182193c44490",
+      "inventory_id": "github:247f92444e190607e51240ec6d61aeaf6bf65ab040ff8b53df07c69c3549cab9",
+      "new_final_disposition": false,
+      "ordinal": 210,
+      "original_assessment": {
+        "candidate_disposition": "学費支援の状態/訂正・根拠追跡を改訂候補として提案。採否・許諾・導入/実test0。",
+        "findings": [
+          "年度とPell額・期間の例、Title IV/FAFSA/34 CFR等への適合主張は保存内容。現年度/制度・本人の業務対象への適用や正しい計算の証明ではない。",
+          "local/offline・parameterized SQL・アクセスlogという主張だけでFERPA適合、認可、保持/削除、会社間分離は保証されない。共通DB依存と各entityの所属照合は未検証。",
+          "record-disbursement/return等の記録と実資金移動、award提示と本人/学生の承諾、COD exportと実提出/受理を混同しない。offline主張とactionの『disburse funds』の実作用は実装確認が必要。",
+          "SAP override/PJ承認・loan限度・work-study timesheet/payroll exportは異なる判断/作用。sourceのroleやinstall後処理を本人許可へ昇格させず実行0。"
+        ],
+        "nearby_limit": "起動metadataのみ。中央本文/存在・同等性・現設定は未照会。",
+        "nearby_metadata": [
+          "domain-modeling",
+          "sql-data-integrity",
+          "payment-status-reconciliation",
+          "payroll-batch-reconciliation"
+        ],
+        "negative": "保存例の金額/法律名を最新保証とし、承認flagと支給記録だけで実送金/制度適合まで完了とする。",
+        "notices": [
+          [
+            "LICENSE.txt",
+            1,
+            "当該finaid packageの1082B MIT本文。",
+            "実作者/公開版・制度/入力データ/依存資源の権利は別。"
+          ]
+        ],
+        "positive": "年度・計算版と学生/awardを固定し、審査→承諾→支給記録と実受領を分け、取消/返還を原取引へ結ぶ設計へ参照する。",
+        "read": [
+          2,
+          0,
+          0,
+          true,
+          true,
+          268
+        ],
+        "reason": "全268行を順序全読。ISIR/SAP/R2T4/COD、奨学金、work-study/loanのaction一覧とoffline/security主張を確認。実装/DB/UIは未保存で規則・計算・作用は未検証。",
+        "required_changes": [
+          "親の実利用時に対象国/制度/年度と公式根拠・算式/丸め/境界・必要な審査を確認し、保存例の額を現行値として使わない。計算版・入力/根拠・結果・承認・訂正/取消を結ぶ。",
+          "共通DBの用途/会社/学生/年度を固定し認可・秘密/個人情報の最小出力を確認する。単なるlogやnon-null IDをアクセス権の証明にしない。",
+          "同じaward/支給/返還を一意に結び二重作用を防ぐ。実支給/提出が必要な場合だけ別の許可範囲と実受領結果を照合し、offline記録だけで完了にしない。"
+        ],
+        "row": 210,
+        "source": [
+          "github:247f92444e190607e51240ec6d61aeaf6bf65ab040ff8b53df07c69c3549cab9",
+          "skills/mailnike/educlaw-finaid/SKILL.md",
+          "363e58feac64317b73a172799c6a7eecbb218e521f65187c0774abc3c4b6ac7b",
+          "9b028075f26082c1bb6b3ccbe541182193c44490",
+          11169
+        ],
+        "support": [
+          [
+            "LICENSE.txt",
+            1082,
+            "b84dde49",
+            "83ac5426",
+            2,
+            0,
+            0,
+            "100644"
+          ],
+          [
+            "SKILL.md",
+            11169,
+            "363e58fe",
+            "9b028075",
+            2,
+            0,
+            0,
+            "100644"
+          ],
+          [
+            "UI.yaml",
+            null,
+            null,
+            "b162c638",
+            0,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "_meta.json",
+            460,
+            "4c326043",
+            "247a1861",
+            1,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "init_db.py",
+            null,
+            null,
+            "c90e8fa8",
+            0,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "scripts/db_query.py",
+            null,
+            null,
+            "74d7c693",
+            0,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "scripts/financial_aid.py",
+            null,
+            null,
+            "62f4094d",
+            0,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "scripts/loan_tracking.py",
+            null,
+            null,
+            "29ec3f71",
+            0,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "scripts/scholarships.py",
+            null,
+            null,
+            "a7ac8519",
+            0,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "scripts/work_study.py",
+            null,
+            null,
+            "1fb28fed",
+            0,
+            null,
+            null,
+            "100644"
+          ]
+        ],
+        "use": "教育機関の学費支援を年度/財源・申請/審査・award/支給記録・返還/異議申立へ分ける業務モデル参考。",
+        "value": "申請受領・審査済み・提示/承諾・支給/取消・返還と、計算結果/承認を別の状態として追える。"
+      },
+      "original_chunk_sha256": "a253ad1cefbe2bdea7ca5d7a151b90450f89de38866c15a6ae439b1c68a264c1",
+      "path": "skills/mailnike/educlaw-finaid/SKILL.md",
+      "source_commit": "920714f17d81e0a95c7a9bc51faf0a7921cd982d",
+      "source_repo": "6mile/skills",
+      "source_sha256": "363e58feac64317b73a172799c6a7eecbb218e521f65187c0774abc3c4b6ac7b"
+    },
+    {
+      "actual_assessment_reader": "20261028-171959-todo-3719",
+      "bytes": 16176,
+      "current_permission_or_adoption_granted": false,
+      "git_blob": "5bf9ef3e6e3a9d94f2c0c516390a6daa0f6945e0",
+      "inventory_id": "github:377f6dcb735bab5277313177e9b87c8474385d15310cf738cb19fcb4c22156a7",
+      "new_final_disposition": false,
+      "ordinal": 211,
+      "original_assessment": {
+        "candidate_disposition": "同期正本/競合・部分成功/確定後訂正の改訂候補として提案。最終採否・許諾・導入/接続/実test0。",
+        "findings": [
+          "SIS正本の名簿とLMS→SIS既定の成績方向を区別し、新規自動適用・既存競合・submitted lock・manualがある。importは照会だけでなく成績更新を含みうる。",
+          "DPA signedやconnection単位のCOPPA verifiedを1にする例は、実契約/本人又は保護者の同意・対象範囲の証拠ではない。sourceのFERPA/COPPA compliant主張は未検証。",
+          "16字以上のpassphrase、AES256、資格の末尾4字表示だけではKDF/暗号mode/改竄検知・鍵保管/rotation・秘密非露出を証明しない。local data主張でも外部への学生同期は明記される。",
+          "同接続のrunning排他・idempotent mapping・append-only logは実装未確認。通信失敗時の部分成功、再試行/古い要求、mapping除去後の再作成や他会社の接続混入に注意が必要。",
+          "OneRosterは既定6file/成績込み8fileとし末尾ではall8をZIPとする。氏名/メール省略だけで再識別や全個人情報の保護を保証しない。"
+        ],
+        "nearby_limit": "起動metadataのみ。中央本文/存在・同等性・現設定は未照会。",
+        "nearby_metadata": [
+          "stale-request-ordering",
+          "sql-data-integrity",
+          "oauth-least-privilege",
+          "database-purpose-binding",
+          "security-review"
+        ],
+        "negative": "DPA/COPPA flagを例のまま1にし、暗号化/同期logだけを根拠に全学生の安全な全件同期や制度適合を宣言する。",
+        "notices": [
+          [
+            "LICENSE.txt",
+            2,
+            "当該LMS packageの同1082B notice。",
+            "各LMS/OneRoster素材・資格/学生データ・実公開版の権利は別。"
+          ]
+        ],
+        "positive": "明示した接続で対象termを同期し、更新対象/競合/未同期を分け、確定成績の変更は元値と根拠を残して解決し、実相手の結果と照合する。",
+        "read": [
+          2,
+          0,
+          0,
+          true,
+          true,
+          299
+        ],
+        "reason": "299行を順序全読。Canvas/Moodle/Classroom/OneRoster、暗号化・DPA/COPPA flag、同期/競合/閉鎖・exportを確認。adapter/DB/scriptは未保存で保証主張や現API動作は未検証。",
+        "required_changes": [
+          "対象会社/学校・接続/実subject/scope、正本/方向、同期の基準版を固定し、実同意/契約の範囲と各対象の適用状態をflagから独立に照合する。現在の公式API/OneRoster仕様は親の実利用時に確認する。",
+          "stagingと新規自動適用・確定後の修正を明示し、部分/全件・実保存・再試行の重複/順序、取消/閉鎖を対象行receiptへ結ぶ。設定flagやlog生成だけで配送成功にしない。",
+          "資格を引数/出力へ露出させず鍵とDBを分け、実暗号/認可・保存先境界とexportの実file/件数/内容を検査する。sourceの契約/同意flagを実証なしに変更しない。"
+        ],
+        "row": 211,
+        "source": [
+          "github:377f6dcb735bab5277313177e9b87c8474385d15310cf738cb19fcb4c22156a7",
+          "skills/mailnike/educlaw-lms/SKILL.md",
+          "3e639579a7fc156b5a1d41a8ee8931ba1cae1ee9b7de4617510139a3509b6593",
+          "5bf9ef3e6e3a9d94f2c0c516390a6daa0f6945e0",
+          16176
+        ],
+        "support": [
+          [
+            "LICENSE.txt",
+            1082,
+            "b84dde49",
+            "83ac5426",
+            4,
+            0,
+            0,
+            "100644"
+          ],
+          [
+            "SKILL.md",
+            16176,
+            "3e639579",
+            "5bf9ef3e",
+            2,
+            0,
+            0,
+            "100644"
+          ],
+          [
+            "UI.yaml",
+            null,
+            null,
+            "9907de78",
+            0,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "_meta.json",
+            454,
+            "5282a453",
+            "223128cc",
+            1,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "init_db.py",
+            null,
+            null,
+            "ea795b63",
+            0,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "scripts/adapters/__init__.py",
+            null,
+            null,
+            "5719f681",
+            0,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "scripts/adapters/base.py",
+            null,
+            null,
+            "2e41a17f",
+            0,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "scripts/adapters/canvas.py",
+            null,
+            null,
+            "604e2d62",
+            0,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "scripts/adapters/google_classroom.py",
+            null,
+            null,
+            "8438df9c",
+            0,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "scripts/adapters/moodle.py",
+            null,
+            null,
+            "c0d94f81",
+            0,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "scripts/adapters/oneroster_csv.py",
+            null,
+            null,
+            "a6c65a74",
+            0,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "scripts/assignments.py",
+            null,
+            null,
+            "eb96ac60",
+            0,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "scripts/course_materials.py",
+            null,
+            null,
+            "057dd9a9",
+            0,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "scripts/db_query.py",
+            null,
+            null,
+            "abe354b4",
+            0,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "scripts/lms_sync.py",
+            null,
+            null,
+            "2e722867",
+            0,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "scripts/online_gradebook.py",
+            null,
+            null,
+            "a849792a",
+            0,
+            null,
+            null,
+            "100644"
+          ]
+        ],
+        "use": "SIS/LMS間の名簿・課題・成績同期で、正本/方向・staging・競合/確定成績・部分成功を分ける設計参考。",
+        "value": "新規成績と既存/確定成績を分け、明示的な競合解消と修正履歴、接続別の同期状態/対象行を追跡できる。"
+      },
+      "original_chunk_sha256": "a253ad1cefbe2bdea7ca5d7a151b90450f89de38866c15a6ae439b1c68a264c1",
+      "path": "skills/mailnike/educlaw-lms/SKILL.md",
+      "source_commit": "920714f17d81e0a95c7a9bc51faf0a7921cd982d",
+      "source_repo": "6mile/skills",
+      "source_sha256": "3e639579a7fc156b5a1d41a8ee8931ba1cae1ee9b7de4617510139a3509b6593"
+    },
+    {
+      "actual_assessment_reader": "20261028-171959-todo-3719",
+      "bytes": 11469,
+      "current_permission_or_adoption_granted": false,
+      "git_blob": "f1ade4ada88714e78df5510f59e63d3f276d2b71",
+      "inventory_id": "github:f427953b261b14549bce75543fbed81753710d91feac53ba288b91e782f2f388",
+      "new_final_disposition": false,
+      "ordinal": 212,
+      "original_assessment": {
+        "candidate_disposition": "時間割/資源割当・公開の状態整合を改訂候補として提案。採否・許諾・導入/実test0。",
+        "findings": [
+          "CRITICALが残るとpublish拒否とする一方、HIGHの教員契約/学生/定員等は別分類。critical0だけで学校の全必須条件を満たしたとはしない。severityを本人の新たな禁止へも昇格させない。",
+          "publish時に全sectionをscheduled、termをenrollment_openへ更新する主張があり、単なる時間割表示/出力より作用が広い。update-master-scheduleのstatus変更が同じ制約を通るかも未確認。",
+          "check→解消→submitの間の変更、room swap/emergency/bulk assignment、既存lockの競合・全体の原子性は未検証。古いcheck結果で現版の安全を確定しない。",
+          "HH:MM/duration・day cycleはあるが、実calendar休日/時間帯、日跨ぎ、重なり境界や移動/準備・accessibility等の評価規則はprimaryだけでは確定できない。"
+        ],
+        "nearby_limit": "起動metadataのみ。中央本文/存在・同等性・現設定は未照会。",
+        "nearby_metadata": [
+          "domain-modeling",
+          "stale-request-ordering",
+          "sql-data-integrity",
+          "timezone-helper"
+        ],
+        "negative": "critical0やroom提案を全制約合格/予約完了とみなし、古いcheckで公開して勝手に履修受付まで開始する。",
+        "notices": [
+          [
+            "LICENSE.txt",
+            2,
+            "当該scheduling packageの同1082B notice。",
+            "実作者/公開版・依存DB/入力データの権利は別。"
+          ]
+        ],
+        "positive": "固定版の需要/制約から割当案を作り、競合と受容理由を記録し、公開直前に同版を確認して実予約/term状態を照合する設計へ参照する。",
+        "read": [
+          2,
+          0,
+          0,
+          true,
+          true,
+          224
+        ],
+        "reason": "224行を順序全読。56actions、11競合種、master lifecycle・部屋swap/emergencyと公開の副作用を確認。script/DB/UIは未保存でsolverや排他・制約網羅性は未検証。",
+        "required_changes": [
+          "機関の実必須制約/希望を区別し、対象学期/会社とcalendar・periodの版を固定する。解消/受容は理由/実担当と対象版を保持し、check/公開時の同じ版を検証する。",
+          "公開による履修開始等を依頼範囲に結び、status別更新・swap/emergency/一括処理も同じ認可/lockと制約を通す。予約の二重作用と部分失敗を防ぎ結果を再検査する。",
+          "時間/周期/部屋定員・feature/教員制約の境界を実装と例で検査し、提案/割当/実公開・通知を別結果として扱う。実UIの実装や公開は行わない。"
+        ],
+        "row": 212,
+        "source": [
+          "github:f427953b261b14549bce75543fbed81753710d91feac53ba288b91e782f2f388",
+          "skills/mailnike/educlaw-scheduling/SKILL.md",
+          "3b3f5494e04cb4364394bc337afcdfe275da53b0e8fee701759ca4da347a96e8",
+          "f1ade4ada88714e78df5510f59e63d3f276d2b71",
+          11469
+        ],
+        "support": [
+          [
+            "LICENSE.txt",
+            1082,
+            "b84dde49",
+            "83ac5426",
+            4,
+            0,
+            0,
+            "100644"
+          ],
+          [
+            "SKILL.md",
+            11469,
+            "3b3f5494",
+            "f1ade4ad",
+            2,
+            0,
+            0,
+            "100644"
+          ],
+          [
+            "UI.yaml",
+            null,
+            null,
+            "7575e5ac",
+            0,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "_meta.json",
+            644,
+            "9f7d8e9b",
+            "d79baff2",
+            1,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "init_db.py",
+            null,
+            null,
+            "b0388a12",
+            0,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "scripts/conflict_resolution.py",
+            null,
+            null,
+            "0a1296bf",
+            0,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "scripts/db_query.py",
+            null,
+            null,
+            "f319202c",
+            0,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "scripts/master_schedule.py",
+            null,
+            null,
+            "c2b846c5",
+            0,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "scripts/room_assignment.py",
+            null,
+            null,
+            "d4c774e1",
+            0,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "scripts/schedule_patterns.py",
+            null,
+            null,
+            "e44ba878",
+            0,
+            null,
+            null,
+            "100644"
+          ]
+        ],
+        "use": "時間割のpattern/day/periodと、履修希望・教員/部屋制約・競合解消・公開/lockを結ぶ設計参考。",
+        "value": "希望需要と実割当、部屋提案と予約、競合を検出/解消/受容する状態、学期ごとの版を分離できる。"
+      },
+      "original_chunk_sha256": "a253ad1cefbe2bdea7ca5d7a151b90450f89de38866c15a6ae439b1c68a264c1",
+      "path": "skills/mailnike/educlaw-scheduling/SKILL.md",
+      "source_commit": "920714f17d81e0a95c7a9bc51faf0a7921cd982d",
+      "source_repo": "6mile/skills",
+      "source_sha256": "3b3f5494e04cb4364394bc337afcdfe275da53b0e8fee701759ca4da347a96e8"
+    },
+    {
+      "actual_assessment_reader": "20261028-171959-todo-3719",
+      "bytes": 13846,
+      "current_permission_or_adoption_granted": false,
+      "git_blob": "89553a891a479e1297ce24fbbf765b083e838752",
+      "inventory_id": "github:f7fe304c8bcd0f1164f028d4896f829b5fa137c04d92c4a77e2a26f1e6b23c9c",
+      "new_final_disposition": false,
+      "ordinal": 213,
+      "original_assessment": {
+        "candidate_disposition": "固定snapshotと検証/提出/訂正の証拠連鎖を改訂候補として提案。採否・許諾・導入/外部送信/実test0。",
+        "findings": [
+          "EDFacts/CRDC/IDEA618/Ed-Fi、57built-in rules・特定閾値やrollupの主張は保存内容。現行年度/州・対象/標準版での適合保証ではない。",
+          "data entry/validation/snapshot/追跡はoffline、Ed-Fiのsubmit/testは明示外部HTTPSと区別する。get-edfi-connection-testもtoken取得/last_tested更新という作用がある。",
+          "snapshot INSERT-only、approveの3状態原子更新、company_id非NULLという主張だけで不変/認可・会社間分離は証明されない。dynamic rule SQLを変更/実行する手順は値のparameterizationだけで安全としない。",
+          "add/update submissionやapproveの記録、errorをresolved/deferredにすることと、実提出先の受理/正しいデータの修正は別。full snapshot JSONには学生単位の機微情報が含まれうる。",
+          "少数集計のsuppression・機微flag/SSID・児童のdisciplineを扱う。数だけのreportや完全性scoreを正確性・権限・非再識別の証明としない。"
+        ],
+        "nearby_limit": "起動metadataのみ。中央本文/存在・同等性・現設定は未照会。",
+        "nearby_metadata": [
+          "sql-data-integrity",
+          "independent-hash-anchor",
+          "evidence-based-text-review",
+          "backend-correctness"
+        ],
+        "negative": "58等の件数やcompliant表記、non-null会社IDとapprove flagだけで制度適合/会社隔離・実提出成功を宣言する。",
+        "notices": [
+          [
+            "LICENSE.txt",
+            2,
+            "当該state-report packageの同1082B notice。",
+            "実作者/公開版・標準/入力データや外部serviceの権利は別。"
+          ]
+        ],
+        "positive": "対象年度の規則とsnapshotを固定し、errorの根拠・修正/保留を残し、原提出と訂正・相手の受理結果を一意に結ぶ設計へ参照する。",
+        "read": [
+          2,
+          0,
+          0,
+          true,
+          true,
+          221
+        ],
+        "reason": "221行を順序全読。demographics/discipline/Ed-Fi/州報告/検証/提出追跡、98actionsと不変条件を確認。SQL規則やscript未保存で標準/法令適合・暗号化/原子性は未検証。",
+        "required_changes": [
+          "対象州/年度・報告/規則版と入力snapshotを固定し、公式の現在の条件/descriptor/schemaを親が必要時に確認する。再実行/訂正は元提出と根拠・版へ結ぶ。",
+          "認可済みの会社/学校/宛先に限定し、rule SQLの作用/読取範囲、snapshot不変性・承認の原子性、外部再試行の重複/部分失敗を検査する。鍵/secretと学生情報をerrorやexportへ無選別に出さない。",
+          "検証合格・提出記録・相手受領・certificationを別証拠で確認する。保留errorを消しただけで完了とせず、必要な最小data/小集団保護と実内容を照合する。"
+        ],
+        "row": 213,
+        "source": [
+          "github:f7fe304c8bcd0f1164f028d4896f829b5fa137c04d92c4a77e2a26f1e6b23c9c",
+          "skills/mailnike/educlaw-statereport/SKILL.md",
+          "fecee4679ccd55178377d3113302fcbd73a9ee0dc4ff1940524c105dd037495c",
+          "89553a891a479e1297ce24fbbf765b083e838752",
+          13846
+        ],
+        "support": [
+          [
+            "LICENSE.txt",
+            1082,
+            "b84dde49",
+            "83ac5426",
+            4,
+            0,
+            0,
+            "100644"
+          ],
+          [
+            "SKILL.md",
+            13846,
+            "fecee467",
+            "89553a89",
+            2,
+            0,
+            0,
+            "100644"
+          ],
+          [
+            "UI.yaml",
+            null,
+            null,
+            "33ae5de4",
+            0,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "_meta.json",
+            470,
+            "b106785e",
+            "a92f1007",
+            1,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "init_db.py",
+            null,
+            null,
+            "55352b24",
+            0,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "scripts/data_validation.py",
+            null,
+            null,
+            "e6168b2e",
+            0,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "scripts/db_query.py",
+            null,
+            null,
+            "c76b9397",
+            0,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "scripts/demographics.py",
+            null,
+            null,
+            "e145e840",
+            0,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "scripts/discipline.py",
+            null,
+            null,
+            "9ed14a10",
+            0,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "scripts/ed_fi.py",
+            null,
+            null,
+            "746c3c45",
+            0,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "scripts/state_reporting.py",
+            null,
+            null,
+            "a73fc679",
+            0,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "scripts/submission_tracking.py",
+            null,
+            null,
+            "456788bf",
+            0,
+            null,
+            null,
+            "100644"
+          ]
+        ],
+        "use": "学校の行政報告を、対象window/規則・検証結果・凍結snapshot・提出記録/訂正・外部受領へ分ける設計参考。",
+        "value": "通常記録と報告用固定版、errorの解消/保留、原提出とamendment、外部連携の再試行を追跡できる。"
+      },
+      "original_chunk_sha256": "a253ad1cefbe2bdea7ca5d7a151b90450f89de38866c15a6ae439b1c68a264c1",
+      "path": "skills/mailnike/educlaw-statereport/SKILL.md",
+      "source_commit": "920714f17d81e0a95c7a9bc51faf0a7921cd982d",
+      "source_repo": "6mile/skills",
+      "source_sha256": "fecee4679ccd55178377d3113302fcbd73a9ee0dc4ff1940524c105dd037495c"
+    },
+    {
+      "actual_assessment_reader": "20261028-171959-todo-3719",
+      "bytes": 16822,
+      "current_permission_or_adoption_granted": false,
+      "git_blob": "cbcb5729b14c6713d1c3f2d12859d17cf3fcb323",
+      "inventory_id": "github:2bf9114397aea87454d207fdf77a9fd69dcf43f873b81f11e0b4c17487c7f96d",
+      "new_final_disposition": false,
+      "ordinal": 214,
+      "original_assessment": {
+        "candidate_disposition": "学生情報と履修/会計/通知の境界・訂正履歴を改訂候補として提案。最終採否・許諾・導入/実test0。",
+        "findings": [
+          "学生=customer、学費invoice=売上invoice、全feeをGLへ計上とする。学校の在籍/成績判断と会計/実支払・新費用は異なる作用で、一般の教育照会依頼から請求/延滞料付加を許可しない。",
+          "cancel-sectionは全在籍学生をdrop、waitlistは48h seat offer/notification、緊急alertは全recipientが対象。単なるrecordや特定学生照会と同じscopeにしない。",
+          "fully offline/zero-networkとsend/publishの記述は、内部通知記録か外部配送かを実装で区別する必要がある。生成/対象数だけで本人/保護者への実配送を保証しない。",
+          "get-studentのaccess logやunder13 flagは法令適合の十分な証拠ではない。list/export/guardian、同意取消、成績/会計の不変/訂正や会社分離はprimaryだけでは検証できない。",
+          "1行MIT表記には詳細termsがない。隣接finaid等の1082B noticeを当packageの実許諾へ無断で広げない。Windows対応や既存共通DBとの安全な初期化も未確認。"
+        ],
+        "nearby_limit": "起動metadataのみ。中央本文/存在・同等性・現設定は未照会。",
+        "nearby_metadata": [
+          "domain-modeling",
+          "sql-data-integrity",
+          "payment-status-reconciliation",
+          "stale-request-ordering",
+          "observability-notifications"
+        ],
+        "negative": "教育管理者という原personaを実権限とし、任意の全生徒をdrop/通知し、成績/学費記録とflagだけで配送/支払・制度適合まで完了とする。",
+        "notices": [
+          [
+            "LICENSE.txt",
+            3,
+            "当該educlaw packageの1行43B表記。",
+            "完全termsと実公開版/作者・依存資源や学生データの権利は未確定。"
+          ]
+        ],
+        "positive": "対象学生の履修・成績を固定し、確定後の修正は原値/理由へ結び、請求と通知は対象/作用と実結果を分けて照合する設計へ参照する。",
+        "read": [
+          2,
+          0,
+          0,
+          true,
+          true,
+          271
+        ],
+        "reason": "271行を順序全読。8domain/112actions、原子性/不変性・offline/法令主張、waitlist/緊急通知と学費作用を確認。実装と依存は未保存で正しさは未検証。個別noticeは43Bの1行だけと確認。",
+        "required_changes": [
+          "会社/学校・学期・学生/保護者と各作用を固定し、同意/アクセス権の現在の範囲・取消と最小出力を確認する。保存中のFERPA/COPPA適合主張は現制度/実装の確認と分ける。",
+          "成績/在籍/待機席数・invoice/GLの整合を原子性/一意性/訂正履歴で検査し、料金変更/実送金・通知/全体cancelを一般操作へ混ぜない。内部記録と実保存/配送/支払を別receiptで照合する。",
+          "親は43B noticeと実公開版/権利者の対応・必要なtermsを個別確認する。原本/共通DB・依存を保ち、未保存scriptや新費用/恒久設定をこの研究から実行しない。"
+        ],
+        "row": 214,
+        "source": [
+          "github:2bf9114397aea87454d207fdf77a9fd69dcf43f873b81f11e0b4c17487c7f96d",
+          "skills/mailnike/educlaw/SKILL.md",
+          "b3a70bfec2a4519fdf029fbf73026978de25117d614c23d8e224b618f11503dc",
+          "cbcb5729b14c6713d1c3f2d12859d17cf3fcb323",
+          16822
+        ],
+        "support": [
+          [
+            "LICENSE.txt",
+            43,
+            "0f0c1471",
+            "c19e067b",
+            2,
+            0,
+            0,
+            "100644"
+          ],
+          [
+            "SKILL.md",
+            16822,
+            "b3a70bfe",
+            "cbcb5729",
+            2,
+            0,
+            0,
+            "100644"
+          ],
+          [
+            "UI.yaml",
+            null,
+            null,
+            "b40a508a",
+            0,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "_meta.json",
+            446,
+            "cfe87e4b",
+            "eb3ad349",
+            1,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "init_db.py",
+            null,
+            null,
+            "f030b9a7",
+            0,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "scripts/academics.py",
+            null,
+            null,
+            "a78d8ee9",
+            0,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "scripts/attendance.py",
+            null,
+            null,
+            "770e46f6",
+            0,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "scripts/communications.py",
+            null,
+            null,
+            "2ab8ee01",
+            0,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "scripts/db_query.py",
+            null,
+            null,
+            "5e661e02",
+            0,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "scripts/enrollment.py",
+            null,
+            null,
+            "b1b82c07",
+            0,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "scripts/fees.py",
+            null,
+            null,
+            "341e5568",
+            0,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "scripts/grading.py",
+            null,
+            null,
+            "41584b59",
+            0,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "scripts/staff.py",
+            null,
+            null,
+            "c37f3a1f",
+            0,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "scripts/students.py",
+            null,
+            null,
+            "db786f88",
+            0,
+            null,
+            null,
+            "100644"
+          ]
+        ],
+        "use": "学生/保護者・学期/履修・成績/訂正・出欠・学費/台帳・通知を結ぶ業務境界の参考。",
+        "value": "申請/承認/在籍、履修/待機/取消、成績確定/訂正、請求/反対仕訳と通知の実作用を別状態で追える。"
+      },
+      "original_chunk_sha256": "a253ad1cefbe2bdea7ca5d7a151b90450f89de38866c15a6ae439b1c68a264c1",
+      "path": "skills/mailnike/educlaw/SKILL.md",
+      "source_commit": "920714f17d81e0a95c7a9bc51faf0a7921cd982d",
+      "source_repo": "6mile/skills",
+      "source_sha256": "b3a70bfec2a4519fdf029fbf73026978de25117d614c23d8e224b618f11503dc"
+    },
+    {
+      "actual_assessment_reader": "20261028-171959-todo-3719",
+      "bytes": 20300,
+      "current_permission_or_adoption_granted": false,
+      "git_blob": "371c3584e6cbcb8896136339a75f5881b30e33cf",
+      "inventory_id": "github:d5522d59b315be11d8180f0f5a5533306b5e2ac653d06ff69ecd9374b1e8bd3a",
+      "new_final_disposition": false,
+      "ordinal": 215,
+      "original_assessment": {
+        "candidate_disposition": "domain/台帳とmodule・移行/自己改訂の境界を改訂候補として提案。採否・許諾・導入/実test0。",
+        "findings": [
+          "Money=Decimal/TEXT、WAL、RBAC/immutable GL・US GAAP/ASC/給与税等は保存主張。正しい計算・認可/原子性・現制度適合の証明ではない。",
+          "自動業種検出→module導入、GitHub更新/削除、web dashboardのclone/build/nginx/SSL配備、定期請求/仕訳/再注文等は各々の作用が広い。sourceのcron/roleや命名だけを本人の導入/公開/支出許可にしない。",
+          "sourceは多数submit等を常に本人確認、全add/get/list/updateは即実行とする。実際の作用と既存の許可範囲に合わせ、通常操作の再承認待ちや逆に危険なupdateの一括許可を追加しない。",
+          "constitutional guardrails・adversarial audit・schema rollback・非財務DGM・Skill再生成は実装未確認。原sourceのconstitutionを本人方針へ昇格させず、自己選択の成績だけで安全性/回復済みとしない。",
+          "packageにはvendor/pypika等も含む。個別MITだけで全vendor/module/将来取得物をgrantしない。下位scriptを別primaryへ加算しない。"
+        ],
+        "nearby_limit": "起動metadataのみ。中央本文/存在・同等性・現設定は未照会。",
+        "nearby_metadata": [
+          "domain-modeling",
+          "database-migrations",
+          "sql-data-integrity",
+          "agent-system-design",
+          "security-review"
+        ],
+        "negative": "ERP Controllerという原roleを実権限としてcron/公開/新規購入を有効にし、constitution/監査の自己主張だけで安全・制度適合とする。",
+        "notices": [
+          [
+            "LICENSE.txt",
+            1,
+            "当該erp-clawの同1082B MIT本文。",
+            "vendor・個別module・実作者/公開版・データ/外部serviceは別。"
+          ]
+        ],
+        "positive": "同じ会社/DB/版の請求・台帳・取消を結び、moduleやschema変更を別作用として検査し、再生成Skillも原方針との対応を確認する設計へ参照する。",
+        "read": [
+          3,
+          1,
+          0,
+          false,
+          true,
+          299
+        ],
+        "reason": "299行を順序全読し86行メールのみ伏字。413actions/43modules、cron・auto onboarding・自己改訂/監査/配備を確認。全100支持を列挙し、実装/README/catalogの意味は未読で保持した。",
+        "required_changes": [
+          "会社/DB用途・domain/作用と依存版を固定し、金額/通貨/期間/訂正・一意性/原子性と認可を必要実装で検証する。保存した制度名やhash方式だけで適合/安全を保証しない。",
+          "module/移行/公開/cron/自動改訂は元依頼の同対象/範囲へ限定し、必要な版・依存/権利・復旧・実結果を確認する。原sourceから新費用・恒久設定・本人禁止の変更を採用しない。",
+          "確認は実作用と既存承認に合わせ、未確認の重大要件だけを親の確認点へ戻す。実行/課金/送信は0のまま原資料/既存中央を保持する。"
+        ],
+        "row": 215,
+        "source": [
+          "github:d5522d59b315be11d8180f0f5a5533306b5e2ac653d06ff69ecd9374b1e8bd3a",
+          "skills/mailnike/erp-claw/SKILL.md",
+          "d0d8173c3822e8d7865af5f7b4612d10c9c98ca07975b05c2dc3515f83c6d8bc",
+          "371c3584e6cbcb8896136339a75f5881b30e33cf",
+          20300
+        ],
+        "support": [
+          [
+            "LICENSE.txt",
+            1082,
+            "b84dde49",
+            "83ac5426",
+            4,
+            0,
+            0,
+            "100644"
+          ],
+          [
+            "README.md",
+            8621,
+            "1dd2c0c7",
+            "796f1069",
+            1,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "SKILL.md",
+            20300,
+            "d0d8173c",
+            "371c3584",
+            3,
+            1,
+            0,
+            "100644"
+          ],
+          [
+            "UI.yaml",
+            null,
+            null,
+            "bf06d5c2",
+            0,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "_meta.json",
+            624,
+            "4988af6e",
+            "1abe1af4",
+            1,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "scripts/db_query.py",
+            null,
+            null,
+            "ed23234b",
+            0,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "scripts/erpclaw-accounting-adv/consolidation.py",
+            null,
+            null,
+            "09b77cfc",
+            0,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "scripts/erpclaw-accounting-adv/db_query.py",
+            null,
+            null,
+            "7f43a9ca",
+            0,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "scripts/erpclaw-accounting-adv/init_db.py",
+            null,
+            null,
+            "1bcf7c45",
+            0,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "scripts/erpclaw-accounting-adv/intercompany.py",
+            null,
+            null,
+            "a00683d6",
+            0,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "scripts/erpclaw-accounting-adv/leases.py",
+            null,
+            null,
+            "2263ce4a",
+            0,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "scripts/erpclaw-accounting-adv/reports.py",
+            null,
+            null,
+            "b82244d0",
+            0,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "scripts/erpclaw-accounting-adv/revenue.py",
+            null,
+            null,
+            "294c4470",
+            0,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "scripts/erpclaw-billing/db_query.py",
+            null,
+            null,
+            "ee3aa2dd",
+            0,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "scripts/erpclaw-buying/db_query.py",
+            null,
+            null,
+            "47fe0d52",
+            0,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "scripts/erpclaw-gl/assets/charts/us_gaap.json",
+            null,
+            null,
+            "125ecebc",
+            0,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "scripts/erpclaw-gl/db_query.py",
+            null,
+            null,
+            "45fdf786",
+            0,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "scripts/erpclaw-hr/db_query.py",
+            null,
+            null,
+            "05e0b4bc",
+            0,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "scripts/erpclaw-inventory/db_query.py",
+            null,
+            null,
+            "89761a69",
+            0,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "scripts/erpclaw-journals/db_query.py",
+            null,
+            null,
+            "1cd541e8",
+            0,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "scripts/erpclaw-manufacturing/db_query.py",
+            null,
+            null,
+            "0e916334",
+            0,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "scripts/erpclaw-meta/db_query.py",
+            null,
+            null,
+            "137d758b",
+            0,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "scripts/erpclaw-os/__init__.py",
+            null,
+            null,
+            "e69de29b",
+            0,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "scripts/erpclaw-os/adversarial_audit.py",
+            null,
+            null,
+            "2b4ad51f",
+            0,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "scripts/erpclaw-os/compliance_weather.py",
+            null,
+            null,
+            "5f8f9482",
+            0,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "scripts/erpclaw-os/configure_module.py",
+            null,
+            null,
+            "4e864435",
+            0,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "scripts/erpclaw-os/constitution.py",
+            null,
+            null,
+            "18d0c548",
+            0,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "scripts/erpclaw-os/db_query.py",
+            null,
+            null,
+            "9cfdb3da",
+            0,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "scripts/erpclaw-os/dependency_resolver.py",
+            null,
+            null,
+            "d2a3dfe6",
+            0,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "scripts/erpclaw-os/deploy_audit.py",
+            null,
+            null,
+            "83678453",
+            0,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "scripts/erpclaw-os/deploy_pipeline.py",
+            null,
+            null,
+            "47d36821",
+            0,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "scripts/erpclaw-os/dgm_engine.py",
+            null,
+            null,
+            "1a4faf80",
+            0,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "scripts/erpclaw-os/feature_matrix.py",
+            null,
+            null,
+            "6d779c3c",
+            0,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "scripts/erpclaw-os/gap_detector.py",
+            null,
+            null,
+            "11802ab2",
+            0,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "scripts/erpclaw-os/generate_module.py",
+            null,
+            null,
+            "d91c1e44",
+            0,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "scripts/erpclaw-os/gl_invariant_checker.py",
+            null,
+            null,
+            "bcc23ec2",
+            0,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "scripts/erpclaw-os/heartbeat_analysis.py",
+            null,
+            null,
+            "d39879ae",
+            0,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "scripts/erpclaw-os/improvement_log.py",
+            null,
+            null,
+            "eb22306c",
+            0,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "scripts/erpclaw-os/in_module_generator.py",
+            null,
+            null,
+            "095d1a08",
+            0,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "scripts/erpclaw-os/industry_configs.py",
+            null,
+            null,
+            "e0291141",
+            0,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "scripts/erpclaw-os/install_suite.py",
+            null,
+            null,
+            "1a05f22c",
+            0,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "scripts/erpclaw-os/pattern_library.py",
+            null,
+            null,
+            "35b328fb",
+            0,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "scripts/erpclaw-os/references/pattern_catalog.md",
+            30665,
+            "6d00afd3",
+            "1d3484c7",
+            1,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "scripts/erpclaw-os/regression_gate.py",
+            null,
+            null,
+            "29e25d8b",
+            0,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "scripts/erpclaw-os/research_engine.py",
+            null,
+            null,
+            "d0f0ed02",
+            0,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "scripts/erpclaw-os/sandbox.py",
+            null,
+            null,
+            "02d4d907",
+            0,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "scripts/erpclaw-os/schema_diff.py",
+            null,
+            null,
+            "c4fc2583",
+            0,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "scripts/erpclaw-os/schema_migrator.py",
+            null,
+            null,
+            "fcedf150",
+            0,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "scripts/erpclaw-os/semantic_engine.py",
+            null,
+            null,
+            "337f241b",
+            0,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "scripts/erpclaw-os/tier_classifier.py",
+            null,
+            null,
+            "0337e6bc",
+            0,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "scripts/erpclaw-os/validate_module.py",
+            null,
+            null,
+            "ecd0089c",
+            0,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "scripts/erpclaw-os/variant_manager.py",
+            null,
+            null,
+            "9ef0427a",
+            0,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "scripts/erpclaw-payments/db_query.py",
+            null,
+            null,
+            "181f170e",
+            0,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "scripts/erpclaw-payroll/db_query.py",
+            null,
+            null,
+            "95427aa1",
+            0,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "scripts/erpclaw-reports/db_query.py",
+            null,
+            null,
+            "fc6638b4",
+            0,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "scripts/erpclaw-selling/db_query.py",
+            null,
+            null,
+            "c29abec0",
+            0,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "scripts/erpclaw-setup/assets/currencies.json",
+            null,
+            null,
+            "88846a8d",
+            0,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "scripts/erpclaw-setup/assets/default_payment_terms.json",
+            null,
+            null,
+            "4f2d08ec",
+            0,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "scripts/erpclaw-setup/assets/default_uom.json",
+            null,
+            null,
+            "83661731",
+            0,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "scripts/erpclaw-setup/assets/us_gaap.json",
+            null,
+            null,
+            "125ecebc",
+            0,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "scripts/erpclaw-setup/db_query.py",
+            null,
+            null,
+            "b911b644",
+            0,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "scripts/erpclaw-setup/init_schema.py",
+            null,
+            null,
+            "6eef15ab",
+            0,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "scripts/erpclaw-setup/lib/erpclaw_lib/__init__.py",
+            null,
+            null,
+            "b9044b3c",
+            0,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "scripts/erpclaw-setup/lib/erpclaw_lib/args.py",
+            null,
+            null,
+            "a1adc41d",
+            0,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "scripts/erpclaw-setup/lib/erpclaw_lib/audit.py",
+            null,
+            null,
+            "ee399c42",
+            0,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "scripts/erpclaw-setup/lib/erpclaw_lib/cross_skill.py",
+            null,
+            null,
+            "57e35033",
+            0,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "scripts/erpclaw-setup/lib/erpclaw_lib/crypto.py",
+            null,
+            null,
+            "77e98073",
+            0,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "scripts/erpclaw-setup/lib/erpclaw_lib/csv_import.py",
+            null,
+            null,
+            "78b0e9f9",
+            0,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "scripts/erpclaw-setup/lib/erpclaw_lib/custom_fields.py",
+            null,
+            null,
+            "c1c964e5",
+            0,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "scripts/erpclaw-setup/lib/erpclaw_lib/datetime_utils.py",
+            null,
+            null,
+            "d3aa354e",
+            0,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "scripts/erpclaw-setup/lib/erpclaw_lib/db.py",
+            null,
+            null,
+            "92738bd3",
+            0,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "scripts/erpclaw-setup/lib/erpclaw_lib/decimal_utils.py",
+            null,
+            null,
+            "b68f93f2",
+            0,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "scripts/erpclaw-setup/lib/erpclaw_lib/dependencies.py",
+            null,
+            null,
+            "fc2b2356",
+            0,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "scripts/erpclaw-setup/lib/erpclaw_lib/fx_posting.py",
+            null,
+            null,
+            "332b529d",
+            0,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "scripts/erpclaw-setup/lib/erpclaw_lib/gl_posting.py",
+            null,
+            null,
+            "1031ad30",
+            0,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "scripts/erpclaw-setup/lib/erpclaw_lib/naming.py",
+            null,
+            null,
+            "5b38e12e",
+            0,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "scripts/erpclaw-setup/lib/erpclaw_lib/pagination.py",
+            null,
+            null,
+            "9ceff83e",
+            0,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "scripts/erpclaw-setup/lib/erpclaw_lib/passwords.py",
+            null,
+            null,
+            "bfe8d49a",
+            0,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "scripts/erpclaw-setup/lib/erpclaw_lib/query.py",
+            null,
+            null,
+            "fbc4b4be",
+            0,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "scripts/erpclaw-setup/lib/erpclaw_lib/query_helpers.py",
+            null,
+            null,
+            "b68eff05",
+            0,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "scripts/erpclaw-setup/lib/erpclaw_lib/rbac.py",
+            null,
+            null,
+            "a5c04c7a",
+            0,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "scripts/erpclaw-setup/lib/erpclaw_lib/response.py",
+            null,
+            null,
+            "cf4e2c69",
+            0,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "scripts/erpclaw-setup/lib/erpclaw_lib/stock_posting.py",
+            null,
+            null,
+            "5cf4fa06",
+            0,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "scripts/erpclaw-setup/lib/erpclaw_lib/tax_calculation.py",
+            null,
+            null,
+            "1d57e176",
+            0,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "scripts/erpclaw-setup/lib/erpclaw_lib/validation.py",
+            null,
+            null,
+            "cdd1dda6",
+            0,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "scripts/erpclaw-setup/lib/erpclaw_lib/vendor/__init__.py",
+            null,
+            null,
+            "dd897403",
+            0,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "scripts/erpclaw-setup/lib/erpclaw_lib/vendor/pypika/__init__.py",
+            null,
+            null,
+            "145de38e",
+            0,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "scripts/erpclaw-setup/lib/erpclaw_lib/vendor/pypika/analytics.py",
+            null,
+            null,
+            "7581e397",
+            0,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "scripts/erpclaw-setup/lib/erpclaw_lib/vendor/pypika/dialects.py",
+            null,
+            null,
+            "cc7ddff1",
+            0,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "scripts/erpclaw-setup/lib/erpclaw_lib/vendor/pypika/enums.py",
+            null,
+            null,
+            "482b687f",
+            0,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "scripts/erpclaw-setup/lib/erpclaw_lib/vendor/pypika/functions.py",
+            null,
+            null,
+            "4d6ea15c",
+            0,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "scripts/erpclaw-setup/lib/erpclaw_lib/vendor/pypika/pseudocolumns.py",
+            null,
+            null,
+            "6aeb47c0",
+            0,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "scripts/erpclaw-setup/lib/erpclaw_lib/vendor/pypika/queries.py",
+            null,
+            null,
+            "47a134e9",
+            0,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "scripts/erpclaw-setup/lib/erpclaw_lib/vendor/pypika/terms.py",
+            null,
+            null,
+            "ec5bfbef",
+            0,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "scripts/erpclaw-setup/lib/erpclaw_lib/vendor/pypika/utils.py",
+            null,
+            null,
+            "15984e04",
+            0,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "scripts/erpclaw-setup/migrations/001_registry_tables.py",
+            null,
+            null,
+            "83843784",
+            0,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "scripts/erpclaw-tax/db_query.py",
+            null,
+            null,
+            "40f6af45",
+            0,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "scripts/module_manager.py",
+            null,
+            null,
+            "2643c56c",
+            0,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "scripts/module_registry.json",
+            null,
+            null,
+            "f0e5d336",
+            0,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "scripts/onboarding.py",
+            null,
+            null,
+            "7ae3e398",
+            0,
+            null,
+            null,
+            "100644"
+          ]
+        ],
+        "use": "ERPのrouter/共通DBと14domain、module/移行・仕訳/反対仕訳を結ぶ業務構造の参考。",
+        "value": "請求/支払/在庫/給与と台帳、module導入・schema/監査を別作用として整理できる。"
+      },
+      "original_chunk_sha256": "63de620fef81af98e5610ea00be2d4e1c7e13d574c5609ef65d7b68f33e3b467",
+      "path": "skills/mailnike/erp-claw/SKILL.md",
+      "source_commit": "920714f17d81e0a95c7a9bc51faf0a7921cd982d",
+      "source_repo": "6mile/skills",
+      "source_sha256": "d0d8173c3822e8d7865af5f7b4612d10c9c98ca07975b05c2dc3515f83c6d8bc"
+    },
+    {
+      "actual_assessment_reader": "20261028-171959-todo-3719",
+      "bytes": 10206,
+      "current_permission_or_adoption_granted": false,
+      "git_blob": "4d9688c9d380062a0d01b57c2f8578404c69967c",
+      "inventory_id": "github:21f3f9e8f75852527faf5401fcafc65cc79b6a9dd3dfa134c8c001f73f78617e",
+      "new_final_disposition": false,
+      "ordinal": 216,
+      "original_assessment": {
+        "candidate_disposition": "分析候補と実務作用・context分離を改訂候補として提案。採否・許諾・導入/実test0。",
+        "findings": [
+          "AI engineという名称だが本文は外部API/資格不要のoffline分析を主張する。AI API鍵の課金前提と名称だけで分類しない。",
+          "round number等の検知・correlation・relationship score/forecastは判定候補/推定で、真の不正や因果・将来残高の保証ではない。10future typesを実装済みにしない。",
+          "company_idが列にないtableはJSON保持、get-conversation-contextは省略時latest、自table/auditも可変とする。company/session分離・証跡の不変性や全auditを本文だけで保証しない。",
+          "rule severityにblock/notify/auto_execute等があり、財務read-onlyとの境界は未検証。任意ruleを本人禁止/許可の変更へしない。weekly cron/announceも原命令で有効化しない。"
+        ],
+        "nearby_limit": "起動metadataのみ。中央本文/存在・同等性・現設定は未照会。",
+        "nearby_metadata": [
+          "sql-data-integrity",
+          "domain-modeling",
+          "evidence-based-text-review",
+          "database-purpose-binding"
+        ],
+        "negative": "丸い金額やscoreを不正の確定とし、latest contextから別会社の判断を継承し、auto_executeを実権限として支出や禁止変更に使う。",
+        "notices": [
+          [
+            "LICENSE.txt",
+            2,
+            "当該ai-engineの1066B MIT本文。",
+            "実公開版/作者・依存/入力データの権利は別。"
+          ]
+        ],
+        "positive": "同じ会社/期間の分析候補と仮定を保存し、原取引/確認結果へ結び、財務データを書換えず誤検知を根拠付きで棄却する設計へ参照する。",
+        "read": [
+          2,
+          0,
+          0,
+          true,
+          true,
+          235
+        ],
+        "reason": "235行を順序全読。22actions、offline/標準library・財務GL投稿なし、自tableへの書込/可変、company_idをJSONに持つ説明を確認。script未保存で検知/予測/分離は未検証。",
+        "required_changes": [
+          "分析の入力期間/版・仮定/閾値/欠測・実測評価を記録し、候補/予測・確認/棄却・実務判断を別状態にする。検知対象外を問題なしとしない。",
+          "会社/主体/session/contextと認可を固定し、JSON内IDやlatestだけで範囲を選ばない。可変auditの履歴/改竄検出とruleの作用を確認する。",
+          "no-such-tableを理由に別用途DBへ初期化せず、実path/schema/依存を技術的に照合する。原cron・auto_executeや本人ルールを追加/変更しない。"
+        ],
+        "row": 216,
+        "source": [
+          "github:21f3f9e8f75852527faf5401fcafc65cc79b6a9dd3dfa134c8c001f73f78617e",
+          "skills/mailnike/erpclaw-ai-engine/SKILL.md",
+          "cfec3933ed060b8c58370c8a797a5cc4a93f7a355f7645106383091118c5f05e",
+          "4d9688c9d380062a0d01b57c2f8578404c69967c",
+          10206
+        ],
+        "support": [
+          [
+            "LICENSE.txt",
+            1066,
+            "6f6bb192",
+            "ff21cdae",
+            2,
+            0,
+            0,
+            "100644"
+          ],
+          [
+            "SKILL.md",
+            10206,
+            "cfec3933",
+            "4d9688c9",
+            2,
+            0,
+            0,
+            "100644"
+          ],
+          [
+            "UI.yaml",
+            null,
+            null,
+            "f347aaf6",
+            0,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "_meta.json",
+            298,
+            "af64a64c",
+            "61cff018",
+            1,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "pytest.ini",
+            null,
+            null,
+            "6d5fa314",
+            0,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "scripts/__init__.py",
+            null,
+            null,
+            "e69de29b",
+            0,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "scripts/db_query.py",
+            null,
+            null,
+            "85f4153e",
+            0,
+            null,
+            null,
+            "100644"
+          ]
+        ],
+        "use": "異常候補・予測/シナリオ・業務rule・会話contextを元データへの作用と分ける分析設計参考。",
+        "value": "財務データ読取と自moduleの分析結果/確認/棄却を分け、仮説を実績へ混ぜず追跡できる。"
+      },
+      "original_chunk_sha256": "63de620fef81af98e5610ea00be2d4e1c7e13d574c5609ef65d7b68f33e3b467",
+      "path": "skills/mailnike/erpclaw-ai-engine/SKILL.md",
+      "source_commit": "920714f17d81e0a95c7a9bc51faf0a7921cd982d",
+      "source_repo": "6mile/skills",
+      "source_sha256": "cfec3933ed060b8c58370c8a797a5cc4a93f7a355f7645106383091118c5f05e"
+    },
+    {
+      "actual_assessment_reader": "20261028-171959-todo-3719",
+      "bytes": 10092,
+      "current_permission_or_adoption_granted": false,
+      "git_blob": "1e95c7b1ecac9957fe29521033598a495a6725ef",
+      "inventory_id": "github:18e6d4807f0c62a42d216659fea4bfa545d26c4075e460e9d2722cfb21844631",
+      "new_final_disposition": false,
+      "ordinal": 217,
+      "original_assessment": {
+        "candidate_disposition": "欠測を保つ横断集計・指標の根拠を改訂候補として提案。採否・許諾・導入/実test0。",
+        "findings": [
+          "自tableなし/DB書込0/いつでも安全という主張は実装未確認。読取でも他会社の機微情報・全量負荷や変動中の別時点集計を問題なしとしない。",
+          "指標の対象期間/as-of、optional依存と欠測理由を出す設計は有用。module欠如・schema違い・権限不足・障害と、実測0/空を分離する必要がある。",
+          "Dollar固定format、default company/current period、scorecardのgradeや流動性から『支払えるか』への短絡は、実通貨/会計基準・算式/母数/資金期限を省略しうる。"
+        ],
+        "nearby_limit": "起動metadataのみ。中央本文/存在・同等性・現設定は未照会。",
+        "nearby_metadata": [
+          "sql-data-integrity",
+          "double-read-snapshot-limits",
+          "evidence-based-text-review",
+          "domain-modeling"
+        ],
+        "negative": "欠moduleを0と埋め、別会社/別時点の数値を混ぜ、Dollar固定のscoreだけで全社の財務状態を保証する。",
+        "notices": [
+          [
+            "LICENSE.txt",
+            3,
+            "当該analyticsの同1066B notice。",
+            "実公開版/作者と入力/依存の権利は別。"
+          ]
+        ],
+        "positive": "対象会社/期間と通貨を表示し、利用可能moduleの同時点データで指標を計算し、未取得/欠測の項目を理由付きで残す。",
+        "read": [
+          2,
+          0,
+          0,
+          true,
+          true,
+          218
+        ],
+        "reason": "218行を順序全読。25read-only actions・財務/収益/在庫/人員/業務指標・部分結果とformatを確認。script未保存で非更新・算式/性能や会社間分離は未検証。",
+        "required_changes": [
+          "会社・会計期間/通貨/単位・対象版を固定し、算式/分母0/丸め・欠測/部分/全体とpaginationを明示する。現在の財務判断を保存例やscoreだけで確定しない。",
+          "実装でread-only接続/認可・同じsnapshotからの整合集計、動的metric/group-by等の許可値と負荷を確認する。例外を一括で欠module扱いにしない。"
+        ],
+        "row": 217,
+        "source": [
+          "github:18e6d4807f0c62a42d216659fea4bfa545d26c4075e460e9d2722cfb21844631",
+          "skills/mailnike/erpclaw-analytics/SKILL.md",
+          "9037f985547f9e8af15c998516757927d35735844db8caa197e04c5657a95c30",
+          "1e95c7b1ecac9957fe29521033598a495a6725ef",
+          10092
+        ],
+        "support": [
+          [
+            "LICENSE.txt",
+            1066,
+            "6f6bb192",
+            "ff21cdae",
+            4,
+            0,
+            0,
+            "100644"
+          ],
+          [
+            "SKILL.md",
+            10092,
+            "9037f985",
+            "1e95c7b1",
+            2,
+            0,
+            0,
+            "100644"
+          ],
+          [
+            "UI.yaml",
+            null,
+            null,
+            "bf5ea8e0",
+            0,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "_meta.json",
+            288,
+            "c2b35a1e",
+            "54399ace",
+            1,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "scripts/db_query.py",
+            null,
+            null,
+            "5a5e30e5",
+            0,
+            null,
+            null,
+            "100644"
+          ]
+        ],
+        "use": "複数業務moduleのKPI/比率・期間比較を、利用可能範囲と欠測を示して集計する参考。",
+        "value": "optional module欠如をavailable:false/理由や部分結果として示し、0件/数値0や全体成功と区別できる。"
+      },
+      "original_chunk_sha256": "63de620fef81af98e5610ea00be2d4e1c7e13d574c5609ef65d7b68f33e3b467",
+      "path": "skills/mailnike/erpclaw-analytics/SKILL.md",
+      "source_commit": "920714f17d81e0a95c7a9bc51faf0a7921cd982d",
+      "source_repo": "6mile/skills",
+      "source_sha256": "9037f985547f9e8af15c998516757927d35735844db8caa197e04c5657a95c30"
+    },
+    {
+      "actual_assessment_reader": "20261028-171959-todo-3719",
+      "bytes": 13815,
+      "current_permission_or_adoption_granted": false,
+      "git_blob": "954c44dcfeb43c56d9e4491f7f72ddf463b24e03",
+      "inventory_id": "github:59bee50d5d2e82e8b1a34cbb5570b4e381d663da130b5160dbe8f631e54379c0",
+      "new_final_disposition": false,
+      "ordinal": 218,
+      "original_assessment": {
+        "candidate_disposition": "資産/予定・台帳/実物作用の整合を改訂候補として提案。採否・許諾・導入/実test0。",
+        "findings": [
+          "straight-lineだけ月割を明示し、WDV/double-decliningのrate/期間単位や残存価額下限・端数/初月/最終月等はprimaryでは十分確定しない。制度/税務適合を読取だけで保証しない。",
+          "償却/除却GLとstatusの単一transaction・cancel=反対仕訳は保存主張。重複計上・途中失敗/再試行、計上後の取得価額/方法変更・過去as-of整合は未検証。",
+          "売却時のCash/Bank仕訳は実入金や実物処分の証明ではない。movement/maintenance記録も実際の引渡し/作業完了とは別。monthly cronは本人が許可した定期実行ではない。"
+        ],
+        "nearby_limit": "起動metadataのみ。中央本文/存在・同等性・現設定は未照会。",
+        "nearby_metadata": [
+          "domain-modeling",
+          "sql-data-integrity",
+          "payment-status-reconciliation",
+          "stale-request-ordering"
+        ],
+        "negative": "償却式やGL成功だけで税務適合・実入金/実物処分まで完了とし、原cronから月次計上/通知を勝手に有効化する。",
+        "notices": [
+          [
+            "LICENSE.txt",
+            3,
+            "当該assetsの同1066B notice。",
+            "実公開版/作者・依存や資産データの権利は別。"
+          ]
+        ],
+        "positive": "対象期間の償却予定と確定仕訳を結び、再試行で二重計上しないことと、売却記録/実入金を別に照合する設計へ参照する。",
+        "read": [
+          2,
+          0,
+          0,
+          true,
+          true,
+          265
+        ],
+        "reason": "265行を順序全読。16actions、3償却方式・GL/状態の単一transaction主張とcronを確認。script/要件は未読/未保存で算式・原子性・不変性は未検証。",
+        "required_changes": [
+          "対象会社/資産・計上期間/通貨・償却方針/算式版を固定し、ゼロ/残価/耐用年数・丸め・期間境界と変更後の再計算を検査する。公式の制度/会計条件は親の実利用時に確認する。",
+          "原資産/予定/仕訳・状態/取消を一意に結び原子性と再試行を確認する。実売却/入金・物理処分/保守完了を帳簿記録から推定せず、既存許可に合う証拠を分ける。",
+          "DB用途/依存を確かめ、未保存要件/scriptを取得拒否の別経路で補わず確認点に残す。原cron/announce・不要な確認待ちをそのまま導入しない。"
+        ],
+        "row": 218,
+        "source": [
+          "github:59bee50d5d2e82e8b1a34cbb5570b4e381d663da130b5160dbe8f631e54379c0",
+          "skills/mailnike/erpclaw-assets/SKILL.md",
+          "1ff06faaf27cdd1d8b725b22f1960da215494cca305a68bf9d29f42b74d2e30a",
+          "954c44dcfeb43c56d9e4491f7f72ddf463b24e03",
+          13815
+        ],
+        "support": [
+          [
+            "LICENSE.txt",
+            1066,
+            "6f6bb192",
+            "ff21cdae",
+            4,
+            0,
+            0,
+            "100644"
+          ],
+          [
+            "SKILL.md",
+            13815,
+            "1ff06faa",
+            "954c44dc",
+            2,
+            0,
+            0,
+            "100644"
+          ],
+          [
+            "UI.yaml",
+            null,
+            null,
+            "c53c0d7d",
+            0,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "_meta.json",
+            282,
+            "e86d0f4d",
+            "1188b2a9",
+            1,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "pytest.ini",
+            null,
+            null,
+            "784f2837",
+            0,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "scripts/db_query.py",
+            null,
+            null,
+            "3a1ff04c",
+            0,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "scripts/requirements.txt",
+            137,
+            "db73144f",
+            "48e37f5e",
+            1,
+            null,
+            null,
+            "100644"
+          ]
+        ],
+        "use": "固定資産の登録・償却予定/計上・移動/保管・保守・売却/除却と台帳を結ぶ参考。",
+        "value": "予定と確定計上、実物の移動と記録、売却/除却の帳簿価額・損益・取消を区別できる。"
+      },
+      "original_chunk_sha256": "63de620fef81af98e5610ea00be2d4e1c7e13d574c5609ef65d7b68f33e3b467",
+      "path": "skills/mailnike/erpclaw-assets/SKILL.md",
+      "source_commit": "920714f17d81e0a95c7a9bc51faf0a7921cd982d",
+      "source_repo": "6mile/skills",
+      "source_sha256": "1ff06faaf27cdd1d8b725b22f1960da215494cca305a68bf9d29f42b74d2e30a"
+    },
+    {
+      "actual_assessment_reader": "20261028-171959-todo-3719",
+      "bytes": 10920,
+      "current_permission_or_adoption_granted": false,
+      "git_blob": "86f586ed7a61a347ed08fd1df9ee67644caecb88",
+      "inventory_id": "github:d2e00cb7739dad437a5f41d58a8e95eddfcfe0167f51e151a067019506baf68c",
+      "new_final_disposition": false,
+      "ordinal": 219,
+      "original_assessment": {
+        "candidate_disposition": "計量/料金版・請求/決済の整合を改訂候補として提案。採否・許諾・導入/実test0。",
+        "findings": [
+          "flat/tiered/volume_discountをsupported、time-of-use/demand/prepaid_credit/hybridをplannedとする。前払残高actionがあることだけでplanned方式も完成としない。",
+          "usage idempotency keyは任意でUNIQUE、meter_reading/adjustmentはupdated_atなしでimmutableと説明する。NULL/省略・batchの重複、会社/送信元scopeやDB更新防止の実証ではない。",
+          "期間/料金effective版と境界・メーターreset/rollover・遅着/補正event、再計算/請求書再生成時の二重作用はprimaryで未確定。既存periodというerrorだけで正しい内容の処理済みとしない。",
+          "billing自体はGL投稿なしでsellingへinvoiceを委譲する主張。計算/請求書生成・実送付/決済/返金は別で、通常API鍵やAI API課金との分類も混同しない。"
+        ],
+        "nearby_limit": "起動metadataのみ。中央本文/存在・同等性・現設定は未照会。",
+        "nearby_metadata": [
+          "commerce-billing",
+          "payment-status-reconciliation",
+          "incremental-read-late-events",
+          "sql-data-integrity"
+        ],
+        "negative": "任意UNIQUE keyやinvoice生成だけで二重課金防止/入金完了を宣言し、planned料金方式や保存例の料金を本番で勝手に有効化する。",
+        "notices": [
+          [
+            "LICENSE.txt",
+            3,
+            "当該billingの同1066B notice。",
+            "実公開版/作者・selling依存/顧客データや決済serviceの権利は別。"
+          ]
+        ],
+        "positive": "同じmeter/期間・料金版から一意なeventだけを集計し、補正は原記録へ結び、invoiceと実決済を別結果として照合する設計へ参照する。",
+        "read": [
+          2,
+          0,
+          0,
+          true,
+          true,
+          228
+        ],
+        "reason": "228行を順序全読。22actions、flat/tiered/volumeとplanned方式、UNIQUE event key・計算とinvoice委譲を確認。script未保存で算式/原子性・重複防止は未検証。",
+        "required_changes": [
+          "対象会社/顧客/meter・単位/通貨、料金版と期間の開始/終了・timezoneを固定し、階層境界/丸め/基本料金・遅着/補正/残高期限を実装で検査する。保存例を本人の新料金/支出許可へしない。",
+          "event keyの必須性/複合scopeとbatch/再試行、同periodの再計算・invoice連携の一意性/原子性を確認する。元記録を保って訂正/取消を結び、updated_at欠如だけで不変としない。",
+          "計算結果・invoice・実送付/決済/返金を別receiptで確認し、原sourceの請求提案や確認規則を既存の許可に合わせる。今回の請求/新費用/実API/送信は0。"
+        ],
+        "row": 219,
+        "source": [
+          "github:d2e00cb7739dad437a5f41d58a8e95eddfcfe0167f51e151a067019506baf68c",
+          "skills/mailnike/erpclaw-billing/SKILL.md",
+          "f8c6ef937657a9c12faf2758f6a9bf6dc6c3ff1dc3693e4dc4b48923e40b819f",
+          "86f586ed7a61a347ed08fd1df9ee67644caecb88",
+          10920
+        ],
+        "support": [
+          [
+            "LICENSE.txt",
+            1066,
+            "6f6bb192",
+            "ff21cdae",
+            4,
+            0,
+            0,
+            "100644"
+          ],
+          [
+            "SKILL.md",
+            10920,
+            "f8c6ef93",
+            "86f586ed",
+            2,
+            0,
+            0,
+            "100644"
+          ],
+          [
+            "UI.yaml",
+            null,
+            null,
+            "9112901e",
+            0,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "_meta.json",
+            284,
+            "bcb1a086",
+            "ebf1e969",
+            1,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "scripts/db_query.py",
+            null,
+            null,
+            "6a5bc8cb",
+            0,
+            null,
+            null,
+            "100644"
+          ]
+        ],
+        "use": "計量値/使用event、料金版・請求期間/計算・請求書/調整・前払残高を分ける従量課金モデルの参考。",
+        "value": "観測/推定/補正/rolloverと、消費集計/請求/取消・調整を原記録へ結び、二重課金を防ぐ確認点を整理できる。"
+      },
+      "original_chunk_sha256": "63de620fef81af98e5610ea00be2d4e1c7e13d574c5609ef65d7b68f33e3b467",
+      "path": "skills/mailnike/erpclaw-billing/SKILL.md",
+      "source_commit": "920714f17d81e0a95c7a9bc51faf0a7921cd982d",
+      "source_repo": "6mile/skills",
+      "source_sha256": "f8c6ef937657a9c12faf2758f6a9bf6dc6c3ff1dc3693e4dc4b48923e40b819f"
+    },
+    {
+      "actual_assessment_reader": "20261028-171959-todo-3719",
+      "bytes": 14938,
+      "current_permission_or_adoption_granted": false,
+      "git_blob": "1a4e37b536a8afd62e9458464f41b400b57daa8b",
+      "inventory_id": "github:6b6451e0b67649ca6028ebe7812aa6dae8610822d582594e4ca8c791d09f9700",
+      "new_final_disposition": false,
+      "ordinal": 220,
+      "original_assessment": {
+        "candidate_disposition": "購買伝票と台帳・実作用の整合を改訂候補として提案。採否・許諾・導入/実test0。",
+        "findings": [
+          "receiptで在庫計上、invoiceでもupdate_stock時SLE計上とするため、同じ受入を二重計上しない対応が必要。部分受入/返品・原価配賦・原請求との関係は未検証。",
+          "offline主張と『RFQ送信』『POが購入確約』『支払が買掛を決済』を区別する。内部伝票のsubmitと実配送/購入/入出金は別。",
+          "見積のbest priceには通貨/税/送料/支払・納期条件の一致が必要。1099 flagだけで現税務適合としない。未submitを自動submit、編集不能を自動cancelする回復案は業務作用を増やす。"
+        ],
+        "nearby_metadata": [
+          "domain-modeling",
+          "sql-data-integrity",
+          "payment-status-reconciliation",
+          "commerce-billing"
+        ],
+        "negative": "受入とinvoiceの両方で在庫を増やし、伝票submitだけで購入/配送/支払まで完了とする。",
+        "notices": [
+          [
+            "LICENSE.txt",
+            1,
+            "当該buyingの同1066B MIT本文。",
+            "実公開版/作者・依存/取引データやserviceの権利は別。"
+          ]
+        ],
+        "positive": "同じPOの部分受入と請求を数量/金額・在庫/買掛台帳で照合し、返品は原伝票へ結び、実支払を別に確認する。",
+        "read": [
+          2,
+          0,
+          0,
+          true,
+          true,
+          296
+        ],
+        "reason": "296行全読。34actionsとDraft/Submit/Cancel、SLE/GL/PLE原子性の主張を確認。script/依存は未保存で実動作未検証。",
+        "required_changes": [
+          "会社/仕入先・PO/receipt/invoice/返品と台帳を一意に結び、数量・通貨/税/評価・期間と部分/全件、再試行/取消の原子性を検証する。",
+          "実発注/支出/配送/支払を記録処理と分け、元の同対象/既存許可を保つ。欠tableや状態errorを理由に初期化/確約/取消を自動で追加しない。"
+        ],
+        "row": 220,
+        "source": [
+          "github:6b6451e0b67649ca6028ebe7812aa6dae8610822d582594e4ca8c791d09f9700",
+          "skills/mailnike/erpclaw-buying/SKILL.md",
+          "735d0113d6285fbef9c469c09d425983214cecaa1c662555306e01ba69798cd3",
+          "1a4e37b536a8afd62e9458464f41b400b57daa8b",
+          14938
+        ],
+        "support": [
+          [
+            "LICENSE.txt",
+            1066,
+            "6f6bb192",
+            "ff21cdae",
+            4,
+            0,
+            0,
+            "100644"
+          ],
+          [
+            "SKILL.md",
+            14938,
+            "735d0113",
+            "1a4e37b5",
+            2,
+            0,
+            0,
+            "100644"
+          ],
+          [
+            "UI.yaml",
+            null,
+            null,
+            "c457bb64",
+            0,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "_meta.json",
+            282,
+            "11b3c3ce",
+            "73e9fa42",
+            1,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "pytest.ini",
+            null,
+            null,
+            "b0de3e5c",
+            0,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "scripts/db_query.py",
+            null,
+            null,
+            "4d427ca9",
+            0,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "scripts/requirements.txt",
+            80,
+            "58033b43",
+            "236e5b82",
+            1,
+            null,
+            null,
+            "100644"
+          ]
+        ],
+        "use": "購買要求→見積/発注→部分受入→買掛/税・支払を原伝票へ結ぶ設計参考。",
+        "value": "発注・受入・請求の数量/金額と、在庫/GL/支払台帳・取消を別状態で照合できる。"
+      },
+      "original_chunk_sha256": "74ee4171ce47d716b1a5eb27419fdec83ed7b8d7bacbf16bce4a1e978adf35ea",
+      "path": "skills/mailnike/erpclaw-buying/SKILL.md",
+      "source_commit": "920714f17d81e0a95c7a9bc51faf0a7921cd982d",
+      "source_repo": "6mile/skills",
+      "source_sha256": "735d0113d6285fbef9c469c09d425983214cecaa1c662555306e01ba69798cd3"
+    },
+    {
+      "actual_assessment_reader": "20261028-171959-todo-3719",
+      "bytes": 12167,
+      "current_permission_or_adoption_granted": false,
+      "git_blob": "5406ada23d4cfa6a2a59409f598a8cda0f4507e4",
+      "inventory_id": "github:df9a82258f0a730c5dd2c6c9d932a3545d646f275ecb6a158e7dc702d3eca556",
+      "new_final_disposition": false,
+      "ordinal": 221,
+      "original_assessment": {
+        "candidate_disposition": "商談の証拠/予測・変換の境界を改訂候補として提案。採否・許諾・導入/実test0。",
+        "findings": [
+          "proposal_sentへのstatus変更・call/email activityの記録は実送信の証拠ではない。確率×見込収益も認識収益/実入金や較正済み予測とは別。",
+          "won/lost後の更新禁止と、update-opportunityのstage変更が同じ条件を通るか未検証。新商談を作る回復案で原履歴/失注や重複を隠さない。",
+          "quotationを別processで作る唯一のcross-skill writeとする。親の状態と子の実結果・再試行を一意に結ぶ必要がある。company-scoped主張に対し多くのactionに会社指定がなく、実認可/所属照合は未確認。"
+        ],
+        "nearby_metadata": [
+          "domain-modeling",
+          "sql-data-integrity",
+          "stale-request-ordering",
+          "b2b-cold-outreach"
+        ],
+        "negative": "proposal_sent flagだけで実送信とし、別processの再実行で見積を重複作成して加重見込額を売上とする。",
+        "notices": [
+          [
+            "LICENSE.txt",
+            1,
+            "当該CRMの同1066B notice。",
+            "実公開版/作者・連絡先/取引データと送信serviceの権利は別。"
+          ]
+        ],
+        "positive": "原leadから商談/見積への一意な対応を残し、連絡の記録と実配送、見込額と実成約/売上を別に確認する。",
+        "read": [
+          3,
+          1,
+          0,
+          false,
+          true,
+          254
+        ],
+        "reason": "254行を順序全読し65行メールのみ伏字。18actions・terminal state、加重見込収益とsubprocess変換を確認。実装未保存で分離/変換の整合は未検証。",
+        "required_changes": [
+          "会社/担当・lead/商談/顧客のscope、変換元/先と版を固定する。subprocessの部分失敗/二重作成・status競合を検査し、原履歴を保つ。",
+          "実送信/成約/顧客との新約束を記録/予測と分離し、確率/期間/通貨/母数を明示する。原personaやstageを送信・契約権限にしない。"
+        ],
+        "row": 221,
+        "source": [
+          "github:df9a82258f0a730c5dd2c6c9d932a3545d646f275ecb6a158e7dc702d3eca556",
+          "skills/mailnike/erpclaw-crm/SKILL.md",
+          "891f3850546e06419f234470c5e91468fba263502cf3653d11221baf16ffb698",
+          "5406ada23d4cfa6a2a59409f598a8cda0f4507e4",
+          12167
+        ],
+        "support": [
+          [
+            "LICENSE.txt",
+            1066,
+            "6f6bb192",
+            "ff21cdae",
+            4,
+            0,
+            0,
+            "100644"
+          ],
+          [
+            "SKILL.md",
+            12167,
+            "891f3850",
+            "5406ada2",
+            3,
+            1,
+            0,
+            "100644"
+          ],
+          [
+            "UI.yaml",
+            null,
+            null,
+            "ddefb60b",
+            0,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "_meta.json",
+            276,
+            "cbef4ddb",
+            "09949df0",
+            1,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "scripts/db_query.py",
+            null,
+            null,
+            "2c2ebcd0",
+            0,
+            null,
+            null,
+            "100644"
+          ]
+        ],
+        "use": "見込客・商談stage・活動記録・見積への変換と予測集計を分けるCRM設計参考。",
+        "value": "元lead→opportunity→quotationの履歴と、予測/実成約・連絡記録/実送信を別に追跡できる。"
+      },
+      "original_chunk_sha256": "74ee4171ce47d716b1a5eb27419fdec83ed7b8d7bacbf16bce4a1e978adf35ea",
+      "path": "skills/mailnike/erpclaw-crm/SKILL.md",
+      "source_commit": "920714f17d81e0a95c7a9bc51faf0a7921cd982d",
+      "source_repo": "6mile/skills",
+      "source_sha256": "891f3850546e06419f234470c5e91468fba263502cf3653d11221baf16ffb698"
+    },
+    {
+      "actual_assessment_reader": "20261028-171959-todo-3719",
+      "bytes": 12382,
+      "current_permission_or_adoption_granted": false,
+      "git_blob": "897aec7143803765fb9ad49cc78375928a7a1fd8",
+      "inventory_id": "github:a432066a511a55c4f6692fe231401017475e81cdd5d31157ba1b0c4a74f21ea0",
+      "new_final_disposition": false,
+      "ordinal": 222,
+      "original_assessment": {
+        "candidate_disposition": "元帳不変性・期間/勘定制約の検査観点を改訂候補として提案。採否・許諾・導入/実test0。",
+        "findings": [
+          "借貸一致は必要条件であり、完全性/正しい勘定・会社/通貨・実銀行残高の証明ではない。balanced→All goodという報告案は範囲を超える。",
+          "updated_at列がないことだけでimmutableを保証しない。voucher別の一回限りの計上/取消・caller transactionと全moduleの制約適用が必要。",
+          "validate-period-close→closeの間の変更、親子階層の循環/二重表現整合、next-seriesの更新作用は未検証。unfreeze/reopen/日付変更を単なるerror回避として自動適用しない。"
+        ],
+        "nearby_metadata": [
+          "sql-data-integrity",
+          "deterministic-graph-cycle-reporting",
+          "database-purpose-binding",
+          "backend-correctness"
+        ],
+        "negative": "借貸だけ合わせて正しい帳簿とし、凍結/締めerrorを理由に日付や勘定を変更して計上を通す。",
+        "notices": [
+          [
+            "LICENSE.txt",
+            1,
+            "当該GLの同1066B notice。",
+            "実公開版/作者・CoA/共有lib/入力データの権利は別。"
+          ]
+        ],
+        "positive": "同一会社/期間の原voucherと元帳を一意に結び、借貸と勘定/凍結/締めを計上時に確認し、訂正は反対仕訳として残す。",
+        "read": [
+          2,
+          0,
+          0,
+          true,
+          true,
+          269
+        ],
+        "reason": "269行全読。借貸等式、共有connへのinsert/reverse、nested set/parent階層、期間締め等を確認。script/CoA/共有libは未保存で実効性は未検証。",
+        "required_changes": [
+          "会社/勘定・通貨/期間・元voucherを固定し、借貸/符号/丸め・leaf/frozen/closed・hierarchy・一意性を実更新と同じtransactionで検証する。",
+          "締め/反対仕訳/再開の根拠と版を保ち、book balanceと外部残高を分ける。US templateや保存等式を本人の会計方針/現制度適合へ自動適用しない。"
+        ],
+        "row": 222,
+        "source": [
+          "github:a432066a511a55c4f6692fe231401017475e81cdd5d31157ba1b0c4a74f21ea0",
+          "skills/mailnike/erpclaw-gl/SKILL.md",
+          "4d0be8122e632a7a62201de6e3115e4feb0844cebd2b5f0a49903478cb10f484",
+          "897aec7143803765fb9ad49cc78375928a7a1fd8",
+          12382
+        ],
+        "support": [
+          [
+            "LICENSE.txt",
+            1066,
+            "6f6bb192",
+            "ff21cdae",
+            4,
+            0,
+            0,
+            "100644"
+          ],
+          [
+            "SKILL.md",
+            12382,
+            "4d0be812",
+            "897aec71",
+            2,
+            0,
+            0,
+            "100644"
+          ],
+          [
+            "UI.yaml",
+            null,
+            null,
+            "e265c509",
+            0,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "_meta.json",
+            274,
+            "ac74d7fe",
+            "f6f8302e",
+            1,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "assets/charts/us_gaap.json",
+            null,
+            null,
+            "125ecebc",
+            0,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "pytest.ini",
+            null,
+            null,
+            "b0de3e5c",
+            0,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "scripts/db_query.py",
+            null,
+            null,
+            "4eebf7f4",
+            0,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "scripts/requirements.txt",
+            121,
+            "2a4f9e9c",
+            "10deda1f",
+            1,
+            null,
+            null,
+            "100644"
+          ]
+        ],
+        "use": "勘定体系・借貸検証/元帳・反対仕訳・期間締め・伝票連番を結ぶ会計基盤の設計参考。",
+        "value": "元voucherと計上/取消、勘定の階層/凍結・年度/締めの制約を全writerへ揃える観点がある。"
+      },
+      "original_chunk_sha256": "74ee4171ce47d716b1a5eb27419fdec83ed7b8d7bacbf16bce4a1e978adf35ea",
+      "path": "skills/mailnike/erpclaw-gl/SKILL.md",
+      "source_commit": "920714f17d81e0a95c7a9bc51faf0a7921cd982d",
+      "source_repo": "6mile/skills",
+      "source_sha256": "4d0be8122e632a7a62201de6e3115e4feb0844cebd2b5f0a49903478cb10f484"
+    },
+    {
+      "actual_assessment_reader": "20261028-171959-todo-3719",
+      "bytes": 14095,
+      "current_permission_or_adoption_granted": false,
+      "git_blob": "a6e1d214c698574bf174275099776a2b1d185762",
+      "inventory_id": "github:bf6e3181a1766ddbd0f790e623b565dc090c7f07029428b8df9aa202384c5c3c",
+      "new_final_disposition": false,
+      "ordinal": 223,
+      "original_assessment": {
+        "candidate_disposition": "人事記録・残高/台帳/実事実の整合を改訂候補として提案。採否・許諾・導入/実test0。",
+        "findings": [
+          "経費はDraft→Submit→Approve→Paid、どの段階でもRejectedという説明がある。承認済み債務/既払金をflagだけで消さず、反対仕訳/支払との整合が必要。",
+          "休暇残高を承認時に減らす説明と承認済み申請から計算する説明を、実装で一つの正本へ結ぶ必要がある。並行承認・休日/半日/繰越や勤怠訂正は未検証。",
+          "勤怠UNIQUEは真の勤務の証明ではない。社員status/ライフサイクル記録は実雇用判断/通知と別。残高不足を理由に追加付与、日付変更、経費submit/承認を自動で行わない。"
+        ],
+        "nearby_metadata": [
+          "domain-modeling",
+          "payroll-batch-reconciliation",
+          "sql-data-integrity",
+          "timezone-helper"
+        ],
+        "negative": "PaidをRejectedへ変えて債務/支払を消し、勤怠行や退職eventだけで実勤務/雇用手続きまで完了とする。",
+        "notices": [
+          [
+            "LICENSE.txt",
+            1,
+            "当該HRの同1066B notice。",
+            "実公開版/作者・依存/従業員データや雇用制度の適用は別。"
+          ]
+        ],
+        "positive": "対象社員の休暇承認と残高を整合させ、経費の原申請→債務計上→実支払を別の証拠で確認する。",
+        "read": [
+          2,
+          0,
+          0,
+          true,
+          true,
+          287
+        ],
+        "reason": "287行全読。28actions、経費GLとstatusの原子性・休暇/勤怠/退職等の記録を確認。実装/制度・認可/履歴保持は未検証。",
+        "required_changes": [
+          "会社/社員・期間/勤務calendar・実承認者と対象版を固定し、残高/重複/申請状態を同じtransactionで照合する。機微情報を必要範囲だけ出力する。",
+          "経費の債務/支払/取消と、雇用/勤務・休暇の実事実を内部記録から分離し、原状態・根拠/訂正履歴を保つ。原確認規則を既存許可の再質問や一括許可へしない。"
+        ],
+        "row": 223,
+        "source": [
+          "github:bf6e3181a1766ddbd0f790e623b565dc090c7f07029428b8df9aa202384c5c3c",
+          "skills/mailnike/erpclaw-hr/SKILL.md",
+          "59aa52ba9c6e2073456ac55d0a56b8c6475b29aac325c0a35a30a70bd6930ae0",
+          "a6e1d214c698574bf174275099776a2b1d185762",
+          14095
+        ],
+        "support": [
+          [
+            "LICENSE.txt",
+            1066,
+            "6f6bb192",
+            "ff21cdae",
+            4,
+            0,
+            0,
+            "100644"
+          ],
+          [
+            "SKILL.md",
+            14095,
+            "59aa52ba",
+            "a6e1d214",
+            2,
+            0,
+            0,
+            "100644"
+          ],
+          [
+            "UI.yaml",
+            null,
+            null,
+            "34f8b023",
+            0,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "_meta.json",
+            274,
+            "a7385c97",
+            "9003dfdd",
+            1,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "pytest.ini",
+            null,
+            null,
+            "784f2837",
+            0,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "scripts/db_query.py",
+            null,
+            null,
+            "6a21eb86",
+            0,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "scripts/requirements.txt",
+            137,
+            "db73144f",
+            "48e37f5e",
+            1,
+            null,
+            null,
+            "100644"
+          ]
+        ],
+        "use": "社員/組織・休暇申請/残高・勤怠・経費債務/実払を分ける人事業務モデル参考。",
+        "value": "承認と実消化/支払、履歴/訂正、会社/社員と台帳の一貫した対応を設計できる。"
+      },
+      "original_chunk_sha256": "74ee4171ce47d716b1a5eb27419fdec83ed7b8d7bacbf16bce4a1e978adf35ea",
+      "path": "skills/mailnike/erpclaw-hr/SKILL.md",
+      "source_commit": "920714f17d81e0a95c7a9bc51faf0a7921cd982d",
+      "source_repo": "6mile/skills",
+      "source_sha256": "59aa52ba9c6e2073456ac55d0a56b8c6475b29aac325c0a35a30a70bd6930ae0"
+    },
+    {
+      "actual_assessment_reader": "20261028-171959-todo-3719",
+      "bytes": 9242,
+      "current_permission_or_adoption_granted": false,
+      "git_blob": "8d0c6e9c6292020ba393ff5e80db73ecba9b9ce3",
+      "inventory_id": "github:ef14d5e9e80898653eb3934a916c10f12075077248d8c2df5c3df9b8d2e82ca6",
+      "new_final_disposition": false,
+      "ordinal": 224,
+      "original_assessment": {
+        "candidate_disposition": "mock/実連携と配送/保存証拠の境界を改訂候補として提案。採否・許諾・導入/実API/実test0。",
+        "findings": [
+          "Plaid/Stripe/S3を冠するが全offline/mockと明記する。現service/公式test sandboxの実受入や実決済・remote backupの成功証拠ではない。実secret/実カード情報をfixtureに必要としない。",
+          "銀行照合はABS(amount)+3日窓。符号/通貨/口座/相手や候補衝突を無視して実照合済みにしない。webhook UNIQUEも署名/主体/mode・順序・原子的な作用完了の証明ではない。",
+          "mock backupの実hashはremote存在/整合snapshot・復元の証拠ではない。restore command生成と実復元、soft-delete記録とremote削除を分ける。local key保持・encrypted既定0で安全性を保証しない。"
+        ],
+        "nearby_metadata": [
+          "payment-status-reconciliation",
+          "sqlite-wal-snapshot",
+          "independent-hash-anchor",
+          "commerce-billing",
+          "oauth-least-privilege"
+        ],
+        "negative": "全intent成功のmockを本番決済成功とし、hash/復元commandだけでS3保存・復元済みと報告する。",
+        "notices": [
+          [
+            "LICENSE.txt",
+            1,
+            "当該integrationsの同1066B notice。",
+            "実公開版/作者・Plaid/Stripe/AWS契約や入力データの権利は別。"
+          ]
+        ],
+        "positive": "mock fixtureによる契約検査と明示し、サンプルの一致/重複を確認する。実決済・remote保存/復元は別の実receiptがある場合にだけ報告する。",
+        "read": [
+          2,
+          0,
+          0,
+          true,
+          true,
+          202
+        ],
+        "reason": "202行全読。全APIがmock、銀行sample5件、intentは全成功とする説明、S3記録/実hash・復元command生成を確認。script未保存でmock実装さえ未検証。",
+        "required_changes": [
+          "模擬データ/期待結果/作用を明示し、mock成功を実連携へ昇格させない。将来の実利用は同service/環境/主体・既存許可/費用と公式仕様を親が確認し、非AI鍵とAI API課金を混同しない。",
+          "実連携を検査する際は取引/口座/通貨/署名とeventの一意な作用・失敗後再試行を確認する。backupはWAL整合/保存bytes・独立根拠のhash・実復元を検証し、追加有料保管を原sourceから有効にしない。"
+        ],
+        "row": 224,
+        "source": [
+          "github:ef14d5e9e80898653eb3934a916c10f12075077248d8c2df5c3df9b8d2e82ca6",
+          "skills/mailnike/erpclaw-integrations/SKILL.md",
+          "6df051933f1ebb8dd330c9052c649d94d1fe2892534e25098d27eae9f863cef4",
+          "8d0c6e9c6292020ba393ff5e80db73ecba9b9ce3",
+          9242
+        ],
+        "support": [
+          [
+            "LICENSE.txt",
+            1066,
+            "6f6bb192",
+            "ff21cdae",
+            4,
+            0,
+            0,
+            "100644"
+          ],
+          [
+            "SKILL.md",
+            9242,
+            "6df05193",
+            "8d0c6e9c",
+            2,
+            0,
+            0,
+            "100644"
+          ],
+          [
+            "_meta.json",
+            472,
+            "91eede7b",
+            "86fe3d51",
+            1,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "scripts/db_query.py",
+            null,
+            null,
+            "cc8a54cc",
+            0,
+            null,
+            null,
+            "100644"
+          ]
+        ],
+        "use": "銀行/決済/remote backupの模擬連携を、実連携の証拠と区別して検査する反例・contract設計参考。",
+        "value": "模擬fixtureの設定/照合・event重複と、外部への実配送/保存/復元を別状態にできる。"
+      },
+      "original_chunk_sha256": "74ee4171ce47d716b1a5eb27419fdec83ed7b8d7bacbf16bce4a1e978adf35ea",
+      "path": "skills/mailnike/erpclaw-integrations/SKILL.md",
+      "source_commit": "920714f17d81e0a95c7a9bc51faf0a7921cd982d",
+      "source_repo": "6mile/skills",
+      "source_sha256": "6df051933f1ebb8dd330c9052c649d94d1fe2892534e25098d27eae9f863cef4"
+    },
+    {
+      "actual_assessment_reader": "20261028-171959-todo-3719",
+      "bytes": 14981,
+      "current_permission_or_adoption_granted": false,
+      "git_blob": "ae18c4cbc7da304973700a8303d49adf65c3aed2",
+      "inventory_id": "github:ea98f1a0afc8f998fef0cda4a645982060ab3c09794813148bb60189c93b21e5",
+      "new_final_disposition": false,
+      "ordinal": 225,
+      "original_assessment": {
+        "candidate_disposition": "在庫/実物・評価/取消と全writerの整合を改訂候補として提案。採否・許諾・導入/実test0。",
+        "findings": [
+          "FIFOはfuture supportと記載。moving-averageの過去日付/取消/再評価が後続原価へ及ぼす影響、SLE/GL原子性・全writerでの二重作用防止は未検証。",
+          "batch/serialの必要性・signed qty・倉庫/会社/UOMを合わせる必要がある。実在庫不足を架空のreceiptで補い、physical countの記録だけで実物照合済みとしない。",
+          "cronのcheck-reorderはaction一覧にない。low-stockのfilter/sortや全社量へのitem必須get-stock-balance等の短縮案も掲載flagsと一致しない。sourceから未確認action/通知を導入しない。"
+        ],
+        "nearby_metadata": [
+          "domain-modeling",
+          "sql-data-integrity",
+          "stale-request-ordering",
+          "backend-correctness"
+        ],
+        "negative": "FIFOを完成済みとし、不足を架空receiptで埋め、別moduleから同じ在庫を二度増やして台帳だけで実物一致とする。",
+        "notices": [
+          [
+            "LICENSE.txt",
+            1,
+            "当該inventoryの同1066B notice。",
+            "実公開版/作者・依存/実物/取引データの権利は別。"
+          ]
+        ],
+        "positive": "原入出庫とserial/batch・SLE/GLを結び、取消後の残数量/評価と実物照合の根拠を別に確認する。",
+        "read": [
+          2,
+          0,
+          0,
+          true,
+          true,
+          299
+        ],
+        "reason": "299行全読。34actions、moving-average/FIFO将来対応、SLE/GL・クロスmodule writerとcronを確認。実装/計算/排他は未検証。",
+        "required_changes": [
+          "会社/倉庫/品目・単位/serial/batchと原voucherを固定し、入出/移動/取消・評価を一意に結ぶ。全writerの原子性/再試行と後続評価の整合を検査する。",
+          "実数量/入庫根拠と記録・原価/価格版を分離し、残数/期限/期間境界を検査する。catalogと実装を確認して参照/短縮案を修復し、cron/再注文や新支出を追加しない。"
+        ],
+        "row": 225,
+        "source": [
+          "github:ea98f1a0afc8f998fef0cda4a645982060ab3c09794813148bb60189c93b21e5",
+          "skills/mailnike/erpclaw-inventory/SKILL.md",
+          "a8ef9b04f5406d610f74f25a3045adc203cd98159d196206e17992e99e5f9ebe",
+          "ae18c4cbc7da304973700a8303d49adf65c3aed2",
+          14981
+        ],
+        "support": [
+          [
+            "LICENSE.txt",
+            1066,
+            "6f6bb192",
+            "ff21cdae",
+            4,
+            0,
+            0,
+            "100644"
+          ],
+          [
+            "SKILL.md",
+            14981,
+            "a8ef9b04",
+            "ae18c4cb",
+            2,
+            0,
+            0,
+            "100644"
+          ],
+          [
+            "UI.yaml",
+            null,
+            null,
+            "b4d690b2",
+            0,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "_meta.json",
+            288,
+            "3489cf53",
+            "227b6427",
+            1,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "pytest.ini",
+            null,
+            null,
+            "b0de3e5c",
+            0,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "scripts/db_query.py",
+            null,
+            null,
+            "5ecbd53f",
+            0,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "scripts/requirements.txt",
+            80,
+            "58033b43",
+            "236e5b82",
+            1,
+            null,
+            null,
+            "100644"
+          ]
+        ],
+        "use": "入出庫/倉庫移動・製造材料/完成品・serial/batchと在庫/GL・評価を結ぶ参考。",
+        "value": "実物の観測と在庫伝票、元取引と取消/再評価、複数moduleからの同じ在庫作用を追跡できる。"
+      },
+      "original_chunk_sha256": "74ee4171ce47d716b1a5eb27419fdec83ed7b8d7bacbf16bce4a1e978adf35ea",
+      "path": "skills/mailnike/erpclaw-inventory/SKILL.md",
+      "source_commit": "920714f17d81e0a95c7a9bc51faf0a7921cd982d",
+      "source_repo": "6mile/skills",
+      "source_sha256": "a8ef9b04f5406d610f74f25a3045adc203cd98159d196206e17992e99e5f9ebe"
+    },
+    {
+      "actual_assessment_reader": "20261028-171959-todo-3719",
+      "bytes": 13738,
+      "current_permission_or_adoption_granted": false,
+      "git_blob": "3165da09dec0f4f9bf9f49471db1a9cc65463c7d",
+      "inventory_id": "github:0c76ebf1fa8c0780a8b28dfb14e48055f0a9e7028090a4f915708b0297d40370",
+      "new_final_disposition": false,
+      "ordinal": 226,
+      "original_assessment": {
+        "candidate_disposition": "訂正履歴・定期発生回の整合を改訂候補として提案。採否・許諾・導入/実test0。",
+        "findings": [
+          "作成/submit時の再検証は有用だが、借貸一致だけで正しい取引/勘定/期間としない。元GL/状態と取消/新draftを一回の作用へ結ぶ必要がある。",
+          "cancel後にamendを提案する文に対し、lifecycleではcancelledをamend不可とする。catalog/状態の整合を確認し、unfreeze/別勘定を単なる通過策にしない。",
+          "next_run_date\u003c=as_of_dateは対象選択条件でありidempotenceの証明ではない。並行cron/再試行・月末/閏日/DST・追付きとauto-submitの作用範囲は未検証。"
+        ],
+        "nearby_metadata": [
+          "sql-data-integrity",
+          "bounded-batch-cursor-starvation",
+          "stale-request-ordering",
+          "database-purpose-binding"
+        ],
+        "negative": "借貸だけ合わせて凍結/期間を迂回し、期限以下という条件だけで定期処理を重複防止済みとする。",
+        "notices": [
+          [
+            "LICENSE.txt",
+            1,
+            "当該journalsの同1066B notice。",
+            "実公開版/作者・共有lib/会計データの権利は別。"
+          ]
+        ],
+        "positive": "同じ元仕訳を一度だけ反対仕訳に結び、訂正draftと定期発生回の履歴を残して再実行の二重計上を防ぐ設計へ参照する。",
+        "read": [
+          2,
+          0,
+          0,
+          true,
+          true,
+          288
+        ],
+        "reason": "288行全読。借貸/2行以上・片側正数、17actions主張、amend・recurring/auto-submitを確認。script未保存で原子性/一意性は未検証。",
+        "required_changes": [
+          "会社/原voucher・勘定/通貨/期間と訂正版を固定し、計上/取消/新draft作成の原子性/一意性を確認する。状態表・提案/catalogを実装と合わせる。",
+          "定期処理はtemplate版/発生回の一意性とJE生成/next date更新を同じtransactionへ結び、有限の追付き/再試行を検査する。原cron/auto-submitから新しい実務権限や支出を作らない。"
+        ],
+        "row": 226,
+        "source": [
+          "github:0c76ebf1fa8c0780a8b28dfb14e48055f0a9e7028090a4f915708b0297d40370",
+          "skills/mailnike/erpclaw-journals/SKILL.md",
+          "943aec5bfa66680cf1a2c0a710cd3d3e52e2c611d0f849db7624a42b066c5905",
+          "3165da09dec0f4f9bf9f49471db1a9cc65463c7d",
+          13738
+        ],
+        "support": [
+          [
+            "LICENSE.txt",
+            1066,
+            "6f6bb192",
+            "ff21cdae",
+            4,
+            0,
+            0,
+            "100644"
+          ],
+          [
+            "SKILL.md",
+            13738,
+            "943aec5b",
+            "3165da09",
+            2,
+            0,
+            0,
+            "100644"
+          ],
+          [
+            "UI.yaml",
+            null,
+            null,
+            "517d1fb4",
+            0,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "_meta.json",
+            464,
+            "4b8c2419",
+            "0900b4cf",
+            1,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "pytest.ini",
+            null,
+            null,
+            "69a434ad",
+            0,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "scripts/db_query.py",
+            null,
+            null,
+            "26852f72",
+            0,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "scripts/requirements.txt",
+            121,
+            "2a4f9e9c",
+            "10deda1f",
+            1,
+            null,
+            null,
+            "100644"
+          ]
+        ],
+        "use": "手動仕訳の下書き/計上・取消/訂正と、定期発生単位の再実行を設計する参考。",
+        "value": "作成時と計上時の再検証、元仕訳→反対仕訳→リンク付き新draft、定期template/発生回の対応を残せる。"
+      },
+      "original_chunk_sha256": "74ee4171ce47d716b1a5eb27419fdec83ed7b8d7bacbf16bce4a1e978adf35ea",
+      "path": "skills/mailnike/erpclaw-journals/SKILL.md",
+      "source_commit": "920714f17d81e0a95c7a9bc51faf0a7921cd982d",
+      "source_repo": "6mile/skills",
+      "source_sha256": "943aec5bfa66680cf1a2c0a710cd3d3e52e2c611d0f849db7624a42b066c5905"
+    },
+    {
+      "actual_assessment_reader": "20261028-171959-todo-3719",
+      "bytes": 14900,
+      "current_permission_or_adoption_granted": false,
+      "git_blob": "8523bed1cdaa18bfbba0f92e282b0adbba036f8a",
+      "inventory_id": "github:3e54620cd2c191c7de6b34645eeab6b05c4bdec8335011876590a1b19c2d4e03",
+      "new_final_disposition": false,
+      "ordinal": 227,
+      "original_assessment": {
+        "candidate_disposition": "BOM/計画と実消費/原価・台帳の整合を改訂候補として提案。採否・許諾・導入/実test0。",
+        "findings": [
+          "多段BOM再帰は循環/重複・数量倍率/UOMと版の検証が必要。MRPの在庫/未完了注文比較は、他注文の予約・納期等を含む確実な使用可能量の証明ではない。",
+          "actual-time-in-minsとhour-rateの原価式には時間単位換算・丸め/版の確認が必要。計画数量やcompleted flag・SLE/GLだけで実製造/品質を保証しない。",
+          "WIP transfer→材料消費/完成品の二重計上/残余・取消/部分産出は未検証。状態表はcompleted取消不可なので、一般的なcancel案を完成後へ広げない。purchase request生成は実POや新支出の許可ではない。"
+        ],
+        "nearby_metadata": [
+          "domain-modeling",
+          "deterministic-graph-cycle-reporting",
+          "sql-data-integrity",
+          "codebase-design"
+        ],
+        "negative": "再帰BOMやMRPを無検証で確定し、completed/GLだけで品質・実受領まで保証して不足分を勝手に購入する。",
+        "notices": [
+          [
+            "LICENSE.txt",
+            1,
+            "当該manufacturingの同1066B notice。",
+            "実公開版/作者・依存/工程/取引データの権利は別。"
+          ]
+        ],
+        "positive": "固定BOM版の所要量と実材料/産出・時間/原価を照合し、WIPと完成品/GLを同じwork orderへ結ぶ設計へ参照する。",
+        "read": [
+          2,
+          0,
+          0,
+          true,
+          true,
+          297
+        ],
+        "reason": "297行全読。24actions、BOM再帰展開、work-order状態、材料transfer/完了・原価/原子性を確認。実装/solver・実生産/品質は未検証。",
+        "required_changes": [
+          "会社/倉庫・BOM/工程/単位・計画/実数量と原価版を固定し、循環/重複/倍率、所要量/予約/納期と時間単位を検査する。",
+          "材料/WIP/完成品・SLE/GL/statusを一意かつ原子的に結び、再試行/取消・残余/不良/部分結果を実事実と照合する。実生産/受領・購買を内部生成記録だけで完了にしない。"
+        ],
+        "row": 227,
+        "source": [
+          "github:3e54620cd2c191c7de6b34645eeab6b05c4bdec8335011876590a1b19c2d4e03",
+          "skills/mailnike/erpclaw-manufacturing/SKILL.md",
+          "987a467d4fe3a2845aea8a7366dbd319835003e931566220ab989805fdfff105",
+          "8523bed1cdaa18bfbba0f92e282b0adbba036f8a",
+          14900
+        ],
+        "support": [
+          [
+            "LICENSE.txt",
+            1066,
+            "6f6bb192",
+            "ff21cdae",
+            4,
+            0,
+            0,
+            "100644"
+          ],
+          [
+            "SKILL.md",
+            14900,
+            "987a467d",
+            "8523bed1",
+            2,
+            0,
+            0,
+            "100644"
+          ],
+          [
+            "UI.yaml",
+            null,
+            null,
+            "3d7a746e",
+            0,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "_meta.json",
+            296,
+            "62884c73",
+            "c6fbf68f",
+            1,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "pytest.ini",
+            null,
+            null,
+            "c8c67797",
+            0,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "scripts/db_query.py",
+            null,
+            null,
+            "105277f7",
+            0,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "scripts/requirements.txt",
+            80,
+            "58033b43",
+            "236e5b82",
+            1,
+            null,
+            null,
+            "100644"
+          ]
+        ],
+        "use": "BOM/工程・計画/MRPと、材料/WIP・実生産/原価・完成品/台帳の対応を設計する参考。",
+        "value": "必要量/不足の予測と実消費/産出、work orderの段階、原BOM/工程版・原価根拠を分けられる。"
+      },
+      "original_chunk_sha256": "74ee4171ce47d716b1a5eb27419fdec83ed7b8d7bacbf16bce4a1e978adf35ea",
+      "path": "skills/mailnike/erpclaw-manufacturing/SKILL.md",
+      "source_commit": "920714f17d81e0a95c7a9bc51faf0a7921cd982d",
+      "source_repo": "6mile/skills",
+      "source_sha256": "987a467d4fe3a2845aea8a7366dbd319835003e931566220ab989805fdfff105"
+    }
+  ],
+  "roster_sha256": "f9c6b2e44c5e3aa8947f758f864eaa0d5edc396d622359826bca848cd96f9901",
+  "saved_support_metadata": 63,
+  "shared_original_contexts": {
+    "63de620fef81af98e5610ea00be2d4e1c7e13d574c5609ef65d7b68f33e3b467": {
+      "actual_assessment_reader": "20261028-171959-todo-3719",
+      "common": {
+        "boundaries": {
+          "central_operations": 0,
+          "copy_license_accepted": false,
+          "new_final_dispositions": 0,
+          "source_executed": false
+        },
+        "chunk_id": "f4596a7383208b5187c6475bc6c85133",
+        "definitions": {
+          "actors": {
+            "0": "今回の実assistant読取"
+          },
+          "mask_method": "表示前のv2置換：メール・長い数値・token形式・長いhex・SSN形式・IPv4形式・長い国際電話形式。215の86行のメールを伏字。他primary/新規noticeは0行で、秘密不存在の証明ではない。",
+          "reader_namespace": "20261028-171959-todo-3719/current3719",
+          "states": {
+            "0": "unsaved",
+            "1": "saved_unread",
+            "2": "direct_raw_full",
+            "3": "direct_masked_full",
+            "4": "exact_bytes_reuse",
+            "5": "ordered_full_diff",
+            "6": "partial",
+            "7": "scan"
+          },
+          "support_tuple": "[relative,bytes,SHA8,Gitblob8,state,maskCount,actor,mode]。未保存bytes/SHA/reader/maskCountはnull、Gitblobは固定complete tree。"
+        },
+        "domain": "research598-chunk-v1",
+        "first_ordinal": 215,
+        "limits": {
+          "central_body_or_existence_checks": 0,
+          "current_financial_legal_standard_api_claims_not_verified": true,
+          "prior_reader_states_not_relabelled": true,
+          "source_bodies_refetched": 0,
+          "source_script_execution": 0,
+          "whole16_complete": false
+        },
+        "notice_bodies": [
+          {
+            "bytes": 1082,
+            "consumer_path": "skills/mailnike/erp-claw/LICENSE.txt",
+            "consumer_row": 215,
+            "fresh_raw": false,
+            "git_blob": "83ac54265c2a9c5e824da850c0c4ea47d73fd976",
+            "id": 1,
+            "meaning": "同1082BのMIT本文を検証して210の実全読へ結ぶ。実公開版/作者・vendorや個別moduleの権利は別。",
+            "parent_chunk_sha256": "a253ad1cefbe2bdea7ca5d7a151b90450f89de38866c15a6ae439b1c68a264c1",
+            "parent_receipt": "research3719-chunk-59f61fa511b35584aee8a697fc72ff55.json",
+            "read": [
+              4,
+              0,
+              0,
+              false,
+              true,
+              21
+            ],
+            "reader_job": "20261028-171959-todo-3719",
+            "reader_namespace": "20261028-171959-todo-3719/current3719",
+            "representative_path": "skills/mailnike/educlaw-finaid/LICENSE.txt",
+            "representative_read": [
+              2,
+              0,
+              0,
+              true,
+              true,
+              21
+            ],
+            "representative_row": 210,
+            "sha256": "b84dde49057a6d8a69d28c22e9854d86a9aee01e09a2d7498d0aebf20cd8f538"
+          },
+          {
+            "bytes": 1066,
+            "consumer_path": "skills/mailnike/erpclaw-ai-engine/LICENSE.txt",
+            "consumer_row": 216,
+            "fresh_raw": true,
+            "git_blob": "ff21cdae6e9e7e0ed7a376bfe989771b40831982",
+            "id": 2,
+            "meaning": "AvanSaberのcopyright/2026を記載するMITの許可・notice保持・保証否認を21行全読。1082B版とは異なる保存本文で、作者/実公開版の対応は別確認。",
+            "read": [
+              2,
+              0,
+              0,
+              true,
+              true,
+              21
+            ],
+            "reader_job": "20261028-171959-todo-3719",
+            "reader_namespace": "20261028-171959-todo-3719/current3719",
+            "representative_path": "skills/mailnike/erpclaw-ai-engine/LICENSE.txt",
+            "representative_row": 216,
+            "sha256": "6f6bb192fb5854c274ca1bd5f3705ad6d4577099d2db95f46c90d0657ffb830d"
+          },
+          {
+            "bytes": 1066,
+            "consumer_paths": [
+              "skills/mailnike/erpclaw-analytics/LICENSE.txt",
+              "skills/mailnike/erpclaw-assets/LICENSE.txt",
+              "skills/mailnike/erpclaw-billing/LICENSE.txt"
+            ],
+            "consumer_rows": [
+              217,
+              218,
+              219
+            ],
+            "fresh_raw": false,
+            "git_blob": "ff21cdae6e9e7e0ed7a376bfe989771b40831982",
+            "id": 3,
+            "meaning": "各取得済みbufferのbytes/SHA/Gitblobと216との完全一致を確認。各module/第三者資源/データへの実許諾確定ではない。",
+            "read": [
+              4,
+              0,
+              0,
+              false,
+              true,
+              21
+            ],
+            "reader_job": "20261028-171959-todo-3719",
+            "reader_namespace": "20261028-171959-todo-3719/current3719",
+            "representative_path": "skills/mailnike/erpclaw-ai-engine/LICENSE.txt",
+            "representative_read": [
+              2,
+              0,
+              0,
+              true,
+              true,
+              21
+            ],
+            "representative_row": 216,
+            "sha256": "6f6bb192fb5854c274ca1bd5f3705ad6d4577099d2db95f46c90d0657ffb830d"
+          }
+        ],
+        "prior_journal_sha256": "45d865a1c4d6195f9086681edb0c5c3454c0d6903dc37b82bfc34f24944f03ff",
+        "reader_job": "20261028-171959-todo-3719",
+        "reader_todo": 3719,
+        "reading_integrity": {
+          "primary215_other_supports_saved_unread": 3,
+          "primary215_unsaved_supports": 95,
+          "primary215_withheld_ranges": [
+            [
+              86,
+              86
+            ]
+          ],
+          "primary_lines": [
+            299,
+            235,
+            218,
+            265,
+            228
+          ],
+          "primary_mask_counts": [
+            1,
+            0,
+            0,
+            0,
+            0
+          ],
+          "primary_ordered_full_rows": [
+            215,
+            216,
+            217,
+            218,
+            219
+          ],
+          "same_buffer_sha256_gitblob_bytes_strict_utf8": true,
+          "source_original_text_included": false,
+          "support_inventory_complete_tree_counts": [
+            [
+              215,
+              100
+            ],
+            [
+              216,
+              7
+            ],
+            [
+              217,
+              5
+            ],
+            [
+              218,
+              7
+            ],
+            [
+              219,
+              5
+            ]
+          ]
+        },
+        "roster_sha256": "f9c6b2e44c5e3aa8947f758f864eaa0d5edc396d622359826bca848cd96f9901"
+      },
+      "independent_native_metadata_sha256": "f8fc11659b6a9a19b7452652fc0af753978885b32eaa190e9c60d02ed67b601f",
+      "independent_parent_journal_record": {
+        "chunk_id": "f4596a7383208b5187c6475bc6c85133",
+        "receipt_file": "research3719-chunk-f4596a7383208b5187c6475bc6c85133.json",
+        "chunk_sha256": "63de620fef81af98e5610ea00be2d4e1c7e13d574c5609ef65d7b68f33e3b467",
+        "reader_job": "20261028-171959-todo-3719",
+        "first_ordinal": 215,
+        "last_ordinal": 219,
+        "parent_semantic_assessments_read": true
+      },
+      "original_chunk_id": "f4596a7383208b5187c6475bc6c85133",
+      "original_fields_losslessly_reconstructed": true,
+      "original_message_sha256": "dd3f896a427d7995b5afc8955d02d560d97f322dc111691477bc82368358c968",
+      "original_receipt_sha256": "1ca8d4fd2f3fe35878e270609995c855e97982907a40d73d2cc25cf56bfac42a",
+      "parent_meaning": {
+        "actual_native_model": "pac24df/gpt-6.1-sol",
+        "actual_native_proof": "research3719-native-actual171959-through219175645.json",
+        "actual_native_sha256": "f8fc11659b6a9a19b7452652fc0af753978885b32eaa190e9c60d02ed67b601f",
+        "chunk_id": "f4596a7383208b5187c6475bc6c85133",
+        "chunk_sha256": "63de620fef81af98e5610ea00be2d4e1c7e13d574c5609ef65d7b68f33e3b467",
+        "consumer_job": "20261027-175645-todo-3080",
+        "effort": "max",
+        "first": 215,
+        "full_original_meanings_and_all_limits_read": true,
+        "limits": "元担当primaryは4raw+1masked、計1245物理行。noticeは新1066B raw1と旧1082B/当該1066Bの再利用4、support124=saved18/unsaved106の状態/null/actorを保持。親の原本文/支持再open・新raw/個別許諾/最終採否/中央/現法令財務API適合確認0。packet/definitions v2/権利範囲は元のまま、全598/全16でなく次220へ継続する。",
+        "meanings": [
+          "215 erp-claw299行中86行メール1行のみ伏字。会社/DB用途・版と請求/支払/在庫/給与・GL/取消、module/移行/監査を別作用にする参考。Decimal/TEXT/WAL/RBAC/immutableGL/GAAP等は正しい算式・認可/原子性・現制度の保証でなく、413actions/43modulesの機能数を実装確認へしない。自動業種判定/module導入/自己改訂/削除・clone/build/nginx/SSL公開やcron請求等は元依頼と実権限へ個別照合。sourceの全submit本人確認と全update自動という分類を現行の新禁止/一括許可へせず、未読のconstitution/監査/rollback宣言を採用しない。support100はsaved5/unsaved95、vendor等にpackage MITを一括付与せず、notice1082Bは旧210の実読同bytes再利用。実導入/DB/cron/公開/API/費用0。",
+          "216 ai-engine235行rawはoffline標準lib分析の主張で、名称だけでAI課金APIへしない。異常候補/推定/correlation/forecast・確認棄却と財務実務作用を分け、丸い数値/scoreを不正や因果/将来残高の確定へしない。10future typesを完成へせず、companyIDがJSONだけ・latest context既定・可変auditの会社/session隔離/不変を検証する。block/notify/auto_executeを本人の権限/禁止変更へしない。新1066B MIT21行rawと旧1082B版は異なる原資料として保持し、作者/公開版/依存権利未確認。原script/cron/announce/API/書込0。",
+          "217 analytics218行raw。対象会社/会計期間/as-of/通貨/算式版とoptional module欠測、部分/全体を区別する横断集計の参考。自tableなし/read-only/いつでも安全の自己申告は実認可・他社機微情報・負荷・同時点snapshotの証明ではない。module不在/schema差/権限/障害を実測0と分け、Dollar固定/default company/current period/gradeから支払可能を短絡しない。動的groupby/metricの許可値と分母0/丸めを必要実装で確認。noticeは216と同bytes再利用、実DB/集計/設定/採否/配置0。",
+          "218 assets265行raw。資産/償却予定/確定仕訳/状態/取消、実物移動/保守と記録、売却と実入金を分離する参考。straight-line月割以外のWDV/double-declining・rate単位/残価下限/端数/初最終月は不明、制度/税務適合にしない。単一transactionと反対仕訳は未検証で、原asset/period一意性・再試行/変更後再計算・as-of整合を調べる必要。Cash/Bank仕訳だけで実入金/物理処分の完了を保証せず、原monthly cronを現許可へしない。notice再利用とsaved未読requirements137B/未保存scriptを保持し、実計上/処分/cron/実行0。",
+          "219 billing228行raw。meter/event/単位・料金版/期間/計算/調整とinvoice/実送付/決済/返金を分ける参考。flat/tiered/volumeとplannedのTOU/demand/prepaid/hybridを区別し、前払actionだけでplanned方式完成へしない。任意UNIQUE eventkeyはNULL/省略/複合scope/batch重複の防止保証ではなく、updated_atなしだけで不変としない。reset/rollover・期間境界/timezone・遅着補正・同period再計算とinvoice一意性/原子性が未検証。保存料金やkeyを本人の新支出/AI課金へしない。notice同1066B再利用、実請求/決済/送信/API/費用/配置0。"
+        ],
+        "observed_at": "2026-10-28T12:15:34.6363982+00:00",
+        "original_actor_namespace_and_nulls_preserved": true,
+        "original_message_sha256": "dd3f896a427d7995b5afc8955d02d560d97f322dc111691477bc82368358c968",
+        "producer_job": "20261028-171959-todo-3719",
+        "requested_model": "gpt-6.1-sol",
+        "source_or_support_body_reopens_by_parent": 0,
+        "through": 219
+      },
+      "parent_meaning_sha256": "c04e9c50509881627115414933e5cc14159e43593ea901bc64341b9cd45fc395"
+    },
+    "74ee4171ce47d716b1a5eb27419fdec83ed7b8d7bacbf16bce4a1e978adf35ea": {
+      "actual_assessment_reader": "20261028-171959-todo-3719",
+      "common": {
+        "boundaries": {
+          "central_operations": 0,
+          "copy_license_accepted": false,
+          "new_final_dispositions": 0,
+          "source_executed": false
+        },
+        "chunk_id": "04ddc71a91f6f74e6aac98d2f3cfd01c",
+        "definitions": {
+          "actors": {
+            "0": "今回の実assistant読取"
+          },
+          "mask_method": "v2：表示前にメール・長い数値・token形式・長いhex・SSN形式・IPv4形式・長い国際電話形式を置換。221の65行メールのみ伏字。他primaryは0行で秘密不存在の証明ではない。",
+          "reader_namespace": "20261028-171959-todo-3719/current3719",
+          "states": {
+            "0": "unsaved",
+            "1": "saved_unread",
+            "2": "direct_raw_full",
+            "3": "direct_masked_full",
+            "4": "exact_bytes_reuse",
+            "5": "ordered_full_diff",
+            "6": "partial",
+            "7": "scan"
+          },
+          "support_tuple": "[relative,bytes,SHA8,Gitblob8,state,maskCount,actor,mode]。未保存bytes/SHA/reader/maskCountはnull、Gitblobは固定complete tree。"
+        },
+        "domain": "research598-chunk-v1",
+        "first_ordinal": 220,
+        "limits": {
+          "central_body_or_existence_checks": 0,
+          "prior_reader_states_not_relabelled": true,
+          "source_bodies_refetched": 0,
+          "source_script_execution": 0,
+          "whole16_complete": false
+        },
+        "notice_bodies": [
+          {
+            "bytes": 1066,
+            "consumer_paths": [
+              "skills/mailnike/erpclaw-buying/LICENSE.txt",
+              "skills/mailnike/erpclaw-crm/LICENSE.txt",
+              "skills/mailnike/erpclaw-gl/LICENSE.txt",
+              "skills/mailnike/erpclaw-hr/LICENSE.txt",
+              "skills/mailnike/erpclaw-integrations/LICENSE.txt",
+              "skills/mailnike/erpclaw-inventory/LICENSE.txt",
+              "skills/mailnike/erpclaw-journals/LICENSE.txt",
+              "skills/mailnike/erpclaw-manufacturing/LICENSE.txt"
+            ],
+            "consumer_rows": [
+              220,
+              221,
+              222,
+              223,
+              224,
+              225,
+              226,
+              227
+            ],
+            "fresh_raw": false,
+            "git_blob": "ff21cdae6e9e7e0ed7a376bfe989771b40831982",
+            "id": 1,
+            "meaning": "各consumerの取得済みbytes/SHA/Gitblobを照合し、216で全読したcopyright/年付きMITの許可・notice保持・保証否認と完全一致。実作者/公開版、依存・外部service/データの権利は個別確認でcopy grant0。",
+            "parent_chunk_sha256": "63de620fef81af98e5610ea00be2d4e1c7e13d574c5609ef65d7b68f33e3b467",
+            "parent_receipt": "research3719-chunk-f4596a7383208b5187c6475bc6c85133.json",
+            "read": [
+              4,
+              0,
+              0,
+              false,
+              true,
+              21
+            ],
+            "reader_job": "20261028-171959-todo-3719",
+            "reader_namespace": "20261028-171959-todo-3719/current3719",
+            "representative_path": "skills/mailnike/erpclaw-ai-engine/LICENSE.txt",
+            "representative_read": [
+              2,
+              0,
+              0,
+              true,
+              true,
+              21
+            ],
+            "representative_row": 216,
+            "sha256": "6f6bb192fb5854c274ca1bd5f3705ad6d4577099d2db95f46c90d0657ffb830d"
+          }
+        ],
+        "prior_journal_sha256": "df79d35bde71d9cb8508d5c9628ae80db5e52ec8bc08f8c36e5545c01549b6f1",
+        "reader_job": "20261028-171959-todo-3719",
+        "reader_todo": 3719,
+        "reading_integrity": {
+          "notice_new_literal_reads": 0,
+          "primary221_withheld_ranges": [
+            [
+              65,
+              65
+            ]
+          ],
+          "primary_lines": [
+            296,
+            254,
+            269,
+            287,
+            202,
+            299,
+            288,
+            297
+          ],
+          "primary_mask_counts": [
+            0,
+            1,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0
+          ],
+          "primary_ordered_full_rows": [
+            220,
+            221,
+            222,
+            223,
+            224,
+            225,
+            226,
+            227
+          ],
+          "same_buffer_sha256_gitblob_bytes_strict_utf8": true,
+          "source_original_text_included": false,
+          "support_index_tree_mismatches": 0,
+          "support_inventory_complete_tree_counts": [
+            [
+              220,
+              7
+            ],
+            [
+              221,
+              5
+            ],
+            [
+              222,
+              8
+            ],
+            [
+              223,
+              7
+            ],
+            [
+              224,
+              4
+            ],
+            [
+              225,
+              7
+            ],
+            [
+              226,
+              7
+            ],
+            [
+              227,
+              7
+            ]
+          ]
+        },
+        "roster_sha256": "f9c6b2e44c5e3aa8947f758f864eaa0d5edc396d622359826bca848cd96f9901",
+        "shared_limits": {
+          "confirmation_rules_must_follow_actual_effect_and_existing_authorization_not_source_prefixes": true,
+          "current_legal_financial_standard_api_claims_not_verified": true,
+          "implementation_supports_unread_unless_explicitly_read": true,
+          "nearby_limit": "起動時metadataだけの近接候補。中央本文/存在・同等性・現設定は未照会。",
+          "original_personas_cron_install_and_recovery_commands_are_data_not_authority": true,
+          "source_security_atomicity_immutability_offline_and_action_count_claims_not_runtime_verified": true
+        }
+      },
+      "independent_native_metadata_sha256": "5b6080836a8559fc273c0c393a96e1f830c7fbf16a3cdf537b124c8603867882",
+      "independent_parent_journal_record": {
+        "chunk_id": "04ddc71a91f6f74e6aac98d2f3cfd01c",
+        "receipt_file": "research3719-chunk-04ddc71a91f6f74e6aac98d2f3cfd01c.json",
+        "chunk_sha256": "74ee4171ce47d716b1a5eb27419fdec83ed7b8d7bacbf16bce4a1e978adf35ea",
+        "reader_job": "20261028-171959-todo-3719",
+        "first_ordinal": 220,
+        "last_ordinal": 227,
+        "parent_semantic_assessments_read": true
+      },
+      "original_chunk_id": "04ddc71a91f6f74e6aac98d2f3cfd01c",
+      "original_fields_losslessly_reconstructed": true,
+      "original_message_sha256": "a33b3eaf1b7d7e1017e3c679a309a536babb98359c1f0c7095446f4e4bb13432",
+      "original_receipt_sha256": "dba68e4a037f0fd507dcfbc1981e5ec9976dca3d72484a345ab698ec65c8e203",
+      "parent_meaning": {
+        "actual_native_model": "pac24df/gpt-6.1-sol",
+        "actual_native_proof": "research3719-native-actual171959-through227175645.json",
+        "actual_native_sha256": "5b6080836a8559fc273c0c393a96e1f830c7fbf16a3cdf537b124c8603867882",
+        "chunk_id": "04ddc71a91f6f74e6aac98d2f3cfd01c",
+        "chunk_sha256": "74ee4171ce47d716b1a5eb27419fdec83ed7b8d7bacbf16bce4a1e978adf35ea",
+        "consumer_job": "20261027-175645-todo-3080",
+        "effort": "max",
+        "first": 220,
+        "full_original_meanings_and_all_limits_read": true,
+        "limits": "全8primaryの計2192物理行、7raw+1masked（CRM65行だけ伏字）。noticeは原216の1066B/21行と全byte一致を各consumerで再利用8、fresh literal notice0。支持52=saved30/unsaved22、saved未読14を含む元state/null/actorをそのまま保持。実装・原子性/隔離/不変・現法律/財務/料金/API/権利は未検証。原persona/cron/install/recoveryは資料であり権限でない。原本文/支持の親再open、新raw/権利/最終採否/中央/実DB/実サービス/API/費用0。全598/全16完了ではなく、次228へ続く。",
+        "meanings": [
+          "220購買。PO・部分受入・請求・返品とSLE/GL/PLE・実発注/配送/支払を一意に結ぶ設計材料。receiptとinvoiceのupdate_stockで同受入を二重計上しない。見積は通貨/税/送料/支払納期条件をそろえる。内部submitやoffline自己申告を実確約/配送/入出金とせず、税務flagを現制度保証へしない。未submitやerrorの回復で勝手な確約/取消/追加作用をしない。",
+          "221CRM。元lead→商談→見積を会社/担当/版へ結び、活動記録と実配送・見込額と成約/認識売上/入金を分離。proposal_sentは送信証拠でなく、確率積は較正予測でない。terminal状態を全更新経路で守ること、別process変換の部分失敗/重複・company scopeの実認可は未確認。新商談で旧失注/履歴を隠さず、原連絡先を使用しない。",
+          "222GL。借貸一致だけで帳簿完全性・会社/勘定/通貨や銀行残高を保証しない。updated_atなしを不変性の証拠にせず、原voucher一意計上/反対仕訳・caller transactionと全writerの制約を確認する。期間close前後の競合、nested setとparentの整合/循環、連番の更新作用は未検証。unfreeze/reopen/日付変更でエラーを通さない。",
+          "223人事。会社/社員/期間・勤務calendar・実承認者/対象版と休暇残高を同じtransactionで照合。承認時減算と承認済み申請から算出する説明の正本、並行承認/半日/休日/繰越を確かめる必要。経費Paid→Rejectedだけで債務や支払を消さず反対仕訳と結ぶ。勤怠UNIQUEや雇用eventは実勤務/実雇用判断・通知の証拠でなく、残高不足から付与/日付変更/自動承認を追加しない。",
+          "224mock連携。Plaid/Stripe/S3という名称でも全offline/mock・全intent成功の資料であり、公式sandboxや実決済/remote保存の実受入へしない。ABS金額+3日窓は符号/通貨/口座/相手/候補衝突を無視できず、webhook UNIQUEだけで署名/主体/mode/順序/作用の原子性を証明しない。mock hash・restore command・soft-deleteとremote存在/整合snapshot/実復元/削除は別。local key保持と暗号化既定0は安全保証でなく、実カード/秘密をfixtureへ持ち込まない。WAL/独立hashと実復元は後の実検査に必要。",
+          "225在庫。moving-averageと将来FIFOを分け、過去日付/取消/再評価が後続原価へ及ぼす影響と全writerのSLE/GL二重作用を調べる。会社/倉庫/品目/UOM/serial/batch・数量符号を合わせ、架空receiptで不足を埋めず実物観測と台帳を区別する。check-reorder cronや短縮action/flagsはcatalogと不一致のまま導入しない。",
+          "226仕訳。2行以上/片側正数と借貸一致は取引/勘定/期間の正しさの十分条件でない。計上/取消/訂正draftを元voucherへ一意かつ原子的に結ぶ。cancel後amend推奨とcancelled amend不可の矛盾を実装で解く必要。next_run_date\u003c=as_ofは選択条件だけで、定期発生回の一意性・並行cron/再試行、月末/閏日/DST・追付き/auto-submitの権限を保証しない。",
+          "227製造。固定BOM/工程/単位/原価版を用い、再帰の循環/重複/倍率、予約/納期/不足と実消費/産出/品質を分ける。actual-time-minutesとhour-rateは単位換算と丸めを検証する。WIP移動→材料消費→完成品とSLE/GL/statusの二重作用・残余/部分産出/不良/取消を一意/原子的に照合。completed取消不可を一般cancelで広げず、購買要求から実POや支出の許可を作らない。"
+        ],
+        "observed_at": "2026-10-28T13:16:17.3978524+00:00",
+        "original_actor_namespace_and_nulls_preserved": true,
+        "original_message_sha256": "a33b3eaf1b7d7e1017e3c679a309a536babb98359c1f0c7095446f4e4bb13432",
+        "producer_job": "20261028-171959-todo-3719",
+        "requested_model": "gpt-6.1-sol",
+        "source_or_support_body_reopens_by_parent": 0,
+        "through": 227
+      },
+      "parent_meaning_sha256": "5e1558b7bdad356c81a23c20f1192246bf7c5d03c017388c8448182513cbffee"
+    },
+    "a253ad1cefbe2bdea7ca5d7a151b90450f89de38866c15a6ae439b1c68a264c1": {
+      "actual_assessment_reader": "20261028-171959-todo-3719",
+      "common": {
+        "boundaries": {
+          "central_operations": 0,
+          "copy_license_accepted": false,
+          "new_final_dispositions": 0,
+          "source_executed": false
+        },
+        "chunk_id": "59f61fa511b35584aee8a697fc72ff55",
+        "definitions": {
+          "actors": {
+            "0": "今回の実assistant読取"
+          },
+          "mask_method": "表示前にメール・長い数値・token形式・長いhex、SSN形式・IPv4形式・長い国際電話形式を置換するv2。本chunkのprimary/noticeは置換行0。0は秘密不存在の証明ではない。",
+          "reader_namespace": "20261028-171959-todo-3719/current3719",
+          "states": {
+            "0": "unsaved",
+            "1": "saved_unread",
+            "2": "direct_raw_full",
+            "3": "direct_masked_full",
+            "4": "exact_bytes_reuse",
+            "5": "ordered_full_diff",
+            "6": "partial",
+            "7": "scan"
+          },
+          "support_tuple": "[relative,bytes,SHA8,Gitblob8,state,maskCount,actor,mode]。未保存bytes/SHA/reader/maskCountはnull、Gitblobは固定complete tree。"
+        },
+        "domain": "research598-chunk-v1",
+        "first_ordinal": 210,
+        "limits": {
+          "central_body_or_existence_checks": 0,
+          "current_legal_financial_standard_api_claims_not_verified": true,
+          "prior_reader_states_not_relabelled": true,
+          "source_bodies_refetched": 0,
+          "source_script_execution": 0,
+          "whole16_complete": false
+        },
+        "notice_bodies": [
+          {
+            "bytes": 1082,
+            "consumer_path": "skills/mailnike/educlaw-finaid/LICENSE.txt",
+            "consumer_row": 210,
+            "fresh_raw": true,
+            "git_blob": "83ac54265c2a9c5e824da850c0c4ea47d73fd976",
+            "id": 1,
+            "meaning": "copyright名/年付きMIT、notice保持と保証否認を21行全読。ERPForgeというprimary author表記と実権利者の対応、実公開版・service/データの権利は別確認。",
+            "read": [
+              2,
+              0,
+              0,
+              true,
+              true,
+              21
+            ],
+            "reader_job": "20261028-171959-todo-3719",
+            "reader_namespace": "20261028-171959-todo-3719/current3719",
+            "representative_path": "skills/mailnike/educlaw-finaid/LICENSE.txt",
+            "representative_row": 210,
+            "sha256": "b84dde49057a6d8a69d28c22e9854d86a9aee01e09a2d7498d0aebf20cd8f538"
+          },
+          {
+            "bytes": 1082,
+            "consumer_paths": [
+              "skills/mailnike/educlaw-lms/LICENSE.txt",
+              "skills/mailnike/educlaw-scheduling/LICENSE.txt",
+              "skills/mailnike/educlaw-statereport/LICENSE.txt"
+            ],
+            "consumer_rows": [
+              211,
+              212,
+              213
+            ],
+            "fresh_raw": false,
+            "git_blob": "83ac54265c2a9c5e824da850c0c4ea47d73fd976",
+            "id": 2,
+            "meaning": "各consumerの取得済みbytes/SHA/Gitblobを照合し210と完全同一。noticeの再利用だけで各packageの実権利/動作を承認しない。",
+            "read": [
+              4,
+              0,
+              0,
+              false,
+              true,
+              21
+            ],
+            "reader_job": "20261028-171959-todo-3719",
+            "reader_namespace": "20261028-171959-todo-3719/current3719",
+            "representative_path": "skills/mailnike/educlaw-finaid/LICENSE.txt",
+            "representative_read": [
+              2,
+              0,
+              0,
+              true,
+              true,
+              21
+            ],
+            "representative_row": 210,
+            "sha256": "b84dde49057a6d8a69d28c22e9854d86a9aee01e09a2d7498d0aebf20cd8f538"
+          },
+          {
+            "bytes": 43,
+            "consumer_path": "skills/mailnike/educlaw/LICENSE.txt",
+            "consumer_row": 214,
+            "fresh_raw": true,
+            "git_blob": "c19e067b860e22528714589b4538bb0c1aac33c5",
+            "id": 3,
+            "meaning": "1行のMIT License/copyright表記だけ。標準MITの許可/条件本文を当fileで読んだことにはならず、隣接1082B notice・root MIT/補助MIT0を自動継承しない。実公開版/個別権利の対応は親の確認点。",
+            "read": [
+              2,
+              0,
+              0,
+              true,
+              true,
+              1
+            ],
+            "reader_job": "20261028-171959-todo-3719",
+            "reader_namespace": "20261028-171959-todo-3719/current3719",
+            "representative_path": "skills/mailnike/educlaw/LICENSE.txt",
+            "representative_row": 214,
+            "sha256": "0f0c14718c4c5842917f9c4e8670166a823df2c7c3892f9265abe6f9c7070959"
+          }
+        ],
+        "prior_journal_sha256": "900fdcf060f5174e9626af1426a66f9983d0c1c5ef973126ccce89331f3820f2",
+        "reader_job": "20261028-171959-todo-3719",
+        "reader_todo": 3719,
+        "reading_integrity": {
+          "notice210_and214_new_full_reads": true,
+          "notice211_212_213_exact_verified_reuse": true,
+          "primary_lines": [
+            268,
+            299,
+            224,
+            221,
+            271
+          ],
+          "primary_mask_counts": [
+            0,
+            0,
+            0,
+            0,
+            0
+          ],
+          "primary_ordered_full_rows": [
+            210,
+            211,
+            212,
+            213,
+            214
+          ],
+          "same_buffer_sha256_gitblob_bytes_strict_utf8": true,
+          "source_original_text_included": false,
+          "support_inventory_complete_tree_counts": [
+            [
+              210,
+              10
+            ],
+            [
+              211,
+              16
+            ],
+            [
+              212,
+              10
+            ],
+            [
+              213,
+              12
+            ],
+            [
+              214,
+              14
+            ]
+          ]
+        },
+        "roster_sha256": "f9c6b2e44c5e3aa8947f758f864eaa0d5edc396d622359826bca848cd96f9901"
+      },
+      "independent_native_metadata_sha256": "ad284c291ef5cf6cd39cf6d2d591ee4592f1fd78598362b638f10a675ee50107",
+      "independent_parent_journal_record": {
+        "chunk_id": "59f61fa511b35584aee8a697fc72ff55",
+        "receipt_file": "research3719-chunk-59f61fa511b35584aee8a697fc72ff55.json",
+        "chunk_sha256": "a253ad1cefbe2bdea7ca5d7a151b90450f89de38866c15a6ae439b1c68a264c1",
+        "reader_job": "20261028-171959-todo-3719",
+        "first_ordinal": 210,
+        "last_ordinal": 214,
+        "parent_semantic_assessments_read": true
+      },
+      "original_chunk_id": "59f61fa511b35584aee8a697fc72ff55",
+      "original_fields_losslessly_reconstructed": true,
+      "original_message_sha256": "96656a9499a7fa559eb27b8518335ed8107d5c56c1fcfc43cada4df5e64bba0a",
+      "original_receipt_sha256": "1347a320fba35779f514d9c8fb009bd13112a013962fc5d07098c3cce6249a60",
+      "parent_meaning": {
+        "actual_native_model": "pac24df/gpt-6.1-sol",
+        "actual_native_proof": "research3719-native-actual171959-through214175645.json",
+        "actual_native_sha256": "ad284c291ef5cf6cd39cf6d2d591ee4592f1fd78598362b638f10a675ee50107",
+        "chunk_id": "59f61fa511b35584aee8a697fc72ff55",
+        "chunk_sha256": "a253ad1cefbe2bdea7ca5d7a151b90450f89de38866c15a6ae439b1c68a264c1",
+        "consumer_job": "20261027-175645-todo-3080",
+        "effort": "max",
+        "first": 210,
+        "full_original_meanings_and_all_limits_read": true,
+        "limits": "元担当のraw primary5（1283物理行）、notice freshraw2と同bytes再利用3、支持metadata62の保存済15/未保存47を区別する。元packetのmask_method v2/置換0は秘密不存在の証明でなく、その定義とnamespace・nullを保持。親の元本文/支持再読、新raw、個別許諾、最終採否、中央配置、現法令/金融/標準/API適合確認は0。全598/73220/16の完了ではなく次215へ継続。",
+        "meanings": [
+          "210 finaid268行raw。申請/審査/award提示と承諾・支給記録/実送金・返還/取消/COD提出と受理の状態を分ける参考。保存年度の額・算式/丸め・TitleIV等の名称を現在の適合/正しい計算にせず、対象制度/年度/学生/財源と根拠/訂正履歴を固定する。offline/log/parameterized SQLはFERPA/認可/会社隔離の証明ではなく、overrideやPJ承認/loan/work-study作用も別。MIT1082B21行freshraw、primary作者表記と実権利者・公開版/依存権利対応は未確認。実DB/Python/UI/支給/提出0。",
+          "211 LMS299行raw。SIS正本名簿とLMS→SIS成績方向、新規/既存競合/確定lock、manual/staging・部分成功/再試行順序/取消/閉鎖を別状態として追う参考。importも更新作用を持ち、DPA/COPPAのflag1は実契約・同意の証明にしない。16字/AES256/末尾4字・append logはKDF/暗号mode/認可/鍵分離・安全な同期の実証でなく、local主張と外部学生同期を分ける。OneRoster6/8fileの不一致、名前/メール省略でも再識別の可能性とscopeを保持。noticeは210の同bytes確認だけで新raw/各権利へしない。実接続・同期・同意変更/出力0。",
+          "212 scheduling224行raw。需要/周期/period・教員/部屋と提案/割当/予約、競合検出/解消/受容と公開/lockを分離。critical0だけをHIGHを含む実必須条件の合格へせず、重大度を本人の新禁止へしない。publishが全sectionと履修受付状態まで変える広い作用、update status/swap/emergency/bulkの同じ制約/認可・原子性や古いcheck後の変更、時刻帯/休日/日跨ぎ/移動準備は未検証。元のMIT同bytes再利用と未保存solver/DB/UIを保持し、実UI/公開/予約0。",
+          "213 statereport221行raw。年度/州/規則版・報告windowと入力snapshot、error修正/保留、原提出/amendment・相手受領を一意に結ぶ参考。EDFacts/CRDC/IDEA618/Ed-Fiや57rule/閾値・件数/scoreは現版適合の証明ではない。offline保存と外部HTTPS/token取得/last_tested更新を分け、INSERT-only/会社IDnonnull/approve3状態原子更新・SQLparameterだけで不変/隔離/動的rule SQLの安全を保証しない。学生機微/小集団suppressionと出力最小化、deferredをerror解消や実受理へしない。notice同bytes再利用、実SQL/script/送信0。",
+          "214 educlaw271行raw。学生/保護者・学期/履修・待機/取消、確定成績/訂正、invoice/GL/反対仕訳・通知の対象作用を分ける参考。source管理者personaから権限/学費追加/延滞/全生徒drop/緊急全員通知を承認しない。offlineとsend/publishの矛盾は内部記録/実配送の実装確認が必要、under13/accesslog/承認flagは法適合/認可/会計や受領の証明でない。当packageの43B1行MIT名/著作権表示は全読したが完全termsは未確認で、隣接1082BやrootMITを無断継承しない。原本/依存/未保存script/本人PC/新費用/実操作0。"
+        ],
+        "observed_at": "2026-10-28T10:28:11.9897084+00:00",
+        "original_actor_namespace_and_nulls_preserved": true,
+        "original_message_sha256": "96656a9499a7fa559eb27b8518335ed8107d5c56c1fcfc43cada4df5e64bba0a",
+        "producer_job": "20261028-171959-todo-3719",
+        "requested_model": "gpt-6.1-sol",
+        "source_or_support_body_reopens_by_parent": 0,
+        "through": 214
+      },
+      "parent_meaning_sha256": "2a568ab1bce71c63fe014932cf420d2b8bf573d6a49b44ef7d6e0b8a5ff6b29c"
+    }
+  },
+  "spec_sha256": "4f6fe32f62db56bed2acb4d378147ff952ad06230243fb45f7674f3158313fc3",
+  "support_metadata_records": 238,
+  "through": 227,
+  "unsaved_support_metadata": 175,
+  "whole16_complete": false
+}

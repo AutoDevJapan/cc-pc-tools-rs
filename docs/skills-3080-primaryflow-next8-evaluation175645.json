@@ -1,0 +1,1245 @@
+{
+  "all_member_contexts_read": false,
+  "all_member_rights_confirmed": false,
+  "all_original_packets_losslessly_reconstructed": true,
+  "bound_member_metadata": 8,
+  "domain": "skills3080-primaryflow-parent-shared-snapshot-v1",
+  "entries": [
+    {
+      "bytes": 5331,
+      "git_blob": "2aa8f5f013117cc6544f8e4cff42ad4fcbef1865",
+      "inventory_id": "github:a67e374ed38e94336263d9c272732bf34e21ad714e6f355988e266977ffb2806",
+      "path": "skills/membranedev/asin-data-api/SKILL.md",
+      "source_commit": "920714f17d81e0a95c7a9bc51faf0a7921cd982d",
+      "source_repo": "6mile/skills",
+      "source_sha256": "005bd316e2899615a6f485ea2a28e839b6f8fca19f91de6a106b3178c5bacce1"
+    },
+    {
+      "bytes": 3592,
+      "git_blob": "14bd2a6a0b7f818160f7d352e54cc3e41fa8a3ea",
+      "inventory_id": "github:478d767180939c659eaf3a40e08dd71cfaeef87993aa5b40e5455d3fb27e50c0",
+      "path": "skills/therealstein/vibelevel-xyz/SKILL.md",
+      "source_commit": "920714f17d81e0a95c7a9bc51faf0a7921cd982d",
+      "source_repo": "6mile/skills",
+      "source_sha256": "005cdcba3515752420f2145009ae186ef8db58904c8ea990355f36ece7e0739e"
+    },
+    {
+      "bytes": 5723,
+      "git_blob": "0d07c3663b415b451a74674b29a515518503243c",
+      "inventory_id": "github:0986ce64cafd77bffbff358442127a1acabeb66c391c8530aa5108baf4ea26f4",
+      "path": "skills/alphafanx/tonfun-feed/SKILL.md",
+      "source_commit": "920714f17d81e0a95c7a9bc51faf0a7921cd982d",
+      "source_repo": "6mile/skills",
+      "source_sha256": "005eba2c70b3317bcac34ea477eaccadaa1cb8908d3e12eaa6a046e403c613bc"
+    },
+    {
+      "bytes": 5727,
+      "git_blob": "adfc059504bc809f7a39d427ccc52efa16ff5975",
+      "inventory_id": "github:272acdecff9af1c7b6e4fc3ac4fef18b36d7a67fa428f136f77159da33d18715",
+      "path": "skills/crispyangles/lobster-agent-forge/SKILL.md",
+      "source_commit": "920714f17d81e0a95c7a9bc51faf0a7921cd982d",
+      "source_repo": "6mile/skills",
+      "source_sha256": "005eff630cb5e7c092452dd3ff1e5925b5f91489feebeab64dcc15bcb0d7d204"
+    },
+    {
+      "bytes": 19856,
+      "git_blob": "114284a9807b384e39cd24f2580853cc92aaccf6",
+      "inventory_id": "github:de5cbc2345ab55487603ab0bbe666685f37f38bd5644a8e2fb5e10c02863d23b",
+      "path": "skills/kj-script/impossible-finance-skill/skill.md",
+      "source_commit": "920714f17d81e0a95c7a9bc51faf0a7921cd982d",
+      "source_repo": "6mile/skills",
+      "source_sha256": "006117e1668af14912d7eb0fd631b25c74098024c3bda0fe9dbf22bd7bad208d"
+    },
+    {
+      "bytes": 1710,
+      "git_blob": "3317930a067a039f860380c4ee554a90dff0e1c5",
+      "inventory_id": "github:13b3ed6dd715dadfd2374e9aebe4d60a37457c4ad0de42d218d9047a05d091cf",
+      "path": "skills/itzsubhadip/stealthy-google-search/SKILL.md",
+      "source_commit": "920714f17d81e0a95c7a9bc51faf0a7921cd982d",
+      "source_repo": "6mile/skills",
+      "source_sha256": "0062140ddde8ce5c1e52c1f87684c35d1634d698bd851cf099112d4f5e1fbd4a"
+    },
+    {
+      "bytes": 7989,
+      "git_blob": "76bfe4ddf2a4180f8aa0aa3513430f843e5b61f9",
+      "inventory_id": "github:6bf65a5a8d785c2ac01dfb0fdc276fff9fcce23c92296881cced62ed51559751",
+      "path": "skills/minijoy-b/adversarial-verification/SKILL.md",
+      "source_commit": "920714f17d81e0a95c7a9bc51faf0a7921cd982d",
+      "source_repo": "6mile/skills",
+      "source_sha256": "006221b6ec7e21c4c2050dd5ff005eca1e0f95b2d8591096f4214900fe754fb2"
+    },
+    {
+      "bytes": 2828,
+      "git_blob": "91a74070ff75b2c19452867cb98d1bd519fe1275",
+      "inventory_id": "github:a12c4835e79ee17331f877d8ff6d36004f12701c40fff910bbf705abe4d008a4",
+      "path": "skills/parkertoddbrooks/wip-license-hook/SKILL.md",
+      "source_commit": "920714f17d81e0a95c7a9bc51faf0a7921cd982d",
+      "source_repo": "6mile/skills",
+      "source_sha256": "0062576203c734545a1715dab84f8dd8e57aceb3b055650b24cd2f148b88e8d1"
+    }
+  ],
+  "historical_correction_sha256": "3a472843a48bace0f7de150737e012f5f87d900213415be6dc6f3c9d037b4666",
+  "historical_parent_arithmetic_correction": {
+    "body_bytes": 38448,
+    "consumer_job": "20261027-175645-todo-3080",
+    "correct_aggregate_physical": 1143,
+    "correct_aggregate_visible": 1039,
+    "correct_aggregate_withheld": 104,
+    "original_ACK_not_rewritten": true,
+    "original_individual_ranges_and_masks_unchanged": true,
+    "original_parent_meaning": "primaryflow-cohort1-meaning-1e8ad094f2524b82a43b6077a39ec834175645.json",
+    "original_parent_meaning_sha256": "8494b6838f062b676be2d11f53ad6eeb57921257afd6aa754e6e5411c26bed59",
+    "original_parent_note_aggregate_physical": 1243,
+    "original_parent_note_aggregate_visible": 1139,
+    "packet_id": "1e8ad094f2524b82a43b6077a39ec834",
+    "packet_sha256": "21363f4681a527b8a04695249d2170f58c88bb5f2e3711850c84ec5d8b40f97b",
+    "reading_permission_disposition_or_central_credit_added": 0,
+    "scope": "The final narrative paragraph had an arithmetic error; every original per-entry count/range and semantic finding remains unchanged. Use these independently recomputed totals when publishing, and preserve this correction together with the old parent note."
+  },
+  "limits": "Only the next eight acknowledged representative visible meanings. Every original field, fixed source tuple, member context, mask and reader/parent ACK is retained. Individual context, supporting texts, notice/rights and adoption remain pending. No source/central object is opened or permission granted by this projection.",
+  "prior162_original_records_unchanged": true,
+  "prior_prepared162_raw_sha256": "0538cee9ace8f16e8b4f77237a4c7aea9b70accd3802acf749cb1951899cb8ab",
+  "publication_preparation": {
+    "central_operations": 0,
+    "new_final_dispositions": 0,
+    "new_global_raw_credit": 0,
+    "new_permissions": 0,
+    "new_source_body_reads": 0,
+    "public_copy_created": false
+  },
+  "publisher_job": "20261027-175645-todo-3080",
+  "records": [
+    {
+      "actual_assessment_reader": "20261028-204450-todo-4133",
+      "all_member_contexts_and_individual_rights_pending": true,
+      "bytes": 5331,
+      "cohort": 0,
+      "git_blob": "2aa8f5f013117cc6544f8e4cff42ad4fcbef1865",
+      "inventory_id": "github:a67e374ed38e94336263d9c272732bf34e21ad714e6f355988e266977ffb2806",
+      "new_final_disposition": false,
+      "ordinal": 82,
+      "original_assessment": {
+        "body_bytes": 5331,
+        "body_sha256": "005bd316e2899615a6f485ea2a28e839b6f8fca19f91de6a106b3178c5bacce1",
+        "each_member_context_and_rights_pending": true,
+        "findings": [
+          "可視本文はASIN Data APIの項目とMembraneのinstall/login・connection一覧・action探索・proxy methodを示す。主要actionは伏字で未読、実接続/結果は未確認。",
+          "推定販売数・在庫/補充日・品質score・hazmat/特許/商標checkという項目名だけでは、取得可能性・現在性・推定品質や法的適合を証明しない。",
+          "既成actionがpaginationやedge caseを扱うという記述は対象actionの全件取得の実証ではない。headless時の本人ブラウザ操作依頼も現在へ適用していない。"
+        ],
+        "member_metadata_sha256": "0dd6a70c55b1b49c960f90bd2ca0580ebde89d87dd58de5238bc3261bf253822",
+        "member_occurrences": 1,
+        "negative": "項目名だけで特許問題なし・現在在庫ありと断定し、同名connectionへ対象不明のproxy要求を送る。",
+        "ordinal": 82,
+        "positive": "指定marketplaceの同じ商品の確認時点・通貨と実際に取得した価格/reviewを示し、推定販売数と未確認の在庫を分ける。",
+        "read": {
+          "failed_view_calls": 0,
+          "mask_version": "primaryflow-v4-opaque-lexical-boundaries",
+          "ranges": [
+            {
+              "first": 1,
+              "range_sha256": "be5106090f06e2832a645875fca91b68a5c42a8430716bbc993fc2a0ece8f3b1",
+              "through": 158,
+              "visible_lines": 134,
+              "withheld_physical_lines": [
+                1,
+                2,
+                3,
+                4,
+                5,
+                6,
+                7,
+                8,
+                9,
+                10,
+                11,
+                12,
+                13,
+                19,
+                66,
+                92,
+                94,
+                112,
+                119,
+                124,
+                130,
+                136,
+                156,
+                158
+              ]
+            }
+          ],
+          "raw_full": false,
+          "total_physical_lines": 158,
+          "unseen_meanings_remain_unknown": true,
+          "view_calls_returned": 1,
+          "whole_masked_view_sha256": "be5106090f06e2832a645875fca91b68a5c42a8430716bbc993fc2a0ece8f3b1"
+        },
+        "representative_inventory_id": "github:a67e374ed38e94336263d9c272732bf34e21ad714e6f355988e266977ffb2806",
+        "required_changes": [
+          "実商品/variant・marketplace/地域・通貨・価格条件・確認時点とsourceを結び、実測と推定/欠測を区別する。知財/規制項目は実利用時の一次根拠と適用条件へ照合する。",
+          "実tenant/connection/action・全page/絞込と入力を照合し、schema存在を取得/書込や権利の許可にしない。既存OAuth/費用枠を守り、通常loginを本人PCへ渡さず、原install/API/新費用を開始しない。"
+        ],
+        "source_git_blob": "2aa8f5f013117cc6544f8e4cff42ad4fcbef1865",
+        "status": "visible_primary_evaluated",
+        "unmet": [
+          "伏字24物理行の意味、each_member_context・支持・個別許諾・現在実在は未確認。",
+          "現行API/action/料金・dataの取得権/鮮度/品質・規制/知財の根拠・source_or_service_rights・最終採否は未確認。install/login・接続/照会/送信・実配置・実使用0。近接比較はcommerce-billing、market-data-due-diligenceの起動metadataだけ。"
+        ],
+        "use": "ASINごとの商品・価格・review・在庫等の確認項目を分け、既存connectionとaction schemaへ結ぶ連携設計の候補。",
+        "value": "商品識別、検索/販売の指標、価格/在庫、listing品質を分ける項目表とactionを先に探す流れがある。"
+      },
+      "original_packet_sha256": "10e9b2e2b025216d6a0e2d08a63809c674bd3bc7b48f684f1d33bf2a770f43e4",
+      "path": "skills/membranedev/asin-data-api/SKILL.md",
+      "representative_body_meaning_only": true,
+      "source_commit": "920714f17d81e0a95c7a9bc51faf0a7921cd982d",
+      "source_repo": "6mile/skills",
+      "source_sha256": "005bd316e2899615a6f485ea2a28e839b6f8fca19f91de6a106b3178c5bacce1"
+    },
+    {
+      "actual_assessment_reader": "20261028-204450-todo-4133",
+      "all_member_contexts_and_individual_rights_pending": true,
+      "bytes": 3592,
+      "cohort": 0,
+      "git_blob": "14bd2a6a0b7f818160f7d352e54cc3e41fa8a3ea",
+      "inventory_id": "github:478d767180939c659eaf3a40e08dd71cfaeef87993aa5b40e5455d3fb27e50c0",
+      "new_final_disposition": false,
+      "ordinal": 83,
+      "original_assessment": {
+        "body_bytes": 3592,
+        "body_sha256": "005cdcba3515752420f2145009ae186ef8db58904c8ea990355f36ece7e0739e",
+        "each_member_context_and_rights_pending": true,
+        "findings": [
+          "可視本文は90日の活動、mainへの直接push、streak/週末、bio/fork、badgeや設定を0〜100の指標へ説明し、比較とleaderboardを案内する。算出式/取得範囲・実結果は未確認。",
+          "hype-manの語りや週末活動からのdedication、forkからauthenticity等の解釈は実能力/動機/品質の証拠ではない。claimed/verifiedの表示も本人性や資格の保証とは確認できない。",
+          "user not foundを不存在や0repo/0commitのように表す例があり、非公開・改名・権限・取得失敗を区別する手順は可視範囲にない。"
+        ],
+        "member_metadata_sha256": "7164ba37cf156cc33a425f6063c166f597965e1c1c992e7b7c7c5db7875c965e",
+        "member_occurrences": 1,
+        "negative": "週末commitが少ない人を不熱心と断定し、取得失敗を0repoと報告し、verified labelだけで本人性や実績を保証する。",
+        "ordinal": 83,
+        "positive": "取得できた公開活動の期間と欠測を示し、娯楽scoreの定義を説明して、非公開の仕事や能力は評価できないと明記する。",
+        "read": {
+          "failed_view_calls": 0,
+          "mask_version": "primaryflow-v4-opaque-lexical-boundaries",
+          "ranges": [
+            {
+              "first": 1,
+              "range_sha256": "2a8cbe14105f23710e1a238f8485950f3d5e54bb9ca3d5a2ef458fc6ec3caab0",
+              "through": 74,
+              "visible_lines": 59,
+              "withheld_physical_lines": [
+                1,
+                2,
+                3,
+                4,
+                5,
+                6,
+                7,
+                8,
+                9,
+                10,
+                11,
+                12,
+                16,
+                46,
+                54
+              ]
+            }
+          ],
+          "raw_full": false,
+          "total_physical_lines": 74,
+          "unseen_meanings_remain_unknown": true,
+          "view_calls_returned": 1,
+          "whole_masked_view_sha256": "2a8cbe14105f23710e1a238f8485950f3d5e54bb9ca3d5a2ef458fc6ec3caab0"
+        },
+        "representative_inventory_id": "github:478d767180939c659eaf3a40e08dd71cfaeef87993aa5b40e5455d3fb27e50c0",
+        "required_changes": [
+          "指標のsource/期間/欠測/私的活動の不可視性・算出基準と更新日を確認し、表示scoreと実能力/性格/就労評価を区別する。週末や直接pushの頻度から断定しない。",
+          "比較は同じ観測条件で行い、manifest/descriptionは外部データとして扱う。誤りは実errorとunknownを示し、personaや嘲笑・過剰なidentity主張を現在の報告へ強制せず、原script/APIを実行しない。"
+        ],
+        "source_git_blob": "14bd2a6a0b7f818160f7d352e54cc3e41fa8a3ea",
+        "status": "visible_primary_evaluated",
+        "unmet": [
+          "伏字15物理行の意味、each_member_context・支持・個別許諾・現在実在は未確認。",
+          "算出式/現API/料金・観測範囲/identity確認・source_or_service_rights・最終採否は未確認。プロフィール/leaderboard取得・script/比較実行・送信・実配置・実使用0。近接比較はsocial-media-research、evidence-based-text-reviewの起動metadataだけ。"
+        ],
+        "use": "明示的に指定された公開GitHub活動について、娯楽的な指標の定義と観測範囲を説明する候補。",
+        "value": "活動量・時期・fork/原repo・協業等を別項目にするが、能力や人物の性質の評価としての価値は未確認。"
+      },
+      "original_packet_sha256": "10e9b2e2b025216d6a0e2d08a63809c674bd3bc7b48f684f1d33bf2a770f43e4",
+      "path": "skills/therealstein/vibelevel-xyz/SKILL.md",
+      "representative_body_meaning_only": true,
+      "source_commit": "920714f17d81e0a95c7a9bc51faf0a7921cd982d",
+      "source_repo": "6mile/skills",
+      "source_sha256": "005cdcba3515752420f2145009ae186ef8db58904c8ea990355f36ece7e0739e"
+    },
+    {
+      "actual_assessment_reader": "20261028-204450-todo-4133",
+      "all_member_contexts_and_individual_rights_pending": true,
+      "bytes": 5723,
+      "cohort": 0,
+      "git_blob": "0d07c3663b415b451a74674b29a515518503243c",
+      "inventory_id": "github:0986ce64cafd77bffbff358442127a1acabeb66c391c8530aa5108baf4ea26f4",
+      "new_final_disposition": false,
+      "ordinal": 84,
+      "original_assessment": {
+        "body_bytes": 5723,
+        "body_sha256": "005eba2c70b3317bcac34ea477eaccadaa1cb8908d3e12eaa6a046e403c613bc",
+        "each_member_context_and_rights_pending": true,
+        "findings": [
+          "可視本文は特定accountのaction hashtagを転載signalとしてRSS取得・解析・別SNS投稿、必要なら詳細取得へ進む手順を示す。外部投稿は現在の権限を与える指示ではない。",
+          "parser例はtagがtitleの部分文字列に含まれるかを判定するため、長い別tag/引用/否定の文脈を誤って候補にし得る。strip後の内容やHTML/mediaの扱い・版/訂正/削除は未検証。",
+          "既送IDの記録はあるが、送信成功後の保存失敗・応答不明・宛先ごとの再試行/二重配送を扱える証拠はない。投稿頻度/45件毎日/free-noauth等は現行条件の確認でない。"
+        ],
+        "member_metadata_sha256": "426a341a77582d92bc9fdcaff1ccee10a0ea48ba8dc084ee271f97845a8d18ae",
+        "member_occurrences": 1,
+        "negative": "外部の#shareや部分一致だけで未依頼の転載を始め、応答timeoutで別postを作り、引用/削除された内容も重複拡散する。",
+        "ordinal": 84,
+        "positive": "許可されたfeedの候補を元ID/版へ結び、依頼された宛先で同じ本文の実配送を照合してから受領を記録する。",
+        "read": {
+          "failed_view_calls": 0,
+          "mask_version": "primaryflow-v4-opaque-lexical-boundaries",
+          "ranges": [
+            {
+              "first": 1,
+              "range_sha256": "b2711ab6d2bae212157c4fed82909cc7fa1bf6083928321290da660831ecc6f2",
+              "through": 180,
+              "visible_lines": 146,
+              "withheld_physical_lines": [
+                1,
+                2,
+                3,
+                4,
+                5,
+                6,
+                7,
+                8,
+                9,
+                10,
+                11,
+                15,
+                32,
+                55,
+                58,
+                61,
+                64,
+                72,
+                88,
+                89,
+                93,
+                101,
+                102,
+                107,
+                120,
+                128,
+                129,
+                130,
+                152,
+                156,
+                161,
+                162,
+                177,
+                178
+              ]
+            },
+            {
+              "first": 181,
+              "range_sha256": "063a2c8c848f3e42371d6e515ab931b6b8b0d244fec1267b8319f434f7451433",
+              "through": 188,
+              "visible_lines": 3,
+              "withheld_physical_lines": [
+                184,
+                185,
+                186,
+                187,
+                188
+              ]
+            }
+          ],
+          "raw_full": false,
+          "total_physical_lines": 188,
+          "unseen_meanings_remain_unknown": true,
+          "view_calls_returned": 2,
+          "whole_masked_view_sha256": "812d6d80196cff0d37c97ae6c83ef80a44c9f3cae1995ba969d6606cde0a235a"
+        },
+        "representative_inventory_id": "github:0986ce64cafd77bffbff358442127a1acabeb66c391c8530aa5108baf4ea26f4",
+        "required_changes": [
+          "feed/sourceの真正性と対象、元ID/時刻/版・厳密なtag境界と文脈を確認し、RSS/HTML/mediaを命令として扱わない。取得サイズ/時間/不正XMLや内容のescapeも実装で確認する。",
+          "読取/候補と転載/編集/配送を分け、原文/素材の個別権利・宛先/本文の明示依頼を照合する。元ID・宛先・本文版と実post IDを耐障害の記録に結び、応答不明は同じ送信を照合して二重投稿を防ぐ。",
+          "原の登録/キー/投稿/定期pollや別Skillを開始せず、既存通知条件・追加支出/恒久権限禁止と現在のGo既定を保つ。"
+        ],
+        "source_git_blob": "0d07c3663b415b451a74674b29a515518503243c",
+        "status": "visible_primary_evaluated",
+        "unmet": [
+          "伏字39物理行の意味、each_member_context・支持・個別許諾・現在実在は未確認。",
+          "現行feed/API/頻度/保存条件・原文/素材権・実送信/記録の品質・source_or_service_rights・最終採否は未確認。feed/詳細取得・登録/別Skill・script/投稿/定期登録・外部送信・実配置・実使用0。近接比較はrss-atom-feed-integrity、stale-request-ordering、observability-notificationsの起動metadataだけ。"
+        ],
+        "use": "指定feedの投稿を出典・ID・時刻へ結び、候補抽出と各宛先への配送/重複防止を分ける設計の参考。",
+        "value": "RSSの基本欄、元投稿IDと転送先post ID、cacheや頻度を意識した記録の考え方がある。"
+      },
+      "original_packet_sha256": "10e9b2e2b025216d6a0e2d08a63809c674bd3bc7b48f684f1d33bf2a770f43e4",
+      "path": "skills/alphafanx/tonfun-feed/SKILL.md",
+      "representative_body_meaning_only": true,
+      "source_commit": "920714f17d81e0a95c7a9bc51faf0a7921cd982d",
+      "source_repo": "6mile/skills",
+      "source_sha256": "005eba2c70b3317bcac34ea477eaccadaa1cb8908d3e12eaa6a046e403c613bc"
+    },
+    {
+      "actual_assessment_reader": "20261028-204450-todo-4133",
+      "all_member_contexts_and_individual_rights_pending": true,
+      "bytes": 5727,
+      "cohort": 0,
+      "git_blob": "adfc059504bc809f7a39d427ccc52efa16ff5975",
+      "inventory_id": "github:272acdecff9af1c7b6e4fc3ac4fef18b36d7a67fa428f136f77159da33d18715",
+      "new_final_disposition": false,
+      "ordinal": 85,
+      "original_assessment": {
+        "body_bytes": 5727,
+        "body_sha256": "005eff630cb5e7c092452dd3ff1e5925b5f91489feebeab64dcc15bcb0d7d204",
+        "each_member_context_and_rights_pending": true,
+        "findings": [
+          "可視本文は5つのfileと日誌、夜間のmemory整理、heartbeat/cron、役割/引渡し/model routingを示す。file/cron設定だけで実稼働・復帰・成果を証明した資料ではない。",
+          "10日で事業を作ったという自己紹介や初回以後human input0のdisclaimerは未検証の主張で、そのまま本人の実績/運用実態にできない。",
+          "revenue最優先の例、approval/red lineや人格、modelの強弱配置は原の雛形で、現在の本人方針・優先順位・指定model/資源/正規schedulerを置き換えない。",
+          "fileを各担当が所有しlocks等で調停するとするが、job/版の照合・atomic更新・ACK/再開・途中失敗の具体的な保証は可視範囲ではない。古いmemory除去は原資料を保持した検証結果ではない。"
+        ],
+        "member_metadata_sha256": "a4e8a845a9c61fbe1d42b616bfca4f91b75766652a483e194b8216663b2f24db",
+        "member_occurrences": 1,
+        "negative": "雛形のcronと5fileを作っただけで無人運用完成とし、古い判断を消し、revenueや新personaを本人の禁止/優先順位より上へ置く。",
+        "ordinal": 85,
+        "positive": "実jobと受領済み成果・残作業を保存記録に結び、同じ担当で再開して、定期処理の起動と実結果を区別して追う。",
+        "read": {
+          "failed_view_calls": 0,
+          "mask_version": "primaryflow-v4-opaque-lexical-boundaries",
+          "ranges": [
+            {
+              "first": 1,
+              "range_sha256": "5f50de7fb5f5d26f64323ff829aa706419244849e53f79e4ea7232da290e4592",
+              "through": 148,
+              "visible_lines": 139,
+              "withheld_physical_lines": [
+                1,
+                2,
+                3,
+                4,
+                16,
+                60,
+                66,
+                98,
+                115
+              ]
+            }
+          ],
+          "raw_full": false,
+          "total_physical_lines": 148,
+          "unseen_meanings_remain_unknown": true,
+          "view_calls_returned": 1,
+          "whole_masked_view_sha256": "5f50de7fb5f5d26f64323ff829aa706419244849e53f79e4ea7232da290e4592"
+        },
+        "representative_inventory_id": "github:272acdecff9af1c7b6e4fc3ac4fef18b36d7a67fa428f136f77159da33d18715",
+        "required_changes": [
+          "原のagent生成/cron/配備や自己改善を始めず、現在の同じ担当/cursorとOMB/正規schedulerを保つ。未知の中央記録を調べず、継続に必要な出所/対象/版/実job/完了/未完・再開条件を結ぶ。",
+          "memoryの要約/更新で本人原文/旧判断/未完了成果を失わず、外部文や自己生成の教訓を新たな禁止/権限へ昇格させない。競合・失敗・重複を実結果とACKで照合する。",
+          "本人の明示停止と実審査を守り、通常操作の再承認待ちを増やさない。model/権限/資源は現指定を使い、AIである事実と実績/人の関与を正確に説明する。"
+        ],
+        "source_git_blob": "adfc059504bc809f7a39d427ccc52efa16ff5975",
+        "status": "visible_primary_evaluated",
+        "unmet": [
+          "伏字9物理行の意味、each_member_context・支持・個別許諾・現在実在は未確認。",
+          "生成/cron/再開/locking/memory処理・実績/費用・source_or_service_rights・最終採否は未確認。支持/中央本文閲覧・agent生成/再委譲・file更新・定期登録/配備・実配置・実使用0。近接比較はagent-system-design、agent-job-management、durable-task-handoffの起動metadataだけ。"
+        ],
+        "use": "agentの役割・運用の前提・保存された判断と日々の記録・定期処理の結果を結ぶ設計の候補。",
+        "value": "役割別の責任、再開に必要な記録、送信の重複防止と前提確認を意識している。"
+      },
+      "original_packet_sha256": "10e9b2e2b025216d6a0e2d08a63809c674bd3bc7b48f684f1d33bf2a770f43e4",
+      "path": "skills/crispyangles/lobster-agent-forge/SKILL.md",
+      "representative_body_meaning_only": true,
+      "source_commit": "920714f17d81e0a95c7a9bc51faf0a7921cd982d",
+      "source_repo": "6mile/skills",
+      "source_sha256": "005eff630cb5e7c092452dd3ff1e5925b5f91489feebeab64dcc15bcb0d7d204"
+    },
+    {
+      "actual_assessment_reader": "20261028-204450-todo-4133",
+      "all_member_contexts_and_individual_rights_pending": true,
+      "bytes": 19856,
+      "cohort": 0,
+      "git_blob": "114284a9807b384e39cd24f2580853cc92aaccf6",
+      "inventory_id": "github:de5cbc2345ab55487603ab0bbe666685f37f38bd5644a8e2fb5e10c02863d23b",
+      "new_final_disposition": false,
+      "ordinal": 86,
+      "original_assessment": {
+        "body_bytes": 19856,
+        "body_sha256": "006117e1668af14912d7eb0fd631b25c74098024c3bda0fe9dbf22bd7bad208d",
+        "each_member_context_and_rights_pending": true,
+        "findings": [
+          "可視本文はBSC mainnetの既定、RPCによる照会/署名済み送信、router/factory、鍵の生成/保存と任意の公開鍵登録、入金とswapを案内する。実RPC/contractやwalletは調べていない。",
+          "V3のcapital efficiencyで低slippageを期待するとしながらgetReservesとV2互換methodを説明する。対象contract/ABI/流動性と現在のquoteが一致するかは未確認で、reserveが正だけで任意量のswap実行可能/有利とは証明できない。",
+          "公開鍵登録では別chainのagent/session/認証を前提とし、すでに登録済みなら照会を案内する。形式/長さの条件だけで鍵の数学的妥当性や本人/chainへの正しいbindingを確認したとは扱えない。",
+          "deadlineの5分、volatility時の2〜5%slippage等は原の例で本人の損失許容条件ではない。decimalsを読む説明だけで整数精度/丸めやtokenの挙動/feeに正しく対応したと確認できない。",
+          "expiredは新deadlineで作り直す、nonce too lowは待機/retryや更新という案内があるが、前送信の確定/置換/二重送信とreorgやreceipt失敗の扱いは可視範囲では不足する。",
+          "owner-only modeやlocal署名/keystore、testnetなら実資金riskなしという説明は実保護の検証でない。特にWindowsのACLや実chain/資産/手数料、表示/記録/送信の秘密抑止は別に確認が必要。"
+        ],
+        "member_metadata_sha256": "9b2c5a685721c3a83b54668c59dbe676436451af320c69327f49c274f71a39f5",
+        "member_occurrences": 1,
+        "negative": "残高やsymbol・reserve正だけで安全/有利と決め、保存されたslippageで主網取引を開始し、nonce errorのたびに新txを送る。",
+        "ordinal": 86,
+        "positive": "許可範囲の取引結果を確認する別作業で、対象chainと同じtxの受領/成功/最終性を照合し、見積と実受取・手数料の差を示す。",
+        "read": {
+          "failed_view_calls": 0,
+          "mask_version": "primaryflow-v4-opaque-lexical-boundaries",
+          "ranges": [
+            {
+              "first": 1,
+              "range_sha256": "a477f91033eefbb9753cd416235dd11e22c8290072b7cdaf44dcca1741d0dc7b",
+              "through": 180,
+              "visible_lines": 93,
+              "withheld_physical_lines": [
+                1,
+                2,
+                3,
+                4,
+                5,
+                6,
+                7,
+                8,
+                9,
+                10,
+                11,
+                12,
+                13,
+                14,
+                15,
+                16,
+                17,
+                18,
+                19,
+                20,
+                21,
+                22,
+                23,
+                24,
+                25,
+                26,
+                27,
+                28,
+                29,
+                30,
+                31,
+                32,
+                33,
+                34,
+                35,
+                36,
+                37,
+                38,
+                39,
+                40,
+                41,
+                42,
+                43,
+                44,
+                45,
+                46,
+                47,
+                48,
+                49,
+                55,
+                59,
+                60,
+                61,
+                62,
+                63,
+                69,
+                75,
+                76,
+                92,
+                96,
+                97,
+                98,
+                101,
+                103,
+                116,
+                118,
+                120,
+                124,
+                131,
+                132,
+                134,
+                136,
+                137,
+                138,
+                140,
+                141,
+                145,
+                147,
+                152,
+                158,
+                166,
+                167,
+                170,
+                172,
+                173,
+                174,
+                175
+              ]
+            },
+            {
+              "first": 181,
+              "range_sha256": "db3bb3e57ab5c45101213d07b985db64505b55d09eac827ae7ed8af0c83d1442",
+              "through": 360,
+              "visible_lines": 126,
+              "withheld_physical_lines": [
+                181,
+                189,
+                190,
+                197,
+                198,
+                206,
+                207,
+                209,
+                217,
+                219,
+                225,
+                234,
+                242,
+                243,
+                247,
+                253,
+                266,
+                269,
+                270,
+                271,
+                272,
+                288,
+                293,
+                296,
+                298,
+                302,
+                303,
+                307,
+                309,
+                311,
+                313,
+                314,
+                318,
+                319,
+                323,
+                324,
+                326,
+                327,
+                334,
+                338,
+                340,
+                341,
+                342,
+                348,
+                349,
+                350,
+                351,
+                353,
+                355,
+                356,
+                357,
+                358,
+                359,
+                360
+              ]
+            },
+            {
+              "first": 361,
+              "range_sha256": "1640214dcdb91c1bc1cc098e65a5105bd13cebe689af055c7a88be413b968e1c",
+              "through": 473,
+              "visible_lines": 70,
+              "withheld_physical_lines": [
+                362,
+                363,
+                371,
+                374,
+                380,
+                382,
+                383,
+                384,
+                388,
+                389,
+                390,
+                391,
+                392,
+                396,
+                400,
+                402,
+                404,
+                405,
+                406,
+                407,
+                408,
+                410,
+                418,
+                420,
+                421,
+                425,
+                427,
+                428,
+                435,
+                436,
+                440,
+                443,
+                444,
+                447,
+                448,
+                450,
+                460,
+                461,
+                464,
+                470,
+                471,
+                472,
+                473
+              ]
+            }
+          ],
+          "raw_full": false,
+          "total_physical_lines": 473,
+          "unseen_meanings_remain_unknown": true,
+          "view_calls_returned": 3,
+          "whole_masked_view_sha256": "2c2549cab465253713f318de1cc99cfabf96848ae480fd123d320661c5c85e9b"
+        },
+        "representative_inventory_id": "github:de5cbc2345ab55487603ab0bbe666685f37f38bd5644a8e2fb5e10c02863d23b",
+        "required_changes": [
+          "実利用が別途指定された場合もchain/RPC・contract/ABI/token・quoteの時点/block・route/流動性・amount/decimals/丸め・min受取/deadline/fee/承認範囲を照合する。保存値やsymbolだけで宛先/資産/版を決めない。",
+          "署名/受付/確定/失敗と観測を分け、同じtx/nonceを照合して応答不明時の二重取引を防ぐ。受領後の結果/残高/差分・最終性と失効/置換を確認し、例のslippageやtimeoutを実許容にしない。",
+          "今回の研究では鍵file/認証/残高・登録・入金/bridge/承認/署名/送信を一切開始しない。本人の対象/新費用/権利の条件と秘密保護、現研究modelを保ち、原script/installや別Skillへ移らない。"
+        ],
+        "source_git_blob": "114284a9807b384e39cd24f2580853cc92aaccf6",
+        "status": "visible_primary_evaluated",
+        "unmet": [
+          "伏字184物理行の意味、each_member_context・支持・個別許諾・現在実在は未確認。",
+          "現行contract/API/ネットワーク/料金・鍵保護/登録binding・整数計算/quote/tx確定/復旧品質・source_or_service_rights・最終採否は未確認。wallet/秘密/実データ/支持本文閲覧・install/登録/入金/承認/署名/取引/外部送信・実配置・実使用0。近接比較はmarket-data-due-diligence、payment-status-reconciliation、stale-request-orderingの起動metadataだけ。"
+        ],
+        "use": "取引の見積・署名・送信・受領、chain/contract・token単位、再試行を分ける設計上の点検材料。",
+        "value": "quoteとswap、deadlineと最小受取量、秘密をlogへ出さない注意があるが、実取引の安全性や有利さは未確認。"
+      },
+      "original_packet_sha256": "0137cb1697c301132151fe25b3b4b3ce399b3d477483e77c1103fab6f23d02bd",
+      "path": "skills/kj-script/impossible-finance-skill/skill.md",
+      "representative_body_meaning_only": true,
+      "source_commit": "920714f17d81e0a95c7a9bc51faf0a7921cd982d",
+      "source_repo": "6mile/skills",
+      "source_sha256": "006117e1668af14912d7eb0fd631b25c74098024c3bda0fe9dbf22bd7bad208d"
+    },
+    {
+      "actual_assessment_reader": "20261028-204450-todo-4133",
+      "all_member_contexts_and_individual_rights_pending": true,
+      "bytes": 1710,
+      "cohort": 0,
+      "git_blob": "3317930a067a039f860380c4ee554a90dff0e1c5",
+      "inventory_id": "github:13b3ed6dd715dadfd2374e9aebe4d60a37457c4ad0de42d218d9047a05d091cf",
+      "new_final_disposition": false,
+      "ordinal": 87,
+      "original_assessment": {
+        "body_bytes": 1710,
+        "body_sha256": "0062140ddde8ce5c1e52c1f87684c35d1634d698bd851cf099112d4f5e1fbd4a",
+        "each_member_context_and_rights_pending": true,
+        "findings": [
+          "可視本文はScraplingによるGoogle検索、text/JSON形式、query/top/hl/glを示す。実検索品質や結果の鮮度/網羅性を検証した資料ではない。",
+          "installはvenv・追加package・Playwright browser/system依存の取得とsudo試行を含む。stealthでもblockされ得ると述べるが、許可された利用範囲や取得先の現行条件は未確認。"
+        ],
+        "member_metadata_sha256": "ada90ca51b75ddda2e6c2cef8c155f34fa9a54a0a32505c740368864be2943c0",
+        "member_occurrences": 1,
+        "negative": "上位10件のtitleだけで調査全体完了とし、blockされたため未許可のsystem変更や別認証環境で取得を続ける。",
+        "ordinal": 87,
+        "positive": "指定した言語/地域の検索条件と取得時点・上位範囲を示し、0件と通信失敗を別に報告する。",
+        "read": {
+          "failed_view_calls": 0,
+          "mask_version": "primaryflow-v4-opaque-lexical-boundaries",
+          "ranges": [
+            {
+              "first": 1,
+              "range_sha256": "f3cc2e0919b26ec40e7df6d750cce0d662b0da00d2c8e5618cbbc7acd7b0cf25",
+              "through": 54,
+              "visible_lines": 44,
+              "withheld_physical_lines": [
+                1,
+                2,
+                3,
+                4,
+                5,
+                12,
+                13,
+                20,
+                31,
+                41
+              ]
+            }
+          ],
+          "raw_full": false,
+          "total_physical_lines": 54,
+          "unseen_meanings_remain_unknown": true,
+          "view_calls_returned": 1,
+          "whole_masked_view_sha256": "f3cc2e0919b26ec40e7df6d750cce0d662b0da00d2c8e5618cbbc7acd7b0cf25"
+        },
+        "representative_inventory_id": "github:13b3ed6dd715dadfd2374e9aebe4d60a37457c4ad0de42d218d9047a05d091cf",
+        "required_changes": [
+          "検索の実言語/地域/時点と上位件数・取得失敗/0件を区別し、title/URLだけで本文・真偽・全候補を読んだ扱いにしない。重複/広告/redirectの判別と出典を確認する。",
+          "現在の許可された検索/本人Chromeの手順と秘密保護・Rakko等の対象制限を保ち、block/正規審査を迂回しない。原install/sudo/別browser取得やscriptを開始せず、新規機能はGo既定を保つ。"
+        ],
+        "source_git_blob": "3317930a067a039f860380c4ee554a90dff0e1c5",
+        "status": "visible_primary_evaluated",
+        "unmet": [
+          "伏字10物理行の意味、each_member_context・支持・個別許諾・現在実在は未確認。",
+          "現行検索/依存/利用条件/料金・取得品質/運用動作・source_or_service_rights・最終採否は未確認。install/取得/sudo・browser/検索/script実行・外部接続・実配置・実使用0。近接比較はbrowser-automation、social-media-researchの起動metadataだけ。"
+        ],
+        "use": "検索語・表示言語/地域・取得件数と、返すtitle/URLの最小形式を整理する候補。",
+        "value": "検索結果の上位情報だけを返す用途を限定し、rate limitや接続失敗の可能性を明記している。"
+      },
+      "original_packet_sha256": "3d9301b045fe8951f6a144fec291867cd60bbce672d537c560c6c68f32a4b2bc",
+      "path": "skills/itzsubhadip/stealthy-google-search/SKILL.md",
+      "representative_body_meaning_only": true,
+      "source_commit": "920714f17d81e0a95c7a9bc51faf0a7921cd982d",
+      "source_repo": "6mile/skills",
+      "source_sha256": "0062140ddde8ce5c1e52c1f87684c35d1634d698bd851cf099112d4f5e1fbd4a"
+    },
+    {
+      "actual_assessment_reader": "20261028-204450-todo-4133",
+      "all_member_contexts_and_individual_rights_pending": true,
+      "bytes": 7989,
+      "cohort": 0,
+      "git_blob": "76bfe4ddf2a4180f8aa0aa3513430f843e5b61f9",
+      "inventory_id": "github:6bf65a5a8d785c2ac01dfb0fdc276fff9fcce23c92296881cced62ed51559751",
+      "new_final_disposition": false,
+      "ordinal": 88,
+      "original_assessment": {
+        "body_bytes": 7989,
+        "body_sha256": "006221b6ec7e21c4c2050dd5ff005eca1e0f95b2d8591096f4214900fe754fb2",
+        "each_member_context_and_rights_pending": true,
+        "findings": [
+          "可視本文はfrontend/API/CLI/config/library/bug修復を分け、実コマンドと結果・再現手順を残す。今回の資料読取は実テスト実行やPASSの証拠ではない。",
+          "全command成功とPASS/FAIL二値を要求するが、期待した拒否/非0終了のテスト、環境不足・未実行・不確定の区別が不足する。再現失敗が見つからないだけで安全/全件性を保証できない。",
+          "libraryの完全suiteと増分/高risk優先・不要な全件反復回避が併存する。似た変更のcache再利用は、同じ最終source/環境/影響範囲の有効結果と同じではない。",
+          "sandbox/rollbackを掲げるが、実隔離・対象/データ・秘密・資源や復元結果の実証はない。破壊の強調・言い訳の逆を必ず行う指定や直接subagent起動は現在の担当/権限を変えない。",
+          "本文にMITの自由利用/再配布と非商用/非commercialという説明が併存する。個別notice/packageの未読を含め権利の整合は未確認で、MITや自主実装の宣言だけで採用できない。"
+        ],
+        "member_metadata_sha256": "83c09d0f626e9cac1a002496fe9624af1945c5f96e0fd38668906f07d9a1b421",
+        "member_occurrences": 1,
+        "negative": "全commandがexit0だからPASSとし、未実行をFAIL/成功へ押し込み、似た過去結果だけでテストを代用し、原の破壊指示を実行する。",
+        "ordinal": 88,
+        "positive": "対象版で原bugと修復後の結果を比較し、拒否すべき入力が期待どおり拒否され、利用側と復旧も影響範囲で確認する。",
+        "read": {
+          "failed_view_calls": 0,
+          "mask_version": "primaryflow-v4-opaque-lexical-boundaries",
+          "ranges": [
+            {
+              "first": 1,
+              "range_sha256": "96b3f18dca84d4bbac2088eeb066e80a3109091ff9e38647a530f18ee4aecea9",
+              "through": 180,
+              "visible_lines": 177,
+              "withheld_physical_lines": [
+                133,
+                138,
+                148
+              ]
+            },
+            {
+              "first": 181,
+              "range_sha256": "aec0f3f4087c7474d9d799d839549b1267cebf2186593d9ff11ab1116735a33b",
+              "through": 314,
+              "visible_lines": 126,
+              "withheld_physical_lines": [
+                214,
+                243,
+                249,
+                252,
+                255,
+                261,
+                264,
+                310
+              ]
+            }
+          ],
+          "raw_full": false,
+          "total_physical_lines": 314,
+          "unseen_meanings_remain_unknown": true,
+          "view_calls_returned": 2,
+          "whole_masked_view_sha256": "ab3a1deb0d7b5a3e4d891085e6a9884fa30bd035e63f53f891a323a3d0c4ec26"
+        },
+        "representative_inventory_id": "github:6bf65a5a8d785c2ac01dfb0fdc276fff9fcce23c92296881cced62ed51559751",
+        "required_changes": [
+          "元要件/受入条件と最終source・対象環境に結んだ期待結果を定め、正常・期待した異常・実失敗・未実行/不確定を区別する。exit0やPASS labelだけで成果を判断しない。",
+          "変更と利用側の影響範囲を選び、必要な実受入/再現/回帰と復元を確認する。同じ最終版の有効結果だけを再利用し、似たpatternだけで省略/無関係なfull buildを増やさない。",
+          "実対象/Prd・使い捨てテスト資源・秘密/費用/割当と本人の画像回答を保ち、原の破壊的操作/backup/別agent/定期scanを始めない。個別の非商用記述と許諾の整合は親が後で確認する。"
+        ],
+        "source_git_blob": "76bfe4ddf2a4180f8aa0aa3513430f843e5b61f9",
+        "status": "visible_primary_evaluated",
+        "unmet": [
+          "伏字11物理行の意味、each_member_context・支持・個別許諾・現在実在は未確認。",
+          "現行tool/実装/判定/隔離・cache/復旧の品質、MITと非商用記述の個別条件・source_or_service_rights・最終採否は未確認。支持/notice本文閲覧・原command/攻撃/別agent/テスト・設定/保存/配備・実配置・実使用0。近接比較はtest-quality、security-review、spec-atdd-tdd-issue-workflowの起動metadataだけ。"
+        ],
+        "use": "変更の種類に応じて、失敗/境界・利用側の実動作と根拠を確認するテスト計画の候補。",
+        "value": "lintや他agentの成功報告だけに頼らず、応答構造・stdout/stderr/終了code・原bugの再現・復旧を具体的に点検する。"
+      },
+      "original_packet_sha256": "3d9301b045fe8951f6a144fec291867cd60bbce672d537c560c6c68f32a4b2bc",
+      "path": "skills/minijoy-b/adversarial-verification/SKILL.md",
+      "representative_body_meaning_only": true,
+      "source_commit": "920714f17d81e0a95c7a9bc51faf0a7921cd982d",
+      "source_repo": "6mile/skills",
+      "source_sha256": "006221b6ec7e21c4c2050dd5ff005eca1e0f95b2d8591096f4214900fe754fb2"
+    },
+    {
+      "actual_assessment_reader": "20261028-204450-todo-4133",
+      "all_member_contexts_and_individual_rights_pending": true,
+      "bytes": 2828,
+      "cohort": 0,
+      "git_blob": "91a74070ff75b2c19452867cb98d1bd519fe1275",
+      "inventory_id": "github:a12c4835e79ee17331f877d8ff6d36004f12701c40fff910bbf705abe4d008a4",
+      "new_final_disposition": false,
+      "ordinal": 89,
+      "original_assessment": {
+        "body_bytes": 2828,
+        "body_sha256": "0062576203c734545a1715dab84f8dd8e57aceb3b055650b24cd2f148b88e8d1",
+        "each_member_context_and_rights_pending": true,
+        "findings": [
+          "可視本文はinit ledger、全scan/last_checked更新、upstream fetchのみのgate、report/dashboard/alert、MCP追加を案内する。実走査範囲・品質・CI結果は未確認。",
+          "cleanは採用時から不変を意味するが、最初の許諾が正しかったことや各file/asset/依存・service権を証明しない。変化/metadata不一致の判別も実法的結論とは別である。",
+          "license変更なら人のreview必須、dashboardをPagesへ、daily alertを案内する。原の一般人手待ちや公開/通知を現在の通常技術作業へ強制していない。"
+        ],
+        "member_metadata_sha256": "765c5284336478a4e19562620faa69bafdc0fd33551c4cb8cc29e263639247f5",
+        "member_occurrences": 1,
+        "negative": "初回のroot MITだけを台帳へ入れ、後のscanが変化0なら全member/素材/サービスの商用利用も許諾済みとし、公開dashboardを無指定で配備する。",
+        "ordinal": 89,
+        "positive": "実採用版と更新候補を固定して個別のlicense差分と未確認対象を示し、取得失敗をunchangedへ変えない。",
+        "read": {
+          "failed_view_calls": 0,
+          "mask_version": "primaryflow-v4-opaque-lexical-boundaries",
+          "ranges": [
+            {
+              "first": 1,
+              "range_sha256": "80b1f0dac6a823bb9844d2e2a823d134343ab0a0163e7856fba3e3aabfee8b0e",
+              "through": 111,
+              "visible_lines": 80,
+              "withheld_physical_lines": [
+                1,
+                2,
+                3,
+                4,
+                5,
+                6,
+                7,
+                8,
+                9,
+                10,
+                11,
+                12,
+                13,
+                14,
+                15,
+                16,
+                17,
+                18,
+                19,
+                20,
+                21,
+                22,
+                23,
+                24,
+                25,
+                26,
+                27,
+                28,
+                29,
+                30,
+                108
+              ]
+            }
+          ],
+          "raw_full": false,
+          "total_physical_lines": 111,
+          "unseen_meanings_remain_unknown": true,
+          "view_calls_returned": 1,
+          "whole_masked_view_sha256": "80b1f0dac6a823bb9844d2e2a823d134343ab0a0163e7856fba3e3aabfee8b0e"
+        },
+        "representative_inventory_id": "github:a12c4835e79ee17331f877d8ff6d36004f12701c40fff910bbf705abe4d008a4",
+        "required_changes": [
+          "実採用commit/blob/lockfile・依存全体と個別license/notice/dual条件/例外を結び、初期不明と変更・取得失敗/欠損を区別する。rootの一つのlicenseやunchangedだけで権利を自動承認しない。",
+          "比較の対象旧/新版・ledgerの出所/不変証拠と更新/失敗codeを照合し、last_checkedを完了の証明にしない。変更が旧版/新版のどの適用範囲に関わるかを確認する。",
+          "技術的な不一致は担当が調べ、本人だけが決める新しい権利条件だけ既存判断を確認して質問する。原scan/fetch/hook/cron/MCP/Pages公開・通知を始めず、個別noticeの追加閲覧は親の後工程に残す。"
+        ],
+        "source_git_blob": "91a74070ff75b2c19452867cb98d1bd519fe1275",
+        "status": "visible_primary_evaluated",
+        "unmet": [
+          "伏字31物理行の意味、each_member_context・支持・個別許諾・現在実在は未確認。",
+          "走査/ledger/gateの実装/完全性・個別licenseの適用/現利用条件・source_or_service_rights・最終採否は未確認。notice/依存本文閲覧・scan/fetch/設定/cron/MCP/通知/公開・実配置・実使用0。近接比較はknowledge-to-skills、skill-maintenance、market-data-due-diligenceの起動metadataだけ。"
+        ],
+        "use": "依存/forkの採用時と更新候補のlicense証拠を版ごとに結び、変化/不一致を検出する設計の参考。",
+        "value": "LICENSE・package field・SPDX header・削除を別に記録し、比較とreport・mergeの実行を分ける構成がある。"
+      },
+      "original_packet_sha256": "3d9301b045fe8951f6a144fec291867cd60bbce672d537c560c6c68f32a4b2bc",
+      "path": "skills/parkertoddbrooks/wip-license-hook/SKILL.md",
+      "representative_body_meaning_only": true,
+      "source_commit": "920714f17d81e0a95c7a9bc51faf0a7921cd982d",
+      "source_repo": "6mile/skills",
+      "source_sha256": "0062576203c734545a1715dab84f8dd8e57aceb3b055650b24cd2f148b88e8d1"
+    }
+  ],
+  "representative_body_groups": 8,
+  "shared_original_contexts": {
+    "0137cb1697c301132151fe25b3b4b3ce399b3d477483e77c1103fab6f23d02bd": {
+      "actual_assessment_reader": "20261028-204450-todo-4133",
+      "all_original_fields_reconstructed": true,
+      "common": {
+        "boundaries": {
+          "central_operations": 0,
+          "copy_grants": 0,
+          "final_dispositions": 0,
+          "new_global_raw_credit": 0,
+          "source_executed": false,
+          "support_body_reads": 0
+        },
+        "cohort": 0,
+        "domain": "skills3080-primary-meaning-chunk-v1",
+        "first_ordinal": 86,
+        "packet_id": "37d1465f0f534d6c88fbad0059a17a92",
+        "parent_origin_job": "20261027-175645-todo-3080",
+        "plan_sha256": "edb8069e0564eb3b95fd0863865b66c4e0b1d3fb994990c6701bcc624678cabf",
+        "reader_job": "20261028-204450-todo-4133",
+        "reader_todo": 4133
+      },
+      "independent_parent_ack": {
+        "acknowledged_through": 86,
+        "at": "2026-10-28T12:28:03.3781201Z",
+        "binding_sha256": "269fe9fcd42342587cb50a5148da5819617ad03b27a9269d9beb5d0174fd2f6f",
+        "cohort": 0,
+        "consumer_job": "20261027-175645-todo-3080",
+        "cumulative_held_groups": 0,
+        "cumulative_member_metadata_bound": 91,
+        "cumulative_visible_semantic_groups": 86,
+        "domain": "skills3080-primaryflow-parent-ack-v1",
+        "generation": 24,
+        "meaning_file": "primaryflow-cohort0-meaning-37d1465f0f534d6c88fbad0059a17a92175645.json",
+        "meaning_sha256": "960d7b84f3e4aec96dcfc52f51bc62017a7bfcb470eabee30a517ba202f698c6",
+        "original_message_sha256": "65336e075e2fce7bfdc07ac9326d4e03b609becaa5b4945b5e83505f2f3dae0a",
+        "packet_file": "primaryflow-cohort0-packet-37d1465f0f534d6c88fbad0059a17a92175645.json",
+        "packet_id": "37d1465f0f534d6c88fbad0059a17a92",
+        "packet_sha256": "0137cb1697c301132151fe25b3b4b3ce399b3d477483e77c1103fab6f23d02bd",
+        "parent_origin_job": "20261027-175645-todo-3080",
+        "plan_sha256": "edb8069e0564eb3b95fd0863865b66c4e0b1d3fb994990c6701bcc624678cabf",
+        "previous_sha256": "26c7c01d228007cfc64829a25f69b1be1a9b3e9608af90050eb2c88734ab2521",
+        "reader_job": "20261028-204450-todo-4133",
+        "receipt_sha256": "a721b1727330785677e852a1cc8165f6d95ffe4febf6640b34a488fa5e8ce262",
+        "whole16_complete": false
+      },
+      "member_metadata": {
+        "86": [
+          {
+            "bytes": 19856,
+            "commit": "920714f17d81e0a95c7a9bc51faf0a7921cd982d",
+            "content_path": "github/6mile__skills/objects/006117e1668af14912d7eb0fd631b25c74098024c3bda0fe9dbf22bd7bad208d.gz",
+            "git_blob": "114284a9807b384e39cd24f2580853cc92aaccf6",
+            "inventory_id": "github:de5cbc2345ab55487603ab0bbe666685f37f38bd5644a8e2fb5e10c02863d23b",
+            "path": "skills/kj-script/impossible-finance-skill/skill.md",
+            "repo": "6mile/skills",
+            "sha256": "006117e1668af14912d7eb0fd631b25c74098024c3bda0fe9dbf22bd7bad208d"
+          }
+        ]
+      },
+      "original_packet_id": "37d1465f0f534d6c88fbad0059a17a92",
+      "original_parent_ack_sha256": "f8a9c70566a86897cda742136e5ae4b89dbf449b62b4142bcd87a4b34f42a30b",
+      "original_receipt_sha256": "a721b1727330785677e852a1cc8165f6d95ffe4febf6640b34a488fa5e8ce262"
+    },
+    "10e9b2e2b025216d6a0e2d08a63809c674bd3bc7b48f684f1d33bf2a770f43e4": {
+      "actual_assessment_reader": "20261028-204450-todo-4133",
+      "all_original_fields_reconstructed": true,
+      "common": {
+        "boundaries": {
+          "central_operations": 0,
+          "copy_grants": 0,
+          "final_dispositions": 0,
+          "new_global_raw_credit": 0,
+          "source_executed": false,
+          "support_body_reads": 0
+        },
+        "cohort": 0,
+        "domain": "skills3080-primary-meaning-chunk-v1",
+        "first_ordinal": 82,
+        "packet_id": "c9dc1943e4474d77b0d9a23e3d43eb95",
+        "parent_origin_job": "20261027-175645-todo-3080",
+        "plan_sha256": "edb8069e0564eb3b95fd0863865b66c4e0b1d3fb994990c6701bcc624678cabf",
+        "reader_job": "20261028-204450-todo-4133",
+        "reader_todo": 4133
+      },
+      "independent_parent_ack": {
+        "acknowledged_through": 85,
+        "at": "2026-10-28T12:13:43.560488Z",
+        "binding_sha256": "269fe9fcd42342587cb50a5148da5819617ad03b27a9269d9beb5d0174fd2f6f",
+        "cohort": 0,
+        "consumer_job": "20261027-175645-todo-3080",
+        "cumulative_held_groups": 0,
+        "cumulative_member_metadata_bound": 90,
+        "cumulative_visible_semantic_groups": 85,
+        "domain": "skills3080-primaryflow-parent-ack-v1",
+        "generation": 23,
+        "meaning_file": "primaryflow-cohort0-meaning-c9dc1943e4474d77b0d9a23e3d43eb95175645.json",
+        "meaning_sha256": "62ced3341194e20d32f1ed942413fe68c847e28b86468687d59d23d8273e6c46",
+        "original_message_sha256": "3959aaf9e5ba03b6e153697b54470c4303487e9d585c5bdb92f1da9382a61f3b",
+        "packet_file": "primaryflow-cohort0-packet-c9dc1943e4474d77b0d9a23e3d43eb95175645.json",
+        "packet_id": "c9dc1943e4474d77b0d9a23e3d43eb95",
+        "packet_sha256": "10e9b2e2b025216d6a0e2d08a63809c674bd3bc7b48f684f1d33bf2a770f43e4",
+        "parent_origin_job": "20261027-175645-todo-3080",
+        "plan_sha256": "edb8069e0564eb3b95fd0863865b66c4e0b1d3fb994990c6701bcc624678cabf",
+        "previous_sha256": "601a6c707a7d710c916bd36b42fbb13c4ff2241b9896e7e93f9e12130d1568bb",
+        "reader_job": "20261028-204450-todo-4133",
+        "receipt_sha256": "b85a7e9b0f457cdb651f2eb4bca6256bbeb0de88a07a0f2687e0773f7d0cf59d",
+        "whole16_complete": false
+      },
+      "member_metadata": {
+        "82": [
+          {
+            "bytes": 5331,
+            "commit": "920714f17d81e0a95c7a9bc51faf0a7921cd982d",
+            "content_path": "github/6mile__skills/objects/005bd316e2899615a6f485ea2a28e839b6f8fca19f91de6a106b3178c5bacce1.gz",
+            "git_blob": "2aa8f5f013117cc6544f8e4cff42ad4fcbef1865",
+            "inventory_id": "github:a67e374ed38e94336263d9c272732bf34e21ad714e6f355988e266977ffb2806",
+            "path": "skills/membranedev/asin-data-api/SKILL.md",
+            "repo": "6mile/skills",
+            "sha256": "005bd316e2899615a6f485ea2a28e839b6f8fca19f91de6a106b3178c5bacce1"
+          }
+        ],
+        "83": [
+          {
+            "bytes": 3592,
+            "commit": "920714f17d81e0a95c7a9bc51faf0a7921cd982d",
+            "content_path": "github/6mile__skills/objects/005cdcba3515752420f2145009ae186ef8db58904c8ea990355f36ece7e0739e.gz",
+            "git_blob": "14bd2a6a0b7f818160f7d352e54cc3e41fa8a3ea",
+            "inventory_id": "github:478d767180939c659eaf3a40e08dd71cfaeef87993aa5b40e5455d3fb27e50c0",
+            "path": "skills/therealstein/vibelevel-xyz/SKILL.md",
+            "repo": "6mile/skills",
+            "sha256": "005cdcba3515752420f2145009ae186ef8db58904c8ea990355f36ece7e0739e"
+          }
+        ],
+        "84": [
+          {
+            "bytes": 5723,
+            "commit": "920714f17d81e0a95c7a9bc51faf0a7921cd982d",
+            "content_path": "github/6mile__skills/objects/005eba2c70b3317bcac34ea477eaccadaa1cb8908d3e12eaa6a046e403c613bc.gz",
+            "git_blob": "0d07c3663b415b451a74674b29a515518503243c",
+            "inventory_id": "github:0986ce64cafd77bffbff358442127a1acabeb66c391c8530aa5108baf4ea26f4",
+            "path": "skills/alphafanx/tonfun-feed/SKILL.md",
+            "repo": "6mile/skills",
+            "sha256": "005eba2c70b3317bcac34ea477eaccadaa1cb8908d3e12eaa6a046e403c613bc"
+          }
+        ],
+        "85": [
+          {
+            "bytes": 5727,
+            "commit": "920714f17d81e0a95c7a9bc51faf0a7921cd982d",
+            "content_path": "github/6mile__skills/objects/005eff630cb5e7c092452dd3ff1e5925b5f91489feebeab64dcc15bcb0d7d204.gz",
+            "git_blob": "adfc059504bc809f7a39d427ccc52efa16ff5975",
+            "inventory_id": "github:272acdecff9af1c7b6e4fc3ac4fef18b36d7a67fa428f136f77159da33d18715",
+            "path": "skills/crispyangles/lobster-agent-forge/SKILL.md",
+            "repo": "6mile/skills",
+            "sha256": "005eff630cb5e7c092452dd3ff1e5925b5f91489feebeab64dcc15bcb0d7d204"
+          }
+        ]
+      },
+      "original_packet_id": "c9dc1943e4474d77b0d9a23e3d43eb95",
+      "original_parent_ack_sha256": "26c7c01d228007cfc64829a25f69b1be1a9b3e9608af90050eb2c88734ab2521",
+      "original_receipt_sha256": "b85a7e9b0f457cdb651f2eb4bca6256bbeb0de88a07a0f2687e0773f7d0cf59d"
+    },
+    "3d9301b045fe8951f6a144fec291867cd60bbce672d537c560c6c68f32a4b2bc": {
+      "actual_assessment_reader": "20261028-204450-todo-4133",
+      "all_original_fields_reconstructed": true,
+      "common": {
+        "boundaries": {
+          "central_operations": 0,
+          "copy_grants": 0,
+          "final_dispositions": 0,
+          "new_global_raw_credit": 0,
+          "source_executed": false,
+          "support_body_reads": 0
+        },
+        "cohort": 0,
+        "domain": "skills3080-primary-meaning-chunk-v1",
+        "first_ordinal": 87,
+        "packet_id": "f3d8ef06810c4afaa44e61c8523a6177",
+        "parent_origin_job": "20261027-175645-todo-3080",
+        "plan_sha256": "edb8069e0564eb3b95fd0863865b66c4e0b1d3fb994990c6701bcc624678cabf",
+        "reader_job": "20261028-204450-todo-4133",
+        "reader_todo": 4133
+      },
+      "independent_parent_ack": {
+        "acknowledged_through": 89,
+        "at": "2026-10-28T13:17:19.2497317Z",
+        "binding_sha256": "269fe9fcd42342587cb50a5148da5819617ad03b27a9269d9beb5d0174fd2f6f",
+        "cohort": 0,
+        "consumer_job": "20261027-175645-todo-3080",
+        "cumulative_held_groups": 0,
+        "cumulative_member_metadata_bound": 94,
+        "cumulative_visible_semantic_groups": 89,
+        "domain": "skills3080-primaryflow-parent-ack-v1",
+        "generation": 25,
+        "meaning_file": "primaryflow-cohort0-meaning-f3d8ef06810c4afaa44e61c8523a6177175645.json",
+        "meaning_sha256": "3e0920cd8450e2eb2de6691c8d7aaab1430364a2b9346e3bfb7dc69170029416",
+        "original_message_sha256": "92a331813512f5508b18f5091951e0be1b581b006bb9040b7e12399a8759befd",
+        "packet_file": "primaryflow-cohort0-packet-f3d8ef06810c4afaa44e61c8523a6177175645.json",
+        "packet_id": "f3d8ef06810c4afaa44e61c8523a6177",
+        "packet_sha256": "3d9301b045fe8951f6a144fec291867cd60bbce672d537c560c6c68f32a4b2bc",
+        "parent_origin_job": "20261027-175645-todo-3080",
+        "plan_sha256": "edb8069e0564eb3b95fd0863865b66c4e0b1d3fb994990c6701bcc624678cabf",
+        "previous_sha256": "f8a9c70566a86897cda742136e5ae4b89dbf449b62b4142bcd87a4b34f42a30b",
+        "reader_job": "20261028-204450-todo-4133",
+        "receipt_sha256": "b68801d411ca755e1aad9c3e882437ca3358bc204c9eabc3c4fbcdf63b66d504",
+        "whole16_complete": false
+      },
+      "member_metadata": {
+        "87": [
+          {
+            "bytes": 1710,
+            "commit": "920714f17d81e0a95c7a9bc51faf0a7921cd982d",
+            "content_path": "github/6mile__skills/objects/0062140ddde8ce5c1e52c1f87684c35d1634d698bd851cf099112d4f5e1fbd4a.gz",
+            "git_blob": "3317930a067a039f860380c4ee554a90dff0e1c5",
+            "inventory_id": "github:13b3ed6dd715dadfd2374e9aebe4d60a37457c4ad0de42d218d9047a05d091cf",
+            "path": "skills/itzsubhadip/stealthy-google-search/SKILL.md",
+            "repo": "6mile/skills",
+            "sha256": "0062140ddde8ce5c1e52c1f87684c35d1634d698bd851cf099112d4f5e1fbd4a"
+          }
+        ],
+        "88": [
+          {
+            "bytes": 7989,
+            "commit": "920714f17d81e0a95c7a9bc51faf0a7921cd982d",
+            "content_path": "github/6mile__skills/objects/006221b6ec7e21c4c2050dd5ff005eca1e0f95b2d8591096f4214900fe754fb2.gz",
+            "git_blob": "76bfe4ddf2a4180f8aa0aa3513430f843e5b61f9",
+            "inventory_id": "github:6bf65a5a8d785c2ac01dfb0fdc276fff9fcce23c92296881cced62ed51559751",
+            "path": "skills/minijoy-b/adversarial-verification/SKILL.md",
+            "repo": "6mile/skills",
+            "sha256": "006221b6ec7e21c4c2050dd5ff005eca1e0f95b2d8591096f4214900fe754fb2"
+          }
+        ],
+        "89": [
+          {
+            "bytes": 2828,
+            "commit": "920714f17d81e0a95c7a9bc51faf0a7921cd982d",
+            "content_path": "github/6mile__skills/objects/0062576203c734545a1715dab84f8dd8e57aceb3b055650b24cd2f148b88e8d1.gz",
+            "git_blob": "91a74070ff75b2c19452867cb98d1bd519fe1275",
+            "inventory_id": "github:a12c4835e79ee17331f877d8ff6d36004f12701c40fff910bbf705abe4d008a4",
+            "path": "skills/parkertoddbrooks/wip-license-hook/SKILL.md",
+            "repo": "6mile/skills",
+            "sha256": "0062576203c734545a1715dab84f8dd8e57aceb3b055650b24cd2f148b88e8d1"
+          }
+        ]
+      },
+      "original_packet_id": "f3d8ef06810c4afaa44e61c8523a6177",
+      "original_parent_ack_sha256": "4803e326ffb4b26ead137092f9c4621202cefe0f9b3af83320b54272bd770e11",
+      "original_receipt_sha256": "b68801d411ca755e1aad9c3e882437ca3358bc204c9eabc3c4fbcdf63b66d504"
+    }
+  },
+  "slice": [
+    {
+      "after": 81,
+      "cohort": 0,
+      "new_member_metadata": 8,
+      "new_semantic_groups": 8,
+      "through": 89
+    }
+  ],
+  "source_full170_snapshot_sha256": "5cead2040975a2e97ba395ca504202f74cd420fa0380bd60f6617aab65701ac5",
+  "whole16_complete": false
+}

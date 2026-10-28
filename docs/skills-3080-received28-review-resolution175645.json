@@ -1,0 +1,28 @@
+{
+  "original_self": {
+    "task": 4076,
+    "job": "20261029-002143-todo-4076",
+    "spec": "ee0837854ef1eeaf3181bed45a814c878c763b7a8e9eadac67ddaf8bac6e85e5",
+    "bytes": 2777,
+    "sha": "1c65ae1462978c5c15511aa32af5c352a665852782844aa48901c72788333a03",
+    "native": "independently verified Luna/max",
+    "M": 0,
+    "S": 2,
+    "N": 0
+  },
+  "S1": {
+    "change": "Add explicit full canonical queue byte/row/hash acceptance with supplied worker path, mandatory before publication. Add real measured proof of73220 rows/64512087B/a0ddea. CI explicitly skips absent full private queue and does not claim its byte check.",
+    "negative_cases": "changed bytes same rows, truncated, missing newline, extra row, wrong well-shaped hash",
+    "actual_root_test": "PASS0.688s including full queue",
+    "physical_queue_body_not_committed": true
+  },
+  "S2": {
+    "change": "Require exact equality of reconstructed packet group and shared context key sets",
+    "negative_cases": "orphan extra context, same count different key, missing key",
+    "actual_root_test": "PASS"
+  },
+  "before_head": "8995fce6eb7137d6a3dfff7dc8c78f298f1c0a16",
+  "assessment_data_and_full_queue_changed": false,
+  "reviewer_final_resolution_pending": true,
+  "whole16_complete": false
+}

@@ -9,10 +9,14 @@ import (
 // Pending source assessments retain original observations and actor namespaces.
 // This test never reopens upstream bodies or promotes them into copy grants.
 func TestOriginal3719Next8PreservesCompletePacketsAndOriginalActors(t *testing.T) {
+	checkOriginal3719PendingSnapshot(t, "skills-3080-original3719-next8-199206-evaluation175645.json", "0362991564c4bee6b86edc9b52cc934b94d5b47ef4b142985f39b5ed5d8280b2", 199, 206, 3, "20261028-154151-todo-3719", 86, 32, 54)
+}
+func checkOriginal3719PendingSnapshot(t *testing.T, file, expectedSHA string, first, last, contextCount int, reader string, wantSupports, wantSaved, wantUnsaved int) {
+	t.Helper()
 	var value map[string]any
-	raw := loadPublicReceipt(t, "skills-3080-original3719-next8-199206-evaluation175645.json", &value)
-	if travel3Digest(raw) != "0362991564c4bee6b86edc9b52cc934b94d5b47ef4b142985f39b5ed5d8280b2" || value["domain"] != "skills3080-original3719-parent-shared-snapshot-v1" || value["publisher_job"] != "20261027-175645-todo-3080" || value["original_journal_parent"] != "20261024-235901-todo-3080" || value["after"] != float64(198) || value["through"] != float64(206) || value["whole16_complete"] != false {
-		t.Fatal("original eight pending observations or scope changed")
+	raw := loadPublicReceipt(t, file, &value)
+	if travel3Digest(raw) != expectedSHA || value["domain"] != "skills3080-original3719-parent-shared-snapshot-v1" || value["publisher_job"] != "20261027-175645-todo-3080" || value["original_journal_parent"] != "20261024-235901-todo-3080" || value["after"] != float64(first-1) || value["through"] != float64(last) || value["whole16_complete"] != false {
+		t.Fatal("original pending observations or scope changed")
 	}
 	for _, key := range []string{"new_source_or_support_reads_by_materializer", "new_parent_raw_body_read_credit", "new_copy_permissions", "new_final_dispositions", "central_operations"} {
 		if value[key] != float64(0) {
@@ -22,8 +26,8 @@ func TestOriginal3719Next8PreservesCompletePacketsAndOriginalActors(t *testing.T
 	records := received27Array(t, value["records"])
 	entries := received27Array(t, value["entries"])
 	contexts := received27Object(t, value["shared_original_contexts"])
-	if len(records) != 8 || len(entries) != 8 || len(contexts) != 3 {
-		t.Fatal("exact original eight/three chunk membership differs")
+	if len(records) != last-first+1 || len(entries) != last-first+1 || len(contexts) != contextCount {
+		t.Fatal("exact original record and whole-chunk membership differs")
 	}
 	groups := map[string][]any{}
 	ids := map[string]bool{}
@@ -34,7 +38,7 @@ func TestOriginal3719Next8PreservesCompletePacketsAndOriginalActors(t *testing.T
 		a := received27Object(t, r["original_assessment"])
 		source := received27Array(t, a["source"])
 		id, ok := r["inventory_id"].(string)
-		if !ok || ids[id] || len(source) != 5 || source[0] != id || a["row"] != float64(199+i) || r["ordinal"] != a["row"] || r["actual_assessment_reader"] != "20261028-154151-todo-3719" || r["new_final_disposition"] != false || r["current_permission_or_adoption_granted"] != false {
+		if !ok || ids[id] || len(source) != 5 || source[0] != id || a["row"] != float64(first+i) || r["ordinal"] != a["row"] || r["actual_assessment_reader"] != reader || r["new_final_disposition"] != false || r["current_permission_or_adoption_granted"] != false {
 			t.Fatal("original identity, sequence, reader or pending status changed")
 		}
 		ids[id] = true
@@ -69,6 +73,9 @@ func TestOriginal3719Next8PreservesCompletePacketsAndOriginalActors(t *testing.T
 			}
 		}
 	}
+	if !original3719PacketKeySetsMatch(groups, contexts) {
+		t.Fatal("original packet groups and shared context key sets differ")
+	}
 	for sha, originals := range groups {
 		context := received27Object(t, contexts[sha])
 		common := received27Object(t, context["common"])
@@ -78,7 +85,7 @@ func TestOriginal3719Next8PreservesCompletePacketsAndOriginalActors(t *testing.T
 		}
 		whole["entries"] = originals
 		encoded, err := json.Marshal(whole)
-		if err != nil || travel3Digest(encoded) != sha || common["reader_job"] != "20261028-154151-todo-3719" || common["roster_sha256"] != "f9c6b2e44c5e3aa8947f758f864eaa0d5edc396d622359826bca848cd96f9901" || context["original_fields_losslessly_reconstructed"] != true {
+		if err != nil || travel3Digest(encoded) != sha || common["reader_job"] != reader || common["roster_sha256"] != "f9c6b2e44c5e3aa8947f758f864eaa0d5edc396d622359826bca848cd96f9901" || context["original_fields_losslessly_reconstructed"] != true {
 			t.Fatal("complete original packet or namespaces changed")
 		}
 		boundary := received27Object(t, common["boundaries"])
@@ -92,7 +99,32 @@ func TestOriginal3719Next8PreservesCompletePacketsAndOriginalActors(t *testing.T
 			t.Fatal("independent parent read no longer binds this exact packet")
 		}
 	}
-	if supports != 86 || saved != 32 || unsaved != 54 {
+	if supports != wantSupports || saved != wantSaved || unsaved != wantUnsaved {
 		t.Fatal("original support states or nulls changed")
+	}
+}
+
+func original3719PacketKeySetsMatch(groups map[string][]any, contexts map[string]any) bool {
+	if len(groups) != len(contexts) {
+		return false
+	}
+	for key := range groups {
+		if _, ok := contexts[key]; !ok {
+			return false
+		}
+	}
+	return true
+}
+func TestOriginal3719PacketContextSetRejectsOrphansAndWrongKeys(t *testing.T) {
+	groups := map[string][]any{"a": {}, "b": {}}
+	if !original3719PacketKeySetsMatch(groups, map[string]any{"a": true, "b": true}) {
+		t.Fatal("matching key sets rejected")
+	}
+	for name, contexts := range map[string]map[string]any{"orphan": {"a": true, "b": true, "c": true}, "same_count_wrong_key": {"a": true, "c": true}, "missing": {"a": true}} {
+		t.Run(name, func(t *testing.T) {
+			if original3719PacketKeySetsMatch(groups, contexts) {
+				t.Fatal("lost/extra/wrong original context accepted")
+			}
+		})
 	}
 }

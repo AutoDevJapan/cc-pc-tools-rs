@@ -1,0 +1,66 @@
+{
+  "domain": "skills3080-canonical-manual-assignment-diagnostic-v1",
+  "observer_job": "20261027-175645-todo-3080",
+  "observed_at": "2026-10-28T11:19:09.5836301+00:00",
+  "scope": "Same3080/3686 purpose-bound registered public result and subsequent exclusive new Skill creation. No general protection or other project change.",
+  "deployed_guard_sha256": "f8b2ba6e66e60b06bbbc46c2c0f3d6eedc0208d40444c30e37b70afe29db4fc7",
+  "deployed_source": "a71330f543969b4585f01b7359a84a2fa528c9f2",
+  "guard_source_unchanged_at_fixed_input": "d40dad460e67cd4cc27b2fb06dc33c613fb162db",
+  "normal_request_sha256": "30cee5c50f81882de5c6cd2c9aad47a8c42a2c7880d585a0c7550b0dbda7976b",
+  "normal_result_reason": "writer",
+  "normal_result_body_consumed": false,
+  "read_only_production_predicate_diagnostic": {
+    "actual_branch_and_normal_source_verified": true,
+    "actual_caller_matches": true,
+    "job_in_history": true,
+    "latest_job_matches": true,
+    "metadata_source_or_guard_changes": 0,
+    "own_actor_same_birth_live": true,
+    "own_cwd_matches": true,
+    "own_job_metadata_read_ok": true,
+    "own_job_running": true,
+    "own_job_task_matches": true,
+    "own_launch_key_matches": false,
+    "parent_doing": true,
+    "parent_held": false,
+    "parent_project_matches": true,
+    "parent_spec_matches": true,
+    "refused_response_or_central_data_opened": false,
+    "registered_job_matches": true,
+    "registry_project_root_matches": true,
+    "registry_read_ok": true,
+    "registry_selected_rows_loaded": 3,
+    "worktree_matches": true,
+    "writer_valid_shape": true
+  },
+  "canonical_assignment_metadata_observation": {
+    "id": 3080,
+    "actual_current_job": "20261027-175645-todo-3080",
+    "scheduler_key_present": true,
+    "scheduler_key_is_null": true,
+    "scheduler_key_nonempty_string": false,
+    "canonical_generation_positive": true,
+    "canonical_receipt_generation_matches": true,
+    "canonical_receipt_job_matches_actual": true,
+    "no_key_value_or_unrelated_private_metadata_returned": true
+  },
+  "diagnostic_and_shape_are_separate_timed_observations_not_a_global_atomic_snapshot": true,
+  "canonical_source_references": [
+    {
+      "commit": "deef7563d77e7d55f3569ef6ed445502def24330",
+      "line": 25,
+      "meaning": "assign_worker/advance_resume save the canonical current-job generation and receipt; new manual assignment uses a null scheduler launch key.",
+      "path": "cc-scheduler/src/common.rs"
+    },
+    {
+      "commit": "deef7563d77e7d55f3569ef6ed445502def24330",
+      "line": 520,
+      "meaning": "Existing code recognizes canonical null-key same-job same-positive-generation manual assignment instead of inventing a scheduler key.",
+      "path": "cc-todo/src/answered_wait.rs"
+    }
+  ],
+  "model_or_test_acceptance_issued": false,
+  "source_or_metadata_or_guard_mutations": 0,
+  "central_or_private_result_operations": 0,
+  "whole16_complete": false
+}

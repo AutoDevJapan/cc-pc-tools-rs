@@ -3,7 +3,7 @@
   "issue": "https://github.com/AutoDevJapan/cc-pc-tools-rs/issues/283",
   "observed_at": "2026-10-24T08:15:09.0197014+00:00",
   "phase_a": "partial; 647 additional text shapes held by execution review",
-  "phase_b": "実導入154・既存統合3・再確認が残る除外記録15を保持する。次79本文群と85掲載元metadataを、元の22原応答・実読担当・伏字/unknown・親の連続受領へ結ぶ未確定評価として追加する。元の公開83群を変えず、評価を許諾・採用・全16資料の完了へ変えない。全73,220掲載と未取得428・追加取得審査647を保持して続ける。",
+  "phase_b": "実導入154・既存統合3・再確認が残る除外記録15を保持する。元3719の199..209の原評価11件と、指定サイトの伏字付き表示可能全文を読んだ4件を追加する。既存1409件は変えず、評価記録1424件、未採否の評価1258件と最終記録との重複166件を分ける。原資料の担当・notice再利用・伏字・未保存・未確認を保持し、今回の15評価を許諾・新採用・全16資料の完了へ変えない。全73220掲載、未取得428、追加取得審査647を保持して続ける。",
   "catalog_sha256": "2d73c9a038a41cc220a9687b935bfa1e0b315b65d9bd6d3e54ddb4111972876c",
   "source_count": 16,
   "fixed_public_repos": [
@@ -3184,6 +3184,50 @@
     "new_adoptions": 0,
     "normal_mutation_qualification_and_current_discovery_or_use_pending": true,
     "independent_full_review_not_yet_accepted": true,
+    "whole16_complete": false
+  },
+  "latest_received15": {
+    "publisher_job": "20261027-175645-todo-3080",
+    "original3719_primary_assessments": 11,
+    "original3719_complete_packets": 4,
+    "original3719_after": 198,
+    "original3719_through": 209,
+    "original3719_origin": "20261024-235901-todo-3080",
+    "actual_original_reader_jobs": [
+      "20261028-154151-todo-3719",
+      "20261028-171959-todo-3719"
+    ],
+    "source9_visible_masked_workflows": 4,
+    "source9_physical_lines": 939,
+    "source9_visible_lines": 873,
+    "source9_withheld_unknown_lines": 66,
+    "original_actor_reuse_diff_and_unsaved_nulls_preserved": true,
+    "all_original_packets_reconstructed_to_parent_ACK_sha": true,
+    "new_original_source_body_reads_by_publication": 0,
+    "new_parent_raw_credit": 0,
+    "new_individual_copy_permissions": 0,
+    "new_final_dispositions": 0,
+    "central_operations": 0,
+    "source9_upstream_Git_commit_or_publisher_not_verified": true,
+    "source9_current_platform_or_legal_claims_not_verified": true,
+    "current_assessments": 1424,
+    "assessed_without_final": 1258,
+    "assessment_final_intersection": 166,
+    "final_only_legacy": 6,
+    "assessment_or_final_union": 1430,
+    "whole16_complete": false
+  },
+  "source9_first4_evaluation": {
+    "artifact": "skills-3080-source9-first4-visible-evaluation175645.json",
+    "sha256": "645df498826e6b38814f2e30ea322097400121df7b22b19b9ae299718c3c670f",
+    "all_site_occurrences": 10290,
+    "body_available": 9862,
+    "body_unavailable": 428,
+    "new_visible_assessments": 4,
+    "raw_full_reads": 0,
+    "source_text_republished": false,
+    "individual_license_status": "pending; Amazon SEO has explicit All rights reserved; no index-label-only grants",
+    "current_dispositions_recorded": 0,
     "whole16_complete": false
   }
 }

@@ -41,7 +41,7 @@ func validateNext4Contract(h, n, r map[string]any) error {
 			return err
 		}
 	}
-	if err := validateSubscriptionExecution(next4Object(h["subscription_execution"]), []string{"20261029-000437-todo-4193", "20261029-033138-todo-4203", "20261029-035105-todo-4204"}); err != nil {
+	if err := validateSubscriptionObservation(next4Object(h["subscription_execution"]), []string{"20261029-000437-todo-4193", "20261029-033138-todo-4203", "20261029-035105-todo-4204"}); err != nil {
 		return err
 	}
 	if err := next4Fields(h, map[string]any{"creator_runtime_sha256": "eab69e4fc8e52f2ad6858ef4e8498e8cc6030ac8ce7f788251a1aae476dc5d55", "creator_runtime_revision": "034520d84d52f76dcd7dc7ef371910d6acd8ae9f", "current_runtime_sha256": "7fb45b8a411ca2e1dd64a034b94c51ce5ca51324ad7c0c4b778eecb9f4538d36", "current_runtime_revision": "b78007695a7c5d73eb1f11118757e93918aa3234", "software_fix_reviewed_head": "f36bd74e131e29fcc2787ba5ea0a900f91912bd8", "software_fix_merge": "b78007695a7c5d73eb1f11118757e93918aa3234", "normal_current_ID_hash_buffers_verified": true}); err != nil {

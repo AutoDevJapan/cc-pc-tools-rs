@@ -155,7 +155,7 @@
     "main_accepted_new_before_result_merge": 158
   },
   "subscription_execution": {
-    "mode": "oauth_subscription_only",
+    "mode": "unknown_historical_execution",
     "source": "Normal current Codex login status and OpenCodex account list type/spend metadata plus original producer job and independently received native identity; no model request or account change",
     "observed_at": "2026-10-28T22:04:08.1801104+00:00",
     "metadata_account_count": 5,
@@ -165,7 +165,7 @@
     "all_additional_credits_disabled": true,
     "raw_credentials_account_ids_labels_or_balances_returned_or_saved": false,
     "historical_per_request_billing_proven": false,
-    "scope": "Current observed mode and eligible account types/spending state; original owner-request job/model/effort proven separately. Historical per-request credentials or billing are neither inspected nor claimed.",
+    "scope": "Current OAuth login and eligible account/spending metadata are observed separately. Earlier producer authentication remains unknown. Model/effort/origin checks and operational file results are separate verified facts. No credentials, authentication files or billing secrets were inspected.",
     "original_producer_conditions": [
       {
         "producer_job": "20261029-061701-todo-4208",
@@ -175,7 +175,11 @@
         "effort_origin": "owner_request",
         "metadata_equals_independently_received_native_identity": true
       }
-    ]
+    ],
+    "current_observed_mode": "oauth_subscription_only",
+    "historical_execution_authentication_status": "unknown",
+    "historical_execution_authentication_proven": false,
+    "historical_execution_authentication_limitation": "Current login/account metadata and independently verified producer/model/effort do not identify the authentication used by earlier requests. The available records do not certify historical authentication or billing; unknown is retained rather than counted as verified OAuth."
   },
   "final_review_fix_validation": {
     "prior_reviewed_head": "888eb8e574c021873eedd3615151040230875af6",
@@ -195,5 +199,26 @@
     "new_central_operations": 0,
     "corrected_authored_definition": "159+3+0=162",
     "exact_all_current_final_reviews_and_CI_still_required": true
+  },
+  "historical_authentication_correction": {
+    "reviewed_head": "8e93cd0cbe5d52d6d7fe9933382efd7ee39b002b",
+    "rubber_original_sha256": "1e0565932b27b0d9b2e2c038165e730df078caf1b7af3b90eca429dccc1eee37",
+    "unknown_historical_authentication_not_certified": true,
+    "Creator4208_native_window": "2026-10-28T21:17:25Z/2026-10-28T21:27:56Z",
+    "exact_job_thread_and_cwd_match": true,
+    "native_provider": "godd",
+    "native_CLI_version": "0.164.0",
+    "rate_limit_observations": 51,
+    "rate_limit_plan_type": null,
+    "non_secret_authentication_mode_field_observed": false,
+    "current_account_state_not_historical_proof": true,
+    "historical_credentials_and_billing_not_inspected": true,
+    "original_frozen_Creator_and_actual7_unchanged": true,
+    "new_central_operations": 0,
+    "counterexample_actual_Red_sha256": "9b1919bbca2329c59cc2265387e02c718be569d14d9129bc74a9f1ea5cd08f95",
+    "affected_full_package_seconds": 7.323,
+    "vet_exit": 0,
+    "actual_queue_and4snapshots_supplied": true,
+    "report_completeness_not_historical_authentication_certification": true
   }
 }

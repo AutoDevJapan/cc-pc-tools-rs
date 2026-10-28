@@ -28,7 +28,7 @@ func rentalRuntimeContract(h, n, r map[string]any) error {
 			return fmt.Errorf("rental exact runtime differs")
 		}
 	}
-	if err := validateSubscriptionExecution(next4Object(h["subscription_execution"]), []string{"20261029-061701-todo-4208"}); err != nil {
+	if err := validateSubscriptionObservation(next4Object(h["subscription_execution"]), []string{"20261029-061701-todo-4208"}); err != nil {
 		return err
 	}
 	for _, v := range receivedRentalContexts(next4Object(h["qualified_full_review"])["native"]) {

@@ -1736,6 +1736,10 @@ if !truth(&row["scheduler"]["key"]){let attempt=add_count(&row["scheduler"]["att
             selection["finite_review_spec_sha256"] =
                 json!(cc_job_policy::product_retry::digest(text.as_bytes()));
         }
+        let continuation_db=self.todo()?;
+        if crate::subwork_continuation::finalize(&mut self.backend,&continuation_db,&item,source,&jobs,&mut selection)? {
+            resume_session=None;
+        }
         let folder = self.root.join("prompts");
         fs::create_dir_all(&folder)?;
         let target = folder.join(format!(

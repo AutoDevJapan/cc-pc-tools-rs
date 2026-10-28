@@ -25,6 +25,7 @@ mod pretool_failure;
 pub mod queue;
 pub mod queue_status;
 mod quota_recovery;
+mod subwork_continuation;
 pub mod reboot;
 pub mod recovery;
 pub use events::*;

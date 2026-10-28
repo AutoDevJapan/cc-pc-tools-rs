@@ -14,6 +14,7 @@ pub mod product_identity;
 pub mod product_retry;
 pub mod review_result;
 pub mod subwork;
+pub mod subwork_continuation;
 pub mod todo_history;
 pub mod todo_store;
 pub mod todo_wait;

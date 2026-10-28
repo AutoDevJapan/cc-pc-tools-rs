@@ -7,11 +7,13 @@ import (
 )
 
 type skillsRuntimeRequest struct {
-	SourceRoot   string `json:"source_root"`
-	SourceHead   string `json:"source_head"`
-	ReviewedHead string `json:"reviewed_head"`
-	Candidate    string `json:"candidate"`
-	CandidateSHA string `json:"candidate_sha256"`
+	SourceRoot     string               `json:"source_root"`
+	SourceHead     string               `json:"source_head"`
+	ReviewedHead   string               `json:"reviewed_head"`
+	Candidate      string               `json:"candidate"`
+	CandidateSHA   string               `json:"candidate_sha256"`
+	PeerReview     *skillsResultRequest `json:"peer_review,omitempty"`
+	OperationNonce string               `json:"operation_nonce,omitempty"`
 }
 
 const skillsRuntimeTarget = "D:/CC/Tools/client-records/scrub391.exe"
@@ -20,6 +22,10 @@ const skillsGuardModule = "github.com/AutoDevJapan/cc-pc-tools-rs/repair-guard"
 // Independent previously accepted distribution facts (3258 and3686), not a caller
 // supplied baseline or an assertion made by the artifact being installed.
 var skillsGuardBaselines = map[string]string{
+	// PR610's normal distribution was independently observed by the parent
+	// and this writer before building the notice-representation successor.
+	// docs/evidence/skills-3080-guard-before-notice-representation175645.json
+	"9be9a066053183a099e78133571d394ecbb2845372e3cf603e292c74dac1a8d3": "deb430b8b089fde2391dbd243c01db48de48d493",
 	// PR594's normally deployed runtime was independently matched to its public
 	// distribution record before the native-log successor was generated.
 	// Evidence: docs/evidence/skills-3080-guard-before-native609-16386.json.
@@ -134,6 +140,9 @@ func skillsBuildRevision(raw []byte) (string, bool) {
 	return values["vcs.revision"], values["GOOS"] == "windows" && values["GOARCH"] == "amd64" && values["vcs"] == "git" && values["vcs.modified"] == "false" && civ6Commit.MatchString(values["vcs.revision"])
 }
 func skillsCodeReviewAccepted(received skillsReceived, head string) bool {
+	return skillsCodeReviewAcceptedMode(received, head, false)
+}
+func skillsCodeReviewAcceptedMode(received skillsReceived, head string, strict bool) bool {
 	if !strings.Contains(string(received.Spec), "SKILLS3080_IMPLEMENTATION_REVIEW "+head) || len(received.Native) == 0 {
 		return false
 	}
@@ -161,18 +170,32 @@ func skillsCodeReviewAccepted(received skillsReceived, head string) bool {
 		}
 		count++
 		var a struct {
-			Domain   string `json:"domain"`
-			Head     string `json:"head"`
-			Must     *int   `json:"must"`
-			Accepted bool   `json:"accepted"`
+			Domain     string `json:"domain"`
+			Head       string `json:"head"`
+			Must       *int   `json:"must"`
+			Accepted   bool   `json:"accepted"`
+			Suggestion *int   `json:"suggestion,omitempty"`
+			Nit        *int   `json:"nit,omitempty"`
 		}
 		if !skillsStrict([]byte(strings.TrimPrefix(line, prefix)), &a) || a.Domain != "skills-3080-code-review-v1" || a.Head != head || a.Must == nil || *a.Must != 0 || !a.Accepted {
+			return false
+		}
+		if (strict && (a.Suggestion == nil || a.Nit == nil)) || (a.Suggestion != nil && *a.Suggestion != 0) || (a.Nit != nil && *a.Nit != 0) {
 			return false
 		}
 	}
 	return count == 1
 }
+func skillsCodeReviewPairAccepted(a, b skillsReceived, head string) bool {
+	return skillsCodeReviewAcceptedMode(a, head, true) && skillsCodeReviewAcceptedMode(b, head, true) && str(a.Metadata["id"]) != "" && a.Metadata["id"] != b.Metadata["id"] && str(a.Metadata["thread_id"]) != "" && str(b.Metadata["thread_id"]) != "" && a.Metadata["thread_id"] != b.Metadata["thread_id"]
+}
+func skillsRuntimeReviewTasks(a, b *skillsResultRequest) bool {
+	return a != nil && b != nil && a.Task == 3740 && b.Task == 3877 && skillsResultID(*a) && skillsResultID(*b)
+}
 func skillsRuntimeQualification(r skillsRequest, reg skillsRegistry, s *skillsFS) object {
+	return skillsRuntimeQualificationRead(r, reg, s, nil)
+}
+func skillsRuntimeQualificationRead(r skillsRequest, reg skillsRegistry, s *skillsFS, loadInstalled func() ([]byte, bool)) object {
 	failure := object{"qualified": false, "reason": "source"}
 	u := r.Runtime
 	if u == nil || r.Writer.Task != 3686 || r.Result != nil || r.ManifestSHA != "" || r.ManifestPath != "" || r.ManifestCommit != "" || r.Review == nil || !skillsResultID(*r.Review) || !skillsDigest(u.CandidateSHA) || !within(r.Writer.Workspace, u.SourceRoot) || !within(r.Writer.Workspace, u.Candidate) || same(u.Candidate, skillsRuntimeTarget) || !skillsMerged(u.SourceHead) || !skillsMerged(u.ReviewedHead) || !sourceVerified(u.SourceRoot) || !modelSourceHead(u.SourceRoot, u.SourceHead) {
@@ -190,8 +213,20 @@ func skillsRuntimeQualification(r skillsRequest, reg skillsRegistry, s *skillsFS
 		return failure
 	}
 	review, reason := skillsReceive(*r.Review, reg, s, false)
-	if reason != "" || !skillsCodeReviewAccepted(review, u.ReviewedHead) {
+	if reason != "" || !skillsCodeReviewAcceptedMode(review, u.ReviewedHead, u.PeerReview != nil) {
 		return object{"qualified": false, "reason": "review"}
+	}
+	if u.PeerReview != nil {
+		if !skillsRuntimeReviewTasks(r.Review, u.PeerReview) {
+			return object{"qualified": false, "reason": "review"}
+		}
+		if !skillsResultID(*u.PeerReview) || u.PeerReview.Task == r.Review.Task || u.PeerReview.Job == r.Review.Job {
+			return object{"qualified": false, "reason": "review"}
+		}
+		peer, reason := skillsReceive(*u.PeerReview, reg, s, false)
+		if reason != "" || !skillsCodeReviewPairAccepted(review, peer, u.ReviewedHead) {
+			return object{"qualified": false, "reason": "review"}
+		}
 	}
 	candidate, ok := s.read(u.Candidate, 64<<20)
 	if !ok || hashBytes(candidate) != u.CandidateSHA {
@@ -201,7 +236,10 @@ func skillsRuntimeQualification(r skillsRequest, reg skillsRegistry, s *skillsFS
 	if !ok || candidateHead != u.SourceHead {
 		return failure
 	}
-	installed, ok := s.read(skillsRuntimeTarget, 64<<20)
+	if loadInstalled == nil {
+		loadInstalled = func() ([]byte, bool) { return s.read(skillsRuntimeTarget, 64<<20) }
+	}
+	installed, ok := loadInstalled()
 	if !ok {
 		return failure
 	}
@@ -211,6 +249,11 @@ func skillsRuntimeQualification(r skillsRequest, reg skillsRegistry, s *skillsFS
 		return failure
 	}
 	already := currentSHA == u.CandidateSHA
+	// Preserve old already-current readback, but never authorize a new update
+	// with a single historical review or caller-asserted peer metadata.
+	if !already && u.PeerReview == nil {
+		return object{"qualified": false, "reason": "review"}
+	}
 	if (!already && skillsGuardBaselines[currentSHA] != currentHead) || (already && currentHead != u.SourceHead) {
 		return failure
 	}

@@ -201,6 +201,9 @@ func skillsOperation(op, path string) object {
 	if r.Review != nil {
 		ids = append(ids, r.Review.Task)
 	}
+	if r.Runtime != nil && r.Runtime.PeerReview != nil {
+		ids = append(ids, r.Runtime.PeerReview.Task)
+	}
 	reg, ok := skillsRegistryRead(ids)
 	if !ok || !skillsActorCheck(r.Writer, reg, &fs, caller) {
 		return fail("writer")
@@ -231,9 +234,12 @@ func skillsOperation(op, path string) object {
 		result["native_turn_context"] = received.Native
 		return result
 	}
-	if op == "verify-skills3080-update" {
+	if op == "verify-skills3080-update" || op == "apply-skills3080-update" || op == "recover-skills3080-update" {
 		if r.Consume != nil {
 			return fail("request")
+		}
+		if op != "verify-skills3080-update" {
+			return skillsRuntimeApply(op, path, raw, r, reg, &fs, ids)
 		}
 		return skillsRuntimeQualification(r, reg, &fs)
 	}

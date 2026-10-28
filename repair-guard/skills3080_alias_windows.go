@@ -41,12 +41,22 @@ func skillsMaskedBindings(m skillsManifest) (map[string]string, bool) {
 		if !ok {
 			return nil, false
 		}
+		for key := range value {
+			for _, canonical := range []string{"source", "reformulation_writer", "source_bytes", "source_git_blob"} {
+				if strings.EqualFold(key, canonical) && key != canonical {
+					return nil, false
+				}
+			}
+		}
 		_, hasSource := value["source"]
 		_, hasWriter := value["reformulation_writer"]
 		if !hasWriter {
 			continue
 		}
 		if !hasSource || !hasWriter || !skillsName.MatchString(name) || len(name) > 80 || hashBytes(f.body) != f.SHA || value["reformulation_writer"] != m.Writer.Job {
+			return nil, false
+		}
+		if _, _, ok := skillsMaskedMetadataIdentity(value); !ok {
 			return nil, false
 		}
 		raw, e := json.Marshal(value["source"])
@@ -127,6 +137,36 @@ func skillsMaskedBindings(m skillsManifest) (map[string]string, bool) {
 	}
 	return bound, true
 }
+
+func skillsMaskedMetadataIdentity(value object) (int64, string, bool) {
+	count, countOK := value["source_bytes"].(json.Number)
+	bytes, err := count.Int64()
+	blob, blobOK := value["source_git_blob"].(string)
+	return bytes, blob, countOK && err == nil && bytes > 0 && blobOK && civ6Commit.MatchString(blob) && blob != strings.Repeat("0", 40)
+}
+
+// Bind declarations to the independently validated acquired object, rather
+// than trusting metadata because a matching raw copy also appears in outputs.
+func skillsMaskedMetadataMatches(row skillsSavedSource, outputs []skillsOutput, target string) bool {
+	metaTarget := strings.TrimSuffix(target, "original-skill.masked.txt") + "source.json"
+	for _, output := range outputs {
+		if output.Target != metaTarget {
+			continue
+		}
+		value, ok := conversationJSON(output.body)
+		if !ok {
+			return false
+		}
+		if _, explicit := value["reformulation_writer"]; !explicit {
+			return true // Preserve the original same-name metadata schema.
+		}
+		count, blob, ok := skillsMaskedMetadataIdentity(value)
+		return ok && count == row.Bytes && blob == row.Blob
+	}
+	legacy, ok := skillsMaskedSourceTarget(row.Path)
+	return ok && legacy == target // Earlier same-name references need no metadata.
+}
+
 func skillsBoundMaskedOutput(source skillsSource, outputs []skillsOutput, bound map[string]string) bool {
 	target, ok := bound[skillsSourceKey(source.Repository, source.Commit, source.Path)]
 	if !ok {

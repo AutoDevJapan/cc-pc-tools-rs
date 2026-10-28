@@ -156,7 +156,7 @@ func TestSkills3080RenamedReferenceStillUsesSameAcquiredObjectAndLines(t *testin
 	for i := range m.Files {
 		m.Files[i].Target = strings.Replace(m.Files[i].Target, "sample/", "renamed/", 1)
 	}
-	meta, _ := json.Marshal(map[string]any{"source": m.Sources[0], "reformulation_writer": m.Writer.Job})
+	meta, _ := json.Marshal(map[string]any{"source": m.Sources[0], "reformulation_writer": m.Writer.Job, "source_bytes": len(raw), "source_git_blob": skillsGitBlobID(raw)})
 	m.Files = append(m.Files, skillsOutput{Target: "renamed/references/source.json", SHA: hashBytes(meta), body: meta})
 	check := func(m skillsManifest) bool {
 		fs := skillsFS{blocked: func(string) bool { return false }}
@@ -177,7 +177,7 @@ func TestSkills3080RenamedReferenceStillUsesSameAcquiredObjectAndLines(t *testin
 	}
 	wrongWriter := m
 	wrongWriter.Files = append([]skillsOutput(nil), m.Files...)
-	badMeta, _ := json.Marshal(map[string]any{"source": m.Sources[0], "reformulation_writer": "20261028-103853-todo-3686"})
+	badMeta, _ := json.Marshal(map[string]any{"source": m.Sources[0], "reformulation_writer": "20261028-103853-todo-3686", "source_bytes": len(raw), "source_git_blob": skillsGitBlobID(raw)})
 	skillsAliasReplaceOutput(t, &wrongWriter, "renamed/references/source.json", badMeta)
 	if check(wrongWriter) {
 		t.Fatal("raw copy bypassed the original metadata writer")
@@ -200,6 +200,59 @@ func TestSkills3080RenamedReferenceStillUsesSameAcquiredObjectAndLines(t *testin
 		if check(c) {
 			t.Fatal("renamed target bypassed original line/marker check")
 		}
+	}
+}
+
+func TestSkills3080AliasMetadataBindsAcquiredBytesAndBlob(t *testing.T) {
+	for _, kind := range []string{"valid", "different_bytes", "fractional_bytes", "missing_bytes", "different_blob", "invalid_blob", "missing_blob", "source_case_alias", "writer_case_alias", "bytes_case_alias", "blob_case_alias", "nested_source_case_alias"} {
+		t.Run(kind, func(t *testing.T) {
+			raw, notice := []byte("Visible\nfixture hidden\n"), []byte("exact package notice\n")
+			f := skillsAcquiredFixture(t, raw, notice, true)
+			m := skillsManifestWithOriginals(t, raw, notice)
+			m.Files[1] = skillsMaskedFixtureOutput([]byte("Visible\n[WITHHELD physical line 2]\n"))
+			for i := range m.Files {
+				m.Files[i].Target = strings.Replace(m.Files[i].Target, "sample/", "renamed/", 1)
+			}
+			sourceBytes, _ := json.Marshal(m.Sources[0])
+			var source map[string]any
+			if json.Unmarshal(sourceBytes, &source) != nil {
+				t.Fatal("synthetic source")
+			}
+			meta := map[string]any{"source": source, "reformulation_writer": m.Writer.Job, "source_bytes": len(raw), "source_git_blob": skillsGitBlobID(raw)}
+			switch kind {
+			case "different_bytes":
+				meta["source_bytes"] = 1
+			case "fractional_bytes":
+				meta["source_bytes"] = 1.5
+			case "missing_bytes":
+				delete(meta, "source_bytes")
+			case "different_blob":
+				meta["source_git_blob"] = strings.Repeat("a", 40)
+			case "invalid_blob":
+				meta["source_git_blob"] = "not-a-blob"
+			case "missing_blob":
+				delete(meta, "source_git_blob")
+			case "source_case_alias":
+				meta["Source"] = source
+			case "writer_case_alias":
+				meta["Reformulation_Writer"] = m.Writer.Job
+			case "bytes_case_alias":
+				meta["Source_Bytes"] = len(raw)
+			case "blob_case_alias":
+				meta["Source_Git_Blob"] = skillsGitBlobID(raw)
+			case "nested_source_case_alias":
+				source["Repository"] = source["repository"]
+			}
+			b, _ := json.Marshal(meta)
+			m.Files = append(m.Files, skillsOutput{Target: "renamed/references/source.json", SHA: hashBytes(b), body: b})
+			// A matching raw copy cannot excuse a conflicting identity in metadata.
+			m.Files = append(m.Files, skillsOutput{Target: "renamed/references/raw-fixture.txt", SHA: hashBytes(raw), body: raw})
+			fs := skillsFS{blocked: func(string) bool { return false }}
+			defer fs.close()
+			if got := skillsSourcesBoundAt(m, &fs, f.root, f.catalogSHA, f.anchors); got != (kind == "valid") {
+				t.Fatalf("same acquired bytes/blob metadata %s accepted=%v", kind, got)
+			}
+		})
 	}
 }
 func TestSkills3080AliasSuccessorRetainsOnlyKnownInstalledPair(t *testing.T) {

@@ -365,7 +365,7 @@ func skillsSourceObject(root string, row skillsSavedSource, outputs []skillsOutp
 	}
 	if len(bindings) == 1 {
 		if target, ok := bindings[0][skillsSourceKey(row.Repo, row.Commit, row.Path)]; ok {
-			return skillsMaskedSourceObjectTarget(row, raw, outputs, target)
+			return skillsMaskedMetadataMatches(row, outputs, target) && skillsMaskedSourceObjectTarget(row, raw, outputs, target)
 		}
 	}
 	for _, output := range outputs {

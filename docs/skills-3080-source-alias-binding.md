@@ -23,6 +23,11 @@ claims照合と実saved object照合は同じ対応を使う。metadataは原本
 任意の同名参照、support_text、script、改訂名の改名権限や新しい許諾へ一般化しない。
 原コーパスや中央への書込みをテストから始めず、実manifestの純粋回帰と合成原本で確認する。
 
+親のPR617の追加差分も同じ担当・PR618へ統合する。source.jsonが明示するsource_bytesと
+source_git_blobを整数・Git blobの形式として確認し、実取得済みrowのbytes/blobと一致させる。
+重要なmetadataキーの大文字小文字による別名を拒否し、rawの別出力があっても省略しない。
+旧schemaに改訂担当の宣言がない同名参照は保持し、二重のPRを重ねてマージしない。
+
 成功済み3712/3896/3740/3877、親の成功済み内容レビューと各原spec/job/native/原返信は
 凍結したまま保持する。未受入だった既存3870(self、原Must2)と3876(rubber、原Must1)を
 同じ3686の既存Luna/max・両owner_requestで使い、旧originと今回launch親を分ける。

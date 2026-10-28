@@ -80,8 +80,9 @@
     "owner_input_required": false,
     "windows_updated": true,
     "final_head_ci_accepted": true,
-    "parent_ack199_received": false,
-    "old_source_or_reply_rewritten": false
+    "parent_ack199_received": true,
+    "old_source_or_reply_rewritten": false,
+    "functional_repair_acceptance_complete": true
   },
   "logs": [
     {
@@ -410,5 +411,76 @@
     "issue_state": "OPEN",
     "owner_input_required": false,
     "pending": "Parent normal canonical reader must receive new3719 output for next199+; do not count old8486B or ACK198 as new receipt"
+  },
+  "functional_acceptance_20261028_182554": {
+    "qualified_at": "2026-10-28T18:32:12.4881426+09:00",
+    "observer_job": "20261028-182554-todo-3669",
+    "complete": true,
+    "parent_receipt": {
+      "source": "normal current3669 ToDo note",
+      "marker": "[Parent175645:ReceivedAll8To206-RepairFunctionalAcceptance]",
+      "producer_job": "20261027-175645-todo-3080",
+      "received_note_utf8_bytes": 2015,
+      "received_note_sha256": "08ae3e2ae07936808db14851b36f5071fd7b302df83c6b616d9b0efeefe34945",
+      "canonical_packet_digest_not_claimed_for_note": true
+    },
+    "canonical_result": {
+      "source_job": "20261028-154151-todo-3719",
+      "evaluation_first": 199,
+      "evaluation_last": 206,
+      "accepted_count": 8,
+      "parent_ack": 206,
+      "next": 207,
+      "original_packets_verified_by_parent": 3,
+      "quota_interrupted205to206_received_by_parent": true,
+      "result_loss_reported_by_parent": 0,
+      "native_model": "p5a4c66/gpt-6.1-sol",
+      "native_effort": "max",
+      "spec_sha256": "4f6fe32f62db56bed2acb4d378147ff952ad06230243fb45f7674f3158313fc3",
+      "own_fixed_metadata_native_spec_source_matches": true,
+      "raw_native_or_packets_directly_opened_by_this_worker": false,
+      "producer_verified_canonical_receipt": true,
+      "lossless_parent_reconstruction_utf8_bytes": 90426,
+      "lossless_parent_reconstruction_sha256": "0362991564c4bee6b86edc9b52cc934b94d5b47ef4b142985f39b5ed5d8280b2",
+      "unknown_values_and_old_namespace_preserved_by_parent": true,
+      "new_licensing_decisions_claimed": 0,
+      "old8486B_or_ACK198_reused_as_new_proof": false
+    },
+    "correction": {
+      "prior_unreceived_claim_corrected": true,
+      "cause": "Observer checked only the note prefix and missed the already appended parent receipt",
+      "received_time_not_rewritten_as_new_acceptance": true,
+      "original_records_preserved": true
+    },
+    "implementation": {
+      "head": "a0c0d779dcc1adc2678fc1e09313720a8dc8e80a",
+      "pr": 612,
+      "merge": "6a9a1747b9bafd42a6e30292e5a38f2b241c11e1",
+      "exact_head_ci_success": 8,
+      "exact_head_ci_neutral": 1,
+      "exact_head_ci_skipped": 1,
+      "accepted_final_reviews": 2,
+      "all_repair_findings_resolved": true,
+      "windows_accepted_receipt": "runtime-applied-final.json",
+      "accepted_related_tests_clippy_doctests_reused": true,
+      "new_product_changes": 0,
+      "new_builds": 0,
+      "new_deployments": 0
+    },
+    "checkpoint_before_final_evidence_commit": {
+      "head": "0229253434a4245d0419731a44826000c03da471",
+      "saved": true,
+      "all11_checks_true": true,
+      "launched": 0,
+      "receipt": "checkpoint-current-head-173552-result.json"
+    },
+    "remaining_functional_acceptance": [],
+    "issue611_state_before_final_closure": "OPEN",
+    "parent_continues_research_from": 207,
+    "parent_full598_or16_complete": false,
+    "live_parent_worker_stopped": false,
+    "new_handoff_todos": 0,
+    "owner_input_required": false,
+    "upstream_fast_effective_amount_observed": false
   }
 }

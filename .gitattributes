@@ -578,3 +578,14 @@ repair-guard/testdata/skills3080-rlm-controller-LICENCE.txt -text
 /docs/skills-3080-notice-next4-review-resolution175645.json -text
 /docs/skills-3080-primaryflow-next36-evaluation175645.json -text
 /docs/skills-3080-parent-notice19-evaluation175645.json -text
+
+docs/skills-3080-notice-next4-actual-bundle175645.json -text
+docs/skills-3080-installed-notice-next4-manifest175645.json -text
+docs/skills-3080-notice-next4-create-evidence175645.json -text
+docs/skills-3080-notice-next4-consume-evidence175645.json -text
+docs/skills-3080-notice-next4-actual-structure175645.json -text
+docs/skills-3080-notice-next4-discovery175645.json -text
+docs/skills-3080-notice-next4-application175645.json -text
+docs/skills-3080-notice-next4-actual-designs175645.json -text
+docs/skills-3080-notice-next4-installation-evidence175645.json -text
+docs/skills-3080-notice-next4-precreation-qualification175645.json -text

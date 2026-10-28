@@ -1,0 +1,311 @@
+package main
+
+import (
+	"encoding/base64"
+	"encoding/json"
+	"errors"
+	"path/filepath"
+	"strings"
+	"testing"
+)
+
+const notice4Manifest = "5ab55cfca8778374e86862905e9c39d5bfe11bea2ae6e3e33ec82f82e7607f89"
+const notice4Request = "758a78033f857c1cda0f25deeed5a18a89b16b5730caf3cd758fc3929a789167"
+const notice4Call = "call_9a5bc551506640e49f56dc88155e0eaf"
+
+type notice4Header struct {
+	Creator  string `json:"creator_job"`
+	Targets  int    `json:"new_targets_created"`
+	Files    int    `json:"current_files_readback_verified"`
+	Bytes    int    `json:"bytes"`
+	Manifest string `json:"creation_manifest_sha256"`
+	Runtime  string `json:"creator_runtime_sha256"`
+	Frozen   struct {
+		Task   int    `json:"task"`
+		Job    string `json:"job"`
+		Spec   string `json:"spec_sha256"`
+		Final  string `json:"final_sha256"`
+		Frozen *bool  `json:"frozen"`
+		Never  *bool  `json:"never_edit_spec_or_restart_this_task"`
+	} `json:"frozen_full_content_review"`
+	Pins map[string]struct {
+		File string `json:"file"`
+		SHA  string `json:"sha256"`
+	} `json:"referenced_artifacts"`
+	Implicit   *bool `json:"implicit_skill_selection_proven"`
+	Budget     *bool `json:"full_discovery_or_context_budget_proven"`
+	ThirdParty *bool `json:"third_party_assets_services_or_unknown_central_rights_accepted"`
+	Done       *bool `json:"whole16_complete"`
+}
+
+func validateNotice4Header(i notice4Header, n travel3Native, r travel3Read) error {
+	if i.Creator != next3Actor || i.Targets != 4 || i.Files != 28 || i.Bytes != 89144 || i.Manifest != notice4Manifest || i.Runtime != "f8b2ba6e66e60b06bbbc46c2c0f3d6eedc0208d40444c30e37b70afe29db4fc7" || !recordedFalse(i.Implicit) || !recordedFalse(i.Budget) || !recordedFalse(i.ThirdParty) || !recordedFalse(i.Done) {
+		return errors.New("notice4 actual scope, producer or boundaries differ")
+	}
+	f := i.Frozen
+	if f.Task != 4184 || f.Job != "20261028-105110-todo-4184" || f.Spec != "3cb28efe25d36e48c426a0ca14ebaaf8f3e8cd1213f97758dfc0f95f1d9a24df" || f.Final != "204f8d4175e5158c71a73259252c16c8faedbf909d979f333ad8361554962a06" || !recordedTrue(f.Frozen) || !recordedTrue(f.Never) || n.Call != notice4Call || n.Count != 1 || n.Request != notice4Request || r.Files != 28 || r.Bytes != 89144 || !recordedTrue(r.IDs) || !recordedTrue(r.Buffers) || !recordedFalse(r.General) {
+		return errors.New("notice4 full reviewer, once-only creation or current identity differs")
+	}
+	return nil
+}
+
+// Bind later final decisions to actual placement evidence without changing the
+// original primary-reading records or approving equal-body sibling occurrences.
+func validatedNoticeNext4Dispositions(t *testing.T) map[string]cohortLedgerRow {
+	t.Helper()
+	var install notice4Header
+	loadPublicReceipt(t, "skills-3080-notice-next4-installation-evidence175645.json", &install)
+	wantPins := map[string]string{"bundle": "skills-3080-notice-next4-actual-bundle175645.json", "manifest": "skills-3080-installed-notice-next4-manifest175645.json", "creation": "skills-3080-notice-next4-create-evidence175645.json", "readback": "skills-3080-notice-next4-consume-evidence175645.json", "structure": "skills-3080-notice-next4-actual-structure175645.json", "discovery": "skills-3080-notice-next4-discovery175645.json", "application": "skills-3080-notice-next4-application175645.json", "design": "skills-3080-notice-next4-actual-designs175645.json", "precreation": "skills-3080-notice-next4-precreation-qualification175645.json"}
+	rawPins := map[string][]byte{}
+	for kind, file := range wantPins {
+		pin, ok := install.Pins[kind]
+		if !ok || pin.File != file || filepath.Base(file) != file {
+			t.Fatal("notice4 artifact namespace differs")
+		}
+		var v any
+		b := loadPublicReceipt(t, file, &v)
+		if travel3Digest(b) != pin.SHA {
+			t.Fatal("notice4 artifact hash differs")
+		}
+		rawPins[kind] = b
+	}
+	if len(install.Pins) != len(wantPins) {
+		t.Fatal("notice4 artifact membership differs")
+	}
+	var native travel3Native
+	var read travel3Read
+	if json.Unmarshal(rawPins["creation"], &native) != nil || json.Unmarshal(rawPins["readback"], &read) != nil || validateNotice4Header(install, native, read) != nil {
+		t.Fatal("notice4 current acceptance incomplete")
+	}
+	var op struct {
+		Files []struct {
+			Target string `json:"target"`
+			SHA    string `json:"sha256"`
+			Body   string `json:"content_base64"`
+		} `json:"files"`
+	}
+	opRaw := loadPublicReceipt(t, "skills-3080-operations/create-notice-next4-175645.json", &op)
+	if travel3Digest(opRaw) != notice4Manifest || len(op.Files) != 28 || len(read.Rows) != 28 {
+		t.Fatal("notice4 fixed original operation or current count differs")
+	}
+	bodies := map[string][]byte{}
+	total := 0
+	for _, f := range op.Files {
+		b, e := base64.StdEncoding.DecodeString(f.Body)
+		if e != nil || bodies[f.Target] != nil || travel3Digest(b) != f.SHA {
+			t.Fatal("notice4 reviewed payload differs")
+		}
+		bodies[f.Target] = b
+		total += len(b)
+	}
+	if total != 89144 {
+		t.Fatal("notice4 original byte sum differs")
+	}
+	seen := map[int]bool{}
+	for _, r := range read.Rows {
+		if r.Index < 0 || r.Index >= len(op.Files) || seen[r.Index] {
+			t.Fatal("notice4 current indices missing/repeated")
+		}
+		seen[r.Index] = true
+		f := op.Files[r.Index]
+		if r.Target != f.Target || r.SHA != f.SHA || r.Bytes != len(bodies[f.Target]) || !validHex(r.ID, 64) || !recordedTrue(r.SameID) || !recordedTrue(r.SameBuffer) || !recordedTrue(r.Reviewed) {
+			t.Fatal("notice4 current readback not bound to reviewed payload")
+		}
+	}
+	var bundle struct {
+		Targets []struct {
+			Name  string `json:"name"`
+			Files []struct {
+				Path    string `json:"path"`
+				SHA     string `json:"sha256"`
+				Content string `json:"content"`
+			} `json:"files"`
+		} `json:"targets"`
+	}
+	if json.Unmarshal(rawPins["bundle"], &bundle) != nil || len(bundle.Targets) != 4 {
+		t.Fatal("notice4 bundle differs")
+	}
+	files := map[string]bool{}
+	names := map[string]bool{}
+	for _, target := range bundle.Targets {
+		if names[target.Name] || len(target.Files) != 7 {
+			t.Fatal("notice4 target membership differs")
+		}
+		names[target.Name] = true
+		for _, f := range target.Files {
+			key := target.Name + "/" + f.Path
+			if files[key] || bodies[key] == nil || string(bodies[key]) != f.Content || travel3Digest([]byte(f.Content)) != f.SHA {
+				t.Fatal("notice4 actual buffer differs")
+			}
+			files[key] = true
+		}
+	}
+	if len(files) != 28 {
+		t.Fatal("notice4 omitted actual file")
+	}
+	var discovery struct {
+		Found  int                `json:"found_count"`
+		Errors int                `json:"parse_error_count"`
+		Called *bool              `json:"model_called"`
+		Exited *bool              `json:"process_tree_exit_confirmed"`
+		Rows   []newSkillMetadata `json:"found"`
+	}
+	if json.Unmarshal(rawPins["discovery"], &discovery) != nil || discovery.Found != 4 || discovery.Errors != 0 || !recordedFalse(discovery.Called) || !recordedTrue(discovery.Exited) || len(discovery.Rows) != 4 {
+		t.Fatal("notice4 fresh bounded discovery differs")
+	}
+	found := map[string]bool{}
+	for _, r := range discovery.Rows {
+		if !names[r.Name] || found[r.Name] || !recordedTrue(r.Central) || !recordedTrue(r.EnabledPresent) || !recordedTrue(r.Enabled) || !recordedTrue(r.Description) {
+			t.Fatal("notice4 discovery row differs")
+		}
+		found[r.Name] = true
+	}
+	var app struct {
+		Actor        string `json:"consumer_job"`
+		Applied      *bool  `json:"all_scenario_meanings_applied"`
+		Files        int    `json:"instruction_files"`
+		Bytes        int    `json:"instruction_bytes"`
+		Real         int    `json:"actual_current_workflow_decisions"`
+		Synthetic    int    `json:"synthetic_decisions"`
+		Calls        *int   `json:"external_source_or_service_or_payment_operations"`
+		Instructions []struct {
+			Target string `json:"target"`
+			Bytes  int    `json:"bytes"`
+			SHA    string `json:"sha256"`
+			Read   *bool  `json:"literal_current_buffer_read_in_actual_parent_turn"`
+		} `json:"instructions"`
+		Decisions []struct {
+			Skill    string `json:"skill"`
+			Kind     string `json:"kind"`
+			Decision string `json:"decision"`
+		} `json:"decisions"`
+	}
+	if json.Unmarshal(rawPins["application"], &app) != nil || app.Actor != next3Actor || !recordedTrue(app.Applied) || app.Files != 8 || app.Bytes != 13040 || app.Real != 2 || app.Synthetic != 6 || !recordedCount(app.Calls, 0) || len(app.Instructions) != 8 || len(app.Decisions) != 8 {
+		t.Fatal("notice4 explicit real/synthetic application differs")
+	}
+	ins := map[string]bool{}
+	nbytes := 0
+	for _, r := range app.Instructions {
+		b := bodies[r.Target]
+		if b == nil || ins[r.Target] || !recordedTrue(r.Read) || travel3Digest(b) != r.SHA || len(b) != r.Bytes || !(strings.HasSuffix(r.Target, "/SKILL.md") || strings.HasSuffix(r.Target, "/references/guide.md")) {
+			t.Fatal("notice4 applied instruction differs")
+		}
+		ins[r.Target] = true
+		nbytes += len(b)
+	}
+	if nbytes != 13040 {
+		t.Fatal("notice4 instruction byte sum differs")
+	}
+	for j, r := range app.Decisions {
+		want := []string{"rlm-controller", "rlm-controller", "parse-payment-qr", "parse-payment-qr", "payroll-batch-reconciliation", "payroll-batch-reconciliation", "payment-status-reconciliation", "payment-status-reconciliation"}[j]
+		if r.Skill != want || r.Decision == "" || (j < 2) != strings.HasPrefix(r.Kind, "real current-workflow") || (j >= 2) != strings.HasPrefix(r.Kind, "synthetic text-only") {
+			t.Fatal("notice4 application classification differs")
+		}
+	}
+	var structure struct {
+		Exit   *int   `json:"exit"`
+		Output string `json:"stdout"`
+		Writes *int   `json:"additional_central_writes"`
+		Bundle struct {
+			File string `json:"file"`
+			SHA  string `json:"sha256"`
+		} `json:"bundle"`
+	}
+	if json.Unmarshal(rawPins["structure"], &structure) != nil || !recordedCount(structure.Exit, 0) || !recordedCount(structure.Writes, 0) || structure.Output != "PASS: 4 explicit skills; structure, descriptions, references, hashes, scenario pairs; in-memory bundle only; no deployment implied\n" || structure.Bundle.File != wantPins["bundle"] || structure.Bundle.SHA != travel3Digest(rawPins["bundle"]) {
+		t.Fatal("notice4 actual buffer structure check absent")
+	}
+	var precreation struct {
+		CurrentAbsence *bool  `json:"current_absence_asserted"`
+		Revalidated    *bool  `json:"mutation_revalidated_before_CreateNew"`
+		ExtraCalls     *int   `json:"new_Create_calls_by_publication"`
+		Call           string `json:"successful_native_creation_call"`
+		Response       struct {
+			Qualified *bool  `json:"qualified"`
+			Created   *int   `json:"created_files"`
+			Files     int    `json:"file_count"`
+			Manifest  string `json:"manifest_sha256"`
+			Request   string `json:"request_sha256"`
+			General   *bool  `json:"general_access_granted"`
+		} `json:"response_projection"`
+	}
+	if json.Unmarshal(rawPins["precreation"], &precreation) != nil || !recordedFalse(precreation.CurrentAbsence) || !recordedTrue(precreation.Revalidated) || !recordedCount(precreation.ExtraCalls, 0) || precreation.Call != notice4Call || !recordedTrue(precreation.Response.Qualified) || !recordedCount(precreation.Response.Created, 0) || precreation.Response.Files != 28 || precreation.Response.Manifest != notice4Manifest || precreation.Response.Request != notice4Request || !recordedFalse(precreation.Response.General) {
+		t.Fatal("notice4 historical qualification cannot become current absence or new creation")
+	}
+	result := map[string]cohortLedgerRow{}
+	for name := range names {
+		var source struct {
+			ID     string `json:"source_inventory_id"`
+			Source struct {
+				Repo    string `json:"repository"`
+				Commit  string `json:"commit"`
+				Path    string `json:"path"`
+				SHA     string `json:"sha256"`
+				License struct {
+					SHA      string `json:"sha256"`
+					Scope    string `json:"scope"`
+					Accepted *bool  `json:"accepted"`
+				} `json:"license"`
+			} `json:"source"`
+			Profile struct {
+				Raw     *bool `json:"raw_full"`
+				Unknown *bool `json:"unseen_meanings_remain_unknown"`
+			} `json:"primary_read_profile"`
+			Copied        *bool `json:"source_original_body_copied"`
+			NonAuthorship *bool `json:"source_published_notice_not_independently_verified_authorship"`
+		}
+		if json.Unmarshal(bodies[name+"/references/source.json"], &source) != nil || source.ID == "" || result[source.ID].ID != "" || source.Source.Repo != "6mile/skills" || source.Source.Commit != "920714f17d81e0a95c7a9bc51faf0a7921cd982d" || !recordedTrue(source.Source.License.Accepted) || source.Source.License.Scope == "" || travel3Digest(bodies[name+"/references/LICENSE.txt"]) != source.Source.License.SHA || !recordedFalse(source.Profile.Raw) || !recordedTrue(source.Profile.Unknown) || !recordedFalse(source.Copied) || !recordedTrue(source.NonAuthorship) {
+			t.Fatal("notice4 individually scoped original source differs")
+		}
+		result[source.ID] = cohortLedgerRow{ID: source.ID, Source: source.Source.Repo, Commit: source.Source.Commit, Path: source.Source.Path, SHA: source.Source.SHA, Disposition: "installed_new_adaptation"}
+	}
+	var ledger struct {
+		Rows []cohortLedgerRow `json:"entries"`
+	}
+	loadPublicReceipt(t, "skills-3080-adoptions.json", &ledger)
+	matched := map[string]bool{}
+	for _, r := range ledger.Rows {
+		if want, ok := result[r.ID]; ok {
+			if want != r || matched[r.ID] {
+				t.Fatal("notice4 live ledger identity differs")
+			}
+			matched[r.ID] = true
+		}
+	}
+	if len(matched) != 4 {
+		t.Fatal("notice4 live acceptance missing")
+	}
+	return result
+}
+
+func TestNoticeNext4ActualAcceptance(t *testing.T) { validatedNoticeNext4Dispositions(t) }
+
+func TestNoticeNext4RejectsUnboundCurrentAcceptance(t *testing.T) {
+	for _, change := range []string{"valid", "reviewer", "review bytes", "extra creation", "current identity missing", "general access", "third party rights"} {
+		t.Run(change, func(t *testing.T) {
+			var i notice4Header
+			var n travel3Native
+			var r travel3Read
+			loadPublicReceipt(t, "skills-3080-notice-next4-installation-evidence175645.json", &i)
+			loadPublicReceipt(t, "skills-3080-notice-next4-create-evidence175645.json", &n)
+			loadPublicReceipt(t, "skills-3080-notice-next4-consume-evidence175645.json", &r)
+			yes := true
+			switch change {
+			case "reviewer":
+				i.Frozen.Task = 4033
+			case "review bytes":
+				i.Frozen.Final = "changed"
+			case "extra creation":
+				n.Count = 2
+			case "current identity missing":
+				r.IDs = nil
+			case "general access":
+				r.General = &yes
+			case "third party rights":
+				i.ThirdParty = &yes
+			}
+			if (change == "valid") != (validateNotice4Header(i, n, r) == nil) {
+				t.Fatal("unbound evidence was accepted or valid evidence rejected")
+			}
+		})
+	}
+}

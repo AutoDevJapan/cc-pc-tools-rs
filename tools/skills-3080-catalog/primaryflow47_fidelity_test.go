@@ -18,6 +18,10 @@ func TestPrimaryflowNext36RetainsOriginalMeaningAndPendingMemberRights(t *testin
 	checkPrimaryflowOriginalMeaning(t, "skills-3080-primaryflow-next36-evaluation175645.json", "19ee72178b3b7e79feb9dd6521de0ab801ed3aad163c425c5a588a06fd97ccb7", 36, 8, 39)
 }
 
+func TestPrimaryflowNext79RetainsOriginalMeaningAndPendingMemberRights(t *testing.T) {
+	checkPrimaryflowOriginalMeaning(t, "skills-3080-primaryflow-next79-evaluation175645.json", "def96d3e622c9918827c1a52b991be0fe039d46a44831c8742c6c36a16463407", 79, 22, 85)
+}
+
 func checkPrimaryflowOriginalMeaning(t *testing.T, file, expectedSHA string, recordsExpected, contextsExpected, membersExpected int) {
 	t.Helper()
 	var outer map[string]any

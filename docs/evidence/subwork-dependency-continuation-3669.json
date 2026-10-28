@@ -43,8 +43,8 @@
     }
   },
   "reviews": {
-    "accepted_results": 0,
-    "native_verified": false,
+    "accepted_results": 2,
+    "native_verified": true,
     "effort_requested": "max",
     "latest_normal_observation": {
       "candidate": true,
@@ -56,18 +56,30 @@
       "queue_rank": 26
     },
     "model_requested": "gpt-6-luna",
-    "self_todo": 4163,
-    "rubber_todo": 4164,
-    "origin": "Saved owner review choice for same3669, relayed in continuation request and parent3080 note"
+    "self_todo": 4175,
+    "rubber_todo": 4176,
+    "origin": "Saved owner review choice for same3669, relayed in continuation request and parent3080 note",
+    "native_verification_source": "Earlier3669 qualified original replies and normal native metadata; current entry retains that evidence",
+    "prior_self_todo": 4163,
+    "prior_rubber_todo": 4164,
+    "final_source_head": "a0c0d779dcc1adc2678fc1e09313720a8dc8e80a",
+    "final_findings": {
+      "self_must": 0,
+      "self_suggestion": 0,
+      "self_nit": 0,
+      "rubber_must": 0,
+      "rubber_suggestion": 0,
+      "rubber_nit": 0
+    }
   },
   "limits": {
-    "native_Sol_max_verified": false,
-    "actual3719_launched": false,
-    "merged": false,
+    "native_Sol_max_verified": true,
+    "actual3719_launched": true,
+    "merged": true,
     "guard_or_global_settings_changed": false,
     "owner_input_required": false,
-    "windows_updated": false,
-    "final_head_ci_accepted": false,
+    "windows_updated": true,
+    "final_head_ci_accepted": true,
     "parent_ack199_received": false,
     "old_source_or_reply_rewritten": false
   },
@@ -235,5 +247,108 @@
         "sha256": "ae12d22390692cdfb5356d51f0022e00f5762122d0e45a96874690a514b86d4d"
       }
     ]
+  },
+  "pre_final_snapshot": {
+    "reviews": {
+      "accepted_results": 0,
+      "native_verified": false,
+      "effort_requested": "max",
+      "latest_normal_observation": {
+        "candidate": true,
+        "validity": "matching_task_metadata",
+        "stage": "priority",
+        "reason": "earlier_candidate_launched",
+        "task": 4164,
+        "eligible": true,
+        "queue_rank": 26
+      },
+      "model_requested": "gpt-6-luna",
+      "self_todo": 4163,
+      "rubber_todo": 4164,
+      "origin": "Saved owner review choice for same3669, relayed in continuation request and parent3080 note"
+    },
+    "limits": {
+      "native_Sol_max_verified": false,
+      "actual3719_launched": false,
+      "merged": false,
+      "guard_or_global_settings_changed": false,
+      "owner_input_required": false,
+      "windows_updated": false,
+      "final_head_ci_accepted": false,
+      "parent_ack199_received": false,
+      "old_source_or_reply_rewritten": false
+    },
+    "note": "Historical pre-merge values retained without replacing original test or review records"
+  },
+  "final_acceptance_20261028": {
+    "observed_at": "2026-10-28T16:39:26+09:00",
+    "implementation_head": "a0c0d779dcc1adc2678fc1e09313720a8dc8e80a",
+    "merge": "6a9a1747b9bafd42a6e30292e5a38f2b241c11e1",
+    "pr": 612,
+    "exact_head_ci": {
+      "success": 8,
+      "neutral": 1,
+      "skipped": 1,
+      "direct_github_readback": true
+    },
+    "final_parent_generation_related_tests": 63,
+    "accepted_tests_reused": true,
+    "new_product_changes": 0,
+    "new_builds": 0,
+    "runtime_receipt": "runtime-applied-final.json",
+    "runtime_build_receipt": "final-build-receipt.json",
+    "runtime_receipt_reread": true,
+    "current_all_runtime_hashes_directly_reread": false,
+    "new_job": {
+      "id": "20261028-154151-todo-3719",
+      "normal_metadata_cli": true,
+      "native_model": "p5a4c66/gpt-6.1-sol",
+      "native_effort": "max",
+      "spec_sha256": "4f6fe32f62db56bed2acb4d378147ff952ad06230243fb45f7674f3158313fc3",
+      "continuation_source_job": "20261026-180903-todo-3719",
+      "continuation_resume_generation": 3,
+      "started_at": "2026-10-28T15:44:57+09:00",
+      "finished_at": "2026-10-28T16:17:37+09:00",
+      "steps": 86,
+      "status": "failed",
+      "last_failure_kind": "quota",
+      "successful_completion_claimed": false,
+      "raw_native_or_reply_opened": false
+    },
+    "fresh_quota": {
+      "eligible_oauth": 5,
+      "weekly_available": 4,
+      "missing_weekly_window": 1,
+      "no_paid_overage": 5,
+      "raw_reply_retained": false,
+      "selected_route_revalidation_required": true
+    },
+    "parent_delivery": {
+      "todo": 3080,
+      "marker": "[3669:Native3719Observed:20261028-163556]",
+      "saved": true,
+      "exact_readback": true,
+      "new_canonical_ack199_requested": true,
+      "new_canonical_ack199_accepted": false
+    },
+    "normal_dispatch": {
+      "result": "TimeoutError",
+      "normal_status_busy": true,
+      "lock_or_cooldown_changed": false
+    },
+    "own_history_archival": {
+      "todo": 3669,
+      "entries": 4,
+      "bytes": 140839,
+      "total_readback": 46,
+      "sha256": "4ac850f8c2a639ac2bc08a9e43fe2cb66e6fe7f6027511c70a02ca6c621b7f8b",
+      "originals_preserved": true,
+      "global_limit_changed": false
+    },
+    "issue_state": "OPEN",
+    "remaining": "Parent normal canonical reader must qualify new199+ from the new3719; preserve old8486B mismatch and ACK198 separately",
+    "owner_input_required": false,
+    "upstream_fast_effective_amount_observed": false,
+    "parent_skills_scope_complete": false
   }
 }

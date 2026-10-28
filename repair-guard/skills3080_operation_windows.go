@@ -170,7 +170,7 @@ func skillsActorCheck(w skillsWriter, reg skillsRegistry, s *skillsFS, caller st
 		return false
 	}
 	job, ok := skillsReadJob(s, caller)
-	return ok && skillsJobTask(job, 3686) && job["status"] == "running" && skillsActorLive(job) && skillsActorSource(w.Workspace, row.Scheduler.Branch) && same(str(job["cwd"]), w.Workspace) && job["launch_key"] == row.Scheduler.Key
+	return ok && skillsJobTask(job, 3686) && job["status"] == "running" && skillsActorLive(job) && skillsActorSource(w.Workspace, row.Scheduler.Branch) && same(str(job["cwd"]), w.Workspace) && skillsActorAssignmentBound(row, job)
 }
 func skillsOperation(op, path string) object {
 	if op == "consume-skills3080-admitted" {

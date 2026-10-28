@@ -31,18 +31,22 @@ type skillsAdmission struct {
 }
 
 type skillsTask struct {
-	ID            int      `json:"id"`
-	Project       string   `json:"project"`
-	Status        string   `json:"status"`
-	Spec          string   `json:"spec"`
-	Jobs          []string `json:"jobs"`
-	OwnerStopped  bool     `json:"owner_stopped"`
-	Postponed     bool     `json:"owner_postponement_recorded"`
-	StopKind      string   `json:"stop_kind"`
-	OwnerQuestion any      `json:"owner_question_wait"`
-	DecisionWait  any      `json:"decision_wait"`
-	WaitReady     any      `json:"wait_ready"`
-	Scheduler     struct {
+	// Derived from the original canonical JSON, never caller request fields.
+	assignmentKeyNull    bool
+	assignmentJob        string
+	assignmentGeneration uint64
+	ID                   int      `json:"id"`
+	Project              string   `json:"project"`
+	Status               string   `json:"status"`
+	Spec                 string   `json:"spec"`
+	Jobs                 []string `json:"jobs"`
+	OwnerStopped         bool     `json:"owner_stopped"`
+	Postponed            bool     `json:"owner_postponement_recorded"`
+	StopKind             string   `json:"stop_kind"`
+	OwnerQuestion        any      `json:"owner_question_wait"`
+	DecisionWait         any      `json:"decision_wait"`
+	WaitReady            any      `json:"wait_ready"`
+	Scheduler            struct {
 		Job           string           `json:"job"`
 		LastJob       string           `json:"last_job"`
 		Worktree      string           `json:"worktree"`
@@ -157,11 +161,15 @@ func skillsRegistryProjectionWith(input io.Reader, ids []int, project func([]byt
 							return out, false
 						}
 					}
-					if _, ok := conversationJSON(raw); !ok {
+					metadata, ok := conversationJSON(raw)
+					if !ok {
 						return out, false
 					}
 					var row skillsTask
 					if json.Unmarshal(raw, &row) != nil || row.ID != id.ID {
+						return out, false
+					}
+					if (row.ID == 3080 || row.ID == 3686) && !skillsProjectActorAssignment(metadata, &row) {
 						return out, false
 					}
 					out.Tasks[id.ID] = row
@@ -272,7 +280,7 @@ func skillsWriterCheck(w skillsWriter, reg skillsRegistry, s *skillsFS, caller s
 		return false
 	}
 	job, ok := skillsReadJob(s, w.Job)
-	return ok && skillsJobTask(job, 3080) && job["status"] == "running" && skillsActorLive(job) && skillsActorSource(w.Workspace, row.Scheduler.Branch) && same(str(job["cwd"]), w.Workspace) && job["launch_key"] == row.Scheduler.Key
+	return ok && skillsJobTask(job, 3080) && job["status"] == "running" && skillsActorLive(job) && skillsActorSource(w.Workspace, row.Scheduler.Branch) && same(str(job["cwd"]), w.Workspace) && skillsActorAssignmentBound(row, job)
 }
 
 func skillsActorLive(job object) bool {

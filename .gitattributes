@@ -626,6 +626,7 @@ docs/evidence/skills-3080-guard-before-native-path-eab175645.json -text
 
 docs/evidence/skills-3080-native-path-create-and-hold175645.json -text
 
+docs/evidence/skills-3080-ci-issuer-observation80c.json -text -filter -working-tree-encoding
 docs/evidence/skills-3080-native-path-actual64138-175645.txt -text
 
 docs/skills-3080-native-path-repair-task175645.md -text

@@ -19,6 +19,9 @@ transport・payload・結果blockの既知キーは大文字小文字の別名�
 case-insensitiveなfield選択でid/cwd/call ID/type/textを置き換えられないようにする。
 完全一致でも同じパス文法を検証し、rendererも同じ文法で読戻せる呼び出しだけを返す。
 dot segmentや末尾の点/空白、device、UNCを含む同一cmdの拒否を、実際のcall入口で確認する。
+予約deviceのbasenameはWindows版Go標準の字句判定を使い、COM¹/COM²/COM³とLPT¹/²/³、
+CONIN$/CONOUT$、拡張子やbasename末尾空白による別名も両入口で拒否する。
+通常のUnicode名やCOM10などを一律には拒否しない。
 
 新しいWindows版の正式セルフレビュー4203とラバーダック4204を、同じ最終sourceで
 Luna/max・両origin owner_requestとして正常受領する。成功済み4198/4199は凍結し、
@@ -35,6 +38,10 @@ reviewed headと同じであることを別に検証し、同じソースのCI�
 呼出者の手書きCI証拠や配布準備の省略を資格とせず、片方だけを旧single-review扱いに
 落とすことも拒否する。CI不足ならcandidate/backupを開く前に止める。
 旧4198/4199など、正確な旧softwareだけのreadonly条件へこの新しいCI契約を適用しない。
+必須14件は公式RESTでも同じhead・name・details URL・成功を照合し、実測済みの
+GitHub Actions App15368/github-actionsだけをCI発行元として認める。別Appの同名成功は拒否する。
+候補生成前のPowerShellも名前・状態・結果を大文字小文字まで同じ規則で比較する。
+発行元の独立した候補生成前観測は `docs/evidence/skills-3080-ci-issuer-observation80c.json` に保持する。
 正常verify/applyと既存AdminBrokerで元Eabの実backup・ID/hash・owner/group/DACLを
 保持し、配置後の同buffer/CLIを照合する。SACLや過去の物理的連続性を証明とはしない。
 親が元request79f/native call64138の正常consumeで同じ28出力のID/hash/bufferを再確認し、

@@ -1,6 +1,8 @@
 package main
 
 import (
+	"encoding/json"
+	"strconv"
 	"strings"
 	"testing"
 )
@@ -8,14 +10,59 @@ import (
 func skillsRuntimeCIFixture() (object, *skillsRuntimeRequest) {
 	u := &skillsRuntimeRequest{SourceHead: strings.Repeat("b", 40), ReviewedHead: strings.Repeat("a", 40)}
 	checks := []any{}
+	issuers := []any{}
 	for _, name := range []string{"documentation", "repair-guard", "analyze (actions, none)", "analyze (go, autobuild)", "analyze (javascript-typescript, none)", "analyze (rust, none)", "go (Windows, resident-guard)", "go (Windows, capacity-audit-3h)", "go (Windows, unattended-runner)", "go (Windows, tools/linux-runner-bridge)", "go (Linux, resident-guard)", "go (Linux, capacity-audit-3h)", "go (Linux, unattended-runner)", "go (Linux, tools/linux-runner-bridge)", "CodeQL", "Cursor Bugbot"} {
-		checks = append(checks, object{"name": name, "status": "COMPLETED", "conclusion": "SUCCESS"})
+		url := "https://github.com/AutoDevJapan/cc-pc-tools-rs/actions/runs/1/job/" + strconv.Itoa(len(checks)+1)
+		checks = append(checks, object{"name": name, "status": "COMPLETED", "conclusion": "SUCCESS", "detailsUrl": url})
+		issuers = append(issuers, object{"name": name, "status": "completed", "conclusion": "success", "head_sha": u.ReviewedHead, "details_url": url, "app": object{"id": json.Number("15368"), "slug": "github-actions"}})
 	}
-	return object{"state": "MERGED", "headRefOid": u.ReviewedHead, "mergeCommit": object{"oid": u.SourceHead}, "statusCheckRollup": checks}, u
+	return object{"state": "MERGED", "headRefOid": u.ReviewedHead, "mergeCommit": object{"oid": u.SourceHead}, "statusCheckRollup": checks, "ci_issuers": object{"total_count": json.Number(strconv.Itoa(len(issuers))), "check_runs": issuers}}, u
+}
+
+func TestSkills3080RuntimeCIRequiresTheActualActionsIssuer(t *testing.T) {
+	for _, kind := range []string{"valid", "missing_proof", "missing_required", "wrong_app", "wrong_slug", "string_app_id", "wrong_head", "wrong_url", "failed_issuer", "pending_issuer", "duplicate_required", "count_mismatch", "missing_app"} {
+		t.Run(kind, func(t *testing.T) {
+			pr, u := skillsRuntimeCIFixture()
+			proof := obj(pr["ci_issuers"])
+			runs := proof["check_runs"].([]any)
+			guard := obj(runs[1])
+			switch kind {
+			case "missing_proof":
+				delete(pr, "ci_issuers")
+			case "missing_required":
+				proof["check_runs"] = append(runs[:1], runs[2:]...)
+				proof["total_count"] = json.Number("15")
+			case "wrong_app":
+				obj(guard["app"])["id"] = json.Number("999")
+			case "wrong_slug":
+				obj(guard["app"])["slug"] = "other-app"
+			case "string_app_id":
+				obj(guard["app"])["id"] = "15368"
+			case "wrong_head":
+				guard["head_sha"] = u.SourceHead
+			case "wrong_url":
+				guard["details_url"] = "https://example.invalid/check"
+			case "failed_issuer":
+				guard["conclusion"] = "failure"
+			case "pending_issuer":
+				guard["status"] = "in_progress"
+			case "duplicate_required":
+				proof["check_runs"] = append(runs, guard)
+				proof["total_count"] = json.Number("17")
+			case "count_mismatch":
+				proof["total_count"] = json.Number("17")
+			case "missing_app":
+				delete(guard, "app")
+			}
+			if skillsRuntimeCIBound(pr, u) != (kind == "valid") {
+				t.Fatalf("issuer binding %s accepted=%v", kind, skillsRuntimeCIBound(pr, u))
+			}
+		})
+	}
 }
 
 func TestSkills3080RuntimeCIBindsMergedReviewedSourceAndEveryRequiredCheck(t *testing.T) {
-	for _, kind := range []string{"valid", "optional_neutral", "optional_skipped", "head", "merge", "open", "missing", "failed", "pending", "cancelled", "skipped_required", "neutral_required", "duplicate", "unknown_conclusion", "missing_name", "no_checks", "wrong_checks_type", "too_many", "optional_pending"} {
+	for _, kind := range []string{"valid", "optional_neutral", "optional_skipped", "head", "merge", "open", "missing", "failed", "pending", "cancelled", "skipped_required", "neutral_required", "duplicate", "unknown_conclusion", "missing_name", "no_checks", "wrong_checks_type", "too_many", "optional_pending", "name_case", "status_case", "conclusion_case"} {
 		t.Run(kind, func(t *testing.T) {
 			pr, u := skillsRuntimeCIFixture()
 			checks := pr["statusCheckRollup"].([]any)
@@ -60,6 +107,12 @@ func TestSkills3080RuntimeCIBindsMergedReviewedSourceAndEveryRequiredCheck(t *te
 				pr["statusCheckRollup"] = checks
 			case "optional_pending":
 				obj(checks[15])["status"] = "QUEUED"
+			case "name_case":
+				guard["name"] = "REPAIR-GUARD"
+			case "status_case":
+				guard["status"] = "completed"
+			case "conclusion_case":
+				guard["conclusion"] = "success"
 			}
 			want := kind == "valid" || kind == "optional_neutral" || kind == "optional_skipped"
 			if skillsRuntimeCIBound(pr, u) != want {

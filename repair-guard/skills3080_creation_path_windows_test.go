@@ -128,6 +128,24 @@ func TestSkills3080CreationCanonicalCallStillRequiresPathGrammar(t *testing.T) {
 	}
 }
 
+func TestSkills3080CreationRejectsUnicodeReservedDevicesAtBothEntrypoints(t *testing.T) {
+	for _, name := range []string{"COM¹", "COM²", "COM³", "LPT¹", "LPT²", "LPT³", "com¹.txt", "lpt².tar.gz", "CONIN$", "CONOUT$", "CON .txt", "com¹ .log"} {
+		path := `D:/work/` + name + `/request.json`
+		workspace := `D:/work`
+		b, _ := json.Marshal(skillsForwardCommand(path, workspace))
+		if skillsForwardInvocation(path, workspace) != "" || skillsCreationCall("text(await tools.exec_command("+string(b)+"));", path, workspace) {
+			t.Errorf("Unicode reserved device accepted: %s", name)
+		}
+	}
+	for _, name := range []string{"COM⁴", "COM10", "日本語"} {
+		path := `D:/work/` + name + `/request.json`
+		inv := skillsForwardInvocation(path, `D:/work`)
+		if inv == "" || !skillsCreationCall(inv, path, `D:/work`) {
+			t.Errorf("ordinary Unicode name rejected: %s", name)
+		}
+	}
+}
+
 func TestSkills3080CreationActual64138NativeBinding(t *testing.T) {
 	_, _, e, _ := skillsForwardFixture(t)
 	e.Writer.Workspace = skillsActual64138Workspace

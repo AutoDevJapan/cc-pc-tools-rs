@@ -102,8 +102,12 @@ func skillsCreationPath(path string) (string, bool) {
 		if strings.TrimRight(segment, ". ") != segment {
 			return "", false
 		}
-		device := strings.ToUpper(strings.SplitN(segment, ".", 2)[0])
-		if device == "CON" || device == "PRN" || device == "AUX" || device == "NUL" || (len(device) == 4 && (strings.HasPrefix(device, "COM") || strings.HasPrefix(device, "LPT")) && device[3] >= '1' && device[3] <= '9') {
+		// Use Windows' standard lexical reserved-base rules, including COM¹
+		// and CONIN$/CONOUT$. Test the bare base so extension aliases are
+		// consistently refused across Windows versions. Leading-dot names
+		// such as .ci-work have no device base and remain ordinary names.
+		base := strings.TrimRight(strings.SplitN(segment, ".", 2)[0], " ")
+		if base != "" && !filepath.IsLocal(base) {
 			return "", false
 		}
 	}

@@ -3388,5 +3388,21 @@
     "unavailable": 428,
     "acquisition_review_hold": 647,
     "whole16_complete": false
+  },
+  "rental_ledger_preparation": {
+    "target": "rental-ledger-reconciliation",
+    "state": "proposed_uninstalled",
+    "fixed_primary_source_sha256": "ffcebd1dd25bf25767d69cc242b597309233c1383c65a53281bcbbd2529b1ac0",
+    "individual_notice_sha256": "6f6bb192fb5854c274ca1bd5f3705ad6d4577099d2db95f46c90d0657ffb830d",
+    "visible_workflow_lines": 166,
+    "withheld_lines": 39,
+    "prepared_files": 7,
+    "bundle_sha256": "b52679f4217ad54404b6de8f337fc14f2525fca4c2d76958852962818bb7fa15",
+    "operation_sha256": "4862a6fd4080829b724e194e878c804ce1ffcea6334f7d2f299eba94ba0230bd",
+    "Creator_full_review_received": false,
+    "fresh_physical_absence_qualified": false,
+    "new_adoptions": 0,
+    "central_operations": 0,
+    "not_a_total_candidate_cap": true
   }
 }

@@ -7,5 +7,9 @@
   "payload_files": 28,
   "original_precreation_receipt_sha256": "6af6cb97f450d051e06b4127d2777c709b913a4bc018f2812eef6f70bc4addac",
   "scope": "Original normal precreation only; not a new absence claim after placement",
-  "whole16_complete": false
+  "whole16_complete": false,
+  "current_absence_asserted": false,
+  "mutation_revalidated_before_CreateNew": true,
+  "new_Create_calls_by_publication": 0,
+  "successful_native_creation_call": "call_64138b14df4e483885c35a84ad2a2741"
 }

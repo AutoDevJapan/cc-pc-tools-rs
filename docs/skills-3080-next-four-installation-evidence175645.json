@@ -122,7 +122,7 @@
     },
     "precreation": {
       "file": "skills-3080-next-four-precreation-qualification175645.json",
-      "sha256": "dd9896bc4f1e1d7668fbf0ab1a674b4814a35c8e35fa417e18817e1df103f116"
+      "sha256": "157c261e55491f7a9e455175c82ed50b9c8b94db869987ade52d3f44548ff3d5"
     },
     "catalog": {
       "file": "skills-3080-next-four-catalog-identity175645.json",
@@ -220,5 +220,33 @@
   "Windows_full_admin_journal_not_independently_received_by_parent": true,
   "parent_observed_new_runtime_and_normally_consumed_all28": true,
   "public_result_review_pending_at_recording": true,
-  "whole16_complete": false
+  "whole16_complete": false,
+  "original_application_private_record_sha256": "fdd26a61ffc89dce250d800e02f38baeffa84b593d8ee3160754e9ca1bd1b8bb",
+  "catalog_validation": {
+    "actual_worker": "20261027-175645-todo-3080",
+    "related_package": "tools/skills-3080-catalog",
+    "test_count": 1,
+    "test_exit": 0,
+    "test_stdout": "ok  \tcc-pc-tools-rs/skills-3080-catalog\t5.623s\n",
+    "seconds": 5.623,
+    "vet_exit": 0,
+    "actual_full_queue_and_primary_snapshot_paths_explicitly_supplied": true,
+    "actual_full_queue_records": 73220,
+    "actual_full_queue_bytes": 64514642,
+    "actual_full_queue_sha256": "497359fb798e9f77cecb95ecf76c6c4eb2195494cb6d326d96ca4c6a36232db7",
+    "independent_file_hash_matches": true,
+    "assessment_records": 1469,
+    "final_records": 176,
+    "assessment_final_intersection": 170,
+    "final_only_legacy": 6,
+    "assessment_final_union": 1475,
+    "actual_new": 158,
+    "integrated": 3,
+    "excluded_records": 15,
+    "pending_final": 73044,
+    "held_body": 428,
+    "held_acquisition": 647,
+    "CI_does_not_claim_reading_private_full_queue_or_snapshots": true,
+    "source_bodies_or_new_permissions_or_central_ops": 0
+  }
 }

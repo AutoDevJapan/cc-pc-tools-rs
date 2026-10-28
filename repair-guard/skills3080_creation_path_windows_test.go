@@ -98,6 +98,36 @@ func TestSkills3080CreationPathOnlyRepeatsBackslashes(t *testing.T) {
 	}
 }
 
+func TestSkills3080CreationCanonicalCallStillRequiresPathGrammar(t *testing.T) {
+	for _, tc := range []struct{ path, workspace string }{
+		{`D:/work/.ci-work/./request.json`, `D:/work`},
+		{`D:/work/.ci-work/child/../request.json`, `D:/work`},
+		{`D:/work/.ci-work/request.json.`, `D:/work`},
+		{`D:/work/.ci-work/request.json `, `D:/work`},
+		{`D:/work/.ci-work/request.json:stream`, `D:/work`},
+		{`D:/work/.ci-work/CON.txt`, `D:/work`},
+		{`D:/work/.ci-work/request.json`, `D:/work/.`},
+		{`D:/work/.ci-work/request.json`, `D:/work/`},
+		{`D:/work/area/.ci-work/request.json`, `D:/work/./area`},
+		{`\\server\share\work\request.json`, `\\server\share\work`},
+		{`D:work\request.json`, `D:work`},
+	} {
+		// Construct the exact expected command rather than calling the renderer;
+		// a renderer that now refuses the grammar must not make this vacuous.
+		b, err := json.Marshal(skillsForwardCommand(tc.path, tc.workspace))
+		if err != nil {
+			t.Fatal(err)
+		}
+		input := "text(await tools.exec_command(" + string(b) + "));"
+		if skillsCreationCall(input, tc.path, tc.workspace) {
+			t.Errorf("exact command bypassed path grammar: %q / %q", tc.path, tc.workspace)
+		}
+		if skillsForwardInvocation(tc.path, tc.workspace) != "" {
+			t.Errorf("renderer advertised an unconsumable path: %q / %q", tc.path, tc.workspace)
+		}
+	}
+}
+
 func TestSkills3080CreationActual64138NativeBinding(t *testing.T) {
 	_, _, e, _ := skillsForwardFixture(t)
 	e.Writer.Workspace = skillsActual64138Workspace

@@ -30,7 +30,7 @@ func skillsForwardCommand(path, workspace string) skillsCreationCommand {
 // awaited tool call and one unmodified result. No echo, script file, environment
 // override, arbitrary JS, alternate executable, or copied receipt is accepted.
 func skillsForwardInvocation(path, workspace string) string {
-	if !filepath.IsAbs(path) || !within(workspace, path) || strings.ContainsAny(path, "'\r\n") {
+	if !filepath.IsAbs(path) || !within(workspace, path) || !skillsCreationPathEqual(path, path) || !skillsCreationPathEqual(workspace, workspace) {
 		return ""
 	}
 	var b bytes.Buffer
@@ -53,9 +53,6 @@ func skillsCreationCall(input, path, workspace string) bool {
 		return false
 	}
 	expected := skillsForwardCommand(path, workspace)
-	if cmd == expected {
-		return true
-	}
 	// Keep the executable, flag, quoting and every tool option exact. Only the
 	// quoted request path and workdir can contain repeated Windows separators.
 	const commandPrefix = "& '" + skillsRuntimeTarget + "' --create-skills3080-forward '"

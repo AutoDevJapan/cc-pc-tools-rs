@@ -5,21 +5,24 @@ import "testing"
 // Public runtime records must keep site provenance and masked reading distinct
 // from upstream Git identity, raw full reads and individual copy permission.
 func TestSource9FourReadReceiptsKeepUnknownRightsAndFullMaskedRanges(t *testing.T) {
+	checkSource9VisibleReceipt(t, "skills-3080-source9-first4-visible-evaluation175645.json", "645df498826e6b38814f2e30ea322097400121df7b22b19b9ae299718c3c670f", map[string]string{
+		"site:find-skills":              "b77341cc0f76616e1a61bf336a4de87740b148ec6bd0e48b5d493761260711c6",
+		"site:rakuten-seo":              "614be4659e921758fa10a5ea4e5ecd6efb647b1daac22469d22d4e579e493d60",
+		"site:amazon-seo-jp":            "95fb3e7844645879efdaeaf6dedf18cbc475259d3f52600a4c556f2bd5a7dea7",
+		"site:rakuten-bulk-control-csv": "0145904bc61a1fc5a4f3a903dd30b051a847be8d1f2648d36837fb7f522cccb2",
+	}, 939, 873, 66)
+}
+func checkSource9VisibleReceipt(t *testing.T, file, expectedSHA string, want map[string]string, wantPhysical, wantVisible, wantWithheld int) {
+	t.Helper()
 	var v map[string]any
-	raw := loadPublicReceipt(t, "skills-3080-source9-first4-visible-evaluation175645.json", &v)
-	if travel3Digest(raw) != "645df498826e6b38814f2e30ea322097400121df7b22b19b9ae299718c3c670f" || v["site_total"] != float64(10290) || v["site_saved_body_occurrences"] != float64(9862) || v["site_held_body_occurrences"] != float64(428) || v["whole16_complete"] != false {
+	raw := loadPublicReceipt(t, file, &v)
+	if travel3Digest(raw) != expectedSHA || v["site_total"] != float64(10290) || v["site_saved_body_occurrences"] != float64(9862) || v["site_held_body_occurrences"] != float64(428) || v["whole16_complete"] != false {
 		t.Fatal("fixed site scope changed")
 	}
 	for _, key := range []string{"new_raw_reads", "new_permissions", "new_final_dispositions", "central_operations"} {
 		if v[key] != float64(0) {
 			t.Fatal("visible evaluation gained raw reads or authority")
 		}
-	}
-	want := map[string]string{
-		"site:find-skills":              "b77341cc0f76616e1a61bf336a4de87740b148ec6bd0e48b5d493761260711c6",
-		"site:rakuten-seo":              "614be4659e921758fa10a5ea4e5ecd6efb647b1daac22469d22d4e579e493d60",
-		"site:amazon-seo-jp":            "95fb3e7844645879efdaeaf6dedf18cbc475259d3f52600a4c556f2bd5a7dea7",
-		"site:rakuten-bulk-control-csv": "0145904bc61a1fc5a4f3a903dd30b051a847be8d1f2648d36837fb7f522cccb2",
 	}
 	entries := received27Array(t, v["entries"])
 	if len(entries) != len(want) {
@@ -61,7 +64,7 @@ func TestSource9FourReadReceiptsKeepUnknownRightsAndFullMaskedRanges(t *testing.
 		}
 		physical, visible, withheld = physical+next-1, visible+nvisible, withheld+nwithheld
 	}
-	if len(want) != 0 || physical != 939 || visible != 873 || withheld != 66 {
+	if len(want) != 0 || physical != wantPhysical || visible != wantVisible || withheld != wantWithheld {
 		t.Fatal("site range or unknown-line totals changed")
 	}
 }

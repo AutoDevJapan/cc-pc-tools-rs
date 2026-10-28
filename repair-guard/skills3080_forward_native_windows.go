@@ -210,7 +210,9 @@ func skillsCreationNativeProjection(input io.Reader, thread, cwd string, start, 
 			return evidence, false
 		}
 		if env.Type == "session_meta" {
-			if session || p.ID != thread || !same(p.Cwd, cwd) {
+			// Session identity has the same recursive duplicate-key rejection as
+			// the matched native call/result. Never use Unmarshal's last value.
+			if _, strict := conversationJSON(scanner.Bytes()); !strict || session || p.ID != thread || !same(p.Cwd, cwd) {
 				return evidence, false
 			}
 			session = true

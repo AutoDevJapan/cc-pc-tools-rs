@@ -135,3 +135,50 @@ func TestSkills3080CreationActual64138NativeBinding(t *testing.T) {
 		})
 	}
 }
+
+func TestSkills3080CreationRejectsDuplicateSessionMetadata(t *testing.T) {
+	_, _, e, _ := skillsForwardFixture(t)
+	c := skillsConsumeRequest{Creator: e.Writer, RequestPath: e.Writer.Workspace + "/.ci-work/forward-request.json", RequestSHA: e.RequestSHA, CallID: "call_meta_duplicates"}
+	start, _ := time.Parse(time.RFC3339, "2026-10-25T12:00:00Z")
+	for _, name := range []string{"type", "id", "cwd", "payload", "timestamp", "nested"} {
+		t.Run(name, func(t *testing.T) {
+			records := skillsNativeCreationFixture(t, e, c)
+			meta, err := json.Marshal(records[0])
+			if err != nil {
+				t.Fatal(err)
+			}
+			old, replacement := "", ""
+			switch name {
+			case "type":
+				old, replacement = `"type":"session_meta"`, `"type":"ignored","type":"session_meta"`
+			case "id":
+				old, replacement = `"id":"synthetic-thread"`, `"id":"other","id":"synthetic-thread"`
+			case "cwd":
+				value, _ := json.Marshal(e.Writer.Workspace)
+				old = `"cwd":` + string(value)
+				replacement = `"cwd":"D:/other",` + old
+			case "payload":
+				old, replacement = `"payload":`, `"payload":{},"payload":`
+			case "timestamp":
+				old, replacement = `"timestamp":`, `"timestamp":"ignored","timestamp":`
+			case "nested":
+				old, replacement = `"payload":`, `"extra":{"x":1,"x":2},"payload":`
+			}
+			bad := bytes.Replace(meta, []byte(old), []byte(replacement), 1)
+			if bytes.Equal(meta, bad) {
+				t.Fatal("duplicate mutation did not apply")
+			}
+			var stream bytes.Buffer
+			stream.Write(bad)
+			stream.WriteByte('\n')
+			for _, record := range records[1:] {
+				if json.NewEncoder(&stream).Encode(record) != nil {
+					t.Fatal("record encoding")
+				}
+			}
+			if _, ok := skillsCreationNativeProjection(&stream, "synthetic-thread", e.Writer.Workspace, start, start.Add(time.Minute), c); ok {
+				t.Fatal("duplicate session metadata accepted")
+			}
+		})
+	}
+}

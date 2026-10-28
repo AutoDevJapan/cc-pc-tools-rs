@@ -13,6 +13,8 @@ UNC、相対/drive-relative、混在した連続区切りは新たに許可し�
 作成時producer、object ID、現在の同bufferの検証は従来の処理に結んだままにする。
 元450バイトの拒否を修正前のproductionで再現し、修正後は同じbyteで成功を確認した。
 正規rendererの成功、異なる作用・option・対象の拒否、元証拠のbindingもテストする。
+セッションのheaderも再帰的な重複キー検査を通し、type/id/cwd/payload/timestampと
+入れ子の重複について、修正前の拒否不足と修正後の拒否を確認する。
 
 新しいWindows版の正式セルフレビュー4203とラバーダック4204を、同じ最終sourceで
 Luna/max・両origin owner_requestとして正常受領する。成功済み4198/4199は凍結し、
@@ -22,6 +24,9 @@ Luna/max・両origin owner_requestとして正常受領する。成功済み4198
 
 関連Go raceテスト・vet、正式2役割の全修正指摘解消、最終headのCI、通常mergeを経て、
 cleanな同merged sourceの全raw入力をGit blobと前後照合してWindows版を一度生成する。
+生成前に、PR627の実MERGED状態、reviewed head、実merge commit、必須14チェックの
+SUCCESSと他のチェックの終了・失敗なしを照合して保存する。通常merge後も全build入力が
+reviewed headと同じであることを別に検証し、同じソースのCIをmerge SHAだけのために重ねない。
 正常verify/applyと既存AdminBrokerで元Eabの実backup・ID/hash・owner/group/DACLを
 保持し、配置後の同buffer/CLIを照合する。SACLや過去の物理的連続性を証明とはしない。
 親が元request79f/native call64138の正常consumeで同じ28出力のID/hash/bufferを再確認し、

@@ -60,7 +60,10 @@ func skillsRuntimeApply(op, path string, raw []byte, r skillsRequest, reg skills
 		result = skillsUpdateRecoverVerified(request)
 	} else {
 		if q["already_current"] == true {
-			q["installed"] = true
+			// This invocation changed nothing. Keep the legacy readback meaning
+			// distinct from a durable, verified installation outcome.
+			q["installed"] = false
+			q["operation"] = "readonly_already_current"
 			return q
 		}
 		result = skillsUpdateApplyVerified(request)

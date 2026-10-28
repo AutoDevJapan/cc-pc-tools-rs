@@ -42,7 +42,7 @@ type skillsUpdateResult struct {
 	OriginalID       [3]uint32 "json:\"original_id\""
 	StageID          [3]uint32 "json:\"stage_id\""
 	BackupID         [3]uint32 "json:\"backup_id\""
-	Journal          string    "json:\"skillsUpdateJournal\""
+	Journal          string    "json:\"journal\""
 }
 type skillsUpdateHooks struct {
 	afterValidation func() error

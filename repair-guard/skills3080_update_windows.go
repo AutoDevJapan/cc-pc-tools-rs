@@ -20,6 +20,10 @@ const skillsGuardModule = "github.com/AutoDevJapan/cc-pc-tools-rs/repair-guard"
 // Independent previously accepted distribution facts (3258 and3686), not a caller
 // supplied baseline or an assertion made by the artifact being installed.
 var skillsGuardBaselines = map[string]string{
+	// PR610's normal distribution was independently observed by the parent
+	// and this writer before building the notice-representation successor.
+	// docs/evidence/skills-3080-guard-before-notice-representation175645.json
+	"9be9a066053183a099e78133571d394ecbb2845372e3cf603e292c74dac1a8d3": "deb430b8b089fde2391dbd243c01db48de48d493",
 	// PR594's normally deployed runtime was independently matched to its public
 	// distribution record before the native-log successor was generated.
 	// Evidence: docs/evidence/skills-3080-guard-before-native609-16386.json.

@@ -34,6 +34,23 @@ type skillsSavedSource struct {
 	Content string `json:"content_path"`
 }
 
+// The acquired index's historical classification is immutable. This one
+// package's individual Apache notice was acquired as support_text; recognize
+// its actual notice role only at the complete fixed object identity. The
+// original catalog/index/tree/commit pins and retained object bytes still run.
+func skillsSavedNotice(row skillsSavedSource) bool {
+	if row.Role == "license_or_notice" {
+		return true
+	}
+	return row == (skillsSavedSource{
+		Repo: "6mile/skills", Commit: "920714f17d81e0a95c7a9bc51faf0a7921cd982d",
+		Path: "skills/skywyze/rlm-controller/LICENCE.md", Role: "support_text",
+		Bytes: 10752, SHA: "120701352845f72eda11433beb40df387026e41c5a9c6b9c9cef0c6c624f6004",
+		Blob:    "0093542cc130c66e50a69f86839a5989484a6db3",
+		Content: "objects/120701352845f72eda11433beb40df387026e41c5a9c6b9c9cef0c6c624f6004.gz",
+	})
+}
+
 // Checksum and select from the same bounded stream. No selected metadata is
 // trusted until EOF and the independent whole-file digest have both matched.
 func skillsSourceLines(input io.Reader, expected string, selectRow func([]byte) bool) bool {
@@ -145,7 +162,7 @@ func skillsSourcesBoundAt(m skillsManifest, fs *skillsFS, corpus, catalogSHA str
 			}
 			applicable := false
 			for _, support := range missing {
-				applicable = applicable || (row.Role == "license_or_notice" && skillsSupportNotice(row.Path, support.Path))
+				applicable = applicable || (skillsSavedNotice(row) && skillsSupportNotice(row.Path, support.Path))
 			}
 			if !paths[row.Path] && !applicable {
 				return true
@@ -171,7 +188,7 @@ func skillsSourcesBoundAt(m skillsManifest, fs *skillsFS, corpus, catalogSHA str
 		fs.failureStage = "source_notice_or_catalog"
 		for _, source := range sources {
 			original, notice := selected[source.Path], selected[source.License.Path]
-			if original.SHA != source.SHA || notice.SHA != source.License.SHA || notice.Role != "license_or_notice" {
+			if original.SHA != source.SHA || notice.SHA != source.License.SHA || !skillsSavedNotice(notice) {
 				return false
 			}
 			if cat, candidate := found[skillsSourceKey(repo, source.Commit, source.Path)]; candidate {
@@ -260,7 +277,7 @@ func skillsSourceTree(root string, a skillsSourceAnchor, rootSHA string, selecte
 				}
 				if skillsSupportNotice(entry.Path, support) && entry.Type != "tree" {
 					row, retained := selected[entry.Path]
-					if !retained || row.Role != "license_or_notice" {
+					if !retained || !skillsSavedNotice(row) {
 						return false
 					}
 				}

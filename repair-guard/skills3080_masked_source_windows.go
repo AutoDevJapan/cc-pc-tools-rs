@@ -8,6 +8,8 @@ import (
 	"unicode/utf8"
 )
 
+const skillsModificationNoticePrefix = "Modification notice: The distributor changed this reference only by replacing withheld source lines with \"[WITHHELD physical line N]\" markers. All remaining source lines and their original positions are preserved below.\n\n"
+
 func skillsMaskedSourceTarget(sourcePath string) (string, bool) {
 	if !skillsRelative(sourcePath) || path.Base(sourcePath) != "SKILL.md" {
 		return "", false
@@ -38,6 +40,10 @@ func skillsMaskedSourceBytes(raw, view []byte) bool {
 	if !utf8.Valid(raw) || !utf8.Valid(view) || bytes.IndexByte(raw, 0) >= 0 || bytes.IndexByte(view, 0) >= 0 || bytes.IndexByte(view, '\r') >= 0 {
 		return false
 	}
+	// Strip at most the one exact fixed representation prefix. Every original
+	// byte/line/marker rule below still applies to the unchanged payload. An
+	// unknown, changed or duplicated prefix remains unmatched source content.
+	view = bytes.TrimPrefix(view, []byte(skillsModificationNoticePrefix))
 	original := strings.ReplaceAll(string(raw), "\r\n", "\n")
 	if strings.ContainsRune(original, '\r') || strings.HasSuffix(original, "\n") != bytes.HasSuffix(view, []byte{'\n'}) {
 		return false

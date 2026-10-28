@@ -28,6 +28,9 @@ func rentalRuntimeContract(h, n, r map[string]any) error {
 			return fmt.Errorf("rental exact runtime differs")
 		}
 	}
+	if err := validateSubscriptionExecution(next4Object(h["subscription_execution"]), []string{"20261029-061701-todo-4208"}); err != nil {
+		return err
+	}
 	for _, v := range receivedRentalContexts(next4Object(h["qualified_full_review"])["native"]) {
 		if e := next4Fields(v, map[string]any{"model": "gpt-6-luna", "effort": "max"}); e != nil {
 			return e
@@ -45,6 +48,13 @@ func receivedRentalContexts(value any) []map[string]any {
 		out = append(out, next4Object(v))
 	}
 	return out
+}
+
+func rentalInstallRoots(bundle, installed map[string]any) error {
+	if err := next4Fields(bundle, map[string]any{"root": "D:/CC/Skills"}); err != nil {
+		return err
+	}
+	return next4Fields(installed, map[string]any{"root": "D:/CC/Skills", "creator_job": next3Actor, "current_consumer_job": next3Actor})
 }
 
 func validatedRentalDispositions(t *testing.T) map[string]cohortLedgerRow {
@@ -68,6 +78,9 @@ func validatedRentalDispositions(t *testing.T) map[string]cohortLedgerRow {
 		values[kind] = v
 	}
 	if e := rentalRuntimeContract(h, values["creation"], values["readback"]); e != nil {
+		t.Fatal(e)
+	}
+	if e := rentalInstallRoots(values["bundle"], values["manifest"]); e != nil {
 		t.Fatal(e)
 	}
 	var op struct {
@@ -137,6 +150,9 @@ func validatedRentalDispositions(t *testing.T) map[string]cohortLedgerRow {
 	it := received27Array(t, installed["targets"])
 	if len(it) != 1 {
 		t.Fatal("rental installed manifest target omitted")
+	}
+	if received27Object(t, it[0])["name"] != "rental-ledger-reconciliation" {
+		t.Fatal("installed rental manifest changed target name")
 	}
 	installedFiles := map[string]bool{}
 	for _, v := range received27Array(t, received27Object(t, it[0])["files"]) {
@@ -238,6 +254,32 @@ func validatedRentalDispositions(t *testing.T) map[string]cohortLedgerRow {
 }
 
 func TestRentalCurrentAcceptance(t *testing.T) { validatedRentalDispositions(t) }
+
+func TestRentalInstallRootsRejectMissingOrChangedPlacement(t *testing.T) {
+	for _, mutation := range []string{"valid", "bundle missing", "bundle other root", "manifest missing", "manifest other root", "consumer other job"} {
+		t.Run(mutation, func(t *testing.T) {
+			var bundle, installed map[string]any
+			loadPublicReceipt(t, "skills-3080-rental-ledger-actual-bundle175645.json", &bundle)
+			loadPublicReceipt(t, "skills-3080-installed-rental-ledger-manifest175645.json", &installed)
+			switch mutation {
+			case "bundle missing":
+				delete(bundle, "root")
+			case "bundle other root":
+				bundle["root"] = "E:/Skills"
+			case "manifest missing":
+				delete(installed, "root")
+			case "manifest other root":
+				installed["root"] = "C:/Skills"
+			case "consumer other job":
+				installed["current_consumer_job"] = "other"
+			}
+			err := rentalInstallRoots(bundle, installed)
+			if mutation == "valid" && err != nil || mutation != "valid" && err == nil {
+				t.Fatalf("placement mutation %s: %v", mutation, err)
+			}
+		})
+	}
+}
 func TestRentalRuntimeRejectsUnprovedOrReplayedAcceptance(t *testing.T) {
 	for _, mutation := range []string{"valid", "creator origin", "owner model origin", "suggestion", "new Create", "changed runtime", "literal rewritten", "general access", "invented writer"} {
 		t.Run(mutation, func(t *testing.T) {

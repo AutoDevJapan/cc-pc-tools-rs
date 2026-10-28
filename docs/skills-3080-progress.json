@@ -353,7 +353,7 @@
     "pending_plan_targets": 0,
     "archived_draft_targets": 8,
     "archived_draft_is_subset_of_batch03": true,
-    "independently_accepted": "Includes frozen full4193 content acceptance and actual4/28 normal readback, structure/discovery and explicit model use. The public result delta still requires final2-role review/CI/merge; no implicit selection/full discovery/context budget/full16 proof.",
+    "independently_accepted": "Includes original frozen full4193 and4208 content acceptance and actual current4/28 plus rental1/7 ID/hash/buffer readback, structure/discovery and explicit current instruction decisions. The newest public result still requires final2-role review/CI/merge; no implicit selection/full discovery/context budget/full16 proof.",
     "not_semantically_disposed_occurrences": 73043,
     "additional_draft_sources": [
       "skills-3080-mizchi-sql-draft.json",
@@ -362,7 +362,7 @@
     "authored_total_definition": "159 actually installed new adaptations plus3 legacy pending drafts; source aliases/catalog rows are not installation counts.",
     "new_proposed_uninstalled_targets": 0,
     "authored_including_new_proposals": 162,
-    "authored_including_new_proposals_definition": "158 actually installed new designs plus3 legacy pending drafts; the original next4 proposal remains historical and its actual placement is recorded separately."
+    "authored_including_new_proposals_definition": "159 actually installed new adaptations plus3 legacy pending drafts and0 new uninstalled proposals =162; original proposal records remain historical."
   },
   "kepano_entrypoint_assessment": {
     "pinned_entrypoints": 6,

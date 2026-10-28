@@ -105,12 +105,14 @@ fn run_with_wait<B: Backend>(engine: &mut Scheduler<B>, id: i64, wait: Duration)
     ]
     .contains(&reason)
     .then_some(reason);
+    let launch_deferred_reason = (engine.report["launch_deferred"]["item"] == id)
+        .then(|| engine.report["launch_deferred"]["reason"].clone());
     // Do not return the sampled jobs, other task bodies or private source paths.
     Ok(
         json!({"id":id,"busy":false,"launched":engine.report["launched"]["job"],
         "launch_return":engine.report["launch_return"],
         "launch_return_error":launch_return_error,
-        "launch_deferred_reason":current["scheduler"]["launch_outcome_deferred"]["reason"],
+        "launch_deferred_reason":launch_deferred_reason,
         "dispatch_enabled":cfg["dispatch_enabled"],
         "priority_wait":engine.report["priority_wait"] == id,
         "allowance_now":engine.report["allowance_now"],

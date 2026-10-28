@@ -1065,12 +1065,40 @@ fn exact_protocol_failures_and_saved_diagnostics_are_not_generic_tool_errors() {
             Err(Error(code))
         );
     }
-    for code in ["unsupported", "schema", "invalid", "too_large"] {
-        let mut f = Fixture::new();
-        f.put(item(1, "other", "todo", &[]));
-        f.put(item(2, "other", "todo", &[]));
-        f.e.backend.m["launch_error"] = json!(code);
-        assert!(f.e.dispatch(&f.cfg, &f.pri).is_err());
+}
+
+fn protocol_failure_fixture(code: &str) -> Fixture {
+    let mut f = Fixture::new();
+    f.put(item(1, "other", "todo", &[]));
+    f.put(item(2, "other", "todo", &[]));
+    f.e.backend.m["launch_error"] = json!(code);
+    f.e.backend.m["launch_error_item"] = json!(1);
+    // The failed first call takes long enough for ordinary spacing to expire.
+    // The second item must reach launch if the explicit protocol stop is lost.
+    f.e.backend.m["launch_error_clock_advance_s"] = json!(n(&f.cfg["launch_interval_s"]) + 1.);
+    f
+}
+
+#[test]
+fn ordinary_launch_error_positive_control_advances_to_the_next_qualified_item() {
+    let mut f = protocol_failure_fixture("ordinary");
+    f.e.dispatch(&f.cfg, &f.pri).unwrap();
+    assert_eq!(f.e.backend.m["launch_calls"], 2);
+    assert_eq!(f.get(2)["status"], "doing");
+    assert_eq!(f.e.backend.launched.len(), 1);
+    assert_eq!(f.e.backend.launched[0]["item"]["id"], 2);
+}
+
+#[test]
+fn protocol_launch_errors_stop_before_an_otherwise_qualified_second_item() {
+    for (code, error) in [
+        ("unsupported", "LaunchOutcomeUnsupported"),
+        ("schema", "LaunchOutcomeSchemaUnsupported"),
+        ("invalid", "LaunchOutcomeInvalid"),
+        ("too_large", "LaunchOutcomeTooLarge"),
+    ] {
+        let mut f = protocol_failure_fixture(code);
+        assert_eq!(f.e.dispatch(&f.cfg, &f.pri), Err(Error(error)));
         let expected = if code == "schema" {
             "launch_outcome_schema_unsupported".to_string()
         } else {
@@ -1083,6 +1111,8 @@ fn exact_protocol_failures_and_saved_diagnostics_are_not_generic_tool_errors() {
         let observation = read_json(&f.e.root.join("admission.json"), Value::Null).unwrap();
         assert_eq!(observation["entries"]["1"]["failure_code"], expected);
         assert_eq!(f.e.backend.m["launch_calls"], 1);
+        assert_eq!(f.get(2)["status"], "todo");
+        assert!(f.e.backend.launched.is_empty());
     }
 }
 
@@ -1107,6 +1137,80 @@ fn accepted_live_registration_and_persisted_defer_are_explained_without_replay()
         report["launch_deferred_reason"],
         "launch_outcome_unverified"
     );
+}
+
+#[test]
+fn targeted_responses_do_not_present_a_historical_defer_as_the_current_result() {
+    for subwork in [false, true] {
+        let mut f = Fixture::new();
+        let mut sub_fixture = subwork.then(subwork_support::Fixture::new);
+        let id = if let Some(sub) = sub_fixture.as_mut() {
+            sub.register();
+            sub.jobs[0]["pid"] = json!(1);
+            sub.jobs[0]["pid_created"] = proc(1, 0, "codex.exe")["created"].clone();
+            sub.jobs[0]["created_at"] = json!(T - 1200.);
+            f.e.backend.records = sub.jobs.clone();
+            write_json(&f.e.todo_path, &sub.db, 1).unwrap();
+            let prepared =
+                f.e.prepare(&f.get(2), sub.repo.to_str().unwrap())
+                    .unwrap()
+                    .unwrap();
+            let mut old = job("old-terminal", 999, "failed");
+            old["launch_key"] = prepared["scheduler"]["key"].clone();
+            old["todo_id"] = json!(2);
+            old["cwd"] = prepared["scheduler"]["worktree"].clone();
+            old["queue_restart_pending"] = json!(false);
+            old["reboot_launch_pending"] = json!(false);
+            f.e.backend.records.push(old);
+            2
+        } else {
+            terminal_same_key(&mut f);
+            1
+        };
+        f.e.backend.replay_kind_override = Some(Kind::Unknown);
+        assert_eq!(
+            f.e.dispatch_for(&f.cfg, &f.pri, Some(id)),
+            Err(Error("LaunchOutcomeUnverified"))
+        );
+        let current = if subwork {
+            f.e.dispatch_existing_subwork(id).unwrap()
+        } else {
+            cc_scheduler::targeted_dispatch::run(&mut f.e, id).unwrap()
+        };
+        assert_eq!(
+            current["launch_deferred_reason"],
+            "launch_outcome_unverified"
+        );
+        let history = f.get(id as u64)["scheduler"]["launch_outcome_deferred"].clone();
+        let old =
+            f.e.backend
+                .records
+                .iter_mut()
+                .find(|job| job["id"] == "old-terminal")
+                .unwrap();
+        old["status"] = json!("running");
+        f.e.backend.replay_kind_override = Some(Kind::Accepted);
+        f.e.backend.clock += 310.;
+        let current = if subwork {
+            let report = f.e.dispatch_existing_subwork(id).unwrap();
+            assert_eq!(report["active"], true);
+            report
+        } else {
+            let report = cc_scheduler::targeted_dispatch::run(&mut f.e, id).unwrap();
+            assert_eq!(report["launch_return"]["linked"], true);
+            assert_eq!(f.get(id as u64)["status"], "doing");
+            report
+        };
+        assert!(
+            current["launch_deferred_reason"].is_null(),
+            "subwork={subwork}"
+        );
+        assert_eq!(
+            f.get(id as u64)["scheduler"]["launch_outcome_deferred"],
+            history,
+            "historical evidence must remain saved"
+        );
+    }
 }
 
 #[test]

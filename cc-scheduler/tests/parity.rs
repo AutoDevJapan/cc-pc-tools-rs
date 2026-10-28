@@ -1968,11 +1968,15 @@ impl Backend for Fake {
         _: &Value,
     ) -> Result<cc_job_policy::launch_outcome::Outcome> {
         self.m["launch_calls"] = json!(self.m["launch_calls"].as_u64().unwrap_or(0) + 1);
-        if let Some(code) = self.m["launch_error"].as_str() {
+        if let Some(code) = self.m["launch_error"].as_str().filter(|_| {
+            self.m["launch_error_item"].is_null() || self.m["launch_error_item"] == i["id"]
+        }) {
+            self.clock += n(&self.m["launch_error_clock_advance_s"]);
             return Err(Error(match code {
                 "unsupported" => "LaunchOutcomeUnsupported",
                 "schema" => "LaunchOutcomeSchemaUnsupported",
                 "invalid" => "LaunchOutcomeInvalid",
+                "ordinary" => "RuntimeError",
                 _ => "LaunchOutcomeTooLarge",
             }));
         }

@@ -392,6 +392,10 @@ impl<B: Backend> Scheduler<B> {
             }
         })?;
         if row["scheduler"]["launch_outcome_replay"] == replay {
+            if crate::launch_receipt::deferred_unchanged(&row, root, jobs) {
+                self.report["launch_deferred"] = json!({"item":row["id"],
+                    "reason":row["scheduler"]["launch_outcome_deferred"]["reason"]});
+            }
             receipt.result_metadata_fingerprint = crate::admission::result_fingerprint(&row, root);
             self.report["launch_receipt_recorded"] =
                 json!(crate::launch_receipt::publish(&self.root, receipt).is_ok());
@@ -1837,6 +1841,7 @@ if !truth(&row["scheduler"]["key"]){let attempt=add_count(&row["scheduler"]["att
             return Err(Error("InputRejected"));
         }
         remove(&mut self.report, "launched");
+        remove(&mut self.report, "launch_deferred");
         let _lock = ByteLock::acquire(&self.root.join("scheduler.lock"), Duration::from_secs(30))?
             .ok_or(Error("TimeoutError"))?;
         self.state = read_json(&self.root.join("state.json"), json!({}))?;
@@ -1877,12 +1882,14 @@ if !truth(&row["scheduler"]["key"]){let attempt=add_count(&row["scheduler"]["att
             .into_iter()
             .find(|row| row["id"] == id)
             .ok_or(Error("InputRejected"))?;
+        let launch_deferred_reason = (self.report["launch_deferred"]["item"] == id)
+            .then(|| self.report["launch_deferred"]["reason"].clone());
         Ok(
             json!({"id":id,"status":current["status"],"phase":current["scheduler"]["phase"],
             "active":active,"launched":self.report["launched"],"priority_wait":self.report["priority_wait"],
             "launch_return":self.report["launch_return"],
             "launch_return_error":launch_return_error,
-            "launch_deferred_reason":current["scheduler"]["launch_outcome_deferred"]["reason"],
+            "launch_deferred_reason":launch_deferred_reason,
             "allowance_now":self.report["allowance_now"],"busy_resources":self.report["busy_resources"],
             "not_before":current["scheduler"]["not_before"],
             "preparation_reason":current["scheduler"]["preparation_failure"]["reason"]}),
@@ -2017,7 +2024,14 @@ if !truth(&row["scheduler"]["key"]){let attempt=add_count(&row["scheduler"]["att
     }
     /// A watchdog reservation can dispatch only its own item through normal capacity/resource gates.
     pub fn dispatch_for(&mut self, cfg: &Value, pri: &Value, target: Option<i64>) -> Result<()> {
-        for field in ["launched", "launch_return", "launch_reserved"] { remove(&mut self.report, field); }
+        for field in [
+            "launched",
+            "launch_return",
+            "launch_reserved",
+            "launch_deferred",
+        ] {
+            remove(&mut self.report, field);
+        }
         let mut observation = Observation::new(self.backend.clock(), target.is_none(), truth(&cfg["dispatch_enabled"]));
         self.admission_updates = target.is_none().then(std::collections::BTreeMap::new);
         let result = self.dispatch_observed(cfg, pri, target, &mut observation);
@@ -2141,10 +2155,14 @@ if !truth(&row["scheduler"]["key"]){let attempt=add_count(&row["scheduler"]["att
                                 || arr(&j["related_todo_ids"]).contains(&i["id"])
                                 || i["scheduler"]["job"] == j["id"])
                     }), RelatedOwner);
-                reject!(
-                    crate::launch_receipt::deferred_unchanged(i, &db["projects"][project], &jobs),
-                    LaunchOutcomeDeferred
-                );
+                if crate::launch_receipt::deferred_unchanged(i, &db["projects"][project], &jobs) {
+                    if target.is_some_and(|id| i["id"] == id) {
+                        self.report["launch_deferred"] = json!({"item":i["id"],
+                            "reason":i["scheduler"]["launch_outcome_deferred"]["reason"]});
+                    }
+                    observation.decide(&i["id"], AdmissionStage::Filtering, AdmissionReason::LaunchOutcomeDeferred);
+                    return false;
+                }
                 observation.eligible(&i["id"]);
                 true
             })
@@ -2464,6 +2482,8 @@ if !truth(&row["scheduler"]["key"]){let attempt=add_count(&row["scheduler"]["att
                         }
                     })?;
                     if row["scheduler"]["launch_outcome_deferred"] == deferred {
+                        self.report["launch_deferred"] =
+                            json!({"item":row["id"],"reason":deferred["reason"]});
                         receipt.result_metadata_fingerprint =
                             crate::admission::result_fingerprint(&row, root);
                         self.report["launch_receipt_recorded"] =

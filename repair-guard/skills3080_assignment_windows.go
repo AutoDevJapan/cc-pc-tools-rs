@@ -9,11 +9,11 @@ import (
 // Only the two current Skills actors gain canonical manual-assignment support.
 // Historical authors, reviewer admission and other updaters keep their checks.
 func skillsProjectActorAssignment(metadata object, row *skillsTask) bool {
-	if !skillsAssignmentNames(metadata, "id", "scheduler", "resume_generation", "worker_receipt") {
+	if !skillsAssignmentNames(metadata, "id", "project", "status", "spec", "jobs", "owner_stopped", "owner_postponement_recorded", "stop_kind", "owner_question_wait", "decision_wait", "wait_ready", "scheduler", "resume_generation", "worker_receipt") {
 		return false
 	}
 	scheduler := obj(metadata["scheduler"])
-	if !skillsAssignmentNames(scheduler, "job", "key") {
+	if !skillsAssignmentNames(scheduler, "job", "last_job", "worktree", "branch", "key", "subwork_parent_job", "pending_cancel", "owner_stop_job", "subwork_admission") {
 		return false
 	}
 	receipt := obj(metadata["worker_receipt"])

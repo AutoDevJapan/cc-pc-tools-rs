@@ -163,6 +163,11 @@ func TestSkills3080CanonicalWorkerAssignmentRejectsAmbiguity(t *testing.T) {
 			"receipt_generation_alias": strings.Replace(raw, `"generation":`, `"Generation":`, 1),
 			"duplicate_generation":     strings.Replace(raw, `"resume_generation":7`, `"resume_generation":7,"resume_generation":7`, 1),
 			"duplicate_receipt_job":    strings.Replace(raw, `"worker_receipt":{"job":`, `"worker_receipt":{"job":"duplicate","job":`, 1),
+			"status_alias":             strings.Replace(raw, `"status":"doing"`, `"status":"doing","Status":"doing"`, 1),
+			"stop_alias":               strings.Replace(raw, `"status":"doing"`, `"status":"doing","owner_stopped":true,"Owner_Stopped":false`, 1),
+			"wait_alias":               strings.Replace(raw, `"status":"doing"`, `"status":"doing","wait_ready":{},"Wait_Ready":null`, 1),
+			"workspace_alias":          strings.Replace(raw, `"scheduler":{`, `"scheduler":{"Worktree":"other",`, 1),
+			"branch_alias":             strings.Replace(raw, `"scheduler":{`, `"scheduler":{"Branch":"other",`, 1),
 		}
 		for _, bad := range []string{"0", "-1", "7.0", "7.5", "7e0", `"7"`, "null", "true", "[]", "{}", "18446744073709551616"} {
 			mutations["generation_"+bad] = strings.ReplaceAll(raw, ":7", ":"+bad)

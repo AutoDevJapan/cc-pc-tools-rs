@@ -1,7 +1,7 @@
 {
   "todo": 3080,
   "issue": "https://github.com/AutoDevJapan/cc-pc-tools-rs/issues/283",
-  "observed_at": "2026-10-24T08:15:09.0197014+00:00",
+  "observed_at": "2026-10-24T17:15:09.0197014+09:00",
   "phase_a": "partial; 647 additional text shapes held by execution review",
   "phase_b": "作業版では、元3719の210〜227の原評価18件、既読primary8群、指定サイトの次2評価を追加し、既受入1424件を保持して評価記録1452件とした。評価済み未採否1286件と最終記録との重複166件、最終のみ6件を区別する。実導入154・統合3・再確認が残る除外記録15は変えない。元の担当・個別notice再利用・伏字・未保存/null・未知を保持し、全73220掲載、未取得428、審査保留647を維持する。この作業版はまだmainの1424件へ受け入れていない。28評価を新たな許諾・採否・配置・全16資料の完了としない。",
   "catalog_sha256": "2d73c9a038a41cc220a9687b935bfa1e0b315b65d9bd6d3e54ddb4111972876c",
@@ -502,7 +502,7 @@
         "scope": "新10本文/README9と評価差分/Go2を読取。SQL本文の指紋を独立再計算。支持実装・実行・導入・全体受入は範囲外。",
         "job_model": "anthropic/claude-sonnet-5-5",
         "requested_effort": "max",
-        "recorded_at": "2026-10-23T14:40:28.9070940Z",
+        "recorded_at": "2026-10-23T14:40:28.907094Z",
         "model_origin": "owner_request",
         "effort_origin": "owner_request"
       },
@@ -517,7 +517,7 @@
         "scope": "後続12本文/差分5と支持metadata59。README1全読+11テンプレート同一性照合。旧45/支持実装/実行/導入は範囲外。",
         "job_model": "anthropic/claude-sonnet-5-5",
         "requested_effort": "max",
-        "recorded_at": "2026-10-23T14:40:28.9070940Z",
+        "recorded_at": "2026-10-23T14:40:28.907094Z",
         "model_origin": "owner_request",
         "effort_origin": "owner_request"
       },
@@ -601,7 +601,7 @@
       "todo": 3458,
       "readme_description_template_count": 6,
       "support_nonreadme_unread": 96,
-      "preserved_at": "2026-10-23T16:26:27.3520370Z",
+      "preserved_at": "2026-10-23T16:26:27.352037Z",
       "model_origin": "policy",
       "support_nonreadme_unsaved": 60
     },
@@ -616,7 +616,7 @@
     "guard_client_resource": true,
     "state": "classification_unverified"
   },
-  "recorded_at": "2026-10-28T08:12:21.9287450+00:00",
+  "recorded_at": "2026-10-28T17:02:38.9316133+00:00",
   "total_skill_named_body_read_definition": "This field preserves the historical complete-source subset only. Current raw/workflow primary coverage is projected from the canonical source components and sixmile evaluation index in all_fulltext_primary_paths_including_partial_sources/all_workflow_primary_paths_including_partial_sources, not copied here.",
   "openai_entrypoint_evaluation": {
     "rights_accepted": false,
@@ -746,7 +746,7 @@
   "catalog_discovery_limit": "同版公式sourceの2000directory上限に対し、中央metadataの非dot配下は2015。fresh RPCで直下297入口全件/欠落0・総326/解析0を確認。走査警告2は残り、全walkや文脈予算を証明しない。 This is the earlier immutable directory/metadata snapshot, not a recount after subsequent direct installations. Later discovery/retention snapshots have their own timestamps in the direct-installation evidence documents.",
   "received_review_history": [
     {
-      "preserved_at": "2026-10-23T19:19:14.7905800Z",
+      "preserved_at": "2026-10-23T19:19:14.79058Z",
       "effective_reasoning_measured": false,
       "job_model": "anthropic/claude-sonnet-5-5",
       "nits": 8,
@@ -760,7 +760,7 @@
       "base": "b6d1da58dea2740b3d948aaf04c060fb43ab1510",
       "status": "succeeded",
       "receiver_job": "20261024-041741-todo-3080",
-      "recorded_at": "2026-10-23T19:19:14.7905800Z",
+      "recorded_at": "2026-10-23T19:19:14.79058Z",
       "recorded_at_definition": "restored from preserved original-receipt timestamp; no new historical observation time inferred",
       "scope": "Fixed PR410 sixteen-file delta, Go changes and added evaluation context. Prior SQL2 bodies and whole catalog not reread; no new source execution or whole acceptance."
     },
@@ -781,7 +781,7 @@
       "raw_sha256": "a4e6922570790783503877e89a90be203c1f1f1de7cfde84e32ab81c58d1ad32",
       "preserved_at": "2026-10-23T20:44:06.5415235Z",
       "receiver_job": "20261024-054244-todo-3080",
-      "recorded_at": "2026-10-23T20:55:13.1528116+00:00",
+      "recorded_at": "2026-10-24T05:55:13.1528116+09:00",
       "scope": "Fixed 17-file PR412 delta. Go5 and MengTo45/177 roster/retina manifest/evidence fully read; other changed context read. Support132 and pending132 mechanically verified. v3 final text read, but no v2-v3 verbatim comparison, real Go execution or whole catalog/context budget proof."
     },
     {
@@ -804,7 +804,7 @@
       },
       "effective_reasoning_measured": false,
       "raw_sha256": "7c7a14c48805135f97374e0a3900aa6715c321e60abb9080eb550d8ce24a7593",
-      "preserved_at": "2026-10-23T21:35:39.8880244+00:00",
+      "preserved_at": "2026-10-24T06:35:39.8880244+09:00",
       "receiver_job": "20261024-054244-todo-3080",
       "recorded_at": "2026-10-23T21:43:58.8069249Z",
       "scope": "固定PR413の11差分、Go3、新23評価全項目と旧45変更箇所、177名簿/68identity/支持294metadataを確認。保存448blobのbyte照合と約45主張を保存本文で確認。新23原文全体の意味再読や実Go、実描画、全catalogの受入ではない。"
@@ -861,7 +861,7 @@
       "todo": 3541,
       "requested_effort": "max",
       "parent_fix_pending_independent_confirmation": false,
-      "preserved_at": "2026-10-24T00:21:03.4012516+00:00",
+      "preserved_at": "2026-10-24T09:21:03.4012516+09:00",
       "native_observation": {
         "source": "native_turn_context",
         "effort": "max",
@@ -901,7 +901,7 @@
       "parent_full_read": true,
       "nits": 7,
       "job_model": "anthropic/claude-sonnet-5-5",
-      "parent_read_at": "2026-10-24T01:17:23.2692728+00:00",
+      "parent_read_at": "2026-10-24T10:17:23.2692728+09:00",
       "native_observation": {
         "model": "anthropic/claude-sonnet-5-5",
         "effort": "max",
@@ -956,7 +956,7 @@
       "suggestions": 2,
       "nits": 5,
       "scope": "All19files/42hunks, fixedhashes/counters127 andGo logic checked; rawbundle semanticacceptance3564/3569 reused; no Go/central/network execution",
-      "received_at": "2026-10-24T06:01:47.9786976+00:00",
+      "received_at": "2026-10-24T15:01:47.9786976+09:00",
       "resolution_pending": false,
       "next": "Remove mutablelatest-count prosecopy and link canonicalledger/progress; add missingdiscoveryfield/overclaim tests, restore prior structuredhistory and correct snapshot timestamp/definitions; review fixedimpactdelta beforemerge",
       "parent_resolution": {
@@ -988,7 +988,7 @@
       "suggestions": 4,
       "nits": 5,
       "scope": "All nine correction files/all28hunks (+246/-52), fixedgit/jq/openssl/stdin-node plus limited parentproof; no Go/Cargo/central/networkexecution. Old content reviews and other19file baseline reused.",
-      "received_at": "2026-10-24T06:33:04.6266430+00:00",
+      "received_at": "2026-10-24T15:33:04.626643+09:00",
       "resolution_pending": false,
       "nonblocking_resolution": {
         "suggestions": "Additional missingzero/entrydescription negatives, chronologicalhistory and historical latest_merged_delta labeling will be incorporated into the already-required next45 publication delta; existing validator rejects invalid data, current actual values/records are correct.",
@@ -1022,7 +1022,7 @@
       "suggestions": 6,
       "nits": 6,
       "scope": "All24file differences, elevenJSON strictparse/no duplicatekeys/UTF8/LF, all45semantic assessments, support422 state/fingerprint mechanical check, source/bundle/manifest/design/model hashes and25mutation paths; no Go/central/network/CI execution.",
-      "received_at": "2026-10-24T07:09:02.4159729+00:00",
+      "received_at": "2026-10-24T16:09:02.4159729+09:00",
       "resolution_pending": false,
       "planned_corrections": "One limitedfollowup: common observedmax and snapshot48fingerprint, exactnegativeguards/aggregatefields, publicrights legend and stable readerrowmapping, historical/current flags and scope, acceptance links and privacy/receipt wording; sourcebytes/adoptioncounts/rawcoverage unchanged.",
       "owner_action_required": false,
@@ -1050,7 +1050,7 @@
       "must": 0,
       "suggestions": 3,
       "nits": 6,
-      "received_at": "2026-10-24T08:06:56.4177861+00:00",
+      "received_at": "2026-10-24T17:06:56.4177861+09:00",
       "scope": "Elevenfiles allhunks; next45JSON allleaf comparisons/representativehunks. Rights24 exactexpansion,40sourceIDs/rows,retention46/48,mutationguards/index191/55557,sourcebytes/139commit checked. No Go/central/network/CI execution.",
       "resolution_pending": false,
       "nonblocking_resolution": {
@@ -1062,7 +1062,7 @@
       "owner_action_required": false,
       "followup_in_this_delta": "Empty globalID arrays/strong owner constraints, public namespace consistency tests, amendment labels and explicit original-vs-correction review chronology are handled alongside the new20 intake; no new central apply or final disposition.",
       "parent_read_time_definition": "received_at is receipt persistence. parent_read_observed_response_at is the first full-response tool observation recorded by the parent, normalized to UTC; it is not an exact reading start/completion or duration.",
-      "parent_read_observed_response_at": "2026-10-24T08:04:41.9920154+00:00"
+      "parent_read_observed_response_at": "2026-10-24T17:04:41.9920154+09:00"
     },
     {
       "todo": 3612,
@@ -1085,7 +1085,7 @@
       "suggestions": 4,
       "nits": 5,
       "scope": "All16file/allhunks,20semantic records,178support metadata/state,66740cache hash/bytes/line/failurecounts; no Go/central/network/CI. Raw74410report first/legend only, cache bodymetadata aggregate only.",
-      "received_at": "2026-10-24T08:57:03.3110134+00:00",
+      "received_at": "2026-10-24T17:57:03.3110134+09:00",
       "resolution_pending": false,
       "next": "Remove mutable currentcount prose, clarify default rights/newness/policy constraints, strengthen next20 relations and futureledger alignment, boundedfixreview/exactCI/merge",
       "owner_action_required": false,
@@ -1471,7 +1471,7 @@
     "new_individual_rights_exclusions": 1,
     "existing_duplicate_receipts_reused": 1
   },
-  "amended_at": "2026-10-24T20:55:00.8847686+00:00",
+  "amended_at": "2026-10-25T05:55:00.8847686+09:00",
   "amendment_job": "20261025-074042-todo-3080",
   "mcp_pointer_installation": {
     "real_server_or_rendering_tested": false,
@@ -3302,5 +3302,38 @@
     "fresh_discovered": 0,
     "current_usage_accepted": 0,
     "counting_definition": "Existing154 already includes the previous installed4. These four different named targets remain uninstalled; the old balance1 proposal is the same first target and not an additional fifth."
+  },
+  "latest_received17": {
+    "publisher_job": "20261027-175645-todo-3080",
+    "working_assessments": 1469,
+    "prior_main_accepted_assessments": 1452,
+    "working_not_yet_main_accepted": true,
+    "original3719_rows": "228..239",
+    "original3719_assessments": 12,
+    "primaryflow_cohort0_rows": "90..94",
+    "primaryflow_semantic_groups": 5,
+    "primaryflow_members": 5,
+    "original_whole_packets": 3,
+    "primaryflow_whole_packets": 3,
+    "explicit_original_support_tuples": 123,
+    "saved_support_metadata": 39,
+    "unsaved_support_metadata": 84,
+    "row239_inherited_inventory": "100 base +2 new paths; metadata delta only, not102 support body reads",
+    "all_original_packets_actors_masks_nulls_and_meanings_preserved": true,
+    "previous170_primary_records_unchanged": true,
+    "assessment_without_final": 1303,
+    "assessment_final_intersection": 166,
+    "final_only_legacy": 6,
+    "assessment_or_final_union": 1475,
+    "execution_manifest_sha256": "1b561994202aebee1505619cb4c0c2d67d6f32f2fb14793cadffa68426e729db",
+    "execution_queue_sha256": "d8cb0d9eeb3e6fe3d2044a4c37a6665fdbecef5a16bf983a5309ff8a619b5ec1",
+    "source_body_reads_by_publication": 0,
+    "new_parent_raw_credit": 0,
+    "new_copy_permissions": 0,
+    "new_final_dispositions": 0,
+    "central_operations": 0,
+    "accepted_new_unchanged": 154,
+    "extra4_once_created_current_readback_pending": true,
+    "whole16_complete": false
   }
 }

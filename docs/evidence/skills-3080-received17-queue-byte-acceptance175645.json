@@ -1,0 +1,18 @@
+{
+  "actual_acceptance_actor": "20261027-175645-todo-3080",
+  "recorded_at": "2026-10-28T17:04:08.9982209+00:00",
+  "queue_records": 73220,
+  "queue_bytes": 64514510,
+  "queue_sha256": "d8cb0d9eeb3e6fe3d2044a4c37a6665fdbecef5a16bf983a5309ff8a619b5ec1",
+  "summary_manifest_sha256": "1b561994202aebee1505619cb4c0c2d67d6f32f2fb14793cadffa68426e729db",
+  "actual_queue_hash_independently_remeasured": true,
+  "test": "TestPublishedActualQueueBytesMatchRecordedSummary",
+  "full_worker_queue_explicitly_supplied": true,
+  "test_actual_full_queue_PASS": true,
+  "related_test_seconds": 8.12,
+  "test_scope": "Catalog package after shared evidence manifest and17 assessments changed; actual explicit full-queue acceptance plus packet fidelity, inherited inventory metadata and invalid-control tests",
+  "related_vet_PASS": true,
+  "CI_does_not_claim_absent_private_full_queue_bytes_checked": true,
+  "source_body_reads_or_new_permission_or_central_ops": 0,
+  "whole16_complete": false
+}

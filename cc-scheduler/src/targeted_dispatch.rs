@@ -98,6 +98,10 @@ fn run_with_wait<B: Backend>(engine: &mut Scheduler<B>, id: i64, wait: Duration)
         "input_rejected",
         "excluded_resource",
         "tool_failed",
+        "launch_outcome_unsupported",
+        "launch_outcome_schema_unsupported",
+        "launch_outcome_invalid",
+        "launch_outcome_too_large",
     ]
     .contains(&reason)
     .then_some(reason);
@@ -106,6 +110,7 @@ fn run_with_wait<B: Backend>(engine: &mut Scheduler<B>, id: i64, wait: Duration)
         json!({"id":id,"busy":false,"launched":engine.report["launched"]["job"],
         "launch_return":engine.report["launch_return"],
         "launch_return_error":launch_return_error,
+        "launch_deferred_reason":current["scheduler"]["launch_outcome_deferred"]["reason"],
         "dispatch_enabled":cfg["dispatch_enabled"],
         "priority_wait":engine.report["priority_wait"] == id,
         "allowance_now":engine.report["allowance_now"],

@@ -385,6 +385,9 @@ impl<B: Backend> Scheduler<B> {
                     deferred["receipt_id"] = json!(receipt.receipt_id);
                     row["scheduler"]["launch_outcome_deferred"] = deferred;
                     row["scheduler"]["not_before"] = json!(receipt.observed_at + 300.);
+                    let saved_fingerprint = crate::admission::defer_fingerprint(row, root);
+                    row["scheduler"]["launch_outcome_deferred"]["request_fingerprint"] =
+                        json!(saved_fingerprint);
                 }
             }
         })?;
@@ -1857,12 +1860,18 @@ if !truth(&row["scheduler"]["key"]){let attempt=add_count(&row["scheduler"]["att
                 || arr(&job["related_todo_ids"]).contains(&json!(id)))
                 && (live(job) || alive(job, &ps, at))
         });
-        let mut launch_return_error=None;
+        let mut launch_return_error = None;
         if !active {
             let (cfg, pri) = self.settings()?;
-            let result=self.dispatch_for(&cfg, &pri, Some(id));
+            let result = self.dispatch_for(&cfg, &pri, Some(id));
             self.persist()?;
-            if let Err(error)=result {if error.0=="LaunchOutcomeUnverified" {launch_return_error=Some(failure_reason(&error).0);}else{return Err(error);}}
+            if let Err(error) = result {
+                if error.0 == "LaunchOutcomeUnverified" {
+                    launch_return_error = Some(failure_reason(&error).0);
+                } else {
+                    return Err(error);
+                }
+            }
         }
         let current = arr(&self.todo()?["items"])
             .into_iter()
@@ -1999,9 +2008,11 @@ if !truth(&row["scheduler"]["key"]){let attempt=add_count(&row["scheduler"]["att
         }
         self.dispatch_for(cfg, pri, Some(id))?;
         self.persist()?;
-        Ok(if self.report["launch_return"]["linked"]==true {
+        Ok(if self.report["launch_return"]["linked"] == true {
             self.report["launch_return"]["job"].as_str().map(str::to_string)
-        } else {self.report["launched"]["job"].as_str().map(str::to_string)})
+        } else {
+            self.report["launched"]["job"].as_str().map(str::to_string)
+        })
     }
     /// A watchdog reservation can dispatch only its own item through normal capacity/resource gates.
     pub fn dispatch_for(&mut self, cfg: &Value, pri: &Value, target: Option<i64>) -> Result<()> {
@@ -2129,7 +2140,10 @@ if !truth(&row["scheduler"]["key"]){let attempt=add_count(&row["scheduler"]["att
                                 || arr(&j["related_todo_ids"]).contains(&i["id"])
                                 || i["scheduler"]["job"] == j["id"])
                     }), RelatedOwner);
-                reject!(crate::launch_receipt::deferred_unchanged(i,&db["projects"][project],&jobs), LaunchOutcomeDeferred);
+                reject!(
+                    crate::launch_receipt::deferred_unchanged(i, &db["projects"][project], &jobs),
+                    LaunchOutcomeDeferred
+                );
                 observation.eligible(&i["id"]);
                 true
             })
@@ -2395,10 +2409,11 @@ if !truth(&row["scheduler"]["key"]){let attempt=add_count(&row["scheduler"]["att
                         return Err(Error("LaunchJobChanged"));
                     }
                     let row = self.link_record(&prepared["id"], &j, &prepared["scheduler"]["key"])?;
-                    receipt.linked = row["scheduler"]["job"] == jid
-                        && row["scheduler"]["key"] == prepared["scheduler"]["key"];
+                    receipt.linked =
+                        crate::launch_receipt::linked_to_return(&row, &jid, &prepared["scheduler"]["key"]);
                     if receipt.linked {
                         receipt.result_generation = row["resume_generation"].as_u64();
+                        receipt.result_launch_key = row["scheduler"]["key"].as_str().map(str::to_string);
                         receipt.result_metadata_fingerprint = crate::admission::result_fingerprint(
                             &row,
                             &db["projects"][s(&prepared["project"])],
@@ -2426,9 +2441,9 @@ if !truth(&row["scheduler"]["key"]){let attempt=add_count(&row["scheduler"]["att
                     let until = at + 300.;
                     let root = &db["projects"][s(&prepared["project"])];
                     let deferred = json!({"reason":"launch_outcome_unverified","receipt_id":receipt.receipt_id,
-                "job":jid,"launch_key":prepared["scheduler"]["key"],
-                "request_fingerprint":crate::admission::defer_fingerprint(&prepared,root),
-                "job_state_fingerprint":crate::launch_receipt::job_state_fingerprint(&jobs,&jid)});
+"job":jid,"launch_key":prepared["scheduler"]["key"],
+"request_fingerprint":crate::admission::defer_fingerprint(&prepared,root),
+"job_state_fingerprint":crate::launch_receipt::job_state_fingerprint(&jobs,&jid)});
                     let row = self.edit(&prepared["id"], |row| {
                         if row["status"] == "todo"
                             && row["scheduler"]["key"] == prepared["scheduler"]["key"]
@@ -2453,7 +2468,7 @@ if !truth(&row["scheduler"]["key"]){let attempt=add_count(&row["scheduler"]["att
                     merge(
                         &mut self.report,
                         json!({"launched":{"item":i["id"],"job":jid,
-                "kind":receipt.outcome.kind,"new_execution":false},"allowance_now":0,"launch_wait_s":cfg["launch_interval_s"]}),
+"kind":receipt.outcome.kind,"new_execution":false},"allowance_now":0,"launch_wait_s":cfg["launch_interval_s"]}),
                     );
                 }
                 self.log(
@@ -2529,8 +2544,13 @@ if !truth(&row["scheduler"]["key"]){let attempt=add_count(&row["scheduler"]["att
                         failure_reason(&e).0
                     ),
                 )?;
-                if target.is_some() || self.report["launch_reserved"]["item"] == i["id"] {
-                    if self.report["launch_reserved"]["item"]==i["id"] {observation.earlier_launch(&i["id"]);}
+                if e.0 == "LaunchOutcomeUnsupported"
+                    || target.is_some()
+                    || self.report["launch_reserved"]["item"] == i["id"]
+                {
+                    if self.report["launch_reserved"]["item"] == i["id"] {
+                        observation.earlier_launch(&i["id"]);
+                    }
                     return Err(e);
                 }
                 first_failure.get_or_insert(e);

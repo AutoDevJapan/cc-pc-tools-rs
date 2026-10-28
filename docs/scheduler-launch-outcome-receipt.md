@@ -102,6 +102,20 @@ replayと診断のためにSource/spec/promptを開かない。
 同じschema内の追加JSON項目は無視して固定項目だけを読む。schema不一致は別に扱う。
 実行中の健康なcontrollerやworkerをこの更新のために停止しない。
 
+`RealBackend::launch`を静的に組み込む消費側は`scheduler.exe`、`todo.exe`の旧固定割当CLI、
+`localai-web-rs.exe`のConsole補助作業受付である。この版から生成した消費側を配置するときは、
+いずれもcodex_jobsの後に更新する。既存の旧消費側は従来のID出力を使える。
+このsoftwareの配布対象は変更を含むcodex_jobs/schedulerの2本で、ほかの担当の現稼働を
+未照合で上書きしない。Consoleの未照合エラーは保存済みreceipt/診断で確認し、
+返却jobがあるだけで実行成功へ昇格させない。
+
+旧固定割当CLIの2407は`product_review::in_scope`で2026-10-21 00:00 UTCまでに限定され、
+CLI入口も同じ判定を行う。この作業時点では実行できず、期限を延長しない。
+その終了済みの有効期間のためだけに元の割当/資格や業務状態を変更しない。
+通常の補助担当は割当時にscheduler.keyを消費する。linkの読戻しはdoing/job履歴と
+同じjobのworker_receipt/現保存世代を照合し、返却のlaunch_keyはreceiptに保持する。
+診断では消費後のresult_launch_keyとresult_generationを別に照合する。
+
 ## 検証の途中記録
 
 Red: commit `22d2a96f`の`test(terminal_same_key_no_action)`は2件とも意図した理由で失敗。

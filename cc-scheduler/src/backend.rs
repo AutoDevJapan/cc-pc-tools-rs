@@ -820,6 +820,13 @@ impl Backend for RealBackend {
             .find(|line| !line.trim().is_empty())
             .unwrap_or("")
             .trim();
+        #[derive(serde::Deserialize)]
+        struct Schema {
+            schema: u32,
+        }
+        if serde_json::from_str::<Schema>(returned).is_ok_and(|header| header.schema != 1) {
+            return Err(Error("LaunchOutcomeSchemaUnsupported"));
+        }
         if let Ok(result) = serde_json::from_str::<LaunchOutcome>(returned) {
             if result.schema != 1 {
                 return Err(Error("LaunchOutcomeSchemaUnsupported"));
@@ -829,12 +836,18 @@ impl Backend for RealBackend {
             }
             return Ok(result);
         }
+        if returned.starts_with('{') {
+            return Err(Error("LaunchOutcomeInvalid"));
+        }
         let jid = returned.to_string();
         if !regex::Regex::new(r"^[A-Za-z0-9_-]+$")
             .unwrap()
             .is_match(&jid)
         {
             return Err(Error("ValueError"));
+        }
+        if jid.len() > 128 {
+            return Err(Error("LaunchOutcomeInvalid"));
         }
         Ok(LaunchOutcome::from_job(
             LaunchKind::Unknown,

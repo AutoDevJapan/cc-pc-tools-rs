@@ -118,11 +118,19 @@ pub enum Failure {
     Interrupted,
     Other,
     LaunchReturnUnverified,
+    LaunchOutcomeUnsupported,
+    LaunchOutcomeSchemaUnsupported,
+    LaunchOutcomeInvalid,
+    LaunchOutcomeTooLarge,
 }
 impl Failure {
     pub fn from_error(e: &Error) -> Self {
         match e.0 {
             "LaunchOutcomeUnverified" => Self::LaunchReturnUnverified,
+            "LaunchOutcomeUnsupported" => Self::LaunchOutcomeUnsupported,
+            "LaunchOutcomeSchemaUnsupported" => Self::LaunchOutcomeSchemaUnsupported,
+            "LaunchOutcomeInvalid" => Self::LaunchOutcomeInvalid,
+            "LaunchOutcomeTooLarge" => Self::LaunchOutcomeTooLarge,
             "KeyboardInterrupt" => Self::Interrupted,
             "QuotaRetryEnded" => Self::QuotaRetryEnded,
             "ReviewModelConflict" => Self::ReviewModelConflict,

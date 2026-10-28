@@ -37,6 +37,16 @@ pub(crate) fn deferred_unchanged(item: &Value, root: &Value, jobs: &[Value]) -> 
         && deferred["job_state_fingerprint"] == job_state_fingerprint(jobs, s(&deferred["job"]))
 }
 
+pub(crate) fn linked_to_return(row: &Value, job: &str, key: &Value) -> bool {
+    row["status"] == "doing"
+        && row["scheduler"]["job"] == job
+        && arr(&row["jobs"]).contains(&json!(job))
+        && (row["scheduler"]["key"] == *key
+            || (row["worker_receipt"]["job"] == job
+                && row["resume_generation"].is_u64()
+                && row["worker_receipt"]["generation"] == row["resume_generation"]))
+}
+
 #[derive(Clone, Copy, Debug, Serialize, Deserialize, PartialEq, Eq)]
 #[serde(rename_all = "snake_case")]
 pub enum Binding {
@@ -77,6 +87,7 @@ pub struct Receipt {
     pub request_launch_key: String,
     pub request_generation: Option<u64>,
     pub result_generation: Option<u64>,
+    pub result_launch_key: Option<String>,
     pub request_attempt: Option<u64>,
     pub request_spec_sha256: Option<String>,
     pub request_dispatch_sha256: Option<String>,
@@ -218,6 +229,7 @@ impl Receipt {
             request_launch_key: s(&item["scheduler"]["key"]).to_string(),
             request_generation: item["resume_generation"].as_u64(),
             result_generation: item["resume_generation"].as_u64(),
+            result_launch_key: item["scheduler"]["key"].as_str().map(str::to_string),
             request_attempt: item["scheduler"]["attempt"].as_u64(),
             request_spec_sha256: (input["launch_key"] == item["scheduler"]["key"])
                 .then(|| input["spec_sha256"].as_str().map(str::to_string))
@@ -244,6 +256,12 @@ impl Receipt {
             && hex(&self.receipt_id, 32)
             && hex(&self.cycle_id, 32)
             && hex(&self.request_launch_key, 32)
+            && self
+                .result_launch_key
+                .as_ref()
+                .is_none_or(|key| hex(key, 32))
+            && (self.linked
+                || self.result_launch_key.as_deref() == Some(self.request_launch_key.as_str()))
             && self.observed_at.is_finite()
             && self.expires_at == self.observed_at + TTL
             && hex(&self.input_metadata_fingerprint, 64)
@@ -423,7 +441,12 @@ pub fn publish(root: &Path, receipt: &Receipt) -> Result<()> {
         .receipts
         .sort_by(|a, b| a.observed_at.total_cmp(&b.observed_at));
     while store.receipts.len() > MAX_ENTRIES {
-        store.receipts.remove(0);
+        let oldest = store
+            .receipts
+            .iter()
+            .position(|r| r.receipt_id != receipt.receipt_id)
+            .ok_or(Error("LaunchReceiptTooLarge"))?;
+        store.receipts.remove(oldest);
     }
     let mut bytes = serde_json::to_vec(&store)?;
     while bytes.len() as u64 > MAX_BYTES && store.receipts.len() > 1 {
@@ -487,7 +510,9 @@ pub fn explain(root: &Path, todo: &Path, id: i64, now: f64) -> Value {
     };
     let current = admission::metadata::fingerprint(&item, &root);
     out["current_metadata_fingerprint"] = json!(current);
-    out["validity"] = json!(if item["scheduler"]["key"] != receipt.request_launch_key {
+    out["validity"] = json!(if item["scheduler"]["key"].as_str()
+        != receipt.result_launch_key.as_deref()
+    {
         "launch_key_changed"
     } else if item["resume_generation"].as_u64() != receipt.result_generation {
         "generation_changed"

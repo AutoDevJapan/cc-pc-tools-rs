@@ -697,7 +697,12 @@ impl Context {
                         return Err(Error::new("invalid launch key receipt"));
                     }
                     self.validate_product_retry_replay(a, &job)?;
-                    self.write_launch_outcome(a, out, &job, cc_job_policy::launch_outcome::Kind::ExistingJobNoAction)?;
+                    self.write_launch_outcome(
+                        a,
+                        out,
+                        &job,
+                        cc_job_policy::launch_outcome::Kind::ExistingJobNoAction,
+                    )?;
                     return Ok(0);
                 }
                 Err(error) if error.kind() == std::io::ErrorKind::NotFound => (),
@@ -721,7 +726,12 @@ impl Context {
             {
                 self.validate_product_retry_replay(a, &job)?;
                 self.write_json(&receipt_path, &json!({"id":job["id"]}))?;
-                self.write_launch_outcome(a, out, &job, cc_job_policy::launch_outcome::Kind::ExistingJobNoAction)?;
+                self.write_launch_outcome(
+                    a,
+                    out,
+                    &job,
+                    cc_job_policy::launch_outcome::Kind::ExistingJobNoAction,
+                )?;
                 return Ok(0);
             }
             fs::write(&pending_path, b"receipt pending").map_err(|error| {
@@ -801,7 +811,11 @@ impl Context {
             .iter()
             .map(|p| abs(Path::new(p)))
             .collect::<std::io::Result<Vec<_>>>()?;
-        let flags: std::collections::BTreeSet<_> = a.flags.iter().filter(|flag|flag.as_str()!="launch-outcome").collect();
+        let flags: std::collections::BTreeSet<_> = a
+            .flags
+            .iter()
+            .filter(|flag| flag.as_str() != "launch-outcome")
+            .collect();
         let request = json!({"options":values,"add_dirs":dirs,"flags":flags,
             "model_explicit":a.model_explicit,"prompt_sha256":cc_job_policy::product_retry::digest(bytes)});
         Ok(cc_job_policy::product_retry::digest(&serde_json::to_vec(
@@ -1437,9 +1451,16 @@ impl Context {
                 "warning: could not detach from the caller's job object; this job is killed if the caller's job object closes"
             )?;
         }
-        self.write_launch_outcome(a, out, &stored, if issued {
-            cc_job_policy::launch_outcome::Kind::Queued
-        } else { cc_job_policy::launch_outcome::Kind::Accepted })?;
+        self.write_launch_outcome(
+            a,
+            out,
+            &stored,
+            if issued {
+                cc_job_policy::launch_outcome::Kind::Queued
+            } else {
+                cc_job_policy::launch_outcome::Kind::Accepted
+            },
+        )?;
         Ok(0)
     }
     pub fn cmd_status(&self, a: &Args, out: &mut dyn Write) -> Result<i32> {

@@ -474,7 +474,17 @@ fn unverified_return_defers_same_state_and_next_pass_admits_later_candidate() {
         assert!(n(&f.get(1)["scheduler"]["not_before"]) > T);
         assert!(f.e.backend.launched.is_empty());
         f.e.backend.clock += 310.;
+        f.e.backend.m["replayed"] = json!(false);
         f.dispatch();
+        assert_eq!(
+            f.e.backend.m["replayed"], false,
+            "{scenario}: repeated the deferred launch"
+        );
+        let observation = read_json(&f.e.root.join("admission.json"), Value::Null).unwrap();
+        assert_eq!(
+            observation["entries"]["1"]["reason"], "launch_outcome_deferred",
+            "{scenario}"
+        );
         assert_eq!(f.get(2)["status"], "doing", "{scenario}");
         assert_eq!(f.e.backend.launched.len(), 1, "{scenario}");
     }
@@ -529,6 +539,7 @@ fn fake_and_normal_registration_have_the_same_generation_attempt_and_branch_cont
     let receipt = &report["receipt"];
     assert_eq!(receipt["binding"], "matching");
     assert_eq!(receipt["linked"], true);
+    assert_eq!(receipt["result_generation"], 6);
     assert_eq!(receipt["outcome"]["registration_generation"], 6);
     assert_eq!(
         receipt["outcome"]["registration_attempt"],
@@ -668,9 +679,10 @@ fn compatible_extra_outcome_fields_are_ignored_but_output_stays_fixed_and_produc
     );
 }
 
-struct UnsupportedLauncher;
+struct UnsupportedLauncher(std::sync::Arc<std::sync::atomic::AtomicUsize>);
 impl Runner for UnsupportedLauncher {
     fn run(&mut self, _: &Invocation) -> Result<Output> {
+        self.0.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
         Ok(Output {
             code: 2,
             stdout: String::new(),
@@ -683,11 +695,13 @@ fn an_old_launcher_is_reported_without_retrying_a_second_invocation() {
     let mut f = Fixture::new();
     sample_receipt(&mut f, 1);
     let mut backend = RealBackend::new(f.e.root.clone());
-    backend.runner = Box::new(UnsupportedLauncher);
+    let calls = std::sync::Arc::new(std::sync::atomic::AtomicUsize::new(0));
+    backend.runner = Box::new(UnsupportedLauncher(calls.clone()));
     assert_eq!(
         backend.launch(&f.get(1), Path::new("fixture.md"), &json!({})),
         Err(Error("LaunchOutcomeUnsupported"))
     );
+    assert_eq!(calls.load(std::sync::atomic::Ordering::Relaxed), 1);
 }
 
 #[test]
@@ -738,9 +752,21 @@ fn repeated_known_terminal_no_action_is_bounded_and_ordinary_reconcile_can_settl
         assert_eq!(read_receipt(&f, 1)["receipt"]["replay_count"], count);
     }
     let first = read_receipt(&f, 1)["receipt"]["replay_first_at"].clone();
+    assert_eq!(
+        f.get(1)["scheduler"]["launch_outcome_deferred"]["reason"],
+        "existing_job_no_action"
+    );
+    assert!(n(&f.get(1)["scheduler"]["not_before"]) > T);
     f.e.backend.clock += 310.;
     f.put(item(2, "other", "todo", &[]));
+    f.e.backend.m["replayed"] = json!(false);
     f.dispatch();
+    assert_eq!(f.e.backend.m["replayed"], false);
+    assert_eq!(read_receipt(&f, 1)["receipt"]["replay_count"], 3);
+    assert_eq!(
+        read_json(&f.e.root.join("admission.json"), Value::Null).unwrap()["entries"]["1"]["reason"],
+        "launch_outcome_deferred"
+    );
     assert_eq!(f.get(2)["status"], "doing");
     assert_eq!(read_receipt(&f, 1)["receipt"]["replay_first_at"], first);
     let mut f = Fixture::new();
@@ -752,6 +778,43 @@ fn repeated_known_terminal_no_action_is_bounded_and_ordinary_reconcile_can_settl
         f.get(1)["scheduler"]["key"],
         f.e.backend.records[0]["launch_key"]
     );
+}
+
+#[test]
+fn link_success_survives_subwork_assignment_and_worker_start_consuming_the_key() {
+    for subwork in [false, true] {
+        let mut f = Fixture::new();
+        let mut sub_fixture = subwork.then(subwork_support::Fixture::new);
+        let id = if subwork {
+            let sub = sub_fixture.as_mut().unwrap();
+            sub.register();
+            sub.jobs[0]["pid"] = json!(1);
+            sub.jobs[0]["pid_created"] = proc(1, 0, "codex.exe")["created"].clone();
+            sub.jobs[0]["created_at"] = json!(T - 1200.);
+            f.e.backend.records = sub.jobs.clone();
+            write_json(&f.e.todo_path, &sub.db, 1).unwrap();
+            2
+        } else {
+            f.put(item(1, "other", "todo", &[]));
+            f.e.backend.launch_start = Some(f.e.todo_path.clone());
+            1
+        };
+        f.dispatch();
+        let row = f.get(id);
+        assert!(
+            row["scheduler"]["key"].is_null(),
+            "fixture must consume the launch key"
+        );
+        assert_eq!(f.e.report["launch_return"]["linked"], true);
+        assert_eq!(f.e.report["launched"]["job"], "launched1");
+        let report = read_receipt(&f, id as i64);
+        assert_eq!(report["receipt"]["linked"], true);
+        assert_eq!(
+            report["receipt"]["result_generation"],
+            row["resume_generation"]
+        );
+        assert_eq!(report["validity"], "matching_task_metadata");
+    }
 }
 
 #[test]
@@ -900,9 +963,10 @@ fn targeted_output_keeps_a_returned_effect_even_when_linkage_is_deferred() {
     assert_eq!(report["launch_return_error"], "launch_outcome_unverified");
 }
 
-struct LegacyPinnedLauncher;
+struct LegacyPinnedLauncher(std::sync::Arc<std::sync::atomic::AtomicUsize>);
 impl Runner for LegacyPinnedLauncher {
     fn run(&mut self, command: &Invocation) -> Result<Output> {
+        self.0.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
         assert!(!command.args.iter().any(|arg| arg == "--launch-outcome"));
         Ok(Output {
             code: 0,
@@ -918,12 +982,14 @@ fn historical_fixed_launcher_remains_id_only_and_unknown_without_a_second_launch
     let mut row = f.get(1);
     row["product_review_allocation"] = json!({});
     let mut backend = RealBackend::new(f.e.root.clone());
-    backend.runner = Box::new(LegacyPinnedLauncher);
+    let calls = std::sync::Arc::new(std::sync::atomic::AtomicUsize::new(0));
+    backend.runner = Box::new(LegacyPinnedLauncher(calls.clone()));
     let result = backend
         .launch(&row, Path::new("fixture.md"), &json!({}))
         .unwrap();
     assert_eq!(result.kind, Kind::Unknown);
     assert_eq!(result.job_id, "legacy-fixed-job");
+    assert_eq!(calls.load(std::sync::atomic::Ordering::Relaxed), 1);
 }
 
 #[test]
@@ -939,4 +1005,105 @@ fn admission_rejects_uppercase_fingerprints_in_the_shared_lowercase_domain() {
         cc_scheduler::admission::explain(&f.e.root, &f.e.todo_path, 1, T)["validity"],
         "corrupt_or_unreadable"
     );
+}
+
+#[test]
+fn exact_protocol_failures_and_saved_diagnostics_are_not_generic_tool_errors() {
+    let mut f = Fixture::new();
+    let receipt = sample_receipt(&mut f, 1);
+    let mut backend = RealBackend::new(f.e.root.clone());
+    let mut future = serde_json::to_value(&receipt.outcome).unwrap();
+    future["schema"] = json!(2);
+    let mut invalid = serde_json::to_value(&receipt.outcome).unwrap();
+    invalid["job_id"] = json!("bad/id");
+    for (text, code) in [
+        (
+            "{\"schema\":2}".to_string(),
+            "LaunchOutcomeSchemaUnsupported",
+        ),
+        (future.to_string(), "LaunchOutcomeSchemaUnsupported"),
+        (invalid.to_string(), "LaunchOutcomeInvalid"),
+        ("x".repeat(16385), "LaunchOutcomeTooLarge"),
+    ] {
+        backend.runner = Box::new(ReturnOutput(text));
+        assert_eq!(
+            backend.launch(&f.get(1), Path::new("fixture.md"), &json!({})),
+            Err(Error(code))
+        );
+    }
+    for code in ["unsupported", "schema", "invalid", "too_large"] {
+        let mut f = Fixture::new();
+        f.put(item(1, "other", "todo", &[]));
+        f.put(item(2, "other", "todo", &[]));
+        f.e.backend.m["launch_error"] = json!(code);
+        assert!(f.e.dispatch(&f.cfg, &f.pri).is_err());
+        let expected = if code == "schema" {
+            "launch_outcome_schema_unsupported".to_string()
+        } else {
+            format!("launch_outcome_{code}")
+        };
+        assert_eq!(
+            f.get(1)["scheduler"]["preparation_failure"]["reason"],
+            expected
+        );
+        let observation = read_json(&f.e.root.join("admission.json"), Value::Null).unwrap();
+        assert_eq!(observation["entries"]["1"]["failure_code"], expected);
+        if code == "unsupported" {
+            assert_eq!(f.e.backend.m["launch_calls"], 1);
+        }
+    }
+}
+
+#[test]
+fn accepted_live_registration_and_persisted_defer_are_explained_without_replay() {
+    let mut f = Fixture::new();
+    terminal_same_key(&mut f);
+    f.e.backend.records[0]["status"] = json!("running");
+    f.e.backend.replay_kind_override = Some(Kind::Accepted);
+    f.dispatch();
+    assert_eq!(f.e.report["launch_return"]["kind"], "accepted");
+    assert_eq!(f.e.report["launch_return"]["linked"], true);
+    let mut f = Fixture::new();
+    terminal_same_key(&mut f);
+    f.e.backend.replay_kind_override = Some(Kind::Unknown);
+    assert_eq!(
+        f.e.dispatch(&f.cfg, &f.pri),
+        Err(Error("LaunchOutcomeUnverified"))
+    );
+    let report = cc_scheduler::targeted_dispatch::run(&mut f.e, 1).unwrap();
+    assert_eq!(
+        report["launch_deferred_reason"],
+        "launch_outcome_unverified"
+    );
+}
+
+#[test]
+fn count_limit_keeps_the_newly_returned_receipt_when_the_clock_moves_back() {
+    let mut f = Fixture::new();
+    let receipt = sample_receipt(&mut f, 1);
+    for id in 1..=launch_receipt::MAX_ENTRIES as i64 {
+        let mut entry = receipt.clone();
+        entry.target_todo_id = id;
+        entry.outcome.todo_id = Some(id as u64);
+        entry.receipt_id = uuid::Uuid::new_v4().simple().to_string();
+        launch_receipt::publish(&f.e.root, &entry).unwrap();
+    }
+    let mut earlier = receipt.clone();
+    earlier.target_todo_id = 999;
+    earlier.outcome.todo_id = Some(999);
+    earlier.receipt_id = uuid::Uuid::new_v4().simple().to_string();
+    earlier.observed_at = T - 1.;
+    earlier.expires_at = earlier.observed_at + launch_receipt::TTL;
+    launch_receipt::publish(&f.e.root, &earlier).unwrap();
+    assert_eq!(
+        read_receipt(&f, 999)["receipt"]["receipt_id"],
+        earlier.receipt_id
+    );
+}
+
+#[test]
+fn historical_allocation_cannot_run_after_its_fixed_original_expiry() {
+    assert!(cc_scheduler::product_review::in_scope(1792540799.));
+    assert!(!cc_scheduler::product_review::in_scope(1792540800.));
+    assert!(!cc_scheduler::product_review::in_scope(1793149200.));
 }

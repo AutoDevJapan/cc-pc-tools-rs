@@ -94,12 +94,12 @@ fn report_reason(t: &Test, job: &Value) -> Value {
 
 #[test]
 fn typed_output_selection_is_not_part_of_original_retry_identity() {
-    let (t,_db,key)=fixture();
-    submit(&t,&key,&[],BODY).unwrap();
-    let first=accepted(&t);
-    submit(&t,&key,&["--launch-outcome"],BODY).unwrap();
-    assert_eq!(accepted(&t)["id"],first["id"]);
-    assert_eq!(t.rt.supervisors.load(Ordering::Relaxed),1);
+    let (t, _db, key) = fixture();
+    submit(&t, &key, &[], BODY).unwrap();
+    let first = accepted(&t);
+    submit(&t, &key, &["--launch-outcome"], BODY).unwrap();
+    assert_eq!(accepted(&t)["id"], first["id"]);
+    assert_eq!(t.rt.supervisors.load(Ordering::Relaxed), 1);
 }
 
 #[test]

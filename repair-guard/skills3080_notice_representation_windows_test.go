@@ -10,6 +10,20 @@ import (
 
 const skillsTestModificationPrefix = "Modification notice: The distributor changed this reference only by replacing withheld source lines with \"[WITHHELD physical line N]\" markers. All remaining source lines and their original positions are preserved below.\n\n"
 
+func TestSkills3080OriginalPayloadCanBeginWithLiteralModificationText(t *testing.T) {
+	raw := []byte(skillsTestModificationPrefix + "Visible\nhidden\n")
+	view := []byte(skillsTestModificationPrefix + "Visible\n[WITHHELD physical line 4]\n")
+	if !skillsMaskedSourceBytes(raw, view) {
+		t.Fatal("genuine prefix-free original payload beginning with annotation text rejected")
+	}
+	if !skillsMaskedSourceBytes(raw, append([]byte(skillsTestModificationPrefix), view...)) {
+		t.Fatal("one annotation plus literal original header rejected")
+	}
+	if skillsMaskedSourceBytes([]byte("Visible\nhidden\n"), append([]byte(skillsTestModificationPrefix), view...)) {
+		t.Fatal("duplicated annotation accepted as invented source")
+	}
+}
+
 func TestSkills3080IndividualNoticeRequiresEveryOriginalTupleField(t *testing.T) {
 	row := skillsSavedSource{Repo: "6mile/skills", Commit: "920714f17d81e0a95c7a9bc51faf0a7921cd982d", Path: "skills/skywyze/rlm-controller/LICENCE.md", Role: "support_text", Bytes: 10752, SHA: "120701352845f72eda11433beb40df387026e41c5a9c6b9c9cef0c6c624f6004", Blob: "0093542cc130c66e50a69f86839a5989484a6db3", Content: "objects/120701352845f72eda11433beb40df387026e41c5a9c6b9c9cef0c6c624f6004.gz"}
 	if !skillsSavedNotice(row) {

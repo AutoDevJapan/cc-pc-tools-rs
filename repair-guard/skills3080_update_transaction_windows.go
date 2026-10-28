@@ -1,7 +1,7 @@
 // Native software transaction library; there is no standalone executable.
 // Only the guard invokes it after its complete dual-review qualification.
-// It grants no data access and exposes no arbitrary target or replace operation.
-package deploy3686
+// It grants no data access and exposes no arbitrary target or replace skillsUpdateOperation.
+package main
 
 import (
 	"bytes"
@@ -16,11 +16,7 @@ import (
 	"strings"
 )
 
-const fixedTarget = "D:/CC/Tools/client-records/scrub391.exe"
-const fixedRecords = "D:/CC/Work/unattended-operations-20261013-wt/todo-3686-skills-3080-a/.ci-work/todo3686"
-const modulePath = "github.com/AutoDevJapan/cc-pc-tools-rs/repair-guard/deploy3686"
-
-type operation struct {
+type skillsUpdateOperation struct {
 	ExpectedOldID [3]uint32 "json:\"-\""
 	ID            string    "json:\"operation_id\""
 	Writer        string    "json:\"writer_job\""
@@ -35,7 +31,7 @@ type operation struct {
 	State         string    "json:\"state\""
 	SACL          bool      "json:\"sacl_verified\""
 }
-type result struct {
+type skillsUpdateResult struct {
 	Installed        bool      "json:\"installed\""
 	Reason           string    "json:\"reason\""
 	OldMoved         bool      "json:\"old_moved\""
@@ -46,15 +42,15 @@ type result struct {
 	OriginalID       [3]uint32 "json:\"original_id\""
 	StageID          [3]uint32 "json:\"stage_id\""
 	BackupID         [3]uint32 "json:\"backup_id\""
-	Journal          string    "json:\"journal\""
+	Journal          string    "json:\"skillsUpdateJournal\""
 }
-type hooks struct {
+type skillsUpdateHooks struct {
 	afterValidation func() error
 	afterOldMove    func() error
 	afterPublish    func() error
 }
 
-func digest(f *os.File) (string, bool) {
+func skillsUpdateDigest(f *os.File) (string, bool) {
 	if _, e := f.Seek(0, io.SeekStart); e != nil {
 		return "", false
 	}
@@ -62,9 +58,11 @@ func digest(f *os.File) (string, bool) {
 	n, e := io.Copy(h, io.LimitReader(f, (64<<20)+1))
 	return hex.EncodeToString(h.Sum(nil)), e == nil && n > 0 && n <= 64<<20
 }
-func samePath(a, b string) bool { return strings.EqualFold(filepath.Clean(a), filepath.Clean(b)) }
-func parseOperation(raw []byte) (operation, bool) {
-	var o operation
+func skillsUpdateSamePath(a, b string) bool {
+	return strings.EqualFold(filepath.Clean(a), filepath.Clean(b))
+}
+func skillsUpdateParseOperation(raw []byte) (skillsUpdateOperation, bool) {
+	var o skillsUpdateOperation
 	keys := map[string]bool{"operation_id": false, "writer_job": false, "target": false, "stage": false, "backup": false, "expected_old_sha256": false, "expected_new_sha256": false, "source_head": false, "reviewed_head": false, "owner_group_dacl_before": false, "state": false, "sacl_verified": false}
 	d := json.NewDecoder(bytes.NewReader(raw))
 	if token, e := d.Token(); e != nil || token != json.Delim('{') {
@@ -99,7 +97,7 @@ func parseOperation(raw []byte) (operation, bool) {
 	}
 	return o, true
 }
-func validOperation(o operation) bool {
+func skillsUpdateValidOperation(o skillsUpdateOperation) bool {
 	hexN := func(s string, n int) bool {
 		b, e := hex.DecodeString(s)
 		return e == nil && len(s) == n && len(b) == n/2 && strings.ToLower(s) == s
@@ -108,23 +106,23 @@ func validOperation(o operation) bool {
 	return hexN(o.ID, 32) && hexN(o.Old, 64) && hexN(o.New, 64) && o.Old != o.New && hexN(o.Source, 40) && hexN(o.Reviewed, 40) &&
 		regexp.MustCompile("^20[0-9]{6}-[0-9]{6}-todo-3686$").MatchString(o.Writer) &&
 		o.State == "before_stage_and_handle_move" && !o.SACL && o.SDDL != "" && len(o.SDDL) <= 64<<10 &&
-		samePath(o.Target, fixedTarget) && samePath(o.Stage, filepath.Join(filepath.Dir(fixedTarget), base+".staging.exe")) &&
-		samePath(o.Backup, filepath.Join(filepath.Dir(fixedTarget), base+".backup.exe"))
+		skillsUpdateSamePath(o.Target, skillsRuntimeTarget) && skillsUpdateSamePath(o.Stage, filepath.Join(filepath.Dir(skillsRuntimeTarget), base+".staging.exe")) &&
+		skillsUpdateSamePath(o.Backup, filepath.Join(filepath.Dir(skillsRuntimeTarget), base+".backup.exe"))
 }
-func writeJournal(record string, o operation, r result) bool {
-	p, e := parentAt(filepath.Dir(record))
+func skillsUpdateWriteJournal(record string, o skillsUpdateOperation, r skillsUpdateResult) bool {
+	p, e := skillsUpdateParentAt(filepath.Dir(record))
 	if e != nil {
 		return false
 	}
 	defer p.close()
 	name := filepath.Base(record) + ".native.json"
-	f, e := openAt(p.last, name, false, false, true)
+	f, e := skillsUpdateOpenAt(p.last, name, false, false, true)
 	if e != nil {
 		return false
 	}
 	defer f.Close()
 	b, e := json.MarshalIndent(struct {
-		Operation           operation
+		Operation           skillsUpdateOperation
 		OriginalID, StageID [3]uint32
 		State               string
 	}{o, r.OriginalID, r.StageID, "pinned_before_move"}, "", "  ")
@@ -136,43 +134,43 @@ func writeJournal(record string, o operation, r result) bool {
 }
 
 // Tests supply synthetic paths and deterministic boundary callbacks. Production
-// passes only the fixed-target operation validated above and no callbacks.
+// passes only the fixed-target skillsUpdateOperation validated above and no callbacks.
 // Both rename operations use the held source objects, a held physical parent,
 // and ReplaceIfExists=false. No cooperating writer lock is needed for integrity.
-func applyAt(o operation, record string, h hooks) (r result) {
+func skillsUpdateApplyAt(o skillsUpdateOperation, record string, h skillsUpdateHooks) (r skillsUpdateResult) {
 	r.Reason = "transaction_not_verified"
 	r.Journal = record + ".native.json"
-	parent, e := parentAt(filepath.Dir(o.Target))
+	parent, e := skillsUpdateParentAt(filepath.Dir(o.Target))
 	if e != nil {
 		return
 	}
 	defer parent.close()
-	old, e := openAt(parent.last, filepath.Base(o.Target), false, true, false)
+	old, e := skillsUpdateOpenAt(parent.last, filepath.Base(o.Target), false, true, false)
 	if e != nil {
 		return
 	}
 	defer old.Close()
-	stage, e := openAt(parent.last, filepath.Base(o.Stage), false, true, false)
+	stage, e := skillsUpdateOpenAt(parent.last, filepath.Base(o.Stage), false, true, false)
 	if e != nil {
 		return
 	}
 	defer stage.Close()
-	oldSHA, oldOK := digest(old)
-	newSHA, newOK := digest(stage)
-	oldSD, oldE := sddl(old)
-	newSD, newE := sddl(stage)
-	r.OriginalID, e = identity(old)
+	oldSHA, oldOK := skillsUpdateDigest(old)
+	newSHA, newOK := skillsUpdateDigest(stage)
+	oldSD, oldE := skillsUpdateSDDL(old)
+	newSD, newE := skillsUpdateSDDL(stage)
+	r.OriginalID, e = skillsUpdateIdentity(old)
 	if e != nil {
 		return
 	}
-	r.StageID, e = identity(stage)
+	r.StageID, e = skillsUpdateIdentity(stage)
 	if e != nil {
 		return
 	}
 	if (o.ExpectedOldID != [3]uint32{} && r.OriginalID != o.ExpectedOldID) || !oldOK || !newOK || oldSHA != o.Old || newSHA != o.New || oldSD != o.SDDL || newSD != o.SDDL || oldE != nil || newE != nil {
 		return
 	}
-	if !writeJournal(record, o, r) {
+	if !skillsUpdateWriteJournal(record, o, r) {
 		r.Reason = "journal_unavailable"
 		return
 	}
@@ -184,13 +182,13 @@ func applyAt(o operation, record string, h hooks) (r result) {
 		}
 		r.RestoreAttempted = true
 		if r.Published {
-			if renameHeld(stage, parent.last, filepath.Base(o.Stage)) != nil {
+			if skillsUpdateRenameHeld(stage, parent.last, filepath.Base(o.Stage)) != nil {
 				r.RestoreFailed = true
 				return
 			}
 			r.Published = false
 		}
-		if renameHeld(old, parent.last, filepath.Base(o.Target)) != nil {
+		if skillsUpdateRenameHeld(old, parent.last, filepath.Base(o.Target)) != nil {
 			r.RestoreFailed = true
 			return
 		}
@@ -199,7 +197,7 @@ func applyAt(o operation, record string, h hooks) (r result) {
 	if h.afterValidation != nil && h.afterValidation() != nil {
 		return
 	}
-	if renameHeld(old, parent.last, filepath.Base(o.Backup)) != nil {
+	if skillsUpdateRenameHeld(old, parent.last, filepath.Base(o.Backup)) != nil {
 		r.Reason = "backup_collision_or_move_failed"
 		return
 	}
@@ -207,7 +205,7 @@ func applyAt(o operation, record string, h hooks) (r result) {
 	if h.afterOldMove != nil && h.afterOldMove() != nil {
 		return
 	}
-	if renameHeld(stage, parent.last, filepath.Base(o.Target)) != nil {
+	if skillsUpdateRenameHeld(stage, parent.last, filepath.Base(o.Target)) != nil {
 		r.Reason = "target_collision_or_publish_failed"
 		return
 	}
@@ -215,15 +213,15 @@ func applyAt(o operation, record string, h hooks) (r result) {
 	if h.afterPublish != nil && h.afterPublish() != nil {
 		return
 	}
-	oldSHA, oldOK = digest(old)
-	newSHA, newOK = digest(stage)
-	oldSD, oldE = sddl(old)
-	newSD, newE = sddl(stage)
-	r.BackupID, e = identity(old)
+	oldSHA, oldOK = skillsUpdateDigest(old)
+	newSHA, newOK = skillsUpdateDigest(stage)
+	oldSD, oldE = skillsUpdateSDDL(old)
+	newSD, newE = skillsUpdateSDDL(stage)
+	r.BackupID, e = skillsUpdateIdentity(old)
 	if e != nil {
 		return
 	}
-	stageID, e := identity(stage)
+	stageID, e := skillsUpdateIdentity(stage)
 	if e != nil || !oldOK || !newOK || oldSHA != o.Old || newSHA != o.New || oldSD != o.SDDL || newSD != o.SDDL || oldE != nil || newE != nil || r.BackupID != r.OriginalID || stageID != r.StageID {
 		return
 	}

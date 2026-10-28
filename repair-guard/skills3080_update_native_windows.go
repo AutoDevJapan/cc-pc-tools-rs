@@ -1,4 +1,4 @@
-package deploy3686
+package main
 
 import (
 	"errors"
@@ -10,48 +10,48 @@ import (
 	"unsafe"
 )
 
-type unicodeName struct {
+type skillsUpdateUnicode struct {
 	Length, MaximumLength uint16
 	Buffer                *uint16
 }
-type attributes struct {
+type skillsUpdateAttributes struct {
 	Length            uint32
 	Root              syscall.Handle
-	Name              *unicodeName
+	Name              *skillsUpdateUnicode
 	Flags             uint32
 	Security, Quality unsafe.Pointer
 }
-type ioStatus struct{ Status, Information uintptr }
+type skillsUpdateIOStatus struct{ Status, Information uintptr }
 
-var ntCreate = syscall.NewLazyDLL("ntdll.dll").NewProc("NtCreateFile")
-var ntSet = syscall.NewLazyDLL("ntdll.dll").NewProc("NtSetInformationFile")
-var getSecurity = syscall.NewLazyDLL("advapi32.dll").NewProc("GetSecurityInfo")
-var securityString = syscall.NewLazyDLL("advapi32.dll").NewProc("ConvertSecurityDescriptorToStringSecurityDescriptorW")
-var localFree = syscall.NewLazyDLL("kernel32.dll").NewProc("LocalFree")
+var skillsUpdateNTCreate = syscall.NewLazyDLL("ntdll.dll").NewProc("NtCreateFile")
+var skillsUpdateNTSet = syscall.NewLazyDLL("ntdll.dll").NewProc("NtSetInformationFile")
+var skillsUpdateGetSecurity = syscall.NewLazyDLL("advapi32.dll").NewProc("GetSecurityInfo")
+var skillsUpdateSDString = syscall.NewLazyDLL("advapi32.dll").NewProc("ConvertSecurityDescriptorToStringSecurityDescriptorW")
+var skillsUpdateLocalFree = syscall.NewLazyDLL("kernel32.dll").NewProc("LocalFree")
 
-type physicalParent struct {
+type skillsUpdateParent struct {
 	handles []syscall.Handle
 	last    syscall.Handle
 }
 
-func (p *physicalParent) close() {
+func (p *skillsUpdateParent) close() {
 	for i := len(p.handles) - 1; i >= 0; i-- {
 		syscall.CloseHandle(p.handles[i])
 	}
 }
-func component(name string) bool {
+func skillsUpdateComponent(name string) bool {
 	return name != "" && name != "." && name != ".." && !strings.ContainsAny(name, "/\\:")
 }
-func openAt(parent syscall.Handle, name string, directory, rename, create bool) (*os.File, error) {
-	if !component(name) {
+func skillsUpdateOpenAt(parent syscall.Handle, name string, directory, rename, create bool) (*os.File, error) {
+	if !skillsUpdateComponent(name) {
 		return nil, errors.New("invalid_component")
 	}
 	text, e := syscall.UTF16FromString(name)
 	if e != nil || len(text) > 32767 {
 		return nil, errors.New("invalid_component")
 	}
-	u := unicodeName{uint16((len(text) - 1) * 2), uint16(len(text) * 2), &text[0]}
-	a := attributes{Root: parent, Name: &u, Flags: 0x40}
+	u := skillsUpdateUnicode{uint16((len(text) - 1) * 2), uint16(len(text) * 2), &text[0]}
+	a := skillsUpdateAttributes{Root: parent, Name: &u, Flags: 0x40}
 	a.Length = uint32(unsafe.Sizeof(a))
 	access := uint32(syscall.GENERIC_READ | 0x100000)
 	share := uint32(syscall.FILE_SHARE_READ)
@@ -72,8 +72,8 @@ func openAt(parent syscall.Handle, name string, directory, rename, create bool) 
 		disposition = 2
 	}
 	var h syscall.Handle
-	var status ioStatus
-	code, _, _ := ntCreate.Call(uintptr(unsafe.Pointer(&h)), uintptr(access), uintptr(unsafe.Pointer(&a)), uintptr(unsafe.Pointer(&status)), 0, syscall.FILE_ATTRIBUTE_NORMAL, uintptr(share), uintptr(disposition), uintptr(options), 0, 0)
+	var status skillsUpdateIOStatus
+	code, _, _ := skillsUpdateNTCreate.Call(uintptr(unsafe.Pointer(&h)), uintptr(access), uintptr(unsafe.Pointer(&a)), uintptr(unsafe.Pointer(&status)), 0, syscall.FILE_ATTRIBUTE_NORMAL, uintptr(share), uintptr(disposition), uintptr(options), 0, 0)
 	runtime.KeepAlive(text)
 	runtime.KeepAlive(a)
 	if code != 0 {
@@ -87,7 +87,7 @@ func openAt(parent syscall.Handle, name string, directory, rename, create bool) 
 	}
 	return f, nil
 }
-func parentAt(path string) (*physicalParent, error) {
+func skillsUpdateParentAt(path string) (*skillsUpdateParent, error) {
 	path = filepath.Clean(path)
 	volume := filepath.VolumeName(path)
 	if !filepath.IsAbs(path) || len(volume) != 2 || volume[1] != ':' {
@@ -102,12 +102,12 @@ func parentAt(path string) (*physicalParent, error) {
 	if e != nil {
 		return nil, errors.New("physical_parent")
 	}
-	p := &physicalParent{handles: []syscall.Handle{h}, last: h}
+	p := &skillsUpdateParent{handles: []syscall.Handle{h}, last: h}
 	for _, part := range strings.Split(strings.TrimPrefix(path, root), string(os.PathSeparator)) {
 		if part == "" {
 			continue
 		}
-		f, e := openAt(p.last, part, true, false, false)
+		f, e := skillsUpdateOpenAt(p.last, part, true, false, false)
 		if e != nil {
 			p.close()
 			return nil, e
@@ -125,8 +125,8 @@ func parentAt(path string) (*physicalParent, error) {
 	}
 	return p, nil
 }
-func renameHeld(f *os.File, parent syscall.Handle, name string) error {
-	if !component(name) {
+func skillsUpdateRenameHeld(f *os.File, parent syscall.Handle, name string) error {
+	if !skillsUpdateComponent(name) {
 		return errors.New("invalid_component")
 	}
 	u, e := syscall.UTF16FromString(name)
@@ -148,32 +148,32 @@ func renameHeld(f *os.File, parent syscall.Handle, name string) error {
 	h.Root = parent
 	h.Length = uint32(2 * (len(u) - 1))
 	copy(unsafe.Slice(&h.Name[0], len(u)-1), u[:len(u)-1])
-	var status ioStatus
-	code, _, _ := ntSet.Call(f.Fd(), uintptr(unsafe.Pointer(&status)), uintptr(unsafe.Pointer(&buf[0])), uintptr(len(buf)), 10)
+	var status skillsUpdateIOStatus
+	code, _, _ := skillsUpdateNTSet.Call(f.Fd(), uintptr(unsafe.Pointer(&status)), uintptr(unsafe.Pointer(&buf[0])), uintptr(len(buf)), 10)
 	runtime.KeepAlive(f)
 	if code != 0 {
 		return errors.New("rename_collision_or_failure")
 	}
 	return nil
 }
-func identity(f *os.File) ([3]uint32, error) {
+func skillsUpdateIdentity(f *os.File) ([3]uint32, error) {
 	var info syscall.ByHandleFileInformation
 	e := syscall.GetFileInformationByHandle(syscall.Handle(f.Fd()), &info)
 	return [3]uint32{info.VolumeSerialNumber, info.FileIndexHigh, info.FileIndexLow}, e
 }
-func sddl(f *os.File) (string, error) {
+func skillsUpdateSDDL(f *os.File) (string, error) {
 	var sd uintptr
-	code, _, _ := getSecurity.Call(f.Fd(), 1, 7, 0, 0, 0, 0, uintptr(unsafe.Pointer(&sd)))
+	code, _, _ := skillsUpdateGetSecurity.Call(f.Fd(), 1, 7, 0, 0, 0, 0, uintptr(unsafe.Pointer(&sd)))
 	if code != 0 || sd == 0 {
 		return "", errors.New("metadata_read_failed")
 	}
-	defer localFree.Call(sd)
+	defer skillsUpdateLocalFree.Call(sd)
 	var text *uint16
 	var length uint32
-	ok, _, _ := securityString.Call(sd, 1, 7, uintptr(unsafe.Pointer(&text)), uintptr(unsafe.Pointer(&length)))
+	ok, _, _ := skillsUpdateSDString.Call(sd, 1, 7, uintptr(unsafe.Pointer(&text)), uintptr(unsafe.Pointer(&length)))
 	if ok == 0 || text == nil || length == 0 || length > 1<<20 {
 		return "", errors.New("metadata_read_failed")
 	}
-	defer localFree.Call(uintptr(unsafe.Pointer(text)))
+	defer skillsUpdateLocalFree.Call(uintptr(unsafe.Pointer(text)))
 	return syscall.UTF16ToString(unsafe.Slice(text, length)), nil
 }

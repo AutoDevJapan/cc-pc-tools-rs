@@ -65,3 +65,28 @@ func TestSkills3080OnlyRuntimeApplyRecoveryAcceptNewFlags(t *testing.T) {
 		}
 	}
 }
+func TestSkills3080RuntimePinsOriginalTwoReviewTasks(t *testing.T) {
+	a := &skillsResultRequest{Task: 3740, Job: "20261028-120305-todo-3740", SpecSHA: strings.Repeat("a", 64), FinalSHA: strings.Repeat("b", 64)}
+	b := &skillsResultRequest{Task: 3877, Job: "20261028-120558-todo-3877", SpecSHA: strings.Repeat("c", 64), FinalSHA: strings.Repeat("d", 64)}
+	if !skillsRuntimeReviewTasks(a, b) {
+		t.Fatal("original own reviews rejected")
+	}
+	for _, id := range []int{3712, 3896, 4115, 4184, 9999} {
+		c := *b
+		c.Task = id
+		if skillsRuntimeReviewTasks(a, &c) {
+			t.Fatal("other task accepted as required rubber review")
+		}
+	}
+	if skillsRuntimeReviewTasks(b, a) || skillsRuntimeReviewTasks(a, nil) {
+		t.Fatal("wrong role or missing peer accepted")
+	}
+}
+func TestSkills3080RuntimeRequiresDurableOutcome(t *testing.T) {
+	for _, recovery := range []bool{false, true} {
+		r := skillsUpdateResult{Installed: !recovery, Restored: recovery}
+		if skillsUpdateOutcomeQualified(r, recovery, false) || !skillsUpdateOutcomeQualified(r, recovery, true) {
+			t.Fatal("success without durable outcome or durable success rejected")
+		}
+	}
+}

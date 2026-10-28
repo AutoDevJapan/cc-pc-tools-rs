@@ -74,8 +74,8 @@ backupを動かす処理は廃止する。物理的に一度も不在になら�
 未知の現物をforce rollbackしない。元16資料の取得・中央書込み・一般guardへ広げない。
 ## 配置資格を本体へ統合する
 
-独立したinstallerの実行入口は廃止し、native処理は実行入口を持たないGo libraryにした。
-本体のapply-skills3080-updateとrecover-skills3080-updateだけが、現在の実writer、固定した
+独立したinstallerの実行入口は廃止し、native処理は同じpackage mainの非公開関数へ統合した。
+import可能な別packageも公開APIも残さず、本体のapply-skills3080-updateとrecover-skills3080-updateだけが、現在の実writer、固定した
 公開source/merged source、候補byte、両方の正式なreviewを通常の処理で確認してから呼ぶ。
 helperを別の実行物として生成・配布する経路はない。旧v3/v4 scriptと原指摘は保持する。
 
@@ -104,3 +104,9 @@ Windows Job Objectが受け持つ。brokerが終了未確認を返したとき�
 実プロセスを検証後・旧版移動後・候補公開後の各境界で終了し、deferを動かさずに
 journalから同IDの旧版復旧または公開済み候補確認ができることをWindowsで確認した。
 unknown targetを残す負例も成功した。これ以外の全OSクラッシュ経路やSACLは未検証である。
+
+最終受入では担当3740・3877を役割ごとに固定し、各job/spec/final/nativeを照合する。
+native outcomeのCreateNew/Flushが失敗した場合は成功の資格を返さず、原journal/実backup/
+stageを保持して未確認とする。元のpayloadが改変表示そのもので始まる旧発行も、まず
+同じ全原行を照合して保持し、その照合が成立しない場合だけ固定prefixを分けて検査する。
+実際の管理者送信はsubmit-admin-update.ps1からTimeoutSec 180を明示する。

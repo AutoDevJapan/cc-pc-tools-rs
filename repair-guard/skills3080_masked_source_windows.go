@@ -40,10 +40,20 @@ func skillsMaskedSourceBytes(raw, view []byte) bool {
 	if !utf8.Valid(raw) || !utf8.Valid(view) || bytes.IndexByte(raw, 0) >= 0 || bytes.IndexByte(view, 0) >= 0 || bytes.IndexByte(view, '\r') >= 0 {
 		return false
 	}
+	// First preserve a genuine legacy payload, including one whose original
+	// first physical line happens to equal the fixed annotation text.
+	if skillsMaskedSourcePayload(raw, view) {
+		return true
+	}
 	// Strip at most the one exact fixed representation prefix. Every original
 	// byte/line/marker rule below still applies to the unchanged payload. An
 	// unknown, changed or duplicated prefix remains unmatched source content.
-	view = bytes.TrimPrefix(view, []byte(skillsModificationNoticePrefix))
+	if !bytes.HasPrefix(view, []byte(skillsModificationNoticePrefix)) {
+		return false
+	}
+	return skillsMaskedSourcePayload(raw, bytes.TrimPrefix(view, []byte(skillsModificationNoticePrefix)))
+}
+func skillsMaskedSourcePayload(raw, view []byte) bool {
 	original := strings.ReplaceAll(string(raw), "\r\n", "\n")
 	if strings.ContainsRune(original, '\r') || strings.HasSuffix(original, "\n") != bytes.HasSuffix(view, []byte{'\n'}) {
 		return false

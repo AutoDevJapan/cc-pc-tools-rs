@@ -1,4 +1,4 @@
-package deploy3686
+package main
 
 import (
 	"bufio"
@@ -25,18 +25,18 @@ func TestSkills3080CrashBoundaryChild(t *testing.T) {
 		t.Fatal(e)
 	}
 	var input struct {
-		Operation        operation
+		Operation        skillsUpdateOperation
 		Record, Boundary string
 	}
 	if json.Unmarshal(raw, &input) != nil {
-		t.Fatal("fixture")
+		t.Fatal("skillsUpdateFixture")
 	}
 	stop := func() error {
 		fmt.Fprintln(os.Stdout, "READY")
 		_, _ = io.Copy(io.Discard, os.Stdin)
 		return errors.New("test input ended")
 	}
-	h := hooks{}
+	h := skillsUpdateHooks{}
 	switch input.Boundary {
 	case "validated":
 		h.afterValidation = stop
@@ -47,19 +47,19 @@ func TestSkills3080CrashBoundaryChild(t *testing.T) {
 	default:
 		t.Fatal("boundary")
 	}
-	_ = applyAt(input.Operation, input.Record, h)
+	_ = skillsUpdateApplyAt(input.Operation, input.Record, h)
 }
 func TestSkills3080RealProcessKillRecoversJournalBoundObjects(t *testing.T) {
 	for _, boundary := range []string{"validated", "old_moved", "published"} {
 		t.Run(boundary, func(t *testing.T) {
-			o, record := fixture(t)
-			path := filepath.Join(filepath.Dir(record), "crash-fixture.json")
+			o, record := skillsUpdateFixture(t)
+			path := filepath.Join(filepath.Dir(record), "crash-skillsUpdateFixture.json")
 			raw, _ := json.Marshal(struct {
-				Operation        operation
+				Operation        skillsUpdateOperation
 				Record, Boundary string
 			}{o, record, boundary})
 			if os.WriteFile(path, raw, 0600) != nil {
-				t.Fatal("fixture output")
+				t.Fatal("skillsUpdateFixture output")
 			}
 			exe, e := os.Executable()
 			if e != nil {
@@ -93,42 +93,42 @@ func TestSkills3080RealProcessKillRecoversJournalBoundObjects(t *testing.T) {
 			}
 			_ = cmd.Wait()
 			// The killed process did not run any deferred rollback.
-			r := recoverAt(o, record)
+			r := skillsUpdateRecoverAt(o, record)
 			if boundary == "published" {
-				if !r.Installed || !r.Published || sum(read(t, o.Target)) != o.New || sum(read(t, o.Backup)) != o.Old {
+				if !r.Installed || !r.Published || skillsUpdateTestSHA(skillsUpdateTestRead(t, o.Target)) != o.New || skillsUpdateTestSHA(skillsUpdateTestRead(t, o.Backup)) != o.Old {
 					t.Fatalf("published recovery failed: %+v", r)
 				}
-			} else if !r.Restored || r.Installed || sum(read(t, o.Target)) != o.Old {
+			} else if !r.Restored || r.Installed || skillsUpdateTestSHA(skillsUpdateTestRead(t, o.Target)) != o.Old {
 				t.Fatalf("original recovery failed: %+v", r)
 			}
 		})
 	}
 }
 func TestSkills3080RecoveryPreservesUnknownCurrentIdentity(t *testing.T) {
-	o, record := fixture(t)
-	r := applyAt(o, record, hooks{afterOldMove: func() error {
+	o, record := skillsUpdateFixture(t)
+	r := skillsUpdateApplyAt(o, record, skillsUpdateHooks{afterOldMove: func() error {
 		if os.WriteFile(o.Target, []byte("foreign current"), 0600) != nil {
-			return errors.New("fixture")
+			return errors.New("skillsUpdateFixture")
 		}
 		return errors.New("injected stop")
 	}})
 	if !r.RestoreFailed {
 		t.Fatal("foreign current not reached")
 	}
-	before := read(t, o.Target)
-	recovered := recoverAt(o, record)
-	if recovered.Installed || recovered.Restored || string(read(t, o.Target)) != string(before) || sum(read(t, o.Backup)) != o.Old {
+	before := skillsUpdateTestRead(t, o.Target)
+	recovered := skillsUpdateRecoverAt(o, record)
+	if recovered.Installed || recovered.Restored || string(skillsUpdateTestRead(t, o.Target)) != string(before) || skillsUpdateTestSHA(skillsUpdateTestRead(t, o.Backup)) != o.Old {
 		t.Fatal("unknown current was adopted or overwritten")
 	}
 }
 func TestSkills3080OutcomePreservesFirstFailure(t *testing.T) {
-	_, record := fixture(t)
-	r := result{Reason: "target_collision_or_publish_failed", RestoreFailed: true}
-	if !SaveOutcome(record, "apply", r) || SaveOutcome(record, "apply", result{Installed: true}) {
+	_, record := skillsUpdateFixture(t)
+	r := skillsUpdateResult{Reason: "target_collision_or_publish_failed", RestoreFailed: true}
+	if !skillsUpdateSaveOutcome(record, "apply", r) || skillsUpdateSaveOutcome(record, "apply", skillsUpdateResult{Installed: true}) {
 		t.Fatal("outcome missing or replaced")
 	}
-	var got result
-	if json.Unmarshal(read(t, record+".apply-outcome.json"), &got) != nil || got.Installed || !got.RestoreFailed {
+	var got skillsUpdateResult
+	if json.Unmarshal(skillsUpdateTestRead(t, record+".apply-outcome.json"), &got) != nil || got.Installed || !got.RestoreFailed {
 		t.Fatal("original failure outcome lost")
 	}
 }

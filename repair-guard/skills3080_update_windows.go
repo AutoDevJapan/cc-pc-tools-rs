@@ -189,6 +189,9 @@ func skillsCodeReviewAcceptedMode(received skillsReceived, head string, strict b
 func skillsCodeReviewPairAccepted(a, b skillsReceived, head string) bool {
 	return skillsCodeReviewAcceptedMode(a, head, true) && skillsCodeReviewAcceptedMode(b, head, true) && str(a.Metadata["id"]) != "" && a.Metadata["id"] != b.Metadata["id"] && str(a.Metadata["thread_id"]) != "" && str(b.Metadata["thread_id"]) != "" && a.Metadata["thread_id"] != b.Metadata["thread_id"]
 }
+func skillsRuntimeReviewTasks(a, b *skillsResultRequest) bool {
+	return a != nil && b != nil && a.Task == 3740 && b.Task == 3877 && skillsResultID(*a) && skillsResultID(*b)
+}
 func skillsRuntimeQualification(r skillsRequest, reg skillsRegistry, s *skillsFS) object {
 	return skillsRuntimeQualificationRead(r, reg, s, nil)
 }
@@ -214,6 +217,9 @@ func skillsRuntimeQualificationRead(r skillsRequest, reg skillsRegistry, s *skil
 		return object{"qualified": false, "reason": "review"}
 	}
 	if u.PeerReview != nil {
+		if !skillsRuntimeReviewTasks(r.Review, u.PeerReview) {
+			return object{"qualified": false, "reason": "review"}
+		}
 		if !skillsResultID(*u.PeerReview) || u.PeerReview.Task == r.Review.Task || u.PeerReview.Job == r.Review.Job {
 			return object{"qualified": false, "reason": "review"}
 		}

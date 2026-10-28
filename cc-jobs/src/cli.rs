@@ -1270,6 +1270,7 @@ impl Context {
         self.validate_review_launch(&mut job,quota_choice)?;
         cc_job_policy::apply_managed_launch_policy(&mut job);
         cc_job_policy::launch_context::reconcile_resume(&mut job, &conversation_source);
+        self.inherit_subwork_continuation(&mut job,&quota_inventory)?;
         if (crate::capacity::review_job(&job) || job["subwork"]["kind"] == "research")
             && job["sandbox"] == "read-only"
             && job["todo_id"].as_u64().is_some_and(|id| id > 0)

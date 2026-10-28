@@ -34,6 +34,7 @@ pub mod capacity_cycle;
 pub mod conversation_wait;
 pub mod direction_record;
 mod ordinary_assignment;
+mod continue_subwork;
 pub mod product_resume;
 pub mod product_retry;
 pub mod ready;
@@ -128,6 +129,20 @@ pub enum Command {
         relation: SubworkOptions,
         #[arg(long)]
         repair_owner_wait: bool,
+    },
+    /// Accept the current parent's new finite contract after a completed dependency.
+    ContinueSubwork {
+        id: i64,
+        #[arg(long)]
+        source_job: String,
+        #[arg(long)]
+        parent_job_id: String,
+        #[arg(long)]
+        resume_generation: u64,
+        #[arg(long)]
+        dependency_generation: u64,
+        #[arg(long)]
+        spec_sha256: String,
     },
     #[command(args_override_self = true, infer_long_args = true)]
     List {
@@ -1153,6 +1168,10 @@ pub fn execute(db: &mut Value, cmd: &Command, paths: &Paths) -> Result<Vec<Strin
             }
             row["updated"] = json!(now());
             output.push(format!("registered subwork {id}"));
+        }
+        Command::ContinueSubwork { id, source_job, parent_job_id, resume_generation, dependency_generation, spec_sha256 } => {
+            let receipt=continue_subwork::record(db,paths,*id,source_job,parent_job_id,*resume_generation,*dependency_generation,spec_sha256)?;
+            output.push(receipt.to_string());
         }
         Command::List { project, all } => {
             for i in db["items"].as_array().ok_or("invalid items")? {

@@ -110,3 +110,20 @@ native outcomeのCreateNew/Flushが失敗した場合は成功の資格を返さ
 stageを保持して未確認とする。元のpayloadが改変表示そのもので始まる旧発行も、まず
 同じ全原行を照合して保持し、その照合が成立しない場合だけ固定prefixを分けて検査する。
 実際の管理者送信はsubmit-admin-update.ps1からTimeoutSec 180を明示する。
+
+## 元のSkill名と配置名が異なる場合
+
+上流のディレクトリ名だけから保管先を作る判定では、実際の4件のうち3件を照合できない。
+同じ固定manifest内の`references/source.json`から、repository・commit・path・SHAと
+個別noticeの全宣言、改訂担当job、保存先namespaceを対応付ける。
+同namespaceのSKILL.md、原notice、同じ原行を残すmasked referenceを必要とし、
+JSONの重複/case alias、競合する二重対応、別の出典/担当/namespaceを受け入れない。
+原objectを読む段階では、取得済みindex/treeと照合したbytesとGit blobも同じmetadataへ結ぶ。
+取得済み原bytesのSHA/Git blob、notice、伏字の物理行と可視本文の照合は引き続き行う。
+既存の同名配置の経路は保持し、この対応付けだけで権利やアクセスの資格を増やさない。
+
+公開済みの実4件/28ファイルのmanifest SHA `5ab55cfca8778374e86862905e9c39d5bfe11bea2ae6e3e33ec82f82e7607f89`
+を変更せず、3f6ed705では実際に失敗し、対応付け後は構造上の出典保持判定が成功した。
+合成した取得済み原objectの正負例でも、出典・notice・担当・bytes/blob・namespaceと
+可視行の変更を拒否することを確認した。
+これは実manifestの配置、原コーパスの追加読取、Windows実行版の更新を証明するものではない。

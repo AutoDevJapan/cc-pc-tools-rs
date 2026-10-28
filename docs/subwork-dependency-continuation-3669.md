@@ -126,3 +126,24 @@ Fastの上流での実効量は未確認である。
 旧ACK198は新結果の証拠へ流用せず、Skills全598候補の完了とも区別する。
 新実行が追加で必要なら、現在の停止・依存・世代・排出・予算・実枠の利用可を
 通常のスケジューラで再確認する。本人の判断・PC操作・追加費用は不要である。
+
+## 利用枠切れ後の次の実行（2026-10-28 17:43 JST）
+
+元154151のquota終了後、通常経路が同じ3719の20261028-171959を受け付けた。
+通常metadataはrecovery v2・source 20261028-154151-todo-3719、
+`capacity_same_model_retry_count=2`・`capacity_retry_count=0`を返した。実nativeは
+`pac24df/gpt-6.1-sol`・`max`で、前の`p5a4c66`から別の公開namespaceへ移り、
+model-origin policy・effort-origin owner_requestと元spec SHAも一致した。
+17:43:21時点で63step・runningだった。登録表示だけでなく実turnのモデルを確認したが、
+正常終了・新canonicalの受領・Fastの上流での実効量はまだ確認していない。
+実装担当はこの再試行を直接起動せず、実行中のworkerも重ねて起動していない。
+
+HEAD45dcfc0dの正規checkpointは実actor173552で成功した。初回のTimeoutError後、
+tickの交代を確認したうえで通常CLIを1回だけ再試行し、17:43:04に
+saved=true・全11条件true・起動0・source変更0を受領した。共有排他や周期設定は
+変更していない。この受入済みHEADの保存未達は解消した。
+
+親3080へ新しい実行とcheckpointの証拠を通常noteで返し、全文の読み戻しを確認した。
+親の正規readerによる新canonical・199以降の受領は引き続き未確認で、Issue611はOPEN。
+元154151・旧072935の記録とACK198を保持し、実行中というmetadataを調査結果の
+受領へ昇格させない。実装ソース・ビルド・Windows版の変更はない。

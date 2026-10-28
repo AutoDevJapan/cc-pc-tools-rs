@@ -350,5 +350,65 @@
     "owner_input_required": false,
     "upstream_fast_effective_amount_observed": false,
     "parent_skills_scope_complete": false
+  },
+  "automatic_recovery_20261028_173552": {
+    "observed_at": "2026-10-28T17:43:21.5192337+09:00",
+    "normal_fixed_metadata": {
+      "metadata_only": true,
+      "id": "20261028-171959-todo-3719",
+      "todo_id": 3719,
+      "steps": 63,
+      "capacity_same_model_retry_count": 2,
+      "capacity_retry_count": 0,
+      "capacity_wait_count": null,
+      "status": "running",
+      "model_origin": "policy",
+      "effort_origin": "owner_request",
+      "effort": "max",
+      "last_failure_kind": null,
+      "model": "gpt-6.1-sol",
+      "selector": "pac24df",
+      "spec_sha256": "4f6fe32f62db56bed2acb4d378147ff952ad06230243fb45f7674f3158313fc3",
+      "native": {
+        "model": "pac24df/gpt-6.1-sol",
+        "effort": "max"
+      },
+      "recovery_version": 2,
+      "recovery_source_job": "20261028-154151-todo-3719"
+    },
+    "previous_native_model": "p5a4c66/gpt-6.1-sol",
+    "public_namespace_changed": true,
+    "normal_recovery_started_another_worker": true,
+    "observer_direct_launches": 0,
+    "successful_completion_claimed": false,
+    "canonical_parent_ack199_received": false,
+    "raw_native_or_original_reply_opened": false,
+    "upstream_fast_effective_amount_observed": false,
+    "checkpoint": {
+      "head": "45dcfc0d62cc0eac53eb1bbc4a38e716004a960a",
+      "actual_actor": "20261028-173552-todo-3669",
+      "finished_at": "2026-10-28T17:43:04.8949979+09:00",
+      "normal_cli_exit": 0,
+      "saved": true,
+      "all11_checks_true": true,
+      "launched": 0,
+      "source_files_changed": false,
+      "initial_timeout_retained": true,
+      "bounded_normal_retry_count": 1,
+      "lock_or_periodic_settings_changed": false
+    },
+    "parent_delivery": {
+      "todo": 3080,
+      "marker": "[3669:NativeQuotaRecoveryAndCheckpointSaved:20261028-173552]",
+      "saved": true,
+      "exact_readback": true,
+      "canonical_result_receipt_still_pending": true
+    },
+    "product_changes": 0,
+    "new_builds": 0,
+    "runtime_redeployed": false,
+    "issue_state": "OPEN",
+    "owner_input_required": false,
+    "pending": "Parent normal canonical reader must receive new3719 output for next199+; do not count old8486B or ACK198 as new receipt"
   }
 }

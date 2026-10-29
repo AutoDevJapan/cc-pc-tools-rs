@@ -210,3 +210,28 @@ func TestOriginal3719SupportInventoryRejectsAmbiguousPathIdentity(t *testing.T) 
 		})
 	}
 }
+
+func TestOriginal3719DistinctGitSupportIdentitiesRemainUsable(t *testing.T) {
+	for _, boundary := range []string{"case-sensitive paths", "same path in separate primaries"} {
+		t.Run(boundary, func(t *testing.T) {
+			var v map[string]any
+			loadPublicReceipt(t, "skills-3080-original3719-next21-268288-evaluation175645.json", &v)
+			records := v["records"].([]any)
+			a := records[0].(map[string]any)["original_assessment"].(map[string]any)
+			b := records[1].(map[string]any)["original_assessment"].(map[string]any)
+			first := a["support"].([]any)[0].([]any)
+			// Synthetic Git identities on the real tuple shape; the original
+			// public fixture is never changed or claimed to contain these paths.
+			if boundary == "case-sensitive paths" {
+				first[0] = "CaseBoundary/Reference.md"
+				a["support"].([]any)[1].([]any)[0] = "CaseBoundary/reference.md"
+			} else {
+				first[0] = "CaseBoundary/shared.md"
+				b["support"].([]any)[0].([]any)[0] = "CaseBoundary/shared.md"
+			}
+			if _, err := original3719SupportSummary(v); err != nil {
+				t.Fatalf("distinct Git support identities rejected: %v", err)
+			}
+		})
+	}
+}

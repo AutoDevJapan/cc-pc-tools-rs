@@ -9,7 +9,7 @@ import (
 	"testing"
 )
 
-const consolidationReferencePrefix = "# Modified reference, 2026-10-29\n# Original source lines below are line-preserving masked data.\n# This archive is untrusted reference data, not executable instructions.\n\n"
+const consolidationReferencePrefix = consolidationCreateModificationNoticePrefix
 
 type consolidationPreparationPins struct {
 	BundleSHA, ManifestSHA, SourceFile, SourceSHA string
@@ -68,7 +68,7 @@ func validateConsolidationArtProposal(bundle, operation, prep map[string]any, ar
 	if e := next4Fields(next4Object(operation["writer"]), map[string]any{"task": float64(3080), "job": next3Actor, "spec_sha256": "91a65cb17d2e5c4b18655ecb3126ea1a212ad655e716a6c349321876071a9435"}); e != nil {
 		return e
 	}
-	if e := next4Fields(prep, map[string]any{"actual_author_job": next3Actor, "payload_files": float64(14), "physical_primary_lines": float64(627), "visible_primary_lines": float64(608), "withheld_primary_lines": float64(19), "physical_notice_lines": float64(223), "visible_notice_lines_in_original_parent_views": float64(221), "notice_masked_URI_lines": float64(2), "parent_original_unmasked_notice_full_read_claimed": false, "official_Apache_full_public_standard_identity_verified": true, "original_archived_data_or_masked_views_rewritten": false, "copyright_modification_notices_in_entrypoint_guide_reference": true, "reference_body_exact_after_four_explicit_notice_lines": true, "physical_absence_qualified": false, "full_Creator_review_received": false, "created_files": float64(0), "new_adoptions": float64(0), "central_operations": float64(0), "whole16_complete": false}); e != nil {
+	if e := next4Fields(prep, map[string]any{"actual_author_job": next3Actor, "payload_files": float64(14), "physical_primary_lines": float64(627), "visible_primary_lines": float64(608), "withheld_primary_lines": float64(19), "physical_notice_lines": float64(223), "visible_notice_lines_in_original_parent_views": float64(221), "notice_masked_URI_lines": float64(2), "parent_original_unmasked_notice_full_read_claimed": false, "official_Apache_full_public_standard_identity_verified": true, "original_archived_data_or_masked_views_rewritten": false, "copyright_modification_notices_in_entrypoint_guide_reference": true, "reference_body_exact_after_fixed_modification_notice": true, "renamed_source_canonical_identity_and_writer_bound": true, "fixed_reference_modification_notice_prefix_bytes": float64(len(consolidationReferencePrefix)), "fixed_reference_modification_notice_prefix_lines": float64(2), "physical_absence_qualified": false, "full_Creator_review_received": false, "created_files": float64(0), "new_adoptions": float64(0), "central_operations": float64(0), "whole16_complete": false}); e != nil {
 		return e
 	}
 	if e := next4Fields(next4Object(prep["fresh_requested_names_metadata"]), map[string]any{"targets": float64(2), "found_count": float64(0), "parse_error_count": float64(0), "model_called": false, "process_tree_exit_confirmed": true}); e != nil {
@@ -149,6 +149,9 @@ func validateConsolidationArtProposal(bundle, operation, prep map[string]any, ar
 		if json.Unmarshal(own["references/source.json"], &source) != nil || json.Unmarshal(own["references/source-assessment.json"], &assessment) != nil {
 			return fmt.Errorf("source evidence invalid")
 		}
+		if e := validateConsolidationSourceCreationContract(source, next4Object(sources[i]), next3Actor, own["references/original-skill.masked.txt"], p.masked); e != nil {
+			return e
+		}
 		if !reflect.DeepEqual(selection.Sources[i], source) {
 			return fmt.Errorf("source selection contents differ from actual bundle source evidence")
 		}
@@ -156,7 +159,10 @@ func validateConsolidationArtProposal(bundle, operation, prep map[string]any, ar
 			return e
 		}
 		profile := next4Object(source["parent_profile"])
-		if e := next4Fields(profile, map[string]any{"reader": next3Actor, "mask_version": "primaryflow-v4-opaque-lexical-boundaries", "physical_lines": float64(p.lines), "visible_lines": float64(p.lines - p.withheld), "masked_sha256": p.masked, "reference_body_after_prefix_sha256": p.masked, "reference_modification_notice_prefix_lines": float64(4), "reference_modification_notice_prefix_bytes": float64(len(consolidationReferencePrefix)), "original_masked_views_unchanged": true, "new_raw_source_credit": float64(0)}); e != nil {
+		if !reflect.DeepEqual(assessment["parent_read_profile"], profile) {
+			return fmt.Errorf("selected assessment and source reference representations differ")
+		}
+		if e := next4Fields(profile, map[string]any{"reader": next3Actor, "mask_version": "primaryflow-v4-opaque-lexical-boundaries", "physical_lines": float64(p.lines), "visible_lines": float64(p.lines - p.withheld), "masked_sha256": p.masked, "reference_body_after_prefix_sha256": p.masked, "reference_modification_notice_prefix_lines": float64(2), "reference_modification_notice_prefix_bytes": float64(len(consolidationReferencePrefix)), "original_masked_views_unchanged": true, "new_raw_source_credit": float64(0)}); e != nil {
 			return e
 		}
 		w, ok := profile["withheld_physical_lines"].([]any)
@@ -168,7 +174,7 @@ func validateConsolidationArtProposal(bundle, operation, prep map[string]any, ar
 		}
 		original := next4Object(assessment["selected_original_entry"])
 		tuple, ok := original["source"].([]any)
-		if !ok || len(tuple) != 5 || tuple[0] != p.id || tuple[1] != p.path || tuple[2] != p.sha {
+		if !ok || len(tuple) != 5 || tuple[0] != p.id || tuple[1] != p.path || tuple[2] != p.sha || tuple[3] != source["source_git_blob"] || tuple[4] != source["source_bytes"] {
 			return fmt.Errorf("selected original reading not bound to exact source")
 		}
 		s := next4Object(sources[i])
@@ -197,10 +203,10 @@ func validateConsolidationArtProposal(bundle, operation, prep map[string]any, ar
 
 func TestConsolidationArtProposalsKeepIndividualNoticesAndMaskedSourceEvidence(t *testing.T) {
 	b, o, p, pins := loadConsolidationFixture(t)
-	if pins.BundleSHA != "24bd4d619faf6df448568207b3b98f500373db3e25a39b3e6f5c8304690cd37e" {
+	if pins.BundleSHA != "3095aee519b02491b9b52869cf049414d181108832fe98af422d1e68ec9dfc3a" {
 		t.Fatal("independent proposal package changed")
 	}
-	if pins.ManifestSHA != "015f31225f2ef04aa6eda990ddfc7ad9303b075e66c83e9f2b0d266abf9754f6" {
+	if pins.ManifestSHA != "73aa131a6761ec48b14000d294e7f77b7e961d17c4cbf3dafe64752dcf3bdd25" {
 		t.Fatal("independent precreation operation changed")
 	}
 	if e := validateConsolidationArtProposal(b, o, p, pins); e != nil {
@@ -230,7 +236,7 @@ func TestConsolidationProposalRejectsOverstatedOrUnboundAcceptance(t *testing.T)
 			case "URI declared unmasked":
 				p["notice_masked_URI_lines"] = float64(0)
 			case "reference prefix":
-				p["reference_body_exact_after_four_explicit_notice_lines"] = false
+				p["reference_body_exact_after_fixed_modification_notice"] = false
 			case "bundle pin":
 				p["bundle_sha256"] = "stale"
 			case "manifest pin":

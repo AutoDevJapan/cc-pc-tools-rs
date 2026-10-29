@@ -36,7 +36,6 @@ func checkOriginal3719PendingSnapshot(t *testing.T, file, expectedSHA string, fi
 	}
 	groups := map[string][]any{}
 	ids := map[string]bool{}
-	supports, saved, unsaved := 0, 0, 0
 	for i, item := range records {
 		r := received27Object(t, item)
 		p := received27Object(t, entries[i])
@@ -65,16 +64,12 @@ func checkOriginal3719PendingSnapshot(t *testing.T, file, expectedSHA string, fi
 			if len(tuple) != 8 {
 				t.Fatal("support observation tuple changed")
 			}
-			supports++
 			if tuple[4] == float64(0) {
-				unsaved++
 				for _, index := range []int{1, 2, 5, 6} {
 					if tuple[index] != nil {
 						t.Fatal("unsaved support acquired byte/hash/mask/reader evidence")
 					}
 				}
-			} else {
-				saved++
 			}
 		}
 	}
@@ -84,20 +79,6 @@ func checkOriginal3719PendingSnapshot(t *testing.T, file, expectedSHA string, fi
 	for sha, originals := range groups {
 		context := received27Object(t, contexts[sha])
 		common := received27Object(t, context["common"])
-		if inventory, present := common["support_inventory"]; present {
-			// Some original packets reference a fixed metadata inventory and
-			// carry only explicit overrides. The other rows remain saved/unread,
-			// with unknown bytes, hash and reader; they are not direct reads.
-			if len(originals) != 1 {
-				t.Fatal("inherited support inventory spans multiple primary records")
-			}
-			count, err := original3719InheritedUnread(received27Object(t, inventory), len(received27Array(t, received27Object(t, originals[0])["support"])))
-			if err != nil {
-				t.Fatal(err)
-			}
-			supports += count
-			saved += count
-		}
 		whole := map[string]any{}
 		for key, v := range common {
 			whole[key] = v
@@ -118,7 +99,11 @@ func checkOriginal3719PendingSnapshot(t *testing.T, file, expectedSHA string, fi
 			t.Fatal("independent parent read no longer binds this exact packet")
 		}
 	}
-	if supports != wantSupports || saved != wantSaved || unsaved != wantUnsaved {
+	summary, err := original3719SupportSummary(value)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if summary.total != wantSupports || summary.saved != wantSaved || summary.unsaved != wantUnsaved {
 		t.Fatal("original support states or nulls changed")
 	}
 }

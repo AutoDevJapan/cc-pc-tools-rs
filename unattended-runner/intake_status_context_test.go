@@ -29,10 +29,12 @@ func TestIntakeStatusLegacyContextRetainsTaskAndExplainsNextStep(t *testing.T) {
 			var result struct {
 				Metadata bool `json:"metadata_only"`
 				Items    []struct {
-					Todo  uint64 `json:"todo_id"`
-					Phase string `json:"phase"`
-					Owner string `json:"pending_owner"`
-					Next  string `json:"next_action"`
+					Todo             uint64 `json:"todo_id"`
+					Phase            string `json:"phase"`
+					Owner            string `json:"pending_owner"`
+					Next             string `json:"next_action"`
+					MessageTypeKnown bool   `json:"message_type_known"`
+					AttachmentsKnown bool   `json:"attachments_known"`
 				} `json:"items"`
 			}
 			if code != 0 || json.Unmarshal([]byte(out.String()), &result) != nil || !result.Metadata || len(result.Items) != 1 || loads != 1 {
@@ -41,6 +43,9 @@ func TestIntakeStatusLegacyContextRetainsTaskAndExplainsNextStep(t *testing.T) {
 			item := result.Items[0]
 			if item.Todo != todo || item.Phase != "origin_pending" || item.Owner != "OMB" || item.Next != "review_original_context_and_existing_task_linkage" {
 				t.Fatalf("legacy context lost responsibility or original task: %+v", item)
+			}
+			if item.MessageTypeKnown || item.AttachmentsKnown {
+				t.Fatal("status inferred message type or attachments from an unobserved legacy input")
 			}
 			after, err := json.Marshal(r.State)
 			if err != nil || !bytes.Equal(before, after) || strings.Contains(out.String(), q.Text) {
@@ -59,6 +64,9 @@ func TestIntakeStatusContextAdvicePreservesExplicitRoutingAndOtherPhases(t *test
 		{"registered", "", "", "", ""},
 		{"reported", "", "", "", ""},
 		{"history_watch", "", "", "", ""},
+		{"task_binding_pending", "", "", "", ""},
+		{"context_pending", "", "", "", ""},
+		{"source_context_pending", "", "", "", ""},
 	} {
 		t.Run(tc.phase+"/"+tc.owner+"/"+tc.next, func(t *testing.T) {
 			q := &Request{Message: "600", Todo: 42, Phase: tc.phase, PendingOwner: tc.owner, NextAction: tc.next}

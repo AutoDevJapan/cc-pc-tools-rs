@@ -123,7 +123,7 @@ func checkOriginal3719PendingSnapshot(t *testing.T, file, expectedSHA string, fi
 func original3719InheritedUnread(inventory map[string]any, overrides int) (int, error) {
 	count, ok := inventory["count"].(float64)
 	state, stateOK := inventory["default_current_saved_read"].([]any)
-	if !ok || count != float64(int(count)) || count < float64(overrides) || inventory["saved_in_index"] != count || !stateOK || len(state) != 6 || state[0] != float64(1) || state[1] != nil || state[2] != nil || state[3] != false || state[4] != false {
+	if !ok || count != float64(int(count)) || count < float64(overrides) || inventory["saved_in_index"] != count || !stateOK || !reflect.DeepEqual(state, []any{float64(1), nil, nil, false, false, float64(0)}) {
 		return 0, fmt.Errorf("inherited saved/unread support metadata gained content or read proof")
 	}
 	return int(count) - overrides, nil

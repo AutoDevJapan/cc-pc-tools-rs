@@ -79,7 +79,7 @@ func TestPrimaryNext16RetainsWholeOriginalPacketsAndMemberLimits(t *testing.T) {
 }
 
 func TestInheritedSupportDoesNotPromoteUnknownContentToReads(t *testing.T) {
-	for _, change := range []string{"valid", "reader", "mask", "state", "count", "index", "flag"} {
+	for _, change := range []string{"valid", "reader", "mask", "state", "count", "index", "flag", "other flag", "trailing value", "trailing unknown"} {
 		t.Run(change, func(t *testing.T) {
 			state := []any{float64(1), nil, nil, false, false, float64(0)}
 			v := map[string]any{"count": float64(116), "saved_in_index": float64(116), "default_current_saved_read": state}
@@ -96,6 +96,12 @@ func TestInheritedSupportDoesNotPromoteUnknownContentToReads(t *testing.T) {
 				v["saved_in_index"] = float64(115)
 			case "flag":
 				state[3] = true
+			case "other flag":
+				state[4] = true
+			case "trailing value":
+				state[5] = float64(1)
+			case "trailing unknown":
+				state[5] = nil
 			}
 			n, e := original3719InheritedUnread(v, 3)
 			if (change == "valid" && (e != nil || n != 113)) || (change != "valid" && e == nil) {

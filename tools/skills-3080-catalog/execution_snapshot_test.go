@@ -191,8 +191,34 @@ func TestPublishedCursorRetainsReceivedBatchesWithIndependentPins(t *testing.T) 
 	}
 	var summary ExecutionSummary
 	loadPublicReceipt(t, "skills-3080-execution-queue-summary.json", &summary)
-	if summary.Assessments < 1452 {
+	evidence, err := loadExecutionEvidence(filepath.Join("..", "..", "docs"), m)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !publishedAssessmentCountMatches(summary.Assessments, len(evidence.Assessments)) {
 		t.Fatal("the published cursor lost already received assessments")
+	}
+}
+
+func publishedAssessmentCountMatches(actual, registeredUnique int) bool {
+	return registeredUnique > 0 && actual == registeredUnique
+}
+
+func TestPublishedAssessmentCountRejectsDriftFromAllRegisteredOccurrenceIDs(t *testing.T) {
+	var m ExecutionManifest
+	loadPublicReceipt(t, "skills-3080-execution-evidence.json", &m)
+	evidence, err := loadExecutionEvidence(filepath.Join("..", "..", "docs"), m)
+	if err != nil {
+		t.Fatal(err)
+	}
+	expected := len(evidence.Assessments)
+	if !publishedAssessmentCountMatches(expected, expected) {
+		t.Fatal("registered unique occurrence union rejected")
+	}
+	for _, actual := range []int{expected - 71, expected - 1, expected + 1} {
+		if publishedAssessmentCountMatches(actual, expected) {
+			t.Errorf("summary %d accepted for registered unique occurrence union %d", actual, expected)
+		}
 	}
 }
 

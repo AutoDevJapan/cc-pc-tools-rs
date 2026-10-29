@@ -38,11 +38,19 @@ func original3719SupportSummary(value map[string]any) (original3719SupportCounts
 		}
 		packetRows[sha]++
 		packetOverrides[sha] += len(supports)
+		// Identity is scoped to one primary's Git inventory. Do not fold case
+		// or deduplicate names across different packages.
+		seenPaths := map[string]bool{}
 		for _, item := range supports {
 			tuple, ok := item.([]any)
 			if !ok || len(tuple) != 8 {
 				return out, fmt.Errorf("original support tuple differs")
 			}
+			relative, pathOK := tuple[0].(string)
+			if !pathOK || relative == "" || seenPaths[relative] {
+				return out, fmt.Errorf("per-primary support path is absent or repeated")
+			}
+			seenPaths[relative] = true
 			state, ok := tuple[4].(float64)
 			if !ok || state < 0 || state > 7 || state != float64(int(state)) {
 				return out, fmt.Errorf("original support state differs")
@@ -131,6 +139,73 @@ func TestOriginal3719SupportDeclarationsStayBoundToOriginalRecords(t *testing.T)
 			_, err := original3719SupportSummary(v)
 			if (change == "valid" && err != nil) || (change != "valid" && err == nil) {
 				t.Fatalf("%s: %v", change, err)
+			}
+		})
+	}
+}
+
+func TestOriginal3719SupportInventoryRejectsAmbiguousPathIdentity(t *testing.T) {
+	for _, change := range []string{"duplicate override with consistent totals", "empty path", "non-string path"} {
+		t.Run(change, func(t *testing.T) {
+			var v map[string]any
+			file := "skills-3080-original3719-next21-268288-evaluation175645.json"
+			if change == "duplicate override with consistent totals" {
+				file = "skills-3080-original3719-next6-250255-evaluation175645.json"
+			}
+			loadPublicReceipt(t, file, &v)
+			records := v["records"].([]any)
+			if change == "duplicate override with consistent totals" {
+				changed := false
+				for sha, item := range v["shared_original_contexts"].(map[string]any) {
+					common := item.(map[string]any)["common"].(map[string]any)
+					if _, hasInventory := common["support_inventory"]; !hasInventory {
+						continue
+					}
+					for _, item := range records {
+						r := item.(map[string]any)
+						if r["original_chunk_sha256"] != sha {
+							continue
+						}
+						a := r["original_assessment"].(map[string]any)
+						supports := a["support"].([]any)
+						for _, item := range supports {
+							tuple := item.([]any)
+							if tuple[4].(float64) <= 1 {
+								continue
+							}
+							// One repeated explicit read replaces an inherited unread
+							// slot. Grand totals stay equal and declarations follow
+							// the altered state counts; only path identity detects it.
+							a["support"] = append(supports, tuple)
+							states := v["original_support_state_counts"].(map[string]any)
+							state := strconv.Itoa(int(tuple[4].(float64)))
+							states["1"] = states["1"].(float64) - 1
+							states[state] = states[state].(float64) + 1
+							changed = true
+							break
+						}
+						if changed {
+							break
+						}
+					}
+					if changed {
+						break
+					}
+				}
+				if !changed {
+					t.Fatal("real inherited unread fixture absent")
+				}
+			} else {
+				a := records[0].(map[string]any)["original_assessment"].(map[string]any)
+				tuple := a["support"].([]any)[0].([]any)
+				if change == "empty path" {
+					tuple[0] = ""
+				} else {
+					tuple[0] = float64(1)
+				}
+			}
+			if _, err := original3719SupportSummary(v); err == nil {
+				t.Fatal("ambiguous per-primary support identity accepted despite consistent totals")
 			}
 		})
 	}

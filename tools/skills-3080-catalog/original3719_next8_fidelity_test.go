@@ -28,6 +28,9 @@ func checkOriginal3719PendingSnapshot(t *testing.T, file, expectedSHA string, fi
 	records := received27Array(t, value["records"])
 	entries := received27Array(t, value["entries"])
 	contexts := received27Object(t, value["shared_original_contexts"])
+	if err := original3719DeclaredCounts(value); err != nil {
+		t.Fatal(err)
+	}
 	if len(records) != last-first+1 || len(entries) != last-first+1 || len(contexts) != contextCount {
 		t.Fatal("exact original record and whole-chunk membership differs")
 	}
@@ -118,6 +121,17 @@ func checkOriginal3719PendingSnapshot(t *testing.T, file, expectedSHA string, fi
 	if supports != wantSupports || saved != wantSaved || unsaved != wantUnsaved {
 		t.Fatal("original support states or nulls changed")
 	}
+}
+
+func original3719DeclaredCounts(value map[string]any) error {
+	records, recordsOK := value["records"].([]any)
+	entries, entriesOK := value["entries"].([]any)
+	contexts, contextsOK := value["shared_original_contexts"].(map[string]any)
+	if !recordsOK || !entriesOK || !contextsOK || len(records) == 0 || len(records) != len(entries) || len(contexts) == 0 ||
+		value["original_primary_assessments"] != float64(len(records)) || value["complete_original_chunks"] != float64(len(contexts)) {
+		return fmt.Errorf("original assessment/chunk declarations differ from retained records and complete packet contexts")
+	}
+	return nil
 }
 
 func original3719InheritedUnread(inventory map[string]any, overrides int) (int, error) {

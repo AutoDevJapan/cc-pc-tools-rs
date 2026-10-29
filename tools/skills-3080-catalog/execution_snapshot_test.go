@@ -77,6 +77,7 @@ func publishedReceivedCursorCoverage(artifacts []ExecutionArtifact) error {
 	// Keep these independently received snapshots in the runtime cursor even
 	// if someone regenerates a self-consistent smaller manifest and summary.
 	for _, required := range []ExecutionArtifact{
+		{"skills-3080-original3719-next12-256267-evaluation175645.json", "811b6ec446ff3fdd7c6ed4c85250c1c59e6317e51f6775a5f05da46e1e056524", 12},
 		{"skills-3080-original3719-next6-250255-evaluation175645.json", "831104060ccb98ddd92a16aaf92011b6dff2b8fda05b28c7e35868d145a03167", 6},
 		{"skills-3080-primaryflow-next16-after195-evaluation175645.json", "fc5168d8c3d1709b44d6d1dc4850815bf776c281ee6604e742c960a6c4b1c16f", 16},
 		{"skills-3080-original3719-next4-246249-evaluation175645.json", "a92204428795cf0f3bbbb8c33bd458e1e3c549c6e1156de2fcc0bbd3ae1c2aac", 4},
@@ -134,6 +135,7 @@ func TestPublishedCursorRetainsReceivedBatchesWithIndependentPins(t *testing.T) 
 	var m ExecutionManifest
 	loadPublicReceipt(t, "skills-3080-execution-evidence.json", &m)
 	required := []ExecutionArtifact{
+		{"skills-3080-original3719-next12-256267-evaluation175645.json", "811b6ec446ff3fdd7c6ed4c85250c1c59e6317e51f6775a5f05da46e1e056524", 12},
 		{"skills-3080-original3719-next6-250255-evaluation175645.json", "831104060ccb98ddd92a16aaf92011b6dff2b8fda05b28c7e35868d145a03167", 6},
 		{"skills-3080-primaryflow-next16-after195-evaluation175645.json", "fc5168d8c3d1709b44d6d1dc4850815bf776c281ee6604e742c960a6c4b1c16f", 16},
 		{"skills-3080-original3719-next4-246249-evaluation175645.json", "a92204428795cf0f3bbbb8c33bd458e1e3c549c6e1156de2fcc0bbd3ae1c2aac", 4},

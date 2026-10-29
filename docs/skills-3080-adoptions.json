@@ -3,10 +3,10 @@
   "catalog_sha256": "2d73c9a038a41cc220a9687b935bfa1e0b315b65d9bd6d3e54ddb4111972876c",
   "catalog_occurrences": 73220,
   "installed_new": 162,
-  "integrated": 3,
+  "integrated": 4,
   "excluded": 15,
-  "pending_occurrences": 73040,
-  "pending_available_body_occurrences": 71965,
+  "pending_occurrences": 73039,
+  "pending_available_body_occurrences": 71964,
   "unavailable_site_occurrences": 428,
   "execution_held_occurrences": 647,
   "duplicate_policy": "One installed occurrence does not implicitly approve other copies, URLs or licenses",
@@ -4117,6 +4117,24 @@
       "original_raw_source_in_acquired_archive": true,
       "installed_source_view_is_masked": true,
       "source_published_notice_not_independent_authorship_proof": true
+    },
+    {
+      "inventory_id": "github:c0c5815afe581e7819cfd6429bbb519fa9b8638c067148e781228118b839c8c9",
+      "source_repo": "6mile/skills",
+      "source_commit": "920714f17d81e0a95c7a9bc51faf0a7921cd982d",
+      "source_path": "skills/mailnike/webclaw/SKILL.md",
+      "source_sha256": "6efecd417740587d4f9634937c3883ea97fb6bbb3bd4013069dbf130c762ef64",
+      "target": "dynamic-action-authorization",
+      "disposition": "integrated_existing",
+      "manifest": "skills-3080-installed-recovery-connections-manifest175645.json",
+      "entrypoint_sha256": "4e63c3b8df44a324f6238bf1cb8b0b33012c2a70384df3dbf8d1c806bb3cf95d",
+      "evidence": "skills-3080-web-claw-alias247-integration175645.json",
+      "reason": "Same fixed primary and independently associated individual MIT notice; actual existing target two current instruction buffers/3964B, IDs and hashes verified and workflow applied. No duplicate creation; support metadata/scripts/dependencies and unknown meanings are not equalized.",
+      "source_notice_preserved": true,
+      "upstream_original_preserved": true,
+      "copy_grant_extended_to_other_material": false,
+      "new_central_writes": 0,
+      "public_result_delta_review_pending_at_recording": true
     }
   ],
   "excluded_entries": [

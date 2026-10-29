@@ -1,0 +1,164 @@
+{
+  "domain": "skills3080-consolidation-current-readback-v1",
+  "job": "20261027-175645-todo-3080",
+  "original_creator_job": "20261027-175645-todo-3080",
+  "manifest_sha256": "73aa131a6761ec48b14000d294e7f77b7e961d17c4cbf3dafe64752dcf3bdd25",
+  "request_sha256": "bad8c95b6c9abda64eb7a6d8c61c6935c0b087a8342911cb62e5552ab82f9f95",
+  "native_call_id": "call_f3fd7d6488e94a06a409fb63ea3dc104",
+  "qualified_current_files": 14,
+  "bytes": 77902,
+  "normal_batches": 2,
+  "all_same_read_buffers_match_manifest": true,
+  "current_IDs_match_creation": true,
+  "direct_central_opens_by_parent_verifier": 0,
+  "new_Create_by_reader": 0,
+  "historical_physical_continuity_proven": false,
+  "current_OS_writer": "unproved",
+  "general_access_granted": false,
+  "original_registry_recovered": false,
+  "private_readback_proof_sha256": "26346360a8554da0657c054c5f63bc200753b295f88707dacbaf2f7c19b44eff",
+  "files": [
+    {
+      "index": 0,
+      "target": "memory-consolidation-state/SKILL.md",
+      "sha256": "48e9e0a4593dbe11791e4de5c63da000c2e2f04835864afb4e2fd67b89621fab",
+      "bytes": 1985,
+      "creation_and_current_object_identity_sha256": "e4b054b0f7537163172965d7f1b2f01ab1b049fe0202bd74d6951a97aa3b56f0",
+      "creation_ID_matches_current": true,
+      "same_handle_buffer_returned": true,
+      "reviewed_bytes_equal": true
+    },
+    {
+      "index": 1,
+      "target": "memory-consolidation-state/references/guide.md",
+      "sha256": "9efa7988ff27aab52851f627556d299d5c762d0c884c3ac717041b5210582277",
+      "bytes": 3278,
+      "creation_and_current_object_identity_sha256": "9abaae34e51a12d707bbf09d0da005cc330cd28d0ee9ff5a62048728bac544bd",
+      "creation_ID_matches_current": true,
+      "same_handle_buffer_returned": true,
+      "reviewed_bytes_equal": true
+    },
+    {
+      "index": 2,
+      "target": "memory-consolidation-state/references/LICENSE.txt",
+      "sha256": "43a990050404c5fd26abe14ba73fbdea97c43a0366360a16e35ec37e2f245e3c",
+      "bytes": 1074,
+      "creation_and_current_object_identity_sha256": "aa0b3235cf07b5f0279c4a07414db565597fc456744d5f1a1d61d55d06b99975",
+      "creation_ID_matches_current": true,
+      "same_handle_buffer_returned": true,
+      "reviewed_bytes_equal": true
+    },
+    {
+      "index": 3,
+      "target": "memory-consolidation-state/references/source.json",
+      "sha256": "f72e55379946b9e110a61fb55be71909541209e979ee04eda17d91dace67860f",
+      "bytes": 3857,
+      "creation_and_current_object_identity_sha256": "44ea0189c151cfb3b673bb81397cb86ecb38689d5cab2236f279637c9906a776",
+      "creation_ID_matches_current": true,
+      "same_handle_buffer_returned": true,
+      "reviewed_bytes_equal": true
+    },
+    {
+      "index": 4,
+      "target": "memory-consolidation-state/references/sources.md",
+      "sha256": "dc94ae30ec14d1cae1d1276d6d58aa8377d72761b1c265fef88fda4e63f60552",
+      "bytes": 1329,
+      "creation_and_current_object_identity_sha256": "51262c4918a21f92ce2cd264c62cb34542407253e8ab69f16eabcdc21d479c9e",
+      "creation_ID_matches_current": true,
+      "same_handle_buffer_returned": true,
+      "reviewed_bytes_equal": true
+    },
+    {
+      "index": 5,
+      "target": "memory-consolidation-state/references/source-assessment.json",
+      "sha256": "e7e1781bd3be2404ff41bf015916121901183bb29d21bdcf54b1a35501c4938e",
+      "bytes": 10317,
+      "creation_and_current_object_identity_sha256": "5a436f96858909b85a4f92e061e5478033f3f680c693c7f94959d874ca3d92a6",
+      "creation_ID_matches_current": true,
+      "same_handle_buffer_returned": true,
+      "reviewed_bytes_equal": true
+    },
+    {
+      "index": 6,
+      "target": "memory-consolidation-state/references/original-skill.masked.txt",
+      "sha256": "6339dad9a58ee54a736ca2495d2fcdd49165744675ad5d6a9574ca73f129136e",
+      "bytes": 4689,
+      "creation_and_current_object_identity_sha256": "7ddbaaf9f337253750efbe354ffd4b0c6fbcf1e8d3895baac330a62700428949",
+      "creation_ID_matches_current": true,
+      "same_handle_buffer_returned": true,
+      "reviewed_bytes_equal": true
+    },
+    {
+      "index": 7,
+      "target": "generative-art-reproducibility/SKILL.md",
+      "sha256": "c6c97201564ba9eebe55b1e3dc71ef55283e0a9c8c103aa8ceaf1780bddbed29",
+      "bytes": 1980,
+      "creation_and_current_object_identity_sha256": "0b94edc0cb4cc7c2b3b19b53a73ad708f2ef6e6093f455f05c0dfae990d1ce3c",
+      "creation_ID_matches_current": true,
+      "same_handle_buffer_returned": true,
+      "reviewed_bytes_equal": true
+    },
+    {
+      "index": 8,
+      "target": "generative-art-reproducibility/references/guide.md",
+      "sha256": "43bd0e4a0cd63fb7a6ed491f89f2eab6c42cf233bb546c483b964de185ef61b7",
+      "bytes": 3211,
+      "creation_and_current_object_identity_sha256": "d0af7295e95afcfc4ce9c6b7fafa9cdb7ed232cbd519e52d03fbd6434e066210",
+      "creation_ID_matches_current": true,
+      "same_handle_buffer_returned": true,
+      "reviewed_bytes_equal": true
+    },
+    {
+      "index": 9,
+      "target": "generative-art-reproducibility/references/LICENSE.txt",
+      "sha256": "58d1e17ffe5109a7ae296caafcadfdbe6a7d176f0bc4ab01e12a689b0499d8bd",
+      "bytes": 11357,
+      "creation_and_current_object_identity_sha256": "956b801c5e9c8b7fa459c09ce6250cfa0f91a82f15845e9d1f6d9a5ae9bf05c7",
+      "creation_ID_matches_current": true,
+      "same_handle_buffer_returned": true,
+      "reviewed_bytes_equal": true
+    },
+    {
+      "index": 10,
+      "target": "generative-art-reproducibility/references/source.json",
+      "sha256": "cd442534502491b1320282cc4fac3ea435626098f7d01829470c4ec609cf7783",
+      "bytes": 4796,
+      "creation_and_current_object_identity_sha256": "a2e7eb8eb8971f2c9d589ce8ed8c03d0f94d1f61f9cd2964f950499daf2abf2d",
+      "creation_ID_matches_current": true,
+      "same_handle_buffer_returned": true,
+      "reviewed_bytes_equal": true
+    },
+    {
+      "index": 11,
+      "target": "generative-art-reproducibility/references/sources.md",
+      "sha256": "e969507f711ee5b72b9b942629e61ee6ca57aa7e7b8e6037a7370524d3d9174d",
+      "bytes": 1743,
+      "creation_and_current_object_identity_sha256": "7afefd73fa7a1d9a534dac5abaf63c7d68b723593a007f0e1cce60e1ff9ffb7f",
+      "creation_ID_matches_current": true,
+      "same_handle_buffer_returned": true,
+      "reviewed_bytes_equal": true
+    },
+    {
+      "index": 12,
+      "target": "generative-art-reproducibility/references/source-assessment.json",
+      "sha256": "5b4b59188a59d212c3bb63def672e6dd96d10456615852bebd13f45f21fb3ee8",
+      "bytes": 8910,
+      "creation_and_current_object_identity_sha256": "54030d5663fb943b5875955becb10382c7d000e4e101bb68efefa270ac6eaa5d",
+      "creation_ID_matches_current": true,
+      "same_handle_buffer_returned": true,
+      "reviewed_bytes_equal": true
+    },
+    {
+      "index": 13,
+      "target": "generative-art-reproducibility/references/original-skill.masked.txt",
+      "sha256": "d35bbb2edb485d3cc2dc32e994b7baa2073b1c97585c3ad4f20a2274259e20eb",
+      "bytes": 19376,
+      "creation_and_current_object_identity_sha256": "50c4f6463717169f071aaeda66644d54693260c7e9c4084070eed0bb52521db8",
+      "creation_ID_matches_current": true,
+      "same_handle_buffer_returned": true,
+      "reviewed_bytes_equal": true
+    }
+  ],
+  "identity_digest_definition": "SHA256 UTF8(volume+LF+file_id_128); raw platform IDs remain private",
+  "whole16_complete": false
+}

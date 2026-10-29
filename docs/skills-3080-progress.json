@@ -3,7 +3,7 @@
   "issue": "https://github.com/AutoDevJapan/cc-pc-tools-rs/issues/283",
   "observed_at": "2026-10-24T17:15:09.0197014+09:00",
   "phase_a": "partial; 647 additional text shapes held by execution review",
-  "phase_b": "main受入は新規配置162/既存統合4/登録評価1535。作業版は原3719の268..288・追加21評価を完全な原結果/担当/notice/伏字/未読/nullと共に1556へ反映する準備で、最終採否/許諾/中央書込は0。新2案14fileは別の正規全文内容レビューと新規作成/同buffer読戻し/発見/現手順確認が残る。全16/73220は未完。",
+  "phase_b": "作業版は実導入164・統合4・再確認が残る除外記録15。新2件は一度の通常CreateNew14/77902B、通常2batchのcurrent ID/SHA/同buffer、3048PASS2、freshCodex発見2と現4手順10454Bの実依頼2判断/合成5例を確認。main162との差分2と既受領289..294の追加6評価は公開結果の別モデル二役レビューとCI/通常merge待ち。全16/73220は継続。",
   "catalog_sha256": "2d73c9a038a41cc220a9687b935bfa1e0b315b65d9bd6d3e54ddb4111972876c",
   "source_count": 16,
   "fixed_public_repos": [
@@ -286,9 +286,9 @@
   "site_entries_with_body": 9862,
   "site_entries_without_body": 428,
   "execution_held_shapes": 647,
-  "candidate_designs": 162,
-  "independently_accepted": 162,
-  "installed": 162,
+  "candidate_designs": 164,
+  "independently_accepted": 164,
+  "installed": 164,
   "integrated": 4,
   "excluded": 15,
   "units": {
@@ -346,23 +346,23 @@
     "actual_installed": 8
   },
   "candidate_count_definitions": {
-    "candidate_designs": "Legacy28 plus directly sourced actual designs134; legacy3 pending drafts/catalog rows remain separate;162 is not a cap.",
+    "candidate_designs": "Legacy28 plus136 directly sourced actual designs. Three legacy pending drafts remain separate.",
     "additional_authored_drafts_not_in_plans": 3,
-    "authored_total": 165,
-    "installed": 162,
+    "authored_total": 167,
+    "installed": 164,
     "pending_plan_targets": 0,
     "archived_draft_targets": 8,
     "archived_draft_is_subset_of_batch03": true,
     "independently_accepted": "162 installed new adaptations include frozen full-content acceptances from Creator4193, Creator4208 and Creator4215 and actual current ID/hash/buffer readback, structure, fresh target discovery and explicit current instruction decisions. This newest public result is recorded before its final two-role review/CI/merge. No implicit selection, full-catalog discovery, context-budget or whole16 completion proof.",
-    "not_semantically_disposed_occurrences": 73039,
+    "not_semantically_disposed_occurrences": 73037,
     "additional_draft_sources": [
       "skills-3080-mizchi-sql-draft.json",
       "skills-3080-mizchi-mutation-draft.json"
     ],
-    "authored_total_definition": "162 actually installed new adaptations plus3 legacy pending drafts; source aliases/catalog rows are not installation counts.",
-    "new_proposed_uninstalled_targets": 2,
+    "authored_total_definition": "164 actually installed adaptations plus3 legacy pending drafts. Source aliases and catalog rows are not installations.",
+    "new_proposed_uninstalled_targets": 0,
     "authored_including_new_proposals": 167,
-    "authored_including_new_proposals_definition": "162 actually installed new adaptations+3 legacy pending drafts+2 new uninstalled proposals=167. Source aliases are not new Skill installations;162 is not a cap."
+    "authored_including_new_proposals_definition": "164 actually installed adaptations+3 legacy pending drafts+0 new uninstalled proposals=167. No count cap."
   },
   "kepano_entrypoint_assessment": {
     "pinned_entrypoints": 6,
@@ -616,7 +616,7 @@
     "guard_client_resource": true,
     "state": "classification_unverified"
   },
-  "recorded_at": "2026-10-29T04:29:49.2792213+00:00",
+  "recorded_at": "2026-10-29T06:47:28.4013993+00:00",
   "total_skill_named_body_read_definition": "This field preserves the historical complete-source subset only. Current raw/workflow primary coverage is projected from the canonical source components and sixmile evaluation index in all_fulltext_primary_paths_including_partial_sources/all_workflow_primary_paths_including_partial_sources, not copied here.",
   "openai_entrypoint_evaluation": {
     "rights_accepted": false,
@@ -1703,7 +1703,7 @@
     "current_individual_rights_entries": 5,
     "main_accepted_excluded_before_this_delta": 8,
     "branch_excluded": 15,
-    "branch_pending": 73039,
+    "branch_pending": 73037,
     "primary_and_support_read_states_unchanged": true,
     "existing_primary_amendment_separate": true,
     "source_scripts_executed": false,
@@ -3559,5 +3559,34 @@
     "whole16_complete": false,
     "queue_sha256": "696b51e638bc8a34f588edb73e5c25f0978b921ec30666af727f4248aaea719e",
     "execution_manifest_sha256": "4b1b8906fcf31ec0963c93114433961fd0fbf692899cbc296a67715d09c88715"
+  },
+  "consolidation_art_installation": {
+    "evidence": "skills-3080-consolidation-art-installation-evidence175645.json",
+    "created_targets": 2,
+    "files": 14,
+    "bytes": 77902,
+    "normal_batches": 2,
+    "fresh_found": 2,
+    "current_instruction_files": 4,
+    "current_instruction_bytes": 10454,
+    "actual_task_decisions": 2,
+    "synthetic_cases": 5,
+    "main_before_result": 162,
+    "working_actual_new": 164,
+    "public_result_review_pending": true,
+    "whole16_complete": false
+  },
+  "latest_received6_after1556": {
+    "original3719_assessments": 6,
+    "complete_original_chunks": 3,
+    "support_metadata": 73,
+    "saved_support": 48,
+    "unsaved_support": 25,
+    "direct_raw_support": 13,
+    "direct_masked_support": 6,
+    "reuse_support": 4,
+    "saved_unread_support": 25,
+    "new_grants_dispositions_or_central_writes": 0,
+    "whole16_complete": false
   }
 }

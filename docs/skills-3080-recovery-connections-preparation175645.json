@@ -23,11 +23,11 @@
       ],
       "capability_distinction": "動的metadataで列挙する操作とserver側の主体・tenant・資源・作用を結ぶ判定に集中する。MCP全体設計、一般セキュリティ監査、通常フォームの状態管理とは用途を分ける。",
       "unknown_existing_bodies_read": 0,
-      "fresh_name_probe_completed": false,
       "qualified_absence_completed": false,
       "full_Creator_review_received": false,
       "created_files": 0,
-      "whole16_complete": false
+      "whole16_complete": false,
+      "fresh_name_metadata_probe_completed": true
     },
     {
       "target": "backup-restore-reconciliation",
@@ -49,11 +49,11 @@
       ],
       "capability_distinction": "復元するsnapshot・含有範囲・staging先と、実際に復元した内容・切替後の結果を対応させる。単一fileの原子的更新、会話の引継ぎ、転送だけの確認とは用途を分ける。",
       "unknown_existing_bodies_read": 0,
-      "fresh_name_probe_completed": false,
       "qualified_absence_completed": false,
       "full_Creator_review_received": false,
       "created_files": 0,
-      "whole16_complete": false
+      "whole16_complete": false,
+      "fresh_name_metadata_probe_completed": true
     },
     {
       "target": "connection-scope-reconciliation",
@@ -75,11 +75,11 @@
       ],
       "capability_distinction": "同serviceの複数connectionから、期待するsubject/Org/目的に合う明示接続を選び、proxy受付とnative業務結果を対応させる。OAuth同意scopeの選択、遠隔job結果、URLキーencoding全般とは用途を分ける。",
       "unknown_existing_bodies_read": 0,
-      "fresh_name_probe_completed": false,
       "qualified_absence_completed": false,
       "full_Creator_review_received": false,
       "created_files": 0,
-      "whole16_complete": false
+      "whole16_complete": false,
+      "fresh_name_metadata_probe_completed": true
     }
   ],
   "payload_files": 21,
@@ -231,5 +231,25 @@
     "source_original_251_packet_reconstructed_to_independent_sha": true,
     "original246_and249_compared_with_published_fixed_values": true,
     "new_central_operations": 0
+  },
+  "initial_creator_and_absence_gate_flags_are_preparation_time": true,
+  "probe_record_correction": {
+    "reviewed_head": "ec412eece4afbf658e81a898e9ac734e57f7825e",
+    "qualified_full_reviewer_task": 4215,
+    "qualified_full_reviewer_job": "20261029-090525-todo-4215",
+    "original_response_sha": "19fd47b0bc4a3a1ac1e6c54bead198e3c4b1f56cde11e38e289893a9b58eeeda",
+    "M": 0,
+    "S": 1,
+    "N": 0,
+    "metadata_query_completion_now_consistent_for_all3": true,
+    "physical_absence_still_unqualified": true,
+    "payloads_and_manifest_unchanged": true,
+    "full_Creator_source_spec_kept_for_same21_payload_qualification": true,
+    "new_central_operations": 0,
+    "actual_stale_flag_Red_reproduced": true,
+    "current_affected_full_package_seconds": 10.012,
+    "vet_exit": 0,
+    "actual12_negative_cases": true,
+    "actual_queue_and4snapshots_used": true
   }
 }

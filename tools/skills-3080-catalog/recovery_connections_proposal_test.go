@@ -36,6 +36,15 @@ func validateRecoveryProposal(bundle, operation, prep, original map[string]any) 
 	if e := next4Fields(next4Object(prep["fresh_requested_names_metadata"]), map[string]any{"targets": float64(3), "found_count": float64(0), "parse_error_count": float64(0), "model_called": false, "process_tree_exit_confirmed": true}); e != nil {
 		return e
 	}
+	prepared, ok := prep["prepared_targets"].([]any)
+	if !ok || len(prepared) != 3 {
+		return fmt.Errorf("exact three target preparation records absent")
+	}
+	for i, value := range prepared {
+		if e := next4Fields(next4Object(value), map[string]any{"target": recoveryProposalPins[i].name, "fresh_name_metadata_probe_completed": true, "qualified_absence_completed": false, "created_files": float64(0)}); e != nil {
+			return e
+		}
+	}
 	targets, ok := bundle["targets"].([]any)
 	if !ok || len(targets) != 3 {
 		return fmt.Errorf("exact three proposal targets absent")
@@ -229,7 +238,7 @@ func TestRecoveryConnectionsProposalKeepsIndividualNoticesAndOriginalReaders(t *
 }
 
 func TestRecoveryConnectionsProposalRejectsCrossTargetOrEvidencePromotion(t *testing.T) {
-	for _, mutation := range []string{"outside root", "outside target", "duplicate target", "missing payload", "wrong writer", "root license", "LF-normalized notice with updated hashes", "parent raw invented with updated hashes", "original reader raw invented with updated hashes", "metadata promoted to absence", "proposal promoted to creation"} {
+	for _, mutation := range []string{"outside root", "outside target", "duplicate target", "missing payload", "wrong writer", "root license", "LF-normalized notice with updated hashes", "parent raw invented with updated hashes", "original reader raw invented with updated hashes", "metadata probe not completed", "metadata promoted to absence", "proposal promoted to creation"} {
 		t.Run(mutation, func(t *testing.T) {
 			b, o, p, original := loadRecoveryProposal(t)
 			switch mutation {
@@ -267,6 +276,8 @@ func TestRecoveryConnectionsProposalRejectsCrossTargetOrEvidencePromotion(t *tes
 				})
 			case "metadata promoted to absence":
 				p["qualified_target_absence_completed"] = true
+			case "metadata probe not completed":
+				next4Object(p["prepared_targets"].([]any)[0])["fresh_name_metadata_probe_completed"] = false
 			case "proposal promoted to creation":
 				p["created_files"] = float64(21)
 			}

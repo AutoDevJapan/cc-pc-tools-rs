@@ -23,6 +23,10 @@ func TestPrimaryflowNext79RetainsOriginalMeaningAndPendingMemberRights(t *testin
 }
 
 func checkPrimaryflowOriginalMeaning(t *testing.T, file, expectedSHA string, recordsExpected, contextsExpected, membersExpected int) {
+	checkPrimaryflowOriginalMeaningWithCorrection(t, file, expectedSHA, recordsExpected, contextsExpected, membersExpected, true)
+}
+
+func checkPrimaryflowOriginalMeaningWithCorrection(t *testing.T, file, expectedSHA string, recordsExpected, contextsExpected, membersExpected int, historicalCorrection bool) {
 	t.Helper()
 	requireAssessmentInputRegistered(t, file, expectedSHA, recordsExpected)
 	var outer map[string]any
@@ -140,6 +144,12 @@ func checkPrimaryflowOriginalMeaning(t *testing.T, file, expectedSHA string, rec
 	}
 	if members != membersExpected {
 		t.Fatal("metadata aliases became individual context reads")
+	}
+	if !historicalCorrection {
+		if _, present := outer["historical_parent_arithmetic_correction"]; present {
+			t.Fatal("unrelated historical correction added to new packet set")
+		}
+		return
 	}
 	correction := received27Object(t, outer["historical_parent_arithmetic_correction"])
 	if correction["correct_aggregate_physical"] != float64(1143) || correction["correct_aggregate_visible"] != float64(1039) || correction["correct_aggregate_withheld"] != float64(104) || correction["original_ACK_not_rewritten"] != true {

@@ -122,6 +122,11 @@
       "file": "skills-3080-rental-ledger-actual-designs175645.json",
       "sha256": "4aff25d585839e19ad13713127f3cb904b305eaa80a598f737b7aed0f9b40e6d",
       "target_count": 1
+    },
+    {
+      "file": "skills-3080-recovery-connections-actual-designs175645.json",
+      "sha256": "1e343dc133cd943a75f2c4835339776a2cc2b9caf8d0b2351ef6e7278b0bf8a3",
+      "target_count": 3
     }
   ]
 }

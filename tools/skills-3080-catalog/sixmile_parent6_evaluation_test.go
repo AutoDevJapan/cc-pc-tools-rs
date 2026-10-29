@@ -454,6 +454,12 @@ func TestExpandedSixmileIndexAddsNewCohortAndReadingAmendmentExactlyOnce(t *test
 				}
 				accepted[id] = row
 			}
+			for id, row := range validatedRecoveryDispositions(t) {
+				if accepted[id].ID != "" {
+					t.Fatal("recovery source already has a current acceptance")
+				}
+				accepted[id] = row
+			}
 			switch name {
 			case "received_without_current_acceptance":
 				accepted = nil

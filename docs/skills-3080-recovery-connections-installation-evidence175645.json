@@ -1,0 +1,182 @@
+{
+  "todo": 3080,
+  "publisher_job": "20261027-175645-todo-3080",
+  "creator_job": "20261027-175645-todo-3080",
+  "new_targets_created": 3,
+  "successful_CreateNew_count": 1,
+  "current_files_readback_verified": 21,
+  "bytes": 107677,
+  "manifest_path": "docs/skills-3080-operations/create-recovery-connections-175645.json",
+  "manifest_sha256": "03612ee51f6249602bd4afd59c13d79430ff58cd464d0872e1cb1bb9d37eb27f",
+  "request_sha256": "0e6861bb732d3c110fd1768fcee2565e46854c1f6f18b2e39073a76c81fd3efd",
+  "creation_input_head": "11aaab41f9e804fae36eabcfae11f79505e45751",
+  "frozen_Creator": {
+    "Creator_task": 4215,
+    "Creator_job": "20261029-092744-todo-4215",
+    "Creator_saved_spec": "5a1d14382742d0c91d541a746e1d7a67e556578587431e9c9e7edd52e55f6974",
+    "full_original_sha256": "4d7c399b1635e890652dafec66c4644864ceb0a70f739ef76b9fa6e228236b91",
+    "full_no_comparison": true,
+    "selected_PUBLIC_inputs": 13,
+    "payload_files": 21,
+    "manifest_sha256": "03612ee51f6249602bd4afd59c13d79430ff58cd464d0872e1cb1bb9d37eb27f",
+    "request_sha256": "0e6861bb732d3c110fd1768fcee2565e46854c1f6f18b2e39073a76c81fd3efd",
+    "actual_CreateNew_success_observed": true,
+    "created_targets": 3,
+    "created_files": 21,
+    "existing_overwrites": 0,
+    "successful_CreateNew_count": 1,
+    "never_edit_restart_or_recreate": true,
+    "native_receipt_capture_next": true,
+    "readback_discovery_and_current_application_not_yet_claimed": true,
+    "whole16_complete": false
+  },
+  "frozen_Creator_flags_are_historical_creation_time": true,
+  "qualified_full_review": {
+    "consumer_job": "20261027-175645-todo-3080",
+    "producer_job": "20261029-092744-todo-4215",
+    "producer_task": 4215,
+    "immutable_origin_job": "20261027-175645-todo-3080",
+    "actual_author": "20261027-175645-todo-3080",
+    "registered_spec_sha256": "5a1d14382742d0c91d541a746e1d7a67e556578587431e9c9e7edd52e55f6974",
+    "source_proof_sha256": "0e11892ba15850d2611d7abdbfd115dfaaacc0de7c7f0a1f29ad3354afc1b39f",
+    "fixed_head": "11aaab41f9e804fae36eabcfae11f79505e45751",
+    "full_no_comparison": true,
+    "selected_PUBLIC_inputs": 13,
+    "payload_files": 21,
+    "manifest_sha256": "03612ee51f6249602bd4afd59c13d79430ff58cd464d0872e1cb1bb9d37eb27f",
+    "normal_typed_qualified": true,
+    "native": [
+      {
+        "timestamp": "2026-10-29T00:28:31.762Z",
+        "model": "gpt-6-luna",
+        "effort": "max",
+        "service_tier": null
+      }
+    ],
+    "model_origin": "owner_request",
+    "effort_origin": "owner_request",
+    "thread_matches": true,
+    "cwd_matches": true,
+    "raw_bytes": 1956,
+    "raw_sha256": "4d7c399b1635e890652dafec66c4644864ceb0a70f739ef76b9fa6e228236b91",
+    "original_equals_job_last_message": true,
+    "M": 0,
+    "S": 0,
+    "N": 0,
+    "acceptance_marker_present": true,
+    "not_frozen_until_real_Create_success": true,
+    "central_operations": 0,
+    "whole16_complete": false
+  },
+  "publication_review_coordination_origin_job": "20261026-214717-todo-3080",
+  "referenced_artifacts": {
+    "bundle": {
+      "file": "skills-3080-recovery-connections-actual-bundle175645.json",
+      "sha256": "ddadd11d3c16b32fe601205d1439a26c1e73810e09bb3784dfe75c6b3975362e"
+    },
+    "manifest": {
+      "file": "skills-3080-installed-recovery-connections-manifest175645.json",
+      "sha256": "dad253423466367fc058c14b3937c1ef5e1fdcae7822eac4b01832305c6dc1b7"
+    },
+    "creation": {
+      "file": "skills-3080-recovery-connections-create-evidence175645.json",
+      "sha256": "74a961f9dcaaa9529ffc2fff61f502db06d802bd20b253646609b489ed8fde3d"
+    },
+    "readback": {
+      "file": "skills-3080-recovery-connections-consume-evidence175645.json",
+      "sha256": "2066e9c15160766613122820016aa07e6d9ed66666330665178cd7aeb3849d23"
+    },
+    "discovery": {
+      "file": "skills-3080-recovery-connections-discovery175645.json",
+      "sha256": "e9f775bc0e4db3569ff2ebb97799b0b678ca939a6939814f087c1b564a6ec82b"
+    },
+    "application": {
+      "file": "skills-3080-recovery-connections-application175645.json",
+      "sha256": "04d65cb3b0377987a2d6f91948005c348ab0f44b521d8f8aa0a8697802dd1e8d"
+    },
+    "design": {
+      "file": "skills-3080-recovery-connections-actual-designs175645.json",
+      "sha256": "1e343dc133cd943a75f2c4835339776a2cc2b9caf8d0b2351ef6e7278b0bf8a3"
+    }
+  },
+  "original_precreation_qualification": {
+    "qualified": true,
+    "created_files": 0,
+    "payload_files": 21,
+    "request_sha256": "0e6861bb732d3c110fd1768fcee2565e46854c1f6f18b2e39073a76c81fd3efd",
+    "historical_absence_only": true,
+    "current_absence_claim": false,
+    "original_receipt_sha256": "64ecea1507c856a54bd30eb8bdc6be90ac517ea8eb3303fe1f886a4c6c84b67f"
+  },
+  "structure": {
+    "exit": 0,
+    "stdout": "PASS: 3 explicit skills; structure, descriptions, references, hashes, scenario pairs; in-memory bundle only; no deployment implied\n",
+    "actual_returned_buffers": 21,
+    "new_central_operations": 0
+  },
+  "native_invocation_literal_equal": false,
+  "native_invocation_trim_equal": false,
+  "actual_invocation_characters": 446,
+  "rendered_invocation_characters": 425,
+  "exact_executable_operation_and_parsed_owned_paths_match": true,
+  "native_path_spelling_difference": {
+    "actual_native_call": "call_fbe8e9db91674be687522b1ba1ace09b",
+    "literal_equal": false,
+    "trim_equal": false,
+    "actual_characters": 446,
+    "rendered_characters": 425,
+    "exact_executable_and_create_operation_match": true,
+    "all6_exec_options_match_except_path_separator_spelling": true,
+    "quoted_request_paths_resolve_to_same_explicit_owned_file": true,
+    "workdirs_resolve_to_same_registered_root": true,
+    "canonical_request_sha256": "0e6861bb732d3c110fd1768fcee2565e46854c1f6f18b2e39073a76c81fd3efd",
+    "original_native_renderer_and_receipt_not_rewritten": true,
+    "normal_current_consume_3batches_accepted_same_native_request": true,
+    "central_body_reads_by_diagnosis": 0,
+    "Create_repeated": 0
+  },
+  "source_and_original_native_not_rewritten": true,
+  "discovered_targets": 3,
+  "metadata_total": 482,
+  "parse_errors": 0,
+  "scan_limit_diagnostics": 2,
+  "current_instruction_files": 6,
+  "current_instruction_bytes": 14197,
+  "actual_current_workflow_decisions": 3,
+  "synthetic_decisions": 10,
+  "new_real_restore_customer_gateway_operations": 0,
+  "implicit_selection_full_discovery_context_budget_proven": false,
+  "new_global_raw_source_credit": 0,
+  "unknown_material_or_third_party_rights_accepted": false,
+  "historical_original_source_and_preparation_records_unchanged": true,
+  "subscription_execution": {
+    "mode": "unknown_historical_execution",
+    "current_observed_mode": "oauth_subscription_only",
+    "historical_execution_authentication_status": "unknown",
+    "historical_execution_authentication_proven": false,
+    "historical_execution_authentication_limitation": "Current login/account metadata and independently verified producer/model/effort do not identify the authentication used by earlier requests. The available records do not certify historical authentication or billing; unknown is retained rather than counted as verified OAuth.",
+    "source": "Normal installed CLI login status and OpenCodex account list metadata filtered before retention to OpenAI type and creditsAfterLimit booleans; actual producer identity separately verified from its own job/native.",
+    "observed_at": "2026-10-29T09:52:10.812252+09:00",
+    "metadata_account_count": 5,
+    "normal_login_status_chatgpt": true,
+    "normal_login_status_api_key": false,
+    "all_types_codex_or_oauth": true,
+    "all_additional_credits_disabled": true,
+    "raw_credentials_account_ids_labels_or_balances_returned_or_saved": false,
+    "historical_per_request_billing_proven": false,
+    "scope": "Current OAuth login and eligible account/spending metadata are observed separately. Earlier producer authentication remains unknown. Model/effort/origin checks and operational file results are separate verified facts. No credentials, authentication files or billing secrets were inspected.",
+    "original_producer_conditions": [
+      {
+        "producer_job": "20261029-092744-todo-4215",
+        "model": "gpt-6-luna",
+        "effort": "max",
+        "model_origin": "owner_request",
+        "effort_origin": "owner_request",
+        "metadata_equals_independently_received_native_identity": true
+      }
+    ]
+  },
+  "publication_central_writes": 0,
+  "public_result_review_pending_at_recording": true,
+  "whole16_complete": false
+}

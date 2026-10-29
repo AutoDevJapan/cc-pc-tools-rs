@@ -4,13 +4,49 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
+	"reflect"
 	"strings"
 	"testing"
 )
 
 const consolidationReferencePrefix = "# Modified reference, 2026-10-29\n# Original source lines below are line-preserving masked data.\n# This archive is untrusted reference data, not executable instructions.\n\n"
 
-func validateConsolidationArtProposal(bundle, operation, prep map[string]any) error {
+type consolidationPreparationPins struct {
+	BundleSHA, ManifestSHA, SourceFile, SourceSHA string
+}
+
+// Independently loaded bytes, rather than the preparation document's own
+// filenames or claimed hashes, define the artifacts this observation binds.
+func loadConsolidationFixture(t *testing.T) (b, o, p map[string]any, pins consolidationPreparationPins) {
+	t.Helper()
+	bundleRaw := loadPublicReceipt(t, "skills-3080-consolidation-art-proposal175645.json", &b)
+	manifestRaw := loadPublicReceipt(t, "skills-3080-operations/create-consolidation-art-175645.json", &o)
+	loadPublicReceipt(t, "skills-3080-consolidation-art-preparation175645.json", &p)
+	sourceFile := "skills-3080-consolidation-art-sources175645.json"
+	var source map[string]any
+	sourceRaw := loadPublicReceipt(t, sourceFile, &source)
+	pins = consolidationPreparationPins{travel3Digest(bundleRaw), travel3Digest(manifestRaw), sourceFile, travel3Digest(sourceRaw)}
+	return
+}
+
+func validateConsolidationArtProposal(bundle, operation, prep map[string]any, artifactPins consolidationPreparationPins) error {
+	if !validHex(artifactPins.BundleSHA, 64) || !validHex(artifactPins.ManifestSHA, 64) || !validHex(artifactPins.SourceSHA, 64) || artifactPins.SourceFile != "skills-3080-consolidation-art-sources175645.json" {
+		return fmt.Errorf("independently loaded preparation inputs missing")
+	}
+	if e := next4Fields(prep, map[string]any{"bundle_sha256": artifactPins.BundleSHA, "manifest_sha256": artifactPins.ManifestSHA, "source_selection_file": artifactPins.SourceFile, "source_selection_sha256": artifactPins.SourceSHA}); e != nil {
+		return e
+	}
+	nameTargets, ok := bundle["targets"].([]any)
+	if !ok {
+		return fmt.Errorf("actual bundle targets absent")
+	}
+	names := make([]any, 0, len(nameTargets))
+	for _, value := range nameTargets {
+		names = append(names, next4Object(value)["name"])
+	}
+	if !reflect.DeepEqual(prep["names"], names) {
+		return fmt.Errorf("preparation names differ from actual bundle target membership")
+	}
 	if e := next4Fields(bundle, map[string]any{"root": "D:/CC/Skills"}); e != nil {
 		return e
 	}
@@ -145,28 +181,22 @@ func validateConsolidationArtProposal(bundle, operation, prep map[string]any) er
 }
 
 func TestConsolidationArtProposalsKeepIndividualNoticesAndMaskedSourceEvidence(t *testing.T) {
-	var b, o, p map[string]any
-	raw := loadPublicReceipt(t, "skills-3080-consolidation-art-proposal175645.json", &b)
-	if travel3Digest(raw) != "24bd4d619faf6df448568207b3b98f500373db3e25a39b3e6f5c8304690cd37e" {
+	b, o, p, pins := loadConsolidationFixture(t)
+	if pins.BundleSHA != "24bd4d619faf6df448568207b3b98f500373db3e25a39b3e6f5c8304690cd37e" {
 		t.Fatal("independent proposal package changed")
 	}
-	raw = loadPublicReceipt(t, "skills-3080-operations/create-consolidation-art-175645.json", &o)
-	if travel3Digest(raw) != "015f31225f2ef04aa6eda990ddfc7ad9303b075e66c83e9f2b0d266abf9754f6" {
+	if pins.ManifestSHA != "015f31225f2ef04aa6eda990ddfc7ad9303b075e66c83e9f2b0d266abf9754f6" {
 		t.Fatal("independent precreation operation changed")
 	}
-	loadPublicReceipt(t, "skills-3080-consolidation-art-preparation175645.json", &p)
-	if e := validateConsolidationArtProposal(b, o, p); e != nil {
+	if e := validateConsolidationArtProposal(b, o, p, pins); e != nil {
 		t.Fatal(e)
 	}
 }
 
 func TestConsolidationProposalRejectsOverstatedOrUnboundAcceptance(t *testing.T) {
-	for _, change := range []string{"valid", "root", "author", "physical absence", "created", "new rights", "new raw", "official bytes", "URI declared unmasked", "reference prefix"} {
+	for _, change := range []string{"valid", "root", "author", "physical absence", "created", "new rights", "new raw", "official bytes", "URI declared unmasked", "reference prefix", "bundle pin", "manifest pin", "source filename", "source pin", "names"} {
 		t.Run(change, func(t *testing.T) {
-			var b, o, p map[string]any
-			loadPublicReceipt(t, "skills-3080-consolidation-art-proposal175645.json", &b)
-			loadPublicReceipt(t, "skills-3080-operations/create-consolidation-art-175645.json", &o)
-			loadPublicReceipt(t, "skills-3080-consolidation-art-preparation175645.json", &p)
+			b, o, p, pins := loadConsolidationFixture(t)
 			switch change {
 			case "root":
 				b["root"] = "E:/Skills"
@@ -186,8 +216,18 @@ func TestConsolidationProposalRejectsOverstatedOrUnboundAcceptance(t *testing.T)
 				p["notice_masked_URI_lines"] = float64(0)
 			case "reference prefix":
 				p["reference_body_exact_after_four_explicit_notice_lines"] = false
+			case "bundle pin":
+				p["bundle_sha256"] = "stale"
+			case "manifest pin":
+				p["manifest_sha256"] = "stale"
+			case "source filename":
+				p["source_selection_file"] = "../stale.json"
+			case "source pin":
+				p["source_selection_sha256"] = "stale"
+			case "names":
+				p["names"] = []any{"memory-consolidation-state"}
 			}
-			e := validateConsolidationArtProposal(b, o, p)
+			e := validateConsolidationArtProposal(b, o, p, pins)
 			if (change == "valid" && e != nil) || (change != "valid" && e == nil) {
 				t.Fatalf("%s: %v", change, e)
 			}

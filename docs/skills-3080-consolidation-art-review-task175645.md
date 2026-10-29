@@ -6,9 +6,9 @@ SKILLS3080_READ_ONLY_REVIEW_TASK_V1
 本人の限定指定に従い、作者とは別モデルのgpt-6-luna/max、modelとeffortの両originをowner_requestとして通常登録する。
 既存OAuth枠だけを使い、APIキー・追加費用・全体のモデル設定変更は行わない。
 
-対象はmemory-consolidation-stateとgenerative-art-reproducibilityで、各7ファイル、合計14ファイル76,039バイトである。
+対象はmemory-consolidation-stateとgenerative-art-reproducibilityで、各7ファイル、合計14ファイル77,902バイトである。
 作成manifestはdocs/skills-3080-operations/create-consolidation-art-175645.json、
-SHA256は015f31225f2ef04aa6eda990ddfc7ad9303b075e66c83e9f2b0d266abf9754f6。
+SHA256は73aa131a6761ec48b14000d294e7f77b7e961d17c4cbf3dafe64752dcf3bdd25。
 比較レビューではなく、この固定版の全14出力と、同梱した全PUBLIC技術資料を全文確認する。
 既に配置された4193・4208・4215のCreator資格は凍結しており、今回へ流用・編集・再起動しない。
 
@@ -21,7 +21,7 @@ SHA256は015f31225f2ef04aa6eda990ddfc7ad9303b075e66c83e9f2b0d266abf9754f6。
 source.license.acceptedは選択した可視workflowの改訂に当該noticeを適用する判断であり、
 本人による新しい権利の発行、実作者性、未読の実装・template・ブランド・素材や外部サービスへの一般許諾ではない。
 
-改訂の表示はentrypoint・guide・参照へ明示し、参照本文は固定4行prefixの後で元のmasked bytesを正確に保持する。
+改訂の表示はentrypoint・guide・参照へ明示し、参照本文は既存の作成処理が受け付ける固定改訂通知の後で元のmasked bytesを正確に保持する。
 range rendererが元にない末尾LFを添える場合は、全体SHAと一致する1文字だけを区別し、原記録を書き換えない。
 source.json等の0作成・未配置は準備時の記録であり、将来の配置後の現在値を表すものではない。
 metadata発見0を、物理不在の資格や全catalog発見の証明にしない。
@@ -68,4 +68,12 @@ D:/CC/Skills/scoped-code-review-prompt/SKILL.md、D:/CC/Skills/japanese-report-w
 Must/Suggestion/Nit全件、5条件の適用結果を返す。
 全出力を読んでMust0の時だけ、次の独立行を実際の判定で返す。
 Mustが残る場合はaccepted:falseと実数を返す。
-SKILLS3080_ACCEPTANCE {"domain":"skills-3080-review-v1","manifest_sha256":"015f31225f2ef04aa6eda990ddfc7ad9303b075e66c83e9f2b0d266abf9754f6","accepted":true,"must":0}
+SKILLS3080_ACCEPTANCE {"domain":"skills-3080-review-v1","manifest_sha256":"73aa131a6761ec48b14000d294e7f77b7e961d17c4cbf3dafe64752dcf3bdd25","accepted":true,"must":0}
+
+配置前の旧版への正規確認はsourceで拒否され、実作成は0だった。
+現版は作成処理が既に受け付けるsource.jsonのcanonical sourceと実reformulation_writerを明示し、
+伏字参照の先頭を既存の固定改訂通知221バイト・2行へ合わせた。
+この通知の後の元masked bytes、原資料と個別notice、SKILL/guideの内容、原評価・actor・未読/nullは保持する。
+正常guardやsourceソフトウェアを変更して通す方法にはしていない。
+旧manifest015fの全文レビューは旧版の原証拠として保持し、現manifest73aaの作成資格に流用しない。
+現在の全14出力を新たに確認する。

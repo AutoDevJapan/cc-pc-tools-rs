@@ -3483,13 +3483,19 @@
     "evidence": "skills-3080-consolidation-art-preparation175645.json",
     "proposed_targets": 2,
     "files": 14,
-    "bytes": 76039,
+    "bytes": 77902,
     "existing3048_PASS": 2,
     "fresh_name_metadata_found": 0,
     "physical_absence_qualified": false,
     "full_review_or_creation_completed": false,
     "central_operations": 0,
-    "whole16_complete": false
+    "whole16_complete": false,
+    "producer_revision": 3,
+    "current_manifest_sha256": "73aa131a6761ec48b14000d294e7f77b7e961d17c4cbf3dafe64752dcf3bdd25",
+    "old015f_source_preflight_failed_created0": true,
+    "canonical_source_and_reformulation_writer_bound": true,
+    "normal_fixed_modification_notice": true,
+    "current_full_review_and_qualification_pending": true
   },
   "latest_received12_after1523": {
     "original3719_assessments": 12,

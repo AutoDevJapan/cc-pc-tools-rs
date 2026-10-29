@@ -36,3 +36,12 @@ bundleの個別source情報へ完全一致させる。
 件数の欠落・増加・小数・未指定と、record・entry・contextの欠落を拒否する回帰テストを追加した。
 元の私的準備資料と訂正前の公開版は保持し、過去の原文を編集したことにはしない。
 14出力とmanifest015f、最終採否・中央の状態は、この訂正でも変更しない。
+
+配置前の実CLI確認では、旧manifest015fがsourceで拒否され、作成は0だった。
+改訂名の伏字参照を元出典へ結ぶcanonical sourceとreformulation_writerが不足し、
+参照の4行headerも現用b780の正規形式とは異なっていた。
+元のデータに対する2件のRedを再現し、producer側のデータを既存の結合形式へ合わせた。
+source JSONと選択記録に実writer・同じ既存source宣言を明示し、固定改訂通知221バイト・2行を使う。
+元のmasked本文と個別notice、変更のない8ファイルは同じbytesで保持した。
+親のsourceと選択評価にある表示profileも同じ通知へ結び、元の記録を過去に遡って変更しない。
+正常guard/source実装や読取範囲を緩める変更は行っていない。

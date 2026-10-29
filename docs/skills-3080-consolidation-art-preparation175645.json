@@ -6,11 +6,11 @@
     "generative-art-reproducibility"
   ],
   "payload_files": 14,
-  "payload_bytes": 76039,
-  "bundle_sha256": "24bd4d619faf6df448568207b3b98f500373db3e25a39b3e6f5c8304690cd37e",
-  "manifest_sha256": "015f31225f2ef04aa6eda990ddfc7ad9303b075e66c83e9f2b0d266abf9754f6",
+  "payload_bytes": 77902,
+  "bundle_sha256": "3095aee519b02491b9b52869cf049414d181108832fe98af422d1e68ec9dfc3a",
+  "manifest_sha256": "73aa131a6761ec48b14000d294e7f77b7e961d17c4cbf3dafe64752dcf3bdd25",
   "source_selection_file": "skills-3080-consolidation-art-sources175645.json",
-  "source_selection_sha256": "52fc2c20e2c61fc0777afd9e75be9cdac44bb36d593a83699e7ae9d1359b0ac9",
+  "source_selection_sha256": "2819f96826acb7340283e8ee52cc569d7322795f4dc4ae8711ed591495e01a59",
   "physical_primary_lines": 627,
   "visible_primary_lines": 608,
   "withheld_primary_lines": 19,
@@ -21,7 +21,6 @@
   "official_Apache_full_public_standard_identity_verified": true,
   "original_archived_data_or_masked_views_rewritten": false,
   "copyright_modification_notices_in_entrypoint_guide_reference": true,
-  "reference_body_exact_after_four_explicit_notice_lines": true,
   "original_8_record_packet_received_but_only2_sources_selected": true,
   "structure": {
     "exit": 0,
@@ -93,5 +92,9 @@
   "new_adoptions": 0,
   "central_operations": 0,
   "whole16_complete": false,
-  "observation_definition": "Preparation only. Zero creation and unfinished review/absence flags are historical precreation observations, not current physical placement assertions after a later deployment."
+  "observation_definition": "Preparation only. Zero creation and unfinished review/absence flags are historical precreation observations, not current physical placement assertions after a later deployment.",
+  "reference_body_exact_after_fixed_modification_notice": true,
+  "fixed_reference_modification_notice_prefix_bytes": 221,
+  "fixed_reference_modification_notice_prefix_lines": 2,
+  "renamed_source_canonical_identity_and_writer_bound": true
 }

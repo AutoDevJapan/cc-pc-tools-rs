@@ -6,7 +6,39 @@ import (
 )
 
 func TestOriginal3719Next12KeepsAllFourPacketsAndCrossJobNoticeReuse(t *testing.T) {
-	checkOriginal3719PendingSnapshot(t, "skills-3080-original3719-next12-256267-evaluation175645.json", "811b6ec446ff3fdd7c6ed4c85250c1c59e6317e51f6775a5f05da46e1e056524", 256, 267, 4, "20261028-171959-todo-3719", 144, 63, 81)
+	checkOriginal3719PendingSnapshot(t, "skills-3080-original3719-next12-256267-evaluation175645.json", "5e5a5e2fb6c6e342a72e0bbb37c63c8d03f6b495b48c0b35ad6517293905348c", 256, 267, 4, "20261028-171959-todo-3719", 144, 63, 81)
+}
+
+func TestOriginal3719SummaryCountsCannotHideMissingOrExtraRecords(t *testing.T) {
+	for _, change := range []string{"valid", "stale assessment count", "stale packet count", "missing count", "fractional count", "lost record", "lost entry", "lost context"} {
+		t.Run(change, func(t *testing.T) {
+			var value map[string]any
+			loadPublicReceipt(t, "skills-3080-original3719-next12-256267-evaluation175645.json", &value)
+			switch change {
+			case "stale assessment count":
+				value["original_primary_assessments"] = float64(6)
+			case "stale packet count":
+				value["complete_original_chunks"] = float64(6)
+			case "missing count":
+				delete(value, "complete_original_chunks")
+			case "fractional count":
+				value["original_primary_assessments"] = float64(12.5)
+			case "lost record":
+				value["records"] = value["records"].([]any)[1:]
+			case "lost entry":
+				value["entries"] = value["entries"].([]any)[1:]
+			case "lost context":
+				for key := range value["shared_original_contexts"].(map[string]any) {
+					delete(value["shared_original_contexts"].(map[string]any), key)
+					break
+				}
+			}
+			err := original3719DeclaredCounts(value)
+			if (change == "valid" && err != nil) || (change != "valid" && err == nil) {
+				t.Fatalf("%s: %v", change, err)
+			}
+		})
+	}
 }
 
 func validateWebClawAlias247(evidence, originalCurrent map[string]any) error {

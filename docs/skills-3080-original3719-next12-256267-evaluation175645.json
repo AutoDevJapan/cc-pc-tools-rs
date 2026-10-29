@@ -3,7 +3,7 @@
   "all_original_chunks_losslessly_reconstructed": true,
   "all_original_fields_and_actor_namespaces_preserved": true,
   "central_operations": 0,
-  "complete_original_chunks": 6,
+  "complete_original_chunks": 4,
   "domain": "skills3080-original3719-parent-shared-snapshot-v1",
   "entries": [
     {
@@ -125,7 +125,7 @@
   "new_parent_raw_body_read_credit": 0,
   "new_source_or_support_reads_by_materializer": 0,
   "original_journal_parent": "20261024-235901-todo-3080",
-  "original_primary_assessments": 6,
+  "original_primary_assessments": 12,
   "original_support_state_counts": {
     "0": 81,
     "1": 36,

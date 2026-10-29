@@ -1,0 +1,25 @@
+{
+  "checked_at": "2026-10-29T06:44:23.4510635+00:00",
+  "method": "fresh installed Codex app-server initialize + skills/list forceReload",
+  "model_called": false,
+  "label": "next2-73aa-actual-current",
+  "targets": 2,
+  "total_discovered_metadata": 484,
+  "found_count": 2,
+  "parse_error_count": 0,
+  "notification_count": 1,
+  "same_names_other_paths": 0,
+  "known_target_names_sha256": "0929fd1169be5c1a757eb6372401382b2133db0a8af2d2fc1c54b1ec9ddccb7d",
+  "enabled_count": 2,
+  "new_description_match_count": 2,
+  "found_rows_omitted_to_avoid_existing_names": true,
+  "process_tree_exit_confirmed": true,
+  "pending_stdout_read_drained": true,
+  "failure": null,
+  "diagnostic": {
+    "scan_traversal_limit_count": 2,
+    "context_budget_marker_count": 0,
+    "raw_stderr_not_saved": true
+  },
+  "limit": "Only counts and a fingerprint of already public managed target names are retained. No existing names/paths, unknown metadata, body text or raw private catalog is saved. Scope is exactly the two newlycreated public targets; no all-disk hash, pre-change equality, model-turn or context-budget proof."
+}

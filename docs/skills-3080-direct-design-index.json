@@ -127,6 +127,11 @@
       "file": "skills-3080-recovery-connections-actual-designs175645.json",
       "sha256": "1e343dc133cd943a75f2c4835339776a2cc2b9caf8d0b2351ef6e7278b0bf8a3",
       "target_count": 3
+    },
+    {
+      "file": "skills-3080-consolidation-art-actual-designs175645.json",
+      "sha256": "710d96e4076baac2300298f2b93f5c73ee57d067b2db4a5dc324ec8907f1b883",
+      "target_count": 2
     }
   ]
 }

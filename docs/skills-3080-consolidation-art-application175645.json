@@ -1,0 +1,94 @@
+{
+  "todo": 3080,
+  "actual_job": "20261027-175645-todo-3080",
+  "read_from": "Two normal consume-skills3080 responses; exact actual current returned UTF8 buffers, not direct central opens",
+  "manifest_sha256": "73aa131a6761ec48b14000d294e7f77b7e961d17c4cbf3dafe64752dcf3bdd25",
+  "native_call_id": "call_f3fd7d6488e94a06a409fb63ea3dc104",
+  "current_instruction_files": 4,
+  "current_instruction_bytes": 10454,
+  "all_four_literal_current_instruction_contents_read": true,
+  "instructions": [
+    {
+      "name": "memory-consolidation-state",
+      "path": "SKILL.md",
+      "sha256": "48e9e0a4593dbe11791e4de5c63da000c2e2f04835864afb4e2fd67b89621fab",
+      "bytes": 1985,
+      "literal_current_buffer_read": true
+    },
+    {
+      "name": "memory-consolidation-state",
+      "path": "references/guide.md",
+      "sha256": "9efa7988ff27aab52851f627556d299d5c762d0c884c3ac717041b5210582277",
+      "bytes": 3278,
+      "literal_current_buffer_read": true
+    },
+    {
+      "name": "generative-art-reproducibility",
+      "path": "SKILL.md",
+      "sha256": "c6c97201564ba9eebe55b1e3dc71ef55283e0a9c8c103aa8ceaf1780bddbed29",
+      "bytes": 1980,
+      "literal_current_buffer_read": true
+    },
+    {
+      "name": "generative-art-reproducibility",
+      "path": "references/guide.md",
+      "sha256": "43bd0e4a0cd63fb7a6ed491f89f2eab6c42cf233bb546c483b964de185ef61b7",
+      "bytes": 3211,
+      "literal_current_buffer_read": true
+    }
+  ],
+  "actual_current_task_decisions": [
+    {
+      "skill": "memory-consolidation-state",
+      "applicability": "Apply to this resumed 3080 continuation record",
+      "facts": "Actual native CreateNew once14/77902B is already confirmed. Old preparation says creation0 and stateV92 was stale; old original artifacts and valid owner answers remain.",
+      "decision": "Freeze4222 and reuse the exact successful request/native identity. Advance current state to a new journal version linked to original receipts and ACK294; do not recreate, erase old preparation, alter owner scope or infer historical continuity.",
+      "storage_action": "Save and read back the new current175645 journal generation with previous-version SHA. Keep authoritative current facts separate from prior accumulated history."
+    },
+    {
+      "skill": "generative-art-reproducibility",
+      "applicability": "Negative applicability to actual Skills expansion",
+      "facts": "No art, seed-rendering or UI deliverable is requested in the current task and no GPU is allocated.",
+      "decision": "Record source and adaptation hashes and evaluate workflow examples only. Do not create art, UI, PNGs, GPU jobs, paid services or claim real image export validation."
+    }
+  ],
+  "synthetic_cases": [
+    {
+      "kind": "synthetic reasoning",
+      "input": "Timer and write-after triggers name the same source generation while a late owner correction arrives",
+      "observed_decision": "One generation/result; keep correction for the next source version; no new question or duplicate irreversible action",
+      "pass": true
+    },
+    {
+      "kind": "synthetic reasoning",
+      "input": "Body saved but index update interrupted; old summary says enabled",
+      "observed_decision": "Read saved generation and rebuild only its missing index; enabled is not recovery proof and original instructions/unfinished work remain",
+      "pass": true
+    },
+    {
+      "kind": "synthetic reasoning",
+      "input": "Same art seed but changed noise initializer, frame or pixel ratio",
+      "observed_decision": "Different reproduction conditions; do not claim pixel identity",
+      "pass": true
+    },
+    {
+      "kind": "synthetic reasoning",
+      "input": "50 seed labels each produce ten PNG exports and one invalid PNG per seed",
+      "observed_decision": "500 actual exports would be required, including all50 invalid exports rejected; this written example supplies no real PNG evidence",
+      "pass": true
+    },
+    {
+      "kind": "synthetic reasoning",
+      "input": "Unapproved UI changes or CDN-dependent HTML described as offline",
+      "observed_decision": "Keep image approval boundary and report dependency; do not implement UI or assert offline execution",
+      "pass": true
+    }
+  ],
+  "actual_current_task_decision_count": 2,
+  "synthetic_decision_count": 5,
+  "real_art_exports_checked": 0,
+  "real_memory_service_or_storage_engine_tested": 0,
+  "model_turn_implicit_selection_or_context_budget_proven": false,
+  "new_central_writes": 0,
+  "whole16_complete": false
+}

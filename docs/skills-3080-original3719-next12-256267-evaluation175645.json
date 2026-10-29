@@ -1,0 +1,3218 @@
+{
+  "after": 255,
+  "all_original_chunks_losslessly_reconstructed": true,
+  "all_original_fields_and_actor_namespaces_preserved": true,
+  "central_operations": 0,
+  "complete_original_chunks": 4,
+  "domain": "skills3080-original3719-parent-shared-snapshot-v1",
+  "entries": [
+    {
+      "bytes": 5334,
+      "git_blob": "19719ad63e6c33cc2eeabe83a5df7514e29266cf",
+      "inventory_id": "github:945c62744476afa5d682491b069cd42c04919484bfe457c573da51c55b911d4b",
+      "path": "skills/michael20070814/investment-advisor/SKILL.md",
+      "source_commit": "920714f17d81e0a95c7a9bc51faf0a7921cd982d",
+      "source_repo": "6mile/skills",
+      "source_sha256": "7fdc9f43985a23a2ddc82d1bcde3bbef158d4ae26b97937e90b6e71d6ce4be0c"
+    },
+    {
+      "bytes": 3232,
+      "git_blob": "45c0a584ebc55a7e68c2bc121f60cad68cfed8fc",
+      "inventory_id": "github:26bb00098cc292e741adf08c1ac8c91f61129dbbd1931965790085dfdae22057",
+      "path": "skills/mikel/deshell/SKILL.md",
+      "source_commit": "920714f17d81e0a95c7a9bc51faf0a7921cd982d",
+      "source_repo": "6mile/skills",
+      "source_sha256": "fbd2d2b1670768aa1f3e7d9ef383f4b7ed5772fc7e4e8f2caba6915829be4b38"
+    },
+    {
+      "bytes": 4064,
+      "git_blob": "be8d6d8dab10c3b8963360055ca4338580f40c84",
+      "inventory_id": "github:49506c336a72738715a00dce09df72e9e0031d380941fd426e49078f60df28f4",
+      "path": "skills/mikel/distil/SKILL.md",
+      "source_commit": "920714f17d81e0a95c7a9bc51faf0a7921cd982d",
+      "source_repo": "6mile/skills",
+      "source_sha256": "4d4f449378aab40169a13b331a826ceb0c12aa18917efd5915d8c606e885d20e"
+    },
+    {
+      "bytes": 7773,
+      "git_blob": "1c1d1a792798079ce5a0b7ac71590db46d4f951d",
+      "inventory_id": "github:62ddb38340e5f8b753cb343418ccf262ebd6a32ac9eb76e95d7e0c7ad18a4571",
+      "path": "skills/minmengxhw-cpu/enhanced-memory-4types/SKILL.md",
+      "source_commit": "920714f17d81e0a95c7a9bc51faf0a7921cd982d",
+      "source_repo": "6mile/skills",
+      "source_sha256": "e8cfe390dd809cac0d40261dc5f66f218a1156239a89461d57cd2900be2332a6"
+    },
+    {
+      "bytes": 4539,
+      "git_blob": "1f4479c318e715bf9cae525c9ded457ed714df65",
+      "inventory_id": "github:a1b6f6f944d4f177da0d88112cf8fb0e828e71accabe844d9294169008ffe036",
+      "path": "skills/minmengxhw-cpu/enhanced-memory-v2/SKILL.md",
+      "source_commit": "920714f17d81e0a95c7a9bc51faf0a7921cd982d",
+      "source_repo": "6mile/skills",
+      "source_sha256": "7ce4e60e2ac08709b60fe5434131bcd81f11bd860beccee8df9bb786ee90c60c"
+    },
+    {
+      "bytes": 4582,
+      "git_blob": "b8033934b9896a844a2ee26150b25495b268ced5",
+      "inventory_id": "github:9fa32ebf1497b9744835d50ed01900f942ed81c4d1769802cd0acd4edba1f3a5",
+      "path": "skills/minmengxhw-cpu/enhanced-memory-v3/SKILL.md",
+      "source_commit": "920714f17d81e0a95c7a9bc51faf0a7921cd982d",
+      "source_repo": "6mile/skills",
+      "source_sha256": "fe4a151d4336d7fbb647bd2f434ac7e796ee1e3c87ba5c9f0d4e8b80d4ab0593"
+    },
+    {
+      "bytes": 6322,
+      "git_blob": "4888e12de5259a9cc060e08e7cc14bebce9f904b",
+      "inventory_id": "github:9a7aba14fd7d64d803eb62e98b026218696d13c186107acd4c700d89f0138d26",
+      "path": "skills/minmengxhw-cpu/memory-system-pro-v2/SKILL.md",
+      "source_commit": "920714f17d81e0a95c7a9bc51faf0a7921cd982d",
+      "source_repo": "6mile/skills",
+      "source_sha256": "90684113758567e68184265be9576e89cfb4267149397ad83698ba7385bfa339"
+    },
+    {
+      "bytes": 8072,
+      "git_blob": "d3e046a5ae107a6cb23cfb16c219837094ab35d3",
+      "inventory_id": "github:63c0c5924a11b04153c9b10a3a74102680d3e17289db4cf447cb26142b680a3c",
+      "path": "skills/mockerzxy/pdfssssssss/SKILL.md",
+      "source_commit": "920714f17d81e0a95c7a9bc51faf0a7921cd982d",
+      "source_repo": "6mile/skills",
+      "source_sha256": "9f78b8359fbd4943ad260a7a1e436e5a96503406d6c34e99f69223d647d85b9c"
+    },
+    {
+      "bytes": 4317,
+      "git_blob": "afcbfd4a55a5c6208f0743882f4a931efd90f625",
+      "inventory_id": "github:252502fee3c165421a3cbe30f0e4c14a0932923ff541a0ab927cde4b7501ad7d",
+      "path": "skills/mohibshaikh/clawvet/skills/frontend-design/SKILL.md",
+      "source_commit": "920714f17d81e0a95c7a9bc51faf0a7921cd982d",
+      "source_repo": "6mile/skills",
+      "source_sha256": "e161f0147e8001b771ea41a2c4cc0b0b5b018c769bb797e7fc862bcf31a7b421"
+    },
+    {
+      "bytes": 19769,
+      "git_blob": "634f6fa42e4e697fa6afd293acd7fb8246574876",
+      "inventory_id": "github:db3a296d432ef9beb84fb1c5a128b5297b2f0112b5c61ab1ac248005c2f97a0f",
+      "path": "skills/moyu0032/mo-test-1/SKILL.md",
+      "source_commit": "920714f17d81e0a95c7a9bc51faf0a7921cd982d",
+      "source_repo": "6mile/skills",
+      "source_sha256": "3bc4092c09804853186524c826bc0621b940bb6122c05b84496dff95388e6eef"
+    },
+    {
+      "bytes": 15671,
+      "git_blob": "46475d47418a29c0238bbcada38c4effe727405a",
+      "inventory_id": "github:db4f5d6f0ce7f76284bf6a1ce109e2091efc566045f48e5be6c11718112460db",
+      "path": "skills/mr-q526/wechat-toolkit/SKILL.md",
+      "source_commit": "920714f17d81e0a95c7a9bc51faf0a7921cd982d",
+      "source_repo": "6mile/skills",
+      "source_sha256": "ab0a415b092497e2f97b4e6691a2b6140d417c095bde7a15278dd856191ed30b"
+    },
+    {
+      "bytes": 10281,
+      "git_blob": "efeed2bc6f622f59319701e319946736ef95e0f6",
+      "inventory_id": "github:d73f7cd26503596e058a6f2c60604310497c583ec2b790b71b0fa52e1ad96e33",
+      "path": "skills/mukston-debug/boris-run/SKILL.md",
+      "source_commit": "920714f17d81e0a95c7a9bc51faf0a7921cd982d",
+      "source_repo": "6mile/skills",
+      "source_sha256": "b3512930c010007f819692986fee7907442ca539fd0acedf30bd107f81641fae"
+    }
+  ],
+  "limits": [
+    "Parent received actual original twelve assessments and limits with independent native Sol/max metadata; source body/support raw reads remain the recorded original reader's work, not new parent raw reads.",
+    "Original notice reuse, ordered full-diff, fresh reads, saved-unread and unsaved null states and per-chunk actor namespaces are preserved, not converted into permissions.",
+    "This pending-assessment preparation does not install, accept third-party rights or complete598/51030/73220/16sources."
+  ],
+  "new_copy_permissions": 0,
+  "new_final_dispositions": 0,
+  "new_parent_raw_body_read_credit": 0,
+  "new_source_or_support_reads_by_materializer": 0,
+  "original_journal_parent": "20261024-235901-todo-3080",
+  "original_primary_assessments": 12,
+  "original_support_state_counts": {
+    "0": 81,
+    "1": 36,
+    "2": 18,
+    "3": 2,
+    "4": 7
+  },
+  "parent_journal_sha256_at267": "79486f97592a5dd52d94ab6b957379f1afbfc3a681f472c344eb96618b2ceaeb",
+  "publisher_job": "20261027-175645-todo-3080",
+  "records": [
+    {
+      "actual_assessment_reader": "20261028-171959-todo-3719",
+      "bytes": 5334,
+      "current_permission_or_adoption_granted": false,
+      "git_blob": "19719ad63e6c33cc2eeabe83a5df7514e29266cf",
+      "inventory_id": "github:945c62744476afa5d682491b069cd42c04919484bfe457c573da51c55b911d4b",
+      "new_final_disposition": false,
+      "ordinal": 256,
+      "original_assessment": {
+        "candidate_disposition": "data/指標・score/判断の根拠/検証分離を改訂候補として提案。採否・許諾・導入/実data/API/取引/test0。",
+        "findings": [
+          "固定weight/閾値・confidence/gradeを、較正された成功確率/損失リスクや投資適合性の証明にしない。指標の良好さから具体的な売買/ポジション・将来利益を保証できる検証は本文にない。",
+          "A株例と米国ticker例があるが、実対応市場/銘柄mapping・価格/通貨/時刻/調整/遅延、財務period/単位/欠測・ニュース重複/言語やkeyword感情の精度は未確認。",
+          "key不要の市場data取得という説明は、AI API鍵を使う設計とは異なる。依存なし/無料dataやMITだけでproviderの現quota/商用権利・市場data再配布を承認しない。",
+          "CLIのaction JSONは分析出力であり、本文は実注文/約定の証拠を示さない。免責文だけで具体的な売買提示の妥当性/安全性や現dataを保証しない。"
+        ],
+        "nearby_limit": "起動metadataのみ。中央本文/存在・同等性・現設定は未照会。",
+        "nearby_metadata": [
+          "market-data-due-diligence",
+          "public-data-research",
+          "ai-model-evaluation",
+          "evidence-based-text-review"
+        ],
+        "negative": "古い/別市場のdataや固定gradeを根拠に成功確率/低リスクを断定し、本人条件なしで具体的な売買/保有量を決める。",
+        "notices": [
+          [
+            "LICENSE.txt",
+            1,
+            "当該investment-advisorの1081B MIT本文。",
+            "実公開版/作者・市場data/ニュース/provider契約や第三者資源の権利は別。"
+          ]
+        ],
+        "positive": "出典/観測時点と算式/欠測を明示し、導出指標・keyword分類と未検証の判断scoreを区別する報告設計へ参照する。",
+        "read": [
+          2,
+          0,
+          0,
+          true,
+          true,
+          119
+        ],
+        "reason": "119行全読。CLI mode・summary/technical/fundamental/sentiment/action、固定weight/gradeとrisk/position表・Eastmoney data主張を確認。実装/API referenceは未読/未保存で精度/実測・現market/APIは未検証。",
+        "required_changes": [
+          "市場/銘柄・原出典/取得・観測時点/期間/通貨/調整と算式版を固定し、欠測/例外・分割等の境界を実data/検査で確認する。実利用時の現仕様/権利は親が公式根拠で照合する。",
+          "観測/導出指標・仮定/score・実測評価と投資判断/実行を分離し、時点を保った検証・独立評価で限界を示す。scoreだけで本人の資産/許容損失や売買額を決めず、今回の市場fetch/口座参照/売買・投資推奨0を保つ。"
+        ],
+        "row": 256,
+        "source": [
+          "github:945c62744476afa5d682491b069cd42c04919484bfe457c573da51c55b911d4b",
+          "skills/michael20070814/investment-advisor/SKILL.md",
+          "7fdc9f43985a23a2ddc82d1bcde3bbef158d4ae26b97937e90b6e71d6ce4be0c",
+          "19719ad63e6c33cc2eeabe83a5df7514e29266cf",
+          5334
+        ],
+        "support": [
+          [
+            "Investment_API_Reference.md",
+            14650,
+            "6785609d",
+            "059b271e",
+            1,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "LICENSE.txt",
+            1081,
+            "eebf3191",
+            "a636676d",
+            2,
+            0,
+            0,
+            "100644"
+          ],
+          [
+            "SKILL.md",
+            5334,
+            "7fdc9f43",
+            "19719ad6",
+            2,
+            0,
+            0,
+            "100644"
+          ],
+          [
+            "_meta.json",
+            297,
+            "51f4485d",
+            "3b9721e3",
+            1,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "package.json",
+            null,
+            null,
+            "6ff77fe8",
+            0,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "scripts/analyze.mjs",
+            null,
+            null,
+            "b1521ae2",
+            0,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "scripts/fundamental.mjs",
+            null,
+            null,
+            "47fe7354",
+            0,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "scripts/technical.mjs",
+            null,
+            null,
+            "6f4030e0",
+            0,
+            null,
+            null,
+            "100644"
+          ]
+        ],
+        "use": "市場観測・技術/財務指標・ニュース分類と判断/報告modeを分離する分析設計の参考。",
+        "value": "原data/期間・算式/欠測とモデル評価、推定score/仮説を別項目にし、検証のない投資判断へ直結させない観点がある。"
+      },
+      "original_chunk_sha256": "424e9e2d66876018fcf3eab8e987453dc9d5de9567ab0d85cfd8bf2e91dcb0dc",
+      "path": "skills/michael20070814/investment-advisor/SKILL.md",
+      "source_commit": "920714f17d81e0a95c7a9bc51faf0a7921cd982d",
+      "source_repo": "6mile/skills",
+      "source_sha256": "7fdc9f43985a23a2ddc82d1bcde3bbef158d4ae26b97937e90b6e71d6ce4be0c"
+    },
+    {
+      "actual_assessment_reader": "20261028-171959-todo-3719",
+      "bytes": 3232,
+      "current_permission_or_adoption_granted": false,
+      "git_blob": "45c0a584ebc55a7e68c2bc121f60cad68cfed8fc",
+      "inventory_id": "github:26bb00098cc292e741adf08c1ac8c91f61129dbbd1931965790085dfdae22057",
+      "new_final_disposition": false,
+      "ordinal": 257,
+      "original_assessment": {
+        "candidate_disposition": "取得/変換・出典/失敗と送信先scopeの境界を改訂候補として提案。採否・許諾・導入/MCP登録/HTTP/test0。",
+        "findings": [
+          "60〜80%token削減という保存主張だけで意味保持/出典完全性・最新性を保証しない。表/否定/注記・リンク/引用/動的内容の欠落やcacheの時点を確認する必要がある。",
+          "任意URL/proxy override・extra headersは送信先/資格漏出やscope拡大の境界。proxy/raw/nocacheやdirect curlを正規拒否・保護対象/禁止事業者への別経路アクセスに使わない。",
+          "metadataはPROXY_URLをrequiresに含めつつ本文はdefaultを示す。現runtimeでの必須/任意を照合する。package名のMCPを既存恒久権限追加や必要な登録済み能力の証明にしない。"
+        ],
+        "nearby_limit": "起動metadataのみ。中央本文/存在・同等性・現設定は未照会。",
+        "nearby_metadata": [
+          "defuddle",
+          "public-data-research",
+          "source-grounded-content-review",
+          "browser-automation"
+        ],
+        "negative": "proxyなら任意URL/資格を送れるとし、raw/nocacheを拒否の迂回に使い、短いMarkdownだけで最新/完全な原文とする。",
+        "notices": [
+          [
+            "LICENSE.md",
+            1,
+            "当該deshellの1073B MIT本文/末尾文字。",
+            "実公開版/作者・原ページ/素材/provider/依存の権利は別。"
+          ]
+        ],
+        "positive": "許可された公開URLの取得/変換mode・時点を示し、原出典と省略/失敗範囲を照合して結果を使う設計へ参照する。",
+        "read": [
+          2,
+          0,
+          0,
+          true,
+          true,
+          116
+        ],
+        "reason": "116行全読。DeShell CLI/npm登録・proxy override/extra headers、fetch/search/render/raw/nocache/screenshotと非zero error主張を確認。README/_metaは未読で現CLI/API/契約は未検証。",
+        "required_changes": [
+          "元の許可対象・正規化URL/redirect/proxy/取得modeと出典/時点・response形式を固定し、秘密URL/headersを未知宛先へ送らず、有限timeout/retry/size・失敗/部分/空を区別する。",
+          "原bytes/変換の関係・要点/引用の忠実性を検査し、公開元の権利と現在のprovider仕様/費用は親の必要時に確認する。原install/登録・新費用/権限/HTTPはこの研究から実行しない。"
+        ],
+        "row": 257,
+        "source": [
+          "github:26bb00098cc292e741adf08c1ac8c91f61129dbbd1931965790085dfdae22057",
+          "skills/mikel/deshell/SKILL.md",
+          "fbd2d2b1670768aa1f3e7d9ef383f4b7ed5772fc7e4e8f2caba6915829be4b38",
+          "45c0a584ebc55a7e68c2bc121f60cad68cfed8fc",
+          3232
+        ],
+        "support": [
+          [
+            "LICENSE.md",
+            1073,
+            "e4b36abc",
+            "8a75b5d4",
+            2,
+            0,
+            0,
+            "100644"
+          ],
+          [
+            "README.md",
+            3467,
+            "25d00bbe",
+            "01e888e8",
+            1,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "SKILL.md",
+            3232,
+            "fbd2d2b1",
+            "45c0a584",
+            2,
+            0,
+            0,
+            "100644"
+          ],
+          [
+            "_meta.json",
+            296,
+            "2ef67de1",
+            "e181d8bc",
+            1,
+            null,
+            null,
+            "100644"
+          ]
+        ],
+        "use": "公開Webの取得/検索・render/raw/cache・画像出力を別modeで扱い、本文変換と原出典を結ぶ設計参考。",
+        "value": "変換/検索の入力・取得時点/原URLと、内容/失敗・形式/欠落を分けて記録できる。"
+      },
+      "original_chunk_sha256": "40a93e5ba7571070b9a8d5c99acb18e06bafe55dab9df845e47d34fbd8422710",
+      "path": "skills/mikel/deshell/SKILL.md",
+      "source_commit": "920714f17d81e0a95c7a9bc51faf0a7921cd982d",
+      "source_repo": "6mile/skills",
+      "source_sha256": "fbd2d2b1670768aa1f3e7d9ef383f4b7ed5772fc7e4e8f2caba6915829be4b38"
+    },
+    {
+      "actual_assessment_reader": "20261028-171959-todo-3719",
+      "bytes": 4064,
+      "current_permission_or_adoption_granted": false,
+      "git_blob": "be8d6d8dab10c3b8963360055ca4338580f40c84",
+      "inventory_id": "github:49506c336a72738715a00dce09df72e9e0031d380941fd426e49078f60df28f4",
+      "new_final_disposition": false,
+      "ordinal": 258,
+      "original_assessment": {
+        "candidate_disposition": "形式変化/原文・proxy注記とHTTP結果の境界を改訂候補として提案。採否・許諾・導入/HTTP/設定/test0。",
+        "findings": [
+          "quota超過でMarkdownではなくraw HTMLとproxyの修正案commentを返すと主張する。形式変化/追加注記を検出し、外部commentを本人/システム命令や購入/設定変更許可にしない。",
+          "curl -sだけではHTTP非2xxでもprocess成功となりうる。screenshotのredirect出力先へerror JSON等を書いて画像取得成功とせず、status/content-type/実bytesを確認する必要がある。",
+          "無料鍵/60〜80%削減・self-host overrideの説明は現仕様/権利の保証ではない。元のURL/redirect・cache/送信先/資格を固定し、proxyを正規審査やRakko等の対象制限の迂回に使わない。"
+        ],
+        "nearby_limit": "起動metadataのみ。中央本文/存在・同等性・現設定は未照会。",
+        "nearby_metadata": [
+          "defuddle",
+          "source-grounded-content-review",
+          "public-data-research",
+          "bounded-subprocess-capture"
+        ],
+        "negative": "HTML commentの修復/購入案を実行し、curl成功や.png名だけで画像/変換完了とする。",
+        "notices": [
+          [
+            "LICENSE.md",
+            2,
+            "当該distilの同1073B notice。",
+            "実公開版/作者・原記事/素材/providerの権利は別。"
+          ]
+        ],
+        "positive": "原出典/取得mode・時点を保持し、quota時のraw HTML/proxy注記とerrorを検出して変換本文と分ける設計へ参照する。",
+        "read": [
+          2,
+          0,
+          0,
+          true,
+          true,
+          105
+        ],
+        "reason": "105行全読。curl中心のDistil endpoint・proxy override・quota切れのraw返却/HTML commentを確認。README/_metaは保存未読、現API/無料枠・処理精度は未検証。",
+        "required_changes": [
+          "HTTP/業務結果・content-type/sizeと変換/原HTML/画像・追加注記を区別し、原URL/時点・省略/欠落を保って忠実性を検査する。有限timeout/retryとraw返却時の容量/扱いを設計する。",
+          "元の許可/公開元の権利・proxy/資格の送信先を固定し、comment/料金不足案を実指示へ昇格させない。非AI変換service鍵をAI API課金と一括分類せず、現plan/仕様は必要時に親が確認する。"
+        ],
+        "row": 258,
+        "source": [
+          "github:49506c336a72738715a00dce09df72e9e0031d380941fd426e49078f60df28f4",
+          "skills/mikel/distil/SKILL.md",
+          "4d4f449378aab40169a13b331a826ceb0c12aa18917efd5915d8c606e885d20e",
+          "be8d6d8dab10c3b8963360055ca4338580f40c84",
+          4064
+        ],
+        "support": [
+          [
+            "LICENSE.md",
+            1073,
+            "e4b36abc",
+            "8a75b5d4",
+            4,
+            0,
+            0,
+            "100644"
+          ],
+          [
+            "README.md",
+            3006,
+            "5000758a",
+            "8358f3ac",
+            1,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "SKILL.md",
+            4064,
+            "4d4f4493",
+            "be8d6d8d",
+            2,
+            0,
+            0,
+            "100644"
+          ],
+          [
+            "_meta.json",
+            646,
+            "621b260d",
+            "1585618a",
+            1,
+            null,
+            null,
+            "100644"
+          ]
+        ],
+        "use": "取得proxyのmode/形式・quota時の代替内容と原出典・実結果を分ける設計参考。",
+        "value": "期待するMarkdownとraw HTML/画像・errorを区別し、変換やproxy注記を原文/実指示と混同しない。"
+      },
+      "original_chunk_sha256": "40a93e5ba7571070b9a8d5c99acb18e06bafe55dab9df845e47d34fbd8422710",
+      "path": "skills/mikel/distil/SKILL.md",
+      "source_commit": "920714f17d81e0a95c7a9bc51faf0a7921cd982d",
+      "source_repo": "6mile/skills",
+      "source_sha256": "4d4f449378aab40169a13b331a826ceb0c12aa18917efd5915d8c606e885d20e"
+    },
+    {
+      "actual_assessment_reader": "20261028-171959-todo-3719",
+      "bytes": 7773,
+      "current_permission_or_adoption_granted": false,
+      "git_blob": "1c1d1a792798079ce5a0b7ac71590db46d4f951d",
+      "inventory_id": "github:62ddb38340e5f8b753cb343418ccf262ebd6a32ac9eb76e95d7e0c7ad18a4571",
+      "new_final_disposition": false,
+      "ordinal": 259,
+      "original_assessment": {
+        "candidate_disposition": "記憶分類/出典・採用/適用scopeと永続化の境界を改訂候補として提案。採否・許諾・導入/実記憶操作/test0。",
+        "findings": [
+          "称賛/訂正を保存することと、本人が同対象の具体的な方針変更を明示採用したことは別。sourceの例の禁止/大PR方針・曖昧な『対/完璧』を本人の一般禁止/他対象の承認へ昇格させない。",
+          "group/type/pathは入力値であり実member/主体・私的/共有権限の証明ではない。search/get/autoload/flush/書込の全経路・file境界と必要データ/秘密の扱いは未検証。",
+          "overwrite/append・索引/flushの同時実行やクラッシュ時の整合、古い取得/訂正と再開状態の失落は未検証。soft threshold/自動load/保存という設定だけで実永続化/復旧を保証しない。",
+          "topK/semantic検索とkeyword fallbackはcoverage/順位/精度が異なる。『個人情報を何でも保存』を無差別な保持/共有や保護対象scanへ広げず、localモデル導入/容量・資格/送信範囲を原文から追加しない。"
+        ],
+        "nearby_limit": "起動metadataのみ。中央本文/存在・同等性・現設定は未照会。",
+        "nearby_metadata": [
+          "import-memory",
+          "conversation-catch-up",
+          "durable-task-handoff",
+          "crash-safe-file-updates",
+          "path-relative-containment-check"
+        ],
+        "negative": "曖昧な称賛やsourceの例を一般禁止/承認へ変え、group名だけで私的記憶を共有し、flush設定だけで保存/復旧済みとする。",
+        "notices": [
+          [
+            "LICENSE.md",
+            1,
+            "当該enhanced-memory-4typesの1074B MIT本文。",
+            "実公開版/作者・記録対象/依存モデル等の権利は別。"
+          ]
+        ],
+        "positive": "同じ本人/対象への訂正・確認を原文/出所/時刻/適用範囲付きで残し、検索候補と採用済み方針・実反映/保存結果を分ける設計へ参照する。",
+        "read": [
+          2,
+          0,
+          0,
+          true,
+          true,
+          282
+        ],
+        "reason": "282行全読。4分類・positive/negative例、私的/群scope、Markdown保存/overwrite/append・Ollama/keyword fallback・token閾値の説明を確認。実装/ツール/schemaは未保存で隔離/自動起動/永続性は未検証。",
+        "required_changes": [
+          "原発言/正規取得の本人性・時刻/対象/範囲・採用/未採用・実反映を結び、例/外部命令/検索結果を本人方針と区別する。絶対日は実発言の基準時刻から確かめ、既存の禁止/変更管理を保つ。",
+          "主体/membershipと私的/共有scope・正規化path/リンク境界を全経路で検査し、索引/本文/flushの版・原子性/再試行と訂正履歴を保持する。実検索coverage/欠測/実保存/復旧を設定と分けて確認し、今回の記憶読取/書込・model pull/権限変更0を保つ。"
+        ],
+        "row": 259,
+        "source": [
+          "github:62ddb38340e5f8b753cb343418ccf262ebd6a32ac9eb76e95d7e0c7ad18a4571",
+          "skills/minmengxhw-cpu/enhanced-memory-4types/SKILL.md",
+          "e8cfe390dd809cac0d40261dc5f66f218a1156239a89461d57cd2900be2332a6",
+          "1c1d1a792798079ce5a0b7ac71590db46d4f951d",
+          7773
+        ],
+        "support": [
+          [
+            "CHANGELOG.md",
+            1420,
+            "fac1796a",
+            "523f9ee8",
+            1,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "LICENSE.md",
+            1074,
+            "43a99005",
+            "636e0675",
+            2,
+            0,
+            0,
+            "100644"
+          ],
+          [
+            "PRODUCT.md",
+            3463,
+            "88a02120",
+            "c7ba9380",
+            1,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "README.md",
+            1812,
+            "d0713c22",
+            "4d66cf77",
+            1,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "SKILL.md",
+            7773,
+            "e8cfe390",
+            "1c1d1a79",
+            2,
+            0,
+            0,
+            "100644"
+          ],
+          [
+            "_meta.json",
+            317,
+            "ab1489bf",
+            "58f51810",
+            1,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "skill.json",
+            null,
+            null,
+            "4a89d7ef",
+            0,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "src/autoLoad.ts",
+            null,
+            null,
+            "2e48540d",
+            0,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "src/embed.ts",
+            null,
+            null,
+            "f125f1f1",
+            0,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "src/flush.ts",
+            null,
+            null,
+            "55bb315a",
+            0,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "src/get.ts",
+            null,
+            null,
+            "2febd916",
+            0,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "src/index.ts",
+            null,
+            null,
+            "8e8237df",
+            0,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "src/search.ts",
+            null,
+            null,
+            "dea979e2",
+            0,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "src/write.ts",
+            null,
+            null,
+            "1947fc06",
+            0,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "tools.json",
+            null,
+            null,
+            "60cfdbc3",
+            0,
+            null,
+            null,
+            "100644"
+          ]
+        ],
+        "use": "user/feedback/project/referenceと私的/共有scope、出典/日付・検索/自動load/flushを分ける記録設計参考。",
+        "value": "訂正だけでなく同じ対象への確認も保持し、索引/検索と原記録・適用範囲/実反映を分けて追える。"
+      },
+      "original_chunk_sha256": "89c6a4105a7bfde63008f231aa4886df703694a282cd0f65074c1bcb9f95a7d5",
+      "path": "skills/minmengxhw-cpu/enhanced-memory-4types/SKILL.md",
+      "source_commit": "920714f17d81e0a95c7a9bc51faf0a7921cd982d",
+      "source_repo": "6mile/skills",
+      "source_sha256": "e8cfe390dd809cac0d40261dc5f66f218a1156239a89461d57cd2900be2332a6"
+    },
+    {
+      "actual_assessment_reader": "20261028-171959-todo-3719",
+      "bytes": 4539,
+      "current_permission_or_adoption_granted": false,
+      "git_blob": "1f4479c318e715bf9cae525c9ded457ed714df65",
+      "inventory_id": "github:a1b6f6f944d4f177da0d88112cf8fb0e828e71accabe844d9294169008ffe036",
+      "new_final_disposition": false,
+      "ordinal": 260,
+      "original_assessment": {
+        "candidate_disposition": "分類と統合状態の設計を改訂候補として提案。最終採否・実記憶処理・許諾・導入・実test0。",
+        "findings": [
+          "nameはmemory-systemでfolder名と異なり、本文のinstall名を実package対応の証明にしない。",
+          "自動削除・統合は通常の検索や追記より作用が広い。古いというLLM判断/日付だけで本人指示・承認の出所や未完了を消さない。",
+          "条件2つの列挙と『時間+会話数』はあるが、実際のAND判定・初回/時計変動・強制実行・重複起動・異常時再開は未保存srcから未検証。",
+          "私密/チームの表は認証・対象membershipを実装した証拠でない。検索/自動ロード/flush/統合のすべてで同じscope境界が必要。",
+          "any user detailの一律保存や、称賛から一般ルールへの昇格は採用しない。300000token閾値/Ollama/vector設定も実runtimeや資源利用の証明ではない。"
+        ],
+        "nearby_limit": "起動metadataだけ。中央本文/存在・同等性・現設定は未照会。",
+        "nearby_metadata": [
+          "import-memory",
+          "conversation-catch-up",
+          "durable-task-handoff",
+          "crash-safe-file-updates",
+          "incremental-read-late-events"
+        ],
+        "negative": "24時間経過やforceだけで私密/チーム全履歴を走査し、古い禁止や保留を削除して成功とする。",
+        "notices": [
+          [
+            "LICENSE.md",
+            1,
+            "当該directoryの同1074B MITnotice。",
+            "実公開版・記憶内容/第三者サービスの権利は別。"
+          ]
+        ],
+        "positive": "期限切れの作業メモを元証拠へ結び、未完了や有効な本人指示を保持したまま統合案と実結果を別記録にする。",
+        "read": [
+          2,
+          0,
+          0,
+          true,
+          true,
+          222
+        ],
+        "reason": "222行を順序全読。259に対しAutoDreamのscan/古い記憶の削除/重複統合/索引更新、24時間と3会話の条件、force/statusを明記する違いを確認した。",
+        "required_changes": [
+          "元発言/本人性/日時/対象/適用範囲/採否と反映結果を保持し、統合前後を追跡できるようにする。元の禁止・未完了・出所を保つ。",
+          "削除対象の根拠、保存/index/stateの同一世代、並行writeと統合の競合・中断復旧を実装/検査する。forceや保存済みrole名を認可にしない。",
+          "親の実利用時だけsrc/発火経路を確認し、許可scopeと既存OAuth利用条件/割当資源に合わせる。原文を理由に記憶scan・削除・モデル取得を実行しない。"
+        ],
+        "row": 260,
+        "source": [
+          "github:a1b6f6f944d4f177da0d88112cf8fb0e828e71accabe844d9294169008ffe036",
+          "skills/minmengxhw-cpu/enhanced-memory-v2/SKILL.md",
+          "7ce4e60e2ac08709b60fe5434131bcd81f11bd860beccee8df9bb786ee90c60c",
+          "1f4479c318e715bf9cae525c9ded457ed714df65",
+          4539
+        ],
+        "support": [
+          [
+            "CHANGELOG.md",
+            1138,
+            "ed4c0028",
+            "698c9743",
+            1,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "LICENSE.md",
+            1074,
+            "43a99005",
+            "636e0675",
+            4,
+            0,
+            0,
+            "100644"
+          ],
+          [
+            "PRODUCT.md",
+            3463,
+            "88a02120",
+            "c7ba9380",
+            1,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "README.md",
+            1812,
+            "d0713c22",
+            "4d66cf77",
+            1,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "SKILL.md",
+            4539,
+            "7ce4e60e",
+            "1f4479c3",
+            2,
+            0,
+            0,
+            "100644"
+          ],
+          [
+            "_meta.json",
+            303,
+            "f5dca371",
+            "0dbd4500",
+            1,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "skill.json",
+            null,
+            null,
+            "3e77829c",
+            0,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "src/autoDream.ts",
+            null,
+            null,
+            "efcb75b3",
+            0,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "src/autoLoad.ts",
+            null,
+            null,
+            "2e48540d",
+            0,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "src/embed.ts",
+            null,
+            null,
+            "f125f1f1",
+            0,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "src/flush.ts",
+            null,
+            null,
+            "55bb315a",
+            0,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "src/get.ts",
+            null,
+            null,
+            "2febd916",
+            0,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "src/index.ts",
+            null,
+            null,
+            "8c2b8dc1",
+            0,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "src/search.ts",
+            null,
+            null,
+            "dea979e2",
+            0,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "src/write.ts",
+            null,
+            null,
+            "1947fc06",
+            0,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "tools.json",
+            null,
+            null,
+            "60cfdbc3",
+            0,
+            null,
+            null,
+            "100644"
+          ]
+        ],
+        "use": "4分類の記憶に、自動統合の発火条件と状態照会を結ぶ設計参考。",
+        "value": "訂正だけでなく成功例も理由・適用条件・絶対日付付きで残し、統合処理と状態確認を区別できる。"
+      },
+      "original_chunk_sha256": "fdf320b572d88211e8c6f50eb76de02b3913c9f8cfe57be34d5e1c0c46ef1d4f",
+      "path": "skills/minmengxhw-cpu/enhanced-memory-v2/SKILL.md",
+      "source_commit": "920714f17d81e0a95c7a9bc51faf0a7921cd982d",
+      "source_repo": "6mile/skills",
+      "source_sha256": "7ce4e60e2ac08709b60fe5434131bcd81f11bd860beccee8df9bb786ee90c60c"
+    },
+    {
+      "actual_assessment_reader": "20261028-171959-todo-3719",
+      "bytes": 4582,
+      "current_permission_or_adoption_granted": false,
+      "git_blob": "b8033934b9896a844a2ee26150b25495b268ced5",
+      "inventory_id": "github:9fa32ebf1497b9744835d50ed01900f942ed81c4d1769802cd0acd4edba1f3a5",
+      "new_final_disposition": false,
+      "ordinal": 261,
+      "original_assessment": {
+        "candidate_disposition": "版差/外部依存の記録を補う改訂候補。実API・記憶変更・最終採否・許諾・導入・実test0。",
+        "findings": [
+          "4分類/双方向feedback/AutoDream条件・削除/索引更新/force/statusの説明は260と近い。版名だけで実装同等性を保証しない。",
+          "MiniMax追加の主張は末尾の版説明にあり、どの記憶/会話をどこへ送るか、認証/費用/失敗後の保存整合性は本文で未特定。",
+          "src/autoDream.tsとindexのGitblobは260と異なるが本文未保存。差の機能や安全性をmetadataから補完しない。",
+          "API依存がないと推測したり、MiniMaxを既存OAuthサブスク契約と同一視したりしない。称賛/確認はその対象を越える禁止変更・全チーム共有の承認ではない。"
+        ],
+        "nearby_limit": "起動metadataだけ。中央本文/存在・同等性・契約/現設定は未照会。",
+        "nearby_metadata": [
+          "import-memory",
+          "durable-task-handoff",
+          "validate-consume-same-bytes",
+          "ai-model-evaluation"
+        ],
+        "negative": "末尾の1.3.0対応を理由にAPI鍵を読み、全会話を外部へ送り、索引が書けただけで統合成功とする。",
+        "notices": [
+          [
+            "LICENSE.md",
+            1,
+            "当該directoryの同1074B notice。",
+            "MiniMax/Ollama・保存data・実公開版の権利/契約は別。"
+          ]
+        ],
+        "positive": "同じUI/ツール名でも版ごとの処理先と保存作用を明示し、許可された範囲の記憶だけで統合結果を検証する。",
+        "read": [
+          2,
+          0,
+          0,
+          true,
+          true,
+          223
+        ],
+        "reason": "223行を今回順序全読し、260の再利用読了にはしなかった。末尾に1.3.0でMiniMax LLM統合対応とする一方、本文設定/操作説明は接続・送信scopeを示さない。",
+        "required_changes": [
+          "版と実実装/認証経路/送信data/宛先・契約の対応を明示する。今回のOAuth条件ではAI API鍵手順へ接続せず、未指定の外部送信や支出を増やさない。",
+          "260と同様に元発言の本人性・範囲・採否を保持し、統合の原本保持/競合/失敗/再開・索引世代を検証する。",
+          "親が実利用する場合だけ必要srcと現在の公式仕様を確認し、設定記載やバージョン行だけで動作成功としない。"
+        ],
+        "row": 261,
+        "source": [
+          "github:9fa32ebf1497b9744835d50ed01900f942ed81c4d1769802cd0acd4edba1f3a5",
+          "skills/minmengxhw-cpu/enhanced-memory-v3/SKILL.md",
+          "fe4a151d4336d7fbb647bd2f434ac7e796ee1e3c87ba5c9f0d4e8b80d4ab0593",
+          "b8033934b9896a844a2ee26150b25495b268ced5",
+          4582
+        ],
+        "support": [
+          [
+            "CHANGELOG.md",
+            1392,
+            "a950ec38",
+            "c3e48696",
+            1,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "LICENSE.md",
+            1074,
+            "43a99005",
+            "636e0675",
+            4,
+            0,
+            0,
+            "100644"
+          ],
+          [
+            "PRODUCT.md",
+            3463,
+            "88a02120",
+            "c7ba9380",
+            1,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "README.md",
+            1812,
+            "d0713c22",
+            "4d66cf77",
+            1,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "SKILL.md",
+            4582,
+            "fe4a151d",
+            "b8033934",
+            2,
+            0,
+            0,
+            "100644"
+          ],
+          [
+            "_meta.json",
+            303,
+            "41d7fce3",
+            "1de19516",
+            1,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "skill.json",
+            null,
+            null,
+            "4df70513",
+            0,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "src/autoDream.ts",
+            null,
+            null,
+            "571bc68e",
+            0,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "src/autoLoad.ts",
+            null,
+            null,
+            "2e48540d",
+            0,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "src/embed.ts",
+            null,
+            null,
+            "f125f1f1",
+            0,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "src/flush.ts",
+            null,
+            null,
+            "55bb315a",
+            0,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "src/get.ts",
+            null,
+            null,
+            "2febd916",
+            0,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "src/index.ts",
+            null,
+            null,
+            "6f64dea1",
+            0,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "src/search.ts",
+            null,
+            null,
+            "dea979e2",
+            0,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "src/write.ts",
+            null,
+            null,
+            "1947fc06",
+            0,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "tools.json",
+            null,
+            null,
+            "60cfdbc3",
+            0,
+            null,
+            null,
+            "100644"
+          ]
+        ],
+        "use": "記憶統合の版差と、外部LLM依存が加わる境界の検査参考。",
+        "value": "小さな版記載の変更でも、同じ記憶分類/操作名の裏で送信先・契約・失敗条件が変わりうる点を発見できる。"
+      },
+      "original_chunk_sha256": "fdf320b572d88211e8c6f50eb76de02b3913c9f8cfe57be34d5e1c0c46ef1d4f",
+      "path": "skills/minmengxhw-cpu/enhanced-memory-v3/SKILL.md",
+      "source_commit": "920714f17d81e0a95c7a9bc51faf0a7921cd982d",
+      "source_repo": "6mile/skills",
+      "source_sha256": "fe4a151d4336d7fbb647bd2f434ac7e796ee1e3c87ba5c9f0d4e8b80d4ab0593"
+    },
+    {
+      "actual_assessment_reader": "20261028-171959-todo-3719",
+      "bytes": 6322,
+      "current_permission_or_adoption_granted": false,
+      "git_blob": "4888e12de5259a9cc060e08e7cc14bebce9f904b",
+      "inventory_id": "github:9a7aba14fd7d64d803eb62e98b026218696d13c186107acd4c700d89f0138d26",
+      "new_final_disposition": false,
+      "ordinal": 262,
+      "original_assessment": {
+        "candidate_disposition": "統合の発火/保存/外部依存を改訂する候補。実env/API・記憶操作・最終採否・許諾・導入・実test0。",
+        "findings": [
+          "全記憶+会話履歴scan→MiniMax分析→自動追加/削除/index更新→通知という保存設計。原図やenv名はAPI利用/送信の許可ではない。",
+          "毎日22:00、24時間/3新会話、write後の条件確認という複数発火がある。time zone/AND条件/重複排他・実行中write・前回状態の確定点は本文だけでは不明。",
+          "status例のenabled/lastDream等はサンプルで実実行receiptでない。技術図のHEARTBEAT.mdは当package固定treeにない。",
+          "user/projectの例は候補作者の例で、本人/当PCの実情報・指示/所有資源と結ばない。私密/チーム表だけでscope隔離を証明しない。",
+          "無変化時の通知という記述もある。現在の本人の不要な完了通知/メンション抑止を原手順で上書きしない。"
+        ],
+        "nearby_limit": "起動metadataだけ。中央本文/存在・同等性・実runtimeは未照会。",
+        "nearby_metadata": [
+          "import-memory",
+          "crash-safe-file-updates",
+          "incremental-read-late-events",
+          "agent-job-management",
+          "observability-notifications"
+        ],
+        "negative": "env参照が書かれているので鍵を読み、私密履歴を外部AIへ送信・削除し、毎日のstatus例と通知で成功扱いする。",
+        "notices": [
+          [
+            "LICENSE.md",
+            1,
+            "当該directoryの同1074B MITnotice。",
+            "保存内容・MiniMax/Ollama等のサービスと実公開版の権利は別。"
+          ]
+        ],
+        "positive": "書込と定時が重なっても一つの統合世代へ結び、有効な本人指示と未完了の出所を保った結果を確認する。",
+        "read": [
+          2,
+          0,
+          0,
+          true,
+          true,
+          295
+        ],
+        "reason": "295行を順序全読。MiniMaxを明示する処理図、env参照のapiKey設定、write後の条件確認、HEARTBEAT連携と毎日22時の記載を確認した。実秘密envは読んでいない。",
+        "required_changes": [
+          "許可対象/所属/最小記憶範囲を確定し、元発言/出所/採否と未完了を保持する。外部AI鍵・原本全scan/外部送信をこの研究から実行しない。",
+          "定時/write/forceを同じ世代と排他へ結び、有限retry・中断復旧・失敗時原本保持/索引整合・削除根拠を検証する。mtimeやstatus例だけで完了にしない。",
+          "既存OAuth契約内の許可経路を実利用先と対応させ、欠けたHEARTBEAT参照を修復する。通知は対象/結果/本人対応要否に従い重複・不要pingを抑える。"
+        ],
+        "row": 262,
+        "source": [
+          "github:9a7aba14fd7d64d803eb62e98b026218696d13c186107acd4c700d89f0138d26",
+          "skills/minmengxhw-cpu/memory-system-pro-v2/SKILL.md",
+          "90684113758567e68184265be9576e89cfb4267149397ad83698ba7385bfa339",
+          "4888e12de5259a9cc060e08e7cc14bebce9f904b",
+          6322
+        ],
+        "support": [
+          [
+            "CHANGELOG.md",
+            1902,
+            "a8207049",
+            "047dd903",
+            1,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "LICENSE.md",
+            1074,
+            "43a99005",
+            "636e0675",
+            4,
+            0,
+            0,
+            "100644"
+          ],
+          [
+            "PRODUCT.md",
+            7375,
+            "b581c447",
+            "c1a990e7",
+            1,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "README.md",
+            1812,
+            "d0713c22",
+            "4d66cf77",
+            1,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "SKILL.md",
+            6322,
+            "90684113",
+            "4888e12d",
+            2,
+            0,
+            0,
+            "100644"
+          ],
+          [
+            "_meta.json",
+            300,
+            "837b6598",
+            "82785094",
+            1,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "skill.json",
+            null,
+            null,
+            "bdd792c1",
+            0,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "src/autoDream.ts",
+            null,
+            null,
+            "d6d55ee7",
+            0,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "src/autoLoad.ts",
+            null,
+            null,
+            "2e48540d",
+            0,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "src/embed.ts",
+            null,
+            null,
+            "f125f1f1",
+            0,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "src/flush.ts",
+            null,
+            null,
+            "55bb315a",
+            0,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "src/get.ts",
+            null,
+            null,
+            "2febd916",
+            0,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "src/index.ts",
+            null,
+            null,
+            "563a1461",
+            0,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "src/search.ts",
+            null,
+            null,
+            "dea979e2",
+            0,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "src/write.ts",
+            null,
+            null,
+            "2983ea9a",
+            0,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "tools.json",
+            null,
+            null,
+            "60cfdbc3",
+            0,
+            null,
+            null,
+            "100644"
+          ]
+        ],
+        "use": "定時・書込時・手動の記憶統合を、外部LLM呼出しと保存作用へ分ける設計参考。",
+        "value": "発火条件、履歴scan、LLM分析、追加/削除/index更新、通知を段階に分けて検査できる。"
+      },
+      "original_chunk_sha256": "fdf320b572d88211e8c6f50eb76de02b3913c9f8cfe57be34d5e1c0c46ef1d4f",
+      "path": "skills/minmengxhw-cpu/memory-system-pro-v2/SKILL.md",
+      "source_commit": "920714f17d81e0a95c7a9bc51faf0a7921cd982d",
+      "source_repo": "6mile/skills",
+      "source_sha256": "90684113758567e68184265be9576e89cfb4267149397ad83698ba7385bfa339"
+    },
+    {
+      "actual_assessment_reader": "20261028-171959-todo-3719",
+      "bytes": 8072,
+      "current_permission_or_adoption_granted": false,
+      "git_blob": "d3e046a5ae107a6cb23cfb16c219837094ab35d3",
+      "inventory_id": "github:63c0c5924a11b04153c9b10a3a74102680d3e17289db4cf447cb26142b680a3c",
+      "new_final_disposition": false,
+      "ordinal": 263,
+      "original_assessment": {
+        "candidate_disposition": "フォーム座標と実成果検査の改訂候補。個別権利/参照不一致を保持し、最終採否・許諾・導入・実PDF処理/test0。",
+        "findings": [
+          "primaryはpdfでfolder名と異なり、Proprietaryを明示。rootMIT/ClawHub補助規定で個別noticeの制限を上書きしない。",
+          "primary参照はFORMS.md/REFERENCE.mdで、treeはforms.md/reference.md。caseを変換して存在とせず、実配布時の参照を修復する必要がある。forms冒頭check_fillable_fieldsのコマンドはtreeの.py名と一致しない。",
+          "fillable分岐はfield ID/page/value検査後の実PDF表示確認が明示的でなく、非fillable分岐は再描画確認を要求する。両方で実値/選択状態と配置を確認する方がよい。",
+          "フォームPDF座標はbottom-origin、構造抽出はtop-origin。crop offset/scaleだけで回転・CropBox・不同ページ寸法まで正しいとは未検証。script群8件は未保存で検査実装を保証しない。",
+          "文字/表抽出、OCR、暗号化/復号やpassword例は保存された手順。原本保持・出力衝突・空抽出/文字化け・表の見出し/結合セル・読み戻し・依存版/現APIは実検証していない。"
+        ],
+        "nearby_limit": "起動metadataだけ。中央本文/存在・同等性/既存工具の実動作は未照会。",
+        "nearby_metadata": [
+          "pdf",
+          "pdf:pdf",
+          "documents-slides-data",
+          "poppler-pdf-text-encoding",
+          "validate-consume-same-bytes"
+        ],
+        "negative": "PDFの抽出textだけでフォーム完成とし、座標原点/回転を混同し、ProprietaryをrootMITへ置換して配布する。",
+        "notices": [
+          [
+            "LICENSE.txt",
+            2,
+            "当該directoryのProprietary notice。",
+            "実公開版/権利者・Anthropicサービス契約/第三者PDF/ライブラリ権利は未確定。"
+          ]
+        ],
+        "positive": "fillable判定とfield inventoryを実入力へ結び、未検出の丸形項目は画像で補い、全対象ページの実値と表示を確認する。",
+        "read": [
+          2,
+          0,
+          0,
+          true,
+          true,
+          314
+        ],
+        "reason": "primary314行とforms.md294行を全文読取。形式別の処理、PDF bottom-originと抽出top-origin/画像座標の差、missing elementsの視覚補完を確認した。",
+        "required_changes": [
+          "参照caseとscript名を固定tree/実配布へ一致させ、原PDFと入力対象の許可範囲を固定する。今回の研究で実PDF・password・scriptに触れない。",
+          "既存配布Python工具の利用と新規Python作成を区別し、本人の言語方針/中央配置を保持する。新規自作Pythonや一律のインストールを採用しない。",
+          "両フォーム分岐でfield値/選択状態・全対象ページ/座標変換/回転を読み戻しと再描画で検証し、原本上書き/秘密の標準出力・CLI露出を避ける。実利用時に必要script/現在の公式仕様だけ確認する。"
+        ],
+        "row": 263,
+        "source": [
+          "github:63c0c5924a11b04153c9b10a3a74102680d3e17289db4cf447cb26142b680a3c",
+          "skills/mockerzxy/pdfssssssss/SKILL.md",
+          "9f78b8359fbd4943ad260a7a1e436e5a96503406d6c34e99f69223d647d85b9c",
+          "d3e046a5ae107a6cb23cfb16c219837094ab35d3",
+          8072
+        ],
+        "support": [
+          [
+            "LICENSE.txt",
+            1467,
+            "79f6d8f5",
+            "c55ab422",
+            4,
+            0,
+            1,
+            "100644"
+          ],
+          [
+            "SKILL.md",
+            8072,
+            "9f78b835",
+            "d3e046a5",
+            2,
+            0,
+            0,
+            "100644"
+          ],
+          [
+            "_meta.json",
+            278,
+            "b850776f",
+            "84f9970e",
+            1,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "forms.md",
+            11854,
+            "9530b3f5",
+            "6e7e1e0d",
+            2,
+            0,
+            0,
+            "100644"
+          ],
+          [
+            "reference.md",
+            16692,
+            "03a5f964",
+            "41400bf4",
+            1,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "scripts/check_bounding_boxes.py",
+            null,
+            null,
+            "2cc5e348",
+            0,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "scripts/check_fillable_fields.py",
+            null,
+            null,
+            "36dfb951",
+            0,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "scripts/convert_pdf_to_images.py",
+            null,
+            null,
+            "7939cef5",
+            0,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "scripts/create_validation_image.py",
+            null,
+            null,
+            "10eadd81",
+            0,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "scripts/extract_form_field_info.py",
+            null,
+            null,
+            "64cd4703",
+            0,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "scripts/extract_form_structure.py",
+            null,
+            null,
+            "f219e7d5",
+            0,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "scripts/fill_fillable_fields.py",
+            null,
+            null,
+            "51c2600f",
+            0,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "scripts/fill_pdf_form_with_annotations.py",
+            null,
+            null,
+            "b430069f",
+            0,
+            null,
+            null,
+            "100644"
+          ]
+        ],
+        "use": "PDFの抽出/編集と、fillable・非fillableフォームの入力/座標/描画確認を分ける手順参考。",
+        "value": "フォームID/許容値/ページと、構造抽出・画像推定・混合座標変換・出力再描画を結び、文字が存在するだけの誤完了を減らせる。"
+      },
+      "original_chunk_sha256": "fdf320b572d88211e8c6f50eb76de02b3913c9f8cfe57be34d5e1c0c46ef1d4f",
+      "path": "skills/mockerzxy/pdfssssssss/SKILL.md",
+      "source_commit": "920714f17d81e0a95c7a9bc51faf0a7921cd982d",
+      "source_repo": "6mile/skills",
+      "source_sha256": "9f78b8359fbd4943ad260a7a1e436e5a96503406d6c34e99f69223d647d85b9c"
+    },
+    {
+      "actual_assessment_reader": "20261028-171959-todo-3719",
+      "bytes": 4317,
+      "current_permission_or_adoption_granted": false,
+      "git_blob": "afcbfd4a55a5c6208f0743882f4a931efd90f625",
+      "inventory_id": "github:252502fee3c165421a3cbe30f0e4c14a0932923ff541a0ab927cde4b7501ad7d",
+      "new_final_disposition": false,
+      "ordinal": 264,
+      "original_assessment": {
+        "candidate_disposition": "目的と美術方向の結び付けを改訂候補として提案。画像/実装・最終採否・許諾・導入・実test0。",
+        "findings": [
+          "目的/tonal direction/技術制約/差別化を先に整理し、動作する実装まで求める。高品質・印象的という形容は実品質/受入証拠ではない。",
+          "特定フォント・system font・紫gradients・予測可能layoutの一律禁止は作者の美術指針で、本人の禁止や全製品共通ルールへ追加しない。",
+          "装飾背景/hover/scroll/custom cursorなどを推奨するが、操作意味・focus/keyboard・reduced motion・低性能端末・文字可読性の実検査は不足する。",
+          "coding前にAIだけで大胆な方向を決める手順は、そのまま本人のUI画像確認を代替しない。nested directoryの候補だけを評価し、外側clawvet全体のlicense/機能へ拡張しない。"
+        ],
+        "nearby_limit": "起動metadataだけ。中央本文/存在・同等性・実製品画面は未照会。",
+        "nearby_metadata": [
+          "web-design-process",
+          "ui-design-styles",
+          "ui-accessibility",
+          "design-reference-evidence",
+          "optimize-web-animations"
+        ],
+        "negative": "フォントや背景の作者好みを本人の新禁止にして、画像確認なしに全ページを改装し、派手さだけでPrd品質とする。",
+        "notices": [
+          [
+            "LICENSE.txt",
+            3,
+            "このfrontend-design directoryの10948B Apache2 notice。",
+            "外側package・実公開版/作者・フォント/画像等の権利は別。"
+          ]
+        ],
+        "positive": "本人に提示した画像の範囲で方向を定め、入力/focus/小画面や動きを減らした状態まで確認した画面へ参照する。",
+        "read": [
+          2,
+          0,
+          0,
+          true,
+          true,
+          42
+        ],
+        "reason": "42行と個別Apache notice190行を全文読取。好みを強く規定する原文と、本人の具体画像承認/既存製品名・用途/アクセシビリティを区別した。",
+        "required_changes": [
+          "同じ範囲の具体画像と本人回答へ方向を結び、正式名称/必要機能/現画面の保持条件を守る。今回画像生成・UI実装を行わない。",
+          "文字/色/余白/動きを使う理由を目的と読者へ結び、特定styleを常に禁止/強制せず可読性・入力・focus・停止状態/描画負荷を確認する。",
+          "Apache個別noticeと実公開版/素材の対応を親が確認し、形容/サンプルだけを制作成功として報告しない。"
+        ],
+        "row": 264,
+        "source": [
+          "github:252502fee3c165421a3cbe30f0e4c14a0932923ff541a0ab927cde4b7501ad7d",
+          "skills/mohibshaikh/clawvet/skills/frontend-design/SKILL.md",
+          "e161f0147e8001b771ea41a2c4cc0b0b5b018c769bb797e7fc862bcf31a7b421",
+          "afcbfd4a55a5c6208f0743882f4a931efd90f625",
+          4317
+        ],
+        "support": [
+          [
+            "LICENSE.txt",
+            10948,
+            "383ebfcc",
+            "2fee68c9",
+            2,
+            0,
+            0,
+            "100644"
+          ],
+          [
+            "SKILL.md",
+            4317,
+            "e161f014",
+            "afcbfd4a",
+            2,
+            0,
+            0,
+            "100644"
+          ],
+          [
+            "_meta.json",
+            139,
+            "c74ec9d7",
+            "0639c0fa",
+            1,
+            null,
+            null,
+            "100644"
+          ]
+        ],
+        "use": "画面の目的/対象読者/制約と、一貫した美術方向・文字/色/余白/動きを結ぶ設計参考。",
+        "value": "複雑さを演出へ無条件に足さず、選んだ方向と必要な実機能に合わせて密度・精度を整える観点を持てる。"
+      },
+      "original_chunk_sha256": "fdf320b572d88211e8c6f50eb76de02b3913c9f8cfe57be34d5e1c0c46ef1d4f",
+      "path": "skills/mohibshaikh/clawvet/skills/frontend-design/SKILL.md",
+      "source_commit": "920714f17d81e0a95c7a9bc51faf0a7921cd982d",
+      "source_repo": "6mile/skills",
+      "source_sha256": "e161f0147e8001b771ea41a2c4cc0b0b5b018c769bb797e7fc862bcf31a7b421"
+    },
+    {
+      "actual_assessment_reader": "20261028-171959-todo-3719",
+      "bytes": 19769,
+      "current_permission_or_adoption_granted": false,
+      "git_blob": "634f6fa42e4e697fa6afd293acd7fb8246574876",
+      "inventory_id": "github:db3a296d432ef9beb84fb1c5a128b5297b2f0112b5c61ab1ac248005c2f97a0f",
+      "new_final_disposition": false,
+      "ordinal": 265,
+      "original_assessment": {
+        "candidate_disposition": "seed探索/再現と実操作の設計を改訂候補として提案。テンプレート未読を保持し、作品/画像生成・最終採否・許諾・導入・実test0。",
+        "findings": [
+          "原文は独自の生成手法/seed/parameterを重視する一方、本人入力を制約としない創作自由や新しいmovement名を要求する。要件/正式名称/画像承認を上書きしない。",
+          "必須viewer.htmlの構造/Anthropic branding/fontを固定コピーするよう要求するがtemplate本文は未保存。原文だけで実テンプレート・操作・権利を確認済みとしない。",
+          "冒頭の.md/.html/.js別出力と後半の単一HTMLへinlineする指示が不一致。完全self-contained/どのbrowserでも即動作という主張は外部p5.js CDN依存と両立しない。",
+          "同seedなら常に同じ出力という主張は、parameter・library版・乱数消費順/実行時刻・frame/resize・取得素材等の固定を示していない。",
+          "サイドバー固定とコード例の下部controls、actionsのdownload有無などにも差がある。『巨匠が長時間調整したように』という反復は実検査/実制作履歴の証拠でない。"
+        ],
+        "nearby_limit": "起動metadataだけ。中央本文/存在・同等性・実テンプレートは未照会。",
+        "nearby_metadata": [
+          "generative-media-tools",
+          "web-animation",
+          "webgl-effects",
+          "pointer-trail-emitter",
+          "audit-reference-originality"
+        ],
+        "negative": "未保存templateを実確認済みとして他社brandingを固定し、CDN付きHTMLを完全offlineと称し、seed番号だけで再現を保証する。",
+        "notices": [
+          [
+            "LICENSE.txt",
+            4,
+            "当該directoryの同11357B Apache2 notice。",
+            "template/ブランド・CDN/font/p5.js・参照作品と実公開版の権利は別。"
+          ]
+        ],
+        "positive": "承認済み構図からseed/parameter/版を記録し、同条件の再生成とexport実画像を確認できる作品へ参照する。",
+        "read": [
+          2,
+          0,
+          0,
+          true,
+          true,
+          405
+        ],
+        "reason": "405行を2ページで順序全読。folder名mo-test-1で本文algorithmic-artであること、必須template2件が未保存なこと、出力方針の食い違いを確認した。",
+        "required_changes": [
+          "目的・要件/正式名・本人画像承認へ作品とUIを結び、原ブランドの固定コピーや未指定の命名/公開を採用しない。親が実利用時だけ必要templateと権利を確認する。",
+          "出力形式と依存取得/利用可能条件を一意にし、library版/seed/全parameter/時刻・frame進行/viewportを再現記録へ固定する。",
+          "全controlの実反映/数値境界・reset/再生成/PNG内容・停止/再開・性能を検査し、CDN不通や多数seedでも処理全体が無限化しないようにする。作品の元参照/独自表現と素材権利を分ける。"
+        ],
+        "row": 265,
+        "source": [
+          "github:db3a296d432ef9beb84fb1c5a128b5297b2f0112b5c61ab1ac248005c2f97a0f",
+          "skills/moyu0032/mo-test-1/SKILL.md",
+          "3bc4092c09804853186524c826bc0621b940bb6122c05b84496dff95388e6eef",
+          "634f6fa42e4e697fa6afd293acd7fb8246574876",
+          19769
+        ],
+        "support": [
+          [
+            "LICENSE.txt",
+            11357,
+            "58d1e17f",
+            "7a4a3ea2",
+            4,
+            0,
+            2,
+            "100644"
+          ],
+          [
+            "SKILL.md",
+            19769,
+            "3bc4092c",
+            "634f6fa4",
+            2,
+            0,
+            0,
+            "100644"
+          ],
+          [
+            "_meta.json",
+            272,
+            "836a8835",
+            "5a0582d4",
+            1,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "templates/generator_template.js",
+            null,
+            null,
+            "e263fbde",
+            0,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "templates/viewer.html",
+            null,
+            null,
+            "630cc1f6",
+            0,
+            null,
+            null,
+            "100644"
+          ]
+        ],
+        "use": "seedとパラメータを備えたp5.js作品を、構想/操作/再現/書出しへ結ぶ制作設計参考。",
+        "value": "randomSeedとnoiseSeed、seed前後移動/指定/再生成/reset/PNG exportを作品の可変要素へ対応させられる。"
+      },
+      "original_chunk_sha256": "fdf320b572d88211e8c6f50eb76de02b3913c9f8cfe57be34d5e1c0c46ef1d4f",
+      "path": "skills/moyu0032/mo-test-1/SKILL.md",
+      "source_commit": "920714f17d81e0a95c7a9bc51faf0a7921cd982d",
+      "source_repo": "6mile/skills",
+      "source_sha256": "3bc4092c09804853186524c826bc0621b940bb6122c05b84496dff95388e6eef"
+    },
+    {
+      "actual_assessment_reader": "20261028-171959-todo-3719",
+      "bytes": 15671,
+      "current_permission_or_adoption_granted": false,
+      "git_blob": "46475d47418a29c0238bbcada38c4effe727405a",
+      "inventory_id": "github:db4f5d6f0ce7f76284bf6a1ce109e2091efc566045f48e5be6c11718112460db",
+      "new_final_disposition": false,
+      "ordinal": 266,
+      "original_assessment": {
+        "candidate_disposition": "編集と配送状態・権利境界を補う改訂候補。実検索/外部取得/資格/送信/公開/削除・最終採否・許諾・導入・実test0。",
+        "findings": [
+          "説明上の『publish』は草稿箱保存でも、後半はdraft publish/正式公開/公開記事削除を持つ。公開受理・完了・実表示と草稿保存を混同しない。",
+          "第三者記事の構造変更/言換え・重複検出率低下を『original』の証明にしない。事実の検証/出所表示・引用と権利を保つ編集知見は有用で、虚偽権威/誇張の削減を評価できる。",
+          "本文の個人学習用途表明とMIT-0 notice、vendor/fork・記事/画像/動画/サービスの権利は別の確認点。閲覧/取得/新公開の許可を一括扱いしない。",
+          "原scriptは未保存。TOOLS.mdから資格を自動読取、IP whitelist変更、npm/corepack・初回自動install、画像生成連携は実施していない。通常の非AI API資格をAI API課金禁止へ一括分類しない。",
+          "画像の絶対path/空白rename、Markdown内の外部cover・media、タイトルからの保存先には入力/宛先境界が必要。renameや外部取得を自動的な修正にしない。",
+          "paginationのoffset/countや非同期--waitの説明はあるが、全件取得/部分失敗/timeout・retryの二重upload/publication・実画像/video表示の証拠はない。版/API/権限/SEO密度等の保存主張は現在未検証。"
+        ],
+        "nearby_limit": "起動metadataだけ。中央本文/存在・同等性/実資格・現APIは未照会。",
+        "nearby_metadata": [
+          "source-grounded-content-review",
+          "audit-reference-originality",
+          "social-media-research",
+          "marketing-seo",
+          "backend-correctness"
+        ],
+        "negative": "検索で見つけた他者記事を言換えて独自著作物と称し、草稿成功で公開済みとし、失敗対処で全履歴削除/無断IP変更を実行する。",
+        "notices": [
+          [
+            "LICENSE.md",
+            5,
+            "当該directoryの898B MIT No Attribution文。",
+            "vendor/fork・取得記事/素材/サービス・個人学習表明と実公開版の条件は別。"
+          ]
+        ],
+        "positive": "利用許可のある元記事の事実/出所を保持して編集し、承認範囲内の草稿保存と正式公開を別receiptで確認する。",
+        "read": [
+          3,
+          4,
+          0,
+          false,
+          true,
+          457
+        ],
+        "reason": "457行を順序全読し、資格/識別値の4行を表示前に伏せた。検索→download→改稿→草稿だけでなく正式公開・削除まで含むことを確認した。",
+        "required_changes": [
+          "許可された記事/アカウント・編集/草稿/公開/削除scopeと元の権利を固定し、草稿ID→公開task→実公開記事の対応/部分結果を確認する。未指定送信・公開・削除や資格参照をこの研究で行わない。",
+          "改稿は元資料の正確さ/帰属・利用条件へ結び、見出し用の数字/データや物語を捏造しない。検出回避や言換えだけを独自性保証にしない。",
+          "秘密を文書/CLI/logへ出さず、相対/絶対path・空白/URL・redirect・対象file境界を扱う。必要scriptの有限retry/期限・取消/不明状態・全page/実保存・画像/動画内容を実利用時に検証する。"
+        ],
+        "row": 266,
+        "source": [
+          "github:db4f5d6f0ce7f76284bf6a1ce109e2091efc566045f48e5be6c11718112460db",
+          "skills/mr-q526/wechat-toolkit/SKILL.md",
+          "ab0a415b092497e2f97b4e6691a2b6140d417c095bde7a15278dd856191ed30b",
+          "46475d47418a29c0238bbcada38c4effe727405a",
+          15671
+        ],
+        "support": [
+          [
+            "LICENSE.md",
+            898,
+            "5b6e3a67",
+            "ac9ff776",
+            2,
+            0,
+            0,
+            "100644"
+          ],
+          [
+            "README.md",
+            6443,
+            "6b1d76e2",
+            "4ef044e2",
+            1,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "SKILL.md",
+            15671,
+            "ab0a415b",
+            "46475d47",
+            3,
+            4,
+            0,
+            "100644"
+          ],
+          [
+            "_meta.json",
+            821,
+            "a495fded",
+            "6660fd21",
+            1,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "example.md",
+            1020,
+            "87af7d79",
+            "391dfced",
+            1,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "references/themes.md",
+            2972,
+            "7df0bfd8",
+            "1f5ae182",
+            1,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "references/troubleshooting.md",
+            6144,
+            "53ddcddf",
+            "7345f498",
+            1,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "scripts/bootstrap/install_wenyan.js",
+            null,
+            null,
+            "184a9e7e",
+            0,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "scripts/downloader/download.js",
+            null,
+            null,
+            "dfa381ea",
+            0,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "scripts/downloader/package.json",
+            null,
+            null,
+            "f27f08f2",
+            0,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "scripts/publisher/manage_draft.js",
+            null,
+            null,
+            "96f0fec9",
+            0,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "scripts/publisher/publish.js",
+            null,
+            null,
+            "e49c8216",
+            0,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "scripts/publisher/publish.sh",
+            null,
+            null,
+            "3b6ea1bf",
+            0,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "scripts/publisher/publish_with_video.js",
+            null,
+            null,
+            "86f433a3",
+            0,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "scripts/publisher/publish_with_video.py",
+            null,
+            null,
+            "a60dc261",
+            0,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "scripts/publisher/setup.sh",
+            null,
+            null,
+            "56a668fc",
+            0,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "scripts/publisher/theme_catalog.js",
+            null,
+            null,
+            "afdcd6a3",
+            0,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "scripts/publisher/theme_catalog.json",
+            null,
+            null,
+            "db2241f0",
+            0,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "scripts/publisher/theme_preview_sample.md",
+            1675,
+            "ed53cbd9",
+            "02d686b8",
+            1,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "scripts/publisher/themes/aurora.css",
+            null,
+            null,
+            "8d6f8875",
+            0,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "scripts/publisher/themes/ember.css",
+            null,
+            null,
+            "f8ab61ca",
+            0,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "scripts/publisher/themes/newsroom.css",
+            null,
+            null,
+            "1b2b58ff",
+            0,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "scripts/publisher/themes/sage.css",
+            null,
+            null,
+            "375674df",
+            0,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "scripts/publisher/wenyan_runner.js",
+            null,
+            null,
+            "d8325bc7",
+            0,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "scripts/search/search_wechat.js",
+            null,
+            null,
+            "77ac66fc",
+            0,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "vendor/wenyan-cli-main/README.docker.md",
+            3715,
+            "2ea7ad12",
+            "a0ec6db1",
+            1,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "vendor/wenyan-cli-main/README.md",
+            6556,
+            "47187445",
+            "e382f0ef",
+            1,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "vendor/wenyan-cli-main/package.json",
+            null,
+            null,
+            "933bb799",
+            0,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "vendor/wenyan-cli-main/pnpm-lock.yaml",
+            null,
+            null,
+            "f1c00470",
+            0,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "vendor/wenyan-cli-main/src/cli.ts",
+            null,
+            null,
+            "a8946f36",
+            0,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "vendor/wenyan-cli-main/src/commands/serve.ts",
+            null,
+            null,
+            "d26bb88c",
+            0,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "vendor/wenyan-cli-main/src/index.ts",
+            null,
+            null,
+            "e69de29b",
+            0,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "vendor/wenyan-cli-main/src/utils.ts",
+            null,
+            null,
+            "ef35e95b",
+            0,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "vendor/wenyan-cli-main/src/wechat-admin-client.ts",
+            null,
+            null,
+            "d41b2443",
+            0,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "vendor/wenyan-cli-main/src/wechat-admin.ts",
+            null,
+            null,
+            "432a46b6",
+            0,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "vendor/wenyan-cli-main/tsconfig.json",
+            null,
+            null,
+            "b79ff54a",
+            0,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "vendor/wenyan-cli-main/vite.config.ts",
+            null,
+            null,
+            "fa212241",
+            0,
+            null,
+            null,
+            "100644"
+          ]
+        ],
+        "use": "記事検索/取得/編集、草稿保存、正式公開・状態照会・削除を分離する編集配送設計参考。",
+        "value": "草稿IDと非同期公開ID/記事ID、取得元・素材、入力frontmatterや画像/動画の処理を個別結果へ結べる。"
+      },
+      "original_chunk_sha256": "fdf320b572d88211e8c6f50eb76de02b3913c9f8cfe57be34d5e1c0c46ef1d4f",
+      "path": "skills/mr-q526/wechat-toolkit/SKILL.md",
+      "source_commit": "920714f17d81e0a95c7a9bc51faf0a7921cd982d",
+      "source_repo": "6mile/skills",
+      "source_sha256": "ab0a415b092497e2f97b4e6691a2b6140d417c095bde7a15278dd856191ed30b"
+    },
+    {
+      "actual_assessment_reader": "20261028-171959-todo-3719",
+      "bytes": 10281,
+      "current_permission_or_adoption_granted": false,
+      "git_blob": "efeed2bc6f622f59319701e319946736ef95e0f6",
+      "inventory_id": "github:d73f7cd26503596e058a6f2c60604310497c583ec2b790b71b0fa52e1ad96e33",
+      "new_final_disposition": false,
+      "ordinal": 267,
+      "original_assessment": {
+        "candidate_disposition": "状態/成果/期限の設計参考を改訂候補として提案。実装未取得を保持し、子job・サービス/ブラウザ・最終採否・許諾・導入・実test0。",
+        "findings": [
+          "1〜20agent、work stealing、SSE UI、自動retry/cleanup等を主張するが、固定packageのblob7件にはbin/boris-run・requirements・webui/実engineが存在しない。READMEもprimaryと同bytesで独立の動作証拠ではない。",
+          "INSTALLは別repoのclone/upgradeを指すが、noticeのrepo表記とも所有者文字列が異なる。新規HTTPや別repo参照で未保存実装を補わない。",
+          "mock/dry-run/health応答は実タスク成功・保存済み成果/独立reviewの証明ではない。原設定のwriter/verifierは同じmodel名で、本人指定の別モデルレビュー条件と一致すると断定しない。",
+          "task retryが副作用を再実行する場合の重複、timeout後の子孫/pipe drain、孤児回収、cleanupが未完了成果を保持するかは未検証。",
+          "原上限20やwork stealingはこのPCの割当・単一scheduler所有/資源排他を変更しない。依存版/最低RAM/Windows WSL・web動作の主張も実受入でない。",
+          "説明にあるcleanupやuninstallは範囲/未完了確認なしで実行しない。配布工具がPythonであることだけで候補を一括拒否せず、新規自作言語方針と区別する。"
+        ],
+        "nearby_limit": "起動metadataだけ。中央本文/存在・同等性・実scheduler設定や別repoは未照会。",
+        "nearby_metadata": [
+          "agent-job-management",
+          "agent-system-design",
+          "bounded-batch-cursor-starvation",
+          "subprocess-output-drain",
+          "win32-job-tree-lifecycle",
+          "subagent-review"
+        ],
+        "negative": "説明だけで20agentを直接起動し、同modelのmock検証/進捗バーを実成功とし、keep_last_10で未完了成果を消す。",
+        "notices": [
+          [
+            "LICENSE.md",
+            6,
+            "当該directoryのMIT条項と追加のplatform規約参照。",
+            "実公開版/別repo/第三者platformの適用や権利は未確定。"
+          ]
+        ],
+        "positive": "各taskの許可/資源/実成果を一意に結び、失敗後も同じ未完了を保持し、別モデルreviewと保存結果を確認する設計へ参照する。",
+        "read": [
+          2,
+          0,
+          0,
+          true,
+          true,
+          257
+        ],
+        "reason": "primary257行、INSTALL203行を順序全読。INSTALLの1行は住所形式伏字。READMEはprimaryと同buffer bytes/SHA/Gitblob一致の再利用に分けた。",
+        "required_changes": [
+          "既存scheduler/共有ToDoを正本とする設計へ結び、実作業者/資源割当・model/auth/成果受領を別の状態で追う。この研究で子job/新ToDo/別engineを起動しない。",
+          "実導入を親が扱う場合にのみ、対象版の実実装・repo/権利・CLIの対応を確認し、有限retry/作用の重複防止・timeout後のdrain/回収・保存と再開を実証する。",
+          "成果本文/検査と独立した別モデルreviewを確認し、cleanupは所有/終了/未完了/保持条件に従う。SSE表示・mock・プロセス存在を成果完了へ置換しない。"
+        ],
+        "row": 267,
+        "source": [
+          "github:d73f7cd26503596e058a6f2c60604310497c583ec2b790b71b0fa52e1ad96e33",
+          "skills/mukston-debug/boris-run/SKILL.md",
+          "b3512930c010007f819692986fee7907442ca539fd0acedf30bd107f81641fae",
+          "efeed2bc6f622f59319701e319946736ef95e0f6",
+          10281
+        ],
+        "support": [
+          [
+            "CHANGELOG.md",
+            5496,
+            "d4fb2aaf",
+            "753e2fea",
+            1,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "INSTALL.md",
+            3549,
+            "95da882f",
+            "b4a62030",
+            3,
+            1,
+            0,
+            "100644"
+          ],
+          [
+            "LICENSE.md",
+            1441,
+            "8f66e97c",
+            "11d41666",
+            2,
+            0,
+            0,
+            "100644"
+          ],
+          [
+            "README.md",
+            10281,
+            "b3512930",
+            "efeed2bc",
+            4,
+            0,
+            0,
+            "100644"
+          ],
+          [
+            "SKILL.json",
+            null,
+            null,
+            "a3d7ec30",
+            0,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "SKILL.md",
+            10281,
+            "b3512930",
+            "efeed2bc",
+            2,
+            0,
+            0,
+            "100644"
+          ],
+          [
+            "_meta.json",
+            295,
+            "848a614f",
+            "73b5f854",
+            1,
+            null,
+            null,
+            "100644"
+          ]
+        ],
+        "use": "配布/実行/検証、retry、進捗・成果物保持を分ける並列作業の設計参考。",
+        "value": "task単位の状態・期限/再試行・成果とverificationを結び、実行中表示やmockだけを完了としない検査点を整理できる。"
+      },
+      "original_chunk_sha256": "fdf320b572d88211e8c6f50eb76de02b3913c9f8cfe57be34d5e1c0c46ef1d4f",
+      "path": "skills/mukston-debug/boris-run/SKILL.md",
+      "source_commit": "920714f17d81e0a95c7a9bc51faf0a7921cd982d",
+      "source_repo": "6mile/skills",
+      "source_sha256": "b3512930c010007f819692986fee7907442ca539fd0acedf30bd107f81641fae"
+    }
+  ],
+  "roster_sha256": "f9c6b2e44c5e3aa8947f758f864eaa0d5edc396d622359826bca848cd96f9901",
+  "saved_support_metadata": 63,
+  "shared_original_contexts": {
+    "40a93e5ba7571070b9a8d5c99acb18e06bafe55dab9df845e47d34fbd8422710": {
+      "actual_assessment_reader": "20261028-171959-todo-3719",
+      "common": {
+        "boundaries": {
+          "central_operations": 0,
+          "copy_license_accepted": false,
+          "new_final_dispositions": 0,
+          "source_executed": false
+        },
+        "chunk_id": "0d8b95117caa561aa1f8a9ae724ecad6",
+        "definitions": {
+          "actors": {
+            "0": "今回の実assistant読取"
+          },
+          "mask_method": "表示前v6置換。今回primary/noticeは0行で秘密不存在の証明ではない。",
+          "reader_namespace": "20261028-171959-todo-3719/current3719",
+          "states": {
+            "0": "unsaved",
+            "1": "saved_unread",
+            "2": "direct_raw_full",
+            "3": "direct_masked_full",
+            "4": "exact_bytes_reuse",
+            "5": "ordered_full_diff",
+            "6": "partial",
+            "7": "scan"
+          },
+          "support_tuple": "[relative,bytes,SHA8,Gitblob8,state,maskCount,actor,mode]。保存未読のmaskCount/actorはnull。"
+        },
+        "domain": "research598-chunk-v1",
+        "first_ordinal": 257,
+        "limits": {
+          "central_body_or_existence_checks": 0,
+          "current_api_terms_quota_price_claims_not_verified": true,
+          "prior_reader_states_not_relabelled": true,
+          "source_bodies_refetched": 0,
+          "source_script_execution": 0,
+          "whole16_complete": false
+        },
+        "notice_bodies": [
+          {
+            "bytes": 1073,
+            "consumer_path": "skills/mikel/deshell/LICENSE.md",
+            "consumer_row": 257,
+            "fresh_raw": true,
+            "git_blob": "8a75b5d43fd25adad5253ee810b36e7dcf3ccde8",
+            "id": 1,
+            "meaning": "copyright/年付きMITの許可・notice保持/免責と末尾22行目の余分な左波括弧もそのまま全読。実公開版/作者・provider契約/原Web記事や依存の権利は別。",
+            "read": [
+              2,
+              0,
+              0,
+              true,
+              true,
+              22
+            ],
+            "reader_job": "20261028-171959-todo-3719",
+            "reader_namespace": "20261028-171959-todo-3719/current3719",
+            "representative_path": "skills/mikel/deshell/LICENSE.md",
+            "representative_row": 257,
+            "sha256": "e4b36abca411a980dfa2716048b5a145b9538c81a6076b11e81f37dafe184110"
+          },
+          {
+            "bytes": 1073,
+            "consumer_path": "skills/mikel/distil/LICENSE.md",
+            "consumer_row": 258,
+            "fresh_raw": false,
+            "git_blob": "8a75b5d43fd25adad5253ee810b36e7dcf3ccde8",
+            "id": 2,
+            "meaning": "bytes/SHA/Gitblob照合済み同1073B noticeを同chunk257実readへ結ぶ。",
+            "read": [
+              4,
+              0,
+              0,
+              false,
+              true,
+              22
+            ],
+            "reader_job": "20261028-171959-todo-3719",
+            "reader_namespace": "20261028-171959-todo-3719/current3719",
+            "representative_path": "skills/mikel/deshell/LICENSE.md",
+            "representative_read": [
+              2,
+              0,
+              0,
+              true,
+              true,
+              22
+            ],
+            "representative_row": 257,
+            "sha256": "e4b36abca411a980dfa2716048b5a145b9538c81a6076b11e81f37dafe184110"
+          }
+        ],
+        "prior_journal_sha256": "be66460d711171cee3b612e920369b5c83a3984388302f8c94236043b58aea9e",
+        "reader_job": "20261028-171959-todo-3719",
+        "reader_todo": 3719,
+        "reading_integrity": {
+          "notice_new_full_read_lines": 22,
+          "primary_lines": [
+            116,
+            105
+          ],
+          "primary_mask_counts": [
+            0,
+            0
+          ],
+          "primary_ordered_full_rows": [
+            257,
+            258
+          ],
+          "same_buffer_sha256_gitblob_bytes_strict_utf8": true,
+          "source_original_text_included": false,
+          "support_inventory_complete_tree_counts": [
+            [
+              257,
+              4
+            ],
+            [
+              258,
+              4
+            ]
+          ]
+        },
+        "roster_sha256": "f9c6b2e44c5e3aa8947f758f864eaa0d5edc396d622359826bca848cd96f9901"
+      },
+      "independent_native_metadata_sha256": "250048eae340e1ffb0159d1cb36487c24a4f0289090d0b43d52ddf5c027b1e3a",
+      "independent_parent_journal_record": {
+        "chunk_id": "0d8b95117caa561aa1f8a9ae724ecad6",
+        "receipt_file": "research3719-chunk-0d8b95117caa561aa1f8a9ae724ecad6.json",
+        "chunk_sha256": "40a93e5ba7571070b9a8d5c99acb18e06bafe55dab9df845e47d34fbd8422710",
+        "reader_job": "20261028-171959-todo-3719",
+        "first_ordinal": 257,
+        "last_ordinal": 258,
+        "parent_semantic_assessments_read": true
+      },
+      "original_chunk_id": "0d8b95117caa561aa1f8a9ae724ecad6",
+      "original_fields_losslessly_reconstructed": true,
+      "original_message_sha256": "59cb88a8d44ca4344eb74a8acce5efab7dabfd77bc11ad31fb8863ae7e0638d4",
+      "original_receipt_sha256": "f1133d10be210db4b784aa432ff236cba916a24574fa1224e21c16a24dbcc632",
+      "parent_meaning": {
+        "actual_native_model": "pac24df/gpt-6.1-sol",
+        "actual_native_proof": "research3719-native-actual171959-through258175645.json",
+        "actual_native_sha256": "250048eae340e1ffb0159d1cb36487c24a4f0289090d0b43d52ddf5c027b1e3a",
+        "chunk_id": "0d8b95117caa561aa1f8a9ae724ecad6",
+        "chunk_sha256": "40a93e5ba7571070b9a8d5c99acb18e06bafe55dab9df845e47d34fbd8422710",
+        "consumer_job": "20261027-175645-todo-3080",
+        "effort": "max",
+        "first": 257,
+        "full_original_meanings_and_all_limits_read": true,
+        "limits": "近接Skillは起動metadataだけ、中央本文/存在/同等性は未確認。現CLI/API/provider/価格/quotas/無料枠・変換精度は未確認。source script/新MCP/権限/鍵/料金/HTTP/test・本人PC操作0。親source再open/新許諾/採否/中央0、全16未完。",
+        "meanings": [
+          "257 DeShellは公開Web取得/検索/render/raw/cache/画像の入力mode・取得時点/出典・失敗/部分/空と変換結果を別に扱う設計参考。60〜80%token削減は精度/意味保持/出典完全性/最新性を証明しない。表/否定/注記/リンク/引用/動的内容と省略を原出典へ照合する必要がある。PROXY_URL metadataのrequiresと本文defaultは現runtimeでの必須性未確認、名称MCPも登録済み能力/恒久権限の許可ではない。",
+          "258 Distilはquota時にraw HTMLと外部修正案commentを返す説明を、期待Markdown/原文/外部注記/errorの形式識別へ用いる参考。curl -sのprocess成功をHTTP非2xxや業務成功/完全取得へ広げず、画像名だけを画像取得の証拠とせずstatus/content-type/実bytesを確認する。HTML commentや購入/設定案を実命令や本人の新承認へ昇格させない。",
+          "両方の任意URL/redirect/proxy override/extra headers/資格の送信先と元の依頼scopeを固定し、秘密URLやheaderを未知宛先へ送らず、raw/nocache/direct curlを正規審査やRakko等の対象制限の迂回にしない。非AI変換service鍵はAI API鍵と同一分類しないが、新規登録/課金/恒久権限/現仕様や原記事/素材/providerの権利は別。原install/登録/HTTP/画像fetchを実行しない。",
+          "原257の3232B/116行rawと258の4064B/105行raw、257個別notice1073B/22行rawと258のexact bytes/SHA/Gitblob一致reuseを親が全意味/limitsまで読了。MIT末尾の左波括弧を原のまま保持、reuseを二度目のfresh rawとしない。全支持8=saved8/unsaved0、direct_raw3/reuse1/saved_unread4、README2/_meta2のmask/reader nullを保持。mask0は秘密不存在/権利包括の証明ではない。"
+        ],
+        "observed_at": "2026-10-29T01:14:20.3069927+00:00",
+        "original_actor_namespace_and_nulls_preserved": true,
+        "original_message_sha256": "59cb88a8d44ca4344eb74a8acce5efab7dabfd77bc11ad31fb8863ae7e0638d4",
+        "producer_job": "20261028-171959-todo-3719",
+        "through": 258
+      },
+      "parent_meaning_sha256": "f1186876674647604f28347d88e25fd1750054ecd682b2214835b5110c942fe3"
+    },
+    "424e9e2d66876018fcf3eab8e987453dc9d5de9567ab0d85cfd8bf2e91dcb0dc": {
+      "actual_assessment_reader": "20261028-171959-todo-3719",
+      "common": {
+        "boundaries": {
+          "central_operations": 0,
+          "copy_license_accepted": false,
+          "new_final_dispositions": 0,
+          "source_executed": false
+        },
+        "chunk_id": "70aa2bdfd6df23d416eba77466eb7d41",
+        "definitions": {
+          "actors": {
+            "0": "今回の実assistant読取"
+          },
+          "mask_method": "表示前v6置換。primary/noticeは0行で秘密不存在の証明ではない。",
+          "reader_namespace": "20261028-171959-todo-3719/current3719",
+          "states": {
+            "0": "unsaved",
+            "1": "saved_unread",
+            "2": "direct_raw_full",
+            "3": "direct_masked_full",
+            "4": "exact_bytes_reuse",
+            "5": "ordered_full_diff",
+            "6": "partial",
+            "7": "scan"
+          },
+          "support_tuple": "[relative,bytes,SHA8,Gitblob8,state,maskCount,actor,mode]。未保存bytes/SHA/reader/maskCountはnull。"
+        },
+        "domain": "research598-chunk-v1",
+        "first_ordinal": 256,
+        "limits": {
+          "central_body_or_existence_checks": 0,
+          "current_financial_market_api_price_terms_claims_not_verified": true,
+          "prior_reader_states_not_relabelled": true,
+          "source_bodies_refetched": 0,
+          "source_script_execution": 0,
+          "whole16_complete": false
+        },
+        "notice_bodies": [
+          {
+            "bytes": 1081,
+            "consumer_path": "skills/michael20070814/investment-advisor/LICENSE.txt",
+            "consumer_row": 256,
+            "fresh_raw": true,
+            "git_blob": "a636676d512ce05178e3a185bbfb290466e84aed",
+            "id": 1,
+            "meaning": "copyright/年付きMITの許可・notice保持・保証否認を21行全読。実公開版/作者・市場data/API/ニュース/第三者素材の利用権は別。",
+            "read": [
+              2,
+              0,
+              0,
+              true,
+              true,
+              21
+            ],
+            "reader_job": "20261028-171959-todo-3719",
+            "reader_namespace": "20261028-171959-todo-3719/current3719",
+            "representative_path": "skills/michael20070814/investment-advisor/LICENSE.txt",
+            "representative_row": 256,
+            "sha256": "eebf3191ea77f17ad116fc58461e5ac21032af8dd971fbab91a556d68dee22d7"
+          }
+        ],
+        "prior_journal_sha256": "47477fbdf979e6d46ff324b6afeea375a7871ab64eae3f8554fc0a35f90f8c42",
+        "reader_job": "20261028-171959-todo-3719",
+        "reader_todo": 3719,
+        "reading_integrity": {
+          "notice_new_full_read_lines": 21,
+          "primary_lines": [
+            119
+          ],
+          "primary_mask_counts": [
+            0
+          ],
+          "primary_ordered_full_rows": [
+            256
+          ],
+          "same_buffer_sha256_gitblob_bytes_strict_utf8": true,
+          "source_original_text_included": false,
+          "support_inventory_complete_tree_counts": [
+            [
+              256,
+              8
+            ]
+          ]
+        },
+        "roster_sha256": "f9c6b2e44c5e3aa8947f758f864eaa0d5edc396d622359826bca848cd96f9901"
+      },
+      "independent_native_metadata_sha256": "131684f0b3e4150aeb979d2d084720ee8c383bac73979eb9939bb23a9db17326",
+      "independent_parent_journal_record": {
+        "chunk_id": "70aa2bdfd6df23d416eba77466eb7d41",
+        "receipt_file": "research3719-chunk-70aa2bdfd6df23d416eba77466eb7d41.json",
+        "chunk_sha256": "424e9e2d66876018fcf3eab8e987453dc9d5de9567ab0d85cfd8bf2e91dcb0dc",
+        "reader_job": "20261028-171959-todo-3719",
+        "first_ordinal": 256,
+        "last_ordinal": 256,
+        "parent_semantic_assessments_read": true
+      },
+      "original_chunk_id": "70aa2bdfd6df23d416eba77466eb7d41",
+      "original_fields_losslessly_reconstructed": true,
+      "original_message_sha256": "dc2ee658e7938563e6d1db8ff463baf66c7a9ef1300b4fead03a46148c39d539",
+      "original_receipt_sha256": "ee5875e738b0ced0b4cfb51e3720e45fc7bcf01f4c9fa0c978cc7011df6af619",
+      "parent_meaning": {
+        "actual_native_model": "pac24df/gpt-6.1-sol",
+        "actual_native_proof": "research3719-native-actual171959-through256175645.json",
+        "actual_native_sha256": "131684f0b3e4150aeb979d2d084720ee8c383bac73979eb9939bb23a9db17326",
+        "chunk_id": "70aa2bdfd6df23d416eba77466eb7d41",
+        "chunk_sha256": "424e9e2d66876018fcf3eab8e987453dc9d5de9567ab0d85cfd8bf2e91dcb0dc",
+        "consumer_job": "20261027-175645-todo-3080",
+        "effort": "max",
+        "first": 256,
+        "full_original_meanings_and_all_limits_read": true,
+        "limits": "近接Skillは起動metadataだけで本文/存在/同等性は未照会。現価格/API/条件/市場dataのfetch・投資推奨/売買/口座/実test・source script/新鍵/権限/料金・中央操作0。本人の金融条件や保有量を決めず、親のsource再open/新許諾/採否0、全16未完。",
+        "meanings": [
+          "256 investment-advisorはdata/technical/fundamental/sentimentとsummary/action出力、固定weight/gradeとrisk/position表を分離して点検する分析設計の参考。固定score/confidenceを較正済み成功確率/損失リスク/投資適合性や将来利益へ変えず、action JSONと実注文/約定も分ける。免責文だけを妥当性の証拠にしない。",
+          "A株と米国tickerの例から現在の実対応市場・銘柄mapping/時刻/通貨/調整/遅延、財務period/単位/欠測、ニュース重複・言語やkeyword分類精度を確認済みとしない。出典/観測時点/算式版/例外と時点を守った独立検証が必要という改訂候補を保持する。鍵不要の市場HTTP説明はAI API鍵利用と同じではないが、無料/依存なし/MITもdata providerの現quota/商用利用/再配布の許諾ではない。",
+          "原5334B/119行のraw全読と個別MIT1081B/21行raw全読、全8支持=saved4/unsaved4を親が全用途/価値/所見/改訂/正負例/未達まで読了。Investment_API_Reference.mdと_metaは保存未読、package.jsonと3mjsは未保存bytes/SHA/reader/mask nullを保持する。noticeの著作権/年・保証否認は原の観測で、実公開版/作者・市場data/news/API/第三者資源の権利は別。mask0を秘密不存在の証明にしない。"
+        ],
+        "observed_at": "2026-10-29T01:09:46.7646627+00:00",
+        "original_actor_namespace_and_nulls_preserved": true,
+        "original_message_sha256": "dc2ee658e7938563e6d1db8ff463baf66c7a9ef1300b4fead03a46148c39d539",
+        "producer_job": "20261028-171959-todo-3719",
+        "through": 256
+      },
+      "parent_meaning_sha256": "b8c77821a81eaed5161b15ad181642b172f68f4fcf250167aa41925fb6b49460"
+    },
+    "89c6a4105a7bfde63008f231aa4886df703694a282cd0f65074c1bcb9f95a7d5": {
+      "actual_assessment_reader": "20261028-171959-todo-3719",
+      "common": {
+        "boundaries": {
+          "central_operations": 0,
+          "copy_license_accepted": false,
+          "new_final_dispositions": 0,
+          "source_executed": false
+        },
+        "chunk_id": "1fd4ab3388f1bb6f8bfea7fbbbc2faf8",
+        "definitions": {
+          "actors": {
+            "0": "今回の実assistant読取"
+          },
+          "mask_method": "表示前v6置換。今回primary/noticeは0行で秘密不存在の証明ではない。",
+          "reader_namespace": "20261028-171959-todo-3719/current3719",
+          "states": {
+            "0": "unsaved",
+            "1": "saved_unread",
+            "2": "direct_raw_full",
+            "3": "direct_masked_full",
+            "4": "exact_bytes_reuse",
+            "5": "ordered_full_diff",
+            "6": "partial",
+            "7": "scan"
+          },
+          "support_tuple": "[relative,bytes,SHA8,Gitblob8,state,maskCount,actor,mode]。未保存bytes/SHA/reader/maskCountはnull。"
+        },
+        "domain": "research598-chunk-v1",
+        "first_ordinal": 259,
+        "limits": {
+          "central_body_or_existence_checks": 0,
+          "prior_reader_states_not_relabelled": true,
+          "source_bodies_refetched": 0,
+          "source_script_execution": 0,
+          "whole16_complete": false
+        },
+        "notice_bodies": [
+          {
+            "bytes": 1074,
+            "consumer_path": "skills/minmengxhw-cpu/enhanced-memory-4types/LICENSE.md",
+            "consumer_row": 259,
+            "fresh_raw": true,
+            "git_blob": "636e06752b1f273345df1abeea62e0db96ca2d99",
+            "id": 1,
+            "meaning": "copyright/年付きMITの許可・notice保持・保証否認を21行全読。実公開版/作者・依存/モデルや記録対象データの権利は別。",
+            "read": [
+              2,
+              0,
+              0,
+              true,
+              true,
+              21
+            ],
+            "reader_job": "20261028-171959-todo-3719",
+            "reader_namespace": "20261028-171959-todo-3719/current3719",
+            "representative_path": "skills/minmengxhw-cpu/enhanced-memory-4types/LICENSE.md",
+            "representative_row": 259,
+            "sha256": "43a990050404c5fd26abe14ba73fbdea97c43a0366360a16e35ec37e2f245e3c"
+          }
+        ],
+        "prior_journal_sha256": "5d5eef3ef39ffda5d8978109709c8b6860aa8690cdd47018d2ab2d9988ffcbab",
+        "reader_job": "20261028-171959-todo-3719",
+        "reader_todo": 3719,
+        "reading_integrity": {
+          "notice_new_full_read_lines": 21,
+          "primary_lines": [
+            282
+          ],
+          "primary_mask_counts": [
+            0
+          ],
+          "primary_ordered_full_rows": [
+            259
+          ],
+          "same_buffer_sha256_gitblob_bytes_strict_utf8": true,
+          "source_original_text_included": false,
+          "support_inventory_complete_tree_counts": [
+            [
+              259,
+              15
+            ]
+          ]
+        },
+        "roster_sha256": "f9c6b2e44c5e3aa8947f758f864eaa0d5edc396d622359826bca848cd96f9901"
+      },
+      "independent_native_metadata_sha256": "5200a50c19d9a61cd8ff98d3a266ab05ed030947d60df22cfb9f17a95571c6fb",
+      "independent_parent_journal_record": {
+        "chunk_id": "1fd4ab3388f1bb6f8bfea7fbbbc2faf8",
+        "receipt_file": "research3719-chunk-1fd4ab3388f1bb6f8bfea7fbbbc2faf8.json",
+        "chunk_sha256": "89c6a4105a7bfde63008f231aa4886df703694a282cd0f65074c1bcb9f95a7d5",
+        "reader_job": "20261028-171959-todo-3719",
+        "first_ordinal": 259,
+        "last_ordinal": 259,
+        "parent_semantic_assessments_read": true
+      },
+      "original_chunk_id": "1fd4ab3388f1bb6f8bfea7fbbbc2faf8",
+      "original_fields_losslessly_reconstructed": true,
+      "original_message_sha256": "4778e3fc14d56f89bca4737c33842d7f72dc194ec15ab9385ac9cf74a180b7e9",
+      "original_receipt_sha256": "ce816ba806cad8f83696495aa3139ea544d10941838e4b60e738bdf38e54e8de",
+      "parent_meaning": {
+        "actual_native_model": "pac24df/gpt-6.1-sol",
+        "actual_native_proof": "research3719-native-actual171959-through259175645.json",
+        "actual_native_sha256": "5200a50c19d9a61cd8ff98d3a266ab05ed030947d60df22cfb9f17a95571c6fb",
+        "chunk_id": "1fd4ab3388f1bb6f8bfea7fbbbc2faf8",
+        "chunk_sha256": "89c6a4105a7bfde63008f231aa4886df703694a282cd0f65074c1bcb9f95a7d5",
+        "consumer_job": "20261027-175645-todo-3080",
+        "effort": "max",
+        "first": 259,
+        "full_original_meanings_and_all_limits_read": true,
+        "limits": "近接Skillはmetadataのみ、中央本文/存在/同等性・現設定/実schemaは未確認。source実行/実記憶操作・model導入/新権限/費用0、親source再open/新許諾/採否/中央0、全16未完。",
+        "meanings": [
+          "259 enhanced-memory-4typesはuser/feedback/project/reference、私的/共有、索引/検索/原文/自動load/flushと実保存・復旧を分ける記録設計参考。称賛/訂正を残すことと、本人が同対象の具体的な方針変更を明示採用することは別。source例の禁止/大PR方針、曖昧な対/完璧を一般禁止/別対象の承認へ昇格させず、原文/本人性・出所/実発言時刻/対象/適用範囲/採用・未採用/実反映を保持する。",
+          "group/type/pathの入力値をmembership/本人や私的共有権限の証明とせず、search/get/autoload/flush/write全経路の主体・正規化path/リンク境界と必要データ/秘密を検証する。overwrite/append/索引/flushの同時実行やクラッシュ整合・訂正と履歴の保存、検索coverage/順位/欠測/精度・実永続化/復帰は未検証。soft閾値/自動load/保存設定だけで保証しない。",
+          "topK意味検索とkeyword fallbackは同じcoverage/順位/精度ではなく、個人情報を何でも保存という例を無差別な保持/共有や保護対象scanへ広げない。Ollama/local model導入/容量・資格/送信範囲や本人の新禁止をsourceから追加せず、今回の実記憶検索/読取/書込・flush/モデルpull/権限変更0を保つ。",
+          "原7773B/282行raw、個別MIT1074B/21行rawと全支持15=saved6/unsaved9を親が全意味・改訂/正負例/limitsまで読了。direct_raw2、CHANGELOG/PRODUCT/README/_metaの4保存未読とskill.json/src7本/tools.jsonの9未保存bytes/SHA/reader/mask nullを保持。noticeのcopyright/年/許可・保持/免責の観測と実公開版/作者・依存/モデル/記録対象データの権利は別、mask0は秘密不存在の証明ではない。"
+        ],
+        "observed_at": "2026-10-29T01:19:33.2635530+00:00",
+        "original_actor_namespace_and_nulls_preserved": true,
+        "original_message_sha256": "4778e3fc14d56f89bca4737c33842d7f72dc194ec15ab9385ac9cf74a180b7e9",
+        "producer_job": "20261028-171959-todo-3719",
+        "through": 259
+      },
+      "parent_meaning_sha256": "3740047563b80cb08498c09f49b6aed7602ef99f4950c28beb3efdb44251049c"
+    },
+    "fdf320b572d88211e8c6f50eb76de02b3913c9f8cfe57be34d5e1c0c46ef1d4f": {
+      "actual_assessment_reader": "20261028-171959-todo-3719",
+      "common": {
+        "boundaries": {
+          "central_operations": 0,
+          "copy_license_accepted": false,
+          "new_final_dispositions": 0,
+          "source_executed": false
+        },
+        "chunk_id": "f581cfc5fea7e7abf35146380a36efd2",
+        "definitions": {
+          "actors": {
+            "0": "今回の実assistant読取。同jobの259実読も個別receiptへ結ぶ。",
+            "1": "旧実reader 20261025-041905-todo-3719/current3719。",
+            "2": "旧実reader 20261028-154151-todo-3719/current3719。"
+          },
+          "mask_method": "6版は表示前のメール・長い数値・token形式・長いhex・電話/住所形式等とUUIDの置換。266は追加の7版で環境変数の資格/アプリ識別値を置換。数は置換された物理行数であり、0は秘密不存在の証明ではない。",
+          "reader_namespace": "20261028-171959-todo-3719/current3719",
+          "states": {
+            "0": "unsaved",
+            "1": "saved_unread",
+            "2": "direct_raw_full",
+            "3": "direct_masked_full",
+            "4": "exact_bytes_reuse",
+            "5": "ordered_full_diff",
+            "6": "partial",
+            "7": "scan"
+          },
+          "support_tuple": "[relative,bytes,SHA8,Gitblob8,state,maskCount,actor,mode]。全packageのcomplete tree blobを列挙。未保存bytes/SHA/reader/maskCountはnull。"
+        },
+        "domain": "research598-chunk-v1",
+        "first_ordinal": 260,
+        "limits": {
+          "central_body_or_existence_checks": 0,
+          "common_policy_and_japanese_report_skill_guard_unverified_unread": true,
+          "current_primary_masked_full": 1,
+          "current_primary_raw_full": 7,
+          "new_notice_literal_reads": 3,
+          "notice_reuse_consumer_records": 5,
+          "old_reader_histories_not_relabelled": true,
+          "package_metadata_records": 113,
+          "saved_unread_support_records": 26,
+          "source_bodies_refetched": 0,
+          "unsaved_support_records": 68
+        },
+        "notice_bodies": [
+          {
+            "bytes": 1074,
+            "consumers": [
+              [
+                260,
+                "skills/minmengxhw-cpu/enhanced-memory-v2/LICENSE.md"
+              ],
+              [
+                261,
+                "skills/minmengxhw-cpu/enhanced-memory-v3/LICENSE.md"
+              ],
+              [
+                262,
+                "skills/minmengxhw-cpu/memory-system-pro-v2/LICENSE.md"
+              ]
+            ],
+            "fresh_raw": false,
+            "git_blob": "636e06752b1f273345df1abeea62e0db96ca2d99",
+            "id": 1,
+            "meaning": "259で全読したMIT noticeと3件ともSHA/Gitblob/length一致。作者表記とnotice保持等を継承するが、実公開版・第三者資源/サービス・保存する記憶の権利は別。",
+            "parent_chunk_sha256": "89c6a4105a7bfde63008f231aa4886df703694a282cd0f65074c1bcb9f95a7d5",
+            "parent_receipt": "research3719-chunk-1fd4ab3388f1bb6f8bfea7fbbbc2faf8.json",
+            "read": [
+              4,
+              0,
+              0,
+              false,
+              true,
+              21
+            ],
+            "reader_job": "20261028-171959-todo-3719",
+            "reader_namespace": "20261028-171959-todo-3719/current3719",
+            "representative_path": "skills/minmengxhw-cpu/enhanced-memory-4types/LICENSE.md",
+            "representative_read": [
+              2,
+              0,
+              0,
+              true,
+              true,
+              21
+            ],
+            "representative_row": 259,
+            "sha256": "43a990050404c5fd26abe14ba73fbdea97c43a0366360a16e35ec37e2f245e3c"
+          },
+          {
+            "bytes": 1467,
+            "consumer_path": "skills/mockerzxy/pdfssssssss/LICENSE.txt",
+            "consumer_row": 263,
+            "fresh_raw": false,
+            "git_blob": "c55ab42224874608473643de0a85736b7fec0730",
+            "id": 2,
+            "meaning": "旧row7実raw全読のProprietary・Anthropic契約参照/追加制限を再利用。今回loaderの改行数30で旧31行という実記録を上書きしない。ClawHub補助方針との対応・矛盾や実権利者は未確定。",
+            "parent_chunk_sha256": "8ab87b1cc64e782270bbcfca75177c4e1cc12f41a1b453cfa72e253b3c8f6483",
+            "parent_receipt": "research3719-chunk-87912b9a9c5ed98bd263458bd902dfc6.json",
+            "read": [
+              4,
+              0,
+              1,
+              false,
+              true,
+              31
+            ],
+            "reader_job": "20261025-041905-todo-3719",
+            "reader_namespace": "20261025-041905-todo-3719/current3719",
+            "representative_original_read": [
+              2,
+              0,
+              0,
+              true,
+              true,
+              31
+            ],
+            "representative_path": "skills/binbin/docx-cn-1-0-1/LICENSE.txt",
+            "representative_row": 7,
+            "sha256": "79f6d8f5b427252fa3b1c11ecdbdb6bf610b944f7530b4de78f770f38741cfaa"
+          },
+          {
+            "bytes": 10948,
+            "consumer_path": "skills/mohibshaikh/clawvet/skills/frontend-design/LICENSE.txt",
+            "consumer_row": 264,
+            "fresh_raw": true,
+            "git_blob": "2fee68c96218df0dca4d8d94569a0249b71e290c",
+            "id": 3,
+            "meaning": "Apache2のterms1〜9と2024 Anthropic PBC表記を全読。再配布時のlicense/変更表示/関連notice、特許・商標・保証等の保存条項を確認。203の別bytes版を同一とせず、実公開版/作者・素材の適用は別。",
+            "read": [
+              2,
+              0,
+              0,
+              true,
+              true,
+              190
+            ],
+            "reader_job": "20261028-171959-todo-3719",
+            "reader_namespace": "20261028-171959-todo-3719/current3719",
+            "representative_path": "skills/mohibshaikh/clawvet/skills/frontend-design/LICENSE.txt",
+            "representative_row": 264,
+            "sha256": "383ebfcc75e7680295523a4eb0d5ceace7dad6ac8051baf3f67e9d428025d9c9"
+          },
+          {
+            "bytes": 11357,
+            "consumer_path": "skills/moyu0032/mo-test-1/LICENSE.txt",
+            "consumer_row": 265,
+            "fresh_raw": false,
+            "git_blob": "7a4a3ea2424c09fbe48d455aed1eaa94d9124835",
+            "id": 4,
+            "meaning": "旧203で全読したApache2 terms/appendixと同bytes。テンプレート/ブランド・p5.js/font/CDNや生成作品/参照素材の個別権利を自動承認しない。",
+            "parent_chunk_sha256": "836022e13bf344b5d03714a6da7abd82abd644b6170ae0767ed0648f267be8f1",
+            "parent_receipt": "research3719-chunk-b9336b076e4c4a69e92760629543c132.json",
+            "read": [
+              4,
+              0,
+              2,
+              false,
+              true,
+              202
+            ],
+            "reader_job": "20261028-154151-todo-3719",
+            "reader_namespace": "20261028-154151-todo-3719/current3719",
+            "representative_original_read": [
+              2,
+              0,
+              0,
+              true,
+              true,
+              202
+            ],
+            "representative_path": "skills/ljglover/skill-creator-0-1-0/LICENSE.txt",
+            "representative_row": 203,
+            "sha256": "58d1e17ffe5109a7ae296caafcadfdbe6a7d176f0bc4ab01e12a689b0499d8bd"
+          },
+          {
+            "bytes": 898,
+            "consumer_path": "skills/mr-q526/wechat-toolkit/LICENSE.md",
+            "consumer_row": 266,
+            "fresh_raw": true,
+            "git_blob": "ac9ff776be540fed3e8e7dd96ebcb286a98bf2eb",
+            "id": 5,
+            "meaning": "MIT No Attribution表題の許可文と無保証文を16行全読。primary末尾の個人学習用途表明・vendorや取得記事/画像/動画/WeChatサービスの条件を同noticeで一括解消しない。",
+            "read": [
+              2,
+              0,
+              0,
+              true,
+              true,
+              16
+            ],
+            "reader_job": "20261028-171959-todo-3719",
+            "reader_namespace": "20261028-171959-todo-3719/current3719",
+            "representative_path": "skills/mr-q526/wechat-toolkit/LICENSE.md",
+            "representative_row": 266,
+            "sha256": "5b6e3a67178eb986b6006d45bea027ba59978e7e176297581e2df9ff7c1dca8b"
+          },
+          {
+            "bytes": 1441,
+            "consumer_path": "skills/mukston-debug/boris-run/LICENSE.md",
+            "consumer_row": 267,
+            "fresh_raw": true,
+            "git_blob": "11d41666bd396de08c7434abf33c98f1b29ec82b",
+            "id": 6,
+            "meaning": "MIT条項/著作権表記保持/無保証と、末尾のOpenClaw規約にも従う旨を全読。リンク先/実公開版・別repoの実装/第三者の権利は新規確認していない。",
+            "read": [
+              2,
+              0,
+              0,
+              true,
+              true,
+              32
+            ],
+            "reader_job": "20261028-171959-todo-3719",
+            "reader_namespace": "20261028-171959-todo-3719/current3719",
+            "representative_path": "skills/mukston-debug/boris-run/LICENSE.md",
+            "representative_row": 267,
+            "sha256": "8f66e97c6a3284b32c811f18c8d66c8815c39f72786b6d4748ceb8e969165017"
+          }
+        ],
+        "prior_journal_sha256": "8eb623d0ea46fbd88dd12352afdf34dd8ded7afcac3322df645ea68a5624b765",
+        "reader_job": "20261028-171959-todo-3719",
+        "reader_todo": 3719,
+        "reading_integrity": {
+          "masked_physical_lines": [
+            [
+              266,
+              "SKILL.md",
+              [
+                256,
+                257,
+                319,
+                424
+              ]
+            ],
+            [
+              267,
+              "INSTALL.md",
+              [
+                180
+              ]
+            ]
+          ],
+          "primary_ordered_full_ranges": [
+            [
+              260,
+              1,
+              222,
+              6,
+              0
+            ],
+            [
+              261,
+              1,
+              223,
+              6,
+              0
+            ],
+            [
+              262,
+              1,
+              295,
+              6,
+              0
+            ],
+            [
+              263,
+              1,
+              314,
+              6,
+              0
+            ],
+            [
+              264,
+              1,
+              42,
+              6,
+              0
+            ],
+            [
+              265,
+              1,
+              210,
+              6,
+              0
+            ],
+            [
+              265,
+              211,
+              405,
+              6,
+              0
+            ],
+            [
+              266,
+              1,
+              230,
+              7,
+              4
+            ],
+            [
+              266,
+              231,
+              457,
+              7,
+              4
+            ],
+            [
+              267,
+              1,
+              257,
+              6,
+              0
+            ]
+          ],
+          "same_buffer": {
+            "bytes": true,
+            "git_blob": true,
+            "sha256": true,
+            "strict_utf8": true
+          },
+          "source_original_text_included": false,
+          "support_direct_full": [
+            [
+              263,
+              "forms.md",
+              "9530b3f57034792e0242a3abfe8b3c296466329551916f2ff6c5a70db78f7e44",
+              "6e7e1e0d9e6ae17215db3e130aea3c3c546487e6",
+              11854,
+              2,
+              0,
+              294
+            ],
+            [
+              267,
+              "INSTALL.md",
+              "95da882f0173ec0a4ec450ee6c7136e16e0a4102926c2ffdb0bbda583d6d9ff7",
+              "b4a6203001ed5955ea7636c1ac405269e438c259",
+              3549,
+              3,
+              1,
+              203
+            ]
+          ],
+          "support_reuse": [
+            {
+              "all_buffer_bytes_equal": true,
+              "bytes": 10281,
+              "fresh_raw": false,
+              "git_blob": "efeed2bc6f622f59319701e319946736ef95e0f6",
+              "path": "README.md",
+              "reader_namespace": "20261028-171959-todo-3719/current3719",
+              "representative_path": "SKILL.md",
+              "representative_read": [
+                2,
+                0,
+                0,
+                true,
+                true,
+                257
+              ],
+              "representative_row": 267,
+              "row": 267,
+              "sha256": "b3512930c010007f819692986fee7907442ca539fd0acedf30bd107f81641fae"
+            }
+          ]
+        },
+        "roster_sha256": "f9c6b2e44c5e3aa8947f758f864eaa0d5edc396d622359826bca848cd96f9901"
+      },
+      "independent_native_metadata_sha256": "62aa505862dfa2ddcc84c27b9a5f9d705159d2b65e7ceb289b4ad0a3dae36b45",
+      "independent_parent_journal_record": {
+        "chunk_id": "f581cfc5fea7e7abf35146380a36efd2",
+        "receipt_file": "research3719-chunk-f581cfc5fea7e7abf35146380a36efd2.json",
+        "chunk_sha256": "fdf320b572d88211e8c6f50eb76de02b3913c9f8cfe57be34d5e1c0c46ef1d4f",
+        "reader_job": "20261028-171959-todo-3719",
+        "first_ordinal": 260,
+        "last_ordinal": 267,
+        "parent_semantic_assessments_read": true
+      },
+      "original_chunk_id": "f581cfc5fea7e7abf35146380a36efd2",
+      "original_fields_losslessly_reconstructed": true,
+      "original_message_sha256": "c7f6e1c5510565ee91009e1f44449c0c7aa350dde11f1f2c463ced279ebbd6c4",
+      "original_receipt_sha256": "7ff65e7ad738d88889096eb5aaee45b132acf2d4dfaf8a733aa875242c300ba4",
+      "parent_meaning": {
+        "actual_native_model": "pac24df/gpt-6.1-sol",
+        "actual_native_proof": "research3719-native-actual171959-through267175645.json",
+        "actual_native_sha256": "62aa505862dfa2ddcc84c27b9a5f9d705159d2b65e7ceb289b4ad0a3dae36b45",
+        "chunk_id": "f581cfc5fea7e7abf35146380a36efd2",
+        "chunk_sha256": "fdf320b572d88211e8c6f50eb76de02b3913c9f8cfe57be34d5e1c0c46ef1d4f",
+        "consumer_job": "20261027-175645-todo-3080",
+        "effort": "max",
+        "first": 260,
+        "full_original_meanings_and_all_limits_read": true,
+        "limits": "親は原評価と意味/全限界を受領しただけでsource再open/freshraw加算/新許諾/採否/中央操作0。版/現在契約やモデル・外部サービス適合、未保存実装/素材・旧保護原本や未知中央9は未確認。元の本人方針/停止・取得審査647を保持、全16未完。",
+        "meanings": [
+          "260〜262は記憶分類/feedbackと自動統合の版差を比較する設計参考。scan/古い記憶削除/重複統合/索引更新、24時間と3会話・定時22時/write/force/statusを作用別に分け、原発言/本人性/対象・範囲/採用・未採用/未完了と訂正の証拠を保持する。LLMの古いという判断や称賛を一般禁止/承認・削除根拠へ昇格しない。実AND条件/時計・初回/排他/並行write/世代/中断・保存復旧は未保存srcから確認できず、役割表やサンプルstatusも実認可/実行receiptでない。",
+          "261の末尾1.3.0 MiniMax対応と262のMiniMax図・envのapiKey例を、実装同等性・当PCの実env/契約・外部送信許可の証明にしない。srcのGitblob差だけで差の動作を補完せず、Ollama/vector設定や大token閾値も実資源利用としない。262のHEARTBEAT.mdは固定treeに不在、無変化通知も本人の不要な完了通知/メンション抑止を上書きしない。原記憶scan/書込/削除/モデルpull/API鍵読取や外部送信0。",
+          "263はPDF抽出/編集とfillable/非fillableの分岐、fieldID/許容値/頁、PDF bottom-origin・抽出top-origin/画像座標を実表示へ結ぶ設計参考。primary314行とforms294行rawを区別し、大小文字FORMS/REFERENCE参照と実tree、check_fillable_fieldsの名前不一致を保持する。両分岐の実値/選択・回転/CropBox/不同頁を再描画で検証すべきで、未保存8scriptから実動作を保証しない。Proprietary/Anthropic契約参照とClawHub補助記載の未確定をrootMITで解消せず、旧row7の1467B notice再利用/旧31行と今回loader30行を別記する。実PDF/passwordやscript処理0。",
+          "264のnested frontend-designは目的/読者/制約・差別化と美術方向を結ぶ42行の参考。特定font/紫gradient/layoutの一律禁止や大胆な方向決定を本人の新禁止やUI画像確認の代替へしない。入力/focus/keyboard/reduced motion/小画面/可読性/描画負荷を確認し、nested Apache10948B/190行を外側clawvetや別bytes版Apacheへ広げない。画像生成/UI実装0。",
+          "265 algorithmic-artはseed/parameter/版・乱数順/時刻・frame/viewportと実control/reset/exportを結ぶ405行の参考。folder mo-test-1との名前差、別.md/html/js対inline単一HTML、CDN依存対self-contained、sidebar対下部control/download差を保持。未保存template2を確認済みにせず、固定Anthropic branding/fontや新movement名を本人要件へしない。旧203の11357B Apacheをexact reuseし、template/ブランド/CDN/font/p5.js/生成素材の権利は別。作品/UIの生成・公開0。",
+          "266 wechat-toolkitは検索/取得/改稿、草稿ID、正式公開task/実記事ID、削除を別結果へ結ぶ457行masked4の参考。言換え/重複検出回避をoriginalの証明にせず、正確さ/出所・引用/帰属と利用条件を保持する。個人学習表明とMIT-0 notice/vendor・記事/画像/動画/service条件は別。TOOLSから資格参照、IP変更、自動install/rename/外部cover取得、投稿/削除は実行しない。非AI service資格をAI API課金と一括分類せず、pagination/timeout/retryの重複や実画像表示は未検証のまま。v7はsourceの4行256/257/319/424を伏字、秘密不存在としない。",
+          "267 boris-runはtask/資源/実作者・結果/検証・期限/retry/cleanupを分ける257行とINSTALL203行masked1の参考。固定tree7にはengine/bin/requirements/webuiがなくREADMEもprimaryの同bytes reuse、別repo/notice所有表記の差から未取得実装をHTTPで補完しない。mock/dry-run/health/SSEや同model writer/verifierを実成果・本人指定別モデルレビューの証明にせず、上限20/work stealingを既存単一scheduler/割当・排他の変更にしない。子job直接起動/新engine/未完了を捨てるcleanup0。配布Python工具と新規自作言語方針も別。",
+          "8評価の全用途/価値/所見/改訂/正負例/全limitsを親が分割して全読了。primary2215物理=2211可視+4伏字、raw7/masked1、forms294raw/INSTALL203masked1、notice3fresh literal（Apache190/MIT-0 16/MIT32）と5consumer reuse、README exact reuseを区別。全支持113=saved45/unsaved68、directraw11/masked2/reuse6/saved_unread26を独立算定し、未保存bytes/SHA/reader/mask null、旧actor1/2と現在actor0を保持。元packetにある共通policy/JPskillのguard未確認・未読という限界も隠さず、親の読了や権利へ置換しない。"
+        ],
+        "observed_at": "2026-10-29T01:34:32.8960972+00:00",
+        "original_actor_namespace_and_nulls_preserved": true,
+        "original_message_sha256": "c7f6e1c5510565ee91009e1f44449c0c7aa350dde11f1f2c463ced279ebbd6c4",
+        "producer_job": "20261028-171959-todo-3719",
+        "through": 267
+      },
+      "parent_meaning_sha256": "7c5602406ae8d7c22c080a60fc4fba7ca6e84194960db0b42b5f2298e0b286b5"
+    }
+  },
+  "spec_sha256": "4f6fe32f62db56bed2acb4d378147ff952ad06230243fb45f7674f3158313fc3",
+  "support_metadata_records": 144,
+  "through": 267,
+  "unsaved_support_metadata": 81,
+  "whole16_complete": false
+}

@@ -13,6 +13,7 @@ const consolidationReferencePrefix = "# Modified reference, 2026-10-29\n# Origin
 
 type consolidationPreparationPins struct {
 	BundleSHA, ManifestSHA, SourceFile, SourceSHA string
+	SourceRaw                                     []byte
 }
 
 // Independently loaded bytes, rather than the preparation document's own
@@ -25,7 +26,7 @@ func loadConsolidationFixture(t *testing.T) (b, o, p map[string]any, pins consol
 	sourceFile := "skills-3080-consolidation-art-sources175645.json"
 	var source map[string]any
 	sourceRaw := loadPublicReceipt(t, sourceFile, &source)
-	pins = consolidationPreparationPins{travel3Digest(bundleRaw), travel3Digest(manifestRaw), sourceFile, travel3Digest(sourceRaw)}
+	pins = consolidationPreparationPins{travel3Digest(bundleRaw), travel3Digest(manifestRaw), sourceFile, travel3Digest(sourceRaw), sourceRaw}
 	return
 }
 
@@ -35,6 +36,17 @@ func validateConsolidationArtProposal(bundle, operation, prep map[string]any, ar
 	}
 	if e := next4Fields(prep, map[string]any{"bundle_sha256": artifactPins.BundleSHA, "manifest_sha256": artifactPins.ManifestSHA, "source_selection_file": artifactPins.SourceFile, "source_selection_sha256": artifactPins.SourceSHA}); e != nil {
 		return e
+	}
+	// Hash and consume the same independently loaded source buffer, then bind
+	// every source field to the actual bundle/operation rather than only its pin.
+	if travel3Digest(artifactPins.SourceRaw) != artifactPins.SourceSHA {
+		return fmt.Errorf("source selection consumed bytes differ from verified pin")
+	}
+	var selection struct {
+		Sources []map[string]any `json:"sources"`
+	}
+	if json.Unmarshal(artifactPins.SourceRaw, &selection) != nil || len(selection.Sources) != 2 {
+		return fmt.Errorf("exact actual source selection membership required")
 	}
 	nameTargets, ok := bundle["targets"].([]any)
 	if !ok {
@@ -137,6 +149,9 @@ func validateConsolidationArtProposal(bundle, operation, prep map[string]any, ar
 		if json.Unmarshal(own["references/source.json"], &source) != nil || json.Unmarshal(own["references/source-assessment.json"], &assessment) != nil {
 			return fmt.Errorf("source evidence invalid")
 		}
+		if !reflect.DeepEqual(selection.Sources[i], source) {
+			return fmt.Errorf("source selection contents differ from actual bundle source evidence")
+		}
 		if e := next4Fields(source, map[string]any{"source_inventory_id": p.id, "source_repo": "6mile/skills", "source_commit": "920714f17d81e0a95c7a9bc51faf0a7921cd982d", "source_path": p.path, "source_sha256": p.sha, "individual_notice_sha256": p.notice, "source_original_in_acquired_archive_retained": true, "pre_creation_source_observation_only": true, "created_files_at_source_preparation": float64(0), "third_party_assets_supports_services_or_independent_authorship_proven": false}); e != nil {
 			return e
 		}
@@ -194,7 +209,7 @@ func TestConsolidationArtProposalsKeepIndividualNoticesAndMaskedSourceEvidence(t
 }
 
 func TestConsolidationProposalRejectsOverstatedOrUnboundAcceptance(t *testing.T) {
-	for _, change := range []string{"valid", "root", "author", "physical absence", "created", "new rights", "new raw", "official bytes", "URI declared unmasked", "reference prefix", "bundle pin", "manifest pin", "source filename", "source pin", "names"} {
+	for _, change := range []string{"valid", "root", "author", "physical absence", "created", "new rights", "new raw", "official bytes", "URI declared unmasked", "reference prefix", "bundle pin", "manifest pin", "source filename", "source pin", "names", "joint stale source row", "joint missing source row", "joint reordered source rows", "joint source rights expansion"} {
 		t.Run(change, func(t *testing.T) {
 			b, o, p, pins := loadConsolidationFixture(t)
 			switch change {
@@ -226,6 +241,32 @@ func TestConsolidationProposalRejectsOverstatedOrUnboundAcceptance(t *testing.T)
 				p["source_selection_sha256"] = "stale"
 			case "names":
 				p["names"] = []any{"memory-consolidation-state"}
+			}
+			if strings.HasPrefix(change, "joint ") {
+				// Simulate swapping both a stale selection file and its matching
+				// preparation pin. Neither actual bundle nor operation is changed.
+				var selection map[string]any
+				if json.Unmarshal(pins.SourceRaw, &selection) != nil {
+					t.Fatal("actual source selection invalid")
+				}
+				rows := selection["sources"].([]any)
+				switch change {
+				case "joint stale source row":
+					next4Object(rows[0])["source_sha256"] = "stale"
+				case "joint missing source row":
+					selection["sources"] = rows[:1]
+				case "joint reordered source rows":
+					rows[0], rows[1] = rows[1], rows[0]
+				case "joint source rights expansion":
+					next4Object(rows[0])["third_party_assets_supports_services_or_independent_authorship_proven"] = true
+				}
+				var err error
+				pins.SourceRaw, err = json.Marshal(selection)
+				if err != nil {
+					t.Fatal(err)
+				}
+				pins.SourceSHA = travel3Digest(pins.SourceRaw)
+				p["source_selection_sha256"] = pins.SourceSHA
 			}
 			e := validateConsolidationArtProposal(b, o, p, pins)
 			if (change == "valid" && e != nil) || (change != "valid" && e == nil) {

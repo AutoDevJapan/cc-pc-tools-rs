@@ -3,7 +3,7 @@
   "issue": "https://github.com/AutoDevJapan/cc-pc-tools-rs/issues/283",
   "observed_at": "2026-10-24T17:15:09.0197014+09:00",
   "phase_a": "partial; 647 additional text shapes held by execution review",
-  "phase_b": "main受入の実新規162は不変。作業版は同一primaryと個別noticeを証明したalias1件を既存へ統合し4件、追加12評価を1535件へ反映。新2案14file76039Bは構造/出典/正負例とfresh名前metadata0を確認した準備で、未fullreview/未物理不在資格/未配置。全16/73220は継続。",
+  "phase_b": "main受入は新規配置162/既存統合4/登録評価1535。作業版は原3719の268..288・追加21評価を完全な原結果/担当/notice/伏字/未読/nullと共に1556へ反映する準備で、最終採否/許諾/中央書込は0。新2案14fileは別の正規全文内容レビューと新規作成/同buffer読戻し/発見/現手順確認が残る。全16/73220は未完。",
   "catalog_sha256": "2d73c9a038a41cc220a9687b935bfa1e0b315b65d9bd6d3e54ddb4111972876c",
   "source_count": 16,
   "fixed_public_repos": [
@@ -616,7 +616,7 @@
     "guard_client_resource": true,
     "state": "classification_unverified"
   },
-  "recorded_at": "2026-10-29T11:27:39.6180748+09:00",
+  "recorded_at": "2026-10-29T04:29:49.2792213+00:00",
   "total_skill_named_body_read_definition": "This field preserves the historical complete-source subset only. Current raw/workflow primary coverage is projected from the canonical source components and sixmile evaluation index in all_fulltext_primary_paths_including_partial_sources/all_workflow_primary_paths_including_partial_sources, not copied here.",
   "openai_entrypoint_evaluation": {
     "rights_accepted": false,
@@ -3524,5 +3524,34 @@
     "new_central_writes": 0,
     "result_review_pending": true,
     "whole16_complete": false
+  },
+  "latest_received21_after1535": {
+    "evidence": "skills-3080-original3719-next21-268288-evaluation175645.json",
+    "original_ordinal_first": 268,
+    "original_ordinal_last": 288,
+    "original_assessments": 21,
+    "complete_original_chunks": 3,
+    "support_metadata": 228,
+    "saved": 94,
+    "unsaved": 134,
+    "direct_raw_support_records": 29,
+    "direct_masked_support_records": 14,
+    "reuse_support_records": 4,
+    "ordered_full_diff_support_records": 1,
+    "saved_unread_support_records": 46,
+    "all_original_actor_null_mask_notice_and_pending_rights_kept": true,
+    "new_permissions_or_central_writes": 0,
+    "main_before_this_publication_assessments": 1535,
+    "working_assessments": 1556,
+    "final_records": 181,
+    "intersection": 175,
+    "legacy_final_only": 6,
+    "union": 1562,
+    "assessed_without_final": 1381,
+    "needs_semantic_and_individual_rights": 70583,
+    "new_result_review_CI_and_merge_pending": true,
+    "whole16_complete": false,
+    "queue_sha256": "696b51e638bc8a34f588edb73e5c25f0978b921ec30666af727f4248aaea719e",
+    "execution_manifest_sha256": "4b1b8906fcf31ec0963c93114433961fd0fbf692899cbc296a67715d09c88715"
   }
 }

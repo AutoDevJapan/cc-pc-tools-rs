@@ -1,0 +1,4675 @@
+{
+  "after": 294,
+  "all_original_chunks_losslessly_reconstructed": true,
+  "all_original_fields_and_actor_namespaces_preserved": true,
+  "central_operations": 0,
+  "complete_original_chunks": 3,
+  "domain": "skills3080-original3719-parent-shared-snapshot-v1",
+  "entries": [
+    {
+      "bytes": 20360,
+      "git_blob": "7d6b3ced10be5d1287c1cff0004ed30782b3b7d8",
+      "inventory_id": "github:1a9140756c5d2cb8be737b3c96a838e6cfbedd3f98bb7d50e61a7e8b9721e407",
+      "path": "skills/nollio/normieclaw-dashboard-builder/SKILL.md",
+      "source_commit": "920714f17d81e0a95c7a9bc51faf0a7921cd982d",
+      "source_repo": "6mile/skills",
+      "source_sha256": "a661d7b2b49bcbe2e9265be2c9d2f1baed2e688f97d7286c79eaaaafda4f5c32"
+    },
+    {
+      "bytes": 5036,
+      "git_blob": "dbbfc24e0202944af8fb2cc4787428a862e9fdfc",
+      "inventory_id": "github:e896f09503ff2a6ba3f07abe44e5e9d6ae19b0dc1affbe9313ffbf9ee10974cf",
+      "path": "skills/nollio/normieclaw-docuscan/SKILL.md",
+      "source_commit": "920714f17d81e0a95c7a9bc51faf0a7921cd982d",
+      "source_repo": "6mile/skills",
+      "source_sha256": "8b42ea6d5936283e66683ce55ef7b46716b839e48ecf9f249a94e449aff4173d"
+    },
+    {
+      "bytes": 15763,
+      "git_blob": "2dba362dceb55b8e71b1b063ad64efc0aa407bd6",
+      "inventory_id": "github:9a1d380f04110aae91f0df9af10c3528e75d0f0b9143bdba71d603824ef559c0",
+      "path": "skills/nollio/normieclaw-email-assistant/SKILL.md",
+      "source_commit": "920714f17d81e0a95c7a9bc51faf0a7921cd982d",
+      "source_repo": "6mile/skills",
+      "source_sha256": "17bab366a1e45d53b30b4662c576273b9baa7d91d75c7675244e84502949c5a6"
+    },
+    {
+      "bytes": 4729,
+      "git_blob": "4be2d9f03d52662fb008d971a9c4a7f6f9e61e22",
+      "inventory_id": "github:9deda2eac9465f5d18ce737c9f855bb593d25fd29a66564b551f219230010624",
+      "path": "skills/nollio/normieclaw-expense-report-pro/SKILL.md",
+      "source_commit": "920714f17d81e0a95c7a9bc51faf0a7921cd982d",
+      "source_repo": "6mile/skills",
+      "source_sha256": "f699aa680195b3b2ee9debcb256d24ef5f7f8261aa43b25bd389cbcb9519846a"
+    },
+    {
+      "bytes": 16774,
+      "git_blob": "4ca2b302375d6a6855914545c10c0fb18fd4aff4",
+      "inventory_id": "github:40afc179c68fc44590131f6455d04e025d596d7dde37fbc4733a3dee39f50fc8",
+      "path": "skills/nollio/normieclaw-health-buddy-pro/SKILL.md",
+      "source_commit": "920714f17d81e0a95c7a9bc51faf0a7921cd982d",
+      "source_repo": "6mile/skills",
+      "source_sha256": "626aaa61a81b7cdd8b735c5ad49ae45491091a7c78f0299b66b503ffcaebb9e2"
+    },
+    {
+      "bytes": 19286,
+      "git_blob": "4330fcae55579b96658dd548b2d09ee2ae883a3c",
+      "inventory_id": "github:b154f121a5b79aa83e871b949759680c6e6a98b09bd9035544d606e038a51900",
+      "path": "skills/nollio/normieclaw-hireme-pro/SKILL.md",
+      "source_commit": "920714f17d81e0a95c7a9bc51faf0a7921cd982d",
+      "source_repo": "6mile/skills",
+      "source_sha256": "f35dfdc6a927bfbec96f18749ba885e365a21eeab1d655d52e536742691e23ae"
+    },
+    {
+      "bytes": 6316,
+      "git_blob": "dda4679f839711bc36b46d670ab510b913f1b052",
+      "inventory_id": "github:89ca2ad0da8575c7e98bf54040f71a045c06a0e75a2b8ee155b59ff9169135d6",
+      "path": "skills/nollio/normieclaw-invoicegen/SKILL.md",
+      "source_commit": "920714f17d81e0a95c7a9bc51faf0a7921cd982d",
+      "source_repo": "6mile/skills",
+      "source_sha256": "d24e4b1639303339bdf45637eda493b5864fc9d6a8783efc7700ecbc9945f895"
+    },
+    {
+      "bytes": 18452,
+      "git_blob": "ef4e55e729d14c0efaeeb6e157e84e1089e1e223",
+      "inventory_id": "github:00434c596fe94ad4996377b69453a3fa0372ca0d887fbfd6e7e57fc88ea92774",
+      "path": "skills/nollio/normieclaw-knowledge-vault/SKILL.md",
+      "source_commit": "920714f17d81e0a95c7a9bc51faf0a7921cd982d",
+      "source_repo": "6mile/skills",
+      "source_sha256": "d320ce9beb65c4f1d57838b3286e13668be368712c3b85c9e32e5d5cdd13b154"
+    },
+    {
+      "bytes": 20627,
+      "git_blob": "0b23440b80e03feaedbe39d6ae748d0a6dca5e79",
+      "inventory_id": "github:3f0ec9b26b5385895c9c3379bc40cab90957b4dd5a671f42b1c813c4908898d6",
+      "path": "skills/nollio/normieclaw-meal-planner-pro/SKILL.md",
+      "source_commit": "920714f17d81e0a95c7a9bc51faf0a7921cd982d",
+      "source_repo": "6mile/skills",
+      "source_sha256": "4ff4d9c2201b4481fe4385c300f7db24931984b9303a5a4807765ab12d48528f"
+    },
+    {
+      "bytes": 16446,
+      "git_blob": "9c1f91c811216944a35f1c1bd7e50f282a1611da",
+      "inventory_id": "github:ae0212aec7b6f3a4d2279ba0c06771676bc4d1dda3e7cf99369271f70deb5634",
+      "path": "skills/nollio/normieclaw-notetaker-pro/SKILL.md",
+      "source_commit": "920714f17d81e0a95c7a9bc51faf0a7921cd982d",
+      "source_repo": "6mile/skills",
+      "source_sha256": "781203a218812dabe4a495adec2708981366a31b164fb1a94aa493b2a4d0945d"
+    },
+    {
+      "bytes": 16119,
+      "git_blob": "3273f76b1ec65d7eae82248e0caea24e37d6edee",
+      "inventory_id": "github:4abe3cc6967dde57d3bbc1f31ccf38b1c01713c8e7251efe8706a24bbe376397",
+      "path": "skills/nollio/normieclaw-relationship-buddy/SKILL.md",
+      "source_commit": "920714f17d81e0a95c7a9bc51faf0a7921cd982d",
+      "source_repo": "6mile/skills",
+      "source_sha256": "baf535a0159110ec507cf345b2c7f7d9d322fce0c2e1f99c8203fec978839c33"
+    },
+    {
+      "bytes": 16595,
+      "git_blob": "fca09925d46c094f397d8ef95844f5560f69de6d",
+      "inventory_id": "github:b3f1140055fe136caa3cd2ce0e9b96dea9b0b4d57f1d6a7d8efbfb46d39ddb8e",
+      "path": "skills/nollio/normieclaw-security-team/SKILL.md",
+      "source_commit": "920714f17d81e0a95c7a9bc51faf0a7921cd982d",
+      "source_repo": "6mile/skills",
+      "source_sha256": "6222d1328f73e9eead3e655ba9fc77edc7d718879757dfd92301248136cb0cf1"
+    },
+    {
+      "bytes": 20613,
+      "git_blob": "c5e7becf35d2b7973f9ab218c64bf0101f64a416",
+      "inventory_id": "github:ad266ee5787026571bed1c185050f7989e6ec14ae0f456dca7930a4e42bff39f",
+      "path": "skills/nollio/normieclaw-stock-watcher-pro/SKILL.md",
+      "source_commit": "920714f17d81e0a95c7a9bc51faf0a7921cd982d",
+      "source_repo": "6mile/skills",
+      "source_sha256": "71dd8bbe27ae75b3875f3e1841929ca3447473f9fc85e867daa0e3c71f069610"
+    },
+    {
+      "bytes": 15986,
+      "git_blob": "5841bc4acbcd7bad1a6ee748130b12062fb15d8e",
+      "inventory_id": "github:d78c14bc2d61e668cf4a8521b1c536f3317b5e4c512c1625e5468a601091ff7f",
+      "path": "skills/nollio/normieclaw-supercharged-memory/SKILL.md",
+      "source_commit": "920714f17d81e0a95c7a9bc51faf0a7921cd982d",
+      "source_repo": "6mile/skills",
+      "source_sha256": "31a559974f2496f381e82aa4a105645dbc451161504c28fa8e415bdf76a2d305"
+    },
+    {
+      "bytes": 22415,
+      "git_blob": "e7a0faf29620d372b141e69530593a43e60a1e5a",
+      "inventory_id": "github:bd26f6f6b2aa7c3f47915308e7d6341be07d76caa0bb333245aa26151f2b5b5e",
+      "path": "skills/nollio/normieclaw-trainer-buddy-pro/SKILL.md",
+      "source_commit": "920714f17d81e0a95c7a9bc51faf0a7921cd982d",
+      "source_repo": "6mile/skills",
+      "source_sha256": "e66f68c0913718584913e787c43ef64517fe057c0eeb1e038c3a45a284fdf02d"
+    },
+    {
+      "bytes": 26678,
+      "git_blob": "8e2c1a9655cc206e313a225bbdba428ea4978720",
+      "inventory_id": "github:78df2b63cc9907ed5a9ef6c85643065e73bcdecbeb6f96182bbf38ed371a0811",
+      "path": "skills/nollio/normieclaw-travel-planner-pro/SKILL.md",
+      "source_commit": "920714f17d81e0a95c7a9bc51faf0a7921cd982d",
+      "source_repo": "6mile/skills",
+      "source_sha256": "cea7a232cad8692d575e64d5b029fcd9251b66dc26822ee1db82de8f0cd17452"
+    }
+  ],
+  "limits": [
+    "Parent received actual original sixteen assessments and limits with independent native Sol/max metadata; source body/support raw reads remain the recorded original reader's work, not new parent raw reads.",
+    "Original notice reuse, ordered full-diff, fresh reads, saved-unread and unsaved null states and per-chunk actor namespaces are preserved, not converted into permissions.",
+    "This pending-assessment preparation does not install, accept third-party rights or complete598/51030/73220/16sources."
+  ],
+  "new_copy_permissions": 0,
+  "new_final_dispositions": 0,
+  "new_parent_raw_body_read_credit": 0,
+  "new_source_or_support_reads_by_materializer": 0,
+  "original_journal_parent": "20261024-235901-todo-3080",
+  "original_primary_assessments": 16,
+  "original_support_state_counts": {
+    "0": 67,
+    "1": 98,
+    "2": 42,
+    "3": 10,
+    "4": 16
+  },
+  "parent_journal_sha256_at310": "a7dcad1367442cd2aef22484461a959b578b30e6fc40ccf52f854629350ead16",
+  "publisher_job": "20261029-170905-todo-3080",
+  "records": [
+    {
+      "actual_assessment_reader": "20261028-171959-todo-3719",
+      "bytes": 20360,
+      "current_permission_or_adoption_granted": false,
+      "git_blob": "7d6b3ced10be5d1287c1cff0004ed30782b3b7d8",
+      "inventory_id": "github:1a9140756c5d2cb8be737b3c96a838e6cfbedd3f98bb7d50e61a7e8b9721e407",
+      "new_final_disposition": false,
+      "ordinal": 295,
+      "original_assessment": {
+        "candidate_disposition": "manifest/認証dataと実配備の境界を補う改訂候補。別冊/実装は未読。最終採否・許諾・導入・実test0。",
+        "findings": [
+          "System Prompt/architecture自律・新規Next/Supabase/配備手順はsource data。実UIの画像/本人回答・元の導入範囲や正式名を省略せず、Skills依頼を新製品/対象外稼働環境の構築許可へ広げない。許可された使い捨て検査資源とは区別する。",
+          "manifest route/skill_id/prefixやSQL生成・TypeScript取込にはschema/許可identifier・正規化後path/包含と作用scopeが必要。table prefix/重複検出やRLS有効化だけで全tenant・書込経路の認可を証明しない。",
+          "service-role direct/JSON bridge/webhookはlocal JSONから外部DBへの移送/権限変更で、page表示とは別。webhook秘密だけでsubject/user_idと最小scopeが正しいことを保証しない。",
+          "NEXT_PUBLICという名前やanonという表記だけで情報の公開可否を決めない。service secret・build/runtime env/ログ・COPY . .を含むDocker context/imageの露出境界は未実証。",
+          "例はuser!.idやdata??[]で未認証/取得errorと空dataを分けていない。常に全row取得/各widget独立query・RSCだけで全21機能の性能/安全/実成功は保証しない。",
+          "find /の最初の一致でsource選択・template上書き、cp先dir作成が後段、@latest/unpinned依存/CLIやNext14+等は実対象版/Windows動作未検証。ARCHITECTURE-SPEC.md204723Bとtemplate/scriptは現時点未読/未保存で補完しない。",
+          "removeでroute/code削除/DB dropは既存data/consumer/保持へ影響する。新Supabase/free tier・Vercel/Docker/DNS例から新費用/他Org・非Prd/他事業者accessを承認済みにしない。",
+          "formatCentsの固定100・2桁、dateの相対表示やchart集計は元通貨/単位/日時・不正/欠測を隠さない検証が必要。UI/shapeの作者好みを本人の一般禁止へしない。",
+          "SECURITYは規則・保証の説明で、実tenant/route/SQL identifierや生成codeの検査結果ではない。templating/parameterizedという名だけでmanifest由来identifier/routeを安全としない。",
+          "SETUPはDASH_SKILLのローカル検出部分がコメントのみで、fallbackは/Users全域findの最初の一致。source/target/版を確認しないscaffold再実行や.env.localへのcpは既存成果/秘密設定を上書きしうる。login表示/表存在/.gitignore確認だけを実auth/同期/Prd稼働成功にしない。"
+        ],
+        "nearby_limit": "起動metadataだけ。中央本文/存在・同等性/現設定は未照会。",
+        "nearby_metadata": [
+          "frontend-node-engineering",
+          "chatgpt-apps",
+          "oauth-least-privilege",
+          "database-purpose-binding",
+          "path-relative-containment-check",
+          "ui-accessibility"
+        ],
+        "negative": "manifestやprefix/RLSだけで全権限を正しいとし、全local dataをservice keyでcloudへ送り、作者theme/新費用/配備例を採用済みとして公開・DB dropする。",
+        "notices": [
+          [
+            "LICENSE.md",
+            1,
+            "当directoryの同1069B MITnotice。",
+            "実公開版/作者・第三者data/素材/service・個別権利/契約は別。"
+          ]
+        ],
+        "positive": "許可されたmanifest/対象版を画面と認証されたdataの実作用へ結び、原本保持・取得失敗/同期/配備をそれぞれ確認する設計へ参照する。",
+        "read": [
+          3,
+          6,
+          0,
+          false,
+          true,
+          603
+        ],
+        "reason": "primary603行、SECURITY.md72行、SETUP-PROMPT.md121行を順序全読。primary資格例6行は伏字。204723B別冊architectureは保存未読、template/scriptは未保存として保持する。",
+        "required_changes": [
+          "元の対象/画像・既存回答/正式名、実所有とPrd/Rakko・data移送/既存契約scopeを固定し、manifest/表示/書込/同期/配備を別作用へ結ぶ。",
+          "実認証/subjectと入力schema/identifier・path/SQL境界、RLS/child書込・webhook/replay/並行sync・保持/失敗/再開を必要範囲で検証する。",
+          "版/依存/実sourceとtargetを固定し原本を保持する。未認証/取得error/空/partialと実性能、公開env/secret・Docker context、通貨/日時/可読性/入力を別検査にする。",
+          "実利用時だけ親が必要な別冊/実装/現公式仕様・個別権利を確認する。本研究でUI/DB/秘密/クラウド・install/配備/削除/新費用/中央変更0。",
+          "SETUPの実source検出/変数初期化とdir作成順を修復し、原本/既存.env・script/dataを上書きしない。実scopeと対象版・Windows実行を確認してから有限な移行/読戻しを検証する。"
+        ],
+        "row": 295,
+        "source": [
+          "github:1a9140756c5d2cb8be737b3c96a838e6cfbedd3f98bb7d50e61a7e8b9721e407",
+          "skills/nollio/normieclaw-dashboard-builder/SKILL.md",
+          "a661d7b2b49bcbe2e9265be2c9d2f1baed2e688f97d7286c79eaaaafda4f5c32",
+          "7d6b3ced10be5d1287c1cff0004ed30782b3b7d8",
+          20360
+        ],
+        "support": [
+          [
+            "LICENSE.md",
+            1069,
+            "c9602051",
+            "f55b4192",
+            4,
+            0,
+            0,
+            "100644"
+          ],
+          [
+            "README.md",
+            3443,
+            "1390ef52",
+            "bf3be229",
+            1,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "SECURITY.md",
+            3277,
+            "0abc26c0",
+            "69083fb0",
+            2,
+            0,
+            0,
+            "100644"
+          ],
+          [
+            "SETUP-PROMPT.md",
+            3247,
+            "70a9df14",
+            "2bc43604",
+            2,
+            0,
+            0,
+            "100644"
+          ],
+          [
+            "SKILL.md",
+            20360,
+            "a661d7b2",
+            "7d6b3ced",
+            3,
+            6,
+            0,
+            "100644"
+          ],
+          [
+            "_meta.json",
+            297,
+            "f5b1a668",
+            "29003884",
+            1,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "config/dashboard-config.json",
+            null,
+            null,
+            "246d98ec",
+            0,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "dashboard-kit/ARCHITECTURE-SPEC.md",
+            204723,
+            "0e103bae",
+            "8cb73f62",
+            1,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "examples/full-ecosystem.md",
+            4170,
+            "6ba557b3",
+            "713ca741",
+            1,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "examples/multi-skill-setup.md",
+            2695,
+            "25345cc4",
+            "dca1f486",
+            1,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "examples/single-skill-setup.md",
+            2172,
+            "7ebb0554",
+            "39cc664d",
+            1,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "scripts/add-skill.sh",
+            null,
+            null,
+            "a9c6fbd7",
+            0,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "scripts/run-migrations.sh",
+            null,
+            null,
+            "eeb1b02b",
+            0,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "scripts/scaffold-project.sh",
+            null,
+            null,
+            "fea31195",
+            0,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "templates/chart-wrapper.tsx",
+            null,
+            null,
+            "82bdc20c",
+            0,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "templates/data-table.tsx",
+            null,
+            null,
+            "855663c2",
+            0,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "templates/globals.css",
+            null,
+            null,
+            "26f89dae",
+            0,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "templates/home-overview.tsx",
+            null,
+            null,
+            "fbe74998",
+            0,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "templates/layout.tsx",
+            null,
+            null,
+            "4f4a5da9",
+            0,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "templates/middleware.ts",
+            null,
+            null,
+            "23c4f869",
+            0,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "templates/page-template.tsx",
+            null,
+            null,
+            "1bb99832",
+            0,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "templates/sidebar.tsx",
+            null,
+            null,
+            "0ce11adb",
+            0,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "templates/stat-card.tsx",
+            null,
+            null,
+            "e6c6b5db",
+            0,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "templates/supabase-client.ts",
+            null,
+            null,
+            "55b2f028",
+            0,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "templates/supabase-server.ts",
+            null,
+            null,
+            "38c28b46",
+            0,
+            null,
+            null,
+            "100644"
+          ]
+        ],
+        "use": "manifestから画面/route・DB/同期/配備を分けるdashboard構成の設計参考。",
+        "value": "表示pluginと実dataの所有/認証・移送/保存・schema/版を対応させ、画面追加だけで全権限/機能完了としない。"
+      },
+      "original_chunk_sha256": "63df86b3477a7d1b4e04259ed07f6ddddfa238ff29d8a23549f6cc559709eb51",
+      "path": "skills/nollio/normieclaw-dashboard-builder/SKILL.md",
+      "source_commit": "920714f17d81e0a95c7a9bc51faf0a7921cd982d",
+      "source_repo": "6mile/skills",
+      "source_sha256": "a661d7b2b49bcbe2e9265be2c9d2f1baed2e688f97d7286c79eaaaafda4f5c32"
+    },
+    {
+      "actual_assessment_reader": "20261028-171959-todo-3719",
+      "bytes": 5036,
+      "current_permission_or_adoption_granted": false,
+      "git_blob": "dbbfc24e0202944af8fb2cc4787428a862e9fdfc",
+      "inventory_id": "github:e896f09503ff2a6ba3f07abe44e5e9d6ae19b0dc1affbe9313ffbf9ee10974cf",
+      "new_final_disposition": false,
+      "ordinal": 296,
+      "original_assessment": {
+        "candidate_disposition": "原画像/不確実性と実成果の検査を補う改訂候補。最終採否・許諾・導入・実test0。",
+        "findings": [
+          "perfect/pristineや人が読めれば完璧に読めるという主張は実品質/忠実性の証明でない。[unreadable]の方針は有用だが、意味を推定して意図どおりへ改作せず原本と不明箇所を保持する。",
+          "生成名の文字列制限だけでpath包含/Windows名・衝突/上書き/junctionを防ぐ実装は未検証。文書のsubject/人名等を自動的にfilename/logへ広げない。",
+          "SECURITYはCodex verifiedを主張する一方、HTML/JSがPDF化のPlaywrightで実行されうると警告する。コード含む文書を一括拒否する注意だけでなく、dataのescape/HTML・resource/通信/実行境界を実装側で検証する必要がある。",
+          "no external/local-only/stdlibという主張は、vision処理/agent provider・Playwrightやoptional cloud dashboardを含むdataflow/権利・費用を実証しない。実カード/保護文書の非参照と必要な非カード情報の範囲を保つ。",
+          "複数pageをmemoryに蓄えて結合するだけでは順番/重複/欠落・中断復旧を保証しない。検索可能PDF・表の行列/フォント/値と実描画、署名/注記等の保持を別検査にする。",
+          "setupの空log初期化は既存log/成果を保つ条件/schemaが不明。badgeやscript存在/実行可能bitだけを実変換/安全/初期化成功としない。scriptsは未保存で実動作を補完しない。",
+          "templateはCSS主体で内容escape/安全なHTML変換を実証しない。CompactはCode/Logs用とする一方SECURITYは実行code含む文書を避ける案で、入力内容の一律禁止でなくdataとして忠実に転記/renderする境界へ整理する必要がある。"
+        ],
+        "nearby_limit": "起動metadataだけ。中央本文/存在・同等性/現設定は未照会。",
+        "nearby_metadata": [
+          "pdf",
+          "source-grounded-content-review",
+          "business-card-ocr-review",
+          "path-relative-containment-check",
+          "validate-consume-same-bytes"
+        ],
+        "negative": "perfect/verified badgeで不明文字を補完し、OCRのHTML/JSをそのまま実行して、原契約/署名や全pageと同一とする。",
+        "notices": [
+          [
+            "LICENSE.md",
+            1,
+            "当directoryの同1069B MITnotice。",
+            "実公開版/作者・第三者data/素材/service・個別権利/契約は別。"
+          ]
+        ],
+        "positive": "原画像とpage inventoryへ転記・不明箇所を結び、dataとして安全に変換したPDFの実text/表示を確認する。",
+        "read": [
+          2,
+          0,
+          0,
+          true,
+          true,
+          68
+        ],
+        "reason": "primary68行、SECURITY.md32行、SETUP-PROMPT.md13行、config/pdf-templates.md77行を順序全読。置換行0は秘密不存在の証明でない。実文書/画像/機密は参照していない。",
+        "required_changes": [
+          "元の有限page/原画像・出所/権利と読取不確実性を固定し、転記/再構成と原本を分ける。署名等の同一性/法的効力を生成PDFだけで保証しない。",
+          "内容をcode/HTMLとして実行しないescape・render/resource/通信とpath/上書き/機密名の境界を検証する。既存log/成果を保持した初期化・page順/重複/中断再開を実装する。",
+          "実値/全page・表構造と検索text/表示を独立に確認し、実利用時だけ必要script/現仕様・個別権利を親が確認する。本研究で実画像/文書・生成/ブラウザ/導入/送信0。"
+        ],
+        "row": 296,
+        "source": [
+          "github:e896f09503ff2a6ba3f07abe44e5e9d6ae19b0dc1affbe9313ffbf9ee10974cf",
+          "skills/nollio/normieclaw-docuscan/SKILL.md",
+          "8b42ea6d5936283e66683ce55ef7b46716b839e48ecf9f249a94e449aff4173d",
+          "dbbfc24e0202944af8fb2cc4787428a862e9fdfc",
+          5036
+        ],
+        "support": [
+          [
+            "LICENSE.md",
+            1069,
+            "c9602051",
+            "f55b4192",
+            4,
+            0,
+            0,
+            "100644"
+          ],
+          [
+            "README.md",
+            1391,
+            "3cda6192",
+            "50ad3eef",
+            1,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "SECURITY.md",
+            2674,
+            "df4bbd9b",
+            "ab04f9a9",
+            2,
+            0,
+            0,
+            "100644"
+          ],
+          [
+            "SETUP-PROMPT.md",
+            1017,
+            "5baf210c",
+            "49e12b7c",
+            2,
+            0,
+            0,
+            "100644"
+          ],
+          [
+            "SKILL.md",
+            5036,
+            "8b42ea6d",
+            "dbbfc24e",
+            2,
+            0,
+            0,
+            "100644"
+          ],
+          [
+            "_meta.json",
+            457,
+            "4394f5eb",
+            "5e33f4a8",
+            1,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "config/pdf-templates.md",
+            1788,
+            "0285d211",
+            "ed79bc46",
+            2,
+            0,
+            0,
+            "100644"
+          ],
+          [
+            "dashboard-kit/DASHBOARD-SPEC.md",
+            2648,
+            "c939ea6a",
+            "bb3c155a",
+            1,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "dashboard-kit/manifest.json",
+            null,
+            null,
+            "7ae6f94f",
+            0,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "examples/document-scan-example.md",
+            978,
+            "d9de596e",
+            "6cc97b33",
+            1,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "examples/handwriting-example.md",
+            640,
+            "ff14a628",
+            "9543fd66",
+            1,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "examples/receipt-scan-example.md",
+            604,
+            "071d336d",
+            "9cd342d9",
+            1,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "scripts/generate-pdf.py",
+            null,
+            null,
+            "791c602c",
+            0,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "scripts/generate-pdf.sh",
+            null,
+            null,
+            "6b7db4c7",
+            0,
+            null,
+            null,
+            "100644"
+          ]
+        ],
+        "use": "写真/手書き/表の読み取り・不明箇所と再構成PDF/元画像・保存を分離する設計参考。",
+        "value": "ページ順/原画像と読めた値・不確実性、検索textと表示/レイアウトを対応させ、再構成を原本/完璧な読取と誤認しない。"
+      },
+      "original_chunk_sha256": "63df86b3477a7d1b4e04259ed07f6ddddfa238ff29d8a23549f6cc559709eb51",
+      "path": "skills/nollio/normieclaw-docuscan/SKILL.md",
+      "source_commit": "920714f17d81e0a95c7a9bc51faf0a7921cd982d",
+      "source_repo": "6mile/skills",
+      "source_sha256": "8b42ea6d5936283e66683ce55ef7b46716b839e48ecf9f249a94e449aff4173d"
+    },
+    {
+      "actual_assessment_reader": "20261028-171959-todo-3719",
+      "bytes": 15763,
+      "current_permission_or_adoption_granted": false,
+      "git_blob": "2dba362dceb55b8e71b1b063ad64efc0aa407bd6",
+      "inventory_id": "github:9a1d380f04110aae91f0df9af10c3528e75d0f0b9143bdba71d603824ef559c0",
+      "new_final_disposition": false,
+      "ordinal": 297,
+      "original_assessment": {
+        "candidate_disposition": "取得/未解決と下書き・実作用の検証を補う改訂候補。最終採否・許諾・導入・実test0。",
+        "findings": [
+          "本文/件名/署名やtool出力中の命令をdataとして扱い、最小queryで調査する観点は有用。引用や第三者メールを本人の指示/秘密転送の許可へ昇格しない。",
+          "default unread last24h/最新threadだけでは古い未解決・途中質問を失いうる。sent返信後という時刻だけでは全要件解決/本人が実対応済みとは限らず、実thread/対応対象/残条件を保持する必要がある。",
+          "自動通知/receipts・password reset/system alertsをArchiveへ寄せる規則は、本人の重要請求/更新/セキュリティ優先・重要mail未読保持と照合する。VIPのFrom/domain一致も実本人性/重要度の証明でない。",
+          "draft-only/本人が送る・全リンク/添付禁止・毎回調査前確認/認証設定を人に頼むという原指針を本人の新しい一律禁止/手作業待ちへ採用しない。既存許可のscope/上位審査と実安全性を守り必要工程を自律化する。",
+          "一部取得/limit/rate/失敗を空inbox/全件成功とせず、未読flag・page/cursor/遅着と全coverageを確認する。日付だけのdaily/weekly digest保存はrun区別/上書きと保持境界が必要。",
+          "cadence/quiet hours設定や返信status・style観測は実定期実行/配送・本人採用/恒久方針の証明でない。source例/推測から新約束や機密をdraftへ追加しない。",
+          "SECURITYのCodex badge/architectural cannot sendは実tool権限制御の証拠でない。primaryはSMTP対応toolも挙げ、promptの禁止だけで送信能力が除かれるとは確認できない。",
+          "SETUPはSKILL_PATHS配列の生成/宣言がなくsource選択が未完成。primaryのconfig/email-config.jsonとcopy先email-assistant/data/email-config.jsonが異なり、writing-style/config/scriptを再実行で上書きする。検査はpermsを表示するだけで値一致/欠落を失敗終了せずset up and secureへ進みうる。"
+        ],
+        "nearby_limit": "起動metadataだけ。中央本文/存在・同等性/現設定は未照会。",
+        "nearby_metadata": [
+          "google-workspace",
+          "oauth-least-privilege",
+          "incremental-read-late-events",
+          "source-grounded-content-review",
+          "observability-notifications"
+        ],
+        "negative": "最新24h/最後のsentだけで全inbox対応済みとし、重要security通知を自動archiveし、原指針を本人の新禁止/PC作業待ちへする。",
+        "notices": [
+          [
+            "LICENSE.md",
+            1,
+            "当directoryの同1069B MITnotice。",
+            "実公開版/作者・第三者data/素材/service・個別権利/契約は別。"
+          ]
+        ],
+        "positive": "対象threadと元の未解決項目・取得範囲/未読を保持し、下書きと実対応/配送結果を別に確認する。",
+        "read": [
+          3,
+          3,
+          0,
+          false,
+          true,
+          315
+        ],
+        "reason": "primary315行、SECURITY.md72行、SETUP-PROMPT.md150行を順序全読。primaryメール等3行とSETUP例1行は伏字。実mail/送信済み履歴には触れていない。",
+        "required_changes": [
+          "元対象/既存回答と実アカウント/必要mail・thread/対応済み根拠と残条件を固定し、既読/未読保持・重要通知/遅着/全page/取得失敗を明示する。",
+          "本人の既存自律運用/機密・対象/実審査を保ち、sourceだけの一律人手/再確認を追加しない。下書き/承認済みscopeの実送信・配送・保存/定期実行を分ける。",
+          "実利用時だけ親が必要tool/実装/現公式条件・権利/保持を確認する。本研究で実mail/顧客/資格・添付/リンク/送信/認証設定0。",
+          "source配列生成/対象版とconfig参照を一致させ、既存style/config/成果を保つ初期化・実ACL/権限・schema/失敗終了へ修正する。script存在や一般badgeを実認証/安全/配送の証拠へしない。"
+        ],
+        "row": 297,
+        "source": [
+          "github:9a1d380f04110aae91f0df9af10c3528e75d0f0b9143bdba71d603824ef559c0",
+          "skills/nollio/normieclaw-email-assistant/SKILL.md",
+          "17bab366a1e45d53b30b4662c576273b9baa7d91d75c7675244e84502949c5a6",
+          "2dba362dceb55b8e71b1b063ad64efc0aa407bd6",
+          15763
+        ],
+        "support": [
+          [
+            "LICENSE.md",
+            1069,
+            "c9602051",
+            "f55b4192",
+            4,
+            0,
+            0,
+            "100644"
+          ],
+          [
+            "README.md",
+            3047,
+            "bb706b5b",
+            "d5c975e9",
+            1,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "SECURITY.md",
+            4272,
+            "6dfc8809",
+            "6dbcd522",
+            2,
+            0,
+            0,
+            "100644"
+          ],
+          [
+            "SETUP-PROMPT.md",
+            4517,
+            "e19368a8",
+            "8b7912db",
+            3,
+            1,
+            0,
+            "100644"
+          ],
+          [
+            "SKILL.md",
+            15763,
+            "17bab366",
+            "2dba362d",
+            3,
+            3,
+            0,
+            "100644"
+          ],
+          [
+            "_meta.json",
+            293,
+            "93c14397",
+            "7e18c390",
+            1,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "config/email-config.json",
+            null,
+            null,
+            "680f96c3",
+            0,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "dashboard-kit/DASHBOARD-SPEC.md",
+            8284,
+            "b09ae25e",
+            "9f849ef8",
+            1,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "dashboard-kit/manifest.json",
+            null,
+            null,
+            "ccf431e8",
+            0,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "examples/digest-example.md",
+            2050,
+            "bcffb79c",
+            "bbaf4bd1",
+            1,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "examples/draft-reply-example.md",
+            1222,
+            "54051770",
+            "7eba69b8",
+            1,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "examples/inbox-triage-example.md",
+            2005,
+            "8fe7769c",
+            "598873ea",
+            1,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "scripts/email-health-check.sh",
+            null,
+            null,
+            "c96dcb98",
+            0,
+            null,
+            null,
+            "100644"
+          ]
+        ],
+        "use": "メールの取得範囲/未読・threadの未解決点、分類/下書きと実送信を分離する設計参考。",
+        "value": "何を読んだか/残っているかと、返信の記録/実対応・配送を結び、重要通知の見落としや二重対応を減らせる。"
+      },
+      "original_chunk_sha256": "63df86b3477a7d1b4e04259ed07f6ddddfa238ff29d8a23549f6cc559709eb51",
+      "path": "skills/nollio/normieclaw-email-assistant/SKILL.md",
+      "source_commit": "920714f17d81e0a95c7a9bc51faf0a7921cd982d",
+      "source_repo": "6mile/skills",
+      "source_sha256": "17bab366a1e45d53b30b4662c576273b9baa7d91d75c7675244e84502949c5a6"
+    },
+    {
+      "actual_assessment_reader": "20261028-171959-todo-3719",
+      "bytes": 4729,
+      "current_permission_or_adoption_granted": false,
+      "git_blob": "4be2d9f03d52662fb008d971a9c4a7f6f9e61e22",
+      "inventory_id": "github:9deda2eac9465f5d18ce737c9f855bb593d25fd29a66564b551f219230010624",
+      "new_final_disposition": false,
+      "ordinal": 298,
+      "original_assessment": {
+        "candidate_disposition": "原証拠/通貨・規程とreport/実状態を結ぶ改訂候補。最終採否・許諾・導入・実test0。",
+        "findings": [
+          "vision抽出はSubtotal/Tax/Tip/Total・通貨/項目の検算と不明箇所・重複/全pageを別に確認する必要がある。employer-readyは実会社規程/申請/承認の証明でない。",
+          "the day exchange rateの基準日/根拠・保存が曖昧で、現在FXを過去経費へ無条件適用しない。IRS mileageや税控除は現制度/適用国・契約条件が未検証の保存主張。",
+          "Submitted/Approved/Paidやmanual expense記録と、実申請・承認/入金/支払は別。並列receipt抽出と単一JSON更新は原本/重複/競合・部分失敗を保つ方式が必要。",
+          "JS無効Playwright・Codex verified/厳格perms・無外部送信という主張はscript未保存で未実証。JS無効だけでHTML/外部画像等のresource取得・escape/秘密/ACL境界を保証せず、primaryのFX外部照会とも区別する。",
+          "SETUPはset-e/umaskは持つが既存expense-log/config/categoriesをecho/cpで上書きしうる。初期化/存在と実PDF/安全を区別し、固定相対copy先と実package/既存dataを照合する。",
+          "SECURITYはaudit reportを参照するが、今回その独立review/実検査の本文・対象版の証拠は未確認。config/HTML template・generatorは未読/未保存で、元の実カード禁止や必要非カード情報の条件を保つ。"
+        ],
+        "nearby_limit": "起動metadataだけ。中央本文/存在・同等性/現設定は未照会。",
+        "nearby_metadata": [
+          "commerce-billing",
+          "business-card-ocr-review",
+          "payment-status-reconciliation",
+          "sql-data-integrity",
+          "source-grounded-content-review"
+        ],
+        "negative": "現在rateや既定mileageで過去経費を確定し、verified badgeとPDF出力だけで実承認/返金済みとし、再setupで帳簿を空にする。",
+        "notices": [
+          [
+            "LICENSE.md",
+            1,
+            "当directoryの同1069B MITnotice。",
+            "実公開版/作者・第三者data/素材/service・個別権利/契約は別。"
+          ]
+        ],
+        "positive": "原領収と確定値/rate/規程へreportを結び、抽出の不確実性・実承認/入金とPDF検査を分けて追う。",
+        "read": [
+          2,
+          0,
+          0,
+          true,
+          true,
+          77
+        ],
+        "reason": "primary77行、SECURITY.md12行、SETUP-PROMPT.md60行を順序全読。置換行0は秘密不存在の証明でない。実領収/金融/カード情報を参照していない。",
+        "required_changes": [
+          "原領収/許可対象・必要な非カード値・通貨/取引日/rate/実規程と分類案を固定し、不明/欠測・実検算と原証拠を保持する。",
+          "取込/並行write/重複/訂正・再実行時の非上書き/復旧と、実申請/承認/入金・PDFの全text/表示を別に検証する。",
+          "HTML/ブラウザのcontent/resource/通信・path/秘密/実ACLの境界、現在の適用制度/個別権利は実利用時だけ親が確認する。本研究で実金融資料/転送/支払・PDF/導入/設定0。"
+        ],
+        "row": 298,
+        "source": [
+          "github:9deda2eac9465f5d18ce737c9f855bb593d25fd29a66564b551f219230010624",
+          "skills/nollio/normieclaw-expense-report-pro/SKILL.md",
+          "f699aa680195b3b2ee9debcb256d24ef5f7f8261aa43b25bd389cbcb9519846a",
+          "4be2d9f03d52662fb008d971a9c4a7f6f9e61e22",
+          4729
+        ],
+        "support": [
+          [
+            "LICENSE.md",
+            1069,
+            "c9602051",
+            "f55b4192",
+            4,
+            0,
+            0,
+            "100644"
+          ],
+          [
+            "README.md",
+            1766,
+            "53ab2a27",
+            "8cff9b08",
+            1,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "SECURITY.md",
+            540,
+            "4b640487",
+            "a0f58cfe",
+            2,
+            0,
+            0,
+            "100644"
+          ],
+          [
+            "SETUP-PROMPT.md",
+            1711,
+            "058f8107",
+            "f2e3313c",
+            2,
+            0,
+            0,
+            "100644"
+          ],
+          [
+            "SKILL.md",
+            4729,
+            "f699aa68",
+            "4be2d9f0",
+            2,
+            0,
+            0,
+            "100644"
+          ],
+          [
+            "_meta.json",
+            299,
+            "b67cadef",
+            "231aae75",
+            1,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "config/default-categories.md",
+            1364,
+            "ad9354f3",
+            "b1bc66db",
+            1,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "config/report-template.html",
+            null,
+            null,
+            "03546d3e",
+            0,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "dashboard-kit/DASHBOARD-SPEC.md",
+            3783,
+            "37ed9fbe",
+            "66a67b8e",
+            1,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "dashboard-kit/manifest.json",
+            null,
+            null,
+            "8ec7eb0c",
+            0,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "examples/monthly-report-example.md",
+            886,
+            "339248af",
+            "e3c28d3e",
+            1,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "examples/query-example.md",
+            717,
+            "38eb5535",
+            "ac407592",
+            1,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "examples/receipt-processing-example.md",
+            1268,
+            "279c7d1d",
+            "7fefbd7d",
+            1,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "scripts/generate-expense-report.py",
+            null,
+            null,
+            "0dfa8f86",
+            0,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "scripts/generate-expense-report.sh",
+            null,
+            null,
+            "1c90090b",
+            0,
+            null,
+            null,
+            "100644"
+          ]
+        ],
+        "use": "領収抽出/分類・通貨/規程と、実経費/承認/返金・PDF成果を分離する設計参考。",
+        "value": "原領収書と値/分類案・実適用rateや期間を対応させ、整ったreportを実承認/返金・税務適合と誤認しない。"
+      },
+      "original_chunk_sha256": "63df86b3477a7d1b4e04259ed07f6ddddfa238ff29d8a23549f6cc559709eb51",
+      "path": "skills/nollio/normieclaw-expense-report-pro/SKILL.md",
+      "source_commit": "920714f17d81e0a95c7a9bc51faf0a7921cd982d",
+      "source_repo": "6mile/skills",
+      "source_sha256": "f699aa680195b3b2ee9debcb256d24ef5f7f8261aa43b25bd389cbcb9519846a"
+    },
+    {
+      "actual_assessment_reader": "20261028-171959-todo-3719",
+      "bytes": 16774,
+      "current_permission_or_adoption_granted": false,
+      "git_blob": "4ca2b302375d6a6855914545c10c0fb18fd4aff4",
+      "inventory_id": "github:40afc179c68fc44590131f6455d04e025d596d7dde37fbc4733a3dee39f50fc8",
+      "new_final_disposition": false,
+      "ordinal": 299,
+      "original_assessment": {
+        "candidate_disposition": "非医療の原記録/不確実性を整理する改訂候補。医学的妥当性/個別権利は未検証。最終採否・許諾・導入・実test0。",
+        "findings": [
+          "persona・免責やcoachの自己説明はcandidate data。医療機器でないという文言や固定の男女別minimumを、個人に安全な摂取目標・医学的保証の証拠にしない。保存中の健康/価格/節約効果は現在未検証。",
+          "Goal Wizardは個別目標を算出し、写真/運動由来推定も計算へ使う。元の医療方針・体調/条件や必要な専門的確認を無視した自動処方/極端な制限へ進めない。",
+          "見た目/典型portion・隠れた材料や調理法からの数値は推定。label photoでも判読/単位/serving・商品/版を確認せずexact/成分/アレルギー安全を保証しない。",
+          "本人確認後logging・運動分を既定で自動調整しない方針は有用。申告/推定/実測・予定と実摂取/服薬を分け、気分の自然文を勝手に最大数値へ変換しない。",
+          "hydration schema例は列挙entryとtotalが一致せず、日付/timezone・再記録/重複/欠測・部分日/週平均/0扱いの検証が必要。stock photoでの試用を実摂取履歴へ混ぜない。",
+          "local/私的・chmodだけでvision provider/外部検索/optional dashboard・履歴/派生物の隔離・保持は実証しない。記録/reminder設定は実配送/医療上の遵守の証明でなく、scriptは未保存。",
+          "SECURITYのCodex verified/最高基準・append-only/無外部送信/医学的minimum保証は保存自己申告で独立review/現医療検証の証拠でない。primaryの外部栄養検索/visionや任意dashboardとは実dataflowを分けて確認する。",
+          "SETUPはSKILL_SRCの実検出/初期化が欠落し、cp -RPが既存Skill/dataを上書きしうる。後段の非存在時だけtemp作成/mvやsymlink検査は有用だが、再実行全体の非上書き・競合/junction・中央配置を実証しない。検査のecho/warning後もInstallation Completeに進む。"
+        ],
+        "nearby_limit": "起動metadataだけ。中央本文/存在・同等性/現設定は未照会。",
+        "nearby_metadata": [
+          "source-grounded-content-review",
+          "sql-data-integrity",
+          "observability-notifications",
+          "security-review"
+        ],
+        "negative": "写真や固定minimum/免責から個人に安全な目標を断定し、stock photo/申告/空logを実摂取/健康状態や服薬遵守の証拠とする。",
+        "notices": [
+          [
+            "LICENSE.md",
+            1,
+            "当directoryの同1069B MITnotice。",
+            "実公開版/作者・第三者data/素材/service・各種個別権利/条件は別。"
+          ]
+        ],
+        "positive": "原出所と不確実性を保って確認済み記録を集計し、未記録/推定・目標と実健康判断を分ける設計へ参照する。",
+        "read": [
+          2,
+          0,
+          0,
+          true,
+          true,
+          362
+        ],
+        "reason": "primary362行、SECURITY.md98行、SETUP-PROMPT.md139行を順序全読。置換行0は秘密不存在の証明でない。実健康/身体/服薬情報を参照していない。",
+        "required_changes": [
+          "元の許可対象/必要な記録と出所・単位/serving/絶対日時/不確実性を固定し、推定・申告・実測と目標/医療方針を分ける。固定閾値/免責を医学的安全性の保証へしない。",
+          "確認/訂正履歴・重複/日付境界/欠測/部分期間・total整合と原本保持/並行更新/復旧、reminder登録/実配送を必要範囲で検証する。",
+          "実利用時だけ親が必要実装/現在の公式根拠・個別条件/権利とdataflow/ACLを確認する。本研究で実健康data/医療助言・外部照会/処方/導入/設定0。",
+          "source/targetの版/包含と中央配置を明示し、既存config/logをコピーで上書きしない。原子的な初期化・schema/実ACL/欠落の失敗終了と読戻しへ修正し、医療安全性と設置存在を別にする。"
+        ],
+        "row": 299,
+        "source": [
+          "github:40afc179c68fc44590131f6455d04e025d596d7dde37fbc4733a3dee39f50fc8",
+          "skills/nollio/normieclaw-health-buddy-pro/SKILL.md",
+          "626aaa61a81b7cdd8b735c5ad49ae45491091a7c78f0299b66b503ffcaebb9e2",
+          "4ca2b302375d6a6855914545c10c0fb18fd4aff4",
+          16774
+        ],
+        "support": [
+          [
+            "LICENSE.md",
+            1069,
+            "c9602051",
+            "f55b4192",
+            4,
+            0,
+            0,
+            "100644"
+          ],
+          [
+            "README.md",
+            4410,
+            "5aa4e797",
+            "8e1dbc37",
+            1,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "SECURITY.md",
+            4844,
+            "74f94fc0",
+            "f9564a02",
+            2,
+            0,
+            0,
+            "100644"
+          ],
+          [
+            "SETUP-PROMPT.md",
+            4748,
+            "9c50eb12",
+            "6b219ac4",
+            2,
+            0,
+            0,
+            "100644"
+          ],
+          [
+            "SKILL.md",
+            16774,
+            "626aaa61",
+            "4ca2b302",
+            2,
+            0,
+            0,
+            "100644"
+          ],
+          [
+            "_meta.json",
+            295,
+            "e0cb057a",
+            "c3e18e84",
+            1,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "config/health-config.json",
+            null,
+            null,
+            "b202760f",
+            0,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "dashboard-kit/DASHBOARD-SPEC.md",
+            9561,
+            "7b1723f3",
+            "7293991c",
+            1,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "dashboard-kit/manifest.json",
+            null,
+            null,
+            "e7d69e19",
+            0,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "examples/daily-summary.md",
+            1751,
+            "44aa1df2",
+            "565cdf9c",
+            1,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "examples/goal-checkin.md",
+            1869,
+            "d65135a0",
+            "e8598adb",
+            1,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "examples/photo-meal-logging.md",
+            1693,
+            "2ac39ddd",
+            "8d417629",
+            1,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "scripts/health-buddy-init.sh",
+            null,
+            null,
+            "633f8d0d",
+            0,
+            null,
+            null,
+            "100644"
+          ]
+        ],
+        "use": "栄養/水分等の原記録・写真推定/申告/ラベル値と、目標/予定/実結果を分離する設計参考。",
+        "value": "推定の不確実性・確認済みの量/単位/期間を保持し、記録やstreakを実健康状態/治療効果と誤認しない。"
+      },
+      "original_chunk_sha256": "9fdec5e2b825e647cb2666f3dcf364a5063bd78701c8f01dd208ec11dd2fe075",
+      "path": "skills/nollio/normieclaw-health-buddy-pro/SKILL.md",
+      "source_commit": "920714f17d81e0a95c7a9bc51faf0a7921cd982d",
+      "source_repo": "6mile/skills",
+      "source_sha256": "626aaa61a81b7cdd8b735c5ad49ae45491091a7c78f0299b66b503ffcaebb9e2"
+    },
+    {
+      "actual_assessment_reader": "20261028-171959-todo-3719",
+      "bytes": 19286,
+      "current_permission_or_adoption_granted": false,
+      "git_blob": "4330fcae55579b96658dd548b2d09ee2ae883a3c",
+      "inventory_id": "github:b154f121a5b79aa83e871b949759680c6e6a98b09bd9035544d606e038a51900",
+      "new_final_disposition": false,
+      "ordinal": 300,
+      "original_assessment": {
+        "candidate_disposition": "原経歴/用途別版と実結果の対応を補う改訂候補。現雇用/給与等は未検証。最終採否・許諾・導入・実test0。",
+        "findings": [
+          "masterを変更せずtailored copyと差分を残す方針は有用。会社名だけの日付filenameは同日複数role/版を区別できず、promotion/deleteも旧masterや参照を保持する必要がある。",
+          "Never fabricateという原則に対し、例の具体metricsやSignificantly increased/よりseniorにという表現を根拠なく本人の実績へ移さない。推定/本人確認/事実と表現編集を分ける。",
+          "0-100%match・ATS-friendly/premium template・採用側の好みや最適pagesは実選考確率/全ATS動作の検証でない。job requirementのcoverage/gapを根拠付きで示し、推測の経験/資格を追加しない。",
+          "company/news/給与range・交渉資料/国別慣行は現在未検証の保存手順。job descriptionから推測したcompany事情やseedの数値を現事実/合意にしない。",
+          "applied/offer/ghostedやfollow-up記録は実提出/受領/内定/拒否・配送の証明でなく、未返信を拒否/消失に即断しない。下書き/版と実送付scopeを分ける。",
+          "no data exfil/relative path/chmodとHTML→PDFはPII/context/provider・外部asset/内容実行/保存/出力先の境界を実証しない。templates/scriptは未保存でPDF/検索text/表示の実品質を保証しない。",
+          "初回表示で短い電話形式が伏字対象から漏れた限界を保持し、原値や実在性/所属を再掲・分類しない。元の禁止/出力・配布scopeと既存回答/正式名を保つ。",
+          "SECURITYのPASSED/Codex verified・PII無漏えい/依存安全性は保存自己申告で、実review/現検証の証拠でない。local保証とweb search/fetch/vision provider・HTML resource/backupや配布の実dataflowは別。",
+          "SETUPのI just purchasedという貼付文を実本人の購入/契約/支出承認へ昇格しない。cpは既存config/codeを上書きし、生成dataの全file権限や未読templateの実品質を証明しない。存在/whichのwarning後もSetup Complete表示へ進みうる。"
+        ],
+        "nearby_limit": "起動metadataだけ。中央本文/存在・同等性/現設定は未照会。",
+        "nearby_metadata": [
+          "source-grounded-content-review",
+          "audit-reference-originality",
+          "documents-slides-data",
+          "crash-safe-file-updates",
+          "security-review"
+        ],
+        "negative": "例の成果や形容を本人実績へ足し、match%/見栄えだけで採用適合を保証し、status appliedだけで提出済みとする。",
+        "notices": [
+          [
+            "LICENSE.md",
+            1,
+            "当directoryの同1069B MITnotice。",
+            "実公開版/作者・第三者data/素材/service・各種個別権利/条件は別。"
+          ]
+        ],
+        "positive": "実経歴の根拠を保った用途別版と変更理由を作り、要件のgaps/未検証と実提出結果を分ける。",
+        "read": [
+          3,
+          2,
+          0,
+          false,
+          true,
+          386
+        ],
+        "reason": "primary386行、SECURITY.md97行、SETUP-PROMPT.md110行を順序全読。primaryメール等2行とSECURITY例1行は伏字。実resume/応募/個人dataには触れていない。",
+        "required_changes": [
+          "原経歴/出所・事実と表現/推定を固定し、未提供の結果/数値/資格を創作しない。target job/版ID・元master・差分/旧版と参照を保持する。",
+          "matchを要件対応のheuristicと明示し、応募/送付/受領/未解決を別結果へ結ぶ。同日同社複数role/版・中断/並行編集・filename/PII/HTML/resourceとPDF全text/表示を検証する。",
+          "現会社/給与/国別条件・個別権利と必要実装は実利用時だけ親が確認する。今回実個人履歴/応募/交渉・外部照会/送信/生成/導入0。",
+          "実package/版・source/targetと中央配置を照合し既存config/経歴/旧版を保持する。必要file内容/実ACL・PDFのtext/表示を検証し、失敗/依存未準備と実完了を区別する。"
+        ],
+        "row": 300,
+        "source": [
+          "github:b154f121a5b79aa83e871b949759680c6e6a98b09bd9035544d606e038a51900",
+          "skills/nollio/normieclaw-hireme-pro/SKILL.md",
+          "f35dfdc6a927bfbec96f18749ba885e365a21eeab1d655d52e536742691e23ae",
+          "4330fcae55579b96658dd548b2d09ee2ae883a3c",
+          19286
+        ],
+        "support": [
+          [
+            "LICENSE.md",
+            1069,
+            "c9602051",
+            "f55b4192",
+            4,
+            0,
+            0,
+            "100644"
+          ],
+          [
+            "README.md",
+            3335,
+            "1f129a15",
+            "6be8a63b",
+            1,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "SECURITY.md",
+            4316,
+            "3517d667",
+            "05c8efca",
+            3,
+            1,
+            0,
+            "100644"
+          ],
+          [
+            "SETUP-PROMPT.md",
+            4433,
+            "4c3df163",
+            "5376871a",
+            2,
+            0,
+            0,
+            "100644"
+          ],
+          [
+            "SKILL.md",
+            19286,
+            "f35dfdc6",
+            "4330fcae",
+            3,
+            2,
+            0,
+            "100644"
+          ],
+          [
+            "_meta.json",
+            461,
+            "fbf5d48c",
+            "f79231c9",
+            1,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "config/hireme-config.json",
+            null,
+            null,
+            "bb890781",
+            0,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "dashboard-kit/DASHBOARD-SPEC.md",
+            10148,
+            "d24d2591",
+            "ccc06e83",
+            1,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "dashboard-kit/manifest.json",
+            null,
+            null,
+            "89606bc3",
+            0,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "examples/cover-letter-generation.md",
+            2138,
+            "31daf3c1",
+            "fa4a6a30",
+            1,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "examples/interview-prep.md",
+            4104,
+            "b703dc88",
+            "e5acd3d0",
+            1,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "examples/resume-tailoring.md",
+            2391,
+            "76a93eae",
+            "c053dbef",
+            1,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "scripts/generate-resume-pdf.sh",
+            null,
+            null,
+            "4f705090",
+            0,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "templates/clean.html",
+            null,
+            null,
+            "afbfc1ed",
+            0,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "templates/creative.html",
+            null,
+            null,
+            "a5639405",
+            0,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "templates/executive.html",
+            null,
+            null,
+            "a441815c",
+            0,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "templates/modern.html",
+            null,
+            null,
+            "d9d442f8",
+            0,
+            null,
+            null,
+            "100644"
+          ]
+        ],
+        "use": "元の経歴/根拠と職種別版・適合の説明/応募記録・実提出を分離する制作設計参考。",
+        "value": "master原本を保ってtarget/版と変更理由を結び、draft/heuristic scoreやstatusを実経験/採用/提出の証明にしない。"
+      },
+      "original_chunk_sha256": "9fdec5e2b825e647cb2666f3dcf364a5063bd78701c8f01dd208ec11dd2fe075",
+      "path": "skills/nollio/normieclaw-hireme-pro/SKILL.md",
+      "source_commit": "920714f17d81e0a95c7a9bc51faf0a7921cd982d",
+      "source_repo": "6mile/skills",
+      "source_sha256": "f35dfdc6a927bfbec96f18749ba885e365a21eeab1d655d52e536742691e23ae"
+    },
+    {
+      "actual_assessment_reader": "20261028-171959-todo-3719",
+      "bytes": 6316,
+      "current_permission_or_adoption_granted": false,
+      "git_blob": "dda4679f839711bc36b46d670ab510b913f1b052",
+      "inventory_id": "github:89ca2ad0da8575c7e98bf54040f71a045c06a0e75a2b8ee155b59ff9169135d6",
+      "new_final_disposition": false,
+      "ordinal": 301,
+      "original_assessment": {
+        "candidate_disposition": "請求条件/採番・実成果と業務状態の検証を補う改訂候補。現制度/個別権利は未検証。最終採否・許諾・導入・実test0。",
+        "findings": [
+          "highest number+1は並行/再試行・prefix/年度の一意性を保証しない。JSON logとPDF保存の部分失敗/重複・元明細/修正履歴を保持する必要がある。",
+          "式の税/割引基準・端数/通貨単位、期限/recurring・請求日/実契約条件は個別確認が必要。生成template/記録と実送付/入金・期限督促の適切さを分ける。",
+          "primaryは4styleを掲げるがconfigは別名の3styleで対応が不明。HTML template/generatorは未保存で、実レイアウト/可読性・全明細/値・検索text/実表示を保証しない。",
+          "Codex verified/100%localは自己表明。SECURITYはmalicious HTMLを避ける注意に留まり、実escape/ブラウザresource/外部asset・path/上書き・環境値/ログの秘密保護を実証しない。",
+          "銀行情報をenvへ置くだけで暗号化/無露出にならず、必要な非カード情報と秘密/実カードの非参照を区別する。SECURITYのSQLite言及とprimaryのJSON modelの対応も未確認。",
+          "常時PDF前承認/本人がcopy-paste送信という原flowを、新しい技術的な再承認/PC作業待ちへ採用しない。元の請求/出力/送付scopeと既存回答・正式事業者名/契約を保つ。"
+        ],
+        "nearby_limit": "起動metadataだけ。中央本文/存在・同等性/現設定は未照会。",
+        "nearby_metadata": [
+          "commerce-billing",
+          "payment-status-reconciliation",
+          "sql-data-integrity",
+          "chained-placeholder-replace-injection",
+          "path-relative-containment-check"
+        ],
+        "negative": "max+1や一般式・paid flag/綺麗なPDFだけで合法/入金済みとし、秘密をenvへ置けば安全とみなし、毎回本人PC作業を要求する。",
+        "notices": [
+          [
+            "LICENSE.md",
+            1,
+            "当directoryの同1069B MITnotice。",
+            "実公開版/作者・第三者data/素材/service・各種個別権利/条件は別。"
+          ]
+        ],
+        "positive": "確定した元条件と明細を一意番号/版へ結び、PDF検算/表示と実送付/入金を個別に確認する。",
+        "read": [
+          2,
+          0,
+          0,
+          true,
+          true,
+          63
+        ],
+        "reason": "primary63行、SECURITY.md22行、SETUP-PROMPT.md21行、invoice-styles.md26行を順序全読。置換行0は秘密不存在の証明でない。実請求/顧客/支払情報に触れていない。",
+        "required_changes": [
+          "元の実請求条件/既存回答・対象client/必要非カード値と明細/版を固定し、料金/契約・出力/送付の作用と未指定判断を分ける。",
+          "原子的な採番/保存と再試行・旧版/欠測/税/割引/通貨/期限、style mapping・HTML/外部resource/path境界とPDFの全text/表示を検証する。",
+          "実利用時だけ親が必要実装/現公式条件・適用税務/権利を確認し、記録/生成/実送付/受領/入金を別receiptへ結ぶ。本研究で実金融data・請求/署名/送信/導入0。"
+        ],
+        "row": 301,
+        "source": [
+          "github:89ca2ad0da8575c7e98bf54040f71a045c06a0e75a2b8ee155b59ff9169135d6",
+          "skills/nollio/normieclaw-invoicegen/SKILL.md",
+          "d24e4b1639303339bdf45637eda493b5864fc9d6a8783efc7700ecbc9945f895",
+          "dda4679f839711bc36b46d670ab510b913f1b052",
+          6316
+        ],
+        "support": [
+          [
+            "LICENSE.md",
+            1069,
+            "c9602051",
+            "f55b4192",
+            4,
+            0,
+            0,
+            "100644"
+          ],
+          [
+            "README.md",
+            1302,
+            "bfd2549a",
+            "bf0ebc9f",
+            1,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "SECURITY.md",
+            1632,
+            "90efb6c1",
+            "57b6b58f",
+            2,
+            0,
+            0,
+            "100644"
+          ],
+          [
+            "SETUP-PROMPT.md",
+            954,
+            "bf16631c",
+            "7e568b02",
+            2,
+            0,
+            0,
+            "100644"
+          ],
+          [
+            "SKILL.md",
+            6316,
+            "d24e4b16",
+            "dda4679f",
+            2,
+            0,
+            0,
+            "100644"
+          ],
+          [
+            "_meta.json",
+            283,
+            "0810774d",
+            "96e65c93",
+            1,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "config/invoice-styles.md",
+            1352,
+            "54d92623",
+            "ea55f7f8",
+            2,
+            0,
+            0,
+            "100644"
+          ],
+          [
+            "config/invoice-template.html",
+            null,
+            null,
+            "c3ce860b",
+            0,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "dashboard-kit/DASHBOARD-SPEC.md",
+            2778,
+            "1cf0b11e",
+            "d00a1f7b",
+            1,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "dashboard-kit/manifest.json",
+            null,
+            null,
+            "a0e13e16",
+            0,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "examples/detailed-invoice-example.md",
+            1888,
+            "71980d45",
+            "02f04f8b",
+            1,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "examples/simple-invoice-example.md",
+            1718,
+            "14236a7b",
+            "47f94886",
+            1,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "scripts/generate-invoice-pdf.py",
+            null,
+            null,
+            "d0bfa9f3",
+            0,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "scripts/generate-invoice-pdf.sh",
+            null,
+            null,
+            "37cc15c2",
+            0,
+            null,
+            null,
+            "100644"
+          ]
+        ],
+        "use": "請求条件/原明細・一意番号/版と、draft/PDF・送付/実入金を分離する設計参考。",
+        "value": "対話入力と既存契約/元証拠を結び、整ったPDFやpaid flagを実請求・支払/税務適合と取り違えない。"
+      },
+      "original_chunk_sha256": "9fdec5e2b825e647cb2666f3dcf364a5063bd78701c8f01dd208ec11dd2fe075",
+      "path": "skills/nollio/normieclaw-invoicegen/SKILL.md",
+      "source_commit": "920714f17d81e0a95c7a9bc51faf0a7921cd982d",
+      "source_repo": "6mile/skills",
+      "source_sha256": "d24e4b1639303339bdf45637eda493b5864fc9d6a8783efc7700ecbc9945f895"
+    },
+    {
+      "actual_assessment_reader": "20261028-171959-todo-3719",
+      "bytes": 18452,
+      "current_permission_or_adoption_granted": false,
+      "git_blob": "ef4e55e729d14c0efaeeb6e157e84e1089e1e223",
+      "inventory_id": "github:00434c596fe94ad4996377b69453a3fa0372ca0d887fbfd6e7e57fc88ea92774",
+      "new_final_disposition": false,
+      "ordinal": 302,
+      "original_assessment": {
+        "candidate_disposition": "原典/実読/要約と保存・記憶反映の対応を補う改訂候補。最終採否・許諾・導入・実test0。",
+        "findings": [
+          "資料/URL・transcript/README等をdataとして扱う方針は有用。人格/never hedgeやcross-sellを本人指示や不確実性の抑止へ採用しない。",
+          "動画/音声timestampが不明ならtranscript位置から推定せよとする。推定/観測を区別し、不明の時刻・quote/話者・takeawayを捏造せず、README/トップcomments/部分transcriptを全作品/全repo読了へしない。",
+          "full_textの100K打切り・long文書chunk要約は保存/意味読取のcoverage/原版・変更を記録する必要がある。URL一致だけで同bytes/同版を保証しない。counter max+1とappend JSON・同日exportは並行/再試行/上書きに弱い可能性がある。",
+          "memory enabled gate/機密伏字は有用だが、category factとimportance0.7/0.9は原典の検証/正確さでない。本人性/採否・出所/版・未読/推測とscope/保持を記憶へ引き継ぐ。",
+          "bulkは全成功がvault and memory保存とするが、memory無効/許可なし/書込失敗を分けていない。vault保存・要約/記憶反映/検索/実回答を別状態へ結ぶ必要がある。",
+          "paywall/抽出blockedでbrowserへfallbackする案は、技術エラーと権限/保護・正規審査拒否を区別する。原647拒否や対象外サイト・実所有scopeを別path/APIで迂回しない。",
+          "URL pattern分類/全vault JSON読取・外部transcript service等は実宛先/redirect・path/秘密/権利と対象範囲を検証した証拠でない。全文保存や引用・exportsの第三者利用条件をMITnoticeだけで自動承認しない。",
+          "SECURITYのPASS/未解決findingなし・only creates/appends/相対path安全は保存自己申告。memory backend/保持がplatform依存であることを別に説明する点は有用だが、実許可/隔離/検査の証明でない。",
+          "SETUPはHOME全域findの最初の一致をtrusted pathと呼び、installで既存config/scriptを上書きし、printf \u003eでvault全体/collectionsを空にする。原本/既存記憶を保持せず再実行できず、存在チェックのecho後にInstallation Completeへ進みうる。"
+        ],
+        "nearby_limit": "起動metadataだけ。中央本文/存在・同等性/現設定は未照会。",
+        "nearby_metadata": [
+          "knowledge-to-skills",
+          "import-memory",
+          "rlm-controller",
+          "source-grounded-content-review",
+          "validate-consume-same-bytes"
+        ],
+        "negative": "推定timestamp/要約を原典事実として記憶category factへ入れ、URL一致/保存だけで全読・学習済みとし、拒否をbrowserで迂回する。",
+        "notices": [
+          [
+            "LICENSE.md",
+            1,
+            "当directoryの同1069B MITnotice。",
+            "実公開版/作者・第三者data/素材/service・各種個別権利/条件は別。"
+          ]
+        ],
+        "positive": "原典と実読/保存範囲・推定を結んだ要約を保持し、vaultと許可されたmemoryの反映/欠測を別に確認する。",
+        "read": [
+          2,
+          0,
+          0,
+          true,
+          true,
+          400
+        ],
+        "reason": "primary400行、SECURITY.md97行、SETUP-PROMPT.md100行を順序全読。SECURITY連絡先1行は伏字。実vault/個人記憶/URLには触れていない。",
+        "required_changes": [
+          "原資料/版・実読範囲/欠落と保存した原text・要約/quote/時刻の根拠を結び、推定/未確認と本人の採用指示を分ける。",
+          "取込/URL重複・版差/原子的IDと追記/再実行・大文書/中断復旧を検証し、vault/memoryの許可/成否・無効/部分結果を個別に記録する。",
+          "対象data/collectionと宛先・秘密/記憶保持/出力範囲、実URL/redirect/取得拒否の境界と個別権利を維持する。現公式条件/必要実装は実利用時だけ親が確認する。本研究で外部取得/私的vault・記憶/送信/導入0。",
+          "正しい対象版/sourceとtargetを固定し、既存vault/collection/configを上書きしない原子的初期化・schema/失敗終了/読戻しへ改訂する。backend保持/許可と反映receiptを確認し、badgeや設置存在だけで成功/安全としない。"
+        ],
+        "row": 302,
+        "source": [
+          "github:00434c596fe94ad4996377b69453a3fa0372ca0d887fbfd6e7e57fc88ea92774",
+          "skills/nollio/normieclaw-knowledge-vault/SKILL.md",
+          "d320ce9beb65c4f1d57838b3286e13668be368712c3b85c9e32e5d5cdd13b154",
+          "ef4e55e729d14c0efaeeb6e157e84e1089e1e223",
+          18452
+        ],
+        "support": [
+          [
+            "LICENSE.md",
+            1069,
+            "c9602051",
+            "f55b4192",
+            4,
+            0,
+            0,
+            "100644"
+          ],
+          [
+            "README.md",
+            3532,
+            "94abb8e2",
+            "33bb9c31",
+            1,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "SECURITY.md",
+            4402,
+            "3df07e44",
+            "c4ec3ca1",
+            3,
+            1,
+            0,
+            "100644"
+          ],
+          [
+            "SETUP-PROMPT.md",
+            3404,
+            "e391f89b",
+            "bd0f996f",
+            2,
+            0,
+            0,
+            "100644"
+          ],
+          [
+            "SKILL.md",
+            18452,
+            "d320ce9b",
+            "ef4e55e7",
+            2,
+            0,
+            0,
+            "100644"
+          ],
+          [
+            "_meta.json",
+            471,
+            "1f58873a",
+            "706806a9",
+            1,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "config/vault-config.json",
+            null,
+            null,
+            "c16ddee4",
+            0,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "dashboard-kit/DASHBOARD-SPEC.md",
+            10625,
+            "4e5e5f25",
+            "38c45d7c",
+            1,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "dashboard-kit/manifest.json",
+            null,
+            null,
+            "5e03dc19",
+            0,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "examples/url-ingestion-example.md",
+            2957,
+            "fba93298",
+            "8e5894a3",
+            1,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "examples/vault-search-example.md",
+            3145,
+            "ddb7d1ce",
+            "117841ba",
+            1,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "examples/youtube-digestion-example.md",
+            3621,
+            "0046d6e0",
+            "d46336a0",
+            1,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "scripts/vault-stats.sh",
+            null,
+            null,
+            "727deb22",
+            0,
+            null,
+            null,
+            "100644"
+          ]
+        ],
+        "use": "URL/版・実読範囲と要約/quote/保存・記憶/検索結果を分離する資料庫設計参考。",
+        "value": "queued/failed/実処理、archiveの完全性とmemory側の許可/実保存を別に記録し、要約やretrievalを全原典理解/学習済みと誤認しない。"
+      },
+      "original_chunk_sha256": "9fdec5e2b825e647cb2666f3dcf364a5063bd78701c8f01dd208ec11dd2fe075",
+      "path": "skills/nollio/normieclaw-knowledge-vault/SKILL.md",
+      "source_commit": "920714f17d81e0a95c7a9bc51faf0a7921cd982d",
+      "source_repo": "6mile/skills",
+      "source_sha256": "d320ce9beb65c4f1d57838b3286e13668be368712c3b85c9e32e5d5cdd13b154"
+    },
+    {
+      "actual_assessment_reader": "20261028-171959-todo-3719",
+      "bytes": 20627,
+      "current_permission_or_adoption_granted": false,
+      "git_blob": "0b23440b80e03feaedbe39d6ae748d0a6dca5e79",
+      "inventory_id": "github:3f0ec9b26b5385895c9c3379bc40cab90957b4dd5a671f42b1c813c4908898d6",
+      "new_final_disposition": false,
+      "ordinal": 303,
+      "original_assessment": {
+        "candidate_disposition": "制約/原recipe・予定と実消費の対応を補う改訂候補。食品/医療適合は未検証。最終採否・許諾・導入・実test0。",
+        "findings": [
+          "アレルギー/好み/一時overrideを分け、member・欠席と買物/残り物を結ぶ観点は有用。ただしprofile更新だけで全既存plan/在庫/買物・交差接触や商品成分が安全と保証しない。",
+          "写真/recipe名だけで実成分/量・保存状態/鮮度・アレルギー安全や個別の栄養適合を断定しない。固定の栄養/variety・season/価格/FIFOや調理時間の主張は現条件/医療・食品安全の検証でない。",
+          "例のplan memberとhousehold profileの対応、ratingの平坦例と階層schemaが異なる。stable member/recipe版IDと完全なingredient/servings・unit/元recipeがないとconstraint判定/再計算を再現できない。",
+          "start of new weekだけでもcompleted planを実食歴へappendする説明は予定と実食を混同しうる。planned/served/consumed/在庫usedや残量・欠測を別に保持する。",
+          "ALL constraintsとstretch/softなvariety優先は優先順位/充足不能を明示し、hard allergyを緩めない。少数ratingやtemporary refusalを恒久の食事禁止/好みへ勝手に昇格しない。",
+          "path allowlist/semantics拒否は有用だが実日付/原版・再解釈/実包含/junctionや原子的writeの証明でない。default週filenameだけでは同週版/並行編集・plan/grocery/prepの部分更新を区別しない。",
+          "dietary profilesの栄養数値/消去期間・supplementやアレルギー代替を一般に安全とする説明は医学的適合の根拠ではない。医療方針・実商品成分/交差接触と個別の条件を確認せず一括適用しない。",
+          "SETUPはprintf \u003eでhousehold/allergy・ratings/実食歴/freezer等を空にする。初回という見出しだけでは既存data保護/再実行性を保証せず、空profileを既存回答がないことや安全確認済みとしない。"
+        ],
+        "nearby_limit": "起動metadataだけ。中央本文/存在・同等性/現設定は未照会。",
+        "nearby_metadata": [
+          "source-grounded-content-review",
+          "sql-data-integrity",
+          "path-relative-containment-check",
+          "crash-safe-file-updates"
+        ],
+        "negative": "写真/好みprofileだけで全員に安全と言い、新週になったので未実行planを実食済みへ移し、FIFOや人気をhard allergyより優先する。",
+        "notices": [
+          [
+            "LICENSE.md",
+            1,
+            "当directoryの同1069B MITnotice。",
+            "実公開版/作者・第三者data/素材/service・各種個別権利/条件は別。"
+          ]
+        ],
+        "positive": "確認済み制約と元recipe/量・週版を固定し、変更に伴う買物/予定と実消費・欠測を別に追う。",
+        "read": [
+          2,
+          0,
+          0,
+          true,
+          true,
+          380
+        ],
+        "reason": "primary380行、SETUP-PROMPT.md141行、config/dietary-profiles.md83行を順序全読。置換行0は秘密不存在の証明でない。実世帯/健康/画像dataには触れていない。",
+        "required_changes": [
+          "元の許可された世帯/必要data・医療方針とhard/soft制約、member/recipe/量・成分/版/日時を固定し、推定/未知・充足不能を明示する。",
+          "plan変更とgrocery/prep/在庫・実食歴を同じ世代へ結び、量/単位/leftover二重計上/原本保持・並行/中断復旧を検証する。原画像や見た目から安全を保証しない。",
+          "実利用時だけ親が必要実装/現公式食品・医療条件/個別権利とdataflowを確認する。本研究で実健康/家族/画像・調理/購入/外部照会/導入0。",
+          "既存の確認済み制約/回答・profileを保持し、非上書き/原子的初期化とschema/充足不能・失敗終了へ改訂する。既存plan/grocery/leftoverを制約変更時に再照合し、静的profileだけで食品/医療安全を断定しない。"
+        ],
+        "row": 303,
+        "source": [
+          "github:3f0ec9b26b5385895c9c3379bc40cab90957b4dd5a671f42b1c813c4908898d6",
+          "skills/nollio/normieclaw-meal-planner-pro/SKILL.md",
+          "4ff4d9c2201b4481fe4385c300f7db24931984b9303a5a4807765ab12d48528f",
+          "0b23440b80e03feaedbe39d6ae748d0a6dca5e79",
+          20627
+        ],
+        "support": [
+          [
+            "LICENSE.md",
+            1069,
+            "c9602051",
+            "f55b4192",
+            4,
+            0,
+            0,
+            "100644"
+          ],
+          [
+            "README.md",
+            2682,
+            "0665e29d",
+            "3b3b5347",
+            1,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "SETUP-PROMPT.md",
+            5742,
+            "beaaef7e",
+            "8f03c7b6",
+            2,
+            0,
+            0,
+            "100644"
+          ],
+          [
+            "SKILL.md",
+            20627,
+            "4ff4d9c2",
+            "0b23440b",
+            2,
+            0,
+            0,
+            "100644"
+          ],
+          [
+            "_meta.json",
+            295,
+            "301ba989",
+            "548e57e5",
+            1,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "config/cuisine-categories.md",
+            5576,
+            "b4d448a1",
+            "5c6e5137",
+            1,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "config/dietary-profiles.md",
+            6004,
+            "cbfd3669",
+            "a69b9a73",
+            2,
+            0,
+            0,
+            "100644"
+          ],
+          [
+            "config/store-sections.md",
+            3035,
+            "8309b241",
+            "a676efe6",
+            1,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "dashboard-kit/DASHBOARD-SPEC.md",
+            30791,
+            "9af0169c",
+            "7d8d5672",
+            1,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "dashboard-kit/manifest.json",
+            null,
+            null,
+            "f016ca25",
+            0,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "examples/fridge-photo-example.md",
+            2959,
+            "ae05fa29",
+            "94f2f3a1",
+            1,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "examples/grocery-list-example.md",
+            3676,
+            "be25a41e",
+            "f4a618ea",
+            1,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "examples/weekly-plan-example.md",
+            4972,
+            "e68556cc",
+            "d53f48e6",
+            1,
+            null,
+            null,
+            "100644"
+          ]
+        ],
+        "use": "世帯の制約/好み・recipe/量/在庫と、献立/買物/調理予定・実消費を分離する計画設計参考。",
+        "value": "誰のどの制約/原recipe・yield/量と週版を使ったかを結び、予定変更とgrocery再計算・実食歴を追える。"
+      },
+      "original_chunk_sha256": "9fdec5e2b825e647cb2666f3dcf364a5063bd78701c8f01dd208ec11dd2fe075",
+      "path": "skills/nollio/normieclaw-meal-planner-pro/SKILL.md",
+      "source_commit": "920714f17d81e0a95c7a9bc51faf0a7921cd982d",
+      "source_repo": "6mile/skills",
+      "source_sha256": "4ff4d9c2201b4481fe4385c300f7db24931984b9303a5a4807765ab12d48528f"
+    },
+    {
+      "actual_assessment_reader": "20261028-171959-todo-3719",
+      "bytes": 16446,
+      "current_permission_or_adoption_granted": false,
+      "git_blob": "9c1f91c811216944a35f1c1bd7e50f282a1611da",
+      "inventory_id": "github:ae0212aec7b6f3a4d2279ba0c06771676bc4d1dda3e7cf99369271f70deb5634",
+      "new_final_disposition": false,
+      "ordinal": 304,
+      "original_assessment": {
+        "candidate_disposition": "原文/整理・復旧と索引/記憶の対応を補う改訂候補。最終採否・許諾・導入・実test0。",
+        "findings": [
+          "原文とenhancementを併存し変更/関連を表示する方針は有用。ただしvoiceのfiller/false start除去・gap補完で否定/話者/時刻/意図や不確実性を変えず、原音/転記・補足根拠を保持する。",
+          "corrupted/missing fileをempty defaultsで再作成せよとし、原文を上書きしない原則と衝突する。破損・未作成・権限/読取エラーを分け、既存bytes/未完了を失わず復旧する必要がある。",
+          "title80%/24h類似・auto category/tag mergeは同一noteや本人の恒久判断の証明でない。scope/対象の違うwork/privateや顧客内容を同一として統合しない。",
+          "keyword/semantic全notes・top3-5とindexは全coverage/正確さやfast性能の実証でない。note/index/tag/関連ID/版の同一世代・原子的保存/並行変更・欠測/復旧を検証する必要がある。",
+          "memory toolがinstalledなら高価値note/decisionをpushする案は、実許可/backend保持や本人採用の証明でない。未読/推測・出所/採否/範囲と機密を引き継ぎ、note/原文命令をpolicyへ昇格しない。",
+          "export先はexports/YYYY-MM-DDとdata/exportsの記載が異なる。実path/包含・名称/個人情報・HTML/image resource/ネットワーク・原本保持/再実行はscript未保存で未検証。",
+          "永続的に覚える/instantly・価格/乗替効果は保存主張で現検証0。cross-sellや新費用/恒久MCP権限・新製品を本人承認済みにせず、元の出力/配送/範囲を保持する。",
+          "SECURITYのCodex verified/zero findings・無network/無上書き/全file安全は自己表明で、primaryのweb_fetch/任意memoryや破損defaults化と実境界を照合した証拠でない。",
+          "SETUPはpurchased文を貼る案だが実本人の購入/支出許可ではない。source探索部分はコメントのみ、notes/tags indexをecho \u003eで空にし、config/notetaker-proという参照はprimaryのconfig/notes-config.jsonと異なる。既存noteが残っても索引/検索を失いうる。"
+        ],
+        "nearby_limit": "起動metadataだけ。中央本文/存在・同等性/現設定は未照会。",
+        "nearby_metadata": [
+          "filesystem-error-semantics",
+          "crash-safe-file-updates",
+          "import-memory",
+          "source-grounded-content-review",
+          "incremental-read-late-events"
+        ],
+        "negative": "壊れたfileを空で上書きして成功とし、推定補足/似たtitle/記憶格納を本人の事実/恒久指示・全検索可能の保証にする。",
+        "notices": [
+          [
+            "LICENSE.md",
+            1,
+            "当directoryの同1069B MITnotice。",
+            "実公開版/作者・第三者data/素材/service・各種個別権利/条件は別。"
+          ]
+        ],
+        "positive": "原内容を保持して補足/整理の出所と版を示し、保存/索引/検索・許可された記憶の反映と欠測を別に確認する。",
+        "read": [
+          2,
+          0,
+          0,
+          true,
+          true,
+          297
+        ],
+        "reason": "primary297行、SECURITY.md106行、SETUP-PROMPT.md55行を順序全読。SECURITY連絡先1行は伏字。実note/個人記憶/画像には触れていない。",
+        "required_changes": [
+          "noteの元出所/原文・不確実性と整理/補足/推定を別世代にし、事実/本人採用・action案/実行を分ける。",
+          "破損原本/エラー種別を保持した復旧と非上書き初期化、原子的ID/note/index/tag/関連の更新・中断/検索漏れ・export先の一貫性を検証する。",
+          "実memory許可/保持/機密・個別権利と原本参照、現公式条件/必要実装は実利用時だけ親が確認する。本研究で実note/記憶・送信/新支出/導入/設定0。",
+          "正しい対象版/central配置とconfig参照を一致させ、旧notes/index/tag/元bytesを保持して内容から索引を復旧する。echo空初期化やbadge/存在だけで成功にせず、実検索/出力/実ACLと失敗終了を確認する。"
+        ],
+        "row": 304,
+        "source": [
+          "github:ae0212aec7b6f3a4d2279ba0c06771676bc4d1dda3e7cf99369271f70deb5634",
+          "skills/nollio/normieclaw-notetaker-pro/SKILL.md",
+          "781203a218812dabe4a495adec2708981366a31b164fb1a94aa493b2a4d0945d",
+          "9c1f91c811216944a35f1c1bd7e50f282a1611da",
+          16446
+        ],
+        "support": [
+          [
+            "LICENSE.md",
+            1069,
+            "c9602051",
+            "f55b4192",
+            4,
+            0,
+            0,
+            "100644"
+          ],
+          [
+            "README.md",
+            3447,
+            "abad51b1",
+            "e24cf2a8",
+            1,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "SECURITY.md",
+            4521,
+            "4aaa5961",
+            "df527fb3",
+            3,
+            1,
+            0,
+            "100644"
+          ],
+          [
+            "SETUP-PROMPT.md",
+            2284,
+            "c65675b2",
+            "d1a88ac7",
+            2,
+            0,
+            0,
+            "100644"
+          ],
+          [
+            "SKILL.md",
+            16446,
+            "781203a2",
+            "9c1f91c8",
+            2,
+            0,
+            0,
+            "100644"
+          ],
+          [
+            "_meta.json",
+            289,
+            "c18bb561",
+            "2c285834",
+            1,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "config/notes-config.json",
+            null,
+            null,
+            "9b606ea6",
+            0,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "dashboard-kit/DASHBOARD-SPEC.md",
+            7125,
+            "b574fb98",
+            "576127e9",
+            1,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "dashboard-kit/manifest.json",
+            null,
+            null,
+            "59d3f09e",
+            0,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "examples/meeting-notes-example.md",
+            2630,
+            "4848525d",
+            "95593e98",
+            1,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "examples/search-recall-example.md",
+            2042,
+            "eb8a88d8",
+            "482726cc",
+            1,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "examples/voice-dump-example.md",
+            2435,
+            "cf1ac4ea",
+            "1440486a",
+            1,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "scripts/export-notes.sh",
+            null,
+            null,
+            "21c2c302",
+            0,
+            null,
+            null,
+            "100644"
+          ]
+        ],
+        "use": "原note/音声転記/画像と整理・補足/索引・検索/記憶反映を分離する記録設計参考。",
+        "value": "元内容と改善/推定・出所/版を保持し、保存/検索indexやmemoryを元の本人発言・実行完了と誤認しない。"
+      },
+      "original_chunk_sha256": "9fdec5e2b825e647cb2666f3dcf364a5063bd78701c8f01dd208ec11dd2fe075",
+      "path": "skills/nollio/normieclaw-notetaker-pro/SKILL.md",
+      "source_commit": "920714f17d81e0a95c7a9bc51faf0a7921cd982d",
+      "source_repo": "6mile/skills",
+      "source_sha256": "781203a218812dabe4a495adec2708981366a31b164fb1a94aa493b2a4d0945d"
+    },
+    {
+      "actual_assessment_reader": "20261028-171959-todo-3719",
+      "bytes": 16119,
+      "current_permission_or_adoption_granted": false,
+      "git_blob": "3273f76b1ec65d7eae82248e0caea24e37d6edee",
+      "inventory_id": "github:4abe3cc6967dde57d3bbc1f31ccf38b1c01713c8e7251efe8706a24bbe376397",
+      "new_final_disposition": false,
+      "ordinal": 305,
+      "original_assessment": {
+        "candidate_disposition": "対象/交流原記録と通知・推定の境界を補う改訂候補。最終採否・許諾・導入・実test0。",
+        "findings": [
+          "個別contactのPIIを他context/検索queryへ出さず、memoryにはoperating preferenceだけ保存する方針は有用。一方cross-sellはcontactsをrememberすると宣伝し、PII保存許可へ拡張しない。",
+          "casual mentionsから自動profile更新・同名重複の確認は出所/本人意図/対象IDを固定する必要がある。推測/引用/昔の情報やtemporary変化を現在の事実/恒久的方針へしない。",
+          "health score/Thriving/At riskはlogged interval等のheuristicで、実関係の深さ/心理・健康の診断ではない。未記録/不明と0交流・未返信/嫌悪を混同しない。",
+          "birthday/anniversary・年次反復/うるう日/時差・memorial/停止対象やquiet/cadence、reminder登録と実配送/実連絡は別。例の自然曜日/日付を現在へ流用しない。",
+          "giftの価格/availability・season/eventは保存手順で現在未検証。proposal/予算・記録と実購入/贈呈/反応を分け、検索やメッセージで対象PII/医療/家族情報を漏らさない。",
+          "no private leak/local/relative path/chmod・CRM例のschemaは実ACL/保持/移行・並行更新/原子的ID/削除/復旧を保証しない。data/私的memoryは実参照せずsource scriptは未保存。",
+          "SECURITYのPASSED/無network・跨contact隔離/削除後保持risk評価は保存自己申告。実host/ログ/外部検索/記憶backend・ACL/保持/実migrationを検証した証拠ではない。",
+          "SETUPはCONFIG_PATHの検出/初期化がなく、while read ... doのdone/入力列挙も欠落。primaryのdata/config参照とnested data/relationship-buddy/data配置が異なり、echo \u003eで既存contacts/交流/通知等を空にしうる。"
+        ],
+        "nearby_limit": "起動時metadataのみ。中央本文/存在・同等性/現設定は照会していない。",
+        "nearby_metadata": [
+          "source-grounded-content-review",
+          "import-memory",
+          "timezone-helper",
+          "observability-notifications",
+          "security-review"
+        ],
+        "negative": "記録なしを関係の危機とし、同名/噂やcadence defaultを本人事実/義務へ変え、contacts PIIをmemory/外部検索へ流す。",
+        "notices": [
+          [
+            "LICENSE.md",
+            1,
+            "当packageの1069B MIT notice。著作権/許諾表示保持と無保証の条件。",
+            "実公開版/作者・第三者資料/サービス・個人dataの権利は別。rootMIT/MIT0で個別条件を上書きしない。"
+          ]
+        ],
+        "positive": "対象の確認済み情報と実交流/欠測を保ち、許可されたreminder/実配送と必要なoperating preferenceだけを別に確認する。",
+        "read": [
+          2,
+          0,
+          0,
+          true,
+          true,
+          289
+        ],
+        "reason": "primary289行、SECURITY.md92行、SETUP-PROMPT.md77行を順序全読。置換行0は秘密不存在の証明でない。実連絡先/私的交流情報には触れていない。",
+        "required_changes": [
+          "元の有限対象/必要情報とperson ID/出所/日時・本人の採用/訂正意図を固定し、予定/申告/実交流・未記録と評価heuristicを分ける。",
+          "日付/対象別停止/年次反復・登録/定期実行/配送/実連絡を検証し、memoryのPII非格納・backend保持/許可と出力scopeを保つ。",
+          "実利用時だけ親が必要実装/現在の公式条件・個別権利/価格とdataflow/ACLを確認する。本研究で実contacts/通信履歴・通知/検索/購入/送信/導入0。",
+          "source/target/参照rootを一意にし、不完全な変数/loopを修復する。既存contacts/履歴を上書きしない原子的初期化・実ACL/schema/失敗終了と読戻しへ改訂し、空配列/設置存在を成功としない。"
+        ],
+        "row": 305,
+        "source": [
+          "github:4abe3cc6967dde57d3bbc1f31ccf38b1c01713c8e7251efe8706a24bbe376397",
+          "skills/nollio/normieclaw-relationship-buddy/SKILL.md",
+          "baf535a0159110ec507cf345b2c7f7d9d322fce0c2e1f99c8203fec978839c33",
+          "3273f76b1ec65d7eae82248e0caea24e37d6edee",
+          16119
+        ],
+        "support": [
+          [
+            "LICENSE.md",
+            1069,
+            "c9602051",
+            "f55b4192",
+            4,
+            0,
+            0,
+            "100644"
+          ],
+          [
+            "README.md",
+            2855,
+            "6dcf2701",
+            "d1185fe4",
+            1,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "SECURITY.md",
+            4091,
+            "02a783c0",
+            "3daa54c0",
+            2,
+            0,
+            0,
+            "100644"
+          ],
+          [
+            "SETUP-PROMPT.md",
+            3027,
+            "9610062e",
+            "843a74ad",
+            2,
+            0,
+            0,
+            "100644"
+          ],
+          [
+            "SKILL.md",
+            16119,
+            "baf535a0",
+            "3273f76b",
+            2,
+            0,
+            0,
+            "100644"
+          ],
+          [
+            "_meta.json",
+            299,
+            "11f3fa9b",
+            "cca8ce84",
+            1,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "config/relationship-config.json",
+            null,
+            null,
+            "fb071615",
+            0,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "dashboard-kit/DASHBOARD-SPEC.md",
+            10259,
+            "6b69b79d",
+            "41ee8f24",
+            1,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "dashboard-kit/manifest.json",
+            null,
+            null,
+            "0f821b6b",
+            0,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "examples/adding-a-contact.md",
+            1748,
+            "1ea7fa95",
+            "02128512",
+            1,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "examples/birthday-reminder.md",
+            2038,
+            "75441dd4",
+            "eb769a5d",
+            1,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "examples/relationship-check-in.md",
+            2276,
+            "1b0d50d5",
+            "a063a571",
+            1,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "scripts/migrate-contacts.sh",
+            null,
+            null,
+            "a1dd8822",
+            0,
+            null,
+            null,
+            "100644"
+          ]
+        ],
+        "use": "連絡先の元情報/交流記録と、予定/通知・贈物案/実連絡を分離する個人CRM設計参考。",
+        "value": "対象person/関係・日時/出所と実交流/未記録を結び、記録間隔や通知rowを関係の質/実配送と誤認しない。"
+      },
+      "original_chunk_sha256": "4ded148766851b366d3025836bfa142c03f8cf15ce062634ddb65dfdaf17915e",
+      "path": "skills/nollio/normieclaw-relationship-buddy/SKILL.md",
+      "source_commit": "920714f17d81e0a95c7a9bc51faf0a7921cd982d",
+      "source_repo": "6mile/skills",
+      "source_sha256": "baf535a0159110ec507cf345b2c7f7d9d322fce0c2e1f99c8203fec978839c33"
+    },
+    {
+      "actual_assessment_reader": "20261028-171959-todo-3719",
+      "bytes": 16595,
+      "current_permission_or_adoption_granted": false,
+      "git_blob": "fca09925d46c094f397d8ef95844f5560f69de6d",
+      "inventory_id": "github:b3f1140055fe136caa3cd2ce0e9b96dea9b0b4d57f1d6a7d8efbfb46d39ddb8e",
+      "new_final_disposition": false,
+      "ordinal": 306,
+      "original_assessment": {
+        "candidate_disposition": "検査範囲・状態/履歴・通知の設計を改訂候補として提案。実監査/導入/設定/送信/採否確定/許諾は0。",
+        "findings": [
+          "3 councilを50/30/20の重みで採点し、緑かつ新規MEDIUM/CRITICALなしなら黙る設計。重み付き平均やknown/acceptedへの移動は重大問題の解消や全検査成功の証明ではない。未実施・失敗・未構成を合格へ合算しない。",
+          "rg/git log/npm出力を未信頼データとする点は有用。ただし秘密の先頭6文字+***は値の一部を露出する。原命令の実走査はせず、秘密値や保護対象を表示しない現在条件を緩めない。",
+          "git log -p --all -Sの例は説明のlast100に対応するlimitがなく大量履歴を読みうる。空のscan_directoriesでworkspace全体へ拡張する既定やHTTP redirect追従を対象許可の代わりにしない。",
+          "HTTP2xx/3xx、pgrep、索引時刻/件数やMEMORYサイズだけでは業務動作・検索内容の正しさを保証しない。QMD/npm未導入のskip、権限拒否と実検査を分ける。WindowsのACL/実環境はchmodやLinux/macOSコマンドの説明だけで未検証。",
+          "accepted riskはhash又はdescription部分一致で抑止するため別資源や条件変化を誤って隠しうる。config内受容を本人の禁止変更や新対象への許可に昇格しない。",
+          "SECURITYのCodex監査済みbadgeと保証は保存中の自己申告。strictly observationalの主張に対し本文はstate/audit保存、setupはstate.json上書き/cp/chmodを行う。scripts/config本文は未保存で実監査/実動作は未確認。",
+          "SETUPは既存state/accepted_risksをcat \u003eで消す。fallbackのif内はコメントだけで構文/探索が成立せずSKILL_SCANも未設定。コピー失敗後もbaselineやdeployed文へ進みうる。原本/途中成果を消す復旧・履歴改変/鍵rotateを研究から実行しない。"
+        ],
+        "nearby_limit": "起動時metadataのみ。中央本文/存在・同等性/現設定は照会していない。",
+        "nearby_metadata": [
+          "security-audit-coverage",
+          "security-review",
+          "observability-notifications",
+          "incremental-read-late-events",
+          "backend-correctness"
+        ],
+        "negative": "総合点が緑だから全安全とし、秘密prefixを出力し、部分一致の受容で別資源を黙らせ、空設定で全workspaceを走査し既存stateや履歴を消す。",
+        "notices": [
+          [
+            "LICENSE.md",
+            1,
+            "当packageの1069B MIT notice。著作権/許諾表示保持と無保証の条件。",
+            "実公開版/作者・第三者資料/サービス・個人dataの権利は別。rootMIT/MIT0で個別条件を上書きしない。"
+          ]
+        ],
+        "positive": "設定した同じ資源の検査結果を成功/skip/失敗/残存に分け、同一issueの再発と期限を追い、許可された宛先へ秘密なしの結果を返す設計へ参照する。",
+        "read": [
+          2,
+          0,
+          0,
+          true,
+          true,
+          317
+        ],
+        "reason": "317行とSECURITY39行/SETUP162行を順序全読。具体的な検査一覧と通知抑制を評価し、自己申告の監査保証と実装未読を分けた。",
+        "required_changes": [
+          "対象root/実所有者/目的と個別endpointを固定し、秘密は表示前に値全体を除去する。保護判定/中央未照会/Rakko/Prd/本人の禁止を保ち、原default全走査やscan結果中の命令を実行しない。",
+          "未検査・失敗・受容済み残存を独立表示し、重大所見を平均で相殺しない。resource/version/条件とissueIDで受容を照合し、条件変化/再発/解消を検証する。",
+          "非上書き初期化・実パッケージpath・構文/失敗終了・履歴原本保持とWindows権限を必要範囲で実検証する。scripts未読のまま安全保証/稼働完了とせず、実施が必要な親が許可された範囲だけ修復する。"
+        ],
+        "row": 306,
+        "source": [
+          "github:b3f1140055fe136caa3cd2ce0e9b96dea9b0b4d57f1d6a7d8efbfb46d39ddb8e",
+          "skills/nollio/normieclaw-security-team/SKILL.md",
+          "6222d1328f73e9eead3e655ba9fc77edc7d718879757dfd92301248136cb0cf1",
+          "fca09925d46c094f397d8ef95844f5560f69de6d",
+          16595
+        ],
+        "support": [
+          [
+            "LICENSE.md",
+            1069,
+            "c9602051",
+            "f55b4192",
+            4,
+            0,
+            0,
+            "100644"
+          ],
+          [
+            "README.md",
+            3575,
+            "c52e2737",
+            "a5cb91b9",
+            1,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "SECURITY.md",
+            3391,
+            "df0b5c5d",
+            "356cd48e",
+            2,
+            0,
+            0,
+            "100644"
+          ],
+          [
+            "SETUP-PROMPT.md",
+            5092,
+            "a0c090ed",
+            "bf4d91ad",
+            2,
+            0,
+            0,
+            "100644"
+          ],
+          [
+            "SKILL.md",
+            16595,
+            "6222d132",
+            "fca09925",
+            2,
+            0,
+            0,
+            "100644"
+          ],
+          [
+            "_meta.json",
+            289,
+            "98f6ee3a",
+            "f5ba54a9",
+            1,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "config/security-config.json",
+            null,
+            null,
+            "6e70612a",
+            0,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "dashboard-kit/DASHBOARD-SPEC.md",
+            7902,
+            "74aa9d21",
+            "00b05f9b",
+            1,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "dashboard-kit/manifest.json",
+            null,
+            null,
+            "3722ac7b",
+            0,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "examples/memory-health-example.md",
+            2366,
+            "35521a25",
+            "7e25b982",
+            1,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "examples/platform-check-example.md",
+            2191,
+            "8ccc0be5",
+            "c3ac192e",
+            1,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "examples/security-audit-example.md",
+            2861,
+            "b91077a9",
+            "f6ab5c52",
+            1,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "scripts/platform-health.sh",
+            null,
+            null,
+            "adbe8b71",
+            0,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "scripts/security-scan.sh",
+            null,
+            null,
+            "abc2198e",
+            0,
+            null,
+            null,
+            "100644"
+          ]
+        ],
+        "use": "セキュリティ・稼働状態・記憶索引の検査を分け、履歴・再発・受容理由を結ぶ監視設計の参考。",
+        "value": "検査対象別の結果と時系列を残し、新規・既知・受容済み・解消・未検査を区別する検査表へ使える。"
+      },
+      "original_chunk_sha256": "4ded148766851b366d3025836bfa142c03f8cf15ce062634ddb65dfdaf17915e",
+      "path": "skills/nollio/normieclaw-security-team/SKILL.md",
+      "source_commit": "920714f17d81e0a95c7a9bc51faf0a7921cd982d",
+      "source_repo": "6mile/skills",
+      "source_sha256": "6222d1328f73e9eead3e655ba9fc77edc7d718879757dfd92301248136cb0cf1"
+    },
+    {
+      "actual_assessment_reader": "20261028-171959-todo-3719",
+      "bytes": 20613,
+      "current_permission_or_adoption_granted": false,
+      "git_blob": "c5e7becf35d2b7973f9ab218c64bf0101f64a416",
+      "inventory_id": "github:ad266ee5787026571bed1c185050f7989e6ec14ae0f456dca7930a4e42bff39f",
+      "new_final_disposition": false,
+      "ordinal": 307,
+      "original_assessment": {
+        "candidate_disposition": "出典と仮説/提出履歴の対応を改訂候補として提案。金融判断/取引・実調査/API・導入・採否/許諾確定は0。",
+        "findings": [
+          "portfolioとwatchlist、出典network、filing、thesis履歴を分ける。sourceのquality点数やimpact1–10は恣意的な評価値で、公式資料でも真実/完全性や投資利益を保証しない。例中の企業出来事・数値は検証していない。",
+          "免責と取引非実行を記すがpersonal thesisにbullish/weakening等を付ける。本文のaccelerating/holding/weakeningとschemaのbullish/neutralの値が混在し、price_targetもユーザー由来か推定か区別が必要。免責文だけで根拠薄い個別推奨を正当化しない。",
+          "EDGARはCIK/ticker対応、form/filter、10req/s/500ms、30日範囲等を記述。現在仕様/公平アクセス条件/全page/時刻の確認は親の実利用時だけ行う。毎2時間をreal-time保証にせず、CIKが見つかっただけで監視稼働としない。",
+          "filing保存keyのDATE-FORMは同日同formの複数提出/訂正を衝突させうる。accession/提出時刻/原文versionと取得/処理/通知cursor、遅着・再処理/重複を分ける。日付窓だけで全件処理を保証しない。",
+          "時刻が利用者localとETで混在し、休日/夏時間/市場calendarは現在未確認。source高点/14日staleやsource削除だけで無報告・資料なしを確定しない。paid記事/第三者transcriptの取得・保存権利と新費用は別。",
+          "SECURITYの監査済み/PASSED/noexfiltrationは自己申告。検索queryや私的position/thesisの送信、group内返信、memory_storeの保存先は外部境界でありローカル保存/chmodだけでは保証されない。実API/scripts/config本文は未保存、定期実行・通知配送は未検証。",
+          "SETUPはSKILL_DIR設定/探索が欠落しcopy不能でも続ける。cat \u003eで既存portfolio/watchlistを空にし、将来作成するbriefing/filing等のfile権限まで検査しない。予定表示後の初回配送保証を実完了にしない。"
+        ],
+        "nearby_limit": "起動時metadataのみ。中央本文/存在・同等性/現設定は照会していない。",
+        "nearby_metadata": [
+          "market-data-due-diligence",
+          "public-data-research",
+          "rss-atom-feed-integrity",
+          "source-grounded-content-review",
+          "timezone-helper"
+        ],
+        "negative": "例の企業出来事や恣意的スコアを実市場事実/売買判断にし、DATE-FORMで提出を上書きし、CIKと予定の表示だけで全監視/配送完了を保証する。",
+        "notices": [
+          [
+            "LICENSE.md",
+            1,
+            "当packageの1069B MIT notice。著作権/許諾表示保持と無保証の条件。",
+            "実公開版/作者・第三者資料/サービス・個人dataの権利は別。rootMIT/MIT0で個別条件を上書きしない。"
+          ]
+        ],
+        "positive": "同一銘柄の実提出IDと原文の期間/単位を保持し、新しい事実と仮説への解釈を分け、矛盾/未取得も含めて情報整理する設計へ参照する。",
+        "read": [
+          2,
+          0,
+          0,
+          true,
+          true,
+          400
+        ],
+        "reason": "400行とSECURITY92/SETUP143/source-categories79行を全読。一般的な調査設計を評価し、保存中の市場/API/価格・制度の主張を現在の金融助言や検証済み実績へしなかった。",
+        "required_changes": [
+          "銘柄/市場/CIK・原資料URL/提出ID/時刻/版・取得範囲を固定し、根拠事実と解釈/反証/不明を分ける。status schemaを統一し、同日複数/訂正/全page/遅着と失敗再開を扱う。",
+          "私的保有/費用/仮説を検索やgroupへ混ぜず、実利用する親だけが現行の公式API/資料利用条件・時間帯・契約内枠を確認する。原scriptや取引/新費用/未指定送信を実行しない。",
+          "非上書き・用途別path/ACL・schema検証と有限retry/重複通知抑止を備え、設定/CIK照合/予定登録/実収集/配送を別証拠で検証する。原監査badgeを独立reviewへ数えない。"
+        ],
+        "row": 307,
+        "source": [
+          "github:ad266ee5787026571bed1c185050f7989e6ec14ae0f456dca7930a4e42bff39f",
+          "skills/nollio/normieclaw-stock-watcher-pro/SKILL.md",
+          "71dd8bbe27ae75b3875f3e1841929ca3447473f9fc85e867daa0e3c71f069610",
+          "c5e7becf35d2b7973f9ab218c64bf0101f64a416",
+          20613
+        ],
+        "support": [
+          [
+            "LICENSE.md",
+            1069,
+            "c9602051",
+            "f55b4192",
+            4,
+            0,
+            0,
+            "100644"
+          ],
+          [
+            "README.md",
+            4204,
+            "926a31f1",
+            "282d2e0c",
+            1,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "SECURITY.md",
+            4693,
+            "95c5dafe",
+            "23d0cca4",
+            2,
+            0,
+            0,
+            "100644"
+          ],
+          [
+            "SETUP-PROMPT.md",
+            4948,
+            "dc0f4073",
+            "a5d206cc",
+            2,
+            0,
+            0,
+            "100644"
+          ],
+          [
+            "SKILL.md",
+            20613,
+            "71dd8bbe",
+            "c5e7becf",
+            2,
+            0,
+            0,
+            "100644"
+          ],
+          [
+            "_meta.json",
+            297,
+            "ef430d76",
+            "7c6d6463",
+            1,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "config/source-categories.md",
+            4344,
+            "2f30f1dd",
+            "ed64469e",
+            2,
+            0,
+            0,
+            "100644"
+          ],
+          [
+            "config/watchlist-config.json",
+            null,
+            null,
+            "031d5845",
+            0,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "dashboard-kit/DASHBOARD-SPEC.md",
+            11066,
+            "d4f594b8",
+            "6ea5c8c3",
+            1,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "dashboard-kit/manifest.json",
+            null,
+            null,
+            "66e4c9a8",
+            0,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "examples/pre-market-briefing-example.md",
+            3977,
+            "1d6e5ebb",
+            "c182d818",
+            1,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "examples/sec-filing-example.md",
+            4525,
+            "e257b703",
+            "4c667ba4",
+            1,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "examples/thesis-tracking-example.md",
+            4194,
+            "1333446d",
+            "aa386914",
+            1,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "scripts/edgar-check.sh",
+            null,
+            null,
+            "1b48df48",
+            0,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "scripts/stock-watcher-scheduler.sh",
+            null,
+            null,
+            "799edc5c",
+            0,
+            null,
+            null,
+            "100644"
+          ]
+        ],
+        "use": "保有銘柄/監視対象と出典・提出書類・投資仮説の変化を結ぶ情報整理の設計参考。",
+        "value": "一次資料、二次記事、感情データの役割を分け、何が変わりどの仮説を支持/反証するかを根拠へ追える。"
+      },
+      "original_chunk_sha256": "4ded148766851b366d3025836bfa142c03f8cf15ce062634ddb65dfdaf17915e",
+      "path": "skills/nollio/normieclaw-stock-watcher-pro/SKILL.md",
+      "source_commit": "920714f17d81e0a95c7a9bc51faf0a7921cd982d",
+      "source_repo": "6mile/skills",
+      "source_sha256": "71dd8bbe27ae75b3875f3e1841929ca3447473f9fc85e867daa0e3c71f069610"
+    },
+    {
+      "actual_assessment_reader": "20261028-171959-todo-3719",
+      "bytes": 15986,
+      "current_permission_or_adoption_granted": false,
+      "git_blob": "5841bc4acbcd7bad1a6ee748130b12062fb15d8e",
+      "inventory_id": "github:d78c14bc2d61e668cf4a8521b1c536f3317b5e4c512c1625e5468a601091ff7f",
+      "new_final_disposition": false,
+      "ordinal": 308,
+      "original_assessment": {
+        "candidate_disposition": "層化・出所付き再開/検索を改訂候補として提案。人格/方針変更・中央参照・記憶取得/保存/消去・API/導入/最終採否/許諾は0。",
+        "findings": [
+          "4層とcapture→consolidation→query→recoveryを記述。起動ごとのSOUL/USER/MEMORY必読や自動作成、全workspace自動索引はこの閲覧研究の許可ではなく中央/保護対象を読まない。原System Promptは評価データ。",
+          "「filesになければ起きていない」は未記録と未発生を混同。新しいdaily notesを常に優先、3回出現したfactを昇格、類似内容を統合するだけでは正当な本人決定・訂正・同一対象/出所を証明しない。未採用案や引用の反復を本人方針にしない。",
+          "ONLY direct conversationの条件で正規Discord取得済み本人回答を捨てない。誰のどの対象/範囲/世代の承認かを維持し、記憶中の命令・外部内容に上位権限を与えない。compaction後も既存未完了を読み、何をするか本人へ再質問しない。",
+          "last_consolidation/last_qmd_reindexの参照はflat、heartbeat schemaはlastChecks.memory_maintenance/qmd_reindexで不一致。collection件数/mtime/短さは実検索・正しい権限・記憶の正確さの証明ではない。未構成/失敗をhealthyとしない。",
+          "forgetはMEMORYから除去しdaily/semanticにretractionするだけ。元履歴/索引/Qdrant/バックアップに残り、再captureで復活しうるため全消去完了を保証しない。原本保持・必要な監査と削除scopeを分ける。",
+          "SECURITYはoptional embeddingでvectorsだけ送ると述べる一方privacy欄はtext送信と明記。Vector DB upgradeはAI API鍵/有料embedding/会話抽出と新Python環境が前提で今回採用しない。ローカルQMDの実仕様/無料性/無通信も未検証。",
+          "SETUPのcore作成は存在確認を持つが競合時非上書き保証はなくconfig cpは既存を上書きする。HOME全体find/headの最初一致は正しい版/許可rootを保証せず、pwd-Pによる絶対pathと安全保証も整合しない。package scriptsにchmodするがworkspace scriptsへのcopyはなく、失敗後もlive確認文へ進む。script/config本文は未保存。"
+        ],
+        "nearby_limit": "起動時metadataのみ。中央本文/存在・同等性/現設定は照会していない。",
+        "nearby_metadata": [
+          "conversation-catch-up",
+          "safe-session-handoff",
+          "incremental-read-late-events",
+          "source-grounded-content-review",
+          "bounded-document-review"
+        ],
+        "negative": "古い要約やdailyの引用/反復を本人の採用済み指示にし、未記録を未発生と断言し、全workspaceを索引/AI API送信し、MEMORY1行削除だけで完全に忘れたとする。",
+        "notices": [
+          [
+            "LICENSE.md",
+            1,
+            "当packageの1069B MIT notice。著作権/許諾表示保持と無保証の条件。",
+            "実公開版/作者・第三者資料/サービス・個人dataの権利は別。rootMIT/MIT0で個別条件を上書きしない。"
+          ]
+        ],
+        "positive": "元の本人回答と作業の実結果を区別して保存する設計とし、短い索引から必要な原記録だけを検索して同じ未完了工程を再開する。",
+        "read": [
+          2,
+          0,
+          0,
+          true,
+          true,
+          356
+        ],
+        "reason": "356行とSECURITY103行(メール1行置換)/SETUP320行/consolidation108行を順序全読。記録の層/予算を評価し、原人格/自動記録/新API導入を現行指示へ昇格しなかった。",
+        "required_changes": [
+          "原記録ID/日時/取得元/本人性・対象/許可scope/世代・提案/採用/訂正/実操作/検証を保持する。記憶の新しさ/反復/類似度だけで権限/事実を上書きせず、検索なし/未記録は不明とする。",
+          "設定schemaと読書きkey、索引root/collection/保存先/権限を一致させ、非上書き・中断/競合・必要範囲の実検索/再開を検証する。無制限収集やHOME探索でscopeを広げず、read-onlyでは作成/導入しない。",
+          "AI API鍵/追加支出/未指定embedding送信を除き、忘却は派生索引/再生成/保持原本を含め実対象を照合する。現行の本人指示/原資料保護を保持し、完了していない消去や永続保証をしない。"
+        ],
+        "row": 308,
+        "source": [
+          "github:d78c14bc2d61e668cf4a8521b1c536f3317b5e4c512c1625e5468a601091ff7f",
+          "skills/nollio/normieclaw-supercharged-memory/SKILL.md",
+          "31a559974f2496f381e82aa4a105645dbc451161504c28fa8e415bdf76a2d305",
+          "5841bc4acbcd7bad1a6ee748130b12062fb15d8e",
+          15986
+        ],
+        "support": [
+          [
+            "LICENSE.md",
+            1069,
+            "c9602051",
+            "f55b4192",
+            4,
+            0,
+            0,
+            "100644"
+          ],
+          [
+            "README.md",
+            4742,
+            "34473264",
+            "72a76f94",
+            1,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "SECURITY.md",
+            4843,
+            "120078c1",
+            "af1d512f",
+            3,
+            1,
+            0,
+            "100644"
+          ],
+          [
+            "SETUP-PROMPT.md",
+            10699,
+            "91daee80",
+            "31e280bb",
+            2,
+            0,
+            0,
+            "100644"
+          ],
+          [
+            "SKILL.md",
+            15986,
+            "31a55997",
+            "5841bc4a",
+            2,
+            0,
+            0,
+            "100644"
+          ],
+          [
+            "_meta.json",
+            301,
+            "72387cf0",
+            "ccab65e4",
+            1,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "config/consolidation-rules.md",
+            4432,
+            "6dc00de9",
+            "ede55e43",
+            2,
+            0,
+            0,
+            "100644"
+          ],
+          [
+            "config/memory-config.json",
+            null,
+            null,
+            "71ed9af2",
+            0,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "dashboard-kit/DASHBOARD-SPEC.md",
+            7283,
+            "9d316568",
+            "81a83f00",
+            1,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "dashboard-kit/manifest.json",
+            null,
+            null,
+            "ec5d5a94",
+            0,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "examples/consolidation-example.md",
+            4662,
+            "25c22306",
+            "8cb6cf57",
+            1,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "examples/memory-recall-example.md",
+            4146,
+            "5cdfc9f4",
+            "51347465",
+            1,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "examples/session-start-example.md",
+            2613,
+            "4baf990a",
+            "fdf9c2d7",
+            1,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "scripts/memory-health-check.sh",
+            null,
+            null,
+            "af571d71",
+            0,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "scripts/qmd-reindex.sh",
+            null,
+            null,
+            "32d1a57d",
+            0,
+            null,
+            null,
+            "100644"
+          ]
+        ],
+        "use": "記憶の原記録・短い索引・話題別詳細・検索と再開手順を分離する設計の参考。",
+        "value": "毎回全資料を再投入せず、元記録へ戻れる要約/検索と未完了の再開点を作る観点が有用。"
+      },
+      "original_chunk_sha256": "4ded148766851b366d3025836bfa142c03f8cf15ce062634ddb65dfdaf17915e",
+      "path": "skills/nollio/normieclaw-supercharged-memory/SKILL.md",
+      "source_commit": "920714f17d81e0a95c7a9bc51faf0a7921cd982d",
+      "source_repo": "6mile/skills",
+      "source_sha256": "31a559974f2496f381e82aa4a105645dbc451161504c28fa8e415bdf76a2d305"
+    },
+    {
+      "actual_assessment_reader": "20261028-171959-todo-3719",
+      "bytes": 22415,
+      "current_permission_or_adoption_granted": false,
+      "git_blob": "e7a0faf29620d372b141e69530593a43e60a1e5a",
+      "inventory_id": "github:bd26f6f6b2aa7c3f47915308e7d6341be07d76caa0bb333245aa26151f2b5b5e",
+      "new_final_disposition": false,
+      "ordinal": 309,
+      "original_assessment": {
+        "candidate_disposition": "器具/制約/実績の照合を改訂候補として提案。医学/運動処方・個人記録取得・導入/削除・採否/許諾確定は0。",
+        "findings": [
+          "画像から器具/重量を推定し本人確認を促す点は有用だが、見えた器具の容量/安全性/利用可否を保証しない。周囲の人/位置・健康情報を含む画像の送信境界はローカルJSON/chmodだけでは守れない。",
+          "原文は診断/rehab非実施と症状時中止を記す一方、痛む部位だけからsafe swap、定量的増量/休養/失敗までのsetを提案する。免責や経験年数だけで個別の安全性・復帰許可や効果を保証しない。具体的な医学的妥当性は未検証。",
+          "lbs固定のprofile/logにmetric選好があり、器具の片手/総重量・種目variation/可動域/補助の比較条件がない。PRのheaviest/most repsとhighest weight×reps、推定1RMが混在する。推定式を実測最大重量/安全な目標にしない。",
+          "partial logをas best as canで埋めると未申告のset/reps/重量が実績化しうる。未記録≠運動しなかった、本人の改善申告≠傷害不存在/医学的回復。計画/自己申告/確定実施・訂正履歴を分ける。",
+          "SECURITYのnoexternal/data never leavesとHIPAA/FDA関連記述は実法的判断/認証ではない。host AI visionの実処理先を考慮せず、relativepathだけでno traversalを保証している。監査badge/backup原本保持の保証もscript未保存で未確認。",
+          "SETUPはSKILL_CONFIGの設定/探索がなく未設定なら即終了。workspaceへcopyしたconfigと編集/検査するskills内configのpathが不一致。unlink対象の実解決/中央junction・data所在を確認せずrm-rfを示すためdata preservedは保証されない。"
+        ],
+        "nearby_limit": "起動時metadataのみ。中央本文/存在・同等性/現設定は照会していない。",
+        "nearby_metadata": [
+          "source-grounded-content-review",
+          "evidence-based-text-review",
+          "sql-data-integrity",
+          "validate-consume-same-bytes"
+        ],
+        "negative": "画像だけで器具容量を断定し、痛みだけで安全な代替と決め、部分入力を実績へ補完し、単位違いのPR/推定1RMで自動増量や復帰を決める。",
+        "notices": [
+          [
+            "LICENSE.md",
+            1,
+            "当packageの1069B MIT notice。著作権/許諾表示保持と無保証の条件。",
+            "実公開版/作者・第三者資料/サービス・個人dataの権利は別。rootMIT/MIT0で個別条件を上書きしない。"
+          ]
+        ],
+        "positive": "本人が記録した同じ種目の単位と実施条件を保持し、欠けたreps等は不明のまま、計画と実績/推定PRを区別する記録へ参照する。",
+        "read": [
+          2,
+          0,
+          0,
+          true,
+          true,
+          417
+        ],
+        "reason": "417行とSECURITY91行(メール1行置換)/SETUP95行を全読。運動や医療上の数値は保存中の未検証主張として評価し、本人への運動処方や健康判断は行わなかった。",
+        "required_changes": [
+          "種目ID/variation・単位/片手総量・日時とsource、計画/実施/不明をschemaへ固定し、部分入力を捏造せず訂正/重複・PR種別/推定値を区別する。",
+          "健康制約は必要な自己申告だけに限定し、画像/健康履歴の無指定送信・臨床的断定やsafe代替の保証を採用しない。実利用が必要な親が現在の一次資料/本人条件を確認し、この研究では医学的助言をしない。",
+          "正しいconfig/data/scriptの所在とWindows権限/リンク境界・非上書き/失敗終了・backup保持/復旧を必要範囲で検証する。原中央/原本/junctionを保持し、研究から削除/導入/個人データ取得を実行しない。"
+        ],
+        "row": 309,
+        "source": [
+          "github:bd26f6f6b2aa7c3f47915308e7d6341be07d76caa0bb333245aa26151f2b5b5e",
+          "skills/nollio/normieclaw-trainer-buddy-pro/SKILL.md",
+          "e66f68c0913718584913e787c43ef64517fe057c0eeb1e038c3a45a284fdf02d",
+          "e7a0faf29620d372b141e69530593a43e60a1e5a",
+          22415
+        ],
+        "support": [
+          [
+            "LICENSE.md",
+            1069,
+            "c9602051",
+            "f55b4192",
+            4,
+            0,
+            0,
+            "100644"
+          ],
+          [
+            "README.md",
+            3288,
+            "177121c2",
+            "49fdef13",
+            1,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "SECURITY.md",
+            4646,
+            "6a7181c8",
+            "05713b28",
+            3,
+            1,
+            0,
+            "100644"
+          ],
+          [
+            "SETUP-PROMPT.md",
+            2564,
+            "dce053f9",
+            "ae76f2ff",
+            2,
+            0,
+            0,
+            "100644"
+          ],
+          [
+            "SKILL.md",
+            22415,
+            "e66f68c0",
+            "e7a0faf2",
+            2,
+            0,
+            0,
+            "100644"
+          ],
+          [
+            "_meta.json",
+            297,
+            "c9368454",
+            "ca598535",
+            1,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "config/trainer-config.json",
+            null,
+            null,
+            "bcd3c042",
+            0,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "dashboard-kit/DASHBOARD-SPEC.md",
+            8568,
+            "332f2e51",
+            "faa2c8a7",
+            1,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "dashboard-kit/manifest.json",
+            null,
+            null,
+            "d491b0e3",
+            0,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "examples/form-check.md",
+            3532,
+            "f2088a43",
+            "b8b1a2f8",
+            1,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "examples/progress-tracking.md",
+            2205,
+            "e1726791",
+            "899f34f8",
+            1,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "examples/workout-generation.md",
+            2720,
+            "0d576d27",
+            "775a3054",
+            1,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "scripts/backup-workout-data.sh",
+            null,
+            null,
+            "741a8865",
+            0,
+            null,
+            null,
+            "100644"
+          ]
+        ],
+        "use": "器具・本人が報告した制約・運動記録を分け、前回実績と今回の計画を照合する記録設計の参考。",
+        "value": "予定と実施、自己申告・画像推定、部分記録と確定値を分け、同一種目の比較条件を保持できる。"
+      },
+      "original_chunk_sha256": "4ded148766851b366d3025836bfa142c03f8cf15ce062634ddb65dfdaf17915e",
+      "path": "skills/nollio/normieclaw-trainer-buddy-pro/SKILL.md",
+      "source_commit": "920714f17d81e0a95c7a9bc51faf0a7921cd982d",
+      "source_repo": "6mile/skills",
+      "source_sha256": "e66f68c0913718584913e787c43ef64517fe057c0eeb1e038c3a45a284fdf02d"
+    },
+    {
+      "actual_assessment_reader": "20261028-171959-todo-3719",
+      "bytes": 26678,
+      "current_permission_or_adoption_granted": false,
+      "git_blob": "8e2c1a9655cc206e313a225bbdba428ea4978720",
+      "inventory_id": "github:78df2b63cc9907ed5a9ef6c85643065e73bcdecbeb6f96182bbf38ed371a0811",
+      "new_final_disposition": false,
+      "ordinal": 310,
+      "original_assessment": {
+        "candidate_disposition": "旅程/予算/状態と共有境界を改訂候補として提案。現旅行推奨/予約/購入/個人資料取得/送信・導入・採否/許諾確定は0。",
+        "findings": [
+          "地理的clusterと移動/天候/同伴者制約、予算カテゴリ、共有用redactionの分離は有用。原personaの経験/現地事情を実経験とせず、実施設/営業時間/価格/安全/visa/健康/forecast APIの期間・無料条件は現在未検証。",
+          "例のflightはNRT着22時だが同日のafternoonはHaneda着で不一致。空港/日付/offsetなしlocal時刻・入国/荷物/乗換bufferを結ばず実行可能な旅程とはいえない。気象予測可能期間外を確定予報にしない。",
+          "budgetカテゴリの合計3000に対しtotal_estimated2800、booked1950に対しremaining_estimate200で算式/重複計上が不明。通貨/為替の取得時刻・税込人数/泊数/取消条件・予約/支払/実費/残枠を固定し、日数短縮で必ず費用減としない。",
+          "国籍/在留資格/経由/旅券種別や日付を欠いたsix-month例を渡航可否へ直結しない。書類期限表示だけで入国可・更新必須や健康安全を保証しない。必要な親だけがその対象の現行公式情報を確認する。",
+          "日付経過だけでcompletedへ移すと取消/延期/不参加が実旅行履歴へ入る。同行者の嗜好を自動永続化/他Skillから同期する権限と最小化、実参加/本人feedback・今回だけの条件を分ける。",
+          "SECURITYのnoPII/noexternal/実保証は自己申告。検索先へ旅先/日付/座標を送る事実、host AIで書類を処理する境界と共有の具体宛先/内容は別。カード末尾保存案を実カードの参照許可にしない。通常送信の既存許可を毎回再確認させる一律手順にもせず、今回の研究では送信0。",
+          "SETUPのwhile read doが閉じられず入力のfindも欠落。cat \u003eで既存profileを空にし、先にwriteしてからconfirmationとも読める。config/scripts本文は未保存でpath/slug/quoted変数だけでjunctionやtraversal不可能を保証しない。"
+        ],
+        "nearby_limit": "起動時metadataのみ。中央本文/存在・同等性/現設定は照会していない。",
+        "nearby_metadata": [
+          "aerobase-flight-deals",
+          "aerobase-travel-hotels",
+          "aerobase-travel-activities",
+          "timezone-helper",
+          "payment-status-reconciliation"
+        ],
+        "negative": "例の空港/時刻矛盾を残し、期限だけで入国可否を断定し、日付経過を実旅行完了とし、曖昧な予算から新費用や予約/同行者情報の共有を実行する。",
+        "notices": [
+          [
+            "LICENSE.md",
+            1,
+            "当packageの1069B MIT notice。著作権/許諾表示保持と無保証の条件。",
+            "実公開版/作者・第三者資料/サービス・個人dataの権利は別。rootMIT/MIT0で個別条件を上書きしない。"
+          ]
+        ],
+        "positive": "同じ空港と現地日付/移動時間を結び、天候は取得時点/予報範囲を示し、推定と実予約・費用/取消条件を分けて変更候補を比較する設計へ参照する。",
+        "read": [
+          2,
+          0,
+          0,
+          true,
+          true,
+          486
+        ],
+        "reason": "486行とSECURITY72行(メール1行置換)/SETUP180行を全読。旅行の手配や現在の価格/入国条件を調べず、保存中の計画例と設計上の欠陥を評価した。",
+        "required_changes": [
+          "出発/到着/施設の同一性、IANA timezone/offset・日付/人数/泊数・移動buffer・利用条件を統一し、推定/未確認/予約確定/実施済みを区別する。現在の条件は実利用する親が公式情報と本人の要件で確認する。",
+          "予算の式と為替/税込総額/取消・変更費を照合し、未指定の購入/保険/予約/増額を実行しない。原例の一般visaや安全・健康断定を現行保証にしない。",
+          "非上書き/競合安全な初期化と構文/失敗終了・実path/ACLを検証する。共有先/送信内容/本人承認scopeを固定し、旅券・実カード/秘密を読まない。原本保持と提案/設定/実収集/配送を別結果へ分ける。"
+        ],
+        "row": 310,
+        "source": [
+          "github:78df2b63cc9907ed5a9ef6c85643065e73bcdecbeb6f96182bbf38ed371a0811",
+          "skills/nollio/normieclaw-travel-planner-pro/SKILL.md",
+          "cea7a232cad8692d575e64d5b029fcd9251b66dc26822ee1db82de8f0cd17452",
+          "8e2c1a9655cc206e313a225bbdba428ea4978720",
+          26678
+        ],
+        "support": [
+          [
+            "LICENSE.md",
+            1069,
+            "c9602051",
+            "f55b4192",
+            4,
+            0,
+            0,
+            "100644"
+          ],
+          [
+            "README.md",
+            3875,
+            "669e3497",
+            "95a0a2aa",
+            1,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "SECURITY.md",
+            3623,
+            "69dc5ac3",
+            "ef45e98b",
+            3,
+            1,
+            0,
+            "100644"
+          ],
+          [
+            "SETUP-PROMPT.md",
+            6415,
+            "db709e6a",
+            "4fcf757e",
+            2,
+            0,
+            0,
+            "100644"
+          ],
+          [
+            "SKILL.md",
+            26678,
+            "cea7a232",
+            "8e2c1a96",
+            2,
+            0,
+            0,
+            "100644"
+          ],
+          [
+            "_meta.json",
+            299,
+            "a28ea27e",
+            "a79414a2",
+            1,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "config/travel-config.json",
+            null,
+            null,
+            "2237ec9e",
+            0,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "dashboard-kit/DASHBOARD-SPEC.md",
+            12051,
+            "7481b125",
+            "0469e2c4",
+            1,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "dashboard-kit/manifest.json",
+            null,
+            null,
+            "2c675eb4",
+            0,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "examples/itinerary-example.md",
+            6858,
+            "dbe7f473",
+            "98820781",
+            1,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "examples/packing-list-example.md",
+            4641,
+            "65751bc6",
+            "895f0008",
+            1,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "examples/trip-planning-example.md",
+            5418,
+            "5c24332a",
+            "c4882cfb",
+            1,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "scripts/trip-reminder.sh",
+            null,
+            null,
+            "98928983",
+            0,
+            null,
+            null,
+            "100644"
+          ]
+        ],
+        "use": "旅程・移動時間・予算・持ち物・必要書類と変更履歴を結ぶ計画設計の参考。",
+        "value": "地域別に行程をまとめ、移動や天候の代案と推定/予約/実費を分け、変更の影響を追える。"
+      },
+      "original_chunk_sha256": "4ded148766851b366d3025836bfa142c03f8cf15ce062634ddb65dfdaf17915e",
+      "path": "skills/nollio/normieclaw-travel-planner-pro/SKILL.md",
+      "source_commit": "920714f17d81e0a95c7a9bc51faf0a7921cd982d",
+      "source_repo": "6mile/skills",
+      "source_sha256": "cea7a232cad8692d575e64d5b029fcd9251b66dc26822ee1db82de8f0cd17452"
+    }
+  ],
+  "roster_sha256": "f9c6b2e44c5e3aa8947f758f864eaa0d5edc396d622359826bca848cd96f9901",
+  "saved_support_metadata": 166,
+  "shared_original_contexts": {
+    "4ded148766851b366d3025836bfa142c03f8cf15ce062634ddb65dfdaf17915e": {
+      "actual_assessment_reader": "20261028-171959-todo-3719",
+      "common": {
+        "boundaries": {
+          "central_operations": 0,
+          "copy_license_accepted": false,
+          "new_final_dispositions": 0,
+          "source_executed": false
+        },
+        "chunk_id": "ef36da6442d743435e77000b13238866",
+        "definitions": {
+          "actors": {
+            "0": "今回の実assistant読取。noticeの代表rawは同jobの292で既受領。"
+          },
+          "mask_method": "version13。表示前のメール/長い数値/token形式/秘密・口座・電話形式の置換。maskCountは置換されたouter physical lines。0も秘密不存在の証明ではない。",
+          "reader_namespace": "20261028-171959-todo-3719/current3719",
+          "states": {
+            "0": "unsaved",
+            "1": "saved_unread",
+            "2": "direct_raw_full",
+            "3": "direct_masked_full",
+            "4": "exact_bytes_reuse",
+            "5": "ordered_full_diff",
+            "6": "partial",
+            "7": "scan"
+          },
+          "support_tuple": "[relative,bytes,SHA8,Gitblob8,state,maskCount,actor,mode]。全tree packageを列挙。未保存bytes/SHA/reader/maskCountはnull。"
+        },
+        "domain": "research598-chunk-v1",
+        "first_ordinal": 305,
+        "limits": {
+          "central_body_or_existence_checks": 0,
+          "masked_meanings_unread": 3,
+          "notice_new_literal_reads": 0,
+          "other_saved_supports": "saved_unread1。未保存script/config等は未取得0。本文未読を監査済み/実動作へしない。",
+          "source_bodies_refetched": 0,
+          "source_script_execution": 0
+        },
+        "notice_bodies": [
+          {
+            "all_consumer_same_bytes": true,
+            "bytes": 1069,
+            "consumer_paths": [
+              "skills/nollio/normieclaw-relationship-buddy/LICENSE.md",
+              "skills/nollio/normieclaw-security-team/LICENSE.md",
+              "skills/nollio/normieclaw-stock-watcher-pro/LICENSE.md",
+              "skills/nollio/normieclaw-supercharged-memory/LICENSE.md",
+              "skills/nollio/normieclaw-trainer-buddy-pro/LICENSE.md",
+              "skills/nollio/normieclaw-travel-planner-pro/LICENSE.md"
+            ],
+            "consumer_rows": [
+              305,
+              306,
+              307,
+              308,
+              309,
+              310
+            ],
+            "fresh_raw": false,
+            "git_blob": "f55b4192a7f78533f379e0416134b14aa0c636f8",
+            "id": 1,
+            "parent_chunk_sha256": "35f5556c0c39c0763728f0bbe5165e4723bc4ebbafd228f0f888c8d03ee74b74",
+            "parent_receipt": "research3719-chunk-3bbd278ad6a11f8edb41ef3b0835c3e8.json",
+            "read": [
+              4,
+              0,
+              0,
+              false,
+              true,
+              21
+            ],
+            "reader_job": "20261028-171959-todo-3719",
+            "reader_namespace": "20261028-171959-todo-3719/current3719",
+            "representative_path": "skills/nollio/normieclaw-budget-buddy-pro/LICENSE.md",
+            "representative_read": [
+              2,
+              0,
+              0,
+              true,
+              true,
+              21
+            ],
+            "representative_row": 292,
+            "sha256": "c96020518e7d5238105b651899ae52bb01b33690d61c42f99703d06279935868"
+          }
+        ],
+        "prior_journal_sha256": "9c070f55067bf80829e4416d560aecddab01544bfc28295f509231539ff93f58",
+        "reader_job": "20261028-171959-todo-3719",
+        "reader_todo": 3719,
+        "reading_integrity": {
+          "all_primary_ordered_full": true,
+          "primary_count": 6,
+          "primary_lines": [
+            289,
+            317,
+            400,
+            356,
+            417,
+            486
+          ],
+          "same_buffer": {
+            "bytes": true,
+            "git_blob": true,
+            "sha256": true,
+            "strict_utf8": true
+          },
+          "source_original_text_included": false,
+          "support_direct_full": [
+            {
+              "lines": 92,
+              "maskCount": 0,
+              "relative": "SECURITY.md",
+              "row": 305,
+              "state": 2,
+              "withheld_lines": []
+            },
+            {
+              "lines": 77,
+              "maskCount": 0,
+              "relative": "SETUP-PROMPT.md",
+              "row": 305,
+              "state": 2,
+              "withheld_lines": []
+            },
+            {
+              "lines": 39,
+              "maskCount": 0,
+              "relative": "SECURITY.md",
+              "row": 306,
+              "state": 2,
+              "withheld_lines": []
+            },
+            {
+              "lines": 162,
+              "maskCount": 0,
+              "relative": "SETUP-PROMPT.md",
+              "row": 306,
+              "state": 2,
+              "withheld_lines": []
+            },
+            {
+              "lines": 92,
+              "maskCount": 0,
+              "relative": "SECURITY.md",
+              "row": 307,
+              "state": 2,
+              "withheld_lines": []
+            },
+            {
+              "lines": 143,
+              "maskCount": 0,
+              "relative": "SETUP-PROMPT.md",
+              "row": 307,
+              "state": 2,
+              "withheld_lines": []
+            },
+            {
+              "lines": 79,
+              "maskCount": 0,
+              "relative": "config/source-categories.md",
+              "row": 307,
+              "state": 2,
+              "withheld_lines": []
+            },
+            {
+              "lines": 103,
+              "maskCount": 1,
+              "relative": "SECURITY.md",
+              "row": 308,
+              "state": 3,
+              "withheld_lines": [
+                103
+              ]
+            },
+            {
+              "lines": 320,
+              "maskCount": 0,
+              "relative": "SETUP-PROMPT.md",
+              "row": 308,
+              "state": 2,
+              "withheld_lines": []
+            },
+            {
+              "lines": 108,
+              "maskCount": 0,
+              "relative": "config/consolidation-rules.md",
+              "row": 308,
+              "state": 2,
+              "withheld_lines": []
+            },
+            {
+              "lines": 91,
+              "maskCount": 1,
+              "relative": "SECURITY.md",
+              "row": 309,
+              "state": 3,
+              "withheld_lines": [
+                87
+              ]
+            },
+            {
+              "lines": 95,
+              "maskCount": 0,
+              "relative": "SETUP-PROMPT.md",
+              "row": 309,
+              "state": 2,
+              "withheld_lines": []
+            },
+            {
+              "lines": 72,
+              "maskCount": 1,
+              "relative": "SECURITY.md",
+              "row": 310,
+              "state": 3,
+              "withheld_lines": [
+                72
+              ]
+            },
+            {
+              "lines": 180,
+              "maskCount": 0,
+              "relative": "SETUP-PROMPT.md",
+              "row": 310,
+              "state": 2,
+              "withheld_lines": []
+            }
+          ]
+        },
+        "roster_sha256": "f9c6b2e44c5e3aa8947f758f864eaa0d5edc396d622359826bca848cd96f9901"
+      },
+      "independent_native_metadata_sha256": "15dc47e9c1570b8ee06c6c78670fcbdf1a548c656e5847df4dbec1c432d0aecb",
+      "independent_parent_journal_record": {
+        "chunk_id": "ef36da6442d743435e77000b13238866",
+        "receipt_file": "research3719-chunk-ef36da6442d743435e77000b13238866.json",
+        "chunk_sha256": "4ded148766851b366d3025836bfa142c03f8cf15ce062634ddb65dfdaf17915e",
+        "reader_job": "20261028-171959-todo-3719",
+        "first_ordinal": 305,
+        "last_ordinal": 310,
+        "parent_semantic_assessments_read": true
+      },
+      "original_chunk_id": "ef36da6442d743435e77000b13238866",
+      "original_fields_losslessly_reconstructed": true,
+      "original_message_sha256": "87fce4cf5f77c4e4a9177547f8ff4afe1dc010c02460f215fe4383962e1b7b55",
+      "original_receipt_sha256": "894f3ce9c6f2958fb765ebb81949d5fc5373b8fe0b84bc7b904803b9896645dc",
+      "parent_meaning": {
+        "actual_native_model": "pac24df/gpt-6.1-sol",
+        "actual_native_proof": "research3719-native-actual171959-through310170905.json",
+        "actual_native_sha256": "15dc47e9c1570b8ee06c6c78670fcbdf1a548c656e5847df4dbec1c432d0aecb",
+        "chunk_id": "ef36da6442d743435e77000b13238866",
+        "chunk_sha256": "4ded148766851b366d3025836bfa142c03f8cf15ce062634ddb65dfdaf17915e",
+        "consumer_job": "20261029-170905-todo-3080",
+        "effort": "max",
+        "first": 305,
+        "full_original_meanings_and_all_limits_read": true,
+        "limits": "保存された公開手順の意味評価であり、実人/医療/金融/法律/旅行・価格/APIの現行保証ではない。必要な現条件は実利用時の親が一次資料と対象条件を確認する。原資料保護と428/647/未知中央9/全16未完を保持。",
+        "meanings": [
+          "305 relationshipはpersonID/元情報/実交流・未記録と予定/通知・贈物案を分離する参考。casual mention/同名/score/cadence/昔の情報を本人の事実・恒久好みや関係/心理診断へしない。年次反復/うるう日/timezone/停止/quietと登録・実配送・実連絡は別。contacts PIIを検索/他context/memoryへ無指定移送せず、cross-sellや自己監査を許可/実隔離の証拠にしない。SETUP未設定変数/閉じないloop/配置不一致/echo空contactsは改訂が必要、実連絡先/送信/購入/設定0。",
+          "306 securityは対象別検査と新規/既知/受容/解消/未検査・再発/期限を分ける参考。50/30/20の平均や緑点で重大所見/skip/失敗を相殺せず、受容hash/description部分一致を別資源や条件変化へ流用しない。秘密prefix6文字も出力せず、空scan対象やgit全履歴/redirectを対象許可へしない。HTTP/pgrep/索引件数/mtimeは業務/検索成功でなく、Codex badge/observational主張は実監査の証拠でない。SETUP state/accepted-risk上書き・変数/構文欠落/失敗後完了を採用せず、実走査/監査/鍵変更/履歴削除/送信0。",
+          "307 stockは銘柄/市場/CIK・原提出ID/時刻/版と一次資料/解釈/仮説・反証を分離する参考。quality/impact点や例の企業出来事・目標価格/免責を現市場事実や投資助言にせず、status語の不一致・取得範囲/未取得を保持。DATE-FORM衝突、訂正/全page/遅着/cursor/時差や現在API/公平アクセス/休日は未検証、実利用時のみ確認。私的position/thesisの検索/共有・第三者記事保存の権利と新費用を分け、SETUP既存portfolio空化/未設定source/初回配送保証を実稼働としない。実調査/取引/外部照会0。",
+          "308 memoryは原記録/短い索引/話題詳細と検索・再開の層化へ参照。未記録を未発生とせず、dailyの新しさ/3回反復/類似度や記憶内のONLY direct conversationで正規Discord本人回答を捨てない。本人性/対象/許可scope/提案/採用/実結果と未完了を継ぐ。heartbeat flat/nested key不一致や件数/短さを実検索成功へしない。forget1行削除と全原履歴/索引/vector/backup消去を区別し、embeddingのvector-only/text送信矛盾・新API鍵/Python/支出を採用しない。SETUP HOME先頭探索/config上書き/失敗後live保証は未実証、中央/実記憶/新サービス0。",
+          "309 trainerは種目/variation/単位・片手総量・原申告と計画/実施/推定PR/欠測を分ける参考。写真から器具容量や個別安全/復帰/医療を保証せず、部分set/repsを捏造せず、weight×reps/推定1RMを実測最大や安全な増量へしない。健康/画像dataのhost処理/無指定送信と実ACL/保持は自己申告で未検証、HIPAA/FDA等を認証根拠にしない。SETUP path/config不一致・未設定変数/無確認unlink/rm-rfは原本/junction/backup保持の証拠でない。実個人記録/医療運動処方/削除/導入0。",
+          "310 travelは同一空港・現地日付/timezone/移動buffer、人数/泊数/条件と予算/推定・予約/支払/実施を分ける参考。NRT夜着とHaneda同日午後の矛盾やbudget合計3000対2800・booked1950/remaining200不整合を残す。期限だけで国籍/経由/旅券別入国可否や健康安全/天候確定を断定せず、日付経過を実旅行完了にしない。同行者好みの永続化/検索data/共有先やカード末尾案を本人許可へ広げない。SETUP loop欠落/既存profile空化と未読scriptは未実証、実旅行推奨/書類/購入/予約/送信0。",
+          "全6件の用途/value/所見/修正/正負例・83支持tuple/全notice/共通限界/reading integrityを分割全読。primary2265物理行の原reader rawfull6は新親のraw読取ではない。支持14文書1653物理1650可視3伏字、tupleはprimary含むraw17/masked3/reuse6/saved unread36/unsaved21=83。MIT1069B/c960/blobf55b21行は292の既読を6packageへ個別同bytes再利用しfresh0。13版表示処理とmask0の限界、原actor/null、未保存script/個別権利/現条件の未確認、親の新許諾/採否/中央/実行0を保持。"
+        ],
+        "observed_at": "2026-10-29T09:05:13.1401455+00:00",
+        "original_actor_namespace_and_nulls_preserved": true,
+        "original_author_parent": "20261027-175645-todo-3080",
+        "original_message_sha256": "87fce4cf5f77c4e4a9177547f8ff4afe1dc010c02460f215fe4383962e1b7b55",
+        "producer_job": "20261028-171959-todo-3719",
+        "through": 310
+      },
+      "parent_meaning_sha256": "89da104efd8fedb5244450f59b4502d4c8586f0bbc9848c57d0886b7ad6f9a7f"
+    },
+    "63df86b3477a7d1b4e04259ed07f6ddddfa238ff29d8a23549f6cc559709eb51": {
+      "actual_assessment_reader": "20261028-171959-todo-3719",
+      "common": {
+        "boundaries": {
+          "central_operations": 0,
+          "copy_license_accepted": false,
+          "new_final_dispositions": 0,
+          "source_executed": false
+        },
+        "chunk_id": "095a4b7a103ab11237b7bfa9180f1c67",
+        "definitions": {
+          "actors": {
+            "0": "今回の実assistant読取。notice4件は同job292の実raw全読を既受領receiptへ結ぶ。"
+          },
+          "mask_method": "12版の表示前メール・数値/token/hex/UUID・資格/環境変数・電話/銀行識別/区切り番号の置換。maskCountは置換物理行数で、0は秘密不存在の証明でない。",
+          "reader_namespace": "20261028-171959-todo-3719/current3719",
+          "states": {
+            "0": "unsaved",
+            "1": "saved_unread",
+            "2": "direct_raw_full",
+            "3": "direct_masked_full",
+            "4": "exact_bytes_reuse",
+            "5": "ordered_full_diff",
+            "6": "partial",
+            "7": "scan"
+          },
+          "support_tuple": "[relative,bytes,SHA8,Gitblob8,state,maskCount,actor,mode]。全package blobを固定complete treeから列挙。未保存bytes/SHA/reader/maskCountはnull。"
+        },
+        "domain": "research598-chunk-v1",
+        "first_ordinal": 295,
+        "limits": {
+          "central_body_or_existence_checks": 0,
+          "common_policy_and_japanese_report_skill_guard_unverified_unread": true,
+          "current_primary_masked_full": 2,
+          "current_primary_raw_full": 2,
+          "current_support_literal_masked_full": 1,
+          "current_support_literal_raw_full": 8,
+          "new_notice_literal_reads": 0,
+          "notice_reuse_consumer_records": 4,
+          "package_metadata_records": 67,
+          "saved_unread_support_records": 25,
+          "source_bodies_refetched": 0,
+          "source_script_execution": 0,
+          "unsaved_support_records": 25
+        },
+        "notice_bodies": [
+          {
+            "all_4_consumer_buffers_equal": true,
+            "bytes": 1069,
+            "consumers": [
+              [
+                295,
+                "skills/nollio/normieclaw-dashboard-builder/LICENSE.md"
+              ],
+              [
+                296,
+                "skills/nollio/normieclaw-docuscan/LICENSE.md"
+              ],
+              [
+                297,
+                "skills/nollio/normieclaw-email-assistant/LICENSE.md"
+              ],
+              [
+                298,
+                "skills/nollio/normieclaw-expense-report-pro/LICENSE.md"
+              ]
+            ],
+            "fresh_raw": false,
+            "git_blob": "f55b4192a7f78533f379e0416134b14aa0c636f8",
+            "id": 1,
+            "meaning": "292で実raw全読のMIT21行と同SHA/Gitblob/1069B。copyright/permission保持・無保証を再利用し、4件の新rawへしない。実公開版/作者・各cloud/工具/第三者data/素材/個別権利は別。",
+            "parent_chunk_sha256": "35f5556c0c39c0763728f0bbe5165e4723bc4ebbafd228f0f888c8d03ee74b74",
+            "parent_receipt": "research3719-chunk-3bbd278ad6a11f8edb41ef3b0835c3e8.json",
+            "read": [
+              4,
+              0,
+              0,
+              false,
+              true,
+              21
+            ],
+            "reader_job": "20261028-171959-todo-3719",
+            "reader_namespace": "20261028-171959-todo-3719/current3719",
+            "representative_path": "skills/nollio/normieclaw-budget-buddy-pro/LICENSE.md",
+            "representative_read": [
+              2,
+              0,
+              0,
+              true,
+              true,
+              21
+            ],
+            "representative_row": 292,
+            "sha256": "c96020518e7d5238105b651899ae52bb01b33690d61c42f99703d06279935868"
+          }
+        ],
+        "prior_journal_sha256": "b7adedf111bd7147c213b8d7b0145dfe5703d34f28f18c65c61f2ec463ac75c3",
+        "reader_job": "20261028-171959-todo-3719",
+        "reader_todo": 3719,
+        "reading_integrity": {
+          "large_reference_saved_unread": [
+            [
+              295,
+              "dashboard-kit/ARCHITECTURE-SPEC.md",
+              204723,
+              "0e103bae",
+              "8cb73f62",
+              1,
+              null,
+              null
+            ]
+          ],
+          "primary_ordered_ranges": [
+            [
+              295,
+              1,
+              160
+            ],
+            [
+              295,
+              161,
+              320
+            ],
+            [
+              295,
+              321,
+              480
+            ],
+            [
+              295,
+              481,
+              603
+            ],
+            [
+              296,
+              1,
+              68
+            ],
+            [
+              297,
+              1,
+              160
+            ],
+            [
+              297,
+              161,
+              315
+            ],
+            [
+              298,
+              1,
+              77
+            ]
+          ],
+          "primary_withheld_lines": [
+            [
+              295,
+              [
+                212,
+                213,
+                214,
+                531,
+                532,
+                533
+              ]
+            ],
+            [
+              297,
+              [
+                36,
+                157,
+                169
+              ]
+            ]
+          ],
+          "same_buffer": {
+            "bytes": true,
+            "git_blob": true,
+            "sha256": true,
+            "strict_utf8": true
+          },
+          "source_original_text_included": false,
+          "support_direct_full": [
+            [
+              295,
+              "SECURITY.md",
+              3277,
+              "0abc26c0b56787ac4b6c530383d389e947c5478eccd371cc3197ed5ba16798fe",
+              "69083fb051284e546b300722a1de5785d7b62cb0",
+              2,
+              0,
+              72
+            ],
+            [
+              295,
+              "SETUP-PROMPT.md",
+              3247,
+              "70a9df1480f2d261f219f227daeff028b2649e41aa2f1f94024bcc90389fa715",
+              "2bc43604f928426a5029382e0ccefcff8f30d494",
+              2,
+              0,
+              121
+            ],
+            [
+              296,
+              "SECURITY.md",
+              2674,
+              "df4bbd9bee4d2b6282c398df41107487325dcfd35af701908b5d8757c973f9b4",
+              "ab04f9a9ea1c1eeecc8b670775fd66a56910fed0",
+              2,
+              0,
+              32
+            ],
+            [
+              296,
+              "SETUP-PROMPT.md",
+              1017,
+              "5baf210ca05b167b0bde382fb7d9237d4381c3e39eaee3e95050d51bc53fb364",
+              "49e12b7c91c51e895d02b6c84c994b6ae9199d5a",
+              2,
+              0,
+              13
+            ],
+            [
+              296,
+              "config/pdf-templates.md",
+              1788,
+              "0285d211ff1bd7edb09325483475d5e1c9d76e9f018d74cb6b21b4e46917a91c",
+              "ed79bc4646200acd257527ccdcc691ac7c793fd3",
+              2,
+              0,
+              77
+            ],
+            [
+              297,
+              "SECURITY.md",
+              4272,
+              "6dfc88090af227801bbaa710279083cbf281519321146a0cd6ab909a4828c243",
+              "6dbcd522dd155dfdaafde1db993b8c2c48b2f0b1",
+              2,
+              0,
+              72
+            ],
+            [
+              297,
+              "SETUP-PROMPT.md",
+              4517,
+              "e19368a83c8e1082b55ff3dc120acfb59e22682bc2c853d8e4940c07cf146618",
+              "8b7912db8e01ceaf8dcf4a752c206c811c295bb4",
+              3,
+              1,
+              150
+            ],
+            [
+              298,
+              "SECURITY.md",
+              540,
+              "4b640487d46a4b06e0de8e17aa937b76520d332b527dc5236124bb45b641a9a3",
+              "a0f58cfeb4524c2857590cfa902c0aa068d148c3",
+              2,
+              0,
+              12
+            ],
+            [
+              298,
+              "SETUP-PROMPT.md",
+              1711,
+              "058f8107ac64cffd106d1ca10c9b5b0bada5a3a6e3867f325543edbb13d65c71",
+              "f2e3313c59e66f1a0737ce3c0ba58573d2f89f03",
+              2,
+              0,
+              60
+            ]
+          ],
+          "support_withheld_lines": [
+            [
+              297,
+              "SETUP-PROMPT.md",
+              [
+                146
+              ]
+            ]
+          ]
+        },
+        "roster_sha256": "f9c6b2e44c5e3aa8947f758f864eaa0d5edc396d622359826bca848cd96f9901"
+      },
+      "independent_native_metadata_sha256": "eaebd1896ce73cc2a16ca2503959d603265ab993cb258dff34e9bf5289591509",
+      "independent_parent_journal_record": {
+        "chunk_id": "095a4b7a103ab11237b7bfa9180f1c67",
+        "receipt_file": "research3719-chunk-095a4b7a103ab11237b7bfa9180f1c67.json",
+        "chunk_sha256": "63df86b3477a7d1b4e04259ed07f6ddddfa238ff29d8a23549f6cc559709eb51",
+        "reader_job": "20261028-171959-todo-3719",
+        "first_ordinal": 295,
+        "last_ordinal": 298,
+        "parent_semantic_assessments_read": true
+      },
+      "original_chunk_id": "095a4b7a103ab11237b7bfa9180f1c67",
+      "original_fields_losslessly_reconstructed": true,
+      "original_message_sha256": "24be9fc9b6c78aa106ed1d45f46ca586a196b2b3bc6b7542ff8745df34efc911",
+      "original_receipt_sha256": "e057263a1597610cc3ea6b60f0584dff824febee8531029d913d47c142353466",
+      "parent_meaning": {
+        "actual_native_model": "pac24df/gpt-6.1-sol",
+        "actual_native_proof": "research3719-native-actual171959-through298175645.json",
+        "actual_native_sha256": "eaebd1896ce73cc2a16ca2503959d603265ab993cb258dff34e9bf5289591509",
+        "chunk_id": "095a4b7a103ab11237b7bfa9180f1c67",
+        "chunk_sha256": "63df86b3477a7d1b4e04259ed07f6ddddfa238ff29d8a23549f6cc559709eb51",
+        "consumer_job": "20261027-175645-todo-3080",
+        "effort": "max",
+        "first": 295,
+        "full_original_meanings_and_all_limits_read": true,
+        "limits": "親の新source raw/許諾/採否/中央0。現制度/価格/FX・tool/API/未保存script/実ACL/未読architecture/第三者dataやサービスの権利は未検証。428/647/未知中央9/全16未完を保持。",
+        "meanings": [
+          "295 dashboardはmanifest/routeやtable prefixと実subject・認証/tenant・RLS/SQL identifier/同期/配備の作用を別に結ぶ参考。data??[]やuser!.idは取得失敗/未認証を隠し、local JSONのcloud移送やwebhook secretだけでscopeを証明しない。NEXT_PUBLIC/anon/parameterized等の名称は安全の実証ではない。source/theme/新費用/非Prd/DNS例を本人承認へ広げず、UIは元画像回答へ結ぶ。architecture204723Bは保存未読、template/scriptは未保存。SETUP変数未初期化/find先頭/dir作成順・env上書きとremove DBdropは実source/target/版/保持を確かめて改訂が必要。",
+          "296 docuscanは原画像/page順/転記値・不確実性と検索text/描画を分離する参考。perfect/verified/生成PDFを原文や署名・法的効力と等価にせず、不明字を推測で補完しない。コードやHTMLはデータとしてescapeし実行/resource/通信境界へ結び、文書を一括禁止する原案を本人ルールへしない。path/Windows名/衝突・junction/上書き、log初期化/中断再開/全page実描画は未保存scriptで未検証。実文書・画像・秘密・実変換0。",
+          "297 emailは実対象thread/既存未解決と取得範囲/全page/遅着/重要通知/未読を保持し、last24h/最新sentだけで全件解決にしない。From/domainやSECURITY badgeは本人性/権限制御の証拠ではない。receipt/security/resetの一律archiveや毎回人手確認・送信禁止を本人の新方針にせず、明示の既存scopeと実審査を保つ。SMTP列挙とcannot-sendの矛盾、SKILL_PATHS未定義/config参照先不一致/既存style上書き・perms表示だけの成功は未実装として残す。実mail/送信・認証操作0。",
+          "298 expenseは原領収/必要非カード値・通貨/取引日/rate/規程と報告書・実申請/承認/返金を分ける参考。現在FX・保存IRS/mileage例を適用国/時点未検証で確定せず、実数/税/チップ/不明/重複/並行JSON更新を検証する。JS無効やbadgeだけでHTML/resource/通信/Windows ACLを証明しない。SETUP echo/cpで既存帳簿/設定を消さず元版と保持へ結ぶ。実金融/カード/支払・PDF0。",
+          "4件の全用途/value/所見/改訂/正負例・全67支持tupleと全notice/reading integrity/共通限界を分割全読。primary1063物理1054可視9伏字、支持9文書609物理608可視1伏字は原readerの読取で新parent rawcreditではない。支持67=saved42/unsaved25、primary含むtuple状態raw10/masked3/reuse4/saved unread25。primaryを除くdirect支持raw8/masked1。MIT1069B/同SHA/blob21行は292の既読を4消費者へexact reuseしfresh0。large architecture未読とpolicy/JPskill guard未確認未読、12版mask0の限界・actor/nullを保持。"
+        ],
+        "observed_at": "2026-10-29T06:55:03.8054353+00:00",
+        "original_actor_namespace_and_nulls_preserved": true,
+        "original_message_sha256": "24be9fc9b6c78aa106ed1d45f46ca586a196b2b3bc6b7542ff8745df34efc911",
+        "producer_job": "20261028-171959-todo-3719",
+        "through": 298
+      },
+      "parent_meaning_sha256": "5af4c05c88198d5edce2638416c7caeab99afaa5c150c4132cf5b601476c6867"
+    },
+    "9fdec5e2b825e647cb2666f3dcf364a5063bd78701c8f01dd208ec11dd2fe075": {
+      "actual_assessment_reader": "20261028-171959-todo-3719",
+      "common": {
+        "boundaries": {
+          "central_operations": 0,
+          "copy_license_accepted": false,
+          "new_final_dispositions": 0,
+          "source_executed": false
+        },
+        "chunk_id": "91fdfa6b403bbc411d4ca49cecddf8de",
+        "definitions": {
+          "actors": {
+            "0": "今回の実assistant読取。notice6件は同job292の実raw全読を既受領receiptへ結ぶ。"
+          },
+          "mask_method": "12版の表示前メール/長い数値/token/hex/UUID・資格/環境変数/電話/銀行識別と区切り番号置換。301以降/関連支持は13版で短い電話・bank識別JSON値も追加。maskCountは置換物理行数、0は秘密不存在の証明でない。",
+          "reader_namespace": "20261028-171959-todo-3719/current3719",
+          "states": {
+            "0": "unsaved",
+            "1": "saved_unread",
+            "2": "direct_raw_full",
+            "3": "direct_masked_full",
+            "4": "exact_bytes_reuse",
+            "5": "ordered_full_diff",
+            "6": "partial",
+            "7": "scan"
+          },
+          "support_tuple": "[relative,bytes,SHA8,Gitblob8,state,maskCount,actor,mode]。当package全blobを固定complete treeから列挙。未保存bytes/SHA/reader/maskCountはnull。"
+        },
+        "domain": "research598-chunk-v1",
+        "first_ordinal": 299,
+        "limits": {
+          "central_body_or_existence_checks": 0,
+          "common_policy_and_japanese_report_skill_guard_unverified_unread": true,
+          "current_primary_masked_full": 1,
+          "current_primary_raw_full": 5,
+          "current_support_literal_masked_full": 3,
+          "current_support_literal_raw_full": 10,
+          "new_notice_literal_reads": 0,
+          "notice_reuse_consumer_records": 6,
+          "package_metadata_records": 83,
+          "saved_unread_support_records": 37,
+          "source_bodies_refetched": 0,
+          "source_script_execution": 0,
+          "unsaved_support_records": 21
+        },
+        "notice_bodies": [
+          {
+            "all_6_consumer_buffers_equal": true,
+            "bytes": 1069,
+            "consumers": [
+              [
+                299,
+                "skills/nollio/normieclaw-health-buddy-pro/LICENSE.md"
+              ],
+              [
+                300,
+                "skills/nollio/normieclaw-hireme-pro/LICENSE.md"
+              ],
+              [
+                301,
+                "skills/nollio/normieclaw-invoicegen/LICENSE.md"
+              ],
+              [
+                302,
+                "skills/nollio/normieclaw-knowledge-vault/LICENSE.md"
+              ],
+              [
+                303,
+                "skills/nollio/normieclaw-meal-planner-pro/LICENSE.md"
+              ],
+              [
+                304,
+                "skills/nollio/normieclaw-notetaker-pro/LICENSE.md"
+              ]
+            ],
+            "fresh_raw": false,
+            "git_blob": "f55b4192a7f78533f379e0416134b14aa0c636f8",
+            "id": 1,
+            "meaning": "292で実raw全読のMIT21行と同SHA/Gitblob/1069Bを再利用。copyright/permission保持・無保証と実適用scopeを保持し、新raw/許諾確定へしない。各packageの実公開版/作者・第三者資料/素材/data/service・個別契約/権利は別。",
+            "parent_chunk_sha256": "35f5556c0c39c0763728f0bbe5165e4723bc4ebbafd228f0f888c8d03ee74b74",
+            "parent_receipt": "research3719-chunk-3bbd278ad6a11f8edb41ef3b0835c3e8.json",
+            "read": [
+              4,
+              0,
+              0,
+              false,
+              true,
+              21
+            ],
+            "reader_job": "20261028-171959-todo-3719",
+            "reader_namespace": "20261028-171959-todo-3719/current3719",
+            "representative_path": "skills/nollio/normieclaw-budget-buddy-pro/LICENSE.md",
+            "representative_read": [
+              2,
+              0,
+              0,
+              true,
+              true,
+              21
+            ],
+            "representative_row": 292,
+            "sha256": "c96020518e7d5238105b651899ae52bb01b33690d61c42f99703d06279935868"
+          }
+        ],
+        "prior_journal_sha256": "3844f09d7c01fcf7682a68ba7197c2975a7b3bb8fbb770d661f9c2c77b376ef2",
+        "reader_job": "20261028-171959-todo-3719",
+        "reader_todo": 3719,
+        "reading_integrity": {
+          "initial_display_limit": "300の短い電話形式の初回未伏字を保持。原値/実在性/所属を再掲・分類せず後続表示処理を補った。過去表示を完全保護へ変更しない。",
+          "primary_masks": [
+            [
+              299,
+              12,
+              []
+            ],
+            [
+              300,
+              12,
+              [
+                49,
+                248
+              ]
+            ],
+            [
+              301,
+              13,
+              []
+            ],
+            [
+              302,
+              13,
+              []
+            ],
+            [
+              303,
+              13,
+              []
+            ],
+            [
+              304,
+              13,
+              []
+            ]
+          ],
+          "primary_ordered_ranges": [
+            [
+              299,
+              1,
+              180
+            ],
+            [
+              299,
+              181,
+              362
+            ],
+            [
+              300,
+              1,
+              160
+            ],
+            [
+              300,
+              161,
+              320
+            ],
+            [
+              300,
+              321,
+              386
+            ],
+            [
+              301,
+              1,
+              63
+            ],
+            [
+              302,
+              1,
+              160
+            ],
+            [
+              302,
+              161,
+              320
+            ],
+            [
+              302,
+              321,
+              400
+            ],
+            [
+              303,
+              1,
+              160
+            ],
+            [
+              303,
+              161,
+              320
+            ],
+            [
+              303,
+              321,
+              380
+            ],
+            [
+              304,
+              1,
+              160
+            ],
+            [
+              304,
+              161,
+              297
+            ]
+          ],
+          "same_buffer": {
+            "bytes": true,
+            "git_blob": true,
+            "sha256": true,
+            "strict_utf8": true
+          },
+          "source_original_text_included": false,
+          "support_direct_full": [
+            [
+              299,
+              "SECURITY.md",
+              4844,
+              "74f94fc009a96982653e8b5d868783e7e69644c11ad536a7f9187f4fe0c85cee",
+              "f9564a02d31d0ba5bd49921259ba47f3f3c3fc17",
+              2,
+              0,
+              98
+            ],
+            [
+              299,
+              "SETUP-PROMPT.md",
+              4748,
+              "9c50eb129bd97d6cb4d16a6b8d3fa98ce5a71de5c87bc8a0b93caaaaa1cc8049",
+              "6b219ac417afa0bec1b3ba8423e5731ece9e7a4b",
+              2,
+              0,
+              139
+            ],
+            [
+              300,
+              "SECURITY.md",
+              4316,
+              "3517d667edcd7603927c44bc4f5fa5550ff15fb94eb386ace7d8a399c9107809",
+              "05c8efcab4c4972c71b6f79bdc0ec86c303d358a",
+              3,
+              1,
+              97
+            ],
+            [
+              300,
+              "SETUP-PROMPT.md",
+              4433,
+              "4c3df163620481249964b5ffb508331c5e89ae3ea26361ddbdae8bb8d8523f95",
+              "5376871a38954f336721dd18398be6e3db972a6c",
+              2,
+              0,
+              110
+            ],
+            [
+              301,
+              "SECURITY.md",
+              1632,
+              "90efb6c16346cdaad218ccdbe1b66bb73c91441c60fdbb7cc195e330e923fcd7",
+              "57b6b58f842dabfaa1a92c42d2510d64c74f6d8e",
+              2,
+              0,
+              22
+            ],
+            [
+              301,
+              "SETUP-PROMPT.md",
+              954,
+              "bf16631cf560734b9c57d4482ac9076da3d21ba43316909d9eaa7f3be4493f7b",
+              "7e568b02e506314df926f07513aff951fa03820f",
+              2,
+              0,
+              21
+            ],
+            [
+              301,
+              "config/invoice-styles.md",
+              1352,
+              "54d9262360a87d398d9dcd8724cceb68b2dd482794e06fca60e301bbc160a0d0",
+              "ea55f7f8afdefd6aeb17424f0f1ae1b3c54968f8",
+              2,
+              0,
+              26
+            ],
+            [
+              302,
+              "SECURITY.md",
+              4402,
+              "3df07e44c882591e1709480b7c0db2679311796e3c96b411b57172094e384ee7",
+              "c4ec3ca117bcbe10c95b9e8c6524e0589c58f6bc",
+              3,
+              1,
+              97
+            ],
+            [
+              302,
+              "SETUP-PROMPT.md",
+              3404,
+              "e391f89bcfb0c0b47b3f687fe4d1e0d77ce358492aac8afa2309e2a406299da4",
+              "bd0f996f15c32f5c660e883545620e3a308c9644",
+              2,
+              0,
+              100
+            ],
+            [
+              303,
+              "SETUP-PROMPT.md",
+              5742,
+              "beaaef7ee4da8cb0988dc18a252286786792321aaf1406f5093c06918bf43ff4",
+              "8f03c7b678b10b9cbcf4d4ae82c6e5bed88be514",
+              2,
+              0,
+              141
+            ],
+            [
+              303,
+              "config/dietary-profiles.md",
+              6004,
+              "cbfd366980340fc0ec11aa1d8f93c5d8aaa7b6c9a0a7d7d1485faeab11c9d505",
+              "a69b9a7323e13bbbc610a094b29fee7c7d56b090",
+              2,
+              0,
+              83
+            ],
+            [
+              304,
+              "SECURITY.md",
+              4521,
+              "4aaa5961702940a8bc7263efa501c0c21184030f32bfb7951d4f4f6f7f35f641",
+              "df527fb382fbc0d3c4a1f760970946271f3f120c",
+              3,
+              1,
+              106
+            ],
+            [
+              304,
+              "SETUP-PROMPT.md",
+              2284,
+              "c65675b214387060c0f0eae588f32d4b4afb22e39430fc171576ba5d2a614200",
+              "d1a88ac72fb672725f6bb73591b6471cea4a1169",
+              2,
+              0,
+              55
+            ]
+          ],
+          "support_withheld_lines": [
+            [
+              300,
+              "SECURITY.md",
+              [
+                62
+              ]
+            ],
+            [
+              302,
+              "SECURITY.md",
+              [
+                97
+              ]
+            ],
+            [
+              304,
+              "SECURITY.md",
+              [
+                102
+              ]
+            ]
+          ]
+        },
+        "roster_sha256": "f9c6b2e44c5e3aa8947f758f864eaa0d5edc396d622359826bca848cd96f9901"
+      },
+      "independent_native_metadata_sha256": "6890841de8e3de368c062811c042fe999f8f924064e255f35838aae17e29de08",
+      "independent_parent_journal_record": {
+        "chunk_id": "91fdfa6b403bbc411d4ca49cecddf8de",
+        "receipt_file": "research3719-chunk-91fdfa6b403bbc411d4ca49cecddf8de.json",
+        "chunk_sha256": "9fdec5e2b825e647cb2666f3dcf364a5063bd78701c8f01dd208ec11dd2fe075",
+        "reader_job": "20261028-171959-todo-3719",
+        "first_ordinal": 299,
+        "last_ordinal": 304,
+        "parent_semantic_assessments_read": true
+      },
+      "original_chunk_id": "91fdfa6b403bbc411d4ca49cecddf8de",
+      "original_fields_losslessly_reconstructed": true,
+      "original_message_sha256": "9185847ad3f8bdadd1adee2cf96c27c47b5480f32a23dbd4cca3ad1b69942fda",
+      "original_receipt_sha256": "5fa278a3961724671067e8668b1ce30895d303e85a1db97d8343605d92ae5fa6",
+      "parent_meaning": {
+        "actual_native_model": "pac24df/gpt-6.1-sol",
+        "actual_native_proof": "research3719-native-actual171959-through304170905.json",
+        "actual_native_sha256": "6890841de8e3de368c062811c042fe999f8f924064e255f35838aae17e29de08",
+        "chunk_id": "91fdfa6b403bbc411d4ca49cecddf8de",
+        "chunk_sha256": "9fdec5e2b825e647cb2666f3dcf364a5063bd78701c8f01dd208ec11dd2fe075",
+        "consumer_job": "20261029-170905-todo-3080",
+        "effort": "max",
+        "first": 299,
+        "full_original_meanings_and_all_limits_read": true,
+        "limits": "医療/食品/給与/税/価格や現公式条件の妥当性・実人/実文書・未読code/template・現ACL/第三者data/services権利は未検証。これは保存された公開手順の評価で実助言/実取引/新許諾/採否/中央/親raw0。428/647/未知中央9と全16未完を保持。",
+        "meanings": [
+          "299 healthは原記録/量・単位/期間と推定・申告・実測、目標/予定と実結果の分離へ参照。写真/label/固定minimumや免責・Codex badgeを医療安全や実摂取/服薬の証拠にせず、hydration entryとtotalの不一致・欠測/0/重複/日時を検証する。必要な非医療記録の範囲だけ保持し、実健康情報/医療助言や外部検索/原scriptの実行0。SETUP未定義source/cp上書き・warning後completeは実導入の証拠でなく改訂が必要。",
+          "300 hiremeはmaster原本と職種/版/根拠を保持した制作へ参照。未提供のmetrics/経験/資格やsenior表現を創作せず、match%/ATS/premium templateや応募statusは実適合/採用/提出の証拠にしない。国/会社/給与や交渉の現事実は未検証、実個人履歴/応募/送信0。初回の短い電話形式の未伏字限界は原値や実在性を再掲せず保持し、過去表示を完全保護にしない。SETUP購入文は本人許可でなく、既存経歴/版/設定を保つ改訂が必要。",
+          "301 invoiceは元の確定条件・原明細と採番/版/PDF/実送付/入金を別receiptへ結ぶ参考。max+1と複数JSON/PDF更新の競合/部分失敗、税/割引/端数/通貨/期限の個別条件を検証する。4styleとconfig3style不一致、SQLiteとJSON説明の対応・HTML/resource/path/secretの安全は未読実装として保持。env格納だけで秘密の安全や合法性を証明せず、常時本人PC待ち/再確認という原flowを新しい一律規則にしない。実請求/顧客/金融/送信0。",
+          "302 knowledge vaultは原資料/版・実読範囲と要約/quote/推定時刻、vault/許可されたmemoryの各反映を分ける参考。100K打切り/部分transcriptを全読にせず、推定timestampを事実やfact categoryへ昇格しない。URL一致/保存/検索topKは版や学習完了の証拠でない。max+1/append/同日exportの競合・memory無効や書込失敗を別に保持。blockedをbrowserで迂回せず、原647の拒否を保持。SETUP find先頭をtrustedとせず、空vault/collection上書きや実記憶/外部照会/導入0。",
+          "303 mealは確認済みmember/recipe版・成分/量/単位とhard/soft制約を週版へ結び、plan/grocery/prep/在庫・予定と実消費を分ける参考。写真/名前/静的profileで成分・鮮度・アレルギー安全や個別医療適合を保証せず、hard allergyを人気/FIFO/柔軟varietyで緩めない。新週やcompleted flagだけで未実行planを実食履歴へ移さず、同週並行変更/旧版/充足不能/欠測と原本を保つ。SETUPの空allergy/ratings/在庫上書きと未読scriptは改訂が必要。実世帯/健康/購入/調理0。",
+          "304 notetakerは原音/転記/原noteと整理・補足/推測、本文/索引/タグ/記憶の各状態を分ける参考。filler除去やgap補完で否定/話者/不確実性を変えず、破損/未作成/権限エラーを空defaultsへまとめない。title類似/24h・top3-5・installed memoryだけで同一note/本人採用/全検索可能とせず、private/work/顧客の範囲を保持する。export先の不一致やSETUP未検出source/echo空index/config参照差は未検証として残す。実note/記憶/画像/送信/導入0。",
+          "6件の全用途/value/所見/改訂/正負例・83支持metadata・notice/reading integrity/全共通限界を分割全読。支持83=saved62/unsaved21、primary含むraw15/masked4/reuse6/unread37。primary1888物理1886可視2伏字、支持13文書1095物理1092可視3伏字は原readerの読取で親raw0。個別MIT1069B/SHA-c960/blob-f55b21行は292の既読を6消費者へ同bytes再利用しfresh0。301以降13版表示処理と初回未伏字の限界、policy/JPskill未読・actor/null・未保存実装/第三者権利を保持。"
+        ],
+        "observed_at": "2026-10-29T08:21:20.3568717+00:00",
+        "original_actor_namespace_and_nulls_preserved": true,
+        "original_author_parent": "20261027-175645-todo-3080",
+        "original_message_sha256": "9185847ad3f8bdadd1adee2cf96c27c47b5480f32a23dbd4cca3ad1b69942fda",
+        "producer_job": "20261028-171959-todo-3719",
+        "through": 304
+      },
+      "parent_meaning_sha256": "e492b207bc437ab3699eb593489040b65490213547d6affdea9dfb383b9d8365"
+    }
+  },
+  "spec_sha256": "4f6fe32f62db56bed2acb4d378147ff952ad06230243fb45f7674f3158313fc3",
+  "support_metadata_records": 233,
+  "through": 310,
+  "unsaved_support_metadata": 67,
+  "whole16_complete": false
+}

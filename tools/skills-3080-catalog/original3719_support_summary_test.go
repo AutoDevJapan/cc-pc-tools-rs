@@ -217,6 +217,13 @@ func TestOriginal3719DistinctGitSupportIdentitiesRemainUsable(t *testing.T) {
 			var v map[string]any
 			loadPublicReceipt(t, "skills-3080-original3719-next21-268288-evaluation175645.json", &v)
 			records := v["records"].([]any)
+			left := records[0].(map[string]any)
+			right := records[1].(map[string]any)
+			leftID, leftOK := left["inventory_id"].(string)
+			rightID, rightOK := right["inventory_id"].(string)
+			if !leftOK || !rightOK || leftID == "" || rightID == "" || leftID == rightID {
+				t.Fatal("positive boundary requires distinct primary inventory identities")
+			}
 			a := records[0].(map[string]any)["original_assessment"].(map[string]any)
 			b := records[1].(map[string]any)["original_assessment"].(map[string]any)
 			first := a["support"].([]any)[0].([]any)

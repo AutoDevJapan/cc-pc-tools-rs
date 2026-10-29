@@ -2,6 +2,7 @@ package main
 
 import (
 	"encoding/json"
+	"fmt"
 	"reflect"
 	"testing"
 )
@@ -80,6 +81,20 @@ func checkOriginal3719PendingSnapshot(t *testing.T, file, expectedSHA string, fi
 	for sha, originals := range groups {
 		context := received27Object(t, contexts[sha])
 		common := received27Object(t, context["common"])
+		if inventory, present := common["support_inventory"]; present {
+			// Some original packets reference a fixed metadata inventory and
+			// carry only explicit overrides. The other rows remain saved/unread,
+			// with unknown bytes, hash and reader; they are not direct reads.
+			if len(originals) != 1 {
+				t.Fatal("inherited support inventory spans multiple primary records")
+			}
+			count, err := original3719InheritedUnread(received27Object(t, inventory), len(received27Array(t, received27Object(t, originals[0])["support"])))
+			if err != nil {
+				t.Fatal(err)
+			}
+			supports += count
+			saved += count
+		}
 		whole := map[string]any{}
 		for key, v := range common {
 			whole[key] = v
@@ -103,6 +118,15 @@ func checkOriginal3719PendingSnapshot(t *testing.T, file, expectedSHA string, fi
 	if supports != wantSupports || saved != wantSaved || unsaved != wantUnsaved {
 		t.Fatal("original support states or nulls changed")
 	}
+}
+
+func original3719InheritedUnread(inventory map[string]any, overrides int) (int, error) {
+	count, ok := inventory["count"].(float64)
+	state, stateOK := inventory["default_current_saved_read"].([]any)
+	if !ok || count != float64(int(count)) || count < float64(overrides) || inventory["saved_in_index"] != count || !stateOK || !reflect.DeepEqual(state, []any{float64(1), nil, nil, false, false, float64(0)}) {
+		return 0, fmt.Errorf("inherited saved/unread support metadata gained content or read proof")
+	}
+	return int(count) - overrides, nil
 }
 
 func original3719PacketKeySetsMatch(groups map[string][]any, contexts map[string]any) bool {

@@ -1,0 +1,2519 @@
+{
+  "all_member_contexts_read": false,
+  "all_member_rights_confirmed": false,
+  "all_original_packets_losslessly_reconstructed": true,
+  "bound_member_metadata": 17,
+  "complete_original_packets": 7,
+  "current_snapshot": {
+    "file": "prepared-skills-3080-primaryflow211-evaluation-v14-175645.json",
+    "original_packets": 62,
+    "records": 211,
+    "sha256": "29ab9d5eea8a15843e9ced10b6ce3ce4b56d3bd6768b07e16fc5a8c9694f8568"
+  },
+  "domain": "skills3080-primaryflow-parent-shared-snapshot-v1",
+  "entries": [
+    {
+      "bytes": 4331,
+      "git_blob": "418a8854fbf149e0953e9ef63a8d4e897ad40cbd",
+      "inventory_id": "github:e1ec0f2f0ca0e67816d73522b8a97632620c58625ab1cc8bc7f2b045558c52d9",
+      "path": "skills/olivermonneke/agile-observer/SKILL.md",
+      "source_commit": "920714f17d81e0a95c7a9bc51faf0a7921cd982d",
+      "source_repo": "6mile/skills",
+      "source_sha256": "007a75e85385c5e84620d954ff458e00c8fe04ecda88a495a67c2d4ade15657d"
+    },
+    {
+      "bytes": 1994,
+      "git_blob": "c586aed0bb38a6070a5884698cf417bb2a29b86c",
+      "inventory_id": "github:7eaebe986757d72a48b31beedd1b308a5e51854ff6f99b9919339204839de304",
+      "path": "skills/shawn92/ftshare-macro-economy-data/sub-skills/economic-china-ppi-monthly/SKILL.md",
+      "source_commit": "920714f17d81e0a95c7a9bc51faf0a7921cd982d",
+      "source_repo": "6mile/skills",
+      "source_sha256": "007bdd24524e2ca913cd1a715e4c25f4d9c51dea7ed0d2f38b081ff1c8b0fa5e"
+    },
+    {
+      "bytes": 2799,
+      "git_blob": "efff76bbe31ec4f0332be884fee766c0d7ea10bb",
+      "inventory_id": "github:3a20519368d5af845d1beae8e06651f94be91eda9b9ae580c0cd29d3e9eb1af7",
+      "path": "skills/honestqiao/zhipu-embeddings-v2/skill/SKILL.md",
+      "source_commit": "920714f17d81e0a95c7a9bc51faf0a7921cd982d",
+      "source_repo": "6mile/skills",
+      "source_sha256": "007c0c74c4b1a5936407a8aa4a8896d9d42b890d8029733aa3f5f1ec19604468"
+    },
+    {
+      "bytes": 7070,
+      "git_blob": "15c0b9df7c6694f89d2db1dd3180c729e56c0486",
+      "inventory_id": "github:7ba20aa0e3d61d97b2b842279828439d44ab2b6970eafc4ea5d8d17429f970ce",
+      "path": "skills/lmtlssss/mailcaduceus/SKILL.md",
+      "source_commit": "920714f17d81e0a95c7a9bc51faf0a7921cd982d",
+      "source_repo": "6mile/skills",
+      "source_sha256": "007c5eea40a74d4f04ea4634d2c415f748e4bd0c433ad03c097a14307c5f97e7"
+    },
+    {
+      "bytes": 23028,
+      "git_blob": "5e5d7386cf7d699987a21aa670cdb5fd547a87a1",
+      "inventory_id": "github:1749eedf83bbdd3a6781f31172a66078f1042dc62b9ddbb4f5f6bc5cdde38c11",
+      "path": "skills/katherine0325/visnote-image-creator/SKILL.md",
+      "source_commit": "920714f17d81e0a95c7a9bc51faf0a7921cd982d",
+      "source_repo": "6mile/skills",
+      "source_sha256": "007d041908277d9d6821bf94982802e861a2664ca5d5e9401d7171a510c64fef"
+    },
+    {
+      "bytes": 7266,
+      "git_blob": "884bf286b71925dd12839718ec6c2522d9679373",
+      "inventory_id": "github:046acd3979cb0968fff0b04707d4062bb0e967d341cf3f739c61e5a6f0b9fda1",
+      "path": "skills/nitishgargiitd/meme-cog/SKILL.md",
+      "source_commit": "920714f17d81e0a95c7a9bc51faf0a7921cd982d",
+      "source_repo": "6mile/skills",
+      "source_sha256": "007d6befd57bcffc1de667ee5c7761d727c5244ef67b86481b11e82861a44340"
+    },
+    {
+      "bytes": 3495,
+      "git_blob": "d884292fc15deffd8e8c81b7d34d0418b29f505a",
+      "inventory_id": "github:b0561c7bfd1908803ec02746ba80e49ddcee4dccd96ff08de41193e2ff849b2b",
+      "path": "skills/markswendsen-code/strider-cvs/SKILL.md",
+      "source_commit": "920714f17d81e0a95c7a9bc51faf0a7921cd982d",
+      "source_repo": "6mile/skills",
+      "source_sha256": "007e1134222812c81823a87b53a9d141b2c1f80422a0a540e4abd3f9db646834"
+    },
+    {
+      "bytes": 3582,
+      "git_blob": "422eb2d4e6ec7dbdda00068c363d58c17889d90c",
+      "inventory_id": "github:c1fa175c62264ed34264c32fb6d51bd2582d1dab7004fc9af6453e6d4f50cd36",
+      "path": "skills/zer07z/redmine-pilot/SKILL.md",
+      "source_commit": "920714f17d81e0a95c7a9bc51faf0a7921cd982d",
+      "source_repo": "6mile/skills",
+      "source_sha256": "007ed368f9f196161ffdac286d82bcc9b36498c38f59d17121b0f6f0f535aeb6"
+    },
+    {
+      "bytes": 5999,
+      "git_blob": "9fdc78deb27d17e51f6f84ab2c66a905e3397be6",
+      "inventory_id": "github:abd1ecb1750ae9f64946d968b77db7db7d6753c23f3414451467ff2df08fdae5",
+      "path": "skills/wesdaliang/xqant-daily-gushouplus-report/SKILL.md",
+      "source_commit": "920714f17d81e0a95c7a9bc51faf0a7921cd982d",
+      "source_repo": "6mile/skills",
+      "source_sha256": "015fd3ffa362b7b5f0ca65630b2bd52de48ea42c29335d5618c4ef2d60abe9df"
+    },
+    {
+      "bytes": 5281,
+      "git_blob": "b74970f71fc07b929c43b42b9f90338d9bac24c7",
+      "inventory_id": "github:01e66e7d0e85e605d4b990ca9efdafb360360a3fc70190f2b487a391ba85f0f2",
+      "path": "skills/risboo6909/funda-gateway/SKILL.md",
+      "source_commit": "920714f17d81e0a95c7a9bc51faf0a7921cd982d",
+      "source_repo": "6mile/skills",
+      "source_sha256": "016053d65c9ab148f2c69caa879a5ccab8cf722e016d1a27f9d172e156fb06b1"
+    },
+    {
+      "bytes": 3178,
+      "git_blob": "7ede55f8c37c244c78a8605b8c1923e48fc768ab",
+      "inventory_id": "github:02ca1c6ebfdcca936d8f1d4870c1c2cafbe8f96f9059d31f2b3839536d9613f9",
+      "path": "skills/pigbun-ai/pigbun-rednote/SKILL.md",
+      "source_commit": "920714f17d81e0a95c7a9bc51faf0a7921cd982d",
+      "source_repo": "6mile/skills",
+      "source_sha256": "0164b570bc67f1e07761a4ba7bc16b8b4d2632a4c44a59894cee6f175b8bdf60"
+    },
+    {
+      "bytes": 4564,
+      "git_blob": "b424c6631ab2e1dd3564da6b06690c93026d42b1",
+      "inventory_id": "github:dc1000af0ff7ea12a7283d8da33e7936c74d315e0851b1f2c9d4321522fd0f86",
+      "path": "skills/tatlantis/armarius/SKILL.md",
+      "source_commit": "920714f17d81e0a95c7a9bc51faf0a7921cd982d",
+      "source_repo": "6mile/skills",
+      "source_sha256": "016568884c337ec2c3b94972b6d56b99f2d4814274419252c8e0c3933f3e2868"
+    },
+    {
+      "bytes": 18651,
+      "git_blob": "6ac21694b616368ba832ce4edfbb42fb8c69b5d3",
+      "inventory_id": "github:252cdd42d31d874882c8d311a0ee0f9114fcac89fc0b24d758b5f2d6e41f2b7a",
+      "path": "skills/alexissan/fastlane/SKILL.md",
+      "source_commit": "920714f17d81e0a95c7a9bc51faf0a7921cd982d",
+      "source_repo": "6mile/skills",
+      "source_sha256": "0166c9d624c43362c5437f9a3dc90ac3c08c67b48f1fe9c1ec7b3ae969cdaadb"
+    },
+    {
+      "bytes": 13279,
+      "git_blob": "460b57d409fc1e4baa3c2d0ad1979d1e4c43ce02",
+      "inventory_id": "github:a33d8627a5f3163cc5fd6873bad8ba46f04eabf3e08b8ba03544c96141bcfb11",
+      "path": "skills/globalcaos/agent-superpowers/SKILL.md",
+      "source_commit": "920714f17d81e0a95c7a9bc51faf0a7921cd982d",
+      "source_repo": "6mile/skills",
+      "source_sha256": "01683f1ecada92be033766663fb56f9cc59f1335f5c2a034e81a764b6996d25a"
+    },
+    {
+      "bytes": 2138,
+      "git_blob": "ad8e7bb99f400882770dc10c8addabcbeb539605",
+      "inventory_id": "github:5fda5de6effad0cc123d4bf460d50efdcc2589481745a4c60eaeaf3a37ab59bd",
+      "path": "skills/radyakaze/xiaomi-air-purifier/SKILL.md",
+      "source_commit": "920714f17d81e0a95c7a9bc51faf0a7921cd982d",
+      "source_repo": "6mile/skills",
+      "source_sha256": "0168765c25cd48b3c7549f63ad75223a8e63cd2e98b2e4bbca4889d471cc1927"
+    },
+    {
+      "bytes": 2916,
+      "git_blob": "a31ece082d1e5692e9909366274a8bc240b9acb9",
+      "inventory_id": "github:feb4d73847e4dc8a9e04e62de537f1bd0ea276f95f5f47fd23a0dbac9efc61ac",
+      "path": "skills/iamhankai/beijing-house-pro/SKILL.md",
+      "source_commit": "920714f17d81e0a95c7a9bc51faf0a7921cd982d",
+      "source_repo": "6mile/skills",
+      "source_sha256": "016ae2be9adf7a4f52b0ef48b8e262802abea4d5cc4198227876cd4bab33eff3"
+    }
+  ],
+  "limits": "Sixteen representative visible meanings, not seventeen independently read packages or individual permissions. Mixed cohort1 ranges1..180 remain old015516; only181..end are current063706. No historical authentication or billing is certified.",
+  "new_parent_meanings_and_mixed_reader_range_proof_retained": true,
+  "prior_snapshot": {
+    "all_records_and55_original_contexts_exactly_retained": true,
+    "file": "prepared-skills-3080-primaryflow195-evaluation-v10-175645.json",
+    "records": 195,
+    "sha256": "57126a21ca7a0af0c443b0f263fb2d5cdedc3fda0858cb0d7e5b61dbf80e4e3f"
+  },
+  "publication_preparation": {
+    "central_operations": 0,
+    "new_final_dispositions": 0,
+    "new_global_raw_credit": 0,
+    "new_permissions": 0,
+    "new_source_body_reads": 0,
+    "public_copy_created": false
+  },
+  "publisher_job": "20261027-175645-todo-3080",
+  "records": [
+    {
+      "actual_assessment_reader": "20261029-061612-todo-4133",
+      "all_member_contexts_and_individual_rights_pending": true,
+      "bytes": 4331,
+      "cohort": 0,
+      "git_blob": "418a8854fbf149e0953e9ef63a8d4e897ad40cbd",
+      "inventory_id": "github:e1ec0f2f0ca0e67816d73522b8a97632620c58625ab1cc8bc7f2b045558c52d9",
+      "new_final_disposition": false,
+      "ordinal": 109,
+      "original_assessment": {
+        "body_bytes": 4331,
+        "body_sha256": "007a75e85385c5e84620d954ff458e00c8fe04ecda88a495a67c2d4ade15657d",
+        "each_member_context_and_rights_pending": true,
+        "findings": [
+          "可視本文はTrello/Jiraのboard・status・移動履歴を取得して4状態へ分類する。closed/deployed等の名前をdoneとみなし、Jiraのindeterminateをdoingとするが、実際の受入完了・配備・reviewや再openとの対応は未検証。cycle timeの式は伏字で未読。",
+          "5日活動なし、WIP10件超、中央値7日超、team人数×1.5等を目安に健康色と助言を出す。実teamの尺度/期間・作業量・待ち理由に基づく実測ではない。",
+          "月曜9時のcronとprimary channelへの配信を勧める。reference本文/現行API・権限・ページングや全履歴の取得保証は確認していない。"
+        ],
+        "member_metadata_sha256": "b8fb790269e7def85d2bbd65b0e582c548a8e8f5ecdbc46b6465510ef9b41345",
+        "member_occurrences": 1,
+        "negative": "列名closedだけで配備完了と数え、5日無更新を放棄と断定し、推測人数のWIP制限や新cronを適用する。",
+        "ordinal": 109,
+        "positive": "確認した移動履歴と完了条件から対象期間の件数と未測定項目を示し、依存待ちと実際の滞留を区別する。",
+        "read": {
+          "failed_view_calls": 0,
+          "mask_version": "primaryflow-v4-opaque-lexical-boundaries",
+          "ranges": [
+            {
+              "first": 1,
+              "range_sha256": "60b7439aa98f370572a76a4c568aac4f5a40b45b9f6f49ed6db069425f707d52",
+              "through": 95,
+              "visible_lines": 83,
+              "withheld_physical_lines": [
+                1,
+                2,
+                3,
+                4,
+                13,
+                24,
+                74,
+                75,
+                78,
+                82,
+                84,
+                88
+              ]
+            }
+          ],
+          "raw_full": false,
+          "total_physical_lines": 95,
+          "unseen_meanings_remain_unknown": true,
+          "view_calls_returned": 1,
+          "whole_masked_view_sha256": "60b7439aa98f370572a76a4c568aac4f5a40b45b9f6f49ed6db069425f707d52"
+        },
+        "representative_inventory_id": "github:e1ec0f2f0ca0e67816d73522b8a97632620c58625ab1cc8bc7f2b045558c52d9",
+        "required_changes": [
+          "実対象・状態遷移/再open・完了条件と時刻/期間を定め、履歴の欠測・未完了・除外・測定母数を示す。単なるboard更新やclosedを実成果とせず、全page/履歴と算定方法を照合する。",
+          "閾値や健康色は実teamの根拠と観測範囲へ結び、更新なしを放棄/停止と決めない。原の件数制限を現在PCの割当や研究の上限へ使わず、原API/cron/投稿・未指定board閲覧を開始しない。"
+        ],
+        "source_git_blob": "418a8854fbf149e0953e9ef63a8d4e897ad40cbd",
+        "status": "visible_primary_evaluated",
+        "unmet": [
+          "伏字12物理行の意味、each_member_context・支持・個別許諾・現在実在は未確認。",
+          "現行API/権限・分類/履歴/算定/閾値の妥当性・source_or_service_rights・最終採否は未確認。実board/支持本文閲覧・API/計測/cron/配信/設定・実配置・実使用0。近接比較はbusiness-strategy、agent-job-management、sql-data-integrityの起動metadataだけ。"
+        ],
+        "use": "指定された開発boardの状態履歴から、仕掛件数・完了件数・滞留とblockerを分けて整理する候補。",
+        "value": "現在の状態だけでなく移動履歴と測定件数、中央値/P85、対象期間を報告へ揃える構成がある。"
+      },
+      "original_packet_sha256": "55819de3894817e42aa57fb33474d5d7bfe82121405a7459025a43f421c0f78e",
+      "path": "skills/olivermonneke/agile-observer/SKILL.md",
+      "representative_body_meaning_only": true,
+      "source_commit": "920714f17d81e0a95c7a9bc51faf0a7921cd982d",
+      "source_repo": "6mile/skills",
+      "source_sha256": "007a75e85385c5e84620d954ff458e00c8fe04ecda88a495a67c2d4ade15657d"
+    },
+    {
+      "actual_assessment_reader": "20261029-061612-todo-4133",
+      "all_member_contexts_and_individual_rights_pending": true,
+      "bytes": 1994,
+      "cohort": 0,
+      "git_blob": "c586aed0bb38a6070a5884698cf417bb2a29b86c",
+      "inventory_id": "github:7eaebe986757d72a48b31beedd1b308a5e51854ff6f99b9919339204839de304",
+      "new_final_disposition": false,
+      "ordinal": 110,
+      "original_assessment": {
+        "body_bytes": 1994,
+        "body_sha256": "007bdd24524e2ca913cd1a715e4c25f4d9c51dea7ed0d2f38b081ff1c8b0fa5e",
+        "each_member_context_and_rights_pending": true,
+        "findings": [
+          "可視本文は引数不要のGETとPython handlerで、month/ppi/yoy/mom/cumulative_avgのJSONを返すと述べる。取得元endpointは伏字で、実データや現在の公表値を確認していない。",
+          "指数の基準100、前年/前月比は%、年内累積平均と説明するが、基準年/算定/改定・公表/取得時点は可視範囲にない。nullable列や例示月は現在の確定値にならない。",
+          "2掲載先のID/path/commit/blobをmetadataで確認した。同じ本文1群であり、各掲載先の文脈/支持・個別権利は未確認。"
+        ],
+        "member_metadata_sha256": "f58f621347476561f687b46815a94872c9851e2b62bad58aa600a9951c346b82",
+        "member_occurrences": 2,
+        "negative": "例示月を最新値と呼び、nullを0にして異なる基準の指数や率を混ぜ、未確認の年内平均で投資を勧める。",
+        "ordinal": 110,
+        "positive": "同じ系列・基準の対象月を並べ、同比/環比の単位とnull・改定/取得時点を別欄で示す。",
+        "read": {
+          "failed_view_calls": 0,
+          "mask_version": "primaryflow-v4-opaque-lexical-boundaries",
+          "ranges": [
+            {
+              "first": 1,
+              "range_sha256": "5cdefcf1246ed401abcc748bed6207ed2ac6b1d387f8d40a6da2198b90e89410",
+              "through": 58,
+              "visible_lines": 52,
+              "withheld_physical_lines": [
+                1,
+                2,
+                3,
+                4,
+                13,
+                52
+              ]
+            }
+          ],
+          "raw_full": false,
+          "total_physical_lines": 58,
+          "unseen_meanings_remain_unknown": true,
+          "view_calls_returned": 1,
+          "whole_masked_view_sha256": "5cdefcf1246ed401abcc748bed6207ed2ac6b1d387f8d40a6da2198b90e89410"
+        },
+        "representative_inventory_id": "github:7eaebe986757d72a48b31beedd1b308a5e51854ff6f99b9919339204839de304",
+        "required_changes": [
+          "実利用では一次公表元・対象系列/基準・公表日/対象月/改定版を確認し、計算された年内平均と公表指数を混同しない。月は年月として整列し、nullを0へ変えず、比較の単位と欠測を明示する。",
+          "原script/GETや投資判断を開始せず、新しい補助道具はGo既定・既存Rust保持、APIキー/追加支出なしを保つ。最新値や再配布権は親の後続確認へ残し、保存説明だけで金融上の保証をしない。"
+        ],
+        "source_git_blob": "c586aed0bb38a6070a5884698cf417bb2a29b86c",
+        "status": "visible_primary_evaluated",
+        "unmet": [
+          "伏字6物理行の意味、2memberそれぞれの文脈・支持・個別許諾・現在実在は未確認。",
+          "現行取得元/仕様/系列/基準/算定/改定/値・source_or_service_rights・最終採否は未確認。実市場データ/支持本文閲覧・script/GET/計算/保存/送信/投資・実配置・実使用0。近接比較はpublic-data-research、market-data-due-diligenceの起動metadataだけ。"
+        ],
+        "use": "中国の月次PPIの指数・前年同月比・前月比・年内平均を、月と欠測状態を保持した表へ整理する候補。",
+        "value": "指数と百分率、nullを区別するschemaと月単位の降順出力を明示する。"
+      },
+      "original_packet_sha256": "55819de3894817e42aa57fb33474d5d7bfe82121405a7459025a43f421c0f78e",
+      "path": "skills/shawn92/ftshare-macro-economy-data/sub-skills/economic-china-ppi-monthly/SKILL.md",
+      "representative_body_meaning_only": true,
+      "source_commit": "920714f17d81e0a95c7a9bc51faf0a7921cd982d",
+      "source_repo": "6mile/skills",
+      "source_sha256": "007bdd24524e2ca913cd1a715e4c25f4d9c51dea7ed0d2f38b081ff1c8b0fa5e"
+    },
+    {
+      "actual_assessment_reader": "20261029-061612-todo-4133",
+      "all_member_contexts_and_individual_rights_pending": true,
+      "bytes": 2799,
+      "cohort": 0,
+      "git_blob": "efff76bbe31ec4f0332be884fee766c0d7ea10bb",
+      "inventory_id": "github:3a20519368d5af845d1beae8e06651f94be91eda9b9ae580c0cd29d3e9eb1af7",
+      "new_final_disposition": false,
+      "ordinal": 111,
+      "original_assessment": {
+        "body_bytes": 2799,
+        "body_sha256": "007c0c74c4b1a5936407a8aa4a8896d9d42b890d8029733aa3f5f1ec19604468",
+        "each_member_context_and_rights_pending": true,
+        "findings": [
+          "可視本文はweb_embeddings toolを付けたchat形式のmodel呼出しとembeddings.shを示し、最新news/情報検索にも発動するとする。数値vector・次元・返却schema・検索結果の出典は見えず、通常のembedding機能や最新情報取得の実証はない。",
+          "jqで注入防止、TLS1.2以上、汎用errorで漏洩なし等を掲げるが、scriptの実装は未確認。JSON escapeだけで他のshell/出力/URLの安全性を保証できない。",
+          "環境変数へ直接設定し、最小scopeのkeyを使うと説明する。認証の核心とendpoint等は伏字で、OAuthの既存枠で使える根拠はなく、今回のAPIキー禁止に適合すると扱えない。"
+        ],
+        "member_metadata_sha256": "5e29f3536bac0860cf6445ddab80aec9ff2cbc11ce0f0fb9cd805ee07bbf7526",
+        "member_occurrences": 1,
+        "negative": "embeddingsという名前だけでvector生成と最新newsが動くとし、security宣言を根拠にkeyや私的queryを渡す。",
+        "ordinal": 111,
+        "positive": "返却が検索結果か数値vectorかを実schemaと出典で区別し、確認できた範囲と未取得の意味を示す。",
+        "read": {
+          "failed_view_calls": 0,
+          "mask_version": "primaryflow-v4-opaque-lexical-boundaries",
+          "ranges": [
+            {
+              "first": 1,
+              "range_sha256": "86467974a1e8069fff1aa9255de18d0a20953d3238a3f56a14773acff617fe20",
+              "through": 96,
+              "visible_lines": 74,
+              "withheld_physical_lines": [
+                1,
+                2,
+                3,
+                4,
+                5,
+                6,
+                7,
+                15,
+                19,
+                22,
+                27,
+                28,
+                31,
+                38,
+                40,
+                41,
+                47,
+                53,
+                63,
+                69,
+                72,
+                94
+              ]
+            }
+          ],
+          "raw_full": false,
+          "total_physical_lines": 96,
+          "unseen_meanings_remain_unknown": true,
+          "view_calls_returned": 1,
+          "whole_masked_view_sha256": "86467974a1e8069fff1aa9255de18d0a20953d3238a3f56a14773acff617fe20"
+        },
+        "representative_inventory_id": "github:3a20519368d5af845d1beae8e06651f94be91eda9b9ae580c0cd29d3e9eb1af7",
+        "required_changes": [
+          "検索とembeddingを区別し、実入出力・対象model/版・vectorや出典・取得時点/欠測と再現条件を確認する。query上限500や30秒timeoutは保存上の設定として扱い、現在の品質/実行上限へ転用しない。",
+          "原API/key/環境設定・shell/外部送信を開始せず、現在の許可された道具と既存OAuth枠を保つ。現行仕様/契約/料金と入力の送信範囲は親が後続で確認し、一般的なsecurity宣言だけで秘密なしとしない。"
+        ],
+        "source_git_blob": "efff76bbe31ec4f0332be884fee766c0d7ea10bb",
+        "status": "visible_primary_evaluated",
+        "unmet": [
+          "伏字22物理行の意味、each_member_context・支持・個別許諾・現在実在は未確認。",
+          "現行API/model/認証/契約/料金・script/実機能/出力/安全性・source_or_service_rights・最終採否は未確認。認証値/支持本文閲覧・key/API/環境変更/shell/外部検索/送信・実配置・実使用0。近接比較はai-model-evaluation、security-reviewの起動metadataだけ。"
+        ],
+        "use": "外部のWeb検索/embedding連携を評価する際、入力・出力の実機能と接続/秘密保護の主張を分ける資料。",
+        "value": "shell設定をsourceしない、JSONをescapeする、入力長とtimeoutを設定するという確認項目は参考になる。"
+      },
+      "original_packet_sha256": "55819de3894817e42aa57fb33474d5d7bfe82121405a7459025a43f421c0f78e",
+      "path": "skills/honestqiao/zhipu-embeddings-v2/skill/SKILL.md",
+      "representative_body_meaning_only": true,
+      "source_commit": "920714f17d81e0a95c7a9bc51faf0a7921cd982d",
+      "source_repo": "6mile/skills",
+      "source_sha256": "007c0c74c4b1a5936407a8aa4a8896d9d42b890d8029733aa3f5f1ec19604468"
+    },
+    {
+      "actual_assessment_reader": "20261029-061612-todo-4133",
+      "all_member_contexts_and_individual_rights_pending": true,
+      "bytes": 7070,
+      "cohort": 0,
+      "git_blob": "15c0b9df7c6694f89d2db1dd3180c729e56c0486",
+      "inventory_id": "github:7ba20aa0e3d61d97b2b842279828439d44ab2b6970eafc4ea5d8d17429f970ce",
+      "new_final_disposition": false,
+      "ordinal": 112,
+      "original_assessment": {
+        "body_bytes": 7070,
+        "body_sha256": "007c5eea40a74d4f04ea4634d2c415f748e4bd0c433ad03c097a14307c5f97e7",
+        "each_member_context_and_rights_pending": true,
+        "findings": [
+          "可視本文はMicrosoft365 mailboxとCloudflare DNSを前提にGraph/Exchangeのapp権限・admin同意をbootstrapし、aliasやSPF/MX/DMARCを変更する。現在のRakko限定・指定対象/恒久権限なしの研究とは合致せず、原の例示domainも対象の許可ではない。",
+          "replyありとno-replyを分け、後者をno MX/SPF -allで非受信と説明するが、その設定だけで意図した受信/送信制御になるかは未検証。返信fallbackにはaccepted domainと到達可能なDNS/MXの保持が必要と本文自身が述べる。",
+          "dry-run/sandbox test、atomic保存・制限された外部script・非永続既定を掲げるが、実テストやWindows権限/復旧は確認していない。shellが一時ps1を実行する構成を含む。",
+          "単一宛先操作と高volumeの個別outreachを両立しspam risk低減を主張する。1通1宛先だけでは同意/到達/規約・送信評判や安全性を確認したことにならない。"
+        ],
+        "member_metadata_sha256": "cf194386dd97c969386f6ffa88db65e13ebaf1f03256460c548fbb25d39dd690",
+        "member_occurrences": 1,
+        "negative": "原の例示domainやCloudflareを操作し、MXなしや1通1宛先だけで非受信/低spamを保証し、返信先を失う削除を完了扱いする。",
+        "ordinal": 112,
+        "positive": "許可されたaliasの廃止で、変更前の到達経路と必要データを保ち、変更後の実返信を確認してから結果を報告する。",
+        "read": {
+          "failed_view_calls": 0,
+          "mask_version": "primaryflow-v4-opaque-lexical-boundaries",
+          "ranges": [
+            {
+              "first": 1,
+              "range_sha256": "38ab26292fb239234ec89339c7e8d63295cac59e67517e6482359327816fd182",
+              "through": 178,
+              "visible_lines": 123,
+              "withheld_physical_lines": [
+                1,
+                2,
+                3,
+                4,
+                5,
+                6,
+                15,
+                24,
+                40,
+                41,
+                42,
+                46,
+                47,
+                54,
+                56,
+                58,
+                66,
+                67,
+                69,
+                70,
+                73,
+                74,
+                76,
+                84,
+                85,
+                86,
+                89,
+                90,
+                91,
+                92,
+                98,
+                99,
+                104,
+                109,
+                110,
+                111,
+                112,
+                118,
+                121,
+                124,
+                125,
+                128,
+                131,
+                132,
+                133,
+                134,
+                135,
+                136,
+                139,
+                140,
+                143,
+                144,
+                152,
+                159,
+                160
+              ]
+            }
+          ],
+          "raw_full": false,
+          "total_physical_lines": 178,
+          "unseen_meanings_remain_unknown": true,
+          "view_calls_returned": 1,
+          "whole_masked_view_sha256": "38ab26292fb239234ec89339c7e8d63295cac59e67517e6482359327816fd182"
+        },
+        "representative_inventory_id": "github:7ba20aa0e3d61d97b2b842279828439d44ab2b6970eafc4ea5d8d17429f970ce",
+        "required_changes": [
+          "原Cloudflare/Graph/Exchangeへのアクセス・app/admin権限追加・script/設定/メール送信を開始しない。Rakkoと実対象、既存Prd/所有/秘密保護を保ち、資料の便利さを他の事業者やdomainの許可へ広げない。",
+          "実利用時はalias/accepted domain・DNS・送信認証・実受信/返信をそれぞれ照合し、既存メール/依存と返信経路を保持する。no-replyや廃止成功を設定の存在だけで保証せず、dry-runと実変更/実配送を分ける。",
+          "atomic出力と再開/部分失敗・権限/保持条件を確認し、通常のメール閲覧許可をoutreach/削除/転送へ拡大しない。原の人手sign-in・新cron/大量送信・hard-deleteを現在の依頼へ持ち込まない。"
+        ],
+        "source_git_blob": "15c0b9df7c6694f89d2db1dd3180c729e56c0486",
+        "status": "visible_primary_evaluated",
+        "unmet": [
+          "伏字55物理行の意味、each_member_context・支持・個別許諾・現在実在は未確認。",
+          "現行API/権限/tenant/domain・script/設定/Windows権限/atomic復旧/到達性/送信条件・source_or_service_rights・最終採否は未確認。実mailbox/認証/別事業者/支持本文閲覧・接続/同意/権限/DNS/alias変更/削除/保存/送信・実配置・実使用0。近接比較はoauth-least-privilege、crash-safe-file-updates、security-reviewの起動metadataだけ。"
+        ],
+        "use": "メールaliasの作成・検証・廃止と返信の継続、設定変更と結果保存を分ける設計の参考。",
+        "value": "accepted domain・alias・DNS等の確認を分け、廃止後も返信先へ到達する条件を明示する点には参考価値がある。"
+      },
+      "original_packet_sha256": "55819de3894817e42aa57fb33474d5d7bfe82121405a7459025a43f421c0f78e",
+      "path": "skills/lmtlssss/mailcaduceus/SKILL.md",
+      "representative_body_meaning_only": true,
+      "source_commit": "920714f17d81e0a95c7a9bc51faf0a7921cd982d",
+      "source_repo": "6mile/skills",
+      "source_sha256": "007c5eea40a74d4f04ea4634d2c415f748e4bd0c433ad03c097a14307c5f97e7"
+    },
+    {
+      "actual_assessment_reader": "20261029-061612-todo-4133",
+      "all_member_contexts_and_individual_rights_pending": true,
+      "bytes": 23028,
+      "cohort": 0,
+      "git_blob": "5e5d7386cf7d699987a21aa670cdb5fd547a87a1",
+      "inventory_id": "github:1749eedf83bbdd3a6781f31172a66078f1042dc62b9ddbb4f5f6bc5cdde38c11",
+      "new_final_disposition": false,
+      "ordinal": 113,
+      "original_assessment": {
+        "body_bytes": 23028,
+        "body_sha256": "007d041908277d9d6821bf94982802e861a2664ca5d5e9401d7171a510c64fef",
+        "each_member_context_and_rights_pending": true,
+        "findings": [
+          "可視本文はVisNoteのtemplate APIとPlaywrightで画像を生成すると説明し、初回/新題材でregistry取得、同会話の再生成ではcache再利用とする。現行schema/配信先・cache失効や同じtemplate版での再現は未確認。",
+          "表紙/画像/tag/用途から選び、該当なしはyellow、未指定の画像/色/author/本文はすべて原template既定値を保持する。指定箇所だけ変更とする一方でsubtitle/tagを推測補完し、例には題材と無関係な集客文や実測を示すtagが残る。",
+          "template既定の素材やauthorを使える権利・本人の見た目承認や事実の裏付けは確認していない。無料template優先とする一方、後半では生成にVIP会員が必要とし、未加入/失効/枠切れには加入・更新・追加購入を勧める。",
+          "config.jsonの表示/編集とnpm/Chromium導入、JSONのshell用escapeを案内する。伏字の設定値は未読で、秘密保護や対象shellでの引用符/改行/backslashの保持を実証していない。説明用のJSON例にはcommentも混在する。",
+          "成功確認は終了codeとmessage、報告は出力pathを中心とする。実画像の内容/文字/寸法・default素材/author・downloadの中身や直接配送を確認する工程は不足する。複数生成の10〜15秒待機でtimeoutを避けるという主張も実測ではない。"
+        ],
+        "member_metadata_sha256": "823de4b62ea30a470e22e0b0c290cae77e181934bc426d0aac6d25d48944f2ab",
+        "member_occurrences": 1,
+        "negative": "registry既定の他者素材/authorや集客文をそのまま使い、configを表示してVIP追加購入へ進み、exit成功と保存pathだけで正しい画像を届けたとする。",
+        "ordinal": 113,
+        "positive": "承認対象の具体画像とtemplate版を結び、指定文字と素材権を確認し、仮author/未確認の実測文を混ぜず、実画像を直接添付する。",
+        "read": {
+          "failed_view_calls": 0,
+          "mask_version": "primaryflow-v4-opaque-lexical-boundaries",
+          "ranges": [
+            {
+              "first": 1,
+              "range_sha256": "13b92012a25d1c2a75797e7a6ffd7c35676deb3cf2c99a04ac65479bbd06f7ca",
+              "through": 180,
+              "visible_lines": 166,
+              "withheld_physical_lines": [
+                1,
+                2,
+                3,
+                4,
+                5,
+                26,
+                30,
+                32,
+                35,
+                37,
+                41,
+                84,
+                87,
+                99
+              ]
+            },
+            {
+              "first": 181,
+              "range_sha256": "4053612c45d4201237f67150d82f9a0094e11c1ac7e13e5c520fa5bb6b2d3dc8",
+              "through": 360,
+              "visible_lines": 170,
+              "withheld_physical_lines": [
+                188,
+                229,
+                241,
+                244,
+                281,
+                286,
+                289,
+                340,
+                343,
+                345
+              ]
+            },
+            {
+              "first": 361,
+              "range_sha256": "289daf2218ca786020b9fbb5ab0d01833554cd7376601ac9ec11d46c1c6d7950",
+              "through": 540,
+              "visible_lines": 154,
+              "withheld_physical_lines": [
+                370,
+                373,
+                397,
+                400,
+                419,
+                421,
+                422,
+                456,
+                458,
+                460,
+                467,
+                477,
+                479,
+                480,
+                481,
+                483,
+                485,
+                487,
+                488,
+                489,
+                513,
+                514,
+                518,
+                519,
+                521,
+                522
+              ]
+            },
+            {
+              "first": 541,
+              "range_sha256": "8c6b5b26965ccf4399f764bac9af0b8c4f84fb6ede5efee566ce318bcce56db3",
+              "through": 553,
+              "visible_lines": 12,
+              "withheld_physical_lines": [
+                552
+              ]
+            }
+          ],
+          "raw_full": false,
+          "total_physical_lines": 553,
+          "unseen_meanings_remain_unknown": true,
+          "view_calls_returned": 4,
+          "whole_masked_view_sha256": "0086a7c1cc38cce8a940502bd99203a2dd79c59c88c09975e00c5340b6efadda"
+        },
+        "representative_inventory_id": "github:1749eedf83bbdd3a6781f31172a66078f1042dc62b9ddbb4f5f6bc5cdde38c11",
+        "required_changes": [
+          "template ID/schema/版・取得時点と依頼本文を結び、cache失効/削除/変更を確認する。必要fieldの構造は保ちつつ、default画像/author・仮文/集客効果/実測tagを事実や権利ありとして無条件に残さず、推測補完を区別する。",
+          "現在の許可された画像toolと既存OAuth枠、素材権・本人の名前/見た目方針を保つ。UI等は同じ具体画像への本人回答後に実装し、原のVIP加入/更新/追加枠・設定表示/変更・npm/ブラウザ導入/API・新しい外部送信を開始しない。",
+          "JSONとshell引数を別に扱い、対象shellの引用符/改行とschemaを検証する。既存出力を保ち、実download/画像の文字・欠落・寸法・素材/author・指定変更を確認して本人へ直接添付する。固定待機/成功codeやPC内pathだけで品質・配送済みとしない。"
+        ],
+        "source_git_blob": "5e5d7386cf7d699987a21aa670cdb5fd547a87a1",
+        "status": "visible_primary_evaluated",
+        "unmet": [
+          "伏字51物理行の意味、each_member_context・支持・個別許諾・現在実在は未確認。",
+          "現行API/schema/cache/認証/契約/料金・script/引用符/画像内容/素材権/取得配送・source_or_service_rights・最終採否は未確認。実config/認証値/registry/画像/支持本文の追加閲覧・原API/Playwright/導入/生成/編集/購入/設定/保存/送信・実配置・実使用0。近接比較はimage-generation-editing、playwright-download-verification、audit-reference-originalityの起動metadataだけ。"
+        ],
+        "use": "画像templateのschema・素材・利用者の指定値を分け、表紙/本文/比較画像を組み立てる手順の評価。",
+        "value": "registryから各templateのfieldを取得し、全体の構造を保って指定箇所を上書きする整理があり、選択と生成/取得を分ける参考になる。"
+      },
+      "original_packet_sha256": "0a87b050897e1eda54350de15a412cdaaa4ccaeb1509f0a81778250c7c4cca6c",
+      "path": "skills/katherine0325/visnote-image-creator/SKILL.md",
+      "representative_body_meaning_only": true,
+      "source_commit": "920714f17d81e0a95c7a9bc51faf0a7921cd982d",
+      "source_repo": "6mile/skills",
+      "source_sha256": "007d041908277d9d6821bf94982802e861a2664ca5d5e9401d7171a510c64fef"
+    },
+    {
+      "actual_assessment_reader": "20261029-061612-todo-4133",
+      "all_member_contexts_and_individual_rights_pending": true,
+      "bytes": 7266,
+      "cohort": 0,
+      "git_blob": "884bf286b71925dd12839718ec6c2522d9679373",
+      "inventory_id": "github:046acd3979cb0968fff0b04707d4062bb0e967d341cf3f739c61e5a6f0b9fda1",
+      "new_final_disposition": false,
+      "ordinal": 114,
+      "original_assessment": {
+        "body_bytes": 7266,
+        "body_sha256": "007d6befd57bcffc1de667ee5c7761d727c5244ef67b86481b11e82861a44340",
+        "each_member_context_and_rights_pending": true,
+        "findings": [
+          "可視本文は既存meme形式・reaction画像・caption・文章・community別の例を示す。時事性/文化/主観性と反復を重視し、万能ではないとも述べる。",
+          "冒頭のbenchmark首位や60〜70%の成功率は保存本文の宣伝で、母数/評価方法・現行性能やこの依頼の成果を確認していない。",
+          "cellcogの別Skill導入とSDK/API、create_chatのagent mode・非同期/完了待ちを前提にする。価格/認証/配送・著名template/素材の権利と実生成は未確認で、支持Skill本文は開いていない。"
+        ],
+        "member_metadata_sha256": "06ae72204d8d4e4678b0eccecdd1041958f413659185f5d67a1cff68c0abb642",
+        "member_occurrences": 1,
+        "negative": "宣伝の成功率だけで必ず面白いとし、権利未確認のtemplateや時事の誤認をそのまま使い、外部agentを起動して投稿まで進む。",
+        "ordinal": 114,
+        "positive": "対象communityで伝わる具体場面と参照を説明した複数案を比較し、実feedbackに基づき言葉や構図を調整する。",
+        "read": {
+          "failed_view_calls": 0,
+          "mask_version": "primaryflow-v4-opaque-lexical-boundaries",
+          "ranges": [
+            {
+              "first": 1,
+              "range_sha256": "e3ef57b9469621bf82c8e45d7083f6d1bcacf6fe3997043a4cbb54e297ce0c65",
+              "through": 180,
+              "visible_lines": 168,
+              "withheld_physical_lines": [
+                1,
+                2,
+                3,
+                4,
+                5,
+                6,
+                7,
+                8,
+                9,
+                10,
+                11,
+                37
+              ]
+            },
+            {
+              "first": 181,
+              "range_sha256": "78a5309895e4ff2b4b1b088a6d0c4f400c4b60a2e531d13b34e56a2883e89a49",
+              "through": 230,
+              "visible_lines": 50,
+              "withheld_physical_lines": []
+            }
+          ],
+          "raw_full": false,
+          "total_physical_lines": 230,
+          "unseen_meanings_remain_unknown": true,
+          "view_calls_returned": 2,
+          "whole_masked_view_sha256": "ad0fefd5243ee710b233c28d1261086094ba9f57d2cacd31bf2bd65f0ef89403"
+        },
+        "representative_inventory_id": "github:046acd3979cb0968fff0b04707d4062bb0e967d341cf3f739c61e5a6f0b9fda1",
+        "required_changes": [
+          "読者・目的・文化的参照と依頼した言葉/素材を照合し、面白さ/タイミングは案と実feedbackで判断する。原の成功率やbenchmark・時事例を現在の保証にせず、三段構成や例の案数を一律の上限にしない。",
+          "現在の許可された制作tool・既存OAuth枠と素材権/本人の見た目指定を守る。原のinstall/別agent/SDK/API・外部送信を開始せず、実画像の文字/構造/指定内容と直接配送を確認する工程を別に設ける。"
+        ],
+        "source_git_blob": "884bf286b71925dd12839718ec6c2522d9679373",
+        "status": "visible_primary_evaluated",
+        "unmet": [
+          "伏字12物理行の意味、each_member_context・支持・個別許諾・現在実在は未確認。",
+          "現行SDK/契約/料金/実model・benchmark/成功率/時事/文化/素材権/生成配送品質・source_or_service_rights・最終採否は未確認。支持本文/素材の追加閲覧・原導入/SDK/API/別agent/生成/保存/送信/投稿・実配置・実使用0。近接比較はimage-generation-editing、marketing-seoの起動metadataだけ。"
+        ],
+        "use": "対象の読者・文化的参照・具体場面・形式を明らかにし、複数の冗談/画像案を比較して改善する制作の候補。",
+        "value": "抽象的な題材を具体場面へ変え、期待の裏切りや段階的な展開、本人のfeedbackを使って選ぶ観点がある。"
+      },
+      "original_packet_sha256": "9b1157e3e066a30e2df171aa494373202632981063ca880d2780726ed1eee544",
+      "path": "skills/nitishgargiitd/meme-cog/SKILL.md",
+      "representative_body_meaning_only": true,
+      "source_commit": "920714f17d81e0a95c7a9bc51faf0a7921cd982d",
+      "source_repo": "6mile/skills",
+      "source_sha256": "007d6befd57bcffc1de667ee5c7761d727c5244ef67b86481b11e82861a44340"
+    },
+    {
+      "actual_assessment_reader": "20261029-061612-todo-4133",
+      "all_member_contexts_and_individual_rights_pending": true,
+      "bytes": 3495,
+      "cohort": 0,
+      "git_blob": "d884292fc15deffd8e8c81b7d34d0418b29f505a",
+      "inventory_id": "github:b0561c7bfd1908803ec02746ba80e49ddcee4dccd96ff08de41193e2ff849b2b",
+      "new_final_disposition": false,
+      "ordinal": 115,
+      "original_assessment": {
+        "body_bytes": 3495,
+        "body_sha256": "007e1134222812c81823a87b53a9d141b2c1f80422a0a540e4abd3f9db646834",
+        "each_member_context_and_rights_pending": true,
+        "findings": [
+          "可視本文はCVSのMCP connectorをnpm/npxで導入し、処方照会/補充、商品検索/cart/checkout、rewards、予防接種予約や店舗照会を案内する。現行service/API・対象地域/認証は未確認で、実健康情報を読んでいない。",
+          "ready_for_refillと受取準備の照会を別にし、NO_REFILLS/保険問題では医師/薬局への連絡、空きなしでは別時刻を提案する。原の例は補充/購入/接種の適否や本人の現在の依頼ではない。",
+          "一部input/outputのfield例はあるが、患者/処方/店舗の一致、補充の実受付/取消/重複・金額や予約確定ID・再送照合の方法は可視範囲では不足する。認証の核心は伏字で未読。"
+        ],
+        "member_metadata_sha256": "e8b9c9005b27b22ac97cdfb803757027c5aa9d9e10479b4f25e3104639055834",
+        "member_occurrences": 1,
+        "negative": "補充可能flagを受取準備済みとし、処方の取り違えや保険errorを無視して再送し、原の例だけで商品購入や接種予約を確定する。",
+        "ordinal": 115,
+        "positive": "補充の受付結果を同じ処方/店舗に結び、受付済みと受取可能を別時点の状態として報告する。",
+        "read": {
+          "failed_view_calls": 0,
+          "mask_version": "primaryflow-v4-opaque-lexical-boundaries",
+          "ranges": [
+            {
+              "first": 1,
+              "range_sha256": "1368371c808dad7a394c9a671f9808d062ef601ff46c2f376703dcf175444e67",
+              "through": 162,
+              "visible_lines": 146,
+              "withheld_physical_lines": [
+                1,
+                2,
+                3,
+                4,
+                5,
+                6,
+                7,
+                8,
+                9,
+                10,
+                11,
+                91,
+                106,
+                114,
+                161,
+                162
+              ]
+            }
+          ],
+          "raw_full": false,
+          "total_physical_lines": 162,
+          "unseen_meanings_remain_unknown": true,
+          "view_calls_returned": 1,
+          "whole_masked_view_sha256": "1368371c808dad7a394c9a671f9808d062ef601ff46c2f376703dcf175444e67"
+        },
+        "representative_inventory_id": "github:b0561c7bfd1908803ec02746ba80e49ddcee4dccd96ff08de41193e2ff849b2b",
+        "required_changes": [
+          "実利用時は許可された本人/患者・処方と薬局/日時/受取方法を照合し、必要最小限の健康情報だけ扱う。補充可能/受付/調剤/受取準備と予約候補/確定を区別し、医療上の適否や不足処方を推測で補わない。",
+          "原のMCP追加/導入・健康情報照会/補充/購入/連絡/予約を開始しない。新支出・実カード・恒久権限の禁止と既存OAuth枠を保ち、応答不明時は同じ受付の実状態を確認して二重注文/予約を防ぐ。現行医療/契約条件は後続の一次確認へ残す。"
+        ],
+        "source_git_blob": "d884292fc15deffd8e8c81b7d34d0418b29f505a",
+        "status": "visible_primary_evaluated",
+        "unmet": [
+          "伏字16物理行の意味、each_member_context・支持・個別許諾・現在実在は未確認。",
+          "現行MCP/API/認証/地域/医療・費用/保険/個人情報条件・受付/取消/再送/予約の実品質・source_or_service_rights・最終採否は未確認。実処方/健康/カード/支持本文閲覧・導入/権限追加/照会/補充/注文/連絡/予約/送信・実配置・実使用0。近接比較はoauth-least-privilege、stale-request-ordering、commerce-billingの起動metadataだけ。"
+        ],
+        "use": "薬局連携で処方の照会・補充受付・受取準備、商品購入と予約を別操作/別結果として扱うschemaの評価。",
+        "value": "処方の残回数・最終調剤日・補充可否、店/受取方法、予約空きや認証失効等を分ける項目がある。"
+      },
+      "original_packet_sha256": "9b1157e3e066a30e2df171aa494373202632981063ca880d2780726ed1eee544",
+      "path": "skills/markswendsen-code/strider-cvs/SKILL.md",
+      "representative_body_meaning_only": true,
+      "source_commit": "920714f17d81e0a95c7a9bc51faf0a7921cd982d",
+      "source_repo": "6mile/skills",
+      "source_sha256": "007e1134222812c81823a87b53a9d141b2c1f80422a0a540e4abd3f9db646834"
+    },
+    {
+      "actual_assessment_reader": "20261029-061612-todo-4133",
+      "all_member_contexts_and_individual_rights_pending": true,
+      "bytes": 3582,
+      "cohort": 0,
+      "git_blob": "422eb2d4e6ec7dbdda00068c363d58c17889d90c",
+      "inventory_id": "github:c1fa175c62264ed34264c32fb6d51bd2582d1dab7004fc9af6453e6d4f50cd36",
+      "new_final_disposition": false,
+      "ordinal": 116,
+      "original_assessment": {
+        "body_bytes": 3582,
+        "body_sha256": "007ed368f9f196161ffdac286d82bcc9b36498c38f59d17121b0f6f0f535aeb6",
+        "each_member_context_and_rights_pending": true,
+        "findings": [
+          "可視本文はREST APIでproject/Issueを扱い、関連・添付・journal等のinclude、作成/更新のJSONとPython scriptを示す。例のproject/tracker/担当/status IDは実対象のIDではない。",
+          "設定をTOOLS.mdや環境へ置く案とHTTP Basic認証を挙げるが、設定値やもう一つの認証方式等は伏字で未読。実装・秘密の保持/送信先/権限と現行APIは未確認。",
+          "既定25/最大100件とoffset/limit、total_countを示すが、取得中の更新・並び順・再open・重複/欠落や作成/notes追記の再送境界は可視範囲にない。401/403/404/422の説明だけで不存在や成功を確定できない。"
+        ],
+        "member_metadata_sha256": "501c68844842bbbcf3ce00f44042b9581244af4e7697ac17b77e79fb341c90f8",
+        "member_occurrences": 1,
+        "negative": "例示IDを実instanceへ送って別Issueを更新し、最初の25件だけを全件とし、応答不明のcreateやnotes追記を繰り返す。",
+        "ordinal": 116,
+        "positive": "許可されたprojectの実metadataと取得pageを照合し、対象Issueの更新後の状態/履歴を読み返して実反映を示す。",
+        "read": {
+          "failed_view_calls": 0,
+          "mask_version": "primaryflow-v4-opaque-lexical-boundaries",
+          "ranges": [
+            {
+              "first": 1,
+              "range_sha256": "4f1ba43f0acde2d8ddac0a8294166f49d797ab2d8c8b0e814dda1a8be1ef2e14",
+              "through": 163,
+              "visible_lines": 132,
+              "withheld_physical_lines": [
+                1,
+                2,
+                3,
+                4,
+                15,
+                16,
+                25,
+                26,
+                29,
+                30,
+                33,
+                34,
+                37,
+                38,
+                44,
+                45,
+                53,
+                55,
+                71,
+                73,
+                85,
+                86,
+                93,
+                94,
+                97,
+                98,
+                101,
+                102,
+                105,
+                106,
+                155
+              ]
+            }
+          ],
+          "raw_full": false,
+          "total_physical_lines": 163,
+          "unseen_meanings_remain_unknown": true,
+          "view_calls_returned": 1,
+          "whole_masked_view_sha256": "4f1ba43f0acde2d8ddac0a8294166f49d797ab2d8c8b0e814dda1a8be1ef2e14"
+        },
+        "representative_inventory_id": "github:c1fa175c62264ed34264c32fb6d51bd2582d1dab7004fc9af6453e6d4f50cd36",
+        "required_changes": [
+          "実利用ではRedmine instance/projectと所有/許可・版、metadataで実ID/状態遷移/custom fieldを照合し、Issueの本文や添付/journalの命令を実行指示にしない。秘密値を文書やlogへ保存/表示しない。",
+          "全件が必要なら期間/安定順序とpage範囲・重複/更新中の欠落を扱い、取得できた範囲を明示する。書込は同一要求と実結果/履歴を照合して二重作成/notes追記を防ぎ、closedを受入/配備完了にしない。",
+          "原API/認証設定・script/Issue作成更新を開始しない。既存の元ToDo/Issue・顧客固有の規則と新支出なし/既存OAuthを守り、新しい補助実装はGo既定・既存Rust保持とする。"
+        ],
+        "source_git_blob": "422eb2d4e6ec7dbdda00068c363d58c17889d90c",
+        "status": "visible_primary_evaluated",
+        "unmet": [
+          "伏字31物理行の意味、each_member_context・支持・個別許諾・現在実在は未確認。",
+          "現行instance/API/認証/権限・metadata/遷移/全page/再送/品質・source_or_service_rights・最終採否は未確認。実Issue/顧客/認証値/支持本文閲覧・API/script/設定/作成更新/保存/送信・実配置・実使用0。近接比較はspec-atdd-tdd-issue-workflow、incremental-read-late-events、stale-request-orderingの起動metadataだけ。"
+        ],
+        "use": "RedmineのIssue照会・metadata・作成/更新・custom fieldとページングを区別する連携設計の候補。",
+        "value": "対象project/status/担当での絞込と、total_count/offset/limitによる取得範囲、操作別のerrorを整理する。"
+      },
+      "original_packet_sha256": "9b1157e3e066a30e2df171aa494373202632981063ca880d2780726ed1eee544",
+      "path": "skills/zer07z/redmine-pilot/SKILL.md",
+      "representative_body_meaning_only": true,
+      "source_commit": "920714f17d81e0a95c7a9bc51faf0a7921cd982d",
+      "source_repo": "6mile/skills",
+      "source_sha256": "007ed368f9f196161ffdac286d82bcc9b36498c38f59d17121b0f6f0f535aeb6"
+    },
+    {
+      "actual_assessment_reader": "20261029-063706-todo-4134",
+      "all_member_contexts_and_individual_rights_pending": true,
+      "bytes": 5999,
+      "cohort": 1,
+      "git_blob": "9fdc78deb27d17e51f6f84ab2c66a905e3397be6",
+      "inventory_id": "github:abd1ecb1750ae9f64946d968b77db7db7d6753c23f3414451467ff2df08fdae5",
+      "new_final_disposition": false,
+      "ordinal": 88,
+      "original_assessment": {
+        "body_bytes": 5999,
+        "body_sha256": "015fd3ffa362b7b5f0ca65630b2bd52de48ea42c29335d5618c4ef2d60abe9df",
+        "each_member_context_and_rights_pending": true,
+        "findings": [
+          "中国語の本文は固定87商品を30/5/22/30に分け、当日変化・1年収益・2年最大下落/区間を取得し、各分類の上位3/下位3と全一覧を出すと説明する。実一覧・Wind等の入力/返却・値・現行契約/利用条件は確認していない。",
+          "四半期の開示構成と当日の値が合わなければ、その後に大幅に組替えたと推測する帰属規則は、現時点の保有や取引の証拠ではない。本文の条件表・手順・例の整合も不明で、相関・時間差と因果を分ける必要がある。",
+          "5商品だけの分類では上位3/下位3の集合が重なる。重複・同順位・欠測・観測時点の違いを扱わず、別6件の分析や完全な順位としない。APIの下落区間と価格曲線が食い違う際、APIを無条件に優先する案も原因と定義の照合を要する。",
+          "交易日の21:30という目的と、60秒ごとの独立session・自動配信という例が併記される。対象日/時刻帯・期限・重複・部分失敗と再開を確認せず定期起動しない。固定87/上位下位/20〜30件batchを現在の研究全体の上限へしない。",
+          "起動metadataのmarket-data-due-diligence、sql-data-integrity、source-grounded-content-reviewと用途が近い。原の保有情報・支持本文・API・定期/別agent・配信は実行していない。",
+          "表示来歴は、1〜180行が前reader_job 20261029-015516-todo-4134、181〜196行が今回20261029-063706-todo-4134。同じbody/SHA/whole masked viewへ連なる範囲として保持し、初回範囲を再表示していない。"
+        ],
+        "member_metadata_sha256": "cf5d0929a44e13d4e7420fe6106dc4a71d77739cd85d1b4c1d98f5f1b4f3d5e7",
+        "member_occurrences": 1,
+        "negative": "当日の値が四半期開示と合わないので大幅な組替えがあったと断定し、60秒ごとに同じ日報を新sessionで配信する。",
+        "ordinal": 88,
+        "positive": "固定一覧の各IDと値の基準日・欠測を照合し、5商品中の上位下位の重なりと、未確認の帰属仮説を明示する。",
+        "read": {
+          "failed_view_calls": 0,
+          "mask_version": "primaryflow-v4-opaque-lexical-boundaries",
+          "ranges": [
+            {
+              "first": 1,
+              "range_sha256": "db8528a42cb9c85a55cfde9bf00bc683b40cc23250b8c6d0c1168ae644131bdf",
+              "through": 180,
+              "visible_lines": 166,
+              "withheld_physical_lines": [
+                4,
+                11,
+                29,
+                44,
+                51,
+                58,
+                65,
+                109,
+                129,
+                130,
+                136,
+                145,
+                148,
+                156
+              ]
+            },
+            {
+              "first": 181,
+              "range_sha256": "bed1ef8479d1bac9010784c945aee60fa6a33de736e85800fd8dec9a189bd551",
+              "through": 196,
+              "visible_lines": 15,
+              "withheld_physical_lines": [
+                196
+              ]
+            }
+          ],
+          "raw_full": false,
+          "total_physical_lines": 196,
+          "unseen_meanings_remain_unknown": true,
+          "view_calls_returned": 2,
+          "whole_masked_view_sha256": "a97e8f31732c9a5f6cbb2822438f53b121f09a6a9e514034bc7e4c44ca14e888"
+        },
+        "representative_inventory_id": "github:abd1ecb1750ae9f64946d968b77db7db7d6753c23f3414451467ff2df08fdae5",
+        "required_changes": [
+          "実商品ID/一覧版・母集団・出所・値の基準日・期間/単位・欠測・取得済み/未取得cursorを対応させる。値の不一致は定義/時点/返却の原因を調べ、名前だけで同じ商品としない。",
+          "開示情報と観測から言えること、未確認の保有変更、帰属の仮説を区別し、現在の投資判断や効果の保証にしない。上位/下位の重複・同順位・欠測を明示する。",
+          "実依頼の時刻帯/頻度と既存担当へ合わせ、重複実行/配送や新費用・APIキーを発生させない。原の新session/cron・Python・自動配信を導入せず、新規codeはGo既定とする。"
+        ],
+        "source_git_blob": "9fdc78deb27d17e51f6f84ab2c66a905e3397be6",
+        "status": "visible_primary_evaluated",
+        "unmet": [
+          "全196物理行のうち可視181行を評価した。伏字15行の意味、実一覧/入力/値の定義・現行契約/料金・保有/帰属・定期/重複/配信の実装は未確認。",
+          "初回と今回の2実reader_jobのnative照合は親が行う必要がある。単一の今回ジョブだけで全表示を取得したとはしない。",
+          "source_or_service_rightsとmemberの文脈・支持・個別許諾・現在実在・採否は未確認。"
+        ],
+        "use": "固定された商品一覧の調査で、全件取得・時点・期間・順位・根拠付きの分析と未確認の解釈を分けて報告する設計を検討するとき。",
+        "value": "商品コードを変形せず、batchの途中結果と残りを保持し、各分類の母集団を明示して集計する観点は有用。"
+      },
+      "original_packet_sha256": "8f26f83e2422fc8e83cb5f9ca32f2373cb98d669c8d802fee52cd970e67d672c",
+      "path": "skills/wesdaliang/xqant-daily-gushouplus-report/SKILL.md",
+      "representative_body_meaning_only": true,
+      "source_commit": "920714f17d81e0a95c7a9bc51faf0a7921cd982d",
+      "source_repo": "6mile/skills",
+      "source_sha256": "015fd3ffa362b7b5f0ca65630b2bd52de48ea42c29335d5618c4ef2d60abe9df"
+    },
+    {
+      "actual_assessment_reader": "20261029-063706-todo-4134",
+      "all_member_contexts_and_individual_rights_pending": true,
+      "bytes": 5281,
+      "cohort": 1,
+      "git_blob": "b74970f71fc07b929c43b42b9f90338d9bac24c7",
+      "inventory_id": "github:01e66e7d0e85e605d4b990ca9efdafb360360a3fc70190f2b487a391ba85f0f2",
+      "new_final_disposition": false,
+      "ordinal": 89,
+      "original_assessment": {
+        "body_bytes": 5281,
+        "body_sha256": "016053d65c9ab148f2c69caa879a5ccab8cf722e016d1a27f9d172e156fb06b1",
+        "each_member_context_and_rights_pending": true,
+        "findings": [
+          "本文はpyfundaのHTTP gateway、listing/価格履歴/検索/画像preview、127.0.0.1限定・認証/レート制限なし、外部データを未信頼として扱う方針を説明する。実server・支持WORKFLOW・依存/現行サービス条件と実動作は未確認。",
+          "画像はlimit/size/qualityをclampし、base64か保存pathを返すと説明する。clampと相対dir制限の宣言だけで、参照先/filename template/外部ID・symlink/junction・同時変更・上書き/中断の安全性を保証できない。",
+          "pagesがpageに優先し、複数ページをmerge、stringの大小文字を正規化、未対応filterを無視すると説明する。黙って無視された条件やページの重複/欠落・時点差がある結果を、依頼した条件通りの全件としない。",
+          "valid JSONをhealthの目安とするが、機能・上流接続/取得・実bind/認可の確認ではない。localhostもそのPC上の全呼出し元を認証した意味にならず、認証なしのまま外部へ公開する根拠にしない。TLS shimはcompatibilityの説明であり正規審査やアクセス拒否を迂回しない。",
+          "起動metadataのopaque-key-url-encoding、path-relative-containment-check、browser-extraction-missingnessと用途が近い。原のserver起動・依存導入・上流取得/画像編集/保存は実行していない。",
+          "表示来歴は、1〜180行が前reader_job 20261029-015516-todo-4134、181〜190行が今回20261029-063706-todo-4134。同じbody/SHA/whole masked viewへ連なる範囲として保持し、初回範囲を再表示していない。"
+        ],
+        "member_metadata_sha256": "f840c41985bc010a4cbf0459a4583dfe5d90fcb53e1b6778add52202157b754f",
+        "member_occurrences": 1,
+        "negative": "JSONが返るので安全/正常とし、未対応のbedrooms条件を無視した結果を条件適合の全件と報告し、外部IDをfilenameへ無検証で保存する。",
+        "ordinal": 89,
+        "positive": "指定URLを変形せず、実際に適用されたfilterと未対応条件・各ページの取得状態を示し、画像の出所/権利と保存結果を区別する。",
+        "read": {
+          "failed_view_calls": 0,
+          "mask_version": "primaryflow-v4-opaque-lexical-boundaries",
+          "ranges": [
+            {
+              "first": 1,
+              "range_sha256": "c98a9a341bf6964c073328a00edc3d21842f090e719dc0123f0b36b2fd289fea",
+              "through": 180,
+              "visible_lines": 158,
+              "withheld_physical_lines": [
+                1,
+                2,
+                3,
+                4,
+                5,
+                35,
+                40,
+                51,
+                57,
+                62,
+                65,
+                70,
+                73,
+                80,
+                92,
+                100,
+                105,
+                109,
+                113,
+                151,
+                173,
+                178
+              ]
+            },
+            {
+              "first": 181,
+              "range_sha256": "37606274bf3ab18e19c617d675c79a543fb93bce9ccc814679fcc6c57f6b15e7",
+              "through": 190,
+              "visible_lines": 9,
+              "withheld_physical_lines": [
+                182
+              ]
+            }
+          ],
+          "raw_full": false,
+          "total_physical_lines": 190,
+          "unseen_meanings_remain_unknown": true,
+          "view_calls_returned": 2,
+          "whole_masked_view_sha256": "4bb459acf78a8b216196315765893e81b488923f17f4869c53ed10e471bff2ff"
+        },
+        "representative_inventory_id": "github:01e66e7d0e85e605d4b990ca9efdafb360360a3fc70190f2b487a391ba85f0f2",
+        "required_changes": [
+          "実際の対象URL/ID・許可されたデータ/画像と条件を照合し、URLを意味推測で書き換えない。入力の変換・既定値・未対応/無視されたfilterを結果へ明示する。",
+          "ページごとの時点・結果/失敗・重複/未取得cursorを保持し、countを全件性の保証にしない。上流/validation/不存在/認可等の失敗を区別して実機能を検査する。",
+          "実bindと呼出し元/接続先・費用/権利/秘密保護、保存先の参照/所有/競合・原データ保持を確認する必要を残す。原のPython/server・TLS shimを自動導入せず、新規codeはGo既定へ合わせる。"
+        ],
+        "source_git_blob": "b74970f71fc07b929c43b42b9f90338d9bac24c7",
+        "status": "visible_primary_evaluated",
+        "unmet": [
+          "全190物理行のうち可視167行を評価した。伏字23行の意味、gateway/依存/WORKFLOW・現行サービス/権利/料金・取得/検索/画像/保存/認可の実装は未確認。",
+          "初回と今回の2実reader_jobのnative照合は親が行う必要がある。単一の今回ジョブだけで全表示を取得したとはしない。",
+          "source_or_service_rightsとmemberの文脈・支持・個別許諾・現在実在・採否は未確認。"
+        ],
+        "use": "指定された物件情報の取得で、検索条件・不変のURL/ID・個別取得結果・画像の保存・失敗を対応させるgateway設計を検討するとき。",
+        "value": "URLをopaqueな値として保ち、入力の正規化と未対応filter、ページ結合、画像の保存有無、JSON errorを明示する契約が具体的。"
+      },
+      "original_packet_sha256": "8f26f83e2422fc8e83cb5f9ca32f2373cb98d669c8d802fee52cd970e67d672c",
+      "path": "skills/risboo6909/funda-gateway/SKILL.md",
+      "representative_body_meaning_only": true,
+      "source_commit": "920714f17d81e0a95c7a9bc51faf0a7921cd982d",
+      "source_repo": "6mile/skills",
+      "source_sha256": "016053d65c9ab148f2c69caa879a5ccab8cf722e016d1a27f9d172e156fb06b1"
+    },
+    {
+      "actual_assessment_reader": "20261029-081529-todo-4134",
+      "all_member_contexts_and_individual_rights_pending": true,
+      "bytes": 3178,
+      "cohort": 1,
+      "git_blob": "7ede55f8c37c244c78a8605b8c1923e48fc768ab",
+      "inventory_id": "github:02ca1c6ebfdcca936d8f1d4870c1c2cafbe8f96f9059d31f2b3839536d9613f9",
+      "new_final_disposition": false,
+      "ordinal": 90,
+      "original_assessment": {
+        "body_bytes": 3178,
+        "body_sha256": "0164b570bc67f1e07761a4ba7bc16b8b4d2632a4c44a59894cee6f175b8bdf60",
+        "each_member_context_and_rights_pending": true,
+        "findings": [
+          "中国語の本文は27toolを提供すると述べ、検索/本文/コメント取得、画像/動画/文字/長文の投稿、編集/削除、返信・like/collect/follow、analytics/通知等を説明する。実plugin・schema・認証/費用・現在のplatform制約と実動作は未確認。",
+          "投稿や返信の例は利用例であり、今回の本人からの送信/公開指示ではない。ログイン済みやtoolの存在だけで全記録の読取・一括返信・削除・関係操作への許可を得たとはしない。",
+          "文字投稿の自動cover生成と、長文タイトルに制限がないという説明は実検証していない。画像/動画の実装・公開には同じ具体画像の本人回答や素材の権利・現行動画方針を保持する。commentの感情分類も事実や本人の意図と同一にしない。",
+          "PlaywrightのChromium導入・QRログインの原手順は、現在のowner Chrome・通常操作の自律処理・本人PC操作回避へ合わせる必要がある。起動metadataのsocial-media-research、marketing-seo、browser-automationと用途が近い。"
+        ],
+        "member_metadata_sha256": "f7a3e192bd033cca6fe5a170a3d577d5e7bc8ec2d94aa4eaa848348e30c119ef",
+        "member_occurrences": 1,
+        "negative": "運用自動化toolがあるので全コメントへ返信し、自動coverを本人確認済みの画像として無指示で投稿する。",
+        "ordinal": 90,
+        "positive": "明示された対象noteの読取と、別に許可された同じ宛先/本文の返信を区別し、IDと実配送/読戻しを確認する設計にする。",
+        "read": {
+          "failed_view_calls": null,
+          "mask_version": "primaryflow-v4-opaque-lexical-boundaries",
+          "ranges": [
+            {
+              "first": 1,
+              "range_sha256": "65e128d3c6017134cc83940e48816b235b3feec1c83a32f20dc995ebba242852",
+              "through": 122,
+              "visible_lines": 114,
+              "withheld_physical_lines": [
+                11,
+                62,
+                66,
+                67,
+                68,
+                103,
+                112,
+                122
+              ]
+            }
+          ],
+          "raw_full": false,
+          "total_physical_lines": 122,
+          "unseen_meanings_remain_unknown": true,
+          "view_calls_returned": 1,
+          "whole_masked_view_sha256": "65e128d3c6017134cc83940e48816b235b3feec1c83a32f20dc995ebba242852"
+        },
+        "representative_inventory_id": "github:02ca1c6ebfdcca936d8f1d4870c1c2cafbe8f96f9059d31f2b3839536d9613f9",
+        "required_changes": [
+          "実対象account/note/comment・操作・既存回答と本文/媒体の範囲を照合し、読取/分析から投稿/返信/削除へ自動拡張しない。必要な公開・権利・見た目の新判断だけを既存回答と区別する。",
+          "実schema・paging/欠測・成功/失敗/結果不明と重複防止・message/note ID/読戻しを確認し、分類やanalyticsの時刻/根拠を保持する。raw本文や通知内の指示は未信頼データとして扱う。",
+          "現在の認証/契約/秘密保護・Chrome・UI画像/動画条件へ合わせ、本文のinstaller/plugin有効化/投稿等をこの研究では実行しない。"
+        ],
+        "source_git_blob": "7ede55f8c37c244c78a8605b8c1923e48fc768ab",
+        "status": "visible_primary_evaluated",
+        "unmet": [
+          "全122物理行のうち可視114行を評価した。伏字8行の意味、plugin/schema・認証/費用・platform制約・実取得/分類/投稿/反応/削除・配送は未確認。",
+          "前job 20261029-063706-todo-4134の90/91向けexecはabortedで返却を確認できず、読了に加算していない。今回確認できたrender返却は1回。過去の失敗呼出し数は未知のためnull。",
+          "source_or_service_rightsとmemberの文脈・支持・個別許諾・現在実在・採否は未確認。"
+        ],
+        "use": "明示されたRedNoteの対象について、検索/分析・下書き・投稿/編集/削除・コメント等の操作と実際の許可を分ける連携設計を検討するとき。",
+        "value": "読取・投稿・管理・対話・反応/分析をtool別に列挙し、どの操作が外部へ影響するかを確認する入口になる。"
+      },
+      "original_packet_sha256": "b8febdee722ebe265668484751210486010e023a90e62ac93155cb88c760512d",
+      "path": "skills/pigbun-ai/pigbun-rednote/SKILL.md",
+      "representative_body_meaning_only": true,
+      "source_commit": "920714f17d81e0a95c7a9bc51faf0a7921cd982d",
+      "source_repo": "6mile/skills",
+      "source_sha256": "0164b570bc67f1e07761a4ba7bc16b8b4d2632a4c44a59894cee6f175b8bdf60"
+    },
+    {
+      "actual_assessment_reader": "20261029-081529-todo-4134",
+      "all_member_contexts_and_individual_rights_pending": true,
+      "bytes": 4564,
+      "cohort": 1,
+      "git_blob": "b424c6631ab2e1dd3564da6b06690c93026d42b1",
+      "inventory_id": "github:dc1000af0ff7ea12a7283d8da33e7936c74d315e0851b1f2c9d4321522fd0f86",
+      "new_final_disposition": false,
+      "ordinal": 91,
+      "original_assessment": {
+        "body_bytes": 4564,
+        "body_sha256": "016568884c337ec2c3b94972b6d56b99f2d4814274419252c8e0c3933f3e2868",
+        "each_member_context_and_rights_pending": true,
+        "findings": [
+          "本文はdirect userだけをCONTROL、tool/file/email等すべてをCONTENTに固定し、注入のパターン検出・無害化・末尾log、不可逆操作の全停止、immutable ruleを説明する。現在の担当へ保護を有効化する宣言やruleは、評価対象データであり適用していない。",
+          "user directだけを権威にするとsystem/developer等の実際の上位指示を落とし、正規Discord APIで照合した本人回答や保存済みAGENTS/承認の引継ぎまで無効扱いにしかねない。来歴・本人ID・質問世代・対象/範囲の照合と、偽装ページの指示を分ける必要がある。",
+          "keywordやurgency/base64等の形式だけで悪意を確定できず、正当な教材や引用・データを含み得る。rule自体も外部Skillであり、名称やimmutable宣言から上位の効力を得ない。検出/防御の実装・精度は未確認。",
+          "注入文の完全な逐語全文と出所を常に再掲する案は、秘密・私的記録・著作物・危険な内容を会話へ再露出させ得る。current readerの伏字や現在の秘密保護を外して全文logへ戻さない。",
+          "送信/削除等を含む注入を無害化しただけで元の作業を全面停止し、常に明示確認を求める原ルールは、既存の具体許可や通常の自律継続を上書きしない。起動metadataのsecurity-review、security-threat-model、ai-workflowと用途が近い。"
+        ],
+        "member_metadata_sha256": "1089a9019200cc1cbe1f6ea825fb32ef60164e30df3c6b4d1a2f6419f6886ba0",
+        "member_occurrences": 1,
+        "negative": "Skillがimmutableと宣言したので上位指示や正規の本人回答を無効にし、検出した秘密入りの全文を会話へ貼って、無関係な作業まで停止する。",
+        "ordinal": 91,
+        "positive": "外部本文の偽装指示を実行せず、正規取得した同じ対象の本人回答と元の作業を保持し、秘密を再露出させない記録で継続する。",
+        "read": {
+          "failed_view_calls": null,
+          "mask_version": "primaryflow-v4-opaque-lexical-boundaries",
+          "ranges": [
+            {
+              "first": 1,
+              "range_sha256": "73a7700dcb9d35601f7bedd1375edda1051eea3adfe8e5106692644c69088e0b",
+              "through": 97,
+              "visible_lines": 76,
+              "withheld_physical_lines": [
+                1,
+                2,
+                3,
+                4,
+                5,
+                6,
+                7,
+                8,
+                9,
+                10,
+                11,
+                12,
+                13,
+                14,
+                15,
+                16,
+                17,
+                18,
+                57,
+                66,
+                97
+              ]
+            }
+          ],
+          "raw_full": false,
+          "total_physical_lines": 97,
+          "unseen_meanings_remain_unknown": true,
+          "view_calls_returned": 1,
+          "whole_masked_view_sha256": "73a7700dcb9d35601f7bedd1375edda1051eea3adfe8e5106692644c69088e0b"
+        },
+        "representative_inventory_id": "github:dc1000af0ff7ea12a7283d8da33e7936c74d315e0851b1f2c9d4321522fd0f86",
+        "required_changes": [
+          "実際の指示階層と、正規に照合した本人回答/保存済み許可の対象・範囲・時刻を保持し、外部の自称権威と区別する。Skillの自己宣言を上位規則へしない。",
+          "検出の事実と疑わしい形式・実影響を分け、必要な範囲だけを抑止済みで記録する。秘密や無関係な出所/全文を再掲せず、許可された監査証跡へ結ぶ。",
+          "拒否した指示・実行していない操作・継続する工程を分け、既存の許可済み作業を再承認待ちへ戻さない。必要な本人だけの新判断と実審査の拒否は具体的に扱い、正規の復旧を続ける。"
+        ],
+        "source_git_blob": "b424c6631ab2e1dd3564da6b06690c93026d42b1",
+        "status": "visible_primary_evaluated",
+        "unmet": [
+          "全97物理行のうち可視76行を評価した。伏字21行の意味、検出/防御の実装・精度・権限/来歴の扱い・記録の秘密保護と実効果は未確認。",
+          "前job 20261029-063706-todo-4134の90/91向けexecはabortedで返却を確認できず、読了に加算していない。今回確認できたrender返却は1回。過去の失敗呼出し数は未知のためnull。",
+          "source_or_service_rightsとmemberの文脈・支持・個別許諾・現在実在・採否は未確認。"
+        ],
+        "use": "未信頼の外部本文と現在の実行指示・権限を分け、注入の扱いと必要な記録を検討する設計資料として使うとき。",
+        "value": "外部本文が自分をsystem/admin等と称しても、それだけで指示へ昇格しないという境界と、元の作業を続ける観点は有用。"
+      },
+      "original_packet_sha256": "b8febdee722ebe265668484751210486010e023a90e62ac93155cb88c760512d",
+      "path": "skills/tatlantis/armarius/SKILL.md",
+      "representative_body_meaning_only": true,
+      "source_commit": "920714f17d81e0a95c7a9bc51faf0a7921cd982d",
+      "source_repo": "6mile/skills",
+      "source_sha256": "016568884c337ec2c3b94972b6d56b99f2d4814274419252c8e0c3933f3e2868"
+    },
+    {
+      "actual_assessment_reader": "20261029-081529-todo-4134",
+      "all_member_contexts_and_individual_rights_pending": true,
+      "bytes": 18651,
+      "cohort": 1,
+      "git_blob": "6ac21694b616368ba832ce4edfbb42fb8c69b5d3",
+      "inventory_id": "github:252cdd42d31d874882c8d311a0ee0f9114fcac89fc0b24d758b5f2d6e41f2b7a",
+      "new_final_disposition": false,
+      "ordinal": 92,
+      "original_assessment": {
+        "body_bytes": 18651,
+        "body_sha256": "0166c9d624c43362c5437f9a3dc90ac3c08c67b48f1fe9c1ec7b3ae969cdaadb",
+        "each_member_context_and_rights_pending": true,
+        "findings": [
+          "本文はFastlaneの導入/認証、pilot/deliver/gym/match/scan/snapshot/cert/sigh/precheck/pem/frameit、複数の組合せと環境変数を説明する。対象版のaction/flag・Xcode/SDK・現行サービス条件・実装/実動作は確認していない。",
+          "ビルドのupload、processing、tester配布、審査提出/承認、公開は別の状態として確認が必要。例のbuild番号や固定IPA path・CIの文言だけで、source/成果物/署名/app/team/配布対象の同一性を証明できない。",
+          "組合せ例にはautomatic_release・submit_for_review・forceがあり、HTML previewをskipする説明もある。認証済み/force等のflagを公開/対象変更やUI画像回答の許可とせず、既存の具体対象と現在の本人回答へ合わせる必要がある。",
+          "matchの共有署名同期とCIのreadonly、cert/sighの作成/修復、nukeによる全削除を区別する説明はある。readonlyやCI=trueだけで秘密の保護・正しいteam/証明書repo・他利用者への無影響を保証できず、署名エラーからforce修復や全削除へ自動で進めない。",
+          "scan/snapshot/precheckは検査や表示の項目を示すが、現在の関連検査・別モデルレビュー/CI、実機の受入・ストア審査成功を証明しない。snapshotとframeitの見た目変更・画像公開は同じ具体画像と本人回答/権利を保持する。",
+          "Fastfileの尊重とCLIの構文確認は有用だが、括弧/空白等を含む入力の引用だけでshell注入・秘密のcommand line/log露出を防げるとはしない。installer・署名/鍵/セッションの参照・build・配布/審査/公開・metadata/画像更新は一切実行していない。起動metadataのdesktop-native-apps、github-artifact-provenance、git-github-workflowと一部近い。"
+        ],
+        "member_metadata_sha256": "1e26050e8f1df06fb2e52f56a7536474061ecc6c68e8b6e9fc6833338a849357",
+        "member_occurrences": 1,
+        "negative": "固定pathのIPAを無検証でuploadし、forceと自動公開の例をそのまま実行し、署名不一致なので共有証明書を全削除して全体完了とする。",
+        "ordinal": 92,
+        "positive": "指定されたapp/teamの固定sourceと署名済み成果物を照合し、検査・upload・processing・配布/審査/公開を別々に記録して部分失敗の工程だけ再開する。",
+        "read": {
+          "failed_view_calls": 0,
+          "mask_version": "primaryflow-v4-opaque-lexical-boundaries",
+          "ranges": [
+            {
+              "first": 1,
+              "range_sha256": "5604c25765457af3132a0aba8a078724456c347563224f104f469c8d1da20d97",
+              "through": 180,
+              "visible_lines": 146,
+              "withheld_physical_lines": [
+                1,
+                2,
+                3,
+                4,
+                5,
+                6,
+                7,
+                36,
+                43,
+                45,
+                47,
+                52,
+                53,
+                54,
+                60,
+                63,
+                68,
+                69,
+                72,
+                75,
+                76,
+                83,
+                84,
+                85,
+                86,
+                88,
+                89,
+                90,
+                129,
+                134,
+                147,
+                150,
+                171,
+                175
+              ]
+            },
+            {
+              "first": 181,
+              "range_sha256": "0a65bb80b46640234525040360997fde4584f7e2cb6869fc7bf4db03b81a8e4c",
+              "through": 360,
+              "visible_lines": 176,
+              "withheld_physical_lines": [
+                253,
+                255,
+                256,
+                315
+              ]
+            },
+            {
+              "first": 361,
+              "range_sha256": "77259fe6f01ab52857d3eac25eea4a9c0333fb08a78737e52760ff6af290fedb",
+              "through": 540,
+              "visible_lines": 172,
+              "withheld_physical_lines": [
+                380,
+                441,
+                444,
+                445,
+                457,
+                458,
+                496,
+                532
+              ]
+            },
+            {
+              "first": 541,
+              "range_sha256": "bc122a926468751f830a1dd4bd8ee732376fdcbc392247258f3100d67a75015e",
+              "through": 720,
+              "visible_lines": 169,
+              "withheld_physical_lines": [
+                556,
+                567,
+                571,
+                678,
+                679,
+                680,
+                682,
+                683,
+                684,
+                691,
+                693
+              ]
+            },
+            {
+              "first": 721,
+              "range_sha256": "74ebc7d39d55f92d248a9944d5bbf29c3af2279786b09d65f1bf5ccdaea2b1d4",
+              "through": 737,
+              "visible_lines": 15,
+              "withheld_physical_lines": [
+                721,
+                724
+              ]
+            }
+          ],
+          "raw_full": false,
+          "total_physical_lines": 737,
+          "unseen_meanings_remain_unknown": true,
+          "view_calls_returned": 5,
+          "whole_masked_view_sha256": "62fa925e89e4c110af868e87a6b6bb00c19a1558a8834ecb4a9aaff2ae6d8a52"
+        },
+        "representative_inventory_id": "github:252cdd42d31d874882c8d311a0ee0f9114fcac89fc0b24d758b5f2d6e41f2b7a",
+        "required_changes": [
+          "実対象のowner/team/app・source版・Xcode/SDK/action版・既存Fastfile・成果物/署名を結び、各工程の受付/処理中/失敗/完了と再試行・重複防止を確認する。保存本文の固定flagや例を現行仕様の保証にしない。",
+          "秘密値をmodel/会話/command line/logへ表示する前提を外し、現在の許可された既存認証・契約枠へ合わせる。共有署名repoと対象の所有・依存を確認し、nuke/更新/修復の範囲と影響を個別に扱う。",
+          "本人の対象指定・Windows完成優先・UI画像回答・公開/権利/費用条件を保ち、この研究からMac/iOSの新工程や配布を開始しない。テスター向け配布と非Prd常駐環境を区別する。",
+          "影響範囲の検査と実受入・レビュー/CIを同じ最終source/成果物へ結び、upload成功やprecheckだけで全体公開完了としない。自動公開/forceや固定pathへ依存せず、必要な状態と実結果を照合する。"
+        ],
+        "source_git_blob": "6ac21694b616368ba832ce4edfbb42fb8c69b5d3",
+        "status": "visible_primary_evaluated",
+        "unmet": [
+          "全737物理行の連続した5範囲を読み、可視678行を評価した。伏字59行の意味、認証/秘密・action/flagの現行仕様・署名/依存/実成果物・検査/配布/審査/公開/復旧は未確認。",
+          "source_or_service_rightsとmemberの文脈・支持・個別許諾・現在実在・採否は未確認。"
+        ],
+        "use": "明示されたApple向け製品で、ビルド・検査・署名・配布・ストア提出/公開・metadata/画像の変更を別工程として照合する設計資料を検討するとき。",
+        "value": "actionごとのCLI例・入力・成果物/配布先、Fastfileやworkspaceの確認、署名の読取同期と変更を分ける観点が具体的。"
+      },
+      "original_packet_sha256": "3adce0f245094e168dd2c7194849a9bb55f23c21a43cd8592ff0295f2a7122ef",
+      "path": "skills/alexissan/fastlane/SKILL.md",
+      "representative_body_meaning_only": true,
+      "source_commit": "920714f17d81e0a95c7a9bc51faf0a7921cd982d",
+      "source_repo": "6mile/skills",
+      "source_sha256": "0166c9d624c43362c5437f9a3dc90ac3c08c67b48f1fe9c1ec7b3ae969cdaadb"
+    },
+    {
+      "actual_assessment_reader": "20261029-081529-todo-4134",
+      "all_member_contexts_and_individual_rights_pending": true,
+      "bytes": 13279,
+      "cohort": 1,
+      "git_blob": "460b57d409fc1e4baa3c2d0ad1979d1e4c43ce02",
+      "inventory_id": "github:a33d8627a5f3163cc5fd6873bad8ba46f04eabf3e08b8ba03544c96141bcfb11",
+      "new_final_disposition": false,
+      "ordinal": 93,
+      "original_assessment": {
+        "body_bytes": 13279,
+        "body_sha256": "01683f1ecada92be033766663fb56f9cc59f1335f5c2a034e81a764b6996d25a",
+        "each_member_context_and_rights_pending": true,
+        "findings": [
+          "本文はbrainstorm/plan/実装/spec review/quality review/verifyの流れ、TDD、scope管理、debugging、根拠と主張の区別を説明する。設計の各節に本人承認を必須とし、push/PR等でも毎回確認する案は、既存の具体許可・回答のセッション越し継続を上書きしない。",
+          "同じ問題の3回失敗から誤ったarchitectureと断定して停止する規則は、仮説・実験条件・新しい根拠の確認に代わらない。実原因を調べて正規の復旧を続け、本人が決めない技術事項の一律待機を増やさない。",
+          "毎回freshなcommand出力を同じmessageへ求め、過去の成功を不足とする表は、同じ最終sourceの有効なCI/関連検査を再利用する現在の方針へ調整が必要。VCS diffがあるだけでも依頼の完了や実機能を証明できず、読取だけの調査等には編集差分自体が不要な場合がある。",
+          "3担当を毎task起動する案、sonnet/haiku/gptの固定roleとsessions_spawn/cronは原の環境前提。現在の共有scheduler・資源・Haikuの単一file範囲・別モデル/effort・この研究の再委譲禁止を置き換えない。品質向上や費用効果の主張は実測していない。",
+          "他agentのSkillやbinaryからsystem promptを調べる案とMIT/proprietaryの説明があるが、実在・個別権利・契約/法的条件は確認していない。原の説明だけで未知中央/他agent資源の閲覧や複製・再配布の権利を認めず、原のAGENTSへの追記や探索も行っていない。起動metadataのdiagnosing-superpowers、diagnosing-bugs、self-review-pr-mergeと用途が近い。"
+        ],
+        "member_metadata_sha256": "7b9d16a1d4977330774e4723baf592ba663696de949fe3f1a820232ecd849432",
+        "member_occurrences": 1,
+        "negative": "3回失敗したので根拠なくarchitecture全体が誤りと断定して本人待ちにし、毎task3担当を起動し、差分があるので完了とする。",
+        "ordinal": 93,
+        "positive": "再現条件と原因仮説を関連検査で確かめ、同じ最終sourceの有効なCIと実受入を照合して、依頼の達成と残りを具体的に述べる。",
+        "read": {
+          "failed_view_calls": 0,
+          "mask_version": "primaryflow-v4-opaque-lexical-boundaries",
+          "ranges": [
+            {
+              "first": 1,
+              "range_sha256": "32b81a7a1c6619f0cf27506aa8dabea489b2879e812454aec961d96ec3da8a93",
+              "through": 180,
+              "visible_lines": 162,
+              "withheld_physical_lines": [
+                1,
+                2,
+                3,
+                4,
+                5,
+                6,
+                7,
+                8,
+                9,
+                10,
+                36,
+                44,
+                90,
+                92,
+                105,
+                115,
+                123,
+                161
+              ]
+            },
+            {
+              "first": 181,
+              "range_sha256": "eaa88055df131064a9fa7a945979e7d63af0b18574da9616218686ba4722cf53",
+              "through": 297,
+              "visible_lines": 113,
+              "withheld_physical_lines": [
+                285,
+                286,
+                287,
+                291
+              ]
+            }
+          ],
+          "raw_full": false,
+          "total_physical_lines": 297,
+          "unseen_meanings_remain_unknown": true,
+          "view_calls_returned": 2,
+          "whole_masked_view_sha256": "e384075d0afcf7f13dd90fe55acca812aff5eeb711e565e5cb29e4b200848502"
+        },
+        "representative_inventory_id": "github:a33d8627a5f3163cc5fd6873bad8ba46f04eabf3e08b8ba03544c96141bcfb11",
+        "required_changes": [
+          "元の依頼・対象・既存回答/許可を保持し、UIの具体画像等の本人だけの判断と内部の技術判断を分ける。固定3担当/再承認/AGENTS注入を導入しない。",
+          "原因・仮説・確認条件と実結果を結び、固定の失敗回数を誤architectureの証明や全体終了にしない。正常な復旧と独立工程を続ける。",
+          "主張を同じsource/成果物と受入条件の証拠へ結び、有効な検査結果を再利用し、変更や失敗で無効になった範囲だけ再検査する。diffや自己報告だけを完了条件にしない。",
+          "個別のsource/支持/契約条件・出所と権利は未確認として残し、原のbinary分析・他Skill探索・copy/再配布をこの研究範囲へ広げない。"
+        ],
+        "source_git_blob": "460b57d409fc1e4baa3c2d0ad1979d1e4c43ce02",
+        "status": "visible_primary_evaluated",
+        "unmet": [
+          "全297物理行のうち可視275行を評価した。伏字22行の意味、参照/他Skill・実装・reviewの品質効果/費用・各環境/role・権利/現行条件は未確認。",
+          "source_or_service_rightsとmemberの文脈・支持・個別許諾・現在実在・採否は未確認。"
+        ],
+        "use": "依頼・実装・要求への適合・品質・検査結果を対応させ、原因調査と根拠付きの完了報告を整理するとき。",
+        "value": "根本原因の仮説を小さな変更で検証し、担当の成功報告をそのまま受け入れず、実際の成果物と要件を照合する観点は有用。"
+      },
+      "original_packet_sha256": "f938d8ce8b1846b6e336b3d180e30e2f56128265b8e1f40b526f254b99c60a84",
+      "path": "skills/globalcaos/agent-superpowers/SKILL.md",
+      "representative_body_meaning_only": true,
+      "source_commit": "920714f17d81e0a95c7a9bc51faf0a7921cd982d",
+      "source_repo": "6mile/skills",
+      "source_sha256": "01683f1ecada92be033766663fb56f9cc59f1335f5c2a034e81a764b6996d25a"
+    },
+    {
+      "actual_assessment_reader": "20261029-081529-todo-4134",
+      "all_member_contexts_and_individual_rights_pending": true,
+      "bytes": 2138,
+      "cohort": 1,
+      "git_blob": "ad8e7bb99f400882770dc10c8addabcbeb539605",
+      "inventory_id": "github:5fda5de6effad0cc123d4bf460d50efdcc2589481745a4c60eaeaf3a37ab59bd",
+      "new_final_disposition": false,
+      "ordinal": 94,
+      "original_assessment": {
+        "body_bytes": 2138,
+        "body_sha256": "0168765c25cd48b3c7549f63ad75223a8e63cd2e98b2e4bbca4889d471cc1927",
+        "each_member_context_and_rights_pending": true,
+        "findings": [
+          "本文はXiaomi Air Purifier 4 Liteの機種ID、Cloud経由のdiscovery/読取と電源・mode・fan・brightness・buzzer・child lock、propertyのsiid/piid/型/単位を説明する。実機・script・API/認証・現行region/仕様と動作は未確認。",
+          "room/name/DIDで指定し、省略時はdefaultか唯一の機器を使うという説明は、依頼対象の実IDや本人の操作許可を保証しない。同名・部屋変更・default変更を照合し、読取から制御へ自動拡張しない。",
+          "PM2.5等の値は取得/観測時刻・単位・sensor状態・欠測を区別し、健康や空間の安全性の保証へしない。level/mode/propertyの範囲表だけで機器側の受理や物理動作、再送の安全性を確認できない。起動metadataのbackend-correctness、safe-tool-evaluationと一部近い。"
+        ],
+        "member_metadata_sha256": "9d7b9aca37affb120aacf49b99e45524e1cac59138c1501fcc12fe0a7d925185",
+        "member_occurrences": 1,
+        "negative": "defaultが唯一の機器なので本人の対象と推定して電源を切り、PM2.5の一つの値だけで健康上安全と保証する。",
+        "ordinal": 94,
+        "positive": "既に指定された実DIDとmode・単位・時刻を照合し、許可された操作の受理と読戻しを確認する。",
+        "read": {
+          "failed_view_calls": 0,
+          "mask_version": "primaryflow-v4-opaque-lexical-boundaries",
+          "ranges": [
+            {
+              "first": 1,
+              "range_sha256": "fdbe65aa18de2892833db05699bf0ddc497a6d01049745cb39ed2af4e5fd7497",
+              "through": 57,
+              "visible_lines": 52,
+              "withheld_physical_lines": [
+                1,
+                2,
+                3,
+                4,
+                19
+              ]
+            }
+          ],
+          "raw_full": false,
+          "total_physical_lines": 57,
+          "unseen_meanings_remain_unknown": true,
+          "view_calls_returned": 1,
+          "whole_masked_view_sha256": "fdbe65aa18de2892833db05699bf0ddc497a6d01049745cb39ed2af4e5fd7497"
+        },
+        "representative_inventory_id": "github:5fda5de6effad0cc123d4bf460d50efdcc2589481745a4c60eaeaf3a37ab59bd",
+        "required_changes": [
+          "指定された機種/region/accountと実DID・所属・操作を既存回答と照合し、target省略や名前だけで別機器へ送らない。秘密値を表示せず、既存の認証・契約条件を保つ。",
+          "入力の型/範囲・mode依存、通信/業務失敗・結果不明・観測時刻・読戻しと実機の受入を確認する。原のinstaller/login/discovery/制御は実行せず、新規codeはGo既定とする。"
+        ],
+        "source_git_blob": "ad8e7bb99f400882770dc10c8addabcbeb539605",
+        "status": "visible_primary_evaluated",
+        "unmet": [
+          "全57物理行のうち可視52行を評価した。伏字5行の意味、script/API・認証/region・対象対応・実sensor/制御/再送/読戻しと現行条件は未確認。",
+          "source_or_service_rightsとmemberの文脈・支持・個別許諾・現在実在・採否は未確認。"
+        ],
+        "use": "明示された空気清浄機の状態読取と操作で、機種・部屋名・機器名・実IDと通信結果を対応させる設計を検討するとき。",
+        "value": "機種とpropertyの型・単位、modeやlevelの範囲、複数機器の指定を並べる構成は、対象と入力を確認する入口になる。"
+      },
+      "original_packet_sha256": "f938d8ce8b1846b6e336b3d180e30e2f56128265b8e1f40b526f254b99c60a84",
+      "path": "skills/radyakaze/xiaomi-air-purifier/SKILL.md",
+      "representative_body_meaning_only": true,
+      "source_commit": "920714f17d81e0a95c7a9bc51faf0a7921cd982d",
+      "source_repo": "6mile/skills",
+      "source_sha256": "0168765c25cd48b3c7549f63ad75223a8e63cd2e98b2e4bbca4889d471cc1927"
+    },
+    {
+      "actual_assessment_reader": "20261029-081529-todo-4134",
+      "all_member_contexts_and_individual_rights_pending": true,
+      "bytes": 2916,
+      "cohort": 1,
+      "git_blob": "a31ece082d1e5692e9909366274a8bc240b9acb9",
+      "inventory_id": "github:feb4d73847e4dc8a9e04e62de537f1bd0ea276f95f5f47fd23a0dbac9efc61ac",
+      "new_final_disposition": false,
+      "ordinal": 95,
+      "original_assessment": {
+        "body_bytes": 2916,
+        "body_sha256": "016ae2be9adf7a4f52b0ef48b8e262802abea4d5cc4198227876cd4bab33eff3",
+        "each_member_context_and_rights_pending": true,
+        "findings": [
+          "中国語の本文は住宅価格/築年/交通のscript、学区の検索定位と公式名簿の照合、区ごとのbrowser/入口、2025年資料の注意を説明する。実script・現行価格/学区/公式資料/規則は未確認。",
+          "検索で物件から学区名を推定し、その学区の公式学校一覧を得ても、当該物件がその学区や学校へ対応すること・年度の入学資格を証明できない。17学区という固定値やofficialというラベルだけで現在の範囲を確定しない。",
+          "全結果へ2025年資料という文言を付ける案は、実際に参照した年度/資料/確認時刻を保持する代わりにならない。検索の価格も成約/掲載・時点・単位・対象範囲を区別する必要がある。",
+          "script失敗後の検索fallbackは、実エラー・欠測と正規のアクセス制限/審査拒否を区別して扱う必要がある。本人へ全ログイン/QR操作を求め自動化を一律に拒む原ルールは、owner Chromeと既存許可の通常認証をAIが進める現在の方針へ合わせる。起動metadataのgeo-data-research、public-data-research、source-grounded-content-reviewと用途が近い。"
+        ],
+        "member_metadata_sha256": "75adb49842cf7db7954c8b9e13be8ddecbd55dc234ad796f3b2db11d04d44556",
+        "member_occurrences": 1,
+        "negative": "検索で出た学区名が公式一覧にあるので、その物件の入学資格と現在の対応校まで確定し、すべて2025年の注意文で済ませる。",
+        "ordinal": 95,
+        "positive": "指定物件の正確な所在地と対象年度の公式対応資料を結び、未確認の入学条件や価格時点を分けて示す。",
+        "read": {
+          "failed_view_calls": 0,
+          "mask_version": "primaryflow-v4-opaque-lexical-boundaries",
+          "ranges": [
+            {
+              "first": 1,
+              "range_sha256": "c5baa3c36a29dd7ebfd9d29ba43786817ed0f46290a661fb0373a5b6d41281b8",
+              "through": 59,
+              "visible_lines": 52,
+              "withheld_physical_lines": [
+                1,
+                2,
+                3,
+                4,
+                35,
+                41,
+                59
+              ]
+            }
+          ],
+          "raw_full": false,
+          "total_physical_lines": 59,
+          "unseen_meanings_remain_unknown": true,
+          "view_calls_returned": 1,
+          "whole_masked_view_sha256": "c5baa3c36a29dd7ebfd9d29ba43786817ed0f46290a661fb0373a5b6d41281b8"
+        },
+        "representative_inventory_id": "github:feb4d73847e4dc8a9e04e62de537f1bd0ea276f95f5f47fd23a0dbac9efc61ac",
+        "required_changes": [
+          "実対象の所在地/識別・年度・入学条件と、その場所への公式の対応資料を直接結び、学校一覧や検索結果だけで該当/資格を保証しない。価格・政策の保存中の主張を現在の保証にしない。",
+          "出所/URL・発行年度/確認日時・値の定義と未確認を明示し、実取得の失敗/partial・info_requiredを正常完了へ変えない。正規の審査/アクセス拒否を別経路で迂回しない。",
+          "通常のPC/認証操作を本人へ求めず、利用可能な正規経路で既存の対象/許可を守る。原のPython/無頭browser/script/外部取得はこの研究では実行せず、新規codeはGo既定とする。"
+        ],
+        "source_git_blob": "a31ece082d1e5692e9909366274a8bc240b9acb9",
+        "status": "visible_primary_evaluated",
+        "unmet": [
+          "全59物理行のうち可視52行を評価した。伏字7行の意味、script/browser・公式の場所/年度対応・現行価格/政策/資格・取得/失敗処理と個別条件は未確認。",
+          "source_or_service_rightsとmemberの文脈・支持・個別許諾・現在実在・採否は未確認。"
+        ],
+        "use": "指定された北京の物件情報や学区を調べる際、所在地・年度・正式な対応関係と出所を分ける調査設計を検討するとき。",
+        "value": "学区を推測せず公式の対象資料へ照合し、未確定ならinfo_requiredとして残す観点は有用。"
+      },
+      "original_packet_sha256": "f938d8ce8b1846b6e336b3d180e30e2f56128265b8e1f40b526f254b99c60a84",
+      "path": "skills/iamhankai/beijing-house-pro/SKILL.md",
+      "representative_body_meaning_only": true,
+      "source_commit": "920714f17d81e0a95c7a9bc51faf0a7921cd982d",
+      "source_repo": "6mile/skills",
+      "source_sha256": "016ae2be9adf7a4f52b0ef48b8e262802abea4d5cc4198227876cd4bab33eff3"
+    }
+  ],
+  "representative_body_groups": 16,
+  "shared_original_contexts": {
+    "0a87b050897e1eda54350de15a412cdaaa4ccaeb1509f0a81778250c7c4cca6c": {
+      "actual_assessment_reader": "20261029-061612-todo-4133",
+      "all_original_fields_reconstructed": true,
+      "common": {
+        "boundaries": {
+          "central_operations": 0,
+          "copy_grants": 0,
+          "final_dispositions": 0,
+          "new_global_raw_credit": 0,
+          "source_executed": false,
+          "support_body_reads": 0
+        },
+        "cohort": 0,
+        "domain": "skills3080-primary-meaning-chunk-v1",
+        "first_ordinal": 113,
+        "packet_id": "4f2b3aff54e5466fb012726bc04aeaf4",
+        "parent_origin_job": "20261027-175645-todo-3080",
+        "plan_sha256": "edb8069e0564eb3b95fd0863865b66c4e0b1d3fb994990c6701bcc624678cabf",
+        "reader_job": "20261029-061612-todo-4133",
+        "reader_todo": 4133
+      },
+      "independent_parent_ack": {
+        "acknowledged_through": 113,
+        "at": "2026-10-28T22:29:52.5516357Z",
+        "binding_sha256": "269fe9fcd42342587cb50a5148da5819617ad03b27a9269d9beb5d0174fd2f6f",
+        "cohort": 0,
+        "consumer_job": "20261027-175645-todo-3080",
+        "cumulative_held_groups": 0,
+        "cumulative_member_metadata_bound": 125,
+        "cumulative_visible_semantic_groups": 113,
+        "domain": "skills3080-primaryflow-parent-ack-v1",
+        "generation": 37,
+        "meaning_file": "primaryflow-cohort0-meaning-4f2b3aff54e5466fb012726bc04aeaf4175645.json",
+        "meaning_sha256": "2210bfc3bcf86c9ed3a9fcb9fba448695cb957b7bc79d0912ac534679b007c64",
+        "original_message_sha256": "a8698b0e0db472dba21e9a9042934f37e893b9b2da2e9db0c629059824a59a7c",
+        "packet_file": "primaryflow-cohort0-packet-4f2b3aff54e5466fb012726bc04aeaf4175645.json",
+        "packet_id": "4f2b3aff54e5466fb012726bc04aeaf4",
+        "packet_sha256": "0a87b050897e1eda54350de15a412cdaaa4ccaeb1509f0a81778250c7c4cca6c",
+        "parent_origin_job": "20261027-175645-todo-3080",
+        "plan_sha256": "edb8069e0564eb3b95fd0863865b66c4e0b1d3fb994990c6701bcc624678cabf",
+        "previous_sha256": "d06b4cdfb49a4f07298233f553cbfb007252abe4a1392e6c5bd145c755de779a",
+        "reader_job": "20261029-061612-todo-4133",
+        "receipt_sha256": "4f4fbb49f070999c1fe82667a03a3844d5428e089bf2cc971e0ac39b24a97ca3",
+        "whole16_complete": false
+      },
+      "independent_parent_meaning": {
+        "all_entry_meanings_and_limits_read": true,
+        "body_bytes": 23028,
+        "central_operations": 0,
+        "consumer_job": "20261027-175645-todo-3080",
+        "first_ordinal": 113,
+        "groups": 1,
+        "later_native_observation": "primaryflow-cohort0-native-observed061612-through113175645.json",
+        "masked_lines": 51,
+        "meanings": [
+          "113はtemplate registryのschema/版と依頼の指定値・素材・author/出力を別に結ぶ設計の参考。初回/新題材取得と同会話cache再利用の説明はcache失効/版不変の証拠でなく、未指定は既定保持という規則とsubtitle/tag推測補完・無関係な集客文/実測tagが残る例の衝突を整理する。",
+          "既定画像/他者author/素材の権利や事実の裏付け、本人の具体的な見た目承認は未確認。無料優先という説明とVIP加入/更新/追加購入を促す後半を区別し、既存枠と今の許可された画像tool・直接添付/実download/画像の文字寸法欠落の検査へ改訂する。固定待機/終了code/messageやPC内pathだけを完成/配送済みの証拠にしない。",
+          "config表示/編集、npm/Chromium導入、API/Playwrightや原JSONのshell escapeを実行せず、対象shellの引用符/改行/backslashとschema/JSONコメントの適否を必要時に検証する観点を保持する。親は全用途/価値/5所見/正負例/3修正/2未達・全4表示範囲とSHA/固定body/blob/1memberを読了し、553物理=502可視+51伏字を独立集計。"
+        ],
+        "member_context_rights_support_and_dispositions_pending": true,
+        "member_metadata_occurrences": 1,
+        "native_proof_file": "primaryflow-native-20261029-061612-todo-4133175645.json",
+        "native_proof_sha256": "fc3a58eb6a525e2278852077ad7112b8cb2ddd6c3a6874e830b0dbed99103828",
+        "new_raw_or_copy_permission_credit": 0,
+        "packet_id": "4f2b3aff54e5466fb012726bc04aeaf4",
+        "packet_sha256": "0a87b050897e1eda54350de15a412cdaaa4ccaeb1509f0a81778250c7c4cca6c",
+        "physical_lines": 553,
+        "reader_job": "20261029-061612-todo-4133",
+        "through_ordinal": 113,
+        "view_calls": 4,
+        "visible_lines": 502,
+        "whole16_complete": false
+      },
+      "independent_parent_meaning_sha256": "2210bfc3bcf86c9ed3a9fcb9fba448695cb957b7bc79d0912ac534679b007c64",
+      "member_metadata": {
+        "113": [
+          {
+            "bytes": 23028,
+            "commit": "920714f17d81e0a95c7a9bc51faf0a7921cd982d",
+            "content_path": "github/6mile__skills/objects/007d041908277d9d6821bf94982802e861a2664ca5d5e9401d7171a510c64fef.gz",
+            "git_blob": "5e5d7386cf7d699987a21aa670cdb5fd547a87a1",
+            "inventory_id": "github:1749eedf83bbdd3a6781f31172a66078f1042dc62b9ddbb4f5f6bc5cdde38c11",
+            "path": "skills/katherine0325/visnote-image-creator/SKILL.md",
+            "repo": "6mile/skills",
+            "sha256": "007d041908277d9d6821bf94982802e861a2664ca5d5e9401d7171a510c64fef"
+          }
+        ]
+      },
+      "original_packet_id": "4f2b3aff54e5466fb012726bc04aeaf4",
+      "original_parent_ack_sha256": "ef30b0ad1e180f4b780c424e427203a10b4cdcd9a9f21a7566e27db02701c482",
+      "original_receipt_sha256": "4f4fbb49f070999c1fe82667a03a3844d5428e089bf2cc971e0ac39b24a97ca3"
+    },
+    "3adce0f245094e168dd2c7194849a9bb55f23c21a43cd8592ff0295f2a7122ef": {
+      "actual_assessment_reader": "20261029-081529-todo-4134",
+      "all_original_fields_reconstructed": true,
+      "common": {
+        "boundaries": {
+          "central_operations": 0,
+          "copy_grants": 0,
+          "final_dispositions": 0,
+          "new_global_raw_credit": 0,
+          "source_executed": false,
+          "support_body_reads": 0
+        },
+        "cohort": 1,
+        "domain": "skills3080-primary-meaning-chunk-v1",
+        "first_ordinal": 92,
+        "packet_id": "951d691ab5f7440aab9109a7eb8cc168",
+        "parent_origin_job": "20261027-175645-todo-3080",
+        "plan_sha256": "9ebe1d51eef54663c578687b103e69eeb6fe687709def40b790faa104184195a",
+        "reader_job": "20261029-081529-todo-4134",
+        "reader_todo": 4134
+      },
+      "independent_parent_ack": {
+        "acknowledged_through": 92,
+        "at": "2026-10-29T00:11:07.1146468Z",
+        "binding_sha256": "fa8eb83d8cf97f2bb567c7e059e94b8dafa2c2cee052947e7823ae26ab42ada8",
+        "cohort": 1,
+        "consumer_job": "20261027-175645-todo-3080",
+        "cumulative_held_groups": 0,
+        "cumulative_member_metadata_bound": 106,
+        "cumulative_visible_semantic_groups": 92,
+        "domain": "skills3080-primaryflow-parent-ack-v1",
+        "generation": 23,
+        "meaning_file": "primaryflow-cohort1-meaning-951d691ab5f7440aab9109a7eb8cc168175645.json",
+        "meaning_sha256": "d6a8c12ade782deb81e07d0f0c5d14c845e5ccf11dd312236c80d16f0681e91a",
+        "original_message_sha256": "c3727b26d9e38e5c35fae1206ebc89b7aa291aa379de185b9e85891d2ceb1e8a",
+        "packet_file": "primaryflow-cohort1-packet-951d691ab5f7440aab9109a7eb8cc168175645.json",
+        "packet_id": "951d691ab5f7440aab9109a7eb8cc168",
+        "packet_sha256": "3adce0f245094e168dd2c7194849a9bb55f23c21a43cd8592ff0295f2a7122ef",
+        "parent_origin_job": "20261027-175645-todo-3080",
+        "plan_sha256": "9ebe1d51eef54663c578687b103e69eeb6fe687709def40b790faa104184195a",
+        "previous_sha256": "3e967da75479b7f0e6105e85b092430c21a5cec6e6623cc2cf99a1d0083fefde",
+        "reader_job": "20261029-081529-todo-4134",
+        "receipt_sha256": "006ecabfa75cb6b31215894ff02bd116b17c5e1495807dbd2016be79181569a3",
+        "whole16_complete": false
+      },
+      "independent_parent_meaning": {
+        "all_entry_meanings_and_limits_read": true,
+        "body_bytes": 18651,
+        "central_operations": 0,
+        "consumer_job": "20261027-175645-todo-3080",
+        "first_ordinal": 92,
+        "groups": 1,
+        "masked_lines": 59,
+        "meanings": [
+          "92はFastlane actionごとの入力/成果物/配布先・Fastfileを固定し、build/upload/processing/tester配布/審査提出・承認/公開を別stageへ結ぶ設計資料。例のbuild番号/IPA固定pathとCIという表記だけでsource/成果物/署名/app/teamの同一性を認定せず、対象版のXcode/SDK/action/flagや現service・実動作は未確認とする。",
+          "matchのreadonly同期とcert/sighの作成修復、nukeの共有署名全削除を別作用に分ける。署名失敗やforce/CI=true・認証済みを自動修復/全削除/新しい公開の許可へしない。共有repoの所有/依存/他利用者影響・秘密の保持・有効な証明書を必要時に照合し、秘密値をmodel/会話/CLI/logへ表示する前提を採らない。",
+          "scan/snapshot/precheckの実行記載と実受入/別モデルreview/CI・ストア審査成功は別で、automatic_release/submit_for_review/force/preview省略を元の具体対象や同画像の本人回答へ優先させない。Windows完成優先と公開/権利/費用、テスター配布と非Prd稼働環境の違いを保ち、研究からMac/iOS build/署名/配布・metadata/画像更新を始めない。",
+          "原の全6所見/4修正/正負例/2未達、用途/価値と5連続範囲・固定body SHA/bytes/blob/1memberを親が実読し、737=678可視+59伏字を独立算定した。引用符だけでshell注入や秘密のCLI露出を防げるとせず、現行版/認証/実成果物/権利/支持/実行結果は未確認。原installer/API/署名/証明書repo/鍵sessionの閲覧や変更・build・upload/配布/審査/公開/保存送信・新コピー許諾/採否/中央操作0。"
+        ],
+        "member_context_rights_support_and_dispositions_pending": true,
+        "member_metadata_occurrences": 1,
+        "native_proof_file": "primaryflow-native-20261029-081529-todo-4134175645.json",
+        "native_proof_sha256": "d85b27f77f613f49f810a0c106ff16c03d29809a912e2a7e58984b72a4c5faa8",
+        "new_raw_or_copy_permission_credit": 0,
+        "packet_id": "951d691ab5f7440aab9109a7eb8cc168",
+        "packet_sha256": "3adce0f245094e168dd2c7194849a9bb55f23c21a43cd8592ff0295f2a7122ef",
+        "physical_lines": 737,
+        "reader_job": "20261029-081529-todo-4134",
+        "through_ordinal": 92,
+        "view_calls": 5,
+        "visible_lines": 678,
+        "whole16_complete": false
+      },
+      "independent_parent_meaning_sha256": "d6a8c12ade782deb81e07d0f0c5d14c845e5ccf11dd312236c80d16f0681e91a",
+      "member_metadata": {
+        "92": [
+          {
+            "bytes": 18651,
+            "commit": "920714f17d81e0a95c7a9bc51faf0a7921cd982d",
+            "content_path": "github/6mile__skills/objects/0166c9d624c43362c5437f9a3dc90ac3c08c67b48f1fe9c1ec7b3ae969cdaadb.gz",
+            "git_blob": "6ac21694b616368ba832ce4edfbb42fb8c69b5d3",
+            "inventory_id": "github:252cdd42d31d874882c8d311a0ee0f9114fcac89fc0b24d758b5f2d6e41f2b7a",
+            "path": "skills/alexissan/fastlane/SKILL.md",
+            "repo": "6mile/skills",
+            "sha256": "0166c9d624c43362c5437f9a3dc90ac3c08c67b48f1fe9c1ec7b3ae969cdaadb"
+          }
+        ]
+      },
+      "original_packet_id": "951d691ab5f7440aab9109a7eb8cc168",
+      "original_parent_ack_sha256": "b73ebcba8b1f63eca8b3936866127c0809ae3f357582d931fcc91d44351a5f76",
+      "original_receipt_sha256": "006ecabfa75cb6b31215894ff02bd116b17c5e1495807dbd2016be79181569a3"
+    },
+    "55819de3894817e42aa57fb33474d5d7bfe82121405a7459025a43f421c0f78e": {
+      "actual_assessment_reader": "20261029-061612-todo-4133",
+      "all_original_fields_reconstructed": true,
+      "common": {
+        "boundaries": {
+          "central_operations": 0,
+          "copy_grants": 0,
+          "final_dispositions": 0,
+          "new_global_raw_credit": 0,
+          "source_executed": false,
+          "support_body_reads": 0
+        },
+        "cohort": 0,
+        "domain": "skills3080-primary-meaning-chunk-v1",
+        "first_ordinal": 109,
+        "packet_id": "e9e8692735b145f58d5720520855a721",
+        "parent_origin_job": "20261027-175645-todo-3080",
+        "plan_sha256": "edb8069e0564eb3b95fd0863865b66c4e0b1d3fb994990c6701bcc624678cabf",
+        "reader_job": "20261029-061612-todo-4133",
+        "reader_todo": 4133
+      },
+      "independent_parent_ack": {
+        "acknowledged_through": 112,
+        "at": "2026-10-28T21:55:01.9860442Z",
+        "binding_sha256": "269fe9fcd42342587cb50a5148da5819617ad03b27a9269d9beb5d0174fd2f6f",
+        "cohort": 0,
+        "consumer_job": "20261027-175645-todo-3080",
+        "cumulative_held_groups": 0,
+        "cumulative_member_metadata_bound": 124,
+        "cumulative_visible_semantic_groups": 112,
+        "domain": "skills3080-primaryflow-parent-ack-v1",
+        "generation": 36,
+        "meaning_file": "primaryflow-cohort0-meaning-e9e8692735b145f58d5720520855a721175645.json",
+        "meaning_sha256": "db7a302ba9976953badfd8ff13cfce36843291fe9b5ec6e78be98463f9880838",
+        "original_message_sha256": "b51d12359fc287355f170cddc6ad5a024dcfde6633f4266880aa546c8ec59f16",
+        "packet_file": "primaryflow-cohort0-packet-e9e8692735b145f58d5720520855a721175645.json",
+        "packet_id": "e9e8692735b145f58d5720520855a721",
+        "packet_sha256": "55819de3894817e42aa57fb33474d5d7bfe82121405a7459025a43f421c0f78e",
+        "parent_origin_job": "20261027-175645-todo-3080",
+        "plan_sha256": "edb8069e0564eb3b95fd0863865b66c4e0b1d3fb994990c6701bcc624678cabf",
+        "previous_sha256": "3d56509d6f247ed9f8b4fce8464009888557f9b9d9e205077973b7bfd02626fb",
+        "reader_job": "20261029-061612-todo-4133",
+        "receipt_sha256": "63d6d800e1665da89e068e3cf159a3add6914ca8a195687e6e6d40c0a394acb3",
+        "whole16_complete": false
+      },
+      "independent_parent_meaning": {
+        "all_entry_meanings_and_limits_read": true,
+        "body_bytes": 16194,
+        "central_operations": 0,
+        "consumer_job": "20261027-175645-todo-3080",
+        "first_ordinal": 109,
+        "groups": 4,
+        "masked_lines": 95,
+        "meanings": [
+          "109 board列名closed/deployed/indeterminateを実受入/配備/doingへ直結せず、指定期間の状態遷移/再open・完了条件と履歴欠測/算定母数を照合する用途。5日/WIP10/中央値7日/人数1.5倍等の原閾値は実team根拠未検証、更新なしを放棄や現PC枠/研究上限にしない。原API/board参照/cron/配信0。95物理/83可視/12伏字。",
+          "110 中国PPIの月・指数の基準100・前年比/前月比%・年内平均とnullを区別するschema参考。取得endpointと基準年/算定/改定/公表時点は未確認で例示月を最新値へしない。一次系列/基準/対象月/公表/取得/改定を実利用時に照合し、nullを0や投資判断/再配布権へしない。2member同byte1代表で各文脈/支持/権利は未確認。58物理/52可視/6伏字、原GET/script0。",
+          "111 embeddingsという名前とchat+web_embeddingsを数値vector/次元/実検索/最新情報の証明にしない。jq/TLS1.2/汎用error/入力長500/30秒は保存説明でscript安全/秘密なし/現品質を保証しない。返却schema・出典/時点/欠測/版を確認する観点に留め、伏字のendpoint/keyや環境設定・API/shell/私的query送信0、既存OAuth枠を保つ。96物理/74可視/22伏字。",
+          "112 alias/accepted-domain/DNS・送信認証と実受信/返信・廃止後経路を別に確認する用途。原のMicrosoft365/Cloudflare・Graph/Exchange app/admin同意、例示domain、PSscript/大量outreach/dry-run宣言は今回の対象やRakko制限/恒久権限の許可でなく全操作0。noMX/SPF-allや1通1宛先だけで非受信/低spamを保証せず、既存メール/依存/返信路と部分失敗/復旧を保つ。通常メール閲覧を削除/転送/営業送信へ拡大しない。178物理/123可視/55伏字。",
+          "全4の用途/価値・全所見/正負例/修正/未達、固定SHA/bytes/blobと4view・95伏字位置、4代表/5member metadataを親が実読し合計427/332/95を独立算定。各memberの文脈/支持/個別権利/現在実在と原API/制度は未確認。親raw再open/新raw/permission/採否/中央操作0、全16未完。"
+        ],
+        "member_context_rights_support_and_dispositions_pending": true,
+        "member_metadata_occurrences": 5,
+        "native_proof_file": "primaryflow-native-20261029-061612-todo-4133175645.json",
+        "native_proof_sha256": "fc3a58eb6a525e2278852077ad7112b8cb2ddd6c3a6874e830b0dbed99103828",
+        "new_raw_or_copy_permission_credit": 0,
+        "packet_id": "e9e8692735b145f58d5720520855a721",
+        "packet_sha256": "55819de3894817e42aa57fb33474d5d7bfe82121405a7459025a43f421c0f78e",
+        "physical_lines": 427,
+        "reader_job": "20261029-061612-todo-4133",
+        "through_ordinal": 112,
+        "view_calls": 4,
+        "visible_lines": 332,
+        "whole16_complete": false
+      },
+      "independent_parent_meaning_sha256": "db7a302ba9976953badfd8ff13cfce36843291fe9b5ec6e78be98463f9880838",
+      "member_metadata": {
+        "109": [
+          {
+            "bytes": 4331,
+            "commit": "920714f17d81e0a95c7a9bc51faf0a7921cd982d",
+            "content_path": "github/6mile__skills/objects/007a75e85385c5e84620d954ff458e00c8fe04ecda88a495a67c2d4ade15657d.gz",
+            "git_blob": "418a8854fbf149e0953e9ef63a8d4e897ad40cbd",
+            "inventory_id": "github:e1ec0f2f0ca0e67816d73522b8a97632620c58625ab1cc8bc7f2b045558c52d9",
+            "path": "skills/olivermonneke/agile-observer/SKILL.md",
+            "repo": "6mile/skills",
+            "sha256": "007a75e85385c5e84620d954ff458e00c8fe04ecda88a495a67c2d4ade15657d"
+          }
+        ],
+        "110": [
+          {
+            "bytes": 1994,
+            "commit": "920714f17d81e0a95c7a9bc51faf0a7921cd982d",
+            "content_path": "github/6mile__skills/objects/007bdd24524e2ca913cd1a715e4c25f4d9c51dea7ed0d2f38b081ff1c8b0fa5e.gz",
+            "git_blob": "c586aed0bb38a6070a5884698cf417bb2a29b86c",
+            "inventory_id": "github:7eaebe986757d72a48b31beedd1b308a5e51854ff6f99b9919339204839de304",
+            "path": "skills/shawn92/ftshare-macro-economy-data/sub-skills/economic-china-ppi-monthly/SKILL.md",
+            "repo": "6mile/skills",
+            "sha256": "007bdd24524e2ca913cd1a715e4c25f4d9c51dea7ed0d2f38b081ff1c8b0fa5e"
+          },
+          {
+            "bytes": 1994,
+            "commit": "920714f17d81e0a95c7a9bc51faf0a7921cd982d",
+            "content_path": "github/6mile__skills/objects/007bdd24524e2ca913cd1a715e4c25f4d9c51dea7ed0d2f38b081ff1c8b0fa5e.gz",
+            "git_blob": "c586aed0bb38a6070a5884698cf417bb2a29b86c",
+            "inventory_id": "github:d28a8453173a53326fec1629a244dbec14ac08e3ce5532f33ae6c9be24cafa17",
+            "path": "skills/shawn92/ftshare-market-data/sub-skills/economic-china-ppi-monthly/SKILL.md",
+            "repo": "6mile/skills",
+            "sha256": "007bdd24524e2ca913cd1a715e4c25f4d9c51dea7ed0d2f38b081ff1c8b0fa5e"
+          }
+        ],
+        "111": [
+          {
+            "bytes": 2799,
+            "commit": "920714f17d81e0a95c7a9bc51faf0a7921cd982d",
+            "content_path": "github/6mile__skills/objects/007c0c74c4b1a5936407a8aa4a8896d9d42b890d8029733aa3f5f1ec19604468.gz",
+            "git_blob": "efff76bbe31ec4f0332be884fee766c0d7ea10bb",
+            "inventory_id": "github:3a20519368d5af845d1beae8e06651f94be91eda9b9ae580c0cd29d3e9eb1af7",
+            "path": "skills/honestqiao/zhipu-embeddings-v2/skill/SKILL.md",
+            "repo": "6mile/skills",
+            "sha256": "007c0c74c4b1a5936407a8aa4a8896d9d42b890d8029733aa3f5f1ec19604468"
+          }
+        ],
+        "112": [
+          {
+            "bytes": 7070,
+            "commit": "920714f17d81e0a95c7a9bc51faf0a7921cd982d",
+            "content_path": "github/6mile__skills/objects/007c5eea40a74d4f04ea4634d2c415f748e4bd0c433ad03c097a14307c5f97e7.gz",
+            "git_blob": "15c0b9df7c6694f89d2db1dd3180c729e56c0486",
+            "inventory_id": "github:7ba20aa0e3d61d97b2b842279828439d44ab2b6970eafc4ea5d8d17429f970ce",
+            "path": "skills/lmtlssss/mailcaduceus/SKILL.md",
+            "repo": "6mile/skills",
+            "sha256": "007c5eea40a74d4f04ea4634d2c415f748e4bd0c433ad03c097a14307c5f97e7"
+          }
+        ]
+      },
+      "original_packet_id": "e9e8692735b145f58d5720520855a721",
+      "original_parent_ack_sha256": "d06b4cdfb49a4f07298233f553cbfb007252abe4a1392e6c5bd145c755de779a",
+      "original_receipt_sha256": "63d6d800e1665da89e068e3cf159a3add6914ca8a195687e6e6d40c0a394acb3"
+    },
+    "8f26f83e2422fc8e83cb5f9ca32f2373cb98d669c8d802fee52cd970e67d672c": {
+      "actual_assessment_reader": "20261029-063706-todo-4134",
+      "all_original_fields_reconstructed": true,
+      "common": {
+        "boundaries": {
+          "central_operations": 0,
+          "copy_grants": 0,
+          "final_dispositions": 0,
+          "new_global_raw_credit": 0,
+          "source_executed": false,
+          "support_body_reads": 0
+        },
+        "cohort": 1,
+        "domain": "skills3080-primary-meaning-chunk-v1",
+        "first_ordinal": 88,
+        "packet_id": "aa8c4ec095b94ec8a1d3ea8ce5ef724d",
+        "parent_origin_job": "20261027-175645-todo-3080",
+        "plan_sha256": "9ebe1d51eef54663c578687b103e69eeb6fe687709def40b790faa104184195a",
+        "reader_job": "20261029-063706-todo-4134",
+        "reader_todo": 4134
+      },
+      "independent_parent_ack": {
+        "acknowledged_through": 89,
+        "at": "2026-10-28T21:59:04.1481357Z",
+        "binding_sha256": "fa8eb83d8cf97f2bb567c7e059e94b8dafa2c2cee052947e7823ae26ab42ada8",
+        "cohort": 1,
+        "consumer_job": "20261027-175645-todo-3080",
+        "cumulative_held_groups": 0,
+        "cumulative_member_metadata_bound": 103,
+        "cumulative_visible_semantic_groups": 89,
+        "domain": "skills3080-primaryflow-parent-ack-v1",
+        "generation": 21,
+        "meaning_file": "primaryflow-cohort1-meaning-aa8c4ec095b94ec8a1d3ea8ce5ef724d175645.json",
+        "meaning_sha256": "8f1624891ec7762fab84f71d02a1d72066abf9c4f3c614ede956320b3c5d4ed3",
+        "original_message_sha256": "bef57828fd3217b867235d0031077940c922a47c65ef29d218e809f408ecd53d",
+        "packet_file": "primaryflow-cohort1-packet-aa8c4ec095b94ec8a1d3ea8ce5ef724d175645.json",
+        "packet_id": "aa8c4ec095b94ec8a1d3ea8ce5ef724d",
+        "packet_sha256": "8f26f83e2422fc8e83cb5f9ca32f2373cb98d669c8d802fee52cd970e67d672c",
+        "parent_origin_job": "20261027-175645-todo-3080",
+        "plan_sha256": "9ebe1d51eef54663c578687b103e69eeb6fe687709def40b790faa104184195a",
+        "previous_sha256": "62482abb4b6dc12baf469dc1d76fb5c987c3e1046402ea4a3aa2d0b998513ce0",
+        "reader_job": "20261029-063706-todo-4134",
+        "receipt_sha256": "5e58cd5fa5324aa54c9526c9070f6a2285b5001982f92e22dc92ba5645056395",
+        "whole16_complete": false
+      },
+      "independent_parent_meaning": {
+        "all_entry_meanings_and_limits_read": true,
+        "body_bytes": 11280,
+        "central_operations": 0,
+        "consumer_job": "20261027-175645-todo-3080",
+        "current_remaining_ranges_reader": "20261029-063706-todo-4134",
+        "first_ordinal": 88,
+        "groups": 2,
+        "masked_lines": 38,
+        "meanings": [
+          "88 固定87商品の分類母集団30/5/22/30と商品ID、各値の基準日/期間/単位・欠測・取得cursorを対応させる設計の用途。四半期開示と当日値の不一致を後の大幅保有変更の証明にせず、時点/定義/相関と未確認帰属を分ける。5商品で上位3/下位3は集合が重なるため別6件や完全順位とせず同順位/欠測を表示、API下落区間と曲線不一致も無条件API優先にしない。実一覧/Wind/値/契約/投資判断0、原21:30目的と60秒別session/配信例を予定へ採らず、新Python/API/cron/支出0。196物理/181可視/15伏字。",
+          "89 物件取得gatewayで指定URL/IDをopaqueに保ち、pages/page優先・merge・正規化と無視されたfilter、各pageの時点/欠測/重複と画像の出所/保存を分ける用途。JSON応答/127.0.0.1/clamp/相対dir制約だけで機能/上流/呼出し元認証・symlink/競合/上書き/中断や全件性を保証しない。画像pathtemplateと外部ID、安全な保存/原本保持は実装未検証。原Python/server/TLS shim/上流取得・画像/保存/追加権限0、拒否は迂回しない。190物理/167可視/23伏字。",
+          "全2の用途/価値・各6所見・正負例/修正/未達、固定SHA/bytes/blob/member metadataと4ranges/全38伏字位置を親が実読。各1..180は旧015516、181..196/190は現063706という来歴を別actorのまま保持。両jobの同thread/cwd/時間窓/実SolMaxと実view call/outputに同source/range/whole digestが現れる4件を独立相関し、旧partial表示を今回の新表示へ変えていない。",
+          "2代表の可視意味/2member metadataを個別文脈/支持/利用条件/現在実在・現API/金融帰属/権利・最終採否へしない。新Root source/support再open/実service/研究上限の縮小/許諾/採否/中央0、全16未完。"
+        ],
+        "member_context_rights_support_and_dispositions_pending": true,
+        "member_metadata_occurrences": 2,
+        "mixed_view_proof_file": "primaryflow-cohort1-mixed88to89-old015516-current063706-native-ranges175645.json",
+        "mixed_view_proof_sha256": "d4482793e7fc4de7b10bec5fdfcbf68dcb77db5250c2fb33ab1e5495b878acfd",
+        "native_proof_file": "primaryflow-native-20261029-063706-todo-4134175645.json",
+        "native_proof_sha256": "0c9089c617bcabe2bed25a243483f19f8527120d477ce7e6c32c127d19ec0633",
+        "new_raw_or_copy_permission_credit": 0,
+        "old_initial_ranges_reader": "20261029-015516-todo-4134",
+        "old_reader_1to180_not_relabelled_as_current": true,
+        "packet_id": "aa8c4ec095b94ec8a1d3ea8ce5ef724d",
+        "packet_sha256": "8f26f83e2422fc8e83cb5f9ca32f2373cb98d669c8d802fee52cd970e67d672c",
+        "physical_lines": 386,
+        "reader_job": "20261029-063706-todo-4134",
+        "through_ordinal": 89,
+        "view_calls": 4,
+        "visible_lines": 348,
+        "whole16_complete": false
+      },
+      "independent_parent_meaning_sha256": "8f1624891ec7762fab84f71d02a1d72066abf9c4f3c614ede956320b3c5d4ed3",
+      "member_metadata": {
+        "88": [
+          {
+            "bytes": 5999,
+            "commit": "920714f17d81e0a95c7a9bc51faf0a7921cd982d",
+            "content_path": "github/6mile__skills/objects/015fd3ffa362b7b5f0ca65630b2bd52de48ea42c29335d5618c4ef2d60abe9df.gz",
+            "git_blob": "9fdc78deb27d17e51f6f84ab2c66a905e3397be6",
+            "inventory_id": "github:abd1ecb1750ae9f64946d968b77db7db7d6753c23f3414451467ff2df08fdae5",
+            "path": "skills/wesdaliang/xqant-daily-gushouplus-report/SKILL.md",
+            "repo": "6mile/skills",
+            "sha256": "015fd3ffa362b7b5f0ca65630b2bd52de48ea42c29335d5618c4ef2d60abe9df"
+          }
+        ],
+        "89": [
+          {
+            "bytes": 5281,
+            "commit": "920714f17d81e0a95c7a9bc51faf0a7921cd982d",
+            "content_path": "github/6mile__skills/objects/016053d65c9ab148f2c69caa879a5ccab8cf722e016d1a27f9d172e156fb06b1.gz",
+            "git_blob": "b74970f71fc07b929c43b42b9f90338d9bac24c7",
+            "inventory_id": "github:01e66e7d0e85e605d4b990ca9efdafb360360a3fc70190f2b487a391ba85f0f2",
+            "path": "skills/risboo6909/funda-gateway/SKILL.md",
+            "repo": "6mile/skills",
+            "sha256": "016053d65c9ab148f2c69caa879a5ccab8cf722e016d1a27f9d172e156fb06b1"
+          }
+        ]
+      },
+      "mixed_reader_range_provenance": {
+        "all_four_actual_view_ranges_correlated": true,
+        "current_reader_remaining181toend_only": true,
+        "new_raw_grants_dispositions_or_central": 0,
+        "new_source_body_or_support_opens": 0,
+        "old_reader_initial_1to180_not_relabelled_as_current": true,
+        "packet": "aa8c4ec095b94ec8a1d3ea8ce5ef724d",
+        "proofs": [
+          {
+            "actual_tool_call_id": "call_4b4afbcb0d86437596c7986c69e1738f",
+            "actual_tool_output_timestamp": "2026-10-28T17:28:48.535Z",
+            "first": 1,
+            "method": "Correlated actual view tool call/output within exact producer window; source/range/whole digest tuple present; no source/native text reprinted.",
+            "native_tool_output_representation_sha256": "f1555a3bc358bcafd79fbd2072e98f97a86fd4849828f41a587324266e3f718a",
+            "ordinal": 88,
+            "range_sha256": "db8528a42cb9c85a55cfde9bf00bc683b40cc23250b8c6d0c1168ae644131bdf",
+            "reader_job": "20261029-015516-todo-4134",
+            "source_archive_reopened_by_parent": false,
+            "source_sha256": "015fd3ffa362b7b5f0ca65630b2bd52de48ea42c29335d5618c4ef2d60abe9df",
+            "through": 180,
+            "tool_input_sha256": "c72390a3206a6a0d58f0bfaff95d5796b351297c826e92866fbabe30b3ad3f10",
+            "whole_masked_view_sha256": "a97e8f31732c9a5f6cbb2822438f53b121f09a6a9e514034bc7e4c44ca14e888"
+          },
+          {
+            "actual_tool_call_id": "call_4b4afbcb0d86437596c7986c69e1738f",
+            "actual_tool_output_timestamp": "2026-10-28T17:28:48.535Z",
+            "first": 1,
+            "method": "Correlated actual view tool call/output within exact producer window; source/range/whole digest tuple present; no source/native text reprinted.",
+            "native_tool_output_representation_sha256": "f1555a3bc358bcafd79fbd2072e98f97a86fd4849828f41a587324266e3f718a",
+            "ordinal": 89,
+            "range_sha256": "c98a9a341bf6964c073328a00edc3d21842f090e719dc0123f0b36b2fd289fea",
+            "reader_job": "20261029-015516-todo-4134",
+            "source_archive_reopened_by_parent": false,
+            "source_sha256": "016053d65c9ab148f2c69caa879a5ccab8cf722e016d1a27f9d172e156fb06b1",
+            "through": 180,
+            "tool_input_sha256": "c72390a3206a6a0d58f0bfaff95d5796b351297c826e92866fbabe30b3ad3f10",
+            "whole_masked_view_sha256": "4bb459acf78a8b216196315765893e81b488923f17f4869c53ed10e471bff2ff"
+          },
+          {
+            "actual_tool_call_id": "call_0eb86d247e024300b0fdd0f5056fffe0",
+            "actual_tool_output_timestamp": "2026-10-28T21:39:34.857Z",
+            "first": 181,
+            "method": "Correlated actual view tool call/output within exact producer window; source/range/whole digest tuple present; no source/native text reprinted.",
+            "native_tool_output_representation_sha256": "61bf6e016802e14f720590dcd01c176b734da981fd8000db9bb37395083ec424",
+            "ordinal": 88,
+            "range_sha256": "bed1ef8479d1bac9010784c945aee60fa6a33de736e85800fd8dec9a189bd551",
+            "reader_job": "20261029-063706-todo-4134",
+            "source_archive_reopened_by_parent": false,
+            "source_sha256": "015fd3ffa362b7b5f0ca65630b2bd52de48ea42c29335d5618c4ef2d60abe9df",
+            "through": 196,
+            "tool_input_sha256": "376ac68b02f329d6727bbd0110bd809d7ef107fb2085ebdd443172726a21bacd",
+            "whole_masked_view_sha256": "a97e8f31732c9a5f6cbb2822438f53b121f09a6a9e514034bc7e4c44ca14e888"
+          },
+          {
+            "actual_tool_call_id": "call_0eb86d247e024300b0fdd0f5056fffe0",
+            "actual_tool_output_timestamp": "2026-10-28T21:39:34.857Z",
+            "first": 181,
+            "method": "Correlated actual view tool call/output within exact producer window; source/range/whole digest tuple present; no source/native text reprinted.",
+            "native_tool_output_representation_sha256": "61bf6e016802e14f720590dcd01c176b734da981fd8000db9bb37395083ec424",
+            "ordinal": 89,
+            "range_sha256": "37606274bf3ab18e19c617d675c79a543fb93bce9ccc814679fcc6c57f6b15e7",
+            "reader_job": "20261029-063706-todo-4134",
+            "source_archive_reopened_by_parent": false,
+            "source_sha256": "016053d65c9ab148f2c69caa879a5ccab8cf722e016d1a27f9d172e156fb06b1",
+            "through": 190,
+            "tool_input_sha256": "376ac68b02f329d6727bbd0110bd809d7ef107fb2085ebdd443172726a21bacd",
+            "whole_masked_view_sha256": "4bb459acf78a8b216196315765893e81b488923f17f4869c53ed10e471bff2ff"
+          }
+        ],
+        "whole16_complete": false
+      },
+      "mixed_reader_range_provenance_sha256": "d4482793e7fc4de7b10bec5fdfcbf68dcb77db5250c2fb33ab1e5495b878acfd",
+      "original_packet_id": "aa8c4ec095b94ec8a1d3ea8ce5ef724d",
+      "original_parent_ack_sha256": "d366e73da7bd6deb701fcd69a1356bc83287d9883310bd543daa412f92c1cec1",
+      "original_receipt_sha256": "5e58cd5fa5324aa54c9526c9070f6a2285b5001982f92e22dc92ba5645056395",
+      "packet_publisher_not_relabelled_as_all_range_reader": true
+    },
+    "9b1157e3e066a30e2df171aa494373202632981063ca880d2780726ed1eee544": {
+      "actual_assessment_reader": "20261029-061612-todo-4133",
+      "all_original_fields_reconstructed": true,
+      "common": {
+        "boundaries": {
+          "central_operations": 0,
+          "copy_grants": 0,
+          "final_dispositions": 0,
+          "new_global_raw_credit": 0,
+          "source_executed": false,
+          "support_body_reads": 0
+        },
+        "cohort": 0,
+        "domain": "skills3080-primary-meaning-chunk-v1",
+        "first_ordinal": 114,
+        "packet_id": "575d4cb0c68d4c999a0030d14ee620e2",
+        "parent_origin_job": "20261027-175645-todo-3080",
+        "plan_sha256": "edb8069e0564eb3b95fd0863865b66c4e0b1d3fb994990c6701bcc624678cabf",
+        "reader_job": "20261029-061612-todo-4133",
+        "reader_todo": 4133
+      },
+      "independent_parent_ack": {
+        "acknowledged_through": 116,
+        "at": "2026-10-28T23:30:03.9912654Z",
+        "binding_sha256": "269fe9fcd42342587cb50a5148da5819617ad03b27a9269d9beb5d0174fd2f6f",
+        "cohort": 0,
+        "consumer_job": "20261027-175645-todo-3080",
+        "cumulative_held_groups": 0,
+        "cumulative_member_metadata_bound": 128,
+        "cumulative_visible_semantic_groups": 116,
+        "domain": "skills3080-primaryflow-parent-ack-v1",
+        "generation": 38,
+        "meaning_file": "primaryflow-cohort0-meaning-575d4cb0c68d4c999a0030d14ee620e2175645.json",
+        "meaning_sha256": "cc59b3d2255557f6cc2b2e340de9e82f6e12332b62123c1d40ec71992eab7d80",
+        "original_message_sha256": "8f2eaadee68109acdff56c62dad4364950dc4c9a4574648c63e8634ed233e842",
+        "packet_file": "primaryflow-cohort0-packet-575d4cb0c68d4c999a0030d14ee620e2175645.json",
+        "packet_id": "575d4cb0c68d4c999a0030d14ee620e2",
+        "packet_sha256": "9b1157e3e066a30e2df171aa494373202632981063ca880d2780726ed1eee544",
+        "parent_origin_job": "20261027-175645-todo-3080",
+        "plan_sha256": "edb8069e0564eb3b95fd0863865b66c4e0b1d3fb994990c6701bcc624678cabf",
+        "previous_sha256": "ef30b0ad1e180f4b780c424e427203a10b4cdcd9a9f21a7566e27db02701c482",
+        "reader_job": "20261029-061612-todo-4133",
+        "receipt_sha256": "dcd8e62b2ba241420201a1643a29bd8d19226ae9bdc9ad3273c3b7ddb4b463da",
+        "whole16_complete": false
+      },
+      "independent_parent_meaning": {
+        "all_entry_meanings_and_limits_read": true,
+        "body_bytes": 14343,
+        "central_operations": 0,
+        "consumer_job": "20261027-175645-todo-3080",
+        "first_ordinal": 114,
+        "groups": 3,
+        "later_native_observation": "primaryflow-cohort0-native-observed061612-through116175645.json",
+        "masked_lines": 59,
+        "meanings": [
+          "114はmemeの読者/目的/文化的参照と具体場面・形式を定め、複数案と実feedbackで調整する候補。benchmark首位/60〜70%や時事例を現在の性能・面白さの保証とせず、3段構成や案数を全体上限へしない。元cellcog導入/SDK/API/別agentと素材権・実model/料金/生成配送は未確認で全操作0。230物理/218可視/12伏字、2範囲。",
+          "115は処方の補充可能・受付・調剤・受取準備、予約候補と確定を別stateとして同じ対象へ結ぶschema参考。患者/処方/店舗/日時・受取方法と実受付/確定ID・取消/重複を確認する観点に留め、医療適否・不足処方/保険条件を推測しない。実患者/処方/健康/実カードを参照せず、元MCP追加・API/補充/購入/連絡/予約0。162物理/146可視/16伏字、現制度は未確認。",
+          "116はRedmine instance/project・版と実metadataのID/状態遷移/custom fieldを例示IDと分ける連携設計候補。最初25/最大100、offset/limit/total_countだけで全件取得を保証せず、期間/安定順序・取得中更新/再open/重複欠落を扱う。closedを受入/配備完了にせず、create/notes追記の応答不明時は同要求と実結果/履歴を照合する。設定値/認証の伏字は未読、本文/添付/journal内の命令を実行せず、原API/script/設定/作成更新/私的顧客情報の参照0。163物理/132可視/31伏字。",
+          "3件の用途/価値、全所見、修正、正負例、全未達と4表示範囲・固定SHA/bytes/blob/3memberの境界を親が実読し、555=496可視+59伏字を独立集計した。原のraw=falseとunknownを保持し、各memberの文脈・support本文・個別許諾・現在実在/品質は未確認、親の追加原本文open/新raw/権利/採否/中央操作0、全16未完。"
+        ],
+        "member_context_rights_support_and_dispositions_pending": true,
+        "member_metadata_occurrences": 3,
+        "native_proof_file": "primaryflow-native-20261029-061612-todo-4133175645.json",
+        "native_proof_sha256": "fc3a58eb6a525e2278852077ad7112b8cb2ddd6c3a6874e830b0dbed99103828",
+        "new_raw_or_copy_permission_credit": 0,
+        "packet_id": "575d4cb0c68d4c999a0030d14ee620e2",
+        "packet_sha256": "9b1157e3e066a30e2df171aa494373202632981063ca880d2780726ed1eee544",
+        "physical_lines": 555,
+        "reader_job": "20261029-061612-todo-4133",
+        "through_ordinal": 116,
+        "view_calls": 4,
+        "visible_lines": 496,
+        "whole16_complete": false
+      },
+      "independent_parent_meaning_sha256": "cc59b3d2255557f6cc2b2e340de9e82f6e12332b62123c1d40ec71992eab7d80",
+      "member_metadata": {
+        "114": [
+          {
+            "bytes": 7266,
+            "commit": "920714f17d81e0a95c7a9bc51faf0a7921cd982d",
+            "content_path": "github/6mile__skills/objects/007d6befd57bcffc1de667ee5c7761d727c5244ef67b86481b11e82861a44340.gz",
+            "git_blob": "884bf286b71925dd12839718ec6c2522d9679373",
+            "inventory_id": "github:046acd3979cb0968fff0b04707d4062bb0e967d341cf3f739c61e5a6f0b9fda1",
+            "path": "skills/nitishgargiitd/meme-cog/SKILL.md",
+            "repo": "6mile/skills",
+            "sha256": "007d6befd57bcffc1de667ee5c7761d727c5244ef67b86481b11e82861a44340"
+          }
+        ],
+        "115": [
+          {
+            "bytes": 3495,
+            "commit": "920714f17d81e0a95c7a9bc51faf0a7921cd982d",
+            "content_path": "github/6mile__skills/objects/007e1134222812c81823a87b53a9d141b2c1f80422a0a540e4abd3f9db646834.gz",
+            "git_blob": "d884292fc15deffd8e8c81b7d34d0418b29f505a",
+            "inventory_id": "github:b0561c7bfd1908803ec02746ba80e49ddcee4dccd96ff08de41193e2ff849b2b",
+            "path": "skills/markswendsen-code/strider-cvs/SKILL.md",
+            "repo": "6mile/skills",
+            "sha256": "007e1134222812c81823a87b53a9d141b2c1f80422a0a540e4abd3f9db646834"
+          }
+        ],
+        "116": [
+          {
+            "bytes": 3582,
+            "commit": "920714f17d81e0a95c7a9bc51faf0a7921cd982d",
+            "content_path": "github/6mile__skills/objects/007ed368f9f196161ffdac286d82bcc9b36498c38f59d17121b0f6f0f535aeb6.gz",
+            "git_blob": "422eb2d4e6ec7dbdda00068c363d58c17889d90c",
+            "inventory_id": "github:c1fa175c62264ed34264c32fb6d51bd2582d1dab7004fc9af6453e6d4f50cd36",
+            "path": "skills/zer07z/redmine-pilot/SKILL.md",
+            "repo": "6mile/skills",
+            "sha256": "007ed368f9f196161ffdac286d82bcc9b36498c38f59d17121b0f6f0f535aeb6"
+          }
+        ]
+      },
+      "original_packet_id": "575d4cb0c68d4c999a0030d14ee620e2",
+      "original_parent_ack_sha256": "b052e5c0b223969709e4ee97ab0c313974bc5558a944380a82c78027fab1bea4",
+      "original_receipt_sha256": "dcd8e62b2ba241420201a1643a29bd8d19226ae9bdc9ad3273c3b7ddb4b463da"
+    },
+    "b8febdee722ebe265668484751210486010e023a90e62ac93155cb88c760512d": {
+      "actual_assessment_reader": "20261029-081529-todo-4134",
+      "all_original_fields_reconstructed": true,
+      "common": {
+        "boundaries": {
+          "central_operations": 0,
+          "copy_grants": 0,
+          "final_dispositions": 0,
+          "new_global_raw_credit": 0,
+          "source_executed": false,
+          "support_body_reads": 0
+        },
+        "cohort": 1,
+        "domain": "skills3080-primary-meaning-chunk-v1",
+        "first_ordinal": 90,
+        "packet_id": "d38b652b8b1a4ac09ab68bcb2b87775b",
+        "parent_origin_job": "20261027-175645-todo-3080",
+        "plan_sha256": "9ebe1d51eef54663c578687b103e69eeb6fe687709def40b790faa104184195a",
+        "reader_job": "20261029-081529-todo-4134",
+        "reader_todo": 4134
+      },
+      "independent_parent_ack": {
+        "acknowledged_through": 91,
+        "at": "2026-10-28T23:31:35.3025301Z",
+        "binding_sha256": "fa8eb83d8cf97f2bb567c7e059e94b8dafa2c2cee052947e7823ae26ab42ada8",
+        "cohort": 1,
+        "consumer_job": "20261027-175645-todo-3080",
+        "cumulative_held_groups": 0,
+        "cumulative_member_metadata_bound": 105,
+        "cumulative_visible_semantic_groups": 91,
+        "domain": "skills3080-primaryflow-parent-ack-v1",
+        "generation": 22,
+        "meaning_file": "primaryflow-cohort1-meaning-d38b652b8b1a4ac09ab68bcb2b87775b175645.json",
+        "meaning_sha256": "97244e61dc11f5c18208b43c631857abe93f2ee851730496d86382893608d0d7",
+        "original_message_sha256": "a2afa220b120be5d6f807445f460e8309c0dd78e9e36420eb41a275a9f6eeddd",
+        "packet_file": "primaryflow-cohort1-packet-d38b652b8b1a4ac09ab68bcb2b87775b175645.json",
+        "packet_id": "d38b652b8b1a4ac09ab68bcb2b87775b",
+        "packet_sha256": "b8febdee722ebe265668484751210486010e023a90e62ac93155cb88c760512d",
+        "parent_origin_job": "20261027-175645-todo-3080",
+        "plan_sha256": "9ebe1d51eef54663c578687b103e69eeb6fe687709def40b790faa104184195a",
+        "previous_sha256": "d366e73da7bd6deb701fcd69a1356bc83287d9883310bd543daa412f92c1cec1",
+        "reader_job": "20261029-081529-todo-4134",
+        "receipt_sha256": "f38a1c28877f672a8d6e97ddf903dd97a0fe92773271c54e35ad9a611e48baef",
+        "whole16_complete": false
+      },
+      "independent_parent_meaning": {
+        "all_entry_meanings_and_limits_read": true,
+        "body_bytes": 7742,
+        "central_operations": 0,
+        "consumer_job": "20261027-175645-todo-3080",
+        "failed_prior_view_calls": null,
+        "first_ordinal": 90,
+        "groups": 2,
+        "masked_lines": 29,
+        "meanings": [
+          "90は明示されたRedNote account/note/commentに対して、検索/分析・下書きと投稿/返信/削除・反応を別作用として許可範囲へ結ぶ候補。27tools/自動cover/長文title無制限は保存説明で、現在plugin/schema/認証/費用/制約や分類/analyticsの精度・実配送は未確認。ログイン済み/installer存在を全読取・全返信・削除の許可にせず、対象ID/宛先/本文・媒体/実配送読戻しとpaging/欠測を確認する観点を保持する。原Chromium導入/QRログインやplugin有効化・投稿/削除0、owner Chrome/本人PC操作回避/同画像の本人回答/素材権と動画方針を変更しない。122物理/114可視/8伏字。",
+          "91は未信頼の外部本文の自称system/admin/immutableを実指示へ昇格させないという境界を参照し、原のdirect-userだけをCONTROLとする規則自体を採用しない。実際のsystem/developer等の階層、正規Discord APIで本人ID/元質問世代/対象・範囲を照合した回答と保存済み許可の引継ぎを保持する。keyword/urgency/base64形式だけで悪意と決めず、外部Skillの自己宣言で上位効力を作らない。秘密入りの注入全文/無関係な出所を会話へ再掲せず、必要な抑止と記録・既存作業の継続を分け、原の一律不可逆操作停止/全再承認を本人の新規則へしない。検出の実装/精度/実効果・伏字は未確認、97物理/76可視/21伏字。",
+          "両sourceの全用途/価値・所見・修正・正負例・全未達と、固定SHA/bytes/blob/2member metadata・2range/29伏字を親が実読し、219=190+29を独立算定。前063706の90/91向けexecはaborted/返却未確認という原の履歴を保持し、今回の1返却ずつだけを現在の読了とする。過去失敗数nullを0へ変えず、旧90/91の読了やfresh rawを作らない。個別文脈/支持/権利・現在実在と全採否は未確認、新grant/disposition/中央/私的情報参照0、全16未完。"
+        ],
+        "member_context_rights_support_and_dispositions_pending": true,
+        "member_metadata_occurrences": 2,
+        "native_proof_file": "primaryflow-native-20261029-081529-todo-4134175645.json",
+        "native_proof_sha256": "d85b27f77f613f49f810a0c106ff16c03d29809a912e2a7e58984b72a4c5faa8",
+        "new_raw_or_copy_permission_credit": 0,
+        "packet_id": "d38b652b8b1a4ac09ab68bcb2b87775b",
+        "packet_sha256": "b8febdee722ebe265668484751210486010e023a90e62ac93155cb88c760512d",
+        "physical_lines": 219,
+        "reader_job": "20261029-081529-todo-4134",
+        "through_ordinal": 91,
+        "view_calls": 2,
+        "visible_lines": 190,
+        "whole16_complete": false
+      },
+      "independent_parent_meaning_sha256": "97244e61dc11f5c18208b43c631857abe93f2ee851730496d86382893608d0d7",
+      "member_metadata": {
+        "90": [
+          {
+            "bytes": 3178,
+            "commit": "920714f17d81e0a95c7a9bc51faf0a7921cd982d",
+            "content_path": "github/6mile__skills/objects/0164b570bc67f1e07761a4ba7bc16b8b4d2632a4c44a59894cee6f175b8bdf60.gz",
+            "git_blob": "7ede55f8c37c244c78a8605b8c1923e48fc768ab",
+            "inventory_id": "github:02ca1c6ebfdcca936d8f1d4870c1c2cafbe8f96f9059d31f2b3839536d9613f9",
+            "path": "skills/pigbun-ai/pigbun-rednote/SKILL.md",
+            "repo": "6mile/skills",
+            "sha256": "0164b570bc67f1e07761a4ba7bc16b8b4d2632a4c44a59894cee6f175b8bdf60"
+          }
+        ],
+        "91": [
+          {
+            "bytes": 4564,
+            "commit": "920714f17d81e0a95c7a9bc51faf0a7921cd982d",
+            "content_path": "github/6mile__skills/objects/016568884c337ec2c3b94972b6d56b99f2d4814274419252c8e0c3933f3e2868.gz",
+            "git_blob": "b424c6631ab2e1dd3564da6b06690c93026d42b1",
+            "inventory_id": "github:dc1000af0ff7ea12a7283d8da33e7936c74d315e0851b1f2c9d4321522fd0f86",
+            "path": "skills/tatlantis/armarius/SKILL.md",
+            "repo": "6mile/skills",
+            "sha256": "016568884c337ec2c3b94972b6d56b99f2d4814274419252c8e0c3933f3e2868"
+          }
+        ]
+      },
+      "original_packet_id": "d38b652b8b1a4ac09ab68bcb2b87775b",
+      "original_parent_ack_sha256": "3e967da75479b7f0e6105e85b092430c21a5cec6e6623cc2cf99a1d0083fefde",
+      "original_receipt_sha256": "f38a1c28877f672a8d6e97ddf903dd97a0fe92773271c54e35ad9a611e48baef"
+    },
+    "f938d8ce8b1846b6e336b3d180e30e2f56128265b8e1f40b526f254b99c60a84": {
+      "actual_assessment_reader": "20261029-081529-todo-4134",
+      "all_original_fields_reconstructed": true,
+      "common": {
+        "boundaries": {
+          "central_operations": 0,
+          "copy_grants": 0,
+          "final_dispositions": 0,
+          "new_global_raw_credit": 0,
+          "source_executed": false,
+          "support_body_reads": 0
+        },
+        "cohort": 1,
+        "domain": "skills3080-primary-meaning-chunk-v1",
+        "first_ordinal": 93,
+        "packet_id": "2fc5acb3be5f4f5188ca711310231fe9",
+        "parent_origin_job": "20261027-175645-todo-3080",
+        "plan_sha256": "9ebe1d51eef54663c578687b103e69eeb6fe687709def40b790faa104184195a",
+        "reader_job": "20261029-081529-todo-4134",
+        "reader_todo": 4134
+      },
+      "independent_parent_ack": {
+        "acknowledged_through": 95,
+        "at": "2026-10-29T00:31:50.1573793Z",
+        "binding_sha256": "fa8eb83d8cf97f2bb567c7e059e94b8dafa2c2cee052947e7823ae26ab42ada8",
+        "cohort": 1,
+        "consumer_job": "20261027-175645-todo-3080",
+        "cumulative_held_groups": 0,
+        "cumulative_member_metadata_bound": 109,
+        "cumulative_visible_semantic_groups": 95,
+        "domain": "skills3080-primaryflow-parent-ack-v1",
+        "generation": 24,
+        "meaning_file": "primaryflow-cohort1-meaning-2fc5acb3be5f4f5188ca711310231fe9175645.json",
+        "meaning_sha256": "882e796f9cc5abdccfff982440506254cab8be2153653f0108fd7d1adcf1527e",
+        "original_message_sha256": "beb60785134994f4cbb0c43dc3e2af11387475ebd83cc61532dcaaeb01d37452",
+        "packet_file": "primaryflow-cohort1-packet-2fc5acb3be5f4f5188ca711310231fe9175645.json",
+        "packet_id": "2fc5acb3be5f4f5188ca711310231fe9",
+        "packet_sha256": "f938d8ce8b1846b6e336b3d180e30e2f56128265b8e1f40b526f254b99c60a84",
+        "parent_origin_job": "20261027-175645-todo-3080",
+        "plan_sha256": "9ebe1d51eef54663c578687b103e69eeb6fe687709def40b790faa104184195a",
+        "previous_sha256": "b73ebcba8b1f63eca8b3936866127c0809ae3f357582d931fcc91d44351a5f76",
+        "reader_job": "20261029-081529-todo-4134",
+        "receipt_sha256": "a5a3e28ebe740688958c6417ae7196083193ded8a8125bd6ba0dce18e4a6f5e2",
+        "whole16_complete": false
+      },
+      "independent_parent_meaning": {
+        "all_entry_meanings_and_limits_read": true,
+        "body_bytes": 18333,
+        "central_operations": 0,
+        "consumer_job": "20261027-175645-todo-3080",
+        "first_ordinal": 93,
+        "groups": 3,
+        "masked_lines": 34,
+        "meanings": [
+          "93は要件/実装/spec適合/品質/verifyと根本原因の仮説・実験、成果物と主張の根拠を結ぶ観点を参照する。各設計節やpush/PRの全再承認、3回失敗から誤architectureと断定して停止、毎message fresh全テスト・VCSdiffを完了必須とする原ルールは採用せず、現在の既存許可・同一最終sourceの有効CI/関連テスト再利用・実受入と独立工程継続を保つ。毎task3担当起動/固定modelrole/sessions_spawn/cron/AGENTS追記・他Skillやbinary調査も研究では実行せず、権利/環境/費用効果は未検証。297物理275可視22伏字、2範囲。",
+          "94はXiaomi Air Purifier4Liteの機種/region/accountと実DID・部屋/名前/操作、property型/範囲/単位/modeを対応させる設計参考。default/唯一/同名機器を指定対象の証明にせず、読取と制御のscopeを分ける。PM2.5等は観測時点・単位・sensor/欠測を示し健康/空間の安全を保証せず、機器受理・物理作用・結果不明/再送/読戻しは未確認。原installer/login/discovery/実機の電源/設定/制御や資格参照0、57物理52可視5伏字。",
+          "95は北京の指定物件の正確な所在地/識別・対象年度と公式の直接対応資料を結び、検索推定した学区名と学校一覧だけで物件の該当校/入学資格を確定しない。固定17学区/officialラベル・一律2025注意文を現年度/実資料/確認日時の代わりにせず、価格の成約/掲載・時点/単位/範囲・未確認を分ける。scriptエラー/欠測と正規審査/アクセス拒否を区別し、拒否を別経路で迂回せず、通常PC/認証操作を本人へ要求する原ルールを現行方針へ優先させない。原Python/無頭browser/script/外部取得・実価格/制度/資格の助言0、59物理52可視7伏字。",
+          "親は全3の用途/価値・全所見/修正/正負例/未達、固定SHA/bytes/blob/3member/4範囲と34伏字を実読し、413=379+34を独立算定した。原source自己宣言・品質/費用主張を現方針や成功証拠へ昇格せず、各文脈/support/個別権利/現在実在と最終採否は未確認、親の原body再open・新raw/許諾/採否/中央/設定操作0。"
+        ],
+        "member_context_rights_support_and_dispositions_pending": true,
+        "member_metadata_occurrences": 3,
+        "native_proof_file": "primaryflow-native-20261029-081529-todo-4134175645.json",
+        "native_proof_sha256": "d85b27f77f613f49f810a0c106ff16c03d29809a912e2a7e58984b72a4c5faa8",
+        "new_raw_or_copy_permission_credit": 0,
+        "packet_id": "2fc5acb3be5f4f5188ca711310231fe9",
+        "packet_sha256": "f938d8ce8b1846b6e336b3d180e30e2f56128265b8e1f40b526f254b99c60a84",
+        "physical_lines": 413,
+        "reader_job": "20261029-081529-todo-4134",
+        "through_ordinal": 95,
+        "view_calls": 4,
+        "visible_lines": 379,
+        "whole16_complete": false
+      },
+      "independent_parent_meaning_sha256": "882e796f9cc5abdccfff982440506254cab8be2153653f0108fd7d1adcf1527e",
+      "member_metadata": {
+        "93": [
+          {
+            "bytes": 13279,
+            "commit": "920714f17d81e0a95c7a9bc51faf0a7921cd982d",
+            "content_path": "github/6mile__skills/objects/01683f1ecada92be033766663fb56f9cc59f1335f5c2a034e81a764b6996d25a.gz",
+            "git_blob": "460b57d409fc1e4baa3c2d0ad1979d1e4c43ce02",
+            "inventory_id": "github:a33d8627a5f3163cc5fd6873bad8ba46f04eabf3e08b8ba03544c96141bcfb11",
+            "path": "skills/globalcaos/agent-superpowers/SKILL.md",
+            "repo": "6mile/skills",
+            "sha256": "01683f1ecada92be033766663fb56f9cc59f1335f5c2a034e81a764b6996d25a"
+          }
+        ],
+        "94": [
+          {
+            "bytes": 2138,
+            "commit": "920714f17d81e0a95c7a9bc51faf0a7921cd982d",
+            "content_path": "github/6mile__skills/objects/0168765c25cd48b3c7549f63ad75223a8e63cd2e98b2e4bbca4889d471cc1927.gz",
+            "git_blob": "ad8e7bb99f400882770dc10c8addabcbeb539605",
+            "inventory_id": "github:5fda5de6effad0cc123d4bf460d50efdcc2589481745a4c60eaeaf3a37ab59bd",
+            "path": "skills/radyakaze/xiaomi-air-purifier/SKILL.md",
+            "repo": "6mile/skills",
+            "sha256": "0168765c25cd48b3c7549f63ad75223a8e63cd2e98b2e4bbca4889d471cc1927"
+          }
+        ],
+        "95": [
+          {
+            "bytes": 2916,
+            "commit": "920714f17d81e0a95c7a9bc51faf0a7921cd982d",
+            "content_path": "github/6mile__skills/objects/016ae2be9adf7a4f52b0ef48b8e262802abea4d5cc4198227876cd4bab33eff3.gz",
+            "git_blob": "a31ece082d1e5692e9909366274a8bc240b9acb9",
+            "inventory_id": "github:feb4d73847e4dc8a9e04e62de537f1bd0ea276f95f5f47fd23a0dbac9efc61ac",
+            "path": "skills/iamhankai/beijing-house-pro/SKILL.md",
+            "repo": "6mile/skills",
+            "sha256": "016ae2be9adf7a4f52b0ef48b8e262802abea4d5cc4198227876cd4bab33eff3"
+          }
+        ]
+      },
+      "original_packet_id": "2fc5acb3be5f4f5188ca711310231fe9",
+      "original_parent_ack_sha256": "0c3fa91bd41f8342a06b2d41deb4f5bbbdb36d74a7003c1976a2848c90ca895a",
+      "original_receipt_sha256": "a5a3e28ebe740688958c6417ae7196083193ded8a8125bd6ba0dce18e4a6f5e2"
+    }
+  },
+  "whole16_complete": false
+}

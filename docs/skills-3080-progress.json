@@ -3,7 +3,7 @@
   "issue": "https://github.com/AutoDevJapan/cc-pc-tools-rs/issues/283",
   "observed_at": "2026-10-24T17:15:09.0197014+09:00",
   "phase_a": "partial; 647 additional text shapes held by execution review",
-  "phase_b": "作業版は実導入164・統合4・再確認が残る除外記録15。新2件は一度の通常CreateNew14/77902B、通常2batchのcurrent ID/SHA/同buffer、3048PASS2、freshCodex発見2と現4手順10454Bの実依頼2判断/合成5例を確認。main162との差分2と既受領289..294の追加6評価は公開結果の別モデル二役レビューとCI/通常merge待ち。全16/73220は継続。",
+  "phase_b": "main637受入の実導入164・統合4を保持。作業版は元3719の16評価と復旧した2群の5評価を追加し、評価1583/最終183/交差177/和1589/意味個別権利70556を全73220queueで照合。原actor/伏字/未読/nullと個別権利未確認を保持。5重複候補の個別出典・notice metadataは照合済みで、現2命令の正規consumer4227を待ち、未受領を統合へ数えない。全16は継続。",
   "catalog_sha256": "2d73c9a038a41cc220a9687b935bfa1e0b315b65d9bd6d3e54ddb4111972876c",
   "source_count": 16,
   "fixed_public_repos": [
@@ -616,7 +616,7 @@
     "guard_client_resource": true,
     "state": "classification_unverified"
   },
-  "recorded_at": "2026-10-29T06:47:28.4013993+00:00",
+  "recorded_at": "2026-10-29T09:34:28.5681902+00:00",
   "total_skill_named_body_read_definition": "This field preserves the historical complete-source subset only. Current raw/workflow primary coverage is projected from the canonical source components and sixmile evaluation index in all_fulltext_primary_paths_including_partial_sources/all_workflow_primary_paths_including_partial_sources, not copied here.",
   "openai_entrypoint_evaluation": {
     "rights_accepted": false,
@@ -3587,6 +3587,26 @@
     "reuse_support": 4,
     "saved_unread_support": 25,
     "new_grants_dispositions_or_central_writes": 0,
+    "whole16_complete": false
+  },
+  "latest_received21_after1562": {
+    "publisher_job": "20261029-170905-todo-3080",
+    "original3719_representative_assessments": 16,
+    "original3719_whole_packets": 3,
+    "original3719_support_metadata": 233,
+    "saved_support": 166,
+    "unsaved_support": 67,
+    "raw_support_tuples_including_primary": 42,
+    "masked_support_tuples_including_primary": 10,
+    "reuse_support_tuples": 16,
+    "saved_unread_support_tuples": 98,
+    "primaryflow_new_meanings": 5,
+    "primaryflow_pending_member_metadata": 5,
+    "primaryflow_complete_packets": 2,
+    "original_consumer175645_and_current_consumer170905_distinct": true,
+    "C0_normal_finite_continuation_and_C1_same_scope_spec_amendment_verified_with_real_results": true,
+    "new_current_C1_render_ranges_correlated": 4,
+    "new_central_writes_permissions_or_final_dispositions": 0,
     "whole16_complete": false
   }
 }

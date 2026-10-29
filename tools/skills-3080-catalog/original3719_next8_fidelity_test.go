@@ -14,10 +14,17 @@ func TestOriginal3719Next8PreservesCompletePacketsAndOriginalActors(t *testing.T
 }
 func checkOriginal3719PendingSnapshot(t *testing.T, file, expectedSHA string, first, last, contextCount int, reader string, wantSupports, wantSaved, wantUnsaved int) {
 	t.Helper()
+	checkOriginal3719PendingSnapshotWithActors(t, file, expectedSHA, first, last, contextCount, reader, wantSupports, wantSaved, wantUnsaved, "20261027-175645-todo-3080", nil)
+}
+
+// A resumed publisher is distinct from each packet's actual semantic consumer.
+// Exact per-packet actors preserve the original receipt rather than relabel it.
+func checkOriginal3719PendingSnapshotWithActors(t *testing.T, file, expectedSHA string, first, last, contextCount int, reader string, wantSupports, wantSaved, wantUnsaved int, publisher string, packetConsumers map[string]string) {
+	t.Helper()
 	requireAssessmentInputRegistered(t, file, expectedSHA, last-first+1)
 	var value map[string]any
 	raw := loadPublicReceipt(t, file, &value)
-	if travel3Digest(raw) != expectedSHA || value["domain"] != "skills3080-original3719-parent-shared-snapshot-v1" || value["publisher_job"] != "20261027-175645-todo-3080" || value["original_journal_parent"] != "20261024-235901-todo-3080" || value["after"] != float64(first-1) || value["through"] != float64(last) || value["whole16_complete"] != false {
+	if travel3Digest(raw) != expectedSHA || value["domain"] != "skills3080-original3719-parent-shared-snapshot-v1" || value["publisher_job"] != publisher || value["original_journal_parent"] != "20261024-235901-todo-3080" || value["after"] != float64(first-1) || value["through"] != float64(last) || value["whole16_complete"] != false {
 		t.Fatal("original pending observations or scope changed")
 	}
 	for _, key := range []string{"new_source_or_support_reads_by_materializer", "new_parent_raw_body_read_credit", "new_copy_permissions", "new_final_dispositions", "central_operations"} {
@@ -76,7 +83,17 @@ func checkOriginal3719PendingSnapshot(t *testing.T, file, expectedSHA string, fi
 	if !original3719PacketKeySetsMatch(groups, contexts) {
 		t.Fatal("original packet groups and shared context key sets differ")
 	}
+	if packetConsumers != nil && len(packetConsumers) != len(contexts) {
+		t.Fatal("exact original per-packet consumer membership required")
+	}
 	for sha, originals := range groups {
+		consumer := publisher
+		if packetConsumers != nil {
+			consumer = packetConsumers[sha]
+			if consumer == "" {
+				t.Fatal("original packet consumer was omitted")
+			}
+		}
 		context := received27Object(t, contexts[sha])
 		common := received27Object(t, context["common"])
 		whole := map[string]any{}
@@ -95,7 +112,7 @@ func checkOriginal3719PendingSnapshot(t *testing.T, file, expectedSHA string, fi
 		ack := received27Object(t, context["independent_parent_journal_record"])
 		meaning := received27Object(t, context["parent_meaning"])
 		nativeSHA, nativeOK := meaning["actual_native_sha256"].(string)
-		if ack["chunk_sha256"] != sha || ack["reader_job"] != common["reader_job"] || ack["parent_semantic_assessments_read"] != true || meaning["chunk_sha256"] != sha || meaning["producer_job"] != common["reader_job"] || meaning["consumer_job"] != "20261027-175645-todo-3080" || meaning["full_original_meanings_and_all_limits_read"] != true || !nativeOK || !validHex(nativeSHA, 64) || context["independent_native_metadata_sha256"] != nativeSHA {
+		if ack["chunk_sha256"] != sha || ack["reader_job"] != common["reader_job"] || ack["parent_semantic_assessments_read"] != true || meaning["chunk_sha256"] != sha || meaning["producer_job"] != common["reader_job"] || meaning["consumer_job"] != consumer || meaning["full_original_meanings_and_all_limits_read"] != true || !nativeOK || !validHex(nativeSHA, 64) || context["independent_native_metadata_sha256"] != nativeSHA {
 			t.Fatal("independent parent read no longer binds this exact packet")
 		}
 	}

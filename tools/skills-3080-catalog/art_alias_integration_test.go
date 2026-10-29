@@ -121,6 +121,19 @@ func validateArtAliasObservation(v map[string]any) error {
 	return nil
 }
 
+func validateArtAliasLedgerProvenance(row, evidence map[string]any) error {
+	return next4Fields(row, map[string]any{
+		"inventory_id": evidence["inventory_id"], "source_repo": evidence["source_repo"],
+		"source_commit": evidence["source_commit"], "source_path": evidence["path"],
+		"source_sha256": evidence["source_sha256"], "target": evidence["target"],
+		"disposition":              "integrated_existing",
+		"evidence":                 "skills-3080-art-five-alias-integrations170905.json",
+		"individual_notice_path":   evidence["individual_notice_path"],
+		"individual_notice_sha256": evidence["individual_notice_sha256"],
+		"manifest":                 evidence["target_manifest"], "entrypoint_sha256": evidence["target_entrypoint_sha256"],
+	})
+}
+
 func validatedArtAliasDispositions(t *testing.T) map[string]cohortLedgerRow {
 	t.Helper()
 	var v map[string]any
@@ -131,7 +144,7 @@ func validatedArtAliasDispositions(t *testing.T) map[string]cohortLedgerRow {
 		t.Fatal(e)
 	}
 	var ledger struct {
-		Entries []cohortLedgerRow `json:"entries"`
+		Entries []map[string]any `json:"entries"`
 	}
 	loadPublicReceipt(t, "skills-3080-adoptions.json", &ledger)
 	result := map[string]cohortLedgerRow{}
@@ -141,9 +154,9 @@ func validatedArtAliasDispositions(t *testing.T) map[string]cohortLedgerRow {
 		want := cohortLedgerRow{ID: id, Source: r["source_repo"].(string), Commit: r["source_commit"].(string), Path: r["path"].(string), SHA: r["source_sha256"].(string), Disposition: "integrated_existing"}
 		matched := 0
 		for _, row := range ledger.Entries {
-			if row.ID == id {
-				if row != want {
-					t.Fatal("alias final tuple differs")
+			if row["inventory_id"] == id {
+				if err := validateArtAliasLedgerProvenance(row, r); err != nil {
+					t.Fatal(err)
 				}
 				matched++
 			}
@@ -158,6 +171,49 @@ func validatedArtAliasDispositions(t *testing.T) map[string]cohortLedgerRow {
 
 func TestArtAliasesIntegrateOnlyIndividuallyBoundVisibleWorkflow(t *testing.T) {
 	validatedArtAliasDispositions(t)
+}
+
+func TestArtAliasLedgerRejectsLostEvidenceAndIndividualNotice(t *testing.T) {
+	var evidence map[string]any
+	loadPublicReceipt(t, "skills-3080-art-five-alias-integrations170905.json", &evidence)
+	entry := received27Object(t, received27Array(t, evidence["entries"])[0])
+	var ledger struct {
+		Entries []map[string]any `json:"entries"`
+	}
+	loadPublicReceipt(t, "skills-3080-adoptions.json", &ledger)
+	var original map[string]any
+	for _, row := range ledger.Entries {
+		if row["inventory_id"] == entry["inventory_id"] {
+			original = row
+		}
+	}
+	if original == nil {
+		t.Fatal("actual alias ledger row missing")
+	}
+	for _, change := range []string{"valid", "evidence", "individual_notice_path", "individual_notice_sha256", "manifest", "entrypoint_sha256"} {
+		t.Run(change, func(t *testing.T) {
+			row := map[string]any{}
+			for k, v := range original {
+				row[k] = v
+			}
+			if change != "valid" {
+				delete(row, change)
+			}
+			err := validateArtAliasLedgerProvenance(row, entry)
+			if (change == "valid" && err != nil) || (change != "valid" && err == nil) {
+				t.Fatalf("%s: %v", change, err)
+			}
+		})
+	}
+	row := map[string]any{}
+	for k, v := range original {
+		row[k] = v
+	}
+	row["evidence"] = "skills-3080-consolidation-art-installation-evidence175645.json"
+	row["individual_notice_path"] = "skills/moyu0032/mo-test-1/LICENSE.txt"
+	if validateArtAliasLedgerProvenance(row, entry) == nil {
+		t.Fatal("reported borrowed-evidence/notice counterexample accepted")
+	}
 }
 
 func TestArtAliasObservationRejectsWrongSourceNoticeActorOrEffect(t *testing.T) {

@@ -1,0 +1,238 @@
+{
+  "domain": "skills3080-recovery-current-readback-v1",
+  "job": "20261027-175645-todo-3080",
+  "original_creator_job": "20261027-175645-todo-3080",
+  "manifest_sha256": "03612ee51f6249602bd4afd59c13d79430ff58cd464d0872e1cb1bb9d37eb27f",
+  "request_sha256": "0e6861bb732d3c110fd1768fcee2565e46854c1f6f18b2e39073a76c81fd3efd",
+  "native_call_id": "call_fbe8e9db91674be687522b1ba1ace09b",
+  "original_creator_runtime_sha256": "7fb45b8a411ca2e1dd64a034b94c51ce5ca51324ad7c0c4b778eecb9f4538d36",
+  "original_creator_runtime_revision": "b78007695a7c5d73eb1f11118757e93918aa3234",
+  "current_runtime_sha256": "7fb45b8a411ca2e1dd64a034b94c51ce5ca51324ad7c0c4b778eecb9f4538d36",
+  "current_runtime_revision": "b78007695a7c5d73eb1f11118757e93918aa3234",
+  "qualified_current_files": 21,
+  "bytes": 107677,
+  "normal_batches": 3,
+  "all_same_read_buffers_match_manifest": true,
+  "current_IDs_match_creation": true,
+  "direct_central_opens_by_parent_verifier": 0,
+  "new_Create_by_reader": 0,
+  "atomic_snapshot_or_historical_continuity_proven": false,
+  "current_OS_writer": "unproved",
+  "general_access_granted": false,
+  "original_registry_recovered": false,
+  "private_readback_proof_sha256": "9c7b20e05cee18c617951c1d2bda74a121e80ddcd4d1a653cdc171dfed5ff7e4",
+  "files": [
+    {
+      "index": 0,
+      "target": "dynamic-action-authorization/SKILL.md",
+      "sha256": "4e63c3b8df44a324f6238bf1cb8b0b33012c2a70384df3dbf8d1c806bb3cf95d",
+      "bytes": 1652,
+      "creation_and_current_object_identity_sha256": "aea776b9d9f807837ee4bc8a269dc0c82ccf0ac54f1c80f0775222e7727ff581",
+      "creation_ID_matches_current": true,
+      "same_handle_buffer_returned": true,
+      "reviewed_bytes_equal": true
+    },
+    {
+      "index": 1,
+      "target": "dynamic-action-authorization/references/guide.md",
+      "sha256": "3645b00d6da4de19a2627674f13257f39cbca8c3cb8cde9eebc1d01eadaa9df6",
+      "bytes": 2312,
+      "creation_and_current_object_identity_sha256": "b3f90acb1c10c21c6df11026b4cb15c8f8575599938bcf587049c8c9354c4b28",
+      "creation_ID_matches_current": true,
+      "same_handle_buffer_returned": true,
+      "reviewed_bytes_equal": true
+    },
+    {
+      "index": 2,
+      "target": "dynamic-action-authorization/references/LICENSE.txt",
+      "sha256": "6f6bb192fb5854c274ca1bd5f3705ad6d4577099d2db95f46c90d0657ffb830d",
+      "bytes": 1066,
+      "creation_and_current_object_identity_sha256": "e516878608706ac2df8505db6ee85ae6c85376c11cbba5b2bf46f697312e0771",
+      "creation_ID_matches_current": true,
+      "same_handle_buffer_returned": true,
+      "reviewed_bytes_equal": true
+    },
+    {
+      "index": 3,
+      "target": "dynamic-action-authorization/references/source.json",
+      "sha256": "2fd9934093b57451bb6ce278c8238ce84f7458d28f84364e063226b12271b9cc",
+      "bytes": 5164,
+      "creation_and_current_object_identity_sha256": "9ce5d9b4568fce5f86df9986fc396d9a9508d9ad35cd800109fd308b806cf0d6",
+      "creation_ID_matches_current": true,
+      "same_handle_buffer_returned": true,
+      "reviewed_bytes_equal": true
+    },
+    {
+      "index": 4,
+      "target": "dynamic-action-authorization/references/sources.md",
+      "sha256": "00998160041ef6ee5137ecfac057f3894e64e6d0f47373cc278bb35d278a8d0b",
+      "bytes": 1710,
+      "creation_and_current_object_identity_sha256": "d7fe739504a1f3fbfb80ce9278695b603e20edd758738debca59d9bf4d84c3b2",
+      "creation_ID_matches_current": true,
+      "same_handle_buffer_returned": true,
+      "reviewed_bytes_equal": true
+    },
+    {
+      "index": 5,
+      "target": "dynamic-action-authorization/references/source-assessment.json",
+      "sha256": "cb3c8deebc00c76953ab927505b5a71f0c71bdb4fb68602d8be368dd94341828",
+      "bytes": 11734,
+      "creation_and_current_object_identity_sha256": "f71be62f3b17d5da5acb9891591a5f87cd35983d2f801a2089ac6df3b63494ae",
+      "creation_ID_matches_current": true,
+      "same_handle_buffer_returned": true,
+      "reviewed_bytes_equal": true
+    },
+    {
+      "index": 6,
+      "target": "dynamic-action-authorization/references/original-skill.masked.txt",
+      "sha256": "b4a526741ed5e42d5f1a961889e04f3d5436d235d2174f37b883934462d82b46",
+      "bytes": 5792,
+      "creation_and_current_object_identity_sha256": "2e533d5107b409c02e376d5b472952374e356626d5594ebb2578ff7b39e7ad98",
+      "creation_ID_matches_current": true,
+      "same_handle_buffer_returned": true,
+      "reviewed_bytes_equal": true
+    },
+    {
+      "index": 7,
+      "target": "backup-restore-reconciliation/SKILL.md",
+      "sha256": "760e635399a2c4d5b31a510a4f037038ecc6c8a3b782b50e464e253eb8894762",
+      "bytes": 2226,
+      "creation_and_current_object_identity_sha256": "1991c0ae32b3f83a9dc4a248b06cbe495c2344bdd955df080162dfd707a999f6",
+      "creation_ID_matches_current": true,
+      "same_handle_buffer_returned": true,
+      "reviewed_bytes_equal": true
+    },
+    {
+      "index": 8,
+      "target": "backup-restore-reconciliation/references/guide.md",
+      "sha256": "d31fd959ef5d4235748477ab5ef119c79212b7279095fd4d0514c442207439ad",
+      "bytes": 4196,
+      "creation_and_current_object_identity_sha256": "54e46d1e779aae958c94daf7aa83b9cdb4e36c08e9b5f52f058b4c9f6b6a63ba",
+      "creation_ID_matches_current": true,
+      "same_handle_buffer_returned": true,
+      "reviewed_bytes_equal": true
+    },
+    {
+      "index": 9,
+      "target": "backup-restore-reconciliation/references/LICENSE.txt",
+      "sha256": "152ff6b3b51acbae8d220f2ac81b1d0e31e5c8d1253721b8a1e7c3c71b994eb4",
+      "bytes": 1086,
+      "creation_and_current_object_identity_sha256": "83fea82f72267f16b66096605ba1f96ea266f262d267e1cfbca01d47833ff97d",
+      "creation_ID_matches_current": true,
+      "same_handle_buffer_returned": true,
+      "reviewed_bytes_equal": true
+    },
+    {
+      "index": 10,
+      "target": "backup-restore-reconciliation/references/source.json",
+      "sha256": "267a56dcb64750844b92d9b51476794b66ded14805e0a3b69e48e97729b95eb3",
+      "bytes": 4848,
+      "creation_and_current_object_identity_sha256": "b0f1f761516f4ff8d4376c1c6ba00235c0ae8f9b2d6c91bec64963022dfd4cb7",
+      "creation_ID_matches_current": true,
+      "same_handle_buffer_returned": true,
+      "reviewed_bytes_equal": true
+    },
+    {
+      "index": 11,
+      "target": "backup-restore-reconciliation/references/sources.md",
+      "sha256": "8e5bec8d5563ad5240fc57eaaf527951700494bfa825c82193fee446e7808ff3",
+      "bytes": 2120,
+      "creation_and_current_object_identity_sha256": "927ee0f0738a7352be89bb0370c40a4ee2ad0ba6b48a93ec45fe14c3d286fd9f",
+      "creation_ID_matches_current": true,
+      "same_handle_buffer_returned": true,
+      "reviewed_bytes_equal": true
+    },
+    {
+      "index": 12,
+      "target": "backup-restore-reconciliation/references/source-assessment.json",
+      "sha256": "36019e1c3286fd8225443951e424d7a6fb8461b5538a480c86d9baab2319dc97",
+      "bytes": 11251,
+      "creation_and_current_object_identity_sha256": "abd820ae012c8cc0099b81d243f426c09b8505cb75fb23c17a9f8c07eaec3910",
+      "creation_ID_matches_current": true,
+      "same_handle_buffer_returned": true,
+      "reviewed_bytes_equal": true
+    },
+    {
+      "index": 13,
+      "target": "backup-restore-reconciliation/references/original-skill.masked.txt",
+      "sha256": "179e8404bc2ecfcdece13b75fb295fdbecc2ca81bddb26b8b9d084cd76dff5a3",
+      "bytes": 3280,
+      "creation_and_current_object_identity_sha256": "c2c61fad751ac52bba7b1335b79fe49684214df3e6ae6dbff586dd1b3b1c22e3",
+      "creation_ID_matches_current": true,
+      "same_handle_buffer_returned": true,
+      "reviewed_bytes_equal": true
+    },
+    {
+      "index": 14,
+      "target": "connection-scope-reconciliation/SKILL.md",
+      "sha256": "73573f9305c9b5bf8a630eccc468a951696493b23bba3f14796f9a72250231e9",
+      "bytes": 1686,
+      "creation_and_current_object_identity_sha256": "bc400e6baf52a0de07842d8c8ed208a7164631bc0fd8700490b3aebbd103356b",
+      "creation_ID_matches_current": true,
+      "same_handle_buffer_returned": true,
+      "reviewed_bytes_equal": true
+    },
+    {
+      "index": 15,
+      "target": "connection-scope-reconciliation/references/guide.md",
+      "sha256": "ee436562a5adc575dbed3c20cf0559dbc6bfd3e13fb67b7de2663aae43ca215b",
+      "bytes": 2125,
+      "creation_and_current_object_identity_sha256": "ba89e10a7bdbeb4c0c424775ebb7a900d0d0cf07f13760d91a102f9521fb54b6",
+      "creation_ID_matches_current": true,
+      "same_handle_buffer_returned": true,
+      "reviewed_bytes_equal": true
+    },
+    {
+      "index": 16,
+      "target": "connection-scope-reconciliation/references/LICENSE.txt",
+      "sha256": "ec9e952fec4d029fab649746d033bf91802b15f59ffa40a0d3a3a0e1a1587802",
+      "bytes": 1072,
+      "creation_and_current_object_identity_sha256": "848066288274221ac84da8821b9ae5b0f8c6586996e873ca26fea72d412422ee",
+      "creation_ID_matches_current": true,
+      "same_handle_buffer_returned": true,
+      "reviewed_bytes_equal": true
+    },
+    {
+      "index": 17,
+      "target": "connection-scope-reconciliation/references/source.json",
+      "sha256": "f4967d933f3f3adab2cc20ec035cfed908e5c57afa1fc872944d81ed5dd21f3c",
+      "bytes": 9502,
+      "creation_and_current_object_identity_sha256": "df985f6547bd09da568b6b20d988b615c1db3398908bc0475799b8993ab8e51c",
+      "creation_ID_matches_current": true,
+      "same_handle_buffer_returned": true,
+      "reviewed_bytes_equal": true
+    },
+    {
+      "index": 18,
+      "target": "connection-scope-reconciliation/references/sources.md",
+      "sha256": "236cb07a51c4f70ca8e20239c17459b8ebc6c2cd09483c0999be9a676cf8c6ea",
+      "bytes": 1759,
+      "creation_and_current_object_identity_sha256": "30dbb899b94aa282bd7a12c50ebdae0e8921026722054721ba1f614e9cfa860c",
+      "creation_ID_matches_current": true,
+      "same_handle_buffer_returned": true,
+      "reviewed_bytes_equal": true
+    },
+    {
+      "index": 19,
+      "target": "connection-scope-reconciliation/references/source-assessment.json",
+      "sha256": "dd70dceb0d9bb0332506e1fb0b174af09ff08612075aa0d61582d731eb28c558",
+      "bytes": 16986,
+      "creation_and_current_object_identity_sha256": "bab27a24cd620504c5870f5c428492f33f0d4435ad06864f31f22410fca13686",
+      "creation_ID_matches_current": true,
+      "same_handle_buffer_returned": true,
+      "reviewed_bytes_equal": true
+    },
+    {
+      "index": 20,
+      "target": "connection-scope-reconciliation/references/original-skill.masked.txt",
+      "sha256": "1a375a1ff2f70676ddc9a63de07275ab408147dc6610f9aaebdf9880278b907a",
+      "bytes": 16110,
+      "creation_and_current_object_identity_sha256": "3c551814579c457d184a859a2a93fabbfce77e38b631eac1c160bec143ae9bab",
+      "creation_ID_matches_current": true,
+      "same_handle_buffer_returned": true,
+      "reviewed_bytes_equal": true
+    }
+  ],
+  "identity_digest_definition": "SHA256 UTF8(volume+LF+file_id_128); raw platform IDs retained privately.",
+  "whole16_complete": false
+}

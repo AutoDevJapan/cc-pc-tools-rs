@@ -30,7 +30,7 @@ func validateRecoveryProposal(bundle, operation, prep, original map[string]any) 
 	if e := next4Fields(next4Object(operation["writer"]), map[string]any{"task": float64(3080), "job": next3Actor, "spec_sha256": "91a65cb17d2e5c4b18655ecb3126ea1a212ad655e716a6c349321876071a9435"}); e != nil {
 		return e
 	}
-	if e := next4Fields(prep, map[string]any{"todo": float64(3080), "actual_author_job": next3Actor, "payload_files": float64(21), "payload_bytes": float64(104799), "actual_parent_physical_lines": float64(924), "actual_parent_visible_lines": float64(606), "actual_parent_withheld_lines": float64(318), "metadata0_is_not_physical_absence_qualification": true, "qualified_target_absence_completed": false, "full_Creator_review_received": false, "created_files": float64(0), "new_adoptions": float64(0), "central_operations": float64(0), "whole16_complete": false, "independent_authorship_third_party_or_current_service_claims_proven": false}); e != nil {
+	if e := next4Fields(prep, map[string]any{"todo": float64(3080), "actual_author_job": next3Actor, "payload_files": float64(21), "payload_bytes": float64(107677), "actual_parent_physical_lines": float64(924), "actual_parent_visible_lines": float64(606), "actual_parent_withheld_lines": float64(318), "metadata0_is_not_physical_absence_qualification": true, "qualified_target_absence_completed": false, "full_Creator_review_received": false, "created_files": float64(0), "new_adoptions": float64(0), "central_operations": float64(0), "whole16_complete": false, "independent_authorship_third_party_or_current_service_claims_proven": false}); e != nil {
 		return e
 	}
 	if e := next4Fields(next4Object(prep["fresh_requested_names_metadata"]), map[string]any{"targets": float64(3), "found_count": float64(0), "parse_error_count": float64(0), "model_called": false, "process_tree_exit_confirmed": true}); e != nil {
@@ -165,8 +165,8 @@ func validateRecoveryProposal(bundle, operation, prep, original map[string]any) 
 		}
 		seen[path] = true
 	}
-	if len(all) != 21 || len(seen) != 21 || totalBytes != 104799 {
-		return fmt.Errorf("exact21/104799B payload scope differs")
+	if len(all) != 21 || len(seen) != 21 || totalBytes != 107677 {
+		return fmt.Errorf("exact21/107677B payload scope differs")
 	}
 	return nil
 }
@@ -174,10 +174,10 @@ func validateRecoveryProposal(bundle, operation, prep, original map[string]any) 
 func loadRecoveryProposal(t *testing.T) (map[string]any, map[string]any, map[string]any, map[string]any) {
 	t.Helper()
 	var bundle, operation, prep, original map[string]any
-	if travel3Digest(loadPublicReceipt(t, "skills-3080-recovery-connections-proposal175645.json", &bundle)) != "d4648ee3215ac971789b567554bcf663626c08fdcf781303cb0107eec81a5330" {
+	if travel3Digest(loadPublicReceipt(t, "skills-3080-recovery-connections-proposal175645.json", &bundle)) != "e8214396684ab260357c7873e39feeacce3a69036fdf6578509ce9d4401720bc" {
 		t.Fatal("final proposed bundle pin differs")
 	}
-	if travel3Digest(loadPublicReceipt(t, "skills-3080-operations/create-recovery-connections-175645.json", &operation)) != "212e5645cd33a0ae0abe44b1b75fa2079826889b8c41f4857963808649d90c24" {
+	if travel3Digest(loadPublicReceipt(t, "skills-3080-operations/create-recovery-connections-175645.json", &operation)) != "03612ee51f6249602bd4afd59c13d79430ff58cd464d0872e1cb1bb9d37eb27f" {
 		t.Fatal("final proposed operation pin differs")
 	}
 	loadPublicReceipt(t, "skills-3080-recovery-connections-preparation175645.json", &prep)

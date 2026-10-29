@@ -5,8 +5,8 @@ SKILLS3080_READ_ONLY_REVIEW_TASK_V1
 作者は20261027-175645-todo-3080のSol/maxで、別モデルのLuna/maxを本人の限定指定に従って使う。
 現在の導入159件・統合3件・除外記録15件（再確認中）と登録評価1501件は不変で、3案の配置・発見・実利用はまだ0。
 
-対象はdynamic-action-authorization、backup-restore-reconciliation、connection-scope-reconciliationの3案で、それぞれ7ファイル、合計21ファイル104799バイトを全文読む。
-作成manifestはdocs/skills-3080-operations/create-recovery-connections-175645.json、SHA256は212e5645cd33a0ae0abe44b1b75fa2079826889b8c41f4857963808649d90c24。
+対象はdynamic-action-authorization、backup-restore-reconciliation、connection-scope-reconciliationの3案で、それぞれ7ファイル、合計21ファイル107677バイトを全文読む。
+作成manifestはdocs/skills-3080-operations/create-recovery-connections-175645.json、SHA256は03612ee51f6249602bd4afd59c13d79430ff58cd464d0872e1cb1bb9d37eb27f。
 比較reviewではなく、この固定版の全21出力を確認する。
 旧Creator4193/4208は既作成の別manifestに結ぶ凍結済みの証拠なので、今回の資格へ流用・編集・再起動しない。
 
@@ -28,16 +28,18 @@ new3のSKILL、guide、正負例、3つのsource metadataとmanifestの関係、
 原資料のinstall、全DB公開、rootへの一括復元、秘密表示、接続作成/削除や通知を実行しない。
 自分の実model/effortは親が正常metadataとnativeで独立照合し、自己申告での確認や内部名を見られないことによる不要な再起動を求めない。
 
-本文の全文確認に加え、次の3つの合成入力へSkillを適用し、どの手順を使うか・判断と不足情報・実行しなかった操作を簡潔に返す。
+本文の全文確認に加え、次の4つの合成入力へSkillを適用し、どの手順を使うか・判断と不足情報・実行しなかった操作を簡潔に返す。
 これは実環境の操作や利用実績ではない。
 
 1. 動的actionのmetadataはreadProfileと名付けているが、handlerには権限変更が含まれる。呼出し主体はtenant Aのprofile読取権限だけを持ち、requestはtenant Bの同じ数値IDを指す。
 2. 復元対象は200ファイルで、snapshot manifestとstaging結果は199ファイルで一致した。欠けた1件の除外理由は不明で、現在の原本は200ファイルのまま残っている。backup終了codeは0だった。
 3. 同serviceにsubject AとBのACTIVE接続があり、依頼対象はA/Org Xだが最古の接続はBである。proxyはHTTP200を返し、nativeの業務結果は部分失敗、次page tokenもある。別のwrite O1はtimeoutしたが同じO1の配送記録が見つかった。
 
-既存3048の構造/参照/hash/正負例PASS3、関連Go package9.579s/vet成功と11反例を記録しているが、それを自分で再実行したとは書かない。
+4. 指定stagingはD:/restore-fixture/stage、既存原本はその外にある。snapshotのmemberに../outside/current.txt、D:/outside/current.txt、stage/link/current.txtがあり、linkは外部を指す。別memberは範囲外原本へのhardlinkを指定し、事前確認後に親directoryの実体も変わった。実ファイルを操作せず、復元の判断と不足情報を示す。
+
+既存3048の構造/参照/hash/正負例PASS3、関連Go package6.943s/vet成功と12反例を記録しているが、それを自分で再実行したとは書かない。
 metadata発見0を物理不在の資格や全catalogの発見保証へ変えず、3案の実配置・利用可能・全16完了は未確認のまま保持する。
 
-最終返信は日本語で「状態: 完了」から固定commit・全13PUBLIC資料と21出力の実読範囲・Must/Suggestion/Nit全件・3合成入力の適用結果を返す。
+最終返信は日本語で「状態: 完了」から固定commit・全13PUBLIC資料と21出力の実読範囲・Must/Suggestion/Nit全件・4合成入力の適用結果を返す。
 全出力を読み、Must0の時だけ、次の1行を実際の判定で付ける。Mustが残る場合はaccepted:falseと実数を返す。
-SKILLS3080_ACCEPTANCE {"domain":"skills-3080-review-v1","manifest_sha256":"212e5645cd33a0ae0abe44b1b75fa2079826889b8c41f4857963808649d90c24","accepted":true,"must":0}
+SKILLS3080_ACCEPTANCE {"domain":"skills-3080-review-v1","manifest_sha256":"03612ee51f6249602bd4afd59c13d79430ff58cd464d0872e1cb1bb9d37eb27f","accepted":true,"must":0}

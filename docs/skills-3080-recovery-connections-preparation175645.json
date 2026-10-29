@@ -33,7 +33,7 @@
       "target": "backup-restore-reconciliation",
       "ordinal": 249,
       "files": 7,
-      "bytes": 26129,
+      "bytes": 29007,
       "primary_physical_lines": 140,
       "primary_visible_lines": 117,
       "primary_withheld_lines": 23,
@@ -83,9 +83,9 @@
     }
   ],
   "payload_files": 21,
-  "payload_bytes": 104799,
-  "bundle_sha256": "d4648ee3215ac971789b567554bcf663626c08fdcf781303cb0107eec81a5330",
-  "operation_manifest_sha256": "212e5645cd33a0ae0abe44b1b75fa2079826889b8c41f4857963808649d90c24",
+  "payload_bytes": 107677,
+  "bundle_sha256": "e8214396684ab260357c7873e39feeacce3a69036fdf6578509ce9d4401720bc",
+  "operation_manifest_sha256": "03612ee51f6249602bd4afd59c13d79430ff58cd464d0872e1cb1bb9d37eb27f",
   "source_selections_sha256": "d34b3ebba464e23be167ccd3b0962464098396b21557ca638c01a3ed3b7498c3",
   "source_repository_id": 1147531245,
   "source_repo": "6mile/skills",
@@ -244,12 +244,44 @@
     "metadata_query_completion_now_consistent_for_all3": true,
     "physical_absence_still_unqualified": true,
     "payloads_and_manifest_unchanged": true,
-    "full_Creator_source_spec_kept_for_same21_payload_qualification": true,
+    "full_Creator_source_spec_kept_for_same21_payload_qualification": false,
     "new_central_operations": 0,
     "actual_stale_flag_Red_reproduced": true,
     "current_affected_full_package_seconds": 10.012,
     "vet_exit": 0,
     "actual12_negative_cases": true,
-    "actual_queue_and4snapshots_used": true
+    "actual_queue_and4snapshots_used": true,
+    "historical_v2_manifest": "212e5645cd33a0ae0abe44b1b75fa2079826889b8c41f4857963808649d90c24",
+    "historical_before_restore_boundary_fix": true
+  },
+  "restore_boundary_Must_correction": {
+    "bundle_sha256": "e8214396684ab260357c7873e39feeacce3a69036fdf6578509ce9d4401720bc",
+    "operation_sha256": "03612ee51f6249602bd4afd59c13d79430ff58cd464d0872e1cb1bb9d37eb27f",
+    "payload_bytes": 107677,
+    "per_target_bytes": {
+      "dynamic-action-authorization": 29430,
+      "backup-restore-reconciliation": 29007,
+      "connection-scope-reconciliation": 49240
+    },
+    "changed_payloads": [
+      "backup-restore-reconciliation/SKILL.md",
+      "backup-restore-reconciliation/references/guide.md",
+      "backup-restore-reconciliation/references/sources.md"
+    ],
+    "other18_payloads_unchanged": true,
+    "source_originals_notices_masks_and_assessments_unchanged": true,
+    "Must_source_job": "20261029-091424-todo-4033",
+    "Must_original_sha": "0f5023daf671d0949c9181b2e26d436253eab09f3bc8ffa032d56ff9c779d208",
+    "untrusted_restore_paths_and_links_admission_added": true,
+    "real_restore_or_central_operations": 0,
+    "old212e_full_review_retained_not_reused_for_new_bytes": true,
+    "whole16_complete": false,
+    "new_full_Creator_required_before_creation": true,
+    "fourth_synthetic_forward_case_added": true,
+    "current_related_go_seconds": 6.943,
+    "current_vet_exit": 0,
+    "current_existing3048_PASS": 3,
+    "actual_queue_and4snapshots_used": true,
+    "forward_path_link_case_is_synthetic_no_actual_extract": true
   }
 }

@@ -1305,6 +1305,14 @@ if truth(&current["scheduler"]["question_close_pending"]){e.backend.close_questi
                 .map_err(|error| invalid_subwork(&error, "before_workspace"))?;
         }
         let recovered = self.backend.workspace_recovery(repo, i, &jobs)?;
+        let pointer_source = jobs.iter().find(|source| {
+            cc_job_policy::subwork_continuation::latest_worker(i, source)
+        });
+        let pointer_repair = if let Some(source) = pointer_source.filter(|s| s["id"] != i["scheduler"]["last_job"]) {
+            let ps = self.backend.snapshot()?;
+            (!jobs.iter().any(|j| (j["todo_id"] == i["id"] || arr(&i["jobs"]).contains(&j["id"]))
+                && (live(j) || alive(j, &ps, self.backend.clock())))).then(|| source["id"].clone())
+        } else { None };
         let expected_inputs = launch_inputs(i);
         let now = self.backend.clock();
         let mut reserved = false;
@@ -1312,6 +1320,7 @@ if truth(&current["scheduler"]["question_close_pending"]){e.backend.close_questi
 if launch_inputs(row)!=expected_inputs || (n(&row["scheduler"]["not_before"])>now && !quota_recheck) {return;}
 reserved=true;
 if !row["scheduler"].is_object(){row["scheduler"]=json!({});}
+if let Some(source)=&pointer_repair {row["scheduler"]["result_pointer_repair"]=json!({"previous":row["scheduler"]["last_job"],"source_job":source,"generation":row["resume_generation"]});row["scheduler"]["last_job"]=source.clone();}
 if let Some(recovered)=recovered {merge(&mut row["scheduler"], recovered);}
 if !truth(&row["scheduler"]["worktree"]){let slug=regex::Regex::new("[^a-z0-9]+").unwrap().replace_all(&s(&row["title"]).to_lowercase(),"-").trim_matches('-').chars().take(32).collect::<String>();let name=format!("todo-{}-{}",row["id"],if slug.is_empty(){"work"}else{&slug});merge(&mut row["scheduler"],json!({"worktree":PathBuf::from(format!("{}-wt",base.display())).join(&name),"branch":format!("scheduler/{name}")}));}
 if !truth(&row["scheduler"]["key"]){let attempt=add_count(&row["scheduler"]["attempt"],1);merge(&mut row["scheduler"],json!({"key":uuid::Uuid::new_v4().simple().to_string(),"attempt":attempt}));}row["scheduler"]["phase"]=json!("preparing");})?;
@@ -1363,7 +1372,11 @@ if !truth(&row["scheduler"]["key"]){let attempt=add_count(&row["scheduler"]["att
             }
         }
         let jobs = self.backend.jobs()?;
-        let source = (!truth(&item["scheduler"]["console_fresh_request"]))
+        let source = if !item["subwork"].is_object() {
+            jobs.iter().find(|j| !truth(&item["scheduler"]["console_fresh_request"])
+                && (j["id"] == item["scheduler"]["last_job"] || j["id"] == item["scheduler"]["workspace_receipt"]["job"])
+                && owns_workspace(&item,j))
+        } else { (!truth(&item["scheduler"]["console_fresh_request"]))
             .then(|| {
                 [
                     cc_job_policy::subwork_continuation::source_id(&item),
@@ -1372,7 +1385,7 @@ if !truth(&row["scheduler"]["key"]){let attempt=add_count(&row["scheduler"]["att
                 ].into_iter().filter(|id| !id.is_empty()).find_map(|id| {
                     jobs.iter().find(|j| j["id"] == id && owns_workspace(&item, j))
                 })
-            }).flatten();
+            }).flatten() };
         let mut resume_session = source.and_then(|j| {
             crate::preparation::recovery_session(&item, j, s(&item["scheduler"]["worktree"]), &jobs)
         });
@@ -2288,7 +2301,7 @@ if !truth(&row["scheduler"]["key"]){let attempt=add_count(&row["scheduler"]["att
                             }
                             if e.0=="QuotaRetryEnded" {
                                 row["scheduler"]["phase"]=json!("quota_retry_ended");
-                                row["scheduler"]["quota_retry_terminal"]=json!({"source_job":i["scheduler"]["last_job"],"at":failed_at,"reason":"finite_or_invalid_retry_history"});
+                                row["scheduler"]["quota_retry_terminal"]=json!({"source_job":cc_job_policy::subwork_continuation::source_id(i),"at":failed_at,"reason":"finite_or_invalid_retry_history"});
                                 row["note"]=json!("同じ担当の利用枠回復を有限予算で終了しました。元の仕様・履歴・停止状態を保持しています。");
                                 return;
                             }

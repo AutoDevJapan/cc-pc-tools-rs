@@ -114,6 +114,7 @@ fn current_result(status: &str) -> support::Fixture {
     let mut f = fixture();
     f.jobs[1]["work_owner"] = cc_job_policy::work_owner::checkout(f.jobs[1]["cwd"].as_str().unwrap());
     f.jobs[1]["status"] = json!(status);
+    if status == "failed" { f.jobs[1]["last_failure_kind"] = json!("transient"); }
     f.jobs[1]["todo_resume_generation"] = json!(3);
     f.jobs[1]["todo_dependency_generation"] = json!(1);
     f.db["items"][1]["worker_receipt"] = json!({"job":"old-quota","generation":3});
@@ -127,7 +128,7 @@ fn current_result(status: &str) -> support::Fixture {
 
 #[test]
 fn current_parent_rebinds_the_exact_finished_worker_after_cancel_or_pc_return() {
-    for status in ["succeeded", "lost", "cancelled"] {
+    for status in ["succeeded", "lost", "cancelled", "failed"] {
         let f = current_result(status);
         save(&f);
         let original = fs::read(f.dir.path().join("jobs/old-quota/job.json")).unwrap();
@@ -135,13 +136,15 @@ fn current_parent_rebinds_the_exact_finished_worker_after_cancel_or_pc_return() 
         assert!(out.status.success(), "{status}: {}", String::from_utf8_lossy(&out.stderr));
         let db: Value = serde_json::from_slice(&fs::read(f.dir.path().join("todo.json")).unwrap()).unwrap();
         assert_eq!(db["items"][1]["subwork_continuation"]["source_job"], "old-quota");
+        assert_eq!(db["items"][1]["subwork_continuation"]["source_kind"], "current_result");
+        assert_eq!(db["items"][1]["subwork_continuation"]["source_receipt"], f.db["items"][1]["worker_receipt"]);
         assert_eq!(fs::read(f.dir.path().join("jobs/old-quota/job.json")).unwrap(), original);
     }
 }
 
 #[test]
 fn finished_worker_rebinding_cannot_replace_current_ownership_or_quota_retry() {
-    for case in ["unknown_cancel", "quota_failure", "receipt_job", "receipt_generation", "source_generation", "dependency", "spec", "scope", "source_owner", "budget", "drain", "stop", "parent"] {
+    for case in ["unknown_cancel", "quota_failure", "receipt_job", "receipt_generation", "source_generation", "dependency", "spec", "scope", "source_owner", "branch", "git_common", "worktree", "latest", "future_dependency", "budget", "drain", "stop", "parent"] {
         let mut f = current_result("cancelled");
         match case {
             "unknown_cancel" => { f.jobs[1].as_object_mut().unwrap().remove("recovery_cancel"); },
@@ -153,6 +156,11 @@ fn finished_worker_rebinding_cannot_replace_current_ownership_or_quota_retry() {
             "spec" => fs::write(f.db["items"][1]["spec"].as_str().unwrap(), "Changed").unwrap(),
             "scope" => f.db["items"][1]["network"] = json!(true),
             "source_owner" => f.jobs[1]["work_owner"]["repository"] = json!("different"),
+            "branch" => f.jobs[1]["work_owner"]["branch"] = json!("different"),
+            "git_common" => f.jobs[1]["work_owner"]["git_common"] = json!("different"),
+            "worktree" => f.jobs[1]["work_owner"]["worktree"] = json!("different"),
+            "latest" => f.db["items"][1]["jobs"].as_array_mut().unwrap().push(json!("later")),
+            "future_dependency" => f.jobs[1]["todo_dependency_generation"] = json!(2),
             "budget" => f.jobs[1]["capacity_exhausted"] = json!(true),
             "drain" => { f.jobs[1]["pid"] = f.jobs[0]["pid"].clone(); f.jobs[1]["pid_created"] = f.jobs[0]["pid_created"].clone(); },
             "stop" => f.db["items"][1]["owner_stopped"] = json!(true),
@@ -161,9 +169,33 @@ fn finished_worker_rebinding_cannot_replace_current_ownership_or_quota_retry() {
         }
         save(&f);
         let before = fs::read(f.dir.path().join("todo.json")).unwrap();
-        assert!(!call(&f, "parent").status.success(), "{case}");
+        let out = call(&f, "parent");
+        assert!(!out.status.success(), "{case}");
+        let expected = match case {
+            "dependency" => "subwork_continuation_generation_or_dependency",
+            "drain" => "subwork_continuation_not_drained",
+            "parent" => "subwork_continuation_parent_invalid",
+            _ => "subwork_continuation_contract_rejected",
+        };
+        assert!(String::from_utf8_lossy(&out.stderr).contains(expected), "{case}: {}", String::from_utf8_lossy(&out.stderr));
         assert_eq!(fs::read(f.dir.path().join("todo.json")).unwrap(), before, "{case}");
     }
+}
+
+#[test]
+fn actual_quota_result_after_dependency_release_binds_a_new_contract_without_resetting_history() {
+    let mut f = current_result("failed");
+    f.jobs[1]["last_failure_kind"] = json!("quota");
+    f.jobs[1]["todo_dependency_generation"] = json!(0);
+    f.jobs[1]["capacity_same_model_retry_count"] = json!(1);
+    f.jobs[1]["capacity_history"] = json!([{"kind":"same_model_account_retry","account_selector":"p000001"}]);
+    save(&f);
+    let original = fs::read(f.dir.path().join("jobs/old-quota/job.json")).unwrap();
+    let out = call(&f, "parent");
+    assert!(out.status.success(), "{}", String::from_utf8_lossy(&out.stderr));
+    let db: Value = serde_json::from_slice(&fs::read(f.dir.path().join("todo.json")).unwrap()).unwrap();
+    assert_eq!(db["items"][1]["subwork_continuation"]["source_kind"], "current_quota");
+    assert_eq!(fs::read(f.dir.path().join("jobs/old-quota/job.json")).unwrap(), original);
 }
 
 #[test]

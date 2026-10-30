@@ -501,12 +501,18 @@ pub fn quota_recheck_candidate(item: &Value, jobs: &[Value], now: f64) -> bool {
             || n(&m["preparation_failure"]["at"]) + 300. <= now)
         && (retry || preparation) && !crate::targeted_dispatch::held(item)
         && jobs.iter().any(|source| {
-            source["id"] == m["last_job"] && owns_workspace(item, source)
+            source["id"] == cc_job_policy::subwork_continuation::source_id(item) && owns_workspace(item, source)
                 && source["status"] == "failed"
                 && cc_job_policy::quota_recovery::quota_source(source)
                 && ((retry && cc_job_policy::quota_recovery::provider(s(&source["model"])) == Some("xai"))
                     || (cc_job_policy::quota_recovery::provider(s(&source["model"])) == Some("openai")
-                        && cc_job_policy::quota_recovery::eligible_source(item, source)
+                        && {
+                            let mut current = item.clone();
+                            if cc_job_policy::subwork_continuation::latest_worker(item, source) {
+                                current["scheduler"]["last_job"] = source["id"].clone();
+                            }
+                            cc_job_policy::quota_recovery::eligible_source(&current, source)
+                        }
                         && resource_deadline(source, now).is_none()))
         })
 }

@@ -340,14 +340,48 @@ fn dependency_continuation_is_consumed_once_and_later_work_uses_its_own_result()
     let proof=first["scheduler"]["selection"]["subwork_continuation"].clone();
     let mut next=f.e.backend.records[1].clone();next["id"]=json!("new-current");next["status"]=json!("succeeded");
     next["launch_key"]=first["scheduler"]["key"].clone();next["subwork_continuation"]=proof;
+    next["finite_subwork"]["launch_key"]=next["launch_key"].clone();
+    next["work_owner"]=cc_job_policy::work_owner::checkout(s(&next["cwd"]));
     next["todo_resume_generation"]=json!(4);next["todo_dependency_generation"]=json!(1);
     let row=&mut sub.db["items"][1];row["resume_generation"]=json!(4);row["worker_receipt"]=json!({"job":"new-current","generation":4});
     row["jobs"].as_array_mut().unwrap().push(next["id"].clone());row["scheduler"]["last_job"]=next["id"].clone();
     row["scheduler"]["key"]=Value::Null;f.e.backend.records.push(next);
     write_json(&f.e.todo_path,&sub.db,1).unwrap();
     let later=f.e.prepare(&sub.db["items"][1],sub.repo.to_str().unwrap()).unwrap().unwrap();
-    assert!(later["scheduler"]["selection"]["subwork_continuation"].is_null());
+    assert_eq!(later["scheduler"]["selection"]["subwork_continuation"]["request"]["source_job"], "new-current");
     assert!(later["scheduler"]["selection"]["quota_recovery"].is_null());
+}
+
+#[test]
+fn retired_request_rebinds_later_ordinary_results_without_resetting_their_budget() {
+    for status in ["succeeded", "lost", "failed", "cancelled", "quota"] {
+        let (mut f, mut sub) = dependency_continuation_fixture();
+        let mut next = f.e.backend.records[1].clone();
+        next["id"] = json!("later-ordinary"); next["status"] = json!(if status == "quota" { "failed" } else { status });
+        next["launch_key"] = json!("later-key");
+        next["finite_subwork"]["launch_key"] = next["launch_key"].clone();
+        next["work_owner"] = cc_job_policy::work_owner::checkout(s(&next["cwd"]));
+        next["todo_resume_generation"] = json!(5); next["todo_dependency_generation"] = json!(1);
+        if status == "failed" { next["last_failure_kind"] = json!("transient"); }
+        if status == "cancelled" { next["recovery_cancel"] = json!({"key":"recovery-later","committed_at":"2026-10-26T01:01:00Z"}); }
+        let row = &mut sub.db["items"][1]; row["resume_generation"] = json!(5); row["dependency_generation"] = json!(3);
+        row["worker_receipt"] = json!({"job":next["id"],"generation":5});
+        row["scheduler"]["last_job"] = next["id"].clone(); row["scheduler"]["key"] = Value::Null;
+        if status == "quota" { row["scheduler"]["last_job"] = json!("old-quota"); }
+        row["jobs"].as_array_mut().unwrap().push(next["id"].clone());
+        let retained = row["subwork_continuation"].clone();
+        let original = next.clone(); f.e.backend.records.push(next);
+        write_json(&f.e.todo_path, &sub.db, 1).unwrap();
+        let prepared = f.e.prepare(&sub.db["items"][1], sub.repo.to_str().unwrap()).unwrap().unwrap();
+        let proof = &prepared["scheduler"]["selection"]["subwork_continuation"];
+        assert_eq!(proof["request"]["source_job"], "later-ordinary", "{status}");
+        assert_eq!(proof["request"]["automatic_result"], true);
+        if status == "quota" { assert_eq!(proof["quota_retry"]["retry"]["same_model_count"], 2); }
+        assert_eq!(proof["request"]["retry_source_sha256"], cc_job_policy::quota_retry::binding(&original));
+        assert!(prepared["scheduler"]["selection"]["quota_recovery"].is_null());
+        assert_eq!(prepared["subwork_continuation"], retained);
+        assert_eq!(f.e.backend.records.last().unwrap(), &original);
+    }
 }
 
 #[test]
@@ -385,6 +419,7 @@ fn stale_continuation_request_does_not_block_the_latest_workers_real_quota_retry
     for case in ["normal", "receipt", "generation", "source", "scope", "spec", "pending", "stop", "live", "exhausted", "unknown", "budget"] {
     let (mut f, mut sub) = dependency_continuation_fixture();
     let mut next = f.e.backend.records[1].clone();
+    next["work_owner"] = cc_job_policy::work_owner::checkout(s(&next["cwd"]));
     next["id"] = json!("new-current");
     next["launch_key"] = json!("new-current-key");
     next["finite_subwork"]["launch_key"] = next["launch_key"].clone();
@@ -398,6 +433,7 @@ fn stale_continuation_request_does_not_block_the_latest_workers_real_quota_retry
     row["scheduler"]["last_job"] = next["id"].clone();
     row["scheduler"]["key"] = Value::Null;
     row["jobs"].as_array_mut().unwrap().push(next["id"].clone());
+    if ["normal", "budget"].contains(&case) { row["scheduler"]["last_job"] = json!("old-quota"); }
     match case {
         "receipt" => row["worker_receipt"]["job"] = json!("different"),
         "generation" => row["resume_generation"] = json!(5),
@@ -416,12 +452,14 @@ fn stale_continuation_request_does_not_block_the_latest_workers_real_quota_retry
     write_json(&f.e.todo_path, &sub.db, 1).unwrap();
     let result = f.e.prepare(&sub.db["items"][1], sub.repo.to_str().unwrap());
     if case != "normal" {
+        if case == "budget" { assert_eq!(result.as_ref().unwrap_err().0, "QuotaRetryEnded"); }
         assert!(result.is_err() || result.unwrap().is_none(), "{case}");
         assert!(f.e.backend.launched.is_empty());
         assert_eq!(f.e.backend.records.last().unwrap(), &original);
         continue;
     }
     let prepared = result.unwrap().unwrap();
+    assert_eq!(prepared["scheduler"]["last_job"], "new-current");
     let selection = &prepared["scheduler"]["selection"];
     assert!(selection["subwork_continuation"].is_null());
     assert_eq!(selection["quota_recovery"]["source_job"], "new-current");

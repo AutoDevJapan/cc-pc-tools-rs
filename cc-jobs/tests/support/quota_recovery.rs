@@ -161,7 +161,7 @@ fn child(t: &Test) -> Value {
     t.ctx
         .list_jobs(&HashSet::new())
         .into_iter()
-        .find(|j| j["todo_id"] == 2 && j["id"] != "quota-reader")
+        .find(|j| j["todo_id"] == 2 && j["launch_key"] == "22222222222222222222222222222222")
         .unwrap()
 }
 
@@ -210,7 +210,9 @@ fn legacy_claude_reentry_checks_its_current_health_after_the_old_provider_recove
 fn research_admission(gpt: bool, case: &str) {
     use cc_job_policy::subwork;
     let (t, mut row, mut source) = setup();
-    let continuation=case.starts_with("continuation_");
+    let automatic=case.starts_with("automatic_");
+    let continuation=case.starts_with("continuation_") || automatic;
+    let quota_dependency=case.contains("quota_dependency");
     let mut f = subwork_support::Fixture::new();
     f.register();
     f.db["items"][0]["status"] = json!("wait");
@@ -268,12 +270,29 @@ fn research_admission(gpt: bool, case: &str) {
     if continuation {
         row["resume_generation"]=json!(3);row["dependency_generation"]=json!(1);
         source["todo_resume_generation"]=json!(2);
+        let retained = if automatic {
+            let mut previous = source.clone(); previous["id"] = json!("earlier-quota");
+            let mut old_row = row.clone(); old_row["jobs"] = json!([previous["id"]]); old_row["scheduler"]["last_job"] = previous["id"].clone();
+            let old = cc_job_policy::subwork_continuation::request(&old_row, &previous, &f.jobs[0]).unwrap();
+            t.put(previous); row["jobs"] = json!(["earlier-quota",source["id"]]);
+            row["subwork_continuation"] = old.clone(); old
+        } else { Value::Null };
+        if automatic {
+            let status = case.strip_prefix("automatic_").unwrap();
+            source["status"] = json!(if quota_dependency || status == "transient" { "failed" } else if ["succeeded","lost","cancelled"].contains(&status) { status } else { "lost" });
+            if status == "transient" { source["last_failure_kind"] = json!("transient"); }
+            if status == "cancelled" { source["recovery_cancel"] = json!({"key":"recovery-auto","committed_at":"2026-09-28T12:01:00Z"}); }
+            source["todo_resume_generation"] = json!(4);
+            source["todo_dependency_generation"] = json!(if quota_dependency {0} else {1});
+            source["work_owner"] = cc_job_policy::work_owner::checkout(s(&source,"cwd"));
+            row["resume_generation"] = json!(4); row["worker_receipt"] = json!({"job":source["id"],"generation":4});
+        }
         if case.starts_with("continuation_result_") {
             source["work_owner"] = cc_job_policy::work_owner::checkout(s(&source, "cwd"));
             let status = case.strip_prefix("continuation_result_").unwrap();
-            source["status"] = json!(if status == "reset" { "lost" } else { status });
+            source["status"] = json!(if quota_dependency {"failed"} else if status == "reset" { "lost" } else { status });
             source["todo_resume_generation"] = json!(3);
-            source["todo_dependency_generation"] = json!(1);
+            source["todo_dependency_generation"] = json!(if quota_dependency {0} else {1});
             row["worker_receipt"] = json!({"job":source["id"],"generation":3});
             if status == "cancelled" { source["recovery_cancel"] = json!({"key":"recovery-source","committed_at":"2026-09-28T12:01:00Z"}); }
         }
@@ -281,10 +300,11 @@ fn research_admission(gpt: bool, case: &str) {
         target["effort_origin"]=json!("policy");
         target.as_object_mut().unwrap().remove("quota_recovery");
         let actor=&f.jobs[0];
-        let request=cc_job_policy::subwork_continuation::request(&row,&source,actor).unwrap();
+        let request=if automatic { cc_job_policy::subwork_continuation::automatic_request(&row,&source,actor).unwrap() }
+            else { cc_job_policy::subwork_continuation::request(&row,&source,actor).unwrap() };
         target["subwork_continuation"]=cc_job_policy::subwork_continuation::receipt(&request,&row,&source,actor,&target,
             &t.rt.quota_recovery_inventory.lock().unwrap(),t.rt.epoch()).unwrap();
-        row["subwork_continuation"]=request;
+        row["subwork_continuation"]=if automatic {retained} else {request};
     } else {
     target["quota_recovery"] = cc_job_policy::quota_recovery::receipt(
         &row,
@@ -360,10 +380,11 @@ fn research_admission(gpt: bool, case: &str) {
     .unwrap();
     fs::write(&paths.store, db.to_string()).unwrap();
     if continuation {
-        assert_eq!(j["capacity_same_model_retry_count"],source["capacity_same_model_retry_count"]);
+        assert_eq!(j["capacity_same_model_retry_count"],if quota_dependency {json!(2)} else {source["capacity_same_model_retry_count"].clone()});
         assert_eq!(j["capacity_retry_count"],source["capacity_retry_count"]);
         assert_eq!(j["capacity_wait_count"],source["capacity_wait_count"]);
-        assert_eq!(j["capacity_history"],source["capacity_history"]);
+        if quota_dependency { assert_eq!(j["capacity_history"].as_array().unwrap().len(), source["capacity_history"].as_array().unwrap().len()+1); }
+        else { assert_eq!(j["capacity_history"],source["capacity_history"]); }
         assert!(j["quota_recovery"].is_null());assert!(j["subwork_continuation"].is_object());
         match case {
             "continuation_health"=>t.rt.quota_recovery_inventory.lock().unwrap()["openai"]["verified"]=json!(false),
@@ -374,6 +395,15 @@ fn research_admission(gpt: bool, case: &str) {
             "continuation_scope"=>{let mut changed=j.clone();changed["network"]=json!(true);t.put(changed);},
             "continuation_legacy_reset"=>{let mut changed=j.clone();changed["capacity_retry_count"]=json!(0);t.put(changed);},
             "continuation_result_reset"=>{let mut changed=j.clone();changed["capacity_same_model_retry_count"]=json!(0);t.put(changed);},
+            "automatic_reset" | "automatic_quota_dependency_reset" | "continuation_result_quota_dependency_reset"=>{let mut changed=j.clone();changed["capacity_same_model_retry_count"]=json!(0);t.put(changed);},
+            "automatic_parent"=>{db["items"][0]["resume_generation"]=json!(2);fs::write(&paths.store,db.to_string()).unwrap();},
+            "automatic_generation"=>{db["items"][1]["resume_generation"]=json!(99);fs::write(&paths.store,db.to_string()).unwrap();},
+            "automatic_pending"=>{db["items"][1]["wait_on"]=json!([99]);fs::write(&paths.store,db.to_string()).unwrap();},
+            "automatic_scope"=>{let mut changed=j.clone();changed["network"]=json!(true);t.put(changed);},
+            "automatic_source"=>{let mut changed=source.clone();changed["finite_subwork"]["spec_sha256"]=json!("wrong");t.put(changed);},
+            "automatic_retained"=>{db["items"][1]["subwork_continuation"]["resume_generation"]=json!(99);fs::write(&paths.store,db.to_string()).unwrap();},
+            "automatic_unknown"=>t.rt.quota_recovery_inventory.lock().unwrap()["openai"]["verified"]=json!(false),
+            "automatic_selected_unknown"=>t.rt.quota_recovery_inventory.lock().unwrap()["openai"]["safe_routes"][0]["verified"]=json!(false),
             "continuation_parent_generation"=>{
                 db["items"][0]["resume_generation"]=json!(2);
                 db["items"][0]["worker_receipt"]["generation"]=json!(2);
@@ -412,7 +442,7 @@ fn research_admission(gpt: bool, case: &str) {
         for route in health["openai"]["safe_routes"].as_array_mut().unwrap(){route["at"]=json!(now);}
     }
     let slot = t.ctx.admit(s(&j, "id"));
-    if !["normal","continuation_normal","continuation_legacy","continuation_no_retry","continuation_result_succeeded","continuation_result_lost","continuation_result_cancelled","capacity_same","capacity_switch","capacity_anthropic","capacity_metadata","capacity_wait"].contains(&case) {
+    if !["normal","continuation_normal","continuation_legacy","continuation_no_retry","continuation_result_succeeded","continuation_result_lost","continuation_result_cancelled","continuation_result_quota_dependency","automatic_succeeded","automatic_lost","automatic_transient","automatic_cancelled","automatic_quota_dependency","capacity_same","capacity_switch","capacity_anthropic","capacity_metadata","capacity_wait"].contains(&case) {
         assert!(slot.is_err() || slot.unwrap().is_none(), "{case}");
         assert_ne!(t.ctx.load(s(&j, "id")).unwrap()["status"], "running");
         return;
@@ -486,8 +516,15 @@ fn dependency_continuation_registers_links_and_rechecks_before_real_queue_admiss
 
 #[test]
 fn current_finished_result_keeps_its_budget_through_registration_start_and_final_queue() {
-    for case in ["continuation_result_succeeded", "continuation_result_lost", "continuation_result_cancelled", "continuation_result_reset"] {
+    for case in ["continuation_result_succeeded", "continuation_result_lost", "continuation_result_cancelled", "continuation_result_reset", "continuation_result_quota_dependency", "continuation_result_quota_dependency_reset"] {
         research_admission(true, case);
+    }
+}
+
+#[test]
+fn automatic_current_result_keeps_its_budget_through_registration_start_and_final_queue() {
+    for case in ["automatic_succeeded","automatic_lost","automatic_transient","automatic_cancelled","automatic_quota_dependency","automatic_reset","automatic_quota_dependency_reset","automatic_parent","automatic_generation","automatic_pending","automatic_scope","automatic_source","automatic_retained","automatic_unknown","automatic_selected_unknown"] {
+        research_admission(true,case);
     }
 }
 

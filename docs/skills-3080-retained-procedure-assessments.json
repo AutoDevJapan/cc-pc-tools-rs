@@ -1,0 +1,4507 @@
+{
+  "all_source_and_support_rights_confirmed": false,
+  "assessment_records": 22,
+  "catalog_sha256": "2d73c9a038a41cc220a9687b935bfa1e0b315b65d9bd6d3e54ddb4111972876c",
+  "central_operations": 0,
+  "counts": {
+    "initial_display_gap_records": 3,
+    "masked_primary_records": 12,
+    "primary_physical_lines": 5995,
+    "primary_records": 22,
+    "primary_withheld_lines": 72,
+    "raw_primary_records": 10,
+    "saved_support_metadata": 157,
+    "support_records": 320,
+    "support_state_counts": {
+      "direct_masked_full": 23,
+      "direct_raw_full": 42,
+      "exact_bytes_reuse": 20,
+      "saved_unread": 72,
+      "unsaved": 163
+    },
+    "unsaved_support_metadata": 163
+  },
+  "domain": "skills3080-retained-procedure-assessment-journal-v1",
+  "entries": [
+    {
+      "bytes": 18276,
+      "copy_permission_accepted": false,
+      "findings": [
+        "複雑さ/価値/実現性/誤りの回復性でsurfaceを選ぶ点、SDKの型付き例外と完全contentblock保持は有用。schema parseや自動toolrunnerは対象の許可/業務完了の証明ではない。",
+        "Go例はContent[0].Text固定で空/複数/tool等のblockを欠く可能性があり、stream delta表示だけでは最終stop/不完全応答を確定できない。context.TODO/BackgroundとMaxIterations5だけでは実時間/取消・副作用の有限性を保証しない。",
+        "primaryは切捨て禁止だがerror資料413はtruncateを案内。未処理範囲/原版/cursorと再開を保持し無断で欠落させない。SDK retryに独自retryを重ねてtool作用を二重化しない。",
+        "2026-02-17 cachedモデル/料金・effort/beta/endpoint・SDK互換は現在未検証。nonnegotiable Opus/defaultPython/low effort/別modelの指示を本人指定モデル/max・新コード言語/OAuth限定へ優先しない。API鍵による実呼出し/新費用/環境確認/送信0。"
+      ],
+      "git_blob": "0fa842997c9e8c447151abced6abb0c4c6fb1b7f",
+      "individual_notices": [
+        {
+          "bytes": 11357,
+          "copy_permission_accepted": false,
+          "git_blob": "7a4a3ea2424c09fbe48d455aed1eaa94d9124835",
+          "path": "skills/pupuking723/claude-api-anthropic/LICENSE.txt",
+          "read_kind": "exact_bytes_reuse",
+          "relative_path": "LICENSE.txt",
+          "scope": "実公開版/著作者・第三者素材/依存/service/dataの権利は別。rootMIT/ClawHub補助MIT0で個別条件/矛盾を解除しない。",
+          "sha256": "58d1e17ffe5109a7ae296caafcadfdbe6a7d176f0bc4ab01e12a689b0499d8bd",
+          "source_url": "https://github.com/6mile/skills/blob/920714f17d81e0a95c7a9bc51faf0a7921cd982d/skills/pupuking723/claude-api-anthropic/LICENSE.txt"
+        }
+      ],
+      "inventory_id": "github:b6fe2358b6d8e2af40a0de6aec90d66d16d653bf93773c17530972c41a17a890",
+      "nearby_metadata": [
+        "agent-system-design",
+        "timeout-retry-concurrency",
+        "backend-correctness",
+        "mcp-builder"
+      ],
+      "negative": "自動toolrunner/schema合格だけで全操作許可/完了とし、最初のtextや途中streamだけを保存し、413で原履歴を黙って切る。",
+      "new_final_disposition": false,
+      "path": "skills/pupuking723/claude-api-anthropic/SKILL.md",
+      "positive": "単発で足りる目的と自律loopの必要条件を分け、完全な応答block/停止理由・有限retryと実作用receiptで回復を確認する。",
+      "read": {
+        "final_withheld_unread_except_reported_initial_gaps": true,
+        "initial_withheld_display_gaps": [],
+        "kind": "direct_raw_full",
+        "masked_lines": 0,
+        "ordered_view_complete": true,
+        "physical_lines": 243,
+        "raw_read_complete": true,
+        "recorded_mask_version": null,
+        "visible_range_digest_provided": false,
+        "withheld_meanings_not_treated_as_complete": true,
+        "withheld_physical_lines": [],
+        "workflow_view_complete": true
+      },
+      "required_changes": [
+        "実作用/入力/応答block/停止理由と許可scopeを結び、型/空/部分/取消/時間期限・重複作用を検証する。履歴欠落を明示し原本と再開cursorを保つ。",
+        "実利用する親だけが現在の公式仕様/実SDK版と契約枠を必要範囲で確認する。原API鍵・モデル/努力量の既定を今回採用せず、秘密/生errorを報告しない。"
+      ],
+      "source_code_executed": false,
+      "source_commit": "920714f17d81e0a95c7a9bc51faf0a7921cd982d",
+      "source_repo": "6mile/skills",
+      "source_sha256": "1ec3d558d3364ac7f768471055ded521f95bdb0f3e7239be9e4c8e0b219c587e",
+      "source_url": "https://github.com/6mile/skills/blob/920714f17d81e0a95c7a9bc51faf0a7921cd982d/skills/pupuking723/claude-api-anthropic/SKILL.md",
+      "support_read_states": [
+        {
+          "bytes": 11357,
+          "git_blob_prefix": "7a4a3ea2",
+          "masked_lines": 0,
+          "mode": "100644",
+          "relative_path": "LICENSE.txt",
+          "sha256_prefix": "58d1e17f",
+          "state": "exact_bytes_reuse"
+        },
+        {
+          "bytes": 18276,
+          "git_blob_prefix": "0fa84299",
+          "masked_lines": 0,
+          "mode": "100644",
+          "relative_path": "SKILL.md",
+          "sha256_prefix": "1ec3d558",
+          "state": "direct_raw_full"
+        },
+        {
+          "bytes": 297,
+          "git_blob_prefix": "57c2b966",
+          "masked_lines": null,
+          "mode": "100644",
+          "relative_path": "_meta.json",
+          "sha256_prefix": "424a3391",
+          "state": "saved_unread"
+        },
+        {
+          "bytes": 1758,
+          "git_blob_prefix": "cfb938a2",
+          "masked_lines": null,
+          "mode": "100644",
+          "relative_path": "csharp/claude-api.md",
+          "sha256_prefix": "55e92c36",
+          "state": "saved_unread"
+        },
+        {
+          "bytes": 4475,
+          "git_blob_prefix": "f33e11b8",
+          "masked_lines": null,
+          "mode": "100644",
+          "relative_path": "curl/examples.md",
+          "sha256_prefix": "c22799c5",
+          "state": "saved_unread"
+        },
+        {
+          "bytes": 3980,
+          "git_blob_prefix": "7ba732ac",
+          "masked_lines": 0,
+          "mode": "100644",
+          "relative_path": "go/claude-api.md",
+          "sha256_prefix": "56de3a20",
+          "state": "direct_raw_full"
+        },
+        {
+          "bytes": 3941,
+          "git_blob_prefix": "d618dfee",
+          "masked_lines": null,
+          "mode": "100644",
+          "relative_path": "java/claude-api.md",
+          "sha256_prefix": "6dd97d77",
+          "state": "saved_unread"
+        },
+        {
+          "bytes": 1568,
+          "git_blob_prefix": "4aab6b4a",
+          "masked_lines": null,
+          "mode": "100644",
+          "relative_path": "php/claude-api.md",
+          "sha256_prefix": "b051028f",
+          "state": "saved_unread"
+        },
+        {
+          "bytes": 9869,
+          "git_blob_prefix": "c819c674",
+          "masked_lines": null,
+          "mode": "100644",
+          "relative_path": "python/agent-sdk/README.md",
+          "sha256_prefix": "1ec9db63",
+          "state": "saved_unread"
+        },
+        {
+          "bytes": 8208,
+          "git_blob_prefix": "5e6ea911",
+          "masked_lines": null,
+          "mode": "100644",
+          "relative_path": "python/agent-sdk/patterns.md",
+          "sha256_prefix": "fc6e7c2b",
+          "state": "saved_unread"
+        },
+        {
+          "bytes": 10942,
+          "git_blob_prefix": "ae8801bb",
+          "masked_lines": null,
+          "mode": "100644",
+          "relative_path": "python/claude-api/README.md",
+          "sha256_prefix": "e6276a0b",
+          "state": "saved_unread"
+        },
+        {
+          "bytes": 4948,
+          "git_blob_prefix": "c9027689",
+          "masked_lines": null,
+          "mode": "100644",
+          "relative_path": "python/claude-api/batches.md",
+          "sha256_prefix": "39730b8a",
+          "state": "saved_unread"
+        },
+        {
+          "bytes": 3881,
+          "git_blob_prefix": "efcdd9cb",
+          "masked_lines": null,
+          "mode": "100644",
+          "relative_path": "python/claude-api/files-api.md",
+          "sha256_prefix": "e51e15f2",
+          "state": "saved_unread"
+        },
+        {
+          "bytes": 5217,
+          "git_blob_prefix": "bb2a84ef",
+          "masked_lines": null,
+          "mode": "100644",
+          "relative_path": "python/claude-api/streaming.md",
+          "sha256_prefix": "c21d8fca",
+          "state": "saved_unread"
+        },
+        {
+          "bytes": 16730,
+          "git_blob_prefix": "f347de5c",
+          "masked_lines": null,
+          "mode": "100644",
+          "relative_path": "python/claude-api/tool-use.md",
+          "sha256_prefix": "1cbae00f",
+          "state": "saved_unread"
+        },
+        {
+          "bytes": 1816,
+          "git_blob_prefix": "912bc181",
+          "masked_lines": null,
+          "mode": "100644",
+          "relative_path": "ruby/claude-api.md",
+          "sha256_prefix": "92a02c8d",
+          "state": "saved_unread"
+        },
+        {
+          "bytes": 7050,
+          "git_blob_prefix": "9f207bab",
+          "masked_lines": 2,
+          "mode": "100644",
+          "relative_path": "shared/error-codes.md",
+          "sha256_prefix": "3788d44b",
+          "state": "direct_masked_full"
+        },
+        {
+          "bytes": 10727,
+          "git_blob_prefix": "0b9ebedb",
+          "masked_lines": null,
+          "mode": "100644",
+          "relative_path": "shared/live-sources.md",
+          "sha256_prefix": "d17fb107",
+          "state": "saved_unread"
+        },
+        {
+          "bytes": 4625,
+          "git_blob_prefix": "24d00853",
+          "masked_lines": null,
+          "mode": "100644",
+          "relative_path": "shared/models.md",
+          "sha256_prefix": "0239fc3f",
+          "state": "saved_unread"
+        },
+        {
+          "bytes": 14761,
+          "git_blob_prefix": "2a1b84e1",
+          "masked_lines": null,
+          "mode": "100644",
+          "relative_path": "shared/tool-use-concepts.md",
+          "sha256_prefix": "c966bafc",
+          "state": "saved_unread"
+        },
+        {
+          "bytes": 7839,
+          "git_blob_prefix": "997ca17f",
+          "masked_lines": null,
+          "mode": "100644",
+          "relative_path": "typescript/agent-sdk/README.md",
+          "sha256_prefix": "472ca072",
+          "state": "saved_unread"
+        },
+        {
+          "bytes": 3274,
+          "git_blob_prefix": "62b7fee9",
+          "masked_lines": null,
+          "mode": "100644",
+          "relative_path": "typescript/agent-sdk/patterns.md",
+          "sha256_prefix": "afbf6b49",
+          "state": "saved_unread"
+        },
+        {
+          "bytes": 8627,
+          "git_blob_prefix": "9da778b4",
+          "masked_lines": null,
+          "mode": "100644",
+          "relative_path": "typescript/claude-api/README.md",
+          "sha256_prefix": "2568b414",
+          "state": "saved_unread"
+        },
+        {
+          "bytes": 2594,
+          "git_blob_prefix": "4f6f4f3e",
+          "masked_lines": null,
+          "mode": "100644",
+          "relative_path": "typescript/claude-api/batches.md",
+          "sha256_prefix": "69428038",
+          "state": "saved_unread"
+        },
+        {
+          "bytes": 2260,
+          "git_blob_prefix": "8224b52a",
+          "masked_lines": null,
+          "mode": "100644",
+          "relative_path": "typescript/claude-api/files-api.md",
+          "sha256_prefix": "06d37800",
+          "state": "saved_unread"
+        },
+        {
+          "bytes": 5582,
+          "git_blob_prefix": "a9505710",
+          "masked_lines": null,
+          "mode": "100644",
+          "relative_path": "typescript/claude-api/streaming.md",
+          "sha256_prefix": "3eafa11c",
+          "state": "saved_unread"
+        },
+        {
+          "bytes": 12821,
+          "git_blob_prefix": "98fe131d",
+          "masked_lines": null,
+          "mode": "100644",
+          "relative_path": "typescript/claude-api/tool-use.md",
+          "sha256_prefix": "b2414ccf",
+          "state": "saved_unread"
+        }
+      ],
+      "unmet": [
+        "起動提供metadataのみ。中央本文/存在・同等性/現設定は照会していない。",
+        "surface選択/状態復元と失敗の検査を改訂候補として提案。実API/採否/許諾/導入0。",
+        "固定した保存資料の評価であり、現在のサービス仕様・実動作・個別権利の受入を保証しない。"
+      ],
+      "use": "単発処理・固定workflow・自律loopの選択と、型付き失敗/stream/履歴復元の検査参考。",
+      "value": "必要能力と誤作用/回復・コストを対応させ、tool schemaと実行権限、部分streamと完全応答を区別できる。"
+    },
+    {
+      "bytes": 20084,
+      "copy_permission_accepted": false,
+      "findings": [
+        "DXA/page/余白・column/cell幅、見出しとTOC、画像relation/contenttype、コメントmarker/変更runの構造を具体化する。字形/日本語fallback・実Word/LO/GoogleDocsの現版での互換性は未検証。",
+        "unpackはrun結合/quote変換、packはauto-repairを記す。最小編集でもfields/links/anchors・style/元履歴の意味を変えうる。XML妥当性と最終表示/参照/内容の一致、変更の受入を分ける。",
+        "all tracked changes acceptは他者の未承認編集も確定させる作用。単なるclean copy/変換で同意済みにせず、原本・比較版・残すコメント/履歴と対象範囲を固定する。",
+        "authorをClaudeとする既定/例は本人名義/公開範囲の直接指示へ優先しない。実著者/変更者・作成/更新日時等のmetadataを必要範囲で照合し、正当な履歴を捏造/消去しない。",
+        "ZIP/XML/外部relationshipを未信頼dataとして扱い、展開path/サイズ/外部参照や変換の副作用を必要実装で検証する。Proprietaryの個別noticeをrootMIT/補助MIT0で解除しない。"
+      ],
+      "git_blob": "2951e559989765293b6fbf83942378a3c2d0cba6",
+      "individual_notices": [
+        {
+          "bytes": 1467,
+          "copy_permission_accepted": false,
+          "git_blob": "c55ab42224874608473643de0a85736b7fec0730",
+          "path": "skills/pupuking723/docx-anthropic/LICENSE.txt",
+          "read_kind": "exact_bytes_reuse",
+          "relative_path": "LICENSE.txt",
+          "scope": "実公開版/著作者・第三者素材/依存/service/dataの権利は別。rootMIT/ClawHub補助MIT0で個別条件/矛盾を解除しない。",
+          "sha256": "79f6d8f5b427252fa3b1c11ecdbdb6bf610b944f7530b4de78f770f38741cfaa",
+          "source_url": "https://github.com/6mile/skills/blob/920714f17d81e0a95c7a9bc51faf0a7921cd982d/skills/pupuking723/docx-anthropic/LICENSE.txt"
+        }
+      ],
+      "inventory_id": "github:c0a6a4c5311a2ea2631e6c12b16c06e91b47df2caefe6354d6162717284a876f",
+      "nearby_metadata": [
+        "documents-slides-data",
+        "source-grounded-content-review",
+        "public-artifact-hygiene",
+        "validate-consume-same-bytes"
+      ],
+      "negative": "packが通ったから内容も正しいとし、全変更を勝手に受け入れ、著者Claudeの既定を公開物へ残して元履歴を消す。",
+      "new_final_disposition": false,
+      "path": "skills/pupuking723/docx-anthropic/SKILL.md",
+      "positive": "原本と最小XML差分・関係IDを保持し、検証成功後も文面/目次/頁組み/著者metadataを実表示で確認する。",
+      "read": {
+        "final_withheld_unread_except_reported_initial_gaps": true,
+        "initial_withheld_display_gaps": [],
+        "kind": "direct_raw_full",
+        "masked_lines": 0,
+        "ordered_view_complete": true,
+        "physical_lines": 590,
+        "raw_read_complete": true,
+        "recorded_mask_version": null,
+        "visible_range_digest_provided": false,
+        "withheld_meanings_not_treated_as_complete": true,
+        "withheld_physical_lines": [],
+        "workflow_view_complete": true
+      },
+      "required_changes": [
+        "元documentの同じbytes/対象版と編集scope、保つ履歴/コメント/著者情報を固定し、原本非上書きで構造・内容差分と全page実表示を照合する。",
+        "公開用metadataの不要なAI帰属/セッション情報を機械検索と実物の読み返しで確認する。既存正式著者/出典/正当な変更履歴は保持する。",
+        "実利用する親だけが必要helper/現行ライブラリ/個別許諾を確認する。この研究はdocument作成/変換/変更受入/導入0。"
+      ],
+      "source_code_executed": false,
+      "source_commit": "920714f17d81e0a95c7a9bc51faf0a7921cd982d",
+      "source_repo": "6mile/skills",
+      "source_sha256": "cfbabd72b1aec7dfaad988fb6e5e16b27dc744b9a00cae15db9045e95f53903e",
+      "source_url": "https://github.com/6mile/skills/blob/920714f17d81e0a95c7a9bc51faf0a7921cd982d/skills/pupuking723/docx-anthropic/SKILL.md",
+      "support_read_states": [
+        {
+          "bytes": 1467,
+          "git_blob_prefix": "c55ab422",
+          "masked_lines": 0,
+          "mode": "100644",
+          "relative_path": "LICENSE.txt",
+          "sha256_prefix": "79f6d8f5",
+          "state": "exact_bytes_reuse"
+        },
+        {
+          "bytes": 20084,
+          "git_blob_prefix": "2951e559",
+          "masked_lines": 0,
+          "mode": "100644",
+          "relative_path": "SKILL.md",
+          "sha256_prefix": "cfbabd72",
+          "state": "direct_raw_full"
+        },
+        {
+          "bytes": 285,
+          "git_blob_prefix": "1b6d7de6",
+          "masked_lines": null,
+          "mode": "100644",
+          "relative_path": "_meta.json",
+          "sha256_prefix": "d59f5c9b",
+          "state": "saved_unread"
+        },
+        {
+          "bytes": null,
+          "git_blob_prefix": "8b137891",
+          "masked_lines": null,
+          "mode": "100644",
+          "relative_path": "scripts/__init__.py",
+          "sha256_prefix": null,
+          "state": "unsaved"
+        },
+        {
+          "bytes": null,
+          "git_blob_prefix": "8e363161",
+          "masked_lines": null,
+          "mode": "100644",
+          "relative_path": "scripts/accept_changes.py",
+          "sha256_prefix": null,
+          "state": "unsaved"
+        },
+        {
+          "bytes": null,
+          "git_blob_prefix": "36e1c935",
+          "masked_lines": null,
+          "mode": "100644",
+          "relative_path": "scripts/comment.py",
+          "sha256_prefix": null,
+          "state": "unsaved"
+        },
+        {
+          "bytes": null,
+          "git_blob_prefix": "e69de29b",
+          "masked_lines": null,
+          "mode": "100644",
+          "relative_path": "scripts/office/helpers/__init__.py",
+          "sha256_prefix": null,
+          "state": "unsaved"
+        },
+        {
+          "bytes": null,
+          "git_blob_prefix": "ad7c25ee",
+          "masked_lines": null,
+          "mode": "100644",
+          "relative_path": "scripts/office/helpers/merge_runs.py",
+          "sha256_prefix": null,
+          "state": "unsaved"
+        },
+        {
+          "bytes": null,
+          "git_blob_prefix": "db963bb9",
+          "masked_lines": null,
+          "mode": "100644",
+          "relative_path": "scripts/office/helpers/simplify_redlines.py",
+          "sha256_prefix": null,
+          "state": "unsaved"
+        },
+        {
+          "bytes": null,
+          "git_blob_prefix": "db29ed8b",
+          "masked_lines": null,
+          "mode": "100644",
+          "relative_path": "scripts/office/pack.py",
+          "sha256_prefix": null,
+          "state": "unsaved"
+        },
+        {
+          "bytes": null,
+          "git_blob_prefix": "c7f7e328",
+          "masked_lines": null,
+          "mode": "100644",
+          "relative_path": "scripts/office/soffice.py",
+          "sha256_prefix": null,
+          "state": "unsaved"
+        },
+        {
+          "bytes": null,
+          "git_blob_prefix": "00152533",
+          "masked_lines": null,
+          "mode": "100644",
+          "relative_path": "scripts/office/unpack.py",
+          "sha256_prefix": null,
+          "state": "unsaved"
+        },
+        {
+          "bytes": null,
+          "git_blob_prefix": "03b01f6e",
+          "masked_lines": null,
+          "mode": "100644",
+          "relative_path": "scripts/office/validate.py",
+          "sha256_prefix": null,
+          "state": "unsaved"
+        },
+        {
+          "bytes": null,
+          "git_blob_prefix": "db092ece",
+          "masked_lines": null,
+          "mode": "100644",
+          "relative_path": "scripts/office/validators/__init__.py",
+          "sha256_prefix": null,
+          "state": "unsaved"
+        },
+        {
+          "bytes": null,
+          "git_blob_prefix": "db4a06a2",
+          "masked_lines": null,
+          "mode": "100644",
+          "relative_path": "scripts/office/validators/base.py",
+          "sha256_prefix": null,
+          "state": "unsaved"
+        },
+        {
+          "bytes": null,
+          "git_blob_prefix": "fec405e6",
+          "masked_lines": null,
+          "mode": "100644",
+          "relative_path": "scripts/office/validators/docx.py",
+          "sha256_prefix": null,
+          "state": "unsaved"
+        },
+        {
+          "bytes": null,
+          "git_blob_prefix": "09842aa9",
+          "masked_lines": null,
+          "mode": "100644",
+          "relative_path": "scripts/office/validators/pptx.py",
+          "sha256_prefix": null,
+          "state": "unsaved"
+        },
+        {
+          "bytes": null,
+          "git_blob_prefix": "71c81b6b",
+          "masked_lines": null,
+          "mode": "100644",
+          "relative_path": "scripts/office/validators/redlining.py",
+          "sha256_prefix": null,
+          "state": "unsaved"
+        },
+        {
+          "bytes": null,
+          "git_blob_prefix": "cd01a7d7",
+          "masked_lines": null,
+          "mode": "100644",
+          "relative_path": "scripts/templates/comments.xml",
+          "sha256_prefix": null,
+          "state": "unsaved"
+        },
+        {
+          "bytes": null,
+          "git_blob_prefix": "411003cc",
+          "masked_lines": null,
+          "mode": "100644",
+          "relative_path": "scripts/templates/commentsExtended.xml",
+          "sha256_prefix": null,
+          "state": "unsaved"
+        },
+        {
+          "bytes": null,
+          "git_blob_prefix": "f5572d71",
+          "masked_lines": null,
+          "mode": "100644",
+          "relative_path": "scripts/templates/commentsExtensible.xml",
+          "sha256_prefix": null,
+          "state": "unsaved"
+        },
+        {
+          "bytes": null,
+          "git_blob_prefix": "32f1629f",
+          "masked_lines": null,
+          "mode": "100644",
+          "relative_path": "scripts/templates/commentsIds.xml",
+          "sha256_prefix": null,
+          "state": "unsaved"
+        },
+        {
+          "bytes": null,
+          "git_blob_prefix": "3803d2de",
+          "masked_lines": null,
+          "mode": "100644",
+          "relative_path": "scripts/templates/people.xml",
+          "sha256_prefix": null,
+          "state": "unsaved"
+        }
+      ],
+      "unmet": [
+        "起動提供metadataのみ。中央本文/存在・同等性/現設定は照会していない。",
+        "原本/履歴保持と成果照合を改訂候補として提案。Proprietary適用は未確定。実操作/採否/許諾/導入0。",
+        "固定した保存資料の評価であり、現在のサービス仕様・実動作・個別権利の受入を保証しない。"
+      ],
+      "use": "Wordの構造/変更履歴/コメント・参照を保持した編集と、検証/実描画を分ける設計参考。",
+      "value": "page/table幅の整合、runの意味/format保持とrel/ID・最小変更を対応づけて文書破損/履歴消失を避ける。"
+    },
+    {
+      "bytes": 4440,
+      "copy_permission_accepted": false,
+      "findings": [
+        "目的/constraints・意図を持った統一と節度は有用。極端/毎回異なるdesignやfont/配色の一律排除を、本人が選んだ画像/既存ブランド・日本語可読性へ優先しない。",
+        "hover/cursor/motion/重なりはkeyboard/touch/focus/読順・contrast/低減設定と状態/性能の検査が不足。production-gradeやモデル能力の宣伝は実品質の証拠でない。",
+        "本文同一でも原path/ID/作者・実公開版/素材権利は別。Apache2当noticeを他候補のProprietary又はrootMITへ取り替えない。"
+      ],
+      "git_blob": "5be498e2585843c7137bf9a74e262f57415de5ce",
+      "individual_notices": [
+        {
+          "bytes": 10174,
+          "copy_permission_accepted": false,
+          "git_blob": "f433b1a53f5b830a205fd2df78e2b34974656c7b",
+          "path": "skills/pupuking723/frontend-design-anthropic/LICENSE.txt",
+          "read_kind": "exact_bytes_reuse",
+          "relative_path": "LICENSE.txt",
+          "scope": "実公開版/著作者・第三者素材/依存/service/dataの権利は別。rootMIT/ClawHub補助MIT0で個別条件/矛盾を解除しない。",
+          "sha256": "0d542e0c8804e39aa7f37eb00da5a762149dc682d7829451287e11b938e94594",
+          "source_url": "https://github.com/6mile/skills/blob/920714f17d81e0a95c7a9bc51faf0a7921cd982d/skills/pupuking723/frontend-design-anthropic/LICENSE.txt"
+        }
+      ],
+      "inventory_id": "github:775acb7cef4adbca873e93469d43d6971ac4c91dab7ab2832001cb5156bf6885",
+      "nearby_metadata": [
+        "ui-design-styles",
+        "ui-accessibility",
+        "web-design-process",
+        "public-artifact-hygiene"
+      ],
+      "negative": "類似本文だから全権利も同じとし、新奇性のため既存UIを画像回答なしに置き換える。",
+      "new_final_disposition": false,
+      "path": "skills/pupuking723/frontend-design-anthropic/SKILL.md",
+      "positive": "承認された画像と用途に合う視覚選択を保ち、実操作と可読性/状態を検査する。",
+      "read": {
+        "final_withheld_unread_except_reported_initial_gaps": true,
+        "initial_withheld_display_gaps": [],
+        "kind": "direct_raw_full",
+        "masked_lines": 0,
+        "ordered_view_complete": true,
+        "physical_lines": 42,
+        "raw_read_complete": true,
+        "recorded_mask_version": null,
+        "visible_range_digest_provided": false,
+        "withheld_meanings_not_treated_as_complete": true,
+        "withheld_physical_lines": [],
+        "workflow_view_complete": true
+      },
+      "required_changes": [
+        "同対象の具体画像/本人回答と元要件を固定し、操作状態/日本語/アクセシビリティ/性能を検証する。通常の技術検査へ新たな本人待ちを増やさない。",
+        "font/asset/公開版と個別noticeを対応づけ、公開物の名義/不要なAI帰属を確認する。研究ではUI案/実装/配備0。"
+      ],
+      "source_code_executed": false,
+      "source_commit": "920714f17d81e0a95c7a9bc51faf0a7921cd982d",
+      "source_repo": "6mile/skills",
+      "source_sha256": "b81e2ff87ed8fa4d6c377ccb127a7254c9e6a77e3ae94f21e6b514f7bb2945a0",
+      "source_url": "https://github.com/6mile/skills/blob/920714f17d81e0a95c7a9bc51faf0a7921cd982d/skills/pupuking723/frontend-design-anthropic/SKILL.md",
+      "support_read_states": [
+        {
+          "bytes": 10174,
+          "git_blob_prefix": "f433b1a5",
+          "masked_lines": 0,
+          "mode": "100644",
+          "relative_path": "LICENSE.txt",
+          "sha256_prefix": "0d542e0c",
+          "state": "exact_bytes_reuse"
+        },
+        {
+          "bytes": 4440,
+          "git_blob_prefix": "5be498e2",
+          "masked_lines": 0,
+          "mode": "100644",
+          "relative_path": "SKILL.md",
+          "sha256_prefix": "b81e2ff8",
+          "state": "direct_raw_full"
+        },
+        {
+          "bytes": 307,
+          "git_blob_prefix": "faa91ac9",
+          "masked_lines": null,
+          "mode": "100644",
+          "relative_path": "_meta.json",
+          "sha256_prefix": "17e84d52",
+          "state": "saved_unread"
+        }
+      ],
+      "unmet": [
+        "起動提供metadataのみ。中央本文/存在・同等性/現設定は照会していない。",
+        "視覚方針と操作検証の改訂候補。最終採否/許諾/導入0。",
+        "固定した保存資料の評価であり、現在のサービス仕様・実動作・個別権利の受入を保証しない。"
+      ],
+      "use": "目的/対象者/制約に対応した一貫した視覚方針の検討参考。",
+      "value": "文字・色・余白・motionの選択理由と実装量を利用者の用事へ結べる。"
+    },
+    {
+      "bytes": 8072,
+      "copy_permission_accepted": false,
+      "findings": [
+        "fillableか非fillableかで経路を分け、入力前bbox/値検査と入力後image検査を行う観点は有用。文字抽出None/空/読順/表headerを型や見出し確認なしで連結すると取りこぼし/誤集計を生む。",
+        "formsはPDF field座標がbottom起点、構造抽出はtop起点、画像はpixelで説明。crop offset/回転/CropBox/縮尺・pageindexを結ばず単純比率だけで全PDFに正しいとは限らない。bbox妥当≠正しいfield/値・checkbox表示/意味。",
+        "primaryはFORMS.md/REFERENCE.mdと大文字参照だがtreeは小文字。forms起動例check_fillable_fieldsには.pyがない。実環境のcaseとscript名を保持し、別path存在/実装安全性を未確認で補わない。",
+        "page追加/merge/再暗号化は文書のbookmark/forms/metadata/署名・権限制限を保持するとは限らない。保護解除の原例を資格/権利の取得許可にしない。新Python作成や実カード/顧客/秘密data閲覧0、個別Proprietaryは未解除。"
+      ],
+      "git_blob": "d3e046a5ae107a6cb23cfb16c219837094ab35d3",
+      "individual_notices": [
+        {
+          "bytes": 1467,
+          "copy_permission_accepted": false,
+          "git_blob": "c55ab42224874608473643de0a85736b7fec0730",
+          "path": "skills/pupuking723/pdf-anthropic/LICENSE.txt",
+          "read_kind": "exact_bytes_reuse",
+          "relative_path": "LICENSE.txt",
+          "scope": "実公開版/著作者・第三者素材/依存/service/dataの権利は別。rootMIT/ClawHub補助MIT0で個別条件/矛盾を解除しない。",
+          "sha256": "79f6d8f5b427252fa3b1c11ecdbdb6bf610b944f7530b4de78f770f38741cfaa",
+          "source_url": "https://github.com/6mile/skills/blob/920714f17d81e0a95c7a9bc51faf0a7921cd982d/skills/pupuking723/pdf-anthropic/LICENSE.txt"
+        }
+      ],
+      "inventory_id": "github:445b95cd8d92443e07cf68a1b1c31ca18d4fb2e4da626a7c55b90fc3459cd674",
+      "nearby_metadata": [
+        "pdf",
+        "poppler-pdf-text-encoding",
+        "source-grounded-content-review",
+        "browser-extraction-missingness"
+      ],
+      "negative": "空抽出を内容なしとし、座標起点/回転を混ぜ、bbox合格だけで記入完了として原署名やmetadataを壊す。",
+      "new_final_disposition": false,
+      "path": "skills/pupuking723/pdf-anthropic/SKILL.md",
+      "positive": "元PDFの同じfieldIDとページ/座標系を保持し、入力前bboxと値、入力後の全page画像で正しい欄/文字を照合する。",
+      "read": {
+        "final_withheld_unread_except_reported_initial_gaps": true,
+        "initial_withheld_display_gaps": [],
+        "kind": "direct_masked_full",
+        "masked_lines": 1,
+        "ordered_view_complete": true,
+        "physical_lines": 314,
+        "raw_read_complete": false,
+        "recorded_mask_version": null,
+        "visible_range_digest_provided": false,
+        "withheld_meanings_not_treated_as_complete": true,
+        "withheld_physical_lines": [
+          216
+        ],
+        "workflow_view_complete": true
+      },
+      "required_changes": [
+        "原版/ページ/単位/座標変換とfieldID・本人提供値を固定し、原本非上書きで内容/metadata/署名等の保持範囲と実表示を確認する。",
+        "文字なし/空/失敗/OCR推定を分け、表schema/全pagecoverageと各欄を元画像へ照合する。公開物の名義/不要なAI帰属は検索と実物で確認する。",
+        "親の実利用時だけ必要helper・個別権利と現行仕様を確認する。今回実変換/記入/解除/導入0。"
+      ],
+      "source_code_executed": false,
+      "source_commit": "920714f17d81e0a95c7a9bc51faf0a7921cd982d",
+      "source_repo": "6mile/skills",
+      "source_sha256": "9f78b8359fbd4943ad260a7a1e436e5a96503406d6c34e99f69223d647d85b9c",
+      "source_url": "https://github.com/6mile/skills/blob/920714f17d81e0a95c7a9bc51faf0a7921cd982d/skills/pupuking723/pdf-anthropic/SKILL.md",
+      "support_read_states": [
+        {
+          "bytes": 1467,
+          "git_blob_prefix": "c55ab422",
+          "masked_lines": 0,
+          "mode": "100644",
+          "relative_path": "LICENSE.txt",
+          "sha256_prefix": "79f6d8f5",
+          "state": "exact_bytes_reuse"
+        },
+        {
+          "bytes": 8072,
+          "git_blob_prefix": "d3e046a5",
+          "masked_lines": 1,
+          "mode": "100644",
+          "relative_path": "SKILL.md",
+          "sha256_prefix": "9f78b835",
+          "state": "direct_masked_full"
+        },
+        {
+          "bytes": 283,
+          "git_blob_prefix": "c4cbe501",
+          "masked_lines": null,
+          "mode": "100644",
+          "relative_path": "_meta.json",
+          "sha256_prefix": "ac5024a0",
+          "state": "saved_unread"
+        },
+        {
+          "bytes": 11854,
+          "git_blob_prefix": "6e7e1e0d",
+          "masked_lines": 0,
+          "mode": "100644",
+          "relative_path": "forms.md",
+          "sha256_prefix": "9530b3f5",
+          "state": "direct_raw_full"
+        },
+        {
+          "bytes": 16692,
+          "git_blob_prefix": "41400bf4",
+          "masked_lines": null,
+          "mode": "100644",
+          "relative_path": "reference.md",
+          "sha256_prefix": "03a5f964",
+          "state": "saved_unread"
+        },
+        {
+          "bytes": null,
+          "git_blob_prefix": "2cc5e348",
+          "masked_lines": null,
+          "mode": "100644",
+          "relative_path": "scripts/check_bounding_boxes.py",
+          "sha256_prefix": null,
+          "state": "unsaved"
+        },
+        {
+          "bytes": null,
+          "git_blob_prefix": "36dfb951",
+          "masked_lines": null,
+          "mode": "100644",
+          "relative_path": "scripts/check_fillable_fields.py",
+          "sha256_prefix": null,
+          "state": "unsaved"
+        },
+        {
+          "bytes": null,
+          "git_blob_prefix": "7939cef5",
+          "masked_lines": null,
+          "mode": "100644",
+          "relative_path": "scripts/convert_pdf_to_images.py",
+          "sha256_prefix": null,
+          "state": "unsaved"
+        },
+        {
+          "bytes": null,
+          "git_blob_prefix": "10eadd81",
+          "masked_lines": null,
+          "mode": "100644",
+          "relative_path": "scripts/create_validation_image.py",
+          "sha256_prefix": null,
+          "state": "unsaved"
+        },
+        {
+          "bytes": null,
+          "git_blob_prefix": "64cd4703",
+          "masked_lines": null,
+          "mode": "100644",
+          "relative_path": "scripts/extract_form_field_info.py",
+          "sha256_prefix": null,
+          "state": "unsaved"
+        },
+        {
+          "bytes": null,
+          "git_blob_prefix": "f219e7d5",
+          "masked_lines": null,
+          "mode": "100644",
+          "relative_path": "scripts/extract_form_structure.py",
+          "sha256_prefix": null,
+          "state": "unsaved"
+        },
+        {
+          "bytes": null,
+          "git_blob_prefix": "51c2600f",
+          "masked_lines": null,
+          "mode": "100644",
+          "relative_path": "scripts/fill_fillable_fields.py",
+          "sha256_prefix": null,
+          "state": "unsaved"
+        },
+        {
+          "bytes": null,
+          "git_blob_prefix": "b430069f",
+          "masked_lines": null,
+          "mode": "100644",
+          "relative_path": "scripts/fill_pdf_form_with_annotations.py",
+          "sha256_prefix": null,
+          "state": "unsaved"
+        }
+      ],
+      "unmet": [
+        "起動提供metadataのみ。中央本文/存在・同等性/現設定は照会していない。",
+        "構造/画像/入力後検証の改訂候補。Proprietary適用未確定、実操作/採否/許諾/導入0。",
+        "固定した保存資料の評価であり、現在のサービス仕様・実動作・個別権利の受入を保証しない。"
+      ],
+      "use": "PDFの文字抽出/OCR・ページ操作と、フォーム値/座標・入力後表示を照合する設計参考。",
+      "value": "構造抽出と画像推定を区別し、fieldID/値/ページ/座標系を元文書へ結んで記入位置を検証できる。"
+    },
+    {
+      "bytes": 9182,
+      "copy_permission_accepted": false,
+      "findings": [
+        "元内容→slide mappingを先に決め、全文抽出と個別画像QAを分ける点、余りのtemplate要素を文字だけで残さない点は有用。図/注記・数値/出典/notesを抽出textだけで全確認したことにしない。",
+        "delete/reorder/duplicate/cleanはrelations/notes/mediaや途中成果を変える。slideファイル独立でも共有style/master/ID/rel更新は競合するため、並列編集の隔離と最終整合が必要。scriptが処理すると述べるだけで原本保全を保証しない。",
+        "必ずvisualを入れる/既定色禁止/全headerbold等の原美術方針を本人画像回答/既存brandへ優先しない。字の大きさは投影/読者/日本語glyphと実renderで判断する。",
+        "「問題0なら探し不足」「最低1修正cycle」を実在しない欠陥/不要変更の要求にしない。妥当な指摘と実害だけ直し、同最終版の有効検査を再利用する。原subagent必須をこの研究の再委譲へしない。Proprietary個別noticeは未解除。"
+      ],
+      "git_blob": "df5000e17ef60ecf400e65bfcd3c58ff88b604c3",
+      "individual_notices": [
+        {
+          "bytes": 1467,
+          "copy_permission_accepted": false,
+          "git_blob": "c55ab42224874608473643de0a85736b7fec0730",
+          "path": "skills/pupuking723/pptx-anthropic/LICENSE.txt",
+          "read_kind": "exact_bytes_reuse",
+          "relative_path": "LICENSE.txt",
+          "scope": "実公開版/著作者・第三者素材/依存/service/dataの権利は別。rootMIT/ClawHub補助MIT0で個別条件/矛盾を解除しない。",
+          "sha256": "79f6d8f5b427252fa3b1c11ecdbdb6bf610b944f7530b4de78f770f38741cfaa",
+          "source_url": "https://github.com/6mile/skills/blob/920714f17d81e0a95c7a9bc51faf0a7921cd982d/skills/pupuking723/pptx-anthropic/LICENSE.txt"
+        }
+      ],
+      "inventory_id": "github:f22366df72bd7e284fcd002dac4b83893c7e3128a2b1cba3ffb65fa7c2da120a",
+      "nearby_metadata": [
+        "documents-slides-data",
+        "source-grounded-content-review",
+        "bounded-document-review",
+        "public-artifact-hygiene"
+      ],
+      "negative": "validatorやthumbnailだけで全品質を保証し、指摘0が気に入らず架空欠陥を直し、cleanで必要notes/mediaや原本を消す。",
+      "new_final_disposition": false,
+      "path": "skills/pupuking723/pptx-anthropic/SKILL.md",
+      "positive": "slide mappingと共有partを管理し、修正した内容/出典と実表示を確認して影響slideだけ再検証する。",
+      "read": {
+        "final_withheld_unread_except_reported_initial_gaps": true,
+        "initial_withheld_display_gaps": [],
+        "kind": "direct_raw_full",
+        "masked_lines": 0,
+        "ordered_view_complete": true,
+        "physical_lines": 232,
+        "raw_read_complete": true,
+        "recorded_mask_version": null,
+        "visible_range_digest_provided": false,
+        "withheld_meanings_not_treated_as_complete": true,
+        "withheld_physical_lines": [],
+        "workflow_view_complete": true
+      },
+      "required_changes": [
+        "原内容・全slide/順序/notes/図表/出典と必要なmetadataを保持し、非上書きの構造/内容差分と個別画像を照合する。共有part編集/cleanの影響を限定する。",
+        "実害のある所見を修復して影響slideを再検証する。本人名義/不要AI帰属・session情報を機械検索と実物で確認し、本人未確認の新UIを実装しない。",
+        "親の実利用時だけhelper/ライブラリ/素材権利と個別許諾を確認する。研究で実deck/子job/導入0。"
+      ],
+      "source_code_executed": false,
+      "source_commit": "920714f17d81e0a95c7a9bc51faf0a7921cd982d",
+      "source_repo": "6mile/skills",
+      "source_sha256": "e5b0df918cbe9d62508b3cf808d73899633f82fc19f6258a25ef9f0de7e62125",
+      "source_url": "https://github.com/6mile/skills/blob/920714f17d81e0a95c7a9bc51faf0a7921cd982d/skills/pupuking723/pptx-anthropic/SKILL.md",
+      "support_read_states": [
+        {
+          "bytes": 1467,
+          "git_blob_prefix": "c55ab422",
+          "masked_lines": 0,
+          "mode": "100644",
+          "relative_path": "LICENSE.txt",
+          "sha256_prefix": "79f6d8f5",
+          "state": "exact_bytes_reuse"
+        },
+        {
+          "bytes": 9182,
+          "git_blob_prefix": "df5000e1",
+          "masked_lines": 0,
+          "mode": "100644",
+          "relative_path": "SKILL.md",
+          "sha256_prefix": "e5b0df91",
+          "state": "direct_raw_full"
+        },
+        {
+          "bytes": 285,
+          "git_blob_prefix": "24b62f98",
+          "masked_lines": null,
+          "mode": "100644",
+          "relative_path": "_meta.json",
+          "sha256_prefix": "96690808",
+          "state": "saved_unread"
+        },
+        {
+          "bytes": 6885,
+          "git_blob_prefix": "f873e8a0",
+          "masked_lines": 0,
+          "mode": "100644",
+          "relative_path": "editing.md",
+          "sha256_prefix": "6cb47c3a",
+          "state": "direct_raw_full"
+        },
+        {
+          "bytes": 12819,
+          "git_blob_prefix": "6bfed908",
+          "masked_lines": null,
+          "mode": "100644",
+          "relative_path": "pptxgenjs.md",
+          "sha256_prefix": "9539534d",
+          "state": "saved_unread"
+        },
+        {
+          "bytes": null,
+          "git_blob_prefix": "e69de29b",
+          "masked_lines": null,
+          "mode": "100644",
+          "relative_path": "scripts/__init__.py",
+          "sha256_prefix": null,
+          "state": "unsaved"
+        },
+        {
+          "bytes": null,
+          "git_blob_prefix": "13700df0",
+          "masked_lines": null,
+          "mode": "100644",
+          "relative_path": "scripts/add_slide.py",
+          "sha256_prefix": null,
+          "state": "unsaved"
+        },
+        {
+          "bytes": null,
+          "git_blob_prefix": "3d13994c",
+          "masked_lines": null,
+          "mode": "100644",
+          "relative_path": "scripts/clean.py",
+          "sha256_prefix": null,
+          "state": "unsaved"
+        },
+        {
+          "bytes": null,
+          "git_blob_prefix": "e69de29b",
+          "masked_lines": null,
+          "mode": "100644",
+          "relative_path": "scripts/office/helpers/__init__.py",
+          "sha256_prefix": null,
+          "state": "unsaved"
+        },
+        {
+          "bytes": null,
+          "git_blob_prefix": "ad7c25ee",
+          "masked_lines": null,
+          "mode": "100644",
+          "relative_path": "scripts/office/helpers/merge_runs.py",
+          "sha256_prefix": null,
+          "state": "unsaved"
+        },
+        {
+          "bytes": null,
+          "git_blob_prefix": "db963bb9",
+          "masked_lines": null,
+          "mode": "100644",
+          "relative_path": "scripts/office/helpers/simplify_redlines.py",
+          "sha256_prefix": null,
+          "state": "unsaved"
+        },
+        {
+          "bytes": null,
+          "git_blob_prefix": "db29ed8b",
+          "masked_lines": null,
+          "mode": "100644",
+          "relative_path": "scripts/office/pack.py",
+          "sha256_prefix": null,
+          "state": "unsaved"
+        },
+        {
+          "bytes": null,
+          "git_blob_prefix": "c7f7e328",
+          "masked_lines": null,
+          "mode": "100644",
+          "relative_path": "scripts/office/soffice.py",
+          "sha256_prefix": null,
+          "state": "unsaved"
+        },
+        {
+          "bytes": null,
+          "git_blob_prefix": "00152533",
+          "masked_lines": null,
+          "mode": "100644",
+          "relative_path": "scripts/office/unpack.py",
+          "sha256_prefix": null,
+          "state": "unsaved"
+        },
+        {
+          "bytes": null,
+          "git_blob_prefix": "03b01f6e",
+          "masked_lines": null,
+          "mode": "100644",
+          "relative_path": "scripts/office/validate.py",
+          "sha256_prefix": null,
+          "state": "unsaved"
+        },
+        {
+          "bytes": null,
+          "git_blob_prefix": "db092ece",
+          "masked_lines": null,
+          "mode": "100644",
+          "relative_path": "scripts/office/validators/__init__.py",
+          "sha256_prefix": null,
+          "state": "unsaved"
+        },
+        {
+          "bytes": null,
+          "git_blob_prefix": "db4a06a2",
+          "masked_lines": null,
+          "mode": "100644",
+          "relative_path": "scripts/office/validators/base.py",
+          "sha256_prefix": null,
+          "state": "unsaved"
+        },
+        {
+          "bytes": null,
+          "git_blob_prefix": "fec405e6",
+          "masked_lines": null,
+          "mode": "100644",
+          "relative_path": "scripts/office/validators/docx.py",
+          "sha256_prefix": null,
+          "state": "unsaved"
+        },
+        {
+          "bytes": null,
+          "git_blob_prefix": "09842aa9",
+          "masked_lines": null,
+          "mode": "100644",
+          "relative_path": "scripts/office/validators/pptx.py",
+          "sha256_prefix": null,
+          "state": "unsaved"
+        },
+        {
+          "bytes": null,
+          "git_blob_prefix": "71c81b6b",
+          "masked_lines": null,
+          "mode": "100644",
+          "relative_path": "scripts/office/validators/redlining.py",
+          "sha256_prefix": null,
+          "state": "unsaved"
+        },
+        {
+          "bytes": null,
+          "git_blob_prefix": "edcbdc0f",
+          "masked_lines": null,
+          "mode": "100644",
+          "relative_path": "scripts/thumbnail.py",
+          "sha256_prefix": null,
+          "state": "unsaved"
+        }
+      ],
+      "unmet": [
+        "起動提供metadataのみ。中央本文/存在・同等性/現設定は照会していない。",
+        "構造/内容/実表示を結ぶ改訂候補。個別権利未確定、実操作/採否/許諾/導入0。",
+        "固定した保存資料の評価であり、現在のサービス仕様・実動作・個別権利の受入を保証しない。"
+      ],
+      "use": "内容とslide mapping/構造・placeholder除去と実slide表示の照合を分ける制作設計参考。",
+      "value": "presentation順序とpart/relation/notesの対応を保ち、構造整理後の内容編集・影響範囲再確認を行える。"
+    },
+    {
+      "bytes": 33168,
+      "copy_permission_accepted": false,
+      "findings": [
+        "旧版snapshot/同prompt・期待結果と実成果/claim証拠、弱いassertion自体の点検は有用。原の全run同時spawnやresource上限なしの並列・新helper作成をこのread-only担当の許可へしない。",
+        "primary evalsはassertions、schemaはexpectations。old_skill/without_skillの保存名とschema configurationの2値にも対応が必要。graderは未検証をFAILへ集計し、測定失敗/未実行・実失敗を別記録しないと性能が歪む。",
+        "descriptionのtrain/test60/40を反復比較してtest scoreでbestを選ぶとそのtestも選抜に使用済み。独立な最終確認と再現条件が必要。few samples/3試行やmean±stddevだけで因果・一般性能を保証しない。",
+        "comparatorはrubric平均優先・同点を稀としbothfailでも勝者を出す。重要必須条件/両方不合格・不明/引分けを品質点で隠さず、ラベル秘匿/順序入替/評者の独立性と対比較を保つ。analyzerの事後説明だけで原因を確定しない。",
+        "空feedbackをfine/満足として停止するのは未回答との混同。mostrecent Downloadsのファイルを世代/対象照合なしで読む手順やHTMLplaceholder置換は誤受領/注入の境界。本人のPC操作や人reviewを通常工程の前提にせず、同対象の既存回答だけを反映する。",
+        "script/viewerは未保存で、token通知の唯一性/計測schema例や現CLI互換は未検証。secret/実カード/顧客のprompt・transcriptを原の「realistic」のために使わず、AI API/新費用/再委譲/中央変更0を保持する。"
+      ],
+      "git_blob": "65b3a402dbd09b8e83f9d637c6b553875189085c",
+      "individual_notices": [
+        {
+          "bytes": 11357,
+          "copy_permission_accepted": false,
+          "git_blob": "7a4a3ea2424c09fbe48d455aed1eaa94d9124835",
+          "path": "skills/pupuking723/skill-creator-anthropic/LICENSE.txt",
+          "read_kind": "exact_bytes_reuse",
+          "relative_path": "LICENSE.txt",
+          "scope": "実公開版/著作者・第三者素材/依存/service/dataの権利は別。rootMIT/ClawHub補助MIT0で個別条件/矛盾を解除しない。",
+          "sha256": "58d1e17ffe5109a7ae296caafcadfdbe6a7d176f0bc4ab01e12a689b0499d8bd",
+          "source_url": "https://github.com/6mile/skills/blob/920714f17d81e0a95c7a9bc51faf0a7921cd982d/skills/pupuking723/skill-creator-anthropic/LICENSE.txt"
+        }
+      ],
+      "inventory_id": "github:146f10015f2a1677495d18974da14c6b3cfe0e47f0928f4c5716861f453199d4",
+      "nearby_metadata": [
+        "ai-model-evaluation",
+        "test-quality",
+        "subagent-review",
+        "chained-placeholder-replace-injection",
+        "skill-maintenance"
+      ],
+      "negative": "空feedbackを承認として採用し、反復選抜に使ったtestを独立と称し、両方失敗でも高平均の方を完了にして例の数値を実測と報告する。",
+      "new_final_disposition": false,
+      "path": "skills/pupuking723/skill-creator-anthropic/SKILL.md",
+      "positive": "固定版と同入力のbaseline/改訂成果を盲検で比較し、必須成果と不明/測定失敗も残し、未使用確認集合で効果を再評価する。",
+      "read": {
+        "final_withheld_unread_except_reported_initial_gaps": true,
+        "initial_withheld_display_gaps": [],
+        "kind": "direct_masked_full",
+        "masked_lines": 2,
+        "ordered_view_complete": true,
+        "physical_lines": 485,
+        "raw_read_complete": false,
+        "recorded_mask_version": null,
+        "visible_range_digest_provided": false,
+        "withheld_meanings_not_treated_as_complete": true,
+        "withheld_physical_lines": [
+          186,
+          238
+        ],
+        "workflow_view_complete": true
+      },
+      "required_changes": [
+        "版/入力/環境/実model・effort/seed・run/成果hash/採点者と期待条件を固定し、未実行/失敗/不明/評価を区別する。baseline対比較と独立な最終確認を維持し、必須条件を平均で相殺しない。",
+        "schema/保存場所・時刻/単位/metricの定義を統一し、原証拠から集計値を照合する。空feedback/最終mtimeを採用/対象確認の証拠にしない。",
+        "既存許可と資源枠の範囲で親が必要な実eval/別モデルreviewを行う。原本/中央junction/正式名・本人画像/公開名義条件を保持し、新たな本人PC待ちを作らない。"
+      ],
+      "source_code_executed": false,
+      "source_commit": "920714f17d81e0a95c7a9bc51faf0a7921cd982d",
+      "source_repo": "6mile/skills",
+      "source_sha256": "dcd4803e61e913e6fc27294184cd3a71f09f5e924ff20c8a9a20173e7b3c2bcf",
+      "source_url": "https://github.com/6mile/skills/blob/920714f17d81e0a95c7a9bc51faf0a7921cd982d/skills/pupuking723/skill-creator-anthropic/SKILL.md",
+      "support_read_states": [
+        {
+          "bytes": 11357,
+          "git_blob_prefix": "7a4a3ea2",
+          "masked_lines": 0,
+          "mode": "100644",
+          "relative_path": "LICENSE.txt",
+          "sha256_prefix": "58d1e17f",
+          "state": "exact_bytes_reuse"
+        },
+        {
+          "bytes": 33168,
+          "git_blob_prefix": "65b3a402",
+          "masked_lines": 2,
+          "mode": "100644",
+          "relative_path": "SKILL.md",
+          "sha256_prefix": "dcd4803e",
+          "state": "direct_masked_full"
+        },
+        {
+          "bytes": 303,
+          "git_blob_prefix": "9dca8b36",
+          "masked_lines": null,
+          "mode": "100644",
+          "relative_path": "_meta.json",
+          "sha256_prefix": "d91a1f95",
+          "state": "saved_unread"
+        },
+        {
+          "bytes": 10376,
+          "git_blob_prefix": "14e41d60",
+          "masked_lines": 0,
+          "mode": "100644",
+          "relative_path": "agents/analyzer.md",
+          "sha256_prefix": "bf68f4ca",
+          "state": "direct_raw_full"
+        },
+        {
+          "bytes": 7287,
+          "git_blob_prefix": "80e00eb4",
+          "masked_lines": 0,
+          "mode": "100644",
+          "relative_path": "agents/comparator.md",
+          "sha256_prefix": "fe1fc978",
+          "state": "direct_raw_full"
+        },
+        {
+          "bytes": 9049,
+          "git_blob_prefix": "558ab05c",
+          "masked_lines": 0,
+          "mode": "100644",
+          "relative_path": "agents/grader.md",
+          "sha256_prefix": "57134da0",
+          "state": "direct_raw_full"
+        },
+        {
+          "bytes": null,
+          "git_blob_prefix": "938ff32a",
+          "masked_lines": null,
+          "mode": "100644",
+          "relative_path": "assets/eval_review.html",
+          "sha256_prefix": null,
+          "state": "unsaved"
+        },
+        {
+          "bytes": null,
+          "git_blob_prefix": "7fa59786",
+          "masked_lines": null,
+          "mode": "100644",
+          "relative_path": "eval-viewer/generate_review.py",
+          "sha256_prefix": null,
+          "state": "unsaved"
+        },
+        {
+          "bytes": null,
+          "git_blob_prefix": "6d8e9634",
+          "masked_lines": null,
+          "mode": "100644",
+          "relative_path": "eval-viewer/viewer.html",
+          "sha256_prefix": null,
+          "state": "unsaved"
+        },
+        {
+          "bytes": 12061,
+          "git_blob_prefix": "b6eeaa2d",
+          "masked_lines": 0,
+          "mode": "100644",
+          "relative_path": "references/schemas.md",
+          "sha256_prefix": "8e887618",
+          "state": "direct_raw_full"
+        },
+        {
+          "bytes": null,
+          "git_blob_prefix": "e69de29b",
+          "masked_lines": null,
+          "mode": "100644",
+          "relative_path": "scripts/__init__.py",
+          "sha256_prefix": null,
+          "state": "unsaved"
+        },
+        {
+          "bytes": null,
+          "git_blob_prefix": "3e66e8c1",
+          "masked_lines": null,
+          "mode": "100644",
+          "relative_path": "scripts/aggregate_benchmark.py",
+          "sha256_prefix": null,
+          "state": "unsaved"
+        },
+        {
+          "bytes": null,
+          "git_blob_prefix": "959e30a0",
+          "masked_lines": null,
+          "mode": "100644",
+          "relative_path": "scripts/generate_report.py",
+          "sha256_prefix": null,
+          "state": "unsaved"
+        },
+        {
+          "bytes": null,
+          "git_blob_prefix": "06bcec76",
+          "masked_lines": null,
+          "mode": "100644",
+          "relative_path": "scripts/improve_description.py",
+          "sha256_prefix": null,
+          "state": "unsaved"
+        },
+        {
+          "bytes": null,
+          "git_blob_prefix": "f48eac44",
+          "masked_lines": null,
+          "mode": "100644",
+          "relative_path": "scripts/package_skill.py",
+          "sha256_prefix": null,
+          "state": "unsaved"
+        },
+        {
+          "bytes": null,
+          "git_blob_prefix": "ed8e1ddd",
+          "masked_lines": null,
+          "mode": "100644",
+          "relative_path": "scripts/quick_validate.py",
+          "sha256_prefix": null,
+          "state": "unsaved"
+        },
+        {
+          "bytes": null,
+          "git_blob_prefix": "e58c70be",
+          "masked_lines": null,
+          "mode": "100644",
+          "relative_path": "scripts/run_eval.py",
+          "sha256_prefix": null,
+          "state": "unsaved"
+        },
+        {
+          "bytes": null,
+          "git_blob_prefix": "30a263d6",
+          "masked_lines": null,
+          "mode": "100644",
+          "relative_path": "scripts/run_loop.py",
+          "sha256_prefix": null,
+          "state": "unsaved"
+        },
+        {
+          "bytes": null,
+          "git_blob_prefix": "51b6a07d",
+          "masked_lines": null,
+          "mode": "100644",
+          "relative_path": "scripts/utils.py",
+          "sha256_prefix": null,
+          "state": "unsaved"
+        }
+      ],
+      "unmet": [
+        "起動提供metadataのみ。中央本文/存在・同等性/現設定は照会していない。",
+        "実成果/採点根拠と比較独立性を補う改訂候補。実eval/別job/採用/許諾/導入0。",
+        "固定した保存資料の評価であり、現在のサービス仕様・実動作・個別権利の受入を保証しない。"
+      ],
+      "use": "Skillの目的/発火・実成果・比較条件と採点証拠を結び、改訂の実価値を測る設計参考。",
+      "value": "baselineと同条件の実成果・transcript/有効なassertionを照合し、平均だけで隠れる欠陥や指標の弱さを検出できる。"
+    },
+    {
+      "bytes": 3124,
+      "copy_permission_accepted": false,
+      "findings": [
+        "10テーマの色hex/用途/fontを保存し選択後適用とする。元の本人回答が同対象にある場合は再質問せず、具体画像と同scopeの回答を維持する。",
+        "theme-showcase.pdfは固定treeにないため既存画像を実見したとはしない。色の名前と値にもSunsetのDeep Purple=#264653等の齟齬があり、色名やprofessionalだけでcontrast/意味を保証しない。",
+        "日本語glyph/太さ/埋込・font権利、page別の色組合せ/図表の意味と既存brandとの整合は未検証。customthemeの命名を製品/機能の無断命名へ広げない。"
+      ],
+      "git_blob": "90dfceaf2ecdc191a4dcfb0069768a9560638998",
+      "individual_notices": [
+        {
+          "bytes": 11357,
+          "copy_permission_accepted": false,
+          "git_blob": "7a4a3ea2424c09fbe48d455aed1eaa94d9124835",
+          "path": "skills/pupuking723/theme-factory-anthropic/LICENSE.txt",
+          "read_kind": "exact_bytes_reuse",
+          "relative_path": "LICENSE.txt",
+          "scope": "実公開版/著作者・第三者素材/依存/service/dataの権利は別。rootMIT/ClawHub補助MIT0で個別条件/矛盾を解除しない。",
+          "sha256": "58d1e17ffe5109a7ae296caafcadfdbe6a7d176f0bc4ab01e12a689b0499d8bd",
+          "source_url": "https://github.com/6mile/skills/blob/920714f17d81e0a95c7a9bc51faf0a7921cd982d/skills/pupuking723/theme-factory-anthropic/LICENSE.txt"
+        }
+      ],
+      "inventory_id": "github:6bf5451de07fc504b391c3d29c79acb04f8a7b29044f49b18c0f60a76be22ce1",
+      "nearby_metadata": [
+        "ui-design-styles",
+        "design-reference-evidence",
+        "ui-accessibility",
+        "web-design-process"
+      ],
+      "negative": "テーマ名やhexがあるだけで全contrast/全font権利を保証し、未見showcaseを本人承認済みとして全製品へ適用する。",
+      "new_final_disposition": false,
+      "path": "skills/pupuking723/theme-factory-anthropic/SKILL.md",
+      "positive": "同じ画像の選択範囲に沿って色roleとfontを適用し、実pageの文字と図の可読性を確認する。",
+      "read": {
+        "final_withheld_unread_except_reported_initial_gaps": true,
+        "initial_withheld_display_gaps": [],
+        "kind": "direct_raw_full",
+        "masked_lines": 0,
+        "ordered_view_complete": true,
+        "physical_lines": 59,
+        "raw_read_complete": true,
+        "recorded_mask_version": null,
+        "visible_range_digest_provided": false,
+        "withheld_meanings_not_treated_as_complete": true,
+        "withheld_physical_lines": [],
+        "workflow_view_complete": true
+      },
+      "required_changes": [
+        "具体画像/対象/既存本人回答と色role/値/fontを対応させ、全pageの読順/contrast/状態・言語とfont使用条件を確認する。",
+        "欠けたshowcaseを存在/承認済みにせず、研究から取得/新UI/公開変更をしない。通常の技術検査を本人PC待ちにしない。"
+      ],
+      "source_code_executed": false,
+      "source_commit": "920714f17d81e0a95c7a9bc51faf0a7921cd982d",
+      "source_repo": "6mile/skills",
+      "source_sha256": "c35893e221e28895c52143cc11bf30e41a44817796b39d4b15727dadc9796552",
+      "source_url": "https://github.com/6mile/skills/blob/920714f17d81e0a95c7a9bc51faf0a7921cd982d/skills/pupuking723/theme-factory-anthropic/SKILL.md",
+      "support_read_states": [
+        {
+          "bytes": 11357,
+          "git_blob_prefix": "7a4a3ea2",
+          "masked_lines": 0,
+          "mode": "100644",
+          "relative_path": "LICENSE.txt",
+          "sha256_prefix": "58d1e17f",
+          "state": "exact_bytes_reuse"
+        },
+        {
+          "bytes": 3124,
+          "git_blob_prefix": "90dfceaf",
+          "masked_lines": 0,
+          "mode": "100644",
+          "relative_path": "SKILL.md",
+          "sha256_prefix": "c35893e2",
+          "state": "direct_raw_full"
+        },
+        {
+          "bytes": 303,
+          "git_blob_prefix": "4e5aaa55",
+          "masked_lines": null,
+          "mode": "100644",
+          "relative_path": "_meta.json",
+          "sha256_prefix": "d01c062c",
+          "state": "saved_unread"
+        },
+        {
+          "bytes": 544,
+          "git_blob_prefix": "e9f1eb05",
+          "masked_lines": 0,
+          "mode": "100644",
+          "relative_path": "themes/arctic-frost.md",
+          "sha256_prefix": "868a75a8",
+          "state": "direct_raw_full"
+        },
+        {
+          "bytes": 519,
+          "git_blob_prefix": "0c95bf73",
+          "masked_lines": 0,
+          "mode": "100644",
+          "relative_path": "themes/botanical-garden.md",
+          "sha256_prefix": "222cb8e7",
+          "state": "direct_raw_full"
+        },
+        {
+          "bytes": 496,
+          "git_blob_prefix": "ea7c74eb",
+          "masked_lines": 0,
+          "mode": "100644",
+          "relative_path": "themes/desert-rose.md",
+          "sha256_prefix": "bd065b86",
+          "state": "direct_raw_full"
+        },
+        {
+          "bytes": 506,
+          "git_blob_prefix": "90c2b265",
+          "masked_lines": 0,
+          "mode": "100644",
+          "relative_path": "themes/forest-canopy.md",
+          "sha256_prefix": "ecb722ef",
+          "state": "direct_raw_full"
+        },
+        {
+          "bytes": 528,
+          "git_blob_prefix": "ed8fc256",
+          "masked_lines": 0,
+          "mode": "100644",
+          "relative_path": "themes/golden-hour.md",
+          "sha256_prefix": "3444a00d",
+          "state": "direct_raw_full"
+        },
+        {
+          "bytes": 513,
+          "git_blob_prefix": "97e1c5f3",
+          "masked_lines": 0,
+          "mode": "100644",
+          "relative_path": "themes/midnight-galaxy.md",
+          "sha256_prefix": "0e134c4c",
+          "state": "direct_raw_full"
+        },
+        {
+          "bytes": 549,
+          "git_blob_prefix": "6bd26a29",
+          "masked_lines": 0,
+          "mode": "100644",
+          "relative_path": "themes/modern-minimalist.md",
+          "sha256_prefix": "b8bc572b",
+          "state": "direct_raw_full"
+        },
+        {
+          "bytes": 555,
+          "git_blob_prefix": "b675126f",
+          "masked_lines": 0,
+          "mode": "100644",
+          "relative_path": "themes/ocean-depths.md",
+          "sha256_prefix": "a7ad8eec",
+          "state": "direct_raw_full"
+        },
+        {
+          "bytes": 558,
+          "git_blob_prefix": "df799a0c",
+          "masked_lines": 0,
+          "mode": "100644",
+          "relative_path": "themes/sunset-boulevard.md",
+          "sha256_prefix": "658af11a",
+          "state": "direct_raw_full"
+        },
+        {
+          "bytes": 547,
+          "git_blob_prefix": "e029a435",
+          "masked_lines": 0,
+          "mode": "100644",
+          "relative_path": "themes/tech-innovation.md",
+          "sha256_prefix": "18364816",
+          "state": "direct_raw_full"
+        }
+      ],
+      "unmet": [
+        "起動提供metadataのみ。中央本文/存在・同等性/現設定は照会していない。",
+        "テーマの選択範囲と実表示照合を補う改訂候補。実適用/採否/許諾/導入0。",
+        "固定した保存資料の評価であり、現在のサービス仕様・実動作・個別権利の受入を保証しない。"
+      ],
+      "use": "選択したテーマの色role/fontを複数pageへ一貫適用する設計参考。",
+      "value": "色値と役割・見出し/本文fontを分け、同対象の本人選択と適用範囲を固定できる。"
+    },
+    {
+      "bytes": 3087,
+      "copy_permission_accepted": false,
+      "findings": [
+        "複雑なstate/routing向けと単純HTML向けを区別する点は有用。initとbundleで依存install/config書換があり、単にbundleするだけの無変更処理ではない。",
+        "React18/Tailwind3.4.1/Node18/Vite自動pin等は保存主張で現在互換未確認。runtimeの外部通信/route/動的asset・fontまで自己完結するかはscript未読で不明。",
+        "先に完成品として共有し検査はoptional/後回しとする手順は、成果の実操作検証・本人の同画像回答前の実装制限と衝突。font/色の一律禁止を共通本人方針にしない。"
+      ],
+      "git_blob": "8b39b19f259b4216ecb07574741dd8eaa9863a07",
+      "individual_notices": [
+        {
+          "bytes": 11357,
+          "copy_permission_accepted": false,
+          "git_blob": "7a4a3ea2424c09fbe48d455aed1eaa94d9124835",
+          "path": "skills/pupuking723/web-artifacts-builder-anthropic/LICENSE.txt",
+          "read_kind": "exact_bytes_reuse",
+          "relative_path": "LICENSE.txt",
+          "scope": "実公開版/著作者・第三者素材/依存/service/dataの権利は別。rootMIT/ClawHub補助MIT0で個別条件/矛盾を解除しない。",
+          "sha256": "58d1e17ffe5109a7ae296caafcadfdbe6a7d176f0bc4ab01e12a689b0499d8bd",
+          "source_url": "https://github.com/6mile/skills/blob/920714f17d81e0a95c7a9bc51faf0a7921cd982d/skills/pupuking723/web-artifacts-builder-anthropic/LICENSE.txt"
+        }
+      ],
+      "inventory_id": "github:acfe5afe864b43a59e2c1e5cbc0c8b0c1946796b640b0fdcd1d5390870177979",
+      "nearby_metadata": [
+        "frontend-node-engineering",
+        "playwright-download-verification",
+        "ui-testing",
+        "public-artifact-hygiene"
+      ],
+      "negative": "scriptがinlineすると書いてあるだけで全動作を保証し、未検査の新UIを完成として共有してから不具合を探す。",
+      "new_final_disposition": false,
+      "path": "skills/pupuking723/web-artifacts-builder-anthropic/SKILL.md",
+      "positive": "固定した承認scopeのsourceからbundleを作る設計とし、配布する同じHTMLで操作/依存/内容を確認する。",
+      "read": {
+        "final_withheld_unread_except_reported_initial_gaps": true,
+        "initial_withheld_display_gaps": [],
+        "kind": "direct_raw_full",
+        "masked_lines": 0,
+        "ordered_view_complete": true,
+        "physical_lines": 74,
+        "raw_read_complete": true,
+        "recorded_mask_version": null,
+        "visible_range_digest_provided": false,
+        "withheld_meanings_not_treated_as_complete": true,
+        "withheld_physical_lines": [],
+        "workflow_view_complete": true
+      },
+      "required_changes": [
+        "固定source/lock/設定とbundlehash・必要runtime機能を結び、build成功と実HTMLのoffline/外部依存/操作/空・失敗状態を分けて検証する。",
+        "原本を上書きせず必要な依存だけを確認する。本人画像/公開名義の条件を保ち、研究ではinstall/新UI/配布0。"
+      ],
+      "source_code_executed": false,
+      "source_commit": "920714f17d81e0a95c7a9bc51faf0a7921cd982d",
+      "source_repo": "6mile/skills",
+      "source_sha256": "81c5002c6643b0de7b8710b00e7a9038daa6fb9b68d59870ee6adb12da8d10f8",
+      "source_url": "https://github.com/6mile/skills/blob/920714f17d81e0a95c7a9bc51faf0a7921cd982d/skills/pupuking723/web-artifacts-builder-anthropic/SKILL.md",
+      "support_read_states": [
+        {
+          "bytes": 11357,
+          "git_blob_prefix": "7a4a3ea2",
+          "masked_lines": 0,
+          "mode": "100644",
+          "relative_path": "LICENSE.txt",
+          "sha256_prefix": "58d1e17f",
+          "state": "exact_bytes_reuse"
+        },
+        {
+          "bytes": 3087,
+          "git_blob_prefix": "8b39b19f",
+          "masked_lines": 0,
+          "mode": "100644",
+          "relative_path": "SKILL.md",
+          "sha256_prefix": "81c5002c",
+          "state": "direct_raw_full"
+        },
+        {
+          "bytes": 319,
+          "git_blob_prefix": "9f6639be",
+          "masked_lines": null,
+          "mode": "100644",
+          "relative_path": "_meta.json",
+          "sha256_prefix": "d30f37b8",
+          "state": "saved_unread"
+        },
+        {
+          "bytes": null,
+          "git_blob_prefix": "c13d229e",
+          "masked_lines": null,
+          "mode": "100644",
+          "relative_path": "scripts/bundle-artifact.sh",
+          "sha256_prefix": null,
+          "state": "unsaved"
+        },
+        {
+          "bytes": null,
+          "git_blob_prefix": "7d1022d8",
+          "masked_lines": null,
+          "mode": "100644",
+          "relative_path": "scripts/init-artifact.sh",
+          "sha256_prefix": null,
+          "state": "unsaved"
+        }
+      ],
+      "unmet": [
+        "起動提供metadataのみ。中央本文/存在・同等性/現設定は照会していない。",
+        "source/配布物の対応と実受入を補う改訂候補。実梱包/採否/許諾/導入0。",
+        "固定した保存資料の評価であり、現在のサービス仕様・実動作・個別権利の受入を保証しない。"
+      ],
+      "use": "複数componentの開発sourceと配布用単一HTMLを分離する梱包設計参考。",
+      "value": "source/依存/alias/buildと成果bundleを結び、同じ入力版から配布物ができるか追える。"
+    },
+    {
+      "bytes": 11463,
+      "copy_permission_accepted": false,
+      "findings": [
+        "元template保持、仮定を別cell/出典へ分離、sheet/rowoffset/型・全match確認は有用。ただしerror0は正しい数式/元値/全sheetcoverage・実経済判断を保証しない。",
+        "data_onlyの読込と保存は式/値の扱いを区別する必要がある。cache欠落/古い値/未対応関数や外部参照・macroを0/成功へしない。色/年format/0をダッシュ表示は値の意味や既存templateへ優先しない。",
+        "pandas初期sheet/推論型や再export・行列挿入/削除はID先頭0/日付/式/範囲/図表/notes/署名等を失う可能性。新式を全て必須とせず元資料/確定値/推定/不明を保つ。",
+        "LO導入済みの想定と初回macro設定、Linux/macOS対応をWindows検証済みにしない。script未読のまま全cellscan/期限/原本保持を保証せず、新Python作成やglobal設定/本番data更新を行わない。Proprietary条件は未解除。"
+      ],
+      "git_blob": "c5c881be9ebaa2bfcdd02f97de2ebd711ab78803",
+      "individual_notices": [
+        {
+          "bytes": 1467,
+          "copy_permission_accepted": false,
+          "git_blob": "c55ab42224874608473643de0a85736b7fec0730",
+          "path": "skills/pupuking723/xlsx-anthropic/LICENSE.txt",
+          "read_kind": "exact_bytes_reuse",
+          "relative_path": "LICENSE.txt",
+          "scope": "実公開版/著作者・第三者素材/依存/service/dataの権利は別。rootMIT/ClawHub補助MIT0で個別条件/矛盾を解除しない。",
+          "sha256": "79f6d8f5b427252fa3b1c11ecdbdb6bf610b944f7530b4de78f770f38741cfaa",
+          "source_url": "https://github.com/6mile/skills/blob/920714f17d81e0a95c7a9bc51faf0a7921cd982d/skills/pupuking723/xlsx-anthropic/LICENSE.txt"
+        }
+      ],
+      "inventory_id": "github:c79da10fa3dc45112b83836fb9d9ea8133121f2a720d515d4b7afca7dc77420e",
+      "nearby_metadata": [
+        "sql-data-integrity",
+        "evidence-based-text-review",
+        "source-grounded-content-review",
+        "public-artifact-hygiene"
+      ],
+      "negative": "recalc JSONのerror0だけで金融model完成とし、data_onlyのまま上書きして式を失い、未取得を0へ変える。",
+      "new_final_disposition": false,
+      "path": "skills/pupuking723/xlsx-anthropic/SKILL.md",
+      "positive": "式とcacheを別に保持し、同じ元出典/単位と期待例で再計算値を照合して全対象と不足を記録する。",
+      "read": {
+        "final_withheld_unread_except_reported_initial_gaps": true,
+        "initial_withheld_display_gaps": [],
+        "kind": "direct_raw_full",
+        "masked_lines": 0,
+        "ordered_view_complete": true,
+        "physical_lines": 292,
+        "raw_read_complete": true,
+        "recorded_mask_version": null,
+        "visible_range_digest_provided": false,
+        "withheld_meanings_not_treated_as_complete": true,
+        "withheld_physical_lines": [],
+        "workflow_view_complete": true
+      },
+      "required_changes": [
+        "原workbook版・対象sheet/range/単位/型・元dataと式/依存/再計算環境を固定し、別成果で保持/内容差分・実数値と表示/metadataを照合する。",
+        "null/空/0/古いcache/解析不能/計算失敗を分離し、意味のある基準例/境界と影響利用側を検証する。公開名義/不要AI帰属を検索と実物で確認する。",
+        "実利用の親が必要helper/互換/個別許諾を確認する。今回実book作成/再計算/採否/許諾/導入0。"
+      ],
+      "source_code_executed": false,
+      "source_commit": "920714f17d81e0a95c7a9bc51faf0a7921cd982d",
+      "source_repo": "6mile/skills",
+      "source_sha256": "dd316db7785a6be12966c2a2d848931fbf5f518b3cdb0a66fa62ee835ead1cfc",
+      "source_url": "https://github.com/6mile/skills/blob/920714f17d81e0a95c7a9bc51faf0a7921cd982d/skills/pupuking723/xlsx-anthropic/SKILL.md",
+      "support_read_states": [
+        {
+          "bytes": 1467,
+          "git_blob_prefix": "c55ab422",
+          "masked_lines": 0,
+          "mode": "100644",
+          "relative_path": "LICENSE.txt",
+          "sha256_prefix": "79f6d8f5",
+          "state": "exact_bytes_reuse"
+        },
+        {
+          "bytes": 11463,
+          "git_blob_prefix": "c5c881be",
+          "masked_lines": 0,
+          "mode": "100644",
+          "relative_path": "SKILL.md",
+          "sha256_prefix": "dd316db7",
+          "state": "direct_raw_full"
+        },
+        {
+          "bytes": 285,
+          "git_blob_prefix": "eccddc1c",
+          "masked_lines": null,
+          "mode": "100644",
+          "relative_path": "_meta.json",
+          "sha256_prefix": "038df04f",
+          "state": "saved_unread"
+        },
+        {
+          "bytes": null,
+          "git_blob_prefix": "e69de29b",
+          "masked_lines": null,
+          "mode": "100644",
+          "relative_path": "scripts/office/helpers/__init__.py",
+          "sha256_prefix": null,
+          "state": "unsaved"
+        },
+        {
+          "bytes": null,
+          "git_blob_prefix": "ad7c25ee",
+          "masked_lines": null,
+          "mode": "100644",
+          "relative_path": "scripts/office/helpers/merge_runs.py",
+          "sha256_prefix": null,
+          "state": "unsaved"
+        },
+        {
+          "bytes": null,
+          "git_blob_prefix": "db963bb9",
+          "masked_lines": null,
+          "mode": "100644",
+          "relative_path": "scripts/office/helpers/simplify_redlines.py",
+          "sha256_prefix": null,
+          "state": "unsaved"
+        },
+        {
+          "bytes": null,
+          "git_blob_prefix": "db29ed8b",
+          "masked_lines": null,
+          "mode": "100644",
+          "relative_path": "scripts/office/pack.py",
+          "sha256_prefix": null,
+          "state": "unsaved"
+        },
+        {
+          "bytes": null,
+          "git_blob_prefix": "c7f7e328",
+          "masked_lines": null,
+          "mode": "100644",
+          "relative_path": "scripts/office/soffice.py",
+          "sha256_prefix": null,
+          "state": "unsaved"
+        },
+        {
+          "bytes": null,
+          "git_blob_prefix": "00152533",
+          "masked_lines": null,
+          "mode": "100644",
+          "relative_path": "scripts/office/unpack.py",
+          "sha256_prefix": null,
+          "state": "unsaved"
+        },
+        {
+          "bytes": null,
+          "git_blob_prefix": "03b01f6e",
+          "masked_lines": null,
+          "mode": "100644",
+          "relative_path": "scripts/office/validate.py",
+          "sha256_prefix": null,
+          "state": "unsaved"
+        },
+        {
+          "bytes": null,
+          "git_blob_prefix": "db092ece",
+          "masked_lines": null,
+          "mode": "100644",
+          "relative_path": "scripts/office/validators/__init__.py",
+          "sha256_prefix": null,
+          "state": "unsaved"
+        },
+        {
+          "bytes": null,
+          "git_blob_prefix": "db4a06a2",
+          "masked_lines": null,
+          "mode": "100644",
+          "relative_path": "scripts/office/validators/base.py",
+          "sha256_prefix": null,
+          "state": "unsaved"
+        },
+        {
+          "bytes": null,
+          "git_blob_prefix": "fec405e6",
+          "masked_lines": null,
+          "mode": "100644",
+          "relative_path": "scripts/office/validators/docx.py",
+          "sha256_prefix": null,
+          "state": "unsaved"
+        },
+        {
+          "bytes": null,
+          "git_blob_prefix": "09842aa9",
+          "masked_lines": null,
+          "mode": "100644",
+          "relative_path": "scripts/office/validators/pptx.py",
+          "sha256_prefix": null,
+          "state": "unsaved"
+        },
+        {
+          "bytes": null,
+          "git_blob_prefix": "71c81b6b",
+          "masked_lines": null,
+          "mode": "100644",
+          "relative_path": "scripts/office/validators/redlining.py",
+          "sha256_prefix": null,
+          "state": "unsaved"
+        },
+        {
+          "bytes": null,
+          "git_blob_prefix": "f472e9a5",
+          "masked_lines": null,
+          "mode": "100644",
+          "relative_path": "scripts/recalc.py",
+          "sha256_prefix": null,
+          "state": "unsaved"
+        }
+      ],
+      "unmet": [
+        "起動提供metadataのみ。中央本文/存在・同等性/現設定は照会していない。",
+        "式/値/出典と実再計算の検査を改訂候補として提案。権利未確定、実操作/採否/導入0。",
+        "固定した保存資料の評価であり、現在のサービス仕様・実動作・個別権利の受入を保証しない。"
+      ],
+      "use": "入力/仮定・formula/参照・計算cacheと実結果を分ける表計算検査の参考。",
+      "value": "元出典/日時・単位/範囲と計算の依存関係を結び、書式と値/式の保持を検査できる。"
+    },
+    {
+      "bytes": 33514,
+      "copy_permission_accepted": false,
+      "findings": [
+        "opencode runへの置換・検出path/OPENCODE_PATH、Python3.9/root検出の変更を主張するが該当scriptは未保存。CLIが見つかることは正しい版/主体/OAuth契約/実model/出力互換の証明ではない。",
+        "原のclaude-with-skill/環境依存subagents等が残り、harnessごとの技能発火/計測通知・再開/取消を検証した証拠はない。全run同時spawnや既存CLIの別モデルを今回writerや独立reviewへ流用しない。",
+        "schemaのexpectationsとprimary assertions等の差、空feedback=承認、繰返すtest選抜の独立性/合否と未検証の混同をskill-creatorの所見と同様に改訂する必要がある。支持4件は別copyをfresh raw読了に変更しない。",
+        "READMEはMITと述べるが個別LICENSEはApache2同bytesで、原版/移植の著作権/変更通知・実公開版対応は別。単なる改名/コピー/原public命令で中央junctionやAPI鍵/新支出を許可しない。"
+      ],
+      "git_blob": "deff3fd91436646a781302a41268d2416469323e",
+      "individual_notices": [
+        {
+          "bytes": 11357,
+          "copy_permission_accepted": false,
+          "git_blob": "7a4a3ea2424c09fbe48d455aed1eaa94d9124835",
+          "path": "skills/pwu0125/skill-creator-opencode/LICENSE.txt",
+          "read_kind": "exact_bytes_reuse",
+          "relative_path": "LICENSE.txt",
+          "scope": "実公開版/著作者・第三者素材/依存/service/dataの権利は別。rootMIT/ClawHub補助MIT0で個別条件/矛盾を解除しない。",
+          "sha256": "58d1e17ffe5109a7ae296caafcadfdbe6a7d176f0bc4ab01e12a689b0499d8bd",
+          "source_url": "https://github.com/6mile/skills/blob/920714f17d81e0a95c7a9bc51faf0a7921cd982d/skills/pwu0125/skill-creator-opencode/LICENSE.txt"
+        }
+      ],
+      "inventory_id": "github:ac80c039264fba9e2193368ffd359d5713e2db7218e94921db3aedc202bbed32",
+      "nearby_metadata": [
+        "migrate-to-codex",
+        "coding-agent-tools",
+        "ai-model-evaluation",
+        "subagent-review",
+        "skill-maintenance"
+      ],
+      "negative": "opencodeという実行名があるだけで同じモデル/利用枠/発火精度とし、未保存scriptの互換性やREADMEのMITを全許諾と報告する。",
+      "new_final_disposition": false,
+      "path": "skills/pwu0125/skill-creator-opencode/SKILL.md",
+      "positive": "CLIを替えた差分としてauth/起動/実model/出力/取消と採点schemaを固定し、同じ評価入力で独立比較する。",
+      "read": {
+        "final_withheld_unread_except_reported_initial_gaps": true,
+        "initial_withheld_display_gaps": [],
+        "kind": "direct_masked_full",
+        "masked_lines": 2,
+        "ordered_view_complete": true,
+        "physical_lines": 500,
+        "raw_read_complete": false,
+        "recorded_mask_version": null,
+        "visible_range_digest_provided": false,
+        "withheld_meanings_not_treated_as_complete": true,
+        "withheld_physical_lines": [
+          201,
+          253
+        ],
+        "workflow_view_complete": true
+      },
+      "required_changes": [
+        "実CLIの版/場所・本人の既存OAuth対象/必要権限・要求model/effortと実出力を起動receiptへ結び、失敗/取消/期限と重複runを検証する。",
+        "比較入力/期待条件/実成果/採点のschemaを統一し、未回答/失敗/不明を分け、独立な最終確認を保持する。研究からCLI実行/再委譲・新Python・中央変更0。",
+        "個別Apache/READMEの不一致と移植範囲・公開名義/不要AI帰属を親の採否時に照合する。実版の互換性や許諾を未検証で保証しない。"
+      ],
+      "source_code_executed": false,
+      "source_commit": "920714f17d81e0a95c7a9bc51faf0a7921cd982d",
+      "source_repo": "6mile/skills",
+      "source_sha256": "4f639d4ffaed0a4479b9817205c19989c74d6b66a8c647fb8d75404d8d827a07",
+      "source_url": "https://github.com/6mile/skills/blob/920714f17d81e0a95c7a9bc51faf0a7921cd982d/skills/pwu0125/skill-creator-opencode/SKILL.md",
+      "support_read_states": [
+        {
+          "bytes": 11357,
+          "git_blob_prefix": "7a4a3ea2",
+          "masked_lines": 0,
+          "mode": "100644",
+          "relative_path": "LICENSE.txt",
+          "sha256_prefix": "58d1e17f",
+          "state": "exact_bytes_reuse"
+        },
+        {
+          "bytes": 1948,
+          "git_blob_prefix": "2137a280",
+          "masked_lines": 2,
+          "mode": "100644",
+          "relative_path": "README.cn.md",
+          "sha256_prefix": "b6b4421b",
+          "state": "direct_masked_full"
+        },
+        {
+          "bytes": 2001,
+          "git_blob_prefix": "281688e5",
+          "masked_lines": 2,
+          "mode": "100644",
+          "relative_path": "README.md",
+          "sha256_prefix": "f1a6938f",
+          "state": "direct_masked_full"
+        },
+        {
+          "bytes": 33514,
+          "git_blob_prefix": "deff3fd9",
+          "masked_lines": 2,
+          "mode": "100644",
+          "relative_path": "SKILL.md",
+          "sha256_prefix": "4f639d4f",
+          "state": "direct_masked_full"
+        },
+        {
+          "bytes": 299,
+          "git_blob_prefix": "51084c96",
+          "masked_lines": null,
+          "mode": "100644",
+          "relative_path": "_meta.json",
+          "sha256_prefix": "9dd172f3",
+          "state": "saved_unread"
+        },
+        {
+          "bytes": 10376,
+          "git_blob_prefix": "14e41d60",
+          "masked_lines": 0,
+          "mode": "100644",
+          "relative_path": "agents/analyzer.md",
+          "sha256_prefix": "bf68f4ca",
+          "state": "exact_bytes_reuse"
+        },
+        {
+          "bytes": 7287,
+          "git_blob_prefix": "80e00eb4",
+          "masked_lines": 0,
+          "mode": "100644",
+          "relative_path": "agents/comparator.md",
+          "sha256_prefix": "fe1fc978",
+          "state": "exact_bytes_reuse"
+        },
+        {
+          "bytes": 9049,
+          "git_blob_prefix": "558ab05c",
+          "masked_lines": 0,
+          "mode": "100644",
+          "relative_path": "agents/grader.md",
+          "sha256_prefix": "57134da0",
+          "state": "exact_bytes_reuse"
+        },
+        {
+          "bytes": null,
+          "git_blob_prefix": "938ff32a",
+          "masked_lines": null,
+          "mode": "100644",
+          "relative_path": "assets/eval_review.html",
+          "sha256_prefix": null,
+          "state": "unsaved"
+        },
+        {
+          "bytes": null,
+          "git_blob_prefix": "7fa59786",
+          "masked_lines": null,
+          "mode": "100644",
+          "relative_path": "eval-viewer/generate_review.py",
+          "sha256_prefix": null,
+          "state": "unsaved"
+        },
+        {
+          "bytes": null,
+          "git_blob_prefix": "6d8e9634",
+          "masked_lines": null,
+          "mode": "100644",
+          "relative_path": "eval-viewer/viewer.html",
+          "sha256_prefix": null,
+          "state": "unsaved"
+        },
+        {
+          "bytes": 12061,
+          "git_blob_prefix": "b6eeaa2d",
+          "masked_lines": 0,
+          "mode": "100644",
+          "relative_path": "references/schemas.md",
+          "sha256_prefix": "8e887618",
+          "state": "exact_bytes_reuse"
+        },
+        {
+          "bytes": null,
+          "git_blob_prefix": "e69de29b",
+          "masked_lines": null,
+          "mode": "100644",
+          "relative_path": "scripts/__init__.py",
+          "sha256_prefix": null,
+          "state": "unsaved"
+        },
+        {
+          "bytes": null,
+          "git_blob_prefix": "3e66e8c1",
+          "masked_lines": null,
+          "mode": "100644",
+          "relative_path": "scripts/aggregate_benchmark.py",
+          "sha256_prefix": null,
+          "state": "unsaved"
+        },
+        {
+          "bytes": null,
+          "git_blob_prefix": "959e30a0",
+          "masked_lines": null,
+          "mode": "100644",
+          "relative_path": "scripts/generate_report.py",
+          "sha256_prefix": null,
+          "state": "unsaved"
+        },
+        {
+          "bytes": null,
+          "git_blob_prefix": "c3856f60",
+          "masked_lines": null,
+          "mode": "100644",
+          "relative_path": "scripts/improve_description.py",
+          "sha256_prefix": null,
+          "state": "unsaved"
+        },
+        {
+          "bytes": null,
+          "git_blob_prefix": "f48eac44",
+          "masked_lines": null,
+          "mode": "100644",
+          "relative_path": "scripts/package_skill.py",
+          "sha256_prefix": null,
+          "state": "unsaved"
+        },
+        {
+          "bytes": null,
+          "git_blob_prefix": "ed8e1ddd",
+          "masked_lines": null,
+          "mode": "100644",
+          "relative_path": "scripts/quick_validate.py",
+          "sha256_prefix": null,
+          "state": "unsaved"
+        },
+        {
+          "bytes": null,
+          "git_blob_prefix": "4290f016",
+          "masked_lines": null,
+          "mode": "100644",
+          "relative_path": "scripts/run_eval.py",
+          "sha256_prefix": null,
+          "state": "unsaved"
+        },
+        {
+          "bytes": null,
+          "git_blob_prefix": "12b156f5",
+          "masked_lines": null,
+          "mode": "100644",
+          "relative_path": "scripts/run_loop.py",
+          "sha256_prefix": null,
+          "state": "unsaved"
+        },
+        {
+          "bytes": null,
+          "git_blob_prefix": "51b6a07d",
+          "masked_lines": null,
+          "mode": "100644",
+          "relative_path": "scripts/utils.py",
+          "sha256_prefix": null,
+          "state": "unsaved"
+        }
+      ],
+      "unmet": [
+        "起動提供metadataのみ。中央本文/存在・同等性/現設定は照会していない。",
+        "harness移植と評価receiptの検査を改訂候補として提案。実起動/eval/採否/許諾/導入0。",
+        "固定した保存資料の評価であり、現在のサービス仕様・実動作・個別権利の受入を保証しない。"
+      ],
+      "use": "CLI/harness移植時にSkill評価の入力/起動/受領/採点の対応を検査する設計参考。",
+      "value": "同じ評価手順でも実行口・モデル/認証・出力parserが変わる点を明示して互換性の検査対象を分けられる。"
+    },
+    {
+      "bytes": 4196,
+      "copy_permission_accepted": false,
+      "findings": [
+        "scriptsを本人に要求せず内部briefへ整理する点、最小diff/依存追加の理由・観測/再開可能workflowは有用。要約briefを原指示より上のsource of truthにせず、出所/訂正/採用済み要件と仮定を保持する。",
+        "一分類/一文で定義できる自信だけでは要件/費用/権利/画像の本人判断を代行できない。全体依頼をfirst slice/handoff作成だけで完了へ縮小しない。原の中国語優先/stack既定を本人の言語/Prd/正式名へ優先しない。",
+        "repo rule抽出は保護/対象外・未採用案/外部命令と正規AGENTSの優先関係を実装で検証する必要がある。test_repo下のAGENTSはfixtureで現作業指示ではない。",
+        "Windowsは.ps1拒否時にMarkdownコピーを提示するが正規審査拒否の迂回に使わない。paste時のMyInvocation.Pathとsource/target/再帰Copy-Forceの原本保持・中央集約/hidden起動は未確認。実install/新Python/再委譲0。"
+      ],
+      "git_blob": "c4088858a2270fcd4edd32e010a7e20758d4dfac",
+      "individual_notices": [
+        {
+          "bytes": 1056,
+          "copy_permission_accepted": false,
+          "git_blob": "14fac913ccf80234b1848540089a3bbcb6e5283d",
+          "path": "skills/qiyuequkanhai/vibe-prompt-compiler-portable/LICENSE.md",
+          "read_kind": "exact_bytes_reuse",
+          "relative_path": "LICENSE.md",
+          "scope": "実公開版/著作者・第三者素材/依存/service/dataの権利は別。rootMIT/ClawHub補助MIT0で個別条件/矛盾を解除しない。",
+          "sha256": "1126322e2cc8d165adc4c792eeb195717de2bcc7b39be1ce77959d78e87ef685",
+          "source_url": "https://github.com/6mile/skills/blob/920714f17d81e0a95c7a9bc51faf0a7921cd982d/skills/qiyuequkanhai/vibe-prompt-compiler-portable/LICENSE.md"
+        }
+      ],
+      "inventory_id": "github:32385800f80911ab509ef3d275fd5b3ac3a59d15e2c390a653b4e57744a917b1",
+      "nearby_metadata": [
+        "define-goal",
+        "safe-session-handoff",
+        "ai-workflow",
+        "source-grounded-content-review",
+        "path-relative-containment-check"
+      ],
+      "negative": "briefを新しい権限/真実にし、未指定の費用/見た目を仮定して実装し、引継ぎ文を作っただけで全体完了にする。",
+      "new_final_disposition": false,
+      "path": "skills/qiyuequkanhai/vibe-prompt-compiler-portable/SKILL.md",
+      "positive": "原依頼と同じ受入条件を短いbriefへ結び、明示した技術仮定だけで必要工程を進め、残作業を保持する。",
+      "read": {
+        "final_withheld_unread_except_reported_initial_gaps": true,
+        "initial_withheld_display_gaps": [],
+        "kind": "direct_raw_full",
+        "masked_lines": 0,
+        "ordered_view_complete": true,
+        "physical_lines": 124,
+        "raw_read_complete": true,
+        "recorded_mask_version": null,
+        "visible_range_digest_provided": false,
+        "withheld_meanings_not_treated_as_complete": true,
+        "withheld_physical_lines": [],
+        "workflow_view_complete": true
+      },
+      "required_changes": [
+        "原依頼/回答ID・対象とscope/受入条件をbriefに結び、提案/仮定と本人決定を分ける。質問は既存回答を確認し本人だけの未指定判断に限定する。",
+        "全体の残作業を保持して整理後の実作業まで追い、template/配布script名だけで品質/互換を認定しない。必要な実装/同等性は親の実利用時に確認する。",
+        "審査/保護を形式変更で迂回せず、許可root・非上書き/包含/競合/hiddenを守る。研究は新file/導入/公開0。"
+      ],
+      "source_code_executed": false,
+      "source_commit": "920714f17d81e0a95c7a9bc51faf0a7921cd982d",
+      "source_repo": "6mile/skills",
+      "source_sha256": "3a52fef3efb8f2230becd0e83d2d258384ea5ed0631c86356e10e4ae227cbc89",
+      "source_url": "https://github.com/6mile/skills/blob/920714f17d81e0a95c7a9bc51faf0a7921cd982d/skills/qiyuequkanhai/vibe-prompt-compiler-portable/SKILL.md",
+      "support_read_states": [
+        {
+          "bytes": 2749,
+          "git_blob_prefix": "51785189",
+          "masked_lines": null,
+          "mode": "100644",
+          "relative_path": "CHANGELOG.md",
+          "sha256_prefix": "438f6378",
+          "state": "saved_unread"
+        },
+        {
+          "bytes": 1056,
+          "git_blob_prefix": "14fac913",
+          "masked_lines": 0,
+          "mode": "100644",
+          "relative_path": "LICENSE.md",
+          "sha256_prefix": "1126322e",
+          "state": "exact_bytes_reuse"
+        },
+        {
+          "bytes": 15381,
+          "git_blob_prefix": "3a32876d",
+          "masked_lines": null,
+          "mode": "100644",
+          "relative_path": "README.md",
+          "sha256_prefix": "80603825",
+          "state": "saved_unread"
+        },
+        {
+          "bytes": 1266,
+          "git_blob_prefix": "58516bd9",
+          "masked_lines": null,
+          "mode": "100644",
+          "relative_path": "ROADMAP.md",
+          "sha256_prefix": "21c82de7",
+          "state": "saved_unread"
+        },
+        {
+          "bytes": 4196,
+          "git_blob_prefix": "c4088858",
+          "masked_lines": 0,
+          "mode": "100644",
+          "relative_path": "SKILL.md",
+          "sha256_prefix": "3a52fef3",
+          "state": "direct_raw_full"
+        },
+        {
+          "bytes": 317,
+          "git_blob_prefix": "780f81a6",
+          "masked_lines": null,
+          "mode": "100644",
+          "relative_path": "_meta.json",
+          "sha256_prefix": "435ed236",
+          "state": "saved_unread"
+        },
+        {
+          "bytes": 1066,
+          "git_blob_prefix": "32caaa1f",
+          "masked_lines": 0,
+          "mode": "100644",
+          "relative_path": "install-windows.md",
+          "sha256_prefix": "aec0637e",
+          "state": "direct_raw_full"
+        },
+        {
+          "bytes": null,
+          "git_blob_prefix": "49d09218",
+          "masked_lines": null,
+          "mode": "100644",
+          "relative_path": "install.sh",
+          "sha256_prefix": null,
+          "state": "unsaved"
+        },
+        {
+          "bytes": 1005,
+          "git_blob_prefix": "d3cb0b03",
+          "masked_lines": 0,
+          "mode": "100644",
+          "relative_path": "references/auto-mode.md",
+          "sha256_prefix": "85a0e118",
+          "state": "direct_raw_full"
+        },
+        {
+          "bytes": 9249,
+          "git_blob_prefix": "407c6d33",
+          "masked_lines": null,
+          "mode": "100644",
+          "relative_path": "references/real-examples.md",
+          "sha256_prefix": "4f7129ef",
+          "state": "saved_unread"
+        },
+        {
+          "bytes": 2877,
+          "git_blob_prefix": "d5c4f93c",
+          "masked_lines": 0,
+          "mode": "100644",
+          "relative_path": "references/routing.md",
+          "sha256_prefix": "b5102758",
+          "state": "direct_raw_full"
+        },
+        {
+          "bytes": 13483,
+          "git_blob_prefix": "4ace8af1",
+          "masked_lines": null,
+          "mode": "100644",
+          "relative_path": "references/templates.md",
+          "sha256_prefix": "355556af",
+          "state": "saved_unread"
+        },
+        {
+          "bytes": 4618,
+          "git_blob_prefix": "27255ff1",
+          "masked_lines": null,
+          "mode": "100644",
+          "relative_path": "references/tool-examples.md",
+          "sha256_prefix": "3c34bb77",
+          "state": "saved_unread"
+        },
+        {
+          "bytes": 1547,
+          "git_blob_prefix": "325d69d4",
+          "masked_lines": 0,
+          "mode": "100644",
+          "relative_path": "references/usage.md",
+          "sha256_prefix": "63ee2c7a",
+          "state": "direct_raw_full"
+        },
+        {
+          "bytes": null,
+          "git_blob_prefix": "80927178",
+          "masked_lines": null,
+          "mode": "100644",
+          "relative_path": "scripts/compile_prompt.py",
+          "sha256_prefix": null,
+          "state": "unsaved"
+        },
+        {
+          "bytes": null,
+          "git_blob_prefix": "a7d7625c",
+          "masked_lines": null,
+          "mode": "100644",
+          "relative_path": "scripts/create_handoff.py",
+          "sha256_prefix": null,
+          "state": "unsaved"
+        },
+        {
+          "bytes": null,
+          "git_blob_prefix": "d6f0162b",
+          "masked_lines": null,
+          "mode": "100644",
+          "relative_path": "scripts/extract_repo_rules.py",
+          "sha256_prefix": null,
+          "state": "unsaved"
+        },
+        {
+          "bytes": null,
+          "git_blob_prefix": "5378ef1c",
+          "masked_lines": null,
+          "mode": "100644",
+          "relative_path": "scripts/prompt_lint.py",
+          "sha256_prefix": null,
+          "state": "unsaved"
+        },
+        {
+          "bytes": null,
+          "git_blob_prefix": "0b09f871",
+          "masked_lines": null,
+          "mode": "100644",
+          "relative_path": "scripts/test_extract_repo_rules.py",
+          "sha256_prefix": null,
+          "state": "unsaved"
+        },
+        {
+          "bytes": null,
+          "git_blob_prefix": "d4c18a10",
+          "masked_lines": null,
+          "mode": "100644",
+          "relative_path": "scripts/test_golden_outputs.py",
+          "sha256_prefix": null,
+          "state": "unsaved"
+        },
+        {
+          "bytes": null,
+          "git_blob_prefix": "a8c00568",
+          "masked_lines": null,
+          "mode": "100644",
+          "relative_path": "scripts/test_handoff.py",
+          "sha256_prefix": null,
+          "state": "unsaved"
+        },
+        {
+          "bytes": null,
+          "git_blob_prefix": "7efae3c6",
+          "masked_lines": null,
+          "mode": "100644",
+          "relative_path": "scripts/test_language_presets.py",
+          "sha256_prefix": null,
+          "state": "unsaved"
+        },
+        {
+          "bytes": null,
+          "git_blob_prefix": "ac31f6fc",
+          "masked_lines": null,
+          "mode": "100644",
+          "relative_path": "scripts/test_prompt_lint.py",
+          "sha256_prefix": null,
+          "state": "unsaved"
+        },
+        {
+          "bytes": null,
+          "git_blob_prefix": "3e62d88a",
+          "masked_lines": null,
+          "mode": "100644",
+          "relative_path": "scripts/test_routing.py",
+          "sha256_prefix": null,
+          "state": "unsaved"
+        },
+        {
+          "bytes": null,
+          "git_blob_prefix": "183d3692",
+          "masked_lines": null,
+          "mode": "100644",
+          "relative_path": "scripts/test_rulesets.py",
+          "sha256_prefix": null,
+          "state": "unsaved"
+        },
+        {
+          "bytes": null,
+          "git_blob_prefix": "0a600408",
+          "masked_lines": null,
+          "mode": "100644",
+          "relative_path": "scripts/test_tool_presets.py",
+          "sha256_prefix": null,
+          "state": "unsaved"
+        },
+        {
+          "bytes": null,
+          "git_blob_prefix": "7f6ae811",
+          "masked_lines": null,
+          "mode": "100644",
+          "relative_path": "scripts/test_web_cases.py",
+          "sha256_prefix": null,
+          "state": "unsaved"
+        },
+        {
+          "bytes": null,
+          "git_blob_prefix": "d98f3337",
+          "masked_lines": null,
+          "mode": "100644",
+          "relative_path": "tests/golden_prompts.json",
+          "sha256_prefix": null,
+          "state": "unsaved"
+        },
+        {
+          "bytes": null,
+          "git_blob_prefix": "0a810d9e",
+          "masked_lines": null,
+          "mode": "100644",
+          "relative_path": "tests/language_presets.json",
+          "sha256_prefix": null,
+          "state": "unsaved"
+        },
+        {
+          "bytes": null,
+          "git_blob_prefix": "2f896b78",
+          "masked_lines": null,
+          "mode": "100644",
+          "relative_path": "tests/prompt_lint_cases.json",
+          "sha256_prefix": null,
+          "state": "unsaved"
+        },
+        {
+          "bytes": null,
+          "git_blob_prefix": "3b8e4ec0",
+          "masked_lines": null,
+          "mode": "100644",
+          "relative_path": "tests/repo_extract_cases.json",
+          "sha256_prefix": null,
+          "state": "unsaved"
+        },
+        {
+          "bytes": null,
+          "git_blob_prefix": "ec87e51f",
+          "masked_lines": null,
+          "mode": "100644",
+          "relative_path": "tests/repo_rules_sample.json",
+          "sha256_prefix": null,
+          "state": "unsaved"
+        },
+        {
+          "bytes": null,
+          "git_blob_prefix": "935abe01",
+          "masked_lines": null,
+          "mode": "100644",
+          "relative_path": "tests/rulesets.json",
+          "sha256_prefix": null,
+          "state": "unsaved"
+        },
+        {
+          "bytes": 165,
+          "git_blob_prefix": "47111408",
+          "masked_lines": null,
+          "mode": "100644",
+          "relative_path": "tests/test_repo/rules/AGENTS.md",
+          "sha256_prefix": "f92ce213",
+          "state": "saved_unread"
+        },
+        {
+          "bytes": 110,
+          "git_blob_prefix": "db6db1f3",
+          "masked_lines": null,
+          "mode": "100644",
+          "relative_path": "tests/test_repo/rules/README.md",
+          "sha256_prefix": "e8544eea",
+          "state": "saved_unread"
+        },
+        {
+          "bytes": null,
+          "git_blob_prefix": "25aaf90c",
+          "masked_lines": null,
+          "mode": "100644",
+          "relative_path": "tests/test_repo/rules/package.json",
+          "sha256_prefix": null,
+          "state": "unsaved"
+        },
+        {
+          "bytes": null,
+          "git_blob_prefix": "37c38039",
+          "masked_lines": null,
+          "mode": "100644",
+          "relative_path": "tests/tool_presets.json",
+          "sha256_prefix": null,
+          "state": "unsaved"
+        },
+        {
+          "bytes": null,
+          "git_blob_prefix": "57ed4701",
+          "masked_lines": null,
+          "mode": "100644",
+          "relative_path": "tests/web_cases.json",
+          "sha256_prefix": null,
+          "state": "unsaved"
+        }
+      ],
+      "unmet": [
+        "起動提供metadataのみ。中央本文/存在・同等性/現設定は照会していない。",
+        "意図/範囲の整理と原指示保持を補う改訂候補。実compiler/採否/許諾/導入0。",
+        "固定した保存資料の評価であり、現在のサービス仕様・実動作・個別権利の受入を保証しない。"
+      ],
+      "use": "曖昧な実装依頼を目的/範囲/制約/受入条件/次の実作業へ整理する設計参考。",
+      "value": "既存事実を先に抽出し、技術的仮定と今する工程/将来案を分けて作業逸脱を防げる。"
+    },
+    {
+      "bytes": 7460,
+      "copy_permission_accepted": false,
+      "findings": [
+        "snapshot→操作→snapshotは有用だがload/要素存在/画面変化だけで実保存・配送/決済や正しい主体を保証しない。fillはEnterを押すので別submit/retryの二重作用を防ぐ。",
+        "403/429/保護画面・空ページのときremote/stealth/proxyへ移す原規則を正規拒否/対象制限の迂回へ用いない。Rakko/他人・旧勤務先認証の制限は全経路で維持する。",
+        "local Chromeは本人の既定profileの証明でなく、sticky env・daemon stopや広域pkillは他担当/本人tabへ影響する。DOM/value/全通信の保存/接続情報・remotecookieは秘密/外部境界。非AI Browserbase資格とAI課金禁止を混同しないが今回資格/新費用/実ブラウザ0。",
+        "CLI実装/現在の機能/契約/料金は未検証。当packageは旧320のnestedSKILLやREADMEを持たず、他packageの支持を現在存在するものへ補わない。"
+      ],
+      "git_blob": "3e466f9bbca8fe40c3f2fea96af1efd4b5b4ef44",
+      "individual_notices": [
+        {
+          "bytes": 1074,
+          "copy_permission_accepted": false,
+          "git_blob": "f2f439741a263d46773bd2cf7f120ce494b5c719",
+          "path": "skills/radical7vii/browse-2-0-2/LICENSE.txt",
+          "read_kind": "exact_bytes_reuse",
+          "relative_path": "LICENSE.txt",
+          "scope": "実公開版/著作者・第三者素材/依存/service/dataの権利は別。rootMIT/ClawHub補助MIT0で個別条件/矛盾を解除しない。",
+          "sha256": "a7f98ba58237657d1f06d32903af0e4ef28a757eed4f0cd01c72191e4220083c",
+          "source_url": "https://github.com/6mile/skills/blob/920714f17d81e0a95c7a9bc51faf0a7921cd982d/skills/radical7vii/browse-2-0-2/LICENSE.txt"
+        }
+      ],
+      "inventory_id": "github:c654fb240f0ec7b1228612344f012a5d0ba7c554b642799ecfda23b3d56a5b92",
+      "nearby_metadata": [
+        "browser-automation",
+        "dynamic-action-authorization",
+        "process-lifecycle",
+        "visibility-click-request-race"
+      ],
+      "negative": "refや保存資格を対象許可とし、拒否をremoteproxyで回避し、fill後に再送して広域pkillで他担当を止める。",
+      "new_final_disposition": false,
+      "path": "skills/radical7vii/browse-2-0-2/SKILL.md",
+      "positive": "同じ自分のsessionで最新snapshotと実作用receiptを照合し、Enterによる送信を二重実行せず作成tabだけ閉じる。",
+      "read": {
+        "final_withheld_unread_except_reported_initial_gaps": true,
+        "initial_withheld_display_gaps": [],
+        "kind": "direct_masked_full",
+        "masked_lines": 3,
+        "ordered_view_complete": true,
+        "physical_lines": 161,
+        "raw_read_complete": false,
+        "recorded_mask_version": null,
+        "visible_range_digest_provided": false,
+        "withheld_meanings_not_treated_as_complete": true,
+        "withheld_physical_lines": [
+          4,
+          43,
+          145
+        ],
+        "workflow_view_complete": true
+      },
+      "required_changes": [
+        "page/主体・最新refと作用/実結果を固定し、送信冪等性/有限retry・未実行/失敗を分ける。許可された通常操作を本人PC待ちにせず、拒否を別経路で回避しない。",
+        "実process/session・自作tabだけを終了し、秘密を含む抽出/通信を最小化する。親の実利用時だけ現仕様/契約と必要実装を確認し、研究から導入/操作/送信0。"
+      ],
+      "source_code_executed": false,
+      "source_commit": "920714f17d81e0a95c7a9bc51faf0a7921cd982d",
+      "source_repo": "6mile/skills",
+      "source_sha256": "b13b62f0961b12bc6001e825c0c32acb9449546e86262085bae0827204d45c1b",
+      "source_url": "https://github.com/6mile/skills/blob/920714f17d81e0a95c7a9bc51faf0a7921cd982d/skills/radical7vii/browse-2-0-2/SKILL.md",
+      "support_read_states": [
+        {
+          "bytes": 4209,
+          "git_blob_prefix": "1c466ec2",
+          "masked_lines": 2,
+          "mode": "100644",
+          "relative_path": "EXAMPLES.md",
+          "sha256_prefix": "f5c5225e",
+          "state": "exact_bytes_reuse"
+        },
+        {
+          "bytes": 1074,
+          "git_blob_prefix": "f2f43974",
+          "masked_lines": 0,
+          "mode": "100644",
+          "relative_path": "LICENSE.txt",
+          "sha256_prefix": "a7f98ba5",
+          "state": "exact_bytes_reuse"
+        },
+        {
+          "bytes": 10881,
+          "git_blob_prefix": "d77a4a8a",
+          "masked_lines": 2,
+          "mode": "100644",
+          "relative_path": "REFERENCE.md",
+          "sha256_prefix": "1d431e28",
+          "state": "exact_bytes_reuse"
+        },
+        {
+          "bytes": 7460,
+          "git_blob_prefix": "3e466f9b",
+          "masked_lines": 3,
+          "mode": "100644",
+          "relative_path": "SKILL.md",
+          "sha256_prefix": "b13b62f0",
+          "state": "direct_masked_full"
+        },
+        {
+          "bytes": 281,
+          "git_blob_prefix": "a1a93b6f",
+          "masked_lines": null,
+          "mode": "100644",
+          "relative_path": "_meta.json",
+          "sha256_prefix": "8ef2abe5",
+          "state": "saved_unread"
+        }
+      ],
+      "unmet": [
+        "起動提供metadataのみ。中央本文/存在・同等性/現設定は照会していない。",
+        "操作/結果とsession所有の検査を改訂候補として提案。実操作/採否/許諾/導入0。",
+        "固定した保存資料の評価であり、現在のサービス仕様・実動作・個別権利の受入を保証しない。"
+      ],
+      "use": "最新のpage観測と対象操作/結果、sessionの所有を結ぶブラウザ自動化設計参考。",
+      "value": "snapshot由来のrefを再取得し、入力と実送信・確認結果を分けて二重作用を避ける。"
+    },
+    {
+      "bytes": 8270,
+      "copy_permission_accepted": false,
+      "findings": [
+        "写真の推定を確認後に記録する点、profile/meal/metrics/在庫/backup分離は有用。569食品やBMR/TDEE/比率・賞味期限既定は保存主張で、出典/対象集団/生調理/可食量/アレルギー・疾病/薬との適合や医学的安全は未検証。",
+        "username別SQLiteだけで認可/実path/ACL隔離を保証しない。共通user_configやhealth画像の外部vision送信/hostmodel処理・export/backupと保持日数の境界を分ける。AI API鍵のcloud OCRやmacOS無料機能をWindows既存OAuth枠へ同一視しない。",
+        "auto減算/食品名照合/量解析で誤同定/単位違い/記録修正・同時更新が在庫/栄養を二重化しうる。未記録を摂取0/在庫なしとしない。バックアップ10世代/365日保持は実復元/必要原本保全の証明でない。",
+        "primaryの5000portとauditの8080固定済みは不一致。migrate_db.pyやconfig.example/.gitignore参照は固定treeにない。auditの「実装済み」と未完checklist、test20/20自己申告を実source版のCI/回帰結果へしない。実scriptは未保存。"
+      ],
+      "git_blob": "a81e62c4d6b202a0c35fbc9105840e62fea14562",
+      "individual_notices": [
+        {
+          "bytes": 1072,
+          "copy_permission_accepted": false,
+          "git_blob": "1373dab26783552264ccf700379dc92f37a58bad",
+          "path": "skills/rainbowlion0320/nutricoach/LICENSE.md",
+          "read_kind": "direct_raw_full",
+          "relative_path": "LICENSE.md",
+          "scope": "実公開版/作者・第三者素材/依存/service/dataと利用契約の権利は別。rootMIT/補助MIT0で個別条件/矛盾を解除しない。",
+          "sha256": "6c8b3e5517d4eefdb0b031b78e6c555948ea3a976875ef491752a1e4ba42559b",
+          "source_url": "https://github.com/6mile/skills/blob/920714f17d81e0a95c7a9bc51faf0a7921cd982d/skills/rainbowlion0320/nutricoach/LICENSE.md"
+        }
+      ],
+      "inventory_id": "github:0407c2fce6b57febe1a9bd00eb3c822526e8e54f3057bb9ad9d11efa72d8092a",
+      "nearby_metadata": [
+        "source-grounded-content-review",
+        "sqlite-wal-snapshot",
+        "sql-data-integrity",
+        "backup-restore-reconciliation",
+        "security-review"
+      ],
+      "negative": "OCR推定を実摂取とし、期限既定を食の安全保証にして、別DB名/20合格の記載だけで隔離/全機能完成を断言する。",
+      "new_final_disposition": false,
+      "path": "skills/rainbowlion0320/nutricoach/SKILL.md",
+      "positive": "同じ食品/単位と本人確認した量だけを確定mealへ結び、同一記録の再送でも在庫を二重減算しない設計へ参照する。",
+      "read": {
+        "final_withheld_unread_except_reported_initial_gaps": true,
+        "initial_withheld_display_gaps": [],
+        "kind": "direct_masked_full",
+        "masked_lines": 2,
+        "ordered_view_complete": true,
+        "physical_lines": 281,
+        "raw_read_complete": false,
+        "recorded_mask_version": 14,
+        "visible_range_digest_provided": false,
+        "withheld_meanings_not_treated_as_complete": true,
+        "withheld_physical_lines": [
+          73,
+          247
+        ],
+        "workflow_view_complete": true
+      },
+      "required_changes": [
+        "食品ID/版/出典/単位・自己申告/推定/確認/欠測とmeal/在庫transactionを結び、再送/訂正/取消/並行更新を検証する。医学的判断/保証を原の計算式から与えない。",
+        "実利用の親だけが必要実装/現在一次資料/個人data処理先・権利/契約内枠とWindows適合を確認する。既存原本/backupを保持し、研究ではDB/画像取得・API/新UI/導入0。"
+      ],
+      "source_code_executed": false,
+      "source_commit": "920714f17d81e0a95c7a9bc51faf0a7921cd982d",
+      "source_repo": "6mile/skills",
+      "source_sha256": "f4ff277b66d684025e7c3476a8e1317bc40ff3a30a58d2b7035791744d65cf42",
+      "source_url": "https://github.com/6mile/skills/blob/920714f17d81e0a95c7a9bc51faf0a7921cd982d/skills/rainbowlion0320/nutricoach/SKILL.md",
+      "support_read_states": [
+        {
+          "bytes": null,
+          "git_blob_prefix": "bea01d44",
+          "masked_lines": null,
+          "mode": "100644",
+          "relative_path": ".clawhub.yml",
+          "sha256_prefix": null,
+          "state": "unsaved"
+        },
+        {
+          "bytes": 2479,
+          "git_blob_prefix": "7d1cc0c0",
+          "masked_lines": null,
+          "mode": "100644",
+          "relative_path": "CHANGELOG.md",
+          "sha256_prefix": "0d12a393",
+          "state": "saved_unread"
+        },
+        {
+          "bytes": 3495,
+          "git_blob_prefix": "615d8e7c",
+          "masked_lines": 0,
+          "mode": "100644",
+          "relative_path": "HARDCODING_AUDIT.md",
+          "sha256_prefix": "6457c06a",
+          "state": "direct_raw_full"
+        },
+        {
+          "bytes": 1072,
+          "git_blob_prefix": "1373dab2",
+          "masked_lines": 0,
+          "mode": "100644",
+          "relative_path": "LICENSE.md",
+          "sha256_prefix": "6c8b3e55",
+          "state": "direct_raw_full"
+        },
+        {
+          "bytes": 2776,
+          "git_blob_prefix": "307ec7a6",
+          "masked_lines": null,
+          "mode": "100644",
+          "relative_path": "LUXURY_DESIGN.md",
+          "sha256_prefix": "61b41d93",
+          "state": "saved_unread"
+        },
+        {
+          "bytes": 8492,
+          "git_blob_prefix": "31618aaf",
+          "masked_lines": null,
+          "mode": "100644",
+          "relative_path": "README.md",
+          "sha256_prefix": "c9476e8c",
+          "state": "saved_unread"
+        },
+        {
+          "bytes": 2196,
+          "git_blob_prefix": "2dfd7b4a",
+          "masked_lines": null,
+          "mode": "100644",
+          "relative_path": "REFACTOR.md",
+          "sha256_prefix": "6c2c96f2",
+          "state": "saved_unread"
+        },
+        {
+          "bytes": 8270,
+          "git_blob_prefix": "a81e62c4",
+          "masked_lines": 2,
+          "mode": "100644",
+          "relative_path": "SKILL.md",
+          "sha256_prefix": "f4ff277b",
+          "state": "direct_masked_full"
+        },
+        {
+          "bytes": 294,
+          "git_blob_prefix": "45f473e9",
+          "masked_lines": null,
+          "mode": "100644",
+          "relative_path": "_meta.json",
+          "sha256_prefix": "aaf43310",
+          "state": "saved_unread"
+        },
+        {
+          "bytes": null,
+          "git_blob_prefix": "a5124f58",
+          "masked_lines": null,
+          "mode": "100644",
+          "relative_path": "clawhub.json",
+          "sha256_prefix": null,
+          "state": "unsaved"
+        },
+        {
+          "bytes": 6019,
+          "git_blob_prefix": "e7de5662",
+          "masked_lines": 1,
+          "mode": "100644",
+          "relative_path": "references/ARCHITECTURE.md",
+          "sha256_prefix": "a23a02a9",
+          "state": "direct_masked_full"
+        },
+        {
+          "bytes": 21652,
+          "git_blob_prefix": "583e960b",
+          "masked_lines": null,
+          "mode": "100644",
+          "relative_path": "references/DATABASE_SCHEMA.md",
+          "sha256_prefix": "03d4f138",
+          "state": "saved_unread"
+        },
+        {
+          "bytes": 4856,
+          "git_blob_prefix": "14e4f45b",
+          "masked_lines": null,
+          "mode": "100644",
+          "relative_path": "references/DEVELOPER_GUIDE.md",
+          "sha256_prefix": "2e270252",
+          "state": "saved_unread"
+        },
+        {
+          "bytes": 9374,
+          "git_blob_prefix": "f2b83cdc",
+          "masked_lines": null,
+          "mode": "100644",
+          "relative_path": "references/FEATURE_GUIDE.md",
+          "sha256_prefix": "82560fbb",
+          "state": "saved_unread"
+        },
+        {
+          "bytes": null,
+          "git_blob_prefix": "06b5908a",
+          "masked_lines": null,
+          "mode": "100644",
+          "relative_path": "references/chinese_foods_nutrition.py",
+          "sha256_prefix": null,
+          "state": "unsaved"
+        },
+        {
+          "bytes": 377,
+          "git_blob_prefix": "09db9f2a",
+          "masked_lines": null,
+          "mode": "100644",
+          "relative_path": "requirements.txt",
+          "sha256_prefix": "a2601f58",
+          "state": "saved_unread"
+        },
+        {
+          "bytes": 693,
+          "git_blob_prefix": "08a63283",
+          "masked_lines": null,
+          "mode": "100644",
+          "relative_path": "screenshots/README.md",
+          "sha256_prefix": "85e7c8bb",
+          "state": "saved_unread"
+        },
+        {
+          "bytes": null,
+          "git_blob_prefix": "e9d96e28",
+          "masked_lines": null,
+          "mode": "100644",
+          "relative_path": "scripts/backup_db.py",
+          "sha256_prefix": null,
+          "state": "unsaved"
+        },
+        {
+          "bytes": null,
+          "git_blob_prefix": "1db8b356",
+          "masked_lines": null,
+          "mode": "100644",
+          "relative_path": "scripts/body_metrics.py",
+          "sha256_prefix": null,
+          "state": "unsaved"
+        },
+        {
+          "bytes": null,
+          "git_blob_prefix": "b04e0dfd",
+          "masked_lines": null,
+          "mode": "100644",
+          "relative_path": "scripts/db_schema.py",
+          "sha256_prefix": null,
+          "state": "unsaved"
+        },
+        {
+          "bytes": null,
+          "git_blob_prefix": "0c37a1f9",
+          "masked_lines": null,
+          "mode": "100644",
+          "relative_path": "scripts/diet_recommender.py",
+          "sha256_prefix": null,
+          "state": "unsaved"
+        },
+        {
+          "bytes": null,
+          "git_blob_prefix": "e154245b",
+          "masked_lines": null,
+          "mode": "100644",
+          "relative_path": "scripts/export_data.py",
+          "sha256_prefix": null,
+          "state": "unsaved"
+        },
+        {
+          "bytes": null,
+          "git_blob_prefix": "2a9e42b8",
+          "masked_lines": null,
+          "mode": "100644",
+          "relative_path": "scripts/food_analyzer.py",
+          "sha256_prefix": null,
+          "state": "unsaved"
+        },
+        {
+          "bytes": null,
+          "git_blob_prefix": "9d216d52",
+          "masked_lines": null,
+          "mode": "100644",
+          "relative_path": "scripts/food_matcher.py",
+          "sha256_prefix": null,
+          "state": "unsaved"
+        },
+        {
+          "bytes": null,
+          "git_blob_prefix": "ef685cfe",
+          "masked_lines": null,
+          "mode": "100644",
+          "relative_path": "scripts/food_ocr.py",
+          "sha256_prefix": null,
+          "state": "unsaved"
+        },
+        {
+          "bytes": null,
+          "git_blob_prefix": "4339707c",
+          "masked_lines": null,
+          "mode": "100644",
+          "relative_path": "scripts/import_chinese_foods.py",
+          "sha256_prefix": null,
+          "state": "unsaved"
+        },
+        {
+          "bytes": null,
+          "git_blob_prefix": "2b84ce2c",
+          "masked_lines": null,
+          "mode": "100644",
+          "relative_path": "scripts/init_db.py",
+          "sha256_prefix": null,
+          "state": "unsaved"
+        },
+        {
+          "bytes": null,
+          "git_blob_prefix": "a2d4bfc5",
+          "masked_lines": null,
+          "mode": "100644",
+          "relative_path": "scripts/launch_dashboard.py",
+          "sha256_prefix": null,
+          "state": "unsaved"
+        },
+        {
+          "bytes": null,
+          "git_blob_prefix": "4dd915e8",
+          "masked_lines": null,
+          "mode": "100644",
+          "relative_path": "scripts/logger.py",
+          "sha256_prefix": null,
+          "state": "unsaved"
+        },
+        {
+          "bytes": null,
+          "git_blob_prefix": "e976a98b",
+          "masked_lines": null,
+          "mode": "100644",
+          "relative_path": "scripts/meal_logger.py",
+          "sha256_prefix": null,
+          "state": "unsaved"
+        },
+        {
+          "bytes": null,
+          "git_blob_prefix": "81adae89",
+          "masked_lines": null,
+          "mode": "100644",
+          "relative_path": "scripts/pantry_manager.py",
+          "sha256_prefix": null,
+          "state": "unsaved"
+        },
+        {
+          "bytes": null,
+          "git_blob_prefix": "ce12bf01",
+          "masked_lines": null,
+          "mode": "100644",
+          "relative_path": "scripts/report_generator.py",
+          "sha256_prefix": null,
+          "state": "unsaved"
+        },
+        {
+          "bytes": null,
+          "git_blob_prefix": "7eaecd37",
+          "masked_lines": null,
+          "mode": "100644",
+          "relative_path": "scripts/smart_recipe.py",
+          "sha256_prefix": null,
+          "state": "unsaved"
+        },
+        {
+          "bytes": 2241,
+          "git_blob_prefix": "b0af0806",
+          "masked_lines": 0,
+          "mode": "100644",
+          "relative_path": "scripts/tests/README.md",
+          "sha256_prefix": "6336a99d",
+          "state": "direct_raw_full"
+        },
+        {
+          "bytes": 477,
+          "git_blob_prefix": "04519b0e",
+          "masked_lines": null,
+          "mode": "100644",
+          "relative_path": "scripts/tests/manual/README.md",
+          "sha256_prefix": "d01d1ee5",
+          "state": "saved_unread"
+        },
+        {
+          "bytes": null,
+          "git_blob_prefix": "f8153367",
+          "masked_lines": null,
+          "mode": "100644",
+          "relative_path": "scripts/tests/manual/test_barcode_match.py",
+          "sha256_prefix": null,
+          "state": "unsaved"
+        },
+        {
+          "bytes": null,
+          "git_blob_prefix": "e4fb2a54",
+          "masked_lines": null,
+          "mode": "100644",
+          "relative_path": "scripts/tests/manual/test_ocr_flow.py",
+          "sha256_prefix": null,
+          "state": "unsaved"
+        },
+        {
+          "bytes": null,
+          "git_blob_prefix": "0c0ee8d6",
+          "masked_lines": null,
+          "mode": "100644",
+          "relative_path": "scripts/tests/manual/test_silent_scan.py",
+          "sha256_prefix": null,
+          "state": "unsaved"
+        },
+        {
+          "bytes": null,
+          "git_blob_prefix": "6a87833e",
+          "masked_lines": null,
+          "mode": "100644",
+          "relative_path": "scripts/tests/run_all_tests.py",
+          "sha256_prefix": null,
+          "state": "unsaved"
+        },
+        {
+          "bytes": null,
+          "git_blob_prefix": "85c5cdfb",
+          "masked_lines": null,
+          "mode": "100644",
+          "relative_path": "scripts/tests/test_database.py",
+          "sha256_prefix": null,
+          "state": "unsaved"
+        },
+        {
+          "bytes": null,
+          "git_blob_prefix": "4371de1f",
+          "masked_lines": null,
+          "mode": "100644",
+          "relative_path": "scripts/tests/test_nutrition_calc.py",
+          "sha256_prefix": null,
+          "state": "unsaved"
+        },
+        {
+          "bytes": null,
+          "git_blob_prefix": "5906137c",
+          "masked_lines": null,
+          "mode": "100644",
+          "relative_path": "scripts/user_profile.py",
+          "sha256_prefix": null,
+          "state": "unsaved"
+        },
+        {
+          "bytes": null,
+          "git_blob_prefix": "ae6f9e72",
+          "masked_lines": null,
+          "mode": "100644",
+          "relative_path": "scripts/web/__init__.py",
+          "sha256_prefix": null,
+          "state": "unsaved"
+        },
+        {
+          "bytes": null,
+          "git_blob_prefix": "608f17c0",
+          "masked_lines": null,
+          "mode": "100644",
+          "relative_path": "scripts/web/config.py",
+          "sha256_prefix": null,
+          "state": "unsaved"
+        },
+        {
+          "bytes": null,
+          "git_blob_prefix": "4ea8cf58",
+          "masked_lines": null,
+          "mode": "100644",
+          "relative_path": "scripts/web/routes.py",
+          "sha256_prefix": null,
+          "state": "unsaved"
+        },
+        {
+          "bytes": null,
+          "git_blob_prefix": "84cd21f1",
+          "masked_lines": null,
+          "mode": "100644",
+          "relative_path": "scripts/web/static/app.js",
+          "sha256_prefix": null,
+          "state": "unsaved"
+        },
+        {
+          "bytes": null,
+          "git_blob_prefix": "bd381617",
+          "masked_lines": null,
+          "mode": "100644",
+          "relative_path": "scripts/web/static/style-luxury.css",
+          "sha256_prefix": null,
+          "state": "unsaved"
+        },
+        {
+          "bytes": null,
+          "git_blob_prefix": "baa7aeda",
+          "masked_lines": null,
+          "mode": "100644",
+          "relative_path": "scripts/web/utils.py",
+          "sha256_prefix": null,
+          "state": "unsaved"
+        },
+        {
+          "bytes": null,
+          "git_blob_prefix": "247a1d41",
+          "masked_lines": null,
+          "mode": "100644",
+          "relative_path": "scripts/web_server.py",
+          "sha256_prefix": null,
+          "state": "unsaved"
+        },
+        {
+          "bytes": null,
+          "git_blob_prefix": "b70e0c86",
+          "masked_lines": null,
+          "mode": "100644",
+          "relative_path": "templates/dashboard.html",
+          "sha256_prefix": null,
+          "state": "unsaved"
+        }
+      ],
+      "unmet": [
+        "起動提供metadataのみ。中央本文/存在・同等性/現設定は未照会。",
+        "推定/確認と在庫更新・出典/保持の検査を改訂候補として提案。実医療/操作/採否/許諾/導入0。",
+        "固定した保存資料の評価であり、現在のサービス仕様・実動作・個別権利の受入を保証しない。"
+      ],
+      "use": "食事/身体測定の自己申告・画像推定/確認と栄養DB/在庫の更新を分ける記録設計参考。",
+      "value": "食材同定→量/単位の確認→確定meal→在庫減算を対応させ、再送/取消時の二重更新を検査できる。"
+    },
+    {
+      "bytes": 13601,
+      "copy_permission_accepted": false,
+      "findings": [
+        "session別の項目/洞察とAsia/Jakarta時刻を分ける点は有用。Yahoo値とニュース/検索snippetが同じ日付・セッション/市場板/foreign定義か未照合で、top10/pricechangeやYTDを別基準のまま併合しうる。",
+        "never incomplete/必ず10銘柄を埋める規則は未取得/無取引/抽出失敗を捏造値へ変える圧力。欠測の理由・観測範囲と原記事/データ時刻を保持し、検索結果数=全市場coverageにしない。DataSource:Tavilyだけでは原出典を追えない。",
+        "国内net=-外国netやsector原因/翌日の具体推奨は同じ母集団/単位・因果根拠が必要。例の数値/文章を現市場事実・投資助言/利益保証にしない。営業時間/休日/特別sessionは現在未確認。",
+        "Tavilyの無料量/Pro推奨と月40–50search概算は保存主張。複数query/銘柄別extractで使用量が増え、無料や既存契約内と断定しない。非AI検索資格をAI API鍵禁止へ一括分類せず、実資格/送信/新費用0。",
+        "cron enabled JSONやscript2回起動の例は実定期収集/配送成功の証拠でない。scriptは未保存。中央配置/junctionと元担当の依存を原copy/新jobで置換しない。"
+      ],
+      "git_blob": "50856e1d8b82586fe4dad4945c25dd86687bf45d",
+      "individual_notices": [
+        {
+          "bytes": 1067,
+          "copy_permission_accepted": false,
+          "git_blob": "42091e772d69053066d9ffd89692e6aa4a69c9a2",
+          "path": "skills/raufimusaddiq/ihsg-session-summary/LICENSE",
+          "read_kind": "direct_raw_full",
+          "relative_path": "LICENSE",
+          "scope": "実公開版/作者・第三者素材/依存/service/dataと利用契約の権利は別。rootMIT/補助MIT0で個別条件/矛盾を解除しない。",
+          "sha256": "322a370d82d7ebe26d9744455201b86d7b0ff8959a272064a4c393e25b703a89",
+          "source_url": "https://github.com/6mile/skills/blob/920714f17d81e0a95c7a9bc51faf0a7921cd982d/skills/raufimusaddiq/ihsg-session-summary/LICENSE"
+        }
+      ],
+      "inventory_id": "github:2ed1999158b306b17ea68b0865df857b1569debd4111a67dfde006adfb4d5368",
+      "nearby_metadata": [
+        "market-data-due-diligence",
+        "source-grounded-content-review",
+        "timezone-helper",
+        "rss-atom-feed-integrity",
+        "browser-extraction-missingness"
+      ],
+      "negative": "top10を埋めるため別日のsnippet/推定を混ぜ、生成時刻とAPI名だけで全市場を把握したとして新Pro契約や送信を行う。",
+      "new_final_disposition": false,
+      "path": "skills/raufimusaddiq/ihsg-session-summary/SKILL.md",
+      "positive": "同じsessionの原値と出典時刻を対応づけ、欠けた項目を明示したまま算式と要約を照合する。",
+      "read": {
+        "final_withheld_unread_except_reported_initial_gaps": true,
+        "initial_withheld_display_gaps": [],
+        "kind": "direct_masked_full",
+        "masked_lines": 6,
+        "ordered_view_complete": true,
+        "physical_lines": 464,
+        "raw_read_complete": false,
+        "recorded_mask_version": 14,
+        "visible_range_digest_provided": false,
+        "withheld_meanings_not_treated_as_complete": true,
+        "withheld_physical_lines": [
+          86,
+          108,
+          158,
+          433,
+          434,
+          449
+        ],
+        "workflow_view_complete": true
+      },
+      "required_changes": [
+        "日付/session/市場・銘柄ID/価格基準・flow母集団/単位/出典版・取得時刻を固定し、空/欠測/失敗/暫定を別状態で返す。元数値と算式/原文を照合し推測を事実/個別売買推奨へしない。",
+        "実利用の親だけが現在公式市場calendar/API/第三者利用条件・契約内枠を必要範囲で確認し、有限retry/重複防止と実配送・未配送の証拠を残す。研究は実市場照会/cron/送信/導入0。"
+      ],
+      "source_code_executed": false,
+      "source_commit": "920714f17d81e0a95c7a9bc51faf0a7921cd982d",
+      "source_repo": "6mile/skills",
+      "source_sha256": "7468e9d176eedf837942ab8a1111bdd36ff53cad0f4be25f52fa864f02e2f124",
+      "source_url": "https://github.com/6mile/skills/blob/920714f17d81e0a95c7a9bc51faf0a7921cd982d/skills/raufimusaddiq/ihsg-session-summary/SKILL.md",
+      "support_read_states": [
+        {
+          "bytes": 1067,
+          "git_blob_prefix": "42091e77",
+          "masked_lines": 0,
+          "mode": "100644",
+          "relative_path": "LICENSE",
+          "sha256_prefix": "322a370d",
+          "state": "direct_raw_full"
+        },
+        {
+          "bytes": 13601,
+          "git_blob_prefix": "50856e1d",
+          "masked_lines": 6,
+          "mode": "100644",
+          "relative_path": "SKILL.md",
+          "sha256_prefix": "7468e9d1",
+          "state": "direct_masked_full"
+        },
+        {
+          "bytes": 299,
+          "git_blob_prefix": "3f7a1092",
+          "masked_lines": null,
+          "mode": "100644",
+          "relative_path": "_meta.json",
+          "sha256_prefix": "15ebda60",
+          "state": "saved_unread"
+        },
+        {
+          "bytes": null,
+          "git_blob_prefix": "31b10c34",
+          "masked_lines": null,
+          "mode": "100644",
+          "relative_path": "scripts/ihsg_session_extractor.py",
+          "sha256_prefix": null,
+          "state": "unsaved"
+        },
+        {
+          "bytes": 204,
+          "git_blob_prefix": "ce685853",
+          "masked_lines": null,
+          "mode": "100644",
+          "relative_path": "scripts/requirements.txt",
+          "sha256_prefix": "5bd7802c",
+          "state": "saved_unread"
+        }
+      ],
+      "unmet": [
+        "起動提供metadataのみ。中央本文/存在・同等性/現設定は未照会。",
+        "session/原出典と欠測・費用/配送境界を補う改訂候補。実金融判断/操作/採否/許諾/導入0。",
+        "固定した保存資料の評価であり、現在のサービス仕様・実動作・個別権利の受入を保証しない。"
+      ],
+      "use": "同一市場/sessionの指数・資金flow/順位と原出典・欠測を対応させる定期レポート設計参考。",
+      "value": "morning/closing・価格基準/集計期間/単位と生成/配送時刻を分けて取り違えを検査できる。"
+    },
+    {
+      "bytes": 29057,
+      "copy_permission_accepted": false,
+      "findings": [
+        "元story/任意toolと拡張仕様を区別し、package配置と共有TEAM_ROOT/同絶対pathを分ける点は有用。folder共有やprivateという名前だけで実ACL/保護/顧客間・agent間隔離は保証されない。",
+        "boardはcustomer毎にactive_task1個/phase4値。複数未完了/実担当job・依存/停止理由/資源/再開cursorや実receiptを持たず、null/行削除で未完了を隠しうる。共有複数writerの競合/原子的更新・索引と原成果の整合も未実装。",
+        "handoff作成/役割persona/agent数・予定の存在を実稼働/担当受領/検査成功に数えない。sourceのsamechat役割切替は別モデル独立reviewの証明でない。現在のOMB/scheduler単一所有・既存未完了を保持し再委譲/重複組織を作らない。",
+        "sourceのstaging default/Prdはhumanapproval・技術変数も全て本人が決める/本人のgateway操作を前提とする手順は現本人指示へ優先しない。実所有者/顧客契約ごとの規則は保ち、通常技術作業や既存許可を再質問しない。",
+        "OpenClaw path/config/通信権限やmodels・ClawHub公開規則は保存主張。参照先の現仕様/実対応は未確認。原SOUL/AGENTS書換・共有memory/auth参照・公開syncを研究の許可にせず、rootMIT/補助MIT0で元引用/第三者条件を一括解除しない。"
+      ],
+      "git_blob": "81ee28c24d91fe358e0138aba9f6910243e21b0f",
+      "individual_notices": [
+        {
+          "bytes": 1032,
+          "copy_permission_accepted": false,
+          "git_blob": "0f8c35255445ea7a2253dfc34b0ad5cefb900e42",
+          "path": "skills/realm1lf/dev-team/LICENSE.md",
+          "read_kind": "direct_raw_full",
+          "relative_path": "LICENSE.md",
+          "scope": "実公開版/作者・第三者素材/依存/service/dataと利用契約の権利は別。rootMIT/補助MIT0で個別条件/矛盾を解除しない。",
+          "sha256": "3fc7169db05990e3d28e695ff9d68d7f5887a50785fc71f3204c01184d7c9a74",
+          "source_url": "https://github.com/6mile/skills/blob/920714f17d81e0a95c7a9bc51faf0a7921cd982d/skills/realm1lf/dev-team/LICENSE.md"
+        }
+      ],
+      "inventory_id": "github:0059c33840ec191d4d302af1331e981dca9272ec02b4cd34db8da91f4718e049",
+      "nearby_metadata": [
+        "agent-system-design",
+        "durable-task-handoff",
+        "double-read-snapshot-limits",
+        "safe-session-handoff",
+        "dynamic-action-authorization"
+      ],
+      "negative": "boardやhandoffを書くだけで実稼働/完了とし、未完了rowを消し、同じwriterの役割切替を独立reviewとして新司令塔を重ねる。",
+      "new_final_disposition": false,
+      "path": "skills/realm1lf/dev-team/SKILL.md",
+      "positive": "同じ元taskの仕様/実成果と次の担当・受領/検査結果を結び、未完了/停止理由を索引から追える設計へ参照する。",
+      "read": {
+        "final_withheld_unread_except_reported_initial_gaps": true,
+        "initial_withheld_display_gaps": [],
+        "kind": "direct_masked_full",
+        "masked_lines": 4,
+        "ordered_view_complete": true,
+        "physical_lines": 485,
+        "raw_read_complete": false,
+        "recorded_mask_version": 14,
+        "visible_range_digest_provided": false,
+        "withheld_meanings_not_treated_as_complete": true,
+        "withheld_physical_lines": [
+          229,
+          304,
+          341,
+          366
+        ],
+        "workflow_view_complete": true
+      },
+      "required_changes": [
+        "仕様/原成果と実owner/job・依存/許可対象/資源・receipt/検査/残件/cursorを結び、複数未完了と未受領/失敗を保持する。索引は原証拠へ戻し競合/中断/整合を検証する。",
+        "実利用する親だけが実所有者/顧客契約と現公式設定・必要権限を確認する。正規の既存担当/モデルreview/Prd方針と原本/中央junctionを保持し、本人PC操作や新たな通常承認待ちを作らない。",
+        "個別notice/引用元・公開名義を対応づける。研究はsource/dataの編集/新組織/子job/送信/権限追加/採否0。"
+      ],
+      "source_code_executed": false,
+      "source_commit": "920714f17d81e0a95c7a9bc51faf0a7921cd982d",
+      "source_repo": "6mile/skills",
+      "source_sha256": "9bc3d6bd19587adc65d9176eafa9c8944e8c634a2aebcdab0b5cf8c2e5dc44a1",
+      "source_url": "https://github.com/6mile/skills/blob/920714f17d81e0a95c7a9bc51faf0a7921cd982d/skills/realm1lf/dev-team/SKILL.md",
+      "support_read_states": [
+        {
+          "bytes": 524,
+          "git_blob_prefix": "1837487f",
+          "masked_lines": null,
+          "mode": "100644",
+          "relative_path": "CHANGELOG.md",
+          "sha256_prefix": "d9063791",
+          "state": "saved_unread"
+        },
+        {
+          "bytes": 1032,
+          "git_blob_prefix": "0f8c3525",
+          "masked_lines": 0,
+          "mode": "100644",
+          "relative_path": "LICENSE.md",
+          "sha256_prefix": "3fc7169d",
+          "state": "direct_raw_full"
+        },
+        {
+          "bytes": 959,
+          "git_blob_prefix": "4b22d169",
+          "masked_lines": null,
+          "mode": "100644",
+          "relative_path": "README.md",
+          "sha256_prefix": "e62e10d7",
+          "state": "saved_unread"
+        },
+        {
+          "bytes": 29057,
+          "git_blob_prefix": "81ee28c2",
+          "masked_lines": 4,
+          "mode": "100644",
+          "relative_path": "SKILL.md",
+          "sha256_prefix": "9bc3d6bd",
+          "state": "direct_masked_full"
+        },
+        {
+          "bytes": 304,
+          "git_blob_prefix": "46ac2c9e",
+          "masked_lines": null,
+          "mode": "100644",
+          "relative_path": "_meta.json",
+          "sha256_prefix": "5baecdf2",
+          "state": "saved_unread"
+        },
+        {
+          "bytes": 2820,
+          "git_blob_prefix": "f507577d",
+          "masked_lines": 0,
+          "mode": "100644",
+          "relative_path": "references/BOARD_SCHEMA.md",
+          "sha256_prefix": "fb19b4a7",
+          "state": "direct_raw_full"
+        },
+        {
+          "bytes": 1454,
+          "git_blob_prefix": "0bc5ec6c",
+          "masked_lines": null,
+          "mode": "100644",
+          "relative_path": "references/CUSTOMER_CONTEXT.template.md",
+          "sha256_prefix": "1a83d751",
+          "state": "saved_unread"
+        },
+        {
+          "bytes": 3966,
+          "git_blob_prefix": "54251186",
+          "masked_lines": null,
+          "mode": "100644",
+          "relative_path": "references/OPENCLAW_LAYOUT.md",
+          "sha256_prefix": "b54e23ea",
+          "state": "saved_unread"
+        },
+        {
+          "bytes": 7732,
+          "git_blob_prefix": "177ad486",
+          "masked_lines": 3,
+          "mode": "100644",
+          "relative_path": "references/OPENCLAW_TEAM_SETUP_GUIDE.md",
+          "sha256_prefix": "0130e3f6",
+          "state": "direct_masked_full"
+        },
+        {
+          "bytes": 7926,
+          "git_blob_prefix": "0b8617cd",
+          "masked_lines": null,
+          "mode": "100644",
+          "relative_path": "references/ORG_CHART_EXAMPLE.md",
+          "sha256_prefix": "5cadf7bf",
+          "state": "saved_unread"
+        },
+        {
+          "bytes": 4063,
+          "git_blob_prefix": "c37d82f4",
+          "masked_lines": null,
+          "mode": "100644",
+          "relative_path": "references/ROLE_TEMPLATES.md",
+          "sha256_prefix": "6cb11b08",
+          "state": "saved_unread"
+        },
+        {
+          "bytes": 7223,
+          "git_blob_prefix": "9188b2a0",
+          "masked_lines": null,
+          "mode": "100644",
+          "relative_path": "references/SKILL-SETUP.md",
+          "sha256_prefix": "7c97df09",
+          "state": "saved_unread"
+        }
+      ],
+      "unmet": [
+        "起動提供metadataのみ。中央本文/存在・同等性/現設定は未照会。",
+        "対象別索引と実受領/責任・競合の検査を改訂候補として提案。実構成/採否/許諾/導入0。",
+        "固定した保存資料の評価であり、現在のサービス仕様・実動作・個別権利の受入を保証しない。"
+      ],
+      "use": "役割・対象別task/原成果とportfolio索引を分け、handoffの受領/検証を追う協働設計参考。",
+      "value": "共有indexを短く保ち、仕様/実装場所/検査/残件・次の担当を対象別に結べる。"
+    },
+    {
+      "bytes": 11834,
+      "copy_permission_accepted": false,
+      "findings": [
+        "文/参照画像・動画の首尾frame/向き/解像度とquotaを区別する点は有用。原AI生成APIの登録/鍵保存/uv実行や新quota取得・新nicknameを今回のOAuth契約/本人命名/費用条件へ同一視しない。",
+        "最新版未満なら全実行拒否、version照会失敗なら続行とするため、versionmatchは安全性/互換保証ではない。latestZIPで原fileを置換する指示を固定input変更/審査迂回にしない。script未保存で実semver/副作用/更新の安全性は未確認。",
+        "結果はpresignedCOSURLで、downloadでは完全queryを保つ点は有用。ただしURLはアクセス権を含みうるため報告/logへ再掲せず、実HTTP/status/type/内容/尺/音・原本非上書きと期限を別確認する。",
+        "生成とdownloadをcommand substitutionで結ぶ例はdownload失敗時の再実行で再生成/二重消費を生む。既存TaskID/receiptを保持し、successJSONや保存file存在だけで実成果/配送完了を認定しない。",
+        "見えないmediaをアプリ権限不足と即断しない。内容審査errorのretry/微修正を実拒否の迂回にせず、quota/障害/型不一致/期限を切り分ける。価格/model/制約・素材/人物/出力権利は現在未確認。",
+        "個別800B通知は許諾scope外の使用/無許可copy・配布/転売/逆解析等を制限する。rootMITやClawHub補助資料で解除せず、実許諾/公開版対応は未確定。"
+      ],
+      "git_blob": "8c6c9eb32022d052874d8d8f60d169f1363555f2",
+      "individual_notices": [
+        {
+          "bytes": 800,
+          "copy_permission_accepted": false,
+          "git_blob": "16ff359425c8493763f288c149974f9f926474bd",
+          "path": "skills/regalzzz/aoment-image-video/LICENSE.md",
+          "read_kind": "direct_raw_full",
+          "relative_path": "LICENSE.md",
+          "scope": "実公開版/作者・第三者素材/依存/service/dataと利用契約の権利は別。rootMIT/補助MIT0で個別条件/矛盾を解除しない。",
+          "sha256": "affc62016dda28623b682ed129715795f18bbf72340f32f03e8e3736e88eb895",
+          "source_url": "https://github.com/6mile/skills/blob/920714f17d81e0a95c7a9bc51faf0a7921cd982d/skills/regalzzz/aoment-image-video/LICENSE.md"
+        }
+      ],
+      "inventory_id": "github:32d2398021d03dc952b1ee9afa10b033aa12dfba1f7cff1c76cff03d8cc88df2",
+      "nearby_metadata": [
+        "remote-run-result-reconciliation",
+        "voice-and-video-production",
+        "timeout-retry-concurrency",
+        "playwright-download-verification",
+        "generative-media-tools"
+      ],
+      "negative": "download失敗のたびに新生成し、signedURLを公開し、最新版/権限のせいと決めつけて原fileや設定を置き換える。",
+      "new_final_disposition": false,
+      "path": "skills/regalzzz/aoment-image-video/SKILL.md",
+      "positive": "生成済みreceiptを保持して同じ成果を期限内に再取得し、成功表示と実媒体/配送を分ける設計へ参照する。",
+      "read": {
+        "final_withheld_unread_except_reported_initial_gaps": true,
+        "initial_withheld_display_gaps": [
+          {
+            "kind": "public source example token-shaped string before v15",
+            "line": 65
+          },
+          {
+            "kind": "public source example username before v15",
+            "line": 96
+          },
+          {
+            "kind": "public source signedURL example query partly visible before v16",
+            "line": 247
+          }
+        ],
+        "kind": "direct_masked_full",
+        "masked_lines": 13,
+        "ordered_view_complete": true,
+        "physical_lines": 274,
+        "raw_read_complete": false,
+        "recorded_mask_version": 16,
+        "visible_range_digest_provided": false,
+        "withheld_meanings_not_treated_as_complete": true,
+        "withheld_physical_lines": [
+          3,
+          10,
+          63,
+          65,
+          69,
+          96,
+          98,
+          112,
+          128,
+          176,
+          178,
+          247,
+          274
+        ],
+        "workflow_view_complete": true
+      },
+      "required_changes": [
+        "同じ入力/要求・実task/既存成果receiptとquotaを固定し、有限retry/取消/期限・新生成と再downloadを分離する。原固定版/backupと本人scopeを保持する。",
+        "signedURL/鍵/生errorの秘密を表示前に完全伏字にし、許可された取得先と実成果の内容を検証する。原登録/AIAPI/新費用/権限追加を実行しない。",
+        "実利用の親だけが現在公式条件/契約内枠と個別license/素材権利を確認する。実生成/登録/ダウンロード/導入0。"
+      ],
+      "source_code_executed": false,
+      "source_commit": "920714f17d81e0a95c7a9bc51faf0a7921cd982d",
+      "source_repo": "6mile/skills",
+      "source_sha256": "830f36e0bf3f23b145b394515e4c46c2ba6928c97d3ab4eba8fb03a5d4f1e5a7",
+      "source_url": "https://github.com/6mile/skills/blob/920714f17d81e0a95c7a9bc51faf0a7921cd982d/skills/regalzzz/aoment-image-video/SKILL.md",
+      "support_read_states": [
+        {
+          "bytes": 800,
+          "git_blob_prefix": "16ff3594",
+          "masked_lines": 0,
+          "mode": "100644",
+          "relative_path": "LICENSE.md",
+          "sha256_prefix": "affc6201",
+          "state": "direct_raw_full"
+        },
+        {
+          "bytes": 11834,
+          "git_blob_prefix": "8c6c9eb3",
+          "masked_lines": 13,
+          "mode": "100644",
+          "relative_path": "SKILL.md",
+          "sha256_prefix": "830f36e0",
+          "state": "direct_masked_full"
+        },
+        {
+          "bytes": 290,
+          "git_blob_prefix": "0cd58e9a",
+          "masked_lines": null,
+          "mode": "100644",
+          "relative_path": "_meta.json",
+          "sha256_prefix": "3367b91c",
+          "state": "saved_unread"
+        },
+        {
+          "bytes": null,
+          "git_blob_prefix": "7ad9e3ce",
+          "masked_lines": null,
+          "mode": "100644",
+          "relative_path": "scripts/aoment_image_video.py",
+          "sha256_prefix": null,
+          "state": "unsaved"
+        },
+        {
+          "bytes": null,
+          "git_blob_prefix": "46977691",
+          "masked_lines": null,
+          "mode": "100644",
+          "relative_path": "scripts/aoment_quota.py",
+          "sha256_prefix": null,
+          "state": "unsaved"
+        },
+        {
+          "bytes": null,
+          "git_blob_prefix": "789bbb0e",
+          "masked_lines": null,
+          "mode": "100644",
+          "relative_path": "scripts/aoment_register.py",
+          "sha256_prefix": null,
+          "state": "unsaved"
+        }
+      ],
+      "unmet": [
+        "起動提供metadataのみ。中央本文/存在・同等性/現設定は未照会。",
+        "入力/生成/成果とversion・quota/秘密の境界を改訂候補として提案。実API/採否/許諾/導入0。",
+        "固定した保存資料の評価であり、現在のサービス仕様・実動作・個別権利の受入を保証しない。"
+      ],
+      "use": "画像/動画の入力役割とquota・結果URL/実成果取得・version検査を分ける設計参考。",
+      "value": "生成依頼/失敗/実画像動画と、期限付き取得手段を別状態で記録できる。"
+    },
+    {
+      "bytes": 10710,
+      "copy_permission_accepted": false,
+      "findings": [
+        "能力/首尾frame/向き/解像度制約とsignedURLの全queryを取得に保つ点は有用。ただし期限付きURLを報告/logへ漏らさず、HTTP/type/実内容/尺と保存/配送を別に検証する。",
+        "aoment-image-videoのsemver照会と異なり3日以内更新かでlatestZIPを必須取得する。mtime/経過日数は版/互換性/安全性の証明でなく、原固定sourceを無条件置換しない。ダウンロード/uv/scriptsは未実行・実装未保存。",
+        "生成→downloadの一コマンド再実行は二重生成/消費の境界。結果が見えない原因を権限不足と即断せず、既存receipt/task/URL期限と実media/表示条件を照合する。",
+        "原AI API登録/鍵保存/新quotaやmodelの能力・費用/素材権利は現在未検証。内容審査errorの微修正retryを正規拒否の回避に使わず、本人OAuth/新支出/命名/画像確認条件を保つ。",
+        "個別800B通知は無許可copy/配布/転売等とscope外利用を制限する。aoment-image-videoの通知と同bytesでもそれを現在のcopy許諾・rootMITやClawHub補助資料による解除にしない。"
+      ],
+      "git_blob": "bd9534808a438d55bef5fcd7b99b39b0dd72123b",
+      "individual_notices": [
+        {
+          "bytes": 800,
+          "copy_permission_accepted": false,
+          "git_blob": "16ff359425c8493763f288c149974f9f926474bd",
+          "path": "skills/regalzzz/aoment-visuals/LICENSE.md",
+          "read_kind": "direct_raw_full",
+          "relative_path": "LICENSE.md",
+          "scope": "実公開版/作者・第三者素材/依存/service/dataと利用契約の権利は別。rootMIT/補助MIT0で個別条件/矛盾を解除しない。",
+          "sha256": "affc62016dda28623b682ed129715795f18bbf72340f32f03e8e3736e88eb895",
+          "source_url": "https://github.com/6mile/skills/blob/920714f17d81e0a95c7a9bc51faf0a7921cd982d/skills/regalzzz/aoment-visuals/LICENSE.md"
+        }
+      ],
+      "inventory_id": "github:25c00e33ea1817c124124d76f971dab503f53616591b07a01619fb101bc363f1",
+      "nearby_metadata": [
+        "remote-run-result-reconciliation",
+        "playwright-download-verification",
+        "timeout-retry-concurrency",
+        "generative-media-tools"
+      ],
+      "negative": "3日経過だけで元packageを置換し、downloadの失敗を新生成で補い、署名URLを公開して制限noticeを一括MITにする。",
+      "new_final_disposition": false,
+      "path": "skills/regalzzz/aoment-visuals/SKILL.md",
+      "positive": "同じ生成済みreceiptから成果を再取得する設計へ参照し、版/実成果とquotaの対応を確認する。",
+      "read": {
+        "final_withheld_unread_except_reported_initial_gaps": true,
+        "initial_withheld_display_gaps": [],
+        "kind": "direct_masked_full",
+        "masked_lines": 12,
+        "ordered_view_complete": true,
+        "physical_lines": 249,
+        "raw_read_complete": false,
+        "recorded_mask_version": 16,
+        "visible_range_digest_provided": false,
+        "withheld_meanings_not_treated_as_complete": true,
+        "withheld_physical_lines": [
+          3,
+          38,
+          40,
+          44,
+          71,
+          73,
+          87,
+          103,
+          151,
+          153,
+          222,
+          249
+        ],
+        "workflow_view_complete": true
+      },
+      "required_changes": [
+        "入力/要求・既存task/成果hash/receiptとquotaを固定し、有限retry・新生成と再download、期限/取消/未知/配送を分ける。",
+        "版/更新planと原本/backupを保持し、秘密URL/鍵を出力しない。親の実利用時だけ現公式仕様/契約内枠・個別許諾/素材権利を確認し、今回登録/API/導入0。"
+      ],
+      "source_code_executed": false,
+      "source_commit": "920714f17d81e0a95c7a9bc51faf0a7921cd982d",
+      "source_repo": "6mile/skills",
+      "source_sha256": "c43776e23fec800fad71c3d1b2347f0b079f45dd535225acc2d7c62df5a99c15",
+      "source_url": "https://github.com/6mile/skills/blob/920714f17d81e0a95c7a9bc51faf0a7921cd982d/skills/regalzzz/aoment-visuals/SKILL.md",
+      "support_read_states": [
+        {
+          "bytes": 800,
+          "git_blob_prefix": "16ff3594",
+          "masked_lines": 0,
+          "mode": "100644",
+          "relative_path": "LICENSE.md",
+          "sha256_prefix": "affc6201",
+          "state": "direct_raw_full"
+        },
+        {
+          "bytes": 10710,
+          "git_blob_prefix": "bd953480",
+          "masked_lines": 12,
+          "mode": "100644",
+          "relative_path": "SKILL.md",
+          "sha256_prefix": "c43776e2",
+          "state": "direct_masked_full"
+        },
+        {
+          "bytes": 460,
+          "git_blob_prefix": "e1d946f4",
+          "masked_lines": null,
+          "mode": "100644",
+          "relative_path": "_meta.json",
+          "sha256_prefix": "23acf148",
+          "state": "saved_unread"
+        },
+        {
+          "bytes": null,
+          "git_blob_prefix": "aa44a513",
+          "masked_lines": null,
+          "mode": "100644",
+          "relative_path": "scripts/aoment_quota.py",
+          "sha256_prefix": null,
+          "state": "unsaved"
+        },
+        {
+          "bytes": null,
+          "git_blob_prefix": "775f5c79",
+          "masked_lines": null,
+          "mode": "100644",
+          "relative_path": "scripts/aoment_register.py",
+          "sha256_prefix": null,
+          "state": "unsaved"
+        },
+        {
+          "bytes": null,
+          "git_blob_prefix": "3c644c38",
+          "masked_lines": null,
+          "mode": "100644",
+          "relative_path": "scripts/aoment_visuals.py",
+          "sha256_prefix": null,
+          "state": "unsaved"
+        }
+      ],
+      "unmet": [
+        "起動提供metadataのみ。中央本文/存在・同等性/現設定は未照会。",
+        "入力/成果と版/秘密・quota境界を補う改訂候補。制限notice未解消、実操作/採否/許諾/導入0。",
+        "固定した保存資料の評価であり、現在のサービス仕様・実動作・個別権利の受入を保証しない。"
+      ],
+      "use": "画像/動画の入力役割と生成/取得・quota/versionを別状態へ結ぶ設計参考。",
+      "value": "利用回数・既存成果と取得失敗を分け、不要な再生成/二重消費を防ぐ観点が得られる。"
+    },
+    {
+      "bytes": 3510,
+      "copy_permission_accepted": false,
+      "findings": [
+        "価格/指数/清算/予定/RSSを区別する点は有用。CLI価格と検索BTC/清算値を同じ時刻/venue/quote/期間にそろえず合成しない。限界2件の指数取得だけでは先週/先月値を取得できない。",
+        "典型的清算値/高ボラ閾値を未取得値の補完や売買判断にしない。potential top/bottomや原因解釈・免責は予測/利益の証明ではなく、例/推定/不明を分ける。",
+        "8時UTC+8を説明するがcron expr0 0にAsia/Shanghaiを併記し時刻解釈が不整合。原sourceの宛先IDを本人指定先にしない。scripts/を参照するが固定treeはroot配置で参照pathも異なる。",
+        "DataSource:CoinGlass/Gate固定ラベルは実検索の原記事・観測窓/更新時刻と一致する保証でない。RSS重複/遅着/全件・timezoneを確認し、設定/生成/実配送を分ける。原scriptは未保存。"
+      ],
+      "git_blob": "4dac758fb6ac967ac8aa43476c7fd4ff3c550fb4",
+      "individual_notices": [
+        {
+          "bytes": 1067,
+          "copy_permission_accepted": false,
+          "git_blob": "75df53f85ba677a6b86a04692730398d375593eb",
+          "path": "skills/renyuke-cn/crypto-daily-report-zh/LICENSE",
+          "read_kind": "direct_raw_full",
+          "relative_path": "LICENSE",
+          "scope": "実公開版/作者・第三者素材/依存/service/dataと利用契約の権利は別。rootMIT/補助MIT0で個別条件/矛盾を解除しない。",
+          "sha256": "870e9b58ade88cfd45d9da1686042aa8afcb3b8c854a645a4c6fd0b37e14c75b",
+          "source_url": "https://github.com/6mile/skills/blob/920714f17d81e0a95c7a9bc51faf0a7921cd982d/skills/renyuke-cn/crypto-daily-report-zh/LICENSE"
+        }
+      ],
+      "inventory_id": "github:775e4eff00c8016c91781d6397046d046d8822fdcce746aa28c22f96832be75e",
+      "nearby_metadata": [
+        "market-data-due-diligence",
+        "balance-snapshot-reconciliation",
+        "rss-atom-feed-integrity",
+        "timezone-helper",
+        "observability-notifications"
+      ],
+      "negative": "典型値で欠測を埋め、2件だけで月次比較を作り、cron表記と例の宛先をそのまま使って送信済みとする。",
+      "new_final_disposition": false,
+      "path": "skills/renyuke-cn/crypto-daily-report-zh/SKILL.md",
+      "positive": "同じ観測窓の実値/原出典と不足を示し、ニュース/予定の時刻と実配送を別receiptへ結ぶ。",
+      "read": {
+        "final_withheld_unread_except_reported_initial_gaps": true,
+        "initial_withheld_display_gaps": [],
+        "kind": "direct_masked_full",
+        "masked_lines": 3,
+        "ordered_view_complete": true,
+        "physical_lines": 130,
+        "raw_read_complete": false,
+        "recorded_mask_version": 14,
+        "visible_range_digest_provided": false,
+        "withheld_meanings_not_treated_as_complete": true,
+        "withheld_physical_lines": [
+          27,
+          56,
+          63
+        ],
+        "workflow_view_complete": true
+      },
+      "required_changes": [
+        "chain/asset/venue・quote/時刻/集計期間と原URL/版を保持し、欠測/古い値/検索要約/推定を分離する。raw指標/算式と報告を照合する。",
+        "実利用の親が現公式情報/第三者利用条件と費用・指定宛先/cron実時刻・有限retry/重複抑止/実配送を必要範囲で検証する。研究で価格照会/cron/取引/送信/導入0。"
+      ],
+      "source_code_executed": false,
+      "source_commit": "920714f17d81e0a95c7a9bc51faf0a7921cd982d",
+      "source_repo": "6mile/skills",
+      "source_sha256": "ce5e2552ec43e4a71699301166b27bf38537e4596baa72f5763446edea4c8f2e",
+      "source_url": "https://github.com/6mile/skills/blob/920714f17d81e0a95c7a9bc51faf0a7921cd982d/skills/renyuke-cn/crypto-daily-report-zh/SKILL.md",
+      "support_read_states": [
+        {
+          "bytes": 1067,
+          "git_blob_prefix": "75df53f8",
+          "masked_lines": 0,
+          "mode": "100644",
+          "relative_path": "LICENSE",
+          "sha256_prefix": "870e9b58",
+          "state": "direct_raw_full"
+        },
+        {
+          "bytes": 2223,
+          "git_blob_prefix": "a00b46f3",
+          "masked_lines": 2,
+          "mode": "100644",
+          "relative_path": "README.md",
+          "sha256_prefix": "76bf53a9",
+          "state": "direct_masked_full"
+        },
+        {
+          "bytes": 3510,
+          "git_blob_prefix": "4dac758f",
+          "masked_lines": 3,
+          "mode": "100644",
+          "relative_path": "SKILL.md",
+          "sha256_prefix": "ce5e2552",
+          "state": "direct_masked_full"
+        },
+        {
+          "bytes": 306,
+          "git_blob_prefix": "b3548357",
+          "masked_lines": null,
+          "mode": "100644",
+          "relative_path": "_meta.json",
+          "sha256_prefix": "a1dbc00f",
+          "state": "saved_unread"
+        },
+        {
+          "bytes": 1992,
+          "git_blob_prefix": "8ad0f824",
+          "masked_lines": 2,
+          "mode": "100644",
+          "relative_path": "data-sources.md",
+          "sha256_prefix": "43b4a7ed",
+          "state": "direct_masked_full"
+        },
+        {
+          "bytes": null,
+          "git_blob_prefix": "b010ae64",
+          "masked_lines": null,
+          "mode": "100644",
+          "relative_path": "generate-report.sh",
+          "sha256_prefix": null,
+          "state": "unsaved"
+        },
+        {
+          "bytes": 687,
+          "git_blob_prefix": "6d71ef8b",
+          "masked_lines": 0,
+          "mode": "100644",
+          "relative_path": "report-template.txt",
+          "sha256_prefix": "fe53b846",
+          "state": "direct_raw_full"
+        },
+        {
+          "bytes": null,
+          "git_blob_prefix": "26660e7e",
+          "masked_lines": null,
+          "mode": "100644",
+          "relative_path": "setup-cron.sh",
+          "sha256_prefix": null,
+          "state": "unsaved"
+        },
+        {
+          "bytes": null,
+          "git_blob_prefix": "3ba71a34",
+          "masked_lines": null,
+          "mode": "100644",
+          "relative_path": "test-send.sh",
+          "sha256_prefix": null,
+          "state": "unsaved"
+        }
+      ],
+      "unmet": [
+        "起動提供metadataのみ。中央本文/存在・同等性/現設定は未照会。",
+        "snapshot/出典・欠測/配送の検査を改訂候補として提案。実金融判断/操作/採否/許諾/導入0。",
+        "固定した保存資料の評価であり、現在のサービス仕様・実動作・個別権利の受入を保証しない。"
+      ],
+      "use": "市場snapshot/指数・ニュース/予定を出典と観測期間・配送へ結ぶ定期報告設計参考。",
+      "value": "chain/asset・quote/時刻・集計窓と原出典を固定して別指標の混在/欠測を検査できる。"
+    },
+    {
+      "bytes": 11335,
+      "copy_permission_accepted": false,
+      "findings": [
+        "Admin/Data別app/connection、nativepathとMaton-Connectionを分ける点は有用。oldestactive既定/ACTIVEやaccessible一覧は依頼対象本人/実所有者/必要scopeの証明でない。",
+        "POST reportは照会だがproperty/stream/customdimension/conversionや接続作成/削除は別作用。HTTPmethodだけでread/writeを分類せず、具体endpoint/対象/必要権限と本人scopeを照合する。",
+        "today/30daysAgoとproperty timezone、dimension/metric/filters・limit10と全page/rowcount/threshold/欠測・遅延更新等は区別が必要。metadataに名前があることやHTTP成功だけで業務集計/全件を保証しない。",
+        "GA4/v1beta/conversionsやquota10req/s・400=接続欠落は保存主張で現在未確認。一般400から新接続/旧削除を決めずpassthrough/部分errorを切り分ける。Maton非AI資格をAI API課金禁止へ一括分類しないが資格/接続作成/送信0。"
+      ],
+      "git_blob": "dd2c6f9521d3c094e7e7047bbc9c8124f0757ef9",
+      "individual_notices": [
+        {
+          "bytes": 1072,
+          "copy_permission_accepted": false,
+          "git_blob": "4813de20b72e365983fe0370d79d7cac6ea21d9b",
+          "path": "skills/rich-song/google-analytics-api/LICENSE.txt",
+          "read_kind": "exact_bytes_reuse",
+          "relative_path": "LICENSE.txt",
+          "scope": "実公開版/作者・第三者素材/依存/service/dataと利用契約の権利は別。rootMIT/補助MIT0で個別条件/矛盾を解除しない。",
+          "sha256": "ec9e952fec4d029fab649746d033bf91802b15f59ffa40a0d3a3a0e1a1587802",
+          "source_url": "https://github.com/6mile/skills/blob/920714f17d81e0a95c7a9bc51faf0a7921cd982d/skills/rich-song/google-analytics-api/LICENSE.txt"
+        }
+      ],
+      "inventory_id": "github:3817cd2c04997f1abbf4f5c31ec178d0a35a66709207f901bae0c9d9155019cb",
+      "nearby_metadata": [
+        "connection-scope-reconciliation",
+        "oauth-least-privilege",
+        "backend-correctness",
+        "opaque-url-path-keys"
+      ],
+      "negative": "oldestactive/accessibleだから正しい接続とし、POSTを全て安全/全権限と扱い、top10やHTTP成功を全期間/全件の完成とする。",
+      "new_final_disposition": false,
+      "path": "skills/rich-song/google-analytics-api/SKILL.md",
+      "positive": "同じ本人/propertyの明示Data接続と集計条件/期間を固定し、管理作用を実行せずrowcoverageと原結果を照合する。",
+      "read": {
+        "final_withheld_unread_except_reported_initial_gaps": true,
+        "initial_withheld_display_gaps": [],
+        "kind": "direct_masked_full",
+        "masked_lines": 22,
+        "ordered_view_complete": true,
+        "physical_lines": 389,
+        "raw_read_complete": false,
+        "recorded_mask_version": 14,
+        "visible_range_digest_provided": false,
+        "withheld_meanings_not_treated_as_complete": true,
+        "withheld_physical_lines": [
+          5,
+          19,
+          22,
+          41,
+          44,
+          47,
+          50,
+          73,
+          76,
+          83,
+          86,
+          92,
+          115,
+          123,
+          141,
+          152,
+          315,
+          327,
+          347,
+          353,
+          365,
+          370
+        ],
+        "workflow_view_complete": true
+      },
+      "required_changes": [
+        "app/明示connection・期待subject/実所有者/最小scopeと正規化後のendpoint/body/propertyを固定し、管理変更と集計照会の作用を別に扱う。",
+        "metric定義/期間/時間帯/単位と取得範囲・全page/欠測/部分失敗を保持し、有限retry/重複変更防止・秘密の非表示を検証する。親の実利用時だけ現在公式仕様/契約内枠/個別権利を確認する。"
+      ],
+      "source_code_executed": false,
+      "source_commit": "920714f17d81e0a95c7a9bc51faf0a7921cd982d",
+      "source_repo": "6mile/skills",
+      "source_sha256": "332ec30fd24e99aaa351f73d9b9e3474c176d4fb38eebefda58925a6588d8ebb",
+      "source_url": "https://github.com/6mile/skills/blob/920714f17d81e0a95c7a9bc51faf0a7921cd982d/skills/rich-song/google-analytics-api/SKILL.md",
+      "support_read_states": [
+        {
+          "bytes": 1072,
+          "git_blob_prefix": "4813de20",
+          "masked_lines": 0,
+          "mode": "100644",
+          "relative_path": "LICENSE.txt",
+          "sha256_prefix": "ec9e952f",
+          "state": "exact_bytes_reuse"
+        },
+        {
+          "bytes": 11335,
+          "git_blob_prefix": "dd2c6f95",
+          "masked_lines": 22,
+          "mode": "100644",
+          "relative_path": "SKILL.md",
+          "sha256_prefix": "332ec30f",
+          "state": "direct_masked_full"
+        },
+        {
+          "bytes": 291,
+          "git_blob_prefix": "a7d5da52",
+          "masked_lines": null,
+          "mode": "100644",
+          "relative_path": "_meta.json",
+          "sha256_prefix": "45b04db5",
+          "state": "saved_unread"
+        }
+      ],
+      "unmet": [
+        "起動提供metadataのみ。中央本文/存在・同等性/現設定は未照会。",
+        "接続/作用と集計範囲を補う改訂候補。実API/設定/採否/許諾/導入0。",
+        "固定した保存資料の評価であり、現在のサービス仕様・実動作・個別権利の受入を保証しない。"
+      ],
+      "use": "管理と集計APIの別接続を、本人主体/対象property・要求/結果へ結ぶ設計参考。",
+      "value": "report照会とproperty/stream/connectionの作成削除を分け、広いgateway接続の誤選択を防げる。"
+    },
+    {
+      "bytes": 1553,
+      "copy_permission_accepted": false,
+      "findings": [
+        "activity/history/library/recent/users/serverを分け、履歴/新着の既定10件を明記する点は有用。10件やlibrarycount/connectionstatusを全履歴・全server正常や対象本人の証明にしない。",
+        "視聴者/title/player/最終利用は私的情報であり、依頼対象instance/所有/閲覧scope・公開先を固定する。TAUTULLI通常API鍵はAI API課金鍵と別だが、rawquery/log/設定例を秘密取得/表示許可にしない。",
+        "curl/jqがあるだけでHTTP/業務code/空/partial/全page・limit検証/有限timeoutの正しさは保証されない。source script/現API/接続・web公開/ACLは未確認。central配置や保存済み資格を本人/他者serverの許可にしない。"
+      ],
+      "git_blob": "8e97109e35bfffae424a57075d9181aea8e8e2e4",
+      "individual_notices": [
+        {
+          "bytes": 1072,
+          "copy_permission_accepted": false,
+          "git_blob": "cb147bde6a3893ceeab66b06ecc2ca5914ba850a",
+          "path": "skills/rjmurillo/tautulli/LICENSE.txt",
+          "read_kind": "direct_raw_full",
+          "relative_path": "LICENSE.txt",
+          "scope": "実公開版/作者・第三者素材/依存/service/dataと利用契約の権利は別。rootMIT/補助MIT0で個別条件/矛盾を解除しない。",
+          "sha256": "3a541ce3493ffc307bb0483304758480fffc4c2b2590b9b2f0e5b0694b2063e1",
+          "source_url": "https://github.com/6mile/skills/blob/920714f17d81e0a95c7a9bc51faf0a7921cd982d/skills/rjmurillo/tautulli/LICENSE.txt"
+        }
+      ],
+      "inventory_id": "github:41fab302004ef90a422cf8bf5270bac225859cccc0491e2d3b3bc45e47e71e41",
+      "nearby_metadata": [
+        "browser-extraction-missingness",
+        "backend-correctness",
+        "security-review",
+        "connection-scope-reconciliation"
+      ],
+      "negative": "server接続statusや直近10件だけで全視聴履歴/稼働を断定し、保存API鍵で他者の履歴を読んでqueryを報告する。",
+      "new_final_disposition": false,
+      "path": "skills/rjmurillo/tautulli/SKILL.md",
+      "positive": "許可された同じinstanceの取得時刻と直近10件という範囲を示し、未取得と実activity0を分ける設計へ参照する。",
+      "read": {
+        "final_withheld_unread_except_reported_initial_gaps": true,
+        "initial_withheld_display_gaps": [],
+        "kind": "direct_masked_full",
+        "masked_lines": 2,
+        "ordered_view_complete": true,
+        "physical_lines": 84,
+        "raw_read_complete": false,
+        "recorded_mask_version": 14,
+        "visible_range_digest_provided": false,
+        "withheld_meanings_not_treated_as_complete": true,
+        "withheld_physical_lines": [
+          23,
+          81
+        ],
+        "workflow_view_complete": true
+      },
+      "required_changes": [
+        "instance/主体/対象者・観測時刻/期間/limitと実status・空/未取得/失敗/全pageを分け、秘密や私的視聴内容の報告を最小化する。",
+        "親の必要な実利用時だけscript/現在公式仕様/実所有と契約を確認する。研究は資格/個人履歴取得・通信/導入/中央変更0。"
+      ],
+      "source_code_executed": false,
+      "source_commit": "920714f17d81e0a95c7a9bc51faf0a7921cd982d",
+      "source_repo": "6mile/skills",
+      "source_sha256": "5ad4437bb8abbb056b103f7b521f442fc986bff8582d1819bfed653e69743722",
+      "source_url": "https://github.com/6mile/skills/blob/920714f17d81e0a95c7a9bc51faf0a7921cd982d/skills/rjmurillo/tautulli/SKILL.md",
+      "support_read_states": [
+        {
+          "bytes": 1072,
+          "git_blob_prefix": "cb147bde",
+          "masked_lines": 0,
+          "mode": "100644",
+          "relative_path": "LICENSE.txt",
+          "sha256_prefix": "3a541ce3",
+          "state": "direct_raw_full"
+        },
+        {
+          "bytes": 1221,
+          "git_blob_prefix": "07180d3a",
+          "masked_lines": 4,
+          "mode": "100644",
+          "relative_path": "README.md",
+          "sha256_prefix": "a1e3b59d",
+          "state": "direct_masked_full"
+        },
+        {
+          "bytes": 1553,
+          "git_blob_prefix": "8e97109e",
+          "masked_lines": 2,
+          "mode": "100644",
+          "relative_path": "SKILL.md",
+          "sha256_prefix": "5ad4437b",
+          "state": "direct_masked_full"
+        },
+        {
+          "bytes": 271,
+          "git_blob_prefix": "cdcf57f9",
+          "masked_lines": null,
+          "mode": "100644",
+          "relative_path": "_meta.json",
+          "sha256_prefix": "9ac44fbf",
+          "state": "saved_unread"
+        },
+        {
+          "bytes": null,
+          "git_blob_prefix": "2ea9b228",
+          "masked_lines": null,
+          "mode": "100644",
+          "relative_path": "scripts/activity.sh",
+          "sha256_prefix": null,
+          "state": "unsaved"
+        },
+        {
+          "bytes": null,
+          "git_blob_prefix": "5b49728e",
+          "masked_lines": null,
+          "mode": "100644",
+          "relative_path": "scripts/history.sh",
+          "sha256_prefix": null,
+          "state": "unsaved"
+        },
+        {
+          "bytes": null,
+          "git_blob_prefix": "63013686",
+          "masked_lines": null,
+          "mode": "100644",
+          "relative_path": "scripts/libraries.sh",
+          "sha256_prefix": null,
+          "state": "unsaved"
+        },
+        {
+          "bytes": null,
+          "git_blob_prefix": "e2c224b1",
+          "masked_lines": null,
+          "mode": "100644",
+          "relative_path": "scripts/recent.sh",
+          "sha256_prefix": null,
+          "state": "unsaved"
+        },
+        {
+          "bytes": null,
+          "git_blob_prefix": "91569b6f",
+          "masked_lines": null,
+          "mode": "100644",
+          "relative_path": "scripts/server.sh",
+          "sha256_prefix": null,
+          "state": "unsaved"
+        },
+        {
+          "bytes": null,
+          "git_blob_prefix": "260adfe1",
+          "masked_lines": null,
+          "mode": "100644",
+          "relative_path": "scripts/users.sh",
+          "sha256_prefix": null,
+          "state": "unsaved"
+        }
+      ],
+      "unmet": [
+        "起動提供metadataのみ。中央本文/存在・同等性/現設定は未照会。",
+        "観測対象/範囲と私的data境界を補う改訂候補。実監視/採否/許諾/導入0。",
+        "固定した保存資料の評価であり、現在のサービス仕様・実動作・個別権利の受入を保証しない。"
+      ],
+      "use": "媒体serverの現在stream・履歴/利用者集計とserver情報を分離する観測設計参考。",
+      "value": "同じinstanceと取得時刻/対象者・件数範囲を結び、活動なし/未取得を区別できる。"
+    },
+    {
+      "bytes": 18452,
+      "copy_permission_accepted": false,
+      "findings": [
+        "具体例→資源計画→init→編集→package→実使用の順序とprogressive disclosureは有用。lucky-skill-creatorというpathと本文skill-creatorの用途を対応づけ、folder名だけで別機能としない。",
+        "references/workflows.md/output-patterns.mdを推奨するが当package固定treeにない。原説明を参照実在/読了や品質証拠にしない。name/description以外frontmatter禁止、README/CHANGELOG一律排除も現runtime/schema/必要履歴に合わせる。",
+        "任意pathへのinit・全file入りZIP/skill梱包・symlink拒否を述べるが実script未読。Windows junction/reparsepoint/包含/競合/差替え・秘密混入/原本保持は未検証。中央の既存junctionを削除/実体化する根拠にしない。",
+        "新Pythonや命名例を本人の言語/正式名・公開名義の変更許可にせず、代表testだけで相異なる作用/依存先を全検証済みにしない。原の一般copy条件と実許諾は別。"
+      ],
+      "git_blob": "369440fdba8dd20c71ffdf4c0c10ccb84ec1a334",
+      "individual_notices": [
+        {
+          "bytes": 11358,
+          "copy_permission_accepted": false,
+          "git_blob": "d645695673349e3947e8e5ae42332d0ac3164cd7",
+          "path": "skills/rmbell09-lang/lucky-skill-creator/license.txt",
+          "read_kind": "exact_bytes_reuse",
+          "relative_path": "license.txt",
+          "scope": "実公開版/作者・第三者素材/依存/service/dataと利用契約の権利は別。rootMIT/補助MIT0で個別条件/矛盾を解除しない。",
+          "sha256": "cfc7749b96f63bd31c3c42b5c471bf756814053e847c10f3eb003417bc523d30",
+          "source_url": "https://github.com/6mile/skills/blob/920714f17d81e0a95c7a9bc51faf0a7921cd982d/skills/rmbell09-lang/lucky-skill-creator/license.txt"
+        }
+      ],
+      "inventory_id": "github:235ed0e86a584dc9239aed0374132f7981eff6a4d2a5d6396eb70cf98fecb146",
+      "nearby_metadata": [
+        "skill-maintenance",
+        "knowledge-to-skills",
+        "path-relative-containment-check",
+        "validate-consume-same-bytes",
+        "public-artifact-hygiene"
+      ],
+      "negative": "欠けた参照を読了扱いし、nameのために正式名を変え、symlink拒否の説明だけで中央junctionを削除して全fileをZIP送信する。",
+      "new_final_disposition": false,
+      "path": "skills/rmbell09-lang/lucky-skill-creator/SKILL.md",
+      "positive": "同じ用途/入力から必要資源だけを計画し、実梱包の対象境界と原本/リンク保持を検査する設計へ参照する。",
+      "read": {
+        "final_withheld_unread_except_reported_initial_gaps": true,
+        "initial_withheld_display_gaps": [],
+        "kind": "direct_raw_full",
+        "masked_lines": 0,
+        "ordered_view_complete": true,
+        "physical_lines": 372,
+        "raw_read_complete": true,
+        "recorded_mask_version": 14,
+        "visible_range_digest_provided": false,
+        "withheld_meanings_not_treated_as_complete": true,
+        "withheld_physical_lines": [],
+        "workflow_view_complete": true
+      },
+      "required_changes": [
+        "用途/name/path・具体入力/期待成果と必要な参照の実在/版を親の台帳へ結び、既存schema/metadata/原本/backup/中央junctionを保持する。",
+        "親の実利用時だけ必要なinit/package/script・実権利を確認し、許可root/非上書き/リンク・秘密/失敗と影響範囲の実testを行う。研究で実配置/梱包/新コード/導入0。"
+      ],
+      "source_code_executed": false,
+      "source_commit": "920714f17d81e0a95c7a9bc51faf0a7921cd982d",
+      "source_repo": "6mile/skills",
+      "source_sha256": "4a9bb47629ca9ef89428c0c47c18fdff9765a03a2b42d908495c5075c918571a",
+      "source_url": "https://github.com/6mile/skills/blob/920714f17d81e0a95c7a9bc51faf0a7921cd982d/skills/rmbell09-lang/lucky-skill-creator/SKILL.md",
+      "support_read_states": [
+        {
+          "bytes": 18452,
+          "git_blob_prefix": "369440fd",
+          "masked_lines": 0,
+          "mode": "100644",
+          "relative_path": "SKILL.md",
+          "sha256_prefix": "4a9bb476",
+          "state": "direct_raw_full"
+        },
+        {
+          "bytes": 297,
+          "git_blob_prefix": "6bbbe7d8",
+          "masked_lines": null,
+          "mode": "100644",
+          "relative_path": "_meta.json",
+          "sha256_prefix": "0eead1f3",
+          "state": "saved_unread"
+        },
+        {
+          "bytes": 11358,
+          "git_blob_prefix": "d6456956",
+          "masked_lines": 0,
+          "mode": "100644",
+          "relative_path": "license.txt",
+          "sha256_prefix": "cfc7749b",
+          "state": "exact_bytes_reuse"
+        },
+        {
+          "bytes": null,
+          "git_blob_prefix": "8633fe9e",
+          "masked_lines": null,
+          "mode": "100644",
+          "relative_path": "scripts/init_skill.py",
+          "sha256_prefix": null,
+          "state": "unsaved"
+        },
+        {
+          "bytes": null,
+          "git_blob_prefix": "aa4de896",
+          "masked_lines": null,
+          "mode": "100644",
+          "relative_path": "scripts/package_skill.py",
+          "sha256_prefix": null,
+          "state": "unsaved"
+        },
+        {
+          "bytes": null,
+          "git_blob_prefix": "e8737b4f",
+          "masked_lines": null,
+          "mode": "100644",
+          "relative_path": "scripts/quick_validate.py",
+          "sha256_prefix": null,
+          "state": "unsaved"
+        },
+        {
+          "bytes": null,
+          "git_blob_prefix": "503ba30c",
+          "masked_lines": null,
+          "mode": "100644",
+          "relative_path": "scripts/test_package_skill.py",
+          "sha256_prefix": null,
+          "state": "unsaved"
+        },
+        {
+          "bytes": null,
+          "git_blob_prefix": "199fcb63",
+          "masked_lines": null,
+          "mode": "100644",
+          "relative_path": "scripts/test_quick_validate.py",
+          "sha256_prefix": null,
+          "state": "unsaved"
+        }
+      ],
+      "unmet": [
+        "起動提供metadataのみ。中央本文/存在・同等性/現設定は未照会。",
+        "資源分割/発火と梱包境界を補う改訂候補。実操作/採否/許諾/導入0。",
+        "固定した保存資料の評価であり、現在のサービス仕様・実動作・個別権利の受入を保証しない。"
+      ],
+      "use": "具体的な利用例から必要資源・発火条件/自由度と梱包境界を整理するSkill作成設計参考。",
+      "value": "必須本文とoptional resources/examplesを分け、手順の脆さに応じた制約と実使用での改善を結べる。"
+    },
+    {
+      "bytes": 3912,
+      "copy_permission_accepted": false,
+      "findings": [
+        "topic/難度分類・更新履歴とPPT/Word出力の分離は有用。一方知識は2024-01-01版の広い説明で、repo/platform/API/SDK・CLI/最低要件等の公式性/現在性・自動同期は未検証。原URLへ新規HTTPはしない。",
+        "知識例はInterfaceにpass、main例に未定義save_result等を含み、testがimportするclassも別snippet。これを実行可能/検査済み教材としない。API成功/sleep completed・assertNotNone等の表層を業務成功の証明へしない。",
+        "path入力は..と先頭/だけを拒む例でWindows drive/UNC・separator/link/実解決後包含は検証されない。例外文字列を全て返す手順は秘密/私的pathを漏らしうる。原コードを実行せず必要検査へ落とす。",
+        "primaryの--action addとREADMEの位置引数add、既定/home/z出力やSkill配置が現環境と未対応。template/classificationだけで必要情報・font/日本語/全page/出典/著者metadata保持を保証しない。",
+        "原末尾の自動生成/maintenanceとauthor:OpenClaw Teamを本人名義/実公式著作者へ流用しない。MITcopyright/出典の正当表示と不要なAI帰属/セッション情報を分け、実公開版/素材/service権利は別に確認する。"
+      ],
+      "git_blob": "776ffe8223a468f2bc48b7a2d44fa253b7b82231",
+      "individual_notices": [
+        {
+          "bytes": 1434,
+          "copy_permission_accepted": false,
+          "git_blob": "be99089772e2913da48c9304d480cbebceae1ca0",
+          "path": "skills/roadherogb/openclaw-teaching/LICENSE.txt",
+          "read_kind": "direct_masked_full",
+          "relative_path": "LICENSE.txt",
+          "scope": "実公開版/作者・第三者素材/依存/service/dataと利用契約の権利は別。rootMIT/補助MIT0で個別条件/矛盾を解除しない。",
+          "sha256": "030076e11e8b513fd12ec9050818582d49681efacee4d38ce46f271098ca7492",
+          "source_url": "https://github.com/6mile/skills/blob/920714f17d81e0a95c7a9bc51faf0a7921cd982d/skills/roadherogb/openclaw-teaching/LICENSE.txt"
+        }
+      ],
+      "inventory_id": "github:8ea83a0203e93b24f2787cfe185e2afe264ed26c94e657e72f89252f2d51a2c2",
+      "nearby_metadata": [
+        "knowledge-to-skills",
+        "source-grounded-content-review",
+        "documents-slides-data",
+        "public-artifact-hygiene",
+        "path-relative-containment-check"
+      ],
+      "negative": "古い例のAPI/SDKを現公式とし、passやcompleted文字列を実完了とみなして自動生成/著者表記を本人公開物へ流用する。",
+      "new_final_disposition": false,
+      "path": "skills/roadherogb/openclaw-teaching/SKILL.md",
+      "positive": "原知識の版/出典と未確認を保ち、検証した同入力から教材を作る設計として実文面/全pageとmetadataを照合する。",
+      "read": {
+        "final_withheld_unread_except_reported_initial_gaps": true,
+        "initial_withheld_display_gaps": [],
+        "kind": "direct_raw_full",
+        "masked_lines": 0,
+        "ordered_view_complete": true,
+        "physical_lines": 151,
+        "raw_read_complete": true,
+        "recorded_mask_version": 14,
+        "visible_range_digest_provided": false,
+        "withheld_meanings_not_treated_as_complete": true,
+        "withheld_physical_lines": [],
+        "workflow_view_complete": true
+      },
+      "required_changes": [
+        "各知識claimを対象software版/公式出典/確認日時・提案/実測/未確認へ結び、例示と実動作を分ける。親の実利用時だけ現公式情報/必要script・個別権利を確認する。",
+        "更新元/改訂差分/生成入力版と成果hashを固定し、原本非上書き・path包含/有限失敗と実教材/全page表示/必要metadataを照合する。",
+        "公開名義/不要AI帰属を検索と実物で二重確認する。研究ではnewPython/教材生成/知識更新/HTTP/導入0。"
+      ],
+      "source_code_executed": false,
+      "source_commit": "920714f17d81e0a95c7a9bc51faf0a7921cd982d",
+      "source_repo": "6mile/skills",
+      "source_sha256": "677cea971ba9eab9b209ff65f80ce58f2d6a540e02cc59c893e6460ec2f781ce",
+      "source_url": "https://github.com/6mile/skills/blob/920714f17d81e0a95c7a9bc51faf0a7921cd982d/skills/roadherogb/openclaw-teaching/SKILL.md",
+      "support_read_states": [
+        {
+          "bytes": 14313,
+          "git_blob_prefix": "df2431af",
+          "masked_lines": 4,
+          "mode": "100644",
+          "relative_path": "KNOWLEDGE_BASE.md",
+          "sha256_prefix": "c912b77c",
+          "state": "direct_masked_full"
+        },
+        {
+          "bytes": 1434,
+          "git_blob_prefix": "be990897",
+          "masked_lines": 1,
+          "mode": "100644",
+          "relative_path": "LICENSE.txt",
+          "sha256_prefix": "030076e1",
+          "state": "direct_masked_full"
+        },
+        {
+          "bytes": 1986,
+          "git_blob_prefix": "1dc2b065",
+          "masked_lines": 1,
+          "mode": "100644",
+          "relative_path": "README.md",
+          "sha256_prefix": "31832234",
+          "state": "direct_masked_full"
+        },
+        {
+          "bytes": 3912,
+          "git_blob_prefix": "776ffe82",
+          "masked_lines": 0,
+          "mode": "100644",
+          "relative_path": "SKILL.md",
+          "sha256_prefix": "677cea97",
+          "state": "direct_raw_full"
+        },
+        {
+          "bytes": 290,
+          "git_blob_prefix": "97d689ac",
+          "masked_lines": null,
+          "mode": "100644",
+          "relative_path": "_meta.json",
+          "sha256_prefix": "428620d8",
+          "state": "saved_unread"
+        },
+        {
+          "bytes": null,
+          "git_blob_prefix": "df9643dc",
+          "masked_lines": null,
+          "mode": "100644",
+          "relative_path": "scripts/generate_docs.py",
+          "sha256_prefix": null,
+          "state": "unsaved"
+        },
+        {
+          "bytes": null,
+          "git_blob_prefix": "55980de3",
+          "masked_lines": null,
+          "mode": "100644",
+          "relative_path": "scripts/update_knowledge.py",
+          "sha256_prefix": null,
+          "state": "unsaved"
+        }
+      ],
+      "unmet": [
+        "起動提供metadataのみ。中央本文/存在・同等性/現設定は未照会。",
+        "知識の出所/版と教材成果の検査を改訂候補として提案。現公式性/実教材・採否/許諾/導入0。",
+        "固定した保存資料の評価であり、現在のサービス仕様・実動作・個別権利の受入を保証しない。"
+      ],
+      "use": "知識の原出典/版・分類/更新と教材出力を結ぶ知識管理設計参考。",
+      "value": "収集→検証→改訂履歴→文書生成を分け、古い/推定の知識を現仕様の保証にしない検査点が得られる。"
+    }
+  ],
+  "new_copy_grants": 0,
+  "new_final_dispositions": 0,
+  "scope": "固定した保存資料の意味評価。元の担当・独立受領・再利用の来歴は非公開の原記録に保持し、本文読了・伏字・未読・未取得と個別の権利を区別する。支持一覧には一次本文自身も含まれるため、本文と支持の読取数を足して新規読了数にしない。公開資料に表示範囲そのものやそのdigestがない場合、その検証済みとは主張しない。初回の伏字不足は値を再掲せず位置と種類を保持し、後の表示の伏字を過去から未読だった証拠にはしない。",
+  "whole16_complete": false
+}

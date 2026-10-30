@@ -513,6 +513,16 @@ func validateAppendOnlyAdoptionLedger(original, current map[string]any) error {
 	if !ok || !oldOK || len(excluded) != len(oldExcluded) {
 		return fmt.Errorf("historical exclusions missing")
 	}
+	// Identity is unique across the complete ledger, including both old
+	// decisions and later declared extensions. This matches the runtime check.
+	seenIDs := map[string]bool{}
+	for _, value := range append(append([]any{}, entries...), excluded...) {
+		id, ok := next4Object(value)["inventory_id"].(string)
+		if !ok || id == "" || seenIDs[id] {
+			return fmt.Errorf("final ledger identity missing or repeated across decisions")
+		}
+		seenIDs[id] = true
+	}
 	for i, pin := range oldExcluded {
 		if !matches(pin, excluded[i]) {
 			return fmt.Errorf("historical exclusion changed")
@@ -632,6 +642,44 @@ func TestAdoptionAppendKeepsHistoricalEntriesExclusionsAndActualCounters(t *test
 			err := validateLedgerAppendScope(original, current, allowed)
 			if (err == nil) != (change == "valid") {
 				t.Fatalf("%s: %v", change, err)
+			}
+		})
+	}
+}
+
+func TestDeclaredLedgerExtensionCannotReuseHistoricalIdentity(t *testing.T) {
+	for _, kind := range []string{"accepted", "excluded"} {
+		t.Run(kind, func(t *testing.T) {
+			var baseline, current map[string]any
+			loadPublicReceipt(t, "skills-3080-adoption-baseline.json", &baseline)
+			loadPublicReceipt(t, "skills-3080-adoptions.json", &current)
+			allowed := loadPublishedLedgerExtensions(t)
+			source := current["entries"].([]any)[0]
+			if kind == "excluded" {
+				source = current["excluded_entries"].([]any)[0]
+			}
+			row := map[string]any{}
+			for key, value := range next4Object(source) {
+				row[key] = value
+			}
+			id := row["inventory_id"].(string)
+			target, _ := row["target"].(string)
+			if target == "" {
+				target, _ = row["canonical_existing_target"].(string)
+			}
+			if target == "" {
+				t.Fatal("historical fixture target missing")
+			}
+			row["target"] = target
+			row["disposition"] = "integrated_existing"
+			current["entries"] = append(current["entries"].([]any), row)
+			current["integrated"] = current["integrated"].(float64) + 1
+			current["pending_occurrences"] = current["pending_occurrences"].(float64) - 1
+			current["pending_available_body_occurrences"] = current["pending_available_body_occurrences"].(float64) - 1
+			// Simulate a later fixed result accidentally redeclaring an old ID.
+			allowed[id] = [2]string{target, "integrated_existing"}
+			if err := validateLedgerAppendScope(baseline, current, allowed); err == nil {
+				t.Fatal("declared extension reused a historical identity despite matching counts")
 			}
 		})
 	}

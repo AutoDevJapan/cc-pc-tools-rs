@@ -578,6 +578,11 @@
       "file": "skills-3080-deployment-aliases.json",
       "sha256": "0a18b082e9e2769f6f44dcf521362a416965844bb532d3c3fe05b188f2f4e70c",
       "rows": 4
+    },
+    {
+      "file": "skills-3080-visible-primary-assessments.json",
+      "sha256": "4b499fafd955cd0773982bcf2ee0a2ea2fcdab55892651e8a0df3b6d18d9caa8",
+      "rows": 30
     }
   ],
   "adoption_ledger": {

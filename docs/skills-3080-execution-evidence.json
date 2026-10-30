@@ -583,6 +583,11 @@
       "file": "skills-3080-visible-primary-assessments.json",
       "sha256": "88eb360eb1dccd1055f73fdf3c6b144ef33590428e31b8e5cbafd73efdb2869d",
       "rows": 54
+    },
+    {
+      "file": "skills-3080-retained-procedure-assessments.json",
+      "sha256": "76461c5fc0d1bc25347fe4109c3e9412f2406d15075e277cdb57799eb07b7a98",
+      "rows": 22
     }
   ],
   "adoption_ledger": {

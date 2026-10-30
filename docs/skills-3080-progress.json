@@ -1,9 +1,9 @@
 {
   "todo": 3080,
   "issue": "https://github.com/AutoDevJapan/cc-pc-tools-rs/issues/283",
-  "observed_at": "2026-10-30T11:20:42.5925592+00:00",
+  "observed_at": "2026-10-30T21:08:30.6921439+09:00",
   "phase_a": "partial; 647 additional text shapes held by execution review",
-  "phase_b": "新規164・既存統合19を保持し、可視一次本文54代表の評価と候補metadata55を同じ全件台帳に記録した。今回追加した11意味と既存43意味を全field/順序まで保持し、伏字・未読支持・各memberの文脈/個別許諾は未確認のまま。新しい許諾・採否・中央書込0。指定16資料の残候補を継続する。",
+  "phase_b": "新規164・既存統合19・最終198を保持し、可視一次本文54代表と、保存済み手順の新しい22評価を同じ全件台帳に記録した。新22件のraw/伏字付き表示・未保存/未読支持・旧読取の再利用と個別noticeを区別する。新しい許諾・採否・中央書込0。指定16資料の残候補を継続する。",
   "catalog_sha256": "2d73c9a038a41cc220a9687b935bfa1e0b315b65d9bd6d3e54ddb4111972876c",
   "source_count": 16,
   "fixed_public_repos": [
@@ -442,7 +442,7 @@
     "complete_definition": "本文の全path読取のみ。個別許諾・支持・採否・実導入は未完。"
   },
   "all_fulltext_primary_paths_including_partial_sources": 588,
-  "primary_coverage_definition": "既存10資料固定137+別枠mizchi76+MengTo全入口177+6mile部分195+VoltAgent設計raw3=588source paths。設計のmasked21はworkflow807へ含めるがrawへ含めない。保存した原文の複製/機械照合を新しい親の意味読取へ加算しない。全16資料は未完。",
+  "primary_coverage_definition": "既存10資料固定137+別枠mizchi76+MengTo全入口177+6mile部分195+VoltAgent設計raw3=588source paths。設計のmasked21を含むworkflow807も同じ歴史的構成要素の集計で、後続の受領台帳をすべて含む総数ではない。保存済み手順22件のraw10/masked12等はretained_procedure_assessment_journalに別記し、全台帳の重複除去後raw/workflow総数は未確定。全体の意味評価と最終採否はcurrent_execution_planが示す全件queueで確認する。全16資料は未完。",
   "external_revisions": {
     "count": 1,
     "target": "diagnosing-bugs",
@@ -616,8 +616,8 @@
     "guard_client_resource": true,
     "state": "classification_unverified"
   },
-  "recorded_at": "2026-10-30T05:42:10.2052012+00:00",
-  "total_skill_named_body_read_definition": "This field preserves the historical complete-source subset only. Current raw/workflow primary coverage is projected from the canonical source components and sixmile evaluation index in all_fulltext_primary_paths_including_partial_sources/all_workflow_primary_paths_including_partial_sources, not copied here.",
+  "recorded_at": "2026-10-30T14:42:10.2052012+09:00",
+  "total_skill_named_body_read_definition": "This field preserves the historical complete-source subset only. The 588 raw/807 workflow path fields also retain their explicitly bounded historical components, not every later received journal. Consult per-journal read states and the current full-catalog execution queue; a deduplicated raw/workflow total across all later journals is not claimed.",
   "openai_entrypoint_evaluation": {
     "rights_accepted": false,
     "support_unread": 690,
@@ -1774,7 +1774,8 @@
     "all_occurrences_retained": true,
     "per_candidate_workers_created": 0,
     "equal_body_is_not_permission": true,
-    "queue_generation_is_not_semantic_completion": true
+    "queue_generation_is_not_semantic_completion": true,
+    "current_queue_rollup_field": "latest_retained_procedure_queue"
   },
   "current_scope_qualification_repair": {
     "todo": 3686,
@@ -3926,5 +3927,68 @@
       "Assessment records 1705 = assessed without final disposition 1513 + assessment/final intersection 192. Final records 198 include 6 final-only legacy records without assessment. The assessment/final union is 1711 occurrences; these categories are not additive independent totals."
     ]
   },
-  "observed_at_scope": "この評価/全件queueを公開記録へ集約した時点。各出典の取得時刻や固定commitは元の個別記録を保持し、再取得した時点とはしない。"
+  "observed_at_scope": "この評価/全件queueを公開記録へ集約した時点。各出典の取得時刻や固定commitは元の個別記録を保持し、再取得した時点とはしない。",
+  "retained_procedure_assessment_journal": {
+    "file": "skills-3080-retained-procedure-assessments.json",
+    "definition": "skills-3080-retained-procedure-assessments.md",
+    "assessment_records": 22,
+    "counts": {
+      "initial_display_gap_records": 3,
+      "masked_primary_records": 12,
+      "primary_physical_lines": 5995,
+      "primary_records": 22,
+      "primary_withheld_lines": 72,
+      "raw_primary_records": 10,
+      "saved_support_metadata": 157,
+      "support_records": 320,
+      "support_state_counts": {
+        "direct_masked_full": 23,
+        "direct_raw_full": 42,
+        "exact_bytes_reuse": 20,
+        "saved_unread": 72,
+        "unsaved": 163
+      },
+      "unsaved_support_metadata": 163
+    },
+    "primary_and_support_counts_not_additive": true,
+    "source_range_digests_not_provided": true,
+    "private_original_reader_and_native_history_retained": true,
+    "all_rights_accepted": false,
+    "new_Skills": 0,
+    "new_final_dispositions": 0,
+    "central_operations": 0,
+    "whole16_complete": false
+  },
+  "latest_retained_procedure_queue": {
+    "state": "complete",
+    "catalog_sha256": "2d73c9a038a41cc220a9687b935bfa1e0b315b65d9bd6d3e54ddb4111972876c",
+    "manifest_sha256": "f55457434ae7e84604e0fb10bc958a8847fc73487f75d052b0fdb6c6b2c6d867",
+    "queue_sha256": "1bc308d49ba6628bd0074ecec1f4e4170eebb62882bc95d05f7ddbd6d532349b",
+    "occurrences": 73220,
+    "occurrences_with_assessment_records": 1727,
+    "recorded_final_occurrences": 198,
+    "occurrences_with_assessment_and_final_records": 192,
+    "final_records_without_assessment_record": 6,
+    "occurrences_with_assessment_or_final_records": 1733,
+    "stages": {
+      "assessed_needs_current_disposition": 1535,
+      "held_body_unavailable": 428,
+      "held_execution_review": 647,
+      "needs_semantic_and_individual_rights_review": 70412,
+      "recorded_final_disposition": 198
+    },
+    "recorded_final_dispositions": {
+      "excluded": 15,
+      "installed_new_adaptation": 164,
+      "integrated_existing": 19
+    },
+    "limits": [
+      "An assessment reference is not a full raw read, licence grant, current adoption or completed acceptance; consult its recorded actor, scope and state.",
+      "Equal body bytes do not transfer source ownership, individual permission or support-resource review.",
+      "No source body or URL is opened, no model or worker is launched, no permission is changed and nothing is installed.",
+      "The queue is complete only when its separate summary is complete and its recorded queue SHA256 matches the actual bytes.",
+      "Explicit site identity interpretations retain original archive locations and unverified historical upstream claims separately from catalog occurrence Git fields; historical exclusion claims still require reconfirmation.",
+      "Assessment records 1727 = assessed without final disposition 1535 + assessment/final intersection 192. Final records 198 include 6 final-only legacy records without assessment. The assessment/final union is 1733 occurrences; these categories are not additive independent totals."
+    ]
+  }
 }

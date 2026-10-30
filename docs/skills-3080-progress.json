@@ -616,7 +616,7 @@
     "guard_client_resource": true,
     "state": "classification_unverified"
   },
-  "recorded_at": "2026-10-30T03:51:53.0397110+00:00",
+  "recorded_at": "2026-10-30T04:48:08.2066173+00:00",
   "total_skill_named_body_read_definition": "This field preserves the historical complete-source subset only. Current raw/workflow primary coverage is projected from the canonical source components and sixmile evaluation index in all_fulltext_primary_paths_including_partial_sources/all_workflow_primary_paths_including_partial_sources, not copied here.",
   "openai_entrypoint_evaluation": {
     "rights_accepted": false,
@@ -679,31 +679,31 @@
     "scope": "Final4-file concurrent-publication correction only. Prior31-file and8-file reviews retained; no source-body/permission/central/whole16 completion."
   },
   "latest_merged_pr": {
-    "number": 646,
-    "url": "https://github.com/AutoDevJapan/cc-pc-tools-rs/pull/646",
-    "head": "02318f14d9677b385c3976139e3afa2b5517a0cc",
-    "merge": "9765bea7399842b06e89d0fb90455fd4bde0e39c",
-    "merged_at": "2026-10-30T03:11:51Z",
+    "number": 649,
+    "url": "https://github.com/AutoDevJapan/cc-pc-tools-rs/pull/649",
+    "head": "7f873c8c9b9096d3cbeb1cbe52245d3c422b6a99",
+    "merge": "433d761c9ff1ae0ec47ee396677a2db01587b48f",
+    "merged_at": "2026-10-30T04:26:19Z",
     "review_todos": [
       4033,
       4076
     ],
-    "final_rubber_job": "20261030-120002-todo-4033",
-    "final_self_job": "20261030-120100-todo-4076",
+    "final_rubber_job": "20261030-130641-todo-4033",
+    "final_self_job": "20261030-130804-todo-4076",
     "final_pair_must": 0,
     "final_pair_suggestion": 0,
     "final_pair_nit": 0,
-    "actual_models": "gpt-6-luna/max matched to actual native contexts",
+    "actual_models": "gpt-6-luna/max independently checked in matching native contexts",
     "all7checks_completed_without_failure": true,
-    "merge_state_before": "CLEAN",
-    "unresolved_threads_before": 0,
     "normal_merge": true,
     "readback_confirmed": true,
     "Root_merge_push_and_checkpoint_confirmed": true,
-    "new_assessment_references": 25,
-    "unique_assessment_occurrences_added": 24,
-    "new_existing_workflow_integrations": 0,
-    "central_new_writes": 0
+    "new_existing_workflow_integrations": 6,
+    "new_assessment_references": 24,
+    "central_new_writes": 0,
+    "merge_state_before": "CLEAN",
+    "unresolved_threads_before": 0,
+    "acceptance_evidence": "PR649 final7f873 actual pair0/all7 successful/CLEAN/no unresolved threads verified by canonical parent before normal merge"
   },
   "mengto_partial_entrypoint_evaluation": {
     "fixed_roster": "skills-3080-mengto-fixed-entrypoints.json",
@@ -3791,5 +3791,54 @@
     "historical_exclusions_reconfirmation_still_pending": true,
     "unknown_and_known_occurrence_tuples_match_exactly": true,
     "new_reads_grants_or_dispositions": 0
+  },
+  "latest_received12_after1635": {
+    "evidence": "skills-3080-primaryflow-next12-after248-evaluation095653.json",
+    "actual_reader": "20261030-033405-todo-4134",
+    "actual_consumer": "20261030-095653-todo-3080",
+    "first": 129,
+    "through": 140,
+    "visible_meanings": 12,
+    "new_held": 0,
+    "old_held1_and247records70contexts_exact": true,
+    "complete_original_packets": 2,
+    "member_metadata": 12,
+    "all_member_contexts_and_rights_pending": true,
+    "native_model_and_true_null_parent_observed": true,
+    "assessment_references": 1647,
+    "new_grants_or_dispositions_or_central": 0,
+    "whole16_complete": false
+  },
+  "next12_after649_current_queue": {
+    "state": "complete",
+    "catalog_sha256": "2d73c9a038a41cc220a9687b935bfa1e0b315b65d9bd6d3e54ddb4111972876c",
+    "manifest_sha256": "2834686b29d57245bcfecfbf31512e7f6b5685e3cf609568cf38440bbacaa561",
+    "queue_sha256": "dfdde5efdad9b3f4d34fa43e006d8ab5fe00e09f78b41278bb4f0c076124401d",
+    "occurrences": 73220,
+    "occurrences_with_assessment_records": 1647,
+    "recorded_final_occurrences": 194,
+    "occurrences_with_assessment_and_final_records": 188,
+    "final_records_without_assessment_record": 6,
+    "occurrences_with_assessment_or_final_records": 1653,
+    "stages": {
+      "assessed_needs_current_disposition": 1459,
+      "held_body_unavailable": 428,
+      "held_execution_review": 647,
+      "needs_semantic_and_individual_rights_review": 70492,
+      "recorded_final_disposition": 194
+    },
+    "recorded_final_dispositions": {
+      "excluded": 15,
+      "installed_new_adaptation": 164,
+      "integrated_existing": 15
+    },
+    "limits": [
+      "An assessment reference is not a full raw read, licence grant, current adoption or completed acceptance; consult its recorded actor, scope and state.",
+      "Equal body bytes do not transfer source ownership, individual permission or support-resource review.",
+      "No source body or URL is opened, no model or worker is launched, no permission is changed and nothing is installed.",
+      "The queue is complete only when its separate summary is complete and its recorded queue SHA256 matches the actual bytes.",
+      "Explicit site identity interpretations retain original archive locations and unverified historical upstream claims separately from catalog occurrence Git fields; historical exclusion claims still require reconfirmation.",
+      "Assessment records 1647 = assessed without final disposition 1459 + assessment/final intersection 188. Final records 194 include 6 final-only legacy records without assessment. The assessment/final union is 1653 occurrences; these categories are not additive independent totals."
+    ]
   }
 }

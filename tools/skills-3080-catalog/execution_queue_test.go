@@ -44,6 +44,49 @@ func TestExecutionQueueKeepsAllOccurrencesAndDoesNotApproveEqualBodies(t *testin
 	}
 }
 
+func TestExecutionQueueChecksPinnedBlobAndByteCount(t *testing.T) {
+	for _, name := range []string{"valid", "changed_blob", "changed_bytes", "missing_tuple"} {
+		t.Run(name, func(t *testing.T) {
+			input, m, e := executionFixture()
+			e.PinnedSources = map[string]executionSourceTuple{"first": {Blob: strings.Repeat("b", 40), Bytes: 33}}
+			lines := strings.Split(strings.TrimSuffix(input, "\n"), "\n")
+			var row map[string]any
+			if err := json.Unmarshal([]byte(lines[0]), &row); err != nil {
+				t.Fatal(err)
+			}
+			if name != "missing_tuple" {
+				row["git_blob"] = strings.Repeat("b", 40)
+				row["bytes"] = 33
+			}
+			if name == "changed_blob" {
+				row["git_blob"] = strings.Repeat("d", 40)
+			}
+			if name == "changed_bytes" {
+				row["bytes"] = 34
+			}
+			encoded, err := json.Marshal(row)
+			if err != nil {
+				t.Fatal(err)
+			}
+			lines[0] = string(encoded)
+			input = strings.Join(lines, "\n") + "\n"
+			// Update the input pin too: the source tuple must be independently
+			// checked, rather than accidentally rejected only by the catalog hash.
+			h := sha256.Sum256([]byte(input))
+			m.CatalogSHA = hex.EncodeToString(h[:])
+			var out bytes.Buffer
+			_, err = executionQueue(strings.NewReader(input), &out, m, e)
+			if name == "valid" {
+				if err != nil {
+					t.Fatal(err)
+				}
+			} else if err == nil {
+				t.Fatal("queue accepted a changed or missing independently pinned source tuple")
+			}
+		})
+	}
+}
+
 func TestExecutionQueueRejectsStaleEvidenceAndUnmatchedFinals(t *testing.T) {
 	for _, name := range []string{"wrong_catalog", "wrong_count", "unknown_assessment", "wrong_source_hash", "wrong_source_path", "unknown_final", "held_final", "wrong_final_hash", "wrong_final_path", "unfinished_final", "missing_assessment_commit", "missing_final_commit"} {
 		t.Run(name, func(t *testing.T) {

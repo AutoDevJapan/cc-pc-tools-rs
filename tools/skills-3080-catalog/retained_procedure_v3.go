@@ -13,6 +13,30 @@ const retainedProcedureV3Scope = "固定保存資料の可視意味評価。本�
 
 const retainedV3EntriesSHA = "c4d1996e7e5fb33e86b9b8166a11f90d8cdb4e5b4c0cfbbf7ba29bda76ec0da5"
 const retainedV3HistorySHA = "c6cb667f2be5f999ee9e0f31a5fbb5911f0b6f6913e1827e402e90358c9e9327"
+const retainedV3CatalogSHA = "2d73c9a038a41cc220a9687b935bfa1e0b315b65d9bd6d3e54ddb4111972876c"
+
+// The accepted full catalog requires this history even if an input manifest
+// removes it, or changes both the artifact filename and its declared domain.
+// Smaller parser fixtures and unrelated catalogs do not inherit these claims;
+// executionQueue separately verifies the actual catalog bytes and row count.
+func validateRetainedV3ManifestBinding(m ExecutionManifest) error {
+	if m.CatalogSHA != retainedV3CatalogSHA {
+		return nil
+	}
+	count := 0
+	for _, a := range m.Artifacts {
+		if a.File == retainedProcedureV3File {
+			count++
+			if a.Rows != 91 {
+				return fmt.Errorf("required retained v3 row count differs")
+			}
+		}
+	}
+	if m.Records != 73220 || count != 1 {
+		return fmt.Errorf("fixed full catalog requires exactly one retained v3 history")
+	}
+	return nil
+}
 
 func retainedV3Anchor(value any, want string) bool {
 	b, err := json.Marshal(value)

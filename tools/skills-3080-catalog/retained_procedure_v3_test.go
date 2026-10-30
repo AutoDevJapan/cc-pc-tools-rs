@@ -53,7 +53,7 @@ func TestRetainedV3ExecutionRejectsRepinnedHistoryAndRenaming(t *testing.T) {
 			ledger := write("skills-3080-empty-final-ledger.json", []byte(`{"entries":[],"excluded_entries":[]}`), 0)
 			evidence, e := loadExecutionEvidence(root, ExecutionManifest{Artifacts: []ExecutionArtifact{a}, Ledger: ledger})
 			if name == "valid" {
-				if e != nil || len(evidence.Assessments) != 91 || len(evidence.Decisions) != 0 {
+				if e != nil || len(evidence.Assessments) != 91 || len(evidence.PinnedSources) != 91 || len(evidence.Decisions) != 0 {
 					t.Fatalf("assessment-only execution integration failed: %v", e)
 				}
 			} else if e == nil {
@@ -76,6 +76,53 @@ func TestRetainedV3IsRequiredInPublishedExecutionManifest(t *testing.T) {
 	}
 	if count != 1 {
 		t.Fatal("all91 latest assessments must occur exactly once in the full occurrence queue")
+	}
+}
+
+func TestRetainedV3RuntimeManifestCannotOmitOrDisguiseLatest(t *testing.T) {
+	for _, name := range []string{"valid", "missing_latest", "domain_and_filename_and_history_changed", "duplicate_latest", "wrong_row_count"} {
+		t.Run(name, func(t *testing.T) {
+			v := retainedV3Fixture(t)
+			file := retainedProcedureV3File
+			if name == "domain_and_filename_and_history_changed" {
+				v["domain"] = "skills3080-other-assessment"
+				v["notice_read_exceptions"].([]any)[0].(map[string]any)["legal_permission_confirmed"] = true
+				file = "skills-3080-disguised-latest-assessments.json"
+			}
+			root := t.TempDir()
+			write := func(file string, data []byte, n int) ExecutionArtifact {
+				if e := os.WriteFile(filepath.Join(root, file), data, 0600); e != nil {
+					t.Fatal(e)
+				}
+				h := sha256.Sum256(data)
+				return ExecutionArtifact{File: file, SHA: hex.EncodeToString(h[:]), Rows: n}
+			}
+			b, e := json.Marshal(v)
+			if e != nil {
+				t.Fatal(e)
+			}
+			a := write(file, b, 91)
+			artifacts := []ExecutionArtifact{a}
+			switch name {
+			case "missing_latest":
+				artifacts = nil
+			case "duplicate_latest":
+				artifacts = append(artifacts, a)
+			case "wrong_row_count":
+				artifacts[0].Rows = 90
+			}
+			ledger := write("skills-3080-empty-final-ledger.json", []byte(`{"entries":[],"excluded_entries":[]}`), 0)
+			// This is the actual fixed catalog identity, rather than a partial
+			// parser fixture that intentionally has no production input contract.
+			_, e = loadExecutionEvidence(root, ExecutionManifest{CatalogSHA: "2d73c9a038a41cc220a9687b935bfa1e0b315b65d9bd6d3e54ddb4111972876c", Records: 73220, Artifacts: artifacts, Ledger: ledger})
+			if name == "valid" {
+				if e != nil {
+					t.Fatal(e)
+				}
+			} else if e == nil {
+				t.Fatal("runtime fixed-catalog contract accepted an omitted or disguised v3 history")
+			}
+		})
 	}
 }
 func TestRetainedV3RejectsCoherentHistoryPromotion(t *testing.T) {

@@ -27,6 +27,7 @@
     "No source body or URL is opened, no model or worker is launched, no permission is changed and nothing is installed.",
     "The queue is complete only when its separate summary is complete and its recorded queue SHA256 matches the actual bytes.",
     "Explicit site identity interpretations retain original archive locations and unverified historical upstream claims separately from catalog occurrence Git fields; historical exclusion claims still require reconfirmation.",
+    "Additional catalog Git blob/byte-count checks cover 91 independently pinned retained v3 occurrences; other legacy formats retain their recorded identity checks.",
     "Assessment records 2036 = assessed without final disposition 1844 + assessment/final intersection 192. Final records 198 include 6 final-only legacy records without assessment. The assessment/final union is 2042 occurrences; these categories are not additive independent totals."
   ]
 }

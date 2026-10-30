@@ -399,7 +399,7 @@ func skillsPublicInputsWith(c skillsPublicReviewScope, s *skillsFS, gh func(...s
 	// A fresh runtime may load newer operating instructions than its resumed
 	// author. Bind the project part to this same PUBLIC commit, not to whatever
 	// text the reviewer calls AGENTS.md. No additional task input is admitted.
-	if !repair {
+	{
 		e := paths["AGENTS.md"]
 		if e["type"] == "blob" && (e["mode"] == "100644" || e["mode"] == "100755") && conversationNumber(e["size"]) <= 256<<10 {
 			b, valid := blob(str(e["sha"]))

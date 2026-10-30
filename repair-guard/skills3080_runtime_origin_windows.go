@@ -1,8 +1,18 @@
 package main
 
-import "time"
+import (
+	"path/filepath"
+	"strconv"
+	"strings"
+	"time"
+)
 
-type skillsRuntimePriorWindow struct{ Start, End time.Time }
+type skillsRuntimePriorWindow struct {
+	Start, End time.Time
+	Job        object
+	Input      []byte
+	proof      *skillsNativeResultProof
+}
 type skillsRuntimeOrigin struct {
 	Start   time.Time
 	Windows []skillsRuntimePriorWindow
@@ -14,9 +24,36 @@ func skillsRuntimeSourceOrigin(s *skillsFS, job object, start time.Time) (skills
 	if !ok {
 		return skillsRuntimeOrigin{}, false
 	}
-	return skillsRuntimeSourceOriginWith(reg.Tasks[id], job, start, func(id string) (object, bool) {
+	origin, valid := skillsRuntimeSourceOriginWith(reg.Tasks[id], job, start, func(id string) (object, bool) {
 		return skillsReadJob(s, id)
 	})
+	if !valid {
+		return skillsRuntimeOrigin{}, false
+	}
+	for i := range origin.Windows {
+		prior := origin.Windows[i].Job
+		path := str(obj(prior["finite_review"])["spec"])
+		if !within(currentTodoSpecsRoot, path) || !strings.HasPrefix(filepath.Base(path), strconv.Itoa(id)+"-") || !currentSubworkSpecName.MatchString(filepath.Base(path)) {
+			return skillsRuntimeOrigin{}, false
+		}
+		spec, ok := s.read(path, 1<<20)
+		storedSHA := str(obj(prior["finite_review"])["spec_sha256"])
+		if !ok || !skillsDigest(storedSHA) || hashBytes(spec) != storedSHA || (prior["spec_sha256"] != nil && str(prior["spec_sha256"]) != storedSHA) {
+			return skillsRuntimeOrigin{}, false
+		}
+		_, consumer := skillsParseConsumer(spec)
+		_, review := skillsParsePublicReview(spec)
+		_, repair := skillsParsePublicRepair(spec)
+		if !consumer && !review && !repair {
+			return skillsRuntimeOrigin{}, false
+		}
+		input, ok := skillsTypedLaunchInputAt(s, skillsJobsRoot, prior, spec)
+		if !ok {
+			return skillsRuntimeOrigin{}, false
+		}
+		origin.Windows[i].Input = input
+	}
+	return origin, true
 }
 
 // The task/final window remains the current job's. This distinct source origin
@@ -84,7 +121,7 @@ func skillsRuntimeSourceOriginWith(row skillsTask, job object, start time.Time, 
 		if initialResume != "" && initialResume != thread {
 			return skillsRuntimeOrigin{}, false
 		}
-		windows = append(windows, skillsRuntimePriorWindow{began, ended})
+		windows = append(windows, skillsRuntimePriorWindow{Start: began, End: ended, Job: prior})
 		source, nextStart, matched = began, began, true
 	}
 	if !matched || initialResume != "" {

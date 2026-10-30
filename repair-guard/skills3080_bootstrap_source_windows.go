@@ -17,7 +17,7 @@ import (
 func skillsRuntimeBootstrapProjection(input io.Reader, job object, project []byte, start, end time.Time) ([]byte, bool, bool) {
 	return skillsRuntimeBootstrapProjectionWithOrigin(input, job, project, start, end, nil)
 }
-func skillsRuntimeBootstrapProjectionWithOrigin(input io.Reader, job object, project []byte, start, end time.Time, origin func() (time.Time, bool)) ([]byte, bool, bool) {
+func skillsRuntimeBootstrapProjectionWithOrigin(input io.Reader, job object, project []byte, start, end time.Time, origin func() (time.Time, bool), envelopes ...map[string]bool) ([]byte, bool, bool) {
 	scan := bufio.NewScanner(io.LimitReader(input, 4<<20))
 	scan.Buffer(make([]byte, 64<<10), 16<<20)
 	session, started, boot, state := false, false, false, false
@@ -127,11 +127,17 @@ func skillsRuntimeBootstrapProjectionWithOrigin(input io.Reader, job object, pro
 				if v.Role != "developer" || boot || state || !started {
 					return nil, true, false
 				}
+				if len(envelopes) == 1 {
+					envelopes[0][hashBytes(raw)] = true
+				}
 				continue
 			}
 			if v.Role != "user" {
 				if v.Role != "developer" || v.Type != "additional_tools" || boot || state || !started {
 					return nil, true, false
+				}
+				if len(envelopes) == 1 {
+					envelopes[0][hashBytes(raw)] = true
 				}
 				continue
 			}

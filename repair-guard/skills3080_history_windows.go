@@ -191,18 +191,31 @@ func skillsNativeWindowWithSourceOrigin(s *skillsFS, job object, proof *skillsNa
 			return nil, false
 		}
 		if proof.requireRuntimeSource || len(proof.runtimeProject) > 0 {
+			envelopes := map[string]bool{}
 			source, modern, valid := skillsRuntimeBootstrapProjectionWithOrigin(input, job, proof.runtimeProject, start, end, func() (time.Time, bool) {
 				origin, valid := resolve(start)
 				if valid {
 					proof.runtimePriorWindows = origin.Windows
 				}
 				return origin.Start, valid
-			})
+			}, envelopes)
 			if !valid || !snapshot.rewind() {
 				return nil, false
 			}
 			if modern {
 				proof.runtimeBootstrap = source
+				proof.runtimeEnvelopeRecords = envelopes
+				for i := range proof.runtimePriorWindows {
+					w := &proof.runtimePriorWindows[i]
+					if len(w.Input) == 0 {
+						return nil, false
+					}
+					w.proof = &skillsNativeResultProof{prompt: w.Input, inputOnly: true, exactInput: true, runtimeBootstrap: source, bootstrapBound: true, cwd: proof.cwd, sandbox: proof.sandbox}
+					// Only the independently projected first runtime bootstrap is
+					// an extra source message. Later historical jobs have exactly
+					// their own normally stored execution input.
+					w.proof.userSeen = !w.Start.Equal(proof.runtimePriorWindows[len(proof.runtimePriorWindows)-1].Start)
+				}
 			}
 		}
 		// Session bootstrap is independent of the job's task-input window.
@@ -335,6 +348,7 @@ type skillsNativeResultProof struct {
 	requireRuntimeSource          bool
 	runtimeSourceUsed             bool
 	runtimePriorWindows           []skillsRuntimePriorWindow
+	runtimeEnvelopeRecords        map[string]bool
 	userSeen                      bool
 	runtimePrefixClosed           bool
 	bootstrapSeen, bootstrapBound bool
@@ -348,6 +362,46 @@ func (p *skillsNativeResultProof) priorRuntimeWindow(at time.Time) bool {
 		}
 	}
 	return false
+}
+
+func (p *skillsNativeResultProof) observePriorRuntimeInput(raw []byte, at time.Time, event bool) bool {
+	for i := range p.runtimePriorWindows {
+		w := &p.runtimePriorWindows[i]
+		if at.Before(w.Start) || at.After(w.End) {
+			continue
+		}
+		if w.proof == nil || len(w.Input) == 0 {
+			return false
+		}
+		if event {
+			return w.proof.observeEvent(raw, at)
+		}
+		var e struct {
+			Payload struct {
+				Role string `json:"role"`
+			} `json:"payload"`
+		}
+		if json.Unmarshal(raw, &e) != nil {
+			return false
+		}
+		if e.Payload.Role == "developer" {
+			return p.runtimeEnvelopeRecords[hashBytes(raw)]
+		}
+		if e.Payload.Role != "user" {
+			return false
+		}
+		return w.proof.observe(raw, at)
+	}
+	return false
+}
+
+func (p *skillsNativeResultProof) priorRuntimeInputsBound() bool {
+	for _, w := range p.runtimePriorWindows {
+		if w.proof == nil || !w.proof.bound() {
+			return false
+		}
+	}
+	return true
 }
 
 func (p *skillsNativeResultProof) observeEvent(raw []byte, at time.Time) bool {

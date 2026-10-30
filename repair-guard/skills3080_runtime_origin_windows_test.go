@@ -149,6 +149,9 @@ func TestSkills3080ResumedRuntimeSourceAndCurrentTaskHaveSeparateWindows(t *test
 		t.Fatal("unproven earlier source was accepted")
 	}
 	context, contextOK := skillsRuntimeSourceOriginWith(row, job, start, func(id string) (object, bool) { j, ok := jobs[id]; return j, ok })
+	for i := range context.Windows {
+		context.Windows[i].Input = []byte("old different task")
+	}
 	if !contextOK {
 		t.Fatal("normal context")
 	}
@@ -172,31 +175,60 @@ func TestSkills3080ResumedRuntimeSourceAndCurrentTaskHaveSeparateWindows(t *test
 	defer fs.close()
 	bound := &skillsNativeResultProof{prompt: []byte("registered current task"), finalSHA: hashBytes([]byte("current original final")), exactInput: true, bootstrapSHA: hashBytes([]byte("older author policy")), runtimeProject: project, requireRuntimeSource: true, cwd: str(job["cwd"]), sandbox: "read-only", frozen: true}
 	observed, valid := skillsNativeWindowWithSourceOrigin(&fs, job, bound, end, func(at time.Time) (skillsRuntimeOrigin, bool) {
-		return skillsRuntimeSourceOriginWith(row, job, at, func(id string) (object, bool) { j, ok := jobs[id]; return j, ok })
+		c, ok := skillsRuntimeSourceOriginWith(row, job, at, func(id string) (object, bool) { j, ok := jobs[id]; return j, ok })
+		for i := range c.Windows {
+			c.Windows[i].Input = []byte("old different task")
+		}
+		return c, ok
 	})
 	if !valid || len(observed) != 1 || !bound.runtimeSourceUsed {
 		t.Fatal("frozen registered-resume proof did not reach current result")
 	}
-	for _, kind := range []string{"current", "wrong_current_input", "old_final_digest", "extra_current_user", "extra_current_final", "gap_user", "gap_event", "gap_developer", "backdated_prior_user"} {
+	for _, kind := range []string{"current", "wrong_current_input", "old_final_digest", "extra_current_user", "extra_current_final", "gap_user", "gap_event", "gap_developer", "backdated_prior_user", "inserted_prior_user", "inserted_prior_event", "inserted_prior_developer", "verified_runtime_developer", "missing_prior_input", "duplicate_prior_event"} {
 		t.Run(kind, func(t *testing.T) {
 			b := raw.Bytes()
 			prompt, final := []byte("registered current task"), []byte("current original final")
 			switch kind {
+			case "verified_runtime_developer":
+				dev := msg("developer", "", "normal runtime envelope", initial)
+				copied := append([]object{}, records[:2]...)
+				copied = append(copied, dev)
+				copied = append(copied, records[2:]...)
+				var buf bytes.Buffer
+				for _, v := range copied {
+					x, _ := json.Marshal(v)
+					buf.Write(x)
+					buf.WriteByte('\n')
+				}
+				b = buf.Bytes()
+			case "duplicate_prior_event":
+				at := initial.Add(time.Second)
+				v := object{"type": "event_msg", "timestamp": at.Format(time.RFC3339Nano), "payload": object{"type": "user_message", "message": "old different task", "images": []any{}, "local_images": []any{}, "text_elements": []any{}}}
+				x, _ := json.Marshal(v)
+				firstCurrent, _ := json.Marshal(records[7])
+				boundary := bytes.Index(b, firstCurrent)
+				if boundary < 0 {
+					t.Fatal("current boundary")
+				}
+				prefix := append([]byte{}, b[:boundary]...)
+				prefix = append(prefix, append(x, '\n')...)
+				prefix = append(prefix, append(x, '\n')...)
+				b = append(prefix, b[boundary:]...)
 			case "wrong_current_input":
 				prompt = []byte("unregistered replacement")
 			case "old_final_digest":
 				final = []byte("old different final")
-			case "gap_user", "gap_developer", "backdated_prior_user", "gap_event":
+			case "gap_user", "gap_developer", "backdated_prior_user", "gap_event", "inserted_prior_user", "inserted_prior_event", "inserted_prior_developer":
 				at := start.Add(-2 * time.Hour)
 				role := "user"
-				if kind == "gap_developer" {
+				if kind == "gap_developer" || kind == "inserted_prior_developer" {
 					role = "developer"
 				}
-				if kind == "backdated_prior_user" {
-					at = initial.Add(time.Second)
+				if kind == "backdated_prior_user" || strings.HasPrefix(kind, "inserted_prior_") {
+					at = initial.Add(3 * time.Second)
 				}
 				value := msg(role, "", "unregistered outside task", at)
-				if kind == "gap_event" {
+				if kind == "gap_event" || kind == "inserted_prior_event" {
 					value = object{"type": "event_msg", "timestamp": at.Format(time.RFC3339Nano), "payload": object{"type": "user_message", "message": "unregistered outside task", "images": []any{}, "local_images": []any{}, "text_elements": []any{}}}
 				}
 				extra, _ := json.Marshal(value)
@@ -220,9 +252,20 @@ func TestSkills3080ResumedRuntimeSourceAndCurrentTaskHaveSeparateWindows(t *test
 				extra, _ := json.Marshal(msg(role, phase, text, start.Add(3*time.Second)))
 				b = append(append([]byte{}, b...), append(extra, '\n')...)
 			}
-			proof := &skillsNativeResultProof{prompt: prompt, finalSHA: hashBytes(final), exactInput: true, bootstrapSHA: hashBytes([]byte("older author policy")), runtimeBootstrap: source, runtimeSourceUsed: true, runtimePriorWindows: context.Windows, bootstrapBound: true, cwd: str(job["cwd"]), sandbox: "read-only"}
+			envelope := map[string]bool{}
+			_, _, projected := skillsRuntimeBootstrapProjectionWithOrigin(bytes.NewReader(b), job, project, start, end, origin, envelope)
+			if kind == "verified_runtime_developer" && !projected {
+				t.Fatal("normal initial runtime developer projection")
+			}
+			proof := &skillsNativeResultProof{prompt: prompt, finalSHA: hashBytes(final), exactInput: true, bootstrapSHA: hashBytes([]byte("older author policy")), runtimeBootstrap: source, runtimeSourceUsed: true, runtimePriorWindows: append([]skillsRuntimePriorWindow{}, context.Windows...), runtimeEnvelopeRecords: envelope, bootstrapBound: true, cwd: str(job["cwd"]), sandbox: "read-only"}
+			if kind == "missing_prior_input" {
+				proof.runtimePriorWindows[0].Input = nil
+			}
+			for i := range proof.runtimePriorWindows {
+				proof.runtimePriorWindows[i].proof = &skillsNativeResultProof{prompt: proof.runtimePriorWindows[i].Input, inputOnly: true, exactInput: true, runtimeBootstrap: source, bootstrapBound: true, cwd: str(job["cwd"]), sandbox: "read-only"}
+			}
 			_, ok := skillsNativeProjectionBound(bytes.NewReader(b), id, str(job["cwd"]), start, end, proof)
-			if ok != (kind == "current") {
+			if ok != (kind == "current" || kind == "verified_runtime_developer") {
 				t.Fatalf("current task/final isolation %s accepted=%v", kind, ok)
 			}
 		})

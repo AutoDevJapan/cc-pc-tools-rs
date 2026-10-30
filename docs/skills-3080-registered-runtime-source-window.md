@@ -11,7 +11,11 @@ sourceの開始は、正常登録された同じToDoの履歴から導く。
 first_started_atの自己申告や任意のbootstrap hashだけで、過去のsourceを資格化しない。
 
 runtimeが記録した初回のsource・originator・既知CLI版・turn・full world_state・公開project blobの一致は維持する。
-登録済みの過去jobの窓に属する入力を、今回の共通指示や作成・閲覧の権限として継承しない。
+過去jobの時刻窓だけを、任意の先行入力の資格にしない。
+元jobの正常なfinite reviewに保存されたspec path・hash、launch receipt・登録元promptと
+execution inputを照合し、各過去窓のuserと対応するeventもその正規入力へ一意に結ぶ。
+初回developer envelopeは、独立したruntime source検証で観測した同bufferの記録だけを使う。
+これらの過去入力を、今回の共通指示や作成・閲覧の権限として継承しない。
 今回の登録済み入力・現在model・final digestは、今回jobだけの窓で確認する。
 job間の未登録指示、今回の多重user/final、今回の記録より後へ時刻を戻して追記した過去userも拒否する。
 

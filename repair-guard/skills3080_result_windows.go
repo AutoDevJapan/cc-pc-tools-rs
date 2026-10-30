@@ -671,7 +671,7 @@ func skillsNativeProjectionBound(input io.Reader, id, cwd string, start, end tim
 					var v struct {
 						Type string `json:"type"`
 					}
-					if json.Unmarshal(envelope.Payload, &v) != nil || (v.Type == "user_message" && (currentWindowSeen || !proof.priorRuntimeWindow(at))) {
+					if json.Unmarshal(envelope.Payload, &v) != nil || (v.Type == "user_message" && (currentWindowSeen || !proof.observePriorRuntimeInput(raw, at, true))) {
 						return nil, false
 					}
 				}
@@ -694,7 +694,7 @@ func skillsNativeProjectionBound(input io.Reader, id, cwd string, start, end tim
 					var header struct {
 						Role string `json:"role"`
 					}
-					if json.Unmarshal(envelope.Payload, &header) != nil || (header.Role != "" && header.Role != "assistant" && (currentWindowSeen || !proof.priorRuntimeWindow(at))) {
+					if json.Unmarshal(envelope.Payload, &header) != nil || (header.Role != "" && header.Role != "assistant" && (currentWindowSeen || !proof.observePriorRuntimeInput(raw, at, false))) {
 						return nil, false
 					}
 				}
@@ -774,7 +774,7 @@ func skillsNativeProjectionBound(input io.Reader, id, cwd string, start, end tim
 			return nil, false
 		}
 	}
-	return out, scanner.Err() == nil && session && len(out) > 0 && (proof == nil || proof.bound())
+	return out, scanner.Err() == nil && session && len(out) > 0 && (proof == nil || (proof.bound() && proof.priorRuntimeInputsBound()))
 }
 func skillsResultID(r skillsResultRequest) bool {
 	m := currentSubworkJobName.FindStringSubmatch(r.Job)

@@ -112,6 +112,25 @@ func TestCurrentConversationActorPreservesOriginalAndRetry(t *testing.T) {
 	}
 }
 
+func TestCurrentConversationActorRejectsNonWaitingTrackerBeforeSending(t *testing.T) {
+	for _, status := range []string{"todo", "doing"} {
+		t.Run(status, func(t *testing.T) {
+			f := currentActorTest(t, false)
+			f.mutate(t, 3264, func(row map[string]any) { row["status"] = status })
+			before, _ := os.ReadFile(f.r.TodoPath)
+			_, err := f.r.conversationAsk(context.Background(), f.input)
+			var reason currentActorRejection
+			if !errors.As(err, &reason) || string(reason) != "origin_not_waiting" {
+				t.Fatalf("tracker must be ready for the full reply before sending: %v", err)
+			}
+			after, _ := os.ReadFile(f.r.TodoPath)
+			if f.posts != 0 || string(before) != string(after) {
+				t.Fatal("inconsistent tracker sent a question or changed tasks")
+			}
+		})
+	}
+}
+
 func TestCurrentConversationActorRejectsChangedSourceScopeAndStops(t *testing.T) {
 	for _, kind := range []string{"actor", "origin", "project", "root", "actor-spec", "origin-spec", "source-input", "source-stop", "actor-stop", "origin-stop", "job", "repository", "unavailable-input", "body", "decision"} {
 		t.Run(kind, func(t *testing.T) {
@@ -408,6 +427,49 @@ func TestCurrentConversationActorNativeFullReplyReachesTrackerAndWorker(t *testi
 		if strings.Count(row.Note, "<discord-owner-answer>") != 1 {
 			t.Fatal("reply duplicated")
 		}
+	}
+}
+
+func TestCurrentConversationActorNativeAnswerReleasesOnlyItsQuestionHold(t *testing.T) {
+	f := currentActorTest(t, true)
+	f.mutate(t, 3350, func(row map[string]any) { delete(row, "wait_on"); row["status"] = "todo" })
+	q := f.ask(t)
+	f.q = q
+	actor, err := f.r.todo(3350)
+	if err != nil || q.Phase != "waiting" || q.WaitDeferred || actor.Status != "block" || len(actor.QuestionWait) == 0 {
+		t.Fatal("normal ask did not establish the exact worker question hold", err)
+	}
+	base := f.r.Run
+	answers := 0
+	f.r.Run = func(ctx context.Context, path string, args ...string) (string, error) {
+		if path == receivedInputCLI {
+			t.Fatal("posted question hold must use its retained proof")
+		}
+		if path == conversationTodo && len(args) > 0 && args[0] == "question-answer" {
+			answers++
+		}
+		return base(ctx, path, args...)
+	}
+	reply := f.reply(t, 8, "a：同じ画像で進めてください。\n回答全文を保持します。")
+	f.replies[0].Todo = 3264
+	health := Health{}
+	f.r.processConversations(context.Background(), &health)
+	actor, err = f.r.todo(3350)
+	origin, originErr := f.r.todo(3264)
+	if len(health.Errors) != 0 || err != nil || originErr != nil || answers != 1 || actor.Status != "todo" || len(actor.QuestionWait) != 0 || origin.Status != "wait" || canonicalHash(origin.WaitOn) != canonicalHash([]uint64{3350}) || len(origin.Jobs) != 0 {
+		t.Fatal("answer lost the canonical hold or tracker dependency", health.Errors, err, originErr)
+	}
+	for _, row := range []*TodoRow{origin, actor} {
+		if strings.Count(row.Note, "<discord-owner-answer>") != 1 || !strings.Contains(row.Note, reply.Body) || !strings.Contains(row.Note, "author_id="+reply.Author) || !strings.Contains(row.Note, "<discord-original-question>") {
+			t.Fatal("exact question or owner reply missing", row.ID)
+		}
+	}
+	if !strings.Contains(actor.conversationInstruction(), reply.Body) || f.r.State.Requests[reply.Message].Phase != "conversation_reply_delivered" {
+		t.Fatal("released worker did not receive the full answer instruction")
+	}
+	f.r.processConversations(context.Background(), &Health{})
+	if answers != 1 || f.posts != 1 {
+		t.Fatal("retained question or canonical answer was repeated")
 	}
 }
 

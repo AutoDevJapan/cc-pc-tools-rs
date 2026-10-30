@@ -109,6 +109,11 @@ func (r *Runner) checkCurrentConversationActor(ctx context.Context, origin, acto
 	if reservedAnchor != nil && (readonly || actor.Status == "block") {
 		return nil, currentActorRejection("reservation_held")
 	}
+	// The original tracker must remain ready to retain the same full answer.
+	// Detect an inconsistent state before reserving or sending the question.
+	if !readonly && origin.Status != "wait" {
+		return nil, currentActorRejection("origin_not_waiting")
+	}
 	if !currentConversationPair(origin.ID, actor.ID, origin.Project) || actor.Project != origin.Project || actor.conversationRoot != origin.conversationRoot || !r.repairGuard(ctx, actor.Scheduler.Worktree) || !r.currentConversationRepository(ctx, actor.conversationRoot) {
 		return nil, currentActorRejection("current_scope")
 	}

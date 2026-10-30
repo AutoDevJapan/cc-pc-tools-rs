@@ -3,7 +3,7 @@
   "issue": "https://github.com/AutoDevJapan/cc-pc-tools-rs/issues/283",
   "observed_at": "2026-10-30T21:08:30.6921439+09:00",
   "phase_a": "partial; 647 additional text shapes held by execution review",
-  "phase_b": "新規164・既存統合19・最終198を保持し、可視一次本文54代表と、保存済み手順の新しい22評価を同じ全件台帳に記録した。新22件のraw/伏字付き表示・未保存/未読支持・旧読取の再利用と個別noticeを区別する。新しい許諾・採否・中央書込0。指定16資料の残候補を継続する。",
+  "phase_b": "新規164・既存統合19・最終198を保持し、保存済み手順の追加163評価を記録した。既存評価との重複1件を除き、全73,220候補の評価記録は1,947件。伏字・未読支持・文字コード例外・旧読取の再利用と個別noticeを区別し、新しい許諾・採否・中央書込みは0。指定16資料の残作業を継続する。",
   "catalog_sha256": "2d73c9a038a41cc220a9687b935bfa1e0b315b65d9bd6d3e54ddb4111972876c",
   "source_count": 16,
   "fixed_public_repos": [
@@ -3989,6 +3989,72 @@
       "The queue is complete only when its separate summary is complete and its recorded queue SHA256 matches the actual bytes.",
       "Explicit site identity interpretations retain original archive locations and unverified historical upstream claims separately from catalog occurrence Git fields; historical exclusion claims still require reconfirmation.",
       "Assessment records 1727 = assessed without final disposition 1535 + assessment/final intersection 192. Final records 198 include 6 final-only legacy records without assessment. The assessment/final union is 1733 occurrences; these categories are not additive independent totals."
+    ]
+  },
+  "additional_retained_procedure_assessments": {
+    "file": "skills-3080-retained-procedure-assessments-v2.json",
+    "definition": "skills-3080-retained-procedure-assessments-v2.md",
+    "sha256": "8c3a35de7bfc536fc676f03f0757514f0c683fa65a8818f6a08572724951a08f",
+    "assessment_records": 163,
+    "already_assessed_occurrences": 1,
+    "new_unique_assessment_occurrences": 162,
+    "counts": {
+      "masked_primary_records": 112,
+      "primary_physical_lines": 47861,
+      "primary_records": 163,
+      "primary_withheld_lines": 760,
+      "raw_primary_records": 51,
+      "saved_support_metadata": 1280,
+      "support_records": 1600,
+      "support_state_counts": {
+        "direct_masked_full": 191,
+        "direct_raw_full": 153,
+        "exact_bytes_reuse": 211,
+        "ordered_full_diff": 1,
+        "saved_unread": 724,
+        "unsaved": 320
+      },
+      "unsaved_support_metadata": 320
+    },
+    "initial_display_limit_contexts": 6,
+    "encoding_exceptions": 1,
+    "old22_record_and_order_unchanged": true,
+    "all163_seven_source_fields_match_full_pinned_catalog": true,
+    "new_copy_grants": 0,
+    "new_final_dispositions": 0,
+    "central_operations": 0,
+    "whole16_complete": false
+  },
+  "current_execution_queue": {
+    "state": "complete",
+    "catalog_sha256": "2d73c9a038a41cc220a9687b935bfa1e0b315b65d9bd6d3e54ddb4111972876c",
+    "manifest_sha256": "32d9ef1825f1e7acefcd20b1b674ddc02a1fd835fc11051418da37ecf4438643",
+    "queue_sha256": "99b18181e5232ef68fb061d5c8ef64a91e658628f54123af4d6928810c7ab80c",
+    "occurrences": 73220,
+    "occurrences_with_assessment_records": 1947,
+    "recorded_final_occurrences": 198,
+    "occurrences_with_assessment_and_final_records": 192,
+    "final_records_without_assessment_record": 6,
+    "occurrences_with_assessment_or_final_records": 1953,
+    "stages": {
+      "assessed_needs_current_disposition": 1755,
+      "held_body_unavailable": 428,
+      "held_execution_review": 647,
+      "needs_semantic_and_individual_rights_review": 70192,
+      "recorded_final_disposition": 198
+    },
+    "recorded_final_dispositions": {
+      "excluded": 15,
+      "installed_new_adaptation": 164,
+      "integrated_existing": 19
+    },
+    "limits": [
+      "An assessment reference is not a full raw read, licence grant, current adoption or completed acceptance; consult its recorded actor, scope and state.",
+      "Equal body bytes do not transfer source ownership, individual permission or support-resource review.",
+      "No source body or URL is opened, no model or worker is launched, no permission is changed and nothing is installed.",
+      "The queue is complete only when its separate summary is complete and its recorded queue SHA256 matches the actual bytes.",
+      "Explicit site identity interpretations retain original archive locations and unverified historical upstream claims separately from catalog occurrence Git fields; historical exclusion claims still require reconfirmation.",
+      "Assessment records 1947 = assessed without final disposition 1755 + assessment/final intersection 192. Final records 198 include 6 final-only legacy records without assessment. The assessment/final union is 1953 occurrences; these categories are not additive independent totals."
     ]
   }
 }

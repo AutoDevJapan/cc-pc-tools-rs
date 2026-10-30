@@ -236,6 +236,14 @@ func loadExecutionEvidence(root string, m ExecutionManifest) (ExecutionEvidence,
 				return e, err
 			}
 		}
+		if object, ok := decoded.(map[string]any); ok && (object["domain"] == retainedProcedureV2Domain || pin.File == retainedProcedureV2File) {
+			if pin.File != retainedProcedureV2File {
+				return e, errors.New("additional retained procedure journal filename differs")
+			}
+			if err := validateRetainedProcedureV2(object, pin.Rows); err != nil {
+				return e, err
+			}
+		}
 		var a struct {
 			Entries []executionIdentity `json:"entries"`
 		}

@@ -37,9 +37,13 @@ impl Context {
                 "subwork continuation model differs from preparation",
             ));
         }
-        for key in continuation::RETRY_FIELDS {
-            if !source[key].is_null() {
-                job[key] = source[key].clone();
+        if proof["quota_retry"].is_object() {
+            cc_job_policy::quota_retry::inherit(job, &source, &proof["quota_retry"]);
+        } else {
+            for key in continuation::RETRY_FIELDS {
+                if !source[key].is_null() {
+                    job[key] = source[key].clone();
+                }
             }
         }
         job["resume_session"] = Value::Null;
@@ -71,7 +75,11 @@ impl Context {
             || (job["capacity_account_selector"].is_string()
                 && !cc_job_policy::quota_retry::current_available(job, inventory, self.rt.epoch()))
             || (job["subwork_continuation_initial_admitted"] != true
-                && (!continuation::inherited(job, &source) || job["model"] != proof["model"]))
+                && (!(if proof["quota_retry"].is_object() {
+                    cc_job_policy::quota_retry::inherited(job, &source, &proof["quota_retry"])
+                } else {
+                    continuation::inherited(job, &source)
+                }) || job["model"] != proof["model"]))
             || !job["resume_session"].is_null()
         {
             return Err(Error::new(

@@ -130,7 +130,7 @@ pub enum Command {
         #[arg(long)]
         repair_owner_wait: bool,
     },
-    /// Accept the current parent's new finite contract after a completed dependency.
+    /// Accept the current parent's finite contract from its latest result or older quota source.
     ContinueSubwork {
         id: i64,
         #[arg(long)]

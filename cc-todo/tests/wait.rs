@@ -6,6 +6,17 @@ use std::path::Path;
 fn paths() -> Paths {
     Paths::at(Path::new("unused"), Path::new("unused/jobs"))
 }
+#[test]
+fn dependency_release_remembers_the_worker_it_retires() {
+    let mut d = db();
+    d["items"][0]["scheduler"]["last_job"] = json!("older-quota");
+    execute(&mut d, &Command::Wait { id: 1, on: vec![2], progress: None }, &paths()).unwrap();
+    execute(&mut d, &Command::Done { id: 2, note: String::new() }, &paths()).unwrap();
+    assert_eq!(d["items"][0]["status"], "todo");
+    assert!(d["items"][0]["scheduler"]["job"].is_null());
+    assert_eq!(d["items"][0]["scheduler"]["last_job"], "old");
+    assert_eq!(d["items"][0]["jobs"], json!(["old"]));
+}
 fn db() -> Value {
     json!({"projects":{"demo":"C:/repo"},"items":[
         {"id":1,"project":"demo","title":"依存元","status":"doing","jobs":["old"],"note":"既存メモ","progress":60,"spec":"s.md","dispatchable":true,

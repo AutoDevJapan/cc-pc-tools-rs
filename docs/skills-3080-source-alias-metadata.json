@@ -10,10 +10,9 @@
     "same_SHA_different_or_missing_URL": 5,
     "same_URL_and_SHA": 4
   },
-  "definition": "Complete metadata pass over all179 accepted source occurrences; effective_attempt SHA and read state take precedence exactly as the existing catalog reader. catalog_original_sha256 separately preserves the original top-level field. Same fixed canonical URL and recorded saved primary SHA is a lead for reusing an already accepted workflow and individual notice, not blanket rights, package equality, current central availability or final adoption. Keep site Git tuple empty; different/missing URLs require separate provenance and rights review. No source body, service or credential is read/executed.",
+  "definition": "Complete metadata comparison of179 accepted source occurrences against the73220-row fixed catalog. effective_attempt determines the saved primary SHA/read state while catalog_original_sha256 preserves the original field. Matching URL and primary bytes identify possible reuse of an existing workflow and its own notice; they do not transfer package or service rights. Site Git fields remain unknown and different URLs require separate provenance review.",
   "domain": "skills3080-current179-alias-metadata-only-v2",
   "effective_attempt_precedence_matches_current_catalog_reader": true,
-  "job": "20261030-095653-todo-3080",
   "matches": [
     {
       "unclassified_occurrence": {
@@ -572,7 +571,6 @@
   "new_final_dispositions": 0,
   "new_permissions": 0,
   "prior_final_occurrences": 194,
-  "prior_incomplete_top_level_only_projection_retained": "current179-adopted-primary-alias-metadata095653.json",
   "same_URL_and_SHA_inventory_ids": [
     "site:cloudflare-deploy",
     "site:netlify-deploy",

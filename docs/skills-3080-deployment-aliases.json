@@ -1,18 +1,13 @@
 {
   "domain": "skills3080-existing-four-deploy-canonical-site-integrations-v1",
   "todo": 3080,
-  "actual_consumer": "20261030-095653-todo-3080",
   "aliases": 4,
   "new_Skills": 0,
   "new_central_writes": 0,
   "final_dispositions_recorded": 4,
-  "catalog_proof_sha256": "72054a8472c336c385e27b41b74c83f9965141eff1e6a81ef0ac0bb8eebc587d",
-  "current_application_sha256": "aabc9594bfa7620f68011c6e353855c04db3cca9e4a14aa3de9905de6cdd7399",
   "current_instructions_files": 8,
   "current_instruction_bytes": 13862,
   "fresh_discovery": {
-    "file": "discovery-deploy4-current8-095653.json",
-    "sha256": "f960eb009685b028c9aa7f3c4d1151da1ef0428f77674438bd007c8d5c0e2ac9",
     "requested": 4,
     "found": 4,
     "enabled": 4,
@@ -23,8 +18,6 @@
   },
   "creation_manifest_commit": "2beb051cd7922d16d54044f281ccdd212bb96206",
   "creation_manifest_sha256": "f2ac5a8415c2ad119aeb8fb49d34a07c341d7036e79d65d3bb96e898a3e7e1b4",
-  "frozen_creator_review_task": 4066,
-  "frozen_creator_not_modified": true,
   "entries": [
     {
       "inventory_id": "site:cloudflare-deploy",
@@ -407,10 +400,9 @@
   "site_git_tuple_not_filled_from_upstream": true,
   "general_access_granted": false,
   "historical_continuity_proven": false,
-  "current_OS_writer": "unproved",
   "whole16_complete": false,
-  "publisher_job": "20261030-095653-todo-3080",
   "new_integrations": 4,
   "new_permissions": 0,
-  "publication_review_pending_at_recording": true
+  "publication_review_pending_at_recording": true,
+  "source_bundle_unchanged": true
 }

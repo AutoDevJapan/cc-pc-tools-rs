@@ -2,7 +2,7 @@ package main
 
 import "testing"
 
-const canonicalDeployFourFile = "skills-3080-deploy4-site-integrations095653.json"
+const canonicalDeployFourFile = "skills-3080-deployment-aliases.json"
 
 var canonicalDeployFourTargets = map[string]string{
 	"site:cloudflare-deploy":    "cloudflare-deploy",
@@ -13,14 +13,14 @@ var canonicalDeployFourTargets = map[string]string{
 
 func validateCanonicalDeployFour(v, manifest, ledger map[string]any) error {
 	if err := next4Fields(v, map[string]any{
-		"todo": float64(3080), "publisher_job": "20261030-095653-todo-3080",
+		"todo":    float64(3080),
 		"aliases": float64(4), "new_integrations": float64(4), "final_dispositions_recorded": float64(4),
 		"current_instructions_files": float64(8), "current_instruction_bytes": float64(13862),
 		"new_Skills": float64(0), "new_central_writes": float64(0), "new_permissions": float64(0),
-		"creation_manifest_sha256":   "f2ac5a8415c2ad119aeb8fb49d34a07c341d7036e79d65d3bb96e898a3e7e1b4",
-		"frozen_creator_review_task": float64(4066), "frozen_creator_not_modified": true,
+		"creation_manifest_sha256":                "f2ac5a8415c2ad119aeb8fb49d34a07c341d7036e79d65d3bb96e898a3e7e1b4",
+		"source_bundle_unchanged":                 true,
 		"site_git_tuple_not_filled_from_upstream": true, "general_access_granted": false,
-		"historical_continuity_proven": false, "current_OS_writer": "unproved", "whole16_complete": false,
+		"historical_continuity_proven": false, "whole16_complete": false,
 	}); err != nil {
 		return err
 	}
@@ -72,7 +72,7 @@ func TestCanonicalDeployFourReusesEachExistingSourceAndOwnNotice(t *testing.T) {
 
 func TestDeployFourComesFromCompleteEffectiveMetadataJoin(t *testing.T) {
 	var proof map[string]any
-	if travel3Digest(loadPublicReceipt(t, "skills-3080-adopted179-alias-metadata095653.json", &proof)) != "5ab65d102da309443fc5623e231c2ec06191dfafaaafea8341d112118e6e3aba" {
+	if travel3Digest(loadPublicReceipt(t, "skills-3080-source-alias-metadata.json", &proof)) != "edd507e80992df08519fbefdf3c256f253fce807013d44ab5ac65658e3403f3a" {
 		t.Fatal("independent complete metadata projection changed")
 	}
 	if err := next4Fields(proof, map[string]any{"catalog_rows": float64(73220), "accepted_occurrences": float64(179), "matching_unclassified_occurrences": float64(9), "effective_attempt_precedence_matches_current_catalog_reader": true, "source_body_opens": float64(0), "new_permissions": float64(0), "new_final_dispositions": float64(0), "new_central_writes": float64(0), "whole16_complete": false}); err != nil {

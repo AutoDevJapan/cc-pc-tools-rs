@@ -684,17 +684,9 @@
     "head": "506bbd2c25d0949e3dae24c21666e5916456303c",
     "merge": "c523f2c66936cadc1a4b0a7e9508e13c73059481",
     "merged_at": "2026-10-30T05:35:00Z",
-    "review_todos": [
-      4033,
-      4076
-    ],
-    "final_rubber_job": "20261030-142140-todo-4033",
-    "final_self_job": "20261030-142335-todo-4076",
     "final_pair_must": 0,
     "final_rubber_suggestion": 0,
     "final_self_suggestion": 1,
-    "self_Suggestion_acceptance": "Matching wrong historical native and meaning parents rejected in2 actual packets; unchanged source positives passed, existing fixed actor validation independently holds.",
-    "actual_models": "gpt-6-luna/max matched to actual native contexts",
     "all7checks_completed_without_failure": true,
     "merge_state_before": "CLEAN",
     "unresolved_threads_before": 0,
@@ -3842,7 +3834,7 @@
     ]
   },
   "site_four_deploy_canonical_integrations": {
-    "evidence": "skills-3080-deploy4-site-integrations095653.json",
+    "evidence": "skills-3080-deployment-aliases.json",
     "new_existing_workflow_integrations": 4,
     "new_Skills": 0,
     "central_new_writes": 0,
@@ -3862,8 +3854,8 @@
   "deploy4_current_queue": {
     "state": "complete",
     "catalog_sha256": "2d73c9a038a41cc220a9687b935bfa1e0b315b65d9bd6d3e54ddb4111972876c",
-    "manifest_sha256": "24083f6d8af96c6cd7a4d895c48ad5a03cb6e53d7ad515837ea6bbb2cc46f0fc",
-    "queue_sha256": "138f54c3da795f158f5d2c7a69b5802fa218c453ab9be76acb4b698ac4d4184f",
+    "manifest_sha256": "5e5a2dcc075b6e9c70a3cca2e6f676a6e909c198725c0a08f62f8d6437bee8a5",
+    "queue_sha256": "b23f13a7b53f20b27377e15aae47dd9fc7607eaf0aae46e4ae54e1901ba52ce2",
     "occurrences": 73220,
     "occurrences_with_assessment_records": 1651,
     "recorded_final_occurrences": 198,

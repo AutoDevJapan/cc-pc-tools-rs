@@ -575,14 +575,14 @@
       "rows": 12
     },
     {
-      "file": "skills-3080-deploy4-site-integrations095653.json",
-      "sha256": "94aa6adf6eddf5614fe3c561447e7a771094f2d05ef27f683ce1495069e2c863",
+      "file": "skills-3080-deployment-aliases.json",
+      "sha256": "0a18b082e9e2769f6f44dcf521362a416965844bb532d3c3fe05b188f2f4e70c",
       "rows": 4
     }
   ],
   "adoption_ledger": {
     "file": "skills-3080-adoptions.json",
-    "sha256": "82804a1e86cd1c06a7999e1ee9f4e4e171173e677abe365dcf3d77cd442e2cee",
+    "sha256": "ef9d84d04c09fda011691350b8415ff46214d580377aa6e89017fc5c6b5108c4",
     "rows": 198,
     "site_occurrence_bindings": [
       {
@@ -692,8 +692,8 @@
   "definition": "Assessment record references and existing final decisions only. No semantic/individual licence approval is inherited through equal bytes. The fixed catalog remains the complete occurrence universe; all holds are retained.",
   "append_only_ledger_publications": [
     {
-      "file": "skills-3080-deploy4-site-integrations095653.json",
-      "sha256": "94aa6adf6eddf5614fe3c561447e7a771094f2d05ef27f683ce1495069e2c863",
+      "file": "skills-3080-deployment-aliases.json",
+      "sha256": "0a18b082e9e2769f6f44dcf521362a416965844bb532d3c3fe05b188f2f4e70c",
       "rows": 4
     }
   ]

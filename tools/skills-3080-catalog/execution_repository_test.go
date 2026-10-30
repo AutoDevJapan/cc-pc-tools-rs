@@ -399,8 +399,8 @@ func TestPublishedSiteInterpretationsKeepOriginalArtifactsAndUnverifiedClaims(t 
 	var manifest ExecutionManifest
 	loadPublicReceipt(t, "skills-3080-execution-evidence.json", &manifest)
 	var originalLedger, currentLedger map[string]any
-	if travel3Digest(loadPublicReceipt(t, "skills-3080-adoptions-before-deploy4-095653.json", &originalLedger)) != proof.OriginalLedger {
-		t.Fatal("independent original ledger bytes changed")
+	if travel3Digest(loadPublicReceipt(t, "skills-3080-adoption-baseline.json", &originalLedger)) != "a37e27b03f487b5a45114f97ceb39719d5680b8b5a80f2ad62b61b9a1d4cf76a" || next4Object(originalLedger["original_source"])["sha256"] != proof.OriginalLedger {
+		t.Fatal("independent original ledger digest or source anchor changed")
 	}
 	loadPublicReceipt(t, "skills-3080-adoptions.json", &currentLedger)
 	if err := validateLedgerAppendScope(originalLedger, currentLedger, loadPublishedLedgerExtensions(t)); err != nil {
@@ -473,20 +473,27 @@ func TestPublishedSiteInterpretationsKeepOriginalArtifactsAndUnverifiedClaims(t 
 func validateAppendOnlyAdoptionLedger(original, current map[string]any) error {
 	oldEntries, oldOK := original["entries"].([]any)
 	entries, ok := current["entries"].([]any)
-	if !oldOK || !ok || len(entries) < len(oldEntries) || len(current) != len(original) {
+	if original["domain"] != "skills3080-adoption-baseline-digests-v1" || !oldOK || !ok || len(entries) < len(oldEntries) || original["original_ledger_key_count"] != float64(len(current)) {
 		return fmt.Errorf("original adoption ledger structure or prefix removed")
 	}
-	equal := func(a, b any) bool {
-		x, e := json.Marshal(a)
-		y, f := json.Marshal(b)
-		return e == nil && f == nil && bytes.Equal(x, y)
+	matches := func(pin, value any) bool {
+		r := next4Object(pin)
+		b, err := json.Marshal(value)
+		return err == nil && r["inventory_id"] == next4Object(value)["inventory_id"] && r["canonical_record_sha256"] == travel3Digest(b)
 	}
-	if !equal(oldEntries, entries[:len(oldEntries)]) {
-		return fmt.Errorf("historical accepted entries changed")
+	for i, pin := range oldEntries {
+		if !matches(pin, entries[i]) {
+			return fmt.Errorf("historical accepted entry changed")
+		}
 	}
-	mutable := map[string]bool{"entries": true, "installed_new": true, "integrated": true, "pending_occurrences": true, "pending_available_body_occurrences": true}
-	for key, value := range original {
-		if !mutable[key] && !equal(value, current[key]) {
+	stable, ok := original["unchanged_field_sha256"].(map[string]any)
+	if !ok || len(stable) != len(current)-6 {
+		return fmt.Errorf("complete stable ledger field digests required")
+	}
+	for key, expected := range stable {
+		value, present := current[key]
+		b, err := json.Marshal(value)
+		if !present || err != nil || travel3Digest(b) != expected {
 			return fmt.Errorf("historical ledger field changed: %s", key)
 		}
 	}
@@ -502,8 +509,14 @@ func validateAppendOnlyAdoptionLedger(original, current map[string]any) error {
 		}
 	}
 	excluded, ok := current["excluded_entries"].([]any)
-	if !ok {
+	oldExcluded, oldOK := original["excluded_entries"].([]any)
+	if !ok || !oldOK || len(excluded) != len(oldExcluded) {
 		return fmt.Errorf("historical exclusions missing")
+	}
+	for i, pin := range oldExcluded {
+		if !matches(pin, excluded[i]) {
+			return fmt.Errorf("historical exclusion changed")
+		}
 	}
 	pending := 73220 - len(entries) - len(excluded)
 	if current["installed_new"] != float64(installed) || current["integrated"] != float64(integrated) || current["pending_occurrences"] != float64(pending) || current["pending_available_body_occurrences"] != float64(pending-428-647) {
@@ -589,7 +602,7 @@ func validateLedgerAppendScope(original, current map[string]any, allowed map[str
 
 func TestAdoptionAppendKeepsHistoricalEntriesExclusionsAndActualCounters(t *testing.T) {
 	var original map[string]any
-	if travel3Digest(loadPublicReceipt(t, "skills-3080-adoptions-before-deploy4-095653.json", &original)) != "f2dddb6f978ef1b1690e54d12e855dac0df6e0b3ab40cfad2f572c8208ada4c7" {
+	if travel3Digest(loadPublicReceipt(t, "skills-3080-adoption-baseline.json", &original)) != "a37e27b03f487b5a45114f97ceb39719d5680b8b5a80f2ad62b61b9a1d4cf76a" {
 		t.Fatal("fixed original ledger changed")
 	}
 	allowed := loadPublishedLedgerExtensions(t)

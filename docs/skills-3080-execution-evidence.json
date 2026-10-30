@@ -689,5 +689,12 @@
       }
     ]
   },
-  "definition": "Assessment record references and existing final decisions only. No semantic/individual licence approval is inherited through equal bytes. The fixed catalog remains the complete occurrence universe; all holds are retained."
+  "definition": "Assessment record references and existing final decisions only. No semantic/individual licence approval is inherited through equal bytes. The fixed catalog remains the complete occurrence universe; all holds are retained.",
+  "append_only_ledger_publications": [
+    {
+      "file": "skills-3080-deploy4-site-integrations095653.json",
+      "sha256": "94aa6adf6eddf5614fe3c561447e7a771094f2d05ef27f683ce1495069e2c863",
+      "rows": 4
+    }
+  ]
 }

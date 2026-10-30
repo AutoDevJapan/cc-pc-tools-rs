@@ -403,7 +403,7 @@ func TestPublishedSiteInterpretationsKeepOriginalArtifactsAndUnverifiedClaims(t 
 		t.Fatal("independent original ledger bytes changed")
 	}
 	loadPublicReceipt(t, "skills-3080-adoptions.json", &currentLedger)
-	if err := validateAppendOnlyAdoptionLedger(originalLedger, currentLedger); err != nil {
+	if err := validateLedgerAppendScope(originalLedger, currentLedger, loadPublishedLedgerExtensions(t)); err != nil {
 		t.Fatal(err)
 	}
 	if !proof.Unverified || len(proof.Artifacts) != 4 || len(proof.Final) != 6 || len(proof.Catalog) != 14 {
@@ -512,12 +512,88 @@ func validateAppendOnlyAdoptionLedger(original, current map[string]any) error {
 	return nil
 }
 
+// New ledger entries must come from explicitly listed, hash-pinned result
+// artifacts. Later accepted cohorts extend data in this list rather than
+// loosening the original prefix or adding another hard-coded count to Go.
+func loadPublishedLedgerExtensions(t *testing.T) map[string][2]string {
+	t.Helper()
+	var descriptor struct {
+		Artifacts    []ExecutionArtifact `json:"assessment_artifacts"`
+		Publications []ExecutionArtifact `json:"append_only_ledger_publications"`
+	}
+	loadPublicReceipt(t, "skills-3080-execution-evidence.json", &descriptor)
+	if len(descriptor.Publications) == 0 {
+		t.Fatal("explicit published ledger extensions required")
+	}
+	allowed := map[string][2]string{}
+	files := map[string]bool{}
+	for _, pin := range descriptor.Publications {
+		if files[pin.File] || pin.Rows < 1 {
+			t.Fatal("duplicate or empty ledger extension artifact")
+		}
+		files[pin.File] = true
+		matched := 0
+		for _, actual := range descriptor.Artifacts {
+			if actual.File == pin.File {
+				if actual.SHA != pin.SHA || actual.Rows != pin.Rows {
+					t.Fatal("ledger extension differs from independently pinned assessment artifact")
+				}
+				matched++
+			}
+		}
+		if matched != 1 {
+			t.Fatal("ledger extension not uniquely registered in assessment evidence")
+		}
+		var publication struct {
+			Entries []struct {
+				ID          string `json:"inventory_id"`
+				Target      string `json:"target"`
+				Disposition string `json:"disposition"`
+				Final       bool   `json:"final_disposition_recorded"`
+			} `json:"entries"`
+		}
+		if travel3Digest(loadPublicReceipt(t, pin.File, &publication)) != pin.SHA || len(publication.Entries) != pin.Rows {
+			t.Fatal("complete published ledger extension bytes/count changed")
+		}
+		for _, entry := range publication.Entries {
+			if entry.ID == "" || entry.Target == "" || !entry.Final || (entry.Disposition != "installed_new_adaptation" && entry.Disposition != "integrated_existing") || allowed[entry.ID] != ([2]string{}) {
+				t.Fatal("ledger extension identity missing, repeated or unfinished")
+			}
+			allowed[entry.ID] = [2]string{entry.Target, entry.Disposition}
+		}
+	}
+	return allowed
+}
+
+func validateLedgerAppendScope(original, current map[string]any, allowed map[string][2]string) error {
+	if err := validateAppendOnlyAdoptionLedger(original, current); err != nil {
+		return err
+	}
+	prior := original["entries"].([]any)
+	tail := current["entries"].([]any)[len(prior):]
+	if len(tail) != len(allowed) {
+		return fmt.Errorf("ledger extension includes missing or unreviewed occurrences")
+	}
+	seen := map[string]bool{}
+	for _, value := range tail {
+		row := next4Object(value)
+		id, _ := row["inventory_id"].(string)
+		want, ok := allowed[id]
+		if !ok || seen[id] || row["target"] != want[0] || row["disposition"] != want[1] {
+			return fmt.Errorf("ledger extension differs from fixed published result scope")
+		}
+		seen[id] = true
+	}
+	return nil
+}
+
 func TestAdoptionAppendKeepsHistoricalEntriesExclusionsAndActualCounters(t *testing.T) {
 	var original map[string]any
 	if travel3Digest(loadPublicReceipt(t, "skills-3080-adoptions-before-deploy4-095653.json", &original)) != "f2dddb6f978ef1b1690e54d12e855dac0df6e0b3ab40cfad2f572c8208ada4c7" {
 		t.Fatal("fixed original ledger changed")
 	}
-	for _, change := range []string{"valid", "historical accepted target changed", "historical exclusion removed", "invented pending count"} {
+	allowed := loadPublishedLedgerExtensions(t)
+	for _, change := range []string{"valid", "historical accepted target changed", "historical exclusion removed", "invented pending count", "additional held source with matching counters"} {
 		t.Run(change, func(t *testing.T) {
 			var current map[string]any
 			loadPublicReceipt(t, "skills-3080-adoptions.json", &current)
@@ -528,8 +604,19 @@ func TestAdoptionAppendKeepsHistoricalEntriesExclusionsAndActualCounters(t *test
 				current["excluded_entries"] = current["excluded_entries"].([]any)[1:]
 			case "invented pending count":
 				current["pending_occurrences"] = float64(0)
+			case "additional held source with matching counters":
+				row := map[string]any{}
+				for key, value := range next4Object(current["entries"].([]any)[179]) {
+					row[key] = value
+				}
+				row["inventory_id"] = "site:notion-meeting-intelligence-88fc92"
+				row["target"] = "notion-meeting-intelligence"
+				current["entries"] = append(current["entries"].([]any), row)
+				current["integrated"] = current["integrated"].(float64) + 1
+				current["pending_occurrences"] = current["pending_occurrences"].(float64) - 1
+				current["pending_available_body_occurrences"] = current["pending_available_body_occurrences"].(float64) - 1
 			}
-			err := validateAppendOnlyAdoptionLedger(original, current)
+			err := validateLedgerAppendScope(original, current, allowed)
 			if (err == nil) != (change == "valid") {
 				t.Fatalf("%s: %v", change, err)
 			}

@@ -13,6 +13,10 @@ const visiblePrimaryJournalFile = "skills-3080-visible-primary-assessments.json"
 
 func visibleJournalNumber(value int64) json.Number { return json.Number(strconv.FormatInt(value, 10)) }
 
+func visibleJournalGitHubID(id string) bool {
+	return strings.HasPrefix(id, "github:") && validHex(strings.TrimPrefix(id, "github:"), 64)
+}
+
 func visibleJournalKeys(v map[string]any, keys ...string) bool {
 	if len(v) != len(keys) {
 		return false
@@ -45,6 +49,7 @@ func validateVisiblePrimaryJournal(v map[string]any, expectedRows int) error {
 	seen := map[string]bool{}
 	seenMembers := map[string]bool{}
 	seenBodies := map[string]bool{}
+	seenBlobs := map[string]bool{}
 	members := int64(0)
 	for _, value := range rows {
 		r, ok := value.(map[string]any)
@@ -60,17 +65,18 @@ func validateVisiblePrimaryJournal(v map[string]any, expectedRows int) error {
 		path, _ := r["path"].(string)
 		sha, _ := r["source_sha256"].(string)
 		blob, _ := r["git_blob"].(string)
-		if !strings.HasPrefix(id, "github:") || seen[id] || !executionRepositoryName.MatchString(repo) || !validHex(commit, 40) || !validHex(sha, 64) || !validHex(blob, 40) || !evidencePath(path) {
+		if !visibleJournalGitHubID(id) || seen[id] || !executionRepositoryName.MatchString(repo) || !validHex(commit, 40) || !validHex(sha, 64) || !validHex(blob, 40) || !evidencePath(path) {
 			return fmt.Errorf("fixed unique source tuple required")
 		}
 		seen[id] = true
 		if size, ok := parent19PhysicalNumber(r["bytes"]); !ok || size == 0 {
 			return fmt.Errorf("actual primary byte count required")
 		}
-		if seenBodies[sha] {
+		if seenBodies[sha] || seenBlobs[blob] {
 			return fmt.Errorf("one representative group required per primary body")
 		}
 		seenBodies[sha] = true
+		seenBlobs[blob] = true
 		parts := strings.Split(path, "/")
 		for i := range parts {
 			parts[i] = url.PathEscape(parts[i])
@@ -165,7 +171,7 @@ func validateVisiblePrimaryJournal(v map[string]any, expectedRows int) error {
 			mrepo, _ := m["repo"].(string)
 			mc, _ := m["commit"].(string)
 			mp, _ := m["path"].(string)
-			if mid == "" || memberIDs[mid] || seenMembers[mid] || !executionRepositoryName.MatchString(mrepo) || !validHex(mc, 40) || !evidencePath(mp) || m["sha256"] != sha || m["git_blob"] != blob || m["bytes"] != r["bytes"] {
+			if !visibleJournalGitHubID(mid) || memberIDs[mid] || seenMembers[mid] || !executionRepositoryName.MatchString(mrepo) || !validHex(mc, 40) || !evidencePath(mp) || m["sha256"] != sha || m["git_blob"] != blob || m["bytes"] != r["bytes"] {
 				return fmt.Errorf("same primary bytes and fixed member identity required")
 			}
 			memberIDs[mid] = true
@@ -224,7 +230,7 @@ func TestVisiblePrimaryJournalPreservesHiddenLinesPendingRightsAndMemberUnits(t 
 		}
 		return v
 	}
-	for _, change := range []string{"valid", "raw credit", "range gap", "repeated hidden line", "hidden count changed", "rights granted", "member omitted", "member rights transfer", "source URL changed", "source identity repeated", "member repeated across entries", "representative body repeated", "operational actor exposed", "member actor exposed", "header publisher exposed"} {
+	for _, change := range []string{"valid", "raw credit", "range gap", "repeated hidden line", "hidden count changed", "rights granted", "member omitted", "member rights transfer", "source URL changed", "source identity repeated", "member repeated across entries", "representative body repeated", "representative ID malformed", "member ID malformed", "blob reused with different SHA", "operational actor exposed", "member actor exposed", "header publisher exposed"} {
 		t.Run(change, func(t *testing.T) {
 			v := load()
 			r := next4Object(v["entries"].([]any)[0])
@@ -273,6 +279,37 @@ func TestVisiblePrimaryJournalPreservesHiddenLinesPendingRightsAndMemberUnits(t 
 					member["sha256"] = r["source_sha256"]
 					member["git_blob"] = r["git_blob"]
 					member["bytes"] = r["bytes"]
+				}
+			case "representative ID malformed":
+				id := r["inventory_id"]
+				r["inventory_id"] = "github:not-a-digest"
+				for _, value := range r["member_metadata"].([]any) {
+					member := next4Object(value)
+					if member["inventory_id"] == id {
+						member["inventory_id"] = r["inventory_id"]
+					}
+				}
+			case "member ID malformed":
+				changed := false
+				for _, value := range v["entries"].([]any) {
+					entry := next4Object(value)
+					for _, value := range entry["member_metadata"].([]any) {
+						member := next4Object(value)
+						if member["inventory_id"] != entry["inventory_id"] {
+							member["inventory_id"] = "not-a-catalog-id"
+							changed = true
+						}
+					}
+				}
+				if !changed {
+					t.Fatal("nonrepresentative member fixture required")
+				}
+			case "blob reused with different SHA":
+				other := next4Object(v["entries"].([]any)[1])
+				other["git_blob"], other["bytes"] = r["git_blob"], r["bytes"]
+				for _, value := range other["member_metadata"].([]any) {
+					member := next4Object(value)
+					member["git_blob"], member["bytes"] = r["git_blob"], r["bytes"]
 				}
 			case "operational actor exposed":
 				r["reader_job"] = "internal-run"

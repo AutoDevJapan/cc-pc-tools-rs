@@ -4,6 +4,8 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/url"
+	"os"
+	"path/filepath"
 	"strconv"
 	"strings"
 	"testing"
@@ -15,6 +17,67 @@ func visibleJournalNumber(value int64) json.Number { return json.Number(strconv.
 
 func visibleJournalGitHubID(id string) bool {
 	return strings.HasPrefix(id, "github:") && validHex(strings.TrimPrefix(id, "github:"), 64)
+}
+
+// Independent anchor: the accepted journal at 4ebfedab3794ff12e0f0be09243be3fd3544107a,
+// file SHA88eb360eb1dccd1055f73fdf3c6b144ef33590428e31b8e5cbafd73efdb2869d.
+// Canonical JSON preserves all values and entry order, without checkout spacing.
+func visibleAcceptedPrefixMatches(entries []any) bool {
+	if len(entries) < 54 {
+		return false
+	}
+	raw, err := json.Marshal(entries[:54])
+	return err == nil && travel3Digest(raw) == "b5276adcc6bc7709955f3481d0baf7c570a1577a0f550f1eb16f134950ab492c"
+}
+
+func TestVisiblePrimaryJournalRetainsEveryAcceptedPrefixFieldAndOrder(t *testing.T) {
+	for _, change := range []string{"valid", "value changed", "order changed", "entry missing"} {
+		t.Run(change, func(t *testing.T) {
+			var ignored any
+			raw := loadPublicReceipt(t, visiblePrimaryJournalFile, &ignored)
+			v, err := parent19Decode(raw)
+			if err != nil {
+				t.Fatal(err)
+			}
+			entries := v["entries"].([]any)
+			switch change {
+			case "value changed":
+				entries[0].(map[string]any)["value"] = "A different nonempty meaning still passes structural validation."
+			case "order changed":
+				entries[0], entries[1] = entries[1], entries[0]
+			case "entry missing":
+				entries = entries[:53]
+			}
+			if visibleAcceptedPrefixMatches(entries) != (change == "valid") {
+				t.Fatal("accepted history value or order drift was not detected")
+			}
+		})
+	}
+}
+
+func TestVisiblePrimaryMarkdownCountsMatchTheExecutionSnapshot(t *testing.T) {
+	var summary ExecutionSummary
+	loadPublicReceipt(t, "skills-3080-execution-queue-summary.json", &summary)
+	var journal struct {
+		Groups  int `json:"representative_body_groups"`
+		Members int `json:"bound_member_metadata"`
+	}
+	loadPublicReceipt(t, visiblePrimaryJournalFile, &journal)
+	raw, err := os.ReadFile(filepath.Join("..", "..", "docs", "skills-3080-visible-primary-assessments.md"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, expected := range []string{
+		fmt.Sprintf("固定した出典に対する%d件の評価", journal.Groups),
+		fmt.Sprintf("今回の追加は%d件", journal.Groups-54),
+		fmt.Sprintf("候補メタデータは計%d件", journal.Members),
+		fmt.Sprintf("評価%d、最終%d、新規%d・既存統合%d・旧除外%d", summary.Assessments, summary.Final, summary.Decisions["installed_new_adaptation"], summary.Decisions["integrated_existing"], summary.Decisions["excluded"]),
+		fmt.Sprintf("交差%d、和集合%d、評価済未採否%d、意味と個別権利の確認が必要な候補%d", summary.AssessmentAndFinal, summary.AssessmentOrFinal, summary.Stages["assessed_needs_current_disposition"], summary.Stages["needs_semantic_and_individual_rights_review"]),
+	} {
+		if !strings.Contains(string(raw), expected) {
+			t.Fatalf("Markdown count differs from the current JSON snapshot: %s", expected)
+		}
+	}
 }
 
 func visibleJournalKeys(v map[string]any, keys ...string) bool {

@@ -60,9 +60,10 @@ type executionIdentity struct {
 	occurrence   *ExecutionSiteBinding
 }
 type ExecutionEvidence struct {
-	Assessments map[string]executionIdentity
-	References  map[string][]ExecutionReference
-	Decisions   map[string]executionIdentity
+	Assessments    map[string]executionIdentity
+	References     map[string][]ExecutionReference
+	Decisions      map[string]executionIdentity
+	VisibleMembers map[string]executionVisibleMember
 }
 
 var executionRepositoryName = regexp.MustCompile(`^[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+$`)
@@ -193,7 +194,7 @@ func readExecutionArtifact(root string, pin ExecutionArtifact) ([]byte, error) {
 }
 
 func loadExecutionEvidence(root string, m ExecutionManifest) (ExecutionEvidence, error) {
-	e := ExecutionEvidence{Assessments: map[string]executionIdentity{}, References: map[string][]ExecutionReference{}, Decisions: map[string]executionIdentity{}}
+	e := ExecutionEvidence{Assessments: map[string]executionIdentity{}, References: map[string][]ExecutionReference{}, Decisions: map[string]executionIdentity{}, VisibleMembers: map[string]executionVisibleMember{}}
 	files := map[string]bool{}
 	for _, pin := range m.Artifacts {
 		if files[pin.File] {
@@ -211,6 +212,21 @@ func loadExecutionEvidence(root string, m ExecutionManifest) (ExecutionEvidence,
 		decoded, err := uniqueEvidenceJSON(raw)
 		if err != nil {
 			return e, err
+		}
+		if object, ok := decoded.(map[string]any); ok && (object["domain"] == executionVisibleDomain || pin.File == executionVisibleJournal) {
+			if pin.File != executionVisibleJournal {
+				return e, errors.New("visible primary journal filename differs")
+			}
+			members, err := executionVisibleMembers(raw, m.CatalogSHA)
+			if err != nil {
+				return e, err
+			}
+			for id, member := range members {
+				if _, duplicate := e.VisibleMembers[id]; duplicate {
+					return e, errors.New("visible primary member repeated across artifacts")
+				}
+				e.VisibleMembers[id] = member
+			}
 		}
 		if object, ok := decoded.(map[string]any); ok && (object["domain"] == retainedProcedureDomain || pin.File == retainedProcedureJournalFile) {
 			if pin.File != retainedProcedureJournalFile {
@@ -334,6 +350,7 @@ func executionQueue(input io.Reader, output io.Writer, m ExecutionManifest, e Ex
 	scanner.Buffer(make([]byte, 65536), 16<<20)
 	enc := json.NewEncoder(output)
 	seen, matchedAssessment, matchedDecision := map[string]bool{}, map[string]bool{}, map[string]bool{}
+	matchedMembers := map[string]bool{}
 	bodyEvidence := map[string]string{}
 	for id, a := range e.Assessments {
 		if prior := bodyEvidence[a.SHA]; prior == "" || id < prior {
@@ -350,6 +367,13 @@ func executionQueue(input io.Reader, output io.Writer, m ExecutionManifest, e Ex
 		}
 		seen[r.ID] = true
 		s.Records++
+		if expected, selected := e.VisibleMembers[r.ID]; selected {
+			var actual executionVisibleMember
+			if json.Unmarshal(scanner.Bytes(), &actual) != nil || actual != expected || !r.BodyRead {
+				return s, errors.New("visible primary member does not match its fixed catalog occurrence")
+			}
+			matchedMembers[r.ID] = true
+		}
 		if r.Effective != nil {
 			r.SHA, r.BodyRead = r.Effective.SHA, r.Effective.BodyRead
 		}
@@ -404,7 +428,7 @@ func executionQueue(input io.Reader, output io.Writer, m ExecutionManifest, e Ex
 		return s, err
 	}
 	s.CatalogSHA = hex.EncodeToString(h.Sum(nil))
-	if s.Records != m.Records || s.CatalogSHA != m.CatalogSHA || len(matchedAssessment) != len(e.Assessments) || len(matchedDecision) != len(e.Decisions) {
+	if s.Records != m.Records || s.CatalogSHA != m.CatalogSHA || len(matchedAssessment) != len(e.Assessments) || len(matchedDecision) != len(e.Decisions) || len(matchedMembers) != len(e.VisibleMembers) {
 		return s, errors.New("catalog/evidence universe incomplete or changed")
 	}
 	for id := range matchedDecision {

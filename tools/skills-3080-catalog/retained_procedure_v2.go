@@ -10,11 +10,15 @@ import (
 
 const retainedProcedureV2File = "skills-3080-retained-procedure-assessments-v2.json"
 const retainedProcedureV2Domain = "skills3080-retained-procedure-assessment-journal-v2"
+const retainedProcedureV2Scope = "固定保存資料の意味評価。本文・支持一覧・個別通知の実読、再利用、未読と権利の未確定を区別する。支持一覧は本文自身を含む。文字コード不正行と伏字の意味を読了へ加えず、初回表示不足を保持する。元の担当・独立受領の来歴は非公開原記録に保持する。"
 
 // Validate the additional observations before adapting their common fields to
 // the existing read-state validator. The accepted earlier journal stays intact.
 func validateRetainedProcedureV2(v map[string]any, expectedRows int) error {
 	fail := func() error { return fmt.Errorf("additional retained procedure read or history boundary differs") }
+	if v["scope"] != retainedProcedureV2Scope {
+		return fail()
+	}
 	if !retainedKeys(v, "domain", "catalog_sha256", "assessment_records", "counts", "entries", "initial_display_limitations", "all_source_and_support_rights_confirmed", "new_copy_grants", "new_final_dispositions", "central_operations", "whole16_complete", "scope") || v["domain"] != retainedProcedureV2Domain {
 		return fail()
 	}

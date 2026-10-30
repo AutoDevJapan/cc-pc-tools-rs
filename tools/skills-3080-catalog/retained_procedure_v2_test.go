@@ -73,6 +73,7 @@ func TestAdditionalRetainedJournalRejectsChangedReadHistory(t *testing.T) {
 		name string
 		edit func(map[string]any)
 	}{
+		{"scope_claim_changed", func(v map[string]any) { v["scope"] = "全候補を許諾済みとして導入完了" }},
 		{"notice_list_wrong_type", func(v map[string]any) {
 			v["entries"].([]any)[0].(map[string]any)["individual_notices"] = "invalid"
 		}},

@@ -31,9 +31,15 @@ func validateCanonicalSiteSix(v, manifest, ledger map[string]any) error {
 	if err := next4Fields(next4Object(v["fresh_discovery"]), map[string]any{"requested": float64(6), "found": float64(6), "enabled": float64(6), "parse_errors": float64(0), "total_metadata": float64(484), "scan_limit_warnings": float64(2), "model_turn_or_context_budget_proof": false}); err != nil {
 		return err
 	}
+	return validateCanonicalSiteEntries(v, manifest, ledger, canonicalSiteSixTargets, canonicalSiteSixFile)
+}
+
+// Both receipt cohorts reuse the same individual-source/notice and current
+// instruction checks, while keeping their fixed cohort expectations separate.
+func validateCanonicalSiteEntries(v, manifest, ledger map[string]any, targets map[string]string, evidence string) error {
 	entries, ok := v["entries"].([]any)
-	if !ok || len(entries) != 6 {
-		return fmt.Errorf("six canonical site occurrences required")
+	if !ok || len(entries) != len(targets) {
+		return fmt.Errorf("all fixed canonical site occurrences required")
 	}
 	adopted := map[string]map[string]any{}
 	for _, value := range ledger["entries"].([]any) {
@@ -44,7 +50,7 @@ func validateCanonicalSiteSix(v, manifest, ledger map[string]any) error {
 	for _, value := range entries {
 		e := next4Object(value)
 		id, _ := e["inventory_id"].(string)
-		target := canonicalSiteSixTargets[id]
+		target := targets[id]
 		if target == "" || seen[id] || e["target"] != target || e["disposition"] != "integrated_existing" {
 			return fmt.Errorf("canonical occurrence repeated, changed or unintegrated")
 		}
@@ -173,7 +179,7 @@ func validateCanonicalSiteSix(v, manifest, ledger map[string]any) error {
 			return fmt.Errorf("existing target acceptance changed")
 		}
 		final := adopted[id]
-		if final == nil || final["target"] != target || final["disposition"] != "integrated_existing" || final["evidence"] != canonicalSiteSixFile || final["source_sha256"] != site["sha256"] || final["source_repo"] != "" || final["source_commit"] != "" || final["source_path"] != "" || final["entrypoint_sha256"] != a["entrypoint_sha256"] || final["individual_notice_sha256"] != notice["sha256"] {
+		if final == nil || final["target"] != target || final["disposition"] != "integrated_existing" || final["evidence"] != evidence || final["source_sha256"] != site["sha256"] || final["source_repo"] != "" || final["source_commit"] != "" || final["source_path"] != "" || final["entrypoint_sha256"] != a["entrypoint_sha256"] || final["individual_notice_sha256"] != notice["sha256"] {
 			return fmt.Errorf("final ledger no longer matches actual site and individual upstream notice")
 		}
 		if e["scope"] != canonicalSiteSixScope || final["selected_source_scope"] != canonicalSiteSixScope || final["resolved_upstream_inventory_id"] != upID || final["resolved_upstream_repo"] != up["repo"] || final["resolved_upstream_commit"] != up["commit"] || final["resolved_upstream_path"] != up["path"] || final["canonical_URL"] != url || final["individual_notice_path"] != notice["path"] || final["manifest"] != a["manifest"] || final["source_notice_preserved"] != true || final["upstream_original_preserved"] != true || final["copy_grant_extended_to_other_material"] != false || final["new_central_writes"] != float64(0) {

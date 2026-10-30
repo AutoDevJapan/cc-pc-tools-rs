@@ -49,10 +49,20 @@ func retainedConversationURL(text string) bool {
 	boundary := func(r rune) bool { return unicode.IsSpace(r) || strings.ContainsRune("<>\"'`", r) }
 	for _, token := range strings.FieldsFunc(text, boundary) {
 		forms := []string{token}
-		// A malformed escape in another query value must not hide a valid
-		// encoded URL. Decode valid triplets once, retaining other bytes.
-		if decoded := retainedPercentView(token); decoded != token {
+		// Inspect each finite decoding layer. A malformed escape elsewhere
+		// must not hide a nested URL. Inputs still changing after the bound
+		// are rejected rather than silently treating deeper layers as clear.
+		current := token
+		for depth := 0; depth < 8; depth++ {
+			decoded := retainedPercentView(current)
+			if decoded == current {
+				break
+			}
 			forms = append(forms, decoded)
+			current = decoded
+		}
+		if retainedPercentView(current) != current {
+			return true
 		}
 		for _, form := range forms {
 			for _, part := range strings.FieldsFunc(form, boundary) {
@@ -162,6 +172,10 @@ func retainedURL(repo, commit, sourcePath string) string {
 // The journal is an assessment input, never an installer or a permission
 // source. Private original receipts remain the separate acceptance anchor.
 func validateRetainedProcedureJournal(v map[string]any, expectedRows int) error {
+	return validateRetainedProcedureCommon(v, expectedRows, noticeEvidencePath)
+}
+
+func validateRetainedProcedureCommon(v map[string]any, expectedRows int, noticePathAllowed func(string) bool) error {
 	fail := func() error { return fmt.Errorf("retained procedure journal source/read/rights boundary differs") }
 	if !retainedKeys(v, "domain", "catalog_sha256", "assessment_records", "counts", "entries", "all_source_and_support_rights_confirmed", "new_copy_grants", "new_final_dispositions", "central_operations", "whole16_complete", "scope") ||
 		v["domain"] != retainedProcedureDomain || v["catalog_sha256"] != "2d73c9a038a41cc220a9687b935bfa1e0b315b65d9bd6d3e54ddb4111972876c" ||
@@ -334,7 +348,7 @@ func validateRetainedProcedureJournal(v map[string]any, expectedRows int) error 
 			noticeSHA, _ := notice["sha256"].(string)
 			noticeBlob, _ := notice["git_blob"].(string)
 			support := byPath[rel]
-			if !evidencePath(rel) || !noticeEvidencePath(rel) || seenNotice[rel] || support == nil || noticePath != path.Join(path.Dir(p), rel) ||
+			if !evidencePath(rel) || !noticePathAllowed(rel) || seenNotice[rel] || support == nil || noticePath != path.Join(path.Dir(p), rel) ||
 				!evidenceHex(noticeSHA, 64) || !evidenceHex(noticeBlob, 40) || notice["source_url"] != retainedURL(repo, commit, noticePath) ||
 				notice["copy_permission_accepted"] != false || !retainedText(notice["scope"]) || notice["bytes"] != support["bytes"] ||
 				noticeSHA[:8] != support["sha256_prefix"] || noticeBlob[:8] != support["git_blob_prefix"] || notice["read_kind"] != support["state"] {

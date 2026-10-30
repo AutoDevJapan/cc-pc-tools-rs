@@ -587,6 +587,11 @@
       "file": "skills-3080-retained-procedure-assessments.json",
       "sha256": "76461c5fc0d1bc25347fe4109c3e9412f2406d15075e277cdb57799eb07b7a98",
       "rows": 22
+    },
+    {
+      "file": "skills-3080-retained-procedure-assessments-v2.json",
+      "sha256": "238c8102ef219548a6acb7447603f7745c341d0aeddfac8be973d6bac8ac808e",
+      "rows": 163
     }
   ],
   "adoption_ledger": {

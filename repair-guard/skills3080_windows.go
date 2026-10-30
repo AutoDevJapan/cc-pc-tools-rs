@@ -178,7 +178,12 @@ func skillsParseManifest(raw []byte) (skillsManifest, bool) {
 		if e != nil || len(body) < 1 || len(body) > 2<<20 || !utf8.Valid(body) || bytes.IndexByte(body, 0) >= 0 || hashBytes(body) != f.SHA {
 			return m, false
 		}
-		if m.publicV2 && len(parts) == 3 && parts[1] == "references" && parts[2] == "source.json" {
+		if m.publicV2 && len(parts) == 3 && strings.EqualFold(parts[1], "references") && strings.EqualFold(parts[2], "source.json") {
+			// Reserve one spelling before parsing metadata: Windows aliases
+			// must not bypass its public-only schema or later source binding.
+			if parts[1] != "references" || parts[2] != "source.json" {
+				return m, false
+			}
 			var metadata skillsPublicSourceMetadata
 			if !skillsStrict(body, &metadata) || metadata.Schema != "skills-3080-source-v2" || metadata.SourceBytes < 1 || !skillsGitObjectID(metadata.SourceBlob) {
 				return m, false

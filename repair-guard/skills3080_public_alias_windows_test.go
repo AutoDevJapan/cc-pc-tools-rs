@@ -3,6 +3,7 @@ package main
 import (
 	"encoding/base64"
 	"encoding/json"
+	"fmt"
 	"testing"
 )
 
@@ -59,5 +60,33 @@ func TestSkills3080PublicSourceMetadataRejectsInternalBinding(t *testing.T) {
 				t.Fatal("private metadata accepted by public manifest")
 			}
 		})
+	}
+}
+
+func TestSkills3080PublicSourceMetadataHasOneWindowsSpelling(t *testing.T) {
+	for _, target := range []string{"sample/references/source.json", "sample/references/SOURCE.JSON", "sample/References/source.json", "sample/REFERENCES/SOURCE.JSON", "sample/references/Source.Json"} {
+		for _, private := range []bool{false, true} {
+			t.Run(target+fmt.Sprint(private), func(t *testing.T) {
+				m, _ := skillsPublicAliasFixture(t)
+				for i, f := range m.Files {
+					if f.Target == "sample/references/source.json" {
+						v, _ := conversationJSON(f.body)
+						if private {
+							v["native_call_id"] = "private example"
+						}
+						b, _ := json.Marshal(v)
+						m.Files[i].Target = target
+						m.Files[i].SHA = hashBytes(b)
+						m.Files[i].Content = base64.StdEncoding.EncodeToString(b)
+					}
+				}
+				b, _ := json.Marshal(m)
+				_, ok := skillsParseManifest(b)
+				want := target == "sample/references/source.json" && !private
+				if ok != want {
+					t.Fatalf("public metadata target accepted=%v want=%v", ok, want)
+				}
+			})
+		}
 	}
 }

@@ -269,15 +269,9 @@ func skillsOperation(op, path string) object {
 	if !ok || !skillsReviewAccepted(review, r.ManifestSHA, str(writer["model"])) {
 		return fail("review")
 	}
-	if manifest.publicV2 {
-		c, valid := skillsParsePublicReview(review.Spec)
-		if !valid || c.ManifestSHA != r.ManifestSHA || c.ManifestPath != r.ManifestPath || !skillsRegisteredGeneration(reg.Tasks[3080], c.Author.Job, r.Writer.Job) {
-			return fail("review")
-		}
-		manifest, valid = skillsBindPublicManifest(manifest, r.Writer, c.Author)
-		if !valid {
-			return fail("review")
-		}
+	manifest, ok = skillsBindCreationReview(manifest, r, review, reg)
+	if !ok {
+		return fail("review")
 	}
 	if reason := skillsTargetsAbsent(manifest, skillsCentralRoot, &fs); reason != "" {
 		return fail(reason)

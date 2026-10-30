@@ -11,11 +11,14 @@
 書き込むcreatorは、現在の実actorと既存の本人回答の正規証明で確認する。
 この情報を公開manifestへ後付けせず、CreateNewに成功した正規issuerの内部証明へ結ぶ。
 manifestのSHA、原request、レビュー、producer、原native call、現在object/hashの検証を維持する。
+作成requestはレビューしたcommit・manifest path・SHAの組に一致させ、
+同じmanifest bytesを別commitのproject指示へ結び直すことも拒否する。
 
 名前を変えた参照のsource metadataには、出典tuple・原bytes・Git blobと個別noticeを残す。
 公開するmetadataにreformulation_writerを要求せず、公開出典の対応を内部creatorの識別と分ける。
 新形式のreferences/source.jsonはschema、source、source_bytes、source_git_blobと
 任意の説明文字列adaptationだけを許可し、未知・大小文字違いの項目を拒否する。
+出力pathもreferences/source.jsonの表記に固定し、Windowsの大小文字違いで検証を避けられないようにする。
 同じbasenameの古いmetadataと、旧manifest・旧producerによる作成証明は互換契約として保つ。
 新形式のprivate証明が欠ける、別author、別creator、別manifest、別requestなら受け入れない。
 公開形式に内部識別子を紛れ込ませても、新形式として受け入れない。

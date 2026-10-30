@@ -74,11 +74,29 @@ const official3894MaskedPredecessorHead = "4e117a2d813e4a989d1c3085d2734963d9c19
 const official3894MaskedDistributionSHA = "c80d60ab470e52ef9fbe53c1e039d1fcdc31429e291c3f156a953b9b6059d02f"
 const official3894MaskedDistributionHead = "444eae8714ee8b6199c9ed95208ac40272aeb8ce"
 
-// Parent3387's normal PR594 deployment and original software pair were
-// independently read back before ToDo4143; see ci3888-runtime-purpose.md.
-// This admits software comparison only, never the original SDK or receiver.
-const official3894RequalificationGuardSHA = "16386d55e418ce271cfed923edede1e7472bb93aa691b15409bcdb99753b9899"
-const official3894RequalificationGuardHead = "61de98373f8cb481302394be11d7d75cfef08a52"
+// PR594's accepted normal distribution was independently read back before the
+// native-log successor. Preserve only this software pair in both updaters.
+// docs/evidence/skills-3080-guard-before-native609-16386.json
+const official3894NativePredecessorSHA = "16386d55e418ce271cfed923edede1e7472bb93aa691b15409bcdb99753b9899"
+const official3894NativePredecessorHead = "61de98373f8cb481302394be11d7d75cfef08a52"
+
+// PR610's independently observed accepted software, retained by both existing
+// updaters before generating its notice-representation successor. No data grant.
+// docs/evidence/skills-3080-guard-before-notice-representation175645.json
+const official3894NoticePredecessorSHA = "9be9a066053183a099e78133571d394ecbb2845372e3cf603e292c74dac1a8d3"
+const official3894NoticePredecessorHead = "deb430b8b089fde2391dbd243c01db48de48d493"
+
+// Independent completed PR615 distribution, observed before its successor.
+const official3894AliasPredecessorSHA = "50c817a829ecb33c30e4ee2b129dee3716f822fc4627dd01df6f24cb98a7925b"
+const official3894AliasPredecessorHead = "34cd8877587596539e8b4a8847468fc74fca8e57"
+
+// The same independent PR618 software observation used by the Skills updater.
+const official3894CanonicalAssignmentPredecessorSHA = "f8b2ba6e66e60b06bbbc46c2c0f3d6eedc0208d40444c30e37b70afe29db4fc7"
+const official3894CanonicalAssignmentPredecessorHead = "a71330f543969b4585f01b7359a84a2fa528c9f2"
+
+// Independent completed PR624 distribution, observed before the path repair.
+const official3894CreationPathPredecessorSHA = "eab69e4fc8e52f2ad6858ef4e8498e8cc6030ac8ce7f788251a1aae476dc5d55"
+const official3894CreationPathPredecessorHead = "034520d84d52f76dcd7dc7ef371910d6acd8ae9f"
 
 type official3894Source struct {
 	Head, Registration, CreatorJob, Workspace, Branch, SpecSHA string
@@ -945,7 +963,11 @@ func official3894InstalledBaseline(sha, head string) bool {
 		(sha == official3894SharedGuardSHA && head == official3894SharedGuardHead) ||
 		(sha == official3894MaskedPredecessorSHA && head == official3894MaskedPredecessorHead) ||
 		(sha == official3894MaskedDistributionSHA && head == official3894MaskedDistributionHead) ||
-		(sha == official3894RequalificationGuardSHA && head == official3894RequalificationGuardHead)
+		(sha == official3894NativePredecessorSHA && head == official3894NativePredecessorHead) ||
+		(sha == official3894NoticePredecessorSHA && head == official3894NoticePredecessorHead) ||
+		(sha == official3894AliasPredecessorSHA && head == official3894AliasPredecessorHead) ||
+		(sha == official3894CanonicalAssignmentPredecessorSHA && head == official3894CanonicalAssignmentPredecessorHead) ||
+		(sha == official3894CreationPathPredecessorSHA && head == official3894CreationPathPredecessorHead)
 }
 
 // Qualifies only comparison of the known previously published guard software.

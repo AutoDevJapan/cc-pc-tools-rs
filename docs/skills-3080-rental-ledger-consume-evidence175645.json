@@ -1,0 +1,98 @@
+{
+  "domain": "skills3080-rental-current-readback-v1",
+  "job": "20261027-175645-todo-3080",
+  "original_creator_job": "20261027-175645-todo-3080",
+  "manifest_sha256": "9181080be684764ecc89a6c8a77138f45e79507b470fb76c66ecc0fb6c5a3572",
+  "request_sha256": "da7029cef27b8376970475710fbd1f49aedf2384a9f583657fe660b0436c88ba",
+  "native_call_id": "call_800d6a534c354a5fb1db2a2d455ae852",
+  "original_creator_runtime_sha256": "7fb45b8a411ca2e1dd64a034b94c51ce5ca51324ad7c0c4b778eecb9f4538d36",
+  "original_creator_runtime_revision": "b78007695a7c5d73eb1f11118757e93918aa3234",
+  "current_runtime_sha256": "7fb45b8a411ca2e1dd64a034b94c51ce5ca51324ad7c0c4b778eecb9f4538d36",
+  "current_runtime_revision": "b78007695a7c5d73eb1f11118757e93918aa3234",
+  "qualified_current_files": 7,
+  "bytes": 37868,
+  "normal_batches": 1,
+  "all_same_read_buffers_match_manifest": true,
+  "current_IDs_match_creation": true,
+  "direct_central_opens_by_parent_verifier": 0,
+  "new_Create_by_reader": 0,
+  "atomic_snapshot_or_historical_continuity_proven": false,
+  "current_OS_writer": "unproved",
+  "general_access_granted": false,
+  "original_registry_recovered": false,
+  "original_private_readback_proof_sha256": "4e1f6e670caf562623e06cdad5801550ab5b525c278852d7b18751e67cae0528",
+  "files": [
+    {
+      "index": 0,
+      "target": "rental-ledger-reconciliation/SKILL.md",
+      "sha256": "a12a1c304e1c84250316ab96ec25aa44f78dfd49ffa892b1db9f9b8db06747a3",
+      "bytes": 3094,
+      "creation_and_current_object_identity_sha256": "48566c6a97e05a9a3a4c02fa28c6cf57b7e138e5e61a9d51f227f5386181ce94",
+      "creation_ID_matches_current": true,
+      "same_handle_buffer_returned": true,
+      "reviewed_bytes_equal": true
+    },
+    {
+      "index": 1,
+      "target": "rental-ledger-reconciliation/references/guide.md",
+      "sha256": "955ff5e6948ecbca87acc86b118be48a5e40de836662487d23addcf397cef871",
+      "bytes": 4801,
+      "creation_and_current_object_identity_sha256": "3502c2bd6e8c2eb60f88331093cee36ead57ce5793ea00e693be6fb72b9d629f",
+      "creation_ID_matches_current": true,
+      "same_handle_buffer_returned": true,
+      "reviewed_bytes_equal": true
+    },
+    {
+      "index": 2,
+      "target": "rental-ledger-reconciliation/references/LICENSE.txt",
+      "sha256": "6f6bb192fb5854c274ca1bd5f3705ad6d4577099d2db95f46c90d0657ffb830d",
+      "bytes": 1066,
+      "creation_and_current_object_identity_sha256": "1d46d33ea2c09dae00fdbcfe0f50ada3ec527e39d29bd4698311c177bc89db26",
+      "creation_ID_matches_current": true,
+      "same_handle_buffer_returned": true,
+      "reviewed_bytes_equal": true
+    },
+    {
+      "index": 3,
+      "target": "rental-ledger-reconciliation/references/source.json",
+      "sha256": "f30fc8aec78a38dd9faf54d6774b595933ca0a9296ac1b4f6a25e6d44fdacec9",
+      "bytes": 5432,
+      "creation_and_current_object_identity_sha256": "4caf590b16afb987c31e2c106fac11dc0f8f693bb491813ec9a9e93b82c64eee",
+      "creation_ID_matches_current": true,
+      "same_handle_buffer_returned": true,
+      "reviewed_bytes_equal": true
+    },
+    {
+      "index": 4,
+      "target": "rental-ledger-reconciliation/references/sources.md",
+      "sha256": "5e0cebb526e3748781cd44dce16f5064d9e0604ba505a1f69df5b097770fae80",
+      "bytes": 2000,
+      "creation_and_current_object_identity_sha256": "5d47b2d4d46d24167b9c2675a69bb199a9a2abe7dae631f75c1a39cc4965750c",
+      "creation_ID_matches_current": true,
+      "same_handle_buffer_returned": true,
+      "reviewed_bytes_equal": true
+    },
+    {
+      "index": 5,
+      "target": "rental-ledger-reconciliation/references/source-assessment.json",
+      "sha256": "2192d02ab2e7126e9d4843131b6a9fe93eb89b9ae3897aa6a7a0c9a2abf077d6",
+      "bytes": 11752,
+      "creation_and_current_object_identity_sha256": "4aace7d36e7fd6307982de123e99806b2a7d73b6cc4c433a934ce43ac8b3ca81",
+      "creation_ID_matches_current": true,
+      "same_handle_buffer_returned": true,
+      "reviewed_bytes_equal": true
+    },
+    {
+      "index": 6,
+      "target": "rental-ledger-reconciliation/references/original-skill.masked.txt",
+      "sha256": "bd49e5f1792aec6a35c85552adffd2f6d14a185abfd059316268661bcdaf62fb",
+      "bytes": 9723,
+      "creation_and_current_object_identity_sha256": "7b9038fc030af209b6705cfcdbba7e9d1e4836baf4591d7666162508a220e525",
+      "creation_ID_matches_current": true,
+      "same_handle_buffer_returned": true,
+      "reviewed_bytes_equal": true
+    }
+  ],
+  "identity_digest_definition": "SHA256 UTF8(volume+LF+file_id_128); raw platform IDs retained privately.",
+  "whole16_complete": false
+}

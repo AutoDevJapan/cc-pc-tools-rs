@@ -4,6 +4,7 @@ package main
 // independent of SDK receipt qualification/consumption and never opens an SDK
 // journal, payload, credential or runner. No caller supplies evidence or a store.
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"errors"
@@ -157,35 +158,63 @@ type ci3888RuntimeAccess struct {
 	directory func(string) bool
 	identity  func(string) (audio2906Metadata, error)
 	common    func(string) (string, bool)
-	source    func(string, string) bool
+	source    func(string, string) error
 	live      func(object) bool
 	github    func(context.Context) error
-	merged    func(context.Context) bool
+	merged    func(context.Context) error
 	blocked   func(string) bool
 	creation  func([]byte) (official3894Owned, bool)
 }
 
-func ci3888RuntimeVerifyWith(ctx context.Context, path, caller string, a ci3888RuntimeAccess) error {
-	deny := func(reason string) error { return official3894Error("runtime_" + reason) }
-	if !ci3888RuntimePath(path) || a.blocked(path) {
-		return deny("location_required")
+type ci3888RuntimeActorSnapshot struct {
+	root, workspace, branch, common, key, origins, actorSHA string
+}
+
+func ci3888RuntimeCurrent(ctx context.Context, caller string, a ci3888RuntimeAccess) (ci3888RuntimeActorSnapshot, error) {
+	var result ci3888RuntimeActorSnapshot
+	m := currentSubworkJobName.FindStringSubmatch(caller)
+	if len(m) != 3 || m[2] != "3888" {
+		return result, official3894Error("runtime_native_provider_required")
 	}
 	reg, ok := a.registry(ctx)
 	if !ok {
-		return deny("task_metadata_unavailable")
+		return result, official3894Error("runtime_task_metadata_unavailable")
 	}
 	row := reg.Tasks[3888]
 	common, ok := a.common(row.Scheduler.Worktree)
 	actor, actorOK := a.job(caller)
 	producer, producerOK := a.job(ci3888RuntimeProducer)
 	if !ok || !actorOK || !producerOK || !ci3888RuntimeActorBound(reg, caller, actor, producer, common) || !a.live(actor) {
-		return deny("native_provider_required")
+		return result, official3894Error("runtime_native_provider_required")
 	}
-	if _, ok := official3894OriginalLineage(reg, a.job); !ok {
-		return deny("original_lineage_required")
+	origins, ok := official3894OriginalLineage(reg, a.job)
+	if !ok {
+		return result, official3894Error("runtime_original_lineage_required")
 	}
-	if !a.source(row.Scheduler.Worktree, row.Scheduler.Branch) || !a.merged(ctx) {
-		return deny("normal_source_required")
+	raw, err := json.Marshal(actor)
+	if err != nil || ctx.Err() != nil {
+		return result, official3894Error("runtime_current_evidence_changed")
+	}
+	return ci3888RuntimeActorSnapshot{reg.Root, row.Scheduler.Worktree, row.Scheduler.Branch, common, row.Scheduler.Key, origins, hashBytes(raw)}, nil
+}
+
+func ci3888RuntimeVerifyWith(ctx context.Context, path, caller string, a ci3888RuntimeAccess) error {
+	deny := func(reason string) error { return official3894Error("runtime_" + reason) }
+	if !ci3888RuntimePath(path) {
+		return deny("location_required")
+	}
+	if a.blocked(path) {
+		return deny("location_protection_unverified")
+	}
+	actor, err := ci3888RuntimeCurrent(ctx, caller, a)
+	if err != nil {
+		return err
+	}
+	if err := a.source(actor.workspace, actor.branch); err != nil {
+		return err
+	}
+	if err := a.merged(ctx); err != nil {
+		return err
 	}
 	stdout, ok := a.read(ci3888RuntimeCreationOutput, 8192)
 	if !ok {
@@ -211,38 +240,89 @@ func ci3888RuntimeVerifyWith(ctx context.Context, path, caller string, a ci3888R
 	if err := a.github(ctx); err != nil {
 		return deny("original_github_scope_required")
 	}
-	// No durable grant: source/assignment/process and physical identity must
-	// still agree at the end of this one metadata query. The caller's SDK and
-	// materialization/session contracts remain separate and mandatory.
-	if ctx.Err() != nil || a.blocked(path) || !a.live(actor) || !ci3888RuntimePhysical(r, a.identity) || !a.source(row.Scheduler.Worktree, row.Scheduler.Branch) {
+	// File snapshots are closed before external calls. Reacquire the current
+	// assignment, stops, job projections and ownership bytes; keeping ordinary
+	// metadata files open here would prevent normal atomic progress writes.
+	if err := a.source(actor.workspace, actor.branch); err != nil {
+		return err
+	}
+	fresh, err := ci3888RuntimeCurrent(ctx, caller, a)
+	if err != nil {
+		return err
+	}
+	if fresh != actor {
+		return deny("current_evidence_changed")
+	}
+	currentOutput, outputOK := a.read(ci3888RuntimeCreationOutput, 8192)
+	currentIssuer, issuerOK := a.read(ci3888RuntimeIssuerRecord, 8192)
+	if !outputOK || !issuerOK || !bytes.Equal(currentOutput, stdout) || !bytes.Equal(currentIssuer, issuer) {
+		return deny("current_ownership_changed")
+	}
+	if ctx.Err() != nil || a.blocked(path) || !ci3888RuntimePhysical(r, a.identity) {
 		return deny("current_evidence_changed")
 	}
 	return nil
 }
 
 func ci3888RuntimeVerify(ctx context.Context, path string) error {
-	// Do not retain other tasks' text or private note/SDK data in the reader.
+	// Only physical directories are held across network calls. Normal task/job
+	// metadata and the fixed public creation proof use short, closed snapshots.
 	s := skillsFS{blocked: skillsBlocked}
 	defer s.close()
-	registry := func(ctx context.Context) (skillsRegistry, bool) {
-		f, ok := s.open(productStore, 512<<20)
-		if !ok {
-			return skillsRegistry{}, false
-		}
-		return official3894RegistryProjection(ownerDeadlineReader{ctx, io.LimitReader(f, 512<<20+1)})
-	}
 	return ci3888RuntimeVerifyWith(ctx, path, os.Getenv("CC_JOB_ID"), ci3888RuntimeAccess{
-		registry: registry, job: func(id string) (object, bool) { return official3894ReadJob(&s, id) }, read: s.read,
+		registry: official3894Registry, job: ci3888RuntimeReadJob, read: ci3888RuntimeRead,
 		directory: func(path string) bool { _, ok := s.directory(path); return ok },
 		identity:  func(path string) (audio2906Metadata, error) { return resourceIdentity(path, true) },
-		common:    currentGitCommonDir, source: func(root, branch string) bool {
-			return ownerRegisteredSource(root).AccessAllowed && official3894ProviderSource(root, branch)
-		}, live: official3894Descendant, github: official3894GitHub, blocked: skillsBlocked, creation: ci3888RuntimeCreation,
-		merged: func(ctx context.Context) bool {
+		common:    currentGitCommonDir, source: ci3888RuntimeSource,
+		live: official3894Descendant, github: official3894GitHub, blocked: skillsBlocked, creation: ci3888RuntimeCreation,
+		merged: func(ctx context.Context) error {
 			head, ok := official3894BuildHead()
-			return ok && official3894Merged(ctx, head)
+			if !ok {
+				return official3894Error("runtime_clean_reader_build_required")
+			}
+			if outcome := official3894MergeLookup(ctx, head, official3894Command); outcome != official3894MergeConfirmed {
+				return official3894Error("runtime_reader_merge_" + outcome.reason())
+			}
+			return nil
 		},
 	})
+}
+
+func ci3888RuntimeSource(root, branch string) error {
+	verdict, expired := ownerRegisteredSourceStatus(root)
+	if expired {
+		return official3894Error("runtime_provider_source_deadline")
+	}
+	if !verdict.AccessAllowed {
+		return official3894Error("runtime_provider_source_unverified")
+	}
+	if !official3894ProviderSource(root, branch) {
+		return official3894Error("runtime_provider_source_binding_required")
+	}
+	return nil
+}
+
+func ci3888RuntimeRead(path string, limit int64) ([]byte, bool) {
+	s := skillsFS{blocked: skillsBlocked}
+	defer s.close()
+	return s.read(path, limit)
+}
+
+func ci3888RuntimeReadJob(id string) (object, bool) {
+	return ci3888RuntimeJobFile(filepath.Join(skillsJobsRoot, id, "job.json"), id)
+}
+
+func ci3888RuntimeJobFile(path, id string) (object, bool) {
+	if !currentSubworkJobName.MatchString(id) {
+		return nil, false
+	}
+	s := skillsFS{blocked: skillsBlocked}
+	defer s.close()
+	f, ok := s.open(path, 4<<20)
+	if !ok {
+		return nil, false
+	}
+	return official3894JobProjection(io.LimitReader(f, 4<<20+1), id)
 }
 
 func ci3888RuntimePathAllowed(path string) bool {

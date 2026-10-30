@@ -8,8 +8,9 @@ import (
 
 const sixmilePrimaryRightsError = "next10 individual primary rights: "
 
-func recordedTrue(v *bool) bool  { return v != nil && *v }
-func recordedFalse(v *bool) bool { return v != nil && !*v }
+func recordedTrue(v *bool) bool           { return v != nil && *v }
+func recordedFalse(v *bool) bool          { return v != nil && !*v }
+func recordedCount(v *int, want int) bool { return v != nil && *v == want }
 
 func validateSixmileNext10Rights(a sixmileAssessment) error {
 	copied, selected := 0, 0

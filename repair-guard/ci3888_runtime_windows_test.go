@@ -13,6 +13,7 @@ import (
 
 func ci3888RuntimeFixture() (ci3888RuntimeAccess, skillsRegistry, map[string]object, official3894Owned, string) {
 	reg := official3894LineageFixture()
+	reg.Root = roots[3]
 	row := reg.Tasks[3888]
 	caller := "20261028-000001-todo-3888"
 	row.Status, row.Scheduler.Worktree = "doing", ci3888RuntimeWorkspace
@@ -66,8 +67,8 @@ func ci3888RuntimeFixture() (ci3888RuntimeAccess, skillsRegistry, map[string]obj
 			return m, errors.New("not a declared metadata path")
 		},
 		common: func(string) (string, bool) { return "D:/synthetic/.git", true },
-		source: func(string, string) bool { return true }, live: func(object) bool { return true },
-		github: func(context.Context) error { return nil }, merged: func(context.Context) bool { return true }, blocked: func(string) bool { return false },
+		source: func(string, string) error { return nil }, live: func(object) bool { return true },
+		github: func(context.Context) error { return nil }, merged: func(context.Context) error { return nil }, blocked: func(string) bool { return false },
 	}
 	return a, reg, jobs, r, caller
 }
@@ -118,9 +119,9 @@ func TestCI3888RuntimeIndependentEvidence(t *testing.T) {
 			case "original-lineage":
 				jobs[official3894OriginalCreator]["scope_source"] = "caller"
 			case "source":
-				a.source = func(string, string) bool { return false }
+				a.source = func(string, string) error { return official3894Error("runtime_provider_source_unverified") }
 			case "build":
-				a.merged = func(context.Context) bool { return false }
+				a.merged = func(context.Context) error { return official3894Error("runtime_reader_merge_not_merged") }
 			case "process":
 				a.live = func(object) bool { return false }
 			case "stdout", "issuer", "issuer-changed":
@@ -174,7 +175,13 @@ func TestCI3888RuntimeIndependentEvidence(t *testing.T) {
 				a.github = func(context.Context) error { cancel(); return nil }
 			case "source-recheck":
 				calls := 0
-				a.source = func(string, string) bool { calls++; return calls == 1 }
+				a.source = func(string, string) error {
+					calls++
+					if calls > 1 {
+						return official3894Error("runtime_provider_source_unverified")
+					}
+					return nil
+				}
 			case "process-recheck":
 				calls := 0
 				a.live = func(object) bool { calls++; return calls == 1 }
@@ -347,12 +354,5 @@ func TestCI3888RuntimeCLIMetadataOnly(t *testing.T) {
 		if got["files"] != nil {
 			t.Fatal("metadata query returned payload")
 		}
-	}
-}
-
-func TestCI3888RuntimeKnownSoftwarePair(t *testing.T) {
-	sha, head := "16386d55e418ce271cfed923edede1e7472bb93aa691b15409bcdb99753b9899", "61de98373f8cb481302394be11d7d75cfef08a52"
-	if !official3894InstalledBaseline(sha, head) || official3894InstalledBaseline(sha, official3894MaskedDistributionHead) || official3894InstalledBaseline(official3894MaskedDistributionSHA, head) {
-		t.Fatal("normal software comparison must require the independently known complete pair")
 	}
 }

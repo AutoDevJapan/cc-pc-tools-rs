@@ -1,0 +1,100 @@
+{
+  "todo": 3080,
+  "actual_author_job": "20261027-175645-todo-3080",
+  "names": [
+    "memory-consolidation-state",
+    "generative-art-reproducibility"
+  ],
+  "payload_files": 14,
+  "payload_bytes": 77902,
+  "bundle_sha256": "3095aee519b02491b9b52869cf049414d181108832fe98af422d1e68ec9dfc3a",
+  "manifest_sha256": "73aa131a6761ec48b14000d294e7f77b7e961d17c4cbf3dafe64752dcf3bdd25",
+  "source_selection_file": "skills-3080-consolidation-art-sources175645.json",
+  "source_selection_sha256": "2819f96826acb7340283e8ee52cc569d7322795f4dc4ae8711ed591495e01a59",
+  "physical_primary_lines": 627,
+  "visible_primary_lines": 608,
+  "withheld_primary_lines": 19,
+  "physical_notice_lines": 223,
+  "visible_notice_lines_in_original_parent_views": 221,
+  "notice_masked_URI_lines": 2,
+  "parent_original_unmasked_notice_full_read_claimed": false,
+  "official_Apache_full_public_standard_identity_verified": true,
+  "original_archived_data_or_masked_views_rewritten": false,
+  "copyright_modification_notices_in_entrypoint_guide_reference": true,
+  "original_8_record_packet_received_but_only2_sources_selected": true,
+  "structure": {
+    "exit": 0,
+    "timed_out": false,
+    "stdout": "PASS: 2 explicit skills; structure, descriptions, references, hashes, scenario pairs; in-memory bundle only; no deployment implied\n",
+    "stderr": ""
+  },
+  "fresh_requested_names_metadata": {
+    "checked_at": "2026-10-29T10:43:04.899293+09:00",
+    "method": "fresh installed Codex app-server initialize + skills/list forceReload",
+    "model_called": false,
+    "label": "proposed-names",
+    "targets": 2,
+    "total_discovered_metadata": 482,
+    "found_count": 0,
+    "parse_error_count": 0,
+    "notification_count": 2,
+    "same_names_other_paths": 0,
+    "found": [],
+    "process_tree_exit_confirmed": true,
+    "pending_stdout_read_drained": true,
+    "failure": null,
+    "diagnostic": {
+      "scan_traversal_limit_count": 2,
+      "context_budget_marker_count": 0,
+      "raw_stderr_not_saved": true
+    },
+    "limit": "Only requested target metadata is retained. No full private catalog or unknown body text is saved. No model turn or context-budget proof; discovery-internal file parsing is not a semantic body review."
+  },
+  "real_public_source_metadata": {
+    "source": "normal GitHub GraphQL public metadata, no source body fetched",
+    "observed_at": "2026-10-29T10:46:15.3366026+09:00",
+    "metadata": {
+      "nameWithOwner": "6mile/skills",
+      "databaseId": 1147531245,
+      "isPrivate": false,
+      "defaultBranchRef": {
+        "name": "main"
+      },
+      "fixed": {
+        "oid": "920714f17d81e0a95c7a9bc51faf0a7921cd982d",
+        "tree": {
+          "oid": "5782ae7deffe5024e15b6e090327385c10f76273"
+        }
+      },
+      "p0": {
+        "oid": "1f4479c318e715bf9cae525c9ded457ed714df65",
+        "byteSize": 4539
+      },
+      "n0": {
+        "oid": "636e06752b1f273345df1abeea62e0db96ca2d99",
+        "byteSize": 1074
+      },
+      "p1": {
+        "oid": "634f6fa42e4e697fa6afd293acd7fb8246574876",
+        "byteSize": 19769
+      },
+      "n1": {
+        "oid": "7a4a3ea2424c09fbe48d455aed1eaa94d9124835",
+        "byteSize": 11357
+      }
+    },
+    "independent_authorship_or_third_party_rights_proven": false,
+    "source_script_or_central_operations": 0
+  },
+  "physical_absence_qualified": false,
+  "full_Creator_review_received": false,
+  "created_files": 0,
+  "new_adoptions": 0,
+  "central_operations": 0,
+  "whole16_complete": false,
+  "observation_definition": "Preparation only. Zero creation and unfinished review/absence flags are historical precreation observations, not current physical placement assertions after a later deployment.",
+  "reference_body_exact_after_fixed_modification_notice": true,
+  "fixed_reference_modification_notice_prefix_bytes": 221,
+  "fixed_reference_modification_notice_prefix_lines": 2,
+  "renamed_source_canonical_identity_and_writer_bound": true
+}

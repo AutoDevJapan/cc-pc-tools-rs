@@ -1,0 +1,1048 @@
+{
+  "all2_primary_and2_individual_notice_metadata_match": true,
+  "all_original_selected_chunks_losslessly_reconstructed": true,
+  "central_operations": 0,
+  "consumer_job": "20261027-175645-todo-3080",
+  "definition": "Whole accepted original chunks, not selected prose. Original assessment writers, actual literal/reuse reader evidence, source states and all common/privacy/support definitions are retained. Independent fixed metadata match is not a fresh physical-byte observation or new reading/permission grant.",
+  "domain": "skills3080-sixmile-received-two-whole-original-v1",
+  "entries": [
+    {
+      "actual_body_reader_inferred_from_assessment_writer": false,
+      "assessment_writer_job": "20261027-072935-todo-3719",
+      "bytes": 8756,
+      "central_operations": 0,
+      "copy_license_accepted": false,
+      "git_blob": "3b9e974705c385bd3cb52117f61c9971f1fd2f2f",
+      "individual_notice_metadata": [
+        {
+          "repo": "6mile/skills",
+          "commit": "920714f17d81e0a95c7a9bc51faf0a7921cd982d",
+          "path": "skills/litiao1224/gmail-litiao/LICENSE.txt",
+          "sha256": "ec9e952fec4d029fab649746d033bf91802b15f59ffa40a0d3a3a0e1a1587802",
+          "git_blob": "4813de20b72e365983fe0370d79d7cac6ea21d9b",
+          "bytes": 1072,
+          "role": "license_or_notice"
+        }
+      ],
+      "inventory_id": "github:901facf61636b5e2674ffa860e17f9bd96def49e29398cd4a3af781c3cd1a760",
+      "new_final_disposition": false,
+      "original_chunk_id": "0a18aa720f976a50026eb0414f978005",
+      "original_chunk_sha256": "2fdcfc6618fe88908a67af62d8a5032937d2ef651010d295bee4e0a0698c87f0",
+      "original_context_ref": "0a18aa720f976a50026eb0414f978005",
+      "original_read_tuple": [
+        3,
+        62,
+        0,
+        false,
+        true,
+        340
+      ],
+      "original_reader_assessment": {
+        "candidate_disposition": "接続/メール作用の検査を改訂候補として提案。実利用/採否・許諾0。",
+        "findings": [
+          "Matonのgoogle-mail proxyとctrl接続管理を分け、複数接続はMaton-Connection、未指定は最古ACTIVE。me/ACTIVEだけで本人subject・指定account/最小scopeや依頼対象としない。",
+          "検索/一覧・thread・label・draftとsend/trash/接続deleteを記述。UNREAD除去の例は重要メールを未読へ保つ運用と衝突する。読取許可を送信/削除まで拡張しない。",
+          "rawのbase64url説明とsend/draft例の表記差は、MIME/文字コード・添付も含む実結果で検査が必要。単発maxResults10や受付JSONだけで全page/実配送としない。",
+          "400をmissing connectionとする一方Gmailの4xx/5xx透過も記述。10req/s/account・現在API/料金/相手quotaは保存主張で未検証。具体URL/methodの伏字部を補完しない。"
+        ],
+        "nearby_metadata": [
+          "oauth-least-privilege",
+          "google-workspace",
+          "backend-correctness"
+        ],
+        "negative": "最古ACTIVE/meや一覧10件の受付だけで全件完了とし、読取許可からUNREAD除去/送信/ごみ箱まで実行。",
+        "notices": [
+          [
+            "LICENSE.txt",
+            1,
+            "旧10の同1072B MIT直接raw22行へ4。",
+            "公開版/作者・Google/Maton契約やmail dataの権利は別。"
+          ]
+        ],
+        "positive": "本人subjectの明示接続で読取/送信を分け、全pageと重要メールの未読保持を検証。",
+        "read": [
+          3,
+          62,
+          0,
+          false,
+          true,
+          340
+        ],
+        "reason": "340行を123版2範囲で直接全読。auth/URL等62行の意味は未読。",
+        "required_changes": [
+          "明示接続/実subject・宛先/作用を元の同対象許可と結ぶ。重要メールの未読を保持し本文/秘密をログへ出さず、一般400で接続を増殖/削除しない。",
+          "MIME/base64url・全page/空/partial/業務結果と実配送を検証し、不明結果の再送を抑制。有限backoff、現契約/個別権利は親が確認。通常の非AI資格をAI API禁止へ一括分類しない。"
+        ],
+        "row": 197,
+        "source": [
+          "github:901facf61636b5e2674ffa860e17f9bd96def49e29398cd4a3af781c3cd1a760",
+          "skills/litiao1224/gmail-litiao/SKILL.md",
+          "1f73f79991de28683b7ca4a318e2375d3604844c205033398532baa36799430d",
+          "3b9e974705c385bd3cb52117f61c9971f1fd2f2f",
+          8756
+        ],
+        "support": [
+          [
+            "LICENSE.txt",
+            1072,
+            "ec9e952f",
+            "4813de20",
+            4,
+            0,
+            1,
+            "100644"
+          ],
+          [
+            "SKILL.md",
+            8756,
+            "1f73f799",
+            "3b9e9747",
+            3,
+            62,
+            0,
+            "100644"
+          ],
+          [
+            "_meta.json",
+            280,
+            "2c5e7c77",
+            "5f887d92",
+            1,
+            null,
+            null,
+            "100644"
+          ]
+        ],
+        "use": "Gmailの接続選択、読取/検索と送信/ラベル変更の作用を分ける設計参考。",
+        "value": "誤アカウント利用・意図しない既読化・重複送信を防ぐ観点を得られる。"
+      },
+      "parent_all_semantics_received": true,
+      "path": "skills/litiao1224/gmail-litiao/SKILL.md",
+      "reader_row": 197,
+      "source_commit": "920714f17d81e0a95c7a9bc51faf0a7921cd982d",
+      "source_repo": "6mile/skills",
+      "source_sha256": "1f73f79991de28683b7ca4a318e2375d3604844c205033398532baa36799430d"
+    },
+    {
+      "actual_body_reader_inferred_from_assessment_writer": false,
+      "assessment_writer_job": "20261027-072935-todo-3719",
+      "bytes": 8108,
+      "central_operations": 0,
+      "copy_license_accepted": false,
+      "git_blob": "a39057ac607f58f8a0ab2fa8b1be9a5ec7a8a503",
+      "individual_notice_metadata": [
+        {
+          "repo": "6mile/skills",
+          "commit": "920714f17d81e0a95c7a9bc51faf0a7921cd982d",
+          "path": "skills/liuchang8877/liuchang-skill-creator/license.txt",
+          "sha256": "cfc7749b96f63bd31c3c42b5c471bf756814053e847c10f3eb003417bc523d30",
+          "git_blob": "d645695673349e3947e8e5ae42332d0ac3164cd7",
+          "bytes": 11358,
+          "role": "license_or_notice"
+        }
+      ],
+      "inventory_id": "github:0f74d78eca661ced9041334fafd02ca3c07317518029b31f48e629ffd53d3dfb",
+      "new_final_disposition": false,
+      "original_chunk_id": "0a18aa720f976a50026eb0414f978005",
+      "original_chunk_sha256": "2fdcfc6618fe88908a67af62d8a5032937d2ef651010d295bee4e0a0698c87f0",
+      "original_context_ref": "0a18aa720f976a50026eb0414f978005",
+      "original_read_tuple": [
+        3,
+        6,
+        0,
+        false,
+        true,
+        284
+      ],
+      "original_reader_assessment": {
+        "candidate_disposition": "設計/検証の改訂候補。実導入/最終採否・許諾未確定。",
+        "findings": [
+          "patternsは5役割、workflowsは順序/条件/反復/並列を整理。Google ADK/Claude best practicesという出自・metadata/hook/CLAUDE_PLUGIN_DATAの実環境対応は未照合。",
+          "Skill外に記憶を置き更新消失を避ける案は有用だが、保存先/保持/同時更新と秘密を別に扱う必要。10MB分割/1秒待機/UTF8等の例やcareful/freeze hookを普遍的な禁止/性能保証へしない。",
+          "inversion全質問完了・pipeline逐次承認を通常技術作業の本人待ちへせず、Permission denied→chmodや常時fallbackを正規拒否の回避へ使わない。",
+          "file存在/スクリーンショット/Skill使用回数だけで品質や完了を証明しない。repo内.claude/skills配置例はこのPCのD:/CC/Skills集約と不一致。5Python/test支持は未保存、実検査/登録0。"
+        ],
+        "nearby_metadata": [
+          "skill-creator",
+          "skill-maintenance",
+          "knowledge-to-skills"
+        ],
+        "negative": "固定1秒や使用回数/存在だけで成功とし、権限拒否をchmod/別経路で回避、毎工程の人手承認を追加。",
+        "notices": [
+          [
+            "license.txt",
+            2,
+            "小文字pathの同11358Bを旧135の96版直接伏字読取へ4。",
+            "158行の主要terms等は未読。旧134の11357Bとは別bytes、公開版/作者/第三者適用未確定。"
+          ]
+        ],
+        "positive": "実使用の失敗を条件付きgotchaへ反映し、更新で消えない許可済み保存先と実出力の検査証拠へ結ぶ。",
+        "read": [
+          3,
+          6,
+          0,
+          false,
+          true,
+          284
+        ],
+        "reason": "284行と支持265/130/123行を123版で直接全読。本文6行とpatterns2行は意味未読。",
+        "required_changes": [
+          "D:/CC/Skillsと原本/backup/junctionを保持。記憶は元の許可範囲に置き、リンクの実参照先を確認。新code Go既定、例のhook/権限変更は実行しない。",
+          "実出力/異常・部分成功の根拠を完了前に検査し、条件に応じたretry/停止と独立工程を分ける。既存指示/回答を引継ぎ、本人だけの未指定判断/UI画像だけ正規Discordへ。"
+        ],
+        "row": 198,
+        "source": [
+          "github:0f74d78eca661ced9041334fafd02ca3c07317518029b31f48e629ffd53d3dfb",
+          "skills/liuchang8877/liuchang-skill-creator/SKILL.md",
+          "6cf9825c597ac7cfb272707cd62508f2756a9eb6dea75de758f681db01539211",
+          "a39057ac607f58f8a0ab2fa8b1be9a5ec7a8a503",
+          8108
+        ],
+        "support": [
+          [
+            "SKILL.md",
+            8108,
+            "6cf9825c",
+            "a39057ac",
+            3,
+            6,
+            0,
+            "100644"
+          ],
+          [
+            "_meta.json",
+            293,
+            "ab580665",
+            "8aab1f7b",
+            1,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "license.txt",
+            11358,
+            "cfc7749b",
+            "d6456956",
+            4,
+            158,
+            1,
+            "100644"
+          ],
+          [
+            "references/output-patterns.md",
+            2201,
+            "dd134f5e",
+            "9c24cc4c",
+            2,
+            0,
+            0,
+            "100644"
+          ],
+          [
+            "references/patterns.md",
+            6269,
+            "6a6945c3",
+            "c7e8d888",
+            3,
+            2,
+            0,
+            "100644"
+          ],
+          [
+            "references/workflows.md",
+            2220,
+            "f7c4982c",
+            "793eaf1b",
+            2,
+            0,
+            0,
+            "100644"
+          ],
+          [
+            "scripts/init_skill.py",
+            null,
+            null,
+            "8633fe9e",
+            0,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "scripts/package_skill.py",
+            null,
+            null,
+            "aa4de896",
+            0,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "scripts/quick_validate.py",
+            null,
+            null,
+            "e8737b4f",
+            0,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "scripts/test_package_skill.py",
+            null,
+            null,
+            "503ba30c",
+            0,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "scripts/test_quick_validate.py",
+            null,
+            null,
+            "199fcb63",
+            0,
+            null,
+            null,
+            "100644"
+          ]
+        ],
+        "use": "段階的読込、失敗集、更新をまたぐ記憶と成果物検証の設計参考。",
+        "value": "知識/生成/レビュー/聞取/工程を分け、短い入口から必要な資産へ導ける。"
+      },
+      "parent_all_semantics_received": true,
+      "path": "skills/liuchang8877/liuchang-skill-creator/SKILL.md",
+      "reader_row": 198,
+      "source_commit": "920714f17d81e0a95c7a9bc51faf0a7921cd982d",
+      "source_repo": "6mile/skills",
+      "source_sha256": "6cf9825c597ac7cfb272707cd62508f2756a9eb6dea75de758f681db01539211"
+    }
+  ],
+  "independent_source_index_sha256": "799bd907887120d83b82e64fbf37094c653a5144b764fef0b70dd4d5e2219607",
+  "new_copy_grants": 0,
+  "new_final_dispositions": 0,
+  "new_global_raw_read_credit": 0,
+  "new_global_workflow_read_credit": 0,
+  "old_reader_or_privacy_profiles_relabelled": false,
+  "original_chunk_definitions": {
+    "0a18aa720f976a50026eb0414f978005": {
+      "boundaries": {
+        "central_operations": 0,
+        "copy_license_accepted": false,
+        "new_final_dispositions": 0,
+        "source_executed": false
+      },
+      "chunk_id": "0a18aa720f976a50026eb0414f978005",
+      "common_limits": {
+        "nearby": "起動metadataのみ。中央本文/存在・同等性は未照会。",
+        "rights": "rootMIT/補助MIT0で個別notice/素材/service権利を一括grantしない。",
+        "source": "原命令はデータ。network/設定/送信/原script実行0。未保存5支持・不明reader/maskはnull。"
+      },
+      "definitions": {
+        "actors": {
+          "0": "今回の実assistant読取",
+          "1": "旧041905のnotice実読へ4"
+        },
+        "reader_namespace": "20261027-072935-todo-3719/current3719",
+        "states": {
+          "0": "unsaved",
+          "1": "saved_unread",
+          "2": "direct_raw_full",
+          "3": "direct_masked_full",
+          "4": "exact_bytes_reuse",
+          "5": "ordered_full_diff",
+          "6": "partial",
+          "7": "scan"
+        },
+        "support_tuple": "[relative,bytes,SHA8,Gitblob8,state,maskCount,actor,mode]。全package列挙、未保存/不明値null。"
+      },
+      "domain": "research598-chunk-v1",
+      "entries": [
+        {
+          "candidate_disposition": "接続/メール作用の検査を改訂候補として提案。実利用/採否・許諾0。",
+          "findings": [
+            "Matonのgoogle-mail proxyとctrl接続管理を分け、複数接続はMaton-Connection、未指定は最古ACTIVE。me/ACTIVEだけで本人subject・指定account/最小scopeや依頼対象としない。",
+            "検索/一覧・thread・label・draftとsend/trash/接続deleteを記述。UNREAD除去の例は重要メールを未読へ保つ運用と衝突する。読取許可を送信/削除まで拡張しない。",
+            "rawのbase64url説明とsend/draft例の表記差は、MIME/文字コード・添付も含む実結果で検査が必要。単発maxResults10や受付JSONだけで全page/実配送としない。",
+            "400をmissing connectionとする一方Gmailの4xx/5xx透過も記述。10req/s/account・現在API/料金/相手quotaは保存主張で未検証。具体URL/methodの伏字部を補完しない。"
+          ],
+          "nearby_metadata": [
+            "oauth-least-privilege",
+            "google-workspace",
+            "backend-correctness"
+          ],
+          "negative": "最古ACTIVE/meや一覧10件の受付だけで全件完了とし、読取許可からUNREAD除去/送信/ごみ箱まで実行。",
+          "notices": [
+            [
+              "LICENSE.txt",
+              1,
+              "旧10の同1072B MIT直接raw22行へ4。",
+              "公開版/作者・Google/Maton契約やmail dataの権利は別。"
+            ]
+          ],
+          "positive": "本人subjectの明示接続で読取/送信を分け、全pageと重要メールの未読保持を検証。",
+          "read": [
+            3,
+            62,
+            0,
+            false,
+            true,
+            340
+          ],
+          "reason": "340行を123版2範囲で直接全読。auth/URL等62行の意味は未読。",
+          "required_changes": [
+            "明示接続/実subject・宛先/作用を元の同対象許可と結ぶ。重要メールの未読を保持し本文/秘密をログへ出さず、一般400で接続を増殖/削除しない。",
+            "MIME/base64url・全page/空/partial/業務結果と実配送を検証し、不明結果の再送を抑制。有限backoff、現契約/個別権利は親が確認。通常の非AI資格をAI API禁止へ一括分類しない。"
+          ],
+          "row": 197,
+          "source": [
+            "github:901facf61636b5e2674ffa860e17f9bd96def49e29398cd4a3af781c3cd1a760",
+            "skills/litiao1224/gmail-litiao/SKILL.md",
+            "1f73f79991de28683b7ca4a318e2375d3604844c205033398532baa36799430d",
+            "3b9e974705c385bd3cb52117f61c9971f1fd2f2f",
+            8756
+          ],
+          "support": [
+            [
+              "LICENSE.txt",
+              1072,
+              "ec9e952f",
+              "4813de20",
+              4,
+              0,
+              1,
+              "100644"
+            ],
+            [
+              "SKILL.md",
+              8756,
+              "1f73f799",
+              "3b9e9747",
+              3,
+              62,
+              0,
+              "100644"
+            ],
+            [
+              "_meta.json",
+              280,
+              "2c5e7c77",
+              "5f887d92",
+              1,
+              null,
+              null,
+              "100644"
+            ]
+          ],
+          "use": "Gmailの接続選択、読取/検索と送信/ラベル変更の作用を分ける設計参考。",
+          "value": "誤アカウント利用・意図しない既読化・重複送信を防ぐ観点を得られる。"
+        },
+        {
+          "candidate_disposition": "設計/検証の改訂候補。実導入/最終採否・許諾未確定。",
+          "findings": [
+            "patternsは5役割、workflowsは順序/条件/反復/並列を整理。Google ADK/Claude best practicesという出自・metadata/hook/CLAUDE_PLUGIN_DATAの実環境対応は未照合。",
+            "Skill外に記憶を置き更新消失を避ける案は有用だが、保存先/保持/同時更新と秘密を別に扱う必要。10MB分割/1秒待機/UTF8等の例やcareful/freeze hookを普遍的な禁止/性能保証へしない。",
+            "inversion全質問完了・pipeline逐次承認を通常技術作業の本人待ちへせず、Permission denied→chmodや常時fallbackを正規拒否の回避へ使わない。",
+            "file存在/スクリーンショット/Skill使用回数だけで品質や完了を証明しない。repo内.claude/skills配置例はこのPCのD:/CC/Skills集約と不一致。5Python/test支持は未保存、実検査/登録0。"
+          ],
+          "nearby_metadata": [
+            "skill-creator",
+            "skill-maintenance",
+            "knowledge-to-skills"
+          ],
+          "negative": "固定1秒や使用回数/存在だけで成功とし、権限拒否をchmod/別経路で回避、毎工程の人手承認を追加。",
+          "notices": [
+            [
+              "license.txt",
+              2,
+              "小文字pathの同11358Bを旧135の96版直接伏字読取へ4。",
+              "158行の主要terms等は未読。旧134の11357Bとは別bytes、公開版/作者/第三者適用未確定。"
+            ]
+          ],
+          "positive": "実使用の失敗を条件付きgotchaへ反映し、更新で消えない許可済み保存先と実出力の検査証拠へ結ぶ。",
+          "read": [
+            3,
+            6,
+            0,
+            false,
+            true,
+            284
+          ],
+          "reason": "284行と支持265/130/123行を123版で直接全読。本文6行とpatterns2行は意味未読。",
+          "required_changes": [
+            "D:/CC/Skillsと原本/backup/junctionを保持。記憶は元の許可範囲に置き、リンクの実参照先を確認。新code Go既定、例のhook/権限変更は実行しない。",
+            "実出力/異常・部分成功の根拠を完了前に検査し、条件に応じたretry/停止と独立工程を分ける。既存指示/回答を引継ぎ、本人だけの未指定判断/UI画像だけ正規Discordへ。"
+          ],
+          "row": 198,
+          "source": [
+            "github:0f74d78eca661ced9041334fafd02ca3c07317518029b31f48e629ffd53d3dfb",
+            "skills/liuchang8877/liuchang-skill-creator/SKILL.md",
+            "6cf9825c597ac7cfb272707cd62508f2756a9eb6dea75de758f681db01539211",
+            "a39057ac607f58f8a0ab2fa8b1be9a5ec7a8a503",
+            8108
+          ],
+          "support": [
+            [
+              "SKILL.md",
+              8108,
+              "6cf9825c",
+              "a39057ac",
+              3,
+              6,
+              0,
+              "100644"
+            ],
+            [
+              "_meta.json",
+              293,
+              "ab580665",
+              "8aab1f7b",
+              1,
+              null,
+              null,
+              "100644"
+            ],
+            [
+              "license.txt",
+              11358,
+              "cfc7749b",
+              "d6456956",
+              4,
+              158,
+              1,
+              "100644"
+            ],
+            [
+              "references/output-patterns.md",
+              2201,
+              "dd134f5e",
+              "9c24cc4c",
+              2,
+              0,
+              0,
+              "100644"
+            ],
+            [
+              "references/patterns.md",
+              6269,
+              "6a6945c3",
+              "c7e8d888",
+              3,
+              2,
+              0,
+              "100644"
+            ],
+            [
+              "references/workflows.md",
+              2220,
+              "f7c4982c",
+              "793eaf1b",
+              2,
+              0,
+              0,
+              "100644"
+            ],
+            [
+              "scripts/init_skill.py",
+              null,
+              null,
+              "8633fe9e",
+              0,
+              null,
+              null,
+              "100644"
+            ],
+            [
+              "scripts/package_skill.py",
+              null,
+              null,
+              "aa4de896",
+              0,
+              null,
+              null,
+              "100644"
+            ],
+            [
+              "scripts/quick_validate.py",
+              null,
+              null,
+              "e8737b4f",
+              0,
+              null,
+              null,
+              "100644"
+            ],
+            [
+              "scripts/test_package_skill.py",
+              null,
+              null,
+              "503ba30c",
+              0,
+              null,
+              null,
+              "100644"
+            ],
+            [
+              "scripts/test_quick_validate.py",
+              null,
+              null,
+              "199fcb63",
+              0,
+              null,
+              null,
+              "100644"
+            ]
+          ],
+          "use": "段階的読込、失敗集、更新をまたぐ記憶と成果物検証の設計参考。",
+          "value": "知識/生成/レビュー/聞取/工程を分け、短い入口から必要な資産へ導ける。"
+        }
+      ],
+      "first_ordinal": 197,
+      "notice_bodies": [
+        {
+          "bytes": 1072,
+          "fresh_raw": false,
+          "git_blob": "4813de20b72e365983fe0370d79d7cac6ea21d9b",
+          "id": 1,
+          "parent_receipt": "research3719-chunk-66b86047aca0b0294296e8329833ddb7.json",
+          "read": [
+            4,
+            0,
+            1,
+            false,
+            true,
+            22
+          ],
+          "reader_job": "20261025-041905-todo-3719",
+          "reader_namespace": "20261025-041905-todo-3719/current3719",
+          "representative_path": "skills/bobbyzzhao/gmail-1-0-6/LICENSE.txt",
+          "representative_read": [
+            2,
+            0,
+            0,
+            true,
+            true,
+            22
+          ],
+          "representative_row": 10,
+          "sha256": "ec9e952fec4d029fab649746d033bf91802b15f59ffa40a0d3a3a0e1a1587802"
+        },
+        {
+          "bytes": 11358,
+          "fresh_raw": false,
+          "git_blob": "d645695673349e3947e8e5ae42332d0ac3164cd7",
+          "id": 2,
+          "mask_unit": "outer_physical_lines",
+          "mask_version": 96,
+          "parent_chunk_sha256": "b0eea33a62b1d85c17964aa3530639f7253767a6151f8c9e9e436054d9c9403b",
+          "parent_receipt": "research3719-chunk-b34ebdb95c3fe69d7e1a64a4642870d4.json",
+          "read": [
+            4,
+            158,
+            1,
+            false,
+            true,
+            203
+          ],
+          "reader_job": "20261025-041905-todo-3719",
+          "reader_namespace": "20261025-041905-todo-3719/current3719",
+          "representative_path": "skills/ciklopentan/skill-creator-canonical/license.txt",
+          "representative_read": [
+            3,
+            158,
+            0,
+            false,
+            true,
+            203
+          ],
+          "representative_row": 135,
+          "sha256": "cfc7749b96f63bd31c3c42b5c471bf756814053e847c10f3eb003417bc523d30"
+        }
+      ],
+      "prior_journal_sha256": "54705208f12e77fec767e95a65db58744a00ec30a37f6d4cc37d8022f50f4759",
+      "reader_job": "20261027-072935-todo-3719",
+      "reader_todo": 3719,
+      "reading_integrity": {
+        "files": [
+          [
+            197,
+            "SKILL.md",
+            [
+              3,
+              62,
+              0,
+              false,
+              true,
+              340
+            ],
+            [
+              [
+                1,
+                14
+              ],
+              [
+                26,
+                27
+              ],
+              [
+                38,
+                38
+              ],
+              [
+                42,
+                42
+              ],
+              [
+                45,
+                45
+              ],
+              [
+                48,
+                48
+              ],
+              [
+                51,
+                51
+              ],
+              [
+                54,
+                54
+              ],
+              [
+                58,
+                58
+              ],
+              [
+                70,
+                70
+              ],
+              [
+                82,
+                82
+              ],
+              [
+                94,
+                94
+              ],
+              [
+                103,
+                103
+              ],
+              [
+                107,
+                107
+              ],
+              [
+                114,
+                114
+              ],
+              [
+                122,
+                122
+              ],
+              [
+                134,
+                136
+              ],
+              [
+                148,
+                148
+              ],
+              [
+                154,
+                154
+              ],
+              [
+                160,
+                160
+              ],
+              [
+                166,
+                166
+              ],
+              [
+                172,
+                172
+              ],
+              [
+                183,
+                183
+              ],
+              [
+                189,
+                189
+              ],
+              [
+                195,
+                195
+              ],
+              [
+                201,
+                201
+              ],
+              [
+                213,
+                213
+              ],
+              [
+                219,
+                219
+              ],
+              [
+                232,
+                232
+              ],
+              [
+                243,
+                243
+              ],
+              [
+                251,
+                252
+              ],
+              [
+                264,
+                264
+              ],
+              [
+                267,
+                267
+              ],
+              [
+                280,
+                281
+              ],
+              [
+                292,
+                292
+              ],
+              [
+                299,
+                299
+              ],
+              [
+                303,
+                303
+              ],
+              [
+                305,
+                305
+              ],
+              [
+                308,
+                308
+              ],
+              [
+                311,
+                311
+              ],
+              [
+                317,
+                317
+              ],
+              [
+                326,
+                327
+              ],
+              [
+                339,
+                339
+              ]
+            ],
+            [
+              [
+                1,
+                170,
+                "96e2017c6d014885255c97c9d2183d76b54156fb8286ca751e911f906ef48e05",
+                133,
+                37
+              ],
+              [
+                171,
+                340,
+                "c30bc31e4e3d9796e21be666be93e4ae5ef3c2adbb04523a3393304a9632a9ce",
+                145,
+                25
+              ]
+            ]
+          ],
+          [
+            198,
+            "SKILL.md",
+            [
+              3,
+              6,
+              0,
+              false,
+              true,
+              284
+            ],
+            [
+              [
+                1,
+                5
+              ],
+              [
+                158,
+                158
+              ]
+            ],
+            [
+              [
+                1,
+                170,
+                "0d8df1ad5af664d6e3341406efd638741eed662fbf1b5b7793e2c78f0de4045b",
+                164,
+                6
+              ],
+              [
+                171,
+                284,
+                "c3ebb6ecf9cf98b6b1a74977d7b1c8f033fcd27cb31f7ca04ed3c08457888af3",
+                114,
+                0
+              ]
+            ]
+          ],
+          [
+            198,
+            "references/patterns.md",
+            [
+              3,
+              2,
+              0,
+              false,
+              true,
+              265
+            ],
+            [
+              [
+                90,
+                90
+              ],
+              [
+                133,
+                133
+              ]
+            ],
+            [
+              [
+                1,
+                170,
+                "29e1c30e3b5c72c689ae6ce126cb72bfbac65bcbf0e78510fda6128926b2d217",
+                168,
+                2
+              ],
+              [
+                171,
+                265,
+                "0ce28548ef3ababcc17614c75ff2bce24748d4893294e1af1c100030e9084b65",
+                95,
+                0
+              ]
+            ]
+          ],
+          [
+            198,
+            "references/output-patterns.md",
+            [
+              2,
+              0,
+              0,
+              true,
+              true,
+              130
+            ],
+            [],
+            [
+              [
+                1,
+                130,
+                "ad413bdf29e48212c71e665e0656211d51d5d6ecacbf5ff3e8733b987ef779b8",
+                130,
+                0
+              ]
+            ]
+          ],
+          [
+            198,
+            "references/workflows.md",
+            [
+              2,
+              0,
+              0,
+              true,
+              true,
+              123
+            ],
+            [],
+            [
+              [
+                1,
+                123,
+                "15dd76400e095985abe8819c515e9e4fc35440203cff4a516fca257dc931727a",
+                123,
+                0
+              ]
+            ]
+          ]
+        ],
+        "mask_unit": "outer_physical_lines",
+        "mask_version": 123,
+        "method": "同123版。0は秘密不存在証明でない。",
+        "new_notice_literal_reads": 0,
+        "old_notice_profiles_not_relabelled": true,
+        "proof_tuple": "[row,relative,read,withheld_ranges,ordered_ranges]。range=from/to/viewSHA/visible/mask。",
+        "same_buffer": {
+          "bytes": true,
+          "git_blob": true,
+          "same_buffer": true,
+          "sha256": true,
+          "strict_utf8": true
+        },
+        "source_original_text_included": false
+      },
+      "roster_sha256": "f9c6b2e44c5e3aa8947f758f864eaa0d5edc396d622359826bca848cd96f9901"
+    }
+  },
+  "parent_acknowledged_through": 198,
+  "parent_journal_sha256": "6f913b68dfdbd64cbab2b2e2f9b4cfa9b7b217526aa2279cbacf29b9b5dba086",
+  "registered_spec_sha256": "4f6fe32f62db56bed2acb4d378147ff952ad06230243fb45f7674f3158313fc3",
+  "roster_sha256": "f9c6b2e44c5e3aa8947f758f864eaa0d5edc396d622359826bca848cd96f9901",
+  "source_commit": "920714f17d81e0a95c7a9bc51faf0a7921cd982d",
+  "source_gzip_or_original_body_reopened": 0,
+  "source_primary_bytes": 16864,
+  "source_slice": [
+    197,
+    198
+  ],
+  "todo": 3080,
+  "whole16_complete": false,
+  "whole_original_ACK_pins": [
+    {
+      "all_original_fields_reconstructed": true,
+      "chunk_id": "0a18aa720f976a50026eb0414f978005",
+      "chunk_sha256": "2fdcfc6618fe88908a67af62d8a5032937d2ef651010d295bee4e0a0698c87f0",
+      "first": 197,
+      "last": 198,
+      "original_message_sha256": "6a1ee7c7c27f8cebd07dc12c12c90b5933b7efbac0620b96e14a396de1896e25",
+      "reader_job": "20261027-072935-todo-3719"
+    }
+  ],
+  "publication_preparation": {
+    "publisher_job": "20261027-175645-todo-3080",
+    "original_input_sha256": "3080636d95abc0315e2004bf301161ce3c6ee649215f271dc0ff0ea6e09ad7b7",
+    "new_source_body_reads": 0,
+    "new_global_raw_or_workflow_credit": 0,
+    "new_permissions": 0,
+    "new_final_dispositions": 0,
+    "central_operations": 0,
+    "whole_original_contexts_preserved": true,
+    "original_reader_or_privacy_profiles_changed": false,
+    "publication_not_yet_performed": true,
+    "whole16_complete": false
+  }
+}

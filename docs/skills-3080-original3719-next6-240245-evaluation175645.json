@@ -1,0 +1,1535 @@
+{
+  "after": 239,
+  "all_original_chunks_losslessly_reconstructed": true,
+  "all_original_fields_and_actor_namespaces_preserved": true,
+  "central_operations": 0,
+  "complete_original_chunks": 4,
+  "domain": "skills3080-original3719-parent-shared-snapshot-v1",
+  "entries": [
+    {
+      "bytes": 5280,
+      "git_blob": "f1b5a7d0399274a52fce7ce80b9444bbba5be968",
+      "inventory_id": "github:c8487d40e088274b29908d38e2abd4acdab42dc129543334db1824627e2267aa",
+      "path": "skills/mailnike/healthclaw-dental/SKILL.md",
+      "source_commit": "920714f17d81e0a95c7a9bc51faf0a7921cd982d",
+      "source_repo": "6mile/skills",
+      "source_sha256": "53ecb6cd26997f1877965fb3b0384e9e4f4294c14483383078f0d972067b1802"
+    },
+    {
+      "bytes": 5588,
+      "git_blob": "cd072dca8f41e8d6df9ac067d096a59490539778",
+      "inventory_id": "github:372979a9154d2a65029ceabfcaf56f79967a3b544791d0909bc389e734d157b7",
+      "path": "skills/mailnike/healthclaw-homehealth/SKILL.md",
+      "source_commit": "920714f17d81e0a95c7a9bc51faf0a7921cd982d",
+      "source_repo": "6mile/skills",
+      "source_sha256": "d161def15b72843c5be887bec666ae67de8191f80be02e6f943c546f32108464"
+    },
+    {
+      "bytes": 5686,
+      "git_blob": "9c7300d3976a96341087d7af2f732328ec18a3b0",
+      "inventory_id": "github:ef06565cf75ba5872977c524e0a8e8297031323f94c904ae3593f8ac944a4d5e",
+      "path": "skills/mailnike/healthclaw-mental/SKILL.md",
+      "source_commit": "920714f17d81e0a95c7a9bc51faf0a7921cd982d",
+      "source_repo": "6mile/skills",
+      "source_sha256": "6bad4a90600032ee0c1d5225f4aa82f5af08a87f7303bc4d492888cae4d72bb2"
+    },
+    {
+      "bytes": 5239,
+      "git_blob": "89d3622dc45ca06b8560563826012d099948cd96",
+      "inventory_id": "github:427a8b916526cc3c36eab16d6120d2de88766631b9a610cf04062d9f727c6868",
+      "path": "skills/mailnike/healthclaw-vet/SKILL.md",
+      "source_commit": "920714f17d81e0a95c7a9bc51faf0a7921cd982d",
+      "source_repo": "6mile/skills",
+      "source_sha256": "6096ed4addb0f6ee144ae2eee3e480bf29c3fda66b748a60e68e5004862e2d5f"
+    },
+    {
+      "bytes": 19555,
+      "git_blob": "f2a3cc5597945909fd976b95f46ee078c39328e0",
+      "inventory_id": "github:b758e9f891dfafabcb8f9c4980d15def76386d2cf8dba8462fe99cc2831bba28",
+      "path": "skills/mailnike/healthclaw/SKILL.md",
+      "source_commit": "920714f17d81e0a95c7a9bc51faf0a7921cd982d",
+      "source_repo": "6mile/skills",
+      "source_sha256": "e13a7cd23c065b215285611bd65b5cffa2ae4603f53136a2720fc2d4e13e7f0b"
+    },
+    {
+      "bytes": 12496,
+      "git_blob": "8b2648997678e0840c819e9fc023efb20b4b1ebc",
+      "inventory_id": "github:1834bb0001544b6acd228b9f9fd2eab265895ec9f7cdf256b24ad63e3689033d",
+      "path": "skills/mailnike/propclaw/SKILL.md",
+      "source_commit": "920714f17d81e0a95c7a9bc51faf0a7921cd982d",
+      "source_repo": "6mile/skills",
+      "source_sha256": "ffcebd1dd25bf25767d69cc242b597309233c1383c65a53281bcbbd2529b1ac0"
+    }
+  ],
+  "limits": [
+    "Parent received actual original six assessments and limits with independent native Sol/max metadata; source body/support raw reads remain the recorded original reader's work, not new parent raw reads.",
+    "Original notice reuse, ordered full-diff, fresh reads, saved-unread and unsaved null states and per-chunk actor namespaces are preserved, not converted into permissions.",
+    "This pending-assessment preparation does not install, accept third-party rights or complete598/51030/73220/16sources."
+  ],
+  "new_copy_permissions": 0,
+  "new_final_dispositions": 0,
+  "new_parent_raw_body_read_credit": 0,
+  "new_source_or_support_reads_by_materializer": 0,
+  "original_journal_parent": "20261024-235901-todo-3080",
+  "original_primary_assessments": 6,
+  "original_support_state_counts": {
+    "0": 30,
+    "1": 6,
+    "2": 5,
+    "3": 1,
+    "4": 6
+  },
+  "parent_journal_sha256_at245": "59e0eb3ce5af5afbad0ed139cfeb63078aba28b9eeda7f825e38288a2d219dcb",
+  "publisher_job": "20261027-175645-todo-3080",
+  "records": [
+    {
+      "actual_assessment_reader": "20261028-171959-todo-3719",
+      "bytes": 5280,
+      "current_permission_or_adoption_granted": false,
+      "git_blob": "f1b5a7d0399274a52fce7ce80b9444bbba5be968",
+      "inventory_id": "github:c8487d40e088274b29908d38e2abd4acdab42dc129543334db1824627e2267aa",
+      "new_final_disposition": false,
+      "ordinal": 240,
+      "original_assessment": {
+        "candidate_disposition": "診療記録の識別/版・予定/実施の境界を改訂候補として提案。採否・許諾・導入/臨床判断/実test0。",
+        "findings": [
+          "Universal/Palmer/FDI、乳歯/永久歯と面の対応・患者/encounter/provider所属、比較する検査の同患者/単位/部位・欠測は未検証。",
+          "CDTをtext保存することやMIT noticeだけで現在のcode/第三者利用権を保証しない。stored trendやplan completedは臨床的改善/実処置・同意/実保険給付/支払の証明ではない。",
+          "local/parameterized/zero-networkという説明だけで患者情報の認可/履歴・安全な保管やGL連携の正しさは確定しない。"
+        ],
+        "nearby_limit": "起動metadataのみ。中央本文/存在・同等性・現設定は未照会。",
+        "nearby_metadata": [
+          "domain-modeling",
+          "sql-data-integrity",
+          "source-grounded-content-review",
+          "security-review"
+        ],
+        "negative": "歯番号やcode文字列が保存できたことだけで正しい診療/権利とし、trendやcompleted flagで治療成功/保険支払を保証する。",
+        "notices": [
+          [
+            "LICENSE.txt",
+            1,
+            "当該dentalの同1082B notice。",
+            "CDT等の第三者code/標準・実公開版/作者/患者データの権利は別。"
+          ]
+        ],
+        "positive": "同じ患者/部位/測定体系の検査を欠測付きで比較し、記録・臨床解釈/実処置・実費用を分ける設計へ参照する。",
+        "read": [
+          2,
+          0,
+          0,
+          true,
+          true,
+          91
+        ],
+        "reason": "91行全読。歯式/3体系、CDT・多段計画・6部位測定とcore/GL連携の主張を確認。実装/標準/診療判断は未検証。",
+        "required_changes": [
+          "患者/診療/資格・歯式/部位/単位と測定・code版を固定し、変更/欠測/比較可能性と認可/最小出力を検査する。実利用に必要な現標準/権利は親が公式根拠で確認する。",
+          "臨床記録/予定・実施・臨床判断/同意、費用/保険見積と実請求/支払を分離し、訂正履歴と原診療/台帳の対応を確認する。今回は診療/DB/送信0。"
+        ],
+        "row": 240,
+        "source": [
+          "github:c8487d40e088274b29908d38e2abd4acdab42dc129543334db1824627e2267aa",
+          "skills/mailnike/healthclaw-dental/SKILL.md",
+          "53ecb6cd26997f1877965fb3b0384e9e4f4294c14483383078f0d972067b1802",
+          "f1b5a7d0399274a52fce7ce80b9444bbba5be968",
+          5280
+        ],
+        "support": [
+          [
+            "LICENSE.txt",
+            1082,
+            "b84dde49",
+            "83ac5426",
+            4,
+            0,
+            0,
+            "100644"
+          ],
+          [
+            "SKILL.md",
+            5280,
+            "53ecb6cd",
+            "f1b5a7d0",
+            2,
+            0,
+            0,
+            "100644"
+          ],
+          [
+            "_meta.json",
+            466,
+            "129125e5",
+            "c85fb5f8",
+            1,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "init_db.py",
+            null,
+            null,
+            "fa44a510",
+            0,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "scripts/db_query.py",
+            null,
+            null,
+            "1eb1e582",
+            0,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "scripts/dental.py",
+            null,
+            null,
+            "718cae29",
+            0,
+            null,
+            null,
+            "100644"
+          ]
+        ],
+        "use": "歯式/歯面・処置/診療・治療計画/費用見積・検査比較を対応させる記録モデル参考。",
+        "value": "患者/診療・歯の識別体系と測定部位/時点を固定し、予定/実施・見積/確定・比較結果を分けられる。"
+      },
+      "original_chunk_sha256": "37fef44ae8408978b6fba1448166d72196d6cab7cda8ebbea3a1c4fc1447bb65",
+      "path": "skills/mailnike/healthclaw-dental/SKILL.md",
+      "source_commit": "920714f17d81e0a95c7a9bc51faf0a7921cd982d",
+      "source_repo": "6mile/skills",
+      "source_sha256": "53ecb6cd26997f1877965fb3b0384e9e4f4294c14483383078f0d972067b1802"
+    },
+    {
+      "actual_assessment_reader": "20261028-171959-todo-3719",
+      "bytes": 5588,
+      "current_permission_or_adoption_granted": false,
+      "git_blob": "cd072dca8f41e8d6df9ac067d096a59490539778",
+      "inventory_id": "github:372979a9154d2a65029ceabfcaf56f79967a3b544791d0909bc389e734d157b7",
+      "new_final_disposition": false,
+      "ordinal": 241,
+      "original_assessment": {
+        "candidate_disposition": "訪問/計画/評価・資格/監督の記録整合を改訂候補として提案。採否・許諾・導入/臨床判断/実test0。",
+        "findings": [
+          "485/60日・OASIS/M-items等は保存主張で、現在の国/制度/版・対象者への適合を保証しない。scheduled/visit-statusやphysician IDだけで実訪問/認定・適格な臨床判断済みとしない。",
+          "頻度JSON/曜日・開始終了/移動/距離の単位/日跨ぎ/重複・監督期限と担当資格、患者/社員/会社の所属照合は未検証。",
+          "Decimal保存だけで正しい償還/実支払とせず、local/no-networkの説明だけで患者情報の認可/保管/訂正履歴を保証しない。"
+        ],
+        "nearby_limit": "起動metadataのみ。中央本文/存在・同等性・現設定は未照会。",
+        "nearby_metadata": [
+          "domain-modeling",
+          "sql-data-integrity",
+          "timezone-helper",
+          "source-grounded-content-review"
+        ],
+        "negative": "予定やstatus・認定者IDだけで訪問/監督・現制度適合/保険支払まで完了とする。",
+        "notices": [
+          [
+            "LICENSE.txt",
+            1,
+            "当該homehealthの同1082B notice。",
+            "OASIS等の標準・実公開版/作者/患者情報や依存の権利は別。"
+          ]
+        ],
+        "positive": "同患者の計画版/期間と実訪問・担当/監督・時間/距離を照合し、評価記録と臨床判断/認定・実支払を分ける。",
+        "read": [
+          2,
+          0,
+          0,
+          true,
+          true,
+          91
+        ],
+        "reason": "91行全読。訪問種別・485/60日episode・OASIS評価・aide assignmentとGL連携主張を確認。現規則/評価版や実装は未検証。",
+        "required_changes": [
+          "対象制度/評価/計画の版・期間と患者/担当者/資格を固定し、公式の現条件を親の必要時に確認する。予定/実訪問・認定/評価と訂正履歴を分ける。",
+          "calendar/時間帯/単位・頻度/監督期限・重複と認可/最小出力を検査し、実作業/費用とGLを原訪問へ結ぶ。記録だけで臨床/会計完了を報告せず実行0を保つ。"
+        ],
+        "row": 241,
+        "source": [
+          "github:372979a9154d2a65029ceabfcaf56f79967a3b544791d0909bc389e734d157b7",
+          "skills/mailnike/healthclaw-homehealth/SKILL.md",
+          "d161def15b72843c5be887bec666ae67de8191f80be02e6f943c546f32108464",
+          "cd072dca8f41e8d6df9ac067d096a59490539778",
+          5588
+        ],
+        "support": [
+          [
+            "LICENSE.txt",
+            1082,
+            "b84dde49",
+            "83ac5426",
+            4,
+            0,
+            0,
+            "100644"
+          ],
+          [
+            "SKILL.md",
+            5588,
+            "d161def1",
+            "cd072dca",
+            2,
+            0,
+            0,
+            "100644"
+          ],
+          [
+            "_meta.json",
+            474,
+            "ad578476",
+            "53f60a52",
+            1,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "init_db.py",
+            null,
+            null,
+            "9acc3119",
+            0,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "scripts/db_query.py",
+            null,
+            null,
+            "1e5774f3",
+            0,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "scripts/homehealth.py",
+            null,
+            null,
+            "a1641243",
+            0,
+            null,
+            null,
+            "100644"
+          ]
+        ],
+        "use": "訪問予定/実施・認定期間/計画・評価/担当者/監督を対応させる在宅サービス記録モデル参考。",
+        "value": "患者・担当/監督者と訪問/評価・計画の版、予定と実事実、移動/時間/費用を分けて追跡できる。"
+      },
+      "original_chunk_sha256": "37fef44ae8408978b6fba1448166d72196d6cab7cda8ebbea3a1c4fc1447bb65",
+      "path": "skills/mailnike/healthclaw-homehealth/SKILL.md",
+      "source_commit": "920714f17d81e0a95c7a9bc51faf0a7921cd982d",
+      "source_repo": "6mile/skills",
+      "source_sha256": "d161def15b72843c5be887bec666ae67de8191f80be02e6f943c546f32108464"
+    },
+    {
+      "actual_assessment_reader": "20261028-171959-todo-3719",
+      "bytes": 5686,
+      "current_permission_or_adoption_granted": false,
+      "git_blob": "9c7300d3976a96341087d7af2f732328ec18a3b0",
+      "inventory_id": "github:ef06565cf75ba5872977c524e0a8e8297031323f94c904ae3593f8ac944a4d5e",
+      "new_final_disposition": false,
+      "ordinal": 242,
+      "original_assessment": {
+        "candidate_disposition": "評価記録/比較・臨床解釈と開示scopeの境界を改訂候補として提案。採否・許諾・導入/実test0。",
+        "findings": [
+          "同instrumentという条件だけで、同患者・版/言語/設問/欠測・実施条件が同じとは限らない。score低下やimproved booleanを診断/安全や治療成功の保証にしない。",
+          "responses/scoreは任意入力であり、両者の整合・欠測/範囲・根拠/訂正履歴は未検証。列挙尺度すべての正しい実装や利用権も未確認。",
+          "group参加者JSONとnotesは他患者情報の混入/開示を招きうる。local/SQL parameterizationだけで患者/会社/実担当の認可・同意を保証しない。"
+        ],
+        "nearby_limit": "起動metadataのみ。中央本文/存在・同等性・現設定は未照会。",
+        "nearby_metadata": [
+          "domain-modeling",
+          "sql-data-integrity",
+          "evidence-based-text-review",
+          "security-review"
+        ],
+        "negative": "数値低下やimproved flagだけで治療成功/安全とし、group参加者間へ無選別にnotesを開示する。",
+        "notices": [
+          [
+            "LICENSE.txt",
+            1,
+            "当該mentalの同1082B notice。",
+            "尺度/実公開版/作者・患者データの権利は別。"
+          ]
+        ],
+        "positive": "同患者/同版の回答と採点根拠・欠測を照合し、比較結果を臨床判断と分けて記録する。",
+        "read": [
+          2,
+          0,
+          0,
+          true,
+          true,
+          93
+        ],
+        "reason": "93行全読。尺度/自動採点・比較/改善boolean、治療目標・groupの説明を確認。script未保存で採点/閾値/認可・現尺度版は未検証。",
+        "required_changes": [
+          "患者/診療・実施者/尺度の版/言語・回答/採点根拠/欠測を固定して検査し、臨床判断/適切な対応と単なる記録/scoreを分離する。現尺度/権利は親の実利用時に公式根拠で確認する。",
+          "group/個別記録の認可・同意/最小出力、訂正と比較可能性を検査する。今回は患者情報参照/臨床判断・診療/DB操作0。"
+        ],
+        "row": 242,
+        "source": [
+          "github:ef06565cf75ba5872977c524e0a8e8297031323f94c904ae3593f8ac944a4d5e",
+          "skills/mailnike/healthclaw-mental/SKILL.md",
+          "6bad4a90600032ee0c1d5225f4aa82f5af08a87f7303bc4d492888cae4d72bb2",
+          "9c7300d3976a96341087d7af2f732328ec18a3b0",
+          5686
+        ],
+        "support": [
+          [
+            "LICENSE.txt",
+            1082,
+            "b84dde49",
+            "83ac5426",
+            4,
+            0,
+            0,
+            "100644"
+          ],
+          [
+            "SKILL.md",
+            5686,
+            "6bad4a90",
+            "9c7300d3",
+            2,
+            0,
+            0,
+            "100644"
+          ],
+          [
+            "_meta.json",
+            466,
+            "4477497f",
+            "52c19a1a",
+            1,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "init_db.py",
+            null,
+            null,
+            "b365d7cc",
+            0,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "scripts/db_query.py",
+            null,
+            null,
+            "e13e35d4",
+            0,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "scripts/mental.py",
+            null,
+            null,
+            "354b1c52",
+            0,
+            null,
+            null,
+            "100644"
+          ]
+        ],
+        "use": "面談/尺度評価・目標/比較・group参加者を元患者/診療へ対応させる記録モデル参考。",
+        "value": "回答・算出/入力scoreと臨床解釈、目標の記録と実経過、個別情報とgroup共有を分けられる。"
+      },
+      "original_chunk_sha256": "f5f38bc5b71d6448afe5edcfc8dff7280d69928fd1763e21af149581130f6e9c",
+      "path": "skills/mailnike/healthclaw-mental/SKILL.md",
+      "source_commit": "920714f17d81e0a95c7a9bc51faf0a7921cd982d",
+      "source_repo": "6mile/skills",
+      "source_sha256": "6bad4a90600032ee0c1d5225f4aa82f5af08a87f7303bc4d492888cae4d72bb2"
+    },
+    {
+      "actual_assessment_reader": "20261028-171959-todo-3719",
+      "bytes": 5239,
+      "current_permission_or_adoption_granted": false,
+      "git_blob": "89d3622dc45ca06b8560563826012d099948cd96",
+      "inventory_id": "github:427a8b916526cc3c36eab16d6120d2de88766631b9a610cf04062d9f727c6868",
+      "new_final_disposition": false,
+      "ordinal": 243,
+      "original_assessment": {
+        "candidate_disposition": "計測/算術と臨床/実事実・関係者scopeの境界を改訂候補として提案。採否・許諾・導入/実test0。",
+        "findings": [
+          "体重による単純な算術やDecimal精度は適切な投薬の証明ではない。薬剤/剤形濃度・単位/経路・動物種/個体条件と体重の時点/根拠は別に確認する必要がある。",
+          "latest weightが同動物/実測・適切な時点か、訂正/負値/欠測/単位や計算履歴の再現は未検証。計算保存と実投与を混同しない。",
+          "reserved/checked-in/outやowner/financial flagだけで実預かり・正当な同意/所有・実支払を保証しない。患者/会社/関係者間の認可・情報開示も未検証。"
+        ],
+        "nearby_limit": "起動metadataのみ。中央本文/存在・同等性・現設定は未照会。",
+        "nearby_metadata": [
+          "domain-modeling",
+          "sql-data-integrity",
+          "source-grounded-content-review",
+          "validate-consume-same-bytes"
+        ],
+        "negative": "latest体重と掛算結果だけで安全な投薬量を保証し、owner flagやstatusを実同意/実預かりとする。",
+        "notices": [
+          [
+            "LICENSE.txt",
+            1,
+            "当該vetの同1082B notice。",
+            "実公開版/作者・医薬/臨床資料/関係者データや依存の権利は別。"
+          ]
+        ],
+        "positive": "同動物の体重時点/単位と計算入力を保持し、計算結果と専門的判断/実投与・実預かりを分ける。",
+        "read": [
+          2,
+          0,
+          0,
+          true,
+          true,
+          90
+        ],
+        "reason": "90行全読。体重×入力単価の計算、latest weight既定・boarding/owner linksを確認。実装・投薬安全性/現臨床条件は未検証。",
+        "required_changes": [
+          "動物/患者/会社、計測の時点/単位・薬剤/入力根拠と計算版を固定し、算術出力と獣医療上の判断/実投与を分離する。実利用に必要な現公式条件は親が確認する。",
+          "預かり/関係者の予定/記録と実事実/同意・費用を分け、認可/最小出力・訂正/監査を検査する。今回は投薬量推奨/実投与・患者参照/DB操作0。"
+        ],
+        "row": 243,
+        "source": [
+          "github:427a8b916526cc3c36eab16d6120d2de88766631b9a610cf04062d9f727c6868",
+          "skills/mailnike/healthclaw-vet/SKILL.md",
+          "6096ed4addb0f6ee144ae2eee3e480bf29c3fda66b748a60e68e5004862e2d5f",
+          "89d3622dc45ca06b8560563826012d099948cd96",
+          5239
+        ],
+        "support": [
+          [
+            "LICENSE.txt",
+            1082,
+            "b84dde49",
+            "83ac5426",
+            4,
+            0,
+            0,
+            "100644"
+          ],
+          [
+            "SKILL.md",
+            5239,
+            "6096ed4a",
+            "89d3622d",
+            2,
+            0,
+            0,
+            "100644"
+          ],
+          [
+            "_meta.json",
+            460,
+            "1eacaac6",
+            "7b8eac34",
+            1,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "init_db.py",
+            null,
+            null,
+            "6188767a",
+            0,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "scripts/db_query.py",
+            null,
+            null,
+            "01924915",
+            0,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "scripts/vet.py",
+            null,
+            null,
+            "af3c2a99",
+            0,
+            null,
+            null,
+            "100644"
+          ]
+        ],
+        "use": "動物患者・計測体重/時点・預かり予定/実施・複数関係者/費用責任を結ぶ記録設計参考。",
+        "value": "最新記録という選択と実際に使える計測、算術結果と投薬判断、飼主の関係/請求責任を分けられる。"
+      },
+      "original_chunk_sha256": "f5f38bc5b71d6448afe5edcfc8dff7280d69928fd1763e21af149581130f6e9c",
+      "path": "skills/mailnike/healthclaw-vet/SKILL.md",
+      "source_commit": "920714f17d81e0a95c7a9bc51faf0a7921cd982d",
+      "source_repo": "6mile/skills",
+      "source_sha256": "6096ed4addb0f6ee144ae2eee3e480bf29c3fda66b748a60e68e5004862e2d5f"
+    },
+    {
+      "actual_assessment_reader": "20261028-171959-todo-3719",
+      "bytes": 19555,
+      "current_permission_or_adoption_granted": false,
+      "git_blob": "f2a3cc5597945909fd976b95f46ee078c39328e0",
+      "inventory_id": "github:b758e9f891dfafabcb8f9c4980d15def76386d2cf8dba8462fe99cc2831bba28",
+      "new_final_disposition": false,
+      "ordinal": 244,
+      "original_assessment": {
+        "candidate_disposition": "診療記録/臨床判断・指示/実施と請求/実受理の境界を改訂候補として提案。採否・許諾・導入/実test0。",
+        "findings": [
+          "local/zero-network・consent行・audit記録だけでHIPAA適合や全患者/会社/実担当の認可・同意範囲/撤回・保管/訂正が検証済みとはしない。",
+          "患者=customer/担当=employeeというリンクは、正しい患者照合や資格/処方権限・臨床判断の証明ではない。sourceの診断/処方例を実患者への推奨として採用しない。",
+          "codeをTEXT保存するだけで版/適用/第三者権利・有効な診療/請求codeを保証しない。lab結果の単位/基準範囲・検体/検査/患者との対応、sign/addendumの実効性も未確認。",
+          "submit-claim/accepted/paidやprior-auth番号/usage、dispensing/cancelは、実相手の受理/支払・実承認/実投薬を証明しない。二重請求/調剤・在庫/GLとの原子性、署名後訂正/取消は実装未検証。"
+        ],
+        "nearby_limit": "起動metadataのみ。中央本文/存在・同等性・現設定は未照会。",
+        "nearby_metadata": [
+          "domain-modeling",
+          "sql-data-integrity",
+          "security-review",
+          "source-grounded-content-review",
+          "stale-request-ordering"
+        ],
+        "negative": "患者IDやTEXT code・consent/audit行だけで安全/適合とし、statusや処方例を実診療/投薬・保険受理/支払の保証にする。",
+        "notices": [
+          [
+            "LICENSE.txt",
+            1,
+            "当該healthclawの同1082B notice。",
+            "実公開版/作者・医療code/標準/患者データと依存資源の権利は別。"
+          ]
+        ],
+        "positive": "同患者/診療の指示→検体/結果と実担当/版を照合し、署名/訂正、実施/調剤・請求の実受領を別結果で確認する設計へ参照する。",
+        "read": [
+          2,
+          0,
+          0,
+          true,
+          true,
+          255
+        ],
+        "reason": "255行全読。98actions/7domain、35tables、consent/audit・HIPAA-friendly/zero-networkの主張と臨床/請求等の例を確認。実装/臨床妥当性・現規則/標準は未検証。",
+        "required_changes": [
+          "患者/会社・診療/検体/指示と実担当/資格・同意/認可、測定単位/時点・薬剤/コード/帳票版を固定する。署名/訂正・機微情報最小出力と全取得/更新経路を検査する。",
+          "記録/計画・臨床判断/実施・請求/事前承認/実受理・在庫/GL/実支払を別証拠へ結び、重複/部分失敗/再試行を確認する。現医療/法令/標準/権利は親の必要時に公式根拠で確認し、原role/例から実診療や新支出を実行しない。"
+        ],
+        "row": 244,
+        "source": [
+          "github:b758e9f891dfafabcb8f9c4980d15def76386d2cf8dba8462fe99cc2831bba28",
+          "skills/mailnike/healthclaw/SKILL.md",
+          "e13a7cd23c065b215285611bd65b5cffa2ae4603f53136a2720fc2d4e13e7f0b",
+          "f2a3cc5597945909fd976b95f46ee078c39328e0",
+          19555
+        ],
+        "support": [
+          [
+            "LICENSE.txt",
+            1082,
+            "b84dde49",
+            "83ac5426",
+            4,
+            0,
+            0,
+            "100644"
+          ],
+          [
+            "SKILL.md",
+            19555,
+            "e13a7cd2",
+            "f2a3cc55",
+            2,
+            0,
+            0,
+            "100644"
+          ],
+          [
+            "UI.yaml",
+            null,
+            null,
+            "790369d9",
+            0,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "_meta.json",
+            452,
+            "49d00dd5",
+            "4ad4bebe",
+            1,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "init_db.py",
+            null,
+            null,
+            "c1693e21",
+            0,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "scripts/appointments.py",
+            null,
+            null,
+            "beff1fec",
+            0,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "scripts/billing.py",
+            null,
+            null,
+            "7cb49f3a",
+            0,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "scripts/clinical.py",
+            null,
+            null,
+            "92afc886",
+            0,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "scripts/db_query.py",
+            null,
+            null,
+            "a0ce4bb2",
+            0,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "scripts/inventory.py",
+            null,
+            null,
+            "3a155588",
+            0,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "scripts/lab.py",
+            null,
+            null,
+            "160d08bb",
+            0,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "scripts/patients.py",
+            null,
+            null,
+            "db135bcb",
+            0,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "scripts/referrals.py",
+            null,
+            null,
+            "0ed21b67",
+            0,
+            null,
+            null,
+            "100644"
+          ]
+        ],
+        "use": "患者/診療を中心に予定・臨床記録/指示・検査/薬局・請求/事前承認を対応させる記録モデル参考。",
+        "value": "同じ患者/診療・実担当と、注文/結果・計画/実施・請求/実受理/支払を別状態で追跡できる。"
+      },
+      "original_chunk_sha256": "ce201f8d9ef8c7aa2c255652ba19ca7b7e54dd2bff5374bb9ea4147712aaf315",
+      "path": "skills/mailnike/healthclaw/SKILL.md",
+      "source_commit": "920714f17d81e0a95c7a9bc51faf0a7921cd982d",
+      "source_repo": "6mile/skills",
+      "source_sha256": "e13a7cd23c065b215285611bd65b5cffa2ae4603f53136a2720fc2d4e13e7f0b"
+    },
+    {
+      "actual_assessment_reader": "20261028-171959-todo-3719",
+      "bytes": 12496,
+      "current_permission_or_adoption_granted": false,
+      "git_blob": "8b2648997678e0840c819e9fc023efb20b4b1ebc",
+      "inventory_id": "github:1834bb0001544b6acd228b9f9fd2eab265895ec9f7cdf256b24ad63e3689033d",
+      "new_final_disposition": false,
+      "ordinal": 245,
+      "original_assessment": {
+        "candidate_disposition": "契約/審査・預り金/実資金と保守作用の境界を改訂候補として提案。採否・許諾・導入/実test0。",
+        "findings": [
+          "『背景審査』をadd-screeningへ対応させるが外部審査は別で、同意/result/CRA情報の記録だけでは実審査/適法な拒否通知・実配送を証明しない。",
+          "FCRA適合・州別late fee/預り金期限・1099等は保存主張。実所在地/自治体/契約/適用日・現法令との一致は未確認。fee/rent更新やrenewal acceptanceを実同意/請求権限にしない。",
+          "trust型GL accountやdeposit/return記録は実銀行口座の信託/資金分離・実入出金の証明ではない。契約期間/住戸の重複、定期charges/fee/返還の一意性/取消は未検証。",
+          "permission-to-enterやcomplete work-orderは実入室許可/修理・費用確定と別。URL文字列を保存することは、その宛先へのアクセス/取得許可や安全な表示の証明ではない。"
+        ],
+        "nearby_limit": "起動metadataのみ。中央本文/存在・同等性・現設定は未照会。",
+        "nearby_metadata": [
+          "domain-modeling",
+          "sql-data-integrity",
+          "payment-status-reconciliation",
+          "source-grounded-content-review",
+          "security-review"
+        ],
+        "negative": "screening/consent flagやtrust account分類だけで実審査/適法性・資金分離を保証し、保存期限/feeを根拠に勝手に課金/返還や入室を行う。",
+        "notices": [
+          [
+            "LICENSE.txt",
+            1,
+            "当該propclawの同1066B notice。",
+            "実公開版/作者・契約/審査データ・依存やserviceの権利は別。"
+          ]
+        ],
+        "positive": "同じ住戸/契約版の請求と預り金・実入出金を照合し、外部審査/通知・実保守を記録から分ける設計へ参照する。",
+        "read": [
+          3,
+          1,
+          0,
+          false,
+          true,
+          205
+        ],
+        "reason": "205行を順序全読し59行メールのみ伏字。66actions/5domain、offline/CRA照会なし・URLは文字列保存のみ、FCRA/州別fee/deposit期限の主張を確認。実装/現制度は未検証。",
+        "required_changes": [
+          "会社/物件/住戸・申込/契約/同意の版・期間と実相手を固定し、審査/拒否通知、契約/更新・入室/保守の実証拠を内部記録と分ける。現在の公式法令/適用範囲と権利は親の実利用時に確認する。",
+          "家賃/fee・預り金/控除/返還と銀行/GLを一意に結び、反対仕訳/再試行/部分失敗・期限を検査する。原role/flagから新費用/顧客との新約束・外部審査/送信を実行せず、機微情報の認可/最小出力を守る。"
+        ],
+        "row": 245,
+        "source": [
+          "github:1834bb0001544b6acd228b9f9fd2eab265895ec9f7cdf256b24ad63e3689033d",
+          "skills/mailnike/propclaw/SKILL.md",
+          "ffcebd1dd25bf25767d69cc242b597309233c1383c65a53281bcbbd2529b1ac0",
+          "8b2648997678e0840c819e9fc023efb20b4b1ebc",
+          12496
+        ],
+        "support": [
+          [
+            "LICENSE.txt",
+            1066,
+            "6f6bb192",
+            "ff21cdae",
+            4,
+            0,
+            0,
+            "100644"
+          ],
+          [
+            "SKILL.md",
+            12496,
+            "ffcebd1d",
+            "8b264899",
+            3,
+            1,
+            0,
+            "100644"
+          ],
+          [
+            "UI.yaml",
+            null,
+            null,
+            "616a814c",
+            0,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "_meta.json",
+            624,
+            "045aa6fb",
+            "048d8982",
+            1,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "init_db.py",
+            null,
+            null,
+            "584dd419",
+            0,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "scripts/accounting.py",
+            null,
+            null,
+            "3feb4e17",
+            0,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "scripts/db_query.py",
+            null,
+            null,
+            "812ed664",
+            0,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "scripts/leases.py",
+            null,
+            null,
+            "e6ec1aa1",
+            0,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "scripts/maintenance.py",
+            null,
+            null,
+            "d4d26789",
+            0,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "scripts/properties.py",
+            null,
+            null,
+            "0a183d98",
+            0,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "scripts/tenants.py",
+            null,
+            null,
+            "075f8e59",
+            0,
+            null,
+            null,
+            "100644"
+          ]
+        ],
+        "use": "物件/住戸・申込/審査/契約・家賃/預り金・保守と会計/実作用を分ける業務モデル参考。",
+        "value": "原契約/対象期間/住戸と請求/預り金台帳、審査記録と実審査、保守予定と実作業を対応させられる。"
+      },
+      "original_chunk_sha256": "5bc1bce4a1644c6d4b233d13a2f91447cd7bf256b1062ffe90c76feed7fababb",
+      "path": "skills/mailnike/propclaw/SKILL.md",
+      "source_commit": "920714f17d81e0a95c7a9bc51faf0a7921cd982d",
+      "source_repo": "6mile/skills",
+      "source_sha256": "ffcebd1dd25bf25767d69cc242b597309233c1383c65a53281bcbbd2529b1ac0"
+    }
+  ],
+  "roster_sha256": "f9c6b2e44c5e3aa8947f758f864eaa0d5edc396d622359826bca848cd96f9901",
+  "saved_support_metadata": 18,
+  "shared_original_contexts": {
+    "37fef44ae8408978b6fba1448166d72196d6cab7cda8ebbea3a1c4fc1447bb65": {
+      "actual_assessment_reader": "20261028-171959-todo-3719",
+      "common": {
+        "boundaries": {
+          "central_operations": 0,
+          "copy_license_accepted": false,
+          "new_final_dispositions": 0,
+          "source_executed": false
+        },
+        "chunk_id": "35c5cb9ca8e772791e718fd6fbe067fe",
+        "definitions": {
+          "actors": {
+            "0": "今回の実assistant読取"
+          },
+          "mask_method": "表示前v5置換。今回primaryは0行。秘密不存在の証明ではない。",
+          "reader_namespace": "20261028-171959-todo-3719/current3719",
+          "states": {
+            "0": "unsaved",
+            "1": "saved_unread",
+            "2": "direct_raw_full",
+            "3": "direct_masked_full",
+            "4": "exact_bytes_reuse",
+            "5": "ordered_full_diff",
+            "6": "partial",
+            "7": "scan"
+          },
+          "support_tuple": "[relative,bytes,SHA8,Gitblob8,state,maskCount,actor,mode]。未保存bytes/SHA/reader/maskCountはnull。"
+        },
+        "domain": "research598-chunk-v1",
+        "first_ordinal": 240,
+        "limits": {
+          "central_body_or_existence_checks": 0,
+          "current_medical_legal_financial_claims_not_verified": true,
+          "prior_reader_states_not_relabelled": true,
+          "source_bodies_refetched": 0,
+          "source_script_execution": 0,
+          "whole16_complete": false
+        },
+        "notice_bodies": [
+          {
+            "bytes": 1082,
+            "consumer_paths": [
+              "skills/mailnike/healthclaw-dental/LICENSE.txt",
+              "skills/mailnike/healthclaw-homehealth/LICENSE.txt"
+            ],
+            "consumer_rows": [
+              240,
+              241
+            ],
+            "fresh_raw": false,
+            "git_blob": "83ac54265c2a9c5e824da850c0c4ea47d73fd976",
+            "id": 1,
+            "meaning": "各取得済みbufferを照合した同1082B MIT本文。実公開版/作者・医療code/標準/患者データと依存の権利は別。",
+            "parent_chunk_sha256": "a253ad1cefbe2bdea7ca5d7a151b90450f89de38866c15a6ae439b1c68a264c1",
+            "parent_receipt": "research3719-chunk-59f61fa511b35584aee8a697fc72ff55.json",
+            "read": [
+              4,
+              0,
+              0,
+              false,
+              true,
+              21
+            ],
+            "reader_job": "20261028-171959-todo-3719",
+            "reader_namespace": "20261028-171959-todo-3719/current3719",
+            "representative_path": "skills/mailnike/educlaw-finaid/LICENSE.txt",
+            "representative_read": [
+              2,
+              0,
+              0,
+              true,
+              true,
+              21
+            ],
+            "representative_row": 210,
+            "sha256": "b84dde49057a6d8a69d28c22e9854d86a9aee01e09a2d7498d0aebf20cd8f538"
+          }
+        ],
+        "prior_journal_sha256": "0f4b229e32c0230d7b7453c6283d6b497cefd53dd9cb60620018ea05e7cf490d",
+        "reader_job": "20261028-171959-todo-3719",
+        "reader_todo": 3719,
+        "reading_integrity": {
+          "notice_new_literal_reads": 0,
+          "primary_lines": [
+            91,
+            91
+          ],
+          "primary_mask_counts": [
+            0,
+            0
+          ],
+          "primary_ordered_full_rows": [
+            240,
+            241
+          ],
+          "same_buffer_sha256_gitblob_bytes_strict_utf8": true,
+          "source_original_text_included": false,
+          "support_inventory_complete_tree_counts": [
+            [
+              240,
+              6
+            ],
+            [
+              241,
+              6
+            ]
+          ]
+        },
+        "roster_sha256": "f9c6b2e44c5e3aa8947f758f864eaa0d5edc396d622359826bca848cd96f9901"
+      },
+      "independent_native_metadata_sha256": "7dbdb50440f246afdb59b356086c82906615f2e8a41355804f1dd8bb086b2a49",
+      "independent_parent_journal_record": {
+        "chunk_id": "35c5cb9ca8e772791e718fd6fbe067fe",
+        "receipt_file": "research3719-chunk-35c5cb9ca8e772791e718fd6fbe067fe.json",
+        "chunk_sha256": "37fef44ae8408978b6fba1448166d72196d6cab7cda8ebbea3a1c4fc1447bb65",
+        "reader_job": "20261028-171959-todo-3719",
+        "first_ordinal": 240,
+        "last_ordinal": 241,
+        "parent_semantic_assessments_read": true
+      },
+      "original_chunk_id": "35c5cb9ca8e772791e718fd6fbe067fe",
+      "original_fields_losslessly_reconstructed": true,
+      "original_message_sha256": "2f6fdcd4ef8924281f460e4c1a2f112823e0eaa68a1af54213f56fa4b0ea41ab",
+      "original_receipt_sha256": "5810e52446ae19f2eb22f75ab561c56369f4496b6cf1d06671804ffd19cf43f3",
+      "parent_meaning": {
+        "actual_native_model": "pac24df/gpt-6.1-sol",
+        "actual_native_proof": "research3719-native-actual171959-through241175645.json",
+        "actual_native_sha256": "7dbdb50440f246afdb59b356086c82906615f2e8a41355804f1dd8bb086b2a49",
+        "chunk_id": "35c5cb9ca8e772791e718fd6fbe067fe",
+        "chunk_sha256": "37fef44ae8408978b6fba1448166d72196d6cab7cda8ebbea3a1c4fc1447bb65",
+        "consumer_job": "20261027-175645-todo-3080",
+        "effort": "max",
+        "first": 240,
+        "full_original_meanings_and_all_limits_read": true,
+        "limits": "2 primary各91行/計182物理をordered raw全読した元actorの評価で、v5置換0は秘密不存在の証明でない。1082B/21行MITの同byte再利用2で新literal0、支持全12=saved6/unsaved6。saved_unread/unsavedのmask/reader/nullと原namespaceを保持し、親の新raw・中央・許諾/採否/導入・現医療/法/財務/標準・臨床/権利の成功0。",
+        "meanings": [
+          "240歯科記録。患者/診療/provider/会社の所属と、Universal/Palmer/FDI・乳歯/永久歯/歯面/測定部位と時点/単位/欠測・code版を固定して比較可能性を確認する参考。文字列保存やplan completed・trendは実治療/改善/同意/保険給付/支払いの証明でなく、CDTの現在版や第三者の権利はMIT noticeで保証しない。",
+          "241在宅訪問記録。対象制度/評価/計画版と患者/担当/監督者の資格・期間、予定/実訪問・監督/認定と評価・時刻帯/日跨ぎ/頻度/距離単位/期限/重複を分ける。485/60日やOASIS/M-itemsの保存主張を現条件へ拡大せず、ID/status/Decimal保存だけで実訪問/適合/償還・支払完了を保証しない。",
+          "両方のlocal/parameterized/zero-network宣言は認可/最小出力/保管/訂正履歴やGL連携の正しさを保証しない。実利用時に必要な現公式根拠と個別標準/患者データ/依存の権利、実処置/費用と原診療/訪問・台帳対応を別に確認する。親は原の診療/DB/送信/scriptを実行しない。"
+        ],
+        "observed_at": "2026-10-28T17:22:19.5426335+00:00",
+        "original_actor_namespace_and_nulls_preserved": true,
+        "original_message_sha256": "2f6fdcd4ef8924281f460e4c1a2f112823e0eaa68a1af54213f56fa4b0ea41ab",
+        "producer_job": "20261028-171959-todo-3719",
+        "through": 241
+      },
+      "parent_meaning_sha256": "87442ff47fc1608db076aa94aa67b554168b2027641bbdedef54796f2847df6e"
+    },
+    "5bc1bce4a1644c6d4b233d13a2f91447cd7bf256b1062ffe90c76feed7fababb": {
+      "actual_assessment_reader": "20261028-171959-todo-3719",
+      "common": {
+        "boundaries": {
+          "central_operations": 0,
+          "copy_license_accepted": false,
+          "new_final_dispositions": 0,
+          "source_executed": false
+        },
+        "chunk_id": "73428e5045ba0149209a5f9ad07c18cd",
+        "definitions": {
+          "actors": {
+            "0": "今回の実assistant読取"
+          },
+          "mask_method": "表示前v5置換。59行のメールを伏字。0/1は秘密不存在の証明ではない。",
+          "reader_namespace": "20261028-171959-todo-3719/current3719",
+          "states": {
+            "0": "unsaved",
+            "1": "saved_unread",
+            "2": "direct_raw_full",
+            "3": "direct_masked_full",
+            "4": "exact_bytes_reuse",
+            "5": "ordered_full_diff",
+            "6": "partial",
+            "7": "scan"
+          },
+          "support_tuple": "[relative,bytes,SHA8,Gitblob8,state,maskCount,actor,mode]。未保存bytes/SHA/reader/maskCountはnull。"
+        },
+        "domain": "research598-chunk-v1",
+        "first_ordinal": 245,
+        "limits": {
+          "central_body_or_existence_checks": 0,
+          "current_legal_financial_standard_api_claims_not_verified": true,
+          "prior_reader_states_not_relabelled": true,
+          "source_bodies_refetched": 0,
+          "source_script_execution": 0,
+          "whole16_complete": false
+        },
+        "notice_bodies": [
+          {
+            "bytes": 1066,
+            "consumer_path": "skills/mailnike/propclaw/LICENSE.txt",
+            "consumer_row": 245,
+            "fresh_raw": false,
+            "git_blob": "ff21cdae6e9e7e0ed7a376bfe989771b40831982",
+            "id": 1,
+            "meaning": "bytes/SHA/Gitblob照合済み同1066B MIT本文。実公開版/作者・依存/データや第三者serviceの権利は別。",
+            "parent_chunk_sha256": "63de620fef81af98e5610ea00be2d4e1c7e13d574c5609ef65d7b68f33e3b467",
+            "parent_receipt": "research3719-chunk-f4596a7383208b5187c6475bc6c85133.json",
+            "read": [
+              4,
+              0,
+              0,
+              false,
+              true,
+              21
+            ],
+            "reader_job": "20261028-171959-todo-3719",
+            "reader_namespace": "20261028-171959-todo-3719/current3719",
+            "representative_path": "skills/mailnike/erpclaw-ai-engine/LICENSE.txt",
+            "representative_read": [
+              2,
+              0,
+              0,
+              true,
+              true,
+              21
+            ],
+            "representative_row": 216,
+            "sha256": "6f6bb192fb5854c274ca1bd5f3705ad6d4577099d2db95f46c90d0657ffb830d"
+          }
+        ],
+        "prior_journal_sha256": "1edcbba290f3cbe62b27ce7d523fddada5cd70f918388c51a1911c058a588c8f",
+        "reader_job": "20261028-171959-todo-3719",
+        "reader_todo": 3719,
+        "reading_integrity": {
+          "notice_new_literal_reads": 0,
+          "primary_lines": [
+            205
+          ],
+          "primary_mask_counts": [
+            1
+          ],
+          "primary_ordered_full_rows": [
+            245
+          ],
+          "same_buffer_sha256_gitblob_bytes_strict_utf8": true,
+          "source_original_text_included": false,
+          "support_inventory_complete_tree_counts": [
+            [
+              245,
+              11
+            ]
+          ],
+          "withheld_ranges": [
+            [
+              59,
+              59
+            ]
+          ]
+        },
+        "roster_sha256": "f9c6b2e44c5e3aa8947f758f864eaa0d5edc396d622359826bca848cd96f9901"
+      },
+      "independent_native_metadata_sha256": "0479281fb89f95400412aaa36dbb6ad7b476dbdd64e97a761349188aec5c1592",
+      "independent_parent_journal_record": {
+        "chunk_id": "73428e5045ba0149209a5f9ad07c18cd",
+        "receipt_file": "research3719-chunk-73428e5045ba0149209a5f9ad07c18cd.json",
+        "chunk_sha256": "5bc1bce4a1644c6d4b233d13a2f91447cd7bf256b1062ffe90c76feed7fababb",
+        "reader_job": "20261028-171959-todo-3719",
+        "first_ordinal": 245,
+        "last_ordinal": 245,
+        "parent_semantic_assessments_read": true
+      },
+      "original_chunk_id": "73428e5045ba0149209a5f9ad07c18cd",
+      "original_fields_losslessly_reconstructed": true,
+      "original_message_sha256": "cad10b308ce4e56f38f9241ff24b9cf72a02e3af8afb38c26c57791130f54e00",
+      "original_receipt_sha256": "9be5a30a7ad1b43b856511c6ebfb1fb57cbd3a137f7bf7ed3b412fef93726bed",
+      "parent_meaning": {
+        "actual_native_model": "pac24df/gpt-6.1-sol",
+        "actual_native_proof": "research3719-native-actual171959-through245175645.json",
+        "actual_native_sha256": "0479281fb89f95400412aaa36dbb6ad7b476dbdd64e97a761349188aec5c1592",
+        "chunk_id": "73428e5045ba0149209a5f9ad07c18cd",
+        "chunk_sha256": "5bc1bce4a1644c6d4b233d13a2f91447cd7bf256b1062ffe90c76feed7fababb",
+        "consumer_job": "20261027-175645-todo-3080",
+        "effort": "max",
+        "first": 245,
+        "full_original_meanings_and_all_limits_read": true,
+        "limits": "原masked205行/伏字1、notice1066B同byte reuse1/fresh0、支持11=saved3/unsaved8。未保存bytes/SHA/reader/maskはnull、saved unreadは読了へしない。実顧客/物件/審査/契約/銀行/保守/送信/費用・source実行0、親raw再open・新許諾/最終採否/中央0、全16未完。",
+        "meanings": [
+          "245 物件/住戸・申込/契約/同意の版/期間と実相手を固定し、審査情報・同意flagと外部審査/実通知配送、更新記録と実同意・入室/保守記録と実作用を分けるモデルに用途がある。原66action/5domainやFCRA・州fee/預り金期限/1099は保存主張で現行公式制度/実所在地への適用を証明しない。",
+          "trust GL分類やdeposit/returnの行で実銀行の資金分離や入出金を保証せず、対象契約/住戸の重複・請求/返還/控除の一意性と取消/反対仕訳/再試行/部分失敗を照合する。URL文字列の保存をその宛先へのアクセス・取得/安全性の許可にしない。",
+          "全所見・正負例/必要修正/候補理由/近接metadata限界と個別noticeのreuse来歴、支持11件の全tuple・nullとactor/reader定義、表示範囲の意味を親が実読した。205物理中59行のみメール伏字、raw全読ではなく204可視の意味。実コード・制度・権利と作用は未検証のまま。"
+        ],
+        "observed_at": "2026-10-28T19:56:32.7028110+00:00",
+        "original_actor_namespace_and_nulls_preserved": true,
+        "original_message_sha256": "cad10b308ce4e56f38f9241ff24b9cf72a02e3af8afb38c26c57791130f54e00",
+        "producer_job": "20261028-171959-todo-3719",
+        "through": 245
+      },
+      "parent_meaning_sha256": "ffce3bc571d9ca4ed4a1fcd27b0f246d96a47f2fce4ec5089ba128540892883d"
+    },
+    "ce201f8d9ef8c7aa2c255652ba19ca7b7e54dd2bff5374bb9ea4147712aaf315": {
+      "actual_assessment_reader": "20261028-171959-todo-3719",
+      "common": {
+        "boundaries": {
+          "central_operations": 0,
+          "copy_license_accepted": false,
+          "new_final_dispositions": 0,
+          "source_executed": false
+        },
+        "chunk_id": "afda54c9bbe91722a222e978bd94c74f",
+        "definitions": {
+          "actors": {
+            "0": "今回の実assistant読取"
+          },
+          "mask_method": "表示前v5置換。今回primaryは0行で秘密不存在の証明ではない。",
+          "reader_namespace": "20261028-171959-todo-3719/current3719",
+          "states": {
+            "0": "unsaved",
+            "1": "saved_unread",
+            "2": "direct_raw_full",
+            "3": "direct_masked_full",
+            "4": "exact_bytes_reuse",
+            "5": "ordered_full_diff",
+            "6": "partial",
+            "7": "scan"
+          },
+          "support_tuple": "[relative,bytes,SHA8,Gitblob8,state,maskCount,actor,mode]。未保存bytes/SHA/reader/maskCountはnull。"
+        },
+        "domain": "research598-chunk-v1",
+        "first_ordinal": 244,
+        "limits": {
+          "central_body_or_existence_checks": 0,
+          "current_medical_legal_financial_standard_api_claims_not_verified": true,
+          "prior_reader_states_not_relabelled": true,
+          "source_bodies_refetched": 0,
+          "source_script_execution": 0,
+          "whole16_complete": false
+        },
+        "notice_bodies": [
+          {
+            "bytes": 1082,
+            "consumer_path": "skills/mailnike/healthclaw/LICENSE.txt",
+            "consumer_row": 244,
+            "fresh_raw": false,
+            "git_blob": "83ac54265c2a9c5e824da850c0c4ea47d73fd976",
+            "id": 1,
+            "meaning": "照合済み同1082B MIT本文。実公開版/作者・ICD/CPT等の第三者code/標準・患者データ/依存の権利は別。",
+            "parent_chunk_sha256": "a253ad1cefbe2bdea7ca5d7a151b90450f89de38866c15a6ae439b1c68a264c1",
+            "parent_receipt": "research3719-chunk-59f61fa511b35584aee8a697fc72ff55.json",
+            "read": [
+              4,
+              0,
+              0,
+              false,
+              true,
+              21
+            ],
+            "reader_job": "20261028-171959-todo-3719",
+            "reader_namespace": "20261028-171959-todo-3719/current3719",
+            "representative_path": "skills/mailnike/educlaw-finaid/LICENSE.txt",
+            "representative_read": [
+              2,
+              0,
+              0,
+              true,
+              true,
+              21
+            ],
+            "representative_row": 210,
+            "sha256": "b84dde49057a6d8a69d28c22e9854d86a9aee01e09a2d7498d0aebf20cd8f538"
+          }
+        ],
+        "prior_journal_sha256": "84defe89742737999c4ad04984bb33c530c75eaed45521a65beaabf45435468f",
+        "reader_job": "20261028-171959-todo-3719",
+        "reader_todo": 3719,
+        "reading_integrity": {
+          "notice_new_literal_reads": 0,
+          "primary_lines": [
+            255
+          ],
+          "primary_mask_counts": [
+            0
+          ],
+          "primary_ordered_full_rows": [
+            244
+          ],
+          "same_buffer_sha256_gitblob_bytes_strict_utf8": true,
+          "source_original_text_included": false,
+          "support_inventory_complete_tree_counts": [
+            [
+              244,
+              13
+            ]
+          ]
+        },
+        "roster_sha256": "f9c6b2e44c5e3aa8947f758f864eaa0d5edc396d622359826bca848cd96f9901"
+      },
+      "independent_native_metadata_sha256": "0d24f88cb5628dd1fbd8b7c6028e86072bc9b92e166a3afc7408cc5460d14314",
+      "independent_parent_journal_record": {
+        "chunk_id": "afda54c9bbe91722a222e978bd94c74f",
+        "receipt_file": "research3719-chunk-afda54c9bbe91722a222e978bd94c74f.json",
+        "chunk_sha256": "ce201f8d9ef8c7aa2c255652ba19ca7b7e54dd2bff5374bb9ea4147712aaf315",
+        "reader_job": "20261028-171959-todo-3719",
+        "first_ordinal": 244,
+        "last_ordinal": 244,
+        "parent_semantic_assessments_read": true
+      },
+      "original_chunk_id": "afda54c9bbe91722a222e978bd94c74f",
+      "original_fields_losslessly_reconstructed": true,
+      "original_message_sha256": "92391182d9e793233e88b2c81539239e2085ff81d4e32e5e67ccbbfb8828afe8",
+      "original_receipt_sha256": "31eb56cd88f21f59619cbd04752c6323ae02c23a93ae77e82d47c6941bcf7f59",
+      "parent_meaning": {
+        "actual_native_model": "pac24df/gpt-6.1-sol",
+        "actual_native_proof": "research3719-native-actual171959-through244175645.json",
+        "actual_native_sha256": "0d24f88cb5628dd1fbd8b7c6028e86072bc9b92e166a3afc7408cc5460d14314",
+        "chunk_id": "afda54c9bbe91722a222e978bd94c74f",
+        "chunk_sha256": "ce201f8d9ef8c7aa2c255652ba19ca7b7e54dd2bff5374bb9ea4147712aaf315",
+        "consumer_job": "20261027-175645-todo-3080",
+        "effort": "max",
+        "first": 244,
+        "full_original_meanings_and_all_limits_read": true,
+        "limits": "255物理raw全読の元actor評価、v5置換0は秘密不存在の証明でない。notice1082B21行同byte reuse1/fresh0、全支持13=saved3/unsaved10。患者参照/臨床/診断/投薬/DB/送信/費用とsource script0、親のraw再open/新許諾/採否/中央0。伏字/支持・実装・現医療/法/標準/API・実publisher/依存権利は未確認。",
+        "meanings": [
+          "244診療と請求の記録モデル。98actions/7domain/35tablesという保存主張と、local/zero-network・consent/audit行だけで現在のHIPAA適合や全経路の認可/同意/撤回/保管/訂正を保証しない。患者customer/担当employeeのlinkを同一性/資格/処方権限や臨床判断にしない。",
+          "患者/会社・診療/指示/検体/結果と担当/資格、測定単位/時点・薬剤/コード/帳票版を固定し、署名/addendum/訂正の実効性と機微情報最小出力を検査する参考。TEXT code保存は現在のICD/CPT等の適用/権利の証明でなく、例の診断/処方を実患者へ推奨しない。",
+          "記録/計画と実診療/調剤、請求/事前承認/相手の実受理/実支払を別証拠へ結ぶ。submit/accepted/paidや番号/usage・dispensing/cancelのstatusは現実の作用完了でなく、重複/部分失敗/再試行・在庫/GL原子性は未読実装のまま。"
+        ],
+        "observed_at": "2026-10-28T19:38:15.7898528+00:00",
+        "original_actor_namespace_and_nulls_preserved": true,
+        "original_message_sha256": "92391182d9e793233e88b2c81539239e2085ff81d4e32e5e67ccbbfb8828afe8",
+        "producer_job": "20261028-171959-todo-3719",
+        "through": 244
+      },
+      "parent_meaning_sha256": "ad4637596e3ff707d48f9c6996eeb27b484c9d95b0b03e6824d38de03bb03dcf"
+    },
+    "f5f38bc5b71d6448afe5edcfc8dff7280d69928fd1763e21af149581130f6e9c": {
+      "actual_assessment_reader": "20261028-171959-todo-3719",
+      "common": {
+        "boundaries": {
+          "central_operations": 0,
+          "copy_license_accepted": false,
+          "new_final_dispositions": 0,
+          "source_executed": false
+        },
+        "chunk_id": "b1b8afe999b3e3aa788ea91b000bf20b",
+        "definitions": {
+          "actors": {
+            "0": "今回の実assistant読取"
+          },
+          "mask_method": "表示前v5置換。今回primaryは0行。秘密不存在の証明ではない。",
+          "reader_namespace": "20261028-171959-todo-3719/current3719",
+          "states": {
+            "0": "unsaved",
+            "1": "saved_unread",
+            "2": "direct_raw_full",
+            "3": "direct_masked_full",
+            "4": "exact_bytes_reuse",
+            "5": "ordered_full_diff",
+            "6": "partial",
+            "7": "scan"
+          },
+          "support_tuple": "[relative,bytes,SHA8,Gitblob8,state,maskCount,actor,mode]。未保存bytes/SHA/reader/maskCountはnull。"
+        },
+        "domain": "research598-chunk-v1",
+        "first_ordinal": 242,
+        "limits": {
+          "central_body_or_existence_checks": 0,
+          "current_medical_legal_financial_claims_not_verified": true,
+          "prior_reader_states_not_relabelled": true,
+          "source_bodies_refetched": 0,
+          "source_script_execution": 0,
+          "whole16_complete": false
+        },
+        "notice_bodies": [
+          {
+            "bytes": 1082,
+            "consumer_paths": [
+              "skills/mailnike/healthclaw-mental/LICENSE.txt",
+              "skills/mailnike/healthclaw-vet/LICENSE.txt"
+            ],
+            "consumer_rows": [
+              242,
+              243
+            ],
+            "fresh_raw": false,
+            "git_blob": "83ac54265c2a9c5e824da850c0c4ea47d73fd976",
+            "id": 1,
+            "meaning": "各bufferのbytes/SHA/Gitblobを照合した同1082B MIT。実公開版/作者・尺度/標準/データや依存資源の権利は別。",
+            "parent_chunk_sha256": "a253ad1cefbe2bdea7ca5d7a151b90450f89de38866c15a6ae439b1c68a264c1",
+            "parent_receipt": "research3719-chunk-59f61fa511b35584aee8a697fc72ff55.json",
+            "read": [
+              4,
+              0,
+              0,
+              false,
+              true,
+              21
+            ],
+            "reader_job": "20261028-171959-todo-3719",
+            "reader_namespace": "20261028-171959-todo-3719/current3719",
+            "representative_path": "skills/mailnike/educlaw-finaid/LICENSE.txt",
+            "representative_read": [
+              2,
+              0,
+              0,
+              true,
+              true,
+              21
+            ],
+            "representative_row": 210,
+            "sha256": "b84dde49057a6d8a69d28c22e9854d86a9aee01e09a2d7498d0aebf20cd8f538"
+          }
+        ],
+        "prior_journal_sha256": "6091c21bab0e616ecda4192cc15ade326ef2f752333384c779067aa1e8d99ee5",
+        "reader_job": "20261028-171959-todo-3719",
+        "reader_todo": 3719,
+        "reading_integrity": {
+          "notice_new_literal_reads": 0,
+          "primary_lines": [
+            93,
+            90
+          ],
+          "primary_mask_counts": [
+            0,
+            0
+          ],
+          "primary_ordered_full_rows": [
+            242,
+            243
+          ],
+          "same_buffer_sha256_gitblob_bytes_strict_utf8": true,
+          "source_original_text_included": false,
+          "support_inventory_complete_tree_counts": [
+            [
+              242,
+              6
+            ],
+            [
+              243,
+              6
+            ]
+          ]
+        },
+        "roster_sha256": "f9c6b2e44c5e3aa8947f758f864eaa0d5edc396d622359826bca848cd96f9901"
+      },
+      "independent_native_metadata_sha256": "3a294ab41695c76b6ead62d15424b719787238f7630a662bc9460f39cf4d5a70",
+      "independent_parent_journal_record": {
+        "chunk_id": "b1b8afe999b3e3aa788ea91b000bf20b",
+        "receipt_file": "research3719-chunk-b1b8afe999b3e3aa788ea91b000bf20b.json",
+        "chunk_sha256": "f5f38bc5b71d6448afe5edcfc8dff7280d69928fd1763e21af149581130f6e9c",
+        "reader_job": "20261028-171959-todo-3719",
+        "first_ordinal": 242,
+        "last_ordinal": 243,
+        "parent_semantic_assessments_read": true
+      },
+      "original_chunk_id": "b1b8afe999b3e3aa788ea91b000bf20b",
+      "original_fields_losslessly_reconstructed": true,
+      "original_message_sha256": "46077f1edf3366a09e125ea81a4483ad821100914c0e6d08ad4d75064281d81e",
+      "original_receipt_sha256": "fb59a7429cb29022f3009a4a87e6c1503b54710f9162eda1250f06122ba792bb",
+      "parent_meaning": {
+        "actual_native_model": "pac24df/gpt-6.1-sol",
+        "actual_native_proof": "research3719-native-actual171959-through243175645.json",
+        "actual_native_sha256": "3a294ab41695c76b6ead62d15424b719787238f7630a662bc9460f39cf4d5a70",
+        "chunk_id": "b1b8afe999b3e3aa788ea91b000bf20b",
+        "chunk_sha256": "f5f38bc5b71d6448afe5edcfc8dff7280d69928fd1763e21af149581130f6e9c",
+        "consumer_job": "20261027-175645-todo-3080",
+        "effort": "max",
+        "first": 242,
+        "full_original_meanings_and_all_limits_read": true,
+        "limits": "2 raw primary93+90=183物理、v5置換0は秘密不存在の証明でない。notice1082B/21行の同byte再利用2・fresh0、支持12=saved6/unsaved6、saved unreadとunsavedのnull/元actor/namespaceを保持。現医療/法/財務/尺度/標準/依存の権利は未確認で、親の原本文再open・新raw/許諾/採否/中央は0。",
+        "meanings": [
+          "242心理尺度等の記録。患者/診療/実施者とinstrumentの版/言語/設問/欠測・実施条件、回答と採点根拠/任意入力scoreの整合を固定し、訂正履歴・比較可能性を確認する参考。同instrumentや数値低下/improved flagを診断/安全/治療成功にしない。group参加者とnotesは認可/同意/最小開示を分け、他患者情報を混入/一律共有しない。尺度の現版/実装/権利は未確認。",
+          "243動物の計測/計算/預かり記録。latest weightという選択を同じ動物の実測/適切な時点/単位と区別し、体重と入力値の単純算術/Decimal精度を投薬の妥当性や実投与にしない。動物種/個体・薬剤/剤形濃度/経路/根拠/訂正・計算版を別確認に保つ。owner/financial flagやreserved/check-in/outを実同意/実預かり/所有/支払いとせず関係者/会社の認可・最小開示と原費用を結ぶ。",
+          "両方のlocal/parameterization宣言は認可/患者情報の保管・履歴/正しい実装を保証しない。今回の対象は記録境界の意味評価だけで、患者参照/臨床判断/投薬量推奨/診療/実投与/DB/API・source scriptは0。"
+        ],
+        "observed_at": "2026-10-28T18:16:56.8956064+00:00",
+        "original_actor_namespace_and_nulls_preserved": true,
+        "original_message_sha256": "46077f1edf3366a09e125ea81a4483ad821100914c0e6d08ad4d75064281d81e",
+        "producer_job": "20261028-171959-todo-3719",
+        "through": 243
+      },
+      "parent_meaning_sha256": "9b0c2e516ad014679f11a7a303a4b4d908589d50ae72a91d30d6e0663012131f"
+    }
+  },
+  "spec_sha256": "4f6fe32f62db56bed2acb4d378147ff952ad06230243fb45f7674f3158313fc3",
+  "support_metadata_records": 48,
+  "through": 245,
+  "unsaved_support_metadata": 30,
+  "whole16_complete": false
+}

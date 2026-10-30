@@ -310,6 +310,7 @@ func parseCurrentSuccessionTask(value string) (int, bool) {
 
 func printGuardUsage(output io.Writer) {
 	fmt.Fprintln(output, "Usage of scrub391:")
+	fmt.Fprintln(output, "  --verify-ci3888-runtime-creation\n    \tcheck only the fixed public creation stdout; no directory, SDK or issuer access grant")
 	fmt.Fprintln(output, "  --verify-ci3888-runtime <absolute-root>\n    \tverify the one existing receiver directory purpose; no child data, SDK or launch grant")
 	fmt.Fprintln(output, "  --prepare-official-ci3387\n    \tprepare the one fixed official public Windows SDK using normal new ownership")
 	fmt.Fprintln(output, "  --verify-official-ci3387 <receipt-id>\n    \tverify original purpose, identities and public bytes; metadata only")
@@ -336,6 +337,8 @@ func printGuardUsage(output io.Writer) {
 	fmt.Fprintln(output, "  --consume-skills3080-admitted\n    \tconsume only the actual registered readonly caller's immutable public Skill scope")
 	fmt.Fprintln(output, "  -receive-skills3080-result string\n    \treceive one registered public final response and bounded native model projection")
 	fmt.Fprintln(output, "  -verify-skills3080-update string\n    \tqualify the reviewed merged Windows guard update only; no data access")
+	fmt.Fprintln(output, "  -apply-skills3080-update string\n    \tqualify both exact reviews and publish the same held software objects")
+	fmt.Fprintln(output, "  -recover-skills3080-update string\n    \tqualify both reviews and recover only journal-bound software identities")
 	fmt.Fprintln(output, "  -qualify-skills3080-revision string\n    \tqualify the exact own index27 revision; deliver its canonical native invocation")
 	fmt.Fprintln(output, "  -prepare-skills3080-revision string\n    \tstage the exact public revision1 bytes without changing the old metadata")
 	fmt.Fprintln(output, "  -apply-skills3080-revision string\n    \tpreserve old metadata and publish prepared bytes by collision-rejecting renames")
@@ -363,6 +366,9 @@ func verifyCurrentSuccession(taskID int) object {
 }
 
 func runGuardCLI(args []string, stdout, stderr io.Writer, currentVerifier func(int) object) int {
+	if ci3888CreationFlagPresent(args) {
+		return runCI3888CreationCLI(args, stdout, ci3888CreationMetadata)
+	}
 	if ci3888RuntimeFlagPresent(args) {
 		return runCI3888RuntimeCLI(args, stdout, ci3888RuntimeVerify)
 	}

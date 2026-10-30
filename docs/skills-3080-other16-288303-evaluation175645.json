@@ -1,0 +1,2662 @@
+{
+  "all_original_selected_chunks_losslessly_reconstructed": true,
+  "central_operations": 0,
+  "context_resolution": "Each record.original_chunk_sha256 selects shared_original_contexts[sha].common; add that chunk's ordered original_assessment values as entries and canonical-JSON SHA256 must equal sha. All common fields, including definitions, input_validation, privacy, notice and boundaries, are preserved once.",
+  "domain": "other373-parent-received-shared-snapshot-v3",
+  "entries": [
+    {
+      "inventory_id": "github:961cce7437d6790645db906b660550d00d76a1e53fb40a4e796e5b32d2714e24",
+      "original_assessment_pointer": "/records/0/original_assessment",
+      "original_chunk_sha256": "56cd799ba1c8017a7213e63627bc0893734a25b6ed99d953e1ffa1100e028684",
+      "original_record_index": 0,
+      "path": "Augment Code/claude-4-sonnet-agent-prompts.txt",
+      "source_commit": "162db92f54d717d8ebd12292e155aeef32bb4b3c",
+      "source_repo": "x1xhlol/system-prompts-and-models-of-ai-tools",
+      "source_sha256": "d4d2239d8c827a1532d7b3b6c335f2f1cf97839834a4e796ae817294ea257cd7"
+    },
+    {
+      "inventory_id": "github:10fb54105fd246f6e5335026ab61b0d65026da704463a61bc04e524c4abd8fbe",
+      "original_assessment_pointer": "/records/1/original_assessment",
+      "original_chunk_sha256": "56cd799ba1c8017a7213e63627bc0893734a25b6ed99d953e1ffa1100e028684",
+      "original_record_index": 1,
+      "path": "Augment Code/gpt-5-agent-prompts.txt",
+      "source_commit": "162db92f54d717d8ebd12292e155aeef32bb4b3c",
+      "source_repo": "x1xhlol/system-prompts-and-models-of-ai-tools",
+      "source_sha256": "46163da651515f97c5dbc1d53b558b64081420edc68ea381fe8d8eedf7041fc0"
+    },
+    {
+      "inventory_id": "github:2eea3d1bb2d5c836bf42ad663aba42eccec4a99a90f4010f4de6d770d8a7b051",
+      "original_assessment_pointer": "/records/2/original_assessment",
+      "original_chunk_sha256": "56cd799ba1c8017a7213e63627bc0893734a25b6ed99d953e1ffa1100e028684",
+      "original_record_index": 2,
+      "path": "Cluely/Default Prompt.txt",
+      "source_commit": "162db92f54d717d8ebd12292e155aeef32bb4b3c",
+      "source_repo": "x1xhlol/system-prompts-and-models-of-ai-tools",
+      "source_sha256": "f724d4c6df15229e84ad98f00ecb6db252b30c7fba04e703168ced9fab642e1f"
+    },
+    {
+      "inventory_id": "github:7749a2a3b179d4d2d47b74f7f215095f6e7bd5663c2647451404cdaf4f2a489a",
+      "original_assessment_pointer": "/records/3/original_assessment",
+      "original_chunk_sha256": "56cd799ba1c8017a7213e63627bc0893734a25b6ed99d953e1ffa1100e028684",
+      "original_record_index": 3,
+      "path": "Cluely/Enterprise Prompt.txt",
+      "source_commit": "162db92f54d717d8ebd12292e155aeef32bb4b3c",
+      "source_repo": "x1xhlol/system-prompts-and-models-of-ai-tools",
+      "source_sha256": "3abed886b802fced45ed5668dc3cae0780c18ee1db20628a2bacd024b28ce6c2"
+    },
+    {
+      "inventory_id": "github:04508a55f726d15f2a1b2809b807400b6ee6135cc2170d80392059fe9b9270a6",
+      "original_assessment_pointer": "/records/4/original_assessment",
+      "original_chunk_sha256": "56cd799ba1c8017a7213e63627bc0893734a25b6ed99d953e1ffa1100e028684",
+      "original_record_index": 4,
+      "path": "CodeBuddy Prompts/Chat Prompt.txt",
+      "source_commit": "162db92f54d717d8ebd12292e155aeef32bb4b3c",
+      "source_repo": "x1xhlol/system-prompts-and-models-of-ai-tools",
+      "source_sha256": "c8c01fab68fad836ac3c5655ebce8300217e33fbc6208a5a748d335ec5dfbed5"
+    },
+    {
+      "inventory_id": "github:b067895e0d95702d399a4daa0ed3b04c665d650cd061e2af967674a2cceb9d01",
+      "original_assessment_pointer": "/records/5/original_assessment",
+      "original_chunk_sha256": "56cd799ba1c8017a7213e63627bc0893734a25b6ed99d953e1ffa1100e028684",
+      "original_record_index": 5,
+      "path": "CodeBuddy Prompts/Craft Prompt.txt",
+      "source_commit": "162db92f54d717d8ebd12292e155aeef32bb4b3c",
+      "source_repo": "x1xhlol/system-prompts-and-models-of-ai-tools",
+      "source_sha256": "40508d2c78f0704a473f3083666adcdcde98bfe75c6ac243f6688ee37237b581"
+    },
+    {
+      "inventory_id": "github:18d1791049c1be482906dd43721dd021edb861ee3b34b136299e1168f68e2274",
+      "original_assessment_pointer": "/records/6/original_assessment",
+      "original_chunk_sha256": "56cd799ba1c8017a7213e63627bc0893734a25b6ed99d953e1ffa1100e028684",
+      "original_record_index": 6,
+      "path": "Comet Assistant/System Prompt.txt",
+      "source_commit": "162db92f54d717d8ebd12292e155aeef32bb4b3c",
+      "source_repo": "x1xhlol/system-prompts-and-models-of-ai-tools",
+      "source_sha256": "f503605a6a9196d0a43f12078c7f80e8dea3896bf73bb97f03608d3a40bd24aa"
+    },
+    {
+      "inventory_id": "github:13f5f81f79a22c4367a021d7b56be91fd46870be892800e29d84bd6e0889a4d7",
+      "original_assessment_pointer": "/records/7/original_assessment",
+      "original_chunk_sha256": "56cd799ba1c8017a7213e63627bc0893734a25b6ed99d953e1ffa1100e028684",
+      "original_record_index": 7,
+      "path": "Cursor Prompts/Agent CLI Prompt 2025-08-07.txt",
+      "source_commit": "162db92f54d717d8ebd12292e155aeef32bb4b3c",
+      "source_repo": "x1xhlol/system-prompts-and-models-of-ai-tools",
+      "source_sha256": "7bc79653ca2c2c113e2cf60ea44a89991155be82d815c95096d30cc0b540027c"
+    },
+    {
+      "inventory_id": "github:bffde68e7c597a24f2d0178aedf62681b724b89a22baa7eadd0a55b99446d43d",
+      "original_assessment_pointer": "/records/8/original_assessment",
+      "original_chunk_sha256": "7c5c2352bf852e7f59a3c988eec6a60c0880a85abb9b0a47341b53ff32dfb42d",
+      "original_record_index": 8,
+      "path": "Cursor Prompts/Agent Prompt 2.0.txt",
+      "source_commit": "162db92f54d717d8ebd12292e155aeef32bb4b3c",
+      "source_repo": "x1xhlol/system-prompts-and-models-of-ai-tools",
+      "source_sha256": "999452424931d76f705b7d1e3bd971ea3c4028a9c957d2cd4e6b4378e1331c6c"
+    },
+    {
+      "inventory_id": "github:73ac7d1e891299e95020c21e527aebbc8dafed930c4365d1e0aed7f5b08e93b3",
+      "original_assessment_pointer": "/records/9/original_assessment",
+      "original_chunk_sha256": "7c5c2352bf852e7f59a3c988eec6a60c0880a85abb9b0a47341b53ff32dfb42d",
+      "original_record_index": 9,
+      "path": "Cursor Prompts/Agent Prompt 2025-09-03.txt",
+      "source_commit": "162db92f54d717d8ebd12292e155aeef32bb4b3c",
+      "source_repo": "x1xhlol/system-prompts-and-models-of-ai-tools",
+      "source_sha256": "4cea174cfe85b5125f03b80b3c3e8acfb8fc4c2b00666172886da6d5f315862e"
+    },
+    {
+      "inventory_id": "github:818225c7a4c5014595629387d5da4e18360364ab8fc668147449394fd2bf9b7b",
+      "original_assessment_pointer": "/records/10/original_assessment",
+      "original_chunk_sha256": "7c5c2352bf852e7f59a3c988eec6a60c0880a85abb9b0a47341b53ff32dfb42d",
+      "original_record_index": 10,
+      "path": "Cursor Prompts/Agent Prompt v1.0.txt",
+      "source_commit": "162db92f54d717d8ebd12292e155aeef32bb4b3c",
+      "source_repo": "x1xhlol/system-prompts-and-models-of-ai-tools",
+      "source_sha256": "2a610285f244117721e9200230bdcdbcf735541e5971c121a196579b174b3bcb"
+    },
+    {
+      "inventory_id": "github:1381a1b98023b6a1aeae0016cbd5f5dd54cfe02a5b00ae5699b04c52d51a3c5d",
+      "original_assessment_pointer": "/records/11/original_assessment",
+      "original_chunk_sha256": "7c5c2352bf852e7f59a3c988eec6a60c0880a85abb9b0a47341b53ff32dfb42d",
+      "original_record_index": 11,
+      "path": "Cursor Prompts/Agent Prompt v1.2.txt",
+      "source_commit": "162db92f54d717d8ebd12292e155aeef32bb4b3c",
+      "source_repo": "x1xhlol/system-prompts-and-models-of-ai-tools",
+      "source_sha256": "b425c42900a5738911eecf82b69a5e96b02949c6815cf15fa9dd1f15e9fb05c8"
+    },
+    {
+      "inventory_id": "github:78c7cc28cb8108914e50fbb40bb887ecd351435ef8af6a058485dace19f2f814",
+      "original_assessment_pointer": "/records/12/original_assessment",
+      "original_chunk_sha256": "7c5c2352bf852e7f59a3c988eec6a60c0880a85abb9b0a47341b53ff32dfb42d",
+      "original_record_index": 12,
+      "path": "Cursor Prompts/Chat Prompt.txt",
+      "source_commit": "162db92f54d717d8ebd12292e155aeef32bb4b3c",
+      "source_repo": "x1xhlol/system-prompts-and-models-of-ai-tools",
+      "source_sha256": "8c171212485164b1a6440b940771e41355288b2d686114d469180b886d0a359c"
+    },
+    {
+      "inventory_id": "github:7edec023c5d49ff9ad59f680ae3635553fa41728dc7fd08e017f5bc1836b2471",
+      "original_assessment_pointer": "/records/13/original_assessment",
+      "original_chunk_sha256": "7c5c2352bf852e7f59a3c988eec6a60c0880a85abb9b0a47341b53ff32dfb42d",
+      "original_record_index": 13,
+      "path": "Devin AI/DeepWiki Prompt.txt",
+      "source_commit": "162db92f54d717d8ebd12292e155aeef32bb4b3c",
+      "source_repo": "x1xhlol/system-prompts-and-models-of-ai-tools",
+      "source_sha256": "291db45e3f07eff73dfaaee7b310c38460099ca4ecb12bfded397ec19045911e"
+    },
+    {
+      "inventory_id": "github:a998293626470cde1c01535850e6ae061a7a70db297f5687d19066188767904a",
+      "original_assessment_pointer": "/records/14/original_assessment",
+      "original_chunk_sha256": "7c5c2352bf852e7f59a3c988eec6a60c0880a85abb9b0a47341b53ff32dfb42d",
+      "original_record_index": 14,
+      "path": "Devin AI/Prompt.txt",
+      "source_commit": "162db92f54d717d8ebd12292e155aeef32bb4b3c",
+      "source_repo": "x1xhlol/system-prompts-and-models-of-ai-tools",
+      "source_sha256": "cf3014c72f70ea0486ef100bf49fb782f5a0d9cef7de34c35f51f4c0eff7785f"
+    },
+    {
+      "inventory_id": "github:f99c98ea6301bc1d10975a8f6548150161c327f5c66fb09d928ca53fa11f2a78",
+      "original_assessment_pointer": "/records/15/original_assessment",
+      "original_chunk_sha256": "7c5c2352bf852e7f59a3c988eec6a60c0880a85abb9b0a47341b53ff32dfb42d",
+      "original_record_index": 15,
+      "path": "dia/Prompt.txt",
+      "source_commit": "162db92f54d717d8ebd12292e155aeef32bb4b3c",
+      "source_repo": "x1xhlol/system-prompts-and-models-of-ai-tools",
+      "source_sha256": "95d0115edf48d204ecd6d0721ea786db899d6d9355a371369b4d358327b693da"
+    }
+  ],
+  "entries_projection_definition": "Identity-only execution projection; complete original records and shared contexts remain unchanged. No new reading, licence acceptance or adoption.",
+  "first_ordinal": 288,
+  "last_ordinal": 303,
+  "limits": "This shares complete already acknowledged structured evidence, not original source bodies. Original actors, masks, unknown/partial/unread states and opaque path references remain unchanged; no grant, execution, adoption, current physical continuity or new reading is established.",
+  "materializer_job": "20261027-175645-todo-3080",
+  "new_copy_grants": 0,
+  "new_final_dispositions": 0,
+  "new_raw_or_unique_credit": 0,
+  "new_source_body_reads": 0,
+  "parent_acknowledged_through_at_materialization": 303,
+  "parent_journal_sha256": "a3d9f2ed285630df4e9ab3b850960da9a48ce3ae0dbede130e5e4ff099a6e9b4",
+  "public_reflected": false,
+  "publication_preparation": {
+    "central_operations": 0,
+    "new_final_dispositions": 0,
+    "new_global_raw_or_workflow_credit": 0,
+    "new_permissions": 0,
+    "new_source_body_reads": 0,
+    "publisher_job": "20261027-175645-todo-3080",
+    "retained_private_snapshot_sha256": "408f9f4ff42cd3bb709439cdac6b0392b9047a448cab9031766e24f319d0e8f1",
+    "whole_original_contexts_reconstructed_now": 2
+  },
+  "records": [
+    {
+      "actual_assessment_reader": "20261027-105225-todo-3778",
+      "bytes": 10836,
+      "inventory_id": "github:961cce7437d6790645db906b660550d00d76a1e53fb40a4e796e5b32d2714e24",
+      "inventory_unit": "github_prompt_or_model_information",
+      "original_assessment": {
+        "candidate_disposition": "履歴/現コードの対応、編集前調査、達成条件によるtask管理のvariantとして改訂比較候補。全promptの直接採用/新権限/最終採否は0。",
+        "classification": "variant",
+        "findings": [
+          "L12..18はcodebase-retrievalとgit-commit-retrievalを分け、過去commitの後に現コードを確認する。world-leading等の宣伝や索引の鮮度は実証していない。L4の日付は月相当部が不正で、現在日付へ使えない。",
+          "L20..49は20分程度のtask粒度と複数状態の一括更新を扱うが、着手時に前taskをCOMPLETEへ動かす説明は達成確認を要求していない。Completedを本人が確認した状態とする表記も現在の自律検証とは別。",
+          "L51..62は編集直前に関係symbolを一回で集める。ALL/極低レベルを広く要求するが、無関係な秘密や全repoを収集する許可にはならない。",
+          "L64..81は依存操作をpackage managerへ寄せる例と、複雑な設定は手編集する例外を持つ。具体コマンド/版/lockfileの挙動は実行・検証しておらず、新Python追加や未割当の重いCargo作業をこの資料から起動しない。",
+          "L83..101/122..131はcommit/merge等の許可と本人への検査提案/ループ時のhelp依頼を既定にする。保存済みの通常操作の許可を再質問し、技術操作を本人PC作業へ戻す案にしない。",
+          "L103..120の専用snippetタグ/\u003c10行、L158の高々一toolは当該consumerの出力/呼出し条件。複数工程の依頼や373件をこの件数へ縮小しない。末尾のuser rules/memoryは固定source内の枠で、現在の本人回答ではない。"
+        ],
+        "negative": "履歴や索引を現実装と同一視し、次taskへ移ったので前の未完taskも完了、仕上げの検査は本人に任せる。",
+        "notices": [
+          {
+            "notice_ref": "root"
+          }
+        ],
+        "package": {
+          "actual_non_primary_support": 0,
+          "complete_tree": true,
+          "other_primary_aliases": 3,
+          "primary_alias_not_double_counted": true,
+          "root": "Augment Code",
+          "total_tree_blobs": 4
+        },
+        "positive": "過去commitの設計理由を読んだ後で現コードの該当symbolを確認し、差分と関連検査を対応させる。",
+        "read": [
+          2,
+          0,
+          0,
+          true,
+          true,
+          159
+        ],
+        "read_evidence": {
+          "masked_lines": [],
+          "masking_version": "v20-context-values-20261027",
+          "method": "direct_raw_full",
+          "ranges": [
+            [
+              1,
+              159
+            ]
+          ],
+          "strict_utf8": true
+        },
+        "reason": "全159行をraw表示して読取。旧43の24tool意味評価は固定SHAの別資料として再利用し、今回新rawへ加えない。",
+        "required_changes": [
+          "履歴/現コード/索引の読取範囲と版を結び、編集に必要なsymbolに絞る。既存43toolの原read/actorと、今回prompt読取を区別する。",
+          "taskは達成条件の検証後に完了へ更新し、未完了を移行で消さない。20分/一tool/\u003c10行を依頼全体や調査範囲の上限にしない。",
+          "既存の対象別許可を継承し、検査・技術調査・復旧は担当が正規CLIで進める。本人だけの新しい判断を既存Discord経路へ分ける。",
+          "依存変更やtool出力形式は実consumer/現在版と本人方針へ合わせ、原コマンドやPython例を実行/コピーしない。個別権利と実配布の可否を別に残す。"
+        ],
+        "row": 288,
+        "source": [
+          "github:961cce7437d6790645db906b660550d00d76a1e53fb40a4e796e5b32d2714e24",
+          "x1xhlol/system-prompts-and-models-of-ai-tools",
+          "162db92f54d717d8ebd12292e155aeef32bb4b3c",
+          "Augment Code/claude-4-sonnet-agent-prompts.txt",
+          "d4d2239d8c827a1532d7b3b6c335f2f1cf97839834a4e796ae817294ea257cd7",
+          "074868802892a34327a609553884e7ee49235fe3",
+          10836
+        ],
+        "support": [
+          "p43",
+          "p289",
+          "p44"
+        ],
+        "unit": "github_prompt_or_model_information",
+        "unmet": [
+          "mask0は秘密不存在の証明ではない。現在のAugment/tool・索引鮮度・実編集/検査・package manager挙動・個別権利・未知中央本文比較は未検証。"
+        ],
+        "use": "履歴検索と現コード確認、編集前の依存調査、計画/検査/状態更新を含むcoding-agent prompt variantを比較する。",
+        "value": "git履歴は現コードと一致するとは限らないと明記し、変更の意図と現実装を分けて調べる手順が有用。編集に関わるsymbolをまとめて取得する用途も具体的。"
+      },
+      "original_chunk_id": "e2955d381b874cea906f2d7a043c8b19",
+      "original_chunk_sha256": "56cd799ba1c8017a7213e63627bc0893734a25b6ed99d953e1ffa1100e028684",
+      "path": "Augment Code/claude-4-sonnet-agent-prompts.txt",
+      "previous_parent_semantic_read": true,
+      "source_commit": "162db92f54d717d8ebd12292e155aeef32bb4b3c",
+      "source_git_blob": "074868802892a34327a609553884e7ee49235fe3",
+      "source_path": "Augment Code/claude-4-sonnet-agent-prompts.txt",
+      "source_repo": "x1xhlol/system-prompts-and-models-of-ai-tools",
+      "source_sha256": "d4d2239d8c827a1532d7b3b6c335f2f1cf97839834a4e796ae817294ea257cd7"
+    },
+    {
+      "actual_assessment_reader": "20261027-105225-todo-3778",
+      "bytes": 15035,
+      "inventory_id": "github:10fb54105fd246f6e5335026ab61b0d65026da704463a61bc04e524c4abd8fbe",
+      "inventory_unit": "github_prompt_or_model_information",
+      "original_assessment": {
+        "candidate_disposition": "探索/計画/検証のvariantとして改訂比較候補。288と似たtool名でも差を保持し、直接採用/最終採否は0。",
+        "classification": "variant",
+        "findings": [
+          "L17..32は初回探索一回後にtasklistの要否を判定し、未知の場所はsemantic retrieval、既知の定義/利用箇所はgrep/viewへ分ける。調査の回数閾値はtool選択目安で、資料全件の上限ではない。",
+          "L35..84は現在のコードとgit historyの範囲を分ける具体例を持つ。L118..123は288のALL symbols要求よりも直接依存/曖昧さがある場合にだけ探索を広げる。索引の実際の鮮度は未検証。",
+          "L86..115は最初の調査taskから必要なtaskを増やすが、10分/1..3件/一つIN_PROGRESSや、次task開始で前をCOMPLETEとする規則を持つ。達成未確認の一括完了や未完保存の省略へ使わない。",
+          "L157..177は動作確認の依頼を実コマンド実行と解釈し、stdout/stderr/exitを取得、失敗原因を修復して対象検査を再実行する。exit0と明白なlog error無しだけで期待した振る舞い/副作用の証明にはならない。",
+          "L125..153/169..177/202..209の依存追加や長いjob/配備の確認、本人へのテスト/help提案は既存の対象別許可・資源割当・本人PC操作禁止へ合わせる必要がある。技術作業の一律再質問にしない。",
+          "L179..196は四backtickを指定する一方、例は三backtick。consumer専用タグ/短いexcerptの説明を、実際の現在UIや本文coverageと同一視しない。日付/モデル名はsnapshotの宣言である。"
+        ],
+        "negative": "調査5回を超えたので候補を打ち切る、exit0だけで実動作成功とする、長い通常検査を本人PC操作へ戻す。",
+        "notices": [
+          {
+            "notice_ref": "root"
+          }
+        ],
+        "package": {
+          "actual_non_primary_support": 0,
+          "complete_tree": true,
+          "other_primary_aliases": 3,
+          "primary_alias_not_double_counted": true,
+          "root": "Augment Code",
+          "total_tree_blobs": 4
+        },
+        "positive": "場所が分かるsymbolは範囲を絞って確認し、過去理由は別に調べ、修正後の対象動作とexit/logを対応させて検証する。",
+        "read": [
+          2,
+          0,
+          0,
+          true,
+          true,
+          241
+        ],
+        "read_evidence": {
+          "masked_lines": [],
+          "masking_version": "v20-context-values-20261027",
+          "method": "direct_raw_full",
+          "ranges": [
+            [
+              1,
+              241
+            ]
+          ],
+          "strict_utf8": true
+        },
+        "reason": "全241行をraw表示で読取。288と異なる探索/計画/検証条件を保持し、旧44の25function評価を原reader付きで参照する。",
+        "required_changes": [
+          "実在/signature/範囲と対象版を結び、既知grep/未知retrieval/履歴の用途を保持する。旧44のschema/引数差を288/旧43から推測で埋めない。",
+          "task粒度や件数は整理の目安にし、検証した達成条件で状態を決める。共有ToDoの単一所有と未完保持を残し、本人の完了確認待ちを増やさない。",
+          "実行は割当と非表示の正規CLIに合わせ、終了/出力/期待結果を確認する。既存成功結果は再利用し、影響範囲の検査を選ぶ。",
+          "既存許可を継承し、未指定の要件/新費用等だけを本人へ分ける。専用snippet形式/依存commandは実consumerへ合わせ、原文や補助softwareを実行/登録しない。"
+        ],
+        "row": 289,
+        "source": [
+          "github:10fb54105fd246f6e5335026ab61b0d65026da704463a61bc04e524c4abd8fbe",
+          "x1xhlol/system-prompts-and-models-of-ai-tools",
+          "162db92f54d717d8ebd12292e155aeef32bb4b3c",
+          "Augment Code/gpt-5-agent-prompts.txt",
+          "46163da651515f97c5dbc1d53b558b64081420edc68ea381fe8d8eedf7041fc0",
+          "7a23f099b5ae6e41fd6e1cb30a25893070d3a0a5",
+          15035
+        ],
+        "support": [
+          "p288",
+          "p43",
+          "p44"
+        ],
+        "unit": "github_prompt_or_model_information",
+        "unmet": [
+          "mask0は秘密不存在の証明ではない。現在のtool/schema、索引鮮度、実編集/コマンド/期待動作、個別権利、未知中央本文比較は未検証。"
+        ],
+        "use": "探索/grep/範囲view/履歴の使い分け、段階的な計画、実行検証を含む別coding-agent promptを比較する。",
+        "value": "symbolの場所が既知か不明か、現在のコードか過去理由かでtoolを分け、編集前に実在/signatureを確認する正例/負例が有用。"
+      },
+      "original_chunk_id": "e2955d381b874cea906f2d7a043c8b19",
+      "original_chunk_sha256": "56cd799ba1c8017a7213e63627bc0893734a25b6ed99d953e1ffa1100e028684",
+      "path": "Augment Code/gpt-5-agent-prompts.txt",
+      "previous_parent_semantic_read": true,
+      "source_commit": "162db92f54d717d8ebd12292e155aeef32bb4b3c",
+      "source_git_blob": "7a23f099b5ae6e41fd6e1cb30a25893070d3a0a5",
+      "source_path": "Augment Code/gpt-5-agent-prompts.txt",
+      "source_repo": "x1xhlol/system-prompts-and-models-of-ai-tools",
+      "source_sha256": "46163da651515f97c5dbc1d53b558b64081420edc68ea381fe8d8eedf7041fc0"
+    },
+    {
+      "actual_assessment_reader": "20261027-105225-todo-3778",
+      "bytes": 4534,
+      "inventory_id": "github:2eea3d1bb2d5c836bf42ad663aba42eccec4a99a90f4010f4de6d770d8a7b051",
+      "inventory_unit": "github_prompt_or_model_information",
+      "original_assessment": {
+        "candidate_disposition": "画面文脈と応答分類のvariantとして改訂比較候補。全prompt/人格の直接採用は保留。",
+        "classification": "variant",
+        "findings": [
+          "L16/64..85は明示の質問がない画面をunclear intentとし、推測を推測と表示する。90%という閾値は校正/測定方法がなく、実確信度の証明ではない。",
+          "L19..42はコードから始め、選択式では正解/誤選択肢を説明し、数学でdouble-checkを求める。一方every lineへの後置commentは必要性/言語/可読性を問わない一律規則。",
+          "L44..50は確認せず文案を作る指示で、実送信の許可ではない。具体的な本人しか決められない条件を推測して新約束を作らない。",
+          "L52..62は操作位置と結果を詳細に説明するが、人に実行させる手順が中心。当PCでは本人PC操作を要求せず、必要な観測と利用可能なCUA/CLIへ結ぶ案にする。",
+          "L10/15/94のスクリーンショット呼称禁止、providerを伏せるidentity、要約禁止は製品promptの表示方針。実証跡や現在writerのidentity、本人へ必要な画像説明を隠す根拠にしない。"
+        ],
+        "negative": "何も依頼されていない画面へ操作を推測し、出所の画像やproviderを隠して本人に細かなPC操作を要求する。",
+        "notices": [
+          {
+            "notice_ref": "root"
+          }
+        ],
+        "package": {
+          "actual_non_primary_support": 0,
+          "complete_tree": true,
+          "other_primary_aliases": 1,
+          "primary_alias_not_double_counted": true,
+          "root": "Cluely",
+          "total_tree_blobs": 2
+        },
+        "positive": "観測した質問に対して答えと誤選択肢の理由を分け、問いの無い画面には限定した仮定を明示する。",
+        "read": [
+          2,
+          0,
+          0,
+          true,
+          true,
+          95
+        ],
+        "read_evidence": {
+          "masked_lines": [],
+          "masking_version": "v20-context-values-20261027",
+          "method": "direct_raw_full",
+          "ranges": [
+            [
+              1,
+              95
+            ]
+          ],
+          "strict_utf8": true
+        },
+        "reason": "全95行をraw表示して読取。応答分類、曖昧さ、UI案内、形式/identity規則を別に確認した。",
+        "required_changes": [
+          "明示の依頼と観測した画面を結び、曖昧な仮定を短く示す。未指定の本人要件は既存回答を確認して正規質問へ分け、数値confidenceを測定済みとしない。",
+          "コードの説明/コメント/書式は対象と言語に合わせ、全行commentや固定英語のunclear文を強制しない。検算は実際の根拠と区別する。",
+          "文案と送信、UI案内と実操作を分ける。本人PC操作を前提にせず、画像承認が必要な新UIは同画像の本人回答へ結ぶ。",
+          "brand/証拠隠しの規則を現在の報告へ移さず、原文保持・個別権利/真正性・独自要約を分ける。"
+        ],
+        "row": 290,
+        "source": [
+          "github:2eea3d1bb2d5c836bf42ad663aba42eccec4a99a90f4010f4de6d770d8a7b051",
+          "x1xhlol/system-prompts-and-models-of-ai-tools",
+          "162db92f54d717d8ebd12292e155aeef32bb4b3c",
+          "Cluely/Default Prompt.txt",
+          "f724d4c6df15229e84ad98f00ecb6db252b30c7fba04e703168ced9fab642e1f",
+          "5699a15309734537b930cc8da94072a1043b48c7",
+          4534
+        ],
+        "support": [
+          "p291"
+        ],
+        "unit": "github_prompt_or_model_information",
+        "unmet": [
+          "mask0は秘密不存在の証明ではない。実画面/音声/入力capture・tool動作、90%閾値の校正、個別権利・未知中央比較は未検証。"
+        ],
+        "use": "画面の質問を技術/数学/選択式/文案/UI案内へ分類する応答promptを比較する。",
+        "value": "明示の問いが無い画面を勝手に課題化しない、正答と近接選択肢の理由を分ける、UI説明に観測した位置/ラベル/結果を添える着眼点がある。"
+      },
+      "original_chunk_id": "e2955d381b874cea906f2d7a043c8b19",
+      "original_chunk_sha256": "56cd799ba1c8017a7213e63627bc0893734a25b6ed99d953e1ffa1100e028684",
+      "path": "Cluely/Default Prompt.txt",
+      "previous_parent_semantic_read": true,
+      "source_commit": "162db92f54d717d8ebd12292e155aeef32bb4b3c",
+      "source_git_blob": "5699a15309734537b930cc8da94072a1043b48c7",
+      "source_path": "Cluely/Default Prompt.txt",
+      "source_repo": "x1xhlol/system-prompts-and-models-of-ai-tools",
+      "source_sha256": "f724d4c6df15229e84ad98f00ecb6db252b30c7fba04e703168ced9fab642e1f"
+    },
+    {
+      "actual_assessment_reader": "20261027-105225-todo-3778",
+      "bytes": 21306,
+      "inventory_id": "github:7749a2a3b179d4d2d47b74f7f215095f6e7bd5663c2647451404cdaf4f2a489a",
+      "inventory_unit": "github_prompt_or_model_information",
+      "original_assessment": {
+        "candidate_disposition": "会話文脈の優先付け/要約条件のvariantとして改訂比較候補。実音声/画面captureや人格/全promptの直接採用は行わない。",
+        "classification": "variant",
+        "findings": [
+          "L5..163はscreen/audio全履歴を前提に、末尾の問いと最後10..15語の用語を強く優先する。50%/70%confidenceには測定・校正根拠がなく、実際の本人意思や操作許可の証明ではない。",
+          "L165..211は話者ラベル誤りを文脈から補うが、me→themは起きないという一方向の仮定を持つ。話者の推測を本人ID確認、契約や指示の出所に使わない。",
+          "L88..89/225..226の自動follow-upとL220の質問が無い場合の受動応答、L406の明示要約とL463のFALLBACK_MODE限定には適用境界が不明な箇所がある。元依頼の要件を会話末尾だけで置換しない。",
+          "L269/445..447は実履歴/verified contextだけとするが、L272はgeneric例を作り、L282..299の一人称例は具体的な実績を語る。実ユーザーの経歴/達成として使わず、例・推定・観測を分ける。",
+          "L76の会社metrics、L126の販売効果例、L317..322の具体数値/推奨は事実の裏付けをこのfileから得られない。新しい顧客約束/機能/財務判断を作る根拠にしない。",
+          "L401..440の要約は直近2..4分/3点を目安とする。現在の研究やセッション継承の全未完/承認履歴を省く上限にはならない。",
+          "短い見出し/語数/no pronouns/no headers、model-provider非開示等は当該UIの表示規則。現在の日本語報告・証拠・writer実値の報告にそのまま移さない。"
+        ],
+        "negative": "推測したme/themを本人の承認とし、架空の一人称実績や販売効果をそのまま語り、直近4分だけで未完条件を消す。",
+        "notices": [
+          {
+            "notice_ref": "root"
+          }
+        ],
+        "package": {
+          "actual_non_primary_support": 0,
+          "complete_tree": true,
+          "other_primary_aliases": 1,
+          "primary_alias_not_double_counted": true,
+          "root": "Cluely",
+          "total_tree_blobs": 2
+        },
+        "positive": "会議で最後の質問と既出の用語を区別し、話者帰属が不確かな部分を明示して関連する背景だけを補助表示する設計。",
+        "read": [
+          2,
+          0,
+          0,
+          true,
+          true,
+          471
+        ],
+        "read_evidence": {
+          "masked_lines": [],
+          "masking_version": "v20-context-values-20261027",
+          "method": "direct_raw_full",
+          "ranges": [
+            [
+              1,
+              240
+            ],
+            [
+              241,
+              471
+            ]
+          ],
+          "strict_utf8": true
+        },
+        "reason": "全471行を2範囲のraw表示で読取。6優先事項、話者推論、回答例、要約条件と禁止事項を別々に確認した。",
+        "required_changes": [
+          "画面/音声の実在・対象・取扱範囲を確認し、このpromptをcaptureや外部送信の許可にしない。話者推論と正規の本人ID/対象照合を分ける。",
+          "末尾に焦点を合わせても、元要件/既存回答/未完条件を保持する。priority/summary/fallback間の矛盾を実consumerの状態として明示する。",
+          "一人称の架空実績/metrics/販売効果を本人や製品の事実へ置換しない。generic例は例と明記し、本人しか決められない新約束を作らない。",
+          "表示語数やfollow-up数は整理の目安とし、依頼全体の件数/証跡を縮小しない。現在の本人方針に沿う報告へ改訂し、個別権利は別に残す。"
+        ],
+        "row": 291,
+        "source": [
+          "github:7749a2a3b179d4d2d47b74f7f215095f6e7bd5663c2647451404cdaf4f2a489a",
+          "x1xhlol/system-prompts-and-models-of-ai-tools",
+          "162db92f54d717d8ebd12292e155aeef32bb4b3c",
+          "Cluely/Enterprise Prompt.txt",
+          "3abed886b802fced45ed5668dc3cae0780c18ee1db20628a2bacd024b28ce6c2",
+          "e1a138b392979c5baa13e32df4652b59ac13af8c",
+          21306
+        ],
+        "support": [
+          "p290"
+        ],
+        "unit": "github_prompt_or_model_information",
+        "unmet": [
+          "mask0は秘密不存在の証明ではない。実録/話者認識・confidence校正、実ユーザー履歴・販売/財務数値、consumer状態、個別権利・未知中央比較は未検証。"
+        ],
+        "use": "会議の末尾文脈から質問/用語/次の問い/反論/画面課題/受動応答を選ぶcopilot promptを比較する。",
+        "value": "現在の問いを優先し、既出用語の反復を避け、要約を依頼された場合に限定する状態分岐が具体的。曖昧な音声と話者帰属を分けるレビューに用途がある。"
+      },
+      "original_chunk_id": "e2955d381b874cea906f2d7a043c8b19",
+      "original_chunk_sha256": "56cd799ba1c8017a7213e63627bc0893734a25b6ed99d953e1ffa1100e028684",
+      "path": "Cluely/Enterprise Prompt.txt",
+      "previous_parent_semantic_read": true,
+      "source_commit": "162db92f54d717d8ebd12292e155aeef32bb4b3c",
+      "source_git_blob": "e1a138b392979c5baa13e32df4652b59ac13af8c",
+      "source_path": "Cluely/Enterprise Prompt.txt",
+      "source_repo": "x1xhlol/system-prompts-and-models-of-ai-tools",
+      "source_sha256": "3abed886b802fced45ed5668dc3cae0780c18ee1db20628a2bacd024b28ce6c2"
+    },
+    {
+      "actual_assessment_reader": "20261027-105225-todo-3778",
+      "bytes": 1558,
+      "inventory_id": "github:04508a55f726d15f2a1b2809b807400b6ee6135cc2170d80392059fe9b9270a6",
+      "inventory_unit": "github_prompt_or_model_information",
+      "original_assessment": {
+        "candidate_disposition": "mode/環境templateのconfig支持候補。Chat人格や言語、手動待ちを直接採用せず改訂条件を親へ返す。",
+        "classification": "config_support",
+        "findings": [
+          "L14..17はChat Modeで対話し、Craft専用toolが必要なら本人が手動toggleするまで待つ契約。現在PCや利用可能なCUA/CLIの能力を示さず、本人へPC操作を要求する規則へ移さない。",
+          "L19..33は中国語環境/zh-cnとUSER'S CUSTOM INSTRUCTIONSを固定している。これは収集済みtemplateの文章で、現在の本人の言語指定/高位指示ではない。",
+          "L1..12のfile/tab/path等は値が無く、存在/全走査/読取権限の根拠にしない。chat_mode_respondという名前だけで実toolを登録しない。"
+        ],
+        "negative": "placeholderのfile_listを全PCの読取許可とし、Craftへ切り替えるPC操作を本人へ要求する。",
+        "notices": [
+          {
+            "notice_ref": "root"
+          }
+        ],
+        "package": {
+          "actual_non_primary_support": 0,
+          "complete_tree": true,
+          "other_primary_aliases": 1,
+          "primary_alias_not_double_counted": true,
+          "root": "CodeBuddy Prompts",
+          "total_tree_blobs": 2
+        },
+        "positive": "表示中のmodeと実toolを確認し、対話だけで答えられる依頼と実操作が必要な依頼を適切に分ける設計。",
+        "read": [
+          2,
+          0,
+          0,
+          true,
+          true,
+          35
+        ],
+        "read_evidence": {
+          "masked_lines": [],
+          "masking_version": "v20-context-values-20261027",
+          "method": "direct_raw_full",
+          "ranges": [
+            [
+              1,
+              35
+            ]
+          ],
+          "strict_utf8": true
+        },
+        "reason": "全35行をraw表示で読取。visible_files/open_tabs/time/path/file_listは未展開のplaceholderであり、実機の値ではない。",
+        "required_changes": [
+          "実環境のmode/tool/対象範囲を確認し、必要な技術操作は正規の利用可能経路へ結ぶ。原templateの手動toggleを本人作業へ丸投げしない。",
+          "placeholderの出所と未展開状態を保持し、現在の日本語指定と本当の本人回答を適用する。未知中央や任意file一覧へ範囲を広げない。",
+          "原文の配置/転載と独自要約を分け、tool契約・真正性・個別権利が未確認のまま設定へ直接導入しない。"
+        ],
+        "row": 292,
+        "source": [
+          "github:04508a55f726d15f2a1b2809b807400b6ee6135cc2170d80392059fe9b9270a6",
+          "x1xhlol/system-prompts-and-models-of-ai-tools",
+          "162db92f54d717d8ebd12292e155aeef32bb4b3c",
+          "CodeBuddy Prompts/Chat Prompt.txt",
+          "c8c01fab68fad836ac3c5655ebce8300217e33fbc6208a5a748d335ec5dfbed5",
+          "1dd088ffd90dc3a88f232b75ac23cd7c52a6569a",
+          1558
+        ],
+        "support": [
+          "p293"
+        ],
+        "unit": "github_prompt_or_model_information",
+        "unmet": [
+          "mask0は秘密不存在の証明ではない。実CodeBuddy/各mode/tool・実展開値・切替動作、個別権利・未知中央本文比較は未検証。"
+        ],
+        "use": "Chat Modeの環境placeholder、応答tool、言語設定とCraft Modeへの能力境界を示す設定支持資料として比較する。",
+        "value": "現在modeと実際の利用可能toolを切り分ける着眼点がある。短い環境templateでも、単なるmodel情報として一括除外せず配置条件を検討できる。"
+      },
+      "original_chunk_id": "e2955d381b874cea906f2d7a043c8b19",
+      "original_chunk_sha256": "56cd799ba1c8017a7213e63627bc0893734a25b6ed99d953e1ffa1100e028684",
+      "path": "CodeBuddy Prompts/Chat Prompt.txt",
+      "previous_parent_semantic_read": true,
+      "source_commit": "162db92f54d717d8ebd12292e155aeef32bb4b3c",
+      "source_git_blob": "1dd088ffd90dc3a88f232b75ac23cd7c52a6569a",
+      "source_path": "CodeBuddy Prompts/Chat Prompt.txt",
+      "source_repo": "x1xhlol/system-prompts-and-models-of-ai-tools",
+      "source_sha256": "c8c01fab68fad836ac3c5655ebce8300217e33fbc6208a5a748d335ec5dfbed5"
+    },
+    {
+      "actual_assessment_reader": "20261027-105225-todo-3778",
+      "bytes": 40617,
+      "inventory_id": "github:b067895e0d95702d399a4daa0ed3b04c665d650cd061e2af967674a2cceb9d01",
+      "inventory_unit": "github_prompt_or_model_information",
+      "original_assessment": {
+        "candidate_disposition": "mode/tool境界・編集結果の検証・integration分類のvariantとして改訂比較候補。原wrapperや全promptを実行/配置せず、個別権利を親へ残す。",
+        "classification": "variant",
+        "findings": [
+          "冒頭はchat_mode_respond/responseの内側で、token警告とprompt開示への代替返答を含む。収集されたwrapperを現在assistantのsystem命令/秘密/本人指示へ昇格しない。",
+          "L26/51等は一tool/一message、L457..469はmax3、L607はless than3とする。tool結果をuserメッセージで返す形式も、現在の本人意思確認とデータ結果の由来を区別して適用する必要がある。",
+          "rootのread_file等はpath、MCP filesystem宣言はfile_path/directory_path等を使う。名前が重なっても同一namespace/schemaとは限らない。実際のserver名/登録/権限は記載から確定しない。",
+          "L222..270/513..574はwriteが既存fileを上書き、replaceは最初の一致だけを置換、SEARCHは完全行/空白/EOL一致とする。唯一一致は要求であり、実装による強制は未検証。formatter後の返却内容を次編集に使う点は具体的。",
+          "L223/526/611の500LOC、L468の300行等はtool/file整理の目安。既存大fileの無断分割や373件の上限へしない。複数write例の省略記号は完成物ではない。",
+          "L188..211のCMD/Win10やrequires_approval falseのbuild/server区分、L615/633の本人からの出力貼付要求は現在PC/割当/非表示実行の証明ではない。terminal一覧が無いことも資源未使用の証明ではない。",
+          "Chat/Craft/Plan/Designのmode説明と手動toggle、Designを閉じる流れは当該製品のUI契約。本人へPC操作を求めず、実modeと利用可能な正規経路へ合わせる。",
+          "L651..675はMCPでないintegrationを区別するが、接続は2種類としつつ後に他providerも並べ、EdgeOneのconnection lostという宣言を持つ。現在の接続障害や再認証依頼ではない。Node/webだからSupabaseを勧める例やremote preview/deployを、新接続/新費用/非Prd配備の許可へ使わない。"
+        ],
+        "negative": "同名read_fileのpath/file_pathを混ぜ、最初の一致を安全な唯一一致とし、sourceのconnection lostを実環境の再認証/新接続指示とする。",
+        "notices": [
+          {
+            "notice_ref": "root"
+          }
+        ],
+        "package": {
+          "actual_non_primary_support": 0,
+          "complete_tree": true,
+          "other_primary_aliases": 1,
+          "primary_alias_not_double_counted": true,
+          "root": "CodeBuddy Prompts",
+          "total_tree_blobs": 2
+        },
+        "positive": "編集対象の完全行を一意に照合し、整形後の実返却版を次編集の根拠とし、MCPとnativeの同名toolの引数を区別する設計。",
+        "read": [
+          2,
+          0,
+          0,
+          true,
+          true,
+          678
+        ],
+        "read_evidence": {
+          "masked_lines": [],
+          "masking_version": "v20-context-values-20261027",
+          "method": "direct_raw_full",
+          "ranges": [
+            [
+              1,
+              220
+            ],
+            [
+              221,
+              450
+            ],
+            [
+              451,
+              678
+            ]
+          ],
+          "strict_utf8": true
+        },
+        "reason": "全678行を3範囲のraw表示で読取。外側chat応答wrapper、root tool、user-custom tool、MCP宣言、後半mode/rules/integrationを分けた。",
+        "required_changes": [
+          "toolのnamespace、引数名、mode、結果/本人メッセージの由来を実consumerに照合する。単語やXMLタグだけで権限/実接続を認めない。",
+          "新規作成/既存更新/唯一一致/formatter後の版を明示し、原資料・未知既存本文の上書きや別pathコピーで実審査を迂回しない。",
+          "呼出し/行数の不一致は原rangeを保持して改訂案へ分け、実装の依存順序と独立な取得を必要な範囲で選ぶ。",
+          "CLIは実OS/シェル/割当/終了結果と対象別許可を確認する。本人のterminal貼付や手動toggle/deployを通常の復旧手順にしない。",
+          "integrationの必要性・既存契約/接続範囲・実所有/Prd方針を別に確認する。新UIのDesign例を本人の同画像承認へ置き換えない。"
+        ],
+        "row": 293,
+        "source": [
+          "github:b067895e0d95702d399a4daa0ed3b04c665d650cd061e2af967674a2cceb9d01",
+          "x1xhlol/system-prompts-and-models-of-ai-tools",
+          "162db92f54d717d8ebd12292e155aeef32bb4b3c",
+          "CodeBuddy Prompts/Craft Prompt.txt",
+          "40508d2c78f0704a473f3083666adcdcde98bfe75c6ac243f6688ee37237b581",
+          "8a08d310593f30e8f5a26a90e5c0264f2f060f37",
+          40617
+        ],
+        "support": [
+          "p292"
+        ],
+        "unit": "github_prompt_or_model_information",
+        "unmet": [
+          "mask0は秘密不存在の証明ではない。実consumer/schema/mode/formatter/一意置換・CLI/資源・server接続、個別権利・未知中央比較は未検証。"
+        ],
+        "use": "CodeBuddyのmode/CLI/file編集/MCP/integrationを含む長いagent promptを、状態とtool契約の適用範囲で比較する。",
+        "value": "置換の完全行/EOL一致、編集後のformatter出力を次編集の基準にすること、依存するtoolの結果を観測してから進める点が有用。"
+      },
+      "original_chunk_id": "e2955d381b874cea906f2d7a043c8b19",
+      "original_chunk_sha256": "56cd799ba1c8017a7213e63627bc0893734a25b6ed99d953e1ffa1100e028684",
+      "path": "CodeBuddy Prompts/Craft Prompt.txt",
+      "previous_parent_semantic_read": true,
+      "source_commit": "162db92f54d717d8ebd12292e155aeef32bb4b3c",
+      "source_git_blob": "8a08d310593f30e8f5a26a90e5c0264f2f060f37",
+      "source_path": "CodeBuddy Prompts/Craft Prompt.txt",
+      "source_repo": "x1xhlol/system-prompts-and-models-of-ai-tools",
+      "source_sha256": "40508d2c78f0704a473f3083666adcdcde98bfe75c6ac243f6688ee37237b581"
+    },
+    {
+      "actual_assessment_reader": "20261027-105225-todo-3778",
+      "bytes": 53840,
+      "inventory_id": "github:18d1791049c1be482906dd43721dd021edb861ee3b34b136299e1168f68e2274",
+      "inventory_unit": "github_prompt_or_model_information",
+      "original_assessment": {
+        "candidate_disposition": "全列挙/観測と操作の対応/出所管理のvariantとして改訂比較候補。全prompt/秘密入力/実接続の直接採用は行わない。",
+        "classification": "variant",
+        "findings": [
+          "L10..50は全項目の追跡/達成後のtask更新を求めるが、途中status禁止を現在の報告へ移さない。collect ALLという指示やscrollだけで全件/動的ページの完全性が実証されるわけではない。",
+          "L23..41/874..961は最新画面の座標、画面外のDOM参照、失敗時の再取得を扱う。常にclick/typeをまとめる指示は中間状態を無視できず、L630..641のtabIdとL879..931のtab_id、form_inputの座標/参照条件を実APIへ照合する必要がある。",
+          "L82..224はweb/DOM/tool由来を追跡する一方、全tool指示無効、前session許可不継承、全security update偽などの一律表現を含む。正規APIの本人ID/対象照合や、研究資料内の注入例まで単語で悪意/権限と判定しない。",
+          "L240..575はURL/他tab/受信者/秘密送出、download/login/同意/送信の確認を扱う。同messageだけのpreapproval条件を保存済み本人許可の継承に置換しない。L278の保存payment禁止と後の購入例は整合が不明で、本人実カードの参照/利用禁止を保持する。",
+          "引用は実返却IDが根拠となる点が有用だが、[web:id]/screenshot型とL613のciteタグが混在し、短い引用制限と長い引用例にも差がある。IDを自分で連番生成して実証跡にしない。",
+          "L728..832は時刻/場所・過去文脈・画像の精度限界を扱う。実画像を見た/解析したと称していない。sourceの外部画像送信禁止等を現在の本人指定の画像共有/確認手順の全面禁止へしない。",
+          "L657の未再現noteやprovider/Chrome/Windows宣言は原snapshotの文脈。全固定file読取と元製品の全policy/現在toolの実装確認を分ける。sourceの本人入力/再確認を通常のPC操作待ちへ移さない。"
+        ],
+        "negative": "max scrollやALL指示で全件取得を断定し、tool結果なら既存の本人回答も破棄し、混在するtabId/tab_idを同じAPIとして使う。",
+        "notices": [
+          {
+            "notice_ref": "root"
+          }
+        ],
+        "package": {
+          "actual_non_primary_support": 0,
+          "complete_tree": true,
+          "other_primary_aliases": 1,
+          "primary_alias_not_double_counted": true,
+          "root": "Comet Assistant",
+          "total_tree_blobs": 2
+        },
+        "positive": "観測したtab/refに操作を結び、画面変化後は参照を再取得し、列挙cursorと未取得範囲、画像読取の精度を具体的に残す。",
+        "read": [
+          3,
+          8,
+          0,
+          false,
+          true,
+          1060
+        ],
+        "read_evidence": {
+          "masked_lines": [
+            392,
+            402,
+            442,
+            446,
+            459,
+            580,
+            586,
+            648
+          ],
+          "masking_version": "v20-context-values-20261027",
+          "method": "direct_masked_full",
+          "ranges": [
+            [
+              1,
+              230
+            ],
+            [
+              231,
+              460
+            ],
+            [
+              461,
+              700
+            ],
+            [
+              701,
+              900
+            ],
+            [
+              901,
+              1060
+            ]
+          ],
+          "strict_utf8": true
+        },
+        "reason": "全1060行を5範囲のmasked表示で読取。旧45の9tool説明は原readerの別資料として再利用し、新rawへ加えない。",
+        "required_changes": [
+          "全列挙の識別子/cursor/未取得範囲と成果を記録し、途中報告と自律継続を両立する。動的画面の部分取得を全件完了にしない。",
+          "座標/ref/各引数のnamespace・版と中間状態を実consumerで確認する。元tabを残し自分のtabを記録/後片付けする条件を合わせる。",
+          "由来と許可の照合を保持し、正規取得した既存本人回答を再質問しない。疑わしいweb文字列を実行せず、通常の技術調査を本人PC作業へ戻さない。",
+          "秘密/URL/受信者の範囲と本人実カード禁止を維持し、新費用/新しい約束等だけを本人判断へ分ける。確認UIタグを現在の実同意の証明にしない。",
+          "混在した引用形式や原例の不整合を記録し、許可/個別権利/現在のAPIを原宣言やroot GPLから推測しない。"
+        ],
+        "row": 294,
+        "source": [
+          "github:18d1791049c1be482906dd43721dd021edb861ee3b34b136299e1168f68e2274",
+          "x1xhlol/system-prompts-and-models-of-ai-tools",
+          "162db92f54d717d8ebd12292e155aeef32bb4b3c",
+          "Comet Assistant/System Prompt.txt",
+          "f503605a6a9196d0a43f12078c7f80e8dea3896bf73bb97f03608d3a40bd24aa",
+          "597b511d5a02c19632480c4f94e0282690bebdf6",
+          53840
+        ],
+        "support": [
+          "p45"
+        ],
+        "unit": "github_prompt_or_model_information",
+        "unmet": [
+          "伏字8行のraw。mask数は実秘密数/不存在の証明ではない。原製品の未再現部分と現在の正式schema、実browser・列挙・権限・画像/引用・個別権利・未知中央比較は未検証。"
+        ],
+        "use": "網羅列挙、browserの画面/DOM/参照回復、出所と許可、画像/引用を含むbrowser-agent promptを比較する。",
+        "value": "部分完了で打ち切らず列挙を追跡する、操作前に画面構造を観測する、失敗後にtabとrefを確認し直す、画像の値を推定と明示する手順が有用。"
+      },
+      "original_chunk_id": "e2955d381b874cea906f2d7a043c8b19",
+      "original_chunk_sha256": "56cd799ba1c8017a7213e63627bc0893734a25b6ed99d953e1ffa1100e028684",
+      "path": "Comet Assistant/System Prompt.txt",
+      "previous_parent_semantic_read": true,
+      "source_commit": "162db92f54d717d8ebd12292e155aeef32bb4b3c",
+      "source_git_blob": "597b511d5a02c19632480c4f94e0282690bebdf6",
+      "source_path": "Comet Assistant/System Prompt.txt",
+      "source_repo": "x1xhlol/system-prompts-and-models-of-ai-tools",
+      "source_sha256": "f503605a6a9196d0a43f12078c7f80e8dea3896bf73bb97f03608d3a40bd24aa"
+    },
+    {
+      "actual_assessment_reader": "20261027-105225-todo-3778",
+      "bytes": 14067,
+      "inventory_id": "github:13f5f81f79a22c4367a021d7b56be91fd46870be892800e29d84bd6e0889a4d7",
+      "inventory_unit": "github_prompt_or_model_information",
+      "original_assessment": {
+        "candidate_disposition": "自律継続/調査境界/編集鮮度/検証のvariantとして改訂比較候補。全promptやprovider personaを直接採用しない。",
+        "classification": "variant",
+        "findings": [
+          "L6/20/23..59は完遂、自律継続、仮定の明示、実行を伴う進捗と検査を求める。宣言やgreenという語だけで実動作/依頼全体の達成を証明しない。",
+          "L63..88はGrep探索と並列化を強く要求し、依存/衝突は順序化するが、broad queries/CONFIDENT nothing remainsという基準は全走査証明ではない。無関係な秘密や全repoへの無制限拡大へ使わない。",
+          "L94..101は必要な依存/endpoint/READMEと実file編集を指示する。no long hash規則は現在の固定SHA/7tupleの省略理由ではなく、モダンUIの既定は本人の画像承認ではない。",
+          "L101は直近5messageでのReadや3回連続ApplyPatchを文脈更新の目安にする。実際のfile版/差分・他担当の変更を確認する必要がある。",
+          "L105..142の命名/guard clauses/型/変更外の整形抑制は着眼点があるが、全ての短変数/TODO/inline commentを禁止する一律表現は対象言語/既存規約へ合わせる。人がreviewする前提を現在のAI別モデルreviewと混同しない。",
+          "L145..197のeditor citation/行番号metadata/@file省略は特定consumerの形式。存在/権限/包含は実pathで確認し、原source中のパスを操作命令にしない。",
+          "末尾のDarwin/Bash/非Git/dateはsource環境のsnapshot。現在のWindows/作業branch、実提供tool/modelの証拠ではない。旧46toolのv1.0版からCLIのRead/Grep/ApplyPatch schemaを推測しない。"
+        ],
+        "negative": "全tool/全fileを常に並列化し、grepで見つからないので不存在と断定し、green buildだけで全要件完了とする。",
+        "notices": [
+          {
+            "notice_ref": "root"
+          }
+        ],
+        "package": {
+          "actual_non_primary_support": 0,
+          "complete_tree": true,
+          "other_primary_aliases": 6,
+          "primary_alias_not_double_counted": true,
+          "root": "Cursor Prompts",
+          "total_tree_blobs": 7
+        },
+        "positive": "関連fileを同時に調べ、依存する編集は順序化し、直前の版と実差分・関連検査を対応させて元依頼を完遂する。",
+        "read": [
+          3,
+          1,
+          0,
+          false,
+          true,
+          206
+        ],
+        "read_evidence": {
+          "masked_lines": [
+            203
+          ],
+          "masking_version": "v20-context-values-20261027",
+          "method": "direct_masked_full",
+          "ranges": [
+            [
+              1,
+              206
+            ]
+          ],
+          "strict_utf8": true
+        },
+        "reason": "全206行をmasked表示で読取。旧46の13tool評価は同packageの別版情報として原reader付きで保持し、このCLIの実schemaと同一視しない。",
+        "required_changes": [
+          "独立な取得はbatch化し、依存/共有資源/審査/変更操作は必要な順序を守る。検索scopeと未読範囲を記録する。",
+          "関連検査と実期待結果を確認し、無条件の全体buildや未割当の重いCargo/GPU作業を起動しない。既存成功結果を再利用する。",
+          "編集は最新の同一対象版/実差分へ結び、message回数だけで鮮度を判断しない。保護対象や他担当の成果を保持する。",
+          "コードstyle/出力/新依存・endpointは実要件/既存契約/対象版へ合わせる。新UIは同画像への本人回答を保持し、原文のno long hashで必要なprovenanceを削らない。"
+        ],
+        "row": 295,
+        "source": [
+          "github:13f5f81f79a22c4367a021d7b56be91fd46870be892800e29d84bd6e0889a4d7",
+          "x1xhlol/system-prompts-and-models-of-ai-tools",
+          "162db92f54d717d8ebd12292e155aeef32bb4b3c",
+          "Cursor Prompts/Agent CLI Prompt 2025-08-07.txt",
+          "7bc79653ca2c2c113e2cf60ea44a89991155be82d815c95096d30cc0b540027c",
+          "14f9422fef6ca3efb59ddb02fb161125c28e0b77",
+          14067
+        ],
+        "support": [
+          "p296",
+          "p297",
+          "p298",
+          "p299",
+          "p46",
+          "p300"
+        ],
+        "unit": "github_prompt_or_model_information",
+        "unmet": [
+          "伏字1行のraw。同packageの別prompt296..300は現在saved_unreadで、v1.0 toolとCLIの契約同一性は未確定。",
+          "実tool/API・実編集/検査・現在の環境/モデル・個別権利・未知中央比較は未検証。"
+        ],
+        "use": "CLI coding-agentの持続作業、調査/並列化/検査、編集の文脈鮮度と報告を設計するprompt variantを比較する。",
+        "value": "宣言した次の操作を実行する、技術的に調べられる点を本人へ戻さない、独立操作と依存操作を分ける、想定外の編集前に原文を確認する手順が有用。"
+      },
+      "original_chunk_id": "e2955d381b874cea906f2d7a043c8b19",
+      "original_chunk_sha256": "56cd799ba1c8017a7213e63627bc0893734a25b6ed99d953e1ffa1100e028684",
+      "path": "Cursor Prompts/Agent CLI Prompt 2025-08-07.txt",
+      "previous_parent_semantic_read": true,
+      "source_commit": "162db92f54d717d8ebd12292e155aeef32bb4b3c",
+      "source_git_blob": "14f9422fef6ca3efb59ddb02fb161125c28e0b77",
+      "source_path": "Cursor Prompts/Agent CLI Prompt 2025-08-07.txt",
+      "source_repo": "x1xhlol/system-prompts-and-models-of-ai-tools",
+      "source_sha256": "7bc79653ca2c2c113e2cf60ea44a89991155be82d815c95096d30cc0b540027c"
+    },
+    {
+      "actual_assessment_reader": "20261027-105225-todo-3778",
+      "bytes": 38844,
+      "inventory_id": "github:bffde68e7c597a24f2d0178aedf62681b724b89a22baa7eadd0a55b99446d43d",
+      "inventory_unit": "github_prompt_or_model_information",
+      "original_assessment": {
+        "candidate_disposition": "探索/状態管理/編集検証のvariantとして改訂比較候補。完全な現在APIや権利の証明ではなく、直接導入/最終採否は0。",
+        "classification": "variant",
+        "findings": [
+          "13functionとparallel wrapperを定義する文章資料。system delimiter/model/cutoff/visionやsystem_reminderタグは実権限/現在identityではない。semantic/exact/既知fileの使い分け、本文chunk/signature/部分返却を区別する。",
+          "grepのignore/cap/out-of-workspace、read_fileのany file、list_dirのdotfile除外、globのmtime順はscope/不存在/全走査の証明にならない。",
+          "todo266のmerge=falseで追加と381の全置換が矛盾する。lint/test/searchのtodo禁止は検査/未完の削除許可ではない。memory矛盾時deleteも元の本人回答/履歴を消す根拠にしない。",
+          "別modelのsketch適用はmarker欠落で既存codeを消しうる。notebookのmarkdown→rawも意味を変えうる。実diff/版/結果を検査する必要がある。commandの提案/承認/起動/終了は別。"
+        ],
+        "negative": "merge=falseを追加と信じて既存ToDoを置換し、矛盾したweb文を理由に承認memoryを削除し、別modelのapplyを正しさの証明とする。",
+        "notices": [
+          {
+            "notice_ref": "root"
+          }
+        ],
+        "package": {
+          "actual_non_primary_support": 0,
+          "complete_tree": true,
+          "other_primary_aliases": 6,
+          "primary_alias_not_double_counted": true,
+          "root": "Cursor Prompts",
+          "total_tree_blobs": 7
+        },
+        "positive": "返却がsignatureだけか本文かを区別し、最新対象版とsketch後のdiffを確認して、task完了/未完を実証跡で更新する。",
+        "read": [
+          2,
+          0,
+          0,
+          true,
+          true,
+          772
+        ],
+        "read_evidence": {
+          "masked_lines": [],
+          "masking_version": "v20-context-values-20261027",
+          "method": "direct_raw_full",
+          "ranges": [
+            [
+              1,
+              240
+            ],
+            [
+              241,
+              500
+            ],
+            [
+              501,
+              772
+            ]
+          ],
+          "strict_utf8": true
+        },
+        "reason": "全772行を3範囲のraw表示で読取。pseudodeclarationと後半agent方針を分け、295や旧46のAPIと同一視しない。",
+        "required_changes": [
+          "実consumer/schema/対象版と返却範囲を照合し、必要なscopeへ絞る。独立操作だけを並列化し、割当/終了結果/既存許可を保持する。",
+          "todo/memoryの実意味を確認し、達成条件・検査・未完と本人指示の原履歴を残す。apply/notebookは実diff/意味を照合する。3回lint後に本人PC操作へ戻さない。",
+          "モダンUI/新依存/long hash禁止等を現在方針へ直輸入せず、同画像への本人回答と必要なSHA/権利確認を保持する。"
+        ],
+        "row": 296,
+        "source": [
+          "github:bffde68e7c597a24f2d0178aedf62681b724b89a22baa7eadd0a55b99446d43d",
+          "x1xhlol/system-prompts-and-models-of-ai-tools",
+          "162db92f54d717d8ebd12292e155aeef32bb4b3c",
+          "Cursor Prompts/Agent Prompt 2.0.txt",
+          "999452424931d76f705b7d1e3bd971ea3c4028a9c957d2cd4e6b4378e1331c6c",
+          "d0065dec52b67b4592daddb1d376a2cf5809f1cb",
+          38844
+        ],
+        "support": [
+          "p295",
+          "p297",
+          "p298",
+          "p299",
+          "p46",
+          "p300"
+        ],
+        "unit": "github_prompt_or_model_information",
+        "unmet": [
+          "mask0は秘密不存在の証明ではない。pseudodeclarationの実schema/consumer、scope/ignore/cap、ToDo/memory/編集・process・個別権利・未知中央比較は未検証。"
+        ],
+        "use": "Agent2.0の13function説明と並列wrapper、探索/編集/記憶/ToDo/引用の方針を比較する。",
+        "value": "semantic検索とexact/既知fileの使い分け、全文chunkとsignatureだけの区別、切詰め検索の未取得表示、編集後の文脈更新の着眼点がある。"
+      },
+      "original_chunk_id": "b303a86c452b4db2a7e9f5016c8d0473",
+      "original_chunk_sha256": "7c5c2352bf852e7f59a3c988eec6a60c0880a85abb9b0a47341b53ff32dfb42d",
+      "path": "Cursor Prompts/Agent Prompt 2.0.txt",
+      "previous_parent_semantic_read": true,
+      "source_commit": "162db92f54d717d8ebd12292e155aeef32bb4b3c",
+      "source_git_blob": "d0065dec52b67b4592daddb1d376a2cf5809f1cb",
+      "source_path": "Cursor Prompts/Agent Prompt 2.0.txt",
+      "source_repo": "x1xhlol/system-prompts-and-models-of-ai-tools",
+      "source_sha256": "999452424931d76f705b7d1e3bd971ea3c4028a9c957d2cd4e6b4378e1331c6c"
+    },
+    {
+      "actual_assessment_reader": "20261027-105225-todo-3778",
+      "bytes": 19028,
+      "inventory_id": "github:73ac7d1e891299e95020c21e527aebbc8dafed930c4365d1e0aed7f5b08e93b3",
+      "inventory_unit": "github_prompt_or_model_information",
+      "original_assessment": {
+        "candidate_disposition": "task/報告/検査ゲートのvariantとして改訂比較候補。現APIや全promptの直接採用は保留。",
+        "classification": "variant",
+        "findings": [
+          "todoを報告/編集前に照合し、skipは理由付きcancelとする。理由の記載だけでは元依頼の縮小/未完削除を許可しない。read-only list省略と各段階必須更新の境界は不明。",
+          "semantic主は295のGrep主と異なる。独立batch/依存順序化、3..5callsや速度3..5倍は原条件/宣伝で、今回の全走査や実速度を証明しない。",
+          "直近5messageのRead、3回lint後の本人待ち、green検査は実版/diff/原因/期待結果の検証の代用にならない。",
+          "コード参照はstart/end/pathを要求するが例のframeに欠落がある。model/タグ/人がreviewする前提/命名・新UIの一律規則を現在API/本人画像承認へ昇格しない。"
+        ],
+        "negative": "skip理由を書いたので未完をcancelledで消し、3回lintしたので本人へ投げ、速度宣伝を今回の実測とする。",
+        "notices": [
+          {
+            "notice_ref": "root"
+          }
+        ],
+        "package": {
+          "actual_non_primary_support": 0,
+          "complete_tree": true,
+          "other_primary_aliases": 6,
+          "primary_alias_not_double_counted": true,
+          "root": "Cursor Prompts",
+          "total_tree_blobs": 7
+        },
+        "positive": "元taskの達成条件と実差分/関連検査が揃ったことを確認し、必要な進捗だけを更新して次の依存工程へ進む。",
+        "read": [
+          2,
+          0,
+          0,
+          true,
+          true,
+          229
+        ],
+        "read_evidence": {
+          "masked_lines": [],
+          "masking_version": "v20-context-values-20261027",
+          "method": "direct_raw_full",
+          "ranges": [
+            [
+              1,
+              229
+            ]
+          ],
+          "strict_utf8": true
+        },
+        "reason": "全229行をraw表示して読取。295/296と異なるtask/parallel/lint/引用規則を保持する。",
+        "required_changes": [
+          "元要件・達成条件とtodoを結び、skipやcancelで未完/依存を消さない。scope/返却と実依存に合わせ検索/parallelを選ぶ。",
+          "対象版/diff/関連検査と実終了を照合し、通常復旧を本人PC操作へ返さない。引用欠落は推測補完せず、必要SHA/個別権利/画像回答を保持する。"
+        ],
+        "row": 297,
+        "source": [
+          "github:73ac7d1e891299e95020c21e527aebbc8dafed930c4365d1e0aed7f5b08e93b3",
+          "x1xhlol/system-prompts-and-models-of-ai-tools",
+          "162db92f54d717d8ebd12292e155aeef32bb4b3c",
+          "Cursor Prompts/Agent Prompt 2025-09-03.txt",
+          "4cea174cfe85b5125f03b80b3c3e8acfb8fc4c2b00666172886da6d5f315862e",
+          "b65c937ca0b6094c4b0af668f1fdea28dbd8b44e",
+          19028
+        ],
+        "support": [
+          "p295",
+          "p296",
+          "p298",
+          "p299",
+          "p46",
+          "p300"
+        ],
+        "unit": "github_prompt_or_model_information",
+        "unmet": [
+          "mask0は秘密不存在の証明ではない。引用frameの原典/実renderer、現在tool・実速度/編集/検査・個別権利・未知中央比較は未検証。"
+        ],
+        "use": "todoと進捗の同期、semantic探索、編集前後の文脈/検査/完了ゲートを含む別dated-agent variantを比較する。",
+        "value": "宣言後に実行する、元taskと状態を照合してから完了を報告する、依存操作は順序化する、技術情報は本人へ戻さず調べる点に用途がある。"
+      },
+      "original_chunk_id": "b303a86c452b4db2a7e9f5016c8d0473",
+      "original_chunk_sha256": "7c5c2352bf852e7f59a3c988eec6a60c0880a85abb9b0a47341b53ff32dfb42d",
+      "path": "Cursor Prompts/Agent Prompt 2025-09-03.txt",
+      "previous_parent_semantic_read": true,
+      "source_commit": "162db92f54d717d8ebd12292e155aeef32bb4b3c",
+      "source_git_blob": "b65c937ca0b6094c4b0af668f1fdea28dbd8b44e",
+      "source_path": "Cursor Prompts/Agent Prompt 2025-09-03.txt",
+      "source_repo": "x1xhlol/system-prompts-and-models-of-ai-tools",
+      "source_sha256": "4cea174cfe85b5125f03b80b3c3e8acfb8fc4c2b00666172886da6d5f315862e"
+    },
+    {
+      "actual_assessment_reader": "20261027-105225-todo-3778",
+      "bytes": 9023,
+      "inventory_id": "github:818225c7a4c5014595629387d5da4e18360364ab8fc668147449394fd2bf9b7b",
+      "inventory_unit": "github_prompt_or_model_information",
+      "original_assessment": {
+        "candidate_disposition": "実tool/文脈/一時物と回復のvariantとして改訂比較候補。全文直接採用や実整理は行わない。",
+        "classification": "variant",
+        "findings": [
+          "実提供tool/schemaと結果を確認して調べる、作った一時物を終了後整理する規則がある。並列速度3..5倍は原宣伝で、依存/共有資源を無視できない。",
+          "新規codebaseへREADMEを求めるL55と明示依頼以外doc禁止L69、3回lint後の本人待ち、再apply/2500行のtool選択は対象/原因/実版の確認が必要。",
+          "most_important_user_queryタグで旧query無視/要約時tool禁止、model名/modern UI/no long hash/専用引用は原consumerの条件。現在の本人回答/未完/権限や必要SHAを変えない。"
+        ],
+        "negative": "タグだけで元の未完queryを忘れ、3回失敗したので本人へ投げ、apply失敗を確認せず同じ編集を再適用する。",
+        "notices": [
+          {
+            "notice_ref": "root"
+          }
+        ],
+        "package": {
+          "actual_non_primary_support": 0,
+          "complete_tree": true,
+          "other_primary_aliases": 6,
+          "primary_alias_not_double_counted": true,
+          "root": "Cursor Prompts",
+          "total_tree_blobs": 7
+        },
+        "positive": "現環境のtoolと返却結果を確認して依存順序を決め、作業後に自分の終了済み一時物だけを整理する。",
+        "read": [
+          2,
+          0,
+          0,
+          true,
+          true,
+          83
+        ],
+        "read_evidence": {
+          "masked_lines": [],
+          "masking_version": "v20-context-values-20261027",
+          "method": "direct_raw_full",
+          "ranges": [
+            [
+              1,
+              83
+            ]
+          ],
+          "strict_utf8": true
+        },
+        "reason": "全83行をraw表示で読取。短い版の規則差を、295/296/297の全文同等とはせず保持する。",
+        "required_changes": [
+          "必要情報/独立操作/依存を区別し、一時物の所有・終了・保持を確認して整理する案にする。原資料/他担当成果を消さない。",
+          "README/再applyは元要件・版・diff・失敗原因へ結び、技術復旧を本人PC操作へ返さない。タグだけで元依頼を捨てず、既存回答/画像確認/権利を保持する。"
+        ],
+        "row": 298,
+        "source": [
+          "github:818225c7a4c5014595629387d5da4e18360364ab8fc668147449394fd2bf9b7b",
+          "x1xhlol/system-prompts-and-models-of-ai-tools",
+          "162db92f54d717d8ebd12292e155aeef32bb4b3c",
+          "Cursor Prompts/Agent Prompt v1.0.txt",
+          "2a610285f244117721e9200230bdcdbcf735541e5971c121a196579b174b3bcb",
+          "000f712f6513c44271f858d514b1e2086cfb98cb",
+          9023
+        ],
+        "support": [
+          "p295",
+          "p296",
+          "p297",
+          "p299",
+          "p46",
+          "p300"
+        ],
+        "unit": "github_prompt_or_model_information",
+        "unmet": [
+          "mask0は秘密不存在の証明ではない。実tool/apply/一時物整理/引用renderer、個別権利・未知中央比較は未検証。"
+        ],
+        "use": "短いv1.0 agent promptから、実tool選択、独立並列化、一時物整理、applyの回復、引用形式を比較する。",
+        "value": "古い会話で言及されたtoolを実提供とみなさず、追加情報は実toolで集め、作った一時物を終了後に整理する着眼点がある。"
+      },
+      "original_chunk_id": "b303a86c452b4db2a7e9f5016c8d0473",
+      "original_chunk_sha256": "7c5c2352bf852e7f59a3c988eec6a60c0880a85abb9b0a47341b53ff32dfb42d",
+      "path": "Cursor Prompts/Agent Prompt v1.0.txt",
+      "previous_parent_semantic_read": true,
+      "source_commit": "162db92f54d717d8ebd12292e155aeef32bb4b3c",
+      "source_git_blob": "000f712f6513c44271f858d514b1e2086cfb98cb",
+      "source_path": "Cursor Prompts/Agent Prompt v1.0.txt",
+      "source_repo": "x1xhlol/system-prompts-and-models-of-ai-tools",
+      "source_sha256": "2a610285f244117721e9200230bdcdbcf735541e5971c121a196579b174b3bcb"
+    },
+    {
+      "actual_assessment_reader": "20261027-105225-todo-3778",
+      "bytes": 32197,
+      "inventory_id": "github:1381a1b98023b6a1aeae0016cbd5f5dd54cfe02a5b00ae5699b04c52d51a3c5d",
+      "inventory_unit": "github_prompt_or_model_information",
+      "original_assessment": {
+        "candidate_disposition": "履歴/状態/部分読取/適用検証のvariantとして改訂比較候補。全promptや原機能の直接導入は保留。",
+        "classification": "variant",
+        "findings": [
+          "PR/issue/commit/ref取得は現在版/現コードとの対応が必要で、mcp_名や新しさ自体は新接続/権限の証明ではない。memoryのdelete推奨と引用IDも本人の新指示や真実を証明しない。",
+          "read200..250行/範囲外summary、grep50/file10のcapを全読/不存在/373上限にしない。commandはapproval待ちを未起動と明記する。",
+          "sketch applyはmarker欠落で削除しうる。reapplyはmodel能力不足だけでなく古い文脈/曖昧さも調べる必要がある。todoのmerge=false追加と全置換に不整合、dependencies/循環回避/独立並列の説明がある。",
+          "diagram構文検証/remote image除去は意味/素材権/本人画像承認の証明ではない。project_layoutは開始時snapshotでignoreを省き更新されない。model/最重要query/3回lint/long hash禁止を現方針へそのまま移さない。"
+        ],
+        "negative": "新しいPRやmemory引用を実承認とし、merge=falseで未完を消し、diff不一致だけで即reapplyし、図の構文成功を内容/承認成功とする。",
+        "notices": [
+          {
+            "notice_ref": "root"
+          }
+        ],
+        "package": {
+          "actual_non_primary_support": 0,
+          "complete_tree": true,
+          "other_primary_aliases": 6,
+          "primary_alias_not_double_counted": true,
+          "root": "Cursor Prompts",
+          "total_tree_blobs": 7
+        },
+        "positive": "承認待ちcommandを未起動と報告し、実diffと依存taskの完了条件、未表示の読取範囲を対応させる。",
+        "read": [
+          3,
+          1,
+          0,
+          false,
+          true,
+          568
+        ],
+        "read_evidence": {
+          "masked_lines": [
+            560
+          ],
+          "masking_version": "v20-context-values-20261027",
+          "method": "direct_masked_full",
+          "ranges": [
+            [
+              1,
+              240
+            ],
+            [
+              241,
+              460
+            ],
+            [
+              461,
+              568
+            ]
+          ],
+          "strict_utf8": true
+        },
+        "reason": "全568行を3範囲でmasked表示して読取。後半function定義と前半方針を読み、295/296や旧46の能力と同一視しない。",
+        "required_changes": [
+          "履歴/現コード/許可scopeと根拠を結び、元指示と判断履歴を保持する。summary/cap/raw、受付/起動/終了を分ける。",
+          "merge/reapply/markerは実consumer/版/diffを照合し、未完・検査・他担当成果を保持する。図の意味/素材/画像回答を別に確認し、通常復旧を本人PC作業へ戻さない。"
+        ],
+        "row": 299,
+        "source": [
+          "github:1381a1b98023b6a1aeae0016cbd5f5dd54cfe02a5b00ae5699b04c52d51a3c5d",
+          "x1xhlol/system-prompts-and-models-of-ai-tools",
+          "162db92f54d717d8ebd12292e155aeef32bb4b3c",
+          "Cursor Prompts/Agent Prompt v1.2.txt",
+          "b425c42900a5738911eecf82b69a5e96b02949c6815cf15fa9dd1f15e9fb05c8",
+          "e087b7ab042744679479b099e5fcc394deeb58ef",
+          32197
+        ],
+        "support": [
+          "p295",
+          "p296",
+          "p297",
+          "p298",
+          "p46",
+          "p300"
+        ],
+        "unit": "github_prompt_or_model_information",
+        "unmet": [
+          "伏字1行のraw。実PR/現コード・memory/merge/apply・process・diagram・正式schema/asset権利・未知中央比較は未検証。"
+        ],
+        "use": "v1.2の履歴/PR取得、memory、図、依存ToDo、部分読取と編集適用の契約を比較する。",
+        "value": "承認待ちと起動を分け、部分返却の未表示を追い、task依存を明示し、元snapshotが更新されないと記録する着眼点がある。"
+      },
+      "original_chunk_id": "b303a86c452b4db2a7e9f5016c8d0473",
+      "original_chunk_sha256": "7c5c2352bf852e7f59a3c988eec6a60c0880a85abb9b0a47341b53ff32dfb42d",
+      "path": "Cursor Prompts/Agent Prompt v1.2.txt",
+      "previous_parent_semantic_read": true,
+      "source_commit": "162db92f54d717d8ebd12292e155aeef32bb4b3c",
+      "source_git_blob": "e087b7ab042744679479b099e5fcc394deeb58ef",
+      "source_path": "Cursor Prompts/Agent Prompt v1.2.txt",
+      "source_repo": "x1xhlol/system-prompts-and-models-of-ai-tools",
+      "source_sha256": "b425c42900a5738911eecf82b69a5e96b02949c6815cf15fa9dd1f15e9fb05c8"
+    },
+    {
+      "actual_assessment_reader": "20261027-105225-todo-3778",
+      "bytes": 12569,
+      "inventory_id": "github:78c7cc28cb8108914e50fbb40bb887ecd351435ef8af6a058485dace19f2f814",
+      "inventory_unit": "github_prompt_or_model_information",
+      "original_assessment": {
+        "candidate_disposition": "Chat/提案適用と文脈由来の参考候補。混在captureのため全prompt/requestの直接導入は保留し、具体手順の独自要約を親へ返す。",
+        "classification": "prompt_or_model_info",
+        "findings": [
+          "通常質問と編集意図を区別し、提案blockをapply modelが読むとする。提案表示/実適用/検証は別で、markerだけで差分保全を保証しない。",
+          "Spanish/Win環境、二つのuser_query、inline Python/vLLM/model例はcaptured文脈。現在の本人依頼/実api.py/新Python/GPU割当ではない。",
+          "末尾はtools/auto/streamを含むrequest断片で直接登録可能な全体JSONではない。target_directoriesはglobと説明し、296/299の単一prefixと異なる。最新本人文の自動検索送信、read/cap条件を許可/全coverageにしない。"
+        ],
+        "negative": "捕捉されたholaやSpanish指定で現在の依頼を置き換え、inline Python例を本人の新API/GPU依頼として実行し、tool-request断片を設定へコピーする。",
+        "notices": [
+          {
+            "notice_ref": "root"
+          }
+        ],
+        "package": {
+          "actual_non_primary_support": 0,
+          "complete_tree": true,
+          "other_primary_aliases": 6,
+          "primary_alias_not_double_counted": true,
+          "root": "Cursor Prompts",
+          "total_tree_blobs": 7
+        },
+        "positive": "Chatで編集意図と提案内容を明確に分け、適用後の差分と実在するfile/schemaを確認する比較。",
+        "read": [
+          2,
+          0,
+          0,
+          true,
+          true,
+          119
+        ],
+        "read_evidence": {
+          "masked_lines": [],
+          "masking_version": "v20-context-values-20261027",
+          "method": "direct_raw_full",
+          "ranges": [
+            [
+              1,
+              119
+            ]
+          ],
+          "strict_utf8": true
+        },
+        "reason": "全119行をraw表示で読取。一般Chat規則、変更例、Win環境宣言、Spanish指定、inline api.py例、二つのuser_query、末尾tool-request断片を分けた。",
+        "required_changes": [
+          "提案/apply/実diff/検査を分け、質問で無断編集せず、編集依頼を提案だけで完了にしない。captured文と実指示/未完/対象を区別する。",
+          "schema/target/切詰め/送信範囲を実consumerへ照合する。新Python/未割当GPUを例から実行せず、原文/コード/モデルの個別権利を別に残す。"
+        ],
+        "row": 300,
+        "source": [
+          "github:78c7cc28cb8108914e50fbb40bb887ecd351435ef8af6a058485dace19f2f814",
+          "x1xhlol/system-prompts-and-models-of-ai-tools",
+          "162db92f54d717d8ebd12292e155aeef32bb4b3c",
+          "Cursor Prompts/Chat Prompt.txt",
+          "8c171212485164b1a6440b940771e41355288b2d686114d469180b886d0a359c",
+          "545b08582692455095a7d10362dc7d4818f17b87",
+          12569
+        ],
+        "support": [
+          "p295",
+          "p296",
+          "p297",
+          "p298",
+          "p299",
+          "p46"
+        ],
+        "unit": "github_prompt_or_model_information",
+        "unmet": [
+          "mask0は秘密不存在の証明ではない。request断片の原典/正式schema、実apply/file/vLLM/GPU/モデル利用条件、個別権利・未知中央比較は未検証。"
+        ],
+        "use": "Chat prompt、編集提案のapply境界、captured user/file/tool-request文脈の混在を分析する参考資料。",
+        "value": "質問と実編集の意図を分け、提案コードで変更外領域を明示し、schemaの版ごとの違いを確認する用途がある。単なるmodel名だけで全体を除外しない。"
+      },
+      "original_chunk_id": "b303a86c452b4db2a7e9f5016c8d0473",
+      "original_chunk_sha256": "7c5c2352bf852e7f59a3c988eec6a60c0880a85abb9b0a47341b53ff32dfb42d",
+      "path": "Cursor Prompts/Chat Prompt.txt",
+      "previous_parent_semantic_read": true,
+      "source_commit": "162db92f54d717d8ebd12292e155aeef32bb4b3c",
+      "source_git_blob": "545b08582692455095a7d10362dc7d4818f17b87",
+      "source_path": "Cursor Prompts/Chat Prompt.txt",
+      "source_repo": "x1xhlol/system-prompts-and-models-of-ai-tools",
+      "source_sha256": "8c171212485164b1a6440b940771e41355288b2d686114d469180b886d0a359c"
+    },
+    {
+      "actual_assessment_reader": "20261027-105225-todo-3778",
+      "bytes": 5505,
+      "inventory_id": "github:7edec023c5d49ff9ad59f680ae3635553fa41728dc7fd08e017f5bc1836b2471",
+      "inventory_unit": "github_prompt_or_model_information",
+      "original_assessment": {
+        "candidate_disposition": "出所に基づくコード説明手順の改訂候補。全prompt/専用citation/identityの直接採用は保留。",
+        "classification": "reusable_procedure",
+        "findings": [
+          "git historyが見えるというL7と、shown snippetのgit blame以外無いというL30を区別する。用語の一般的意味とcodebase固有の意味、不確実性を原lineへ結ぶ。",
+          "全sentenceにcite/根拠無しでも空cite、最大5行/長いlogicはdefinitionのみという条件は、主張を実際に支持する証拠の代用にならない。",
+          "Notes/mermaid/date/token budget/専用citationは原UIの宣言で、現在の能力・利用枠・全373の範囲を変えない。"
+        ],
+        "negative": "空citeや関数見出しだけを付けて未読logicを断定し、原token budgetを今回の利用枠とする。",
+        "notices": [
+          {
+            "notice_ref": "root"
+          }
+        ],
+        "package": {
+          "actual_non_primary_support": 0,
+          "complete_tree": true,
+          "other_primary_aliases": 1,
+          "primary_alias_not_double_counted": true,
+          "root": "Devin AI",
+          "total_tree_blobs": 2
+        },
+        "positive": "codebase特有の用語を該当lineと結び、表示されたblame/snippetだけでは答えられない範囲を明示する。",
+        "read": [
+          2,
+          0,
+          0,
+          true,
+          true,
+          63
+        ],
+        "read_evidence": {
+          "masked_lines": [],
+          "masking_version": "v20-context-values-20261027",
+          "method": "direct_raw_full",
+          "ranges": [
+            [
+              1,
+              63
+            ]
+          ],
+          "strict_utf8": true
+        },
+        "reason": "全63行をraw表示で読取。利用可能な履歴の範囲、回答/Notes形式、citationの条件を分けた。",
+        "required_changes": [
+          "snippet/現コード/実履歴の版と読取範囲を保持し、根拠が足りなければ未確認を明記する。空cite/関数見出しで未読logicを証明しない。",
+          "現在rendererと許可scopeに合わせ、技術情報を本人PC作業へ戻さない。独自要約と個別転載/配布権を分ける。"
+        ],
+        "row": 301,
+        "source": [
+          "github:7edec023c5d49ff9ad59f680ae3635553fa41728dc7fd08e017f5bc1836b2471",
+          "x1xhlol/system-prompts-and-models-of-ai-tools",
+          "162db92f54d717d8ebd12292e155aeef32bb4b3c",
+          "Devin AI/DeepWiki Prompt.txt",
+          "291db45e3f07eff73dfaaee7b310c38460099ca4ecb12bfded397ec19045911e",
+          "c8a4a29a2aafad0d0c91a4837ee554dd270faccb",
+          5505
+        ],
+        "support": [
+          "p302"
+        ],
+        "unit": "github_prompt_or_model_information",
+        "unmet": [
+          "mask0は秘密不存在の証明ではない。実codebase/履歴/renderer・根拠範囲・個別権利・未知中央比較は未検証。"
+        ],
+        "use": "コード固有の用語と返却snippetの根拠を結び、知っている範囲/未回答を区別するコード質問応答の手順を比較する。",
+        "value": "同じ単語の一般的意味とcodebase固有の意味を分け、推測しない、line範囲を根拠にする正例が具体的。"
+      },
+      "original_chunk_id": "b303a86c452b4db2a7e9f5016c8d0473",
+      "original_chunk_sha256": "7c5c2352bf852e7f59a3c988eec6a60c0880a85abb9b0a47341b53ff32dfb42d",
+      "path": "Devin AI/DeepWiki Prompt.txt",
+      "previous_parent_semantic_read": true,
+      "source_commit": "162db92f54d717d8ebd12292e155aeef32bb4b3c",
+      "source_git_blob": "c8a4a29a2aafad0d0c91a4837ee554dd270faccb",
+      "source_path": "Devin AI/DeepWiki Prompt.txt",
+      "source_repo": "x1xhlol/system-prompts-and-models-of-ai-tools",
+      "source_sha256": "291db45e3f07eff73dfaaee7b310c38460099ca4ecb12bfded397ec19045911e"
+    },
+    {
+      "actual_assessment_reader": "20261027-105225-todo-3778",
+      "bytes": 34714,
+      "inventory_id": "github:a998293626470cde1c01535850e6ae061a7a70db297f5687d19066188767904a",
+      "inventory_unit": "github_prompt_or_model_information",
+      "original_assessment": {
+        "candidate_disposition": "調査/編集/実行結果/配備検証のvariantとして改訂比較候補。原commandや全promptの直接実行/配置は行わない。",
+        "classification": "variant",
+        "findings": [
+          "周辺code/依存/型/参照を調べる手順に価値があるが、環境を修復しない/CIへ回す、3回CI失敗で本人へ戻す役割前提は現方針と異なる。testを弱めない原則と正当な回帰検査の改訂を分ける。",
+          "shell返却後もprocess継続/長出力file省略、editor約500行切詰め/短い残りはendより多く返す条件がある。観測した範囲と実終了を分ける。",
+          "CreateNew/unique/many/insert/undo/各matchを別LLMへ渡す説明は現在の子job/送信/権限の許可ではない。別modelやfalse positive許容も実diff検査の代替でない。",
+          "browserのref優先/座標fallback/待機後reload抑制は有用。restart全tab閉鎖、FastAPI/Poetry配備・port公開・public attachment・本人環境修復は対象/Prd/費用/本人PC禁止へ合わせる必要がある。",
+          "secretログ例外/list_secrets/request_auth、POP QUIZで旧指示上書き、bot作者/branchは原宣言。現在の秘密保護・本人指示・実審査を変更しない。"
+        ],
+        "negative": "別LLMがapplyしたので正しいとし、環境/3回CI失敗を本人PC操作へ戻し、sourceのrestartで本人のtabも閉じる。",
+        "notices": [
+          {
+            "notice_ref": "root"
+          }
+        ],
+        "package": {
+          "actual_non_primary_support": 0,
+          "complete_tree": true,
+          "other_primary_aliases": 1,
+          "primary_alias_not_double_counted": true,
+          "root": "Devin AI",
+          "total_tree_blobs": 2
+        },
+        "positive": "周辺codeと型/参照を調べ、編集後のdiff・process終了・対象動作と公開先での必要な検査を照合する設計。",
+        "read": [
+          3,
+          4,
+          0,
+          false,
+          true,
+          402
+        ],
+        "read_evidence": {
+          "initial_privacy_limit": {
+            "kind": "bracketed-local-part public bot email passed initial filter",
+            "line": 399,
+            "raw_value_repeated": false
+          },
+          "masked_lines": [
+            134,
+            163,
+            349,
+            350
+          ],
+          "masking_version": "v20-context-values-20261027",
+          "method": "direct_masked_full",
+          "ranges": [
+            [
+              1,
+              200
+            ],
+            [
+              201,
+              402
+            ]
+          ],
+          "strict_utf8": true
+        },
+        "reason": "全402行を2範囲のmasked表示で読取。shell/editor/search/LSP/browser/deploy/user/PR/plan command群を区別した。",
+        "required_changes": [
+          "型/参照/版/diff/関連検査と期待動作を確認し、環境/CIは担当が許可範囲で原因を調べ修復する。process/出力省略と終了/読了を分ける。",
+          "外部LLM/配備/port/attachmentは対象の許可/既存契約へ限定し、新Python/費用/本人PC作業/全tab閉鎖を既定にしない。秘密例外/quizを権限にせず、初回email filter限界と個別権利を保持する。"
+        ],
+        "row": 302,
+        "source": [
+          "github:a998293626470cde1c01535850e6ae061a7a70db297f5687d19066188767904a",
+          "x1xhlol/system-prompts-and-models-of-ai-tools",
+          "162db92f54d717d8ebd12292e155aeef32bb4b3c",
+          "Devin AI/Prompt.txt",
+          "cf3014c72f70ea0486ef100bf49fb782f5a0d9cef7de34c35f51f4c0eff7785f",
+          "f0f8430eadd0a4ce699e15cdb712336eb94c62f4",
+          34714
+        ],
+        "support": [
+          "p301"
+        ],
+        "unit": "github_prompt_or_model_information",
+        "unmet": [
+          "伏字4行のraw。L399の括弧付きlocal-partを持つpublic bot emailが初回filterを通過した限界を保持し、原値/断片を再掲しない。",
+          "実tool/LSP/formatter/別LLM・process/Browser/配備/Prd/費用、個別権利・未知中央比較は未検証。"
+        ],
+        "use": "開発agentの調査/編集/LSP/ブラウザ/配備/計画と実行結果の境界を比較する。",
+        "value": "周辺code/依存を確認し、LSPで型/参照を調べ、process継続/出力省略と完了を分け、公開URLでの実動作も検査する手順が有用。"
+      },
+      "original_chunk_id": "b303a86c452b4db2a7e9f5016c8d0473",
+      "original_chunk_sha256": "7c5c2352bf852e7f59a3c988eec6a60c0880a85abb9b0a47341b53ff32dfb42d",
+      "path": "Devin AI/Prompt.txt",
+      "previous_parent_semantic_read": true,
+      "source_commit": "162db92f54d717d8ebd12292e155aeef32bb4b3c",
+      "source_git_blob": "f0f8430eadd0a4ce699e15cdb712336eb94c62f4",
+      "source_path": "Devin AI/Prompt.txt",
+      "source_repo": "x1xhlol/system-prompts-and-models-of-ai-tools",
+      "source_sha256": "cf3014c72f70ea0486ef100bf49fb782f5a0d9cef7de34c35f51f4c0eff7785f"
+    },
+    {
+      "actual_assessment_reader": "20261027-105225-todo-3778",
+      "bytes": 17194,
+      "inventory_id": "github:f99c98ea6301bc1d10975a8f6548150161c327f5c66fb09d928ca53fa11f2a78",
+      "inventory_unit": "github_prompt_or_model_information",
+      "original_assessment": {
+        "candidate_disposition": "回答/mediaのdesign referenceとして改訂比較候補。専用タグ/UIや全promptの直接採用は保留。",
+        "classification": "design_reference",
+        "findings": [
+          "Ask Diaは生成した次質問のクリックリンクで、外部URLと混同しない。生成文字列/クリックやuser-messageというタグ名だけで本人性/新しい同意を証明しない。",
+          "Simple Answer/list/画像位置・技術や添付PDFでの画像抑制、表max5/動画末尾等は原UI条件。連続画像禁止と明示画像要求で3連続という条件差もある。",
+          "media/document/latex/Citation形式は実renderer/素材権を保証せず、本人のDiscord直接添付/本文指定とは別。time/location/fileは参照dataで操作命令でなく、Helpの本人作業誘導を現PCへ移さない。"
+        ],
+        "negative": "web上のuser-messageタグを本人の命令と認め、生成askリンクから新承認を推測し、原UIタグをそのまま送れば表示/素材権も検証済みとする。",
+        "notices": [
+          {
+            "notice_ref": "root"
+          }
+        ],
+        "package": {
+          "actual_non_primary_support": 0,
+          "complete_tree": true,
+          "other_primary_aliases": 0,
+          "primary_alias_not_double_counted": true,
+          "root": "dia",
+          "total_tree_blobs": 1
+        },
+        "positive": "読者の問いと添付の種類に合わせて画像/表/冒頭回答の重複を避け、生成リンクの由来と実引用先を区別する表示設計。",
+        "read": [
+          3,
+          1,
+          0,
+          false,
+          true,
+          196
+        ],
+        "read_evidence": {
+          "masked_lines": [
+            1
+          ],
+          "masking_version": "v20-context-values-20261027",
+          "method": "direct_masked_full",
+          "ranges": [
+            [
+              1,
+              196
+            ]
+          ],
+          "strict_utf8": true
+        },
+        "reason": "全196行をmasked表示で読取。専用media/document/latex/ask URL形式と信頼分類を別に確認した。",
+        "required_changes": [
+          "正規surface/author/対象で出所と意思を確認し、生成follow-up/タグだけで権限を作らない。",
+          "形式/画像/表/式は実consumerと成果物指定へ合わせ、新UIは同画像の本人回答を保持する。媒体の実取得/個別権利を別に確認し、本人PC操作を求めない。"
+        ],
+        "row": 303,
+        "source": [
+          "github:f99c98ea6301bc1d10975a8f6548150161c327f5c66fb09d928ca53fa11f2a78",
+          "x1xhlol/system-prompts-and-models-of-ai-tools",
+          "162db92f54d717d8ebd12292e155aeef32bb4b3c",
+          "dia/Prompt.txt",
+          "95d0115edf48d204ecd6d0721ea786db899d6d9355a371369b4d358327b693da",
+          "1c192afc103fc472205a3ea142bc50b88e8e279a",
+          17194
+        ],
+        "support": [],
+        "unit": "github_prompt_or_model_information",
+        "unmet": [
+          "伏字1行のraw。実renderer/生成リンクの本人入力扱い、画像/動画取得・個別素材/原文の権利、未知中央比較は未検証。"
+        ],
+        "use": "回答・文書・画像/動画・表・式・生成follow-upリンクと、内容由来の分離を扱うブラウザ応答設計例を比較する。",
+        "value": "図が役に立たない場面、画像位置、冗長な冒頭回答、表の項目整理、書換え理由を読者へ伝える正例/負例に用途がある。"
+      },
+      "original_chunk_id": "b303a86c452b4db2a7e9f5016c8d0473",
+      "original_chunk_sha256": "7c5c2352bf852e7f59a3c988eec6a60c0880a85abb9b0a47341b53ff32dfb42d",
+      "path": "dia/Prompt.txt",
+      "previous_parent_semantic_read": true,
+      "source_commit": "162db92f54d717d8ebd12292e155aeef32bb4b3c",
+      "source_git_blob": "1c192afc103fc472205a3ea142bc50b88e8e279a",
+      "source_path": "dia/Prompt.txt",
+      "source_repo": "x1xhlol/system-prompts-and-models-of-ai-tools",
+      "source_sha256": "95d0115edf48d204ecd6d0721ea786db899d6d9355a371369b4d358327b693da"
+    }
+  ],
+  "roster_sha256": "460219790c088b33e6044c6a97c68a882549c608c3de46ea536aa990a2c1adac",
+  "shared_original_contexts": {
+    "56cd799ba1c8017a7213e63627bc0893734a25b6ed99d953e1ffa1100e028684": {
+      "actual_assessment_reader": "20261027-105225-todo-3778",
+      "all_original_chunk_fields_reconstructed": true,
+      "common": {
+        "boundaries": {
+          "central_operations": 0,
+          "copy_license_accepted": false,
+          "new_final_dispositions": 0,
+          "source_executed": false
+        },
+        "chunk_id": "e2955d381b874cea906f2d7a043c8b19",
+        "definitions": {
+          "actors": {
+            "0": "今回の実assistant",
+            "1": "以前同じToDo3778の実assistant:20261025-142809-todo-3778"
+          },
+          "primary_alias_columns": [
+            "path",
+            "sha256",
+            "git_blob",
+            "bytes",
+            "saved",
+            "method",
+            "actual_reader_ref",
+            "mask",
+            "read",
+            "original_read",
+            "representative",
+            "primary_ordinal",
+            "block_reason"
+          ],
+          "read_credit": "old43..46は旧readerの全文/意味評価を保持し、今回の旧評価読取やbyte照合を新rawへしない。mask数は実秘密数/不存在の証明ではない。",
+          "reader_namespace": "20261027-105225-todo-3778/current",
+          "readers": {
+            "current": {
+              "actor": 0,
+              "actual_reader_job": "20261027-105225-todo-3778",
+              "reader_namespace": "20261027-105225-todo-3778/current"
+            },
+            "r142809": {
+              "actor": 1,
+              "actual_reader_job": "20261025-142809-todo-3778",
+              "reader_namespace": "20261025-142809-todo-3778/current"
+            }
+          },
+          "states": {
+            "1": "saved_unread",
+            "2": "direct_raw_full",
+            "3": "direct_masked_full",
+            "6": "partial",
+            "7": "scan"
+          },
+          "support_rule": "supportはprimary_alias_inventoryの参照。各packageの全blobから当該primaryだけを除外。全て別primary aliasで、支持数/新uniqueへ二重加算0。tree blob/bytesは同列git_blob/bytesと独立に照合して一致。正確なgzip pathは固定名簿の該当ordinal.entry.content_path。未読aliasのreader/maskはnullで、byte照合は本文読了ではない。"
+        },
+        "domain": "othergit373-chunk-v1",
+        "existing_relationship": {
+          "comparison": "起動catalogのai-workflow/codebase-design/browser-automation/mcp-builder等の名/descriptionと既知3048/public metadataまで。未知中央本文/全存在の同一性や過去の未読を確定しない。",
+          "new_global_unique_coverage_claimed": false,
+          "prior_context_chunk_id": "a284c790d65e4b0f938217cb5e6a104d",
+          "prior_tool_assessments": {
+            "chunk_id": "c27ec764c8264c2397db8f6a0e612409",
+            "current_read": "meaning assessment only; before related new primaries, not new source raw",
+            "original_body_reader": "20261025-142809-todo-3778",
+            "receipt_sha256": "799c278aeec664a5ac9cca429b746e6bde2e28ec1197bae5e28d332ac43dd82e",
+            "rows": [
+              43,
+              44,
+              45,
+              46
+            ]
+          }
+        },
+        "first_ordinal": 288,
+        "input_validation": {
+          "alias_count": 17,
+          "all_primary_and_package_aliases_same_buffer_verified": true,
+          "catalog_rows": 73220,
+          "catalog_sha256": "2d73c9a038a41cc220a9687b935bfa1e0b315b65d9bd6d3e54ddb4111972876c",
+          "commit": "162db92f54d717d8ebd12292e155aeef32bb4b3c",
+          "commit_json_sha256": "674dc969c4d800fefbf65a7ecb1c875e919118aa48fd0a2133ede51385f90939",
+          "index_sha256": "477ac8c5b178c4c781bf5baf0b26c6a316ed0ae6e9001ad28f0ac0ab9844b54f",
+          "notice_paths": [
+            "LICENSE.md"
+          ],
+          "primary_tuple_unit_catalog_exact": true,
+          "repo": "x1xhlol/system-prompts-and-models-of-ai-tools",
+          "root_tree": "e8d86c0a025a7a07d4bb8723ae758cf98d63cbf5",
+          "same_buffer_sha_bytes_gitblob_strict_utf8": true,
+          "tree_entries": 171,
+          "tree_sha256": "416b91db26db0b0c4447d46bbb945259d89ac393e45ee76b5ebceb09cde459f5",
+          "truncated": false
+        },
+        "notice_evidence": {
+          "root": {
+            "actual_reader_job": "20261025-142809-todo-3778",
+            "bytes": 35149,
+            "copy_license_accepted": false,
+            "displayed_line_ranges": [
+              [
+                1,
+                350
+              ],
+              [
+                351,
+                674
+              ]
+            ],
+            "fixed_token_recovery": {
+              "line": 154,
+              "new_raw_read": false,
+              "same_bytes_verified": true,
+              "text": "2. Basic Permissions."
+            },
+            "git_blob": "f288702d2fa16d3cdf0035b15a9fcbc552cd88e7",
+            "mask": 2,
+            "masked_lines": [
+              4,
+              154
+            ],
+            "method": "same-byte-reuse",
+            "original_notice_gzip": "github/x1xhlol__system-prompts-and-models-of-ai-tools/objects/3972dc9744f6499f0f9b2dbf76696f2ae7ad8af9b23dde66d6af86c9dfb36986.gz",
+            "original_read": [
+              3,
+              2,
+              0,
+              false,
+              true,
+              674
+            ],
+            "original_reader_namespace": "20261025-142809-todo-3778/current",
+            "path": "LICENSE.md",
+            "read": [
+              3,
+              2,
+              1,
+              false,
+              true,
+              674
+            ],
+            "reader": 1,
+            "representative": {
+              "chunk_id": "951da82f4b0d41cda1532574d0b68f97",
+              "pointer": "entries/0/notices/0",
+              "receipt_sha256": "a0afd9bdcf9511fb72c7995cf4376914fe854047aa4512be84661a60d3cfaf9f"
+            },
+            "saved": true,
+            "scope": "root GPLv3全文の旧masked読取を再利用。固定complete treeに別notice名候補なし。収集者のrootGPLをAnthropic等の第三者prompt/tool/サービスの真正性・転載/配布・利用権へ包括しない。原文参照/要約と公開転載/実配布/サービス利用を区別。",
+            "sha256": "3972dc9744f6499f0f9b2dbf76696f2ae7ad8af9b23dde66d6af86c9dfb36986"
+          }
+        },
+        "primary_alias_inventory": {
+          "p288": [
+            "Augment Code/claude-4-sonnet-agent-prompts.txt",
+            "d4d2239d8c827a1532d7b3b6c335f2f1cf97839834a4e796ae817294ea257cd7",
+            "074868802892a34327a609553884e7ee49235fe3",
+            10836,
+            true,
+            "same-byte-reuse",
+            "current",
+            0,
+            [
+              2,
+              0,
+              0,
+              true,
+              true,
+              159
+            ],
+            [
+              2,
+              0,
+              0,
+              true,
+              true,
+              159
+            ],
+            {
+              "chunk_id": "e2955d381b874cea906f2d7a043c8b19",
+              "pointer": "entries/0"
+            },
+            288,
+            null
+          ],
+          "p289": [
+            "Augment Code/gpt-5-agent-prompts.txt",
+            "46163da651515f97c5dbc1d53b558b64081420edc68ea381fe8d8eedf7041fc0",
+            "7a23f099b5ae6e41fd6e1cb30a25893070d3a0a5",
+            15035,
+            true,
+            "same-byte-reuse",
+            "current",
+            0,
+            [
+              2,
+              0,
+              0,
+              true,
+              true,
+              241
+            ],
+            [
+              2,
+              0,
+              0,
+              true,
+              true,
+              241
+            ],
+            {
+              "chunk_id": "e2955d381b874cea906f2d7a043c8b19",
+              "pointer": "entries/1"
+            },
+            289,
+            null
+          ],
+          "p290": [
+            "Cluely/Default Prompt.txt",
+            "f724d4c6df15229e84ad98f00ecb6db252b30c7fba04e703168ced9fab642e1f",
+            "5699a15309734537b930cc8da94072a1043b48c7",
+            4534,
+            true,
+            "same-byte-reuse",
+            "current",
+            0,
+            [
+              2,
+              0,
+              0,
+              true,
+              true,
+              95
+            ],
+            [
+              2,
+              0,
+              0,
+              true,
+              true,
+              95
+            ],
+            {
+              "chunk_id": "e2955d381b874cea906f2d7a043c8b19",
+              "pointer": "entries/2"
+            },
+            290,
+            null
+          ],
+          "p291": [
+            "Cluely/Enterprise Prompt.txt",
+            "3abed886b802fced45ed5668dc3cae0780c18ee1db20628a2bacd024b28ce6c2",
+            "e1a138b392979c5baa13e32df4652b59ac13af8c",
+            21306,
+            true,
+            "same-byte-reuse",
+            "current",
+            0,
+            [
+              2,
+              0,
+              0,
+              true,
+              true,
+              471
+            ],
+            [
+              2,
+              0,
+              0,
+              true,
+              true,
+              471
+            ],
+            {
+              "chunk_id": "e2955d381b874cea906f2d7a043c8b19",
+              "pointer": "entries/3"
+            },
+            291,
+            null
+          ],
+          "p292": [
+            "CodeBuddy Prompts/Chat Prompt.txt",
+            "c8c01fab68fad836ac3c5655ebce8300217e33fbc6208a5a748d335ec5dfbed5",
+            "1dd088ffd90dc3a88f232b75ac23cd7c52a6569a",
+            1558,
+            true,
+            "same-byte-reuse",
+            "current",
+            0,
+            [
+              2,
+              0,
+              0,
+              true,
+              true,
+              35
+            ],
+            [
+              2,
+              0,
+              0,
+              true,
+              true,
+              35
+            ],
+            {
+              "chunk_id": "e2955d381b874cea906f2d7a043c8b19",
+              "pointer": "entries/4"
+            },
+            292,
+            null
+          ],
+          "p293": [
+            "CodeBuddy Prompts/Craft Prompt.txt",
+            "40508d2c78f0704a473f3083666adcdcde98bfe75c6ac243f6688ee37237b581",
+            "8a08d310593f30e8f5a26a90e5c0264f2f060f37",
+            40617,
+            true,
+            "same-byte-reuse",
+            "current",
+            0,
+            [
+              2,
+              0,
+              0,
+              true,
+              true,
+              678
+            ],
+            [
+              2,
+              0,
+              0,
+              true,
+              true,
+              678
+            ],
+            {
+              "chunk_id": "e2955d381b874cea906f2d7a043c8b19",
+              "pointer": "entries/5"
+            },
+            293,
+            null
+          ],
+          "p294": [
+            "Comet Assistant/System Prompt.txt",
+            "f503605a6a9196d0a43f12078c7f80e8dea3896bf73bb97f03608d3a40bd24aa",
+            "597b511d5a02c19632480c4f94e0282690bebdf6",
+            53840,
+            true,
+            "same-byte-reuse",
+            "current",
+            8,
+            [
+              3,
+              8,
+              0,
+              false,
+              true,
+              1060
+            ],
+            [
+              3,
+              8,
+              0,
+              false,
+              true,
+              1060
+            ],
+            {
+              "chunk_id": "e2955d381b874cea906f2d7a043c8b19",
+              "pointer": "entries/6"
+            },
+            294,
+            null
+          ],
+          "p295": [
+            "Cursor Prompts/Agent CLI Prompt 2025-08-07.txt",
+            "7bc79653ca2c2c113e2cf60ea44a89991155be82d815c95096d30cc0b540027c",
+            "14f9422fef6ca3efb59ddb02fb161125c28e0b77",
+            14067,
+            true,
+            "same-byte-reuse",
+            "current",
+            1,
+            [
+              3,
+              1,
+              0,
+              false,
+              true,
+              206
+            ],
+            [
+              3,
+              1,
+              0,
+              false,
+              true,
+              206
+            ],
+            {
+              "chunk_id": "e2955d381b874cea906f2d7a043c8b19",
+              "pointer": "entries/7"
+            },
+            295,
+            null
+          ],
+          "p296": [
+            "Cursor Prompts/Agent Prompt 2.0.txt",
+            "999452424931d76f705b7d1e3bd971ea3c4028a9c957d2cd4e6b4378e1331c6c",
+            "d0065dec52b67b4592daddb1d376a2cf5809f1cb",
+            38844,
+            true,
+            "saved_unread",
+            null,
+            null,
+            [
+              1,
+              null,
+              null,
+              false,
+              false,
+              0
+            ],
+            null,
+            null,
+            296,
+            "固定名簿の別primary ordinal296。本文未表示で、保存metadataとbytesだけを照合。後続cursorで個別評価する。"
+          ],
+          "p297": [
+            "Cursor Prompts/Agent Prompt 2025-09-03.txt",
+            "4cea174cfe85b5125f03b80b3c3e8acfb8fc4c2b00666172886da6d5f315862e",
+            "b65c937ca0b6094c4b0af668f1fdea28dbd8b44e",
+            19028,
+            true,
+            "saved_unread",
+            null,
+            null,
+            [
+              1,
+              null,
+              null,
+              false,
+              false,
+              0
+            ],
+            null,
+            null,
+            297,
+            "固定名簿の別primary ordinal297。本文未表示で、保存metadataとbytesだけを照合。後続cursorで個別評価する。"
+          ],
+          "p298": [
+            "Cursor Prompts/Agent Prompt v1.0.txt",
+            "2a610285f244117721e9200230bdcdbcf735541e5971c121a196579b174b3bcb",
+            "000f712f6513c44271f858d514b1e2086cfb98cb",
+            9023,
+            true,
+            "saved_unread",
+            null,
+            null,
+            [
+              1,
+              null,
+              null,
+              false,
+              false,
+              0
+            ],
+            null,
+            null,
+            298,
+            "固定名簿の別primary ordinal298。本文未表示で、保存metadataとbytesだけを照合。後続cursorで個別評価する。"
+          ],
+          "p299": [
+            "Cursor Prompts/Agent Prompt v1.2.txt",
+            "b425c42900a5738911eecf82b69a5e96b02949c6815cf15fa9dd1f15e9fb05c8",
+            "e087b7ab042744679479b099e5fcc394deeb58ef",
+            32197,
+            true,
+            "saved_unread",
+            null,
+            null,
+            [
+              1,
+              null,
+              null,
+              false,
+              false,
+              0
+            ],
+            null,
+            null,
+            299,
+            "固定名簿の別primary ordinal299。本文未表示で、保存metadataとbytesだけを照合。後続cursorで個別評価する。"
+          ],
+          "p300": [
+            "Cursor Prompts/Chat Prompt.txt",
+            "8c171212485164b1a6440b940771e41355288b2d686114d469180b886d0a359c",
+            "545b08582692455095a7d10362dc7d4818f17b87",
+            12569,
+            true,
+            "saved_unread",
+            null,
+            null,
+            [
+              1,
+              null,
+              null,
+              false,
+              false,
+              0
+            ],
+            null,
+            null,
+            300,
+            "固定名簿の別primary ordinal300。本文未表示で、保存metadataとbytesだけを照合。後続cursorで個別評価する。"
+          ],
+          "p43": [
+            "Augment Code/claude-4-sonnet-tools.json",
+            "44304e0ff21623151d8c479caa9033c9c61629f8e2842722e76c357e8d4db9fd",
+            "21147b427dfaba9b2311d91725caa3b053176148",
+            28992,
+            true,
+            "same-byte-reuse",
+            "r142809",
+            0,
+            [
+              2,
+              0,
+              1,
+              true,
+              true,
+              514
+            ],
+            [
+              2,
+              0,
+              0,
+              true,
+              true,
+              514
+            ],
+            {
+              "chunk_id": "c27ec764c8264c2397db8f6a0e612409",
+              "pointer": "entries/0",
+              "receipt_sha256": "799c278aeec664a5ac9cca429b746e6bde2e28ec1197bae5e28d332ac43dd82e"
+            },
+            43,
+            null
+          ],
+          "p44": [
+            "Augment Code/gpt-5-tools.json",
+            "2870be55958c405528a7c93d94d5ad4177d2bcfc2372a4051d9a864e26ba4463",
+            "215983a7b4d02561169f05fa882be84fcc0934e1",
+            19181,
+            true,
+            "same-byte-reuse",
+            "r142809",
+            0,
+            [
+              2,
+              0,
+              1,
+              true,
+              true,
+              549
+            ],
+            [
+              2,
+              0,
+              0,
+              true,
+              true,
+              549
+            ],
+            {
+              "chunk_id": "c27ec764c8264c2397db8f6a0e612409",
+              "pointer": "entries/1",
+              "receipt_sha256": "799c278aeec664a5ac9cca429b746e6bde2e28ec1197bae5e28d332ac43dd82e"
+            },
+            44,
+            null
+          ],
+          "p45": [
+            "Comet Assistant/tools.json",
+            "9ec55c214550e07074b16d0decf11692bc7c3417d8d7700194a350928e51e915",
+            "5a836e00c575f25080fd55659feb2048b61e9a1e",
+            7559,
+            true,
+            "same-byte-reuse",
+            "r142809",
+            0,
+            [
+              2,
+              0,
+              1,
+              true,
+              true,
+              231
+            ],
+            [
+              2,
+              0,
+              0,
+              true,
+              true,
+              231
+            ],
+            {
+              "chunk_id": "c27ec764c8264c2397db8f6a0e612409",
+              "pointer": "entries/2",
+              "receipt_sha256": "799c278aeec664a5ac9cca429b746e6bde2e28ec1197bae5e28d332ac43dd82e"
+            },
+            45,
+            null
+          ],
+          "p46": [
+            "Cursor Prompts/Agent Tools v1.0.json",
+            "ed9113196d044aefdc8e3301b280c0611b6418bc0fff3f681998581c11620d57",
+            "194575ceab8b9d208c57db7e163d733e437c84f5",
+            23545,
+            true,
+            "same-byte-reuse",
+            "r142809",
+            0,
+            [
+              2,
+              0,
+              1,
+              true,
+              true,
+              327
+            ],
+            [
+              2,
+              0,
+              0,
+              true,
+              true,
+              327
+            ],
+            {
+              "chunk_id": "c27ec764c8264c2397db8f6a0e612409",
+              "pointer": "entries/3",
+              "receipt_sha256": "799c278aeec664a5ac9cca429b746e6bde2e28ec1197bae5e28d332ac43dd82e"
+            },
+            46,
+            null
+          ]
+        },
+        "privacy_limits": {
+          "guard_limit_inherited": "起動入口/保存方針/Skill/own-parent job transport metadataの分類未確認を保持し、別path/APIで迂回しない。",
+          "initial_limits_preserved": "過去の初回漏れ/過剰伏字とactor/profileを前packetのまま保持し、後のfilter強化で旧raw/maskを塗替えない。",
+          "profile": "全新primaryはv20を表示前に適用。288..293 mask0、294 mask8、295 mask1。mask0も秘密不存在の証明ではない。"
+        },
+        "reader_job": "20261027-105225-todo-3778",
+        "reader_todo": 3778,
+        "resume_validation": {
+          "acknowledged_through": 287,
+          "generation": 65,
+          "journal_sha256": "684c41e3c155e693a5a5656ea9476e2181303e5fbdcbeb7f57feab93a1c6da48",
+          "parent_semantic_assessments_read": true,
+          "previous_chunk_id": "f2870c6d45a14b83b9e2067fc015a4d2",
+          "previous_chunk_sha256": "c7c0a28a1ab7c9723e7c383538a789b008ff616a5ce6a77847cf465fe727cb32",
+          "previous_receipt_sha256": "655957a23108640f9f91a0bdca12f71b044bc1ff429c663638bae577c9f5c221",
+          "validated_receipts": 65
+        },
+        "roster_sha256": "460219790c088b33e6044c6a97c68a882549c608c3de46ea536aa990a2c1adac"
+      },
+      "original_chunk_id": "e2955d381b874cea906f2d7a043c8b19",
+      "original_receipt_sha256": "847d63ca3e5d8770a0c8bfef23a11a6a6c706d939c0f4cc7e7bb20fc36b41e9f"
+    },
+    "7c5c2352bf852e7f59a3c988eec6a60c0880a85abb9b0a47341b53ff32dfb42d": {
+      "actual_assessment_reader": "20261027-105225-todo-3778",
+      "all_original_chunk_fields_reconstructed": true,
+      "common": {
+        "boundaries": {
+          "central_operations": 0,
+          "copy_license_accepted": false,
+          "new_final_dispositions": 0,
+          "source_executed": false
+        },
+        "chunk_id": "b303a86c452b4db2a7e9f5016c8d0473",
+        "definitions": {
+          "actors": {
+            "0": "今回の実assistant",
+            "1": "以前同じToDo3778の実assistant:20261025-142809-todo-3778"
+          },
+          "primary_alias_columns": [
+            "path",
+            "sha256",
+            "git_blob",
+            "bytes",
+            "saved",
+            "method",
+            "actual_reader_ref",
+            "mask",
+            "read",
+            "original_read",
+            "representative",
+            "primary_ordinal"
+          ],
+          "primary_alias_reference_rule": "primary_entry形式は同chunk.entries[index]のsource7tupleからpath=source[3],sha256=[4],git_blob=[5],bytes=[6]を得る。read/evidenceは同entry、actual_readerはcurrent。native byte/tree照合済み、独立支持数へ二重加算0。配列形式の旧46/295はprimary_alias_columns通り。",
+          "reader_namespace": "20261027-105225-todo-3778/current",
+          "readers": {
+            "current": {
+              "actor": 0,
+              "actual_reader_job": "20261027-105225-todo-3778",
+              "reader_namespace": "20261027-105225-todo-3778/current"
+            },
+            "r142809": {
+              "actor": 1,
+              "actual_reader_job": "20261025-142809-todo-3778",
+              "reader_namespace": "20261025-142809-todo-3778/current"
+            }
+          },
+          "states": {
+            "1": "saved_unread",
+            "2": "direct_raw_full",
+            "3": "direct_masked_full",
+            "6": "partial",
+            "7": "scan"
+          },
+          "support_rule": "全package blobから当該primaryだけ除外して表に結ぶ。全て保存済みの別primary aliasで、支持数/新uniqueへ二重加算0。tree blob/bytesは同列git_blob/bytesと独立照合済み。gzipは固定名簿の該当ordinal.entry.content_path。byte照合だけでraw/reader/maskを作らない。"
+        },
+        "domain": "othergit373-chunk-v1",
+        "existing_relationship": {
+          "new_global_unique_coverage_claimed": false,
+          "prior_3048_context_chunk_id": "a284c790d65e4b0f938217cb5e6a104d",
+          "prior_tool46_body_reader": "20261025-142809-todo-3778",
+          "prior_tool46_chunk_id": "c27ec764c8264c2397db8f6a0e612409",
+          "scope": "旧46の意味評価と原profile、既知3048/public metadata、起動catalogのai-workflow/codebase-design/mcp-builder/browser-automation等の名/descriptionまで。未知中央本文/存在/全過去の未読や重複を確定しない。"
+        },
+        "first_ordinal": 296,
+        "input_validation": {
+          "all_primary_and_package_aliases_same_buffer_verified": true,
+          "catalog_rows": 73220,
+          "catalog_sha256": "2d73c9a038a41cc220a9687b935bfa1e0b315b65d9bd6d3e54ddb4111972876c",
+          "commit": "162db92f54d717d8ebd12292e155aeef32bb4b3c",
+          "commit_json_sha256": "674dc969c4d800fefbf65a7ecb1c875e919118aa48fd0a2133ede51385f90939",
+          "index_sha256": "477ac8c5b178c4c781bf5baf0b26c6a316ed0ae6e9001ad28f0ac0ab9844b54f",
+          "notice_paths": [
+            "LICENSE.md"
+          ],
+          "primary_tuple_unit_catalog_exact": true,
+          "repo": "x1xhlol/system-prompts-and-models-of-ai-tools",
+          "root_tree": "e8d86c0a025a7a07d4bb8723ae758cf98d63cbf5",
+          "same_buffer_sha_bytes_gitblob_strict_utf8": true,
+          "tree_entries": 171,
+          "tree_sha256": "416b91db26db0b0c4447d46bbb945259d89ac393e45ee76b5ebceb09cde459f5",
+          "truncated": false
+        },
+        "notice_evidence": {
+          "root": {
+            "actual_reader_job": "20261025-142809-todo-3778",
+            "bytes": 35149,
+            "copy_license_accepted": false,
+            "displayed_line_ranges": [
+              [
+                1,
+                350
+              ],
+              [
+                351,
+                674
+              ]
+            ],
+            "fixed_token_recovery": {
+              "line": 154,
+              "new_raw_read": false,
+              "same_bytes_verified": true,
+              "text": "2. Basic Permissions."
+            },
+            "git_blob": "f288702d2fa16d3cdf0035b15a9fcbc552cd88e7",
+            "mask": 2,
+            "masked_lines": [
+              4,
+              154
+            ],
+            "method": "same-byte-reuse",
+            "original_notice_gzip": "github/x1xhlol__system-prompts-and-models-of-ai-tools/objects/3972dc9744f6499f0f9b2dbf76696f2ae7ad8af9b23dde66d6af86c9dfb36986.gz",
+            "original_read": [
+              3,
+              2,
+              0,
+              false,
+              true,
+              674
+            ],
+            "original_reader_namespace": "20261025-142809-todo-3778/current",
+            "path": "LICENSE.md",
+            "read": [
+              3,
+              2,
+              1,
+              false,
+              true,
+              674
+            ],
+            "reader": 1,
+            "representative": {
+              "chunk_id": "951da82f4b0d41cda1532574d0b68f97",
+              "pointer": "entries/0/notices/0",
+              "receipt_sha256": "a0afd9bdcf9511fb72c7995cf4376914fe854047aa4512be84661a60d3cfaf9f"
+            },
+            "saved": true,
+            "scope": "root GPLv3全文の旧masked読取を再利用。固定complete treeに別notice名候補なし。収集者のrootGPLをAnthropic等の第三者prompt/tool/サービスの真正性・転載/配布・利用権へ包括しない。原文参照/要約と公開転載/実配布/サービス利用を区別。",
+            "sha256": "3972dc9744f6499f0f9b2dbf76696f2ae7ad8af9b23dde66d6af86c9dfb36986"
+          }
+        },
+        "primary_alias_inventory": {
+          "p295": [
+            "Cursor Prompts/Agent CLI Prompt 2025-08-07.txt",
+            "7bc79653ca2c2c113e2cf60ea44a89991155be82d815c95096d30cc0b540027c",
+            "14f9422fef6ca3efb59ddb02fb161125c28e0b77",
+            14067,
+            true,
+            "same-byte-reuse",
+            "current",
+            1,
+            [
+              3,
+              1,
+              0,
+              false,
+              true,
+              206
+            ],
+            [
+              3,
+              1,
+              0,
+              false,
+              true,
+              206
+            ],
+            {
+              "chunk_id": "e2955d381b874cea906f2d7a043c8b19",
+              "pointer": "entries/7",
+              "receipt_sha256": "847d63ca3e5d8770a0c8bfef23a11a6a6c706d939c0f4cc7e7bb20fc36b41e9f"
+            },
+            295
+          ],
+          "p296": {
+            "actual_reader_ref": "current",
+            "evidence_ref": "entries/0/read_evidence",
+            "method": "same-byte-reuse",
+            "primary_entry": 0,
+            "primary_ordinal": 296,
+            "read_ref": "entries/0/read",
+            "saved": true
+          },
+          "p297": {
+            "actual_reader_ref": "current",
+            "evidence_ref": "entries/1/read_evidence",
+            "method": "same-byte-reuse",
+            "primary_entry": 1,
+            "primary_ordinal": 297,
+            "read_ref": "entries/1/read",
+            "saved": true
+          },
+          "p298": {
+            "actual_reader_ref": "current",
+            "evidence_ref": "entries/2/read_evidence",
+            "method": "same-byte-reuse",
+            "primary_entry": 2,
+            "primary_ordinal": 298,
+            "read_ref": "entries/2/read",
+            "saved": true
+          },
+          "p299": {
+            "actual_reader_ref": "current",
+            "evidence_ref": "entries/3/read_evidence",
+            "method": "same-byte-reuse",
+            "primary_entry": 3,
+            "primary_ordinal": 299,
+            "read_ref": "entries/3/read",
+            "saved": true
+          },
+          "p300": {
+            "actual_reader_ref": "current",
+            "evidence_ref": "entries/4/read_evidence",
+            "method": "same-byte-reuse",
+            "primary_entry": 4,
+            "primary_ordinal": 300,
+            "read_ref": "entries/4/read",
+            "saved": true
+          },
+          "p301": {
+            "actual_reader_ref": "current",
+            "evidence_ref": "entries/5/read_evidence",
+            "method": "same-byte-reuse",
+            "primary_entry": 5,
+            "primary_ordinal": 301,
+            "read_ref": "entries/5/read",
+            "saved": true
+          },
+          "p302": {
+            "actual_reader_ref": "current",
+            "evidence_ref": "entries/6/read_evidence",
+            "method": "same-byte-reuse",
+            "primary_entry": 6,
+            "primary_ordinal": 302,
+            "read_ref": "entries/6/read",
+            "saved": true
+          },
+          "p303": {
+            "actual_reader_ref": "current",
+            "evidence_ref": "entries/7/read_evidence",
+            "method": "same-byte-reuse",
+            "primary_entry": 7,
+            "primary_ordinal": 303,
+            "read_ref": "entries/7/read",
+            "saved": true
+          },
+          "p46": [
+            "Cursor Prompts/Agent Tools v1.0.json",
+            "ed9113196d044aefdc8e3301b280c0611b6418bc0fff3f681998581c11620d57",
+            "194575ceab8b9d208c57db7e163d733e437c84f5",
+            23545,
+            true,
+            "same-byte-reuse",
+            "r142809",
+            0,
+            [
+              2,
+              0,
+              1,
+              true,
+              true,
+              327
+            ],
+            [
+              2,
+              0,
+              0,
+              true,
+              true,
+              327
+            ],
+            {
+              "chunk_id": "c27ec764c8264c2397db8f6a0e612409",
+              "pointer": "entries/3",
+              "receipt_sha256": "799c278aeec664a5ac9cca429b746e6bde2e28ec1197bae5e28d332ac43dd82e"
+            },
+            46
+          ]
+        },
+        "privacy_limits": {
+          "guard_limit_inherited": "起動入口/保存方針/報告Skill/own-parent job transportの分類未確認を保持し、別path/APIで迂回していない。",
+          "initial_limit": "302 L399の括弧付きlocal-partを持つpublic bot emailが初回filterを通過。原値/断片を再掲せず、後のfilter強化で初回maskを塗替えない。過去漏れ/過剰伏字も保持。",
+          "preparation_scope": "296..300はpending295と同じCursor packageの必要な比較文脈として一度先行読取。元packetのsaved_unreadは当時snapshotを保持し、新chunk送信/cursor進行はACK295後。301..303はACK295後に読取。",
+          "profile": "全新primaryは初回v20。296..298 mask0、299 mask1、300..301 mask0、302 mask4、303 mask1。mask0も実秘密不存在の証明ではない。"
+        },
+        "reader_job": "20261027-105225-todo-3778",
+        "reader_todo": 3778,
+        "resume_validation": {
+          "acknowledged_through": 295,
+          "generation": 66,
+          "journal_sha256": "e315d29acb23fb6d295df10eaf072063809e4d1655d855c970fae12a713f79f1",
+          "parent_semantic_assessments_read": true,
+          "previous_chunk_id": "e2955d381b874cea906f2d7a043c8b19",
+          "previous_chunk_sha256": "56cd799ba1c8017a7213e63627bc0893734a25b6ed99d953e1ffa1100e028684",
+          "previous_receipt_sha256": "847d63ca3e5d8770a0c8bfef23a11a6a6c706d939c0f4cc7e7bb20fc36b41e9f",
+          "validated_receipts": 66
+        },
+        "roster_sha256": "460219790c088b33e6044c6a97c68a882549c608c3de46ea536aa990a2c1adac",
+        "transport_audit": {
+          "actual_published_canonical": "56cd799ba1c8017a7213e63627bc0893734a25b6ed99d953e1ffa1100e028684",
+          "difference": "手元の未送信計算データ『で』と実送信/再提示『して』の助詞差だけ。source7tuple/unit/read/支持/notice/意味判断は変更0。原receipt不変。",
+          "kind": "internal draft tracking difference resolved against actual published receipt",
+          "pointer": "/entries/2/reason",
+          "receipt_sha256": "847d63ca3e5d8770a0c8bfef23a11a6a6c706d939c0f4cc7e7bb20fc36b41e9f",
+          "source_profile_changed": false,
+          "target_chunk_id": "e2955d381b874cea906f2d7a043c8b19"
+        }
+      },
+      "original_chunk_id": "b303a86c452b4db2a7e9f5016c8d0473",
+      "original_receipt_sha256": "261eaf84470ffa77b0f7297540a63776e6e58a0d82d65714d46d5345cadcc28e"
+    }
+  },
+  "source_counts": {
+    "x1xhlol/system-prompts-and-models-of-ai-tools": 16
+  },
+  "whole16_complete": false
+}

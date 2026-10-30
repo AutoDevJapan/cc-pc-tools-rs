@@ -1,0 +1,25 @@
+{
+  "domain": "skills3080-notice4-historical-precreation-v1",
+  "request_sha256": "758a78033f857c1cda0f25deeed5a18a89b16b5730caf3cd758fc3929a789167",
+  "manifest_sha256": "5ab55cfca8778374e86862905e9c39d5bfe11bea2ae6e3e33ec82f82e7607f89",
+  "original_complete_wrapper_sha256": "eabd77c3d258eb31e2ed37984c918dda1be2ce4e353dca0380a1fb9544c3d836",
+  "original_CLI_stdout_sha256": "32a4a4c8fe3520be74d531b734c1a4e67262da5494e0684386a05dfca1334eff",
+  "response_projection": {
+    "created_files": 0,
+    "domain": "skills-3080-purpose-v1",
+    "file_count": 28,
+    "general_access_granted": false,
+    "manifest_sha256": "5ab55cfca8778374e86862905e9c39d5bfe11bea2ae6e3e33ec82f82e7607f89",
+    "operation": "CreateNew",
+    "original_registry_recovered": false,
+    "qualified": true,
+    "request_sha256": "758a78033f857c1cda0f25deeed5a18a89b16b5730caf3cd758fc3929a789167",
+    "source_commit": "74f4eff6a10b5bf235e4028ada75232a5f348bb6",
+    "todo_id": 3080
+  },
+  "projection_is_not_a_new_issuer_receipt": true,
+  "current_absence_asserted": false,
+  "mutation_revalidated_before_CreateNew": true,
+  "new_Create_calls_by_publication": 0,
+  "successful_native_creation_call": "call_9a5bc551506640e49f56dc88155e0eaf"
+}

@@ -1,0 +1,5177 @@
+{
+  "after": 267,
+  "all_original_chunks_losslessly_reconstructed": true,
+  "all_original_fields_and_actor_namespaces_preserved": true,
+  "central_operations": 0,
+  "complete_original_chunks": 3,
+  "domain": "skills3080-original3719-parent-shared-snapshot-v1",
+  "entries": [
+    {
+      "bytes": 33624,
+      "git_blob": "0ab4ef46454ba3a32ed0d94af7292fd5ab989833",
+      "inventory_id": "github:f412841073b79a788f58682159263b0866f9b38237922afd75cdc47fc0b80be5",
+      "path": "skills/nattsukun/openclaw-skill-creator-th/SKILL.md",
+      "source_commit": "920714f17d81e0a95c7a9bc51faf0a7921cd982d",
+      "source_repo": "6mile/skills",
+      "source_sha256": "c21994018eb1aaeffa199fe965ff1b0016d7e1d75a1433c4b8283d27beedff26"
+    },
+    {
+      "bytes": 4957,
+      "git_blob": "da994f0bcd1da61b8ea032930d87115f2673216f",
+      "inventory_id": "github:59e9d28887ae66c4b4a9f456ee0d47b5e51bf431b87a8cbe52f8fce128834e40",
+      "path": "skills/neobotjan2026/twinify/SKILL.md",
+      "source_commit": "920714f17d81e0a95c7a9bc51faf0a7921cd982d",
+      "source_repo": "6mile/skills",
+      "source_sha256": "8ad18f96a2d37388e5c8774cad533e81892c648a050acd2ef671036ca42b6a7a"
+    },
+    {
+      "bytes": 8642,
+      "git_blob": "22c1342c2eb18e70e977815022a3af6c4dad7ff3",
+      "inventory_id": "github:2d732464c7beba3992c6905df4ec92c18618cec4394a4baea3e436786e326d0f",
+      "path": "skills/neverchenx/multi-search/SKILL.md",
+      "source_commit": "920714f17d81e0a95c7a9bc51faf0a7921cd982d",
+      "source_repo": "6mile/skills",
+      "source_sha256": "e71281a4ebdd60a1bbf8625056c3c31a88089d7475251e563985fb0f65b77667"
+    },
+    {
+      "bytes": 10454,
+      "git_blob": "d09db67675492f8a1afd59f18d47394d174b9cb3",
+      "inventory_id": "github:77e84509e664397e1389285d34558631b55780fec8c28e1785331d6a8f448df8",
+      "path": "skills/nexaiguy/nex-changelog/SKILL.md",
+      "source_commit": "920714f17d81e0a95c7a9bc51faf0a7921cd982d",
+      "source_repo": "6mile/skills",
+      "source_sha256": "ae2d65e894fcac68cb57b48250c3e834a7b86693b617110f6ad7b9529961d1ef"
+    },
+    {
+      "bytes": 10174,
+      "git_blob": "f7e12d1e747d7da15d0fa043a6ed76d2c2bd7aa7",
+      "inventory_id": "github:c455d180f33137e7101b8902971cc86c3b12f0aae6b83ae2ac1bdab12d677d7d",
+      "path": "skills/nexaiguy/nex-crm/SKILL.md",
+      "source_commit": "920714f17d81e0a95c7a9bc51faf0a7921cd982d",
+      "source_repo": "6mile/skills",
+      "source_sha256": "e042c9b15299ff1f128c48fd7629a4d17d16ab4bf83a19165a1823c02ae7d374"
+    },
+    {
+      "bytes": 13350,
+      "git_blob": "30c29b4df17e9454e8c69bb76b613b3f8bd70002",
+      "inventory_id": "github:8c9486afa5ae3dbf1e7b76472a5a224e88fc7bc0c14d6647d240aec539279055",
+      "path": "skills/nexaiguy/nex-decision-journal/SKILL.md",
+      "source_commit": "920714f17d81e0a95c7a9bc51faf0a7921cd982d",
+      "source_repo": "6mile/skills",
+      "source_sha256": "d0d27cf30dd0e3940f041a7e399c903e86ea58736c4eeffec2d9ee4e6c28c2c0"
+    },
+    {
+      "bytes": 1980,
+      "git_blob": "7dc35141378096027b00b9cb33adc965374e893d",
+      "inventory_id": "github:714629479f02cd511819f5467fd41f092dd5ce323be62fa9d9714dc9e702597d",
+      "path": "skills/nexaiguy/nex-depcheck/SKILL.md",
+      "source_commit": "920714f17d81e0a95c7a9bc51faf0a7921cd982d",
+      "source_repo": "6mile/skills",
+      "source_sha256": "a5c2f768c314971b858f5920a162d876b6aa215d031cf5f895d6671780e1ff25"
+    },
+    {
+      "bytes": 11341,
+      "git_blob": "cc2202518a1fa82ca5204b60a579516b903724f5",
+      "inventory_id": "github:cd1c52b133b0e416fc110e1a924890b2f2c81b14aea30a7ac1a52e33d126480c",
+      "path": "skills/nexaiguy/nex-domains/SKILL.md",
+      "source_commit": "920714f17d81e0a95c7a9bc51faf0a7921cd982d",
+      "source_repo": "6mile/skills",
+      "source_sha256": "4eef2aecbde508d015eba7c80575977d0364926f5b44d01a4a452034e7f0f247"
+    },
+    {
+      "bytes": 12814,
+      "git_blob": "5defecf3365012cc0e735894c6a47ce244a2081d",
+      "inventory_id": "github:4831668edecc8b1b43a51d0a3279cb1f26b8c013e9e3f85e7cf5c581ae512da5",
+      "path": "skills/nexaiguy/nex-einvoice/SKILL.md",
+      "source_commit": "920714f17d81e0a95c7a9bc51faf0a7921cd982d",
+      "source_repo": "6mile/skills",
+      "source_sha256": "fbfec0546d533feac7b7a830231f5d6dff26436b0bd83ca6132a4b6465893164"
+    },
+    {
+      "bytes": 13746,
+      "git_blob": "6f7e3c47a43fe197bace8ce23dac27942c49ba14",
+      "inventory_id": "github:d64d537d6b6bc4cbce665ec87c52bebe2bb6f633bff7d2176ff5fa9f72132d51",
+      "path": "skills/nexaiguy/nex-expenses/SKILL.md",
+      "source_commit": "920714f17d81e0a95c7a9bc51faf0a7921cd982d",
+      "source_repo": "6mile/skills",
+      "source_sha256": "706272f64ae610f3e87adaf2927d8274c1c5245845b2016f2b82486fd09fcb28"
+    },
+    {
+      "bytes": 9367,
+      "git_blob": "c980699e7c97b131c707615c0ffee96aefc355e3",
+      "inventory_id": "github:8db27fe820feeb39692a4a12b76bae1e63145efcd0d7532b7edaf88c6c3ee0b5",
+      "path": "skills/nexaiguy/nex-gdpr/SKILL.md",
+      "source_commit": "920714f17d81e0a95c7a9bc51faf0a7921cd982d",
+      "source_repo": "6mile/skills",
+      "source_sha256": "5c83e03837136604c4baa6e8303f8b53520e5dd53a75a15b00de13dd9ffb1b77"
+    },
+    {
+      "bytes": 9274,
+      "git_blob": "d3842f21e98783c0519c0cb506465dd721bf7f4a",
+      "inventory_id": "github:b9495d0dbafbdb31416e1f94cfae73186cc961c72dc1b6a77dd46e26e032b705",
+      "path": "skills/nexaiguy/nex-ghostwriter/SKILL.md",
+      "source_commit": "920714f17d81e0a95c7a9bc51faf0a7921cd982d",
+      "source_repo": "6mile/skills",
+      "source_sha256": "612b02f39d4270d69c4106748c617bab56061a6b90d245665e12ba7d30a02f80"
+    },
+    {
+      "bytes": 8778,
+      "git_blob": "241eda87a12980334bb366b6ec43517f7d4f7a44",
+      "inventory_id": "github:3dde0da922cef4c32e8d0aa4f8c9f41e9ded12083ce3f7a4670430a19f9cf209",
+      "path": "skills/nexaiguy/nex-healthcheck/SKILL.md",
+      "source_commit": "920714f17d81e0a95c7a9bc51faf0a7921cd982d",
+      "source_repo": "6mile/skills",
+      "source_sha256": "733ac611a4fcb017bfe1d704162badb8df750d60f326951a2cb68b05d58db029"
+    },
+    {
+      "bytes": 9124,
+      "git_blob": "e7175ff403af347facc1611769e25ded5c92ed1f",
+      "inventory_id": "github:30e363c186b6b34de1e56faaaa8262da229a94518623c24a14b3e4ee818379ee",
+      "path": "skills/nexaiguy/nex-keyring/SKILL.md",
+      "source_commit": "920714f17d81e0a95c7a9bc51faf0a7921cd982d",
+      "source_repo": "6mile/skills",
+      "source_sha256": "87ced3766bbbd4aa9f4ac38eb964ae414c5cfa364338913626642d6187241e41"
+    },
+    {
+      "bytes": 9450,
+      "git_blob": "e097f32bc1b499a36f0e343dd3f2f8ec62782136",
+      "inventory_id": "github:2ec558ff3dd5a83b248642088364eaadc0951cc3e30a12ab7f1ec888eb502b0a",
+      "path": "skills/nexaiguy/nex-life-logger/SKILL.md",
+      "source_commit": "920714f17d81e0a95c7a9bc51faf0a7921cd982d",
+      "source_repo": "6mile/skills",
+      "source_sha256": "633074bc53fa44481081dfc523957fc018d7bca653957b70d26f508d4df0475b"
+    },
+    {
+      "bytes": 9807,
+      "git_blob": "3151e0c765180faaf8a5d0ffacd5f539806c93db",
+      "inventory_id": "github:13720c657496f881eea2d1e615e450a4b2f75b4a5f7ec81ccb7673ba66e6c702",
+      "path": "skills/nexaiguy/nex-pricewatch/SKILL.md",
+      "source_commit": "920714f17d81e0a95c7a9bc51faf0a7921cd982d",
+      "source_repo": "6mile/skills",
+      "source_sha256": "ba113ae825b64a0f49a37fdf24cd39c418ec778548856622460841a8d08bb773"
+    },
+    {
+      "bytes": 5843,
+      "git_blob": "ceb05f85985ee04e0265416b6260e9dd44291d88",
+      "inventory_id": "github:da8bbff468e544c66123d5d2ef50b36db46e2117ce9fd4e27ad1acabeac6c303",
+      "path": "skills/nexaiguy/nex-reports/SKILL.md",
+      "source_commit": "920714f17d81e0a95c7a9bc51faf0a7921cd982d",
+      "source_repo": "6mile/skills",
+      "source_sha256": "963e9114a08d1d95d2eb7f48b8c6eff8db31373dd1be6372213e32e2d8980582"
+    },
+    {
+      "bytes": 7151,
+      "git_blob": "c0ea6e0ccb8de6feee73ffb60db89c3a71f0ce45",
+      "inventory_id": "github:f5bcd756257cfe379dba010980b0fd972774eb41544c684cbc918afc40c9d511",
+      "path": "skills/nexaiguy/nex-skillmon/SKILL.md",
+      "source_commit": "920714f17d81e0a95c7a9bc51faf0a7921cd982d",
+      "source_repo": "6mile/skills",
+      "source_sha256": "6fcd04dd9f3718b5b2e4a54efec79cf6cce0fda6dd49f4152794a771c77e6876"
+    },
+    {
+      "bytes": 4045,
+      "git_blob": "7c4c4d6f7a5411e1c55700f14fe80e526a230664",
+      "inventory_id": "github:e1120fa4c0b7fc46c3ffb6e813cef88ab6e79ea4f54818d7e1865e7c8aaebb21",
+      "path": "skills/nexaiguy/nex-timetrack/SKILL.md",
+      "source_commit": "920714f17d81e0a95c7a9bc51faf0a7921cd982d",
+      "source_repo": "6mile/skills",
+      "source_sha256": "487d7a1e9c9c6c0aff297bc53e6648b3f6e5fced49b4578ab97f117fc11c7a3e"
+    },
+    {
+      "bytes": 8815,
+      "git_blob": "20b6d461dddc85e7a38e1770183eb24140fdccae",
+      "inventory_id": "github:0c9fe95c6365a21286af062737ab6fec2f305cc3fc23b662c94fdcc3b2aff93b",
+      "path": "skills/nexaiguy/nex-voice/SKILL.md",
+      "source_commit": "920714f17d81e0a95c7a9bc51faf0a7921cd982d",
+      "source_repo": "6mile/skills",
+      "source_sha256": "c928c026958c6df3a273cce6beeb9a8fb93942dec09d2f4a8838dc97140b2432"
+    },
+    {
+      "bytes": 7068,
+      "git_blob": "f6a22ddf88fdc7e7b7603f4c9064cc51bd930ad9",
+      "inventory_id": "github:ac99f798a8cb5e9a271de3d44feb25815e7443b8e50b79f3b2bcea32ca4435a1",
+      "path": "skills/nicky1108/x-92bilal26-pdf/SKILL.md",
+      "source_commit": "920714f17d81e0a95c7a9bc51faf0a7921cd982d",
+      "source_repo": "6mile/skills",
+      "source_sha256": "38d8559d4899602f82f3560052132aa0c40cfca80203037729756bdb4fb8e0cb"
+    }
+  ],
+  "limits": [
+    "Parent received actual original twenty-one assessments and limits with independent native Sol/max metadata; source body/support raw reads remain the recorded original reader's work, not new parent raw reads.",
+    "Original notice reuse, ordered full-diff, fresh reads, saved-unread and unsaved null states and per-chunk actor namespaces are preserved, not converted into permissions.",
+    "This pending-assessment preparation does not install, accept third-party rights or complete598/51030/73220/16sources."
+  ],
+  "new_copy_permissions": 0,
+  "new_final_dispositions": 0,
+  "new_parent_raw_body_read_credit": 0,
+  "new_source_or_support_reads_by_materializer": 0,
+  "original_journal_parent": "20261024-235901-todo-3080",
+  "original_primary_assessments": 21,
+  "original_support_state_counts": {
+    "0": 134,
+    "1": 46,
+    "2": 29,
+    "3": 14,
+    "4": 4,
+    "5": 1
+  },
+  "parent_journal_sha256_at288": "d56dde3ca3e2ff4765f2f12e5c7dc8c56c7c9ec336ebbfa86d04a22ab965c8d8",
+  "publisher_job": "20261027-175645-todo-3080",
+  "records": [
+    {
+      "actual_assessment_reader": "20261028-171959-todo-3719",
+      "bytes": 33624,
+      "current_permission_or_adoption_granted": false,
+      "git_blob": "0ab4ef46454ba3a32ed0d94af7292fd5ab989833",
+      "inventory_id": "github:f412841073b79a788f58682159263b0866f9b38237922afd75cdc47fc0b80be5",
+      "new_final_disposition": false,
+      "ordinal": 268,
+      "original_assessment": {
+        "candidate_disposition": "実成果比較と発火評価の改訂候補。矛盾・文字化け/未読実装を保持し、実run/最適化/梱包・最終採否・許諾・導入・実test0。",
+        "findings": [
+          "folder名のthから本文をタイ語と推測しない。本文は主に英語のskill-creatorで、UTF8 strict decodeは成功するが文字化けした罫線/記号が既に保存本文へ含まれる。",
+          "初めのOpenClaw節は子担当なし・baseline/benchmark/CLI最適化を省略とし、後の節は子担当あり・並列比較/CLI最適化可能とする。実capabilityを確認せず両方を実行条件にできない。",
+          "runはすべて同時起動と要求するが、実モデル/資源・既存scheduler単一所有/依存と整合させる必要がある。本研究では子jobや新ToDoを起動しない。",
+          "assertionをrun開始後に作成/変更し、改善loopでtest側も毎回評価してbestをtest scoreから選ぶという説明。保存された設計からは結果を見た採点変更やholdoutへの反復適合が起こりうる。script未読のため実際の分割/選択実装の不具合とは断定しない。",
+          "空feedbackを満足扱い、最新download名/mtimeでeval setを選ぶ、model IDをsystem promptから取る、timingは通知時しか取得不能とする。空欄は明示承認でなく、実job/native model・対応する出力bytes/世代・取得可能な計測経路は別に確認が必要。",
+          "schemaはgrading.text/passed/evidence等を要求するが関連agents/schema本文は保存未読、scripts/viewer/templateは未保存。実集計/表示/梱包・現Claude/OpenClawの発火/CLI仕様を保証しない。",
+          "実成果と作業transcriptを読み、弱い非識別assertion/高分散/時間tokenのtradeoffを見る観点は有用。毎回全test/全baselineを無条件再実行する規則へはしない。"
+        ],
+        "nearby_limit": "起動metadataだけ。中央本文/存在・同等性・現runtime設定は未照会。",
+        "nearby_metadata": [
+          "skill-creator",
+          "skill-maintenance",
+          "ai-model-evaluation",
+          "test-quality",
+          "source-grounded-content-review",
+          "filesystem-timestamp-trust"
+        ],
+        "negative": "全runを資源確認なしに起動し、出力後に有利な基準へ変え、反復参照したtestの最高点や空feedbackで改善/本人採用とする。",
+        "notices": [
+          [
+            "LICENSE.txt",
+            1,
+            "このdirectoryの11558B Apache2 notice。",
+            "実公開版/作者・agents/template/CLI/サービスの個別権利と契約は別。"
+          ]
+        ],
+        "positive": "同じ入力・固定した採点基準と版で成果を比較し、弱いassertionと欠測を明示し、未使用testで最終の改善を確かめる設計へ参照する。",
+        "read": [
+          2,
+          0,
+          0,
+          true,
+          true,
+          486
+        ],
+        "reason": "486行を3ページで順序全読。作成→with/baseline→採点/集計→改善とtrigger評価の具体手順に加え、重複するOpenClaw節の矛盾・未読実装・評価漏洩の可能性を確認した。",
+        "required_changes": [
+          "元の目的/本人回答/正式名・配置/junctionを保ち、runtimeの実capabilityとCLI/model/authを対象版へ対応させ、矛盾する2節を一つの条件分岐へ整理する。",
+          "評価prompt/入力/基準・writer/grader/baseline版を事前固定し、採点変更を新世代として残す。反復選択に使うvalidationと最終未使用testを分け、失敗/欠測/空結果と分母・分散を保持する。",
+          "成果/run ID/計測/feedbackの世代とhashを照合し、空欄や最新mtimeを採用/承認の証拠にしない。別モデルreviewと本人が決める要件/画像を区別し、本人へPC操作を求めない。",
+          "実導入時だけ必要script/schema/現在の公式仕様を親が確認し、既存OAuth範囲と割当資源で必要な影響範囲だけ検査する。新規自作Python・未指定送信/梱包配布・中央変更を本研究で実行しない。"
+        ],
+        "row": 268,
+        "source": [
+          "github:f412841073b79a788f58682159263b0866f9b38237922afd75cdc47fc0b80be5",
+          "skills/nattsukun/openclaw-skill-creator-th/SKILL.md",
+          "c21994018eb1aaeffa199fe965ff1b0016d7e1d75a1433c4b8283d27beedff26",
+          "0ab4ef46454ba3a32ed0d94af7292fd5ab989833",
+          33624
+        ],
+        "support": [
+          [
+            "CHANGELOG.md",
+            3563,
+            "1899acbf",
+            "076e66c1",
+            1,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "LICENSE.txt",
+            11558,
+            "49bbe911",
+            "9b5e4019",
+            5,
+            0,
+            0,
+            "100644"
+          ],
+          [
+            "SKILL.md",
+            33624,
+            "c2199401",
+            "0ab4ef46",
+            2,
+            0,
+            0,
+            "100644"
+          ],
+          [
+            "_meta.json",
+            302,
+            "12548e79",
+            "d81607e9",
+            1,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "agents/analyzer.md",
+            10650,
+            "8ccce0d9",
+            "89ffec90",
+            1,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "agents/comparator.md",
+            7489,
+            "ee90af43",
+            "b37cb70c",
+            1,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "agents/grader.md",
+            9272,
+            "6ec1c695",
+            "384e19fc",
+            1,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "assets/eval_review.html",
+            null,
+            null,
+            "454e4816",
+            0,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "eval-viewer/generate_review.py",
+            null,
+            null,
+            "e30bcc31",
+            0,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "eval-viewer/viewer.html",
+            null,
+            null,
+            "ca988045",
+            0,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "references/schemas.md",
+            12491,
+            "5ef5fd3c",
+            "cea2fc3b",
+            1,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "scripts/__init__.py",
+            null,
+            null,
+            "e69de29b",
+            0,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "scripts/aggregate_benchmark.py",
+            null,
+            null,
+            "88b73002",
+            0,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "scripts/generate_report.py",
+            null,
+            null,
+            "a79f321b",
+            0,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "scripts/improve_description.py",
+            null,
+            null,
+            "b9175091",
+            0,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "scripts/package_skill.py",
+            null,
+            null,
+            "6eeb4a57",
+            0,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "scripts/quick_validate.py",
+            null,
+            null,
+            "b020a2dd",
+            0,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "scripts/run_eval.py",
+            null,
+            null,
+            "f3ee6d00",
+            0,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "scripts/run_loop.py",
+            null,
+            null,
+            "97a09ee6",
+            0,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "scripts/utils.py",
+            null,
+            null,
+            "dc6ad25d",
+            0,
+            null,
+            null,
+            "100644"
+          ]
+        ],
+        "use": "Skillの意図/発火条件/出力から、同条件のbaseline比較・実成果採点・説明の最適化を組み立てる手順参考。",
+        "value": "実出力とassertionのevidence、時間/token・分散、常に通る弱い検査、版/iterationの対応を分けて評価できる。"
+      },
+      "original_chunk_sha256": "47777060a37db1391d9d8a5a641039db2470a5f5f3f2721108bc2c80584895a9",
+      "path": "skills/nattsukun/openclaw-skill-creator-th/SKILL.md",
+      "source_commit": "920714f17d81e0a95c7a9bc51faf0a7921cd982d",
+      "source_repo": "6mile/skills",
+      "source_sha256": "c21994018eb1aaeffa199fe965ff1b0016d7e1d75a1433c4b8283d27beedff26"
+    },
+    {
+      "actual_assessment_reader": "20261028-171959-todo-3719",
+      "bytes": 4957,
+      "current_permission_or_adoption_granted": false,
+      "git_blob": "da994f0bcd1da61b8ea032930d87115f2673216f",
+      "inventory_id": "github:59e9d28887ae66c4b4a9f456ee0d47b5e51bf431b87a8cbe52f8fce128834e40",
+      "new_final_disposition": false,
+      "ordinal": 269,
+      "original_assessment": {
+        "candidate_disposition": "文体の根拠/反例と同意・用途境界を改訂候補として提案。欺瞞的persona命令は修正対象。実chat/本人模倣/agent作成/質問・最終採否・許諾・導入・実test0。",
+        "findings": [
+          "pathはtwinify、本文nameはdoppel。実人物のchatから模倣agentを作る手順で、普通の記憶取込や本人アカウント操作と同一にしない。",
+          "primaryは対象人物への説明/用途/明示同意・拒否/撤回尊重を要求するが、実手順のyes/no質問だけで対象本人・対象data/範囲・共有先まで照合したことにならない。今回は人物生成依頼でないため新質問は不要。",
+          "agents-guideは実本人でAIでないと名乗りcharacterを崩さない命令、soul-guideもnever break characterとする。primaryのimpersonation/deception禁止と矛盾し、その人格命令をこのassistantへ適用しない。",
+          "primaryはlocal処理・外部送信しないと述べながらLLM API callを除外する。『local』という語だけでは生chat/第三者識別情報の送信や保存scopeを説明できず、今回のAI API鍵不可/OAuth条件とも分ける必要がある。",
+          "examplesは実message20〜30件をexact copy、memory/soulは関係/居住等の詳しい特徴抽出を求める。対象人物の同意だけで会話相手/登場人物すべての情報利用/共有の条件を満たすとは限らない。",
+          "明示/暗黙事実の区別がなく、少数chatの感情や人格推定を恒久の実本人性とするのは過剰。50+message等は品質保証の実測でなく、parserのlocale/date/sender継続行/偽見出し処理は未保存で未検証。",
+          "削除の原指示はworkspace/config/parsed dataを対象とするが、共有/キャッシュ・index/派生profile等の所在や実削除確認は未説明。原config.patch/install/実chat取得は一切行っていない。"
+        ],
+        "nearby_limit": "起動metadataだけ。中央本文/存在・同等性・実記憶/私的会話は未照会。",
+        "nearby_metadata": [
+          "import-memory",
+          "human-behavior-practice",
+          "source-grounded-content-review",
+          "safe-tool-evaluation",
+          "security-review"
+        ],
+        "negative": "chat入手や利用者のyesだけで他者を実本人と名乗るagentへ変え、生会話や第三者情報をAPIへ送り、別用途のアカウント権限も持たせる。",
+        "notices": [
+          [
+            "LICENSE.txt",
+            2,
+            "このdirectoryの1063B MITnotice。",
+            "会話/人物・第三者の情報利用や同意、LLM/platform条件と実公開版は別。"
+          ]
+        ],
+        "positive": "同意・用途・参照data範囲を固定した文体シミュレーションであると表示し、根拠例/推測/反例と撤回時の派生物を追跡する設計へ参照する。",
+        "read": [
+          2,
+          0,
+          0,
+          true,
+          true,
+          102
+        ],
+        "reason": "primary102行、profile支持5件の29/26/35/36/56行とMITnoticeを全読。一次本文の非欺瞞・同意方針と、支持AGENTSの『AIではなく実本人』という命令の不整合を確認した。",
+        "required_changes": [
+          "明示したシミュレーションとして扱い、実本人だという主張/AIでないという偽装命令を除く。元発話/資料の範囲・同意・用途と生成された推測を分ける。",
+          "実利用時に対象/会話相手・第三者dataの必要範囲と受領済み同意を照合し、私密原文の再掲/不要抽出/未知宛先送信を避ける。原文を外部AI APIへ送る手順を今回採用しない。",
+          "実parserと対象locale/複数行/日時・sender対応、入力zip/path境界を検証し、agent権限とdata保持/撤回時の派生物まで対応を記録する。本人の明示指示や保護設定を人格資料へ上書きしない。"
+        ],
+        "row": 269,
+        "source": [
+          "github:59e9d28887ae66c4b4a9f456ee0d47b5e51bf431b87a8cbe52f8fce128834e40",
+          "skills/neobotjan2026/twinify/SKILL.md",
+          "8ad18f96a2d37388e5c8774cad533e81892c648a050acd2ef671036ca42b6a7a",
+          "da994f0bcd1da61b8ea032930d87115f2673216f",
+          4957
+        ],
+        "support": [
+          [
+            "LICENSE.txt",
+            1063,
+            "81d95d81",
+            "623c0eb7",
+            2,
+            0,
+            0,
+            "100644"
+          ],
+          [
+            "SKILL.md",
+            4957,
+            "8ad18f96",
+            "da994f0b",
+            2,
+            0,
+            0,
+            "100644"
+          ],
+          [
+            "_meta.json",
+            273,
+            "4c2a2f6d",
+            "5f477115",
+            1,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "references/agents-guide.md",
+            916,
+            "7940d5a2",
+            "ac3da9bc",
+            2,
+            0,
+            0,
+            "100644"
+          ],
+          [
+            "references/anti-examples-guide.md",
+            1104,
+            "8f62fc4b",
+            "49e5a517",
+            2,
+            0,
+            0,
+            "100644"
+          ],
+          [
+            "references/examples-guide.md",
+            1054,
+            "194411e8",
+            "8c6dc318",
+            2,
+            0,
+            0,
+            "100644"
+          ],
+          [
+            "references/memory-guide.md",
+            1029,
+            "94429a81",
+            "7e3c08ec",
+            2,
+            0,
+            0,
+            "100644"
+          ],
+          [
+            "references/soul-guide.md",
+            1788,
+            "3f00e7ff",
+            "aec7017a",
+            2,
+            0,
+            0,
+            "100644"
+          ],
+          [
+            "scripts/parse_chat.py",
+            null,
+            null,
+            "5c1536a1",
+            0,
+            null,
+            null,
+            "100644"
+          ]
+        ],
+        "use": "会話資料から文体の特徴/実例/反例/事実記憶を分離し、同意と用途・削除条件を対応させる設計参考。",
+        "value": "特徴の根拠と実例/反例、記憶の事実性、利用対象/撤回時の派生物を個別に検査できる。"
+      },
+      "original_chunk_sha256": "47777060a37db1391d9d8a5a641039db2470a5f5f3f2721108bc2c80584895a9",
+      "path": "skills/neobotjan2026/twinify/SKILL.md",
+      "source_commit": "920714f17d81e0a95c7a9bc51faf0a7921cd982d",
+      "source_repo": "6mile/skills",
+      "source_sha256": "8ad18f96a2d37388e5c8774cad533e81892c648a050acd2ef671036ca42b6a7a"
+    },
+    {
+      "actual_assessment_reader": "20261028-171959-todo-3719",
+      "bytes": 8642,
+      "current_permission_or_adoption_granted": false,
+      "git_blob": "22c1342c2eb18e70e977815022a3af6c4dad7ff3",
+      "inventory_id": "github:2d732464c7beba3992c6905df4ec92c18618cec4394a4baea3e436786e326d0f",
+      "new_final_disposition": false,
+      "ordinal": 270,
+      "original_assessment": {
+        "candidate_disposition": "問題分割/出典対応の改訂候補。NC/SA等の個別noticeと公開対応は未確定。実検索/再委譲/保存・最終採否・許諾・導入・実test0。",
+        "findings": [
+          "捏造/事実追加をしない、問題ごとに絞る、主張の箇所に出典linkを添えるという設計は有用。ただしlinkの存在だけで本文を読んだ/主張が支持されるとは限らない。",
+          "keywordが重複しないことは、資料や主張の重複・未網羅を防ぐ証明でない。同じ重要一次資料を複数観点で使う場合もあり、機械的pivotで必要範囲が欠ける可能性がある。",
+          "各agentが親のkeyword確認待ち、topicごと独立起動、4〜6round固定という手順は、正規scheduler/資源と調査の実必要性へ対応させる必要がある。今回の598担当を再委譲しない。",
+          "arbitrary inputや別agentへのcomplete background配送でも、保護対象/秘密や当初scope・原資料保持を緩和しない。保存先検出は存在確認だけでwrite許可/所有の証明にならない。",
+          "research depth/round count/文書KBは進捗量で、結論の正しさ/全候補読了・採用・実実行の証明ではない。法令/業務/技術への普遍適用や現在tool機能は保存主張として未検証。",
+          "primaryとnoticeはCC-BY-NC-SA-4.0/商用別licenseを明示する。ClawHub補助一次資料のMIT-0規定との個別公開対応を親が確認する点で、今回一括許諾/最終除外へしない。"
+        ],
+        "nearby_limit": "起動metadataだけ。中央本文/存在・同等性・現tool機能は未照会。",
+        "nearby_metadata": [
+          "rlm-controller",
+          "evidence-based-text-review",
+          "source-grounded-content-review",
+          "audit-reference-originality",
+          "bounded-document-review"
+        ],
+        "negative": "検索語が重ならず6round終わっただけで全範囲を確認済みとし、linkだけ添えた推奨を現在の事実として出し、NC条件をrootMITで消す。",
+        "notices": [
+          [
+            "LICENSE.txt",
+            3,
+            "このdirectoryのCC-BY-NC-SA-4.0要約と商用license案内。",
+            "legal code/実権利者・公開版・第三者資料/サービスの条件は未確定。"
+          ]
+        ],
+        "positive": "元の問いを資料・実読範囲へ結び、異なる担当の根拠と矛盾を統合し、未検証の主張を明示した結論へ参照する。",
+        "read": [
+          2,
+          0,
+          0,
+          true,
+          true,
+          331
+        ],
+        "reason": "331行と個別NC/SA notice28行を全読。主題抽出・keyword宣言/親確認・4〜6round・統合/inline citationを具体手順として確認した。",
+        "required_changes": [
+          "問いと有限な完了条件、資料/版・実読範囲・根拠/反証・未確認を対応させる。keyword/round数をcoverageや成功へ置換せず、必要な相互照合を保つ。",
+          "確認済み既存結果を統合し、重複起動/不要な親確認待ちを抑え、許可された通信/保存/資源と当初範囲を各工程へ配送する。本研究でnetwork・子job・新ToDo/文書保存を実行しない。",
+          "主張ごとに直接支持する出典を置き、保存主張/現在検証/推論と実行済みを区別する。実利用を親が扱う場合だけ必要な現公式確認・個別権利/商用条件を確認する。"
+        ],
+        "row": 270,
+        "source": [
+          "github:2d732464c7beba3992c6905df4ec92c18618cec4394a4baea3e436786e326d0f",
+          "skills/neverchenx/multi-search/SKILL.md",
+          "e71281a4ebdd60a1bbf8625056c3c31a88089d7475251e563985fb0f65b77667",
+          "22c1342c2eb18e70e977815022a3af6c4dad7ff3",
+          8642
+        ],
+        "support": [
+          [
+            "CHANGELOG.md",
+            1271,
+            "ca140829",
+            "15a1feeb",
+            1,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "LICENSE.txt",
+            1214,
+            "c7bae4eb",
+            "3d433eef",
+            2,
+            0,
+            0,
+            "100644"
+          ],
+          [
+            "SKILL.md",
+            8642,
+            "e71281a4",
+            "22c1342c",
+            2,
+            0,
+            0,
+            "100644"
+          ],
+          [
+            "_meta.json",
+            280,
+            "ceac7f0b",
+            "912c8117",
+            1,
+            null,
+            null,
+            "100644"
+          ]
+        ],
+        "use": "複数の調査問題を範囲別に整理し、出典を主張のそばへ結んで統合する調査設計参考。",
+        "value": "元の問い/分担範囲/調整履歴と各結論の根拠を対応させ、作り話や出典なしの推奨を検出しやすくできる。"
+      },
+      "original_chunk_sha256": "47777060a37db1391d9d8a5a641039db2470a5f5f3f2721108bc2c80584895a9",
+      "path": "skills/neverchenx/multi-search/SKILL.md",
+      "source_commit": "920714f17d81e0a95c7a9bc51faf0a7921cd982d",
+      "source_repo": "6mile/skills",
+      "source_sha256": "e71281a4ebdd60a1bbf8625056c3c31a88089d7475251e563985fb0f65b77667"
+    },
+    {
+      "actual_assessment_reader": "20261028-171959-todo-3719",
+      "bytes": 10454,
+      "current_permission_or_adoption_granted": false,
+      "git_blob": "d09db67675492f8a1afd59f18d47394d174b9cb3",
+      "inventory_id": "github:77e84509e664397e1389285d34558631b55780fec8c28e1785331d6a8f448df8",
+      "new_final_disposition": false,
+      "ordinal": 271,
+      "original_assessment": {
+        "candidate_disposition": "改訂候補として親へ提案。個別の権利/未検証を保持。最終採否・許諾・導入・実test0。",
+        "findings": [
+          "commit messageを自動でtype/audienceへ分類する説明。feat/fixはclient、chore等はinternalという規則だけで秘密や公開可否・実変更範囲を確定しない。",
+          "importの版/--since・重複/merge/revert・BREAKING CHANGE footer等の扱いは未保存git_parserから未検証。コミットの存在はテスト成功や実配布を証明しない。",
+          "release作成/版本metadataと実タグ/成果物・Prd反映・稼働版は別。生成email/Telegram本文は送信済みでなく、今回外部送信を行わない。",
+          "全command plain textとする一方JSON等のformatも説明。HTMLはdescriptionの主張でcommand表では未確認。footer除去は個別noticeの保持義務を自動解除しない。",
+          ".gitがfolderであるとするトラブル案はworktree等の.git file構成へそのまま適用できない。SQLite分離・no telemetry/完全localもscript/setup未保存で未検証。"
+        ],
+        "nearby_limit": "起動metadataだけ。中央本文/存在・同等性/現設定は未照会。",
+        "nearby_metadata": [
+          "build-game-changelog",
+          "git-verification",
+          "source-grounded-content-review",
+          "observability-notifications"
+        ],
+        "negative": "feat/fixを自動的に公開可能とし、release行を作っただけで配布済み・email送信済みと報告する。",
+        "notices": [
+          [
+            "LICENSE.txt",
+            1,
+            "当該directoryの個別notice。表題と本文条件の差はnotice_bodiesを参照。",
+            "実公開版/作者・取得経路/第三者data・素材/サービス権利は別。"
+          ]
+        ],
+        "positive": "同じ実配布版に含まれた変更だけを、根拠のcommit/検査と対象読者へ結んだrelease説明にする設計へ参照する。",
+        "read": [
+          3,
+          1,
+          0,
+          false,
+          true,
+          298
+        ],
+        "reason": "298行を順序全読。email例の1行は伏字。commitの自動分類・importとrelease/export、実配布や送信の区別を確認した。",
+        "required_changes": [
+          "対象repoの実所有・版と変更/検査/成果物/稼働配布を結び、commit分類と公開・clientへの説明許可を別に確認する。原本/正式名・元の範囲を保持する。",
+          "importの範囲/重複/merge/revert・breakingとaudienceを検証し、失敗/空結果/部分成功を記録する。sourceのplain text/JSON/HTML対応を実CLIへ一致させる。",
+          "親が実利用時だけ必要script/対象版を確認し、原文の実install/DB作成/送信・中央変更を本研究で実行しない。既存Python工具と新規自作言語の方針を区別する。"
+        ],
+        "row": 271,
+        "source": [
+          "github:77e84509e664397e1389285d34558631b55780fec8c28e1785331d6a8f448df8",
+          "skills/nexaiguy/nex-changelog/SKILL.md",
+          "ae2d65e894fcac68cb57b48250c3e834a7b86693b617110f6ad7b9529961d1ef",
+          "d09db67675492f8a1afd59f18d47394d174b9cb3",
+          10454
+        ],
+        "support": [
+          [
+            "LICENSE.txt",
+            955,
+            "e1b0840a",
+            "f1382280",
+            2,
+            0,
+            0,
+            "100644"
+          ],
+          [
+            "README.md",
+            7407,
+            "75d833c3",
+            "0a7a0a63",
+            1,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "SKILL.md",
+            10454,
+            "ae2d65e8",
+            "d09db676",
+            3,
+            1,
+            0,
+            "100644"
+          ],
+          [
+            "_meta.json",
+            280,
+            "e69a867d",
+            "b929d032",
+            1,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "lib/__init__.py",
+            null,
+            null,
+            "224a4703",
+            0,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "lib/config.py",
+            null,
+            null,
+            "e560050d",
+            0,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "lib/formatter.py",
+            null,
+            null,
+            "8ae3fdec",
+            0,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "lib/git_parser.py",
+            null,
+            null,
+            "0f29fe0a",
+            0,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "lib/storage.py",
+            null,
+            null,
+            "0d51e72f",
+            0,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "nex-changelog.py",
+            null,
+            null,
+            "19ae7ce7",
+            0,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "setup.sh",
+            null,
+            null,
+            "b9a628ae",
+            0,
+            null,
+            null,
+            "100644"
+          ]
+        ],
+        "use": "Git由来の変更をtype/audience/version別に整理し、リリース説明へ結ぶ設計参考。",
+        "value": "内部記録・client/public向け説明と、未リリース/正式releaseの対応を別結果で検査できる。"
+      },
+      "original_chunk_sha256": "684350981536b9a164beaba8b37ca183435e7828675a3d7f9b758a90964cb8c2",
+      "path": "skills/nexaiguy/nex-changelog/SKILL.md",
+      "source_commit": "920714f17d81e0a95c7a9bc51faf0a7921cd982d",
+      "source_repo": "6mile/skills",
+      "source_sha256": "ae2d65e894fcac68cb57b48250c3e834a7b86693b617110f6ad7b9529961d1ef"
+    },
+    {
+      "actual_assessment_reader": "20261028-171959-todo-3719",
+      "bytes": 10174,
+      "current_permission_or_adoption_granted": false,
+      "git_blob": "f7e12d1e747d7da15d0fa043a6ed76d2c2bd7aa7",
+      "inventory_id": "github:c455d180f33137e7101b8902971cc86c3b12f0aae6b83ae2ac1bdab12d677d7d",
+      "new_final_disposition": false,
+      "ordinal": 272,
+      "original_assessment": {
+        "candidate_disposition": "改訂候補として親へ提案。個別の権利/未検証を保持。最終採否・許諾・導入・実test0。",
+        "findings": [
+          "会社名/数値ID/自然文による対象指定を持つが、同名/曖昧一致や複数候補・parse失敗の確定方法は未保存nl_parser/storageから未検証。対象の誤対応を防ぐ必要がある。",
+          "log/interact/remindやstage更新はDB記録で、実電話/送信・予約確定・成約/入金の証明ではない。wonや見込月額を実収益/将来予測の保証にしない。",
+          "next Thursdayの例を--in 7へ固定しており、実日付/地域/time zone/解釈へ対応しない。stale14日・followup一覧は実schedulerの配送成功を示さない。",
+          "full interaction/contact exportやconfig showは情報scopeが広い。sourceの例を本人の顧客・価格/契約・連絡許可へ流用しない。保存中の価格/金融集計・現仕様は未検証。",
+          "no API/telemetry/完全local・SQLite分離・データ保持はscript/setup未保存で実証されていない。初回表示で一部の電話形式が伏字対象から漏れた限界を保持し、原値/所属を再掲・分類しない。",
+          "個別noticeの表題と本文条件に不整合がある。notice_bodiesの当該意味を保持し、MIT-0表題/rootMITだけで許諾を確定しない。"
+        ],
+        "nearby_limit": "起動metadataだけ。中央本文/存在・同等性/現設定は未照会。",
+        "nearby_metadata": [
+          "backend-correctness",
+          "timezone-helper",
+          "source-grounded-content-review",
+          "sql-data-integrity"
+        ],
+        "negative": "曖昧な会社名を即決し、来週木曜を常に7日後へ設定して、活動記録やwonだけで実連絡/売上が発生したとする。",
+        "notices": [
+          [
+            "LICENSE.txt",
+            2,
+            "当該directoryの個別notice。表題と本文条件の差はnotice_bodiesを参照。",
+            "実公開版/作者・取得経路/第三者data・素材/サービス権利は別。"
+          ]
+        ],
+        "positive": "対象のprospect IDと元発言を対応させ、次の連絡予定を絶対日時で記録し、実連絡と商談/入金を別に確認する設計へ参照する。",
+        "read": [
+          3,
+          2,
+          0,
+          false,
+          true,
+          280
+        ],
+        "reason": "280行を順序全読。メール等2行は伏字で、--value金額も資格用共通置換が抑止した過伏字を保持する。",
+        "required_changes": [
+          "元の対象ID/会社・本人の依頼scopeと原発言/日時を結び、曖昧parseは勝手に確定せず、必要な連絡先/履歴だけ保持する。対象範囲の既存回答を再質問しない。",
+          "相対曜日を実基準日時/time zoneへ解決して絶対日時を確認し、記録/実連絡/配送/成約/入金を別状態で追う。見込額/集計の母数・通貨・期間と欠測を明示する。",
+          "実利用時だけ保存/入力境界・重複更新/並行操作・exportや保持を検査し、phone等の表示前伏字を補う。本研究で実顧客DB・連絡・新契約/費用や中央設定に触れない。"
+        ],
+        "row": 272,
+        "source": [
+          "github:c455d180f33137e7101b8902971cc86c3b12f0aae6b83ae2ac1bdab12d677d7d",
+          "skills/nexaiguy/nex-crm/SKILL.md",
+          "e042c9b15299ff1f128c48fd7629a4d17d16ab4bf83a19165a1823c02ae7d374",
+          "f7e12d1e747d7da15d0fa043a6ed76d2c2bd7aa7",
+          10174
+        ],
+        "support": [
+          [
+            "LICENSE.txt",
+            1080,
+            "86645c7e",
+            "2374a347",
+            2,
+            0,
+            0,
+            "100644"
+          ],
+          [
+            "README.md",
+            4182,
+            "26f43eed",
+            "6aaeaafb",
+            1,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "SKILL.md",
+            10174,
+            "e042c9b1",
+            "f7e12d1e",
+            3,
+            2,
+            0,
+            "100644"
+          ],
+          [
+            "_meta.json",
+            268,
+            "af5b5868",
+            "8da1cfbe",
+            1,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "lib/config.py",
+            null,
+            null,
+            "75b7b7ac",
+            0,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "lib/nl_parser.py",
+            null,
+            null,
+            "f49ba699",
+            0,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "lib/storage.py",
+            null,
+            null,
+            "27060b12",
+            0,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "nex-crm.py",
+            null,
+            null,
+            "3fedf379",
+            0,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "setup.sh",
+            null,
+            null,
+            "73f97e19",
+            0,
+            null,
+            null,
+            "100644"
+          ]
+        ],
+        "use": "自然文/構造化の営業記録を、prospect・activity・stage・follow-upへ分けるCRM設計参考。",
+        "value": "対象とのやり取り・予定・商談段階/見込額・実連絡や成約を個別に追跡できる。"
+      },
+      "original_chunk_sha256": "684350981536b9a164beaba8b37ca183435e7828675a3d7f9b758a90964cb8c2",
+      "path": "skills/nexaiguy/nex-crm/SKILL.md",
+      "source_commit": "920714f17d81e0a95c7a9bc51faf0a7921cd982d",
+      "source_repo": "6mile/skills",
+      "source_sha256": "e042c9b15299ff1f128c48fd7629a4d17d16ab4bf83a19165a1823c02ae7d374"
+    },
+    {
+      "actual_assessment_reader": "20261028-171959-todo-3719",
+      "bytes": 13350,
+      "current_permission_or_adoption_granted": false,
+      "git_blob": "30c29b4df17e9454e8c69bb76b613b3f8bd70002",
+      "inventory_id": "github:8c9486afa5ae3dbf1e7b76472a5a224e88fc7bc0c14d6647d240aec539279055",
+      "new_final_disposition": false,
+      "ordinal": 273,
+      "original_assessment": {
+        "candidate_disposition": "改訂候補として親へ提案。個別の権利/未検証を保持。最終採否・許諾・導入・実test0。",
+        "findings": [
+          "結果を見る前の理由/予測を記録する設計は有用。ただしeditで予測/自信を後から変更でき、旧版や変更時刻の保持は本文から未確認。後知恵で元予測を置き換えると較正評価が崩れる。",
+          "例では本人が候補を決め切っていない発話からAIが--chosen/価格/理由を選択し、成功後にWorks every timeという一般則を追加する。記録依頼を本人専用の費用/製品判断・恒久方針の決定許可にしない。",
+          "confidence1〜10は主観値で、correct/partially/wrongの基準や事象/観測期限・欠測が不明。高自信の失敗や10+例だけで恒常的な偏りを確定しない。",
+          "stats例は四半期集計と呼ぶが示すコマンドに期間filterがなく、全件集計を期間結果と表示する危険がある。保存価格/投資/health等は現在の助言や実証ではない。",
+          "remindするという例の表現に対し、本文はpendingを定期的に手動/cron実行する説明で、実scheduler/配送設定・成功の証拠はない。No API/local/never auto-deleteも未保存実装の主張。",
+          "当directoryの個別noticeはAGPL3-or-laterと商用別license、ClawHub由来コピーだけMIT-0と主張する。取得経路/実公開版対応は未確定で、補助MIT-0規定だけで上書きしない。"
+        ],
+        "nearby_limit": "起動metadataだけ。中央本文/存在・同等性/現設定は未照会。",
+        "nearby_metadata": [
+          "decision-thinking-frameworks",
+          "define-goal",
+          "source-grounded-content-review",
+          "incremental-read-late-events"
+        ],
+        "negative": "AIが価格/選択肢を本人の決定へ昇格させ、結果後に予測を編集して的中率を上げ、pending行だけで通知済みとする。",
+        "notices": [
+          [
+            "LICENSE.txt",
+            3,
+            "当該directoryの個別notice。表題と本文条件の差はnotice_bodiesを参照。",
+            "実公開版/作者・取得経路/第三者data・素材/サービス権利は別。"
+          ]
+        ],
+        "positive": "判断時点の元予測と根拠を保存し、決めた観測期限/基準で実結果を確認し、未評価と変更履歴を残す設計へ参照する。",
+        "read": [
+          2,
+          0,
+          0,
+          true,
+          true,
+          307
+        ],
+        "reason": "307行を順序全読。log/review/edit/abandon、confidenceと3段階accuracy、follow-up/pendingの扱いを確認した。",
+        "required_changes": [
+          "元の本人発言/本人性・対象/選択とAI提案を分け、採用済み判断の範囲を勝手に広げない。時点ごとの予測/基準/理由を不変の世代として残す。",
+          "結果の観測資料/期限・評価基準/分母と未評価・部分結果を保持し、期間/カテゴリfilterと較正を検証する。単一成功の教訓を常に成り立つ禁止/義務へしない。",
+          "follow-upの登録/定期実行/配送を別に確認し、実利用時だけ保存/並行編集/検索/exportの必要範囲を検査する。本研究で実判断DB・新費用・scheduler/中央変更を行わない。"
+        ],
+        "row": 273,
+        "source": [
+          "github:8c9486afa5ae3dbf1e7b76472a5a224e88fc7bc0c14d6647d240aec539279055",
+          "skills/nexaiguy/nex-decision-journal/SKILL.md",
+          "d0d27cf30dd0e3940f041a7e399c903e86ea58736c4eeffec2d9ee4e6c28c2c0",
+          "30c29b4df17e9454e8c69bb76b613b3f8bd70002",
+          13350
+        ],
+        "support": [
+          [
+            "LICENSE.txt",
+            1446,
+            "07917e55",
+            "333950a2",
+            3,
+            1,
+            0,
+            "100644"
+          ],
+          [
+            "README.md",
+            4463,
+            "193f4f60",
+            "4d23a5fc",
+            1,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "SKILL.md",
+            13350,
+            "d0d27cf3",
+            "30c29b4d",
+            2,
+            0,
+            0,
+            "100644"
+          ],
+          [
+            "_meta.json",
+            294,
+            "ebba7510",
+            "86f7a281",
+            1,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "lib/__init__.py",
+            null,
+            null,
+            "ae5fe018",
+            0,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "lib/config.py",
+            null,
+            null,
+            "b9cf46bc",
+            0,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "lib/storage.py",
+            null,
+            null,
+            "01c013f6",
+            0,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "nex-decision-journal.py",
+            null,
+            null,
+            "a99339c3",
+            0,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "setup.sh",
+            null,
+            null,
+            "9c9f78cf",
+            0,
+            null,
+            null,
+            "100644"
+          ]
+        ],
+        "use": "意思決定の前提/選択肢/選択/理由/予測と、後日の結果・学びを分ける記録設計参考。",
+        "value": "決めた時点の予測と実結果を対応させ、未実行/放棄・未評価/評価済みを区別できる。"
+      },
+      "original_chunk_sha256": "684350981536b9a164beaba8b37ca183435e7828675a3d7f9b758a90964cb8c2",
+      "path": "skills/nexaiguy/nex-decision-journal/SKILL.md",
+      "source_commit": "920714f17d81e0a95c7a9bc51faf0a7921cd982d",
+      "source_repo": "6mile/skills",
+      "source_sha256": "d0d27cf30dd0e3940f041a7e399c903e86ea58736c4eeffec2d9ee4e6c28c2c0"
+    },
+    {
+      "actual_assessment_reader": "20261028-171959-todo-3719",
+      "bytes": 1980,
+      "current_permission_or_adoption_granted": false,
+      "git_blob": "7dc35141378096027b00b9cb33adc965374e893d",
+      "inventory_id": "github:714629479f02cd511819f5467fd41f092dd5ce323be62fa9d9714dc9e702597d",
+      "new_final_disposition": false,
+      "ordinal": 274,
+      "original_assessment": {
+        "candidate_disposition": "改訂候補として親へ提案。個別の権利/未検証を保持。最終採否・許諾・導入・実test0。",
+        "findings": [
+          "本文はimport解析/分類を述べるが、scanner/scriptは未保存。動的import・条件付き/相対/内部moduleや名前衝突・runtime別stdlibと第三者依存を正しく判定するか未検証。",
+          "external importがないことはscriptの安全性・ネットワーク/費用0・secret不在や全機能動作の証明ではない。setupという別作用もある。",
+          "ClawHub MIT-0/GitHub AGPL3.0・商用licenseという表明を分ける。個別notice・実公開版/作者の対応をrootMITや補助MIT-0だけで解消しない。",
+          "all skills scanという原文から中央本文/保護対象を走査する許可を作らない。今回は固定sourceだけの読取で、他のSkill本文/存在を確認していない。",
+          "当directoryの個別noticeはAGPL3-or-laterと商用別license、ClawHub由来コピーだけMIT-0と主張する。取得経路/実公開版対応は未確定で、補助MIT-0規定だけで上書きしない。"
+        ],
+        "nearby_limit": "起動metadataだけ。中央本文/存在・同等性/現設定は未照会。",
+        "nearby_metadata": [
+          "safe-tool-evaluation",
+          "toolchain-hash-pin-scope",
+          "skill-maintenance",
+          "security-audit-coverage"
+        ],
+        "negative": "全中央Skillを無断走査し、外部import0だけで安全/完全動作/権利確認済みとして配布する。",
+        "notices": [
+          [
+            "LICENSE.txt",
+            3,
+            "当該directoryの個別notice。表題と本文条件の差はnotice_bodiesを参照。",
+            "実公開版/作者・取得経路/第三者data・素材/サービス権利は別。"
+          ]
+        ],
+        "positive": "許可された有限packageを対象runtimeへ結び、検出されたimportと未解決の動的依存を明示して必要な実検査へつなぐ。",
+        "read": [
+          3,
+          1,
+          0,
+          false,
+          true,
+          82
+        ],
+        "reason": "82行を順序全読。商用連絡先の1行は伏字。scan/file/check/stdlibと、ClawHub/GitHubで異なるlicense表明を確認した。",
+        "required_changes": [
+          "実利用対象の言語/runtime版/入力範囲を固定し、静的検出結果・未解決/動的依存・実実行結果を別に示す。実行を伴わないimport解析の境界を確認する。",
+          "実公開版と個別licenseの対応、必要scannerの分類/失敗・空結果/対象漏れを親が検証する。",
+          "配布Python工具の利用と新規自作Pythonを区別し、標準libraryだけなら安全/無料という根拠のない保証をしない。"
+        ],
+        "row": 274,
+        "source": [
+          "github:714629479f02cd511819f5467fd41f092dd5ce323be62fa9d9714dc9e702597d",
+          "skills/nexaiguy/nex-depcheck/SKILL.md",
+          "a5c2f768c314971b858f5920a162d876b6aa215d031cf5f895d6671780e1ff25",
+          "7dc35141378096027b00b9cb33adc965374e893d",
+          1980
+        ],
+        "support": [
+          [
+            "LICENSE.txt",
+            1446,
+            "07917e55",
+            "333950a2",
+            4,
+            1,
+            0,
+            "100644"
+          ],
+          [
+            "README.md",
+            898,
+            "86c591bc",
+            "f898099d",
+            1,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "SKILL.md",
+            1980,
+            "a5c2f768",
+            "7dc35141",
+            3,
+            1,
+            0,
+            "100644"
+          ],
+          [
+            "_meta.json",
+            278,
+            "6a98f6f8",
+            "b8e16fa9",
+            1,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "lib/__init__.py",
+            null,
+            null,
+            "11b312cb",
+            0,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "lib/config.py",
+            null,
+            null,
+            "65fb3e87",
+            0,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "lib/scanner.py",
+            null,
+            null,
+            "190f2236",
+            0,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "nex-depcheck.py",
+            null,
+            null,
+            "65ac3e32",
+            0,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "setup.sh",
+            null,
+            null,
+            "9828fc50",
+            0,
+            null,
+            null,
+            "100644"
+          ]
+        ],
+        "use": "配布前に対象Pythonファイルの依存を列挙し、stdlib/内部/外部を区別する検査設計参考。",
+        "value": "file・skill・directoryの検査単位と結果scopeを分け、追加依存の見落としを検出する入口にできる。"
+      },
+      "original_chunk_sha256": "684350981536b9a164beaba8b37ca183435e7828675a3d7f9b758a90964cb8c2",
+      "path": "skills/nexaiguy/nex-depcheck/SKILL.md",
+      "source_commit": "920714f17d81e0a95c7a9bc51faf0a7921cd982d",
+      "source_repo": "6mile/skills",
+      "source_sha256": "a5c2f768c314971b858f5920a162d876b6aa215d031cf5f895d6671780e1ff25"
+    },
+    {
+      "actual_assessment_reader": "20261028-171959-todo-3719",
+      "bytes": 11341,
+      "current_permission_or_adoption_granted": false,
+      "git_blob": "cc2202518a1fa82ca5204b60a579516b903724f5",
+      "inventory_id": "github:cd1c52b133b0e416fc110e1a924890b2f2c81b14aea30a7ac1a52e33d126480c",
+      "new_final_disposition": false,
+      "ordinal": 275,
+      "original_assessment": {
+        "candidate_disposition": "改訂候補として親へ提案。個別の権利/未検証を保持。最終採否・許諾・導入・実test0。",
+        "findings": [
+          "Cloudflare/TransIP等への接続/syncは本人のRakko限定に合わない。一般ログイン許可や保存済み認証・作者例を対象の明示許可へ昇格しない。",
+          "完全local/明示sync以外送信なしという記述と、WHOIS/DNS/SSL/HTTPがnetworkを使う説明が同居する。read-only照会も外部accessであり、dataを全く送らないことを意味しない。",
+          "syncするzoneは実registrar/所有・本人domain一覧と同一とは限らない。local --auto-renew flagやadd/removeは実事業者の更新設定/解約を変更・確認した証拠でない。",
+          "WHOIS timeout/空DNS等から不存在/期限切れを即断しない。SSL期限/subjectだけでhostname/chain/信頼・全経路の健康性を保証せず、HTTPstatusだけで業務成功としない。",
+          "--monthly-costの説明がannual/monthlyで曖昧で、周期/通貨/実契約を混同しうる。90日/7日警告やdb履歴は常駐監視/配送成功の証拠ではない。scripts/setupは未保存、現仕様/費用も未検証。",
+          "個別noticeの表題と本文条件に不整合がある。notice_bodiesの当該意味を保持し、MIT-0表題/rootMITだけで許諾を確定しない。"
+        ],
+        "nearby_limit": "起動metadataだけ。中央本文/存在・同等性/現設定は未照会。",
+        "nearby_metadata": [
+          "cloud-infra-deploy",
+          "backend-correctness",
+          "observability-notifications",
+          "commerce-billing"
+        ],
+        "negative": "local台帳や保存認証があるので他社事業者へ接続し、zone一覧/auto-renew flagだけで本人所有/実更新を確認済みとする。",
+        "notices": [
+          [
+            "LICENSE.txt",
+            4,
+            "当該directoryの個別notice。表題と本文条件の差はnotice_bodiesを参照。",
+            "実公開版/作者・取得経路/第三者data・素材/サービス権利は別。"
+          ]
+        ],
+        "positive": "許可された対象の保存済み期限情報を、登録期限/証明書期限・確認日/失敗と費用周期へ分けて追跡する設計へ参照する。",
+        "read": [
+          3,
+          2,
+          0,
+          false,
+          true,
+          344
+        ],
+        "reason": "344行を順序全読。資格/IP等2行は伏字。複数事業者sync/WHOIS/DNS/SSL/HTTPを記載するが、保存資料の評価だけを行い新規access0。",
+        "required_changes": [
+          "実利用先は明示された対象とRakko限定を守り、他社事業者への表示/調査access・API資格参照を原文から実行しない。",
+          "対象domain/所有・照会元/取得日時/期限種別/取得失敗/保持と追跡情報を結び、実更新設定/実費用と手入力flagを区別する。",
+          "親が許可scopeで実利用時だけ必要実装・current公式仕様を確認し、timeout/部分取得/全page・hostname/TLS・通知の実結果を検査する。未指定の更新/新費用・中央変更を行わない。"
+        ],
+        "row": 275,
+        "source": [
+          "github:cd1c52b133b0e416fc110e1a924890b2f2c81b14aea30a7ac1a52e33d126480c",
+          "skills/nexaiguy/nex-domains/SKILL.md",
+          "4eef2aecbde508d015eba7c80575977d0364926f5b44d01a4a452034e7f0f247",
+          "cc2202518a1fa82ca5204b60a579516b903724f5",
+          11341
+        ],
+        "support": [
+          [
+            "LICENSE.txt",
+            1259,
+            "a4ec360f",
+            "a98b6594",
+            2,
+            0,
+            0,
+            "100644"
+          ],
+          [
+            "README.md",
+            7704,
+            "8b485d73",
+            "0628a551",
+            1,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "SKILL.md",
+            11341,
+            "4eef2aec",
+            "cc220251",
+            3,
+            2,
+            0,
+            "100644"
+          ],
+          [
+            "_meta.json",
+            276,
+            "d7c669ef",
+            "b52d5c10",
+            1,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "lib/__init__.py",
+            null,
+            null,
+            "6a039f51",
+            0,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "lib/checkers.py",
+            null,
+            null,
+            "630f368f",
+            0,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "lib/config.py",
+            null,
+            null,
+            "abfa27ea",
+            0,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "lib/storage.py",
+            null,
+            null,
+            "e2ea49ea",
+            0,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "nex-domains.py",
+            null,
+            null,
+            "4c6e9534",
+            0,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "setup.sh",
+            null,
+            null,
+            "a82eebb3",
+            0,
+            null,
+            null,
+            "100644"
+          ]
+        ],
+        "use": "保存されたdomain/certificateの期限・確認履歴・費用周期を分ける台帳設計参考。",
+        "value": "登録期限と証明書期限、照会失敗/未確認と実サービス状態、追跡削除と実domain操作を個別に追える。"
+      },
+      "original_chunk_sha256": "684350981536b9a164beaba8b37ca183435e7828675a3d7f9b758a90964cb8c2",
+      "path": "skills/nexaiguy/nex-domains/SKILL.md",
+      "source_commit": "920714f17d81e0a95c7a9bc51faf0a7921cd982d",
+      "source_repo": "6mile/skills",
+      "source_sha256": "4eef2aecbde508d015eba7c80575977d0364926f5b44d01a4a452034e7f0f247"
+    },
+    {
+      "actual_assessment_reader": "20261028-171959-todo-3719",
+      "bytes": 12814,
+      "current_permission_or_adoption_granted": false,
+      "git_blob": "5defecf3365012cc0e735894c6a47ce244a2081d",
+      "inventory_id": "github:4831668edecc8b1b43a51d0a3279cb1f26b8c013e9e3f85e7cf5c581ae512da5",
+      "new_final_disposition": false,
+      "ordinal": 276,
+      "original_assessment": {
+        "candidate_disposition": "改訂候補として親へ提案。個別の権利/未検証を保持。最終採否・許諾・導入・実test0。",
+        "findings": [
+          "2026年Belgian B2B義務/税率/Peppol BIS3/ISO20022・銀行検査/端数処理の主張は今回公式検証していない。XML作成/--validateだけで現在の法令・schema/業務rule適合や受領を保証しない。",
+          "source例の5×95=475へ21%を加えると574.75であり、例の575とは一致しない。2桁の正しい丸めを説明する本文とこの表示差は検算が必要。実課税条件/現法令の判断には使わない。",
+          "sent/paid statusやpayment-dateを記録することは実PEPPOL配送・銀行入金の証明でない。例の固定payment-dateやcurrent quarter固定Q1を現在へ流用しない。",
+          "invoice番号/年度reset・credit noteの元伝票対応/採番競合・原本変更・通貨/税率/discount/丸め・NL曖昧入力は実装未保存で未検証。表示通貨を本人好みに変える指示でも法的通貨/換算根拠を勝手に変えない。",
+          "descriptionは暗号化保存を主張するが方法/鍵/backup/export・ログの境界は不明。VIES検証は外部照会を伴いうるため、local保存と無送信を同一視しない。templatesの表明に対し固定package内にそのblobはない。",
+          "show pdf/jsonやstatus open等は本文のplain text/XML・状態列挙と対応が不明。初回表示で空白入りの銀行識別例が伏字から漏れた限界を保持し、原値/実在性/所有を再掲・判定しない。"
+        ],
+        "nearby_limit": "起動metadataだけ。中央本文/存在・同等性/現設定は未照会。",
+        "nearby_metadata": [
+          "commerce-billing",
+          "payment-status-reconciliation",
+          "payroll-batch-reconciliation",
+          "sql-data-integrity"
+        ],
+        "negative": "自然文例とstatus paid/生成XMLだけで法令適合/正式配送/入金済みとし、固定日時や誤った端数表示を実帳簿へ使う。",
+        "notices": [
+          [
+            "LICENSE.txt",
+            5,
+            "当該directoryの個別notice。表題と本文条件の差はnotice_bodiesを参照。",
+            "実公開版/作者・取得経路/第三者data・素材/サービス権利は別。"
+          ]
+        ],
+        "positive": "確定した請求条件を元伝票と一意番号へ結び、実数値検算/適用schema確認・実配送/入金を別々に検証する設計へ参照する。",
+        "read": [
+          3,
+          7,
+          0,
+          false,
+          true,
+          341
+        ],
+        "reason": "341行を順序全読。識別値等7行は伏字。法令/Peppol/VIESや暗号化等は保存主張に分け、sourceの算術例と業務完了の区別を評価した。",
+        "required_changes": [
+          "対象の請求data・元依頼/契約と推定値を分け、現在の公式制度/schema/業務validationを実利用時だけ親が確認する。",
+          "十進/最小通貨単位・行/合計/税別丸めの規則とcredit note/番号の原子性・年度/版・元伝票を検証し、例の計算差を修正する。帳簿flagと実配送/受領/入金を別receiptへ結ぶ。",
+          "保存/暗号化・export/ログの実境界、CLI/schema/状態と不足templateを検証し、銀行識別等の表示前伏字を補う。原本/必要data保持と既存Python工具・新規自作言語の区別を守る。"
+        ],
+        "row": 276,
+        "source": [
+          "github:4831668edecc8b1b43a51d0a3279cb1f26b8c013e9e3f85e7cf5c581ae512da5",
+          "skills/nexaiguy/nex-einvoice/SKILL.md",
+          "fbfec0546d533feac7b7a830231f5d6dff26436b0bd83ca6132a4b6465893164",
+          "5defecf3365012cc0e735894c6a47ce244a2081d",
+          12814
+        ],
+        "support": [
+          [
+            "LICENSE.txt",
+            920,
+            "88583891",
+            "4cb33dc9",
+            2,
+            0,
+            0,
+            "100644"
+          ],
+          [
+            "README.md",
+            6911,
+            "de3952c5",
+            "157e5dc3",
+            1,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "SKILL.md",
+            12814,
+            "fbfec054",
+            "5defecf3",
+            3,
+            7,
+            0,
+            "100644"
+          ],
+          [
+            "_meta.json",
+            278,
+            "c71e9fb5",
+            "0caf6043",
+            1,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "lib/__init__.py",
+            null,
+            null,
+            "e69de29b",
+            0,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "lib/config.py",
+            null,
+            null,
+            "02920995",
+            0,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "lib/nl_parser.py",
+            null,
+            null,
+            "01cb0d65",
+            0,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "lib/storage.py",
+            null,
+            null,
+            "bc8e5335",
+            0,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "lib/ubl_generator.py",
+            null,
+            null,
+            "ed1ab966",
+            0,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "nex-einvoice.py",
+            null,
+            null,
+            "52d23744",
+            0,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "setup.sh",
+            null,
+            null,
+            "e83f6f49",
+            0,
+            null,
+            null,
+            "100644"
+          ]
+        ],
+        "use": "請求の入力/検算・一意番号・修正伝票/状態・XML成果と実配送を分離する設計参考。",
+        "value": "自然文からの推定と確定請求data、draft/sent/paidの帳簿状態と実配送/入金を区別できる。"
+      },
+      "original_chunk_sha256": "684350981536b9a164beaba8b37ca183435e7828675a3d7f9b758a90964cb8c2",
+      "path": "skills/nexaiguy/nex-einvoice/SKILL.md",
+      "source_commit": "920714f17d81e0a95c7a9bc51faf0a7921cd982d",
+      "source_repo": "6mile/skills",
+      "source_sha256": "fbfec0546d533feac7b7a830231f5d6dff26436b0bd83ca6132a4b6465893164"
+    },
+    {
+      "actual_assessment_reader": "20261028-171959-todo-3719",
+      "bytes": 13746,
+      "current_permission_or_adoption_granted": false,
+      "git_blob": "6f7e3c47a43fe197bace8ce23dac27942c49ba14",
+      "inventory_id": "github:d64d537d6b6bc4cbce665ec87c52bebe2bb6f633bff7d2176ff5fa9f72132d51",
+      "new_final_disposition": false,
+      "ordinal": 277,
+      "original_assessment": {
+        "candidate_disposition": "改訂候補として親へ提案。個別の権利/未検証を保持。最終採否・許諾・導入・実test0。",
+        "findings": [
+          "税控除率/VAT/適用区分・既定税率21%等は保存中のBelgian税務主張で、現在の適用や全利用者への正しさは未検証。vendorだけの自動分類・OCR confidenceは適用税務の証拠にならない。",
+          "OCRはvendor/date/amount/rateを抽出するとするが、税込/税抜/小数comma・複数税率/通貨・日付/返金・画像誤読や再取込重複の検査は未保存実装から未確認。OCR raw textの全表示は不要dataを広げうる。",
+          "四半期の問いにyear全カテゴリ、訪問回数top10へ支出額top10を返す例があり、metric/期間の不一致をそのまま回答へ使わない。現在四半期を固定Q1へ置換しない。",
+          "edit/delete --forceは原証拠/変更履歴保持と実資金支払いに別の作用。経費recordやpayment-method記載は実支払/契約・追加支出の承認ではない。",
+          "local/Tesseract/no telemetry・明示設定時だけ外部APIという主張はscript/setup未保存で未検証。本人が許可した必要な非カード請求情報と実カード禁止を混同しない。"
+        ],
+        "nearby_limit": "起動metadataだけ。中央本文/存在・同等性/現設定は未照会。",
+        "nearby_metadata": [
+          "commerce-billing",
+          "business-card-ocr-review",
+          "source-grounded-content-review",
+          "sql-data-integrity"
+        ],
+        "negative": "vendor名やOCR confidenceだけで控除率を確定し、年額/支出順位を四半期/訪問回数と答え、経費recordを支払済みとする。",
+        "notices": [
+          [
+            "LICENSE.txt",
+            6,
+            "当該directoryの個別notice。表題と本文条件の差はnotice_bodiesを参照。",
+            "実公開版/作者・取得経路/第三者data・素材/サービス権利は別。"
+          ]
+        ],
+        "positive": "許可された必要な非カード資料の抽出値を原証拠と照合し、適用条件/集計期間と税区分の未確定を明示する設計へ参照する。",
+        "read": [
+          2,
+          0,
+          0,
+          true,
+          true,
+          356
+        ],
+        "reason": "356行を順序全読。raw表示の置換行0は秘密不存在の証明でない。原資料や実領収書・実カードは参照していない。",
+        "required_changes": [
+          "適用国/事業者区分・対象年度/条件と元資料を固定し、実利用時だけ親が現公式根拠/個別条件を確認する。自動分類/既定税率を確定税務判断へしない。",
+          "原資料の必要部分/確定値・抽出の不確実性を分け、数値/複数税率/丸め・duplicate/訂正履歴・期間/件数と金額の集計を検証する。元証拠や必要dataをforceで消さない。",
+          "表示前に実カード/秘密を除き、raw OCR・exportの範囲を制限する。"
+        ],
+        "row": 277,
+        "source": [
+          "github:d64d537d6b6bc4cbce665ec87c52bebe2bb6f633bff7d2176ff5fa9f72132d51",
+          "skills/nexaiguy/nex-expenses/SKILL.md",
+          "706272f64ae610f3e87adaf2927d8274c1c5245845b2016f2b82486fd09fcb28",
+          "6f7e3c47a43fe197bace8ce23dac27942c49ba14",
+          13746
+        ],
+        "support": [
+          [
+            "LICENSE.txt",
+            1184,
+            "84355356",
+            "15d20f83",
+            2,
+            0,
+            0,
+            "100644"
+          ],
+          [
+            "README.md",
+            4397,
+            "8234d3bf",
+            "fee7d774",
+            1,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "SKILL.md",
+            13746,
+            "706272f6",
+            "6f7e3c47",
+            2,
+            0,
+            0,
+            "100644"
+          ],
+          [
+            "_meta.json",
+            278,
+            "0b638a29",
+            "aa6f539d",
+            1,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "lib/categorizer.py",
+            null,
+            null,
+            "1cd038c6",
+            0,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "lib/config.py",
+            null,
+            null,
+            "dc7d8ab5",
+            0,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "lib/ocr.py",
+            null,
+            null,
+            "2fe0f7a7",
+            0,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "lib/storage.py",
+            null,
+            null,
+            "79c30536",
+            0,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "nex-expenses.py",
+            null,
+            null,
+            "4c0e3756",
+            0,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "setup.sh",
+            null,
+            null,
+            "4997aaa2",
+            0,
+            null,
+            null,
+            "100644"
+          ]
+        ],
+        "use": "領収資料の抽出・分類案、確定経費/税計算・期間集計を分離する経費管理設計参考。",
+        "value": "OCR/自然文の推定と元資料、税込/税抜/VAT・控除区分/集計期間・実保存を対応させられる。"
+      },
+      "original_chunk_sha256": "684350981536b9a164beaba8b37ca183435e7828675a3d7f9b758a90964cb8c2",
+      "path": "skills/nexaiguy/nex-expenses/SKILL.md",
+      "source_commit": "920714f17d81e0a95c7a9bc51faf0a7921cd982d",
+      "source_repo": "6mile/skills",
+      "source_sha256": "706272f64ae610f3e87adaf2927d8274c1c5245845b2016f2b82486fd09fcb28"
+    },
+    {
+      "actual_assessment_reader": "20261028-171959-todo-3719",
+      "bytes": 9367,
+      "current_permission_or_adoption_granted": false,
+      "git_blob": "c980699e7c97b131c707615c0ffee96aefc355e3",
+      "inventory_id": "github:8db27fe820feeb39692a4a12b76bae1e63145efcd0d7532b7edaf88c6c3ee0b5",
+      "new_final_disposition": false,
+      "ordinal": 278,
+      "original_assessment": {
+        "candidate_disposition": "改訂候補として親へ提案。個別の権利/未検証を保持。最終採否・許諾・導入・実test0。",
+        "findings": [
+          "GDPR/AVG・30日/60日延長・対象権利/letter適合や保持1年/audit7年は保存主張。現在の法令/適用国・個別例外/条件を今回検証しておらず、固定定数で法的完了を保証しない。",
+          "verify --methodやVERIFIED statusは実本人性/対象dataの正しさの証拠でない。process前の本人確認/権利/保留・他人/別client dataへの影響と、全作用後の再照合が必要。",
+          "自動scanはsessions/memory/logs/他skill DBまで広範囲。部分文字列一致や同名だけで本人data全件/正しい対象とせず、1人の抹消で共有file/他人data/未完了を消さない。今回中央/私的情報を走査していない。",
+          "3pass overwriteやappend-only SQLiteという記載だけで全storage/backup/index・複製までの消去/監査不変性は実証されない。export暗号化の方法/鍵・manifest/配送/読戻しも未確認。",
+          "processは自動COMPLETEDとする一方部分失敗/未取得/対応不能/保持例外や実回答配送が未説明。cron/manual cleanupと期限一覧は常駐実行/期限遵守の実証でない。Windows path等の実実装も未保存。",
+          "個別noticeの表題と本文条件に不整合がある。notice_bodiesの当該意味を保持し、MIT-0表題/rootMITだけで許諾を確定しない。"
+        ],
+        "nearby_limit": "起動metadataだけ。中央本文/存在・同等性/現設定は未照会。",
+        "nearby_metadata": [
+          "security-review",
+          "security-audit-coverage",
+          "path-relative-containment-check",
+          "crash-safe-file-updates",
+          "oauth-least-privilege"
+        ],
+        "negative": "email文字列やVERIFIED flagだけで全memory/logを削除し、3pass/COMPLETEDを法的適合・全複製消去/本人回答済みの証拠とする。",
+        "notices": [
+          [
+            "LICENSE.txt",
+            7,
+            "当該directoryの個別notice。表題と本文条件の差はnotice_bodiesを参照。",
+            "実公開版/作者・取得経路/第三者data・素材/サービス権利は別。"
+          ]
+        ],
+        "positive": "照合済みrequestの対象と保持条件を固定し、検出範囲と各処理/未処理・実回答の結果を個別に追跡する設計へ参照する。",
+        "read": [
+          3,
+          4,
+          0,
+          false,
+          true,
+          277
+        ],
+        "reason": "277行を順序全読。メール等4行は伏字。processの自動scan/export/erase/COMPLETEDとverifyの別操作、保持/cleanupの作用を確認した。",
+        "required_changes": [
+          "受付・本人照合・適用条件/対象/保持例外と明示scopeを固定し、原禁止/保護対象/他client境界を守る。実利用時だけ親が現公式制度/個別条件を確認する。",
+          "発見coverageとfalse positive/未取得・個別処理結果/部分失敗・保持と削除範囲・原本保持を記録し、statusだけで全完了にしない。export/監査/削除の実結果と必要な回答配送を別に確認する。",
+          "必要な有限対象だけでscanner/processor/storage・並行変更/中断復旧/期限/延長やcleanupの実動作を検査する。"
+        ],
+        "row": 278,
+        "source": [
+          "github:8db27fe820feeb39692a4a12b76bae1e63145efcd0d7532b7edaf88c6c3ee0b5",
+          "skills/nexaiguy/nex-gdpr/SKILL.md",
+          "5c83e03837136604c4baa6e8303f8b53520e5dd53a75a15b00de13dd9ffb1b77",
+          "c980699e7c97b131c707615c0ffee96aefc355e3",
+          9367
+        ],
+        "support": [
+          [
+            "LICENSE.txt",
+            1105,
+            "f746f03a",
+            "20d9f8c7",
+            2,
+            0,
+            0,
+            "100644"
+          ],
+          [
+            "README.md",
+            6494,
+            "55390337",
+            "ab3c800b",
+            1,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "SKILL.md",
+            9367,
+            "5c83e038",
+            "c980699e",
+            3,
+            4,
+            0,
+            "100644"
+          ],
+          [
+            "_meta.json",
+            270,
+            "755f4ab8",
+            "70e71f02",
+            1,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "lib/__init__.py",
+            null,
+            null,
+            "80d6032c",
+            0,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "lib/config.py",
+            null,
+            null,
+            "520f2347",
+            0,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "lib/processor.py",
+            null,
+            null,
+            "82d20a55",
+            0,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "lib/scanner.py",
+            null,
+            null,
+            "866c3459",
+            0,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "lib/storage.py",
+            null,
+            null,
+            "17720b78",
+            0,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "nex-gdpr.py",
+            null,
+            null,
+            "33b581fa",
+            0,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "setup.sh",
+            null,
+            null,
+            "bb7bcc7a",
+            0,
+            null,
+            null,
+            "100644"
+          ]
+        ],
+        "use": "data subject requestの受付/本人照合/対象発見・処理/結果/回答/監査を分離する設計参考。",
+        "value": "request IDと本人/対象data/法的条件・処理結果/期限を結び、受付やstatus変更だけを完了としない検査点を整理できる。"
+      },
+      "original_chunk_sha256": "684350981536b9a164beaba8b37ca183435e7828675a3d7f9b758a90964cb8c2",
+      "path": "skills/nexaiguy/nex-gdpr/SKILL.md",
+      "source_commit": "920714f17d81e0a95c7a9bc51faf0a7921cd982d",
+      "source_repo": "6mile/skills",
+      "source_sha256": "5c83e03837136604c4baa6e8303f8b53520e5dd53a75a15b00de13dd9ffb1b77"
+    },
+    {
+      "actual_assessment_reader": "20261028-171959-todo-3719",
+      "bytes": 9274,
+      "current_permission_or_adoption_granted": false,
+      "git_blob": "d3842f21e98783c0519c0cb506465dd721bf7f4a",
+      "inventory_id": "github:b9495d0dbafbdb31416e1f94cfae73186cc961c72dc1b6a77dd46e26e032b705",
+      "new_final_disposition": false,
+      "ordinal": 279,
+      "original_assessment": {
+        "candidate_disposition": "改訂候補として親へ提案。個別の権利/未検証を保持。最終採否・許諾・導入・実test0。",
+        "findings": [
+          "draftは下書き生成でsentは記録flag。実mail送信/配送・相手への約束/合意済みを証明しない。今回は原指示を理由に送信しない。",
+          "例は元発話にない姓/宛先、担当action/期限やstage配置を補っている。記憶/連絡先の照合なしに推測dataや新約束を確定しない。非Prd環境を作る例も現在の本人方針を上書きしない。",
+          "redraft/tone変更は本文の事実/責任/費用/期限を変えない保証がなく、複数draft/meeting IDと実送信版bytesの対応が必要。edit後の古いdraftやsent状態の整合は未保存実装から不明。",
+          "client/internal typeやpreferred greetingは閲覧/送信権限を証明しない。内部資格/会議メモ・全件exportが別宛先へ漏れない境界が必要。",
+          "comma-separated actionsは文中commaとの曖昧さがあり、JSON等の構造化を実schemaへ対応させる必要がある。local/no telemetry/実生成・FTS/集計は未保存script/templateで未検証。",
+          "当directoryの個別noticeはAGPL3-or-laterと商用別license、ClawHub由来コピーだけMIT-0と主張する。取得経路/実公開版対応は未確定で、補助MIT-0規定だけで上書きしない。"
+        ],
+        "nearby_limit": "起動metadataだけ。中央本文/存在・同等性/現設定は未照会。",
+        "nearby_metadata": [
+          "source-grounded-content-review",
+          "writing-shape",
+          "observability-notifications",
+          "crash-safe-file-updates"
+        ],
+        "negative": "原メモにない宛先/担当/締切やstaging作業を追加して送信し、sent flagを配送済み/合意済みと報告する。",
+        "notices": [
+          [
+            "LICENSE.txt",
+            3,
+            "当該directoryの個別notice。表題と本文条件の差はnotice_bodiesを参照。",
+            "実公開版/作者・取得経路/第三者data・素材/サービス権利は別。"
+          ]
+        ],
+        "positive": "元メモの合意事項だけを正しい宛先へ結んだ下書きとして提示し、tone変更前後の事実と実送信版を照合する設計へ参照する。",
+        "read": [
+          3,
+          5,
+          0,
+          false,
+          true,
+          252
+        ],
+        "reason": "252行を順序全読。メール等5行は伏字。draft/redraft/editとsent/skipの関係、元メモから補完する例を確認した。",
+        "required_changes": [
+          "会議原発言・実参加者/宛先・合意されたactionと提案を分け、元の本人要件/Prd限定・新約束/費用の範囲を守る。既存回答/正式名を保持する。",
+          "下書き/再生成/編集の版と元メモ・実送信版を固定し、各toneで事実/担当/期限が保存されることを検証する。sent flagと送信受理/配送を別状態へ結ぶ。",
+          "実利用時だけ必要script/保存/構造化入力・exportの対象/アクセスを検査する。"
+        ],
+        "row": 279,
+        "source": [
+          "github:b9495d0dbafbdb31416e1f94cfae73186cc961c72dc1b6a77dd46e26e032b705",
+          "skills/nexaiguy/nex-ghostwriter/SKILL.md",
+          "612b02f39d4270d69c4106748c617bab56061a6b90d245665e12ba7d30a02f80",
+          "d3842f21e98783c0519c0cb506465dd721bf7f4a",
+          9274
+        ],
+        "support": [
+          [
+            "LICENSE.txt",
+            1446,
+            "07917e55",
+            "333950a2",
+            4,
+            1,
+            0,
+            "100644"
+          ],
+          [
+            "README.md",
+            3615,
+            "ef802b7e",
+            "e650a52c",
+            1,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "SKILL.md",
+            9274,
+            "612b02f3",
+            "d3842f21",
+            3,
+            5,
+            0,
+            "100644"
+          ],
+          [
+            "_meta.json",
+            284,
+            "73c8d37e",
+            "57a6231c",
+            1,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "lib/__init__.py",
+            null,
+            null,
+            "e171d33f",
+            0,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "lib/config.py",
+            null,
+            null,
+            "eb41ba02",
+            0,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "lib/storage.py",
+            null,
+            null,
+            "2665d9b0",
+            0,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "lib/templates.py",
+            null,
+            null,
+            "bb45035a",
+            0,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "nex-ghostwriter.py",
+            null,
+            null,
+            "d2d1615a",
+            0,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "setup.sh",
+            null,
+            null,
+            "16152040",
+            0,
+            null,
+            null,
+            "100644"
+          ]
+        ],
+        "use": "会議の元メモ/合意済みaction・担当/期限と、複数版のfollow-up下書きを対応させる設計参考。",
+        "value": "同じ会議からのclient/internal向け下書きとtone差・送信/skipの記録を別世代で追える。"
+      },
+      "original_chunk_sha256": "684350981536b9a164beaba8b37ca183435e7828675a3d7f9b758a90964cb8c2",
+      "path": "skills/nexaiguy/nex-ghostwriter/SKILL.md",
+      "source_commit": "920714f17d81e0a95c7a9bc51faf0a7921cd982d",
+      "source_repo": "6mile/skills",
+      "source_sha256": "612b02f39d4270d69c4106748c617bab56061a6b90d245665e12ba7d30a02f80"
+    },
+    {
+      "actual_assessment_reader": "20261028-171959-todo-3719",
+      "bytes": 8778,
+      "current_permission_or_adoption_granted": false,
+      "git_blob": "241eda87a12980334bb366b6ec43517f7d4f7a44",
+      "inventory_id": "github:3dde0da922cef4c32e8d0aa4f8c9f41e9ded12083ce3f7a4670430a19f9cf209",
+      "new_final_disposition": false,
+      "ordinal": 280,
+      "original_assessment": {
+        "candidate_disposition": "改訂候補として親へ提案。個別の権利/未検証を保持。最終採否・許諾・導入・実test0。",
+        "findings": [
+          "all local/no data externallyという記述とHTTP/DNS/SSH/Telegramの通信説明が同居する。local起動は外部無送信/読み取りだけを保証しない。",
+          "ssh_cmdは任意commandで、readonly health照会に限られる仕組みは本文にない。source例/保存鍵/ログインや監視設定は他人/旧勤務先や他Orgへの接続許可にならない。",
+          "status/dashboardはlast checks、addは登録であり、現在の実稼働・定期timer/通知配送成功を示さない。失効した観測/timeout/未測定を健康として扱わない。",
+          "HTTP200/TCP接続・container/systemd runningやSSL期限は異なる観測で、業務機能/全依存・hostname/信頼やPrd稼働成功を一括保証しない。",
+          "weekの問いへincidents --allを返す例は期間filterがなく、uptime/SLAの分母・欠測/停止期間・check間隔/継続障害の推定は未説明。flagsも--serviceと--nameが混在する。",
+          "systemd timer/setupは未保存でWindows native動作・常駐/復帰・重複防止を実証していない。原閾値やinterval5分を本人の現監視設定へ採用済みにしない。"
+        ],
+        "nearby_limit": "起動metadataだけ。中央本文/存在・同等性/現設定は未照会。",
+        "nearby_metadata": [
+          "observability-notifications",
+          "backend-correctness",
+          "bounded-subprocess-capture",
+          "task-scheduler-resident-timelimit",
+          "windows-process-identity"
+        ],
+        "negative": "任意SSH commandや別Orgへ接続し、古い緑表示/200/登録だけで全サービス健康・24時間監視/通知済みとする。",
+        "notices": [
+          [
+            "LICENSE.txt",
+            8,
+            "当該directoryの個別notice。表題と本文条件の差はnotice_bodiesを参照。",
+            "実公開版/作者・取得経路/第三者data・素材/サービス権利は別。"
+          ]
+        ],
+        "positive": "明示対象の必要checkを観測日時/失敗・欠測付きで追い、last resultと現在の業務検査・通知実結果を分ける設計へ参照する。",
+        "read": [
+          3,
+          5,
+          0,
+          false,
+          true,
+          222
+        ],
+        "reason": "222行を順序全読。住所形式等5行は伏字。直接network/SSH任意commandと、last check表示/登録・定期実行/通知の違いを確認した。",
+        "required_changes": [
+          "対象の実所有/許可scope・Prd/Rakko/他Org境界と必要check/宛先を固定し、任意commandを許可された有限操作へ対応させる。資格値や生error/URLを報告へ出さない。",
+          "観測日時/有効期限・unknown/失敗/部分状態と、種類別の検証範囲を表示する。期間/分母/欠測と実incidentを照合し、登録/起動/検査/通知配送を区別する。",
+          "実利用時だけscript/CLI flags・timer/復帰/重複と有限timeout/drainを検証し、割当資源・Windows窓非表示を守る。"
+        ],
+        "row": 280,
+        "source": [
+          "github:3dde0da922cef4c32e8d0aa4f8c9f41e9ded12083ce3f7a4670430a19f9cf209",
+          "skills/nexaiguy/nex-healthcheck/SKILL.md",
+          "733ac611a4fcb017bfe1d704162badb8df750d60f326951a2cb68b05d58db029",
+          "241eda87a12980334bb366b6ec43517f7d4f7a44",
+          8778
+        ],
+        "support": [
+          [
+            "LICENSE.txt",
+            915,
+            "c483b42b",
+            "83326739",
+            2,
+            0,
+            0,
+            "100644"
+          ],
+          [
+            "README.md",
+            4024,
+            "4f760264",
+            "7a603c12",
+            1,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "SKILL.md",
+            8778,
+            "733ac611",
+            "241eda87",
+            3,
+            5,
+            0,
+            "100644"
+          ],
+          [
+            "_meta.json",
+            284,
+            "d3e79d85",
+            "65d24077",
+            1,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "lib/alerter.py",
+            null,
+            null,
+            "953c8a3d",
+            0,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "lib/checkers.py",
+            null,
+            null,
+            "6cf27c22",
+            0,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "lib/config.py",
+            null,
+            null,
+            "8addce53",
+            0,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "lib/storage.py",
+            null,
+            null,
+            "5daa2bba",
+            0,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "nex-healthcheck.py",
+            null,
+            null,
+            "88ddb7ee",
+            0,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "setup.sh",
+            null,
+            null,
+            "c1325aba",
+            0,
+            null,
+            null,
+            "100644"
+          ]
+        ],
+        "use": "有限な監視対象・check種別/閾値、最終観測/incident/通知を分離する運用設計参考。",
+        "value": "TCP/HTTP/DNS/証明書・service/processの観測範囲とunknown/古い結果を区別し、実健康性やuptimeの誤保証を減らせる。"
+      },
+      "original_chunk_sha256": "684350981536b9a164beaba8b37ca183435e7828675a3d7f9b758a90964cb8c2",
+      "path": "skills/nexaiguy/nex-healthcheck/SKILL.md",
+      "source_commit": "920714f17d81e0a95c7a9bc51faf0a7921cd982d",
+      "source_repo": "6mile/skills",
+      "source_sha256": "733ac611a4fcb017bfe1d704162badb8df750d60f326951a2cb68b05d58db029"
+    },
+    {
+      "actual_assessment_reader": "20261028-171959-todo-3719",
+      "bytes": 9124,
+      "current_permission_or_adoption_granted": false,
+      "git_blob": "e7175ff403af347facc1611769e25ded5c92ed1f",
+      "inventory_id": "github:30e363c186b6b34de1e56faaaa8262da229a94518623c24a14b3e4ee818379ee",
+      "new_final_disposition": false,
+      "ordinal": 281,
+      "original_assessment": {
+        "candidate_disposition": "改訂候補として親へ提案。個別の権利/未検証を保持。最終採否・許諾・導入・実test0。",
+        "findings": [
+          "実keyを保存せずhashだけという主張に対し、Fernetまたはcryptography不在時base64・keys obfuscatedという記述がある。何を暗号化/難読化しているかは未保存実装から未確認で、base64を暗号化と同等にしない。",
+          "hashのみ保存でもscan/importの段階でsecret値や保護dataを読む可能性があり、metadata onlyという名は実資格参照や全env走査の許可ではない。今回はCC_JOB_ID以外の実envを列挙していない。",
+          "rotate commandは更新記録で、provider上の実鍵発行/旧鍵失効や全consumer移行の証明でない。fresh/stale等の年齢分類は漏洩有無/実権限の安全性を保証しない。",
+          "presetのserviceごとの期限と固定90/180日risk表が異なる場合の優先順位が不明。原presetを本人の新しい義務/禁止へ追加せず、既存契約/利用依存を確認する。",
+          "all accesses audit/metadata exports no sensitive dataは未実証。利用context/環境変数名・hashや資源の関連も必要範囲へ限定し、無関係な所有者/顧客情報を広げない。非AIの通常API鍵をAI課金禁止へ一括分類しない。",
+          "個別noticeの表題と本文条件に不整合がある。notice_bodiesの当該意味を保持し、MIT-0表題/rootMITだけで許諾を確定しない。"
+        ],
+        "nearby_limit": "起動metadataだけ。中央本文/存在・同等性/現設定は未照会。",
+        "nearby_metadata": [
+          "oauth-least-privilege",
+          "security-review",
+          "safe-tool-evaluation",
+          "crash-safe-file-updates"
+        ],
+        "negative": "metadata onlyという説明で全.envを読み、base64を安全な暗号化とし、rotate行やfresh色だけで実鍵更新/安全確認済みとする。",
+        "notices": [
+          [
+            "LICENSE.txt",
+            9,
+            "当該directoryの個別notice。表題と本文条件の差はnotice_bodiesを参照。",
+            "実公開版/作者・取得経路/第三者data・素材/サービス権利は別。"
+          ]
+        ],
+        "positive": "許可された対象の非秘密metadataをconsumerと実切替結果へ結び、年齢警告と実ローテーション成功を分ける設計へ参照する。",
+        "read": [
+          3,
+          1,
+          0,
+          false,
+          true,
+          340
+        ],
+        "reason": "340行を順序全読。secret指定例の1行は伏字。実.env/環境値/鍵保管庫/サービスへ一切触れず、原手順の安全性主張を評価した。",
+        "required_changes": [
+          "実実装の保存data/秘密読取/鍵保護/暗号化・fallbackとreport/exportの境界を明示し、弱いbase64fallbackを安全な暗号化として扱わない。",
+          "必要対象の実所有/許可scope・consumer/保持を固定し、元の鍵値を表示せず更新記録と実切替/旧鍵処理・読戻しを分ける。期限表やriskの根拠/優先を記録する。",
+          "親が実利用時だけ必要script/対象条件を検証する。"
+        ],
+        "row": 281,
+        "source": [
+          "github:30e363c186b6b34de1e56faaaa8262da229a94518623c24a14b3e4ee818379ee",
+          "skills/nexaiguy/nex-keyring/SKILL.md",
+          "87ced3766bbbd4aa9f4ac38eb964ae414c5cfa364338913626642d6187241e41",
+          "e7175ff403af347facc1611769e25ded5c92ed1f",
+          9124
+        ],
+        "support": [
+          [
+            "LICENSE.txt",
+            1101,
+            "58ca404d",
+            "69c24dfc",
+            2,
+            0,
+            0,
+            "100644"
+          ],
+          [
+            "README.md",
+            7898,
+            "96063b94",
+            "385dfa10",
+            1,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "SKILL.md",
+            9124,
+            "87ced376",
+            "e7175ff4",
+            3,
+            1,
+            0,
+            "100644"
+          ],
+          [
+            "_meta.json",
+            276,
+            "e1aeb0c5",
+            "988ac341",
+            1,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "lib/__init__.py",
+            null,
+            null,
+            "49269b26",
+            0,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "lib/config.py",
+            null,
+            null,
+            "9bab11a7",
+            0,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "lib/scanner.py",
+            null,
+            null,
+            "89862a8c",
+            0,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "lib/storage.py",
+            null,
+            null,
+            "7600f2e7",
+            0,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "nex-keyring.py",
+            null,
+            null,
+            "b3d42dfc",
+            0,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "setup.sh",
+            null,
+            null,
+            "190c0696",
+            0,
+            null,
+            null,
+            "100644"
+          ]
+        ],
+        "use": "資格そのものと、利用先/更新履歴・依存/実ローテーション確認を分ける台帳設計参考。",
+        "value": "秘密値を報告に出さずmetadataと実変更の証拠を対応させ、記録だけのrotationと実provider/利用側切替を区別できる。"
+      },
+      "original_chunk_sha256": "684350981536b9a164beaba8b37ca183435e7828675a3d7f9b758a90964cb8c2",
+      "path": "skills/nexaiguy/nex-keyring/SKILL.md",
+      "source_commit": "920714f17d81e0a95c7a9bc51faf0a7921cd982d",
+      "source_repo": "6mile/skills",
+      "source_sha256": "87ced3766bbbd4aa9f4ac38eb964ae414c5cfa364338913626642d6187241e41"
+    },
+    {
+      "actual_assessment_reader": "20261028-171959-todo-3719",
+      "bytes": 9450,
+      "current_permission_or_adoption_granted": false,
+      "git_blob": "e097f32bc1b499a36f0e343dd3f2f8ec62782136",
+      "inventory_id": "github:2ec558ff3dd5a83b248642088364eaadc0951cc3e30a12ab7f1ec888eb502b0a",
+      "new_final_disposition": false,
+      "ordinal": 282,
+      "original_assessment": {
+        "candidate_disposition": "改訂候補として親へ提案。個別の権利/未検証を保持。最終採否・許諾・導入・実test0。",
+        "findings": [
+          "setupがDB作成だけでなくbackground collector開始を含む。広いSkills導入依頼やDB不在を、私的/保護対象のhistory収集・常駐開始を無条件実行する根拠にしない。",
+          "all activity stays local/no external unless LLM configuredという説明と、YouTube transcript自動network取得が同居する。LLM設定をしたことと対象dataの外部送信scope/現契約内利用を同一視しない。",
+          "set-api-key/OpenAI endpoint/model設定は今回のOAuthサブスク条件と合わない。provider/APIキーや新費用を原文から利用しない。非LLM commandsの存在と実privacy/無送信の証明は別。",
+          "chat/password/bank・非productive content除外は未保存filter/collectorから未検証。URL/title/window・派生keyword/summary/index/exportや別machine syncも、実秘密/顧客/私的dataを収集前に除外できる保証ではない。",
+          "YouTube件数をtime spent、last1dを昨日午後、March sinceだけを3月全期間とする例はmetric/期間の不一致。browser focus/履歴と実視聴/人の作業、全video transcriptと実視聴箇所は別。",
+          "service status/start/logsやsummary存在、FTS再構築は実全coverage/常駐復帰/完全な履歴や保持を示さない。失敗/未観測/重複/clock/CPU負荷・権利は実検証されていない。",
+          "個別noticeはCC-BY-NC4/商用別有料licenseを主張する。実公開版/権利対応は未確定。新費用を採用せず、この研究から問い合わせ/契約を行わない。"
+        ],
+        "nearby_limit": "起動metadataだけ。中央本文/存在・同等性/現設定は未照会。",
+        "nearby_metadata": [
+          "import-memory",
+          "source-grounded-content-review",
+          "incremental-read-late-events",
+          "security-audit-coverage",
+          "task-scheduler-resident-timelimit"
+        ],
+        "negative": "DB不在で全browser collectorを自動開始し、productive filterだけで秘密保護済みとし、動画件数/last1dから実時間や昨日午後の全行動を断定する。",
+        "notices": [
+          [
+            "LICENSE.txt",
+            10,
+            "当該directoryの個別notice。表題と本文条件の差はnotice_bodiesを参照。",
+            "実公開版/作者・取得経路/第三者data・素材/サービス権利は別。"
+          ]
+        ],
+        "positive": "許可された有限の観測をsource/期間・欠測付きで保持し、keyword/要約/時間推定の根拠と外部処理範囲を分ける設計へ参照する。",
+        "read": [
+          2,
+          0,
+          0,
+          true,
+          true,
+          250
+        ],
+        "reason": "250行を順序全読。本文の収集/除外・localと外部LLM/YouTube取得・setupによる常駐開始を具体的に確認した。実history/window/sessionやAPI資格には触れていない。",
+        "required_changes": [
+          "元の目的/対象/保護境界と必要な観測だけを定め、収集前の除外と派生物/保持/停止・実動作を検証する。本人の禁止やアクセスscopeを原filterで緩和しない。",
+          "対象source/絶対期間/time zone・観測/欠測/推定を記録し、件数・滞在/視聴時間と要約根拠を分ける。FTS/summary/exportの世代/対象境界・重複/再開を照合する。",
+          "既存OAuth契約内の許可経路へ対応させ、原AI API鍵手順を実行しない。"
+        ],
+        "row": 282,
+        "source": [
+          "github:2ec558ff3dd5a83b248642088364eaadc0951cc3e30a12ab7f1ec888eb502b0a",
+          "skills/nexaiguy/nex-life-logger/SKILL.md",
+          "633074bc53fa44481081dfc523957fc018d7bca653957b70d26f508d4df0475b",
+          "e097f32bc1b499a36f0e343dd3f2f8ec62782136",
+          9450
+        ],
+        "support": [
+          [
+            "LICENSE.txt",
+            1213,
+            "ee5aa5a2",
+            "6ed623a6",
+            3,
+            1,
+            0,
+            "100644"
+          ],
+          [
+            "README.md",
+            5010,
+            "7b93ded3",
+            "f4c8d1de",
+            1,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "SKILL.md",
+            9450,
+            "633074bc",
+            "e097f32b",
+            2,
+            0,
+            0,
+            "100644"
+          ],
+          [
+            "_meta.json",
+            284,
+            "6fd822f7",
+            "aca45329",
+            1,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "lib/chat_filter.py",
+            null,
+            null,
+            "77a1cf05",
+            0,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "lib/collector_headless.py",
+            null,
+            null,
+            "384638b0",
+            0,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "lib/config.py",
+            null,
+            null,
+            "4b595c05",
+            0,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "lib/content_filter.py",
+            null,
+            null,
+            "9671d5bf",
+            0,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "lib/exporter.py",
+            null,
+            null,
+            "ba0ca2a8",
+            0,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "lib/keyword_extractor.py",
+            null,
+            null,
+            "1c81acb7",
+            0,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "lib/secure_key.py",
+            null,
+            null,
+            "65aa5110",
+            0,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "lib/storage.py",
+            null,
+            null,
+            "00566ab4",
+            0,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "lib/summarizer.py",
+            null,
+            null,
+            "1352a888",
+            0,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "lib/user_filters.py",
+            null,
+            null,
+            "a7336d43",
+            0,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "lib/youtube_transcript.py",
+            null,
+            null,
+            "7c3cbd87",
+            0,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "nex-life-logger.py",
+            null,
+            null,
+            "ef344aeb",
+            0,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "setup.sh",
+            null,
+            null,
+            "a3ab23cf",
+            0,
+            null,
+            null,
+            "100644"
+          ]
+        ],
+        "use": "活動の観測対象/期間・欠測と、keyword/要約/時間推定・保存/外部処理を分離する設計参考。",
+        "value": "何をどの期間に観測したかと推定した内容を区別し、未観測期間や件数を実行時間/全行動の保証へしない。"
+      },
+      "original_chunk_sha256": "684350981536b9a164beaba8b37ca183435e7828675a3d7f9b758a90964cb8c2",
+      "path": "skills/nexaiguy/nex-life-logger/SKILL.md",
+      "source_commit": "920714f17d81e0a95c7a9bc51faf0a7921cd982d",
+      "source_repo": "6mile/skills",
+      "source_sha256": "633074bc53fa44481081dfc523957fc018d7bca653957b70d26f508d4df0475b"
+    },
+    {
+      "actual_assessment_reader": "20261028-171959-todo-3719",
+      "bytes": 9807,
+      "current_permission_or_adoption_granted": false,
+      "git_blob": "3151e0c765180faaf8a5d0ffacd5f539806c93db",
+      "inventory_id": "github:13720c657496f881eea2d1e615e450a4b2f75b4a5f7ec81ccb7673ba66e6c702",
+      "new_final_disposition": false,
+      "ordinal": 283,
+      "original_assessment": {
+        "candidate_disposition": "条件付き比較/抽出と通知の改訂候補。最終採否・許諾・導入・実test0。",
+        "findings": [
+          "CSS/XPath対応を広く主張する一方、本文はsimple CSS/basic XPath・urllib+regex、複雑selector例もある。動的サイトをregexへ変えるだけでJS表示が取得できるとは限らず、実装未保存で未検証。",
+          "通貨/小数comma・税/配送・月年/数量・discount/variant/地域や欠品を固定しないと比較条件が変わる。EURIBORのような率を商品価格と同じ尺度へしない。",
+          "空抽出/エラーpageや複数一致を値0/新価格にせず、元0/負数を含む変化率や期間/欠測・snapshot原表示を検証する必要がある。",
+          "intervalやalert DB登録・dashboardは定期実行/現在価格/通知到着の証明でない。原閾値/市場例や現在価格は保存主張で現検証0。",
+          "local/private・Telegram以外無送信という記述でもHTTP取得は外部access。URL/redirect・snapshot内の命令を権限へしない。削除はtarget履歴も失わせる。",
+          "個別MIT-0 noticeの案内URLは0BSDというslugで、表題だけからリンク先を読了/同一条件としない。実公開版/作者・取得価格dataの権利は別。"
+        ],
+        "nearby_limit": "起動metadataだけ。中央本文/存在・同等性/現設定は未照会。",
+        "nearby_metadata": [
+          "market-data-due-diligence",
+          "backend-correctness",
+          "observability-notifications",
+          "source-grounded-content-review"
+        ],
+        "negative": "動的pageの空抽出を値下げとし、年額/月額や金利率を無条件比較して、alert行だけで相手に届いたとする。",
+        "notices": [
+          [
+            "LICENSE.txt",
+            1,
+            "当該directoryの個別notice。本文条件/未確定はnotice_bodiesを参照。",
+            "実公開版/取得経路・第三者data/素材/serviceの権利は別。"
+          ]
+        ],
+        "positive": "同じ条件の元表示と取得失敗を保持し、実変化と通知配送を別receiptで確かめる。",
+        "read": [
+          3,
+          1,
+          0,
+          false,
+          true,
+          346
+        ],
+        "reason": "346行を順序全読。token例1行は表示前伏字。selector/解析失敗と実価格変動、登録/警告/実配送を分けて評価した。",
+        "required_changes": [
+          "同じ商品/条件・取得元/絶対日時/通貨/単位/期間を固定し、価格と率・表示値と実購入総額を分ける。",
+          "未抽出/複数/timeout・parser別対応/全件・重複alert/有限retryと実配送を検証する。script未読を動作証拠へしない。",
+          "親が実利用時だけ対象範囲と現公式条件/権利を確認する。本研究で外部価格取得・Playwright/通知/購入/設定変更0。"
+        ],
+        "row": 283,
+        "source": [
+          "github:13720c657496f881eea2d1e615e450a4b2f75b4a5f7ec81ccb7673ba66e6c702",
+          "skills/nexaiguy/nex-pricewatch/SKILL.md",
+          "ba113ae825b64a0f49a37fdf24cd39c418ec778548856622460841a8d08bb773",
+          "3151e0c765180faaf8a5d0ffacd5f539806c93db",
+          9807
+        ],
+        "support": [
+          [
+            "LICENSE.txt",
+            1125,
+            "3096357f",
+            "fbc00025",
+            2,
+            0,
+            0,
+            "100644"
+          ],
+          [
+            "README.md",
+            10686,
+            "acf3bd97",
+            "46d58eee",
+            1,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "SKILL.md",
+            9807,
+            "ba113ae8",
+            "3151e0c7",
+            3,
+            1,
+            0,
+            "100644"
+          ],
+          [
+            "_meta.json",
+            282,
+            "da30a1b3",
+            "63d5dce8",
+            1,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "lib/__init__.py",
+            null,
+            null,
+            "94c4404c",
+            0,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "lib/alerter.py",
+            null,
+            null,
+            "69724051",
+            0,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "lib/config.py",
+            null,
+            null,
+            "ab0e3d9d",
+            0,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "lib/scraper.py",
+            null,
+            null,
+            "2fdc4e44",
+            0,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "lib/storage.py",
+            null,
+            null,
+            "f8b46034",
+            0,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "nex-pricewatch.py",
+            null,
+            null,
+            "35fc47cf",
+            0,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "setup.sh",
+            null,
+            null,
+            "1ce3a072",
+            0,
+            null,
+            null,
+            "100644"
+          ]
+        ],
+        "use": "価格の取得条件/原表示と時系列・閾値通知を結ぶ監視設計参考。",
+        "value": "価格だけでなくvariant/通貨/税/周期・取得日時/失敗を保存し、異なる条件の見せかけの値下げを防げる。"
+      },
+      "original_chunk_sha256": "90ac9c0536aad1cecbcf81b61d3aad3d8b1ef43c52a4774be12a0b7b5182c16d",
+      "path": "skills/nexaiguy/nex-pricewatch/SKILL.md",
+      "source_commit": "920714f17d81e0a95c7a9bc51faf0a7921cd982d",
+      "source_repo": "6mile/skills",
+      "source_sha256": "ba113ae825b64a0f49a37fdf24cd39c418ec778548856622460841a8d08bb773"
+    },
+    {
+      "actual_assessment_reader": "20261028-171959-todo-3719",
+      "bytes": 5843,
+      "current_permission_or_adoption_granted": false,
+      "git_blob": "ceb05f85985ee04e0265416b6260e9dd44291d88",
+      "inventory_id": "github:da8bbff468e544c66123d5d2ef50b36db46e2117ce9fd4e27ad1acabeac6c303",
+      "new_final_disposition": false,
+      "ordinal": 284,
+      "original_assessment": {
+        "candidate_disposition": "情報源/実行/配送の検証を補う改訂候補。最終採否・許諾・導入・実test0。",
+        "findings": [
+          "createのscheduleは設定で、後半は外部schedulerがrunを実行すると説明する。登録だけで自動配送/復帰を実証しない。",
+          "HEALTHは実checkを走らせ、CUSTOMは任意shell、EMAILはIMAP接続。dataを集めるという名だけでreadonly/無通信・全対象権限を保証しない。",
+          "modulesごとの未導入/失敗/部分・古い値とreport期間が不明。未取得を0や健康として集計しない。showをlast run閲覧に使う例も実CLIとの対応が必要。",
+          "CRM/expenses/vault等の機密と宛先を区別し、topic/会社・製品の範囲を保つ。元sourceだけで全private DBやcredentialを読む許可にしない。",
+          "file/Telegram/bothを区別し、保存と実配送を分ける。scripts/setup未保存でscheduler/CLI・Windows native動作は未検証。IMAP等の通常非AI資格をAI API課金禁止へ一括分類しない。",
+          "個別noticeはMIT-0とFree Public License 1.0.0を同称する等の記載。条件導入表現/帰属不要の要約を保持し、実公開版対応を自動確定しない。"
+        ],
+        "nearby_limit": "起動metadataだけ。中央本文/存在・同等性/現設定は未照会。",
+        "nearby_metadata": [
+          "observability-notifications",
+          "task-scheduler-resident-timelimit",
+          "bounded-subprocess-capture",
+          "security-review"
+        ],
+        "negative": "cron文字列を保存して24時間自動報告済みとし、任意shellや全DBを実行/集約して別宛先へ送る。",
+        "notices": [
+          [
+            "LICENSE.txt",
+            2,
+            "当該directoryの個別notice。本文条件/未確定はnotice_bodiesを参照。",
+            "実公開版/取得経路・第三者data/素材/serviceの権利は別。"
+          ]
+        ],
+        "positive": "対象と期間を固定した各moduleの成功/欠測を根拠付きでまとめ、実配送結果と再送防止を確認する。",
+        "read": [
+          3,
+          2,
+          0,
+          false,
+          true,
+          195
+        ],
+        "reason": "195行を順序全読。メール/token等2行は伏字。cron保存と外部scheduler実行の区別、moduleごとの作用を確認した。",
+        "required_changes": [
+          "元目的/宛先/対象moduleと必要dataだけを固定し、moduleごとの接続/作用・保存/共有scopeを引き継ぐ。",
+          "情報源/期間/取得日時・失敗/欠測とreport/run世代を記録し、生成/保存/実scheduler/配送/再送重複を別結果で検証する。",
+          "実利用時だけ必要実装・有限timeout/drainと既存scheduler/Windows窓非表示を確認する。今回実mail/DB/外部check・送信/定期設定0。"
+        ],
+        "row": 284,
+        "source": [
+          "github:da8bbff468e544c66123d5d2ef50b36db46e2117ce9fd4e27ad1acabeac6c303",
+          "skills/nexaiguy/nex-reports/SKILL.md",
+          "963e9114a08d1d95d2eb7f48b8c6eff8db31373dd1be6372213e32e2d8980582",
+          "ceb05f85985ee04e0265416b6260e9dd44291d88",
+          5843
+        ],
+        "support": [
+          [
+            "LICENSE.txt",
+            1071,
+            "f673316c",
+            "228cfaf2",
+            2,
+            0,
+            0,
+            "100644"
+          ],
+          [
+            "README.md",
+            6560,
+            "6abb96e9",
+            "f9670faf",
+            1,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "SKILL.md",
+            5843,
+            "963e9114",
+            "ceb05f85",
+            3,
+            2,
+            0,
+            "100644"
+          ],
+          [
+            "_meta.json",
+            276,
+            "5736e7b5",
+            "e9d37cab",
+            1,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "lib/__init__.py",
+            null,
+            null,
+            "b9d4e993",
+            0,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "lib/config.py",
+            null,
+            null,
+            "4468942d",
+            0,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "lib/formatter.py",
+            null,
+            null,
+            "7c88ec8b",
+            0,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "lib/modules.py",
+            null,
+            null,
+            "caafef3f",
+            0,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "lib/notifier.py",
+            null,
+            null,
+            "85b9d3d2",
+            0,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "lib/storage.py",
+            null,
+            null,
+            "efd343bc",
+            0,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "nex-reports.py",
+            null,
+            null,
+            "a722caab",
+            0,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "setup.sh",
+            null,
+            null,
+            "8849ccc4",
+            0,
+            null,
+            null,
+            "100644"
+          ]
+        ],
+        "use": "複数情報源の範囲/鮮度/失敗と報告の生成・定期実行・配送を分離する設計参考。",
+        "value": "一つの報告で情報源が欠けても成功に見せず、run世代と対象期間/受信先に根拠を対応させられる。"
+      },
+      "original_chunk_sha256": "90ac9c0536aad1cecbcf81b61d3aad3d8b1ef43c52a4774be12a0b7b5182c16d",
+      "path": "skills/nexaiguy/nex-reports/SKILL.md",
+      "source_commit": "920714f17d81e0a95c7a9bc51faf0a7921cd982d",
+      "source_repo": "6mile/skills",
+      "source_sha256": "963e9114a08d1d95d2eb7f48b8c6eff8db31373dd1be6372213e32e2d8980582"
+    },
+    {
+      "actual_assessment_reader": "20261028-171959-todo-3719",
+      "bytes": 7151,
+      "current_permission_or_adoption_granted": false,
+      "git_blob": "c0ea6e0ccb8de6feee73ffb60db89c3a71f0ce45",
+      "inventory_id": "github:f5bcd756257cfe379dba010980b0fd972774eb41544c684cbc918afc40c9d511",
+      "new_final_disposition": false,
+      "ordinal": 285,
+      "original_assessment": {
+        "candidate_disposition": "観測・費用/成果の区別を補う改訂候補。最終採否・許諾・導入・実test0。",
+        "findings": [
+          "scanで全installedを発見しClawHub APIへvulnerability照会する設計。meta-toolという名やbase dir設定は中央/保護data走査・新規通信の許可でない。",
+          "health scoreやhash一致/known vulnerability無検出は安全性/全権利・実成功の保証でない。信頼できるbaseline/対象版と未検査scopeが必要。",
+          "trigger・usage件数は成果完了/品質や独立worker数でなく、stale30日だけで不要/削除対象を決めない。例の28日STALEは既定30+日説明とも整合が不明。",
+          "API費用の推定・currency/budget設定と実契約/請求/課金許可は別。今回OAuthサブスク枠をAPI単価へ換算して実支出とせず、新費用やAI API利用を採用しない。",
+          "realtime・alerts acknowledge/更新一覧は実常駐・通知・問題解消を示さない。script/setup未保存で現API/計測/集計・Windows動作は未検証。",
+          "個別MIT-0表題に対し本文はcopyright/許可文の保持を要求する。表題/rootMITだけで条件を除去しない。"
+        ],
+        "nearby_limit": "起動metadataだけ。中央本文/存在・同等性/現設定は未照会。",
+        "nearby_metadata": [
+          "skill-maintenance",
+          "ai-model-evaluation",
+          "security-audit-coverage",
+          "observability-notifications"
+        ],
+        "negative": "trigger数/緑scoreを実成果・安全とし、30日未使用だけで削除し、設定budgetを新しい支出許可とする。",
+        "notices": [
+          [
+            "LICENSE.txt",
+            3,
+            "当該directoryの個別notice。本文条件/未確定はnotice_bodiesを参照。",
+            "実公開版/取得経路・第三者data/素材/serviceの権利は別。"
+          ]
+        ],
+        "positive": "対象版の実使用と検査範囲・推定/実費用を根拠付きで分け、未取得を残した運用台帳へ参照する。",
+        "read": [
+          2,
+          0,
+          0,
+          true,
+          true,
+          215
+        ],
+        "reason": "215行を順序全読。置換行0は秘密不存在の証明でない。中央の実Skill一覧/本文/usageや.envには触れていない。",
+        "required_changes": [
+          "依頼対象の有限なscope・実所有/版と観測/未取得を固定し、導入/発火/実行/成果/検査を分ける。",
+          "契約/利用経路と実測量・推定/実請求の根拠/期間/通貨を明示し、score/予算やstaleで権利/削除・新支出を自動判断しない。",
+          "実利用時だけ必要実装とknown advisory/外部照会scope・通知/再開を検証する。今回中央scan/API/設定変更0。"
+        ],
+        "row": 285,
+        "source": [
+          "github:f5bcd756257cfe379dba010980b0fd972774eb41544c684cbc918afc40c9d511",
+          "skills/nexaiguy/nex-skillmon/SKILL.md",
+          "6fcd04dd9f3718b5b2e4a54efec79cf6cce0fda6dd49f4152794a771c77e6876",
+          "c0ea6e0ccb8de6feee73ffb60db89c3a71f0ce45",
+          7151
+        ],
+        "support": [
+          [
+            "LICENSE.txt",
+            1105,
+            "532dc274",
+            "e62d153d",
+            2,
+            0,
+            0,
+            "100644"
+          ],
+          [
+            "README.md",
+            8755,
+            "1fec7caf",
+            "2e5253c5",
+            1,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "SKILL.md",
+            7151,
+            "6fcd04dd",
+            "c0ea6e0c",
+            2,
+            0,
+            0,
+            "100644"
+          ],
+          [
+            "_meta.json",
+            278,
+            "cacd0bc7",
+            "c5b32397",
+            1,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "lib/__init__.py",
+            null,
+            null,
+            "2d28ffd2",
+            0,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "lib/config.py",
+            null,
+            null,
+            "6b1a5dd1",
+            0,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "lib/cost_tracker.py",
+            null,
+            null,
+            "3b714e83",
+            0,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "lib/scanner.py",
+            null,
+            null,
+            "f1b1c25d",
+            0,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "lib/storage.py",
+            null,
+            null,
+            "6e9ffbe2",
+            0,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "nex-skillmon.py",
+            null,
+            null,
+            "0c91242c",
+            0,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "setup.sh",
+            null,
+            null,
+            "fb2ac666",
+            0,
+            null,
+            null,
+            "100644"
+          ]
+        ],
+        "use": "Skillの導入・実使用/成功・推定費用/実契約・安全検査を分ける運用設計参考。",
+        "value": "件数/trigger/score・警告と実成果、API単価推定とOAuth契約内の実利用を区別できる。"
+      },
+      "original_chunk_sha256": "90ac9c0536aad1cecbcf81b61d3aad3d8b1ef43c52a4774be12a0b7b5182c16d",
+      "path": "skills/nexaiguy/nex-skillmon/SKILL.md",
+      "source_commit": "920714f17d81e0a95c7a9bc51faf0a7921cd982d",
+      "source_repo": "6mile/skills",
+      "source_sha256": "6fcd04dd9f3718b5b2e4a54efec79cf6cce0fda6dd49f4152794a771c77e6876"
+    },
+    {
+      "actual_assessment_reader": "20261028-171959-todo-3719",
+      "bytes": 4045,
+      "current_permission_or_adoption_granted": false,
+      "git_blob": "7c4c4d6f7a5411e1c55700f14fe80e526a230664",
+      "inventory_id": "github:e1120fa4c0b7fc46c3ffb6e813cef88ab6e79ea4f54818d7e1865e7c8aaebb21",
+      "new_final_disposition": false,
+      "ordinal": 286,
+      "original_assessment": {
+        "candidate_disposition": "時間と料金/実作用の境界を補う改訂候補。最終採否・許諾・導入・実test0。",
+        "findings": [
+          "entry\u003eproject\u003eclient\u003edefaultという優先順は有用だが、既定単価や15分切上げは本人/顧客契約の合意でない。時間照会の例が--round-upを付け、実経過/請求済みと異なる可能性がある。",
+          "timer start/stop/cancel・編集/削除の競合/中断保存、複数timer/重複手入力・時計/日付境界は未保存実装から未検証。丸め前の原記録を失わない設計が必要。",
+          "昨日/今週/月の例は固定2026年4月の日付であり、実基準日時/time zoneへ解決しない。billable exportやsummaryは実請求/送付/入金の証拠でない。",
+          "単価0/未指定・通貨/期間・適用日や集計丸め単位を検証する必要がある。local/no telemetry/stdlibのみはscript未読の保存主張。",
+          "個別noticeは旧273で実masked全読したAGPL3-or-later/ClawHub由来コピーだけMIT-0とする同bytes。実公開版/取得経路・商用条件は未確定で、rootMIT等で上書きしない。"
+        ],
+        "nearby_limit": "起動metadataだけ。中央本文/存在・同等性/現設定は未照会。",
+        "nearby_metadata": [
+          "commerce-billing",
+          "timezone-helper",
+          "sql-data-integrity",
+          "crash-safe-file-updates"
+        ],
+        "negative": "既定85EUR/hや15分切上げを合意済みとして適用し、時間exportだけで請求/入金済みとする。",
+        "notices": [
+          [
+            "LICENSE.txt",
+            4,
+            "当該directoryの個別notice。本文条件/未確定はnotice_bodiesを参照。",
+            "実公開版/取得経路・第三者data/素材/serviceの権利は別。"
+          ]
+        ],
+        "positive": "契約で定めた単価/丸めと原時間・期間を結び、billable集計と実請求/入金を分ける。",
+        "read": [
+          3,
+          2,
+          0,
+          false,
+          true,
+          154
+        ],
+        "reason": "154行を順序全読。連絡先2行は伏字。rate優先順と既定85EUR/h・15分round-upを元契約へ適用する条件を評価した。",
+        "required_changes": [
+          "実対象/契約単価・適用期間/通貨と原時間を保持し、丸め/請求対象分類は明示根拠へ結ぶ。既定値を新約束/料金へ採用しない。",
+          "原値/編集履歴・timer並行/中断/再開・日付/time zone/0値・丸め単位と集計を検証し、実請求/配送/入金を別結果で確認する。",
+          "実利用時だけ必要実装/個別権利を親が確認する。本研究で実時間DB・顧客情報/請求/設定変更0。"
+        ],
+        "row": 286,
+        "source": [
+          "github:e1120fa4c0b7fc46c3ffb6e813cef88ab6e79ea4f54818d7e1865e7c8aaebb21",
+          "skills/nexaiguy/nex-timetrack/SKILL.md",
+          "487d7a1e9c9c6c0aff297bc53e6648b3f6e5fced49b4578ab97f117fc11c7a3e",
+          "7c4c4d6f7a5411e1c55700f14fe80e526a230664",
+          4045
+        ],
+        "support": [
+          [
+            "LICENSE.txt",
+            1446,
+            "07917e55",
+            "333950a2",
+            4,
+            1,
+            0,
+            "100644"
+          ],
+          [
+            "README.md",
+            1598,
+            "3aed05e2",
+            "0e0f29c6",
+            1,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "SKILL.md",
+            4045,
+            "487d7a1e",
+            "7c4c4d6f",
+            3,
+            2,
+            0,
+            "100644"
+          ],
+          [
+            "_meta.json",
+            280,
+            "45ee0d9b",
+            "366fecdc",
+            1,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "lib/__init__.py",
+            null,
+            null,
+            "6b69aff8",
+            0,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "lib/config.py",
+            null,
+            null,
+            "6e0f82de",
+            0,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "lib/storage.py",
+            null,
+            null,
+            "ab164bd5",
+            0,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "nex-timetrack.py",
+            null,
+            null,
+            "1fc24506",
+            0,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "setup.sh",
+            null,
+            null,
+            "ef756491",
+            0,
+            null,
+            null,
+            "100644"
+          ]
+        ],
+        "use": "実作業の時間原記録とbillable分類・契約単価/丸め・請求を分離する設計参考。",
+        "value": "timer/手入力・修正履歴/期間と、単価cascade/丸め前後を対応させ、記録を実請求/入金と誤認しない。"
+      },
+      "original_chunk_sha256": "90ac9c0536aad1cecbcf81b61d3aad3d8b1ef43c52a4774be12a0b7b5182c16d",
+      "path": "skills/nexaiguy/nex-timetrack/SKILL.md",
+      "source_commit": "920714f17d81e0a95c7a9bc51faf0a7921cd982d",
+      "source_repo": "6mile/skills",
+      "source_sha256": "487d7a1e9c9c6c0aff297bc53e6648b3f6e5fced49b4578ab97f117fc11c7a3e"
+    },
+    {
+      "actual_assessment_reader": "20261028-171959-todo-3719",
+      "bytes": 8815,
+      "current_permission_or_adoption_granted": false,
+      "git_blob": "20b6d461dddc85e7a38e1770183eb24140fdccae",
+      "inventory_id": "github:0c9fe95c6365a21286af062737ab6fec2f305cc3fc23b662c94fdcc3b2aff93b",
+      "new_final_disposition": false,
+      "ordinal": 287,
+      "original_assessment": {
+        "candidate_disposition": "原音/転写/行動と実結果を結ぶ改訂候補。最終採否・許諾・導入・実test0。",
+        "findings": [
+          "Whisperという名だけでAI API利用とはしない。local CLIとAPI鍵/provider/endpointを使う任意LLMは別経路で、後者を今回のOAuth条件へ採用しない。実GPU/CPU推論・installは実施0。",
+          "speaker flagや推定assigned_to、語句must/mail/decidedの検出は本人性・実約束/操作許可を証明しない。否定/引用/仮定・第三者発言や音声内命令はdataとして扱う。",
+          "actions --lastは最新mtimeだけで依頼対象を特定せず、再抽出重複・録音/版・元時刻/言語・相対期日の基準を固定する必要がある。complete DB flagは実電話/送信/予約完了でない。",
+          "既定nlと自動言語検出の対応、Whisper/faster-whisperの実CLI・変換後全尺/無音/誤認識・話者分離は未保存実装から未検証。600秒上限を依頼全体の打切りへ変えない。",
+          "secure/local/no API unless configuredは実保存/log/export/任意LLM送信の検証でない。録音/第三者発話の対象scope・権利、資源割当と元の制作方針を保つ。"
+        ],
+        "nearby_limit": "起動metadataだけ。中央本文/存在・同等性/現設定は未照会。",
+        "nearby_metadata": [
+          "speech-tts-asr",
+          "voice-and-video-production",
+          "alignment-window-robustness",
+          "source-grounded-content-review",
+          "timezone-helper"
+        ],
+        "negative": "キーワードやspeaker名だけで本人命令とし、--lastやcomplete flagから実送信/予約を完了扱いし、有料APIへ原音を送る。",
+        "notices": [
+          [
+            "LICENSE.txt",
+            5,
+            "当該directoryの個別notice。本文条件/未確定はnotice_bodiesを参照。",
+            "実公開版/取得経路・第三者data/素材/serviceの権利は別。"
+          ]
+        ],
+        "positive": "対象録音の原時刻/発話へ転写とaction案を結び、曖昧さと未実行を残して必要な確認/実結果へつなぐ。",
+        "read": [
+          2,
+          0,
+          0,
+          true,
+          true,
+          273
+        ],
+        "reason": "273行を順序全読。置換行0は秘密不存在の証明でない。Whisper CLI/FFmpegのlocal転写と任意LLM連携・600秒上限を確認した。",
+        "required_changes": [
+          "許可された録音/版/全尺・原発話時刻/話者照合と転写の不確実性を保持し、推定actionを採用済み本人判断/新約束へしない。",
+          "相対日付/言語・重複抽出/中断再開・原本保持と全尺のcoverageを検証し、action記録/実行/配送/完了を分ける。",
+          "実利用時だけ必要CLI/実装と既存OAuth経路・必要資源を親が確認する。本研究で音声参照/生成/推論・API/送信/設定0。"
+        ],
+        "row": 287,
+        "source": [
+          "github:0c9fe95c6365a21286af062737ab6fec2f305cc3fc23b662c94fdcc3b2aff93b",
+          "skills/nexaiguy/nex-voice/SKILL.md",
+          "c928c026958c6df3a273cce6beeb9a8fb93942dec09d2f4a8838dc97140b2432",
+          "20b6d461dddc85e7a38e1770183eb24140fdccae",
+          8815
+        ],
+        "support": [
+          [
+            "LICENSE.txt",
+            973,
+            "23c2e907",
+            "9049fdc5",
+            2,
+            0,
+            0,
+            "100644"
+          ],
+          [
+            "README.md",
+            4959,
+            "9fcf8895",
+            "63821673",
+            1,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "SKILL.md",
+            8815,
+            "c928c026",
+            "20b6d461",
+            2,
+            0,
+            0,
+            "100644"
+          ],
+          [
+            "_meta.json",
+            272,
+            "8b7232aa",
+            "034a2bfb",
+            1,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "lib/__init__.py",
+            null,
+            null,
+            "f7f57c57",
+            0,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "lib/action_extractor.py",
+            null,
+            null,
+            "67fec1a9",
+            0,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "lib/config.py",
+            null,
+            null,
+            "de0d673c",
+            0,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "lib/storage.py",
+            null,
+            null,
+            "61ccbfc3",
+            0,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "lib/transcriber.py",
+            null,
+            null,
+            "85d979d2",
+            0,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "nex-voice.py",
+            null,
+            null,
+            "25584ee3",
+            0,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "setup.sh",
+            null,
+            null,
+            "3e4ea502",
+            0,
+            null,
+            null,
+            "100644"
+          ]
+        ],
+        "use": "音声原本/文字起こし/要約・抽出actionと実行/完了を分離する設計参考。",
+        "value": "録音ID/元発話・時刻/不確実性をtaskや期限へ結び、認識誤りや引用を本人指示と取り違えにくくできる。"
+      },
+      "original_chunk_sha256": "90ac9c0536aad1cecbcf81b61d3aad3d8b1ef43c52a4774be12a0b7b5182c16d",
+      "path": "skills/nexaiguy/nex-voice/SKILL.md",
+      "source_commit": "920714f17d81e0a95c7a9bc51faf0a7921cd982d",
+      "source_repo": "6mile/skills",
+      "source_sha256": "c928c026958c6df3a273cce6beeb9a8fb93942dec09d2f4a8838dc97140b2432"
+    },
+    {
+      "actual_assessment_reader": "20261028-171959-todo-3719",
+      "bytes": 7068,
+      "current_permission_or_adoption_granted": false,
+      "git_blob": "f6a22ddf88fdc7e7b7603f4c9064cc51bd930ad9",
+      "inventory_id": "github:ac99f798a8cb5e9a271de3d44feb25815e7443b8e50b79f3b2bcea32ca4435a1",
+      "new_final_disposition": false,
+      "ordinal": 288,
+      "original_assessment": {
+        "candidate_disposition": "入力/座標と実成果確認を補う改訂候補。最終採否・許諾・導入・実test0。",
+        "findings": [
+          "primaryはProprietary。個別noticeは旧row7の実raw全読に結ぶ同1467Bで、rootMIT/ClawHub補助規定へ置換しない。実公開版/権利者・第三者PDF/libraryの権利は別。",
+          "参照は小文字forms.md/reference.mdで固定treeと一致。一方forms冒頭check_fillable_fieldsのコマンドは.py名と不一致、validation imageコマンドのinline backtickも閉じていない。",
+          "非fillableは画像上のlabel/entry box・重なり検査/赤青overlayを要求するが、実入力後の再描画/読戻し確認がない。box検査だけでglyph fit/値/checkbox・実全ページ完了を保証しない。",
+          "fillableのPDF bottom-originと非fillable画像top-origin/scale、回転/異なるpage box・フォント/暗号化/注釈保持は実検証していない。script/testは未保存で、263の構造抽出/混合座標手順を当版に存在するとしない。",
+          "抽出/表/OCRの空・文字化け/列境界、原本/出力衝突・暗号password等の表示/入力境界や現library/APIも未検証。必要な配布Python工具と新規自作Pythonの方針を区別する。"
+        ],
+        "nearby_limit": "起動metadataだけ。中央本文/存在・同等性/現設定は未照会。",
+        "nearby_metadata": [
+          "pdf",
+          "pdf:pdf",
+          "poppler-pdf-text-encoding",
+          "validate-consume-same-bytes",
+          "documents-slides-data"
+        ],
+        "negative": "赤青boxが正しいだけで入力済みとし、前の別forms版の機能やrootMITをこのpackageへ移す。",
+        "notices": [
+          [
+            "LICENSE.txt",
+            6,
+            "当該directoryの個別notice。本文条件/未確定はnotice_bodiesを参照。",
+            "実公開版/取得経路・第三者data/素材/serviceの権利は別。"
+          ]
+        ],
+        "positive": "入力fieldと原ページを固定し、事前boxと実入力後の値/表示を確認した成果を返す設計へ参照する。",
+        "read": [
+          2,
+          0,
+          0,
+          true,
+          true,
+          294
+        ],
+        "reason": "primary294行と当package固有forms.md205行を全文読取。263とは別SHAのprimary/フォーム手順で、前の読了を流用していない。",
+        "required_changes": [
+          "当版の実script名/参照/書式を修復し、原PDFと許可対象・入力値/出力を固定して原本を保持する。",
+          "事前box validationに加えてfillable/非fillable双方の実値・全対象page・座標/回転と実描画を確認する。秘密や不要metadataを標準出力/CLIへ出さない。",
+          "実利用時だけ必要script/現在の公式仕様と個別権利を親が確認する。本研究でPDF/鍵・source実行/導入/新規取得0。"
+        ],
+        "row": 288,
+        "source": [
+          "github:ac99f798a8cb5e9a271de3d44feb25815e7443b8e50b79f3b2bcea32ca4435a1",
+          "skills/nicky1108/x-92bilal26-pdf/SKILL.md",
+          "38d8559d4899602f82f3560052132aa0c40cfca80203037729756bdb4fb8e0cb",
+          "f6a22ddf88fdc7e7b7603f4c9064cc51bd930ad9",
+          7068
+        ],
+        "support": [
+          [
+            "LICENSE.txt",
+            1467,
+            "79f6d8f5",
+            "c55ab422",
+            4,
+            0,
+            1,
+            "100644"
+          ],
+          [
+            "README.md",
+            1344,
+            "1808d99b",
+            "880efdc2",
+            1,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "SKILL.md",
+            7068,
+            "38d8559d",
+            "f6a22ddf",
+            2,
+            0,
+            0,
+            "100644"
+          ],
+          [
+            "_meta.json",
+            285,
+            "e3962e8b",
+            "3f2b32cc",
+            1,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "forms.md",
+            9438,
+            "0ab10e90",
+            "4e234506",
+            2,
+            0,
+            0,
+            "100644"
+          ],
+          [
+            "reference.md",
+            16692,
+            "03a5f964",
+            "41400bf4",
+            1,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "scripts/check_bounding_boxes.py",
+            null,
+            null,
+            "7443660c",
+            0,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "scripts/check_bounding_boxes_test.py",
+            null,
+            null,
+            "1dbb463c",
+            0,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "scripts/check_fillable_fields.py",
+            null,
+            null,
+            "dc43d182",
+            0,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "scripts/convert_pdf_to_images.py",
+            null,
+            null,
+            "f8a4ec52",
+            0,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "scripts/create_validation_image.py",
+            null,
+            null,
+            "4913f8f8",
+            0,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "scripts/extract_form_field_info.py",
+            null,
+            null,
+            "f42a2df8",
+            0,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "scripts/fill_fillable_fields.py",
+            null,
+            null,
+            "ac35753c",
+            0,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "scripts/fill_pdf_form_with_annotations.py",
+            null,
+            null,
+            "f9805313",
+            0,
+            null,
+            null,
+            "100644"
+          ]
+        ],
+        "use": "PDF処理とfillable/非fillableフォームの入力/座標・事前検査を分ける設計参考。",
+        "value": "field ID/page/valueとラベル/入力領域の分離、視覚validationを結び、誤ったチェック位置や重なりを減らせる。"
+      },
+      "original_chunk_sha256": "90ac9c0536aad1cecbcf81b61d3aad3d8b1ef43c52a4774be12a0b7b5182c16d",
+      "path": "skills/nicky1108/x-92bilal26-pdf/SKILL.md",
+      "source_commit": "920714f17d81e0a95c7a9bc51faf0a7921cd982d",
+      "source_repo": "6mile/skills",
+      "source_sha256": "38d8559d4899602f82f3560052132aa0c40cfca80203037729756bdb4fb8e0cb"
+    }
+  ],
+  "roster_sha256": "f9c6b2e44c5e3aa8947f758f864eaa0d5edc396d622359826bca848cd96f9901",
+  "saved_support_metadata": 94,
+  "shared_original_contexts": {
+    "47777060a37db1391d9d8a5a641039db2470a5f5f3f2721108bc2c80584895a9": {
+      "actual_assessment_reader": "20261028-171959-todo-3719",
+      "common": {
+        "boundaries": {
+          "central_operations": 0,
+          "copy_license_accepted": false,
+          "new_final_dispositions": 0,
+          "source_executed": false
+        },
+        "chunk_id": "9c568939eb0bb4e556e1a1035b52d879",
+        "definitions": {
+          "actors": {
+            "0": "今回の実assistant読取。268noticeは旧203raw全読との全文改行差分。",
+            "1": "baseline実reader 20261028-154151-todo-3719/current3719。"
+          },
+          "mask_method": "表示前の6版のメール/長い数値/token/hex/電話・IP/UUID置換と、7版の資格・アプリ識別環境変数値置換。今回の置換行0は秘密不存在の証明ではない。",
+          "reader_namespace": "20261028-171959-todo-3719/current3719",
+          "states": {
+            "0": "unsaved",
+            "1": "saved_unread",
+            "2": "direct_raw_full",
+            "3": "direct_masked_full",
+            "4": "exact_bytes_reuse",
+            "5": "ordered_full_diff",
+            "6": "partial",
+            "7": "scan"
+          },
+          "support_tuple": "[relative,bytes,SHA8,Gitblob8,state,maskCount,actor,mode]。未保存bytes/SHA/reader/maskCountはnull。全package blobを固定complete treeから列挙。"
+        },
+        "domain": "research598-chunk-v1",
+        "first_ordinal": 268,
+        "limits": {
+          "central_body_or_existence_checks": 0,
+          "common_policy_and_japanese_report_skill_guard_unverified_unread": true,
+          "current_primary_masked_full": 0,
+          "current_primary_raw_full": 3,
+          "new_notice_literal_reads": 2,
+          "new_notice_ordered_full_diff": 1,
+          "old_reader_histories_not_relabelled": true,
+          "package_metadata_records": 33,
+          "saved_unread_support_records": 9,
+          "source_bodies_refetched": 0,
+          "source_script_execution": 0,
+          "unsaved_support_records": 13
+        },
+        "notice_bodies": [
+          {
+            "baseline_bytes": 11357,
+            "baseline_git_blob": "7a4a3ea2424c09fbe48d455aed1eaa94d9124835",
+            "baseline_original_read": [
+              2,
+              0,
+              0,
+              true,
+              true,
+              202
+            ],
+            "baseline_path": "skills/ljglover/skill-creator-0-1-0/LICENSE.txt",
+            "baseline_reader_job": "20261028-154151-todo-3719",
+            "baseline_reader_namespace": "20261028-154151-todo-3719/current3719",
+            "baseline_row": 203,
+            "baseline_sha256": "58d1e17ffe5109a7ae296caafcadfdbe6a7d176f0bc4ab01e12a689b0499d8bd",
+            "bytes": 11558,
+            "consumer_path": "skills/nattsukun/openclaw-skill-creator-th/LICENSE.txt",
+            "consumer_row": 268,
+            "fresh_raw": false,
+            "git_blob": "9b5e4019df618fc47d429529c369f4903142669b",
+            "id": 1,
+            "meaning": "旧203でraw全読したApache2 terms/appendixからの意味差は改行のみ。268をfresh raw読了とはしない。実作者/公開版・第三者資源/CLI等の権利や契約は別。",
+            "ordered_diff": {
+              "all_other_bytes_equal": true,
+              "baseline_CR": 0,
+              "baseline_LF": 201,
+              "changes": "baselineの201個すべてのLF直前へCR1byteを追加。その他変更0。",
+              "head_and_tail_displayed": true,
+              "method": "検証済み両buffer全bytesを順序比較。newのCRを除いた全bufferが既読baselineと完全一致し、全CRがLF直前であることを照合。",
+              "new_CR": 201,
+              "new_LF": 201
+            },
+            "parent_chunk_sha256": "836022e13bf344b5d03714a6da7abd82abd644b6170ae0767ed0648f267be8f1",
+            "parent_receipt": "research3719-chunk-b9336b076e4c4a69e92760629543c132.json",
+            "read": [
+              5,
+              0,
+              0,
+              false,
+              true,
+              202
+            ],
+            "reader_job": "20261028-171959-todo-3719",
+            "reader_namespace": "20261028-171959-todo-3719/current3719",
+            "representative_path": "skills/nattsukun/openclaw-skill-creator-th/LICENSE.txt",
+            "representative_row": 268,
+            "sha256": "49bbe9114e49214df2ccc324cb3ac8d1d1aa1c3a0947f94c286765e86647b32e"
+          },
+          {
+            "bytes": 1063,
+            "consumer_path": "skills/neobotjan2026/twinify/LICENSE.txt",
+            "consumer_row": 269,
+            "fresh_raw": true,
+            "git_blob": "623c0eb72d398cec3255068de556a4986388490e",
+            "id": 2,
+            "meaning": "MITの著作権/許可文保持・無保証を21行全読。実公開版/作者・本人や第三者の会話/人物模倣の同意・LLMやplatform条件は別。",
+            "read": [
+              2,
+              0,
+              0,
+              true,
+              true,
+              21
+            ],
+            "reader_job": "20261028-171959-todo-3719",
+            "reader_namespace": "20261028-171959-todo-3719/current3719",
+            "representative_path": "skills/neobotjan2026/twinify/LICENSE.txt",
+            "representative_row": 269,
+            "sha256": "81d95d81e8aef74b2702d9a555a4701c6388c5658ab89d00d905845d6d429e37"
+          },
+          {
+            "bytes": 1214,
+            "consumer_path": "skills/neverchenx/multi-search/LICENSE.txt",
+            "consumer_row": 270,
+            "fresh_raw": true,
+            "git_blob": "3d433eef729809779c093aba2ec3da26b775d195",
+            "id": 3,
+            "meaning": "CC-BY-NC-SA-4.0表題の要約noticeを全読。帰属/変更表示・非商用・継承と商用license連絡先を記す。リンク先legal code/実権利者・ClawHub実公開版との対応や矛盾は未確認で、rootMIT/補助MIT-0で上書きしない。",
+            "read": [
+              2,
+              0,
+              0,
+              true,
+              true,
+              28
+            ],
+            "reader_job": "20261028-171959-todo-3719",
+            "reader_namespace": "20261028-171959-todo-3719/current3719",
+            "representative_path": "skills/neverchenx/multi-search/LICENSE.txt",
+            "representative_row": 270,
+            "sha256": "c7bae4eb8b8b53adf61c475eb813fb9f0c7e852b91be68e9564e48608abdac47"
+          }
+        ],
+        "prior_journal_sha256": "79486f97592a5dd52d94ab6b957379f1afbfc3a681f472c344eb96618b2ceaeb",
+        "reader_job": "20261028-171959-todo-3719",
+        "reader_todo": 3719,
+        "reading_integrity": {
+          "primary_mask_versions": [
+            [
+              268,
+              7,
+              0
+            ],
+            [
+              269,
+              7,
+              0
+            ],
+            [
+              270,
+              7,
+              0
+            ]
+          ],
+          "primary_ordered_full_ranges": [
+            [
+              268,
+              1,
+              165
+            ],
+            [
+              268,
+              166,
+              330
+            ],
+            [
+              268,
+              331,
+              486
+            ],
+            [
+              269,
+              1,
+              102
+            ],
+            [
+              270,
+              1,
+              331
+            ]
+          ],
+          "same_buffer": {
+            "bytes": true,
+            "git_blob": true,
+            "sha256": true,
+            "strict_utf8": true
+          },
+          "source_original_text_included": false,
+          "support_direct_full": [
+            [
+              269,
+              "references/agents-guide.md",
+              29,
+              0
+            ],
+            [
+              269,
+              "references/anti-examples-guide.md",
+              26,
+              0
+            ],
+            [
+              269,
+              "references/examples-guide.md",
+              35,
+              0
+            ],
+            [
+              269,
+              "references/memory-guide.md",
+              36,
+              0
+            ],
+            [
+              269,
+              "references/soul-guide.md",
+              56,
+              0
+            ]
+          ]
+        },
+        "roster_sha256": "f9c6b2e44c5e3aa8947f758f864eaa0d5edc396d622359826bca848cd96f9901"
+      },
+      "independent_native_metadata_sha256": "45efd1365e95fa0b200a0b9e1d2e719f45fed7d9c996d357e7ddb2ff01fefc77",
+      "independent_parent_journal_record": {
+        "chunk_id": "9c568939eb0bb4e556e1a1035b52d879",
+        "receipt_file": "research3719-chunk-9c568939eb0bb4e556e1a1035b52d879.json",
+        "chunk_sha256": "47777060a37db1391d9d8a5a641039db2470a5f5f3f2721108bc2c80584895a9",
+        "reader_job": "20261028-171959-todo-3719",
+        "first_ordinal": 268,
+        "last_ordinal": 270,
+        "parent_semantic_assessments_read": true
+      },
+      "original_chunk_id": "9c568939eb0bb4e556e1a1035b52d879",
+      "original_fields_losslessly_reconstructed": true,
+      "original_message_sha256": "a2cd7e61eb7ea1e4fbd8c2a1d28a9939d49cbe6e8bd88b1007e46a0cb24d7c63",
+      "original_receipt_sha256": "f21f3a11a214fdda83a7d30914f3dc431c1d5a04ff22cc5e6964688ce7d37fdf",
+      "parent_meaning": {
+        "actual_native_model": "pac24df/gpt-6.1-sol",
+        "actual_native_proof": "research3719-native-actual171959-through270175645.json",
+        "actual_native_sha256": "45efd1365e95fa0b200a0b9e1d2e719f45fed7d9c996d357e7ddb2ff01fefc77",
+        "chunk_id": "9c568939eb0bb4e556e1a1035b52d879",
+        "chunk_sha256": "47777060a37db1391d9d8a5a641039db2470a5f5f3f2721108bc2c80584895a9",
+        "consumer_job": "20261027-175645-todo-3080",
+        "effort": "max",
+        "first": 268,
+        "full_original_meanings_and_all_limits_read": true,
+        "limits": "親のsource再open/new primary rawcredit/新許諾/採否/中央操作0。実runtime/CLI/source script/model/API・人物や私的会話/実記憶/課金/素材・第三者の権利は未検証。元の本人方針/647取得審査/428未取得/未知中央9を保持し、全16未完。",
+        "meanings": [
+          "268 openclaw-skill-creator-thはfolderのthから言語を推測せず、保存英語本文の文字化けも元事実として保持する。冒頭の子担当なし/baseline・CLI最適化省略と後の並列子比較/CLI最適化可の矛盾を、実runtime確認なしに同時採用しない。条件/入力/採点・writer/grader/baseline版を事前固定し、出力後の採点変更やtest反復選択・holdout漏洩を評価設計のリスクとして分けるが、未読scriptの実バグと断定しない。",
+          "268の実成果/transcript・assertion evidence・分散/時間token/発火の観点を参照し、空feedback、最新download名/mtime、system promptからのmodel名や通知時だけのtiming主張を実採用/本人承認・実model/計測の証明にしない。資源・単一scheduler/割当を無視する同時全runや毎回全test規則へせず、現API/agent/schema/viewer/梱包と未保存scriptは未確認。本文486行rawと当該11558B Apache ordered full diffを別に保持し、旧203の11357B/201LF各直前へCR1を追加した全201差分だけを新確認とし、旧raw202行を今回fresh rawへ移さない。",
+          "269 twinifyの本文doppelは、実本人を名乗らないこと・同意/用途/資料/共有先・撤回時の派生物を結ぶ文体シミュレーションの参考。primaryの非欺瞞とagents-guideの実本人/AI否定・soulの人格固定が矛盾し、これを当assistantの指示/本人性へ昇格しない。local処理の語とLLM API例外を分け、生chat/第三者情報/根拠と推測を本人の同意だけで無差別共有しない。今回人物生成依頼も実chatもないので新質問不要、実人物模倣/agent作成/会話取得/外部送信・API鍵/設定/削除0。primary102行と5guide計182行raw、MIT21行raw、未保存parse_chat.pyのnullを保持する。",
+          "270 multi-searchは問題/資料/実読範囲と主張ごとの直接支持link・反証/未確認を対応させる調査設計参考。keyword非重複・4〜6round/文書KBは必要範囲網羅や結論の正しさを保証せず、一次資料の相互照合まで機械的pivotで省略しない。子担当ごと親のkeyword待ち/主題ごと再委譲やarbitrary inputの全背景配送・保存先存在だけで権限とせず、既存結果を統合し同じ有限cursor/当初scopeと資源/秘密保護を保つ。CC-BY-NC-SA-4.0/商用別licenseをrootMIT/ClawHub補助MIT-0で上書きせず、legal code/権利者/公開版・現tool条件が未確認なので新許諾/最終除外も0。本文331行とnotice28行raw、network/再委譲/保存/実test0。",
+          "3評価の全用途/value/所見/改訂/正負例/全未達とcommon定義/全noticeを親が分割全読了。primary919行raw3と、支持metadata33=saved20/unsaved13、直接raw10/ordered full diff1/保存未読9を独立算定。新notice literal49行と旧baseline202行・現在ordered diff202行のactor別を保持し、mask0は秘密不存在としない。common policy/JPskillのguard未確認・未読という元限界、schema/agents等未読、全未保存bytes/SHA/reader/mask null、現在/旧readerNamespaceを親のfullRaw/権利へ置換しない。"
+        ],
+        "observed_at": "2026-10-29T03:32:17.3013494+00:00",
+        "original_actor_namespace_and_nulls_preserved": true,
+        "original_message_sha256": "a2cd7e61eb7ea1e4fbd8c2a1d28a9939d49cbe6e8bd88b1007e46a0cb24d7c63",
+        "producer_job": "20261028-171959-todo-3719",
+        "through": 270
+      },
+      "parent_meaning_sha256": "b652962da3ffb9ff242676efbbf3550a95218bddaa1e8e06b992d95cd570eb6e"
+    },
+    "684350981536b9a164beaba8b37ca183435e7828675a3d7f9b758a90964cb8c2": {
+      "actual_assessment_reader": "20261028-171959-todo-3719",
+      "common": {
+        "boundaries": {
+          "central_operations": 0,
+          "copy_license_accepted": false,
+          "new_final_dispositions": 0,
+          "source_executed": false
+        },
+        "chunk_id": "92c04f316c49ff2a0b9a19f0a8378e71",
+        "definitions": {
+          "actors": {
+            "0": "今回の実assistant読取。notice274/279だけ同chunk273から同bytes再利用。"
+          },
+          "mask_method": "6/7版の表示前のメール・数値/token/hex/UUID等と環境変数置換に、8版は資格header/field/CLI値、9版は追加電話形式、10版は銀行識別形式を追加。maskCountは置換物理行数。0は秘密不存在の証明でない。",
+          "reader_namespace": "20261028-171959-todo-3719/current3719",
+          "states": {
+            "0": "unsaved",
+            "1": "saved_unread",
+            "2": "direct_raw_full",
+            "3": "direct_masked_full",
+            "4": "exact_bytes_reuse",
+            "5": "ordered_full_diff",
+            "6": "partial",
+            "7": "scan"
+          },
+          "support_tuple": "[relative,bytes,SHA8,Gitblob8,state,maskCount,actor,mode]。全package blobを固定complete treeから列挙。未保存bytes/SHA/reader/maskCountはnull。"
+        },
+        "domain": "research598-chunk-v1",
+        "first_ordinal": 271,
+        "limits": {
+          "central_body_or_existence_checks": 0,
+          "common_policy_and_japanese_report_skill_guard_unverified_unread": true,
+          "current_primary_masked_full": 9,
+          "current_primary_raw_full": 3,
+          "new_notice_masked_full": 2,
+          "new_notice_raw_full": 8,
+          "notice_reuse_consumer_records": 2,
+          "package_metadata_records": 127,
+          "saved_unread_support_records": 24,
+          "source_bodies_refetched": 0,
+          "source_script_execution": 0,
+          "unsaved_support_records": 79
+        },
+        "notice_bodies": [
+          {
+            "bytes": 955,
+            "consumers": [
+              [
+                271,
+                "skills/nexaiguy/nex-changelog/LICENSE.txt"
+              ]
+            ],
+            "fresh_literal": true,
+            "fresh_raw": true,
+            "git_blob": "f1382280bc0430d0517df03a3ea2a0633cd81118",
+            "id": 1,
+            "meaning": "MIT-0本文/帰属不要と無保証を18行全読。実公開版/作者・Git履歴/第三者素材の権利は別。",
+            "read": [
+              2,
+              0,
+              0,
+              true,
+              true,
+              18
+            ],
+            "reader_job": "20261028-171959-todo-3719",
+            "reader_namespace": "20261028-171959-todo-3719/current3719",
+            "representative_path": "skills/nexaiguy/nex-changelog/LICENSE.txt",
+            "representative_row": 271,
+            "sha256": "e1b0840adfdac266d258ea8221463c8eab1178b69c6f3bf68d76315b3cf6e75d"
+          },
+          {
+            "bytes": 1080,
+            "consumers": [
+              [
+                272,
+                "skills/nexaiguy/nex-crm/LICENSE.txt"
+              ]
+            ],
+            "fresh_literal": true,
+            "fresh_raw": true,
+            "git_blob": "2374a3479c75ff6f65a7fcd3b92efba534bc089e",
+            "id": 2,
+            "meaning": "MIT-0という表題に対しcopyright/許可文の保持条件を20行本文で明記。表題だけで条件を除去しない。実公開版・第三者data/権利は別。",
+            "read": [
+              2,
+              0,
+              0,
+              true,
+              true,
+              20
+            ],
+            "reader_job": "20261028-171959-todo-3719",
+            "reader_namespace": "20261028-171959-todo-3719/current3719",
+            "representative_path": "skills/nexaiguy/nex-crm/LICENSE.txt",
+            "representative_row": 272,
+            "sha256": "86645c7ed6975b594833e95c15c6e0a5ebac77d4417140f7227b31334d6235c7"
+          },
+          {
+            "bytes": 1446,
+            "consumers": [
+              [
+                273,
+                "skills/nexaiguy/nex-decision-journal/LICENSE.txt"
+              ],
+              [
+                274,
+                "skills/nexaiguy/nex-depcheck/LICENSE.txt"
+              ],
+              [
+                279,
+                "skills/nexaiguy/nex-ghostwriter/LICENSE.txt"
+              ]
+            ],
+            "fresh_literal": true,
+            "fresh_raw": false,
+            "git_blob": "333950a23c0166f8e5225390b6d3670802d55508",
+            "id": 3,
+            "meaning": "35行のAGPL3-or-later案内/無保証・商用別license・ClawHub取得コピーだけMIT-0という二重license表明を全表示読取。連絡先1行伏字、リンク先full legal codeは未読。実公開版と取得経路の対応は未確定。",
+            "read": [
+              3,
+              1,
+              0,
+              false,
+              true,
+              35
+            ],
+            "reader_job": "20261028-171959-todo-3719",
+            "reader_namespace": "20261028-171959-todo-3719/current3719",
+            "representative_path": "skills/nexaiguy/nex-decision-journal/LICENSE.txt",
+            "representative_row": 273,
+            "reuse_consumers": [
+              [
+                274,
+                [
+                  4,
+                  1,
+                  0,
+                  false,
+                  true,
+                  35
+                ]
+              ],
+              [
+                279,
+                [
+                  4,
+                  1,
+                  0,
+                  false,
+                  true,
+                  35
+                ]
+              ]
+            ],
+            "reuse_method": "同chunk row273で実masked全読した同SHA/Gitblob/bytesのnotice。274/279をfresh literalへしない。",
+            "sha256": "07917e55fa8ae285665212ca7ce673d74b15c81c3428cdbace5ec031b3de837e"
+          },
+          {
+            "bytes": 1259,
+            "consumers": [
+              [
+                275,
+                "skills/nexaiguy/nex-domains/LICENSE.txt"
+              ]
+            ],
+            "fresh_literal": true,
+            "fresh_raw": true,
+            "git_blob": "a98b65940268390c1c36dc35cce3d0bd260c0e4d",
+            "id": 4,
+            "meaning": "28行を全読。MIT-0表題ながらnotice保持条件を記し、末尾で保持不要/帰属維持とも述べる内部不整合を保持。表題/rootMIT/補助MIT-0で上書きしない。",
+            "read": [
+              2,
+              0,
+              0,
+              true,
+              true,
+              28
+            ],
+            "reader_job": "20261028-171959-todo-3719",
+            "reader_namespace": "20261028-171959-todo-3719/current3719",
+            "representative_path": "skills/nexaiguy/nex-domains/LICENSE.txt",
+            "representative_row": 275,
+            "sha256": "a4ec360f5ef9ecbbc6da8a7692a6e50e9ef7342c78d4c20bf7e73e0ca50f0d2c"
+          },
+          {
+            "bytes": 920,
+            "consumers": [
+              [
+                276,
+                "skills/nexaiguy/nex-einvoice/LICENSE.txt"
+              ]
+            ],
+            "fresh_literal": true,
+            "fresh_raw": true,
+            "git_blob": "4cb33dc96c9ce3366afd59729e0655243a3b373b",
+            "id": 5,
+            "meaning": "MIT No Attributionの17行を全読。実公開版/作者・請求data/第三者サービスや法的適合は別。",
+            "read": [
+              2,
+              0,
+              0,
+              true,
+              true,
+              17
+            ],
+            "reader_job": "20261028-171959-todo-3719",
+            "reader_namespace": "20261028-171959-todo-3719/current3719",
+            "representative_path": "skills/nexaiguy/nex-einvoice/LICENSE.txt",
+            "representative_row": 276,
+            "sha256": "88583891eec7976986e5434a917f7fa8c4bb753e57f89dec45626eb64cb3a590"
+          },
+          {
+            "bytes": 1184,
+            "consumers": [
+              [
+                277,
+                "skills/nexaiguy/nex-expenses/LICENSE.txt"
+              ]
+            ],
+            "fresh_literal": true,
+            "fresh_raw": true,
+            "git_blob": "15d20f83b94d600d4d47fbee4c70f8483da01db3",
+            "id": 6,
+            "meaning": "25行を全読。MIT-0/無条件という要約と本文の条件導入表現をそのまま保持。link先を読了とせず実公開版/税務data/素材の権利は別。",
+            "read": [
+              2,
+              0,
+              0,
+              true,
+              true,
+              25
+            ],
+            "reader_job": "20261028-171959-todo-3719",
+            "reader_namespace": "20261028-171959-todo-3719/current3719",
+            "representative_path": "skills/nexaiguy/nex-expenses/LICENSE.txt",
+            "representative_row": 277,
+            "sha256": "84355356b5dcac060418f2c150deecc3fd671b2952ba5b25e5a41f60f9d5fbae"
+          },
+          {
+            "bytes": 1105,
+            "consumers": [
+              [
+                278,
+                "skills/nexaiguy/nex-gdpr/LICENSE.txt"
+              ]
+            ],
+            "fresh_literal": true,
+            "fresh_raw": true,
+            "git_blob": "20d9f8c775625baa8be5c375ae7c195616724300",
+            "id": 7,
+            "meaning": "21行全読。MIT-0表題に対しnoticeを含めてはならないという独特な文言がある。通常MIT-0の意味へ黙って訂正/権利確定せず個別不整合として保持。",
+            "read": [
+              2,
+              0,
+              0,
+              true,
+              true,
+              21
+            ],
+            "reader_job": "20261028-171959-todo-3719",
+            "reader_namespace": "20261028-171959-todo-3719/current3719",
+            "representative_path": "skills/nexaiguy/nex-gdpr/LICENSE.txt",
+            "representative_row": 278,
+            "sha256": "f746f03aabfdac0e39d63d63c15817eccf3edf0060f21401b7c791cd304e847f"
+          },
+          {
+            "bytes": 915,
+            "consumers": [
+              [
+                280,
+                "skills/nexaiguy/nex-healthcheck/LICENSE.txt"
+              ]
+            ],
+            "fresh_literal": true,
+            "fresh_raw": true,
+            "git_blob": "8332673913c4a1fdd867370bb1507eda31ca780c",
+            "id": 8,
+            "meaning": "MIT-0本文/無保証18行を全読。実公開版/作者・監視先/第三者サービスの権利や接続許可は別。",
+            "read": [
+              2,
+              0,
+              0,
+              true,
+              true,
+              18
+            ],
+            "reader_job": "20261028-171959-todo-3719",
+            "reader_namespace": "20261028-171959-todo-3719/current3719",
+            "representative_path": "skills/nexaiguy/nex-healthcheck/LICENSE.txt",
+            "representative_row": 280,
+            "sha256": "c483b42bb0275bb72e30c1f7ee7058448cf13119e1e18f45d53d4d6ea7a441a1"
+          },
+          {
+            "bytes": 1101,
+            "consumers": [
+              [
+                281,
+                "skills/nexaiguy/nex-keyring/LICENSE.txt"
+              ]
+            ],
+            "fresh_literal": true,
+            "fresh_raw": true,
+            "git_blob": "69c24dfc02109a1cfd16f3f2a4ba6348942dcdca",
+            "id": 9,
+            "meaning": "MIT-0表題だがcopyright/許可文の保持条件を本文21行で明記。実公開版・資格data/第三者サービスの権利は別。",
+            "read": [
+              2,
+              0,
+              0,
+              true,
+              true,
+              21
+            ],
+            "reader_job": "20261028-171959-todo-3719",
+            "reader_namespace": "20261028-171959-todo-3719/current3719",
+            "representative_path": "skills/nexaiguy/nex-keyring/LICENSE.txt",
+            "representative_row": 281,
+            "sha256": "58ca404d378814e32f33fea584ca5c7eaa147ab733867efad79153b3896e51d5"
+          },
+          {
+            "bytes": 1213,
+            "consumers": [
+              [
+                282,
+                "skills/nexaiguy/nex-life-logger/LICENSE.txt"
+              ]
+            ],
+            "fresh_literal": true,
+            "fresh_raw": false,
+            "git_blob": "6ed623a6fa4b7adea1cd2937814ec2c4a84a0bba",
+            "id": 10,
+            "meaning": "38行のCC-BY-NC4要約と商用は別有料licenseとする案内を全表示読取。連絡先1行伏字、legal codeリンク先は未読。実公開版/権利者・ClawHub補助資料との個別対応は未確定。",
+            "read": [
+              3,
+              1,
+              0,
+              false,
+              true,
+              38
+            ],
+            "reader_job": "20261028-171959-todo-3719",
+            "reader_namespace": "20261028-171959-todo-3719/current3719",
+            "representative_path": "skills/nexaiguy/nex-life-logger/LICENSE.txt",
+            "representative_row": 282,
+            "sha256": "ee5aa5a2b86825d454625ea02fbd133d729c1d1d207f5ebca9c23c7b71624edf"
+          }
+        ],
+        "prior_journal_sha256": "af2edcea632f7e59430de21cdb2017195acaee2896d1492ed6a51c21ceb32e6f",
+        "prior_received_history_audit": {
+          "all_9_representatives_full_read_and_acked_same_SHA_blob_bytes": true,
+          "amendment_receipts": [
+            "research3719-chunk-2257f3becb22587350f9d08e162e4204.json",
+            "research3719-chunk-9ca355cb63466fadcfca8e5592ac3207.json",
+            "research3719-chunk-3015ae05e54443cda27aea6a36c7c96f.json"
+          ],
+          "boundary_mismatches": 0,
+          "continuous_from_1": true,
+          "entries": 267,
+          "full_masked_view_amendments_received_for_all_6": true,
+          "initial_unread_or_partial_rows": [
+            63,
+            78,
+            81,
+            91,
+            92,
+            103
+          ],
+          "metadata_audit_is_not_body_reread": true,
+          "old_primary_reuse_rows": [
+            49,
+            145,
+            157,
+            158,
+            159,
+            166,
+            170,
+            172,
+            177
+          ],
+          "old_states_and_masked_meanings_preserved": true,
+          "receipt_records": 92,
+          "source_tuple_mismatches": 0,
+          "this_job_new_primary_reads_from_audit": 0,
+          "through": 267,
+          "unique_ordinals": 267
+        },
+        "reader_job": "20261028-171959-todo-3719",
+        "reader_todo": 3719,
+        "reading_integrity": {
+          "initial_display_limits": [
+            "272の一部電話形式、276の空白入り銀行識別例の初回未伏字を保持。原値/実在性/所有を再掲・分類せず後続の表示前処理を補った。初回を完全保護へ変更しない。",
+            "272の--value金額が資格用共通置換により抑止された過伏字を保持。"
+          ],
+          "notice_all_consumer_buffers_verified": true,
+          "notice_withheld_lines": [
+            [
+              273,
+              [
+                28
+              ]
+            ],
+            [
+              282,
+              [
+                37
+              ]
+            ]
+          ],
+          "primary_ordered_full_ranges": [
+            [
+              271,
+              1,
+              298,
+              8,
+              1
+            ],
+            [
+              272,
+              1,
+              280,
+              8,
+              2
+            ],
+            [
+              273,
+              1,
+              307,
+              9,
+              0
+            ],
+            [
+              274,
+              1,
+              82,
+              9,
+              1
+            ],
+            [
+              275,
+              1,
+              344,
+              9,
+              2
+            ],
+            [
+              276,
+              1,
+              341,
+              9,
+              7
+            ],
+            [
+              277,
+              1,
+              356,
+              10,
+              0
+            ],
+            [
+              278,
+              1,
+              277,
+              10,
+              4
+            ],
+            [
+              279,
+              1,
+              252,
+              10,
+              5
+            ],
+            [
+              280,
+              1,
+              222,
+              10,
+              5
+            ],
+            [
+              281,
+              1,
+              340,
+              10,
+              1
+            ],
+            [
+              282,
+              1,
+              250,
+              10,
+              0
+            ]
+          ],
+          "primary_withheld_lines": [
+            [
+              271,
+              [
+                176
+              ]
+            ],
+            [
+              272,
+              [
+                66,
+                69
+              ]
+            ],
+            [
+              274,
+              [
+                82
+              ]
+            ],
+            [
+              275,
+              [
+                72,
+                313
+              ]
+            ],
+            [
+              276,
+              [
+                180,
+                181,
+                191,
+                240,
+                241,
+                287,
+                288
+              ]
+            ],
+            [
+              278,
+              [
+                47,
+                48,
+                72,
+                95
+              ]
+            ],
+            [
+              279,
+              [
+                76,
+                94,
+                161,
+                183,
+                207
+              ]
+            ],
+            [
+              280,
+              [
+                77,
+                79,
+                80,
+                82,
+                184
+              ]
+            ],
+            [
+              281,
+              [
+                204
+              ]
+            ]
+          ],
+          "same_buffer": {
+            "bytes": true,
+            "git_blob": true,
+            "sha256": true,
+            "strict_utf8": true
+          },
+          "source_original_text_included": false
+        },
+        "roster_sha256": "f9c6b2e44c5e3aa8947f758f864eaa0d5edc396d622359826bca848cd96f9901"
+      },
+      "independent_native_metadata_sha256": "36caf554505c5d137da0087ad14e953998a41ea6196f8f29cbd6a4190e54c8cb",
+      "independent_parent_journal_record": {
+        "chunk_id": "92c04f316c49ff2a0b9a19f0a8378e71",
+        "receipt_file": "research3719-chunk-92c04f316c49ff2a0b9a19f0a8378e71.json",
+        "chunk_sha256": "684350981536b9a164beaba8b37ca183435e7828675a3d7f9b758a90964cb8c2",
+        "reader_job": "20261028-171959-todo-3719",
+        "first_ordinal": 271,
+        "last_ordinal": 282,
+        "parent_semantic_assessments_read": true
+      },
+      "original_chunk_id": "92c04f316c49ff2a0b9a19f0a8378e71",
+      "original_fields_losslessly_reconstructed": true,
+      "original_message_sha256": "6165f2278bfac147336a3cc1d6e5f9c300cf993866e5e23932d481e06dc5c5fb",
+      "original_receipt_sha256": "9e0a76eafbadd037d65723c450478a1091ff9e3a5966e8b46ae52c1243b42d35",
+      "parent_meaning": {
+        "actual_native_model": "pac24df/gpt-6.1-sol",
+        "actual_native_proof": "research3719-native-actual171959-through282175645.json",
+        "actual_native_sha256": "36caf554505c5d137da0087ad14e953998a41ea6196f8f29cbd6a4190e54c8cb",
+        "chunk_id": "92c04f316c49ff2a0b9a19f0a8378e71",
+        "chunk_sha256": "684350981536b9a164beaba8b37ca183435e7828675a3d7f9b758a90964cb8c2",
+        "consumer_job": "20261027-175645-todo-3080",
+        "effort": "max",
+        "first": 271,
+        "full_original_meanings_and_all_limits_read": true,
+        "limits": "親の原source新規raw読取/新許諾/採否/中央操作0。実法令/税務適合、未読script/全package、実機・API・第三者権利は未検証。428/647/未知中央9と全16未完を保持する。",
+        "meanings": [
+          "271 changelogはcommit分類と実release・公開安全性・配送を分け、merge/revert/breaking/欠測と実版を対応させる。worktreeの.git形状や無通信/telemetryは未保存scriptから不明。MIT-0 notice18行の条件と第三者権利を区別し、source install/export/送信0。",
+          "272 CRMは会社/連絡先と自然文からの同定・金額/段階/次回日時の推定を実行許可や売上/支払へしない。next Thursdayを固定7日へせず絶対時刻と対象を確認する。初回の一部電話形式の未伏字と金額過伏字を原限界として保持し、原値/実在性/所有は再掲・推測しない。MIT-0表題より本文のcopyright/許可文保持条件を優先して記録し、中央/顧客DB/外部操作0。",
+          "273 decision journalは結果前の予測・条件/期限・未確定と後日の判断を版で分け、後から編集した採点を校正精度としない。AIによる例の価格決定を本人回答や実製品方針へしない。1〜10 confidence/quarter主張と期間条件・未測定を区別する。AGPL3-or-later/商用別とClawHub由来のみMIT-0という表明は取得経路・実公開版対応未確定、legal code未読、notice35行の連絡先1行伏字のまま。",
+          "274 depcheckは静的importやstdlib分類を依存不存在・無通信・安全性/機能の証明とせず、未保存scannerの実装を未確認とする。全Skills走査へ権限を広げず、既存配布Python実行と新規開発方針を分ける。個別noticeは273の同bytesをexact reuseしたものでfresh rawではなく、AGPL/ClawHub対応未確定を維持。",
+          "275 domainsはsourceのCloudflare/TransIP等の手順をRakko以外の表示/WHOIS/DNS/HTTP/SSLアクセスの許可へしない。zoneとregistrar所有・local登録と実更新/解約、timeout/空応答と不存在、証明書属性と業務稼働を分ける。期間と費用/更新警告の実動作も未確認。個別notice28行の保持要/不要の内部不整合をrootMITで上書きせず、実ドメイン操作0。",
+          "276 einvoiceは保存されたBelgianB2B/Peppol/VIES/税務主張を現行の適用法・請求適合へしない。5×95=475と21%で574.75なのに575という例の不一致、固定日付/四半期、丸め/credit/番号/並行性は実利用時に確認する。XML生成/sent/paidは配送/決済ではない。初回の空白入り銀行識別例の表示限界を保持し原値/実在性/所有は再掲しない。個別MIT-0本文17行の読了と法適合・第三者サービス権利を分ける。",
+          "277 expensesはOCR抽出と確定経費・税込/税抜/通貨・複数税率/返金/重複や元証拠を結び、vendor/confidence/既定21%だけで控除を決めない。年全体/金額順位を四半期/訪問回数と答えず、force削除で必要原本や変更履歴を失わせない。非カード請求情報の既存許可と実カード禁止を分ける。個別notice25行の要約と条件導入文を勝手に通常MIT-0へ修正せず、実経費/支払/原資料操作0。",
+          "278 GDPRはVERIFIED/COMPLETED flagや30/60日・3pass・append-only記載を実本人照合/法的適合/全複製消去・回答済みとしない。部分一致で全私的memory/log/他人共有データを消さず、対象/保持例外/部分失敗/期限/配送・再照合と未検証scriptを分ける。個別notice21行の『noticeを含めてはならない』という不整合は黙って訂正せず保持し、実私的scan/export/erase0。",
+          "279 ghostwriterは原会議で合意していない宛先/姓/担当/締切/新約束を補完せず、元メモと全draft/tone/edit・実送信bytesを版で結ぶ。draft/sent flagを実配送/合意へせず、sourceのstaging例はPrd限定を変えない。273noticeの同bytes reuseと公開版/経路未確定を維持し、会議/連絡先/実送信0。",
+          "280 healthcheckはlocal起動とHTTP/DNS/SSH/Telegram等外部通信を分け、任意ssh_cmdや保存鍵を他Org/旧勤務先への接続許可にしない。登録/最終観測/古い緑/200/TCP/process/SSLの観測範囲と実業務/定期復帰/通知配送を区別し、uptime期間/分母/欠測を未検証のまま保持する。個別MIT-0本文18行が接続許可を付与するものではなく実監視/network/常駐設定0。",
+          "281 keyringはhash保存という宣伝とFernet/base64難読化の記載を分け、base64を暗号化にせず、未保存実装の秘密読取/保存/exportを未確認にする。metadata-onlyの名で全.env/資格を読まず、更新記録/年齢色をprovider発行・失効/consumer切替・漏洩不存在の証明にしない。CC_JOB_ID以外のenv列挙0、実鍵/保管庫/API0。MIT-0表題でもcopyright/許可文保持条件21行を保持する。",
+          "282 life loggerはDB不在/setupを全browser/window/history収集・常駐開始の承認にせず、local/除外filterの主張と外部YouTube/LLM/APIキー送信の作用を分ける。件数を時間/last1dを昨日午後/since Marchを全3月として答えず、観測期間/欠測/推定/派生物とscopeを対応させる。CC-BY-NC4要約38行の1行伏字、legal code/商用許可未確認・有料別契約を保持し、実history/secret/collector/契約0。",
+          "12評価の用途/value/全所見・改訂・正負例/全支持metadata、共通定義/全10notice/再利用・初回表示限界を親が分割全読。primary3349物理3321可視28伏字、raw3/masked9。支持127=saved48/unsaved79、直接raw11/masked11/reuse2/saved未読24を別計数。notice274/279は273同bytes reuseでfresh0、原actor/current namespace/全nullを保持。過去267監査はmetadata照合で再本文読取ではなく、過去amendmentと旧reuseを維持。common policy/JPskillのguard未確認・未読という原限界を親の読了へ書換えない。"
+        ],
+        "observed_at": "2026-10-29T03:59:38.8334434+00:00",
+        "original_actor_namespace_and_nulls_preserved": true,
+        "original_message_sha256": "6165f2278bfac147336a3cc1d6e5f9c300cf993866e5e23932d481e06dc5c5fb",
+        "producer_job": "20261028-171959-todo-3719",
+        "through": 282
+      },
+      "parent_meaning_sha256": "fdcea7313db9414ceb1c14c93829a0cc0444db48554ffc01638757364c9f859e"
+    },
+    "90ac9c0536aad1cecbcf81b61d3aad3d8b1ef43c52a4774be12a0b7b5182c16d": {
+      "actual_assessment_reader": "20261028-171959-todo-3719",
+      "common": {
+        "boundaries": {
+          "central_operations": 0,
+          "copy_license_accepted": false,
+          "new_final_dispositions": 0,
+          "source_executed": false
+        },
+        "chunk_id": "6305e27a53444270fc0911517f96ae5a",
+        "definitions": {
+          "actors": {
+            "0": "今回の実assistant読取。notice286は同job273の実masked全読へ結ぶ。",
+            "1": "notice288代表の旧実reader 20261025-041905-todo-3719/current3719。"
+          },
+          "mask_method": "11版。既存6版/環境変数・資格header/field/CLI・UUID/電話・銀行識別形式を表示前置換。--valueは資格contextのみへ狭め、金額の過伏字を抑える。maskCountは置換物理行数、0は秘密不存在の証明でない。",
+          "reader_namespace": "20261028-171959-todo-3719/current3719",
+          "states": {
+            "0": "unsaved",
+            "1": "saved_unread",
+            "2": "direct_raw_full",
+            "3": "direct_masked_full",
+            "4": "exact_bytes_reuse",
+            "5": "ordered_full_diff",
+            "6": "partial",
+            "7": "scan"
+          },
+          "support_tuple": "[relative,bytes,SHA8,Gitblob8,state,maskCount,actor,mode]。全treeの当package blobを列挙。未保存bytes/SHA/reader/maskCountはnull。"
+        },
+        "domain": "research598-chunk-v1",
+        "first_ordinal": 283,
+        "limits": {
+          "central_body_or_existence_checks": 0,
+          "common_policy_and_japanese_report_skill_guard_unverified_unread": true,
+          "current_primary_masked_full": 3,
+          "current_primary_raw_full": 3,
+          "new_notice_literal_reads": 4,
+          "notice_reuse_consumer_records": 2,
+          "package_metadata_records": 68,
+          "saved_unread_support_records": 13,
+          "source_bodies_refetched": 0,
+          "source_script_execution": 0,
+          "unsaved_support_records": 42
+        },
+        "notice_bodies": [
+          {
+            "bytes": 1125,
+            "consumer_path": "skills/nexaiguy/nex-pricewatch/LICENSE.txt",
+            "consumer_row": 283,
+            "fresh_raw": true,
+            "git_blob": "fbc000251bb0e1124990610fc44999b2a2a38d2c",
+            "id": 1,
+            "meaning": "23行のMIT-0許可/無保証と末尾解説を全読。案内先URLが0BSDというslugである点も保持し、リンク先未読/実公開対応・第三者data権利を別にする。",
+            "read": [
+              2,
+              0,
+              0,
+              true,
+              true,
+              23
+            ],
+            "reader_job": "20261028-171959-todo-3719",
+            "reader_namespace": "20261028-171959-todo-3719/current3719",
+            "representative_path": "skills/nexaiguy/nex-pricewatch/LICENSE.txt",
+            "representative_row": 283,
+            "sha256": "3096357fc68e09836e132495ef8d0504a9b3f5cdde4d535e613dfedf039fa164"
+          },
+          {
+            "bytes": 1071,
+            "consumer_path": "skills/nexaiguy/nex-reports/LICENSE.txt",
+            "consumer_row": 284,
+            "fresh_raw": true,
+            "git_blob": "228cfaf20548d03d0bb53084e200e73261ef12ab",
+            "id": 2,
+            "meaning": "23行全読。MIT-0表題/条件導入・無保証に、Free Public License 1.0.0とも呼ぶという要約と帰属不要を記載する。実公開版/権利者・第三者data/service条件は別。",
+            "read": [
+              2,
+              0,
+              0,
+              true,
+              true,
+              23
+            ],
+            "reader_job": "20261028-171959-todo-3719",
+            "reader_namespace": "20261028-171959-todo-3719/current3719",
+            "representative_path": "skills/nexaiguy/nex-reports/LICENSE.txt",
+            "representative_row": 284,
+            "sha256": "f673316cf2440f9a9f1db4f748f6f6cf48b4342a87da752efb44ac42ea133181"
+          },
+          {
+            "bytes": 1105,
+            "consumer_path": "skills/nexaiguy/nex-skillmon/LICENSE.txt",
+            "consumer_row": 285,
+            "fresh_raw": true,
+            "git_blob": "e62d153d035ae8ebb35533167aae94d52be77281",
+            "id": 3,
+            "meaning": "21行全読。MIT-0/No Attribution表題と異なり本文にcopyright/許可文保持条件がある。個別不整合をrootMIT/補助MIT-0で上書きせず実適用未確定。",
+            "read": [
+              2,
+              0,
+              0,
+              true,
+              true,
+              21
+            ],
+            "reader_job": "20261028-171959-todo-3719",
+            "reader_namespace": "20261028-171959-todo-3719/current3719",
+            "representative_path": "skills/nexaiguy/nex-skillmon/LICENSE.txt",
+            "representative_row": 285,
+            "sha256": "532dc274abd7b611ca7a6854a18b59bd71162758eb82669f61322388205bc426"
+          },
+          {
+            "bytes": 1446,
+            "consumer_path": "skills/nexaiguy/nex-timetrack/LICENSE.txt",
+            "consumer_row": 286,
+            "fresh_raw": false,
+            "git_blob": "333950a23c0166f8e5225390b6d3670802d55508",
+            "id": 4,
+            "meaning": "273で実masked全読のAGPL3-or-later/商用別license・ClawHub由来コピーだけMIT-0の同1446B noticeを再利用。連絡先1行の伏字/未読と実公開版/取得経路の未確定を保持。",
+            "parent_chunk_sha256": "684350981536b9a164beaba8b37ca183435e7828675a3d7f9b758a90964cb8c2",
+            "parent_receipt": "research3719-chunk-92c04f316c49ff2a0b9a19f0a8378e71.json",
+            "read": [
+              4,
+              1,
+              0,
+              false,
+              true,
+              35
+            ],
+            "reader_job": "20261028-171959-todo-3719",
+            "reader_namespace": "20261028-171959-todo-3719/current3719",
+            "representative_path": "skills/nexaiguy/nex-decision-journal/LICENSE.txt",
+            "representative_read": [
+              3,
+              1,
+              0,
+              false,
+              true,
+              35
+            ],
+            "representative_row": 273,
+            "sha256": "07917e55fa8ae285665212ca7ce673d74b15c81c3428cdbace5ec031b3de837e"
+          },
+          {
+            "bytes": 973,
+            "consumer_path": "skills/nexaiguy/nex-voice/LICENSE.txt",
+            "consumer_row": 287,
+            "fresh_raw": true,
+            "git_blob": "9049fdc5a62dd2683ef2c5bc49b0ea1254158e7b",
+            "id": 5,
+            "meaning": "18行のMIT No Attribution表題・許可と条件導入/無保証を全読。実公開版/作者・Whisper/FFmpeg/音声・第三者話者やサービスの権利は別。",
+            "read": [
+              2,
+              0,
+              0,
+              true,
+              true,
+              18
+            ],
+            "reader_job": "20261028-171959-todo-3719",
+            "reader_namespace": "20261028-171959-todo-3719/current3719",
+            "representative_path": "skills/nexaiguy/nex-voice/LICENSE.txt",
+            "representative_row": 287,
+            "sha256": "23c2e907651b36f0569f8f8066b1c11add9a5d13b6854a7e290f66af2d78b055"
+          },
+          {
+            "bytes": 1467,
+            "consumer_path": "skills/nicky1108/x-92bilal26-pdf/LICENSE.txt",
+            "consumer_row": 288,
+            "fresh_raw": false,
+            "git_blob": "c55ab42224874608473643de0a85736b7fec0730",
+            "id": 6,
+            "meaning": "旧7の実raw全読のProprietary/Anthropic契約参照と追加制限を同SHA/Gitblob/bytesで再利用。現在loader行数30で旧31行を上書きしない。実公開版/権利者・ClawHub補助規定との対応は未確定。",
+            "parent_chunk_sha256": "8ab87b1cc64e782270bbcfca75177c4e1cc12f41a1b453cfa72e253b3c8f6483",
+            "parent_receipt": "research3719-chunk-87912b9a9c5ed98bd263458bd902dfc6.json",
+            "read": [
+              4,
+              0,
+              1,
+              false,
+              true,
+              31
+            ],
+            "reader_job": "20261025-041905-todo-3719",
+            "reader_namespace": "20261025-041905-todo-3719/current3719",
+            "representative_original_read": [
+              2,
+              0,
+              0,
+              true,
+              true,
+              31
+            ],
+            "representative_path": "skills/binbin/docx-cn-1-0-1/LICENSE.txt",
+            "representative_row": 7,
+            "sha256": "79f6d8f5b427252fa3b1c11ecdbdb6bf610b944f7530b4de78f770f38741cfaa"
+          }
+        ],
+        "prior_journal_sha256": "066b18637f81c98ed3cb87a7c65314bff9f15d6b2f0222fb8dd72f08c4a346ed",
+        "reader_job": "20261028-171959-todo-3719",
+        "reader_todo": 3719,
+        "reading_integrity": {
+          "primary_ordered_full_ranges": [
+            [
+              283,
+              1,
+              346,
+              11,
+              1
+            ],
+            [
+              284,
+              1,
+              195,
+              11,
+              2
+            ],
+            [
+              285,
+              1,
+              215,
+              11,
+              0
+            ],
+            [
+              286,
+              1,
+              154,
+              11,
+              2
+            ],
+            [
+              287,
+              1,
+              273,
+              11,
+              0
+            ],
+            [
+              288,
+              1,
+              294,
+              11,
+              0
+            ]
+          ],
+          "primary_withheld_lines": [
+            [
+              283,
+              [
+                210
+              ]
+            ],
+            [
+              284,
+              [
+                130,
+                134
+              ]
+            ],
+            [
+              286,
+              [
+                136,
+                154
+              ]
+            ]
+          ],
+          "same_buffer": {
+            "bytes": true,
+            "git_blob": true,
+            "sha256": true,
+            "strict_utf8": true
+          },
+          "source_original_text_included": false,
+          "support_direct_full": [
+            [
+              288,
+              "forms.md",
+              9438,
+              "0ab10e9095deb1c1f9f79eb04254589f55c1d16e095cb53191e03f9fc3184449",
+              "4e234506dcb180158eeb7e057f7c576c263a2d43",
+              2,
+              0,
+              205
+            ]
+          ]
+        },
+        "roster_sha256": "f9c6b2e44c5e3aa8947f758f864eaa0d5edc396d622359826bca848cd96f9901"
+      },
+      "independent_native_metadata_sha256": "faa1e3f34b4780daec4b3843368aa4b6fc5b5723ef5b60d0dfce3c659e1156de",
+      "independent_parent_journal_record": {
+        "chunk_id": "6305e27a53444270fc0911517f96ae5a",
+        "receipt_file": "research3719-chunk-6305e27a53444270fc0911517f96ae5a.json",
+        "chunk_sha256": "90ac9c0536aad1cecbcf81b61d3aad3d8b1ef43c52a4774be12a0b7b5182c16d",
+        "reader_job": "20261028-171959-todo-3719",
+        "first_ordinal": 283,
+        "last_ordinal": 288,
+        "parent_semantic_assessments_read": true
+      },
+      "original_chunk_id": "6305e27a53444270fc0911517f96ae5a",
+      "original_fields_losslessly_reconstructed": true,
+      "original_message_sha256": "c8b490b111fe57f185a285cc56064cde7f37ef9d4495a767de166bc2d824650f",
+      "original_receipt_sha256": "f96eb3b55ec4fcf1b86d980701a72e45d80e2d64183ec441bcf98b44961addc7",
+      "parent_meaning": {
+        "actual_native_model": "pac24df/gpt-6.1-sol",
+        "actual_native_proof": "research3719-native-actual171959-through288175645.json",
+        "actual_native_sha256": "faa1e3f34b4780daec4b3843368aa4b6fc5b5723ef5b60d0dfce3c659e1156de",
+        "chunk_id": "6305e27a53444270fc0911517f96ae5a",
+        "chunk_sha256": "90ac9c0536aad1cecbcf81b61d3aad3d8b1ef43c52a4774be12a0b7b5182c16d",
+        "consumer_job": "20261027-175645-todo-3080",
+        "effort": "max",
+        "first": 283,
+        "full_original_meanings_and_all_limits_read": true,
+        "limits": "親のsource新規raw読取・新許諾/最終採否/中央0。保存資料の価格/税・法適合/契約/secret不存在/現API/CLI・全packageと第三者権利は未確認。428/647/未知中央9と全16未完を保持。",
+        "meanings": [
+          "283 pricewatchはCSS/XPathの一般主張とsimple/regex/JS表示の実対応を分ける。同じ商品variant/地域/通貨/税込送料・単位/周期と原表示/時刻を固定し、金利率を商品価格として比較しない。空抽出/複数/エラー/旧0からの変化を値下げとせず、interval/alert登録を実定期実行/配送へしない。MIT-0本文23行と0BSD案内slugの違いを保持しリンク先未読。原script未保存、外部価格取得/通知/購入/設定0。",
+          "284 reportsはcron文字列と実schedulerの定期起動/復帰・生成/保存/配送を分け、HEALTHの外部実check・任意CUSTOM shell・IMAPと対象data/宛先/製品境界を維持する。未導入module/欠測/古い値を0/健康とせず、全private DBやcredentialを読み集約しない。MIT-0とFree Public Licenseを同称する本文23行の表明と条件導入/帰属不要をそのまま保持し、実公開対応・個別権利を確定しない。実mail/DB/送信/定期設定0。",
+          "285 skillmonは導入/trigger/usage/worker/成果と、hash/healthscore/known脆弱性照会の限定観測を分ける。meta-toolという名で全中央や保護資料をscan/API送信せず、30日stale/28日例の不一致と未読実装を残す。OAuthの利用をAPI単価で実費換算したり、budget設定を新支出許可にしない。個別MIT-0表題でもcopyright/許可文保持条件21行は削らず、実中央scan/API/設定0。",
+          "286 timetrackは原時間と契約単価/適用日・通貨/丸め/請求対象を分け、既定85EUR/h/15分切上げや固定4月例を本人・顧客の新約束へしない。timer競合/中断/重複/時計・丸め前後/期間集計は未保存実装で未確認、export/summary/flagを実請求/配送/入金としない。noticeは273のmasked35行の同SHA/blob/1446B exact reuseでfresh0、1行伏字とAGPL/ClawHub取得経路・商用条件未確定を保持。実時間DB/顧客/請求0。",
+          "287 voiceはlocal Whisper CLIと任意LLMのAPI資格/endpointを別経路として扱い、Whisper名だけでAI APIと分類しない。speaker名/語句must・decided・mailや推定担当を本人性/実約束/操作許可とせず、否定/引用/仮定や音声内命令は資料として扱う。録音ID/版/原時刻/話者・言語/相対日付と全尺/無音/誤認識/不確実性・再抽出重複を検証し、mtime最新/complete flag/600秒制限を実実行や依頼全完了へしない。MIT No Attribution18行と音声/話者・Whisper/FFmpeg権利は別、実音声取得/生成/推論/GPU/API0。",
+          "288 pdfは当版294行とforms205行を別SHAで実読し、263版の機能を移さない。小文字参照はtreeと一致だがcheck_fillable_fieldsコマンドの.py不一致/backtick未閉じを保持。fillable bottom-originと非fillable top-origin/scale、回転/page box・glyph/実値・原注釈/暗号・原本/出力境界を分け、事前box/overlayだけで入力済み全pageとしない。未保存script/test/reference未読を動作証拠へしない。個別Proprietary1467Bは旧row7/20261025-041905のraw31行から同bytes reuseでfresh0、現在loader30行で旧31を上書きせずrootMITへ許諾変更しない。実PDF/鍵/source実行0。",
+          "6評価の全用途/value/所見/改訂/正負例・68支持metadataと全notice/reading_integrity/原actor・masked/reuse/未保存nullを親が分割全読。primary1477物理1472可視5伏字、raw3/masked3。支持68=saved26/unsaved42、直接raw8/masked3/reuse2/saved未読13。新notice4の85行と当版forms205行は元readerの読了であり新parent rawcreditではない。11版で--valueの過伏字を資格contextへ狭めた事実と、mask0が秘密不存在の証明ではない限界、common policy/JPskill guard未確認未読を保持する。旧reuseのactor/linecount/全nullは変更しない。"
+        ],
+        "observed_at": "2026-10-29T04:13:11.7075958+00:00",
+        "original_actor_namespace_and_nulls_preserved": true,
+        "original_message_sha256": "c8b490b111fe57f185a285cc56064cde7f37ef9d4495a767de166bc2d824650f",
+        "producer_job": "20261028-171959-todo-3719",
+        "through": 288
+      },
+      "parent_meaning_sha256": "be14c84308e795456a3466085423ea1af00ae608df43b1907e6c222eeb96240a"
+    }
+  },
+  "spec_sha256": "4f6fe32f62db56bed2acb4d378147ff952ad06230243fb45f7674f3158313fc3",
+  "support_metadata_records": 228,
+  "through": 288,
+  "unsaved_support_metadata": 134,
+  "whole16_complete": false
+}

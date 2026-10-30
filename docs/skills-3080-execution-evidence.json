@@ -397,12 +397,22 @@
       "file": "skills-3080-primaryflow-next13-plus-held1-after216-evaluation095653.json",
       "sha256": "fcf47aad13ee0d1fd342411f16070e449c7e04b3884502b9405a24002211a673",
       "rows": 13
+    },
+    {
+      "file": "skills-3080-openai6-site-integrations095653.json",
+      "sha256": "15d76290403166d9dab64ddd6ca292fe30f1ea99f668c10dce4593568e37ae89",
+      "rows": 6
+    },
+    {
+      "file": "skills-3080-primaryflow-next18-after230-evaluation095653.json",
+      "sha256": "02775423e57ab88a02f49158b96f50b12d8e59ca31d94014b064e7a0e2a0bba5",
+      "rows": 18
     }
   ],
   "adoption_ledger": {
     "file": "skills-3080-adoptions.json",
-    "sha256": "e3da5440e65e63c76b860000c8bc7a875f32caed480f7217b6b443343275efb9",
-    "rows": 188
+    "sha256": "f2dddb6f978ef1b1690e54d12e855dac0df6e0b3ab40cfad2f572c8208ada4c7",
+    "rows": 194
   },
   "definition": "Assessment record references and existing final decisions only. No semantic/individual licence approval is inherited through equal bytes. The fixed catalog remains the complete occurrence universe; all holds are retained."
 }

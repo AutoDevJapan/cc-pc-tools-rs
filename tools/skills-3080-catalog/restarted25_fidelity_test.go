@@ -32,18 +32,29 @@ type resumedPlanMember struct {
 }
 
 func validateResumedThirteenAndHeld(v map[string]any) error {
+	return validateResumedVisibleSnapshot(v, 13, 1, 14, 3,
+		map[string]any{"records": float64(216), "sha256": "abc54e47f783c03ecb1e235a2b556e191b0d215f285148c698d7373e393d14a6", "all_records_and64_original_contexts_exactly_retained": true},
+		map[string]any{"records": float64(229), "held_groups": float64(1), "acknowledged_groups": float64(230), "original_packets": float64(67), "sha256": "9b34f3cec8b9895826d64cc289a5c41736f75c36e16f87d58834afa38303be0e"},
+		map[string][5]string{
+			"77584462e0028ffd4941707f2341d0ac9efce930717ae20ee805aac6327f69aa": {"20261029-174543-todo-4133", "20261029-170905-todo-3080", "p5a4c66/gpt-6.1-sol", "9336a02f41b267d04f4f406815ff048938055a11ea4582f8514d79708881c9ff", "20261029-170905-todo-3080"},
+			"c5866fcb34261c82de2d1c0825eddc6d78a21bc05110e39c93a4592ac84c4489": {"20261029-174632-todo-4134", "20261029-170905-todo-3080", "gpt-6.1-sol", "b0bfc631a8d355a1c406003da7c417b668dabd49dccf48b1d11ffa18a3132b72", "20261029-170905-todo-3080"},
+			"19665e6f7aab6488fa8c1e224cc2f4999c4a18a5830b8c402b28a379fdc2c3f3": {"20261030-033405-todo-4134", "20261030-095653-todo-3080", "gpt-6.1-sol", "b0bfc631a8d355a1c406003da7c417b668dabd49dccf48b1d11ffa18a3132b72", ""},
+		})
+}
+
+func validateResumedVisibleSnapshot(v map[string]any, semanticCount, heldCount, expectedMembers, packetCount int, prior, current map[string]any, actors map[string][5]string) error {
 	if err := next4Fields(v, map[string]any{
 		"domain": "skills3080-primaryflow-parent-shared-snapshot-v1", "publisher_job": "20261030-095653-todo-3080",
-		"representative_body_groups": float64(13), "acknowledged_body_groups": float64(14), "held_body_groups": float64(1),
-		"bound_member_metadata": float64(14), "complete_original_packets": float64(3),
+		"representative_body_groups": float64(semanticCount), "acknowledged_body_groups": float64(semanticCount + heldCount), "held_body_groups": float64(heldCount),
+		"bound_member_metadata": float64(expectedMembers), "complete_original_packets": float64(packetCount),
 		"all_original_packets_losslessly_reconstructed": true, "all_member_contexts_read": false, "all_member_rights_confirmed": false, "whole16_complete": false,
 	}); err != nil {
 		return err
 	}
-	if err := next4Fields(next4Object(v["prior_snapshot"]), map[string]any{"records": float64(216), "sha256": "abc54e47f783c03ecb1e235a2b556e191b0d215f285148c698d7373e393d14a6", "all_records_and64_original_contexts_exactly_retained": true}); err != nil {
+	if err := next4Fields(next4Object(v["prior_snapshot"]), prior); err != nil {
 		return err
 	}
-	if err := next4Fields(next4Object(v["current_snapshot"]), map[string]any{"records": float64(229), "held_groups": float64(1), "acknowledged_groups": float64(230), "original_packets": float64(67), "sha256": "9b34f3cec8b9895826d64cc289a5c41736f75c36e16f87d58834afa38303be0e"}); err != nil {
+	if err := next4Fields(next4Object(v["current_snapshot"]), current); err != nil {
 		return err
 	}
 	prep := next4Object(v["publication_preparation"])
@@ -56,8 +67,8 @@ func validateResumedThirteenAndHeld(v map[string]any) error {
 	entries, eok := v["entries"].([]any)
 	held, hok := v["held_records"].([]any)
 	contexts := next4Object(v["shared_original_contexts"])
-	if !rok || !eok || !hok || len(records) != 13 || len(entries) != 13 || len(held) != 1 || len(contexts) != 3 {
-		return fmt.Errorf("13 semantic entries and one separate unread group required")
+	if !rok || !eok || !hok || len(records) != semanticCount || len(entries) != semanticCount || len(held) != heldCount || len(contexts) != packetCount || len(actors) != packetCount {
+		return fmt.Errorf("fixed semantic entries, separate held groups and original packets required")
 	}
 	groups := map[string][]any{}
 	rowsByOrdinal := map[string]map[string]any{}
@@ -140,17 +151,11 @@ func validateResumedThirteenAndHeld(v map[string]any) error {
 		if err != nil || travel3Digest(b) != sha || common["parent_origin_job"] != "20261027-175645-todo-3080" || c["all_original_fields_reconstructed"] != true {
 			return fmt.Errorf("complete original packet changed")
 		}
-		reader, consumer, model, spec, parent := "", "", "", "", ""
-		switch sha {
-		case "77584462e0028ffd4941707f2341d0ac9efce930717ae20ee805aac6327f69aa":
-			reader, consumer, model, spec, parent = "20261029-174543-todo-4133", "20261029-170905-todo-3080", "p5a4c66/gpt-6.1-sol", "9336a02f41b267d04f4f406815ff048938055a11ea4582f8514d79708881c9ff", "20261029-170905-todo-3080"
-		case "c5866fcb34261c82de2d1c0825eddc6d78a21bc05110e39c93a4592ac84c4489":
-			reader, consumer, model, spec, parent = "20261029-174632-todo-4134", "20261029-170905-todo-3080", "gpt-6.1-sol", "b0bfc631a8d355a1c406003da7c417b668dabd49dccf48b1d11ffa18a3132b72", "20261029-170905-todo-3080"
-		case "19665e6f7aab6488fa8c1e224cc2f4999c4a18a5830b8c402b28a379fdc2c3f3":
-			reader, consumer, model, spec = "20261030-033405-todo-4134", "20261030-095653-todo-3080", "gpt-6.1-sol", "b0bfc631a8d355a1c406003da7c417b668dabd49dccf48b1d11ffa18a3132b72"
-		default:
+		actor, ok := actors[sha]
+		if !ok {
 			return fmt.Errorf("unexpected original packet")
 		}
+		reader, consumer, model, spec, parent := actor[0], actor[1], actor[2], actor[3], actor[4]
 		ack := next4Object(c["independent_parent_ack"])
 		meaning := next4Object(c["independent_parent_meaning"])
 		native := next4Object(c["independent_native_metadata"])
@@ -203,8 +208,8 @@ func validateResumedThirteenAndHeld(v map[string]any) error {
 			}
 		}
 	}
-	if memberCount != 14 {
-		return fmt.Errorf("all14 individual member contexts must remain pending")
+	if memberCount != expectedMembers {
+		return fmt.Errorf("all individual member contexts must remain pending")
 	}
 	return nil
 }

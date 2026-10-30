@@ -142,7 +142,7 @@ func loadExecutionEvidence(root string, m ExecutionManifest) (ExecutionEvidence,
 		}
 		own := map[string]bool{}
 		for row, r := range a.Entries {
-			if r.ID == "" || own[r.ID] || !evidenceHex(r.SHA, 64) || !evidencePath(r.Path) {
+			if r.ID == "" || own[r.ID] || !evidenceHex(r.SHA, 64) {
 				return e, errors.New("invalid assessment identity")
 			}
 			own[r.ID] = true
@@ -151,6 +151,13 @@ func loadExecutionEvidence(root string, m ExecutionManifest) (ExecutionEvidence,
 			}
 			if err := normalizeExecutionRepository(&r); err != nil {
 				return e, err
+			}
+			// A site occurrence can retain its genuinely unknown Git tuple.
+			// Its resolved upstream is separate evidence, never a replacement
+			// for the site's missing repository, commit or path.
+			unknownSiteTuple := strings.HasPrefix(r.ID, "site:") && r.SourceRepo == "" && r.Commit == "" && r.Path == ""
+			if !unknownSiteTuple && !evidencePath(r.Path) {
+				return e, errors.New("invalid assessment path")
 			}
 			if prior, ok := e.Assessments[r.ID]; ok && (prior.SHA != r.SHA || prior.Path != r.Path || prior.Commit != r.Commit || prior.SourceRepo != r.SourceRepo) {
 				return e, errors.New("conflicting assessment references")
@@ -247,7 +254,7 @@ func executionQueue(input io.Reader, output io.Writer, m ExecutionManifest, e Ex
 			return s, errors.New("available source lacks exact hash")
 		}
 		if a, ok := e.Assessments[r.ID]; ok {
-			if !r.BodyRead || a.SHA != r.SHA || r.Path != "" && a.Path != r.Path || r.Commit != "" && a.Commit != r.Commit || r.Repo != "" && a.SourceRepo != r.Repo {
+			if !r.BodyRead || a.SHA != r.SHA || a.Path == "" && r.Unit != "site_index_entry" || r.Path != "" && a.Path != r.Path || r.Commit != "" && a.Commit != r.Commit || r.Repo != "" && a.SourceRepo != r.Repo {
 				return s, errors.New("assessment does not match fixed catalog occurrence")
 			}
 			matchedAssessment[r.ID] = true

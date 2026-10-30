@@ -3,7 +3,7 @@
   "issue": "https://github.com/AutoDevJapan/cc-pc-tools-rs/issues/283",
   "observed_at": "2026-10-24T17:15:09.0197014+09:00",
   "phase_a": "partial; 647 additional text shapes held by execution review",
-  "phase_b": "実導入164・既存統合9を保持し、PR639の全指摘解消・同7fae全7CI終了失敗0/CLEAN/thread0・通常merge951cとRoot取込/push/checkpointを確認した。今回のpending用途評価25recordと全伏字未読1を入力へ結び、全73220実再生成でユニーク評価1611（+24）/最終188/交差182/legacyfinal6/和1617/採否待ち1429/意味個別権利70528、未最終73032。全伏字1は70528内の同じ1出現で加算しない。新許諾/最終採否/Skill作成/中央書込0。今回データの二役レビューとCIは記録時未受入であり、他25重複候補・残りの資料と全16は未完。",
+  "phase_b": "実導入164を保持。作業版は既存OpenAI6の同じ固定出典へ6site掲載を統合し統合15、原siteの不明git項目と各upstream個別noticeを分ける。新規作成/中央書込/許諾拡張0。原C1の111..128の18意味とtrue null親/実reader・consumerを保って全73220実queueへ反映。raw/fullread旧bucketは変更せず、全16/残採否/権利と428/647/未知中央9は未完。",
   "catalog_sha256": "2d73c9a038a41cc220a9687b935bfa1e0b315b65d9bd6d3e54ddb4111972876c",
   "source_count": 16,
   "fixed_public_repos": [
@@ -289,7 +289,7 @@
   "candidate_designs": 164,
   "independently_accepted": 164,
   "installed": 164,
-  "integrated": 9,
+  "integrated": 15,
   "excluded": 15,
   "units": {
     "github_agent_procedure": 483,
@@ -354,7 +354,7 @@
     "archived_draft_targets": 8,
     "archived_draft_is_subset_of_batch03": true,
     "independently_accepted": "164 actually installed new adaptations retain their recorded frozen Creator acceptances, current ID/hash/buffer readback, structure and target discovery evidence, including the two Creator4222 adaptations accepted in PR637. This is not an all164 current-turn reread, full-catalog discovery, current context-budget or whole16 completion proof.",
-    "not_semantically_disposed_occurrences": 73032,
+    "not_semantically_disposed_occurrences": 73026,
     "additional_draft_sources": [
       "skills-3080-mizchi-sql-draft.json",
       "skills-3080-mizchi-mutation-draft.json"
@@ -616,7 +616,7 @@
     "guard_client_resource": true,
     "state": "classification_unverified"
   },
-  "recorded_at": "2026-10-30T02:07:58.9838686+00:00",
+  "recorded_at": "2026-10-30T03:20:50.7434004+00:00",
   "total_skill_named_body_read_definition": "This field preserves the historical complete-source subset only. Current raw/workflow primary coverage is projected from the canonical source components and sixmile evaluation index in all_fulltext_primary_paths_including_partial_sources/all_workflow_primary_paths_including_partial_sources, not copied here.",
   "openai_entrypoint_evaluation": {
     "rights_accepted": false,
@@ -679,28 +679,30 @@
     "scope": "Final4-file concurrent-publication correction only. Prior31-file and8-file reviews retained; no source-body/permission/central/whole16 completion."
   },
   "latest_merged_pr": {
-    "number": 639,
-    "url": "https://github.com/AutoDevJapan/cc-pc-tools-rs/pull/639",
-    "head": "7faee0533da2aec1c20cfd810fec89a668dd073e",
-    "merge": "951c0ff01c72f949c1ade6304c0d0a640a47c94f",
-    "merged_at": "2026-10-30T01:35:56Z",
+    "number": 646,
+    "url": "https://github.com/AutoDevJapan/cc-pc-tools-rs/pull/646",
+    "head": "02318f14d9677b385c3976139e3afa2b5517a0cc",
+    "merge": "9765bea7399842b06e89d0fb90455fd4bde0e39c",
+    "merged_at": "2026-10-30T03:11:51Z",
     "review_todos": [
       4033,
       4076
     ],
-    "final_rubber_job": "20261030-101957-todo-4033",
-    "final_self_job": "20261030-102056-todo-4076",
+    "final_rubber_job": "20261030-120002-todo-4033",
+    "final_self_job": "20261030-120100-todo-4076",
     "final_pair_must": 0,
     "final_pair_suggestion": 0,
     "final_pair_nit": 0,
-    "actual_models": "gpt-6-luna/max independently checked in matching native contexts",
+    "actual_models": "gpt-6-luna/max matched to actual native contexts",
     "all7checks_completed_without_failure": true,
     "merge_state_before": "CLEAN",
     "unresolved_threads_before": 0,
     "normal_merge": true,
     "readback_confirmed": true,
     "Root_merge_push_and_checkpoint_confirmed": true,
-    "new_existing_workflow_integrations": 5,
+    "new_assessment_references": 25,
+    "unique_assessment_occurrences_added": 24,
+    "new_existing_workflow_integrations": 0,
     "central_new_writes": 0
   },
   "mengto_partial_entrypoint_evaluation": {
@@ -1706,7 +1708,7 @@
     "current_individual_rights_entries": 5,
     "main_accepted_excluded_before_this_delta": 8,
     "branch_excluded": 15,
-    "branch_pending": 73032,
+    "branch_pending": 73026,
     "primary_and_support_read_states_unchanged": true,
     "existing_primary_amendment_separate": true,
     "source_scripts_executed": false,
@@ -3705,6 +3707,75 @@
     "covered_assessment_artifacts": [
       "skills-3080-sixmile-next75-evaluation.json",
       "skills-3080-sixmile-received50-evaluation.json"
+    ]
+  },
+  "site_six_canonical_integrations": {
+    "evidence": "skills-3080-openai6-site-integrations095653.json",
+    "new_existing_workflow_integrations": 6,
+    "new_Skills": 0,
+    "central_new_writes": 0,
+    "current_instruction_files": 12,
+    "current_instruction_bytes": 21416,
+    "discovery_requested": 6,
+    "discovery_enabled": 6,
+    "parse_errors": 0,
+    "scan_limit_warnings": 2,
+    "context_budget_proved": false,
+    "site_git_tuple_remains_unknown": true,
+    "publication_review_pending": true,
+    "whole16_complete": false
+  },
+  "latest_received18_after1611": {
+    "evidence": "skills-3080-primaryflow-next18-after230-evaluation095653.json",
+    "actual_reader": "20261030-033405-todo-4134",
+    "actual_consumer": "20261030-095653-todo-3080",
+    "primary_first": 111,
+    "primary_through": 128,
+    "visible_body_meanings": 18,
+    "new_held_groups": 0,
+    "old_all_withheld1_unchanged": true,
+    "original_packets": 3,
+    "individual_contexts_and_rights_pending": 18,
+    "all_original_229_records_and67_contexts_unchanged": true,
+    "original_native_parent_present_null": true,
+    "body_groups_processed": 248,
+    "body_groups_semantic": 247,
+    "held_groups": 1,
+    "metadata_members": 274,
+    "all_packets": 70,
+    "new_current_parent_source_body_reads": 0,
+    "new_permissions_or_central_writes": 0,
+    "whole16_complete": false
+  },
+  "site6_primary18_current_queue": {
+    "state": "complete",
+    "catalog_sha256": "2d73c9a038a41cc220a9687b935bfa1e0b315b65d9bd6d3e54ddb4111972876c",
+    "manifest_sha256": "51a0eeb89ecc54e89c1c27479366fb436e615f68b9e1226d0c05efc13ef5d45e",
+    "queue_sha256": "1db41b9f74283ac84306cd4ea47fb754afba6fd3aeedd556a4d8433c7bc30950",
+    "occurrences": 73220,
+    "occurrences_with_assessment_records": 1635,
+    "recorded_final_occurrences": 194,
+    "occurrences_with_assessment_and_final_records": 188,
+    "final_records_without_assessment_record": 6,
+    "occurrences_with_assessment_or_final_records": 1641,
+    "stages": {
+      "assessed_needs_current_disposition": 1447,
+      "held_body_unavailable": 428,
+      "held_execution_review": 647,
+      "needs_semantic_and_individual_rights_review": 70504,
+      "recorded_final_disposition": 194
+    },
+    "recorded_final_dispositions": {
+      "excluded": 15,
+      "installed_new_adaptation": 164,
+      "integrated_existing": 15
+    },
+    "limits": [
+      "An assessment reference is not a full raw read, licence grant, current adoption or completed acceptance; consult its recorded actor, scope and state.",
+      "Equal body bytes do not transfer source ownership, individual permission or support-resource review.",
+      "No source body or URL is opened, no model or worker is launched, no permission is changed and nothing is installed.",
+      "The queue is complete only when its separate summary is complete and its recorded queue SHA256 matches the actual bytes.",
+      "Assessment records 1635 = assessed without final disposition 1447 + assessment/final intersection 188. Final records 194 include 6 final-only legacy records without assessment. The assessment/final union is 1641 occurrences; these categories are not additive independent totals."
     ]
   }
 }

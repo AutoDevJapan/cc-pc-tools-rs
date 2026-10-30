@@ -136,3 +136,77 @@ func TestExecutionFinalDecisionRequiresKnownCatalogRepository(t *testing.T) {
 		})
 	}
 }
+
+func TestSiteAssessmentKeepsOnlyActuallyUnknownGitTuple(t *testing.T) {
+	for _, change := range []string{"valid", "assessment repo known", "assessment commit known", "catalog path known", "catalog repo known", "non-site unit", "non-site identity"} {
+		t.Run(change, func(t *testing.T) {
+			_, manifest, root, _ := executionDiskFixture(t)
+			data, err := os.ReadFile(manifest)
+			if err != nil {
+				t.Fatal(err)
+			}
+			var m ExecutionManifest
+			if err = json.Unmarshal(data, &m); err != nil {
+				t.Fatal(err)
+			}
+			r := Record{ID: "site:fixed-canonical", Unit: "site_index_entry", SHA: strings.Repeat("a", 64), BodyRead: true}
+			a := executionIdentity{ID: r.ID, SHA: r.SHA}
+			switch change {
+			case "assessment repo known":
+				a.SourceRepo = "example/skills"
+			case "assessment commit known":
+				a.SourceCommit = strings.Repeat("c", 40)
+			case "catalog path known":
+				r.Path = "actual/SKILL.md"
+			case "catalog repo known":
+				r.Repo = "example/skills"
+			case "non-site unit":
+				r.Unit = "github_skill_entry"
+			case "non-site identity":
+				r.ID = "github:fixed"
+				a.ID = r.ID
+			}
+			data, err = json.Marshal(struct {
+				Entries []executionIdentity `json:"entries"`
+			}{[]executionIdentity{a}})
+			if err != nil {
+				t.Fatal(err)
+			}
+			file := "skills-3080-site.json"
+			if err = os.WriteFile(filepath.Join(root, file), data, 0600); err != nil {
+				t.Fatal(err)
+			}
+			h := sha256.Sum256(data)
+			m.Artifacts = []ExecutionArtifact{{File: file, SHA: hex.EncodeToString(h[:]), Rows: 1}}
+			catalog, err := json.Marshal(r)
+			if err != nil {
+				t.Fatal(err)
+			}
+			catalog = append(catalog, '\n')
+			h = sha256.Sum256(catalog)
+			m.CatalogSHA = hex.EncodeToString(h[:])
+			m.Records = 1
+			e, err := loadExecutionEvidence(root, m)
+			var output bytes.Buffer
+			if err == nil {
+				_, err = executionQueue(bytes.NewReader(catalog), &output, m, e)
+			}
+			if change != "valid" {
+				if err == nil {
+					t.Fatal("unknown site tuple exception accepted known or mismatched Git provenance")
+				}
+				return
+			}
+			if err != nil {
+				t.Fatal(err)
+			}
+			var result ExecutionRow
+			if err = json.Unmarshal(output.Bytes(), &result); err != nil {
+				t.Fatal(err)
+			}
+			if result.Repo != "" || result.Commit != "" || result.Path != "" || result.Stage != "assessed_needs_current_disposition" || len(result.References) != 1 {
+				t.Fatal("unknown site tuple was invented or assessment reference lost")
+			}
+		})
+	}
+}

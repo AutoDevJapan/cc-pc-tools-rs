@@ -58,6 +58,14 @@ func TestVisiblePrimaryJournalRetainsEveryAcceptedPrefixFieldAndOrder(t *testing
 func TestVisiblePrimaryMarkdownCountsMatchTheExecutionSnapshot(t *testing.T) {
 	var summary ExecutionSummary
 	loadPublicReceipt(t, "skills-3080-execution-queue-summary.json", &summary)
+	var progress struct {
+		Issue       string `json:"issue"`
+		SourceCount int    `json:"source_count"`
+		CentralHold struct {
+			Count int `json:"count"`
+		} `json:"central_target_holds_current"`
+	}
+	loadPublicReceipt(t, "skills-3080-progress.json", &progress)
 	var journal struct {
 		Groups  int `json:"representative_body_groups"`
 		Members int `json:"bound_member_metadata"`
@@ -71,13 +79,65 @@ func TestVisiblePrimaryMarkdownCountsMatchTheExecutionSnapshot(t *testing.T) {
 		fmt.Sprintf("固定した出典に対する%d件の評価", journal.Groups),
 		fmt.Sprintf("今回の追加は%d件", journal.Groups-54),
 		fmt.Sprintf("候補メタデータは計%d件", journal.Members),
-		fmt.Sprintf("評価%d、最終%d、新規%d・既存統合%d・旧除外%d", summary.Assessments, summary.Final, summary.Decisions["installed_new_adaptation"], summary.Decisions["integrated_existing"], summary.Decisions["excluded"]),
-		fmt.Sprintf("交差%d、和集合%d、評価済未採否%d、意味と個別権利の確認が必要な候補%d", summary.AssessmentAndFinal, summary.AssessmentOrFinal, summary.Stages["assessed_needs_current_disposition"], summary.Stages["needs_semantic_and_individual_rights_review"]),
 	} {
 		if !strings.Contains(string(raw), expected) {
 			t.Fatalf("Markdown count differs from the current JSON snapshot: %s", expected)
 		}
 	}
+	issue := strings.TrimPrefix(progress.Issue, "https://github.com/AutoDevJapan/cc-pc-tools-rs/issues/")
+	if _, err := strconv.Atoi(issue); err != nil || issue == progress.Issue {
+		t.Fatal("the public issue reference is not a numbered repository issue")
+	}
+	digits := strconv.Itoa(summary.Records)
+	for i := len(digits) - 3; i > 0; i -= 3 {
+		digits = digits[:i] + "," + digits[i:]
+	}
+	expected := fmt.Sprintf("全件queueは%s出現、評価%d、最終%d、新規%d・既存統合%d・旧除外%d。評価と最終の交差%d、和集合%d、評価済未採否%d、意味と個別権利の確認が必要な候補%dを区別する。本文未取得%d・取得審査保留%d・未知の中央%d・旧除外%dの再確認と、指定%d資料の残作業を保持する。全体のIssue%sは継続する。",
+		digits, summary.Assessments, summary.Final, summary.Decisions["installed_new_adaptation"], summary.Decisions["integrated_existing"], summary.Decisions["excluded"], summary.AssessmentAndFinal, summary.AssessmentOrFinal, summary.Stages["assessed_needs_current_disposition"], summary.Stages["needs_semantic_and_individual_rights_review"], summary.Stages["held_body_unavailable"], summary.Stages["held_execution_review"], progress.CentralHold.Count, summary.Decisions["excluded"], progress.SourceCount, issue)
+	if !visibleMarkdownSummaryMatches(string(raw), expected) {
+		t.Fatal("the complete Markdown summary differs from the JSON snapshot")
+	}
+	for _, change := range []string{"total", "missing bodies", "review holds", "central holds", "sources", "issue", "missing sentence", "duplicate paragraph"} {
+		t.Run(change, func(t *testing.T) {
+			wrong := expected
+			switch change {
+			case "total":
+				wrong = strings.Replace(wrong, digits+"出現", strconv.Itoa(summary.Records+1)+"出現", 1)
+			case "missing bodies":
+				wrong = strings.Replace(wrong, "本文未取得"+strconv.Itoa(summary.Stages["held_body_unavailable"]), "本文未取得"+strconv.Itoa(summary.Stages["held_body_unavailable"]+1), 1)
+			case "review holds":
+				wrong = strings.Replace(wrong, "取得審査保留"+strconv.Itoa(summary.Stages["held_execution_review"]), "取得審査保留"+strconv.Itoa(summary.Stages["held_execution_review"]+1), 1)
+			case "central holds":
+				wrong = strings.Replace(wrong, "未知の中央"+strconv.Itoa(progress.CentralHold.Count), "未知の中央"+strconv.Itoa(progress.CentralHold.Count+1), 1)
+			case "sources":
+				wrong = strings.Replace(wrong, "指定"+strconv.Itoa(progress.SourceCount)+"資料", "指定"+strconv.Itoa(progress.SourceCount+1)+"資料", 1)
+			case "issue":
+				number, _ := strconv.Atoi(issue)
+				wrong = strings.Replace(wrong, "Issue"+issue, "Issue"+strconv.Itoa(number+1), 1)
+			case "missing sentence":
+				wrong = strings.Split(wrong, "本文未取得")[0]
+			case "duplicate paragraph":
+				wrong += "\n\n" + expected
+			}
+			if visibleMarkdownSummaryMatches(wrong, expected) {
+				t.Fatal("missing, stale or duplicated summary passed")
+			}
+		})
+	}
+}
+
+func visibleMarkdownSummaryMatches(markdown, expected string) bool {
+	count := 0
+	for _, paragraph := range strings.Split(strings.ReplaceAll(markdown, "\r\n", "\n"), "\n\n") {
+		paragraph = strings.TrimSpace(paragraph)
+		if strings.HasPrefix(paragraph, "全件queueは") {
+			count++
+			if paragraph != expected {
+				return false
+			}
+		}
+	}
+	return count == 1
 }
 
 func visibleJournalKeys(v map[string]any, keys ...string) bool {

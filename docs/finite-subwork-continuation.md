@@ -15,8 +15,12 @@
 古いrequestのために後続の結果や更新されたspecを拒否しない。
 
 正常終了・lost・回復取消・quota以外の失敗では、通常のsessionとモデル選択を保つ。
+有限subworkの回復取消は、旧requestの有無や過去のquota分類に関係なく、通常の結果として扱う。
+回復目的の記録がないquota分類の取消は、従来どおり拒否する。
+quota分類のない通常の取消には、この修復で新しい保留条件を追加しない。
 親jobの生存、追加のquota照会、過去の混雑対処の通算回数を、新しい起動条件にしない。
 元sourceと使用済み履歴は書き換えず、新しい通常実行と実quota失敗の回復episodeを区別する。
+取消で終わった通常実行と、実quota失敗に対する同じ回復episodeの予算は混同しない。
 
 同じ世代で未消費の明示契約は、従来どおり実親・scope・排出・fresh OAuthを照合する。
 配布済みの旧v1形式では、任意のreceipt snapshotが無いschemaもそのまま検証する。
@@ -24,19 +28,29 @@ Start後の移譲は厳密に次の1世代に限り、原proofの世代を書き
 
 ## 依存解除後の実quota失敗
 
-旧requestの有無に関係なく、現在の実親が`continue-subwork`で新しい世代を明示受付する。
-親は受付前に子の完了だけを待って退席せず、現契約を登録してから通常dispatchと受領を行う。
+現在世代の担当が実quota失敗で終わり、依存世代が進んだ場合は、旧requestの有無に関係なく、
+現在の実親が`continue-subwork`で新しい世代を明示受付する。
+親が実行中に現契約を登録してから、通常dispatchと受領を行う。
 親jobへの環境変数の書換えで受付を代行しない。
 
 ```text
 todo.exe continue-subwork TASK_ID --source-job SOURCE_JOB_ID --parent-job-id CURRENT_PARENT_JOB_ID --resume-generation CURRENT_RESUME_GENERATION --dependency-generation CURRENT_DEPENDENCY_GENERATION --spec-sha256 REGISTERED_SPEC_SHA256
 ```
 
-未受付は`SubworkParentContinuationRequired`として5分後の技術再確認へ残す。
+現在世代のsourceが親に依存しない受付条件を満たすときだけ、未受付を
+`SubworkParentContinuationRequired`として5分後の技術再確認へ残す。
 表示理由は`subwork_parent_continuation_required`とし、本人判断待ちにはしない。
+scope変更、未復元capsule、固定実行契約などで受付できないsourceは`input_rejected`に残す。
+旧世代のquota sourceにも従来の厳密な受付条件を適用し、未受付を上の理由へ一律に置き換えない。
 policyによるquota再試行では、最新の失敗sourceの使用済み回数と履歴に今回の1回も加える。
 本人指定のモデルを置き換えず、policyの再試行計画は追加せずに元履歴を保持する。
 実quota失敗の予算終了は記録と入口の両方で同じ`source_id`を照合する。
+
+親が既に子の完了待ちで退席している場合、この入口だけでは親を起動できない。
+親の`wait_on`、子の未完了、技術停止の理由を共有ToDoと既存のadmission診断へ残す。
+既存の停滞監視はプロジェクト単位であり、この相互待ちを自動解除するものではない。
+親の正規復帰が別途必要になる制約であり、依存完了とは扱わない。
+この修復は未完依存の解除、親の強制起動、自動の親CLI呼出しを追加しない。
 
 ## 確認する境界
 
@@ -44,7 +58,7 @@ policyによるquota再試行では、最新の失敗sourceの使用済み回数
 - 古いrequest、親の交代、quota以外の失敗、spec更新、回数上限に達した正常結果を分ける。
 - 実quotaの使用済み予算、旧形式互換、登録・Start・最終queueの世代とscopeを再照合する。
 - 偽caller、別job・所有・spec・scope・世代、排出未確認、未完依存、本人停止を拒否する。
-- 枯渇・未確認OAuth、API鍵だけの経路、追加支出、予算の巻き戻しを拒否する。
+- 枯渇・未確認OAuth、API鍵だけの経路、追加支出、同じ実quota回復episodeの予算の巻き戻しを拒否する。
 - Windows実行版の更新後に、固定spec・scopeの実行、原結果の受領、ACKの前進を確認する。
 
 受付、起動、実操作、原結果の受領は別の結果として扱い、登録やプロセスの存在だけで復旧としない。

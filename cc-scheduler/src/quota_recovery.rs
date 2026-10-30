@@ -23,13 +23,14 @@ pub(crate) fn prepare(
         return Ok(false);
     }
     if source.is_some_and(live) { return Err(Error("ResourceWait")); }
-    if source.is_some_and(|s| cancellation::blocks_recovery(item,s)) { return Err(Error("InputRejected")); }
-    // Success/loss and a recovery cancellation after the request's generation
-    // use normal continuation. Preserve the existing unconsumed quota-cancel
-    // route; it is still subject to every original quota guard below.
+    if source.is_some_and(|s| cc_job_policy::quota_recovery::quota_source(s)
+        && cancellation::blocks_recovery(item,s)) { return Err(Error("InputRejected")); }
+    // A finite recovery cancellation is its own ordinary result, regardless of
+    // retained request or quota metadata. Actual quota failures retain their
+    // finite retry episode; ordinary review cancellation keeps its old behavior.
+    let finite = ["research", "review"].contains(&s(&item["subwork"]["kind"]));
     let Some(source) = source.filter(|s| cc_job_policy::quota_recovery::quota_source(s)
-        && (s["status"] == "failed" || (cancellation::cancelled(s)
-            && !cc_job_policy::subwork_continuation::stale_request(item)))) else {
+        && (s["status"] == "failed" || (cancellation::cancelled(s) && !finite))) else {
         return Ok(false);
     };
     if selection["model_origin"] == "owner_request" {
@@ -47,6 +48,9 @@ pub(crate) fn prepare(
     if cc_job_policy::subwork_continuation::quota_dependency_changed(item, source) {
         if cc_job_policy::quota_retry::tracked(source) && cc_job_policy::quota_retry::terminal_reason(source).is_some() {
             return Err(Error("QuotaRetryEnded"));
+        }
+        if !cc_job_policy::subwork_continuation::source_request_eligible(item, source) {
+            return Err(Error("InputRejected"));
         }
         return Err(Error("SubworkParentContinuationRequired"));
     }

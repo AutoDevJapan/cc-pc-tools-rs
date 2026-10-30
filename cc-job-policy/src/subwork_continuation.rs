@@ -191,8 +191,12 @@ pub fn quota_dependency_changed(item: &Value, source: &Value) -> bool {
             .zip(item["dependency_generation"].as_u64())
             .is_some_and(|(old, current)| old < current)
 }
-/// Caller additionally checks actual parent ownership, real process drain and dependencies.
-pub fn request(item: &Value, source: &Value, actor: &Value) -> Option<Value> {
+struct SourceRequest {
+    result: bool,
+    current_quota: bool,
+    spec_sha256: String,
+}
+fn request_source(item: &Value, source: &Value) -> Option<SourceRequest> {
     let finite = if item["subwork"]["kind"] == "review" {
         &source["finite_review"]
     } else {
@@ -232,9 +236,6 @@ pub fn request(item: &Value, source: &Value, actor: &Value) -> Option<Value> {
             .as_array()
             .is_some_and(|ids| ids.contains(&source["id"]))
         || item["jobs"].as_array().and_then(|ids| ids.last()) != Some(&source["id"])
-        || actor["todo_id"] != item["subwork"]["parent_todo_id"]
-        || text(actor, "id").is_empty()
-        || !actor["todo_resume_generation"].is_u64()
         || source["sandbox"] != "read-only"
         || crate::launch_context::fixed_execution_contract(source)
         || quota::collection_pending(source)
@@ -273,6 +274,31 @@ pub fn request(item: &Value, source: &Value, actor: &Value) -> Option<Value> {
     if quota::scope(&target) != quota::scope(source) {
         return None;
     }
+    Some(SourceRequest {
+        result,
+        current_quota,
+        spec_sha256,
+    })
+}
+/// Diagnostic eligibility only. This grants no caller, parent or drain authority.
+pub fn source_request_eligible(item: &Value, source: &Value) -> bool {
+    request_source(item, source).is_some()
+}
+/// Caller additionally checks actual parent ownership, real process drain and dependencies.
+pub fn request(item: &Value, source: &Value, actor: &Value) -> Option<Value> {
+    let SourceRequest {
+        result,
+        current_quota,
+        spec_sha256,
+    } = request_source(item, source)?;
+    if actor["todo_id"] != item["subwork"]["parent_todo_id"]
+        || text(actor, "id").is_empty()
+        || !actor["todo_resume_generation"].is_u64()
+    {
+        return None;
+    }
+    let generation = gen_(item, "resume_generation");
+    let dependency = gen_(item, "dependency_generation");
     let mut proof = json!({"version":1,"source_job":source["id"],"actor_job":actor["id"],
         "actor_resume_generation":actor["todo_resume_generation"],
         "actor_sha256":hash(&actor_binding(actor)),"source_sha256":hash(&quota::source_binding(source)),

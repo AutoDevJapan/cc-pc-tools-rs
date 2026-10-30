@@ -52,11 +52,14 @@ func skillsRuntimeBootstrapProjection(input io.Reader, job object, project []byt
 				return nil, modern, false
 			}
 			session = true
-			if m.Version != "0.165.0" {
+			if m.Source != "exec" || m.Originator != "codex_exec" {
+				return nil, true, false
+			}
+			if m.Version == "0.163.0" {
 				return nil, false, true
 			}
 			modern = true
-			if m.Source != "exec" || m.Originator != "codex_exec" {
+			if m.Version != "0.165.0" {
 				return nil, true, false
 			}
 			continue
@@ -92,7 +95,20 @@ func skillsRuntimeBootstrapProjection(input io.Reader, job object, project []byt
 			if !skillsCreationHeaderKeys(e.Payload, "type", "role", "content") || json.Unmarshal(e.Payload, &v) != nil {
 				return nil, true, false
 			}
+			if v.Type == "message" && v.Role != "user" {
+				// Native developer messages before bootstrap belong to the
+				// runtime's exec launch envelope. User/task input cannot issue
+				// that role. A later developer/system/unknown message is outside
+				// this proved first-turn envelope and is rejected below.
+				if v.Role != "developer" || boot || state || !started {
+					return nil, true, false
+				}
+				continue
+			}
 			if v.Role != "user" {
+				if v.Role != "developer" || v.Type != "additional_tools" || boot || state || !started {
+					return nil, true, false
+				}
 				continue
 			}
 			var blocks []struct {

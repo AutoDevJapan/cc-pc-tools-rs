@@ -39,7 +39,7 @@ func TestSkills3080UnknownUserPayloadIsNeverAnIgnoredEvent(t *testing.T) {
 }
 
 func TestSkills3080RuntimeWorldStateAnchorsTheLaunchInstructions(t *testing.T) {
-	for _, kind := range []string{"valid", "changed_common_version", "missing_snapshot", "delta_snapshot", "wrong_snapshot_body", "wrong_directory", "wrong_project", "late_snapshot", "duplicate_snapshot", "user_fake_snapshot", "wrong_turn", "wrong_model", "wrong_source", "wrong_originator", "before_job", "unknown_user_type"} {
+	for _, kind := range []string{"valid", "changed_common_version", "runtime_developer_prefix", "unknown_cli", "wrong_source", "wrong_originator", "missing_snapshot", "delta_snapshot", "wrong_snapshot_body", "wrong_directory", "wrong_project", "late_snapshot", "duplicate_snapshot", "user_fake_snapshot", "wrong_turn", "wrong_model", "before_job", "unknown_user_type", "system_before_bootstrap", "unknown_role_before_bootstrap", "developer_after_bootstrap"} {
 		t.Run(kind, func(t *testing.T) {
 			cwd, id, turn := "D:/CC/Work/synthetic", "11111111-1111-7111-8111-111111111111", "22222222-2222-7222-8222-222222222222"
 			start := time.Date(2026, 10, 30, 14, 0, 0, 0, time.UTC)
@@ -52,6 +52,9 @@ func TestSkills3080RuntimeWorldStateAnchorsTheLaunchInstructions(t *testing.T) {
 			meta := object{"type": "session_meta", "timestamp": start.Format(time.RFC3339Nano), "payload": object{"id": id, "cwd": cwd, "source": "exec", "originator": "codex_exec", "cli_version": "0.165.0"}}
 			if kind == "wrong_source" {
 				obj(meta["payload"])["source"] = "user"
+			}
+			if kind == "unknown_cli" {
+				obj(meta["payload"])["cli_version"] = "0.999.0"
 			}
 			if kind == "wrong_originator" {
 				obj(meta["payload"])["originator"] = "other"
@@ -84,6 +87,20 @@ func TestSkills3080RuntimeWorldStateAnchorsTheLaunchInstructions(t *testing.T) {
 				obj(context["payload"])["model"] = "gpt-6.1-sol"
 			}
 			records := []object{meta, {"type": "event_msg", "timestamp": start.Format(time.RFC3339Nano), "payload": object{"type": "task_started", "turn_id": turn}}, msg}
+			if kind == "runtime_developer_prefix" || kind == "system_before_bootstrap" || kind == "unknown_role_before_bootstrap" {
+				role := "developer"
+				if kind == "system_before_bootstrap" {
+					role = "system"
+				}
+				if kind == "unknown_role_before_bootstrap" {
+					role = "unrecognized"
+				}
+				dev := object{"type": "response_item", "timestamp": start.Format(time.RFC3339Nano), "payload": object{"type": "message", "role": role, "content": []object{{"type": "input_text", "text": "runtime launch instructions"}}}}
+				records = append(records[:2], dev, msg)
+			}
+			if kind == "developer_after_bootstrap" {
+				records = append(records, object{"type": "response_item", "timestamp": start.Add(time.Second).Format(time.RFC3339Nano), "payload": object{"type": "message", "role": "developer", "content": []object{{"type": "input_text", "text": "extra later instruction"}}}})
+			}
 			if kind != "missing_snapshot" && kind != "late_snapshot" && kind != "user_fake_snapshot" {
 				records = append(records, snapshot)
 			}
@@ -106,7 +123,7 @@ func TestSkills3080RuntimeWorldStateAnchorsTheLaunchInstructions(t *testing.T) {
 			}
 			job := object{"thread_id": id, "cwd": cwd, "sandbox": "read-only", "model": "gpt-6-luna", "effort": "max"}
 			source, modern, ok := skillsRuntimeBootstrapProjection(&b, job, project, start, start.Add(time.Minute))
-			want := kind == "valid" || kind == "changed_common_version"
+			want := kind == "valid" || kind == "changed_common_version" || kind == "runtime_developer_prefix"
 			if ok != want || (want && (!modern || string(source) != string(body))) {
 				t.Fatalf("runtime snapshot %s accepted=%v modern=%v", kind, ok, modern)
 			}
@@ -160,7 +177,9 @@ func TestSkills3080DuplicateRoleCannotHideAcrossTheJobWindow(t *testing.T) {
 }
 
 func TestSkills3080ConsumerWindowInheritsJobSandbox(t *testing.T) {
-	home := t.TempDir()
+	// The self-hosted CI service uses a short Windows TEMP alias. Normalize
+	// this synthetic home just like the other held-handle fixtures.
+	home := skillsFixtureRoot(t)
 	t.Setenv("USERPROFILE", home)
 	id, cwd := "11111111-1111-7111-8111-111111111111", "D:/CC/Work/synthetic"
 	start := time.Date(2026, 10, 30, 14, 0, 0, 0, time.UTC)

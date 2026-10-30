@@ -319,6 +319,7 @@ type skillsNativeResultProof struct {
 	runtimeProject                []byte
 	runtimeSourceUsed             bool
 	userSeen                      bool
+	runtimePrefixClosed           bool
 	bootstrapSeen, bootstrapBound bool
 	frozen                        bool
 }
@@ -344,6 +345,12 @@ func (p *skillsNativeResultProof) observe(raw []byte, at time.Time) bool {
 		return false
 	}
 	v := envelope.Payload
+	if (p.exactInput || p.inputOnly) && v.Type != "message" && v.Role != "" {
+		return v.Type == "additional_tools" && v.Role == "developer" && !p.runtimePrefixClosed && !p.userSeen
+	}
+	if (p.exactInput || p.inputOnly) && v.Type == "message" && v.Role != "user" && v.Role != "assistant" {
+		return v.Role == "developer" && !p.runtimePrefixClosed && !p.userSeen
+	}
 	if v.Role == "user" && v.Type != "message" {
 		return false
 	}
@@ -382,6 +389,7 @@ func (p *skillsNativeResultProof) observe(raw []byte, at time.Time) bool {
 		}
 	}
 	if v.Role == "user" && (p.exactInput || p.inputOnly) {
+		p.runtimePrefixClosed = true
 		first := !p.userSeen
 		p.userSeen = true
 		if first {

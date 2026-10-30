@@ -661,7 +661,7 @@ func skillsNativeProjectionBound(input io.Reader, id, cwd string, start, end tim
 					var header struct {
 						Role string `json:"role"`
 					}
-					if json.Unmarshal(envelope.Payload, &header) != nil || header.Role == "user" {
+					if json.Unmarshal(envelope.Payload, &header) != nil || (header.Role != "" && header.Role != "assistant") {
 						return nil, false
 					}
 				}

@@ -1,0 +1,868 @@
+{
+  "after": 206,
+  "all_original_chunks_losslessly_reconstructed": true,
+  "all_original_fields_and_actor_namespaces_preserved": true,
+  "central_operations": 0,
+  "complete_original_chunks": 1,
+  "domain": "skills3080-original3719-parent-shared-snapshot-v1",
+  "entries": [
+    {
+      "bytes": 33168,
+      "git_blob": "65b3a402dbd09b8e83f9d637c6b553875189085c",
+      "inventory_id": "github:2197d235695104a8d2efe692445742ab010c34a2be30f285f213231b272ffcb0",
+      "path": "skills/luowanqian/skill-creator-3/SKILL.md",
+      "source_commit": "920714f17d81e0a95c7a9bc51faf0a7921cd982d",
+      "source_repo": "6mile/skills",
+      "source_sha256": "dcd4803e61e913e6fc27294184cd3a71f09f5e924ff20c8a9a20173e7b3c2bcf"
+    },
+    {
+      "bytes": 4124,
+      "git_blob": "75b2074e5dc2b20b9c4e16319bbb2db1276f05ee",
+      "inventory_id": "github:30dbf44290ba969433d1b947fbf4f046f04949002fff45aac145586b6de4eef6",
+      "path": "skills/mackhendricks/dsiprouter-skill/SKILL.md",
+      "source_commit": "920714f17d81e0a95c7a9bc51faf0a7921cd982d",
+      "source_repo": "6mile/skills",
+      "source_sha256": "eae89994cfaac4a4cf3dd95a0c0fe78ab830bca9ac70b390abda2c539f5af1d3"
+    },
+    {
+      "bytes": 1244,
+      "git_blob": "50a19456b174e7de3c35e473c46773fe0cfec24c",
+      "inventory_id": "github:c402c3eed2dc748cfde5e636bbcf8ece73ae753b316937e86a6e1b6bcccff3b0",
+      "path": "skills/maherucifer/mersal-orem/SKILL.md",
+      "source_commit": "920714f17d81e0a95c7a9bc51faf0a7921cd982d",
+      "source_repo": "6mile/skills",
+      "source_sha256": "56c5e8f3fff39155bdc54b5a9d81d168c16fa9a3b39c39661a20bf54dbfdc1ad"
+    }
+  ],
+  "limits": [
+    "Parent received actual original three assessments and limits with independent native Sol/max metadata; source body/support raw reads remain the recorded original reader's work, not new parent raw reads.",
+    "Original notice reuse, ordered full-diff, fresh reads, saved-unread and unsaved null states and per-chunk actor namespaces are preserved, not converted into permissions.",
+    "This pending-assessment preparation does not install, accept third-party rights or complete598/51030/73220/16sources."
+  ],
+  "new_copy_permissions": 0,
+  "new_final_dispositions": 0,
+  "new_parent_raw_body_read_credit": 0,
+  "new_source_or_support_reads_by_materializer": 0,
+  "original_journal_parent": "20261024-235901-todo-3080",
+  "original_primary_assessments": 3,
+  "original_support_state_counts": {
+    "0": 22,
+    "1": 9,
+    "2": 5,
+    "3": 1,
+    "4": 1
+  },
+  "parent_journal_sha256_at209": "900fdcf060f5174e9626af1426a66f9983d0c1c5ef973126ccce89331f3820f2",
+  "publisher_job": "20261027-175645-todo-3080",
+  "records": [
+    {
+      "actual_assessment_reader": "20261028-171959-todo-3719",
+      "bytes": 33168,
+      "current_permission_or_adoption_granted": false,
+      "git_blob": "65b3a402dbd09b8e83f9d637c6b553875189085c",
+      "inventory_id": "github:2197d235695104a8d2efe692445742ab010c34a2be30f285f213231b272ffcb0",
+      "new_final_disposition": false,
+      "ordinal": 207,
+      "original_assessment": {
+        "candidate_disposition": "対照/分散・証拠付き採点の観点を改訂候補として提案。採否・許諾・導入・実test/子job0。",
+        "findings": [
+          "baselineの選択と実出力・assertion/evidence・時間を結ぶ設計は有用。少数2〜3例や20query/3試行だけで一般精度や因果を確定しない。",
+          "run開始後のassertion作成/変更、複数回のtestでbest_descriptionを選ぶ手順は評価への漏洩/過学習を招く。同じtestで選ぶことだけをheld-out保証にしない。",
+          "空feedbackを問題なし・了承とみなす記述がある。未回答/未閲覧と、同じ画像/範囲への本人の明示回答は別。PCでviewer操作を本人へ求める手順も今回へ適用しない。",
+          "全run一斉spawn・writer自身の逐次実行・環境別baseline省略は独立性と資源利用が異なる。結果を同等な別モデルreview/因果検証へ昇格させない。",
+          "pushyな発火description、学習例に具体的な個人/会社/URLを加える要求、transcript読取、HTML placeholder置換や最新download選択には過発火/秘密/取り違え/埋込の検査が必要。",
+          "原文のPython自作・子job・viewer起動/梱包等は評価対象で実行0。現在のClaude発火機構・計測保存条件・各runtimeの能力は保存主張で未検証。"
+        ],
+        "nearby_limit": "起動metadataのみ。中央本文/存在/同等性・現設定は未照会。",
+        "nearby_metadata": [
+          "skill-creator",
+          "skill-maintenance",
+          "ai-model-evaluation",
+          "test-quality",
+          "chained-placeholder-replace-injection"
+        ],
+        "negative": "20queryのtest最高点へ何度も最適化し、空feedbackを了承とし、自己採点とviewer生成だけで別モデルreview・一般改善・本人画像承認まで完了とする。",
+        "notices": [
+          [
+            "LICENSE.txt",
+            1,
+            "当該packageの同Apache2 notice。",
+            "実公開版/作者・同梱資源と実行serviceの権利は別。"
+          ]
+        ],
+        "positive": "固定した実入力と旧版で比較し、事前の受入条件・実出力・欠測を同じ版へ結び、選択に使わない別の入力で改善が続くか確認する。",
+        "read": [
+          2,
+          0,
+          0,
+          true,
+          true,
+          485
+        ],
+        "reason": "485行を順序全読。作成、並列対照、grading/集計/viewer/feedback、発火判定のtrain/test・環境別適応を確認した。grader等とscript/viewer実装は未読/未保存で性能や正しい独立性は未検証。",
+        "required_changes": [
+          "採点条件とtest/選択用データ・独立の最終確認を分け、全runの同条件/版/欠測/失敗・分散を保持する。実成果を見た後に採点規則を変えた場合はその事実を残す。",
+          "空feedbackを承認へせず、既存の本人回答を利用し、必要な画像判断だけ正規のスマホ経路へまとめる。一般技術検査を毎回の本人待ちにしない。",
+          "実行は元の許可/資源割当・OAuth枠/言語/中央配置に合わせる。秘密を例/測定/transcriptへ含めず、HTML文脈のescape・placeholder再置換とdownload世代を検査する。未読実装の検査を成功扱いしない。"
+        ],
+        "row": 207,
+        "source": [
+          "github:2197d235695104a8d2efe692445742ab010c34a2be30f285f213231b272ffcb0",
+          "skills/luowanqian/skill-creator-3/SKILL.md",
+          "dcd4803e61e913e6fc27294184cd3a71f09f5e924ff20c8a9a20173e7b3c2bcf",
+          "65b3a402dbd09b8e83f9d637c6b553875189085c",
+          33168
+        ],
+        "support": [
+          [
+            "LICENSE.txt",
+            11357,
+            "58d1e17f",
+            "7a4a3ea2",
+            4,
+            0,
+            1,
+            "100644"
+          ],
+          [
+            "SKILL.md",
+            33168,
+            "dcd4803e",
+            "65b3a402",
+            2,
+            0,
+            0,
+            "100644"
+          ],
+          [
+            "_meta.json",
+            284,
+            "11563e80",
+            "54eb66af",
+            1,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "agents/analyzer.md",
+            10376,
+            "bf68f4ca",
+            "14e41d60",
+            1,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "agents/comparator.md",
+            7287,
+            "fe1fc978",
+            "80e00eb4",
+            1,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "agents/grader.md",
+            9049,
+            "57134da0",
+            "558ab05c",
+            1,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "assets/eval_review.html",
+            null,
+            null,
+            "938ff32a",
+            0,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "eval-viewer/generate_review.py",
+            null,
+            null,
+            "7fa59786",
+            0,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "eval-viewer/viewer.html",
+            null,
+            null,
+            "6d8e9634",
+            0,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "references/schemas.md",
+            12061,
+            "8e887618",
+            "b6eeaa2d",
+            1,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "scripts/__init__.py",
+            null,
+            null,
+            "e69de29b",
+            0,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "scripts/aggregate_benchmark.py",
+            null,
+            null,
+            "3e66e8c1",
+            0,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "scripts/generate_report.py",
+            null,
+            null,
+            "959e30a0",
+            0,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "scripts/improve_description.py",
+            null,
+            null,
+            "06bcec76",
+            0,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "scripts/package_skill.py",
+            null,
+            null,
+            "f48eac44",
+            0,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "scripts/quick_validate.py",
+            null,
+            null,
+            "ed8e1ddd",
+            0,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "scripts/run_eval.py",
+            null,
+            null,
+            "e58c70be",
+            0,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "scripts/run_loop.py",
+            null,
+            null,
+            "30a263d6",
+            0,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "scripts/utils.py",
+            null,
+            null,
+            "51b6a07d",
+            0,
+            null,
+            null,
+            "100644"
+          ]
+        ],
+        "use": "Skillの作成/改訂を実成果・対照試験・発火/非発火の測定から改善する研究設計の参考。",
+        "value": "同じ入力のwith/without又は旧版比較、assertionと証拠、時間/token・分散、常に通る非識別的検査の分析、blind比較という観点を整理できる。"
+      },
+      "original_chunk_sha256": "8137137d5a206f6228bd0aa44dbc3fcd40a66e9be005a60db02aec21ab83bf18",
+      "path": "skills/luowanqian/skill-creator-3/SKILL.md",
+      "source_commit": "920714f17d81e0a95c7a9bc51faf0a7921cd982d",
+      "source_repo": "6mile/skills",
+      "source_sha256": "dcd4803e61e913e6fc27294184cd3a71f09f5e924ff20c8a9a20173e7b3c2bcf"
+    },
+    {
+      "actual_assessment_reader": "20261028-171959-todo-3719",
+      "bytes": 4124,
+      "current_permission_or_adoption_granted": false,
+      "git_blob": "75b2074e5dc2b20b9c4e16319bbb2db1276f05ee",
+      "inventory_id": "github:30dbf44290ba969433d1b947fbf4f046f04949002fff45aac145586b6de4eef6",
+      "new_final_disposition": false,
+      "ordinal": 208,
+      "original_assessment": {
+        "candidate_disposition": "API作用・timeout・catalog整合の検査観点を改訂候補として提案。採否/許諾・導入・実test0。",
+        "findings": [
+          "schemeなしaddressにhttps/port/pathを組立て、bearerと任意の-kを使う。文字列組立てとself-signed切替だけを安全な認証/正しい所有者・宛先の証明としない。",
+          "固定のID/番号/sample bodyでcreate/update/delete/auth/lease/cdr等を例示。GET leaseも資源予約の作用がありうるためread-onlyと自動分類しない。非AIサービスtokenをAI API課金禁止へ一括分類しない。",
+          "例のkamailio:statsとcatalogのkamailio:list、update/deleteの説明がcreate、lease説明の不一致がある。名称から作用や戻り値を推定せず現collection/実装へ結ぶ必要がある。",
+          "fail-with-bodyやjq表示は生のbody/error/CDR・認証情報を出しうる。reload・権限変更・revoke/削除と単なる照会は別作用。MPL2の実covered scopeはrootMITで上書きしない。"
+        ],
+        "nearby_limit": "起動metadataのみ。中央本文/存在・同等性/現設定は未照会。",
+        "nearby_metadata": [
+          "backend-correctness",
+          "oauth-least-privilege",
+          "security-review",
+          "process-lifecycle"
+        ],
+        "negative": "sampleを本番へ送信し、GETだから無作用とleaseを作り、-kで任意nodeへtokenを送り、jqの出力だけで反映完了とする。",
+        "notices": [
+          [
+            "LICENSE.txt",
+            2,
+            "当該packageのMPL2本文とExhibit。",
+            "covered files・実作者/実公開版・Postman/サービス側権利の対応は別確認。"
+          ]
+        ],
+        "positive": "同じ許可nodeの対象IDを明示し、照会→指定変更→反映確認を別結果として記録し、必要なreloadだけ作用を確認する。",
+        "read": [
+          3,
+          2,
+          0,
+          false,
+          true,
+          112
+        ],
+        "reason": "112行を順序全読し91/92行のメールだけ伏字、MPL2 notice373行も全読。helperとPostman本文は未保存で実request・sample・現APIは未検証。",
+        "required_changes": [
+          "元対象のnode/所有者・必要scope、正規化後のhost/port/path/methodと対象IDを固定し、sampleではなく実依頼のpayloadを用いる。TLS検証を保ち必要な証明書対応を行う。",
+          "helper/collectionの必要部分と現APIを親が確認してcatalog/説明を整合させる。status/業務結果・部分/全page・設定反映/reloadを別receiptとし、writeの二重作用・秘密のlogを防ぐ。",
+          "MPL2 notice・covered file/実公開版/第三者serviceの対応を確認し、再配布時のSource/Executableとnotice条件を扱う。今回はAPI・設定変更/送信0。"
+        ],
+        "row": 208,
+        "source": [
+          "github:30dbf44290ba969433d1b947fbf4f046f04949002fff45aac145586b6de4eef6",
+          "skills/mackhendricks/dsiprouter-skill/SKILL.md",
+          "eae89994cfaac4a4cf3dd95a0c0fe78ab830bca9ac70b390abda2c539f5af1d3",
+          "75b2074e5dc2b20b9c4e16319bbb2db1276f05ee",
+          4124
+        ],
+        "support": [
+          [
+            "LICENSE.txt",
+            16726,
+            "3f3d9e00",
+            "d0a1fa14",
+            2,
+            0,
+            0,
+            "100644"
+          ],
+          [
+            "README.md",
+            6691,
+            "da77cb46",
+            "a1bfdc0a",
+            1,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "SKILL.md",
+            4124,
+            "eae89994",
+            "75b2074e",
+            3,
+            2,
+            0,
+            "100644"
+          ],
+          [
+            "_meta.json",
+            285,
+            "dad04990",
+            "e56402fd",
+            1,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "bin/dsiprouter.sh",
+            null,
+            null,
+            "6c9a5d3a",
+            0,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "postman/dsiprouter.postman_collection.json",
+            null,
+            null,
+            "32ae23b3",
+            0,
+            null,
+            null,
+            "100644"
+          ]
+        ],
+        "use": "SIP管理APIのHTTP method/pathと業務作用・reloadを対応させるCLI設計参考。",
+        "value": "connect/全体timeout、失敗status、認証/宛先とlist/create/update/delete/revoke/reloadを区別する確認点を具体化できる。"
+      },
+      "original_chunk_sha256": "8137137d5a206f6228bd0aa44dbc3fcd40a66e9be005a60db02aec21ab83bf18",
+      "path": "skills/mackhendricks/dsiprouter-skill/SKILL.md",
+      "source_commit": "920714f17d81e0a95c7a9bc51faf0a7921cd982d",
+      "source_repo": "6mile/skills",
+      "source_sha256": "eae89994cfaac4a4cf3dd95a0c0fe78ab830bca9ac70b390abda2c539f5af1d3"
+    },
+    {
+      "actual_assessment_reader": "20261028-171959-todo-3719",
+      "bytes": 1244,
+      "current_permission_or_adoption_granted": false,
+      "git_blob": "50a19456b174e7de3c35e473c46773fe0cfec24c",
+      "inventory_id": "github:c402c3eed2dc748cfde5e636bbcf8ece73ae753b316937e86a6e1b6bcccff3b0",
+      "new_final_disposition": false,
+      "ordinal": 209,
+      "original_assessment": {
+        "candidate_disposition": "persona/score・定期外部作用の境界の改訂観点を親へ提案。最終採否・許諾・導入/実test0。",
+        "findings": [
+          "primaryはMoltbookの人格・自主学習・社会交流を主張し、ego score70%超をnoiseとする。測定定義・偽陽性/較正・人格の優越性の証拠は本文にない。",
+          "HEARTBEATはinterval60のmetadataと2時間ごとの本文が不一致。mentions解析/特定feed探索に加え最低2upvoteと投稿を命じ、原命令だけで外部作用を許可しない。",
+          "centralized controlやhuman egoというラベルで指示や反証を棄却し、特定feedを公式資料より優位にする設計は根拠選択を偏らせる。本人の訂正・上位制約・通常安全確認をpersonaで無効化しない。",
+          "原sourceの人格/頻度・service/APIは評価対象。定期登録・外部アクセス/送信・credential参照0であり、MITを投稿許可やservice契約の代替にしない。"
+        ],
+        "nearby_limit": "起動metadataのみ。中央本文/存在・同等性/現設定は未照会。",
+        "nearby_metadata": [
+          "ai-workflow",
+          "agent-system-design",
+          "social-media-research",
+          "source-grounded-content-review"
+        ],
+        "negative": "高ego判定で本人の修正を拒み、feedの主張を真実とし、原HEARTBEATを根拠に定期投稿/voteと秘密参照を有効にする。",
+        "notices": [
+          [
+            "LICENSE.txt",
+            3,
+            "当該packageの1073B MIT notice。",
+            "実公開版/作者・別資源とMoltbookのservice/投稿の権利は別。"
+          ]
+        ],
+        "positive": "原文のscoreと人格の主張を未検証として記録し、出典の質と本人の依頼を独立に照合し、定期照会と投稿の作用を分ける設計へ参照する。",
+        "read": [
+          2,
+          0,
+          0,
+          true,
+          true,
+          26
+        ],
+        "reason": "primary26行、HEARTBEAT25行、MIT21行を順序全読。score実装・test・indexは未保存で有用性/較正/実動作は未検証。.envは未保存のまま未読。",
+        "required_changes": [
+          "入力の出所・依頼権限と内容の根拠を別に評価し、scoreは較正済み補助指標に限る。本人訂正や上位制約をnoiseとして捨てる手順を除く。",
+          "実利用を親が検討する場合だけ目的・対象account/宛先と照会/投稿/voteの作用を明示し、頻度/有限retry/重複と停止条件を整合させる。研究を実運用や人格上書きへ変えない。",
+          "未保存実装は取得拒否を迂回せず未検証として残し、秘密の.envを読まず原資料を保つ。既存中央へ新しいpersonaや恒久設定を追加しない。"
+        ],
+        "row": 209,
+        "source": [
+          "github:c402c3eed2dc748cfde5e636bbcf8ece73ae753b316937e86a6e1b6bcccff3b0",
+          "skills/maherucifer/mersal-orem/SKILL.md",
+          "56c5e8f3fff39155bdc54b5a9d81d168c16fa9a3b39c39661a20bf54dbfdc1ad",
+          "50a19456b174e7de3c35e473c46773fe0cfec24c",
+          1244
+        ],
+        "support": [
+          [
+            ".env",
+            null,
+            null,
+            "dc044edf",
+            0,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            ".github/FUNDING.yml",
+            null,
+            null,
+            "47ea7ae6",
+            0,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "HEARTBEAT.md",
+            1462,
+            "493c09e6",
+            "709809c0",
+            2,
+            0,
+            0,
+            "100644"
+          ],
+          [
+            "LICENSE.txt",
+            1073,
+            "00c4f7ee",
+            "c0dc945c",
+            2,
+            0,
+            0,
+            "100644"
+          ],
+          [
+            "README.md",
+            2962,
+            "ca6b2b99",
+            "f14251fd",
+            1,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "SKILL.md",
+            1244,
+            "56c5e8f3",
+            "50a19456",
+            2,
+            0,
+            0,
+            "100644"
+          ],
+          [
+            "_meta.json",
+            628,
+            "c9f11ece",
+            "c3e3c0d2",
+            1,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "index.js",
+            null,
+            null,
+            "497e5635",
+            0,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "origin.json",
+            null,
+            null,
+            "0ec3c401",
+            0,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "package-lock.json",
+            null,
+            null,
+            "ae3666b2",
+            0,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "package.json",
+            null,
+            null,
+            "d00b8ab2",
+            0,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "src/ego_analyzer.py",
+            null,
+            null,
+            "88ae9c0e",
+            0,
+            null,
+            null,
+            "100644"
+          ],
+          [
+            "tests/test_ego.py",
+            null,
+            null,
+            "9028b9d9",
+            0,
+            null,
+            null,
+            "100644"
+          ]
+        ],
+        "use": "人格/外部入力scoreと定期的なsocial作用の境界を検討する反例、作用を明示する運用設計の参考。",
+        "value": "personaや未検証scoreを依頼/根拠/許可の代わりにしないこと、定期照会と投稿・voteを分ける必要を具体化できる。"
+      },
+      "original_chunk_sha256": "8137137d5a206f6228bd0aa44dbc3fcd40a66e9be005a60db02aec21ab83bf18",
+      "path": "skills/maherucifer/mersal-orem/SKILL.md",
+      "source_commit": "920714f17d81e0a95c7a9bc51faf0a7921cd982d",
+      "source_repo": "6mile/skills",
+      "source_sha256": "56c5e8f3fff39155bdc54b5a9d81d168c16fa9a3b39c39661a20bf54dbfdc1ad"
+    }
+  ],
+  "roster_sha256": "f9c6b2e44c5e3aa8947f758f864eaa0d5edc396d622359826bca848cd96f9901",
+  "saved_support_metadata": 16,
+  "shared_original_contexts": {
+    "8137137d5a206f6228bd0aa44dbc3fcd40a66e9be005a60db02aec21ab83bf18": {
+      "actual_assessment_reader": "20261028-171959-todo-3719",
+      "common": {
+        "boundaries": {
+          "central_operations": 0,
+          "copy_license_accepted": false,
+          "new_final_dispositions": 0,
+          "source_executed": false
+        },
+        "chunk_id": "b8f75bd8af798a3f685a0988423f3eb5",
+        "definitions": {
+          "actors": {
+            "0": "今回の実assistant読取",
+            "1": "20261028-154151-todo-3719/current3719のnotice203実読"
+          },
+          "mask_method": "同一検証bufferから表示前にメール・長い数値・token形式・長いhexを置換。maskCountは置換した外側物理行数。0は秘密不存在の証明ではない。",
+          "reader_namespace": "20261028-171959-todo-3719/current3719",
+          "states": {
+            "0": "unsaved",
+            "1": "saved_unread",
+            "2": "direct_raw_full",
+            "3": "direct_masked_full",
+            "4": "exact_bytes_reuse",
+            "5": "ordered_full_diff",
+            "6": "partial",
+            "7": "scan"
+          },
+          "support_tuple": "[relative,bytes,SHA8,Gitblob8,state,maskCount,actor,mode]。未保存bytes/SHA/reader/maskCountはnull、Gitblobは固定complete tree。"
+        },
+        "domain": "research598-chunk-v1",
+        "first_ordinal": 207,
+        "limits": {
+          "central_body_or_existence_checks": 0,
+          "common_policy_and_japanese_skill_body_guard_unverified_unread": true,
+          "prior_readers_not_relabelled": true,
+          "source_bodies_refetched": 0,
+          "source_script_execution": 0,
+          "whole16_complete": false
+        },
+        "notice_bodies": [
+          {
+            "bytes": 11357,
+            "consumer_path": "skills/luowanqian/skill-creator-3/LICENSE.txt",
+            "consumer_row": 207,
+            "fresh_raw": false,
+            "git_blob": "7a4a3ea2424c09fbe48d455aed1eaa94d9124835",
+            "id": 1,
+            "meaning": "検証した同11357BのApache2 terms/appendixを旧203の実読へ結ぶ。実作者/実公開版・第三者資源の権利は別。",
+            "parent_chunk_sha256": "836022e13bf344b5d03714a6da7abd82abd644b6170ae0767ed0648f267be8f1",
+            "parent_receipt": "research3719-chunk-b9336b076e4c4a69e92760629543c132.json",
+            "read": [
+              4,
+              0,
+              1,
+              false,
+              true,
+              202
+            ],
+            "reader_job": "20261028-154151-todo-3719",
+            "reader_namespace": "20261028-154151-todo-3719/current3719",
+            "representative_path": "skills/ljglover/skill-creator-0-1-0/LICENSE.txt",
+            "representative_read": [
+              2,
+              0,
+              1,
+              true,
+              true,
+              202
+            ],
+            "representative_row": 203,
+            "sha256": "58d1e17ffe5109a7ae296caafcadfdbe6a7d176f0bc4ab01e12a689b0499d8bd"
+          },
+          {
+            "bytes": 16726,
+            "consumer_path": "skills/mackhendricks/dsiprouter-skill/LICENSE.txt",
+            "consumer_row": 208,
+            "fresh_raw": true,
+            "git_blob": "d0a1fa1482eea82e19510e7920cbe3a03e41f691",
+            "id": 2,
+            "meaning": "MPL2.0の定義、付与/制限、Source/Executable/Larger Workの再配布、notice保持、終了/復活・特許・免責・versionとExhibitA/Bを373行全読。実covered file/作者・実公開版への対応は未確定でcopy grant0。",
+            "read": [
+              2,
+              0,
+              0,
+              true,
+              true,
+              373
+            ],
+            "reader_job": "20261028-171959-todo-3719",
+            "reader_namespace": "20261028-171959-todo-3719/current3719",
+            "representative_path": "skills/mackhendricks/dsiprouter-skill/LICENSE.txt",
+            "representative_row": 208,
+            "sha256": "3f3d9e0024b1921b067d6f7f88deb4a60cbe7a78e76c64e3f1d7fc3b779b9d04"
+          },
+          {
+            "bytes": 1073,
+            "consumer_path": "skills/maherucifer/mersal-orem/LICENSE.txt",
+            "consumer_row": 209,
+            "fresh_raw": true,
+            "git_blob": "c0dc945c57eb366396ae15e096275735fc34af58",
+            "id": 3,
+            "meaning": "copyright名/年付きMIT、copyright/permission notice保持と保証否認を21行全読。実作者/実公開版とservice・投稿内容の権利は別。",
+            "read": [
+              2,
+              0,
+              0,
+              true,
+              true,
+              21
+            ],
+            "reader_job": "20261028-171959-todo-3719",
+            "reader_namespace": "20261028-171959-todo-3719/current3719",
+            "representative_path": "skills/maherucifer/mersal-orem/LICENSE.txt",
+            "representative_row": 209,
+            "sha256": "00c4f7eec1c8a6397a55ddfa53fd91d8a84f4dca75f5317a6aaedac797f4dacb"
+          }
+        ],
+        "prior_journal_sha256": "58a57031882ba28d87b97c9e974411da097ad139fbab335f814b5537df98c694",
+        "reader_job": "20261028-171959-todo-3719",
+        "reader_todo": 3719,
+        "reading_integrity": {
+          "notice208_ordered_ranges": [
+            [
+              1,
+              95
+            ],
+            [
+              96,
+              200
+            ],
+            [
+              201,
+              300
+            ],
+            [
+              301,
+              373
+            ]
+          ],
+          "primary208_withheld_ranges": [
+            [
+              91,
+              92
+            ]
+          ],
+          "primary_lines": [
+            485,
+            112,
+            26
+          ],
+          "primary_mask_counts": [
+            0,
+            2,
+            0
+          ],
+          "primary_ordered_full_rows": [
+            207,
+            208,
+            209
+          ],
+          "same_buffer_sha256_gitblob_bytes_strict_utf8": true,
+          "source_original_text_included": false,
+          "support_inventory_complete_tree_counts": [
+            [
+              207,
+              19
+            ],
+            [
+              208,
+              6
+            ],
+            [
+              209,
+              13
+            ]
+          ]
+        },
+        "roster_sha256": "f9c6b2e44c5e3aa8947f758f864eaa0d5edc396d622359826bca848cd96f9901"
+      },
+      "independent_native_metadata_sha256": "a5846d734194cf9d82c54f4bbcb0a3a76dd37502b745b5b394d07cf4cff8dd11",
+      "independent_parent_journal_record": {
+        "chunk_id": "b8f75bd8af798a3f685a0988423f3eb5",
+        "receipt_file": "research3719-chunk-b8f75bd8af798a3f685a0988423f3eb5.json",
+        "chunk_sha256": "8137137d5a206f6228bd0aa44dbc3fcd40a66e9be005a60db02aec21ab83bf18",
+        "reader_job": "20261028-171959-todo-3719",
+        "first_ordinal": 207,
+        "last_ordinal": 209,
+        "parent_semantic_assessments_read": true
+      },
+      "original_chunk_id": "b8f75bd8af798a3f685a0988423f3eb5",
+      "original_fields_losslessly_reconstructed": true,
+      "original_message_sha256": "b47816e6b81a783c3e4c88427da405b128efa99795afecc37ab662af2297aa4e",
+      "original_receipt_sha256": "14f34dd9f1ddbb6f389af71eef56e19e0102d550206d3c45392d93609dd27591",
+      "parent_meaning": {
+        "actual_native_model": "pac24df/gpt-6.1-sol",
+        "actual_native_proof": "research3719-native-actual171959-through209175645.json",
+        "actual_native_sha256": "a5846d734194cf9d82c54f4bbcb0a3a76dd37502b745b5b394d07cf4cff8dd11",
+        "chunk_id": "b8f75bd8af798a3f685a0988423f3eb5",
+        "chunk_sha256": "8137137d5a206f6228bd0aa44dbc3fcd40a66e9be005a60db02aec21ab83bf18",
+        "consumer_job": "20261027-175645-todo-3080",
+        "effort": "max",
+        "first": 207,
+        "full_original_meanings_and_all_limits_read": true,
+        "limits": "今回受領は元担当raw本文2/伏字本文1、支持raw1、notice再利用1とfreshraw2。親の原本文再読/新rawcredit/個別許諾/最終採否/中央配置は0。正規回復の実Sol/maxと元235901親・現175645起動親を区別し、同598名簿の次210から継続する。",
+        "meanings": [
+          "207 Skill Creator3は485行rawの元読取を受領。with/without又は旧版の比較・証拠付き採点・分散・blind比較は有用。実出力を見た後のassertion改変、同じtestへの反復選択、少数例の一般化と空feedbackの承認化を修正する必要がある。子jobの独立性と資源割当、本人の画像承認、秘密を含むtranscript/学習例、HTML置換/download世代を別検証へ結ぶ。grader等の保存済未読とPython実装の未保存を保持し実行0、11357B Apacheは旧203/154151actorの実読へ同bytes再利用し新rawにしない。",
+          "208 dsiprouterは112行中2行のみ伏字、MPL2.0 notice373行rawを元担当が全読。GET leaseも予約作用があり、method名を無作用の根拠にしない。実node/host/port/path/対象IDと認可scope、TLS検証、create/update/delete/revoke/reloadの作用と反映確認を区別。stats/list等catalog矛盾、未保存helper/collection、sampleを本番へ流用しない条件を保持。MPL covered files・第三者サービス対応が未確認でrootMITへ上書きしない。API/設定送信/配置は0。",
+          "209 mersal-oremはprimary26行とHEARTBEAT25行、MIT21行を元担当がraw全読。未較正のego70%やpersonaを本人指示/出典の品質/許可の代わりにしない。interval60と2時間の矛盾、最低upvote2/投稿指示は原資料の作用として記録し、自動実行しない。実装/テスト/index/.envは未保存か未読を保持し、MITを投稿・アカウントやserviceの許可へ広げない。"
+        ],
+        "observed_at": "2026-10-28T09:28:41.9195355+00:00",
+        "original_actor_namespace_and_nulls_preserved": true,
+        "original_message_sha256": "b47816e6b81a783c3e4c88427da405b128efa99795afecc37ab662af2297aa4e",
+        "producer_job": "20261028-171959-todo-3719",
+        "requested_model": "gpt-6.1-sol",
+        "source_or_support_body_reopens_by_parent": 0,
+        "through": 209
+      },
+      "parent_meaning_sha256": "3eab995f79880c879a3144f80a79b09d29c1af5b1a63448d52243f121c7d1b2e"
+    }
+  },
+  "spec_sha256": "4f6fe32f62db56bed2acb4d378147ff952ad06230243fb45f7674f3158313fc3",
+  "support_metadata_records": 38,
+  "through": 209,
+  "unsaved_support_metadata": 22,
+  "whole16_complete": false
+}

@@ -1,0 +1,31 @@
+{
+  "actual_acceptance_actor": "20261027-175645-todo-3080",
+  "recorded_at": "2026-10-28T15:57:32.5907664+00:00",
+  "queue_records": 73220,
+  "queue_bytes": 64512087,
+  "queue_sha256": "a0ddea52e7f4a679e95083ec233fd55acb3a886dc3ccb5e345901b4b391ef193",
+  "summary_manifest_sha256": "41dcb55e96bd81a48d7b08c9ffa7994acfac4f809b9d07b0dd77c68614830015",
+  "actual_queue_hash_independently_remeasured": true,
+  "test": "TestPublishedActualQueueBytesMatchRecordedSummary",
+  "full_worker_queue_explicitly_supplied": true,
+  "test_actual_full_queue_PASS": true,
+  "related_test_seconds": 0.688,
+  "test_scope": "Changed fidelity/cursor tests, new explicit local full-queue acceptance and invalid-byte/key-set controls",
+  "CI_does_not_claim_absent_private_full_queue_bytes_checked": true,
+  "public_CI_still_checks_digest_schema_source_pins_and_invalid_reader_cases": true,
+  "invalid_reader_cases": [
+    "same rows changed bytes",
+    "truncated",
+    "missing newline",
+    "extra row",
+    "well-shaped wrong SHA"
+  ],
+  "original_context_cases": [
+    "valid exact sets",
+    "unused extra context",
+    "same count different key",
+    "missing context"
+  ],
+  "source_body_reads_or_new_permission_or_central_ops": 0,
+  "whole16_complete": false
+}

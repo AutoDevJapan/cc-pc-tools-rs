@@ -1,0 +1,122 @@
+{
+  "domain": "skills3080-next3-actual-explicit-text-application-v1",
+  "actor": "20261027-175645-todo-3080",
+  "actual_model": "gpt-6.1-sol",
+  "effort": "max",
+  "Fast_proved": false,
+  "applied_at": "2026-10-27T21:04:25.3547915+00:00",
+  "operation_sha256": "5df4ba1cf1946271e5d03d6b6e02009f0c29d2c8025a9b8be0161a3d8aefae70",
+  "current_instructions_literally_read_before_decisions": true,
+  "all_scenario_meanings_applied": true,
+  "instruction_buffers": 6,
+  "instruction_bytes": 9206,
+  "instruction_pins": [
+    {
+      "target": "aerobase-travel-hotels/SKILL.md",
+      "sha256": "984a37ec16985f15ecabfbf5d68fea957c41fc3ed4ce254b9dc3bf7dfb64ce8b",
+      "bytes": 2471,
+      "actual_semantic_reader": "20261027-175645-todo-3080",
+      "source": "qualified current same-handle returned buffer; literally read by actual current model before these decisions"
+    },
+    {
+      "target": "aerobase-travel-hotels/references/guide.md",
+      "sha256": "e3efb44ae5248df0483c97698f86cb8992a49778b7df476bf70da05ba15abe51",
+      "bytes": 1146,
+      "actual_semantic_reader": "20261027-175645-todo-3080",
+      "source": "qualified current same-handle returned buffer; literally read by actual current model before these decisions"
+    },
+    {
+      "target": "aerobase-travel-lounges/SKILL.md",
+      "sha256": "6433185bef4f57835d7f07c30c3d8ef9f87172d5e8f74ce6df85fd93f2f4ae90",
+      "bytes": 1736,
+      "actual_semantic_reader": "20261027-175645-todo-3080",
+      "source": "qualified current same-handle returned buffer; literally read by actual current model before these decisions"
+    },
+    {
+      "target": "aerobase-travel-lounges/references/guide.md",
+      "sha256": "132d7390c6c230fb028c17aadabe01b33cef0b0f3e8966bdab6d4c425bc0ce38",
+      "bytes": 868,
+      "actual_semantic_reader": "20261027-175645-todo-3080",
+      "source": "qualified current same-handle returned buffer; literally read by actual current model before these decisions"
+    },
+    {
+      "target": "aerobase-travel-wallet/SKILL.md",
+      "sha256": "fb5121abbb590ca6d1eb225ff06ed5dc079128de917d1bb6cdc079391621b776",
+      "bytes": 1935,
+      "actual_semantic_reader": "20261027-175645-todo-3080",
+      "source": "qualified current same-handle returned buffer; literally read by actual current model before these decisions"
+    },
+    {
+      "target": "aerobase-travel-wallet/references/guide.md",
+      "sha256": "73457268fad673b54c30e2a91eec9079bc743f6208d0d614f00adb8acd326068",
+      "bytes": 1050,
+      "actual_semantic_reader": "20261027-175645-todo-3080",
+      "source": "qualified current same-handle returned buffer; literally read by actual current model before these decisions"
+    }
+  ],
+  "explicit_decision_count": 8,
+  "decisions": [
+    {
+      "skill": "aerobase-travel-hotels",
+      "service_calls": 0,
+      "applied": "SKILL1の条件/滞在総額、予約前段落とguideの同2泊例。",
+      "case": "same-room-two-night-total",
+      "decision": "同条件の宿泊総額は100×2+30+20=250USD。出典/取得時点と税込・施設料込みの条件を一緒に示し、税が不明な別案を0として順位に混ぜない。実予約指示はないため候補比較までとし、別途提示された取消条件と具体的な宿泊対象の既存指示を予約時に照合する。"
+    },
+    {
+      "skill": "aerobase-travel-hotels",
+      "service_calls": 0,
+      "applied": "SKILL3の状態分離と末尾のsandbox-safe制限、guideの取得時点・条件照合。",
+      "case": "offer-prebook-not-booked",
+      "decision": "offerIdとprebookの200受付は料金提示や仮押さえの応答で、予約成立・決済・取消や返金を証明しない。ACC_CREDIT_CARD/sandbox-safeという保存版の列挙値だけで実テストモードや実カード不使用を認めず、実カードは参照・利用しない。"
+    },
+    {
+      "skill": "aerobase-travel-hotels",
+      "service_calls": 0,
+      "applied": "SKILL4の変更時の保持/回復、guideのtimeout/5xxと有限再試行。",
+      "case": "rebook-timeout-unknown-states",
+      "decision": "タイムアウト時は元の処理結果、新予約の成立、旧予約の保持/取消、違約金と返金を別の未確認状態として残す。結果を確かめる前に同じ予約/決済/取消を盲再送せず、元の宿泊を失う変更は回復手順と同対象の既存許可へ結ぶ。"
+    },
+    {
+      "skill": "aerobase-travel-lounges",
+      "service_calls": 0,
+      "applied": "SKILL3の移動/手続/締切差引きと4、guideの同90分例。",
+      "case": "ninety-minute-connection",
+      "decision": "利用できる参考時間は90−40−20−20=10分で、施設内45分の休憩案とは両立しない。短い候補比較にとどめ、営業時間・利用資格・当日空き/稼働の未確認と帰着余裕を残し、搭乗の安全や医学的回復を保証しない。"
+    },
+    {
+      "skill": "aerobase-travel-lounges",
+      "service_calls": 0,
+      "applied": "SKILL2/5の資格と状態、末尾の有料宣伝制限とguide。",
+      "case": "listing-is-not-admission",
+      "decision": "公開一覧の施設名・シャワーは設備掲載であり、本人の会員資格、対象ターミナル、同行者条件、当日の空き/稼働の確認とは分ける。Proのreal-time広告を実観測とせず、カードを返すwallet取得や新規購入で埋めない。"
+    },
+    {
+      "skill": "aerobase-travel-wallet",
+      "service_calls": 0,
+      "applied": "SKILL2/3とguideの単純CPP/別払い差分の例。",
+      "case": "provided-noncard-points-cpp",
+      "decision": "同条件の現金200USDと10000ポイントの単純CPPは200×100÷10000=2.00。現金200USDが同条件の税込総額である前提なら、別払い30USDを差し引く参考値は(200−30)×100÷10000=1.70CPP。税/移行費用/期限・取消・利用可否が未確認なので最も得な選択や現在の確定価値とは断言しない。"
+    },
+    {
+      "skill": "aerobase-travel-wallet",
+      "service_calls": 0,
+      "applied": "SKILL1/2/4、冒頭の実カード情報制限と連携の範囲、guideの前提保持。",
+      "case": "zero-missing-currency",
+      "decision": "分母0ではCPPを計算せず、欠けた現金総額を0にせず、異なる通貨を現在の換算率なしで比較しない。所有や期限を推測しない。既知の非カード数値と不足を返し、実カードwallet/無指定Gmail/第三者転送・APIキー/追加権限/費用へ広げない。"
+    },
+    {
+      "skill": "all3",
+      "service_calls": 0,
+      "applied": "3つのSKILLとguideの原API/プラン/個別notice/未読・第三者権利の限界。",
+      "case": "source-api-advertising-and-rights",
+      "decision": "保存版のAPI-only/429のPro・Lifetime/固定価格は現在の本人OAuth利用枠や実サービスの証明ではない。追加購入・APIキー・原script実行・実カード参照を行わず、可視workflowに付く個別MIT noticeを、伏字47行/_meta未読/第三者の宿泊・施設・ポイントデータやサービスの権利へ包括しない。"
+    }
+  ],
+  "new_service_or_booking_payment_monitoring_or_notification_operations": 0,
+  "implicit_skill_selection_proven": false,
+  "method": "Actual current model read qualified current six instructions and applied them to eight hypothetical text cases; no real travel recommendation, transaction, runtime API invocation, or implicit routing proof",
+  "plan_sha256": "f640e8092ec6c58c03228d05ab40a78a18afb2c7ecc4625443a63c1402e83b74",
+  "readback_proof_sha256": "72af041b9817f7967ec27fafa511f23ddf03a533e30a67b9bd82fed312ff5d8e",
+  "whole16_complete": false
+}

@@ -1,0 +1,357 @@
+{
+  "all_original_selected_chunks_losslessly_reconstructed": true,
+  "central_operations": 0,
+  "context_resolution": "Each record.original_chunk_sha256 selects shared_original_contexts[sha].common; add that chunk's ordered original_assessment values as entries and canonical-JSON SHA256 must equal sha. All common fields, including definitions, input_validation, privacy, notice and boundaries, are preserved once.",
+  "domain": "other373-parent-received-shared-snapshot-v3",
+  "entries": [
+    {
+      "inventory_id": "github:0d4a36360201b9bb171776a263c6366c83df96219141e8706686d6fdc6185fb7",
+      "original_assessment_pointer": "/records/0/original_assessment",
+      "original_chunk_sha256": "54b17db3e209f1483979a28383797fa8c74b2c399b3a244efd09148b4275ddf3",
+      "original_record_index": 0,
+      "path": "Emergent/Prompt.txt",
+      "source_commit": "162db92f54d717d8ebd12292e155aeef32bb4b3c",
+      "source_repo": "x1xhlol/system-prompts-and-models-of-ai-tools",
+      "source_sha256": "9619d1f728c375139e427a8daa6e9dcc2266617982eade1f29f64810c6e0623e"
+    }
+  ],
+  "entries_projection_definition": "Identity-only execution projection; complete original records and shared contexts remain unchanged. No new reading, licence acceptance or adoption.",
+  "first_ordinal": 304,
+  "last_ordinal": 304,
+  "limits": "This shares complete already acknowledged structured evidence, not original source bodies. Original actors, masks, unknown/partial/unread states and opaque path references remain unchanged; no grant, execution, adoption, current physical continuity or new reading is established.",
+  "materializer_job": "20261027-175645-todo-3080",
+  "new_copy_grants": 0,
+  "new_final_dispositions": 0,
+  "new_raw_or_unique_credit": 0,
+  "new_source_body_reads": 0,
+  "parent_acknowledged_through_at_materialization": 304,
+  "parent_journal_sha256": "7bceb9e724270b92d6fd1f0cb33780e556aa8b4e9ab32368fb1ef698aa1745a4",
+  "public_reflected": false,
+  "publication_preparation": {
+    "central_operations": 0,
+    "new_final_dispositions": 0,
+    "new_global_raw_or_workflow_credit": 0,
+    "new_permissions": 0,
+    "new_source_body_reads": 0,
+    "publisher_job": "20261027-175645-todo-3080",
+    "retained_private_snapshot_sha256": "ef6b03488be0b40cb880b0260121bcf515ad35e9a3b71ecc7734de2dd343095f",
+    "whole_original_contexts_reconstructed_now": 1
+  },
+  "records": [
+    {
+      "actual_assessment_reader": "20261027-105225-todo-3778",
+      "bytes": 37424,
+      "inventory_id": "github:0d4a36360201b9bb171776a263c6366c83df96219141e8706686d6fdc6185fb7",
+      "inventory_unit": "github_prompt_or_model_information",
+      "original_assessment": {
+        "candidate_disposition": "mock/契約/段階検証とtemplate設計のvariantとして改訂比較候補。全prompt/code/依存の直接導入や実行は保留。",
+        "classification": "variant",
+        "findings": [
+          "React/FastAPI/Mongo、env名/port/api prefix/ingress/supervisor/hotreloadは固定templateの宣言。現在PCの環境やサービス起動/秘密env読取の許可ではない。npm/yarn等の特定規則も当該platform向け。",
+          "frontend mockを作って停止/本人にbackend開始確認、毎回frontend testing前に質問、minor fixも本人確認とする。現運用の通常検査/自律修復を本人PC待ちにせず、新UIは制作前の同画像への回答に結ぶ。",
+          "API key要求、keyを.envへ追加、環境からuniversal key取得、残高追加/auto topを提案する実記述がある。OAuthサブスクの利用や新費用不要の証明ではなく、この手順を実行しない。",
+          "playbook/subagentをそのまま採用・support回答をそのまま本人へ返す規則と、下位diffを点検する規則が併存する。tool outputを権限/正しさへ昇格せず、原要件/既存回答/実結果を照合する。MVPだからsecurity/privacy/qualityを軽視する記述も実リスクを無視できない。",
+          "inline use-toastはglobal state/listener/遅延remove/reducer内の副作用を含み、App/CSS/theme/依存/backend/requirementsを例示する。sourceのInspired by表示を第三者codeの個別許諾としない。実file/稼働/現行libraryではない。",
+          "backend例はstatus一覧を1000件まで読み、明示authやpagingが無い。CORSはcredentialsとwildcard origin。これだけで全件/認可・実安全/動作を証明しない。templateの寿命/型/実依存は未検証。",
+          "designはfocus/contrast、transition対象の限定、実画像/ログ確認に価値がある一方、色/フォント/動き/20%gradients等を一律規則とする。Inline CSSのsystem fontと禁止規則にも差がある。最終『正例』には比較演算子後のsemicolon等の不整合があり、実行可能と保証しない。"
+        ],
+        "negative": "mock frontendを実backend完了とし、環境からkey取得/auto topを有効にし、下位agentの成功文や1000件だけを全件/安全の証明とする。",
+        "notices": [
+          {
+            "notice_ref": "root"
+          }
+        ],
+        "package": {
+          "actual_non_primary_support": 0,
+          "complete_tree": true,
+          "other_primary_aliases": 1,
+          "root": "Emergent",
+          "total_tree_blobs": 2
+        },
+        "positive": "mock箇所とAPI契約を明示し、実統合後の新しい検査・diffで結果を確認する。アップロードの各段階に進捗と失敗/再試行条件を設ける設計。",
+        "read": [
+          3,
+          1,
+          0,
+          false,
+          true,
+          946
+        ],
+        "read_evidence": {
+          "actual_reader_job": "20261027-105225-todo-3778",
+          "masked_lines": [
+            472
+          ],
+          "masking_version": "v21-bracketed-email-20261027",
+          "method": "direct_masked_full",
+          "original_requested_ranges": [
+            [
+              1,
+              320
+            ],
+            [
+              321,
+              640
+            ],
+            [
+              641,
+              946
+            ]
+          ],
+          "overflow_recovery": "初回3rangeの合成出力が中間省略。保存済みの同じmasked tool outputから286..640を表示して補完。原gzipの再読/新unique加算ではない。",
+          "ranges": [
+            [
+              1,
+              285
+            ],
+            [
+              286,
+              640
+            ],
+            [
+              641,
+              946
+            ]
+          ],
+          "strict_utf8": true
+        },
+        "reason": "全946行をmasked表示。初回outer出力の省略は保存済みmasked出力から補い、全読と新raw再読を区別した。workflowとinline code/config/design例を分ける。",
+        "required_changes": [
+          "原templateの実環境・routing・mock/API契約と対象を照合し、mock/実接続/検査済みを分ける。検査は変更影響で選び、通常の修復/PC操作を本人へ返さない。",
+          "API key/新Python/残高追加・auto topは既存OAuth/許可済み費用の代わりにせず、原指示を実行しない。agent返却/統合playbookは証拠/権限/要件と照合する。",
+          "inline code/configは実consumer/型/依存・寿命/認可/paging/CORS/期待結果を確認する案へ分ける。原source/実資料を保持し、第三者素材/codeの個別権利を残す。",
+          "新UIは本人の同画像への回答を保持し、一律の流行/色/動きを移さない。原文の壊れた例/escape表現を黙って実行コードへ変えない。"
+        ],
+        "row": 304,
+        "source": [
+          "github:0d4a36360201b9bb171776a263c6366c83df96219141e8706686d6fdc6185fb7",
+          "x1xhlol/system-prompts-and-models-of-ai-tools",
+          "162db92f54d717d8ebd12292e155aeef32bb4b3c",
+          "Emergent/Prompt.txt",
+          "9619d1f728c375139e427a8daa6e9dcc2266617982eade1f29f64810c6e0623e",
+          "8d179d2b47d8445b97a2e2c00923c5316e85aefd",
+          37424
+        ],
+        "subunits": [
+          [
+            "environment_workflow",
+            1,
+            190
+          ],
+          [
+            "component_toast_examples",
+            191,
+            400
+          ],
+          [
+            "app_css_theme_examples",
+            402,
+            667
+          ],
+          [
+            "package_backend_dependency_examples",
+            670,
+            869
+          ],
+          [
+            "image_design_guidelines",
+            871,
+            946
+          ]
+        ],
+        "support": [
+          {
+            "actual_reader_job": "20261025-142809-todo-3778",
+            "bytes": 7880,
+            "git_blob": "ef92120335c789e432888fe819324b2681a81538",
+            "mask": 0,
+            "method": "same-byte-reuse",
+            "original_read": [
+              2,
+              0,
+              0,
+              true,
+              true,
+              232
+            ],
+            "original_reader_namespace": "20261025-142809-todo-3778/current",
+            "path": "Emergent/Tools.json",
+            "primary_alias_not_support_count": true,
+            "read": [
+              2,
+              0,
+              1,
+              true,
+              true,
+              232
+            ],
+            "reader": 1,
+            "related_primary_ordinal": 47,
+            "representative": {
+              "chunk_id": "ef7d04539b944d15918aa97adfe5fe27",
+              "pointer": "entries/0",
+              "receipt_sha256": "27b97a1b0365a93e8c250c7fa2811cc77277c4c3f3a365fdd3c6eb6324f7ea72"
+            },
+            "saved": true,
+            "sha256": "bd79526e64624c9cd23bded3dfa5acb82f8a687e464f6898853cba878931634f"
+          }
+        ],
+        "unit": "github_prompt_or_model_information",
+        "unmet": [
+          "伏字1行のraw。outer出力の省略は同じcaptured masked出力で補ったが、maskは秘密数/不存在の証明でない。",
+          "現在のtemplate/tool/agent/依存・実upload/API/認可/CORS/paging/寿命・画像回答・第三者code/素材/原prompt権利・未知中央比較は未検証。"
+        ],
+        "use": "MVP開発のmock→API統合→検査、routing/env/依存、inline template/UI例を比較する。",
+        "value": "mockを実接続と分けて明示し、契約にmock箇所/API/置換条件を記録する、アップロード段階ごとの失敗/進捗を扱う、下位agentのdiffを確認する手順に用途がある。"
+      },
+      "original_chunk_id": "c304a791e5034f6b8d02c9157e4ab638",
+      "original_chunk_sha256": "54b17db3e209f1483979a28383797fa8c74b2c399b3a244efd09148b4275ddf3",
+      "path": "Emergent/Prompt.txt",
+      "previous_parent_semantic_read": true,
+      "source_commit": "162db92f54d717d8ebd12292e155aeef32bb4b3c",
+      "source_git_blob": "8d179d2b47d8445b97a2e2c00923c5316e85aefd",
+      "source_path": "Emergent/Prompt.txt",
+      "source_repo": "x1xhlol/system-prompts-and-models-of-ai-tools",
+      "source_sha256": "9619d1f728c375139e427a8daa6e9dcc2266617982eade1f29f64810c6e0623e"
+    }
+  ],
+  "roster_sha256": "460219790c088b33e6044c6a97c68a882549c608c3de46ea536aa990a2c1adac",
+  "shared_original_contexts": {
+    "54b17db3e209f1483979a28383797fa8c74b2c399b3a244efd09148b4275ddf3": {
+      "actual_assessment_reader": "20261027-105225-todo-3778",
+      "all_original_chunk_fields_reconstructed": true,
+      "common": {
+        "boundaries": {
+          "central_operations": 0,
+          "copy_license_accepted": false,
+          "new_final_dispositions": 0,
+          "source_executed": false
+        },
+        "chunk_id": "c304a791e5034f6b8d02c9157e4ab638",
+        "definitions": {
+          "actors": {
+            "0": "今回の実assistant",
+            "1": "以前同じToDo3778の実assistant:20261025-142809-todo-3778"
+          },
+          "reader_namespace": "20261027-105225-todo-3778/current",
+          "states": {
+            "1": "saved_unread",
+            "2": "direct_raw_full",
+            "3": "direct_masked_full",
+            "6": "partial",
+            "7": "scan"
+          },
+          "support_rule": "固定complete treeの全blobからprimaryを除外。同じ固定名簿の別primary47だけで支持数/新uniqueへ二重加算0。SHA/bytes/Gitblob/strictUTF8は同じ保存gzipで照合。旧raw/readerは当時profileで、今回byte照合/旧意味評価読取は新rawではない。"
+        },
+        "domain": "othergit373-chunk-v1",
+        "existing_relationship": {
+          "new_global_unique_coverage_claimed": false,
+          "prior47_meaning_chunk_id": "ef7d04539b944d15918aa97adfe5fe27",
+          "prior47_receipt_sha256": "27b97a1b0365a93e8c250c7fa2811cc77277c4c3f3a365fdd3c6eb6324f7ea72",
+          "scope": "旧47の意味評価/原profileは304表示前に確認。既知3048/public metadataと起動catalogのai-workflow/mcp-builder/frontend-node-engineering/ui-accessibility等の名/descriptionまで。未知中央本文/存在/全過去の未読・重複を確定しない。"
+        },
+        "first_ordinal": 304,
+        "input_validation": {
+          "all_primary_package_alias_bytes_verified": true,
+          "catalog_rows": 73220,
+          "catalog_sha256": "2d73c9a038a41cc220a9687b935bfa1e0b315b65d9bd6d3e54ddb4111972876c",
+          "commit": "162db92f54d717d8ebd12292e155aeef32bb4b3c",
+          "commit_json_sha256": "674dc969c4d800fefbf65a7ecb1c875e919118aa48fd0a2133ede51385f90939",
+          "index_sha256": "477ac8c5b178c4c781bf5baf0b26c6a316ed0ae6e9001ad28f0ac0ab9844b54f",
+          "notice_paths": [
+            "LICENSE.md"
+          ],
+          "primary_tuple_unit_catalog_exact": true,
+          "repo": "x1xhlol/system-prompts-and-models-of-ai-tools",
+          "root_tree": "e8d86c0a025a7a07d4bb8723ae758cf98d63cbf5",
+          "same_buffer_sha_bytes_gitblob_strict_utf8": true,
+          "tree_entries": 171,
+          "tree_sha256": "416b91db26db0b0c4447d46bbb945259d89ac393e45ee76b5ebceb09cde459f5",
+          "truncated": false
+        },
+        "notice_evidence": {
+          "root": {
+            "actual_reader_job": "20261025-142809-todo-3778",
+            "bytes": 35149,
+            "copy_license_accepted": false,
+            "displayed_line_ranges": [
+              [
+                1,
+                350
+              ],
+              [
+                351,
+                674
+              ]
+            ],
+            "fixed_token_recovery": {
+              "line": 154,
+              "new_raw_read": false,
+              "same_bytes_verified": true,
+              "text": "2. Basic Permissions."
+            },
+            "git_blob": "f288702d2fa16d3cdf0035b15a9fcbc552cd88e7",
+            "mask": 2,
+            "masked_lines": [
+              4,
+              154
+            ],
+            "method": "same-byte-reuse",
+            "original_notice_gzip": "github/x1xhlol__system-prompts-and-models-of-ai-tools/objects/3972dc9744f6499f0f9b2dbf76696f2ae7ad8af9b23dde66d6af86c9dfb36986.gz",
+            "original_read": [
+              3,
+              2,
+              0,
+              false,
+              true,
+              674
+            ],
+            "original_reader_namespace": "20261025-142809-todo-3778/current",
+            "path": "LICENSE.md",
+            "read": [
+              3,
+              2,
+              1,
+              false,
+              true,
+              674
+            ],
+            "reader": 1,
+            "representative": {
+              "chunk_id": "951da82f4b0d41cda1532574d0b68f97",
+              "pointer": "entries/0/notices/0",
+              "receipt_sha256": "a0afd9bdcf9511fb72c7995cf4376914fe854047aa4512be84661a60d3cfaf9f"
+            },
+            "saved": true,
+            "scope": "root GPLv3全文の旧masked読取を再利用。固定complete treeに別notice名候補なし。収集者のrootGPLをAnthropic等の第三者prompt/tool/サービスの真正性・転載/配布・利用権へ包括しない。原文参照/要約と公開転載/実配布/サービス利用を区別。",
+            "sha256": "3972dc9744f6499f0f9b2dbf76696f2ae7ad8af9b23dde66d6af86c9dfb36986"
+          }
+        },
+        "privacy_limits": {
+          "inherited": "過去の初回漏れ/過剰伏字/guard分類未確認を保持し、原値を再掲/別pathやAPIで迂回しない。",
+          "mask": "初回v21 mask1。L472をwhole-line伏字し過剰伏字も保持。mask数は実秘密数/不存在の証明ではない。",
+          "output_limit": "初回outer outputの中間省略をcaptured masked出力286..640で補完。最初から全読だったとせず、補完後に完了を記録。"
+        },
+        "reader_job": "20261027-105225-todo-3778",
+        "reader_todo": 3778,
+        "resume_validation": {
+          "acknowledged_through": 303,
+          "generation": 67,
+          "journal_sha256": "a3d9f2ed285630df4e9ab3b850960da9a48ce3ae0dbede130e5e4ff099a6e9b4",
+          "parent_semantic_assessments_read": true,
+          "previous_chunk_id": "b303a86c452b4db2a7e9f5016c8d0473",
+          "previous_chunk_sha256": "7c5c2352bf852e7f59a3c988eec6a60c0880a85abb9b0a47341b53ff32dfb42d",
+          "previous_receipt_sha256": "261eaf84470ffa77b0f7297540a63776e6e58a0d82d65714d46d5345cadcc28e",
+          "validated_receipts": 67
+        },
+        "roster_sha256": "460219790c088b33e6044c6a97c68a882549c608c3de46ea536aa990a2c1adac"
+      },
+      "original_chunk_id": "c304a791e5034f6b8d02c9157e4ab638",
+      "original_receipt_sha256": "fa2e79db0a388fd00fad4cb64ee991ceaae8b9dfcfc7829a693439749725215b"
+    }
+  },
+  "source_counts": {
+    "x1xhlol/system-prompts-and-models-of-ai-tools": 1
+  },
+  "whole16_complete": false
+}

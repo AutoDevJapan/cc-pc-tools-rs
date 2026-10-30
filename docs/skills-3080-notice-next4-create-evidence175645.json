@@ -1,0 +1,21 @@
+{
+  "central_file_reads_by_capture": 0,
+  "created_files": 28,
+  "created_targets": 4,
+  "creator_runtime_revision": "a71330f543969b4585f01b7359a84a2fa528c9f2",
+  "creator_runtime_sha256": "f8b2ba6e66e60b06bbbc46c2c0f3d6eedc0208d40444c30e37b70afe29db4fc7",
+  "exact_unmodified_invocation_sha256": "5fa20e6bd8299e8c4c424878042dee788647e0c6deb01b708f0897aaf4fdd640",
+  "job": "20261027-175645-todo-3080",
+  "native_call_id": "call_9a5bc551506640e49f56dc88155e0eaf",
+  "native_call_timestamp": "2026-10-28T05:42:53.185Z",
+  "new_adoptions": 0,
+  "original_CLI_stdout_sha256": "96a3ba604ad620a70b86cdb1eae108e4fb5b32e6dbc5eaf9c7626591d3994560",
+  "original_tool_blocks_sha256": "5f29cb5ebf81a51937e0495b098a70b8c5b177a4e018bb38f83f3892a54040e7",
+  "other_native_bodies_returned": false,
+  "prior_failed_exact_invocation_attempts": [],
+  "request_sha256": "758a78033f857c1cda0f25deeed5a18a89b16b5730caf3cd758fc3929a789167",
+  "successful_CreateNew_count": 1,
+  "thread_id": "01a16bab-c238-7293-953d-d0f447cf2c05",
+  "new_adoptions_scope": "additional_ledger_entries_written_by_capture_only",
+  "scope_clarification_is_a_new_issuer_receipt": false
+}

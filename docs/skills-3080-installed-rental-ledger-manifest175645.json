@@ -1,0 +1,49 @@
+{
+  "root": "D:/CC/Skills",
+  "targets": [
+    {
+      "name": "rental-ledger-reconciliation",
+      "positive": "同一契約の預り金と一部返還を元イベント/実入出金へ結び、再送と未確認を分ける。",
+      "negative": "同名別契約や欠損を混ぜ、記録の状態だけで実同意/支払や適法性を保証し、未依頼の請求/送金を行う。",
+      "files": [
+        {
+          "path": "SKILL.md",
+          "sha256": "a12a1c304e1c84250316ab96ec25aa44f78dfd49ffa892b1db9f9b8db06747a3"
+        },
+        {
+          "path": "references/guide.md",
+          "sha256": "955ff5e6948ecbca87acc86b118be48a5e40de836662487d23addcf397cef871"
+        },
+        {
+          "path": "references/LICENSE.txt",
+          "sha256": "6f6bb192fb5854c274ca1bd5f3705ad6d4577099d2db95f46c90d0657ffb830d"
+        },
+        {
+          "path": "references/source.json",
+          "sha256": "f30fc8aec78a38dd9faf54d6774b595933ca0a9296ac1b4f6a25e6d44fdacec9"
+        },
+        {
+          "path": "references/sources.md",
+          "sha256": "5e0cebb526e3748781cd44dce16f5064d9e0604ba505a1f69df5b097770fae80"
+        },
+        {
+          "path": "references/source-assessment.json",
+          "sha256": "2192d02ab2e7126e9d4843131b6a9fe93eb89b9ae3897aa6a7a0c9a2abf077d6"
+        },
+        {
+          "path": "references/original-skill.masked.txt",
+          "sha256": "bd49e5f1792aec6a35c85552adffd2f6d14a185abfd059316268661bcdaf62fb"
+        }
+      ],
+      "pre_readback_target_state": null,
+      "target_state": "actual_once_created_normal_readback_discovered_explicit_application",
+      "deployment_state": "actual_once_created_normal_readback_discovered_explicit_application"
+    }
+  ],
+  "stage": "actual_once_created_normal_readback_discovered_explicit_application",
+  "central_operations": 1,
+  "new_adoptions": 1,
+  "definition": "One actual CreateNew7/37868B; same original/current7 object IDs and buffers through one normal consume.3048PASS/fresh enabled1/parse0;current2 instructions7895B explicitly used for1 research workflow and6 synthetic cases. Publication changes no central files.",
+  "creator_job": "20261027-175645-todo-3080",
+  "current_consumer_job": "20261027-175645-todo-3080"
+}

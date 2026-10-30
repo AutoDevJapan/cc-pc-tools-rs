@@ -1,0 +1,15 @@
+{
+  "checker": "existing tools/skills-3048-check",
+  "mode": "in-memory embedded bundle; no central reads",
+  "manifest_sha": "39ea776e81250f702902f53aa0e08df98df30d71a964edd9d4295317dcc1a209",
+  "target_count": 4,
+  "payload_count": 28,
+  "central_operations": 0,
+  "new_adoptions": 0,
+  "result": {
+    "exit": 0,
+    "timed_out": false,
+    "stdout": "PASS: 4 explicit skills; structure, descriptions, references, hashes, scenario pairs; in-memory bundle only; no deployment implied\n",
+    "stderr": ""
+  }
+}

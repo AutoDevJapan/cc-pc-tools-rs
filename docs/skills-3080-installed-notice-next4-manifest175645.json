@@ -1,0 +1,300 @@
+{
+  "definition": "Actual once-only canonical CreateNew4/28files89144B. Four normal same-ID/current-buffer readbacks,3048structure,fresh4enabled metadata,8current instructions13040B,2real workflow decisions+6synthetic cases. Publication itself writes no central files; historical proposal and source assessment remain unchanged.",
+  "targets": [
+    {
+      "name": "rlm-controller",
+      "new": true,
+      "before_sha256": "absent",
+      "positive": "固定240行の前半180行を実読した結果を受領し、残る60行と未読の伏字を分けて同じ版の次位置から続ける。",
+      "negative": "先頭180行やワーカー起動だけで240行完了とし、別版の結果や伏字・権利未確認を読了へ混ぜる。",
+      "sources": [
+        "https://github.com/6mile/skills/blob/920714f17d81e0a95c7a9bc51faf0a7921cd982d/skills/skywyze/rlm-controller/SKILL.md",
+        "https://github.com/6mile/skills/blob/920714f17d81e0a95c7a9bc51faf0a7921cd982d/skills/skywyze/rlm-controller/LICENCE.md"
+      ],
+      "files": [
+        {
+          "path": "SKILL.md",
+          "sha256": "9d86deda9edbf8ed21c69c56901a4238e52e06edd59b0bf0e734dcb4434179dc"
+        },
+        {
+          "path": "references/guide.md",
+          "sha256": "091d8dd279f87e61d2235ea29d89c82bd0fe4638c4569568249606dd76961273"
+        },
+        {
+          "path": "references/LICENSE.txt",
+          "sha256": "120701352845f72eda11433beb40df387026e41c5a9c6b9c9cef0c6c624f6004"
+        },
+        {
+          "path": "references/source.json",
+          "sha256": "a0a567961da83ab51c67f7cbe372b090ac805835996804745f5af57a6d53628b"
+        },
+        {
+          "path": "references/sources.md",
+          "sha256": "b1fad594675d9f875fc63d8330705ab07060a9d2a063d718868f46af7b95c9fc"
+        },
+        {
+          "path": "references/source-assessment.json",
+          "sha256": "fd8e875f74b05b3a9f5cedaf869b8d7a220b3a15fa6c7534d0e695e5f8030b75"
+        },
+        {
+          "path": "references/original-skill.masked.txt",
+          "sha256": "fb4c42765f345abb6fb29d65cb3b4b394ea74db4225c110866fcde6731fdb272"
+        }
+      ],
+      "target_kind": "newly_created_adaptation",
+      "deployment_state": "created_once_and_current_readback_verified",
+      "pre_mutation_absence_qualification_completed": true,
+      "target_state": "actual_created",
+      "pre_creation_history": {
+        "target_kind": "new_adaptation_intent",
+        "deployment_state": "proposed_uninstalled",
+        "before_sha256": "not_qualified_private_proposal_only",
+        "pre_mutation_absence_qualification_completed": false,
+        "directory_presence_observation": {
+          "name": "rlm-controller",
+          "observed_at": "2026-10-27T23:21:07.5959420+00:00",
+          "path_exists": false,
+          "metadata_result": "FileNotFoundException",
+          "existing_contents_opened": false,
+          "future_absence_not_asserted": true,
+          "normal_mutation_absence_qualification_completed": false
+        },
+        "target_state": null
+      },
+      "precreation_qualification": {
+        "sha256": "2dee59b98cf302c277746bfb2014377c88f9f12f359d24a9e75eca897f7c73cc",
+        "file": "skills-3080-notice-next4-precreation-qualification175645.json"
+      },
+      "recorded_current_readback": {
+        "sha256": "0f6fc5a4d7ccbc8ef5bb6dc76d4aaee50697ad6074acfe0e578a25bf5bd97485",
+        "file": "skills-3080-notice-next4-consume-evidence175645.json"
+      }
+    },
+    {
+      "name": "parse-payment-qr",
+      "new": true,
+      "before_sha256": "absent",
+      "positive": "提供されたQR由来文字列を解析し、chain未指定・宛先と表示の不一致・単位の未確定を残して支払いを実行せず返す。",
+      "negative": "画像を見ただけで正確なURIやchainを推測し、そのURIを開く・shell実行する・送金する。",
+      "sources": [
+        "https://github.com/6mile/skills/blob/920714f17d81e0a95c7a9bc51faf0a7921cd982d/skills/shawnmuggle/rozo-intents-skills/skills/parse-qr/SKILL.md",
+        "https://github.com/6mile/skills/blob/920714f17d81e0a95c7a9bc51faf0a7921cd982d/skills/shawnmuggle/rozo-intents-skills/LICENSE.md"
+      ],
+      "files": [
+        {
+          "path": "SKILL.md",
+          "sha256": "89c9885189fcd92e9cc4334c3ad856eb597077c6fd82dc2a9e8c92d3645b5784"
+        },
+        {
+          "path": "references/guide.md",
+          "sha256": "2bf4199aac29ab78b99d1c40bd6b36cc4057489e4feff2f14a6b881ae04d82d9"
+        },
+        {
+          "path": "references/LICENSE.txt",
+          "sha256": "07121e96b2e2b849fbcbdd53c78e25811f75d2c565b683eb9048d74d731470a0"
+        },
+        {
+          "path": "references/source.json",
+          "sha256": "d9b2144a56206dd977f6359317f0061aaea503ff571a547a2bced37b186cc534"
+        },
+        {
+          "path": "references/sources.md",
+          "sha256": "686900de6a41987c23a95d2d2b34a6c9d0f43eff7c13341d1cf945c57801a9dd"
+        },
+        {
+          "path": "references/source-assessment.json",
+          "sha256": "9a10136b122f12bc845e8c584762da0957859ce2e6b4bdd2b03219f6c411d950"
+        },
+        {
+          "path": "references/original-skill.masked.txt",
+          "sha256": "474b7df0b361ddb7a5e2c9c8e8cf2b5e491e9bd92cea23d8fd1d06febe93c606"
+        }
+      ],
+      "target_kind": "newly_created_adaptation",
+      "deployment_state": "created_once_and_current_readback_verified",
+      "pre_mutation_absence_qualification_completed": true,
+      "target_state": "actual_created",
+      "pre_creation_history": {
+        "target_kind": "new_adaptation_intent",
+        "deployment_state": "proposed_uninstalled",
+        "before_sha256": "not_qualified_private_proposal_only",
+        "pre_mutation_absence_qualification_completed": false,
+        "directory_presence_observation": {
+          "name": "parse-payment-qr",
+          "observed_at": "2026-10-27T23:21:07.5987150+00:00",
+          "path_exists": false,
+          "metadata_result": "FileNotFoundException",
+          "existing_contents_opened": false,
+          "future_absence_not_asserted": true,
+          "normal_mutation_absence_qualification_completed": false
+        },
+        "target_state": null
+      },
+      "precreation_qualification": {
+        "sha256": "2dee59b98cf302c277746bfb2014377c88f9f12f359d24a9e75eca897f7c73cc",
+        "file": "skills-3080-notice-next4-precreation-qualification175645.json"
+      },
+      "recorded_current_readback": {
+        "sha256": "0f6fc5a4d7ccbc8ef5bb6dc76d4aaee50697ad6074acfe0e578a25bf5bd97485",
+        "file": "skills-3080-notice-next4-consume-evidence175645.json"
+      }
+    },
+    {
+      "name": "payroll-batch-reconciliation",
+      "new": true,
+      "before_sha256": "absent",
+      "positive": "同じ承認版のA成功・B失敗・C結果不明を別々に残し、不明分を照合して成功済みを再実行しない。",
+      "negative": "名簿やsimulate結果だけを送金承認とし、部分失敗後に全batchを再送して給与や個人情報を公開する。",
+      "sources": [
+        "https://github.com/6mile/skills/blob/920714f17d81e0a95c7a9bc51faf0a7921cd982d/skills/walkjoi/elytro-wallet-cli-skill/payroll/SKILL.md",
+        "https://github.com/6mile/skills/blob/920714f17d81e0a95c7a9bc51faf0a7921cd982d/skills/walkjoi/elytro-wallet-cli-skill/LICENSE.md"
+      ],
+      "files": [
+        {
+          "path": "SKILL.md",
+          "sha256": "7554d973d03b37e14f6a64acc81fc8f418a0d5bd3f43bf26148a5d38eacbc980"
+        },
+        {
+          "path": "references/guide.md",
+          "sha256": "bce82dcedc6b5e4804993d0c20682d17c54a820a96c0724354ddbb937a18edac"
+        },
+        {
+          "path": "references/LICENSE.txt",
+          "sha256": "ab7bd2afaf644b54c8fad33f882399aa5cfcc94d6b77d00ce829a469e07af3c3"
+        },
+        {
+          "path": "references/source.json",
+          "sha256": "0e07f2f4fa7045f0b405425fcbaab55271d52ec18ab54d856ca3f2fd929c6ce4"
+        },
+        {
+          "path": "references/sources.md",
+          "sha256": "bcc52bb1351414cd4ae7e1eba1c3a46becdc146e2902bdcddb30183782ab616e"
+        },
+        {
+          "path": "references/source-assessment.json",
+          "sha256": "2f6a3c4a911cba8c0a209df592f51e3a767d140dd434d380fffb4c20f01246c8"
+        },
+        {
+          "path": "references/original-skill.masked.txt",
+          "sha256": "719abe21894d50db5dac77869d9e678c3461d5407dc68f4c4331cd743725c763"
+        }
+      ],
+      "target_kind": "newly_created_adaptation",
+      "deployment_state": "created_once_and_current_readback_verified",
+      "pre_mutation_absence_qualification_completed": true,
+      "target_state": "actual_created",
+      "pre_creation_history": {
+        "target_kind": "new_adaptation_intent",
+        "deployment_state": "proposed_uninstalled",
+        "before_sha256": "not_qualified_private_proposal_only",
+        "pre_mutation_absence_qualification_completed": false,
+        "directory_presence_observation": {
+          "name": "payroll-batch-reconciliation",
+          "observed_at": "2026-10-27T23:21:07.5988248+00:00",
+          "path_exists": false,
+          "metadata_result": "FileNotFoundException",
+          "existing_contents_opened": false,
+          "future_absence_not_asserted": true,
+          "normal_mutation_absence_qualification_completed": false
+        },
+        "target_state": null
+      },
+      "precreation_qualification": {
+        "sha256": "2dee59b98cf302c277746bfb2014377c88f9f12f359d24a9e75eca897f7c73cc",
+        "file": "skills-3080-notice-next4-precreation-qualification175645.json"
+      },
+      "recorded_current_readback": {
+        "sha256": "0f6fc5a4d7ccbc8ef5bb6dc76d4aaee50697ad6074acfe0e578a25bf5bd97485",
+        "file": "skills-3080-notice-next4-consume-evidence175645.json"
+      }
+    },
+    {
+      "name": "payment-status-reconciliation",
+      "new": true,
+      "before_sha256": "absent",
+      "positive": "同じ取引の入金済み・払出し未確認を分けて返し、期限切れやtimeoutでも旧結果を調べてから再開する。",
+      "negative": "資金検知や支払いIDの発行を最終完了とし、期限切れ・409・不明応答のたびに新IDと支払いを作る。",
+      "sources": [
+        "https://github.com/6mile/skills/blob/920714f17d81e0a95c7a9bc51faf0a7921cd982d/skills/shawnmuggle/rozo-intents-skills/skills/payment-status/SKILL.md",
+        "https://github.com/6mile/skills/blob/920714f17d81e0a95c7a9bc51faf0a7921cd982d/skills/shawnmuggle/rozo-intents-skills/LICENSE.md"
+      ],
+      "files": [
+        {
+          "path": "SKILL.md",
+          "sha256": "2d0b1ecb49b0fdbdd862c9c99e729bbaa15246e0ff05af1d193693e2cc28eefa"
+        },
+        {
+          "path": "references/guide.md",
+          "sha256": "623cc09135f304bae4b1609527b12ecb9a5832366cb0e59de1cf37f17ba4e125"
+        },
+        {
+          "path": "references/LICENSE.txt",
+          "sha256": "07121e96b2e2b849fbcbdd53c78e25811f75d2c565b683eb9048d74d731470a0"
+        },
+        {
+          "path": "references/source.json",
+          "sha256": "67d1154664dbbb18e228e7583405f4ee3c9a19fc6f872f0094cc697c344de7dd"
+        },
+        {
+          "path": "references/sources.md",
+          "sha256": "c9db1398e7bf501ee93d24b3866bcde3ec4dcfc0594255d5e4a2048a1d9bb415"
+        },
+        {
+          "path": "references/source-assessment.json",
+          "sha256": "576bf1394714e5fcf5db5e2a2d625d2da14e31f7dc038507201524cadb0e78b0"
+        },
+        {
+          "path": "references/original-skill.masked.txt",
+          "sha256": "7dfe69b0d8eac1949d1239abd627f79b5abbc010d20d32cda2781b90f4ff29f1"
+        }
+      ],
+      "target_kind": "newly_created_adaptation",
+      "deployment_state": "created_once_and_current_readback_verified",
+      "pre_mutation_absence_qualification_completed": true,
+      "target_state": "actual_created",
+      "pre_creation_history": {
+        "target_kind": "new_adaptation_intent",
+        "deployment_state": "proposed_uninstalled",
+        "before_sha256": "not_qualified_private_proposal_only",
+        "pre_mutation_absence_qualification_completed": false,
+        "directory_presence_observation": {
+          "name": "payment-status-reconciliation",
+          "observed_at": "2026-10-27T23:21:07.5988746+00:00",
+          "path_exists": false,
+          "metadata_result": "FileNotFoundException",
+          "existing_contents_opened": false,
+          "future_absence_not_asserted": true,
+          "normal_mutation_absence_qualification_completed": false
+        },
+        "target_state": null
+      },
+      "precreation_qualification": {
+        "sha256": "2dee59b98cf302c277746bfb2014377c88f9f12f359d24a9e75eca897f7c73cc",
+        "file": "skills-3080-notice-next4-precreation-qualification175645.json"
+      },
+      "recorded_current_readback": {
+        "sha256": "0f6fc5a4d7ccbc8ef5bb6dc76d4aaee50697ad6074acfe0e578a25bf5bd97485",
+        "file": "skills-3080-notice-next4-consume-evidence175645.json"
+      }
+    }
+  ],
+  "central_operations": 1,
+  "new_adoptions": 4,
+  "stage": "actual_once_created_current_readback_discovered_and_explicitly_applied",
+  "pre_creation_history": {
+    "stage": "proposal_not_qualified_or_placed",
+    "central_operations": 0,
+    "new_adoptions": 0,
+    "file": "skills-3080-notice-next4-bundle175645.json",
+    "sha256": "cf2acf71099b334d800211622614768f3b0c2cba6d667fe9d140aac18a28ddae"
+  },
+  "precreation_qualification": {
+    "sha256": "2dee59b98cf302c277746bfb2014377c88f9f12f359d24a9e75eca897f7c73cc",
+    "file": "skills-3080-notice-next4-precreation-qualification175645.json"
+  },
+  "publication_additional_central_operations": 0,
+  "publication_additional_adoptions": 0,
+  "root": "D:/CC/Skills",
+  "creator_job": "20261027-175645-todo-3080",
+  "current_consumer_job": "20261027-175645-todo-3080"
+}

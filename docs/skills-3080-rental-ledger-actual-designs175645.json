@@ -1,0 +1,34 @@
+{
+  "todo": 3080,
+  "targets": [
+    {
+      "name": "rental-ledger-reconciliation",
+      "inventory_id": "github:1834bb0001544b6acd228b9f9fd2eab265895ec9f7cdf256b24ad63e3689033d",
+      "source_repo": "6mile/skills",
+      "source_commit": "920714f17d81e0a95c7a9bc51faf0a7921cd982d",
+      "source_path": "skills/mailnike/propclaw/SKILL.md",
+      "source_sha256": "ffcebd1dd25bf25767d69cc242b597309233c1383c65a53281bcbbd2529b1ac0",
+      "primary_license": "MIT",
+      "individual_notice_sha256": "6f6bb192fb5854c274ca1bd5f3705ad6d4577099d2db95f46c90d0657ffb830d",
+      "rights_scope": "Authored Japanese adaptation of the directly read visible workflow plus its exact line-preserving masked reference, with the stated per-package MIT notice preserved. Withheld meanings, unread scripts/supports/metadata, independent authorship and third-party data/components/service rights are not adopted.",
+      "source_urls": [
+        "https://github.com/6mile/skills/blob/920714f17d81e0a95c7a9bc51faf0a7921cd982d/skills/mailnike/propclaw/SKILL.md",
+        "https://github.com/6mile/skills/blob/920714f17d81e0a95c7a9bc51faf0a7921cd982d/skills/mailnike/propclaw/LICENSE.txt"
+      ],
+      "positive": "同一契約の預り金と一部返還を元イベント/実入出金へ結び、再送と未確認を分ける。",
+      "negative": "同名別契約や欠損を混ぜ、記録の状態だけで実同意/支払や適法性を保証し、未依頼の請求/送金を行う。",
+      "entrypoint_sha256": "a12a1c304e1c84250316ab96ec25aa44f78dfd49ffa892b1db9f9b8db06747a3",
+      "target_kind": "new_adaptation",
+      "deployment_state": "actual_once_created_normal_readback_discovered_explicit_application",
+      "included_in_single_CreateNew": true,
+      "new_adoptions": 1,
+      "actual_manifest": "skills-3080-installed-rental-ledger-manifest175645.json",
+      "actual_evidence": "skills-3080-rental-ledger-installation-evidence175645.json",
+      "historical_preparation": "skills-3080-rental-ledger-preparation175645.json",
+      "public_result_delta_review_pending_at_recording": true
+    }
+  ],
+  "successful_CreateNew_count": 1,
+  "batch_is_not_total_scope_or_count_cap": true,
+  "whole16_complete": false
+}

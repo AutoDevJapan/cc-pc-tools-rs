@@ -1,0 +1,225 @@
+{
+  "definition": "Once-only canonical Create3/21files, qualified same-ID/hash/buffer readback65566B in3normal batches; no historical continuity, full raw original reading or third-party service/data rights implied",
+  "targets": [
+    {
+      "name": "aerobase-travel-hotels",
+      "positive": "同条件2泊の税・施設料込み総額と取消期限を比較し、新旧予約と返金の状態を別に確認する。",
+      "negative": "仮押さえやsandbox-safe表記だけで実予約/決済成功とし、旧予約を失う変更や未確認費用を黙って行う。",
+      "sources": [
+        "https://github.com/6mile/skills/blob/920714f17d81e0a95c7a9bc51faf0a7921cd982d/skills/kurosh87/aerobase-travel-hotels/SKILL.md",
+        "https://github.com/6mile/skills/blob/920714f17d81e0a95c7a9bc51faf0a7921cd982d/skills/kurosh87/aerobase-travel-hotels/LICENSE.txt"
+      ],
+      "files": [
+        {
+          "path": "SKILL.md",
+          "sha256": "984a37ec16985f15ecabfbf5d68fea957c41fc3ed4ce254b9dc3bf7dfb64ce8b"
+        },
+        {
+          "path": "references/guide.md",
+          "sha256": "e3efb44ae5248df0483c97698f86cb8992a49778b7df476bf70da05ba15abe51"
+        },
+        {
+          "path": "references/LICENSE.txt",
+          "sha256": "619bd2ca1801541f1923b1f5d343e59067030fb865eae56a207fdf32fc0f8e81"
+        },
+        {
+          "path": "references/source.json",
+          "sha256": "3ea16a00d706042f7da758c3f9f941a7299990ed5a27524575133a9b3d673e74"
+        },
+        {
+          "path": "references/sources.md",
+          "sha256": "c8d18116c8fe4e5ef08e73d3f9d4ad4ac375882cc9c9284405d041b9acf43a2a"
+        },
+        {
+          "path": "references/source-assessment.json",
+          "sha256": "58aa965968f3d763120121059d6462b0e776793e37dfaf504547e8cb93a7c199"
+        },
+        {
+          "path": "references/original-skill.masked.txt",
+          "sha256": "ec6192f03df3dcd912ec15388ed14016fe9b06c352afc7f31efd74c7da60e8df"
+        }
+      ],
+      "target_kind": "newly_created_adaptation",
+      "deployment_state": "created_once_and_current_readback_verified",
+      "pre_mutation_absence_qualification_completed": true,
+      "new": true,
+      "before_sha256": "absent",
+      "target_state": "actual_once_created_and_current_ID_hash_buffer_verified",
+      "pre_creation_history": {
+        "target_kind": "new_adaptation_intent",
+        "deployment_state": "proposed_uninstalled",
+        "pre_mutation_absence_qualification_completed": false,
+        "directory_presence_observation": {
+          "observed_at": "2026-10-27T12:56:18Z",
+          "path_exists": false,
+          "method": "exact-directory GetAttributes returned FileNotFoundException",
+          "existing_contents_opened": false,
+          "future_absence_not_asserted": true
+        },
+        "before_sha256": "absent"
+      },
+      "precreation_qualification": {
+        "file": "skills-3080-next3-precreation-qualification175645.json",
+        "sha256": "ceb05f9db7a6744332f79f40c98c71b6fe5545308ec74961346c798c1f68b323"
+      },
+      "recorded_current_readback": {
+        "file": "skills-3080-next3-consume-evidence175645.json",
+        "sha256": "9464d57dd3c3d158b51819977c14a1a5556cd0e85489280ff2eb0704f19a64fa"
+      }
+    },
+    {
+      "name": "aerobase-travel-lounges",
+      "positive": "施設の出典・時点とターミナル、本人の入場条件、必要移動と搭乗余裕を分けて候補を比べる。",
+      "negative": "公開一覧や有料プランの宣伝だけで今入場できる、休める、搭乗に間に合うと断言する。",
+      "sources": [
+        "https://github.com/6mile/skills/blob/920714f17d81e0a95c7a9bc51faf0a7921cd982d/skills/kurosh87/aerobase-travel-lounges/SKILL.md",
+        "https://github.com/6mile/skills/blob/920714f17d81e0a95c7a9bc51faf0a7921cd982d/skills/kurosh87/aerobase-travel-lounges/LICENSE.txt"
+      ],
+      "files": [
+        {
+          "path": "SKILL.md",
+          "sha256": "6433185bef4f57835d7f07c30c3d8ef9f87172d5e8f74ce6df85fd93f2f4ae90"
+        },
+        {
+          "path": "references/guide.md",
+          "sha256": "132d7390c6c230fb028c17aadabe01b33cef0b0f3e8966bdab6d4c425bc0ce38"
+        },
+        {
+          "path": "references/LICENSE.txt",
+          "sha256": "619bd2ca1801541f1923b1f5d343e59067030fb865eae56a207fdf32fc0f8e81"
+        },
+        {
+          "path": "references/source.json",
+          "sha256": "1789cf75e569a8025b631e23ba9e0ac9bcd83557638503a16c54f6a9bad0f20f"
+        },
+        {
+          "path": "references/sources.md",
+          "sha256": "2b18afc33eef9b3ad5daa60ed8b6407430fdea4941a25ba450d86291981b269b"
+        },
+        {
+          "path": "references/source-assessment.json",
+          "sha256": "aca61a42bdbb4f85f4adf295c4c3be0309f4b9ea0c5fa932084bd1f820fbb0e3"
+        },
+        {
+          "path": "references/original-skill.masked.txt",
+          "sha256": "0526c423a5e48d348566233bcd63a6ee9d25fca1825ac7e331116885fbb8f391"
+        }
+      ],
+      "target_kind": "newly_created_adaptation",
+      "deployment_state": "created_once_and_current_readback_verified",
+      "pre_mutation_absence_qualification_completed": true,
+      "new": true,
+      "before_sha256": "absent",
+      "target_state": "actual_once_created_and_current_ID_hash_buffer_verified",
+      "pre_creation_history": {
+        "target_kind": "new_adaptation_intent",
+        "deployment_state": "proposed_uninstalled",
+        "pre_mutation_absence_qualification_completed": false,
+        "directory_presence_observation": {
+          "observed_at": "2026-10-27T12:56:18Z",
+          "path_exists": false,
+          "method": "exact-directory GetAttributes returned FileNotFoundException",
+          "existing_contents_opened": false,
+          "future_absence_not_asserted": true
+        },
+        "before_sha256": "absent"
+      },
+      "precreation_qualification": {
+        "file": "skills-3080-next3-precreation-qualification175645.json",
+        "sha256": "ceb05f9db7a6744332f79f40c98c71b6fe5545308ec74961346c798c1f68b323"
+      },
+      "recorded_current_readback": {
+        "file": "skills-3080-next3-consume-evidence175645.json",
+        "sha256": "9464d57dd3c3d158b51819977c14a1a5556cd0e85489280ff2eb0704f19a64fa"
+      }
+    },
+    {
+      "name": "aerobase-travel-wallet",
+      "positive": "公開条件と提供済みの非カード数値だけで、通貨・費用・期限・時点を添えて参考CPPを計算する。",
+      "negative": "実カードを含み得るwalletやGmailを無指定で取得・転送し、単純CPPを確定した価値とする。",
+      "sources": [
+        "https://github.com/6mile/skills/blob/920714f17d81e0a95c7a9bc51faf0a7921cd982d/skills/kurosh87/aerobase-travel-wallet/SKILL.md",
+        "https://github.com/6mile/skills/blob/920714f17d81e0a95c7a9bc51faf0a7921cd982d/skills/kurosh87/aerobase-travel-wallet/LICENSE.txt"
+      ],
+      "files": [
+        {
+          "path": "SKILL.md",
+          "sha256": "fb5121abbb590ca6d1eb225ff06ed5dc079128de917d1bb6cdc079391621b776"
+        },
+        {
+          "path": "references/guide.md",
+          "sha256": "73457268fad673b54c30e2a91eec9079bc743f6208d0d614f00adb8acd326068"
+        },
+        {
+          "path": "references/LICENSE.txt",
+          "sha256": "619bd2ca1801541f1923b1f5d343e59067030fb865eae56a207fdf32fc0f8e81"
+        },
+        {
+          "path": "references/source.json",
+          "sha256": "1cf487121b4a8f2304469bd7d5782c13f068248317197d7c891c4170c50f9f1f"
+        },
+        {
+          "path": "references/sources.md",
+          "sha256": "8fe3ac5a0f9f9f74a922e7f323d559968249cf56172a3b74be92622a0e25fb06"
+        },
+        {
+          "path": "references/source-assessment.json",
+          "sha256": "6c59e3aea404ce9a74454ad502bfe998a3466319292fe1da8b0e525b57b88147"
+        },
+        {
+          "path": "references/original-skill.masked.txt",
+          "sha256": "25be7d44aa036825a0b82db0ff9fb8a629bfc5d48d9e5bbe459ffb8bf11f6741"
+        }
+      ],
+      "target_kind": "newly_created_adaptation",
+      "deployment_state": "created_once_and_current_readback_verified",
+      "pre_mutation_absence_qualification_completed": true,
+      "new": true,
+      "before_sha256": "absent",
+      "target_state": "actual_once_created_and_current_ID_hash_buffer_verified",
+      "pre_creation_history": {
+        "target_kind": "new_adaptation_intent",
+        "deployment_state": "proposed_uninstalled",
+        "pre_mutation_absence_qualification_completed": false,
+        "directory_presence_observation": {
+          "observed_at": "2026-10-27T12:56:18Z",
+          "path_exists": false,
+          "method": "exact-directory GetAttributes returned FileNotFoundException",
+          "existing_contents_opened": false,
+          "future_absence_not_asserted": true
+        },
+        "before_sha256": "absent"
+      },
+      "precreation_qualification": {
+        "file": "skills-3080-next3-precreation-qualification175645.json",
+        "sha256": "ceb05f9db7a6744332f79f40c98c71b6fe5545308ec74961346c798c1f68b323"
+      },
+      "recorded_current_readback": {
+        "file": "skills-3080-next3-consume-evidence175645.json",
+        "sha256": "9464d57dd3c3d158b51819977c14a1a5556cd0e85489280ff2eb0704f19a64fa"
+      }
+    }
+  ],
+  "central_operations": 1,
+  "new_adoptions": 3,
+  "stage": "actual_created_readback_discovered_and_explicitly_applied",
+  "new_adoptions_definition": "Three actual once-only placements are already included in ledger150. Serializing this record creates no additional Skill or adoption.",
+  "root": "D:/CC/Skills",
+  "creator_job": "20261027-175645-todo-3080",
+  "current_consumer_job": "20261027-175645-todo-3080",
+  "pre_creation_history": {
+    "stage": "proposal_not_qualified_or_placed",
+    "central_operations": 0,
+    "new_adoptions": 0,
+    "original_proposal_commit": "362836100dbbc1c855119a2fbc7356253b0a3b72",
+    "original_proposal": "docs/skills-3080-travel-next3-bundle175645.json",
+    "original_proposal_sha256": "0e0ff688af3fbcd8042d88ab640b01b6e012be318561f58f2f24e1c55d71d151",
+    "source_current_files_or_frozen_operation_changed": false
+  },
+  "publication_additional_central_operations": 0,
+  "publication_additional_adoptions": 0,
+  "precreation_qualification": {
+    "file": "skills-3080-next3-precreation-qualification175645.json",
+    "sha256": "ceb05f9db7a6744332f79f40c98c71b6fe5545308ec74961346c798c1f68b323"
+  }
+}

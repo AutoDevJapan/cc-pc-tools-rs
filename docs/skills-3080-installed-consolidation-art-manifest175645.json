@@ -1,0 +1,84 @@
+{
+  "root": "D:/CC/Skills",
+  "targets": [
+    {
+      "name": "memory-consolidation-state",
+      "positive": "定時と書込後に記憶統合が重なったとき、元発言と未完了を保持し、一つの世代・確定結果と再開後の読戻しへ結ぶ。",
+      "negative": "一つのメモを追記するだけの依頼へ、全履歴scan・自動削除・外部LLMを追加する。",
+      "files": [
+        {
+          "path": "SKILL.md",
+          "sha256": "48e9e0a4593dbe11791e4de5c63da000c2e2f04835864afb4e2fd67b89621fab"
+        },
+        {
+          "path": "references/guide.md",
+          "sha256": "9efa7988ff27aab52851f627556d299d5c762d0c884c3ac717041b5210582277"
+        },
+        {
+          "path": "references/LICENSE.txt",
+          "sha256": "43a990050404c5fd26abe14ba73fbdea97c43a0366360a16e35ec37e2f245e3c"
+        },
+        {
+          "path": "references/source.json",
+          "sha256": "f72e55379946b9e110a61fb55be71909541209e979ee04eda17d91dace67860f"
+        },
+        {
+          "path": "references/sources.md",
+          "sha256": "dc94ae30ec14d1cae1d1276d6d58aa8377d72761b1c265fef88fda4e63f60552"
+        },
+        {
+          "path": "references/source-assessment.json",
+          "sha256": "e7e1781bd3be2404ff41bf015916121901183bb29d21bdcf54b1a35501c4938e"
+        },
+        {
+          "path": "references/original-skill.masked.txt",
+          "sha256": "6339dad9a58ee54a736ca2495d2fcdd49165744675ad5d6a9574ca73f129136e"
+        }
+      ],
+      "target_state": "actual_once_created_normal_readback_discovered_explicit_application",
+      "deployment_state": "actual_once_created_normal_readback_discovered_explicit_application"
+    },
+    {
+      "name": "generative-art-reproducibility",
+      "positive": "同じseedの生成作品で結果が違うとき、版・全parameter・乱数系・素材・frame・寸法を固定し、再生成と実PNGを照合する。",
+      "negative": "静止画像を説明する依頼へ、生成アルゴリズム・新しい操作UIやサービスを追加する。",
+      "files": [
+        {
+          "path": "SKILL.md",
+          "sha256": "c6c97201564ba9eebe55b1e3dc71ef55283e0a9c8c103aa8ceaf1780bddbed29"
+        },
+        {
+          "path": "references/guide.md",
+          "sha256": "43bd0e4a0cd63fb7a6ed491f89f2eab6c42cf233bb546c483b964de185ef61b7"
+        },
+        {
+          "path": "references/LICENSE.txt",
+          "sha256": "58d1e17ffe5109a7ae296caafcadfdbe6a7d176f0bc4ab01e12a689b0499d8bd"
+        },
+        {
+          "path": "references/source.json",
+          "sha256": "cd442534502491b1320282cc4fac3ea435626098f7d01829470c4ec609cf7783"
+        },
+        {
+          "path": "references/sources.md",
+          "sha256": "e969507f711ee5b72b9b942629e61ee6ca57aa7e7b8e6037a7370524d3d9174d"
+        },
+        {
+          "path": "references/source-assessment.json",
+          "sha256": "5b4b59188a59d212c3bb63def672e6dd96d10456615852bebd13f45f21fb3ee8"
+        },
+        {
+          "path": "references/original-skill.masked.txt",
+          "sha256": "d35bbb2edb485d3cc2dc32e994b7baa2073b1c97585c3ad4f20a2274259e20eb"
+        }
+      ],
+      "target_state": "actual_once_created_normal_readback_discovered_explicit_application",
+      "deployment_state": "actual_once_created_normal_readback_discovered_explicit_application"
+    }
+  ],
+  "stage": "Two once-created targets; normal14 current buffers, structure, metadata discovery and explicit application complete",
+  "central_operations": 1,
+  "new_adoptions": 2,
+  "creator_job": "20261027-175645-todo-3080",
+  "current_consumer_job": "20261027-175645-todo-3080"
+}

@@ -32,12 +32,16 @@ var skillsPublicSources = map[string]string{
 }
 
 func skillsSourceClaimsPreserved(m skillsManifest) bool {
+	bound, ok := skillsMaskedBindings(m)
+	if !ok {
+		return false
+	}
 	outputs := map[string]bool{}
 	for _, f := range m.Files {
 		outputs[f.SHA] = true
 	}
 	for _, source := range m.Sources {
-		if skillsPublicSources[source.Repository] != source.Commit || source.Acquisition != "already-acquired" || !source.License.Accepted || strings.TrimSpace(source.License.Scope) == "" || (!outputs[source.SHA] && !skillsHasMaskedSourceOutput(source.Path, m.Files)) || !outputs[source.License.SHA] {
+		if skillsPublicSources[source.Repository] != source.Commit || source.Acquisition != "already-acquired" || !source.License.Accepted || strings.TrimSpace(source.License.Scope) == "" || (!outputs[source.SHA] && !skillsBoundMaskedOutput(source, m.Files, bound)) || !outputs[source.License.SHA] {
 			return false
 		}
 	}
@@ -166,7 +170,7 @@ func skillsActorCheck(w skillsWriter, reg skillsRegistry, s *skillsFS, caller st
 		return false
 	}
 	job, ok := skillsReadJob(s, caller)
-	return ok && skillsJobTask(job, 3686) && job["status"] == "running" && skillsActorLive(job) && skillsActorSource(w.Workspace, row.Scheduler.Branch) && same(str(job["cwd"]), w.Workspace) && job["launch_key"] == row.Scheduler.Key
+	return ok && skillsJobTask(job, 3686) && job["status"] == "running" && skillsActorLive(job) && skillsActorSource(w.Workspace, row.Scheduler.Branch) && same(str(job["cwd"]), w.Workspace) && skillsActorAssignmentBound(row, job)
 }
 func skillsOperation(op, path string) object {
 	if op == "consume-skills3080-admitted" {
@@ -201,6 +205,9 @@ func skillsOperation(op, path string) object {
 	if r.Review != nil {
 		ids = append(ids, r.Review.Task)
 	}
+	if r.Runtime != nil && r.Runtime.PeerReview != nil {
+		ids = append(ids, r.Runtime.PeerReview.Task)
+	}
 	reg, ok := skillsRegistryRead(ids)
 	if !ok || !skillsActorCheck(r.Writer, reg, &fs, caller) {
 		return fail("writer")
@@ -231,9 +238,12 @@ func skillsOperation(op, path string) object {
 		result["native_turn_context"] = received.Native
 		return result
 	}
-	if op == "verify-skills3080-update" {
+	if op == "verify-skills3080-update" || op == "apply-skills3080-update" || op == "recover-skills3080-update" {
 		if r.Consume != nil {
 			return fail("request")
+		}
+		if op != "verify-skills3080-update" {
+			return skillsRuntimeApply(op, path, raw, r, reg, &fs, ids)
 		}
 		return skillsRuntimeQualification(r, reg, &fs)
 	}

@@ -1256,7 +1256,7 @@ impl Context {
         })?;
         self.maintain_tool_yields(&snapshot);
         let quota_snapshot=self.load(jid)?;
-        let quota_inventory=if (quota_snapshot["quota_recovery"].is_object() || quota_snapshot["unstarted_review"].is_object() || quota_snapshot["initial_review"].is_object())
+        let quota_inventory=if (quota_snapshot["quota_recovery"].is_object() || quota_snapshot["unstarted_review"].is_object() || quota_snapshot["initial_review"].is_object() || quota_snapshot["subwork_continuation"].is_object())
             && quota_snapshot["quota_recovery_recheck_after"].as_f64().unwrap_or(0.) <= self.rt.epoch() {
             self.review_recovery_inventory(quota_snapshot["unstarted_review"].is_object(),quota_snapshot["initial_review"].is_object())
         } else { Value::Null };
@@ -1284,7 +1284,7 @@ impl Context {
         if s(&job, "status") != "queued" || job["cancel_requested"] == true {
             return Ok(None);
         }
-        if (job["quota_recovery"].is_object() || job["unstarted_review"].is_object() || job["initial_review"].is_object())
+        if (job["quota_recovery"].is_object() || job["unstarted_review"].is_object() || job["initial_review"].is_object() || job["subwork_continuation"].is_object())
             && job["quota_recovery_recheck_after"].as_f64().unwrap_or(0.) > self.rt.epoch() {
             return Ok(None);
         }
@@ -1415,7 +1415,7 @@ impl Context {
         // Lock order remains queue -> job state -> ToDo, and the slow preparation
         // above does not hold the shared ToDo lock for ordinary jobs.
         let store = self.todo_store();
-        if (job["quota_recovery"].is_object() || job["unstarted_review"].is_object() || job["initial_review"].is_object()) && !store.exists() {
+        if (job["quota_recovery"].is_object() || job["unstarted_review"].is_object() || job["initial_review"].is_object() || job["subwork_continuation"].is_object()) && !store.exists() {
             self.save_admission_wait(&mut job,&json!({"code":"quota_recovery_recheck","text":"元のToDoの再確認待ち"}))?;
             return Ok(None);
         }
@@ -1439,7 +1439,7 @@ impl Context {
         };
         if store.exists() {
             let db = self.read_json(&store)?;
-            if job["quota_recovery"].is_object() || job["unstarted_review"].is_object() || job["initial_review"].is_object() {
+            if job["quota_recovery"].is_object() || job["unstarted_review"].is_object() || job["initial_review"].is_object() || job["subwork_continuation"].is_object() {
                 let row=db["items"].as_array().into_iter().flatten().find(|r| r["id"] == job["todo_id"]);
                 let result=row.ok_or_else(|| Error::new("quota recovery ToDo is missing"))
                     .and_then(|row| self.recheck_quota_recovery(row,&mut job,&quota_inventory));
@@ -1536,6 +1536,7 @@ impl Context {
         }
         job["status"] = json!("running");
         if job["quota_recovery"].is_object() {job["quota_retry_initial_admitted"]=json!(true);}
+        if job["subwork_continuation"].is_object() {job["subwork_continuation_initial_admitted"]=json!(true);}
         job["started_at"] = json!(self.rt.now());
         job["last_event_at"] = json!(self.rt.now());
         job["activity"] = json!("starting");

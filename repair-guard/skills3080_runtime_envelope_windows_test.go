@@ -19,7 +19,7 @@ func TestSkills3080RuntimeFingerprintMatchesIndependentProtocolVectors(t *testin
 }
 
 func TestSkills3080RuntimeEnvelopeNeedsIndependentCheckpointContent(t *testing.T) {
-	for _, kind := range []string{"exact", "arbitrary_initial_developer", "changed_model_text", "host_body_suffix", "wrong_permission_hash", "changed_tool", "missing_tool", "duplicate_fragment", "unknown_plugin", "renamed_plugin", "catalog_added_instruction", "catalog_label_only", "self_hash_only", "section_alias", "field_alias"} {
+	for _, kind := range []string{"exact", "arbitrary_initial_developer", "changed_model_text", "host_body_suffix", "wrong_permission_hash", "changed_tool", "missing_tool", "duplicate_fragment", "unknown_plugin", "renamed_plugin", "catalog_added_instruction", "catalog_label_only", "self_hash_only", "section_alias", "field_alias", "drop_model", "drop_permissions", "drop_collaboration_mode", "drop_host_skills", "drop_top_level_tools", "drop_all", "empty_model", "empty_permissions", "empty_collaboration_mode", "empty_host_skills", "empty_top_level_tools"} {
 		t.Run(kind, func(t *testing.T) {
 			model, permission, collaboration, host := "runtime model instructions", "runtime permissions", "runtime collaboration", "\n## Skills\nknown catalog\n"
 			tool := object{"type": "namespace", "name": "functions", "description": "known namespace", "tools": []any{object{"type": "function", "name": "exec", "description": "known function <&>", "parameters": object{"type": "object", "properties": object{}}}}}
@@ -60,11 +60,39 @@ func TestSkills3080RuntimeEnvelopeNeedsIndependentCheckpointContent(t *testing.T
 			case "field_alias":
 				state["permissions"] = object{"Instructions": skillsRuntimeFragmentHash(permission)}
 			}
+			toolPayload := true
+			if strings.HasPrefix(kind, "drop_") || strings.HasPrefix(kind, "empty_") {
+				key := strings.TrimPrefix(strings.TrimPrefix(kind, "drop_"), "empty_")
+				for section, text := range map[string]string{"model": model, "permissions": permission, "collaboration_mode": collaboration, "host_skills": "<skills_instructions>" + host + "</skills_instructions>", "top_level_tools": ""} {
+					if key != section && key != "all" {
+						continue
+					}
+					if strings.HasPrefix(kind, "drop_") {
+						delete(state, section)
+					} else {
+						state[section] = object{}
+					}
+					if section == "top_level_tools" {
+						toolPayload = false
+						continue
+					}
+					filtered := []string{}
+					for _, v := range texts {
+						if v != text {
+							filtered = append(filtered, v)
+						}
+					}
+					texts = filtered
+				}
+			}
 			blocks := []object{}
 			for _, text := range texts {
 				blocks = append(blocks, object{"type": "input_text", "text": text})
 			}
 			payloads := []object{{"type": "additional_tools", "role": "developer", "tools": []any{tool}}, {"type": "message", "role": "developer", "content": blocks}}
+			if !toolPayload {
+				payloads = payloads[1:]
+			}
 			records := [][]byte{}
 			for _, payload := range payloads {
 				b, _ := json.Marshal(object{"payload": payload})

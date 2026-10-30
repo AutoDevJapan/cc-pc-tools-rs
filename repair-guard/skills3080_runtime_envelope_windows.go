@@ -69,7 +69,7 @@ func skillsRuntimeEnvelopeMatches(records [][]byte, state json.RawMessage) bool 
 	expected := map[string]bool{}
 	for _, key := range []string{"model", "permissions", "collaboration_mode"} {
 		if len(st[key]) == 0 {
-			continue
+			return false
 		}
 		var v struct {
 			Instructions string            `json:"instructions"`
@@ -78,28 +78,21 @@ func skillsRuntimeEnvelopeMatches(records [][]byte, state json.RawMessage) bool 
 		if !skillsCreationHeaderKeys(st[key], "instructions", "approved_command_prefixes") || json.Unmarshal(st[key], &v) != nil || len(v.Prefixes) != 0 {
 			return false
 		}
-		if v.Instructions != "" {
-			if !civ6Commit.MatchString(v.Instructions) || expected[v.Instructions] {
-				return false
-			}
-			expected[v.Instructions] = true
+		if !skillsGitObjectID(v.Instructions) || expected[v.Instructions] {
+			return false
 		}
+		expected[v.Instructions] = true
 	}
 	var host struct {
 		Body    *string `json:"body"`
 		Include bool    `json:"includeInstructions"`
 	}
-	if len(st["host_skills"]) > 0 && (!skillsCreationHeaderKeys(st["host_skills"], "body", "includeInstructions") || json.Unmarshal(st["host_skills"], &host) != nil) {
+	if len(st["host_skills"]) == 0 || !skillsCreationHeaderKeys(st["host_skills"], "body", "includeInstructions") || json.Unmarshal(st["host_skills"], &host) != nil || host.Body == nil || *host.Body == "" || !host.Include {
 		return false
 	}
-	if host.Body != nil {
-		if !host.Include {
-			return false
-		}
-		expected[skillsRuntimeFragmentHash("<skills_instructions>"+*host.Body+"</skills_instructions>")] = true
-	}
+	expected[skillsRuntimeFragmentHash("<skills_instructions>"+*host.Body+"</skills_instructions>")] = true
 	tools := map[string]string{}
-	if len(st["top_level_tools"]) > 0 && json.Unmarshal(st["top_level_tools"], &tools) != nil {
+	if len(st["top_level_tools"]) == 0 || json.Unmarshal(st["top_level_tools"], &tools) != nil || len(tools) == 0 {
 		return false
 	}
 	for _, hash := range tools {

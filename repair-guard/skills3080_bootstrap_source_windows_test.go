@@ -55,7 +55,7 @@ func TestSkills3080UserEventsMustMirrorTheOneRegisteredInput(t *testing.T) {
 			}
 			records = append(records, msg("assistant", "final_answer", "original final", start.Add(3*time.Second)))
 			var b bytes.Buffer
-			for _, v := range records {
+			for _, v := range skillsCompleteRuntimeFixture(records) {
 				raw, _ := json.Marshal(v)
 				b.Write(raw)
 				b.WriteByte('\n')
@@ -93,7 +93,7 @@ func TestSkills3080MissingPublicProjectCannotDowngradeCurrentRuntime(t *testing.
 		}
 		records := []object{{"type": "session_meta", "timestamp": start.Format(time.RFC3339Nano), "payload": object{"id": id, "cwd": cwd, "source": "exec", "originator": "codex_exec", "cli_version": version}}, {"type": "event_msg", "timestamp": start.Format(time.RFC3339Nano), "payload": object{"type": "task_started", "turn_id": turn}}, msg(skillsBootstrapFixture(cwd, string(body), true), start), {"type": "world_state", "timestamp": start.Format(time.RFC3339Nano), "payload": object{"full": true, "state": object{"agents_md": object{"directory": cwd, "text": string(body)}}}}, {"type": "turn_context", "timestamp": start.Format(time.RFC3339Nano), "payload": object{"turn_id": turn, "cwd": cwd, "model": "gpt-6-luna", "effort": "max"}}, msg("exact task", start.Add(time.Second))}
 		var b bytes.Buffer
-		for _, v := range records {
+		for _, v := range skillsCompleteRuntimeFixture(records) {
 			raw, _ := json.Marshal(v)
 			b.Write(raw)
 			b.WriteByte('\n')
@@ -210,7 +210,7 @@ func TestSkills3080RuntimeWorldStateAnchorsTheLaunchInstructions(t *testing.T) {
 				records = append(records, snapshot)
 			}
 			var b bytes.Buffer
-			for _, v := range records {
+			for _, v := range skillsCompleteRuntimeFixture(records) {
 				raw, _ := json.Marshal(v)
 				b.Write(raw)
 				b.WriteByte('\n')

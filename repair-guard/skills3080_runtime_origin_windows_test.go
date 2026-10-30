@@ -137,7 +137,7 @@ func TestSkills3080ResumedRuntimeSourceAndCurrentTaskHaveSeparateWindows(t *test
 		msg("user", "", "registered current task", start.Add(time.Second)), msg("assistant", "final_answer", "current original final", start.Add(2*time.Second)),
 	}
 	var raw bytes.Buffer
-	for _, r := range records {
+	for _, r := range skillsCompleteRuntimeFixture(records) {
 		b, _ := json.Marshal(r)
 		raw.Write(b)
 		raw.WriteByte('\n')
@@ -159,9 +159,31 @@ func TestSkills3080ResumedRuntimeSourceAndCurrentTaskHaveSeparateWindows(t *test
 	if !ok || !modern || !bytes.Equal(source, body) {
 		t.Fatal("normal registered same-session continuation lost its independent source")
 	}
+	t.Run("incomplete_checkpoint_and_missing_developer", func(t *testing.T) {
+		var prefix bytes.Buffer
+		for _, original := range skillsCompleteRuntimeFixture(records) {
+			b, _ := json.Marshal(original)
+			var r object
+			json.Unmarshal(b, &r)
+			if r["type"] == "response_item" && obj(r["payload"])["role"] == "developer" {
+				continue
+			}
+			if r["type"] == "world_state" {
+				st := obj(obj(r["payload"])["state"])
+				for _, key := range []string{"model", "permissions", "collaboration_mode", "host_skills", "top_level_tools"} {
+					delete(st, key)
+				}
+			}
+			json.NewEncoder(&prefix).Encode(r)
+		}
+		if _, _, ok := skillsRuntimeBootstrapProjectionWithOrigin(&prefix, job, project, start, end, origin); ok {
+			t.Fatal("incomplete runtime checkpoint and missing rendered content qualified")
+		}
+	})
 	for _, kind := range []string{"source_meta_in_gap", "source_meta_claims_current", "bootstrap_after_source_end"} {
 		t.Run(kind, func(t *testing.T) {
 			var prefix bytes.Buffer
+			prefixRecords := []object{}
 			firstEnd := context.Windows[len(context.Windows)-1].End
 			for i := 0; i < 5; i++ {
 				r := object{}
@@ -174,6 +196,9 @@ func TestSkills3080ResumedRuntimeSourceAndCurrentTaskHaveSeparateWindows(t *test
 					}
 					r["timestamp"] = at.Format(time.RFC3339Nano)
 				}
+				prefixRecords = append(prefixRecords, r)
+			}
+			for _, r := range skillsCompleteRuntimeFixture(prefixRecords) {
 				json.NewEncoder(&prefix).Encode(r)
 			}
 			if _, _, ok := skillsRuntimeBootstrapProjectionWithOrigin(&prefix, job, project, start, end, origin); ok {
@@ -208,7 +233,7 @@ func TestSkills3080ResumedRuntimeSourceAndCurrentTaskHaveSeparateWindows(t *test
 	}
 	for _, kind := range []string{"registered", "inserted_prior_user", "inserted_prior_event", "unregistered_origin", "retimed_session_meta"} {
 		t.Run("legacy_0163_"+kind, func(t *testing.T) {
-			legacy := bytes.Replace(raw.Bytes(), []byte(`"cli_version":"0.165.0"`), []byte(`"cli_version":"0.163.0"`), 1)
+			legacy := bytes.Replace(skillsLegacyRuntimeFixture(raw.Bytes()), []byte(`"cli_version":"0.165.0"`), []byte(`"cli_version":"0.163.0"`), 1)
 			if kind == "retimed_session_meta" {
 				legacy = bytes.Replace(legacy, []byte(initial.Format(time.RFC3339Nano)), []byte(start.Format(time.RFC3339Nano)), 1)
 			}
@@ -262,7 +287,7 @@ func TestSkills3080ResumedRuntimeSourceAndCurrentTaskHaveSeparateWindows(t *test
 				copied = append(copied, dev)
 				copied = append(copied, records[2:]...)
 				var buf bytes.Buffer
-				for _, v := range copied {
+				for _, v := range skillsCompleteRuntimeFixture(copied) {
 					x, _ := json.Marshal(v)
 					buf.Write(x)
 					buf.WriteByte('\n')

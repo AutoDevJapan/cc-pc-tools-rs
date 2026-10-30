@@ -19,6 +19,8 @@ execution inputを照合し、各過去窓のuserと対応するeventもその�
 初回developer envelopeは、同じ記録から得た自己hashだけでは受け入れない。
 既知0.165のruntime checkpointに保存されたmodel・permissions・collaborationのfragment hash、
 host skillsの完全なbody、tool定義ごとのhashと、描画された全blockを照合する。
+これら5項目は必須とし、空のhash・host body・tool catalogも受け入れない。
+checkpoint項目と対応するdeveloper記録を両方削って空同士の一致にしても拒否する。
 hashの符号化は[公式の固定版](https://github.com/openai/codex/blob/360319d8dee62d87e2d59fc0c21805d79519cfed/codex-rs/core/src/context/world_state/mod.rs)に従う。
 plugin案内は、既知runtime catalogの全固定文と公開name/IDの組が完全一致する場合だけ扱う。
 任意のdeveloper本文、未知catalog、追記、重複block、欠落や変更のあるtool定義は拒否する。

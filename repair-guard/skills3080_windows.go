@@ -47,13 +47,41 @@ type skillsOutput struct {
 	body    []byte
 }
 type skillsManifest struct {
-	Domain   string         `json:"domain"`
-	Todo     int            `json:"todo_id"`
-	Decision string         `json:"decision_identity_sha256"`
-	Writer   skillsWriter   `json:"writer"`
-	Sources  []skillsSource `json:"sources"`
-	Files    []skillsOutput `json:"files"`
+	Domain         string         `json:"domain"`
+	Todo           int            `json:"todo_id"`
+	Decision       string         `json:"decision_identity_sha256"`
+	Writer         skillsWriter   `json:"writer"`
+	Sources        []skillsSource `json:"sources"`
+	Files          []skillsOutput `json:"files"`
+	publicV2       bool
+	proposalAuthor skillsWriter
 }
+
+type skillsPublicManifest struct {
+	Domain  string         `json:"domain"`
+	Sources []skillsSource `json:"sources"`
+	Files   []skillsOutput `json:"files"`
+}
+
+func (m skillsManifest) MarshalJSON() ([]byte, error) {
+	if m.publicV2 {
+		return json.Marshal(skillsPublicManifest{m.Domain, m.Sources, m.Files})
+	}
+	type plain skillsManifest
+	return json.Marshal(plain(m))
+}
+
+func skillsBindPublicManifest(m skillsManifest, creator, author skillsWriter) (skillsManifest, bool) {
+	if !m.publicV2 {
+		return m, m.Writer == creator && m.Writer == author
+	}
+	if !skillsWriterValid(creator) || !skillsWriterValid(author) {
+		return m, false
+	}
+	m.Writer, m.proposalAuthor, m.Decision = creator, author, skillsDecisionSHA
+	return m, true
+}
+
 type skillsResultRequest struct {
 	Task     int    `json:"task"`
 	Job      string `json:"job"`
@@ -109,7 +137,20 @@ func skillsWriterValid(w skillsWriter) bool {
 }
 func skillsParseManifest(raw []byte) (skillsManifest, bool) {
 	var m skillsManifest
-	if !skillsStrict(raw, &m) || m.Domain != "skills-3080-create-v1" || m.Todo != 3080 || m.Decision != skillsDecisionSHA || !skillsWriterValid(m.Writer) || len(m.Sources) < 1 || len(m.Sources) > 128 || len(m.Files) < 1 || len(m.Files) > 1024 {
+	value, valid := conversationJSON(raw)
+	if !valid {
+		return m, false
+	}
+	if value["domain"] == "skills-3080-create-v2" {
+		var public skillsPublicManifest
+		if !skillsStrict(raw, &public) {
+			return m, false
+		}
+		m = skillsManifest{Domain: public.Domain, Todo: 3080, Sources: public.Sources, Files: public.Files, publicV2: true}
+	} else if !skillsStrict(raw, &m) || m.Domain != "skills-3080-create-v1" || m.Todo != 3080 || m.Decision != skillsDecisionSHA || !skillsWriterValid(m.Writer) {
+		return m, false
+	}
+	if len(m.Sources) < 1 || len(m.Sources) > 128 || len(m.Files) < 1 || len(m.Files) > 1024 {
 		return m, false
 	}
 	for _, s := range m.Sources {
@@ -128,6 +169,19 @@ func skillsParseManifest(raw []byte) (skillsManifest, bool) {
 		body, e := base64.StdEncoding.Strict().DecodeString(f.Content)
 		if e != nil || len(body) < 1 || len(body) > 2<<20 || !utf8.Valid(body) || bytes.IndexByte(body, 0) >= 0 || hashBytes(body) != f.SHA {
 			return m, false
+		}
+		if m.publicV2 && len(parts) == 3 && parts[1] == "references" && parts[2] == "source.json" {
+			metadata, valid := conversationJSON(body)
+			if !valid {
+				return m, false
+			}
+			for key := range metadata {
+				for _, private := range []string{"writer", "reformulation_writer", "job", "workspace", "spec_sha256", "todo_id", "decision_identity_sha256", "manifest_author"} {
+					if strings.EqualFold(key, private) {
+						return m, false
+					}
+				}
+			}
 		}
 		seen[strings.ToLower(f.Target)] = true
 		names[parts[0]] = true

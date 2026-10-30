@@ -22,7 +22,8 @@ const skillsGuardModule = "github.com/AutoDevJapan/cc-pc-tools-rs/repair-guard"
 // Independent previously accepted distribution facts (3258 and3686), not a caller
 // supplied baseline or an assertion made by the artifact being installed.
 var skillsGuardBaselines = map[string]string{
-	official3894BootstrapPredecessorSHA: official3894BootstrapPredecessorHead,
+	official3894PublicManifestPredecessorSHA: official3894PublicManifestPredecessorHead,
+	official3894BootstrapPredecessorSHA:      official3894BootstrapPredecessorHead,
 	// Same pre-candidate accepted PR624 observation as the shared updater.
 	// docs/evidence/skills-3080-guard-before-native-path-eab175645.json
 	official3894CreationPathPredecessorSHA: official3894CreationPathPredecessorHead,

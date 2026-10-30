@@ -111,7 +111,12 @@ func skillsConsumerNativeInput(s *skillsFS, job object, spec []byte, author skil
 	if !ok {
 		return false
 	}
-	native, ok := skillsNativeWindow(s, job, &skillsNativeResultProof{prompt: prompt, inputOnly: true, exactInput: true, bootstrapSHA: bootstrap, cwd: str(job["cwd"])}, time.Now())
+	c, valid := skillsParseConsumer(spec)
+	if !valid || c.Author != author {
+		return false
+	}
+	project, required := skillsTypedRuntimeProject(s, job, spec)
+	native, ok := skillsNativeWindow(s, job, &skillsNativeResultProof{prompt: prompt, inputOnly: true, exactInput: true, bootstrapSHA: bootstrap, runtimeProject: project, requireRuntimeSource: required, cwd: str(job["cwd"])}, time.Now())
 	if !ok || len(native) == 0 {
 		return false
 	}
@@ -134,9 +139,25 @@ func skillsConsumeAcceptedCurrent(m skillsManifest, e skillsCreatedEvidence, roo
 // runtime's native CreateNew proves its review acceptance. A fresh consumer
 // does not pretend to be the original current writer to reread that review.
 func skillsConsumerProvenance(c skillsConsumerScope, reg skillsRegistry, s *skillsFS) (skillsManifest, skillsCreatedEvidence, skillsProducer, string) {
-	var m skillsManifest
-	var e skillsCreatedEvidence
-	var current skillsProducer
+	origin, reason := skillsConsumerOriginFor(c, reg, s)
+	if reason != "" {
+		return skillsManifest{}, skillsCreatedEvidence{}, skillsProducer{}, reason
+	}
+	m, e, current, stage := skillsCreatedProvenanceWith(origin.Creation, c.Consume, origin.Creator, s, skillsCreatedChecks{
+		installed: func(*skillsFS) (skillsProducer, bool) { return origin.Current, true },
+		native: func(*skillsFS, object, skillsConsumeRequest) (skillsCreatedEvidence, bool) {
+			return origin.Evidence, true
+		},
+		manifest: skillsCreatedPublicManifest, sources: skillsSourcesBound,
+	})
+	if stage == "" {
+		skillsConsumerProjectFromCreated(s, origin.Evidence)
+	}
+	return m, e, current, skillsCreatedFailureReason(stage)
+}
+
+func skillsConsumerCreationContext(c skillsConsumerScope, reg skillsRegistry, s *skillsFS) (skillsRequest, object, string) {
+	var creation skillsRequest
 	parent := reg.Tasks[3080]
 	latest := parent.Scheduler.Job
 	if latest == "" {
@@ -147,27 +168,25 @@ func skillsConsumerProvenance(c skillsConsumerScope, reg skillsRegistry, s *skil
 	}
 	creator, ok := skillsReadJob(s, c.Consume.Creator.Job)
 	if !ok || skillsHeld(parent) || !skillsRegisteredGeneration(parent, c.Consume.Creator.Job, latest) || !skillsJobTask(creator, 3080) || creator["id"] != c.Consume.Creator.Job || !same(str(creator["cwd"]), c.Consume.Creator.Workspace) || !same(parent.Scheduler.Worktree, c.Consume.Creator.Workspace) || !skillsModelIdentifier(str(creator["model"])) {
-		return m, e, current, "writer"
+		return creation, nil, "writer"
 	}
 	switch creator["status"] {
 	case "running", "succeeded", "failed", "cancelled", "canceled", "lost":
 	default:
-		return m, e, current, "writer"
+		return creation, nil, "writer"
 	}
 	spec, ok := s.read(c.CreatorSpecPath, 1<<20)
 	if !ok || hashBytes(spec) != c.Consume.Creator.SpecSHA {
-		return m, e, current, "creation_evidence"
+		return creation, nil, "creation_evidence"
 	}
 	if _, ok = skillsReviewLaunchPromptAt(s, skillsJobsRoot, creator, spec); !ok {
-		return m, e, current, "creation_evidence"
+		return creation, nil, "creation_evidence"
 	}
 	raw, ok := s.read(c.Consume.RequestPath, 1<<20)
-	var creation skillsRequest
 	if !ok || hashBytes(raw) != c.Consume.RequestSHA || !skillsStrict(raw, &creation) || creation.Domain != "skills-3080-operation-v1" || creation.Writer != c.Consume.Creator || creation.Consume != nil || creation.Result != nil || creation.Runtime != nil || creation.Review == nil || *creation.Review != c.Review || creation.ManifestCommit != c.ManifestCommit || creation.ManifestPath != c.ManifestPath || creation.ManifestSHA != c.ManifestSHA {
-		return m, e, current, "creation_evidence"
+		return creation, nil, "creation_evidence"
 	}
-	m, e, current, stage := skillsCreatedProvenance(creation, c.Consume, creator, s)
-	return m, e, current, skillsCreatedFailureReason(stage)
+	return creation, creator, ""
 }
 
 func skillsFreshConsumerOperation() object {
@@ -204,6 +223,14 @@ func skillsFreshConsumerOperation() object {
 	if !ok || !skillsConsumerActorBound(w, reg, job, c) || !skillsActorLive(job) || !skillsActorSource(w.Workspace, row.Scheduler.Branch) || !skillsConsumerAuthor(c, reg, job, &fs) {
 		return fail("writer")
 	}
+	// Metadata-only original issuance proves which PUBLIC project blob may be
+	// used for launch instructions. No source corpus or central leaf is read
+	// until the actual current consumer's complete native input is proven.
+	origin, reason := skillsConsumerOriginFor(c, reg, &fs)
+	if reason != "" {
+		return fail(reason)
+	}
+	skillsConsumerProjectFromCreated(&fs, origin.Evidence)
 	if !skillsConsumerNativeInput(&fs, job, spec, c.Author) {
 		return fail("native_context")
 	}

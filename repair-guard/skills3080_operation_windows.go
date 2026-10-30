@@ -258,7 +258,7 @@ func skillsOperation(op, path string) object {
 		return fail("manifest")
 	}
 	manifest, ok := skillsParseManifest(manifestRaw)
-	if !ok || manifest.Writer != r.Writer || !skillsSourcesBound(manifest, &fs) {
+	if !ok || (!manifest.publicV2 && manifest.Writer != r.Writer) || !skillsSourcesBound(manifest, &fs) {
 		return fail("source")
 	}
 	review, reason := skillsReceive(*r.Review, reg, &fs, true)
@@ -268,6 +268,16 @@ func skillsOperation(op, path string) object {
 	writer, ok := skillsReadJob(&fs, caller)
 	if !ok || !skillsReviewAccepted(review, r.ManifestSHA, str(writer["model"])) {
 		return fail("review")
+	}
+	if manifest.publicV2 {
+		c, valid := skillsParsePublicReview(review.Spec)
+		if !valid || c.ManifestSHA != r.ManifestSHA || c.ManifestPath != r.ManifestPath || !skillsRegisteredGeneration(reg.Tasks[3080], c.Author.Job, r.Writer.Job) {
+			return fail("review")
+		}
+		manifest, valid = skillsBindPublicManifest(manifest, r.Writer, c.Author)
+		if !valid {
+			return fail("review")
+		}
 	}
 	if reason := skillsTargetsAbsent(manifest, skillsCentralRoot, &fs); reason != "" {
 		return fail(reason)

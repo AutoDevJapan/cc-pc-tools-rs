@@ -96,9 +96,8 @@ func skillsReceiveTypedRepair(r skillsResultRequest, reg skillsRegistry, s *skil
 		p.bootstrapSHA = bootstrap
 		p.cwd = str(job["cwd"])
 		p.exactInput = true
-		if job["resume_session"] == nil && job["first_started_at"] == job["started_at"] {
-			p.runtimeProject = s.bootstrapProjects[c.Commit]
-			p.requireRuntimeSource = true
+		if skillsFreshRuntimeJob(job) {
+			p.runtimeProject, p.requireRuntimeSource = skillsTypedRuntimeProject(s, job, spec)
 			p.frozen = true
 		}
 		return skillsHistoricalNative(s, job, p)

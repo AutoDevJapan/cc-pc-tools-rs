@@ -24,7 +24,13 @@ import (
 
 const requestForum = "1554771264298819675"
 const maxState = 8 << 20
+
+// The authoritative sender's recovery_messages::LEDGER_BYTES is 32 MiB.
+// This budget applies only to that existing receipt ledger, not intake state.
+const maxRecoveryMessages = 32 << 20
 const maxTodo = 64 << 20
+
+var errRecordLimitExceeded = errors.New("record limit exceeded")
 
 type Config struct {
 	Since            string                `json:"since"`
@@ -206,10 +212,32 @@ func readJSON(path string, ceiling int64, value any) error {
 		return closeErr
 	}
 	if int64(len(data)) > ceiling {
-		return errors.New("record limit exceeded")
+		return errRecordLimitExceeded
 	}
 	return json.Unmarshal(data, value)
 }
+
+func readRecoveryMessages(home string, value any) error {
+	return readJSON(filepath.Join(filepath.Dir(home), "recovery-messages.json"), maxRecoveryMessages, value)
+}
+
+// Classify only fixed error types. Paths, JSON values and raw error text must
+// never reach the public discovery diagnostic.
+func receiptReadStage(err error) string {
+	var syntax *json.SyntaxError
+	var valueType *json.UnmarshalTypeError
+	switch {
+	case os.IsNotExist(err):
+		return "receipt_registry_missing"
+	case errors.Is(err, errRecordLimitExceeded):
+		return "receipt_registry_limit"
+	case errors.As(err, &syntax), errors.As(err, &valueType):
+		return "receipt_registry_malformed"
+	default:
+		return "receipt_registry_unavailable"
+	}
+}
+
 func publish(path string, value any) error {
 	data, err := json.MarshalIndent(value, "", "  ")
 	if err != nil {
@@ -306,11 +334,11 @@ func (r *Runner) knownBotThreads() (map[string]bool, error) {
 			} `json:"receipt"`
 		} `json:"events"`
 	}
-	if err := readJSON(filepath.Join(filepath.Dir(r.Config.Home), "recovery-messages.json"), maxState, &ledger); err != nil {
-		return nil, err
+	if err := readRecoveryMessages(r.Config.Home, &ledger); err != nil {
+		return nil, monthlyInvalid(receiptReadStage(err))
 	}
 	if ledger.Domain != "new-owner-recovery-messages" {
-		return nil, errors.New("new message receipts invalid")
+		return nil, monthlyInvalid("receipt_registry_domain")
 	}
 	out := map[string]bool{}
 	r.KnownQuestionThreads = make(map[string]bool)
@@ -336,18 +364,18 @@ func (r *Runner) discover(ctx context.Context) error {
 		ID  string `json:"id"`
 		Bot bool   `json:"bot"`
 	}
-	if err := r.get(ctx, "/users/@me", &bot); err != nil {
+	if err := monthlyGet(ctx, r, "/users/@me", "bot_identity", &bot); err != nil {
 		return err
 	}
 	if !bot.Bot || bot.ID != r.State.Destination.Bot {
-		return errors.New("bot identity differs")
+		return monthlyInvalid("bot_identity")
 	}
 	var forum Thread
-	if err := r.get(ctx, "/channels/"+requestForum, &forum); err != nil {
+	if err := monthlyGet(ctx, r, "/channels/"+requestForum, "request_forum", &forum); err != nil {
 		return err
 	}
 	if forum.ID != requestForum || forum.Type != 15 || forum.Guild != r.State.Destination.Guild {
-		return errors.New("owner request forum differs")
+		return monthlyInvalid("request_forum")
 	}
 	known, err := r.knownBotThreads()
 	if err != nil {
@@ -730,6 +758,13 @@ func (r *Runner) tickWithIntakeContext(ctx, intakeParent context.Context) Health
 	defer cancelIntake()
 	if err := r.discover(intakeCtx); err != nil {
 		health.Errors = append(health.Errors, "discord_discovery_failed")
+		var failure monthlyFailure
+		if errors.As(err, &failure) {
+			health.Errors = append(health.Errors, "discovery_"+failure.Stage+"_"+failure.Code)
+			if failure.Status != 0 {
+				health.Errors = append(health.Errors, fmt.Sprintf("discovery_http_status_%d", failure.Status))
+			}
+		}
 	} else {
 		health.API = true
 		health.Errors = append(health.Errors, r.DiscoveryErrors...)

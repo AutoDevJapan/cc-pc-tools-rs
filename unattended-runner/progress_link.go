@@ -220,7 +220,7 @@ func (r *Runner) verifyProgressLink(ctx context.Context, link ProgressLink) (Pro
 			} `json:"receipt"`
 		} `json:"events"`
 	}
-	if readJSON(filepath.Join(filepath.Dir(r.Config.Home), "recovery-messages.json"), maxState, &ledger) != nil || ledger.Domain != "new-owner-recovery-messages" {
+	if readRecoveryMessages(r.Config.Home, &ledger) != nil || ledger.Domain != "new-owner-recovery-messages" {
 		return link, false
 	}
 	receiptFound := false

@@ -27,7 +27,35 @@ func ownerPhysicalPath(path string) (string, error) {
 		return "", &os.PathError{Op: "metadata", Path: "", Err: err}
 	}
 	defer syscall.CloseHandle(h)
+	var info syscall.ByHandleFileInformation
+	if syscall.GetFileInformationByHandle(h, &info) != nil || info.FileAttributes&syscall.FILE_ATTRIBUTE_DIRECTORY == 0 && info.NumberOfLinks != 1 {
+		return "", os.ErrInvalid
+	}
 	return ownerHandlePath(h)
+}
+
+// Creation paths still need their existing ancestor's final identity. A missing
+// leaf must not conceal a junction or a short-name alias in its parent.
+func ownerRulePhysicalPath(path string) (string, error) {
+	target := path
+	for {
+		resolved, err := ownerPhysicalPath(target)
+		if err == nil {
+			rel, e := filepath.Rel(target, path)
+			if e != nil {
+				return "", e
+			}
+			return filepath.Join(resolved, rel), nil
+		}
+		if !os.IsNotExist(err) {
+			return "", err
+		}
+		parent := filepath.Dir(target)
+		if parent == target {
+			return "", err
+		}
+		target = parent
+	}
 }
 
 func ownerHandlePath(h syscall.Handle) (string, error) {

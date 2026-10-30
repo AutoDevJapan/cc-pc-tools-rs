@@ -74,6 +74,7 @@ struct Fake {
     guard_calls: Vec<String>,
     deny_images: bool,
     unverified_images: bool,
+    guard_image_proof: Option<Value>,
     qualify_images: bool,
     qualification_calls: usize,
     mismatched_qualification: bool,
@@ -283,9 +284,9 @@ impl Effects for Fake {
             self.guard_calls.push(argument(args, "--guard-path").into());
             return Ok(Output {
                 code: 0,
-                stdout:
-                    json!({"client_resource":self.deny_images,"classification_unverified":self.unverified_images})
-                        .to_string(),
+                stdout: self.guard_image_proof.clone().unwrap_or_else(||
+                    json!({"client_resource":self.deny_images,"classification_unverified":self.unverified_images}))
+                    .to_string(),
                 stderr: String::new(),
             });
         }
@@ -1100,4 +1101,69 @@ fn conversation_bridge_cli_gate_precedes_enabled_mode_and_dry_run_uses_legacy_pa
     assert!(!String::from_utf8_lossy(&output.stderr).contains("新しい質問・報告の設定が不正"));
     assert!(!f.root.path().join("conversation-bridge").exists());
     f.unchanged_legacy();
+}
+
+#[test]
+fn conversation_bridge_owner_rule_default_still_requires_question_specific_proof() {
+    let f = Fixture::new();
+    let image = f.root.path().join("generated.png");
+    fs::write(&image, b"\x89PNG\r\n\x1a\nsynthetic-image").unwrap();
+    let mut decision: Value = serde_json::from_slice(&fs::read(&f.decision).unwrap()).unwrap();
+    decision["owner"] = json!("100");
+    decision["guild"] = json!("101");
+    decision["parent"] = json!("102");
+    fs::write(&f.decision, decision.to_string()).unwrap();
+    let mut args = f.ask();
+    args.attach.push(image);
+    let default_proof = json!({"client_resource":true,"classification_unverified":false,"access_allowed":false,"protection_status":"protected","protection_categories":["client_project"],"classification_policy":"owner-client-rule-20261027","classification_basis":"owner_rule_unattributed_location"});
+    let mut fake = Fake {
+        guard_image_proof: Some(default_proof.clone()),
+        qualify_images: true,
+        ..Default::default()
+    };
+    bridge::try_ask(f.root.path(), &mut fake, &args).unwrap();
+    assert_eq!(fake.qualification_calls, 1);
+    assert_eq!(fake.attachments.len(), 1);
+    fake.mismatched_qualification = true;
+    let sent = fake.calls.len();
+    assert!(bridge::try_ask(f.root.path(), &mut fake, &args).is_err());
+    assert_eq!(fake.calls.len(), sent);
+    for basis in [
+        "legacy_exclusion",
+        "client_registration",
+        "client_department",
+        "client_repository_id",
+        "owner_rule_other_development_top",
+        "mixed_client_record_store",
+        "owner_rule_unattributed_record",
+    ] {
+        let mut proof = default_proof.clone();
+        proof["classification_basis"] = json!(basis);
+        let mut denied = Fake {
+            guard_image_proof: Some(proof),
+            qualify_images: true,
+            ..Default::default()
+        };
+        assert!(bridge::try_ask(f.root.path(), &mut denied, &args).is_err());
+        assert_eq!(denied.qualification_calls, 0);
+        assert!(denied.attachments.is_empty());
+    }
+    let mut log = Fake {
+        guard_image_proof: Some(default_proof),
+        qualify_images: true,
+        ..Default::default()
+    };
+    assert!(
+        bridge::try_log(
+            f.root.path(),
+            &mut log,
+            "進捗",
+            "本文",
+            None,
+            false,
+            &args.attach
+        )
+        .is_err()
+    );
+    assert_eq!(log.qualification_calls, 0);
 }

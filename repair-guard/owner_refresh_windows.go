@@ -177,7 +177,7 @@ func ownerRequestIdentityRefresh(path, repository string) {
 }
 func ownerRefreshIdentity(path string) bool { return ownerRefreshIdentityRequest(path, "") }
 func ownerRefreshIdentityRequest(path, request string) bool {
-	return ownerRefreshIdentityRequestWith(path, request, ownerIdentityHome, time.Now, ownerSourceQuery, ownerGitHubIdentityWith)
+	return ownerRefreshIdentityRequestWith(path, request, ownerIdentityHome, time.Now, ownerOrganizationQuery, ownerGitHubIdentityWith)
 }
 
 func ownerRefreshIdentityRequestWith(path, request, home string, now func() time.Time, query func(context.Context, string, ownerSourceAccess) ownerPathVerdict, fetch func(context.Context, string) (int64, string, string, bool)) bool {

@@ -48,16 +48,17 @@ type checkpoint struct {
 	Last     *report               `json:"last,omitempty"`
 }
 type categoryResult struct {
-	Category    string  `json:"category"`
-	Status      string  `json:"status"`
-	Bytes       *uint64 `json:"logical_bytes"`
-	Files       uint64  `json:"files"`
-	Directories uint64  `json:"directories"`
-	Links       uint64  `json:"reparse_points_skipped"`
-	Errors      uint64  `json:"errors"`
-	Started     string  `json:"scan_started,omitempty"`
-	Completed   string  `json:"scan_completed,omitempty"`
-	Increase    *int64  `json:"increase_since_previous_complete_bytes,omitempty"`
+	Category        string  `json:"category"`
+	Status          string  `json:"status"`
+	Bytes           *uint64 `json:"logical_bytes"`
+	Files           uint64  `json:"files"`
+	Directories     uint64  `json:"directories"`
+	Links           uint64  `json:"reparse_points_skipped"`
+	Errors          uint64  `json:"errors"`
+	Started         string  `json:"scan_started,omitempty"`
+	Completed       string  `json:"scan_completed,omitempty"`
+	Increase        *int64  `json:"increase_since_previous_complete_bytes,omitempty"`
+	ProtectionBasis string  `json:"protection_basis,omitempty"`
 }
 type report struct {
 	Schema           int                `json:"schema"`
@@ -128,9 +129,15 @@ func classifyPath(ctx context.Context, path string) string {
 	if err != nil || len(output) > 4096 {
 		return "guard_unavailable"
 	}
+	return classifyGuardResponse(output)
+}
+
+func classifyGuardResponse(output []byte) string {
 	var result struct {
-		Client     *bool `json:"client_resource"`
-		Unverified bool  `json:"classification_unverified"`
+		Client     *bool  `json:"client_resource"`
+		Unverified bool   `json:"classification_unverified"`
+		Policy     string `json:"classification_policy"`
+		Basis      string `json:"classification_basis"`
 	}
 	if json.Unmarshal(output, &result) != nil || result.Client == nil {
 		return "guard_unavailable"
@@ -139,6 +146,9 @@ func classifyPath(ctx context.Context, path string) string {
 		return "protected_unclassified"
 	}
 	if *result.Client {
+		if result.Policy == "owner-client-rule-20261027" && result.Basis == "owner_rule_unattributed_location" {
+			return "protected_owner_rule_unattributed"
+		}
 		return "protected"
 	}
 	return "clear"
@@ -403,10 +413,13 @@ func runAudit(home string, specs []rootSpec, deps auditDependencies) error {
 			delete(state.Scans, spec.Category)
 			continue
 		}
-		if !spec.PublicSystem && !privateAllowed(ctx, spec.Path) {
-			byCategory[spec.Category] = categoryResult{Category: spec.Category, Status: "protected_unclassified"}
-			delete(state.Scans, spec.Category)
-			continue
+		if !spec.PublicSystem {
+			classification := classifyPath(ctx, spec.Path)
+			if classification != "clear" {
+				byCategory[spec.Category] = protectedCategoryResult(spec, classification)
+				delete(state.Scans, spec.Category)
+				continue
+			}
 		}
 		st := state.Scans[spec.Category]
 		if st == nil || len(st.Pending) == 0 {
@@ -468,6 +481,10 @@ func runAudit(home string, specs []rootSpec, deps auditDependencies) error {
 		return errors.New("decision queue unavailable; measurements retained")
 	}
 	return allErr
+}
+
+func protectedCategoryResult(spec rootSpec, classification string) categoryResult {
+	return categoryResult{Category: spec.Category, Status: "protected_unclassified", ProtectionBasis: classification}
 }
 
 func main() {

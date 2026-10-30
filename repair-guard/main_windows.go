@@ -209,7 +209,7 @@ func repairPathAllowed(path string) bool {
 	if productCIRuntime(absolute, productCIDirectory, legacyMatch) && sourceVerified(base) {
 		return true
 	}
-	if discordAskRuntime(absolute, legacyMatch) && sourceVerified(base) {
+	if ownerRuleOperationalPathAllowed(absolute) {
 		return true
 	}
 	target, err := physical(absolute)
@@ -473,20 +473,27 @@ func runGuardCLIWithVerifiers(args []string, stdout, stderr io.Writer, currentVe
 		return 0
 	}
 	ok := parsed.path != "" && filepath.IsAbs(parsed.path)
-	verdict := ownerUnverified()
+	verdict := ownerRuleUnknown("invalid_absolute_path")
 	if ok {
 		verdict = pathVerifier(parsed.path)
 	}
 	retirement := ok && (retirement3250PathAllowed(parsed.path) || ci3574RootAllowed(parsed.path))
-	if retirement && verdict.Status == "unverified" && !ownerCardPath(parsed.path) {
-		verdict = ownerPathVerdict{AccessAllowed: true, Status: "clear", Categories: []string{}}
-	}
+	verdict = ownerRuleRetirementVerdict(verdict, parsed.path, retirement)
 	result := map[string]any{"ok": ok, "client_resource": !verdict.AccessAllowed, "classification_unverified": verdict.Status == "unverified", "ci_retirement_qualified": retirement, "original_registry_recovered": false, "scope": "owner protection policy: client projects and owner card information; verified sources and purpose-checked receipts", "access_allowed": verdict.AccessAllowed, "protection_status": verdict.Status, "protection_categories": verdict.Categories}
+	result["classification_policy"] = "owner-client-rule-20261027"
+	result["classification_basis"] = verdict.Basis
 	_ = json.NewEncoder(stdout).Encode(result)
 	if !ok {
 		return 2
 	}
 	return 0
+}
+
+func ownerRuleRetirementVerdict(v ownerPathVerdict, path string, qualified bool) ownerPathVerdict {
+	if qualified && ownerRuleIndependentReceiptEligible(v) && !ownerCardPath(path) && !ownerWindowsAlias(path) {
+		return ownerRuleClear("verified_retirement_receipt")
+	}
+	return v
 }
 
 func main() {

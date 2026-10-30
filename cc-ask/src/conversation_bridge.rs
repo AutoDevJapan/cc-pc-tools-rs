@@ -239,7 +239,13 @@ fn attachments(
             .map_err(|_| "添付元の保護範囲を確認できません。画像は送信していません")?;
         let qualified = if guard.code == 0
             && proof["client_resource"] == true
-            && proof["classification_unverified"] == true
+            && (proof["classification_unverified"] == true
+                || (proof["classification_policy"] == "owner-client-rule-20261027"
+                    && proof["classification_basis"] == "owner_rule_unattributed_location"
+                    && proof["access_allowed"] == false
+                    && proof["protection_status"] == "protected"
+                    && proof["classification_unverified"] == false
+                    && proof["protection_categories"] == json!(["client_project"])))
         {
             Some(crate::question_images::preflight(
                 effects,

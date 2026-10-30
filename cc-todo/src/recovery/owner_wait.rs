@@ -128,7 +128,8 @@ fn run<H: Host>(
     }
     let _lock = Lock::acquire(&paths.lock, Duration::ZERO)?;
     let mut current = load(&paths.store)?;
-    if source != self::source(&current, id)? {
+    let current_source = self::source(&current, id)?;
+    if source != current_source {
         return Err("reevaluation source changed".into());
     }
     for (path, bytes, _) in &records {
@@ -145,6 +146,17 @@ fn run<H: Host>(
         return Err("reevaluation liveness changed".into());
     }
     fresh_proof(&started, &host.now())?;
+    // Other dependency rows are intentionally outside the selected-source CAS.
+    // Recheck both holds against this locked store: a dependency may have been
+    // reopened while the second guard/Git pass ran outside the shared locks.
+    if held(&current, &current_source.item, &jobs, true)
+        || current_source
+            .owner
+            .as_ref()
+            .is_some_and(|owner| held(&current, owner, &jobs, false))
+    {
+        return Ok(vec![]);
+    }
     *find(&mut current, id)? = replacement;
     commit(&current)?;
     Ok(changed)
@@ -288,16 +300,26 @@ fn held(db: &Value, item: &Value, jobs: &[Value], candidate: bool) -> bool {
         || crate::direction_record::HOLD_FIELDS
             .iter()
             .any(|key| explicit(&item[*key]) || explicit(&item["scheduler"][*key]))
+        // todo_wait::release_item treats every non-null readiness value as a
+        // hold, including false/empty strings that its normal writer never emits.
+        || !item["wait_ready"].is_null()
+        || !item["scheduler"]["wait_ready"].is_null()
+        // capacity_cycle already preserves this recorded conversation hold.
+        || explicit(&item["conversation_wait"])
+        || explicit(&item["scheduler"]["conversation_wait"])
         || (!item["scheduler"].is_null() && !item["scheduler"].is_object())
         || (!item["stall_recovery"].is_null() && !item["stall_recovery"].is_object())
         || [
             "owner_stop_job",
             "pending_cancel",
             "question_close_pending",
-            "question",
         ]
         .iter()
         .any(|key| explicit(&item["scheduler"][*key]))
+        // Normal answer delivery retains the question as history. A recorded
+        // answer removes only this unanswered-question gate, never other holds.
+        || (explicit(&item["scheduler"]["question"])
+            && !common::truth(&item["scheduler"]["answer"]))
         || [
             &item["scheduler"]["not_before"],
             &item["stall_recovery"]["next_at"],

@@ -1,0 +1,35 @@
+   Compiling cc-todo v0.1.0 (D:\CC\Work\unattended-operations-20261013-wt\todo-4264-work\cc-todo)
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 4.56s
+────────────
+ Nextest run ID b5f6a583-8c85-4b72-819b-0c4a93897b16 with nextest profile: default
+    Starting 28 tests across 1 binary (33 tests skipped)
+        PASS [   0.031s] ( 1/28) cc-todo recovery::owner_wait::tests::durable_pr_or_branch_owner_claim_is_not_released
+        PASS [   0.072s] ( 2/28) cc-todo recovery::owner_wait::tests::cross_project_owner_is_rejected_without_reinterpreting_its_scope
+        PASS [   0.082s] ( 3/28) cc-todo recovery::owner_wait::tests::changed_exact_job_and_busy_normal_job_lock_are_rejected
+        PASS [   0.043s] ( 4/28) cc-todo recovery::owner_wait::tests::guard_paths_are_unique_per_pass_and_every_pass_is_fresh
+        PASS [   0.121s] ( 5/28) cc-todo recovery::owner_wait::tests::dependency_reopened_during_second_guard_never_commits
+        PASS [   0.049s] ( 6/28) cc-todo recovery::owner_wait::tests::guards_never_hold_shared_todo_or_referenced_job_locks
+        PASS [   0.047s] ( 7/28) cc-todo recovery::owner_wait::tests::host_budget_begins_after_initial_scope_snapshot_and_lock_release
+        PASS [   0.266s] ( 8/28) cc-todo recovery::owner_wait::tests::answered_question_history_allows_only_the_existing_automatic_release
+        PASS [   0.289s] ( 9/28) cc-todo recovery::owner_wait::tests::actual_owner_question_stops_and_terminal_items_never_save
+        PASS [   0.157s] (10/28) cc-todo recovery::owner_wait::tests::liveness_change_snapshot_error_and_expired_guard_cannot_commit
+        PASS [   0.226s] (11/28) cc-todo recovery::owner_wait::tests::inactive_hold_markers_except_wait_ready_keep_legitimate_release
+        PASS [   0.243s] (12/28) cc-todo recovery::owner_wait::tests::guards_run_without_todo_lock_and_changed_selected_source_is_rejected
+        PASS [   0.082s] (13/28) cc-todo recovery::owner_wait::tests::manual_dependencies_and_unproven_automatic_edges_stay_untouched
+        PASS [   0.084s] (14/28) cc-todo recovery::owner_wait::tests::normal_registered_root_fallback_and_ancestor_git_scope_are_preserved
+        PASS [   0.111s] (15/28) cc-todo recovery::owner_wait::tests::null_or_absent_wait_ready_allows_complete_release
+        PASS [   0.524s] (16/28) cc-todo recovery::owner_wait::tests::conversation_wait_on_candidate_or_owner_is_preserved
+        PASS [   0.052s] (17/28) cc-todo recovery::owner_wait::tests::positive_uses_current_guard_without_reading_legacy_list
+        PASS [   0.232s] (18/28) cc-todo recovery::owner_wait::tests::non_null_wait_ready_never_saves_a_partial_automatic_release
+        PASS [   0.337s] (19/28) cc-todo recovery::owner_wait::tests::malformed_scheduler_worktree_on_either_source_never_saves
+        PASS [   0.092s] (20/28) cc-todo recovery::owner_wait::tests::queued_running_surviving_and_unknown_processes_never_save
+        PASS [   0.060s] (21/28) cc-todo recovery::owner_wait::tests::unknown_start_is_rejected_and_sub_45_second_scope_is_not_renewed
+        PASS [   0.332s] (22/28) cc-todo recovery::owner_wait::tests::missing_or_wrong_project_owner_and_reference_sources_never_save
+        PASS [   0.096s] (23/28) cc-todo recovery::owner_wait::tests::unrelated_item_changes_are_preserved_and_other_items_never_reevaluated
+        PASS [   0.810s] (24/28) cc-todo recovery::owner_wait::tests::guard_denial_unknown_malformed_missing_cli_error_and_timeout_never_save
+        PASS [   0.214s] (25/28) cc-todo recovery::owner_wait::tests::wrong_job_bindings_or_omitted_receipt_sources_never_save
+        PASS [   0.448s] (26/28) cc-todo recovery::owner_wait::tests::owner_block_delay_dependency_and_malformed_hold_containers_never_save
+        PASS [   0.535s] (27/28) cc-todo recovery::owner_wait::tests::question_prerequisites_and_recorded_stops_survive_answers_on_either_row
+        PASS [   5.211s] (28/28) cc-todo recovery::owner_wait::tests::explicit_holds_on_candidate_or_owner_never_release_or_save
+────────────
+     Summary [   5.212s] 28 tests run: 28 passed, 33 skipped

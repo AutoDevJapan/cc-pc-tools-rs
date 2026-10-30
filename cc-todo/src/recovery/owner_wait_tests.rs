@@ -264,8 +264,10 @@ fn answered_question_history_allows_only_the_existing_automatic_release() {
             let after = f.completely_released();
             for row in &rows {
                 for field in ["question", "answer"] {
-                    assert_eq!(after["items"][*row]["scheduler"][field],
-                        before["items"][*row]["scheduler"][field]);
+                    assert_eq!(
+                        after["items"][*row]["scheduler"][field],
+                        before["items"][*row]["scheduler"][field]
+                    );
                 }
             }
             assert_eq!(after["items"][1], before["items"][1]);
@@ -297,7 +299,10 @@ fn question_prerequisites_and_recorded_stops_survive_answers_on_either_row() {
                     "question":{"thread_id":"saved-question"},"answer":"recorded reply"});
                 // The unanswered cases explicitly replace/remove the answer.
                 if patch["scheduler"]["question"].is_object() {
-                    db["items"][row]["scheduler"].as_object_mut().unwrap().remove("answer");
+                    db["items"][row]["scheduler"]
+                        .as_object_mut()
+                        .unwrap()
+                        .remove("answer");
                 }
                 common::merge(&mut db["items"][row], patch.clone());
             });
@@ -333,7 +338,11 @@ fn non_null_wait_ready_never_saves_a_partial_automatic_release() {
             }
         }
     }
-    assert!(failures.is_empty(), "non-null readiness was released/saved:\n{}", failures.join("\n"));
+    assert!(
+        failures.is_empty(),
+        "non-null readiness was released/saved:\n{}",
+        failures.join("\n")
+    );
 }
 
 #[test]
@@ -357,7 +366,13 @@ fn null_or_absent_wait_ready_allows_complete_release() {
 fn conversation_wait_on_candidate_or_owner_is_preserved() {
     for row in [0, 1] {
         for scheduler in [false, true] {
-            for value in [json!(true), json!({"thread_id":"saved-conversation"}), json!("waiting"), json!(0), json!({})] {
+            for value in [
+                json!(true),
+                json!({"thread_id":"saved-conversation"}),
+                json!("waiting"),
+                json!(0),
+                json!({}),
+            ] {
                 let mut f = Fixture::new();
                 f.edit(|db| {
                     if scheduler {
@@ -367,7 +382,11 @@ fn conversation_wait_on_candidate_or_owner_is_preserved() {
                     }
                 });
                 let before = f.bytes();
-                assert_eq!(f.run(), Ok(vec![]), "row={row} scheduler={scheduler} value={value}");
+                assert_eq!(
+                    f.run(),
+                    Ok(vec![]),
+                    "row={row} scheduler={scheduler} value={value}"
+                );
                 f.unchanged(&before);
             }
         }
@@ -380,9 +399,12 @@ fn dependency_reopened_during_second_guard_never_commits() {
     for row in [0, 1] {
         let mut f = Fixture::new();
         f.edit(|db| {
-            db["items"].as_array_mut().unwrap().push(json!({"id":3,"status":"done"}));
+            db["items"]
+                .as_array_mut()
+                .unwrap()
+                .push(json!({"id":3,"status":"done"}));
             if row == 0 {
-                db["items"][0]["wait_on"] = json!([2,3]);
+                db["items"][0]["wait_on"] = json!([2, 3]);
             } else {
                 db["items"][1]["status"] = json!("wait");
                 db["items"][1]["wait_on"] = json!([3]);
@@ -394,7 +416,8 @@ fn dependency_reopened_during_second_guard_never_commits() {
         let mut calls = 0;
         f.host.hook = Some(Box::new(move |_, _| {
             calls += 1;
-            if calls != 3 { // root and job cwd were checked in the first pass.
+            if calls != 3 {
+                // root and job cwd were checked in the first pass.
                 return;
             }
             let _lock = Lock::acquire(&paths.lock, Duration::ZERO).unwrap();
@@ -404,15 +427,25 @@ fn dependency_reopened_during_second_guard_never_commits() {
             *captured.borrow_mut() = fs::read(&paths.store).unwrap();
         }));
         let result = f.run();
-        assert!(!expected.borrow().is_empty(), "the concurrent writer must run");
+        assert!(
+            !expected.borrow().is_empty(),
+            "the concurrent writer must run"
+        );
         if result != Ok(vec![]) || f.writes.get() != 0 || f.bytes() != *expected.borrow() {
-            failures.push(format!("dependency of row={row}: result={result:?} saves={} only_concurrent_change={}",
-                f.writes.get(), f.bytes() == *expected.borrow()));
+            failures.push(format!(
+                "dependency of row={row}: result={result:?} saves={} only_concurrent_change={}",
+                f.writes.get(),
+                f.bytes() == *expected.borrow()
+            ));
         } else {
             f.unchanged(&expected.borrow());
         }
     }
-    assert!(failures.is_empty(), "reopened dependency was released/saved:\n{}", failures.join("\n"));
+    assert!(
+        failures.is_empty(),
+        "reopened dependency was released/saved:\n{}",
+        failures.join("\n")
+    );
 }
 
 #[test]

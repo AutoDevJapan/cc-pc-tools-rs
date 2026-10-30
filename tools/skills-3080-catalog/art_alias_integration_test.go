@@ -122,7 +122,9 @@ func validateArtAliasObservation(v map[string]any) error {
 }
 
 func validateArtAliasLedgerProvenance(row, evidence map[string]any) error {
-	return next4Fields(row, map[string]any{
+	// Required fields are the actual public ledger schema. The independent
+	// evidence has additional object metadata, which must agree if added.
+	if err := next4Fields(row, map[string]any{
 		"inventory_id": evidence["inventory_id"], "source_repo": evidence["source_repo"],
 		"source_commit": evidence["source_commit"], "source_path": evidence["path"],
 		"source_sha256": evidence["source_sha256"], "target": evidence["target"],
@@ -131,7 +133,24 @@ func validateArtAliasLedgerProvenance(row, evidence map[string]any) error {
 		"individual_notice_path":   evidence["individual_notice_path"],
 		"individual_notice_sha256": evidence["individual_notice_sha256"],
 		"manifest":                 evidence["target_manifest"], "entrypoint_sha256": evidence["target_entrypoint_sha256"],
-	})
+		"source_notice_preserved": true, "upstream_original_preserved": true,
+		"selected_source_scope": evidence["rights_scope"], "copy_grant_extended_to_other_material": false,
+		"new_central_writes": float64(0), "public_result_delta_review_pending_at_recording": true,
+	}); err != nil {
+		return err
+	}
+	for key, expected := range map[string]any{
+		"source_git_blob": evidence["git_blob"], "source_bytes": evidence["bytes"],
+		"individual_notice_git_blob": evidence["individual_notice_git_blob"],
+		"individual_notice_bytes":    evidence["individual_notice_bytes"],
+	} {
+		if _, exists := row[key]; exists {
+			if err := next4Fields(row, map[string]any{key: expected}); err != nil {
+				return err
+			}
+		}
+	}
+	return nil
 }
 
 func validatedArtAliasDispositions(t *testing.T) map[string]cohortLedgerRow {
@@ -190,18 +209,32 @@ func TestArtAliasLedgerRejectsLostEvidenceAndIndividualNotice(t *testing.T) {
 	if original == nil {
 		t.Fatal("actual alias ledger row missing")
 	}
-	for _, change := range []string{"valid", "evidence", "individual_notice_path", "individual_notice_sha256", "manifest", "entrypoint_sha256"} {
-		t.Run(change, func(t *testing.T) {
-			row := map[string]any{}
-			for k, v := range original {
-				row[k] = v
-			}
-			if change != "valid" {
-				delete(row, change)
-			}
-			err := validateArtAliasLedgerProvenance(row, entry)
-			if (change == "valid" && err != nil) || (change != "valid" && err == nil) {
-				t.Fatalf("%s: %v", change, err)
+	if err := validateArtAliasLedgerProvenance(original, entry); err != nil {
+		t.Fatal(err)
+	}
+	for _, key := range []string{
+		"inventory_id", "source_repo", "source_commit", "source_path", "source_sha256",
+		"target", "disposition", "evidence", "individual_notice_path", "individual_notice_sha256",
+		"manifest", "entrypoint_sha256", "source_notice_preserved", "upstream_original_preserved",
+		"selected_source_scope", "copy_grant_extended_to_other_material", "new_central_writes",
+		"public_result_delta_review_pending_at_recording",
+	} {
+		t.Run(key, func(t *testing.T) {
+			for _, mutation := range []string{"missing", "wrong"} {
+				t.Run(mutation, func(t *testing.T) {
+					row := map[string]any{}
+					for k, v := range original {
+						row[k] = v
+					}
+					if mutation == "missing" {
+						delete(row, key)
+					} else {
+						row[key] = "contradictory metadata"
+					}
+					if err := validateArtAliasLedgerProvenance(row, entry); err == nil {
+						t.Fatal("missing or contradictory recorded provenance accepted")
+					}
+				})
 			}
 		})
 	}
@@ -213,6 +246,59 @@ func TestArtAliasLedgerRejectsLostEvidenceAndIndividualNotice(t *testing.T) {
 	row["individual_notice_path"] = "skills/moyu0032/mo-test-1/LICENSE.txt"
 	if validateArtAliasLedgerProvenance(row, entry) == nil {
 		t.Fatal("reported borrowed-evidence/notice counterexample accepted")
+	}
+}
+
+func TestArtAliasLedgerRejectsContradictoryOptionalObjectMetadata(t *testing.T) {
+	var evidence map[string]any
+	loadPublicReceipt(t, "skills-3080-art-five-alias-integrations170905.json", &evidence)
+	entry := received27Object(t, received27Array(t, evidence["entries"])[0])
+	var ledger struct {
+		Entries []map[string]any `json:"entries"`
+	}
+	loadPublicReceipt(t, "skills-3080-adoptions.json", &ledger)
+	var original map[string]any
+	for _, row := range ledger.Entries {
+		if row["inventory_id"] == entry["inventory_id"] {
+			original = row
+		}
+	}
+	if original == nil {
+		t.Fatal("actual alias ledger row missing")
+	}
+	// These four fields exist in the independent evidence, but are absent
+	// from the actual public ledger. An added value must not contradict it.
+	for key, value := range map[string]any{
+		"source_git_blob": entry["git_blob"], "source_bytes": entry["bytes"],
+		"individual_notice_git_blob": entry["individual_notice_git_blob"],
+		"individual_notice_bytes":    entry["individual_notice_bytes"],
+	} {
+		t.Run(key, func(t *testing.T) {
+			if _, exists := original[key]; exists {
+				t.Fatal("reported premise differs: original ledger already has optional field")
+			}
+			for _, mutation := range []string{"absent", "matching", "wrong", "null"} {
+				t.Run(mutation, func(t *testing.T) {
+					row := map[string]any{}
+					for k, v := range original {
+						row[k] = v
+					}
+					switch mutation {
+					case "matching":
+						row[key] = value
+					case "wrong":
+						row[key] = "contradictory metadata"
+					case "null":
+						row[key] = nil
+					}
+					err := validateArtAliasLedgerProvenance(row, entry)
+					wantError := mutation == "wrong" || mutation == "null"
+					if (err != nil) != wantError {
+						t.Fatalf("%s: want error=%t, got %v", mutation, wantError, err)
+					}
+				})
+			}
+		})
 	}
 }
 

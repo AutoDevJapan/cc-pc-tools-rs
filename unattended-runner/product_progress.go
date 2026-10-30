@@ -441,7 +441,7 @@ var errNoticeMissing = errors.New("no verified exact product notice")
 // successful command response alone is not a new progress-origin credential.
 func (r *Runner) recoverProductNotice(ctx context.Context, id, body, expectedThread string) (ProgressLink, error) {
 	var ledger newMessageLedger
-	if err := readJSON(filepath.Join(filepath.Dir(r.Config.Home), "recovery-messages.json"), maxState, &ledger); err != nil {
+	if err := readJSON(filepath.Join(filepath.Dir(r.Config.Home), "recovery-messages.json"), maxRecoveryMessages, &ledger); err != nil {
 		if os.IsNotExist(err) {
 			return ProgressLink{}, errNoticeMissing
 		}
@@ -637,7 +637,7 @@ func (r *Runner) reportProducts(ctx context.Context, h *Health) {
 // their origins from the independent verified ledger when no registry was made.
 func (r *Runner) derivedRequestLinks(ctx context.Context) []ProgressLink {
 	var ledger newMessageLedger
-	if readJSON(filepath.Join(filepath.Dir(r.Config.Home), "recovery-messages.json"), maxState, &ledger) != nil || ledger.Domain != "new-owner-recovery-messages" {
+	if readJSON(filepath.Join(filepath.Dir(r.Config.Home), "recovery-messages.json"), maxRecoveryMessages, &ledger) != nil || ledger.Domain != "new-owner-recovery-messages" {
 		return nil
 	}
 	out := []ProgressLink{}

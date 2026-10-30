@@ -24,6 +24,10 @@ import (
 
 const requestForum = "1554771264298819675"
 const maxState = 8 << 20
+
+// The authoritative sender's recovery_messages::LEDGER_BYTES is 32 MiB.
+// This budget applies only to that existing receipt ledger, not intake state.
+const maxRecoveryMessages = 32 << 20
 const maxTodo = 64 << 20
 
 type Config struct {
@@ -306,7 +310,7 @@ func (r *Runner) knownBotThreads() (map[string]bool, error) {
 			} `json:"receipt"`
 		} `json:"events"`
 	}
-	if err := readJSON(filepath.Join(filepath.Dir(r.Config.Home), "recovery-messages.json"), maxState, &ledger); err != nil {
+	if err := readJSON(filepath.Join(filepath.Dir(r.Config.Home), "recovery-messages.json"), maxRecoveryMessages, &ledger); err != nil {
 		return nil, err
 	}
 	if ledger.Domain != "new-owner-recovery-messages" {
@@ -336,22 +340,22 @@ func (r *Runner) discover(ctx context.Context) error {
 		ID  string `json:"id"`
 		Bot bool   `json:"bot"`
 	}
-	if err := r.get(ctx, "/users/@me", &bot); err != nil {
+	if err := monthlyGet(ctx, r, "/users/@me", "bot_identity", &bot); err != nil {
 		return err
 	}
 	if !bot.Bot || bot.ID != r.State.Destination.Bot {
-		return errors.New("bot identity differs")
+		return monthlyInvalid("bot_identity")
 	}
 	var forum Thread
-	if err := r.get(ctx, "/channels/"+requestForum, &forum); err != nil {
+	if err := monthlyGet(ctx, r, "/channels/"+requestForum, "request_forum", &forum); err != nil {
 		return err
 	}
 	if forum.ID != requestForum || forum.Type != 15 || forum.Guild != r.State.Destination.Guild {
-		return errors.New("owner request forum differs")
+		return monthlyInvalid("request_forum")
 	}
 	known, err := r.knownBotThreads()
 	if err != nil {
-		return err
+		return monthlyInvalid("receipt_registry")
 	}
 	// Fetch live discovery before potentially slow historical link validation.
 	// Only links verified in this pass can route an owner reply.
@@ -730,6 +734,13 @@ func (r *Runner) tickWithIntakeContext(ctx, intakeParent context.Context) Health
 	defer cancelIntake()
 	if err := r.discover(intakeCtx); err != nil {
 		health.Errors = append(health.Errors, "discord_discovery_failed")
+		var failure monthlyFailure
+		if errors.As(err, &failure) {
+			health.Errors = append(health.Errors, "discovery_"+failure.Stage+"_"+failure.Code)
+			if failure.Status != 0 {
+				health.Errors = append(health.Errors, fmt.Sprintf("discovery_http_status_%d", failure.Status))
+			}
+		}
 	} else {
 		health.API = true
 		health.Errors = append(health.Errors, r.DiscoveryErrors...)

@@ -112,7 +112,7 @@ func (r *Runner) questionContext(ctx context.Context, request *Request) error {
 			} `json:"receipt"`
 		} `json:"events"`
 	}
-	if err := readJSON(filepath.Join(filepath.Dir(r.Config.Home), "recovery-messages.json"), maxState, &ledger); err != nil {
+	if err := readJSON(filepath.Join(filepath.Dir(r.Config.Home), "recovery-messages.json"), maxRecoveryMessages, &ledger); err != nil {
 		return err
 	}
 	if ledger.Domain != "new-owner-recovery-messages" {
@@ -388,7 +388,7 @@ func (r *Runner) recoverStatusReceipt(ctx context.Context, id, body string) (str
 			} `json:"receipt"`
 		} `json:"events"`
 	}
-	if err := readJSON(filepath.Join(filepath.Dir(r.Config.Home), "recovery-messages.json"), maxState, &ledger); err != nil {
+	if err := readJSON(filepath.Join(filepath.Dir(r.Config.Home), "recovery-messages.json"), maxRecoveryMessages, &ledger); err != nil {
 		return "", err
 	}
 	if ledger.Domain != "new-owner-recovery-messages" {

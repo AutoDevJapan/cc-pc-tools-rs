@@ -6,6 +6,7 @@ import (
 	"net/url"
 	"os"
 	"path/filepath"
+	"regexp"
 	"strconv"
 	"strings"
 	"testing"
@@ -88,34 +89,45 @@ func TestVisiblePrimaryMarkdownCountsMatchTheExecutionSnapshot(t *testing.T) {
 	if _, err := strconv.Atoi(issue); err != nil || issue == progress.Issue {
 		t.Fatal("the public issue reference is not a numbered repository issue")
 	}
-	digits := strconv.Itoa(summary.Records)
-	for i := len(digits) - 3; i > 0; i -= 3 {
-		digits = digits[:i] + "," + digits[i:]
-	}
+	digits := visibleMarkdownCount(summary.Records, true)
 	expected := fmt.Sprintf("全件queueは%s出現、評価%d、最終%d、新規%d・既存統合%d・旧除外%d。評価と最終の交差%d、和集合%d、評価済未採否%d、意味と個別権利の確認が必要な候補%dを区別する。本文未取得%d・取得審査保留%d・未知の中央%d・旧除外%dの再確認と、指定%d資料の残作業を保持する。全体のIssue%sは継続する。",
 		digits, summary.Assessments, summary.Final, summary.Decisions["installed_new_adaptation"], summary.Decisions["integrated_existing"], summary.Decisions["excluded"], summary.AssessmentAndFinal, summary.AssessmentOrFinal, summary.Stages["assessed_needs_current_disposition"], summary.Stages["needs_semantic_and_individual_rights_review"], summary.Stages["held_body_unavailable"], summary.Stages["held_execution_review"], progress.CentralHold.Count, summary.Decisions["excluded"], progress.SourceCount, issue)
 	if !visibleMarkdownSummaryMatches(string(raw), expected) {
 		t.Fatal("the complete Markdown summary differs from the JSON snapshot")
 	}
-	for _, change := range []string{"total", "missing bodies", "review holds", "central holds", "sources", "issue", "missing sentence", "duplicate paragraph"} {
+	spans := regexp.MustCompile(`[0-9][0-9,]*`).FindAllStringIndex(expected, -1)
+	if len(spans) != 16 {
+		t.Fatal("the complete summary must expose exactly sixteen numeric fields")
+	}
+	for index, span := range spans {
+		t.Run(fmt.Sprintf("numeric field %02d", index+1), func(t *testing.T) {
+			original := expected[span[0]:span[1]]
+			number, err := strconv.Atoi(strings.ReplaceAll(original, ",", ""))
+			if err != nil {
+				t.Fatal(err)
+			}
+			// Keep the original grouping style and every other byte unchanged.
+			changed := visibleMarkdownCount(number+1, strings.Contains(original, ","))
+			wrong := expected[:span[0]] + changed + expected[span[1]:]
+			if visibleMarkdownSummaryMatches(wrong, expected) {
+				t.Fatal("a changed numeric value passed with unchanged grouping style")
+			}
+		})
+	}
+	for _, change := range []string{"missing sentence", "duplicate paragraph"} {
 		t.Run(change, func(t *testing.T) {
 			wrong := expected
 			switch change {
-			case "total":
-				wrong = strings.Replace(wrong, digits+"出現", strconv.Itoa(summary.Records+1)+"出現", 1)
-			case "missing bodies":
-				wrong = strings.Replace(wrong, "本文未取得"+strconv.Itoa(summary.Stages["held_body_unavailable"]), "本文未取得"+strconv.Itoa(summary.Stages["held_body_unavailable"]+1), 1)
-			case "review holds":
-				wrong = strings.Replace(wrong, "取得審査保留"+strconv.Itoa(summary.Stages["held_execution_review"]), "取得審査保留"+strconv.Itoa(summary.Stages["held_execution_review"]+1), 1)
-			case "central holds":
-				wrong = strings.Replace(wrong, "未知の中央"+strconv.Itoa(progress.CentralHold.Count), "未知の中央"+strconv.Itoa(progress.CentralHold.Count+1), 1)
-			case "sources":
-				wrong = strings.Replace(wrong, "指定"+strconv.Itoa(progress.SourceCount)+"資料", "指定"+strconv.Itoa(progress.SourceCount+1)+"資料", 1)
-			case "issue":
-				number, _ := strconv.Atoi(issue)
-				wrong = strings.Replace(wrong, "Issue"+issue, "Issue"+strconv.Itoa(number+1), 1)
 			case "missing sentence":
-				wrong = strings.Split(wrong, "本文未取得")[0]
+				start := strings.Index(wrong, "本文未取得")
+				if start < 0 {
+					t.Fatal("the hold sentence is absent from the baseline")
+				}
+				end := strings.Index(wrong[start:], "。")
+				if end < 0 {
+					t.Fatal("the hold sentence has no end")
+				}
+				wrong = wrong[:start] + wrong[start+end+len("。"):]
 			case "duplicate paragraph":
 				wrong += "\n\n" + expected
 			}
@@ -124,6 +136,16 @@ func TestVisiblePrimaryMarkdownCountsMatchTheExecutionSnapshot(t *testing.T) {
 			}
 		})
 	}
+}
+
+func visibleMarkdownCount(number int, grouped bool) string {
+	digits := strconv.Itoa(number)
+	if grouped {
+		for i := len(digits) - 3; i > 0; i -= 3 {
+			digits = digits[:i] + "," + digits[i:]
+		}
+	}
+	return digits
 }
 
 func visibleMarkdownSummaryMatches(markdown, expected string) bool {

@@ -24,6 +24,8 @@ Issue644、元Issue283/611。611で完了した旧世代からの一度限りの
    正常終了、排出済みの回復取消、lost/transientは過去のquota分類だけで拒否しない。
 3. 最新worker自身が実quota失敗したときは、現在の世代と有限retry予算を使う。
    古いsourceの例外を何度でも受付したり予算を0へ戻したりしない。
+   後の通常workerが旧例外を持たない場合も、現在receiptと最新の実quota失敗を照合し、
+   古いrequestだけを通常のquota再試行の妨げにしない。旧quota capsuleは再利用しない。
 4. 別job/owner/spec/scope/世代、偽caller、排出未確認、未完依存、本人停止、
    枯渇・未確認OAuth、API鍵だけ・追加支出は引き続き拒否する。
 

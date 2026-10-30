@@ -237,6 +237,28 @@ pub fn consumed(item: &Value, source: &Value) -> bool {
             .as_array()
             .is_some_and(|ids| ids.contains(&source["id"]))
 }
+/// A later ordinary worker can fail quota without carrying the old exception.
+/// Retire only that stale request; the normal quota capsule must still prove
+/// its own exact generation, scope, drain, fresh OAuth and spent retry budget.
+pub fn superseded_by_current_quota(item: &Value, source: &Value) -> bool {
+    let request = &item["subwork_continuation"];
+    request["version"] == 1
+        && !text(request, "source_job").is_empty()
+        && request["source_job"] != source["id"]
+        && source["status"] == "failed"
+        && source["todo_resume_generation"]
+            .as_u64()
+            .is_some_and(|generation| {
+                source["todo_resume_generation"] == item["resume_generation"]
+                    && request["resume_generation"]
+                        .as_u64()
+                        .is_some_and(|old| old < generation)
+            })
+        && item["worker_receipt"]["job"] == source["id"]
+        && item["worker_receipt"]["generation"] == item["resume_generation"]
+        && item["jobs"].as_array().and_then(|ids| ids.last()) == Some(&source["id"])
+        && quota::eligible_source(item, source)
+}
 pub fn available(health: &Value, model: &str, now: f64) -> bool {
     if model
         .split_once('/')

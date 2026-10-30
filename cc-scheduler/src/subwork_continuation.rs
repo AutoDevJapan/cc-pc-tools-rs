@@ -13,7 +13,9 @@ pub(crate) fn requested(
         return Ok(false);
     }
     let source = source.ok_or(Error("InputRejected"))?;
-    if continuation::consumed(item, source) {
+    if continuation::consumed(item, source)
+        || continuation::superseded_by_current_quota(item, source)
+    {
         return Ok(false);
     }
     let actor = jobs

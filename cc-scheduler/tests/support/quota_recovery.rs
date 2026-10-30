@@ -381,6 +381,56 @@ fn current_finite_result_contract_uses_worker_receipt_instead_of_stale_last_job(
 }
 
 #[test]
+fn stale_continuation_request_does_not_block_the_latest_workers_real_quota_retry() {
+    for case in ["normal", "receipt", "generation", "source", "scope", "spec", "pending", "stop", "live", "exhausted", "unknown", "budget"] {
+    let (mut f, mut sub) = dependency_continuation_fixture();
+    let mut next = f.e.backend.records[1].clone();
+    next["id"] = json!("new-current");
+    next["launch_key"] = json!("new-current-key");
+    next["finite_subwork"]["launch_key"] = next["launch_key"].clone();
+    next["todo_resume_generation"] = json!(4);
+    next["todo_dependency_generation"] = json!(1);
+    // A later ordinary worker has no copy of the original one-use exception.
+    assert!(next["subwork_continuation"].is_null());
+    let row = &mut sub.db["items"][1];
+    row["resume_generation"] = json!(4);
+    row["worker_receipt"] = json!({"job":"new-current","generation":4});
+    row["scheduler"]["last_job"] = next["id"].clone();
+    row["scheduler"]["key"] = Value::Null;
+    row["jobs"].as_array_mut().unwrap().push(next["id"].clone());
+    match case {
+        "receipt" => row["worker_receipt"]["job"] = json!("different"),
+        "generation" => row["resume_generation"] = json!(5),
+        "source" => next["todo_id"] = json!(99),
+        "scope" => row["network"] = json!(true),
+        "spec" => std::fs::write(s(&row["spec"]), "Changed").unwrap(),
+        "pending" => row["wait_on"] = json!([99]),
+        "stop" => row["owner_stopped"] = json!(true),
+        "live" => next["status"] = json!("running"),
+        "exhausted" => f.e.backend.quota_inventory["openai"]["available"] = json!(false),
+        "unknown" => f.e.backend.quota_inventory["openai"]["verified"] = json!(false),
+        "budget" => next["capacity_exhausted"] = json!(true),
+        _ => (),
+    }
+    let original = next.clone(); f.e.backend.records.push(next);
+    write_json(&f.e.todo_path, &sub.db, 1).unwrap();
+    let result = f.e.prepare(&sub.db["items"][1], sub.repo.to_str().unwrap());
+    if case != "normal" {
+        assert!(result.is_err() || result.unwrap().is_none(), "{case}");
+        assert!(f.e.backend.launched.is_empty());
+        assert_eq!(f.e.backend.records.last().unwrap(), &original);
+        continue;
+    }
+    let prepared = result.unwrap().unwrap();
+    let selection = &prepared["scheduler"]["selection"];
+    assert!(selection["subwork_continuation"].is_null());
+    assert_eq!(selection["quota_recovery"]["source_job"], "new-current");
+    assert_eq!(selection["quota_recovery"]["retry"]["same_model_count"], 2);
+    assert_eq!(f.e.backend.records.last().unwrap(), &original);
+    }
+}
+
+#[test]
 fn dependency_continuation_retains_the_ordinary_independent_review_default() {
     let (mut f,mut sub)=grok_fixture();
     current_continuation_parent(&mut f,&mut sub);

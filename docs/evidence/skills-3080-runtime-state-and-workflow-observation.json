@@ -1,0 +1,35 @@
+{
+  "domain": "skills3080-workflow-source-observation-v1",
+  "repository": "AutoDevJapan/cc-pc-tools-rs",
+  "repository_id": 1406818713,
+  "observed_at": "2026-10-31T01:54:32.6313759+09:00",
+  "candidate_built": false,
+  "workflows": [
+    {
+      "path": ".github/workflows/skills-3048.yml",
+      "id": 390109678
+    },
+    {
+      "path": ".github/workflows/unattended-readiness.yml",
+      "id": 382798887
+    },
+    {
+      "path": ".github/workflows/codeql.yml",
+      "id": 382939687
+    }
+  ],
+  "runtime_instruction_proof": {
+    "current_instruction_file_is_not_the_proof": true,
+    "agents_md_sha256": "193f734527350162399c4a111924aa83f4ea40049444815a93139ccdee730f3b",
+    "task_started_and_first_context_turn_match": true,
+    "original_final_opened": false,
+    "full_world_state_present": true,
+    "native_version": "0.165.0",
+    "agents_md_directory_matches": true,
+    "originator": "codex_exec",
+    "source": "exec",
+    "review_count": 2,
+    "agents_md_bytes": 37915,
+    "bootstrap_bytes_match_runtime_state": true
+  }
+}

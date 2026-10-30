@@ -54,3 +54,42 @@ review側の完了nativeはdeny-writeで開け、実modelとmax・session/cwdも
 
 これは一般の保護解除や中央の再作成の依頼ではない。全16資料の拡張は元3080で継続し、
 親が原結果・残る指摘・実配置・発見と適用を確認するまで全体完了としない。
+
+## 指示の出所と照合順
+
+作者の初回bootstrapは過去のセッションの事実として保持する。
+保存spec・scheduler prompt・launch receipt・実行時に配送されたowner policyは、
+今回のjobの入力として従来どおり別に照合する。
+新しいPUBLICレビューのbootstrapを作者の古い本文へ書き換えない。
+
+初回起動のレビューでは、Codex 0.165.0が起動時に記録したfull `world_state`の
+`agents_md.directory/text`を独立した実行時の指示版として照合する。
+execのsession、task_startedのturn、bootstrap、runtime snapshot、最初のturn_contextを
+同じjob窓・cwd・モデルへ結び、runtimeが記録した全文とbootstrapの全byteを照合する。
+現在の可変な指示ファイルや、後から書いたsnapshot・本文の自己申告hashは使わない。
+
+プロジェクト側は同じPUBLIC commitのGitHub treeで確認した`AGENTS.md` blobへ結ぶ。
+この部分のBOM・改行・文書端の表現だけを比較用に揃え、任意のprefixやラベルを除去しない。
+新runtimeではsnapshotが欠ける・異なる・遅れる場合に旧digestへdowngradeしない。
+同PUBLIC project原本の欠落・取得失敗でも旧digestへ戻らない。
+以前のruntimeで同じ原authorのbootstrapを確認する旧契約は別に保つ。
+一般guard・原台帳・任意の指示ファイル・設定・秘密の読取は変更しない。
+受領CLIへ指示本文を返さない。
+
+新しい出所を使う場合は、初回起動のmetadataとjob窓内のsession開始を確認する。
+bootstrapとタスク・最終応答は同じ長さを固定したnative handleから読み、
+重複user/final、別の世代、別cwd・環境、未知の追加指示を拒否する。
+元のauthor・現在のconsumer・原結果のIDとhashの照合は省略しない。
+全job窓の`user_message` eventも確認し、登録入力と同じ本文・同じ記録時刻の
+一つの表現だけを認める。内容違い・重複・時刻違い・添付付きeventは拒否する。
+
+Windows更新では、以前のPR番号を再利用せず、固定したreviewed headに対応する
+実際の通常マージをGitHubから選ぶ。repository ID、head、main、merge SHAを確認し、
+そのPRの必須CI、Actionsアプリ、固定したworkflow ID/path、run/job/check-runの対応を
+既存の共通verify/apply/recover入口で照合する。
+既に配布したWindows版のhash/sourceの組は、生成前の独立観測で両更新処理へ保持する。
+これらのコード確認と、正式レビュー・CI・配布・親の受入は別の完了条件である。
+Windowsの生成中は、確認済みsourceのfile handleと物理的な親を保持し、
+書き換え・置換を拒否した同じ入力をcompiler終了後まで照合する。
+directory監視を先に開始し、監視下で未追跡・ignore対象を含む入力一覧を照合する。
+監視前から存在した余分なsourceと、一時追加後に消されたsourceをどちらも拒否する。

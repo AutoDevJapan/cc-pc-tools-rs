@@ -331,18 +331,21 @@ func (p *skillsNativeResultProof) observeEvent(raw []byte, at time.Time) bool {
 		return true
 	}
 	var e struct {
-		Payload struct {
-			Type     string            `json:"type"`
-			Message  string            `json:"message"`
-			Images   []json.RawMessage `json:"images"`
-			Local    []json.RawMessage `json:"local_images"`
-			Elements []json.RawMessage `json:"text_elements"`
-		} `json:"payload"`
+		Payload json.RawMessage `json:"payload"`
 	}
 	if json.Unmarshal(raw, &e) != nil {
 		return false
 	}
-	v := e.Payload
+	var v struct {
+		Type     string            `json:"type"`
+		Message  string            `json:"message"`
+		Images   []json.RawMessage `json:"images"`
+		Local    []json.RawMessage `json:"local_images"`
+		Elements []json.RawMessage `json:"text_elements"`
+	}
+	if !skillsStrict(e.Payload, &v) {
+		return false
+	}
 	if v.Type != "user_message" {
 		return true
 	}

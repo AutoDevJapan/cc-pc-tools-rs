@@ -25,7 +25,7 @@ func TestSkills3080AvailableRuntimeSourceDoesNotDowngrade(t *testing.T) {
 }
 
 func TestSkills3080UserEventsMustMirrorTheOneRegisteredInput(t *testing.T) {
-	for _, kind := range []string{"no_event", "matching_event", "different_input", "duplicate_event", "later_same_input", "attachments", "outside_window"} {
+	for _, kind := range []string{"no_event", "matching_event", "different_input", "duplicate_event", "later_same_input", "attachments", "outside_window", "unknown_field"} {
 		t.Run(kind, func(t *testing.T) {
 			cwd, id := "D:/CC/Work/synthetic", "11111111-1111-7111-8111-111111111111"
 			start := time.Date(2026, 10, 30, 14, 0, 0, 0, time.UTC)
@@ -44,6 +44,8 @@ func TestSkills3080UserEventsMustMirrorTheOneRegisteredInput(t *testing.T) {
 				obj(event["payload"])["images"] = []any{"image"}
 			case "outside_window":
 				event["timestamp"] = start.Add(-time.Second).Format(time.RFC3339Nano)
+			case "unknown_field":
+				obj(event["payload"])["extra_instruction"] = "unregistered"
 			}
 			if kind != "no_event" {
 				records = append(records, event)

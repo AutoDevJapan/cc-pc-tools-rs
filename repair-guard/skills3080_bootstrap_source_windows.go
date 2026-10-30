@@ -17,14 +17,14 @@ import (
 func skillsRuntimeBootstrapProjection(input io.Reader, job object, project []byte, start, end time.Time) ([]byte, bool, bool) {
 	return skillsRuntimeBootstrapProjectionWithOrigin(input, job, project, start, end, nil)
 }
-func skillsRuntimeBootstrapProjectionWithOrigin(input io.Reader, job object, project []byte, start, end time.Time, origin func() (time.Time, bool), envelopes ...map[string]bool) ([]byte, bool, bool) {
+func skillsRuntimeBootstrapProjectionWithOrigin(input io.Reader, job object, project []byte, start, end time.Time, origin func() (skillsRuntimeOrigin, bool), envelopes ...map[string]bool) ([]byte, bool, bool) {
 	scan := bufio.NewScanner(io.LimitReader(input, 4<<20))
 	scan.Buffer(make([]byte, 64<<10), 16<<20)
 	session, started, boot, state := false, false, false, false
 	turn, body := "", ""
 	var source []byte
 	var developer [][]byte
-	sourceStart, last := start, start
+	sourceStart, sourceEnd, last := start, end, start
 	modern := false
 	for scan.Scan() {
 		raw := scan.Bytes()
@@ -62,19 +62,23 @@ func skillsRuntimeBootstrapProjectionWithOrigin(input io.Reader, job object, pro
 			if m.Version != "0.165.0" && m.Version != "0.163.0" {
 				return nil, true, false
 			}
-			if at.Before(sourceStart) {
+			if at.Before(sourceStart) || str(job["resume_session"]) != "" {
 				// A real continuation keeps the first runtime-owned source in
 				// its original generation. Prove that generation from the
 				// normal same-task history; the current task/final window is
 				// independently enforced by skillsNativeProjectionBound.
 				if origin == nil {
-					return nil, true, false
+					return nil, modern, false
 				}
-				initial, valid := origin()
-				if !valid || !initial.Before(start) || at.Before(initial) {
-					return nil, true, false
+				context, valid := origin()
+				if !valid || !context.Start.Before(start) || len(context.Windows) == 0 {
+					return nil, modern, false
 				}
-				sourceStart, last = initial, initial
+				first := context.Windows[len(context.Windows)-1]
+				if !first.Start.Equal(context.Start) || at.Before(first.Start) || at.After(first.End) {
+					return nil, modern, false
+				}
+				sourceStart, sourceEnd, last = first.Start, first.End, first.Start
 			}
 			if at.Before(last) {
 				return nil, true, false
@@ -88,7 +92,7 @@ func skillsRuntimeBootstrapProjectionWithOrigin(input io.Reader, job object, pro
 			}
 			continue
 		}
-		if at.Before(sourceStart) || at.Before(last) {
+		if at.Before(sourceStart) || at.Before(last) || at.After(sourceEnd) {
 			return nil, modern, false
 		}
 		last = at

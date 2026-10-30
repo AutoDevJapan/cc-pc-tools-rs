@@ -142,8 +142,8 @@ func TestSkills3080ResumedRuntimeSourceAndCurrentTaskHaveSeparateWindows(t *test
 		raw.Write(b)
 		raw.WriteByte('\n')
 	}
-	origin := func() (time.Time, bool) {
-		return skillsRuntimeSourceStartWith(row, job, start, func(id string) (object, bool) { j, ok := jobs[id]; return j, ok })
+	origin := func() (skillsRuntimeOrigin, bool) {
+		return skillsRuntimeSourceOriginWith(row, job, start, func(id string) (object, bool) { j, ok := jobs[id]; return j, ok })
 	}
 	if _, _, ok := skillsRuntimeBootstrapProjection(bytes.NewReader(raw.Bytes()), job, project, start, end); ok {
 		t.Fatal("unproven earlier source was accepted")
@@ -158,6 +158,28 @@ func TestSkills3080ResumedRuntimeSourceAndCurrentTaskHaveSeparateWindows(t *test
 	source, modern, ok := skillsRuntimeBootstrapProjectionWithOrigin(bytes.NewReader(raw.Bytes()), job, project, start, end, origin)
 	if !ok || !modern || !bytes.Equal(source, body) {
 		t.Fatal("normal registered same-session continuation lost its independent source")
+	}
+	for _, kind := range []string{"source_meta_in_gap", "source_meta_claims_current", "bootstrap_after_source_end"} {
+		t.Run(kind, func(t *testing.T) {
+			var prefix bytes.Buffer
+			firstEnd := context.Windows[len(context.Windows)-1].End
+			for i := 0; i < 5; i++ {
+				r := object{}
+				b, _ := json.Marshal(records[i])
+				json.Unmarshal(b, &r)
+				if kind != "bootstrap_after_source_end" || i > 0 {
+					at := firstEnd.Add(time.Second)
+					if kind == "source_meta_claims_current" {
+						at = start
+					}
+					r["timestamp"] = at.Format(time.RFC3339Nano)
+				}
+				json.NewEncoder(&prefix).Encode(r)
+			}
+			if _, _, ok := skillsRuntimeBootstrapProjectionWithOrigin(&prefix, job, project, start, end, origin); ok {
+				t.Fatal("source prefix escaped its original registered window")
+			}
+		})
 	}
 	// Real Windows snapshot, bootstrap projection and current-task projection
 	// share the same frozen handle; only the metadata store is a test seam.
@@ -184,9 +206,12 @@ func TestSkills3080ResumedRuntimeSourceAndCurrentTaskHaveSeparateWindows(t *test
 	if !valid || len(observed) != 1 || !bound.runtimeSourceUsed {
 		t.Fatal("frozen registered-resume proof did not reach current result")
 	}
-	for _, kind := range []string{"registered", "inserted_prior_user", "inserted_prior_event", "unregistered_origin"} {
+	for _, kind := range []string{"registered", "inserted_prior_user", "inserted_prior_event", "unregistered_origin", "retimed_session_meta"} {
 		t.Run("legacy_0163_"+kind, func(t *testing.T) {
 			legacy := bytes.Replace(raw.Bytes(), []byte(`"cli_version":"0.165.0"`), []byte(`"cli_version":"0.163.0"`), 1)
+			if kind == "retimed_session_meta" {
+				legacy = bytes.Replace(legacy, []byte(initial.Format(time.RFC3339Nano)), []byte(start.Format(time.RFC3339Nano)), 1)
+			}
 			if kind == "inserted_prior_user" || kind == "inserted_prior_event" {
 				v := msg("user", "", "unregistered prior instruction", initial.Add(3*time.Second))
 				if kind == "inserted_prior_event" {

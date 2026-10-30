@@ -9,6 +9,8 @@ sourceの開始は、正常登録された同じToDoの履歴から導く。
 正常な終端状態と重ならない開始・終了時刻を持つことを確認する。
 途中の再開関係が欠ける、原sessionの登録がない、別ToDoや環境、時刻の逆転や重複がある場合は拒否する。
 first_started_atの自己申告や任意のbootstrap hashだけで、過去のsourceを資格化しない。
+再開jobではsession metaの時刻を書き換えて今回の開始に見せても再開元の照合を省略しない。
+初回のsource prefix全体を、登録された最初のjobの開始から終了までに限定する。
 
 runtimeが記録した初回のsource・originator・既知CLI版・turn・full world_state・公開project blobの一致は維持する。
 過去jobの時刻窓だけを、任意の先行入力の資格にしない。

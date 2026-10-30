@@ -192,12 +192,12 @@ func skillsNativeWindowWithSourceOrigin(s *skillsFS, job object, proof *skillsNa
 		}
 		if proof.requireRuntimeSource || len(proof.runtimeProject) > 0 {
 			envelopes := map[string]bool{}
-			source, modern, valid := skillsRuntimeBootstrapProjectionWithOrigin(input, job, proof.runtimeProject, start, end, func() (time.Time, bool) {
+			source, modern, valid := skillsRuntimeBootstrapProjectionWithOrigin(input, job, proof.runtimeProject, start, end, func() (skillsRuntimeOrigin, bool) {
 				origin, valid := resolve(start)
 				if valid {
 					proof.runtimePriorWindows = origin.Windows
 				}
-				return origin.Start, valid
+				return origin, valid
 			}, envelopes)
 			if !valid || !snapshot.rewind() {
 				return nil, false

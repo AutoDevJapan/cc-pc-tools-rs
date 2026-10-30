@@ -24,13 +24,8 @@ pub(crate) fn prepare(
     }
     if source.is_some_and(live) { return Err(Error("ResourceWait")); }
     if source.is_some_and(|s| cc_job_policy::quota_recovery::quota_source(s)
-        && cancellation::blocks_recovery(item,s)) { return Err(Error("InputRejected")); }
-    // A finite recovery cancellation is its own ordinary result, regardless of
-    // retained request or quota metadata. Actual quota failures retain their
-    // finite retry episode; ordinary review cancellation keeps its old behavior.
-    let finite = ["research", "review"].contains(&s(&item["subwork"]["kind"]));
-    let Some(source) = source.filter(|s| cc_job_policy::quota_recovery::quota_source(s)
-        && (s["status"] == "failed" || (cancellation::cancelled(s) && !finite))) else {
+        && cancellation::owner_stopped(item,s)) { return Err(Error("InputRejected")); }
+    let Some(source) = source.filter(|s| cc_job_policy::quota_recovery::quota_source(s)) else {
         return Ok(false);
     };
     if selection["model_origin"] == "owner_request" {
@@ -42,6 +37,14 @@ pub(crate) fn prepare(
         && source["subwork"]["kind"] == "research"
         && source["finite_subwork"].is_null()
     {
+        return Ok(false);
+    }
+    if cancellation::blocks_recovery(item, source) { return Err(Error("InputRejected")); }
+    // Preserve ordinary owner-choice and legacy routes before rejecting an
+    // unknown cancellation. Explicit stops above always retain precedence.
+    // Finite recovery cancellation is an ordinary result, never a new quota failure.
+    let finite = ["research", "review"].contains(&s(&item["subwork"]["kind"]));
+    if source["status"] != "failed" && (finite || !cancellation::cancelled(source)) {
         return Ok(false);
     }
     let now = backend.clock();

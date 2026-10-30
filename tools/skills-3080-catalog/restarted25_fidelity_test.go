@@ -68,8 +68,11 @@ func validateResumedThirteenAndHeld(v map[string]any) error {
 		a := next4Object(r["original_assessment"])
 		read := next4Object(a["read"])
 		id, ok := r["inventory_id"].(string)
-		if !ok || id == "" || seen[id] || r["new_final_disposition"] != false || r["all_member_contexts_and_individual_rights_pending"] != true || a["each_member_context_and_rights_pending"] != true || read["raw_full"] != false || a["member_occurrences"] != float64(1) {
+		if !ok || id == "" || seen[id] || r["new_final_disposition"] != false || r["representative_body_meaning_only"] != true || r["all_member_contexts_and_individual_rights_pending"] != true || a["each_member_context_and_rights_pending"] != true || read["raw_full"] != false || a["member_occurrences"] != float64(1) {
 			return fmt.Errorf("original pending identity, read scope or rights changed")
+		}
+		if r["ordinal"] != a["ordinal"] || a["representative_inventory_id"] != id || a["body_sha256"] != r["source_sha256"] || a["source_git_blob"] != r["git_blob"] || a["body_bytes"] != r["bytes"] {
+			return fmt.Errorf("derived record no longer binds the original representative and body tuple")
 		}
 		seen[id] = true
 		if i < len(records) {
@@ -169,6 +172,9 @@ func validateResumedThirteenAndHeld(v map[string]any) error {
 			a := next4Object(value)
 			ordinal := fmt.Sprint(a["ordinal"])
 			r := rowsByOrdinal[sha+"/"+ordinal]
+			if r["cohort"] != common["cohort"] || r["actual_assessment_reader"] != reader {
+				return fmt.Errorf("derived cohort or actual reader changed")
+			}
 			raw, err := json.Marshal(members[ordinal])
 			if err != nil {
 				return err
@@ -205,7 +211,7 @@ func validateResumedThirteenAndHeld(v map[string]any) error {
 
 func TestResumedPrimaryThirteenKeepsAllWithheldSeparateAndNullParentObserved(t *testing.T) {
 	requireAssessmentInputRegistered(t, resumedPrimary13File, resumedPrimary13SHA, 13)
-	for _, change := range []string{"valid", "held credited", "held meaning", "held visible line", "raw credit", "member source", "orphan context", "wrong consumer", "empty parent", "missing parent", "permission"} {
+	for _, change := range []string{"valid", "held credited", "held meaning", "held visible line", "raw credit", "member source", "orphan context", "wrong consumer", "empty parent", "missing parent", "permission", "record ordinal", "record reader", "record cohort", "record representative scope"} {
 		t.Run(change, func(t *testing.T) {
 			var v map[string]any
 			if travel3Digest(loadPublicReceipt(t, resumedPrimary13File, &v)) != resumedPrimary13SHA {
@@ -236,6 +242,14 @@ func TestResumedPrimaryThirteenKeepsAllWithheldSeparateAndNullParentObserved(t *
 				delete(next4Object(c["independent_native_metadata"]), "actual_launch_parent")
 			case "permission":
 				next4Object(next4Object(c["common"])["boundaries"])["copy_grants"] = float64(1)
+			case "record ordinal":
+				next4Object(v["records"].([]any)[0])["ordinal"] = float64(999)
+			case "record reader":
+				next4Object(v["records"].([]any)[0])["actual_assessment_reader"] = "20261030-095653-todo-3080"
+			case "record cohort":
+				next4Object(v["records"].([]any)[0])["cohort"] = float64(99)
+			case "record representative scope":
+				next4Object(v["records"].([]any)[0])["representative_body_meaning_only"] = false
 			}
 			err := validateResumedThirteenAndHeld(v)
 			if (change == "valid" && err != nil) || (change != "valid" && err == nil) {

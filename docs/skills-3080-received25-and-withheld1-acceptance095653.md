@@ -57,9 +57,12 @@ member metadataの元のstruct順序によるSHA、source tuple、実reader/cons
 全伏字への意味や可視行の追加、semanticへの混入、raw信用の追加、別source/consumer、
 余分なcontext、nullの欠落/空文字化、許諾への変更を拒否する例も確認する。
 対象の実データを使った2テストは0.062秒で成功した。
+追加確認では、外側のrecordのordinal・実reader・cohort・代表本文だけという範囲を
+変えた4反例を先にRedで再現し、原assessment・packet・memberへ直接結ぶ照合を追加した。
+元の証拠JSONと全件queueは変えていない。
 
 同じ最終コードと入力に対する関連パッケージ全体のテストも、実全件queueと固定snapshotを
-使って14.283秒で成功し、vetも成功した。今回の公開結果に対する二役レビュー、
+使って9.108秒で成功し、vetも成功した。今回の公開結果に対する二役レビュー、
 同じ最終headのCIと通常mergeは記録時未受入である。原Creator4222は成功後の凍結を保ち、
 ここで再作成・再資格化しない。原担当の再開記録2ケースは資源付き4261が別に修復し、
 登録・起動を配布や元researchの実再開と数えない。

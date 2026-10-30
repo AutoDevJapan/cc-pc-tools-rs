@@ -15,12 +15,15 @@ import (
 // PUBLIC project blob are proven from the same frozen native snapshot. No
 // current instruction file, alternate source path or caller digest is read.
 func skillsRuntimeBootstrapProjection(input io.Reader, job object, project []byte, start, end time.Time) ([]byte, bool, bool) {
+	return skillsRuntimeBootstrapProjectionWithOrigin(input, job, project, start, end, nil)
+}
+func skillsRuntimeBootstrapProjectionWithOrigin(input io.Reader, job object, project []byte, start, end time.Time, origin func() (time.Time, bool)) ([]byte, bool, bool) {
 	scan := bufio.NewScanner(io.LimitReader(input, 4<<20))
 	scan.Buffer(make([]byte, 64<<10), 16<<20)
 	session, started, boot, state := false, false, false, false
 	turn, body := "", ""
 	var source []byte
-	last := start
+	sourceStart, last := start, start
 	modern := false
 	for scan.Scan() {
 		raw := scan.Bytes()
@@ -58,13 +61,30 @@ func skillsRuntimeBootstrapProjection(input io.Reader, job object, project []byt
 				return nil, false, true
 			}
 			modern = true
-			if m.Version != "0.165.0" || at.Before(start) || at.Before(last) {
+			if m.Version != "0.165.0" {
+				return nil, true, false
+			}
+			if at.Before(sourceStart) {
+				// A real continuation keeps the first runtime-owned source in
+				// its original generation. Prove that generation from the
+				// normal same-task history; the current task/final window is
+				// independently enforced by skillsNativeProjectionBound.
+				if origin == nil {
+					return nil, true, false
+				}
+				initial, valid := origin()
+				if !valid || !initial.Before(start) || at.Before(initial) {
+					return nil, true, false
+				}
+				sourceStart, last = initial, initial
+			}
+			if at.Before(last) {
 				return nil, true, false
 			}
 			last = at
 			continue
 		}
-		if at.Before(start) || at.Before(last) {
+		if at.Before(sourceStart) || at.Before(last) {
 			return nil, modern, false
 		}
 		last = at

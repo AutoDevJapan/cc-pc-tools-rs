@@ -1,0 +1,25 @@
+# 登録済みの再開元と今回の入力・結果の窓を分ける
+
+同じsessionを正常に再開しても、runtimeが記録した初回の指示snapshotは再発行されない場合がある。
+初回snapshotを今回jobの開始以後に限定すると、保存済みの正しい入力まで拒否する。
+初回sourceの窓と、今回のtask・finalの厳密な窓を別々に証明する。
+
+sourceの開始は、正常登録された同じToDoの履歴から導く。
+現在jobのresume_sessionとthreadが一致し、先行する同threadのjobが同じcwd・sandbox・model・effortを持ち、
+正常な終端状態と重ならない開始・終了時刻を持つことを確認する。
+途中の再開関係が欠ける、原sessionの登録がない、別ToDoや環境、時刻の逆転や重複がある場合は拒否する。
+first_started_atの自己申告や任意のbootstrap hashだけで、過去のsourceを資格化しない。
+
+runtimeが記録した初回のsource・originator・既知CLI版・turn・full world_state・公開project blobの一致は維持する。
+登録済みの過去jobの窓に属する入力を、今回の共通指示や作成・閲覧の権限として継承しない。
+今回の登録済み入力・現在model・final digestは、今回jobだけの窓で確認する。
+job間の未登録指示、今回の多重user/final、今回の記録より後へ時刻を戻して追記した過去userも拒否する。
+
+原job・spec・prompt・native・finalは変更せず、同じ長さを凍結したhandleを読み直して検証する。
+sourceや結果を別path、copy、可変な指示ファイル、未知のdigestへ置き換えない。
+古い0.163の既知契約、未知CLI版の拒否、原author・origin・実launch親・現在consumerの区別は維持する。
+これは一般guardや中央の既存対象の解除ではない。
+
+正負例と関連Goテスト、正式二役、対象headのCI、通常merge、同ソースのWindows更新と
+親による同bufferの実使用を、それぞれの実結果として確認する。
+再開元が証明されたことだけを、利用成功や依頼全体の完了と扱わない。

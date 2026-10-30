@@ -158,6 +158,14 @@ func skillsHistoricalNative(s *skillsFS, job object, proof *skillsNativeResultPr
 // A live consumer has no finished_at. Its immutable input is checked only up
 // to an actual observation time, without inventing or changing job metadata.
 func skillsNativeWindow(s *skillsFS, job object, proof *skillsNativeResultProof, end time.Time) ([]object, bool) {
+	return skillsNativeWindowWithSourceOrigin(s, job, proof, end, func(start time.Time) (skillsRuntimeOrigin, bool) {
+		return skillsRuntimeSourceOrigin(s, job, start)
+	})
+}
+
+// The origin resolver is an internal test seam. Requests cannot supply a
+// historical source window or replace the registered metadata reader above.
+func skillsNativeWindowWithSourceOrigin(s *skillsFS, job object, proof *skillsNativeResultProof, end time.Time, resolve func(time.Time) (skillsRuntimeOrigin, bool)) ([]object, bool) {
 	id := str(job["thread_id"])
 	start, e := time.Parse(time.RFC3339Nano, str(job["started_at"]))
 	if e != nil || end.Before(start) || !skillsUUID.MatchString(id) {
@@ -183,7 +191,13 @@ func skillsNativeWindow(s *skillsFS, job object, proof *skillsNativeResultProof,
 			return nil, false
 		}
 		if proof.requireRuntimeSource || len(proof.runtimeProject) > 0 {
-			source, modern, valid := skillsRuntimeBootstrapProjection(input, job, proof.runtimeProject, start, end)
+			source, modern, valid := skillsRuntimeBootstrapProjectionWithOrigin(input, job, proof.runtimeProject, start, end, func() (time.Time, bool) {
+				origin, valid := resolve(start)
+				if valid {
+					proof.runtimePriorWindows = origin.Windows
+				}
+				return origin.Start, valid
+			})
 			if !valid || !snapshot.rewind() {
 				return nil, false
 			}
@@ -320,10 +334,20 @@ type skillsNativeResultProof struct {
 	runtimeProject                []byte
 	requireRuntimeSource          bool
 	runtimeSourceUsed             bool
+	runtimePriorWindows           []skillsRuntimePriorWindow
 	userSeen                      bool
 	runtimePrefixClosed           bool
 	bootstrapSeen, bootstrapBound bool
 	frozen                        bool
+}
+
+func (p *skillsNativeResultProof) priorRuntimeWindow(at time.Time) bool {
+	for _, w := range p.runtimePriorWindows {
+		if !at.Before(w.Start) && !at.After(w.End) {
+			return true
+		}
+	}
+	return false
 }
 
 func (p *skillsNativeResultProof) observeEvent(raw []byte, at time.Time) bool {

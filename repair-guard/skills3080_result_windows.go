@@ -632,6 +632,7 @@ func skillsNativeProjectionBound(input io.Reader, id, cwd string, start, end tim
 	scanner.Buffer(make([]byte, 64<<10), 16<<20)
 	out := []object{}
 	session := false
+	currentWindowSeen := false
 	for scanner.Scan() {
 		raw := scanner.Bytes()
 		if !skillsNativeUniqueJSON(raw) {
@@ -670,12 +671,14 @@ func skillsNativeProjectionBound(input io.Reader, id, cwd string, start, end tim
 					var v struct {
 						Type string `json:"type"`
 					}
-					if json.Unmarshal(envelope.Payload, &v) != nil || v.Type == "user_message" {
+					if json.Unmarshal(envelope.Payload, &v) != nil || (v.Type == "user_message" && (currentWindowSeen || !proof.priorRuntimeWindow(at))) {
 						return nil, false
 					}
 				}
 				continue
 			}
+			currentWindowSeen = true
+
 			if !session || !proof.observeEvent(raw, at) {
 				return nil, false
 			}
@@ -691,12 +694,14 @@ func skillsNativeProjectionBound(input io.Reader, id, cwd string, start, end tim
 					var header struct {
 						Role string `json:"role"`
 					}
-					if json.Unmarshal(envelope.Payload, &header) != nil || (header.Role != "" && header.Role != "assistant") {
+					if json.Unmarshal(envelope.Payload, &header) != nil || (header.Role != "" && header.Role != "assistant" && (currentWindowSeen || !proof.priorRuntimeWindow(at))) {
 						return nil, false
 					}
 				}
 				continue
 			}
+			currentWindowSeen = true
+
 			if !session || !proof.observe(raw, at) {
 				return nil, false
 			}
@@ -722,7 +727,7 @@ func skillsNativeProjectionBound(input io.Reader, id, cwd string, start, end tim
 			}
 			if proof != nil && proof.runtimeSourceUsed {
 				at, err := time.Parse(time.RFC3339Nano, envelope.Timestamp)
-				if err != nil || at.Before(start) || at.After(end) {
+				if err != nil || at.After(end) || (at.Before(start) && !proof.priorRuntimeWindow(at)) {
 					return nil, false
 				}
 			}
@@ -739,6 +744,8 @@ func skillsNativeProjectionBound(input io.Reader, id, cwd string, start, end tim
 		if value, exists := p["cwd"]; exists && (!same(str(value), cwd) || str(value) == "") {
 			return nil, false
 		}
+		currentWindowSeen = true
+
 		model := str(p["model"])
 		if !skillsModelIdentifier(model) {
 			return nil, false

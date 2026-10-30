@@ -175,10 +175,12 @@ func skillsNativeWindow(s *skillsFS, job object, proof *skillsNativeResultProof,
 	}
 	if proof != nil && (proof.inputOnly || proof.exactInput) {
 		// Session bootstrap is independent of the job's task-input window.
-		bootstrap, valid := skillsBootstrapForJob(s, job)
-		if !valid || !skillsDigest(proof.bootstrapSHA) || bootstrap != proof.bootstrapSHA {
+		body, valid := skillsBootstrapBodyProjection(input, id, str(job["cwd"]), proof.sandbox)
+		snapshot, rewindable := input.(*skillsNativeSnapshotReader)
+		if !valid || !proof.bootstrapMatchesBody(body) || !rewindable || !snapshot.rewind() {
 			return nil, false
 		}
+		proof.runtimeSourceUsed = hashBytes([]byte(body)) != proof.bootstrapSHA
 		proof.bootstrapBound = true
 	}
 	return skillsNativeProjectionBound(input, id, str(job["cwd"]), start, end, proof)
@@ -249,7 +251,7 @@ func skillsNativeSnapshotWithSharing(s *skillsFS, job object, appendLog bool) (i
 	// Freeze the observed length through this same handle. Bootstrap extraction
 	// separately stops at 4 MiB; full projections retain per-record bounds and the
 	// original task window, exact input/final/call checks and duplicate detection.
-	return &skillsNativeSnapshotReader{reader: f, remaining: info.Size()}, true
+	return &skillsNativeSnapshotReader{reader: f, remaining: info.Size(), length: info.Size()}, true
 }
 
 // Unlike LimitReader, an early underlying EOF must not authenticate a shortened
@@ -259,6 +261,19 @@ func skillsNativeSnapshotWithSharing(s *skillsFS, job object, appendLog bool) (i
 type skillsNativeSnapshotReader struct {
 	reader    io.Reader
 	remaining int64
+	length    int64
+}
+
+func (s *skillsNativeSnapshotReader) rewind() bool {
+	r, ok := s.reader.(io.Seeker)
+	if !ok {
+		return false
+	}
+	if _, err := r.Seek(0, io.SeekStart); err != nil {
+		return false
+	}
+	s.remaining = s.length
+	return true
 }
 
 func (s *skillsNativeSnapshotReader) Read(p []byte) (int, error) {
@@ -283,9 +298,16 @@ type skillsNativeResultProof struct {
 	inputOnly                     bool
 	exactInput                    bool
 	bootstrapSHA, cwd             string
+	sandbox                       string
+	runtimeBootstrap              []byte
+	runtimeSourceUsed             bool
 	userSeen                      bool
 	bootstrapSeen, bootstrapBound bool
 	frozen                        bool
+}
+
+func (p *skillsNativeResultProof) bootstrapMatchesBody(body string) bool {
+	return (skillsDigest(p.bootstrapSHA) && hashBytes([]byte(body)) == p.bootstrapSHA) || skillsBootstrapSourceMatches(body, p.runtimeBootstrap)
 }
 
 func (p *skillsNativeResultProof) observe(raw []byte, at time.Time) bool {
@@ -316,12 +338,19 @@ func (p *skillsNativeResultProof) observe(raw []byte, at time.Time) bool {
 	if _, ok := conversationJSON(raw); !ok {
 		return false
 	}
-	var blocks []struct{ Type, Text string }
+	var blocks []json.RawMessage
 	if json.Unmarshal(v.Content, &blocks) != nil {
 		return false
 	}
 	var text strings.Builder
-	for _, block := range blocks {
+	for _, raw := range blocks {
+		var block struct {
+			Type string `json:"type"`
+			Text string `json:"text"`
+		}
+		if !skillsCreationHeaderKeys(raw, "type", "text") || json.Unmarshal(raw, &block) != nil {
+			return false
+		}
 		if v.Role == "user" && (p.exactInput || p.inputOnly) && block.Type != "input_text" {
 			return false
 		}
@@ -332,8 +361,8 @@ func (p *skillsNativeResultProof) observe(raw []byte, at time.Time) bool {
 	if v.Role == "user" && (p.exactInput || p.inputOnly) {
 		first := !p.userSeen
 		p.userSeen = true
-		if first && skillsDigest(p.bootstrapSHA) {
-			if sha, ok := skillsBootstrapIdentity(text.String(), p.cwd); ok && sha == p.bootstrapSHA {
+		if first {
+			if body, ok := skillsBootstrapBodyWithSandbox(text.String(), p.cwd, p.sandbox); ok && p.bootstrapMatchesBody(body) {
 				p.bootstrapSeen = true
 				return true
 			}
@@ -344,6 +373,9 @@ func (p *skillsNativeResultProof) observe(raw []byte, at time.Time) bool {
 		matched = strings.Contains(text.String(), string(p.prompt))
 	}
 	if v.Role == "user" && matched {
+		if !p.promptAt.IsZero() {
+			return false
+		}
 		p.promptAt = at
 	} else if v.Role == "user" && ((p.finalSHA != "" && !p.promptAt.IsZero()) || p.inputOnly || p.exactInput) {
 		// The typed contract fixes the review's complete user input. An unknown
@@ -351,6 +383,9 @@ func (p *skillsNativeResultProof) observe(raw []byte, at time.Time) bool {
 		return false
 	}
 	if v.Role == "assistant" {
+		if !p.finalAt.IsZero() {
+			return false
+		}
 		p.lastFinal = []byte(text.String())
 		p.finalAt = at
 	}

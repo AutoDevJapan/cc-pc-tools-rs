@@ -3,6 +3,7 @@ package main
 import (
 	"encoding/json"
 	"strconv"
+	"time"
 )
 
 func skillsRuntimeNewCIReview(r skillsRequest) bool {
@@ -12,13 +13,27 @@ func skillsRuntimeNewCIReview(r skillsRequest) bool {
 	return current(r.Review) || (r.Runtime != nil && current(r.Runtime.PeerReview))
 }
 
-// Only this new, finite software pair uses PR627. Old exact software pairs keep
-// their existing readonly qualification; callers cannot supply a CI receipt.
+// The existing finite software pair must prove its actual merged PR. A resumed
+// repair must not reuse a previous PR's checks merely because the role IDs are
+// unchanged. The PR comes from GitHub's commit association, never a request.
 func skillsRuntimeCI(u *skillsRuntimeRequest) bool {
 	if u == nil || !civ6Commit.MatchString(u.SourceHead) || !civ6Commit.MatchString(u.ReviewedHead) {
 		return false
 	}
-	raw, ok := skillsGitHub("pr", "view", "627", "--repo", "github.com/AutoDevJapan/cc-pc-tools-rs", "--json", "state,mergeCommit,headRefOid,statusCheckRollup")
+	raw, ok := skillsGitHub("api", "--hostname", "github.com", "repos/AutoDevJapan/cc-pc-tools-rs/commits/"+u.ReviewedHead+"/pulls?per_page=100")
+	if !ok {
+		return false
+	}
+	wrapper, valid := conversationJSON(append(append([]byte(`{"pulls":`), raw...), '}'))
+	pulls, array := wrapper["pulls"].([]any)
+	if !valid || !array {
+		return false
+	}
+	number, ok := skillsRuntimeAssociatedPR(pulls, u)
+	if !ok {
+		return false
+	}
+	raw, ok = skillsGitHub("pr", "view", strconv.Itoa(number), "--repo", "github.com/AutoDevJapan/cc-pc-tools-rs", "--json", "state,mergeCommit,headRefOid,statusCheckRollup")
 	if !ok {
 		return false
 	}
@@ -36,6 +51,30 @@ func skillsRuntimeCI(u *skillsRuntimeRequest) bool {
 	}
 	pr["ci_issuers"] = issuers // official response only, never a request field
 	return skillsRuntimeCIBound(pr, u)
+}
+
+func skillsRuntimeAssociatedPR(pulls []any, u *skillsRuntimeRequest) (int, bool) {
+	if u == nil || len(pulls) == 0 || len(pulls) >= 100 {
+		return 0, false
+	}
+	matched := 0
+	for _, value := range pulls {
+		pr := obj(value)
+		if obj(pr["head"])["sha"] != u.ReviewedHead {
+			continue
+		}
+		base, head := obj(pr["base"]), obj(pr["head"])
+		n := conversationNumber(pr["number"])
+		_, numberType := pr["number"].(json.Number)
+		_, mergedTime := time.Parse(time.RFC3339Nano, str(pr["merged_at"]))
+		if matched != 0 || !numberType || n == 0 || n > 1<<31 || pr["state"] != "closed" || mergedTime != nil || pr["merge_commit_sha"] != u.SourceHead || base["ref"] != "main" ||
+			obj(base["repo"])["id"] != json.Number("1406818713") || obj(base["repo"])["full_name"] != "AutoDevJapan/cc-pc-tools-rs" ||
+			obj(head["repo"])["id"] != json.Number("1406818713") {
+			return 0, false
+		}
+		matched = int(n)
+	}
+	return matched, matched > 0
 }
 
 func skillsRuntimeCIBound(pr object, u *skillsRuntimeRequest) bool {

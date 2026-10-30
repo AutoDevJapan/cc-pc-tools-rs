@@ -93,6 +93,15 @@ func skillsTypedLaunchInputAt(s *skillsFS, root string, job object, spec []byte)
 // real registered origin's same-repository session, with a strict cwd envelope.
 // This does not qualify or read the global AGENTS.md file through another path.
 func skillsBootstrapIdentity(text, cwd string) (string, bool) {
+	body, ok := skillsBootstrapBody(text, cwd)
+	return hashBytes([]byte(body)), ok
+}
+
+func skillsBootstrapBody(text, cwd string) (string, bool) {
+	return skillsBootstrapBodyWithSandbox(text, cwd, "")
+}
+
+func skillsBootstrapBodyWithSandbox(text, cwd, sandbox string) (string, bool) {
 	const header = "# AGENTS.md instructions for "
 	line, rest, ok := strings.Cut(text, "\n")
 	if !ok || !strings.HasPrefix(line, header) || !same(strings.TrimSuffix(strings.TrimPrefix(line, header), "\r"), cwd) {
@@ -107,13 +116,17 @@ func skillsBootstrapIdentity(text, cwd string) (string, bool) {
 		return "", false
 	}
 	body, tail := rest[:at], strings.TrimSpace(rest[at+len("\n</INSTRUCTIONS>"):])
-	if body == "" || len(body) > 256<<10 || !skillsBootstrapEnvironment(tail, cwd) {
+	if body == "" || len(body) > 256<<10 || !skillsBootstrapEnvironmentWithSandbox(tail, cwd, sandbox) {
 		return "", false
 	}
-	return hashBytes([]byte(body)), true
+	return body, true
 }
 
 func skillsBootstrapEnvironment(raw, cwd string) bool {
+	return skillsBootstrapEnvironmentWithSandbox(raw, cwd, "")
+}
+
+func skillsBootstrapEnvironmentWithSandbox(raw, cwd, sandbox string) bool {
 	decoder := xml.NewDecoder(strings.NewReader(raw))
 	stack := []string{}
 	counts := map[string]int{}
@@ -220,49 +233,71 @@ func skillsBootstrapEnvironment(raw, cwd string) bool {
 		}
 	}
 	fsMode := (profile == "disabled" && mode == "unrestricted" && counts["entry"] == 0 && counts["special"] == 0) || (profile == "managed" && mode == "restricted" && counts["entry"] == 1 && counts["special"] == 1 && values["special"] == 1)
+	if sandbox != "" && ((sandbox == "read-only") != (profile == "managed")) {
+		return false
+	}
 	return len(stack) == 0 && counts["environment_context"] == 1 && counts["cwd"] == 1 && counts["shell"] == 1 && counts["current_date"] == 1 && counts["timezone"] == 1 && values["cwd"] == 1 && values["shell"] == 1 && values["current_date"] == 1 && values["timezone"] == 1 && roots == 2 && fsMode
 }
 
 func skillsBootstrapProjection(input io.Reader, id, cwd string) (string, bool) {
+	body, ok := skillsBootstrapBodyProjection(input, id, cwd, "")
+	return hashBytes([]byte(body)), ok
+}
+
+func skillsBootstrapBodyProjection(input io.Reader, id, cwd, sandbox string) (string, bool) {
 	scan := bufio.NewScanner(io.LimitReader(input, 4<<20))
 	scan.Buffer(make([]byte, 64<<10), 1<<20)
 	session := false
 	for scan.Scan() {
 		var e struct {
-			Type    string
-			Payload struct {
-				Type, Role, ID, Cwd string
-				Content             json.RawMessage
-			}
+			Type    string          `json:"type"`
+			Payload json.RawMessage `json:"payload"`
 		}
-		if json.Unmarshal(scan.Bytes(), &e) != nil {
+		if !skillsCreationHeaderKeys(scan.Bytes(), "type", "timestamp", "payload") || json.Unmarshal(scan.Bytes(), &e) != nil {
+			return "", false
+		}
+		if e.Type != "session_meta" && e.Type != "response_item" {
+			continue
+		}
+		var p struct {
+			Type    string          `json:"type"`
+			Role    string          `json:"role"`
+			ID      string          `json:"id"`
+			Cwd     string          `json:"cwd"`
+			Content json.RawMessage `json:"content"`
+		}
+		if !skillsCreationHeaderKeys(e.Payload, "type", "role", "id", "cwd", "content") || json.Unmarshal(e.Payload, &p) != nil {
 			return "", false
 		}
 		if e.Type == "session_meta" {
-			if session || e.Payload.ID != id || !same(e.Payload.Cwd, cwd) {
+			if _, strict := conversationJSON(scan.Bytes()); !strict || session || p.ID != id || !same(p.Cwd, cwd) {
 				return "", false
 			}
 			session = true
 			continue
 		}
-		if e.Type != "response_item" || e.Payload.Type != "message" || e.Payload.Role != "user" {
+		if e.Type != "response_item" || p.Type != "message" || p.Role != "user" {
 			continue
 		}
 		if !session {
 			return "", false
 		}
-		var blocks []struct{ Type, Text string }
-		if json.Unmarshal(e.Payload.Content, &blocks) != nil || len(blocks) < 1 || len(blocks) > 2 {
+		var blocks []json.RawMessage
+		if _, strict := conversationJSON(scan.Bytes()); !strict || json.Unmarshal(p.Content, &blocks) != nil || len(blocks) < 1 || len(blocks) > 2 {
 			return "", false
 		}
 		var text strings.Builder
-		for _, block := range blocks {
-			if block.Type != "input_text" {
+		for _, raw := range blocks {
+			var block struct {
+				Type string `json:"type"`
+				Text string `json:"text"`
+			}
+			if !skillsCreationHeaderKeys(raw, "type", "text") || json.Unmarshal(raw, &block) != nil || block.Type != "input_text" {
 				return "", false
 			}
 			text.WriteString(block.Text)
 		}
-		return skillsBootstrapIdentity(text.String(), cwd)
+		return skillsBootstrapBodyWithSandbox(text.String(), cwd, sandbox)
 	}
 	return "", false
 }

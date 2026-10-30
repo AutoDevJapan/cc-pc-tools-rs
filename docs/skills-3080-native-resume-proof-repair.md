@@ -54,3 +54,33 @@ review側の完了nativeはdeny-writeで開け、実modelとmax・session/cwdも
 
 これは一般の保護解除や中央の再作成の依頼ではない。全16資料の拡張は元3080で継続し、
 親が原結果・残る指摘・実配置・発見と適用を確認するまで全体完了としない。
+
+## 指示の出所と照合順
+
+作者の初回bootstrapは過去のセッションの事実として保持する。
+保存spec・scheduler prompt・launch receipt・実行時に配送されたowner policyは、
+今回のjobの入力として従来どおり別に照合する。
+新しいPUBLICレビューのbootstrapを作者の古い本文へ書き換えない。
+
+初回起動のレビューに限り、独立した二つの指示原本から全体を組み立てて照合する。
+プロジェクト側は同じPUBLIC commitのGitHub treeで確認した通常の`AGENTS.md` blob、
+共通指示は既存Windowsアカウントの決まったCodex `AGENTS.md`だけを使う。
+後者はこの用途内で照合し、元のclient除外がある場合は拒否する。
+一般のpath分類、原台帳、任意の指示ファイル、設定や秘密の読取へは広げない。
+原本はdeny-writeで開き、同じbufferを使う。受領CLIへ指示本文を返さない。
+
+文書のUTF-8 BOM、CRLFとLF、文書端の空白だけを実行環境の組立て表現に揃え、
+文書間の区切りと全文を照合する。任意のprefix・ラベル・追加本文は除去しない。
+原本のないdigestや、レビュー自身のdigestを期待値へ採用しない。
+新しい原本で証明できない場合は、従来の作者のbootstrapとの完全一致だけを保つ。
+
+新しい出所を使う場合は、初回起動のmetadataとjob窓内のsession開始を確認する。
+bootstrapとタスク・最終応答は同じ長さを固定したnative handleから読み、
+重複user/final、別の世代、別cwd・環境、未知の追加指示を拒否する。
+元のauthor・現在のconsumer・原結果のIDとhashの照合は省略しない。
+
+Windows更新では、以前のPR番号を再利用せず、固定したreviewed headに対応する
+実際の通常マージをGitHubから選ぶ。repository ID、head、main、merge SHAを確認し、
+そのPRの必須CIと発行元を既存の共通verify/apply/recover入口で照合する。
+既に配布したWindows版のhash/sourceの組は、生成前の独立観測で両更新処理へ保持する。
+これらのコード確認と、正式レビュー・CI・配布・親の受入は別の完了条件である。

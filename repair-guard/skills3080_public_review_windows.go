@@ -396,6 +396,21 @@ func skillsPublicInputsWith(c skillsPublicReviewScope, s *skillsFS, gh func(...s
 			}
 		}
 	}
+	// A fresh runtime may load newer operating instructions than its resumed
+	// author. Bind the project part to this same PUBLIC commit, not to whatever
+	// text the reviewer calls AGENTS.md. No additional task input is admitted.
+	if !repair {
+		e := paths["AGENTS.md"]
+		if e["type"] == "blob" && (e["mode"] == "100644" || e["mode"] == "100755") && conversationNumber(e["size"]) <= 256<<10 {
+			b, valid := blob(str(e["sha"]))
+			if valid && len(b) > 0 && uint64(len(b)) == conversationNumber(e["size"]) && skillsGitBlobID(b) == e["sha"] {
+				if s.bootstrapProjects == nil {
+					s.bootstrapProjects = map[string][]byte{}
+				}
+				s.bootstrapProjects[c.Commit] = b
+			}
+		}
+	}
 	return true
 }
 
@@ -464,6 +479,7 @@ func skillsReviewNative(s *skillsFS, job object, spec []byte, finalSHA string) (
 	_, reviewTyped := skillsParsePublicReview(spec)
 	consumer, consumerTyped := skillsParseConsumer(spec)
 	bootstrap := ""
+	var runtimeBootstrap []byte
 	if reviewTyped || consumerTyped {
 		prompt, ok = skillsTypedLaunchInputAt(s, skillsJobsRoot, job, spec)
 		if !ok {
@@ -482,15 +498,25 @@ func skillsReviewNative(s *skillsFS, job object, spec []byte, finalSHA string) (
 		if !ok {
 			return nil, false
 		}
+		if reviewTyped && job["resume_session"] == nil && job["first_started_at"] == job["started_at"] {
+			scope, _ := skillsParsePublicReview(spec)
+			// Failure to prove a current source never expands the old contract:
+			// the original-author bootstrap still has to match exactly.
+			runtimeBootstrap, _ = skillsPublicBootstrapSource(s, scope.Commit)
+		}
 	}
-	return skillsCompletedReviewNative(s, job, prompt, finalSHA, reviewTyped || consumerTyped, bootstrap)
+	return skillsCompletedReviewNativeWithBootstrap(s, job, prompt, finalSHA, reviewTyped || consumerTyped, bootstrap, runtimeBootstrap)
 }
 
 // Every completed review/consumer result uses one deny-write proof engine.
 // Input/source/author validation above remains specific to its registered type;
 // live creation and resumed historical results retain their separate contract.
 func skillsCompletedReviewNative(s *skillsFS, job object, prompt []byte, finalSHA string, exactInput bool, bootstrap string) ([]object, bool) {
-	native, ok := skillsHistoricalNative(s, job, &skillsNativeResultProof{prompt: prompt, finalSHA: finalSHA, exactInput: exactInput, bootstrapSHA: bootstrap, cwd: str(job["cwd"]), frozen: true})
+	return skillsCompletedReviewNativeWithBootstrap(s, job, prompt, finalSHA, exactInput, bootstrap, nil)
+}
+
+func skillsCompletedReviewNativeWithBootstrap(s *skillsFS, job object, prompt []byte, finalSHA string, exactInput bool, bootstrap string, source []byte) ([]object, bool) {
+	native, ok := skillsHistoricalNative(s, job, &skillsNativeResultProof{prompt: prompt, finalSHA: finalSHA, exactInput: exactInput, bootstrapSHA: bootstrap, runtimeBootstrap: source, cwd: str(job["cwd"]), sandbox: str(job["sandbox"]), frozen: true})
 	if !ok {
 		return nil, false
 	}

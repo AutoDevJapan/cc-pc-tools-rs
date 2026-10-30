@@ -7,6 +7,60 @@ import (
 	"testing"
 )
 
+func TestSkills3080RuntimeFindsOnlyItsActualMergedPR(t *testing.T) {
+	for _, kind := range []string{"current", "historical", "other_head", "other_merge", "open", "unmerged", "other_base", "other_repo", "other_owner", "fork", "duplicate", "string_number", "string_repo", "nil", "missing"} {
+		t.Run(kind, func(t *testing.T) {
+			u := &skillsRuntimeRequest{SourceHead: strings.Repeat("b", 40), ReviewedHead: strings.Repeat("a", 40)}
+			pr := object{"number": json.Number("655"), "state": "closed", "merged_at": "2026-10-30T14:00:00Z", "merge_commit_sha": u.SourceHead, "head": object{"sha": u.ReviewedHead, "repo": object{"id": json.Number("1406818713")}}, "base": object{"ref": "main", "repo": object{"id": json.Number("1406818713"), "full_name": "AutoDevJapan/cc-pc-tools-rs"}}}
+			pulls := []any{pr}
+			switch kind {
+			case "historical":
+				pr["number"] = json.Number("627")
+			case "other_head":
+				obj(pr["head"])["sha"] = strings.Repeat("c", 40)
+			case "other_merge":
+				pr["merge_commit_sha"] = strings.Repeat("c", 40)
+			case "open":
+				pr["state"] = "open"
+			case "unmerged":
+				pr["merged_at"] = nil
+			case "other_base":
+				obj(pr["base"])["ref"] = "other"
+			case "other_repo":
+				obj(obj(pr["base"])["repo"])["id"] = json.Number("1")
+			case "other_owner":
+				obj(obj(pr["base"])["repo"])["full_name"] = "other/cc-pc-tools-rs"
+			case "fork":
+				obj(obj(pr["head"])["repo"])["id"] = json.Number("1")
+			case "duplicate":
+				pulls = append(pulls, pr)
+			case "string_number":
+				pr["number"] = "655"
+			case "string_repo":
+				obj(obj(pr["base"])["repo"])["id"] = "1406818713"
+			case "nil":
+				u = nil
+			case "missing":
+				pulls = nil
+			}
+			_, ok := skillsRuntimeAssociatedPR(pulls, u)
+			if ok != (kind == "current" || kind == "historical") {
+				t.Fatalf("PR binding %s accepted=%v", kind, ok)
+			}
+		})
+	}
+}
+
+func TestSkills3080BootstrapPredecessorIsTheSameInBothUpdaters(t *testing.T) {
+	sha, head := official3894BootstrapPredecessorSHA, official3894BootstrapPredecessorHead
+	if skillsGuardBaselines[sha] != head || !official3894InstalledBaseline(sha, head) {
+		t.Fatal("accepted predecessor missing")
+	}
+	if official3894InstalledBaseline(sha, strings.Repeat("a", 40)) || official3894InstalledBaseline(strings.Repeat("a", 64), head) {
+		t.Fatal("unknown predecessor admitted")
+	}
+}
+
 func skillsRuntimeCIFixture() (object, *skillsRuntimeRequest) {
 	u := &skillsRuntimeRequest{SourceHead: strings.Repeat("b", 40), ReviewedHead: strings.Repeat("a", 40)}
 	checks := []any{}

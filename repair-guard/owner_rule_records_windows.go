@@ -345,7 +345,18 @@ func ownerRuleMixedStorePath(root, path string) bool {
 		return false
 	}
 	rel, err := filepath.Rel(parent, path)
-	return err == nil && strings.HasPrefix(strings.ToLower(strings.Split(rel, string(os.PathSeparator))[0]), strings.ToLower(filepath.Base(root))+".")
+	if err != nil {
+		return false
+	}
+	leaf := strings.ToLower(strings.Split(rel, string(os.PathSeparator))[0])
+	name := strings.ToLower(filepath.Base(root))
+	if strings.HasPrefix(leaf, name+".") {
+		return true
+	}
+	// rename-project retains a byte-for-byte table copy with its extension
+	// after the suffix. Keep executable and unrelated sibling names outside it.
+	ext := filepath.Ext(name)
+	return ext != "" && strings.HasPrefix(leaf, strings.TrimSuffix(name, ext)+".") && strings.HasSuffix(leaf, ext)
 }
 
 func ownerRuleRecordedPath(path string, config ownerRuleConfig) bool {
@@ -370,6 +381,10 @@ func (m ownerRecordMetadata) matchesID(id string) bool {
 }
 
 func ownerRuleRecordOrigin(ctx context.Context, m ownerRecordMetadata, projects object, access ownerSourceAccess, config ownerRuleConfig) ownerPathVerdict {
+	return ownerRuleStoredOriginVerdict(ownerRuleRecordOriginSource(ctx, m, projects, access, config))
+}
+
+func ownerRuleRecordOriginSource(ctx context.Context, m ownerRecordMetadata, projects object, access ownerSourceAccess, config ownerRuleConfig) ownerPathVerdict {
 	if access.membership(m.project, m.repository) == "client_project" || m.cwd != "" && ownerRuleDevelopment(m.cwd, config.dev) == "client" {
 		return ownerRuleProtected("client_record_producer")
 	}
@@ -387,8 +402,11 @@ func ownerRuleRecordOrigin(ctx context.Context, m ownerRecordMetadata, projects 
 			return ownerRuleProtected("client_record_producer")
 		}
 		id, actual, owner, verified := access.identity(m.repository)
-		if !verified || id <= 0 || !strings.EqualFold(actual, m.repository) || !ownerSelfGitHubOwner(owner) {
-			return ownerRuleUnknown("stored_record_origin_unverified")
+		if !verified || id <= 0 {
+			return ownerRuleUnknown("repository_identity_unavailable")
+		}
+		if !strings.EqualFold(actual, m.repository) || !ownerSelfGitHubOwner(owner) || !strings.EqualFold(strings.Split(m.repository, "/")[0], owner) {
+			return ownerRuleUnknown("owner_location_conflict")
 		}
 		if id == 1156778979 {
 			return ownerRuleProtected("client_repository_id")
@@ -396,7 +414,10 @@ func ownerRuleRecordOrigin(ctx context.Context, m ownerRecordMetadata, projects 
 	}
 	producerConfig := config
 	producerConfig.recordProducer = true
-	v := ownerRuleWith(ctx, m.cwd, projects, access, producerConfig, nil)
+	return ownerRuleWith(ctx, m.cwd, projects, access, producerConfig, nil)
+}
+
+func ownerRuleStoredOriginVerdict(v ownerPathVerdict) ownerPathVerdict {
 	if v.AccessAllowed {
 		return ownerRuleClear("verified_self_record_producer")
 	}

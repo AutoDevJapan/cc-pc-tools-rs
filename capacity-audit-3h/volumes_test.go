@@ -179,6 +179,24 @@ func TestOwnerRuleProtectionCountsSurviveResumeAndReachDriveReport(t *testing.T)
 	}
 }
 
+func TestOwnerRuleLegacyCheckpointRetainsUnknownProtectionCounts(t *testing.T) {
+	root := t.TempDir()
+	st := &driveScan{Blocked: 4, ProtectionBasisCounts: map[string]uint64{"protected": 1}}
+	for range 2 {
+		result := scanDrive(context.Background(), root, st, 1, func(context.Context, string) string {
+			t.Fatal("completed checkpoint unexpectedly scanned contents")
+			return "clear"
+		})
+		if result.Blocked != 4 || result.ProtectionBasisCounts["legacy_checkpoint_unclassified"] != 3 || result.ProtectionBasisCounts["protected"] != 1 {
+			t.Fatal("resumed legacy checkpoint lost unclassified protection counts")
+		}
+		encoded, err := json.Marshal(st)
+		if err != nil || json.Unmarshal(encoded, &st) != nil {
+			t.Fatal("checkpoint round trip failed")
+		}
+	}
+}
+
 func TestAllDriveCheckpointFailsClosedAndRetainsCursor(t *testing.T) {
 	path := filepath.Join(t.TempDir(), "state.json")
 	st, err := readAllDriveState(path)

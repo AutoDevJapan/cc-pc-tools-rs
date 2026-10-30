@@ -85,9 +85,7 @@ func ownerRuleOwnedVerdictAt(ctx context.Context, path, store, jobs string, proj
 			if access.membership(r.Project, "") == "client_project" {
 				return ownerRuleProtected("client_record_producer")
 			}
-			if r.Version != 3 || r.ID != match[1] || r.State != "owned" ||
-				!same(r.Path, root) || !same(filepath.Join(r.Root, "codex-owned-"+r.ID), root) ||
-				r.ProducerKind != "scheduler" || r.ProducerTodo == 0 || !ownerOwnedJob.MatchString(r.ProducerJob) ||
+			if r.Version != 3 || r.ProducerKind != "scheduler" || r.ProducerTodo == 0 || !ownerOwnedJob.MatchString(r.ProducerJob) ||
 				!strings.HasSuffix(r.ProducerJob, "-todo-"+strconv.FormatUint(r.ProducerTodo, 10)) {
 				return ownerRuleUnknown("owned_resource_metadata_unavailable")
 			}
@@ -120,8 +118,11 @@ func ownerRuleOwnedVerdictAt(ctx context.Context, path, store, jobs string, proj
 			if !ok || job.id != r.ProducerJob || job.todo != strconv.FormatUint(r.ProducerTodo, 10) || !filepath.IsAbs(job.cwd) || !same(job.cwd, job.worktree) {
 				return ownerRuleUnknown("owned_resource_metadata_unavailable")
 			}
-			if v := ownerRuleRecordOrigin(ctx, job, projects, access, config); !v.AccessAllowed {
-				return v
+			if v := ownerRuleRecordOriginSource(ctx, job, projects, access, config); !v.AccessAllowed {
+				if v.Status == "unverified" && ownerRuleIndependentReceiptEligible(v) {
+					return ownerRuleUnknown("owned_resource_metadata_unavailable")
+				}
+				return ownerRuleStoredOriginVerdict(v)
 			}
 			// The typed producer check above already checked actual ownership,
 			// exclusions and source location. Do not repeat its Git subprocesses.

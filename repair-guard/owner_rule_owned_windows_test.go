@@ -65,6 +65,26 @@ func TestOwnerRule4088OwnedReceiptNeedsOriginalProducerAndNativeIdentity(t *test
 	if !check(object{}) {
 		t.Fatal("original self producer did not qualify its owned resource")
 	}
+	transient := access
+	transient.git = func(string, ...string) (string, bool) { return "", false }
+	v := ownerRuleOwnedVerdictAt(context.Background(), root, store, jobs, object{}, transient, config)
+	if v.AccessAllowed || v.Basis != "owned_resource_metadata_unavailable" || !ownerRuleReceiptFallback(v, root, func(string) bool { return true }).AccessAllowed {
+		t.Fatal("scheduler resource lost independent qualification on transient Git failure")
+	}
+	conflict := access
+	conflict.git = func(string, ...string) (string, bool) { return "https://github.com/outside-fixture/example.git", true }
+	v = ownerRuleOwnedVerdictAt(context.Background(), root, store, jobs, object{}, conflict, config)
+	if v.AccessAllowed || v.Basis != "stored_record_origin_unverified" || ownerRuleIndependentReceiptEligible(v) {
+		t.Fatal("conflicting producer inherited transient qualification")
+	}
+	conflict = access
+	conflict.identity = func(string) (int64, string, string, bool) {
+		return 12345, "AutoDevJapan/different-fixture", "AutoDevJapan", true
+	}
+	v = ownerRuleOwnedVerdictAt(context.Background(), root, store, jobs, object{}, conflict, config)
+	if v.AccessAllowed || v.Basis != "stored_record_origin_unverified" || ownerRuleIndependentReceiptEligible(v) {
+		t.Fatal("conflicting verified identity inherited transient qualification")
+	}
 	if check(object{"contracted-fixture": cwd}) {
 		t.Fatal("client producer admitted")
 	}

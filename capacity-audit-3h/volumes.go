@@ -313,6 +313,22 @@ func saveAllDriveJSON(path string, value any) error {
 // Every directory and file is guarded before using metadata. Public-system
 // scans remain separate legacy categories; they do not authorize another root.
 func scanDrive(ctx context.Context, root string, st *driveScan, max int, guard func(context.Context, string) string) driveResult {
+	// Older checkpoints count blocked entries without recording their basis.
+	// Preserve that missing evidence explicitly rather than inventing a reason.
+	unknown := st.Blocked
+	for _, count := range st.ProtectionBasisCounts {
+		if count >= unknown {
+			unknown = 0
+			break
+		}
+		unknown -= count
+	}
+	if unknown > 0 {
+		if st.ProtectionBasisCounts == nil {
+			st.ProtectionBasisCounts = map[string]uint64{}
+		}
+		st.ProtectionBasisCounts["legacy_checkpoint_unclassified"] += unknown
+	}
 	visited := 0
 	guardUnavailable := false
 	// Keep a small invocation-local LRU so a wide parent is not re-read and

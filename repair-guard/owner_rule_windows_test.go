@@ -79,21 +79,16 @@ func TestOwnerRule4088ProtectionsPrecedeSelf(t *testing.T) {
 	for _, tc := range []struct {
 		label, leaf string
 		legacy      ownerLegacyState
-		department  bool
 	}{
-		{"card", "credit-cards.json", ownerLegacyClear, false},
-		{"exclusion", "ordinary.txt", ownerLegacyClient, false},
-		{"alias", "ordinary.txt:stream", ownerLegacyClear, false},
+		{"card", "credit-cards.json", ownerLegacyClear},
+		{"exclusion", "ordinary.txt", ownerLegacyClient},
+		{"alias", "ordinary.txt:stream", ownerLegacyClear},
 	} {
 		t.Run(tc.label, func(t *testing.T) {
-			probe := access
-			if tc.department {
-				probe.membership = func(string, string) string { return "client_project" }
-			}
 			path := filepath.Join(root, tc.leaf)
 			v := ownerPolicyClassify(path, ownerPolicyAccess{legacy: func(string) ownerLegacyState { return tc.legacy }, repair: func(string) bool { return true }, physical: physical,
 				organization: func(p string) ownerPathVerdict {
-					return ownerRuleWith(context.Background(), p, object{"contracted-fixture": root}, probe, config, nil)
+					return ownerRuleWith(context.Background(), p, object{"contracted-fixture": root}, access, config, nil)
 				},
 			})
 			if v.AccessAllowed {

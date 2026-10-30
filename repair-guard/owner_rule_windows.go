@@ -36,7 +36,7 @@ func ownerRuleWith(ctx context.Context, path string, projects object, access own
 		return ownerRuleProtected("owner_rule_other_development_top")
 	}
 	for _, root := range config.records {
-		if within(root, path) {
+		if ownerRuleMixedStorePath(root, path) {
 			return ownerRuleProtected("client_record_store")
 		}
 	}
@@ -299,7 +299,7 @@ func ownerDefaultRuleConfig() ownerRuleConfig {
 		infrastructure: []string{"D:/CC", "D:/OMB"},
 		records:        []string{"D:/CC/Tools/client-records", "D:/CC/Tools/client-projects.txt"},
 		jobStore:       "D:/CC/Tools/codex-jobs/jobs", specStore: "D:/CC/Tools/todo/specs", promptStore: "D:/CC/Tools/scheduler/prompts", todoStore: productStore,
-		mixedStores: []string{productStore, "D:/CC/Tools/todo/history", discordAskDirectory, "D:/OMB/workspace"},
+		mixedStores: []string{productStore, "D:/CC/Tools/todo/history", "D:/CC/Tools/todo/note-history-v1", "D:/CC/Tools/todo/stall_summary.json", "D:/CC/Tools/todo/capacity-decisions", discordAskDirectory, "D:/OMB/workspace"},
 		// Normal consumer declarations: cc-jobs/src/platform.rs and pool_retry.rs,
 		// cc-scheduler/src/backend.rs. The owner explicitly assigned this existing
 		// AI-agent tool's installed location for classification in 4088/2655.
@@ -310,9 +310,7 @@ func ownerDefaultRuleConfig() ownerRuleConfig {
 func ownerOrganizationQuery(ctx context.Context, path string, access ownerSourceAccess) ownerPathVerdict {
 	access.legacy = ownerLegacyProtection
 	access.conversation = conversationPathAllowed
-	access.operational = func(p string) bool {
-		return discordAskRuntime(p, legacyMatch) || ombCaptureAllowed(p)
-	}
+	access.operational = ownerRuleOperationalPathAllowed
 	return ownerOrganizationQueryWith(ctx, path, access, ownerDefaultRuleConfig(), func(ctx context.Context, project func(io.Reader) (object, bool)) (*ownerProjectSnapshot, bool) {
 		return ownerReadProjectSnapshotUsing(ctx, productStore, legacyMatch, project)
 	})
@@ -328,7 +326,7 @@ func ownerOrganizationQueryWith(ctx context.Context, path string, access ownerSo
 		return ownerRuleProtected("owner_rule_other_development_top")
 	}
 	for _, root := range config.records {
-		if within(root, path) {
+		if ownerRuleMixedStorePath(root, path) {
 			return ownerRuleProtected("client_record_store")
 		}
 	}
@@ -400,12 +398,27 @@ func ownerOrganizationPath(path string) ownerPathVerdict {
 	if refresh != "" && ctx.Err() == nil {
 		ownerRequestIdentityRefresh(path, refresh)
 	}
-	// Exact legacy conversation proofs remain independent of generic producer
-	// inference. Unknown mixed producers cannot use the general repair fallback.
-	if result.ReceiptRestricted && result.Status == "unverified" && conversationPathAllowed(path) {
-		return ownerRuleClear("verified_conversation_record")
+	return ownerRuleFinalize(result, path, conversationPathAllowed, ownerRuleOperationalPathAllowed, repairPathAllowed)
+}
+
+func ownerRuleOperationalPathAllowed(path string) bool {
+	return discordAskRuntime(path, legacyMatch)
+}
+
+// Exact independent proofs survive a transient registration failure. A mixed
+// body or a positive client classification never acquires the generic fallback.
+func ownerRuleFinalize(result ownerPathVerdict, path string, conversation, operational, receipt func(string) bool) ownerPathVerdict {
+	transient := result
+	transient.ReceiptRestricted = false
+	if result.ReceiptRestricted && result.Status == "unverified" && ownerRuleIndependentReceiptEligible(transient) {
+		if conversation(path) {
+			return ownerRuleClear("verified_conversation_record")
+		}
+		if operational(path) {
+			return ownerRuleClear("verified_operational_receipt")
+		}
 	}
-	return ownerRuleReceiptFallback(result, path, repairPathAllowed)
+	return ownerRuleReceiptFallback(result, path, receipt)
 }
 
 // A transient metadata failure does not erase an independently checked old

@@ -209,7 +209,7 @@ func repairPathAllowed(path string) bool {
 	if productCIRuntime(absolute, productCIDirectory, legacyMatch) && sourceVerified(base) {
 		return true
 	}
-	if discordAskRuntime(absolute, legacyMatch) && sourceVerified(base) {
+	if ownerRuleOperationalPathAllowed(absolute) {
 		return true
 	}
 	target, err := physical(absolute)

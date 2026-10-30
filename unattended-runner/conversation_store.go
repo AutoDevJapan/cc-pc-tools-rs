@@ -250,7 +250,7 @@ func (r *Runner) loadConversations() (*conversationIndex, error) {
 		if q.RecoveredIntake != 0 && !ordinaryRecoveryRoute(q) {
 			return nil, errors.New("conversation recovery route differs")
 		}
-		if q.Actor != nil && (q.Todo != 1171 || q.Project != "GitDo" || q.Actor.Todo != 3277 || !validJob(q.Actor.Job) || !shaPattern.MatchString(q.Actor.SpecSHA) || !shaPattern.MatchString(q.Actor.OriginSpecSHA) || !shaPattern.MatchString(q.Actor.RootSHA) || !shaPattern.MatchString(q.Actor.SourceSHA)) {
+		if q.Actor != nil && (!((q.Todo == 1171 && q.Project == "GitDo" && q.Actor.Todo == 3277) || currentConversationPair(q.Todo, q.Actor.Todo, q.Project)) || !validJob(q.Actor.Job) || !shaPattern.MatchString(q.Actor.SpecSHA) || !shaPattern.MatchString(q.Actor.OriginSpecSHA) || !shaPattern.MatchString(q.Actor.RootSHA) || !shaPattern.MatchString(q.Actor.SourceSHA)) {
 			return nil, errors.New("conversation actor unverified")
 		}
 		if q.WaitDeferred && (q.Actor == nil || !q.Wait) {
@@ -531,6 +531,9 @@ func (r *Runner) conversationAsk(ctx context.Context, input ConversationAskInput
 			return zero, errors.New("conversation reserved task is held")
 		}
 		args := []string{"recovery-ask", "--request-id", q.SenderID, "--todo-id", fmt.Sprint(q.Todo), "--origin-thread", q.OriginThread, "--body-file", q.BodyFile, "--decision-file", q.DecisionFile}
+		if q.Actor != nil && q.RequestID == fixedConversationOrigin.RequestID {
+			args = append(args, "--conversation-source-request", q.RequestID)
+		}
 		if q.Title != "" {
 			args = append(args, "--title", q.Title)
 		}
@@ -542,6 +545,9 @@ func (r *Runner) conversationAsk(ctx context.Context, input ConversationAskInput
 		}
 		raw, callErr := r.Run(ctx, conversationSender, args...)
 		if callErr != nil {
+			if strings.HasPrefix(callErr.Error(), "conversation sender ") {
+				return zero, callErr
+			}
 			return zero, errors.New("conversation send pending; retry the same request")
 		}
 		var report struct {

@@ -667,7 +667,7 @@ func skillsNativeProjectionBound(input io.Reader, id, cwd string, start, end tim
 				return nil, false
 			}
 			if at.Before(start) || at.After(end) {
-				if proof.runtimeSourceUsed {
+				if proof.runtimeSourceUsed || len(proof.runtimePriorWindows) > 0 {
 					var v struct {
 						Type string `json:"type"`
 					}
@@ -690,7 +690,7 @@ func skillsNativeProjectionBound(input io.Reader, id, cwd string, start, end tim
 				return nil, false
 			}
 			if at.Before(start) || at.After(end) {
-				if proof.runtimeSourceUsed {
+				if proof.runtimeSourceUsed || len(proof.runtimePriorWindows) > 0 {
 					var header struct {
 						Role string `json:"role"`
 					}
@@ -725,7 +725,7 @@ func skillsNativeProjectionBound(input io.Reader, id, cwd string, start, end tim
 			if session || p["id"] != id || !same(str(p["cwd"]), cwd) {
 				return nil, false
 			}
-			if proof != nil && proof.runtimeSourceUsed {
+			if proof != nil && (proof.runtimeSourceUsed || len(proof.runtimePriorWindows) > 0) {
 				at, err := time.Parse(time.RFC3339Nano, envelope.Timestamp)
 				if err != nil || at.After(end) || (at.Before(start) && !proof.priorRuntimeWindow(at)) {
 					return nil, false

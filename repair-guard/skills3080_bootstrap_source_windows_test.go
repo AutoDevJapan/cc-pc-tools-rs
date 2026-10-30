@@ -188,6 +188,9 @@ func TestSkills3080RuntimeWorldStateAnchorsTheLaunchInstructions(t *testing.T) {
 				}
 				dev := object{"type": "response_item", "timestamp": start.Format(time.RFC3339Nano), "payload": object{"type": "message", "role": role, "content": []object{{"type": "input_text", "text": "runtime launch instructions"}}}}
 				records = append(records[:2], dev, msg)
+				if kind == "runtime_developer_prefix" {
+					obj(obj(snapshot["payload"])["state"])["model"] = object{"instructions": skillsRuntimeFragmentHash("runtime launch instructions")}
+				}
 			}
 			if kind == "developer_after_bootstrap" {
 				records = append(records, object{"type": "response_item", "timestamp": start.Add(time.Second).Format(time.RFC3339Nano), "payload": object{"type": "message", "role": "developer", "content": []object{{"type": "input_text", "text": "extra later instruction"}}}})

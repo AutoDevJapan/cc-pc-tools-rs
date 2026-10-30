@@ -205,17 +205,18 @@ func skillsNativeWindowWithSourceOrigin(s *skillsFS, job object, proof *skillsNa
 			if modern {
 				proof.runtimeBootstrap = source
 				proof.runtimeEnvelopeRecords = envelopes
-				for i := range proof.runtimePriorWindows {
-					w := &proof.runtimePriorWindows[i]
-					if len(w.Input) == 0 {
-						return nil, false
-					}
-					w.proof = &skillsNativeResultProof{prompt: w.Input, inputOnly: true, exactInput: true, runtimeBootstrap: source, bootstrapBound: true, cwd: proof.cwd, sandbox: proof.sandbox}
-					// Only the independently projected first runtime bootstrap is
-					// an extra source message. Later historical jobs have exactly
-					// their own normally stored execution input.
-					w.proof.userSeen = !w.Start.Equal(proof.runtimePriorWindows[len(proof.runtimePriorWindows)-1].Start)
+				proof.runtimeEnvelopeRequired = true
+			}
+			for i := range proof.runtimePriorWindows {
+				w := &proof.runtimePriorWindows[i]
+				if len(w.Input) == 0 {
+					return nil, false
 				}
+				w.proof = &skillsNativeResultProof{prompt: w.Input, inputOnly: true, exactInput: true, bootstrapSHA: proof.bootstrapSHA, runtimeBootstrap: source, bootstrapBound: true, cwd: proof.cwd, sandbox: proof.sandbox}
+				// Only the independently projected first runtime bootstrap is
+				// an extra source message. Later historical jobs have exactly
+				// their own normally stored execution input.
+				w.proof.userSeen = !w.Start.Equal(proof.runtimePriorWindows[len(proof.runtimePriorWindows)-1].Start)
 			}
 		}
 		// Session bootstrap is independent of the job's task-input window.
@@ -349,6 +350,7 @@ type skillsNativeResultProof struct {
 	runtimeSourceUsed             bool
 	runtimePriorWindows           []skillsRuntimePriorWindow
 	runtimeEnvelopeRecords        map[string]bool
+	runtimeEnvelopeRequired       bool
 	userSeen                      bool
 	runtimePrefixClosed           bool
 	bootstrapSeen, bootstrapBound bool
@@ -455,6 +457,9 @@ func (p *skillsNativeResultProof) observe(raw []byte, at time.Time) bool {
 		return false
 	}
 	v := envelope.Payload
+	if (p.exactInput || p.inputOnly) && v.Role == "developer" && (p.runtimeEnvelopeRequired || len(p.runtimePriorWindows) > 0) {
+		return !p.runtimePrefixClosed && !p.userSeen && p.runtimeEnvelopeRecords[hashBytes(raw)]
+	}
 	if (p.exactInput || p.inputOnly) && v.Type != "message" && v.Role != "" {
 		return v.Type == "additional_tools" && v.Role == "developer" && !p.runtimePrefixClosed && !p.userSeen
 	}

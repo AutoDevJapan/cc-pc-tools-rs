@@ -184,12 +184,54 @@ func TestSkills3080ResumedRuntimeSourceAndCurrentTaskHaveSeparateWindows(t *test
 	if !valid || len(observed) != 1 || !bound.runtimeSourceUsed {
 		t.Fatal("frozen registered-resume proof did not reach current result")
 	}
-	for _, kind := range []string{"current", "wrong_current_input", "old_final_digest", "extra_current_user", "extra_current_final", "gap_user", "gap_event", "gap_developer", "backdated_prior_user", "inserted_prior_user", "inserted_prior_event", "inserted_prior_developer", "verified_runtime_developer", "missing_prior_input", "duplicate_prior_event"} {
+	for _, kind := range []string{"registered", "inserted_prior_user", "inserted_prior_event", "unregistered_origin"} {
+		t.Run("legacy_0163_"+kind, func(t *testing.T) {
+			legacy := bytes.Replace(raw.Bytes(), []byte(`"cli_version":"0.165.0"`), []byte(`"cli_version":"0.163.0"`), 1)
+			if kind == "inserted_prior_user" || kind == "inserted_prior_event" {
+				v := msg("user", "", "unregistered prior instruction", initial.Add(3*time.Second))
+				if kind == "inserted_prior_event" {
+					v = object{"type": "event_msg", "timestamp": initial.Add(3 * time.Second).Format(time.RFC3339Nano), "payload": object{"type": "user_message", "message": "unregistered prior instruction"}}
+				}
+				x, _ := json.Marshal(v)
+				boundary, _ := json.Marshal(records[7])
+				at := bytes.Index(legacy, boundary)
+				if at < 0 {
+					t.Fatal("current boundary")
+				}
+				prefix := append([]byte{}, legacy[:at]...)
+				prefix = append(prefix, append(x, '\n')...)
+				legacy = append(prefix, legacy[at:]...)
+			}
+			home := skillsFixtureRoot(t)
+			t.Setenv("USERPROFILE", home)
+			dir := filepath.Join(home, ".codex", "sessions", "2026", "10", "31")
+			if os.MkdirAll(dir, 0700) != nil || os.WriteFile(filepath.Join(dir, "rollout-legacy-"+id+".jsonl"), legacy, 0600) != nil {
+				t.Fatal("legacy fixture")
+			}
+			fs := skillsFS{blocked: func(string) bool { return false }}
+			defer fs.close()
+			p := &skillsNativeResultProof{prompt: []byte("registered current task"), finalSHA: hashBytes([]byte("current original final")), exactInput: true, bootstrapSHA: hashBytes(body), runtimeProject: project, requireRuntimeSource: true, cwd: str(job["cwd"]), sandbox: "read-only", frozen: true}
+			_, ok := skillsNativeWindowWithSourceOrigin(&fs, job, p, end, func(at time.Time) (skillsRuntimeOrigin, bool) {
+				if kind == "unregistered_origin" {
+					return skillsRuntimeOrigin{}, false
+				}
+				c, ok := skillsRuntimeSourceOriginWith(row, job, at, func(id string) (object, bool) { j, ok := jobs[id]; return j, ok })
+				for i := range c.Windows {
+					c.Windows[i].Input = []byte("old different task")
+				}
+				return c, ok
+			})
+			if ok != (kind == "registered") || (ok && p.runtimeSourceUsed) {
+				t.Fatalf("legacy digest/history contract %s accepted=%v", kind, ok)
+			}
+		})
+	}
+	for _, kind := range []string{"current", "wrong_current_input", "old_final_digest", "extra_current_user", "extra_current_final", "gap_user", "gap_event", "gap_developer", "backdated_prior_user", "inserted_prior_user", "inserted_prior_event", "inserted_prior_developer", "unverified_initial_developer", "missing_prior_input", "duplicate_prior_event"} {
 		t.Run(kind, func(t *testing.T) {
 			b := raw.Bytes()
 			prompt, final := []byte("registered current task"), []byte("current original final")
 			switch kind {
-			case "verified_runtime_developer":
+			case "unverified_initial_developer":
 				dev := msg("developer", "", "normal runtime envelope", initial)
 				copied := append([]object{}, records[:2]...)
 				copied = append(copied, dev)
@@ -254,8 +296,11 @@ func TestSkills3080ResumedRuntimeSourceAndCurrentTaskHaveSeparateWindows(t *test
 			}
 			envelope := map[string]bool{}
 			_, _, projected := skillsRuntimeBootstrapProjectionWithOrigin(bytes.NewReader(b), job, project, start, end, origin, envelope)
-			if kind == "verified_runtime_developer" && !projected {
-				t.Fatal("normal initial runtime developer projection")
+			if kind == "unverified_initial_developer" {
+				if projected {
+					t.Fatal("unverified initial developer qualified its own record hash")
+				}
+				return
 			}
 			proof := &skillsNativeResultProof{prompt: prompt, finalSHA: hashBytes(final), exactInput: true, bootstrapSHA: hashBytes([]byte("older author policy")), runtimeBootstrap: source, runtimeSourceUsed: true, runtimePriorWindows: append([]skillsRuntimePriorWindow{}, context.Windows...), runtimeEnvelopeRecords: envelope, bootstrapBound: true, cwd: str(job["cwd"]), sandbox: "read-only"}
 			if kind == "missing_prior_input" {
@@ -265,7 +310,7 @@ func TestSkills3080ResumedRuntimeSourceAndCurrentTaskHaveSeparateWindows(t *test
 				proof.runtimePriorWindows[i].proof = &skillsNativeResultProof{prompt: proof.runtimePriorWindows[i].Input, inputOnly: true, exactInput: true, runtimeBootstrap: source, bootstrapBound: true, cwd: str(job["cwd"]), sandbox: "read-only"}
 			}
 			_, ok := skillsNativeProjectionBound(bytes.NewReader(b), id, str(job["cwd"]), start, end, proof)
-			if ok != (kind == "current" || kind == "verified_runtime_developer") {
+			if ok != (kind == "current") {
 				t.Fatalf("current task/final isolation %s accepted=%v", kind, ok)
 			}
 		})

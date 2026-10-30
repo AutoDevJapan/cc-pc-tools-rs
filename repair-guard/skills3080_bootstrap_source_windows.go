@@ -23,6 +23,7 @@ func skillsRuntimeBootstrapProjectionWithOrigin(input io.Reader, job object, pro
 	session, started, boot, state := false, false, false, false
 	turn, body := "", ""
 	var source []byte
+	var developer [][]byte
 	sourceStart, last := start, start
 	modern := false
 	for scan.Scan() {
@@ -57,11 +58,8 @@ func skillsRuntimeBootstrapProjectionWithOrigin(input io.Reader, job object, pro
 			if m.Source != "exec" || m.Originator != "codex_exec" {
 				return nil, true, false
 			}
-			if m.Version == "0.163.0" {
-				return nil, false, true
-			}
-			modern = true
-			if m.Version != "0.165.0" {
+			modern = m.Version != "0.163.0"
+			if m.Version != "0.165.0" && m.Version != "0.163.0" {
 				return nil, true, false
 			}
 			if at.Before(sourceStart) {
@@ -82,6 +80,12 @@ func skillsRuntimeBootstrapProjectionWithOrigin(input io.Reader, job object, pro
 				return nil, true, false
 			}
 			last = at
+			// The old bootstrap digest contract is retained. A resumed old
+			// session must nevertheless prove its registered origin above;
+			// legacy input cannot bypass the historical-input checks.
+			if !modern {
+				return nil, false, true
+			}
 			continue
 		}
 		if at.Before(sourceStart) || at.Before(last) {
@@ -120,25 +124,19 @@ func skillsRuntimeBootstrapProjectionWithOrigin(input io.Reader, job object, pro
 				return nil, true, false
 			}
 			if v.Type == "message" && v.Role != "user" {
-				// Native developer messages before bootstrap belong to the
-				// runtime's exec launch envelope. User/task input cannot issue
-				// that role. A later developer/system/unknown message is outside
-				// this proved first-turn envelope and is rejected below.
+				// Retain the initial rendering only until the independent
+				// runtime checkpoint can prove every block's content below.
 				if v.Role != "developer" || boot || state || !started {
 					return nil, true, false
 				}
-				if len(envelopes) == 1 {
-					envelopes[0][hashBytes(raw)] = true
-				}
+				developer = append(developer, append([]byte{}, raw...))
 				continue
 			}
 			if v.Role != "user" {
 				if v.Role != "developer" || v.Type != "additional_tools" || boot || state || !started {
 					return nil, true, false
 				}
-				if len(envelopes) == 1 {
-					envelopes[0][hashBytes(raw)] = true
-				}
+				developer = append(developer, append([]byte{}, raw...))
 				continue
 			}
 			var blocks []struct {
@@ -177,6 +175,14 @@ func skillsRuntimeBootstrapProjectionWithOrigin(input io.Reader, job object, pro
 				return nil, true, false
 			}
 			source = []byte(a.Text)
+			if !skillsRuntimeEnvelopeMatches(developer, v.State) {
+				return nil, true, false
+			}
+			if len(envelopes) == 1 {
+				for _, raw := range developer {
+					envelopes[0][hashBytes(raw)] = true
+				}
+			}
 			state = true
 		case "turn_context":
 			var v struct {

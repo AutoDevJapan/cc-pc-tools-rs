@@ -14,14 +14,22 @@ runtimeが記録した初回のsource・originator・既知CLI版・turn・full 
 過去jobの時刻窓だけを、任意の先行入力の資格にしない。
 元jobの正常なfinite reviewに保存されたspec path・hash、launch receipt・登録元promptと
 execution inputを照合し、各過去窓のuserと対応するeventもその正規入力へ一意に結ぶ。
-初回developer envelopeは、独立したruntime source検証で観測した同bufferの記録だけを使う。
+初回developer envelopeは、同じ記録から得た自己hashだけでは受け入れない。
+既知0.165のruntime checkpointに保存されたmodel・permissions・collaborationのfragment hash、
+host skillsの完全なbody、tool定義ごとのhashと、描画された全blockを照合する。
+hashの符号化は[公式の固定版](https://github.com/openai/codex/blob/360319d8dee62d87e2d59fc0c21805d79519cfed/codex-rs/core/src/context/world_state/mod.rs)に従う。
+plugin案内は、既知runtime catalogの全固定文と公開name/IDの組が完全一致する場合だけ扱う。
+任意のdeveloper本文、未知catalog、追記、重複block、欠落や変更のあるtool定義は拒否する。
+catalogの表示をサービスの利用許可や作業範囲へ昇格しない。
 これらの過去入力を、今回の共通指示や作成・閲覧の権限として継承しない。
 今回の登録済み入力・現在model・final digestは、今回jobだけの窓で確認する。
 job間の未登録指示、今回の多重user/final、今回の記録より後へ時刻を戻して追記した過去userも拒否する。
 
 原job・spec・prompt・native・finalは変更せず、同じ長さを凍結したhandleを読み直して検証する。
 sourceや結果を別path、copy、可変な指示ファイル、未知のdigestへ置き換えない。
-古い0.163の既知契約、未知CLI版の拒否、原author・origin・実launch親・現在consumerの区別は維持する。
+古い0.163は元のbootstrap digest照合を保ち、再開元の登録と各過去入力の照合も必要とする。
+旧形式を理由に、時刻外の先行user/eventを確認せず読み飛ばさない。
+未知CLI版の拒否、原author・origin・実launch親・現在consumerの区別は維持する。
 これは一般guardや中央の既存対象の解除ではない。
 
 正負例と関連Goテスト、正式二役、対象headのCI、通常merge、同ソースのWindows更新と

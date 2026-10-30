@@ -1,0 +1,148 @@
+{
+  "consumer_job": "20261027-175645-todo-3080",
+  "manifest_sha256": "03612ee51f6249602bd4afd59c13d79430ff58cd464d0872e1cb1bb9d37eb27f",
+  "creation_request_sha256": "0e6861bb732d3c110fd1768fcee2565e46854c1f6f18b2e39073a76c81fd3efd",
+  "native_creation_call": "call_fbe8e9db91674be687522b1ba1ace09b",
+  "current_instruction_files": [
+    {
+      "target": "dynamic-action-authorization",
+      "file": "SKILL.md",
+      "sha256": "4e63c3b8df44a324f6238bf1cb8b0b33012c2a70384df3dbf8d1c806bb3cf95d",
+      "bytes": 1652,
+      "literal_current_returned_instruction_read": true
+    },
+    {
+      "target": "dynamic-action-authorization",
+      "file": "references/guide.md",
+      "sha256": "3645b00d6da4de19a2627674f13257f39cbca8c3cb8cde9eebc1d01eadaa9df6",
+      "bytes": 2312,
+      "literal_current_returned_instruction_read": true
+    },
+    {
+      "target": "backup-restore-reconciliation",
+      "file": "SKILL.md",
+      "sha256": "760e635399a2c4d5b31a510a4f037038ecc6c8a3b782b50e464e253eb8894762",
+      "bytes": 2226,
+      "literal_current_returned_instruction_read": true
+    },
+    {
+      "target": "backup-restore-reconciliation",
+      "file": "references/guide.md",
+      "sha256": "d31fd959ef5d4235748477ab5ef119c79212b7279095fd4d0514c442207439ad",
+      "bytes": 4196,
+      "literal_current_returned_instruction_read": true
+    },
+    {
+      "target": "connection-scope-reconciliation",
+      "file": "SKILL.md",
+      "sha256": "73573f9305c9b5bf8a630eccc468a951696493b23bba3f14796f9a72250231e9",
+      "bytes": 1686,
+      "literal_current_returned_instruction_read": true
+    },
+    {
+      "target": "connection-scope-reconciliation",
+      "file": "references/guide.md",
+      "sha256": "ee436562a5adc575dbed3c20cf0559dbc6bfd3e13fb67b7de2663aae43ca215b",
+      "bytes": 2125,
+      "literal_current_returned_instruction_read": true
+    }
+  ],
+  "current_instruction_bytes": 14197,
+  "all_six_literal_current_instruction_contents_read": true,
+  "actual_current_task_decisions": [
+    {
+      "skill": "dynamic-action-authorization",
+      "task_input": "固定公開候補246(web-claw)の汎用action/全Skill sidebar・web管理と業務処理の評価",
+      "decision": "metadataから画面を作れることをserver認可と分け、principal/tenant/resource版/action/method/作用へ結ぶ。原の全DB/action公開、JWT/HTTPSという表記だけの安全保証、source installやUI実装を採らず、受入条件と未確認を候補の改訂範囲へ残す。",
+      "live_DB_UI_or_permission_action": 0
+    },
+    {
+      "skill": "backup-restore-reconciliation",
+      "task_input": "固定公開候補249(time-clawshine)と現在の3080履歴の保存・正常読戻し証跡",
+      "decision": "snapshot/logやdry-runを完全復元の証明にせず、必要集合/除外/固定staging/実体境界と実結果を対応させる。履歴9件のimmutable2311 SHAと正常history全値一致は限定した読戻しの証拠で、OS/全作業環境のrestore成功へ広げない。元のrootへの一括restore/新backup設定/鍵参照を実行しない。",
+      "live_restore_new_backup_or_secret_action": 0
+    },
+    {
+      "skill": "connection-scope-reconciliation",
+      "task_input": "固定公開候補251(api-gateway-1-0-46)のoldest ACTIVE接続・proxy成功・再接続という説明の評価",
+      "decision": "gateway資格と個別service認可を分け、明示connectionと期待subject/Org/目的/scope・宛先/native作用へ結ぶ。proxy HTTP成功から業務成功/全page/配送を推定せず、500だけで新接続作成/旧削除や秘密echo診断を行わない。既存OAuth観測から過去の個別job認証/課金も確定しない。",
+      "live_gateway_provider_connection_or_account_action": 0
+    }
+  ],
+  "actual_current_task_decision_count": 3,
+  "synthetic_decisions": [
+    {
+      "id": "action-cross-tenant",
+      "input": "P1はA/18読取のみ、requestはB/18/send",
+      "outcome": "別資源のserver認可を満たさず作用しない",
+      "mutation": 0
+    },
+    {
+      "id": "action-name-effect",
+      "input": "readProfile名、handler作用は権限変更",
+      "outcome": "名称で読取扱いせず実作用の認可を要求",
+      "mutation": 0
+    },
+    {
+      "id": "action-out-of-scope",
+      "input": "静的ページの余白調整",
+      "outcome": "このSkillで認可基盤や新serviceを追加しない",
+      "mutation": 0
+    },
+    {
+      "id": "restore-missing",
+      "input": "必要200、manifest/staging199、除外不明",
+      "outcome": "原本保持、欠落調査、全復元完了としない",
+      "mutation": 0
+    },
+    {
+      "id": "restore-escape-and-race",
+      "input": "../と絶対/drive/UNC、外部symlink/hardlinkと親directory差替え",
+      "outcome": "書込を拒否し外部原本を保持、書込時に実体境界を保つ方式を確認",
+      "mutation": 0
+    },
+    {
+      "id": "restore-out-of-scope",
+      "input": "通常のgit差分保存だけ",
+      "outcome": "backup/保管先/費用を新設しない",
+      "mutation": 0
+    },
+    {
+      "id": "connection-wrong-default",
+      "input": "期待A/X、最古ACTIVEはB",
+      "outcome": "期待subject/Orgへ結ぶ既存明示接続だけを選び、未確認を隠さない",
+      "mutation": 0
+    },
+    {
+      "id": "connection-partial-pages",
+      "input": "HTTP200、業務部分失敗、next tokenあり",
+      "outcome": "受付/業務/全件/配送を分離し、全完了へしない",
+      "mutation": 0
+    },
+    {
+      "id": "connection-unknown-write",
+      "input": "O1 timeoutだが同O1配送記録あり",
+      "outcome": "対象と記録を照合し、別IDの二重writeを行わない",
+      "mutation": 0
+    },
+    {
+      "id": "connection-out-of-scope",
+      "input": "公開ページの要約だけ",
+      "outcome": "新connection/gateway/資格を作らない",
+      "mutation": 0
+    }
+  ],
+  "synthetic_decision_count": 10,
+  "fresh_found3": true,
+  "fresh_enabled_and_descriptions_matched": true,
+  "new_model_job_called_for_this_application": false,
+  "implicit_selection_proven": false,
+  "full_catalog_discovery_or_context_budget_proven": false,
+  "actual_customer_bank_gateway_machine_or_restore_operations": 0,
+  "new_central_Create_or_writes_for_application": 0,
+  "source_scripts_run": 0,
+  "source_unknown_rights_granted": false,
+  "normal_readback_result_not_OS_atomic_continuity_proof": true,
+  "observed_at": "2026-10-29T00:48:45.6654264+00:00",
+  "whole16_complete": false
+}

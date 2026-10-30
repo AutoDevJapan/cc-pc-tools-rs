@@ -1,0 +1,6 @@
+{
+  "exit": 0,
+  "timed_out": false,
+  "stdout": "PASS: 4 explicit skills; structure, descriptions, references, hashes, scenario pairs; in-memory bundle only; no deployment implied\n",
+  "stderr": ""
+}

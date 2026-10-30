@@ -1,27 +1,31 @@
 {
   "state": "complete",
   "catalog_sha256": "2d73c9a038a41cc220a9687b935bfa1e0b315b65d9bd6d3e54ddb4111972876c",
-  "manifest_sha256": "723dae0b14e8c7b29bb90453f92882cdf2a604dfd058ad0d86a09d7e8d93ac67",
-  "queue_sha256": "6c6942446578dc4e7aab135941a37abf5566b24525212bc2265bae6d3521d750",
+  "manifest_sha256": "250999fd97371767f4b6e1172153fe17861e8c94d75102c1751227ec3c3ec186",
+  "queue_sha256": "85a022312a2fb1a3d8d2ccd7ed437b2d194f35f84cefd3f0905017a3afb33a43",
   "occurrences": 73220,
-  "occurrences_with_assessment_records": 1130,
-  "recorded_final_occurrences": 165,
+  "occurrences_with_assessment_records": 1583,
+  "recorded_final_occurrences": 183,
+  "occurrences_with_assessment_and_final_records": 177,
+  "final_records_without_assessment_record": 6,
+  "occurrences_with_assessment_or_final_records": 1589,
   "stages": {
-    "assessed_needs_current_disposition": 971,
+    "assessed_needs_current_disposition": 1406,
     "held_body_unavailable": 428,
     "held_execution_review": 647,
-    "needs_semantic_and_individual_rights_review": 71009,
-    "recorded_final_disposition": 165
+    "needs_semantic_and_individual_rights_review": 70556,
+    "recorded_final_disposition": 183
   },
   "recorded_final_dispositions": {
     "excluded": 15,
-    "installed_new_adaptation": 147,
-    "integrated_existing": 3
+    "installed_new_adaptation": 164,
+    "integrated_existing": 4
   },
   "limits": [
     "An assessment reference is not a full raw read, licence grant, current adoption or completed acceptance; consult its recorded actor, scope and state.",
     "Equal body bytes do not transfer source ownership, individual permission or support-resource review.",
     "No source body or URL is opened, no model or worker is launched, no permission is changed and nothing is installed.",
-    "The queue is complete only when its separate summary is complete and its recorded queue SHA256 matches the actual bytes."
+    "The queue is complete only when its separate summary is complete and its recorded queue SHA256 matches the actual bytes.",
+    "Assessment records 1583 = assessed without final disposition 1406 + assessment/final intersection 177. Final records 183 include 6 final-only legacy records without assessment. The assessment/final union is 1589 occurrences; these categories are not additive independent totals."
   ]
 }

@@ -110,3 +110,67 @@ GoのcleanなWindows/amd64 metadataを照合し、公開観測へ保存した。
 変更後ソースのWindows生成、正規更新確認と既存AdminBrokerによる配置、
 親自身の元の同じrequestによる旅行3案のCreateNew・現在18buffer・発見・適用は、
 それぞれ実結果で確認する。配布前のsource検証を実配置成功とは扱わない。
+
+## 長いセッションログの修復を同じ3686から配布する
+
+今回の実行は20261028-033657-todo-3686。PR596と旅行3案18出力の既受入は保持し、
+再作成しない。親3080のPR609は同handleの初期長を上限にstreamで読み、起動指示の
+先頭4MiB、record上限、元session/cwd・時刻・入力・final SHA・call ID・保護を維持する。
+そのコードの親レビュー4033/4115は、3686専用のソフト更新資格には流用しない。
+
+新候補の生成前に、現用16386d55/source61de9837/13,315,072バイトをread handle保持中に
+独立観測し、PR594の通常配布記録と公開mainの全guard入力が一致することを確認した。
+この事実を920d6d6dで先に公開し、既存の両ソフト更新処理に同じ一組だけを保持する。
+正しい既配布版を拒否するRedと、同じSHAで別source・同sourceで未知SHA・未知組の
+拒否を回帰テストで確認する。元baseline・issuer・backupは変更しない。
+
+残る工程は、同じ3686に登録された既存3712と3896による別セッションのLuna/max
+セルフレビューとラバーダック、全修正指摘の解消、同じ最終headのCIと通常マージ、
+cleanなmerged source全入力一致のWindows生成、実writer3686の正規verify、既存
+AdminBrokerによるCAS・実backupとowner/group/DACL保持、配置後hash/sourceと実CLI、
+親自身による同じ元requestと新3件21出力の受入である。登録や配布だけでは完了しない。
+SACL・過去の物理的連続性・原台帳復旧を未検証のまま成功とは書かない。
+元16資料/73,220出現、647取得保留・428未取得、未知中央と原ログは保持する。
+
+固定6fdbの32公開入力を実照合すると、保持した旧manifestの作成者214717と今回の
+修復依頼者175645を同一とする既存の条件が、正しい公開入力も拒否した。
+原manifest・原specは書き換えず、同じ公開commit、依頼本文、manifestのpath/blob/
+bytes/SHA、両方の元author/spec/workspaceが一致するこの一件だけ、旧manifestを
+修復範囲の参照資料として保持する。通常の内容レビューや別の修復へは流用しない。
+固定した実入力の失敗と、元author・spec・commit・本文の改変および通常レビューの
+拒否を確認し、公開Git全入力の独立照合を同じ正規処理でやり直す。
+
+3686自身の3712セルフレビューと3896ラバーダックでは、通常受領に残った256MiB上限、
+snapshot途中の短縮、本人指定モデルの由来確認不足が指摘された。
+通常受領も同じsnapshotへ統一し、初期サイズより短いEOFはエラーにする。
+実jobのmodel/effortと両owner_requestを受領記録に保持し、この有限なソフト更新の
+code acceptanceは実nativeと一致するLuna/maxだけを受け入れる。
+内容レビューなどの別モデル対応、元のbaselineや作成時producerは変更しない。
+
+配布後のhash・backup・owner/group/DACL照合が失敗した場合は、更新成功とせず、
+その実行物をデータの資格確認に使わない。候補・現用・backupのバイトと原ACLを
+読取専用で再照合し、同じ既受入候補と実backupであることを確認した後にだけ、
+必要なmetadataの復旧または正規の再配置を既存brokerから行い、再度読み戻す。
+未知のバイトや未照合のtargetへforce rollbackせず、実backup・原結果・次の手を
+親へ記録する。この手順は未発生の障害を復旧済みと主張するものではない。
+
+再確認では、完了済みの通常レビューのログを読む間の書き換えを防ぐため、
+通常受領とコードレビューの証明に、書き込みを共有しない専用snapshotを使う。
+既存の追記中・再開済み履歴・作成callの読み方は保ち、公開入力からこのモードを
+変更できない。実Windows上で、読み取り中のwrite handle取得と、先行write handleを
+保持した受領が拒否されることを確認する。
+
+配布用scriptの原v2は保持し、v3の失敗出力には取得できたtarget/backupのSHAと
+owner/group/DACLの一致・不一致を残す。取得不能な値はnullとし、推測しない。
+既存brokerは実clean buildinfoのb7cd724dと公開sourceが一致し、このmoduleに差分は
+ない。今回の送信期限180秒は実行にも適用され、Windows Job Objectが子孫を管理する。
+bridgeだけを途中で独立終了させる別の期限は加えず、既存brokerの期限・cleanup_pending
+記録を使う。期限切れを配布成功へ読み替えず、実物・backupと終了結果を再照合する。
+この確認はsourceと現用metadataに基づくもので、新しい実timeout試験は行っていない。
+
+PUBLIC・consumer形式の完了結果も同じ凍結証明処理へ統一し、形式ごとの呼出しで
+書き込み共有を選べる引数をなくす。入力・source・authorの形式別検証後は、通常・
+コード・PUBLIC・consumerの全完了レビューが同じdeny-write処理を通る。
+PUBLICとconsumerの実native証明段階について、それぞれ先行writerを拒否し、
+証明中のwrite handle取得も拒否するWindows回帰を追加した。
+既存の追記中・再開済みの歴史的ログ・作成callは別の契約として保持する。

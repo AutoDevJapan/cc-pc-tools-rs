@@ -52,16 +52,19 @@ type ExecutionRow struct {
 	Decision    string               `json:"recorded_final_disposition,omitempty"`
 }
 type ExecutionSummary struct {
-	State       string         `json:"state"`
-	CatalogSHA  string         `json:"catalog_sha256"`
-	ManifestSHA string         `json:"manifest_sha256"`
-	QueueSHA    string         `json:"queue_sha256"`
-	Records     int            `json:"occurrences"`
-	Assessments int            `json:"occurrences_with_assessment_records"`
-	Final       int            `json:"recorded_final_occurrences"`
-	Stages      map[string]int `json:"stages"`
-	Decisions   map[string]int `json:"recorded_final_dispositions"`
-	Limits      []string       `json:"limits"`
+	State              string         `json:"state"`
+	CatalogSHA         string         `json:"catalog_sha256"`
+	ManifestSHA        string         `json:"manifest_sha256"`
+	QueueSHA           string         `json:"queue_sha256"`
+	Records            int            `json:"occurrences"`
+	Assessments        int            `json:"occurrences_with_assessment_records"`
+	Final              int            `json:"recorded_final_occurrences"`
+	AssessmentAndFinal int            `json:"occurrences_with_assessment_and_final_records"`
+	FinalOnly          int            `json:"final_records_without_assessment_record"`
+	AssessmentOrFinal  int            `json:"occurrences_with_assessment_or_final_records"`
+	Stages             map[string]int `json:"stages"`
+	Decisions          map[string]int `json:"recorded_final_dispositions"`
+	Limits             []string       `json:"limits"`
 }
 
 func readExecutionArtifact(root string, pin ExecutionArtifact) ([]byte, error) {
@@ -251,6 +254,15 @@ func executionQueue(input io.Reader, output io.Writer, m ExecutionManifest, e Ex
 	if s.Records != m.Records || s.CatalogSHA != m.CatalogSHA || len(matchedAssessment) != len(e.Assessments) || len(matchedDecision) != len(e.Decisions) {
 		return s, errors.New("catalog/evidence universe incomplete or changed")
 	}
+	for id := range matchedDecision {
+		if matchedAssessment[id] {
+			s.AssessmentAndFinal++
+		} else {
+			s.FinalOnly++
+		}
+	}
+	s.AssessmentOrFinal = s.Assessments + s.Final - s.AssessmentAndFinal
+	s.Limits = append(s.Limits, fmt.Sprintf("Assessment records %d = assessed without final disposition %d + assessment/final intersection %d. Final records %d include %d final-only legacy records without assessment. The assessment/final union is %d occurrences; these categories are not additive independent totals.", s.Assessments, s.Stages["assessed_needs_current_disposition"], s.AssessmentAndFinal, s.Final, s.FinalOnly, s.AssessmentOrFinal))
 	s.State = "complete"
 	return s, nil
 }

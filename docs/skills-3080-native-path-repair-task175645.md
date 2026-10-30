@@ -1,0 +1,42 @@
+# 同じ3686で、作成済みの新4件の呼び出し照合を直す
+
+元3080 / Issue283の指定16資料の拡張に必要な、同じ用途限定の追加修復である。
+本人の限定修復aが認めた、公開出典・個別notice・固定hash・実writerに結ぶCreateNewと、その元記録を使う正常な読戻しの範囲だけを扱う。
+一般guard、未知の中央/backup、原の保護設定、647件の取得審査、本人の禁止・権限・費用は変更しない。
+
+## 実際に起きたこと
+
+作者/現在の親は20261027-175645-todo-3080、元spec SHAは91a65cb17d2e5c4b18655ecb3126ea1a212ad655e716a6c349321876071a9435。
+固定92683cd / manifest39ea776e81250f702902f53aa0e08df98df30d71a964edd9d4295317dcc1a209の新4案は、最終2役割・CI後にPR625/merge8dac4bdへ通常反映済みである。
+全14入力/28内容を読んだ正式Creator4193/実20261029-000437/spec74728b7e/原1223B/bd8a09b0を正常receiverで受領し、実nativeのLuna/max、全分類0と独立acceptanceを親が照合した。
+
+通常qualifyのrequest79f7fbc0694e435a597d9b4a24bbf7ca827bc6f872c8e568ce2f0bf39507ab77から、親が一度だけCreateNewを実行し28ファイル作成に成功した。
+元native call_64138b14df4e483885c35a84ad2a2741 / 2026-10-28T15:20:00.716Z、元stdout SHA88c7c342d9239c0f8b37511b9c7d213400623a5c250e2e2b303ba9ee87ed3c95。
+実producerはeab69e4fc8e52f2ad6858ef4e8498e8cc6030ac8ce7f788251a1aae476dc5d55 / source034520d84d52f76dcd7dc7ef371910d6acd8ae9f。
+新4名はbalance-snapshot-reconciliation、browser-extraction-missingness、remote-run-result-reconciliation、codebase-impact-contextである。
+既存154件や旧成功Creatorは変更・再作成していない。今回の4193も実Create成功後に永久凍結した。
+
+親が表示されたJSON中の実行パスを二重にエスケープしたため、実際のcmd内requestパスとworkdirに重複したWindows区切りが入った。
+元の実入力450B/d8439880cc85a444f34f695a968de73761310b014782a2c819d1e72e6c436ce0、表示された入力429B/14c78472bc6642bedc5d04ebdc3c475879c14371d9a9ead089ddad2f02084663は、byteとしては同じでない。
+双方を改変せず保持し、JSONを解析するとexe・flag・全optionは一致し、引用されたrequestパスとworkdirのWindows区切りの重複だけが相違する。実入力には末尾改行もあり、既存parserはその外側空白を既に除いている。
+その元入力/元結果を、親の同thread/cwd/時間窓から一意に抽出した。手書きのreceiptや複製したnativeは発行していない。
+
+新4件の通常consumeを各7indexで行うと、全てqualified:false、reason:creation_evidence、failure_stage:creation_nativeで葉を開く前に止まった。
+skillsCreationCallはJSONの各optionを厳格に解析するが、cmdとworkdirを文字列のままskillsForwardCommandと比較するため、既に正常に発行した同じ資源の証跡を拒否している。
+これを同じCreateの再実行、原nativeの書換え、receipt差替え、別path/普通のファイル読取で回避しない。
+
+## 追加修復の条件
+
+- 小さい呼び出し言語、単一await・単一結果、同exe/flag、login/shell/時間/出力量、strict JSON/重複key/未知field拒否は保つ。
+- 既に同一writer・元request hash・同thread/cwd/時間・実native結果に結ばれる、引用された絶対Windows requestパスとworkdirについて、今回の重複区切りが同じ資源を指すことだけを正規に扱う。
+- 任意のJS/別exe/追加command・script/環境上書き・redirect・相対/drive-relative/UNC/別資源・未知のpath形を許可へ広げない。必要な差分を実反例で限定する。
+- 親が元の450Bをそのまま使ってproductionのskillsCreationCallがfalseになることを再現し、修正後は同じ元入力でtrue、異なるflag/option/対象・余分な作用を拒否する正負例を示す。モデル用に書き直した入力を代用しない。
+- renderer/consumerと元request/作成結果の整合を確認し、認可やobject ID/hash/同buffer・原入力の検査を省略しない。
+- 今回の既に作成済み28ファイルは絶対に再作成/上書き/削除しない。元Creator4193/4184/4129/4083や成功したsoftware pair4198/4199/3870/3876等も再編集/再起動しない。
+- 既存Eab/0345を正常なsoftware baselineとして原物を保持し、新しい同最終sourceのセルフレビューとラバーダックを、新しい2つの正式reviewでLuna/max/両origin owner_requestとして受領する。旧pairは元softwareの読戻しだけへ保持し、新apply/recover資格へ流用しない。
+- 必要な関連Goテスト・vet・CI、通常merge後の同merged-source Windows生成と正常verify/apply、元Eabのbackup/ID/hashと現物の同buffer/CLIまで同じ担当で完遂する。Cargo/GPU/Civ6は使わない。
+- 親は同じ元request79fとnative call64138、同28出力の正常consumeを再検証する。正常成功後もCreateを再実行せず、元28の現在ID/hash/同bufferを照合し、発見・現在の指示を使う実適用へ進む。
+
+元3686の203114最終404B/ba5836の正常結果受領はresult_bindingで止まり、親は別pathで読んでいない。
+この既存未受領と元記録も保持する。親が正式4198/4199の最終原文・実native・全分類0を正常受領した事実と、Eabで今回実Createが発行された事実は別に確認済みである。
+この追加修復を、全16資料・次28評価のmain受入・新4件の実利用完了や一般guard解除にしない。

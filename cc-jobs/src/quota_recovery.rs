@@ -34,6 +34,11 @@ pub(crate) fn status_metadata(job: &Value) -> Value {
         v["recovery_version"] = job["quota_recovery"]["version"].as_u64().map_or(Value::Null, |n| json!(n));
         if crate::queue::valid_job_id(s(&job["quota_recovery"], "source_job")) { v["recovery_source_job"] = job["quota_recovery"]["source_job"].clone(); }
     }
+    if job["subwork_continuation"].is_object() {
+        let request=&job["subwork_continuation"]["request"];
+        if crate::queue::valid_job_id(s(request,"source_job")) {v["continuation_source_job"]=request["source_job"].clone();}
+        v["continuation_resume_generation"]=request["resume_generation"].as_u64().map_or(Value::Null,|n|json!(n));
+    }
     v
 }
 
@@ -55,7 +60,7 @@ impl Context {
         let unstarted =
             row.is_some_and(|row| row["scheduler"]["selection"]["unstarted_review"].is_object());
         let initial = row.is_some_and(|row| row["scheduler"]["selection"]["initial_review"].is_object());
-        let prepared = unstarted || initial
+        let prepared = unstarted || initial || row.is_some_and(|row|row["scheduler"]["selection"]["subwork_continuation"].is_object())
             || row.is_some_and(|row| row["scheduler"]["selection"]["quota_recovery"].is_object());
         Ok(if prepared {
             self.review_recovery_inventory(unstarted,initial)
@@ -252,6 +257,11 @@ impl Context {
         job: &mut Value,
         inventory: &Value,
     ) -> Result<()> {
+        if job["subwork_continuation"].is_object() {
+            self.verify_subwork_continuation(row,job,inventory)?;
+            job["review_source_verified"]=json!(false);
+            return self.validate_review_launch(job,true);
+        }
         if job["initial_review"].is_object() {
             self.verify_initial_review(row,job,inventory)?;
             job["review_source_verified"]=json!(false);

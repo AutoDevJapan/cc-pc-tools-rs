@@ -228,7 +228,7 @@ func validateExpandedSixmileIndex(current, snapshot sixmileCohortIndex, old lega
 				// scoped notice, review, discovery and use receipt supplies this
 				// exact current decision, never all equal-body siblings.
 				a, ok := accepted[e.ID]
-				if !ok || a != r || r.Source != e.Source || r.Commit != e.Commit || r.Path != e.Path || r.SHA != e.SHA || r.Disposition != "installed_new_adaptation" {
+				if !ok || a != r || r.Source != e.Source || r.Commit != e.Commit || r.Path != e.Path || r.SHA != e.SHA || (r.Disposition != "installed_new_adaptation" && r.Disposition != "integrated_existing") {
 					return errors.New("expanded sixmile index: immutable received reading lacks a current final acceptance")
 				}
 				known[e.ID] = extra45Entry{ID: e.ID, Commit: e.Commit, Path: e.Path, SHA: e.SHA}
@@ -237,13 +237,15 @@ func validateExpandedSixmileIndex(current, snapshot sixmileCohortIndex, old lega
 		}
 	}
 	// A later actual placement may come from a separately received primary
-	// cohort. Its independent full-review/Create/current-buffer/discovery/use
-	// acceptance is required; never rewrite the historic reading index.
+	// cohort, or an exact individually licensed alias may reuse that target.
+	// Each accepted row comes from its independently validated current placement
+	// or reuse receipt. A disposition string alone supplies no acceptance.
+	// Never rewrite the historic reading index.
 	for id, r := range accepted {
 		if _, exists := known[id]; exists || r.Source != "6mile/skills" {
 			continue
 		}
-		if id != r.ID || paths[r.Path] || r.Disposition != "installed_new_adaptation" || r.Commit != current.Commit || r.Path == "" || r.SHA == "" {
+		if id != r.ID || paths[r.Path] || (r.Disposition != "installed_new_adaptation" && r.Disposition != "integrated_existing") || r.Commit != current.Commit || r.Path == "" || r.SHA == "" {
 			return errors.New("expanded sixmile index: separate current acceptance identity differs")
 		}
 		known[id] = extra45Entry{ID: id, Commit: r.Commit, Path: r.Path, SHA: r.SHA}
@@ -302,7 +304,7 @@ func validateExpandedSixmileIndex(current, snapshot sixmileCohortIndex, old lega
 }
 
 func TestExpandedSixmileIndexAddsNewCohortAndReadingAmendmentExactlyOnce(t *testing.T) {
-	for _, name := range []string{"valid", "synthetic_future_parent_adoption", "missing_parent_cohort", "cross_cohort_identity", "unknown_live_row", "repeated_live_row", "parent_final_without_row", "parent_unknown_disposition", "comparison_row_missing", "comparison_became_adoption", "duplicate_amendment", "amendment_forged_actor", "amendment_rewrites_history", "amendment_wrong_identity", "omitted_amendment", "double_amendment", "received_without_current_acceptance", "received_wrong_acceptance_identity"} {
+	for _, name := range []string{"valid", "synthetic_future_parent_adoption", "missing_parent_cohort", "cross_cohort_identity", "unknown_live_row", "repeated_live_row", "parent_final_without_row", "parent_unknown_disposition", "comparison_row_missing", "comparison_became_adoption", "duplicate_amendment", "amendment_forged_actor", "amendment_rewrites_history", "amendment_wrong_identity", "omitted_amendment", "double_amendment", "received_without_current_acceptance", "received_wrong_acceptance_identity", "separate_alias_unknown_disposition"} {
 		t.Run(name, func(t *testing.T) {
 			var current sixmileCohortIndex
 			snapshot := loadThreeCohortSnapshot(t)
@@ -430,6 +432,48 @@ func TestExpandedSixmileIndexAddsNewCohortAndReadingAmendmentExactlyOnce(t *test
 				}
 				accepted[id] = row
 			}
+			for id, row := range validatedNext3Dispositions(t) {
+				if _, duplicate := accepted[id]; duplicate {
+					t.Fatal("separate current next3 acceptances overlap")
+				}
+				accepted[id] = row
+			}
+			for id, row := range validatedNoticeNext4Dispositions(t) {
+				if _, duplicate := accepted[id]; duplicate {
+					t.Fatal("separate current notice4 acceptances overlap")
+				}
+				accepted[id] = row
+			}
+			for id, row := range validatedNextFourDispositions(t) {
+				if accepted[id].ID != "" {
+					t.Fatal("new current4 source repeats an already accepted purpose")
+				}
+				accepted[id] = row
+			}
+			for id, row := range validatedRentalDispositions(t) {
+				if accepted[id].ID != "" {
+					t.Fatal("rental source already has a current acceptance")
+				}
+				accepted[id] = row
+			}
+			for id, row := range validatedRecoveryDispositions(t) {
+				if accepted[id].ID != "" {
+					t.Fatal("recovery source already has a current acceptance")
+				}
+				accepted[id] = row
+			}
+			for id, row := range validatedConsolidationDispositions(t) {
+				if accepted[id].ID != "" {
+					t.Fatal("consolidation/art source already has a current acceptance")
+				}
+				accepted[id] = row
+			}
+			for id, row := range validatedWebClawAlias247Disposition(t) {
+				if accepted[id].ID != "" {
+					t.Fatal("same primary/notice alias was already accepted")
+				}
+				accepted[id] = row
+			}
 			switch name {
 			case "received_without_current_acceptance":
 				accepted = nil
@@ -440,6 +484,12 @@ func TestExpandedSixmileIndexAddsNewCohortAndReadingAmendmentExactlyOnce(t *test
 					accepted[id] = r
 				}
 				want = "expanded sixmile index: immutable received reading lacks a current final acceptance"
+			case "separate_alias_unknown_disposition":
+				id := "github:c0c5815afe581e7819cfd6429bbb519fa9b8638c067148e781228118b839c8c9"
+				r := accepted[id]
+				r.Disposition = "excluded"
+				accepted[id] = r
+				want = "expanded sixmile index: separate current acceptance identity differs"
 			}
 			err := validateExpandedSixmileIndex(current, snapshot, old, extra, next20, parent, next75, amendment, comparison, rows, received, accepted)
 			if want == "" {

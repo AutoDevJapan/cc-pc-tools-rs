@@ -1,0 +1,168 @@
+{
+  "commit": "80c7abee474bd414a606356c627a5841c124ffaa",
+  "total_count": 16,
+  "selected_metadata": [
+    {
+      "name": "CodeQL",
+      "id": 122985409827,
+      "head_sha": "80c7abee474bd414a606356c627a5841c124ffaa",
+      "app_id": 57789,
+      "app_slug": "github-advanced-security",
+      "status": "completed",
+      "conclusion": "success",
+      "details_url": "https://github.com/AutoDevJapan/cc-pc-tools-rs/runs/122985409827"
+    },
+    {
+      "name": "go (Linux, tools/linux-runner-bridge)",
+      "id": 122985356370,
+      "head_sha": "80c7abee474bd414a606356c627a5841c124ffaa",
+      "app_id": 15368,
+      "app_slug": "github-actions",
+      "status": "completed",
+      "conclusion": "success",
+      "details_url": "https://github.com/AutoDevJapan/cc-pc-tools-rs/actions/runs/40736041389/job/122985356370"
+    },
+    {
+      "name": "go (Windows, unattended-runner)",
+      "id": 122985356360,
+      "head_sha": "80c7abee474bd414a606356c627a5841c124ffaa",
+      "app_id": 15368,
+      "app_slug": "github-actions",
+      "status": "completed",
+      "conclusion": "success",
+      "details_url": "https://github.com/AutoDevJapan/cc-pc-tools-rs/actions/runs/40736041389/job/122985356360"
+    },
+    {
+      "name": "go (Windows, resident-guard)",
+      "id": 122985356231,
+      "head_sha": "80c7abee474bd414a606356c627a5841c124ffaa",
+      "app_id": 15368,
+      "app_slug": "github-actions",
+      "status": "completed",
+      "conclusion": "success",
+      "details_url": "https://github.com/AutoDevJapan/cc-pc-tools-rs/actions/runs/40736041389/job/122985356231"
+    },
+    {
+      "name": "go (Linux, resident-guard)",
+      "id": 122985356202,
+      "head_sha": "80c7abee474bd414a606356c627a5841c124ffaa",
+      "app_id": 15368,
+      "app_slug": "github-actions",
+      "status": "completed",
+      "conclusion": "success",
+      "details_url": "https://github.com/AutoDevJapan/cc-pc-tools-rs/actions/runs/40736041389/job/122985356202"
+    },
+    {
+      "name": "go (Windows, tools/linux-runner-bridge)",
+      "id": 122985356197,
+      "head_sha": "80c7abee474bd414a606356c627a5841c124ffaa",
+      "app_id": 15368,
+      "app_slug": "github-actions",
+      "status": "completed",
+      "conclusion": "success",
+      "details_url": "https://github.com/AutoDevJapan/cc-pc-tools-rs/actions/runs/40736041389/job/122985356197"
+    },
+    {
+      "name": "go (Linux, capacity-audit-3h)",
+      "id": 122985356054,
+      "head_sha": "80c7abee474bd414a606356c627a5841c124ffaa",
+      "app_id": 15368,
+      "app_slug": "github-actions",
+      "status": "completed",
+      "conclusion": "success",
+      "details_url": "https://github.com/AutoDevJapan/cc-pc-tools-rs/actions/runs/40736041389/job/122985356054"
+    },
+    {
+      "name": "go (Windows, capacity-audit-3h)",
+      "id": 122985356050,
+      "head_sha": "80c7abee474bd414a606356c627a5841c124ffaa",
+      "app_id": 15368,
+      "app_slug": "github-actions",
+      "status": "completed",
+      "conclusion": "success",
+      "details_url": "https://github.com/AutoDevJapan/cc-pc-tools-rs/actions/runs/40736041389/job/122985356050"
+    },
+    {
+      "name": "go (Linux, unattended-runner)",
+      "id": 122985355941,
+      "head_sha": "80c7abee474bd414a606356c627a5841c124ffaa",
+      "app_id": 15368,
+      "app_slug": "github-actions",
+      "status": "completed",
+      "conclusion": "success",
+      "details_url": "https://github.com/AutoDevJapan/cc-pc-tools-rs/actions/runs/40736041389/job/122985355941"
+    },
+    {
+      "name": "repair-guard",
+      "id": 122985355756,
+      "head_sha": "80c7abee474bd414a606356c627a5841c124ffaa",
+      "app_id": 15368,
+      "app_slug": "github-actions",
+      "status": "completed",
+      "conclusion": "success",
+      "details_url": "https://github.com/AutoDevJapan/cc-pc-tools-rs/actions/runs/40736041389/job/122985355756"
+    },
+    {
+      "name": "analyze (rust, none)",
+      "id": 122985057087,
+      "head_sha": "80c7abee474bd414a606356c627a5841c124ffaa",
+      "app_id": 15368,
+      "app_slug": "github-actions",
+      "status": "completed",
+      "conclusion": "success",
+      "details_url": "https://github.com/AutoDevJapan/cc-pc-tools-rs/actions/runs/40736041372/job/122985057087"
+    },
+    {
+      "name": "analyze (javascript-typescript, none)",
+      "id": 122985056932,
+      "head_sha": "80c7abee474bd414a606356c627a5841c124ffaa",
+      "app_id": 15368,
+      "app_slug": "github-actions",
+      "status": "completed",
+      "conclusion": "success",
+      "details_url": "https://github.com/AutoDevJapan/cc-pc-tools-rs/actions/runs/40736041372/job/122985056932"
+    },
+    {
+      "name": "analyze (go, autobuild)",
+      "id": 122985056686,
+      "head_sha": "80c7abee474bd414a606356c627a5841c124ffaa",
+      "app_id": 15368,
+      "app_slug": "github-actions",
+      "status": "completed",
+      "conclusion": "success",
+      "details_url": "https://github.com/AutoDevJapan/cc-pc-tools-rs/actions/runs/40736041372/job/122985056686"
+    },
+    {
+      "name": "analyze (actions, none)",
+      "id": 122985056221,
+      "head_sha": "80c7abee474bd414a606356c627a5841c124ffaa",
+      "app_id": 15368,
+      "app_slug": "github-actions",
+      "status": "completed",
+      "conclusion": "success",
+      "details_url": "https://github.com/AutoDevJapan/cc-pc-tools-rs/actions/runs/40736041372/job/122985056221"
+    },
+    {
+      "name": "Cursor Bugbot",
+      "id": 122984832293,
+      "head_sha": "80c7abee474bd414a606356c627a5841c124ffaa",
+      "app_id": 1210556,
+      "app_slug": "cursor",
+      "status": "completed",
+      "conclusion": "neutral",
+      "details_url": "https://cursor.com/docs/bugbot"
+    },
+    {
+      "name": "documentation",
+      "id": 122984744983,
+      "head_sha": "80c7abee474bd414a606356c627a5841c124ffaa",
+      "app_id": 15368,
+      "app_slug": "github-actions",
+      "status": "completed",
+      "conclusion": "success",
+      "details_url": "https://github.com/AutoDevJapan/cc-pc-tools-rs/actions/runs/40736041376/job/122984744983"
+    }
+  ],
+  "queried_before_candidate": true,
+  "candidate_generated": false
+}

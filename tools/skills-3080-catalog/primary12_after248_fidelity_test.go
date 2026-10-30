@@ -26,7 +26,7 @@ func validateNextTwelveAfter248(v map[string]any) error {
 }
 
 func TestPrimaryReceiptBindsExactPacketThroughAndActualNativeTurns(t *testing.T) {
-	for _, change := range []string{"valid", "swapped ACK", "ACK id", "ACK sha", "ACK through", "native consumer", "native contexts missing", "native contexts empty", "native turn model", "native turn effort"} {
+	for _, change := range []string{"valid", "swapped ACK", "ACK id", "ACK sha", "ACK through", "ACK cohort", "ACK plan", "ACK parent origin", "meaning packet id", "meaning packet sha", "meaning first", "meaning through", "meaning parent", "meaning parent missing", "native consumer", "native contexts missing", "native contexts empty", "native turn model", "native turn effort", "native time malformed", "native time before", "native time after", "native window reversed"} {
 		t.Run(change, func(t *testing.T) {
 			var v map[string]any
 			loadPublicReceipt(t, "skills-3080-primaryflow-next12-after248-evaluation095653.json", &v)
@@ -34,6 +34,7 @@ func TestPrimaryReceiptBindsExactPacketThroughAndActualNativeTurns(t *testing.T)
 			c := next4Object(contexts["acd485712541b8678fb65e0c55976d552f13f90f34e85ae78004f1c26e3116cc"])
 			ack := next4Object(c["independent_parent_ack"])
 			native := next4Object(c["independent_native_metadata"])
+			meaning := next4Object(c["independent_parent_meaning"])
 			switch change {
 			case "swapped ACK":
 				c["independent_parent_ack"] = next4Object(contexts["06c5bf148ae735bb698723ceb7dd7fe8d7f9d3624043f7ac193c573a26f06d39"])["independent_parent_ack"]
@@ -43,6 +44,24 @@ func TestPrimaryReceiptBindsExactPacketThroughAndActualNativeTurns(t *testing.T)
 				ack["packet_sha256"] = "wrong"
 			case "ACK through":
 				ack["acknowledged_through"] = float64(134)
+			case "ACK cohort":
+				ack["cohort"] = float64(0)
+			case "ACK plan":
+				ack["plan_sha256"] = "other-plan"
+			case "ACK parent origin":
+				ack["parent_origin_job"] = "other-origin"
+			case "meaning packet id":
+				meaning["packet_id"] = "other-packet"
+			case "meaning packet sha":
+				meaning["packet_sha256"] = "other-sha"
+			case "meaning first":
+				meaning["first"] = float64(129)
+			case "meaning through":
+				meaning["through"] = float64(134)
+			case "meaning parent":
+				meaning["actual_reader_launch_parent"] = "20261029-170905-todo-3080"
+			case "meaning parent missing":
+				delete(meaning, "actual_reader_launch_parent")
 			case "native consumer":
 				native["actual_consumer_job"] = "20261029-170905-todo-3080"
 			case "native contexts missing":
@@ -53,6 +72,15 @@ func TestPrimaryReceiptBindsExactPacketThroughAndActualNativeTurns(t *testing.T)
 				next4Object(native["native_turn_contexts"].([]any)[0])["model"] = "gpt-6-luna"
 			case "native turn effort":
 				next4Object(native["native_turn_contexts"].([]any)[0])["effort"] = "low"
+			case "native time malformed":
+				next4Object(native["native_turn_contexts"].([]any)[0])["timestamp"] = "not-a-time"
+			case "native time before":
+				next4Object(native["native_turn_contexts"].([]any)[0])["timestamp"] = "2020-01-01T00:00:00Z"
+			case "native time after":
+				next4Object(native["native_turn_contexts"].([]any)[0])["timestamp"] = "2099-01-01T00:00:00Z"
+			case "native window reversed":
+				native["strict_window_start"] = native["strict_window_observed_end"]
+				native["strict_window_observed_end"] = "2020-01-01T00:00:00Z"
 			}
 			err := validateNextTwelveAfter248(v)
 			if (err == nil) != (change == "valid") {

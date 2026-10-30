@@ -199,6 +199,12 @@ func validateResumedVisibleSnapshot(v map[string]any, semanticCount, heldCount, 
 		if !present || (parent == "" && observed != nil) || (parent != "" && observed != parent) {
 			return fmt.Errorf("actual parent null/missing/empty/retained origin conflated")
 		}
+		meaningParent, meaningParentPresent := meaning["actual_reader_launch_parent"]
+		if meaningParentPresent && meaningParent != observed || reader == "20261030-033405-todo-4134" && !meaningParentPresent {
+			return fmt.Errorf("parent meaning and actual native launch parent observations differ")
+		}
+		// Older consumers did not record this observation. Keep it absent,
+		// rather than inventing a parent value for their historical meaning.
 		members := next4Object(c["member_metadata"])
 		if len(members) != len(originals) {
 			return fmt.Errorf("original member groups omitted")

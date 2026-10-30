@@ -1,0 +1,31 @@
+{
+  "domain": "skills3080-native-resume-reproduction-v1",
+  "source_head": "cfe6d3e16101910ff79a55fa6e7def7b6d1acbf5",
+  "manifest_sha256": "2d56531652603394f7ff0283712e149f13f8a3acde450bc63fc15c9c7ed8dc84",
+  "installed_verifier_sha256": "7fb45b8a411ca2e1dd64a034b94c51ce5ca51324ad7c0c4b778eecb9f4538d36",
+  "normal_result_reason": "native_context",
+  "initial_registration_error_preserved": "Earlier review reuse had a different immutable origin and typed author; its result_binding was correct. Proper fresh registrations retain the actual author as their immutable origin.",
+  "author": {
+    "session_resumed": true,
+    "initial_bootstrap_bytes": 37039,
+    "initial_bootstrap_sha256": "0d118d7819ec5ff91766ca45cc15b4fb62ccee3f6ccb776ce7f8eac4966e67fc",
+    "native_larger_than_initial_bootstrap_prefix_bound": true,
+    "current_job_window_bootstrap_messages": 0,
+    "current_job_window_normal_task_inputs": 1
+  },
+  "fresh_completed_review": {
+    "bootstrap_bytes": 37915,
+    "bootstrap_sha256": "193f734527350162399c4a111924aa83f4ea40049444815a93139ccdee730f3b",
+    "actual_model_matches_requested": true,
+    "actual_effort_is_max": true,
+    "session_and_cwd_match": true,
+    "deny_write_native_open_succeeded": true,
+    "same_author_as_immutable_registration": true
+  },
+  "entire_old_body_is_new_body_suffix": false,
+  "other_verification_stages_not_yet_excluded": true,
+  "original_final_read_through_alternate_path": false,
+  "new_skill_placements": 0,
+  "new_grants_or_final_dispositions": 0,
+  "original_registry_recovered": false
+}

@@ -98,6 +98,11 @@ const official3894CanonicalAssignmentPredecessorHead = "a71330f543969b4585f01b73
 const official3894CreationPathPredecessorSHA = "eab69e4fc8e52f2ad6858ef4e8498e8cc6030ac8ce7f788251a1aae476dc5d55"
 const official3894CreationPathPredecessorHead = "034520d84d52f76dcd7dc7ef371910d6acd8ae9f"
 
+// Prior normal PR627 deployment, independently observed before this candidate.
+// docs/evidence/skills-3080-guard-before-runtime-bootstrap.json
+const official3894BootstrapPredecessorSHA = "7fb45b8a411ca2e1dd64a034b94c51ce5ca51324ad7c0c4b778eecb9f4538d36"
+const official3894BootstrapPredecessorHead = "b78007695a7c5d73eb1f11118757e93918aa3234"
+
 type official3894Source struct {
 	Head, Registration, CreatorJob, Workspace, Branch, SpecSHA string
 }
@@ -967,7 +972,8 @@ func official3894InstalledBaseline(sha, head string) bool {
 		(sha == official3894NoticePredecessorSHA && head == official3894NoticePredecessorHead) ||
 		(sha == official3894AliasPredecessorSHA && head == official3894AliasPredecessorHead) ||
 		(sha == official3894CanonicalAssignmentPredecessorSHA && head == official3894CanonicalAssignmentPredecessorHead) ||
-		(sha == official3894CreationPathPredecessorSHA && head == official3894CreationPathPredecessorHead)
+		(sha == official3894CreationPathPredecessorSHA && head == official3894CreationPathPredecessorHead) ||
+		(sha == official3894BootstrapPredecessorSHA && head == official3894BootstrapPredecessorHead)
 }
 
 // Qualifies only comparison of the known previously published guard software.

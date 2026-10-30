@@ -7,16 +7,144 @@ import (
 	"testing"
 )
 
+func TestSkills3080RuntimeFindsOnlyItsActualMergedPR(t *testing.T) {
+	for _, kind := range []string{"current", "historical", "other_head", "other_merge", "open", "unmerged", "other_base", "other_repo", "other_owner", "fork", "duplicate", "string_number", "string_repo", "nil", "missing"} {
+		t.Run(kind, func(t *testing.T) {
+			u := &skillsRuntimeRequest{SourceHead: strings.Repeat("b", 40), ReviewedHead: strings.Repeat("a", 40)}
+			pr := object{"number": json.Number("655"), "state": "closed", "merged_at": "2026-10-30T14:00:00Z", "merge_commit_sha": u.SourceHead, "head": object{"sha": u.ReviewedHead, "repo": object{"id": json.Number("1406818713")}}, "base": object{"ref": "main", "repo": object{"id": json.Number("1406818713"), "full_name": "AutoDevJapan/cc-pc-tools-rs"}}}
+			pulls := []any{pr}
+			switch kind {
+			case "historical":
+				pr["number"] = json.Number("627")
+			case "other_head":
+				obj(pr["head"])["sha"] = strings.Repeat("c", 40)
+			case "other_merge":
+				pr["merge_commit_sha"] = strings.Repeat("c", 40)
+			case "open":
+				pr["state"] = "open"
+			case "unmerged":
+				pr["merged_at"] = nil
+			case "other_base":
+				obj(pr["base"])["ref"] = "other"
+			case "other_repo":
+				obj(obj(pr["base"])["repo"])["id"] = json.Number("1")
+			case "other_owner":
+				obj(obj(pr["base"])["repo"])["full_name"] = "other/cc-pc-tools-rs"
+			case "fork":
+				obj(obj(pr["head"])["repo"])["id"] = json.Number("1")
+			case "duplicate":
+				pulls = append(pulls, pr)
+			case "string_number":
+				pr["number"] = "655"
+			case "string_repo":
+				obj(obj(pr["base"])["repo"])["id"] = "1406818713"
+			case "nil":
+				u = nil
+			case "missing":
+				pulls = nil
+			}
+			_, ok := skillsRuntimeAssociatedPR(pulls, u)
+			if ok != (kind == "current" || kind == "historical") {
+				t.Fatalf("PR binding %s accepted=%v", kind, ok)
+			}
+		})
+	}
+}
+
+func TestSkills3080BootstrapPredecessorIsTheSameInBothUpdaters(t *testing.T) {
+	sha, head := official3894BootstrapPredecessorSHA, official3894BootstrapPredecessorHead
+	if skillsGuardBaselines[sha] != head || !official3894InstalledBaseline(sha, head) {
+		t.Fatal("accepted predecessor missing")
+	}
+	if official3894InstalledBaseline(sha, strings.Repeat("a", 40)) || official3894InstalledBaseline(strings.Repeat("a", 64), head) {
+		t.Fatal("unknown predecessor admitted")
+	}
+}
+
 func skillsRuntimeCIFixture() (object, *skillsRuntimeRequest) {
 	u := &skillsRuntimeRequest{SourceHead: strings.Repeat("b", 40), ReviewedHead: strings.Repeat("a", 40)}
 	checks := []any{}
 	issuers := []any{}
+	workflows := object{}
 	for _, name := range []string{"documentation", "repair-guard", "analyze (actions, none)", "analyze (go, autobuild)", "analyze (javascript-typescript, none)", "analyze (rust, none)", "go (Windows, resident-guard)", "go (Windows, capacity-audit-3h)", "go (Windows, unattended-runner)", "go (Windows, tools/linux-runner-bridge)", "go (Linux, resident-guard)", "go (Linux, capacity-audit-3h)", "go (Linux, unattended-runner)", "go (Linux, tools/linux-runner-bridge)", "CodeQL", "Cursor Bugbot"} {
-		url := "https://github.com/AutoDevJapan/cc-pc-tools-rs/actions/runs/1/job/" + strconv.Itoa(len(checks)+1)
+		workflowID, path, required := skillsRuntimeWorkflowIdentity(name)
+		runID := "99"
+		if required {
+			switch path {
+			case ".github/workflows/skills-3048.yml":
+				runID = "1"
+			case ".github/workflows/unattended-readiness.yml":
+				runID = "2"
+			default:
+				runID = "3"
+			}
+		}
+		jobID := strconv.Itoa(len(checks) + 1)
+		checkID := strconv.Itoa(1000 + len(checks) + 1)
+		url := "https://github.com/AutoDevJapan/cc-pc-tools-rs/actions/runs/" + runID + "/job/" + jobID
 		checks = append(checks, object{"name": name, "status": "COMPLETED", "conclusion": "SUCCESS", "detailsUrl": url})
-		issuers = append(issuers, object{"name": name, "status": "completed", "conclusion": "success", "head_sha": u.ReviewedHead, "details_url": url, "app": object{"id": json.Number("15368"), "slug": "github-actions"}})
+		issuers = append(issuers, object{"id": json.Number(checkID), "name": name, "status": "completed", "conclusion": "success", "head_sha": u.ReviewedHead, "details_url": url, "app": object{"id": json.Number("15368"), "slug": "github-actions"}})
+		if required {
+			if workflows[runID] == nil {
+				workflows[runID] = object{"run": object{"id": json.Number(runID), "workflow_id": workflowID, "path": path, "head_sha": u.ReviewedHead, "status": "completed", "conclusion": "success", "repository": object{"id": json.Number("1406818713")}}, "jobs": object{"total_count": json.Number("0"), "jobs": []any{}}}
+			}
+			listing := obj(obj(workflows[runID])["jobs"])
+			jobs := listing["jobs"].([]any)
+			jobs = append(jobs, object{"id": json.Number(jobID), "run_id": json.Number(runID), "name": name, "head_sha": u.ReviewedHead, "status": "completed", "conclusion": "success", "check_run_url": "https://api.github.com/repos/AutoDevJapan/cc-pc-tools-rs/check-runs/" + checkID})
+			listing["jobs"] = jobs
+			listing["total_count"] = json.Number(strconv.Itoa(len(jobs)))
+		}
 	}
-	return object{"state": "MERGED", "headRefOid": u.ReviewedHead, "mergeCommit": object{"oid": u.SourceHead}, "statusCheckRollup": checks, "ci_issuers": object{"total_count": json.Number(strconv.Itoa(len(issuers))), "check_runs": issuers}}, u
+	return object{"state": "MERGED", "headRefOid": u.ReviewedHead, "mergeCommit": object{"oid": u.SourceHead}, "statusCheckRollup": checks, "ci_issuers": object{"total_count": json.Number(strconv.Itoa(len(issuers))), "check_runs": issuers}, "ci_workflows": workflows}, u
+}
+
+func TestSkills3080RuntimeCIBindsTheWorkflowAndExactJob(t *testing.T) {
+	for _, kind := range []string{"valid", "missing", "different_workflow_id", "different_path", "other_head", "other_repo", "wrong_run", "job_missing", "wrong_job_run", "wrong_check_run", "wrong_name", "pending_job", "duplicate_job", "string_id", "count"} {
+		t.Run(kind, func(t *testing.T) {
+			pr, u := skillsRuntimeCIFixture()
+			proof := obj(pr["ci_workflows"])
+			entry := obj(proof["2"])
+			run := obj(entry["run"])
+			listing := obj(entry["jobs"])
+			jobs := listing["jobs"].([]any)
+			job := obj(jobs[0])
+			switch kind {
+			case "missing":
+				delete(pr, "ci_workflows")
+			case "different_workflow_id":
+				run["workflow_id"] = json.Number("1")
+			case "different_path":
+				run["path"] = ".github/workflows/spoof.yml"
+			case "other_head":
+				run["head_sha"] = strings.Repeat("c", 40)
+			case "other_repo":
+				obj(run["repository"])["id"] = json.Number("1")
+			case "wrong_run":
+				run["id"] = json.Number("3")
+			case "job_missing":
+				listing["jobs"] = jobs[1:]
+				listing["total_count"] = json.Number(strconv.Itoa(len(jobs) - 1))
+			case "wrong_job_run":
+				job["run_id"] = json.Number("3")
+			case "wrong_check_run":
+				job["check_run_url"] = "https://api.github.com/repos/AutoDevJapan/cc-pc-tools-rs/check-runs/9"
+			case "wrong_name":
+				job["name"] = "other"
+			case "pending_job":
+				job["status"] = "in_progress"
+			case "duplicate_job":
+				listing["jobs"] = append(jobs, job)
+				listing["total_count"] = json.Number(strconv.Itoa(len(jobs) + 1))
+			case "string_id":
+				run["workflow_id"] = "382798887"
+			case "count":
+				listing["total_count"] = json.Number("99")
+			}
+			if got := skillsRuntimeCIBound(pr, u); got != (kind == "valid") {
+				t.Fatalf("workflow identity %s accepted=%v", kind, got)
+			}
+		})
+	}
 }
 
 func TestSkills3080RuntimeCIRequiresTheActualActionsIssuer(t *testing.T) {

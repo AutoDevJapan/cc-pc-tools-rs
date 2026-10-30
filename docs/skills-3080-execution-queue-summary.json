@@ -1,31 +1,32 @@
 {
   "state": "complete",
   "catalog_sha256": "2d73c9a038a41cc220a9687b935bfa1e0b315b65d9bd6d3e54ddb4111972876c",
-  "manifest_sha256": "e0d73c417c827733720fbfd9b2162ec1275db3aa19e24a71c94fe58ef053f0a9",
-  "queue_sha256": "114c98550258a77bc5a3ea01ca8ba044a040c7e0778e181499d10d16a1520006",
+  "manifest_sha256": "2834686b29d57245bcfecfbf31512e7f6b5685e3cf609568cf38440bbacaa561",
+  "queue_sha256": "dfdde5efdad9b3f4d34fa43e006d8ab5fe00e09f78b41278bb4f0c076124401d",
   "occurrences": 73220,
-  "occurrences_with_assessment_records": 1587,
-  "recorded_final_occurrences": 188,
-  "occurrences_with_assessment_and_final_records": 182,
+  "occurrences_with_assessment_records": 1647,
+  "recorded_final_occurrences": 194,
+  "occurrences_with_assessment_and_final_records": 188,
   "final_records_without_assessment_record": 6,
-  "occurrences_with_assessment_or_final_records": 1593,
+  "occurrences_with_assessment_or_final_records": 1653,
   "stages": {
-    "assessed_needs_current_disposition": 1405,
+    "assessed_needs_current_disposition": 1459,
     "held_body_unavailable": 428,
     "held_execution_review": 647,
-    "needs_semantic_and_individual_rights_review": 70552,
-    "recorded_final_disposition": 188
+    "needs_semantic_and_individual_rights_review": 70492,
+    "recorded_final_disposition": 194
   },
   "recorded_final_dispositions": {
     "excluded": 15,
     "installed_new_adaptation": 164,
-    "integrated_existing": 9
+    "integrated_existing": 15
   },
   "limits": [
     "An assessment reference is not a full raw read, licence grant, current adoption or completed acceptance; consult its recorded actor, scope and state.",
     "Equal body bytes do not transfer source ownership, individual permission or support-resource review.",
     "No source body or URL is opened, no model or worker is launched, no permission is changed and nothing is installed.",
     "The queue is complete only when its separate summary is complete and its recorded queue SHA256 matches the actual bytes.",
-    "Assessment records 1587 = assessed without final disposition 1405 + assessment/final intersection 182. Final records 188 include 6 final-only legacy records without assessment. The assessment/final union is 1593 occurrences; these categories are not additive independent totals."
+    "Explicit site identity interpretations retain original archive locations and unverified historical upstream claims separately from catalog occurrence Git fields; historical exclusion claims still require reconfirmation.",
+    "Assessment records 1647 = assessed without final disposition 1459 + assessment/final intersection 188. Final records 194 include 6 final-only legacy records without assessment. The assessment/final union is 1653 occurrences; these categories are not additive independent totals."
   ]
 }

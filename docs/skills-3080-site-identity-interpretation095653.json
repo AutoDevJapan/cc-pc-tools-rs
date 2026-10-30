@@ -1,0 +1,500 @@
+{
+  "actual_catalog_occurrences": [
+    {
+      "inventory_id": "site:find-skills",
+      "inventory_unit": "site_index_entry",
+      "repo": "",
+      "commit": "",
+      "path": "",
+      "sha256": "b77341cc0f76616e1a61bf336a4de87740b148ec6bd0e48b5d493761260711c6",
+      "machine_body_read": true,
+      "normalized_canonical_url": "https://agent-skills.jp/api/skill/find-skills/download",
+      "effective_attempt": {
+        "sha256": "b77341cc0f76616e1a61bf336a4de87740b148ec6bd0e48b5d493761260711c6",
+        "machine_body_read": true
+      }
+    },
+    {
+      "inventory_id": "site:rakuten-seo",
+      "inventory_unit": "site_index_entry",
+      "repo": "",
+      "commit": "",
+      "path": "",
+      "sha256": "614be4659e921758fa10a5ea4e5ecd6efb647b1daac22469d22d4e579e493d60",
+      "machine_body_read": true,
+      "normalized_canonical_url": "https://agent-skills.jp/api/skill/rakuten-seo/download",
+      "effective_attempt": {
+        "sha256": "614be4659e921758fa10a5ea4e5ecd6efb647b1daac22469d22d4e579e493d60",
+        "machine_body_read": true
+      }
+    },
+    {
+      "inventory_id": "site:amazon-seo-jp",
+      "inventory_unit": "site_index_entry",
+      "repo": "",
+      "commit": "",
+      "path": "",
+      "sha256": "95fb3e7844645879efdaeaf6dedf18cbc475259d3f52600a4c556f2bd5a7dea7",
+      "machine_body_read": true,
+      "normalized_canonical_url": "https://agent-skills.jp/api/skill/amazon-seo-jp/download",
+      "effective_attempt": {
+        "sha256": "95fb3e7844645879efdaeaf6dedf18cbc475259d3f52600a4c556f2bd5a7dea7",
+        "machine_body_read": true
+      }
+    },
+    {
+      "inventory_id": "site:rakuten-bulk-control-csv",
+      "inventory_unit": "site_index_entry",
+      "repo": "",
+      "commit": "",
+      "path": "",
+      "sha256": "0145904bc61a1fc5a4f3a903dd30b051a847be8d1f2648d36837fb7f522cccb2",
+      "machine_body_read": true,
+      "normalized_canonical_url": "https://agent-skills.jp/api/skill/rakuten-bulk-control-csv/download",
+      "effective_attempt": {
+        "sha256": "0145904bc61a1fc5a4f3a903dd30b051a847be8d1f2648d36837fb7f522cccb2",
+        "machine_body_read": true
+      }
+    },
+    {
+      "inventory_id": "site:amazon-a-plus-content-brief",
+      "inventory_unit": "site_index_entry",
+      "repo": "",
+      "commit": "",
+      "path": "",
+      "sha256": "14e4307b089d11e9187d39f7ff15aad14047a596223971492222d668425bc3b4",
+      "machine_body_read": true,
+      "normalized_canonical_url": "https://agent-skills.jp/api/skill/amazon-a-plus-content-brief/download",
+      "effective_attempt": {
+        "sha256": "14e4307b089d11e9187d39f7ff15aad14047a596223971492222d668425bc3b4",
+        "machine_body_read": true
+      }
+    },
+    {
+      "inventory_id": "site:amazon-brand-store-planner",
+      "inventory_unit": "site_index_entry",
+      "repo": "",
+      "commit": "",
+      "path": "",
+      "sha256": "7ff3654cbee657b2d0c98d324eb22f07f6f74c8e88e6087573a9c3795d49e880",
+      "machine_body_read": true,
+      "normalized_canonical_url": "https://agent-skills.jp/api/skill/amazon-brand-store-planner/download",
+      "effective_attempt": {
+        "sha256": "7ff3654cbee657b2d0c98d324eb22f07f6f74c8e88e6087573a9c3795d49e880",
+        "machine_body_read": true
+      }
+    },
+    {
+      "inventory_id": "site:amazon-bullet-attribute-benefit",
+      "inventory_unit": "site_index_entry",
+      "repo": "",
+      "commit": "",
+      "path": "",
+      "sha256": "09ea36fe3eb263040fa8c27c42427fe57a77f23aa4f9663f08002ad9e6b936d4",
+      "machine_body_read": true,
+      "normalized_canonical_url": "https://agent-skills.jp/api/skill/amazon-bullet-attribute-benefit/download",
+      "effective_attempt": {
+        "sha256": "09ea36fe3eb263040fa8c27c42427fe57a77f23aa4f9663f08002ad9e6b936d4",
+        "machine_body_read": true
+      }
+    },
+    {
+      "inventory_id": "site:amazon-catalog-conflict-ticket-builder",
+      "inventory_unit": "site_index_entry",
+      "repo": "",
+      "commit": "",
+      "path": "",
+      "sha256": "5ca54cb23781881486dff1260e3981a9ee2ebae52dfc7331504ebd7c3a788310",
+      "machine_body_read": true,
+      "normalized_canonical_url": "https://agent-skills.jp/api/skill/amazon-catalog-conflict-ticket-builder/download",
+      "effective_attempt": {
+        "sha256": "5ca54cb23781881486dff1260e3981a9ee2ebae52dfc7331504ebd7c3a788310",
+        "machine_body_read": true
+      }
+    },
+    {
+      "inventory_id": "site:mcp-builder-6a45e1",
+      "inventory_unit": "site_index_entry",
+      "repo": "",
+      "commit": "",
+      "path": "",
+      "sha256": "0f4592dcb53cf2b5d6b7febee6b4152018b565551a1c29e3c612f57b218ab295",
+      "machine_body_read": true,
+      "normalized_canonical_url": "https://raw.githubusercontent.com/anthropics/skills/dbd4588f9e1033efb41dad4bef2f7947c8993d44/skills/mcp-builder/SKILL.md",
+      "effective_attempt": {
+        "sha256": "0f4592dcb53cf2b5d6b7febee6b4152018b565551a1c29e3c612f57b218ab295",
+        "machine_body_read": true
+      }
+    },
+    {
+      "inventory_id": "site:triage",
+      "inventory_unit": "site_index_entry",
+      "repo": "",
+      "commit": "",
+      "path": "",
+      "sha256": "917b0baf74be583e74f110857ed45df2766617f75c00baf61fd136d7af515edf",
+      "machine_body_read": true,
+      "normalized_canonical_url": "https://raw.githubusercontent.com/mattpocock/skills/5beb35b040e3de97e54fa9e386d7e42d15c295c2/skills/engineering/triage/SKILL.md",
+      "effective_attempt": {
+        "sha256": "917b0baf74be583e74f110857ed45df2766617f75c00baf61fd136d7af515edf",
+        "machine_body_read": true
+      }
+    },
+    {
+      "inventory_id": "site:obsidian-cli-d54e74",
+      "inventory_unit": "site_index_entry",
+      "repo": "",
+      "commit": "",
+      "path": "",
+      "sha256": "b54257cdc0e5d04488b35b0c797bfe427b24359f0848d3c73924dcacf8da6358",
+      "machine_body_read": true,
+      "normalized_canonical_url": "https://raw.githubusercontent.com/kepano/obsidian-skills/3ccff5338ea700537839b21900aa5358a0402c98/skills/obsidian-cli/SKILL.md",
+      "effective_attempt": {
+        "sha256": "b54257cdc0e5d04488b35b0c797bfe427b24359f0848d3c73924dcacf8da6358",
+        "machine_body_read": true
+      }
+    },
+    {
+      "inventory_id": "site:setup-pre-commit",
+      "inventory_unit": "site_index_entry",
+      "repo": "",
+      "commit": "",
+      "path": "",
+      "sha256": "c9819d7f1e3b198064edc1faa3154224ed67395e9f07f5d3cea4b67cf0a11a98",
+      "machine_body_read": true,
+      "normalized_canonical_url": "https://raw.githubusercontent.com/mattpocock/skills/5beb35b040e3de97e54fa9e386d7e42d15c295c2/skills/misc/setup-pre-commit/SKILL.md",
+      "effective_attempt": {
+        "sha256": "c9819d7f1e3b198064edc1faa3154224ed67395e9f07f5d3cea4b67cf0a11a98",
+        "machine_body_read": true
+      }
+    },
+    {
+      "inventory_id": "site:scaffold-exercises",
+      "inventory_unit": "site_index_entry",
+      "repo": "",
+      "commit": "",
+      "path": "",
+      "sha256": "75f5c9d771606fb9762f16522efc954df11c324f87148d8ff069bce166257de9",
+      "machine_body_read": true,
+      "normalized_canonical_url": "https://raw.githubusercontent.com/mattpocock/skills/5beb35b040e3de97e54fa9e386d7e42d15c295c2/skills/misc/scaffold-exercises/SKILL.md",
+      "effective_attempt": {
+        "sha256": "75f5c9d771606fb9762f16522efc954df11c324f87148d8ff069bce166257de9",
+        "machine_body_read": true
+      }
+    },
+    {
+      "inventory_id": "site:migrate-to-shoehorn-d43a0b",
+      "inventory_unit": "site_index_entry",
+      "repo": "",
+      "commit": "",
+      "path": "",
+      "sha256": "de4da4c11d924fac79c924b2ee3d2db4a5cb98386eb490a599119463d036ae72",
+      "machine_body_read": true,
+      "normalized_canonical_url": "https://raw.githubusercontent.com/mattpocock/skills/5beb35b040e3de97e54fa9e386d7e42d15c295c2/skills/misc/migrate-to-shoehorn/SKILL.md",
+      "effective_attempt": {
+        "sha256": "de4da4c11d924fac79c924b2ee3d2db4a5cb98386eb490a599119463d036ae72",
+        "machine_body_read": true
+      }
+    }
+  ],
+  "all73220_actual_catalog_rows_verified": true,
+  "assessment_artifact_interpretations": [
+    {
+      "file": "skills-3080-mcp-site-duplicate-evidence090101.json",
+      "rows": 1,
+      "sha256": "fe4547ae7954867716800ec6d8308d400a1be326ae4749d03d02a4227ab3defa",
+      "site_occurrence_bindings": [
+        {
+          "catalog_occurrence_git_fields": {
+            "commit": "",
+            "path": "",
+            "repo": ""
+          },
+          "inventory_id": "site:mcp-builder-6a45e1",
+          "inventory_unit": "site_index_entry",
+          "one_based_row": 1,
+          "recorded_git_fields": {
+            "commit": "dbd4588f9e1033efb41dad4bef2f7947c8993d44",
+            "path": "skills/mcp-builder/SKILL.md",
+            "repo": "anthropics/skills"
+          },
+          "recorded_identity_role": "legacy_upstream_source_claim_unverified",
+          "source_sha256": "0f4592dcb53cf2b5d6b7febee6b4152018b565551a1c29e3c612f57b218ab295"
+        }
+      ]
+    },
+    {
+      "file": "skills-3080-source9-first4-visible-evaluation175645.json",
+      "rows": 4,
+      "sha256": "645df498826e6b38814f2e30ea322097400121df7b22b19b9ae299718c3c670f",
+      "site_occurrence_bindings": [
+        {
+          "catalog_occurrence_git_fields": {
+            "commit": "",
+            "path": "",
+            "repo": ""
+          },
+          "inventory_id": "site:find-skills",
+          "inventory_unit": "site_index_entry",
+          "one_based_row": 1,
+          "recorded_git_fields": {
+            "commit": "",
+            "path": "site/objects/b77341cc0f76616e1a61bf336a4de87740b148ec6bd0e48b5d493761260711c6.gz",
+            "repo": ""
+          },
+          "recorded_identity_role": "saved_archive_location_not_upstream_git",
+          "source_sha256": "b77341cc0f76616e1a61bf336a4de87740b148ec6bd0e48b5d493761260711c6"
+        },
+        {
+          "catalog_occurrence_git_fields": {
+            "commit": "",
+            "path": "",
+            "repo": ""
+          },
+          "inventory_id": "site:rakuten-seo",
+          "inventory_unit": "site_index_entry",
+          "one_based_row": 2,
+          "recorded_git_fields": {
+            "commit": "",
+            "path": "site/objects/614be4659e921758fa10a5ea4e5ecd6efb647b1daac22469d22d4e579e493d60.gz",
+            "repo": ""
+          },
+          "recorded_identity_role": "saved_archive_location_not_upstream_git",
+          "source_sha256": "614be4659e921758fa10a5ea4e5ecd6efb647b1daac22469d22d4e579e493d60"
+        },
+        {
+          "catalog_occurrence_git_fields": {
+            "commit": "",
+            "path": "",
+            "repo": ""
+          },
+          "inventory_id": "site:amazon-seo-jp",
+          "inventory_unit": "site_index_entry",
+          "one_based_row": 3,
+          "recorded_git_fields": {
+            "commit": "",
+            "path": "site/objects/95fb3e7844645879efdaeaf6dedf18cbc475259d3f52600a4c556f2bd5a7dea7.gz",
+            "repo": ""
+          },
+          "recorded_identity_role": "saved_archive_location_not_upstream_git",
+          "source_sha256": "95fb3e7844645879efdaeaf6dedf18cbc475259d3f52600a4c556f2bd5a7dea7"
+        },
+        {
+          "catalog_occurrence_git_fields": {
+            "commit": "",
+            "path": "",
+            "repo": ""
+          },
+          "inventory_id": "site:rakuten-bulk-control-csv",
+          "inventory_unit": "site_index_entry",
+          "one_based_row": 4,
+          "recorded_git_fields": {
+            "commit": "",
+            "path": "site/objects/0145904bc61a1fc5a4f3a903dd30b051a847be8d1f2648d36837fb7f522cccb2.gz",
+            "repo": ""
+          },
+          "recorded_identity_role": "saved_archive_location_not_upstream_git",
+          "source_sha256": "0145904bc61a1fc5a4f3a903dd30b051a847be8d1f2648d36837fb7f522cccb2"
+        }
+      ]
+    },
+    {
+      "file": "skills-3080-source9-next2-visible-evaluation175645.json",
+      "rows": 2,
+      "sha256": "8f9f22d4273a317acf5026dcfa791c9ad34695ad9fd84a544218d6e8545bb86a",
+      "site_occurrence_bindings": [
+        {
+          "catalog_occurrence_git_fields": {
+            "commit": "",
+            "path": "",
+            "repo": ""
+          },
+          "inventory_id": "site:amazon-a-plus-content-brief",
+          "inventory_unit": "site_index_entry",
+          "one_based_row": 1,
+          "recorded_git_fields": {
+            "commit": "",
+            "path": "site/objects/14e4307b089d11e9187d39f7ff15aad14047a596223971492222d668425bc3b4.gz",
+            "repo": ""
+          },
+          "recorded_identity_role": "saved_archive_location_not_upstream_git",
+          "source_sha256": "14e4307b089d11e9187d39f7ff15aad14047a596223971492222d668425bc3b4"
+        },
+        {
+          "catalog_occurrence_git_fields": {
+            "commit": "",
+            "path": "",
+            "repo": ""
+          },
+          "inventory_id": "site:amazon-brand-store-planner",
+          "inventory_unit": "site_index_entry",
+          "one_based_row": 2,
+          "recorded_git_fields": {
+            "commit": "",
+            "path": "site/objects/7ff3654cbee657b2d0c98d324eb22f07f6f74c8e88e6087573a9c3795d49e880.gz",
+            "repo": ""
+          },
+          "recorded_identity_role": "saved_archive_location_not_upstream_git",
+          "source_sha256": "7ff3654cbee657b2d0c98d324eb22f07f6f74c8e88e6087573a9c3795d49e880"
+        }
+      ]
+    },
+    {
+      "file": "skills-3080-source9-next2-7to8-visible-evaluation175645.json",
+      "rows": 2,
+      "sha256": "d5e2d1972f51d44fbd8b9ed32e50ec17a60f80fb13776de480c15ba357a4bcb3",
+      "site_occurrence_bindings": [
+        {
+          "catalog_occurrence_git_fields": {
+            "commit": "",
+            "path": "",
+            "repo": ""
+          },
+          "inventory_id": "site:amazon-bullet-attribute-benefit",
+          "inventory_unit": "site_index_entry",
+          "one_based_row": 1,
+          "recorded_git_fields": {
+            "commit": "",
+            "path": "site/objects/09ea36fe3eb263040fa8c27c42427fe57a77f23aa4f9663f08002ad9e6b936d4.gz",
+            "repo": ""
+          },
+          "recorded_identity_role": "saved_archive_location_not_upstream_git",
+          "source_sha256": "09ea36fe3eb263040fa8c27c42427fe57a77f23aa4f9663f08002ad9e6b936d4"
+        },
+        {
+          "catalog_occurrence_git_fields": {
+            "commit": "",
+            "path": "",
+            "repo": ""
+          },
+          "inventory_id": "site:amazon-catalog-conflict-ticket-builder",
+          "inventory_unit": "site_index_entry",
+          "one_based_row": 2,
+          "recorded_git_fields": {
+            "commit": "",
+            "path": "site/objects/5ca54cb23781881486dff1260e3981a9ee2ebae52dfc7331504ebd7c3a788310.gz",
+            "repo": ""
+          },
+          "recorded_identity_role": "saved_archive_location_not_upstream_git",
+          "source_sha256": "5ca54cb23781881486dff1260e3981a9ee2ebae52dfc7331504ebd7c3a788310"
+        }
+      ]
+    }
+  ],
+  "catalog_sha256": "2d73c9a038a41cc220a9687b935bfa1e0b315b65d9bd6d3e54ddb4111972876c",
+  "domain": "skills3080-site-occurrence-and-recorded-source-identity-v1",
+  "ledger_occurrence_interpretations": [
+    {
+      "catalog_occurrence_git_fields": {
+        "commit": "",
+        "path": "",
+        "repo": ""
+      },
+      "inventory_id": "site:obsidian-cli-d54e74",
+      "inventory_unit": "site_index_entry",
+      "one_based_row": 180,
+      "recorded_git_fields": {
+        "commit": "3ccff5338ea700537839b21900aa5358a0402c98",
+        "path": "skills/obsidian-cli/SKILL.md",
+        "repo": "kepano/obsidian-skills"
+      },
+      "recorded_identity_role": "legacy_upstream_source_claim_unverified",
+      "source_sha256": "b54257cdc0e5d04488b35b0c797bfe427b24359f0848d3c73924dcacf8da6358"
+    },
+    {
+      "catalog_occurrence_git_fields": {
+        "commit": "",
+        "path": "",
+        "repo": ""
+      },
+      "inventory_id": "site:triage",
+      "inventory_unit": "site_index_entry",
+      "one_based_row": 181,
+      "recorded_git_fields": {
+        "commit": "5beb35b040e3de97e54fa9e386d7e42d15c295c2",
+        "path": "skills/engineering/triage/SKILL.md",
+        "repo": "mattpocock/skills"
+      },
+      "recorded_identity_role": "legacy_upstream_source_claim_unverified",
+      "source_sha256": "917b0baf74be583e74f110857ed45df2766617f75c00baf61fd136d7af515edf"
+    },
+    {
+      "catalog_occurrence_git_fields": {
+        "commit": "",
+        "path": "",
+        "repo": ""
+      },
+      "inventory_id": "site:setup-pre-commit",
+      "inventory_unit": "site_index_entry",
+      "one_based_row": 184,
+      "recorded_git_fields": {
+        "commit": "5beb35b040e3de97e54fa9e386d7e42d15c295c2",
+        "path": "skills/misc/setup-pre-commit/SKILL.md",
+        "repo": "mattpocock/skills"
+      },
+      "recorded_identity_role": "legacy_upstream_source_claim_unverified",
+      "source_sha256": "c9819d7f1e3b198064edc1faa3154224ed67395e9f07f5d3cea4b67cf0a11a98"
+    },
+    {
+      "catalog_occurrence_git_fields": {
+        "commit": "",
+        "path": "",
+        "repo": ""
+      },
+      "inventory_id": "site:scaffold-exercises",
+      "inventory_unit": "site_index_entry",
+      "one_based_row": 185,
+      "recorded_git_fields": {
+        "commit": "5beb35b040e3de97e54fa9e386d7e42d15c295c2",
+        "path": "skills/misc/scaffold-exercises/SKILL.md",
+        "repo": "mattpocock/skills"
+      },
+      "recorded_identity_role": "legacy_upstream_source_claim_unverified",
+      "source_sha256": "75f5c9d771606fb9762f16522efc954df11c324f87148d8ff069bce166257de9"
+    },
+    {
+      "catalog_occurrence_git_fields": {
+        "commit": "",
+        "path": "",
+        "repo": ""
+      },
+      "inventory_id": "site:migrate-to-shoehorn-d43a0b",
+      "inventory_unit": "site_index_entry",
+      "one_based_row": 186,
+      "recorded_git_fields": {
+        "commit": "5beb35b040e3de97e54fa9e386d7e42d15c295c2",
+        "path": "skills/misc/migrate-to-shoehorn/SKILL.md",
+        "repo": "mattpocock/skills"
+      },
+      "recorded_identity_role": "legacy_upstream_source_claim_unverified",
+      "source_sha256": "de4da4c11d924fac79c924b2ee3d2db4a5cb98386eb490a599119463d036ae72"
+    },
+    {
+      "catalog_occurrence_git_fields": {
+        "commit": "",
+        "path": "",
+        "repo": ""
+      },
+      "inventory_id": "site:mcp-builder-6a45e1",
+      "inventory_unit": "site_index_entry",
+      "one_based_row": 194,
+      "recorded_git_fields": {
+        "commit": "dbd4588f9e1033efb41dad4bef2f7947c8993d44",
+        "path": "skills/mcp-builder/SKILL.md",
+        "repo": "anthropics/skills"
+      },
+      "recorded_identity_role": "legacy_upstream_source_claim_unverified",
+      "source_sha256": "0f4592dcb53cf2b5d6b7febee6b4152018b565551a1c29e3c612f57b218ab295"
+    }
+  ],
+  "new_semantic_reads_or_grants_or_dispositions": 0,
+  "old15_exclusions_reconfirmation_still_pending": true,
+  "original_assessment_or_ledger_bytes_changed": 0,
+  "original_head": "5567d390256ad4ba65c207e02a36ba09782a2a7d",
+  "original_ledger_sha256": "f2dddb6f978ef1b1690e54d12e855dac0df6e0b3ab40cfad2f572c8208ada4c7",
+  "original_manifest_sha256": "51a0eeb89ecc54e89c1c27479366fb436e615f68b9e1226d0c05efc13ef5d45e",
+  "publisher_job": "20261030-095653-todo-3080",
+  "todo": 3080,
+  "unverified_legacy_source_claims_not_validated_or_promoted": true,
+  "whole16_complete": false
+}

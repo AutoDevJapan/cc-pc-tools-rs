@@ -368,23 +368,27 @@ pub fn check_scope(db: &Value, id: i64, path: &Path) -> Result<()> {
         ],
     ) {
         let index = row_index(db, id)?;
-        let origin = row_index(db, 1171)?;
         let row = &db["items"][index];
-        let original = &db["items"][origin];
         let expected: Value = serde_json::from_slice(&snapshot_bytes(Path::new(text(
             &scope,
             "origin_state_file",
         )))?)
         .map_err(|_| "conversation_state_invalid")?;
+        let (origin_id, project) = match (id, expected["id"].as_i64()) {
+            (3277, Some(1171)) => (1171, "GitDo"),
+            (3350, Some(3264)) => (3264, "localai-web-rs"),
+            _ => return fail("scope_changed"),
+        };
+        let origin = row_index(db, origin_id)?;
+        let original = &db["items"][origin];
         if scope["domain"] != "discord-conversation-actor-todo-scope-v1"
-            || id != 3277
             || text(&scope, "todo_id") != id.to_string()
-            || scope["project"] != "GitDo"
+            || scope["project"] != project
             || row["project"] != scope["project"]
             || original["project"] != scope["project"]
             || *original != expected
             || text(&scope, "project_path_sha256")
-                != digest(db["projects"]["GitDo"].as_str().unwrap().as_bytes())
+                != digest(db["projects"][project].as_str().unwrap().as_bytes())
             || !hash(text(&scope, "actor_spec_sha256"))
             || !hash(text(&scope, "origin_spec_sha256"))
             || digest(&bytes(Path::new(text(row, "spec")))?) != text(&scope, "actor_spec_sha256")
@@ -394,6 +398,7 @@ pub fn check_scope(db: &Value, id: i64, path: &Path) -> Result<()> {
                 text(original, "status"),
                 "recovery_unverified" | "todo" | "doing" | "wait"
             )
+            || (origin_id == 3264 && original["status"] == "recovery_unverified")
         {
             return fail("scope_changed");
         }

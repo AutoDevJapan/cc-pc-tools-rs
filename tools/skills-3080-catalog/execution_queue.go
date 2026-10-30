@@ -10,6 +10,7 @@ import (
 	"io"
 	"os"
 	"path/filepath"
+	"regexp"
 	"strings"
 )
 
@@ -20,13 +21,29 @@ type ExecutionManifest struct {
 	Ledger     ExecutionArtifact   `json:"adoption_ledger"`
 }
 type ExecutionArtifact struct {
-	File string `json:"file"`
-	SHA  string `json:"sha256"`
-	Rows int    `json:"rows"`
+	File         string                 `json:"file"`
+	SHA          string                 `json:"sha256"`
+	Rows         int                    `json:"rows"`
+	SiteBindings []ExecutionSiteBinding `json:"site_occurrence_bindings,omitempty"`
+}
+type executionGitIdentity struct {
+	Repo   string `json:"repo"`
+	Commit string `json:"commit"`
+	Path   string `json:"path"`
+}
+type ExecutionSiteBinding struct {
+	Row        int                   `json:"one_based_row"`
+	ID         string                `json:"inventory_id"`
+	SHA        string                `json:"source_sha256"`
+	Unit       string                `json:"inventory_unit"`
+	Role       string                `json:"recorded_identity_role"`
+	Recorded   executionGitIdentity  `json:"recorded_git_fields"`
+	Occurrence *executionGitIdentity `json:"catalog_occurrence_git_fields"`
 }
 type ExecutionReference struct {
-	File string `json:"artifact"`
-	Row  int    `json:"one_based_row"`
+	File     string                `json:"artifact"`
+	Row      int                   `json:"one_based_row"`
+	Identity *ExecutionSiteBinding `json:"identity_interpretation,omitempty"`
 }
 type executionIdentity struct {
 	ID           string `json:"inventory_id"`
@@ -36,21 +53,103 @@ type executionIdentity struct {
 	SourceCommit string `json:"source_commit"`
 	SourcePath   string `json:"source_path"`
 	SourceRepo   string `json:"source_repo"`
+	Repo         string `json:"repo"`
+	Source       string `json:"source"`
 	Disposition  string `json:"disposition"`
+	PathKind     string `json:"path_kind"`
+	occurrence   *ExecutionSiteBinding
 }
 type ExecutionEvidence struct {
 	Assessments map[string]executionIdentity
 	References  map[string][]ExecutionReference
 	Decisions   map[string]executionIdentity
 }
+
+var executionRepositoryName = regexp.MustCompile(`^[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+$`)
+
+// Older assessment formats recorded the same per-row repository under repo or
+// source. Only an explicit repository-shaped source is an alias; a URL, label,
+// artifact name or catalog match is never used to invent missing provenance.
+func normalizeExecutionRepository(r *executionIdentity) error {
+	aliases := []string{r.Repo}
+	if executionRepositoryName.MatchString(r.Source) {
+		aliases = append(aliases, r.Source)
+	}
+	for _, repo := range aliases {
+		if repo == "" {
+			continue
+		}
+		if r.SourceRepo != "" && r.SourceRepo != repo {
+			return errors.New("conflicting repository fields in evidence row")
+		}
+		r.SourceRepo = repo
+	}
+	return nil
+}
+
 type ExecutionRow struct {
 	Record
-	Stage       string               `json:"execution_stage"`
-	Next        string               `json:"next_operation"`
-	References  []ExecutionReference `json:"assessment_evidence,omitempty"`
-	RelatedBody string               `json:"related_assessed_body_id,omitempty"`
-	Decision    string               `json:"recorded_final_disposition,omitempty"`
+	Stage         string                `json:"execution_stage"`
+	Next          string                `json:"next_operation"`
+	References    []ExecutionReference  `json:"assessment_evidence,omitempty"`
+	RelatedBody   string                `json:"related_assessed_body_id,omitempty"`
+	Decision      string                `json:"recorded_final_disposition,omitempty"`
+	FinalIdentity *ExecutionSiteBinding `json:"recorded_final_identity_interpretation,omitempty"`
 }
+
+func executionSiteBindings(pin ExecutionArtifact) (map[int]ExecutionSiteBinding, error) {
+	bindings := map[int]ExecutionSiteBinding{}
+	for _, b := range pin.SiteBindings {
+		if b.Row < 1 || b.Row > pin.Rows || bindings[b.Row].ID != "" || !strings.HasPrefix(b.ID, "site:") || !evidenceHex(b.SHA, 64) || b.Unit != "site_index_entry" || b.Occurrence == nil || *b.Occurrence != (executionGitIdentity{}) {
+			return nil, errors.New("invalid explicit site occurrence identity binding")
+		}
+		bindings[b.Row] = b
+	}
+	return bindings, nil
+}
+func bindExecutionSiteIdentity(r *executionIdentity, b ExecutionSiteBinding, final bool) error {
+	if b.ID != r.ID || b.SHA != r.SHA || b.Recorded != (executionGitIdentity{r.SourceRepo, r.Commit, r.Path}) {
+		return errors.New("site identity binding differs from the original pinned evidence row")
+	}
+	switch b.Role {
+	case "saved_archive_location_not_upstream_git":
+		if final || r.SourceRepo != "" || r.Commit != "" || r.PathKind != "fixed_saved_archive_relative_path_not_upstream_path" || r.Path != "site/objects/"+r.SHA+".gz" {
+			return errors.New("archive location was conflated with a Git source identity")
+		}
+	case "legacy_upstream_source_claim_unverified":
+		if !executionRepositoryName.MatchString(r.SourceRepo) || !evidenceHex(r.Commit, 40) || !evidencePath(r.Path) || final && r.Disposition != "excluded" {
+			return errors.New("unverified historical source claim cannot approve a new adoption")
+		}
+	default:
+		return errors.New("unknown historical site identity role")
+	}
+	copy := b
+	r.occurrence = &copy
+	return nil
+}
+func sameExecutionOccurrence(r Record, a executionIdentity) bool {
+	actual := executionGitIdentity{a.SourceRepo, a.Commit, a.Path}
+	if a.occurrence != nil {
+		if r.Unit != a.occurrence.Unit {
+			return false
+		}
+		actual = *a.occurrence.Occurrence
+	}
+	return !(strings.HasPrefix(r.ID, "site:") && r.Unit != "site_index_entry") && actual == (executionGitIdentity{r.Repo, r.Commit, r.Path})
+}
+func sameExecutionAssessmentIdentity(a, b executionIdentity) bool {
+	left, right := executionGitIdentity{a.SourceRepo, a.Commit, a.Path}, executionGitIdentity{b.SourceRepo, b.Commit, b.Path}
+	if a.occurrence != nil {
+		left = *a.occurrence.Occurrence
+	}
+	if b.occurrence != nil {
+		right = *b.occurrence.Occurrence
+	}
+	// Different saved locations or unverified historical source claims are
+	// retained per reference. They do not replace the occurrence's identity.
+	return a.SHA == b.SHA && left == right
+}
+
 type ExecutionSummary struct {
 	State              string         `json:"state"`
 	CatalogSHA         string         `json:"catalog_sha256"`
@@ -101,6 +200,10 @@ func loadExecutionEvidence(root string, m ExecutionManifest) (ExecutionEvidence,
 			return e, errors.New("repeated evidence artifact")
 		}
 		files[pin.File] = true
+		bindings, err := executionSiteBindings(pin)
+		if err != nil {
+			return e, err
+		}
 		raw, err := readExecutionArtifact(root, pin)
 		if err != nil {
 			return e, err
@@ -116,18 +219,39 @@ func loadExecutionEvidence(root string, m ExecutionManifest) (ExecutionEvidence,
 		}
 		own := map[string]bool{}
 		for row, r := range a.Entries {
-			if r.ID == "" || own[r.ID] || !evidenceHex(r.SHA, 64) || !evidencePath(r.Path) {
+			if r.ID == "" || own[r.ID] || !evidenceHex(r.SHA, 64) {
 				return e, errors.New("invalid assessment identity")
 			}
 			own[r.ID] = true
 			if r.Commit == "" {
 				r.Commit = r.SourceCommit
 			}
-			if prior, ok := e.Assessments[r.ID]; ok && (prior.SHA != r.SHA || prior.Path != r.Path || prior.Commit != r.Commit) {
+			if r.Path == "" {
+				r.Path = r.SourcePath
+			}
+			if r.SourcePath != "" && r.SourcePath != r.Path || r.SourceCommit != "" && r.SourceCommit != r.Commit {
+				return e, errors.New("conflicting original path or commit fields")
+			}
+			if err := normalizeExecutionRepository(&r); err != nil {
+				return e, err
+			}
+			// A site occurrence can retain its genuinely unknown Git tuple.
+			// Its resolved upstream is separate evidence, never a replacement
+			// for the site's missing repository, commit or path.
+			unknownSiteTuple := strings.HasPrefix(r.ID, "site:") && r.SourceRepo == "" && r.Commit == "" && r.Path == ""
+			if !unknownSiteTuple && !evidencePath(r.Path) {
+				return e, errors.New("invalid assessment path")
+			}
+			if b, ok := bindings[row+1]; ok {
+				if err := bindExecutionSiteIdentity(&r, b, false); err != nil {
+					return e, err
+				}
+			}
+			if prior, ok := e.Assessments[r.ID]; ok && !sameExecutionAssessmentIdentity(prior, r) {
 				return e, errors.New("conflicting assessment references")
 			}
 			e.Assessments[r.ID] = r
-			e.References[r.ID] = append(e.References[r.ID], ExecutionReference{pin.File, row + 1})
+			e.References[r.ID] = append(e.References[r.ID], ExecutionReference{File: pin.File, Row: row + 1, Identity: r.occurrence})
 		}
 	}
 	raw, err := readExecutionArtifact(root, m.Ledger)
@@ -142,15 +266,30 @@ func loadExecutionEvidence(root string, m ExecutionManifest) (ExecutionEvidence,
 		return e, err
 	}
 	rows := append(ledger.Entries, ledger.Excluded...)
+	bindings, err := executionSiteBindings(m.Ledger)
+	if err != nil {
+		return e, err
+	}
 	if len(rows) != m.Ledger.Rows {
 		return e, errors.New("ledger row count differs")
 	}
-	for _, r := range rows {
+	for row, r := range rows {
 		if r.Path == "" {
 			r.Path = r.SourcePath
 		}
 		if r.Commit == "" {
 			r.Commit = r.SourceCommit
+		}
+		if err := normalizeExecutionRepository(&r); err != nil {
+			return e, err
+		}
+		if r.SourcePath != "" && r.SourcePath != r.Path || r.SourceCommit != "" && r.SourceCommit != r.Commit {
+			return e, errors.New("conflicting final path or commit fields")
+		}
+		if b, ok := bindings[row+1]; ok {
+			if err := bindExecutionSiteIdentity(&r, b, true); err != nil {
+				return e, err
+			}
 		}
 		if r.ID == "" || !evidenceHex(r.SHA, 64) {
 			return e, errors.New("invalid ledger identity")
@@ -176,6 +315,7 @@ func executionQueue(input io.Reader, output io.Writer, m ExecutionManifest, e Ex
 		"Equal body bytes do not transfer source ownership, individual permission or support-resource review.",
 		"No source body or URL is opened, no model or worker is launched, no permission is changed and nothing is installed.",
 		"The queue is complete only when its separate summary is complete and its recorded queue SHA256 matches the actual bytes.",
+		"Explicit site identity interpretations retain original archive locations and unverified historical upstream claims separately from catalog occurrence Git fields; historical exclusion claims still require reconfirmation.",
 	}}
 	h := sha256.New()
 	scanner := bufio.NewScanner(io.TeeReader(input, h))
@@ -215,7 +355,7 @@ func executionQueue(input io.Reader, output io.Writer, m ExecutionManifest, e Ex
 			return s, errors.New("available source lacks exact hash")
 		}
 		if a, ok := e.Assessments[r.ID]; ok {
-			if !r.BodyRead || a.SHA != r.SHA || r.Path != "" && a.Path != r.Path || r.Commit != "" && a.Commit != r.Commit {
+			if !r.BodyRead || a.SHA != r.SHA || !sameExecutionOccurrence(r, a) {
 				return s, errors.New("assessment does not match fixed catalog occurrence")
 			}
 			matchedAssessment[r.ID] = true
@@ -227,7 +367,7 @@ func executionQueue(input io.Reader, output io.Writer, m ExecutionManifest, e Ex
 			q.RelatedBody = bodyEvidence[r.SHA]
 		}
 		if d, ok := e.Decisions[r.ID]; ok {
-			if !r.BodyRead || d.SHA != r.SHA || r.Path != "" && d.Path != r.Path || r.Commit != "" && d.Commit != r.Commit || r.Repo != "" && d.SourceRepo != "" && r.Unit != "site_index_entry" && d.SourceRepo != r.Repo {
+			if !r.BodyRead || d.SHA != r.SHA || !sameExecutionOccurrence(r, d) {
 				return s, errors.New("final decision does not match acquired catalog occurrence")
 			}
 			switch d.Disposition {
@@ -241,6 +381,7 @@ func executionQueue(input io.Reader, output io.Writer, m ExecutionManifest, e Ex
 			q.Stage = "recorded_final_disposition"
 			q.Next = "preserve_existing_acceptance_and_source_evidence"
 			q.Decision = d.Disposition
+			q.FinalIdentity = d.occurrence
 		}
 		s.Stages[q.Stage]++
 		if err := enc.Encode(q); err != nil {

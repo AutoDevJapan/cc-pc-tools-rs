@@ -1,7 +1,7 @@
 package main
 
 // A recipient binding does not alter the sender's original question identity.
-// This finite contract is the already verified 3638/3650 -> 3277 -> 1171 chain.
+// The historical succession and current registered assignment remain distinct.
 import (
 	"context"
 	"encoding/json"
@@ -25,6 +25,11 @@ type conversationActor struct {
 	RootSHA       string          `json:"registered_path_sha256"`
 	SourceSHA     string          `json:"succession_sha256"`
 }
+
+// A source retained after posting and a reserved job anchor confer different
+// rights. Named types prevent swapping these adjacent internal arguments.
+type conversationRetainedProof json.RawMessage
+type conversationReservedAnchor json.RawMessage
 
 func conversationRecipient(q ConversationQuestion) uint64 {
 	if q.Actor != nil {
@@ -89,20 +94,32 @@ func (r *Runner) conversationActorForAsk(ctx context.Context, input Conversation
 	if alias, ok := index.Aliases[input.RequestID]; ok {
 		q, exists = index.Questions[alias.Target]
 	}
-	var historical json.RawMessage
+	var historical conversationRetainedProof
+	var anchor conversationReservedAnchor
 	readonly := false
 	if exists {
 		saved = q.Actor
 		readonly = q.Phase == "answered" || q.Phase == "applied" || q.Phase == "closed"
 		if saved != nil && q.Phase != "reserved" {
-			historical, err = r.conversationActorProof(q)
+			var proof json.RawMessage
+			proof, err = r.conversationActorProof(q)
+			historical = conversationRetainedProof(proof)
+			if err != nil {
+				return nil, err
+			}
+		} else if saved != nil && currentConversationPair(q.Todo, saved.Todo, q.Project) {
+			// A reserved question still needs live admission. Load its immutable
+			// proof only to retain the original job and input versions on retry.
+			var proof json.RawMessage
+			proof, err = r.conversationActorProof(q)
+			anchor = conversationReservedAnchor(proof)
 			if err != nil {
 				return nil, err
 			}
 		}
 	}
 	if saved != nil && saved.Job != input.ActorJob {
-		current, err := r.checkConversationActor(ctx, input.Todo, input.ActorTodo, input.ActorJob, origin, nil, historical, readonly)
+		current, err := r.checkConversationActor(ctx, input.Todo, input.ActorTodo, input.ActorJob, origin, nil, historical, anchor, readonly)
 		if err != nil {
 			return nil, err
 		}
@@ -110,13 +127,13 @@ func (r *Runner) conversationActorForAsk(ctx context.Context, input Conversation
 		if !sameConversationActor(current, saved) {
 			return nil, errors.New("conversation actor differs")
 		}
-		return r.checkConversationActor(ctx, input.Todo, input.ActorTodo, saved.Job, origin, saved, historical, readonly)
+		return r.checkConversationActor(ctx, input.Todo, input.ActorTodo, saved.Job, origin, saved, historical, anchor, readonly)
 	}
-	return r.checkConversationActor(ctx, input.Todo, input.ActorTodo, input.ActorJob, origin, saved, historical, readonly)
+	return r.checkConversationActor(ctx, input.Todo, input.ActorTodo, input.ActorJob, origin, saved, historical, anchor, readonly)
 }
 
 func (r *Runner) verifyConversationActor(ctx context.Context, originID, actorID uint64, jobID string, origin *TodoRow, saved *conversationActor) (*conversationActor, error) {
-	return r.checkConversationActor(ctx, originID, actorID, jobID, origin, saved, nil, false)
+	return r.checkConversationActor(ctx, originID, actorID, jobID, origin, saved, nil, nil, false)
 }
 
 func (r *Runner) conversationActorProof(q ConversationQuestion) (json.RawMessage, error) {
@@ -132,9 +149,11 @@ func (r *Runner) conversationActorProof(q ConversationQuestion) (json.RawMessage
 
 // A retained proof confirms an existing question only; it can never reserve a
 // question, register a wait or deliver new instructions after work has ended.
-func (r *Runner) checkConversationActor(ctx context.Context, originID, actorID uint64, jobID string, origin *TodoRow, saved *conversationActor, historical json.RawMessage, readonly bool) (*conversationActor, error) {
+func (r *Runner) checkConversationActor(ctx context.Context, originID, actorID uint64, jobID string, origin *TodoRow, saved *conversationActor, historical conversationRetainedProof, anchor conversationReservedAnchor, readonly bool) (*conversationActor, error) {
 	fail := errors.New("conversation actor unverified")
-	if originID != 1171 || actorID != 3277 || origin.ID != originID || origin.Project != "GitDo" || (!readonly && origin.Status != "recovery_unverified" && origin.Status != "todo" && origin.Status != "doing" && origin.Status != "wait") || conversationActorHeld(origin.conversationState) || !validJob(jobID) {
+	current := currentConversationPair(originID, actorID, origin.Project)
+	legacy := originID == 1171 && actorID == 3277 && origin.Project == "GitDo"
+	if (!current && !legacy) || origin.ID != originID || (!readonly && origin.Status != "recovery_unverified" && origin.Status != "todo" && origin.Status != "doing" && origin.Status != "wait") || (current && origin.Status == "recovery_unverified") || conversationActorHeld(origin.conversationState) || !validJob(jobID) {
 		return nil, fail
 	}
 	actor, err := r.conversationTask(ctx, actorID)
@@ -171,6 +190,9 @@ func (r *Runner) checkConversationActor(ctx context.Context, originID, actorID u
 	}
 	if readJSON(filepath.Join(jobs, jobID, "job.json"), 1<<20, &job) != nil || job.ID != jobID || job.Todo != actorID || !filepath.IsAbs(job.Cwd) || actor.Scheduler.Worktree == "" || conversationPathSHA(job.Cwd) != conversationPathSHA(actor.Scheduler.Worktree) || job.Stopped || job.Cancel || job.Reason == "manual" || job.Reason == "person" || job.Status == "cancelled" || job.Status == "canceled" {
 		return nil, fail
+	}
+	if current {
+		return r.checkCurrentConversationActor(ctx, origin, actor, jobID, saved, historical, anchor, readonly)
 	}
 	raw := string(historical)
 	// Running/runnable recipients need today's admission for a wait or a new
@@ -240,7 +262,16 @@ func (r *Runner) conversationActorRowWithProof(ctx context.Context, q Conversati
 	if err != nil {
 		return nil, err
 	}
-	if _, err = r.checkConversationActor(ctx, q.Todo, q.Actor.Todo, q.Actor.Job, origin, q.Actor, historical, readonly); err != nil {
+	var anchor conversationReservedAnchor
+	if q.Phase == "reserved" && currentConversationPair(q.Todo, q.Actor.Todo, q.Project) {
+		var proof json.RawMessage
+		proof, err = r.conversationActorProof(q)
+		anchor = conversationReservedAnchor(proof)
+		if err != nil {
+			return nil, err
+		}
+	}
+	if _, err = r.checkConversationActor(ctx, q.Todo, q.Actor.Todo, q.Actor.Job, origin, q.Actor, conversationRetainedProof(historical), anchor, readonly); err != nil {
 		return nil, err
 	}
 	row, err := r.conversationTask(ctx, q.Actor.Todo)
@@ -330,6 +361,16 @@ func (r *Runner) deliverConversationActorReply(ctx context.Context, q Conversati
 	if err != nil {
 		return err
 	}
+	if err = r.deliverCurrentConversationTracker(ctx, q, reply, req); err != nil {
+		return err
+	}
+	if currentConversationPair(q.Todo, q.Actor.Todo, q.Project) {
+		original, err := r.conversationTask(ctx, q.Todo)
+		if err != nil || original.Project != q.Project || original.conversationRoot != row.conversationRoot || conversationActorHeld(original.conversationState) {
+			return errors.New("conversation actor unverified")
+		}
+		row.conversationOriginState = original.conversationState
+	}
 	delivery, err := r.conversationActorQuestion(q)
 	if err != nil {
 		return err
@@ -388,6 +429,18 @@ func conversationFailureStage(err error) string {
 		return "deadline"
 	}
 	switch err.Error() {
+	case "conversation sender origin_scope":
+		return "sender_origin_scope"
+	case "conversation sender source_scope":
+		return "sender_source_scope"
+	case "conversation sender busy":
+		return "sender_busy"
+	case "conversation sender network":
+		return "sender_network"
+	case "conversation sender rate_limited":
+		return "sender_rate_limited"
+	case "conversation sender deadline":
+		return "sender_deadline"
 	case "conversation actor unverified", "conversation actor differs", "conversation actor receipt differs", "conversation actor held":
 		return "actor_scope"
 	case "conversation task scope unavailable", "conversation task scope unverified", "conversation original project differs":
@@ -396,7 +449,7 @@ func conversationFailureStage(err error) string {
 		return "original_task"
 	case "conversation retry input differs", "conversation alias retry input differs", "conversation decision task differs":
 		return "input_mismatch"
-	case "conversation send pending; retry the same request":
+	case "conversation send pending; retry the same request", "conversation sender operation_pending":
 		return "send_pending"
 	case "conversation send verification pending", "conversation reply verification deferred":
 		return "verification_pending"

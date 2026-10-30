@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"sort"
 	"testing"
+	"time"
 )
 
 const resumedPrimary13File = "skills-3080-primaryflow-next13-plus-held1-after216-evaluation095653.json"
@@ -159,11 +160,40 @@ func validateResumedVisibleSnapshot(v map[string]any, semanticCount, heldCount, 
 		ack := next4Object(c["independent_parent_ack"])
 		meaning := next4Object(c["independent_parent_meaning"])
 		native := next4Object(c["independent_native_metadata"])
+		first, through := next4Object(originals[0])["ordinal"], next4Object(originals[len(originals)-1])["ordinal"]
+		if err := next4Fields(ack, map[string]any{"domain": "skills3080-primaryflow-parent-ack-v1", "packet_id": common["packet_id"], "packet_sha256": sha, "acknowledged_through": through, "cohort": common["cohort"], "plan_sha256": common["plan_sha256"], "parent_origin_job": common["parent_origin_job"]}); err != nil {
+			return err
+		}
+		if err := next4Fields(meaning, map[string]any{"packet_id": common["packet_id"], "packet_sha256": sha, "first": first, "through": through}); err != nil {
+			return err
+		}
 		if common["reader_job"] != reader || c["actual_assessment_reader"] != reader || ack["reader_job"] != reader || ack["consumer_job"] != consumer || meaning["reader_job"] != reader || meaning["consumer_job"] != consumer || meaning["all_entry_meanings_and_limits_read"] != true {
 			return fmt.Errorf("actual reader or resumed consumer changed")
 		}
-		if err := next4Fields(native, map[string]any{"reader_job": reader, "registered_spec_sha256": spec, "actual_model": model, "actual_effort": "max", "thread_matches": true, "cwd_matches": true, "immutable_origin_job": "20261027-175645-todo-3080"}); err != nil {
+		if err := next4Fields(native, map[string]any{"reader_job": reader, "actual_consumer_job": consumer, "registered_spec_sha256": spec, "actual_model": model, "actual_effort": "max", "thread_matches": true, "cwd_matches": true, "immutable_origin_job": "20261027-175645-todo-3080"}); err != nil {
 			return err
+		}
+		turns, ok := native["native_turn_contexts"].([]any)
+		if !ok || len(turns) == 0 {
+			return fmt.Errorf("actual native turn contexts missing")
+		}
+		startText, _ := native["strict_window_start"].(string)
+		endText, _ := native["strict_window_observed_end"].(string)
+		start, startErr := time.Parse(time.RFC3339Nano, startText)
+		end, endErr := time.Parse(time.RFC3339Nano, endText)
+		if startErr != nil || endErr != nil || end.Before(start) {
+			return fmt.Errorf("actual native time window invalid")
+		}
+		for _, value := range turns {
+			turn := next4Object(value)
+			if turn["model"] != model || turn["effort"] != "max" {
+				return fmt.Errorf("actual native turn model or effort differs")
+			}
+			stamp, _ := turn["timestamp"].(string)
+			at, err := time.Parse(time.RFC3339Nano, stamp)
+			if err != nil || at.Before(start) || at.After(end) {
+				return fmt.Errorf("native turn outside the same reader observation window")
+			}
 		}
 		observed, present := native["actual_launch_parent"]
 		if !present || (parent == "" && observed != nil) || (parent != "" && observed != parent) {

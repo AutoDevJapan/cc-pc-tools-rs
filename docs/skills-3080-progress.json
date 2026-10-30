@@ -700,7 +700,10 @@
     "Root_merge_push_and_checkpoint_confirmed": true,
     "new_existing_workflow_integrations": 6,
     "new_assessment_references": 24,
-    "central_new_writes": 0
+    "central_new_writes": 0,
+    "merge_state_before": "CLEAN",
+    "unresolved_threads_before": 0,
+    "acceptance_evidence": "PR649 final7f873 actual pair0/all7 successful/CLEAN/no unresolved threads verified by canonical parent before normal merge"
   },
   "mengto_partial_entrypoint_evaluation": {
     "fixed_roster": "skills-3080-mengto-fixed-entrypoints.json",

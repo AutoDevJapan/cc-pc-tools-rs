@@ -1,4 +1,4 @@
-use super::{strict, Host, ReadError, Result};
+use super::{Host, ReadError, Result, strict};
 use std::{
     fs::File,
     io::{self, Read},
@@ -10,7 +10,7 @@ use std::{
     time::{Duration, Instant},
 };
 use windows_sys::Win32::Storage::FileSystem::{
-    GetFileInformationByHandle, BY_HANDLE_FILE_INFORMATION,
+    BY_HANDLE_FILE_INFORMATION, GetFileInformationByHandle,
 };
 
 /// The normal local host: fixed guard, no profile or environment-selected data roots.
@@ -176,6 +176,7 @@ impl Host for SystemHost {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use serde_json::Value;
     #[test]
     fn guard_classification_failure_is_not_an_observed_permission_deny() {
         assert_eq!(guard_verdict(br#"{"ok":true,"access_allowed":true,"client_resource":false,"classification_unverified":false}"#),Ok(true));
@@ -198,5 +199,39 @@ mod tests {
             host.guard(Path::new("D:/never-spawn")).unwrap_err(),
             ReadError("query_deadline")
         );
+    }
+    #[test]
+    fn owner_wait_guard_requires_all_typed_consistent_positive_fields() {
+        let positive = serde_json::json!({"ok":true,"access_allowed":true,
+            "client_resource":false,"classification_unverified":false});
+        for field in [
+            "ok",
+            "access_allowed",
+            "client_resource",
+            "classification_unverified",
+        ] {
+            for value in [
+                None,
+                Some(Value::Null),
+                Some(Value::String("true".into())),
+                Some(serde_json::json!(1)),
+                Some(serde_json::json!([])),
+            ] {
+                let mut report = positive.clone();
+                if let Some(value) = value {
+                    report[field] = value;
+                } else {
+                    report.as_object_mut().unwrap().remove(field);
+                }
+                assert!(guard_verdict(&serde_json::to_vec(&report).unwrap()).is_err());
+            }
+        }
+        for bytes in [br#"{"#.as_slice(),br#"[]"#,
+            br#"{"ok":true,"ok":false,"access_allowed":true,"client_resource":false,"classification_unverified":false}"#,
+            br#"{"ok":true,"access_allowed":true,"client_resource":true,"classification_unverified":false}"#,
+            br#"{"ok":true,"access_allowed":true,"client_resource":false,"classification_unverified":true}"#,
+            br#"{"ok":false,"access_allowed":true,"client_resource":false,"classification_unverified":false}"#] {
+            assert!(guard_verdict(bytes).is_err());
+        }
     }
 }

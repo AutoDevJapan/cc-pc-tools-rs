@@ -1,0 +1,1335 @@
+diff --git a/cc-scheduler/src/received_input/system.rs b/cc-scheduler/src/received_input/system.rs
+index 6f0be66bda91331da318b41e0075d38f72e6093c..5d986e922ca94164548d4ce76796af61fe883a73 100644
+--- a/cc-scheduler/src/received_input/system.rs
++++ b/cc-scheduler/src/received_input/system.rs
+@@ -1,4 +1,4 @@
+-use super::{strict, Host, ReadError, Result};
++use super::{Host, ReadError, Result, strict};
+ use std::{
+     fs::File,
+     io::{self, Read},
+@@ -10,7 +10,7 @@ use std::{
+     time::{Duration, Instant},
+ };
+ use windows_sys::Win32::Storage::FileSystem::{
+-    GetFileInformationByHandle, BY_HANDLE_FILE_INFORMATION,
++    BY_HANDLE_FILE_INFORMATION, GetFileInformationByHandle,
+ };
+ 
+ /// The normal local host: fixed guard, no profile or environment-selected data roots.
+@@ -176,6 +176,7 @@ impl Host for SystemHost {
+ #[cfg(test)]
+ mod tests {
+     use super::*;
++    use serde_json::Value;
+     #[test]
+     fn guard_classification_failure_is_not_an_observed_permission_deny() {
+         assert_eq!(guard_verdict(br#"{"ok":true,"access_allowed":true,"client_resource":false,"classification_unverified":false}"#),Ok(true));
+@@ -199,4 +200,38 @@ mod tests {
+             ReadError("query_deadline")
+         );
+     }
++    #[test]
++    fn owner_wait_guard_requires_all_typed_consistent_positive_fields() {
++        let positive = serde_json::json!({"ok":true,"access_allowed":true,
++            "client_resource":false,"classification_unverified":false});
++        for field in [
++            "ok",
++            "access_allowed",
++            "client_resource",
++            "classification_unverified",
++        ] {
++            for value in [
++                None,
++                Some(Value::Null),
++                Some(Value::String("true".into())),
++                Some(serde_json::json!(1)),
++                Some(serde_json::json!([])),
++            ] {
++                let mut report = positive.clone();
++                if let Some(value) = value {
++                    report[field] = value;
++                } else {
++                    report.as_object_mut().unwrap().remove(field);
++                }
++                assert!(guard_verdict(&serde_json::to_vec(&report).unwrap()).is_err());
++            }
++        }
++        for bytes in [br#"{"#.as_slice(),br#"[]"#,
++            br#"{"ok":true,"ok":false,"access_allowed":true,"client_resource":false,"classification_unverified":false}"#,
++            br#"{"ok":true,"access_allowed":true,"client_resource":true,"classification_unverified":false}"#,
++            br#"{"ok":true,"access_allowed":true,"client_resource":false,"classification_unverified":true}"#,
++            br#"{"ok":false,"access_allowed":true,"client_resource":false,"classification_unverified":false}"#] {
++            assert!(guard_verdict(bytes).is_err());
++        }
++    }
+ }
+diff --git a/cc-todo/src/direction_record.rs b/cc-todo/src/direction_record.rs
+index 42af42b7298e664df8c6f22beb39490fc7e159ed..36a7c2c1ea50bd8872cc1f097695c647e921c2d2 100644
+--- a/cc-todo/src/direction_record.rs
++++ b/cc-todo/src/direction_record.rs
+@@ -74,7 +74,7 @@ fn row(db: &Value, id: i64) -> Result<&Value> {
+     }
+     Ok(selected)
+ }
+-const HOLD_FIELDS: &[&str] = &[
++pub(crate) const HOLD_FIELDS: &[&str] = &[
+     "stopped",
+     "cancel_requested",
+     "owner_stopped",
+diff --git a/cc-todo/src/recovery.rs b/cc-todo/src/recovery.rs
+index ee0728c8db9778d428c8d50ed13e9f0722a36078..428be8e5840e00e25cdf88e72d9771ae7c5083a6 100644
+--- a/cc-todo/src/recovery.rs
++++ b/cc-todo/src/recovery.rs
+@@ -14,53 +14,8 @@ pub const HANG_S: f64 = 1800.;
+ pub const RETRY_WINDOW_S: f64 = 21600.;
+ const CLAIM_S: f64 = 300.;
+ 
+-/// Finite repair under todo.lock. It neither launches nor cancels any worker.
+-/// Only the selected item's recorded receipts are read; secret names stay internal.
+-pub fn reevaluate_owner_wait_files(paths: &Paths, id: i64) -> Result<Vec<i64>> {
+-    let clients = fs::read_to_string("D:/CC/Tools/client-projects.txt")
+-        .map_err(|_| "client guard unavailable")?;
+-    let mut backend = RealBackend::new(PathBuf::from("D:/CC/Tools/scheduler"));
+-    let ps = backend
+-        .snapshot()
+-        .map_err(|_| "process identity unavailable")?;
+-    let _lock = Lock::acquire(&paths.lock, Duration::from_secs(30))?;
+-    let mut db = load(&paths.store)?;
+-    let item = db["items"]
+-        .as_array()
+-        .into_iter()
+-        .flatten()
+-        .find(|i| i["id"] == id)
+-        .ok_or("no item")?;
+-    if excluded(
+-        s(&item["project"]),
+-        s(&db["projects"][s(&item["project"])]),
+-        &clients,
+-    ) {
+-        return Err("requested item excluded".into());
+-    }
+-    let ids: BTreeSet<_> = crate::job_refs::ids(&item["jobs"])
+-        .chain(item["work_owner_job"].as_str())
+-        .chain(item["scheduler"]["job"].as_str())
+-        .collect();
+-    let mut jobs = vec![];
+-    for jid in ids {
+-        if !crate::job_refs::valid_id(jid) {
+-            return Err("invalid receipt identifier".into());
+-        }
+-        let job = load(&paths.jobs.join(jid).join("job.json"))?;
+-        if job["id"] != jid || excluded(s(&job["project"]), s(&job["cwd"]), &clients) {
+-            return Err("receipt unavailable or excluded".into());
+-        }
+-        let mut job = job;
+-        job["work_owner_live"] = json!(policy::matches(&job, "codex_pid", &ps));
+-        jobs.push(job);
+-    }
+-    let changed = cc_job_policy::work_owner::reevaluate_todos_if(&mut db, &jobs, |i| i["id"] == id);
+-    if !changed.is_empty() {
+-        save(&paths.store, &db)?;
+-    }
+-    Ok(changed)
+-}
++mod owner_wait;
++pub use owner_wait::reevaluate_owner_wait_files;
+ 
+ /// Run the SAME admission planner against a copy. Return identifiers and decisions
+ /// only; never expose project names, saved prompts or recovery credentials.
+diff --git a/cc-todo/src/recovery/owner_wait.rs b/cc-todo/src/recovery/owner_wait.rs
+new file mode 100644
+index 0000000000000000000000000000000000000000..facbde74e9598b7798aa4d888f7f1306f9fc39eb
+--- /dev/null
++++ b/cc-todo/src/recovery/owner_wait.rs
+@@ -0,0 +1,334 @@
++//! Finite entry for reevaluating one recorded automatic ownership edge.
++use super::*;
++use cc_scheduler::received_input::{Host, SystemHost};
++use std::path::Path;
++
++const JOB_LIMIT: usize = 1024 * 1024;
++
++/// Uses the normal per-path guard. Reads only referenced bounded job.json files;
++/// their complete JSON is parsed, but separate prompt/SDK/registry files are not read.
++pub fn reevaluate_owner_wait_files(paths: &Paths, id: i64) -> Result<Vec<i64>> {
++    let mut backend = RealBackend::new(PathBuf::from("D:/CC/Tools/scheduler"));
++    run(
++        paths,
++        id,
++        SystemHost::default,
++        || {
++            backend
++                .snapshot()
++                .map_err(|_| "process identity unavailable".into())
++        },
++        |db| save(&paths.store, db),
++    )
++}
++
++fn run<H: Host>(
++    paths: &Paths,
++    id: i64,
++    make_host: impl FnOnce() -> H,
++    mut snapshot: impl FnMut() -> Result<Processes>,
++    mut commit: impl FnMut(&Value) -> Result<()>,
++) -> Result<Vec<i64>> {
++    // Only the selected row and its exact automatic owner participate in CAS.
++    // Unrelated writers are preserved by reloading the store at commit.
++    let mut proposed = {
++        let _lock = Lock::acquire(&paths.lock, Duration::from_secs(30))?;
++        load(&paths.store)?
++    };
++    let source = source(&proposed, id)?;
++    // Waiting for the initial shared lock is not part of the scope's 45-second
++    // proof budget. Construct SystemHost (and its one monotonic deadline) here;
++    // neither pass renews it.
++    let mut host = make_host();
++    let started = host.now();
++    let mut checked = BTreeSet::new();
++    guarded_source(&mut host, &source, &mut checked)?;
++    let mut records = vec![];
++    let mut identities = vec![];
++    for jid in references(&source.item)? {
++        let path = paths.jobs.join(&jid).join("job.json");
++        let bytes = read(&mut host, &path)?;
++        let job: Value = serde_json::from_slice(&bytes).map_err(|_| "receipt invalid")?;
++        let expected = if source.item["work_owner_job"] == jid {
++            source.owner.as_ref().ok_or("owner source unavailable")?
++        } else {
++            &source.item
++        };
++        if job["id"] != jid
++            || job["project"] != expected["project"]
++            || !(job["todo_id"] == expected["id"]
++                || job["related_todo_ids"]
++                    .as_array()
++                    .is_some_and(|a| a.contains(&expected["id"])))
++            || !job["status"].is_string()
++            || (!job["registered_cwd"].is_null()
++                && (s(&job["registered_cwd"]).is_empty()
++                    || normalized(s(&job["registered_cwd"])) != normalized(&source.root)))
++        {
++            return Err("receipt source mismatch".into());
++        }
++        for key in ["pid", "codex_pid"] {
++            if !job[key].is_null()
++                && (job[key]
++                    .as_u64()
++                    .is_none_or(|p| p == 0 || p > u64::from(u32::MAX))
++                    || job[format!("{key}_created")]
++                        .as_u64()
++                        .is_none_or(|b| b == 0))
++            {
++                return Err("process identity unavailable".into());
++            }
++        }
++        guarded(&mut host, s(&job["cwd"]), &mut checked)?;
++        identities.push(identity(&proposed, &job)?);
++        records.push((path, bytes, job));
++    }
++    let ps = snapshot()?;
++    let jobs: Vec<_> = records
++        .iter()
++        .map(|(_, _, job)| observed(job, &ps))
++        .collect();
++    if held(&proposed, &source.item, &jobs, true)
++        || source
++            .owner
++            .as_ref()
++            .is_some_and(|owner| held(&proposed, owner, &jobs, false))
++    {
++        return Ok(vec![]);
++    }
++    // The existing policy may inspect Git ownership. Do that outside shared locks,
++    // then bind its proposal to unchanged inputs and a fresh liveness observation.
++    let changed =
++        cc_job_policy::work_owner::reevaluate_todos_if(&mut proposed, &jobs, |i| i["id"] == id);
++    if changed.is_empty() {
++        return Ok(changed);
++    }
++    let replacement = one(&proposed, id)?.clone();
++    // Refresh permissions after planning as well; slow Git discovery or a changed
++    // guard verdict must not turn an earlier positive into unconditional authority.
++    // Deduplicate only inside this pass. Every path must be checked afresh even
++    // if the first pass checked the same root, worktree or referenced job cwd.
++    let mut checked = BTreeSet::new();
++    guarded_source(&mut host, &source, &mut checked)?;
++    for ((_, _, job), before) in records.iter().zip(&identities) {
++        guarded(&mut host, s(&job["cwd"]), &mut checked)?;
++        if identity(&proposed, job)? != *before {
++            return Err("reevaluation ownership source changed".into());
++        }
++    }
++
++    // Normal order is job state -> ToDo. No tool/guard runs under these locks.
++    let mut locks = vec![];
++    for (path, _, _) in &records {
++        locks.push(
++            common::ByteLock::acquire(&path.with_file_name("state.lock"), Duration::ZERO)
++                .map_err(|_| "receipt lock unavailable")?
++                .ok_or("receipt busy")?,
++        );
++    }
++    let _lock = Lock::acquire(&paths.lock, Duration::ZERO)?;
++    let mut current = load(&paths.store)?;
++    if source != self::source(&current, id)? {
++        return Err("reevaluation source changed".into());
++    }
++    for (path, bytes, _) in &records {
++        if *bytes != read(&mut host, path)? {
++            return Err("reevaluation receipt changed".into());
++        }
++    }
++    let fresh = snapshot()?;
++    if records
++        .iter()
++        .zip(&jobs)
++        .any(|((_, _, job), before)| observed(job, &fresh) != *before)
++    {
++        return Err("reevaluation liveness changed".into());
++    }
++    fresh_proof(&started, &host.now())?;
++    *find(&mut current, id)? = replacement;
++    commit(&current)?;
++    Ok(changed)
++}
++
++#[derive(PartialEq)]
++struct Source {
++    item: Value,
++    root: String,
++    owner: Option<Value>,
++}
++fn one(db: &Value, id: i64) -> Result<&Value> {
++    let mut rows = db["items"]
++        .as_array()
++        .ok_or("invalid items")?
++        .iter()
++        .filter(|i| i["id"] == id);
++    let row = rows.next().ok_or("no item")?;
++    if id <= 0 || rows.next().is_some() {
++        return Err("ambiguous item".into());
++    }
++    Ok(row)
++}
++fn source(db: &Value, id: i64) -> Result<Source> {
++    let item = one(db, id)?;
++    let project = item["project"]
++        .as_str()
++        .filter(|p| !p.is_empty() && !p.eq_ignore_ascii_case("owner"))
++        .ok_or("requested item excluded")?;
++    let root = db["projects"][project]
++        .as_str()
++        .ok_or("project source unavailable")?;
++    let owner = if item["work_owner_job"].is_null() && item["work_owner_wait_on"].is_null() {
++        None
++    } else {
++        let on = item["work_owner_wait_on"]
++            .as_i64()
++            .filter(|on| *on != id)
++            .ok_or("owner source unavailable")?;
++        let row = one(db, on)?;
++        if row["project"] != project {
++            return Err("owner source mismatch".into());
++        }
++        Some(row.clone())
++    };
++    Ok(Source {
++        item: item.clone(),
++        root: root.into(),
++        owner,
++    })
++}
++fn references(item: &Value) -> Result<BTreeSet<String>> {
++    if crate::job_refs::unverified_count(&item["jobs"]) != 0 {
++        return Err("invalid receipt identifier".into());
++    }
++    let mut ids: BTreeSet<_> = crate::job_refs::ids(&item["jobs"])
++        .map(str::to_owned)
++        .collect();
++    for value in [&item["work_owner_job"], &item["scheduler"]["job"]] {
++        if !value.is_null() {
++            let id = value
++                .as_str()
++                .filter(|id| crate::job_refs::valid_id(id))
++                .ok_or("invalid receipt identifier")?;
++            ids.insert(id.into());
++        }
++    }
++    Ok(ids)
++}
++fn read(host: &mut impl Host, path: &Path) -> Result<Vec<u8>> {
++    let bytes = host
++        .read(path, JOB_LIMIT)
++        .map_err(|_| "receipt unavailable")?;
++    if bytes.len() > JOB_LIMIT {
++        return Err("receipt too large".into());
++    }
++    Ok(bytes)
++}
++fn guarded_source(
++    host: &mut impl Host,
++    source: &Source,
++    checked: &mut BTreeSet<String>,
++) -> Result<()> {
++    guarded(host, &source.root, checked)?;
++    for row in std::iter::once(&source.item).chain(source.owner.as_ref()) {
++        let value = &row["scheduler"]["worktree"];
++        if !value.is_null() && value != "" {
++            guarded(
++                host,
++                value.as_str().ok_or("project source unavailable")?,
++                checked,
++            )?;
++        }
++    }
++    Ok(())
++}
++fn guarded(host: &mut impl Host, path: &str, checked: &mut BTreeSet<String>) -> Result<()> {
++    if path.trim().is_empty()
++        || path.chars().any(char::is_control)
++        || !Path::new(path).is_absolute()
++    {
++        return Err("project source unavailable".into());
++    }
++    let key = normalized(path);
++    if checked.contains(&key) {
++        return Ok(());
++    }
++    // SystemHost validates all four typed booleans, duplicate JSON keys, exit
++    // status and deadline; unknown classification is never an empty client list.
++    if !host
++        .guard(Path::new(path))
++        .map_err(|_| "client guard unavailable")?
++    {
++        return Err("requested item excluded".into());
++    }
++    checked.insert(key);
++    Ok(())
++}
++fn observed(job: &Value, ps: &Processes) -> Value {
++    let mut job = job.clone();
++    job["work_owner_live"] = json!(policy::alive(&job, ps, time_s()));
++    job
++}
++fn identity(db: &Value, job: &Value) -> Result<Value> {
++    // Reuse normal registration/Git ownership projection, including legitimate
++    // registered subfolders. This is not a new source or permission attestation.
++    let identity =
++        cc_job_policy::work_owner::from_job(&cc_job_policy::work_owner::registered_job(db, job));
++    if s(&identity["worktree"]).is_empty() {
++        return Err("ownership source unavailable".into());
++    }
++    Ok(identity)
++}
++fn explicit(value: &Value) -> bool {
++    !value.is_null() && value != false && value != ""
++}
++fn held(db: &Value, item: &Value, jobs: &[Value], candidate: bool) -> bool {
++    let t = time_s();
++    !(matches!(s(&item["status"]), "todo" | "doing" | "wait")
++        || (!candidate && item["status"] == "done"))
++        || crate::direction_record::HOLD_FIELDS
++            .iter()
++            .any(|key| explicit(&item[*key]) || explicit(&item["scheduler"][*key]))
++        || (!item["scheduler"].is_null() && !item["scheduler"].is_object())
++        || (!item["stall_recovery"].is_null() && !item["stall_recovery"].is_object())
++        || [
++            "owner_stop_job",
++            "pending_cancel",
++            "question_close_pending",
++            "question",
++        ]
++        .iter()
++        .any(|key| explicit(&item["scheduler"][*key]))
++        || [
++            &item["scheduler"]["not_before"],
++            &item["stall_recovery"]["next_at"],
++            &item["discord_restart_not_before"],
++        ]
++        .iter()
++        .any(|value| {
++            !value.is_null()
++                && !value
++                    .as_f64()
++                    .is_some_and(|n| n.is_finite() && n >= 0. && n <= t)
++        })
++        || discord_wait(item, time_s())
++        || cc_job_policy::todo_wait::pending_on(db, item)
++            .iter()
++            .any(|on| !candidate || item["work_owner_wait_on"] != *on)
++        || jobs
++            .iter()
++            .any(|j| stopped(item, j) || policy::live(j) || j["work_owner_live"] == true)
++}
++fn fresh_proof(started: &str, ended: &str) -> Result<()> {
++    let start =
++        chrono::DateTime::parse_from_rfc3339(started).map_err(|_| "guard time unavailable")?;
++    let end = chrono::DateTime::parse_from_rfc3339(ended).map_err(|_| "guard time unavailable")?;
++    let elapsed = end.signed_duration_since(start);
++    if elapsed < chrono::Duration::zero() || elapsed >= chrono::Duration::seconds(45) {
++        return Err("guard proof expired".into());
++    }
++    Ok(())
++}
++
++#[cfg(test)]
++#[path = "owner_wait_tests.rs"]
++mod tests;
+diff --git a/cc-todo/src/recovery/owner_wait_tests.rs b/cc-todo/src/recovery/owner_wait_tests.rs
+new file mode 100644
+index 0000000000000000000000000000000000000000..fad8c08cadedc44d36623b56f4fd02d1414e4e7b
+--- /dev/null
++++ b/cc-todo/src/recovery/owner_wait_tests.rs
+@@ -0,0 +1,749 @@
++use super::*;
++use cc_scheduler::received_input::ReadError;
++use std::collections::{BTreeMap, VecDeque};
++
++type GuardHook = Box<dyn FnMut(&Path, &mut BTreeMap<PathBuf, Vec<u8>>)>;
++
++struct Fixture {
++    _temp: tempfile::TempDir,
++    paths: Paths,
++    host: FakeHost,
++    writes: std::cell::Cell<usize>,
++}
++struct FakeHost {
++    files: BTreeMap<PathBuf, Vec<u8>>,
++    reads: Vec<PathBuf>,
++    guards: Vec<PathBuf>,
++    verdicts: VecDeque<std::result::Result<bool, ReadError>>,
++    hook: Option<GuardHook>,
++    ended: Option<String>,
++    started: String,
++    now_calls: std::cell::Cell<usize>,
++}
++impl Host for FakeHost {
++    fn read(&mut self, path: &Path, _: usize) -> std::result::Result<Vec<u8>, ReadError> {
++        self.reads.push(path.into());
++        self.files.get(path).cloned().ok_or(ReadError("not_found"))
++    }
++    fn guard(&mut self, path: &Path) -> std::result::Result<bool, ReadError> {
++        self.guards.push(path.into());
++        if let Some(hook) = &mut self.hook {
++            hook(path, &mut self.files);
++        }
++        self.verdicts.pop_front().unwrap_or(Ok(true))
++    }
++    fn now(&self) -> String {
++        self.now_calls.set(self.now_calls.get() + 1);
++        if !self.guards.is_empty()
++            && let Some(ended) = &self.ended
++        {
++            return ended.clone();
++        }
++        self.started.clone()
++    }
++}
++impl Host for &mut FakeHost {
++    fn read(&mut self, path: &Path, limit: usize) -> std::result::Result<Vec<u8>, ReadError> {
++        (**self).read(path, limit)
++    }
++    fn guard(&mut self, path: &Path) -> std::result::Result<bool, ReadError> {
++        (**self).guard(path)
++    }
++    fn now(&self) -> String {
++        (**self).now()
++    }
++}
++impl Fixture {
++    fn new() -> Self {
++        let temp = tempfile::tempdir().unwrap();
++        let paths = Paths::at(temp.path(), &temp.path().join("jobs"));
++        let db = json!({"projects":{"fixture":"D:/fixture-source"},"items":[
++            {"id":1,"project":"fixture","status":"wait","jobs":["candidate"],
++             "work_owner_job":"owner","work_owner_wait_on":2,"wait_on":[2],"spec":"saved"},
++            {"id":2,"project":"fixture","status":"todo","jobs":["owner"]}
++        ]});
++        save(&paths.store, &db).unwrap();
++        let mut files = BTreeMap::new();
++        for (id, todo) in [("candidate", 1), ("owner", 2)] {
++            let job = json!({"id":id,"todo_id":todo,"project":"fixture","status":"succeeded",
++                "created_at":"2026-10-26T00:00:00Z","cwd":"D:/fixture-tree",
++                "registered_cwd":"D:/fixture-source","work_owner":{"worktree":"d:/fixture-tree"}});
++            let path = paths.jobs.join(id).join("job.json");
++            fs::create_dir_all(path.parent().unwrap()).unwrap();
++            files.insert(path, serde_json::to_vec(&job).unwrap());
++        }
++        Self {
++            _temp: temp,
++            paths,
++            host: FakeHost {
++                files,
++                reads: vec![],
++                guards: vec![],
++                verdicts: VecDeque::new(),
++                hook: None,
++                ended: None,
++                started: "2026-10-27T00:00:00Z".into(),
++                now_calls: std::cell::Cell::new(0),
++            },
++            writes: std::cell::Cell::new(0),
++        }
++    }
++    fn run(&mut self) -> Result<Vec<i64>> {
++        self.run_snapshot(|| Ok(Processes::new()))
++    }
++    fn run_snapshot(&mut self, snapshot: impl FnMut() -> Result<Processes>) -> Result<Vec<i64>> {
++        let writes = &self.writes;
++        let path = &self.paths.store;
++        run(
++            &self.paths,
++            1,
++            || &mut self.host,
++            snapshot,
++            |db| {
++                writes.set(writes.get() + 1);
++                save(path, db)
++            },
++        )
++    }
++    fn unchanged(&self, before: &[u8]) {
++        assert_eq!(self.bytes(), before);
++        assert_eq!(self.writes.get(), 0);
++    }
++    fn edit(&self, edit: impl FnOnce(&mut Value)) {
++        let mut db = load(&self.paths.store).unwrap();
++        edit(&mut db);
++        save(&self.paths.store, &db).unwrap();
++    }
++    fn job(&mut self, id: &str, edit: impl FnOnce(&mut Value)) {
++        let path = self.paths.jobs.join(id).join("job.json");
++        let mut job: Value = serde_json::from_slice(&self.host.files[&path]).unwrap();
++        edit(&mut job);
++        self.host
++            .files
++            .insert(path, serde_json::to_vec(&job).unwrap());
++    }
++    fn bytes(&self) -> Vec<u8> {
++        fs::read(&self.paths.store).unwrap()
++    }
++}
++
++#[test]
++fn positive_uses_current_guard_without_reading_legacy_list() {
++    let mut f = Fixture::new();
++    let before = load(&f.paths.store).unwrap();
++    let jobs_before = f.host.files.clone();
++    assert_eq!(f.run(), Ok(vec![1]));
++    let db = load(&f.paths.store).unwrap();
++    assert_eq!(db["items"][0]["status"], "todo");
++    assert_eq!(db["items"][0]["spec"], "saved");
++    assert!(db["items"][0]["wait_on"].is_null());
++    assert!(f.host.guards.contains(&PathBuf::from("D:/fixture-source")));
++    assert!(f.host.reads.iter().all(|p| p.starts_with(&f.paths.jobs)));
++    assert_eq!(db["items"][1], before["items"][1]);
++    assert_eq!(f.host.files, jobs_before);
++    assert_eq!(
++        db["items"][0]["work_owner_wait_history"][0]["reason"],
++        "owner_claim_reevaluated"
++    );
++    assert_eq!(f.run(), Ok(vec![]));
++    assert_eq!(f.writes.get(), 1);
++}
++
++#[test]
++fn explicit_holds_on_candidate_or_owner_never_release_or_save() {
++    let mut failures = vec![];
++    for row in [0, 1] {
++        for scheduler in [false, true] {
++            let fields: Vec<_> = crate::direction_record::HOLD_FIELDS
++                .iter()
++                .copied()
++                .chain(
++                    scheduler
++                        .then_some([
++                            "owner_stop_job",
++                            "pending_cancel",
++                            "question_close_pending",
++                            "question",
++                        ])
++                        .into_iter()
++                        .flatten(),
++                )
++                .collect();
++            for field in fields {
++                // Even zero and empty containers are malformed hold values, not
++                // proof that an explicit hold was cleared.
++                for value in [
++                    json!(true),
++                    json!("hold"),
++                    json!(1),
++                    json!(0),
++                    json!([]),
++                    json!({}),
++                ] {
++                    let mut f = Fixture::new();
++                    f.edit(|db| {
++                        let item = &mut db["items"][row];
++                        if scheduler {
++                            item["scheduler"][field] = value.clone();
++                        } else {
++                            item[field] = value.clone();
++                        }
++                    });
++                    let before = f.bytes();
++                    let released = f.run();
++                    if released != Ok(vec![]) || f.writes.get() != 0 || f.bytes() != before {
++                        failures.push(format!("row={row} scheduler={scheduler} field={field} value={value}: released={released:?} commits={} bytes_unchanged={}", f.writes.get(), f.bytes() == before));
++                    }
++                }
++            }
++        }
++    }
++    assert!(
++        failures.is_empty(),
++        "explicit holds were released/saved:\n{}",
++        failures.join("\n")
++    );
++}
++
++#[test]
++fn null_false_and_empty_hold_markers_keep_legitimate_release() {
++    for value in [Value::Null, json!(false), json!("")] {
++        let mut f = Fixture::new();
++        f.edit(|db| {
++            for row in [0, 1] {
++                for key in crate::direction_record::HOLD_FIELDS {
++                    db["items"][row][*key] = value.clone();
++                    db["items"][row]["scheduler"][*key] = value.clone();
++                }
++                for key in [
++                    "owner_stop_job",
++                    "pending_cancel",
++                    "question_close_pending",
++                    "question",
++                ] {
++                    db["items"][row]["scheduler"][key] = value.clone();
++                }
++            }
++        });
++        assert_eq!(f.run(), Ok(vec![1]), "inactive marker {value}");
++        assert_eq!(f.writes.get(), 1);
++    }
++    let mut f = Fixture::new();
++    f.edit(|db| db["items"][1]["status"] = json!("done"));
++    assert_eq!(f.run(), Ok(vec![1]));
++}
++
++#[test]
++fn owner_block_delay_dependency_and_malformed_hold_containers_never_save() {
++    for row in [0, 1] {
++        for patch in [
++            json!({"status":"block"}),
++            json!({"status":"recovery_unverified"}),
++            json!({"scheduler":false}),
++            json!({"stall_recovery":[]}),
++            json!({"scheduler":{"not_before":"unknown"}}),
++            json!({"scheduler":{"not_before":9_999_999_999u64}}),
++            json!({"stall_recovery":{"next_at":9_999_999_999u64}}),
++            json!({"discord_restart_not_before":9_999_999_999u64}),
++            json!({"status":"wait","wait_on":[3]}),
++        ] {
++            let mut f = Fixture::new();
++            f.edit(|db| {
++                common::merge(&mut db["items"][row], patch.clone());
++                db["items"]
++                    .as_array_mut()
++                    .unwrap()
++                    .push(json!({"id":3,"status":"todo"}));
++            });
++            let before = f.bytes();
++            assert_eq!(f.run(), Ok(vec![]), "row={row} patch={patch}");
++            f.unchanged(&before);
++        }
++    }
++}
++
++#[test]
++fn guard_paths_are_unique_per_pass_and_every_pass_is_fresh() {
++    let mut f = Fixture::new();
++    f.edit(|db| {
++        db["items"][0]["scheduler"]["worktree"] = json!("d:\\FIXTURE-tree\\");
++        db["items"][1]["scheduler"]["worktree"] = json!("D:/fixture-source/");
++    });
++    assert_eq!(f.run(), Ok(vec![1]));
++    let paths: Vec<_> = f
++        .host
++        .guards
++        .iter()
++        .map(|p| normalized(p.to_str().unwrap()))
++        .collect();
++    assert_eq!(
++        paths,
++        [
++            "D:/fixture-source",
++            "D:/fixture-tree",
++            "D:/fixture-source",
++            "D:/fixture-tree"
++        ]
++        .map(normalized)
++    );
++    assert_eq!(
++        f.host.now_calls.get(),
++        2,
++        "the single scope deadline must not be renewed"
++    );
++}
++
++#[test]
++fn malformed_scheduler_worktree_on_either_source_never_saves() {
++    for row in [0, 1] {
++        for value in [
++            json!(42),
++            json!(false),
++            json!([]),
++            json!({}),
++            json!("relative"),
++            json!(" "),
++        ] {
++            let mut f = Fixture::new();
++            f.edit(|db| db["items"][row]["scheduler"]["worktree"] = value.clone());
++            let before = f.bytes();
++            assert!(f.run().is_err(), "row={row} worktree={value}");
++            f.unchanged(&before);
++        }
++    }
++}
++
++#[test]
++fn host_budget_begins_after_initial_scope_snapshot_and_lock_release() {
++    let mut f = Fixture::new();
++    let paths = f.paths.clone();
++    let writes = &f.writes;
++    let result = run(
++        &f.paths,
++        1,
++        || {
++            // The host factory must run after the snapshot and after its lock was
++            // released. This writer then makes that snapshot stale, proving order
++            // without sleeping for the production 30/45-second deadlines.
++            let _lock = Lock::acquire(&paths.lock, Duration::ZERO).unwrap();
++            let mut db = load(&paths.store).unwrap();
++            db["items"][0]["note"] = json!("writer at scope start");
++            save(&paths.store, &db).unwrap();
++            &mut f.host
++        },
++        || Ok(Processes::new()),
++        |_| {
++            writes.set(writes.get() + 1);
++            Ok(())
++        },
++    );
++    assert_eq!(result, Err("reevaluation source changed".into()));
++    assert_eq!(f.writes.get(), 0);
++    let db = load(&paths.store).unwrap();
++    assert_eq!(db["items"][0]["note"], "writer at scope start");
++    assert_eq!(db["items"][0]["status"], "wait");
++}
++
++#[test]
++fn guards_never_hold_shared_todo_or_referenced_job_locks() {
++    let mut f = Fixture::new();
++    let paths = f.paths.clone();
++    let count = std::rc::Rc::new(std::cell::Cell::new(0));
++    let seen = count.clone();
++    f.host.hook = Some(Box::new(move |_, _| {
++        let _todo = Lock::acquire(&paths.lock, Duration::ZERO).unwrap();
++        let _candidate =
++            common::ByteLock::acquire(&paths.jobs.join("candidate/state.lock"), Duration::ZERO)
++                .unwrap()
++                .unwrap();
++        let _owner =
++            common::ByteLock::acquire(&paths.jobs.join("owner/state.lock"), Duration::ZERO)
++                .unwrap()
++                .unwrap();
++        seen.set(seen.get() + 1);
++    }));
++    assert_eq!(f.run(), Ok(vec![1]));
++    assert_eq!(count.get(), f.host.guards.len());
++    assert!(count.get() > 0);
++}
++
++#[test]
++fn cross_project_owner_is_rejected_without_reinterpreting_its_scope() {
++    let mut f = Fixture::new();
++    f.edit(|db| {
++        db["projects"]["other"] = json!("D:/other-root");
++        db["items"][1]["project"] = json!("other");
++    });
++    f.job("owner", |job| job["project"] = json!("other"));
++    let before = f.bytes();
++    assert_eq!(f.run(), Err("owner source mismatch".into()));
++    f.unchanged(&before);
++}
++
++#[test]
++fn actual_owner_question_stops_and_terminal_items_never_save() {
++    for patch in [
++        json!({"status":"block"}),
++        json!({"status":"done"}),
++        json!({"stopped":true}),
++        json!({"cancel_requested":true}),
++        json!({"scheduler":{"question":{"thread":"existing"}}}),
++        json!({"scheduler":{"answer":"received"},"note":"停止したまま"}),
++        json!({"wait_ready":{"condition":"retry-time"}}),
++        json!({"scheduler":{"not_before":9_999_999_999u64}}),
++    ] {
++        let mut f = Fixture::new();
++        f.edit(|db| common::merge(&mut db["items"][0], patch));
++        let before = f.bytes();
++        assert_eq!(f.run(), Ok(vec![]));
++        f.unchanged(&before);
++    }
++    for patch in [
++        json!({"stopped":true}),
++        json!({"cancel_requested":true}),
++        json!({"cancel_reason":"manual"}),
++        json!({"status":"cancelled"}),
++        json!({"last_message":"状態: 要判断\nどちらの方針にしますか？\na. 保持する（推奨）\nb. 中止する"}),
++    ] {
++        let mut f = Fixture::new();
++        f.job("candidate", |job| common::merge(job, patch));
++        let before = f.bytes();
++        assert_eq!(f.run(), Ok(vec![]));
++        f.unchanged(&before);
++    }
++}
++
++#[test]
++fn manual_dependencies_and_unproven_automatic_edges_stay_untouched() {
++    for patch in [
++        json!({"wait_on":[2,3]}),
++        json!({"work_owner_job":null,"work_owner_wait_on":null}),
++        json!({"wait_on":[3]}),
++    ] {
++        let mut f = Fixture::new();
++        f.edit(|db| {
++            common::merge(&mut db["items"][0], patch);
++            db["items"]
++                .as_array_mut()
++                .unwrap()
++                .push(json!({"id":3,"status":"todo"}));
++        });
++        let before = f.bytes();
++        assert_eq!(f.run(), Ok(vec![]));
++        f.unchanged(&before);
++    }
++}
++
++#[test]
++fn queued_running_surviving_and_unknown_processes_never_save() {
++    for status in ["queued", "starting", "running"] {
++        let mut f = Fixture::new();
++        f.job("owner", |job| job["status"] = json!(status));
++        let before = f.bytes();
++        assert_eq!(f.run(), Ok(vec![]));
++        f.unchanged(&before);
++    }
++    for created in [json!(9), Value::Null] {
++        let mut f = Fixture::new();
++        f.job("owner", |job| {
++            job["codex_pid"] = json!(7);
++            job["codex_pid_created"] = json!(9)
++        });
++        let before = f.bytes();
++        let ps = Processes::from([(7, json!({"pid":7,"created":created}))]);
++        assert_eq!(f.run_snapshot(|| Ok(ps.clone())), Ok(vec![]));
++        f.unchanged(&before);
++    }
++}
++
++#[test]
++fn durable_pr_or_branch_owner_claim_is_not_released() {
++    for identity in [
++        json!({"repository":"fixture/repo","pr":42}),
++        json!({"git_common":"D:/fixture/.git","branch":"existing"}),
++    ] {
++        let mut f = Fixture::new();
++        for id in ["candidate", "owner"] {
++            f.job(id, |job| {
++                common::merge(&mut job["work_owner"], identity.clone())
++            });
++        }
++        let before = f.bytes();
++        assert_eq!(f.run(), Ok(vec![]));
++        f.unchanged(&before);
++    }
++}
++
++#[test]
++fn guard_denial_unknown_malformed_missing_cli_error_and_timeout_never_save() {
++    // These are the Host boundary outcomes, not manufactured production receipts.
++    // SystemHost's wire-format tests exercise malformed/typed JSON separately.
++    let mut baseline = Fixture::new();
++    // Include a distinct scheduler worktree on both rows so every protected
++    // source position, including pass two, is enumerated from a passing run.
++    baseline.edit(|db| {
++        db["items"][0]["scheduler"]["worktree"] = json!("D:/candidate-scheduler-tree");
++        db["items"][1]["scheduler"]["worktree"] = json!("D:/owner-scheduler-tree");
++    });
++    assert_eq!(baseline.run(), Ok(vec![1]));
++    let calls = baseline.host.guards.clone();
++    assert!(!calls.is_empty());
++    for at in 0..calls.len() {
++        for verdict in [
++            Ok(false),
++            Err(ReadError("classification_unverified")),
++            Err(ReadError("guard_unavailable")),
++            Err(ReadError("query_deadline")),
++        ] {
++            let mut f = Fixture::new();
++            f.edit(|db| {
++                db["items"][0]["scheduler"]["worktree"] = json!("D:/candidate-scheduler-tree");
++                db["items"][1]["scheduler"]["worktree"] = json!("D:/owner-scheduler-tree");
++            });
++            f.host.verdicts.extend((0..at).map(|_| Ok(true)));
++            f.host.verdicts.push_back(verdict);
++            let before = f.bytes();
++            assert!(f.run().is_err(), "guard position {at}");
++            assert_eq!(f.host.guards, calls[..=at]);
++            f.unchanged(&before);
++            assert!(f.host.reads.iter().all(|p| p.starts_with(&f.paths.jobs)));
++        }
++    }
++}
++
++#[test]
++fn missing_or_wrong_project_owner_and_reference_sources_never_save() {
++    for patch in [
++        json!({"project":"owner"}),
++        json!({"project":"unknown"}),
++        json!({"project":null}),
++        json!({"jobs":["../other"]}),
++        json!({"jobs":[null]}),
++        json!({"jobs":null}),
++        json!({"scheduler":{"job":7}}),
++        json!({"work_owner_job":7}),
++        json!({"work_owner_wait_on":3}),
++    ] {
++        let mut f = Fixture::new();
++        f.edit(|db| common::merge(&mut db["items"][0], patch));
++        let before = f.bytes();
++        assert!(f.run().is_err());
++        f.unchanged(&before);
++    }
++    for root in [Value::Null, json!(""), json!("relative"), json!(42)] {
++        let mut f = Fixture::new();
++        f.edit(|db| db["projects"]["fixture"] = root);
++        let before = f.bytes();
++        assert!(f.run().is_err());
++        f.unchanged(&before);
++    }
++    let mut f = Fixture::new();
++    f.edit(|db| {
++        let duplicate = db["items"][0].clone();
++        db["items"].as_array_mut().unwrap().push(duplicate);
++    });
++    let before = f.bytes();
++    assert!(f.run().is_err());
++    f.unchanged(&before);
++}
++
++#[test]
++fn wrong_job_bindings_or_omitted_receipt_sources_never_save() {
++    for patch in [
++        json!({"id":"other"}),
++        json!({"todo_id":8}),
++        json!({"project":"other"}),
++        json!({"cwd":null}),
++        json!({"cwd":"relative"}),
++        json!({"status":null}),
++        json!({"registered_cwd":"D:/other"}),
++        json!({"work_owner":null}),
++        json!({"work_owner":{}}),
++        json!({"pid":7}),
++        json!({"codex_pid":"7"}),
++        json!({"codex_pid":4_294_967_296u64,"codex_pid_created":9}),
++    ] {
++        let mut f = Fixture::new();
++        f.job("candidate", |job| common::merge(job, patch));
++        let before = f.bytes();
++        assert!(f.run().is_err());
++        f.unchanged(&before);
++    }
++    for bytes in [None, Some(b"{".to_vec()), Some(vec![b' '; JOB_LIMIT + 1])] {
++        let mut f = Fixture::new();
++        let path = f.paths.jobs.join("candidate/job.json");
++        if let Some(bytes) = bytes {
++            f.host.files.insert(path, bytes);
++        } else {
++            f.host.files.remove(&path);
++        }
++        let before = f.bytes();
++        assert!(f.run().is_err());
++        f.unchanged(&before);
++    }
++}
++
++#[test]
++fn guards_run_without_todo_lock_and_changed_selected_source_is_rejected() {
++    for change in [
++        "item",
++        "root",
++        "owner",
++        "references",
++        "source_omitted",
++        "scheduler_worktree",
++        "owner_worktree",
++    ] {
++        let mut f = Fixture::new();
++        let paths = f.paths.clone();
++        let unlocked = std::rc::Rc::new(std::cell::Cell::new(false));
++        let seen = unlocked.clone();
++        f.host.hook = Some(Box::new(move |_, _| {
++            if seen.replace(true) {
++                return;
++            }
++            let _lock = Lock::acquire(&paths.lock, Duration::ZERO).unwrap();
++            let mut db = load(&paths.store).unwrap();
++            match change {
++                "item" => db["items"][0]["note"] = json!("concurrent writer"),
++                "root" => db["projects"]["fixture"] = json!("D:/new-source"),
++                "owner" => db["items"][1]["stopped"] = json!(true),
++                "references" => db["items"][0]["jobs"] = json!(["other"]),
++                "scheduler_worktree" => {
++                    db["items"][0]["scheduler"]["worktree"] = json!("D:/new-tree")
++                }
++                "owner_worktree" => {
++                    db["items"][1]["scheduler"]["worktree"] = json!("D:/new-owner-tree")
++                }
++                _ => {
++                    db["items"][0].as_object_mut().unwrap().remove("project");
++                }
++            }
++            save(&paths.store, &db).unwrap();
++        }));
++        assert!(f.run().is_err(), "{change}");
++        assert!(unlocked.get());
++        let db = load(&f.paths.store).unwrap();
++        assert_eq!(db["items"][0]["status"], "wait");
++        assert_eq!(db["items"][0]["wait_on"], json!([2]));
++        assert!(db["items"][0]["work_owner_wait_history"].is_null());
++        assert_eq!(f.writes.get(), 0);
++    }
++}
++
++#[test]
++fn changed_exact_job_and_busy_normal_job_lock_are_rejected() {
++    let mut f = Fixture::new();
++    let candidate = f.paths.jobs.join("candidate/job.json");
++    f.host.hook = Some(Box::new(move |path, files| {
++        if path == Path::new("D:/fixture-tree") {
++            let mut job: Value = serde_json::from_slice(&files[&candidate]).unwrap();
++            job["cwd"] = json!("D:/changed-tree");
++            files.insert(candidate.clone(), serde_json::to_vec(&job).unwrap());
++        }
++    }));
++    let before = f.bytes();
++    assert!(f.run().is_err());
++    f.unchanged(&before);
++
++    let mut f = Fixture::new();
++    let _busy = common::ByteLock::acquire(&f.paths.jobs.join("owner/state.lock"), Duration::ZERO)
++        .unwrap()
++        .unwrap();
++    let before = f.bytes();
++    assert_eq!(f.run(), Err("receipt busy".into()));
++    f.unchanged(&before);
++}
++
++#[test]
++fn liveness_change_snapshot_error_and_expired_guard_cannot_commit() {
++    let mut f = Fixture::new();
++    f.job("owner", |job| {
++        job["codex_pid"] = json!(7);
++        job["codex_pid_created"] = json!(9)
++    });
++    let before = f.bytes();
++    let mut calls = 0;
++    assert_eq!(
++        f.run_snapshot(|| {
++            calls += 1;
++            Ok(if calls == 1 {
++                Processes::new()
++            } else {
++                Processes::from([(7, json!({"pid":7,"created":9}))])
++            })
++        }),
++        Err("reevaluation liveness changed".into())
++    );
++    f.unchanged(&before);
++    let mut f = Fixture::new();
++    let before = f.bytes();
++    assert!(
++        f.run_snapshot(|| Err("process identity unavailable".into()))
++            .is_err()
++    );
++    f.unchanged(&before);
++    for ended in ["2026-10-27T00:00:45Z", "2026-10-26T23:59:59Z", "invalid"] {
++        let mut f = Fixture::new();
++        f.host.ended = Some(ended.into());
++        let before = f.bytes();
++        assert!(f.run().is_err());
++        f.unchanged(&before);
++    }
++}
++
++#[test]
++fn unknown_start_is_rejected_and_sub_45_second_scope_is_not_renewed() {
++    let mut f = Fixture::new();
++    f.host.started = "unknown".into();
++    let before = f.bytes();
++    assert_eq!(f.run(), Err("guard time unavailable".into()));
++    f.unchanged(&before);
++
++    let mut f = Fixture::new();
++    f.host.ended = Some("2026-10-27T00:00:44.999999Z".into());
++    assert_eq!(f.run(), Ok(vec![1]));
++    assert_eq!(f.host.now_calls.get(), 2);
++    assert_eq!(f.writes.get(), 1);
++}
++
++#[test]
++fn unrelated_item_changes_are_preserved_and_other_items_never_reevaluated() {
++    let mut f = Fixture::new();
++    f.edit(|db| {
++        let mut other = db["items"][0].clone();
++        other["id"] = json!(3);
++        db["items"].as_array_mut().unwrap().push(other);
++    });
++    let paths = f.paths.clone();
++    f.host.hook = Some(Box::new(move |_, _| {
++        let _lock = Lock::acquire(&paths.lock, Duration::ZERO).unwrap();
++        let mut db = load(&paths.store).unwrap();
++        db["items"][2]["note"] = json!("independent edit");
++        save(&paths.store, &db).unwrap();
++    }));
++    assert_eq!(f.run(), Ok(vec![1]));
++    let db = load(&f.paths.store).unwrap();
++    assert_eq!(db["items"][2]["note"], "independent edit");
++    assert_eq!(db["items"][2]["status"], "wait");
++    assert_eq!(db["items"][2]["wait_on"], json!([2]));
++}
++
++#[test]
++fn normal_registered_root_fallback_and_ancestor_git_scope_are_preserved() {
++    let mut f = Fixture::new();
++    for id in ["candidate", "owner"] {
++        f.job(id, |job| {
++            job.as_object_mut().unwrap().remove("registered_cwd");
++            job["work_owner"]["worktree"] = json!("D:/fixture-ancestor");
++        });
++    }
++    assert_eq!(f.run(), Ok(vec![1]));
++    assert_eq!(f.writes.get(), 1);
++    assert!(
++        f.host
++            .guards
++            .iter()
++            .all(|p| p == Path::new("D:/fixture-source") || p == Path::new("D:/fixture-tree"))
++    );
++}
+diff --git a/docs/todo-4142-owner-wait-guard.md b/docs/todo-4142-owner-wait-guard.md
+new file mode 100644
+index 0000000000000000000000000000000000000000..1f430464bd580cf5c6c2b30a356c364da8a2980f
+--- /dev/null
++++ b/docs/todo-4142-owner-wait-guard.md
+@@ -0,0 +1,95 @@
++# ToDo4142：既存レビューの再評価と正規の保護判定
++
++元3387の有限工程。対象は `AutoDevJapan/cc-pc-tools-rs`（repository ID
++1406818713、公開）の `reevaluate-owner-wait` 入口だけ。
++元3684の制作、元3387全体、既存4023のレビュー実施・再開・完了はこの工程の完了に含めない。
++実4023/3992/3684の状態、依存、原spec、model、所有は操作しない。
++別モデルのレビュー、ラバーダック、CI、統合、共有実行物の配布、実再評価は親が担当する。
++
++## 原因と確認した範囲
++
++開始HEADは `86fc9f06ca01a6cb8a11720fcfb5a884c5209f56`。
++親指定の `2344cb493996194029afcac55c956a642f70f702` と、この修復の関連ソースに差分はなかった。
++旧 `cc-todo/src/recovery.rs:19-22` は対象行を選ぶ前に旧保護一覧を直接読み、
++読取エラーを一律に `client guard unavailable` へ変換していた。
++そのため、対象別の正規判定が現在許可でも、この入口はその判定へ進めなかった。
++一覧の不存在、ACL、内容、復元可能性は調査していない。
++原一覧・registry・認証情報・別ファイルの原job prompt・SDK dataは参照、hash、copyしていない。
++この表現はjob.json内部のprompt値を除外して読む保証ではない。
++参照job.jsonは上限1MiBで本体全体を読み、全体をJSONとしてparseするため、
++内部にprompt等があれば読取・parseの対象に含まれる。
++
++Redでは、旧一覧への読取要求だけを拒むテスト用Hostを使い、
++正常対象の期待 `Ok([1])` に対して `Err("client guard unavailable")` になることを確認した。
++旧一覧の実物を開いて障害を再現したのではない。
++テストの架空データを実sourceの資格や本人回答として登録していない。
++
++## 修復と保存条件
++
++入口の公開シグネチャとCLIは維持し、処理を `recovery/owner_wait.rs` に分離した。
++既存 `received_input::SystemHost` の正規 `scrub391 --guard-path` をそのまま使う。
++同実装は窓を出さず、四つのbool、整合性、重複JSONキー、終了コード、上限と期限を確認する。
++`ok=true/access_allowed=true/client_resource=false/classification_unverified=false`
++以外を許可へ読み替えない。
++旧一覧を空の一覧へ変換する処理、別guard、HTTP reader、資格登録は追加していない。
++
++選択行の登録済みproject rootと、正確に参照された実jobのcwdを判定する。
++後続のToDo4246では、選択行とowner行の非空scheduler.worktreeも同じsourceとして判定する。
++参照jobのID、対象ToDoとの関係、project、存在するregistered_cwdの整合、process identityを確認する。
++登録ルートの補完とGit所有の入力投影には、既存の `work_owner::registered_job/from_job` を使う。
++これにより、登録フォルダと祖先Gitルートが異なる正常ケースを維持する。
++root/cwdや所有の根拠が欠ける場合を、許可済みのowner資源と推測しない。
++bulkの `Backend::jobs/jobs_from` は全jobを列挙するため使わず、Hostの有界読取で選択job.jsonだけを読む。
++`received_input` の全入力取得はspec/promptまで読むため、この工程には使わない。
++
++guardと既存 `work_owner::reevaluate_todos_if` の提案作成は共有lockの外で行う。
++変更提案があるときは判定と所有投影をもう一度確認し、通常のjob state lockからToDo lockの順で取得する。
++最後のToDo lockは即時取得とし、ほかのwriterを長く待ちながらjobを占有しない。
++保存時に選択行・登録root・参照owner行、実jobの元bytes、fresh process snapshotを再照合する。
++ToDo4246では初回の共有ToDo lock待機・source取得が終わってから単一の45秒期限を始める。
++実scope開始から45秒以上、時計の逆行、不明時刻、変更、busyは保存せず拒否する。
++保存は最新storeの選択行だけへ反映し、別itemの並行編集を保つ。
++外部guardの失効とGit変更を跨ぐ全サービス共通の原子性を新しく保証するものではない。
++
++本当の本人質問、停止、完了、延期、別の未完了依存、live/queued worker、
++未確認分類、保護対象、guardエラー、source欠落・変化では保存も解除も行わない。
++通常の自動所有edgeの根拠がない状態を、この入口で新しい本人回答や技術待ち解除へ変えない。
++PR/branchによる本当の完了待ちと、元3992/3995の通常の依存解放は既存policyのまま。
++
++## テストと残る工程
++
++以下はToDo4142当時の履歴であり、ToDo4246の最終sourceの成功件数には加算しない。
++M1の修正・新しいテストと未対応の前提は [ToDo4246の証拠](todo-4246-owner-wait-holds.md) を参照する。
++
++- Red：正常対象の1件が旧一覧への依存で失敗。
++- 最初の関連テストでは、質問を含まない「要判断」をblockと期待した1件が失敗した。
++  既存 `result_state` は具体的な質問がない結果を継続として扱うため、テストを具体的なa/bの質問へ修正した。
++  この結果文の本体実装は変更していない。
++- Green：最終の入口13テストが成功。拒否・保持ケースでは保存callbackの呼出0とstore bytes不変を両方確認した。
++  guard中に通常のToDo lockを取得できること、別itemの編集の保存、job lock競合とliveness競合も確認した。
++- 登録フォルダの互換調整前に `cc-todo` 全311テストが成功。
++  その後の影響はこの入口だけであり、上記13テストを再実行した。
++- 既存 `cc-job-policy` の所有・依存・停止関連21テストが成功。
++- scheduler利用側、doctest、Clippy、候補生成、checkpointの結果は最終の追記で確定する。
++
++作業の完全な出力と実行条件は、このworktreeの `todo-4142-results.private.json` に保存する。
++再開情報とcheckpointは `todo-4142-resume.private.json` を正本とする。
++この工程では共有ToDoの状態更新、runner/CI起動、子AI job、PR作成、マージ、共有exe置換、
++実4023への再評価、本人への質問・再メンションを行わない。
++
++## 親が行う実4023の再評価
++
++出所はこの依頼の保存済み仕様と既存CLI `todo.exe reevaluate-owner-wait --help`、
++`cc-todo/src/lib.rs` の `ReevaluateOwnerWait` 分岐。
++本担当は実4023のsourceや原job promptを再読していない。
++
++1. 同じ最終ソースの別モデルレビュー・ラバーダック・必要CIを親が確認し、通常手順で統合する。
++2. 親が稼働版・並行writer・CASを照合して共有todo実行物を配布する。
++   未審査の候補は `release_eligible=false` のまま扱う。
++3. 通常の `todo list --all` から既存4023の登録rootと参照を確認し、現在の正規guardで資格を確認する。
++   旧一覧や原promptを開いたり、別root/copyへ置き換えたりしない。
++4. 配布済みの通常 `D:/CC/Tools/todo/todo.exe reevaluate-owner-wait 4023` を1回実行する。
++   このコマンドは既存の自動所有edgeを再評価するだけで、新workerを起動しない。
++5. `released` と対象行・既存jobの結果を通常経路で読み返す。
++   空のreleased、本当の本人待ち、M0未判定、source未確認を成功解除やレビュー完了と解釈しない。
++   原依存は通常の完了以外で解除しない。

@@ -1,0 +1,28 @@
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 0.33s
+────────────
+ Nextest run ID 7e2591c0-de91-40bd-a5a9-580d6754c43e with nextest profile: default
+    Starting 22 tests across 1 binary (33 tests skipped)
+        PASS [   0.030s] ( 1/22) cc-todo recovery::owner_wait::tests::durable_pr_or_branch_owner_claim_is_not_released
+        PASS [   0.033s] ( 2/22) cc-todo recovery::owner_wait::tests::guard_paths_are_unique_per_pass_and_every_pass_is_fresh
+        PASS [   0.056s] ( 3/22) cc-todo recovery::owner_wait::tests::guards_never_hold_shared_todo_or_referenced_job_locks
+        PASS [   0.087s] ( 4/22) cc-todo recovery::owner_wait::tests::changed_exact_job_and_busy_normal_job_lock_are_rejected
+        PASS [   0.101s] ( 5/22) cc-todo recovery::owner_wait::tests::cross_project_owner_is_rejected_without_reinterpreting_its_scope
+        PASS [   0.076s] ( 6/22) cc-todo recovery::owner_wait::tests::host_budget_begins_after_initial_scope_snapshot_and_lock_release
+        PASS [   0.114s] ( 7/22) cc-todo recovery::owner_wait::tests::liveness_change_snapshot_error_and_expired_guard_cannot_commit
+        PASS [   0.073s] ( 8/22) cc-todo recovery::owner_wait::tests::manual_dependencies_and_unproven_automatic_edges_stay_untouched
+        PASS [   0.034s] ( 9/22) cc-todo recovery::owner_wait::tests::normal_registered_root_fallback_and_ancestor_git_scope_are_preserved
+        PASS [   0.221s] (10/22) cc-todo recovery::owner_wait::tests::guards_run_without_todo_lock_and_changed_selected_source_is_rejected
+        PASS [   0.279s] (11/22) cc-todo recovery::owner_wait::tests::actual_owner_question_stops_and_terminal_items_never_save
+        PASS [   0.057s] (12/22) cc-todo recovery::owner_wait::tests::positive_uses_current_guard_without_reading_legacy_list
+        PASS [   0.137s] (13/22) cc-todo recovery::owner_wait::tests::null_false_and_empty_hold_markers_keep_legitimate_release
+        PASS [   0.249s] (14/22) cc-todo recovery::owner_wait::tests::malformed_scheduler_worktree_on_either_source_never_saves
+        PASS [   0.086s] (15/22) cc-todo recovery::owner_wait::tests::queued_running_surviving_and_unknown_processes_never_save
+        PASS [   0.060s] (16/22) cc-todo recovery::owner_wait::tests::unknown_start_is_rejected_and_sub_45_second_scope_is_not_renewed
+        PASS [   0.088s] (17/22) cc-todo recovery::owner_wait::tests::unrelated_item_changes_are_preserved_and_other_items_never_reevaluated
+        PASS [   0.299s] (18/22) cc-todo recovery::owner_wait::tests::missing_or_wrong_project_owner_and_reference_sources_never_save
+        PASS [   0.174s] (19/22) cc-todo recovery::owner_wait::tests::wrong_job_bindings_or_omitted_receipt_sources_never_save
+        PASS [   0.355s] (20/22) cc-todo recovery::owner_wait::tests::owner_block_delay_dependency_and_malformed_hold_containers_never_save
+        PASS [   0.730s] (21/22) cc-todo recovery::owner_wait::tests::guard_denial_unknown_malformed_missing_cli_error_and_timeout_never_save
+        PASS [   5.564s] (22/22) cc-todo recovery::owner_wait::tests::explicit_holds_on_candidate_or_owner_never_release_or_save
+────────────
+     Summary [   5.565s] 22 tests run: 22 passed, 33 skipped

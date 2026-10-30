@@ -1,0 +1,21 @@
+{
+  "stage": "green-owner-wait",
+  "started": "2026-10-30T09:03:20.9451797+09:00",
+  "ended": "2026-10-30T09:03:23.4964951+09:00",
+  "exit_code": 101,
+  "head": "751d18510562724d44f05f3f0ccedb3e50502b6d",
+  "executable": "D:/CC/Tools/codex-jobs/cargo_gate.exe",
+  "arguments": [
+    "nextest",
+    "run",
+    "--locked",
+    "-p",
+    "cc-todo",
+    "--lib",
+    "-E",
+    "test(recovery::owner_wait)",
+    "--no-fail-fast"
+  ],
+  "target": "D:\\CC\\Work\\unattended-operations-20261013-wt\\todo-4246-3387\\codex-owned-ca355ffba5561fca35a0723685ed6ebd\\target",
+  "create_no_window": true
+}

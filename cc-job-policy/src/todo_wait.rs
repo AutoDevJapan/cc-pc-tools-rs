@@ -189,6 +189,15 @@ pub fn release_item(item: &mut Value) {
                 .saturating_add(1)
         );
         if let Some(scheduler) = item["scheduler"].as_object_mut() {
+            // Releasing a prerequisite retires this reservation, not the
+            // worker's result. Keep the current source before removing it.
+            if scheduler
+                .get("job")
+                .and_then(Value::as_str)
+                .is_some_and(|id| !id.is_empty())
+            {
+                scheduler.insert("last_job".into(), scheduler["job"].clone());
+            }
             for key in ["job", "key", "selection"] {
                 scheduler.remove(key);
             }

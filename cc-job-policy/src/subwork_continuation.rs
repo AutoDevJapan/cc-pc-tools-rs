@@ -1,4 +1,4 @@
-//! A current parent request creates a new finite contract, never a valid old quota capsule.
+//! A current parent binds the next finite contract to the actual finished worker.
 use crate::{cancellation, product_retry::digest, quota_recovery as quota};
 use serde_json::{Value, json};
 
@@ -93,6 +93,42 @@ fn retry_budget_known(source: &Value) -> bool {
                 })))
         && crate::quota_retry::terminal_reason(source).is_none()
 }
+/// The current generation's assigned worker takes precedence over an older
+/// last_job left behind by a dependency release. Never pick an arbitrary job.
+pub fn source_id(item: &Value) -> &str {
+    let receipt = &item["worker_receipt"];
+    if receipt["generation"].is_u64()
+        && receipt["generation"] == item["resume_generation"]
+        && !text(receipt, "job").is_empty()
+    {
+        text(receipt, "job")
+    } else {
+        text(&item["scheduler"], "last_job")
+    }
+}
+
+fn current_result(item: &Value, source: &Value) -> bool {
+    source["todo_resume_generation"].is_u64()
+        && source["todo_resume_generation"] == item["resume_generation"]
+        && item["worker_receipt"]["generation"] == item["resume_generation"]
+        && item["worker_receipt"]["job"] == source["id"]
+        && source["todo_dependency_generation"]
+            .as_u64()
+            .is_some_and(|g| {
+                item["dependency_generation"]
+                    .as_u64()
+                    .is_some_and(|now| g <= now)
+            })
+        && ["repository", "git_common"].iter().all(|key| {
+            !text(&source["work_owner"], key).is_empty()
+                && source["work_owner"][*key] == item["subwork"]["owner"][*key]
+        })
+        && source["work_owner"]["worktree"]
+            == crate::work_owner::norm(std::path::Path::new(text(source, "cwd")))
+        && source["work_owner"]["branch"] == item["scheduler"]["branch"]
+        && (matches!(text(source, "status"), "succeeded" | "lost")
+            || (cancellation::cancelled(source) && cancellation::recovery_cancel(item, source)))
+}
 /// Caller additionally checks actual parent ownership, real process drain and dependencies.
 pub fn request(item: &Value, source: &Value, actor: &Value) -> Option<Value> {
     let finite = if item["subwork"]["kind"] == "review" {
@@ -102,26 +138,31 @@ pub fn request(item: &Value, source: &Value, actor: &Value) -> Option<Value> {
     };
     let generation = gen_(item, "resume_generation");
     let dependency = gen_(item, "dependency_generation");
+    let result = current_result(item, source);
+    // Genuine quota failures keep the original finite quota-retry route. A
+    // newer worker's success/lost/recovery cancellation is its own result,
+    // even when it retains historical quota classification.
+    let old_quota = source["status"] == "failed"
+        && quota::quota_source(source)
+        && source["todo_resume_generation"]
+            .as_u64()
+            .is_some_and(|g| g < generation)
+        && source["todo_dependency_generation"]
+            .as_u64()
+            .is_some_and(|g| g < dependency);
     let begin = chrono::DateTime::parse_from_rfc3339(text(source, "started_at")).ok()?;
     let end = chrono::DateTime::parse_from_rfc3339(text(source, "finished_at")).ok()?;
     if !unheld(item, source)
         || !["research", "review"].contains(&text(&item["subwork"], "kind"))
-        || item["scheduler"]["last_job"] != source["id"]
+        || source_id(item) != text(source, "id")
         || text(source, "id").is_empty()
         || source["todo_id"] != item["id"]
-        || source["status"] != "failed"
-        || !quota::quota_source(source)
+        || (!old_quota && !result)
         || source["model_origin"] == "owner_request"
         || source["subwork"] != item["subwork"]
         || !item["jobs"]
             .as_array()
             .is_some_and(|ids| ids.contains(&source["id"]))
-        || source["todo_resume_generation"]
-            .as_u64()
-            .is_none_or(|g| g >= generation)
-        || source["todo_dependency_generation"]
-            .as_u64()
-            .is_none_or(|g| g >= dependency)
         || actor["todo_id"] != item["subwork"]["parent_todo_id"]
         || text(actor, "id").is_empty()
         || !actor["todo_resume_generation"].is_u64()
@@ -160,14 +201,17 @@ pub fn request(item: &Value, source: &Value, actor: &Value) -> Option<Value> {
     if quota::scope(&target) != quota::scope(source) {
         return None;
     }
-    Some(
-        json!({"version":1,"source_job":source["id"],"actor_job":actor["id"],
+    let mut proof = json!({"version":1,"source_job":source["id"],"actor_job":actor["id"],
         "actor_resume_generation":actor["todo_resume_generation"],
         "actor_sha256":hash(&actor_binding(actor)),"source_sha256":hash(&quota::source_binding(source)),
         "retry_source_sha256":crate::quota_retry::binding(source),
         "request_sha256":hash(&quota::request(item)),"resume_generation":generation,
-        "dependency_generation":dependency,"spec_sha256":spec_sha256}),
-    )
+        "dependency_generation":dependency,"spec_sha256":spec_sha256});
+    if result {
+        proof["source_kind"] = json!("current_result");
+        proof["source_receipt"] = item["worker_receipt"].clone();
+    }
+    Some(proof)
 }
 pub fn current(proof: &Value, item: &Value, source: &Value, actor: &Value) -> bool {
     proof.is_object() && request(item, source, actor).as_ref() == Some(proof)
@@ -277,6 +321,13 @@ pub fn verify(
             return false;
         }
         prepared["resume_generation"] = request["resume_generation"].clone();
+        // Only the exactly validated next worker above may project the
+        // original source receipt for rechecking the immutable intake proof.
+        prepared["worker_receipt"] = if request["source_kind"] == "current_result" {
+            request["source_receipt"].clone()
+        } else {
+            Value::Null
+        };
     }
     let mut initial = target.clone();
     for field in ["model", "effort", "model_origin", "effort_origin"] {

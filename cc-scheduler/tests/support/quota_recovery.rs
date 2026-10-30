@@ -355,6 +355,7 @@ fn current_finite_result_contract_uses_worker_receipt_instead_of_stale_last_job(
     for status in ["succeeded", "lost", "cancelled"] {
         let (mut f, mut sub) = dependency_continuation_fixture();
         let mut next = f.e.backend.records[1].clone();
+        next["work_owner"] = cc_job_policy::work_owner::checkout(s(&next["cwd"]));
         next["id"] = json!("new-current"); next["status"] = json!(status);
         next["launch_key"] = json!("new-current-key");
         next["finite_subwork"]["launch_key"] = next["launch_key"].clone();

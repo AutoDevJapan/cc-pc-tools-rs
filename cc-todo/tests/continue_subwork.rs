@@ -112,6 +112,7 @@ fn real_parent_accepts_only_the_new_current_request_and_preserves_every_old_reco
 
 fn current_result(status: &str) -> support::Fixture {
     let mut f = fixture();
+    f.jobs[1]["work_owner"] = cc_job_policy::work_owner::checkout(f.jobs[1]["cwd"].as_str().unwrap());
     f.jobs[1]["status"] = json!(status);
     f.jobs[1]["todo_resume_generation"] = json!(3);
     f.jobs[1]["todo_dependency_generation"] = json!(1);
@@ -140,7 +141,7 @@ fn current_parent_rebinds_the_exact_finished_worker_after_cancel_or_pc_return() 
 
 #[test]
 fn finished_worker_rebinding_cannot_replace_current_ownership_or_quota_retry() {
-    for case in ["unknown_cancel", "quota_failure", "receipt_job", "receipt_generation", "source_generation", "dependency", "spec", "scope", "budget", "drain", "stop", "parent"] {
+    for case in ["unknown_cancel", "quota_failure", "receipt_job", "receipt_generation", "source_generation", "dependency", "spec", "scope", "source_owner", "budget", "drain", "stop", "parent"] {
         let mut f = current_result("cancelled");
         match case {
             "unknown_cancel" => { f.jobs[1].as_object_mut().unwrap().remove("recovery_cancel"); },
@@ -151,6 +152,7 @@ fn finished_worker_rebinding_cannot_replace_current_ownership_or_quota_retry() {
             "dependency" => f.db["items"][1]["wait_on"] = json!([99]),
             "spec" => fs::write(f.db["items"][1]["spec"].as_str().unwrap(), "Changed").unwrap(),
             "scope" => f.db["items"][1]["network"] = json!(true),
+            "source_owner" => f.jobs[1]["work_owner"]["repository"] = json!("different"),
             "budget" => f.jobs[1]["capacity_exhausted"] = json!(true),
             "drain" => { f.jobs[1]["pid"] = f.jobs[0]["pid"].clone(); f.jobs[1]["pid_created"] = f.jobs[0]["pid_created"].clone(); },
             "stop" => f.db["items"][1]["owner_stopped"] = json!(true),

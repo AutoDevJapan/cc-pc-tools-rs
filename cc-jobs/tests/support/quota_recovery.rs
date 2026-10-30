@@ -269,6 +269,7 @@ fn research_admission(gpt: bool, case: &str) {
         row["resume_generation"]=json!(3);row["dependency_generation"]=json!(1);
         source["todo_resume_generation"]=json!(2);
         if case.starts_with("continuation_result_") {
+            source["work_owner"] = cc_job_policy::work_owner::checkout(s(&source["cwd"]));
             let status = case.strip_prefix("continuation_result_").unwrap();
             source["status"] = json!(if status == "reset" { "lost" } else { status });
             source["todo_resume_generation"] = json!(3);
@@ -411,7 +412,7 @@ fn research_admission(gpt: bool, case: &str) {
         for route in health["openai"]["safe_routes"].as_array_mut().unwrap(){route["at"]=json!(now);}
     }
     let slot = t.ctx.admit(s(&j, "id"));
-    if !["normal","continuation_normal","continuation_legacy","continuation_no_retry","capacity_same","capacity_switch","capacity_anthropic","capacity_metadata","capacity_wait"].contains(&case) {
+    if !["normal","continuation_normal","continuation_legacy","continuation_no_retry","continuation_result_succeeded","continuation_result_lost","continuation_result_cancelled","capacity_same","capacity_switch","capacity_anthropic","capacity_metadata","capacity_wait"].contains(&case) {
         assert!(slot.is_err() || slot.unwrap().is_none(), "{case}");
         assert_ne!(t.ctx.load(s(&j, "id")).unwrap()["status"], "running");
         return;

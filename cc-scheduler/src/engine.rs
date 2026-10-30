@@ -1363,12 +1363,16 @@ if !truth(&row["scheduler"]["key"]){let attempt=add_count(&row["scheduler"]["att
             }
         }
         let jobs = self.backend.jobs()?;
-        let source = jobs.iter().find(|j| {
-            !truth(&item["scheduler"]["console_fresh_request"])
-                && (j["id"] == item["scheduler"]["last_job"]
-                    || j["id"] == item["scheduler"]["workspace_receipt"]["job"])
-                && owns_workspace(&item, j)
-        });
+        let source = (!truth(&item["scheduler"]["console_fresh_request"]))
+            .then(|| {
+                [
+                    cc_job_policy::subwork_continuation::source_id(&item),
+                    s(&item["scheduler"]["last_job"]),
+                    s(&item["scheduler"]["workspace_receipt"]["job"]),
+                ].into_iter().filter(|id| !id.is_empty()).find_map(|id| {
+                    jobs.iter().find(|j| j["id"] == id && owns_workspace(&item, j))
+                })
+            }).flatten();
         let mut resume_session = source.and_then(|j| {
             crate::preparation::recovery_session(&item, j, s(&item["scheduler"]["worktree"]), &jobs)
         });

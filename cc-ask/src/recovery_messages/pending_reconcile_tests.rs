@@ -655,6 +655,32 @@ fn pending_reconcile_same_body_without_tag_or_with_a_different_tag_stops() {
 }
 
 #[test]
+fn pending_reconcile_multiple_ambiguous_candidates_report_only_the_latest_id() {
+    let mut c = Case::new();
+    c.precheck();
+    let original = c.saved();
+    let older = c.f.add_reply(&c.thread, BOT, &c.body, true);
+    let latest = c.f.add_reply(&c.thread, BOT, &c.body, true);
+    let error = c.run().unwrap_err();
+    assert!(error.contains("same bot body"), "{error}");
+    assert!(
+        error.contains(&format!("latest candidate message {latest}")),
+        "{error}"
+    );
+    assert!(error.contains("additional candidates may exist"), "{error}");
+    assert!(
+        !error.contains(&older),
+        "only the latest ID is reported: {error}"
+    );
+    assert!(
+        !error.contains("no POST"),
+        "history may run after POST: {error}"
+    );
+    assert_eq!(c.posts(), 0);
+    assert_eq!(c.saved(), original);
+}
+
+#[test]
 fn pending_reconcile_transformed_duplicate_body_never_authorizes_a_post() {
     for shape in 0..3 {
         let mut c = if shape == 2 {

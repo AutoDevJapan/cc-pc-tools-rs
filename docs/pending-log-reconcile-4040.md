@@ -1,6 +1,6 @@
 # 予約済みの通常報告1件を回復する
 
-ToDo4040。対象は run `automation:2026-10-26T18:34:26.422Z` の
+対象は run `automation:2026-10-26T18:34:26.422Z` の
 `conversation-log-1ff3c6481a24325fcd88363de3a7593c`、`log:0` のみ。
 通常senderのPendingは結果不明を意味し、GETで不在でも再POSTしない。
 この既存動作を保持し、明示的な資格入力を用いる専用コマンドを追加する。
@@ -18,17 +18,15 @@ ToDo4040。対象は run `automation:2026-10-26T18:34:26.422Z` の
   再実行・同時実行・応答喪失後もこのslotの追加attemptを許さない。
 - 保存失敗/CAS競合/unknown lease/active sendは成功扱いにしない。
   POST後のGET/保存失敗も再POST資格を復活させない。
-- 投稿前後の本番操作は既存Relayだけが実行する。ソフト担当はPOSTしない。
-- 変更部テスト、Clippy、doctest、Windows受入、別実モデルレビュー、必要CIを確認し、
+- 投稿前後の本番操作は既存の送信担当だけが実行する。
+- 変更部テスト、Clippy、doctest、Windows受入、所定のレビュー、必要CIを確認し、
   通常マージと最新実行版を保持する配布を行う。
 
-## 調査時点の制約
+## 操作前の確認
 
-2026-10-27 06:15 JST。専用worktree/rootは現guard clear。
-指定再現フォルダ、正規sender journal、正規conversation登録は現guardが
-classification_unverified/access_allowed=falseを返したため、本担当は未読。
-別pathやコピーでは回避せず、ソースに基づく独立修正を進める。
-本番precheck・CAS・Relay実GET/受領は未実施であり、モック成功を本番回復へ読み替えない。
+正規sender journal、conversation登録、凍結本文の保護判定を確認してから操作する。
+分類未確認の原記録を別pathやコピーから読んで回避しない。
+テストの成功と、配布・本番precheck・CAS・実GETによる配送確認は分けて記録する。
 
 一次資料: [Discord Message API](https://docs.discord.com/developers/resources/message)。
 履歴APIはREAD_MESSAGE_HISTORYとcursorの確認が必要。nonceの短期間の重複抑止だけを
@@ -94,7 +92,10 @@ check-onlyは候補数・hash・lease確認・attempt有無を返すが投稿・
 履歴hashのmentionsはID、attachmentsはID・filename・size・content_typeへ限定し、
 プロフィールや添付URLだけの変化では確認済みの同一性を変えない。
 
-同じbot本文を含む曖昧な候補で停止した場合は、エラーに候補のmessage IDを返す。
+同じbot本文を含む曖昧な候補で停止した場合は、エラーに最新候補1件のmessage IDだけを返す。
+ほかにも候補があり得ることを明記し、候補が1件しかないという証拠にはしない。
 本文自体はエラーへ出さず、元RelayはそのIDを正規GETで照合する。
+この診断は送信後の再照合でも使うため、診断だけでPOSTの有無を判断しない。
+保存済みattemptと実GETを照合し、再POSTはしない。
 mention ID、添付ID・filename・size・content_typeの変化は履歴の同一性を変えるため、
 以前のprecheckによるapplyをCAS不一致で拒否し、journalと送信回数を変えない。

@@ -1,0 +1,4 @@
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 0.38s
+   Doc-tests cc_job_policy
+   Doc-tests cc_scheduler
+   Doc-tests cc_todo

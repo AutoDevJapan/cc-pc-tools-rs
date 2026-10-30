@@ -1,0 +1,21 @@
+{
+  "stage": "clippy-todo",
+  "started": "2026-10-30T09:06:37.9430570+09:00",
+  "ended": "2026-10-30T09:06:58.4376748+09:00",
+  "exit_code": 0,
+  "head": "5443df48b2d1de7913ae61d0376deb59f2792423",
+  "executable": "D:/CC/Tools/codex-jobs/cargo_gate.exe",
+  "arguments": [
+    "clippy",
+    "--locked",
+    "-p",
+    "cc-todo",
+    "--lib",
+    "--tests",
+    "--",
+    "-D",
+    "warnings"
+  ],
+  "target": "D:\\CC\\Work\\unattended-operations-20261013-wt\\todo-4246-3387\\codex-owned-ca355ffba5561fca35a0723685ed6ebd\\target",
+  "create_no_window": true
+}

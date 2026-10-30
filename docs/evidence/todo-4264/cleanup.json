@@ -1,0 +1,17 @@
+{
+  "id": "54d7c4749feb42fe35f5482956923eac",
+  "plan_action": "quarantine",
+  "reason": "size",
+  "bytes": 3934735176,
+  "entries": 5745,
+  "state": "quarantined",
+  "destination": "C:\\Users\\makhmeto\\Downloads\\削除希望\\20261030-todo-4264-cargo-and-fixtures-54d7c474",
+  "source_absent": true,
+  "destination_exists": true,
+  "destination_regular_file_bytes": 3934735842.0,
+  "capacity_reclaimed": false,
+  "owner_decision_required": false,
+  "next_step": "Existing cleanup process may reclaim the owned quarantine after reviewing its receipt. Parent records this new hold once.",
+  "candidate_and_closure_hashes_verified": true,
+  "other_targets_touched": 0
+}

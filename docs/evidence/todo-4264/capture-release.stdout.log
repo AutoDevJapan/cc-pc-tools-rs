@@ -1,0 +1,16 @@
+{
+  "candidate": {
+    "path": "D:\\CC\\Work\\unattended-operations-20261013-wt\\todo-4264-work\\.ci-work\\candidate\\todo.exe",
+    "bytes": 8771584,
+    "raw_sha256": "369c82aaaa942161032b429608003e353e2d9f5c149505fed4a7690919652530"
+  },
+  "closure": {
+    "path": "D:\\CC\\Work\\unattended-operations-20261013-wt\\todo-4264-work\\.ci-work\\candidate\\release-closure.private.json",
+    "bytes": 1417050,
+    "raw_sha256": "4250ef4b2d93c94d04a18e3952bfe0df411a574819fb383904dad820b1f690b3"
+  },
+  "inputs": 2849,
+  "git_inputs": 152,
+  "dep_info": 195,
+  "release_eligible": false
+}

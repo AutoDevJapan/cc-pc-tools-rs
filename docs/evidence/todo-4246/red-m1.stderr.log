@@ -1,0 +1,501 @@
+   Compiling proc-macro2 v1.0.107
+   Compiling quote v1.0.47
+   Compiling unicode-ident v1.0.26
+   Compiling windows-link v0.2.1
+   Compiling memchr v2.8.3
+   Compiling stable_deref_trait v1.2.1
+   Compiling cfg-if v1.0.5
+   Compiling itoa v1.0.18
+   Compiling windows-sys v0.61.2
+   Compiling pin-project-lite v0.2.17
+   Compiling writeable v0.6.4
+   Compiling litemap v0.8.3
+   Compiling futures-core v0.3.34
+   Compiling smallvec v1.16.2
+   Compiling serde_core v1.0.229
+   Compiling bytes v1.12.1
+   Compiling utf8_iter v1.0.4
+   Compiling icu_properties_data v2.3.0
+   Compiling icu_normalizer_data v2.3.0
+   Compiling once_cell v1.21.4
+   Compiling serde v1.0.229
+   Compiling percent-encoding v2.3.2
+   Compiling shlex v2.0.1
+   Compiling zmij v1.0.23
+   Compiling find-msvc-tools v0.1.14
+   Compiling futures-sink v0.3.34
+   Compiling hashbrown v0.17.1
+   Compiling version_check v0.9.5
+   Compiling equivalent v1.0.2
+   Compiling generic-array v0.14.7
+   Compiling futures-channel v0.3.34
+   Compiling cc v1.6.0
+   Compiling indexmap v2.14.2
+   Compiling futures-task v0.3.34
+   Compiling serde_json v1.0.151
+   Compiling zeroize v1.9.1
+   Compiling mio v1.2.4
+   Compiling socket2 v0.6.5
+   Compiling slab v0.4.12
+   Compiling futures-io v0.3.34
+   Compiling rustls-pki-types v1.15.1
+   Compiling ring v0.17.14
+   Compiling form_urlencoded v1.2.2
+   Compiling crc32fast v1.5.2
+   Compiling typenum v1.20.1
+   Compiling log v0.4.34
+   Compiling simd-adler32 v0.3.10
+   Compiling autocfg v1.5.1
+   Compiling syn v3.0.6
+   Compiling syn v2.0.119
+   Compiling http v1.5.0
+   Compiling num-traits v0.2.19
+   Compiling getrandom v0.2.17
+   Compiling windows-result v0.4.1
+   Compiling windows-strings v0.5.1
+   Compiling untrusted v0.9.0
+   Compiling adler2 v2.0.1
+   Compiling crypto-common v0.1.7
+   Compiling block-buffer v0.10.4
+   Compiling windows-implement v0.60.2
+   Compiling windows-interface v0.59.3
+   Compiling miniz_oxide v0.9.1
+   Compiling http-body v1.1.0
+   Compiling synstructure v0.14.0
+   Compiling zerovec-derive v0.11.6
+   Compiling displaydoc v0.2.7
+   Compiling zerofrom-derive v0.1.8
+   Compiling yoke-derive v0.8.4
+   Compiling serde_derive v1.0.229
+   Compiling futures-macro v0.3.34
+   Compiling tokio-macros v2.7.2
+   Compiling windows-core v0.62.2
+   Compiling getrandom v0.4.3
+   Compiling zerofrom v0.1.8
+   Compiling yoke v0.8.3
+   Compiling futures-util v0.3.34
+   Compiling tokio v1.53.2
+   Compiling windows_x86_64_msvc v0.52.6
+   Compiling httparse v1.10.1
+   Compiling zerovec v0.11.8
+   Compiling zerotrie v0.2.5
+   Compiling rustls v0.23.45
+   Compiling flate2 v1.1.10
+   Compiling tinystr v0.8.4
+   Compiling potential_utf v0.1.6
+   Compiling digest v0.10.7
+   Compiling icu_collections v2.3.0
+   Compiling icu_locale_core v2.3.0
+   Compiling webpki-roots v1.0.9
+   Compiling aho-corasick v1.1.5
+   Compiling base64 v0.22.1
+   Compiling libc v0.2.190
+   Compiling utf8parse v0.2.2
+   Compiling try-lock v0.2.5
+   Compiling anstyle v1.0.14
+   Compiling subtle v2.6.1
+   Compiling cpufeatures v0.2.17
+   Compiling once_cell_polyfill v1.70.2
+   Compiling tower-service v0.3.3
+   Compiling regex-syntax v0.8.11
+   Compiling native-tls v0.2.18
+   Compiling thiserror v2.0.21
+   Compiling anstyle-wincon v3.0.11
+   Compiling sha2 v0.10.9
+   Compiling want v0.3.2
+   Compiling anstyle-parse v1.0.0
+   Compiling regex-automata v0.4.18
+   Compiling icu_provider v2.3.1
+   Compiling webpki-roots v0.26.11
+   Compiling chrono v0.4.45
+   Compiling thiserror-impl v2.0.21
+   Compiling schannel v0.1.29
+   Compiling anstyle-query v1.1.5
+   Compiling tracing-core v0.1.36
+   Compiling rustls-webpki v0.103.15
+   Compiling windows-threading v0.2.1
+   Compiling icu_properties v2.3.0
+   Compiling icu_normalizer v2.3.0
+   Compiling atomic-waker v1.1.2
+   Compiling is_terminal_polyfill v1.70.2
+   Compiling colorchoice v1.0.5
+   Compiling windows-future v0.3.2
+   Compiling tracing v0.1.44
+   Compiling anstream v1.0.0
+   Compiling regex v1.13.1
+   Compiling futures-executor v0.3.34
+   Compiling windows-targets v0.52.6
+   Compiling windows-numerics v0.3.1
+   Compiling windows-collections v0.3.2
+   Compiling sync_wrapper v1.0.2
+   Compiling zip v2.4.2
+   Compiling tower-layer v0.3.3
+   Compiling clap_lex v1.1.1
+   Compiling fastrand v2.5.0
+   Compiling ipnet v2.12.2
+   Compiling base64 v0.23.1
+   Compiling heck v0.5.0
+   Compiling bumpalo v3.20.3
+   Compiling strsim v0.11.1
+   Compiling tempfile v3.27.0
+   Compiling clap_derive v4.6.7
+   Compiling windows v0.62.2
+   Compiling zopfli v0.8.3
+   Compiling clap_builder v4.6.7
+   Compiling futures v0.3.34
+   Compiling windows-sys v0.59.0
+   Compiling cc-job-policy v0.1.0 (D:\CC\Work\unattended-operations-20261013-wt\todo-4246-3387\cc-job-policy)
+   Compiling uuid v1.27.0
+   Compiling http-body-util v0.1.5
+   Compiling bitflags v2.13.2
+   Compiling idna_adapter v1.2.2
+   Compiling ryu v1.0.23
+   Compiling winreg v0.55.0
+   Compiling idna v1.1.0
+   Compiling serde_urlencoded v0.7.1
+   Compiling hyper v1.12.0
+   Compiling tokio-native-tls v0.3.1
+   Compiling url v2.5.8
+   Compiling tower v0.5.3
+   Compiling ureq v2.12.1
+   Compiling cc-chrome v0.1.0 (D:\CC\Work\unattended-operations-20261013-wt\todo-4246-3387\cc-chrome)
+   Compiling hyper-util v0.1.21
+   Compiling tower-http v0.6.11
+   Compiling clap v4.6.7
+   Compiling hyper-tls v0.6.0
+   Compiling reqwest v0.12.28
+   Compiling wmi v0.18.4
+   Compiling cc-task-title v0.1.0 (D:\CC\Work\unattended-operations-20261013-wt\todo-4246-3387\cc-task-title)
+   Compiling cc-local-llm v0.1.0 (D:\CC\Work\unattended-operations-20261013-wt\todo-4246-3387\cc-local-llm)
+   Compiling cc-live v0.1.0 (D:\CC\Work\unattended-operations-20261013-wt\todo-4246-3387\cc-live)
+   Compiling cc-ask v0.1.0 (D:\CC\Work\unattended-operations-20261013-wt\todo-4246-3387\cc-ask)
+   Compiling cc-scheduler v0.1.0 (D:\CC\Work\unattended-operations-20261013-wt\todo-4246-3387\cc-scheduler)
+   Compiling cc-todo v0.1.0 (D:\CC\Work\unattended-operations-20261013-wt\todo-4246-3387\cc-todo)
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 30.07s
+────────────
+ Nextest run ID be3f9e99-26f0-42be-ac43-394ffdf457c5 with nextest profile: default
+    Starting 1 test across 1 binary (46 tests skipped)
+        FAIL [   8.668s] (1/1) cc-todo recovery::owner_wait::tests::explicit_holds_on_candidate_or_owner_never_release_or_save
+  stdout ───
+
+    running 1 test
+    test recovery::owner_wait::tests::explicit_holds_on_candidate_or_owner_never_release_or_save ... FAILED
+
+    failures:
+
+    failures:
+        recovery::owner_wait::tests::explicit_holds_on_candidate_or_owner_never_release_or_save
+
+    test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 46 filtered out; finished in 8.65s
+
+  stderr ───
+
+    thread 'recovery::owner_wait::tests::explicit_holds_on_candidate_or_owner_never_release_or_save' (62280) panicked at cc-todo\src\recovery\owner_wait_tests.rs:159:5:
+    explicit holds were released/saved:
+    row=0 scheduler=false field=stopped value="hold": released=Ok([1]) commits=1 bytes_unchanged=false
+    row=0 scheduler=false field=stopped value=1: released=Ok([1]) commits=1 bytes_unchanged=false
+    row=0 scheduler=false field=stopped value=0: released=Ok([1]) commits=1 bytes_unchanged=false
+    row=0 scheduler=false field=stopped value=[]: released=Ok([1]) commits=1 bytes_unchanged=false
+    row=0 scheduler=false field=stopped value={}: released=Ok([1]) commits=1 bytes_unchanged=false
+    row=0 scheduler=false field=cancel_requested value="hold": released=Ok([1]) commits=1 bytes_unchanged=false
+    row=0 scheduler=false field=cancel_requested value=1: released=Ok([1]) commits=1 bytes_unchanged=false
+    row=0 scheduler=false field=cancel_requested value=0: released=Ok([1]) commits=1 bytes_unchanged=false
+    row=0 scheduler=false field=cancel_requested value=[]: released=Ok([1]) commits=1 bytes_unchanged=false
+    row=0 scheduler=false field=cancel_requested value={}: released=Ok([1]) commits=1 bytes_unchanged=false
+    row=0 scheduler=false field=owner_stopped value=true: released=Ok([1]) commits=1 bytes_unchanged=false
+    row=0 scheduler=false field=owner_stopped value="hold": released=Ok([1]) commits=1 bytes_unchanged=false
+    row=0 scheduler=false field=owner_stopped value=1: released=Ok([1]) commits=1 bytes_unchanged=false
+    row=0 scheduler=false field=owner_stopped value=0: released=Ok([1]) commits=1 bytes_unchanged=false
+    row=0 scheduler=false field=owner_stopped value=[]: released=Ok([1]) commits=1 bytes_unchanged=false
+    row=0 scheduler=false field=owner_stopped value={}: released=Ok([1]) commits=1 bytes_unchanged=false
+    row=0 scheduler=false field=paused value=true: released=Ok([1]) commits=1 bytes_unchanged=false
+    row=0 scheduler=false field=paused value="hold": released=Ok([1]) commits=1 bytes_unchanged=false
+    row=0 scheduler=false field=paused value=1: released=Ok([1]) commits=1 bytes_unchanged=false
+    row=0 scheduler=false field=paused value=0: released=Ok([1]) commits=1 bytes_unchanged=false
+    row=0 scheduler=false field=paused value=[]: released=Ok([1]) commits=1 bytes_unchanged=false
+    row=0 scheduler=false field=paused value={}: released=Ok([1]) commits=1 bytes_unchanged=false
+    row=0 scheduler=false field=owner_postponement_recorded value=true: released=Ok([1]) commits=1 bytes_unchanged=false
+    row=0 scheduler=false field=owner_postponement_recorded value="hold": released=Ok([1]) commits=1 bytes_unchanged=false
+    row=0 scheduler=false field=owner_postponement_recorded value=1: released=Ok([1]) commits=1 bytes_unchanged=false
+    row=0 scheduler=false field=owner_postponement_recorded value=0: released=Ok([1]) commits=1 bytes_unchanged=false
+    row=0 scheduler=false field=owner_postponement_recorded value=[]: released=Ok([1]) commits=1 bytes_unchanged=false
+    row=0 scheduler=false field=owner_postponement_recorded value={}: released=Ok([1]) commits=1 bytes_unchanged=false
+    row=0 scheduler=false field=stop_kind value=true: released=Ok([1]) commits=1 bytes_unchanged=false
+    row=0 scheduler=false field=stop_kind value="hold": released=Ok([1]) commits=1 bytes_unchanged=false
+    row=0 scheduler=false field=stop_kind value=1: released=Ok([1]) commits=1 bytes_unchanged=false
+    row=0 scheduler=false field=stop_kind value=0: released=Ok([1]) commits=1 bytes_unchanged=false
+    row=0 scheduler=false field=stop_kind value=[]: released=Ok([1]) commits=1 bytes_unchanged=false
+    row=0 scheduler=false field=stop_kind value={}: released=Ok([1]) commits=1 bytes_unchanged=false
+    row=0 scheduler=false field=decision_wait value=true: released=Ok([1]) commits=1 bytes_unchanged=false
+    row=0 scheduler=false field=decision_wait value="hold": released=Ok([1]) commits=1 bytes_unchanged=false
+    row=0 scheduler=false field=decision_wait value=1: released=Ok([1]) commits=1 bytes_unchanged=false
+    row=0 scheduler=false field=decision_wait value=0: released=Ok([1]) commits=1 bytes_unchanged=false
+    row=0 scheduler=false field=decision_wait value=[]: released=Ok([1]) commits=1 bytes_unchanged=false
+    row=0 scheduler=false field=decision_wait value={}: released=Ok([1]) commits=1 bytes_unchanged=false
+    row=0 scheduler=false field=owner_question_wait value=true: released=Ok([1]) commits=1 bytes_unchanged=false
+    row=0 scheduler=false field=owner_question_wait value="hold": released=Ok([1]) commits=1 bytes_unchanged=false
+    row=0 scheduler=false field=owner_question_wait value=1: released=Ok([1]) commits=1 bytes_unchanged=false
+    row=0 scheduler=false field=owner_question_wait value=0: released=Ok([1]) commits=1 bytes_unchanged=false
+    row=0 scheduler=false field=owner_question_wait value=[]: released=Ok([1]) commits=1 bytes_unchanged=false
+    row=0 scheduler=false field=owner_question_wait value={}: released=Ok([1]) commits=1 bytes_unchanged=false
+    row=0 scheduler=false field=resume_condition value=true: released=Ok([1]) commits=1 bytes_unchanged=false
+    row=0 scheduler=false field=resume_condition value="hold": released=Ok([1]) commits=1 bytes_unchanged=false
+    row=0 scheduler=false field=resume_condition value=1: released=Ok([1]) commits=1 bytes_unchanged=false
+    row=0 scheduler=false field=resume_condition value=0: released=Ok([1]) commits=1 bytes_unchanged=false
+    row=0 scheduler=false field=resume_condition value=[]: released=Ok([1]) commits=1 bytes_unchanged=false
+    row=0 scheduler=false field=resume_condition value={}: released=Ok([1]) commits=1 bytes_unchanged=false
+    row=0 scheduler=false field=external_resume_condition value=true: released=Ok([1]) commits=1 bytes_unchanged=false
+    row=0 scheduler=false field=external_resume_condition value="hold": released=Ok([1]) commits=1 bytes_unchanged=false
+    row=0 scheduler=false field=external_resume_condition value=1: released=Ok([1]) commits=1 bytes_unchanged=false
+    row=0 scheduler=false field=external_resume_condition value=0: released=Ok([1]) commits=1 bytes_unchanged=false
+    row=0 scheduler=false field=external_resume_condition value=[]: released=Ok([1]) commits=1 bytes_unchanged=false
+    row=0 scheduler=false field=external_resume_condition value={}: released=Ok([1]) commits=1 bytes_unchanged=false
+    row=0 scheduler=true field=stopped value=true: released=Ok([1]) commits=1 bytes_unchanged=false
+    row=0 scheduler=true field=stopped value="hold": released=Ok([1]) commits=1 bytes_unchanged=false
+    row=0 scheduler=true field=stopped value=1: released=Ok([1]) commits=1 bytes_unchanged=false
+    row=0 scheduler=true field=stopped value=0: released=Ok([1]) commits=1 bytes_unchanged=false
+    row=0 scheduler=true field=stopped value=[]: released=Ok([1]) commits=1 bytes_unchanged=false
+    row=0 scheduler=true field=stopped value={}: released=Ok([1]) commits=1 bytes_unchanged=false
+    row=0 scheduler=true field=cancel_requested value=true: released=Ok([1]) commits=1 bytes_unchanged=false
+    row=0 scheduler=true field=cancel_requested value="hold": released=Ok([1]) commits=1 bytes_unchanged=false
+    row=0 scheduler=true field=cancel_requested value=1: released=Ok([1]) commits=1 bytes_unchanged=false
+    row=0 scheduler=true field=cancel_requested value=0: released=Ok([1]) commits=1 bytes_unchanged=false
+    row=0 scheduler=true field=cancel_requested value=[]: released=Ok([1]) commits=1 bytes_unchanged=false
+    row=0 scheduler=true field=cancel_requested value={}: released=Ok([1]) commits=1 bytes_unchanged=false
+    row=0 scheduler=true field=owner_stopped value=true: released=Ok([1]) commits=1 bytes_unchanged=false
+    row=0 scheduler=true field=owner_stopped value="hold": released=Ok([1]) commits=1 bytes_unchanged=false
+    row=0 scheduler=true field=owner_stopped value=1: released=Ok([1]) commits=1 bytes_unchanged=false
+    row=0 scheduler=true field=owner_stopped value=0: released=Ok([1]) commits=1 bytes_unchanged=false
+    row=0 scheduler=true field=owner_stopped value=[]: released=Ok([1]) commits=1 bytes_unchanged=false
+    row=0 scheduler=true field=owner_stopped value={}: released=Ok([1]) commits=1 bytes_unchanged=false
+    row=0 scheduler=true field=paused value=true: released=Ok([1]) commits=1 bytes_unchanged=false
+    row=0 scheduler=true field=paused value="hold": released=Ok([1]) commits=1 bytes_unchanged=false
+    row=0 scheduler=true field=paused value=1: released=Ok([1]) commits=1 bytes_unchanged=false
+    row=0 scheduler=true field=paused value=0: released=Ok([1]) commits=1 bytes_unchanged=false
+    row=0 scheduler=true field=paused value=[]: released=Ok([1]) commits=1 bytes_unchanged=false
+    row=0 scheduler=true field=paused value={}: released=Ok([1]) commits=1 bytes_unchanged=false
+    row=0 scheduler=true field=owner_postponement_recorded value=true: released=Ok([1]) commits=1 bytes_unchanged=false
+    row=0 scheduler=true field=owner_postponement_recorded value="hold": released=Ok([1]) commits=1 bytes_unchanged=false
+    row=0 scheduler=true field=owner_postponement_recorded value=1: released=Ok([1]) commits=1 bytes_unchanged=false
+    row=0 scheduler=true field=owner_postponement_recorded value=0: released=Ok([1]) commits=1 bytes_unchanged=false
+    row=0 scheduler=true field=owner_postponement_recorded value=[]: released=Ok([1]) commits=1 bytes_unchanged=false
+    row=0 scheduler=true field=owner_postponement_recorded value={}: released=Ok([1]) commits=1 bytes_unchanged=false
+    row=0 scheduler=true field=stop_kind value=true: released=Ok([1]) commits=1 bytes_unchanged=false
+    row=0 scheduler=true field=stop_kind value="hold": released=Ok([1]) commits=1 bytes_unchanged=false
+    row=0 scheduler=true field=stop_kind value=1: released=Ok([1]) commits=1 bytes_unchanged=false
+    row=0 scheduler=true field=stop_kind value=0: released=Ok([1]) commits=1 bytes_unchanged=false
+    row=0 scheduler=true field=stop_kind value=[]: released=Ok([1]) commits=1 bytes_unchanged=false
+    row=0 scheduler=true field=stop_kind value={}: released=Ok([1]) commits=1 bytes_unchanged=false
+    row=0 scheduler=true field=decision_wait value=true: released=Ok([1]) commits=1 bytes_unchanged=false
+    row=0 scheduler=true field=decision_wait value="hold": released=Ok([1]) commits=1 bytes_unchanged=false
+    row=0 scheduler=true field=decision_wait value=1: released=Ok([1]) commits=1 bytes_unchanged=false
+    row=0 scheduler=true field=decision_wait value=0: released=Ok([1]) commits=1 bytes_unchanged=false
+    row=0 scheduler=true field=decision_wait value=[]: released=Ok([1]) commits=1 bytes_unchanged=false
+    row=0 scheduler=true field=decision_wait value={}: released=Ok([1]) commits=1 bytes_unchanged=false
+    row=0 scheduler=true field=owner_question_wait value=true: released=Ok([1]) commits=1 bytes_unchanged=false
+    row=0 scheduler=true field=owner_question_wait value="hold": released=Ok([1]) commits=1 bytes_unchanged=false
+    row=0 scheduler=true field=owner_question_wait value=1: released=Ok([1]) commits=1 bytes_unchanged=false
+    row=0 scheduler=true field=owner_question_wait value=0: released=Ok([1]) commits=1 bytes_unchanged=false
+    row=0 scheduler=true field=owner_question_wait value=[]: released=Ok([1]) commits=1 bytes_unchanged=false
+    row=0 scheduler=true field=owner_question_wait value={}: released=Ok([1]) commits=1 bytes_unchanged=false
+    row=0 scheduler=true field=wait_ready value=true: released=Ok([1]) commits=1 bytes_unchanged=false
+    row=0 scheduler=true field=wait_ready value="hold": released=Ok([1]) commits=1 bytes_unchanged=false
+    row=0 scheduler=true field=wait_ready value=1: released=Ok([1]) commits=1 bytes_unchanged=false
+    row=0 scheduler=true field=wait_ready value=0: released=Ok([1]) commits=1 bytes_unchanged=false
+    row=0 scheduler=true field=wait_ready value=[]: released=Ok([1]) commits=1 bytes_unchanged=false
+    row=0 scheduler=true field=wait_ready value={}: released=Ok([1]) commits=1 bytes_unchanged=false
+    row=0 scheduler=true field=resume_condition value=true: released=Ok([1]) commits=1 bytes_unchanged=false
+    row=0 scheduler=true field=resume_condition value="hold": released=Ok([1]) commits=1 bytes_unchanged=false
+    row=0 scheduler=true field=resume_condition value=1: released=Ok([1]) commits=1 bytes_unchanged=false
+    row=0 scheduler=true field=resume_condition value=0: released=Ok([1]) commits=1 bytes_unchanged=false
+    row=0 scheduler=true field=resume_condition value=[]: released=Ok([1]) commits=1 bytes_unchanged=false
+    row=0 scheduler=true field=resume_condition value={}: released=Ok([1]) commits=1 bytes_unchanged=false
+    row=0 scheduler=true field=external_resume_condition value=true: released=Ok([1]) commits=1 bytes_unchanged=false
+    row=0 scheduler=true field=external_resume_condition value="hold": released=Ok([1]) commits=1 bytes_unchanged=false
+    row=0 scheduler=true field=external_resume_condition value=1: released=Ok([1]) commits=1 bytes_unchanged=false
+    row=0 scheduler=true field=external_resume_condition value=0: released=Ok([1]) commits=1 bytes_unchanged=false
+    row=0 scheduler=true field=external_resume_condition value=[]: released=Ok([1]) commits=1 bytes_unchanged=false
+    row=0 scheduler=true field=external_resume_condition value={}: released=Ok([1]) commits=1 bytes_unchanged=false
+    row=0 scheduler=true field=owner_stop_job value=true: released=Ok([1]) commits=1 bytes_unchanged=false
+    row=0 scheduler=true field=owner_stop_job value="hold": released=Ok([1]) commits=1 bytes_unchanged=false
+    row=0 scheduler=true field=owner_stop_job value=1: released=Ok([1]) commits=1 bytes_unchanged=false
+    row=0 scheduler=true field=owner_stop_job value=0: released=Ok([1]) commits=1 bytes_unchanged=false
+    row=0 scheduler=true field=owner_stop_job value=[]: released=Ok([1]) commits=1 bytes_unchanged=false
+    row=0 scheduler=true field=owner_stop_job value={}: released=Ok([1]) commits=1 bytes_unchanged=false
+    row=0 scheduler=true field=pending_cancel value=true: released=Ok([1]) commits=1 bytes_unchanged=false
+    row=0 scheduler=true field=pending_cancel value="hold": released=Ok([1]) commits=1 bytes_unchanged=false
+    row=0 scheduler=true field=pending_cancel value=1: released=Ok([1]) commits=1 bytes_unchanged=false
+    row=0 scheduler=true field=pending_cancel value=0: released=Ok([1]) commits=1 bytes_unchanged=false
+    row=0 scheduler=true field=pending_cancel value=[]: released=Ok([1]) commits=1 bytes_unchanged=false
+    row=0 scheduler=true field=pending_cancel value={}: released=Ok([1]) commits=1 bytes_unchanged=false
+    row=0 scheduler=true field=question_close_pending value=true: released=Ok([1]) commits=1 bytes_unchanged=false
+    row=0 scheduler=true field=question_close_pending value="hold": released=Ok([1]) commits=1 bytes_unchanged=false
+    row=0 scheduler=true field=question_close_pending value=1: released=Ok([1]) commits=1 bytes_unchanged=false
+    row=0 scheduler=true field=question_close_pending value=0: released=Ok([1]) commits=1 bytes_unchanged=false
+    row=0 scheduler=true field=question_close_pending value=[]: released=Ok([1]) commits=1 bytes_unchanged=false
+    row=0 scheduler=true field=question_close_pending value={}: released=Ok([1]) commits=1 bytes_unchanged=false
+    row=0 scheduler=true field=question value=0: released=Ok([1]) commits=1 bytes_unchanged=false
+    row=0 scheduler=true field=question value=[]: released=Ok([1]) commits=1 bytes_unchanged=false
+    row=0 scheduler=true field=question value={}: released=Ok([1]) commits=1 bytes_unchanged=false
+    row=1 scheduler=false field=stopped value=true: released=Ok([1]) commits=1 bytes_unchanged=false
+    row=1 scheduler=false field=stopped value="hold": released=Ok([1]) commits=1 bytes_unchanged=false
+    row=1 scheduler=false field=stopped value=1: released=Ok([1]) commits=1 bytes_unchanged=false
+    row=1 scheduler=false field=stopped value=0: released=Ok([1]) commits=1 bytes_unchanged=false
+    row=1 scheduler=false field=stopped value=[]: released=Ok([1]) commits=1 bytes_unchanged=false
+    row=1 scheduler=false field=stopped value={}: released=Ok([1]) commits=1 bytes_unchanged=false
+    row=1 scheduler=false field=cancel_requested value=true: released=Ok([1]) commits=1 bytes_unchanged=false
+    row=1 scheduler=false field=cancel_requested value="hold": released=Ok([1]) commits=1 bytes_unchanged=false
+    row=1 scheduler=false field=cancel_requested value=1: released=Ok([1]) commits=1 bytes_unchanged=false
+    row=1 scheduler=false field=cancel_requested value=0: released=Ok([1]) commits=1 bytes_unchanged=false
+    row=1 scheduler=false field=cancel_requested value=[]: released=Ok([1]) commits=1 bytes_unchanged=false
+    row=1 scheduler=false field=cancel_requested value={}: released=Ok([1]) commits=1 bytes_unchanged=false
+    row=1 scheduler=false field=owner_stopped value=true: released=Ok([1]) commits=1 bytes_unchanged=false
+    row=1 scheduler=false field=owner_stopped value="hold": released=Ok([1]) commits=1 bytes_unchanged=false
+    row=1 scheduler=false field=owner_stopped value=1: released=Ok([1]) commits=1 bytes_unchanged=false
+    row=1 scheduler=false field=owner_stopped value=0: released=Ok([1]) commits=1 bytes_unchanged=false
+    row=1 scheduler=false field=owner_stopped value=[]: released=Ok([1]) commits=1 bytes_unchanged=false
+    row=1 scheduler=false field=owner_stopped value={}: released=Ok([1]) commits=1 bytes_unchanged=false
+    row=1 scheduler=false field=paused value=true: released=Ok([1]) commits=1 bytes_unchanged=false
+    row=1 scheduler=false field=paused value="hold": released=Ok([1]) commits=1 bytes_unchanged=false
+    row=1 scheduler=false field=paused value=1: released=Ok([1]) commits=1 bytes_unchanged=false
+    row=1 scheduler=false field=paused value=0: released=Ok([1]) commits=1 bytes_unchanged=false
+    row=1 scheduler=false field=paused value=[]: released=Ok([1]) commits=1 bytes_unchanged=false
+    row=1 scheduler=false field=paused value={}: released=Ok([1]) commits=1 bytes_unchanged=false
+    row=1 scheduler=false field=owner_postponement_recorded value=true: released=Ok([1]) commits=1 bytes_unchanged=false
+    row=1 scheduler=false field=owner_postponement_recorded value="hold": released=Ok([1]) commits=1 bytes_unchanged=false
+    row=1 scheduler=false field=owner_postponement_recorded value=1: released=Ok([1]) commits=1 bytes_unchanged=false
+    row=1 scheduler=false field=owner_postponement_recorded value=0: released=Ok([1]) commits=1 bytes_unchanged=false
+    row=1 scheduler=false field=owner_postponement_recorded value=[]: released=Ok([1]) commits=1 bytes_unchanged=false
+    row=1 scheduler=false field=owner_postponement_recorded value={}: released=Ok([1]) commits=1 bytes_unchanged=false
+    row=1 scheduler=false field=stop_kind value=true: released=Ok([1]) commits=1 bytes_unchanged=false
+    row=1 scheduler=false field=stop_kind value="hold": released=Ok([1]) commits=1 bytes_unchanged=false
+    row=1 scheduler=false field=stop_kind value=1: released=Ok([1]) commits=1 bytes_unchanged=false
+    row=1 scheduler=false field=stop_kind value=0: released=Ok([1]) commits=1 bytes_unchanged=false
+    row=1 scheduler=false field=stop_kind value=[]: released=Ok([1]) commits=1 bytes_unchanged=false
+    row=1 scheduler=false field=stop_kind value={}: released=Ok([1]) commits=1 bytes_unchanged=false
+    row=1 scheduler=false field=decision_wait value=true: released=Ok([1]) commits=1 bytes_unchanged=false
+    row=1 scheduler=false field=decision_wait value="hold": released=Ok([1]) commits=1 bytes_unchanged=false
+    row=1 scheduler=false field=decision_wait value=1: released=Ok([1]) commits=1 bytes_unchanged=false
+    row=1 scheduler=false field=decision_wait value=0: released=Ok([1]) commits=1 bytes_unchanged=false
+    row=1 scheduler=false field=decision_wait value=[]: released=Ok([1]) commits=1 bytes_unchanged=false
+    row=1 scheduler=false field=decision_wait value={}: released=Ok([1]) commits=1 bytes_unchanged=false
+    row=1 scheduler=false field=owner_question_wait value=true: released=Ok([1]) commits=1 bytes_unchanged=false
+    row=1 scheduler=false field=owner_question_wait value="hold": released=Ok([1]) commits=1 bytes_unchanged=false
+    row=1 scheduler=false field=owner_question_wait value=1: released=Ok([1]) commits=1 bytes_unchanged=false
+    row=1 scheduler=false field=owner_question_wait value=0: released=Ok([1]) commits=1 bytes_unchanged=false
+    row=1 scheduler=false field=owner_question_wait value=[]: released=Ok([1]) commits=1 bytes_unchanged=false
+    row=1 scheduler=false field=owner_question_wait value={}: released=Ok([1]) commits=1 bytes_unchanged=false
+    row=1 scheduler=false field=wait_ready value=true: released=Ok([1]) commits=1 bytes_unchanged=false
+    row=1 scheduler=false field=wait_ready value="hold": released=Ok([1]) commits=1 bytes_unchanged=false
+    row=1 scheduler=false field=wait_ready value=1: released=Ok([1]) commits=1 bytes_unchanged=false
+    row=1 scheduler=false field=wait_ready value=0: released=Ok([1]) commits=1 bytes_unchanged=false
+    row=1 scheduler=false field=wait_ready value=[]: released=Ok([1]) commits=1 bytes_unchanged=false
+    row=1 scheduler=false field=wait_ready value={}: released=Ok([1]) commits=1 bytes_unchanged=false
+    row=1 scheduler=false field=resume_condition value=true: released=Ok([1]) commits=1 bytes_unchanged=false
+    row=1 scheduler=false field=resume_condition value="hold": released=Ok([1]) commits=1 bytes_unchanged=false
+    row=1 scheduler=false field=resume_condition value=1: released=Ok([1]) commits=1 bytes_unchanged=false
+    row=1 scheduler=false field=resume_condition value=0: released=Ok([1]) commits=1 bytes_unchanged=false
+    row=1 scheduler=false field=resume_condition value=[]: released=Ok([1]) commits=1 bytes_unchanged=false
+    row=1 scheduler=false field=resume_condition value={}: released=Ok([1]) commits=1 bytes_unchanged=false
+    row=1 scheduler=false field=external_resume_condition value=true: released=Ok([1]) commits=1 bytes_unchanged=false
+    row=1 scheduler=false field=external_resume_condition value="hold": released=Ok([1]) commits=1 bytes_unchanged=false
+    row=1 scheduler=false field=external_resume_condition value=1: released=Ok([1]) commits=1 bytes_unchanged=false
+    row=1 scheduler=false field=external_resume_condition value=0: released=Ok([1]) commits=1 bytes_unchanged=false
+    row=1 scheduler=false field=external_resume_condition value=[]: released=Ok([1]) commits=1 bytes_unchanged=false
+    row=1 scheduler=false field=external_resume_condition value={}: released=Ok([1]) commits=1 bytes_unchanged=false
+    row=1 scheduler=true field=stopped value=true: released=Ok([1]) commits=1 bytes_unchanged=false
+    row=1 scheduler=true field=stopped value="hold": released=Ok([1]) commits=1 bytes_unchanged=false
+    row=1 scheduler=true field=stopped value=1: released=Ok([1]) commits=1 bytes_unchanged=false
+    row=1 scheduler=true field=stopped value=0: released=Ok([1]) commits=1 bytes_unchanged=false
+    row=1 scheduler=true field=stopped value=[]: released=Ok([1]) commits=1 bytes_unchanged=false
+    row=1 scheduler=true field=stopped value={}: released=Ok([1]) commits=1 bytes_unchanged=false
+    row=1 scheduler=true field=cancel_requested value=true: released=Ok([1]) commits=1 bytes_unchanged=false
+    row=1 scheduler=true field=cancel_requested value="hold": released=Ok([1]) commits=1 bytes_unchanged=false
+    row=1 scheduler=true field=cancel_requested value=1: released=Ok([1]) commits=1 bytes_unchanged=false
+    row=1 scheduler=true field=cancel_requested value=0: released=Ok([1]) commits=1 bytes_unchanged=false
+    row=1 scheduler=true field=cancel_requested value=[]: released=Ok([1]) commits=1 bytes_unchanged=false
+    row=1 scheduler=true field=cancel_requested value={}: released=Ok([1]) commits=1 bytes_unchanged=false
+    row=1 scheduler=true field=owner_stopped value=true: released=Ok([1]) commits=1 bytes_unchanged=false
+    row=1 scheduler=true field=owner_stopped value="hold": released=Ok([1]) commits=1 bytes_unchanged=false
+    row=1 scheduler=true field=owner_stopped value=1: released=Ok([1]) commits=1 bytes_unchanged=false
+    row=1 scheduler=true field=owner_stopped value=0: released=Ok([1]) commits=1 bytes_unchanged=false
+    row=1 scheduler=true field=owner_stopped value=[]: released=Ok([1]) commits=1 bytes_unchanged=false
+    row=1 scheduler=true field=owner_stopped value={}: released=Ok([1]) commits=1 bytes_unchanged=false
+    row=1 scheduler=true field=paused value=true: released=Ok([1]) commits=1 bytes_unchanged=false
+    row=1 scheduler=true field=paused value="hold": released=Ok([1]) commits=1 bytes_unchanged=false
+    row=1 scheduler=true field=paused value=1: released=Ok([1]) commits=1 bytes_unchanged=false
+    row=1 scheduler=true field=paused value=0: released=Ok([1]) commits=1 bytes_unchanged=false
+    row=1 scheduler=true field=paused value=[]: released=Ok([1]) commits=1 bytes_unchanged=false
+    row=1 scheduler=true field=paused value={}: released=Ok([1]) commits=1 bytes_unchanged=false
+    row=1 scheduler=true field=owner_postponement_recorded value=true: released=Ok([1]) commits=1 bytes_unchanged=false
+    row=1 scheduler=true field=owner_postponement_recorded value="hold": released=Ok([1]) commits=1 bytes_unchanged=false
+    row=1 scheduler=true field=owner_postponement_recorded value=1: released=Ok([1]) commits=1 bytes_unchanged=false
+    row=1 scheduler=true field=owner_postponement_recorded value=0: released=Ok([1]) commits=1 bytes_unchanged=false
+    row=1 scheduler=true field=owner_postponement_recorded value=[]: released=Ok([1]) commits=1 bytes_unchanged=false
+    row=1 scheduler=true field=owner_postponement_recorded value={}: released=Ok([1]) commits=1 bytes_unchanged=false
+    row=1 scheduler=true field=stop_kind value=true: released=Ok([1]) commits=1 bytes_unchanged=false
+    row=1 scheduler=true field=stop_kind value="hold": released=Ok([1]) commits=1 bytes_unchanged=false
+    row=1 scheduler=true field=stop_kind value=1: released=Ok([1]) commits=1 bytes_unchanged=false
+    row=1 scheduler=true field=stop_kind value=0: released=Ok([1]) commits=1 bytes_unchanged=false
+    row=1 scheduler=true field=stop_kind value=[]: released=Ok([1]) commits=1 bytes_unchanged=false
+    row=1 scheduler=true field=stop_kind value={}: released=Ok([1]) commits=1 bytes_unchanged=false
+    row=1 scheduler=true field=decision_wait value=true: released=Ok([1]) commits=1 bytes_unchanged=false
+    row=1 scheduler=true field=decision_wait value="hold": released=Ok([1]) commits=1 bytes_unchanged=false
+    row=1 scheduler=true field=decision_wait value=1: released=Ok([1]) commits=1 bytes_unchanged=false
+    row=1 scheduler=true field=decision_wait value=0: released=Ok([1]) commits=1 bytes_unchanged=false
+    row=1 scheduler=true field=decision_wait value=[]: released=Ok([1]) commits=1 bytes_unchanged=false
+    row=1 scheduler=true field=decision_wait value={}: released=Ok([1]) commits=1 bytes_unchanged=false
+    row=1 scheduler=true field=owner_question_wait value=true: released=Ok([1]) commits=1 bytes_unchanged=false
+    row=1 scheduler=true field=owner_question_wait value="hold": released=Ok([1]) commits=1 bytes_unchanged=false
+    row=1 scheduler=true field=owner_question_wait value=1: released=Ok([1]) commits=1 bytes_unchanged=false
+    row=1 scheduler=true field=owner_question_wait value=0: released=Ok([1]) commits=1 bytes_unchanged=false
+    row=1 scheduler=true field=owner_question_wait value=[]: released=Ok([1]) commits=1 bytes_unchanged=false
+    row=1 scheduler=true field=owner_question_wait value={}: released=Ok([1]) commits=1 bytes_unchanged=false
+    row=1 scheduler=true field=wait_ready value=true: released=Ok([1]) commits=1 bytes_unchanged=false
+    row=1 scheduler=true field=wait_ready value="hold": released=Ok([1]) commits=1 bytes_unchanged=false
+    row=1 scheduler=true field=wait_ready value=1: released=Ok([1]) commits=1 bytes_unchanged=false
+    row=1 scheduler=true field=wait_ready value=0: released=Ok([1]) commits=1 bytes_unchanged=false
+    row=1 scheduler=true field=wait_ready value=[]: released=Ok([1]) commits=1 bytes_unchanged=false
+    row=1 scheduler=true field=wait_ready value={}: released=Ok([1]) commits=1 bytes_unchanged=false
+    row=1 scheduler=true field=resume_condition value=true: released=Ok([1]) commits=1 bytes_unchanged=false
+    row=1 scheduler=true field=resume_condition value="hold": released=Ok([1]) commits=1 bytes_unchanged=false
+    row=1 scheduler=true field=resume_condition value=1: released=Ok([1]) commits=1 bytes_unchanged=false
+    row=1 scheduler=true field=resume_condition value=0: released=Ok([1]) commits=1 bytes_unchanged=false
+    row=1 scheduler=true field=resume_condition value=[]: released=Ok([1]) commits=1 bytes_unchanged=false
+    row=1 scheduler=true field=resume_condition value={}: released=Ok([1]) commits=1 bytes_unchanged=false
+    row=1 scheduler=true field=external_resume_condition value=true: released=Ok([1]) commits=1 bytes_unchanged=false
+    row=1 scheduler=true field=external_resume_condition value="hold": released=Ok([1]) commits=1 bytes_unchanged=false
+    row=1 scheduler=true field=external_resume_condition value=1: released=Ok([1]) commits=1 bytes_unchanged=false
+    row=1 scheduler=true field=external_resume_condition value=0: released=Ok([1]) commits=1 bytes_unchanged=false
+    row=1 scheduler=true field=external_resume_condition value=[]: released=Ok([1]) commits=1 bytes_unchanged=false
+    row=1 scheduler=true field=external_resume_condition value={}: released=Ok([1]) commits=1 bytes_unchanged=false
+    row=1 scheduler=true field=owner_stop_job value=true: released=Ok([1]) commits=1 bytes_unchanged=false
+    row=1 scheduler=true field=owner_stop_job value="hold": released=Ok([1]) commits=1 bytes_unchanged=false
+    row=1 scheduler=true field=owner_stop_job value=1: released=Ok([1]) commits=1 bytes_unchanged=false
+    row=1 scheduler=true field=owner_stop_job value=0: released=Ok([1]) commits=1 bytes_unchanged=false
+    row=1 scheduler=true field=owner_stop_job value=[]: released=Ok([1]) commits=1 bytes_unchanged=false
+    row=1 scheduler=true field=owner_stop_job value={}: released=Ok([1]) commits=1 bytes_unchanged=false
+    row=1 scheduler=true field=pending_cancel value=true: released=Ok([1]) commits=1 bytes_unchanged=false
+    row=1 scheduler=true field=pending_cancel value="hold": released=Ok([1]) commits=1 bytes_unchanged=false
+    row=1 scheduler=true field=pending_cancel value=1: released=Ok([1]) commits=1 bytes_unchanged=false
+    row=1 scheduler=true field=pending_cancel value=0: released=Ok([1]) commits=1 bytes_unchanged=false
+    row=1 scheduler=true field=pending_cancel value=[]: released=Ok([1]) commits=1 bytes_unchanged=false
+    row=1 scheduler=true field=pending_cancel value={}: released=Ok([1]) commits=1 bytes_unchanged=false
+    row=1 scheduler=true field=question_close_pending value=true: released=Ok([1]) commits=1 bytes_unchanged=false
+    row=1 scheduler=true field=question_close_pending value="hold": released=Ok([1]) commits=1 bytes_unchanged=false
+    row=1 scheduler=true field=question_close_pending value=1: released=Ok([1]) commits=1 bytes_unchanged=false
+    row=1 scheduler=true field=question_close_pending value=0: released=Ok([1]) commits=1 bytes_unchanged=false
+    row=1 scheduler=true field=question_close_pending value=[]: released=Ok([1]) commits=1 bytes_unchanged=false
+    row=1 scheduler=true field=question_close_pending value={}: released=Ok([1]) commits=1 bytes_unchanged=false
+    row=1 scheduler=true field=question value=true: released=Ok([1]) commits=1 bytes_unchanged=false
+    row=1 scheduler=true field=question value="hold": released=Ok([1]) commits=1 bytes_unchanged=false
+    row=1 scheduler=true field=question value=1: released=Ok([1]) commits=1 bytes_unchanged=false
+    row=1 scheduler=true field=question value=0: released=Ok([1]) commits=1 bytes_unchanged=false
+    row=1 scheduler=true field=question value=[]: released=Ok([1]) commits=1 bytes_unchanged=false
+    row=1 scheduler=true field=question value={}: released=Ok([1]) commits=1 bytes_unchanged=false
+    note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+
+────────────
+     Summary [   8.733s] 1 test run: 0 passed, 1 failed, 46 skipped
+        FAIL [   8.668s] (1/1) cc-todo recovery::owner_wait::tests::explicit_holds_on_candidate_or_owner_never_release_or_save
+error: test run failed

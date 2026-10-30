@@ -1,0 +1,19 @@
+{
+  "name": "format-check",
+  "head": "0c910d370b59a501dd3cf58ebf54ef65f61ffb46",
+  "job": "20261030-111925-todo-4264",
+  "start": "2026-10-30T11:29:18.7993917+09:00",
+  "end": "2026-10-30T11:29:18.9601252+09:00",
+  "exe": "C:\\Users\\makhmeto\\.cargo\\bin\\rustfmt.exe",
+  "args": [
+    "--check",
+    "--edition",
+    "2024",
+    "cc-todo/src/recovery/owner_wait.rs",
+    "cc-todo/src/recovery/owner_wait_tests.rs"
+  ],
+  "target": "C:/Users/makhmeto/AppData/Local/Temp/codex-owned-54d7c4749feb42fe35f5482956923eac/target",
+  "exit": 0,
+  "stdout": "format-check.stdout.log",
+  "stderr": "format-check.stderr.log"
+}

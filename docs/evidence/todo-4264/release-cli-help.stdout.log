@@ -1,0 +1,9 @@
+Recheck this item's automatic owner wait; retain explicit prerequisites
+
+Usage: todo.exe reevaluate-owner-wait <ID>
+
+Arguments:
+  <ID>  
+
+Options:
+  -h, --help  Print help

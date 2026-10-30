@@ -1,0 +1,22 @@
+{
+  "name": "red-dependency-both-rows",
+  "head": "7ddafaff4c5366fb53a35eb7734b53653dbe1e69",
+  "job": "20261030-111925-todo-4264",
+  "start": "2026-10-30T11:25:18.2596024+09:00",
+  "end": "2026-10-30T11:25:23.8612117+09:00",
+  "exe": "D:/CC/Tools/codex-jobs/cargo_gate.exe",
+  "args": [
+    "nextest",
+    "run",
+    "--locked",
+    "-p",
+    "cc-todo",
+    "--lib",
+    "-E",
+    "test(dependency_reopened_during_second_guard_never_commits)"
+  ],
+  "target": "C:/Users/makhmeto/AppData/Local/Temp/codex-owned-54d7c4749feb42fe35f5482956923eac/target",
+  "exit": 100,
+  "stdout": "red-dependency-both-rows.stdout.log",
+  "stderr": "red-dependency-both-rows.stderr.log"
+}

@@ -1,0 +1,33 @@
+{
+  "repository_id": 1406818713,
+  "owner": "AutoDevJapan",
+  "visibility": "public",
+  "branch": "scheduler/todo-4264-work",
+  "job": "20261030-111925-todo-4264",
+  "start": "38f09f17d786d05a89876be7bc5dd1df866f9dba",
+  "fixed_rust": "4ae5f8372c1e4c231b8e2d547594e08a61f051b9",
+  "merge": "5894e725cd525647a5e396765bb7e9829eca8b08",
+  "normal_guard": {
+    "classification_unverified": false,
+    "client_resource": false,
+    "access_allowed": true,
+    "specified_original_source_paths": "five clear verdicts observed before reading fixed blobs",
+    "self_workspace": "clear",
+    "old_registry_read": false
+  },
+  "fixed_blobs": [
+    "100644 blob 36a7c2c1ea50bd8872cc1f097695c647e921c2d2\tcc-todo/src/direction_record.rs",
+    "100644 blob facbde74e9598b7798aa4d888f7f1306f9fc39eb\tcc-todo/src/recovery/owner_wait.rs",
+    "100644 blob fad8c08cadedc44d36623b56f4fd02d1414e4e7b\tcc-todo/src/recovery/owner_wait_tests.rs",
+    "100644 blob 1f430464bd580cf5c6c2b30a356c364da8a2980f\tdocs/todo-4142-owner-wait-guard.md",
+    "100644 blob 3b757f25fa5cfa4e502d1704bdc8c034cb4964e7\tdocs/todo-4246-owner-wait-holds.md"
+  ],
+  "parent_remote_readback": "4ae5f8372c1e4c231b8e2d547594e08a61f051b9",
+  "go_diff_against_start": 0,
+  "real_reevaluations": 0,
+  "shared_exe_updates": 0,
+  "discord_sends": 0,
+  "direct_child_jobs": 0,
+  "parent_branch_updates": 0,
+  "independent_prs": 0
+}

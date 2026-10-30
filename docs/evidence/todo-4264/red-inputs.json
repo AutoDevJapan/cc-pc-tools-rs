@@ -1,0 +1,55 @@
+{
+  "implementation_base": "4ae5f8372c1e4c231b8e2d547594e08a61f051b9",
+  "head": "7ddafaff4c5366fb53a35eb7734b53653dbe1e69",
+  "test_uncommitted_extension": "dependency test reports both rows; see red-dependency-both-rows",
+  "inputs": [
+    {
+      "path": "cc-todo/src/recovery/owner_wait.rs",
+      "bytes": 12390,
+      "raw_sha256": "30f6c03ee55512ddbd45f51e4291192ad8e249fd5c8ab1714d0dcd3507d03737",
+      "git_blob": "facbde74e9598b7798aa4d888f7f1306f9fc39eb",
+      "commit_entry": "100644 blob facbde74e9598b7798aa4d888f7f1306f9fc39eb\tcc-todo/src/recovery/owner_wait.rs",
+      "fixed_entry": "100644 blob facbde74e9598b7798aa4d888f7f1306f9fc39eb\tcc-todo/src/recovery/owner_wait.rs"
+    },
+    {
+      "path": "cc-todo/src/recovery/owner_wait_tests.rs",
+      "bytes": 34840,
+      "raw_sha256": "82a7b0d0898353ee22adb5e51aeb1fc88f4108154d5e184c0c2e756f9fb09d8b",
+      "git_blob": "18eef577ea724546afee6ccc90726149da5376f8",
+      "commit_entry": "100644 blob ab60fbf162a1aba191eb7c9dc6436d4f5a03a990\tcc-todo/src/recovery/owner_wait_tests.rs",
+      "fixed_entry": "100644 blob fad8c08cadedc44d36623b56f4fd02d1414e4e7b\tcc-todo/src/recovery/owner_wait_tests.rs"
+    },
+    {
+      "path": "cc-todo/src/direction_record.rs",
+      "bytes": 23195,
+      "raw_sha256": "7c0abe8cf5514bf3c1cb9b79d6729587cb9a204dca4ac976998ba9bf525137db",
+      "git_blob": "36a7c2c1ea50bd8872cc1f097695c647e921c2d2",
+      "commit_entry": "100644 blob 36a7c2c1ea50bd8872cc1f097695c647e921c2d2\tcc-todo/src/direction_record.rs",
+      "fixed_entry": "100644 blob 36a7c2c1ea50bd8872cc1f097695c647e921c2d2\tcc-todo/src/direction_record.rs"
+    },
+    {
+      "path": "Cargo.lock",
+      "bytes": 66265,
+      "raw_sha256": "c4c19f2fae3563e26d09d6359dd1ed49d4e3256dab98ab1cb118ad39e920533d",
+      "git_blob": "a2fc3a4ad0d8c6652f7baf8fe4f23ecdc11ee055",
+      "commit_entry": "100644 blob a2fc3a4ad0d8c6652f7baf8fe4f23ecdc11ee055\tCargo.lock",
+      "fixed_entry": "100644 blob a2fc3a4ad0d8c6652f7baf8fe4f23ecdc11ee055\tCargo.lock"
+    },
+    {
+      "path": "cc-todo/Cargo.toml",
+      "bytes": 744,
+      "raw_sha256": "752d4ef308b0e31cf53351018cee25cd1e4e8af50f22e57e8550a1f590ce16a0",
+      "git_blob": "9d28aad133270d20e008b0a143c8f57dda2361df",
+      "commit_entry": "100644 blob 9d28aad133270d20e008b0a143c8f57dda2361df\tcc-todo/Cargo.toml",
+      "fixed_entry": "100644 blob 9d28aad133270d20e008b0a143c8f57dda2361df\tcc-todo/Cargo.toml"
+    },
+    {
+      "path": "Cargo.toml",
+      "bytes": 312,
+      "raw_sha256": "85ceffdad72c64902ba086495d785bc6560e7f9f6576f94d534ed5c6f65a4087",
+      "git_blob": "4d0ac6b922b76f926c669030ab0ae2bfa638a7fa",
+      "commit_entry": "100644 blob 4d0ac6b922b76f926c669030ab0ae2bfa638a7fa\tCargo.toml",
+      "fixed_entry": "100644 blob 4d0ac6b922b76f926c669030ab0ae2bfa638a7fa\tCargo.toml"
+    }
+  ]
+}

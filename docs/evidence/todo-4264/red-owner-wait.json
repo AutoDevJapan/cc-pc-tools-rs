@@ -1,0 +1,23 @@
+{
+  "name": "red-owner-wait",
+  "head": "7ddafaff4c5366fb53a35eb7734b53653dbe1e69",
+  "job": "20261030-111925-todo-4264",
+  "start": "2026-10-30T11:23:26.8348867+09:00",
+  "end": "2026-10-30T11:24:38.6535371+09:00",
+  "exe": "D:/CC/Tools/codex-jobs/cargo_gate.exe",
+  "args": [
+    "nextest",
+    "run",
+    "--locked",
+    "-p",
+    "cc-todo",
+    "--lib",
+    "-E",
+    "test(recovery::owner_wait::tests::)",
+    "--no-fail-fast"
+  ],
+  "target": "C:/Users/makhmeto/AppData/Local/Temp/codex-owned-54d7c4749feb42fe35f5482956923eac/target",
+  "exit": 100,
+  "stdout": "red-owner-wait.stdout.log",
+  "stderr": "red-owner-wait.stderr.log"
+}

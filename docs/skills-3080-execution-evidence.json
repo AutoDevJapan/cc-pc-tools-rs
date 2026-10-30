@@ -1,5 +1,4 @@
 {
-  "todo": 3080,
   "catalog_sha256": "2d73c9a038a41cc220a9687b935bfa1e0b315b65d9bd6d3e54ddb4111972876c",
   "catalog_records": 73220,
   "assessment_artifacts": [
@@ -581,8 +580,8 @@
     },
     {
       "file": "skills-3080-visible-primary-assessments.json",
-      "sha256": "88eb360eb1dccd1055f73fdf3c6b144ef33590428e31b8e5cbafd73efdb2869d",
-      "rows": 54
+      "sha256": "2395e2b04ba2ec8bdc63f933f886bd7246caabf8daf618e90db4bd034cb5a4de",
+      "rows": 112
     },
     {
       "file": "skills-3080-retained-procedure-assessments.json",

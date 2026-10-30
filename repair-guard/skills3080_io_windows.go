@@ -99,6 +99,7 @@ type skillsFS struct {
 	// Populated only by the independently verified public Git tree. This is
 	// operating metadata, never a caller-provided bootstrap digest or path.
 	bootstrapProjects map[string][]byte
+	consumerOrigins   map[string]skillsConsumerOrigin
 }
 
 // Open only the declared regular object; keep it non-sharing until the caller
@@ -253,6 +254,9 @@ func skillsTargetsAbsent(m skillsManifest, root string, s *skillsFS) string {
 	return ""
 }
 func skillsCreate(m skillsManifest, root string, s *skillsFS) (int, string) {
+	if m.publicV2 && (!skillsWriterValid(m.Writer) || !skillsWriterValid(m.proposalAuthor) || m.Decision != skillsDecisionSHA) {
+		return 0, "writer"
+	}
 	for _, output := range m.Files {
 		if len(output.body) == 0 || hashBytes(output.body) != output.SHA {
 			return 0, "manifest"

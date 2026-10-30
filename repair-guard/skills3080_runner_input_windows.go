@@ -15,6 +15,22 @@ import (
 const skillsRunnerOwnerHeader = "\n\n## 最新の保存済みオーナー指示\n以下はPCの保存済み運用指示です。元の作業対象・閲覧専用指定・承認審査の範囲を広げません。GitHub所有者は実際の所有者を確認し、保護対象はscrub391 --guard-pathで除外してください。稼働中の担当は途中成果を保存し、次の区切りで反映してください。\n"
 const skillsRunnerSiteHeader = "\n\n## 実行時のサイト制限\n"
 
+// Shared by live input and completed result proof. The source map is populated
+// only by verified PUBLIC Git or the accepted original CreateNew publication.
+// An unavailable project remains required on modern runtime, never a fallback.
+func skillsTypedRuntimeProject(s *skillsFS, _ object, spec []byte) ([]byte, bool) {
+	if c, ok := skillsParsePublicReview(spec); ok {
+		return s.bootstrapProjects[c.Commit], true
+	}
+	if c, ok := skillsParseConsumer(spec); ok {
+		return s.bootstrapProjects[c.ManifestCommit], true
+	}
+	if c, ok := skillsParsePublicRepair(spec); ok {
+		return s.bootstrapProjects[c.Commit], true
+	}
+	return nil, false
+}
+
 // Validate every record before filtering type/role, including outside-window
 // records, without retaining their message or tool-result bodies in a tree.
 func skillsNativeUniqueJSON(raw []byte) bool {

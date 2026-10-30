@@ -34,6 +34,8 @@ the exact original request ID, ToDo and a recorded origin repair.
 長い一覧は進捗投稿へ分割する。質問投稿へ後続の質問や進捗を積まない。
 
 独立した `recovery-messages.json` のイベントを専用ロックと原子的な置換で保存する。
+送信側の台帳上限は32MiB。unattended-runnerの読取上限と固定診断は
+[配送記録の読取上限](discord-receipt-bounds.md)を参照する。
 認証値はHTTPヘッダーの中だけで扱い、本文や台帳へ出さない。
 Intent は取得処理より前に、Pending は取得成功後・投稿直前に保存する。
 取得が失敗しただけなら同じ依頼番号で再開できる。

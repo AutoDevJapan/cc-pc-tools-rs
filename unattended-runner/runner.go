@@ -30,6 +30,8 @@ const maxState = 8 << 20
 const maxRecoveryMessages = 32 << 20
 const maxTodo = 64 << 20
 
+var errRecordLimitExceeded = errors.New("record limit exceeded")
+
 type Config struct {
 	Since            string                `json:"since"`
 	Home             string                `json:"home"`
@@ -210,10 +212,32 @@ func readJSON(path string, ceiling int64, value any) error {
 		return closeErr
 	}
 	if int64(len(data)) > ceiling {
-		return errors.New("record limit exceeded")
+		return errRecordLimitExceeded
 	}
 	return json.Unmarshal(data, value)
 }
+
+func readRecoveryMessages(home string, value any) error {
+	return readJSON(filepath.Join(filepath.Dir(home), "recovery-messages.json"), maxRecoveryMessages, value)
+}
+
+// Classify only fixed error types. Paths, JSON values and raw error text must
+// never reach the public discovery diagnostic.
+func receiptReadStage(err error) string {
+	var syntax *json.SyntaxError
+	var valueType *json.UnmarshalTypeError
+	switch {
+	case os.IsNotExist(err):
+		return "receipt_registry_missing"
+	case errors.Is(err, errRecordLimitExceeded):
+		return "receipt_registry_limit"
+	case errors.As(err, &syntax), errors.As(err, &valueType):
+		return "receipt_registry_malformed"
+	default:
+		return "receipt_registry_unavailable"
+	}
+}
+
 func publish(path string, value any) error {
 	data, err := json.MarshalIndent(value, "", "  ")
 	if err != nil {
@@ -310,11 +334,11 @@ func (r *Runner) knownBotThreads() (map[string]bool, error) {
 			} `json:"receipt"`
 		} `json:"events"`
 	}
-	if err := readJSON(filepath.Join(filepath.Dir(r.Config.Home), "recovery-messages.json"), maxRecoveryMessages, &ledger); err != nil {
-		return nil, err
+	if err := readRecoveryMessages(r.Config.Home, &ledger); err != nil {
+		return nil, monthlyInvalid(receiptReadStage(err))
 	}
 	if ledger.Domain != "new-owner-recovery-messages" {
-		return nil, errors.New("new message receipts invalid")
+		return nil, monthlyInvalid("receipt_registry_domain")
 	}
 	out := map[string]bool{}
 	r.KnownQuestionThreads = make(map[string]bool)
@@ -355,7 +379,7 @@ func (r *Runner) discover(ctx context.Context) error {
 	}
 	known, err := r.knownBotThreads()
 	if err != nil {
-		return monthlyInvalid("receipt_registry")
+		return err
 	}
 	// Fetch live discovery before potentially slow historical link validation.
 	// Only links verified in this pass can route an owner reply.

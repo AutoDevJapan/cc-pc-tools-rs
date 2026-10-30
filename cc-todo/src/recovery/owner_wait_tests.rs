@@ -128,6 +128,38 @@ fn positive_uses_current_guard_without_reading_legacy_list() {
 }
 
 #[test]
+fn explicit_holds_on_candidate_or_owner_never_release_or_save() {
+    let mut failures = vec![];
+    for row in [0, 1] {
+        for scheduler in [false, true] {
+            let fields: Vec<_> = crate::direction_record::HOLD_FIELDS
+                .iter()
+                .copied()
+                .chain(scheduler.then_some(["owner_stop_job", "pending_cancel", "question_close_pending", "question"]).into_iter().flatten())
+                .collect();
+            for field in fields {
+                // Even zero and empty containers are malformed hold values, not
+                // proof that an explicit hold was cleared.
+                for value in [json!(true), json!("hold"), json!(1), json!(0), json!([]), json!({})] {
+                    let mut f = Fixture::new();
+                    f.edit(|db| {
+                        let item = &mut db["items"][row];
+                        if scheduler { item["scheduler"][field] = value.clone(); }
+                        else { item[field] = value.clone(); }
+                    });
+                    let before = f.bytes();
+                    let released = f.run();
+                    if released != Ok(vec![]) || f.writes.get() != 0 || f.bytes() != before {
+                        failures.push(format!("row={row} scheduler={scheduler} field={field} value={value}: released={released:?} commits={} bytes_unchanged={}", f.writes.get(), f.bytes() == before));
+                    }
+                }
+            }
+        }
+    }
+    assert!(failures.is_empty(), "explicit holds were released/saved:\n{}", failures.join("\n"));
+}
+
+#[test]
 fn actual_owner_question_stops_and_terminal_items_never_save() {
     for patch in [
         json!({"status":"block"}),

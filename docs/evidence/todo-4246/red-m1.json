@@ -1,0 +1,21 @@
+{
+  "stage": "red-m1",
+  "started": "2026-10-30T09:00:58.2896568+09:00",
+  "ended": "2026-10-30T09:01:42.5253529+09:00",
+  "exit_code": 100,
+  "head": "0abca7fb2087c730411523ab20bddb18f7e03a1e",
+  "executable": "D:/CC/Tools/codex-jobs/cargo_gate.exe",
+  "arguments": [
+    "nextest",
+    "run",
+    "--locked",
+    "-p",
+    "cc-todo",
+    "--lib",
+    "-E",
+    "test(explicit_holds_on_candidate_or_owner_never_release_or_save)",
+    "--no-fail-fast"
+  ],
+  "target": "D:\\CC\\Work\\unattended-operations-20261013-wt\\todo-4246-3387\\codex-owned-ca355ffba5561fca35a0723685ed6ebd\\target",
+  "create_no_window": true
+}

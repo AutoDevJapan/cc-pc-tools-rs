@@ -12,7 +12,9 @@ import (
 
 func TestCI3888RuntimeMetadataFilesReplaceableDuringGitHub(t *testing.T) {
 	a, reg, jobs, _, caller := ci3888RuntimeFixture()
-	dir := t.TempDir()
+	// The Windows service runner can expose TEMP through an alias. Keep the
+	// native reader's exact physical-path check and canonicalize this fixture.
+	dir := skillsFixtureRoot(t)
 	files := map[string][]byte{}
 	write := func(name string, data []byte) string {
 		t.Helper()

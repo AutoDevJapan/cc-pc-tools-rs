@@ -1,3 +1,4 @@
+SKILLS3080_READ_ONLY_REVIEW_TASK_V1
 # 四つの追加手順の受入範囲
 
 OpenClawの状態保全、Google DriveとOwnCloudの一覧照合、A/B実験設計、メール自動配信設計の四つを、固定出典と個別MIT通知に結ぶ。二つの公開manifestは`skills-3080-create-v2`形式で、出典・通知・出力先・同じ内容のhashを持つ。作成者と本人回答の内部証明は正規の別記録に保持する。

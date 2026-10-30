@@ -109,6 +109,71 @@ fn real_parent_accepts_only_the_new_current_request_and_preserves_every_old_reco
         &f.jobs[1]
     ));
 }
+
+fn current_result(status: &str) -> support::Fixture {
+    let mut f = fixture();
+    f.jobs[1]["status"] = json!(status);
+    f.jobs[1]["todo_resume_generation"] = json!(3);
+    f.jobs[1]["todo_dependency_generation"] = json!(1);
+    f.db["items"][1]["worker_receipt"] = json!({"job":"old-quota","generation":3});
+    // Simulate a wait release which used to leave last_job pointing further back.
+    f.db["items"][1]["scheduler"]["last_job"] = json!("older-quota");
+    if status == "cancelled" {
+        f.jobs[1]["recovery_cancel"] = json!({"key":"recovery-old-quota","committed_at":"2026-10-26T01:01:00Z"});
+    }
+    f
+}
+
+#[test]
+fn current_parent_rebinds_the_exact_finished_worker_after_cancel_or_pc_return() {
+    for status in ["succeeded", "lost", "cancelled"] {
+        let f = current_result(status);
+        save(&f);
+        let original = fs::read(f.dir.path().join("jobs/old-quota/job.json")).unwrap();
+        let out = call(&f, "parent");
+        assert!(out.status.success(), "{status}: {}", String::from_utf8_lossy(&out.stderr));
+        let db: Value = serde_json::from_slice(&fs::read(f.dir.path().join("todo.json")).unwrap()).unwrap();
+        assert_eq!(db["items"][1]["subwork_continuation"]["source_job"], "old-quota");
+        assert_eq!(fs::read(f.dir.path().join("jobs/old-quota/job.json")).unwrap(), original);
+    }
+}
+
+#[test]
+fn finished_worker_rebinding_cannot_replace_current_ownership_or_quota_retry() {
+    for case in ["unknown_cancel", "quota_failure", "receipt_job", "receipt_generation", "source_generation", "dependency", "spec", "scope", "budget", "drain", "stop", "parent"] {
+        let mut f = current_result("cancelled");
+        match case {
+            "unknown_cancel" => { f.jobs[1].as_object_mut().unwrap().remove("recovery_cancel"); },
+            "quota_failure" => f.jobs[1]["status"] = json!("failed"),
+            "receipt_job" => f.db["items"][1]["worker_receipt"]["job"] = json!("different"),
+            "receipt_generation" => f.db["items"][1]["worker_receipt"]["generation"] = json!(2),
+            "source_generation" => f.jobs[1]["todo_resume_generation"] = json!(2),
+            "dependency" => f.db["items"][1]["wait_on"] = json!([99]),
+            "spec" => fs::write(f.db["items"][1]["spec"].as_str().unwrap(), "Changed").unwrap(),
+            "scope" => f.db["items"][1]["network"] = json!(true),
+            "budget" => f.jobs[1]["capacity_exhausted"] = json!(true),
+            "drain" => { f.jobs[1]["pid"] = f.jobs[0]["pid"].clone(); f.jobs[1]["pid_created"] = f.jobs[0]["pid_created"].clone(); },
+            "stop" => f.db["items"][1]["owner_stopped"] = json!(true),
+            "parent" => f.db["items"][0]["resume_generation"] = json!(2),
+            _ => unreachable!(),
+        }
+        save(&f);
+        let before = fs::read(f.dir.path().join("todo.json")).unwrap();
+        assert!(!call(&f, "parent").status.success(), "{case}");
+        assert_eq!(fs::read(f.dir.path().join("todo.json")).unwrap(), before, "{case}");
+    }
+}
+
+#[test]
+fn old_quota_source_cannot_be_reused_after_a_new_worker_owned_the_generation() {
+    let mut f = fixture();
+    f.db["items"][1]["worker_receipt"] = json!({"job":"new-current","generation":3});
+    f.db["items"][1]["jobs"].as_array_mut().unwrap().push(json!("new-current"));
+    save(&f);
+    let before = fs::read(f.dir.path().join("todo.json")).unwrap();
+    assert!(!call(&f, "parent").status.success(), "old quota source was reused");
+    assert_eq!(fs::read(f.dir.path().join("todo.json")).unwrap(), before);
+}
 #[test]
 fn forged_or_stale_continuation_is_rejected_without_modifying_the_store() {
     for case in [

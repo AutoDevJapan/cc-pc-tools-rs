@@ -351,6 +351,35 @@ fn dependency_continuation_is_consumed_once_and_later_work_uses_its_own_result()
 }
 
 #[test]
+fn current_finite_result_contract_uses_worker_receipt_instead_of_stale_last_job() {
+    for status in ["succeeded", "lost", "cancelled"] {
+        let (mut f, mut sub) = dependency_continuation_fixture();
+        let mut next = f.e.backend.records[1].clone();
+        next["id"] = json!("new-current"); next["status"] = json!(status);
+        next["launch_key"] = json!("new-current-key");
+        next["finite_subwork"]["launch_key"] = next["launch_key"].clone();
+        next["todo_resume_generation"] = json!(4); next["todo_dependency_generation"] = json!(1);
+        if status == "cancelled" { next["recovery_cancel"] = json!({"key":"recovery-new-current","committed_at":"2026-10-26T01:01:00Z"}); }
+        let row = &mut sub.db["items"][1];
+        row["resume_generation"] = json!(4); row["dependency_generation"] = json!(3);
+        row["worker_receipt"] = json!({"job":"new-current","generation":4});
+        row["jobs"].as_array_mut().unwrap().push(next["id"].clone());
+        row["scheduler"]["key"] = Value::Null;
+        row["subwork_continuation"] = cc_job_policy::subwork_continuation::request(row, &next, &f.e.backend.records[0])
+            .expect("current finished result must accept a new bounded parent contract");
+        let original = next.clone(); f.e.backend.records.push(next);
+        write_json(&f.e.todo_path, &sub.db, 1).unwrap();
+        let prepared = f.e.prepare(&sub.db["items"][1], sub.repo.to_str().unwrap()).unwrap().unwrap();
+        let selection = &prepared["scheduler"]["selection"];
+        assert_eq!(selection["subwork_continuation"]["request"]["source_job"], "new-current", "{status}");
+        assert!(selection["quota_recovery"].is_null());
+        assert_eq!(selection["sandbox"], "read-only");
+        assert_eq!(selection["model"], "gpt-6.1-sol"); assert_eq!(selection["effort"], "max");
+        assert_eq!(f.e.backend.records.last().unwrap(), &original);
+    }
+}
+
+#[test]
 fn dependency_continuation_retains_the_ordinary_independent_review_default() {
     let (mut f,mut sub)=grok_fixture();
     current_continuation_parent(&mut f,&mut sub);

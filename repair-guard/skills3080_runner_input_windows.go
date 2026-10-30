@@ -15,6 +15,63 @@ import (
 const skillsRunnerOwnerHeader = "\n\n## 最新の保存済みオーナー指示\n以下はPCの保存済み運用指示です。元の作業対象・閲覧専用指定・承認審査の範囲を広げません。GitHub所有者は実際の所有者を確認し、保護対象はscrub391 --guard-pathで除外してください。稼働中の担当は途中成果を保存し、次の区切りで反映してください。\n"
 const skillsRunnerSiteHeader = "\n\n## 実行時のサイト制限\n"
 
+// Validate every record before filtering type/role, including outside-window
+// records, without retaining their message or tool-result bodies in a tree.
+func skillsNativeUniqueJSON(raw []byte) bool {
+	trimmed := bytes.TrimSpace(raw)
+	if len(trimmed) == 0 || trimmed[0] != '{' {
+		return false
+	}
+	d := json.NewDecoder(bytes.NewReader(raw))
+	d.UseNumber()
+	var value func(int) bool
+	value = func(depth int) bool {
+		if depth > 64 {
+			return false
+		}
+		t, err := d.Token()
+		if err != nil {
+			return false
+		}
+		delim, composite := t.(json.Delim)
+		if !composite {
+			return true
+		}
+		switch delim {
+		case '{':
+			seen := map[string]bool{}
+			for d.More() {
+				key, err := d.Token()
+				name, ok := key.(string)
+				if err != nil || !ok || seen[name] {
+					return false
+				}
+				seen[name] = true
+				if !value(depth + 1) {
+					return false
+				}
+			}
+			end, err := d.Token()
+			return err == nil && end == json.Delim('}')
+		case '[':
+			for d.More() {
+				if !value(depth + 1) {
+					return false
+				}
+			}
+			end, err := d.Token()
+			return err == nil && end == json.Delim(']')
+		default:
+			return false
+		}
+	}
+	if !value(0) {
+		return false
+	}
+	_, err := d.Token()
+	return err == io.EOF
+}
+
 func skillsStoredPromptScope(prompt, spec []byte, sandbox string, subwork ...skillsSubwork) bool {
 	const marker = "\n依頼:\n"
 	at := bytes.Index(prompt, []byte(marker))
@@ -249,6 +306,10 @@ func skillsBootstrapBodyProjection(input io.Reader, id, cwd, sandbox string) (st
 	scan.Buffer(make([]byte, 64<<10), 1<<20)
 	session := false
 	for scan.Scan() {
+		// Validate duplicates before type/role filtering can hide an input.
+		if !skillsNativeUniqueJSON(scan.Bytes()) {
+			return "", false
+		}
 		var e struct {
 			Type    string          `json:"type"`
 			Payload json.RawMessage `json:"payload"`

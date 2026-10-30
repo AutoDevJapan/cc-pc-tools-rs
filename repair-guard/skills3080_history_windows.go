@@ -174,13 +174,17 @@ func skillsNativeWindow(s *skillsFS, job object, proof *skillsNativeResultProof,
 		return nil, false
 	}
 	if proof != nil && (proof.inputOnly || proof.exactInput) {
+		// Every typed caller, including live consumers and repair results, gets
+		// its environment from the real job here rather than an optional caller
+		// initializer. This cannot be supplied in an operation request.
+		proof.sandbox = str(job["sandbox"])
 		// Session bootstrap is independent of the job's task-input window.
 		body, valid := skillsBootstrapBodyProjection(input, id, str(job["cwd"]), proof.sandbox)
 		snapshot, rewindable := input.(*skillsNativeSnapshotReader)
 		if !valid || !proof.bootstrapMatchesBody(body) || !rewindable || !snapshot.rewind() {
 			return nil, false
 		}
-		proof.runtimeSourceUsed = hashBytes([]byte(body)) != proof.bootstrapSHA
+		proof.runtimeSourceUsed = len(proof.runtimeBootstrap) > 0
 		proof.bootstrapBound = true
 	}
 	return skillsNativeProjectionBound(input, id, str(job["cwd"]), start, end, proof)
@@ -307,10 +311,16 @@ type skillsNativeResultProof struct {
 }
 
 func (p *skillsNativeResultProof) bootstrapMatchesBody(body string) bool {
-	return (skillsDigest(p.bootstrapSHA) && hashBytes([]byte(body)) == p.bootstrapSHA) || skillsBootstrapSourceMatches(body, p.runtimeBootstrap)
+	if len(p.runtimeBootstrap) > 0 {
+		return skillsBootstrapSourceMatches(body, p.runtimeBootstrap)
+	}
+	return skillsDigest(p.bootstrapSHA) && hashBytes([]byte(body)) == p.bootstrapSHA
 }
 
 func (p *skillsNativeResultProof) observe(raw []byte, at time.Time) bool {
+	if _, ok := conversationJSON(raw); !ok {
+		return false
+	}
 	var envelope struct {
 		Payload struct {
 			Type, Role, Phase string
@@ -334,9 +344,6 @@ func (p *skillsNativeResultProof) observe(raw []byte, at time.Time) bool {
 	// classified this turn. Do not materialize an unbound assistant's text.
 	if v.Role == "assistant" && (p.promptAt.IsZero() || at.Before(p.promptAt)) {
 		return true
-	}
-	if _, ok := conversationJSON(raw); !ok {
-		return false
 	}
 	var blocks []json.RawMessage
 	if json.Unmarshal(v.Content, &blocks) != nil {

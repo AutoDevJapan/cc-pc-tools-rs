@@ -634,6 +634,9 @@ func skillsNativeProjectionBound(input io.Reader, id, cwd string, start, end tim
 	session := false
 	for scanner.Scan() {
 		raw := scanner.Bytes()
+		if !skillsNativeUniqueJSON(raw) {
+			return nil, false
+		}
 		var envelope struct {
 			Type      string          `json:"type"`
 			Timestamp string          `json:"timestamp"`
@@ -668,6 +671,15 @@ func skillsNativeProjectionBound(input io.Reader, id, cwd string, start, end tim
 				return nil, false
 			}
 			continue
+		}
+		if envelope.Type == "turn_context" {
+			at, err := time.Parse(time.RFC3339Nano, envelope.Timestamp)
+			if err != nil {
+				return nil, false
+			}
+			if at.Before(start) || at.After(end) {
+				continue
+			}
 		}
 		m, ok := conversationJSON(raw)
 		if !ok {

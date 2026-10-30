@@ -72,7 +72,8 @@ review側の完了nativeはdeny-writeで開け、実modelとmax・session/cwdも
 文書のUTF-8 BOM、CRLFとLF、文書端の空白だけを実行環境の組立て表現に揃え、
 文書間の区切りと全文を照合する。任意のprefix・ラベル・追加本文は除去しない。
 原本のないdigestや、レビュー自身のdigestを期待値へ採用しない。
-新しい原本で証明できない場合は、従来の作者のbootstrapとの完全一致だけを保つ。
+二つの独立原本を確認できない場合だけ、従来の作者のbootstrapとの完全一致を保つ。
+原本を確認した場合は新しい本文との一致を必須にし、不一致を旧digestで受け入れない。
 
 新しい出所を使う場合は、初回起動のmetadataとjob窓内のsession開始を確認する。
 bootstrapとタスク・最終応答は同じ長さを固定したnative handleから読み、

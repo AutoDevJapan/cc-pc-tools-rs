@@ -226,6 +226,78 @@ fn nonquota_cancellation_after_dependency_release_keeps_ordinary_preparation() {
 }
 
 #[test]
+fn quota_cancellation_preserves_owner_and_legacy_early_returns_but_not_owner_stops() {
+    for case in ["owner_research", "owner_review", "legacy_research"] {
+        for owner_stop in [false, true] {
+            // Given a quota-classified cancellation during a dependency wait,
+            // preserve the existing owner-choice and legacy-research routes.
+            let (mut f, mut sub) = later_result("cancelled");
+            let source = f.e.backend.records.last_mut().unwrap();
+            source["recovery_cancel"] = Value::Null;
+            if owner_stop {
+                source["cancel_requested"] = json!(true);
+            }
+            let row = &mut sub.db["items"][1];
+            row["subwork_continuation"] = Value::Null;
+            row["status"] = json!("wait");
+            row["wait_on"] = json!([99]);
+            row["scheduler"]["job"] = source["id"].clone();
+            match case {
+                "owner_review" => {
+                    row["subwork"] = Value::Null;
+                    row["task_type"] = json!("review");
+                    source["subwork"] = Value::Null;
+                    source["task_type"] = json!("review");
+                    row["model"] = json!("anthropic/claude-opus-5-5");
+                    row["model_origin"] = json!("owner_request");
+                    f.e.backend.quota_inventory["anthropic"] =
+                        json!({"at":T,"verified":true,"available":true,"exhausted":false});
+                }
+                "owner_research" => row["model_origin"] = json!("owner_request"),
+                "legacy_research" => {
+                    source["model"] = json!("grok-4.7");
+                    row["model"] = source["model"].clone();
+                    source["last_failure_kind"] = json!("transient");
+                    source["last_error"] = json!("Grok Build usage balance exhausted");
+                    source["finite_subwork"] = Value::Null;
+                }
+                _ => unreachable!(),
+            }
+            let expected_model = row["model"].clone();
+            sub.db["items"]
+                .as_array_mut()
+                .unwrap()
+                .push(json!({"id":99,"status":"todo"}));
+            assert!(cc_job_policy::todo_wait::release_ready(&mut sub.db).is_empty());
+            sub.db["items"][2]["status"] = json!("done");
+            assert_eq!(
+                cc_job_policy::todo_wait::release_ready(&mut sub.db),
+                vec![2]
+            );
+            let original = f.e.backend.records.clone();
+            write_json(&f.e.todo_path, &sub.db, 1).unwrap();
+            // When the prerequisite completes, unknown cancellation alone
+            // must not add a new hold. Explicit owner stops still reject it.
+            let result = f.e.prepare(&sub.db["items"][1], sub.repo.to_str().unwrap());
+            if owner_stop {
+                assert_eq!(result.unwrap_err().0, "InputRejected", "{case}");
+                assert!(f.e.backend.launched.is_empty());
+            } else {
+                let prepared = result
+                    .unwrap_or_else(|e| panic!("{case}: {}", e.0))
+                    .unwrap();
+                assert!(prepared["scheduler"]["selection"]["quota_recovery"].is_null());
+                assert_eq!(
+                    prepared["scheduler"]["selection"]["model"], expected_model,
+                    "{case}"
+                );
+            }
+            assert_eq!(f.e.backend.records, original);
+        }
+    }
+}
+
+#[test]
 fn parent_intake_reason_requires_the_same_actor_independent_source_checks_as_cli() {
     for case in ["normal", "scope", "legacy_capsule", "owner_source"] {
         let (mut f, mut sub) = later_result("failed");

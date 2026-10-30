@@ -4,6 +4,7 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
+	"net/url"
 	"os"
 	"path/filepath"
 	"strings"
@@ -120,6 +121,16 @@ func TestRetainedProcedureJournalRejectsChangedReadAndRightsBeforeQueue(t *testi
 		}},
 		{"query_escaped_conversation_URL", func(v map[string]any) {
 			entry(v, 0)["value"] = "https://example.test/?next=https%3A%2F%2Fchatgpt.com%2Fshare%2Fexample-share"
+		}},
+		{"double_escaped_conversation_URL", func(v map[string]any) {
+			entry(v, 0)["value"] = "https://example.test/?next=https%253A%252F%252Fclaude.ai%252Fchat%252Fexample-session"
+		}},
+		{"deep_escaped_conversation_URL", func(v map[string]any) {
+			text := "https://claude.ai/chat/example-session"
+			for i := 0; i < 12; i++ {
+				text = url.QueryEscape(text)
+			}
+			entry(v, 0)["value"] = "https://example.test/?next=" + text
 		}},
 		{"invalid_query_escape_cannot_hide_conversation_URL", func(v map[string]any) {
 			entry(v, 0)["value"] = "https://example.test/?bad=100%&next=https%3A%2F%2Fclaude.ai%2Fchat%2Fexample-session"

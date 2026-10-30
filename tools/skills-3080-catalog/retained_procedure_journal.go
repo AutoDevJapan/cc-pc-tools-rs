@@ -49,10 +49,20 @@ func retainedConversationURL(text string) bool {
 	boundary := func(r rune) bool { return unicode.IsSpace(r) || strings.ContainsRune("<>\"'`", r) }
 	for _, token := range strings.FieldsFunc(text, boundary) {
 		forms := []string{token}
-		// A malformed escape in another query value must not hide a valid
-		// encoded URL. Decode valid triplets once, retaining other bytes.
-		if decoded := retainedPercentView(token); decoded != token {
+		// Inspect each finite decoding layer. A malformed escape elsewhere
+		// must not hide a nested URL. Inputs still changing after the bound
+		// are rejected rather than silently treating deeper layers as clear.
+		current := token
+		for depth := 0; depth < 8; depth++ {
+			decoded := retainedPercentView(current)
+			if decoded == current {
+				break
+			}
 			forms = append(forms, decoded)
+			current = decoded
+		}
+		if retainedPercentView(current) != current {
+			return true
 		}
 		for _, form := range forms {
 			for _, part := range strings.FieldsFunc(form, boundary) {

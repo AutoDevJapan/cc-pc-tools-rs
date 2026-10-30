@@ -113,6 +113,9 @@ func validateRetainedProcedureV2(v map[string]any, expectedRows int) error {
 	}
 	cc["initial_display_gap_records"] = json.Number("0")
 	adapted["counts"] = cc
+	if !retainedFullEntryAnchor(rows) {
+		return fail()
+	}
 	if !retainedFontNoticeAnchor(rows) {
 		return fail()
 	}
@@ -214,7 +217,8 @@ func validateRetainedEncoding(row, read map[string]any) error {
 		return fail()
 	}
 	ex, ok := read["encoding_exception"].(map[string]any)
-	if !ok || !retainedKeys(ex, "strict_utf8", "invalid_bytes", "permissive_decode_not_used", "source_refetched", "method") || ex["strict_utf8"] != false || ex["permissive_decode_not_used"] != true || ex["source_refetched"] != false || !retainedText(ex["method"]) {
+	const method = "この固定本文だけ、原bufferをLF単位へ分け各行fatal UTF8復号。不正行全体は表示前に伏せ、意味未読。別encoding/置換復号/再取得/原本変更0。"
+	if !ok || !retainedKeys(ex, "strict_utf8", "invalid_bytes", "permissive_decode_not_used", "source_refetched", "method") || ex["strict_utf8"] != false || ex["permissive_decode_not_used"] != true || ex["source_refetched"] != false || ex["method"] != method {
 		return fail()
 	}
 	withheld, ok := read["withheld_physical_lines"].([]any)
@@ -242,9 +246,21 @@ func validateRetainedEncoding(row, read map[string]any) error {
 		}
 		off, a := retainedInteger(m["byte_offset_zero_based"])
 		line, b := retainedInteger(m["line"])
-		if !a || !b || off != offsets[i] || line != lines[i] || !hidden[line] || strings.ToLower(fmt.Sprint(m["invalid_byte_hex"])) != "97" {
+		byteText, stringOK := m["invalid_byte_hex"].(string)
+		if !a || !b || !stringOK || byteText != "97" || off != offsets[i] || line != lines[i] || !hidden[line] {
 			return fail()
 		}
 	}
 	return nil
+}
+
+const retainedFullEntrySHA = "66933ba23a27a083a2060407a45a8f267255ed34170d72074306e13741376783"
+
+func retainedFullEntryAnchor(rows []any) bool {
+	b, e := json.Marshal(rows)
+	if e != nil {
+		return false
+	}
+	h := sha256.Sum256(b)
+	return hex.EncodeToString(h[:]) == retainedFullEntrySHA
 }

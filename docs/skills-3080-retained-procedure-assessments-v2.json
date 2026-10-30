@@ -20261,7 +20261,7 @@
               "line": 465
             }
           ],
-          "method": "row470だけ、原bufferをLF単位へ分け各行fatal UTF8復号。不正行全体は表示前に伏せ、意味未読。別encoding/置換復号/再取得/原本変更0。",
+          "method": "この固定本文だけ、原bufferをLF単位へ分け各行fatal UTF8復号。不正行全体は表示前に伏せ、意味未読。別encoding/置換復号/再取得/原本変更0。",
           "permissive_decode_not_used": true,
           "source_refetched": false,
           "strict_utf8": false

@@ -4,8 +4,10 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
+	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 )
 
@@ -155,6 +157,98 @@ func TestAdditionalRetainedJournalRejectsChangedReadHistory(t *testing.T) {
 			tc.edit(v)
 			if _, e := retainedV2Load(t, v); e == nil {
 				t.Fatal("changed history accepted despite fresh matching artifact pin")
+			}
+		})
+	}
+}
+
+func TestAdditionalRetainedRejectsCoherentHistoryInflation(t *testing.T) {
+	changeCount := func(v map[string]any, key string, delta int64) {
+		t.Helper()
+		counts := v["counts"].(map[string]any)
+		old, ok := retainedInteger(counts[key])
+		if !ok {
+			t.Fatal("fixture counter absent")
+		}
+		counts[key] = json.Number(fmt.Sprint(old + delta))
+	}
+	t.Run("primary_and_support_and_counts_claim_raw", func(t *testing.T) {
+		v := retainedV2Fixture(t)
+		for _, x := range v["entries"].([]any) {
+			r := x.(map[string]any)
+			rd := r["read"].(map[string]any)
+			if rd["kind"] != "direct_masked_full" || rd["encoding_exception"] != nil {
+				continue
+			}
+			mask, _ := retainedInteger(rd["masked_lines"])
+			rd["kind"] = "direct_raw_full"
+			rd["raw_read_complete"] = true
+			rd["masked_lines"] = json.Number("0")
+			rd["withheld_physical_lines"] = []any{}
+			for _, s := range r["support_read_states"].([]any) {
+				sup := s.(map[string]any)
+				if sup["relative_path"] == "SKILL.md" {
+					sup["state"] = "direct_raw_full"
+					sup["masked_lines"] = json.Number("0")
+				}
+			}
+			changeCount(v, "raw_primary_records", 1)
+			changeCount(v, "masked_primary_records", -1)
+			changeCount(v, "primary_withheld_lines", -mask)
+			states := v["counts"].(map[string]any)["support_state_counts"].(map[string]any)
+			for key, d := range map[string]int64{"direct_raw_full": 1, "direct_masked_full": -1} {
+				n, _ := retainedInteger(states[key])
+				states[key] = json.Number(fmt.Sprint(n + d))
+			}
+			if _, e := retainedV2Load(t, v); e == nil {
+				t.Fatal("coherent masked history promoted to raw")
+			}
+			return
+		}
+		t.Fatal("masked fixture absent")
+	})
+	t.Run("reuse_and_notice_and_counts_claim_fresh", func(t *testing.T) {
+		v := retainedV2Fixture(t)
+		for _, x := range v["entries"].([]any) {
+			r := x.(map[string]any)
+			for _, nx := range r["individual_notices"].([]any) {
+				n := nx.(map[string]any)
+				rel := n["relative_path"].(string)
+				if n["read_kind"] != "exact_bytes_reuse" || strings.HasPrefix(rel, "canvas-fonts/") {
+					continue
+				}
+				for _, sx := range r["support_read_states"].([]any) {
+					s := sx.(map[string]any)
+					if s["relative_path"] == rel {
+						s["state"] = "direct_raw_full"
+						s["masked_lines"] = json.Number("0")
+					}
+				}
+				n["read_kind"] = "direct_raw_full"
+				states := v["counts"].(map[string]any)["support_state_counts"].(map[string]any)
+				for key, d := range map[string]int64{"direct_raw_full": 1, "exact_bytes_reuse": -1} {
+					count, _ := retainedInteger(states[key])
+					states[key] = json.Number(fmt.Sprint(count + d))
+				}
+				if _, e := retainedV2Load(t, v); e == nil {
+					t.Fatal("coherent reused notice promoted to fresh raw")
+				}
+				return
+			}
+		}
+		t.Fatal("reuse fixture absent")
+	})
+	for _, kind := range []string{"numeric_byte", "contradictory_method"} {
+		t.Run(kind, func(t *testing.T) {
+			v := retainedV2Fixture(t)
+			ex := retainedV2EncodingRow(t, v)["read"].(map[string]any)["encoding_exception"].(map[string]any)
+			if kind == "numeric_byte" {
+				ex["invalid_bytes"].([]any)[0].(map[string]any)["invalid_byte_hex"] = json.Number("97")
+			} else {
+				ex["method"] = "置換文字で復号した"
+			}
+			if _, e := retainedV2Load(t, v); e == nil {
+				t.Fatal("encoding history changed")
 			}
 		})
 	}

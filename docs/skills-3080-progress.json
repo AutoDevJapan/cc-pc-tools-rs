@@ -3994,7 +3994,7 @@
   "additional_retained_procedure_assessments": {
     "file": "skills-3080-retained-procedure-assessments-v2.json",
     "definition": "skills-3080-retained-procedure-assessments-v2.md",
-    "sha256": "8c3a35de7bfc536fc676f03f0757514f0c683fa65a8818f6a08572724951a08f",
+    "sha256": "238c8102ef219548a6acb7447603f7745c341d0aeddfac8be973d6bac8ac808e",
     "assessment_records": 163,
     "already_assessed_occurrences": 1,
     "new_unique_assessment_occurrences": 162,
@@ -4023,12 +4023,14 @@
     "new_copy_grants": 0,
     "new_final_dispositions": 0,
     "central_operations": 0,
-    "whole16_complete": false
+    "whole16_complete": false,
+    "all163_complete_entry_history_independent_anchor": true,
+    "coherent_state_and_counter_inflation_rejected": true
   },
   "current_execution_queue": {
     "state": "complete",
     "catalog_sha256": "2d73c9a038a41cc220a9687b935bfa1e0b315b65d9bd6d3e54ddb4111972876c",
-    "manifest_sha256": "32d9ef1825f1e7acefcd20b1b674ddc02a1fd835fc11051418da37ecf4438643",
+    "manifest_sha256": "c49eff9b61d47cfcaa883198355e35e51205ed3eef931eda67809e00defd312f",
     "queue_sha256": "99b18181e5232ef68fb061d5c8ef64a91e658628f54123af4d6928810c7ab80c",
     "occurrences": 73220,
     "occurrences_with_assessment_records": 1947,

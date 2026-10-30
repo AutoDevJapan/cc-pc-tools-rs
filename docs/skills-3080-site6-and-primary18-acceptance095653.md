@@ -68,8 +68,8 @@ parse errorは0件だった。返却metadataは484件、走査上限の警告は
 元の除外記録15件の再確認と未知中央9件を保ち、残る最終判断は73,026出現。
 raw/workflowの旧固定bucket588/807は範囲が異なるため変更しない。
 
-manifest SHAは`51a0eeb89ecc54e89c1c27479366fb436e615f68b9e1226d0c05efc13ef5d45e`、
-実queue SHAは`1db41b9f74283ac84306cd4ea47fb754afba6fd3aeedd556a4d8433c7bc30950`。
+manifest SHAは`5cd4f501a7b2d73c9bc8030075c1f074429a1ec29ba64046d0d77e30606540d6`、
+実queue SHAは`223ef93362bde15352313b29ab005396bf33d2e920d6ef17e5672cd01c7733cb`。
 81 assessment artifactと台帳から全件を生成し、実bytesと完了summaryを読み返した。
 
 実データの初回生成で、未知のサイトGitパスを必須とする旧検査の失敗を確認した。
@@ -90,3 +90,39 @@ vetも成功した。旧snapshotの検査を再利用し、原packet・member・
 この差分の二役レビュー・最終headのCI・通常mergeは、記録時点では未受入。
 新規のSkill作成、中央ファイル変更、junction変更、秘密参照、外部サービス操作、
 APIキーや新費用は0。停止した元研究の再開修復4261は別に実配布と実結果まで追う。
+
+## 固定5567のレビューを受けた識別方法の修正
+
+最初の二役レビューは原応答と実Luna/maxを照合して受領した。
+4033はMust1・Suggestion1、4076はMust2・Suggestion2を報告した。
+共通のMustは未知のsite tupleへ別記録の値を補えること、もう一つは
+commit/source_commit・path/source_pathの矛盾を拒否していないことだった。
+元の指摘と原応答は保持し、追加差分の受入と区別する。
+
+catalogのUnitとrepo・commit・pathを、評価側・最終記録側の**掲載出現の識別情報**と
+全項目で照合する。空欄も一致対象であり、既知の上流情報を掲載のGit情報へ補わない。
+別名のpath/commitが両方ある場合は矛盾を拒否する。
+
+旧8評価のpathは保存archiveの場所で、別の旧評価1件と歴史的な除外6件は
+上流sourceについての過去の主張を記していた。原の4評価artifactと台帳のbytesを
+変えず、実catalogを全73,220件照合し、該当する14のsite出現のGit tupleが未知で
+保存本文SHAが対応することを確認した。manifestに原artifact/row/SHAと役割、
+元の値・掲載側の未知tupleを結ぶ解釈を9評価分・6最終記録分だけ明示する。
+
+実queueにもこの解釈を原の参照と併記する。archiveの場所をGit pathと呼ばず、
+過去の上流sourceの主張を今回検証済みにしない。旧15除外の再確認は引き続き必要で、
+新しい採用や許諾の根拠には使わない。解釈のない任意の値・別Unit・既知tupleとの
+不一致は拒否し、解釈の原row・元tuple・SHA・種別・欠落/重複/範囲外や、
+未確認の旧source主張を新規導入へ使う変更も拒否する。
+
+未知tupleへの補完とUnit不一致7反例、effective試行や上流種別の改変5反例を
+実Redで再現して修正した。さらに証拠と台帳のentrypoint SHAを同時に同じ誤値へ
+変える反例を再現し、凍結manifestの実SKILL.mdのSHAへ直接結んだ。
+原のarchive・上流の主張・掲載のGit tupleを区別する正負例と、両方のpath/commit
+別名の正負例も、同じ実受入経路で確認する。
+
+同じ掲載出現について、保存archiveの参照とGit tupleが未知の直接参照が
+両方ある場合は、各原参照を残して同じ出現へ結ぶ。保存場所の違いを異なる
+Git出典と誤判定して拒否する反例も再現し、未知のGit情報へ既知repoを補う変更は
+引き続き拒否する。追加修正後の最終関連Go全体は、新しい実queueと固定snapshotを
+渡して8.045秒で成功し、vetも成功した。全73,220件を再生成して上記のSHAと件数を確認した。

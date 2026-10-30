@@ -61,6 +61,12 @@ func validateCanonicalSiteSix(v, manifest, ledger map[string]any) error {
 			return err
 		}
 		url := "https://raw.githubusercontent.com/openai/skills/49f948faa9258a0c61caceaf225e179651397431/" + path
+		if up["inventory_unit"] != "github_skill_entry" {
+			return fmt.Errorf("accepted upstream occurrence kind changed")
+		}
+		if err := next4Fields(next4Object(site["effective_attempt"]), map[string]any{"sha256": up["sha256"], "machine_body_read": true}); err != nil {
+			return err
+		}
 		if site["normalized_canonical_url"] != url || up["normalized_canonical_url"] != url || site["sha256"] != up["sha256"] || e["source_sha256"] != up["sha256"] {
 			return fmt.Errorf("same fixed canonical URL and primary bytes required")
 		}
@@ -159,6 +165,9 @@ func validateCanonicalSiteSix(v, manifest, ledger map[string]any) error {
 			if !ok || text != string(raw) || travel3Digest(raw) != f["sha256"] || f["sha256"] != original["sha256"] || f["bytes"] != float64(len(raw)) || f["same_normal_current_buffer_fully_read"] != true {
 				return fmt.Errorf("current qualified instruction bytes changed")
 			}
+			if rel == "SKILL.md" && (e["target_entrypoint_sha256"] != f["sha256"] || a["entrypoint_sha256"] != f["sha256"]) {
+				return fmt.Errorf("evidence and ledger must bind the independently fixed actual entrypoint")
+			}
 		}
 		if e["target_entrypoint_sha256"] != a["entrypoint_sha256"] || e["target_manifest"] != a["manifest"] || e["target_evidence"] != a["evidence"] {
 			return fmt.Errorf("existing target acceptance changed")
@@ -180,7 +189,7 @@ func TestCanonicalSiteSixPreservesUnknownSiteGitAndEachAcceptedNotice(t *testing
 		t.Fatal("independent frozen manifest changed")
 	}
 	loadPublicReceipt(t, "skills-3080-adoptions.json", &ledger)
-	for _, change := range []string{"valid", "site repo filled", "site URL changed", "notice transferred", "target changed", "instruction changed", "current raw invented", "scan warning erased", "permission extended", "ledger notice changed", "duplicate preserved source", "wrong preserved bytes", "wrong resolved source", "wrong ledger scope"} {
+	for _, change := range []string{"valid", "site repo filled", "site URL changed", "notice transferred", "target changed", "instruction changed", "current raw invented", "scan warning erased", "permission extended", "ledger notice changed", "duplicate preserved source", "wrong preserved bytes", "wrong resolved source", "wrong ledger scope", "upstream unit", "effective hash", "effective unread", "effective missing", "effective null", "same wrong entrypoint in evidence and ledger"} {
 		t.Run(change, func(t *testing.T) {
 			var v map[string]any
 			loadPublicReceipt(t, canonicalSiteSixFile, &v)
@@ -189,6 +198,24 @@ func TestCanonicalSiteSixPreservesUnknownSiteGitAndEachAcceptedNotice(t *testing
 			var currentLedger map[string]any
 			json.Unmarshal(copyBytes, &currentLedger)
 			switch change {
+			case "same wrong entrypoint in evidence and ledger":
+				e["target_entrypoint_sha256"] = strings.Repeat("0", 64)
+				for _, value := range currentLedger["entries"].([]any) {
+					row := next4Object(value)
+					if row["inventory_id"] == e["inventory_id"] || row["inventory_id"] == e["upstream_adoption_inventory_id"] {
+						row["entrypoint_sha256"] = strings.Repeat("0", 64)
+					}
+				}
+			case "upstream unit":
+				next4Object(e["accepted_upstream_occurrence"])["inventory_unit"] = "github_agent_procedure"
+			case "effective hash":
+				next4Object(next4Object(e["site_occurrence"])["effective_attempt"])["sha256"] = strings.Repeat("0", 64)
+			case "effective unread":
+				next4Object(next4Object(e["site_occurrence"])["effective_attempt"])["machine_body_read"] = false
+			case "effective missing":
+				delete(next4Object(e["site_occurrence"]), "effective_attempt")
+			case "effective null":
+				next4Object(e["site_occurrence"])["effective_attempt"] = nil
 			case "site repo filled":
 				next4Object(e["site_occurrence"])["repo"] = "openai/skills"
 			case "site URL changed":

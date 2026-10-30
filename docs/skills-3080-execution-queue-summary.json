@@ -1,8 +1,8 @@
 {
   "state": "complete",
   "catalog_sha256": "2d73c9a038a41cc220a9687b935bfa1e0b315b65d9bd6d3e54ddb4111972876c",
-  "manifest_sha256": "51a0eeb89ecc54e89c1c27479366fb436e615f68b9e1226d0c05efc13ef5d45e",
-  "queue_sha256": "1db41b9f74283ac84306cd4ea47fb754afba6fd3aeedd556a4d8433c7bc30950",
+  "manifest_sha256": "5cd4f501a7b2d73c9bc8030075c1f074429a1ec29ba64046d0d77e30606540d6",
+  "queue_sha256": "223ef93362bde15352313b29ab005396bf33d2e920d6ef17e5672cd01c7733cb",
   "occurrences": 73220,
   "occurrences_with_assessment_records": 1635,
   "recorded_final_occurrences": 194,
@@ -26,6 +26,7 @@
     "Equal body bytes do not transfer source ownership, individual permission or support-resource review.",
     "No source body or URL is opened, no model or worker is launched, no permission is changed and nothing is installed.",
     "The queue is complete only when its separate summary is complete and its recorded queue SHA256 matches the actual bytes.",
+    "Explicit site identity interpretations retain original archive locations and unverified historical upstream claims separately from catalog occurrence Git fields; historical exclusion claims still require reconfirmation.",
     "Assessment records 1635 = assessed without final disposition 1447 + assessment/final intersection 188. Final records 194 include 6 final-only legacy records without assessment. The assessment/final union is 1641 occurrences; these categories are not additive independent totals."
   ]
 }

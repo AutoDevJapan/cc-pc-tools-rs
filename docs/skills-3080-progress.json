@@ -616,7 +616,7 @@
     "guard_client_resource": true,
     "state": "classification_unverified"
   },
-  "recorded_at": "2026-10-30T03:20:50.7434004+00:00",
+  "recorded_at": "2026-10-30T03:51:53.0397110+00:00",
   "total_skill_named_body_read_definition": "This field preserves the historical complete-source subset only. Current raw/workflow primary coverage is projected from the canonical source components and sixmile evaluation index in all_fulltext_primary_paths_including_partial_sources/all_workflow_primary_paths_including_partial_sources, not copied here.",
   "openai_entrypoint_evaluation": {
     "rights_accepted": false,
@@ -3750,8 +3750,8 @@
   "site6_primary18_current_queue": {
     "state": "complete",
     "catalog_sha256": "2d73c9a038a41cc220a9687b935bfa1e0b315b65d9bd6d3e54ddb4111972876c",
-    "manifest_sha256": "51a0eeb89ecc54e89c1c27479366fb436e615f68b9e1226d0c05efc13ef5d45e",
-    "queue_sha256": "1db41b9f74283ac84306cd4ea47fb754afba6fd3aeedd556a4d8433c7bc30950",
+    "manifest_sha256": "5cd4f501a7b2d73c9bc8030075c1f074429a1ec29ba64046d0d77e30606540d6",
+    "queue_sha256": "223ef93362bde15352313b29ab005396bf33d2e920d6ef17e5672cd01c7733cb",
     "occurrences": 73220,
     "occurrences_with_assessment_records": 1635,
     "recorded_final_occurrences": 194,
@@ -3775,7 +3775,21 @@
       "Equal body bytes do not transfer source ownership, individual permission or support-resource review.",
       "No source body or URL is opened, no model or worker is launched, no permission is changed and nothing is installed.",
       "The queue is complete only when its separate summary is complete and its recorded queue SHA256 matches the actual bytes.",
+      "Explicit site identity interpretations retain original archive locations and unverified historical upstream claims separately from catalog occurrence Git fields; historical exclusion claims still require reconfirmation.",
       "Assessment records 1635 = assessed without final disposition 1447 + assessment/final intersection 188. Final records 194 include 6 final-only legacy records without assessment. The assessment/final union is 1641 occurrences; these categories are not additive independent totals."
     ]
+  },
+  "site_occurrence_identity_interpretation": {
+    "evidence": "skills-3080-site-identity-interpretation095653.json",
+    "sha256": "8e22d4ecfd06cf973732cd7bc31c7e790b5b44182437016b31dc1bffe64c9a0e",
+    "original_assessment_references": 9,
+    "historical_final_references": 6,
+    "distinct_actual_site_occurrences": 14,
+    "catalog_Git_fields_remain_unknown": true,
+    "original_artifact_and_ledger_bytes_unchanged": true,
+    "old_upstream_source_claims_remain_unverified": true,
+    "historical_exclusions_reconfirmation_still_pending": true,
+    "unknown_and_known_occurrence_tuples_match_exactly": true,
+    "new_reads_grants_or_dispositions": 0
   }
 }

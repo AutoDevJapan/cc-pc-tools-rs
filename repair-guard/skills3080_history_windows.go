@@ -178,9 +178,21 @@ func skillsNativeWindow(s *skillsFS, job object, proof *skillsNativeResultProof,
 		// its environment from the real job here rather than an optional caller
 		// initializer. This cannot be supplied in an operation request.
 		proof.sandbox = str(job["sandbox"])
+		snapshot, rewindable := input.(*skillsNativeSnapshotReader)
+		if !rewindable {
+			return nil, false
+		}
+		if len(proof.runtimeProject) > 0 {
+			source, modern, valid := skillsRuntimeBootstrapProjection(input, job, proof.runtimeProject, start, end)
+			if !valid || !snapshot.rewind() {
+				return nil, false
+			}
+			if modern {
+				proof.runtimeBootstrap = source
+			}
+		}
 		// Session bootstrap is independent of the job's task-input window.
 		body, valid := skillsBootstrapBodyProjection(input, id, str(job["cwd"]), proof.sandbox)
-		snapshot, rewindable := input.(*skillsNativeSnapshotReader)
 		if !valid || !proof.bootstrapMatchesBody(body) || !rewindable || !snapshot.rewind() {
 			return nil, false
 		}
@@ -304,6 +316,7 @@ type skillsNativeResultProof struct {
 	bootstrapSHA, cwd             string
 	sandbox                       string
 	runtimeBootstrap              []byte
+	runtimeProject                []byte
 	runtimeSourceUsed             bool
 	userSeen                      bool
 	bootstrapSeen, bootstrapBound bool
@@ -331,6 +344,9 @@ func (p *skillsNativeResultProof) observe(raw []byte, at time.Time) bool {
 		return false
 	}
 	v := envelope.Payload
+	if v.Role == "user" && v.Type != "message" {
+		return false
+	}
 	if p.inputOnly && v.Role == "assistant" {
 		return true
 	}

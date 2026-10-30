@@ -337,6 +337,9 @@ func skillsBootstrapBodyProjection(input io.Reader, id, cwd, sandbox string) (st
 			session = true
 			continue
 		}
+		if p.Role == "user" && p.Type != "message" {
+			return "", false
+		}
 		if e.Type != "response_item" || p.Type != "message" || p.Role != "user" {
 			continue
 		}

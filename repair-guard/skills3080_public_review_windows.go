@@ -502,7 +502,7 @@ func skillsReviewNative(s *skillsFS, job object, spec []byte, finalSHA string) (
 			scope, _ := skillsParsePublicReview(spec)
 			// Failure to prove a current source never expands the old contract:
 			// the original-author bootstrap still has to match exactly.
-			runtimeBootstrap, _ = skillsPublicBootstrapSource(s, scope.Commit)
+			runtimeBootstrap = s.bootstrapProjects[scope.Commit]
 		}
 	}
 	return skillsCompletedReviewNativeWithBootstrap(s, job, prompt, finalSHA, reviewTyped || consumerTyped, bootstrap, runtimeBootstrap)
@@ -516,7 +516,7 @@ func skillsCompletedReviewNative(s *skillsFS, job object, prompt []byte, finalSH
 }
 
 func skillsCompletedReviewNativeWithBootstrap(s *skillsFS, job object, prompt []byte, finalSHA string, exactInput bool, bootstrap string, source []byte) ([]object, bool) {
-	native, ok := skillsHistoricalNative(s, job, &skillsNativeResultProof{prompt: prompt, finalSHA: finalSHA, exactInput: exactInput, bootstrapSHA: bootstrap, runtimeBootstrap: source, cwd: str(job["cwd"]), sandbox: str(job["sandbox"]), frozen: true})
+	native, ok := skillsHistoricalNative(s, job, &skillsNativeResultProof{prompt: prompt, finalSHA: finalSHA, exactInput: exactInput, bootstrapSHA: bootstrap, runtimeProject: source, cwd: str(job["cwd"]), sandbox: str(job["sandbox"]), frozen: true})
 	if !ok {
 		return nil, false
 	}

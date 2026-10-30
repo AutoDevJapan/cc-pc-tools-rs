@@ -24,6 +24,96 @@ func TestSkills3080AvailableRuntimeSourceDoesNotDowngrade(t *testing.T) {
 	}
 }
 
+func TestSkills3080UnknownUserPayloadIsNeverAnIgnoredEvent(t *testing.T) {
+	cwd, id := "D:/CC/Work/synthetic", "11111111-1111-7111-8111-111111111111"
+	meta, _ := json.Marshal(object{"type": "session_meta", "payload": object{"id": id, "cwd": cwd}})
+	boot, _ := json.Marshal(object{"type": "response_item", "payload": object{"type": "message", "role": "user", "content": []object{{"type": "input_text", "text": skillsBootstrapFixture(cwd, "known", true)}}}})
+	unknown := `{"type":"response_item","payload":{"type":"other","role":"user","content":[{"type":"input_text","text":"private extra"}]}}`
+	if _, ok := skillsBootstrapBodyProjection(strings.NewReader(string(meta)+"\n"+unknown+"\n"+string(boot)+"\n"), id, cwd, "read-only"); ok {
+		t.Fatal("unknown prior user hidden")
+	}
+	proof := &skillsNativeResultProof{prompt: []byte("exact task"), exactInput: true, cwd: cwd}
+	if proof.observe([]byte(unknown), time.Now()) {
+		t.Fatal("unknown later user hidden")
+	}
+}
+
+func TestSkills3080RuntimeWorldStateAnchorsTheLaunchInstructions(t *testing.T) {
+	for _, kind := range []string{"valid", "changed_common_version", "missing_snapshot", "delta_snapshot", "wrong_snapshot_body", "wrong_directory", "wrong_project", "late_snapshot", "duplicate_snapshot", "user_fake_snapshot", "wrong_turn", "wrong_model", "wrong_source", "wrong_originator", "before_job", "unknown_user_type"} {
+		t.Run(kind, func(t *testing.T) {
+			cwd, id, turn := "D:/CC/Work/synthetic", "11111111-1111-7111-8111-111111111111", "22222222-2222-7222-8222-222222222222"
+			start := time.Date(2026, 10, 30, 14, 0, 0, 0, time.UTC)
+			project := []byte("public project instructions")
+			common := "launch owner instructions"
+			if kind == "changed_common_version" {
+				common = "new independent launch owner instructions"
+			}
+			body, _ := skillsAssembleBootstrapSource([]byte(common), project)
+			meta := object{"type": "session_meta", "timestamp": start.Format(time.RFC3339Nano), "payload": object{"id": id, "cwd": cwd, "source": "exec", "originator": "codex_exec", "cli_version": "0.165.0"}}
+			if kind == "wrong_source" {
+				obj(meta["payload"])["source"] = "user"
+			}
+			if kind == "wrong_originator" {
+				obj(meta["payload"])["originator"] = "other"
+			}
+			if kind == "before_job" {
+				meta["timestamp"] = start.Add(-time.Second).Format(time.RFC3339Nano)
+			}
+			msg := object{"type": "response_item", "timestamp": start.Add(time.Second).Format(time.RFC3339Nano), "payload": object{"type": "message", "role": "user", "content": []object{{"type": "input_text", "text": skillsBootstrapFixture(cwd, string(body), true)}}}}
+			if kind == "unknown_user_type" {
+				obj(msg["payload"])["type"] = "other"
+			}
+			snapshot := object{"type": "world_state", "ordinal": json.Number("6"), "timestamp": start.Add(2 * time.Second).Format(time.RFC3339Nano), "payload": object{"full": true, "state": object{"agents_md": object{"directory": cwd, "text": string(body)}}}}
+			if kind == "delta_snapshot" {
+				obj(snapshot["payload"])["full"] = false
+			}
+			if kind == "wrong_snapshot_body" {
+				obj(obj(obj(snapshot["payload"])["state"])["agents_md"])["text"] = "post-hoc file contents"
+			}
+			if kind == "wrong_directory" {
+				obj(obj(obj(snapshot["payload"])["state"])["agents_md"])["directory"] = "D:/other"
+			}
+			if kind == "wrong_project" {
+				project = []byte("different public project")
+			}
+			context := object{"type": "turn_context", "timestamp": start.Add(3 * time.Second).Format(time.RFC3339Nano), "payload": object{"turn_id": turn, "cwd": cwd, "model": "gpt-6-luna", "effort": "max"}}
+			if kind == "wrong_turn" {
+				obj(context["payload"])["turn_id"] = id
+			}
+			if kind == "wrong_model" {
+				obj(context["payload"])["model"] = "gpt-6.1-sol"
+			}
+			records := []object{meta, {"type": "event_msg", "timestamp": start.Format(time.RFC3339Nano), "payload": object{"type": "task_started", "turn_id": turn}}, msg}
+			if kind != "missing_snapshot" && kind != "late_snapshot" && kind != "user_fake_snapshot" {
+				records = append(records, snapshot)
+			}
+			if kind == "duplicate_snapshot" {
+				records = append(records, snapshot)
+			}
+			if kind == "user_fake_snapshot" {
+				b, _ := json.Marshal(snapshot)
+				records = append(records, object{"type": "response_item", "timestamp": start.Add(2 * time.Second).Format(time.RFC3339Nano), "payload": object{"type": "message", "role": "user", "content": []object{{"type": "input_text", "text": string(b)}}}})
+			}
+			records = append(records, context)
+			if kind == "late_snapshot" {
+				records = append(records, snapshot)
+			}
+			var b bytes.Buffer
+			for _, v := range records {
+				raw, _ := json.Marshal(v)
+				b.Write(raw)
+				b.WriteByte('\n')
+			}
+			job := object{"thread_id": id, "cwd": cwd, "sandbox": "read-only", "model": "gpt-6-luna", "effort": "max"}
+			source, modern, ok := skillsRuntimeBootstrapProjection(&b, job, project, start, start.Add(time.Minute))
+			want := kind == "valid" || kind == "changed_common_version"
+			if ok != want || (want && (!modern || string(source) != string(body))) {
+				t.Fatalf("runtime snapshot %s accepted=%v modern=%v", kind, ok, modern)
+			}
+		})
+	}
+}
+
 func TestSkills3080DuplicateRoleCannotHideBeforeBootstrap(t *testing.T) {
 	cwd, id := "D:/CC/Work/synthetic", "11111111-1111-7111-8111-111111111111"
 	meta, _ := json.Marshal(object{"type": "session_meta", "payload": object{"id": id, "cwd": cwd}})
@@ -117,6 +207,7 @@ func TestSkills3080RuntimeBootstrapRequiresIndependentWholeDocuments(t *testing.
 			switch kind {
 			case "windows":
 				body = strings.ReplaceAll(body, "\n", "\r\n")
+				expected = []byte(body)
 			case "old":
 				body = "old owner instructions\n\n--- project-doc ---\n\nproject operating instructions"
 			case "self_digest":

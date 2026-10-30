@@ -125,6 +125,17 @@ impl Fixture {
     fn bytes(&self) -> Vec<u8> {
         fs::read(&self.paths.store).unwrap()
     }
+    fn completely_released(&self) -> Value {
+        let db = load(&self.paths.store).unwrap();
+        let item = &db["items"][0];
+        assert_eq!(item["status"], "todo");
+        assert!(item["wait_on"].is_null());
+        assert!(item["work_owner_job"].is_null());
+        assert!(item["work_owner_wait_on"].is_null());
+        assert_eq!(item["dependency_ready"], true);
+        assert_eq!(self.writes.get(), 1);
+        db
+    }
 }
 
 #[test]
@@ -206,12 +217,16 @@ fn explicit_holds_on_candidate_or_owner_never_release_or_save() {
 }
 
 #[test]
-fn null_false_and_empty_hold_markers_keep_legitimate_release() {
+fn inactive_hold_markers_except_wait_ready_keep_legitimate_release() {
     for value in [Value::Null, json!(false), json!("")] {
         let mut f = Fixture::new();
         f.edit(|db| {
             for row in [0, 1] {
                 for key in crate::direction_record::HOLD_FIELDS {
+                    // todo_wait::release_item requires null/absent wait_ready.
+                    if *key == "wait_ready" {
+                        continue;
+                    }
                     db["items"][row][*key] = value.clone();
                     db["items"][row]["scheduler"][*key] = value.clone();
                 }
@@ -226,11 +241,171 @@ fn null_false_and_empty_hold_markers_keep_legitimate_release() {
             }
         });
         assert_eq!(f.run(), Ok(vec![1]), "inactive marker {value}");
-        assert_eq!(f.writes.get(), 1);
+        f.completely_released();
     }
     let mut f = Fixture::new();
     f.edit(|db| db["items"][1]["status"] = json!("done"));
     assert_eq!(f.run(), Ok(vec![1]));
+}
+
+#[test]
+fn answered_question_history_allows_only_the_existing_automatic_release() {
+    for rows in [vec![0], vec![1], vec![0, 1]] {
+        for answer in [json!("recorded reply"), json!({"message_id":"saved-reply"})] {
+            let mut f = Fixture::new();
+            f.edit(|db| {
+                for row in &rows {
+                    db["items"][*row]["scheduler"] = json!({
+                        "question":{"thread_id":"saved-question"},"answer":answer});
+                }
+            });
+            let before = load(&f.paths.store).unwrap();
+            assert_eq!(f.run(), Ok(vec![1]), "rows={rows:?} answer={answer}");
+            let after = f.completely_released();
+            for row in &rows {
+                for field in ["question", "answer"] {
+                    assert_eq!(after["items"][*row]["scheduler"][field],
+                        before["items"][*row]["scheduler"][field]);
+                }
+            }
+            assert_eq!(after["items"][1], before["items"][1]);
+        }
+    }
+}
+
+#[test]
+fn question_prerequisites_and_recorded_stops_survive_answers_on_either_row() {
+    for row in [0, 1] {
+        let patches = [
+            json!({"scheduler":{"question":{"thread_id":"saved-question"}}}),
+            json!({"scheduler":{"question":"saved-question","answer":false}}),
+            json!({"scheduler":{"question":"saved-question","answer":""}}),
+            json!({"scheduler":{"question_close_pending":true}}),
+            json!({"status":"block"}),
+            json!({"owner_stopped":true}),
+            json!({"cancel_requested":true}),
+            json!({"scheduler":{"owner_stop_job":"recorded-job"}}),
+            json!({"scheduler":{"pending_cancel":"manual"}}),
+            json!({"note":"停止したまま"}),
+            json!({"note":"再開しない"}),
+            json!({"note":"止めておく"}),
+        ];
+        for patch in patches {
+            let mut f = Fixture::new();
+            f.edit(|db| {
+                db["items"][row]["scheduler"] = json!({
+                    "question":{"thread_id":"saved-question"},"answer":"recorded reply"});
+                // The unanswered cases explicitly replace/remove the answer.
+                if patch["scheduler"]["question"].is_object() {
+                    db["items"][row]["scheduler"].as_object_mut().unwrap().remove("answer");
+                }
+                common::merge(&mut db["items"][row], patch.clone());
+            });
+            let before = f.bytes();
+            assert_eq!(f.run(), Ok(vec![]), "row={row} patch={patch}");
+            f.unchanged(&before);
+        }
+    }
+}
+
+#[test]
+fn non_null_wait_ready_never_saves_a_partial_automatic_release() {
+    let mut failures = vec![];
+    for row in [0, 1] {
+        for scheduler in [false, true] {
+            for value in [json!(false), json!("")] {
+                let mut f = Fixture::new();
+                f.edit(|db| {
+                    if scheduler {
+                        db["items"][row]["scheduler"]["wait_ready"] = value.clone();
+                    } else {
+                        db["items"][row]["wait_ready"] = value.clone();
+                    }
+                });
+                let before = f.bytes();
+                let result = f.run();
+                if result != Ok(vec![]) || f.writes.get() != 0 || f.bytes() != before {
+                    let db = load(&f.paths.store).unwrap();
+                    failures.push(format!("row={row} scheduler={scheduler} value={value}: result={result:?} saves={} candidate_status={} wait_on={} work_owner_job={} work_owner_wait_on={} bytes_unchanged={}",
+                        f.writes.get(), db["items"][0]["status"], db["items"][0]["wait_on"],
+                        db["items"][0]["work_owner_job"], db["items"][0]["work_owner_wait_on"], f.bytes() == before));
+                }
+            }
+        }
+    }
+    assert!(failures.is_empty(), "non-null readiness was released/saved:\n{}", failures.join("\n"));
+}
+
+#[test]
+fn null_or_absent_wait_ready_allows_complete_release() {
+    for present in [false, true] {
+        let mut f = Fixture::new();
+        if present {
+            f.edit(|db| {
+                for row in [0, 1] {
+                    db["items"][row]["wait_ready"] = Value::Null;
+                    db["items"][row]["scheduler"]["wait_ready"] = Value::Null;
+                }
+            });
+        }
+        assert_eq!(f.run(), Ok(vec![1]));
+        f.completely_released();
+    }
+}
+
+#[test]
+fn conversation_wait_on_candidate_or_owner_is_preserved() {
+    for row in [0, 1] {
+        for scheduler in [false, true] {
+            for value in [json!(true), json!({"thread_id":"saved-conversation"}), json!("waiting"), json!(0), json!({})] {
+                let mut f = Fixture::new();
+                f.edit(|db| {
+                    if scheduler {
+                        db["items"][row]["scheduler"]["conversation_wait"] = value.clone();
+                    } else {
+                        db["items"][row]["conversation_wait"] = value.clone();
+                    }
+                });
+                let before = f.bytes();
+                assert_eq!(f.run(), Ok(vec![]), "row={row} scheduler={scheduler} value={value}");
+                f.unchanged(&before);
+            }
+        }
+    }
+}
+
+#[test]
+fn dependency_reopened_during_second_guard_never_commits() {
+    for row in [0, 1] {
+        let mut f = Fixture::new();
+        f.edit(|db| {
+            db["items"].as_array_mut().unwrap().push(json!({"id":3,"status":"done"}));
+            if row == 0 {
+                db["items"][0]["wait_on"] = json!([2,3]);
+            } else {
+                db["items"][1]["status"] = json!("wait");
+                db["items"][1]["wait_on"] = json!([3]);
+            }
+        });
+        let paths = f.paths.clone();
+        let expected = std::rc::Rc::new(std::cell::RefCell::new(Vec::new()));
+        let captured = expected.clone();
+        let mut calls = 0;
+        f.host.hook = Some(Box::new(move |_, _| {
+            calls += 1;
+            if calls != 3 { // root and job cwd were checked in the first pass.
+                return;
+            }
+            let _lock = Lock::acquire(&paths.lock, Duration::ZERO).unwrap();
+            let mut db = load(&paths.store).unwrap();
+            db["items"][2]["status"] = json!("todo");
+            save(&paths.store, &db).unwrap();
+            *captured.borrow_mut() = fs::read(&paths.store).unwrap();
+        }));
+        assert_eq!(f.run(), Ok(vec![]), "dependency of row={row}");
+        assert!(!expected.borrow().is_empty(), "the concurrent writer must run");
+        f.unchanged(&expected.borrow());
+    }
 }
 
 #[test]

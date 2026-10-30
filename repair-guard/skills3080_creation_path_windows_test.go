@@ -148,6 +148,7 @@ func TestSkills3080CreationRejectsUnicodeReservedDevicesAtBothEntrypoints(t *tes
 
 func TestSkills3080CreationActual64138NativeBinding(t *testing.T) {
 	_, _, e, _ := skillsForwardFixture(t)
+	e.NativeContract = "" // The original producer predates the hidden contract.
 	e.Writer.Workspace = skillsActual64138Workspace
 	c := skillsConsumeRequest{Creator: e.Writer, RequestPath: skillsActual64138Request, RequestSHA: e.RequestSHA, CallID: "call_64138b14df4e483885c35a84ad2a2741"}
 	start, _ := time.Parse(time.RFC3339, "2026-10-25T12:00:00Z")

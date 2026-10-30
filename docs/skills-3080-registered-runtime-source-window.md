@@ -32,6 +32,14 @@ sourceや結果を別path、copy、可変な指示ファイル、未知のdigest
 未知CLI版の拒否、原author・origin・実launch親・現在consumerの区別は維持する。
 これは一般guardや中央の既存対象の解除ではない。
 
+新しい作成の正規呼出は、固定PowerShell 7からProcessStartInfoを使い、
+CreateNoWindow=true・UseShellExecute=falseを明示する。
+実行物・flag・request・内外の作業場所・tool optionを固定し、stdout/stderrをUTF-8のまま待ち受け、
+結果を整形せず元のexit codeとともに返す。
+新しい私的な作成証拠には必要な呼出形式の版を記録し、その版と実native callを照合する。
+旧direct呼出は版のない過去の証拠を読む互換に限り、新しい版の証拠には使えない。
+この版は起動結果の自己証明や作業範囲の追加ではなく、元の同buffer・ID・hash検証にも従う。
+
 正負例と関連Goテスト、正式二役、対象headのCI、通常merge、同ソースのWindows更新と
 親による同bufferの実使用を、それぞれの実結果として確認する。
 再開元が証明されたことだけを、利用成功や依頼全体の完了と扱わない。

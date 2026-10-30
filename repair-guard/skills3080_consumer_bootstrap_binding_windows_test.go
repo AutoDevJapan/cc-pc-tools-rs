@@ -26,7 +26,11 @@ func TestSkills3080ConsumerLiveAndCompletedSelectTheSameProvenProject(t *testing
 		t.Fatal("missing public source downgraded a fresh consumer")
 	}
 	job["resume_session"] = "same-old-session"
-	if _, required := skillsTypedRuntimeProject(&s, job, spec); required {
-		t.Fatal("historical resumed contract rewritten as a fresh launch")
+	if _, required := skillsTypedRuntimeProject(&s, job, spec); !required {
+		t.Fatal("caller resume metadata bypassed real native-version classification")
+	}
+	delete(job, "first_started_at")
+	if _, required := skillsTypedRuntimeProject(&s, job, spec); !required {
+		t.Fatal("missing first-start metadata downgraded")
 	}
 }

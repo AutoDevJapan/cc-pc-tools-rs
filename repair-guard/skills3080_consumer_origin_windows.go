@@ -45,15 +45,19 @@ func skillsConsumerOriginFor(c skillsConsumerScope, reg skillsRegistry, s *skill
 // publication of this same commit. Use its exact local immutable Git object;
 // readonly use never enables network or consults today's working-tree file.
 func skillsConsumerProjectFromCreated(s *skillsFS, e skillsCreatedEvidence) bool {
+	return skillsConsumerProjectFromCreatedWith(s, e, permanentGitAt)
+}
+
+func skillsConsumerProjectFromCreatedWith(s *skillsFS, e skillsCreatedEvidence, git func(string, ...string) ([]byte, error)) bool {
 	if !skillsWriterValid(e.Writer) || !skillsGitObjectID(e.ManifestCommit) || s.blocked(filepath.Join(e.Writer.Workspace, "AGENTS.md")) {
 		return false
 	}
-	tree, err := permanentGitAt(e.Writer.Workspace, "ls-tree", e.ManifestCommit, "--", "AGENTS.md")
+	tree, err := git(e.Writer.Workspace, "ls-tree", e.ManifestCommit, "--", "AGENTS.md")
 	fields := strings.Fields(string(tree))
 	if err != nil || len(fields) != 4 || (fields[0] != "100644" && fields[0] != "100755") || fields[1] != "blob" || !skillsGitObjectID(fields[2]) || fields[3] != "AGENTS.md" {
 		return false
 	}
-	body, err := permanentGitAt(e.Writer.Workspace, "cat-file", "blob", fields[2])
+	body, err := git(e.Writer.Workspace, "cat-file", "blob", fields[2])
 	if err != nil || len(body) == 0 || len(body) > 256<<10 || skillsGitBlobID(body) != fields[2] {
 		return false
 	}

@@ -63,6 +63,14 @@ type skillsPublicManifest struct {
 	Files   []skillsOutput `json:"files"`
 }
 
+type skillsPublicSourceMetadata struct {
+	Schema      string       `json:"schema"`
+	Source      skillsSource `json:"source"`
+	SourceBytes int64        `json:"source_bytes"`
+	SourceBlob  string       `json:"source_git_blob"`
+	Adaptation  string       `json:"adaptation,omitempty"`
+}
+
 func (m skillsManifest) MarshalJSON() ([]byte, error) {
 	if m.publicV2 {
 		return json.Marshal(skillsPublicManifest{m.Domain, m.Sources, m.Files})
@@ -171,16 +179,9 @@ func skillsParseManifest(raw []byte) (skillsManifest, bool) {
 			return m, false
 		}
 		if m.publicV2 && len(parts) == 3 && parts[1] == "references" && parts[2] == "source.json" {
-			metadata, valid := conversationJSON(body)
-			if !valid {
+			var metadata skillsPublicSourceMetadata
+			if !skillsStrict(body, &metadata) || metadata.Schema != "skills-3080-source-v2" || metadata.SourceBytes < 1 || !skillsGitObjectID(metadata.SourceBlob) {
 				return m, false
-			}
-			for key := range metadata {
-				for _, private := range []string{"writer", "reformulation_writer", "job", "workspace", "spec_sha256", "todo_id", "decision_identity_sha256", "manifest_author"} {
-					if strings.EqualFold(key, private) {
-						return m, false
-					}
-				}
 			}
 		}
 		seen[strings.ToLower(f.Target)] = true

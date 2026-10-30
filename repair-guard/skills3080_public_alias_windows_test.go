@@ -42,7 +42,7 @@ func TestSkills3080PublicAliasBindsSourceWithoutPublishingWriter(t *testing.T) {
 }
 
 func TestSkills3080PublicSourceMetadataRejectsInternalBinding(t *testing.T) {
-	for _, key := range []string{"reformulation_writer", "Reformulation_Writer", "writer", "job", "workspace", "spec_sha256", "decision_identity_sha256", "manifest_author"} {
+	for _, key := range []string{"reformulation_writer", "Reformulation_Writer", "writer", "job", "workspace", "spec_sha256", "decision_identity_sha256", "manifest_author", "author_job", "creator_job", "review_job", "native_call_id", "Creator_Job"} {
 		t.Run(key, func(t *testing.T) {
 			m, _ := skillsPublicAliasFixture(t)
 			for i, f := range m.Files {

@@ -573,12 +573,17 @@
       "file": "skills-3080-primaryflow-next12-after248-evaluation095653.json",
       "sha256": "248091e116ccc6aadbc32cf63283aea6a8d6229a3855ab51fd70e7c28e8c58f2",
       "rows": 12
+    },
+    {
+      "file": "skills-3080-deployment-aliases.json",
+      "sha256": "0a18b082e9e2769f6f44dcf521362a416965844bb532d3c3fe05b188f2f4e70c",
+      "rows": 4
     }
   ],
   "adoption_ledger": {
     "file": "skills-3080-adoptions.json",
-    "sha256": "f2dddb6f978ef1b1690e54d12e855dac0df6e0b3ab40cfad2f572c8208ada4c7",
-    "rows": 194,
+    "sha256": "ef9d84d04c09fda011691350b8415ff46214d580377aa6e89017fc5c6b5108c4",
+    "rows": 198,
     "site_occurrence_bindings": [
       {
         "catalog_occurrence_git_fields": {
@@ -588,7 +593,7 @@
         },
         "inventory_id": "site:obsidian-cli-d54e74",
         "inventory_unit": "site_index_entry",
-        "one_based_row": 180,
+        "one_based_row": 184,
         "recorded_git_fields": {
           "commit": "3ccff5338ea700537839b21900aa5358a0402c98",
           "path": "skills/obsidian-cli/SKILL.md",
@@ -605,7 +610,7 @@
         },
         "inventory_id": "site:triage",
         "inventory_unit": "site_index_entry",
-        "one_based_row": 181,
+        "one_based_row": 185,
         "recorded_git_fields": {
           "commit": "5beb35b040e3de97e54fa9e386d7e42d15c295c2",
           "path": "skills/engineering/triage/SKILL.md",
@@ -622,7 +627,7 @@
         },
         "inventory_id": "site:setup-pre-commit",
         "inventory_unit": "site_index_entry",
-        "one_based_row": 184,
+        "one_based_row": 188,
         "recorded_git_fields": {
           "commit": "5beb35b040e3de97e54fa9e386d7e42d15c295c2",
           "path": "skills/misc/setup-pre-commit/SKILL.md",
@@ -639,7 +644,7 @@
         },
         "inventory_id": "site:scaffold-exercises",
         "inventory_unit": "site_index_entry",
-        "one_based_row": 185,
+        "one_based_row": 189,
         "recorded_git_fields": {
           "commit": "5beb35b040e3de97e54fa9e386d7e42d15c295c2",
           "path": "skills/misc/scaffold-exercises/SKILL.md",
@@ -656,7 +661,7 @@
         },
         "inventory_id": "site:migrate-to-shoehorn-d43a0b",
         "inventory_unit": "site_index_entry",
-        "one_based_row": 186,
+        "one_based_row": 190,
         "recorded_git_fields": {
           "commit": "5beb35b040e3de97e54fa9e386d7e42d15c295c2",
           "path": "skills/misc/migrate-to-shoehorn/SKILL.md",
@@ -673,7 +678,7 @@
         },
         "inventory_id": "site:mcp-builder-6a45e1",
         "inventory_unit": "site_index_entry",
-        "one_based_row": 194,
+        "one_based_row": 198,
         "recorded_git_fields": {
           "commit": "dbd4588f9e1033efb41dad4bef2f7947c8993d44",
           "path": "skills/mcp-builder/SKILL.md",
@@ -684,5 +689,12 @@
       }
     ]
   },
-  "definition": "Assessment record references and existing final decisions only. No semantic/individual licence approval is inherited through equal bytes. The fixed catalog remains the complete occurrence universe; all holds are retained."
+  "definition": "Assessment record references and existing final decisions only. No semantic/individual licence approval is inherited through equal bytes. The fixed catalog remains the complete occurrence universe; all holds are retained.",
+  "append_only_ledger_publications": [
+    {
+      "file": "skills-3080-deployment-aliases.json",
+      "sha256": "0a18b082e9e2769f6f44dcf521362a416965844bb532d3c3fe05b188f2f4e70c",
+      "rows": 4
+    }
+  ]
 }

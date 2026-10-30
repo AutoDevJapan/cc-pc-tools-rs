@@ -444,6 +444,7 @@ pub fn failure_reason(e: &Error) -> (&'static str, &'static str) {
         "InputRejected" | "ValueError" | "InvalidSubwork" => {
             ("input_rejected", "保存された起動情報を受け付けられません")
         }
+        "SubworkParentContinuationRequired" => ("subwork_parent_continuation_required", "依存解除後のquota失敗は、現在の実親がcontinue-subworkで新しい契約を登録すると再開できます"),
         "ClientResource" => (
             "excluded_resource",
             "この担当の作業対象から除外されています",

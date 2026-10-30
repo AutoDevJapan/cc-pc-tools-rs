@@ -161,7 +161,7 @@ fn finished_worker_rebinding_cannot_replace_current_ownership_or_quota_retry() {
             "worktree" => f.jobs[1]["work_owner"]["worktree"] = json!("different"),
             "latest" => f.db["items"][1]["jobs"].as_array_mut().unwrap().push(json!("later")),
             "future_dependency" => f.jobs[1]["todo_dependency_generation"] = json!(2),
-            "budget" => f.jobs[1]["capacity_exhausted"] = json!(true),
+            "budget" => { f.jobs[1]["status"] = json!("failed"); f.jobs[1]["todo_dependency_generation"] = json!(0); f.jobs[1]["capacity_exhausted"] = json!(true); },
             "drain" => { f.jobs[1]["pid"] = f.jobs[0]["pid"].clone(); f.jobs[1]["pid_created"] = f.jobs[0]["pid_created"].clone(); },
             "stop" => f.db["items"][1]["owner_stopped"] = json!(true),
             "parent" => f.db["items"][0]["resume_generation"] = json!(2),

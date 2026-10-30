@@ -2015,7 +2015,7 @@ if !truth(&row["scheduler"]["key"]){let attempt=add_count(&row["scheduler"]["att
                 reject!(!truth(&i["spec"]), MissingSpecMetadata);
                 reject!(todo_wait::waiting(&db, i), DependencyWait);
                 reject!(target.is_some() && crate::targeted_dispatch::held(i), TargetedHold);
-                reject!(i["scheduler"]["quota_retry_terminal"]["source_job"]==i["scheduler"]["last_job"]
+                reject!(i["scheduler"]["quota_retry_terminal"]["source_job"]==cc_job_policy::subwork_continuation::source_id(i)
                     && i["scheduler"]["quota_retry_terminal"].is_object(), QuotaRetryEnded);
                 let review_failure = &i["scheduler"]["review_preparation_failure"];
                 if review_failure["exhausted"] == true

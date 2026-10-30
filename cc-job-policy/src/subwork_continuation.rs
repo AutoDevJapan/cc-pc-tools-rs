@@ -1,4 +1,4 @@
-//! Current parent intake and normal finite-result continuation retain the older quota bridge.
+//! Current parent intake, inert historical requests, and the older quota bridge.
 use crate::{cancellation, product_retry::digest, quota_recovery as quota};
 use serde_json::{Value, json};
 
@@ -69,7 +69,7 @@ pub fn unheld(item: &Value, source: &Value) -> bool {
             v.is_null() || v == false || v == ""
         })
 }
-fn retry_budget_known(source: &Value) -> bool {
+fn retry_budget_known(source: &Value, quota_failure: bool) -> bool {
     let proof = &source["quota_recovery"];
     // A v1 capsule predates retry details. Only an already restored snapshot
     // proves its spent switch; this new-generation intake cannot validate the
@@ -91,7 +91,10 @@ fn retry_budget_known(source: &Value) -> bool {
                             && entry["to_model"] == proof["model"]
                     })
                 })))
-        && crate::quota_retry::terminal_reason(source).is_none()
+        && (crate::quota_retry::terminal_reason(source).is_none()
+            || (!quota_failure
+                && crate::quota_retry::terminal_reason(source)
+                    == Some("finite_retry_budget_exhausted")))
 }
 /// The current generation's assigned worker takes precedence over an older
 /// last_job left behind by a dependency release. Never pick an arbitrary job.
@@ -167,35 +170,26 @@ pub fn latest_worker(item: &Value, source: &Value) -> bool {
             .filter(|b| !b.is_empty() && b.len() <= 1024 * 1024)
             .is_some_and(|bytes| finite["spec_sha256"] == digest(&bytes))
 }
-/// The retained request is historical once a newer, current finite worker owns the result.
-pub fn retired_result(item: &Value, source: &Value) -> bool {
-    let old = &item["subwork_continuation"];
-    old["version"] == 1
-        && old["source_job"].is_string()
-        && old["source_job"] != source["id"]
-        && old["resume_generation"]
-            .as_u64()
-            .zip(source["todo_resume_generation"].as_u64())
-            .is_some_and(|(old, current)| old < current)
-        && latest_worker(item, source)
-        && (nonquota_result(item, source)
-            || (source["status"] == "failed"
-                && quota::quota_source(source)
-                && source["todo_dependency_generation"]
-                    .as_u64()
-                    .zip(item["dependency_generation"].as_u64())
-                    .is_some_and(|(old, current)| old < current)))
+/// A request authorizes only its exact task generation. Keep its immutable
+/// record, but never reapply it after Start or a prerequisite transition.
+pub fn stale_request(item: &Value) -> bool {
+    let request = &item["subwork_continuation"];
+    request["version"] == 1
+        && request["resume_generation"].is_u64()
+        && request["dependency_generation"].is_u64()
+        && (request["resume_generation"] != gen_(item, "resume_generation")
+            || request["dependency_generation"] != gen_(item, "dependency_generation"))
 }
-/// Scheduler-generated normal continuation, not a claim of a new parent CLI call.
-/// Its real current parent, latest result and retained original are all bound again.
-pub fn automatic_request(item: &Value, source: &Value, actor: &Value) -> Option<Value> {
-    if !retired_result(item, source) {
-        return None;
-    }
-    let mut proof = request(item, source, actor)?;
-    proof["automatic_result"] = json!(true);
-    proof["retired_request_sha256"] = json!(hash(&item["subwork_continuation"]));
-    Some(proof)
+/// The same current worker failed quota before a prerequisite advanced. Only
+/// the actual parent's explicit new intake may bridge that dependency change.
+pub fn quota_dependency_changed(item: &Value, source: &Value) -> bool {
+    source["status"] == "failed"
+        && quota::quota_source(source)
+        && latest_worker(item, source)
+        && source["todo_dependency_generation"]
+            .as_u64()
+            .zip(item["dependency_generation"].as_u64())
+            .is_some_and(|(old, current)| old < current)
 }
 /// Caller additionally checks actual parent ownership, real process drain and dependencies.
 pub fn request(item: &Value, source: &Value, actor: &Value) -> Option<Value> {
@@ -251,7 +245,10 @@ pub fn request(item: &Value, source: &Value, actor: &Value) -> Option<Value> {
         || finite["spec"] != item["spec"]
         || text(source, "launch_key").is_empty()
         || finite["launch_key"] != source["launch_key"]
-        || !retry_budget_known(source)
+        || !retry_budget_known(
+            source,
+            source["status"] == "failed" && quota::quota_source(source),
+        )
     {
         return None;
     }
@@ -295,54 +292,18 @@ pub fn request(item: &Value, source: &Value, actor: &Value) -> Option<Value> {
     Some(proof)
 }
 pub fn current(proof: &Value, item: &Value, source: &Value, actor: &Value) -> bool {
-    proof.is_object()
-        && if proof["automatic_result"] == true {
-            automatic_request(item, source, actor).as_ref() == Some(proof)
-        } else {
-            request(item, source, actor).as_ref() == Some(proof)
-        }
-}
-/// Once the exact next worker owns this request, a later ordinary attempt must
-/// use that worker's own result. The retained original request grants no new exception.
-pub fn consumed(item: &Value, source: &Value) -> bool {
-    let request = &item["subwork_continuation"];
-    request.is_object()
-        && source["subwork_continuation"]["request"] == *request
-        && source["subwork_continuation"]["launch_key"] == source["launch_key"]
-        && source["todo_resume_generation"].as_u64()
-            == request["resume_generation"]
-                .as_u64()
-                .and_then(|g| g.checked_add(1))
-        && source["todo_resume_generation"] == item["resume_generation"]
-        && item["worker_receipt"]["generation"] == item["resume_generation"]
-        && item["worker_receipt"]["job"] == source["id"]
-        && source["todo_id"] == item["id"]
-        && source["subwork"] == item["subwork"]
-        && item["jobs"]
-            .as_array()
-            .is_some_and(|ids| ids.contains(&source["id"]))
-}
-/// A later ordinary worker can fail quota without carrying the old exception.
-/// Retire only that stale request; the normal quota capsule must still prove
-/// its own exact generation, scope, drain, fresh OAuth and spent retry budget.
-pub fn superseded_by_current_quota(item: &Value, source: &Value) -> bool {
-    let request = &item["subwork_continuation"];
-    request["version"] == 1
-        && !text(request, "source_job").is_empty()
-        && request["source_job"] != source["id"]
-        && source["status"] == "failed"
-        && source["todo_resume_generation"]
-            .as_u64()
-            .is_some_and(|generation| {
-                source["todo_resume_generation"] == item["resume_generation"]
-                    && request["resume_generation"]
-                        .as_u64()
-                        .is_some_and(|old| old < generation)
-            })
-        && item["worker_receipt"]["job"] == source["id"]
-        && item["worker_receipt"]["generation"] == item["resume_generation"]
-        && item["jobs"].as_array().and_then(|ids| ids.last()) == Some(&source["id"])
-        && quota::eligible_source(item, source)
+    let Some(mut expected) = request(item, source, actor) else {
+        return false;
+    };
+    // Shipped v1 quota requests predate the optional receipt snapshot. Keep
+    // that exact old schema valid before and after Start, without editing it.
+    if proof["source_kind"].is_null()
+        && proof["source_receipt"].is_null()
+        && expected["source_kind"].is_null()
+    {
+        expected.as_object_mut().unwrap().remove("source_receipt");
+    }
+    proof.is_object() && expected == *proof
 }
 pub fn available(health: &Value, model: &str, now: f64) -> bool {
     if model
@@ -401,7 +362,7 @@ pub fn receipt(
     let mut proof = json!({"version":1,"request":request,"launch_key":target["launch_key"],"scope_sha256":hash(&quota::scope(target)),
         "model":target["model"],"effort":target["effort"],"model_origin":target["model_origin"],"effort_origin":target["effort_origin"],
         "selector":target["capacity_account_selector"],"health":safe_health,"at":now});
-    if request["source_kind"] == "current_quota" {
+    if request["source_kind"] == "current_quota" && target["model_origin"] != "owner_request" {
         let retry = crate::quota_retry::plan(source, target, health, now)?;
         let mut retry_health = proof["health"].clone();
         retry_health["at"] = json!(now);
@@ -453,11 +414,8 @@ pub fn verify(
     }
     initial["capacity_account_selector"] = proof["selector"].clone();
     let original_at = proof["at"].as_f64().unwrap_or(f64::NAN);
-    (if request["automatic_result"] == true {
-        request["retired_request_sha256"] == hash(&item["subwork_continuation"])
-    } else {
-        item["subwork_continuation"] == *request
-    }) && target["subwork"] == item["subwork"]
+    item["subwork_continuation"] == *request
+        && target["subwork"] == item["subwork"]
         && available(health, text(target, "model"), now)
         && target["effort"] == proof["effort"]
         && receipt(

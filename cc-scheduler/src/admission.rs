@@ -44,6 +44,7 @@ pub enum Reason {
     DependencyWait,
     TargetedHold,
     QuotaRetryEnded,
+    SubworkParentContinuationRequired,
     ReviewPreparationExhausted,
     RootExcluded,
     RecoveryReservation,
@@ -86,6 +87,7 @@ pub enum Failure {
     ExcludedResource,
     ToolFailed,
     QuotaRetryEnded,
+    SubworkParentContinuationRequired,
     ReviewModelConflict,
     ReviewModelUnavailable,
     ReviewSourceUnavailable,
@@ -97,6 +99,7 @@ impl Failure {
         match e.0 {
             "KeyboardInterrupt" => Self::Interrupted,
             "QuotaRetryEnded" => Self::QuotaRetryEnded,
+            "SubworkParentContinuationRequired" => Self::SubworkParentContinuationRequired,
             "ReviewModelConflict" => Self::ReviewModelConflict,
             "ReviewModelUnavailable" => Self::ReviewModelUnavailable,
             "ReviewSourceUnavailable" => Self::ReviewSourceUnavailable,

@@ -9,16 +9,10 @@ pub(crate) fn requested(
     jobs: &[Value],
 ) -> Result<bool> {
     let request = &item["subwork_continuation"];
-    if request.is_null() {
+    if request.is_null() || continuation::stale_request(item) {
         return Ok(false);
     }
     let source = source.ok_or(Error("InputRejected"))?;
-    if continuation::consumed(item, source)
-        || continuation::superseded_by_current_quota(item, source)
-        || continuation::retired_result(item, source)
-    {
-        return Ok(false);
-    }
     let actor = jobs
         .iter()
         .find(|j| j["id"] == request["actor_job"])
@@ -51,57 +45,20 @@ pub(crate) fn finalize(
         .as_object_mut()
         .unwrap()
         .remove("subwork_continuation");
-    let explicit = requested(backend, item, source, jobs)?;
-    let automatic = !explicit && source.is_some_and(|s| continuation::retired_result(item, s));
-    if !explicit && !automatic {
+    if !requested(backend, item, source, jobs)? {
         return Ok(false);
     }
     let source = source.ok_or(Error("InputRejected"))?;
-    let parent_job = db["items"]
-        .as_array()
-        .into_iter()
-        .flatten()
-        .find(|p| p["id"] == item["subwork"]["parent_todo_id"])
-        .map(|p| p["scheduler"]["job"].clone())
-        .unwrap_or(Value::Null);
-    let actor_id = if automatic {
-        &parent_job
-    } else {
-        &item["subwork_continuation"]["actor_job"]
-    };
+    let request = &item["subwork_continuation"];
     let actor = jobs
         .iter()
-        .find(|j| j["id"] == *actor_id)
+        .find(|j| j["id"] == request["actor_job"])
         .ok_or(Error("InputRejected"))?;
     if !continuation::parent_registered(db, item, actor) {
         return Err(Error("InputRejected"));
     }
-    if automatic {
-        if epoch(&source["finished_at"]) > backend.clock() + 1. {
-            return Err(Error("InputRejected"));
-        }
-        let ps = backend.snapshot()?;
-        if jobs.iter().any(|j| {
-            (j["todo_id"] == item["id"]
-                || arr(&item["jobs"]).contains(&j["id"])
-                || arr(&j["related_todo_ids"]).contains(&item["id"]))
-                && (live(j) || alive(j, &ps, backend.clock()))
-        }) {
-            return Err(Error("ResourceWait"));
-        }
-    }
-    let automatic_request = if automatic {
-        continuation::automatic_request(item, source, actor).ok_or(Error("InputRejected"))?
-    } else {
-        Value::Null
-    };
-    let request = if automatic {
-        &automatic_request
-    } else {
-        &item["subwork_continuation"]
-    };
     let health = backend.quota_recovery_inventory()?;
-    if request["source_kind"] == "current_quota" {
+    if request["source_kind"] == "current_quota" && selection["model_origin"] != "owner_request" {
         let excluded = arr(&selection["review_excluded_models"]);
         let mut candidates = vec![
             s(&source["model"]).to_owned(),
@@ -125,11 +82,23 @@ pub(crate) fn finalize(
                 target["model"] = json!(model);
                 target["capacity_account_selector"] =
                     if cc_job_policy::quota_recovery::provider(&model) == Some("openai") {
-                        json!(cc_job_policy::quota_retry::selector(
-                            source,
-                            &health,
-                            backend.clock()
-                        )?)
+                        json!(
+                            if cc_job_policy::quota_recovery::provider(s(&source["model"]))
+                                == Some("openai")
+                            {
+                                cc_job_policy::quota_retry::selector(
+                                    source,
+                                    &health,
+                                    backend.clock(),
+                                )?
+                            } else {
+                                cc_job_policy::quota_retry::available_selector(
+                                    source,
+                                    &health,
+                                    backend.clock(),
+                                )?
+                            }
+                        )
                     } else {
                         Value::Null
                     };
@@ -138,6 +107,7 @@ pub(crate) fn finalize(
             })
             .ok_or(Error("ResourceWait"))?;
         selection["model"] = choice["model"].clone();
+        selection["model_origin"] = json!("policy");
         selection["capacity_account_selector"] = choice["capacity_account_selector"].clone();
     } else if cc_job_policy::quota_recovery::provider(s(&selection["model"])) == Some("openai") {
         let selector =

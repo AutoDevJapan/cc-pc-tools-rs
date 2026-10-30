@@ -37,7 +37,7 @@ impl Context {
                 "subwork continuation model differs from preparation",
             ));
         }
-        if proof["request"]["source_kind"] == "current_quota" {
+        if proof["quota_retry"].is_object() {
             cc_job_policy::quota_retry::inherit(job, &source, &proof["quota_retry"]);
         } else {
             for key in continuation::RETRY_FIELDS {
@@ -75,7 +75,7 @@ impl Context {
             || (job["capacity_account_selector"].is_string()
                 && !cc_job_policy::quota_retry::current_available(job, inventory, self.rt.epoch()))
             || (job["subwork_continuation_initial_admitted"] != true
-                && (!(if request["source_kind"] == "current_quota" {
+                && (!(if proof["quota_retry"].is_object() {
                     cc_job_policy::quota_retry::inherited(job, &source, &proof["quota_retry"])
                 } else {
                     continuation::inherited(job, &source)

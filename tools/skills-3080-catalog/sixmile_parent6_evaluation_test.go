@@ -468,6 +468,12 @@ func TestExpandedSixmileIndexAddsNewCohortAndReadingAmendmentExactlyOnce(t *test
 				}
 				accepted[id] = row
 			}
+			for id, row := range validatedArtAliasDispositions(t) {
+				if accepted[id].ID != "" {
+					t.Fatal("art alias already has a current final acceptance")
+				}
+				accepted[id] = row
+			}
 			for id, row := range validatedWebClawAlias247Disposition(t) {
 				if accepted[id].ID != "" {
 					t.Fatal("same primary/notice alias was already accepted")

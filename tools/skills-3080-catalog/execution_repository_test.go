@@ -398,7 +398,15 @@ func TestPublishedSiteInterpretationsKeepOriginalArtifactsAndUnverifiedClaims(t 
 	}
 	var manifest ExecutionManifest
 	loadPublicReceipt(t, "skills-3080-execution-evidence.json", &manifest)
-	if !proof.Unverified || len(proof.Artifacts) != 4 || len(proof.Final) != 6 || len(proof.Catalog) != 14 || manifest.Ledger.SHA != proof.OriginalLedger {
+	var originalLedger, currentLedger map[string]any
+	if travel3Digest(loadPublicReceipt(t, "skills-3080-adoptions-before-deploy4-095653.json", &originalLedger)) != proof.OriginalLedger {
+		t.Fatal("independent original ledger bytes changed")
+	}
+	loadPublicReceipt(t, "skills-3080-adoptions.json", &currentLedger)
+	if err := validateAppendOnlyAdoptionLedger(originalLedger, currentLedger); err != nil {
+		t.Fatal(err)
+	}
+	if !proof.Unverified || len(proof.Artifacts) != 4 || len(proof.Final) != 6 || len(proof.Catalog) != 14 {
 		t.Fatal("original source claim or ledger preservation boundary changed")
 	}
 	catalog := map[string]Record{}
@@ -439,12 +447,94 @@ func TestPublishedSiteInterpretationsKeepOriginalArtifactsAndUnverifiedClaims(t 
 	if count != 9 {
 		t.Fatal("nine historical assessment references required")
 	}
+	// Appending accepted entries moves the later excluded rows. Preserve the
+	// original identities and source claims, and derive only their new position.
+	positions := map[string]int{}
+	rows := append(append([]any{}, currentLedger["entries"].([]any)...), currentLedger["excluded_entries"].([]any)...)
+	for i, value := range rows {
+		positions[next4Object(value)["inventory_id"].(string)] = i + 1
+	}
+	expected := append([]ExecutionSiteBinding{}, proof.Final...)
+	for i := range expected {
+		position := positions[expected[i].ID]
+		if position == 0 {
+			t.Fatal("historical final occurrence missing")
+		}
+		expected[i].Row = position
+	}
 	a, _ := json.Marshal(manifest.Ledger.SiteBindings)
-	b, _ := json.Marshal(proof.Final)
+	b, _ := json.Marshal(expected)
 	if !bytes.Equal(a, b) {
 		t.Fatal("historical final interpretations changed")
 	}
 	check(proof.Final)
+}
+
+func validateAppendOnlyAdoptionLedger(original, current map[string]any) error {
+	oldEntries, oldOK := original["entries"].([]any)
+	entries, ok := current["entries"].([]any)
+	if !oldOK || !ok || len(entries) < len(oldEntries) || len(current) != len(original) {
+		return fmt.Errorf("original adoption ledger structure or prefix removed")
+	}
+	equal := func(a, b any) bool {
+		x, e := json.Marshal(a)
+		y, f := json.Marshal(b)
+		return e == nil && f == nil && bytes.Equal(x, y)
+	}
+	if !equal(oldEntries, entries[:len(oldEntries)]) {
+		return fmt.Errorf("historical accepted entries changed")
+	}
+	mutable := map[string]bool{"entries": true, "installed_new": true, "integrated": true, "pending_occurrences": true, "pending_available_body_occurrences": true}
+	for key, value := range original {
+		if !mutable[key] && !equal(value, current[key]) {
+			return fmt.Errorf("historical ledger field changed: %s", key)
+		}
+	}
+	installed, integrated := 0, 0
+	for _, value := range entries {
+		switch next4Object(value)["disposition"] {
+		case "installed_new_adaptation":
+			installed++
+		case "integrated_existing":
+			integrated++
+		default:
+			return fmt.Errorf("unfinished entry in accepted ledger")
+		}
+	}
+	excluded, ok := current["excluded_entries"].([]any)
+	if !ok {
+		return fmt.Errorf("historical exclusions missing")
+	}
+	pending := 73220 - len(entries) - len(excluded)
+	if current["installed_new"] != float64(installed) || current["integrated"] != float64(integrated) || current["pending_occurrences"] != float64(pending) || current["pending_available_body_occurrences"] != float64(pending-428-647) {
+		return fmt.Errorf("appended ledger counters differ from actual rows and retained holds")
+	}
+	return nil
+}
+
+func TestAdoptionAppendKeepsHistoricalEntriesExclusionsAndActualCounters(t *testing.T) {
+	var original map[string]any
+	if travel3Digest(loadPublicReceipt(t, "skills-3080-adoptions-before-deploy4-095653.json", &original)) != "f2dddb6f978ef1b1690e54d12e855dac0df6e0b3ab40cfad2f572c8208ada4c7" {
+		t.Fatal("fixed original ledger changed")
+	}
+	for _, change := range []string{"valid", "historical accepted target changed", "historical exclusion removed", "invented pending count"} {
+		t.Run(change, func(t *testing.T) {
+			var current map[string]any
+			loadPublicReceipt(t, "skills-3080-adoptions.json", &current)
+			switch change {
+			case "historical accepted target changed":
+				next4Object(current["entries"].([]any)[0])["target"] = "other"
+			case "historical exclusion removed":
+				current["excluded_entries"] = current["excluded_entries"].([]any)[1:]
+			case "invented pending count":
+				current["pending_occurrences"] = float64(0)
+			}
+			err := validateAppendOnlyAdoptionLedger(original, current)
+			if (err == nil) != (change == "valid") {
+				t.Fatalf("%s: %v", change, err)
+			}
+		})
+	}
 }
 
 func TestExecutionAssessmentAndLedgerRejectConflictingPathAndCommitAliases(t *testing.T) {

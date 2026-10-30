@@ -1,0 +1,416 @@
+{
+  "domain": "skills3080-existing-four-deploy-canonical-site-integrations-v1",
+  "todo": 3080,
+  "actual_consumer": "20261030-095653-todo-3080",
+  "aliases": 4,
+  "new_Skills": 0,
+  "new_central_writes": 0,
+  "final_dispositions_recorded": 4,
+  "catalog_proof_sha256": "72054a8472c336c385e27b41b74c83f9965141eff1e6a81ef0ac0bb8eebc587d",
+  "current_application_sha256": "aabc9594bfa7620f68011c6e353855c04db3cca9e4a14aa3de9905de6cdd7399",
+  "current_instructions_files": 8,
+  "current_instruction_bytes": 13862,
+  "fresh_discovery": {
+    "file": "discovery-deploy4-current8-095653.json",
+    "sha256": "f960eb009685b028c9aa7f3c4d1151da1ef0428f77674438bd007c8d5c0e2ac9",
+    "requested": 4,
+    "found": 4,
+    "enabled": 4,
+    "parse_errors": 0,
+    "total_metadata": 484,
+    "scan_limit_warnings": 2,
+    "model_turn_or_context_budget_proof": false
+  },
+  "creation_manifest_commit": "2beb051cd7922d16d54044f281ccdd212bb96206",
+  "creation_manifest_sha256": "f2ac5a8415c2ad119aeb8fb49d34a07c341d7036e79d65d3bb96e898a3e7e1b4",
+  "frozen_creator_review_task": 4066,
+  "frozen_creator_not_modified": true,
+  "entries": [
+    {
+      "inventory_id": "site:cloudflare-deploy",
+      "source_repo": "",
+      "source_commit": "",
+      "path": "",
+      "source_sha256": "d7632537cf19be17cf33d2c696b9d9c2ea3ee51026030e9b203d5b9255e75b15",
+      "site_occurrence": {
+        "inventory_id": "site:cloudflare-deploy",
+        "inventory_unit": "site_index_entry",
+        "sha256": "d7632537cf19be17cf33d2c696b9d9c2ea3ee51026030e9b203d5b9255e75b15",
+        "catalog_original_sha256": "",
+        "repo": "",
+        "commit": "",
+        "path": "",
+        "git_blob": "",
+        "bytes": 0,
+        "normalized_canonical_url": "https://raw.githubusercontent.com/openai/skills/49f948faa9258a0c61caceaf225e179651397431/skills/.curated/cloudflare-deploy/SKILL.md",
+        "machine_body_read": true,
+        "effective_attempt": {
+          "sha256": "d7632537cf19be17cf33d2c696b9d9c2ea3ee51026030e9b203d5b9255e75b15",
+          "machine_body_read": true
+        }
+      },
+      "accepted_upstream_occurrence": {
+        "inventory_id": "github:0ab793e37d3b44eaf3a16af08020907fd32239fbbafa1813a00f57d13497e095",
+        "inventory_unit": "github_skill_entry",
+        "sha256": "d7632537cf19be17cf33d2c696b9d9c2ea3ee51026030e9b203d5b9255e75b15",
+        "catalog_original_sha256": "d7632537cf19be17cf33d2c696b9d9c2ea3ee51026030e9b203d5b9255e75b15",
+        "repo": "openai/skills",
+        "commit": "49f948faa9258a0c61caceaf225e179651397431",
+        "path": "skills/.curated/cloudflare-deploy/SKILL.md",
+        "git_blob": "e2d73abb7e5a550af3d9e40797a28259bddba97d",
+        "bytes": 7377,
+        "normalized_canonical_url": "https://raw.githubusercontent.com/openai/skills/49f948faa9258a0c61caceaf225e179651397431/skills/.curated/cloudflare-deploy/SKILL.md",
+        "machine_body_read": true,
+        "effective_attempt": null
+      },
+      "upstream_adoption_inventory_id": "github:0ab793e37d3b44eaf3a16af08020907fd32239fbbafa1813a00f57d13497e095",
+      "target": "cloudflare-deploy",
+      "target_manifest": "skills-3080-installed-openai11-manifest214717.json",
+      "target_evidence": "skills-3080-openai11-installation-evidence214717.json",
+      "target_entrypoint_sha256": "b107b066b709b50b2027b8916697c3aeafaf6b63e8168b93354ea8db29731930",
+      "individual_upstream_notice": {
+        "path": "skills/.curated/cloudflare-deploy/LICENSE.txt",
+        "sha256": "4dd13869245e356246a5b770723247bbb80a8f07a181d1d3d873a1734297cdb9",
+        "scope": "Selected authored primary workflow text under its exact per-package Apache-2.0 notice only; no supporting scripts/templates/third-party documentation/assets/services or unknown original/private data rights; changed files marked and original text/license preserved",
+        "accepted": true
+      },
+      "preserved_source_and_notice": [
+        {
+          "path": "references/original-skill.txt",
+          "bytes": 7377,
+          "sha256": "d7632537cf19be17cf33d2c696b9d9c2ea3ee51026030e9b203d5b9255e75b15",
+          "git_blob_from_preserved_fixed_buffer": "e2d73abb7e5a550af3d9e40797a28259bddba97d",
+          "semantic_literal_reread_by_current_parent": false
+        },
+        {
+          "path": "references/LICENSE.txt",
+          "bytes": 10776,
+          "sha256": "4dd13869245e356246a5b770723247bbb80a8f07a181d1d3d873a1734297cdb9",
+          "git_blob_from_preserved_fixed_buffer": "13e25df86ce06eb6488e6a6bc5c5847f5dedc352",
+          "semantic_literal_reread_by_current_parent": false
+        }
+      ],
+      "current_instruction_files": [
+        {
+          "path": "SKILL.md",
+          "bytes": 2415,
+          "sha256": "b107b066b709b50b2027b8916697c3aeafaf6b63e8168b93354ea8db29731930",
+          "content_utf8": "---\nname: cloudflare-deploy\ndescription: Cloudflareへの配備で、用途と既存サービス・認証・本番の実結果を結ぶときに使う。\n---\n\n# 用途から既存の配備先を選ぶ\n\nCloudflareを使う依頼で、処理・状態・データ・起動方式と既存のサービスを対応させる。製品索引を新しいサービス・費用・権限を作る指示へしない。\n\n1. 対象repositoryの実所有者、既存Worker/PagesのID、アカウント、PrdのURLと依頼の範囲を確認する。新しいサーバーや自作ツールはGo既定、GoDDはRustという本人方針を保つ。\n2. request処理、永続状態、非同期queue、定期実行、既存DBの接続など必要な機能を分け、現設定と実装から必要なbindingと依存先を選ぶ。固定資料の全製品を有効化しない。\n3. 既存CLIの版と設定を調べ、作業に必要な現在仕様だけ公式資料で確かめる。既存OAuth/本人Chromeで通常認証を進め、状態確認で得た秘密や個人情報を出力しない。\n4. 対象所有者がAutoDevJapan・BM1314・mashfrombandの場合は既存Prdの規則を適用し、Preview/dev/stgを新設しない。必要な切替とデータ・依存の確認を終えてから旧環境を廃止する。他Orgの環境を変更しない。\n5. 変更した設定・処理と利用側をテストし、別モデルのMustとCIを確認して通常マージする。配備後は同じサービスの版、URL、状態・データの必要な動作を確認し、コマンド成功だけを完了にしない。\n6. 正規の実行審査が拒否した操作は、出所と具体対象を通常審査へ示して切り分ける。拒否を回避する昇格や別経路、通常操作の技術的な再質問へ置き換えない。\n\nドメイン管理はRakkoだけとし、このSkillから他事業者のDNS・登録・アカウントを調べない。新しいAI APIキー・追加課金や恒久権限を導入せず、既存契約内の対象を扱う。\n[配備の確認](references/guide.md)と[固定出典・変更点](references/sources.md)を読む。\n変更済み: openai/skills@49f948faa9258a0c61caceaf225e179651397431 の skills/.curated/cloudflare-deploy/SKILL.md を2026-10-27に用途・本人方針へ合わせて再構成した。原文と個別license noticeは変更せず別に保持する。\n",
+          "same_normal_current_buffer_fully_read": true
+        },
+        {
+          "path": "references/guide.md",
+          "bytes": 1284,
+          "sha256": "9669dd153558671782646a8094a7619f45d0ed5007335f36c0807818f55041c4",
+          "content_utf8": "# bindingと動作を分けて確かめる\n\n正例: 既存Workerの環境名と実サービスIDを照合し、queueの送信受付、consumerの処理、保存された結果を別々に追う。負例: bindingが一覧に出たので、別環境のDBやconsumerも正しく動くとする。\n\n原索引のWorkers・Pages・Durable Objects・Workflows・KV/D1/R2・Queues等は保存時の整理である。対象版・実契約・実設定へ結び直し、API名や価格、整合性・quotaを現在の保証にしない。未読の参照・script・templateは同梱せず、必要な公式資料だけを選ぶ。AI製品の列挙は既存OAuthサブスクを介さない推論API利用の許可ではない。\n\n配備前後の版・URL・必要な依存・失敗時の戻し方を対応させ、実トラフィックやデータへの影響を確認する。本人にPC操作を戻さず、必要な権限操作は既存の正規窓口を使う。UIの変更は同じ画像・範囲に対する本人回答を保持する。\n変更済み: openai/skills@49f948faa9258a0c61caceaf225e179651397431 の skills/.curated/cloudflare-deploy/SKILL.md を2026-10-27に用途・本人方針へ合わせて再構成した。原文と個別license noticeは変更せず別に保持する。\n",
+          "same_normal_current_buffer_fully_read": true
+        }
+      ],
+      "bounded_application": [
+        "cloudflare-deploy: 入力は同Workerのqueue送信受付だけが成功しconsumerの保存は未確認。適用結果は受付と実処理/同DBの結果を分け、binding一覧から保存成功を認定しない。実サービス/設定変更0。"
+      ],
+      "positive": "既存Cloudflare Workerの配備先とbindingを確認して本番へ反映する。",
+      "negative": "公開資料の製品一覧だけで有料AI機能や新しいDNS管理を追加する。",
+      "candidate_disposition": "integrated_existing",
+      "final_disposition_recorded": true,
+      "scope": "Same site canonical URL and saved primary bytes resolved to the already accepted fixed upstream workflow and its own individual notice. Reuse its existing Japanese adaptation. No independent site authorship, notice for site editorial text, package/assets/templates/scripts/service rights or source re-read is claimed.",
+      "new_permissions": 0,
+      "new_source_literal_reads": 0,
+      "new_central_writes": 0,
+      "new_Skill_creations": 0,
+      "disposition": "integrated_existing"
+    },
+    {
+      "inventory_id": "site:netlify-deploy",
+      "source_repo": "",
+      "source_commit": "",
+      "path": "",
+      "source_sha256": "bb2c29bf599a043cade932f60cc64f632ca100e8767ccdfa2ba1a42c8d43958f",
+      "site_occurrence": {
+        "inventory_id": "site:netlify-deploy",
+        "inventory_unit": "site_index_entry",
+        "sha256": "bb2c29bf599a043cade932f60cc64f632ca100e8767ccdfa2ba1a42c8d43958f",
+        "catalog_original_sha256": "",
+        "repo": "",
+        "commit": "",
+        "path": "",
+        "git_blob": "",
+        "bytes": 0,
+        "normalized_canonical_url": "https://raw.githubusercontent.com/openai/skills/49f948faa9258a0c61caceaf225e179651397431/skills/.curated/netlify-deploy/SKILL.md",
+        "machine_body_read": true,
+        "effective_attempt": {
+          "sha256": "bb2c29bf599a043cade932f60cc64f632ca100e8767ccdfa2ba1a42c8d43958f",
+          "machine_body_read": true
+        }
+      },
+      "accepted_upstream_occurrence": {
+        "inventory_id": "github:17350a87d59037557bf9e8c20b6ed1ebcefc4fac682f541e50445c77cc333a85",
+        "inventory_unit": "github_skill_entry",
+        "sha256": "bb2c29bf599a043cade932f60cc64f632ca100e8767ccdfa2ba1a42c8d43958f",
+        "catalog_original_sha256": "bb2c29bf599a043cade932f60cc64f632ca100e8767ccdfa2ba1a42c8d43958f",
+        "repo": "openai/skills",
+        "commit": "49f948faa9258a0c61caceaf225e179651397431",
+        "path": "skills/.curated/netlify-deploy/SKILL.md",
+        "git_blob": "52075090a6644b104fc34837c9923b403d949369",
+        "bytes": 7011,
+        "normalized_canonical_url": "https://raw.githubusercontent.com/openai/skills/49f948faa9258a0c61caceaf225e179651397431/skills/.curated/netlify-deploy/SKILL.md",
+        "machine_body_read": true,
+        "effective_attempt": null
+      },
+      "upstream_adoption_inventory_id": "github:17350a87d59037557bf9e8c20b6ed1ebcefc4fac682f541e50445c77cc333a85",
+      "target": "netlify-deploy",
+      "target_manifest": "skills-3080-installed-openai11-manifest214717.json",
+      "target_evidence": "skills-3080-openai11-installation-evidence214717.json",
+      "target_entrypoint_sha256": "58b744ad72aa7afd05208f59c422f8932206d40d97afcf10c2a31cce39fb5fae",
+      "individual_upstream_notice": {
+        "path": "skills/.curated/netlify-deploy/LICENSE.txt",
+        "sha256": "4dd13869245e356246a5b770723247bbb80a8f07a181d1d3d873a1734297cdb9",
+        "scope": "Selected authored primary workflow text under its exact per-package Apache-2.0 notice only; no supporting scripts/templates/third-party documentation/assets/services or unknown original/private data rights; changed files marked and original text/license preserved",
+        "accepted": true
+      },
+      "preserved_source_and_notice": [
+        {
+          "path": "references/original-skill.txt",
+          "bytes": 7011,
+          "sha256": "bb2c29bf599a043cade932f60cc64f632ca100e8767ccdfa2ba1a42c8d43958f",
+          "git_blob_from_preserved_fixed_buffer": "52075090a6644b104fc34837c9923b403d949369",
+          "semantic_literal_reread_by_current_parent": false
+        },
+        {
+          "path": "references/LICENSE.txt",
+          "bytes": 10776,
+          "sha256": "4dd13869245e356246a5b770723247bbb80a8f07a181d1d3d873a1734297cdb9",
+          "git_blob_from_preserved_fixed_buffer": "13e25df86ce06eb6488e6a6bc5c5847f5dedc352",
+          "semantic_literal_reread_by_current_parent": false
+        }
+      ],
+      "current_instruction_files": [
+        {
+          "path": "SKILL.md",
+          "bytes": 2028,
+          "sha256": "58b744ad72aa7afd05208f59c422f8932206d40d97afcf10c2a31cce39fb5fae",
+          "content_utf8": "---\nname: netlify-deploy\ndescription: Netlifyの既存siteとGit・build・本番の実動作を対応させて配備するときに使う。\n---\n\n# siteの同一性と公開された版を確認する\n\nNetlifyへの配備が依頼されたとき、既存site、Gitの実所有者、buildとpublish先を対応させる。認証やリンクの失敗だけで新しいsiteや契約を作らない。\n\n1. repository、既存site ID・所属account/team、Prd URLと設定を照合する。同名やGit remoteの推測だけで別のsiteを選ばない。\n2. 利用できる既存CLIと版、認証状態を確認し、必要な通常ログインは本人のChromeと既存OAuthで進める。本人にPC操作やtokenの貼付を求めず、秘密を記録しない。\n3. lock・既存build設定・framework adapterと実際の出力先を確認する。固定例の.nextやdistを現在の配備形式と決めず、必要な関連テストと成果物を確かめる。\n4. GitHub実ownerがAutoDevJapan・BM1314・mashfrombandなら既存Prdのみとし、Preview/dev/stgの新設や再生成を避ける。他Orgの環境を変えない。既存の非Prd廃止では必要なデータ・依存の切替と実確認を先に行う。\n5. 別モデルレビューとCIを確認した版を通常マージし、必要な既存Prdへ反映する。deploy ID、公開された版、URL、必要なページ・機能とログを対応させる。\n6. build失敗・出力不在・部分的な配備は原因を直し、必要な範囲を再確認する。新費用・新しい公開範囲・顧客との約束は元の承認と照合し、通常操作の確認待ちを増やさない。\n\n[リンクとbuildの確認](references/guide.md)、[出典](references/sources.md)を読む。\n変更済み: openai/skills@49f948faa9258a0c61caceaf225e179651397431 の skills/.curated/netlify-deploy/SKILL.md を2026-10-27に用途・本人方針へ合わせて再構成した。原文と個別license noticeは変更せず別に保持する。\n",
+          "same_normal_current_buffer_fully_read": true
+        },
+        {
+          "path": "references/guide.md",
+          "bytes": 1155,
+          "sha256": "7ed4488e714e8a2ecd1870ed154e8097b30a9b5d92d8faafae0ab8f2b7680f99",
+          "content_utf8": "# 設定の名前より実際の成果物を見る\n\n正例: remoteから既存site IDを照合し、対象版のbuildと公開directoryを確かめ、Prdのroute・asset・必要な機能を読み戻す。負例: CLIが一つのURLを返したので、正しいsite・本番・全機能の成功とする。\n\n原文のnpxの未固定実行、npm install、Preview優先、API tokenの新設定、sandbox拒否後の一律昇格は自動実行しない。既存の依存管理・対象版と正規審査を使い、必要な無料の通常操作を本人へ頼まない。ドメイン管理はRakkoのみ、UIの変更は同じ画像と範囲への本人回答を保つ。\n\n現在のCLIや設定仕様が必要な部分は公式資料で確認する。未読の参照・templateを既知の根拠へ加えず、設定の妥当性・build・実配備・Prd動作と旧環境の不在を別に確認する。\n変更済み: openai/skills@49f948faa9258a0c61caceaf225e179651397431 の skills/.curated/netlify-deploy/SKILL.md を2026-10-27に用途・本人方針へ合わせて再構成した。原文と個別license noticeは変更せず別に保持する。\n",
+          "same_normal_current_buffer_fully_read": true
+        }
+      ],
+      "bounded_application": [
+        "netlify-deploy: 入力はCLIのURL一つと未照合site ID。適用結果はrepository/account/site ID/build出力/Prd版と実routeを結ぶまで配備成功とはしない。対照の同ID/commit/route実結果が揃う条件ではその観測範囲で完了とする。実配備0。"
+      ],
+      "positive": "既存Netlify siteのIDと公開先を確認し、変更した版をPrdへ反映する。",
+      "negative": "リンク失敗だけで新しいsiteを作り、PreviewのURLを本番反映済みとして返す。",
+      "candidate_disposition": "integrated_existing",
+      "final_disposition_recorded": true,
+      "scope": "Same site canonical URL and saved primary bytes resolved to the already accepted fixed upstream workflow and its own individual notice. Reuse its existing Japanese adaptation. No independent site authorship, notice for site editorial text, package/assets/templates/scripts/service rights or source re-read is claimed.",
+      "new_permissions": 0,
+      "new_source_literal_reads": 0,
+      "new_central_writes": 0,
+      "new_Skill_creations": 0,
+      "disposition": "integrated_existing"
+    },
+    {
+      "inventory_id": "site:render-deploy",
+      "source_repo": "",
+      "source_commit": "",
+      "path": "",
+      "source_sha256": "c17c75adeb1834ed5cee1e440a651ae476c4101cd63762fcd9a58eada917552d",
+      "site_occurrence": {
+        "inventory_id": "site:render-deploy",
+        "inventory_unit": "site_index_entry",
+        "sha256": "c17c75adeb1834ed5cee1e440a651ae476c4101cd63762fcd9a58eada917552d",
+        "catalog_original_sha256": "",
+        "repo": "",
+        "commit": "",
+        "path": "",
+        "git_blob": "",
+        "bytes": 0,
+        "normalized_canonical_url": "https://raw.githubusercontent.com/openai/skills/49f948faa9258a0c61caceaf225e179651397431/skills/.curated/render-deploy/SKILL.md",
+        "machine_body_read": true,
+        "effective_attempt": {
+          "sha256": "c17c75adeb1834ed5cee1e440a651ae476c4101cd63762fcd9a58eada917552d",
+          "machine_body_read": true
+        }
+      },
+      "accepted_upstream_occurrence": {
+        "inventory_id": "github:a1627daf67cfce95b3702c81bfe6414a3612300cb6832ffd24e1b42cafe419bb",
+        "inventory_unit": "github_skill_entry",
+        "sha256": "c17c75adeb1834ed5cee1e440a651ae476c4101cd63762fcd9a58eada917552d",
+        "catalog_original_sha256": "c17c75adeb1834ed5cee1e440a651ae476c4101cd63762fcd9a58eada917552d",
+        "repo": "openai/skills",
+        "commit": "49f948faa9258a0c61caceaf225e179651397431",
+        "path": "skills/.curated/render-deploy/SKILL.md",
+        "git_blob": "a0f78c13b07df3def82c16bccf4a1c17c4d8e30d",
+        "bytes": 17582,
+        "normalized_canonical_url": "https://raw.githubusercontent.com/openai/skills/49f948faa9258a0c61caceaf225e179651397431/skills/.curated/render-deploy/SKILL.md",
+        "machine_body_read": true,
+        "effective_attempt": null
+      },
+      "upstream_adoption_inventory_id": "github:a1627daf67cfce95b3702c81bfe6414a3612300cb6832ffd24e1b42cafe419bb",
+      "target": "render-deploy",
+      "target_manifest": "skills-3080-installed-openai11-manifest214717.json",
+      "target_evidence": "skills-3080-openai11-installation-evidence214717.json",
+      "target_entrypoint_sha256": "dd543170a2a17ba4c66c38f95ce5d35ca646ac265029cef0f8fbbd77b75df572",
+      "individual_upstream_notice": {
+        "path": "skills/.curated/render-deploy/LICENSE.txt",
+        "sha256": "4dd13869245e356246a5b770723247bbb80a8f07a181d1d3d873a1734297cdb9",
+        "scope": "Selected authored primary workflow text under its exact per-package Apache-2.0 notice only; no supporting scripts/templates/third-party documentation/assets/services or unknown original/private data rights; changed files marked and original text/license preserved",
+        "accepted": true
+      },
+      "preserved_source_and_notice": [
+        {
+          "path": "references/original-skill.txt",
+          "bytes": 17582,
+          "sha256": "c17c75adeb1834ed5cee1e440a651ae476c4101cd63762fcd9a58eada917552d",
+          "git_blob_from_preserved_fixed_buffer": "a0f78c13b07df3def82c16bccf4a1c17c4d8e30d",
+          "semantic_literal_reread_by_current_parent": false
+        },
+        {
+          "path": "references/LICENSE.txt",
+          "bytes": 10776,
+          "sha256": "4dd13869245e356246a5b770723247bbb80a8f07a181d1d3d873a1734297cdb9",
+          "git_blob_from_preserved_fixed_buffer": "13e25df86ce06eb6488e6a6bc5c5847f5dedc352",
+          "semantic_literal_reread_by_current_parent": false
+        }
+      ],
+      "current_instruction_files": [
+        {
+          "path": "SKILL.md",
+          "bytes": 2229,
+          "sha256": "dd543170a2a17ba4c66c38f95ce5d35ca646ac265029cef0f8fbbd77b75df572",
+          "content_utf8": "---\nname: render-deploy\ndescription: Renderの既存配備先とBlueprint・Git・image・稼働結果を結ぶときに使う。\n---\n\n# sourceと既存serviceの対応を保つ\n\nRenderへの配備が依頼されたとき、既存workspace・service、Gitまたはimageのsourceと実動作を結ぶ。原資料の作成例を新しい契約・DB・cron・MCP権限の許可へしない。\n\n1. 実repository所有者、既存Render workspace/service ID、sourceとPrd URLを確認する。他Orgの環境を変更せず、新サービス・費用・公開範囲は元の依頼と承認へ結ぶ。\n2. Gitの固定版とimageの実digestを区別し、対象の現在のCLI・Dashboard・利用可能な既存連携を確認する。未接続から新しいAPIキーや恒久MCP登録を作らず、必要な通常認証は本人Chromeと既存OAuthで進める。\n3. 実装と設定からruntime、build/start、port、環境設定の名前、既存DB・worker・cron等の依存を対応させる。秘密値は表示・コミット・移行報告に含めない。\n4. Blueprintを使う場合は実sourceに対応する最小限の差分を作り、対象版の公式仕様と既存validatorで確認する。原のfreeプラン、型名、未読templateやMCPの対応範囲を現在の事実と決めない。\n5. 別モデルレビューとCIを確認して通常マージし、既存の正規経路で必要なPrdへ反映する。実装・build済みimageと公開されたserviceの版を照合する。\n6. deployのlive表示に加え、必要なHTTP route、データ・認証・依存、起動とログの挙動を確認する。旧環境の廃止では必要な移行と動作確認を先に行い、再生成が無いことを確かめる。\n\n本人へDashboard・Git・PCの通常操作を戻さず、追加支出と本人だけの新しい判断を切り分ける。\n[sourceと動作の確認](references/guide.md)、[固定出典](references/sources.md)を読む。\n変更済み: openai/skills@49f948faa9258a0c61caceaf225e179651397431 の skills/.curated/render-deploy/SKILL.md を2026-10-27に用途・本人方針へ合わせて再構成した。原文と個別license noticeは変更せず別に保持する。\n",
+          "same_normal_current_buffer_fully_read": true
+        },
+        {
+          "path": "references/guide.md",
+          "bytes": 1331,
+          "sha256": "da3c70f96bf4cd625eb472e55a1c89038e01db06a9f066ec2aedd6b772df9b9b",
+          "content_utf8": "# 配備の受付と実際の成功を分ける\n\n正例: 既存service IDとGit commitまたはimage digestを固定し、必要な設定名とportの整合、反映された版と実HTTP・保存結果を確かめる。負例: Blueprintのlinkやlive表示を返し、依存DB・認証・業務の動作も成功とする。\n\nBlueprintをGitへ反映する必要がある場合は、通常のbranch・PR・レビュー・CIを通し、mainへ直接pushする元の例をそのまま実行しない。依存を理由なく増やさず、plan/free/保持期間等の条件は実契約で確認する。新しい出費を原資料の既定へ隠さない。\n\ncurlとshellを直結するinstall、Bearerキーの新規MCP登録、一律昇格、本人にCLIを導入させる手順は採用しない。現在の使える管理経路で対象を扱い、正規審査を保つ。ドメイン管理はRakkoのみ、UIの変更は同じ画像と範囲への本人回答を保つ。原のrender-debugや参照・assetsは未読であり、必須の導入済み依存として扱わない。\n変更済み: openai/skills@49f948faa9258a0c61caceaf225e179651397431 の skills/.curated/render-deploy/SKILL.md を2026-10-27に用途・本人方針へ合わせて再構成した。原文と個別license noticeは変更せず別に保持する。\n",
+          "same_normal_current_buffer_fully_read": true
+        }
+      ],
+      "bounded_application": [
+        "render-deploy: 入力はBlueprintのlink/live表示と未確認image digest/依存DB。適用結果はGitまたはimageの版/port/依存を照合し実HTTP/保存/認証が未確認と明示する。新DB/有料plan/MCP権限を増やさず既存Prdだけに限定。実操作0。"
+      ],
+      "positive": "既存Render serviceのsourceとBlueprintを照合し、反映した版の動作を確かめる。",
+      "negative": "資料のfree例だけでDBやcronを新設し、APIキーをMCPへ追加して本人へ操作を戻す。",
+      "candidate_disposition": "integrated_existing",
+      "final_disposition_recorded": true,
+      "scope": "Same site canonical URL and saved primary bytes resolved to the already accepted fixed upstream workflow and its own individual notice. Reuse its existing Japanese adaptation. No independent site authorship, notice for site editorial text, package/assets/templates/scripts/service rights or source re-read is claimed.",
+      "new_permissions": 0,
+      "new_source_literal_reads": 0,
+      "new_central_writes": 0,
+      "new_Skill_creations": 0,
+      "disposition": "integrated_existing"
+    },
+    {
+      "inventory_id": "site:vercel-deploy-110b98",
+      "source_repo": "",
+      "source_commit": "",
+      "path": "",
+      "source_sha256": "f4a6cbfbb378a320fae179a79f727a881d19677e9b3db96ed49d2dc02a74fa46",
+      "site_occurrence": {
+        "inventory_id": "site:vercel-deploy-110b98",
+        "inventory_unit": "site_index_entry",
+        "sha256": "f4a6cbfbb378a320fae179a79f727a881d19677e9b3db96ed49d2dc02a74fa46",
+        "catalog_original_sha256": "",
+        "repo": "",
+        "commit": "",
+        "path": "",
+        "git_blob": "",
+        "bytes": 0,
+        "normalized_canonical_url": "https://raw.githubusercontent.com/openai/skills/49f948faa9258a0c61caceaf225e179651397431/skills/.curated/vercel-deploy/SKILL.md",
+        "machine_body_read": true,
+        "effective_attempt": {
+          "sha256": "f4a6cbfbb378a320fae179a79f727a881d19677e9b3db96ed49d2dc02a74fa46",
+          "machine_body_read": true
+        }
+      },
+      "accepted_upstream_occurrence": {
+        "inventory_id": "github:059212fb5a1656ec6c064ad7a99b9df9b3cd4300aff43bf514a715d092963a00",
+        "inventory_unit": "github_skill_entry",
+        "sha256": "f4a6cbfbb378a320fae179a79f727a881d19677e9b3db96ed49d2dc02a74fa46",
+        "catalog_original_sha256": "f4a6cbfbb378a320fae179a79f727a881d19677e9b3db96ed49d2dc02a74fa46",
+        "repo": "openai/skills",
+        "commit": "49f948faa9258a0c61caceaf225e179651397431",
+        "path": "skills/.curated/vercel-deploy/SKILL.md",
+        "git_blob": "a7e6faf3b999d31e8224e232d39fbf58952b7a5b",
+        "bytes": 2653,
+        "normalized_canonical_url": "https://raw.githubusercontent.com/openai/skills/49f948faa9258a0c61caceaf225e179651397431/skills/.curated/vercel-deploy/SKILL.md",
+        "machine_body_read": true,
+        "effective_attempt": null
+      },
+      "upstream_adoption_inventory_id": "github:059212fb5a1656ec6c064ad7a99b9df9b3cd4300aff43bf514a715d092963a00",
+      "target": "vercel-deploy",
+      "target_manifest": "skills-3080-installed-openai11-manifest214717.json",
+      "target_evidence": "skills-3080-openai11-installation-evidence214717.json",
+      "target_entrypoint_sha256": "3cc6c537db4d0ddb21b494dfbf5f073395f32c3f4d02f88710b200d8e721f818",
+      "individual_upstream_notice": {
+        "path": "skills/.curated/vercel-deploy/LICENSE.txt",
+        "sha256": "e0fad1e120e56b02bb8e65745ff5be6d3234368f2df9d0dd183183879e595fc1",
+        "scope": "Selected authored primary workflow text under its exact per-package MIT notice only; no supporting scripts/templates/third-party documentation/assets/services or unknown original/private data rights; changed files marked and original text/license preserved",
+        "accepted": true
+      },
+      "preserved_source_and_notice": [
+        {
+          "path": "references/original-skill.txt",
+          "bytes": 2653,
+          "sha256": "f4a6cbfbb378a320fae179a79f727a881d19677e9b3db96ed49d2dc02a74fa46",
+          "git_blob_from_preserved_fixed_buffer": "a7e6faf3b999d31e8224e232d39fbf58952b7a5b",
+          "semantic_literal_reread_by_current_parent": false
+        },
+        {
+          "path": "references/LICENSE.txt",
+          "bytes": 1063,
+          "sha256": "e0fad1e120e56b02bb8e65745ff5be6d3234368f2df9d0dd183183879e595fc1",
+          "git_blob_from_preserved_fixed_buffer": "94df5bf89dbb6210a707fb4edbf3aade96bc4318",
+          "semantic_literal_reread_by_current_parent": false
+        }
+      ],
+      "current_instruction_files": [
+        {
+          "path": "SKILL.md",
+          "bytes": 2231,
+          "sha256": "3cc6c537db4d0ddb21b494dfbf5f073395f32c3f4d02f88710b200d8e721f818",
+          "content_utf8": "---\nname: vercel-deploy\ndescription: Vercelの既存project・本番設定と反映した版の実動作を照合するときに使う。\n---\n\n# 正しいprojectとPrdの版を確かめる\n\nVercelへの配備が依頼されたとき、既存project、Gitの実所有者、設定と反映した版を対応させる。固定資料のPreview優先や無認証scriptを、このPCの実行手順へしない。\n\n1. 実repository所有者、既存Vercel account/teamとproject ID、Prd URL、保存済み要件と本人回答を照合する。同名やURLの類似で別projectを選ばない。\n2. 現在のCLIと既存認証を確認し、必要な通常ログインは本人Chromeと既存OAuthで進める。秘密を読み出して表示せず、本人にPC操作や鍵の貼付を求めない。\n3. 対象設定、依存、build出力、環境設定の用途と必要なデータ・URL・Webhook・定期実行を確認する。変更処理と利用側のテスト、別モデルレビューとCIを通す。\n4. GitHub実ownerがAutoDevJapan・BM1314・mashfrombandなら既存Prdのみとし、Preview/dev/stgの新設・自動再生成を避ける。他Orgの環境を変えない。必要な旧環境の廃止は移行とPrd動作確認後に行う。\n5. 通常マージした版を対象の正規配備経路で反映し、deploy ID、commit、projectと公開URLを照合する。原例のcommandやflagは現在のCLIと対象へ合わせて確認する。\n6. 配備後に必要なroute・asset・認証・データ・依存を実際に確認する。コマンド受付、build成功、URLの取得と本番動作を分け、未完了なら原因を直して必要な範囲を再確認する。\n\n新しい費用・権限・公開範囲は元の承認を超えない。ドメイン管理はRakkoのみ、UIの変更は同じ画像と範囲への本人回答を保つ。\n[失敗時と配備後の確認](references/guide.md)、[固定出典](references/sources.md)を読む。\n変更済み: openai/skills@49f948faa9258a0c61caceaf225e179651397431 の skills/.curated/vercel-deploy/SKILL.md を2026-10-27に用途・本人方針へ合わせて再構成した。原文と個別license noticeは変更せず別に保持する。\n",
+          "same_normal_current_buffer_fully_read": true
+        },
+        {
+          "path": "references/guide.md",
+          "bytes": 1189,
+          "sha256": "bd0fbf22a4eacf1293922d56758cf370606d7fd585a612d1385d5c19192a6220",
+          "content_utf8": "# 認証エラーを無認証の送信へ切り替えない\n\n正例: OAuthの既存認証とprojectの対応を確認し、正しいPrdへ反映した版と必要なHTTP動作を確かめる。負例: 認証エラーから未確認のdeploy.shへrepo全体をtarで送り、claim URLが出たので所有と反映も済んだとする。\n\n原資料の「配備後にfetchしない」は採用せず、元の依頼に必要な通常の動作確認を行う。実課金や顧客データの変更をテストとして無断で行わず、許可済みのテストモードと安全な受入を使い分ける。既存のPrdデータを保持し、戻し方と再生成防止を確認する。\n\n正規の実行審査と資源割当を守り、拒否から別経路へ迂回しない。通常の技術手順を本人へ聞き直さず、新費用や未指定の要件だけを切り分ける。未読の配備scriptは同梱・実行しない。\n変更済み: openai/skills@49f948faa9258a0c61caceaf225e179651397431 の skills/.curated/vercel-deploy/SKILL.md を2026-10-27に用途・本人方針へ合わせて再構成した。原文と個別license noticeは変更せず別に保持する。\n",
+          "same_normal_current_buffer_fully_read": true
+        }
+      ],
+      "bounded_application": [
+        "vercel-deploy: 入力は既存OAuth認証エラーとsourceの無認証deploy.sh/claim URL案。適用結果はrepo tar送信に進まず既存project/認証の対応と正規経路を調べ、claim URLを所有/実反映と認定しない。Prd必要データを保持しUI画像回答を維持、実送信/課金0。"
+      ],
+      "positive": "既存Vercel projectへ承認済み版をPrd配備し、URLと必要な機能を確かめる。",
+      "negative": "認証失敗から無認証scriptへproject全体を送り、Preview URLだけで完了とする。",
+      "candidate_disposition": "integrated_existing",
+      "final_disposition_recorded": true,
+      "scope": "Same site canonical URL and saved primary bytes resolved to the already accepted fixed upstream workflow and its own individual notice. Reuse its existing Japanese adaptation. No independent site authorship, notice for site editorial text, package/assets/templates/scripts/service rights or source re-read is claimed.",
+      "new_permissions": 0,
+      "new_source_literal_reads": 0,
+      "new_central_writes": 0,
+      "new_Skill_creations": 0,
+      "disposition": "integrated_existing"
+    }
+  ],
+  "independent_result_review_pending": true,
+  "site_git_tuple_not_filled_from_upstream": true,
+  "general_access_granted": false,
+  "historical_continuity_proven": false,
+  "current_OS_writer": "unproved",
+  "whole16_complete": false,
+  "publisher_job": "20261030-095653-todo-3080",
+  "new_integrations": 4,
+  "new_permissions": 0,
+  "publication_review_pending_at_recording": true
+}

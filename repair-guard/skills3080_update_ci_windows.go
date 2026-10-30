@@ -2,7 +2,9 @@ package main
 
 import (
 	"encoding/json"
+	"regexp"
 	"strconv"
+	"time"
 )
 
 func skillsRuntimeNewCIReview(r skillsRequest) bool {
@@ -12,13 +14,27 @@ func skillsRuntimeNewCIReview(r skillsRequest) bool {
 	return current(r.Review) || (r.Runtime != nil && current(r.Runtime.PeerReview))
 }
 
-// Only this new, finite software pair uses PR627. Old exact software pairs keep
-// their existing readonly qualification; callers cannot supply a CI receipt.
+// The existing finite software pair must prove its actual merged PR. A resumed
+// repair must not reuse a previous PR's checks merely because the role IDs are
+// unchanged. The PR comes from GitHub's commit association, never a request.
 func skillsRuntimeCI(u *skillsRuntimeRequest) bool {
 	if u == nil || !civ6Commit.MatchString(u.SourceHead) || !civ6Commit.MatchString(u.ReviewedHead) {
 		return false
 	}
-	raw, ok := skillsGitHub("pr", "view", "627", "--repo", "github.com/AutoDevJapan/cc-pc-tools-rs", "--json", "state,mergeCommit,headRefOid,statusCheckRollup")
+	raw, ok := skillsGitHub("api", "--hostname", "github.com", "repos/AutoDevJapan/cc-pc-tools-rs/commits/"+u.ReviewedHead+"/pulls?per_page=100")
+	if !ok {
+		return false
+	}
+	wrapper, valid := conversationJSON(append(append([]byte(`{"pulls":`), raw...), '}'))
+	pulls, array := wrapper["pulls"].([]any)
+	if !valid || !array {
+		return false
+	}
+	number, ok := skillsRuntimeAssociatedPR(pulls, u)
+	if !ok {
+		return false
+	}
+	raw, ok = skillsGitHub("pr", "view", strconv.Itoa(number), "--repo", "github.com/AutoDevJapan/cc-pc-tools-rs", "--json", "state,mergeCommit,headRefOid,statusCheckRollup")
 	if !ok {
 		return false
 	}
@@ -35,7 +51,123 @@ func skillsRuntimeCI(u *skillsRuntimeRequest) bool {
 		return false
 	}
 	pr["ci_issuers"] = issuers // official response only, never a request field
+	workflows, valid := skillsRuntimeWorkflowProof(issuers)
+	if !valid {
+		return false
+	}
+	pr["ci_workflows"] = workflows
 	return skillsRuntimeCIBound(pr, u)
+}
+
+var skillsRuntimeJobLink = regexp.MustCompile(`^https://github\.com/AutoDevJapan/cc-pc-tools-rs/actions/runs/([1-9][0-9]{0,19})/job/([1-9][0-9]{0,19})$`)
+
+func skillsRuntimeWorkflowIdentity(name string) (json.Number, string, bool) {
+	switch name {
+	case "documentation":
+		return json.Number("390109678"), ".github/workflows/skills-3048.yml", true
+	case "repair-guard", "go (Windows, resident-guard)", "go (Windows, capacity-audit-3h)", "go (Windows, unattended-runner)", "go (Windows, tools/linux-runner-bridge)", "go (Linux, resident-guard)", "go (Linux, capacity-audit-3h)", "go (Linux, unattended-runner)", "go (Linux, tools/linux-runner-bridge)":
+		return json.Number("382798887"), ".github/workflows/unattended-readiness.yml", true
+	case "analyze (actions, none)", "analyze (go, autobuild)", "analyze (javascript-typescript, none)", "analyze (rust, none)":
+		return json.Number("382939687"), ".github/workflows/codeql.yml", true
+	}
+	return "", "", false
+}
+
+func skillsRuntimeWorkflowProof(issuers object) (object, bool) {
+	out := object{}
+	runs, ok := issuers["check_runs"].([]any)
+	if !ok {
+		return nil, false
+	}
+	for _, v := range runs {
+		r := obj(v)
+		if _, _, required := skillsRuntimeWorkflowIdentity(str(r["name"])); !required {
+			continue
+		}
+		link := skillsRuntimeJobLink.FindStringSubmatch(str(r["details_url"]))
+		if len(link) != 3 {
+			return nil, false
+		}
+		if out[link[1]] != nil {
+			continue
+		}
+		if len(out) >= 16 {
+			return nil, false
+		}
+		raw, ok := skillsGitHub("api", "--hostname", "github.com", "repos/AutoDevJapan/cc-pc-tools-rs/actions/runs/"+link[1], "--jq", "{id,workflow_id,path,head_sha,status,conclusion,repository:{id:.repository.id}}")
+		run, valid := conversationJSON(raw)
+		if !ok || !valid {
+			return nil, false
+		}
+		raw, ok = skillsGitHub("api", "--hostname", "github.com", "repos/AutoDevJapan/cc-pc-tools-rs/actions/runs/"+link[1]+"/jobs?per_page=100&filter=latest", "--jq", "{total_count,jobs:[.jobs[]|{id,run_id,name,head_sha,status,conclusion,check_run_url}]}")
+		jobs, valid := conversationJSON(raw)
+		if !ok || !valid {
+			return nil, false
+		}
+		out[link[1]] = object{"run": run, "jobs": jobs}
+	}
+	return out, true
+}
+
+func skillsRuntimeWorkflowBound(proof object, check object, head string) bool {
+	id, path, required := skillsRuntimeWorkflowIdentity(str(check["name"]))
+	if !required {
+		return false
+	}
+	link := skillsRuntimeJobLink.FindStringSubmatch(str(check["details_url"]))
+	if len(link) != 3 {
+		return false
+	}
+	p := obj(proof[link[1]])
+	run := obj(p["run"])
+	if run["id"] != json.Number(link[1]) || run["workflow_id"] != id || run["path"] != path || run["head_sha"] != head || run["status"] != "completed" || run["conclusion"] != "success" || obj(run["repository"])["id"] != json.Number("1406818713") {
+		return false
+	}
+	listing := obj(p["jobs"])
+	jobs, ok := listing["jobs"].([]any)
+	if !ok || len(jobs) > 100 || listing["total_count"] != json.Number(strconv.Itoa(len(jobs))) {
+		return false
+	}
+	checkID, ok := check["id"].(json.Number)
+	if !ok || conversationNumber(checkID) == 0 {
+		return false
+	}
+	found := false
+	for _, v := range jobs {
+		j := obj(v)
+		if j["id"] != json.Number(link[2]) {
+			continue
+		}
+		if found || j["run_id"] != json.Number(link[1]) || j["name"] != check["name"] || j["head_sha"] != head || j["status"] != "completed" || j["conclusion"] != "success" || j["check_run_url"] != "https://api.github.com/repos/AutoDevJapan/cc-pc-tools-rs/check-runs/"+string(checkID) {
+			return false
+		}
+		found = true
+	}
+	return found
+}
+
+func skillsRuntimeAssociatedPR(pulls []any, u *skillsRuntimeRequest) (int, bool) {
+	if u == nil || len(pulls) == 0 || len(pulls) >= 100 {
+		return 0, false
+	}
+	matched := 0
+	for _, value := range pulls {
+		pr := obj(value)
+		if obj(pr["head"])["sha"] != u.ReviewedHead {
+			continue
+		}
+		base, head := obj(pr["base"]), obj(pr["head"])
+		n := conversationNumber(pr["number"])
+		_, numberType := pr["number"].(json.Number)
+		_, mergedTime := time.Parse(time.RFC3339Nano, str(pr["merged_at"]))
+		if matched != 0 || !numberType || n == 0 || n > 1<<31 || pr["state"] != "closed" || mergedTime != nil || pr["merge_commit_sha"] != u.SourceHead || base["ref"] != "main" ||
+			obj(base["repo"])["id"] != json.Number("1406818713") || obj(base["repo"])["full_name"] != "AutoDevJapan/cc-pc-tools-rs" ||
+			obj(head["repo"])["id"] != json.Number("1406818713") {
+			return 0, false
+		}
+		matched = int(n)
+	}
+	return matched, matched > 0
 }
 
 func skillsRuntimeCIBound(pr object, u *skillsRuntimeRequest) bool {
@@ -81,6 +213,9 @@ func skillsRuntimeCIBound(pr object, u *skillsRuntimeRequest) bool {
 		}
 		app := obj(run["app"])
 		if trusted[name] || app["id"] != json.Number("15368") || app["slug"] != "github-actions" || run["head_sha"] != u.ReviewedHead || run["status"] != "completed" || run["conclusion"] != "success" {
+			return false
+		}
+		if !skillsRuntimeWorkflowBound(obj(pr["ci_workflows"]), run, u.ReviewedHead) {
 			return false
 		}
 		matched := false

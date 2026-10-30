@@ -96,6 +96,9 @@ type skillsFS struct {
 	created map[string]*os.File
 	// Fixed internal stage names only; never paths, source bytes or OS errors.
 	failureStage string
+	// Populated only by the independently verified public Git tree. This is
+	// operating metadata, never a caller-provided bootstrap digest or path.
+	bootstrapProjects map[string][]byte
 }
 
 // Open only the declared regular object; keep it non-sharing until the caller

@@ -182,7 +182,16 @@ func testDiscoveryReceiptFailure(t *testing.T, input, wantStage string) {
 	if err == nil || !errors.As(err, &failure) || failure.Stage != wantStage || failure.Code != "invalid_or_unavailable" || failure.Status != 0 {
 		t.Fatalf("receipt failure lost its safe discovery stage: %v", err)
 	}
-	if input != "missing" && input != "directory" {
+	switch input {
+	case "missing":
+		if _, err := os.Lstat(path); !os.IsNotExist(err) {
+			t.Fatal("failed discovery created a receipt ledger", err)
+		}
+	case "directory":
+		if info, err := os.Lstat(path); err != nil || !info.IsDir() {
+			t.Fatal("failed discovery replaced the original directory", err)
+		}
+	default:
 		after, readErr := os.ReadFile(path)
 		if readErr != nil || !bytes.Equal(before, after) {
 			t.Fatal("failed discovery rewrote its input")
@@ -206,11 +215,27 @@ func TestDiscoveryTickDiagnosticsExcludePrivateInput(t *testing.T) {
 		{"bot-identity", "bot_identity_invalid_or_unavailable", 0, "499", "100"},
 		{"forum-source", "request_forum_source_unavailable", 403, "400", "100"},
 		{"forum-guild", "request_forum_invalid_or_unavailable", 0, "400", "999"},
+		{"receipt-oversize", "receipt_registry_limit_invalid_or_unavailable", 0, "400", "100"},
+		{"receipt-wrong-type", "receipt_registry_malformed_invalid_or_unavailable", 0, "400", "100"},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			r, _ := fixture(t)
+			r.Config.Home = filepath.Join(r.Config.Home, "unattended")
+			if err := os.Mkdir(r.Config.Home, 0700); err != nil {
+				t.Fatal(err)
+			}
 			const privateMarker = "synthetic-private-marker-not-for-health"
+			const privateValue = "synthetic-private-input"
 			r.Token = privateMarker
+			if strings.HasPrefix(tc.name, "receipt-") {
+				doc := []byte(`{"domain":"new-owner-recovery-messages","events":"` + privateValue + `"}`)
+				if tc.name == "receipt-oversize" {
+					doc = append(doc, bytes.Repeat([]byte(" "), (32<<20)+1-len(doc))...)
+				}
+				if err := os.WriteFile(filepath.Join(filepath.Dir(r.Config.Home), "recovery-messages.json"), doc, 0600); err != nil {
+					t.Fatal(err)
+				}
+			}
 			var calls atomic.Int32
 			server(t, r, func(w http.ResponseWriter, q *http.Request) {
 				calls.Add(1)
@@ -248,14 +273,45 @@ func TestDiscoveryTickDiagnosticsExcludePrivateInput(t *testing.T) {
 			if tc.status != 0 {
 				want = append(want, "discovery_http_status_"+strconv.Itoa(tc.status))
 			}
-			encoded, err := json.Marshal(health)
 			wantCalls := int32(2)
 			if tc.name == "authentication" || tc.name == "bot-identity" {
 				wantCalls = 1
 			}
-			if !slices.Equal(got, want) || err != nil || strings.Contains(string(encoded), privateMarker) || strings.Contains(string(encoded), r.Config.Home) || calls.Load() != wantCalls || health.API {
+			if !slices.Equal(got, want) || privateDiagnosticPresent(health, privateMarker, privateValue, r.Config.Home, filepath.Dir(r.Config.Home)) || calls.Load() != wantCalls || health.API {
 				t.Fatalf("discovery did not retain only safe diagnostics: %v, requests=%d", got, calls.Load())
 			}
 		})
+	}
+}
+
+func privateDiagnosticPresent(health Health, private ...string) bool {
+	encoded, err := json.Marshal(health)
+	if err != nil {
+		return true
+	}
+	for _, value := range private {
+		for _, spelling := range []string{value, filepath.ToSlash(value), strings.ReplaceAll(value, `\`, "/")} {
+			if spelling == "" {
+				continue
+			}
+			escaped, err := json.Marshal(spelling)
+			if err != nil || strings.Contains(string(encoded), spelling) || bytes.Contains(encoded, escaped[1:len(escaped)-1]) {
+				return true
+			}
+		}
+	}
+	return false
+}
+
+func TestDiscoveryPrivacyAssertionDetectsEscapedPaths(t *testing.T) {
+	for _, path := range []string{`D:\synthetic-private-root\home`, "/synthetic-private-root/home"} {
+		for _, spelling := range []string{path, strings.ReplaceAll(path, `\`, "/")} {
+			if !privateDiagnosticPresent(Health{Errors: []string{"io failure at " + spelling}}, path) {
+				t.Fatal("privacy assertion did not detect a path in serialized health")
+			}
+		}
+	}
+	if privateDiagnosticPresent(Health{Errors: []string{"discord_discovery_failed"}}, `D:\synthetic-private-root`) {
+		t.Fatal("privacy assertion rejected a safe diagnostic")
 	}
 }

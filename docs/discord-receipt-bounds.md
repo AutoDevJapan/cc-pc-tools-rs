@@ -16,14 +16,14 @@ unattended-runnerでも読む。
 本文、認証値、保存先のパス、入力中の任意文字列は診断へ出さない。
 
 `health.errors` には従来の `discord_discovery_failed` に加え、
-`discovery_<stage>_<code>` と、HTTP応答がある場合の
+`discovery_<stage>_<code>` と、200以外のHTTP応答の場合の
 `discovery_http_status_<数字>` が入る。
 botとforumのstageは `bot_identity` / `request_forum`、codeは取得失敗の
 `source_unavailable` または照合不一致の `invalid_or_unavailable` である。
 配送記録のstageは `receipt_registry_missing` / `receipt_registry_limit` /
 `receipt_registry_malformed` / `receipt_registry_domain` / `receipt_registry_unavailable`、
 codeは既存の `invalid_or_unavailable` を維持する。
-ファイル不存在、上限超過、JSON不正、domain不一致、その他の読取不能を区別し、
+ファイル不存在、上限超過、JSON不正（型の不一致を含む）、domain不一致、その他の読取不能を区別し、
 失敗した記録を空と見なして処理を進めない。保存段階の失敗にはこの診断を付けない。
 
 回帰検査は架空JSONの文書サイズを8MiB超・32MiBちょうど・32MiB超へ変え、

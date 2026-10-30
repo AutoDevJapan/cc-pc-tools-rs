@@ -35,6 +35,16 @@ func retainedPercentView(text string) string {
 	return decoded.String()
 }
 
+func retainedPathMarker(p, marker string) bool {
+	segments := strings.Split(strings.Trim(p, "/"), "/")
+	for index, segment := range segments {
+		if segment == marker && index+1 < len(segments) && segments[index+1] != "" {
+			return true
+		}
+	}
+	return false
+}
+
 func retainedConversationURL(text string) bool {
 	boundary := func(r rune) bool { return unicode.IsSpace(r) || strings.ContainsRune("<>\"'`", r) }
 	for _, token := range strings.FieldsFunc(text, boundary) {
@@ -81,7 +91,7 @@ func retainedConversationURL(text string) bool {
 					p := strings.ToLower(path.Clean(u.Path))
 					switch host {
 					case "chatgpt.com", "chat.openai.com":
-						if strings.HasPrefix(p, "/c/") || strings.HasPrefix(p, "/share/") || strings.HasPrefix(p, "/codex/tasks/") {
+						if retainedPathMarker(p, "c") || retainedPathMarker(p, "share") || strings.Contains(p, "/codex/tasks/") {
 							return true
 						}
 					case "claude.ai":

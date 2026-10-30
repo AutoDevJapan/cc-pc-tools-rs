@@ -126,6 +126,8 @@ func TestRetainedProcedureJournalRejectsChangedReadAndRightsBeforeQueue(t *testi
 		}},
 		{"bare_conversation_URL", func(v map[string]any) { entry(v, 0)["value"] = "chatgpt.com/c/example-session" }},
 		{"protocol_relative_conversation_URL", func(v map[string]any) { entry(v, 0)["value"] = "//chatgpt.com/c/example-session" }},
+		{"custom_GPT_conversation_URL", func(v map[string]any) { entry(v, 0)["value"] = "https://chatgpt.com/g/g-example/c/example-session" }},
+		{"project_GPT_conversation_URL", func(v map[string]any) { entry(v, 0)["value"] = "https://chatgpt.com/g/g-p-example/c/example-session" }},
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
@@ -140,7 +142,7 @@ func TestRetainedProcedureJournalRejectsChangedReadAndRightsBeforeQueue(t *testi
 
 func TestRetainedProcedureJournalKeepsLegitimateNamesAndDocumentationURLs(t *testing.T) {
 	v := retainedJournalFixture(t)
-	v["entries"].([]any)[0].(map[string]any)["value"] = "Claude-Session is an analyzed header name, gpt-6-luna is a model identifier, and legitimate copyright authors remain. https://platform.openai.com/docs/overview https://discord.com/developers/docs/intro"
+	v["entries"].([]any)[0].(map[string]any)["value"] = "Claude-Session is an analyzed header name, gpt-6-luna is a model identifier, and legitimate copyright authors remain. https://platform.openai.com/docs/overview https://discord.com/developers/docs/intro https://chatgpt.com/g/g-example"
 	if _, err := loadRetainedJournalFixture(t, v); err != nil {
 		t.Fatalf("functional identifiers and documentation links are not an attribution: %v", err)
 	}

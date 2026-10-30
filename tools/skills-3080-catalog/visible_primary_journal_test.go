@@ -4,6 +4,9 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/url"
+	"os"
+	"path/filepath"
+	"regexp"
 	"strconv"
 	"strings"
 	"testing"
@@ -15,6 +18,148 @@ func visibleJournalNumber(value int64) json.Number { return json.Number(strconv.
 
 func visibleJournalGitHubID(id string) bool {
 	return strings.HasPrefix(id, "github:") && validHex(strings.TrimPrefix(id, "github:"), 64)
+}
+
+// Independent anchor: the accepted journal at 4ebfedab3794ff12e0f0be09243be3fd3544107a,
+// file SHA88eb360eb1dccd1055f73fdf3c6b144ef33590428e31b8e5cbafd73efdb2869d.
+// Canonical JSON preserves all values and entry order, without checkout spacing.
+func visibleAcceptedPrefixMatches(entries []any) bool {
+	if len(entries) < 54 {
+		return false
+	}
+	raw, err := json.Marshal(entries[:54])
+	return err == nil && travel3Digest(raw) == "b5276adcc6bc7709955f3481d0baf7c570a1577a0f550f1eb16f134950ab492c"
+}
+
+func TestVisiblePrimaryJournalRetainsEveryAcceptedPrefixFieldAndOrder(t *testing.T) {
+	for _, change := range []string{"valid", "value changed", "order changed", "entry missing"} {
+		t.Run(change, func(t *testing.T) {
+			var ignored any
+			raw := loadPublicReceipt(t, visiblePrimaryJournalFile, &ignored)
+			v, err := parent19Decode(raw)
+			if err != nil {
+				t.Fatal(err)
+			}
+			entries := v["entries"].([]any)
+			switch change {
+			case "value changed":
+				entries[0].(map[string]any)["value"] = "A different nonempty meaning still passes structural validation."
+			case "order changed":
+				entries[0], entries[1] = entries[1], entries[0]
+			case "entry missing":
+				entries = entries[:53]
+			}
+			if visibleAcceptedPrefixMatches(entries) != (change == "valid") {
+				t.Fatal("accepted history value or order drift was not detected")
+			}
+		})
+	}
+}
+
+func TestVisiblePrimaryMarkdownCountsMatchTheExecutionSnapshot(t *testing.T) {
+	var summary ExecutionSummary
+	loadPublicReceipt(t, "skills-3080-execution-queue-summary.json", &summary)
+	var progress struct {
+		Issue       string `json:"issue"`
+		SourceCount int    `json:"source_count"`
+		CentralHold struct {
+			Count int `json:"count"`
+		} `json:"central_target_holds_current"`
+	}
+	loadPublicReceipt(t, "skills-3080-progress.json", &progress)
+	var journal struct {
+		Groups  int `json:"representative_body_groups"`
+		Members int `json:"bound_member_metadata"`
+	}
+	loadPublicReceipt(t, visiblePrimaryJournalFile, &journal)
+	raw, err := os.ReadFile(filepath.Join("..", "..", "docs", "skills-3080-visible-primary-assessments.md"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, expected := range []string{
+		fmt.Sprintf("固定した出典に対する%d件の評価", journal.Groups),
+		fmt.Sprintf("今回の追加は%d件", journal.Groups-54),
+		fmt.Sprintf("候補メタデータは計%d件", journal.Members),
+	} {
+		if !strings.Contains(string(raw), expected) {
+			t.Fatalf("Markdown count differs from the current JSON snapshot: %s", expected)
+		}
+	}
+	issue := strings.TrimPrefix(progress.Issue, "https://github.com/AutoDevJapan/cc-pc-tools-rs/issues/")
+	if _, err := strconv.Atoi(issue); err != nil || issue == progress.Issue {
+		t.Fatal("the public issue reference is not a numbered repository issue")
+	}
+	digits := visibleMarkdownCount(summary.Records, true)
+	expected := fmt.Sprintf("全件queueは%s出現、評価%d、最終%d、新規%d・既存統合%d・旧除外%d。評価と最終の交差%d、和集合%d、評価済未採否%d、意味と個別権利の確認が必要な候補%dを区別する。本文未取得%d・取得審査保留%d・未知の中央%d・旧除外%dの再確認と、指定%d資料の残作業を保持する。全体のIssue%sは継続する。",
+		digits, summary.Assessments, summary.Final, summary.Decisions["installed_new_adaptation"], summary.Decisions["integrated_existing"], summary.Decisions["excluded"], summary.AssessmentAndFinal, summary.AssessmentOrFinal, summary.Stages["assessed_needs_current_disposition"], summary.Stages["needs_semantic_and_individual_rights_review"], summary.Stages["held_body_unavailable"], summary.Stages["held_execution_review"], progress.CentralHold.Count, summary.Decisions["excluded"], progress.SourceCount, issue)
+	if !visibleMarkdownSummaryMatches(string(raw), expected) {
+		t.Fatal("the complete Markdown summary differs from the JSON snapshot")
+	}
+	spans := regexp.MustCompile(`[0-9][0-9,]*`).FindAllStringIndex(expected, -1)
+	if len(spans) != 16 {
+		t.Fatal("the complete summary must expose exactly sixteen numeric fields")
+	}
+	for index, span := range spans {
+		t.Run(fmt.Sprintf("numeric field %02d", index+1), func(t *testing.T) {
+			original := expected[span[0]:span[1]]
+			number, err := strconv.Atoi(strings.ReplaceAll(original, ",", ""))
+			if err != nil {
+				t.Fatal(err)
+			}
+			// Keep the original grouping style and every other byte unchanged.
+			changed := visibleMarkdownCount(number+1, strings.Contains(original, ","))
+			wrong := expected[:span[0]] + changed + expected[span[1]:]
+			if visibleMarkdownSummaryMatches(wrong, expected) {
+				t.Fatal("a changed numeric value passed with unchanged grouping style")
+			}
+		})
+	}
+	for _, change := range []string{"missing sentence", "duplicate paragraph"} {
+		t.Run(change, func(t *testing.T) {
+			wrong := expected
+			switch change {
+			case "missing sentence":
+				start := strings.Index(wrong, "本文未取得")
+				if start < 0 {
+					t.Fatal("the hold sentence is absent from the baseline")
+				}
+				end := strings.Index(wrong[start:], "。")
+				if end < 0 {
+					t.Fatal("the hold sentence has no end")
+				}
+				wrong = wrong[:start] + wrong[start+end+len("。"):]
+			case "duplicate paragraph":
+				wrong += "\n\n" + expected
+			}
+			if visibleMarkdownSummaryMatches(wrong, expected) {
+				t.Fatal("missing, stale or duplicated summary passed")
+			}
+		})
+	}
+}
+
+func visibleMarkdownCount(number int, grouped bool) string {
+	digits := strconv.Itoa(number)
+	if grouped {
+		for i := len(digits) - 3; i > 0; i -= 3 {
+			digits = digits[:i] + "," + digits[i:]
+		}
+	}
+	return digits
+}
+
+func visibleMarkdownSummaryMatches(markdown, expected string) bool {
+	count := 0
+	for _, paragraph := range strings.Split(strings.ReplaceAll(markdown, "\r\n", "\n"), "\n\n") {
+		paragraph = strings.TrimSpace(paragraph)
+		if strings.HasPrefix(paragraph, "全件queueは") {
+			count++
+			if paragraph != expected {
+				return false
+			}
+		}
+	}
+	return count == 1
 }
 
 func visibleJournalKeys(v map[string]any, keys ...string) bool {

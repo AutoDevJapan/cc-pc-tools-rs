@@ -43,6 +43,8 @@ func validateVisiblePrimaryJournal(v map[string]any, expectedRows int) error {
 		return fmt.Errorf("complete fixed journal rows required")
 	}
 	seen := map[string]bool{}
+	seenMembers := map[string]bool{}
+	seenBodies := map[string]bool{}
 	members := int64(0)
 	for _, value := range rows {
 		r, ok := value.(map[string]any)
@@ -65,6 +67,10 @@ func validateVisiblePrimaryJournal(v map[string]any, expectedRows int) error {
 		if size, ok := parent19PhysicalNumber(r["bytes"]); !ok || size == 0 {
 			return fmt.Errorf("actual primary byte count required")
 		}
+		if seenBodies[sha] {
+			return fmt.Errorf("one representative group required per primary body")
+		}
+		seenBodies[sha] = true
 		parts := strings.Split(path, "/")
 		for i := range parts {
 			parts[i] = url.PathEscape(parts[i])
@@ -159,10 +165,11 @@ func validateVisiblePrimaryJournal(v map[string]any, expectedRows int) error {
 			mrepo, _ := m["repo"].(string)
 			mc, _ := m["commit"].(string)
 			mp, _ := m["path"].(string)
-			if mid == "" || memberIDs[mid] || !executionRepositoryName.MatchString(mrepo) || !validHex(mc, 40) || !evidencePath(mp) || m["sha256"] != sha || m["git_blob"] != blob || m["bytes"] != r["bytes"] {
+			if mid == "" || memberIDs[mid] || seenMembers[mid] || !executionRepositoryName.MatchString(mrepo) || !validHex(mc, 40) || !evidencePath(mp) || m["sha256"] != sha || m["git_blob"] != blob || m["bytes"] != r["bytes"] {
 				return fmt.Errorf("same primary bytes and fixed member identity required")
 			}
 			memberIDs[mid] = true
+			seenMembers[mid] = true
 			if mid == id {
 				if mrepo != repo || mc != commit || mp != path {
 					return fmt.Errorf("representative member differs")
@@ -217,7 +224,7 @@ func TestVisiblePrimaryJournalPreservesHiddenLinesPendingRightsAndMemberUnits(t 
 		}
 		return v
 	}
-	for _, change := range []string{"valid", "raw credit", "range gap", "repeated hidden line", "hidden count changed", "rights granted", "member omitted", "member rights transfer", "source URL changed", "source identity repeated", "operational actor exposed", "member actor exposed", "header publisher exposed"} {
+	for _, change := range []string{"valid", "raw credit", "range gap", "repeated hidden line", "hidden count changed", "rights granted", "member omitted", "member rights transfer", "source URL changed", "source identity repeated", "member repeated across entries", "representative body repeated", "operational actor exposed", "member actor exposed", "header publisher exposed"} {
 		t.Run(change, func(t *testing.T) {
 			v := load()
 			r := next4Object(v["entries"].([]any)[0])
@@ -244,6 +251,29 @@ func TestVisiblePrimaryJournalPreservesHiddenLinesPendingRightsAndMemberUnits(t 
 			case "source identity repeated":
 				rows := v["entries"].([]any)
 				rows[1] = rows[0]
+			case "member repeated across entries":
+				other := next4Object(v["entries"].([]any)[1])
+				member := map[string]any{}
+				for key, value := range next4Object(other["member_metadata"].([]any)[0]) {
+					member[key] = value
+				}
+				member["inventory_id"] = r["inventory_id"]
+				other["member_metadata"] = append(other["member_metadata"].([]any), member)
+				count, _ := parent19PhysicalNumber(other["member_occurrences"])
+				other["member_occurrences"] = visibleJournalNumber(count + 1)
+				total, _ := parent19PhysicalNumber(v["bound_member_metadata"])
+				v["bound_member_metadata"] = visibleJournalNumber(total + 1)
+			case "representative body repeated":
+				other := next4Object(v["entries"].([]any)[1])
+				for _, key := range []string{"source_sha256", "git_blob", "bytes", "read"} {
+					other[key] = r[key]
+				}
+				for _, value := range other["member_metadata"].([]any) {
+					member := next4Object(value)
+					member["sha256"] = r["source_sha256"]
+					member["git_blob"] = r["git_blob"]
+					member["bytes"] = r["bytes"]
+				}
 			case "operational actor exposed":
 				r["reader_job"] = "internal-run"
 			case "member actor exposed":

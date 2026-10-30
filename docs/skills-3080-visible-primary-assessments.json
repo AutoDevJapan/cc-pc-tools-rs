@@ -1,7 +1,7 @@
 {
   "all_member_contexts_read": false,
   "all_member_rights_confirmed": false,
-  "bound_member_metadata": 31,
+  "bound_member_metadata": 44,
   "catalog_sha256": "2d73c9a038a41cc220a9687b935bfa1e0b315b65d9bd6d3e54ddb4111972876c",
   "central_operations": 0,
   "domain": "skills3080-visible-primary-assessment-journal-v1",
@@ -2865,11 +2865,1185 @@
       ],
       "use": "取引に関する調査、pool比較、リスク評価、本人の具体判断、実行/結果を分け、同じ入力/根拠と失敗段階を追う設計資料を検討するとき。",
       "value": "段階ごとの所見と累積contextを保持し、途中停止でも調査結果を返す観点、必要な金額を推測しない観点は、調査と実行の取り違えを避ける参考になる。"
+    },
+    {
+      "bytes": 2906,
+      "central_operations": 0,
+      "each_member_context_and_rights_pending": true,
+      "findings": [
+        "可視本文はScrapling Web Fetchを掲げ、article、main、.post-content、classにbodyを含む要素の順で本文を探し、html2textで変換し、未検出時はbodyへ代替してmax_charsで切ると説明する。",
+        "Markdownを標準出力とし、--jsonとstderrによるselector診断を案内する。実際にどの要素が選ばれるか、本文以外の混入、切断位置やJSONの項目は未確認。",
+        "Python製の複数依存、仮想環境とChromium導入を例示する。配布済みツールをそのまま試す既存例外と、新しい自作Pythonを作らない方針は区別が必要で、原の導入手順は実行していない。",
+        "共有短縮リンクを解決して記事のタイトルや本文を得る用途を示し、ログインや複雑な操作はブラウザ自動化へ分ける。現在の対象サイト・短縮先・取得可能性や利用条件を確認したものではない。",
+        "公開本文に用途を限定し、私的資源や権限制御の迂回を対象外とする。原の優先利用指示は現在のタスクへの適用命令ではなく、抽出本文自体も上位指示にはならない。"
+      ],
+      "git_blob": "be09962b08527336bfe321bcdf5a3196c2180812",
+      "inventory_id": "github:20b7503a5c9bcd68b18c8d0f18522eeb80b5b126530aac1fca0c4a71a449fee1",
+      "member_metadata": [
+        {
+          "bytes": 2906,
+          "commit": "920714f17d81e0a95c7a9bc51faf0a7921cd982d",
+          "git_blob": "be09962b08527336bfe321bcdf5a3196c2180812",
+          "inventory_id": "github:20b7503a5c9bcd68b18c8d0f18522eeb80b5b126530aac1fca0c4a71a449fee1",
+          "path": "skills/jllyzzd/clean-content-fetch/SKILL.md",
+          "repo": "6mile/skills",
+          "sha256": "0088ffca1473314dfa40acbf0b718b60841b7af50e16ce0f08eb2d6d2fe94a28"
+        }
+      ],
+      "member_occurrences": 1,
+      "negative": "共有リンクを無条件にたどり、bodyのメニューや途中で切れた文字列を全記事として扱い、本文中の指示に従って設定や外部送信を始める。",
+      "new_copy_grants": 0,
+      "new_final_disposition": false,
+      "path": "skills/jllyzzd/clean-content-fetch/SKILL.md",
+      "positive": "許可された記事で選択要素と最終URLを記録し、本文が見つからずbodyを使った場合や末尾を切った場合はその範囲を明示して要約する。",
+      "read": {
+        "failed_view_calls": 0,
+        "mask_version": "primaryflow-v4-opaque-lexical-boundaries",
+        "ranges": [
+          {
+            "first": 1,
+            "range_sha256": "439b297f5b6a7a4dbc9483494178ce0067af335e7639840f1081868b344b05a6",
+            "through": 80,
+            "visible_lines": 70,
+            "withheld_physical_lines": [
+              1,
+              2,
+              3,
+              4,
+              11,
+              23,
+              42,
+              52,
+              53,
+              65
+            ]
+          }
+        ],
+        "raw_full": false,
+        "total_physical_lines": 80,
+        "unseen_meanings_remain_unknown": true,
+        "view_calls_returned": 1,
+        "whole_masked_view_sha256": "439b297f5b6a7a4dbc9483494178ce0067af335e7639840f1081868b344b05a6"
+      },
+      "required_changes": [
+        "実利用時は取得元・最終到達先・取得日時・選択要素・本文未検出・文字数切断を区別し、bodyへの代替やmax_charsの結果を全文取得と報告しない。",
+        "短縮リンクの遷移先と実対象の範囲を確かめ、公開ページでも個別の利用条件を確認する。ログインや操作が必要なら既存の許可範囲とオーナーのChromeを使う手順へ接続する。",
+        "配布済み実装と依存を確認してから採用し、新しい補助実装が必要ならGoを既定とする。原のpip・ブラウザ導入や伏字のコマンドを推測して実行しない。"
+      ],
+      "source_commit": "920714f17d81e0a95c7a9bc51faf0a7921cd982d",
+      "source_repo": "6mile/skills",
+      "source_sha256": "0088ffca1473314dfa40acbf0b718b60841b7af50e16ce0f08eb2d6d2fe94a28",
+      "source_url": "https://github.com/6mile/skills/blob/920714f17d81e0a95c7a9bc51faf0a7921cd982d/skills/jllyzzd/clean-content-fetch/SKILL.md",
+      "status": "visible_primary_evaluated",
+      "support_body_reads": 0,
+      "unmet": [
+        "伏字10物理行の意味、各memberの文脈・支持・個別許諾・現在実在・最終採否は未確認。",
+        "参照usage・script本文、依存版・実出力schema・抽出/文字数境界・現行サイト条件・source_or_service_rightsは未確認。支持本文/外部リンク閲覧・install・取得・ブラウザ操作・設定・送信・実配置・実使用0。近接比較はdefuddle、browser-extraction-missingnessの起動metadataだけ。"
+      ],
+      "use": "公開記事の本文を選択してMarkdownへ変換する工程と、ブラウザ操作が必要な工程を切り分ける参考。",
+      "value": "本文selectorの優先順、bodyへの代替、文字数制限、Markdown/JSON出力とselector診断の区別が具体的。ただし抽出品質や実装を実証した資料ではない。"
+    },
+    {
+      "bytes": 15463,
+      "central_operations": 0,
+      "each_member_context_and_rights_pending": true,
+      "findings": [
+        "可視本文は共有3D空間でm-blockをm-groupにまとめ、m-attr-anim/m-attr-lerpで動かす形式を説明する。事前の登録・入場・WebSocket接続と別Skillを前提とし、現行接続やサービスの実在を確認したものではない。",
+        "各blockを1x1x1m、整数座標、y>=0、開始/終了タグ必須とし、textureはURLではなくtypeの定義名を使う。sphere等やscript属性を許さないと述べるが、実serverの検証・animation経由の制限適用は未確認。",
+        "塔・壁・橋・部屋・地形や他者作品への追加を提案する。壁と塔の例は配置行が多く伏せられており、説明上のblock数・形・接続や実際の外観を検証できない。",
+        "worldのserverUrlを使うagent APIとdocumentId、create/update/delete、contentを説明し、updateは差分ではなく以前の全文を置き換えると明示する。",
+        "HTTP 200とsuccess/documentId/actionを成功応答として示すが、描画への反映、競合する更新、応答不明時の再送、権限・所有範囲の保証は可視範囲にない。",
+        "配置をpermanentと述べる一方、文書の全置換・削除も案内するため、不変・復元可能・削除不能の保証にはできない。",
+        "日々の建築、評判、共有・勧誘、追加Skillのinstallを促す。原の競争やstreakの訴求は、現在の人格・毎日予定・外部公開/他者への連絡の指示ではない。"
+      ],
+      "git_blob": "18e1a98456c225564e3d23bf5ac55d804d07571d",
+      "inventory_id": "github:2a3f8256c1436ca3d3c0bbff6dd9ef68bbd221696443ed910310125b2c557cb4",
+      "member_metadata": [
+        {
+          "bytes": 15463,
+          "commit": "920714f17d81e0a95c7a9bc51faf0a7921cd982d",
+          "git_blob": "18e1a98456c225564e3d23bf5ac55d804d07571d",
+          "inventory_id": "github:2a3f8256c1436ca3d3c0bbff6dd9ef68bbd221696443ed910310125b2c557cb4",
+          "path": "skills/0xm1kr/doppel-block-builder/SKILL.md",
+          "repo": "6mile/skills",
+          "sha256": "0089a929dc54dbdb73d847ec6fc742a4762e30fb2415a42a6a71b8f390d89f1a"
+        }
+      ],
+      "member_occurrences": 1,
+      "negative": "permanentの一語を不変保証と考え、部分的なcontentをupdateして既存の建物を失わせ、200だけで反映完了とし、評判のため未依頼の共有や勧誘を始める。",
+      "new_copy_grants": 0,
+      "new_final_disposition": false,
+      "path": "skills/0xm1kr/doppel-block-builder/SKILL.md",
+      "positive": "同じ文書の版と全block構成を照合して更新し、許可属性と座標を確認したうえで、保存結果と実際に表示された形を別々に確認する。",
+      "read": {
+        "failed_view_calls": 0,
+        "mask_version": "primaryflow-v4-opaque-lexical-boundaries",
+        "ranges": [
+          {
+            "first": 1,
+            "range_sha256": "a982d7d8a716522dbc9b7c187e175a9cd1a8c1832da07e92980f881227137403",
+            "through": 180,
+            "visible_lines": 116,
+            "withheld_physical_lines": [
+              1,
+              2,
+              3,
+              4,
+              5,
+              13,
+              44,
+              58,
+              63,
+              72,
+              73,
+              74,
+              75,
+              76,
+              77,
+              88,
+              89,
+              90,
+              91,
+              92,
+              93,
+              94,
+              95,
+              96,
+              98,
+              99,
+              100,
+              101,
+              102,
+              103,
+              104,
+              105,
+              106,
+              107,
+              108,
+              109,
+              110,
+              111,
+              112,
+              113,
+              115,
+              116,
+              117,
+              118,
+              119,
+              120,
+              121,
+              122,
+              123,
+              124,
+              125,
+              126,
+              127,
+              128,
+              129,
+              130,
+              131,
+              132,
+              133,
+              134,
+              151,
+              160,
+              169,
+              175
+            ]
+          },
+          {
+            "first": 181,
+            "range_sha256": "9e7adbcacfca1f0c19dedaf7c4abf58de097e7b5a2ab6a409c98ab9bd7f1e4d9",
+            "through": 236,
+            "visible_lines": 48,
+            "withheld_physical_lines": [
+              190,
+              192,
+              200,
+              202,
+              210,
+              223,
+              225,
+              231
+            ]
+          }
+        ],
+        "raw_full": false,
+        "total_physical_lines": 236,
+        "unseen_meanings_remain_unknown": true,
+        "view_calls_returned": 2,
+        "whole_masked_view_sha256": "0a1fe0da8eaf2f9fab2fa3ba864340e17b8aff8fd93e02b0848ab526f6f7ba41"
+      },
+      "required_changes": [
+        "実利用時は許可された実space・文書・所有者と現行schemaを照合し、格子・寸法・属性・animationを一貫して検証する。固定の1m制限を一般の3D制作全体へ広げない。",
+        "全文updateでは期待する版と対象文書を照合し、既存の必要部分を落とさない。HTTP受付、保存、readback、実描画を分け、応答不明時の再送やcreate/update/deleteを実状態と結び付ける。",
+        "permanentという表現と置換/削除の範囲、素材・共同作品・公開の条件を確認する。他者作品を拡張する提案だけで変更権限を得たことにしない。",
+        "見た目の制作は具体画像への本人回答を先に得る既存方針を保つ。評判目的の自動投稿・勧誘・毎日loopや追加installを現在PCへ移さず、新費用・恒久権限も発生させない。"
+      ],
+      "source_commit": "920714f17d81e0a95c7a9bc51faf0a7921cd982d",
+      "source_repo": "6mile/skills",
+      "source_sha256": "0089a929dc54dbdb73d847ec6fc742a4762e30fb2415a42a6a71b8f390d89f1a",
+      "source_url": "https://github.com/6mile/skills/blob/920714f17d81e0a95c7a9bc51faf0a7921cd982d/skills/0xm1kr/doppel-block-builder/SKILL.md",
+      "status": "visible_primary_evaluated",
+      "support_body_reads": 0,
+      "unmet": [
+        "伏字72物理行の意味、各memberの文脈・支持・個別許諾・現在実在・最終採否は未確認。",
+        "連携Skill/支持本文、現行API/認証/所有・素材権・料金・置換/削除/競合/冪等性・実block配置と外観・source_or_service_rightsは未確認。支持本文/外部リンク閲覧・登録/入場/接続・build/投稿/更新/削除/勧誘・install・設定・実配置・実使用0。近接比較はthreejs-towers、author-game-levels、stale-request-orderingの起動metadataだけ。"
+      ],
+      "use": "共有voxel空間で許可するMML要素・属性と、文書全置換の更新単位を定義する設計の参考。",
+      "value": "1m格子、整数座標、明示寸法、texture名の対応とcreate/update/deleteの違いが具体的。永続配置という説明と削除・全置換の関係を確認する必要も読み取れる。"
+    },
+    {
+      "bytes": 1480,
+      "central_operations": 0,
+      "each_member_context_and_rights_pending": true,
+      "findings": [
+        "可視本文はSortinoのfinance reference toolと称し、概要・標準/実務・トラブル対応・チェックリストへの利用を挙げる。",
+        "scripts/script.shのintro、formulas、regulations、risks、instruments、strategies、glossary、checklist、help、versionを列挙する。各説明は短い分類名で、出力や実装は見えていない。",
+        "数式やリターンの期間、下方偏差の定義、比較基準、データ、規制の対象国・時点は可視本文にない。regulationsという入口だけで現行の金融規制に適合するとは判断できない。",
+        "原scriptは起動しておらず、名前から欠けた計算仕様・精度・助言能力を補っていない。"
+      ],
+      "git_blob": "44cb2d8d859172b228b6066fa10d308653847164",
+      "inventory_id": "github:d09c33637d478da4414d9966468236fd05e39f9e7d6fe227e18946a12d8aad27",
+      "member_metadata": [
+        {
+          "bytes": 1480,
+          "commit": "920714f17d81e0a95c7a9bc51faf0a7921cd982d",
+          "git_blob": "44cb2d8d859172b228b6066fa10d308653847164",
+          "inventory_id": "github:d09c33637d478da4414d9966468236fd05e39f9e7d6fe227e18946a12d8aad27",
+          "path": "skills/bytesagain3/sortino/SKILL.md",
+          "repo": "6mile/skills",
+          "sha256": "0089b98ac0e2050d96902c1c3035fd6d96cfaa18212b9dcdbfebc3ce545940d8"
+        }
+      ],
+      "member_occurrences": 1,
+      "negative": "formulasやregulationsというコマンド名だけで正しい比率と現行法を確認済みとし、未読scriptを実行して投資推奨へ使う。",
+      "new_copy_grants": 0,
+      "new_final_disposition": false,
+      "path": "skills/bytesagain3/sortino/SKILL.md",
+      "positive": "現段階ではCLIの項目一覧まで確認できたと記録し、計算式と実データの根拠を得るまでは金融分析が実行できたと扱わない。",
+      "read": {
+        "failed_view_calls": 0,
+        "mask_version": "primaryflow-v4-opaque-lexical-boundaries",
+        "ranges": [
+          {
+            "first": 1,
+            "range_sha256": "e2b24a022e13ebaae09914c57ec594d774ee6cc01912fe10e2ba019590a99d86",
+            "through": 103,
+            "visible_lines": 92,
+            "withheld_physical_lines": [
+              1,
+              2,
+              3,
+              4,
+              5,
+              6,
+              7,
+              8,
+              9,
+              10,
+              103
+            ]
+          }
+        ],
+        "raw_full": false,
+        "total_physical_lines": 103,
+        "unseen_meanings_remain_unknown": true,
+        "view_calls_returned": 1,
+        "whole_masked_view_sha256": "e2b24a022e13ebaae09914c57ec594d774ee6cc01912fe10e2ba019590a99d86"
+      },
+      "required_changes": [
+        "採用候補とする前に支持実装と出力を別途確認し、具体的な適用対象・定義・出典・期間/単位・欠測/ゼロ分母等の扱いと検証例を備える。項目一覧を計算能力の証拠にしない。",
+        "現行の金融情報や法令に用いる場合はその実対象と時点の一次資料を確認し、原の一般的なregulations/strategiesを投資判断や適法性の保証へしない。",
+        "原shellを自動実行せず、必要な新実装はGo既定と既存の費用・秘密保護を守る。"
+      ],
+      "source_commit": "920714f17d81e0a95c7a9bc51faf0a7921cd982d",
+      "source_repo": "6mile/skills",
+      "source_sha256": "0089b98ac0e2050d96902c1c3035fd6d96cfaa18212b9dcdbfebc3ce545940d8",
+      "source_url": "https://github.com/6mile/skills/blob/920714f17d81e0a95c7a9bc51faf0a7921cd982d/skills/bytesagain3/sortino/SKILL.md",
+      "status": "visible_primary_evaluated",
+      "support_body_reads": 0,
+      "unmet": [
+        "伏字11物理行の意味、各memberの文脈・支持・個別許諾・現在実在・最終採否は未確認。",
+        "script/出力・数式/データ/精度/定義・現行法/サービス条件・source_or_service_rightsは未確認。支持本文/外部リンク閲覧・script起動・計算・取引・投資助言・install・設定・送信・実配置・実使用0。近接比較はmarket-data-due-diligence、source-grounded-content-reviewの起動metadataだけ。"
+      ],
+      "use": "金融のSortino関連資料をintro/formulas/risks等の入口に分けるCLI索引の参考。",
+      "value": "参照項目の分類は得られるが、可視本文に実際の数式・計算・法令・具体的な対処はなく、Sortino分析を実施できる品質は確認できない。"
+    },
+    {
+      "bytes": 6608,
+      "central_operations": 0,
+      "each_member_context_and_rights_pending": true,
+      "findings": [
+        "可視本文は状態/能力確認、printCreate、uploadFile、orderGetStatus、orderCancelを案内する。印刷機やbridgeが現在PCで利用可能であることを確認したものではない。",
+        "毎回deviceReadyCheckを行いcan_printがtrueでなければ後続を進めず、名称等のprinter_infoと、紙・色・両面の能力判定を分ける。monoの展示情報で能力照会を代用しないと明示する。",
+        "URLは直接利用し、uploadFileは原稿をCDNアドレスへ変えると説明する。原稿を外部へ渡す範囲、保持/削除・共有条件、deviceの自動補完で選ばれる実機は未確認。",
+        "部数は1を既定とし、A4画像は文書向けを優先し、A4写真紙は明示確認時だけとする。photoでは両面・ページ範囲・奇偶指定が無視されるという注意がある。",
+        "作成応答から番号を取り5〜10秒後に状態照会し、受付/待機/処理中等なら提出成功と案内して通常は終了する。これは実紙の出力完了や指定ページの品質確認ではない。",
+        "継続追跡時の10〜15秒間隔・5分上限、upload再試行2回までを示す。これらは原手順の数値で、現在PCの監督や依頼の完了条件を一律に打ち切る根拠にはならない。",
+        "schema外の項目を作らないとする一方、実schema・応答不明時の作成重複防止やcancelの成立条件は可視範囲から確認できない。"
+      ],
+      "git_blob": "b774f37aaf2604c81c8bf43f474ca71a0858dfc5",
+      "inventory_id": "github:3893dc6ee7273733f8a96e79d03f037fdf02a03e34f81f09fdce0cd7ed53e0bf",
+      "member_metadata": [
+        {
+          "bytes": 6608,
+          "commit": "920714f17d81e0a95c7a9bc51faf0a7921cd982d",
+          "git_blob": "b774f37aaf2604c81c8bf43f474ca71a0858dfc5",
+          "inventory_id": "github:3893dc6ee7273733f8a96e79d03f037fdf02a03e34f81f09fdce0cd7ed53e0bf",
+          "path": "skills/zwwz22/xiaobai-print/SKILL.md",
+          "repo": "6mile/skills",
+          "sha256": "008a79804031ec63aea2a70e1732659ec4aaba80a69968e22ad634f6194981d2"
+        }
+      ],
+      "member_occurrences": 1,
+      "negative": "online表示だけで写真紙・両面を推測し、原稿を未確認のCDNへ送り、キュー入りを印刷完了と呼び、応答が遅いので同じ原稿を再作成する。",
+      "new_copy_grants": 0,
+      "new_final_disposition": false,
+      "path": "skills/zwwz22/xiaobai-print/SKILL.md",
+      "positive": "指定機器の実能力に合う原稿設定で1件作成し、同じ番号で受付状態を確認し、出力完了が必要ならその状態まで追って結果を区別して報告する。",
+      "read": {
+        "failed_view_calls": 0,
+        "mask_version": "primaryflow-v4-opaque-lexical-boundaries",
+        "ranges": [
+          {
+            "first": 1,
+            "range_sha256": "56881a0de62b474a6117ca8d3a0195479ff90c8a986ca331c06629452b8799dc",
+            "through": 153,
+            "visible_lines": 136,
+            "withheld_physical_lines": [
+              1,
+              2,
+              3,
+              4,
+              5,
+              6,
+              10,
+              37,
+              70,
+              75,
+              76,
+              82,
+              91,
+              115,
+              119,
+              135,
+              143
+            ]
+          }
+        ],
+        "raw_full": false,
+        "total_physical_lines": 153,
+        "unseen_meanings_remain_unknown": true,
+        "view_calls_returned": 1,
+        "whole_masked_view_sha256": "56881a0de62b474a6117ca8d3a0195479ff90c8a986ca331c06629452b8799dc"
+      },
+      "required_changes": [
+        "実利用では依頼された原稿・実機・枚数/ページ・紙/色/両面と実capabilityを照合する。自動補完された機器情報をそのまま別の実機への許可にせず、photoで無効になる指定を反映する。",
+        "原稿のURL利用とCDNへのuploadをデータ送信として扱い、対象・機密性・利用条件・保持と追加費用の有無を確認する。原の呼出し例を現在の実行許可へ昇格させない。",
+        "作成/再照会/取消を同じ番号と実状態で結び、応答不明を未作成と決めて重複印刷しない。受付・キュー・印刷中・完了・失敗・取消を区別し、依頼が出力完了を求めるならその条件まで追う。",
+        "原の固定回数/時間を全作業の停止上限へ移さず、技術待ちの理由と再開条件を残す。既存の監督経路を使い、本人へPC操作を求める手順にしない。"
+      ],
+      "source_commit": "920714f17d81e0a95c7a9bc51faf0a7921cd982d",
+      "source_repo": "6mile/skills",
+      "source_sha256": "008a79804031ec63aea2a70e1732659ec4aaba80a69968e22ad634f6194981d2",
+      "source_url": "https://github.com/6mile/skills/blob/920714f17d81e0a95c7a9bc51faf0a7921cd982d/skills/zwwz22/xiaobai-print/SKILL.md",
+      "status": "visible_primary_evaluated",
+      "support_body_reads": 0,
+      "unmet": [
+        "伏字17物理行の意味、各memberの文脈・支持・個別許諾・現在実在・最終採否は未確認。",
+        "bridge/支持実装・現行schema/認証・実機/消耗品/費用・CDNの原稿条件・冪等性/取消/実出力・source_or_service_rightsは未確認。支持本文/外部リンク閲覧・device照会・upload・印刷/取消・install・設定・送信・実配置・実使用0。近接比較はremote-run-result-reconciliation、stale-request-orderingの起動metadataだけ。"
+      ],
+      "use": "印刷機の稼働状態と印刷能力を別に確認し、原稿準備・送信・受付状態を追う手順の参考。",
+      "value": "deviceReadyCheckとdeviceGetCapabilityの役割、A4画像のplain/photo選択、印刷受付と最終出力の区別に利用できる。ただし原の終了条件では紙への出力完了までは確認しない。"
+    },
+    {
+      "bytes": 1798,
+      "central_operations": 0,
+      "each_member_context_and_rights_pending": true,
+      "findings": [
+        "本文はcustom SMTP senderのMarkdownからHTMLへの変換、添付・一時失敗時の再送・送信/エラーlogと既存設定の利用を説明する。secure/reliableという宣言、port/useTLSやchmod600だけでは、実TLS方式/証明書検証・保存権限・秘密保護や配送の成功を確認したことにはならない。",
+        "例はMarkdown構文のbodyと--html、attachmentを含むが、実際の変換/文字コード・mail client表示・添付の同一性や送信対象/認証は未確認。伏字の設定/宛先・error handlingを補っていない。",
+        "一時失敗の再送は、既に送信先が受け付けたか不明な場合の重複を防ぐ仕様が未確認。CC/BCC・cronによる予約・templateはFuture Expansionにあり、現実装の機能としない。原の送信/添付/設定・ログ保存は実行していない。"
+      ],
+      "git_blob": "c0526c8c541746ca745eae7d62fdd2c37d938418",
+      "inventory_id": "github:43ee72a701c4cf83b055e7b5e72fb7419ff25ea7c03867e4b8936aff9c2f917b",
+      "member_metadata": [
+        {
+          "bytes": 1798,
+          "commit": "920714f17d81e0a95c7a9bc51faf0a7921cd982d",
+          "git_blob": "c0526c8c541746ca745eae7d62fdd2c37d938418",
+          "inventory_id": "github:43ee72a701c4cf83b055e7b5e72fb7419ff25ea7c03867e4b8936aff9c2f917b",
+          "path": "skills/scccmsd/custom-smtp-sender/SKILL.md",
+          "repo": "6mile/skills",
+          "sha256": "01c5f46fb85f73600a1c24049fa4413c5e28108792af5668ccbff3df8aef5fc9"
+        }
+      ],
+      "member_occurrences": 1,
+      "negative": "secureと書かれているので設定/ログは安全とし、timeoutで同じメールを再送し続け、送信logだけで配達済みと報告する。",
+      "new_copy_grants": 0,
+      "new_final_disposition": false,
+      "path": "skills/scccmsd/custom-smtp-sender/SKILL.md",
+      "positive": "指定した同じ本文/添付と宛先を保ち、変換後の実表示・送信受付と配送状態/不明を分けて、再送の重複と保護した監査記録を確認する設計にする。",
+      "read": {
+        "failed_view_calls": 0,
+        "mask_version": "primaryflow-v4-opaque-lexical-boundaries",
+        "ranges": [
+          {
+            "first": 1,
+            "range_sha256": "d8ecfcc2b2b24289224780c0806c1895852233c60b6f8864725f817af4e7d1c3",
+            "through": 57,
+            "visible_lines": 46,
+            "withheld_physical_lines": [
+              1,
+              2,
+              3,
+              4,
+              17,
+              24,
+              25,
+              26,
+              36,
+              42,
+              50
+            ]
+          }
+        ],
+        "raw_full": false,
+        "total_physical_lines": 57,
+        "unseen_meanings_remain_unknown": true,
+        "view_calls_returned": 1,
+        "whole_masked_view_sha256": "37393f7ad49b36e8e8063835e898186fe200e8c3e33c42e77f1094b0738c2dbf"
+      },
+      "required_changes": [
+        "実際に指示された送信者/宛先・目的・本文/添付版と許可範囲を照合し、本文や見本だけを送信許可にしない。新認証/新費用や無関係な添付/秘密/顧客情報へ広げず、本研究からメールを送らない。",
+        "本文の形式/変換と実表示・日本語/文字コード、添付の型/内容/同一性を確かめる設計にし、既存の許可された接続と実TLS/保存条件へ合わせる。原設定や秘密値を出力しない。",
+        "作成/送信受付/配送失敗・不明を分け、同じ送信の識別・実結果と有限再試行/重複を照合する。Message-IDやlogだけで配達済みとせず、必要な最小記録を保護し、未実装のCC/BCC/定期送信を自動追加しない。"
+      ],
+      "source_commit": "920714f17d81e0a95c7a9bc51faf0a7921cd982d",
+      "source_repo": "6mile/skills",
+      "source_sha256": "01c5f46fb85f73600a1c24049fa4413c5e28108792af5668ccbff3df8aef5fc9",
+      "source_url": "https://github.com/6mile/skills/blob/920714f17d81e0a95c7a9bc51faf0a7921cd982d/skills/scccmsd/custom-smtp-sender/SKILL.md",
+      "status": "visible_primary_evaluated",
+      "support_body_reads": 0,
+      "unmet": [
+        "全57物理行のうち可視46行を評価した。伏字11行の意味、実設定/認証/TLS/保存・本文変換/表示/添付/配送/再送・log保護/現機能/費用と実効果は未確認。",
+        "source_or_service_rightsと各memberの文脈・支持・個別許諾・現在実在・採否は未確認。"
+      ],
+      "use": "明示されたメール送信で、本文の変換・添付・送信受付/配送と再試行・最小限の監査記録を分ける設計を検討するとき。",
+      "value": "本文形式と添付を入力として扱い、送信失敗の段階と監査を結ぶ観点は、誤送信・重複送信や本文の表示不一致を調べる参考になる。"
+    },
+    {
+      "bytes": 3856,
+      "central_operations": 0,
+      "each_member_context_and_rights_pending": true,
+      "findings": [
+        "本文はQuestradeのbrowser取引を人手で実行し、Yahoo Financeでquoteを別確認、準備/検証/監視artifactを自動化する案。現在の無人運用で本人へPC操作を求めず、実結果を確認する方針へ調整が必要で、この研究からbroker/UIへアクセスしていない。",
+        "stale snapshotの閾値、risk cap/freshness/drift、side/quantity/order type/TIF・exit・buying power/既存注文等のcheckを挙げるが、具体基準や実tool/取得経路の一部は伏字。policy-ackというflagや一般的なacknowledgementは、本人の具体資産/数量・新支出や実発注の承認ではない。",
+        "Yahooを二次情報、brokerを実行情報と分ける一方、提出済みはhuman確認があるときだけとする。人の確認やconfirmation IDだけで実受付/約定・残数量/stop状態が確認されたとは限らず、同時点/同銘柄/通貨等をそろえた価格比較や情報源の独立性も未検証。",
+        "識別値をmaskし、明示依頼ならrawをlocal-onlyで含められるという案がある。localという呼称は秘密/個人金融情報の保護を保証しない。実口座/取引/資産・秘密/本人のカード情報やbroker exportは参照せず、script/保存・発注も実行していない。"
+      ],
+      "git_blob": "3a4a0894ce06f236e59b788806eaa4f6f24fb018",
+      "inventory_id": "github:9d32591990f08abbe2927f4fe7866abf60f954cdf7e9264108a75db2eabbbc3a",
+      "member_metadata": [
+        {
+          "bytes": 3856,
+          "commit": "920714f17d81e0a95c7a9bc51faf0a7921cd982d",
+          "git_blob": "3a4a0894ce06f236e59b788806eaa4f6f24fb018",
+          "inventory_id": "github:9d32591990f08abbe2927f4fe7866abf60f954cdf7e9264108a75db2eabbbc3a",
+          "path": "skills/witty-quotes25/openclaw-questrade/SKILL.md",
+          "repo": "6mile/skills",
+          "sha256": "01c81715c66832d2af6868d6b337fc6f520bdebf50faf14a67504fb7435aec2f"
+        }
+      ],
+      "member_occurrences": 1,
+      "negative": "policy-ack flagと人の一言で発注済みとし、二次価格のsnapshotを約定値に置き換え、本人へPCで注文するよう求める。",
+      "new_copy_grants": 0,
+      "new_final_disposition": false,
+      "path": "skills/witty-quotes25/openclaw-questrade/SKILL.md",
+      "positive": "同じ対象と時点のsnapshot/注文条件・欠測を残し、brokerの実受付と約定/残数量・取消を別に照合して、確認できた範囲だけを報告する設計にする。",
+      "read": {
+        "failed_view_calls": 0,
+        "mask_version": "primaryflow-v4-opaque-lexical-boundaries",
+        "ranges": [
+          {
+            "first": 1,
+            "range_sha256": "f7a5214cfa60cc0673944a393993bc9a2c471167cc0f8de2fba5e4b4e4e31a66",
+            "through": 62,
+            "visible_lines": 40,
+            "withheld_physical_lines": [
+              1,
+              2,
+              3,
+              4,
+              12,
+              13,
+              14,
+              15,
+              16,
+              20,
+              22,
+              24,
+              25,
+              26,
+              28,
+              46,
+              47,
+              54,
+              55,
+              59,
+              60,
+              61
+            ]
+          }
+        ],
+        "raw_full": false,
+        "total_physical_lines": 62,
+        "unseen_meanings_remain_unknown": true,
+        "view_calls_returned": 1,
+        "whole_masked_view_sha256": "f7a5214cfa60cc0673944a393993bc9a2c471167cc0f8de2fba5e4b4e4e31a66"
+      },
+      "required_changes": [
+        "元の依頼と既存回答・実口座/資産の識別・side/数量/通貨・注文条件/費用の許可範囲を保持する。人手提出や固定flagを現在の許可手順へそのまま移さず、本人へPC操作を求めない。この研究から新しい金融判断の質問や発注をしない。",
+        "取得時刻/市場session・銘柄/通貨/価格の基準と閾値の根拠を対応させ、古い/未取得/不一致を残す。checklistやdeterministic scriptの存在を実検証とせず、未確認の値・伏字の条件を補わない。",
+        "準備・実受付・部分約定/取消/残数量・費用と監視/再開・重複注文を同じID/対象で照合する。実審査の拒否や支出制限を変更/迂回せず、技術調査は継続する。必要な識別だけを保護して保持し、raw exportを無関係な記録へ出さない。"
+      ],
+      "source_commit": "920714f17d81e0a95c7a9bc51faf0a7921cd982d",
+      "source_repo": "6mile/skills",
+      "source_sha256": "01c81715c66832d2af6868d6b337fc6f520bdebf50faf14a67504fb7435aec2f",
+      "source_url": "https://github.com/6mile/skills/blob/920714f17d81e0a95c7a9bc51faf0a7921cd982d/skills/witty-quotes25/openclaw-questrade/SKILL.md",
+      "status": "visible_primary_evaluated",
+      "support_body_reads": 0,
+      "unmet": [
+        "全62物理行のうち可視40行を評価した。伏字22行の意味、実broker/tool/認証・データ鮮度/独立性/閾値・注文/約定/残数量/監視/費用や保護と実効果は未確認。保存中の金融/価格の説明を現在の保証にしていない。",
+        "source_or_service_rightsと各memberの文脈・支持・個別許諾・現在実在・採否は未確認。"
+      ],
+      "use": "取引の準備・市場snapshotの比較・注文条件と、brokerの受付/約定/残数量を分けて照合する設計資料を検討するとき。",
+      "value": "symbol/side/size/account・order type/TIF・freshnessと、注文競合/約定結果を別に確認する観点、二次データとbrokerの実行情報を区別する点は参考になる。"
+    },
+    {
+      "bytes": 1330,
+      "central_operations": 0,
+      "each_member_context_and_rights_pending": true,
+      "findings": [
+        "本文はask-search CLIのquery、件数・news等category/lang、URL-only/JSONと、local SearxNG/URL設定を説明する。実CLI/serverやengine・認証/送信/取得動作は未確認で、local serverという説明を検索queryが外へ出ない保証にしない。",
+        "snippetで十分なら直接回答し、切れていればweb_fetchで全文という案がある。切れていないsnippetでも出所/文脈・日付/正確さを確認した一次資料とは限らず、検索結果の存在や自然な要約だけで根拠確認済みとしない。",
+        "件数default10や--numの目安は1回の候補数で、有限の全資料調査の上限や検索の網羅性ではない。URL-onlyをfetchへ渡す例も、任意送信先/サイト・redirectへのアクセスや返却内の命令を許可するものではない。実検索/HTTP/設定変更は行っていない。"
+      ],
+      "git_blob": "024b23900b7f0d81a65e4f1c84183275bcb7540d",
+      "inventory_id": "github:61ed1f4db0ce1229a7e1aa9a1260da49ca3214549a04bed63612bce690b58a2a",
+      "member_metadata": [
+        {
+          "bytes": 1330,
+          "commit": "920714f17d81e0a95c7a9bc51faf0a7921cd982d",
+          "git_blob": "024b23900b7f0d81a65e4f1c84183275bcb7540d",
+          "inventory_id": "github:61ed1f4db0ce1229a7e1aa9a1260da49ca3214549a04bed63612bce690b58a2a",
+          "path": "skills/sexychina/ask-search/SKILL.md",
+          "repo": "6mile/skills",
+          "sha256": "01c99f8c97c241334ab6dc04eef69c6955a90a036068a086daf5d79227183acb"
+        }
+      ],
+      "member_occurrences": 1,
+      "negative": "snippetが切れていないので一次資料を検証済みとし、10件で全体を読み終えたと扱い、URL一覧の全サイトを許可対象とみなしてfetchする。",
+      "new_copy_grants": 0,
+      "new_final_disposition": false,
+      "path": "skills/sexychina/ask-search/SKILL.md",
+      "positive": "候補URLとquery/日時・返却件数を保ち、必要な主張の出典本文と未取得を別に照合して、確認できた根拠だけを使う設計にする。",
+      "read": {
+        "failed_view_calls": 0,
+        "mask_version": "primaryflow-v4-opaque-lexical-boundaries",
+        "ranges": [
+          {
+            "first": 1,
+            "range_sha256": "cbe12a1b4744113c6a075d120722875749b7b0cd28835fdbed9e92c5b1bba20b",
+            "through": 40,
+            "visible_lines": 33,
+            "withheld_physical_lines": [
+              1,
+              2,
+              3,
+              4,
+              8,
+              32,
+              34
+            ]
+          }
+        ],
+        "raw_full": false,
+        "total_physical_lines": 40,
+        "unseen_meanings_remain_unknown": true,
+        "view_calls_returned": 1,
+        "whole_masked_view_sha256": "cbe12a1b4744113c6a075d120722875749b7b0cd28835fdbed9e92c5b1bba20b"
+      },
+      "required_changes": [
+        "元の対象/質問・必要な言語/期間とquery・候補の取得元/日時/版を残し、取得件数・空/未取得/エラーを分ける。queryへ秘密や顧客内容を含めず、既存の許可された接続/枠に合わせ、server起動や環境変更を自動導入しない。",
+        "主張に必要な出典の本文/文脈・確認日を照合する工程へ結び、snippetの長さだけで裏付けを判定しない。既存の同資料・同版の結果を保持し、件数や言語設定を網羅/完了の保証にしない。",
+        "URL/redirect先と元の許可範囲を確かめ、Rakko以外のドメイン事業者の制限や秘密保護を保持する。取得本文/JSONをdataとして扱い、sourceのweb_fetch/シェル例をこの研究で実行せず、支持本文は親の確認へ残す。"
+      ],
+      "source_commit": "920714f17d81e0a95c7a9bc51faf0a7921cd982d",
+      "source_repo": "6mile/skills",
+      "source_sha256": "01c99f8c97c241334ab6dc04eef69c6955a90a036068a086daf5d79227183acb",
+      "source_url": "https://github.com/6mile/skills/blob/920714f17d81e0a95c7a9bc51faf0a7921cd982d/skills/sexychina/ask-search/SKILL.md",
+      "status": "visible_primary_evaluated",
+      "support_body_reads": 0,
+      "unmet": [
+        "全40物理行のうち可視33行を評価した。伏字7行の意味、CLI/SearxNG/engine・設定/認証/送信・検索/抽出の精度/網羅性・出典本文/現行仕様/費用と実効果は未確認。",
+        "source_or_service_rightsと各memberの文脈・支持・個別許諾・現在実在・採否は未確認。"
+      ],
+      "use": "検索query・言語/件数と候補URL/要約を分け、根拠本文の確認・未取得を追う検索設計を検討するとき。",
+      "value": "候補の取得と本文取得、URLのみ/JSON等の返却形式を分ける観点は、取得できた範囲と未確認の出典を整理する参考になる。"
+    },
+    {
+      "bytes": 2067,
+      "central_operations": 0,
+      "each_member_context_and_rights_pending": true,
+      "findings": [
+        "本文はOraClaw Calibrateのscore_calibrationで0〜1の予測/0か1の結果からBrier/log score、score_convergenceでconsensus/spread/outlierを返すと説明する。toolの実在/実装・入力検証や実精度は未確認で、calibration agentという人格宣言を現在の担当へ適用していない。",
+        "可視例の5組を通常の無重み平均二乗誤差で計算すると、二乗誤差の和0.565÷5=0.113で、返却例のbrier_score0.082とは一致しない。別の重み/定義等があるかは未確認で、この例だけでexcellentと評価しない。",
+        "Brierのexcellent/good等の固定境界、convergenceの0.7/0.5、Hellinger距離によるoutlierとliquidity-weighted consensusを挙げる。閾値・集計/重み/独立性や適用対象の根拠は未確認で、多数の一致や高流動性を予測の正しさ/少数sourceの誤りと同一視しない。",
+        "price欄の内容は伏字で、無料や特定の認証/API方式を補っていない。小さなBrier値だけで確率のcalibration全体や未観測の将来/市場の安全性を保証しない。実tool呼出し・市場/positionの参照・課金や外送は行っていない。"
+      ],
+      "git_blob": "5f09edb52507ef4030af56a953bd779b5524a958",
+      "inventory_id": "github:dec72b3f62739d18279b97c01ff35962a1574dbe6bee8a71dc1d2fcccd9c0cae",
+      "member_metadata": [
+        {
+          "bytes": 2067,
+          "commit": "920714f17d81e0a95c7a9bc51faf0a7921cd982d",
+          "git_blob": "5f09edb52507ef4030af56a953bd779b5524a958",
+          "inventory_id": "github:dec72b3f62739d18279b97c01ff35962a1574dbe6bee8a71dc1d2fcccd9c0cae",
+          "path": "skills/whatsonyourmind/oraclaw-calibrate/SKILL.md",
+          "repo": "6mile/skills",
+          "sha256": "01cc5b6efbc32a055115faabc4e8e5c23f86da1eec6bbc7a462a1b5966e7e016"
+        }
+      ],
+      "member_occurrences": 1,
+      "negative": "返却例0.082を検算せずexcellentとし、多数sourceが一致したので真実、outlierは必ず誤りと判断して市場の安全性まで保証する。",
+      "new_copy_grants": 0,
+      "new_final_disposition": false,
+      "path": "skills/whatsonyourmind/oraclaw-calibrate/SKILL.md",
+      "positive": "同じ予測/確定結果を明示した式・重みで再計算し、未確定とscore・sourceの一致/不一致を分け、例示数値と実返却を照合する設計にする。",
+      "read": {
+        "failed_view_calls": 0,
+        "mask_version": "primaryflow-v4-opaque-lexical-boundaries",
+        "ranges": [
+          {
+            "first": 1,
+            "range_sha256": "bb63d85be6dc3f9c9aead8ddcb122c325a2ffc3e4fcb417db361b5036a9509a2",
+            "through": 68,
+            "visible_lines": 44,
+            "withheld_physical_lines": [
+              1,
+              2,
+              3,
+              4,
+              5,
+              6,
+              7,
+              8,
+              9,
+              10,
+              11,
+              12,
+              13,
+              14,
+              15,
+              16,
+              17,
+              18,
+              19,
+              20,
+              21,
+              22,
+              23,
+              68
+            ]
+          }
+        ],
+        "raw_full": false,
+        "total_physical_lines": 68,
+        "unseen_meanings_remain_unknown": true,
+        "view_calls_returned": 1,
+        "whole_masked_view_sha256": "bb63d85be6dc3f9c9aead8ddcb122c325a2ffc3e4fcb417db361b5036a9509a2"
+      },
+      "required_changes": [
+        "同じイベント/予測時点・horizon/結果確定の定義と入力版を対応させ、未確定/欠測・0/1/範囲外・配列長不一致を分ける。可視の数値例と式・重みの仕様を再計算でそろえ、logの符号/底や端点/clip等の未確認を残す。",
+        "同じ評価集合・baseline/件数・集計と重み/選択条件を保ち、scoreの良さとcalibration・source間agreementを別に評価する。sourceの出所/依存や不一致の理由を調べ、固定閾値やliquidityだけで正誤を決めない。",
+        "既存の許可された評価範囲/接続・利用枠に合わせ、伏字の料金/認証や新契約・AI APIキーを推測して導入しない。人格/他tool起動や新しい市場判断へ広げず、個別条件・実装/実効果の確認を親へ残す。"
+      ],
+      "source_commit": "920714f17d81e0a95c7a9bc51faf0a7921cd982d",
+      "source_repo": "6mile/skills",
+      "source_sha256": "01cc5b6efbc32a055115faabc4e8e5c23f86da1eec6bbc7a462a1b5966e7e016",
+      "source_url": "https://github.com/6mile/skills/blob/920714f17d81e0a95c7a9bc51faf0a7921cd982d/skills/whatsonyourmind/oraclaw-calibrate/SKILL.md",
+      "status": "visible_primary_evaluated",
+      "support_body_reads": 0,
+      "unmet": [
+        "全68物理行のうち可視44行を評価した。伏字24行の意味、tool/数式/重み/clip・入力/欠測処理・閾値/独立性/評価精度/現行料金/認証と実効果は未確認。数値例の可視5組の再計算と実toolの検証は区別する。",
+        "source_or_service_rightsと各memberの文脈・支持・個別許諾・現在実在・採否は未確認。"
+      ],
+      "use": "同じ予測対象/期間と確定結果について、予測score・情報源間の一致/相違を分けて検証する評価設計を検討するとき。",
+      "value": "予測の実績との対応と、複数sourceのagreementを別toolに分ける観点は、合意を正しさと誤認せず評価の根拠を整理する参考になる。"
+    },
+    {
+      "bytes": 8583,
+      "central_operations": 0,
+      "each_member_context_and_rights_pending": true,
+      "findings": [
+        "本文はvisitor/resident/nomad/worker/student/entrepreneur等のroleとtimelineを確認し、住居・交通/food/文化/法律・visa/仕事/医療/教育等の補助ファイルへ案内する。索引の記載は参照先の存在/本文・品質/利用条件や各話題の実調査を確認した事実ではなく、この群では補助資料を開いていない。",
+        "Current DataをFeb2026とし、家賃/給与/交通/食事価格、visaの所得条件や税率/日数等を記す。保存中の数値・制度名・一行の要約は、現在の法/税/在留・個人の資格/適用条件、実契約/相場/費用を確認した証拠ではない。",
+        "欧州のtop destination、賃金比の物価/住宅危機・賃料上昇/平均給与等の一般説明や、profileごとのbest neighborhoodを示す。比較の基準/出所・期間/集計範囲、本人の通勤/家族/予算/必要条件を検証したものではなく、地域名と属性だけで適合を決めない。",
+        "季節の気温/混雑/価格、交通や坂・暑さ、治安/賃貸詐欺/営業時間・日帰りの目安を挙げるが、指定日の実天候・運行/空き/営業・安全を保証しない。人数や周遊数の目安を本人の範囲の上限にせず、単に物件を見たことだけで契約/所有や送金先の正当性が確認されたとしない。",
+        "文化や言語について国/世代・時間感覚/言語の使用を一般化する表現がある。個々の人や店・地域の状況を確認した事実ではなく、固定観念や断言を案内へそのまま移さない。本文のload/現在情報を提供するという役割宣言も、外部取得や新しい本人質問・予約/申請の指示へ適用していない。"
+      ],
+      "git_blob": "900c6c32889b57e60100f5c2a630ee46cf6df4a9",
+      "inventory_id": "github:c6d879ac98fb5dda3c7cfd9f396f636ca00d69bd10695113da0a4f945d95022c",
+      "member_metadata": [
+        {
+          "bytes": 8583,
+          "commit": "920714f17d81e0a95c7a9bc51faf0a7921cd982d",
+          "git_blob": "900c6c32889b57e60100f5c2a630ee46cf6df4a9",
+          "inventory_id": "github:c6d879ac98fb5dda3c7cfd9f396f636ca00d69bd10695113da0a4f945d95022c",
+          "path": "skills/ivangdavila/lisbon/SKILL.md",
+          "repo": "6mile/skills",
+          "sha256": "01ceba30da91e0543ee620b1183365d636dedd1529e8b5739549725611d4be97"
+        }
+      ],
+      "member_occurrences": 1,
+      "negative": "Feb2026の価格やvisa/税の一行説明を現在の本人の条件へ無条件に当てはめ、profile別best地域と文化の断言だけで移住先を決め、契約/予約を進める。",
+      "new_copy_grants": 0,
+      "new_final_disposition": false,
+      "path": "skills/ivangdavila/lisbon/SKILL.md",
+      "positive": "同じ目的・日付と必要条件について、確認できた住居/交通/費用の基準と、制度/個人適用の未確認を分け、出所と時点を保って案内する設計にする。",
+      "read": {
+        "failed_view_calls": 0,
+        "mask_version": "primaryflow-v4-opaque-lexical-boundaries",
+        "ranges": [
+          {
+            "first": 1,
+            "range_sha256": "5c4831e1a139b01b8a83f12de42c75033a473eda9c5a0f6eade920ed74b16071",
+            "through": 180,
+            "visible_lines": 158,
+            "withheld_physical_lines": [
+              1,
+              2,
+              3,
+              4,
+              5,
+              6,
+              7,
+              8,
+              19,
+              20,
+              24,
+              25,
+              26,
+              27,
+              28,
+              29,
+              115,
+              134,
+              135,
+              136,
+              137,
+              152
+            ]
+          },
+          {
+            "first": 181,
+            "range_sha256": "2774ae0161992809b32fd95ca8617bdee435b54accbececa65a6b7c413ee0b4c",
+            "through": 182,
+            "visible_lines": 2,
+            "withheld_physical_lines": []
+          }
+        ],
+        "raw_full": false,
+        "total_physical_lines": 182,
+        "unseen_meanings_remain_unknown": true,
+        "view_calls_returned": 2,
+        "whole_masked_view_sha256": "c536f551d0ef896e6ceea96a28f989e17738723d8a826226c01606967b9ac591"
+      },
+      "required_changes": [
+        "元依頼と既存回答から目的・実際の日付/期間・予算の基準/人数、移動や住居等の必要条件を保持する。roleから本人属性や未指定の要件を作らず、調査で解ける点と本人だけの不足を分け、固定の確認質問や同じ回答の再質問を増やさない。",
+        "法/税/visa・医療等は適用対象/地域・要件/例外/手続/時点の一次情報と個別条件を親の適用確認へ結ぶ。保存版の税率/日数/所得や制度名だけで就労/在留・税務等への適合を判定せず、伏字/未読の内容を補わない。",
+        "費用は総額/通貨・税込/税引前後/周期・初期費用/保証金/取消条件等の基準をそろえ、同じ指定日の住居/交通/営業時間/天候と実行可能な動線・必要な移動条件を照合する。原のレンジ/気候平均/安全やbestの主張を現在の保証にしない。",
+        "文化/地域の評価を具体的な根拠と本人の条件へ戻し、未確認を明示する。個別の支持/許諾と現状確認を親へ残し、この研究では補助本文・外部サイトを開かず、送金・購入/予約・契約/申請や新費用を実行しない。"
+      ],
+      "source_commit": "920714f17d81e0a95c7a9bc51faf0a7921cd982d",
+      "source_repo": "6mile/skills",
+      "source_sha256": "01ceba30da91e0543ee620b1183365d636dedd1529e8b5739549725611d4be97",
+      "source_url": "https://github.com/6mile/skills/blob/920714f17d81e0a95c7a9bc51faf0a7921cd982d/skills/ivangdavila/lisbon/SKILL.md",
+      "status": "visible_primary_evaluated",
+      "support_body_reads": 0,
+      "unmet": [
+        "全182物理行のうち可視160行を評価した。伏字22行の意味、参照する補助本文・出所/統計・現行法/税/在留/医療等の条件と本人への適用・指定日の価格/住居/運行/天候/営業/安全・契約/費用や実効果は未確認。",
+        "source_or_service_rightsと各memberの文脈・支持・個別許諾・現在実在・採否は未確認。"
+      ],
+      "use": "Lisbonへの訪問・滞在/移住・仕事/学習等の目的と時期を分け、住居/交通/予算・行政/医療等の必要な確認項目を整理する設計資料を検討するとき。",
+      "value": "目的/期間と、費用・生活動線・就労/在留など性質の違う条件を別項目へ振り分ける構成は、一般観光情報を個人の移住要件へ流用しないための参考になる。"
+    },
+    {
+      "bytes": 2509,
+      "central_operations": 0,
+      "each_member_context_and_rights_pending": true,
+      "findings": [
+        "本文はOraClaw Evolveの遺伝的アルゴリズムによるportfolio/marketing/ML等の最適化を説明し、populationSize・maxGenerations・geneLength/bounds・選択/交叉/変異・numObjectivesと、chromosome/Pareto frontier/収束世代/時間という返却を挙げる。実tool/API・評価関数/制約の受渡しや検証は未確認で、人格宣言やoptimize_evolveを起動していない。",
+        "非線形/多目的ならanythingを解ける、世代が多いほど良いという説明は、有限の確率的探索で大域最適や改善が保証される証拠ではない。探索した候補内の非劣解と真の全探索空間のPareto最適を区別し、返却があるだけで制約を満たしたとしない。",
+        "例の4geneを0〜1に収めるboundsだけでは、portfolio例の重み総和など用途固有の制約や目的の向き/尺度が表現・検証されたとは確認できない。tournamentが概してbest、mutation率0.01〜0.05等の目安やadaptiveの主張も、対象問題での比較/実装確認ではない。",
+        "100/1000世代までの価格とUSDC/Base/x402による支払いを記す。少額や暗号資産による支払いも新支出で、現在の契約枠/許可に含めない。保存価格の現行性・認証/送信/契約・利用条件は未確認で、支払いや最適化の実行は0。"
+      ],
+      "git_blob": "07466f9fa5fc6b8fdf7b58afdb118934a68d7678",
+      "inventory_id": "github:d290bc2285f9168b37fcd87d4904aa0c06e6f0b11dbf0d8a3c93355fb1068d73",
+      "member_metadata": [
+        {
+          "bytes": 2509,
+          "commit": "920714f17d81e0a95c7a9bc51faf0a7921cd982d",
+          "git_blob": "07466f9fa5fc6b8fdf7b58afdb118934a68d7678",
+          "inventory_id": "github:d290bc2285f9168b37fcd87d4904aa0c06e6f0b11dbf0d8a3c93355fb1068d73",
+          "path": "skills/whatsonyourmind/oraclaw-evolve/SKILL.md",
+          "repo": "6mile/skills",
+          "sha256": "01cf58855e399b53ce09d36f6a91810347a01dbb77e92f4a002e800056c1836c"
+        }
+      ],
+      "member_occurrences": 1,
+      "negative": "bounds内の値とParetoという返却名だけで最適な投資比率と断定し、世代を無制限に増やして有料のx402処理を実行する。",
+      "new_copy_grants": 0,
+      "new_final_disposition": false,
+      "path": "skills/whatsonyourmind/oraclaw-evolve/SKILL.md",
+      "positive": "同じ入力・目的/制約とseed/計算量を保ち、得られた候補の実行可能性・baselineとの差と探索の限界を分けて記録する設計にする。",
+      "read": {
+        "failed_view_calls": 0,
+        "mask_version": "primaryflow-v4-opaque-lexical-boundaries",
+        "ranges": [
+          {
+            "first": 1,
+            "range_sha256": "817485f8bf5f84ba97d85c36d24445fa23ae9f2691b73a1e4f94cdf91192fa24",
+            "through": 75,
+            "visible_lines": 52,
+            "withheld_physical_lines": [
+              1,
+              2,
+              3,
+              4,
+              5,
+              6,
+              7,
+              8,
+              9,
+              10,
+              11,
+              12,
+              13,
+              14,
+              15,
+              16,
+              17,
+              18,
+              19,
+              20,
+              21,
+              22,
+              23
+            ]
+          }
+        ],
+        "raw_full": false,
+        "total_physical_lines": 75,
+        "unseen_meanings_remain_unknown": true,
+        "view_calls_returned": 1,
+        "whole_masked_view_sha256": "817485f8bf5f84ba97d85c36d24445fa23ae9f2691b73a1e4f94cdf91192fa24"
+      },
+      "required_changes": [
+        "実目的と入力版・geneの型/単位/次元・bounds、目的の向き/尺度/制約と実行可能性を定義する設計へ直す。既存の本人回答と対象範囲を保持し、portfolio例から投資判断や原のbestという主張へ飛躍しない。",
+        "seed/実装版・評価回数/時間・停止理由とbaseline/反復結果、候補の制約違反や未取得を分けて照合する。収束表示や多い世代を大域最適/改善保証にせず、必要な資源は実割当と実使用状況へ結ぶ。",
+        "原の有料tool/x402・API呼出しや再委譲を導入せず、既存OAuthサブスク/許可済み枠と個別条件を保持する。新費用・APIキー/恒久権限を使わず、伏字の意味や未確認の実装/権利を親の適用確認へ残す。"
+      ],
+      "source_commit": "920714f17d81e0a95c7a9bc51faf0a7921cd982d",
+      "source_repo": "6mile/skills",
+      "source_sha256": "01cf58855e399b53ce09d36f6a91810347a01dbb77e92f4a002e800056c1836c",
+      "source_url": "https://github.com/6mile/skills/blob/920714f17d81e0a95c7a9bc51faf0a7921cd982d/skills/whatsonyourmind/oraclaw-evolve/SKILL.md",
+      "status": "visible_primary_evaluated",
+      "support_body_reads": 0,
+      "unmet": [
+        "全75物理行のうち可視52行を評価した。伏字23行の意味、tool/評価関数/制約・適応変異/seed/収束と実精度/性能・現行価格/認証/費用や実効果は未確認。",
+        "source_or_service_rightsと各memberの文脈・支持・個別許諾・現在実在・採否は未確認。"
+      ],
+      "use": "複数の目的が競合する探索で、入力・評価関数/制約と、得られた候補/計算量を分けて比較する設計を検討するとき。",
+      "value": "population/generation・geneのboundsとselection/crossover/mutation、複数目的のtradeoffを別に記録する構成は、探索結果の再現条件と未達条件を整理する参考になる。"
+    },
+    {
+      "bytes": 14496,
+      "central_operations": 0,
+      "each_member_context_and_rights_pending": true,
+      "findings": [
+        "OPC Essentialsはone-person company向けのoperating layerを掲げ、daily brief/triage・sales準備/返信/提案・pipeline/retention/請求・automation案・週月review/decision/handoff・priority/revenue/relationship/end-of-day等19形式を説明する。本文は出力項目/文章のroutingで、実業務システム・自動連携や収益/負担軽減の効果を確認した証拠ではない。",
+        "文脈からmodeを推定して進み、context不十分でも仮定して実用的な出力を返すという原則がある。形式や内部の整理方法は選べるが、担当/合意期限・顧客の意向/関係の温度・未払/更新/収益リスクまで確認済みの事実として補ってよいわけではない。",
+        "top3・fewer priorities・一つのstrong actionやignore/pause/stop/deferを推す。要約の強調と元の仕事の停止/削除は別で、現在の本人の部署優先順位や依存・全件研究/未完了保持を、原の件数やcash優先で置き換えない。",
+        "メール/請求催促・提案/renewal・upsellの下書きとwhat to send等を挙げるが、原文の出力例は送信・新費用/価格・顧客との約束を行う許可ではない。実client/財務記録・メールの参照や対外送信はしておらず、本文の境界/仮定も本人/相手の承認済み条件としない。",
+        "Zapier/Make/n8n等の提案や不安定な工程は自動化を勧めないという方針を含む。実際の発火/作用・重複/失敗/復旧と効果は未確認で、既存の司令塔/定期処理を別に増やす根拠ではない。premium・quality bar・使える文体という説明から料金/許諾・実装品質を保証しない。"
+      ],
+      "git_blob": "24d8dc9df8f8f2d5d8f29c1127162cfcce92ed57",
+      "inventory_id": "github:7695dbb11ac934c1a93d3e0e40f6539f35ee3265ad7be84a7f7b59bbe37a4e8b",
+      "member_metadata": [
+        {
+          "bytes": 14496,
+          "commit": "920714f17d81e0a95c7a9bc51faf0a7921cd982d",
+          "git_blob": "24d8dc9df8f8f2d5d8f29c1127162cfcce92ed57",
+          "inventory_id": "github:7695dbb11ac934c1a93d3e0e40f6539f35ee3265ad7be84a7f7b59bbe37a4e8b",
+          "path": "skills/atwatcher/opc-essentials/SKILL.md",
+          "repo": "6mile/skills",
+          "sha256": "01cfea116a43544be87488af22da7afd448f1301dc876f37e1b22ae4182fcf58"
+        }
+      ],
+      "member_occurrences": 1,
+      "negative": "不十分なcontextを埋めて顧客が合意した期限や未払を捏造し、top3以外の依頼を消し、提案メールの下書きだけで業務を完了とする。",
+      "new_copy_grants": 0,
+      "new_final_disposition": false,
+      "path": "skills/atwatcher/opc-essentials/SKILL.md",
+      "positive": "同じ業務記録と既存回答から、合意した担当/期限・未決と提案を分け、下書きの版・実際の送信/履行結果・残る工程を追う設計にする。",
+      "read": {
+        "failed_view_calls": 0,
+        "mask_version": "primaryflow-v4-opaque-lexical-boundaries",
+        "ranges": [
+          {
+            "first": 1,
+            "range_sha256": "d40ec5b2881ce9f6d785d034a3961a6b9d1bf6e5e0c1ce8dde7c162796d2f877",
+            "through": 180,
+            "visible_lines": 165,
+            "withheld_physical_lines": [
+              1,
+              2,
+              3,
+              4,
+              5,
+              6,
+              7,
+              8,
+              9,
+              10,
+              11,
+              12,
+              13,
+              14,
+              15
+            ]
+          },
+          {
+            "first": 181,
+            "range_sha256": "7682d0bb4200762fe2c8391a4ed0ad0ba1e2c2e931118d76aaca5e953d9920ae",
+            "through": 360,
+            "visible_lines": 180,
+            "withheld_physical_lines": []
+          },
+          {
+            "first": 361,
+            "range_sha256": "0289368a6c2902c33383ce9ffc281304f8a25a52c88640c841fc064ec00933d8",
+            "through": 505,
+            "visible_lines": 145,
+            "withheld_physical_lines": []
+          }
+        ],
+        "raw_full": false,
+        "total_physical_lines": 505,
+        "unseen_meanings_remain_unknown": true,
+        "view_calls_returned": 3,
+        "whole_masked_view_sha256": "42977ea614c204ebed4c783e1d9e527a796869b21e9be228bc7020b78502e9ad"
+      },
+      "required_changes": [
+        "元依頼/既存本人回答と出所・対象/版を保持し、確認事実・提案/仮定・明示合意・担当裁量・未決を分ける。合意期限/請求入金/顧客状態は根拠へ結び、技術的に調べられる不足と本人だけの未指定判断を分け、同じ質問を重ねない。",
+        "件数や原の優先基準を全体の打切り/停止へ移さず、現在の優先順位・依存と全未完了を保持する。整理/下書き/引継ぎと、実操作・検証/配送・履行を分け、文書や提案の存在だけで元依頼を完了にしない。",
+        "送信者/宛先・下書き版/添付・対外約束の範囲を実指示と照合する設計にし、顧客内容や秘密/本人カードを無関係な記録へ出さない。新契約/費用・約束・未指定製品/権利を自動採用せず、本人向け文体は現在の日本語方針へ合わせる。",
+        "automationは既存の対象/担当/定期処理と、発火・入力/出力・重複/失敗/再開・受入を具体化し、実際の動作/効果で判断する。提案だけの新システムや監視・再委譲へ変えず、不安定な原因は許可済み範囲で調べ、本人へPC作業を戻さない。"
+      ],
+      "source_commit": "920714f17d81e0a95c7a9bc51faf0a7921cd982d",
+      "source_repo": "6mile/skills",
+      "source_sha256": "01cfea116a43544be87488af22da7afd448f1301dc876f37e1b22ae4182fcf58",
+      "source_url": "https://github.com/6mile/skills/blob/920714f17d81e0a95c7a9bc51faf0a7921cd982d/skills/atwatcher/opc-essentials/SKILL.md",
+      "status": "visible_primary_evaluated",
+      "support_body_reads": 0,
+      "unmet": [
+        "全505物理行のうち可視490行を評価した。伏字15行の意味、実業務データ/合意・請求/関係/優先判断の正確さ、各連携/送信/自動化・費用/契約と実効果は未確認。",
+        "source_or_service_rightsと各memberの文脈・支持・個別許諾・現在実在・採否は未確認。"
+      ],
+      "use": "許可された業務記録から、優先順位・提案/連絡の下書き、合意した次の工程や請求/更新状況を分けて整理する出力設計を検討するとき。",
+      "value": "follow-upの担当/時期/未決、提案のdeliverables/仮定/除外、週/月の未完了と次の行動を対応させる構成は、合意や途中成果を失わず再開する参考になる。"
+    },
+    {
+      "bytes": 8104,
+      "central_operations": 0,
+      "each_member_context_and_rights_pending": true,
+      "findings": [
+        "本文は訪問/移住/居住/事業の4modeと、地域・county/ZIP/学区等で条件を区別し、行政/税/免許/災害は現行の公式資料で確認する方針を説明する。参照索引は補助本文や現制度・実地域条件を読んだ証拠ではなく、今回は未読のまま保持する。",
+        "移動距離を運転時間/疲労/天候へ、州所得税の説明を住居/固定資産税・保険/料金/電力等の総費用へ結ぶ観点がある。州の説明・危険の列挙だけでは、実日の運行/交通/気象・個別保険/資格/税/法令の適用を保証しない。",
+        "public pageの照会やlocation条件だけを外送、その他はlocalに保持しNo other data is sentとするが、endpoint表の複数行や一部の禁止欄は伏字。実接続/通信・保存/保持や秘密保護を検証したわけではなく、伏字の宛先/認証・送信範囲を補っていない。",
+        "継続用の独自memory作成前と変更のたびの確認、補助資料の読込み、related skillのinstall/star/syncを挙げる。これらは現在の担当への保存/外部取得/導入指示ではなく、今回のread-only境界や既存の許可済み技術操作へ新しい再承認待ちを加えない。"
+      ],
+      "git_blob": "af08bbd95aa6e8cfbb1fd7592fa34b4c3626d10b",
+      "inventory_id": "github:ff2394c773d45883530d14e83f1075eabc24c526e6e499fa3cbdb6ce43e91c7f",
+      "member_metadata": [
+        {
+          "bytes": 8104,
+          "commit": "920714f17d81e0a95c7a9bc51faf0a7921cd982d",
+          "git_blob": "af08bbd95aa6e8cfbb1fd7592fa34b4c3626d10b",
+          "inventory_id": "github:ff2394c773d45883530d14e83f1075eabc24c526e6e499fa3cbdb6ce43e91c7f",
+          "path": "skills/ivangdavila/texas/SKILL.md",
+          "repo": "6mile/skills",
+          "sha256": "01d237487a6e590b30b448547ccca9ee51f509fc5716b32b620608485c7ba48e"
+        }
+      ],
+      "member_occurrences": 1,
+      "negative": "州全体の説明で任意の地域の安全/費用/制度適合を保証し、local保存なので漏洩はないとし、伏字のendpointを推測して私的なlocationを送る。",
+      "new_copy_grants": 0,
+      "new_final_disposition": false,
+      "path": "skills/ivangdavila/texas/SKILL.md",
+      "positive": "同じ日付と目的について、州の規則と地域固有の条件・実移動/費用を分け、確認元と未取得・個人適用の未確認を記録する設計にする。",
+      "read": {
+        "failed_view_calls": 0,
+        "mask_version": "primaryflow-v4-opaque-lexical-boundaries",
+        "ranges": [
+          {
+            "first": 1,
+            "range_sha256": "f2b116e43ba18cd6e3353c018996d2abc2161c52df0170e9ee1a01360b9b2a20",
+            "through": 139,
+            "visible_lines": 114,
+            "withheld_physical_lines": [
+              1,
+              2,
+              3,
+              4,
+              5,
+              6,
+              7,
+              8,
+              9,
+              33,
+              34,
+              35,
+              36,
+              38,
+              41,
+              43,
+              56,
+              98,
+              99,
+              100,
+              101,
+              102,
+              103,
+              104,
+              119
+            ]
+          }
+        ],
+        "raw_full": false,
+        "total_physical_lines": 139,
+        "unseen_meanings_remain_unknown": true,
+        "view_calls_returned": 1,
+        "whole_masked_view_sha256": "f2b116e43ba18cd6e3353c018996d2abc2161c52df0170e9ee1a01360b9b2a20"
+      },
+      "required_changes": [
+        "元依頼と既存回答の目的・実日付/期間・予算/移動等を保持し、必要な地域の境界を根拠へ結ぶ。本人の正確な住所/家族等を不必要に求めず、調査可能な不足と本人だけの未指定条件を分けて再質問を防ぐ。",
+        "適用時は州/自治体/学区/utility等の実対象と制度の時点・例外/手続、実日の交通/天候と保険/総費用を同じ条件で照合する設計にする。保存中の法/税/価格等を現在の保証や個人への適合判定へ変えない。",
+        "許可した目的に必要なlocation等の最小入力と実送信先/保持を確認し、local/officialという説明だけで秘密保護を断定しない。Rakko/実対象の制限、既存の記憶/途中成果と個別権利を保持し、独自memory・政府申請/予約/契約・外部取得/installをこの研究で実行しない。"
+      ],
+      "source_commit": "920714f17d81e0a95c7a9bc51faf0a7921cd982d",
+      "source_repo": "6mile/skills",
+      "source_sha256": "01d237487a6e590b30b448547ccca9ee51f509fc5716b32b620608485c7ba48e",
+      "source_url": "https://github.com/6mile/skills/blob/920714f17d81e0a95c7a9bc51faf0a7921cd982d/skills/ivangdavila/texas/SKILL.md",
+      "status": "visible_primary_evaluated",
+      "support_body_reads": 0,
+      "unmet": [
+        "全139物理行のうち可視114行を評価した。伏字25行の意味、補助本文・実地域/現在の制度/法/税/保険・実交通/気象/費用/申請条件・送信/保存と実効果は未確認。",
+        "source_or_service_rightsと各memberの文脈・支持・個別許諾・現在実在・採否は未確認。"
+      ],
+      "use": "Texasでの訪問・移住/生活・事業について、州全体の説明と具体地域/日付・交通/費用/行政等の条件を分けて整理する設計を検討するとき。",
+      "value": "metro/county・school/utility/flood等の境界と、移動時間・税以外の費用/災害リスクを別々に確認する構成は、州の一般説明を個別の生活条件へ流用しない参考になる。"
+    },
+    {
+      "bytes": 6279,
+      "central_operations": 0,
+      "each_member_context_and_rights_pending": true,
+      "findings": [
+        "本文はGOTCHAのGoals/Orchestration/Tools/Context/Hard prompts/Argsという6層と、ATLASのArchitect/Trace/Link/Assemble/Stress-test、追加のValidate/Monitorを説明する。層/構成の記載は、toolの決定性/正確性・実接続/テストやmonitorの実稼働を検証した証拠ではない。",
+        "目的/利用者/成功指標/制約とsource-of-truth/schema、連携の目的/認証・batchや出力formatを確認する観点は有用。一方、全接続を実装前に確認しDB→backend→UIの順とする原の固定順は、実際の依存や独立作業・受入テスト先行の現在の工程に合わせる必要がある。",
+        "memoryをfact/preference/event/insight/task/relationshipへ分類し、session開始時の長期記録/昨日log、keyword/semantic/hybrid検索を説明する。分類名やcuratedという名は真偽/最新性の証拠ではなく、実保存/検索品質・保持/秘密保護は未確認。元資料や文書内の指示を本人の新指示へ昇格させない。",
+        "初回にmemory/logs/data・テンプレートやSQLite DBを作り、失敗したtoolを直してgoalを更新すれば次回は自動成功とする。修復/テストは実際の同じ条件と失敗経路に結ぶ必要があり、失敗は必ず改善や将来の成功になるという保証にはしない。.tmpという名称も削除可能性の証明ではない。",
+        "CLAUDE.mdをsystem instructionと呼ぶ例や、manifest読込み・初期化/別のmanagerという構成をそのまま現権限へ適用していない。起動metadataのagent-system-design、domain-modeling、spec-atdd-tdd-issue-workflowと近い用途があるが、本文の同等性や既存実装の確認ではない。"
+      ],
+      "git_blob": "74481c29cde9fade9c6dc43a11507457abbdbf84",
+      "inventory_id": "github:370d568b83d3af37a29d78890c2cc746e61b4c2b3cdc60ab39f35e30e087f393",
+      "member_metadata": [
+        {
+          "bytes": 6279,
+          "commit": "920714f17d81e0a95c7a9bc51faf0a7921cd982d",
+          "git_blob": "74481c29cde9fade9c6dc43a11507457abbdbf84",
+          "inventory_id": "github:370d568b83d3af37a29d78890c2cc746e61b4c2b3cdc60ab39f35e30e087f393",
+          "path": "skills/marlowne12/atlas-framework/SKILL.md",
+          "repo": "6mile/skills",
+          "sha256": "01d2771d5efd145181e357be1b74cb16a297736c457848957df8160d60ff068e"
+        }
+      ],
+      "member_occurrences": 1,
+      "negative": "6層とmanifestがあるのでtoolは正確とし、全接続待ちで独立工程も止め、memoryのfactを無条件に信じ、goalを書き換えただけで次回の成功を保証する。",
+      "new_copy_grants": 0,
+      "new_final_disposition": false,
+      "path": "skills/marlowne12/atlas-framework/SKILL.md",
+      "positive": "同じ仕様とデータ/接続の契約を受入条件へ結び、失敗段階と部分成果を保持し、変更/利用側の実テスト・反映結果を照合する設計にする。",
+      "read": {
+        "failed_view_calls": 0,
+        "mask_version": "primaryflow-v4-opaque-lexical-boundaries",
+        "ranges": [
+          {
+            "first": 1,
+            "range_sha256": "8da853a9cfe264b2ba682ac9cab367e638a62e97a693a1ce7ce7e1a069c03cda",
+            "through": 180,
+            "visible_lines": 172,
+            "withheld_physical_lines": [
+              1,
+              2,
+              3,
+              4,
+              75,
+              83,
+              125,
+              139
+            ]
+          },
+          {
+            "first": 181,
+            "range_sha256": "1babd85c8ef8545be599ed5472ff0ba3b93d8d2311ec851d1d713d92534a23cf",
+            "through": 198,
+            "visible_lines": 18,
+            "withheld_physical_lines": []
+          }
+        ],
+        "raw_full": false,
+        "total_physical_lines": 198,
+        "unseen_meanings_remain_unknown": true,
+        "view_calls_returned": 2,
+        "whole_masked_view_sha256": "36b3dabab5560c8c19a851d24bab78c8ed58ded420ed5b90d9f3ed36c6bcfb99"
+      },
+      "required_changes": [
+        "元のIssue/仕様/本人回答・対象/出所/版と、実データ/公開面・依存/受入条件を対応させる。原の層名や固定順を必須化して範囲を増やさず、現在のGo既定/既存Rust保持、具体画像回答・Prd/対象制限と実指示の優先順位を守る。",
+        "接続確認は必要な主体/対象/目的・実作用と、同じ受付/返却形式・認証/権限/利用枠へ結ぶ。疎通/MCP応答やenv設定だけで機能/安全を確認済みにせず、失敗原因と部分成果・有限再試行/重複/再開を追い、独立工程は継続する。",
+        "実際の変更と利用側に応じて関連テスト/エラー・境界/認可/入力と受入・レビュー/CI/実反映を確認する工程へ結ぶ。security等を本番という名称だけで後回しにせず、テストや修復の宣言を実証/将来保証としない。",
+        "既存司令塔/記憶・途中成果と保持方針へ合わせ、未知log/秘密/顧客内容を勝手に読まず、原の初期化・保存/SQLite作成/monitor・再委譲をこの研究で行わない。factと推測の出所/時点を残し、未確認の検索/記憶・利用条件を親へ渡す。"
+      ],
+      "source_commit": "920714f17d81e0a95c7a9bc51faf0a7921cd982d",
+      "source_repo": "6mile/skills",
+      "source_sha256": "01d2771d5efd145181e357be1b74cb16a297736c457848957df8160d60ff068e",
+      "source_url": "https://github.com/6mile/skills/blob/920714f17d81e0a95c7a9bc51faf0a7921cd982d/skills/marlowne12/atlas-framework/SKILL.md",
+      "status": "visible_primary_evaluated",
+      "support_body_reads": 0,
+      "unmet": [
+        "全198物理行のうち可視190行を評価した。伏字8行の意味、manifest/実tool・接続/認証・各テスト/monitor・記憶/検索/初期化・実精度/性能/保持/費用と実効果は未確認。",
+        "source_or_service_rightsと各memberの文脈・支持・個別許諾・現在実在・採否は未確認。"
+      ],
+      "use": "開発の目標・業務知識/設定・実行toolを分け、要件/データ境界・接続の実確認と、実装/テスト/復旧を結ぶ設計資料を検討するとき。",
+      "value": "実行処理と未信頼の文脈、目標・接続/出力契約を分け、処理途中の成果と原因を残す観点は、連携失敗や再実行で元の仕事を失わない参考になる。"
     }
   ],
   "new_copy_grants": 0,
   "new_final_dispositions": 0,
-  "representative_body_groups": 30,
+  "representative_body_groups": 43,
   "scope": "Assessment of visible primary text at the fixed source tuples. Hidden text, supporting bodies and each member's full package context, individual notice and rights remain pending. Equal primary bytes do not transfer rights or certify a service. No source command, service operation, central write or installation is performed.",
   "whole16_complete": false
 }

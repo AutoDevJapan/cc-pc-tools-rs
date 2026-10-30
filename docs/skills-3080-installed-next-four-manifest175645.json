@@ -1,0 +1,248 @@
+{
+  "definition": "One actual CreateNew4/28 files80712B; no replay. Four normal current-object/hash/buffer reads using original79f/39ea/call64138 after accepted repair627. Existing3048PASS; fresh4enabled/parse0;8current instructions13640B;3current workflow and5synthetic model decisions. This publication writes no central files.",
+  "targets": [
+    {
+      "name": "balance-snapshot-reconciliation",
+      "new": true,
+      "before_sha256": "absent",
+      "positive": "同じchain・asset・decimalと取得時点を確認し、正しい0と未取得を区別して、通貨別の照合結果を示す。",
+      "negative": "0x形式だけでchainや所有を決め、欠損を0へ置き換え、別chain・別時点の数値を同じ残高として合算する。",
+      "sources": [
+        "https://github.com/6mile/skills/blob/920714f17d81e0a95c7a9bc51faf0a7921cd982d/skills/shawnmuggle/rozo-intents-skills/skills/check-balance/SKILL.md",
+        "https://github.com/6mile/skills/blob/920714f17d81e0a95c7a9bc51faf0a7921cd982d/skills/shawnmuggle/rozo-intents-skills/LICENSE.md"
+      ],
+      "files": [
+        {
+          "path": "SKILL.md",
+          "sha256": "fa7f1bbdc852a7904f183137e5c38d914db0ac21a31b4c15627a12ce8bc6478a"
+        },
+        {
+          "path": "references/guide.md",
+          "sha256": "6eda73b2df255e1b226bc81369d6028d57f895634b9ce6522b93369135f3bc34"
+        },
+        {
+          "path": "references/LICENSE.txt",
+          "sha256": "07121e96b2e2b849fbcbdd53c78e25811f75d2c565b683eb9048d74d731470a0"
+        },
+        {
+          "path": "references/source.json",
+          "sha256": "5ec08bb6bb02c39893587f111162bc55ad6c126eb743a2337bc17cf224e4b5f5"
+        },
+        {
+          "path": "references/sources.md",
+          "sha256": "6bb764fde3ee08790372b2a5020a506aeecc602bfe3d76b66ec8e75ec9ed9b59"
+        },
+        {
+          "path": "references/source-assessment.json",
+          "sha256": "1c866bd04d2fa14bc52e63ee98bade7f207c5ba2c3887ba07c583fcfc93903da"
+        },
+        {
+          "path": "references/original-skill.masked.txt",
+          "sha256": "4e2f9a9a46ee75c02ae79f5d1cb9025e43e97e1e1850f1973a6059920e99a2f1"
+        }
+      ],
+      "target_kind": "new_adaptation_intent",
+      "deployment_state": "actual_once_created_normal_readback_discovered_and_explicitly_applied",
+      "pre_mutation_absence_qualification_completed": false,
+      "directory_presence_observation": {
+        "name": "balance-snapshot-reconciliation",
+        "observed_at": "2026-10-28T08:00:12.0619222+00:00",
+        "path_exists": false,
+        "existing_contents_opened": false,
+        "future_absence_not_asserted": true,
+        "normal_mutation_absence_qualification_completed": false,
+        "method": "Exact directory metadata only; canonical CreateNew must separately revalidate at mutation"
+      },
+      "pre_publication_history": {
+        "original_private_bundle_sha256": "ca73c416c4ea318beba7f527d3318e98c46e385feea801c5db25ac7f956ce4b3",
+        "new": false,
+        "before_sha256": "not_qualified_private_proposal_only",
+        "directory_presence_observation": {
+          "name": "balance-snapshot-reconciliation",
+          "observed_at": "2026-10-28T06:53:26.9249153+00:00",
+          "path_exists": false,
+          "metadata_result": "ItemNotFoundException",
+          "existing_contents_opened": false,
+          "future_absence_not_asserted": true,
+          "normal_mutation_absence_qualification_completed": false
+        },
+        "target_kind": "new_adaptation_intent",
+        "deployment_state": "proposed_uninstalled",
+        "pre_mutation_absence_qualification_completed": false
+      },
+      "target_state": "actual_once_created_normal_readback_discovered_and_explicitly_applied",
+      "pre_readback_target_state": "new"
+    },
+    {
+      "name": "browser-extraction-missingness",
+      "new": true,
+      "before_sha256": "absent",
+      "positive": "対象画面と項目の対応を確認し、明示された0と空欄・未取得・解析失敗を分けて、取得範囲と未解決を記録する。",
+      "negative": "見つからなかった価格を0へ変え、通信が止まったことやsuccessフラグだけで全件抽出が成功したとする。",
+      "sources": [
+        "https://github.com/6mile/skills/blob/920714f17d81e0a95c7a9bc51faf0a7921cd982d/skills/pkiv/browse/skills/create/SKILL.md",
+        "https://github.com/6mile/skills/blob/920714f17d81e0a95c7a9bc51faf0a7921cd982d/skills/pkiv/browse/LICENSE.txt"
+      ],
+      "files": [
+        {
+          "path": "SKILL.md",
+          "sha256": "0c3bcca3bd306dcdc24e6d4c12ae69c652e8e3f46ff0e56a8008496672a2ae7e"
+        },
+        {
+          "path": "references/guide.md",
+          "sha256": "a7c8b47a770b9214e8765a68285bb2fbbf052e1e3ba3ca96448266aacfc44333"
+        },
+        {
+          "path": "references/LICENSE.txt",
+          "sha256": "a7f98ba58237657d1f06d32903af0e4ef28a757eed4f0cd01c72191e4220083c"
+        },
+        {
+          "path": "references/source.json",
+          "sha256": "c4483ba16acb4f9cfd1bb7f6b9240db2716476f566868c4072dd28cf14e846a8"
+        },
+        {
+          "path": "references/sources.md",
+          "sha256": "d6710a625ba6efc626f281336a6f36afe9f145bc898a4bb2425e1e4310439632"
+        },
+        {
+          "path": "references/source-assessment.json",
+          "sha256": "09006bcbcb90ca7aed274bf80929081b948aff33c0e47cadb954398b27467825"
+        },
+        {
+          "path": "references/original-skill.masked.txt",
+          "sha256": "2aa7cc7065b391f490433b9649f82e1a6bcd3b7cba9228f5ff264b1de9b6e9e0"
+        }
+      ],
+      "target_kind": "new_adaptation_intent",
+      "deployment_state": "actual_once_created_normal_readback_discovered_and_explicitly_applied",
+      "pre_mutation_absence_qualification_completed": false,
+      "directory_presence_observation": {
+        "name": "browser-extraction-missingness",
+        "observed_at": "2026-10-28T09:55:16.1369906+00:00",
+        "path_exists": false,
+        "metadata_result": "ItemNotFoundException",
+        "existing_contents_opened": false,
+        "future_absence_not_asserted": true,
+        "normal_mutation_absence_qualification_completed": false
+      },
+      "pre_readback_target_state": null,
+      "target_state": "actual_once_created_normal_readback_discovered_and_explicitly_applied"
+    },
+    {
+      "name": "remote-run-result-reconciliation",
+      "new": true,
+      "before_sha256": "absent",
+      "positive": "指定した公開版と実行IDを固定し、受付・実行中・終了と実結果を照合して、部分結果や応答不明を残す。",
+      "negative": "公開や実行の受付だけで完了とし、応答不明の実行を新しいIDで重ね、生成したsuccessフラグを実成果とする。",
+      "sources": [
+        "https://github.com/6mile/skills/blob/920714f17d81e0a95c7a9bc51faf0a7921cd982d/skills/pkiv/browse/skills/functions/SKILL.md",
+        "https://github.com/6mile/skills/blob/920714f17d81e0a95c7a9bc51faf0a7921cd982d/skills/pkiv/browse/LICENSE.txt"
+      ],
+      "files": [
+        {
+          "path": "SKILL.md",
+          "sha256": "6b686a6489c5f1784efd48a3f1bdfd4982cf3c2c5dcf64bc7c1537fb1965d850"
+        },
+        {
+          "path": "references/guide.md",
+          "sha256": "afa6a3d55777a263c0de585692e7019848d7736199be78ea8d00f4696e4590af"
+        },
+        {
+          "path": "references/LICENSE.txt",
+          "sha256": "a7f98ba58237657d1f06d32903af0e4ef28a757eed4f0cd01c72191e4220083c"
+        },
+        {
+          "path": "references/source.json",
+          "sha256": "c4f3a97cec2a9743215221564e03ebb3b91708099dd2969cc1464f209b56fc72"
+        },
+        {
+          "path": "references/sources.md",
+          "sha256": "e08219978d5f015cd189b34610c6f1ef0cce8aff91a6c2d89c6d7db4e8647b74"
+        },
+        {
+          "path": "references/source-assessment.json",
+          "sha256": "2627e0e137ed52004b49d20ba418d471d42afcead8b37cc51cc5e4a81c3436f0"
+        },
+        {
+          "path": "references/original-skill.masked.txt",
+          "sha256": "d9441999c6e7579dd96f58c64481e97e9026a15a444dd86ed165a427e843075d"
+        }
+      ],
+      "target_kind": "new_adaptation_intent",
+      "deployment_state": "actual_once_created_normal_readback_discovered_and_explicitly_applied",
+      "pre_mutation_absence_qualification_completed": false,
+      "directory_presence_observation": {
+        "name": "remote-run-result-reconciliation",
+        "observed_at": "2026-10-28T09:55:16.1401879+00:00",
+        "path_exists": false,
+        "metadata_result": "ItemNotFoundException",
+        "existing_contents_opened": false,
+        "future_absence_not_asserted": true,
+        "normal_mutation_absence_qualification_completed": false
+      },
+      "pre_readback_target_state": null,
+      "target_state": "actual_once_created_normal_readback_discovered_and_explicitly_applied"
+    },
+    {
+      "name": "codebase-impact-context",
+      "new": true,
+      "before_sha256": "absent",
+      "positive": "同じソース版の呼出し側・設定・利用経路を確認し、索引の不足を残して影響範囲に合うテストを選ぶ。",
+      "negative": "意味検索の上位だけで全依存を把握したとし、索引外の設定や実行時の参照を無視して影響なしと断定する。",
+      "sources": [
+        "https://github.com/6mile/skills/blob/920714f17d81e0a95c7a9bc51faf0a7921cd982d/skills/joeavaib/cxm-neural-memory/docs/cxm-neural-memory/SKILL.md",
+        "https://github.com/6mile/skills/blob/920714f17d81e0a95c7a9bc51faf0a7921cd982d/skills/joeavaib/cxm-neural-memory/docs/LICENSE.md"
+      ],
+      "files": [
+        {
+          "path": "SKILL.md",
+          "sha256": "b03b0a2fffca5f232d232f57ba38aa15fc80e60eb16c92bfee782f65ce9cbdce"
+        },
+        {
+          "path": "references/guide.md",
+          "sha256": "6236959d6322545c03e73406ddd2840d5afc4dc43b431411221eae0521abf338"
+        },
+        {
+          "path": "references/LICENSE.txt",
+          "sha256": "5bceb2f2dcbf4d4f35ec6367998a98b689392c6c8caf1e12ad3d598885095fef"
+        },
+        {
+          "path": "references/source.json",
+          "sha256": "a23f85f9447ab5db2ea7e84c5285a2e3566c3e7172d7427276eebd12ffe8027f"
+        },
+        {
+          "path": "references/sources.md",
+          "sha256": "9e36d4b5718fb6cebd7160fcd02776ec2dc7bbdac495994a1e6eea83631a400e"
+        },
+        {
+          "path": "references/source-assessment.json",
+          "sha256": "36dc113ba494a0bbb833e7d5226c0fa06f2e3976f5b4367a110afc763f31bd6a"
+        },
+        {
+          "path": "references/original-skill.masked.txt",
+          "sha256": "e22e2dac53194b6aa2789591eccbd4b7f27d57ea99f75b295619f98ee887d5cc"
+        }
+      ],
+      "target_kind": "new_adaptation_intent",
+      "deployment_state": "actual_once_created_normal_readback_discovered_and_explicitly_applied",
+      "pre_mutation_absence_qualification_completed": false,
+      "directory_presence_observation": {
+        "name": "codebase-impact-context",
+        "observed_at": "2026-10-28T09:55:16.1404844+00:00",
+        "path_exists": false,
+        "metadata_result": "ItemNotFoundException",
+        "existing_contents_opened": false,
+        "future_absence_not_asserted": true,
+        "normal_mutation_absence_qualification_completed": false
+      },
+      "pre_readback_target_state": null,
+      "target_state": "actual_once_created_normal_readback_discovered_and_explicitly_applied"
+    }
+  ],
+  "central_operations": 1,
+  "new_adoptions": 4,
+  "stage": "actual_once_created_normal_current_readback_discovery_and_explicit_application",
+  "root": "D:/CC/Skills",
+  "creator_job": "20261027-175645-todo-3080",
+  "current_consumer_job": "20261027-175645-todo-3080"
+}

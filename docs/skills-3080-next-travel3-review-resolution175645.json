@@ -1,0 +1,132 @@
+{
+  "domain": "skills3080-next-travel3-review-findings-resolution-v1",
+  "original_review": {
+    "task": 4129,
+    "job": "20261027-205640-todo-4129",
+    "registered_spec_sha256": "7575e0c4caeeaf50b2e0380cfff618eec932cafdb373af46bb1b7e296b5a254f",
+    "original_bytes": 2103,
+    "original_sha256": "7cf351ce5035910f03e11aa19ac1b1685d68f382e84405f21b8033bf93153a3a",
+    "manifest_sha256": "c6c69da31049cccd9cc43bbb3df7f3e258453e6fddbf99d0246ab0ee5614aa28",
+    "Must": 0,
+    "Suggestion": 3,
+    "Nit": 0,
+    "original_input_and_response_retained": true
+  },
+  "resolutions": [
+    {
+      "finding": "S1",
+      "change": "State cancellation/refund terms and fees before booking, require an explicit instruction for the concrete stay, and reuse the same existing instruction without asking twice.",
+      "outputs_changed": [
+        "aerobase-travel-hotels/SKILL.md"
+      ]
+    },
+    {
+      "finding": "S2",
+      "change": "Replace ambiguous virtual new/before/private labels with explicit intent and uninstalled/unchecked stage. Explain that the fixed operation license.accepted declaration accepts only the recorded published notice scope; it is not a new permission grant or placement authority.",
+      "operation_schema_not_weakened": true,
+      "new_external_permission_grants": 0,
+      "central_existence_checked": false,
+      "placement_authority_issued": false
+    },
+    {
+      "finding": "S3",
+      "change": "Remove redundant actor identifiers from human review prose, while retaining the exact structured actors and receipt references needed to reconstruct original packet SHA and distinguish reading, reuse and publication.",
+      "necessary_technical_provenance_retained": true,
+      "original_packet_fields_changed": false,
+      "private_owner_account_ids_or_raw_private_Discord_question_reply_added": false,
+      "credentials_customer_records_or_private_originals_added": false,
+      "reason": "Dropping or relabelling the structured original actors/receipt references would break the required lossless response/ACK evidence. Those technical identifiers are not owner account identifiers or raw private conversation."
+    }
+  ],
+  "current_operation_sha256": "5df4ba1cf1946271e5d03d6b6e02009f0c29d2c8025a9b8be0161a3d8aefae70",
+  "current_bundle_sha256": "0e0ff688af3fbcd8042d88ab640b01b6e012be318561f58f2f24e1c55d71d151",
+  "pointed_reviewer_resolution_not_yet_confirmed": true,
+  "new_CreateNew_operations": 0,
+  "central_operations": 0,
+  "new_adoptions": 0,
+  "whole16_complete": false,
+  "rubber_original_review": {
+    "task": 4115,
+    "job": "20261027-213226-todo-4115",
+    "registered_spec_sha256": "60443f18a9c58b54fe8c004d1a090016337bd6ece1d04b587fe677e888642d82",
+    "original_bytes": 2829,
+    "original_sha256": "9d7e65bae6c5c4bc190225f364a11acc796453762d51e774b9ca0efca64305fa",
+    "Must": 1,
+    "Suggestion": 0,
+    "Nit": 0,
+    "original_input_and_response_retained": true
+  },
+  "rubber_M1_resolution": {
+    "file": "skills-3080-next-travel3-placement-plan175645.md",
+    "sha256": "4f33c14d045d664bbad1b9390698e7aedade5aa7b2bde39efac4659e53f9069e",
+    "old_target_label_ambiguity_removed": true,
+    "exact_three_directory_paths_absent_observed_at": "2026-10-27T12:56:18Z",
+    "observation_only_existing_contents_opened": 0,
+    "recheck_at_actual_mutation_required": true,
+    "exclusive_CreateNew_only": true,
+    "atomic_all_file_rollback_claimed": false,
+    "partial_failure_preserve_native_and_no_blind_retry": true,
+    "only_proven_new_objects_can_be_quarantined": true,
+    "uncertain_identity_retained_for_same_existing_qualified_repair": true,
+    "post_create_21_same_ID_buffers_discovery_and_use_required": true,
+    "placement_or_recovery_already_executed": false,
+    "pointed_rubber_recheck_pending": true
+  },
+  "self_full_round2": {
+    "task": 4129,
+    "job": "20261027-231955-todo-4129",
+    "registered_spec_sha256": "eb4b03863fb9e48222d39ce0ecffd6ef6f67307c714adce36e906ed32216da63",
+    "original_bytes": 1455,
+    "original_sha256": "f79ea3d260de74c8bceb4d7f860b290ac7bd352ebcf2d59c5bca6a39085c6ab3",
+    "manifest_sha256": "33857beb4e3e42ba3546f303e40f788a891e88b6cec52096cebe078aee41b7f4",
+    "comparison_only": false,
+    "Must": 0,
+    "Suggestion": 1,
+    "Nit": 0,
+    "original_input_and_response_retained": true
+  },
+  "source_prose_identifier_followup": {
+    "changed_outputs": [
+      "aerobase-travel-hotels/references/sources.md",
+      "aerobase-travel-lounges/references/sources.md",
+      "aerobase-travel-wallet/references/sources.md"
+    ],
+    "only_three_authored_source_descriptions_changed": true,
+    "all_six_structured_JSON_original_bytes_preserved": true,
+    "all_original_response_packets_and_reader_namespace_receipt_evidence_retained": true,
+    "private_owner_ids_or_private_conversation_added": false,
+    "general_identifier_prohibition_created": false,
+    "pointed_self_recheck_pending": true
+  },
+  "self_full_round3": {
+    "task": 4129,
+    "job": "20261028-000008-todo-4129",
+    "registered_spec_sha256": "b710a8e7437af24ff69109fa58b308890297e002c4df072ee276292388ee581e",
+    "original_bytes": 1679,
+    "original_sha256": "10d1ddd3656d7d0fde6c2e9399da3137c4dd3b6eb3bfef9676a0a52510055b08",
+    "input_commit": "fe77cfb30055104facef60a89bd67313bdc993bf",
+    "inputs": 20,
+    "manifest_sha256": "5df4ba1cf1946271e5d03d6b6e02009f0c29d2c8025a9b8be0161a3d8aefae70",
+    "comparison_only": false,
+    "Must": 0,
+    "Suggestion": 1,
+    "Nit": 0,
+    "normal_qualified_original_and_actual_Luna_max_verified": true,
+    "original_input_and_response_retained": true
+  },
+  "structured_identifier_followup": {
+    "finding": "round3 Suggestion1",
+    "parent_position": "The remaining exact technical actors, namespaces, receipt references and registered workspace are required by the current purpose/identity and lossless original-field/ACK contracts. Replacing them with opaque values would need a different storage/verification design; these values are not owner account IDs, private reply text, credentials or customer originals.",
+    "evidence": [
+      "skills-3080-next-travel3-review-scope175645.md",
+      "skills-3080-purpose-qualification.md",
+      "../tools/skills-3080-catalog/received27_fidelity_test.go"
+    ],
+    "unnecessary_source_prose_identifiers_already_removed": true,
+    "all21_output_bytes_unchanged_from_fe77": true,
+    "operation_schema_or_guard_changed": false,
+    "any_concrete_unnecessary_or_protected_field_must_still_be_fixed": true,
+    "pointed_reviewer_confirmation_pending": true,
+    "new_general_identifier_ban_created": false
+  }
+}

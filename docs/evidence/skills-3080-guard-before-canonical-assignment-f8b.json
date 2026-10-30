@@ -1,0 +1,22 @@
+{
+  "bytes": 13414912,
+  "candidate_built": false,
+  "data_access_granted": false,
+  "domain": "skills3080-independent-software-observation-v1",
+  "file_id": [
+    1215965535,
+    2424832,
+    8835356
+  ],
+  "normal_predecessor_pr": 618,
+  "observer_job": "20261028-203114-todo-3686",
+  "owner_group_dacl_sha256": "bde2150bb664e8cae33a79e5e4f144ae5c148bfa0ad09139da2011f02ed8353c",
+  "review_jobs": [
+    "20261028-140315-todo-3870",
+    "20261028-141327-todo-3876"
+  ],
+  "reviewed_head": "76a3133cee8be5a4a1f8b2b10714b6badb5f1967",
+  "same_handle_retained": true,
+  "sha256": "f8b2ba6e66e60b06bbbc46c2c0f3d6eedc0208d40444c30e37b70afe29db4fc7",
+  "source_head": "a71330f543969b4585f01b7359a84a2fa528c9f2"
+}

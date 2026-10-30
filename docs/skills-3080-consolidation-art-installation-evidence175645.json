@@ -1,0 +1,121 @@
+{
+  "todo": 3080,
+  "publisher_job": "20261027-175645-todo-3080",
+  "creator_job": "20261027-175645-todo-3080",
+  "new_targets_created": 2,
+  "successful_CreateNew_count": 1,
+  "current_files_readback_verified": 14,
+  "bytes": 77902,
+  "manifest_path": "docs/skills-3080-operations/create-consolidation-art-175645.json",
+  "manifest_sha256": "73aa131a6761ec48b14000d294e7f77b7e961d17c4cbf3dafe64752dcf3bdd25",
+  "request_sha256": "bad8c95b6c9abda64eb7a6d8c61c6935c0b087a8342911cb62e5552ab82f9f95",
+  "creation_input_head": "dca4514105560162002e2e6611f210e1c0326f97",
+  "frozen_Creator": {
+    "observation_kind": "work journal of just-returned actual native CreateNew success; canonical evidence capture follows",
+    "Creator_task": 4222,
+    "Creator_job": "20261029-152517-todo-4222",
+    "Creator_spec": "d54c53dd2b79fd4cdcc5567242dd299db717fd716f34c66b181af39a3b67e908",
+    "Creator_final_sha": "f803366450863b5ea3322e58ff9a524ddb500de8abd322168de688a1fec85041",
+    "manifest_sha256": "73aa131a6761ec48b14000d294e7f77b7e961d17c4cbf3dafe64752dcf3bdd25",
+    "request_sha256": "bad8c95b6c9abda64eb7a6d8c61c6935c0b087a8342911cb62e5552ab82f9f95",
+    "actual_CreateNew_success_observed": true,
+    "successful_CreateNew_count": 1,
+    "created_files": 14,
+    "created_targets": 2,
+    "target_names": [
+      "memory-consolidation-state",
+      "generative-art-reproducibility"
+    ],
+    "never_edit_restart_or_recreate": true,
+    "native_capture_and_normal_current_handle_readback_next": true,
+    "readback_discovery_and_application_not_yet_claimed": true,
+    "whole16_complete": false
+  },
+  "frozen_Creator_flags_are_historical_creation_time": true,
+  "qualified_full_review": {
+    "task": 4222,
+    "actual_job": "20261029-152517-todo-4222",
+    "actual_author": "20261027-175645-todo-3080",
+    "registered_spec_sha256": "d54c53dd2b79fd4cdcc5567242dd299db717fd716f34c66b181af39a3b67e908",
+    "fixed_commit": "dca4514105560162002e2e6611f210e1c0326f97",
+    "full_PUBLIC_inputs": 10,
+    "all14_outputs_full_review": true,
+    "comparison_absent": true,
+    "model_origin": "owner_request",
+    "effort_origin": "owner_request",
+    "native": [
+      {
+        "timestamp": "2026-10-29T06:26:01.066Z",
+        "model": "gpt-6-luna",
+        "effort": "max",
+        "service_tier": null
+      }
+    ],
+    "thread_matches": true,
+    "cwd_matches": true,
+    "normal_typed_qualified": true,
+    "raw_sha256": "f803366450863b5ea3322e58ff9a524ddb500de8abd322168de688a1fec85041",
+    "M": 0,
+    "S": 0,
+    "N": 0,
+    "review_original_bytes": 2805,
+    "acceptance_marker_present": true
+  },
+  "referenced_artifacts": {
+    "bundle": {
+      "file": "skills-3080-consolidation-art-actual-bundle175645.json",
+      "sha256": "84585be544c87539f0d622cc0e6c31a2d1bb9ad7611410d526c4e9130329158e"
+    },
+    "manifest": {
+      "file": "skills-3080-installed-consolidation-art-manifest175645.json",
+      "sha256": "690d05dcd12d8d36142a275262874a7e37f75a6167277bcdbfc3da0937e4994d"
+    },
+    "creation": {
+      "file": "skills-3080-consolidation-art-create-evidence175645.json",
+      "sha256": "e024b266c032a3e322c8f658eb274e19a421d651bde62feab27b9fcff16e7294"
+    },
+    "readback": {
+      "file": "skills-3080-consolidation-art-consume-evidence175645.json",
+      "sha256": "5890173378696349a30cfb04e3e162df5d2f65675f5252c06b8d16533e42d925"
+    },
+    "discovery": {
+      "file": "skills-3080-consolidation-art-discovery175645.json",
+      "sha256": "718e8b6df6b840953576394818579cb4b023c67f2addf267f389038b98413636"
+    },
+    "application": {
+      "file": "skills-3080-consolidation-art-application175645.json",
+      "sha256": "34b97144adf62c77e1a6ab5d0c0750af786e3476fe3b21c4fcc3fd927890a671"
+    },
+    "design": {
+      "file": "skills-3080-consolidation-art-actual-designs175645.json",
+      "sha256": "710d96e4076baac2300298f2b93f5c73ee57d067b2db4a5dc324ec8907f1b883"
+    }
+  },
+  "structure": {
+    "exit": 0,
+    "stdout": "PASS: 2 explicit skills; structure, descriptions, references, hashes, scenario pairs; in-memory bundle only; no deployment implied\n",
+    "actual_returned_buffers": 14,
+    "new_central_operations": 0
+  },
+  "native_invocation_literal_equal": false,
+  "semantic_native_exec_request_identity_verified_by_capture": true,
+  "original_native_invocation_and_renderer_preserved": true,
+  "discovered_targets": 2,
+  "metadata_total": 484,
+  "parse_errors": 0,
+  "enabled": 2,
+  "descriptions_match": 2,
+  "scan_limit_diagnostics": 2,
+  "current_instruction_files": 4,
+  "current_instruction_bytes": 10454,
+  "actual_current_workflow_decisions": 2,
+  "synthetic_decisions": 5,
+  "new_global_raw_source_credit": 0,
+  "implicit_selection_full_discovery_context_budget_proven": false,
+  "unknown_material_or_third_party_rights_accepted": false,
+  "real_art_exports_or_memory_engine_operations": 0,
+  "historical_source_and_preparation_records_unchanged": true,
+  "publication_central_writes": 0,
+  "public_result_review_pending_at_recording": true,
+  "whole16_complete": false
+}

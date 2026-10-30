@@ -1,0 +1,134 @@
+{
+  "domain": "skills3080-current-instruction-application-v1",
+  "consumer_job": "20261027-175645-todo-3080",
+  "actual_model": "gpt-6.1-sol",
+  "actual_effort": "max",
+  "Fast_proven": false,
+  "source_of_application": "This actual parent model turn read the8 normal same-ID/same-buffer instruction files verbatim, then produced these explicit decisions. They are model decisions, not a programmatically asserted external service test.",
+  "manifest_sha256": "5ab55cfca8778374e86862905e9c39d5bfe11bea2ae6e3e33ec82f82e7607f89",
+  "readback_proof_sha256": "dd725654d7d964ae2b93f97ef015944868ac2aa0097335aebcf87016c9cbb911",
+  "instruction_files": 8,
+  "instruction_bytes": 13040,
+  "instructions": [
+    {
+      "index": 0,
+      "target": "rlm-controller/SKILL.md",
+      "bytes": 2310,
+      "sha256": "9d86deda9edbf8ed21c69c56901a4238e52e06edd59b0bf0e734dcb4434179dc",
+      "literal_current_buffer_read_in_actual_parent_turn": true
+    },
+    {
+      "index": 1,
+      "target": "rlm-controller/references/guide.md",
+      "bytes": 1560,
+      "sha256": "091d8dd279f87e61d2235ea29d89c82bd0fe4638c4569568249606dd76961273",
+      "literal_current_buffer_read_in_actual_parent_turn": true
+    },
+    {
+      "index": 7,
+      "target": "parse-payment-qr/SKILL.md",
+      "bytes": 1934,
+      "sha256": "89c9885189fcd92e9cc4334c3ad856eb597077c6fd82dc2a9e8c92d3645b5784",
+      "literal_current_buffer_read_in_actual_parent_turn": true
+    },
+    {
+      "index": 8,
+      "target": "parse-payment-qr/references/guide.md",
+      "bytes": 1152,
+      "sha256": "2bf4199aac29ab78b99d1c40bd6b36cc4057489e4feff2f14a6b881ae04d82d9",
+      "literal_current_buffer_read_in_actual_parent_turn": true
+    },
+    {
+      "index": 14,
+      "target": "payroll-batch-reconciliation/SKILL.md",
+      "bytes": 1994,
+      "sha256": "7554d973d03b37e14f6a64acc81fc8f418a0d5bd3f43bf26148a5d38eacbc980",
+      "literal_current_buffer_read_in_actual_parent_turn": true
+    },
+    {
+      "index": 15,
+      "target": "payroll-batch-reconciliation/references/guide.md",
+      "bytes": 1066,
+      "sha256": "bce82dcedc6b5e4804993d0c20682d17c54a820a96c0724354ddbb937a18edac",
+      "literal_current_buffer_read_in_actual_parent_turn": true
+    },
+    {
+      "index": 21,
+      "target": "payment-status-reconciliation/SKILL.md",
+      "bytes": 1938,
+      "sha256": "2d0b1ecb49b0fdbdd862c9c99e729bbaa15246e0ff05af1d193693e2cc28eefa",
+      "literal_current_buffer_read_in_actual_parent_turn": true
+    },
+    {
+      "index": 22,
+      "target": "payment-status-reconciliation/references/guide.md",
+      "bytes": 1086,
+      "sha256": "623cc09135f304bae4b1609527b12ecb9a5832366cb0e59de1cf37f17ba4e125",
+      "literal_current_buffer_read_in_actual_parent_turn": true
+    }
+  ],
+  "all_scenario_meanings_applied": true,
+  "decision_count": 8,
+  "actual_current_workflow_decisions": 2,
+  "synthetic_decisions": 6,
+  "decisions": [
+    {
+      "skill": "rlm-controller",
+      "kind": "real current-workflow positive application",
+      "input": "固定51,030本文群/54,689metadata、C0の73/78とC1の50/61を親が意味まで受領、全73220の拡張は未完",
+      "decision": "本文群の受領123と掲載元139を区別し、次位置74/51を保持する。PR618/実F8/一度Create28/読戻し28と未読・647取得保留を分け、登録や形検証だけで全件完了にしない。"
+    },
+    {
+      "skill": "rlm-controller",
+      "kind": "real current-workflow negative application",
+      "input": "同じ既受領packetの再送、旧親世代3と実actor4の不一致",
+      "decision": "同じhash/actor/版の受領を二重加算せず、旧資格やCC_JOB_ID上書きで通さない。実施済みnormal start3080でactor/task/receipt4を照合し、古い証跡とまだ未受領のoriginal3719を残す。"
+    },
+    {
+      "skill": "parse-payment-qr",
+      "kind": "synthetic text-only positive",
+      "input": "仮の読取文字列を解析済みと明示したfixture。scheme/chain/asset/宛先は全てテスト用、decimal6と表示1.00がfixture条件として与えられる",
+      "decision": "画像decoderを実行したとせず文字列と解析項目を分ける。raw単位はこのfixture条件内だけ1,000,000、構文だけで宛先所有や支払い承認にしない。送金・外部URL・照会0。"
+    },
+    {
+      "skill": "parse-payment-qr",
+      "kind": "synthetic text-only negative",
+      "input": "同じ項目amountに1.00と2.00が重複、0x形式だけでchain欠落",
+      "decision": "amount不一致・chain未指定として保留し、一つを選ばずchainを見た目で補わず複数decode/URL実行をしない。秘密QR/実カード/外部送信0。"
+    },
+    {
+      "skill": "payroll-batch-reconciliation",
+      "kind": "synthetic text-only positive",
+      "input": "仮の承認版r1: A100/B200/C300、A確定・B未実施失敗・C応答不明",
+      "decision": "確定済み100だけを報告し、C300はunknownのまま同IDの実状態照合が必要とする。600全額支払済みやA再送にしない。実給与データ/支払い照会/実行0。"
+    },
+    {
+      "skill": "payroll-batch-reconciliation",
+      "kind": "synthetic text-only negative",
+      "input": "r2でBの金額を250又は宛先を変更、r1のpreview/承認だけがある",
+      "decision": "r1の承認をr2へ流用しない。原入力版/結果ID/部分成功を保持し、実変更の承認範囲が確認できるまで新支出や実再送をしない。失敗行削除だけで不明や重複が解消したとしない。"
+    },
+    {
+      "skill": "payment-status-reconciliation",
+      "kind": "synthetic text-only positive",
+      "input": "仮のID SYNTHETIC-PAY1はsource funds detected、受取側final/feeは欠損",
+      "decision": "入金検知段階と受取最終未確認を分け、feeを0にせず観測/元UTC/時刻帯と不足項目を明示する。実照会/口座/送金/返金0。"
+    },
+    {
+      "skill": "payment-status-reconciliation",
+      "kind": "synthetic text-only negative",
+      "input": "同じ仮IDの409/expired/timeout。後のfixtureでは既完了が元IDに対応する",
+      "decision": "新IDを作って重複実行しない。元資金・払出し・返金それぞれの実結果の照合を必要とし、期限切れだけで未実行や返金完了にしない。既完了のfixtureには新支払いを作らない。"
+    }
+  ],
+  "new_model_job_spawned": 0,
+  "implicit_skill_selection_proven": false,
+  "real_QR_image_decoder_executed": false,
+  "external_source_or_service_or_payment_operations": 0,
+  "private_card_or_payroll_data_read": 0,
+  "new_keys_fees_or_permissions": 0,
+  "additional_central_writes": 0,
+  "full_source_raw_or_hidden_meanings_claimed": false,
+  "source_service_current_spec_or_rights_not_verified_here": true,
+  "whole16_complete": false
+}

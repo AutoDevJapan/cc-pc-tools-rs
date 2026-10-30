@@ -1,0 +1,25 @@
+{
+  "observed_at": "2026-10-28T15:39:45.8128248+00:00",
+  "sha256": "eab69e4fc8e52f2ad6858ef4e8498e8cc6030ac8ce7f788251a1aae476dc5d55",
+  "bytes": 13425152,
+  "actual_cli_issued_source_revision": "034520d84d52f76dcd7dc7ef371910d6acd8ae9f",
+  "actual_cli_native_call": "call_64138b14df4e483885c35a84ad2a2741",
+  "actual_cli_stdout_sha256": "88c7c342d9239c0f8b37511b9c7d213400623a5c250e2e2b303ba9ee87ed3c95",
+  "previous_software_PR": 624,
+  "previous_software_merge": "034520d84d52f76dcd7dc7ef371910d6acd8ae9f",
+  "formal_code_reviews": [
+    {
+      "job": "20261028-213630-todo-4198",
+      "final_sha": "b06dcdd77faa383cd0ec1715a8c7f2f62f1b6bd6ba4b22861bb4a95e7cc39e14",
+      "task": 4198
+    },
+    {
+      "job": "20261028-211640-todo-4199",
+      "final_sha": "7c0dccdf061dc54df31878e2f5afdedd63514fbb9abf19a43370a368638c705b",
+      "task": 4199
+    }
+  ],
+  "both_formal_native_Luna_max_and_M_S_N_zero_independently_verified": true,
+  "source": "Independent parent file SHA/size plus the original CLI issuer and normal formal-review reception; not an unverified candidate self-assertion",
+  "secret_settings_or_original_client_records_opened": 0
+}

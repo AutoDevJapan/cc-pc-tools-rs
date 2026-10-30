@@ -1,0 +1,129 @@
+{
+  "todo": 3080,
+  "result_publisher_job": "20261027-175645-todo-3080",
+  "creator_job": "20261027-175645-todo-3080",
+  "new_targets_created": 3,
+  "successful_CreateNew_count": 1,
+  "current_files_readback_verified": 21,
+  "bytes": 65566,
+  "normal_read_batches": 3,
+  "instruction_buffers": 6,
+  "instruction_bytes": 9206,
+  "input_PR": 601,
+  "input_PR_merge": "ba909b02728bd32a932cd75efa96b7f9347e8ab0",
+  "creation_manifest": "skills-3080-operations/create-travel-next3-175645.json",
+  "creation_manifest_sha": "5df4ba1cf1946271e5d03d6b6e02009f0c29d2c8025a9b8be0161a3d8aefae70",
+  "creation_input_head": "362836100dbbc1c855119a2fbc7356253b0a3b72",
+  "frozen_full_content_review": {
+    "task": 4129,
+    "job": "20261028-054325-todo-4129",
+    "spec": "D:/CC/Tools/todo/specs/4129-9c053ad296b84a10b341f88a7d272a96.md",
+    "spec_sha256": "62dd891e54730d9b3a4daf82331b21fb3c05b3ea5efa508b1bdff632c8e58f44",
+    "final_sha256": "c593ea9e665a19a8ebd1bac348ba061b203a73b21b3ca6e7facc0fc299a94661",
+    "manifest_sha256": "5df4ba1cf1946271e5d03d6b6e02009f0c29d2c8025a9b8be0161a3d8aefae70",
+    "request_sha256": "b74fe84e8da49c63f75cfe41cb905c0493d60eeaa51edfa31fd9182874a0dda2",
+    "creator": "20261027-175645-todo-3080",
+    "actual_native_creation": "call_b3c15733a51840c3a0f58ba684ca3c1c",
+    "successful_creation_file_count": 21,
+    "full_content_no_comparison": true,
+    "frozen": true,
+    "never_edit_spec_or_restart_this_task": true,
+    "old4083_also_unchanged": true,
+    "Must": 0,
+    "Suggestion": 0,
+    "Nit": 0
+  },
+  "qualified_independent_review_native": {
+    "parent_consumer": "20261027-175645-todo-3080",
+    "parent_full_original_read": true,
+    "normal_qualified": true,
+    "metadata": {
+      "effort": "max",
+      "effort_origin": "owner_request",
+      "exit_code": 0,
+      "final_sha256": "c593ea9e665a19a8ebd1bac348ba061b203a73b21b3ca6e7facc0fc299a94661",
+      "id": "20261028-054325-todo-4129",
+      "model": "gpt-6-luna",
+      "model_origin": "owner_request",
+      "public_input_commit": "362836100dbbc1c855119a2fbc7356253b0a3b72",
+      "public_input_file_count": 11,
+      "public_input_scope": "immutable_typed_prelaunch_spec",
+      "spec_sha256": "62dd891e54730d9b3a4daf82331b21fb3c05b3ea5efa508b1bdff632c8e58f44",
+      "status": "succeeded",
+      "task": 4129,
+      "thread_id": "01a17f1a-c6c8-7560-8181-61c476c23f96"
+    },
+    "actual_native": [
+      {
+        "effort": "max",
+        "model": "gpt-6-luna",
+        "source": "native_turn_context"
+      }
+    ],
+    "fixed_head": "362836100dbbc1c855119a2fbc7356253b0a3b72",
+    "comparison_base": "ccf6bb85483dd204ff6784e88f59901ed6b4d296",
+    "all_21_payloads_reviewed": true,
+    "Must": 0,
+    "Suggestion": 0,
+    "Nit": 0,
+    "oldS1_and_N1_originals_preserved": true,
+    "pointed_N1_confirmed_false_positive": true,
+    "full4129_frozen": true,
+    "whole16_complete": false
+  },
+  "referenced_artifacts": {
+    "bundle": {
+      "file": "skills-3080-next3-actual-bundle175645.json",
+      "sha256": "780455fe1d59e36840ff4f8fbd82593c1cf4f9767fbd4ddd491e57d4d644477a"
+    },
+    "manifest": {
+      "file": "skills-3080-installed-next3-manifest175645.json",
+      "sha256": "9a900280825944480c4c297e6b8c86a4706a31f52062a56233e444b45ffb341e"
+    },
+    "creation": {
+      "file": "skills-3080-next3-create-evidence175645.json",
+      "sha256": "d2d5769b16500d38d8c51271a6b3692b0cd82a116091e1928a52648a2f026ee1"
+    },
+    "readback": {
+      "file": "skills-3080-next3-consume-evidence175645.json",
+      "sha256": "9464d57dd3c3d158b51819977c14a1a5556cd0e85489280ff2eb0704f19a64fa"
+    },
+    "structure": {
+      "file": "skills-3080-next3-actual-structure175645.json",
+      "sha256": "5d544918b8ccc8af891a76584e2726e7bc7e92bd780fda41ad60ea6623f64a7c"
+    },
+    "discovery": {
+      "file": "skills-3080-next3-discovery175645.json",
+      "sha256": "6d80424f34eba8a9956fe8b9a2c7c8e98b18a5cfbea222271924d855e279f965"
+    },
+    "application": {
+      "file": "skills-3080-next3-application175645.json",
+      "sha256": "5578ec341d7c6ee853ac3f2d5a7ff27cd38bda993ff2cab699795fb6525c8621"
+    },
+    "design": {
+      "file": "skills-3080-next3-designs175645.json",
+      "sha256": "452969e5ad67cbce06c33684fc8051b0e7e24016a0627f68eda92d0080b70f22"
+    },
+    "precreation": {
+      "file": "skills-3080-next3-precreation-qualification175645.json",
+      "sha256": "ceb05f9db7a6744332f79f40c98c71b6fe5545308ec74961346c798c1f68b323"
+    }
+  },
+  "creator_runtime_sha256": "9be9a066053183a099e78133571d394ecbb2845372e3cf603e292c74dac1a8d3",
+  "creator_runtime_revision": "deb430b8b089fde2391dbd243c01db48de48d493",
+  "software_fix_PR": 609,
+  "software_fix_merge": "daaaf292752bc2a7cb67189c8a203ebda9047250",
+  "distribution_PR": 610,
+  "distribution_merge": "deb430b8b089fde2391dbd243c01db48de48d493",
+  "creation_binding": "Original canonical native call_b3c15733a51840c3a0f58ba684ca3c1c and originalCLI077c2cd8. Firstfailedreviewcall retained, finite1normalretry after positive readonlysame-request qualification; exactcollapsedreviewfailurecause unproven; prewrite failure independently retained.",
+  "model_application": "Current real Root turn read6qualified instruction buffers and applied8explicit text/scenario/boundary decisions; no live service/travel/medical operations",
+  "new_global_source_raw_credit": 0,
+  "implicit_skill_selection_proven": false,
+  "full_discovery_or_context_budget_proven": false,
+  "source_raw_archive_retained": true,
+  "installed_original_is_masked": true,
+  "withheld_meanings_remain_unread": true,
+  "third_party_assets_services_or_unknown_central_rights_accepted": false,
+  "public_result_review_pending_at_recording": true,
+  "whole16_complete": false
+}

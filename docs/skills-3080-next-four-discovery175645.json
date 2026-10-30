@@ -1,0 +1,51 @@
+{
+  "checked_at": "2026-10-28T17:35:22.9326685+00:00",
+  "method": "fresh installed Codex app-server initialize + skills/list forceReload",
+  "model_called": false,
+  "label": "created-before-readback",
+  "targets": 4,
+  "total_discovered_metadata": 475,
+  "found_count": 4,
+  "parse_error_count": 0,
+  "notification_count": 2,
+  "same_names_other_paths": 0,
+  "found": [
+    {
+      "name": "balance-snapshot-reconciliation",
+      "selected_central_path": true,
+      "enabled_present": true,
+      "enabled": true,
+      "description_matches": true
+    },
+    {
+      "name": "browser-extraction-missingness",
+      "selected_central_path": true,
+      "enabled_present": true,
+      "enabled": true,
+      "description_matches": true
+    },
+    {
+      "name": "codebase-impact-context",
+      "selected_central_path": true,
+      "enabled_present": true,
+      "enabled": true,
+      "description_matches": true
+    },
+    {
+      "name": "remote-run-result-reconciliation",
+      "selected_central_path": true,
+      "enabled_present": true,
+      "enabled": true,
+      "description_matches": true
+    }
+  ],
+  "process_tree_exit_confirmed": true,
+  "pending_stdout_read_drained": true,
+  "failure": null,
+  "diagnostic": {
+    "scan_traversal_limit_count": 2,
+    "context_budget_marker_count": 0,
+    "raw_stderr_not_saved": true
+  },
+  "limit": "Only requested target metadata is retained. No full private catalog or unknown body text is saved. No model turn or context-budget proof; discovery-internal file parsing is not a semantic body review."
+}

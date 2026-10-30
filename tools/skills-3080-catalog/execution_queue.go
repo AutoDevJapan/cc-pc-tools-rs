@@ -10,6 +10,7 @@ import (
 	"io"
 	"os"
 	"path/filepath"
+	"regexp"
 	"strings"
 )
 
@@ -36,6 +37,8 @@ type executionIdentity struct {
 	SourceCommit string `json:"source_commit"`
 	SourcePath   string `json:"source_path"`
 	SourceRepo   string `json:"source_repo"`
+	Repo         string `json:"repo"`
+	Source       string `json:"source"`
 	Disposition  string `json:"disposition"`
 }
 type ExecutionEvidence struct {
@@ -43,6 +46,29 @@ type ExecutionEvidence struct {
 	References  map[string][]ExecutionReference
 	Decisions   map[string]executionIdentity
 }
+
+var executionRepositoryName = regexp.MustCompile(`^[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+$`)
+
+// Older assessment formats recorded the same per-row repository under repo or
+// source. Only an explicit repository-shaped source is an alias; a URL, label,
+// artifact name or catalog match is never used to invent missing provenance.
+func normalizeExecutionRepository(r *executionIdentity) error {
+	aliases := []string{r.Repo}
+	if executionRepositoryName.MatchString(r.Source) {
+		aliases = append(aliases, r.Source)
+	}
+	for _, repo := range aliases {
+		if repo == "" {
+			continue
+		}
+		if r.SourceRepo != "" && r.SourceRepo != repo {
+			return errors.New("conflicting repository fields in evidence row")
+		}
+		r.SourceRepo = repo
+	}
+	return nil
+}
+
 type ExecutionRow struct {
 	Record
 	Stage       string               `json:"execution_stage"`
@@ -52,16 +78,19 @@ type ExecutionRow struct {
 	Decision    string               `json:"recorded_final_disposition,omitempty"`
 }
 type ExecutionSummary struct {
-	State       string         `json:"state"`
-	CatalogSHA  string         `json:"catalog_sha256"`
-	ManifestSHA string         `json:"manifest_sha256"`
-	QueueSHA    string         `json:"queue_sha256"`
-	Records     int            `json:"occurrences"`
-	Assessments int            `json:"occurrences_with_assessment_records"`
-	Final       int            `json:"recorded_final_occurrences"`
-	Stages      map[string]int `json:"stages"`
-	Decisions   map[string]int `json:"recorded_final_dispositions"`
-	Limits      []string       `json:"limits"`
+	State              string         `json:"state"`
+	CatalogSHA         string         `json:"catalog_sha256"`
+	ManifestSHA        string         `json:"manifest_sha256"`
+	QueueSHA           string         `json:"queue_sha256"`
+	Records            int            `json:"occurrences"`
+	Assessments        int            `json:"occurrences_with_assessment_records"`
+	Final              int            `json:"recorded_final_occurrences"`
+	AssessmentAndFinal int            `json:"occurrences_with_assessment_and_final_records"`
+	FinalOnly          int            `json:"final_records_without_assessment_record"`
+	AssessmentOrFinal  int            `json:"occurrences_with_assessment_or_final_records"`
+	Stages             map[string]int `json:"stages"`
+	Decisions          map[string]int `json:"recorded_final_dispositions"`
+	Limits             []string       `json:"limits"`
 }
 
 func readExecutionArtifact(root string, pin ExecutionArtifact) ([]byte, error) {
@@ -120,7 +149,10 @@ func loadExecutionEvidence(root string, m ExecutionManifest) (ExecutionEvidence,
 			if r.Commit == "" {
 				r.Commit = r.SourceCommit
 			}
-			if prior, ok := e.Assessments[r.ID]; ok && (prior.SHA != r.SHA || prior.Path != r.Path || prior.Commit != r.Commit) {
+			if err := normalizeExecutionRepository(&r); err != nil {
+				return e, err
+			}
+			if prior, ok := e.Assessments[r.ID]; ok && (prior.SHA != r.SHA || prior.Path != r.Path || prior.Commit != r.Commit || prior.SourceRepo != r.SourceRepo) {
 				return e, errors.New("conflicting assessment references")
 			}
 			e.Assessments[r.ID] = r
@@ -148,6 +180,9 @@ func loadExecutionEvidence(root string, m ExecutionManifest) (ExecutionEvidence,
 		}
 		if r.Commit == "" {
 			r.Commit = r.SourceCommit
+		}
+		if err := normalizeExecutionRepository(&r); err != nil {
+			return e, err
 		}
 		if r.ID == "" || !evidenceHex(r.SHA, 64) {
 			return e, errors.New("invalid ledger identity")
@@ -212,7 +247,7 @@ func executionQueue(input io.Reader, output io.Writer, m ExecutionManifest, e Ex
 			return s, errors.New("available source lacks exact hash")
 		}
 		if a, ok := e.Assessments[r.ID]; ok {
-			if !r.BodyRead || a.SHA != r.SHA || r.Path != "" && a.Path != r.Path || r.Commit != "" && a.Commit != r.Commit {
+			if !r.BodyRead || a.SHA != r.SHA || r.Path != "" && a.Path != r.Path || r.Commit != "" && a.Commit != r.Commit || r.Repo != "" && a.SourceRepo != r.Repo {
 				return s, errors.New("assessment does not match fixed catalog occurrence")
 			}
 			matchedAssessment[r.ID] = true
@@ -224,7 +259,7 @@ func executionQueue(input io.Reader, output io.Writer, m ExecutionManifest, e Ex
 			q.RelatedBody = bodyEvidence[r.SHA]
 		}
 		if d, ok := e.Decisions[r.ID]; ok {
-			if !r.BodyRead || d.SHA != r.SHA || r.Path != "" && d.Path != r.Path || r.Commit != "" && d.Commit != r.Commit || r.Repo != "" && d.SourceRepo != "" && r.Unit != "site_index_entry" && d.SourceRepo != r.Repo {
+			if !r.BodyRead || d.SHA != r.SHA || r.Path != "" && d.Path != r.Path || r.Commit != "" && d.Commit != r.Commit || r.Repo != "" && d.SourceRepo != r.Repo {
 				return s, errors.New("final decision does not match acquired catalog occurrence")
 			}
 			switch d.Disposition {
@@ -251,6 +286,15 @@ func executionQueue(input io.Reader, output io.Writer, m ExecutionManifest, e Ex
 	if s.Records != m.Records || s.CatalogSHA != m.CatalogSHA || len(matchedAssessment) != len(e.Assessments) || len(matchedDecision) != len(e.Decisions) {
 		return s, errors.New("catalog/evidence universe incomplete or changed")
 	}
+	for id := range matchedDecision {
+		if matchedAssessment[id] {
+			s.AssessmentAndFinal++
+		} else {
+			s.FinalOnly++
+		}
+	}
+	s.AssessmentOrFinal = s.Assessments + s.Final - s.AssessmentAndFinal
+	s.Limits = append(s.Limits, fmt.Sprintf("Assessment records %d = assessed without final disposition %d + assessment/final intersection %d. Final records %d include %d final-only legacy records without assessment. The assessment/final union is %d occurrences; these categories are not additive independent totals.", s.Assessments, s.Stages["assessed_needs_current_disposition"], s.AssessmentAndFinal, s.Final, s.FinalOnly, s.AssessmentOrFinal))
 	s.State = "complete"
 	return s, nil
 }

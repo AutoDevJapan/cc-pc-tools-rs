@@ -1,0 +1,23 @@
+{
+  "domain": "skills3080-independent-installed-software-before-candidate-v1",
+  "observer_todo": 3080,
+  "observer_job": "20261027-175645-todo-3080",
+  "observed_at": "2026-10-28T01:23:06.8912427+00:00",
+  "software": "scrub391.exe",
+  "bytes": 13315072,
+  "sha256": "9be9a066053183a099e78133571d394ecbb2845372e3cf603e292c74dac1a8d3",
+  "source_revision": "deb430b8b089fde2391dbd243c01db48de48d493",
+  "module": "github.com/AutoDevJapan/cc-pc-tools-rs/repair-guard",
+  "GOOS": "windows",
+  "GOARCH": "amd64",
+  "vcs_modified": false,
+  "hash_before_and_after_buildinfo_equal": true,
+  "existing_normal_software_delivery_PR": 610,
+  "prior_independent_parent_delivery_readback_preserved": true,
+  "new_notice_representation_candidate_built_or_selected": false,
+  "value_not_supplied_by_new_candidate": true,
+  "new_data_or_general_access_granted": false,
+  "original_registry_recovered": false,
+  "central_operations": 0,
+  "whole16_complete": false
+}

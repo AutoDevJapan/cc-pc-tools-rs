@@ -1,0 +1,50 @@
+{
+  "todo": 3080,
+  "targets": [
+    {
+      "name": "memory-consolidation-state",
+      "inventory_id": "github:a1b6f6f944d4f177da0d88112cf8fb0e828e71accabe844d9294169008ffe036",
+      "source_repo": "6mile/skills",
+      "source_commit": "920714f17d81e0a95c7a9bc51faf0a7921cd982d",
+      "source_path": "skills/minmengxhw-cpu/enhanced-memory-v2/SKILL.md",
+      "source_sha256": "7ce4e60e2ac08709b60fe5434131bcd81f11bd860beccee8df9bb786ee90c60c",
+      "primary_license": "MIT",
+      "individual_notice_sha256": "43a990050404c5fd26abe14ba73fbdea97c43a0366360a16e35ec37e2f245e3c",
+      "rights_scope": "Authored Japanese adaptation of the actually read visible workflow and its exact line-preserving masked reference, under the stated individual package notice. Withheld primary meanings, unread implementations/templates/supports, original author identity and third-party brands/fonts/CDN/services/data rights are not accepted.",
+      "positive": "定時と書込後に記憶統合が重なったとき、元発言と未完了を保持し、一つの世代・確定結果と再開後の読戻しへ結ぶ。",
+      "negative": "一つのメモを追記するだけの依頼へ、全履歴scan・自動削除・外部LLMを追加する。",
+      "entrypoint_sha256": "48e9e0a4593dbe11791e4de5c63da000c2e2f04835864afb4e2fd67b89621fab",
+      "target_kind": "new_adaptation",
+      "deployment_state": "actual_once_created_normal_readback_discovered_explicit_application",
+      "included_in_single_CreateNew": true,
+      "actual_manifest": "skills-3080-installed-consolidation-art-manifest175645.json",
+      "actual_evidence": "skills-3080-consolidation-art-installation-evidence175645.json",
+      "historical_preparation": "skills-3080-consolidation-art-preparation175645.json",
+      "public_result_delta_review_pending_at_recording": true
+    },
+    {
+      "name": "generative-art-reproducibility",
+      "inventory_id": "github:db3a296d432ef9beb84fb1c5a128b5297b2f0112b5c61ab1ac248005c2f97a0f",
+      "source_repo": "6mile/skills",
+      "source_commit": "920714f17d81e0a95c7a9bc51faf0a7921cd982d",
+      "source_path": "skills/moyu0032/mo-test-1/SKILL.md",
+      "source_sha256": "3bc4092c09804853186524c826bc0621b940bb6122c05b84496dff95388e6eef",
+      "primary_license": "Apache-2.0",
+      "individual_notice_sha256": "58d1e17ffe5109a7ae296caafcadfdbe6a7d176f0bc4ab01e12a689b0499d8bd",
+      "rights_scope": "Authored Japanese adaptation of the actually read visible workflow and its exact line-preserving masked reference, under the stated individual package notice. Withheld primary meanings, unread implementations/templates/supports, original author identity and third-party brands/fonts/CDN/services/data rights are not accepted.",
+      "positive": "同じseedの生成作品で結果が違うとき、版・全parameter・乱数系・素材・frame・寸法を固定し、再生成と実PNGを照合する。",
+      "negative": "静止画像を説明する依頼へ、生成アルゴリズム・新しい操作UIやサービスを追加する。",
+      "entrypoint_sha256": "c6c97201564ba9eebe55b1e3dc71ef55283e0a9c8c103aa8ceaf1780bddbed29",
+      "target_kind": "new_adaptation",
+      "deployment_state": "actual_once_created_normal_readback_discovered_explicit_application",
+      "included_in_single_CreateNew": true,
+      "actual_manifest": "skills-3080-installed-consolidation-art-manifest175645.json",
+      "actual_evidence": "skills-3080-consolidation-art-installation-evidence175645.json",
+      "historical_preparation": "skills-3080-consolidation-art-preparation175645.json",
+      "public_result_delta_review_pending_at_recording": true
+    }
+  ],
+  "successful_CreateNew_count": 1,
+  "whole16_complete": false,
+  "batch_is_not_total_scope_or_count_cap": true
+}

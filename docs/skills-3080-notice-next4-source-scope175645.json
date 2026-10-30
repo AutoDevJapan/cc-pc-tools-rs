@@ -1,0 +1,598 @@
+{
+  "actual_author_job": "20261027-175645-todo-3080",
+  "actual_original_public_repo": {
+    "id": 1147531245,
+    "full_name": "6mile/skills",
+    "owner": "6mile",
+    "private": false,
+    "default_branch": "main",
+    "queried_at": "2026-10-27T23:21:09.2996904+00:00",
+    "fixed_commit": "920714f17d81e0a95c7a9bc51faf0a7921cd982d",
+    "fixed_tree": "5782ae7deffe5024e15b6e090327385c10f76273",
+    "source_text_downloads": 0
+  },
+  "source_records": [
+    {
+      "name": "rlm-controller",
+      "source": {
+        "inventory_id": "github:ba33435da1ffbbca3a8d891a4d28865864d16fd14607cccffe6e1489f9e88b0f",
+        "repo": "6mile/skills",
+        "commit": "920714f17d81e0a95c7a9bc51faf0a7921cd982d",
+        "path": "skills/skywyze/rlm-controller/SKILL.md",
+        "sha256": "1016744a3b960c80ef5d1c83b9d76d4840e68d9fc2b7e5098be9374260b50272",
+        "git_blob": "59263e3e393d47e51846e7f451366a0fe2c23fdb",
+        "bytes": 3195,
+        "content_path": "github/6mile__skills/objects/1016744a3b960c80ef5d1c83b9d76d4840e68d9fc2b7e5098be9374260b50272.gz"
+      },
+      "individual_notice": {
+        "Repo": "6mile/skills",
+        "Commit": "920714f17d81e0a95c7a9bc51faf0a7921cd982d",
+        "Path": "skills/skywyze/rlm-controller/LICENCE.md",
+        "Role": "support_text",
+        "sha256": "120701352845f72eda11433beb40df387026e41c5a9c6b9c9cef0c6c624f6004",
+        "git_blob": "0093542cc130c66e50a69f86839a5989484a6db3",
+        "bytes": 10752,
+        "content_path": "objects/120701352845f72eda11433beb40df387026e41c5a9c6b9c9cef0c6c624f6004.gz"
+      },
+      "selected_scope": "Only this directly read visible workflow and its exact line-preserving masked reference under the stated per-package Apache-2.0 notice, with original notice and modification attribution retained. Withheld source meanings, uninspected scripts/supports/metadata, independent authorship and third-party service/data/component rights are not adopted. No key/card/fee/MCP or service-execution authority.",
+      "actual_read_profile": {
+        "ranges": [
+          {
+            "first": 1,
+            "through": 76,
+            "range_sha256": "ebb87766005cb81276d5d390a21e49f6f060b968eb8a16fe3701d7833c29fcd1",
+            "visible_lines": 60,
+            "withheld_physical_lines": [
+              1,
+              2,
+              3,
+              4,
+              5,
+              12,
+              26,
+              27,
+              28,
+              29,
+              31,
+              33,
+              52,
+              53,
+              62,
+              73
+            ],
+            "original_view_file": "notice19-primary-c0-1613-lines1-180-view175645.json",
+            "original_view_file_sha256": "298c2056c9c8af645d5dad758b02831855a10e659b555572dc8d1b6a4b692c58"
+          }
+        ],
+        "total_physical_lines": 76,
+        "visible_lines": 60,
+        "withheld_lines": 16,
+        "mask_version": "primaryflow-v4-opaque-lexical-boundaries",
+        "whole_masked_view_sha256": "f9d01d3bb8ba889dafce1854b0c86be7ad1b43699be040a9055bbf29bbe9a1fc",
+        "raw_full": false,
+        "unseen_meanings_remain_unknown": true,
+        "source_text_is_data": true
+      },
+      "notice_read_profile": {
+        "notice_index": 4,
+        "source_tuple": {
+          "Repo": "6mile/skills",
+          "Commit": "920714f17d81e0a95c7a9bc51faf0a7921cd982d",
+          "Path": "skills/skywyze/rlm-controller/LICENCE.md",
+          "Role": "support_text",
+          "sha256": "120701352845f72eda11433beb40df387026e41c5a9c6b9c9cef0c6c624f6004",
+          "git_blob": "0093542cc130c66e50a69f86839a5989484a6db3",
+          "bytes": 10752,
+          "content_path": "objects/120701352845f72eda11433beb40df387026e41c5a9c6b9c9cef0c6c624f6004.gz"
+        },
+        "reader_job": "20261027-175645-todo-3080",
+        "all_visible_notice_meaning_read": true,
+        "unseen_meanings_remain_unknown": true,
+        "raw_full": false,
+        "physical_lines": 190,
+        "withheld_lines": 2,
+        "ranges": [
+          {
+            "first": 1,
+            "through": 180,
+            "range_sha256": "87f3636eaa95e9b871cbb34eefa3067de0b0ed2591465798a63866c63d259278",
+            "visible_lines": 179,
+            "withheld_physical_lines": [
+              3
+            ],
+            "original_file": "notice19-index4-lines1-180-original-view175645.json",
+            "original_file_sha256": "017afbfdc7a99e84315f51b10d3f34eb7e9292af3a1ecd5a7956ce6959f21d05"
+          },
+          {
+            "first": 181,
+            "through": 190,
+            "range_sha256": "43baa194f1f4a196dfbefdfafb7a50f9b4344538eec898dfe357063e443c8bd2",
+            "visible_lines": 9,
+            "withheld_physical_lines": [
+              184
+            ],
+            "original_file": "notice19-index4-lines181-360-original-view175645.json",
+            "original_file_sha256": "cdd6eaa42f097b1f8e1fc02ac3796dd9d33ed49c7e3bafcb5c810f020a334896"
+          }
+        ],
+        "actual_meaning_and_scope": "4 rlm-controller Apache2/2026Skywyze: 190行の全可視範囲を実読、URL等の伏字2は不明。改変表示・license写し・関連attribution/NOTICE保持、特許/商標/無保証の条件を確認。未読のscript/policy/security/依存部品の安全性・現機能や全第三者素材へ許可を拡大しない。",
+        "grant_scope_still_requires_individual_candidate_link": true,
+        "source_or_service_permission_not_added_by_read": true
+      },
+      "masked_reference_sha256": "f9d01d3bb8ba889dafce1854b0c86be7ad1b43699be040a9055bbf29bbe9a1fc",
+      "original_snapshot_sha256": "a9b03f0ce2ac4695cb57447eec6638236d339f5de984981286e36cb324fd29cf",
+      "independent_authorship_asserted": false,
+      "source_or_service_operations": 0,
+      "central_operations": 0,
+      "original_acquisition_role_interpretation": {
+        "original_saved_index_role": "support_text",
+        "original_role_unchanged": true,
+        "role_is_not_permission": true,
+        "actual_selected_content": "The exact co-located 190-line Apache-2.0 licence text, 10752 bytes / SHA120701352845f72eda11433beb40df387026e41c5a9c6b9c9cef0c6c624f6004 / Git blob0093542cc130c66e50a69f86839a5989484a6db3.",
+        "compatibility_required": "Normal source qualification must reconcile this one proved historical LICENCE.md record without relabelling the original index or accepting arbitrary support_text as a notice."
+      },
+      "distributed_masked_reference": {
+        "modification_notice_prefix": "Modification notice: The distributor changed this reference only by replacing withheld source lines with \"[WITHHELD physical line N]\" markers. All remaining source lines and their original positions are preserved below.\n\n",
+        "prefix_sha256": "98604a095cb4f3362c97a5c4a28f67acbe2cbd3d2b61198d3fd1489a5d02c1ed",
+        "payload_starts_at_line": 3,
+        "payload_original_physical_lines": 76,
+        "payload_original_masked_sha256": "f9d01d3bb8ba889dafce1854b0c86be7ad1b43699be040a9055bbf29bbe9a1fc",
+        "whole_distributed_file_sha256": "fb4c42765f345abb6fb29d65cb3b4b394ea74db4225c110866fcde6731fdb272",
+        "all_original_visible_and_masked_lines_preserved": true,
+        "new_raw_credit": 0
+      },
+      "modified_instruction_files_carry_their_own_notice": [
+        "rlm-controller/SKILL.md",
+        "rlm-controller/references/guide.md"
+      ]
+    },
+    {
+      "name": "parse-payment-qr",
+      "source": {
+        "inventory_id": "github:70fb5bfa5ea789742e557d498d076586fa55ebdb73f3b5de3c6574ea36f3270d",
+        "repo": "6mile/skills",
+        "commit": "920714f17d81e0a95c7a9bc51faf0a7921cd982d",
+        "path": "skills/shawnmuggle/rozo-intents-skills/skills/parse-qr/SKILL.md",
+        "sha256": "7206558482dd712284edd53e39526b36366f01155d2d82ec6fb6a9afe065675d",
+        "git_blob": "d2dfafeb190fceecbaf8b5149806df7c1d89cd85",
+        "bytes": 2578,
+        "content_path": "github/6mile__skills/objects/7206558482dd712284edd53e39526b36366f01155d2d82ec6fb6a9afe065675d.gz"
+      },
+      "individual_notice": {
+        "Repo": "6mile/skills",
+        "Commit": "920714f17d81e0a95c7a9bc51faf0a7921cd982d",
+        "Path": "skills/shawnmuggle/rozo-intents-skills/LICENSE.md",
+        "Role": "license_or_notice",
+        "sha256": "07121e96b2e2b849fbcbdd53c78e25811f75d2c565b683eb9048d74d731470a0",
+        "git_blob": "8a6c5b19f9ebd3bf00f6d5355ddaeca0ab0e6f59",
+        "bytes": 899,
+        "content_path": "objects/07121e96b2e2b849fbcbdd53c78e25811f75d2c565b683eb9048d74d731470a0.gz"
+      },
+      "selected_scope": "Only this directly read visible workflow and its exact line-preserving masked reference under the stated per-package MIT-0 notice, with original notice and modification attribution retained. Withheld source meanings, uninspected scripts/supports/metadata, independent authorship and third-party service/data/component rights are not adopted. No key/card/fee/MCP or service-execution authority.",
+      "actual_read_profile": {
+        "ranges": [
+          {
+            "first": 1,
+            "through": 74,
+            "range_sha256": "474b7df0b361ddb7a5e2c9c8e8cf2b5e491e9bd92cea23d8fd1d06febe93c606",
+            "visible_lines": 46,
+            "withheld_physical_lines": [
+              1,
+              2,
+              3,
+              4,
+              5,
+              6,
+              7,
+              8,
+              9,
+              10,
+              11,
+              12,
+              30,
+              37,
+              38,
+              39,
+              40,
+              45,
+              47,
+              50,
+              52,
+              57,
+              62,
+              67,
+              69,
+              71,
+              72,
+              74
+            ],
+            "original_view_file": "notice19-primary-c0-11378-lines1-180-view175645.json",
+            "original_view_file_sha256": "a62161d5bd2f83633626a2f603771f530ce649091f50f1a85106141b98e3c11e"
+          }
+        ],
+        "total_physical_lines": 74,
+        "visible_lines": 46,
+        "withheld_lines": 28,
+        "mask_version": "primaryflow-v4-opaque-lexical-boundaries",
+        "whole_masked_view_sha256": "474b7df0b361ddb7a5e2c9c8e8cf2b5e491e9bd92cea23d8fd1d06febe93c606",
+        "raw_full": false,
+        "unseen_meanings_remain_unknown": true,
+        "source_text_is_data": true
+      },
+      "notice_read_profile": {
+        "notice_index": 3,
+        "source_tuple": {
+          "Repo": "6mile/skills",
+          "Commit": "920714f17d81e0a95c7a9bc51faf0a7921cd982d",
+          "Path": "skills/shawnmuggle/rozo-intents-skills/LICENSE.md",
+          "Role": "license_or_notice",
+          "sha256": "07121e96b2e2b849fbcbdd53c78e25811f75d2c565b683eb9048d74d731470a0",
+          "git_blob": "8a6c5b19f9ebd3bf00f6d5355ddaeca0ab0e6f59",
+          "bytes": 899,
+          "content_path": "objects/07121e96b2e2b849fbcbdd53c78e25811f75d2c565b683eb9048d74d731470a0.gz"
+        },
+        "reader_job": "20261027-175645-todo-3080",
+        "all_visible_notice_meaning_read": true,
+        "unseen_meanings_remain_unknown": false,
+        "raw_full": true,
+        "physical_lines": 16,
+        "withheld_lines": 0,
+        "ranges": [
+          {
+            "first": 1,
+            "through": 16,
+            "range_sha256": "07121e96b2e2b849fbcbdd53c78e25811f75d2c565b683eb9048d74d731470a0",
+            "visible_lines": 16,
+            "withheld_physical_lines": [],
+            "original_file": "notice19-index3-lines1-180-original-view175645.json",
+            "original_file_sha256": "a3472653a8e75b99243bd1ab1aaf04ef7389107f4104bd9999170333a31ec1dc"
+          }
+        ],
+        "actual_meaning_and_scope": "3 rozo-intents MIT No Attribution/2026Rozo: 16行をすべて実読、software/associated docsの利用/変更/配布と無保証を記す。元noticeと固定sourceを保持し、chain/assets/サービスや新支出の承認、カード/鍵参照の許可へしない。",
+        "grant_scope_still_requires_individual_candidate_link": true,
+        "source_or_service_permission_not_added_by_read": true
+      },
+      "masked_reference_sha256": "474b7df0b361ddb7a5e2c9c8e8cf2b5e491e9bd92cea23d8fd1d06febe93c606",
+      "original_snapshot_sha256": "a9b03f0ce2ac4695cb57447eec6638236d339f5de984981286e36cb324fd29cf",
+      "independent_authorship_asserted": false,
+      "source_or_service_operations": 0,
+      "central_operations": 0
+    },
+    {
+      "name": "payroll-batch-reconciliation",
+      "source": {
+        "inventory_id": "github:87635521246ba56eae43fbbf2c49364da758cbba8ac308dbf66e7c028ee8e135",
+        "repo": "6mile/skills",
+        "commit": "920714f17d81e0a95c7a9bc51faf0a7921cd982d",
+        "path": "skills/walkjoi/elytro-wallet-cli-skill/payroll/SKILL.md",
+        "sha256": "7aba22cf94e3e90e1f516611bb0d818fa0012f8d34aefdef9d5df4a3d3264f2a",
+        "git_blob": "9df085e0b4c6283129069ddf2eb705bfa8f60893",
+        "bytes": 6589,
+        "content_path": "github/6mile__skills/objects/7aba22cf94e3e90e1f516611bb0d818fa0012f8d34aefdef9d5df4a3d3264f2a.gz"
+      },
+      "individual_notice": {
+        "Repo": "6mile/skills",
+        "Commit": "920714f17d81e0a95c7a9bc51faf0a7921cd982d",
+        "Path": "skills/walkjoi/elytro-wallet-cli-skill/LICENSE.md",
+        "Role": "license_or_notice",
+        "sha256": "ab7bd2afaf644b54c8fad33f882399aa5cfcc94d6b77d00ce829a469e07af3c3",
+        "git_blob": "77c0709181f43731b0f97600b143706b2b221ed8",
+        "bytes": 1063,
+        "content_path": "objects/ab7bd2afaf644b54c8fad33f882399aa5cfcc94d6b77d00ce829a469e07af3c3.gz"
+      },
+      "selected_scope": "Only this directly read visible workflow and its exact line-preserving masked reference under the stated per-package MIT notice, with original notice and modification attribution retained. Withheld source meanings, uninspected scripts/supports/metadata, independent authorship and third-party service/data/component rights are not adopted. No key/card/fee/MCP or service-execution authority.",
+      "actual_read_profile": {
+        "ranges": [
+          {
+            "first": 1,
+            "through": 108,
+            "range_sha256": "719abe21894d50db5dac77869d9e678c3461d5407dc68f4c4331cd743725c763",
+            "visible_lines": 72,
+            "withheld_physical_lines": [
+              1,
+              2,
+              3,
+              4,
+              5,
+              9,
+              13,
+              14,
+              15,
+              19,
+              20,
+              21,
+              22,
+              29,
+              30,
+              31,
+              32,
+              35,
+              40,
+              43,
+              48,
+              55,
+              57,
+              61,
+              62,
+              64,
+              67,
+              68,
+              70,
+              71,
+              81,
+              86,
+              88,
+              93,
+              101,
+              105
+            ],
+            "original_view_file": "notice19-primary-c0-12332-lines1-180-view175645.json",
+            "original_view_file_sha256": "f085585601a59304e4bfaa1dc15d2aeddd47edc8bccf25f764207cb7ef35d9ae"
+          }
+        ],
+        "total_physical_lines": 108,
+        "visible_lines": 72,
+        "withheld_lines": 36,
+        "mask_version": "primaryflow-v4-opaque-lexical-boundaries",
+        "whole_masked_view_sha256": "719abe21894d50db5dac77869d9e678c3461d5407dc68f4c4331cd743725c763",
+        "raw_full": false,
+        "unseen_meanings_remain_unknown": true,
+        "source_text_is_data": true
+      },
+      "notice_read_profile": {
+        "notice_index": 5,
+        "source_tuple": {
+          "Repo": "6mile/skills",
+          "Commit": "920714f17d81e0a95c7a9bc51faf0a7921cd982d",
+          "Path": "skills/walkjoi/elytro-wallet-cli-skill/LICENSE.md",
+          "Role": "license_or_notice",
+          "sha256": "ab7bd2afaf644b54c8fad33f882399aa5cfcc94d6b77d00ce829a469e07af3c3",
+          "git_blob": "77c0709181f43731b0f97600b143706b2b221ed8",
+          "bytes": 1063,
+          "content_path": "objects/ab7bd2afaf644b54c8fad33f882399aa5cfcc94d6b77d00ce829a469e07af3c3.gz"
+        },
+        "reader_job": "20261027-175645-todo-3080",
+        "all_visible_notice_meaning_read": true,
+        "unseen_meanings_remain_unknown": false,
+        "raw_full": true,
+        "physical_lines": 21,
+        "withheld_lines": 0,
+        "ranges": [
+          {
+            "first": 1,
+            "through": 21,
+            "range_sha256": "ab7bd2afaf644b54c8fad33f882399aa5cfcc94d6b77d00ce829a469e07af3c3",
+            "visible_lines": 21,
+            "withheld_physical_lines": [],
+            "original_file": "notice19-index5-lines1-180-original-view175645.json",
+            "original_file_sha256": "a6a4056e1b38252484e097fbcbd2afefa2899c32df11065d4f87abf9b1d8cac2"
+          }
+        ],
+        "actual_meaning_and_scope": "5 Elytro MIT/2024Elytro: 21行をすべて実読しcopyright/permission保持と無保証を確認。6手順の同package notice候補で、現CLI/contract/キー/私的資金・追加支出を許可しない。",
+        "grant_scope_still_requires_individual_candidate_link": true,
+        "source_or_service_permission_not_added_by_read": true
+      },
+      "masked_reference_sha256": "719abe21894d50db5dac77869d9e678c3461d5407dc68f4c4331cd743725c763",
+      "original_snapshot_sha256": "a9b03f0ce2ac4695cb57447eec6638236d339f5de984981286e36cb324fd29cf",
+      "independent_authorship_asserted": false,
+      "source_or_service_operations": 0,
+      "central_operations": 0
+    },
+    {
+      "name": "payment-status-reconciliation",
+      "source": {
+        "inventory_id": "github:04ecb50d80203d73a8f3e14aa37fa9c2ff4c017fa6cf4f15cca856e43438aa68",
+        "repo": "6mile/skills",
+        "commit": "920714f17d81e0a95c7a9bc51faf0a7921cd982d",
+        "path": "skills/shawnmuggle/rozo-intents-skills/skills/payment-status/SKILL.md",
+        "sha256": "ba079356e1d9d6370429e74e954cd4a20283b8583d8ad6a25fa72cc3d4fb01b2",
+        "git_blob": "d250c24176dc670582b05549cc84c8f1de2574e9",
+        "bytes": 3410,
+        "content_path": "github/6mile__skills/objects/ba079356e1d9d6370429e74e954cd4a20283b8583d8ad6a25fa72cc3d4fb01b2.gz"
+      },
+      "individual_notice": {
+        "Repo": "6mile/skills",
+        "Commit": "920714f17d81e0a95c7a9bc51faf0a7921cd982d",
+        "Path": "skills/shawnmuggle/rozo-intents-skills/LICENSE.md",
+        "Role": "license_or_notice",
+        "sha256": "07121e96b2e2b849fbcbdd53c78e25811f75d2c565b683eb9048d74d731470a0",
+        "git_blob": "8a6c5b19f9ebd3bf00f6d5355ddaeca0ab0e6f59",
+        "bytes": 899,
+        "content_path": "objects/07121e96b2e2b849fbcbdd53c78e25811f75d2c565b683eb9048d74d731470a0.gz"
+      },
+      "selected_scope": "Only this directly read visible workflow and its exact line-preserving masked reference under the stated per-package MIT-0 notice, with original notice and modification attribution retained. Withheld source meanings, uninspected scripts/supports/metadata, independent authorship and third-party service/data/component rights are not adopted. No key/card/fee/MCP or service-execution authority.",
+      "actual_read_profile": {
+        "ranges": [
+          {
+            "first": 1,
+            "through": 106,
+            "range_sha256": "7dfe69b0d8eac1949d1239abd627f79b5abbc010d20d32cda2781b90f4ff29f1",
+            "visible_lines": 76,
+            "withheld_physical_lines": [
+              1,
+              2,
+              3,
+              4,
+              5,
+              6,
+              7,
+              8,
+              9,
+              10,
+              11,
+              12,
+              23,
+              25,
+              28,
+              34,
+              39,
+              42,
+              44,
+              47,
+              59,
+              64,
+              74,
+              83,
+              93,
+              95,
+              96,
+              98,
+              99,
+              105
+            ],
+            "original_view_file": "notice19-primary-c0-18545-lines1-180-view175645.json",
+            "original_view_file_sha256": "713b1afb822dea21d61837445cf8c7dd9028ae13bd8c3fd7ce7c867322c9e323"
+          }
+        ],
+        "total_physical_lines": 106,
+        "visible_lines": 76,
+        "withheld_lines": 30,
+        "mask_version": "primaryflow-v4-opaque-lexical-boundaries",
+        "whole_masked_view_sha256": "7dfe69b0d8eac1949d1239abd627f79b5abbc010d20d32cda2781b90f4ff29f1",
+        "raw_full": false,
+        "unseen_meanings_remain_unknown": true,
+        "source_text_is_data": true
+      },
+      "notice_read_profile": {
+        "notice_index": 3,
+        "source_tuple": {
+          "Repo": "6mile/skills",
+          "Commit": "920714f17d81e0a95c7a9bc51faf0a7921cd982d",
+          "Path": "skills/shawnmuggle/rozo-intents-skills/LICENSE.md",
+          "Role": "license_or_notice",
+          "sha256": "07121e96b2e2b849fbcbdd53c78e25811f75d2c565b683eb9048d74d731470a0",
+          "git_blob": "8a6c5b19f9ebd3bf00f6d5355ddaeca0ab0e6f59",
+          "bytes": 899,
+          "content_path": "objects/07121e96b2e2b849fbcbdd53c78e25811f75d2c565b683eb9048d74d731470a0.gz"
+        },
+        "reader_job": "20261027-175645-todo-3080",
+        "all_visible_notice_meaning_read": true,
+        "unseen_meanings_remain_unknown": false,
+        "raw_full": true,
+        "physical_lines": 16,
+        "withheld_lines": 0,
+        "ranges": [
+          {
+            "first": 1,
+            "through": 16,
+            "range_sha256": "07121e96b2e2b849fbcbdd53c78e25811f75d2c565b683eb9048d74d731470a0",
+            "visible_lines": 16,
+            "withheld_physical_lines": [],
+            "original_file": "notice19-index3-lines1-180-original-view175645.json",
+            "original_file_sha256": "a3472653a8e75b99243bd1ab1aaf04ef7389107f4104bd9999170333a31ec1dc"
+          }
+        ],
+        "actual_meaning_and_scope": "3 rozo-intents MIT No Attribution/2026Rozo: 16行をすべて実読、software/associated docsの利用/変更/配布と無保証を記す。元noticeと固定sourceを保持し、chain/assets/サービスや新支出の承認、カード/鍵参照の許可へしない。",
+        "grant_scope_still_requires_individual_candidate_link": true,
+        "source_or_service_permission_not_added_by_read": true
+      },
+      "masked_reference_sha256": "7dfe69b0d8eac1949d1239abd627f79b5abbc010d20d32cda2781b90f4ff29f1",
+      "original_snapshot_sha256": "a9b03f0ce2ac4695cb57447eec6638236d339f5de984981286e36cb324fd29cf",
+      "independent_authorship_asserted": false,
+      "source_or_service_operations": 0,
+      "central_operations": 0
+    }
+  ],
+  "notice_byte_preservation": [
+    {
+      "index": 3,
+      "source_sha256": "07121e96b2e2b849fbcbdd53c78e25811f75d2c565b683eb9048d74d731470a0",
+      "exact_bytes_reused_from_prior_own_complete_view": true,
+      "new_archive_opens": 0,
+      "raw_model_read": true
+    },
+    {
+      "index": 4,
+      "source_sha256": "120701352845f72eda11433beb40df387026e41c5a9c6b9c9cef0c6c624f6004",
+      "bytes": 10752,
+      "git_blob": "0093542cc130c66e50a69f86839a5989484a6db3",
+      "normal_guard_allowed": true,
+      "new_archive_opens": 1,
+      "strict_UTF8_and_whole_same_buffer_verified": true,
+      "raw_model_read": false,
+      "all190_visible_notice_lines_previously_read": true,
+      "only_withheld_lines": [
+        3,
+        184
+      ],
+      "withheld_lines_machine_matched_exact_canonical_public_Apache_URI": true,
+      "other_raw_hidden_material_disclosed": false,
+      "source_notice_publication_not_independent_authorship": true
+    },
+    {
+      "index": 5,
+      "source_sha256": "ab7bd2afaf644b54c8fad33f882399aa5cfcc94d6b77d00ce829a469e07af3c3",
+      "exact_bytes_reused_from_prior_own_complete_view": true,
+      "new_archive_opens": 0,
+      "raw_model_read": true
+    }
+  ],
+  "all_unknown_source_meanings_retained": true,
+  "source_scripts_installed_or_run": 0,
+  "central_operations": 0,
+  "new_adoptions": 0,
+  "whole16_complete": false,
+  "complete_specific_package_notice_filename_metadata": {
+    "author_job": "20261027-175645-todo-3080",
+    "tree_sha256": "11e79e2b3e1503ec231ede8e20298f98e7734715a304835f37b3f68bee0b7b5b",
+    "tree_records_previously_verified": 341562,
+    "selected_package_subtrees_scanned_completely": true,
+    "notice_filename_candidates": [
+      "skills/shawnmuggle/rozo-intents-skills/LICENSE.md",
+      "skills/skywyze/rlm-controller/LICENCE.md",
+      "skills/walkjoi/elytro-wallet-cli-skill/LICENSE.md"
+    ],
+    "additional_NOTICE_filename_candidates": 0,
+    "no_extra_notice_filename_is_not_absence_of_all_inline_or_external_rights": true,
+    "source_gzip_opens": 0,
+    "new_licence_grants": 0,
+    "new_HTTP": 0
+  },
+  "complete_specific_package_notice_metadata_sha256": "314cdac43ff374201ac77127549d176833c7355f780b0158b2ce5df26b9a90bf",
+  "historical_version2_snapshot": {
+    "current_proposal_version": 2,
+    "current_bundle_sha256": "7ae8f6d4565d5b3a420f2882fb1d437ec0e0743dc12262c95773adcfdde35f1f",
+    "current_operation_sha256": "d5cfe06e188434b6119e3f79fec880584f0884dff45010a7a532cc1fdf5654d9",
+    "current_stage": "proposal_not_qualified_or_placed",
+    "new_issuer_receipt": false,
+    "representation_repair_dependency": {
+      "existing_original_todo": 3686,
+      "reason": "Prominent legal modification notice prefix needs an exact wrapper around the unchanged line-preserving masked payload; known legacy support_text LICENCE.md requires exact-source-role compatibility. Neither is implemented by rewriting original inputs.",
+      "software_not_yet_updated": true,
+      "central_operations": 0
+    }
+  },
+  "historical_version2_snapshot_definition": {
+    "fixed_commit": "20e4f6836621aee73ebb18f6155fa3370ecec4b0",
+    "bundle_path": "docs/skills-3080-notice-next4-bundle175645.json",
+    "bundle_sha256": "7ae8f6d4565d5b3a420f2882fb1d437ec0e0743dc12262c95773adcfdde35f1f",
+    "target_names": [
+      "rlm-controller",
+      "parse-payment-qr",
+      "payroll-batch-reconciliation",
+      "payment-status-reconciliation"
+    ],
+    "scope": "Exact earlier proposal before Apache reference and runtime compatibility repairs. Retained history, not the next_four uninstalled proposal or a current software state.",
+    "manifest_path": "docs/skills-3080-operations/create-notice-next4-175645.json",
+    "manifest_sha256": "d5cfe06e188434b6119e3f79fec880584f0884dff45010a7a532cc1fdf5654d9"
+  },
+  "cohort_identity": {
+    "record_kind": "historical_source_scope_for_previous_installed4",
+    "target_names": [
+      "rlm-controller",
+      "parse-payment-qr",
+      "payroll-batch-reconciliation",
+      "payment-status-reconciliation"
+    ],
+    "accepted_creation_input_commit": "74f4eff6a10b5bf235e4028ada75232a5f348bb6",
+    "accepted_creation_manifest": "docs/skills-3080-operations/create-notice-next4-175645.json",
+    "accepted_creation_manifest_sha256": "5ab55cfca8778374e86862905e9c39d5bfe11bea2ae6e3e33ec82f82e7607f89",
+    "accepted_creation_bundle_path": "docs/skills-3080-notice-next4-bundle175645.json",
+    "accepted_creation_bundle_sha256": "cf2acf71099b334d800211622614768f3b0c2cba6d667fe9d140aac18a28ddae",
+    "actual_installation_evidence": "docs/skills-3080-notice-next4-installation-evidence175645.json",
+    "actual_result_PR": 619,
+    "actual_result_merge": "d3e91067842cf712590ede8dd6cf8d5e9812f71c",
+    "not_the_current_next_four_manifest": true
+  },
+  "counter_scope": "Top-level zero operations/adoptions describe the historical source-preparation observation. The linked accepted installation-evidence counts actual central creation; these are not counts for the current next_four proposal."
+}

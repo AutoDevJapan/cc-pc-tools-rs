@@ -1,0 +1,17 @@
+{
+  "original_fixture_sha": "d8439880cc85a444f34f695a968de73761310b014782a2c819d1e72e6c436ce0",
+  "production_code_unchanged": true,
+  "test_mode": "Go diagnostic overlay; no production source or state modified",
+  "normal_renderer_control_accepted": true,
+  "actual_already_issued_original_input_rejected": true,
+  "expected_Red_exit": 1,
+  "result": {
+    "exit": 1,
+    "timed_out": false,
+    "stdout": "=== RUN   TestOwnedNativePathActualAlreadyIssuedCreateReadback175645\n    owned_native_path_actual_red175645_test.go:12: RED: original successfully issued same-request CreateNew cannot be consumed because duplicate Windows separators are compared as literal strings\n--- FAIL: TestOwnedNativePathActualAlreadyIssuedCreateReadback175645 (0.00s)\nFAIL\nFAIL\tgithub.com/AutoDevJapan/cc-pc-tools-rs/repair-guard\t0.019s\nFAIL\n",
+    "stderr": ""
+  },
+  "central_file_reads": 0,
+  "new_Create_calls": 0,
+  "normal_consume_refusal_not_bypassed": true
+}

@@ -1,0 +1,317 @@
+{
+  "todo": 3080,
+  "result_publisher_job": "20261027-175645-todo-3080",
+  "creator_job": "20261027-175645-todo-3080",
+  "new_targets_created": 4,
+  "successful_CreateNew_count": 1,
+  "current_files_readback_verified": 28,
+  "bytes": 80712,
+  "normal_read_batches": 4,
+  "instruction_buffers": 8,
+  "instruction_bytes": 13640,
+  "creation_manifest": "skills-3080-operations/create-next-four-175645.json",
+  "creation_manifest_sha256": "39ea776e81250f702902f53aa0e08df98df30d71a964edd9d4295317dcc1a209",
+  "creation_request_sha256": "79f7fbc0694e435a597d9b4a24bbf7ca827bc6f872c8e568ce2f0bf39507ab77",
+  "creation_input_head": "92683cd440d9a4449ca26ac490039ea9c44c81df",
+  "frozen_full_content_review": {
+    "freeze_reason": "The full original content review was used by the one real successful CreateNew. Never edit or restart4193.",
+    "task": 4193,
+    "job": "20261029-000437-todo-4193",
+    "spec": "74728b7e206521ae607c518b438854976f09b9a93751e9ff467f73ff495315c8",
+    "original_sha": "bd8a09b0f3f6dbcb629494a424ed90da5a6770841360d7b47dc57e9bd6d6b2fa",
+    "manifest": "39ea776e81250f702902f53aa0e08df98df30d71a964edd9d4295317dcc1a209",
+    "request": "79f7fbc0694e435a597d9b4a24bbf7ca827bc6f872c8e568ce2f0bf39507ab77",
+    "actual_native_creation": {
+      "actual_unmodified_invocation_sha256": "d8439880cc85a444f34f695a968de73761310b014782a2c819d1e72e6c436ce0",
+      "central_file_reads_by_capture": 0,
+      "created_files": 28,
+      "created_targets": 4,
+      "creator_runtime_revision": "034520d84d52f76dcd7dc7ef371910d6acd8ae9f",
+      "creator_runtime_sha256": "eab69e4fc8e52f2ad6858ef4e8498e8cc6030ac8ce7f788251a1aae476dc5d55",
+      "job": "20261027-175645-todo-3080",
+      "literal_invocations_equal": false,
+      "native_call_id": "call_64138b14df4e483885c35a84ad2a2741",
+      "native_call_timestamp": "2026-10-28T15:20:00.716Z",
+      "new_adoptions": 0,
+      "original_CLI_stdout_sha256": "88c7c342d9239c0f8b37511b9c7d213400623a5c250e2e2b303ba9ee87ed3c95",
+      "original_tool_blocks_sha256": "caf16e923490249f8b37e138fb5cb050f88385af968b5c07d7d926c6c932809a",
+      "other_native_bodies_returned": false,
+      "parsed_exec_options_and_quoted_request_paths_equivalent": true,
+      "prior_failed_exact_invocation_attempts": [],
+      "rendered_preflight_invocation_sha256": "14c78472bc6642bedc5d04ebdc3c475879c14371d9a9ead089ddad2f02084663",
+      "request_sha256": "79f7fbc0694e435a597d9b4a24bbf7ca827bc6f872c8e568ce2f0bf39507ab77",
+      "successful_CreateNew_count": 1,
+      "thread_id": "01a16bab-c238-7293-953d-d0f447cf2c05"
+    },
+    "M": 0,
+    "S": 0,
+    "N": 0,
+    "created_once": 28,
+    "existing_overwrites": 0,
+    "readback_discovery_current_use_pending": true,
+    "whole16_complete": false
+  },
+  "frozen_review_pending_flags_are_historical": true,
+  "qualified_full_review": {
+    "consumer_job": "20261027-175645-todo-3080",
+    "producer_job": "20261029-000437-todo-4193",
+    "producer_task": 4193,
+    "immutable_origin_job": "20261027-175645-todo-3080",
+    "actual_author": "20261027-175645-todo-3080",
+    "registered_spec_sha256": "74728b7e206521ae607c518b438854976f09b9a93751e9ff467f73ff495315c8",
+    "source_proof_sha256": "9cb3b4bac029328138392fce8746cae0d801c5f061289286158ada04352a14bc",
+    "fixed_head": "92683cd440d9a4449ca26ac490039ea9c44c81df",
+    "full_no_comparison": true,
+    "selected_PUBLIC_inputs": 14,
+    "payload_files": 28,
+    "manifest_sha256": "39ea776e81250f702902f53aa0e08df98df30d71a964edd9d4295317dcc1a209",
+    "normal_typed_qualified": true,
+    "native": [
+      {
+        "timestamp": "2026-10-28T15:05:15.159Z",
+        "model": "gpt-6-luna",
+        "effort": "max",
+        "service_tier": null
+      }
+    ],
+    "thread_matches": true,
+    "cwd_matches": true,
+    "raw_bytes": 1223,
+    "raw_sha256": "bd8a09b0f3f6dbcb629494a424ed90da5a6770841360d7b47dc57e9bd6d6b2fa",
+    "original_equals_job_last_message": true,
+    "M": 0,
+    "S": 0,
+    "N": 0,
+    "acceptance_marker_present": true,
+    "not_frozen_until_real_Create_success": true,
+    "central_operations": 0,
+    "whole16_complete": false,
+    "model_origin": "owner_request",
+    "effort_origin": "owner_request"
+  },
+  "referenced_artifacts": {
+    "bundle": {
+      "file": "skills-3080-next-four-actual-bundle175645.json",
+      "sha256": "09ee301f3164aa310f00e68255833045f7e9cb312f59c6cf79f0da3d23ccedb5"
+    },
+    "manifest": {
+      "file": "skills-3080-installed-next-four-manifest175645.json",
+      "sha256": "5904f323f6d51a529f8a51c0a23d13e6ac9b844e08554d1ccbf450196e510577"
+    },
+    "creation": {
+      "file": "skills-3080-next-four-create-evidence175645.json",
+      "sha256": "48e27f24596f650f91a8620ef54110995a3b52b20b27cad989a23150a4ef4646"
+    },
+    "readback": {
+      "file": "skills-3080-next-four-consume-evidence175645.json",
+      "sha256": "a4adb02a06d88dd1cd40a7405070472ce1fee489d406e11cf79c68ea6f132076"
+    },
+    "structure": {
+      "file": "skills-3080-next-four-actual-structure175645.json",
+      "sha256": "e5f450d1e6924b9fc3b90ecb9319729c0b5c821afeeb516446ad94f5a3df38df"
+    },
+    "discovery": {
+      "file": "skills-3080-next-four-discovery175645.json",
+      "sha256": "ddd3a8f919d9e9a01c279bf330e409da6c0a914574613dfa55cfb85523ea73a9"
+    },
+    "application": {
+      "file": "skills-3080-next-four-application175645.json",
+      "sha256": "dec20303db12c0ea6552c7105b3bfac834d1676c18c3275d3647e3c3a71adb91"
+    },
+    "design": {
+      "file": "skills-3080-next-four-actual-designs175645.json",
+      "sha256": "fe7c4466eb9b4b1617ddb73cc889efb44496b1615f33bd2dc45420f498728fc7"
+    },
+    "precreation": {
+      "file": "skills-3080-next-four-precreation-qualification175645.json",
+      "sha256": "157c261e55491f7a9e455175c82ed50b9c8b94db869987ade52d3f44548ff3d5"
+    },
+    "catalog": {
+      "file": "skills-3080-next-four-catalog-identity175645.json",
+      "sha256": "f07cf7c0778885327a2b5ffcec50090f587c58e9493cfc6780ddc11d4c45408a"
+    }
+  },
+  "creator_runtime_sha256": "eab69e4fc8e52f2ad6858ef4e8498e8cc6030ac8ce7f788251a1aae476dc5d55",
+  "creator_runtime_revision": "034520d84d52f76dcd7dc7ef371910d6acd8ae9f",
+  "current_runtime_sha256": "7fb45b8a411ca2e1dd64a034b94c51ce5ca51324ad7c0c4b778eecb9f4538d36",
+  "current_runtime_revision": "b78007695a7c5d73eb1f11118757e93918aa3234",
+  "software_fix_PR": 627,
+  "software_fix_reviewed_head": "f36bd74e131e29fcc2787ba5ea0a900f91912bd8",
+  "software_fix_merge": "b78007695a7c5d73eb1f11118757e93918aa3234",
+  "original_software_reviews": [
+    {
+      "producer_task": 4203,
+      "producer_job": "20261029-033138-todo-4203",
+      "immutable_origin": "20261029-005403-todo-3686",
+      "spec_sha": "c5b705499352d98f15fa82e1761251eeaa48e38e053a63f99c4bffab6cde3919",
+      "head": "f36bd74e131e29fcc2787ba5ea0a900f91912bd8",
+      "raw_bytes": 2141,
+      "raw_sha": "5c4a05aa9627c5bf89b2f8b42d17fe523ee118bfb951760b058162fd5c5b419c",
+      "normal_qualified": true,
+      "original_equals_job_last_message": true,
+      "native": [
+        {
+          "timestamp": "2026-10-28T18:32:14.615Z",
+          "model": "gpt-6-luna",
+          "effort": "max"
+        }
+      ],
+      "thread_matches": true,
+      "cwd_matches": true,
+      "M": 0,
+      "S": 0,
+      "N": 0,
+      "accepted": true,
+      "actual_Windows_apply_or_parent_consume_not_accepted": true,
+      "model_origin": "owner_request",
+      "effort_origin": "owner_request"
+    },
+    {
+      "consumer_job": "20261027-175645-todo-3080",
+      "producer_task": 4204,
+      "producer_job": "20261029-035105-todo-4204",
+      "actual_code_author": "20261029-005403-todo-3686",
+      "immutable_origin": "20261029-005403-todo-3686",
+      "registered_spec_sha256": "e91ed81f9abd08e1f6c469c73dc042797773a2cc78b8105f33d0413cbc8fb74e",
+      "fixed_head": "f36bd74e131e29fcc2787ba5ea0a900f91912bd8",
+      "normal_result_qualified": true,
+      "raw_bytes": 1043,
+      "raw_sha256": "266a418692c300e35268945064385bbe0a41bde5cea3113fc0935592201c543f",
+      "original_equals_job_last_message": true,
+      "actual_native": [
+        {
+          "timestamp": "2026-10-28T18:51:42.178Z",
+          "model": "gpt-6-luna",
+          "effort": "max",
+          "service_tier": null
+        }
+      ],
+      "thread_matches": true,
+      "cwd_matches": true,
+      "code_acceptance": {
+        "domain": "skills-3080-code-review-v1",
+        "head": "f36bd74e131e29fcc2787ba5ea0a900f91912bd8",
+        "accepted": true,
+        "must": 0,
+        "suggestion": 0,
+        "nit": 0
+      },
+      "M": 0,
+      "S": 0,
+      "N": 0,
+      "software_Windows_update_verification_is_separate": true,
+      "general_guard_or_permissions_changed": false,
+      "whole16_complete": false,
+      "model_origin": "owner_request",
+      "effort_origin": "owner_request"
+    }
+  ],
+  "old_actual_native_invocation_preserved": true,
+  "literal_invocations_equal": false,
+  "repeated_windows_separators_only_repair": true,
+  "normal_current_ID_hash_buffers_verified": true,
+  "raw_platform_IDs_private": true,
+  "fresh_discovery_snapshot_precedes_current_readback": true,
+  "discovered_targets": 4,
+  "discovery_parse_errors": 0,
+  "discovery_scan_limit_diagnostics": 2,
+  "actual_current_workflow_decisions": 3,
+  "synthetic_decisions": 5,
+  "implicit_skill_selection_proven": false,
+  "full_discovery_or_context_budget_proven": false,
+  "new_global_source_raw_credit": 0,
+  "third_party_assets_services_or_unknown_central_rights_accepted": false,
+  "source_reference_historical_zero_operation_fields_preserved": true,
+  "withheld_meanings_remain_unknown": true,
+  "Windows_full_admin_journal_not_independently_received_by_parent": true,
+  "parent_observed_new_runtime_and_normally_consumed_all28": true,
+  "public_result_review_pending_at_recording": true,
+  "whole16_complete": false,
+  "original_application_private_record_sha256": "fdd26a61ffc89dce250d800e02f38baeffa84b593d8ee3160754e9ca1bd1b8bb",
+  "catalog_validation": {
+    "actual_worker": "20261027-175645-todo-3080",
+    "related_package": "tools/skills-3080-catalog",
+    "test_count": 1,
+    "test_exit": 0,
+    "test_stdout": "ok  \tcc-pc-tools-rs/skills-3080-catalog\t5.623s\n",
+    "seconds": 5.623,
+    "vet_exit": 0,
+    "actual_full_queue_and_primary_snapshot_paths_explicitly_supplied": true,
+    "actual_full_queue_records": 73220,
+    "actual_full_queue_bytes": 64514642,
+    "actual_full_queue_sha256": "497359fb798e9f77cecb95ecf76c6c4eb2195494cb6d326d96ca4c6a36232db7",
+    "independent_file_hash_matches": true,
+    "assessment_records": 1469,
+    "final_records": 176,
+    "assessment_final_intersection": 170,
+    "final_only_legacy": 6,
+    "assessment_final_union": 1475,
+    "actual_new": 158,
+    "integrated": 3,
+    "excluded_records": 15,
+    "pending_final": 73044,
+    "held_body": 428,
+    "held_acquisition": 647,
+    "CI_does_not_claim_reading_private_full_queue_or_snapshots": true,
+    "source_bodies_or_new_permissions_or_central_ops": 0
+  },
+  "publication_review_coordination_origin_job": "20261026-214717-todo-3080",
+  "review_origin_scope": "Publication reviewers4033/4076 retain coordination origin214717. Frozen Creator4193 has its distinct, genuine origin175645 and actual author175645; neither origin is rewritten or interchangeable.",
+  "subscription_execution": {
+    "mode": "unknown_historical_execution",
+    "source": "Normal job execution requirements, original producer metadata, current normal Codex login status and OpenCodex account metadata",
+    "observed_at": "2026-10-28T19:45:55.1877170+00:00",
+    "normal_login_status_chatgpt": true,
+    "normal_login_status_api_key": false,
+    "all_types_codex_or_oauth": true,
+    "all_additional_credits_disabled": true,
+    "raw_credentials_account_ids_labels_or_balances_returned_or_saved": false,
+    "historical_per_request_billing_proven": false,
+    "scope": "Current OAuth login and eligible account/spending metadata are observed separately. Earlier producer authentication remains unknown. Model/effort/origin checks and operational file results are separate verified facts. No credentials, authentication files or billing secrets were inspected.",
+    "original_producer_conditions": [
+      {
+        "producer_job": "20261029-000437-todo-4193",
+        "model": "gpt-6-luna",
+        "effort": "max",
+        "model_origin": "owner_request",
+        "effort_origin": "owner_request",
+        "metadata_equals_independently_received_native_identity": true
+      },
+      {
+        "producer_job": "20261029-033138-todo-4203",
+        "model": "gpt-6-luna",
+        "effort": "max",
+        "model_origin": "owner_request",
+        "effort_origin": "owner_request",
+        "metadata_equals_independently_received_native_identity": true
+      },
+      {
+        "producer_job": "20261029-035105-todo-4204",
+        "model": "gpt-6-luna",
+        "effort": "max",
+        "model_origin": "owner_request",
+        "effort_origin": "owner_request",
+        "metadata_equals_independently_received_native_identity": true
+      }
+    ],
+    "current_observed_mode": "oauth_subscription_only",
+    "historical_execution_authentication_status": "unknown",
+    "historical_execution_authentication_proven": false,
+    "historical_execution_authentication_limitation": "Current login/account metadata and independently verified producer/model/effort do not identify the authentication used by earlier requests. The available records do not certify historical authentication or billing; unknown is retained rather than counted as verified OAuth."
+  },
+  "review_fix_validation": {
+    "reviewed_prior_head": "17b744e7a1071705da2954635555c2c313a531d7",
+    "rubber4033_original_sha256": "07945e3c4af72a015f7f9f86caf678f9bc8285d3669c1c487178233f7925f45f",
+    "self4076_original_sha256": "4acd4e9c7e832f4e845d9c84f5baaea9086bbcbcc407a651253334cebb1941da",
+    "original_findings": "4033 M1;4076 M1 S1",
+    "new_negative_cases_reproduced": 11,
+    "current_related_full_package": "PASS6.727s",
+    "current_vet": "PASS",
+    "explicit_real_queue_sha256": "497359fb798e9f77cecb95ecf76c6c4eb2195494cb6d326d96ca4c6a36232db7",
+    "explicit_prior170_and_current175_snapshots_used": true,
+    "initial_design_index_pin_failure_fixed": true,
+    "normal_same_final_head_rechecks_still_required": true,
+    "central_operations_for_review_fix": 0,
+    "Creator4193_restarted_or_edited": false
+  }
+}

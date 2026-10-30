@@ -1,0 +1,819 @@
+{
+  "all_member_contexts_read": false,
+  "all_member_rights_confirmed": false,
+  "all_original_packets_losslessly_reconstructed": true,
+  "bound_member_metadata": 5,
+  "complete_original_packets": 2,
+  "current_snapshot": {
+    "file": "prepared-skills-3080-primaryflow216-evaluation-v15-170905.json",
+    "original_packets": 64,
+    "records": 216,
+    "sha256": "abc54e47f783c03ecb1e235a2b556e191b0d215f285148c698d7373e393d14a6"
+  },
+  "domain": "skills3080-primaryflow-parent-shared-snapshot-v1",
+  "entries": [
+    {
+      "bytes": 1293,
+      "git_blob": "46d3e33abec2d9216c51ac81ec5ef60c419ddfc9",
+      "inventory_id": "github:8b6af557572d561312d34c4eec17c97468454ba48bc3d016b685c7486b54d5b5",
+      "path": "skills/googleworkspace-bot/persona-team-lead/SKILL.md",
+      "source_commit": "920714f17d81e0a95c7a9bc51faf0a7921cd982d",
+      "source_repo": "6mile/skills",
+      "source_sha256": "0082c2ccf6f0b18b02e1e779922de2f0a84ce8468ab8c305842e7b6ea016a113"
+    },
+    {
+      "bytes": 15874,
+      "git_blob": "30c448ba477ee4e4d61d5a494766ec470786ed51",
+      "inventory_id": "github:43499a6012768597d4bb8f2e552d2d7efcff16b8137ef3ae2580aa78b6443128",
+      "path": "skills/siddontang/tidb-x/SKILL.md",
+      "source_commit": "920714f17d81e0a95c7a9bc51faf0a7921cd982d",
+      "source_repo": "6mile/skills",
+      "source_sha256": "0082ef186e8686321f89f6cba45d4d5c5d0ee1425f015e1491a26be98b41b860"
+    },
+    {
+      "bytes": 10413,
+      "git_blob": "0f2c3b91ec2be679a8f114c82cc10d46c996e37b",
+      "inventory_id": "github:28f1067ee8f901fd60b853dfd7a745ff085dd49b9f2ea0cde9db09620afb3d11",
+      "path": "skills/bwbernardweston18/pixabay-music-ab2n-0330/SKILL.md",
+      "source_commit": "920714f17d81e0a95c7a9bc51faf0a7921cd982d",
+      "source_repo": "6mile/skills",
+      "source_sha256": "016c10743de1943be8809243c9d25cd37c0b3ccc9768c3d9a83bfc797a9bd2a1"
+    },
+    {
+      "bytes": 11624,
+      "git_blob": "963f1f09af885c62274bb542ef7ed0e35db3a1ca",
+      "inventory_id": "github:2cc8bf6ea0af1c1c1963071ee3eb98bfefe9d029725dcafafae7992421105ca2",
+      "path": "skills/nhadaututtheky/rune-ba/SKILL.md",
+      "source_commit": "920714f17d81e0a95c7a9bc51faf0a7921cd982d",
+      "source_repo": "6mile/skills",
+      "source_sha256": "016d6925a6166fd7e0f4cf293c99b527c0529374da421df44759b7924b91b5c6"
+    },
+    {
+      "bytes": 2580,
+      "git_blob": "b665ade754062c4daaf1b2bad5f59b9da8eefbfe",
+      "inventory_id": "github:6a7ff50c11d0061e34e37ef39d6c01ad3d7693ed89549e08c3024cc07f363ecc",
+      "path": "skills/axelhu/axel-sleep/SKILL.md",
+      "source_commit": "920714f17d81e0a95c7a9bc51faf0a7921cd982d",
+      "source_repo": "6mile/skills",
+      "source_sha256": "016d6a06c94df868445a7921e2903d9d0f60e1c213e47c11b1b712f06e725acd"
+    }
+  ],
+  "limits": "Five newly parent-received representative meanings and five pending member contexts. Original211 records and62 whole contexts retain their exact bytes; prior private snapshot member header228 is historical, while its actual member tuples sum237. Current216 snapshot computes242 from actual members. New actual C0/174543 and C1/174632 retain original actors; C1 uses normal same-scope spec amendment with exact old suffix. Current4 C1 render ranges have native call/result/exit0/no-truncation correlation. No source, permission, disposition or central operation.",
+  "new_parent_meanings_and_mixed_reader_range_proof_retained": true,
+  "prior_snapshot": {
+    "actual_bound_member_records": 237,
+    "all_records_and62_original_contexts_exactly_retained": true,
+    "declared_private_member_header": 228,
+    "file": "prepared-skills-3080-primaryflow211-evaluation-v14-175645.json",
+    "old_private_header_not_rewritten": true,
+    "records": 211,
+    "sha256": "29ab9d5eea8a15843e9ced10b6ce3ce4b56d3bd6768b07e16fc5a8c9694f8568"
+  },
+  "publication_preparation": {
+    "central_operations": 0,
+    "new_final_dispositions": 0,
+    "new_global_raw_credit": 0,
+    "new_permissions": 0,
+    "new_source_body_reads": 0,
+    "public_copy_created": false
+  },
+  "publisher_job": "20261029-170905-todo-3080",
+  "records": [
+    {
+      "actual_assessment_reader": "20261029-174543-todo-4133",
+      "all_member_contexts_and_individual_rights_pending": true,
+      "bytes": 1293,
+      "cohort": 0,
+      "git_blob": "46d3e33abec2d9216c51ac81ec5ef60c419ddfc9",
+      "inventory_id": "github:8b6af557572d561312d34c4eec17c97468454ba48bc3d016b685c7486b54d5b5",
+      "new_final_disposition": false,
+      "ordinal": 117,
+      "original_assessment": {
+        "body_bytes": 1293,
+        "body_sha256": "0082c2ccf6f0b18b02e1e779922de2f0a84ce8468ab8c305842e7b6ea016a113",
+        "each_member_context_and_rights_pending": true,
+        "findings": [
+          "可視本文はTeam LeadというpersonaとしてCalendar/Gmail/Chat/Drive/Sheetsのutility skillsを前提とし、日次standup、1対1面談準備、週次集約、メールの作業委譲を挙げる。これらのutility本文や実在・現在のCLI仕様は確認していない。",
+          "週のagendaを表にする読取と、standupのChat投稿・共有Sheetへのappendを併記している。取得した情報を共有してよい相手・対象範囲や、投稿の重複防止は可視本文にない。",
+          "機微なチーム情報に--sanitizeを使うとするが、その実装や抑止範囲・送信先への適合性は未検証。personaや日次/週次指定は現在の役割・定期実行・送信権限ではない。"
+        ],
+        "member_metadata_sha256": "df21d4eda514a62ef6459573d2610cd061fb1f48a019af2d5cf4abbb21965730",
+        "member_occurrences": 1,
+        "negative": "personaの命令だけでメールを他者へ委譲し、日次Chat投稿や共有表追記を始め、sanitize指定だけで内容確認を済ませる。",
+        "ordinal": 117,
+        "positive": "指定された会議と作業記録から週報案を作り、取得範囲と未取得を示し、許可された共有先への更新結果を別に確認する。",
+        "read": {
+          "failed_view_calls": 0,
+          "mask_version": "primaryflow-v4-opaque-lexical-boundaries",
+          "ranges": [
+            {
+              "first": 1,
+              "range_sha256": "5002a66b9bedb22710d63298caced1fc2a4e402a049c3c3a74079381d059f252",
+              "through": 42,
+              "visible_lines": 25,
+              "withheld_physical_lines": [
+                1,
+                2,
+                3,
+                4,
+                5,
+                6,
+                7,
+                8,
+                9,
+                10,
+                11,
+                12,
+                13,
+                14,
+                15,
+                16,
+                17
+              ]
+            }
+          ],
+          "raw_full": false,
+          "total_physical_lines": 42,
+          "unseen_meanings_remain_unknown": true,
+          "view_calls_returned": 1,
+          "whole_masked_view_sha256": "5002a66b9bedb22710d63298caced1fc2a4e402a049c3c3a74079381d059f252"
+        },
+        "representative_inventory_id": "github:8b6af557572d561312d34c4eec17c97468454ba48bc3d016b685c7486b54d5b5",
+        "required_changes": [
+          "実利用では元依頼のチーム・メール・会議・共有先を限定し、読取、下書き、外部投稿、共有表更新を分けて結果を確認する。--sanitizeだけで秘密保護が済んだとしない。",
+          "現在の役割と既存の定期処理・共有ToDo・本人通知条件に結び、原のpersonaや毎日投稿を新たな司令塔や重複予定へ移さない。Chatやメールの送信は現在の明示依頼の範囲に従う。"
+        ],
+        "source_git_blob": "46d3e33abec2d9216c51ac81ec5ef60c419ddfc9",
+        "status": "visible_primary_evaluated",
+        "unmet": [
+          "伏字17物理行の意味、each_member_context・支持・個別許諾・現在実在・source_or_service_rights・最終採否は未確認。",
+          "utility本文・現行CLI/API・権限/共有先・sanitizeの効力・定期実行と冪等性は未検証。支持本文/外部リンク閲覧・CLI実行・メール/Chat送信・表更新・設定・実配置・実使用0。近接比較はgoogle-workspace、notion-meeting-intelligence、shared-todoの起動metadataだけ。"
+        ],
+        "use": "チームの進捗集約、面談準備、週報、メールからの作業抽出を既存のWorkspace機能へ対応させる参考。",
+        "value": "standup・meeting-prep・weekly-digest・email-to-taskと、共有表へのOKR追記という具体的な作業の対応が短く整理されている。"
+      },
+      "original_packet_sha256": "74e9e11378ed5358e21f36fcbe7914dfc215eab4f88c85a37c6a38ef6939b9ba",
+      "path": "skills/googleworkspace-bot/persona-team-lead/SKILL.md",
+      "representative_body_meaning_only": true,
+      "source_commit": "920714f17d81e0a95c7a9bc51faf0a7921cd982d",
+      "source_repo": "6mile/skills",
+      "source_sha256": "0082c2ccf6f0b18b02e1e779922de2f0a84ce8468ab8c305842e7b6ea016a113"
+    },
+    {
+      "actual_assessment_reader": "20261029-174543-todo-4133",
+      "all_member_contexts_and_individual_rights_pending": true,
+      "bytes": 15874,
+      "cohort": 0,
+      "git_blob": "30c448ba477ee4e4d61d5a494766ec470786ed51",
+      "inventory_id": "github:43499a6012768597d4bb8f2e552d2d7efcff16b8137ef3ae2580aa78b6443128",
+      "new_final_disposition": false,
+      "ordinal": 118,
+      "original_assessment": {
+        "body_bytes": 15874,
+        "body_sha256": "0082ef186e8686321f89f6cba45d4d5c5d0ee1425f015e1491a26be98b41b860",
+        "each_member_context_and_rights_pending": true,
+        "findings": [
+          "可視本文はTiDB Cloud Zeroの作成とclaim、TLS接続、30日失効、Starterへの移行を案内する。無料/認証不要という記述や現行料金・保持条件・claim権限を確認したものではない。",
+          "TiDB Server、TiKV cache、S3、独立したbackground処理、TiCIとRU計測を図示し、S3の耐久性やbackgroundがqueryを阻害しないと主張する。構成の現行性、障害時の保証、性能値の条件は未検証。",
+          "agent_memoryとagent_decisionsの例はtenant_idを持ち、SELECT側で絞るが、可視CREATE TABLEはtenant_idを必須にせず、DB側の認可・行分離を示さない。列とINDEXだけではtenant隔離の証拠にならない。",
+          "agent_contextは追記専用と説明する一方、可視schemaにはsession_id/stepの一意制約やUPDATE禁止の仕組みがない。step\u003e30と全decisionの再読は例示であり、完全な再開位置・重複排除・同step順序の保証ではない。",
+          "tasksは一意task_keyとstatus='pending'条件で取得し、完了時にagent_idを照合する。取得成功の影響行数確認、lease/世代、異常終了後の回収、遅い旧workerからの完了排除は可視例にない。",
+          "判断記録には医療判断やDeFi exitの架空例があり、chain eventにはAI解釈を付ける。source/confidenceを保存しただけで医学的妥当性・売買権限・実取引成功・解釈の真実性を保証しない。",
+          "chain event例はchain、tx/block、金額等を示すが、event単位の一意性、log位置、block hash、reorg/finality、asset単位と価格取得時点を十分には結び付けない。性能改善値とedition表も保存中の主張にとどまる。"
+        ],
+        "member_metadata_sha256": "2afc36bcf788d945dc4f1272cd6d70b7d8353520c703dc9e751495761ebcd8c4",
+        "member_occurrences": 1,
+        "negative": "tenant_id列だけで隔離済みとし、取得UPDATEが0行でも処理を始め、旧workerの完了やAIの医療/売買判断をそのまま採用し、無料の記述だけでクラウド資源を新設する。",
+        "ordinal": 118,
+        "positive": "同じtaskの条件付き取得が1行成功したことを確かめ、lease世代を完了まで照合し、原観測と判断理由を別々の追記記録に残す。",
+        "read": {
+          "failed_view_calls": 0,
+          "mask_version": "primaryflow-v4-opaque-lexical-boundaries",
+          "ranges": [
+            {
+              "first": 1,
+              "range_sha256": "190665334843d0ae1e8543ec7789216eeb624261cb4ba84e3f4f96a4f5da0e6c",
+              "through": 180,
+              "visible_lines": 165,
+              "withheld_physical_lines": [
+                1,
+                2,
+                3,
+                4,
+                8,
+                16,
+                20,
+                22,
+                25,
+                26,
+                27,
+                35,
+                38,
+                129,
+                135
+              ]
+            },
+            {
+              "first": 181,
+              "range_sha256": "18bba9b02cb33442352be4479f7a2eddb209cefef57c840c7310f06d8d2a40ce",
+              "through": 360,
+              "visible_lines": 172,
+              "withheld_physical_lines": [
+                230,
+                231,
+                237,
+                255,
+                298,
+                299,
+                303,
+                306
+              ]
+            },
+            {
+              "first": 361,
+              "range_sha256": "ab835d7cb545317772af298b2f6dedd9e5118ced42585ebcecab69c1bc990b8c",
+              "through": 410,
+              "visible_lines": 39,
+              "withheld_physical_lines": [
+                393,
+                394,
+                395,
+                396,
+                397,
+                398,
+                399,
+                400,
+                401,
+                402,
+                409
+              ]
+            }
+          ],
+          "raw_full": false,
+          "total_physical_lines": 410,
+          "unseen_meanings_remain_unknown": true,
+          "view_calls_returned": 3,
+          "whole_masked_view_sha256": "851b9749266d03f7a56a0bf3c2596733af2c06a9da483ab5edd5909c7350d14f"
+        },
+        "representative_inventory_id": "github:43499a6012768597d4bb8f2e552d2d7efcff16b8137ef3ae2580aa78b6443128",
+        "required_changes": [
+          "実対象と既存契約の条件を確認し、原のprovision/claim/installや有料RU利用を実行しない。追加費用、恒久資源、不要な非Prd配備へ広げず、接続情報を出力/tee/記録へ残さない。",
+          "tenantを認証主体へ結び、必要列のNOT NULL・利用側の認可と分離を検査する。追記記録には安定ID・一意性・順序・再開cursor・保持/秘匿条件を定め、SQL例だけでACIDや監査完全性を報告しない。",
+          "task取得の影響行数と所有世代を確認し、失効・再取得・完了を同じ世代で照合する。旧workerの遅延書込や応答不明時の二重実行を防ぎ、登録/取得/処理/完了を分ける。",
+          "chainのevent識別、reorg/finality、時刻・単位・欠測を保持し、推定解釈と原観測を分ける。医療/金融の例や性能/価格を現在の根拠へ流用せず、実利用時に一次資料と対象版・条件を確認する。"
+        ],
+        "source_git_blob": "30c448ba477ee4e4d61d5a494766ec470786ed51",
+        "status": "visible_primary_evaluated",
+        "unmet": [
+          "伏字34物理行の意味、each_member_context・支持・個別許諾・現在実在・source_or_service_rights・最終採否は未確認。",
+          "現行構成/料金/RU/保持・claim・接続/認可・競合/再開/一意性・reorg/単位・性能根拠・医療/金融例の妥当性は未検証。支持本文/外部リンク閲覧・provision/claim/接続/SQL/送信/取引/install・実配置・実使用0。近接比較はbackend-correctness、sql-data-integrity、stale-request-orderingの起動metadataだけ。"
+        ],
+        "use": "複数agentの記憶、追記式の作業文脈、条件付きtask取得、判断の根拠、chain eventをSQLで記録する設計資料。",
+        "value": "task_keyの一意性とpendingからの条件付きUPDATE、session/stepの再開照会、判断理由とsourceの記録を具体的なSQL例で比較できる。"
+      },
+      "original_packet_sha256": "74e9e11378ed5358e21f36fcbe7914dfc215eab4f88c85a37c6a38ef6939b9ba",
+      "path": "skills/siddontang/tidb-x/SKILL.md",
+      "representative_body_meaning_only": true,
+      "source_commit": "920714f17d81e0a95c7a9bc51faf0a7921cd982d",
+      "source_repo": "6mile/skills",
+      "source_sha256": "0082ef186e8686321f89f6cba45d4d5c5d0ee1425f015e1491a26be98b41b860"
+    },
+    {
+      "actual_assessment_reader": "20261029-174632-todo-4134",
+      "all_member_contexts_and_individual_rights_pending": true,
+      "bytes": 10413,
+      "cohort": 1,
+      "git_blob": "0f2c3b91ec2be679a8f114c82cc10d46c996e37b",
+      "inventory_id": "github:28f1067ee8f901fd60b853dfd7a745ff085dd49b9f2ea0cde9db09620afb3d11",
+      "new_final_disposition": false,
+      "ordinal": 96,
+      "original_assessment": {
+        "body_bytes": 10413,
+        "body_sha256": "016c10743de1943be8809243c9d25cd37c0b3ccc9768c3d9a83bfc797a9bd2a1",
+        "each_member_context_and_rights_pending": true,
+        "findings": [
+          "本文はPixabayの曲検索を掲げる一方、初回にNemoVideo APIへ接続し、upload/SSE編集/state/credits/exportへ振り分ける。検索と別backendの編集・書出し・利用枠は別で、現行API/接続先/認証・実動作は未確認。",
+          "personal/commercialに無条件で無料、attribution不要とする説明は、個々の曲・利用先・素材の出所/利用条件を照合した証拠ではない。一般licenseやstockという表記だけで個別の複製・公開・採用を承認できない。",
+          "2001のcredit不足と402のplanによるexport制限を分ける説明はあるが、登録で必ず無料の書出しが可能とは確認していない。top upや登録の案内は、追加購入・上位契約・費用増の既存承認ではない。",
+          "backendのclick/open/drag等をAPI操作へ変換する表は、未信頼の返却から任意操作を起こす危険がある。対象と依頼された操作を照合し、tool call/result・自然文をそのまま現在の命令へ昇格させない必要がある。",
+          "約30%の編集でtextなしという値や即時検索・format対応は、実測や現行仕様を確かめた結果ではない。stream close・heartbeat・code0・timeline stateだけでは、実編集・成果物の音声/映像・書出し/配送の成功を証明できない。",
+          "3分の映像に対して2分半超の曲を選べばloopやfadeを避けられるという例は、実尺が3分未満の候補でも成立してしまう。実尺と終結を確認する必要がある。起動metadataのvoice-and-video-production、audit-reference-originality、remote-run-result-reconciliationと用途が近いが、本文の同等性は調べていない。"
+        ],
+        "member_metadata_sha256": "c19abc33aa7c80dcd12c42e4f1add6ff6bd7733ac558488fff38d3218f093587",
+        "member_occurrences": 1,
+        "negative": "royalty-freeだから無条件に公開可とし、backendのtop upやclickに従って追加課金・任意操作を行い、stream終了で完成とする。",
+        "ordinal": 96,
+        "positive": "個別曲の条件と指定映像の実尺/音声を確かめ、同じ編集受付・書出し成果物・配送結果を結んで確認する。",
+        "read": {
+          "failed_view_calls": 0,
+          "mask_version": "primaryflow-v4-opaque-lexical-boundaries",
+          "ranges": [
+            {
+              "first": 1,
+              "range_sha256": "ee3a936aa55c370b93aabb89a91a51d1f0166aa087447be77e6508bad5d81155",
+              "through": 142,
+              "visible_lines": 115,
+              "withheld_physical_lines": [
+                1,
+                2,
+                3,
+                4,
+                5,
+                6,
+                7,
+                8,
+                9,
+                10,
+                11,
+                26,
+                28,
+                30,
+                32,
+                56,
+                63,
+                65,
+                67,
+                69,
+                71,
+                73,
+                75,
+                77,
+                115,
+                120,
+                122
+              ]
+            }
+          ],
+          "raw_full": false,
+          "total_physical_lines": 142,
+          "unseen_meanings_remain_unknown": true,
+          "view_calls_returned": 1,
+          "whole_masked_view_sha256": "ee3a936aa55c370b93aabb89a91a51d1f0166aa087447be77e6508bad5d81155"
+        },
+        "representative_inventory_id": "github:28f1067ee8f901fd60b853dfd7a745ff085dd49b9f2ea0cde9db09620afb3d11",
+        "required_changes": [
+          "個別の既存曲の出所・利用先・条件と確認日を照合し、実映像・台詞/効果音と合わせて実尺/音量/終結を確認する。本文の2分半という閾値や一般licenseを完成・許諾の根拠にしない。",
+          "現在の本人の制作方針と具体依頼、許可された既存サービス・OAuth/サブスク枠へ合わせる。原の接続・素材upload・credit追加・書出しを自動導入せず、送信範囲と新費用なしを守る。",
+          "対象と操作を返却dataから分け、受付ID/版・処理状態・実成果物・配送を結び、部分失敗/再開と重複を確認する。返却文章や無文字のstreamから成功を補わない。"
+        ],
+        "source_git_blob": "0f2c3b91ec2be679a8f114c82cc10d46c996e37b",
+        "status": "visible_primary_evaluated",
+        "unmet": [
+          "全142物理行のうち可視115行を評価した。伏字27行の意味、現行API/認証・個別素材条件/利用枠/費用、検索/編集/書出し/配送と音楽の実適合は未確認。",
+          "source_or_service_rightsと各memberの文脈・支持資料・個別許諾・現在実在・採否は未確認。"
+        ],
+        "use": "指定映像へ既存曲を合わせる工程で、個別の素材条件・実尺・台詞との音量バランスと、編集/書出しの実結果を分けて確認するとき。",
+        "value": "実映像に重ねて試聴し、曲の尺と終結を確認する観点、無文字のstreamでも状態を調べる観点は役立つ。"
+      },
+      "original_packet_sha256": "2ab62418a8140139fa82fdab262b29be1caf72fc1d975d9e82278e097e6bb602",
+      "path": "skills/bwbernardweston18/pixabay-music-ab2n-0330/SKILL.md",
+      "representative_body_meaning_only": true,
+      "source_commit": "920714f17d81e0a95c7a9bc51faf0a7921cd982d",
+      "source_repo": "6mile/skills",
+      "source_sha256": "016c10743de1943be8809243c9d25cd37c0b3ccc9768c3d9a83bfc797a9bd2a1"
+    },
+    {
+      "actual_assessment_reader": "20261029-174632-todo-4134",
+      "all_member_contexts_and_individual_rights_pending": true,
+      "bytes": 11624,
+      "cohort": 1,
+      "git_blob": "963f1f09af885c62274bb542ef7ed0e35db3a1ca",
+      "inventory_id": "github:2cc8bf6ea0af1c1c1963071ee3eb98bfefe9d029725dcafafae7992421105ca2",
+      "new_final_disposition": false,
+      "ordinal": 97,
+      "original_assessment": {
+        "body_bytes": 11624,
+        "body_sha256": "016d6925a6166fd7e0f4cf293c99b527c0529374da421df44759b7924b91b5c6",
+        "each_member_context_and_rights_pending": true,
+        "findings": [
+          "本文はBAの5問、未指定要件の探索、user story/受入条件/NFR、Requirements Documentからplanへの引継ぎを説明する。Runeへの強制routing、.runeへの保存、別Skill/agentへの引継ぎは現在の担当への指示として適用していない。",
+          "5問を一問ずつ必ず聞き、just buildでも戻すhard gateがあり、詳細spec/PRDから抽出する場合も本人確認を求める。既存の回答・指定済み要件を再確認する一律のgateは、同じ判断の再質問を避ける現在の方針へ調整が必要。",
+          "分類表のBug FixはBA省略、Refactorは軽量という案と、Sharp Edgesのsimpleでも5問必須という案が併存する。50語/事業語での自動起動や200行上限も原の目安であり、文字量だけで複雑さ・不足・依頼範囲を決められない。",
+          "hidden requirementのchecklistは不足候補の発見に使えるが、auth/analytics/規制対応/API等を確定要件へ自動追加する根拠ではない。本人のDecision、担当のDiscretion、明示されたDeferredという区分は有用だが、未採用案を本人の決定や保留へ変えない。",
+          "関連するNFRだけを扱う説明とtest可能な受入条件は具体的だが、記入・scan名・planへの引渡しだけで機能や適合の実結果は証明できない。58 skills/200接続/14 packsやroot fixの効果も未確認。起動metadataのdefine-goal、domain-modeling、spec-atdd-tdd-issue-workflowと用途が近いが、中央本文の同等性は未確認。"
+        ],
+        "member_metadata_sha256": "eb900b1d4353b979c5bf5cf823d0dbee01df5cba7e9c69224babf73216cf963f",
+        "member_occurrences": 1,
+        "negative": "長い依頼なので同じ5問を再質問し、checklist全項目を確定要件に加え、planへ文書を渡しただけで元作業を完了とする。",
+        "ordinal": 97,
+        "positive": "既存の本人回答と出所を保持し、担当の裁量で解ける内部設計と本人だけの新判断を分け、実際に確認できる受入条件へ結ぶ。",
+        "read": {
+          "failed_view_calls": 0,
+          "mask_version": "primaryflow-v4-opaque-lexical-boundaries",
+          "ranges": [
+            {
+              "first": 1,
+              "range_sha256": "5450012c6cbc40a2db455e1e1aa311df99901e5f82ed0a9bbdb4fa15e9aec00e",
+              "through": 180,
+              "visible_lines": 179,
+              "withheld_physical_lines": [
+                98
+              ]
+            },
+            {
+              "first": 181,
+              "range_sha256": "65f8f2ffc436ee93a03b31d48392d65cf0c7ffd689eaafd4530035a0f895e1b8",
+              "through": 300,
+              "visible_lines": 110,
+              "withheld_physical_lines": [
+                201,
+                233,
+                255,
+                283,
+                286,
+                289,
+                294,
+                298,
+                299,
+                300
+              ]
+            }
+          ],
+          "raw_full": false,
+          "total_physical_lines": 300,
+          "unseen_meanings_remain_unknown": true,
+          "view_calls_returned": 2,
+          "whole_masked_view_sha256": "8db842c70c0d7727a3241e34c1d159f945ee669620689175a35bc76d79b42414"
+        },
+        "representative_inventory_id": "github:2cc8bf6ea0af1c1c1963071ee3eb98bfefe9d029725dcafafae7992421105ca2",
+        "required_changes": [
+          "既存のspec/本人回答と対象・出所・版から決定済みの要件を抽出し、調査で解ける技術的不足は担当が調べる。本人だけの未指定要件・新費用/権利/顧客との約束等だけを具体的に質問し、固定5問や回答の再確認を課さない。",
+          "元の範囲と受入条件を保ち、本人の決定・裁量・明示的な保留・仮定・提案を区別する。語数/行数・自動routingや文書の存在を範囲縮小や元作業の完了根拠にしない。",
+          "関連するNFRを実際の測定/受入へ結び、追加候補を自動採用しない。原の保存・再委譲・他Skill起動を導入せず、この研究の固定入力・read-only範囲を維持する。"
+        ],
+        "source_git_blob": "963f1f09af885c62274bb542ef7ed0e35db3a1ca",
+        "status": "visible_primary_evaluated",
+        "unmet": [
+          "全300物理行のうち可視289行を評価した。伏字11行の意味、routing/他Skill・抽出の精度/効果・NFR/受入の実検証と個別条件は未確認。",
+          "source_or_service_rightsと各memberの文脈・支持資料・個別許諾・現在実在・採否は未確認。"
+        ],
+        "use": "依頼の利用者・目的・完了条件・範囲・前提/依存を整理し、本人が決めた事項、担当の裁量、明示的な保留を分けるとき。",
+        "value": "test可能な受入条件、仮定と依存、Decision/Discretion/Deferredの区分と、関連するNFRだけを測定方法へ結ぶ構成は有用。"
+      },
+      "original_packet_sha256": "2ab62418a8140139fa82fdab262b29be1caf72fc1d975d9e82278e097e6bb602",
+      "path": "skills/nhadaututtheky/rune-ba/SKILL.md",
+      "representative_body_meaning_only": true,
+      "source_commit": "920714f17d81e0a95c7a9bc51faf0a7921cd982d",
+      "source_repo": "6mile/skills",
+      "source_sha256": "016d6925a6166fd7e0f4cf293c99b527c0529374da421df44759b7924b91b5c6"
+    },
+    {
+      "actual_assessment_reader": "20261029-174632-todo-4134",
+      "all_member_contexts_and_individual_rights_pending": true,
+      "bytes": 2580,
+      "cohort": 1,
+      "git_blob": "b665ade754062c4daaf1b2bad5f59b9da8eefbfe",
+      "inventory_id": "github:6a7ff50c11d0061e34e37ef39d6c01ad3d7693ed89549e08c3024cc07f363ecc",
+      "new_final_disposition": false,
+      "ordinal": 98,
+      "original_assessment": {
+        "body_bytes": 2580,
+        "body_sha256": "016d6a06c94df868445a7921e2903d9d0f60e1c213e47c11b1b712f06e725acd",
+        "each_member_context_and_rights_pending": true,
+        "findings": [
+          "中国語の本文は/sleepでsession概要・未完了・次の工程・技術文脈を保存し、pending/all_doneを付け、Gateway reset後のbootstrap hookで同じsession fileを注入する流れを説明する。保存/読戻し・hook/reset・現行APIの実装や動作は未確認。",
+          "完了したことを記録せず記憶から呼び戻すという原則は、完了済み操作の重複防止、根拠・本人の許可/範囲・実job/版の来歴を失わせ得る。pending/all_doneの表記だけで元の完了条件の達成を判定できない。",
+          "詳細は多いほどよいという案は、secret/私的path・無関係な設定/endpointの保存を許すものではない。sessionKey別のfileだけで所有・世代/同名衝突・並行書込・中断からの復元を保証しない。時差を記さない分単位の生成時刻も、実jobとの対応の証拠としては不足する。",
+          "session fileと接続を保つ温和なresetという説明は、処理中I/O・未受領結果・担当/依存や実行状態を保持した証拠ではない。保存本文の自動注入時にも、本人指示と未信頼data・実読証拠を分ける必要がある。原の保存・hook追加・resetは実行していない。起動metadataのsafe-session-handoff、durable-task-handoff、crash-safe-file-updatesと用途が近いが、本文比較はしていない。"
+        ],
+        "member_metadata_sha256": "91428e79775a0bea7f85fef2ebd3bcd985c533fa0ef74aa6acb83e48929d40fd",
+        "member_occurrences": 1,
+        "negative": "完了の根拠と許可を捨てて未完了一覧だけ保存し、処理中にresetして、接続が残ったので再開可能と断定する。",
+        "ordinal": 98,
+        "positive": "完了した操作の根拠と未完了cursor・依存・次の一手を実job/版へ結び、読戻しと復帰後の実作業を確認する。",
+        "read": {
+          "failed_view_calls": 0,
+          "mask_version": "primaryflow-v4-opaque-lexical-boundaries",
+          "ranges": [
+            {
+              "first": 1,
+              "range_sha256": "3036bf15e1266e5bf0839b89494a8b19ae4562ed2fb6cbf91e351acf4fdbc5bc",
+              "through": 86,
+              "visible_lines": 76,
+              "withheld_physical_lines": [
+                1,
+                2,
+                3,
+                4,
+                5,
+                57,
+                71,
+                73,
+                75,
+                78
+              ]
+            }
+          ],
+          "raw_full": false,
+          "total_physical_lines": 86,
+          "unseen_meanings_remain_unknown": true,
+          "view_calls_returned": 1,
+          "whole_masked_view_sha256": "3036bf15e1266e5bf0839b89494a8b19ae4562ed2fb6cbf91e351acf4fdbc5bc"
+        },
+        "representative_inventory_id": "github:6a7ff50c11d0061e34e37ef39d6c01ad3d7693ed89549e08c3024cc07f363ecc",
+        "required_changes": [
+          "未完了に加え、実行済み操作と根拠、元の対象/許可/本人回答・実job/ソース版・依存と再開条件を保持して重複を防ぐ。all_doneは実際の完了条件と照合する。",
+          "秘密や不要な文脈を保存せず、対象sessionと所有、世代/同時変更・中断安全性、保存後の読戻しを確認する。復元時には指示の出所/範囲と実読の来歴を照合し、別ジョブの記録を今回の実読にしない。",
+          "処理中の操作と未受領結果を保ち、resetの受付・実適用・復帰と同じ作業の実再開を分けて確認する。現在のparent保存/ACK・read-only境界を守り、原の保存/resetを導入しない。"
+        ],
+        "source_git_blob": "b665ade754062c4daaf1b2bad5f59b9da8eefbfe",
+        "status": "visible_primary_evaluated",
+        "unmet": [
+          "全86物理行のうち可視76行を評価した。伏字10行の意味、保存/世代/読戻し・reset/hook、処理/結果の保持・復帰と秘密保護の実動作は未確認。",
+          "source_or_service_rightsと各memberの文脈・支持資料・個別許諾・現在実在・採否は未確認。"
+        ],
+        "use": "中断前に未完了・到達点・停止理由・次の一手を整理し、保存/読戻しと同じ作業の再開を確認する設計資料として検討するとき。",
+        "value": "小さな未完了も落とさず、具体的な到達点・障害と再開時の最初の工程を対応させる形式は役立つ。"
+      },
+      "original_packet_sha256": "2ab62418a8140139fa82fdab262b29be1caf72fc1d975d9e82278e097e6bb602",
+      "path": "skills/axelhu/axel-sleep/SKILL.md",
+      "representative_body_meaning_only": true,
+      "source_commit": "920714f17d81e0a95c7a9bc51faf0a7921cd982d",
+      "source_repo": "6mile/skills",
+      "source_sha256": "016d6a06c94df868445a7921e2903d9d0f60e1c213e47c11b1b712f06e725acd"
+    }
+  ],
+  "representative_body_groups": 5,
+  "shared_original_contexts": {
+    "2ab62418a8140139fa82fdab262b29be1caf72fc1d975d9e82278e097e6bb602": {
+      "actual_assessment_reader": "20261029-174632-todo-4134",
+      "all_original_fields_reconstructed": true,
+      "common": {
+        "boundaries": {
+          "central_operations": 0,
+          "copy_grants": 0,
+          "final_dispositions": 0,
+          "new_global_raw_credit": 0,
+          "source_executed": false,
+          "support_body_reads": 0
+        },
+        "cohort": 1,
+        "domain": "skills3080-primary-meaning-chunk-v1",
+        "first_ordinal": 96,
+        "packet_id": "b13ac0b93d4d17c3fa40b6f7c3530240",
+        "parent_origin_job": "20261027-175645-todo-3080",
+        "plan_sha256": "9ebe1d51eef54663c578687b103e69eeb6fe687709def40b790faa104184195a",
+        "reader_job": "20261029-174632-todo-4134",
+        "reader_todo": 4134
+      },
+      "independent_native_metadata": {
+        "Fast_proved": false,
+        "actual_consumer_job": "20261029-170905-todo-3080",
+        "actual_effort": "max",
+        "actual_launch_parent": "20261029-170905-todo-3080",
+        "actual_model": "gpt-6.1-sol",
+        "arguments_outputs_or_other_native_bodies_returned": false,
+        "cwd_matches": true,
+        "immutable_origin_job": "20261027-175645-todo-3080",
+        "native_turn_contexts": [
+          {
+            "effort": "max",
+            "model": "gpt-6.1-sol",
+            "service_tier": null,
+            "timestamp": "2026-10-29T08:47:19.698Z"
+          }
+        ],
+        "observed_at": "2026-10-29T08:52:05.4357721+00:00",
+        "reader_job": "20261029-174632-todo-4134",
+        "registered_spec_sha256": "b0bfc631a8d355a1c406003da7c417b668dabd49dccf48b1d11ffa18a3132b72",
+        "scope": "Initial independent observation of this normal recovery; prior ACK95 and all old reader proofs remain frozen. No source bodies or native arguments/results returned.",
+        "strict_window_observed_end": "2026-10-29T08:52:05.3621946+00:00",
+        "strict_window_start": "2026-10-29T17:46:59.0000000+09:00",
+        "thread_matches": true
+      },
+      "independent_native_metadata_sha256": "426ea8d0037f28460095127f813b2890178af7dd387804574311e49740f78126",
+      "independent_parent_ack": {
+        "acknowledged_through": 98,
+        "at": "2026-10-29T09:11:28.4467967Z",
+        "binding_sha256": "fa8eb83d8cf97f2bb567c7e059e94b8dafa2c2cee052947e7823ae26ab42ada8",
+        "cohort": 1,
+        "consumer_job": "20261029-170905-todo-3080",
+        "cumulative_held_groups": 0,
+        "cumulative_member_metadata_bound": 112,
+        "cumulative_visible_semantic_groups": 98,
+        "domain": "skills3080-primaryflow-parent-ack-v1",
+        "generation": 25,
+        "meaning_file": "primaryflow-cohort1-meaning-b13ac0b93d4d17c3fa40b6f7c3530240175645.json",
+        "meaning_sha256": "6f1d6c2b52ba64a79c0de253d66c0be84517fda302f13bc2f957426b10c55a3b",
+        "original_message_sha256": "7a33dc89a5cd45a54c9c473020a5478b0098cd66177d0bf14de2e25eae6b7a1a",
+        "packet_file": "primaryflow-cohort1-packet-b13ac0b93d4d17c3fa40b6f7c3530240175645.json",
+        "packet_id": "b13ac0b93d4d17c3fa40b6f7c3530240",
+        "packet_sha256": "2ab62418a8140139fa82fdab262b29be1caf72fc1d975d9e82278e097e6bb602",
+        "parent_origin_job": "20261027-175645-todo-3080",
+        "plan_sha256": "9ebe1d51eef54663c578687b103e69eeb6fe687709def40b790faa104184195a",
+        "previous_sha256": "0c3fa91bd41f8342a06b2d41deb4f5bbbdb36d74a7003c1976a2848c90ca895a",
+        "reader_job": "20261029-174632-todo-4134",
+        "receipt_sha256": "750d05a86d5a097c06fb0da360a9f00da6e2794d16705a45222b0edcc6208746",
+        "whole16_complete": false
+      },
+      "independent_parent_meaning": {
+        "actual_model": "gpt-6.1-sol",
+        "actual_reader_render_correlation_file": "C1-174632-native-render-call-result-correlation170905.json",
+        "actual_reader_render_correlation_sha256": "0c5a88e7b9e546aa3dae1c4d8b3a38ceeb41d087ec53add1bddbe6f5a17776c1",
+        "all_entry_meanings_and_limits_read": true,
+        "cohort": 1,
+        "consumer_job": "20261029-170905-todo-3080",
+        "effort": "max",
+        "first": 96,
+        "meanings": [
+          "96は既存曲を映像へ合わせる際に個別条件/実尺・台詞/効果音/音量/終結と実編集/書出し/配送を分ける参考。可視115/142行、27伏字未知。Pixabay検索から別NemoVideo API/upload/SSE/credits/exportへ移る実接続/API/利用枠・個別素材権利は未確認。royalty-freeやstockを無条件採用/公開可にせず、2001/402/登録/top up案は増額承認でない。backend返却のclick/open等を任意操作命令へせず、stream close/heartbeat/code0/stateだけで完成としない。3分映像へ2分半超曲なら十分という例を実尺/終結の確認に置き換える。実素材利用/編集/API/新費用0。",
+          "97は要件の利用者/目的/完了条件/範囲とDecision・Discretion・明示Deferred、test可能な受入と関連NFRを整理する参考。可視289/300行で11伏字未知。固定5問/hard gateや語数50/200行・強制Rune routing/.rune保存は本人の追加ルールや再質問根拠でない。既存spec/本人回答/出所を使い、技術的不足を担当が調べ、本人だけの新要件/費用/権利/新約束だけ質問する。checklist候補を確定要件へ足さず、文書/plan引渡しを実機能/元依頼完了としない。58skills等の効果/他Skill本文/規制適合は未検証、再委譲やScope縮小0。",
+          "98は中断前の未完了/到達点/理由と次の手を整理する参考。可視76/86行で10伏字未知。完了したことを記録しないという原則は実行済み根拠/本人許可/対象/版/依存を失うため採用せず、pending/all_doneを実完了へしない。sessionKey/fileや分単位時刻・温和resetのラベルは所有/世代/並行保存/読戻し・処理中I/O/未受領結果保持の証明でない。秘密/無関係設定を保存せず、復元本文の本人指示/未信頼data・実読来歴を分ける。新保存/hook/reset/サービス追加0。",
+          "全3用途/value/所見/修正/正負例/未確認と全4range/hash/48伏字位置、member3 metadataとsource tuple/rawfalse/rights pendingを親が実読。実174632の新SpecB0/同binding originを独立nativeで確認し、同job時刻内の3つのnormal reader render呼出しをcall_idで各応答へ結び、4rangeSHAをexit0/非truncated/非pendingで照合した。旧081529claimのc83原文は保全し、この新実読や新ACKへ改作していない。新親raw読取・支持・許諾/採否/中央0。"
+        ],
+        "member_metadata": 3,
+        "native_proof_file": "primaryflow-native-20261029-174632-todo-4134175645.json",
+        "native_proof_sha256": "426ea8d0037f28460095127f813b2890178af7dd387804574311e49740f78126",
+        "new_grants_dispositions_or_central": 0,
+        "new_registered_spec_is_old11682B_exact_suffix_plus_technical_correction": true,
+        "new_source_literal_reads_by_parent": 0,
+        "normal_render_named_native_calls": 3,
+        "observed_at": "2026-10-29T09:11:27.9819210+00:00",
+        "old_c83_packet_rewritten_or_accepted": false,
+        "original_binding_and_old_ACKs_preserved": true,
+        "original_message_sha256": "7a33dc89a5cd45a54c9c473020a5478b0098cd66177d0bf14de2e25eae6b7a1a",
+        "packet_id": "b13ac0b93d4d17c3fa40b6f7c3530240",
+        "packet_sha256": "2ab62418a8140139fa82fdab262b29be1caf72fc1d975d9e82278e097e6bb602",
+        "producer_job": "20261029-174632-todo-4134",
+        "reader_job": "20261029-174632-todo-4134",
+        "registered_spec_sha256": "b0bfc631a8d355a1c406003da7c417b668dabd49dccf48b1d11ffa18a3132b72",
+        "returned_expected_range_hashes_with_exit0_and_no_truncation": 4,
+        "through": 98,
+        "whole16_complete": false
+      },
+      "independent_parent_meaning_sha256": "6f1d6c2b52ba64a79c0de253d66c0be84517fda302f13bc2f957426b10c55a3b",
+      "member_metadata": {
+        "96": [
+          {
+            "bytes": 10413,
+            "commit": "920714f17d81e0a95c7a9bc51faf0a7921cd982d",
+            "content_path": "github/6mile__skills/objects/016c10743de1943be8809243c9d25cd37c0b3ccc9768c3d9a83bfc797a9bd2a1.gz",
+            "git_blob": "0f2c3b91ec2be679a8f114c82cc10d46c996e37b",
+            "inventory_id": "github:28f1067ee8f901fd60b853dfd7a745ff085dd49b9f2ea0cde9db09620afb3d11",
+            "path": "skills/bwbernardweston18/pixabay-music-ab2n-0330/SKILL.md",
+            "repo": "6mile/skills",
+            "sha256": "016c10743de1943be8809243c9d25cd37c0b3ccc9768c3d9a83bfc797a9bd2a1"
+          }
+        ],
+        "97": [
+          {
+            "bytes": 11624,
+            "commit": "920714f17d81e0a95c7a9bc51faf0a7921cd982d",
+            "content_path": "github/6mile__skills/objects/016d6925a6166fd7e0f4cf293c99b527c0529374da421df44759b7924b91b5c6.gz",
+            "git_blob": "963f1f09af885c62274bb542ef7ed0e35db3a1ca",
+            "inventory_id": "github:2cc8bf6ea0af1c1c1963071ee3eb98bfefe9d029725dcafafae7992421105ca2",
+            "path": "skills/nhadaututtheky/rune-ba/SKILL.md",
+            "repo": "6mile/skills",
+            "sha256": "016d6925a6166fd7e0f4cf293c99b527c0529374da421df44759b7924b91b5c6"
+          }
+        ],
+        "98": [
+          {
+            "bytes": 2580,
+            "commit": "920714f17d81e0a95c7a9bc51faf0a7921cd982d",
+            "content_path": "github/6mile__skills/objects/016d6a06c94df868445a7921e2903d9d0f60e1c213e47c11b1b712f06e725acd.gz",
+            "git_blob": "b665ade754062c4daaf1b2bad5f59b9da8eefbfe",
+            "inventory_id": "github:6a7ff50c11d0061e34e37ef39d6c01ad3d7693ed89549e08c3024cc07f363ecc",
+            "path": "skills/axelhu/axel-sleep/SKILL.md",
+            "repo": "6mile/skills",
+            "sha256": "016d6a06c94df868445a7921e2903d9d0f60e1c213e47c11b1b712f06e725acd"
+          }
+        ]
+      },
+      "original_packet_id": "b13ac0b93d4d17c3fa40b6f7c3530240",
+      "original_parent_ack_sha256": "c06be55b1fe52df34f2cf77d6ee4fb23e1243142f5c3204628b57a034b7509ac",
+      "original_receipt_sha256": "750d05a86d5a097c06fb0da360a9f00da6e2794d16705a45222b0edcc6208746"
+    },
+    "74e9e11378ed5358e21f36fcbe7914dfc215eab4f88c85a37c6a38ef6939b9ba": {
+      "actual_assessment_reader": "20261029-174543-todo-4133",
+      "all_original_fields_reconstructed": true,
+      "common": {
+        "boundaries": {
+          "central_operations": 0,
+          "copy_grants": 0,
+          "final_dispositions": 0,
+          "new_global_raw_credit": 0,
+          "source_executed": false,
+          "support_body_reads": 0
+        },
+        "cohort": 0,
+        "domain": "skills3080-primary-meaning-chunk-v1",
+        "first_ordinal": 117,
+        "packet_id": "f7659afd79d04afc904e292cae67008b",
+        "parent_origin_job": "20261027-175645-todo-3080",
+        "plan_sha256": "edb8069e0564eb3b95fd0863865b66c4e0b1d3fb994990c6701bcc624678cabf",
+        "reader_job": "20261029-174543-todo-4133",
+        "reader_todo": 4133
+      },
+      "independent_native_metadata": {
+        "Fast_proved": false,
+        "actual_consumer_job": "20261029-170905-todo-3080",
+        "actual_effort": "max",
+        "actual_launch_parent": "20261029-170905-todo-3080",
+        "actual_model": "p5a4c66/gpt-6.1-sol",
+        "arguments_outputs_or_other_native_bodies_returned": false,
+        "cwd_matches": true,
+        "immutable_origin_job": "20261027-175645-todo-3080",
+        "native_turn_contexts": [
+          {
+            "effort": "max",
+            "model": "p5a4c66/gpt-6.1-sol",
+            "service_tier": null,
+            "timestamp": "2026-10-29T08:46:36.362Z"
+          }
+        ],
+        "observed_at": "2026-10-29T08:52:05.3189176+00:00",
+        "reader_job": "20261029-174543-todo-4133",
+        "registered_spec_sha256": "9336a02f41b267d04f4f406815ff048938055a11ea4582f8514d79708881c9ff",
+        "scope": "Initial independent observation of this normal recovery; prior ACK116 and all old reader proofs remain frozen. No source bodies or native arguments/results returned.",
+        "strict_window_observed_end": "2026-10-29T08:52:05.2778169+00:00",
+        "strict_window_start": "2026-10-29T17:46:17.0000000+09:00",
+        "thread_matches": true
+      },
+      "independent_native_metadata_sha256": "ffc630334540b369e716cd8c32b145234bf71d2bfd4c12017c21b916bfb91a8a",
+      "independent_parent_ack": {
+        "acknowledged_through": 118,
+        "at": "2026-10-29T08:56:26.442776Z",
+        "binding_sha256": "269fe9fcd42342587cb50a5148da5819617ad03b27a9269d9beb5d0174fd2f6f",
+        "cohort": 0,
+        "consumer_job": "20261029-170905-todo-3080",
+        "cumulative_held_groups": 0,
+        "cumulative_member_metadata_bound": 130,
+        "cumulative_visible_semantic_groups": 118,
+        "domain": "skills3080-primaryflow-parent-ack-v1",
+        "generation": 39,
+        "meaning_file": "primaryflow-cohort0-meaning-f7659afd79d04afc904e292cae67008b175645.json",
+        "meaning_sha256": "749143329f31c5e3d2a1a6cef0b100a94fb526260fe876cbbd3ec8b0112b2746",
+        "original_message_sha256": "1d2d67640a62dd9f04d147933c0a24e22ac8e1ac04c9e091140f1d79923ed430",
+        "packet_file": "primaryflow-cohort0-packet-f7659afd79d04afc904e292cae67008b175645.json",
+        "packet_id": "f7659afd79d04afc904e292cae67008b",
+        "packet_sha256": "74e9e11378ed5358e21f36fcbe7914dfc215eab4f88c85a37c6a38ef6939b9ba",
+        "parent_origin_job": "20261027-175645-todo-3080",
+        "plan_sha256": "edb8069e0564eb3b95fd0863865b66c4e0b1d3fb994990c6701bcc624678cabf",
+        "previous_sha256": "b052e5c0b223969709e4ee97ab0c313974bc5558a944380a82c78027fab1bea4",
+        "reader_job": "20261029-174543-todo-4133",
+        "receipt_sha256": "5ae8d646d0a2ccd3dc270975ee798d47414213d08c36e2643a2c712c8770fe16",
+        "whole16_complete": false
+      },
+      "independent_parent_meaning": {
+        "all_entry_meanings_and_limits_read": true,
+        "cohort": 0,
+        "consumer_job": "20261029-170905-todo-3080",
+        "effort": "max",
+        "first": 117,
+        "meanings": [
+          "117はstandup/面談準備/週次集約/メール作業抽出とWorkspace utilitiesの対応を整理する資料。可視25/42行を元readerが読んだ評価で、17伏字は未知。utility本文/現CLIや実権限は未読。読取/下書きとChat投稿/共有Sheet追記を別作用へ結び、sanitizeの名だけで秘密抑止や送信先適合としない。原personaや毎日/週次を本人の役割・実定期実行/送信承認へ移さず、元の指示・共有先と結果/重複防止を保つ。",
+          "118はTiDBによるagent記憶/context/条件付きtask取得/根拠/chain event保存のSQL設計資料。可視376/410行で34伏字は未知。tenant列・INDEXやSELECT絞込みだけで認可/隔離を証明せず、NOT NULL/利用側の認証/列scopeを照合する。追記専用の説明に対してsession-step一意性/更新禁止/再開順序、task UPDATEの影響行数/lease世代/異常回収・遅い旧worker排除は未実証。chainのlog位置/blockhash/reorg/finality/asset単位・価格時点、医療/DeFi/性能/料金/RU/保持/claim等は保存主張を実保証へしない。provision/claim/SQL接続・新費用/非Prd/実取引は0。",
+          "全2用途/value/所見/修正/正負例/未確認と全4range/hash/51伏字位置・member2metadata、原actor/plan/source/hash・rawfalse・各文脈/支持/個別権利未確認を実読。新親のsource literal/raw読取・支持/許諾/採否/中央/実使用0。元reader報告はreturned4/failed0で、親が全native toolの成否を独立再集計した主張ではない。"
+        ],
+        "member_metadata": 2,
+        "native_model": "p5a4c66/gpt-6.1-sol",
+        "native_proof_file": "primaryflow-native-20261029-174543-todo-4133175645.json",
+        "native_proof_sha256": "ffc630334540b369e716cd8c32b145234bf71d2bfd4c12017c21b916bfb91a8a",
+        "new_grants_dispositions_or_central": 0,
+        "new_source_literal_reads_by_parent": 0,
+        "observed_at": "2026-10-29T08:56:25.6171436+00:00",
+        "original_binding_and_prior_ACKs_preserved": true,
+        "original_message_sha256": "1d2d67640a62dd9f04d147933c0a24e22ac8e1ac04c9e091140f1d79923ed430",
+        "packet_id": "f7659afd79d04afc904e292cae67008b",
+        "packet_sha256": "74e9e11378ed5358e21f36fcbe7914dfc215eab4f88c85a37c6a38ef6939b9ba",
+        "producer_job": "20261029-174543-todo-4133",
+        "reader_job": "20261029-174543-todo-4133",
+        "registered_spec_sha256": "9336a02f41b267d04f4f406815ff048938055a11ea4582f8514d79708881c9ff",
+        "through": 118,
+        "whole16_complete": false
+      },
+      "independent_parent_meaning_sha256": "749143329f31c5e3d2a1a6cef0b100a94fb526260fe876cbbd3ec8b0112b2746",
+      "member_metadata": {
+        "117": [
+          {
+            "bytes": 1293,
+            "commit": "920714f17d81e0a95c7a9bc51faf0a7921cd982d",
+            "content_path": "github/6mile__skills/objects/0082c2ccf6f0b18b02e1e779922de2f0a84ce8468ab8c305842e7b6ea016a113.gz",
+            "git_blob": "46d3e33abec2d9216c51ac81ec5ef60c419ddfc9",
+            "inventory_id": "github:8b6af557572d561312d34c4eec17c97468454ba48bc3d016b685c7486b54d5b5",
+            "path": "skills/googleworkspace-bot/persona-team-lead/SKILL.md",
+            "repo": "6mile/skills",
+            "sha256": "0082c2ccf6f0b18b02e1e779922de2f0a84ce8468ab8c305842e7b6ea016a113"
+          }
+        ],
+        "118": [
+          {
+            "bytes": 15874,
+            "commit": "920714f17d81e0a95c7a9bc51faf0a7921cd982d",
+            "content_path": "github/6mile__skills/objects/0082ef186e8686321f89f6cba45d4d5c5d0ee1425f015e1491a26be98b41b860.gz",
+            "git_blob": "30c448ba477ee4e4d61d5a494766ec470786ed51",
+            "inventory_id": "github:43499a6012768597d4bb8f2e552d2d7efcff16b8137ef3ae2580aa78b6443128",
+            "path": "skills/siddontang/tidb-x/SKILL.md",
+            "repo": "6mile/skills",
+            "sha256": "0082ef186e8686321f89f6cba45d4d5c5d0ee1425f015e1491a26be98b41b860"
+          }
+        ]
+      },
+      "original_packet_id": "f7659afd79d04afc904e292cae67008b",
+      "original_parent_ack_sha256": "1abdf51321d37cbcd1e7103f35d31d1f2242551a9fcc263a0c1b7fc531ea7e69",
+      "original_receipt_sha256": "5ae8d646d0a2ccd3dc270975ee798d47414213d08c36e2643a2c712c8770fe16"
+    }
+  },
+  "whole16_complete": false
+}

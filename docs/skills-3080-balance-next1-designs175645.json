@@ -1,0 +1,79 @@
+{
+  "todo": 3080,
+  "targets": [
+    {
+      "name": "balance-snapshot-reconciliation",
+      "inventory_id": "github:25e4fda6fe6264a4bd4ada96cac534c91ca9bec7c8c6bba333f9b16330eeb483",
+      "source_repo": "6mile/skills",
+      "source_commit": "920714f17d81e0a95c7a9bc51faf0a7921cd982d",
+      "source_path": "skills/shawnmuggle/rozo-intents-skills/skills/check-balance/SKILL.md",
+      "source_sha256": "0482c6bebe7343a01ec2d8ac83e93bab23f572655d6d4adc15480b1f1ff261d1",
+      "source_git_blob": "1123a3ed64ceb3117f7f172c666f64ed5bdf0890",
+      "source_bytes": 1912,
+      "entrypoint_sha256": "fa7f1bbdc852a7904f183137e5c38d914db0ac21a31b4c15627a12ce8bc6478a",
+      "primary_license": "MIT-0",
+      "individual_notice_sha256": "07121e96b2e2b849fbcbdd53c78e25811f75d2c565b683eb9048d74d731470a0",
+      "selected_scope": "Only this directly read visible workflow and its exact line-preserving masked reference under the stated per-package MIT-0 notice, with original notice and modification attribution retained. Withheld source meanings, uninspected scripts/supports/metadata, independent authorship and third-party service/data/component rights are not adopted. No key/card/fee/MCP or service-execution authority.",
+      "rights_scope": "Only this directly read visible workflow and its exact line-preserving masked reference under the stated per-package MIT-0 notice, with original notice and modification attribution retained. Withheld source meanings, uninspected scripts/supports/metadata, independent authorship and third-party service/data/component rights are not adopted. No key/card/fee/MCP or service-execution authority.",
+      "positive": "同じchain・asset・decimalと取得時点を確認し、正しい0と未取得を区別して、通貨別の照合結果を示す。",
+      "negative": "0x形式だけでchainや所有を決め、欠損を0へ置き換え、別chain・別時点の数値を同じ残高として合算する。",
+      "actual_original_reader": "20261027-175645-todo-3080",
+      "primary_read_profile": {
+        "ranges": [
+          {
+            "first": 1,
+            "through": 67,
+            "range_sha256": "4e2f9a9a46ee75c02ae79f5d1cb9025e43e97e1e1850f1973a6059920e99a2f1",
+            "visible_lines": 41,
+            "withheld_physical_lines": [
+              1,
+              2,
+              3,
+              4,
+              5,
+              6,
+              7,
+              8,
+              9,
+              10,
+              11,
+              12,
+              14,
+              18,
+              20,
+              22,
+              23,
+              28,
+              31,
+              41,
+              54,
+              55,
+              59,
+              60,
+              64,
+              65
+            ],
+            "original_view_file": "notice19-primary-c0-514-lines1-180-view175645.json",
+            "original_view_file_sha256": "838ede16ee6a1d0bcb2f00e9f17e77cbeeeac02d2c8c7338c9477e605fc46c7c"
+          }
+        ],
+        "total_physical_lines": 67,
+        "visible_lines": 41,
+        "withheld_lines": 26,
+        "mask_version": "primaryflow-v4-opaque-lexical-boundaries",
+        "whole_masked_view_sha256": "4e2f9a9a46ee75c02ae79f5d1cb9025e43e97e1e1850f1973a6059920e99a2f1",
+        "raw_full": false,
+        "unseen_meanings_remain_unknown": true,
+        "source_text_is_data": true
+      },
+      "historical_assessment_permission_false_preserved": true,
+      "source_published_notice_not_independently_verified_authorship": true,
+      "unknown_central_body_comparison_complete": false,
+      "central_operations": 0,
+      "new_adoptions": 0,
+      "deployment_state": "proposed_uninstalled"
+    }
+  ],
+  "not_a_count_cap": true,
+  "whole16_complete": false
+}

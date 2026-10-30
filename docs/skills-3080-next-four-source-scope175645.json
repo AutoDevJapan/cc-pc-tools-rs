@@ -1,0 +1,594 @@
+{
+  "actual_author_job": "20261027-175645-todo-3080",
+  "balance_source_scope": {
+    "actual_author_job": "20261027-175645-todo-3080",
+    "actual_original_public_repo": {
+      "id": 1147531245,
+      "full_name": "6mile/skills",
+      "owner": "6mile",
+      "private": false,
+      "default_branch": "main",
+      "queried_at": "2026-10-27T23:21:09.2996904+00:00",
+      "fixed_commit": "920714f17d81e0a95c7a9bc51faf0a7921cd982d",
+      "fixed_tree": "5782ae7deffe5024e15b6e090327385c10f76273",
+      "source_text_downloads": 0
+    },
+    "source_records": [
+      {
+        "name": "balance-snapshot-reconciliation",
+        "source": {
+          "inventory_id": "github:25e4fda6fe6264a4bd4ada96cac534c91ca9bec7c8c6bba333f9b16330eeb483",
+          "repo": "6mile/skills",
+          "commit": "920714f17d81e0a95c7a9bc51faf0a7921cd982d",
+          "path": "skills/shawnmuggle/rozo-intents-skills/skills/check-balance/SKILL.md",
+          "sha256": "0482c6bebe7343a01ec2d8ac83e93bab23f572655d6d4adc15480b1f1ff261d1",
+          "git_blob": "1123a3ed64ceb3117f7f172c666f64ed5bdf0890",
+          "bytes": 1912,
+          "content_path": "github/6mile__skills/objects/0482c6bebe7343a01ec2d8ac83e93bab23f572655d6d4adc15480b1f1ff261d1.gz"
+        },
+        "individual_notice": {
+          "Repo": "6mile/skills",
+          "Commit": "920714f17d81e0a95c7a9bc51faf0a7921cd982d",
+          "Path": "skills/shawnmuggle/rozo-intents-skills/LICENSE.md",
+          "Role": "license_or_notice",
+          "sha256": "07121e96b2e2b849fbcbdd53c78e25811f75d2c565b683eb9048d74d731470a0",
+          "git_blob": "8a6c5b19f9ebd3bf00f6d5355ddaeca0ab0e6f59",
+          "bytes": 899,
+          "content_path": "objects/07121e96b2e2b849fbcbdd53c78e25811f75d2c565b683eb9048d74d731470a0.gz"
+        },
+        "selected_scope": "Only this directly read visible workflow and its exact line-preserving masked reference under the stated per-package MIT-0 notice, with original notice and modification attribution retained. Withheld source meanings, uninspected scripts/supports/metadata, independent authorship and third-party service/data/component rights are not adopted. No key/card/fee/MCP or service-execution authority.",
+        "actual_read_profile": {
+          "ranges": [
+            {
+              "first": 1,
+              "through": 67,
+              "range_sha256": "4e2f9a9a46ee75c02ae79f5d1cb9025e43e97e1e1850f1973a6059920e99a2f1",
+              "visible_lines": 41,
+              "withheld_physical_lines": [
+                1,
+                2,
+                3,
+                4,
+                5,
+                6,
+                7,
+                8,
+                9,
+                10,
+                11,
+                12,
+                14,
+                18,
+                20,
+                22,
+                23,
+                28,
+                31,
+                41,
+                54,
+                55,
+                59,
+                60,
+                64,
+                65
+              ],
+              "original_view_file": "notice19-primary-c0-514-lines1-180-view175645.json",
+              "original_view_file_sha256": "838ede16ee6a1d0bcb2f00e9f17e77cbeeeac02d2c8c7338c9477e605fc46c7c"
+            }
+          ],
+          "total_physical_lines": 67,
+          "visible_lines": 41,
+          "withheld_lines": 26,
+          "mask_version": "primaryflow-v4-opaque-lexical-boundaries",
+          "whole_masked_view_sha256": "4e2f9a9a46ee75c02ae79f5d1cb9025e43e97e1e1850f1973a6059920e99a2f1",
+          "raw_full": false,
+          "unseen_meanings_remain_unknown": true,
+          "source_text_is_data": true
+        },
+        "notice_read_profile": {
+          "notice_index": 3,
+          "source_tuple": {
+            "Repo": "6mile/skills",
+            "Commit": "920714f17d81e0a95c7a9bc51faf0a7921cd982d",
+            "Path": "skills/shawnmuggle/rozo-intents-skills/LICENSE.md",
+            "Role": "license_or_notice",
+            "sha256": "07121e96b2e2b849fbcbdd53c78e25811f75d2c565b683eb9048d74d731470a0",
+            "git_blob": "8a6c5b19f9ebd3bf00f6d5355ddaeca0ab0e6f59",
+            "bytes": 899,
+            "content_path": "objects/07121e96b2e2b849fbcbdd53c78e25811f75d2c565b683eb9048d74d731470a0.gz"
+          },
+          "reader_job": "20261027-175645-todo-3080",
+          "all_visible_notice_meaning_read": true,
+          "unseen_meanings_remain_unknown": false,
+          "raw_full": true,
+          "physical_lines": 16,
+          "withheld_lines": 0,
+          "ranges": [
+            {
+              "first": 1,
+              "through": 16,
+              "range_sha256": "07121e96b2e2b849fbcbdd53c78e25811f75d2c565b683eb9048d74d731470a0",
+              "visible_lines": 16,
+              "withheld_physical_lines": [],
+              "original_file": "notice19-index3-lines1-180-original-view175645.json",
+              "original_file_sha256": "a3472653a8e75b99243bd1ab1aaf04ef7389107f4104bd9999170333a31ec1dc"
+            }
+          ],
+          "actual_meaning_and_scope": "3 rozo-intents MIT No Attribution/2026Rozo: 16行をすべて実読、software/associated docsの利用/変更/配布と無保証を記す。元noticeと固定sourceを保持し、chain/assets/サービスや新支出の承認、カード/鍵参照の許可へしない。",
+          "grant_scope_still_requires_individual_candidate_link": true,
+          "source_or_service_permission_not_added_by_read": true
+        },
+        "masked_reference_sha256": "4e2f9a9a46ee75c02ae79f5d1cb9025e43e97e1e1850f1973a6059920e99a2f1",
+        "original_snapshot_sha256": "a9b03f0ce2ac4695cb57447eec6638236d339f5de984981286e36cb324fd29cf",
+        "independent_authorship_asserted": false,
+        "source_or_service_operations": 0,
+        "central_operations": 0
+      }
+    ],
+    "notice_byte_preservation": [
+      {
+        "index": 3,
+        "source_sha256": "07121e96b2e2b849fbcbdd53c78e25811f75d2c565b683eb9048d74d731470a0",
+        "exact_bytes_reused_from_prior_own_complete_view": true,
+        "new_archive_opens": 0,
+        "raw_model_read": true
+      }
+    ],
+    "all_unknown_source_meanings_retained": true,
+    "source_scripts_installed_or_run": 0,
+    "central_operations": 0,
+    "new_adoptions": 0,
+    "whole16_complete": false
+  },
+  "utilities_source_scope": {
+    "actual_author_job": "20261027-175645-todo-3080",
+    "actual_original_public_repo": {
+      "id": 1147531245,
+      "full_name": "6mile/skills",
+      "owner": "6mile",
+      "private": false,
+      "default_branch": "main",
+      "queried_at": "2026-10-27T23:21:09.2996904+00:00",
+      "fixed_commit": "920714f17d81e0a95c7a9bc51faf0a7921cd982d",
+      "fixed_tree": "5782ae7deffe5024e15b6e090327385c10f76273",
+      "source_text_downloads": 0
+    },
+    "source_records": [
+      {
+        "name": "browser-extraction-missingness",
+        "source": {
+          "inventory_id": "github:58702b56afec89eb19801b922c4a44c309d6caf773aa0036533f0e064914719e",
+          "repo": "6mile/skills",
+          "commit": "920714f17d81e0a95c7a9bc51faf0a7921cd982d",
+          "path": "skills/pkiv/browse/skills/create/SKILL.md",
+          "sha256": "4875de5de3e696c9082f4971387b506e790dd066cb432ab0347b7827841dd882",
+          "git_blob": "1dfe0d9cc8866b607ec1c59f06ce07b825f701f5",
+          "bytes": 4607,
+          "content_path": "github/6mile__skills/objects/4875de5de3e696c9082f4971387b506e790dd066cb432ab0347b7827841dd882.gz"
+        },
+        "individual_notice": {
+          "Repo": "6mile/skills",
+          "Commit": "920714f17d81e0a95c7a9bc51faf0a7921cd982d",
+          "Path": "skills/pkiv/browse/LICENSE.txt",
+          "Role": "license_or_notice",
+          "sha256": "a7f98ba58237657d1f06d32903af0e4ef28a757eed4f0cd01c72191e4220083c",
+          "git_blob": "f2f439741a263d46773bd2cf7f120ce494b5c719",
+          "bytes": 1074,
+          "content_path": "objects/a7f98ba58237657d1f06d32903af0e4ef28a757eed4f0cd01c72191e4220083c.gz"
+        },
+        "selected_scope": "Only this directly read visible workflow and its exact line-preserving masked reference under the stated per-package MIT notice, with original notice and modification attribution retained. Withheld source meanings, uninspected scripts/supports/metadata, independent authorship and third-party service/data/component rights are not adopted. No key/card/fee/MCP or service-execution authority.",
+        "actual_read_profile": {
+          "ranges": [
+            {
+              "first": 1,
+              "through": 180,
+              "range_sha256": "04a1efe93bd5d4c1665bfb4f46260491ab88d90231cd4f0e11971877c51fc07c",
+              "visible_lines": 156,
+              "withheld_physical_lines": [
+                1,
+                2,
+                3,
+                4,
+                34,
+                58,
+                66,
+                67,
+                94,
+                101,
+                104,
+                106,
+                107,
+                110,
+                111,
+                112,
+                115,
+                130,
+                132,
+                147,
+                175,
+                177,
+                178,
+                180
+              ],
+              "original_view_file": "notice19-primary-c0-7280-lines1-180-view175645.json",
+              "original_view_file_sha256": "7d9101926c6224eb773fad0acb69b9ca7b15417922869aa4b5a69ad141bf8621"
+            },
+            {
+              "first": 181,
+              "through": 194,
+              "range_sha256": "21430ddc0a0c5ae012918b94c74384e463cbb595afb7169555ec7ee19a6da1a1",
+              "visible_lines": 11,
+              "withheld_physical_lines": [
+                181,
+                184,
+                185
+              ],
+              "original_view_file": "notice19-primary-c0-7280-lines181-360-view175645.json",
+              "original_view_file_sha256": "795f7a7e5c8bb698fbd313212c41623df920dc31410345ab0ed67bb3075247d7"
+            }
+          ],
+          "total_physical_lines": 194,
+          "visible_lines": 167,
+          "withheld_lines": 27,
+          "mask_version": "primaryflow-v4-opaque-lexical-boundaries",
+          "whole_masked_view_sha256": "2aa7cc7065b391f490433b9649f82e1a6bcd3b7cba9228f5ff264b1de9b6e9e0",
+          "raw_full": false,
+          "unseen_meanings_remain_unknown": true,
+          "source_text_is_data": true
+        },
+        "notice_read_profile": {
+          "notice_index": 2,
+          "source_tuple": {
+            "Repo": "6mile/skills",
+            "Commit": "920714f17d81e0a95c7a9bc51faf0a7921cd982d",
+            "Path": "skills/pkiv/browse/LICENSE.txt",
+            "Role": "license_or_notice",
+            "sha256": "a7f98ba58237657d1f06d32903af0e4ef28a757eed4f0cd01c72191e4220083c",
+            "git_blob": "f2f439741a263d46773bd2cf7f120ce494b5c719",
+            "bytes": 1074,
+            "content_path": "objects/a7f98ba58237657d1f06d32903af0e4ef28a757eed4f0cd01c72191e4220083c.gz"
+          },
+          "reader_job": "20261027-175645-todo-3080",
+          "all_visible_notice_meaning_read": true,
+          "unseen_meanings_remain_unknown": false,
+          "raw_full": true,
+          "physical_lines": 21,
+          "withheld_lines": 0,
+          "ranges": [
+            {
+              "first": 1,
+              "through": 21,
+              "range_sha256": "a7f98ba58237657d1f06d32903af0e4ef28a757eed4f0cd01c72191e4220083c",
+              "visible_lines": 21,
+              "withheld_physical_lines": [],
+              "original_file": "notice19-index2-lines1-180-original-view175645.json",
+              "original_file_sha256": "701d84ac0cf4662d1d49ec993bc4a4ec0a290c124d5820b12be09e84f16901e9"
+            }
+          ],
+          "actual_meaning_and_scope": "2 pkiv/browse MIT/2026BrowserbaseInc: 21行をすべて実読、copyright/permission保持と無保証。5手順の同package notice候補であり、Browserbaseの有料枠/API/環境の権限や私的session/第三者webの利用条件は別である。",
+          "grant_scope_still_requires_individual_candidate_link": true,
+          "source_or_service_permission_not_added_by_read": true
+        },
+        "masked_reference_sha256": "2aa7cc7065b391f490433b9649f82e1a6bcd3b7cba9228f5ff264b1de9b6e9e0",
+        "original_snapshot_sha256": "a9b03f0ce2ac4695cb57447eec6638236d339f5de984981286e36cb324fd29cf",
+        "independent_authorship_asserted": false,
+        "source_or_service_operations": 0,
+        "central_operations": 0
+      },
+      {
+        "name": "remote-run-result-reconciliation",
+        "source": {
+          "inventory_id": "github:aa9395d1b8d7707cde0c3bc7c03691e142c478fabe947548504811085309d69a",
+          "repo": "6mile/skills",
+          "commit": "920714f17d81e0a95c7a9bc51faf0a7921cd982d",
+          "path": "skills/pkiv/browse/skills/functions/SKILL.md",
+          "sha256": "881ba4f730306f639cf0b7cf94f2ded53a40d7a929f7ba741becbabe36f7a716",
+          "git_blob": "17e7b8ed032dafad8bbd0a72ed56070776cba3a2",
+          "bytes": 7060,
+          "content_path": "github/6mile__skills/objects/881ba4f730306f639cf0b7cf94f2ded53a40d7a929f7ba741becbabe36f7a716.gz"
+        },
+        "individual_notice": {
+          "Repo": "6mile/skills",
+          "Commit": "920714f17d81e0a95c7a9bc51faf0a7921cd982d",
+          "Path": "skills/pkiv/browse/LICENSE.txt",
+          "Role": "license_or_notice",
+          "sha256": "a7f98ba58237657d1f06d32903af0e4ef28a757eed4f0cd01c72191e4220083c",
+          "git_blob": "f2f439741a263d46773bd2cf7f120ce494b5c719",
+          "bytes": 1074,
+          "content_path": "objects/a7f98ba58237657d1f06d32903af0e4ef28a757eed4f0cd01c72191e4220083c.gz"
+        },
+        "selected_scope": "Only this directly read visible workflow and its exact line-preserving masked reference under the stated per-package MIT notice, with original notice and modification attribution retained. Withheld source meanings, uninspected scripts/supports/metadata, independent authorship and third-party service/data/component rights are not adopted. No key/card/fee/MCP or service-execution authority.",
+        "actual_read_profile": {
+          "ranges": [
+            {
+              "first": 1,
+              "through": 180,
+              "range_sha256": "a06c1dc92cf55f7bd073c1bc96a986cd2f69b4a597f89efa23491e671b5ba882",
+              "visible_lines": 145,
+              "withheld_physical_lines": [
+                1,
+                2,
+                3,
+                4,
+                20,
+                22,
+                29,
+                39,
+                40,
+                48,
+                57,
+                60,
+                63,
+                64,
+                65,
+                70,
+                71,
+                83,
+                90,
+                91,
+                94,
+                103,
+                114,
+                119,
+                121,
+                139,
+                140,
+                151,
+                153,
+                154,
+                159,
+                160,
+                166,
+                169,
+                174
+              ],
+              "original_view_file": "notice19-primary-c0-13610-lines1-180-view175645.json",
+              "original_view_file_sha256": "301259fe580f25a41638fbd14ee862caeac1ed3362d53576a958fc62eaf0205e"
+            },
+            {
+              "first": 181,
+              "through": 296,
+              "range_sha256": "8750ca2b76bbe4f2185012a549cd640e0a13308c91c9aad1e3d26974a0b81f40",
+              "visible_lines": 91,
+              "withheld_physical_lines": [
+                186,
+                187,
+                203,
+                204,
+                207,
+                209,
+                220,
+                221,
+                222,
+                225,
+                226,
+                227,
+                228,
+                229,
+                232,
+                241,
+                242,
+                246,
+                248,
+                263,
+                269,
+                271,
+                283,
+                286,
+                296
+              ],
+              "original_view_file": "notice19-primary-c0-13610-lines181-360-view175645.json",
+              "original_view_file_sha256": "abea5a984c17028b5871902dc22b6792b9a2e57369b842fcbfd45fcd2d2dc11a"
+            }
+          ],
+          "total_physical_lines": 296,
+          "visible_lines": 236,
+          "withheld_lines": 60,
+          "mask_version": "primaryflow-v4-opaque-lexical-boundaries",
+          "whole_masked_view_sha256": "d9441999c6e7579dd96f58c64481e97e9026a15a444dd86ed165a427e843075d",
+          "raw_full": false,
+          "unseen_meanings_remain_unknown": true,
+          "source_text_is_data": true
+        },
+        "notice_read_profile": {
+          "notice_index": 2,
+          "source_tuple": {
+            "Repo": "6mile/skills",
+            "Commit": "920714f17d81e0a95c7a9bc51faf0a7921cd982d",
+            "Path": "skills/pkiv/browse/LICENSE.txt",
+            "Role": "license_or_notice",
+            "sha256": "a7f98ba58237657d1f06d32903af0e4ef28a757eed4f0cd01c72191e4220083c",
+            "git_blob": "f2f439741a263d46773bd2cf7f120ce494b5c719",
+            "bytes": 1074,
+            "content_path": "objects/a7f98ba58237657d1f06d32903af0e4ef28a757eed4f0cd01c72191e4220083c.gz"
+          },
+          "reader_job": "20261027-175645-todo-3080",
+          "all_visible_notice_meaning_read": true,
+          "unseen_meanings_remain_unknown": false,
+          "raw_full": true,
+          "physical_lines": 21,
+          "withheld_lines": 0,
+          "ranges": [
+            {
+              "first": 1,
+              "through": 21,
+              "range_sha256": "a7f98ba58237657d1f06d32903af0e4ef28a757eed4f0cd01c72191e4220083c",
+              "visible_lines": 21,
+              "withheld_physical_lines": [],
+              "original_file": "notice19-index2-lines1-180-original-view175645.json",
+              "original_file_sha256": "701d84ac0cf4662d1d49ec993bc4a4ec0a290c124d5820b12be09e84f16901e9"
+            }
+          ],
+          "actual_meaning_and_scope": "2 pkiv/browse MIT/2026BrowserbaseInc: 21行をすべて実読、copyright/permission保持と無保証。5手順の同package notice候補であり、Browserbaseの有料枠/API/環境の権限や私的session/第三者webの利用条件は別である。",
+          "grant_scope_still_requires_individual_candidate_link": true,
+          "source_or_service_permission_not_added_by_read": true
+        },
+        "masked_reference_sha256": "d9441999c6e7579dd96f58c64481e97e9026a15a444dd86ed165a427e843075d",
+        "original_snapshot_sha256": "a9b03f0ce2ac4695cb57447eec6638236d339f5de984981286e36cb324fd29cf",
+        "independent_authorship_asserted": false,
+        "source_or_service_operations": 0,
+        "central_operations": 0
+      },
+      {
+        "name": "codebase-impact-context",
+        "source": {
+          "inventory_id": "github:192881db536eb8fa09e04f09aa051710b7540b92da63234eddecb424982996cc",
+          "repo": "6mile/skills",
+          "commit": "920714f17d81e0a95c7a9bc51faf0a7921cd982d",
+          "path": "skills/joeavaib/cxm-neural-memory/docs/cxm-neural-memory/SKILL.md",
+          "sha256": "1d838f736ef09ac06b965f1d540f86c52e001042ffeaf9e40609abba996f9f90",
+          "git_blob": "daaad64f15f30d6901a97db5533e70457317a17d",
+          "bytes": 2794,
+          "content_path": "github/6mile__skills/objects/1d838f736ef09ac06b965f1d540f86c52e001042ffeaf9e40609abba996f9f90.gz"
+        },
+        "individual_notice": {
+          "Repo": "6mile/skills",
+          "Commit": "920714f17d81e0a95c7a9bc51faf0a7921cd982d",
+          "Path": "skills/joeavaib/cxm-neural-memory/docs/LICENSE.md",
+          "Role": "license_or_notice",
+          "sha256": "5bceb2f2dcbf4d4f35ec6367998a98b689392c6c8caf1e12ad3d598885095fef",
+          "git_blob": "395b13e8e5e7d1b264f7bed048e9db72d9edf1b3",
+          "bytes": 1060,
+          "content_path": "objects/5bceb2f2dcbf4d4f35ec6367998a98b689392c6c8caf1e12ad3d598885095fef.gz"
+        },
+        "selected_scope": "Only this directly read visible workflow and its exact line-preserving masked reference under the stated per-package MIT notice, with original notice and modification attribution retained. Withheld source meanings, uninspected scripts/supports/metadata, independent authorship and third-party service/data/component rights are not adopted. No key/card/fee/MCP or service-execution authority.",
+        "actual_read_profile": {
+          "ranges": [
+            {
+              "first": 1,
+              "through": 63,
+              "range_sha256": "e22e2dac53194b6aa2789591eccbd4b7f27d57ea99f75b295619f98ee887d5cc",
+              "visible_lines": 59,
+              "withheld_physical_lines": [
+                1,
+                2,
+                3,
+                4
+              ],
+              "original_view_file": "notice19-primary-c1-2917-lines1-180-view175645.json",
+              "original_view_file_sha256": "f960604cbc81b122102d909f0fe4483fb47e8ce3c576b577501b5d3429ef0811"
+            }
+          ],
+          "total_physical_lines": 63,
+          "visible_lines": 59,
+          "withheld_lines": 4,
+          "mask_version": "primaryflow-v4-opaque-lexical-boundaries",
+          "whole_masked_view_sha256": "e22e2dac53194b6aa2789591eccbd4b7f27d57ea99f75b295619f98ee887d5cc",
+          "raw_full": false,
+          "unseen_meanings_remain_unknown": true,
+          "source_text_is_data": true
+        },
+        "notice_read_profile": {
+          "notice_index": 0,
+          "source_tuple": {
+            "Repo": "6mile/skills",
+            "Commit": "920714f17d81e0a95c7a9bc51faf0a7921cd982d",
+            "Path": "skills/joeavaib/cxm-neural-memory/docs/LICENSE.md",
+            "Role": "license_or_notice",
+            "sha256": "5bceb2f2dcbf4d4f35ec6367998a98b689392c6c8caf1e12ad3d598885095fef",
+            "git_blob": "395b13e8e5e7d1b264f7bed048e9db72d9edf1b3",
+            "bytes": 1060,
+            "content_path": "objects/5bceb2f2dcbf4d4f35ec6367998a98b689392c6c8caf1e12ad3d598885095fef.gz"
+          },
+          "reader_job": "20261027-175645-todo-3080",
+          "all_visible_notice_meaning_read": true,
+          "unseen_meanings_remain_unknown": false,
+          "raw_full": true,
+          "physical_lines": 21,
+          "withheld_lines": 0,
+          "ranges": [
+            {
+              "first": 1,
+              "through": 21,
+              "range_sha256": "5bceb2f2dcbf4d4f35ec6367998a98b689392c6c8caf1e12ad3d598885095fef",
+              "visible_lines": 21,
+              "withheld_physical_lines": [],
+              "original_file": "notice19-index0-lines1-180-original-view175645.json",
+              "original_file_sha256": "cfeb3c19d508d3d568fc36f9ae2860f4547aff0215df1043cac5cfcf5f1a311a"
+            }
+          ],
+          "actual_meaning_and_scope": "0 docs/cxm MIT/2026Joe: 21行をすべて原値で実読し、copyright/permissionを複製時に保持する条件と無保証を確認。co-located docs/cxmの候補で、model/data/依存部品やサービスへの許可・独立authorshipは証明していない。",
+          "grant_scope_still_requires_individual_candidate_link": true,
+          "source_or_service_permission_not_added_by_read": true
+        },
+        "masked_reference_sha256": "e22e2dac53194b6aa2789591eccbd4b7f27d57ea99f75b295619f98ee887d5cc",
+        "original_snapshot_sha256": "a9b03f0ce2ac4695cb57447eec6638236d339f5de984981286e36cb324fd29cf",
+        "independent_authorship_asserted": false,
+        "source_or_service_operations": 0,
+        "central_operations": 0
+      }
+    ],
+    "notice_byte_preservation": [
+      {
+        "index": 0,
+        "source_sha256": "5bceb2f2dcbf4d4f35ec6367998a98b689392c6c8caf1e12ad3d598885095fef",
+        "exact_bytes_reused_from_prior_own_complete_view": true,
+        "new_archive_opens": 0,
+        "raw_model_read": true
+      },
+      {
+        "index": 2,
+        "source_sha256": "a7f98ba58237657d1f06d32903af0e4ef28a757eed4f0cd01c72191e4220083c",
+        "exact_bytes_reused_from_prior_own_complete_view": true,
+        "new_archive_opens": 0,
+        "raw_model_read": true
+      }
+    ],
+    "all_unknown_source_meanings_retained": true,
+    "source_scripts_installed_or_run": 0,
+    "central_operations": 0,
+    "new_adoptions": 0,
+    "whole16_complete": false
+  },
+  "original_input_pins": {
+    "balance_manifest": "a02c1eac85a71f8b55369b8c45255143f7161fd1d6c1426ab3d6aa0729d61d15",
+    "utilities_manifest": "23c2b779eba3e1aa36e20d19a73ab9ee27735ad3d8f5d8f7fd9066ceef547485"
+  },
+  "four_explicit_notice_clarifications": [
+    {
+      "name": "balance-snapshot-reconciliation",
+      "path": "references/source.json",
+      "before_sha256": "03052531684a6f619a7a6f8bb1bd682ecece292ef30a37670ba89162d5ab8a32",
+      "after_sha256": "5ec08bb6bb02c39893587f111162bc55ad6c126eb743a2337bc17cf224e4b5f5",
+      "only_added_notice_scope_explanation": true
+    },
+    {
+      "name": "browser-extraction-missingness",
+      "path": "references/source.json",
+      "before_sha256": "dd97f749409660cc3269e391dae5c687c62c7f5280c6c505704d81bb9400240c",
+      "after_sha256": "c4483ba16acb4f9cfd1bb7f6b9240db2716476f566868c4072dd28cf14e846a8",
+      "only_added_notice_scope_explanation": true
+    },
+    {
+      "name": "remote-run-result-reconciliation",
+      "path": "references/source.json",
+      "before_sha256": "d4ac619876e1359f7d4bf39793cb238a993b42e93c1d96f1f988ea5c66a1fd5f",
+      "after_sha256": "c4f3a97cec2a9743215221564e03ebb3b91708099dd2969cc1464f209b56fc72",
+      "only_added_notice_scope_explanation": true
+    },
+    {
+      "name": "codebase-impact-context",
+      "path": "references/source.json",
+      "before_sha256": "d8393b768e74255353b0a1726839e3b384bd703b3d370c8da880d0a04ea03a79",
+      "after_sha256": "a23f85f9447ab5db2ea7e84c5285a2e3566c3e7172d7427276eebd12ffe8027f",
+      "only_added_notice_scope_explanation": true
+    }
+  ],
+  "all_other_payloads_preserved": true,
+  "prior_4193_review_findings": {
+    "job": "20261028-211001-todo-4193",
+    "spec": "e904ab99388a4a863b392d3bb27eeb528242f79a4456258c89aa3811a7f8b923",
+    "final_sha": "55e7ac24b9c335bae3b2d81557254bb2e62c1a9c74bd30dfb8dd34dd9f43fd90",
+    "Must": 0,
+    "Suggestion": 1,
+    "Nit": 1,
+    "not_used_for_Create": true,
+    "not_frozen": true,
+    "original_standalone_acceptance_line_present": true
+  },
+  "all_unknown_source_meanings_retained": true,
+  "source_scripts_installed_or_run": 0,
+  "central_operations": 0,
+  "new_adoptions": 0,
+  "whole16_complete": false
+}

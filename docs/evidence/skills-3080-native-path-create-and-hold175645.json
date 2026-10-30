@@ -1,0 +1,42 @@
+{
+  "actual_author_job": "20261027-175645-todo-3080",
+  "manifest_sha": "39ea776e81250f702902f53aa0e08df98df30d71a964edd9d4295317dcc1a209",
+  "original_native_creation": {
+    "actual_unmodified_invocation_sha256": "d8439880cc85a444f34f695a968de73761310b014782a2c819d1e72e6c436ce0",
+    "central_file_reads_by_capture": 0,
+    "created_files": 28,
+    "created_targets": 4,
+    "creator_runtime_revision": "034520d84d52f76dcd7dc7ef371910d6acd8ae9f",
+    "creator_runtime_sha256": "eab69e4fc8e52f2ad6858ef4e8498e8cc6030ac8ce7f788251a1aae476dc5d55",
+    "job": "20261027-175645-todo-3080",
+    "literal_invocations_equal": false,
+    "native_call_id": "call_64138b14df4e483885c35a84ad2a2741",
+    "native_call_timestamp": "2026-10-28T15:20:00.716Z",
+    "new_adoptions": 0,
+    "original_CLI_stdout_sha256": "88c7c342d9239c0f8b37511b9c7d213400623a5c250e2e2b303ba9ee87ed3c95",
+    "original_tool_blocks_sha256": "caf16e923490249f8b37e138fb5cb050f88385af968b5c07d7d926c6c932809a",
+    "other_native_bodies_returned": false,
+    "parsed_exec_options_and_quoted_request_paths_equivalent": true,
+    "prior_failed_exact_invocation_attempts": [],
+    "rendered_preflight_invocation_sha256": "14c78472bc6642bedc5d04ebdc3c475879c14371d9a9ead089ddad2f02084663",
+    "request_sha256": "79f7fbc0694e435a597d9b4a24bbf7ca827bc6f872c8e568ce2f0bf39507ab77",
+    "successful_CreateNew_count": 1,
+    "thread_id": "01a16bab-c238-7293-953d-d0f447cf2c05"
+  },
+  "input_fixture": "docs/evidence/skills-3080-native-path-actual64138-175645.txt",
+  "input_fixture_sha": "d8439880cc85a444f34f695a968de73761310b014782a2c819d1e72e6c436ce0",
+  "normal_readback": {
+    "batches": 4,
+    "indices_per_batch": 7,
+    "qualified": false,
+    "failure_stage": "creation_native",
+    "reason": "creation_evidence",
+    "current_file_reads": 0,
+    "alternate_path_or_copied_receipt_used": false
+  },
+  "previous_accepted_physical_count": 154,
+  "new_physical_targets": 4,
+  "new_physical_files": 28,
+  "new_discovery_and_use_not_accepted": true,
+  "whole16_complete": false
+}

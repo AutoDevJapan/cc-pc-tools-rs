@@ -292,7 +292,7 @@ fn finite_spec(source: &Value) -> &Value {
         &source["finite_subwork"]
     }
 }
-fn scope(job: &Value) -> Value {
+pub(crate) fn scope(job: &Value) -> Value {
     let mut dirs: Vec<String> = job["add_dirs"]
         .as_array()
         .into_iter()
@@ -307,7 +307,7 @@ fn scope(job: &Value) -> Value {
         "mcp_profile":job["mcp_profile"],"review":review(job),
         "approval_policy":job["approval_policy"],"approvals_reviewer":job["approvals_reviewer"]})
 }
-fn request(item: &Value) -> Value {
+pub(crate) fn request(item: &Value) -> Value {
     let mut v = json!({});
     for field in [
         "id",
@@ -337,7 +337,7 @@ fn request(item: &Value) -> Value {
     v["dependency_generation"] = json!(generation(item, "dependency_generation"));
     v
 }
-fn source_binding(source: &Value) -> Value {
+pub(crate) fn source_binding(source: &Value) -> Value {
     let mut v = scope(source);
     for k in [
         "id",

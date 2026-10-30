@@ -1,0 +1,1441 @@
+{
+  "all_original_selected_chunks_losslessly_reconstructed": true,
+  "central_operations": 0,
+  "context_resolution": "Each record.original_chunk_sha256 selects shared_original_contexts[sha].common; add that chunk's ordered original_assessment values as entries and canonical-JSON SHA256 must equal sha. All common fields, including definitions, input_validation, privacy, notice and boundaries, are preserved once.",
+  "domain": "other373-parent-received-shared-snapshot-v3",
+  "first_ordinal": 360,
+  "last_ordinal": 366,
+  "limits": "This shares complete already acknowledged structured evidence, not original source bodies. Original actors, masks, unknown/partial/unread states and opaque path references remain unchanged; no grant, execution, adoption, current physical continuity or new reading is established.",
+  "materializer_job": "20261027-175645-todo-3080",
+  "new_copy_grants": 0,
+  "new_final_dispositions": 0,
+  "new_raw_or_unique_credit": 0,
+  "new_source_body_reads": 0,
+  "parent_acknowledged_through_at_materialization": 366,
+  "parent_journal_sha256": "5af4e4e0b9d7e0d4907bce2ec81725817d7a6d43c3b7aed846ebf6d3bc1ea89e",
+  "public_reflected": false,
+  "records": [
+    {
+      "actual_assessment_reader": "20261027-194701-todo-3778",
+      "bytes": 25257,
+      "inventory_id": "github:277cb584c81fb615dcb30dfe60852667abd42f9d348ac13d4d687a8d45573260",
+      "inventory_unit": "github_prompt_or_model_information",
+      "original_assessment": {
+        "candidate_disposition": "継続/影響と実測のvariant候補。原人格/固定工程を丸ごと導入せず、実権利・採否は親へ。",
+        "classification": "variant",
+        "findings": [
+          "一律の小contract/edge cases/test-first/quality gatesと、軽い質問は工程を省くという条件を区別する。小さな隣接改善のproactive extrasを元scope拡大へ移さず、未指定の要件は推測で確定しない。",
+          "patchの一意context/indentや影響する検査を持つ一方、修正3回で停止/本人へ次手を問う条件がある。現担当の原因調査/設計見直し・継続と本人だけの判断を分ける。",
+          "Taskは1進行/完了直後更新、caption/plan/checkpointの細かな頻度と、一度preamble済みなら再紹介しない規則が併存する。共有ToDoをlocal planで更新/置換せず、必要な根拠/未達を保つ。",
+          "捕捉date/Windows/shell/build task/空attachmentsは実PCの状態や現モデルを証明しない。README/runner/manifestやPython例を必要性を問わず新規作成する命令にしない。"
+        ],
+        "negative": "小変更にも全artifact/全gatesを追加し、3回失敗で担当を終え、captureのbuild taskを現PCに実行する。",
+        "notices": [
+          {
+            "notice_ref": "root"
+          }
+        ],
+        "package_evidence": {
+          "complete_tree_enumerated": true,
+          "independent_support_blobs": 0,
+          "other_primary_aliases": 8,
+          "primary_alias_excluded": 1,
+          "root": "VSCode Agent",
+          "tree_blob_count": 9
+        },
+        "positive": "既存contextと公開API/利用側から最小の変更/検査を選び、実結果の差分だけを分かる言葉で返す。",
+        "read": [
+          3,
+          3,
+          0,
+          false,
+          true,
+          216
+        ],
+        "read_evidence": {
+          "actual_reader_job": "20261027-194701-todo-3778",
+          "masked_lines": [
+            101,
+            172,
+            179
+          ],
+          "masking_version": "v37-captured-posix-and-drive-context-20261027-194701",
+          "method": "direct_masked_full",
+          "new_source_read": true,
+          "ranges": [
+            [
+              1,
+              110
+            ],
+            [
+              111,
+              216
+            ]
+          ],
+          "strict_utf8": true
+        },
+        "reason": "全216行を2範囲masked読取。L11..55の継続/contract/検査、L62..145のtool/patch/task/出力と捕捉contextを確認した。",
+        "required_changes": [
+          "元要件/既存回答と変更の影響・実資源を確認して工程/検査を選ぶ。隣接改善/追加artifactを無条件に増やさず、実結果/未達を正確に返す。",
+          "実patch/toolと対象版・diff/関連検査を照合し、回数/定型reportで未完終了や本人PC操作を前提にしない。"
+        ],
+        "row": 360,
+        "source": [
+          "github:277cb584c81fb615dcb30dfe60852667abd42f9d348ac13d4d687a8d45573260",
+          "x1xhlol/system-prompts-and-models-of-ai-tools",
+          "162db92f54d717d8ebd12292e155aeef32bb4b3c",
+          "VSCode Agent/gpt-5-mini.txt",
+          "b565da29e4dd015d70e2b41cadac40ac09b265c22aff01778e0abde7362c8f17",
+          "852583f1e88c7936af082318fc00ab490d10ca23",
+          25257
+        ],
+        "support": [
+          "r355",
+          "r356",
+          "r357",
+          "r358",
+          "r359",
+          "r361",
+          "r362",
+          "r363"
+        ],
+        "unit": "github_prompt_or_model_information",
+        "unmet": [
+          "伏字3行 raw、実patch/tool/診断・検査/状態/記憶と捕捉環境、個別prompt/コード・サービスの真正性/権利、未知中央本文比較。"
+        ],
+        "use": "VSCode gpt-5-mini名variantの、全要件/実作業・差分進捗と検査を結ぶ工程を比較する。",
+        "value": "実測に基づく性能説明、build有無を推測しない、必要なcontext/利用側を確認する点が有用。"
+      },
+      "original_chunk_id": "e366b48c10a94d7aa3f6c8592d07e631",
+      "original_chunk_sha256": "d56968728ebdae3173671bad9ebca77f5e7c66b5e0e6e44b20aa0ac4adaddc18",
+      "path": "VSCode Agent/gpt-5-mini.txt",
+      "previous_parent_semantic_read": true,
+      "source_commit": "162db92f54d717d8ebd12292e155aeef32bb4b3c",
+      "source_git_blob": "852583f1e88c7936af082318fc00ab490d10ca23",
+      "source_path": "VSCode Agent/gpt-5-mini.txt",
+      "source_repo": "x1xhlol/system-prompts-and-models-of-ai-tools",
+      "source_sha256": "b565da29e4dd015d70e2b41cadac40ac09b265c22aff01778e0abde7362c8f17"
+    },
+    {
+      "actual_assessment_reader": "20261027-194701-todo-3778",
+      "bytes": 25579,
+      "inventory_id": "github:517d87f1243481407169d851c2b8a0a8a56f13ac35e800d2773f656d60f3a047",
+      "inventory_unit": "github_prompt_or_model_information",
+      "original_assessment": {
+        "candidate_disposition": "360との共通手順と差を残すvariant候補。実採否・個別権利は親へ。",
+        "classification": "variant",
+        "findings": [
+          "360と多くの工程/patch/task規則を共有するが別SHA/bodyで、captured editor/terminal・userRequest/空行等が異なる。今回full読取をした上で意味関係を比較し、全文同一/同一権利の証明にはしない。",
+          "重要な不明を1〜2仮定で進める、低riskの隣接変更を追加する規則は、本人だけの未指定要件/新費用等をAIが決める許可ではない。検査は必要な影響範囲と実測に合わせる。",
+          "3回の修正/3〜5tool checkpoint/README等のartifact指定は適用先へ一律の義務にせず、正規の実審査/資源・元受入を保持する。収録hey/attached案内も今回の本人指示ではない。"
+        ],
+        "negative": "miniと似ているので全同一とし、収録のuserRequestや設定を現在の本人許可にする。",
+        "notices": [
+          {
+            "notice_ref": "root"
+          }
+        ],
+        "package_evidence": {
+          "complete_tree_enumerated": true,
+          "independent_support_blobs": 0,
+          "other_primary_aliases": 8,
+          "primary_alias_excluded": 1,
+          "root": "VSCode Agent",
+          "tree_blob_count": 9
+        },
+        "positive": "model名で版を推測せず、固定bodyと実contextを確認して要件/検査結果を対応させる。",
+        "read": [
+          3,
+          4,
+          0,
+          false,
+          true,
+          233
+        ],
+        "read_evidence": {
+          "actual_reader_job": "20261027-194701-todo-3778",
+          "masked_lines": [
+            101,
+            176,
+            183,
+            202
+          ],
+          "masking_version": "v37-captured-posix-and-drive-context-20261027-194701",
+          "method": "direct_masked_full",
+          "new_source_read": true,
+          "ranges": [
+            [
+              1,
+              120
+            ],
+            [
+              121,
+              233
+            ]
+          ],
+          "strict_utf8": true
+        },
+        "reason": "全233行を2範囲masked読取。L1..164の共通構成とL165..233のcapture/対話を個別に読んだ。",
+        "required_changes": [
+          "同じように見えるvariantでも実読範囲/原SHA/実consumerの差を保ち、必要な元scope/本人回答と検査/完了を照合する。",
+          "仮定/隣接改善・回数上限を本人判断や未完終了の代わりにせず、技術原因を調べて同担当で継続する。"
+        ],
+        "row": 361,
+        "source": [
+          "github:517d87f1243481407169d851c2b8a0a8a56f13ac35e800d2773f656d60f3a047",
+          "x1xhlol/system-prompts-and-models-of-ai-tools",
+          "162db92f54d717d8ebd12292e155aeef32bb4b3c",
+          "VSCode Agent/gpt-5.txt",
+          "6439ea8ce2263ea2bb7e1f6487af2aa7e1ee3f4c0bf5a449ca1f8997a858b6fa",
+          "2a1ee4e01643328981b13e7ac6bb555348575622",
+          25579
+        ],
+        "support": [
+          "r355",
+          "r356",
+          "r357",
+          "r358",
+          "r359",
+          "r360",
+          "r362",
+          "r363"
+        ],
+        "unit": "github_prompt_or_model_information",
+        "unmet": [
+          "伏字4行 raw、実tool/patch/検査/出力consumer・捕捉環境、個別prompt/コード・サービスの真正性/権利、未知中央本文比較。"
+        ],
+        "use": "VSCode gpt-5名variantの、実装継続/patch・要件追跡と捕捉contextを比較する。",
+        "value": "360と共通する実測/差分進捗の工程に、個別の付加context/出力末尾の違いを保持できる。"
+      },
+      "original_chunk_id": "e366b48c10a94d7aa3f6c8592d07e631",
+      "original_chunk_sha256": "d56968728ebdae3173671bad9ebca77f5e7c66b5e0e6e44b20aa0ac4adaddc18",
+      "path": "VSCode Agent/gpt-5.txt",
+      "previous_parent_semantic_read": true,
+      "source_commit": "162db92f54d717d8ebd12292e155aeef32bb4b3c",
+      "source_git_blob": "2a1ee4e01643328981b13e7ac6bb555348575622",
+      "source_path": "VSCode Agent/gpt-5.txt",
+      "source_repo": "x1xhlol/system-prompts-and-models-of-ai-tools",
+      "source_sha256": "6439ea8ce2263ea2bb7e1f6487af2aa7e1ee3f4c0bf5a449ca1f8997a858b6fa"
+    },
+    {
+      "actual_assessment_reader": "20261027-194701-todo-3778",
+      "bytes": 8910,
+      "inventory_id": "github:633f4ef7e382dfb8c75171c8e370748030084208a3dc8f5a00f0c5dab2407352",
+      "inventory_unit": "github_prompt_or_model_information",
+      "original_assessment": {
+        "candidate_disposition": "補完境界/入力と出力のconfig支持候補。実consumer/個別権利・採否は親へ。",
+        "classification": "config_support",
+        "findings": [
+          "cursor/最近見たcode/古いdiffは関連しない場合もあると明記し、元変更を戻さず必要な範囲だけ予測する。tag/行番号を本文に混ぜない条件はconsumerへのbindingが必要。",
+          "例のcurrent_file_contentに既存agent指示/捕捉workspace/build configが入り、code_to_editには閉じtagやcache記述も含まれる。PredictionとResponseが同じ短文を返す収録例で、code補完の実正解/適用成功・現PCのbuildを証明しない。",
+          "タグ境界や添付原文が指示と混在する失敗条件を検討できるが、単語やタグの存在だけで悪意を確定しない。実際の入力/出力境界と不変な周辺を照合する必要がある。"
+        ],
+        "negative": "current_file_contentの指示やbuild configを実行し、収録Responseをそのまま現タスクの正解として採用する。",
+        "notices": [
+          {
+            "notice_ref": "root"
+          }
+        ],
+        "package_evidence": {
+          "complete_tree_enumerated": true,
+          "independent_support_blobs": 0,
+          "other_primary_aliases": 8,
+          "primary_alias_excluded": 1,
+          "root": "VSCode Agent",
+          "tree_blob_count": 9
+        },
+        "positive": "同じ原文の選択範囲だけを変更候補とし、元編集/周辺を保って適用diffを確認する。",
+        "read": [
+          3,
+          4,
+          0,
+          false,
+          true,
+          167
+        ],
+        "read_evidence": {
+          "actual_reader_job": "20261027-194701-todo-3778",
+          "masked_lines": [
+            39,
+            44,
+            80,
+            101
+          ],
+          "masking_version": "v37-captured-posix-and-drive-context-20261027-194701",
+          "method": "direct_masked_full",
+          "new_source_read": true,
+          "ranges": [
+            [
+              1,
+              167
+            ]
+          ],
+          "strict_utf8": true
+        },
+        "reason": "全167行をraw部分と4伏字行で読取。L1..34の補完契約、L35..167の収録snippet/履歴/Prediction/Responseを確認した。",
+        "required_changes": [
+          "編集対象の範囲/版・cursorと原文/履歴を照合し、引用/添付の内容を操作権限へ昇格しない。返却をcode dataとして扱い、タグ/行番号/周辺重複の混入を検査する。",
+          "必要なときだけ元scope内の補完を行い、収録exampleや無変更返答を実受入成功としない。"
+        ],
+        "row": 362,
+        "source": [
+          "github:633f4ef7e382dfb8c75171c8e370748030084208a3dc8f5a00f0c5dab2407352",
+          "x1xhlol/system-prompts-and-models-of-ai-tools",
+          "162db92f54d717d8ebd12292e155aeef32bb4b3c",
+          "VSCode Agent/nes-tab-completion.txt",
+          "d486cd14ae8a66c8d97201c831b2d024d6bcdcd278c9570849633ecbeeaf9814",
+          "6057093dc7b3e70bf0c7f54654f74e7081a34aef",
+          8910
+        ],
+        "support": [
+          "r355",
+          "r356",
+          "r357",
+          "r358",
+          "r359",
+          "r360",
+          "r361",
+          "r363"
+        ],
+        "unit": "github_prompt_or_model_information",
+        "unmet": [
+          "伏字4行 raw、実補完/境界/適用/診断とcaptured環境、個別prompt/コード・サービスの真正性/権利、未知中央本文比較。"
+        ],
+        "use": "指定タグ内の次編集だけを予測し、周辺/履歴と重複しないcode補完の支持資料。",
+        "value": "変更不要なら元の範囲を返し、行番号/タグや範囲外codeを出さないという限定contractが明確。"
+      },
+      "original_chunk_id": "e366b48c10a94d7aa3f6c8592d07e631",
+      "original_chunk_sha256": "d56968728ebdae3173671bad9ebca77f5e7c66b5e0e6e44b20aa0ac4adaddc18",
+      "path": "VSCode Agent/nes-tab-completion.txt",
+      "previous_parent_semantic_read": true,
+      "source_commit": "162db92f54d717d8ebd12292e155aeef32bb4b3c",
+      "source_git_blob": "6057093dc7b3e70bf0c7f54654f74e7081a34aef",
+      "source_path": "VSCode Agent/nes-tab-completion.txt",
+      "source_repo": "x1xhlol/system-prompts-and-models-of-ai-tools",
+      "source_sha256": "d486cd14ae8a66c8d97201c831b2d024d6bcdcd278c9570849633ecbeeaf9814"
+    },
+    {
+      "actual_assessment_reader": "20261027-194701-todo-3778",
+      "bytes": 21032,
+      "inventory_id": "github:12b2ef382661a09e32b07d604d4b276af53772239e786a96056866be97260c2f",
+      "inventory_unit": "github_prompt_or_model_information",
+      "original_assessment": {
+        "candidate_disposition": "tool契約/状態のconfig支持候補。355..361との関係を保持し、実consumer/権利・採否は親へ。",
+        "classification": "config_support",
+        "findings": [
+          "file/grep検索は20件、read_fileは0-based end-inclusiveと残りoutline、semanticはsnippetか小workspace全文を返す。検索数/outlineを全coverageにせず、絶対path/URIと実範囲を照合する。",
+          "terminalは状態が継続しbackground時IDで後追いする。呼出し/受付/起動/終了と出力範囲は別で、完了や副作用をschemaだけで確認していない。",
+          "insert_editは省略markerを解釈する適用契約、編集後get_errors必須とする。356..361の置換/patch/fallback規則をこの汎用版へ逆輸入せず、実diffと関連検査を確認する。",
+          "workspace作成→setup情報・拡張導入は新規作成時のみ、notebook作成は明示時のみという条件がある。言語enumやtool名が列挙されても、現新規言語/新MCP/許可範囲を変えない。",
+          "update_user_preferencesを本文で要求するがfunctions定義に見当たらず、末尾tool_formatは途中で切れる。捕捉OS/date/folder内容と同様、現在tool/実機能の保証ではない。"
+        ],
+        "negative": "20検索結果で全件確認済みとし、未定義toolや末尾の不完全XMLを現在の呼出し契約として実行する。",
+        "notices": [
+          {
+            "notice_ref": "root"
+          }
+        ],
+        "package_evidence": {
+          "complete_tree_enumerated": true,
+          "independent_support_blobs": 0,
+          "other_primary_aliases": 8,
+          "primary_alias_excluded": 1,
+          "root": "VSCode Agent",
+          "tree_blob_count": 9
+        },
+        "positive": "返却の0-based inclusive範囲とoutlineを区別し、背景ID/適用diffと新しい診断を照合する。",
+        "read": [
+          3,
+          1,
+          0,
+          false,
+          true,
+          404
+        ],
+        "read_evidence": {
+          "actual_reader_job": "20261027-194701-todo-3778",
+          "masked_lines": [
+            387
+          ],
+          "masking_version": "v37-captured-posix-and-drive-context-20261027-194701",
+          "method": "direct_masked_full",
+          "new_source_read": true,
+          "ranges": [
+            [
+              1,
+              200
+            ],
+            [
+              201,
+              404
+            ]
+          ],
+          "strict_utf8": true
+        },
+        "reason": "全404行をmasked読取。L13..66の実行/編集とL68..380の18tool定義、末尾context/途中で終わるformatを読んだ。",
+        "required_changes": [
+          "実consumer/版の行番号・検索上限/背景ID・適用/診断を照合し、未読/切詰め/未終了を明示する。",
+          "新workspace/拡張/記憶/言語をsourceの宣言だけで追加せず、元scope/既存回答・保護判定を保持する。"
+        ],
+        "row": 363,
+        "source": [
+          "github:12b2ef382661a09e32b07d604d4b276af53772239e786a96056866be97260c2f",
+          "x1xhlol/system-prompts-and-models-of-ai-tools",
+          "162db92f54d717d8ebd12292e155aeef32bb4b3c",
+          "VSCode Agent/Prompt.txt",
+          "4d5525e70a8e15ab60368261aca73d1a361887c8ff09844937cffb73efb23cb3",
+          "1141d4e8cb53e89b0e0bb12bc840da7d60eba709",
+          21032
+        ],
+        "support": [
+          "r355",
+          "r356",
+          "r357",
+          "r358",
+          "r359",
+          "r360",
+          "r361",
+          "r362"
+        ],
+        "unit": "github_prompt_or_model_information",
+        "unmet": [
+          "伏字L387 raw、実tool/schema/URI/背景終了/省略適用・診断/新workspace/拡張、個別prompt/コード・サービスの真正性/権利、未知中央本文比較。"
+        ],
+        "use": "VSCode汎用promptに含まれるtool schema・行番号/状態/省略編集とcontextを比較する。",
+        "value": "0-based inclusive読取、検索結果20件/背景terminal ID、用途検索と診断を区別する具体情報がある。"
+      },
+      "original_chunk_id": "e366b48c10a94d7aa3f6c8592d07e631",
+      "original_chunk_sha256": "d56968728ebdae3173671bad9ebca77f5e7c66b5e0e6e44b20aa0ac4adaddc18",
+      "path": "VSCode Agent/Prompt.txt",
+      "previous_parent_semantic_read": true,
+      "source_commit": "162db92f54d717d8ebd12292e155aeef32bb4b3c",
+      "source_git_blob": "1141d4e8cb53e89b0e0bb12bc840da7d60eba709",
+      "source_path": "VSCode Agent/Prompt.txt",
+      "source_repo": "x1xhlol/system-prompts-and-models-of-ai-tools",
+      "source_sha256": "4d5525e70a8e15ab60368261aca73d1a361887c8ff09844937cffb73efb23cb3"
+    },
+    {
+      "actual_assessment_reader": "20261027-194701-todo-3778",
+      "bytes": 14595,
+      "inventory_id": "github:0cd73d1cc4350ba2098823800e60c97a19049ff426a23c129b67265128a5942f",
+      "inventory_unit": "github_prompt_or_model_information",
+      "original_assessment": {
+        "candidate_disposition": "terminal/範囲と編集・状態の改訂参考候補。実consumer/個別権利・採否は親へ。",
+        "classification": "prompt_or_model_info",
+        "findings": [
+          "read_filesを優先しterminal readを避ける規則と、出力をcatへ流してpager回避する説明があり、実tools/persistenceの前提に依存する。5000行は最大/必須chunk/原則全文という固有条件で、必要範囲の読取へ合わせる。",
+          "edit_filesはexact/searchと完全replaceで省略marker禁止、移動は削除+挿入、空searchで新fileとする。別のcreate_file説明もあり、原子性/衝突/作成済み保持と実consumerを確認する。",
+          "秘密の実値非表示を述べつつ前工程で秘密を計算しenvへ入れる前提を持つ。現研究の秘密非読取/利用なし・API key禁止を変えるものではなく、env化だけで漏洩や権限範囲が解決したとはしない。",
+          "質問には手順だけ返し実行するか再質問、変更後の検査も本人へ確認する前提がある。現在の依頼・必要な検査は担当が行う。自動commit/pushをしないsourceの原則は、このreadonly研究の境界とは整合するが一般の既存承認を消さない。",
+          "XML引用を外部context/本人ruleすべてに付ける規則は、秘密/非公開ruleを表示する許可ではない。安全そうなURLだから取得する判断も元の具体対象/Rakko制限/権限とは別。"
+        ],
+        "negative": "省略markerをexact replaceへ渡し、秘密をenvに入れたから利用可能とし、必要な検査も本人のPC操作へ戻す。",
+        "notices": [
+          {
+            "notice_ref": "root"
+          }
+        ],
+        "package_evidence": {
+          "complete_tree_enumerated": true,
+          "independent_support_blobs": 0,
+          "other_primary_aliases": 0,
+          "primary_alias_excluded": 1,
+          "root": "Warp.dev",
+          "tree_blob_count": 1
+        },
+        "positive": "既知範囲の原文とexact置換を照合し、非対話commandの実終了/出力を確認する設計。",
+        "read": [
+          3,
+          2,
+          0,
+          false,
+          true,
+          163
+        ],
+        "read_evidence": {
+          "actual_reader_job": "20261027-194701-todo-3778",
+          "masked_lines": [
+            110,
+            152
+          ],
+          "masking_version": "v37-captured-posix-and-drive-context-20261027-194701",
+          "method": "direct_masked_full",
+          "new_source_read": true,
+          "ranges": [
+            [
+              1,
+              163
+            ]
+          ],
+          "strict_utf8": true
+        },
+        "reason": "全163行をmasked読取。L6..39の役割/引用、L40..95のtool/編集、L129..163の大file/秘密/完了を確認した。",
+        "required_changes": [
+          "実tool/行範囲/一意置換と元file保持・diff/関連検査を照合し、5000行や範囲をsourceの一律値へ固定しない。",
+          "秘密のenv化/URLの見た目を許可へ代用せず、必要な出所/未達を適切な公開範囲で返す。通常技術作業を本人への再質問やPC操作待ちにしない。"
+        ],
+        "row": 364,
+        "source": [
+          "github:0cd73d1cc4350ba2098823800e60c97a19049ff426a23c129b67265128a5942f",
+          "x1xhlol/system-prompts-and-models-of-ai-tools",
+          "162db92f54d717d8ebd12292e155aeef32bb4b3c",
+          "Warp.dev/Prompt.txt",
+          "f327447595c5a1f4637e5d01fe6fb62353a7d16cfd242ce44609dc4c34569844",
+          "145f349b702a9ed0b475b4465d1858383f1dc60f",
+          14595
+        ],
+        "support": [],
+        "unit": "github_prompt_or_model_information",
+        "unmet": [
+          "伏字L110/152 raw、実tool/5000行範囲/編集原子性/terminal/引用・検査、個別prompt/コード・サービスの真正性/権利、未知中央本文比較。"
+        ],
+        "use": "Warp terminal agentの、質問と実行・exact編集/読取範囲/非対話と秘密扱いを比較する。",
+        "value": "pagerを避ける、既知範囲をまとめる、exact検索と空白/indentを保つ置換の使い分けが有用。"
+      },
+      "original_chunk_id": "e366b48c10a94d7aa3f6c8592d07e631",
+      "original_chunk_sha256": "d56968728ebdae3173671bad9ebca77f5e7c66b5e0e6e44b20aa0ac4adaddc18",
+      "path": "Warp.dev/Prompt.txt",
+      "previous_parent_semantic_read": true,
+      "source_commit": "162db92f54d717d8ebd12292e155aeef32bb4b3c",
+      "source_git_blob": "145f349b702a9ed0b475b4465d1858383f1dc60f",
+      "source_path": "Warp.dev/Prompt.txt",
+      "source_repo": "x1xhlol/system-prompts-and-models-of-ai-tools",
+      "source_sha256": "f327447595c5a1f4637e5d01fe6fb62353a7d16cfd242ce44609dc4c34569844"
+    },
+    {
+      "actual_assessment_reader": "20261027-194701-todo-3778",
+      "bytes": 11699,
+      "inventory_id": "github:cc22d921ba7800884c5608b33f3914d2071bf027eec2c16dfb37e0203b976257",
+      "inventory_unit": "github_prompt_or_model_information",
+      "original_assessment": {
+        "candidate_disposition": "記憶/実行境界・継続のvariant候補。366のtoolと個別権利/採否は親へ。",
+        "classification": "variant",
+        "findings": [
+          "全解決まで継続と、modelを固定名で答える人格規則を持つ。capturedURI/OS/date・model名は現PCや実モデル照合の代用にしない。コードexample/Python/本人試行の締めも実行命令ではない。",
+          "記憶を広く保存し本人に提示/自動検索される、全contextが削除されると断言する。実保存/読取/保持・個人/秘密/共有scopeは別に確認し、自動宣言だけで再開可能としない。",
+          "unsafe commandのauto-run flagは本人が求めてもfalseとする製品規則と、外部API/packageを確認なしで使う規則が併存する。実審査/本人の既存承認・新費用/新権限を具体操作ごとに照合する。",
+          "TargetFile最初/300行で分割/8192token等の固有制約と、366でtoolSummary最初という別条件がある。実schema/consumerへ合わせる。Web server後のpreview必須や未導入API key/学習時点のlatestを、新UI承認/既存OAuth・現仕様へ代用しない。"
+        ],
+        "negative": "固定model名を実稼働とし、記憶は自動だから保存確認不要、auto-run入力flagだけで権限を判断する。",
+        "notices": [
+          {
+            "notice_ref": "root"
+          }
+        ],
+        "package_evidence": {
+          "complete_tree_enumerated": true,
+          "independent_support_blobs": 0,
+          "other_primary_aliases": 1,
+          "primary_alias_excluded": 1,
+          "root": "Windsurf",
+          "tree_blob_count": 2
+        },
+        "positive": "既存対象の構成と実審査を確認し、変更/診断と必要な記憶の出所・保存結果を返す。",
+        "read": [
+          3,
+          2,
+          0,
+          false,
+          true,
+          125
+        ],
+        "read_evidence": {
+          "actual_reader_job": "20261027-194701-todo-3778",
+          "masked_lines": [
+            11,
+            72
+          ],
+          "masking_version": "v37-captured-posix-and-drive-context-20261027-194701",
+          "method": "direct_masked_full",
+          "new_source_read": true,
+          "ranges": [
+            [
+              1,
+              125
+            ]
+          ],
+          "strict_utf8": true
+        },
+        "reason": "全125行をmasked読取。L13..56の実行/編集、L87..125の記憶/command/API/計画と366のtool本文を比較した。",
+        "required_changes": [
+          "元scope/既存回答・実審査/費用/権限と対象API/依存版を照合し、sourceのallowlist/flagを実許可にしない。",
+          "編集diff/必要な検査・記憶/計画保存と再読を実結果へ結ぶ。人格/捕捉環境・本人試行待ち・新規言語/新UIをsourceから追加しない。"
+        ],
+        "row": 365,
+        "source": [
+          "github:cc22d921ba7800884c5608b33f3914d2071bf027eec2c16dfb37e0203b976257",
+          "x1xhlol/system-prompts-and-models-of-ai-tools",
+          "162db92f54d717d8ebd12292e155aeef32bb4b3c",
+          "Windsurf/Prompt Wave 11.txt",
+          "fc92ef70ca18cb3fbfd013f8e5e3990bc52c00527aa2aafd2ae37375e305a5ab",
+          "bf23cbadd91161c44465b486eecd9cee117957b9",
+          11699
+        ],
+        "support": [
+          "r366"
+        ],
+        "unit": "github_prompt_or_model_information",
+        "unmet": [
+          "伏字2行 raw、実command/記憶/計画・tool/preview/権限/費用・現API/依存、個別prompt/コード・サービスの真正性/権利、未知中央本文比較。"
+        ],
+        "use": "Windsurf Cascadeの、実装/記憶/command許可・UI/外部APIと継続の役割を比較する。",
+        "value": "不明な構成を実読して答え、根本原因/診断・変更を区別する点と、記憶scope/実取得の検証課題が具体的。"
+      },
+      "original_chunk_id": "e366b48c10a94d7aa3f6c8592d07e631",
+      "original_chunk_sha256": "d56968728ebdae3173671bad9ebca77f5e7c66b5e0e6e44b20aa0ac4adaddc18",
+      "path": "Windsurf/Prompt Wave 11.txt",
+      "previous_parent_semantic_read": true,
+      "source_commit": "162db92f54d717d8ebd12292e155aeef32bb4b3c",
+      "source_git_blob": "bf23cbadd91161c44465b486eecd9cee117957b9",
+      "source_path": "Windsurf/Prompt Wave 11.txt",
+      "source_repo": "x1xhlol/system-prompts-and-models-of-ai-tools",
+      "source_sha256": "fc92ef70ca18cb3fbfd013f8e5e3990bc52c00527aa2aafd2ae37375e305a5ab"
+    },
+    {
+      "actual_assessment_reader": "20261027-194701-todo-3778",
+      "bytes": 32843,
+      "inventory_id": "github:164ed8cc01687e2d9036bff6b783c44cb6e4b69a65536d5e84ec994e4bd50a29",
+      "inventory_unit": "github_prompt_or_model_information",
+      "original_assessment": {
+        "candidate_disposition": "tool契約/IDと状態・範囲のconfig支持候補。直接登録/実行は0、実権利/採否は親へ。",
+        "classification": "config_support",
+        "findings": [
+          "run_commandは提案で承認待ちは起動していないと明記し、SafeToAutoRun/Blocking/WaitMsとcommand_status出力字数/待ちを分ける。短い/0出力や受付だけで実終了/副作用成功を示さない。",
+          "semanticは上位snippet/切詰め・大scopeで品質低下、find/grep/trajectoryは50上限、view_fileは1-based inclusive400行/外側summary、code item5nodesとする。summary/検索上限/trajectory全件という説明を原文全読へしない。",
+          "replaceはexact/複数chunk/同file直列、AllowMultipleとunique、notebook対象外、writeは不存在確認後新規という条件。TargetFile優先・toolSummary最優先/tooSummary誤記が競合し、実consumerが未検証。",
+          "deployment config→deploy→statusのID/既存site・build/claimed状態を分ける。未依頼status禁止/Netlify等への新規配備例は、現在のPrd/実所有・費用/本人PC操作不要の条件へ合わせる。",
+          "memoryのcreate/update/delete・exact CorpusNames/旧Id/空fieldとUserTriggeredを分ける。型上必須と説明上optionalなfield、空文字列の意味やUserTriggered=trueが実本人承認を証明するものではない。",
+          "browser/URL/MCP resourceの取得能力は具体対象の読取/変更権限を与えない。parallel wrapperは独立toolだけとするがsourceの他命令を上書きする説明もあり、実依存/排他/利用可能toolsを先に確認する。"
+        ],
+        "negative": "承認待ちを起動済み、50件/summaryを全文確認、UserTriggered=trueを新費用や任意data共有の承認とする。",
+        "notices": [
+          {
+            "notice_ref": "root"
+          }
+        ],
+        "package_evidence": {
+          "complete_tree_enumerated": true,
+          "independent_support_blobs": 0,
+          "other_primary_aliases": 1,
+          "primary_alias_excluded": 1,
+          "root": "Windsurf",
+          "tree_blob_count": 2
+        },
+        "positive": "観測した背景IDと出力範囲/終了、既存project/deploymentの対応を実証拠で確認する設計。",
+        "read": [
+          3,
+          2,
+          0,
+          false,
+          true,
+          382
+        ],
+        "read_evidence": {
+          "actual_reader_job": "20261027-194701-todo-3778",
+          "masked_lines": [
+            1,
+            271
+          ],
+          "masking_version": "v37-captured-posix-and-drive-context-20261027-194701",
+          "method": "direct_masked_full",
+          "new_source_read": true,
+          "ranges": [
+            [
+              1,
+              130
+            ],
+            [
+              131,
+              260
+            ],
+            [
+              261,
+              382
+            ]
+          ],
+          "strict_utf8": true
+        },
+        "reason": "全382行を3範囲masked読取。検索/command/memory、L231..283の編集/起動、L302..382の範囲/新規作成/parallelを確認した。",
+        "required_changes": [
+          "実schema/ID型・受付/承認待ち/実起動/終了と出力範囲を照合し、検索/summary/原文・配備/claimedを区別して記録する。",
+          "exact編集と新規作成の保持条件、field順/空値/optionalと実consumerを確認する。新配備/MCP/記憶/取得をsourceの宣言で追加しない。"
+        ],
+        "row": 366,
+        "source": [
+          "github:164ed8cc01687e2d9036bff6b783c44cb6e4b69a65536d5e84ec994e4bd50a29",
+          "x1xhlol/system-prompts-and-models-of-ai-tools",
+          "162db92f54d717d8ebd12292e155aeef32bb4b3c",
+          "Windsurf/Tools Wave 11.txt",
+          "95c138da65b1a1e73b5e4170984b5d3fa59559e19a196e53989e3d77fd942013",
+          "39508fe9f06e6115d158aeddc8bdc220aaf9fff1",
+          32843
+        ],
+        "support": [
+          "r365"
+        ],
+        "unit": "github_prompt_or_model_information",
+        "unmet": [
+          "伏字L1/271 raw、実schema/編集/背景終了・配備/記憶/browser/MCP/検索・権限/費用、個別prompt/コード・サービスの真正性/権利、未知中央本文比較。"
+        ],
+        "use": "Windsurf Wave11の29tool・parallel wrapperの、ID/検索/範囲/編集と配備/記憶契約を比較する。",
+        "value": "背景command IDと未起動の承認待ち、deployment IDとproject ID、summaryと実行/原文を区別する具体情報がある。"
+      },
+      "original_chunk_id": "e366b48c10a94d7aa3f6c8592d07e631",
+      "original_chunk_sha256": "d56968728ebdae3173671bad9ebca77f5e7c66b5e0e6e44b20aa0ac4adaddc18",
+      "path": "Windsurf/Tools Wave 11.txt",
+      "previous_parent_semantic_read": true,
+      "source_commit": "162db92f54d717d8ebd12292e155aeef32bb4b3c",
+      "source_git_blob": "39508fe9f06e6115d158aeddc8bdc220aaf9fff1",
+      "source_path": "Windsurf/Tools Wave 11.txt",
+      "source_repo": "x1xhlol/system-prompts-and-models-of-ai-tools",
+      "source_sha256": "95c138da65b1a1e73b5e4170984b5d3fa59559e19a196e53989e3d77fd942013"
+    }
+  ],
+  "roster_sha256": "460219790c088b33e6044c6a97c68a882549c608c3de46ea536aa990a2c1adac",
+  "shared_original_contexts": {
+    "d56968728ebdae3173671bad9ebca77f5e7c66b5e0e6e44b20aa0ac4adaddc18": {
+      "actual_assessment_reader": "20261027-194701-todo-3778",
+      "all_original_chunk_fields_reconstructed": true,
+      "common": {
+        "boundaries": {
+          "central_operations": 0,
+          "copy_license_accepted": false,
+          "new_final_dispositions": 0,
+          "source_executed": false
+        },
+        "chunk_id": "e366b48c10a94d7aa3f6c8592d07e631",
+        "definitions": {
+          "actors": {
+            "0": "今回の実assistant",
+            "1": "20261025-142809-todo-3778/currentの既読担当"
+          },
+          "outside_package_rule": "outsideのsaved:falseは当該参照本文/実体をこの固定package資料として取得/保存していない意味。中央/実環境/別repoでの同名存在・不存在を調べたものではない。",
+          "reader_namespace": "20261027-194701-todo-3778/current",
+          "resource_ref_rule": "supportの文字列はsupport_resourcesのkey。path/fullSHA/blob/bytes/saved/actual reader/profileをそこで機械照合。primary本人と他primary aliasを支持の新uniqueへ二重計上しない。原gzip/資料内コードは保存されたまま、実行0。",
+          "states": {
+            "1": "saved_unread",
+            "2": "direct_raw_full",
+            "3": "direct_masked_full",
+            "6": "partial",
+            "7": "scan"
+          }
+        },
+        "domain": "othergit373-chunk-v1",
+        "existing_relationship": {
+          "central_reads_or_operations": 0,
+          "comparison": "起動catalogのai-workflow/mcp-builder/agent-job-management/diagnosing-bugs/skill-maintenance等の名前/description、既知3048/public metadataと既読355..359の固定SHA評価を照合。未知中央本文/導入済み/重複確定・包括許諾0。"
+        },
+        "first_ordinal": 360,
+        "format_observations": {
+          "method": "cached_visible_lexical_count",
+          "runtime_validation": false,
+          "vscode363_tool_definitions": 18,
+          "windsurf366_parallel_wrapper": 1,
+          "windsurf366_tool_definitions": 29
+        },
+        "input_validation": {
+          "catalog_rows": 73220,
+          "catalog_sha256": "2d73c9a038a41cc220a9687b935bfa1e0b315b65d9bd6d3e54ddb4111972876c",
+          "commit": "162db92f54d717d8ebd12292e155aeef32bb4b3c",
+          "commit_json_sha256": "674dc969c4d800fefbf65a7ecb1c875e919118aa48fd0a2133ede51385f90939",
+          "index_sha256": "477ac8c5b178c4c781bf5baf0b26c6a316ed0ae6e9001ad28f0ac0ab9844b54f",
+          "primary_tuple_unit_catalog_exact": true,
+          "repo": "x1xhlol/system-prompts-and-models-of-ai-tools",
+          "root_tree": "e8d86c0a025a7a07d4bb8723ae758cf98d63cbf5",
+          "same_buffer_sha_bytes_gitblob_strict_utf8": true,
+          "tree_entries": 171,
+          "tree_sha256": "416b91db26db0b0c4447d46bbb945259d89ac393e45ee76b5ebceb09cde459f5",
+          "truncated": false
+        },
+        "notice_evidence": {
+          "root": {
+            "actual_reader_job": "20261025-142809-todo-3778",
+            "bytes": 35149,
+            "copy_license_accepted": false,
+            "displayed_line_ranges": [
+              [
+                1,
+                350
+              ],
+              [
+                351,
+                674
+              ]
+            ],
+            "fixed_token_recovery": {
+              "line": 154,
+              "new_raw_read": false,
+              "same_bytes_verified": true,
+              "text": "2. Basic Permissions."
+            },
+            "git_blob": "f288702d2fa16d3cdf0035b15a9fcbc552cd88e7",
+            "mask": 2,
+            "masked_lines": [
+              4,
+              154
+            ],
+            "method": "same-byte-reuse",
+            "original_notice_gzip": "github/x1xhlol__system-prompts-and-models-of-ai-tools/objects/3972dc9744f6499f0f9b2dbf76696f2ae7ad8af9b23dde66d6af86c9dfb36986.gz",
+            "original_read": [
+              3,
+              2,
+              0,
+              false,
+              true,
+              674
+            ],
+            "original_reader_namespace": "20261025-142809-todo-3778/current",
+            "path": "LICENSE.md",
+            "read": [
+              3,
+              2,
+              1,
+              false,
+              true,
+              674
+            ],
+            "reader": 1,
+            "representative": {
+              "chunk_id": "951da82f4b0d41cda1532574d0b68f97",
+              "pointer": "entries/0/notices/0",
+              "receipt_sha256": "a0afd9bdcf9511fb72c7995cf4376914fe854047aa4512be84661a60d3cfaf9f"
+            },
+            "saved": true,
+            "scope": "360..366 VSCode/Warp/Windsurf各出現の祖先root GPLv3。固定171件complete treeに別notice名候補なし。collector GPLを各prompt/会話/第三者コード/素材・policy/サービスの個別転載/配布/利用権や真正性へ包括しない。",
+            "sha256": "3972dc9744f6499f0f9b2dbf76696f2ae7ad8af9b23dde66d6af86c9dfb36986"
+          }
+        },
+        "outside_package_context": [
+          {
+            "actual_body": {
+              "actual_reader_job": null,
+              "bytes": null,
+              "git_blob": null,
+              "mask": null,
+              "method": "unsaved",
+              "path": null,
+              "reader": null,
+              "saved": false,
+              "sha256": null
+            },
+            "inline_metadata_read": true,
+            "ref": "各実tool/patch/省略補完・terminal/URI/記憶/配備/browser/検索/renderer・policy/サービスの現実体",
+            "source_rows": [
+              360,
+              361,
+              362,
+              363,
+              364,
+              365,
+              366
+            ]
+          }
+        ],
+        "prior_hold_recheck": {
+          "current_status": "正規guard clearの原保存gzipを既存Nodeでメモリ展開し、名簿/catalog/index/commit/tree/SHA/bytes/Gitblob/strictUTF8の同bytes照合に成功。本文表示/意味評価は未実施で次の同担当工程へ保持。",
+          "denial_bypassed": false,
+          "files_copied_or_written": 0,
+          "previous_chunk_id": "6f0c3918a7354ed5b9e204ca862df017",
+          "previous_reason": "旧jobのgzip展開器が利用不可",
+          "row": 1,
+          "scope": "元373の1番の旧未読だけ。已読sourceの再読や範囲追加ではない。",
+          "source_body_read": false
+        },
+        "privacy_limits": {
+          "mask_count": "v37の実整行伏字。360/361/362/363/364/365/366は順に3/4/4/1/2/2/2行。秘密の実数/不存在を示さない。",
+          "overmask": "固定仕様/公開説明/例のpathを含む保守的伏字のraw詳細未読は保持。旧profileの改名/合算や新raw全読の追加は0。"
+        },
+        "reader_job": "20261027-194701-todo-3778",
+        "reader_todo": 3778,
+        "resume_validation": {
+          "acknowledged_through": 359,
+          "generation": 76,
+          "journal_sha256": "543b567d26c00ebaaa7c24564691ec48460ffa039ff4c29481bd6ab50191576a",
+          "parent_semantic_assessments_read": true,
+          "previous_chunk_id": "d3594f21a7c043b1b82e5960fa13d784",
+          "previous_chunk_sha256": "d4b0f4b68a887c9a33add34b236bd9c28aa804b72e0f63f3529f4737c3f604d2",
+          "previous_receipt_sha256": "97410d894a5d8b60c7d586634d2a2d911e0a0100953fce29e8caef665a6b38f2",
+          "validated_receipts": 76
+        },
+        "roster_sha256": "460219790c088b33e6044c6a97c68a882549c608c3de46ea536aa990a2c1adac",
+        "support_resources": {
+          "r355": {
+            "actual_reader_job": "20261027-194701-todo-3778",
+            "bytes": 765,
+            "content_path": "github/x1xhlol__system-prompts-and-models-of-ai-tools/objects/a8dbeaedd2f6bd480c16f6545e2a29c1a26af4e7b84eeed1e182c0c98ef8445f.gz",
+            "counted_as_support": false,
+            "git_blob": "a711612d77967ef28e60af98b1b76ac74ee40f91",
+            "mask": 0,
+            "masked_lines": [],
+            "method": "same-byte-reuse",
+            "new_source_read": false,
+            "original_method": "direct_raw_full",
+            "path": "VSCode Agent/chat-titles.txt",
+            "primary_alias_ordinal": 355,
+            "ranges": [
+              [
+                1,
+                12
+              ]
+            ],
+            "read": [
+              2,
+              0,
+              0,
+              true,
+              true,
+              12
+            ],
+            "reader": 0,
+            "representative": {
+              "chunk_id": "d3594f21a7c043b1b82e5960fa13d784",
+              "pointer": "entries/2/read_evidence",
+              "receipt_sha256": "97410d894a5d8b60c7d586634d2a2d911e0a0100953fce29e8caef665a6b38f2"
+            },
+            "saved": true,
+            "sha256": "a8dbeaedd2f6bd480c16f6545e2a29c1a26af4e7b84eeed1e182c0c98ef8445f",
+            "tree_bytes": 765,
+            "tree_git_blob": "a711612d77967ef28e60af98b1b76ac74ee40f91"
+          },
+          "r356": {
+            "actual_reader_job": "20261027-194701-todo-3778",
+            "bytes": 9910,
+            "content_path": "github/x1xhlol__system-prompts-and-models-of-ai-tools/objects/0dd3f82bc7063a1a22e1a20b410e79b0f561b7ace0c9da29e28297b6b1dd3c81.gz",
+            "counted_as_support": false,
+            "git_blob": "5081f3e67c44020fa45309a141be7a418e5a0a15",
+            "mask": 3,
+            "masked_lines": [
+              75,
+              82,
+              100
+            ],
+            "method": "same-byte-reuse",
+            "new_source_read": false,
+            "original_method": "direct_masked_full",
+            "path": "VSCode Agent/claude-sonnet-4.txt",
+            "primary_alias_ordinal": 356,
+            "ranges": [
+              [
+                1,
+                130
+              ]
+            ],
+            "read": [
+              3,
+              3,
+              0,
+              false,
+              true,
+              130
+            ],
+            "reader": 0,
+            "representative": {
+              "chunk_id": "d3594f21a7c043b1b82e5960fa13d784",
+              "pointer": "entries/3/read_evidence",
+              "receipt_sha256": "97410d894a5d8b60c7d586634d2a2d911e0a0100953fce29e8caef665a6b38f2"
+            },
+            "saved": true,
+            "sha256": "0dd3f82bc7063a1a22e1a20b410e79b0f561b7ace0c9da29e28297b6b1dd3c81",
+            "tree_bytes": 9910,
+            "tree_git_blob": "5081f3e67c44020fa45309a141be7a418e5a0a15"
+          },
+          "r357": {
+            "actual_reader_job": "20261027-194701-todo-3778",
+            "bytes": 9909,
+            "content_path": "github/x1xhlol__system-prompts-and-models-of-ai-tools/objects/ca2b7e7ed0d30a55a8c101e9c3034ef3c5b4a5005977bf2695ec04b1ab09e62a.gz",
+            "counted_as_support": false,
+            "git_blob": "64cb4080e5a020658627dc3f4c98728655b629a3",
+            "mask": 1,
+            "masked_lines": [
+              108
+            ],
+            "method": "same-byte-reuse",
+            "new_source_read": false,
+            "original_method": "direct_masked_full",
+            "path": "VSCode Agent/gemini-2.5-pro.txt",
+            "primary_alias_ordinal": 357,
+            "ranges": [
+              [
+                1,
+                144
+              ]
+            ],
+            "read": [
+              3,
+              1,
+              0,
+              false,
+              true,
+              144
+            ],
+            "reader": 0,
+            "representative": {
+              "chunk_id": "d3594f21a7c043b1b82e5960fa13d784",
+              "pointer": "entries/4/read_evidence",
+              "receipt_sha256": "97410d894a5d8b60c7d586634d2a2d911e0a0100953fce29e8caef665a6b38f2"
+            },
+            "saved": true,
+            "sha256": "ca2b7e7ed0d30a55a8c101e9c3034ef3c5b4a5005977bf2695ec04b1ab09e62a",
+            "tree_bytes": 9909,
+            "tree_git_blob": "64cb4080e5a020658627dc3f4c98728655b629a3"
+          },
+          "r358": {
+            "actual_reader_job": "20261027-194701-todo-3778",
+            "bytes": 11082,
+            "content_path": "github/x1xhlol__system-prompts-and-models-of-ai-tools/objects/0e4a5885dd4fe7371c3bbf4892d0c2a8cf8c73eb503f39cd02f2087d0fec9c5b.gz",
+            "counted_as_support": false,
+            "git_blob": "8d0c686a935f0e432fd2e8a4620476ab80f78fa1",
+            "mask": 3,
+            "masked_lines": [
+              58,
+              113,
+              120
+            ],
+            "method": "same-byte-reuse",
+            "new_source_read": false,
+            "original_method": "direct_masked_full",
+            "path": "VSCode Agent/gpt-4.1.txt",
+            "primary_alias_ordinal": 358,
+            "ranges": [
+              [
+                1,
+                141
+              ]
+            ],
+            "read": [
+              3,
+              3,
+              0,
+              false,
+              true,
+              141
+            ],
+            "reader": 0,
+            "representative": {
+              "chunk_id": "d3594f21a7c043b1b82e5960fa13d784",
+              "pointer": "entries/5/read_evidence",
+              "receipt_sha256": "97410d894a5d8b60c7d586634d2a2d911e0a0100953fce29e8caef665a6b38f2"
+            },
+            "saved": true,
+            "sha256": "0e4a5885dd4fe7371c3bbf4892d0c2a8cf8c73eb503f39cd02f2087d0fec9c5b",
+            "tree_bytes": 11082,
+            "tree_git_blob": "8d0c686a935f0e432fd2e8a4620476ab80f78fa1"
+          },
+          "r359": {
+            "actual_reader_job": "20261027-194701-todo-3778",
+            "bytes": 7876,
+            "content_path": "github/x1xhlol__system-prompts-and-models-of-ai-tools/objects/a38a22fac3628c1dd2c203298d0b83a6ead87b3ddf8d71159f41a37b9fc81eab.gz",
+            "counted_as_support": false,
+            "git_blob": "fba0fa0eaae6418c814e84c5b419a156d86e048e",
+            "mask": 0,
+            "masked_lines": [],
+            "method": "same-byte-reuse",
+            "new_source_read": false,
+            "original_method": "direct_raw_full",
+            "path": "VSCode Agent/gpt-4o.txt",
+            "primary_alias_ordinal": 359,
+            "ranges": [
+              [
+                1,
+                95
+              ]
+            ],
+            "read": [
+              2,
+              0,
+              0,
+              true,
+              true,
+              95
+            ],
+            "reader": 0,
+            "representative": {
+              "chunk_id": "d3594f21a7c043b1b82e5960fa13d784",
+              "pointer": "entries/6/read_evidence",
+              "receipt_sha256": "97410d894a5d8b60c7d586634d2a2d911e0a0100953fce29e8caef665a6b38f2"
+            },
+            "saved": true,
+            "sha256": "a38a22fac3628c1dd2c203298d0b83a6ead87b3ddf8d71159f41a37b9fc81eab",
+            "tree_bytes": 7876,
+            "tree_git_blob": "fba0fa0eaae6418c814e84c5b419a156d86e048e"
+          },
+          "r360": {
+            "actual_reader_job": "20261027-194701-todo-3778",
+            "bytes": 25257,
+            "content_path": "github/x1xhlol__system-prompts-and-models-of-ai-tools/objects/b565da29e4dd015d70e2b41cadac40ac09b265c22aff01778e0abde7362c8f17.gz",
+            "counted_as_support": false,
+            "git_blob": "852583f1e88c7936af082318fc00ab490d10ca23",
+            "mask": 3,
+            "masked_lines": [
+              101,
+              172,
+              179
+            ],
+            "method": "same-byte-reuse",
+            "new_source_read": false,
+            "original_method": "direct_masked_full",
+            "path": "VSCode Agent/gpt-5-mini.txt",
+            "primary_alias_ordinal": 360,
+            "ranges": [
+              [
+                1,
+                110
+              ],
+              [
+                111,
+                216
+              ]
+            ],
+            "read": [
+              3,
+              3,
+              0,
+              false,
+              true,
+              216
+            ],
+            "read_evidence_ref": "entries/0/read_evidence",
+            "reader": 0,
+            "saved": true,
+            "sha256": "b565da29e4dd015d70e2b41cadac40ac09b265c22aff01778e0abde7362c8f17",
+            "tree_bytes": 25257,
+            "tree_git_blob": "852583f1e88c7936af082318fc00ab490d10ca23"
+          },
+          "r361": {
+            "actual_reader_job": "20261027-194701-todo-3778",
+            "bytes": 25579,
+            "content_path": "github/x1xhlol__system-prompts-and-models-of-ai-tools/objects/6439ea8ce2263ea2bb7e1f6487af2aa7e1ee3f4c0bf5a449ca1f8997a858b6fa.gz",
+            "counted_as_support": false,
+            "git_blob": "2a1ee4e01643328981b13e7ac6bb555348575622",
+            "mask": 4,
+            "masked_lines": [
+              101,
+              176,
+              183,
+              202
+            ],
+            "method": "same-byte-reuse",
+            "new_source_read": false,
+            "original_method": "direct_masked_full",
+            "path": "VSCode Agent/gpt-5.txt",
+            "primary_alias_ordinal": 361,
+            "ranges": [
+              [
+                1,
+                120
+              ],
+              [
+                121,
+                233
+              ]
+            ],
+            "read": [
+              3,
+              4,
+              0,
+              false,
+              true,
+              233
+            ],
+            "read_evidence_ref": "entries/1/read_evidence",
+            "reader": 0,
+            "saved": true,
+            "sha256": "6439ea8ce2263ea2bb7e1f6487af2aa7e1ee3f4c0bf5a449ca1f8997a858b6fa",
+            "tree_bytes": 25579,
+            "tree_git_blob": "2a1ee4e01643328981b13e7ac6bb555348575622"
+          },
+          "r362": {
+            "actual_reader_job": "20261027-194701-todo-3778",
+            "bytes": 8910,
+            "content_path": "github/x1xhlol__system-prompts-and-models-of-ai-tools/objects/d486cd14ae8a66c8d97201c831b2d024d6bcdcd278c9570849633ecbeeaf9814.gz",
+            "counted_as_support": false,
+            "git_blob": "6057093dc7b3e70bf0c7f54654f74e7081a34aef",
+            "mask": 4,
+            "masked_lines": [
+              39,
+              44,
+              80,
+              101
+            ],
+            "method": "same-byte-reuse",
+            "new_source_read": false,
+            "original_method": "direct_masked_full",
+            "path": "VSCode Agent/nes-tab-completion.txt",
+            "primary_alias_ordinal": 362,
+            "ranges": [
+              [
+                1,
+                167
+              ]
+            ],
+            "read": [
+              3,
+              4,
+              0,
+              false,
+              true,
+              167
+            ],
+            "read_evidence_ref": "entries/2/read_evidence",
+            "reader": 0,
+            "saved": true,
+            "sha256": "d486cd14ae8a66c8d97201c831b2d024d6bcdcd278c9570849633ecbeeaf9814",
+            "tree_bytes": 8910,
+            "tree_git_blob": "6057093dc7b3e70bf0c7f54654f74e7081a34aef"
+          },
+          "r363": {
+            "actual_reader_job": "20261027-194701-todo-3778",
+            "bytes": 21032,
+            "content_path": "github/x1xhlol__system-prompts-and-models-of-ai-tools/objects/4d5525e70a8e15ab60368261aca73d1a361887c8ff09844937cffb73efb23cb3.gz",
+            "counted_as_support": false,
+            "git_blob": "1141d4e8cb53e89b0e0bb12bc840da7d60eba709",
+            "mask": 1,
+            "masked_lines": [
+              387
+            ],
+            "method": "same-byte-reuse",
+            "new_source_read": false,
+            "original_method": "direct_masked_full",
+            "path": "VSCode Agent/Prompt.txt",
+            "primary_alias_ordinal": 363,
+            "ranges": [
+              [
+                1,
+                200
+              ],
+              [
+                201,
+                404
+              ]
+            ],
+            "read": [
+              3,
+              1,
+              0,
+              false,
+              true,
+              404
+            ],
+            "read_evidence_ref": "entries/3/read_evidence",
+            "reader": 0,
+            "saved": true,
+            "sha256": "4d5525e70a8e15ab60368261aca73d1a361887c8ff09844937cffb73efb23cb3",
+            "tree_bytes": 21032,
+            "tree_git_blob": "1141d4e8cb53e89b0e0bb12bc840da7d60eba709"
+          },
+          "r365": {
+            "actual_reader_job": "20261027-194701-todo-3778",
+            "bytes": 11699,
+            "content_path": "github/x1xhlol__system-prompts-and-models-of-ai-tools/objects/fc92ef70ca18cb3fbfd013f8e5e3990bc52c00527aa2aafd2ae37375e305a5ab.gz",
+            "counted_as_support": false,
+            "git_blob": "bf23cbadd91161c44465b486eecd9cee117957b9",
+            "mask": 2,
+            "masked_lines": [
+              11,
+              72
+            ],
+            "method": "same-byte-reuse",
+            "new_source_read": false,
+            "original_method": "direct_masked_full",
+            "path": "Windsurf/Prompt Wave 11.txt",
+            "primary_alias_ordinal": 365,
+            "ranges": [
+              [
+                1,
+                125
+              ]
+            ],
+            "read": [
+              3,
+              2,
+              0,
+              false,
+              true,
+              125
+            ],
+            "read_evidence_ref": "entries/5/read_evidence",
+            "reader": 0,
+            "saved": true,
+            "sha256": "fc92ef70ca18cb3fbfd013f8e5e3990bc52c00527aa2aafd2ae37375e305a5ab",
+            "tree_bytes": 11699,
+            "tree_git_blob": "bf23cbadd91161c44465b486eecd9cee117957b9"
+          },
+          "r366": {
+            "actual_reader_job": "20261027-194701-todo-3778",
+            "bytes": 32843,
+            "content_path": "github/x1xhlol__system-prompts-and-models-of-ai-tools/objects/95c138da65b1a1e73b5e4170984b5d3fa59559e19a196e53989e3d77fd942013.gz",
+            "counted_as_support": false,
+            "git_blob": "39508fe9f06e6115d158aeddc8bdc220aaf9fff1",
+            "mask": 2,
+            "masked_lines": [
+              1,
+              271
+            ],
+            "method": "same-byte-reuse",
+            "new_source_read": false,
+            "original_method": "direct_masked_full",
+            "path": "Windsurf/Tools Wave 11.txt",
+            "primary_alias_ordinal": 366,
+            "ranges": [
+              [
+                1,
+                130
+              ],
+              [
+                131,
+                260
+              ],
+              [
+                261,
+                382
+              ]
+            ],
+            "read": [
+              3,
+              2,
+              0,
+              false,
+              true,
+              382
+            ],
+            "read_evidence_ref": "entries/6/read_evidence",
+            "reader": 0,
+            "saved": true,
+            "sha256": "95c138da65b1a1e73b5e4170984b5d3fa59559e19a196e53989e3d77fd942013",
+            "tree_bytes": 32843,
+            "tree_git_blob": "39508fe9f06e6115d158aeddc8bdc220aaf9fff1"
+          }
+        },
+        "support_state_updates": [
+          {
+            "current_resource": "r360",
+            "new_unique_support_count": 0,
+            "previous_chunk_id": "d3594f21a7c043b1b82e5960fa13d784",
+            "previous_pointer": "support_resources/u360",
+            "primary_alias_not_double_counted": true,
+            "source_row": 360,
+            "transition": "saved_unread -> current direct_masked_full"
+          },
+          {
+            "current_resource": "r361",
+            "new_unique_support_count": 0,
+            "previous_chunk_id": "d3594f21a7c043b1b82e5960fa13d784",
+            "previous_pointer": "support_resources/u361",
+            "primary_alias_not_double_counted": true,
+            "source_row": 361,
+            "transition": "saved_unread -> current direct_masked_full"
+          },
+          {
+            "current_resource": "r362",
+            "new_unique_support_count": 0,
+            "previous_chunk_id": "d3594f21a7c043b1b82e5960fa13d784",
+            "previous_pointer": "support_resources/u362",
+            "primary_alias_not_double_counted": true,
+            "source_row": 362,
+            "transition": "saved_unread -> current direct_masked_full"
+          },
+          {
+            "current_resource": "r363",
+            "new_unique_support_count": 0,
+            "previous_chunk_id": "d3594f21a7c043b1b82e5960fa13d784",
+            "previous_pointer": "support_resources/u363",
+            "primary_alias_not_double_counted": true,
+            "source_row": 363,
+            "transition": "saved_unread -> current direct_masked_full"
+          }
+        ]
+      },
+      "original_chunk_id": "e366b48c10a94d7aa3f6c8592d07e631",
+      "original_receipt_sha256": "6965572de1ae06de5d8e0fa51cfc3a54576a1c9fcd94b31dca6cb45a7e78ed83"
+    }
+  },
+  "source_counts": {
+    "x1xhlol/system-prompts-and-models-of-ai-tools": 7
+  },
+  "whole16_complete": false,
+  "entries": [
+    {
+      "inventory_id": "github:277cb584c81fb615dcb30dfe60852667abd42f9d348ac13d4d687a8d45573260",
+      "source_repo": "x1xhlol/system-prompts-and-models-of-ai-tools",
+      "source_commit": "162db92f54d717d8ebd12292e155aeef32bb4b3c",
+      "path": "VSCode Agent/gpt-5-mini.txt",
+      "source_sha256": "b565da29e4dd015d70e2b41cadac40ac09b265c22aff01778e0abde7362c8f17",
+      "git_blob": "852583f1e88c7936af082318fc00ab490d10ca23",
+      "bytes": 25257,
+      "original_chunk_sha256": "d56968728ebdae3173671bad9ebca77f5e7c66b5e0e6e44b20aa0ac4adaddc18"
+    },
+    {
+      "inventory_id": "github:517d87f1243481407169d851c2b8a0a8a56f13ac35e800d2773f656d60f3a047",
+      "source_repo": "x1xhlol/system-prompts-and-models-of-ai-tools",
+      "source_commit": "162db92f54d717d8ebd12292e155aeef32bb4b3c",
+      "path": "VSCode Agent/gpt-5.txt",
+      "source_sha256": "6439ea8ce2263ea2bb7e1f6487af2aa7e1ee3f4c0bf5a449ca1f8997a858b6fa",
+      "git_blob": "2a1ee4e01643328981b13e7ac6bb555348575622",
+      "bytes": 25579,
+      "original_chunk_sha256": "d56968728ebdae3173671bad9ebca77f5e7c66b5e0e6e44b20aa0ac4adaddc18"
+    },
+    {
+      "inventory_id": "github:633f4ef7e382dfb8c75171c8e370748030084208a3dc8f5a00f0c5dab2407352",
+      "source_repo": "x1xhlol/system-prompts-and-models-of-ai-tools",
+      "source_commit": "162db92f54d717d8ebd12292e155aeef32bb4b3c",
+      "path": "VSCode Agent/nes-tab-completion.txt",
+      "source_sha256": "d486cd14ae8a66c8d97201c831b2d024d6bcdcd278c9570849633ecbeeaf9814",
+      "git_blob": "6057093dc7b3e70bf0c7f54654f74e7081a34aef",
+      "bytes": 8910,
+      "original_chunk_sha256": "d56968728ebdae3173671bad9ebca77f5e7c66b5e0e6e44b20aa0ac4adaddc18"
+    },
+    {
+      "inventory_id": "github:12b2ef382661a09e32b07d604d4b276af53772239e786a96056866be97260c2f",
+      "source_repo": "x1xhlol/system-prompts-and-models-of-ai-tools",
+      "source_commit": "162db92f54d717d8ebd12292e155aeef32bb4b3c",
+      "path": "VSCode Agent/Prompt.txt",
+      "source_sha256": "4d5525e70a8e15ab60368261aca73d1a361887c8ff09844937cffb73efb23cb3",
+      "git_blob": "1141d4e8cb53e89b0e0bb12bc840da7d60eba709",
+      "bytes": 21032,
+      "original_chunk_sha256": "d56968728ebdae3173671bad9ebca77f5e7c66b5e0e6e44b20aa0ac4adaddc18"
+    },
+    {
+      "inventory_id": "github:0cd73d1cc4350ba2098823800e60c97a19049ff426a23c129b67265128a5942f",
+      "source_repo": "x1xhlol/system-prompts-and-models-of-ai-tools",
+      "source_commit": "162db92f54d717d8ebd12292e155aeef32bb4b3c",
+      "path": "Warp.dev/Prompt.txt",
+      "source_sha256": "f327447595c5a1f4637e5d01fe6fb62353a7d16cfd242ce44609dc4c34569844",
+      "git_blob": "145f349b702a9ed0b475b4465d1858383f1dc60f",
+      "bytes": 14595,
+      "original_chunk_sha256": "d56968728ebdae3173671bad9ebca77f5e7c66b5e0e6e44b20aa0ac4adaddc18"
+    },
+    {
+      "inventory_id": "github:cc22d921ba7800884c5608b33f3914d2071bf027eec2c16dfb37e0203b976257",
+      "source_repo": "x1xhlol/system-prompts-and-models-of-ai-tools",
+      "source_commit": "162db92f54d717d8ebd12292e155aeef32bb4b3c",
+      "path": "Windsurf/Prompt Wave 11.txt",
+      "source_sha256": "fc92ef70ca18cb3fbfd013f8e5e3990bc52c00527aa2aafd2ae37375e305a5ab",
+      "git_blob": "bf23cbadd91161c44465b486eecd9cee117957b9",
+      "bytes": 11699,
+      "original_chunk_sha256": "d56968728ebdae3173671bad9ebca77f5e7c66b5e0e6e44b20aa0ac4adaddc18"
+    },
+    {
+      "inventory_id": "github:164ed8cc01687e2d9036bff6b783c44cb6e4b69a65536d5e84ec994e4bd50a29",
+      "source_repo": "x1xhlol/system-prompts-and-models-of-ai-tools",
+      "source_commit": "162db92f54d717d8ebd12292e155aeef32bb4b3c",
+      "path": "Windsurf/Tools Wave 11.txt",
+      "source_sha256": "95c138da65b1a1e73b5e4170984b5d3fa59559e19a196e53989e3d77fd942013",
+      "git_blob": "39508fe9f06e6115d158aeddc8bdc220aaf9fff1",
+      "bytes": 32843,
+      "original_chunk_sha256": "d56968728ebdae3173671bad9ebca77f5e7c66b5e0e6e44b20aa0ac4adaddc18"
+    }
+  ],
+  "publication_preparation": {
+    "publisher_job": "20261027-175645-todo-3080",
+    "original_input_sha256": "0366bb4f2fbab08335e0bb5b122a6f9809616dbf15e1d2556cfa4c72d6a714b8",
+    "new_source_body_reads": 0,
+    "new_global_raw_or_workflow_credit": 0,
+    "new_permissions": 0,
+    "new_final_dispositions": 0,
+    "central_operations": 0,
+    "whole_original_contexts_preserved": true,
+    "original_reader_or_privacy_profiles_changed": false,
+    "publication_not_yet_performed": true,
+    "whole16_complete": false
+  }
+}

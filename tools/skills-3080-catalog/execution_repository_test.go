@@ -136,3 +136,448 @@ func TestExecutionFinalDecisionRequiresKnownCatalogRepository(t *testing.T) {
 		})
 	}
 }
+
+func TestSiteAssessmentKeepsOnlyActuallyUnknownGitTuple(t *testing.T) {
+	for _, change := range []string{"valid", "assessment repo known", "assessment commit known", "catalog path known", "catalog repo known", "non-site unit", "non-site identity"} {
+		t.Run(change, func(t *testing.T) {
+			_, manifest, root, _ := executionDiskFixture(t)
+			data, err := os.ReadFile(manifest)
+			if err != nil {
+				t.Fatal(err)
+			}
+			var m ExecutionManifest
+			if err = json.Unmarshal(data, &m); err != nil {
+				t.Fatal(err)
+			}
+			r := Record{ID: "site:fixed-canonical", Unit: "site_index_entry", SHA: strings.Repeat("a", 64), BodyRead: true}
+			a := executionIdentity{ID: r.ID, SHA: r.SHA}
+			switch change {
+			case "assessment repo known":
+				a.SourceRepo = "example/skills"
+			case "assessment commit known":
+				a.SourceCommit = strings.Repeat("c", 40)
+			case "catalog path known":
+				r.Path = "actual/SKILL.md"
+			case "catalog repo known":
+				r.Repo = "example/skills"
+			case "non-site unit":
+				r.Unit = "github_skill_entry"
+			case "non-site identity":
+				r.ID = "github:fixed"
+				a.ID = r.ID
+			}
+			data, err = json.Marshal(struct {
+				Entries []executionIdentity `json:"entries"`
+			}{[]executionIdentity{a}})
+			if err != nil {
+				t.Fatal(err)
+			}
+			file := "skills-3080-site.json"
+			if err = os.WriteFile(filepath.Join(root, file), data, 0600); err != nil {
+				t.Fatal(err)
+			}
+			h := sha256.Sum256(data)
+			m.Artifacts = []ExecutionArtifact{{File: file, SHA: hex.EncodeToString(h[:]), Rows: 1}}
+			catalog, err := json.Marshal(r)
+			if err != nil {
+				t.Fatal(err)
+			}
+			catalog = append(catalog, '\n')
+			h = sha256.Sum256(catalog)
+			m.CatalogSHA = hex.EncodeToString(h[:])
+			m.Records = 1
+			e, err := loadExecutionEvidence(root, m)
+			var output bytes.Buffer
+			if err == nil {
+				_, err = executionQueue(bytes.NewReader(catalog), &output, m, e)
+			}
+			if change != "valid" {
+				if err == nil {
+					t.Fatal("unknown site tuple exception accepted known or mismatched Git provenance")
+				}
+				return
+			}
+			if err != nil {
+				t.Fatal(err)
+			}
+			var result ExecutionRow
+			if err = json.Unmarshal(output.Bytes(), &result); err != nil {
+				t.Fatal(err)
+			}
+			if result.Repo != "" || result.Commit != "" || result.Path != "" || result.Stage != "assessed_needs_current_disposition" || len(result.References) != 1 {
+				t.Fatal("unknown site tuple was invented or assessment reference lost")
+			}
+		})
+	}
+}
+
+func TestSiteOccurrenceCannotInheritGitTupleFromAnotherRecord(t *testing.T) {
+	for _, change := range []string{"valid unknown", "assessment path", "assessment repo", "assessment commit", "final path", "final repo", "final commit", "non-site unit with valid path", "valid known"} {
+		t.Run(change, func(t *testing.T) {
+			r := Record{ID: "site:canonical", Unit: "site_index_entry", SHA: strings.Repeat("a", 64), BodyRead: true}
+			a := executionIdentity{ID: r.ID, SHA: r.SHA}
+			d := a
+			d.Disposition = "integrated_existing"
+			switch change {
+			case "assessment path":
+				a.Path = "upstream/SKILL.md"
+			case "assessment repo":
+				a.Path = "upstream/SKILL.md"
+				a.SourceRepo = "different/source"
+			case "assessment commit":
+				a.Path = "upstream/SKILL.md"
+				a.Commit = strings.Repeat("c", 40)
+			case "final path":
+				d.Path = "upstream/SKILL.md"
+			case "final repo":
+				d.SourceRepo = "different/source"
+			case "final commit":
+				d.Commit = strings.Repeat("c", 40)
+			case "non-site unit with valid path":
+				r.Unit = "github_skill_entry"
+				a.Path = "upstream/SKILL.md"
+			case "valid known":
+				r.Repo = "example/skills"
+				r.Commit = strings.Repeat("c", 40)
+				r.Path = "actual/SKILL.md"
+				a.SourceRepo = r.Repo
+				a.Commit = r.Commit
+				a.Path = r.Path
+				d = a
+				d.Disposition = "integrated_existing"
+			}
+			catalog, err := json.Marshal(r)
+			if err != nil {
+				t.Fatal(err)
+			}
+			catalog = append(catalog, '\n')
+			h := sha256.Sum256(catalog)
+			m := ExecutionManifest{CatalogSHA: hex.EncodeToString(h[:]), Records: 1}
+			e := ExecutionEvidence{Assessments: map[string]executionIdentity{r.ID: a}, Decisions: map[string]executionIdentity{r.ID: d}, References: map[string][]ExecutionReference{}}
+			_, err = executionQueue(bytes.NewReader(catalog), &bytes.Buffer{}, m, e)
+			valid := change == "valid unknown" || change == "valid known"
+			if (err == nil) != valid {
+				t.Fatalf("%s: %v", change, err)
+			}
+		})
+	}
+}
+
+func TestExplicitHistoricalSiteIdentityRequiresPinnedRowAndCatalogKind(t *testing.T) {
+	for _, change := range []string{"valid archive", "valid legacy claim", "valid historical exclusion", "missing interpretation", "wrong recorded path", "missing occurrence", "occurrence filled", "duplicate row", "wrong row", "wrong id", "wrong hash", "wrong binding unit", "wrong role", "wrong catalog unit", "catalog tuple known", "legacy claim cannot install"} {
+		t.Run(change, func(t *testing.T) {
+			_, manifest, root, _ := executionDiskFixture(t)
+			data, err := os.ReadFile(manifest)
+			if err != nil {
+				t.Fatal(err)
+			}
+			var m ExecutionManifest
+			if err = json.Unmarshal(data, &m); err != nil {
+				t.Fatal(err)
+			}
+			r := Record{ID: "site:historical", Unit: "site_index_entry", SHA: strings.Repeat("a", 64), BodyRead: true}
+			a := executionIdentity{ID: r.ID, SHA: r.SHA, Path: "site/objects/" + r.SHA + ".gz", PathKind: "fixed_saved_archive_relative_path_not_upstream_path"}
+			b := ExecutionSiteBinding{Row: 1, ID: r.ID, SHA: r.SHA, Unit: "site_index_entry", Role: "saved_archive_location_not_upstream_git", Occurrence: &executionGitIdentity{}}
+			final := change == "valid historical exclusion" || change == "legacy claim cannot install"
+			if change == "valid legacy claim" || final {
+				a.SourceRepo = "example/skills"
+				a.Commit = strings.Repeat("c", 40)
+				a.Path = "skills/example/SKILL.md"
+				a.PathKind = ""
+				b.Role = "legacy_upstream_source_claim_unverified"
+			}
+			if final {
+				a.Disposition = "excluded"
+			}
+			if change == "legacy claim cannot install" {
+				a.Disposition = "installed_new_adaptation"
+			}
+			b.Recorded = executionGitIdentity{a.SourceRepo, a.Commit, a.Path}
+			switch change {
+			case "wrong recorded path":
+				b.Recorded.Path = "other/SKILL.md"
+			case "missing occurrence":
+				b.Occurrence = nil
+			case "occurrence filled":
+				b.Occurrence.Repo = "example/skills"
+			case "wrong row":
+				b.Row = 2
+			case "wrong id":
+				b.ID = "site:another"
+			case "wrong hash":
+				b.SHA = strings.Repeat("b", 64)
+			case "wrong binding unit":
+				b.Unit = "github_skill_entry"
+			case "wrong role":
+				b.Role = "grant_all_sources"
+			case "wrong catalog unit":
+				r.Unit = "github_skill_entry"
+			case "catalog tuple known":
+				r.Path = "known/SKILL.md"
+			}
+			if final {
+				data, err = json.Marshal(struct {
+					Entries  []executionIdentity `json:"entries"`
+					Excluded []executionIdentity `json:"excluded_entries"`
+				}{[]executionIdentity{}, []executionIdentity{a}})
+			} else {
+				data, err = json.Marshal(struct {
+					Entries []executionIdentity `json:"entries"`
+				}{[]executionIdentity{a}})
+			}
+			if err != nil {
+				t.Fatal(err)
+			}
+			file := "skills-3080-historical-site.json"
+			if err = os.WriteFile(filepath.Join(root, file), data, 0600); err != nil {
+				t.Fatal(err)
+			}
+			h := sha256.Sum256(data)
+			pin := ExecutionArtifact{File: file, SHA: hex.EncodeToString(h[:]), Rows: 1, SiteBindings: []ExecutionSiteBinding{b}}
+			if change == "missing interpretation" {
+				pin.SiteBindings = nil
+			}
+			if change == "duplicate row" {
+				pin.SiteBindings = append(pin.SiteBindings, b)
+			}
+			if final {
+				m.Ledger = pin
+			} else {
+				m.Artifacts = []ExecutionArtifact{pin}
+			}
+			catalog, err := json.Marshal(r)
+			if err != nil {
+				t.Fatal(err)
+			}
+			catalog = append(catalog, '\n')
+			h = sha256.Sum256(catalog)
+			m.CatalogSHA = hex.EncodeToString(h[:])
+			m.Records = 1
+			e, err := loadExecutionEvidence(root, m)
+			var out bytes.Buffer
+			if err == nil {
+				_, err = executionQueue(bytes.NewReader(catalog), &out, m, e)
+			}
+			valid := strings.HasPrefix(change, "valid ")
+			if (err == nil) != valid {
+				t.Fatalf("%s: %v", change, err)
+			}
+			if valid {
+				var row ExecutionRow
+				if err = json.Unmarshal(out.Bytes(), &row); err != nil {
+					t.Fatal(err)
+				}
+				var observed *ExecutionSiteBinding
+				if final {
+					observed = row.FinalIdentity
+				} else if len(row.References) == 1 {
+					observed = row.References[0].Identity
+				}
+				if row.Repo != "" || row.Commit != "" || row.Path != "" || observed == nil || observed.Role != b.Role || observed.Recorded.Path != a.Path {
+					t.Fatal("original observation lost or unknown occurrence Git fields invented")
+				}
+				actual, err := os.ReadFile(filepath.Join(root, file))
+				if err != nil || !bytes.Equal(actual, data) {
+					t.Fatal("historical artifact mutated")
+				}
+			}
+		})
+	}
+}
+
+func TestPublishedSiteInterpretationsKeepOriginalArtifactsAndUnverifiedClaims(t *testing.T) {
+	var proof struct {
+		OriginalLedger string                 `json:"original_ledger_sha256"`
+		Artifacts      []ExecutionArtifact    `json:"assessment_artifact_interpretations"`
+		Final          []ExecutionSiteBinding `json:"ledger_occurrence_interpretations"`
+		Catalog        []Record               `json:"actual_catalog_occurrences"`
+		Unverified     bool                   `json:"unverified_legacy_source_claims_not_validated_or_promoted"`
+	}
+	if travel3Digest(loadPublicReceipt(t, "skills-3080-site-identity-interpretation095653.json", &proof)) != "8e22d4ecfd06cf973732cd7bc31c7e790b5b44182437016b31dc1bffe64c9a0e" {
+		t.Fatal("independent original interpretation proof changed")
+	}
+	var manifest ExecutionManifest
+	loadPublicReceipt(t, "skills-3080-execution-evidence.json", &manifest)
+	if !proof.Unverified || len(proof.Artifacts) != 4 || len(proof.Final) != 6 || len(proof.Catalog) != 14 || manifest.Ledger.SHA != proof.OriginalLedger {
+		t.Fatal("original source claim or ledger preservation boundary changed")
+	}
+	catalog := map[string]Record{}
+	for _, r := range proof.Catalog {
+		if r.Unit != "site_index_entry" || r.Repo != "" || r.Commit != "" || r.Path != "" || !r.BodyRead || catalog[r.ID].ID != "" {
+			t.Fatal("recorded actual catalog tuple or identity changed")
+		}
+		catalog[r.ID] = r
+	}
+	check := func(bindings []ExecutionSiteBinding) {
+		for _, b := range bindings {
+			r := catalog[b.ID]
+			if r.ID == "" || r.SHA != b.SHA || b.Occurrence == nil || *b.Occurrence != (executionGitIdentity{}) {
+				t.Fatal("recorded source identity filled actual unknown catalog Git fields")
+			}
+		}
+	}
+	count := 0
+	for _, pin := range proof.Artifacts {
+		found := 0
+		for _, actual := range manifest.Artifacts {
+			if actual.File != pin.File {
+				continue
+			}
+			found++
+			a, _ := json.Marshal(actual)
+			b, _ := json.Marshal(pin)
+			if !bytes.Equal(a, b) {
+				t.Fatal("original pinned artifact interpretation omitted or changed")
+			}
+		}
+		if found != 1 {
+			t.Fatal("original pinned source absent or repeated")
+		}
+		check(pin.SiteBindings)
+		count += len(pin.SiteBindings)
+	}
+	if count != 9 {
+		t.Fatal("nine historical assessment references required")
+	}
+	a, _ := json.Marshal(manifest.Ledger.SiteBindings)
+	b, _ := json.Marshal(proof.Final)
+	if !bytes.Equal(a, b) {
+		t.Fatal("historical final interpretations changed")
+	}
+	check(proof.Final)
+}
+
+func TestExecutionAssessmentAndLedgerRejectConflictingPathAndCommitAliases(t *testing.T) {
+	for _, stage := range []string{"assessment", "ledger"} {
+		for _, change := range []string{"valid primary", "valid equal aliases", "valid source aliases", "wrong path alias", "wrong commit alias", "wrong both aliases"} {
+			t.Run(stage+"/"+change, func(t *testing.T) {
+				_, manifest, root, _ := executionDiskFixture(t)
+				raw, err := os.ReadFile(manifest)
+				if err != nil {
+					t.Fatal(err)
+				}
+				var m ExecutionManifest
+				if err = json.Unmarshal(raw, &m); err != nil {
+					t.Fatal(err)
+				}
+				catalog, _, e := executionFixture()
+				a := e.Assessments["first"]
+				switch change {
+				case "valid equal aliases":
+					a.SourcePath = a.Path
+					a.SourceCommit = a.Commit
+				case "valid source aliases":
+					a.SourcePath = a.Path
+					a.SourceCommit = a.Commit
+					a.Path = ""
+					a.Commit = ""
+				case "wrong path alias":
+					a.SourcePath = "different/SKILL.md"
+				case "wrong commit alias":
+					a.SourceCommit = strings.Repeat("d", 40)
+				case "wrong both aliases":
+					a.SourcePath = "different/SKILL.md"
+					a.SourceCommit = strings.Repeat("d", 40)
+				}
+				if stage == "ledger" {
+					a.Disposition = "excluded"
+				}
+				raw, err = json.Marshal(struct {
+					Entries []executionIdentity `json:"entries"`
+				}{[]executionIdentity{a}})
+				if err != nil {
+					t.Fatal(err)
+				}
+				name := "skills-3080-aliases.json"
+				if err = os.WriteFile(filepath.Join(root, name), raw, 0600); err != nil {
+					t.Fatal(err)
+				}
+				h := sha256.Sum256(raw)
+				pin := ExecutionArtifact{File: name, SHA: hex.EncodeToString(h[:]), Rows: 1}
+				if stage == "ledger" {
+					m.Ledger = pin
+				} else {
+					m.Artifacts = []ExecutionArtifact{pin}
+				}
+				loaded, err := loadExecutionEvidence(root, m)
+				if err == nil {
+					_, err = executionQueue(strings.NewReader(catalog), &bytes.Buffer{}, m, loaded)
+				}
+				if (err == nil) != strings.HasPrefix(change, "valid ") {
+					t.Fatalf("%s/%s: %v", stage, change, err)
+				}
+			})
+		}
+	}
+}
+
+func TestSameSiteOccurrenceCanRetainArchiveAndDirectUnknownReferences(t *testing.T) {
+	for _, change := range []string{"same occurrence", "different repo"} {
+		t.Run(change, func(t *testing.T) {
+			_, manifest, root, _ := executionDiskFixture(t)
+			raw, err := os.ReadFile(manifest)
+			if err != nil {
+				t.Fatal(err)
+			}
+			var m ExecutionManifest
+			if err = json.Unmarshal(raw, &m); err != nil {
+				t.Fatal(err)
+			}
+			r := Record{ID: "site:same", Unit: "site_index_entry", SHA: strings.Repeat("a", 64), BodyRead: true}
+			a := executionIdentity{ID: r.ID, SHA: r.SHA}
+			for i := 0; i < 2; i++ {
+				row := a
+				pin := ExecutionArtifact{File: fmt.Sprintf("skills-3080-same-site-%d.json", i), Rows: 1}
+				if i == 0 {
+					row.Path = "site/objects/" + r.SHA + ".gz"
+					row.PathKind = "fixed_saved_archive_relative_path_not_upstream_path"
+					pin.SiteBindings = []ExecutionSiteBinding{{Row: 1, ID: r.ID, SHA: r.SHA, Unit: r.Unit, Role: "saved_archive_location_not_upstream_git", Recorded: executionGitIdentity{Path: row.Path}, Occurrence: &executionGitIdentity{}}}
+				} else if change == "different repo" {
+					row.SourceRepo = "other/source"
+					row.Path = "upstream/SKILL.md"
+				}
+				raw, err = json.Marshal(struct {
+					Entries []executionIdentity `json:"entries"`
+				}{[]executionIdentity{row}})
+				if err != nil {
+					t.Fatal(err)
+				}
+				if err = os.WriteFile(filepath.Join(root, pin.File), raw, 0600); err != nil {
+					t.Fatal(err)
+				}
+				h := sha256.Sum256(raw)
+				pin.SHA = hex.EncodeToString(h[:])
+				m.Artifacts = append(m.Artifacts, pin)
+			}
+			catalog, err := json.Marshal(r)
+			if err != nil {
+				t.Fatal(err)
+			}
+			catalog = append(catalog, '\n')
+			h := sha256.Sum256(catalog)
+			m.CatalogSHA = hex.EncodeToString(h[:])
+			m.Records = 1
+			e, err := loadExecutionEvidence(root, m)
+			var output bytes.Buffer
+			if err == nil {
+				_, err = executionQueue(bytes.NewReader(catalog), &output, m, e)
+			}
+			if change != "same occurrence" {
+				if err == nil {
+					t.Fatal("known repository was treated as unknown site identity")
+				}
+				return
+			}
+			if err != nil {
+				t.Fatal(err)
+			}
+			var result ExecutionRow
+			if err = json.Unmarshal(output.Bytes(), &result); err != nil {
+				t.Fatal(err)
+			}
+			if len(result.References) != 2 || result.References[0].Identity == nil || result.References[1].Identity != nil || result.References[0].Identity.Recorded.Path == "" || result.Path != "" {
+				t.Fatal("different observations of the same occurrence were erased or conflated")
+			}
+		})
+	}
+}

@@ -131,6 +131,115 @@ fn successful_lost_and_recovery_cancel_results_do_not_exhaust_a_quota_budget() {
 }
 
 #[test]
+fn finite_recovery_cancel_is_ordinary_with_or_without_a_historical_request() {
+    for case in ["remaining", "exhausted", "dependency_changed"] {
+        let mut outcomes = Vec::new();
+        for retained in [false, true] {
+            // Given the same finite worker was cancelled for recovery. Its
+            // historical quota classification is not a new quota failure.
+            let (mut f, mut sub) = later_result("cancelled");
+            let source = f.e.backend.records.last_mut().unwrap();
+            if case == "exhausted" {
+                source["model"] = json!("anthropic/claude-opus-5-5");
+                source["capacity_same_model_retry_count"] = json!(3);
+                source["capacity_retry_count"] = json!(3);
+                sub.db["items"][1]["model"] = source["model"].clone();
+            }
+            if case == "dependency_changed" {
+                sub.db["items"][1]["dependency_generation"] = json!(2);
+            }
+            if !retained {
+                sub.db["items"][1]["subwork_continuation"] = Value::Null;
+            }
+            let original = f.e.backend.records.clone();
+            let row = &sub.db["items"][1];
+            let request = row["subwork_continuation"].clone();
+            write_json(&f.e.todo_path, &sub.db, 1).unwrap();
+            // When the normal scheduler prepares the next ordinary worker,
+            // then neither request presence nor spent quota counters stop it.
+            let prepared = f.e.prepare(row, sub.repo.to_str().unwrap())
+                .unwrap_or_else(|e| panic!("{case}/{retained}: {}", e.0))
+                .unwrap();
+            let selection = &prepared["scheduler"]["selection"];
+            assert!(selection["quota_recovery"].is_null(), "{case}/{retained}");
+            assert!(selection["subwork_continuation"].is_null());
+            assert!(prepared["scheduler"]["quota_retry_terminal"].is_null());
+            assert_eq!(prepared["subwork_continuation"], request);
+            assert_eq!(f.e.backend.records, original);
+            outcomes.push(json!({"model":selection["model"],
+                "session":prepared["scheduler"]["resume_session"]}));
+        }
+        assert_eq!(outcomes[0], outcomes[1], "{case}");
+        assert_eq!(outcomes[0]["session"], "12345678-1234-4321-9234-123456789abc");
+    }
+}
+
+#[test]
+fn nonquota_cancellation_after_dependency_release_keeps_ordinary_preparation() {
+    for ordinary_review in [false, true] {
+        // Given an ordinary cancellation with no quota/request authority,
+        // occurring while a task is already waiting for a prerequisite.
+        let (mut f, mut sub) = later_result("cancelled");
+        let source = f.e.backend.records.last_mut().unwrap();
+        source["last_failure_kind"] = Value::Null;
+        source["recovery_cancel"] = Value::Null;
+        let row = &mut sub.db["items"][1];
+        row["subwork_continuation"] = Value::Null;
+        row["status"] = json!("wait");
+        row["wait_on"] = json!([99]);
+        row["scheduler"]["job"] = source["id"].clone();
+        if ordinary_review {
+            row["subwork"] = Value::Null;
+            row["task_type"] = json!("review");
+            source["subwork"] = Value::Null;
+            source["task_type"] = json!("review");
+        }
+        sub.db["items"].as_array_mut().unwrap().push(json!({"id":99,"status":"todo"}));
+        let waiting = sub.db["items"][1].clone();
+        assert!(cc_job_policy::todo_wait::release_ready(&mut sub.db).is_empty());
+        assert_eq!(sub.db["items"][1], waiting);
+        // When the actual prerequisite completes, normal release retains the
+        // cancelled pointer. Then preparation preserves pre-existing behavior.
+        sub.db["items"][2]["status"] = json!("done");
+        assert_eq!(cc_job_policy::todo_wait::release_ready(&mut sub.db), vec![2]);
+        let original = f.e.backend.records.clone();
+        write_json(&f.e.todo_path, &sub.db, 1).unwrap();
+        let prepared = f.e.prepare(&sub.db["items"][1], sub.repo.to_str().unwrap())
+            .unwrap_or_else(|e| panic!("ordinary_review={ordinary_review}: {}", e.0))
+            .unwrap();
+        assert!(prepared["scheduler"]["selection"]["quota_recovery"].is_null());
+        assert!(prepared["scheduler"]["selection"]["subwork_continuation"].is_null());
+        assert_eq!(prepared["scheduler"]["last_job"], "latest-result");
+        assert_eq!(f.e.backend.records, original);
+    }
+}
+
+#[test]
+fn parent_intake_reason_requires_the_same_actor_independent_source_checks_as_cli() {
+    for case in ["normal", "scope", "legacy_capsule", "owner_source"] {
+        let (mut f, mut sub) = later_result("failed");
+        let source = f.e.backend.records.last_mut().unwrap();
+        let row = &mut sub.db["items"][1];
+        row["dependency_generation"] = json!(2);
+        match case {
+            "scope" => row["network"] = json!(true),
+            "legacy_capsule" => source["quota_recovery"] = json!({"version":1}),
+            "owner_source" => source["model_origin"] = json!("owner_request"),
+            _ => (),
+        }
+        let original = f.e.backend.records.clone();
+        let allowed = cc_job_policy::subwork_continuation::request(
+            &sub.db["items"][1], original.last().unwrap(), &original[0]).is_some();
+        assert_eq!(allowed, case == "normal", "{case}");
+        write_json(&f.e.todo_path, &sub.db, 1).unwrap();
+        let result = f.e.prepare(&sub.db["items"][1], sub.repo.to_str().unwrap());
+        assert_eq!(result.unwrap_err().0,
+            if allowed {"SubworkParentContinuationRequired"} else {"InputRejected"}, "{case}");
+        assert_eq!(f.e.backend.records, original);
+    }
+}
+
+#[test]
 fn same_generation_unconsumed_legacy_request_with_a_receipt_remains_valid() {
     let (mut f, mut sub) = dependency_continuation_fixture();
     let old = sub.db["items"][1]["subwork_continuation"].clone();

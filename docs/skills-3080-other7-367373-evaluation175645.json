@@ -1,0 +1,1708 @@
+{
+  "all_original_selected_chunks_losslessly_reconstructed": true,
+  "central_operations": 0,
+  "context_resolution": "Each record.original_chunk_sha256 selects shared_original_contexts[sha].common; add that chunk's ordered original_assessment values as entries and canonical-JSON SHA256 must equal sha. All common fields, including definitions, input_validation, privacy, notice and boundaries, are preserved once.",
+  "domain": "other373-parent-received-shared-snapshot-v3",
+  "first_ordinal": 367,
+  "last_ordinal": 373,
+  "limits": "This shares complete already acknowledged structured evidence, not original source bodies. Original actors, masks, unknown/partial/unread states and opaque path references remain unchanged; no grant, execution, adoption, current physical continuity or new reading is established.",
+  "materializer_job": "20261027-175645-todo-3080",
+  "new_copy_grants": 0,
+  "new_final_dispositions": 0,
+  "new_raw_or_unique_credit": 0,
+  "new_source_body_reads": 0,
+  "parent_acknowledged_through_at_materialization": 373,
+  "parent_journal_sha256": "668d5266c725fc910fe3b823f19764aa7518d989744f4494ec97a1f39c497661",
+  "public_reflected": false,
+  "records": [
+    {
+      "actual_assessment_reader": "20261027-194701-todo-3778",
+      "bytes": 374,
+      "inventory_id": "github:d378f4719682bf14e3f8dbc01fa5e64b18028dbe6c1198e6d2cb13b0bbd71c8d",
+      "inventory_unit": "github_prompt_or_model_information",
+      "original_assessment": {
+        "candidate_disposition": "documentation actionのconfig支持候補。実consumer/権利・採否は親へ。",
+        "classification": "config_support",
+        "findings": [
+          "実codeは未注入のtemplateで、commentが正しい/実適用済みとは確認していない。selected_codeを別名selectedと混同せず、元file版と選択範囲へ結ぶ。",
+          "filecontent内のbacktickや指示文は資料dataとして境界を保持する必要がある。comment-only規則を実code変更/権限追加へしない。"
+        ],
+        "negative": "未注入placeholderから仕様を推測し、comment以外のcodeや別fileも変更済みとする。",
+        "notices": [
+          {
+            "notice_ref": "root"
+          }
+        ],
+        "package_evidence": {
+          "complete_tree_enumerated": true,
+          "independent_support_blobs": 0,
+          "other_primary_aliases": 5,
+          "primary_alias_excluded": 1,
+          "root": "Xcode",
+          "tree_blob_count": 6
+        },
+        "positive": "確認した同一版の関数に、実codeを変えず仕様と一致するdoc comment案を返す。",
+        "read": [
+          2,
+          0,
+          0,
+          true,
+          true,
+          18
+        ],
+        "read_evidence": {
+          "actual_reader_job": "20261027-194701-todo-3778",
+          "masked_lines": [],
+          "masking_version": "v37-captured-posix-and-drive-context-20261027-194701",
+          "method": "direct_raw_full",
+          "new_source_read": true,
+          "ranges": [
+            [
+              1,
+              18
+            ]
+          ],
+          "strict_utf8": true
+        },
+        "reason": "全18行をraw読取。filename/filecontent/selected_codeのplaceholderとL14..17の出力条件を確認した。",
+        "required_changes": [
+          "実consumerのplaceholder/escapingと選択版を照合し、doc comment以外や秘密値・範囲外codeが混じらないよう確認する。"
+        ],
+        "row": 367,
+        "source": [
+          "github:d378f4719682bf14e3f8dbc01fa5e64b18028dbe6c1198e6d2cb13b0bbd71c8d",
+          "x1xhlol/system-prompts-and-models-of-ai-tools",
+          "162db92f54d717d8ebd12292e155aeef32bb4b3c",
+          "Xcode/DocumentAction.txt",
+          "1193d0978788594be85a949923ac9af628380d20081b9a8f42c0dd48207f9db5",
+          "fbe33a74f7efad4c45c13820249b71c8babc8003",
+          374
+        ],
+        "support": [
+          "r368",
+          "r369",
+          "r370",
+          "r371",
+          "r372"
+        ],
+        "unit": "github_prompt_or_model_information",
+        "unmet": [
+          "実Swift/type/選択内容と適用/出力検証、個別prompt/コードの真正性・権利、未知中央本文比較。"
+        ],
+        "use": "選択したSwift codeへ説明commentだけを返すdocumentation actionのtemplate。",
+        "value": "file全体/選択範囲と、返却を単一codeblockのdoc commentだけに限定する契約が明確。"
+      },
+      "original_chunk_id": "f3736c8e24d94b51af3071c69e825d40",
+      "original_chunk_sha256": "fcbbab4e23536ef6b5cc8be84717efdc8a86fd99a601580a259e4404923545a5",
+      "path": "Xcode/DocumentAction.txt",
+      "previous_parent_semantic_read": true,
+      "source_commit": "162db92f54d717d8ebd12292e155aeef32bb4b3c",
+      "source_git_blob": "fbe33a74f7efad4c45c13820249b71c8babc8003",
+      "source_path": "Xcode/DocumentAction.txt",
+      "source_repo": "x1xhlol/system-prompts-and-models-of-ai-tools",
+      "source_sha256": "1193d0978788594be85a949923ac9af628380d20081b9a8f42c0dd48207f9db5"
+    },
+    {
+      "actual_assessment_reader": "20261027-194701-todo-3778",
+      "bytes": 245,
+      "inventory_id": "github:29aecf22984ae92502cfada012a4db9322bff182e11a551c00fc521e580666cd",
+      "inventory_unit": "github_prompt_or_model_information",
+      "original_assessment": {
+        "candidate_disposition": "説明actionのvariant候補。実context/権利・採否は親へ。",
+        "classification": "variant",
+        "findings": [
+          "説明対象の実内容/依存型/版は未注入。短さだけで全文/動作の理解や説明の正確さを保証しない。",
+          "367のselected_codeとはplaceholder名が違う。実consumerの引数bindingを確認し、添付原文を本人の新指示へ昇格しない。"
+        ],
+        "negative": "filecontentが無いのに動作を断言し、説明依頼をcode修正やbuildの指示とみなす。",
+        "notices": [
+          {
+            "notice_ref": "root"
+          }
+        ],
+        "package_evidence": {
+          "complete_tree_enumerated": true,
+          "independent_support_blobs": 0,
+          "other_primary_aliases": 5,
+          "primary_alias_excluded": 1,
+          "root": "Xcode",
+          "tree_blob_count": 6
+        },
+        "positive": "指定された同じ選択範囲の作用と不足contextを説明する。",
+        "read": [
+          2,
+          0,
+          0,
+          true,
+          true,
+          15
+        ],
+        "read_evidence": {
+          "actual_reader_job": "20261027-194701-todo-3778",
+          "masked_lines": [],
+          "masking_version": "v37-captured-posix-and-drive-context-20261027-194701",
+          "method": "direct_raw_full",
+          "new_source_read": true,
+          "ranges": [
+            [
+              1,
+              15
+            ]
+          ],
+          "strict_utf8": true
+        },
+        "reason": "全15行をraw読取。filename/filecontent/selectedのplaceholderと固定Explain要求を確認した。",
+        "required_changes": [
+          "選択範囲と元file/必要な型のcontext・実出力を対応させ、説明依頼から未依頼の編集/実行へ広げない。"
+        ],
+        "row": 368,
+        "source": [
+          "github:29aecf22984ae92502cfada012a4db9322bff182e11a551c00fc521e580666cd",
+          "x1xhlol/system-prompts-and-models-of-ai-tools",
+          "162db92f54d717d8ebd12292e155aeef32bb4b3c",
+          "Xcode/ExplainAction.txt",
+          "ee4aa3a933139e184c5190027b3095f02ae08b59f2e98deedb5f3e6c1495e72a",
+          "f4769390ad8e091eb85550a4705246657ac62e3e",
+          245
+        ],
+        "support": [
+          "r367",
+          "r369",
+          "r370",
+          "r371",
+          "r372"
+        ],
+        "unit": "github_prompt_or_model_information",
+        "unmet": [
+          "実code/type/consumerと説明精度、個別prompt/コードの真正性・権利、未知中央本文比較。"
+        ],
+        "use": "fileと選択範囲を添えて説明を求めるXcode Explain actionの短いvariant。",
+        "value": "対象範囲と全file文脈を分け、code編集を要求しない説明入口として比較できる。"
+      },
+      "original_chunk_id": "f3736c8e24d94b51af3071c69e825d40",
+      "original_chunk_sha256": "fcbbab4e23536ef6b5cc8be84717efdc8a86fd99a601580a259e4404923545a5",
+      "path": "Xcode/ExplainAction.txt",
+      "previous_parent_semantic_read": true,
+      "source_commit": "162db92f54d717d8ebd12292e155aeef32bb4b3c",
+      "source_git_blob": "f4769390ad8e091eb85550a4705246657ac62e3e",
+      "source_path": "Xcode/ExplainAction.txt",
+      "source_repo": "x1xhlol/system-prompts-and-models-of-ai-tools",
+      "source_sha256": "ee4aa3a933139e184c5190027b3095f02ae08b59f2e98deedb5f3e6c1495e72a"
+    },
+    {
+      "actual_assessment_reader": "20261027-194701-todo-3778",
+      "bytes": 235,
+      "inventory_id": "github:e9a1f070f7e565bf446399d2e1fdd26ea6f652a2113a0920f8cf90d8fa66c398",
+      "inventory_unit": "github_prompt_or_model_information",
+      "original_assessment": {
+        "candidate_disposition": "入力bindingのconfig支持候補。実template実装/個別権利・採否は親へ。",
+        "classification": "config_support",
+        "findings": [
+          "任意messageの本人性/取得元はtemplateだけで分からず、filecontent内の引用と同じ信頼度にはしない。実messageや選択内容・動作結果は未取得。",
+          "置換順/再帰置換やfence衝突の実装は示されない。前の値に別placeholder文字列が入る場合の扱い、trusted slotと原文の境界は実consumer照合を要する。"
+        ],
+        "negative": "filecontentの指示やplaceholder再置換で作られた文を本人の新権限として実行する。",
+        "notices": [
+          {
+            "notice_ref": "root"
+          }
+        ],
+        "package_evidence": {
+          "complete_tree_enumerated": true,
+          "independent_support_blobs": 0,
+          "other_primary_aliases": 5,
+          "primary_alias_excluded": 1,
+          "root": "Xcode",
+          "tree_blob_count": 6
+        },
+        "positive": "認証済みの原依頼と同じ版の選択codeを別fieldで渡し、依頼された結果だけ返す。",
+        "read": [
+          2,
+          0,
+          0,
+          true,
+          true,
+          13
+        ],
+        "read_evidence": {
+          "actual_reader_job": "20261027-194701-todo-3778",
+          "masked_lines": [],
+          "masking_version": "v37-captured-posix-and-drive-context-20261027-194701",
+          "method": "direct_raw_full",
+          "new_source_read": true,
+          "ranges": [
+            [
+              1,
+              13
+            ]
+          ],
+          "strict_utf8": true
+        },
+        "reason": "全13行をraw読取。filename/filecontent/selected/messageの4placeholderを確認した。",
+        "required_changes": [
+          "本人の原message/出所・対象版と添付dataを区別し、placeholderの一回binding/escaping・返却scopeを確認する。"
+        ],
+        "row": 369,
+        "source": [
+          "github:e9a1f070f7e565bf446399d2e1fdd26ea6f652a2113a0920f8cf90d8fa66c398",
+          "x1xhlol/system-prompts-and-models-of-ai-tools",
+          "162db92f54d717d8ebd12292e155aeef32bb4b3c",
+          "Xcode/MessageAction.txt",
+          "b18b38ec60aad2b5b1a4265935112549bca42f6feebe0874220e979dd3d27381",
+          "f4e93844e104f5914153946379f1ca5e3de85114",
+          235
+        ],
+        "support": [
+          "r367",
+          "r368",
+          "r370",
+          "r371",
+          "r372"
+        ],
+        "unit": "github_prompt_or_model_information",
+        "unmet": [
+          "実message/consumer/置換順/escaping・code/出力、個別prompt/コードの真正性・権利、未知中央本文比較。"
+        ],
+        "use": "任意messageとfile/selectionを組み合わせるXcode汎用actionのtemplate。",
+        "value": "元messageと選択contextを明示fieldに分け、説明/編集等の入口を比較できる。"
+      },
+      "original_chunk_id": "f3736c8e24d94b51af3071c69e825d40",
+      "original_chunk_sha256": "fcbbab4e23536ef6b5cc8be84717efdc8a86fd99a601580a259e4404923545a5",
+      "path": "Xcode/MessageAction.txt",
+      "previous_parent_semantic_read": true,
+      "source_commit": "162db92f54d717d8ebd12292e155aeef32bb4b3c",
+      "source_git_blob": "f4e93844e104f5914153946379f1ca5e3de85114",
+      "source_path": "Xcode/MessageAction.txt",
+      "source_repo": "x1xhlol/system-prompts-and-models-of-ai-tools",
+      "source_sha256": "b18b38ec60aad2b5b1a4265935112549bca42f6feebe0874220e979dd3d27381"
+    },
+    {
+      "actual_assessment_reader": "20261027-194701-todo-3778",
+      "bytes": 414,
+      "inventory_id": "github:d6618e81eedb0b313e6be21f0ff82f7c30557e2058f2abe1929ea5c0a13033f5",
+      "inventory_unit": "github_prompt_or_model_information",
+      "original_assessment": {
+        "candidate_disposition": "使用例actionのvariant候補。実consumer/SDK・個別権利/採否は親へ。",
+        "classification": "variant",
+        "findings": [
+          "既存import/型/初期化条件が実際に揃っているとは確認できない。追加module禁止/print禁止という出力styleは正しさや検証済みの証拠ではない。",
+          "実Playgroundの実行/SDKやfilecontentの版は未取得。例生成から未依頼のApple版開発やbuildを開始しない。"
+        ],
+        "negative": "追加importが無いから単独で実行可能と断言し、example生成を実製品の完成扱いにする。",
+        "notices": [
+          {
+            "notice_ref": "root"
+          }
+        ],
+        "package_evidence": {
+          "complete_tree_enumerated": true,
+          "independent_support_blobs": 0,
+          "other_primary_aliases": 5,
+          "primary_alias_excluded": 1,
+          "root": "Xcode",
+          "tree_blob_count": 6
+        },
+        "positive": "既存importで使える選択型の最小使用例を、未実行ならその状態を保持して返す。",
+        "read": [
+          2,
+          0,
+          0,
+          true,
+          true,
+          20
+        ],
+        "read_evidence": {
+          "actual_reader_job": "20261027-194701-todo-3778",
+          "masked_lines": [],
+          "masking_version": "v37-captured-posix-and-drive-context-20261027-194701",
+          "method": "direct_raw_full",
+          "new_source_read": true,
+          "ranges": [
+            [
+              1,
+              20
+            ]
+          ],
+          "strict_utf8": true
+        },
+        "reason": "全20行をraw読取。selected placeholderとL14..19の使用例/返却制約を確認した。",
+        "required_changes": [
+          "対象型/既存importとconsumerを確認し、snippetの文法/依存・必要な場合の実結果を分ける。元のWindows優先/言語・資源範囲を保つ。"
+        ],
+        "row": 370,
+        "source": [
+          "github:d6618e81eedb0b313e6be21f0ff82f7c30557e2058f2abe1929ea5c0a13033f5",
+          "x1xhlol/system-prompts-and-models-of-ai-tools",
+          "162db92f54d717d8ebd12292e155aeef32bb4b3c",
+          "Xcode/PlaygroundAction.txt",
+          "0f982f1967b9a3c9fcbd76092c362fe2c356bf35a0185607b0720a29a8f78ac5",
+          "f2c77bb761aed4f350ad284bee39d4345e7ffb4d",
+          414
+        ],
+        "support": [
+          "r367",
+          "r368",
+          "r369",
+          "r371",
+          "r372"
+        ],
+        "unit": "github_prompt_or_model_information",
+        "unmet": [
+          "実Swift/type/import/SDK・Playgroundと出力/適用、個別prompt/コードの真正性・権利、未知中央本文比較。"
+        ],
+        "use": "選択したSwift要素の短い使用例を、単一codeblockで返すPlayground action。",
+        "value": "追加import/print/commentを出さないという例の表示契約と、実行可能性の違いを検討できる。"
+      },
+      "original_chunk_id": "f3736c8e24d94b51af3071c69e825d40",
+      "original_chunk_sha256": "fcbbab4e23536ef6b5cc8be84717efdc8a86fd99a601580a259e4404923545a5",
+      "path": "Xcode/PlaygroundAction.txt",
+      "previous_parent_semantic_read": true,
+      "source_commit": "162db92f54d717d8ebd12292e155aeef32bb4b3c",
+      "source_git_blob": "f2c77bb761aed4f350ad284bee39d4345e7ffb4d",
+      "source_path": "Xcode/PlaygroundAction.txt",
+      "source_repo": "x1xhlol/system-prompts-and-models-of-ai-tools",
+      "source_sha256": "0f982f1967b9a3c9fcbd76092c362fe2c356bf35a0185607b0720a29a8f78ac5"
+    },
+    {
+      "actual_assessment_reader": "20261027-194701-todo-3778",
+      "bytes": 1938,
+      "inventory_id": "github:58ecf15c1230f6c89f568dd28aca26ebbbc07b63e4d733ef096b830d25ac1966",
+      "inventory_unit": "github_prompt_or_model_information",
+      "original_assessment": {
+        "candidate_disposition": "Preview環境選択のvariant候補。実consumer/SDK/権利と採否は親へ。",
+        "classification": "variant",
+        "findings": [
+          "modifier文字列やRow suffixでNavigationStack/Listを選び、list型なら5件、BindingはPreview内で定義するとする。名前/部分一致だけでは必要な環境/親依存や適切なmock dataを確定できない。",
+          "例にescapeされたquoteがあり、@availability表記やPreviewable条件も現SDK/consumerで未検証。原文字列の描画/置換と、コンパイル可能なSwift codeを分ける。",
+          "Previewの生成/見た目は本人の同画像回答や実アプリの動作確認ではない。実target/code/SDK・素材権利は別に要する。"
+        ],
+        "negative": "Rowという名前だけでList必須とし、escaped例を未検証でコンパイル済み・画像承認済みとする。",
+        "notices": [
+          {
+            "notice_ref": "root"
+          }
+        ],
+        "package_evidence": {
+          "complete_tree_enumerated": true,
+          "independent_support_blobs": 0,
+          "other_primary_aliases": 5,
+          "primary_alias_excluded": 1,
+          "root": "Xcode",
+          "tree_blob_count": 6
+        },
+        "positive": "既存Viewの実型と必要な環境だけを与え、本人確認に使う画像と生成code/実動作を区別する。",
+        "read": [
+          2,
+          0,
+          0,
+          true,
+          true,
+          58
+        ],
+        "read_evidence": {
+          "actual_reader_job": "20261027-194701-todo-3778",
+          "masked_lines": [],
+          "masking_version": "v37-captured-posix-and-drive-context-20261027-194701",
+          "method": "direct_raw_full",
+          "new_source_read": true,
+          "ranges": [
+            [
+              1,
+              58
+            ]
+          ],
+          "strict_utf8": true
+        },
+        "reason": "全58行をraw読取。macro説明/例とL29..52のwrapper/引数/availability条件を確認した。",
+        "required_changes": [
+          "実View型/初期化/環境と元の親wrapper・既存資源を確認し、必要なPreviewだけを対象SDK/consumerで照合する。",
+          "新しい見た目は同画像への本人回答と結び、Preview code/例の5件を実dataや実受入成功とみなさない。"
+        ],
+        "row": 371,
+        "source": [
+          "github:58ecf15c1230f6c89f568dd28aca26ebbbc07b63e4d733ef096b830d25ac1966",
+          "x1xhlol/system-prompts-and-models-of-ai-tools",
+          "162db92f54d717d8ebd12292e155aeef32bb4b3c",
+          "Xcode/PreviewAction.txt",
+          "497e1c4845a84810d5ca5003eaad3fd0669eaa9cba77de7158be074647d67c5e",
+          "bcedc358e682b36c85b5463030f038c74e0bb156",
+          1938
+        ],
+        "support": [
+          "r367",
+          "r368",
+          "r369",
+          "r370",
+          "r372"
+        ],
+        "unit": "github_prompt_or_model_information",
+        "unmet": [
+          "実View/SDK/Preview・wrapper/Binding/資源・同画像回答、個別prompt/コード/素材の真正性・権利、未知中央本文比較。"
+        ],
+        "use": "SwiftUI Viewの周辺条件から#Previewを組み立てるactionのvariant。",
+        "value": "navigation/list関連modifier、Binding、既存static値/画像資源の候補を区別する条件が具体的。"
+      },
+      "original_chunk_id": "f3736c8e24d94b51af3071c69e825d40",
+      "original_chunk_sha256": "fcbbab4e23536ef6b5cc8be84717efdc8a86fd99a601580a259e4404923545a5",
+      "path": "Xcode/PreviewAction.txt",
+      "previous_parent_semantic_read": true,
+      "source_commit": "162db92f54d717d8ebd12292e155aeef32bb4b3c",
+      "source_git_blob": "bcedc358e682b36c85b5463030f038c74e0bb156",
+      "source_path": "Xcode/PreviewAction.txt",
+      "source_repo": "x1xhlol/system-prompts-and-models-of-ai-tools",
+      "source_sha256": "497e1c4845a84810d5ca5003eaad3fd0669eaa9cba77de7158be074647d67c5e"
+    },
+    {
+      "actual_assessment_reader": "20261027-194701-todo-3778",
+      "bytes": 4009,
+      "inventory_id": "github:0479cb036ba5b1797978c88a6c3730c2367a67a3fcb6f1f34a0f93ac35fcdc8f",
+      "inventory_unit": "github_prompt_or_model_information",
+      "original_assessment": {
+        "candidate_disposition": "型context/完全file返却の改訂参考候補。実SDK/consumer・個別権利と採否は親へ。",
+        "classification": "prompt_or_model_info",
+        "findings": [
+          "##SEARCH形式で型/語句を要求し揃うまで待つ。実検索consumer/提供済みcontextや型の取得は未確認で、本人へPC操作を求める前提にしない。",
+          "Apple言語/SDK既定、SwiftConcurrency優先・他の好みへ柔軟という規則を持つ。元のWindows優先/新規言語/既存製品要件を変更する命令ではない。",
+          "既存file変更は省略なし全文を返し、送られたfileだけ置換可能とする。別modelの省略marker契約と混同せず、同じ版/他者差分の保持と適用diffが必要。",
+          "Swift Testing例は数値/optional unwrapの例示で、実codeの意味を検証したtestではない。現在Xcode/project openというcaptureやcontextを隠すstyleも現PC状態/許可の根拠にしない。"
+        ],
+        "negative": "型名の検索依頼を出しただけで確認済みとし、全文提案で他者の差分を失わせ、一般加算testだけで製品検証完了にする。",
+        "notices": [
+          {
+            "notice_ref": "root"
+          }
+        ],
+        "package_evidence": {
+          "complete_tree_enumerated": true,
+          "independent_support_blobs": 0,
+          "other_primary_aliases": 5,
+          "primary_alias_excluded": 1,
+          "root": "Xcode",
+          "tree_blob_count": 6
+        },
+        "positive": "必要な型を正規に調べ、同じfile版の完全な変更案と未適用/未検査を明示する。",
+        "read": [
+          3,
+          1,
+          0,
+          false,
+          true,
+          69
+        ],
+        "read_evidence": {
+          "actual_reader_job": "20261027-194701-todo-3778",
+          "masked_lines": [
+            13
+          ],
+          "masking_version": "v37-captured-posix-and-drive-context-20261027-194701",
+          "method": "direct_masked_full",
+          "new_source_read": true,
+          "ranges": [
+            [
+              1,
+              69
+            ]
+          ],
+          "strict_utf8": true
+        },
+        "reason": "全69行をmasked読取。L1..11の型/OS、Swift Testing例とL50..68の並行/既存file返却を確認した。",
+        "required_changes": [
+          "不足型/実対象/OS・SDKと検索結果を照合し、完全file提案は元版と既存差分を保って必要な検査/実適用を別に確認する。",
+          "sourceの言語/人格/環境・一般test例を本人要件や検証成功へ代用せず、通常技術調査はAIが進める。"
+        ],
+        "row": 372,
+        "source": [
+          "github:0479cb036ba5b1797978c88a6c3730c2367a67a3fcb6f1f34a0f93ac35fcdc8f",
+          "x1xhlol/system-prompts-and-models-of-ai-tools",
+          "162db92f54d717d8ebd12292e155aeef32bb4b3c",
+          "Xcode/System.txt",
+          "d67ef77c44cd2ebf7cb7c1435367ffcb307dff0e9ef3f544c7d5136326cc4060",
+          "c52b840caef248a73627c482eb448a0d3e139a2b",
+          4009
+        ],
+        "support": [
+          "r367",
+          "r368",
+          "r369",
+          "r370",
+          "r371"
+        ],
+        "unit": "github_prompt_or_model_information",
+        "unmet": [
+          "伏字L13 raw、実型/検索/SDK/適用・test/並行/target環境、個別prompt/コードの真正性・権利、未知中央本文比較。"
+        ],
+        "use": "Xcodeの型不足検索とApple向けcode提案・全file返却を比較する基本prompt。",
+        "value": "必要な型を特定して不足を先に検索する、生成interfaceを編集しないという境界が具体的。"
+      },
+      "original_chunk_id": "f3736c8e24d94b51af3071c69e825d40",
+      "original_chunk_sha256": "fcbbab4e23536ef6b5cc8be84717efdc8a86fd99a601580a259e4404923545a5",
+      "path": "Xcode/System.txt",
+      "previous_parent_semantic_read": true,
+      "source_commit": "162db92f54d717d8ebd12292e155aeef32bb4b3c",
+      "source_git_blob": "c52b840caef248a73627c482eb448a0d3e139a2b",
+      "source_path": "Xcode/System.txt",
+      "source_repo": "x1xhlol/system-prompts-and-models-of-ai-tools",
+      "source_sha256": "d67ef77c44cd2ebf7cb7c1435367ffcb307dff0e9ef3f544c7d5136326cc4060"
+    },
+    {
+      "actual_assessment_reader": "20261027-194701-todo-3778",
+      "bytes": 9592,
+      "inventory_id": "github:a6ee6690655011ffc093019dd5b78e32ed42e175382601ecae9ee849cdcf9a89",
+      "inventory_unit": "github_prompt_or_model_information",
+      "original_assessment": {
+        "candidate_disposition": "環境前提と実装/検証・費用境界の改訂参考候補。実SDK/個別権利・採否は親へ。",
+        "classification": "prompt_or_model_info",
+        "findings": [
+          "既存page.tsxを保持不要、frontend先行、他route不可・port3000のみ、test禁止/build禁止・lintと最新logだけという前提。現repo/元scopeや必要な影響検査を確認せず適用しない。lint/log/自動server宣言を実build/動作成功へしない。",
+          "Next/TypeScript/既定DB/cache/auth等を固定し、Prisma設定済みとしてschema変更とdb:pushを勧める。既存data/用途/移行/復旧/権限や実SDK版の確認は別で、固定環境宣言から変更許可を作らない。",
+          "Z.ai SDKによるAI/画像/検索やCLI例は実network/生成/課金の検証ではなく、既存OAuthサブスク枠で使える証明でもない。full response/画像base64をlogする例は個人/秘密/巨大出力を無条件に記録する設計へ移さない。",
+          "socket.ioのみ、青系禁止/固定余白等のUI既定は本人の要件/同画像回答・既存設計へ合わせる。最新技術を常に知るという人格宣言、依存既設や型制約・js fence内の型注釈も現仕様/consumerで未検証。"
+        ],
+        "negative": "page既存codeを無確認で破棄し、db:push/API生成とfull response logを実行、lint成功だけで本番完成とする。",
+        "notices": [
+          {
+            "notice_ref": "root"
+          }
+        ],
+        "package_evidence": {
+          "complete_tree_enumerated": true,
+          "independent_support_blobs": 0,
+          "other_primary_aliases": 0,
+          "primary_alias_excluded": 1,
+          "root": "Z.ai Code",
+          "tree_blob_count": 1
+        },
+        "positive": "既存component/data用途と版を確認し、承認済みの同画像/機能の範囲で必要な検査・実結果を返す。",
+        "read": [
+          3,
+          5,
+          0,
+          false,
+          true,
+          237
+        ],
+        "read_evidence": {
+          "actual_reader_job": "20261027-194701-todo-3778",
+          "masked_lines": [
+            28,
+            37,
+            47,
+            54,
+            56
+          ],
+          "masking_version": "v37-captured-posix-and-drive-context-20261027-194701",
+          "method": "direct_masked_full",
+          "new_source_read": true,
+          "ranges": [
+            [
+              1,
+              237
+            ]
+          ],
+          "strict_utf8": true
+        },
+        "reason": "全237行をmasked読取。L11..73の制約/DB、L75..203のAI/画像/検索/socket例、末尾UI規則を確認した。",
+        "required_changes": [
+          "元repo/既存成果・data/受入/言語・同画像回答を保ち、破棄/新route制限・test/build禁止を一律に持ち込まない。必要な検査を実資源/影響範囲で確認する。",
+          "DB変更/AI/画像/検索/外部通信は正規の既存対象・OAuth/利用枠/費用と実consumerへ照合し、API呼出しや秘密値/全responseの表示を前提にしない。"
+        ],
+        "row": 373,
+        "source": [
+          "github:a6ee6690655011ffc093019dd5b78e32ed42e175382601ecae9ee849cdcf9a89",
+          "x1xhlol/system-prompts-and-models-of-ai-tools",
+          "162db92f54d717d8ebd12292e155aeef32bb4b3c",
+          "Z.ai Code/prompt.txt",
+          "1e62c474838e6ecc6378899747f80e1f481a7dbff2ea0b6ea4ce827a0fef22d8",
+          "8b1c95a092b00b8c688b4d93dfae6d3dcde28a95",
+          9592
+        ],
+        "support": [],
+        "unit": "github_prompt_or_model_information",
+        "unmet": [
+          "伏字5行 raw、実stack/DB・移行/data保持・AI/画像/検索/費用/OAuth/権限・server/検査、同画像回答/素材権利、未知中央本文比較。"
+        ],
+        "use": "Z.ai Codeの固定Next/DB/AI・UIとdev環境前提を比較する参考。",
+        "value": "backend側SDK利用、既存component/型・loading/error/keyboard等の観点と、実環境/権利/費用の未確認を分けられる。"
+      },
+      "original_chunk_id": "f3736c8e24d94b51af3071c69e825d40",
+      "original_chunk_sha256": "fcbbab4e23536ef6b5cc8be84717efdc8a86fd99a601580a259e4404923545a5",
+      "path": "Z.ai Code/prompt.txt",
+      "previous_parent_semantic_read": true,
+      "source_commit": "162db92f54d717d8ebd12292e155aeef32bb4b3c",
+      "source_git_blob": "8b1c95a092b00b8c688b4d93dfae6d3dcde28a95",
+      "source_path": "Z.ai Code/prompt.txt",
+      "source_repo": "x1xhlol/system-prompts-and-models-of-ai-tools",
+      "source_sha256": "1e62c474838e6ecc6378899747f80e1f481a7dbff2ea0b6ea4ce827a0fef22d8"
+    }
+  ],
+  "roster_sha256": "460219790c088b33e6044c6a97c68a882549c608c3de46ea536aa990a2c1adac",
+  "shared_original_contexts": {
+    "fcbbab4e23536ef6b5cc8be84717efdc8a86fd99a601580a259e4404923545a5": {
+      "actual_assessment_reader": "20261027-194701-todo-3778",
+      "all_original_chunk_fields_reconstructed": true,
+      "common": {
+        "boundaries": {
+          "central_operations": 0,
+          "copy_license_accepted": false,
+          "new_final_dispositions": 0,
+          "source_executed": false
+        },
+        "chunk_id": "f3736c8e24d94b51af3071c69e825d40",
+        "cloudflare_support_columns": [
+          "path",
+          "tree_git_blob",
+          "tree_bytes",
+          "saved",
+          "sha256",
+          "git_blob",
+          "bytes",
+          "content_path",
+          "read_profile_ref"
+        ],
+        "cloudflare_support_read_profiles": {
+          "direct_cf02": {
+            "actual_reader_job": "20261027-194701-todo-3778",
+            "mask": 3,
+            "masked_lines": [
+              5,
+              123,
+              130
+            ],
+            "method": "direct_masked_full",
+            "ranges": [
+              [
+                1,
+                65
+              ],
+              [
+                66,
+                130
+              ]
+            ],
+            "read": [
+              3,
+              3,
+              0,
+              false,
+              true,
+              130
+            ],
+            "reader": 0
+          },
+          "direct_cf07": {
+            "actual_reader_job": "20261027-194701-todo-3778",
+            "mask": 0,
+            "masked_lines": [],
+            "method": "direct_raw_full",
+            "ranges": [
+              [
+                1,
+                125
+              ],
+              [
+                126,
+                251
+              ]
+            ],
+            "read": [
+              2,
+              0,
+              0,
+              true,
+              true,
+              251
+            ],
+            "reader": 0
+          },
+          "direct_cf10": {
+            "actual_reader_job": "20261027-194701-todo-3778",
+            "mask": 1,
+            "masked_lines": [
+              78
+            ],
+            "method": "direct_masked_full",
+            "ranges": [
+              [
+                1,
+                80
+              ],
+              [
+                81,
+                156
+              ]
+            ],
+            "read": [
+              3,
+              1,
+              0,
+              false,
+              true,
+              156
+            ],
+            "reader": 0
+          },
+          "direct_cf13": {
+            "actual_reader_job": "20261027-194701-todo-3778",
+            "mask": 0,
+            "masked_lines": [],
+            "method": "direct_raw_full",
+            "ranges": [
+              [
+                1,
+                95
+              ],
+              [
+                96,
+                186
+              ]
+            ],
+            "read": [
+              2,
+              0,
+              0,
+              true,
+              true,
+              186
+            ],
+            "reader": 0
+          },
+          "saved_unread": {
+            "actual_reader_job": null,
+            "block_reason": "保存済みのdomain別companion本文。今回は基礎workflowの意味評価と旧主本文の技術保留解消。実監査target/companion domainを選定しておらず、この本文を読了/採用/検証済みとしない。",
+            "mask": null,
+            "masked_lines": null,
+            "method": "saved_unread",
+            "ranges": null,
+            "read": [
+              1,
+              null,
+              null,
+              false,
+              false,
+              0
+            ],
+            "reader": null,
+            "unread_scope": "entire body"
+          },
+          "unsaved": {
+            "actual_reader_job": null,
+            "mask": null,
+            "masked_lines": null,
+            "method": "unsaved",
+            "ranges": null,
+            "read": null,
+            "reader": null
+          }
+        },
+        "cloudflare_support_resources": {
+          "cf01": [
+            "skills/security-audit/AI-AND-LLM.md",
+            "02ba9039eca4cec811fefc77bce0d7349b379aae",
+            10617,
+            true,
+            "7335a95c43554eadefcf03ece639291bb0e038c398a179299e3887ffe06bd2ef",
+            "02ba9039eca4cec811fefc77bce0d7349b379aae",
+            10617,
+            "github/cloudflare__security-audit-skill/objects/7335a95c43554eadefcf03ece639291bb0e038c398a179299e3887ffe06bd2ef.gz",
+            "saved_unread"
+          ],
+          "cf02": [
+            "skills/security-audit/ATTACK-CLASSES.md",
+            "18a2beb4dbb554fb52b0a0293b8bd9108207f8fa",
+            15695,
+            true,
+            "3ee4f00c6e8c9dcf6dd02dd5ac2a4ceb322e2085f3e9fbe79cf0c6330bc7ef83",
+            "18a2beb4dbb554fb52b0a0293b8bd9108207f8fa",
+            15695,
+            "github/cloudflare__security-audit-skill/objects/3ee4f00c6e8c9dcf6dd02dd5ac2a4ceb322e2085f3e9fbe79cf0c6330bc7ef83.gz",
+            "direct_cf02"
+          ],
+          "cf03": [
+            "skills/security-audit/CLIENT-SIDE.md",
+            "8ba673e9e7e3d02f5518aa0219bcbeec7957531b",
+            8594,
+            true,
+            "613f6b98f86083e045525c5b60154ffdab122bac35f1e05eb17488e6e453370c",
+            "8ba673e9e7e3d02f5518aa0219bcbeec7957531b",
+            8594,
+            "github/cloudflare__security-audit-skill/objects/613f6b98f86083e045525c5b60154ffdab122bac35f1e05eb17488e6e453370c.gz",
+            "saved_unread"
+          ],
+          "cf04": [
+            "skills/security-audit/CLOUD-AND-DEPLOYMENT.md",
+            "5569f76c7740744aa3f60aaa89eaefe275f2e6c9",
+            8291,
+            true,
+            "3c80f3088be22345e07b057c056d6ed99fe2b0304f794398964f7ccd5a496ca3",
+            "5569f76c7740744aa3f60aaa89eaefe275f2e6c9",
+            8291,
+            "github/cloudflare__security-audit-skill/objects/3c80f3088be22345e07b057c056d6ed99fe2b0304f794398964f7ccd5a496ca3.gz",
+            "saved_unread"
+          ],
+          "cf05": [
+            "skills/security-audit/DATA-ISOLATION-AND-LIFECYCLE.md",
+            "0cba1fa463b62c9b0caba710a201e29c1eecd0ec",
+            7798,
+            true,
+            "307dcb3e24d292715c4a041190e7bb135646a37eb6187619ae01d000a634a4ad",
+            "0cba1fa463b62c9b0caba710a201e29c1eecd0ec",
+            7798,
+            "github/cloudflare__security-audit-skill/objects/307dcb3e24d292715c4a041190e7bb135646a37eb6187619ae01d000a634a4ad.gz",
+            "saved_unread"
+          ],
+          "cf06": [
+            "skills/security-audit/DESKTOP-MOBILE-AND-LOCAL-IPC.md",
+            "d6230098651bff6348d3868c11f566bfb1306e7f",
+            8739,
+            true,
+            "58eae8ee0ca6a46611c501ec5a3ab47fdff88dd7db0d8d74789bbf8bb19d8cb2",
+            "d6230098651bff6348d3868c11f566bfb1306e7f",
+            8739,
+            "github/cloudflare__security-audit-skill/objects/58eae8ee0ca6a46611c501ec5a3ab47fdff88dd7db0d8d74789bbf8bb19d8cb2.gz",
+            "saved_unread"
+          ],
+          "cf07": [
+            "skills/security-audit/HUNTING.md",
+            "377d4dcfbe88a049379448cd7892717185401597",
+            22446,
+            true,
+            "71c121decea1322c47c718f6e110f1a892980bb4266bd7ac55ef043a213ade09",
+            "377d4dcfbe88a049379448cd7892717185401597",
+            22446,
+            "github/cloudflare__security-audit-skill/objects/71c121decea1322c47c718f6e110f1a892980bb4266bd7ac55ef043a213ade09.gz",
+            "direct_cf07"
+          ],
+          "cf08": [
+            "skills/security-audit/MEMORY-SAFETY-AND-BINARY.md",
+            "86ff4920752661fc4a31a35ca4f962ace5dd5f48",
+            10513,
+            true,
+            "7c8b0dccfb35315cca2455509674d49632b2fe37e1f3aac16c1a496a7e9924a7",
+            "86ff4920752661fc4a31a35ca4f962ace5dd5f48",
+            10513,
+            "github/cloudflare__security-audit-skill/objects/7c8b0dccfb35315cca2455509674d49632b2fe37e1f3aac16c1a496a7e9924a7.gz",
+            "saved_unread"
+          ],
+          "cf09": [
+            "skills/security-audit/PROTOCOLS-RPC-AND-MESSAGING.md",
+            "b04ab88f852224838fdc9683d9fcccd858b0778a",
+            7483,
+            true,
+            "8b73816fa5b3697c9c40977f0c836b40f01d6e81929ff2720fe83ce089e9a619",
+            "b04ab88f852224838fdc9683d9fcccd858b0778a",
+            7483,
+            "github/cloudflare__security-audit-skill/objects/8b73816fa5b3697c9c40977f0c836b40f01d6e81929ff2720fe83ce089e9a619.gz",
+            "saved_unread"
+          ],
+          "cf10": [
+            "skills/security-audit/RECONNAISSANCE.md",
+            "1a170a93ab76b93dc5ac268a5b690beb423a8aa9",
+            15902,
+            true,
+            "02ca887aca84de8ae137f1891bd2f0a54f28d3fa6da92a27f54734382b3381a2",
+            "1a170a93ab76b93dc5ac268a5b690beb423a8aa9",
+            15902,
+            "github/cloudflare__security-audit-skill/objects/02ca887aca84de8ae137f1891bd2f0a54f28d3fa6da92a27f54734382b3381a2.gz",
+            "direct_cf10"
+          ],
+          "cf11": [
+            "skills/security-audit/RESOURCE-EXHAUSTION-AND-AVAILABILITY.md",
+            "6cbbd1e2cfa482068c8279c2f7da9db43d3f54b8",
+            7476,
+            true,
+            "4326fab5c92a0b4c420a70196254040105cd794026562130b59bf1a6db3e4baa",
+            "6cbbd1e2cfa482068c8279c2f7da9db43d3f54b8",
+            7476,
+            "github/cloudflare__security-audit-skill/objects/4326fab5c92a0b4c420a70196254040105cd794026562130b59bf1a6db3e4baa.gz",
+            "saved_unread"
+          ],
+          "cf12": [
+            "skills/security-audit/SUPPLY-CHAIN-AND-RELEASE.md",
+            "bf96aed0803bc07471483ab129dea86759c3e305",
+            7258,
+            true,
+            "f372e919940e335468ba1ae09f99026c3986a345f7fe26f8068f132e199f52a5",
+            "bf96aed0803bc07471483ab129dea86759c3e305",
+            7258,
+            "github/cloudflare__security-audit-skill/objects/f372e919940e335468ba1ae09f99026c3986a345f7fe26f8068f132e199f52a5.gz",
+            "saved_unread"
+          ],
+          "cf13": [
+            "skills/security-audit/VALIDATION-AND-REPORTING.md",
+            "5e200d7387e665e53e0e4190fa4a5814c334c507",
+            17843,
+            true,
+            "b892470cb89bb31f33403e050d4bdfbe2cdaef940ade1496fa65e32b2e129449",
+            "5e200d7387e665e53e0e4190fa4a5814c334c507",
+            17843,
+            "github/cloudflare__security-audit-skill/objects/b892470cb89bb31f33403e050d4bdfbe2cdaef940ade1496fa65e32b2e129449.gz",
+            "direct_cf13"
+          ],
+          "cf14": [
+            "skills/security-audit/WEB-PROTOCOL-AND-AUTH.md",
+            "1a099fa575cf52a61e9a627f91b61015120fa517",
+            12300,
+            true,
+            "4f3066dffa23c5635859187be9b96c32f2aff29a688186b91ff0c63e47d62b5c",
+            "1a099fa575cf52a61e9a627f91b61015120fa517",
+            12300,
+            "github/cloudflare__security-audit-skill/objects/4f3066dffa23c5635859187be9b96c32f2aff29a688186b91ff0c63e47d62b5c.gz",
+            "saved_unread"
+          ],
+          "cf15": [
+            "skills/security-audit/report-schema.json",
+            "55815a3687a45fff63d8ebf20068611bd6ad6d9a",
+            14494,
+            false,
+            null,
+            null,
+            null,
+            null,
+            "unsaved"
+          ],
+          "cf16": [
+            "skills/security-audit/validate-coverage-ledger.cjs",
+            "0ef58657bef18b26a92321df6c8e3d31bc8e6659",
+            33522,
+            false,
+            null,
+            null,
+            null,
+            null,
+            "unsaved"
+          ],
+          "cf17": [
+            "skills/security-audit/validate-coverage-ledger.test.cjs",
+            "b1444f57e1b021a61175733b8c356171861c8701",
+            28483,
+            false,
+            null,
+            null,
+            null,
+            null,
+            "unsaved"
+          ],
+          "cf18": [
+            "skills/security-audit/validate-findings.cjs",
+            "2843feceddb7e30bf10d6e4f7bbe6640e4c57799",
+            28806,
+            false,
+            null,
+            null,
+            null,
+            null,
+            "unsaved"
+          ],
+          "cf19": [
+            "skills/security-audit/validate-findings.test.cjs",
+            "8d245b226bbe2fdf28b46b3203b99c2824039d2d",
+            26384,
+            false,
+            null,
+            null,
+            null,
+            null,
+            "unsaved"
+          ]
+        },
+        "completion_boundary": {
+          "complete_before_ack": false,
+          "final_ack_required": 373,
+          "final_adoption_or_individual_license_approval": false,
+          "packet_reaches_ordinal": 373,
+          "primary_occurrences_added_by_row1_update": 0,
+          "research_scope_only": true,
+          "whole16_or_parent3080_complete": false
+        },
+        "definitions": {
+          "actors": {
+            "0": "今回の実assistant",
+            "1": "20261025-142809-todo-3778/currentの既読担当"
+          },
+          "outside_package_rule": "outsideのsaved:falseは当該参照本文/実体をこの固定package資料として取得/保存していない意味。中央/実環境/別repoでの同名存在・不存在を調べたものではない。",
+          "prior_entry_update_rule": "prior_entry_updatesは既存ordinalの未読技術保留を解消する補足で、元receipt/journalを上書きせず新候補/重複source数へ加算しない。現373名簿は不変。",
+          "reader_namespace": "20261027-194701-todo-3778/current",
+          "resource_ref_rule": "supportのr番号はsupport_resourcesのobject。cf番号はcloudflare_support_resourcesのtupleをcloudflare_support_columnsで復号し、read_profile_refからcloudflare_support_read_profilesのmethod/実reader/mask/read/rangesを照合。primary aliasと支持を新uniqueへ二重計上しない。未保存本文hash/blob/bytes/reader/maskはnullでtree値だけ別欄。",
+          "states": {
+            "1": "saved_unread",
+            "2": "direct_raw_full",
+            "3": "direct_masked_full",
+            "6": "partial",
+            "7": "scan"
+          }
+        },
+        "domain": "othergit373-chunk-v1",
+        "existing_relationship": {
+          "central_reads_or_operations": 0,
+          "comparison": "起動catalogのcoding-agent-tools/knowledge-to-skills/security-review/security-audit-coverage等の名前/description、既知3048/public metadata・旧1番packet/原評価を照合。未知中央本文/導入済み/重複確定・包括許諾0。"
+        },
+        "first_ordinal": 367,
+        "input_validation": {
+          "catalog_rows": 73220,
+          "catalog_sha256": "2d73c9a038a41cc220a9687b935bfa1e0b315b65d9bd6d3e54ddb4111972876c",
+          "commit": "162db92f54d717d8ebd12292e155aeef32bb4b3c",
+          "commit_json_sha256": "674dc969c4d800fefbf65a7ecb1c875e919118aa48fd0a2133ede51385f90939",
+          "index_sha256": "477ac8c5b178c4c781bf5baf0b26c6a316ed0ae6e9001ad28f0ac0ab9844b54f",
+          "primary_tuple_unit_catalog_exact": true,
+          "repo": "x1xhlol/system-prompts-and-models-of-ai-tools",
+          "root_tree": "e8d86c0a025a7a07d4bb8723ae758cf98d63cbf5",
+          "same_buffer_sha_bytes_gitblob_strict_utf8": true,
+          "tree_entries": 171,
+          "tree_sha256": "416b91db26db0b0c4447d46bbb945259d89ac393e45ee76b5ebceb09cde459f5",
+          "truncated": false
+        },
+        "notice_evidence": {
+          "cloudflare_root": {
+            "actual_reader_job": "20261027-194701-todo-3778",
+            "bytes": 1078,
+            "content_path": "github/cloudflare__security-audit-skill/objects/e598e694aa506650c7192d5ea3be0e50aca0d356ea00551c53429f0b01eb6391.gz",
+            "copy_license_accepted": false,
+            "fixed_public_prose_recovery": {
+              "lines": {
+                "12": "The above copyright notice and this permission notice shall be included in all",
+                "18": "AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER"
+              },
+              "method": "fixed-public-prose-recovery",
+              "new_raw_full_read": false,
+              "original_mask_count": 2,
+              "path": "LICENSE",
+              "same_bytes_verified": true,
+              "sha256": "e598e694aa506650c7192d5ea3be0e50aca0d356ea00551c53429f0b01eb6391"
+            },
+            "git_blob": "6dbc9ecb3a5b9080e95b962869e8c7ab16cfdc20",
+            "lines": 21,
+            "mask": 2,
+            "masked_lines": [
+              12,
+              18
+            ],
+            "method": "direct_masked_full",
+            "original_index_content_path": "objects/e598e694aa506650c7192d5ea3be0e50aca0d356ea00551c53429f0b01eb6391.gz",
+            "path": "LICENSE",
+            "ranges": [
+              [
+                1,
+                21
+              ]
+            ],
+            "read": [
+              3,
+              2,
+              0,
+              false,
+              true,
+              21
+            ],
+            "reader": 0,
+            "saved": true,
+            "scope": "1番packageのroot MIT。帰属/許諾noticeをcopy/substantial portionsへ保持する条件と無保証を確認。third-party引用/素材/サービス/未読moduleの個別権利へ包括しない。原文と許諾は固定gzipに保持。",
+            "sha256": "e598e694aa506650c7192d5ea3be0e50aca0d356ea00551c53429f0b01eb6391"
+          },
+          "root": {
+            "actual_reader_job": "20261025-142809-todo-3778",
+            "bytes": 35149,
+            "copy_license_accepted": false,
+            "displayed_line_ranges": [
+              [
+                1,
+                350
+              ],
+              [
+                351,
+                674
+              ]
+            ],
+            "fixed_token_recovery": {
+              "line": 154,
+              "new_raw_read": false,
+              "same_bytes_verified": true,
+              "text": "2. Basic Permissions."
+            },
+            "git_blob": "f288702d2fa16d3cdf0035b15a9fcbc552cd88e7",
+            "mask": 2,
+            "masked_lines": [
+              4,
+              154
+            ],
+            "method": "same-byte-reuse",
+            "original_notice_gzip": "github/x1xhlol__system-prompts-and-models-of-ai-tools/objects/3972dc9744f6499f0f9b2dbf76696f2ae7ad8af9b23dde66d6af86c9dfb36986.gz",
+            "original_read": [
+              3,
+              2,
+              0,
+              false,
+              true,
+              674
+            ],
+            "original_reader_namespace": "20261025-142809-todo-3778/current",
+            "path": "LICENSE.md",
+            "read": [
+              3,
+              2,
+              1,
+              false,
+              true,
+              674
+            ],
+            "reader": 1,
+            "representative": {
+              "chunk_id": "951da82f4b0d41cda1532574d0b68f97",
+              "pointer": "entries/0/notices/0",
+              "receipt_sha256": "a0afd9bdcf9511fb72c7995cf4376914fe854047aa4512be84661a60d3cfaf9f"
+            },
+            "saved": true,
+            "scope": "367..373 Xcode/Z.ai各出現の祖先root GPLv3。固定171件complete treeに別notice名候補なし。collector GPLを各prompt/会話/第三者code/素材・Apple/SDK/serviceの個別転載/配布/利用権や真正性へ包括しない。",
+            "sha256": "3972dc9744f6499f0f9b2dbf76696f2ae7ad8af9b23dde66d6af86c9dfb36986"
+          }
+        },
+        "outside_package_context": [
+          {
+            "actual_body": {
+              "actual_reader_job": null,
+              "bytes": null,
+              "git_blob": null,
+              "mask": null,
+              "method": "unsaved",
+              "path": null,
+              "reader": null,
+              "saved": false,
+              "sha256": null
+            },
+            "inline_metadata_read": true,
+            "ref": "実Swift/Xcode/Preview/placeholder consumer・Z.ai SDK/DB/AI/画像/検索/現stack/権限/費用/素材",
+            "source_rows": [
+              367,
+              368,
+              369,
+              370,
+              371,
+              372,
+              373
+            ]
+          }
+        ],
+        "prior_entry_updates": [
+          {
+            "entry": {
+              "candidate_disposition": "基礎手順の独自要約/既存security-review等への改訂比較候補。原1番の技術的未読理由は現在解消。domain本文/実validator/OS動作・個別権利/最終採否は未確定で親へ。",
+              "classification": "reusable_procedure",
+              "findings": [
+                "本文はguidanceを既定にし、明示的な全体audit/pen-test/成果物依頼だけ6段階全工程とfile作成を適用する。『常に全段階必須』という一般化は原文にない。source研究を実監査/新agent/新file/target実行へ昇格しない。",
+                "候補はlower-trust principal/input/意図したcontrol/trace/sink・実影響を要し、confirmedだけseverityを持つ。source外の決定的な条件が不明なら具体blocker付きneeds_validation、反証されたclaimはrejectedで、一般不安を保留へ投げない。",
+                "recon→coverage-led hunting→fresh candidate verifier→構造検査→fresh record verifier→reportという手順。quick/scoped/budgetは部分coverageを明示し、回数/agent数・schema合格で全走査/意味確認済みにしない。",
+                "stable source-derived ID/fingerprint、append-only attemptsとcurrent owner、old blocked/deferred/changedを新しい作業へ戻す設計がある。旧readerの根拠を現在ownerの新readへコピーしない。budget reserve/critic・state invariantsの記述は有用だが実validators未保存/未読・未実行。",
+                "target-controlled codeはno external network/empty env/readonly target+tools/scratch/resource boundsのOS sandbox内だけ。scratch出力はtarget-controlledのままで全process終了後trusted parentだけがno-follow/regular-file/linkcount/byte上限/同handleで昇格する。Windows同等APIや実termination/race耐性は未検証。HUNTINGとVALIDATIONの共通34可視行は一致した。",
+                "ATTACKは具体source境界に応じordinary/companionを選び、名前/言語だけで選ばない。domain別10件はmetadata/README上の目的までで本文未読。指示にある秘密grep/履歴探索/外部owner観測/依存copy等を、保護対象や本人PC操作・source実行の許可へしない。",
+                "MIT原許諾/帰属/notice保持・無保証は固定gzipで保持し、過剰伏字L12/18の公開定型文だけ同bytes確認で補完。第三者引用/素材・サービス利用権や全package導入許諾に一括拡張しない。"
+              ],
+              "input_validation": {
+                "catalog_rows": 73220,
+                "catalog_sha256": "2d73c9a038a41cc220a9687b935bfa1e0b315b65d9bd6d3e54ddb4111972876c",
+                "commit": "c1c8a8c1471069fb0e188eeaff69b8e8db6564a8",
+                "commit_json_sha256": "b12cb0e2f1a6afc495d40e3581a55e0036e2c278e32f06527e7a058fdc9b5fb5",
+                "index_sha256": "68574f1644d934e326ad9c04fa24192e0fbe98e4a45bb7286ddcdc4f519d5822",
+                "primary_tuple_unit_catalog_exact": true,
+                "repo": "cloudflare/security-audit-skill",
+                "root_tree": "8cd03bb3941496e441d6248aaae2429a35b93cc3",
+                "same_buffer_sha_bytes_gitblob_strict_utf8": true,
+                "tree_entries": 24,
+                "tree_sha256": "c37547841bcb1429eb2243535f9d4438b1bd4f9b387d00d2476469869690d3bc",
+                "truncated": false
+              },
+              "negative": "checklist不足やparser crashだけで高severityの実侵害と断定し、旧blockedをcoverageから消し、schema合格やagent数だけで全監査完了にする。",
+              "notices": [
+                {
+                  "notice_ref": "cloudflare_root"
+                }
+              ],
+              "outside_package_context": {
+                "actual_reader_job": "20261027-194701-todo-3778",
+                "bytes": 6950,
+                "content_path": "github/cloudflare__security-audit-skill/objects/55e793bbea3563f8246735997c07aaee360e043eeb626f0b56ea6161c8618ae7.gz",
+                "git_blob": "c80305c88cd5087db37f76a0d230c1fc092c864c",
+                "lines": 106,
+                "masked_lines": [
+                  102
+                ],
+                "masking_version": "v37-captured-posix-and-drive-context-20261027-194701",
+                "method": "direct_masked_full",
+                "original_index_content_path": "objects/55e793bbea3563f8246735997c07aaee360e043eeb626f0b56ea6161c8618ae7.gz",
+                "path": "README.md",
+                "ranges": [
+                  [
+                    1,
+                    106
+                  ]
+                ],
+                "read": [
+                  3,
+                  1,
+                  0,
+                  false,
+                  true,
+                  106
+                ],
+                "saved": true,
+                "sha256": "55e793bbea3563f8246735997c07aaee360e043eeb626f0b56ea6161c8618ae7"
+              },
+              "package_evidence": {
+                "complete_tree_enumerated": true,
+                "current_full_support_reads": 4,
+                "independent_support_blobs": 19,
+                "primary_alias_excluded": 1,
+                "root": "skills/security-audit",
+                "saved_support": 14,
+                "saved_unread_support": 10,
+                "tree_blob_count": 20,
+                "unsaved_support": 5
+              },
+              "positive": "許可されたsourceの同じ境界をtraceし、dummyを使う最小の独立確認と未確認条件を根拠/reader付きで報告する設計。",
+              "prior_assessment": {
+                "actual_reader": "旧3048担当。実job ID未記載",
+                "current_raw_or_unique_added_from_prior": false,
+                "file": "docs/skills-3048-sources.json",
+                "scope": "代表内容/関連節。全文範囲未証明",
+                "sha256": "03bfee8f3de8aec858e5567120375faaa5d63f80192f80e21937812e09a9caa1",
+                "source": {
+                  "commit": "c1c8a8c1471069fb0e188eeaff69b8e8db6564a8",
+                  "coverage_note": "Representative contents and relevant sections; not every file in the collection",
+                  "decision": "既存統合",
+                  "license": "MIT",
+                  "read_artifacts": [
+                    {
+                      "path": "LICENSE",
+                      "sha256": "e598e694aa506650c7192d5ea3be0e50aca0d356ea00551c53429f0b01eb6391"
+                    },
+                    {
+                      "path": "README.md",
+                      "sha256": "55e793bbea3563f8246735997c07aaee360e043eeb626f0b56ea6161c8618ae7"
+                    },
+                    {
+                      "path": "skills/security-audit/SKILL.md",
+                      "sha256": "5e3e96a1e438d8f35fef0a1e38f02d4f00e2bdf910401b7dfe00e6779c6dac85"
+                    },
+                    {
+                      "path": "skills/security-audit/VALIDATION-AND-REPORTING.md",
+                      "sha256": "b892470cb89bb31f33403e050d4bdfbe2cdaef940ade1496fa65e32b2e129449"
+                    }
+                  ],
+                  "reason": "候補/実証/追加検証/反証と独立確認を統合。全段階の一律義務化と未依頼の本番通信は採らない。",
+                  "researched": true,
+                  "retrieved": "2026-10-20T03:31:47.2697424Z",
+                  "scope": "README, license when present, tree inventory and named representative files only; no whole repository audit",
+                  "targets": [
+                    "security-review"
+                  ],
+                  "tree_truncated": false,
+                  "url": "https://github.com/cloudflare/security-audit-skill"
+                }
+              },
+              "read": [
+                3,
+                1,
+                0,
+                false,
+                true,
+                192
+              ],
+              "read_evidence": {
+                "actual_reader_job": "20261027-194701-todo-3778",
+                "bytes": 22026,
+                "git_blob": "92178dad304d3f63e37582a297026a7874e12c62",
+                "masked_lines": [
+                  23
+                ],
+                "masking_version": "v37-captured-posix-and-drive-context-20261027-194701",
+                "method": "direct_masked_full",
+                "new_raw_full_read": false,
+                "new_unique_coverage_claimed": false,
+                "new_workflow_read": true,
+                "path": "skills/security-audit/SKILL.md",
+                "ranges": [
+                  [
+                    1,
+                    192
+                  ]
+                ],
+                "read": [
+                  3,
+                  1,
+                  0,
+                  false,
+                  true,
+                  192
+                ],
+                "sha256": "5e3e96a1e438d8f35fef0a1e38f02d4f00e2bdf910401b7dfe00e6779c6dac85",
+                "strict_utf8": true
+              },
+              "reason": "旧gzip技術保留の同固定原本を初めて今回192行masked読取。root許諾21行/README106行、基礎支持4件の計723行を個別profileで読んだ。3048の代表関連節評価を今回のfull/raw/uniqueへ加算しない。",
+              "required_changes": [
+                "現本人の元scope/既存回答・実権限とaudit mode/検査/資源を対応させ、不要な全監査/新job/一般禁止を追加しない。必要な実観測はAIの正規経路で調べ、本当に本人だけの判断だけ親へ返す。",
+                "coverage/候補/保留/反証とreader/根拠・実読範囲を分け、旧source同一性/未読domain・未保存schema/validator/実動作の限界を保持する。実装/登録・動作済みとは報告しない。",
+                "適用案では対象OSのsandbox/全子process終了・昇格API/同bytesの保証とvalidatorの実consumerを確認し、帰属noticeを保つ。新Python/API key/追加費用/未知本文取得や審査迂回を前提にしない。"
+              ],
+              "row": 1,
+              "source": [
+                "github:37cb72b7fc5bc095b6f3995906cca3d61f9f3dc9c959b272c7c6d9c9feb3be95",
+                "cloudflare/security-audit-skill",
+                "c1c8a8c1471069fb0e188eeaff69b8e8db6564a8",
+                "skills/security-audit/SKILL.md",
+                "5e3e96a1e438d8f35fef0a1e38f02d4f00e2bdf910401b7dfe00e6779c6dac85",
+                "92178dad304d3f63e37582a297026a7874e12c62",
+                22026
+              ],
+              "support": [
+                "cf01",
+                "cf02",
+                "cf03",
+                "cf04",
+                "cf05",
+                "cf06",
+                "cf07",
+                "cf08",
+                "cf09",
+                "cf10",
+                "cf11",
+                "cf12",
+                "cf13",
+                "cf14",
+                "cf15",
+                "cf16",
+                "cf17",
+                "cf18",
+                "cf19"
+              ],
+              "unit": "github_skill_entry",
+              "unmet": [
+                "primary L23のraw、支持RECON L78/ATTACK L5/123/130のrawとREADME連絡行のraw。noticeの初回過剰伏字2行は固定公開文のみ補完。",
+                "domain別支持10件の本文全体、未保存schema/4script本文と実検証。今回security auditの実target/実行/報告生成0。",
+                "追加assessment候補はguard分類未確認で本文未読。許可済み3048/public metadata・原packetの評価だけを再利用し、未知/拒否の迂回なし。",
+                "個別third-party素材/現SDK/OS sandbox・昇格/独立検証の実動作、未知中央本文比較/公開転載・配布判断。"
+              ],
+              "use": "明示された監査範囲で、trust boundaryの候補から反証/独立検証と根拠付き報告を作る手順の参考。",
+              "value": "単なるbest-practice不足と実際の境界違反を区別し、同sourceの旧根拠/保留を状態/reader付きで保持する設計が具体的。"
+            },
+            "original_record_preserved": true,
+            "previous_chunk_id": "6f0c3918a7354ed5b9e204ca862df017",
+            "previous_pointer": "entries/0",
+            "previous_read": [
+              1,
+              null,
+              null,
+              false,
+              false,
+              0
+            ],
+            "previous_receipt_sha256": "57138d85d634d073c6fa7d985def5a19aa8cd2f9f49d5d68b2709e7ed1825720",
+            "reason_resolved": "旧jobのgzip展開不可。原pathのguard clear後、既存Nodeの正規メモリ読取で同bytesのSHA/bytes/Gitblob/strictUTF8照合と今回masked本文読了に成功。ファイル変更/コピー/審査変更0。"
+          }
+        ],
+        "privacy_limits": {
+          "mask_count": "367..371は実mask0、372は1、373は5。Cloudflare primary1/root notice2/README1/core支持はRECON1/HUNTING0/ATTACK3/VALIDATION0。秘密実数/不存在の証明ではない。",
+          "original_values_or_fragments_repeated": false,
+          "overmask": "Cloudflareの公開platform文やnoticeの定型許諾/無保証文を含む保守的伏字。notice L12/18は同fixed bytesが定型公開文に完全一致したものだけ補完し、原mask2を保持。新raw全読/uniqueへ加算0。"
+        },
+        "reader_job": "20261027-194701-todo-3778",
+        "reader_todo": 3778,
+        "resume_validation": {
+          "acknowledged_through": 366,
+          "generation": 77,
+          "journal_sha256": "5af4e4e0b9d7e0d4907bce2ec81725817d7a6d43c3b7aed846ebf6d3bc1ea89e",
+          "parent_semantic_assessments_read": true,
+          "previous_chunk_id": "e366b48c10a94d7aa3f6c8592d07e631",
+          "previous_chunk_sha256": "d56968728ebdae3173671bad9ebca77f5e7c66b5e0e6e44b20aa0ac4adaddc18",
+          "previous_receipt_sha256": "6965572de1ae06de5d8e0fa51cfc3a54576a1c9fcd94b31dca6cb45a7e78ed83",
+          "validated_receipts": 77
+        },
+        "roster_sha256": "460219790c088b33e6044c6a97c68a882549c608c3de46ea536aa990a2c1adac",
+        "supplemental_evidence": {
+          "additional_assessment_candidate": {
+            "bypass": false,
+            "classification_unverified": true,
+            "content_read": false,
+            "guard_access_allowed": false
+          },
+          "cloudflare_index_resolution": "indexのobjects/相対値は同じ固定repo保存基準へ解決。初回にC直下として扱ったENOENTを原因特定して修正。原source.entry.content_pathは正しいC相対のまま。コピー/移動0。",
+          "cloudflare_promotion_block_comparison": {
+            "equal": true,
+            "hunter_range": [
+              102,
+              135
+            ],
+            "limitations": "共通34行の可視文比較。新raw/unique加算0。実OS/API/昇格動作は未検証。",
+            "method": "cached_visible_line_comparison",
+            "new_source_read": false,
+            "source_bytes_not_reopened": true,
+            "verifier_range": [
+              51,
+              84
+            ]
+          },
+          "cloudflare_source_anchors": {
+            "commit_and_root_match_fixed_progress": true,
+            "go_file_sha256": "335c531c06c7ea8e8d2a2b5176b93c5c2c5b01320c2e48789f075f027211c8f1",
+            "go_pins_index_tree_commit_json_hashes": true,
+            "notice_paths": [
+              "LICENSE"
+            ]
+          }
+        },
+        "support_resources": {
+          "r367": {
+            "actual_reader_job": "20261027-194701-todo-3778",
+            "bytes": 374,
+            "content_path": "github/x1xhlol__system-prompts-and-models-of-ai-tools/objects/1193d0978788594be85a949923ac9af628380d20081b9a8f42c0dd48207f9db5.gz",
+            "counted_as_support": false,
+            "git_blob": "fbe33a74f7efad4c45c13820249b71c8babc8003",
+            "mask": 0,
+            "method": "same-byte-reuse",
+            "new_source_read": false,
+            "original_method": "direct_raw_full",
+            "path": "Xcode/DocumentAction.txt",
+            "primary_alias_ordinal": 367,
+            "read": [
+              2,
+              0,
+              0,
+              true,
+              true,
+              18
+            ],
+            "read_evidence_ref": "entries/0/read_evidence",
+            "reader": 0,
+            "saved": true,
+            "sha256": "1193d0978788594be85a949923ac9af628380d20081b9a8f42c0dd48207f9db5",
+            "tree_bytes": 374,
+            "tree_git_blob": "fbe33a74f7efad4c45c13820249b71c8babc8003"
+          },
+          "r368": {
+            "actual_reader_job": "20261027-194701-todo-3778",
+            "bytes": 245,
+            "content_path": "github/x1xhlol__system-prompts-and-models-of-ai-tools/objects/ee4aa3a933139e184c5190027b3095f02ae08b59f2e98deedb5f3e6c1495e72a.gz",
+            "counted_as_support": false,
+            "git_blob": "f4769390ad8e091eb85550a4705246657ac62e3e",
+            "mask": 0,
+            "method": "same-byte-reuse",
+            "new_source_read": false,
+            "original_method": "direct_raw_full",
+            "path": "Xcode/ExplainAction.txt",
+            "primary_alias_ordinal": 368,
+            "read": [
+              2,
+              0,
+              0,
+              true,
+              true,
+              15
+            ],
+            "read_evidence_ref": "entries/1/read_evidence",
+            "reader": 0,
+            "saved": true,
+            "sha256": "ee4aa3a933139e184c5190027b3095f02ae08b59f2e98deedb5f3e6c1495e72a",
+            "tree_bytes": 245,
+            "tree_git_blob": "f4769390ad8e091eb85550a4705246657ac62e3e"
+          },
+          "r369": {
+            "actual_reader_job": "20261027-194701-todo-3778",
+            "bytes": 235,
+            "content_path": "github/x1xhlol__system-prompts-and-models-of-ai-tools/objects/b18b38ec60aad2b5b1a4265935112549bca42f6feebe0874220e979dd3d27381.gz",
+            "counted_as_support": false,
+            "git_blob": "f4e93844e104f5914153946379f1ca5e3de85114",
+            "mask": 0,
+            "method": "same-byte-reuse",
+            "new_source_read": false,
+            "original_method": "direct_raw_full",
+            "path": "Xcode/MessageAction.txt",
+            "primary_alias_ordinal": 369,
+            "read": [
+              2,
+              0,
+              0,
+              true,
+              true,
+              13
+            ],
+            "read_evidence_ref": "entries/2/read_evidence",
+            "reader": 0,
+            "saved": true,
+            "sha256": "b18b38ec60aad2b5b1a4265935112549bca42f6feebe0874220e979dd3d27381",
+            "tree_bytes": 235,
+            "tree_git_blob": "f4e93844e104f5914153946379f1ca5e3de85114"
+          },
+          "r370": {
+            "actual_reader_job": "20261027-194701-todo-3778",
+            "bytes": 414,
+            "content_path": "github/x1xhlol__system-prompts-and-models-of-ai-tools/objects/0f982f1967b9a3c9fcbd76092c362fe2c356bf35a0185607b0720a29a8f78ac5.gz",
+            "counted_as_support": false,
+            "git_blob": "f2c77bb761aed4f350ad284bee39d4345e7ffb4d",
+            "mask": 0,
+            "method": "same-byte-reuse",
+            "new_source_read": false,
+            "original_method": "direct_raw_full",
+            "path": "Xcode/PlaygroundAction.txt",
+            "primary_alias_ordinal": 370,
+            "read": [
+              2,
+              0,
+              0,
+              true,
+              true,
+              20
+            ],
+            "read_evidence_ref": "entries/3/read_evidence",
+            "reader": 0,
+            "saved": true,
+            "sha256": "0f982f1967b9a3c9fcbd76092c362fe2c356bf35a0185607b0720a29a8f78ac5",
+            "tree_bytes": 414,
+            "tree_git_blob": "f2c77bb761aed4f350ad284bee39d4345e7ffb4d"
+          },
+          "r371": {
+            "actual_reader_job": "20261027-194701-todo-3778",
+            "bytes": 1938,
+            "content_path": "github/x1xhlol__system-prompts-and-models-of-ai-tools/objects/497e1c4845a84810d5ca5003eaad3fd0669eaa9cba77de7158be074647d67c5e.gz",
+            "counted_as_support": false,
+            "git_blob": "bcedc358e682b36c85b5463030f038c74e0bb156",
+            "mask": 0,
+            "method": "same-byte-reuse",
+            "new_source_read": false,
+            "original_method": "direct_raw_full",
+            "path": "Xcode/PreviewAction.txt",
+            "primary_alias_ordinal": 371,
+            "read": [
+              2,
+              0,
+              0,
+              true,
+              true,
+              58
+            ],
+            "read_evidence_ref": "entries/4/read_evidence",
+            "reader": 0,
+            "saved": true,
+            "sha256": "497e1c4845a84810d5ca5003eaad3fd0669eaa9cba77de7158be074647d67c5e",
+            "tree_bytes": 1938,
+            "tree_git_blob": "bcedc358e682b36c85b5463030f038c74e0bb156"
+          },
+          "r372": {
+            "actual_reader_job": "20261027-194701-todo-3778",
+            "bytes": 4009,
+            "content_path": "github/x1xhlol__system-prompts-and-models-of-ai-tools/objects/d67ef77c44cd2ebf7cb7c1435367ffcb307dff0e9ef3f544c7d5136326cc4060.gz",
+            "counted_as_support": false,
+            "git_blob": "c52b840caef248a73627c482eb448a0d3e139a2b",
+            "mask": 1,
+            "method": "same-byte-reuse",
+            "new_source_read": false,
+            "original_method": "direct_masked_full",
+            "path": "Xcode/System.txt",
+            "primary_alias_ordinal": 372,
+            "read": [
+              3,
+              1,
+              0,
+              false,
+              true,
+              69
+            ],
+            "read_evidence_ref": "entries/5/read_evidence",
+            "reader": 0,
+            "saved": true,
+            "sha256": "d67ef77c44cd2ebf7cb7c1435367ffcb307dff0e9ef3f544c7d5136326cc4060",
+            "tree_bytes": 4009,
+            "tree_git_blob": "c52b840caef248a73627c482eb448a0d3e139a2b"
+          }
+        }
+      },
+      "original_chunk_id": "f3736c8e24d94b51af3071c69e825d40",
+      "original_receipt_sha256": "ada94b52459281bebb02c52e6da59edc6bb3aa5aebb3612afc2f00fd622776cb"
+    }
+  },
+  "source_counts": {
+    "x1xhlol/system-prompts-and-models-of-ai-tools": 7
+  },
+  "whole16_complete": false,
+  "entries": [
+    {
+      "inventory_id": "github:d378f4719682bf14e3f8dbc01fa5e64b18028dbe6c1198e6d2cb13b0bbd71c8d",
+      "source_repo": "x1xhlol/system-prompts-and-models-of-ai-tools",
+      "source_commit": "162db92f54d717d8ebd12292e155aeef32bb4b3c",
+      "path": "Xcode/DocumentAction.txt",
+      "source_sha256": "1193d0978788594be85a949923ac9af628380d20081b9a8f42c0dd48207f9db5",
+      "git_blob": "fbe33a74f7efad4c45c13820249b71c8babc8003",
+      "bytes": 374,
+      "original_chunk_sha256": "fcbbab4e23536ef6b5cc8be84717efdc8a86fd99a601580a259e4404923545a5"
+    },
+    {
+      "inventory_id": "github:29aecf22984ae92502cfada012a4db9322bff182e11a551c00fc521e580666cd",
+      "source_repo": "x1xhlol/system-prompts-and-models-of-ai-tools",
+      "source_commit": "162db92f54d717d8ebd12292e155aeef32bb4b3c",
+      "path": "Xcode/ExplainAction.txt",
+      "source_sha256": "ee4aa3a933139e184c5190027b3095f02ae08b59f2e98deedb5f3e6c1495e72a",
+      "git_blob": "f4769390ad8e091eb85550a4705246657ac62e3e",
+      "bytes": 245,
+      "original_chunk_sha256": "fcbbab4e23536ef6b5cc8be84717efdc8a86fd99a601580a259e4404923545a5"
+    },
+    {
+      "inventory_id": "github:e9a1f070f7e565bf446399d2e1fdd26ea6f652a2113a0920f8cf90d8fa66c398",
+      "source_repo": "x1xhlol/system-prompts-and-models-of-ai-tools",
+      "source_commit": "162db92f54d717d8ebd12292e155aeef32bb4b3c",
+      "path": "Xcode/MessageAction.txt",
+      "source_sha256": "b18b38ec60aad2b5b1a4265935112549bca42f6feebe0874220e979dd3d27381",
+      "git_blob": "f4e93844e104f5914153946379f1ca5e3de85114",
+      "bytes": 235,
+      "original_chunk_sha256": "fcbbab4e23536ef6b5cc8be84717efdc8a86fd99a601580a259e4404923545a5"
+    },
+    {
+      "inventory_id": "github:d6618e81eedb0b313e6be21f0ff82f7c30557e2058f2abe1929ea5c0a13033f5",
+      "source_repo": "x1xhlol/system-prompts-and-models-of-ai-tools",
+      "source_commit": "162db92f54d717d8ebd12292e155aeef32bb4b3c",
+      "path": "Xcode/PlaygroundAction.txt",
+      "source_sha256": "0f982f1967b9a3c9fcbd76092c362fe2c356bf35a0185607b0720a29a8f78ac5",
+      "git_blob": "f2c77bb761aed4f350ad284bee39d4345e7ffb4d",
+      "bytes": 414,
+      "original_chunk_sha256": "fcbbab4e23536ef6b5cc8be84717efdc8a86fd99a601580a259e4404923545a5"
+    },
+    {
+      "inventory_id": "github:58ecf15c1230f6c89f568dd28aca26ebbbc07b63e4d733ef096b830d25ac1966",
+      "source_repo": "x1xhlol/system-prompts-and-models-of-ai-tools",
+      "source_commit": "162db92f54d717d8ebd12292e155aeef32bb4b3c",
+      "path": "Xcode/PreviewAction.txt",
+      "source_sha256": "497e1c4845a84810d5ca5003eaad3fd0669eaa9cba77de7158be074647d67c5e",
+      "git_blob": "bcedc358e682b36c85b5463030f038c74e0bb156",
+      "bytes": 1938,
+      "original_chunk_sha256": "fcbbab4e23536ef6b5cc8be84717efdc8a86fd99a601580a259e4404923545a5"
+    },
+    {
+      "inventory_id": "github:0479cb036ba5b1797978c88a6c3730c2367a67a3fcb6f1f34a0f93ac35fcdc8f",
+      "source_repo": "x1xhlol/system-prompts-and-models-of-ai-tools",
+      "source_commit": "162db92f54d717d8ebd12292e155aeef32bb4b3c",
+      "path": "Xcode/System.txt",
+      "source_sha256": "d67ef77c44cd2ebf7cb7c1435367ffcb307dff0e9ef3f544c7d5136326cc4060",
+      "git_blob": "c52b840caef248a73627c482eb448a0d3e139a2b",
+      "bytes": 4009,
+      "original_chunk_sha256": "fcbbab4e23536ef6b5cc8be84717efdc8a86fd99a601580a259e4404923545a5"
+    },
+    {
+      "inventory_id": "github:a6ee6690655011ffc093019dd5b78e32ed42e175382601ecae9ee849cdcf9a89",
+      "source_repo": "x1xhlol/system-prompts-and-models-of-ai-tools",
+      "source_commit": "162db92f54d717d8ebd12292e155aeef32bb4b3c",
+      "path": "Z.ai Code/prompt.txt",
+      "source_sha256": "1e62c474838e6ecc6378899747f80e1f481a7dbff2ea0b6ea4ce827a0fef22d8",
+      "git_blob": "8b1c95a092b00b8c688b4d93dfae6d3dcde28a95",
+      "bytes": 9592,
+      "original_chunk_sha256": "fcbbab4e23536ef6b5cc8be84717efdc8a86fd99a601580a259e4404923545a5"
+    }
+  ],
+  "publication_preparation": {
+    "publisher_job": "20261027-175645-todo-3080",
+    "original_input_sha256": "e03a2bfd72d9287c547fcd20453754fd52a2bc8d9a82f83da993b9bdf0a4588c",
+    "new_source_body_reads": 0,
+    "new_global_raw_or_workflow_credit": 0,
+    "new_permissions": 0,
+    "new_final_dispositions": 0,
+    "central_operations": 0,
+    "whole_original_contexts_preserved": true,
+    "original_reader_or_privacy_profiles_changed": false,
+    "publication_not_yet_performed": true,
+    "whole16_complete": false
+  }
+}

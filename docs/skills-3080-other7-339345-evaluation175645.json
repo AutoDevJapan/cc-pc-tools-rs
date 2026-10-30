@@ -1,0 +1,1207 @@
+{
+  "all_original_selected_chunks_losslessly_reconstructed": true,
+  "central_operations": 0,
+  "context_resolution": "Each record.original_chunk_sha256 selects shared_original_contexts[sha].common; add that chunk's ordered original_assessment values as entries and canonical-JSON SHA256 must equal sha. All common fields, including definitions, input_validation, privacy, notice and boundaries, are preserved once.",
+  "domain": "other373-parent-received-shared-snapshot-v3",
+  "first_ordinal": 339,
+  "last_ordinal": 345,
+  "limits": "This shares complete already acknowledged structured evidence, not original source bodies. Original actors, masks, unknown/partial/unread states and opaque path references remain unchanged; no grant, execution, adoption, current physical continuity or new reading is established.",
+  "materializer_job": "20261027-175645-todo-3080",
+  "new_copy_grants": 0,
+  "new_final_dispositions": 0,
+  "new_raw_or_unique_credit": 0,
+  "new_source_body_reads": 0,
+  "parent_acknowledged_through_at_materialization": 345,
+  "parent_journal_sha256": "b7ac7b240efee55f107d3aeebb602365be10b43e8574cd0a259cb679d230b23c",
+  "public_reflected": false,
+  "records": [
+    {
+      "actual_assessment_reader": "20261027-194701-todo-3778",
+      "bytes": 12159,
+      "inventory_id": "github:1d5e582ea2557870d0eea4efd9c432c4a8ddd36bb96ecffb7932c06400e875dd",
+      "inventory_unit": "github_prompt_or_model_information",
+      "original_assessment": {
+        "candidate_disposition": "実行agentのvariantとしてID/状態/通知の改訂参考候補。実Poke連携・権利/採否は親へ。",
+        "classification": "variant",
+        "findings": [
+          "実行担当は本人へ直接話さずPokeへ返す。受信タグの表記欠落やlatest messageを代表とする宣言は、実出所/既存回答/元scopeの確認に代わらない。triggerは原則従う一方、誤発火はwaitで取消すとし、本文を権限に昇格しない判定が必要。",
+          "並列taskへgoal/必要contextだけを渡す規則は効率化の参考だが、許可・保持対象・既存回答・返却/完了条件まで省略しない。複数源を探す既定も、必要なscopeの読取許可を与えない。",
+          "本人への通知はPoke、他者へはemailが既定。メール下書きの事前確認例とcompose後すぐexecuteする例、calendarのdraft作成をCreatedと返す例が混在する。下書き/確認/送信・実イベント更新を区別する。",
+          "cronと受信emailの相互取消しは条件成立と時間切れを競合させる例。実trigger IDの対応、片方の実行/取消し、重複送信防止や実結果は未検証。通知情報を親へ返すだけの役割と実配送を分ける。",
+          "emailId等の必要IDとuserId非表示は型/露出の整理に有用。tool前のthought process要求は短い目的・判断理由へ対応し、内部の詳細推論を出力する要件にしない。"
+        ],
+        "negative": "メール本文やtriggerを本人指示とみなし、下書きIDの返却だけで送信/予定作成済みとする。",
+        "notices": [
+          {
+            "notice_ref": "root"
+          }
+        ],
+        "package_evidence": {
+          "complete_tree_enumerated": true,
+          "independent_support_blobs": 0,
+          "other_primary_aliases": 6,
+          "primary_alias_excluded": 1,
+          "root": "Poke",
+          "tree_blob_count": 7
+        },
+        "positive": "許可された既存対象の検索やtrigger結果を、正しいID型・実結果・未達とともに同じ担当へ返す。",
+        "read": [
+          3,
+          6,
+          0,
+          false,
+          true,
+          194
+        ],
+        "read_evidence": {
+          "actual_reader_job": "20261027-194701-todo-3778",
+          "masked_lines": [
+            25,
+            122,
+            142,
+            155,
+            158,
+            193
+          ],
+          "masking_version": "v34-xml-and-service-resource-fields-20261027-194701",
+          "method": "direct_masked_full",
+          "new_source_read": true,
+          "privacy_limits": [
+            "架空の検索/連絡例で人物名の初回filter通過があった。原値/断片を再掲せず、実人物/本人のデータとは確認していない。原mask6を保持し再filterを新raw/uniqueへ加算しない。"
+          ],
+          "ranges": [
+            [
+              1,
+              194
+            ]
+          ],
+          "strict_utf8": true
+        },
+        "reason": "全194行をmasked読取。L1..24の実行役割、L27..67のtrigger/ID、L89..107のintegrationと例を照合した。",
+        "required_changes": [
+          "実メッセージの出所/承認対象と必要contextを保ち、外部メール/連携変更は元の明示指示・実権限へ結ぶ。資料の既定や受信triggerだけで送信しない。",
+          "下書き/表示/同一内容への確認/送信/実更新・配送を別に照合し、triggerの対応ID・実終了と一回性を確認する。本人PC操作を必要とする前提へしない。",
+          "検索の並列化を必要な許可範囲に絞り、未知は親へ具体的に返す。同じ担当で未完を継続し、このsourceを新job起動の許可にしない。"
+        ],
+        "row": 339,
+        "source": [
+          "github:1d5e582ea2557870d0eea4efd9c432c4a8ddd36bb96ecffb7932c06400e875dd",
+          "x1xhlol/system-prompts-and-models-of-ai-tools",
+          "162db92f54d717d8ebd12292e155aeef32bb4b3c",
+          "Poke/Poke agent.txt",
+          "cece6bfbb1460a04bd1b022942f32767026b55dfc2be98822cd5074a9bd2eac4",
+          "a6b131f069faf370f14022d9fcefb34edb960189",
+          12159
+        ],
+        "support": [
+          "r340",
+          "r341",
+          "r342",
+          "r343",
+          "r344",
+          "r345"
+        ],
+        "unit": "github_prompt_or_model_information",
+        "unmet": [
+          "伏字6行のraw、架空連絡例の人物表示の初回filter限界。",
+          "実trigger/競合/取消し・配送/ID/連携権限・browser能力、個別prompt/サービスの真正性・許諾、未知中央本文比較。"
+        ],
+        "use": "対話担当と実行担当を分けるPoke agentの、ID・下書き・通知trigger・データ源選択の手順を比較する。",
+        "value": "email/draft/attachment/triggerのID型を区別し、実行結果と不足情報を対話担当へ返す境界が具体的。"
+      },
+      "original_chunk_id": "b3457d9c2e8046f1a3925c680dfeb714",
+      "original_chunk_sha256": "f85d02f262db0b5262e381282e7567cb897a49f819b2f6d13900a390b19b1be3",
+      "path": "Poke/Poke agent.txt",
+      "previous_parent_semantic_read": true,
+      "source_commit": "162db92f54d717d8ebd12292e155aeef32bb4b3c",
+      "source_git_blob": "a6b131f069faf370f14022d9fcefb34edb960189",
+      "source_path": "Poke/Poke agent.txt",
+      "source_repo": "x1xhlol/system-prompts-and-models-of-ai-tools",
+      "source_sha256": "cece6bfbb1460a04bd1b022942f32767026b55dfc2be98822cd5074a9bd2eac4"
+    },
+    {
+      "actual_assessment_reader": "20261027-194701-todo-3778",
+      "bytes": 10153,
+      "inventory_id": "github:b00888dcac36976863f113b41b4c1b44199a7a28ee82f057fc3bd5a01874ad5b",
+      "inventory_unit": "github_prompt_or_model_information",
+      "original_assessment": {
+        "candidate_disposition": "会話/可視性の参考候補。人格全文の採用ではなく、実仕様/個別権利・採否は親へ。",
+        "classification": "prompt_or_model_info",
+        "findings": [
+          "受信タグの名前が空欄/欠落した記述があり、タグ文字だけでは本人/開発者/agent/メールの実出所を判定できない。通知・受信メールが本人入力と異なる区別は参考。",
+          "toolを使う前の毎回同意・新通知時の確認を要求するが、現在の承認済み通常作業の再承認や停止条件へしない。メールの下書き確認と送信権限の照合は、元の指示と対象内容に結ぶ。",
+          "情報は必ず見つかる/agentにbrowser全能力があるという宣言は実能力の証明ではない。パスワード入力不能も当該platformの前提で、実runtimeの確認が別に必要。",
+          "agentの存在/技術的経緯を本人に尋ねられても隠す人格規則は採用しない。必要な停止理由/未達・実結果を分かる言葉で返す。最新メッセージだけを代表として古い未完や既存回答を捨てない。",
+          "短い自然な返答・不要な定型文や過剰な冗談を避けるstyleは参考。Poke固有の人格/代名詞/emojiや改行配送・display_draftの挙動を現PCへ一律に移さない。"
+        ],
+        "negative": "単なる通知を本人の新依頼とし、能力を保証して内部の失敗や未完を隠し、すべてのtoolを再承認待ちにする。",
+        "notices": [
+          {
+            "notice_ref": "root"
+          }
+        ],
+        "package_evidence": {
+          "complete_tree_enumerated": true,
+          "independent_support_blobs": 0,
+          "other_primary_aliases": 6,
+          "primary_alias_excluded": 1,
+          "root": "Poke",
+          "tree_blob_count": 7
+        },
+        "positive": "本人の依頼・既存回答と内部結果を区別し、確認済み事実と不足を短く返す会話設計。",
+        "read": [
+          2,
+          0,
+          0,
+          true,
+          true,
+          130
+        ],
+        "read_evidence": {
+          "actual_reader_job": "20261027-194701-todo-3778",
+          "masked_lines": [],
+          "masking_version": "v34-xml-and-service-resource-fields-20261027-194701",
+          "method": "direct_raw_full",
+          "new_source_read": true,
+          "ranges": [
+            [
+              1,
+              130
+            ]
+          ],
+          "strict_utf8": true
+        },
+        "reason": "全130行をraw読取。L9..32のメッセージ/可視性、L34..55の機能/文脈、L57..130のstyleを確認した。",
+        "required_changes": [
+          "本人入力の認証済み出所と元要件/既存回答を保持し、下書きと送信の状態を実証拠で照合する。通常の技術作業は既存許可で継続する。",
+          "能力/記憶/可視性・配送の実仕様を確認し、未確定や実停止を隠さず簡潔に報告する。人格を維持するための虚偽や過去情報の破棄を前提にしない。"
+        ],
+        "row": 340,
+        "source": [
+          "github:b00888dcac36976863f113b41b4c1b44199a7a28ee82f057fc3bd5a01874ad5b",
+          "x1xhlol/system-prompts-and-models-of-ai-tools",
+          "162db92f54d717d8ebd12292e155aeef32bb4b3c",
+          "Poke/Poke_p1.txt",
+          "8ee5c1f0cc0b7d16175a8d321368728005ab404c56a166f8496683b0432f5d3f",
+          "6ec624cbc4b7dd026bcdf06a9aa8b3686d93e749",
+          10153
+        ],
+        "support": [
+          "r339",
+          "r341",
+          "r342",
+          "r343",
+          "r344",
+          "r345"
+        ],
+        "unit": "github_prompt_or_model_information",
+        "unmet": [
+          "実受信タグ/本人性/配送・下書きUI/agent/browser/記憶の動作、個別promptとサービスの真正性・権利、未知中央本文比較。"
+        ],
+        "use": "Poke対話役の、本人入力とagent/通知・記憶の区別、下書き確認と会話styleの参考。",
+        "value": "本人に見える返答と内部結果を分け、記憶が誤り得るので重要操作では再照合する観点がある。"
+      },
+      "original_chunk_id": "b3457d9c2e8046f1a3925c680dfeb714",
+      "original_chunk_sha256": "f85d02f262db0b5262e381282e7567cb897a49f819b2f6d13900a390b19b1be3",
+      "path": "Poke/Poke_p1.txt",
+      "previous_parent_semantic_read": true,
+      "source_commit": "162db92f54d717d8ebd12292e155aeef32bb4b3c",
+      "source_git_blob": "6ec624cbc4b7dd026bcdf06a9aa8b3686d93e749",
+      "source_path": "Poke/Poke_p1.txt",
+      "source_repo": "x1xhlol/system-prompts-and-models-of-ai-tools",
+      "source_sha256": "8ee5c1f0cc0b7d16175a8d321368728005ab404c56a166f8496683b0432f5d3f"
+    },
+    {
+      "actual_assessment_reader": "20261027-194701-todo-3778",
+      "bytes": 2440,
+      "inventory_id": "github:cd3a16c6bc3e45457beae598a08c22fba48ecff4aaf9e307262bd00a49a3114d",
+      "inventory_unit": "github_prompt_or_model_information",
+      "original_assessment": {
+        "candidate_disposition": "チャネル/確認・並列化のconfig支持候補。条件の実確認と承認bindingが必要。最終採否/権利は親へ。",
+        "classification": "config_support",
+        "findings": [
+          "WhatsAppの24時間と事前承認templateを述べるが固定sourceの主張で、現在の公式規約/アカウント状態を照合した結果ではない。別チャネルへの移行も本人の対象/費用/同意を要する。",
+          "任意のpositive emojiをyes、negativeをnoとして実行する。本人・対象質問/同一内容・文脈を照合せず、反応の印象だけで新費用/権利/外部送信等の承認へ広げない。",
+          "agentを頻繁/最大限並列に使い、接続MCPがあれば何でも可能と仮定する。実権限・能力/依存・資源と結果の検証は別で、今回の新子job/新MCP起動命令ではない。querymediaを無告知にする規則も実送信範囲を省く根拠ではない。"
+        ],
+        "negative": "好意的な絵文字だけで別の対象/費用も承認済みとし、MCP接続表示だけで任意操作が可能とする。",
+        "notices": [
+          {
+            "notice_ref": "root"
+          }
+        ],
+        "package_evidence": {
+          "complete_tree_enumerated": true,
+          "independent_support_blobs": 0,
+          "other_primary_aliases": 6,
+          "primary_alias_excluded": 1,
+          "root": "Poke",
+          "tree_blob_count": 7
+        },
+        "positive": "本人・元質問・対象内容が一致した回答を保持し、実チャネル制約と独立処理を確認して進める設計。",
+        "read": [
+          2,
+          0,
+          0,
+          true,
+          true,
+          26
+        ],
+        "read_evidence": {
+          "actual_reader_job": "20261027-194701-todo-3778",
+          "masked_lines": [],
+          "masking_version": "v34-xml-and-service-resource-fields-20261027-194701",
+          "method": "direct_raw_full",
+          "new_source_read": true,
+          "ranges": [
+            [
+              1,
+              26
+            ]
+          ],
+          "strict_utf8": true
+        },
+        "reason": "全26行をraw読取。L1..4のWhatsApp制約、L6..16の確認、L18..26のtool規則を確認した。",
+        "required_changes": [
+          "チャネル条件は対象版/実接続/送信可能範囲へ照合し、絵文字は認証済み本人の同一判断への明確な回答として確認できる場合だけ扱う。曖昧さを許可に変えない。",
+          "並列化は独立工程と割当済み資源・既存の許可に限定し、必要な要件/検証/保持対象をagentへ伝える。能力の仮定で実操作成功を報告しない。"
+        ],
+        "row": 341,
+        "source": [
+          "github:cd3a16c6bc3e45457beae598a08c22fba48ecff4aaf9e307262bd00a49a3114d",
+          "x1xhlol/system-prompts-and-models-of-ai-tools",
+          "162db92f54d717d8ebd12292e155aeef32bb4b3c",
+          "Poke/Poke_p2.txt",
+          "fb9378a11a55dfef90e7e47e706654e01d550410bf72d8da4f58d08dd7fb912e",
+          "a0e7b950f6d33d6c672c1d8bc7ec01bc3ebf8e54",
+          2440
+        ],
+        "support": [
+          "r339",
+          "r340",
+          "r342",
+          "r343",
+          "r344",
+          "r345"
+        ],
+        "unit": "github_prompt_or_model_information",
+        "unmet": [
+          "現WhatsApp規約/契約/実送信、reaction/本人/質問binding・MCP能力、個別prompt/サービスの真正性・権利、未知中央本文比較。"
+        ],
+        "use": "Pokeのチャネル制約・絵文字確認と並列agent利用の追加規則を比較する。",
+        "value": "チャネルごとの送信条件と、依存する処理/独立処理を分ける必要性を明示する短い支持資料。"
+      },
+      "original_chunk_id": "b3457d9c2e8046f1a3925c680dfeb714",
+      "original_chunk_sha256": "f85d02f262db0b5262e381282e7567cb897a49f819b2f6d13900a390b19b1be3",
+      "path": "Poke/Poke_p2.txt",
+      "previous_parent_semantic_read": true,
+      "source_commit": "162db92f54d717d8ebd12292e155aeef32bb4b3c",
+      "source_git_blob": "a0e7b950f6d33d6c672c1d8bc7ec01bc3ebf8e54",
+      "source_path": "Poke/Poke_p2.txt",
+      "source_repo": "x1xhlol/system-prompts-and-models-of-ai-tools",
+      "source_sha256": "fb9378a11a55dfef90e7e47e706654e01d550410bf72d8da4f58d08dd7fb912e"
+    },
+    {
+      "actual_assessment_reader": "20261027-194701-todo-3778",
+      "bytes": 5493,
+      "inventory_id": "github:44582483918093d8fc778fc12bd4c9d14f6bb14d67b376fa183c2d6f6cc5e216",
+      "inventory_unit": "github_prompt_or_model_information",
+      "original_assessment": {
+        "candidate_disposition": "下書き/同一回答・担当継続のvariant候補。実表示/配送/取消し・権利/採否は親へ。",
+        "classification": "variant",
+        "findings": [
+          "誤triggerや価値のない内部更新にはwaitを使って本人へ出さないとする。誤発火を実行しない判断は有用だが、実停止/保留を親の永続記録やAI側の復旧からも消すことにはしない。waitというtool名だけで取消し/復旧完了を証明しない。",
+          "メール送信/返信や予定作成/更新/削除でdraftId→表示→確認→実行を分け、予定更新は変更していないfieldも含む全draftを見せる。表示だけと送信/実更新の違いを明示している。",
+          "全操作の毎回確認という規則と、既に本人確認済みなら再質問せずagentへ続行を伝える規則が併存する。現在の既存許可は同一対象/内容/範囲で保持し、別内容へ流用しない。",
+          "既存agent名を使い同じ返信thread/contextを維持する一方、独立なら新agentを許す。本研究の同担当/新job禁止はそのまま保持する。",
+          "技術過程を尋ねられても隠す・custom MCPを設定済みと仮定する規則は、実権限/能力や失敗原因の報告に代わらない。空の表示tagとdisplaydraft/display_draft等の綴りも実consumerで未確認。"
+        ],
+        "negative": "本人へ静かにするため停止記録まで捨て、draftを表示しただけで予定更新済みとし、同じ確認を繰り返す。",
+        "notices": [
+          {
+            "notice_ref": "root"
+          }
+        ],
+        "package_evidence": {
+          "complete_tree_enumerated": true,
+          "independent_support_blobs": 0,
+          "other_primary_aliases": 6,
+          "primary_alias_excluded": 1,
+          "root": "Poke",
+          "tree_blob_count": 7
+        },
+        "positive": "確認済みの同じ下書きと返信threadを既存担当へ戻し、実配送と誤triggerの取消しを別に確認する。",
+        "read": [
+          2,
+          0,
+          0,
+          true,
+          true,
+          54
+        ],
+        "read_evidence": {
+          "actual_reader_job": "20261027-194701-todo-3778",
+          "masked_lines": [],
+          "masking_version": "v34-xml-and-service-resource-fields-20261027-194701",
+          "method": "direct_raw_full",
+          "new_source_read": true,
+          "ranges": [
+            [
+              1,
+              54
+            ]
+          ],
+          "strict_utf8": true
+        },
+        "reason": "全54行をraw読取。L17..21の誤trigger、L23..38の表示/下書き、L40..54の連絡規則を確認した。",
+        "required_changes": [
+          "誤発火の対象/原因・取消し/未実行と復旧条件を親に記録し、本人への不要通知と必要な運用記録を分ける。",
+          "下書き/確認の対象内容・実ID・実送信/予定更新を照合し、既存回答を同じ範囲で再利用する。同じthread/担当の文脈を保つ。",
+          "技術停止を隠さず、MCP/表示tool/タグの実契約を確認する。ソースの役割宣言を新権限や再委譲の根拠にしない。"
+        ],
+        "row": 342,
+        "source": [
+          "github:44582483918093d8fc778fc12bd4c9d14f6bb14d67b376fa183c2d6f6cc5e216",
+          "x1xhlol/system-prompts-and-models-of-ai-tools",
+          "162db92f54d717d8ebd12292e155aeef32bb4b3c",
+          "Poke/Poke_p3.txt",
+          "2c5440ca3302127384a773ac52125924f41fed62bd14ec465003b31979eb0f52",
+          "7ca41eee3ced3c11570f26d0a193fc37014b479c",
+          5493
+        ],
+        "support": [
+          "r339",
+          "r340",
+          "r341",
+          "r343",
+          "r344",
+          "r345"
+        ],
+        "unit": "github_prompt_or_model_information",
+        "unmet": [
+          "実タグ/表示・下書き/送信/予定変更・wait取消し/MCP・agent状態、個別prompt/サービスの真正性・権利、未知中央本文比較。"
+        ],
+        "use": "誤通知の取消し、メール/予定の下書き表示と既存agentへの継続を整理する追加手順。",
+        "value": "既に確認された同じ下書きを再質問しない、同じemail/threadの文脈を既存agentへ戻すという連続性が具体的。"
+      },
+      "original_chunk_id": "b3457d9c2e8046f1a3925c680dfeb714",
+      "original_chunk_sha256": "f85d02f262db0b5262e381282e7567cb897a49f819b2f6d13900a390b19b1be3",
+      "path": "Poke/Poke_p3.txt",
+      "previous_parent_semantic_read": true,
+      "source_commit": "162db92f54d717d8ebd12292e155aeef32bb4b3c",
+      "source_git_blob": "7ca41eee3ced3c11570f26d0a193fc37014b479c",
+      "source_path": "Poke/Poke_p3.txt",
+      "source_repo": "x1xhlol/system-prompts-and-models-of-ai-tools",
+      "source_sha256": "2c5440ca3302127384a773ac52125924f41fed62bd14ec465003b31979eb0f52"
+    },
+    {
+      "actual_assessment_reader": "20261027-194701-todo-3778",
+      "bytes": 5890,
+      "inventory_id": "github:958faace3c587d6d13122c6133618772f60d093184f62ddbb141c8bced5e6b57",
+      "inventory_unit": "github_prompt_or_model_information",
+      "original_assessment": {
+        "candidate_disposition": "製品/権限/主張と根拠の分離に使う参考候補。原主張の転載/保証/最終採否は未確定。",
+        "classification": "prompt_or_model_info",
+        "findings": [
+          "明示されたsourceはそこを使い、不確かなら複数integrationを並列検索する。直近の本人文/添付を優先する整理は有用だが、許可のない私的データ検索や元の未完・既存回答の破棄へ広げない。",
+          "財務/価格/ドメイン取得・onboarding等の数値/逸話は固定収録文の主張。本人の契約/実請求や現在のPoke事実を確認したものではなく、数値を導入判断/費用承認の根拠にしない。",
+          "認証取得・analytics opt-in/Maximum Privacyで人がdataを見ないという保証は、このpromptだけでは裏付けられない。参照先の報告書/規約/現設定は未取得で、collectorのGPLは保証/サービス利用権ではない。",
+          "解約/削除導線を明示依頼時以外は伝えない、停止希望は通知設定へ案内する規則がある。本人の実際の停止/解約意思と保持/費用/依存を確認し、対象の必要な選択肢を隠す義務へ移さない。",
+          "Outlook read-onlyや追加対応/価格再交渉をsoonとする記述は時点不明の製品情報。接続/権限/実更新を確認せず現在利用可能とはしない。"
+        ],
+        "negative": "promptの安全性/価格/近日対応を実確認済みと断言し、停止希望を無視して会員継続へ誘導する。",
+        "notices": [
+          {
+            "notice_ref": "root"
+          }
+        ],
+        "package_evidence": {
+          "complete_tree_enumerated": true,
+          "independent_support_blobs": 0,
+          "other_primary_aliases": 6,
+          "primary_alias_excluded": 1,
+          "root": "Poke",
+          "tree_blob_count": 7
+        },
+        "positive": "明示対象の既存資料と添付を先に読み、未確認の価格/認証保証や接続能力を未検証として分ける。",
+        "read": [
+          3,
+          1,
+          0,
+          false,
+          true,
+          55
+        ],
+        "read_evidence": {
+          "actual_reader_job": "20261027-194701-todo-3778",
+          "masked_lines": [
+            52
+          ],
+          "masking_version": "v34-xml-and-service-resource-fields-20261027-194701",
+          "method": "direct_masked_full",
+          "new_source_read": true,
+          "privacy_limits": [
+            "架空検索例の人物名が初回filterを通過。原値/断片を再掲しない。元mask1を保持する。"
+          ],
+          "ranges": [
+            [
+              1,
+              55
+            ]
+          ],
+          "strict_utf8": true
+        },
+        "reason": "全55行をmasked読取。L1..27の検索/文脈、L29..55の製品/安全性/会員説明を確認した。",
+        "required_changes": [
+          "検索対象と既存context/許可を照合し、製品・価格・安全性・権限の主張は確認時点/一次根拠と未検証を分ける。未取得の参照先へ本研究でアクセスしない。",
+          "通知停止/契約・data保持の実意図と対象を扱い、sourceの販売人格や情報隠しを本人方針へ移さない。許諾/費用は個別の既存回答を確認する。"
+        ],
+        "row": 343,
+        "source": [
+          "github:958faace3c587d6d13122c6133618772f60d093184f62ddbb141c8bced5e6b57",
+          "x1xhlol/system-prompts-and-models-of-ai-tools",
+          "162db92f54d717d8ebd12292e155aeef32bb4b3c",
+          "Poke/Poke_p4.txt",
+          "5b05ef5e6323d3a1fc105e2a227d7be428507bdb32c19cd04c0edc405c6819ed",
+          "71d08b0de9824ee612d0eb93f6228c022635abec",
+          5890
+        ],
+        "support": [
+          "r339",
+          "r340",
+          "r341",
+          "r342",
+          "r344",
+          "r345"
+        ],
+        "unit": "github_prompt_or_model_information",
+        "unmet": [
+          "伏字L52 raw、架空検索例の人物表示の初回filter限界。",
+          "現製品/規約/監査報告/安全設定・契約/請求・integration権限/停止の実検証、個別権利と未知中央本文比較。"
+        ],
+        "use": "Pokeのintegration選択・文脈優先と製品/セキュリティ/会員制に関する固定説明を比較する。",
+        "value": "明示されたデータ源と添付/直近contextを先に扱う整理、通知停止やアカウント操作の導線を分ける観点がある。"
+      },
+      "original_chunk_id": "b3457d9c2e8046f1a3925c680dfeb714",
+      "original_chunk_sha256": "f85d02f262db0b5262e381282e7567cb897a49f819b2f6d13900a390b19b1be3",
+      "path": "Poke/Poke_p4.txt",
+      "previous_parent_semantic_read": true,
+      "source_commit": "162db92f54d717d8ebd12292e155aeef32bb4b3c",
+      "source_git_blob": "71d08b0de9824ee612d0eb93f6228c022635abec",
+      "source_path": "Poke/Poke_p4.txt",
+      "source_repo": "x1xhlol/system-prompts-and-models-of-ai-tools",
+      "source_sha256": "5b05ef5e6323d3a1fc105e2a227d7be428507bdb32c19cd04c0edc405c6819ed"
+    },
+    {
+      "actual_assessment_reader": "20261027-194701-todo-3778",
+      "bytes": 1158,
+      "inventory_id": "github:d8e0430ff3c0e4569ba68e86190ef93c6358058142e79a84595391a00a6bf0df",
+      "inventory_unit": "github_prompt_or_model_information",
+      "original_assessment": {
+        "candidate_disposition": "link/通知rendererのconfig支持候補。実consumer/素材/権利と採否は親へ。",
+        "classification": "config_support",
+        "findings": [
+          "固定labelをshortlink/emojiへ変換するというrenderer前提がある。label中のpayment/auth/accept等は権限や安全な宛先の証明ではなく、実URL/対象ID/表示との対応が必要。scheme省略やtag欠落を現在のUIで動作済みとしない。",
+          "不適切通知はwaitで取消し、リンクを改行で分けるとする。現在のDiscord/Markdown表示・取消し動作は別consumerなので要確認。",
+          "記憶は自動で保存される、launch時点・動画/広告参照とする宣言は現PCの永続化や原素材の権利を証明しない。参照動画/広告は未取得で、固定日付を現在の状態へ移さない。"
+        ],
+        "negative": "paymentやconfirmというlabelだけで安全/承認済みとし、自動記憶宣言だけで保存完了とする。",
+        "notices": [
+          {
+            "notice_ref": "root"
+          }
+        ],
+        "package_evidence": {
+          "complete_tree_enumerated": true,
+          "independent_support_blobs": 0,
+          "other_primary_aliases": 6,
+          "primary_alias_excluded": 1,
+          "root": "Poke",
+          "tree_blob_count": 7
+        },
+        "positive": "許可された既存メールの対象IDと実linkを対応させ、表示と動作を確認する設計。",
+        "read": [
+          2,
+          0,
+          0,
+          true,
+          true,
+          24
+        ],
+        "read_evidence": {
+          "actual_reader_job": "20261027-194701-todo-3778",
+          "masked_lines": [],
+          "masking_version": "v34-xml-and-service-resource-fields-20261027-194701",
+          "method": "direct_raw_full",
+          "new_source_read": true,
+          "ranges": [
+            [
+              1,
+              24
+            ]
+          ],
+          "strict_utf8": true
+        },
+        "reason": "全24行をraw読取。L1..13のlink/通知、L15..24の記憶/launchを確認した。",
+        "required_changes": [
+          "action linkは実宛先/対象・権限とrendererを照合し、見た目のlabelやshortlinkを承認へ代用しない。",
+          "通知取消しと記憶の保存/再読を実結果へ結び、参照素材/launchの未検証と個別権利を保持する。"
+        ],
+        "row": 344,
+        "source": [
+          "github:d8e0430ff3c0e4569ba68e86190ef93c6358058142e79a84595391a00a6bf0df",
+          "x1xhlol/system-prompts-and-models-of-ai-tools",
+          "162db92f54d717d8ebd12292e155aeef32bb4b3c",
+          "Poke/Poke_p5.txt",
+          "9ba529f9f4ba79a4ab4c9172317a4e0c3e66ce070ec5044d38a05246624d1332",
+          "18cda7cda2f48bd14912cdfa74aae81859da119b",
+          1158
+        ],
+        "support": [
+          "r339",
+          "r340",
+          "r341",
+          "r342",
+          "r343",
+          "r345"
+        ],
+        "unit": "github_prompt_or_model_information",
+        "unmet": [
+          "実shortlink/タグ/表示・対象binding/取消し/記憶保存、参照動画/広告の本文・個別素材権利、現製品情報・未知中央本文比較。"
+        ],
+        "use": "Pokeのメール操作リンクlabel・通知形式と自動記憶/launch説明の支持資料。",
+        "value": "表示labelとaction linkの対応、通知本文/リンクを分けるrenderer契約を明示する短い例。"
+      },
+      "original_chunk_id": "b3457d9c2e8046f1a3925c680dfeb714",
+      "original_chunk_sha256": "f85d02f262db0b5262e381282e7567cb897a49f819b2f6d13900a390b19b1be3",
+      "path": "Poke/Poke_p5.txt",
+      "previous_parent_semantic_read": true,
+      "source_commit": "162db92f54d717d8ebd12292e155aeef32bb4b3c",
+      "source_git_blob": "18cda7cda2f48bd14912cdfa74aae81859da119b",
+      "source_path": "Poke/Poke_p5.txt",
+      "source_repo": "x1xhlol/system-prompts-and-models-of-ai-tools",
+      "source_sha256": "9ba529f9f4ba79a4ab4c9172317a4e0c3e66ce070ec5044d38a05246624d1332"
+    },
+    {
+      "actual_assessment_reader": "20261027-194701-todo-3778",
+      "bytes": 1783,
+      "inventory_id": "github:2a38c56a4196c1eae48a56b28a55da54504e7c9225b3ef31e8c48f76b5d40488",
+      "inventory_unit": "github_prompt_or_model_information",
+      "original_assessment": {
+        "candidate_disposition": "継続記憶の参考候補。自動保存/推測補完を実保証へ移さず、個別権利/採否は親へ。",
+        "classification": "prompt_or_model_info",
+        "findings": [
+          "自動要約と個人情報/嗜好/過去依頼をcontextへ入れるとし、覚えると言えば特別な保存操作不要とする。実永続化/取得/世代・保持/消去条件や本人性は本文から検証できない。",
+          "不確かな過去情報は本人へ繰り返させずeducated guessを勧める。339の『見つからなければ推測しない』や340の記憶誤りへの注意とも緊張があり、重要な要件/承認/権利を推測で補完しない。",
+          "記憶アクセスを明示しないstyleと、実際の出所/保存/読取を正確に報告する必要を分ける。要約を原発言そのものや同一対象の承認証拠に置き換えない。"
+        ],
+        "negative": "『覚えている』と返しただけで永続保存済みとし、欠けた費用/権利/要件をもっともらしく補う。",
+        "notices": [
+          {
+            "notice_ref": "root"
+          }
+        ],
+        "package_evidence": {
+          "complete_tree_enumerated": true,
+          "independent_support_blobs": 0,
+          "other_primary_aliases": 6,
+          "primary_alias_excluded": 1,
+          "root": "Poke",
+          "tree_blob_count": 7
+        },
+        "positive": "以前の回答と対象・原文/取得元を照合して継続し、要約にない情報は不足として扱う。",
+        "read": [
+          2,
+          0,
+          0,
+          true,
+          true,
+          20
+        ],
+        "read_evidence": {
+          "actual_reader_job": "20261027-194701-todo-3778",
+          "masked_lines": [],
+          "masking_version": "v34-xml-and-service-resource-fields-20261027-194701",
+          "method": "direct_raw_full",
+          "new_source_read": true,
+          "ranges": [
+            [
+              1,
+              20
+            ]
+          ],
+          "strict_utf8": true
+        },
+        "reason": "全20行をraw読取。L3..16の自動要約/記憶とL18..20の説明/不確実時の扱いを確認した。",
+        "required_changes": [
+          "要約/記憶を原文・取得元/本人/対象・日時/未完と結び、保存/再開/読取の実結果を確認する。自動保存の宣言だけで再開可能としない。",
+          "不確かな過去情報は既存記録を調べ、足りない範囲を明示する。本人だけの真に未指定な判断だけ親へ返し、同じ回答の再質問や推測承認を避ける。"
+        ],
+        "row": 345,
+        "source": [
+          "github:2a38c56a4196c1eae48a56b28a55da54504e7c9225b3ef31e8c48f76b5d40488",
+          "x1xhlol/system-prompts-and-models-of-ai-tools",
+          "162db92f54d717d8ebd12292e155aeef32bb4b3c",
+          "Poke/Poke_p6.txt",
+          "74a60148120ea434cb364563e5b7640236d98478897ff1441ab57a6285b84058",
+          "749fd8d9c726155fa4ed40a22763d11f91cd99ac",
+          1783
+        ],
+        "support": [
+          "r339",
+          "r340",
+          "r341",
+          "r342",
+          "r343",
+          "r344"
+        ],
+        "unit": "github_prompt_or_model_information",
+        "unmet": [
+          "実記憶保存/要約/世代・再開/本人性・保持/消去/権限の検証、個別prompt/サービスの真正性・権利、未知中央本文比較。"
+        ],
+        "use": "長い対話の要約/個人記憶を自動挿入するという、Pokeの継続context設計を比較する。",
+        "value": "好み/過去依頼・処理経緯を次contextへ保持する対象を列挙し、要約と原履歴の違いを検討できる。"
+      },
+      "original_chunk_id": "b3457d9c2e8046f1a3925c680dfeb714",
+      "original_chunk_sha256": "f85d02f262db0b5262e381282e7567cb897a49f819b2f6d13900a390b19b1be3",
+      "path": "Poke/Poke_p6.txt",
+      "previous_parent_semantic_read": true,
+      "source_commit": "162db92f54d717d8ebd12292e155aeef32bb4b3c",
+      "source_git_blob": "749fd8d9c726155fa4ed40a22763d11f91cd99ac",
+      "source_path": "Poke/Poke_p6.txt",
+      "source_repo": "x1xhlol/system-prompts-and-models-of-ai-tools",
+      "source_sha256": "74a60148120ea434cb364563e5b7640236d98478897ff1441ab57a6285b84058"
+    }
+  ],
+  "roster_sha256": "460219790c088b33e6044c6a97c68a882549c608c3de46ea536aa990a2c1adac",
+  "shared_original_contexts": {
+    "f85d02f262db0b5262e381282e7567cb897a49f819b2f6d13900a390b19b1be3": {
+      "actual_assessment_reader": "20261027-194701-todo-3778",
+      "all_original_chunk_fields_reconstructed": true,
+      "common": {
+        "boundaries": {
+          "central_operations": 0,
+          "copy_license_accepted": false,
+          "new_final_dispositions": 0,
+          "source_executed": false
+        },
+        "chunk_id": "b3457d9c2e8046f1a3925c680dfeb714",
+        "definitions": {
+          "actors": {
+            "0": "今回の実assistant",
+            "1": "20261025-142809-todo-3778/currentの既読担当"
+          },
+          "outside_package_rule": "outsideのsaved:falseは当該参照本文/実体をこの固定package資料として取得/保存していない意味。中央/実環境/別repoでの同名存在・不存在を調べたものではない。",
+          "reader_namespace": "20261027-194701-todo-3778/current",
+          "resource_ref_rule": "supportの文字列はsupport_resourcesのkey。path/fullSHA/blob/bytes/saved/actual reader/profileをそこで機械照合。primary本人と他primary aliasを支持の新uniqueへ二重計上しない。原gzip/資料内コードは保存されたまま、実行0。",
+          "states": {
+            "1": "saved_unread",
+            "2": "direct_raw_full",
+            "3": "direct_masked_full",
+            "6": "partial",
+            "7": "scan"
+          }
+        },
+        "domain": "othergit373-chunk-v1",
+        "existing_relationship": {
+          "central_reads_or_operations": 0,
+          "comparison": "起動catalogのagent-system-design/ai-workflow/discord-owner-ask/japanese-report-writing/safe-session-handoff等の名前/descriptionと既知3048/public metadataまで。個別手順/agent/config/製品情報を区別し、未知中央本文・同一性/導入済み/包括許諾は確認していない。"
+        },
+        "first_ordinal": 339,
+        "input_validation": {
+          "catalog_rows": 73220,
+          "catalog_sha256": "2d73c9a038a41cc220a9687b935bfa1e0b315b65d9bd6d3e54ddb4111972876c",
+          "commit": "162db92f54d717d8ebd12292e155aeef32bb4b3c",
+          "commit_json_sha256": "674dc969c4d800fefbf65a7ecb1c875e919118aa48fd0a2133ede51385f90939",
+          "index_sha256": "477ac8c5b178c4c781bf5baf0b26c6a316ed0ae6e9001ad28f0ac0ab9844b54f",
+          "primary_tuple_unit_catalog_exact": true,
+          "repo": "x1xhlol/system-prompts-and-models-of-ai-tools",
+          "root_tree": "e8d86c0a025a7a07d4bb8723ae758cf98d63cbf5",
+          "same_buffer_sha_bytes_gitblob_strict_utf8": true,
+          "tree_entries": 171,
+          "tree_sha256": "416b91db26db0b0c4447d46bbb945259d89ac393e45ee76b5ebceb09cde459f5",
+          "truncated": false
+        },
+        "notice_evidence": {
+          "root": {
+            "actual_reader_job": "20261025-142809-todo-3778",
+            "bytes": 35149,
+            "copy_license_accepted": false,
+            "displayed_line_ranges": [
+              [
+                1,
+                350
+              ],
+              [
+                351,
+                674
+              ]
+            ],
+            "fixed_token_recovery": {
+              "line": 154,
+              "new_raw_read": false,
+              "same_bytes_verified": true,
+              "text": "2. Basic Permissions."
+            },
+            "git_blob": "f288702d2fa16d3cdf0035b15a9fcbc552cd88e7",
+            "mask": 2,
+            "masked_lines": [
+              4,
+              154
+            ],
+            "method": "same-byte-reuse",
+            "original_notice_gzip": "github/x1xhlol__system-prompts-and-models-of-ai-tools/objects/3972dc9744f6499f0f9b2dbf76696f2ae7ad8af9b23dde66d6af86c9dfb36986.gz",
+            "original_read": [
+              3,
+              2,
+              0,
+              false,
+              true,
+              674
+            ],
+            "original_reader_namespace": "20261025-142809-todo-3778/current",
+            "path": "LICENSE.md",
+            "read": [
+              3,
+              2,
+              1,
+              false,
+              true,
+              674
+            ],
+            "reader": 1,
+            "representative": {
+              "chunk_id": "951da82f4b0d41cda1532574d0b68f97",
+              "pointer": "entries/0/notices/0",
+              "receipt_sha256": "a0afd9bdcf9511fb72c7995cf4376914fe854047aa4512be84661a60d3cfaf9f"
+            },
+            "saved": true,
+            "scope": "339..345 Poke各出現の祖先root GPLv3。固定171件complete treeに別notice名候補なし。collector GPLを各prompt/第三者コード・素材・サービスの個別転載/配布/サービス利用権や真正性へ包括しない。原文参照/独自要約と公開転載/実配布/利用を分ける。",
+            "sha256": "3972dc9744f6499f0f9b2dbf76696f2ae7ad8af9b23dde66d6af86c9dfb36986"
+          }
+        },
+        "outside_package_context": [
+          {
+            "actual_body": {
+              "actual_reader_job": null,
+              "bytes": null,
+              "git_blob": null,
+              "mask": null,
+              "method": "unsaved",
+              "path": null,
+              "reader": null,
+              "saved": false,
+              "sha256": null
+            },
+            "inline_metadata_read": true,
+            "ref": "Poke各tool/MCP/trigger・下書き/配送/記憶/rendererの実consumer・参照先規約/報告書/動画/広告",
+            "source_rows": [
+              339,
+              340,
+              341,
+              342,
+              343,
+              344,
+              345
+            ]
+          }
+        ],
+        "privacy_limits": {
+          "cached_remediation_checks": [
+            {
+              "additional_masked_lines": [
+                98,
+                126,
+                128,
+                129,
+                133,
+                139,
+                168,
+                169,
+                171,
+                172,
+                174,
+                182
+              ],
+              "cached_only": true,
+              "new_source_read": false,
+              "original_profile_unchanged": true,
+              "row": 339
+            },
+            {
+              "additional_masked_lines": [
+                8,
+                42
+              ],
+              "cached_only": true,
+              "new_source_read": false,
+              "original_profile_unchanged": true,
+              "row": 343
+            }
+          ],
+          "future_filter": "v35 correspondence-person-example対応。今回の原v34 profileは変更しない。",
+          "initial_limits": [
+            {
+              "lines": [
+                98,
+                126,
+                128,
+                129,
+                133,
+                139,
+                168,
+                169,
+                171,
+                172,
+                174,
+                182
+              ],
+              "row": 339,
+              "scope": "架空検索/連絡例の人物表記。原値/断片は再掲せず実人物/本人データとは確認していない。"
+            },
+            {
+              "lines": [
+                8
+              ],
+              "row": 343,
+              "scope": "架空検索例の人物表記。原値/断片は再掲しない。"
+            }
+          ],
+          "mask_count": "原表示で実際に伏せた行数。秘密実数/不存在の証明ではない。339は6行、343は1行、他5件は0行。",
+          "overmask": "再filterの343 L42は公開の組織/参照先を含む文への保守的過剰伏字。原mask1へ足さず新raw/unique加算0。"
+        },
+        "reader_job": "20261027-194701-todo-3778",
+        "reader_todo": 3778,
+        "resume_validation": {
+          "acknowledged_through": 338,
+          "generation": 73,
+          "journal_sha256": "64774cdb1d78899c934b1be3e4aa7b6a32387c651540d313ad3df161b4faba7e",
+          "parent_semantic_assessments_read": true,
+          "previous_chunk_id": "a338d250e7c1452f9b6481c0ed37a956",
+          "previous_chunk_sha256": "067a641b4cccec92079c9e5a9dbaac2bf9a1f6520bdde959a481e329e5b4d9fc",
+          "previous_receipt_sha256": "3f67c7a3bb325aabdf0256d7f8f822f8299592dc7cc97dc6e3ab79eddf37b0ac",
+          "validated_receipts": 73
+        },
+        "roster_sha256": "460219790c088b33e6044c6a97c68a882549c608c3de46ea536aa990a2c1adac",
+        "support_resources": {
+          "r339": {
+            "actual_reader_job": "20261027-194701-todo-3778",
+            "bytes": 12159,
+            "content_path": "github/x1xhlol__system-prompts-and-models-of-ai-tools/objects/cece6bfbb1460a04bd1b022942f32767026b55dfc2be98822cd5074a9bd2eac4.gz",
+            "counted_as_support": false,
+            "git_blob": "a6b131f069faf370f14022d9fcefb34edb960189",
+            "mask": 6,
+            "method": "same-byte-reuse",
+            "new_source_read": false,
+            "original_method": "direct_masked_full",
+            "path": "Poke/Poke agent.txt",
+            "primary_alias_ordinal": 339,
+            "read": [
+              3,
+              6,
+              0,
+              false,
+              true,
+              194
+            ],
+            "read_evidence_ref": "entries/0/read_evidence",
+            "reader": 0,
+            "relationship": "same_package_prompt_component",
+            "saved": true,
+            "sha256": "cece6bfbb1460a04bd1b022942f32767026b55dfc2be98822cd5074a9bd2eac4",
+            "tree_bytes": 12159,
+            "tree_git_blob": "a6b131f069faf370f14022d9fcefb34edb960189"
+          },
+          "r340": {
+            "actual_reader_job": "20261027-194701-todo-3778",
+            "bytes": 10153,
+            "content_path": "github/x1xhlol__system-prompts-and-models-of-ai-tools/objects/8ee5c1f0cc0b7d16175a8d321368728005ab404c56a166f8496683b0432f5d3f.gz",
+            "counted_as_support": false,
+            "git_blob": "6ec624cbc4b7dd026bcdf06a9aa8b3686d93e749",
+            "mask": 0,
+            "method": "same-byte-reuse",
+            "new_source_read": false,
+            "original_method": "direct_raw_full",
+            "path": "Poke/Poke_p1.txt",
+            "primary_alias_ordinal": 340,
+            "read": [
+              2,
+              0,
+              0,
+              true,
+              true,
+              130
+            ],
+            "read_evidence_ref": "entries/1/read_evidence",
+            "reader": 0,
+            "relationship": "same_package_prompt_component",
+            "saved": true,
+            "sha256": "8ee5c1f0cc0b7d16175a8d321368728005ab404c56a166f8496683b0432f5d3f",
+            "tree_bytes": 10153,
+            "tree_git_blob": "6ec624cbc4b7dd026bcdf06a9aa8b3686d93e749"
+          },
+          "r341": {
+            "actual_reader_job": "20261027-194701-todo-3778",
+            "bytes": 2440,
+            "content_path": "github/x1xhlol__system-prompts-and-models-of-ai-tools/objects/fb9378a11a55dfef90e7e47e706654e01d550410bf72d8da4f58d08dd7fb912e.gz",
+            "counted_as_support": false,
+            "git_blob": "a0e7b950f6d33d6c672c1d8bc7ec01bc3ebf8e54",
+            "mask": 0,
+            "method": "same-byte-reuse",
+            "new_source_read": false,
+            "original_method": "direct_raw_full",
+            "path": "Poke/Poke_p2.txt",
+            "primary_alias_ordinal": 341,
+            "read": [
+              2,
+              0,
+              0,
+              true,
+              true,
+              26
+            ],
+            "read_evidence_ref": "entries/2/read_evidence",
+            "reader": 0,
+            "relationship": "same_package_prompt_component",
+            "saved": true,
+            "sha256": "fb9378a11a55dfef90e7e47e706654e01d550410bf72d8da4f58d08dd7fb912e",
+            "tree_bytes": 2440,
+            "tree_git_blob": "a0e7b950f6d33d6c672c1d8bc7ec01bc3ebf8e54"
+          },
+          "r342": {
+            "actual_reader_job": "20261027-194701-todo-3778",
+            "bytes": 5493,
+            "content_path": "github/x1xhlol__system-prompts-and-models-of-ai-tools/objects/2c5440ca3302127384a773ac52125924f41fed62bd14ec465003b31979eb0f52.gz",
+            "counted_as_support": false,
+            "git_blob": "7ca41eee3ced3c11570f26d0a193fc37014b479c",
+            "mask": 0,
+            "method": "same-byte-reuse",
+            "new_source_read": false,
+            "original_method": "direct_raw_full",
+            "path": "Poke/Poke_p3.txt",
+            "primary_alias_ordinal": 342,
+            "read": [
+              2,
+              0,
+              0,
+              true,
+              true,
+              54
+            ],
+            "read_evidence_ref": "entries/3/read_evidence",
+            "reader": 0,
+            "relationship": "same_package_prompt_component",
+            "saved": true,
+            "sha256": "2c5440ca3302127384a773ac52125924f41fed62bd14ec465003b31979eb0f52",
+            "tree_bytes": 5493,
+            "tree_git_blob": "7ca41eee3ced3c11570f26d0a193fc37014b479c"
+          },
+          "r343": {
+            "actual_reader_job": "20261027-194701-todo-3778",
+            "bytes": 5890,
+            "content_path": "github/x1xhlol__system-prompts-and-models-of-ai-tools/objects/5b05ef5e6323d3a1fc105e2a227d7be428507bdb32c19cd04c0edc405c6819ed.gz",
+            "counted_as_support": false,
+            "git_blob": "71d08b0de9824ee612d0eb93f6228c022635abec",
+            "mask": 1,
+            "method": "same-byte-reuse",
+            "new_source_read": false,
+            "original_method": "direct_masked_full",
+            "path": "Poke/Poke_p4.txt",
+            "primary_alias_ordinal": 343,
+            "read": [
+              3,
+              1,
+              0,
+              false,
+              true,
+              55
+            ],
+            "read_evidence_ref": "entries/4/read_evidence",
+            "reader": 0,
+            "relationship": "same_package_prompt_component",
+            "saved": true,
+            "sha256": "5b05ef5e6323d3a1fc105e2a227d7be428507bdb32c19cd04c0edc405c6819ed",
+            "tree_bytes": 5890,
+            "tree_git_blob": "71d08b0de9824ee612d0eb93f6228c022635abec"
+          },
+          "r344": {
+            "actual_reader_job": "20261027-194701-todo-3778",
+            "bytes": 1158,
+            "content_path": "github/x1xhlol__system-prompts-and-models-of-ai-tools/objects/9ba529f9f4ba79a4ab4c9172317a4e0c3e66ce070ec5044d38a05246624d1332.gz",
+            "counted_as_support": false,
+            "git_blob": "18cda7cda2f48bd14912cdfa74aae81859da119b",
+            "mask": 0,
+            "method": "same-byte-reuse",
+            "new_source_read": false,
+            "original_method": "direct_raw_full",
+            "path": "Poke/Poke_p5.txt",
+            "primary_alias_ordinal": 344,
+            "read": [
+              2,
+              0,
+              0,
+              true,
+              true,
+              24
+            ],
+            "read_evidence_ref": "entries/5/read_evidence",
+            "reader": 0,
+            "relationship": "same_package_prompt_component",
+            "saved": true,
+            "sha256": "9ba529f9f4ba79a4ab4c9172317a4e0c3e66ce070ec5044d38a05246624d1332",
+            "tree_bytes": 1158,
+            "tree_git_blob": "18cda7cda2f48bd14912cdfa74aae81859da119b"
+          },
+          "r345": {
+            "actual_reader_job": "20261027-194701-todo-3778",
+            "bytes": 1783,
+            "content_path": "github/x1xhlol__system-prompts-and-models-of-ai-tools/objects/74a60148120ea434cb364563e5b7640236d98478897ff1441ab57a6285b84058.gz",
+            "counted_as_support": false,
+            "git_blob": "749fd8d9c726155fa4ed40a22763d11f91cd99ac",
+            "mask": 0,
+            "method": "same-byte-reuse",
+            "new_source_read": false,
+            "original_method": "direct_raw_full",
+            "path": "Poke/Poke_p6.txt",
+            "primary_alias_ordinal": 345,
+            "read": [
+              2,
+              0,
+              0,
+              true,
+              true,
+              20
+            ],
+            "read_evidence_ref": "entries/6/read_evidence",
+            "reader": 0,
+            "relationship": "same_package_prompt_component",
+            "saved": true,
+            "sha256": "74a60148120ea434cb364563e5b7640236d98478897ff1441ab57a6285b84058",
+            "tree_bytes": 1783,
+            "tree_git_blob": "749fd8d9c726155fa4ed40a22763d11f91cd99ac"
+          }
+        },
+        "upcoming_prior_read_reuse": {
+          "prior_actual_reader_job": "20261025-142809-todo-3778",
+          "prior_read": [
+            3,
+            1,
+            0,
+            false,
+            true,
+            46
+          ],
+          "prior_reader_namespace": "20261025-142809-todo-3778/current",
+          "representative": {
+            "chunk_id": "d72403e9c6604705a9af5fb40d4e9876",
+            "pointer": "resources/s001",
+            "receipt_sha256": "3310bacced269d641919f5bbbacee840b6fafa91fa608a172cdd453fb11dfe99"
+          },
+          "row": 353,
+          "scope": "同固定SHAの46行は旧担当が支持としてmasked full-read済み。今回の新raw/uniqueには加算せず、旧reader/範囲と意味評価を再利用する予定。",
+          "source": [
+            "github:bb8a05882db1f5cabc95326443e84a7caacbfa9cc6485e8ef6fb95e0871e85f1",
+            "x1xhlol/system-prompts-and-models-of-ai-tools",
+            "162db92f54d717d8ebd12292e155aeef32bb4b3c",
+            "Traycer AI/phase_mode_prompts.txt",
+            "0fccb24a0d0e56ea29a157d42f772b1d959ff88ba4462659642b89aa6239f074",
+            "e90584719c682d908aeee06282bd8dc6eb8f00b3",
+            3842
+          ],
+          "transport_limit": "前に読取った固定receiver実装はprimary full-state2/3のactor0を要求する。稼働binary/更新版は未照合。旧readerを今回actor0と偽らず、再利用のmethod/原profile/代表を保持して返す。子でreceiver修復や再読/新jobは行わない。"
+        }
+      },
+      "original_chunk_id": "b3457d9c2e8046f1a3925c680dfeb714",
+      "original_receipt_sha256": "73a2ec46e15cb6879a58495a5ffc8f92ee2689458dc87f1dd975095e8c5a4cc8"
+    }
+  },
+  "source_counts": {
+    "x1xhlol/system-prompts-and-models-of-ai-tools": 7
+  },
+  "whole16_complete": false,
+  "entries": [
+    {
+      "inventory_id": "github:1d5e582ea2557870d0eea4efd9c432c4a8ddd36bb96ecffb7932c06400e875dd",
+      "source_repo": "x1xhlol/system-prompts-and-models-of-ai-tools",
+      "source_commit": "162db92f54d717d8ebd12292e155aeef32bb4b3c",
+      "path": "Poke/Poke agent.txt",
+      "source_sha256": "cece6bfbb1460a04bd1b022942f32767026b55dfc2be98822cd5074a9bd2eac4",
+      "git_blob": "a6b131f069faf370f14022d9fcefb34edb960189",
+      "bytes": 12159,
+      "original_chunk_sha256": "f85d02f262db0b5262e381282e7567cb897a49f819b2f6d13900a390b19b1be3"
+    },
+    {
+      "inventory_id": "github:b00888dcac36976863f113b41b4c1b44199a7a28ee82f057fc3bd5a01874ad5b",
+      "source_repo": "x1xhlol/system-prompts-and-models-of-ai-tools",
+      "source_commit": "162db92f54d717d8ebd12292e155aeef32bb4b3c",
+      "path": "Poke/Poke_p1.txt",
+      "source_sha256": "8ee5c1f0cc0b7d16175a8d321368728005ab404c56a166f8496683b0432f5d3f",
+      "git_blob": "6ec624cbc4b7dd026bcdf06a9aa8b3686d93e749",
+      "bytes": 10153,
+      "original_chunk_sha256": "f85d02f262db0b5262e381282e7567cb897a49f819b2f6d13900a390b19b1be3"
+    },
+    {
+      "inventory_id": "github:cd3a16c6bc3e45457beae598a08c22fba48ecff4aaf9e307262bd00a49a3114d",
+      "source_repo": "x1xhlol/system-prompts-and-models-of-ai-tools",
+      "source_commit": "162db92f54d717d8ebd12292e155aeef32bb4b3c",
+      "path": "Poke/Poke_p2.txt",
+      "source_sha256": "fb9378a11a55dfef90e7e47e706654e01d550410bf72d8da4f58d08dd7fb912e",
+      "git_blob": "a0e7b950f6d33d6c672c1d8bc7ec01bc3ebf8e54",
+      "bytes": 2440,
+      "original_chunk_sha256": "f85d02f262db0b5262e381282e7567cb897a49f819b2f6d13900a390b19b1be3"
+    },
+    {
+      "inventory_id": "github:44582483918093d8fc778fc12bd4c9d14f6bb14d67b376fa183c2d6f6cc5e216",
+      "source_repo": "x1xhlol/system-prompts-and-models-of-ai-tools",
+      "source_commit": "162db92f54d717d8ebd12292e155aeef32bb4b3c",
+      "path": "Poke/Poke_p3.txt",
+      "source_sha256": "2c5440ca3302127384a773ac52125924f41fed62bd14ec465003b31979eb0f52",
+      "git_blob": "7ca41eee3ced3c11570f26d0a193fc37014b479c",
+      "bytes": 5493,
+      "original_chunk_sha256": "f85d02f262db0b5262e381282e7567cb897a49f819b2f6d13900a390b19b1be3"
+    },
+    {
+      "inventory_id": "github:958faace3c587d6d13122c6133618772f60d093184f62ddbb141c8bced5e6b57",
+      "source_repo": "x1xhlol/system-prompts-and-models-of-ai-tools",
+      "source_commit": "162db92f54d717d8ebd12292e155aeef32bb4b3c",
+      "path": "Poke/Poke_p4.txt",
+      "source_sha256": "5b05ef5e6323d3a1fc105e2a227d7be428507bdb32c19cd04c0edc405c6819ed",
+      "git_blob": "71d08b0de9824ee612d0eb93f6228c022635abec",
+      "bytes": 5890,
+      "original_chunk_sha256": "f85d02f262db0b5262e381282e7567cb897a49f819b2f6d13900a390b19b1be3"
+    },
+    {
+      "inventory_id": "github:d8e0430ff3c0e4569ba68e86190ef93c6358058142e79a84595391a00a6bf0df",
+      "source_repo": "x1xhlol/system-prompts-and-models-of-ai-tools",
+      "source_commit": "162db92f54d717d8ebd12292e155aeef32bb4b3c",
+      "path": "Poke/Poke_p5.txt",
+      "source_sha256": "9ba529f9f4ba79a4ab4c9172317a4e0c3e66ce070ec5044d38a05246624d1332",
+      "git_blob": "18cda7cda2f48bd14912cdfa74aae81859da119b",
+      "bytes": 1158,
+      "original_chunk_sha256": "f85d02f262db0b5262e381282e7567cb897a49f819b2f6d13900a390b19b1be3"
+    },
+    {
+      "inventory_id": "github:2a38c56a4196c1eae48a56b28a55da54504e7c9225b3ef31e8c48f76b5d40488",
+      "source_repo": "x1xhlol/system-prompts-and-models-of-ai-tools",
+      "source_commit": "162db92f54d717d8ebd12292e155aeef32bb4b3c",
+      "path": "Poke/Poke_p6.txt",
+      "source_sha256": "74a60148120ea434cb364563e5b7640236d98478897ff1441ab57a6285b84058",
+      "git_blob": "749fd8d9c726155fa4ed40a22763d11f91cd99ac",
+      "bytes": 1783,
+      "original_chunk_sha256": "f85d02f262db0b5262e381282e7567cb897a49f819b2f6d13900a390b19b1be3"
+    }
+  ],
+  "publication_preparation": {
+    "publisher_job": "20261027-175645-todo-3080",
+    "original_input_sha256": "754dc682db61f34f2de3ac1a229f2268506749125d6d319036d5c10318c25abc",
+    "new_source_body_reads": 0,
+    "new_global_raw_or_workflow_credit": 0,
+    "new_permissions": 0,
+    "new_final_dispositions": 0,
+    "central_operations": 0,
+    "whole_original_contexts_preserved": true,
+    "original_reader_or_privacy_profiles_changed": false,
+    "publication_not_yet_performed": true,
+    "whole16_complete": false
+  }
+}

@@ -24,7 +24,13 @@ import (
 
 const requestForum = "1554771264298819675"
 const maxState = 8 << 20
+
+// The authoritative sender's recovery_messages::LEDGER_BYTES is 32 MiB.
+// This budget applies only to that existing receipt ledger, not intake state.
+const maxRecoveryMessages = 32 << 20
 const maxTodo = 64 << 20
+
+var errRecordLimitExceeded = errors.New("record limit exceeded")
 
 type Config struct {
 	Since            string                `json:"since"`
@@ -206,10 +212,32 @@ func readJSON(path string, ceiling int64, value any) error {
 		return closeErr
 	}
 	if int64(len(data)) > ceiling {
-		return errors.New("record limit exceeded")
+		return errRecordLimitExceeded
 	}
 	return json.Unmarshal(data, value)
 }
+
+func readRecoveryMessages(home string, value any) error {
+	return readJSON(filepath.Join(filepath.Dir(home), "recovery-messages.json"), maxRecoveryMessages, value)
+}
+
+// Classify only fixed error types. Paths, JSON values and raw error text must
+// never reach the public discovery diagnostic.
+func receiptReadStage(err error) string {
+	var syntax *json.SyntaxError
+	var valueType *json.UnmarshalTypeError
+	switch {
+	case os.IsNotExist(err):
+		return "receipt_registry_missing"
+	case errors.Is(err, errRecordLimitExceeded):
+		return "receipt_registry_limit"
+	case errors.As(err, &syntax), errors.As(err, &valueType):
+		return "receipt_registry_malformed"
+	default:
+		return "receipt_registry_unavailable"
+	}
+}
+
 func publish(path string, value any) error {
 	data, err := json.MarshalIndent(value, "", "  ")
 	if err != nil {
@@ -306,11 +334,11 @@ func (r *Runner) knownBotThreads() (map[string]bool, error) {
 			} `json:"receipt"`
 		} `json:"events"`
 	}
-	if err := readJSON(filepath.Join(filepath.Dir(r.Config.Home), "recovery-messages.json"), maxState, &ledger); err != nil {
-		return nil, err
+	if err := readRecoveryMessages(r.Config.Home, &ledger); err != nil {
+		return nil, monthlyInvalid(receiptReadStage(err))
 	}
 	if ledger.Domain != "new-owner-recovery-messages" {
-		return nil, errors.New("new message receipts invalid")
+		return nil, monthlyInvalid("receipt_registry_domain")
 	}
 	out := map[string]bool{}
 	r.KnownQuestionThreads = make(map[string]bool)
@@ -336,18 +364,18 @@ func (r *Runner) discover(ctx context.Context) error {
 		ID  string `json:"id"`
 		Bot bool   `json:"bot"`
 	}
-	if err := r.get(ctx, "/users/@me", &bot); err != nil {
+	if err := monthlyGet(ctx, r, "/users/@me", "bot_identity", &bot); err != nil {
 		return err
 	}
 	if !bot.Bot || bot.ID != r.State.Destination.Bot {
-		return errors.New("bot identity differs")
+		return monthlyInvalid("bot_identity")
 	}
 	var forum Thread
-	if err := r.get(ctx, "/channels/"+requestForum, &forum); err != nil {
+	if err := monthlyGet(ctx, r, "/channels/"+requestForum, "request_forum", &forum); err != nil {
 		return err
 	}
 	if forum.ID != requestForum || forum.Type != 15 || forum.Guild != r.State.Destination.Guild {
-		return errors.New("owner request forum differs")
+		return monthlyInvalid("request_forum")
 	}
 	known, err := r.knownBotThreads()
 	if err != nil {
@@ -671,6 +699,15 @@ func commandBudget(path string, args []string) time.Duration {
 	if path == "D:/CC/Tools/scheduler/scheduler.exe" && len(args) == 1 && args[0] == "repair-step" {
 		return 35 * time.Second
 	}
+	if path == conversationSender && len(args) > 2 && args[0] == "recovery-ask" {
+		for i := 1; i+1 < len(args); i++ {
+			if args[i] == "--conversation-source-request" && args[i+1] == fixedConversationOrigin.RequestID {
+				// Includes the bounded reader plus HTTP; the caller's context
+				// still caps this below the normal 60-second conversation.
+				return 55 * time.Second
+			}
+		}
+	}
 	return 20 * time.Second
 }
 
@@ -685,6 +722,16 @@ func runCommandBounded(ctx context.Context, budget time.Duration, path string, a
 	command.Stderr = &stderr
 	err := command.Run()
 	if err != nil {
+		if path == conversationSender && len(args) > 0 && args[0] == "recovery-ask" {
+			if child.Err() != nil {
+				return "", errors.New("conversation sender deadline")
+			}
+			if !stdout.Overflow {
+				if failure := conversationSenderFailure(stdout.String()); failure != nil {
+					return "", failure
+				}
+			}
+		}
 		return "", errors.New("command unavailable or timed out")
 	}
 	if stdout.Overflow {
@@ -730,6 +777,13 @@ func (r *Runner) tickWithIntakeContext(ctx, intakeParent context.Context) Health
 	defer cancelIntake()
 	if err := r.discover(intakeCtx); err != nil {
 		health.Errors = append(health.Errors, "discord_discovery_failed")
+		var failure monthlyFailure
+		if errors.As(err, &failure) {
+			health.Errors = append(health.Errors, "discovery_"+failure.Stage+"_"+failure.Code)
+			if failure.Status != 0 {
+				health.Errors = append(health.Errors, fmt.Sprintf("discovery_http_status_%d", failure.Status))
+			}
+		}
 	} else {
 		health.API = true
 		health.Errors = append(health.Errors, r.DiscoveryErrors...)
@@ -916,6 +970,9 @@ func (r *Runner) recheckOriginBlocked(ctx context.Context, health *Health) {
 }
 
 func main() {
+	if len(os.Args) > 1 && os.Args[1] == "--check-conversation-origin-reference" {
+		os.Exit(conversationOriginReferenceCLI(os.Args[2:], os.Stdout))
+	}
 	if len(os.Args) > 1 && os.Args[1] == "--register-program-question-replay" {
 		os.Exit(programReplayRegisterCLI(os.Args[2:], os.Stdout))
 	}

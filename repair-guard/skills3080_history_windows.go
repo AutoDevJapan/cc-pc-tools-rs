@@ -163,7 +163,13 @@ func skillsNativeWindow(s *skillsFS, job object, proof *skillsNativeResultProof,
 	if e != nil || end.Before(start) || !skillsUUID.MatchString(id) {
 		return nil, false
 	}
-	input, ok := skillsNativeSnapshot(s, job)
+	var input io.Reader
+	var ok bool
+	if proof != nil && proof.frozen {
+		input, ok = skillsNativeFrozenSnapshot(s, job)
+	} else {
+		input, ok = skillsNativeSnapshot(s, job)
+	}
 	if !ok {
 		return nil, false
 	}
@@ -181,6 +187,20 @@ func skillsNativeWindow(s *skillsFS, job object, proof *skillsNativeResultProof,
 // One exact append-log snapshot. Bootstrap identity is separate session
 // metadata; task input/final projection still uses the original job window.
 func skillsNativeSnapshot(s *skillsFS, job object) (io.Reader, bool) {
+	return skillsNativeSnapshotWithSharing(s, job, true)
+}
+
+// Completed ordinary software reviews retain the old deny-write guarantee.
+// Live and resumed historical append-log paths keep their existing sharing
+// contract; no public request can choose the mode for a completed code review.
+func skillsNativeFrozenSnapshot(s *skillsFS, job object) (io.Reader, bool) {
+	if job["status"] != "succeeded" {
+		return nil, false
+	}
+	return skillsNativeSnapshotWithSharing(s, job, false)
+}
+
+func skillsNativeSnapshotWithSharing(s *skillsFS, job object, appendLog bool) (io.Reader, bool) {
 	id := str(job["thread_id"])
 	start, e := time.Parse(time.RFC3339Nano, str(job["started_at"]))
 	if e != nil || !skillsUUID.MatchString(id) {
@@ -214,7 +234,7 @@ func skillsNativeSnapshot(s *skillsFS, job object) (io.Reader, bool) {
 	if !ok {
 		return nil, false
 	}
-	h, ok := skillsOpenAtSharing(parent, filepath.Base(p), false, false, true)
+	h, ok := skillsOpenAtSharing(parent, filepath.Base(p), false, false, appendLog)
 	if !ok {
 		return nil, false
 	}
@@ -222,10 +242,38 @@ func skillsNativeSnapshot(s *skillsFS, job object) (io.Reader, bool) {
 	s.files = append(s.files, f)
 	info, e := f.Stat()
 	actual, e2 := ownerHandlePath(h)
-	if e != nil || e2 != nil || !same(actual, p) || !info.Mode().IsRegular() || info.Size() < 1 || info.Size() > 256<<20 {
+	if e != nil || e2 != nil || !same(actual, p) || !info.Mode().IsRegular() || info.Size() < 1 {
 		return nil, false
 	}
-	return io.LimitReader(f, info.Size()), true
+	// A long, otherwise valid session does not change its identity or scope.
+	// Freeze the observed length through this same handle. Bootstrap extraction
+	// separately stops at 4 MiB; full projections retain per-record bounds and the
+	// original task window, exact input/final/call checks and duplicate detection.
+	return &skillsNativeSnapshotReader{reader: f, remaining: info.Size()}, true
+}
+
+// Unlike LimitReader, an early underlying EOF must not authenticate a shortened
+// prefix that hides a duplicate proof from the frozen snapshot. Bootstrap may
+// deliberately stop at its separate 4MiB prefix bound; full projections drain
+// this reader and retain ErrUnexpectedEOF through their scanner error check.
+type skillsNativeSnapshotReader struct {
+	reader    io.Reader
+	remaining int64
+}
+
+func (s *skillsNativeSnapshotReader) Read(p []byte) (int, error) {
+	if s.remaining == 0 {
+		return 0, io.EOF
+	}
+	if int64(len(p)) > s.remaining {
+		p = p[:s.remaining]
+	}
+	n, err := s.reader.Read(p)
+	s.remaining -= int64(n)
+	if err == io.EOF && s.remaining > 0 {
+		err = io.ErrUnexpectedEOF
+	}
+	return n, err
 }
 
 type skillsNativeResultProof struct {
@@ -237,6 +285,7 @@ type skillsNativeResultProof struct {
 	bootstrapSHA, cwd             string
 	userSeen                      bool
 	bootstrapSeen, bootstrapBound bool
+	frozen                        bool
 }
 
 func (p *skillsNativeResultProof) observe(raw []byte, at time.Time) bool {

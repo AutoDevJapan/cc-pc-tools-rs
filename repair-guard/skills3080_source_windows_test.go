@@ -21,6 +21,10 @@ type skillsAcquiredTestData struct {
 }
 
 func skillsAcquiredFixture(t *testing.T, source, notice []byte, flat bool) skillsAcquiredTestData {
+	return skillsAcquiredFixtureLayout(t, source, notice, flat, "skills/sample/SKILL.md", "LICENSE", "license_or_notice")
+}
+
+func skillsAcquiredFixtureLayout(t *testing.T, source, notice []byte, flat bool, sourcePath, noticePath, noticeRole string) skillsAcquiredTestData {
 	t.Helper()
 	f := skillsAcquiredTestData{root: skillsFixtureRoot(t), anchors: map[string]skillsSourceAnchor{}}
 	repo := "6mile/skills"
@@ -44,9 +48,9 @@ func skillsAcquiredFixture(t *testing.T, source, notice []byte, flat bool) skill
 	}
 	rows := []skillsSavedSource{}
 	for i, raw := range [][]byte{source, notice} {
-		path, role := "skills/sample/SKILL.md", "skill_entry"
+		path, role := sourcePath, "skill_entry"
 		if i == 1 {
-			path, role = "LICENSE", "license_or_notice"
+			path, role = noticePath, noticeRole
 		}
 		blob := sha1.Sum(append([]byte("blob "+strconv.Itoa(len(raw))+"\x00"), raw...))
 		row := skillsSavedSource{Repo: repo, Commit: skillsPublicSources[repo], Path: path, Role: role, Blob: hex.EncodeToString(blob[:]), SHA: hashBytes(raw), Bytes: int64(len(raw)), Content: "objects/" + hashBytes(raw) + ".gz"}

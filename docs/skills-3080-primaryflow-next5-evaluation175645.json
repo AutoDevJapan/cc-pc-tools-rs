@@ -1,0 +1,899 @@
+{
+  "all_member_contexts_read": false,
+  "all_member_rights_confirmed": false,
+  "all_original_packets_losslessly_reconstructed": true,
+  "bound_member_metadata": 5,
+  "domain": "skills3080-primaryflow-parent-shared-snapshot-v1",
+  "entries": [
+    {
+      "bytes": 30398,
+      "git_blob": "1fc3b935538cd931b3fc7a1b2c951674f4b89316",
+      "inventory_id": "github:83c686d07e7744e36a0a8c0b174749d09ad3280b0404674ba5b304ba9dff4f19",
+      "path": "skills/informat365/informat/SKILL.md",
+      "source_commit": "920714f17d81e0a95c7a9bc51faf0a7921cd982d",
+      "source_repo": "6mile/skills",
+      "source_sha256": "00638b28f276a40fcc4664fb9ba168123982d25837fbe5b2398a2602d84c6a3e"
+    },
+    {
+      "bytes": 1867,
+      "git_blob": "c20ba1dd62992441e011206e8bd06ed76ae1eca3",
+      "inventory_id": "github:4473d335a332887e494d63bfb45ca7c8d678fea9a3eb9b5e1665b7eff5cdff86",
+      "path": "skills/flyyue5/mia-ppt-generator/SKILL.md",
+      "source_commit": "920714f17d81e0a95c7a9bc51faf0a7921cd982d",
+      "source_repo": "6mile/skills",
+      "source_sha256": "00668a0de7b4faeac087b3f96d5fbd43b1131fb56de2bcff5869108e3ea319bc"
+    },
+    {
+      "bytes": 3692,
+      "git_blob": "32c93e6023586056ad93106d0b427f863d13bcce",
+      "inventory_id": "github:6ee058d5d6017ad2d918fc964f45eb52842aa1eb4a499f3db54afad4f27d30f4",
+      "path": "skills/jiajiaoy/dailytech/SKILL.md",
+      "source_commit": "920714f17d81e0a95c7a9bc51faf0a7921cd982d",
+      "source_repo": "6mile/skills",
+      "source_sha256": "0066a020d843ae6c9a9a99cf278f68c68da30a4217d98987387f3e7de0a2fb08"
+    },
+    {
+      "bytes": 8180,
+      "git_blob": "f9efee584638d9641511f52bd6086eef7b6824e4",
+      "inventory_id": "github:d7c1df9f2f416eb53ce39c6665a9ccedb54eacad12d30d676f2617696d32c450",
+      "path": "skills/aipoch-ai/upset-plot-converter/SKILL.md",
+      "source_commit": "920714f17d81e0a95c7a9bc51faf0a7921cd982d",
+      "source_repo": "6mile/skills",
+      "source_sha256": "00686ec11650c742b20de0a53188c85b268d359d7298d4fa77bf9dfbfe95531e"
+    },
+    {
+      "bytes": 6129,
+      "git_blob": "9e9d148d6a3604b7aae4a8801a41f1c6a4d1a865",
+      "inventory_id": "github:19fc517e9e5d1da37cb2e1d5af0682af31f76f0c5c0cd9c5c49b64a4739c1894",
+      "path": "skills/mathlife/chronos/SKILL.md",
+      "source_commit": "920714f17d81e0a95c7a9bc51faf0a7921cd982d",
+      "source_repo": "6mile/skills",
+      "source_sha256": "006889a167d7d65a9b9a04e7a8404382c91391b4b066357df7f33dc31955c284"
+    }
+  ],
+  "historical_correction_sha256": "3a472843a48bace0f7de150737e012f5f87d900213415be6dc6f3c9d037b4666",
+  "historical_parent_arithmetic_correction": {
+    "body_bytes": 38448,
+    "consumer_job": "20261027-175645-todo-3080",
+    "correct_aggregate_physical": 1143,
+    "correct_aggregate_visible": 1039,
+    "correct_aggregate_withheld": 104,
+    "original_ACK_not_rewritten": true,
+    "original_individual_ranges_and_masks_unchanged": true,
+    "original_parent_meaning": "primaryflow-cohort1-meaning-1e8ad094f2524b82a43b6077a39ec834175645.json",
+    "original_parent_meaning_sha256": "8494b6838f062b676be2d11f53ad6eeb57921257afd6aa754e6e5411c26bed59",
+    "original_parent_note_aggregate_physical": 1243,
+    "original_parent_note_aggregate_visible": 1139,
+    "packet_id": "1e8ad094f2524b82a43b6077a39ec834",
+    "packet_sha256": "21363f4681a527b8a04695249d2170f58c88bb5f2e3711850c84ec5d8b40f97b",
+    "reading_permission_disposition_or_central_credit_added": 0,
+    "scope": "The final narrative paragraph had an arithmetic error; every original per-entry count/range and semantic finding remains unchanged. Use these independently recomputed totals when publishing, and preserve this correction together with the old parent note."
+  },
+  "limits": "Only the next five acknowledged representative visible meanings. Every original field, fixed source tuple, member context, mask and reader/parent ACK is retained. Individual context, supporting texts, notice/rights and adoption remain pending. No source/central object is opened or permission granted by this projection.",
+  "prior170_original_records_unchanged": true,
+  "prior_prepared170_raw_sha256": "5cead2040975a2e97ba395ca504202f74cd420fa0380bd60f6617aab65701ac5",
+  "publication_preparation": {
+    "central_operations": 0,
+    "new_final_dispositions": 0,
+    "new_global_raw_credit": 0,
+    "new_permissions": 0,
+    "new_source_body_reads": 0,
+    "public_copy_created": false
+  },
+  "publisher_job": "20261027-175645-todo-3080",
+  "records": [
+    {
+      "actual_assessment_reader": "20261028-204450-todo-4133",
+      "all_member_contexts_and_individual_rights_pending": true,
+      "bytes": 30398,
+      "cohort": 0,
+      "git_blob": "1fc3b935538cd931b3fc7a1b2c951674f4b89316",
+      "inventory_id": "github:83c686d07e7744e36a0a8c0b174749d09ad3280b0404674ba5b304ba9dff4f19",
+      "new_final_disposition": false,
+      "ordinal": 90,
+      "original_assessment": {
+        "body_bytes": 30398,
+        "body_sha256": "00638b28f276a40fcc4664fb9ba168123982d25837fbe5b2398a2602d84c6a3e",
+        "each_member_context_and_rights_pending": true,
+        "findings": [
+          "可視本文はmethod名の_company prefixでteam interface、それ以外をappIdごとのinterfaceへ振り分けると説明する。実tenant/app/対象権限や現APIへの接続は確認していない。",
+          "関連fieldはtarget table/表示field/foreign key/集計field等の実IDが必要とし、一覧と全field構造・parameter型/必須/enumを分ける。主要methodや詳細文書は伏字で未読なので具体操作が実行可能とは確認できない。",
+          "Designerのdraft、Applicationのpublished、User Operationを区別し、公開前の設定checkや公開構造照会を列挙する。設定の整合checkは実公開/動作や法的適合の証拠ではなく、draftという語だけで独立した非Prd稼働環境と確定できない。",
+          "500を未初期化/頻度/一時障害、-32601をparameter/ID不備として説明するが、実error原因は未検証。作成後の応答不明/部分成功時に再送したり、identifier重複で別IDを作ったりする案内は二重生成を防ぐ根拠に不足する。",
+          "parameterをJSON fileで渡す例、cache/on-demand/batchと詳細logを勧めるが、既存file保全・秘密最小化・cacheの版/権限/失効・batch各項目の結果は可視範囲では具体化していない。新規識別子の例も既存資源の実IDと同じではない。"
+        ],
+        "member_metadata_sha256": "6bdcd2a4d690278e9e02ce3cfc3e688c7c0e216003ec2dc8a2b0bec0bb5d38bf",
+        "member_occurrences": 1,
+        "negative": "一覧のtable IDだけで関連fieldを創作し、500やidentifier重複のたびに新IDで作成し、設定check成功を公開済み/動作済みと報告する。",
+        "ordinal": 90,
+        "positive": "指定appの実table/fieldと関連先・schema版を照合し、応答不明の作成は同じ資源ができたかを確認してから再試行を判断する。",
+        "read": {
+          "failed_view_calls": 0,
+          "mask_version": "primaryflow-v4-opaque-lexical-boundaries",
+          "ranges": [
+            {
+              "first": 1,
+              "range_sha256": "c4f16703a0b086ca1a164cff937a40089741f8a17664cd2f38b47ed4909446ea",
+              "through": 180,
+              "visible_lines": 136,
+              "withheld_physical_lines": [
+                1,
+                2,
+                3,
+                4,
+                8,
+                24,
+                28,
+                33,
+                36,
+                37,
+                55,
+                57,
+                59,
+                68,
+                70,
+                73,
+                75,
+                77,
+                78,
+                79,
+                80,
+                86,
+                87,
+                89,
+                91,
+                98,
+                99,
+                100,
+                108,
+                109,
+                110,
+                111,
+                118,
+                119,
+                120,
+                121,
+                139,
+                156,
+                159,
+                166,
+                167,
+                168,
+                179,
+                180
+              ]
+            },
+            {
+              "first": 181,
+              "range_sha256": "70fb85a89dc19c90509adbad721f608accefb442b6637c7c0b778ad8cfa799e5",
+              "through": 360,
+              "visible_lines": 96,
+              "withheld_physical_lines": [
+                182,
+                183,
+                184,
+                191,
+                192,
+                193,
+                194,
+                196,
+                197,
+                199,
+                200,
+                207,
+                208,
+                215,
+                216,
+                217,
+                218,
+                219,
+                226,
+                227,
+                228,
+                229,
+                230,
+                231,
+                237,
+                238,
+                244,
+                245,
+                246,
+                252,
+                253,
+                254,
+                255,
+                256,
+                257,
+                258,
+                259,
+                260,
+                266,
+                267,
+                268,
+                269,
+                270,
+                271,
+                278,
+                279,
+                280,
+                281,
+                282,
+                283,
+                289,
+                290,
+                291,
+                292,
+                293,
+                294,
+                295,
+                301,
+                302,
+                303,
+                304,
+                305,
+                306,
+                313,
+                314,
+                315,
+                316,
+                317,
+                318,
+                319,
+                325,
+                326,
+                327,
+                328,
+                329,
+                330,
+                331,
+                332,
+                338,
+                339,
+                340,
+                341,
+                347,
+                348
+              ]
+            },
+            {
+              "first": 361,
+              "range_sha256": "41ea1e8063bae699a7f66f41964a653d29fa3ac3abd80ff5f37031ee1df7a09a",
+              "through": 505,
+              "visible_lines": 115,
+              "withheld_physical_lines": [
+                361,
+                362,
+                363,
+                364,
+                370,
+                371,
+                372,
+                378,
+                379,
+                385,
+                386,
+                387,
+                388,
+                389,
+                396,
+                397,
+                398,
+                404,
+                410,
+                411,
+                412,
+                427,
+                428,
+                466,
+                472,
+                475,
+                481,
+                490,
+                502,
+                504
+              ]
+            }
+          ],
+          "raw_full": false,
+          "total_physical_lines": 505,
+          "unseen_meanings_remain_unknown": true,
+          "view_calls_returned": 3,
+          "whole_masked_view_sha256": "d984f4bc1b94efcf918edf6d0f7331b8db755d9ccf7b06850f356f18b6a7d607"
+        },
+        "representative_inventory_id": "github:83c686d07e7744e36a0a8c0b174749d09ad3280b0404674ba5b304ba9dff4f19",
+        "required_changes": [
+          "実対象と所有/tenant/app/公開状態を照合し、必要範囲のtable/fieldと関連・schema版/権限を確認する。methodのprefixや取得済IDの存在だけで操作権限を認めず、伏字のAPI/enumを推測しない。",
+          "読取・作成・変更・公開/automation実行を分け、同じ目的の既存資源とrequest/結果を照合する。500/重複ID/timeout時は実状態を確認し、再送で二重生成しない。batchの部分失敗/再開/復元とcacheの変更後整合も扱う。",
+          "現在のPrd/対象制限・UIの具体画像回答・秘密/費用枠と本人PC不要を保ち、原script/API・parameter保存・新app/定期処理/送信/設定を開始しない。設定check・schema・公開後の実動作/受領を別に確認する。"
+        ],
+        "source_git_blob": "1fc3b935538cd931b3fc7a1b2c951674f4b89316",
+        "status": "visible_primary_evaluated",
+        "unmet": [
+          "伏字158物理行の意味、each_member_context・支持・個別許諾・現在実在は未確認。",
+          "現行platform/API/料金・実schema/認可・変更/公開/再送/部分復旧の品質・source_or_service_rights・最終採否は未確認。parameter/支持本文や実app/data閲覧・script/API/設定/保存/定期登録/送信/公開・実配置・実使用0。近接比較はdomain-modeling、backend-correctness、stale-request-orderingの起動metadataだけ。"
+        ],
+        "use": "業務platformで、実app/table/fieldの構造・関連先と操作種別を照合し、照会と変更を分ける設計の参考。",
+        "value": "table一覧だけでなくfield/関連先のIDとparameter文書を確認し、既存scriptを更新時に重複作成しない点が具体的。"
+      },
+      "original_packet_sha256": "bc87dc2f43a924dc7e140fec1dc4d42a144e9ca5b26e37235435857cb3305a83",
+      "path": "skills/informat365/informat/SKILL.md",
+      "representative_body_meaning_only": true,
+      "source_commit": "920714f17d81e0a95c7a9bc51faf0a7921cd982d",
+      "source_repo": "6mile/skills",
+      "source_sha256": "00638b28f276a40fcc4664fb9ba168123982d25837fbe5b2398a2602d84c6a3e"
+    },
+    {
+      "actual_assessment_reader": "20261028-204450-todo-4133",
+      "all_member_contexts_and_individual_rights_pending": true,
+      "bytes": 1867,
+      "cohort": 0,
+      "git_blob": "c20ba1dd62992441e011206e8bd06ed76ae1eca3",
+      "inventory_id": "github:4473d335a332887e494d63bfb45ca7c8d678fea9a3eb9b5e1665b7eff5cdff86",
+      "new_final_disposition": false,
+      "ordinal": 91,
+      "original_assessment": {
+        "body_bytes": 1867,
+        "body_sha256": "00668a0de7b4faeac087b3f96d5fbd43b1131fb56de2bcff5869108e3ea319bc",
+        "each_member_context_and_rights_pending": true,
+        "findings": [
+          "可視本文はReveal.jsによるHTML、インラインCSS/script、keyboard/遷移、Feishu toolで画像download、生成物の保存/送付を案内する。現tool・出力fileや配送結果は確認していない。",
+          "毎pageの画像/icon・公開icon library・公式製品画像の利用を推奨するが、出典の公開と素材の個別利用権/内容の正確性は別である。single-fileだけで外部依存なしや動作/可搬性を証明しない。"
+        ],
+        "member_metadata_sha256": "4e05be1360fa2de966bf43d0a4d1826625f4d238e6c2705c64d43e373226befb",
+        "member_occurrences": 1,
+        "negative": "公式サイトの画像なら自由と判断し、毎pageをiconで埋め、HTMLができただけで正しいPPT/配送済みと報告する。",
+        "ordinal": 91,
+        "positive": "確認済みの内容と参照に沿う構成案を作り、方向決定後の実スライドを全pageで表示/操作し、出典と配布結果を確認する。",
+        "read": {
+          "failed_view_calls": 0,
+          "mask_version": "primaryflow-v4-opaque-lexical-boundaries",
+          "ranges": [
+            {
+              "first": 1,
+              "range_sha256": "b4948bbf6c78208f8d2719a728737af033a5953e0a06cf9fad2887bb03c38450",
+              "through": 54,
+              "visible_lines": 49,
+              "withheld_physical_lines": [
+                1,
+                2,
+                3,
+                4,
+                43
+              ]
+            }
+          ],
+          "raw_full": false,
+          "total_physical_lines": 54,
+          "unseen_meanings_remain_unknown": true,
+          "view_calls_returned": 1,
+          "whole_masked_view_sha256": "b4948bbf6c78208f8d2719a728737af033a5953e0a06cf9fad2887bb03c38450"
+        },
+        "representative_inventory_id": "github:4473d335a332887e494d63bfb45ca7c8d678fea9a3eb9b5e1665b7eff5cdff86",
+        "required_changes": [
+          "既存の主題/読者/本人回答と事実/発言者を確定し、具体画像の方向への本人回答後に実装する。画像/iconを件数で強制せず、素材権/出典と必要な情報階層/可読性を確認する。",
+          "生成時はsourceのHTML/script/外部資源を安全に扱い、対象画面・全page・文字/図/keyboard・offline/配布条件と実配送を確認する。原tool/取得・保存/送信をこの研究から始めない。"
+        ],
+        "source_git_blob": "c20ba1dd62992441e011206e8bd06ed76ae1eca3",
+        "status": "visible_primary_evaluated",
+        "unmet": [
+          "伏字5物理行の意味、each_member_context・支持・個別許諾・現在実在は未確認。",
+          "現行Reveal/tool/依存・素材権/画質/操作/配布品質・source_or_service_rights・最終採否は未確認。参照取得・画像/HTML生成・script/保存/送信・実配置・実使用0。近接比較はdocuments-slides-data、presentations:Presentations、ui-accessibilityの起動metadataだけ。"
+        ],
+        "use": "発表の主題・対象読者・参照と、表紙/本文/結びの構成をHTMLスライドへ結ぶ制作計画の候補。",
+        "value": "内容と見た目を先に集め、実製品の参照を区別する構成があるが、実スライドの品質は未確認。"
+      },
+      "original_packet_sha256": "b8321659307b145070cc059a0a73df6fd1877fa0133e0e921276601b53168f82",
+      "path": "skills/flyyue5/mia-ppt-generator/SKILL.md",
+      "representative_body_meaning_only": true,
+      "source_commit": "920714f17d81e0a95c7a9bc51faf0a7921cd982d",
+      "source_repo": "6mile/skills",
+      "source_sha256": "00668a0de7b4faeac087b3f96d5fbd43b1131fb56de2bcff5869108e3ea319bc"
+    },
+    {
+      "actual_assessment_reader": "20261028-204450-todo-4133",
+      "all_member_contexts_and_individual_rights_pending": true,
+      "bytes": 3692,
+      "cohort": 0,
+      "git_blob": "32c93e6023586056ad93106d0b427f863d13bcce",
+      "inventory_id": "github:6ee058d5d6017ad2d918fc964f45eb52842aa1eb4a499f3db54afad4f27d30f4",
+      "new_final_disposition": false,
+      "ordinal": 92,
+      "original_assessment": {
+        "body_bytes": 3692,
+        "body_sha256": "0066a020d843ae6c9a9a99cf278f68c68da30a4217d98987387f3e7de0a2fb08",
+        "each_member_context_and_rights_pending": true,
+        "findings": [
+          "可視本文は3〜4searchで当日のAI/起業/製品/地域を探し、5〜6記事を選びEN/CNで要約する手順を示す。50M超の調達等の閾値・AI/Asiaの最低件数は原の選定案で、全候補調査や事実の件数上限ではない。",
+          "dark theme/特定font/animation/広告用div/固有footerを指定するが、本人がその見た目/ブランド/広告を選んだ証拠ではない。6stories/3分のstats例も実件数/実測の読了時間でない。",
+          "朝夕のpush-toggleと時刻/宛先channelを示すが、timezone・重複防止・再送/未配・停止/再開の実結果や現利用条件は未確認。検索/送信は実行していない。"
+        ],
+        "member_metadata_sha256": "db090cee56da530d15f9e7aedcff958725faeb84a9ace2fafe6fffa9c50c8554",
+        "member_occurrences": 1,
+        "negative": "検索titleと古い記事で当日の重要ニュース6件を作り、stats/広告/固有footerをそのまま載せ、朝夕の定期送信を無指定で有効にする。",
+        "ordinal": 92,
+        "positive": "対象日の確認済み記事を元sourceと発生日/公開日へ結び、読者に必要な理由と未確認事項を示し、配信は依頼された版/宛先の受領を確認する。",
+        "read": {
+          "failed_view_calls": 0,
+          "mask_version": "primaryflow-v4-opaque-lexical-boundaries",
+          "ranges": [
+            {
+              "first": 1,
+              "range_sha256": "c74848b2b9ba39fc905bbc28e946db1f0ffc0ad97503a87c39cf0fa934c8eead",
+              "through": 91,
+              "visible_lines": 57,
+              "withheld_physical_lines": [
+                1,
+                2,
+                3,
+                4,
+                5,
+                6,
+                7,
+                8,
+                9,
+                10,
+                11,
+                12,
+                13,
+                14,
+                15,
+                16,
+                17,
+                18,
+                19,
+                20,
+                21,
+                22,
+                23,
+                24,
+                25,
+                26,
+                27,
+                28,
+                29,
+                50,
+                53,
+                54,
+                55,
+                71
+              ]
+            }
+          ],
+          "raw_full": false,
+          "total_physical_lines": 91,
+          "unseen_meanings_remain_unknown": true,
+          "view_calls_returned": 1,
+          "whole_masked_view_sha256": "c74848b2b9ba39fc905bbc28e946db1f0ffc0ad97503a87c39cf0fa934c8eead"
+        },
+        "representative_inventory_id": "github:6ee058d5d6017ad2d918fc964f45eb52842aa1eb4a499f3db54afad4f27d30f4",
+        "required_changes": [
+          "実利用時は発生/公開/取得日とtimezone、元source/訂正・選定範囲/理由を結び、保存の価格/調達/法や新製品の主張を現在保証にしない。言語間で数値/否定/未確定を保ち、記事枠のため未知の話を作らない。",
+          "読者/日本語報告と既存の本人回答・実件数に合わせ、既定の見た目/広告/ブランドを一律採用しない。UIは具体画像への回答後に実装し、素材/font権・実表示を確認する。",
+          "原の定期配信/外部tool/scriptを開始せず、既存の通知条件・本人メンションの要否と宛先を保持する。登録/起動/記事取得/生成/実配送を別に照合して重複や古い記事の再送を防ぐ。"
+        ],
+        "source_git_blob": "32c93e6023586056ad93106d0b427f863d13bcce",
+        "status": "visible_primary_evaluated",
+        "unmet": [
+          "伏字34物理行の意味、each_member_context・支持・個別許諾・現在実在は未確認。",
+          "現ニュース/仕様/価格/法・記事/素材の権利・選定/翻訳/表示/配送品質・source_or_service_rights・最終採否は未確認。外部記事/支持本文閲覧・検索/HTML生成・script/定期登録/送信・実配置・実使用0。近接比較はsocial-media-research、source-grounded-content-review、observability-notificationsの起動metadataだけ。"
+        ],
+        "use": "日付・読者・出典へ結んだ技術ニュースの選定と要約、視覚化と定期配送を分ける編集計画の候補。",
+        "value": "各記事の見出し・短い説明・source/tagを分ける雛形があるが、現在の出来事や重要度を検証した資料ではない。"
+      },
+      "original_packet_sha256": "b8321659307b145070cc059a0a73df6fd1877fa0133e0e921276601b53168f82",
+      "path": "skills/jiajiaoy/dailytech/SKILL.md",
+      "representative_body_meaning_only": true,
+      "source_commit": "920714f17d81e0a95c7a9bc51faf0a7921cd982d",
+      "source_repo": "6mile/skills",
+      "source_sha256": "0066a020d843ae6c9a9a99cf278f68c68da30a4217d98987387f3e7de0a2fb08"
+    },
+    {
+      "actual_assessment_reader": "20261028-204450-todo-4133",
+      "all_member_contexts_and_individual_rights_pending": true,
+      "bytes": 8180,
+      "cohort": 0,
+      "git_blob": "f9efee584638d9641511f52bd6086eef7b6824e4",
+      "inventory_id": "github:d7c1df9f2f416eb53ce39c6665a9ccedb54eacad12d30d676f2617696d32c450",
+      "new_final_disposition": false,
+      "ordinal": 93,
+      "original_assessment": {
+        "body_bytes": 8180,
+        "body_sha256": "00686ec11650c742b20de0a53188c85b268d359d7298d4fa77bf9dfbfe95531e",
+        "each_member_context_and_rights_pending": true,
+        "findings": [
+          "可視本文はsetsかset_names/listsからPNGへ出力するとし、図の交差をsize順で表示する。Venn画像そのものからmembershipを復元する手順や実変換結果は示していない。",
+          "min_subset_size=1、max_intersections=30というdefaultがあるが、排他的/包含的な交差、未表示分・全体件数の整合、重複/欠測・空集合の処理は可視範囲で確定しない。表示上限は固定研究群を打ち切る条件ではない。",
+          "py_compile/help/mainの実行例、in-file CONFIG編集、未指定versionの依存と下方のpandas要件、Draftと未checkの評価欄がある。parse成功やknown issuesなしは品質/動作の実証でない。",
+          "上へ参照とするUsage/Prerequisites/Workflowが実際は後方にあり、具体的なfallbackは主に失敗説明/手作業の案内にとどまる。networkなし・workspace出力なら低riskという自己評価も未検証。"
+        ],
+        "member_metadata_sha256": "aa2078981c88c41b28bc0e177f945f75c7661c3d3a39fffb164c520e217aa6d5",
+        "member_occurrences": 1,
+        "negative": "Venn画像から不明な集合要素を推測し、上位30交差だけを全結果と呼び、parse成功で正しい図ができたとする。",
+        "ordinal": 93,
+        "positive": "元membershipに戻って交差件数とlabelを照合し、上位だけ表示した場合は残りの数と表示条件を添える。",
+        "read": {
+          "failed_view_calls": 0,
+          "mask_version": "primaryflow-v4-opaque-lexical-boundaries",
+          "ranges": [
+            {
+              "first": 1,
+              "range_sha256": "6ddeef4ccbffd2e9da1ba3d45a90e7b35d5d8ada334c2772f5406f9dc17709c0",
+              "through": 180,
+              "visible_lines": 168,
+              "withheld_physical_lines": [
+                1,
+                2,
+                3,
+                4,
+                5,
+                6,
+                36,
+                85,
+                95,
+                98,
+                107,
+                150
+              ]
+            },
+            {
+              "first": 181,
+              "range_sha256": "7f68deae0ce13b38af8b68e249fbe4973b07cc29aa8092a7b5256a3e1d036c86",
+              "through": 228,
+              "visible_lines": 47,
+              "withheld_physical_lines": [
+                184
+              ]
+            }
+          ],
+          "raw_full": false,
+          "total_physical_lines": 228,
+          "unseen_meanings_remain_unknown": true,
+          "view_calls_returned": 2,
+          "whole_masked_view_sha256": "2a133baaf2ba14f93a16c84208e387a1beab31c2423c1e7c7152aafc7033c16b"
+        },
+        "representative_inventory_id": "github:d7c1df9f2f416eb53ce39c6665a9ccedb54eacad12d30d676f2617696d32c450",
+        "required_changes": [
+          "元の集合データと要素ID/型・重複/欠測・集合名/順序・交差の定義を確定し、各barと全体/集合別件数を照合する。省略/thresholdと未表示量を明記し、画像だけから不明なmembershipを捏造しない。",
+          "sortの同数時・空/不正/大規模入力を扱い、実図の点とlabel/bar・文字/色/寸法/出力を確認する。gene名の例を生物/医学的な結論にしない。",
+          "原script/py_compile/pip/CONFIG変更を始めず、新規機能はGo既定を保つ。依存/参照/CLIと実動作を照合し、生成物を実確認する前に完成/品質保証へしない。"
+        ],
+        "source_git_blob": "f9efee584638d9641511f52bd6086eef7b6824e4",
+        "status": "visible_primary_evaluated",
+        "unmet": [
+          "伏字13物理行の意味、each_member_context・支持・個別許諾・現在実在は未確認。",
+          "現行依存/CLI・集合計算/図/性能/fallback・source_or_service_rights・最終採否は未確認。原データ/支持本文閲覧・script/compile/install・図生成/表示/保存・実配置・実使用0。近接比較はdocuments-slides-data、evidence-based-text-reviewの起動metadataだけ。"
+        ],
+        "use": "複数集合のmembershipと交差件数を、見やすいUpSet図へ結ぶ可視化設計の候補。",
+        "value": "集合名/要素・出力・最小subset/最大表示数と、点pattern/棒の件数を区別する説明がある。"
+      },
+      "original_packet_sha256": "d4a90afc80f8f36897e13581fe597ecb785bd4ea551a6bd82a75118d7d499a30",
+      "path": "skills/aipoch-ai/upset-plot-converter/SKILL.md",
+      "representative_body_meaning_only": true,
+      "source_commit": "920714f17d81e0a95c7a9bc51faf0a7921cd982d",
+      "source_repo": "6mile/skills",
+      "source_sha256": "00686ec11650c742b20de0a53188c85b268d359d7298d4fa77bf9dfbfe95531e"
+    },
+    {
+      "actual_assessment_reader": "20261028-204450-todo-4133",
+      "all_member_contexts_and_individual_rights_pending": true,
+      "bytes": 6129,
+      "cohort": 0,
+      "git_blob": "9e9d148d6a3604b7aae4a8801a41f1c6a4d1a865",
+      "inventory_id": "github:19fc517e9e5d1da37cb2e1d5af0682af31f76f0c5c0cd9c5c49b64a4739c1894",
+      "new_final_disposition": false,
+      "ordinal": 94,
+      "original_assessment": {
+        "body_bytes": 6129,
+        "body_sha256": "006889a167d7d65a9b9a04e7a8404382c91391b4b066357df7f33dc31955c284",
+        "each_member_context_and_rights_pending": true,
+        "findings": [
+          "可視本文はonce/daily/hourly/週/月の型、canonicalとlegacy entries、explicit system handlerと統合list/add/complete/skipを説明する。実DBや現在の共有ToDoとの関係は確認していない。",
+          "listで今日のoccurrenceを自動生成する説明があり、一覧commandでもread-onlyの保証ではない。todo.dbという同名だけで現PCの共有ToDoを操作する許可にはならない。",
+          "completedだけがquotaを消費し、満額で当月の残活動日を自動完了する。quota到達/予定停止と、その回の実作業完了を混同できない。過去時刻の補送/補完了やlegacy fallbackも実施結果/未実施の区別が未検証。",
+          "hourly anchorや跨月range/31日、月次reset・chat必須/overrideとcron掃除を示すが、timezone/DST・月末/起動遅延・競合/二重生成/配送ACK・原履歴保持の条件は可視範囲では不足する。"
+        ],
+        "member_metadata_sha256": "f801154b221c101a378692adccf955753709ff410738c5a996a00c55c761bb46",
+        "member_occurrences": 1,
+        "negative": "listは読取だけと決めて共有DBを更新し、quota達成時の未来回や過去時刻の補完了を実作業済みと報告する。",
+        "ordinal": 94,
+        "positive": "同じtaskの予定回を一意に照合し、skip/quotaによる停止と実配送/実作業完了を別の状態で残す。",
+        "read": {
+          "failed_view_calls": 0,
+          "mask_version": "primaryflow-v4-opaque-lexical-boundaries",
+          "ranges": [
+            {
+              "first": 1,
+              "range_sha256": "10adbed8b6601f42f8347558f848295e63d5c41af7c47c0d871992851900530a",
+              "through": 144,
+              "visible_lines": 114,
+              "withheld_physical_lines": [
+                1,
+                2,
+                3,
+                4,
+                49,
+                50,
+                51,
+                57,
+                69,
+                72,
+                75,
+                82,
+                88,
+                96,
+                98,
+                102,
+                108,
+                111,
+                118,
+                119,
+                122,
+                123,
+                126,
+                127,
+                130,
+                131,
+                132,
+                135,
+                142,
+                143
+              ]
+            }
+          ],
+          "raw_full": false,
+          "total_physical_lines": 144,
+          "unseen_meanings_remain_unknown": true,
+          "view_calls_returned": 1,
+          "whole_masked_view_sha256": "a268af34cf8ca4c031fb68396fc93426db66f6320574d211c85a0d67b66b7dd9"
+        },
+        "representative_inventory_id": "github:19fc517e9e5d1da37cb2e1d5af0682af31f76f0c5c0cd9c5c49b64a4739c1894",
+        "required_changes": [
+          "実taskID・定義版・各occurrenceの予定/実行/受領/完了/skip/quota到達を分け、未実行の回を実完了へ計上しない。曖昧な自然日付や月末/DST、backfillの対象と世代を明示する。",
+          "DB/workspace/handler/宛先と既存処理の所有を照合し、生成/回収/再試行と送信を一意な回へ結んで、競合/応答不明の二重生成/二重配送を防ぐ。残quotaと実完了の月次整合を確認する。",
+          "現在の正規scheduler/共有ToDo・同じ担当/cursorと親の保存/ACKを保持し、原list/complete/補完了・handler・cron/DBの操作を始めない。停止/削除前に未完了/原履歴を保ち、通常技術待ちを本人判断に変えない。"
+        ],
+        "source_git_blob": "9e9d148d6a3604b7aae4a8801a41f1c6a4d1a865",
+        "status": "visible_primary_evaluated",
+        "unmet": [
+          "伏字30物理行の意味、each_member_context・支持・個別許諾・現在実在は未確認。",
+          "現行tool/DB/migration/handler・時刻/競合/quota/回収/配送の品質・source_or_service_rights・最終採否は未確認。DB/支持本文閲覧・原list/script/complete/skip/補完了・定期登録/掃除/送信・実配置・実使用0。近接比較はbounded-batch-cursor-starvation、stale-request-ordering、agent-job-managementの起動metadataだけ。"
+        ],
+        "use": "周期taskの定義と各回のoccurrence・実完了/skip・quota/配送を分ける設計の参考。",
+        "value": "明示宛先を必須にし、曖昧なlast宛先へ送らない点と、task/occurrenceの別管理を示す。"
+      },
+      "original_packet_sha256": "d4a90afc80f8f36897e13581fe597ecb785bd4ea551a6bd82a75118d7d499a30",
+      "path": "skills/mathlife/chronos/SKILL.md",
+      "representative_body_meaning_only": true,
+      "source_commit": "920714f17d81e0a95c7a9bc51faf0a7921cd982d",
+      "source_repo": "6mile/skills",
+      "source_sha256": "006889a167d7d65a9b9a04e7a8404382c91391b4b066357df7f33dc31955c284"
+    }
+  ],
+  "representative_body_groups": 5,
+  "shared_original_contexts": {
+    "b8321659307b145070cc059a0a73df6fd1877fa0133e0e921276601b53168f82": {
+      "actual_assessment_reader": "20261028-204450-todo-4133",
+      "all_original_fields_reconstructed": true,
+      "common": {
+        "boundaries": {
+          "central_operations": 0,
+          "copy_grants": 0,
+          "final_dispositions": 0,
+          "new_global_raw_credit": 0,
+          "source_executed": false,
+          "support_body_reads": 0
+        },
+        "cohort": 0,
+        "domain": "skills3080-primary-meaning-chunk-v1",
+        "first_ordinal": 91,
+        "packet_id": "e9dba0229fa1470da218407bd930e73b",
+        "parent_origin_job": "20261027-175645-todo-3080",
+        "plan_sha256": "edb8069e0564eb3b95fd0863865b66c4e0b1d3fb994990c6701bcc624678cabf",
+        "reader_job": "20261028-204450-todo-4133",
+        "reader_todo": 4133
+      },
+      "independent_parent_ack": {
+        "acknowledged_through": 92,
+        "at": "2026-10-28T16:04:39.9205777Z",
+        "binding_sha256": "269fe9fcd42342587cb50a5148da5819617ad03b27a9269d9beb5d0174fd2f6f",
+        "cohort": 0,
+        "consumer_job": "20261027-175645-todo-3080",
+        "cumulative_held_groups": 0,
+        "cumulative_member_metadata_bound": 97,
+        "cumulative_visible_semantic_groups": 92,
+        "domain": "skills3080-primaryflow-parent-ack-v1",
+        "generation": 27,
+        "meaning_file": "primaryflow-cohort0-meaning-e9dba0229fa1470da218407bd930e73b175645.json",
+        "meaning_sha256": "bb98dea84575e52702efb27b18269fbd3cc0b2d681fda2fbd3d8f027037ec6c5",
+        "original_message_sha256": "2f3e9ed77096893a569df09d00b9d6a74a798398693af7d70b30b5bb718c3c44",
+        "packet_file": "primaryflow-cohort0-packet-e9dba0229fa1470da218407bd930e73b175645.json",
+        "packet_id": "e9dba0229fa1470da218407bd930e73b",
+        "packet_sha256": "b8321659307b145070cc059a0a73df6fd1877fa0133e0e921276601b53168f82",
+        "parent_origin_job": "20261027-175645-todo-3080",
+        "plan_sha256": "edb8069e0564eb3b95fd0863865b66c4e0b1d3fb994990c6701bcc624678cabf",
+        "previous_sha256": "6818c2380e36077067b49844f18c92b3b8e5890d6d48e7841cca59a3b207b325",
+        "reader_job": "20261028-204450-todo-4133",
+        "receipt_sha256": "323aa9be54821097545eb92bd7f5718d82c493c73f09f1f5c287a525d969a435",
+        "whole16_complete": false
+      },
+      "member_metadata": {
+        "91": [
+          {
+            "bytes": 1867,
+            "commit": "920714f17d81e0a95c7a9bc51faf0a7921cd982d",
+            "content_path": "github/6mile__skills/objects/00668a0de7b4faeac087b3f96d5fbd43b1131fb56de2bcff5869108e3ea319bc.gz",
+            "git_blob": "c20ba1dd62992441e011206e8bd06ed76ae1eca3",
+            "inventory_id": "github:4473d335a332887e494d63bfb45ca7c8d678fea9a3eb9b5e1665b7eff5cdff86",
+            "path": "skills/flyyue5/mia-ppt-generator/SKILL.md",
+            "repo": "6mile/skills",
+            "sha256": "00668a0de7b4faeac087b3f96d5fbd43b1131fb56de2bcff5869108e3ea319bc"
+          }
+        ],
+        "92": [
+          {
+            "bytes": 3692,
+            "commit": "920714f17d81e0a95c7a9bc51faf0a7921cd982d",
+            "content_path": "github/6mile__skills/objects/0066a020d843ae6c9a9a99cf278f68c68da30a4217d98987387f3e7de0a2fb08.gz",
+            "git_blob": "32c93e6023586056ad93106d0b427f863d13bcce",
+            "inventory_id": "github:6ee058d5d6017ad2d918fc964f45eb52842aa1eb4a499f3db54afad4f27d30f4",
+            "path": "skills/jiajiaoy/dailytech/SKILL.md",
+            "repo": "6mile/skills",
+            "sha256": "0066a020d843ae6c9a9a99cf278f68c68da30a4217d98987387f3e7de0a2fb08"
+          }
+        ]
+      },
+      "original_packet_id": "e9dba0229fa1470da218407bd930e73b",
+      "original_parent_ack_sha256": "a5631f7bae2c4510e45e1feef361baf111ca170760757a70b0d658183dc5bb6e",
+      "original_receipt_sha256": "323aa9be54821097545eb92bd7f5718d82c493c73f09f1f5c287a525d969a435"
+    },
+    "bc87dc2f43a924dc7e140fec1dc4d42a144e9ca5b26e37235435857cb3305a83": {
+      "actual_assessment_reader": "20261028-204450-todo-4133",
+      "all_original_fields_reconstructed": true,
+      "common": {
+        "boundaries": {
+          "central_operations": 0,
+          "copy_grants": 0,
+          "final_dispositions": 0,
+          "new_global_raw_credit": 0,
+          "source_executed": false,
+          "support_body_reads": 0
+        },
+        "cohort": 0,
+        "domain": "skills3080-primary-meaning-chunk-v1",
+        "first_ordinal": 90,
+        "packet_id": "7bce0f847887411a8d574f48f79eb5f6",
+        "parent_origin_job": "20261027-175645-todo-3080",
+        "plan_sha256": "edb8069e0564eb3b95fd0863865b66c4e0b1d3fb994990c6701bcc624678cabf",
+        "reader_job": "20261028-204450-todo-4133",
+        "reader_todo": 4133
+      },
+      "independent_parent_ack": {
+        "acknowledged_through": 90,
+        "at": "2026-10-28T14:50:41.4913905Z",
+        "binding_sha256": "269fe9fcd42342587cb50a5148da5819617ad03b27a9269d9beb5d0174fd2f6f",
+        "cohort": 0,
+        "consumer_job": "20261027-175645-todo-3080",
+        "cumulative_held_groups": 0,
+        "cumulative_member_metadata_bound": 95,
+        "cumulative_visible_semantic_groups": 90,
+        "domain": "skills3080-primaryflow-parent-ack-v1",
+        "generation": 26,
+        "meaning_file": "primaryflow-cohort0-meaning-7bce0f847887411a8d574f48f79eb5f6175645.json",
+        "meaning_sha256": "8e7de1274777fc7a0fbcc0688a4ffe2eeb7f4f154e805c24fee6908c28b75b2a",
+        "original_message_sha256": "d2bd9540949215c349cfaeb0e743b48e129c30f68710a741a734b14fa1e65d3f",
+        "packet_file": "primaryflow-cohort0-packet-7bce0f847887411a8d574f48f79eb5f6175645.json",
+        "packet_id": "7bce0f847887411a8d574f48f79eb5f6",
+        "packet_sha256": "bc87dc2f43a924dc7e140fec1dc4d42a144e9ca5b26e37235435857cb3305a83",
+        "parent_origin_job": "20261027-175645-todo-3080",
+        "plan_sha256": "edb8069e0564eb3b95fd0863865b66c4e0b1d3fb994990c6701bcc624678cabf",
+        "previous_sha256": "4803e326ffb4b26ead137092f9c4621202cefe0f9b3af83320b54272bd770e11",
+        "reader_job": "20261028-204450-todo-4133",
+        "receipt_sha256": "7467c7dc0512405f6412227eb8b739c4f092044799b0e599bb9fa8bcab0a4e38",
+        "whole16_complete": false
+      },
+      "member_metadata": {
+        "90": [
+          {
+            "bytes": 30398,
+            "commit": "920714f17d81e0a95c7a9bc51faf0a7921cd982d",
+            "content_path": "github/6mile__skills/objects/00638b28f276a40fcc4664fb9ba168123982d25837fbe5b2398a2602d84c6a3e.gz",
+            "git_blob": "1fc3b935538cd931b3fc7a1b2c951674f4b89316",
+            "inventory_id": "github:83c686d07e7744e36a0a8c0b174749d09ad3280b0404674ba5b304ba9dff4f19",
+            "path": "skills/informat365/informat/SKILL.md",
+            "repo": "6mile/skills",
+            "sha256": "00638b28f276a40fcc4664fb9ba168123982d25837fbe5b2398a2602d84c6a3e"
+          }
+        ]
+      },
+      "original_packet_id": "7bce0f847887411a8d574f48f79eb5f6",
+      "original_parent_ack_sha256": "6818c2380e36077067b49844f18c92b3b8e5890d6d48e7841cca59a3b207b325",
+      "original_receipt_sha256": "7467c7dc0512405f6412227eb8b739c4f092044799b0e599bb9fa8bcab0a4e38"
+    },
+    "d4a90afc80f8f36897e13581fe597ecb785bd4ea551a6bd82a75118d7d499a30": {
+      "actual_assessment_reader": "20261028-204450-todo-4133",
+      "all_original_fields_reconstructed": true,
+      "common": {
+        "boundaries": {
+          "central_operations": 0,
+          "copy_grants": 0,
+          "final_dispositions": 0,
+          "new_global_raw_credit": 0,
+          "source_executed": false,
+          "support_body_reads": 0
+        },
+        "cohort": 0,
+        "domain": "skills3080-primary-meaning-chunk-v1",
+        "first_ordinal": 93,
+        "packet_id": "9ef60aa27f264b08b82c4392d7e6ad50",
+        "parent_origin_job": "20261027-175645-todo-3080",
+        "plan_sha256": "edb8069e0564eb3b95fd0863865b66c4e0b1d3fb994990c6701bcc624678cabf",
+        "reader_job": "20261028-204450-todo-4133",
+        "reader_todo": 4133
+      },
+      "independent_parent_ack": {
+        "acknowledged_through": 94,
+        "at": "2026-10-28T16:53:43.3718228Z",
+        "binding_sha256": "269fe9fcd42342587cb50a5148da5819617ad03b27a9269d9beb5d0174fd2f6f",
+        "cohort": 0,
+        "consumer_job": "20261027-175645-todo-3080",
+        "cumulative_held_groups": 0,
+        "cumulative_member_metadata_bound": 99,
+        "cumulative_visible_semantic_groups": 94,
+        "domain": "skills3080-primaryflow-parent-ack-v1",
+        "generation": 28,
+        "meaning_file": "primaryflow-cohort0-meaning-9ef60aa27f264b08b82c4392d7e6ad50175645.json",
+        "meaning_sha256": "6a910e6aecfd4c89b653d406011aec70196b2b7910ebab5eaa38cf2761b24aa3",
+        "original_message_sha256": "b8b1453c6db5c8538098d946e990b977526f809f5e657915c452c48c5020a52a",
+        "packet_file": "primaryflow-cohort0-packet-9ef60aa27f264b08b82c4392d7e6ad50175645.json",
+        "packet_id": "9ef60aa27f264b08b82c4392d7e6ad50",
+        "packet_sha256": "d4a90afc80f8f36897e13581fe597ecb785bd4ea551a6bd82a75118d7d499a30",
+        "parent_origin_job": "20261027-175645-todo-3080",
+        "plan_sha256": "edb8069e0564eb3b95fd0863865b66c4e0b1d3fb994990c6701bcc624678cabf",
+        "previous_sha256": "a5631f7bae2c4510e45e1feef361baf111ca170760757a70b0d658183dc5bb6e",
+        "reader_job": "20261028-204450-todo-4133",
+        "receipt_sha256": "9695621c55f29abc6b0cdb16163fd09a9cd01ec1178104ff9e0fc67d56ae57de",
+        "whole16_complete": false
+      },
+      "member_metadata": {
+        "93": [
+          {
+            "bytes": 8180,
+            "commit": "920714f17d81e0a95c7a9bc51faf0a7921cd982d",
+            "content_path": "github/6mile__skills/objects/00686ec11650c742b20de0a53188c85b268d359d7298d4fa77bf9dfbfe95531e.gz",
+            "git_blob": "f9efee584638d9641511f52bd6086eef7b6824e4",
+            "inventory_id": "github:d7c1df9f2f416eb53ce39c6665a9ccedb54eacad12d30d676f2617696d32c450",
+            "path": "skills/aipoch-ai/upset-plot-converter/SKILL.md",
+            "repo": "6mile/skills",
+            "sha256": "00686ec11650c742b20de0a53188c85b268d359d7298d4fa77bf9dfbfe95531e"
+          }
+        ],
+        "94": [
+          {
+            "bytes": 6129,
+            "commit": "920714f17d81e0a95c7a9bc51faf0a7921cd982d",
+            "content_path": "github/6mile__skills/objects/006889a167d7d65a9b9a04e7a8404382c91391b4b066357df7f33dc31955c284.gz",
+            "git_blob": "9e9d148d6a3604b7aae4a8801a41f1c6a4d1a865",
+            "inventory_id": "github:19fc517e9e5d1da37cb2e1d5af0682af31f76f0c5c0cd9c5c49b64a4739c1894",
+            "path": "skills/mathlife/chronos/SKILL.md",
+            "repo": "6mile/skills",
+            "sha256": "006889a167d7d65a9b9a04e7a8404382c91391b4b066357df7f33dc31955c284"
+          }
+        ]
+      },
+      "original_packet_id": "9ef60aa27f264b08b82c4392d7e6ad50",
+      "original_parent_ack_sha256": "5259bd6d70dffaa758f0d5dae0b7ca90fcb937b0614cbae3d9ae78a2600bae49",
+      "original_receipt_sha256": "9695621c55f29abc6b0cdb16163fd09a9cd01ec1178104ff9e0fc67d56ae57de"
+    }
+  },
+  "slice": [
+    {
+      "after": 89,
+      "cohort": 0,
+      "new_member_metadata": 5,
+      "new_semantic_groups": 5,
+      "through": 94
+    }
+  ],
+  "source_full175_snapshot_sha256": "6b46ff3a32144b4dbe04b0f2d6f90d4485423795c7f51119cc4e7280c2c2d84d",
+  "whole16_complete": false
+}

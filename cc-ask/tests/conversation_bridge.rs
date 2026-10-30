@@ -848,6 +848,12 @@ fn conversation_bridge_resumed_actor_keeps_original_question_identity() {
 fn conversation_bridge_exposes_only_fixed_failure_stages() {
     for stage in [
         "actor_scope",
+        "sender_origin_scope",
+        "sender_source_scope",
+        "sender_busy",
+        "sender_network",
+        "sender_rate_limited",
+        "sender_deadline",
         "task_scope",
         "original_task",
         "input_mismatch",

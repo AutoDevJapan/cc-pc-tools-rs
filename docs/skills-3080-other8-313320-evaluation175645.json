@@ -1,0 +1,1542 @@
+{
+  "all_original_selected_chunks_losslessly_reconstructed": true,
+  "central_operations": 0,
+  "context_resolution": "Each record.original_chunk_sha256 selects shared_original_contexts[sha].common; add that chunk's ordered original_assessment values as entries and canonical-JSON SHA256 must equal sha. All common fields, including definitions, input_validation, privacy, notice and boundaries, are preserved once.",
+  "domain": "other373-parent-received-shared-snapshot-v3",
+  "first_ordinal": 313,
+  "last_ordinal": 320,
+  "limits": "This shares complete already acknowledged structured evidence, not original source bodies. Original actors, masks, unknown/partial/unread states and opaque path references remain unchanged; no grant, execution, adoption, current physical continuity or new reading is established.",
+  "materializer_job": "20261027-175645-todo-3080",
+  "new_copy_grants": 0,
+  "new_final_dispositions": 0,
+  "new_raw_or_unique_credit": 0,
+  "new_source_body_reads": 0,
+  "parent_acknowledged_through_at_materialization": 320,
+  "parent_journal_sha256": "7863dbc4396fc945c7c343675a289fb2743689754514ceecfad3915065d6bf0e",
+  "public_reflected": false,
+  "records": [
+    {
+      "actual_assessment_reader": "20261027-194701-todo-3778",
+      "bytes": 20301,
+      "inventory_id": "github:a47b47464545b0cd2b2b827a0a8851d009f8ffa29648db0e751f08be84de0eac",
+      "inventory_unit": "github_prompt_or_model_information",
+      "original_assessment": {
+        "candidate_disposition": "変更/観測/テーマの観点を改訂する参考候補。旧49支持の実readerを保持し、採否/第三者権利は親へ。",
+        "classification": "prompt_or_model_info",
+        "findings": [
+          "useful-contextの再読省略は、その版と実際の全範囲がある場合に有用。無条件NEVERや同fileの並列検索置換を、古いcontext/重なる変更にも適用しない。旧49のmarker overwrite・元番号編集と一緒に適用consumerを検査する。",
+          "原則discussion/明示動詞まで実装しないL44/57と、初回は実装したいはずというL273..278が併存する。初回/未編集や日付は収録時の宣言で現在の作業状態や本人の依頼意思ではない。",
+          "不明点質問後は全toolを止める規則がある。本人だけの未指定要件は既存回答を確認して質問し、独立する既決工程まで止めない。",
+          "semantic token、HSL/RGB解釈、light/dark contrast、component variantsは参考。L259の直接白class例と直接色禁止は整合せず、L36や221以降など空のmarkup/欠けた例もある。全文を実行可能な完全実装としない。",
+          "SEOを全page/componentへ一律追加、毎回design設定を変更、画像を生成優先、初回を強く美化する指示を含む。本人の同画像回答、既存upload/素材権/契約・元仕様を置き換える許可ではない。",
+          "debugはconsole/network観測を先にするが、旧49は凍結consoleやrecent networkという範囲。再読を修正後の新検証にしない。React/Vite/Supabase等の能力/制限も固定版の記述。"
+        ],
+        "negative": "『初回・未編集』というpromptを実状態とし、画像確認なしで全designを変更し、凍結console再読を修正成功にする。",
+        "notices": [
+          {
+            "notice_ref": "root"
+          }
+        ],
+        "package_evidence": {
+          "complete_tree_enumerated": true,
+          "independent_support_blobs": 0,
+          "other_primary_aliases": 1,
+          "primary_alias_excluded": 1,
+          "root": "Lovable",
+          "tree_blob_count": 2
+        },
+        "positive": "既存ページの不具合で対象版のcontextと初回logを確認し、最小のtoken/該当component修正を新しい観測で確かめる。",
+        "read": [
+          2,
+          0,
+          0,
+          true,
+          true,
+          304
+        ],
+        "read_evidence": {
+          "actual_reader_job": "20261027-194701-todo-3778",
+          "masked_lines": [],
+          "masking_version": "v24-coordinate-examples-20261027-194701",
+          "method": "direct_raw_full",
+          "new_source_read": true,
+          "ranges": [
+            [
+              1,
+              304
+            ]
+          ],
+          "strict_utf8": true
+        },
+        "reason": "L19..27/44..83のworkflow、L98..127の編集/調査、L204..304のdesignと初回規則を読んだ。",
+        "required_changes": [
+          "入力contextの版・範囲と実対象を照合し、依存/競合する操作は直列にする。本文を持たない/古いsnapshotをNEVER再読の理由にしない。",
+          "技術的な通常検査/復旧と本人判断を分け、既存回答と依頼に従って継続する。限られた2行報告でも未達や重要根拠を落とさない。",
+          "tokenと色形式・例の欠落/矛盾を改訂候補へ分け、実装前の画像回答、素材/既存画像保持を優先する。既存デザインへ不要な全体変更を追加しない。"
+        ],
+        "row": 313,
+        "source": [
+          "github:a47b47464545b0cd2b2b827a0a8851d009f8ffa29648db0e751f08be84de0eac",
+          "x1xhlol/system-prompts-and-models-of-ai-tools",
+          "162db92f54d717d8ebd12292e155aeef32bb4b3c",
+          "Lovable/Agent Prompt.txt",
+          "a1e151e6af8fd2a13d4ffde10d044a47e78342e99714c239332d102bf19c57e8",
+          "499a60d48efbbb288f9415c58fb6f44d7a2823c0",
+          20301
+        ],
+        "support": [
+          {
+            "actual_reader_job": "20261025-142809-todo-3778",
+            "bytes": 27944,
+            "content_path": "supplement/objects/f1c7771d6b929a6b37a6b5d37479eb4572ad4261c1839ae6459540fac2429430.gz",
+            "counted_as_support": false,
+            "git_blob": "59830f8e463bd4e277c7aca40297e73ba989f99b",
+            "mask": 2,
+            "method": "same-byte-reuse",
+            "path": "Lovable/Agent Tools.json",
+            "primary_alias_ordinal": 49,
+            "read": [
+              3,
+              2,
+              1,
+              false,
+              true,
+              436
+            ],
+            "read_evidence_ref": "prior_support/49",
+            "reader": 1,
+            "saved": true,
+            "sha256": "f1c7771d6b929a6b37a6b5d37479eb4572ad4261c1839ae6459540fac2429430",
+            "tree_bytes": 27944,
+            "tree_git_blob": "59830f8e463bd4e277c7aca40297e73ba989f99b"
+          }
+        ],
+        "unit": "github_prompt_or_model_information",
+        "unmet": [
+          "個別prompt/素材/コード/統合サービスの真正性と権利、現在のLovable/tool/apply仕様。",
+          "現context/UI・SEO・観測・buildの実検査、未知中央本文比較。"
+        ],
+        "use": "LovableのWeb編集で、既読context/変更範囲・観測・design tokenを対応させる参考。",
+        "value": "編集前に対象内容を確かめ、非変更の相談と変更依頼を分け、既存テーマの色形式とcontrastを検査する観点が具体的。"
+      },
+      "original_chunk_id": "d320a6f49b1c43d0ae872c953f608214",
+      "original_chunk_sha256": "ed7f9326c78c857ba15bd59390b945080a159316f16738a7efdc99d20cd0a9e2",
+      "path": "Lovable/Agent Prompt.txt",
+      "previous_parent_semantic_read": true,
+      "source_commit": "162db92f54d717d8ebd12292e155aeef32bb4b3c",
+      "source_git_blob": "499a60d48efbbb288f9415c58fb6f44d7a2823c0",
+      "source_path": "Lovable/Agent Prompt.txt",
+      "source_repo": "x1xhlol/system-prompts-and-models-of-ai-tools",
+      "source_sha256": "a1e151e6af8fd2a13d4ffde10d044a47e78342e99714c239332d102bf19c57e8"
+    },
+    {
+      "actual_assessment_reader": "20261027-194701-todo-3778",
+      "bytes": 2147,
+      "inventory_id": "github:9063e2496381ade67e976277c35f00da086e184a9422245798c8c04f006ddbc0",
+      "inventory_unit": "github_prompt_or_model_information",
+      "original_assessment": {
+        "candidate_disposition": "観測/結果配送/完了境界を改訂する手順候補。新しい司令塔や本人操作依頼へ流用せず、個別権利/採否は親へ。",
+        "classification": "reusable_procedure",
+        "findings": [
+          "Analyze Events→Select Tools→Wait for Execution→Iterate→Submit Results→Standbyという手順。出力を選んだだけで実行や結果配送が成功したことにはならない。",
+          "一回一toolのloopは依存を取り違えにくいが、独立した必要操作の並列まで禁止する現在の規則ではない。",
+          "Linux/ネット/新Python作成・shell install/公開配備・本人browser takeoverは当該環境の能力説明で、このPCの範囲/既存OAuth/割当/本人PC操作の許可ではない。",
+          "L1は保守的whole-line伏字でraw未読。identityや提供者の真正性をその行から認定しない。全33行をmasked表示した範囲のみ。"
+        ],
+        "negative": "toolを選んだことや一部結果の送付だけで全タスク完了としてidleする。",
+        "notices": [
+          {
+            "notice_ref": "root"
+          }
+        ],
+        "package_evidence": {
+          "complete_tree_enumerated": true,
+          "independent_support_blobs": 0,
+          "other_primary_aliases": 3,
+          "primary_alias_excluded": 1,
+          "root": "Manus Agent Tools & Prompt",
+          "tree_blob_count": 4
+        },
+        "positive": "処理の出力と終了を同じ実体で確認し、全結果を親へ返して受領後に有限の調査完了を判定する。",
+        "read": [
+          3,
+          1,
+          0,
+          false,
+          true,
+          33
+        ],
+        "read_evidence": {
+          "actual_reader_job": "20261027-194701-todo-3778",
+          "masked_lines": [
+            1
+          ],
+          "masking_version": "v24-coordinate-examples-20261027-194701",
+          "method": "direct_masked_full",
+          "new_source_read": true,
+          "ranges": [
+            [
+              1,
+              33
+            ]
+          ],
+          "strict_utf8": true
+        },
+        "reason": "L27..33の6段階とL17..25の能力説明、L11..15の言語設定を読んだ。",
+        "required_changes": [
+          "観測は実action/job/sessionと対応し、未完・部分失敗を残して同じ依頼を継続する。idleは具体的な完了条件と親受領を満たした後とする。",
+          "新Python/任意install/公開や本人takeoverの既定を本人の現在方針・正規CLI/管理者経路へ合わせ、出力の言語/添付は本人が読める日本語・Discord媒体条件へ合わせる。"
+        ],
+        "row": 314,
+        "source": [
+          "github:9063e2496381ade67e976277c35f00da086e184a9422245798c8c04f006ddbc0",
+          "x1xhlol/system-prompts-and-models-of-ai-tools",
+          "162db92f54d717d8ebd12292e155aeef32bb4b3c",
+          "Manus Agent Tools & Prompt/Agent loop.txt",
+          "2ee373d3c5f1837e25e750872887c8874d4b1847e56ac0e268d979b0f27675f3",
+          "8ee53f47b9dc781cd0abe0da5d9ba4e2f148a619",
+          2147
+        ],
+        "support": [
+          {
+            "actual_reader_job": "20261027-194701-todo-3778",
+            "bytes": 12224,
+            "content_path": "github/x1xhlol__system-prompts-and-models-of-ai-tools/objects/091c8eb2bc485a49c11e24b409f6947b39ee3c1895383b96317e0ea93960dd3e.gz",
+            "counted_as_support": false,
+            "git_blob": "fa0fdcc2428a1f333b10434045213c5b11cc9303",
+            "mask": 2,
+            "method": "same-byte-reuse",
+            "path": "Manus Agent Tools & Prompt/Modules.txt",
+            "primary_alias_ordinal": 315,
+            "read": [
+              3,
+              2,
+              0,
+              false,
+              true,
+              206
+            ],
+            "read_evidence_ref": "entries/2/read_evidence",
+            "reader": 0,
+            "saved": true,
+            "sha256": "091c8eb2bc485a49c11e24b409f6947b39ee3c1895383b96317e0ea93960dd3e",
+            "tree_bytes": 12224,
+            "tree_git_blob": "fa0fdcc2428a1f333b10434045213c5b11cc9303"
+          },
+          {
+            "actual_reader_job": "20261027-194701-todo-3778",
+            "bytes": 10209,
+            "content_path": "github/x1xhlol__system-prompts-and-models-of-ai-tools/objects/c13fa64374c80dc7b48243f48c94e831ea228da1d1917cb3698521606180cda1.gz",
+            "counted_as_support": false,
+            "git_blob": "c1f4c41c0a6d11766e1b04bff05e59955ef5541c",
+            "mask": 0,
+            "method": "same-byte-reuse",
+            "path": "Manus Agent Tools & Prompt/Prompt.txt",
+            "primary_alias_ordinal": 316,
+            "read": [
+              2,
+              0,
+              0,
+              true,
+              true,
+              250
+            ],
+            "read_evidence_ref": "entries/3/read_evidence",
+            "reader": 0,
+            "saved": true,
+            "sha256": "c13fa64374c80dc7b48243f48c94e831ea228da1d1917cb3698521606180cda1",
+            "tree_bytes": 10209,
+            "tree_git_blob": "c1f4c41c0a6d11766e1b04bff05e59955ef5541c"
+          },
+          {
+            "actual_reader_job": "20261025-142809-todo-3778",
+            "bytes": 18501,
+            "content_path": "supplement/objects/87b9ead0071ebce94ff86c94e2582f9af8cbc29e2ea31dc8420de3fe318c6945.gz",
+            "counted_as_support": false,
+            "git_blob": "1a76dd65c0e8902d08bec23c93a011e3b09b131f",
+            "mask": 0,
+            "method": "same-byte-reuse",
+            "path": "Manus Agent Tools & Prompt/tools.json",
+            "primary_alias_ordinal": 50,
+            "read": [
+              2,
+              0,
+              1,
+              true,
+              true,
+              614
+            ],
+            "read_evidence_ref": "prior_support/50",
+            "reader": 1,
+            "saved": true,
+            "sha256": "87b9ead0071ebce94ff86c94e2582f9af8cbc29e2ea31dc8420de3fe318c6945",
+            "tree_bytes": 18501,
+            "tree_git_blob": "1a76dd65c0e8902d08bec23c93a011e3b09b131f"
+          }
+        ],
+        "unit": "github_prompt_or_model_information",
+        "unmet": [
+          "当該loopとmessage/idleの実consumer動作、個別prompt権利/真正性、伏字L1 raw。",
+          "未知中央本文比較、現環境への実適用。"
+        ],
+        "use": "event/実行結果を観測し、次の操作・実行待ち・反復・結果配送・待機を分ける基本loopの参考。",
+        "value": "一回の操作を次の観測へつなぎ、結果を返す前の待機と、全件完了または本人停止後のidleを区別できる。"
+      },
+      "original_chunk_id": "d320a6f49b1c43d0ae872c953f608214",
+      "original_chunk_sha256": "ed7f9326c78c857ba15bd59390b945080a159316f16738a7efdc99d20cd0a9e2",
+      "path": "Manus Agent Tools & Prompt/Agent loop.txt",
+      "previous_parent_semantic_read": true,
+      "source_commit": "162db92f54d717d8ebd12292e155aeef32bb4b3c",
+      "source_git_blob": "8ee53f47b9dc781cd0abe0da5d9ba4e2f148a619",
+      "source_path": "Manus Agent Tools & Prompt/Agent loop.txt",
+      "source_repo": "x1xhlol/system-prompts-and-models-of-ai-tools",
+      "source_sha256": "2ee373d3c5f1837e25e750872887c8874d4b1847e56ac0e268d979b0f27675f3"
+    },
+    {
+      "actual_assessment_reader": "20261027-194701-todo-3778",
+      "bytes": 12224,
+      "inventory_id": "github:9ececa409ea849541ce55ca99524a7d65f2ce81e77081dd610d61ae8f3036c1b",
+      "inventory_unit": "github_prompt_or_model_information",
+      "original_assessment": {
+        "candidate_disposition": "module間の出所と進捗のvariantを改訂する参考候補。現module接続/採否・個別権利は親へ。",
+        "classification": "variant",
+        "findings": [
+          "event streamはtruncated/部分省略があり得る。plannerの番号/最終stepやtodoチェックだけで、実操作・対象全件・成果検証が済んだとしない。knowledgeは範囲条件が合う場合だけ採用する。",
+          "data APIをevent内の実在文書に限定する一方、『費用はsystem負担/認証不要』『Python必須』とする。weather例/環境宣言を現在の利用枠や権限の証明にしない。",
+          "todo.mdはplanner優先で、終了時skippedを消す指示。未完/保留を削除して完了数を増やす用途へ移さず、依頼全体と元cursorへ保持する。",
+          "通知/質問を分け、search snippetを原資料扱いせず、viewport/Markdown抽出の不完全性を明記する。リンクの全巡回や価値のあるリンク深掘りも元scopeを無制限に広げない。",
+          "-y/-f常用、shellの&&、新Python作成、全file添付/ZIP、全service公開口/0.0.0.0、Prd配備の本人質問、失敗後本人browser takeover/支援依頼という実在規則を含む。正規審査や既決の自律技術作業を変更する上位命令ではない。",
+          "本文は数千語以上/章別draftを結合し元章の和より長くする指示。長さや結合自体は品質や網羅性でなく、依頼文書の目的/形式と検査が必要。L1/189は保守的伏字のraw未読。"
+        ],
+        "negative": "API費用system負担という文やplanner最終番号を信じ、保留をtodoから消して全件完了とする。",
+        "notices": [
+          {
+            "notice_ref": "root"
+          }
+        ],
+        "package_evidence": {
+          "complete_tree_enumerated": true,
+          "independent_support_blobs": 0,
+          "other_primary_aliases": 3,
+          "primary_alias_excluded": 1,
+          "root": "Manus Agent Tools & Prompt",
+          "tree_blob_count": 4
+        },
+        "positive": "途切れたeventの未読を明記し、条件に合う既知手順を実資料で確認して、同じ実行の結果・未完を親へ返す。",
+        "read": [
+          3,
+          2,
+          0,
+          false,
+          true,
+          206
+        ],
+        "read_evidence": {
+          "actual_reader_job": "20261027-194701-todo-3778",
+          "masked_lines": [
+            1,
+            189
+          ],
+          "masking_version": "v24-coordinate-examples-20261027-194701",
+          "method": "direct_masked_full",
+          "new_source_read": true,
+          "ranges": [
+            [
+              1,
+              206
+            ]
+          ],
+          "strict_utf8": true
+        },
+        "reason": "L32..77のevent/module、L94..141の進捗/原資料/閲覧範囲、L143..206の実行/配備/執筆/障害規則を読んだ。",
+        "required_changes": [
+          "planner/todo/eventの出所・版・実action/結果と未読を結び、skippedや保留を消さず元依頼の有限完了条件へ戻す。",
+          "data APIの費用/認証・新Python、force/install/ネット/公開設定は実対象の現許可と既存OAuth枠へ合わせる。technical failureはAI側で有限復旧し、正規拒否を別経路で迂回しない。",
+          "質問は本人だけの未指定要件等を既存回答照合後にまとめ、通常作業を本人PC操作へ戻さない。文章を本文、本人が見るmediaを直接添付し、root/原資料/必要範囲を保持して執筆量を目的で選ぶ。"
+        ],
+        "row": 315,
+        "source": [
+          "github:9ececa409ea849541ce55ca99524a7d65f2ce81e77081dd610d61ae8f3036c1b",
+          "x1xhlol/system-prompts-and-models-of-ai-tools",
+          "162db92f54d717d8ebd12292e155aeef32bb4b3c",
+          "Manus Agent Tools & Prompt/Modules.txt",
+          "091c8eb2bc485a49c11e24b409f6947b39ee3c1895383b96317e0ea93960dd3e",
+          "fa0fdcc2428a1f333b10434045213c5b11cc9303",
+          12224
+        ],
+        "support": [
+          {
+            "actual_reader_job": "20261027-194701-todo-3778",
+            "bytes": 2147,
+            "content_path": "github/x1xhlol__system-prompts-and-models-of-ai-tools/objects/2ee373d3c5f1837e25e750872887c8874d4b1847e56ac0e268d979b0f27675f3.gz",
+            "counted_as_support": false,
+            "git_blob": "8ee53f47b9dc781cd0abe0da5d9ba4e2f148a619",
+            "mask": 1,
+            "method": "same-byte-reuse",
+            "path": "Manus Agent Tools & Prompt/Agent loop.txt",
+            "primary_alias_ordinal": 314,
+            "read": [
+              3,
+              1,
+              0,
+              false,
+              true,
+              33
+            ],
+            "read_evidence_ref": "entries/1/read_evidence",
+            "reader": 0,
+            "saved": true,
+            "sha256": "2ee373d3c5f1837e25e750872887c8874d4b1847e56ac0e268d979b0f27675f3",
+            "tree_bytes": 2147,
+            "tree_git_blob": "8ee53f47b9dc781cd0abe0da5d9ba4e2f148a619"
+          },
+          {
+            "actual_reader_job": "20261027-194701-todo-3778",
+            "bytes": 10209,
+            "content_path": "github/x1xhlol__system-prompts-and-models-of-ai-tools/objects/c13fa64374c80dc7b48243f48c94e831ea228da1d1917cb3698521606180cda1.gz",
+            "counted_as_support": false,
+            "git_blob": "c1f4c41c0a6d11766e1b04bff05e59955ef5541c",
+            "mask": 0,
+            "method": "same-byte-reuse",
+            "path": "Manus Agent Tools & Prompt/Prompt.txt",
+            "primary_alias_ordinal": 316,
+            "read": [
+              2,
+              0,
+              0,
+              true,
+              true,
+              250
+            ],
+            "read_evidence_ref": "entries/3/read_evidence",
+            "reader": 0,
+            "saved": true,
+            "sha256": "c13fa64374c80dc7b48243f48c94e831ea228da1d1917cb3698521606180cda1",
+            "tree_bytes": 10209,
+            "tree_git_blob": "c1f4c41c0a6d11766e1b04bff05e59955ef5541c"
+          },
+          {
+            "actual_reader_job": "20261025-142809-todo-3778",
+            "bytes": 18501,
+            "content_path": "supplement/objects/87b9ead0071ebce94ff86c94e2582f9af8cbc29e2ea31dc8420de3fe318c6945.gz",
+            "counted_as_support": false,
+            "git_blob": "1a76dd65c0e8902d08bec23c93a011e3b09b131f",
+            "mask": 0,
+            "method": "same-byte-reuse",
+            "path": "Manus Agent Tools & Prompt/tools.json",
+            "primary_alias_ordinal": 50,
+            "read": [
+              2,
+              0,
+              1,
+              true,
+              true,
+              614
+            ],
+            "read_evidence_ref": "prior_support/50",
+            "reader": 1,
+            "saved": true,
+            "sha256": "87b9ead0071ebce94ff86c94e2582f9af8cbc29e2ea31dc8420de3fe318c6945",
+            "tree_bytes": 18501,
+            "tree_git_blob": "1a76dd65c0e8902d08bec23c93a011e3b09b131f"
+          }
+        ],
+        "unit": "github_prompt_or_model_information",
+        "unmet": [
+          "実module/event/progress/message/公開/費用・認証の検証と個別権利/真正性。",
+          "伏字2行 raw、未知中央本文比較、現PCへの実配置。"
+        ],
+        "use": "planner/knowledge/data sourceのeventと実行・成果配送を連結するmodule構成の参考。",
+        "value": "event streamの欠落、知識の適用条件、実APIを捏造しないこと、原資料への確認とtool名/引数からの復旧が明示される。"
+      },
+      "original_chunk_id": "d320a6f49b1c43d0ae872c953f608214",
+      "original_chunk_sha256": "ed7f9326c78c857ba15bd59390b945080a159316f16738a7efdc99d20cd0a9e2",
+      "path": "Manus Agent Tools & Prompt/Modules.txt",
+      "previous_parent_semantic_read": true,
+      "source_commit": "162db92f54d717d8ebd12292e155aeef32bb4b3c",
+      "source_git_blob": "fa0fdcc2428a1f333b10434045213c5b11cc9303",
+      "source_path": "Manus Agent Tools & Prompt/Modules.txt",
+      "source_repo": "x1xhlol/system-prompts-and-models-of-ai-tools",
+      "source_sha256": "091c8eb2bc485a49c11e24b409f6947b39ee3c1895383b96317e0ea93960dd3e"
+    },
+    {
+      "actual_assessment_reader": "20261027-194701-todo-3778",
+      "bytes": 10209,
+      "inventory_id": "github:70b1f7e6811b169afd3750d40959832a61b088062f3bee96fc714bf15ddfa33d",
+      "inventory_unit": "github_prompt_or_model_information",
+      "original_assessment": {
+        "candidate_disposition": "prompting教材/説明資料の参考候補。独立実行Skillとせず、個別採否・権利は親へ。",
+        "classification": "prompt_or_model_info",
+        "findings": [
+          "題名はPrompt.txtだが中身は能力紹介・利用者向けprompting guide・自己紹介。314の実行loopや315のmodule契約と同一の運用手順/全面重複とは扱わない。",
+          "元要件への照合/検査後配送と、環境版・制約・望む入出力を示す提案は参考。例の問い合わせform色/文章量を現在の本人要件に採用したものではない。",
+          "Linux/sandbox/browser/shell/install/配備等の能力と『account作成不能』『sandbox外アクセス不能』という限界は収録文の自己申告。現在PC/実Manusサービスの現能力、本人採用の禁止ではない。",
+          "各taskから継続学習するという紹介だけで、永続記憶/学習反映/品質改善が実証されたとは言えない。root collectorの許諾もこの説明の真正性や第三者利用権を確定しない。"
+        ],
+        "negative": "この紹介文だけで現環境にinstall/公開能力がある、または全taskが永続学習済みと断定する。",
+        "notices": [
+          {
+            "notice_ref": "root"
+          }
+        ],
+        "package_evidence": {
+          "complete_tree_enumerated": true,
+          "independent_support_blobs": 0,
+          "other_primary_aliases": 3,
+          "primary_alias_excluded": 1,
+          "root": "Manus Agent Tools & Prompt",
+          "tree_blob_count": 4
+        },
+        "positive": "実装の依頼に、既存言語/版・不具合の入出力・保持対象・完了条件を整理して担当へ渡す教材。",
+        "read": [
+          2,
+          0,
+          0,
+          true,
+          true,
+          250
+        ],
+        "read_evidence": {
+          "actual_reader_job": "20261027-194701-todo-3778",
+          "masked_lines": [],
+          "masking_version": "v24-coordinate-examples-20261027-194701",
+          "method": "direct_raw_full",
+          "new_source_read": true,
+          "ranges": [
+            [
+              1,
+              250
+            ]
+          ],
+          "strict_utf8": true
+        },
+        "reason": "L1..120の能力/限界、L128..196のprompting guide、L198..250の紹介/協働を全250行読んだ。",
+        "required_changes": [
+          "能力/限界を実ツール・対象版・許可範囲へ対応し、説明上の自己申告を現在の能力/禁止へ付け替えない。",
+          "既存回答と元要件を保持し、本人に不要なprompt書直しやPC操作を要求しない。入力例は機密/個人値を伏せ、見た目の新要件は同画像への回答へ結ぶ。",
+          "実検査/配送/記憶の証拠と紹介文を分け、資料参照/独自要約と原文再配布/サービス利用の個別条件を保持する。"
+        ],
+        "row": 316,
+        "source": [
+          "github:70b1f7e6811b169afd3750d40959832a61b088062f3bee96fc714bf15ddfa33d",
+          "x1xhlol/system-prompts-and-models-of-ai-tools",
+          "162db92f54d717d8ebd12292e155aeef32bb4b3c",
+          "Manus Agent Tools & Prompt/Prompt.txt",
+          "c13fa64374c80dc7b48243f48c94e831ea228da1d1917cb3698521606180cda1",
+          "c1f4c41c0a6d11766e1b04bff05e59955ef5541c",
+          10209
+        ],
+        "support": [
+          {
+            "actual_reader_job": "20261027-194701-todo-3778",
+            "bytes": 2147,
+            "content_path": "github/x1xhlol__system-prompts-and-models-of-ai-tools/objects/2ee373d3c5f1837e25e750872887c8874d4b1847e56ac0e268d979b0f27675f3.gz",
+            "counted_as_support": false,
+            "git_blob": "8ee53f47b9dc781cd0abe0da5d9ba4e2f148a619",
+            "mask": 1,
+            "method": "same-byte-reuse",
+            "path": "Manus Agent Tools & Prompt/Agent loop.txt",
+            "primary_alias_ordinal": 314,
+            "read": [
+              3,
+              1,
+              0,
+              false,
+              true,
+              33
+            ],
+            "read_evidence_ref": "entries/1/read_evidence",
+            "reader": 0,
+            "saved": true,
+            "sha256": "2ee373d3c5f1837e25e750872887c8874d4b1847e56ac0e268d979b0f27675f3",
+            "tree_bytes": 2147,
+            "tree_git_blob": "8ee53f47b9dc781cd0abe0da5d9ba4e2f148a619"
+          },
+          {
+            "actual_reader_job": "20261027-194701-todo-3778",
+            "bytes": 12224,
+            "content_path": "github/x1xhlol__system-prompts-and-models-of-ai-tools/objects/091c8eb2bc485a49c11e24b409f6947b39ee3c1895383b96317e0ea93960dd3e.gz",
+            "counted_as_support": false,
+            "git_blob": "fa0fdcc2428a1f333b10434045213c5b11cc9303",
+            "mask": 2,
+            "method": "same-byte-reuse",
+            "path": "Manus Agent Tools & Prompt/Modules.txt",
+            "primary_alias_ordinal": 315,
+            "read": [
+              3,
+              2,
+              0,
+              false,
+              true,
+              206
+            ],
+            "read_evidence_ref": "entries/2/read_evidence",
+            "reader": 0,
+            "saved": true,
+            "sha256": "091c8eb2bc485a49c11e24b409f6947b39ee3c1895383b96317e0ea93960dd3e",
+            "tree_bytes": 12224,
+            "tree_git_blob": "fa0fdcc2428a1f333b10434045213c5b11cc9303"
+          },
+          {
+            "actual_reader_job": "20261025-142809-todo-3778",
+            "bytes": 18501,
+            "content_path": "supplement/objects/87b9ead0071ebce94ff86c94e2582f9af8cbc29e2ea31dc8420de3fe318c6945.gz",
+            "counted_as_support": false,
+            "git_blob": "1a76dd65c0e8902d08bec23c93a011e3b09b131f",
+            "mask": 0,
+            "method": "same-byte-reuse",
+            "path": "Manus Agent Tools & Prompt/tools.json",
+            "primary_alias_ordinal": 50,
+            "read": [
+              2,
+              0,
+              1,
+              true,
+              true,
+              614
+            ],
+            "read_evidence_ref": "prior_support/50",
+            "reader": 1,
+            "saved": true,
+            "sha256": "87b9ead0071ebce94ff86c94e2582f9af8cbc29e2ea31dc8420de3fe318c6945",
+            "tree_bytes": 18501,
+            "tree_git_blob": "1a76dd65c0e8902d08bec23c93a011e3b09b131f"
+          }
+        ],
+        "unit": "github_prompt_or_model_information",
+        "unmet": [
+          "能力/限界/永続学習の実証、資料/サービスの真正性・個別権利。",
+          "実prompt適用評価、未知中央本文比較。"
+        ],
+        "use": "能力紹介と、文脈・制約・出力形式・例・環境版を揃えるprompt作成の教材。",
+        "value": "質問を具体化する例と、元要件に照らした品質確認、前の失敗や入出力例を添える観点に用途がある。"
+      },
+      "original_chunk_id": "d320a6f49b1c43d0ae872c953f608214",
+      "original_chunk_sha256": "ed7f9326c78c857ba15bd59390b945080a159316f16738a7efdc99d20cd0a9e2",
+      "path": "Manus Agent Tools & Prompt/Prompt.txt",
+      "previous_parent_semantic_read": true,
+      "source_commit": "162db92f54d717d8ebd12292e155aeef32bb4b3c",
+      "source_git_blob": "c1f4c41c0a6d11766e1b04bff05e59955ef5541c",
+      "source_path": "Manus Agent Tools & Prompt/Prompt.txt",
+      "source_repo": "x1xhlol/system-prompts-and-models-of-ai-tools",
+      "source_sha256": "c13fa64374c80dc7b48243f48c94e831ea228da1d1917cb3698521606180cda1"
+    },
+    {
+      "actual_assessment_reader": "20261027-194701-todo-3778",
+      "bytes": 32081,
+      "inventory_id": "github:0886b349b8db43439b9d2a8d116fcd5865ccd4accfda1f65377af5b73d9e944e",
+      "inventory_unit": "github_prompt_or_model_information",
+      "original_assessment": {
+        "candidate_disposition": "検索/データ更新/renderer境界を改訂する参考候補。旧51の実readerを保持し、採否/個別権利は親へ。",
+        "classification": "prompt_or_model_info",
+        "findings": [
+          "page/DB/data sourceの所有と表示を区別し、blank親の置換やlocked対象の説明を持つ。一方source DBの単一所有/multiple data sourcesの説明は文脈を分けて確認が必要で、lockの記述は権限解除を意味しない。",
+          "省略は保持、null/[]はtype別clear、date end設定には同じ更新のstart、place部分更新には同時の座標という契約。checkboxの未認識stringもfalseとなる仕様は、入力ミスを黙ってclearへし得る。",
+          "検索は最新内部情報を確認し、query可能なdata sourceや既に十分なcontextなら検索を省く。defaultは内部とwebを同時に含むのにsafe/cheap/widestとする。私的内容の外部送信許可・実費用はその語で確定しない。",
+          "最大2回の同一情報検索という目安と、query/scopeを変えた追跡、検索件数の上限ゆえ全件棚卸しに使わないという規則を区別する。旧51のquery100行/hasMore・cursor未明示も全件取得の証明でない。",
+          "相談/レビューはchatだけ、編集は指定pageに限定し余分なpage/format変更を作らない。専用tool不足を理由に本人UI操作へ戻す記述は現PCの通常代行可否を調べる工程へ合わせる。",
+          "langタグ/独自citation/圧縮URL/mention/columns等は特定renderer契約。user/page/DBの既存URLを使い、synced reference編集は原blockにも影響する。meeting transcriptは編集不可という別条件。",
+          "page執筆には通常citation不適切とするstyleがあるが、調査根拠が必要な資料では出所を失わせない。末尾contextは日時・識別値の形式が不整合で、このPCの時刻/本人identityへ使わない。伏字/初回表示限界を保持する。"
+        ],
+        "negative": "default searchはsafeと書いてあるので私的queryをwebへ送り、100件や2検索だけで全候補を回収済みとし、synced referenceだけの局所編集と誤認する。",
+        "notices": [
+          {
+            "notice_ref": "root"
+          }
+        ],
+        "package_evidence": {
+          "complete_tree_enumerated": true,
+          "independent_support_blobs": 0,
+          "other_primary_aliases": 1,
+          "primary_alias_excluded": 1,
+          "root": "NotionAi",
+          "tree_blob_count": 2
+        },
+        "positive": "指定data sourceの既存schemaを確認し、保持とclearを分けた更新案を立て、実結果と残るページ取得範囲を照合する。",
+        "read": [
+          3,
+          6,
+          0,
+          false,
+          true,
+          474
+        ],
+        "read_evidence": {
+          "actual_reader_job": "20261027-194701-todo-3778",
+          "masked_lines": [
+            19,
+            136,
+            138,
+            291,
+            303,
+            469
+          ],
+          "masking_version": "v24-original + v25-cached-overlay second range",
+          "method": "direct_masked_full",
+          "new_source_read": true,
+          "overlay": {
+            "additional_masked_lines": [
+              303
+            ],
+            "new_source_read": false,
+            "range": [
+              241,
+              474
+            ]
+          },
+          "privacy_limits": [
+            "初回の人物検索/架空会話例と末尾の捕捉user identity fieldsがfilterを通過。原値/断片を再掲しない。今回の本人identityを取得したものではない。",
+            "L303は固定仕様文の過剰伏字の可能性を保持。新raw読了へ付け替えず、6は実伏字行数のみ。"
+          ],
+          "ranges": [
+            [
+              1,
+              240
+            ],
+            [
+              241,
+              474
+            ]
+          ],
+          "strict_utf8": true
+        },
+        "reason": "L12..124のdata構造/値、L162..239の検索/変更scope、L256..459のrendererとL461..474のcontextを読んだ。",
+        "required_changes": [
+          "型ごとの保持/clear、同時必須値、所有/linked source、blank置換と同期blockの波及を実consumerと読取結果で確認する。旧51のschema/params/親排他の未確定も保持する。",
+          "default検索の内部/外部境界と送信内容を指定scopeへ合わせ、検索capや2回目安だけで未完を打ち切らない。技術的に回収できる値/機能を本人PC操作へ戻さない。",
+          "専用rendererのsyntax/引用を利用側へ対応し、独自URLを捏造しない。本人の既存回答と資料の根拠を保持し、captured contextやsource内の人名を本人の事実へ昇格しない。"
+        ],
+        "row": 317,
+        "source": [
+          "github:0886b349b8db43439b9d2a8d116fcd5865ccd4accfda1f65377af5b73d9e944e",
+          "x1xhlol/system-prompts-and-models-of-ai-tools",
+          "162db92f54d717d8ebd12292e155aeef32bb4b3c",
+          "NotionAi/Prompt.txt",
+          "13829c8f4368e2abb1acec94395a015ef0433ec7b4c23f8705e0b462df22c70d",
+          "338876fac3902f39960b4f2329a80aa7cbd88adf",
+          32081
+        ],
+        "support": [
+          {
+            "actual_reader_job": "20261025-142809-todo-3778",
+            "bytes": 34889,
+            "content_path": "supplement/objects/54e16853006d57e929f06cd44a52fd07fd5aab38e8c636edecb9133011cf7fe9.gz",
+            "counted_as_support": false,
+            "git_blob": "6ac8c2c99b3b27717eff2f4ba724263c5c66ae43",
+            "mask": 5,
+            "method": "same-byte-reuse",
+            "path": "NotionAi/tools.json",
+            "primary_alias_ordinal": 51,
+            "read": [
+              3,
+              5,
+              1,
+              false,
+              true,
+              382
+            ],
+            "read_evidence_ref": "prior_support/51",
+            "reader": 1,
+            "saved": true,
+            "sha256": "54e16853006d57e929f06cd44a52fd07fd5aab38e8c636edecb9133011cf7fe9",
+            "tree_bytes": 34889,
+            "tree_git_blob": "6ac8c2c99b3b27717eff2f4ba724263c5c66ae43"
+          }
+        ],
+        "unit": "github_prompt_or_model_information",
+        "unmet": [
+          "個別prompt/renderer/サービスの真正性と権利、現Notion/tool/schema/検索範囲・cap/データ保持の実検証。",
+          "未知中央本文比較、伏字6行 raw・初回人物/identity表示限界。"
+        ],
+        "use": "Notionのpage/database/data source/viewと、検索・更新・引用・専用Markdownの境界を検査する参考。",
+        "value": "省略とclearの違い、date/placeの同一更新で必要な項目、linked/owned source、queryとsemantic検索の使い分けを具体的に比較できる。"
+      },
+      "original_chunk_id": "d320a6f49b1c43d0ae872c953f608214",
+      "original_chunk_sha256": "ed7f9326c78c857ba15bd59390b945080a159316f16738a7efdc99d20cd0a9e2",
+      "path": "NotionAi/Prompt.txt",
+      "previous_parent_semantic_read": true,
+      "source_commit": "162db92f54d717d8ebd12292e155aeef32bb4b3c",
+      "source_git_blob": "338876fac3902f39960b4f2329a80aa7cbd88adf",
+      "source_path": "NotionAi/Prompt.txt",
+      "source_repo": "x1xhlol/system-prompts-and-models-of-ai-tools",
+      "source_sha256": "13829c8f4368e2abb1acec94395a015ef0433ec7b4c23f8705e0b462df22c70d"
+    },
+    {
+      "actual_assessment_reader": "20261027-194701-todo-3778",
+      "bytes": 21945,
+      "inventory_id": "github:f68a11941dbdaa5ca4a1c3175e2531fba46d34ad94cc25a12217c1dfaed05d89",
+      "inventory_unit": "github_prompt_or_model_information",
+      "original_assessment": {
+        "candidate_disposition": "環境固有のartifact/DB工程の改訂参考候補。フォルダ名Open Sourceだけで個別許諾を確定せず親へ。",
+        "classification": "prompt_or_model_info",
+        "findings": [
+          "browser内Node/WebAssembly・Linux風shell、Git/native compilerやpip等の制限は当該WebContainerの説明。このWindowsや現環境の能力/新Python作成許可へ読み替えない。",
+          "未展開のSupabase状態/credentials/allowedHTML/cwd等のtemplate式を含む。実接続projectや環境変数の実値/設定済みではない。setupを本人へ促す規則はAI側の正規代行可否を調べる工程へ合わせる。",
+          "DB変更ごとに同一SQLのmigration fileとimmediate queryを両方要求し、既存migration変更/破壊的操作/明示transactionを一律禁止する。二重適用や途中失敗・配備側の履歴消込/atomicityが検証済みとは言えない。",
+          "IF NOT EXISTSはschemaが期待どおりである証明ではない。例のusers IDはrandom生成で、auth.uidとの対応付けは例内に示されない。RLSをenableしただけで認可成功としない。",
+          "型生成をしないL83とschemaから生成するL225/249、new dependenciesならstartL334と再起動しないL354が併存する。consumer/環境版で整合を確認する必要がある。",
+          "相対path/順序/全file内容/既存変更保持は参考だが、例には省略記号と固定依存版がある。末尾の『前応答から続ける』は収録prompt内の指示で現在の依頼ではない。",
+          "Supabase既定、email/password優先・email確認disabled、npx --yes、常時dev/preview等は元対象の許可/本人方針・Prd範囲・新見た目の画像回答を作らない。L127/400は保守的伏字でraw未読。"
+        ],
+        "negative": "同じSQLが2箇所にあるので二度実行し、IF NOT EXISTSとRLS有効化だけでdata保持/認可・本番反映が済んだとする。",
+        "notices": [
+          {
+            "notice_ref": "root"
+          }
+        ],
+        "package_evidence": {
+          "complete_tree_enumerated": true,
+          "independent_support_blobs": 0,
+          "other_primary_aliases": 0,
+          "primary_alias_excluded": 1,
+          "root": "Open Source prompts/Bolt",
+          "tree_blob_count": 1
+        },
+        "positive": "許可された既存環境の変更案で、元変更保持とDB適用履歴・RLSの正例/拒否例、サーバー実状態を照合する。",
+        "read": [
+          3,
+          2,
+          0,
+          false,
+          true,
+          470
+        ],
+        "read_evidence": {
+          "actual_reader_job": "20261027-194701-todo-3778",
+          "masked_lines": [
+            127,
+            400
+          ],
+          "masking_version": "v26-captured-user-identity-20261027-194701",
+          "method": "direct_masked_full",
+          "new_source_read": true,
+          "ranges": [
+            [
+              1,
+              240
+            ],
+            [
+              241,
+              470
+            ]
+          ],
+          "strict_utf8": true
+        },
+        "reason": "L3..54の環境、L57..254のDB/認証、L294..364のartifact、L376..470の例/続行指示を読んだ。",
+        "required_changes": [
+          "未展開templateを実値として埋めず、実接続/費用/対象版/既存構成とconsumerを確かめる。新Python/無条件install、本人PC操作依頼を現在方針へ合わせる。",
+          "DB用途/必要dataを保持し、migrationの作成・適用・履歴・再試行/重複・失敗時の結果を照合する。transaction禁止を一般規則にせず、RLSの実認可/認証既定・型生成の整合を検査する。",
+          "artifactの包含path/escape/順序・完全性、依存変更時の実起動/ready/終了を確認し、例の省略や宣言だけを動作済み/反映済みにしない。UIは本人の同画像回答へ結ぶ。"
+        ],
+        "row": 318,
+        "source": [
+          "github:f68a11941dbdaa5ca4a1c3175e2531fba46d34ad94cc25a12217c1dfaed05d89",
+          "x1xhlol/system-prompts-and-models-of-ai-tools",
+          "162db92f54d717d8ebd12292e155aeef32bb4b3c",
+          "Open Source prompts/Bolt/Prompt.txt",
+          "a3a121ab8d8b234e0450fdde523e577ee34d09d12a0fa5f0ae8fa5736ee50994",
+          "8cf89624d7e14194fa0a165856ef0dc1e8189ab1",
+          21945
+        ],
+        "support": [],
+        "unit": "github_prompt_or_model_information",
+        "unmet": [
+          "個別prompt/コード/上流license・サービスの真正性/権利、実template/consumer/環境版。",
+          "DB/認可/再試行・依存/起動・UIの実検査、未知中央本文比較、伏字2行 raw。"
+        ],
+        "use": "WebContainer向けの実行環境・DBmigration・順序付きartifact生成を比較する資料。",
+        "value": "直近の利用者変更を保持し、作成→実行の順序、依存/起動の区別、DBdata保持とRLSを検査する観点がある。"
+      },
+      "original_chunk_id": "d320a6f49b1c43d0ae872c953f608214",
+      "original_chunk_sha256": "ed7f9326c78c857ba15bd59390b945080a159316f16738a7efdc99d20cd0a9e2",
+      "path": "Open Source prompts/Bolt/Prompt.txt",
+      "previous_parent_semantic_read": true,
+      "source_commit": "162db92f54d717d8ebd12292e155aeef32bb4b3c",
+      "source_git_blob": "8cf89624d7e14194fa0a165856ef0dc1e8189ab1",
+      "source_path": "Open Source prompts/Bolt/Prompt.txt",
+      "source_repo": "x1xhlol/system-prompts-and-models-of-ai-tools",
+      "source_sha256": "a3a121ab8d8b234e0450fdde523e577ee34d09d12a0fa5f0ae8fa5736ee50994"
+    },
+    {
+      "actual_assessment_reader": "20261027-194701-todo-3778",
+      "bytes": 47083,
+      "inventory_id": "github:8dc9f9eb35614dab2c2d9c9f94e52d879758fdb64f52c4336439bd96128a578d",
+      "inventory_unit": "github_prompt_or_model_information",
+      "original_assessment": {
+        "candidate_disposition": "編集・観測と実結果確認の参考/改訂候補。実tool登録/新MCP/採否・個別権利は親へ。",
+        "classification": "prompt_or_model_info",
+        "findings": [
+          "toolごとのXMLとrequired値を持ち、replaceは最初の一致・全文行/空白/改行を含むexact、複数blockは元順、空replaceは削除。独自apply契約とCRLF/競合・実diffを使用側で確認する必要がある。",
+          "write/replace応答のauto-format後最終状態を次の基準にするのは有用。definitionsはtop-level概観で全文でなく、初回recursive一覧も対象全本文の読了ではない。",
+          "L7/213/380/581は各tool成功を本人の返信で確認することを強制する一方、L567は期待出力がなくても成功と仮定し、必要なら本人にterminalを貼らせる。実終了/副作用の確認や本人PC操作不要の現方針へ改訂が必要。",
+          "requires_approvalのboolやbuild/devをsafeと呼ぶ分類は、本人承認/正規審査やCargo等の資源割当を作らない。toolごとの一律直列と依存のある順序を分ける。",
+          "browserは専用Puppeteer起動/close、active中は他tool禁止、planからactへ本人切替、新taskの引継ぎを持つ。現在のChrome/CUA・本人PC操作禁止・同担当継続や範囲を変更する命令ではない。",
+          "cwd固定/cd禁止L557と別dirにはcdを前置L559が併存し、毎回新terminalというL545の状態寿命も別条件。OS/home/cwd/MCP serverは未展開template式で、実環境/接続先の観測ではない。",
+          "MCPのtool/schema/resourceとconfig command/argsを展開するtemplateがある。接続済みの語だけで新scope/権限/秘密表示を許可せず、原templateを実行しない。L577は保守的伏字でraw未読。"
+        ],
+        "negative": "空terminal出力を成功とし、本人に全toolごとの返信やterminal貼付を求め、新task作成だけで残る依頼を完了とする。",
+        "notices": [
+          {
+            "notice_ref": "root"
+          }
+        ],
+        "package_evidence": {
+          "complete_tree_enumerated": true,
+          "independent_support_blobs": 0,
+          "other_primary_aliases": 0,
+          "primary_alias_excluded": 1,
+          "root": "Open Source prompts/Cline",
+          "tree_blob_count": 1
+        },
+        "positive": "実応答の最終内容を基準に、完全行で一意に一致する局所置換を行い、実diffと必要検査を確認する設計。",
+        "read": [
+          3,
+          1,
+          0,
+          false,
+          true,
+          607
+        ],
+        "read_evidence": {
+          "actual_reader_job": "20261027-194701-todo-3778",
+          "masked_lines": [
+            577
+          ],
+          "masking_version": "v26-captured-user-identity-20261027-194701",
+          "method": "direct_masked_full",
+          "new_source_read": true,
+          "ranges": [
+            [
+              1,
+              220
+            ],
+            [
+              221,
+              440
+            ],
+            [
+              441,
+              607
+            ]
+          ],
+          "strict_utf8": true
+        },
+        "reason": "L5..250のtool群、L369..509の確認/編集、L515..607のmode/環境/目的を読んだ。",
+        "required_changes": [
+          "exact置換/auto-format/最初一致と最新対象版をconsumerへ照合し、必要なdiff/検査で結果を確認する。descriptionとrequired条件だけを実validatorとして扱わない。",
+          "本人の逐次返信や空出力による成功仮定を、実tool結果・終了・新観測の照合へ置き換える。独立操作は資源/競合を確かめ、必要時だけ直列とする。",
+          "mode切替/本人terminal回収/新task再委譲を本依頼の中断理由にせず、正規の現API/元ToDo/同担当を保持する。MCP/環境の展開値は必要scope・secret非表示を保ち、画像方向は本人の同画像回答へ結ぶ。"
+        ],
+        "row": 319,
+        "source": [
+          "github:8dc9f9eb35614dab2c2d9c9f94e52d879758fdb64f52c4336439bd96128a578d",
+          "x1xhlol/system-prompts-and-models-of-ai-tools",
+          "162db92f54d717d8ebd12292e155aeef32bb4b3c",
+          "Open Source prompts/Cline/Prompt.txt",
+          "1c37f28688b8d8a251f7c39be7edda839a66c80dcf11cc5d46a7a1b0ab5629fd",
+          "877c60149249698b3752e5fae8ac51a7f09ce4ba",
+          47083
+        ],
+        "support": [],
+        "unit": "github_prompt_or_model_information",
+        "unmet": [
+          "個別prompt/コード/上流licenseの真正性・権利、現XML/apply/browser/MCP consumer。",
+          "実編集/auto-format/終了/検査・mode/環境確認、未知中央本文比較、伏字L577 raw。"
+        ],
+        "use": "ClineのXML tool・exact置換・反復確認・plan/actのconsumer契約を比較する資料。",
+        "value": "全文writeと局所replaceの選択、最初の一致/完全行/順序、auto-format後の最終内容を次編集の基準にする観点が具体的。"
+      },
+      "original_chunk_id": "d320a6f49b1c43d0ae872c953f608214",
+      "original_chunk_sha256": "ed7f9326c78c857ba15bd59390b945080a159316f16738a7efdc99d20cd0a9e2",
+      "path": "Open Source prompts/Cline/Prompt.txt",
+      "previous_parent_semantic_read": true,
+      "source_commit": "162db92f54d717d8ebd12292e155aeef32bb4b3c",
+      "source_git_blob": "877c60149249698b3752e5fae8ac51a7f09ce4ba",
+      "source_path": "Open Source prompts/Cline/Prompt.txt",
+      "source_repo": "x1xhlol/system-prompts-and-models-of-ai-tools",
+      "source_sha256": "1c37f28688b8d8a251f7c39be7edda839a66c80dcf11cc5d46a7a1b0ab5629fd"
+    },
+    {
+      "actual_assessment_reader": "20261027-194701-todo-3778",
+      "bytes": 23864,
+      "inventory_id": "github:f9b4cf16c84b63b19c7a0de5534fc3765196a4331256d7329a7aa8c50e870e66",
+      "inventory_unit": "github_prompt_or_model_information",
+      "original_assessment": {
+        "candidate_disposition": "歴史的prompt/実行契約の改訂参考候補。現Codexルールや公式確認済みとして導入せず、個別権利/採否は親へ。",
+        "classification": "prompt_or_model_info",
+        "findings": [
+          "日付付きファイルの固定収録文であり、現在のCodex公式仕様・実モデル/利用枠・起動toolを認定するものではない。proprietary repo/code表示可という一般文もこのPCの保護対象/秘密の読取許可へ広げない。",
+          "関連検査から広げる/formatter対象を絞る一方、無関係なテスト失敗を直さないL126/143、formatter失敗は3回で残す、事前依頼なしcommit禁止/inline comment禁止等を持つ。現在の本人のCI失敗原因調査/修正・記録/影響範囲方針との適用差がある。",
+          "L131はpatchやmkdir/delete成功なら再読検証を不要とする。受付・tool終了と、適用した対象版/実内容・期待動作を同一視しない。",
+          "sandbox/approval各modeの説明、on-failure再実行やneverでconstraintsを回避する語は当該文書の内容。現在のread-only/neverや正規guard拒否を別path/API等で迂回する権限ではない。",
+          "apply_patch例のcommand arrayと後半のBegin/Add/Deleteマーカー・挿入/削除記号の説明には形式上の不整合がある。特定parserで通る実patchを示した証明ではない。",
+          "L271の250行/10KB等の出力cap主張は固定資料の説明。今回の実returned output・表示範囲とは別で、宣言から未読なし/全文読了を決めない。",
+          "新作のambitious、次工程の実施を本人へ再質問、動作確認を本人に渡す一般例は現在の元scope/同画像回答・AI側の技術検査継続へ合わせる。L130は保守的伏字でraw未読。"
+        ],
+        "negative": "古いpromptのnever/一般repo許可文を根拠に正規拒否を迂回し、壊れたpatch例やtool成功だけを実反映済みとする。",
+        "notices": [
+          {
+            "notice_ref": "root"
+          }
+        ],
+        "package_evidence": {
+          "complete_tree_enumerated": true,
+          "independent_support_blobs": 0,
+          "other_primary_aliases": 1,
+          "primary_alias_excluded": 1,
+          "root": "Open Source prompts/Codex CLI",
+          "tree_blob_count": 2
+        },
+        "positive": "旧agent promptを比較教材にし、計画・関連検査・実tool結果と完了条件の対応だけを現環境へ適合させて検討する。",
+        "read": [
+          3,
+          1,
+          0,
+          false,
+          true,
+          342
+        ],
+        "read_evidence": {
+          "actual_reader_job": "20261027-194701-todo-3778",
+          "masked_lines": [
+            130
+          ],
+          "masking_version": "v26-captured-user-identity-20261027-194701",
+          "method": "direct_masked_full",
+          "new_source_read": true,
+          "ranges": [
+            [
+              1,
+              342
+            ]
+          ],
+          "strict_utf8": true
+        },
+        "reason": "L19..109の進捗/計画、L111..178の実行/検査/権限、L264..342のtool/patch例を読んだ。",
+        "required_changes": [
+          "現toolの実schema/patch/rendererと版を確認し、過去のshell形式や壊れたmarkerをそのまま実行しない。資料にない新機能・権限や本人承認を作らない。",
+          "必要なCI失敗原因を直し、影響範囲の有効検査/実差分を確認する。commit/記録/終了は元依頼のreadonly指定と本人方針を優先する。",
+          "実approval/guard・資源割当を維持し、技術的な検査を本人へ渡さず同じ依頼で続行する。新UIは同画像回答、秘密/第三者コードの利用条件は個別に保持する。"
+        ],
+        "row": 320,
+        "source": [
+          "github:f9b4cf16c84b63b19c7a0de5534fc3765196a4331256d7329a7aa8c50e870e66",
+          "x1xhlol/system-prompts-and-models-of-ai-tools",
+          "162db92f54d717d8ebd12292e155aeef32bb4b3c",
+          "Open Source prompts/Codex CLI/openai-codex-cli-system-prompt-20250820.txt",
+          "71a13ba45fc6633f98198f6d2691cddfdc6ab066cb58253b6d984c20ded702fc",
+          "ff5c2acde6aa0453166a72cf01f2edd9638f8408",
+          23864
+        ],
+        "support": [
+          {
+            "actual_reader_job": "20261027-194701-todo-3778",
+            "bytes": 4848,
+            "content_path": "github/x1xhlol__system-prompts-and-models-of-ai-tools/objects/df0ada4b6d7be3289a4ec7f0d1fac2d1221059007a915faa329b6703e2b2bad8.gz",
+            "counted_as_support": false,
+            "git_blob": "b200424f63aa924e8bf55b01a4bdcf4629260bfc",
+            "mask": 2,
+            "method": "direct_masked_full",
+            "path": "Open Source prompts/Codex CLI/Prompt.txt",
+            "primary_alias_ordinal": 321,
+            "read": [
+              3,
+              2,
+              0,
+              false,
+              true,
+              46
+            ],
+            "read_evidence_ref": "prepared_support/321",
+            "reader": 0,
+            "saved": true,
+            "sha256": "df0ada4b6d7be3289a4ec7f0d1fac2d1221059007a915faa329b6703e2b2bad8",
+            "tree_bytes": 4848,
+            "tree_git_blob": "b200424f63aa924e8bf55b01a4bdcf4629260bfc"
+          }
+        ],
+        "unit": "github_prompt_or_model_information",
+        "unmet": [
+          "個別収録prompt/上流コードの真正性・許諾、現tool/parser/sandbox・rendererの実仕様。",
+          "patch/CI/formatter・適用の実検査、未知中央本文比較、伏字L130 raw。"
+        ],
+        "use": "日付付きCodex CLI向けpromptの、継続/計画・検査範囲・sandbox/approval・patch構文を比較する歴史資料。",
+        "value": "簡潔な工程共有、複雑な依頼だけ計画、狭い関連検査とformatter、既存ソースに限定した変更という観点を切り出せる。"
+      },
+      "original_chunk_id": "d320a6f49b1c43d0ae872c953f608214",
+      "original_chunk_sha256": "ed7f9326c78c857ba15bd59390b945080a159316f16738a7efdc99d20cd0a9e2",
+      "path": "Open Source prompts/Codex CLI/openai-codex-cli-system-prompt-20250820.txt",
+      "previous_parent_semantic_read": true,
+      "source_commit": "162db92f54d717d8ebd12292e155aeef32bb4b3c",
+      "source_git_blob": "ff5c2acde6aa0453166a72cf01f2edd9638f8408",
+      "source_path": "Open Source prompts/Codex CLI/openai-codex-cli-system-prompt-20250820.txt",
+      "source_repo": "x1xhlol/system-prompts-and-models-of-ai-tools",
+      "source_sha256": "71a13ba45fc6633f98198f6d2691cddfdc6ab066cb58253b6d984c20ded702fc"
+    }
+  ],
+  "roster_sha256": "460219790c088b33e6044c6a97c68a882549c608c3de46ea536aa990a2c1adac",
+  "shared_original_contexts": {
+    "ed7f9326c78c857ba15bd59390b945080a159316f16738a7efdc99d20cd0a9e2": {
+      "actual_assessment_reader": "20261027-194701-todo-3778",
+      "all_original_chunk_fields_reconstructed": true,
+      "common": {
+        "boundaries": {
+          "central_operations": 0,
+          "copy_license_accepted": false,
+          "new_final_dispositions": 0,
+          "source_executed": false
+        },
+        "chunk_id": "d320a6f49b1c43d0ae872c953f608214",
+        "definitions": {
+          "actors": {
+            "0": "今回の実assistant",
+            "1": "20261025-142809-todo-3778/currentの既読担当"
+          },
+          "reader_namespace": "20261027-194701-todo-3778/current",
+          "resource_rules": "package全blobを固定complete tree/roster/catalogへ照合。primary/他primary aliasは支持の新uniqueへ重複計上しない。旧49..51の意味評価とprofileを実reader/固定SHA/代表付きで再利用し、新rawへ加算しない。321は320の支持として現在全masked読取。321のprimary評価送付は次chunkに保持し再読/新unique加算しない。",
+          "states": {
+            "1": "saved_unread",
+            "2": "direct_raw_full",
+            "3": "direct_masked_full",
+            "6": "partial",
+            "7": "scan"
+          }
+        },
+        "domain": "othergit373-chunk-v1",
+        "existing_relationship": {
+          "comparison": "起動catalogの名前/descriptionと既知3048/public metadataのみ。過去のREADME/license/代表評価を今回全本文の読了へしない。旧49..51の固定SHA意味評価は原reader/範囲を保持。未知中央9/647/3048原本/backup/junctionの一括本文/存在読取と変更0。",
+          "prior_support_current_semantic_assessments_read": [
+            49,
+            50,
+            51
+          ]
+        },
+        "first_ordinal": 313,
+        "input_validation": {
+          "catalog_rows": 73220,
+          "catalog_sha256": "2d73c9a038a41cc220a9687b935bfa1e0b315b65d9bd6d3e54ddb4111972876c",
+          "commit": "162db92f54d717d8ebd12292e155aeef32bb4b3c",
+          "commit_json_sha256": "674dc969c4d800fefbf65a7ecb1c875e919118aa48fd0a2133ede51385f90939",
+          "index_sha256": "477ac8c5b178c4c781bf5baf0b26c6a316ed0ae6e9001ad28f0ac0ab9844b54f",
+          "primary_tuple_unit_catalog_exact": true,
+          "repo": "x1xhlol/system-prompts-and-models-of-ai-tools",
+          "root_tree": "e8d86c0a025a7a07d4bb8723ae758cf98d63cbf5",
+          "same_buffer_sha_bytes_gitblob_strict_utf8": true,
+          "tree_entries": 171,
+          "tree_sha256": "416b91db26db0b0c4447d46bbb945259d89ac393e45ee76b5ebceb09cde459f5",
+          "truncated": false
+        },
+        "notice_evidence": {
+          "root": {
+            "actual_reader_job": "20261025-142809-todo-3778",
+            "bytes": 35149,
+            "copy_license_accepted": false,
+            "displayed_line_ranges": [
+              [
+                1,
+                350
+              ],
+              [
+                351,
+                674
+              ]
+            ],
+            "fixed_token_recovery": {
+              "line": 154,
+              "new_raw_read": false,
+              "same_bytes_verified": true,
+              "text": "2. Basic Permissions."
+            },
+            "git_blob": "f288702d2fa16d3cdf0035b15a9fcbc552cd88e7",
+            "mask": 2,
+            "masked_lines": [
+              4,
+              154
+            ],
+            "method": "same-byte-reuse",
+            "original_notice_gzip": "github/x1xhlol__system-prompts-and-models-of-ai-tools/objects/3972dc9744f6499f0f9b2dbf76696f2ae7ad8af9b23dde66d6af86c9dfb36986.gz",
+            "original_read": [
+              3,
+              2,
+              0,
+              false,
+              true,
+              674
+            ],
+            "original_reader_namespace": "20261025-142809-todo-3778/current",
+            "path": "LICENSE.md",
+            "read": [
+              3,
+              2,
+              1,
+              false,
+              true,
+              674
+            ],
+            "reader": 1,
+            "representative": {
+              "chunk_id": "951da82f4b0d41cda1532574d0b68f97",
+              "pointer": "entries/0/notices/0",
+              "receipt_sha256": "a0afd9bdcf9511fb72c7995cf4376914fe854047aa4512be84661a60d3cfaf9f"
+            },
+            "saved": true,
+            "scope": "313..321各packageの祖先root GPLv3。固定171件complete treeに別notice名候補なし。Open Sourceというfolder名やcollector GPLを、第三者prompt/コード/モデル/素材/サービスの真正性・個別転載/配布/利用権へ包括しない。原文参照/要約と公開転載/実配布/サービス利用を区別。",
+            "sha256": "3972dc9744f6499f0f9b2dbf76696f2ae7ad8af9b23dde66d6af86c9dfb36986"
+          }
+        },
+        "prepared_support": {
+          "321": {
+            "actual_reader_job": "20261027-194701-todo-3778",
+            "bytes": 4848,
+            "content_path": "github/x1xhlol__system-prompts-and-models-of-ai-tools/objects/df0ada4b6d7be3289a4ec7f0d1fac2d1221059007a915faa329b6703e2b2bad8.gz",
+            "findings": [
+              "当該sessionで編集/実行可・repo cloned/internet disabled/telemetry replay・rollback・自動commitと述べるが、現在の実環境/作動や許可の証拠ではない。",
+              "根本修正と最小差分・docs/git履歴・status/diff/pre-commitは参考。無関係失敗を無視・pre-commit数回で打切り・scratch一括revert・inline comment排除・自動commit任せという規則は現本人指示や途中成果保護へ合わせる。",
+              "L22は旧cmd配列patchの説明で、現在のtool schemaではない。質問等の無変更依頼を末尾で分け、一般『編集/検査可』文でreadonlyを解除しない。"
+            ],
+            "git_blob": "b200424f63aa924e8bf55b01a4bdcf4629260bfc",
+            "limits": [
+              "L31/38は保守的伏字でraw未読。個別権利/真正性と現parser/telemetry/auto-commit/pre-commit等の実動作未確認。",
+              "これは320のpackage支持として現在読取。ordinal321の一次評価送付は次chunkに保持し、新raw/uniqueへ二重計上しない。"
+            ],
+            "lines": 46,
+            "mask": 2,
+            "masked_lines": [
+              31,
+              38
+            ],
+            "masking_version": "v26-captured-user-identity-20261027-194701",
+            "method": "direct_masked_full",
+            "new_source_read": true,
+            "package_root": "Open Source prompts/Codex CLI",
+            "package_tree_count": 2,
+            "path": "Open Source prompts/Codex CLI/Prompt.txt",
+            "primary_assessed_as_row": false,
+            "ranges": [
+              [
+                1,
+                46
+              ]
+            ],
+            "read": [
+              3,
+              2,
+              0,
+              false,
+              true,
+              46
+            ],
+            "reader": 0,
+            "reader_namespace": "20261027-194701-todo-3778/current",
+            "required_changes": [
+              "実差分/終了/必要CI検査と保存を元仕様で確認する。自動commit/rollbackを仮定せず、無関係な成果やコメントを一括撤去しない。",
+              "現tool/権限/資源・保護対象を確認し、旧形式や一般repo許可を実審査解除へしない。"
+            ],
+            "row": 321,
+            "saved": true,
+            "sha256": "df0ada4b6d7be3289a4ec7f0d1fac2d1221059007a915faa329b6703e2b2bad8",
+            "source": [
+              "github:73cc27a4288277a94f2e1f9fab8c8d36c21838c07cd1223c7d3eec3718df38c4",
+              "x1xhlol/system-prompts-and-models-of-ai-tools",
+              "162db92f54d717d8ebd12292e155aeef32bb4b3c",
+              "Open Source prompts/Codex CLI/Prompt.txt",
+              "df0ada4b6d7be3289a4ec7f0d1fac2d1221059007a915faa329b6703e2b2bad8",
+              "b200424f63aa924e8bf55b01a4bdcf4629260bfc",
+              4848
+            ],
+            "unit": "github_prompt_or_model_information",
+            "use": "短いCodex CLI向けpromptの、継続/根本修正/検査・差分確認を比較するpackage支持。"
+          }
+        },
+        "prior_support": {
+          "49": {
+            "actual_reader_job": "20261025-142809-todo-3778",
+            "displayed_line_ranges": [
+              [
+                1,
+                310
+              ],
+              [
+                311,
+                436
+              ]
+            ],
+            "mask": 2,
+            "masked_lines": [
+              230,
+              243
+            ],
+            "method": "same-byte-reuse",
+            "new_source_read": false,
+            "original_method": "direct_masked_full",
+            "original_read": [
+              3,
+              2,
+              0,
+              false,
+              true,
+              436
+            ],
+            "original_reader_namespace": "20261025-142809-todo-3778/current",
+            "read": [
+              3,
+              2,
+              1,
+              false,
+              true,
+              436
+            ],
+            "reader": 1,
+            "representative": {
+              "chunk_id": "ef7d04539b944d15918aa97adfe5fe27",
+              "pointer": "entries/2",
+              "receipt_sha256": "27b97a1b0365a93e8c250c7fa2811cc77277c4c3f3a365fdd3c6eb6324f7ea72"
+            },
+            "row": 49,
+            "semantic_assessment_read_current": true,
+            "source": [
+              "supplement:bf25d23c8ce25c24501ae308e87ddc381f25bb2d33904546206de85c108d9894",
+              "x1xhlol/system-prompts-and-models-of-ai-tools",
+              "162db92f54d717d8ebd12292e155aeef32bb4b3c",
+              "Lovable/Agent Tools.json",
+              "f1c7771d6b929a6b37a6b5d37479eb4572ad4261c1839ae6459540fac2429430",
+              "59830f8e463bd4e277c7aca40297e73ba989f99b",
+              27944
+            ],
+            "unit": "supplemental_non_md_procedure_or_configuration"
+          },
+          "50": {
+            "actual_reader_job": "20261025-142809-todo-3778",
+            "displayed_line_ranges": [
+              [
+                1,
+                260
+              ],
+              [
+                261,
+                614
+              ]
+            ],
+            "mask": 0,
+            "masked_lines": [],
+            "method": "same-byte-reuse",
+            "new_source_read": false,
+            "original_method": "direct_raw_full",
+            "original_read": [
+              2,
+              0,
+              0,
+              true,
+              true,
+              614
+            ],
+            "original_reader_namespace": "20261025-142809-todo-3778/current",
+            "read": [
+              2,
+              0,
+              1,
+              true,
+              true,
+              614
+            ],
+            "reader": 1,
+            "representative": {
+              "chunk_id": "ef7d04539b944d15918aa97adfe5fe27",
+              "pointer": "entries/3",
+              "receipt_sha256": "27b97a1b0365a93e8c250c7fa2811cc77277c4c3f3a365fdd3c6eb6324f7ea72"
+            },
+            "row": 50,
+            "semantic_assessment_read_current": true,
+            "source": [
+              "supplement:7eea29cebe74bf6393cfd33b11460c795e1bb99812f8a5d44dbbcdfd73a1c07f",
+              "x1xhlol/system-prompts-and-models-of-ai-tools",
+              "162db92f54d717d8ebd12292e155aeef32bb4b3c",
+              "Manus Agent Tools & Prompt/tools.json",
+              "87b9ead0071ebce94ff86c94e2582f9af8cbc29e2ea31dc8420de3fe318c6945",
+              "1a76dd65c0e8902d08bec23c93a011e3b09b131f",
+              18501
+            ],
+            "unit": "supplemental_non_md_procedure_or_configuration"
+          },
+          "51": {
+            "actual_reader_job": "20261025-142809-todo-3778",
+            "displayed_line_ranges": [
+              [
+                1,
+                260
+              ],
+              [
+                261,
+                382
+              ]
+            ],
+            "mask": 5,
+            "mask_locations_not_recorded": true,
+            "mask_profile_limit": "原profileのmask数5と説明fieldの改行展開を含む旧読取を保持。今回のmask行数や新raw読取へ付け替えない。",
+            "masked_lines": null,
+            "method": "same-byte-reuse",
+            "new_source_read": false,
+            "original_method": "direct_masked_full",
+            "original_read": [
+              3,
+              5,
+              0,
+              false,
+              true,
+              382
+            ],
+            "original_reader_namespace": "20261025-142809-todo-3778/current",
+            "read": [
+              3,
+              5,
+              1,
+              false,
+              true,
+              382
+            ],
+            "reader": 1,
+            "representative": {
+              "chunk_id": "9e4c71f3a8b7402ab6d056259fce8704",
+              "pointer": "entries/0",
+              "receipt_sha256": "2d761794674e6c7f112ceefbd08bdb6291e14d5ffc364bbf7063edd2e92dbd74"
+            },
+            "row": 51,
+            "semantic_assessment_read_current": true,
+            "source": [
+              "supplement:839b9fa55866fc78aeec68e9ede2fa9a384ff683a0bb2d86b7aedacd002d6218",
+              "x1xhlol/system-prompts-and-models-of-ai-tools",
+              "162db92f54d717d8ebd12292e155aeef32bb4b3c",
+              "NotionAi/tools.json",
+              "54e16853006d57e929f06cd44a52fd07fd5aab38e8c636edecb9133011cf7fe9",
+              "6ac8c2c99b3b27717eff2f4ba724263c5c66ae43",
+              34889
+            ],
+            "unit": "supplemental_non_md_procedure_or_configuration"
+          }
+        },
+        "privacy_limits": {
+          "initial_limits": [
+            "317の人物検索/架空会話例と末尾captured user identity fieldsが初回filterを通過。原値/断片を再掲せず、今回の本人identityの取得とはしない。",
+            "317 L303は固定仕様文の保守的過剰伏字を保持。初回5行にcached第二範囲の追加1行を結び、6行のcomposite読取。新raw全読を作らない。"
+          ],
+          "mask_count": "実伏字行数で、秘密の実数/不存在の証明ではない。313..316はv24、317はv24と第二範囲のv25 cached overlay、318..321はv26。旧profileを再命名しない。",
+          "operational_guard": "ジョブ状態metadataのguardは分類未確認で本文未読。状態CLIはrefreshの書込可能性を静的に確認し未実行。正規journal/receiptの読取で待機し、迂回/新ToDo/本人質問0。"
+        },
+        "reader_job": "20261027-194701-todo-3778",
+        "reader_todo": 3778,
+        "resume_validation": {
+          "acknowledged_through": 312,
+          "generation": 69,
+          "journal_sha256": "a7279f4423e0fd513390e81701bfecce2f73c62bf2e7cb913c1dc1199123ca65",
+          "parent_semantic_assessments_read": true,
+          "previous_chunk_id": "c312e68a3fd94b1c80e527a6bd903f41",
+          "previous_chunk_sha256": "16323c27b062087e14320831a6ec956a19a9d5b6f2b779e51e1e873929cd30bc",
+          "previous_receipt_sha256": "610a9f9d8655ac79ab9efcdb6fd5225ee7bdf691bd8be3b8f8a93a96bb168b82",
+          "validated_receipts": 69
+        },
+        "roster_sha256": "460219790c088b33e6044c6a97c68a882549c608c3de46ea536aa990a2c1adac"
+      },
+      "original_chunk_id": "d320a6f49b1c43d0ae872c953f608214",
+      "original_receipt_sha256": "3ac043270a6a3d3d638528b8bea0269ff2ee5b614e4412523b83eeecf9321a13"
+    }
+  },
+  "source_counts": {
+    "x1xhlol/system-prompts-and-models-of-ai-tools": 8
+  },
+  "whole16_complete": false,
+  "entries": [
+    {
+      "inventory_id": "github:a47b47464545b0cd2b2b827a0a8851d009f8ffa29648db0e751f08be84de0eac",
+      "source_repo": "x1xhlol/system-prompts-and-models-of-ai-tools",
+      "source_commit": "162db92f54d717d8ebd12292e155aeef32bb4b3c",
+      "path": "Lovable/Agent Prompt.txt",
+      "source_sha256": "a1e151e6af8fd2a13d4ffde10d044a47e78342e99714c239332d102bf19c57e8",
+      "git_blob": "499a60d48efbbb288f9415c58fb6f44d7a2823c0",
+      "bytes": 20301,
+      "original_chunk_sha256": "ed7f9326c78c857ba15bd59390b945080a159316f16738a7efdc99d20cd0a9e2"
+    },
+    {
+      "inventory_id": "github:9063e2496381ade67e976277c35f00da086e184a9422245798c8c04f006ddbc0",
+      "source_repo": "x1xhlol/system-prompts-and-models-of-ai-tools",
+      "source_commit": "162db92f54d717d8ebd12292e155aeef32bb4b3c",
+      "path": "Manus Agent Tools & Prompt/Agent loop.txt",
+      "source_sha256": "2ee373d3c5f1837e25e750872887c8874d4b1847e56ac0e268d979b0f27675f3",
+      "git_blob": "8ee53f47b9dc781cd0abe0da5d9ba4e2f148a619",
+      "bytes": 2147,
+      "original_chunk_sha256": "ed7f9326c78c857ba15bd59390b945080a159316f16738a7efdc99d20cd0a9e2"
+    },
+    {
+      "inventory_id": "github:9ececa409ea849541ce55ca99524a7d65f2ce81e77081dd610d61ae8f3036c1b",
+      "source_repo": "x1xhlol/system-prompts-and-models-of-ai-tools",
+      "source_commit": "162db92f54d717d8ebd12292e155aeef32bb4b3c",
+      "path": "Manus Agent Tools & Prompt/Modules.txt",
+      "source_sha256": "091c8eb2bc485a49c11e24b409f6947b39ee3c1895383b96317e0ea93960dd3e",
+      "git_blob": "fa0fdcc2428a1f333b10434045213c5b11cc9303",
+      "bytes": 12224,
+      "original_chunk_sha256": "ed7f9326c78c857ba15bd59390b945080a159316f16738a7efdc99d20cd0a9e2"
+    },
+    {
+      "inventory_id": "github:70b1f7e6811b169afd3750d40959832a61b088062f3bee96fc714bf15ddfa33d",
+      "source_repo": "x1xhlol/system-prompts-and-models-of-ai-tools",
+      "source_commit": "162db92f54d717d8ebd12292e155aeef32bb4b3c",
+      "path": "Manus Agent Tools & Prompt/Prompt.txt",
+      "source_sha256": "c13fa64374c80dc7b48243f48c94e831ea228da1d1917cb3698521606180cda1",
+      "git_blob": "c1f4c41c0a6d11766e1b04bff05e59955ef5541c",
+      "bytes": 10209,
+      "original_chunk_sha256": "ed7f9326c78c857ba15bd59390b945080a159316f16738a7efdc99d20cd0a9e2"
+    },
+    {
+      "inventory_id": "github:0886b349b8db43439b9d2a8d116fcd5865ccd4accfda1f65377af5b73d9e944e",
+      "source_repo": "x1xhlol/system-prompts-and-models-of-ai-tools",
+      "source_commit": "162db92f54d717d8ebd12292e155aeef32bb4b3c",
+      "path": "NotionAi/Prompt.txt",
+      "source_sha256": "13829c8f4368e2abb1acec94395a015ef0433ec7b4c23f8705e0b462df22c70d",
+      "git_blob": "338876fac3902f39960b4f2329a80aa7cbd88adf",
+      "bytes": 32081,
+      "original_chunk_sha256": "ed7f9326c78c857ba15bd59390b945080a159316f16738a7efdc99d20cd0a9e2"
+    },
+    {
+      "inventory_id": "github:f68a11941dbdaa5ca4a1c3175e2531fba46d34ad94cc25a12217c1dfaed05d89",
+      "source_repo": "x1xhlol/system-prompts-and-models-of-ai-tools",
+      "source_commit": "162db92f54d717d8ebd12292e155aeef32bb4b3c",
+      "path": "Open Source prompts/Bolt/Prompt.txt",
+      "source_sha256": "a3a121ab8d8b234e0450fdde523e577ee34d09d12a0fa5f0ae8fa5736ee50994",
+      "git_blob": "8cf89624d7e14194fa0a165856ef0dc1e8189ab1",
+      "bytes": 21945,
+      "original_chunk_sha256": "ed7f9326c78c857ba15bd59390b945080a159316f16738a7efdc99d20cd0a9e2"
+    },
+    {
+      "inventory_id": "github:8dc9f9eb35614dab2c2d9c9f94e52d879758fdb64f52c4336439bd96128a578d",
+      "source_repo": "x1xhlol/system-prompts-and-models-of-ai-tools",
+      "source_commit": "162db92f54d717d8ebd12292e155aeef32bb4b3c",
+      "path": "Open Source prompts/Cline/Prompt.txt",
+      "source_sha256": "1c37f28688b8d8a251f7c39be7edda839a66c80dcf11cc5d46a7a1b0ab5629fd",
+      "git_blob": "877c60149249698b3752e5fae8ac51a7f09ce4ba",
+      "bytes": 47083,
+      "original_chunk_sha256": "ed7f9326c78c857ba15bd59390b945080a159316f16738a7efdc99d20cd0a9e2"
+    },
+    {
+      "inventory_id": "github:f9b4cf16c84b63b19c7a0de5534fc3765196a4331256d7329a7aa8c50e870e66",
+      "source_repo": "x1xhlol/system-prompts-and-models-of-ai-tools",
+      "source_commit": "162db92f54d717d8ebd12292e155aeef32bb4b3c",
+      "path": "Open Source prompts/Codex CLI/openai-codex-cli-system-prompt-20250820.txt",
+      "source_sha256": "71a13ba45fc6633f98198f6d2691cddfdc6ab066cb58253b6d984c20ded702fc",
+      "git_blob": "ff5c2acde6aa0453166a72cf01f2edd9638f8408",
+      "bytes": 23864,
+      "original_chunk_sha256": "ed7f9326c78c857ba15bd59390b945080a159316f16738a7efdc99d20cd0a9e2"
+    }
+  ],
+  "publication_preparation": {
+    "publisher_job": "20261027-175645-todo-3080",
+    "original_input_sha256": "440b6d7fe10d7fdcfc9702fcabccb42c874c7aeb1a2d67c9bed974ba43c9a4df",
+    "new_source_body_reads": 0,
+    "new_global_raw_or_workflow_credit": 0,
+    "new_permissions": 0,
+    "new_final_dispositions": 0,
+    "central_operations": 0,
+    "whole_original_contexts_preserved": true,
+    "original_reader_or_privacy_profiles_changed": false,
+    "publication_not_yet_performed": true,
+    "whole16_complete": false
+  }
+}

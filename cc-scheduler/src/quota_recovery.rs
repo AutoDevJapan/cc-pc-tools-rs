@@ -15,6 +15,16 @@ pub(crate) fn prepare(
         .as_object_mut()
         .unwrap()
         .remove("model_recovery_from");
+    // A completed new worker may retain historical failure metadata. Its own
+    // successful result is an ordinary continuation, not another quota source.
+    if source.is_some_and(|source| source["status"]=="succeeded"
+        && cc_job_policy::subwork_continuation::consumed(item,source)) {return Ok(false);}
+    if crate::subwork_continuation::requested(backend,item,source,jobs)? {
+        let source=source.ok_or(Error("InputRejected"))?;
+        for field in ["sandbox","mcp_profile","network","add_dirs"] {selection[field]=source[field].clone();}
+        selection["task_type"]=item["subwork"]["kind"].clone();
+        return Ok(false);
+    }
     let Some(source) = source.filter(|s| cc_job_policy::quota_recovery::quota_source(s)) else {
         return Ok(false);
     };

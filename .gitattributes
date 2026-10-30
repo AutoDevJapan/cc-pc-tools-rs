@@ -196,7 +196,6 @@ docs/skills-3080-combat6-input-acceptance090101.md text eol=lf
 /docs/skills-3080-codex3-context-observation090101.json text eol=lf
 /docs/skills-3080-codex3-designs090101.json text eol=lf
 /docs/skills-3080-codex3-installation-evidence090101.json text eol=lf
-/docs/skills-3080-progress.json text eol=lf
 /docs/skills-3080-execution-evidence.json text eol=lf
 /docs/skills-3080-execution-queue-summary.json text eol=lf
 /docs/skills-3080-sixmile-next35-physical090101.json text eol=lf
@@ -499,6 +498,7 @@ docs/skills-3080-openai11-result-acceptance214717.md -text
 
 docs/skills-3080-operations/openai11-result-review-snapshot214717.json -text
 repair-guard/testdata/skills3080-runtime-issuer-repair-scope.json -text
+repair-guard/testdata/skills3080-native609-purpose.md -text
 docs/skills-3080-travel3-reviewed-bundle214717.json -text
 docs/skills-3080-operations/create-travel3-214717.json -text
 docs/skills-3080-travel3-source-meaning214717.json -text
@@ -528,3 +528,195 @@ docs/skills-3080-travel3-designs214717.json -text
 docs/skills-3080-travel3-installation-evidence214717.json -text
 docs/skills-3080-operations/travel3-result-review-snapshot214717.json -text
 tools/skills-3080-catalog/internal/primaryflow/protection_manifest.json -text
+
+docs/skills-3080-sixmile-next6-187192-evaluation175645.json -text
+docs/skills-3080-sixmile-next2-193194-evaluation175645.json -text
+docs/skills-3080-other16-288303-evaluation175645.json -text
+docs/skills-3080-other1-304304-evaluation175645.json -text
+docs/skills-3080-sixmile-next2-195196-evaluation175645.json -text
+docs/skills-3080-operations/create-travel-next3-175645.json -text
+docs/skills-3080-travel-next3-bundle175645.json -text
+docs/skills-3080-travel-next3-source-meaning175645.json -text
+docs/skills-3080-received27-and-next-travel3-preparation175645.md -text
+docs/skills-3080-next-travel3-review-resolution175645.json -text
+docs/skills-3080-other8-305312-evaluation175645.json -text
+docs/skills-3080-next-travel3-placement-plan175645.md -text
+docs/skills-3080-next-travel3-read-only-review-task175645.md -text
+
+docs/skills-3080-next3-actual-bundle175645.json -text
+docs/skills-3080-installed-next3-manifest175645.json -text
+docs/skills-3080-next3-create-evidence175645.json -text
+docs/skills-3080-next3-consume-evidence175645.json -text
+docs/skills-3080-next3-actual-structure175645.json -text
+docs/skills-3080-next3-discovery175645.json -text
+docs/skills-3080-next3-application175645.json -text
+docs/skills-3080-next3-designs175645.json -text
+docs/skills-3080-next3-installation-evidence175645.json -text
+docs/skills-3080-sixmile-next2-197198-evaluation175645.json -text
+docs/skills-3080-other8-313320-evaluation175645.json -text
+docs/skills-3080-other8-321328-evaluation175645.json -text
+docs/skills-3080-other5-329333-evaluation175645.json -text
+docs/skills-3080-other5-334338-evaluation175645.json -text
+docs/skills-3080-other7-339345-evaluation175645.json -text
+docs/skills-3080-other7-346352-evaluation175645.json -text
+docs/skills-3080-other7-353359-evaluation175645.json -text
+docs/skills-3080-other7-360366-evaluation175645.json -text
+docs/skills-3080-other7-367373-evaluation175645.json -text
+docs/skills-3080-primaryflow47-evaluation175645.json -text
+docs/skills-3080-actual150-received110-review-task175645.md -text
+docs/skills-3080-next3-precreation-qualification175645.json -text
+docs/evidence/skills-3080-guard-before-notice-representation175645.json -text
+repair-guard/testdata/skills3080-rlm-controller-LICENCE.txt -text
+/docs/skills-3080-notice-next4-bundle175645.json text eol=lf
+/docs/skills-3080-notice-next4-designs175645.json text eol=lf
+/docs/skills-3080-notice-next4-source-scope175645.json text eol=lf
+/docs/skills-3080-notice-next4-structure175645.json text eol=lf
+/docs/skills-3080-notice-next4-review-task175645.md text eol=lf
+/docs/skills-3080-operations/create-notice-next4-175645.json text eol=lf
+/docs/evidence/skills-3080-guard-before-notice-representation175645.json -text
+/docs/skills-3080-notice-next4-review-resolution175645.json -text
+/docs/skills-3080-primaryflow-next36-evaluation175645.json -text
+/docs/skills-3080-parent-notice19-evaluation175645.json -text
+
+docs/skills-3080-notice-next4-actual-bundle175645.json -text
+docs/skills-3080-installed-notice-next4-manifest175645.json -text
+docs/skills-3080-notice-next4-create-evidence175645.json -text
+docs/skills-3080-notice-next4-consume-evidence175645.json -text
+docs/skills-3080-notice-next4-actual-structure175645.json -text
+docs/skills-3080-notice-next4-discovery175645.json -text
+docs/skills-3080-notice-next4-application175645.json -text
+docs/skills-3080-notice-next4-actual-designs175645.json -text
+docs/skills-3080-notice-next4-installation-evidence175645.json -text
+docs/skills-3080-notice-next4-precreation-qualification175645.json -text
+
+docs/skills-3080-primaryflow-next79-evaluation175645.json -text
+
+docs/skills-3080-machine-header-complete51030-175645.json -text
+
+docs/skills-3080-balance-next1-bundle175645.json -text
+
+docs/skills-3080-operations/create-balance-next1-175645.json -text
+
+docs/skills-3080-balance-next1-source-scope175645.json -text
+
+docs/skills-3080-balance-next1-designs175645.json -text
+
+docs/skills-3080-balance-next1-review-task175645.md -text
+
+docs/skills-3080-balance-next1-structure175645.json -text
+docs/skills-3080-original3719-next8-199206-evaluation175645.json -text
+docs/skills-3080-original3719-next3-207209-evaluation175645.json -text
+docs/skills-3080-source9-first4-visible-evaluation175645.json -text
+
+docs/skills-3080-next-four-bundle175645.json -text
+
+docs/skills-3080-operations/create-next-four-175645.json -text
+
+docs/skills-3080-next-four-source-scope175645.json -text
+
+docs/skills-3080-next-four-designs175645.json -text
+
+docs/skills-3080-next-four-review-task175645.md -text
+
+docs/skills-3080-next-four-structure175645.json -text
+
+docs/skills-3080-next-four-review-resolution175645.json -text
+
+docs/evidence/skills-3080-guard-before-native-path-eab175645.json -text
+
+docs/evidence/skills-3080-native-path-create-and-hold175645.json -text
+
+docs/evidence/skills-3080-ci-issuer-observation80c.json -text -filter -working-tree-encoding
+docs/evidence/skills-3080-native-path-actual64138-175645.txt -text
+
+docs/skills-3080-native-path-repair-task175645.md -text
+
+docs/evidence/skills-3080-native-path-production-red175645.json -text
+docs/skills-3080-original3719-next18-210227-evaluation175645.json -text
+
+docs/skills-3080-primaryflow-next8-evaluation175645.json -text
+
+docs/skills-3080-source9-next2-visible-evaluation175645.json -text
+
+docs/evidence/skills-3080-received28-queue-byte-acceptance175645.json -text
+
+docs/skills-3080-received28-review-resolution175645.json -text
+
+docs/skills-3080-original3719-next12-228239-evaluation175645.json -text
+docs/skills-3080-primaryflow-next5-evaluation175645.json -text
+docs/evidence/skills-3080-received17-queue-byte-acceptance175645.json -text
+docs/skills-3080-next-four-actual-bundle175645.json -text
+docs/skills-3080-installed-next-four-manifest175645.json -text
+docs/skills-3080-next-four-create-evidence175645.json -text
+docs/skills-3080-next-four-consume-evidence175645.json -text
+docs/skills-3080-next-four-actual-structure175645.json -text
+docs/skills-3080-next-four-discovery175645.json -text
+docs/skills-3080-next-four-application175645.json -text
+docs/skills-3080-next-four-precreation-qualification175645.json -text
+docs/skills-3080-next-four-actual-designs175645.json -text
+docs/skills-3080-next-four-installation-evidence175645.json -text
+docs/skills-3080-next-four-catalog-identity175645.json -text
+/docs/skills-3080-original3719-next6-240245-evaluation175645.json -text
+/docs/skills-3080-primaryflow-next15-evaluation175645.json -text
+/docs/skills-3080-source9-next2-7to8-visible-evaluation175645.json -text
+/docs/skills-3080-rental-ledger-proposal175645.json -text
+/docs/skills-3080-operations/create-rental-ledger-175645.json -text
+/docs/skills-3080-rental-ledger-sources175645.json -text
+/docs/skills-3080-rental-ledger-preparation175645.json -text
+/docs/skills-3080-rental-ledger-review-task175645.md -text
+/docs/skills-3080-rental-ledger-actual-bundle175645.json -text
+/docs/skills-3080-installed-rental-ledger-manifest175645.json -text
+/docs/skills-3080-rental-ledger-create-evidence175645.json -text
+/docs/skills-3080-rental-ledger-consume-evidence175645.json -text
+/docs/skills-3080-rental-ledger-discovery175645.json -text
+/docs/skills-3080-rental-ledger-application175645.json -text
+/docs/skills-3080-rental-ledger-actual-designs175645.json -text
+/docs/skills-3080-rental-ledger-installation-evidence175645.json -text
+/docs/skills-3080-adoptions.json -text
+/docs/skills-3080-direct-design-index.json -text
+/docs/skills-3080-original3719-next4-246249-evaluation175645.json -text
+/docs/skills-3080-primaryflow-next5-after190-evaluation175645.json -text
+/docs/skills-3080-execution-evidence.json -text
+/docs/skills-3080-progress.json -text
+/docs/skills-3080-recovery-connections-proposal175645.json -text
+/docs/skills-3080-operations/create-recovery-connections-175645.json -text
+/docs/skills-3080-recovery-connections-sources175645.json -text
+/docs/skills-3080-recovery-connections-preparation175645.json -text
+/docs/skills-3080-recovery-connections-actual-bundle175645.json -text
+/docs/skills-3080-installed-recovery-connections-manifest175645.json -text
+/docs/skills-3080-recovery-connections-create-evidence175645.json -text
+/docs/skills-3080-recovery-connections-consume-evidence175645.json -text
+/docs/skills-3080-recovery-connections-discovery175645.json -text
+/docs/skills-3080-recovery-connections-application175645.json -text
+/docs/skills-3080-recovery-connections-actual-designs175645.json -text
+/docs/skills-3080-recovery-connections-installation-evidence175645.json -text
+/docs/skills-3080-original3719-next6-250255-evaluation175645.json -text
+/docs/skills-3080-primaryflow-next16-after195-evaluation175645.json -text
+/docs/skills-3080-consolidation-art-proposal175645.json -text
+/docs/skills-3080-operations/create-consolidation-art-175645.json -text
+/docs/skills-3080-consolidation-art-sources175645.json -text
+/docs/skills-3080-original3719-next12-256267-evaluation175645.json -text
+/docs/skills-3080-web-claw-alias247-integration175645.json -text
+/docs/skills-3080-consolidation-art-preparation175645.json -text
+/docs/skills-3080-original3719-next21-268288-evaluation175645.json -text
+/docs/skills-3080-consolidation-art-actual-bundle175645.json -text
+/docs/skills-3080-installed-consolidation-art-manifest175645.json -text
+/docs/skills-3080-consolidation-art-create-evidence175645.json -text
+/docs/skills-3080-consolidation-art-consume-evidence175645.json -text
+/docs/skills-3080-consolidation-art-discovery175645.json -text
+/docs/skills-3080-consolidation-art-application175645.json -text
+/docs/skills-3080-consolidation-art-actual-designs175645.json -text
+/docs/skills-3080-consolidation-art-installation-evidence175645.json -text
+/docs/skills-3080-original3719-next6-289294-evaluation175645.json -text
+/docs/skills-3080-original3719-next16-295310-evaluation170905.json -text
+/docs/skills-3080-primaryflow-next5-after211-evaluation170905.json -text
+/docs/skills-3080-art-five-alias-integrations170905.json -text
+/docs/skills-3080-original3719-next12-311322-evaluation095653.json -text
+/docs/skills-3080-primaryflow-next13-plus-held1-after216-evaluation095653.json -text
+/docs/skills-3080-openai6-site-integrations095653.json -text
+/docs/skills-3080-primaryflow-next18-after230-evaluation095653.json -text
+/docs/skills-3080-site-identity-interpretation095653.json -text
+/docs/skills-3080-primaryflow-next12-after248-evaluation095653.json -text
+/docs/skills-3080-deployment-aliases.json -text
+/docs/skills-3080-adoption-baseline.json -text
+/docs/skills-3080-source-alias-metadata.json -text

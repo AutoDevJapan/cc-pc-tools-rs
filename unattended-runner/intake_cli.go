@@ -108,6 +108,14 @@ func intakeCLIWith(args []string, out io.Writer, load func(string, bool) (*Runne
 		for _, id := range ids[:min(len(ids), 50)] {
 			q := r.State.Requests[id]
 			owner, next := q.PendingOwner, q.NextAction
+			if q.Phase == "origin_pending" {
+				if owner == "" {
+					owner = "OMB"
+				}
+				if next == "" {
+					next = "review_original_context_and_existing_task_linkage"
+				}
+			}
 			if q.Todo == 0 && owner == "" && q.Phase == "task_binding_pending" {
 				owner, next = "OMB", "read_source_and_bind_original_task"
 			}

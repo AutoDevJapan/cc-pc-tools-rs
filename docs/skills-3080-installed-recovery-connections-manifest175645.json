@@ -1,0 +1,124 @@
+{
+  "root": "D:/CC/Skills",
+  "targets": [
+    {
+      "name": "dynamic-action-authorization",
+      "positive": "動的なaction一覧を持つAPIで、同じ操作名でも主体・会社・資源の認可をserver側で照合し、表示・受付・実作用を別に確認する。",
+      "negative": "普通の静的な画面の色調整だけの依頼へ、このSkillを追加して認可方式やサービス構成を変更する。",
+      "files": [
+        {
+          "path": "SKILL.md",
+          "sha256": "4e63c3b8df44a324f6238bf1cb8b0b33012c2a70384df3dbf8d1c806bb3cf95d"
+        },
+        {
+          "path": "references/guide.md",
+          "sha256": "3645b00d6da4de19a2627674f13257f39cbca8c3cb8cde9eebc1d01eadaa9df6"
+        },
+        {
+          "path": "references/LICENSE.txt",
+          "sha256": "6f6bb192fb5854c274ca1bd5f3705ad6d4577099d2db95f46c90d0657ffb830d"
+        },
+        {
+          "path": "references/source.json",
+          "sha256": "2fd9934093b57451bb6ce278c8238ce84f7458d28f84364e063226b12271b9cc"
+        },
+        {
+          "path": "references/sources.md",
+          "sha256": "00998160041ef6ee5137ecfac057f3894e64e6d0f47373cc278bb35d278a8d0b"
+        },
+        {
+          "path": "references/source-assessment.json",
+          "sha256": "cb3c8deebc00c76953ab927505b5a71f0c71bdb4fb68602d8be368dd94341828"
+        },
+        {
+          "path": "references/original-skill.masked.txt",
+          "sha256": "b4a526741ed5e42d5f1a961889e04f3d5436d235d2174f37b883934462d82b46"
+        }
+      ],
+      "pre_readback_target_state": null,
+      "target_state": "actual_once_created_normal_readback_discovered_explicit_application",
+      "deployment_state": "actual_once_created_normal_readback_discovered_explicit_application"
+    },
+    {
+      "name": "backup-restore-reconciliation",
+      "positive": "指定snapshotを依頼された復元先へ戻す際、必要な内容・除外理由・版と実復元結果を照合し、現在の原本を保って切替する。",
+      "negative": "通常のgit差分保存だけで足りる依頼へ、自動backupや新しい保存先・新費用を追加する。",
+      "files": [
+        {
+          "path": "SKILL.md",
+          "sha256": "760e635399a2c4d5b31a510a4f037038ecc6c8a3b782b50e464e253eb8894762"
+        },
+        {
+          "path": "references/guide.md",
+          "sha256": "d31fd959ef5d4235748477ab5ef119c79212b7279095fd4d0514c442207439ad"
+        },
+        {
+          "path": "references/LICENSE.txt",
+          "sha256": "152ff6b3b51acbae8d220f2ac81b1d0e31e5c8d1253721b8a1e7c3c71b994eb4"
+        },
+        {
+          "path": "references/source.json",
+          "sha256": "267a56dcb64750844b92d9b51476794b66ded14805e0a3b69e48e97729b95eb3"
+        },
+        {
+          "path": "references/sources.md",
+          "sha256": "8e5bec8d5563ad5240fc57eaaf527951700494bfa825c82193fee446e7808ff3"
+        },
+        {
+          "path": "references/source-assessment.json",
+          "sha256": "36019e1c3286fd8225443951e424d7a6fb8461b5538a480c86d9baab2319dc97"
+        },
+        {
+          "path": "references/original-skill.masked.txt",
+          "sha256": "179e8404bc2ecfcdece13b75fb295fdbecc2ca81bddb26b8b9d084cd76dff5a3"
+        }
+      ],
+      "pre_readback_target_state": null,
+      "target_state": "actual_once_created_normal_readback_discovered_explicit_application",
+      "deployment_state": "actual_once_created_normal_readback_discovered_explicit_application"
+    },
+    {
+      "name": "connection-scope-reconciliation",
+      "positive": "同じserviceに複数のACTIVE接続があるとき、期待subject/Org・目的・宛先を確認して明示接続を使い、native結果と全page/配送を別に照合する。",
+      "negative": "単一の公開ページを読んで要約するだけの依頼へ、OAuth接続やAPIキー・新しいgatewayを追加する。",
+      "files": [
+        {
+          "path": "SKILL.md",
+          "sha256": "73573f9305c9b5bf8a630eccc468a951696493b23bba3f14796f9a72250231e9"
+        },
+        {
+          "path": "references/guide.md",
+          "sha256": "ee436562a5adc575dbed3c20cf0559dbc6bfd3e13fb67b7de2663aae43ca215b"
+        },
+        {
+          "path": "references/LICENSE.txt",
+          "sha256": "ec9e952fec4d029fab649746d033bf91802b15f59ffa40a0d3a3a0e1a1587802"
+        },
+        {
+          "path": "references/source.json",
+          "sha256": "f4967d933f3f3adab2cc20ec035cfed908e5c57afa1fc872944d81ed5dd21f3c"
+        },
+        {
+          "path": "references/sources.md",
+          "sha256": "236cb07a51c4f70ca8e20239c17459b8ebc6c2cd09483c0999be9a676cf8c6ea"
+        },
+        {
+          "path": "references/source-assessment.json",
+          "sha256": "dd70dceb0d9bb0332506e1fb0b174af09ff08612075aa0d61582d731eb28c558"
+        },
+        {
+          "path": "references/original-skill.masked.txt",
+          "sha256": "1a375a1ff2f70676ddc9a63de07275ab408147dc6610f9aaebdf9880278b907a"
+        }
+      ],
+      "pre_readback_target_state": null,
+      "target_state": "actual_once_created_normal_readback_discovered_explicit_application",
+      "deployment_state": "actual_once_created_normal_readback_discovered_explicit_application"
+    }
+  ],
+  "stage": "Three once-created targets; normal current21 buffers verified; fresh found3 and explicit application complete",
+  "central_operations": 1,
+  "new_adoptions": 3,
+  "creator_job": "20261027-175645-todo-3080",
+  "current_consumer_job": "20261027-175645-todo-3080"
+}

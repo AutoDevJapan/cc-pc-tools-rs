@@ -12,7 +12,36 @@ import (
 const retainedProcedureJournalFile = "skills-3080-retained-procedure-assessments.json"
 const retainedProcedureDomain = "skills3080-retained-procedure-assessment-journal-v1"
 
-var retainedOperationalValue = regexp.MustCompile(`\b[0-9]{8}-[0-9]{6}-todo-[0-9]+\b|(?i:claude-session|chatgpt\.com/c/|codex\.openai\.com/)`)
+var retainedJobIdentifier = regexp.MustCompile(`\b[0-9]{8}-[0-9]{6}-todo-[0-9]+\b`)
+var retainedURLToken = regexp.MustCompile("(?i)https?://[^\\s<>\"'`]+")
+
+func retainedConversationURL(text string) bool {
+	for _, token := range retainedURLToken.FindAllString(text, -1) {
+		u, err := url.Parse(strings.TrimRight(token, ".,;)]}`"))
+		if err != nil {
+			continue
+		}
+		host := strings.TrimPrefix(strings.TrimSuffix(strings.ToLower(u.Hostname()), "."), "www.")
+		p := strings.ToLower(path.Clean(u.Path))
+		switch host {
+		case "chatgpt.com", "chat.openai.com":
+			if strings.HasPrefix(p, "/c/") || strings.HasPrefix(p, "/codex/tasks/") {
+				return true
+			}
+		case "claude.ai":
+			if strings.HasPrefix(p, "/chat/") || strings.HasPrefix(p, "/code/") {
+				return true
+			}
+		case "discord.com", "discordapp.com":
+			if strings.HasPrefix(p, "/channels/") {
+				return true
+			}
+		case "codex.openai.com":
+			return true
+		}
+	}
+	return false
+}
 
 func retainedKeys(v map[string]any, keys ...string) bool {
 	if len(v) != len(keys) {
@@ -37,7 +66,7 @@ func retainedInteger(v any) (int64, bool) {
 
 func retainedText(v any) bool {
 	text, ok := v.(string)
-	return ok && strings.TrimSpace(text) != "" && !retainedOperationalValue.MatchString(text)
+	return ok && strings.TrimSpace(text) != "" && !retainedJobIdentifier.MatchString(text) && !retainedConversationURL(text)
 }
 
 func retainedTextList(v any) bool {
@@ -129,7 +158,7 @@ func validateRetainedProcedureJournal(v map[string]any, expectedRows int) error 
 			return fail()
 		}
 		if read["recorded_mask_version"] != nil {
-			if version, ok := retainedInteger(read["recorded_mask_version"]); !ok || version == 0 {
+			if version, ok := retainedInteger(read["recorded_mask_version"]); !ok || (version != 14 && version != 16) {
 				return fail()
 			}
 		}

@@ -92,6 +92,7 @@ func TestRetainedProcedureJournalRejectsChangedReadAndRightsBeforeQueue(t *testi
 		{"saved_unread_gains_mask_count", func(v map[string]any) { support(v, "saved_unread")["masked_lines"] = json.Number("0") }},
 		{"support_escapes_package", func(v map[string]any) { support(v, "unsaved")["relative_path"] = "../outside.txt" }},
 		{"unknown_mask_version_invented", func(v map[string]any) { read(v)["recorded_mask_version"] = "unknown" }},
+		{"unknown_numeric_mask_version", func(v map[string]any) { read(v)["recorded_mask_version"] = json.Number("999") }},
 		{"private_reader_field", func(v map[string]any) { entry(v, 0)["reader_job"] = "internal-reader" }},
 		{"full_completion_claim", func(v map[string]any) { v["whole16_complete"] = true }},
 		{"mismatched_source_URL", func(v map[string]any) {
@@ -109,6 +110,10 @@ func TestRetainedProcedureJournalRejectsChangedReadAndRightsBeforeQueue(t *testi
 			t.Fatal("initial display-gap fixture absent")
 		}},
 		{"private_job_value_in_meaning", func(v map[string]any) { entry(v, 0)["value"] = "record 20991231-123456-todo-1" }},
+		{"claude_conversation_URL", func(v map[string]any) { entry(v, 0)["value"] = "https://claude.ai/chat/example-session" }},
+		{"discord_conversation_URL", func(v map[string]any) { entry(v, 0)["value"] = "https://discord.com/channels/1/2/3" }},
+		{"encoded_discord_conversation_URL", func(v map[string]any) { entry(v, 0)["value"] = "https://WWW.DISCORD.COM./%63hannels/1/2/3" }},
+		{"legacy_chatgpt_conversation_URL", func(v map[string]any) { entry(v, 0)["value"] = "https://chat.openai.com/c/example-session" }},
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
@@ -118,6 +123,14 @@ func TestRetainedProcedureJournalRejectsChangedReadAndRightsBeforeQueue(t *testi
 				t.Fatal("queue accepted changed read/rights/public scope despite a freshly matching artifact pin")
 			}
 		})
+	}
+}
+
+func TestRetainedProcedureJournalKeepsLegitimateNamesAndDocumentationURLs(t *testing.T) {
+	v := retainedJournalFixture(t)
+	v["entries"].([]any)[0].(map[string]any)["value"] = "Claude-Session is an analyzed header name, gpt-6-luna is a model identifier, and legitimate copyright authors remain. https://platform.openai.com/docs/overview https://discord.com/developers/docs/intro"
+	if _, err := loadRetainedJournalFixture(t, v); err != nil {
+		t.Fatalf("functional identifiers and documentation links are not an attribution: %v", err)
 	}
 }
 

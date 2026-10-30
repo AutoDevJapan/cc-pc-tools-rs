@@ -80,6 +80,8 @@ execのsession、task_startedのturn、bootstrap、runtime snapshot、最初のt
 bootstrapとタスク・最終応答は同じ長さを固定したnative handleから読み、
 重複user/final、別の世代、別cwd・環境、未知の追加指示を拒否する。
 元のauthor・現在のconsumer・原結果のIDとhashの照合は省略しない。
+全job窓の`user_message` eventも確認し、登録入力と同じ本文・同じ記録時刻の
+一つの表現だけを認める。内容違い・重複・時刻違い・添付付きeventは拒否する。
 
 Windows更新では、以前のPR番号を再利用せず、固定したreviewed headに対応する
 実際の通常マージをGitHubから選ぶ。repository ID、head、main、merge SHAを確認し、

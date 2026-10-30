@@ -645,11 +645,41 @@ func skillsNativeProjectionBound(input io.Reader, id, cwd string, start, end tim
 		if !skillsCreationHeaderKeys(raw, "type", "timestamp", "payload") || json.Unmarshal(raw, &envelope) != nil {
 			return nil, false
 		}
-		if envelope.Type != "session_meta" && envelope.Type != "turn_context" && (proof == nil || envelope.Type != "response_item") {
+		if envelope.Type != "session_meta" && envelope.Type != "turn_context" && (proof == nil || (envelope.Type != "response_item" && envelope.Type != "event_msg")) {
 			continue
 		}
-		if !skillsCreationHeaderKeys(envelope.Payload, "type", "id", "cwd", "role", "phase", "content", "model", "effort", "reasoning_effort", "service_tier") {
+		if !skillsCreationHeaderKeys(envelope.Payload, "type", "id", "cwd", "role", "phase", "content", "model", "effort", "reasoning_effort", "service_tier", "message", "images", "local_images", "text_elements") {
 			return nil, false
+		}
+		if envelope.Type == "event_msg" {
+			var kind struct {
+				Type string `json:"type"`
+			}
+			if json.Unmarshal(envelope.Payload, &kind) != nil {
+				return nil, false
+			}
+			if kind.Type != "user_message" {
+				continue
+			}
+			at, err := time.Parse(time.RFC3339Nano, envelope.Timestamp)
+			if err != nil {
+				return nil, false
+			}
+			if at.Before(start) || at.After(end) {
+				if proof.runtimeSourceUsed {
+					var v struct {
+						Type string `json:"type"`
+					}
+					if json.Unmarshal(envelope.Payload, &v) != nil || v.Type == "user_message" {
+						return nil, false
+					}
+				}
+				continue
+			}
+			if !session || !proof.observeEvent(raw, at) {
+				return nil, false
+			}
+			continue
 		}
 		if envelope.Type == "response_item" {
 			at, e := time.Parse(time.RFC3339Nano, envelope.Timestamp)

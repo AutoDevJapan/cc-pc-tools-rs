@@ -310,6 +310,7 @@ func (s *skillsNativeSnapshotReader) Read(p []byte) (int, error) {
 type skillsNativeResultProof struct {
 	prompt, body, lastFinal       []byte
 	promptAt, finalAt             time.Time
+	inputEventAt                  time.Time
 	finalSHA                      string
 	inputOnly                     bool
 	exactInput                    bool
@@ -323,6 +324,33 @@ type skillsNativeResultProof struct {
 	runtimePrefixClosed           bool
 	bootstrapSeen, bootstrapBound bool
 	frozen                        bool
+}
+
+func (p *skillsNativeResultProof) observeEvent(raw []byte, at time.Time) bool {
+	if !p.exactInput && !p.inputOnly {
+		return true
+	}
+	var e struct {
+		Payload struct {
+			Type     string            `json:"type"`
+			Message  string            `json:"message"`
+			Images   []json.RawMessage `json:"images"`
+			Local    []json.RawMessage `json:"local_images"`
+			Elements []json.RawMessage `json:"text_elements"`
+		} `json:"payload"`
+	}
+	if json.Unmarshal(raw, &e) != nil {
+		return false
+	}
+	v := e.Payload
+	if v.Type != "user_message" {
+		return true
+	}
+	if !p.inputEventAt.IsZero() || v.Message != string(p.prompt) || len(v.Images) != 0 || len(v.Local) != 0 || len(v.Elements) != 0 {
+		return false
+	}
+	p.inputEventAt = at
+	return true
 }
 
 func (p *skillsNativeResultProof) bootstrapMatchesBody(body string) bool {
@@ -425,6 +453,11 @@ func (p *skillsNativeResultProof) observe(raw []byte, at time.Time) bool {
 }
 
 func (p *skillsNativeResultProof) bound() bool {
+	// Some native versions mirror a user message as an event. It must be the
+	// same exact input at the same recorded instant, never a second turn.
+	if !p.inputEventAt.IsZero() && !p.inputEventAt.Equal(p.promptAt) {
+		return false
+	}
 	if (p.inputOnly || p.exactInput) && !p.bootstrapBound && !p.bootstrapSeen {
 		return false
 	}

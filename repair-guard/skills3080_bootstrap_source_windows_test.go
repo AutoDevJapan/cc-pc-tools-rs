@@ -24,6 +24,49 @@ func TestSkills3080AvailableRuntimeSourceDoesNotDowngrade(t *testing.T) {
 	}
 }
 
+func TestSkills3080UserEventsMustMirrorTheOneRegisteredInput(t *testing.T) {
+	for _, kind := range []string{"no_event", "matching_event", "different_input", "duplicate_event", "later_same_input", "attachments", "outside_window"} {
+		t.Run(kind, func(t *testing.T) {
+			cwd, id := "D:/CC/Work/synthetic", "11111111-1111-7111-8111-111111111111"
+			start := time.Date(2026, 10, 30, 14, 0, 0, 0, time.UTC)
+			inputAt := start.Add(time.Second)
+			msg := func(role, phase, text string, at time.Time) object {
+				return object{"type": "response_item", "timestamp": at.Format(time.RFC3339Nano), "payload": object{"type": "message", "role": role, "phase": phase, "content": []object{{"type": "input_text", "text": text}}}}
+			}
+			records := []object{{"type": "session_meta", "timestamp": start.Format(time.RFC3339Nano), "payload": object{"id": id, "cwd": cwd}}, {"type": "turn_context", "timestamp": start.Format(time.RFC3339Nano), "payload": object{"model": "gpt-6-luna", "effort": "max", "cwd": cwd}}, msg("user", "", skillsBootstrapFixture(cwd, "runtime instructions", true), start), msg("user", "", "exact task", inputAt)}
+			event := object{"type": "event_msg", "timestamp": inputAt.Format(time.RFC3339Nano), "payload": object{"type": "user_message", "message": "exact task", "images": []any{}, "local_images": []any{}, "text_elements": []any{}}}
+			switch kind {
+			case "different_input":
+				obj(event["payload"])["message"] = "additional private input"
+			case "later_same_input":
+				event["timestamp"] = inputAt.Add(time.Second).Format(time.RFC3339Nano)
+			case "attachments":
+				obj(event["payload"])["images"] = []any{"image"}
+			case "outside_window":
+				event["timestamp"] = start.Add(-time.Second).Format(time.RFC3339Nano)
+			}
+			if kind != "no_event" {
+				records = append(records, event)
+			}
+			if kind == "duplicate_event" {
+				records = append(records, event)
+			}
+			records = append(records, msg("assistant", "final_answer", "original final", start.Add(3*time.Second)))
+			var b bytes.Buffer
+			for _, v := range records {
+				raw, _ := json.Marshal(v)
+				b.Write(raw)
+				b.WriteByte('\n')
+			}
+			p := &skillsNativeResultProof{prompt: []byte("exact task"), finalSHA: hashBytes([]byte("original final")), exactInput: true, runtimeBootstrap: []byte("runtime instructions"), runtimeSourceUsed: true, cwd: cwd, sandbox: "read-only"}
+			_, ok := skillsNativeProjectionBound(&b, id, cwd, start, start.Add(time.Minute), p)
+			if ok != (kind == "no_event" || kind == "matching_event") {
+				t.Fatalf("native input event %s accepted=%v", kind, ok)
+			}
+		})
+	}
+}
+
 func TestSkills3080MissingPublicProjectCannotDowngradeCurrentRuntime(t *testing.T) {
 	home := skillsFixtureRoot(t)
 	t.Setenv("USERPROFILE", home)

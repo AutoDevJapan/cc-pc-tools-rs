@@ -4030,19 +4030,19 @@
   "current_execution_queue": {
     "state": "complete",
     "catalog_sha256": "2d73c9a038a41cc220a9687b935bfa1e0b315b65d9bd6d3e54ddb4111972876c",
-    "manifest_sha256": "c49eff9b61d47cfcaa883198355e35e51205ed3eef931eda67809e00defd312f",
-    "queue_sha256": "99b18181e5232ef68fb061d5c8ef64a91e658628f54123af4d6928810c7ab80c",
+    "manifest_sha256": "9c293bc6d38ea74ee5b889ef21bd0b53abacd19e6a04ec95df8c915b520e040c",
+    "queue_sha256": "7d46e8181db7a020ad016399f59fe1c4892cf4b082ccd1bfa892342d06e9efdb",
     "occurrences": 73220,
-    "occurrences_with_assessment_records": 1947,
+    "occurrences_with_assessment_records": 2036,
     "recorded_final_occurrences": 198,
     "occurrences_with_assessment_and_final_records": 192,
     "final_records_without_assessment_record": 6,
-    "occurrences_with_assessment_or_final_records": 1953,
+    "occurrences_with_assessment_or_final_records": 2042,
     "stages": {
-      "assessed_needs_current_disposition": 1755,
+      "assessed_needs_current_disposition": 1844,
       "held_body_unavailable": 428,
       "held_execution_review": 647,
-      "needs_semantic_and_individual_rights_review": 70192,
+      "needs_semantic_and_individual_rights_review": 70103,
       "recorded_final_disposition": 198
     },
     "recorded_final_dispositions": {
@@ -4056,7 +4056,41 @@
       "No source body or URL is opened, no model or worker is launched, no permission is changed and nothing is installed.",
       "The queue is complete only when its separate summary is complete and its recorded queue SHA256 matches the actual bytes.",
       "Explicit site identity interpretations retain original archive locations and unverified historical upstream claims separately from catalog occurrence Git fields; historical exclusion claims still require reconfirmation.",
-      "Assessment records 1947 = assessed without final disposition 1755 + assessment/final intersection 192. Final records 198 include 6 final-only legacy records without assessment. The assessment/final union is 1953 occurrences; these categories are not additive independent totals."
+      "Assessment records 2036 = assessed without final disposition 1844 + assessment/final intersection 192. Final records 198 include 6 final-only legacy records without assessment. The assessment/final union is 2042 occurrences; these categories are not additive independent totals."
     ]
+  },
+  "latest_retained_procedure_assessments": {
+    "file": "skills-3080-retained-procedure-assessments-v3.json",
+    "definition": "skills-3080-retained-procedure-assessments-v3.md",
+    "sha256": "7948d96c993d5acaca5d371716a0328735931f090772ed426af1f9b4d28dd1b5",
+    "assessment_records": 91,
+    "already_assessed_occurrences": 2,
+    "new_unique_assessment_occurrences": 89,
+    "counts": {
+      "masked_primary_records": 53,
+      "primary_physical_lines": 25295,
+      "primary_records": 91,
+      "primary_withheld_lines": 354,
+      "raw_primary_records": 38,
+      "saved_support_metadata": 731,
+      "support_records": 1190,
+      "support_state_counts": {
+        "direct_masked_full": 98,
+        "direct_raw_full": 157,
+        "exact_bytes_reuse": 48,
+        "ordered_full_diff": 1,
+        "saved_unread": 427,
+        "unsaved": 459
+      },
+      "unsaved_support_metadata": 459
+    },
+    "runtime_license_client_not_legal_notice_records": 1,
+    "ordered_notice_diff_keeps_masked_baseline_records": 1,
+    "support_initial_display_gap_records": 1,
+    "original_history_separately_anchored": true,
+    "new_copy_grants": 0,
+    "new_final_dispositions": 0,
+    "central_operations": 0,
+    "whole16_complete": false
   }
 }

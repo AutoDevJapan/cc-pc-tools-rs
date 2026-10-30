@@ -114,6 +114,18 @@ func TestRetainedProcedureJournalRejectsChangedReadAndRightsBeforeQueue(t *testi
 		{"discord_conversation_URL", func(v map[string]any) { entry(v, 0)["value"] = "https://discord.com/channels/1/2/3" }},
 		{"encoded_discord_conversation_URL", func(v map[string]any) { entry(v, 0)["value"] = "https://WWW.DISCORD.COM./%63hannels/1/2/3" }},
 		{"legacy_chatgpt_conversation_URL", func(v map[string]any) { entry(v, 0)["value"] = "https://chat.openai.com/c/example-session" }},
+		{"shared_conversation_URL", func(v map[string]any) { entry(v, 0)["value"] = "https://chatgpt.com/share/example-share" }},
+		{"conversation_URL_inside_another_URL", func(v map[string]any) {
+			entry(v, 0)["value"] = "https://example.test/?next=https://claude.ai/chat/example-session"
+		}},
+		{"query_escaped_conversation_URL", func(v map[string]any) {
+			entry(v, 0)["value"] = "https://example.test/?next=https%3A%2F%2Fchatgpt.com%2Fshare%2Fexample-share"
+		}},
+		{"invalid_query_escape_cannot_hide_conversation_URL", func(v map[string]any) {
+			entry(v, 0)["value"] = "https://example.test/?bad=100%&next=https%3A%2F%2Fclaude.ai%2Fchat%2Fexample-session"
+		}},
+		{"bare_conversation_URL", func(v map[string]any) { entry(v, 0)["value"] = "chatgpt.com/c/example-session" }},
+		{"protocol_relative_conversation_URL", func(v map[string]any) { entry(v, 0)["value"] = "//chatgpt.com/c/example-session" }},
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {

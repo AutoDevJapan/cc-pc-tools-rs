@@ -6,38 +6,97 @@ import (
 	"net/url"
 	"path"
 	"regexp"
+	"sort"
+	"strconv"
 	"strings"
+	"unicode"
 )
 
 const retainedProcedureJournalFile = "skills-3080-retained-procedure-assessments.json"
 const retainedProcedureDomain = "skills3080-retained-procedure-assessment-journal-v1"
 
 var retainedJobIdentifier = regexp.MustCompile(`\b[0-9]{8}-[0-9]{6}-todo-[0-9]+\b`)
-var retainedURLToken = regexp.MustCompile("(?i)https?://[^\\s<>\"'`]+")
+var retainedURLStart = regexp.MustCompile(`(?i)https?://`)
+var retainedBareHostStart = regexp.MustCompile(`(?i)(?:^|[^a-z0-9_.%~-])((?:www\.)?(?:chatgpt\.com|chat\.openai\.com|claude\.ai|discord(?:app)?\.com|codex\.openai\.com)\.?(?::[0-9]+)?/)`)
+
+func retainedPercentView(text string) string {
+	var decoded strings.Builder
+	decoded.Grow(len(text))
+	for i := 0; i < len(text); i++ {
+		if text[i] == '%' && i+2 < len(text) {
+			if value, err := strconv.ParseUint(text[i+1:i+3], 16, 8); err == nil {
+				decoded.WriteByte(byte(value))
+				i += 2
+				continue
+			}
+		}
+		decoded.WriteByte(text[i])
+	}
+	return decoded.String()
+}
 
 func retainedConversationURL(text string) bool {
-	for _, token := range retainedURLToken.FindAllString(text, -1) {
-		u, err := url.Parse(strings.TrimRight(token, ".,;)]}`"))
-		if err != nil {
-			continue
+	boundary := func(r rune) bool { return unicode.IsSpace(r) || strings.ContainsRune("<>\"'`", r) }
+	for _, token := range strings.FieldsFunc(text, boundary) {
+		forms := []string{token}
+		// A malformed escape in another query value must not hide a valid
+		// encoded URL. Decode valid triplets once, retaining other bytes.
+		if decoded := retainedPercentView(token); decoded != token {
+			forms = append(forms, decoded)
 		}
-		host := strings.TrimPrefix(strings.TrimSuffix(strings.ToLower(u.Hostname()), "."), "www.")
-		p := strings.ToLower(path.Clean(u.Path))
-		switch host {
-		case "chatgpt.com", "chat.openai.com":
-			if strings.HasPrefix(p, "/c/") || strings.HasPrefix(p, "/codex/tasks/") {
-				return true
+		for _, form := range forms {
+			for _, part := range strings.FieldsFunc(form, boundary) {
+				starts := []int{}
+				for _, match := range retainedURLStart.FindAllStringIndex(part, -1) {
+					starts = append(starts, match[0])
+				}
+				for _, match := range retainedBareHostStart.FindAllStringSubmatchIndex(part, -1) {
+					starts = append(starts, match[2])
+				}
+				sort.Ints(starts)
+				unique := starts[:0]
+				for _, start := range starts {
+					if len(unique) == 0 || unique[len(unique)-1] != start {
+						unique = append(unique, start)
+					}
+				}
+				starts = unique
+				for index, start := range starts {
+					end := len(part)
+					if index+1 < len(starts) {
+						end = starts[index+1]
+					}
+					// Inspect every URL start, including one embedded in another
+					// URL. Nonoverlapping whole-URL matches hide the inner host.
+					candidate := strings.TrimRight(part[start:end], ".,;)]}`")
+					lower := strings.ToLower(candidate)
+					if !strings.HasPrefix(lower, "http://") && !strings.HasPrefix(lower, "https://") {
+						candidate = "https://" + candidate
+					}
+					u, err := url.Parse(candidate)
+					if err != nil {
+						continue
+					}
+					host := strings.TrimPrefix(strings.TrimSuffix(strings.ToLower(u.Hostname()), "."), "www.")
+					p := strings.ToLower(path.Clean(u.Path))
+					switch host {
+					case "chatgpt.com", "chat.openai.com":
+						if strings.HasPrefix(p, "/c/") || strings.HasPrefix(p, "/share/") || strings.HasPrefix(p, "/codex/tasks/") {
+							return true
+						}
+					case "claude.ai":
+						if strings.HasPrefix(p, "/chat/") || strings.HasPrefix(p, "/code/") || strings.HasPrefix(p, "/share/") {
+							return true
+						}
+					case "discord.com", "discordapp.com":
+						if strings.HasPrefix(p, "/channels/") {
+							return true
+						}
+					case "codex.openai.com":
+						return true
+					}
+				}
 			}
-		case "claude.ai":
-			if strings.HasPrefix(p, "/chat/") || strings.HasPrefix(p, "/code/") {
-				return true
-			}
-		case "discord.com", "discordapp.com":
-			if strings.HasPrefix(p, "/channels/") {
-				return true
-			}
-		case "codex.openai.com":
-			return true
 		}
 	}
 	return false

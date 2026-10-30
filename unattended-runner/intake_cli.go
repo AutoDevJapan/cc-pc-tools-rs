@@ -34,7 +34,15 @@ func intakeCLI(args []string, out io.Writer) int {
 }
 
 func intakeCLIWith(args []string, out io.Writer, load func(string, bool) (*Runner, func(), error), guard func(context.Context, string) bool) int {
-	fail := func() int { _, _ = io.WriteString(out, "intake unavailable\n"); return 1 }
+	diagnostic, stage := false, "arguments"
+	fail := func() int {
+		if diagnostic {
+			_ = json.NewEncoder(out).Encode(map[string]any{"domain": "discord-intake-diagnostic-v1", "stage": stage, "application": "not_inferred", "state_change": "not_inferred"})
+		} else {
+			_, _ = io.WriteString(out, "intake unavailable\n")
+		}
+		return 1
+	}
 	if len(args) == 0 {
 		return fail()
 	}
@@ -45,6 +53,7 @@ func intakeCLIWith(args []string, out io.Writer, load func(string, bool) (*Runne
 	config, input, after := conversationDefaultConfig, "", ""
 	f := flag.NewFlagSet("intake", flag.ContinueOnError)
 	f.SetOutput(io.Discard)
+	f.BoolVar(&diagnostic, "diagnostic", false, "return a fixed failure stage without raw input or errors")
 	conversationStringFlag(f, "config", &config)
 	if command != "status" {
 		conversationStringFlag(f, "input", &input)
@@ -59,20 +68,28 @@ func intakeCLIWith(args []string, out io.Writer, load func(string, bool) (*Runne
 	var plan intakeBindInput
 	var watch HistoryWatchInput
 	if command == "bind" {
+		stage = "binding_input"
 		b, err := historyPrivateInput(ctx, input, guard)
 		if err != nil || historyStrictJSON(b, &plan) != nil || plan.Domain != "discord-intake-binding-v1" || !monthlyID(plan.Message) || !monthlyID(plan.Thread) || !monthlyID(plan.Author) || plan.Todo == 0 || !shaPattern.MatchString(plan.SourceSHA) {
 			return fail()
 		}
 	}
 	if command == "watch" {
+		stage = "history_watch_input"
 		b, err := historyPrivateInput(ctx, input, guard)
 		if err != nil || historyStrictJSON(b, &watch) != nil || watch.Domain != "discord-intake-history-watch-v1" || !monthlyID(watch.Message) || !shaPattern.MatchString(watch.ReceiptSHA) {
 			return fail()
 		}
 	}
+	stage = "saved_state_loader"
 	r, unlock, err := load(config, command == "status")
 	if errors.Is(err, errConversationBusy) {
-		_, _ = io.WriteString(out, "busy\n")
+		if diagnostic {
+			stage = "busy"
+			fail()
+		} else {
+			_, _ = io.WriteString(out, "busy\n")
+		}
 		return 2
 	}
 	if err != nil {
@@ -80,6 +97,7 @@ func intakeCLIWith(args []string, out io.Writer, load func(string, bool) (*Runne
 	}
 	defer unlock()
 	if command == "watch" {
+		stage = "history_watch"
 		if err := r.watchHistory(ctx, watch, guard); err != nil {
 			return fail()
 		}
@@ -92,6 +110,7 @@ func intakeCLIWith(args []string, out io.Writer, load func(string, bool) (*Runne
 	// loadConversationRunner does not perform discovery. Load exact question
 	// receipts under the same lock before permitting a general-purpose binding.
 	if command == "bind" {
+		stage = "receipt_registry"
 		if _, err := r.knownBotThreads(); err != nil {
 			return fail()
 		}
@@ -132,13 +151,51 @@ func intakeCLIWith(args []string, out io.Writer, load func(string, bool) (*Runne
 	}
 	q := r.State.Requests[plan.Message]
 	if q == nil || q.Thread != plan.Thread || q.Author != plan.Author || q.Author != r.State.Destination.Owner {
+		stage = "source_identity"
 		return fail()
 	}
 	if err = r.bindOrdinary(ctx, plan.Message, plan.IntakeBinding); err != nil {
+		stage = intakeBindingFailureStage(r, plan, err)
 		return fail()
 	}
 	if json.NewEncoder(out).Encode(map[string]any{"domain": "discord-intake-binding-result-v1", "message_id": q.Message, "source_sha256": ordinaryVersion(q), "todo_id": q.Todo, "phase": q.Phase, "delivery": "canonical_note_verified", "application": "not_inferred"}) != nil {
 		return 1
 	}
 	return 0
+}
+
+// Inspect only the saved routing predicates and exact fixed error vocabulary.
+// Do not print errors, body, evidence, paths, supplied IDs, or configuration.
+// A failed delivery may already have saved a binding; diagnostics deliberately
+// do not infer whether any durable state changed and never bypass a gate.
+func intakeBindingFailureStage(r *Runner, plan intakeBindInput, err error) string {
+	q := r.State.Requests[plan.Message]
+	if q == nil {
+		return "saved_request"
+	}
+	switch err.Error() {
+	case "ordinary binding input invalid":
+		if r.ordinaryProductScope(q) {
+			return "product_context"
+		}
+		if r.isConfiguredRequestReport(plan.Todo) {
+			return "configured_request_context"
+		}
+		return "binding_contract"
+	case "ordinary binding requires exact question delivery instead":
+		if r.KnownQuestionThreads[q.Thread] || ordinaryShortAnswer(q.Text) {
+			return "original_question_context"
+		}
+		return "dedicated_context"
+	case "ordinary source belongs to an exact conversation":
+		return "conversation_context"
+	case "ordinary binding source or task changed":
+		return "binding_version"
+	case "ordinary binding task unavailable":
+		return "target_task_scope"
+	case "owner receipt association differs", "owner thread invalid", "owner message invalid", "owner thread scope differs", "owner message changed; receipt retained", "owner message guild changed; receipt retained", "owner message reference changed; receipt retained":
+		return "source_verification"
+	default:
+		return "binding_operation"
+	}
 }

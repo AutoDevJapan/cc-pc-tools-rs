@@ -1,6 +1,6 @@
 # PCのRust補助ツール
 
-このPCで使っているDiscordの質問・作業一覧ツールと、そのビルドに必要なRustモジュールのソースを保存する非公開リポジトリです。実行記録・認証情報・実行ファイルは保存しません。
+このPCで使っているDiscordの質問・作業一覧ツールと、そのビルドに必要なRustモジュールのソースを保存するリポジトリです。実行記録・認証情報・実行ファイルは保存しません。
 
 - `cc-todo`: 共有ToDoと担当が記録する進み具合。
 - `cc-scheduler`: ToDoから作業を起動する既存の共通処理。
@@ -18,6 +18,8 @@
 稼働中のソースは `D:/CC/Tools/rs/` にあります。Windows上で `cargo test --manifest-path cc-ask/Cargo.toml`、`cargo build --release --manifest-path cc-ask/Cargo.toml` を実行します。ビルドと配置の前に別モデルでレビューし、Mustを解消します。
 
 作業一覧の仕様と状態ファイルは [BOARD.md](cc-ask/BOARD.md) を参照してください。初回の検証は2026-10-06にWindowsで全430件成功、配布物を指定する必要がある既存の1件は対象の配布物がないため未実行です。一覧の11件はすべて成功しました。別モデルgpt-6-lunaの再レビューでMustは0件でした。
+
+Discordの普通投稿の結合に失敗した場合は、[固定の段階を返す診断](docs/intake-diagnostics.md)と[配送記録の読取上限](docs/discord-receipt-bounds.md)を確認してください。
 
 新しい有料の検証環境は設けず、このPCと既存のGitHub Actionsで検査します。Cargoのゲートとジョブ管理はWindowsのCIで確認します。[ビルドとテストの規則](docs/build-speed.md)に従い、作業途中もマージ前も変更クレートと利用側をnextestで確認し、全件は共有設定の変更など必要な理由がある場合だけ実行します。プロセスの起動・停止を扱う検査は専用のグループで一つずつ実行し、他の検査は並列に回します。
 

@@ -22,7 +22,8 @@ const skillsGuardModule = "github.com/AutoDevJapan/cc-pc-tools-rs/repair-guard"
 // Independent previously accepted distribution facts (3258 and3686), not a caller
 // supplied baseline or an assertion made by the artifact being installed.
 var skillsGuardBaselines = map[string]string{
-	official3894BootstrapPredecessorSHA: official3894BootstrapPredecessorHead,
+	official3894PublicManifestPredecessorSHA: official3894PublicManifestPredecessorHead,
+	official3894BootstrapPredecessorSHA:      official3894BootstrapPredecessorHead,
 	// Same pre-candidate accepted PR624 observation as the shared updater.
 	// docs/evidence/skills-3080-guard-before-native-path-eab175645.json
 	official3894CreationPathPredecessorSHA: official3894CreationPathPredecessorHead,
@@ -200,7 +201,7 @@ func skillsCodeReviewPairAccepted(a, b skillsReceived, head string) bool {
 	return skillsCodeReviewAcceptedMode(a, head, true) && skillsCodeReviewAcceptedMode(b, head, true) && str(a.Metadata["id"]) != "" && a.Metadata["id"] != b.Metadata["id"] && str(a.Metadata["thread_id"]) != "" && str(b.Metadata["thread_id"]) != "" && a.Metadata["thread_id"] != b.Metadata["thread_id"]
 }
 
-const skillsRuntimeSelfReviewTask, skillsRuntimePeerReviewTask = 4203, 4204
+const skillsRuntimeSelfReviewTask, skillsRuntimePeerReviewTask = 4300, 4301
 
 func skillsRuntimeReviewTasks(a, b *skillsResultRequest) bool {
 	return a != nil && b != nil && a.Task == skillsRuntimeSelfReviewTask && b.Task == skillsRuntimePeerReviewTask && skillsResultID(*a) && skillsResultID(*b)
@@ -211,6 +212,7 @@ func skillsRuntimeHistoricalNoticePair(r skillsRequest) bool {
 		return false
 	}
 	return (r.Review.Task == 3740 && u.PeerReview.Task == 3877 && u.SourceHead == "34cd8877587596539e8b4a8847468fc74fca8e57" && u.ReviewedHead == "3f6ed705d5908524caa3b02f9f0784f5d5320c93" && u.CandidateSHA == "50c817a829ecb33c30e4ee2b129dee3716f822fc4627dd01df6f24cb98a7925b") ||
+		(r.Review.Task == 4203 && u.PeerReview.Task == 4204 && u.SourceHead == official3894PublicManifestPredecessorHead && u.ReviewedHead == "930bf282717e6b78a9a8b1fde7e7a85be944ebeb" && u.CandidateSHA == official3894PublicManifestPredecessorSHA) ||
 		(r.Review.Task == 3870 && u.PeerReview.Task == 3876 && u.SourceHead == official3894CanonicalAssignmentPredecessorHead && u.ReviewedHead == "76a3133cee8be5a4a1f8b2b10714b6badb5f1967" && u.CandidateSHA == official3894CanonicalAssignmentPredecessorSHA) ||
 		(r.Review.Task == 4198 && u.PeerReview.Task == 4199 && u.SourceHead == official3894CreationPathPredecessorHead && u.ReviewedHead == "4284eef98c916358d68abe134ff057421e82a87d" && u.CandidateSHA == official3894CreationPathPredecessorSHA)
 }

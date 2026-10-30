@@ -36,10 +36,9 @@ func skillsRuntimeBootstrapProjection(input io.Reader, job object, project []byt
 			return nil, modern, false
 		}
 		at, err := time.Parse(time.RFC3339Nano, e.Timestamp)
-		if err != nil || at.Before(start) || at.After(end) || at.Before(last) {
+		if err != nil || at.After(end) {
 			return nil, modern, false
 		}
-		last = at
 		if e.Type == "session_meta" {
 			var m struct {
 				ID         string `json:"id"`
@@ -59,11 +58,16 @@ func skillsRuntimeBootstrapProjection(input io.Reader, job object, project []byt
 				return nil, false, true
 			}
 			modern = true
-			if m.Version != "0.165.0" {
+			if m.Version != "0.165.0" || at.Before(start) || at.Before(last) {
 				return nil, true, false
 			}
+			last = at
 			continue
 		}
+		if at.Before(start) || at.Before(last) {
+			return nil, modern, false
+		}
+		last = at
 		if !session {
 			return nil, modern, false
 		}

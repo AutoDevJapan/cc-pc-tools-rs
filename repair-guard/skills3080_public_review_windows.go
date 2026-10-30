@@ -366,7 +366,7 @@ func skillsPublicInputsWith(c skillsPublicReviewScope, s *skillsFS, gh func(...s
 		}
 		if manifest && f.Path == c.ManifestPath {
 			m, ok := skillsParseManifest(b)
-			if !ok || (!skillsSameWriter(m.Writer, c.Author) && !(repair && skillsAssignedNativeUpdateManifest(c, f, m))) {
+			if !ok || (!m.publicV2 && !skillsSameWriter(m.Writer, c.Author) && !(repair && skillsAssignedNativeUpdateManifest(c, f, m))) {
 				return false
 			}
 		}
@@ -479,7 +479,6 @@ func skillsReviewNative(s *skillsFS, job object, spec []byte, finalSHA string) (
 	_, reviewTyped := skillsParsePublicReview(spec)
 	consumer, consumerTyped := skillsParseConsumer(spec)
 	bootstrap := ""
-	var runtimeBootstrap []byte
 	if reviewTyped || consumerTyped {
 		prompt, ok = skillsTypedLaunchInputAt(s, skillsJobsRoot, job, spec)
 		if !ok {
@@ -498,14 +497,9 @@ func skillsReviewNative(s *skillsFS, job object, spec []byte, finalSHA string) (
 		if !ok {
 			return nil, false
 		}
-		if reviewTyped && job["resume_session"] == nil && job["first_started_at"] == job["started_at"] {
-			scope, _ := skillsParsePublicReview(spec)
-			// Failure to prove a current source never expands the old contract:
-			// the original-author bootstrap still has to match exactly.
-			runtimeBootstrap = s.bootstrapProjects[scope.Commit]
-		}
 	}
-	return skillsCompletedReviewNativeWithBootstrap(s, job, prompt, finalSHA, reviewTyped || consumerTyped, bootstrap, runtimeBootstrap, reviewTyped && job["resume_session"] == nil && job["first_started_at"] == job["started_at"])
+	project, required := skillsTypedRuntimeProject(s, job, spec)
+	return skillsCompletedReviewNativeWithBootstrap(s, job, prompt, finalSHA, reviewTyped || consumerTyped, bootstrap, project, required)
 }
 
 // Every completed review/consumer result uses one deny-write proof engine.

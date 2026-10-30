@@ -50,10 +50,14 @@ func skillsMaskedBindings(m skillsManifest) (map[string]string, bool) {
 		}
 		_, hasSource := value["source"]
 		_, hasWriter := value["reformulation_writer"]
-		if !hasWriter {
+		publicAlias := m.publicV2 && value["schema"] == "skills-3080-source-v2"
+		if m.publicV2 && hasWriter {
+			return nil, false
+		}
+		if !hasWriter && !publicAlias {
 			continue
 		}
-		if !hasSource || !hasWriter || !skillsName.MatchString(name) || len(name) > 80 || hashBytes(f.body) != f.SHA || value["reformulation_writer"] != m.Writer.Job {
+		if !hasSource || !skillsName.MatchString(name) || len(name) > 80 || hashBytes(f.body) != f.SHA || (!publicAlias && value["reformulation_writer"] != m.Writer.Job) {
 			return nil, false
 		}
 		if _, _, ok := skillsMaskedMetadataIdentity(value); !ok {
@@ -157,7 +161,7 @@ func skillsMaskedMetadataMatches(row skillsSavedSource, outputs []skillsOutput, 
 		if !ok {
 			return false
 		}
-		if _, explicit := value["reformulation_writer"]; !explicit {
+		if _, explicit := value["reformulation_writer"]; !explicit && value["schema"] != "skills-3080-source-v2" {
 			return true // Preserve the original same-name metadata schema.
 		}
 		count, blob, ok := skillsMaskedMetadataIdentity(value)

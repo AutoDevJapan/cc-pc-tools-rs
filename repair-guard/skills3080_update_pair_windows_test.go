@@ -66,8 +66,8 @@ func TestSkills3080OnlyRuntimeApplyRecoveryAcceptNewFlags(t *testing.T) {
 	}
 }
 func TestSkills3080RuntimePinsOriginalTwoReviewTasks(t *testing.T) {
-	a := &skillsResultRequest{Task: 4203, Job: "20261029-010000-todo-4203", SpecSHA: strings.Repeat("a", 64), FinalSHA: strings.Repeat("b", 64)}
-	b := &skillsResultRequest{Task: 4204, Job: "20261029-010100-todo-4204", SpecSHA: strings.Repeat("c", 64), FinalSHA: strings.Repeat("d", 64)}
+	a := &skillsResultRequest{Task: 4300, Job: "20261031-010000-todo-4300", SpecSHA: strings.Repeat("a", 64), FinalSHA: strings.Repeat("b", 64)}
+	b := &skillsResultRequest{Task: 4301, Job: "20261031-010100-todo-4301", SpecSHA: strings.Repeat("c", 64), FinalSHA: strings.Repeat("d", 64)}
 	if !skillsRuntimeReviewTasks(a, b) {
 		t.Fatal("original own reviews rejected")
 	}
@@ -117,6 +117,21 @@ func TestSkills3080RuntimeRequiresDurableOutcome(t *testing.T) {
 		if skillsUpdateOutcomeQualified(r, recovery, false) || !skillsUpdateOutcomeQualified(r, recovery, true) {
 			t.Fatal("success without durable outcome or durable success rejected")
 		}
+	}
+}
+
+func TestSkills3080FrozenBootstrapSoftwareIsReadonlyAndNewPairCannotDowngrade(t *testing.T) {
+	r := skillsRequest{Review: &skillsResultRequest{Task: 4203}, Runtime: &skillsRuntimeRequest{PeerReview: &skillsResultRequest{Task: 4204}, SourceHead: official3894PublicManifestPredecessorHead, ReviewedHead: "930bf282717e6b78a9a8b1fde7e7a85be944ebeb", CandidateSHA: official3894PublicManifestPredecessorSHA}}
+	if !skillsRuntimeHistoricalNoticePair(r) || skillsRuntimeNewCIReview(r) || skillsRuntimeReviewTasks(r.Review, r.Runtime.PeerReview) {
+		t.Fatal("accepted bootstrap pair acquired new write authority or lost readonly history")
+	}
+	r.Runtime.SourceHead = strings.Repeat("a", 40)
+	if skillsRuntimeHistoricalNoticePair(r) || !skillsRuntimeNewCIReview(r) {
+		t.Fatal("changed frozen tuple escaped new CI/review gate")
+	}
+	r.Review.Task = 4300
+	if !skillsRuntimeNewCIReview(r) || skillsRuntimeReviewTasks(r.Review, r.Runtime.PeerReview) {
+		t.Fatal("mixed old/new pair downgraded")
 	}
 }
 

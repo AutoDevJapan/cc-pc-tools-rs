@@ -192,109 +192,155 @@ func TestArtAliasesIntegrateOnlyIndividuallyBoundVisibleWorkflow(t *testing.T) {
 	validatedArtAliasDispositions(t)
 }
 
-func TestArtAliasLedgerRejectsLostEvidenceAndIndividualNotice(t *testing.T) {
+type artAliasLedgerPair struct {
+	id            string
+	row, evidence map[string]any
+}
+
+func artAliasLedgerPairs(t *testing.T) []artAliasLedgerPair {
+	t.Helper()
 	var evidence map[string]any
 	loadPublicReceipt(t, "skills-3080-art-five-alias-integrations170905.json", &evidence)
-	entry := received27Object(t, received27Array(t, evidence["entries"])[0])
 	var ledger struct {
 		Entries []map[string]any `json:"entries"`
 	}
 	loadPublicReceipt(t, "skills-3080-adoptions.json", &ledger)
-	var original map[string]any
-	for _, row := range ledger.Entries {
-		if row["inventory_id"] == entry["inventory_id"] {
-			original = row
+	pairs := []artAliasLedgerPair{}
+	seen := map[string]bool{}
+	for _, value := range received27Array(t, evidence["entries"]) {
+		entry := received27Object(t, value)
+		id, ok := entry["inventory_id"].(string)
+		if !ok || seen[id] || artAliasPaths[id] == "" {
+			t.Fatal("five distinct fixed alias inputs required")
 		}
+		seen[id] = true
+		matched := 0
+		var original map[string]any
+		for _, row := range ledger.Entries {
+			if row["inventory_id"] == id {
+				original = row
+				matched++
+			}
+		}
+		if matched != 1 {
+			t.Fatal("actual alias ledger row missing/repeated")
+		}
+		pairs = append(pairs, artAliasLedgerPair{id, original, entry})
 	}
-	if original == nil {
-		t.Fatal("actual alias ledger row missing")
+	if len(pairs) != 5 {
+		t.Fatal("all five actual aliases must be tested")
 	}
-	if err := validateArtAliasLedgerProvenance(original, entry); err != nil {
-		t.Fatal(err)
+	return pairs
+}
+
+func artAliasCloneRow(original map[string]any) map[string]any {
+	row := map[string]any{}
+	for key, value := range original {
+		row[key] = value
 	}
-	for _, key := range []string{
-		"inventory_id", "source_repo", "source_commit", "source_path", "source_sha256",
-		"target", "disposition", "evidence", "individual_notice_path", "individual_notice_sha256",
-		"manifest", "entrypoint_sha256", "source_notice_preserved", "upstream_original_preserved",
-		"selected_source_scope", "copy_grant_extended_to_other_material", "new_central_writes",
-		"public_result_delta_review_pending_at_recording",
-	} {
-		t.Run(key, func(t *testing.T) {
-			for _, mutation := range []string{"missing", "wrong"} {
-				t.Run(mutation, func(t *testing.T) {
-					row := map[string]any{}
-					for k, v := range original {
-						row[k] = v
-					}
-					if mutation == "missing" {
-						delete(row, key)
-					} else {
-						row[key] = "contradictory metadata"
-					}
-					if err := validateArtAliasLedgerProvenance(row, entry); err == nil {
-						t.Fatal("missing or contradictory recorded provenance accepted")
+	return row
+}
+
+func artAliasWrongValueSameType(t *testing.T, value any) any {
+	t.Helper()
+	var changed any
+	switch v := value.(type) {
+	case bool:
+		changed = !v
+	case float64:
+		changed = v + 1
+	case string:
+		changed = v + " changed"
+	default:
+		t.Fatalf("unsupported observed value type %T", value)
+	}
+	if fmt.Sprintf("%T", changed) != fmt.Sprintf("%T", value) || changed == value {
+		t.Fatal("negative fixture must keep the actual type and change the value")
+	}
+	return changed
+}
+
+func artAliasWrongType(value any) any {
+	if _, isString := value.(string); isString {
+		return float64(-1)
+	}
+	return "contradictory metadata"
+}
+
+func TestArtAliasLedgerRejectsLostEvidenceAndIndividualNotice(t *testing.T) {
+	for _, pair := range artAliasLedgerPairs(t) {
+		t.Run(pair.id, func(t *testing.T) {
+			if err := validateArtAliasLedgerProvenance(pair.row, pair.evidence); err != nil {
+				t.Fatal(err)
+			}
+			for _, key := range []string{
+				"inventory_id", "source_repo", "source_commit", "source_path", "source_sha256",
+				"target", "disposition", "evidence", "individual_notice_path", "individual_notice_sha256",
+				"manifest", "entrypoint_sha256", "source_notice_preserved", "upstream_original_preserved",
+				"selected_source_scope", "copy_grant_extended_to_other_material", "new_central_writes",
+				"public_result_delta_review_pending_at_recording",
+			} {
+				t.Run(key, func(t *testing.T) {
+					for _, mutation := range []string{"missing", "wrong_type", "wrong_value_same_type"} {
+						t.Run(mutation, func(t *testing.T) {
+							row := artAliasCloneRow(pair.row)
+							switch mutation {
+							case "missing":
+								delete(row, key)
+							case "wrong_type":
+								row[key] = artAliasWrongType(pair.row[key])
+							case "wrong_value_same_type":
+								row[key] = artAliasWrongValueSameType(t, pair.row[key])
+							}
+							if err := validateArtAliasLedgerProvenance(row, pair.evidence); err == nil {
+								t.Fatal("missing or contradictory recorded provenance accepted")
+							}
+						})
 					}
 				})
 			}
+			row := artAliasCloneRow(pair.row)
+			row["evidence"] = "skills-3080-consolidation-art-installation-evidence175645.json"
+			row["individual_notice_path"] = "skills/moyu0032/mo-test-1/LICENSE.txt"
+			if validateArtAliasLedgerProvenance(row, pair.evidence) == nil {
+				t.Fatal("reported borrowed-evidence/notice counterexample accepted")
+			}
 		})
-	}
-	row := map[string]any{}
-	for k, v := range original {
-		row[k] = v
-	}
-	row["evidence"] = "skills-3080-consolidation-art-installation-evidence175645.json"
-	row["individual_notice_path"] = "skills/moyu0032/mo-test-1/LICENSE.txt"
-	if validateArtAliasLedgerProvenance(row, entry) == nil {
-		t.Fatal("reported borrowed-evidence/notice counterexample accepted")
 	}
 }
 
 func TestArtAliasLedgerRejectsContradictoryOptionalObjectMetadata(t *testing.T) {
-	var evidence map[string]any
-	loadPublicReceipt(t, "skills-3080-art-five-alias-integrations170905.json", &evidence)
-	entry := received27Object(t, received27Array(t, evidence["entries"])[0])
-	var ledger struct {
-		Entries []map[string]any `json:"entries"`
-	}
-	loadPublicReceipt(t, "skills-3080-adoptions.json", &ledger)
-	var original map[string]any
-	for _, row := range ledger.Entries {
-		if row["inventory_id"] == entry["inventory_id"] {
-			original = row
-		}
-	}
-	if original == nil {
-		t.Fatal("actual alias ledger row missing")
-	}
-	// These four fields exist in the independent evidence, but are absent
-	// from the actual public ledger. An added value must not contradict it.
-	for key, value := range map[string]any{
-		"source_git_blob": entry["git_blob"], "source_bytes": entry["bytes"],
-		"individual_notice_git_blob": entry["individual_notice_git_blob"],
-		"individual_notice_bytes":    entry["individual_notice_bytes"],
-	} {
-		t.Run(key, func(t *testing.T) {
-			if _, exists := original[key]; exists {
-				t.Fatal("reported premise differs: original ledger already has optional field")
-			}
-			for _, mutation := range []string{"absent", "matching", "wrong", "null"} {
-				t.Run(mutation, func(t *testing.T) {
-					row := map[string]any{}
-					for k, v := range original {
-						row[k] = v
+	for _, pair := range artAliasLedgerPairs(t) {
+		t.Run(pair.id, func(t *testing.T) {
+			// The four values exist in the independent evidence, not the original ledger.
+			for key, value := range map[string]any{
+				"source_git_blob": pair.evidence["git_blob"], "source_bytes": pair.evidence["bytes"],
+				"individual_notice_git_blob": pair.evidence["individual_notice_git_blob"],
+				"individual_notice_bytes":    pair.evidence["individual_notice_bytes"],
+			} {
+				t.Run(key, func(t *testing.T) {
+					if _, exists := pair.row[key]; exists {
+						t.Fatal("original ledger already has optional field")
 					}
-					switch mutation {
-					case "matching":
-						row[key] = value
-					case "wrong":
-						row[key] = "contradictory metadata"
-					case "null":
-						row[key] = nil
-					}
-					err := validateArtAliasLedgerProvenance(row, entry)
-					wantError := mutation == "wrong" || mutation == "null"
-					if (err != nil) != wantError {
-						t.Fatalf("%s: want error=%t, got %v", mutation, wantError, err)
+					for _, mutation := range []string{"absent", "matching", "wrong_type", "wrong_value_same_type", "null"} {
+						t.Run(mutation, func(t *testing.T) {
+							row := artAliasCloneRow(pair.row)
+							switch mutation {
+							case "matching":
+								row[key] = value
+							case "wrong_type":
+								row[key] = artAliasWrongType(value)
+							case "wrong_value_same_type":
+								row[key] = artAliasWrongValueSameType(t, value)
+							case "null":
+								row[key] = nil
+							}
+							err := validateArtAliasLedgerProvenance(row, pair.evidence)
+							wantError := mutation != "absent" && mutation != "matching"
+							if (err != nil) != wantError {
+								t.Fatalf("%s: want error=%t, got %v", mutation, wantError, err)
+							}
+						})
 					}
 				})
 			}

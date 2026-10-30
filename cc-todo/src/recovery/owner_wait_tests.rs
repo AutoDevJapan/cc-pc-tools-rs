@@ -376,6 +376,7 @@ fn conversation_wait_on_candidate_or_owner_is_preserved() {
 
 #[test]
 fn dependency_reopened_during_second_guard_never_commits() {
+    let mut failures = vec![];
     for row in [0, 1] {
         let mut f = Fixture::new();
         f.edit(|db| {
@@ -402,10 +403,16 @@ fn dependency_reopened_during_second_guard_never_commits() {
             save(&paths.store, &db).unwrap();
             *captured.borrow_mut() = fs::read(&paths.store).unwrap();
         }));
-        assert_eq!(f.run(), Ok(vec![]), "dependency of row={row}");
+        let result = f.run();
         assert!(!expected.borrow().is_empty(), "the concurrent writer must run");
-        f.unchanged(&expected.borrow());
+        if result != Ok(vec![]) || f.writes.get() != 0 || f.bytes() != *expected.borrow() {
+            failures.push(format!("dependency of row={row}: result={result:?} saves={} only_concurrent_change={}",
+                f.writes.get(), f.bytes() == *expected.borrow()));
+        } else {
+            f.unchanged(&expected.borrow());
+        }
     }
+    assert!(failures.is_empty(), "reopened dependency was released/saved:\n{}", failures.join("\n"));
 }
 
 #[test]

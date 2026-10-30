@@ -1,0 +1,31 @@
+   Compiling cc-todo v0.1.0 (D:\CC\Work\unattended-operations-20261013-wt\todo-4264-work\cc-todo)
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 4.37s
+────────────
+ Nextest run ID 49600ccf-1c84-4293-9487-ab032750b990 with nextest profile: default
+    Starting 1 test across 1 binary (60 tests skipped)
+        FAIL [   0.060s] (1/1) cc-todo recovery::owner_wait::tests::dependency_reopened_during_second_guard_never_commits
+  stdout ───
+
+    running 1 test
+    test recovery::owner_wait::tests::dependency_reopened_during_second_guard_never_commits ... FAILED
+
+    failures:
+
+    failures:
+        recovery::owner_wait::tests::dependency_reopened_during_second_guard_never_commits
+
+    test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 60 filtered out; finished in 0.05s
+
+  stderr ───
+
+    thread 'recovery::owner_wait::tests::dependency_reopened_during_second_guard_never_commits' (66024) panicked at cc-todo\src\recovery\owner_wait_tests.rs:415:5:
+    reopened dependency was released/saved:
+    dependency of row=0: result=Ok([1]) saves=1 only_concurrent_change=false
+    dependency of row=1: result=Ok([1]) saves=1 only_concurrent_change=false
+    note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+
+  Cancelling due to test failure: 
+────────────
+     Summary [   0.061s] 1 test run: 0 passed, 1 failed, 60 skipped
+        FAIL [   0.060s] (1/1) cc-todo recovery::owner_wait::tests::dependency_reopened_during_second_guard_never_commits
+error: test run failed

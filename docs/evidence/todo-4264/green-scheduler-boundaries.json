@@ -1,0 +1,25 @@
+{
+  "name": "green-scheduler-boundaries",
+  "head": "0c910d370b59a501dd3cf58ebf54ef65f61ffb46",
+  "job": "20261030-111925-todo-4264",
+  "start": "2026-10-30T11:27:54.3375228+09:00",
+  "end": "2026-10-30T11:28:02.2704435+09:00",
+  "exe": "D:/CC/Tools/codex-jobs/cargo_gate.exe",
+  "args": [
+    "nextest",
+    "run",
+    "--locked",
+    "-p",
+    "cc-scheduler",
+    "--lib",
+    "--test",
+    "parity",
+    "-E",
+    "test(received_input::system::tests::) | test(targeted_dispatch_uses_an_applied_answer) | test(targeted_dispatch_keeps_stops_dependencies_resources_and_priority) | test(targeted_dispatch_preserves_a_stop_recorded_during_preparation)",
+    "--no-fail-fast"
+  ],
+  "target": "C:/Users/makhmeto/AppData/Local/Temp/codex-owned-54d7c4749feb42fe35f5482956923eac/target",
+  "exit": 0,
+  "stdout": "green-scheduler-boundaries.stdout.log",
+  "stderr": "green-scheduler-boundaries.stderr.log"
+}

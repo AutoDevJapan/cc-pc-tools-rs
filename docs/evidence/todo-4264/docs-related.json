@@ -1,0 +1,23 @@
+{
+  "name": "docs-related",
+  "head": "0c910d370b59a501dd3cf58ebf54ef65f61ffb46",
+  "job": "20261030-111925-todo-4264",
+  "start": "2026-10-30T11:29:19.1825599+09:00",
+  "end": "2026-10-30T11:29:21.5187261+09:00",
+  "exe": "D:/CC/Tools/codex-jobs/cargo_gate.exe",
+  "args": [
+    "test",
+    "--locked",
+    "-p",
+    "cc-todo",
+    "-p",
+    "cc-scheduler",
+    "-p",
+    "cc-job-policy",
+    "--doc"
+  ],
+  "target": "C:/Users/makhmeto/AppData/Local/Temp/codex-owned-54d7c4749feb42fe35f5482956923eac/target",
+  "exit": 0,
+  "stdout": "docs-related.stdout.log",
+  "stderr": "docs-related.stderr.log"
+}

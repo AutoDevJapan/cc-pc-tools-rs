@@ -1,0 +1,85 @@
+{
+  "source_commit": "0c910d370b59a501dd3cf58ebf54ef65f61ffb46",
+  "source_tree": "4fd532a2d5b344f8931217d033b33f432287ed97",
+  "owner_wait_green": "Ran against this identical Rust content before committing it as source_commit; no source change after that run.",
+  "remaining_green_clippy_docs_release": "Ran at source_commit",
+  "inputs": [
+    {
+      "path": "Cargo.toml",
+      "bytes": 312,
+      "raw_sha256": "85ceffdad72c64902ba086495d785bc6560e7f9f6576f94d534ed5c6f65a4087",
+      "git_blob": "4d0ac6b922b76f926c669030ab0ae2bfa638a7fa",
+      "commit_entry": "100644 blob 4d0ac6b922b76f926c669030ab0ae2bfa638a7fa\tCargo.toml"
+    },
+    {
+      "path": "Cargo.lock",
+      "bytes": 66265,
+      "raw_sha256": "c4c19f2fae3563e26d09d6359dd1ed49d4e3256dab98ab1cb118ad39e920533d",
+      "git_blob": "a2fc3a4ad0d8c6652f7baf8fe4f23ecdc11ee055",
+      "commit_entry": "100644 blob a2fc3a4ad0d8c6652f7baf8fe4f23ecdc11ee055\tCargo.lock"
+    },
+    {
+      "path": "cc-todo/Cargo.toml",
+      "bytes": 744,
+      "raw_sha256": "752d4ef308b0e31cf53351018cee25cd1e4e8af50f22e57e8550a1f590ce16a0",
+      "git_blob": "9d28aad133270d20e008b0a143c8f57dda2361df",
+      "commit_entry": "100644 blob 9d28aad133270d20e008b0a143c8f57dda2361df\tcc-todo/Cargo.toml"
+    },
+    {
+      "path": "cc-todo/src/recovery/owner_wait.rs",
+      "bytes": 13615,
+      "raw_sha256": "68e97a21b4099c09945c6bfb7a98cbce8504ed07e79f7f647c10daffb07a387c",
+      "git_blob": "575d3cb8a7b1f6a288ae2d62b1393e5d97113f20",
+      "commit_entry": "100644 blob 575d3cb8a7b1f6a288ae2d62b1393e5d97113f20\tcc-todo/src/recovery/owner_wait.rs"
+    },
+    {
+      "path": "cc-todo/src/recovery/owner_wait_tests.rs",
+      "bytes": 34411,
+      "raw_sha256": "646f4bb3f5f75576b9b41a1acb880709d9ae77ebf22801339910370a04b93ed5",
+      "git_blob": "8e3c28a1400d567bd27772bea95c63dfe66a893b",
+      "commit_entry": "100644 blob 8e3c28a1400d567bd27772bea95c63dfe66a893b\tcc-todo/src/recovery/owner_wait_tests.rs"
+    },
+    {
+      "path": "cc-todo/src/direction_record.rs",
+      "bytes": 23195,
+      "raw_sha256": "7c0abe8cf5514bf3c1cb9b79d6729587cb9a204dca4ac976998ba9bf525137db",
+      "git_blob": "36a7c2c1ea50bd8872cc1f097695c647e921c2d2",
+      "commit_entry": "100644 blob 36a7c2c1ea50bd8872cc1f097695c647e921c2d2\tcc-todo/src/direction_record.rs"
+    },
+    {
+      "path": "cc-scheduler/src/received_input/system.rs",
+      "bytes": 9523,
+      "raw_sha256": "f9d3a83a382ec54e1cf1a448201855349fab739bdbf3594631ed24eeb2a9dead",
+      "git_blob": "5d986e922ca94164548d4ce76796af61fe883a73",
+      "commit_entry": "100644 blob 5d986e922ca94164548d4ce76796af61fe883a73\tcc-scheduler/src/received_input/system.rs"
+    },
+    {
+      "path": "cc-scheduler/src/received_input/strict.rs",
+      "bytes": 3130,
+      "raw_sha256": "e28de5a2417f29b7bfe4d7a45f7d2445dacbf9549d9e024c2dbdffb066b7ff15",
+      "git_blob": "92c3491b52ac6e08f5e0fef6e43479fa7dae3d6d",
+      "commit_entry": "100644 blob 92c3491b52ac6e08f5e0fef6e43479fa7dae3d6d\tcc-scheduler/src/received_input/strict.rs"
+    },
+    {
+      "path": "cc-job-policy/src/work_owner.rs",
+      "bytes": 34707,
+      "raw_sha256": "724ffb01b85ae6b7ca591153ad4fcd80f4bb5e95e8e448e33124be346430bfce",
+      "git_blob": "c07095a4b3639399650bd4a6e8167e45213cebac",
+      "commit_entry": "100644 blob c07095a4b3639399650bd4a6e8167e45213cebac\tcc-job-policy/src/work_owner.rs"
+    },
+    {
+      "path": "cc-job-policy/src/todo_wait.rs",
+      "bytes": 12895,
+      "raw_sha256": "22a02730ed7ade989d51a75f2b889b3a2c8922deb8c28d2147e9941394a7f224",
+      "git_blob": "433697edc2bd82daf4b6ff73eb8b522f9af5e49e",
+      "commit_entry": "100644 blob 433697edc2bd82daf4b6ff73eb8b522f9af5e49e\tcc-job-policy/src/todo_wait.rs"
+    },
+    {
+      "path": "cc-job-policy/src/cancellation.rs",
+      "bytes": 4278,
+      "raw_sha256": "1f5eee2283d554323975ddc83945314a2bc6ff35d2b8ed0ee24ad97dec9d8fa0",
+      "git_blob": "ea632efcb766a27c35cecb75c574983f0a6f286a",
+      "commit_entry": "100644 blob ea632efcb766a27c35cecb75c574983f0a6f286a\tcc-job-policy/src/cancellation.rs"
+    }
+  ]
+}

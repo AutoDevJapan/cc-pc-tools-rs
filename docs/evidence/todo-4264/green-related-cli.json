@@ -1,0 +1,30 @@
+{
+  "name": "green-related-cli",
+  "head": "0c910d370b59a501dd3cf58ebf54ef65f61ffb46",
+  "job": "20261030-111925-todo-4264",
+  "start": "2026-10-30T11:26:49.5102676+09:00",
+  "end": "2026-10-30T11:27:00.0275095+09:00",
+  "exe": "D:/CC/Tools/codex-jobs/cargo_gate.exe",
+  "args": [
+    "nextest",
+    "run",
+    "--locked",
+    "-p",
+    "cc-todo",
+    "--test",
+    "direction_record",
+    "--test",
+    "conversation_wait",
+    "--test",
+    "capacity_cycle",
+    "--test",
+    "recovery",
+    "-E",
+    "test(unchanged_numeric_work_owner_dependency) | test(actual_block_then_start) | test(a_new_block_is_distinct) | test(direction_rejects_changed_scope_snapshot_and_new_stops) | test(normal_answer_consumes_only) | test(original_delivery_rejects_other_generations_waits_and_holds) | test(no_wait_or_running_job) | test(disabled_and_unanswered_rows) | test(explicit_stop_flags_on_completed_row) | test(concrete_owner_decisions_and_explicit_stops) | test(intentional_cancel_is_not_restarted) | test(duplicate_pr_recovery) | test(dependency_release_is_consumed)",
+    "--no-fail-fast"
+  ],
+  "target": "C:/Users/makhmeto/AppData/Local/Temp/codex-owned-54d7c4749feb42fe35f5482956923eac/target",
+  "exit": 0,
+  "stdout": "green-related-cli.stdout.log",
+  "stderr": "green-related-cli.stderr.log"
+}

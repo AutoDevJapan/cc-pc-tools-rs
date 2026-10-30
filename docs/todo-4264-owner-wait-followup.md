@@ -66,3 +66,67 @@ debug fixtureや旧候補は流用せず、候補は`release_eligible:false`と�
 共有のlockや担当は操作せず、最終HEADで有限に再試行する。
 候補・証拠・再開情報を保持してから、自分の所有付き一時rootだけをsafe-deleteで片付ける。
 最終結果、入力閉包、checkpointと清掃の結果はこの文書の末尾へ追記する。
+
+## 最終結果
+
+実行ソースは`0c910d370b59a501dd3cf58ebf54ef65f61ffb46`、
+treeは`4fd532a2d5b344f8931217d033b33f432287ed97`。
+以後は証拠とこの文書だけを追加し、Rust/Goのソースは変更していない。
+
+| 対象 | 実結果 | 記録 |
+|---|---|---|
+| 入口の回帰 | 28件成功 | `green-owner-wait.*` |
+| 関連CLI | 13件成功 | `green-related-cli.*` |
+| 所有・依存・cancelのpolicy | 21件成功 | `green-policy.*` |
+| SystemHostとtargeted dispatch | 6件成功 | `green-scheduler-boundaries.*` |
+| duplicate JSON等のstrict入力 | 4件成功 | `green-strict-input.*` |
+| Clippy | todo/policy全targetとscheduler libraryで成功、warningsをエラー扱い | `clippy-*` |
+| doctest | 関連3 libraryでコマンド成功、各0件 | `docs-related.*` |
+| Rust format | 変更2ファイルで成功 | `format-check.*` |
+| releaseとCLI入口 | todoのみ1回build、help成功、実再評価0 | `release-todo.*`、`release-cli-help.*` |
+
+入口のGreenは修正内容をcommitする直前に同じソースで行い、
+ほかのGreen/Clippy/doc/releaseは上記source commitで行った。
+原Redは期待したテストの失敗で、コンパイル失敗ではない。
+候補記録用の補助処理にはパス区切りの分類不備が1回あり、同じ候補のまま補助処理を直した。
+これをRedへ数えず、追加release buildも行っていない。
+
+### 未配布の候補と入力
+
+- candidate：このworktreeの`.ci-work/candidate/todo.exe`、8,771,584 bytes。
+- SHA256：`369c82aaaa942161032b429608003e353e2d9f5c149505fed4a7690919652530`。
+- 状態：`release_eligible:false`、配布0。既存Goのコード・設定・実行物を更新していない。
+- rustc：1.95.0、commit `59807616e1fa2540724bfbac14d7976d7e4a3860`、
+  host `x86_64-pc-windows-msvc`。shimではなく実toolchainのexeもhashで記録した。
+- 完全な記録：`.ci-work/candidate/release-closure.private.json`、1,417,050 bytes、
+  SHA256 `4250ef4b2d93c94d04a18e3952bfe0df411a574819fb383904dad820b1f690b3`。
+- Cargoが宣言した入力2,849件（Git入力152、registry/native入力2,673、生成物23、
+  Cargo設定1）とdep-info195件を保存した。
+  公開用の`artifacts.json`にもGit入力のmode/blob/raw SHAと候補・閉包のhashを残す。
+  dep-infoと必要な生成物を`.ci-work/candidate`内に保持し、PDBも同じ場所へ残した。
+  Cargoの認証ファイルは開かず、設定値を表示していない。
+  MSVC/Windows SDKの全配布物を収めた再現環境archiveではない。
+  対象は明記したCargo入力と実compiler/toolchainである。
+
+`final-source-inputs.json`はテストを含む最終関連ソースのGit blobとraw SHAを記録する。
+`fix-from-4ae.patch`は同じRustの4aeからの追加差分だけで、main由来のGo変更を巻き戻さない。
+親のremote branchは読み取り照合時にも4aeのままだった。
+新しい別モデルレビュー・同headの正式CI・通常merge・旧hash/ACL CASと実配布・
+実タスクの受入は、この子工程では実施していない。
+
+### 清掃と親への保留報告
+
+所有ID `54d7c4749feb42fe35f5482956923eac` の一時rootは3,934,735,176 bytes、5,745 entries。
+safe-deleteのplanが大きさを理由にquarantineを指定したため、通常の退避を実行した。
+退避先は`C:/Users/makhmeto/Downloads/削除希望/20261030-todo-4264-cargo-and-fixtures-54d7c474`。
+state=quarantined、元root不在と退避先の存在を確認し、候補・閉包のSHAも再確認した。
+容量はまだ回収していない。
+次は既存の清掃工程で所有記録と退避物を扱う。本人の判断は不要。
+親はこの新しい保留を1回だけ記録し、同じ保留を再送しない。
+他担当のtarget、旧退避物、共有cacheは操作していない。
+
+checkpointは初回の一時的なscheduler lock競合後、source commitで正規保存と
+同じ入力の`--check`に成功した。
+最終の証拠commit後も、実job/branch/HEADで正規checkpointと読返しを行い、
+自己参照でHEADを変えないよう`.ci-work`の実行記録へ保存する。
+有限な修正・テスト・候補作成の成功は、元3387全体や実4023再開の完了を意味しない。

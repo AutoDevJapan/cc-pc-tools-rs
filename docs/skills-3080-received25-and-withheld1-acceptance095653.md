@@ -66,3 +66,23 @@ member metadataの元のstruct順序によるSHA、source tuple、実reader/cons
 同じ最終headのCIと通常mergeは記録時未受入である。原Creator4222は成功後の凍結を保ち、
 ここで再作成・再資格化しない。原担当の再開記録2ケースは資源付き4261が別に修復し、
 登録・起動を配布や元researchの実再開と数えない。
+
+## 出典リポジトリの照合修正
+
+最初の別モデルレビューは二役とも原応答と実Luna/maxを受領し、一方からMust1件と
+Suggestion1件を受けた。評価の重複とcatalog照合にrepoの比較が欠けており、
+異なるrepoとrepo欠落が通る4反例をRedで再現して修正した。
+最終記録の同種の比較も、既知のcatalog repoとの一致を必須にした。
+古い記録の明示的な行単位の`repo`と、owner/repo形式の`source`を読み分け、
+同じ行の矛盾は拒否する。欠落をcatalog・file名・URLから補わず、未確認の出典は未確認のまま保つ。
+
+修正後の関連Goパッケージは実queueと固定snapshotを使って10.281秒で成功し、vetも成功した。
+79 artifactと台帳から全73,220出現を別の実ファイルへ再生成し、
+上記の件数と実queue SHAが修正前から変わらないことも確認した。
+
+Suggestionの実queueとのSHA照合は、既存の`queue_bytes_acceptance_test.go`が担当する。
+親の受入テストでは実ファイルを環境変数`SKILLS3080_QUEUE_SNAPSHOT`で渡し、
+全bytesのSHAと行数をsummaryと照合する。同じ行数でのbytes変更、切詰め、末尾改行欠落、
+追加行、形式だけ正しい別SHAも拒否する。CIで私的な実queueを渡さない場合は明示的にskipし、
+CI自体でその読取を行ったとは報告しない。この既存fileを追加のレビュー入力へ含め、
+修正の再レビューと最終headのCIは別に受け入れる。

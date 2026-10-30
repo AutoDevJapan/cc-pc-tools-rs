@@ -163,6 +163,7 @@ pub fn request(item: &Value, source: &Value, actor: &Value) -> Option<Value> {
         || !item["jobs"]
             .as_array()
             .is_some_and(|ids| ids.contains(&source["id"]))
+        || item["jobs"].as_array().and_then(|ids| ids.last()) != Some(&source["id"])
         || actor["todo_id"] != item["subwork"]["parent_todo_id"]
         || text(actor, "id").is_empty()
         || !actor["todo_resume_generation"].is_u64()
@@ -317,10 +318,14 @@ pub fn verify(
                     .as_u64()
                     .and_then(|g| g.checked_add(1))
             || item["resume_generation"] != target["todo_resume_generation"]
+            || item["jobs"].as_array().and_then(|ids| ids.last()) != Some(&target["id"])
         {
             return false;
         }
         prepared["resume_generation"] = request["resume_generation"].clone();
+        // Start appended exactly this next worker; it cannot make an older
+        // historical source current again for a separate parent intake.
+        let _ = prepared["jobs"].as_array_mut().unwrap().pop();
         // Only the exactly validated next worker above may project the
         // original source receipt for rechecking the immutable intake proof.
         prepared["worker_receipt"] = if request["source_kind"] == "current_result" {

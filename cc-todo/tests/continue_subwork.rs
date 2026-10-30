@@ -168,13 +168,15 @@ fn finished_worker_rebinding_cannot_replace_current_ownership_or_quota_retry() {
 
 #[test]
 fn old_quota_source_cannot_be_reused_after_a_new_worker_owned_the_generation() {
-    let mut f = fixture();
-    f.db["items"][1]["worker_receipt"] = json!({"job":"new-current","generation":3});
-    f.db["items"][1]["jobs"].as_array_mut().unwrap().push(json!("new-current"));
-    save(&f);
-    let before = fs::read(f.dir.path().join("todo.json")).unwrap();
-    assert!(!call(&f, "parent").status.success(), "old quota source was reused");
-    assert_eq!(fs::read(f.dir.path().join("todo.json")).unwrap(), before);
+    for receipt in [json!({"job":"new-current","generation":3}), Value::Null] {
+        let mut f = fixture();
+        f.db["items"][1]["worker_receipt"] = receipt;
+        f.db["items"][1]["jobs"].as_array_mut().unwrap().push(json!("new-current"));
+        save(&f);
+        let before = fs::read(f.dir.path().join("todo.json")).unwrap();
+        assert!(!call(&f, "parent").status.success(), "old quota source was reused");
+        assert_eq!(fs::read(f.dir.path().join("todo.json")).unwrap(), before);
+    }
 }
 #[test]
 fn forged_or_stale_continuation_is_rejected_without_modifying_the_store() {

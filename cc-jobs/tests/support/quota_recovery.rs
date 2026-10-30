@@ -269,7 +269,7 @@ fn research_admission(gpt: bool, case: &str) {
         row["resume_generation"]=json!(3);row["dependency_generation"]=json!(1);
         source["todo_resume_generation"]=json!(2);
         if case.starts_with("continuation_result_") {
-            source["work_owner"] = cc_job_policy::work_owner::checkout(s(&source["cwd"]));
+            source["work_owner"] = cc_job_policy::work_owner::checkout(s(&source, "cwd"));
             let status = case.strip_prefix("continuation_result_").unwrap();
             source["status"] = json!(if status == "reset" { "lost" } else { status });
             source["todo_resume_generation"] = json!(3);

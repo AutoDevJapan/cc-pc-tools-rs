@@ -1,0 +1,26 @@
+{
+  "stage": "green-related-cli",
+  "started": "2026-10-30T09:05:10.4385087+09:00",
+  "ended": "2026-10-30T09:05:21.8222512+09:00",
+  "exit_code": 0,
+  "head": "751d18510562724d44f05f3f0ccedb3e50502b6d",
+  "executable": "D:/CC/Tools/codex-jobs/cargo_gate.exe",
+  "arguments": [
+    "nextest",
+    "run",
+    "--locked",
+    "-p",
+    "cc-todo",
+    "--test",
+    "direction_record",
+    "--test",
+    "conversation_wait",
+    "--test",
+    "recovery",
+    "-E",
+    "test(direction_rejects_changed_scope_snapshot_and_new_stops_even_with_same_note) | test(direction_verification_rechecks_actual_note_and_preserves_new_control_state) | test(implementation_accepts_registered_sibling_worktree_but_rejects_nested_new_stop) | test(registration_rejects_stops_dependency_waits_external_conditions_and_unknown_states) | test(current_owner_job_stops_are_preserved_before_wait_and_before_answer) | test(answer_never_overrides_new_stops_waits_or_changed_block_ownership) | test(withdrawal_cas_and_current_holds_preserve_stops_waits_other_notes_and_generation) | test(old_watchdog_hold_is_released_but_owner_decision_is_preserved) | test(a_new_concrete_decision_or_owner_block_invalidates_an_existing_reservation) | test(auto_cancel_pending_is_not_sent_before_an_explicit_scheduler_deadline)",
+    "--no-fail-fast"
+  ],
+  "target": "D:\\CC\\Work\\unattended-operations-20261013-wt\\todo-4246-3387\\codex-owned-ca355ffba5561fca35a0723685ed6ebd\\target",
+  "create_no_window": true
+}

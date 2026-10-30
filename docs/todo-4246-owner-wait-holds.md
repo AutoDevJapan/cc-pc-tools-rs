@@ -16,12 +16,12 @@ CI、PR、配布、Discord送信、元4023の受入は親が行う。
 - 回帰テストを先に追加し、Redを実測（nextest exit100、1件失敗）。
   `751d1851` にRedのテスト・入力hashを保存した。
   312条件中301条件が `released=[1]`、保存callback1、store bytes変化になった。
-- M1/S1/S2の修正後、入口21テストと追加の期限/CAS 2テスト、関係するCLI 10テストが成功した。
-  同じテストを重ねて合算しない。旧4142の311/13/31件も加算しない。
-  最終sourceに対する22件の入口、SystemHost、Clippy、doctestの結果と清掃・checkpointは後続記録に残す。
+- 最終source commitは `5443df48b2d1de7913ae61d0376deb59f2792423`。
+  子の修正・テストを終え、差分・入力と清掃結果を証拠commitに保存した。
+  通常checkpointの実際の保存結果は下記の実行記録を参照し、親のレビュー等は別工程とする。
 - 一時物の所有ID：`fb358fdfedb926f235710748ada866ad`（Cの一時補助）、
   `ca355ffba5561fca35a0723685ed6ebd`（このworktree内のCargo target）。
-  清掃はsafe-deleteのplanを別呼出しで実行してfinishする。
+  清掃結果は下記に記録する。
 
 原保護一覧・失われたregistry・原prompt・秘密・実SDK・実タスクのJSONには触れない。
 実行する再評価は架空fixtureだけ。現用実行物や設定を更新しない。
@@ -80,4 +80,48 @@ CLI 10件を選び、全workspaceや旧成功件数を再実行・加算しな�
 テストで作るdebug実行物はfixture用であり、配布候補に昇格しない。
 既存07b6候補を今回の最終版として扱わない。
 別モデル確認・必要CI・通常merge・実配布・元4023の正式再評価は親の未完了工程として返す。
+
+## 最終結果
+
+| テスト | 結果 | 証拠 |
+|---|---|---|
+| 元9cと同じ入口実装へのM1回帰 | 期待したRed、312条件中301条件が保存・解除 | `red-m1.*`、`red-inputs.json` |
+| 最終sourceの入口 | 22件成功（M1の312条件を含む） | `green-final-owner-wait.*` |
+| 関係するCLI | 10件成功 | `green-related-cli.*` |
+| SystemHostの期限とstrict guard | 3件成功 | `green-system-host.*` |
+| cc-todo/cc-schedulerのClippy | 各成功、warningsをエラー扱い | `clippy-todo.*`、`clippy-scheduler.*` |
+| cc-todo/cc-schedulerのdoctest | コマンド成功、各0件 | `docs-libraries.*` |
+| 変更したRust 3ファイルのformat | 成功 | `format-check.*` |
+
+すべて [証拠ディレクトリ](evidence/todo-4246/) に保存する。
+最初のGreen試行には、テストのString配列にslice::repeatを使ったコンパイルエラーがあり、
+期待値の配列を直して解消した。これはM1のRedとは別の実装途中の失敗として残す。
+21件の途中Greenと期限/CAS 2件は履歴であり、最終22件へ合算しない。
+旧4142の311/13/31件やClippy/doc成功も最終件数へ加算しない。
+CLI 10件は最終sourceをcommitする前に同じ実装で実行したもので、以後その実装を変更していない。
+最終22件、SystemHost、Clippy、doctestは上記のsource commitで実行した。
+
+`final-inputs.json` は実sourceのraw SHA256・bytes・filtered Git blob・commit blob、
+Cargo.lockと必要manifest、toolchainと引数の証拠を指す。
+`must-from-fixed.patch` は固定05a18から今回の処置だけ、`full-from-start.patch` は開始HEADから
+固定実装の取込みを含む差分であり、いずれも明示した関連ファイルだけを含む。
+配布候補用の完全なdepinfo入力閉包ではなく、候補作成もrelease buildも行っていない。
+最終証拠を追加するcommitで実行ソースは変えない。
+
+## 後片付けと親への保留報告
+
+- Cargo生成物：2,295,336,794 bytes（約2.14GiB）、3,411 entries。
+  safe-deleteのplanが容量を理由に削除せず退避するよう指定したため、通常のquarantineを実行し、
+  `D:/削除希望/20261030-todo-4246-build-target-ca355ffb` への移動と元フォルダ不在を確認した。
+  状態はquarantinedで、容量はまだ回収されていない。必要ソースとテストの証拠はGitへ残す。
+  次は既存の清掃工程でこの所有記録と退避物を扱う。本人の判断は不要。
+  親はこの新しい保留だけを通常の記録へ反映し、同じ保留を繰り返し送らない。
+- Cの一時補助：1,977 bytes、1 entry。
+  planの通常削除命令を別呼出しで実行し、finishのsource_absentを確認した。
+- 既存4142の5.66GB退避は他担当のデータとして保持し、操作・再報告していない。
+
+checkpointの入力と返却は、この証拠ディレクトリの
+`checkpoint-request.private.json` / `checkpoint-result.private.json` に残す。
+自己参照でHEADが変わらないよう、これらはGit管理外の実行記録とし、実HEADで正規CLIへ保存する。
+本有限工程の成功を元3387全体の完了として登録しない。
 

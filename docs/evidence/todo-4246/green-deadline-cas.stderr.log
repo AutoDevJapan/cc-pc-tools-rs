@@ -1,0 +1,9 @@
+   Compiling cc-todo v0.1.0 (D:\CC\Work\unattended-operations-20261013-wt\todo-4246-3387\cc-todo)
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 3.60s
+────────────
+ Nextest run ID 7a5043f9-06f7-4fac-8473-7a630cac2d91 with nextest profile: default
+    Starting 2 tests across 1 binary (53 tests skipped)
+        PASS [   0.081s] (1/2) cc-todo recovery::owner_wait::tests::unknown_start_is_rejected_and_sub_45_second_scope_is_not_renewed
+        PASS [   0.227s] (2/2) cc-todo recovery::owner_wait::tests::guards_run_without_todo_lock_and_changed_selected_source_is_rejected
+────────────
+     Summary [   0.228s] 2 tests run: 2 passed, 53 skipped

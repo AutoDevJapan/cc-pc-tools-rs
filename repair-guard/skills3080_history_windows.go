@@ -182,7 +182,7 @@ func skillsNativeWindow(s *skillsFS, job object, proof *skillsNativeResultProof,
 		if !rewindable {
 			return nil, false
 		}
-		if len(proof.runtimeProject) > 0 {
+		if proof.requireRuntimeSource || len(proof.runtimeProject) > 0 {
 			source, modern, valid := skillsRuntimeBootstrapProjection(input, job, proof.runtimeProject, start, end)
 			if !valid || !snapshot.rewind() {
 				return nil, false
@@ -317,6 +317,7 @@ type skillsNativeResultProof struct {
 	sandbox                       string
 	runtimeBootstrap              []byte
 	runtimeProject                []byte
+	requireRuntimeSource          bool
 	runtimeSourceUsed             bool
 	userSeen                      bool
 	runtimePrefixClosed           bool

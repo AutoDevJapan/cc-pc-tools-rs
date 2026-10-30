@@ -24,6 +24,52 @@ func TestSkills3080AvailableRuntimeSourceDoesNotDowngrade(t *testing.T) {
 	}
 }
 
+func TestSkills3080MissingPublicProjectCannotDowngradeCurrentRuntime(t *testing.T) {
+	home := skillsFixtureRoot(t)
+	t.Setenv("USERPROFILE", home)
+	cwd, id, turn := "D:/CC/Work/synthetic", "11111111-1111-7111-8111-111111111111", "22222222-2222-7222-8222-222222222222"
+	start := time.Date(2026, 10, 30, 14, 0, 0, 0, time.UTC)
+	dir := filepath.Join(home, ".codex", "sessions", "2026", "10", "30")
+	if e := os.MkdirAll(dir, 0700); e != nil {
+		t.Fatal(e)
+	}
+	project := []byte("PUBLIC project")
+	body, _ := skillsAssembleBootstrapSource([]byte("same historical owner body"), project)
+	for _, kind := range []string{"current_with_project", "current_missing_project", "known_old", "unknown"} {
+		version := "0.165.0"
+		if kind == "known_old" {
+			version = "0.163.0"
+		}
+		if kind == "unknown" {
+			version = "0.999.0"
+		}
+		msg := func(text string, at time.Time) object {
+			return object{"type": "response_item", "timestamp": at.Format(time.RFC3339Nano), "payload": object{"type": "message", "role": "user", "content": []object{{"type": "input_text", "text": text}}}}
+		}
+		records := []object{{"type": "session_meta", "timestamp": start.Format(time.RFC3339Nano), "payload": object{"id": id, "cwd": cwd, "source": "exec", "originator": "codex_exec", "cli_version": version}}, {"type": "event_msg", "timestamp": start.Format(time.RFC3339Nano), "payload": object{"type": "task_started", "turn_id": turn}}, msg(skillsBootstrapFixture(cwd, string(body), true), start), {"type": "world_state", "timestamp": start.Format(time.RFC3339Nano), "payload": object{"full": true, "state": object{"agents_md": object{"directory": cwd, "text": string(body)}}}}, {"type": "turn_context", "timestamp": start.Format(time.RFC3339Nano), "payload": object{"turn_id": turn, "cwd": cwd, "model": "gpt-6-luna", "effort": "max"}}, msg("exact task", start.Add(time.Second))}
+		var b bytes.Buffer
+		for _, v := range records {
+			raw, _ := json.Marshal(v)
+			b.Write(raw)
+			b.WriteByte('\n')
+		}
+		if e := os.WriteFile(filepath.Join(dir, "rollout-fixture-"+id+".jsonl"), b.Bytes(), 0600); e != nil {
+			t.Fatal(e)
+		}
+		p := &skillsNativeResultProof{prompt: []byte("exact task"), inputOnly: true, exactInput: true, bootstrapSHA: hashBytes(body), requireRuntimeSource: true, cwd: cwd}
+		if kind == "current_with_project" {
+			p.runtimeProject = project
+		}
+		job := object{"thread_id": id, "started_at": start.Format(time.RFC3339Nano), "cwd": cwd, "sandbox": "read-only", "model": "gpt-6-luna", "effort": "max"}
+		s := skillsFS{blocked: func(string) bool { return false }}
+		_, ok := skillsNativeWindow(&s, job, p, start.Add(time.Minute))
+		s.close()
+		if ok != (kind == "current_with_project" || kind == "known_old") {
+			t.Fatalf("missing PUBLIC source %s accepted=%v", kind, ok)
+		}
+	}
+}
+
 func TestSkills3080UnknownUserPayloadIsNeverAnIgnoredEvent(t *testing.T) {
 	cwd, id := "D:/CC/Work/synthetic", "11111111-1111-7111-8111-111111111111"
 	meta, _ := json.Marshal(object{"type": "session_meta", "payload": object{"id": id, "cwd": cwd}})

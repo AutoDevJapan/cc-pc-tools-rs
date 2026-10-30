@@ -505,18 +505,18 @@ func skillsReviewNative(s *skillsFS, job object, spec []byte, finalSHA string) (
 			runtimeBootstrap = s.bootstrapProjects[scope.Commit]
 		}
 	}
-	return skillsCompletedReviewNativeWithBootstrap(s, job, prompt, finalSHA, reviewTyped || consumerTyped, bootstrap, runtimeBootstrap)
+	return skillsCompletedReviewNativeWithBootstrap(s, job, prompt, finalSHA, reviewTyped || consumerTyped, bootstrap, runtimeBootstrap, reviewTyped && job["resume_session"] == nil && job["first_started_at"] == job["started_at"])
 }
 
 // Every completed review/consumer result uses one deny-write proof engine.
 // Input/source/author validation above remains specific to its registered type;
 // live creation and resumed historical results retain their separate contract.
 func skillsCompletedReviewNative(s *skillsFS, job object, prompt []byte, finalSHA string, exactInput bool, bootstrap string) ([]object, bool) {
-	return skillsCompletedReviewNativeWithBootstrap(s, job, prompt, finalSHA, exactInput, bootstrap, nil)
+	return skillsCompletedReviewNativeWithBootstrap(s, job, prompt, finalSHA, exactInput, bootstrap, nil, false)
 }
 
-func skillsCompletedReviewNativeWithBootstrap(s *skillsFS, job object, prompt []byte, finalSHA string, exactInput bool, bootstrap string, source []byte) ([]object, bool) {
-	native, ok := skillsHistoricalNative(s, job, &skillsNativeResultProof{prompt: prompt, finalSHA: finalSHA, exactInput: exactInput, bootstrapSHA: bootstrap, runtimeProject: source, cwd: str(job["cwd"]), sandbox: str(job["sandbox"]), frozen: true})
+func skillsCompletedReviewNativeWithBootstrap(s *skillsFS, job object, prompt []byte, finalSHA string, exactInput bool, bootstrap string, source []byte, required bool) ([]object, bool) {
+	native, ok := skillsHistoricalNative(s, job, &skillsNativeResultProof{prompt: prompt, finalSHA: finalSHA, exactInput: exactInput, bootstrapSHA: bootstrap, runtimeProject: source, requireRuntimeSource: required, cwd: str(job["cwd"]), sandbox: str(job["sandbox"]), frozen: true})
 	if !ok {
 		return nil, false
 	}

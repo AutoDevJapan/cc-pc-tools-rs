@@ -71,6 +71,7 @@ execのsession、task_startedのturn、bootstrap、runtime snapshot、最初のt
 プロジェクト側は同じPUBLIC commitのGitHub treeで確認した`AGENTS.md` blobへ結ぶ。
 この部分のBOM・改行・文書端の表現だけを比較用に揃え、任意のprefixやラベルを除去しない。
 新runtimeではsnapshotが欠ける・異なる・遅れる場合に旧digestへdowngradeしない。
+同PUBLIC project原本の欠落・取得失敗でも旧digestへ戻らない。
 以前のruntimeで同じ原authorのbootstrapを確認する旧契約は別に保つ。
 一般guard・原台帳・任意の指示ファイル・設定・秘密の読取は変更しない。
 受領CLIへ指示本文を返さない。
@@ -88,3 +89,5 @@ Windows更新では、以前のPR番号を再利用せず、固定したreviewed
 これらのコード確認と、正式レビュー・CI・配布・親の受入は別の完了条件である。
 Windowsの生成中は、確認済みsourceのfile handleと物理的な親を保持し、
 書き換え・置換を拒否した同じ入力をcompiler終了後まで照合する。
+directory監視を先に開始し、監視下で未追跡・ignore対象を含む入力一覧を照合する。
+監視前から存在した余分なsourceと、一時追加後に消されたsourceをどちらも拒否する。

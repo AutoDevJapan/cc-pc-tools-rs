@@ -17,6 +17,8 @@ struct FakeHost {
     verdicts: VecDeque<std::result::Result<bool, ReadError>>,
     hook: Option<GuardHook>,
     ended: Option<String>,
+    started: String,
+    now_calls: std::cell::Cell<usize>,
 }
 impl Host for FakeHost {
     fn read(&mut self, path: &Path, _: usize) -> std::result::Result<Vec<u8>, ReadError> {
@@ -31,12 +33,24 @@ impl Host for FakeHost {
         self.verdicts.pop_front().unwrap_or(Ok(true))
     }
     fn now(&self) -> String {
+        self.now_calls.set(self.now_calls.get() + 1);
         if !self.guards.is_empty()
             && let Some(ended) = &self.ended
         {
             return ended.clone();
         }
-        "2026-10-27T00:00:00Z".into()
+        self.started.clone()
+    }
+}
+impl Host for &mut FakeHost {
+    fn read(&mut self, path: &Path, limit: usize) -> std::result::Result<Vec<u8>, ReadError> {
+        (**self).read(path, limit)
+    }
+    fn guard(&mut self, path: &Path) -> std::result::Result<bool, ReadError> {
+        (**self).guard(path)
+    }
+    fn now(&self) -> String {
+        (**self).now()
     }
 }
 impl Fixture {
@@ -68,6 +82,8 @@ impl Fixture {
                 verdicts: VecDeque::new(),
                 hook: None,
                 ended: None,
+                started: "2026-10-27T00:00:00Z".into(),
+                now_calls: std::cell::Cell::new(0),
             },
             writes: std::cell::Cell::new(0),
         }
@@ -78,10 +94,16 @@ impl Fixture {
     fn run_snapshot(&mut self, snapshot: impl FnMut() -> Result<Processes>) -> Result<Vec<i64>> {
         let writes = &self.writes;
         let path = &self.paths.store;
-        run(&self.paths, 1, &mut self.host, snapshot, |db| {
-            writes.set(writes.get() + 1);
-            save(path, db)
-        })
+        run(
+            &self.paths,
+            1,
+            || &mut self.host,
+            snapshot,
+            |db| {
+                writes.set(writes.get() + 1);
+                save(path, db)
+            },
+        )
     }
     fn unchanged(&self, before: &[u8]) {
         assert_eq!(self.bytes(), before);
@@ -135,17 +157,37 @@ fn explicit_holds_on_candidate_or_owner_never_release_or_save() {
             let fields: Vec<_> = crate::direction_record::HOLD_FIELDS
                 .iter()
                 .copied()
-                .chain(scheduler.then_some(["owner_stop_job", "pending_cancel", "question_close_pending", "question"]).into_iter().flatten())
+                .chain(
+                    scheduler
+                        .then_some([
+                            "owner_stop_job",
+                            "pending_cancel",
+                            "question_close_pending",
+                            "question",
+                        ])
+                        .into_iter()
+                        .flatten(),
+                )
                 .collect();
             for field in fields {
                 // Even zero and empty containers are malformed hold values, not
                 // proof that an explicit hold was cleared.
-                for value in [json!(true), json!("hold"), json!(1), json!(0), json!([]), json!({})] {
+                for value in [
+                    json!(true),
+                    json!("hold"),
+                    json!(1),
+                    json!(0),
+                    json!([]),
+                    json!({}),
+                ] {
                     let mut f = Fixture::new();
                     f.edit(|db| {
                         let item = &mut db["items"][row];
-                        if scheduler { item["scheduler"][field] = value.clone(); }
-                        else { item[field] = value.clone(); }
+                        if scheduler {
+                            item["scheduler"][field] = value.clone();
+                        } else {
+                            item[field] = value.clone();
+                        }
                     });
                     let before = f.bytes();
                     let released = f.run();
@@ -156,7 +198,186 @@ fn explicit_holds_on_candidate_or_owner_never_release_or_save() {
             }
         }
     }
-    assert!(failures.is_empty(), "explicit holds were released/saved:\n{}", failures.join("\n"));
+    assert!(
+        failures.is_empty(),
+        "explicit holds were released/saved:\n{}",
+        failures.join("\n")
+    );
+}
+
+#[test]
+fn null_false_and_empty_hold_markers_keep_legitimate_release() {
+    for value in [Value::Null, json!(false), json!("")] {
+        let mut f = Fixture::new();
+        f.edit(|db| {
+            for row in [0, 1] {
+                for key in crate::direction_record::HOLD_FIELDS {
+                    db["items"][row][*key] = value.clone();
+                    db["items"][row]["scheduler"][*key] = value.clone();
+                }
+                for key in [
+                    "owner_stop_job",
+                    "pending_cancel",
+                    "question_close_pending",
+                    "question",
+                ] {
+                    db["items"][row]["scheduler"][key] = value.clone();
+                }
+            }
+        });
+        assert_eq!(f.run(), Ok(vec![1]), "inactive marker {value}");
+        assert_eq!(f.writes.get(), 1);
+    }
+    let mut f = Fixture::new();
+    f.edit(|db| db["items"][1]["status"] = json!("done"));
+    assert_eq!(f.run(), Ok(vec![1]));
+}
+
+#[test]
+fn owner_block_delay_dependency_and_malformed_hold_containers_never_save() {
+    for row in [0, 1] {
+        for patch in [
+            json!({"status":"block"}),
+            json!({"status":"recovery_unverified"}),
+            json!({"scheduler":false}),
+            json!({"stall_recovery":[]}),
+            json!({"scheduler":{"not_before":"unknown"}}),
+            json!({"scheduler":{"not_before":9_999_999_999u64}}),
+            json!({"stall_recovery":{"next_at":9_999_999_999u64}}),
+            json!({"discord_restart_not_before":9_999_999_999u64}),
+            json!({"status":"wait","wait_on":[3]}),
+        ] {
+            let mut f = Fixture::new();
+            f.edit(|db| {
+                common::merge(&mut db["items"][row], patch.clone());
+                db["items"]
+                    .as_array_mut()
+                    .unwrap()
+                    .push(json!({"id":3,"status":"todo"}));
+            });
+            let before = f.bytes();
+            assert_eq!(f.run(), Ok(vec![]), "row={row} patch={patch}");
+            f.unchanged(&before);
+        }
+    }
+}
+
+#[test]
+fn guard_paths_are_unique_per_pass_and_every_pass_is_fresh() {
+    let mut f = Fixture::new();
+    f.edit(|db| {
+        db["items"][0]["scheduler"]["worktree"] = json!("d:\\FIXTURE-tree\\");
+        db["items"][1]["scheduler"]["worktree"] = json!("D:/fixture-source/");
+    });
+    assert_eq!(f.run(), Ok(vec![1]));
+    let paths: Vec<_> = f
+        .host
+        .guards
+        .iter()
+        .map(|p| normalized(p.to_str().unwrap()))
+        .collect();
+    assert_eq!(
+        paths,
+        [
+            "D:/fixture-source",
+            "D:/fixture-tree",
+            "D:/fixture-source",
+            "D:/fixture-tree"
+        ]
+        .map(normalized)
+    );
+    assert_eq!(
+        f.host.now_calls.get(),
+        2,
+        "the single scope deadline must not be renewed"
+    );
+}
+
+#[test]
+fn malformed_scheduler_worktree_on_either_source_never_saves() {
+    for row in [0, 1] {
+        for value in [
+            json!(42),
+            json!(false),
+            json!([]),
+            json!({}),
+            json!("relative"),
+            json!(" "),
+        ] {
+            let mut f = Fixture::new();
+            f.edit(|db| db["items"][row]["scheduler"]["worktree"] = value.clone());
+            let before = f.bytes();
+            assert!(f.run().is_err(), "row={row} worktree={value}");
+            f.unchanged(&before);
+        }
+    }
+}
+
+#[test]
+fn host_budget_begins_after_initial_scope_snapshot_and_lock_release() {
+    let mut f = Fixture::new();
+    let paths = f.paths.clone();
+    let writes = &f.writes;
+    let result = run(
+        &f.paths,
+        1,
+        || {
+            // The host factory must run after the snapshot and after its lock was
+            // released. This writer then makes that snapshot stale, proving order
+            // without sleeping for the production 30/45-second deadlines.
+            let _lock = Lock::acquire(&paths.lock, Duration::ZERO).unwrap();
+            let mut db = load(&paths.store).unwrap();
+            db["items"][0]["note"] = json!("writer at scope start");
+            save(&paths.store, &db).unwrap();
+            &mut f.host
+        },
+        || Ok(Processes::new()),
+        |_| {
+            writes.set(writes.get() + 1);
+            Ok(())
+        },
+    );
+    assert_eq!(result, Err("reevaluation source changed".into()));
+    assert_eq!(f.writes.get(), 0);
+    let db = load(&paths.store).unwrap();
+    assert_eq!(db["items"][0]["note"], "writer at scope start");
+    assert_eq!(db["items"][0]["status"], "wait");
+}
+
+#[test]
+fn guards_never_hold_shared_todo_or_referenced_job_locks() {
+    let mut f = Fixture::new();
+    let paths = f.paths.clone();
+    let count = std::rc::Rc::new(std::cell::Cell::new(0));
+    let seen = count.clone();
+    f.host.hook = Some(Box::new(move |_, _| {
+        let _todo = Lock::acquire(&paths.lock, Duration::ZERO).unwrap();
+        let _candidate =
+            common::ByteLock::acquire(&paths.jobs.join("candidate/state.lock"), Duration::ZERO)
+                .unwrap()
+                .unwrap();
+        let _owner =
+            common::ByteLock::acquire(&paths.jobs.join("owner/state.lock"), Duration::ZERO)
+                .unwrap()
+                .unwrap();
+        seen.set(seen.get() + 1);
+    }));
+    assert_eq!(f.run(), Ok(vec![1]));
+    assert_eq!(count.get(), f.host.guards.len());
+    assert!(count.get() > 0);
+}
+
+#[test]
+fn cross_project_owner_is_rejected_without_reinterpreting_its_scope() {
+    let mut f = Fixture::new();
+    f.edit(|db| {
+        db["projects"]["other"] = json!("D:/other-root");
+        db["items"][1]["project"] = json!("other");
+    });
+    f.job("owner", |job| job["project"] = json!("other"));
+    let before = f.bytes();
+    assert_eq!(f.run(), Err("owner source mismatch".into()));
+    f.unchanged(&before);
 }
 
 #[test]
@@ -257,7 +478,17 @@ fn durable_pr_or_branch_owner_claim_is_not_released() {
 fn guard_denial_unknown_malformed_missing_cli_error_and_timeout_never_save() {
     // These are the Host boundary outcomes, not manufactured production receipts.
     // SystemHost's wire-format tests exercise malformed/typed JSON separately.
-    for at in 0..6 {
+    let mut baseline = Fixture::new();
+    // Include a distinct scheduler worktree on both rows so every protected
+    // source position, including pass two, is enumerated from a passing run.
+    baseline.edit(|db| {
+        db["items"][0]["scheduler"]["worktree"] = json!("D:/candidate-scheduler-tree");
+        db["items"][1]["scheduler"]["worktree"] = json!("D:/owner-scheduler-tree");
+    });
+    assert_eq!(baseline.run(), Ok(vec![1]));
+    let calls = baseline.host.guards.clone();
+    assert!(!calls.is_empty());
+    for at in 0..calls.len() {
         for verdict in [
             Ok(false),
             Err(ReadError("classification_unverified")),
@@ -265,10 +496,15 @@ fn guard_denial_unknown_malformed_missing_cli_error_and_timeout_never_save() {
             Err(ReadError("query_deadline")),
         ] {
             let mut f = Fixture::new();
+            f.edit(|db| {
+                db["items"][0]["scheduler"]["worktree"] = json!("D:/candidate-scheduler-tree");
+                db["items"][1]["scheduler"]["worktree"] = json!("D:/owner-scheduler-tree");
+            });
             f.host.verdicts.extend((0..at).map(|_| Ok(true)));
             f.host.verdicts.push_back(verdict);
             let before = f.bytes();
             assert!(f.run().is_err(), "guard position {at}");
+            assert_eq!(f.host.guards, calls[..=at]);
             f.unchanged(&before);
             assert!(f.host.reads.iter().all(|p| p.starts_with(&f.paths.jobs)));
         }
@@ -349,7 +585,15 @@ fn wrong_job_bindings_or_omitted_receipt_sources_never_save() {
 
 #[test]
 fn guards_run_without_todo_lock_and_changed_selected_source_is_rejected() {
-    for change in ["item", "root", "owner", "references", "source_omitted"] {
+    for change in [
+        "item",
+        "root",
+        "owner",
+        "references",
+        "source_omitted",
+        "scheduler_worktree",
+        "owner_worktree",
+    ] {
         let mut f = Fixture::new();
         let paths = f.paths.clone();
         let unlocked = std::rc::Rc::new(std::cell::Cell::new(false));
@@ -365,6 +609,12 @@ fn guards_run_without_todo_lock_and_changed_selected_source_is_rejected() {
                 "root" => db["projects"]["fixture"] = json!("D:/new-source"),
                 "owner" => db["items"][1]["stopped"] = json!(true),
                 "references" => db["items"][0]["jobs"] = json!(["other"]),
+                "scheduler_worktree" => {
+                    db["items"][0]["scheduler"]["worktree"] = json!("D:/new-tree")
+                }
+                "owner_worktree" => {
+                    db["items"][1]["scheduler"]["worktree"] = json!("D:/new-owner-tree")
+                }
                 _ => {
                     db["items"][0].as_object_mut().unwrap().remove("project");
                 }
@@ -440,6 +690,21 @@ fn liveness_change_snapshot_error_and_expired_guard_cannot_commit() {
         assert!(f.run().is_err());
         f.unchanged(&before);
     }
+}
+
+#[test]
+fn unknown_start_is_rejected_and_sub_45_second_scope_is_not_renewed() {
+    let mut f = Fixture::new();
+    f.host.started = "unknown".into();
+    let before = f.bytes();
+    assert_eq!(f.run(), Err("guard time unavailable".into()));
+    f.unchanged(&before);
+
+    let mut f = Fixture::new();
+    f.host.ended = Some("2026-10-27T00:00:44.999999Z".into());
+    assert_eq!(f.run(), Ok(vec![1]));
+    assert_eq!(f.host.now_calls.get(), 2);
+    assert_eq!(f.writes.get(), 1);
 }
 
 #[test]

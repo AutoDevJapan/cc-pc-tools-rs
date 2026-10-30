@@ -14,7 +14,10 @@
 読取エラーを一律に `client guard unavailable` へ変換していた。
 そのため、対象別の正規判定が現在許可でも、この入口はその判定へ進めなかった。
 一覧の不存在、ACL、内容、復元可能性は調査していない。
-原一覧・registry・認証情報・原job prompt・SDK dataは参照、hash、copyしていない。
+原一覧・registry・認証情報・別ファイルの原job prompt・SDK dataは参照、hash、copyしていない。
+この表現はjob.json内部のprompt値を除外して読む保証ではない。
+参照job.jsonは上限1MiBで本体全体を読み、全体をJSONとしてparseするため、
+内部にprompt等があれば読取・parseの対象に含まれる。
 
 Redでは、旧一覧への読取要求だけを拒むテスト用Hostを使い、
 正常対象の期待 `Ok([1])` に対して `Err("client guard unavailable")` になることを確認した。
@@ -30,7 +33,8 @@ Redでは、旧一覧への読取要求だけを拒むテスト用Hostを使い�
 以外を許可へ読み替えない。
 旧一覧を空の一覧へ変換する処理、別guard、HTTP reader、資格登録は追加していない。
 
-選択行の登録済みproject rootと、正確に参照された実jobのcwdだけを判定する。
+選択行の登録済みproject rootと、正確に参照された実jobのcwdを判定する。
+後続のToDo4246では、選択行とowner行の非空scheduler.worktreeも同じsourceとして判定する。
 参照jobのID、対象ToDoとの関係、project、存在するregistered_cwdの整合、process identityを確認する。
 登録ルートの補完とGit所有の入力投影には、既存の `work_owner::registered_job/from_job` を使う。
 これにより、登録フォルダと祖先Gitルートが異なる正常ケースを維持する。
@@ -42,7 +46,8 @@ guardと既存 `work_owner::reevaluate_todos_if` の提案作成は共有lockの
 変更提案があるときは判定と所有投影をもう一度確認し、通常のjob state lockからToDo lockの順で取得する。
 最後のToDo lockは即時取得とし、ほかのwriterを長く待ちながらjobを占有しない。
 保存時に選択行・登録root・参照owner行、実jobの元bytes、fresh process snapshotを再照合する。
-開始から45秒以上、時計の逆行、不明時刻、変更、busyは保存せず拒否する。
+ToDo4246では初回の共有ToDo lock待機・source取得が終わってから単一の45秒期限を始める。
+実scope開始から45秒以上、時計の逆行、不明時刻、変更、busyは保存せず拒否する。
 保存は最新storeの選択行だけへ反映し、別itemの並行編集を保つ。
 外部guardの失効とGit変更を跨ぐ全サービス共通の原子性を新しく保証するものではない。
 
@@ -52,6 +57,9 @@ guardと既存 `work_owner::reevaluate_todos_if` の提案作成は共有lockの
 PR/branchによる本当の完了待ちと、元3992/3995の通常の依存解放は既存policyのまま。
 
 ## テストと残る工程
+
+以下はToDo4142当時の履歴であり、ToDo4246の最終sourceの成功件数には加算しない。
+M1の修正・新しいテストと未対応の前提は [ToDo4246の証拠](todo-4246-owner-wait-holds.md) を参照する。
 
 - Red：正常対象の1件が旧一覧への依存で失敗。
 - 最初の関連テストでは、質問を含まない「要判断」をblockと期待した1件が失敗した。

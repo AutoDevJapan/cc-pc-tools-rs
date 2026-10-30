@@ -5,13 +5,14 @@ use std::path::Path;
 
 const JOB_LIMIT: usize = 1024 * 1024;
 
-/// Uses the normal per-path guard. No original registry, prompt or SDK data is read.
+/// Uses the normal per-path guard. Reads only referenced bounded job.json files;
+/// their complete JSON is parsed, but separate prompt/SDK/registry files are not read.
 pub fn reevaluate_owner_wait_files(paths: &Paths, id: i64) -> Result<Vec<i64>> {
     let mut backend = RealBackend::new(PathBuf::from("D:/CC/Tools/scheduler"));
     run(
         paths,
         id,
-        &mut SystemHost::default(),
+        SystemHost::default,
         || {
             backend
                 .snapshot()
@@ -21,14 +22,13 @@ pub fn reevaluate_owner_wait_files(paths: &Paths, id: i64) -> Result<Vec<i64>> {
     )
 }
 
-fn run(
+fn run<H: Host>(
     paths: &Paths,
     id: i64,
-    host: &mut impl Host,
+    make_host: impl FnOnce() -> H,
     mut snapshot: impl FnMut() -> Result<Processes>,
     mut commit: impl FnMut(&Value) -> Result<()>,
 ) -> Result<Vec<i64>> {
-    let started = host.now();
     // Only the selected row and its exact automatic owner participate in CAS.
     // Unrelated writers are preserved by reloading the store at commit.
     let mut proposed = {
@@ -36,12 +36,18 @@ fn run(
         load(&paths.store)?
     };
     let source = source(&proposed, id)?;
-    guarded(host, &source.root)?;
+    // Waiting for the initial shared lock is not part of the scope's 45-second
+    // proof budget. Construct SystemHost (and its one monotonic deadline) here;
+    // neither pass renews it.
+    let mut host = make_host();
+    let started = host.now();
+    let mut checked = BTreeSet::new();
+    guarded_source(&mut host, &source, &mut checked)?;
     let mut records = vec![];
     let mut identities = vec![];
     for jid in references(&source.item)? {
         let path = paths.jobs.join(&jid).join("job.json");
-        let bytes = read(host, &path)?;
+        let bytes = read(&mut host, &path)?;
         let job: Value = serde_json::from_slice(&bytes).map_err(|_| "receipt invalid")?;
         let expected = if source.item["work_owner_job"] == jid {
             source.owner.as_ref().ok_or("owner source unavailable")?
@@ -73,7 +79,7 @@ fn run(
                 return Err("process identity unavailable".into());
             }
         }
-        guarded(host, s(&job["cwd"]))?;
+        guarded(&mut host, s(&job["cwd"]), &mut checked)?;
         identities.push(identity(&proposed, &job)?);
         records.push((path, bytes, job));
     }
@@ -82,7 +88,12 @@ fn run(
         .iter()
         .map(|(_, _, job)| observed(job, &ps))
         .collect();
-    if held(&proposed, &source.item, &jobs) {
+    if held(&proposed, &source.item, &jobs, true)
+        || source
+            .owner
+            .as_ref()
+            .is_some_and(|owner| held(&proposed, owner, &jobs, false))
+    {
         return Ok(vec![]);
     }
     // The existing policy may inspect Git ownership. Do that outside shared locks,
@@ -95,9 +106,12 @@ fn run(
     let replacement = one(&proposed, id)?.clone();
     // Refresh permissions after planning as well; slow Git discovery or a changed
     // guard verdict must not turn an earlier positive into unconditional authority.
-    guarded(host, &source.root)?;
+    // Deduplicate only inside this pass. Every path must be checked afresh even
+    // if the first pass checked the same root, worktree or referenced job cwd.
+    let mut checked = BTreeSet::new();
+    guarded_source(&mut host, &source, &mut checked)?;
     for ((_, _, job), before) in records.iter().zip(&identities) {
-        guarded(host, s(&job["cwd"]))?;
+        guarded(&mut host, s(&job["cwd"]), &mut checked)?;
         if identity(&proposed, job)? != *before {
             return Err("reevaluation ownership source changed".into());
         }
@@ -118,7 +132,7 @@ fn run(
         return Err("reevaluation source changed".into());
     }
     for (path, bytes, _) in &records {
-        if *bytes != read(host, path)? {
+        if *bytes != read(&mut host, path)? {
             return Err("reevaluation receipt changed".into());
         }
     }
@@ -209,12 +223,34 @@ fn read(host: &mut impl Host, path: &Path) -> Result<Vec<u8>> {
     }
     Ok(bytes)
 }
-fn guarded(host: &mut impl Host, path: &str) -> Result<()> {
+fn guarded_source(
+    host: &mut impl Host,
+    source: &Source,
+    checked: &mut BTreeSet<String>,
+) -> Result<()> {
+    guarded(host, &source.root, checked)?;
+    for row in std::iter::once(&source.item).chain(source.owner.as_ref()) {
+        let value = &row["scheduler"]["worktree"];
+        if !value.is_null() && value != "" {
+            guarded(
+                host,
+                value.as_str().ok_or("project source unavailable")?,
+                checked,
+            )?;
+        }
+    }
+    Ok(())
+}
+fn guarded(host: &mut impl Host, path: &str, checked: &mut BTreeSet<String>) -> Result<()> {
     if path.trim().is_empty()
         || path.chars().any(char::is_control)
         || !Path::new(path).is_absolute()
     {
         return Err("project source unavailable".into());
+    }
+    let key = normalized(path);
+    if checked.contains(&key) {
+        return Ok(());
     }
     // SystemHost validates all four typed booleans, duplicate JSON keys, exit
     // status and deadline; unknown classification is never an empty client list.
@@ -224,6 +260,7 @@ fn guarded(host: &mut impl Host, path: &str) -> Result<()> {
     {
         return Err("requested item excluded".into());
     }
+    checked.insert(key);
     Ok(())
 }
 fn observed(job: &Value, ps: &Processes) -> Value {
@@ -241,14 +278,42 @@ fn identity(db: &Value, job: &Value) -> Result<Value> {
     }
     Ok(identity)
 }
-fn held(db: &Value, item: &Value, jobs: &[Value]) -> bool {
-    !matches!(s(&item["status"]), "todo" | "doing" | "wait")
-        || !item["wait_ready"].is_null()
-        || n(&item["scheduler"]["not_before"]) > time_s()
+fn explicit(value: &Value) -> bool {
+    !value.is_null() && value != false && value != ""
+}
+fn held(db: &Value, item: &Value, jobs: &[Value], candidate: bool) -> bool {
+    let t = time_s();
+    !(matches!(s(&item["status"]), "todo" | "doing" | "wait")
+        || (!candidate && item["status"] == "done"))
+        || crate::direction_record::HOLD_FIELDS
+            .iter()
+            .any(|key| explicit(&item[*key]) || explicit(&item["scheduler"][*key]))
+        || (!item["scheduler"].is_null() && !item["scheduler"].is_object())
+        || (!item["stall_recovery"].is_null() && !item["stall_recovery"].is_object())
+        || [
+            "owner_stop_job",
+            "pending_cancel",
+            "question_close_pending",
+            "question",
+        ]
+        .iter()
+        .any(|key| explicit(&item["scheduler"][*key]))
+        || [
+            &item["scheduler"]["not_before"],
+            &item["stall_recovery"]["next_at"],
+            &item["discord_restart_not_before"],
+        ]
+        .iter()
+        .any(|value| {
+            !value.is_null()
+                && !value
+                    .as_f64()
+                    .is_some_and(|n| n.is_finite() && n >= 0. && n <= t)
+        })
         || discord_wait(item, time_s())
         || cc_job_policy::todo_wait::pending_on(db, item)
             .iter()
-            .any(|on| item["work_owner_wait_on"] != *on)
+            .any(|on| !candidate || item["work_owner_wait_on"] != *on)
         || jobs
             .iter()
             .any(|j| stopped(item, j) || policy::live(j) || j["work_owner_live"] == true)

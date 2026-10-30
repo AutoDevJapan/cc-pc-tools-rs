@@ -1,7 +1,7 @@
 {
   "todo": 3080,
   "issue": "https://github.com/AutoDevJapan/cc-pc-tools-rs/issues/283",
-  "observed_at": "2026-10-24T17:15:09.0197014+09:00",
+  "observed_at": "2026-10-30T11:20:42.5925592+00:00",
   "phase_a": "partial; 647 additional text shapes held by execution review",
   "phase_b": "新規164・既存統合19を保持し、可視一次本文54代表の評価と候補metadata55を同じ全件台帳に記録した。今回追加した11意味と既存43意味を全field/順序まで保持し、伏字・未読支持・各memberの文脈/個別許諾は未確認のまま。新しい許諾・採否・中央書込0。指定16資料の残候補を継続する。",
   "catalog_sha256": "2d73c9a038a41cc220a9687b935bfa1e0b315b65d9bd6d3e54ddb4111972876c",
@@ -3925,5 +3925,6 @@
       "Explicit site identity interpretations retain original archive locations and unverified historical upstream claims separately from catalog occurrence Git fields; historical exclusion claims still require reconfirmation.",
       "Assessment records 1705 = assessed without final disposition 1513 + assessment/final intersection 192. Final records 198 include 6 final-only legacy records without assessment. The assessment/final union is 1711 occurrences; these categories are not additive independent totals."
     ]
-  }
+  },
+  "observed_at_scope": "この評価/全件queueを公開記録へ集約した時点。各出典の取得時刻や固定commitは元の個別記録を保持し、再取得した時点とはしない。"
 }

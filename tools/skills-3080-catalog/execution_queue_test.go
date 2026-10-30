@@ -18,7 +18,7 @@ func executionFixture() (string, ExecutionManifest, ExecutionEvidence) {
 		_ = enc.Encode(r)
 	}
 	h := sha256.Sum256(text.Bytes())
-	return text.String(), ExecutionManifest{CatalogSHA: hex.EncodeToString(h[:]), Records: 4}, ExecutionEvidence{Assessments: map[string]executionIdentity{"first": {ID: "first", SHA: hash, Path: "first/SKILL.md", Commit: strings.Repeat("c", 40)}}, References: map[string][]ExecutionReference{"first": {{"assessment.json", 1}}}, Decisions: map[string]executionIdentity{}}
+	return text.String(), ExecutionManifest{CatalogSHA: hex.EncodeToString(h[:]), Records: 4}, ExecutionEvidence{Assessments: map[string]executionIdentity{"first": {ID: "first", SHA: hash, Path: "first/SKILL.md", Commit: strings.Repeat("c", 40)}}, References: map[string][]ExecutionReference{"first": {{File: "assessment.json", Row: 1}}}, Decisions: map[string]executionIdentity{}}
 }
 
 func TestExecutionQueueKeepsAllOccurrencesAndDoesNotApproveEqualBodies(t *testing.T) {

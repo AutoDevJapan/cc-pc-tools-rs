@@ -1,0 +1,568 @@
+{
+  "domain": "skills3080-existing-six-canonical-site-integrations-v1",
+  "todo": 3080,
+  "actual_consumer": "20261030-095653-todo-3080",
+  "aliases": 6,
+  "new_Skills": 0,
+  "new_central_writes": 0,
+  "final_dispositions_recorded": 6,
+  "catalog_proof_sha256": "00d8462e00de8871336b2d43b3cd2acd34dc8420f4212bc97d4d5ad535d182e8",
+  "current_application_sha256": "0548459aff3715210629a249c90a780580800f6ef663504fbc4295d543b00b87",
+  "current_instructions_files": 12,
+  "current_instruction_bytes": 21416,
+  "fresh_discovery": {
+    "file": "discovery-canonical-openai6-same-current-six-095653.json",
+    "sha256": "0c52441680e05b978461f36993e8bb5e8f0a98ea414f7aaba78ead774446c14b",
+    "requested": 6,
+    "found": 6,
+    "enabled": 6,
+    "parse_errors": 0,
+    "total_metadata": 484,
+    "scan_limit_warnings": 2,
+    "model_turn_or_context_budget_proof": false
+  },
+  "creation_manifest_commit": "9ccca94d78e97c71ed79e1ec4d60239772c4fe25",
+  "creation_manifest_sha256": "af55ac1965aa0ba6796898f23c9e231d045b88f3eff9424314ed57bdcaa8b8b5",
+  "frozen_creator_review_task": 4049,
+  "frozen_creator_not_modified": true,
+  "entries": [
+    {
+      "inventory_id": "site:security-threat-model-7dae2b",
+      "source_repo": "",
+      "source_commit": "",
+      "path": "",
+      "source_sha256": "1283c0dd62a8104d9edda4583569b5d8510b4ddaa45120687c999250fd96bad2",
+      "site_occurrence": {
+        "inventory_id": "site:security-threat-model-7dae2b",
+        "inventory_unit": "site_index_entry",
+        "repo": "",
+        "commit": "",
+        "path": "",
+        "sha256": "1283c0dd62a8104d9edda4583569b5d8510b4ddaa45120687c999250fd96bad2",
+        "normalized_canonical_url": "https://raw.githubusercontent.com/openai/skills/49f948faa9258a0c61caceaf225e179651397431/skills/.curated/security-threat-model/SKILL.md",
+        "machine_body_read": true,
+        "effective_attempt": {
+          "sha256": "1283c0dd62a8104d9edda4583569b5d8510b4ddaa45120687c999250fd96bad2",
+          "machine_body_read": true
+        }
+      },
+      "accepted_upstream_occurrence": {
+        "inventory_id": "github:14d10577531b4a117e0cde0105666ccfbb607f0ea0c9f9d0a65316ee4310bec5",
+        "inventory_unit": "github_skill_entry",
+        "repo": "openai/skills",
+        "commit": "49f948faa9258a0c61caceaf225e179651397431",
+        "path": "skills/.curated/security-threat-model/SKILL.md",
+        "sha256": "1283c0dd62a8104d9edda4583569b5d8510b4ddaa45120687c999250fd96bad2",
+        "normalized_canonical_url": "https://raw.githubusercontent.com/openai/skills/49f948faa9258a0c61caceaf225e179651397431/skills/.curated/security-threat-model/SKILL.md",
+        "machine_body_read": true,
+        "effective_attempt": null
+      },
+      "upstream_adoption_inventory_id": "github:14d10577531b4a117e0cde0105666ccfbb607f0ea0c9f9d0a65316ee4310bec5",
+      "target": "security-threat-model",
+      "target_manifest": "skills-3080-installed-openai6-manifest214717.json",
+      "target_evidence": "skills-3080-openai6-installation-evidence214717.json",
+      "target_entrypoint_sha256": "d5dd7e6a2a51da241563260835a1ecf0d905c392083772831f1cb5d6b63c2550",
+      "individual_upstream_notice": {
+        "path": "skills/.curated/security-threat-model/LICENSE.txt",
+        "sha256": "4dd13869245e356246a5b770723247bbb80a8f07a181d1d3d873a1734297cdb9",
+        "scope": "Selected authored primary workflow text under its exact per-package Apache-2.0 notice only; no supporting scripts/templates/third-party documentation/assets/services or unknown original/private data rights; changed files marked and original text/license preserved",
+        "accepted": true
+      },
+      "preserved_source_and_notice": [
+        {
+          "path": "references/original-skill.txt",
+          "bytes": 5561,
+          "sha256": "1283c0dd62a8104d9edda4583569b5d8510b4ddaa45120687c999250fd96bad2",
+          "git_blob_from_preserved_fixed_buffer": "abd3c1c95d49c4e0e0664f198f4bf168c6291aec",
+          "semantic_literal_reread_by_current_parent": false
+        },
+        {
+          "path": "references/LICENSE.txt",
+          "bytes": 10776,
+          "sha256": "4dd13869245e356246a5b770723247bbb80a8f07a181d1d3d873a1734297cdb9",
+          "git_blob_from_preserved_fixed_buffer": "13e25df86ce06eb6488e6a6bc5c5847f5dedc352",
+          "semantic_literal_reread_by_current_parent": false
+        }
+      ],
+      "current_instruction_files": [
+        {
+          "path": "SKILL.md",
+          "bytes": 2066,
+          "sha256": "d5dd7e6a2a51da241563260835a1ecf0d905c392083772831f1cb5d6b63c2550",
+          "content_utf8": "---\nname: security-threat-model\ndescription: 依頼範囲の脅威を、実在する入口・信頼境界・攻撃条件と根拠から整理するときに使う。\n---\n\n# 悪用の前提と影響を根拠へ結ぶ\n\n依頼された範囲の脅威を、実在するcomponent・入口・資産・信頼境界・攻撃者の能力へ対応させる。一般的なchecklistや例を、対象で成立した攻撃と報告しない。\n\n1. 元の対象・要件・保存済み回答を読み、runtime、CIや開発tool、テスト・exampleを分ける。構成の主張には実際のcode・設定・観測を結ぶ。\n2. 誰が何を制御し、どの入口からどの資源へ届くかを示す。認証・認可・validation・暗号・rate limit等の現在の制御と、まだ確認できていない条件を分ける。\n3. 攻撃者の到達性、初期権限、制御できる入力と制御できない部分を記録し、悪用の経路と具体的な資産への影響を結ぶ。仮定を実装された機能へ昇格させない。\n4. 起こりやすさ・影響・既存の制御と、順位を変える仮定を説明する。名称だけの重大度や人工的な脅威件数の上限で対象を切り捨てない。\n5. 技術的な不明点は対象の通常の調査で解き、本人だけが決める未指定の要件・権利・約束だけを既存回答の後に具体的に質問する。すべての仮定を本人の確認待ちにしない。\n6. 対策を具体的な境界や実装箇所へ結び、現在の対策・提案・条件付き・未実施を分ける。必要な修正と回帰テストまで追い、実悪用や本番動作の成功を捏造しない。\n\n[正負例と確認条件](references/guide.md)、[原文と変更点](references/sources.md)を読む。\n変更済み: openai/skills@49f948faa9258a0c61caceaf225e179651397431 の skills/.curated/security-threat-model/SKILL.md を2026-10-27に用途・本人方針へ合わせて再構成した。原文と個別Apache-2.0 noticeは変更せず別に保持する。\n",
+          "same_normal_current_buffer_fully_read": true
+        },
+        {
+          "path": "references/guide.md",
+          "bytes": 1519,
+          "sha256": "d3e3121904bdae3d408801ae074b6eb9042bc51e2506259fc5e6bebc05c731d1",
+          "content_utf8": "# 一つの悪用経路をたどる\n\n正例: ある入力を制御できる低い権限の主体が、実在するendpointから別主体の資源を選べるかを追い、通過する認可・下流動作・実結果と未確認を示す。負例: uploadやtokenという単語があるので、未認証RCEや秘密の漏洩を確定したとする。\n\n資産と信頼境界ごとに、成立条件と既存の制御を整理する。runtimeとCI、exampleや管理toolの公開範囲を混ぜない。codeで見つかった入口の一覧と実際の経路の対応を保ち、数件の例を全入口の評価完了へしない。\n\n確認した対策と提案中の対策を分け、攻撃者に出来ないことも記す。優先度を変える仮定は根拠と未確認範囲を残して調査し、本人だけの判断がある部分以外を停止しない。原の出力template・STRIDE等の名前や未読の参照だけで、全要件を実施済みとしない。\n\n成果は依頼された対象の所有場所と共有先へ必要な範囲で残し、秘密値や関係のない顧客名を報告しない。原文を利用できることは、他者のsystemへのprobe・exploit・権限追加や新費用を認めることではない。\n変更済み: openai/skills@49f948faa9258a0c61caceaf225e179651397431 の skills/.curated/security-threat-model/SKILL.md を2026-10-27に用途・本人方針へ合わせて再構成した。原文と個別Apache-2.0 noticeは変更せず別に保持する。\n",
+          "same_normal_current_buffer_fully_read": true
+        }
+      ],
+      "bounded_application": [
+        "security-threat-model: concrete actual attacker control/entry/trust boundary/asset path and current controls precede risk rank; keywords or labels are not exploits, no artificial count cap or routine owner-approval wait for technical assumptions; no unrequested probe/new privileges/spend."
+      ],
+      "positive": "指定した機能のデータと認可の境界から、現実的な悪用経路と対策を整理したい。",
+      "negative": "単語の出現だけで入口や攻撃成功を作り、些細な修正へ全社の監査を追加する。",
+      "candidate_disposition": "integrated_existing",
+      "final_disposition_recorded": true,
+      "scope": "Same site canonical URL and saved primary bytes resolved to the already accepted fixed upstream workflow and its own individual notice. Reuse its existing Japanese adaptation. No independent site authorship, notice for site editorial text, package/assets/templates/scripts/service rights or source re-read is claimed.",
+      "new_permissions": 0,
+      "new_source_literal_reads": 0,
+      "new_central_writes": 0,
+      "new_Skill_creations": 0,
+      "disposition": "integrated_existing"
+    },
+    {
+      "inventory_id": "site:aspnet-core",
+      "source_repo": "",
+      "source_commit": "",
+      "path": "",
+      "source_sha256": "1f487ef3565e5ac1ee6c93cbeb9ac666292b30285877c82ddb0a77c9777fe92f",
+      "site_occurrence": {
+        "inventory_id": "site:aspnet-core",
+        "inventory_unit": "site_index_entry",
+        "repo": "",
+        "commit": "",
+        "path": "",
+        "sha256": "1f487ef3565e5ac1ee6c93cbeb9ac666292b30285877c82ddb0a77c9777fe92f",
+        "normalized_canonical_url": "https://raw.githubusercontent.com/openai/skills/49f948faa9258a0c61caceaf225e179651397431/skills/.curated/aspnet-core/SKILL.md",
+        "machine_body_read": true,
+        "effective_attempt": {
+          "sha256": "1f487ef3565e5ac1ee6c93cbeb9ac666292b30285877c82ddb0a77c9777fe92f",
+          "machine_body_read": true
+        }
+      },
+      "accepted_upstream_occurrence": {
+        "inventory_id": "github:cf6f7ec9164d7c060bece5c5f7b795336c97510f860dff6718b8b7c8b48d1360",
+        "inventory_unit": "github_skill_entry",
+        "repo": "openai/skills",
+        "commit": "49f948faa9258a0c61caceaf225e179651397431",
+        "path": "skills/.curated/aspnet-core/SKILL.md",
+        "sha256": "1f487ef3565e5ac1ee6c93cbeb9ac666292b30285877c82ddb0a77c9777fe92f",
+        "normalized_canonical_url": "https://raw.githubusercontent.com/openai/skills/49f948faa9258a0c61caceaf225e179651397431/skills/.curated/aspnet-core/SKILL.md",
+        "machine_body_read": true,
+        "effective_attempt": null
+      },
+      "upstream_adoption_inventory_id": "github:cf6f7ec9164d7c060bece5c5f7b795336c97510f860dff6718b8b7c8b48d1360",
+      "target": "aspnet-core",
+      "target_manifest": "skills-3080-installed-openai6-manifest214717.json",
+      "target_evidence": "skills-3080-openai6-installation-evidence214717.json",
+      "target_entrypoint_sha256": "21d4b3bec97bd3bb831c8ab5a10b2ea74a4db8ec2a720bfb03f95e1c80108690",
+      "individual_upstream_notice": {
+        "path": "skills/.curated/aspnet-core/LICENSE.txt",
+        "sha256": "58d1e17ffe5109a7ae296caafcadfdbe6a7d176f0bc4ab01e12a689b0499d8bd",
+        "scope": "Selected authored primary workflow text under its exact per-package Apache-2.0 notice only; no supporting scripts/templates/third-party documentation/assets/services or unknown original/private data rights; changed files marked and original text/license preserved",
+        "accepted": true
+      },
+      "preserved_source_and_notice": [
+        {
+          "path": "references/original-skill.txt",
+          "bytes": 5544,
+          "sha256": "1f487ef3565e5ac1ee6c93cbeb9ac666292b30285877c82ddb0a77c9777fe92f",
+          "git_blob_from_preserved_fixed_buffer": "c71ed6e705c44038fbcd2e37a3e12c3a81683fdf",
+          "semantic_literal_reread_by_current_parent": false
+        },
+        {
+          "path": "references/LICENSE.txt",
+          "bytes": 11357,
+          "sha256": "58d1e17ffe5109a7ae296caafcadfdbe6a7d176f0bc4ab01e12a689b0499d8bd",
+          "git_blob_from_preserved_fixed_buffer": "7a4a3ea2424c09fbe48d455aed1eaa94d9124835",
+          "semantic_literal_reread_by_current_parent": false
+        }
+      ],
+      "current_instruction_files": [
+        {
+          "path": "SKILL.md",
+          "bytes": 1964,
+          "sha256": "21d4b3bec97bd3bb831c8ab5a10b2ea74a4db8ec2a720bfb03f95e1c80108690",
+          "content_utf8": "---\nname: aspnet-core\ndescription: 既存ASP.NET Coreの構成・認証・状態を、対象版と依頼のアプリ方式へ合わせるときに使う。\n---\n\n# 既存アプリの方式と対象版を保つ\n\n既存のASP.NET Coreアプリでhost・DI・middleware・認証・状態とテストを合わせる。新しいサーバーの言語や製品方式を、この資料だけでC#へ決めない。\n\n1. 対象のrepositoryと依頼範囲、実際のproject/SDK/対象framework、既存のアプリ方式を読む。保存済みの本人回答と所有・顧客の規則を保持する。\n2. requestの入口からrouting・認証・認可・状態・応答までを追い、どの設定・service lifetime・middlewareが挙動を所有するかを確かめる。\n3. MVC・Razor Pages・Blazor・API等の既存方式を維持し、変更に必要な対象版の公式資料だけを選ぶ。元の2026年3月の優先版を、現在のSDKやアップグレードの許可へしない。\n4. request単位の状態と長寿命service、background処理、接続終了を区別する。DIで解決できたことを、状態共有・認可・並行処理の正しさの証拠にしない。\n5. 入力、認証済み主体、選択した資源、観測した応答と失敗経路を対応させ、変更処理と利用側の回帰テストを行う。表示・例外・ログへ秘密を出さない。\n6. 実際に確認した構成・対象版・経路・テストと未確認を報告する。部署や他所有者の対象へ範囲を広げず、UI変更は同じ画像・範囲の本人回答後に行う。\n\n[確認例](references/guide.md)と[固定出典・変更点](references/sources.md)を読む。\n変更済み: openai/skills@49f948faa9258a0c61caceaf225e179651397431 の skills/.curated/aspnet-core/SKILL.md を2026-10-27に用途・本人方針へ合わせて再構成した。原文と個別Apache-2.0 noticeは変更せず別に保持する。\n",
+          "same_normal_current_buffer_fully_read": true
+        },
+        {
+          "path": "references/guide.md",
+          "bytes": 1424,
+          "sha256": "5d0d99503e1d4ce07e49c075ebc34ee532706972bb40fef8f930638a4e237442",
+          "content_utf8": "# 版と所有を確認する\n\n原文の「最新」や.NET 10の優先は保存版の主張である。実際のprojectとSDK・lock・配備先を先に読み、必要なAPIと移行の破壊的変更を対象版の公式資料で確認する。C#の既存プロジェクトはその方式を保ち、新規の製品・自作ツールは本人のGo既定、GoDDはRustの規則を別に適用する。\n\n正例: 認証後のserviceがrequestの主体を長寿命の共有状態へ保存していないか、実行経路と並行した二主体の回帰テストで確かめる。負例: framework標準のDIや認証を使っているという理由だけで、全endpointの資源認可や状態隔離も正しいとする。\n\n参照は変更したhost/pipeline、アプリ方式、状態、認証、対象版の移行等に絞る。原パッケージの未読の章を新しい必須ファイルとしてリンク・同梱せず、必要なときに許可済みの公式資料から確認する。sourceのcode・templateを実行する許可ではなく、新しい環境や課金を作らない。稼働配備は元の所有者の規則と既存Prdの条件を守る。\n変更済み: openai/skills@49f948faa9258a0c61caceaf225e179651397431 の skills/.curated/aspnet-core/SKILL.md を2026-10-27に用途・本人方針へ合わせて再構成した。原文と個別Apache-2.0 noticeは変更せず別に保持する。\n",
+          "same_normal_current_buffer_fully_read": true
+        }
+      ],
+      "bounded_application": [
+        "aspnet-core: current project/framework and existing MVC/Blazor/API shape precede middleware/DI/auth/state changes; request identity and long-lived state require two-principal regression, standard DI is not resource authorization. No new C# server/version upgrade/UI choice from template."
+      ],
+      "positive": "既存のASP.NET Core APIで認証後の状態やmiddlewareの順序を直したい。",
+      "negative": "一つのAPI修復を理由に未確認の新版へ上げ、既存MVC全体を別方式へ書き換える。",
+      "candidate_disposition": "integrated_existing",
+      "final_disposition_recorded": true,
+      "scope": "Same site canonical URL and saved primary bytes resolved to the already accepted fixed upstream workflow and its own individual notice. Reuse its existing Japanese adaptation. No independent site authorship, notice for site editorial text, package/assets/templates/scripts/service rights or source re-read is claimed.",
+      "new_permissions": 0,
+      "new_source_literal_reads": 0,
+      "new_central_writes": 0,
+      "new_Skill_creations": 0,
+      "disposition": "integrated_existing"
+    },
+    {
+      "inventory_id": "site:winui-app",
+      "source_repo": "",
+      "source_commit": "",
+      "path": "",
+      "source_sha256": "917341ec9eb688d73e21362910a7178a92b2ae49544b7d8f17ee9e19adfe2ea8",
+      "site_occurrence": {
+        "inventory_id": "site:winui-app",
+        "inventory_unit": "site_index_entry",
+        "repo": "",
+        "commit": "",
+        "path": "",
+        "sha256": "917341ec9eb688d73e21362910a7178a92b2ae49544b7d8f17ee9e19adfe2ea8",
+        "normalized_canonical_url": "https://raw.githubusercontent.com/openai/skills/49f948faa9258a0c61caceaf225e179651397431/skills/.curated/winui-app/SKILL.md",
+        "machine_body_read": true,
+        "effective_attempt": {
+          "sha256": "917341ec9eb688d73e21362910a7178a92b2ae49544b7d8f17ee9e19adfe2ea8",
+          "machine_body_read": true
+        }
+      },
+      "accepted_upstream_occurrence": {
+        "inventory_id": "github:8a9bf2614b7f256bd700a1d77025f3765863dead67ce65b645d34589d75f150f",
+        "inventory_unit": "github_skill_entry",
+        "repo": "openai/skills",
+        "commit": "49f948faa9258a0c61caceaf225e179651397431",
+        "path": "skills/.curated/winui-app/SKILL.md",
+        "sha256": "917341ec9eb688d73e21362910a7178a92b2ae49544b7d8f17ee9e19adfe2ea8",
+        "normalized_canonical_url": "https://raw.githubusercontent.com/openai/skills/49f948faa9258a0c61caceaf225e179651397431/skills/.curated/winui-app/SKILL.md",
+        "machine_body_read": true,
+        "effective_attempt": null
+      },
+      "upstream_adoption_inventory_id": "github:8a9bf2614b7f256bd700a1d77025f3765863dead67ce65b645d34589d75f150f",
+      "target": "winui-app",
+      "target_manifest": "skills-3080-installed-openai6-manifest214717.json",
+      "target_evidence": "skills-3080-openai6-installation-evidence214717.json",
+      "target_entrypoint_sha256": "12efaced203108731afb7204981dd53334fc9fa24129e0e48813c7d3a63a3083",
+      "individual_upstream_notice": {
+        "path": "skills/.curated/winui-app/LICENSE.txt",
+        "sha256": "58d1e17ffe5109a7ae296caafcadfdbe6a7d176f0bc4ab01e12a689b0499d8bd",
+        "scope": "Selected authored primary workflow text under its exact per-package Apache-2.0 notice only; no supporting scripts/templates/third-party documentation/assets/services or unknown original/private data rights; changed files marked and original text/license preserved",
+        "accepted": true
+      },
+      "preserved_source_and_notice": [
+        {
+          "path": "references/original-skill.txt",
+          "bytes": 11272,
+          "sha256": "917341ec9eb688d73e21362910a7178a92b2ae49544b7d8f17ee9e19adfe2ea8",
+          "git_blob_from_preserved_fixed_buffer": "28e67e8677f0ab74ac921ec85dd80888f7d53fa7",
+          "semantic_literal_reread_by_current_parent": false
+        },
+        {
+          "path": "references/LICENSE.txt",
+          "bytes": 11357,
+          "sha256": "58d1e17ffe5109a7ae296caafcadfdbe6a7d176f0bc4ab01e12a689b0499d8bd",
+          "git_blob_from_preserved_fixed_buffer": "7a4a3ea2424c09fbe48d455aed1eaa94d9124835",
+          "semantic_literal_reread_by_current_parent": false
+        }
+      ],
+      "current_instruction_files": [
+        {
+          "path": "SKILL.md",
+          "bytes": 2048,
+          "sha256": "12efaced203108731afb7204981dd53334fc9fa24129e0e48813c7d3a63a3083",
+          "content_utf8": "---\nname: winui-app\ndescription: 既存WinUIアプリの構成・配布方式・起動と操作を、実ファイルと画面の根拠へ結ぶときに使う。\n---\n\n# buildと実際の起動を分ける\n\n既存のWinUIアプリで、対象版・project構成・配布方式・実行物と、実際のwindowや操作の対応を確認する。製品名や言語、見た目の方向を原のtemplateから決めない。\n\n1. 元のrepo・依頼・実project・SDKとpackaged/unpackaged等の配布方式を読む。buildの出力と起動経路が同じ最終版を指すかを確かめる。\n2. 環境の有無は実際のtoolと対象版で確認する。原のconfigやwinget・templateのflagを未確認で実行せず、必要な技術操作は窓を出さず既存CLI・管理者窓口で行う。\n3. XAML・binding・navigation・window lifetime・資源参照を依頼の影響範囲で追い、隠れたfailureや別版の成果物を調べる。新規の全体作り直しや独立buildを重ねない。\n4. 起動はprocessの存在やlauncherの終了だけで判定せず、対象版の実window・応答・期待した操作を確認する。自分の検証appだけを終了・再起動し、本人や他担当のwindowを止めない。\n5. 対象の承認済み画像と仕様で、keyboard/focus、拡大・狭い幅・日本語、themeとscrollの所有を確かめる。現在の製品制約を、原のlight/dark等の一般既定で上書きしない。\n6. build・配布・実windowの確認と未確認、使った実行物の版を残す。工程の終了時は自分の検証processを片付け、本人が残すよう指定した納品物だけを保持する。\n\n[例と環境の扱い](references/guide.md)、[固定出典・変更点](references/sources.md)を読む。\n変更済み: openai/skills@49f948faa9258a0c61caceaf225e179651397431 の skills/.curated/winui-app/SKILL.md を2026-10-27に用途・本人方針へ合わせて再構成した。原文と個別Apache-2.0 noticeは変更せず別に保持する。\n",
+          "same_normal_current_buffer_fully_read": true
+        },
+        {
+          "path": "references/guide.md",
+          "bytes": 1658,
+          "sha256": "b9926d79416c00bad858980ae909a3489e339db0a07e20cce6972a68f452b1c5",
+          "content_utf8": "# 配布方式から起動を追う\n\n正例: 同じ最終版のproject・build成果物と実際の配布方式に対応する起動経路を確認し、期待したtop-level windowと応答を確かめる。負例: launcherが0で終了した、またはprocessが一瞬存在しただけで、画面の操作まで成功したとする。\n\n既存のC#等のcodebaseとその慣例を保ち、新しい製品・自作ツールの言語既定をこの資料で変更しない。本人が付けた製品名を使い、無ければrepo名と未定を保持する。原のPascalCase名の自動生成を新しい製品名の承認へしない。\n\n原文のVisual Studio、.NET、Windows App SDKやtemplateのflagは保存版の記載であり、実際の対象版・導入済みtool・公式の条件で確認する。未読のconfigやscriptは使わず、環境に変更が必要なら元の依頼・資源・既存契約の範囲で通常の窓なしCLIとCC-AdminBrokerを使う。追加費用や実カード情報を扱わない。\n\nstock controlやsystem resourceを利用する場合も、現在の製品要件と同じ画像への本人回答を先に照合する。見た目の一般既定を強制したり、現在のthemeやcomponentを未指定で全体変更したりしない。工程後に原例の「appを残す」を無条件に行わず、所有する検証windowの終了まで確認する。\n変更済み: openai/skills@49f948faa9258a0c61caceaf225e179651397431 の skills/.curated/winui-app/SKILL.md を2026-10-27に用途・本人方針へ合わせて再構成した。原文と個別Apache-2.0 noticeは変更せず別に保持する。\n",
+          "same_normal_current_buffer_fully_read": true
+        }
+      ],
+      "bounded_application": [
+        "winui-app: exact final project/artifact/package mode and launch route require actual top-level window/response/expected input, not launcher exit0/process existence; preserve approved image/current theme/language/name, hiddenCLI/AdminBroker and own-process cleanup. No Windows app operation was performed for this catalog comparison."
+      ],
+      "positive": "既存WinUIアプリでbuildは通るが画面が起動しない問題を、配布方式と実windowから調べたい。",
+      "negative": "launcherが終了したので起動成功とし、原configで環境全体を無条件に変更してアプリを残す。",
+      "candidate_disposition": "integrated_existing",
+      "final_disposition_recorded": true,
+      "scope": "Same site canonical URL and saved primary bytes resolved to the already accepted fixed upstream workflow and its own individual notice. Reuse its existing Japanese adaptation. No independent site authorship, notice for site editorial text, package/assets/templates/scripts/service rights or source re-read is claimed.",
+      "new_permissions": 0,
+      "new_source_literal_reads": 0,
+      "new_central_writes": 0,
+      "new_Skill_creations": 0,
+      "disposition": "integrated_existing"
+    },
+    {
+      "inventory_id": "site:chatgpt-apps",
+      "source_repo": "",
+      "source_commit": "",
+      "path": "",
+      "source_sha256": "c3a13a659ce26e9d067b5a97c321e8abec6d8e878afce31b7e841dfcf2635c3a",
+      "site_occurrence": {
+        "inventory_id": "site:chatgpt-apps",
+        "inventory_unit": "site_index_entry",
+        "repo": "",
+        "commit": "",
+        "path": "",
+        "sha256": "c3a13a659ce26e9d067b5a97c321e8abec6d8e878afce31b7e841dfcf2635c3a",
+        "normalized_canonical_url": "https://raw.githubusercontent.com/openai/skills/49f948faa9258a0c61caceaf225e179651397431/skills/.curated/chatgpt-apps/SKILL.md",
+        "machine_body_read": true,
+        "effective_attempt": {
+          "sha256": "c3a13a659ce26e9d067b5a97c321e8abec6d8e878afce31b7e841dfcf2635c3a",
+          "machine_body_read": true
+        }
+      },
+      "accepted_upstream_occurrence": {
+        "inventory_id": "github:2e0ee243c19dfad463737e0c64bf90a78204a90843582ff815d73cb73541cc74",
+        "inventory_unit": "github_skill_entry",
+        "repo": "openai/skills",
+        "commit": "49f948faa9258a0c61caceaf225e179651397431",
+        "path": "skills/.curated/chatgpt-apps/SKILL.md",
+        "sha256": "c3a13a659ce26e9d067b5a97c321e8abec6d8e878afce31b7e841dfcf2635c3a",
+        "normalized_canonical_url": "https://raw.githubusercontent.com/openai/skills/49f948faa9258a0c61caceaf225e179651397431/skills/.curated/chatgpt-apps/SKILL.md",
+        "machine_body_read": true,
+        "effective_attempt": null
+      },
+      "upstream_adoption_inventory_id": "github:2e0ee243c19dfad463737e0c64bf90a78204a90843582ff815d73cb73541cc74",
+      "target": "chatgpt-apps",
+      "target_manifest": "skills-3080-installed-openai6-manifest214717.json",
+      "target_evidence": "skills-3080-openai6-installation-evidence214717.json",
+      "target_entrypoint_sha256": "d4cc148fa54308918775996bbd6ff2d31c1d126152963a34f1e04f80228eb857",
+      "individual_upstream_notice": {
+        "path": "skills/.curated/chatgpt-apps/LICENSE.txt",
+        "sha256": "a7f55b2cb68997f729e6199720d4d3cae47633aba0254a84b2d36ab284be9d45",
+        "scope": "Selected authored primary workflow text under its exact per-package Apache-2.0 notice only; no supporting scripts/templates/third-party documentation/assets/services or unknown original/private data rights; changed files marked and original text/license preserved",
+        "accepted": true
+      },
+      "preserved_source_and_notice": [
+        {
+          "path": "references/original-skill.txt",
+          "bytes": 19626,
+          "sha256": "c3a13a659ce26e9d067b5a97c321e8abec6d8e878afce31b7e841dfcf2635c3a",
+          "git_blob_from_preserved_fixed_buffer": "6280a08c57db44ab622dcccbd853e01005edfcbd",
+          "semantic_literal_reread_by_current_parent": false
+        },
+        {
+          "path": "references/LICENSE.txt",
+          "bytes": 10774,
+          "sha256": "a7f55b2cb68997f729e6199720d4d3cae47633aba0254a84b2d36ab284be9d45",
+          "git_blob_from_preserved_fixed_buffer": "145d9443e3e7da910ac0b1e7c8afda86cfefde3a",
+          "semantic_literal_reread_by_current_parent": false
+        }
+      ],
+      "current_instruction_files": [
+        {
+          "path": "SKILL.md",
+          "bytes": 2092,
+          "sha256": "d4cc148fa54308918775996bbd6ff2d31c1d126152963a34f1e04f80228eb857",
+          "content_utf8": "---\nname: chatgpt-apps\ndescription: ChatGPTアプリのtoolとUIの契約・状態・公開範囲を、対象版の根拠へ結ぶときに使う。\n---\n\n# toolと表示の契約を合わせる\n\nChatGPTアプリのtool、UI resource、widget、認証と状態の境界を扱う。元の依頼に必要な表示・外部送信・公開範囲を、例から広げない。\n\n1. 既存repository・対象版・利用できる接続と保存済み要件を読む。UIが必要か、データだけか、内部利用か公開提出かを実際の依頼から決める。\n2. 一つのtoolが何を読み書きするか、入力・出力・資源ID・失敗・再試行の契約を先に定める。annotationはmodelへの説明であり、認可やserver側の検証の代わりにしない。\n3. 対象版の公式資料と実装を照合して、toolの結果とUI resource・bridgeの対応を確かめる。原のAPI名・metadata・exampleを現在互換と決めず、必要な部分だけ参照する。\n4. modelに渡す構造化結果、説明、widget側の表示情報を区別する。widgetだけに渡す情報もclientから見えるものとして扱い、認証情報や秘密を入れない。\n5. 初期化、toolの遅延応答、再試行、hostの変更、表示の再生成と破棄で、古い状態や二重更新が残らないか確認する。版やrequestの順序と副作用の所有を結ぶ。\n6. 対象endpoint・schema・表示・実認証の動作と未確認を分け、必要な変更のテストを行う。公開提出や恒久権限、tunnel・配備・新費用をこのSkillの発動だけで追加しない。\n\n見た目の実装・本番反映には同じ画像と範囲への本人回答を保持する。\n[境界の確認](references/guide.md)と[出典・変更点](references/sources.md)を読む。\n変更済み: openai/skills@49f948faa9258a0c61caceaf225e179651397431 の skills/.curated/chatgpt-apps/SKILL.md を2026-10-27に用途・本人方針へ合わせて再構成した。原文と個別Apache-2.0 noticeは変更せず別に保持する。\n",
+          "same_normal_current_buffer_fully_read": true
+        },
+        {
+          "path": "references/guide.md",
+          "bytes": 1777,
+          "sha256": "bd353366cb395f2e757149d1daa0cc52f3c566b41937c6725a6a5874c9bd4839",
+          "content_utf8": "# 現在の契約から始める\n\nOpenAI製品の実装が必要になったら、対象の既存コード・SDK・型定義を先に確認し、不足する現在仕様は公式の文書経路で調べる。原文はdocs-firstの設計例であり、そこに載るAPI名、wrapper、CSP、resource URIや提出条件が現在の正本であるとは主張しない。読み込む参照は、その変更と対象版に必要な範囲へ絞る。\n\n正例: 同じ状態版に対する再試行が副作用を重ねず、古いtool結果が新しいwidget状態を上書きしないかを、実request識別と応答の順序で確かめる。負例: idempotentやreadOnlyというhintを書いたので、認証・資源認可・入力検証も済んだとする。\n\nwidget-onlyのpayloadはmodelの本文と区別されても、認証済みclientへ送られる情報である。秘密の保存先にはしない。CSPで到達先を限定することと、送信するデータの権利・元の依頼、serverの認可は別に確認する。\n\n新規serverや自作ツールはGo既定、GoDDはRustとし、既存UIの言語と規則を保つ。原のNode/Python scaffoldやscriptをそのまま起動せず、新APIキー・追加費用・新しい恒久MCP権限を前提にしない。実装例の紹介、schemaの確認、実接続、公開審査と配布の成功を区別する。提出・新しい公開や本人だけが決める要件は、既存の回答を先に照合して必要な範囲だけ質問する。\n変更済み: openai/skills@49f948faa9258a0c61caceaf225e179651397431 の skills/.curated/chatgpt-apps/SKILL.md を2026-10-27に用途・本人方針へ合わせて再構成した。原文と個別Apache-2.0 noticeは変更せず別に保持する。\n",
+          "same_normal_current_buffer_fully_read": true
+        }
+      ],
+      "bounded_application": [
+        "chatgpt-apps: actual tool input/output/resource IDs and state versions separate model/widget/client data; annotation hints are not authentication/authorization. Retry/idempotency must bind actual request/version and side effects; no API keys/tunnel/submission/new MCP or UI implementation from mere discovery."
+      ],
+      "positive": "既存ChatGPTアプリでtoolの結果とwidgetの状態がずれる原因を直したい。",
+      "negative": "例を丸ごと実行し、新しいMCP権限・公開tunnel・APIキーを追加して完成とする。",
+      "candidate_disposition": "integrated_existing",
+      "final_disposition_recorded": true,
+      "scope": "Same site canonical URL and saved primary bytes resolved to the already accepted fixed upstream workflow and its own individual notice. Reuse its existing Japanese adaptation. No independent site authorship, notice for site editorial text, package/assets/templates/scripts/service rights or source re-read is claimed.",
+      "new_permissions": 0,
+      "new_source_literal_reads": 0,
+      "new_central_writes": 0,
+      "new_Skill_creations": 0,
+      "disposition": "integrated_existing"
+    },
+    {
+      "inventory_id": "site:security-ownership-map",
+      "source_repo": "",
+      "source_commit": "",
+      "path": "",
+      "source_sha256": "f06c1a59247569326702c945f397af163ea96cf2ecfdf2dde280605bf89a3ec8",
+      "site_occurrence": {
+        "inventory_id": "site:security-ownership-map",
+        "inventory_unit": "site_index_entry",
+        "repo": "",
+        "commit": "",
+        "path": "",
+        "sha256": "f06c1a59247569326702c945f397af163ea96cf2ecfdf2dde280605bf89a3ec8",
+        "normalized_canonical_url": "https://raw.githubusercontent.com/openai/skills/49f948faa9258a0c61caceaf225e179651397431/skills/.curated/security-ownership-map/SKILL.md",
+        "machine_body_read": true,
+        "effective_attempt": {
+          "sha256": "f06c1a59247569326702c945f397af163ea96cf2ecfdf2dde280605bf89a3ec8",
+          "machine_body_read": true
+        }
+      },
+      "accepted_upstream_occurrence": {
+        "inventory_id": "github:f941ef30176f5c72f8d352e8c9b00e297b883496f08a7f6072ab6b4ea6958d19",
+        "inventory_unit": "github_skill_entry",
+        "repo": "openai/skills",
+        "commit": "49f948faa9258a0c61caceaf225e179651397431",
+        "path": "skills/.curated/security-ownership-map/SKILL.md",
+        "sha256": "f06c1a59247569326702c945f397af163ea96cf2ecfdf2dde280605bf89a3ec8",
+        "normalized_canonical_url": "https://raw.githubusercontent.com/openai/skills/49f948faa9258a0c61caceaf225e179651397431/skills/.curated/security-ownership-map/SKILL.md",
+        "machine_body_read": true,
+        "effective_attempt": null
+      },
+      "upstream_adoption_inventory_id": "github:f941ef30176f5c72f8d352e8c9b00e297b883496f08a7f6072ab6b4ea6958d19",
+      "target": "security-ownership-map",
+      "target_manifest": "skills-3080-installed-openai6-manifest214717.json",
+      "target_evidence": "skills-3080-openai6-installation-evidence214717.json",
+      "target_entrypoint_sha256": "d809f0f89e083fb2e828fe841db6fa1d2eae7d6c676ea9798a62fa24b5b1f3d8",
+      "individual_upstream_notice": {
+        "path": "skills/.curated/security-ownership-map/LICENSE.txt",
+        "sha256": "4dd13869245e356246a5b770723247bbb80a8f07a181d1d3d873a1734297cdb9",
+        "scope": "Selected authored primary workflow text under its exact per-package Apache-2.0 notice only; no supporting scripts/templates/third-party documentation/assets/services or unknown original/private data rights; changed files marked and original text/license preserved",
+        "accepted": true
+      },
+      "preserved_source_and_notice": [
+        {
+          "path": "references/original-skill.txt",
+          "bytes": 8736,
+          "sha256": "f06c1a59247569326702c945f397af163ea96cf2ecfdf2dde280605bf89a3ec8",
+          "git_blob_from_preserved_fixed_buffer": "0164d0d8809825dc5bccc99e87cafb8345a6be72",
+          "semantic_literal_reread_by_current_parent": false
+        },
+        {
+          "path": "references/LICENSE.txt",
+          "bytes": 10776,
+          "sha256": "4dd13869245e356246a5b770723247bbb80a8f07a181d1d3d873a1734297cdb9",
+          "git_blob_from_preserved_fixed_buffer": "13e25df86ce06eb6488e6a6bc5c5847f5dedc352",
+          "semantic_literal_reread_by_current_parent": false
+        }
+      ],
+      "current_instruction_files": [
+        {
+          "path": "SKILL.md",
+          "bytes": 1920,
+          "sha256": "d809f0f89e083fb2e828fe841db6fa1d2eae7d6c676ea9798a62fa24b5b1f3d8",
+          "content_utf8": "---\nname: security-ownership-map\ndescription: Git履歴の回数と所有リスクを、期間・除外・不明な履歴条件を保って比べるときに使う。\n---\n\n# 履歴の集中と責任を区別する\n\n依頼された安全性や継続性の調査で、Git履歴の人とfile・同時変更の関係を比較する。commit数やgraphを、現在の権限・正式な所有・脆弱性の証拠にしない。\n\n1. 実際のrepo所有と対象path、ref、期間、履歴の深さ、保護判定を確認する。許可のない顧客repoや秘密の原本へ範囲を広げない。\n2. authorとcommitter、日付の種類、merge、bot、大量変更、rename・aliasをどう数えるか明示する。回数の単位と分母、除外を保存する。\n3. 認証・暗号・配布・CI等、対象で機微な領域を根拠から決める。lockfileやCIを一律に除外して、安全性の重要な変更を落とさない。\n4. 人とfileの接点、同時変更、期間や重みを比較し、CODEOWNERS等の正式な定義と観測の差を示す。相関・cluster・低い人数を権限や脆弱性の確定へしない。\n5. 旧aliasや履歴不足、除外と未観測を明記し、機微な出力は依頼の目的と共有先に必要な範囲へ絞る。timezone offsetから人の所在地や素性を推測しない。\n6. 実際の入力版・集計規則・結果と未確認を結んで報告する。原のPythonやgraph DBのscript・依存を自動実行せず、利用できる通常CLIやGoの処理を使う。\n\n[比較例と限界](references/guide.md)、[固定版と変更点](references/sources.md)を読む。\n変更済み: openai/skills@49f948faa9258a0c61caceaf225e179651397431 の skills/.curated/security-ownership-map/SKILL.md を2026-10-27に用途・本人方針へ合わせて再構成した。原文と個別Apache-2.0 noticeは変更せず別に保持する。\n",
+          "same_normal_current_buffer_fully_read": true
+        },
+        {
+          "path": "references/guide.md",
+          "bytes": 1564,
+          "sha256": "6254eb98995217fcc07a77acc8a624ec5fb7b4eea58c8612daffc871d21acb07",
+          "content_utf8": "# 分母と除外を見せる\n\n一つのcommitが触れた人とfileの関係と、fileごとのtouch回数は違う。期間、author/committer、日付、merge/bot、大量変更、rename/aliasを定義し、再計算できる入力版と集計規則へ結ぶ。shallow cloneや欠けたrefは履歴の不在証明ではなく、観測範囲の制限である。\n\n正例: 認証の一部で一人に履歴が偏っていることを示し、正式な担当・レビュー体制や古いalias、観測期間を別に確認する。負例: touchesが少ないので誰も保守していないと断定し、除外したCIやlockfileの危険を評価済みとする。\n\ncochangeの類似度やcommunityは候補のまとまりであり、因果・資源の認可・組織の役割を確定するものではない。bus factorの意味と算出規則を明示し、commit比率を本人の業務評価や確定した担当の変更へ流用しない。\n\n人数を比べるために全authorのemailやtimezone・私的pathを毎回modelや外部へ出す必要はない。依頼された出力と必要な識別の範囲を照合し、集計と必要な対応だけを保存する。原のPython/networkx/Neo4jや未読のimport資料を、自動実行・新費用・外部送信の指示へしない。\n変更済み: openai/skills@49f948faa9258a0c61caceaf225e179651397431 の skills/.curated/security-ownership-map/SKILL.md を2026-10-27に用途・本人方針へ合わせて再構成した。原文と個別Apache-2.0 noticeは変更せず別に保持する。\n",
+          "same_normal_current_buffer_fully_read": true
+        }
+      ],
+      "bounded_application": [
+        "security-ownership-map: author/committer/time/ref/depth/rename/bot/denominator/exclusions are observations, not formal ownership or vulnerability; retain missing/shallow evidence, do not exclude CI/lockfile by default or infer identity/location from timezone."
+      ],
+      "positive": "指定repoの機微な変更箇所で、履歴上の知識の集中と実際の担当定義の差を調べたい。",
+      "negative": "commitを触った比率だけで現在の権限・人の所在地・正式な担当を断定する。",
+      "candidate_disposition": "integrated_existing",
+      "final_disposition_recorded": true,
+      "scope": "Same site canonical URL and saved primary bytes resolved to the already accepted fixed upstream workflow and its own individual notice. Reuse its existing Japanese adaptation. No independent site authorship, notice for site editorial text, package/assets/templates/scripts/service rights or source re-read is claimed.",
+      "new_permissions": 0,
+      "new_source_literal_reads": 0,
+      "new_central_writes": 0,
+      "new_Skill_creations": 0,
+      "disposition": "integrated_existing"
+    },
+    {
+      "inventory_id": "site:linear-5b7724",
+      "source_repo": "",
+      "source_commit": "",
+      "path": "",
+      "source_sha256": "ce0f39c95b6c9190f8ea33614393cdb556b2684dd8388ded394e9cb915f42601",
+      "site_occurrence": {
+        "inventory_id": "site:linear-5b7724",
+        "inventory_unit": "site_index_entry",
+        "repo": "",
+        "commit": "",
+        "path": "",
+        "sha256": "ce0f39c95b6c9190f8ea33614393cdb556b2684dd8388ded394e9cb915f42601",
+        "normalized_canonical_url": "https://raw.githubusercontent.com/openai/skills/49f948faa9258a0c61caceaf225e179651397431/skills/.curated/linear/SKILL.md",
+        "machine_body_read": true,
+        "effective_attempt": {
+          "sha256": "ce0f39c95b6c9190f8ea33614393cdb556b2684dd8388ded394e9cb915f42601",
+          "machine_body_read": true
+        }
+      },
+      "accepted_upstream_occurrence": {
+        "inventory_id": "github:9e252728557935c94f42fb035570096eb391db7d500c02340e0d4e40c67d1ab3",
+        "inventory_unit": "github_skill_entry",
+        "repo": "openai/skills",
+        "commit": "49f948faa9258a0c61caceaf225e179651397431",
+        "path": "skills/.curated/linear/SKILL.md",
+        "sha256": "ce0f39c95b6c9190f8ea33614393cdb556b2684dd8388ded394e9cb915f42601",
+        "normalized_canonical_url": "https://raw.githubusercontent.com/openai/skills/49f948faa9258a0c61caceaf225e179651397431/skills/.curated/linear/SKILL.md",
+        "machine_body_read": true,
+        "effective_attempt": null
+      },
+      "upstream_adoption_inventory_id": "github:9e252728557935c94f42fb035570096eb391db7d500c02340e0d4e40c67d1ab3",
+      "target": "linear",
+      "target_manifest": "skills-3080-installed-openai6-manifest214717.json",
+      "target_evidence": "skills-3080-openai6-installation-evidence214717.json",
+      "target_entrypoint_sha256": "dcb8001dc33323c644dbdace1d88065fe62f67cfdaa60856b671d3e21aa12e41",
+      "individual_upstream_notice": {
+        "path": "skills/.curated/linear/LICENSE.txt",
+        "sha256": "58d1e17ffe5109a7ae296caafcadfdbe6a7d176f0bc4ab01e12a689b0499d8bd",
+        "scope": "Selected authored primary workflow text under its exact per-package Apache-2.0 notice only; no supporting scripts/templates/third-party documentation/assets/services or unknown original/private data rights; changed files marked and original text/license preserved",
+        "accepted": true
+      },
+      "preserved_source_and_notice": [
+        {
+          "path": "references/original-skill.txt",
+          "bytes": 4952,
+          "sha256": "ce0f39c95b6c9190f8ea33614393cdb556b2684dd8388ded394e9cb915f42601",
+          "git_blob_from_preserved_fixed_buffer": "6982ccbe4835ed207f6c7c0b2f011d903dbe2960",
+          "semantic_literal_reread_by_current_parent": false
+        },
+        {
+          "path": "references/LICENSE.txt",
+          "bytes": 11357,
+          "sha256": "58d1e17ffe5109a7ae296caafcadfdbe6a7d176f0bc4ab01e12a689b0499d8bd",
+          "git_blob_from_preserved_fixed_buffer": "7a4a3ea2424c09fbe48d455aed1eaa94d9124835",
+          "semantic_literal_reread_by_current_parent": false
+        }
+      ],
+      "current_instruction_files": [
+        {
+          "path": "SKILL.md",
+          "bytes": 1918,
+          "sha256": "dcb8001dc33323c644dbdace1d88065fe62f67cfdaa60856b671d3e21aa12e41",
+          "content_utf8": "---\nname: linear\ndescription: Linearの既存接続で、対象のissue・team・変更と結果を対応させるときに使う。\n---\n\n# 対象と変更を結び直す\n\n利用できる既存のLinear接続で、依頼されたissue・project・teamの参照と変更を扱う。このPCの共有ToDoや本人回答の記録をLinearへ勝手に置き換えない。\n\n1. 元の依頼、既存の回答、workspace・team・project・issueの具体IDと権限を照合する。名前の類似や検索の先頭だけで対象を決めない。\n2. 実際に呼べるtoolと入力条件を確認し、必要な読取・検索・ページングで現在の状態と重複を調べる。未接続を理由にconfigや恒久MCP登録を自動変更しない。\n3. 書換えが依頼に含まれる場合は、対象・旧状態・新状態とまとめ方を決める。顧客との新しい約束、担当や期限の新判断を、例や古いstatusから作らない。\n4. 部分成功・再試行・同時更新では、既に変わったものと残りをIDごとに確認する。応答を失っただけで同じissueやコメントを重複作成しない。\n5. 変更後は同じ対象を読み戻し、成功・保持・未実施・失敗を分ける。検索に無い場合はpage・archive・対象workspace・アクセス条件を調べ、不在や削除と即断しない。\n6. メッセージやコメントの外部送信は、明示された依頼の対象と内容へ限る。Skillが見つかったことや古い更新を送信の指示へしない。\n\n[操作例と復旧](references/guide.md)、[固定出典・変更点](references/sources.md)を読む。\n変更済み: openai/skills@49f948faa9258a0c61caceaf225e179651397431 の skills/.curated/linear/SKILL.md を2026-10-27に用途・本人方針へ合わせて再構成した。原文と個別Apache-2.0 noticeは変更せず別に保持する。\n",
+          "same_normal_current_buffer_fully_read": true
+        },
+        {
+          "path": "references/guide.md",
+          "bytes": 1466,
+          "sha256": "d31205a9cd5273a78ee5ab13e84ef9e1281f7969092864f7afef6258419783d8",
+          "content_utf8": "# 存在と同一性を分ける\n\n正例: 指定team/projectのissue IDを読み、現在のstatusと依頼された変更を対応させ、更新後にも同じIDを読む。負例: 同じ題名が一つ検索に出たので対象とし、全teamへ同じlabelや期限を適用する。\n\n一覧のpaging・archive・権限・workspaceの選択を確認する。見えないものを不存在や削除済みとせず、確認できた範囲を残す。bulk変更は、依頼された対象だけを有限なbatchと同じIDで追い、実結果を保存して残りから再開する。\n\n失敗時は実際のエラー・入力・対象を調べる。原文のMCP追加、config変更、WSL/npxの代替接続、cookie一括消去や本人へPC再起動を頼む手順は採用しない。既存OAuthと利用できる通常CLI/Computer Useを元の依頼の範囲で扱い、この手順だけで新しい恒久アクセスやAPIキー・課金を導入しない。\n\n原文のtool名は保存版の例であり、現在利用できるものと入力条件を確認して使う。issueの作成・担当再配分・外部コメントの例は、本人の製品要件や新しい顧客との約束の承認ではない。\n変更済み: openai/skills@49f948faa9258a0c61caceaf225e179651397431 の skills/.curated/linear/SKILL.md を2026-10-27に用途・本人方針へ合わせて再構成した。原文と個別Apache-2.0 noticeは変更せず別に保持する。\n",
+          "same_normal_current_buffer_fully_read": true
+        }
+      ],
+      "bounded_application": [
+        "linear: current workspace/team/project/issue IDs, paging/archive/access and old/new status precede bounded requested writes. Missing search is not nonexistence, lost responses do not authorize duplicate creates; no replacement of sharedToDo or new customer deadlines/comments."
+      ],
+      "positive": "依頼されたLinearの既存issueを読み、特定のteamで重複を避けて更新したい。",
+      "negative": "古い更新があるだけで本人に代わって外部コメントを送り、共有ブラウザのcookieを消す。",
+      "candidate_disposition": "integrated_existing",
+      "final_disposition_recorded": true,
+      "scope": "Same site canonical URL and saved primary bytes resolved to the already accepted fixed upstream workflow and its own individual notice. Reuse its existing Japanese adaptation. No independent site authorship, notice for site editorial text, package/assets/templates/scripts/service rights or source re-read is claimed.",
+      "new_permissions": 0,
+      "new_source_literal_reads": 0,
+      "new_central_writes": 0,
+      "new_Skill_creations": 0,
+      "disposition": "integrated_existing"
+    }
+  ],
+  "independent_result_review_pending": true,
+  "site_git_tuple_not_filled_from_upstream": true,
+  "general_access_granted": false,
+  "historical_continuity_proven": false,
+  "current_OS_writer": "unproved",
+  "whole16_complete": false,
+  "publisher_job": "20261030-095653-todo-3080",
+  "new_integrations": 6,
+  "new_permissions": 0,
+  "publication_review_pending_at_recording": true
+}

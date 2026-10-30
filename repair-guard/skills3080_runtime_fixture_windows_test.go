@@ -24,6 +24,14 @@ func skillsCompleteRuntimeFixture(records []object) []object {
 		for i, key := range []string{"model", "permissions", "collaboration_mode"} {
 			if st[key] == nil {
 				st[key] = object{"instructions": skillsRuntimeFragmentHash(texts[i])}
+				if key == "permissions" {
+					obj(st[key])["approved_command_prefixes"] = []any{}
+				} else {
+					obj(st[key])["model"] = "gpt-6-luna"
+					if key == "collaboration_mode" {
+						obj(st[key])["mode"] = "default"
+					}
+				}
 			}
 		}
 		if st["host_skills"] == nil {

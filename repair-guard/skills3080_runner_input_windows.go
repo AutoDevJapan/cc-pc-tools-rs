@@ -317,7 +317,10 @@ func skillsBootstrapProjection(input io.Reader, id, cwd string) (string, bool) {
 	return hashBytes([]byte(body)), ok
 }
 
-func skillsBootstrapBodyProjection(input io.Reader, id, cwd, sandbox string) (string, bool) {
+func skillsBootstrapBodyProjection(input io.Reader, id, cwd, sandbox string, window ...time.Time) (string, bool) {
+	if len(window) != 0 && (len(window) != 2 || window[1].Before(window[0])) {
+		return "", false
+	}
 	scan := bufio.NewScanner(io.LimitReader(input, 4<<20))
 	scan.Buffer(make([]byte, 64<<10), 1<<20)
 	session := false
@@ -327,8 +330,9 @@ func skillsBootstrapBodyProjection(input io.Reader, id, cwd, sandbox string) (st
 			return "", false
 		}
 		var e struct {
-			Type    string          `json:"type"`
-			Payload json.RawMessage `json:"payload"`
+			Type      string          `json:"type"`
+			Timestamp string          `json:"timestamp"`
+			Payload   json.RawMessage `json:"payload"`
 		}
 		if !skillsCreationHeaderKeys(scan.Bytes(), "type", "timestamp", "payload") || json.Unmarshal(scan.Bytes(), &e) != nil {
 			return "", false
@@ -361,6 +365,12 @@ func skillsBootstrapBodyProjection(input io.Reader, id, cwd, sandbox string) (st
 		}
 		if !session {
 			return "", false
+		}
+		if len(window) == 2 {
+			at, err := time.Parse(time.RFC3339Nano, e.Timestamp)
+			if err != nil || at.Before(window[0]) || at.After(window[1]) {
+				return "", false
+			}
 		}
 		var blocks []json.RawMessage
 		if _, strict := conversationJSON(scan.Bytes()); !strict || json.Unmarshal(p.Content, &blocks) != nil || len(blocks) < 1 || len(blocks) > 2 {

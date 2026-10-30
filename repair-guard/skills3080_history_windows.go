@@ -190,7 +190,9 @@ func skillsNativeWindowWithSourceOrigin(s *skillsFS, job object, proof *skillsNa
 		if !rewindable {
 			return nil, false
 		}
+		var bootstrapWindow []time.Time
 		if proof.requireRuntimeSource || len(proof.runtimeProject) > 0 {
+			bootstrapWindow = []time.Time{start, end}
 			envelopes := map[string]bool{}
 			source, modern, valid := skillsRuntimeBootstrapProjectionWithOrigin(input, job, proof.runtimeProject, start, end, func() (skillsRuntimeOrigin, bool) {
 				origin, valid := resolve(start)
@@ -212,15 +214,22 @@ func skillsNativeWindowWithSourceOrigin(s *skillsFS, job object, proof *skillsNa
 				if len(w.Input) == 0 {
 					return nil, false
 				}
-				w.proof = &skillsNativeResultProof{prompt: w.Input, inputOnly: true, exactInput: true, bootstrapSHA: proof.bootstrapSHA, runtimeBootstrap: source, bootstrapBound: true, cwd: proof.cwd, sandbox: proof.sandbox}
+				first := w.Start.Equal(proof.runtimePriorWindows[len(proof.runtimePriorWindows)-1].Start)
+				w.proof = &skillsNativeResultProof{prompt: w.Input, inputOnly: true, exactInput: true, bootstrapSHA: proof.bootstrapSHA, runtimeBootstrap: source, bootstrapBound: !first, cwd: proof.cwd, sandbox: proof.sandbox}
 				// Only the independently projected first runtime bootstrap is
 				// an extra source message. Later historical jobs have exactly
 				// their own normally stored execution input.
-				w.proof.userSeen = !w.Start.Equal(proof.runtimePriorWindows[len(proof.runtimePriorWindows)-1].Start)
+				w.proof.userSeen = !first
+				if first {
+					bootstrapWindow = []time.Time{w.Start, w.End}
+				}
 			}
+			// A resumed current job has only its registered task input, not a
+			// second copy of the original source/bootstrap user message.
+			proof.userSeen = len(proof.runtimePriorWindows) > 0
 		}
 		// Session bootstrap is independent of the job's task-input window.
-		body, valid := skillsBootstrapBodyProjection(input, id, str(job["cwd"]), proof.sandbox)
+		body, valid := skillsBootstrapBodyProjection(input, id, str(job["cwd"]), proof.sandbox, bootstrapWindow...)
 		if !valid || !proof.bootstrapMatchesBody(body) || !rewindable || !snapshot.rewind() {
 			return nil, false
 		}

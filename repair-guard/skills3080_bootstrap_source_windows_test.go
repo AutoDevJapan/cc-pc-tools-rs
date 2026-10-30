@@ -80,9 +80,9 @@ func TestSkills3080MissingPublicProjectCannotDowngradeCurrentRuntime(t *testing.
 	}
 	project := []byte("PUBLIC project")
 	body, _ := skillsAssembleBootstrapSource([]byte("same historical owner body"), project)
-	for _, kind := range []string{"current_with_project", "current_missing_project", "known_old", "unknown"} {
+	for _, kind := range []string{"current_with_project", "current_missing_project", "known_old", "known_old_bootstrap_before_start", "known_old_bootstrap_after_end", "unknown"} {
 		version := "0.165.0"
-		if kind == "known_old" {
+		if strings.HasPrefix(kind, "known_old") {
 			version = "0.163.0"
 		}
 		if kind == "unknown" {
@@ -92,6 +92,12 @@ func TestSkills3080MissingPublicProjectCannotDowngradeCurrentRuntime(t *testing.
 			return object{"type": "response_item", "timestamp": at.Format(time.RFC3339Nano), "payload": object{"type": "message", "role": "user", "content": []object{{"type": "input_text", "text": text}}}}
 		}
 		records := []object{{"type": "session_meta", "timestamp": start.Format(time.RFC3339Nano), "payload": object{"id": id, "cwd": cwd, "source": "exec", "originator": "codex_exec", "cli_version": version}}, {"type": "event_msg", "timestamp": start.Format(time.RFC3339Nano), "payload": object{"type": "task_started", "turn_id": turn}}, msg(skillsBootstrapFixture(cwd, string(body), true), start), {"type": "world_state", "timestamp": start.Format(time.RFC3339Nano), "payload": object{"full": true, "state": object{"agents_md": object{"directory": cwd, "text": string(body)}}}}, {"type": "turn_context", "timestamp": start.Format(time.RFC3339Nano), "payload": object{"turn_id": turn, "cwd": cwd, "model": "gpt-6-luna", "effort": "max"}}, msg("exact task", start.Add(time.Second))}
+		if kind == "known_old_bootstrap_before_start" {
+			records[2]["timestamp"] = start.Add(-time.Second).Format(time.RFC3339Nano)
+		}
+		if kind == "known_old_bootstrap_after_end" {
+			records[2]["timestamp"] = start.Add(2 * time.Minute).Format(time.RFC3339Nano)
+		}
 		var b bytes.Buffer
 		for _, v := range skillsCompleteRuntimeFixture(records) {
 			raw, _ := json.Marshal(v)
@@ -110,7 +116,7 @@ func TestSkills3080MissingPublicProjectCannotDowngradeCurrentRuntime(t *testing.
 		_, ok := skillsNativeWindow(&s, job, p, start.Add(time.Minute))
 		s.close()
 		if ok != (kind == "current_with_project" || kind == "known_old") {
-			t.Fatalf("missing PUBLIC source %s accepted=%v", kind, ok)
+			t.Errorf("missing PUBLIC source %s accepted=%v", kind, ok)
 		}
 	}
 }
@@ -189,7 +195,7 @@ func TestSkills3080RuntimeWorldStateAnchorsTheLaunchInstructions(t *testing.T) {
 				dev := object{"type": "response_item", "timestamp": start.Format(time.RFC3339Nano), "payload": object{"type": "message", "role": role, "content": []object{{"type": "input_text", "text": "runtime launch instructions"}}}}
 				records = append(records[:2], dev, msg)
 				if kind == "runtime_developer_prefix" {
-					obj(obj(snapshot["payload"])["state"])["model"] = object{"instructions": skillsRuntimeFragmentHash("runtime launch instructions")}
+					obj(obj(snapshot["payload"])["state"])["model"] = object{"model": "gpt-6-luna", "instructions": skillsRuntimeFragmentHash("runtime launch instructions")}
 				}
 			}
 			if kind == "developer_after_bootstrap" {

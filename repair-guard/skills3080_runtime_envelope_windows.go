@@ -61,7 +61,7 @@ func skillsRuntimeRecommendationCatalog() string {
 		"- Teams (teams@openai-curated-remote)\n</recommended_plugins>"
 }
 
-func skillsRuntimeEnvelopeMatches(records [][]byte, state json.RawMessage) bool {
+func skillsRuntimeEnvelopeMatches(records [][]byte, state json.RawMessage, model string) bool {
 	var st map[string]json.RawMessage
 	if !skillsCreationHeaderKeys(state, "model", "permissions", "collaboration_mode", "host_skills", "top_level_tools") || json.Unmarshal(state, &st) != nil {
 		return false
@@ -72,10 +72,26 @@ func skillsRuntimeEnvelopeMatches(records [][]byte, state json.RawMessage) bool 
 			return false
 		}
 		var v struct {
-			Instructions string            `json:"instructions"`
-			Prefixes     []json.RawMessage `json:"approved_command_prefixes"`
+			Instructions string          `json:"instructions"`
+			Prefixes     json.RawMessage `json:"approved_command_prefixes"`
+			Model        string          `json:"model"`
+			Mode         string          `json:"mode"`
 		}
-		if !skillsCreationHeaderKeys(st[key], "instructions", "approved_command_prefixes") || json.Unmarshal(st[key], &v) != nil || len(v.Prefixes) != 0 {
+		if !skillsCreationHeaderKeys(st[key], "instructions", "approved_command_prefixes", "model", "mode") || json.Unmarshal(st[key], &v) != nil {
+			return false
+		}
+		if key == "permissions" {
+			var prefixes []json.RawMessage
+			if len(v.Prefixes) == 0 || json.Unmarshal(v.Prefixes, &prefixes) != nil || prefixes == nil || len(prefixes) != 0 {
+				return false
+			}
+		} else if len(v.Prefixes) != 0 {
+			return false
+		}
+		if key != "permissions" && (skillsModel(v.Model) == "" || skillsModel(v.Model) != skillsModel(model)) {
+			return false
+		}
+		if key == "collaboration_mode" && v.Mode != "default" && v.Mode != "plan" {
 			return false
 		}
 		if !skillsGitObjectID(v.Instructions) || expected[v.Instructions] {

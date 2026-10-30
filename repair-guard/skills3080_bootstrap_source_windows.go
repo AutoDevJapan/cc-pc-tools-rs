@@ -179,7 +179,7 @@ func skillsRuntimeBootstrapProjectionWithOrigin(input io.Reader, job object, pro
 				return nil, true, false
 			}
 			source = []byte(a.Text)
-			if !skillsRuntimeEnvelopeMatches(developer, v.State) {
+			if !skillsRuntimeEnvelopeMatches(developer, v.State, str(job["model"])) {
 				return nil, true, false
 			}
 			if len(envelopes) == 1 {

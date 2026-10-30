@@ -231,11 +231,40 @@ func TestSkills3080ResumedRuntimeSourceAndCurrentTaskHaveSeparateWindows(t *test
 	if !valid || len(observed) != 1 || !bound.runtimeSourceUsed {
 		t.Fatal("frozen registered-resume proof did not reach current result")
 	}
-	for _, kind := range []string{"registered", "inserted_prior_user", "inserted_prior_event", "unregistered_origin", "retimed_session_meta"} {
+	for _, kind := range []string{"registered", "inserted_prior_user", "inserted_prior_event", "unregistered_origin", "retimed_session_meta", "bootstrap_moved_to_current", "bootstrap_retimed_to_current", "bootstrap_copied_to_current"} {
 		t.Run("legacy_0163_"+kind, func(t *testing.T) {
 			legacy := bytes.Replace(skillsLegacyRuntimeFixture(raw.Bytes()), []byte(`"cli_version":"0.165.0"`), []byte(`"cli_version":"0.163.0"`), 1)
 			if kind == "retimed_session_meta" {
 				legacy = bytes.Replace(legacy, []byte(initial.Format(time.RFC3339Nano)), []byte(start.Format(time.RFC3339Nano)), 1)
+			}
+			if strings.HasPrefix(kind, "bootstrap_") {
+				var rewritten bytes.Buffer
+				var moved object
+				for _, line := range bytes.Split(legacy, []byte{'\n'}) {
+					if len(line) == 0 {
+						continue
+					}
+					var r object
+					json.Unmarshal(line, &r)
+					if r["type"] == "response_item" && obj(r["payload"])["role"] == "user" && moved == nil {
+						moved = r
+						moved["timestamp"] = start.Format(time.RFC3339Nano)
+						if kind == "bootstrap_retimed_to_current" {
+							json.NewEncoder(&rewritten).Encode(moved)
+							continue
+						}
+						if kind == "bootstrap_moved_to_current" {
+							continue
+						}
+						r = object{}
+						json.Unmarshal(line, &r)
+					}
+					if r["type"] == "turn_context" && r["timestamp"] == start.Format(time.RFC3339Nano) && kind != "bootstrap_retimed_to_current" {
+						json.NewEncoder(&rewritten).Encode(moved)
+					}
+					json.NewEncoder(&rewritten).Encode(r)
+				}
+				legacy = rewritten.Bytes()
 			}
 			if kind == "inserted_prior_user" || kind == "inserted_prior_event" {
 				v := msg("user", "", "unregistered prior instruction", initial.Add(3*time.Second))

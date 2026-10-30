@@ -19,7 +19,7 @@ func TestSkills3080RuntimeFingerprintMatchesIndependentProtocolVectors(t *testin
 }
 
 func TestSkills3080RuntimeEnvelopeNeedsIndependentCheckpointContent(t *testing.T) {
-	for _, kind := range []string{"exact", "arbitrary_initial_developer", "changed_model_text", "host_body_suffix", "wrong_permission_hash", "changed_tool", "missing_tool", "duplicate_fragment", "unknown_plugin", "renamed_plugin", "catalog_added_instruction", "catalog_label_only", "self_hash_only", "section_alias", "field_alias", "drop_model", "drop_permissions", "drop_collaboration_mode", "drop_host_skills", "drop_top_level_tools", "drop_all", "empty_model", "empty_permissions", "empty_collaboration_mode", "empty_host_skills", "empty_top_level_tools"} {
+	for _, kind := range []string{"exact", "arbitrary_initial_developer", "changed_model_text", "host_body_suffix", "wrong_permission_hash", "changed_tool", "missing_tool", "duplicate_fragment", "unknown_plugin", "renamed_plugin", "catalog_added_instruction", "catalog_label_only", "self_hash_only", "section_alias", "field_alias", "drop_model", "drop_permissions", "drop_collaboration_mode", "drop_host_skills", "drop_top_level_tools", "drop_all", "empty_model", "empty_permissions", "empty_collaboration_mode", "empty_host_skills", "empty_top_level_tools", "missing_approved_prefixes", "null_approved_prefixes", "object_approved_prefixes", "string_approved_prefixes", "missing_model_id", "wrong_model_id", "missing_collaboration_model", "wrong_collaboration_model", "missing_collaboration_mode", "unknown_collaboration_mode"} {
 		t.Run(kind, func(t *testing.T) {
 			model, permission, collaboration, host := "runtime model instructions", "runtime permissions", "runtime collaboration", "\n## Skills\nknown catalog\n"
 			tool := object{"type": "namespace", "name": "functions", "description": "known namespace", "tools": []any{object{"type": "function", "name": "exec", "description": "known function <&>", "parameters": object{"type": "object", "properties": object{}}}}}
@@ -27,7 +27,7 @@ func TestSkills3080RuntimeEnvelopeNeedsIndependentCheckpointContent(t *testing.T
 			header := object{"type": "namespace", "name": "functions", "description": "known namespace"}
 			hh, _ := skillsRuntimeJSONHash(header)
 			mh, _ := skillsRuntimeJSONHash(member)
-			state := object{"model": object{"instructions": skillsRuntimeFragmentHash(model)}, "permissions": object{"instructions": skillsRuntimeFragmentHash(permission), "approved_command_prefixes": []any{}}, "collaboration_mode": object{"instructions": skillsRuntimeFragmentHash(collaboration)}, "host_skills": object{"body": host, "includeInstructions": true}, "top_level_tools": object{"functions": hh, "functions.exec": mh}}
+			state := object{"model": object{"model": "gpt-6-luna", "instructions": skillsRuntimeFragmentHash(model)}, "permissions": object{"instructions": skillsRuntimeFragmentHash(permission), "approved_command_prefixes": []any{}}, "collaboration_mode": object{"mode": "default", "model": "gpt-6-luna", "instructions": skillsRuntimeFragmentHash(collaboration)}, "host_skills": object{"body": host, "includeInstructions": true}, "top_level_tools": object{"functions": hh, "functions.exec": mh}}
 			texts := []string{model, "<skills_instructions>" + host + "</skills_instructions>", permission, collaboration, skillsRuntimeRecommendationCatalog()}
 			switch kind {
 			case "arbitrary_initial_developer":
@@ -59,6 +59,26 @@ func TestSkills3080RuntimeEnvelopeNeedsIndependentCheckpointContent(t *testing.T
 				delete(state, "model")
 			case "field_alias":
 				state["permissions"] = object{"Instructions": skillsRuntimeFragmentHash(permission)}
+			case "missing_approved_prefixes":
+				delete(obj(state["permissions"]), "approved_command_prefixes")
+			case "null_approved_prefixes":
+				obj(state["permissions"])["approved_command_prefixes"] = nil
+			case "object_approved_prefixes":
+				obj(state["permissions"])["approved_command_prefixes"] = object{}
+			case "string_approved_prefixes":
+				obj(state["permissions"])["approved_command_prefixes"] = "[]"
+			case "missing_model_id":
+				delete(obj(state["model"]), "model")
+			case "wrong_model_id":
+				obj(state["model"])["model"] = "gpt-6.1-sol"
+			case "missing_collaboration_model":
+				delete(obj(state["collaboration_mode"]), "model")
+			case "wrong_collaboration_model":
+				obj(state["collaboration_mode"])["model"] = "gpt-6.1-sol"
+			case "missing_collaboration_mode":
+				delete(obj(state["collaboration_mode"]), "mode")
+			case "unknown_collaboration_mode":
+				obj(state["collaboration_mode"])["mode"] = "unknown"
 			}
 			toolPayload := true
 			if strings.HasPrefix(kind, "drop_") || strings.HasPrefix(kind, "empty_") {
@@ -99,7 +119,7 @@ func TestSkills3080RuntimeEnvelopeNeedsIndependentCheckpointContent(t *testing.T
 				records = append(records, b)
 			}
 			raw, _ := json.Marshal(state)
-			if ok := skillsRuntimeEnvelopeMatches(records, raw); ok != (kind == "exact") {
+			if ok := skillsRuntimeEnvelopeMatches(records, raw, "gpt-6-luna"); ok != (kind == "exact") {
 				t.Fatalf("independent envelope %s accepted=%v", kind, ok)
 			}
 		})

@@ -20,6 +20,8 @@ execution inputを照合し、各過去窓のuserと対応するeventもその�
 既知0.165のruntime checkpointに保存されたmodel・permissions・collaborationのfragment hash、
 host skillsの完全なbody、tool定義ごとのhashと、描画された全blockを照合する。
 これら5項目は必須とし、空のhash・host body・tool catalogも受け入れない。
+permissionsのapproved_command_prefixesは配列の存在を確認し、欠落・null・他の型を空配列と同一視しない。
+modelとcollaborationのmodel識別子を実jobへ照合し、collaborationのmodeも既知の型として確認する。
 checkpoint項目と対応するdeveloper記録を両方削って空同士の一致にしても拒否する。
 hashの符号化は[公式の固定版](https://github.com/openai/codex/blob/360319d8dee62d87e2d59fc0c21805d79519cfed/codex-rs/core/src/context/world_state/mod.rs)に従う。
 plugin案内は、既知runtime catalogの全固定文と公開name/IDの組が完全一致する場合だけ扱う。
@@ -32,6 +34,8 @@ job間の未登録指示、今回の多重user/final、今回の記録より後�
 原job・spec・prompt・native・finalは変更せず、同じ長さを凍結したhandleを読み直して検証する。
 sourceや結果を別path、copy、可変な指示ファイル、未知のdigestへ置き換えない。
 古い0.163は元のbootstrap digest照合を保ち、再開元の登録と各過去入力の照合も必要とする。
+bootstrap本文を取り出す際にも元jobの時間を確認し、最初の過去入力証明ではbootstrapの実在を要求する。
+再開後の現在jobには、初回bootstrapをもう一度user入力として加えられない。
 旧形式を理由に、時刻外の先行user/eventを確認せず読み飛ばさない。
 未知CLI版の拒否、原author・origin・実launch親・現在consumerの区別は維持する。
 これは一般guardや中央の既存対象の解除ではない。

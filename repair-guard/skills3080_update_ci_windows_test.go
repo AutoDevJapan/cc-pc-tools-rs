@@ -252,8 +252,8 @@ func TestSkills3080RuntimeCIBindsMergedReviewedSourceAndEveryRequiredCheck(t *te
 
 func skillsRuntimeCIRequestFixture() skillsRequest {
 	w := skillsWriter{Task: 3686, Job: "20261029-005403-todo-3686", Workspace: "D:/fixture", SpecSHA: strings.Repeat("a", 64)}
-	a := &skillsResultRequest{Task: 4300, Job: "20261031-023000-todo-4300", SpecSHA: strings.Repeat("b", 64), FinalSHA: strings.Repeat("c", 64)}
-	b := &skillsResultRequest{Task: 4301, Job: "20261031-023100-todo-4301", SpecSHA: strings.Repeat("d", 64), FinalSHA: strings.Repeat("e", 64)}
+	a := &skillsResultRequest{Task: 4307, Job: "20261031-023000-todo-4307", SpecSHA: strings.Repeat("b", 64), FinalSHA: strings.Repeat("c", 64)}
+	b := &skillsResultRequest{Task: 4308, Job: "20261031-023100-todo-4308", SpecSHA: strings.Repeat("d", 64), FinalSHA: strings.Repeat("e", 64)}
 	return skillsRequest{Writer: w, Review: a, Runtime: &skillsRuntimeRequest{SourceRoot: w.Workspace + "/source", SourceHead: strings.Repeat("b", 40), ReviewedHead: strings.Repeat("a", 40), Candidate: w.Workspace + "/artifact.exe", CandidateSHA: strings.Repeat("f", 64), PeerReview: b, OperationNonce: strings.Repeat("1", 32)}}
 }
 

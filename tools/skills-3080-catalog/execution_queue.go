@@ -64,6 +64,12 @@ type ExecutionEvidence struct {
 	References     map[string][]ExecutionReference
 	Decisions      map[string]executionIdentity
 	VisibleMembers map[string]executionVisibleMember
+	PinnedSources  map[string]executionSourceTuple
+}
+
+type executionSourceTuple struct {
+	Blob  string `json:"git_blob"`
+	Bytes int64  `json:"bytes"`
 }
 
 var executionRepositoryName = regexp.MustCompile(`^[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+$`)
@@ -194,7 +200,10 @@ func readExecutionArtifact(root string, pin ExecutionArtifact) ([]byte, error) {
 }
 
 func loadExecutionEvidence(root string, m ExecutionManifest) (ExecutionEvidence, error) {
-	e := ExecutionEvidence{Assessments: map[string]executionIdentity{}, References: map[string][]ExecutionReference{}, Decisions: map[string]executionIdentity{}, VisibleMembers: map[string]executionVisibleMember{}}
+	e := ExecutionEvidence{Assessments: map[string]executionIdentity{}, References: map[string][]ExecutionReference{}, Decisions: map[string]executionIdentity{}, VisibleMembers: map[string]executionVisibleMember{}, PinnedSources: map[string]executionSourceTuple{}}
+	if err := validateRetainedV3ManifestBinding(m); err != nil {
+		return e, err
+	}
 	files := map[string]bool{}
 	for _, pin := range m.Artifacts {
 		if files[pin.File] {
@@ -242,6 +251,26 @@ func loadExecutionEvidence(root string, m ExecutionManifest) (ExecutionEvidence,
 			}
 			if err := validateRetainedProcedureV2(object, pin.Rows); err != nil {
 				return e, err
+			}
+		}
+		if object, ok := decoded.(map[string]any); ok && (object["domain"] == retainedProcedureV3Domain || pin.File == retainedProcedureV3File) {
+			if pin.File != retainedProcedureV3File {
+				return e, errors.New("latest retained procedure journal filename differs")
+			}
+			if err := validateRetainedProcedureV3(object, pin.Rows); err != nil {
+				return e, err
+			}
+			var sources struct {
+				Entries []struct {
+					ID string `json:"inventory_id"`
+					executionSourceTuple
+				} `json:"entries"`
+			}
+			if err := json.Unmarshal(raw, &sources); err != nil {
+				return e, err
+			}
+			for _, source := range sources.Entries {
+				e.PinnedSources[source.ID] = source.executionSourceTuple
 			}
 		}
 		var a struct {
@@ -358,7 +387,7 @@ func executionQueue(input io.Reader, output io.Writer, m ExecutionManifest, e Ex
 	scanner.Buffer(make([]byte, 65536), 16<<20)
 	enc := json.NewEncoder(output)
 	seen, matchedAssessment, matchedDecision := map[string]bool{}, map[string]bool{}, map[string]bool{}
-	matchedMembers := map[string]bool{}
+	matchedMembers, matchedSources := map[string]bool{}, map[string]bool{}
 	bodyEvidence := map[string]string{}
 	for id, a := range e.Assessments {
 		if prior := bodyEvidence[a.SHA]; prior == "" || id < prior {
@@ -402,6 +431,13 @@ func executionQueue(input io.Reader, output io.Writer, m ExecutionManifest, e Ex
 			if !r.BodyRead || a.SHA != r.SHA || !sameExecutionOccurrence(r, a) {
 				return s, errors.New("assessment does not match fixed catalog occurrence")
 			}
+			if expected, pinned := e.PinnedSources[r.ID]; pinned {
+				var actual executionSourceTuple
+				if json.Unmarshal(scanner.Bytes(), &actual) != nil || actual != expected {
+					return s, errors.New("pinned retained source Git blob or byte count differs from catalog")
+				}
+				matchedSources[r.ID] = true
+			}
 			matchedAssessment[r.ID] = true
 			s.Assessments++
 			q.References = e.References[r.ID]
@@ -436,7 +472,7 @@ func executionQueue(input io.Reader, output io.Writer, m ExecutionManifest, e Ex
 		return s, err
 	}
 	s.CatalogSHA = hex.EncodeToString(h.Sum(nil))
-	if s.Records != m.Records || s.CatalogSHA != m.CatalogSHA || len(matchedAssessment) != len(e.Assessments) || len(matchedDecision) != len(e.Decisions) || len(matchedMembers) != len(e.VisibleMembers) {
+	if s.Records != m.Records || s.CatalogSHA != m.CatalogSHA || len(matchedAssessment) != len(e.Assessments) || len(matchedDecision) != len(e.Decisions) || len(matchedMembers) != len(e.VisibleMembers) || len(matchedSources) != len(e.PinnedSources) {
 		return s, errors.New("catalog/evidence universe incomplete or changed")
 	}
 	for id := range matchedDecision {
@@ -447,6 +483,9 @@ func executionQueue(input io.Reader, output io.Writer, m ExecutionManifest, e Ex
 		}
 	}
 	s.AssessmentOrFinal = s.Assessments + s.Final - s.AssessmentAndFinal
+	if len(matchedSources) > 0 {
+		s.Limits = append(s.Limits, fmt.Sprintf("Additional catalog Git blob/byte-count checks cover %d independently pinned retained v3 occurrences; other legacy formats retain their recorded identity checks.", len(matchedSources)))
+	}
 	s.Limits = append(s.Limits, fmt.Sprintf("Assessment records %d = assessed without final disposition %d + assessment/final intersection %d. Final records %d include %d final-only legacy records without assessment. The assessment/final union is %d occurrences; these categories are not additive independent totals.", s.Assessments, s.Stages["assessed_needs_current_disposition"], s.AssessmentAndFinal, s.Final, s.FinalOnly, s.AssessmentOrFinal))
 	s.State = "complete"
 	return s, nil

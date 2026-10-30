@@ -3,7 +3,7 @@
   "issue": "https://github.com/AutoDevJapan/cc-pc-tools-rs/issues/283",
   "observed_at": "2026-10-24T17:15:09.0197014+09:00",
   "phase_a": "partial; 647 additional text shapes held by execution review",
-  "phase_b": "実導入164を保持。作業版は同じ可視手順と各個別Apache noticeを固定版へ結んだ5掲載を既存generative-art-reproducibilityへ統合し、統合9。現2手順5191Bの正常root読戻しと別Luna/max4227のadmitted同buffer実使用を確認。全73220再生成は評価1587/最終188/交差182/legacyfinal6/和1593/採否待ち1405/意味個別権利70552、未最終73032。新Skill作成/中央書込0、他25重複候補・全16は未完。公開結果の二役レビュー/CI/通常merge前。",
+  "phase_b": "実導入164・既存統合9を保持し、PR639の全指摘解消・同7fae全7CI終了失敗0/CLEAN/thread0・通常merge951cとRoot取込/push/checkpointを確認した。今回のpending用途評価25recordと全伏字未読1を入力へ結び、全73220実再生成でユニーク評価1611（+24）/最終188/交差182/legacyfinal6/和1617/採否待ち1429/意味個別権利70528、未最終73032。全伏字1は70528内の同じ1出現で加算しない。新許諾/最終採否/Skill作成/中央書込0。今回データの二役レビューとCIは記録時未受入であり、他25重複候補・残りの資料と全16は未完。",
   "catalog_sha256": "2d73c9a038a41cc220a9687b935bfa1e0b315b65d9bd6d3e54ddb4111972876c",
   "source_count": 16,
   "fixed_public_repos": [
@@ -353,7 +353,7 @@
     "pending_plan_targets": 0,
     "archived_draft_targets": 8,
     "archived_draft_is_subset_of_batch03": true,
-    "independently_accepted": "162 installed new adaptations include frozen full-content acceptances from Creator4193, Creator4208 and Creator4215 and actual current ID/hash/buffer readback, structure, fresh target discovery and explicit current instruction decisions. This newest public result is recorded before its final two-role review/CI/merge. No implicit selection, full-catalog discovery, context-budget or whole16 completion proof.",
+    "independently_accepted": "164 actually installed new adaptations retain their recorded frozen Creator acceptances, current ID/hash/buffer readback, structure and target discovery evidence, including the two Creator4222 adaptations accepted in PR637. This is not an all164 current-turn reread, full-catalog discovery, current context-budget or whole16 completion proof.",
     "not_semantically_disposed_occurrences": 73032,
     "additional_draft_sources": [
       "skills-3080-mizchi-sql-draft.json",
@@ -616,7 +616,7 @@
     "guard_client_resource": true,
     "state": "classification_unverified"
   },
-  "recorded_at": "2026-10-29T10:04:25.9307692+00:00",
+  "recorded_at": "2026-10-30T02:07:58.9838686+00:00",
   "total_skill_named_body_read_definition": "This field preserves the historical complete-source subset only. Current raw/workflow primary coverage is projected from the canonical source components and sixmile evaluation index in all_fulltext_primary_paths_including_partial_sources/all_workflow_primary_paths_including_partial_sources, not copied here.",
   "openai_entrypoint_evaluation": {
     "rights_accepted": false,
@@ -679,26 +679,29 @@
     "scope": "Final4-file concurrent-publication correction only. Prior31-file and8-file reviews retained; no source-body/permission/central/whole16 completion."
   },
   "latest_merged_pr": {
-    "number": 459,
-    "url": "https://github.com/AutoDevJapan/cc-pc-tools-rs/pull/459",
-    "head": "9c291b253b67c18a3ea11280f5b9256ffe1c6b93",
-    "merge": "d2f26986cbc2b3c7fe18a4ad2cc1093131d62716",
-    "merged_at": "2026-10-24T19:44:35Z",
+    "number": 639,
+    "url": "https://github.com/AutoDevJapan/cc-pc-tools-rs/pull/639",
+    "head": "7faee0533da2aec1c20cfd810fec89a668dd073e",
+    "merge": "951c0ff01c72f949c1ade6304c0d0a640a47c94f",
+    "merged_at": "2026-10-30T01:35:56Z",
     "review_todos": [
-      3708,
-      3717,
-      3722
+      4033,
+      4076
     ],
-    "final_review_must": 0,
-    "checks": "Exact9c291 head: all7completed,6SUCCESS and1NEUTRAL; CLEAN",
+    "final_rubber_job": "20261030-101957-todo-4033",
+    "final_self_job": "20261030-102056-todo-4076",
+    "final_pair_must": 0,
+    "final_pair_suggestion": 0,
+    "final_pair_nit": 0,
+    "actual_models": "gpt-6-luna/max independently checked in matching native contexts",
+    "all7checks_completed_without_failure": true,
+    "merge_state_before": "CLEAN",
+    "unresolved_threads_before": 0,
     "normal_merge": true,
     "readback_confirmed": true,
-    "main_fetch_ff_confirmed": true,
-    "supersedes_unaccepted_pr447": true,
-    "covered_assessment_artifacts": [
-      "skills-3080-sixmile-next75-evaluation.json",
-      "skills-3080-sixmile-received50-evaluation.json"
-    ]
+    "Root_merge_push_and_checkpoint_confirmed": true,
+    "new_existing_workflow_integrations": 5,
+    "central_new_writes": 0
   },
   "mengto_partial_entrypoint_evaluation": {
     "fixed_roster": "skills-3080-mengto-fixed-entrypoints.json",
@@ -3621,7 +3624,87 @@
     "new_Skills": 0,
     "new_central_writes": 0,
     "other25_relationship_candidates_not_disposed": true,
-    "public_result_review_pending": true,
+    "public_result_review_pending": false,
+    "whole16_complete": false,
+    "accepted_PR": 639,
+    "accepted_merge": "951c0ff01c72f949c1ade6304c0d0a640a47c94f"
+  },
+  "latest_received25_after1587": {
+    "publisher_job": "20261030-095653-todo-3080",
+    "original3719_representative_assessments": 12,
+    "original3719_whole_packets": 3,
+    "original3719_support_metadata": 371,
+    "saved_support": 244,
+    "unsaved_support": 127,
+    "raw_support_tuples_including_primary": 30,
+    "masked_support_tuples_including_primary": 10,
+    "reuse_support_tuples": 4,
+    "ordered_full_diff_support_tuples": 26,
+    "saved_unread_support_tuples": 174,
+    "original_primary_reported_state_counts": {
+      "2": 9,
+      "3": 3
+    },
+    "primaryflow_new_visible_meanings": 13,
+    "primaryflow_separate_all_withheld_unread": 1,
+    "primaryflow_pending_member_metadata": 14,
+    "primaryflow_complete_packets": 3,
+    "processed_primary_groups": 230,
+    "visible_primary_meanings": 229,
+    "held_primary_groups": 1,
+    "all_bound_member_metadata": 256,
+    "old216_records_and64_contexts_exactly_retained": true,
+    "actual_original_and_resumed_consumers_distinct": true,
+    "C1_actual_launch_parent_is_present_null_not_missing_or_empty": true,
+    "actual_current_source_spec_is_B0_with_original_suffix_preserved": true,
+    "semantic_record_references_added": 25,
+    "unique_assessment_occurrences_added": 24,
+    "actual_complete_occurrence_queue": 73220,
+    "unique_assessment_occurrences": 1611,
+    "recorded_final": 188,
+    "intersection": 182,
+    "final_only_legacy": 6,
+    "union": 1617,
+    "assessed_without_final": 1429,
+    "meaning_and_individual_rights_needed": 70528,
+    "new_global_raw_credit": 0,
+    "new_central_writes_permissions_or_final_dispositions": 0,
+    "publication_review_pending_at_recording": true,
     "whole16_complete": false
+  },
+  "all_withheld_detail_current": {
+    "inventory_id": "github:ece7af4653a412e88be9e1b04007ced31db6edd463b87e6a4fab4ca22ef67721",
+    "cohort": 1,
+    "ordinal": 107,
+    "physical_lines": 6,
+    "visible_lines": 0,
+    "meaning_unread": true,
+    "separate_from_semantic_entries": true,
+    "included_in_global_meaning_and_individual_rights_needed": true,
+    "additional_global_occurrences": 0,
+    "permission_or_final_disposition": 0
+  },
+  "primary_header_scope_note": "588/807 are the fixed source buckets defined in primary_coverage_definition, retained as prior measurements. They are not an updated all-reader/all-candidate raw/fulltext union including these pending snapshots. Current unique assessment references1611 are a separate metadata unit produced by the full73220 queue; original raw/masked/reuse/diff/unread observations remain per packet, with no new publisher raw-read credit.",
+  "legacy_latest_merged_pr_snapshot459": {
+    "number": 459,
+    "url": "https://github.com/AutoDevJapan/cc-pc-tools-rs/pull/459",
+    "head": "9c291b253b67c18a3ea11280f5b9256ffe1c6b93",
+    "merge": "d2f26986cbc2b3c7fe18a4ad2cc1093131d62716",
+    "merged_at": "2026-10-24T19:44:35Z",
+    "review_todos": [
+      3708,
+      3717,
+      3722
+    ],
+    "final_review_must": 0,
+    "checks": "Exact9c291 head: all7completed,6SUCCESS and1NEUTRAL; CLEAN",
+    "normal_merge": true,
+    "readback_confirmed": true,
+    "main_fetch_ff_confirmed": true,
+    "supersedes_unaccepted_pr447": true,
+    "covered_assessment_artifacts": [
+      "skills-3080-sixmile-next75-evaluation.json",
+      "skills-3080-sixmile-received50-evaluation.json"
+    ]
   }
 }

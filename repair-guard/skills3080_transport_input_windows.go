@@ -6,7 +6,9 @@ import (
 	"strings"
 )
 
-// A projection of one independently recorded model-visible request object.
+// The ordered instruction/tool/input-content projection of one independently
+// recorded model-visible request object, plus its model and effort. Other
+// provider settings are not compared to native or authenticated by this view.
 // It does not assert the first network attempt, wire bytes or provider receipt.
 type skillsTransportInput struct {
 	Model   string

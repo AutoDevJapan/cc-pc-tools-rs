@@ -1,7 +1,6 @@
 package main
 
 import (
-	"bytes"
 	"os"
 	"path/filepath"
 	"strconv"
@@ -181,13 +180,38 @@ func skillsRuntimeSourceStartBound(path string, raw []byte, r skillsRequest, reg
 	if !ok {
 		return fail("source_normal_dispatch")
 	}
-	v, ok := conversationJSON(bytes.TrimSpace(result))
-	if !ok {
-		return fail("source_normal_dispatch")
+	return skillsRuntimeSourceDispatchReceipt(result, row.ID, hashBytes(raw), nonce)
+}
+
+func skillsRuntimeSourceDispatchReceipt(raw []byte, task int, requestSHA, nonce string) object {
+	out := object{"qualified": false, "reason": "source", "failure_stage": "source_normal_dispatch", "launch_accepted": false, "normal_source_recorded": false, "data_access_granted": false}
+	if !skillsNativeUniqueJSON(raw) || !skillsCreationHeaderKeys(raw, "id", "launched") {
+		return out
 	}
-	launched := obj(v["launched"])
-	accepted := (conversationNumber(v["id"]) == uint64(row.ID) && skillsResultID(skillsResultRequest{Task: row.ID, Job: str(v["launched"])})) || (conversationNumber(launched["item"]) == uint64(row.ID) && skillsResultID(skillsResultRequest{Task: row.ID, Job: str(launched["job"])}))
-	return object{"qualified": true, "operation": "start_runtime_source", "request_sha256": hashBytes(raw), "nonce": nonce, "launch_accepted": accepted, "normal_scheduler_result": v, "normal_source_recorded": false, "data_access_granted": false, "general_access_granted": false, "original_registry_recovered": false}
+	v, ok := conversationJSON(raw)
+	if !ok {
+		return out
+	}
+	job := ""
+	if id, present := v["id"]; present && conversationNumber(id) != uint64(task) {
+		return out
+	}
+	if value, text := v["launched"].(string); text {
+		if conversationNumber(v["id"]) != uint64(task) {
+			return out
+		}
+		job = value
+	} else {
+		launched := obj(v["launched"])
+		if conversationNumber(launched["item"]) != uint64(task) {
+			return out
+		}
+		job = str(launched["job"])
+	}
+	if !skillsResultID(skillsResultRequest{Task: task, Job: job}) {
+		return out
+	}
+	return object{"qualified": true, "operation": "start_runtime_source", "request_sha256": requestSHA, "nonce": nonce, "launch_accepted": true, "normal_job": job, "normal_source_recorded": false, "data_access_granted": false, "general_access_granted": false, "original_registry_recovered": false}
 }
 
 func skillsRuntimeSourceSpecPath(path string, task int) bool {

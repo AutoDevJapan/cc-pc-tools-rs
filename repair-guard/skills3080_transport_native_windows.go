@@ -10,13 +10,14 @@ import (
 // Match the entire ordered initial model input, including the normally saved
 // task, against the independent transport record. This is not a comparison to
 // a digest announced by the child or learned from this native snapshot.
-func skillsNativeTransportMatches(input io.Reader, thread, cwd string, start, end time.Time, expected skillsTransportInput) bool {
-	if len(expected.Items) == 0 || end.Before(start) {
+func skillsNativeTransportMatches(input io.Reader, thread, cwd string, start, end time.Time, expected skillsTransportInput, turn string) bool {
+	if len(expected.Items) == 0 || end.Before(start) || !skillsUUID.MatchString(turn) {
 		return false
 	}
 	scan := bufio.NewScanner(input)
 	scan.Buffer(make([]byte, 64<<10), 16<<20)
 	session, index := false, 0
+	taskStarted, turnContext := false, false
 	for scan.Scan() {
 		var e struct {
 			Type      string          `json:"type"`
@@ -38,12 +39,33 @@ func skillsNativeTransportMatches(input io.Reader, thread, cwd string, start, en
 			session = true
 			continue
 		}
-		if e.Type != "response_item" {
+		if e.Type != "response_item" && e.Type != "event_msg" && e.Type != "turn_context" {
 			continue
 		}
 		at, err := time.Parse(time.RFC3339Nano, e.Timestamp)
 		if !session || err != nil || at.Before(start) || at.After(end) {
 			return false
+		}
+		if e.Type == "event_msg" || e.Type == "turn_context" {
+			var p struct {
+				Type string `json:"type"`
+				Turn string `json:"turn_id"`
+			}
+			if !skillsCreationHeaderKeys(e.Payload, "type", "turn_id") || json.Unmarshal(e.Payload, &p) != nil {
+				return false
+			}
+			if e.Type == "turn_context" {
+				if !taskStarted || turnContext || p.Turn != turn {
+					return false
+				}
+				turnContext = true
+			} else if p.Type == "task_started" {
+				if taskStarted || p.Turn != turn {
+					return false
+				}
+				taskStarted = true
+			}
+			continue
 		}
 		sha, _, _, _, ok := skillsSourceInputItem(e.Payload)
 		if !ok || index >= len(expected.Items) || sha != expected.Items[index] {
@@ -51,7 +73,7 @@ func skillsNativeTransportMatches(input io.Reader, thread, cwd string, start, en
 		}
 		index++
 		if index == len(expected.Items) {
-			return true
+			return taskStarted && turnContext
 		}
 	}
 	return false

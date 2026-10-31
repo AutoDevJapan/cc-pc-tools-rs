@@ -53,13 +53,21 @@ func skillsRuntimeSourcePreparationShape(p skillsRuntimeSourcePreparation) bool 
 }
 
 func skillsRuntimeSourceCommand(path, cwd, flag string) skillsCreationCommand {
+	if !skillsRuntimeSourceInvocationPaths(path, cwd, flag) {
+		return skillsCreationCommand{}
+	}
 	c := skillsForwardCommand(path, cwd)
 	c.Cmd = skillsHiddenProcessScript(skillsRuntimeTarget, flag, path, cwd)
 	return c
 }
 
+func skillsRuntimeSourceInvocationPaths(path, cwd, flag string) bool {
+	return (flag == "--prepare-skills3080-runtime-source" || flag == "--start-skills3080-runtime-source") &&
+		filepath.IsAbs(path) && within(cwd, path) && skillsCreationPathEqual(path, path) && skillsCreationPathEqual(cwd, cwd)
+}
+
 func skillsRuntimeSourceInvocation(input, path, cwd, flag string) bool {
-	if flag != "--prepare-skills3080-runtime-source" && flag != "--start-skills3080-runtime-source" {
+	if !skillsRuntimeSourceInvocationPaths(path, cwd, flag) {
 		return false
 	}
 	const prefix, suffix = "text(await tools.exec_command(", "));"
@@ -75,6 +83,9 @@ func skillsRuntimeSourceInvocation(input, path, cwd, flag string) bool {
 }
 
 func skillsRuntimeSourceInvocationText(path, cwd, flag string) string {
+	if !skillsRuntimeSourceInvocationPaths(path, cwd, flag) {
+		return ""
+	}
 	b, _ := json.Marshal(skillsRuntimeSourceCommand(path, cwd, flag))
 	return "text(await tools.exec_command(" + string(b) + "));"
 }

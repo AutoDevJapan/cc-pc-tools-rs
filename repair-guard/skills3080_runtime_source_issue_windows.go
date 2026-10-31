@@ -175,6 +175,9 @@ func skillsRuntimeSourceOperation(op, path string, raw []byte, r skillsRequest, 
 	if r.RuntimeSource == nil || r.Writer.Task != 3080 || r.ManifestCommit != "" || r.ManifestPath != "" || r.ManifestSHA != "" || r.Review != nil || r.Result != nil || r.Runtime != nil || r.Consume != nil || r.Revision != nil {
 		return fail("source_request")
 	}
+	if !skillsRuntimeSourceInvocationPaths(path, r.Writer.Workspace, "--prepare-skills3080-runtime-source") {
+		return fail("source_request")
+	}
 	row, template, stage := skillsRuntimeSourceTarget(r, reg, s)
 	if stage != "" {
 		return fail(stage)

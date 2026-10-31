@@ -21,6 +21,38 @@ func skillsSourcePreparationFixture() skillsRuntimeSourcePreparation {
 	}
 }
 
+func TestSkills3080SourceInvocationRejectsUnsafePathsBeforeRendering(t *testing.T) {
+
+	for _, kind := range []string{"normal", "quote", "newline", "carriage_return", "relative", "outside", "cwd_quote", "cwd_newline", "unknown_flag"} {
+		t.Run(kind, func(t *testing.T) {
+			p := skillsSourcePreparationFixture()
+			path, cwd, flag := p.RequestPath, p.Writer.Workspace, "--prepare-skills3080-runtime-source"
+			switch kind {
+			case "quote":
+				path = filepath.Join(cwd, "a'; Write-Output 'injected.json")
+			case "newline":
+				path += "\n.json"
+			case "carriage_return":
+				path += "\r.json"
+			case "relative":
+				path = "relative.json"
+			case "outside":
+				path = "D:/different/request.json"
+			case "cwd_quote":
+				cwd += "'"
+			case "cwd_newline":
+				cwd += "\n"
+			case "unknown_flag":
+				flag = "--unknown"
+			}
+			invocation := skillsRuntimeSourceInvocationText(path, cwd, flag)
+			if (invocation != "") != (kind == "normal") || skillsRuntimeSourceInvocation(invocation, path, cwd, flag) != (kind == "normal") {
+				t.Fatal("unsafe source path reached a runnable invocation")
+			}
+		})
+	}
+}
+
 func TestSkills3080SourcePreparationRequiresOriginalControllerToolResult(t *testing.T) {
 	for _, kind := range []string{"normal", "message_copy", "without_call", "wrong_flag", "wrong_path", "no_window_false", "wrong_parent", "wrong_task", "wrong_spec", "wrong_nonce", "wrong_request_hash", "before_call", "after_generation", "duplicate_output", "duplicate_call", "yielded", "extra_block", "block_alias", "receipt_alias", "bad_object", "extra_effect"} {
 		t.Run(kind, func(t *testing.T) {

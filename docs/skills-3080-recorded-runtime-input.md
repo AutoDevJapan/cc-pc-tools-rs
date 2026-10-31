@@ -38,8 +38,12 @@ guardが確認するのは、専用rootにある最初の**記録済みモデル
 記録や通常dispatchとの対応が欠ければ資格を拒否する。
 
 manifest、順序付きevent、thread/turn/model、payload kindと相対名を確認してから、最初の入力payloadだけを開く。
-正常に保存された今回の実行入力と、同じnative handleのdeveloper/bootstrap/toolを、内容と順序を保って全体比較する。
-通常のrequest準備が再生成するitem IDと空のphase表現以外を比較から外さない。
+比較対象は、モデルとeffort、および順序付きの指示・tool schema・入力本文のprojectionである。
+正常に保存された今回の実行入力と、同じnative handleのdeveloper/bootstrap/toolを、内容・metadata・順序を保って比較する。
+その入力項目では、通常のrequest準備が再生成するitem IDと空のphase表現以外を比較から外さない。
+traceのturnはnativeの最初のtask_startedとturn_contextにも一致させる。
+tool_choice、parallel_tool_calls、includeなどのprovider設定は、このnative比較による認証の対象には含めない。
+request全体の全fieldがnativeと一致したという保証にはしない。
 本文・tool schema・checkpointを同時に変更しても、別のruntime入力とは一致しない。
 旧形式や入力記録のない完了jobへ、この新しい証明を後付けしない。
 
@@ -53,7 +57,13 @@ Rollout Traceは応答やtool情報も自動生成し得るため、所有付き
 readerは入力requestと必要なmetadataだけを扱い、response、agent result、tool結果、reducer stateを開かない。
 原finalは正常receiverからだけ受領し、別payloadやcopyをその回収経路にしない。
 指示本文とtool引数を返却・公開せず、証拠には型・時刻・長さ・hash・一致判定を残す。
-終了と不要性を確認した所有生成物は、通常のplanと後片付けの手順で回収する。
+実行担当は、専用rootごとに親のprepare結果、所有ID、通常の実job、保持理由と次の回収条件を記録する。
+live入力検証、正常completed receiver、必要な同buffer検証が残る間は、入力原本を含むrootを保持する。
+これらの検証が終わり、同じ世代の再受領を終え、通常jobと実producerの終了を確認してから回収する。
+記録は本文を含めず、検証結果、入力のhash・識別番号、元の所有IDと実測容量を残す。
+通常safe-deleteのplanが返した削除を別の通常呼出しで実行し、成功後にfinishと元root不在を確認する。
+実行前拒否なら同じ削除を繰り返さず、通常quarantineを使い、保持・未回収・実回収を分ける。
+将来この世代を再受領する必要があれば、削除前に保持を継続する。削除したsourceをmetadataだけで資格化し直さない。
 
 公開Skillの実配置、現在bufferでの発見と適用、liveとcompletedの実使用は、この入力資格と別に確認する。
 準備や起動、記録との一致だけを依頼全体の完了にしない。

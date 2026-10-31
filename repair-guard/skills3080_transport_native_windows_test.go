@@ -11,7 +11,7 @@ import (
 )
 
 func TestSkills3080IndependentRequestRejectsJointNativeSourceChanges(t *testing.T) {
-	for _, kind := range []string{"normal", "regenerated_id", "bootstrap_and_checkpoint", "developer_and_checkpoint", "tool_and_checkpoint", "fragment_order"} {
+	for _, kind := range []string{"normal", "regenerated_id", "bootstrap_and_checkpoint", "developer_and_checkpoint", "tool_and_checkpoint", "fragment_order", "wrong_source_turn", "missing_source_turn"} {
 		t.Run(kind, func(t *testing.T) {
 			raw, job, project, start, end := skillsSourcePrefixFixture()
 			request, prompt := skillsTransportRequestFixture()
@@ -93,9 +93,51 @@ func TestSkills3080IndependentRequestRejectsJointNativeSourceChanges(t *testing.
 			}
 			current := skillsFS{blocked: func(string) bool { return false }}
 			defer current.close()
-			_, accepted := skillsNativeWindowWithSourceOrigin(&current, job, proof(&skillsRecordedTransport{Input: expected}), end, nil)
+			source := &skillsRecordedTransport{Input: expected, TurnID: "22222222-2222-7222-8222-222222222222"}
+			if kind == "wrong_source_turn" {
+				source.TurnID = "33333333-3333-7333-8333-333333333333"
+			}
+			if kind == "missing_source_turn" {
+				source.TurnID = ""
+			}
+			_, accepted := skillsNativeWindowWithSourceOrigin(&current, job, proof(source), end, nil)
 			if accepted != (kind == "normal" || kind == "regenerated_id") {
 				t.Fatalf("independent source %s accepted=%v", kind, accepted)
+			}
+		})
+	}
+}
+
+func TestSkills3080RecordedTurnMatchesBothNativeTurnRecords(t *testing.T) {
+	for _, kind := range []string{"normal", "context_only", "started_only", "missing_context"} {
+		t.Run(kind, func(t *testing.T) {
+			raw, job, _, start, end := skillsSourcePrefixFixture()
+			request, prompt := skillsTransportRequestFixture()
+			body, _ := json.Marshal(request)
+			view, valid := skillsTransportInputProjection(body, prompt, "gpt-6-luna", "max")
+			if !valid {
+				t.Fatal("complete independent input")
+			}
+			var stream bytes.Buffer
+			for _, line := range bytes.Split(raw, []byte{'\n'}) {
+				if len(line) == 0 {
+					continue
+				}
+				var r object
+				json.Unmarshal(line, &r)
+				p := obj(r["payload"])
+				if r["type"] == "turn_context" && kind == "missing_context" {
+					continue
+				}
+				if (r["type"] == "turn_context" && kind == "context_only") || (p["type"] == "task_started" && kind == "started_only") {
+					p["turn_id"] = "33333333-3333-7333-8333-333333333333"
+				}
+				json.NewEncoder(&stream).Encode(r)
+			}
+			json.NewEncoder(&stream).Encode(object{"type": "response_item", "timestamp": start.Add(time.Second).Format(time.RFC3339Nano), "payload": object{"type": "message", "role": "user", "content": []object{{"type": "input_text", "text": string(prompt)}}}})
+			accepted := skillsNativeTransportMatches(&stream, str(job["thread_id"]), str(job["cwd"]), start, end, view, "22222222-2222-7222-8222-222222222222")
+			if accepted != (kind == "normal") {
+				t.Fatal("native turn records were not bound individually")
 			}
 		})
 	}

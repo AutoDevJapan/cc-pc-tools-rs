@@ -191,7 +191,7 @@ func skillsNativeWindowWithSourceOrigin(s *skillsFS, job object, proof *skillsNa
 			return nil, false
 		}
 		if proof.runtimeTransport != nil {
-			if !skillsFreshRuntimeThread(job, start, end) || !skillsNativeTransportMatches(input, id, str(job["cwd"]), start, end, proof.runtimeTransport.Input) || !snapshot.rewind() {
+			if !skillsFreshRuntimeThread(job, start, end) || !skillsNativeTransportMatches(input, id, str(job["cwd"]), start, end, proof.runtimeTransport.Input, proof.runtimeTransport.TurnID) || !snapshot.rewind() {
 				return nil, false
 			}
 		}

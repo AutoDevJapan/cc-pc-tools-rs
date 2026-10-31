@@ -1,0 +1,2112 @@
+{
+  "schema": "skills-unavailable-upstream-metadata-v1",
+  "fixed_catalog_sha256": "2d73c9a038a41cc220a9687b935bfa1e0b315b65d9bd6d3e54ddb4111972876c",
+  "selection_queue_sha256": "b174830effc1f5e30b9e3bac49ce814e7fae6c64fc749403f1652123d097b8f2",
+  "original_unavailable_occurrences": 428,
+  "unique_listed_repositories": 159,
+  "repository_states": {
+    "public": 20,
+    "private": 0,
+    "unresolved": 139
+  },
+  "occurrence_states": {
+    "public": 21,
+    "private": 0,
+    "unresolved": 407
+  },
+  "observed_from": "2026-10-31T09:54:12.3419349+00:00",
+  "observed_through": "2026-10-31T09:59:33.9260780+00:00",
+  "body_reads": 0,
+  "new_semantic_assessments": 0,
+  "new_permission_grants": 0,
+  "new_final_dispositions": 0,
+  "central_operations": 0,
+  "original_catalog_modified": false,
+  "original_unavailable428_retained": true,
+  "original_acquisition_review647_retained": true,
+  "whole16_complete": false,
+  "scope": "Only repository metadata for the 159 upstreams named by the 428 original unavailable occurrences; no contents/blob body endpoint, moving-source substitution, private body access or alternative fetch.",
+  "limits": [
+    "Public repository metadata does not prove that the listed fixed file exists, that the recorded author owns it, or that an individual permission has been accepted.",
+    "HTTP404 is unresolved; it does not identify whether a repository is absent or private.",
+    "Original fixed URL/commit/path and body-held state remain unchanged. Later review and actual installation require their own evidence."
+  ],
+  "repositories": [
+    {
+      "listed_repository": "0xinit/cryptoskills",
+      "occurrence_ids": [
+        "site:eliza"
+      ],
+      "occurrences": 1,
+      "observed_at": "2026-10-31T09:57:43.8050091Z",
+      "state": "unresolved",
+      "http_status": 404
+    },
+    {
+      "listed_repository": "0xxmemo/litellmctl",
+      "occurrence_ids": [
+        "site:pick-model"
+      ],
+      "occurrences": 1,
+      "observed_at": "2026-10-31T09:57:44.565018Z",
+      "state": "unresolved",
+      "http_status": 404
+    },
+    {
+      "listed_repository": "4ier/notion-cli",
+      "occurrence_ids": [
+        "site:notion-cli-7feee5"
+      ],
+      "occurrences": 1,
+      "observed_at": "2026-10-31T09:57:45.3040264Z",
+      "state": "unresolved",
+      "http_status": 404
+    },
+    {
+      "listed_repository": "a0972199950/lazy-cv",
+      "occurrence_ids": [
+        "site:gmail"
+      ],
+      "occurrences": 1,
+      "observed_at": "2026-10-31T09:57:45.9907701Z",
+      "state": "unresolved",
+      "http_status": 404
+    },
+    {
+      "listed_repository": "abrahamoo/security-mcp",
+      "occurrence_ids": [
+        "site:file-upload-attacker"
+      ],
+      "occurrences": 1,
+      "observed_at": "2026-10-31T09:57:46.6974819Z",
+      "state": "unresolved",
+      "http_status": 404
+    },
+    {
+      "listed_repository": "adaptationio/skrillz",
+      "occurrence_ids": [
+        "site:api-testing"
+      ],
+      "occurrences": 1,
+      "observed_at": "2026-10-31T09:57:47.4333197Z",
+      "state": "unresolved",
+      "http_status": 404
+    },
+    {
+      "listed_repository": "alfredolopez80/multi-agent-ralph-loop",
+      "occurrence_ids": [
+        "site:adversarial"
+      ],
+      "occurrences": 1,
+      "observed_at": "2026-10-31T09:57:48.1287527Z",
+      "state": "unresolved",
+      "http_status": 404
+    },
+    {
+      "listed_repository": "alphaonedev/openclaw-graph",
+      "occurrence_ids": [
+        "site:nano-pdf",
+        "site:coding-kotlin",
+        "site:discord-6ed3a8",
+        "site:playwright-scraper",
+        "site:gcp-iam"
+      ],
+      "occurrences": 5,
+      "observed_at": "2026-10-31T09:57:48.9068094Z",
+      "state": "unresolved",
+      "http_status": 404
+    },
+    {
+      "listed_repository": "aresbit/matebot",
+      "occurrence_ids": [
+        "site:lecture-skill",
+        "site:hm-fetch-skill"
+      ],
+      "occurrences": 2,
+      "observed_at": "2026-10-31T09:57:49.5975233Z",
+      "state": "unresolved",
+      "http_status": 404
+    },
+    {
+      "listed_repository": "axwelbrand-byte/arbibot",
+      "occurrence_ids": [
+        "site:polymarket-prediction-market"
+      ],
+      "occurrences": 1,
+      "observed_at": "2026-10-31T09:57:50.2936134Z",
+      "state": "unresolved",
+      "http_status": 404
+    },
+    {
+      "listed_repository": "bankielewicz/devforgeai",
+      "occurrence_ids": [
+        "site:spec-driven-ui"
+      ],
+      "occurrences": 1,
+      "observed_at": "2026-10-31T09:57:50.9652681Z",
+      "state": "public",
+      "http_status": null,
+      "public_repository": "bankielewicz/DevForgeAI",
+      "repository_id": 1391619035,
+      "owner": "bankielewicz",
+      "default_branch": "main",
+      "archived": false,
+      "disabled": false
+    },
+    {
+      "listed_repository": "bbohhu-prog/waxs",
+      "occurrence_ids": [
+        "site:web-access"
+      ],
+      "occurrences": 1,
+      "observed_at": "2026-10-31T09:57:51.7347734Z",
+      "state": "unresolved",
+      "http_status": 404
+    },
+    {
+      "listed_repository": "bec01/autopilot-skill",
+      "occurrence_ids": [
+        "site:autopilot-1e8496"
+      ],
+      "occurrences": 1,
+      "observed_at": "2026-10-31T09:57:52.4142564Z",
+      "state": "unresolved",
+      "http_status": 404
+    },
+    {
+      "listed_repository": "betofilippi/nxt-claude-plugins",
+      "occurrence_ids": [
+        "site:build-dashboard"
+      ],
+      "occurrences": 1,
+      "observed_at": "2026-10-31T09:57:53.1520199Z",
+      "state": "unresolved",
+      "http_status": 404
+    },
+    {
+      "listed_repository": "bgauryy/octocode",
+      "occurrence_ids": [
+        "site:octocode-slides"
+      ],
+      "occurrences": 1,
+      "observed_at": "2026-10-31T09:54:12.8264635+00:00",
+      "state": "public",
+      "http_status": null,
+      "public_repository": "bgauryy/octocode",
+      "repository_id": 996813130,
+      "owner": "bgauryy",
+      "default_branch": "main",
+      "archived": false,
+      "disabled": false
+    },
+    {
+      "listed_repository": "bitrouter/bitrouter-openclaw",
+      "occurrence_ids": [
+        "site:bitrouter"
+      ],
+      "occurrences": 1,
+      "observed_at": "2026-10-31T09:57:53.8554212Z",
+      "state": "unresolved",
+      "http_status": 404
+    },
+    {
+      "listed_repository": "boomerang9/agent-acheevy-009",
+      "occurrence_ids": [
+        "site:openrouter-llm-routing-19700a"
+      ],
+      "occurrences": 1,
+      "observed_at": "2026-10-31T09:57:54.5490937Z",
+      "state": "unresolved",
+      "http_status": 404
+    },
+    {
+      "listed_repository": "brunolimaff-jpg/novo-app",
+      "occurrence_ids": [
+        "site:google-drive-automation"
+      ],
+      "occurrences": 1,
+      "observed_at": "2026-10-31T09:57:55.2578341Z",
+      "state": "unresolved",
+      "http_status": 404
+    },
+    {
+      "listed_repository": "c4kar/ktundepo",
+      "occurrence_ids": [
+        "site:google-calendar-automation-9f6d52",
+        "site:x-twitter-scraper",
+        "site:uv-package-manager-8c3169"
+      ],
+      "occurrences": 3,
+      "observed_at": "2026-10-31T09:57:55.9639372Z",
+      "state": "unresolved",
+      "http_status": 404
+    },
+    {
+      "listed_repository": "camacho/ai-skills",
+      "occurrence_ids": [
+        "site:bail",
+        "site:plan-review",
+        "site:archive-c6e7f2",
+        "site:orient",
+        "site:capture-0c2933",
+        "site:reflect",
+        "site:status-a94144",
+        "site:build-skill-4c283c",
+        "site:autonomous",
+        "site:catchup",
+        "site:validate",
+        "site:wrap",
+        "site:copilot",
+        "site:session-start-hook",
+        "site:assemble-panel",
+        "site:policy-algebra",
+        "site:task"
+      ],
+      "occurrences": 17,
+      "observed_at": "2026-10-31T09:57:56.6787169Z",
+      "state": "unresolved",
+      "http_status": 404
+    },
+    {
+      "listed_repository": "cat9999aaa/dev-planner-skill",
+      "occurrence_ids": [
+        "site:dev-planner"
+      ],
+      "occurrences": 1,
+      "observed_at": "2026-10-31T09:57:57.3745129Z",
+      "state": "unresolved",
+      "http_status": 404
+    },
+    {
+      "listed_repository": "chapter42/42-seo-skills",
+      "occurrence_ids": [
+        "site:42-seo-agi"
+      ],
+      "occurrences": 1,
+      "observed_at": "2026-10-31T09:57:58.0644839Z",
+      "state": "unresolved",
+      "http_status": 404
+    },
+    {
+      "listed_repository": "chestnutforty/sdk-rfi",
+      "occurrence_ids": [
+        "site:rfi"
+      ],
+      "occurrences": 1,
+      "observed_at": "2026-10-31T09:57:58.7840104Z",
+      "state": "unresolved",
+      "http_status": 404
+    },
+    {
+      "listed_repository": "christianromney/claude-plugins",
+      "occurrence_ids": [
+        "site:generate-commit-message"
+      ],
+      "occurrences": 1,
+      "observed_at": "2026-10-31T09:57:59.5098166Z",
+      "state": "unresolved",
+      "http_status": 404
+    },
+    {
+      "listed_repository": "christophacham/agent-skills-library",
+      "occurrence_ids": [
+        "site:mermaid-studio",
+        "site:copilot-instructions-blueprint-generator",
+        "site:customaize-agent-prompt-engineering",
+        "site:memory-systems",
+        "site:pdf-co-automation"
+      ],
+      "occurrences": 5,
+      "observed_at": "2026-10-31T09:54:15.5481947+00:00",
+      "state": "unresolved",
+      "http_status": 404
+    },
+    {
+      "listed_repository": "cirne/brain-app",
+      "occurrence_ids": [
+        "site:calendar"
+      ],
+      "occurrences": 1,
+      "observed_at": "2026-10-31T09:58:00.2342599Z",
+      "state": "unresolved",
+      "http_status": 404
+    },
+    {
+      "listed_repository": "croquiscom/order-agent",
+      "occurrence_ids": [
+        "site:commit-583103"
+      ],
+      "occurrences": 1,
+      "observed_at": "2026-10-31T09:58:01.0372752Z",
+      "state": "unresolved",
+      "http_status": 404
+    },
+    {
+      "listed_repository": "cucapcosta/pericode",
+      "occurrence_ids": [
+        "site:documentation-writer"
+      ],
+      "occurrences": 1,
+      "observed_at": "2026-10-31T09:58:01.7681232Z",
+      "state": "unresolved",
+      "http_status": 404
+    },
+    {
+      "listed_repository": "danielrosehill/claude-open-router-model-research-plugin",
+      "occurrence_ids": [
+        "site:or-evaluate-model"
+      ],
+      "occurrences": 1,
+      "observed_at": "2026-10-31T09:58:02.4582624Z",
+      "state": "unresolved",
+      "http_status": 404
+    },
+    {
+      "listed_repository": "davidsneighbour/ai",
+      "occurrence_ids": [
+        "site:prompt-creation"
+      ],
+      "occurrences": 1,
+      "observed_at": "2026-10-31T09:58:03.1630058Z",
+      "state": "public",
+      "http_status": null,
+      "public_repository": "davidsneighbour/ai",
+      "repository_id": 1216551318,
+      "owner": "davidsneighbour",
+      "default_branch": "main",
+      "archived": false,
+      "disabled": false
+    },
+    {
+      "listed_repository": "demerzels-lab/elsamultiskillagent",
+      "occurrence_ids": [
+        "site:summarize-78697e"
+      ],
+      "occurrences": 1,
+      "observed_at": "2026-10-31T09:58:03.9958302Z",
+      "state": "unresolved",
+      "http_status": 404
+    },
+    {
+      "listed_repository": "dennisyangji/ode_g2m",
+      "occurrence_ids": [
+        "site:fixing-metadata",
+        "site:baseline-ui",
+        "site:fixing-motion-performance",
+        "site:fixing-accessibility"
+      ],
+      "occurrences": 4,
+      "observed_at": "2026-10-31T09:58:04.7027999Z",
+      "state": "unresolved",
+      "http_status": 404
+    },
+    {
+      "listed_repository": "dmoneyoh/skills-basin",
+      "occurrence_ids": [
+        "site:c-telegram"
+      ],
+      "occurrences": 1,
+      "observed_at": "2026-10-31T09:58:05.4021912Z",
+      "state": "unresolved",
+      "http_status": 404
+    },
+    {
+      "listed_repository": "emanuelrechsteiner/claude-code-config",
+      "occurrence_ids": [
+        "site:project-bootstrap",
+        "site:version-control"
+      ],
+      "occurrences": 2,
+      "observed_at": "2026-10-31T09:58:06.0998646Z",
+      "state": "unresolved",
+      "http_status": 404
+    },
+    {
+      "listed_repository": "escotilha/claude-public",
+      "occurrence_ids": [
+        "site:platform-sweep"
+      ],
+      "occurrences": 1,
+      "observed_at": "2026-10-31T09:58:06.8265253Z",
+      "state": "unresolved",
+      "http_status": 404
+    },
+    {
+      "listed_repository": "evolving-machines-lab/evolve",
+      "occurrence_ids": [
+        "site:evolve-ef6312"
+      ],
+      "occurrences": 1,
+      "observed_at": "2026-10-31T09:54:14.7513623+00:00",
+      "state": "unresolved",
+      "http_status": 404
+    },
+    {
+      "listed_repository": "ewe-studios/agentic-coding-starter",
+      "occurrence_ids": [
+        "site:code-verification"
+      ],
+      "occurrences": 1,
+      "observed_at": "2026-10-31T09:58:07.5469283Z",
+      "state": "public",
+      "http_status": null,
+      "public_repository": "ewe-studios/agentic-coding-starter",
+      "repository_id": 1133543778,
+      "owner": "ewe-studios",
+      "default_branch": "master",
+      "archived": false,
+      "disabled": false
+    },
+    {
+      "listed_repository": "fabiolk00/trampofy",
+      "occurrence_ids": [
+        "site:gsd-undo"
+      ],
+      "occurrences": 1,
+      "observed_at": "2026-10-31T09:58:08.3480185Z",
+      "state": "unresolved",
+      "http_status": 404
+    },
+    {
+      "listed_repository": "fatihaltiok/agentus-timus",
+      "occurrence_ids": [
+        "site:email-manager"
+      ],
+      "occurrences": 1,
+      "observed_at": "2026-10-31T09:58:09.1043322Z",
+      "state": "unresolved",
+      "http_status": 404
+    },
+    {
+      "listed_repository": "flatrick/mdt",
+      "occurrence_ids": [
+        "site:regex-vs-llm-structured-text"
+      ],
+      "occurrences": 1,
+      "observed_at": "2026-10-31T09:58:09.8097699Z",
+      "state": "unresolved",
+      "http_status": 404
+    },
+    {
+      "listed_repository": "flexnetos/agent_harness",
+      "occurrence_ids": [
+        "site:batch-api"
+      ],
+      "occurrences": 1,
+      "observed_at": "2026-10-31T09:58:10.4982607Z",
+      "state": "unresolved",
+      "http_status": 404
+    },
+    {
+      "listed_repository": "florian-trehaut/bmad-global",
+      "occurrence_ids": [
+        "site:bmad-distillator"
+      ],
+      "occurrences": 1,
+      "observed_at": "2026-10-31T09:58:11.4291726Z",
+      "state": "unresolved",
+      "http_status": 404
+    },
+    {
+      "listed_repository": "franmenem/registro-app",
+      "occurrence_ids": [
+        "site:senior-software-engineer",
+        "site:meta-cognitive-reasoning",
+        "site:clean-code-principles"
+      ],
+      "occurrences": 3,
+      "observed_at": "2026-10-31T09:58:12.1367796Z",
+      "state": "unresolved",
+      "http_status": 404
+    },
+    {
+      "listed_repository": "frvnkfrmchicago/skills-library-v2",
+      "occurrence_ids": [
+        "site:performance-tuning",
+        "site:aws-building"
+      ],
+      "occurrences": 2,
+      "observed_at": "2026-10-31T09:58:12.8786034Z",
+      "state": "unresolved",
+      "http_status": 404
+    },
+    {
+      "listed_repository": "fzkuji/gui-agent-harness",
+      "occurrence_ids": [
+        "site:gui-agent"
+      ],
+      "occurrences": 1,
+      "observed_at": "2026-10-31T09:58:13.5785386Z",
+      "state": "unresolved",
+      "http_status": 404
+    },
+    {
+      "listed_repository": "gald3r-labs/gald3r",
+      "occurrence_ids": [
+        "site:statusline-08a70b",
+        "site:review-and-ship"
+      ],
+      "occurrences": 2,
+      "observed_at": "2026-10-31T09:58:14.2693285Z",
+      "state": "public",
+      "http_status": null,
+      "public_repository": "Gald3r-Labs/gald3r",
+      "repository_id": 1194830172,
+      "owner": "Gald3r-Labs",
+      "default_branch": "main",
+      "archived": false,
+      "disabled": false
+    },
+    {
+      "listed_repository": "geokoko/dotfiles",
+      "occurrence_ids": [
+        "site:office-hours-c19eb3",
+        "site:guard-860e07",
+        "site:careful"
+      ],
+      "occurrences": 3,
+      "observed_at": "2026-10-31T09:58:15.1023006Z",
+      "state": "unresolved",
+      "http_status": 404
+    },
+    {
+      "listed_repository": "georgedoors888/gb-power-market-jj",
+      "occurrence_ids": [
+        "site:inference-audit",
+        "site:claude-usage",
+        "site:nola-squad",
+        "site:pdf-b8170b"
+      ],
+      "occurrences": 4,
+      "observed_at": "2026-10-31T09:58:15.8191808Z",
+      "state": "unresolved",
+      "http_status": 404
+    },
+    {
+      "listed_repository": "github/awesome-copilot",
+      "occurrence_ids": [
+        "site:web-coder"
+      ],
+      "occurrences": 1,
+      "observed_at": "2026-10-31T09:58:16.5282289Z",
+      "state": "public",
+      "http_status": null,
+      "public_repository": "github/awesome-copilot",
+      "repository_id": 1000362065,
+      "owner": "github",
+      "default_branch": "main",
+      "archived": false,
+      "disabled": false
+    },
+    {
+      "listed_repository": "giulianotesta7/glpictl-ai",
+      "occurrence_ids": [
+        "site:glpi-admin"
+      ],
+      "occurrences": 1,
+      "observed_at": "2026-10-31T09:58:17.4054549Z",
+      "state": "unresolved",
+      "http_status": 404
+    },
+    {
+      "listed_repository": "goulburn-ai/goulburn-web",
+      "occurrence_ids": [
+        "site:goulburn"
+      ],
+      "occurrences": 1,
+      "observed_at": "2026-10-31T09:58:18.0990324Z",
+      "state": "unresolved",
+      "http_status": 404
+    },
+    {
+      "listed_repository": "grahama1970/agent-skills",
+      "occurrence_ids": [
+        "site:lean4-prove"
+      ],
+      "occurrences": 1,
+      "observed_at": "2026-10-31T09:58:18.8507861Z",
+      "state": "unresolved",
+      "http_status": 404
+    },
+    {
+      "listed_repository": "guillaumebld/skills_store",
+      "occurrence_ids": [
+        "site:project-nav"
+      ],
+      "occurrences": 1,
+      "observed_at": "2026-10-31T09:58:19.5762809Z",
+      "state": "unresolved",
+      "http_status": 404
+    },
+    {
+      "listed_repository": "gychen-3725/myskills",
+      "occurrence_ids": [
+        "site:git-workflow-514530"
+      ],
+      "occurrences": 1,
+      "observed_at": "2026-10-31T09:58:20.292272Z",
+      "state": "unresolved",
+      "http_status": 404
+    },
+    {
+      "listed_repository": "heeyo-life/skillboss-skills",
+      "occurrence_ids": [
+        "site:skillboss-b7d4f0"
+      ],
+      "occurrences": 1,
+      "observed_at": "2026-10-31T09:58:20.996287Z",
+      "state": "unresolved",
+      "http_status": 404
+    },
+    {
+      "listed_repository": "himself65/finance-skills",
+      "occurrence_ids": [
+        "site:funda-data"
+      ],
+      "occurrences": 1,
+      "observed_at": "2026-10-31T09:58:21.7187247Z",
+      "state": "public",
+      "http_status": null,
+      "public_repository": "himself65/finance-skills",
+      "repository_id": 1181272477,
+      "owner": "himself65",
+      "default_branch": "main",
+      "archived": false,
+      "disabled": false
+    },
+    {
+      "listed_repository": "hjnayp/validate-luban-config",
+      "occurrence_ids": [
+        "site:office-automation"
+      ],
+      "occurrences": 1,
+      "observed_at": "2026-10-31T09:58:22.4784222Z",
+      "state": "unresolved",
+      "http_status": 404
+    },
+    {
+      "listed_repository": "iam6ft7in/cfg_dev_environment",
+      "occurrence_ids": [
+        "site:cleanup-branches",
+        "site:sync-upstream"
+      ],
+      "occurrences": 2,
+      "observed_at": "2026-10-31T09:58:23.1446414Z",
+      "state": "unresolved",
+      "http_status": 404
+    },
+    {
+      "listed_repository": "iamzhihuix/happy-claude-skills",
+      "occurrence_ids": [
+        "site:wechat-article-writer"
+      ],
+      "occurrences": 1,
+      "observed_at": "2026-10-31T09:58:23.9712628Z",
+      "state": "unresolved",
+      "http_status": 404
+    },
+    {
+      "listed_repository": "igot-ai/os-twin",
+      "occurrence_ids": [
+        "site:incident-response-39ef49"
+      ],
+      "occurrences": 1,
+      "observed_at": "2026-10-31T09:58:24.6652805Z",
+      "state": "unresolved",
+      "http_status": 404
+    },
+    {
+      "listed_repository": "ipythoning/b2b-sdr-agent-template",
+      "occurrence_ids": [
+        "site:b2b-sdr-agent"
+      ],
+      "occurrences": 1,
+      "observed_at": "2026-10-31T09:58:25.4062807Z",
+      "state": "unresolved",
+      "http_status": 404
+    },
+    {
+      "listed_repository": "irismaker/ai-agent-skills-hub",
+      "occurrence_ids": [
+        "site:docs-page-generator"
+      ],
+      "occurrences": 1,
+      "observed_at": "2026-10-31T09:58:26.1037377Z",
+      "state": "unresolved",
+      "http_status": 404
+    },
+    {
+      "listed_repository": "jaewilson07/datacrew-public",
+      "occurrence_ids": [
+        "site:verb-noun"
+      ],
+      "occurrences": 1,
+      "observed_at": "2026-10-31T09:58:26.8076562Z",
+      "state": "unresolved",
+      "http_status": 404
+    },
+    {
+      "listed_repository": "jarbitechture/claude-skills",
+      "occurrence_ids": [
+        "site:godmode-ssh"
+      ],
+      "occurrences": 1,
+      "observed_at": "2026-10-31T09:58:27.5266813Z",
+      "state": "unresolved",
+      "http_status": 404
+    },
+    {
+      "listed_repository": "javimontano/jm-adk-alfa",
+      "occurrence_ids": [
+        "site:executive-summary"
+      ],
+      "occurrences": 1,
+      "observed_at": "2026-10-31T09:58:28.226841Z",
+      "state": "unresolved",
+      "http_status": 404
+    },
+    {
+      "listed_repository": "jeanjfth/antigravity-pro",
+      "occurrence_ids": [
+        "site:dynamic-cursor-interactions"
+      ],
+      "occurrences": 1,
+      "observed_at": "2026-10-31T09:58:28.9793491Z",
+      "state": "public",
+      "http_status": null,
+      "public_repository": "jeanjfth/Antigravity-pro",
+      "repository_id": 1208138393,
+      "owner": "jeanjfth",
+      "default_branch": "main",
+      "archived": false,
+      "disabled": false
+    },
+    {
+      "listed_repository": "jgoslow/claude-skill-batch-ticket-processing",
+      "occurrence_ids": [
+        "site:batch-ticket-processing"
+      ],
+      "occurrences": 1,
+      "observed_at": "2026-10-31T09:58:29.74675Z",
+      "state": "unresolved",
+      "http_status": 404
+    },
+    {
+      "listed_repository": "jinyuanlu/dotfiles",
+      "occurrence_ids": [
+        "site:market-research-f9b2af"
+      ],
+      "occurrences": 1,
+      "observed_at": "2026-10-31T09:58:30.4527059Z",
+      "state": "public",
+      "http_status": null,
+      "public_repository": "jinyuanlu/dotfiles",
+      "repository_id": 408378619,
+      "owner": "jinyuanlu",
+      "default_branch": "yadm",
+      "archived": false,
+      "disabled": false
+    },
+    {
+      "listed_repository": "jj1985/claude-config-template",
+      "occurrence_ids": [
+        "site:api-integration-patterns"
+      ],
+      "occurrences": 1,
+      "observed_at": "2026-10-31T09:58:31.2093029Z",
+      "state": "unresolved",
+      "http_status": 404
+    },
+    {
+      "listed_repository": "jk-0001/skills",
+      "occurrence_ids": [
+        "site:automation-workflows"
+      ],
+      "occurrences": 1,
+      "observed_at": "2026-10-31T09:58:31.9318084Z",
+      "state": "unresolved",
+      "http_status": 404
+    },
+    {
+      "listed_repository": "jsdfhasuh/emosonic",
+      "occurrence_ids": [
+        "site:prompt-engineer-8c615f"
+      ],
+      "occurrences": 1,
+      "observed_at": "2026-10-31T09:58:32.6657746Z",
+      "state": "unresolved",
+      "http_status": 404
+    },
+    {
+      "listed_repository": "jssfy/k-skills",
+      "occurrence_ids": [
+        "site:send-feishu"
+      ],
+      "occurrences": 1,
+      "observed_at": "2026-10-31T09:58:33.3704321Z",
+      "state": "unresolved",
+      "http_status": 404
+    },
+    {
+      "listed_repository": "junainfinity/osmdesign",
+      "occurrence_ids": [
+        "site:image-poster"
+      ],
+      "occurrences": 1,
+      "observed_at": "2026-10-31T09:58:34.1258029Z",
+      "state": "unresolved",
+      "http_status": 404
+    },
+    {
+      "listed_repository": "junryge/asas",
+      "occurrence_ids": [
+        "site:cpp-pro-500f16",
+        "site:technical-writer",
+        "site:graphql-architect",
+        "site:rails-expert-2e7958"
+      ],
+      "occurrences": 4,
+      "observed_at": "2026-10-31T09:58:34.8240072Z",
+      "state": "unresolved",
+      "http_status": 404
+    },
+    {
+      "listed_repository": "kilativ100/perkup_bot",
+      "occurrence_ids": [
+        "site:triaging-issues"
+      ],
+      "occurrences": 1,
+      "observed_at": "2026-10-31T09:58:35.4934124Z",
+      "state": "unresolved",
+      "http_status": 404
+    },
+    {
+      "listed_repository": "kimny1143/claude-code-template",
+      "occurrence_ids": [
+        "site:ui-ux-pro-max-d85367"
+      ],
+      "occurrences": 1,
+      "observed_at": "2026-10-31T09:58:36.2251916Z",
+      "state": "unresolved",
+      "http_status": 404
+    },
+    {
+      "listed_repository": "knowhiz/dowhiz",
+      "occurrence_ids": [
+        "site:browser-use-87c2e1"
+      ],
+      "occurrences": 1,
+      "observed_at": "2026-10-31T09:58:36.9232846Z",
+      "state": "unresolved",
+      "http_status": 404
+    },
+    {
+      "listed_repository": "lithos-ai/motus",
+      "occurrence_ids": [
+        "site:motus"
+      ],
+      "occurrences": 1,
+      "observed_at": "2026-10-31T09:54:14.3273514+00:00",
+      "state": "unresolved",
+      "http_status": 404
+    },
+    {
+      "listed_repository": "ljt-520/openclaw-backup",
+      "occurrence_ids": [
+        "site:venice-router",
+        "site:agent-tools",
+        "site:zuckerbot",
+        "site:tator-trader",
+        "site:skill-vettr",
+        "site:openclaw-elsa-x402",
+        "site:lp-agent"
+      ],
+      "occurrences": 7,
+      "observed_at": "2026-10-31T09:58:37.6251987Z",
+      "state": "unresolved",
+      "http_status": 404
+    },
+    {
+      "listed_repository": "loulanyue/awesome-claude-notes",
+      "occurrence_ids": [
+        "site:springboot-security",
+        "site:continuous-learning-7a8e02",
+        "site:bun-runtime",
+        "site:agentic-engineering-97afc5",
+        "site:continuous-learning-6e2c21",
+        "site:autonomous-loops-1fc1c0"
+      ],
+      "occurrences": 6,
+      "observed_at": "2026-10-31T09:54:15.1359318+00:00",
+      "state": "unresolved",
+      "http_status": 404
+    },
+    {
+      "listed_repository": "lucasfdigital/orchard",
+      "occurrence_ids": [
+        "site:mcp-builder-76133a"
+      ],
+      "occurrences": 1,
+      "observed_at": "2026-10-31T09:58:38.2989206Z",
+      "state": "unresolved",
+      "http_status": 404
+    },
+    {
+      "listed_repository": "lucidlabs-hq/lucidlabs-agent-kit",
+      "occurrence_ids": [
+        "site:llm-evaluate"
+      ],
+      "occurrences": 1,
+      "observed_at": "2026-10-31T09:58:39.1365889Z",
+      "state": "unresolved",
+      "http_status": 404
+    },
+    {
+      "listed_repository": "luizfosc/garimpoai",
+      "occurrence_ids": [
+        "site:security-auditor-edf7c5",
+        "site:content-creator-7f4d02",
+        "site:linux-privilege-escalation",
+        "site:notion-template-business",
+        "site:julia-pro",
+        "site:ethical-hacking-methodology",
+        "site:burp-suite-web-application-testing",
+        "site:browser-extension-builder-e26b5b",
+        "site:top-100-web-vulnerabilities-reference",
+        "site:nestjs-expert",
+        "site:scroll-experience",
+        "site:cloud-penetration-testing",
+        "site:kaizen",
+        "site:git-pushing",
+        "site:monorepo-architect",
+        "site:nx-workspace-patterns",
+        "site:market-sizing-analysis",
+        "site:production-code-audit",
+        "site:automate-whatsapp",
+        "site:saga-orchestration",
+        "site:blockchain-developer",
+        "site:event-sourcing-architect",
+        "site:3d-web-experience",
+        "site:radix-ui-design-system",
+        "site:angular",
+        "site:elixir-pro",
+        "site:copywriting-467503",
+        "site:angular-state-management",
+        "site:event-store-design",
+        "site:multi-agent-patterns-7f8cf6",
+        "site:game-art",
+        "site:3d-games",
+        "site:pc-games",
+        "site:2d-games",
+        "site:video-downloader",
+        "site:competitive-landscape",
+        "site:vr-ar",
+        "site:tailwind-design-system",
+        "site:mobile-games"
+      ],
+      "occurrences": 39,
+      "observed_at": "2026-10-31T09:58:39.8519744Z",
+      "state": "unresolved",
+      "http_status": 404
+    },
+    {
+      "listed_repository": "lukeeterna/fluxion-desktop",
+      "occurrence_ids": [
+        "site:legal-compliance-checker"
+      ],
+      "occurrences": 1,
+      "observed_at": "2026-10-31T09:58:40.5233394Z",
+      "state": "unresolved",
+      "http_status": 404
+    },
+    {
+      "listed_repository": "martijnbokma/chain-hub",
+      "occurrence_ids": [
+        "site:find-skills-1ce3a1"
+      ],
+      "occurrences": 1,
+      "observed_at": "2026-10-31T09:58:41.2244764Z",
+      "state": "public",
+      "http_status": null,
+      "public_repository": "martijnbokma/chain-hub",
+      "repository_id": 1433147669,
+      "owner": "martijnbokma",
+      "default_branch": "main",
+      "archived": false,
+      "disabled": false
+    },
+    {
+      "listed_repository": "marvinrichter/clarc",
+      "occurrence_ids": [
+        "site:ux-micro-patterns",
+        "site:zero-trust-patterns",
+        "site:plankton-code-quality-cfec93",
+        "site:cost-management"
+      ],
+      "occurrences": 4,
+      "observed_at": "2026-10-31T09:58:42.0315538Z",
+      "state": "unresolved",
+      "http_status": 404
+    },
+    {
+      "listed_repository": "mejsel/pentest-advisor",
+      "occurrence_ids": [
+        "site:python-pentest"
+      ],
+      "occurrences": 1,
+      "observed_at": "2026-10-31T09:58:42.7123691Z",
+      "state": "unresolved",
+      "http_status": 404
+    },
+    {
+      "listed_repository": "mental-wealth-academy/platform",
+      "occurrence_ids": [
+        "site:swap-integration"
+      ],
+      "occurrences": 1,
+      "observed_at": "2026-10-31T09:58:43.6954852Z",
+      "state": "unresolved",
+      "http_status": 404
+    },
+    {
+      "listed_repository": "mgreenly/ikigai",
+      "occurrence_ids": [
+        "site:harness-25a22a"
+      ],
+      "occurrences": 1,
+      "observed_at": "2026-10-31T09:58:44.4238868Z",
+      "state": "public",
+      "http_status": null,
+      "public_repository": "mgreenly/ikigai",
+      "repository_id": 1258720941,
+      "owner": "mgreenly",
+      "default_branch": "main",
+      "archived": false,
+      "disabled": false
+    },
+    {
+      "listed_repository": "mhagrelius/dotfiles",
+      "occurrence_ids": [
+        "site:dotnet-10-csharp-14"
+      ],
+      "occurrences": 1,
+      "observed_at": "2026-10-31T09:58:45.1880767Z",
+      "state": "unresolved",
+      "http_status": 404
+    },
+    {
+      "listed_repository": "michaelkd01/dic-skills",
+      "occurrence_ids": [
+        "site:ux-design"
+      ],
+      "occurrences": 1,
+      "observed_at": "2026-10-31T09:58:45.9066643Z",
+      "state": "unresolved",
+      "http_status": 404
+    },
+    {
+      "listed_repository": "mohamad44p/billix_agent_main",
+      "occurrence_ids": [
+        "site:websocket-engineer",
+        "site:websocket-implementation"
+      ],
+      "occurrences": 2,
+      "observed_at": "2026-10-31T09:58:46.6063365Z",
+      "state": "unresolved",
+      "http_status": 404
+    },
+    {
+      "listed_repository": "mohammedamineelgalai/impeccable",
+      "occurrence_ids": [
+        "site:colorize-4fc54c"
+      ],
+      "occurrences": 1,
+      "observed_at": "2026-10-31T09:58:47.3367344Z",
+      "state": "unresolved",
+      "http_status": 404
+    },
+    {
+      "listed_repository": "moonaxis/azure-stack",
+      "occurrence_ids": [
+        "site:agent-governance-e4ff87"
+      ],
+      "occurrences": 1,
+      "observed_at": "2026-10-31T09:58:48.0517737Z",
+      "state": "unresolved",
+      "http_status": 404
+    },
+    {
+      "listed_repository": "mourey/dotfiles",
+      "occurrence_ids": [
+        "site:meta-skill"
+      ],
+      "occurrences": 1,
+      "observed_at": "2026-10-31T09:58:48.8044609Z",
+      "state": "unresolved",
+      "http_status": 404
+    },
+    {
+      "listed_repository": "ngtwg/branding-focused-skills",
+      "occurrence_ids": [
+        "site:copilot-sdk",
+        "site:protocol-reverse-engineering"
+      ],
+      "occurrences": 2,
+      "observed_at": "2026-10-31T09:58:49.5198145Z",
+      "state": "unresolved",
+      "http_status": 404
+    },
+    {
+      "listed_repository": "novuhq/novu",
+      "occurrence_ids": [
+        "site:linear-release-setup"
+      ],
+      "occurrences": 1,
+      "observed_at": "2026-10-31T09:54:13.9086866+00:00",
+      "state": "public",
+      "http_status": null,
+      "public_repository": "novuhq/novu",
+      "repository_id": 400215964,
+      "owner": "novuhq",
+      "default_branch": "next",
+      "archived": false,
+      "disabled": false
+    },
+    {
+      "listed_repository": "nymbo/skills",
+      "occurrence_ids": [
+        "site:music-downloader"
+      ],
+      "occurrences": 1,
+      "observed_at": "2026-10-31T09:58:50.2632741Z",
+      "state": "unresolved",
+      "http_status": 404
+    },
+    {
+      "listed_repository": "ozmosko/firmware-copilot-training",
+      "occurrence_ids": [
+        "site:embedded-driver-review"
+      ],
+      "occurrences": 1,
+      "observed_at": "2026-10-31T09:58:50.9696321Z",
+      "state": "unresolved",
+      "http_status": 404
+    },
+    {
+      "listed_repository": "phpmac/trader",
+      "occurrence_ids": [
+        "site:binance-futures-trading"
+      ],
+      "occurrences": 1,
+      "observed_at": "2026-10-31T09:58:51.6825593Z",
+      "state": "unresolved",
+      "http_status": 404
+    },
+    {
+      "listed_repository": "pierre-gaillard-dev/monto",
+      "occurrence_ids": [
+        "site:code"
+      ],
+      "occurrences": 1,
+      "observed_at": "2026-10-31T09:58:52.3720003Z",
+      "state": "unresolved",
+      "http_status": 404
+    },
+    {
+      "listed_repository": "pinkroosterai/pinkroostermcp",
+      "occurrence_ids": [
+        "site:pm-brainstorm"
+      ],
+      "occurrences": 1,
+      "observed_at": "2026-10-31T09:58:53.0809696Z",
+      "state": "unresolved",
+      "http_status": 404
+    },
+    {
+      "listed_repository": "plastikaweb/plastikspace",
+      "occurrence_ids": [
+        "site:angular-signals"
+      ],
+      "occurrences": 1,
+      "observed_at": "2026-10-31T09:58:54.0607444Z",
+      "state": "public",
+      "http_status": null,
+      "public_repository": "plastikaweb/plastikspace",
+      "repository_id": 550328127,
+      "owner": "plastikaweb",
+      "default_branch": "develop",
+      "archived": false,
+      "disabled": false
+    },
+    {
+      "listed_repository": "popo0407/claudmd",
+      "occurrence_ids": [
+        "site:aws-bedrock-model"
+      ],
+      "occurrences": 1,
+      "observed_at": "2026-10-31T09:58:55.1260709Z",
+      "state": "unresolved",
+      "http_status": 404
+    },
+    {
+      "listed_repository": "punkfuncgames/tetris-clone",
+      "occurrence_ids": [
+        "site:implement-game"
+      ],
+      "occurrences": 1,
+      "observed_at": "2026-10-31T09:58:55.8453112Z",
+      "state": "unresolved",
+      "http_status": 404
+    },
+    {
+      "listed_repository": "pvliesdonk/agents.md",
+      "occurrence_ids": [
+        "site:release-flow",
+        "site:prompt-craft",
+        "site:cli-patterns-53bac2",
+        "site:data-patterns",
+        "site:issue-writing",
+        "site:python-patterns-bfe58e",
+        "site:langchain-patterns",
+        "site:dual-model-strategy",
+        "site:memory-patterns",
+        "site:github-workflow",
+        "site:testing-patterns-c38604",
+        "site:observability-patterns",
+        "site:documentation-patterns"
+      ],
+      "occurrences": 13,
+      "observed_at": "2026-10-31T09:58:56.6241489Z",
+      "state": "unresolved",
+      "http_status": 404
+    },
+    {
+      "listed_repository": "raintree-technology/claude-starter",
+      "occurrence_ids": [
+        "site:anthropic-expert"
+      ],
+      "occurrences": 1,
+      "observed_at": "2026-10-31T09:58:57.301153Z",
+      "state": "unresolved",
+      "http_status": 404
+    },
+    {
+      "listed_repository": "ramybarsoum/rstack-v0",
+      "occurrence_ids": [
+        "site:implementation-plan-4277b4"
+      ],
+      "occurrences": 1,
+      "observed_at": "2026-10-31T09:58:57.9916103Z",
+      "state": "unresolved",
+      "http_status": 404
+    },
+    {
+      "listed_repository": "raphi011/skills",
+      "occurrence_ids": [
+        "site:pr-go"
+      ],
+      "occurrences": 1,
+      "observed_at": "2026-10-31T09:58:58.7244321Z",
+      "state": "unresolved",
+      "http_status": 404
+    },
+    {
+      "listed_repository": "rawknee-69/beta-claw",
+      "occurrence_ids": [
+        "site:add-gmail"
+      ],
+      "occurrences": 1,
+      "observed_at": "2026-10-31T09:58:59.4295831Z",
+      "state": "unresolved",
+      "http_status": 404
+    },
+    {
+      "listed_repository": "rbradshaw9/rebar",
+      "occurrence_ids": [
+        "site:cloning-protocol"
+      ],
+      "occurrences": 1,
+      "observed_at": "2026-10-31T09:59:00.1468847Z",
+      "state": "unresolved",
+      "http_status": 404
+    },
+    {
+      "listed_repository": "robdtaylor/personal-ai-infrastructure",
+      "occurrence_ids": [
+        "site:businessstrategy"
+      ],
+      "occurrences": 1,
+      "observed_at": "2026-10-31T09:59:00.8491898Z",
+      "state": "unresolved",
+      "http_status": 404
+    },
+    {
+      "listed_repository": "rohanrichards/claude-log-search",
+      "occurrence_ids": [
+        "site:search-history"
+      ],
+      "occurrences": 1,
+      "observed_at": "2026-10-31T09:59:01.5160563Z",
+      "state": "unresolved",
+      "http_status": 404
+    },
+    {
+      "listed_repository": "ronancodes/ronan-skills",
+      "occurrence_ids": [
+        "site:youtube-scan"
+      ],
+      "occurrences": 1,
+      "observed_at": "2026-10-31T09:59:02.2264501Z",
+      "state": "unresolved",
+      "http_status": 404
+    },
+    {
+      "listed_repository": "ruchernchong/claude-kit",
+      "occurrence_ids": [
+        "site:create-branch-d5ab23"
+      ],
+      "occurrences": 1,
+      "observed_at": "2026-10-31T09:59:02.9208114Z",
+      "state": "unresolved",
+      "http_status": 404
+    },
+    {
+      "listed_repository": "ryanmr/vela-skills",
+      "occurrence_ids": [
+        "site:vela-rulesets"
+      ],
+      "occurrences": 1,
+      "observed_at": "2026-10-31T09:59:03.5952595Z",
+      "state": "public",
+      "http_status": null,
+      "public_repository": "ryanmr/vela-skills",
+      "repository_id": 1175515049,
+      "owner": "ryanmr",
+      "default_branch": "feat/vela-skills",
+      "archived": false,
+      "disabled": false
+    },
+    {
+      "listed_repository": "sakshamzip2-sys/opencomputer",
+      "occurrence_ids": [
+        "site:opencomputer-mcp-integration"
+      ],
+      "occurrences": 1,
+      "observed_at": "2026-10-31T09:59:04.4460469Z",
+      "state": "unresolved",
+      "http_status": 404
+    },
+    {
+      "listed_repository": "sales-skills/sales",
+      "occurrence_ids": [
+        "site:sales-firsto"
+      ],
+      "occurrences": 1,
+      "observed_at": "2026-10-31T09:59:05.1320582Z",
+      "state": "unresolved",
+      "http_status": 404
+    },
+    {
+      "listed_repository": "samanthaci/stormstack",
+      "occurrence_ids": [
+        "site:security-review-46c2e8",
+        "site:solid-review",
+        "site:test-coverage"
+      ],
+      "occurrences": 3,
+      "observed_at": "2026-10-31T09:59:05.8225411Z",
+      "state": "unresolved",
+      "http_status": 404
+    },
+    {
+      "listed_repository": "scottymcandrew/the-promptorium-scottys-archive-of-ai-chaos",
+      "occurrence_ids": [
+        "site:neuro-architect-prd",
+        "site:multicloud-expert",
+        "site:cicd-expert",
+        "site:security-f3f713",
+        "site:architect-3ffd41",
+        "site:frontend-3df2f9",
+        "site:verifier"
+      ],
+      "occurrences": 7,
+      "observed_at": "2026-10-31T09:59:06.5297214Z",
+      "state": "unresolved",
+      "http_status": 404
+    },
+    {
+      "listed_repository": "sekka/dotfiles",
+      "occurrence_ids": [
+        "site:user-dev-prototype"
+      ],
+      "occurrences": 1,
+      "observed_at": "2026-10-31T09:59:07.2210884Z",
+      "state": "unresolved",
+      "http_status": 404
+    },
+    {
+      "listed_repository": "serpdownloaders/skills",
+      "occurrence_ids": [
+        "site:vimeo-video-downloader",
+        "site:skool-video-downloader",
+        "site:loom-video-downloader",
+        "site:serp-image-downloader",
+        "site:onlyfans-video-downloader",
+        "site:instagram-downloader",
+        "site:bilibili-downloader",
+        "site:tiktok-video-downloader",
+        "site:unsplash-downloader",
+        "site:pexels-video-downloader",
+        "site:pdf-downloader",
+        "site:m3u8-downloader",
+        "site:pixabay-downloader",
+        "site:123movies-downloader",
+        "site:youtube-downloader-c3451f",
+        "site:reddit-downloader",
+        "site:twitter-x-downloader",
+        "site:freepik-downloader",
+        "site:facebook-video-downloader",
+        "site:pornhub-video-downloader",
+        "site:canva-downloader",
+        "site:serp-audio-downloader",
+        "site:amazon-video-downloader",
+        "site:pinterest-downloader",
+        "site:gohighlevel-downloader",
+        "site:stocksy-downloader",
+        "site:soundcloud-downloader",
+        "site:terabox-downloader",
+        "site:soundgasm-downloader",
+        "site:coursera-downloader",
+        "site:hdzog-downloader",
+        "site:moodle-downloader",
+        "site:coomer-downloader",
+        "site:depositphotos-downloader",
+        "site:dailymotion-downloader",
+        "site:sexchathu-downloader",
+        "site:redgifs-downloader",
+        "site:giphy-downloader",
+        "site:learnworlds-downloader",
+        "site:flirt4free-downloader",
+        "site:tubi-downloader",
+        "site:internet-archive-downloader",
+        "site:chaturbate-downloader",
+        "site:patreon-downloader",
+        "site:istock-downloader",
+        "site:netflix-downloader",
+        "site:brightcove-video-downloader",
+        "site:open-video-downloader",
+        "site:getty-images-downloader",
+        "site:tnaflix-video-downloader",
+        "site:kajabi-video-downloader",
+        "site:alpha-porno-downloader",
+        "site:linkedin-learning-downloader",
+        "site:clientclub-downloader",
+        "site:nhentai-downloader",
+        "site:fansly-live-downloader",
+        "site:skillshare-downloader",
+        "site:boyfriendtv-downloader",
+        "site:justforfans-downloader",
+        "site:thinkific-downloader",
+        "site:dreamcam-downloader",
+        "site:flickr-downloader",
+        "site:motherless-downloader",
+        "site:myfreecams-downloader",
+        "site:snapchat-video-downloader",
+        "site:alamy-downloader",
+        "site:yespornplease-downloader",
+        "site:mindvalley-downloader",
+        "site:upornia-downloader",
+        "site:luxuretv-downloader",
+        "site:xhamsterlive-downloader",
+        "site:livejasmin-downloader",
+        "site:erome-downloader",
+        "site:erothots-downloader",
+        "site:serp-video-tools",
+        "site:creative-market-downloader",
+        "site:deviantart-downloader",
+        "site:kick-clip-downloader",
+        "site:scribd-downloader",
+        "site:thisvid-downloader",
+        "site:subscription-tracking-manager",
+        "site:stockvault-downloader",
+        "site:vectorstock-downloader",
+        "site:nicovideo-downloader",
+        "site:wistia-video-downloader",
+        "site:udemy-video-downloader",
+        "site:hentaihaven-downloader",
+        "site:shutterstock-downloader",
+        "site:youporn-video-downloader",
+        "site:tellatv-downloader",
+        "site:rawpixel-downloader",
+        "site:porntrex-downloader",
+        "site:cam4-downloader",
+        "site:xhamster-video-downloader",
+        "site:learndash-downloader",
+        "site:ashemaletube-downloader",
+        "site:linkedin-downloader",
+        "site:circle-downloader",
+        "site:dreamstime-downloader",
+        "site:adobe-stock-downloader",
+        "site:beeg-video-downloader",
+        "site:dreamcam-vr-downloader",
+        "site:camsoda-downloader",
+        "site:serp-video-downloader",
+        "site:xlovecam-downloader",
+        "site:eporner-downloader",
+        "site:tokyomotion-downloader",
+        "site:khan-academy-downloader",
+        "site:hulu-downloader",
+        "site:xvideos-video-downloader",
+        "site:spankbang-video-downloader",
+        "site:streamate-downloader",
+        "site:stripchat-vr-downloader",
+        "site:xfantazy-downloader",
+        "site:camscom-downloader",
+        "site:webinarjam-video-downloader",
+        "site:123rf-downloader",
+        "site:gokollab-downloader",
+        "site:redtube-video-downloader",
+        "site:youjizz-downloader",
+        "site:txxx-downloader",
+        "site:manyvids-downloader",
+        "site:sprout-video-downloader",
+        "site:xnxx-video-downloader",
+        "site:bongacams-downloader",
+        "site:stripchat-video-downloader",
+        "site:whop-video-downloader"
+      ],
+      "occurrences": 127,
+      "observed_at": "2026-10-31T09:59:07.9326584Z",
+      "state": "unresolved",
+      "http_status": 404
+    },
+    {
+      "listed_repository": "shajith003/awesome-claude-skills",
+      "occurrence_ids": [
+        "site:ui-design"
+      ],
+      "occurrences": 1,
+      "observed_at": "2026-10-31T09:59:08.6101238Z",
+      "state": "unresolved",
+      "http_status": 404
+    },
+    {
+      "listed_repository": "sharkitect-solutions/sharkitect-claude-toolkit",
+      "occurrence_ids": [
+        "site:senior-backend-768190"
+      ],
+      "occurrences": 1,
+      "observed_at": "2026-10-31T09:59:09.3744604Z",
+      "state": "unresolved",
+      "http_status": 404
+    },
+    {
+      "listed_repository": "simon-fontaine/scrimflow",
+      "occurrence_ids": [
+        "site:gsd-ultraplan-phase"
+      ],
+      "occurrences": 1,
+      "observed_at": "2026-10-31T09:59:10.2554109Z",
+      "state": "unresolved",
+      "http_status": 404
+    },
+    {
+      "listed_repository": "skillboss-ai/agent-skills",
+      "occurrence_ids": [
+        "site:dall-e-api",
+        "site:social-data-api"
+      ],
+      "occurrences": 2,
+      "observed_at": "2026-10-31T09:59:10.9758758Z",
+      "state": "unresolved",
+      "http_status": 404
+    },
+    {
+      "listed_repository": "skomax/skills",
+      "occurrence_ids": [
+        "site:telegram-bot"
+      ],
+      "occurrences": 1,
+      "observed_at": "2026-10-31T09:59:11.7060636Z",
+      "state": "unresolved",
+      "http_status": 404
+    },
+    {
+      "listed_repository": "sonicbotman/github-development-standard",
+      "occurrence_ids": [
+        "site:github-development-standard"
+      ],
+      "occurrences": 1,
+      "observed_at": "2026-10-31T09:59:12.3992698Z",
+      "state": "unresolved",
+      "http_status": 404
+    },
+    {
+      "listed_repository": "stanz-stanz/heimdall",
+      "occurrence_ids": [
+        "site:python-expert",
+        "site:fullstack-guy",
+        "site:docker-expert-4c6e25",
+        "site:devops-303f47",
+        "site:network-security"
+      ],
+      "occurrences": 5,
+      "observed_at": "2026-10-31T09:59:13.0877388Z",
+      "state": "unresolved",
+      "http_status": 404
+    },
+    {
+      "listed_repository": "sunrisever/glm-ocr",
+      "occurrence_ids": [
+        "site:glm-ocr"
+      ],
+      "occurrences": 1,
+      "observed_at": "2026-10-31T09:59:13.8635624Z",
+      "state": "unresolved",
+      "http_status": 404
+    },
+    {
+      "listed_repository": "surya-sunkari/continuous-algorithms-solver",
+      "occurrence_ids": [
+        "site:convert"
+      ],
+      "occurrences": 1,
+      "observed_at": "2026-10-31T09:59:14.5605372Z",
+      "state": "unresolved",
+      "http_status": 404
+    },
+    {
+      "listed_repository": "swat9013/dotfiles",
+      "occurrence_ids": [
+        "site:architect-dd273c"
+      ],
+      "occurrences": 1,
+      "observed_at": "2026-10-31T09:59:15.2499222Z",
+      "state": "unresolved",
+      "http_status": 404
+    },
+    {
+      "listed_repository": "synqing/bt-hil",
+      "occurrence_ids": [
+        "site:supabase-expert"
+      ],
+      "occurrences": 1,
+      "observed_at": "2026-10-31T09:59:15.9667493Z",
+      "state": "unresolved",
+      "http_status": 404
+    },
+    {
+      "listed_repository": "synqing/k1.node1",
+      "occurrence_ids": [
+        "site:rag-implementation",
+        "site:llm-evaluation",
+        "site:python-testing-patterns",
+        "site:sast-configuration",
+        "site:async-python-patterns",
+        "site:k8s-security-policies",
+        "site:auth-implementation-patterns",
+        "site:e2e-testing-patterns",
+        "site:bash-defensive-patterns",
+        "site:github-actions-templates",
+        "site:sql-optimization-patterns",
+        "site:git-advanced-workflows",
+        "site:web3-testing",
+        "site:cost-optimization",
+        "site:gitops-workflow",
+        "site:python-packaging",
+        "site:hybrid-cloud-networking"
+      ],
+      "occurrences": 17,
+      "observed_at": "2026-10-31T09:59:16.6933412Z",
+      "state": "unresolved",
+      "http_status": 404
+    },
+    {
+      "listed_repository": "taewoongheo/taste",
+      "occurrence_ids": [
+        "site:planning-ecc6d1"
+      ],
+      "occurrences": 1,
+      "observed_at": "2026-10-31T09:59:17.4034642Z",
+      "state": "unresolved",
+      "http_status": 404
+    },
+    {
+      "listed_repository": "taiyousan15/taisun_agent",
+      "occurrence_ids": [
+        "site:research-free"
+      ],
+      "occurrences": 1,
+      "observed_at": "2026-10-31T09:59:18.0967489Z",
+      "state": "unresolved",
+      "http_status": 404
+    },
+    {
+      "listed_repository": "terrifiedbug/nanotars-skills",
+      "occurrence_ids": [
+        "site:add-skill-freshrss"
+      ],
+      "occurrences": 1,
+      "observed_at": "2026-10-31T09:59:18.8669873Z",
+      "state": "unresolved",
+      "http_status": 404
+    },
+    {
+      "listed_repository": "threedreamz/master-weaver-gitfinder-starter",
+      "occurrence_ids": [
+        "site:git-safety"
+      ],
+      "occurrences": 1,
+      "observed_at": "2026-10-31T09:59:19.598934Z",
+      "state": "unresolved",
+      "http_status": 404
+    },
+    {
+      "listed_repository": "tobiascm/vobes-agent-vscode",
+      "occurrence_ids": [
+        "site:ppt-cli"
+      ],
+      "occurrences": 1,
+      "observed_at": "2026-10-31T09:59:20.2941589Z",
+      "state": "unresolved",
+      "http_status": 404
+    },
+    {
+      "listed_repository": "tonyoconnell/agent-ui",
+      "occurrence_ids": [
+        "site:ai-sdk-structured-data"
+      ],
+      "occurrences": 1,
+      "observed_at": "2026-10-31T09:59:21.261867Z",
+      "state": "unresolved",
+      "http_status": 404
+    },
+    {
+      "listed_repository": "travisbumgarner/claude-brain",
+      "occurrence_ids": [
+        "site:python-pro-1f75b0"
+      ],
+      "occurrences": 1,
+      "observed_at": "2026-10-31T09:59:21.9482438Z",
+      "state": "unresolved",
+      "http_status": 404
+    },
+    {
+      "listed_repository": "trevoraspencer/skill-ralph-loop-creator",
+      "occurrence_ids": [
+        "site:ralph-257442"
+      ],
+      "occurrences": 1,
+      "observed_at": "2026-10-31T09:59:22.635356Z",
+      "state": "unresolved",
+      "http_status": 404
+    },
+    {
+      "listed_repository": "trevorplam/agency",
+      "occurrence_ids": [
+        "site:supabase"
+      ],
+      "occurrences": 1,
+      "observed_at": "2026-10-31T09:59:23.3277409Z",
+      "state": "unresolved",
+      "http_status": 404
+    },
+    {
+      "listed_repository": "truongnat/skills",
+      "occurrence_ids": [
+        "site:websocket-pro",
+        "site:testing-pro",
+        "site:gemini-api-dev"
+      ],
+      "occurrences": 3,
+      "observed_at": "2026-10-31T09:59:24.0297447Z",
+      "state": "unresolved",
+      "http_status": 404
+    },
+    {
+      "listed_repository": "trytraza/fde-discovery",
+      "occurrence_ids": [
+        "site:vercel-blob"
+      ],
+      "occurrences": 1,
+      "observed_at": "2026-10-31T09:59:24.7103168Z",
+      "state": "public",
+      "http_status": null,
+      "public_repository": "TryTraza/fde-discovery",
+      "repository_id": 1176236899,
+      "owner": "TryTraza",
+      "default_branch": "develop",
+      "archived": false,
+      "disabled": false
+    },
+    {
+      "listed_repository": "udbfd68-cell/aurion-app",
+      "occurrence_ids": [
+        "site:auth0-android"
+      ],
+      "occurrences": 1,
+      "observed_at": "2026-10-31T09:59:25.7106236Z",
+      "state": "unresolved",
+      "http_status": 404
+    },
+    {
+      "listed_repository": "vcasecnikovs/klava",
+      "occurrence_ids": [
+        "site:evaluate"
+      ],
+      "occurrences": 1,
+      "observed_at": "2026-10-31T09:59:26.4051273Z",
+      "state": "unresolved",
+      "http_status": 404
+    },
+    {
+      "listed_repository": "vinaykumarvk/ps-wms",
+      "occurrence_ids": [
+        "site:vibe-coding-guardrails"
+      ],
+      "occurrences": 1,
+      "observed_at": "2026-10-31T09:59:27.1095609Z",
+      "state": "unresolved",
+      "http_status": 404
+    },
+    {
+      "listed_repository": "wavestreamer-ai/wavehub",
+      "occurrence_ids": [
+        "site:wavestreamer"
+      ],
+      "occurrences": 1,
+      "observed_at": "2026-10-31T09:59:27.8392615Z",
+      "state": "unresolved",
+      "http_status": 404
+    },
+    {
+      "listed_repository": "webmanufaktur/pwaiworkflow",
+      "occurrence_ids": [
+        "site:processwire-multi-language"
+      ],
+      "occurrences": 1,
+      "observed_at": "2026-10-31T09:59:28.5552512Z",
+      "state": "unresolved",
+      "http_status": 404
+    },
+    {
+      "listed_repository": "whaleylaw/llm-lawyer",
+      "occurrence_ids": [
+        "site:accessibility-testing-specialist"
+      ],
+      "occurrences": 1,
+      "observed_at": "2026-10-31T09:59:29.3111046Z",
+      "state": "unresolved",
+      "http_status": 404
+    },
+    {
+      "listed_repository": "wuyoscar/internal-safety-collapse",
+      "occurrence_ids": [
+        "site:isc-bench"
+      ],
+      "occurrences": 1,
+      "observed_at": "2026-10-31T09:54:13.3159311+00:00",
+      "state": "public",
+      "http_status": null,
+      "public_repository": "wuyoscar/Internal-Safety-Collapse",
+      "repository_id": 1170037043,
+      "owner": "wuyoscar",
+      "default_branch": "main",
+      "archived": false,
+      "disabled": false
+    },
+    {
+      "listed_repository": "x402agent/solana-clawd",
+      "occurrence_ids": [
+        "site:1password"
+      ],
+      "occurrences": 1,
+      "observed_at": "2026-10-31T09:59:30.0420878Z",
+      "state": "public",
+      "http_status": null,
+      "public_repository": "x402agent/solana-clawd",
+      "repository_id": 1197555798,
+      "owner": "x402agent",
+      "default_branch": "newnew",
+      "archived": false,
+      "disabled": false
+    },
+    {
+      "listed_repository": "xiaojiou176-open/notes-recover",
+      "occurrence_ids": [
+        "site:notestorelab-case-review"
+      ],
+      "occurrences": 1,
+      "observed_at": "2026-10-31T09:59:30.8284567Z",
+      "state": "public",
+      "http_status": null,
+      "public_repository": "xiaojiou176-open/notes-recover",
+      "repository_id": 1203124839,
+      "owner": "xiaojiou176-open",
+      "default_branch": "main",
+      "archived": false,
+      "disabled": false
+    },
+    {
+      "listed_repository": "yogeshku7877/claude-seo-skills",
+      "occurrence_ids": [
+        "site:seo-gsc-brand-vs-nonbrand",
+        "site:seo-robots-ai"
+      ],
+      "occurrences": 2,
+      "observed_at": "2026-10-31T09:59:31.6787813Z",
+      "state": "unresolved",
+      "http_status": 404
+    },
+    {
+      "listed_repository": "yohayetsion/product-org-os",
+      "occurrence_ids": [
+        "site:compliance-audit"
+      ],
+      "occurrences": 1,
+      "observed_at": "2026-10-31T09:59:32.3553862Z",
+      "state": "public",
+      "http_status": null,
+      "public_repository": "yohayetsion/product-org-os",
+      "repository_id": 1359863916,
+      "owner": "yohayetsion",
+      "default_branch": "main",
+      "archived": false,
+      "disabled": false
+    },
+    {
+      "listed_repository": "yuichi176/artlyst",
+      "occurrence_ids": [
+        "site:openai-knowledge"
+      ],
+      "occurrences": 1,
+      "observed_at": "2026-10-31T09:59:33.1377512Z",
+      "state": "unresolved",
+      "http_status": 404
+    },
+    {
+      "listed_repository": "yusufcmg/agent_memory_systems",
+      "occurrence_ids": [
+        "site:video-editing",
+        "site:backend-patterns-329f91"
+      ],
+      "occurrences": 2,
+      "observed_at": "2026-10-31T09:59:33.926078Z",
+      "state": "unresolved",
+      "http_status": 404
+    },
+    {
+      "listed_repository": "yysun/apprun",
+      "occurrence_ids": [
+        "site:apprun-skills"
+      ],
+      "occurrences": 1,
+      "observed_at": "2026-10-31T09:54:12.3419349+00:00",
+      "state": "public",
+      "http_status": null,
+      "public_repository": "yysun/apprun",
+      "repository_id": 70208212,
+      "owner": "yysun",
+      "default_branch": "master",
+      "archived": false,
+      "disabled": false
+    }
+  ],
+  "fixed_path_rechecks": [
+    {
+      "occurrence_id": "site:apprun-skills",
+      "repository": "yysun/apprun",
+      "fixed_commit": "4141f9bf65aa8283d6e726efd6001330cebc2653",
+      "listed_path": "SKILL.md",
+      "state": "listed exact path segment absent in complete fixed subtree",
+      "absent_segment": "SKILL.md",
+      "fixed_commit_tree": "c896a56e367e65054540325b3c107728feb929ae",
+      "walk": [
+        {
+          "tree": "c896a56e367e65054540325b3c107728feb929ae",
+          "segment": "SKILL.md",
+          "truncated": false,
+          "matching_nodes": 0,
+          "case_insensitive_nodes": []
+        }
+      ],
+      "body_reads": 0,
+      "does_not_establish_absence_from_all_history": true
+    },
+    {
+      "occurrence_id": "site:octocode-slides",
+      "repository": "bgauryy/octocode",
+      "fixed_commit": "c265e3f9413161c900cbf4aa70d451b8e6b3920a",
+      "listed_path": "skills/octocode-slides/SKILL.md",
+      "state": "listed exact path segment absent in complete fixed subtree",
+      "absent_segment": "octocode-slides",
+      "fixed_commit_tree": "3b46cff42429a453bff4b69b032aaeda31f15f7e",
+      "walk": [
+        {
+          "tree": "3b46cff42429a453bff4b69b032aaeda31f15f7e",
+          "segment": "skills",
+          "truncated": false,
+          "matching_nodes": 1,
+          "case_insensitive_nodes": [
+            {
+              "mode": "040000",
+              "path": "skills",
+              "sha": "339d26c0a852e479edc9aaa3bad9f7dbc10947c2",
+              "size": null,
+              "type": "tree"
+            }
+          ]
+        },
+        {
+          "tree": "339d26c0a852e479edc9aaa3bad9f7dbc10947c2",
+          "segment": "octocode-slides",
+          "truncated": false,
+          "matching_nodes": 0,
+          "case_insensitive_nodes": []
+        }
+      ],
+      "body_reads": 0,
+      "does_not_establish_absence_from_all_history": true
+    },
+    {
+      "occurrence_id": "site:isc-bench",
+      "repository": "wuyoscar/internal-safety-collapse",
+      "fixed_commit": "6fc4e1011b9c1c6c9ce64a1a98ade8c73d7b8591",
+      "listed_path": "SKILL.md",
+      "state": "listed exact path segment absent in complete fixed subtree",
+      "absent_segment": "SKILL.md",
+      "fixed_commit_tree": "82e2d9d18406ae7e0b5c8ae2794d6b2dbe294ecc",
+      "walk": [
+        {
+          "tree": "82e2d9d18406ae7e0b5c8ae2794d6b2dbe294ecc",
+          "segment": "SKILL.md",
+          "truncated": false,
+          "matching_nodes": 0,
+          "case_insensitive_nodes": []
+        }
+      ],
+      "body_reads": 0,
+      "does_not_establish_absence_from_all_history": true
+    },
+    {
+      "occurrence_id": "site:linear-release-setup",
+      "repository": "novuhq/novu",
+      "fixed_commit": "50597bd3874dc28616cd5a21eadf7d07a33ce5ae",
+      "listed_path": ".agents/skills/linear-release-setup/SKILL.md",
+      "state": "listed exact path segment absent in complete fixed subtree",
+      "absent_segment": ".agents",
+      "fixed_commit_tree": "c71f388369bd328a24f96a6bf7abc2a9097d5c0b",
+      "walk": [
+        {
+          "tree": "c71f388369bd328a24f96a6bf7abc2a9097d5c0b",
+          "segment": ".agents",
+          "truncated": false,
+          "matching_nodes": 0,
+          "case_insensitive_nodes": []
+        }
+      ],
+      "body_reads": 0,
+      "does_not_establish_absence_from_all_history": true
+    }
+  ]
+}

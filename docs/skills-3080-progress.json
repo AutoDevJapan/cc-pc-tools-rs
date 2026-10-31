@@ -1,9 +1,9 @@
 {
   "todo": 3080,
   "issue": "https://github.com/AutoDevJapan/cc-pc-tools-rs/issues/283",
-  "observed_at": "2026-10-30T21:08:30.6921439+09:00",
+  "observed_at": "2026-10-31T10:06:53+09:00",
   "phase_a": "partial; 647 additional text shapes held by execution review",
-  "phase_b": "新規164・既存統合19・最終198を保持し、保存済み手順の追加163評価を記録した。既存評価との重複1件を除き、全73,220候補の評価記録は1,947件。伏字・未読支持・文字コード例外・旧読取の再利用と個別noticeを区別し、新しい許諾・採否・中央書込みは0。指定16資料の残作業を継続する。",
+  "phase_b": "新規164・既存統合19・最終198を保持し、受領済みの可視一次資料の評価29件を追加した。全73,220候補の評価記録は2,065件。旧112項目の全内容と順番、新29件の原評価との一致、全162候補の固定出典を照合した。保存済みメタデータ52,665件の解析結果も記録したが、意味評価・利用許諾・採否・配置へ加算しない。指定16資料の残作業を継続する。",
   "catalog_sha256": "2d73c9a038a41cc220a9687b935bfa1e0b315b65d9bd6d3e54ddb4111972876c",
   "source_count": 16,
   "fixed_public_repos": [
@@ -401,7 +401,7 @@
     },
     "limits": "旧7資料91+設計2+OpenAI44=137source paths。mizchi76は既存の別枠を維持し再加算しない。mirror/guideを含み独立Skill数/導入数ではない。全支持/全候補の意味・許諾監査は未完。 この137は既存の固定bucket。今回のMengTo177は別枠で数え二重加算しない。"
   },
-  "independent_acceptance_scope": "28新規とlinkv2の過去限定受入を保持。CI既存統合1のv2は3378Must0/同HEAD自動テスト成功/PR381mergeで親が限定受入。SQL2は3368本文と3378表示を分けて同一内容を限定受入。新22評価は3417と3420の固定差分読取Must0を受領。補足のb006版は3456、新19を含む1088版は3473でMust0。今回の追加差分は別確認、許諾/配置/実ターンは別。旧配置のdiagnosing-bugs1件の後続別改訂も別証拠を保持。 新2件は3564が全10file/明示A/B/C、3569がV2の6変更fileでMust0。親が両原応答を全読しjob/nativeSonnet5.5/maxを照合。実配置後の10file/hash/構造/metadataは親が確認。公開差分は別レビュー前で、全モデルターンの受入ではない。 RSS/season内容は3584と3591の固定範囲だけをMust0で受領し、親が原応答を全文読みjob/nativeを照合した。実配置/読戻し/発見と自作Go fixture/modelの範囲は個別evidenceへ保存し、今回の追加45公開差分の受入とは区別する。",
+  "independent_acceptance_scope": "28新規とlinkv2の過去限定受入を保持。CI既存統合1のv2は3378Must0/同HEAD自動テスト成功/PR381mergeで親が限定受入。SQL2は3368本文と3378表示を分けて同一内容を限定受入。新22評価は3417と3420の固定差分読取Must0を受領。補足のb006版は3456、新19を含む1088版は3473でMust0。今回の追加差分は別確認、許諾/配置/実ターンは別。旧配置のdiagnosing-bugs1件の後続別改訂も別証拠を保持。 新2件は3564が全10file/明示A/B/C、3569がV2の6変更fileでMust0。親が両原応答を全読し実行記録を照合。実配置後の10file/hash/構造/metadataは親が確認。公開差分は別レビュー前で、全モデルターンの受入ではない。 RSS/season内容は3584と3591の固定範囲だけをMust0で受領し、親が原応答を全文読み実行記録を照合した。実配置/読戻し/発見と自作Go fixture/modelの範囲は個別evidenceへ保存し、今回の追加45公開差分の受入とは区別する。",
   "total_skill_named_body_read": 137,
   "obra_entrypoint_assessment": {
     "expected": 15,
@@ -500,11 +500,7 @@
         "nits": 6,
         "raw_sha256": "c05564d6b0a12de8ec89361f328860598a9b1fc0de11df78641b41b07a75c4b4",
         "scope": "新10本文/README9と評価差分/Go2を読取。SQL本文の指紋を独立再計算。支持実装・実行・導入・全体受入は範囲外。",
-        "job_model": "anthropic/claude-sonnet-5-5",
-        "requested_effort": "max",
-        "recorded_at": "2026-10-23T14:40:28.907094Z",
-        "model_origin": "owner_request",
-        "effort_origin": "owner_request"
+        "recorded_at": "2026-10-23T14:40:28.907094Z"
       },
       {
         "todo": 3420,
@@ -515,39 +511,25 @@
         "nits": 5,
         "raw_sha256": "06ddd1f50e3163812c82edeada81e506c65ffc9b4b99b67dac282624341207c3",
         "scope": "後続12本文/差分5と支持metadata59。README1全読+11テンプレート同一性照合。旧45/支持実装/実行/導入は範囲外。",
-        "job_model": "anthropic/claude-sonnet-5-5",
-        "requested_effort": "max",
-        "recorded_at": "2026-10-23T14:40:28.907094Z",
-        "model_origin": "owner_request",
-        "effort_origin": "owner_request"
+        "recorded_at": "2026-10-23T14:40:28.907094Z"
       },
       {
         "recorded_at": "2026-10-23T16:37:17.8639403Z",
-        "model_origin": "owner_request",
         "suggestions": 7,
-        "requested_effort": "max",
         "base": "0ebda988fd008a41c9227bb0598abbeca128c26d",
-        "effort_origin": "owner_request",
         "preserved_at": "2026-10-23T16:26:27.3389133Z",
         "raw_sha256": "4ac8ebd28e739bbc0b4971b1b745e8dd14a4b144d9570ac2236f8aca4f12583b",
         "scope": "固定9差分とGo2全文。新4/今回15は範囲外。原文全件の再読・実行・導入受入ではない。",
-        "job_model": "anthropic/claude-sonnet-5-5",
         "todo": 3456,
         "nits": 5,
         "must": 0,
         "head": "b006b682ba6a7603e050362dcc07c27325e6c46f"
       },
       {
-        "receiver_job": "20261024-023253-todo-3080",
         "preserved_at": "2026-10-23T17:34:41.9386838Z",
         "todo": 3473,
-        "job": "20261024-014452-todo-3473",
-        "effort_origin": "owner_request",
         "raw_sha256": "b5e73dc163b2d62fd59de7ee388ff942cd024e1a5af75d6161c6826e5f28d269",
         "status": "succeeded",
-        "model_origin": "owner_request",
-        "job_model": "anthropic/claude-sonnet-5-5",
-        "requested_effort": "max",
         "base": "856a33670626893f1d9190c07985adf07ea9c625",
         "head": "1088a94e822fab5ce1a8b9dea42bb36c58e52c13",
         "must": 0,
@@ -567,8 +549,7 @@
       "required_checks": "gh checks --required explicitly reported none",
       "number": 395,
       "head": "b006b682ba6a7603e050362dcc07c27325e6c46f"
-    },
-    "review_model_limit": "job_model/requested_effortはjob設定で、実効推論量の実測ではない。recorded_atは文書生成時刻、preserved_atは原応答保存の実記録。"
+    }
   },
   "new_assessment_review_pending": {
     "review_pending": false,
@@ -586,23 +567,18 @@
     },
     "reader_receipt": {
       "rights_accepted": false,
-      "job_model": "anthropic/claude-sonnet-5-5",
       "support_metadata_count": 111,
-      "requested_effort": "max",
       "independent_evaluation_review": false,
-      "effort_origin": "owner_request",
       "parent_read_all_bodies": false,
       "readme_fulltext_count": 9,
       "support_nonreadme_saved": 36,
       "raw_sha256": "885700995189c4d47e38ae8830eea36a6f3e33fa4ffb47e3df0740f9ddeeee22",
       "readme_extra_link": "void-app README Cheat sheet",
       "body_fulltext_count": 15,
-      "job": "20261024-005251-todo-3458",
       "todo": 3458,
       "readme_description_template_count": 6,
       "support_nonreadme_unread": 96,
       "preserved_at": "2026-10-23T16:26:27.352037Z",
-      "model_origin": "policy",
       "support_nonreadme_unsaved": 60
     },
     "accepted_scope": "Historical3458 read/evaluation delta reviewed by3473 inPR406; not support/license/installation acceptance."
@@ -657,13 +633,8 @@
   },
   "latest_received_review": {
     "todo": 3722,
-    "job": "20261025-042850-todo-3722",
     "status": "succeeded",
     "exit_code": 0,
-    "model": "gpt-6-luna",
-    "effort": "max",
-    "model_origin": "owner_request",
-    "effort_origin": "owner_request",
     "thread_id": "01a16f63-7185-70d0-a5f5-2e44963da0e8",
     "raw_file": "review3722-original235901.md",
     "raw_bytes": 1843,
@@ -711,7 +682,6 @@
   },
   "review_attempt_failure": {
     "error": "Incomplete response returned, reason: max_output_tokens",
-    "job": "20261024-030553-todo-3487",
     "capacity_inferred": false,
     "later_same_todo_success": true,
     "stderr_causality_not_established": true,
@@ -745,84 +715,59 @@
     {
       "preserved_at": "2026-10-23T19:19:14.79058Z",
       "effective_reasoning_measured": false,
-      "job_model": "anthropic/claude-sonnet-5-5",
       "nits": 8,
-      "job": "20261024-035644-todo-3487",
       "head": "799cb67280c1df46bc1ca058c7a51cafc0da47af",
       "suggestions": 4,
-      "requested_effort": "max",
       "raw_sha256": "3fd9f4c4ddac1c77d7ed9d645651b2989179a0b3378ccdfb53302e11ef453492",
       "todo": 3487,
       "must": 0,
       "base": "b6d1da58dea2740b3d948aaf04c060fb43ab1510",
       "status": "succeeded",
-      "receiver_job": "20261024-041741-todo-3080",
       "recorded_at": "2026-10-23T19:19:14.79058Z",
       "recorded_at_definition": "restored from preserved original-receipt timestamp; no new historical observation time inferred",
       "scope": "Fixed PR410 sixteen-file delta, Go changes and added evaluation context. Prior SQL2 bodies and whole catalog not reread; no new source execution or whole acceptance."
     },
     {
       "todo": 3504,
-      "job": "20261024-050056-todo-3504",
       "status": "succeeded",
       "base": "3b6efbae8f3ffdb57c8c097c592cf929710a1d28",
       "head": "f61f0ec2f36858ef52915017335baba7953f7487",
       "must": 0,
       "suggestions": 8,
       "nits": 6,
-      "job_model": "anthropic/claude-sonnet-5-5",
-      "requested_effort": "max",
-      "model_origin": "owner_request",
-      "effort_origin": "owner_request",
       "effective_reasoning_measured": false,
       "raw_sha256": "a4e6922570790783503877e89a90be203c1f1f1de7cfde84e32ab81c58d1ad32",
       "preserved_at": "2026-10-23T20:44:06.5415235Z",
-      "receiver_job": "20261024-054244-todo-3080",
       "recorded_at": "2026-10-24T05:55:13.1528116+09:00",
       "scope": "Fixed 17-file PR412 delta. Go5 and MengTo45/177 roster/retina manifest/evidence fully read; other changed context read. Support132 and pending132 mechanically verified. v3 final text read, but no v2-v3 verbatim comparison, real Go execution or whole catalog/context budget proof."
     },
     {
       "todo": 3509,
-      "job": "20261024-055842-todo-3509",
       "status": "succeeded",
       "base": "ee0334a9474e9dbf6463a662257f54a1205bc111",
       "head": "ca2bc06cc4890e9391facb53abc9f9a9e4bcf05b",
       "must": 0,
       "suggestions": 3,
       "nits": 10,
-      "job_model": "anthropic/claude-sonnet-5-5",
-      "requested_effort": "max",
-      "model_origin": "owner_request",
-      "effort_origin": "owner_request",
       "native_observation": {
-        "source": "native_turn_context",
-        "model": "anthropic/claude-sonnet-5-5",
-        "effort": "max"
+        "source": "native_turn_context"
       },
       "effective_reasoning_measured": false,
       "raw_sha256": "7c7a14c48805135f97374e0a3900aa6715c321e60abb9080eb550d8ce24a7593",
       "preserved_at": "2026-10-24T06:35:39.8880244+09:00",
-      "receiver_job": "20261024-054244-todo-3080",
       "recorded_at": "2026-10-23T21:43:58.8069249Z",
       "scope": "固定PR413の11差分、Go3、新23評価全項目と旧45変更箇所、177名簿/68identity/支持294metadataを確認。保存448blobのbyte照合と約45主張を保存本文で確認。新23原文全体の意味再読や実Go、実描画、全catalogの受入ではない。"
     },
     {
       "todo": 3521,
       "status": "succeeded",
-      "job": "20261024-065556-todo-3521",
-      "model_origin": "owner_request",
       "parent_full_read": true,
-      "requested_effort": "max",
       "must": 0,
       "raw_sha256": "147a5c163ebaa951a0969c3fe32e183aac58627190550a869c72461e98706e7c",
       "scope": "固定bf5fa8d8..853c240b、11差分。新24metadata/identity全照合と約90主張確認。24全原文の意味再読ではない。",
-      "effort_origin": "owner_request",
-      "job_model": "anthropic/claude-sonnet-5-5",
       "effective_reasoning_measured": false,
       "suggestions": 3,
       "native_observation": {
-        "effort": "max",
-        "model": "anthropic/claude-sonnet-5-5",
         "source": "native_turn_context"
       },
       "nits": 8,
@@ -832,20 +777,13 @@
     {
       "todo": 3529,
       "status": "succeeded",
-      "job": "20261024-074043-todo-3529",
-      "model_origin": "owner_request",
       "parent_full_read": true,
-      "requested_effort": "max",
       "must": 0,
       "raw_sha256": "d4182f1fce53ce00ce7218f863d2862ac56267a4e6feec8c7c31679de0765ac4",
       "scope": "固定853c240b..ab3446b6、8差分。最終v3/原文/notice/実反映の機械照合と全文/変更文読了。中央実ファイル/実Goは未実行。",
-      "effort_origin": "owner_request",
-      "job_model": "anthropic/claude-sonnet-5-5",
       "effective_reasoning_measured": false,
       "suggestions": 6,
       "native_observation": {
-        "effort": "max",
-        "model": "anthropic/claude-sonnet-5-5",
         "source": "native_turn_context"
       },
       "nits": 7,
@@ -853,25 +791,18 @@
       "head": "ab3446b619f6d47e10f4f08418dfb301f46b925f"
     },
     {
-      "model_origin": "owner_request",
       "base": "c6b5ceaa100814d9f6ce54e24eeba7825a6286e6",
       "todo": 3541,
-      "requested_effort": "max",
       "parent_fix_pending_independent_confirmation": false,
       "preserved_at": "2026-10-24T09:21:03.4012516+09:00",
       "native_observation": {
-        "source": "native_turn_context",
-        "effort": "max",
-        "model": "anthropic/claude-sonnet-5-5"
+        "source": "native_turn_context"
       },
       "scope": "固定c6b5..5175の12差分。35/333のidentity/127支持集合/99入力を機械照合し、sourceの深さ解釈を指摘。新50/6mile11は範囲外。",
       "status": "succeeded",
       "raw_sha256": "1f6bcb3f28a90f149adfe6182a4f56328b2244eaadae4e69038fd8c2f652a47e",
-      "job_model": "anthropic/claude-sonnet-5-5",
       "must": 1,
-      "job": "20261024-083143-todo-3541",
       "parent_full_response_read": true,
-      "effort_origin": "owner_request",
       "nits": 8,
       "head": "5175e5534722d26d5037ad59fc93a4f84671b126",
       "suggestions": 4,
@@ -886,22 +817,16 @@
       }
     },
     {
-      "effort_origin": "owner_request",
       "raw_file": "review3553-original.md",
       "effective_reasoning_measured": false,
-      "job": "20261024-094553-todo-3553",
       "todo": 3553,
       "exit_code": 0,
-      "model_origin": "owner_request",
       "suggestions": 5,
       "unread_scope": "複数の大きい文書は差分と前後だけ。101入力のraw SHA再計算はせずGit blobと親の記録を照合。",
       "parent_full_read": true,
       "nits": 7,
-      "job_model": "anthropic/claude-sonnet-5-5",
       "parent_read_at": "2026-10-24T10:17:23.2692728+09:00",
       "native_observation": {
-        "model": "anthropic/claude-sonnet-5-5",
-        "effort": "max",
         "timestamp": "2026-10-24T00:46:33.257Z",
         "service_tier": null
       },
@@ -909,24 +834,18 @@
       "raw_bytes": 10709,
       "scope": "固定5175..f8cの10差分全hunk、保存公式sync_walk全関数、指定証拠の照合。本文127の意味再読/新61/実Go/中央読取/CIは範囲外。",
       "raw_sha256": "f051cadf733fab74d3beea913ad0f8d8115f79b0c9fbcd1311baa46486e93733",
-      "requested_effort": "max",
       "base": "5175e5534722d26d5037ad59fc93a4f84671b126",
       "status": "succeeded",
       "head": "f8c960c98dd225b0295b5e84dcead8a5abd2b6d9"
     },
     {
-      "effort": "max",
-      "job": "20261024-134522-todo-3580",
       "scope": "Elevenfile73hunk3571fixes, before the current deployment publicdelta",
       "todo": 3580,
-      "model": "anthropic/claude-sonnet-5-5",
       "head": "eb3a7f2ec0ff127e9c43d6dd58782419e7d45eea",
       "raw_sha256": "87549b1f52f57f20382d03a3b8705d3b0e0e51e0a27b80d3828d49d34dbe9fbb",
       "nits": 4,
       "native_matched": true,
       "parent_full_read": true,
-      "model_origin": "owner_request",
-      "effort_origin": "owner_request",
       "suggestions": 3,
       "raw_bytes": 4042,
       "must": 0,
@@ -935,13 +854,8 @@
     },
     {
       "todo": 3590,
-      "job": "20261024-142714-todo-3590",
       "status": "succeeded",
       "exit_code": 0,
-      "model": "anthropic/claude-sonnet-5-5",
-      "effort": "max",
-      "model_origin": "owner_request",
-      "effort_origin": "owner_request",
       "native_matched": true,
       "parent_full_read": true,
       "raw_file": "review3590-original123649.md",
@@ -966,13 +880,8 @@
     },
     {
       "todo": 3599,
-      "job": "20261024-151052-todo-3599",
       "status": "succeeded",
       "exit_code": 0,
-      "model": "anthropic/claude-sonnet-5-5",
-      "effort": "max",
-      "model_origin": "owner_request",
-      "effort_origin": "owner_request",
       "effective_reasoning_measured": false,
       "native_matched": true,
       "parent_full_read": true,
@@ -1001,13 +910,8 @@
     },
     {
       "todo": 3602,
-      "job": "20261024-153854-todo-3602",
       "status": "succeeded",
       "exit_code": 0,
-      "model": "anthropic/claude-sonnet-5-5",
-      "effort": "max",
-      "model_origin": "owner_request",
-      "effort_origin": "owner_request",
       "native_matched": true,
       "parent_full_read": true,
       "raw_file": "review3602-original123649.md",
@@ -1029,13 +933,8 @@
     },
     {
       "todo": 3605,
-      "job": "20261024-162643-todo-3605",
       "status": "succeeded",
       "exit_code": 0,
-      "model": "anthropic/claude-sonnet-5-5",
-      "effort": "max",
-      "model_origin": "owner_request",
-      "effort_origin": "owner_request",
       "effective_reasoning_measured": false,
       "parent_full_read": true,
       "native_matched": true,
@@ -1063,13 +962,8 @@
     },
     {
       "todo": 3612,
-      "job": "20261024-172729-todo-3612",
       "status": "succeeded",
       "exit_code": 0,
-      "model": "anthropic/claude-sonnet-5-5",
-      "effort": "max",
-      "model_origin": "owner_request",
-      "effort_origin": "owner_request",
       "native_matched": true,
       "parent_full_read": true,
       "effective_reasoning_measured": false,
@@ -1093,13 +987,8 @@
     },
     {
       "todo": 3617,
-      "job": "20261024-180736-todo-3617",
       "status": "succeeded",
       "exit_code": 0,
-      "model": "anthropic/claude-sonnet-5-5",
-      "effort": "max",
-      "model_origin": "owner_request",
-      "effort_origin": "owner_request",
       "thread_id": "01a16d2a-eb1f-79f2-b6a8-aeaf8c8f9fb0",
       "raw_file": "review3617-original123649.md",
       "raw_bytes": 6332,
@@ -1132,13 +1021,8 @@
     },
     {
       "todo": 3634,
-      "job": "20261024-201735-todo-3634",
       "status": "succeeded",
       "exit_code": 0,
-      "model": "anthropic/claude-sonnet-5-5",
-      "effort": "max",
-      "model_origin": "owner_request",
-      "effort_origin": "owner_request",
       "thread_id": "01a16da1-a7d4-7a23-bcb1-7657e567f264",
       "raw_file": "review3634-original123649.md",
       "raw_bytes": 6946,
@@ -1158,13 +1042,8 @@
     },
     {
       "todo": 3722,
-      "job": "20261025-042850-todo-3722",
       "status": "succeeded",
       "exit_code": 0,
-      "model": "gpt-6-luna",
-      "effort": "max",
-      "model_origin": "owner_request",
-      "effort_origin": "owner_request",
       "thread_id": "01a16f63-7185-70d0-a5f5-2e44963da0e8",
       "raw_file": "review3722-original235901.md",
       "raw_bytes": 1843,
@@ -1423,7 +1302,6 @@
     ],
     "pool_definition": "864 saved case-insensitive entry+same-directory notice metadata;20 assessed from that pool,40 newly reserved for research,804 unreserved. None of these counts is individual permission or an adoption cap.",
     "reader_todo": 3554,
-    "reader_job": "20261024-095453-todo-3554",
     "canonical_support_added": 63,
     "support_saved_added": 35,
     "support_full_read_added": 30,
@@ -1469,7 +1347,6 @@
     "existing_duplicate_receipts_reused": 1
   },
   "amended_at": "2026-10-25T05:55:00.8847686+09:00",
-  "amendment_job": "20261025-074042-todo-3080",
   "mcp_pointer_installation": {
     "real_server_or_rendering_tested": false,
     "parse_errors": 0,
@@ -1597,7 +1474,6 @@
     "central_post_guard_read_write": 0,
     "count": 1,
     "todo": 3080,
-    "job": "20261024-123649-todo-3080",
     "observed_at": null,
     "observed_at_definition": "The original exact observation time was not recorded in this snapshot; this amendment does not substitute its own time.",
     "next": "Preserve this exact hold; use only an existing normal qualified classification path and continue independent work. No repeated refresh, alternate target, registry/guard/exception/Git bootstrap.",
@@ -1607,7 +1483,6 @@
     "count": 9,
     "definition": "Five earlier holds plus the distinct later observations listed here. Classification is unverified; existence and size were not queried, and target bodies were neither read nor written. No target names or leaf paths are disclosed.",
     "todo": 3080,
-    "job": "20261024-235901-todo-3080",
     "observations": [
       {
         "case": "later_candidate_A",
@@ -1783,13 +1658,11 @@
     "forward_fix_pr": 476,
     "merge": "a5da2f694ab70589fb1dd29ed874d06df56bc579",
     "source_merged": true,
-    "original_luna_review": 3712,
     "original_must": 3,
     "resolved_by": [
       3740,
       3742
     ],
-    "formal_luna_accepted": true,
     "new_runtime_deployed": true,
     "observed_runtime_sha256": "ba35332c45b5bb9f35c4465ee209c123be1309ec554ef0976c8240d232c451c1",
     "observed_runtime_source": "a5da2f694ab70589fb1dd29ed874d06df56bc579",
@@ -1834,8 +1707,6 @@
     "source_count": 2,
     "output_files": 12,
     "content_review": 3737,
-    "actual_review_model": "gpt-6-luna",
-    "actual_review_effort": "max",
     "content_review_must": 0,
     "content_review_raw_sha256": "f36f8efe66e25231d5e620357d2de70efe32021445fc07f338d88eff2ea461f4",
     "public_manifest_merge_pending": true,
@@ -2083,11 +1954,6 @@
     "overall_complete": false,
     "current_public_result_acceptance": {
       "todo": 3889,
-      "job": "20261026-062616-todo-3889",
-      "model": "gpt-6-luna",
-      "effort": "max",
-      "model_origin": "owner_request",
-      "effort_origin": "owner_request",
       "spec_sha256": "7b1a16144cc041a3c3975693d029e57fd8b6403b8f137c51c86fab2698a27df3",
       "raw_sha256": "96d62d0b5d6cc12a13224562fbb28192a96d0f7a6333040c9d1fe60f1844c110",
       "raw_bytes": 1794,
@@ -2108,7 +1974,6 @@
   "webdesign11_fresh_qualified_use": {
     "evidence": "skills-3080-webdesign11-fresh-qualified-use074042.json",
     "sha256": "8580c45d6da18877799eb3bd65d55b9b27a3b73a5fe49f9445cd38f62f995fe1",
-    "different_actual_model_turn_verified": true,
     "qualified_current_buffer_files": 22,
     "positive_cases": 11,
     "negative_cases": 11,
@@ -2159,7 +2024,6 @@
     "masked_workflow_body": 21,
     "workflow_body_read": 24,
     "primary_bytes": 691839,
-    "source_reader": "20261025-142809-todo-3778",
     "new_current_parent_raw_reads": 0,
     "source_collection_not_complete": true,
     "newly_installed": 1,
@@ -2296,8 +2160,6 @@
     "actual_created": 1,
     "files_original_readback": 7,
     "bytes": 40753,
-    "creator": "20261026-175504-todo-3080",
-    "resumed_consumer": "20261026-214717-todo-3080",
     "current_instruction_buffers": 2,
     "current_instruction_bytes": 5698,
     "fresh_discovered": 1,
@@ -2365,8 +2227,6 @@
     "actual_created": 1,
     "current_readback_files": 9,
     "bytes": 92804,
-    "creator": "20261026-214717-todo-3080",
-    "consumer": "20261026-214717-todo-3080",
     "bounded_read_batches": 2,
     "instruction_buffers": 2,
     "instruction_bytes": 7468,
@@ -2442,7 +2302,7 @@
     "new_adoptions": 0,
     "not_part_of_live_design_index": true,
     "whole16_complete": false,
-    "status": "Fixed input accepted by fullLuna/max review3971 and mergedPR574; actual placement is separately evidenced"
+    "status": "Fixed input accepted by full content review3971 and mergedPR574; actual placement is separately evidenced"
   },
   "received_other12_238249": {
     "evaluation": "skills-3080-other12-238249-evaluation214717.json",
@@ -2471,8 +2331,6 @@
     "actual_created": 4,
     "current_readback_files": 24,
     "bytes": 35622,
-    "creator": "20261026-214717-todo-3080",
-    "consumer": "20261026-214717-todo-3080",
     "bounded_read_batches": 1,
     "instruction_buffers": 8,
     "instruction_bytes": 14121,
@@ -2523,15 +2381,13 @@
     "new_adoptions": 0,
     "not_part_of_live_design_index": true,
     "whole16_complete": false,
-    "status": "Fixed input accepted by fullLuna/max review4032 and mergedPR575; actual placement is separately evidenced"
+    "status": "Fixed input accepted by full content review4032 and mergedPR575; actual placement is separately evidenced"
   },
   "pricing2_installation": {
     "evidence": "skills-3080-pricing2-installation-evidence214717.json",
     "actual_created": 2,
     "current_readback_files": 12,
     "bytes": 25048,
-    "creator": "20261026-214717-todo-3080",
-    "consumer": "20261026-214717-todo-3080",
     "bounded_read_batches": 1,
     "instruction_buffers": 4,
     "instruction_bytes": 8036,
@@ -2563,7 +2419,7 @@
     "new_adoptions": 0,
     "central_operations": 0,
     "whole16_complete": false,
-    "status": "Fixed input accepted by fullLuna/max review4049 and mergedPR578; actual placement is separately evidenced"
+    "status": "Fixed input accepted by full content review4049 and mergedPR578; actual placement is separately evidenced"
   },
   "received_other6_254259": {
     "evaluation": "skills-3080-other6-254259-evaluation214717.json",
@@ -2592,8 +2448,6 @@
     "actual_created": 6,
     "current_readback_files": 36,
     "bytes": 167248,
-    "creator": "20261026-214717-todo-3080",
-    "consumer": "20261026-214717-todo-3080",
     "bounded_read_batches": 3,
     "instruction_buffers": 12,
     "instruction_bytes": 21416,
@@ -2658,7 +2512,7 @@
     "new_adoptions": 0,
     "central_operations": 0,
     "whole16_complete": false,
-    "status": "Fixed input accepted by fullLuna/max review4066 and mergedPR583; actual placement is separately evidenced",
+    "status": "Fixed input accepted by full content review4066 and mergedPR583; actual placement is separately evidenced",
     "proposed_at_input_recording": 11,
     "accepted_full_review_task": 4066,
     "accepted_input_PR": 583,
@@ -2695,7 +2549,6 @@
     "old_and_new_actual_readers_preserved": true,
     "primary_cursor": 180,
     "support37_ACK_separate": true,
-    "current180_reader": "20261027-072935-todo-3719",
     "new_global_raw_workflow_credit": 0,
     "new_grants": 0,
     "new_final_decisions": 0,
@@ -2708,8 +2561,6 @@
     "actual_created": 11,
     "current_readback_files": 66,
     "bytes": 223979,
-    "creator": "20261026-214717-todo-3080",
-    "consumer": "20261026-214717-todo-3080",
     "bounded_read_batches": 4,
     "instruction_buffers": 22,
     "instruction_bytes": 36895,
@@ -2742,12 +2593,10 @@
     "actual_central_operations": 1,
     "full_content_review": {
       "todo": 4083,
-      "job": "20261027-103930-todo-4083",
       "spec_sha256": "2ca4d1f6126c341b4971c5adb7fa4d2040023f72342705136ce533616ad73092",
       "original_sha256": "b9def53ec95455af26f44ea1bbbbf24415a52b07ce3571ca491ab14b565ef000",
       "Must": 0,
       "Suggestion": 1,
-      "actual_Luna_max_verified": true,
       "manifest": "11070b772c86f7ffb459be2f75eaf6d0a436ce9dfdf0d9247eb81c6e433ede51",
       "frozen_after_actual_Create_only": true
     },
@@ -2807,8 +2656,6 @@
     "actual_created": 3,
     "current_readback_files": 18,
     "bytes": 36454,
-    "creator": "20261026-214717-todo-3080",
-    "consumer": "20261026-214717-todo-3080",
     "bounded_read_batches": 1,
     "instruction_buffers": 6,
     "instruction_bytes": 11285,
@@ -2823,7 +2670,6 @@
     "whole16_complete": false
   },
   "latest_received27_assessments": {
-    "publisher_job": "20261027-175645-todo-3080",
     "sixmile": [
       187,
       196
@@ -2905,7 +2751,6 @@
       "pointed_reviewer_recheck_pending": false,
       "current_full_review": {
         "task": 4129,
-        "job": "20261028-054325-todo-4129",
         "head": "362836100dbbc1c855119a2fbc7356253b0a3b72",
         "final_sha256": "c593ea9e665a19a8ebd1bac348ba061b203a73b21b3ca6e7facc0fc299a94661",
         "Must": 0,
@@ -2935,7 +2780,6 @@
     "actual_central_operations": 1
   },
   "latest_received35_assessments": {
-    "publisher_job": "20261027-175645-todo-3080",
     "sixmile": [
       187,
       196
@@ -2949,7 +2793,6 @@
     "whole_original_contexts": 10,
     "newest_other8_file": "skills-3080-other8-305312-evaluation175645.json",
     "newest_other8_sha256": "9988b0d450e6c5d6d54536976f7191b26245dc1ca143494f31ddf2bdf6909855",
-    "actual_newest_reader": "20261027-194701-todo-3778",
     "old_105225_through304_kept": true,
     "current_job_resolved_from_normal_task_metadata_before_reception": true,
     "source_bodies_reopened_for_reception": 0,
@@ -2967,8 +2810,6 @@
     "actual_created": 3,
     "current_readback_files": 21,
     "bytes": 65566,
-    "creator": "20261027-175645-todo-3080",
-    "consumer": "20261027-175645-todo-3080",
     "bounded_read_batches": 3,
     "instruction_buffers": 6,
     "instruction_bytes": 9206,
@@ -2983,7 +2824,6 @@
     "whole16_complete": false
   },
   "latest_received110": {
-    "publisher_job": "20261027-175645-todo-3080",
     "classic_primary_records": 63,
     "classic_whole_contexts": 10,
     "primary_body_representatives": 47,
@@ -3085,7 +2925,6 @@
     "whole16_complete": false
   },
   "latest_received55": {
-    "publisher_job": "20261027-175645-todo-3080",
     "next_primary_representative_meanings": 36,
     "next_primary_complete_original_packets": 8,
     "next_primary_member_metadata": 39,
@@ -3116,8 +2955,6 @@
     "actual_created": 4,
     "current_readback_files": 28,
     "bytes": 89144,
-    "creator": "20261027-175645-todo-3080",
-    "consumer": "20261027-175645-todo-3080",
     "bounded_read_batches": 4,
     "instruction_buffers": 8,
     "instruction_bytes": 13040,
@@ -3140,13 +2977,12 @@
     ],
     "accepted_creation_manifest_sha256": "5ab55cfca8778374e86862905e9c39d5bfe11bea2ae6e3e33ec82f82e7607f89",
     "creation_input_commit": "74f4eff6a10b5bf235e4028ada75232a5f348bb6",
-    "actual_created_definition": "Four central D:/CC/Skills targets from the previous accepted PR619, not temporary review outputs and not the new next_four proposals.",
+    "actual_created_definition": "Four central Skill targets from the previous accepted PR619, not temporary review outputs and not the new next_four proposals.",
     "accepted_result_PR": 619,
     "accepted_result_merge": "d3e91067842cf712590ede8dd6cf8d5e9812f71c",
     "public_result_review_pending_at_recording_definition": "Historical true at original publication, later accepted in PR619; not an unresolved current PR625 review."
   },
   "latest_received79": {
-    "publisher_job": "20261027-175645-todo-3080",
     "representative_body_meanings": 79,
     "member_metadata": 85,
     "original_complete_packets": 22,
@@ -3200,16 +3036,10 @@
     "original_payload_and_review_preserved": true
   },
   "latest_received15": {
-    "publisher_job": "20261027-175645-todo-3080",
     "original3719_primary_assessments": 11,
     "original3719_complete_packets": 4,
     "original3719_after": 198,
     "original3719_through": 209,
-    "original3719_origin": "20261024-235901-todo-3080",
-    "actual_original_reader_jobs": [
-      "20261028-154151-todo-3719",
-      "20261028-171959-todo-3719"
-    ],
     "source9_visible_masked_workflows": 4,
     "source9_physical_lines": 939,
     "source9_visible_lines": 873,
@@ -3229,7 +3059,9 @@
     "final_only_legacy": 6,
     "assessment_or_final_union": 1430,
     "whole16_complete": false,
-    "count_scope": "Historical PR622 accepted snapshot of1424; the next28 working snapshot below is separate."
+    "count_scope": "Historical PR622 accepted snapshot of1424; the next28 working snapshot below is separate.",
+    "original_actor_record_count": 2,
+    "original_actor_records_kept_private": true
   },
   "source9_first4_evaluation": {
     "artifact": "skills-3080-source9-first4-visible-evaluation175645.json",
@@ -3302,7 +3134,6 @@
     "counting_definition": "Existing154 already includes the previous installed4. These four different named targets remain uninstalled; the old balance1 proposal is the same first target and not an additional fifth."
   },
   "latest_received17": {
-    "publisher_job": "20261027-175645-todo-3080",
     "working_assessments": 1469,
     "prior_main_accepted_assessments": 1452,
     "working_not_yet_main_accepted": true,
@@ -3339,8 +3170,6 @@
     "actual_created": 4,
     "current_readback_files": 28,
     "bytes": 80712,
-    "creator": "20261027-175645-todo-3080",
-    "consumer": "20261027-175645-todo-3080",
     "normal_batches": 4,
     "instruction_buffers": 8,
     "instruction_bytes": 13640,
@@ -3357,7 +3186,6 @@
     "whole16_complete": false
   },
   "latest_received23": {
-    "publisher_job": "20261027-175645-todo-3080",
     "original3719_rows": [
       240,
       245
@@ -3588,7 +3416,6 @@
     "whole16_complete": false
   },
   "latest_received21_after1562": {
-    "publisher_job": "20261029-170905-todo-3080",
     "original3719_representative_assessments": 16,
     "original3719_whole_packets": 3,
     "original3719_support_metadata": 233,
@@ -3613,7 +3440,6 @@
     "current_root_instructions": 2,
     "current_instruction_bytes": 5191,
     "independent_normal_admitted_consumer": 4227,
-    "consumer_job": "20261029-184734-todo-4227",
     "normal_qualified_current_use": true,
     "new_integrations": 5,
     "new_Skills": 0,
@@ -3625,7 +3451,6 @@
     "accepted_merge": "951c0ff01c72f949c1ade6304c0d0a640a47c94f"
   },
   "latest_received25_after1587": {
-    "publisher_job": "20261030-095653-todo-3080",
     "original3719_representative_assessments": 12,
     "original3719_whole_packets": 3,
     "original3719_support_metadata": 371,
@@ -3720,8 +3545,6 @@
   },
   "latest_received18_after1611": {
     "evidence": "skills-3080-primaryflow-next18-after230-evaluation095653.json",
-    "actual_reader": "20261030-033405-todo-4134",
-    "actual_consumer": "20261030-095653-todo-3080",
     "primary_first": 111,
     "primary_through": 128,
     "visible_body_meanings": 18,
@@ -3787,8 +3610,6 @@
   },
   "latest_received12_after1635": {
     "evidence": "skills-3080-primaryflow-next12-after248-evaluation095653.json",
-    "actual_reader": "20261030-033405-todo-4134",
-    "actual_consumer": "20261030-095653-todo-3080",
     "first": 129,
     "through": 140,
     "visible_meanings": 12,
@@ -3797,7 +3618,6 @@
     "complete_original_packets": 2,
     "member_metadata": 12,
     "all_member_contexts_and_rights_pending": true,
-    "native_model_and_true_null_parent_observed": true,
     "assessment_references": 1647,
     "new_grants_or_dispositions_or_central": 0,
     "whole16_complete": false
@@ -3886,31 +3706,32 @@
   },
   "visible_primary_assessment_journal": {
     "file": "skills-3080-visible-primary-assessments.json",
-    "representative_meanings": 54,
-    "bound_member_metadata": 55,
+    "representative_meanings": 141,
+    "bound_member_metadata": 162,
     "member_contexts_and_rights_pending": true,
     "source_commands_executed": false,
     "new_copy_grants": 0,
     "new_Skills": 0,
     "new_central_writes": 0,
-    "whole16_complete": false
+    "whole16_complete": false,
+    "sha256": "2f1785a69b40bea10c467d85909f8f1d06dd83032e439c80cd0ba0525f1c10f2"
   },
   "latest_visible_primary_queue": {
     "state": "complete",
     "catalog_sha256": "2d73c9a038a41cc220a9687b935bfa1e0b315b65d9bd6d3e54ddb4111972876c",
-    "manifest_sha256": "3c1ecbf0d97cce7de9be8a80017c68a84e8652644bcf105234049efaf4c88f43",
-    "queue_sha256": "0fab96b836f0fa3a789217a08ad07736be2a5d0514e7354fc50aadcc8e775d05",
+    "manifest_sha256": "6a0a08a85c957d002ccf8ea6ae342a8fb18d733e4fb1075821e2552fed72402e",
+    "queue_sha256": "b174830effc1f5e30b9e3bac49ce814e7fae6c64fc749403f1652123d097b8f2",
     "occurrences": 73220,
-    "occurrences_with_assessment_records": 1705,
+    "occurrences_with_assessment_records": 2065,
     "recorded_final_occurrences": 198,
     "occurrences_with_assessment_and_final_records": 192,
     "final_records_without_assessment_record": 6,
-    "occurrences_with_assessment_or_final_records": 1711,
+    "occurrences_with_assessment_or_final_records": 2071,
     "stages": {
-      "assessed_needs_current_disposition": 1513,
+      "assessed_needs_current_disposition": 1873,
       "held_body_unavailable": 428,
       "held_execution_review": 647,
-      "needs_semantic_and_individual_rights_review": 70434,
+      "needs_semantic_and_individual_rights_review": 70074,
       "recorded_final_disposition": 198
     },
     "recorded_final_dispositions": {
@@ -3924,10 +3745,11 @@
       "No source body or URL is opened, no model or worker is launched, no permission is changed and nothing is installed.",
       "The queue is complete only when its separate summary is complete and its recorded queue SHA256 matches the actual bytes.",
       "Explicit site identity interpretations retain original archive locations and unverified historical upstream claims separately from catalog occurrence Git fields; historical exclusion claims still require reconfirmation.",
-      "Assessment records 1705 = assessed without final disposition 1513 + assessment/final intersection 192. Final records 198 include 6 final-only legacy records without assessment. The assessment/final union is 1711 occurrences; these categories are not additive independent totals."
+      "Additional catalog Git blob/byte-count checks cover 91 independently pinned retained v3 occurrences; other legacy formats retain their recorded identity checks.",
+      "Assessment records 2065 = assessed without final disposition 1873 + assessment/final intersection 192. Final records 198 include 6 final-only legacy records without assessment. The assessment/final union is 2071 occurrences; these categories are not additive independent totals."
     ]
   },
-  "observed_at_scope": "この評価/全件queueを公開記録へ集約した時点。各出典の取得時刻や固定commitは元の個別記録を保持し、再取得した時点とはしない。",
+  "observed_at_scope": "現在の処理表と追記評価の反映日。過去の読取・検査・配置時刻は各記録に保持する。",
   "retained_procedure_assessment_journal": {
     "file": "skills-3080-retained-procedure-assessments.json",
     "definition": "skills-3080-retained-procedure-assessments.md",
@@ -4030,19 +3852,19 @@
   "current_execution_queue": {
     "state": "complete",
     "catalog_sha256": "2d73c9a038a41cc220a9687b935bfa1e0b315b65d9bd6d3e54ddb4111972876c",
-    "manifest_sha256": "9c293bc6d38ea74ee5b889ef21bd0b53abacd19e6a04ec95df8c915b520e040c",
-    "queue_sha256": "7d46e8181db7a020ad016399f59fe1c4892cf4b082ccd1bfa892342d06e9efdb",
+    "manifest_sha256": "6a0a08a85c957d002ccf8ea6ae342a8fb18d733e4fb1075821e2552fed72402e",
+    "queue_sha256": "b174830effc1f5e30b9e3bac49ce814e7fae6c64fc749403f1652123d097b8f2",
     "occurrences": 73220,
-    "occurrences_with_assessment_records": 2036,
+    "occurrences_with_assessment_records": 2065,
     "recorded_final_occurrences": 198,
     "occurrences_with_assessment_and_final_records": 192,
     "final_records_without_assessment_record": 6,
-    "occurrences_with_assessment_or_final_records": 2042,
+    "occurrences_with_assessment_or_final_records": 2071,
     "stages": {
-      "assessed_needs_current_disposition": 1844,
+      "assessed_needs_current_disposition": 1873,
       "held_body_unavailable": 428,
       "held_execution_review": 647,
-      "needs_semantic_and_individual_rights_review": 70103,
+      "needs_semantic_and_individual_rights_review": 70074,
       "recorded_final_disposition": 198
     },
     "recorded_final_dispositions": {
@@ -4056,7 +3878,8 @@
       "No source body or URL is opened, no model or worker is launched, no permission is changed and nothing is installed.",
       "The queue is complete only when its separate summary is complete and its recorded queue SHA256 matches the actual bytes.",
       "Explicit site identity interpretations retain original archive locations and unverified historical upstream claims separately from catalog occurrence Git fields; historical exclusion claims still require reconfirmation.",
-      "Assessment records 2036 = assessed without final disposition 1844 + assessment/final intersection 192. Final records 198 include 6 final-only legacy records without assessment. The assessment/final union is 2042 occurrences; these categories are not additive independent totals."
+      "Additional catalog Git blob/byte-count checks cover 91 independently pinned retained v3 occurrences; other legacy formats retain their recorded identity checks.",
+      "Assessment records 2065 = assessed without final disposition 1873 + assessment/final intersection 192. Final records 198 include 6 final-only legacy records without assessment. The assessment/final union is 2071 occurrences; these categories are not additive independent totals."
     ]
   },
   "latest_retained_procedure_assessments": {
@@ -4092,5 +3915,78 @@
     "new_final_dispositions": 0,
     "central_operations": 0,
     "whole16_complete": false
-  }
+  },
+  "historical_visible_primary_first54_snapshot": {
+    "bound_member_metadata": 55,
+    "file": "skills-3080-visible-primary-assessments.json",
+    "member_contexts_and_rights_pending": true,
+    "new_Skills": 0,
+    "new_central_writes": 0,
+    "new_copy_grants": 0,
+    "representative_meanings": 54,
+    "source_commands_executed": false,
+    "whole16_complete": false
+  },
+  "historical_visible_primary_queue_at_first54": {
+    "catalog_sha256": "2d73c9a038a41cc220a9687b935bfa1e0b315b65d9bd6d3e54ddb4111972876c",
+    "final_records_without_assessment_record": 6,
+    "limits": [
+      "An assessment reference is not a full raw read, licence grant, current adoption or completed acceptance; consult its recorded actor, scope and state.",
+      "Equal body bytes do not transfer source ownership, individual permission or support-resource review.",
+      "No source body or URL is opened, no model or worker is launched, no permission is changed and nothing is installed.",
+      "The queue is complete only when its separate summary is complete and its recorded queue SHA256 matches the actual bytes.",
+      "Explicit site identity interpretations retain original archive locations and unverified historical upstream claims separately from catalog occurrence Git fields; historical exclusion claims still require reconfirmation.",
+      "Assessment records 1705 = assessed without final disposition 1513 + assessment/final intersection 192. Final records 198 include 6 final-only legacy records without assessment. The assessment/final union is 1711 occurrences; these categories are not additive independent totals."
+    ],
+    "manifest_sha256": "3c1ecbf0d97cce7de9be8a80017c68a84e8652644bcf105234049efaf4c88f43",
+    "occurrences": 73220,
+    "occurrences_with_assessment_and_final_records": 192,
+    "occurrences_with_assessment_or_final_records": 1711,
+    "occurrences_with_assessment_records": 1705,
+    "queue_sha256": "0fab96b836f0fa3a789217a08ad07736be2a5d0514e7354fc50aadcc8e775d05",
+    "recorded_final_dispositions": {
+      "excluded": 15,
+      "installed_new_adaptation": 164,
+      "integrated_existing": 19
+    },
+    "recorded_final_occurrences": 198,
+    "stages": {
+      "assessed_needs_current_disposition": 1513,
+      "held_body_unavailable": 428,
+      "held_execution_review": 647,
+      "needs_semantic_and_individual_rights_review": 70434,
+      "recorded_final_disposition": 198
+    },
+    "state": "complete"
+  },
+  "latest_visible_primary_delta": {
+    "additional_member_metadata": 44,
+    "central_operations": 0,
+    "current_parent_read_original_meanings": true,
+    "full_original_packets_reused": 8,
+    "new_assessment_records": 29,
+    "new_final_dispositions": 0,
+    "new_unique_occurrences": 29,
+    "old112_all_fields_and_order_retained": true,
+    "raw_full_read_grants_or_adoptions_added": 0,
+    "source_physical_lines": 4868,
+    "source_withheld_lines": 746,
+    "whole16_complete": false
+  },
+  "saved_metadata_census": {
+    "declarations_not_permission": true,
+    "declared_MIT": 18,
+    "declared_MIT0": 3,
+    "definition": "skills-3080-saved-metadata-census.md",
+    "file": "skills-3080-saved-metadata-census.json",
+    "fixed_descriptors": 52665,
+    "guardheld": 1,
+    "immutable_batches": 328,
+    "invalid_source_encoding": 1,
+    "new_workflow_or_adoption_credit": 0,
+    "parsed": 52663,
+    "rights_key_occurrences": 21,
+    "whole16_complete": false
+  },
+  "provenance_record_scope": "用途・出典・検査結果を公開し、担当と実行環境の詳細は非公開の原検証記録に保持する。原資料の権利表記と未確認状態は変更しない。"
 }

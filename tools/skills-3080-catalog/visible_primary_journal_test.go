@@ -31,6 +31,97 @@ func visibleAcceptedPrefixMatches(entries []any) bool {
 	return err == nil && travel3Digest(raw) == "b5276adcc6bc7709955f3481d0baf7c570a1577a0f550f1eb16f134950ab492c"
 }
 
+// The journal accepted at 379d3daa3bb6940f516b4957d40038a5564921df has 112
+// entries and file SHA2395e2b04ba2ec8bdc63f933f886bd7246caabf8daf618e90db4bd034cb5a4de.
+// Keep the newer accepted suffix as well as the original 54-entry anchor.
+func visibleAccepted112PrefixMatches(entries []any) bool {
+	if len(entries) < 112 || !visibleAcceptedPrefixMatches(entries) {
+		return false
+	}
+	raw, err := json.Marshal(entries[:112])
+	return err == nil && travel3Digest(raw) == "b9035a43e567eccd8464223d0f00405f6e7f96303c01771effe2046b44233948"
+}
+
+// The next 29 entries are anchored to the original received public projection,
+// SHA b01feaa0838c25cbeb538e702f74d7281e3b3872892e1dcc9d96dd567a53cb88.
+// This anchor is independent of a caller's manifest, row count or summary.
+func visibleLatest29DeltaMatches(entries []any, groups, members, latestRecords, latestMembers int) bool {
+	if len(entries) != 141 || groups != 141 || members != 162 || latestRecords != 29 || latestMembers != 44 || !visibleAccepted112PrefixMatches(entries) {
+		return false
+	}
+	raw, err := json.Marshal(entries[112:141])
+	return err == nil && travel3Digest(raw) == "fb9d6283fc8d300c92587ee4fd3f3ef91fec890d186a9fba49d77aeec3c34ce6"
+}
+
+func TestVisiblePrimaryJournalRetainsOriginalLatest29(t *testing.T) {
+	for _, change := range []string{"valid", "new value changed", "new order changed", "new entry missing", "new entry omitted with adjusted header", "new member metadata changed", "new tail with adjusted header", "new member total changed", "latest count changed", "latest member count changed"} {
+		t.Run(change, func(t *testing.T) {
+			var ignored any
+			raw := loadPublicReceipt(t, visiblePrimaryJournalFile, &ignored)
+			v, err := parent19Decode(raw)
+			if err != nil {
+				t.Fatal(err)
+			}
+			entries := v["entries"].([]any)
+			groups, members, latestRecords, latestMembers := len(entries), 162, 29, 44
+			switch change {
+			case "new value changed":
+				entries[140].(map[string]any)["value"] = "Different meaningful text that still passes the structural validator."
+			case "new order changed":
+				entries[139], entries[140] = entries[140], entries[139]
+			case "new entry missing":
+				entries = entries[:140]
+			case "new entry omitted with adjusted header":
+				entries = entries[:140]
+				groups, latestRecords = 140, 28
+			case "new member metadata changed":
+				member := entries[140].(map[string]any)["member_metadata"].([]any)[0].(map[string]any)
+				member["path"] = "skills/fixture/changed-same-shape/SKILL.md"
+			case "new tail with adjusted header":
+				entries = append(entries, entries[140])
+				groups, members = 142, 164
+			case "new member total changed":
+				members = 163
+			case "latest count changed":
+				latestRecords = 28
+			case "latest member count changed":
+				latestMembers = 43
+			}
+			if strings.HasPrefix(change, "new ") && !visibleAccepted112PrefixMatches(entries) {
+				t.Fatal("the delta regression must leave the older accepted prefix intact")
+			}
+			if visibleLatest29DeltaMatches(entries, groups, members, latestRecords, latestMembers) != (change == "valid") {
+				t.Fatal("the newly received delta was changed, reordered, omitted or counted differently")
+			}
+		})
+	}
+}
+
+func TestVisiblePrimaryJournalRetainsNewerAcceptedSuffix(t *testing.T) {
+	for _, change := range []string{"valid", "suffix value changed", "suffix order changed", "suffix missing"} {
+		t.Run(change, func(t *testing.T) {
+			var ignored any
+			raw := loadPublicReceipt(t, visiblePrimaryJournalFile, &ignored)
+			v, err := parent19Decode(raw)
+			if err != nil {
+				t.Fatal(err)
+			}
+			entries := v["entries"].([]any)
+			switch change {
+			case "suffix value changed":
+				entries[111].(map[string]any)["value"] = "A different nonempty meaning in the newer accepted suffix."
+			case "suffix order changed":
+				entries[110], entries[111] = entries[111], entries[110]
+			case "suffix missing":
+				entries = entries[:111]
+			}
+			if visibleAccepted112PrefixMatches(entries) != (change == "valid") {
+				t.Fatal("newer accepted history value or order drift was not detected")
+			}
+		})
+	}
+}
+
 func TestVisiblePrimaryJournalRetainsEveryAcceptedPrefixFieldAndOrder(t *testing.T) {
 	for _, change := range []string{"valid", "value changed", "order changed", "entry missing"} {
 		t.Run(change, func(t *testing.T) {
@@ -65,6 +156,10 @@ func TestVisiblePrimaryMarkdownCountsMatchTheExecutionSnapshot(t *testing.T) {
 		CentralHold struct {
 			Count int `json:"count"`
 		} `json:"central_target_holds_current"`
+		LatestDelta struct {
+			Records int `json:"new_assessment_records"`
+			Members int `json:"additional_member_metadata"`
+		} `json:"latest_visible_primary_delta"`
 	}
 	loadPublicReceipt(t, "skills-3080-progress.json", &progress)
 	var journal struct {
@@ -72,13 +167,24 @@ func TestVisiblePrimaryMarkdownCountsMatchTheExecutionSnapshot(t *testing.T) {
 		Members int `json:"bound_member_metadata"`
 	}
 	loadPublicReceipt(t, visiblePrimaryJournalFile, &journal)
+	var baseline any
+	journalRaw := loadPublicReceipt(t, visiblePrimaryJournalFile, &baseline)
+	journalValue, decodeErr := parent19Decode(journalRaw)
+	if decodeErr != nil || !visibleLatest29DeltaMatches(journalValue["entries"].([]any), journal.Groups, journal.Members, progress.LatestDelta.Records, progress.LatestDelta.Members) {
+		t.Fatal("the current latest delta differs from the independently received 29 records and 44 member metadata")
+	}
+	if progress.LatestDelta.Records <= 0 || progress.LatestDelta.Records > journal.Groups || progress.LatestDelta.Members < progress.LatestDelta.Records || progress.LatestDelta.Members > journal.Members {
+		t.Fatal("the current increment must be a nonempty subset of the cumulative journal")
+	}
 	raw, err := os.ReadFile(filepath.Join("..", "..", "docs", "skills-3080-visible-primary-assessments.md"))
 	if err != nil {
 		t.Fatal(err)
 	}
 	for _, expected := range []string{
 		fmt.Sprintf("固定した出典に対する%d件の評価", journal.Groups),
-		fmt.Sprintf("今回の追加は%d件", journal.Groups-54),
+		fmt.Sprintf("今回の追加は%d件", progress.LatestDelta.Records),
+		fmt.Sprintf("今回%d件増えた", progress.LatestDelta.Members),
+		fmt.Sprintf("初回54件からの追加は%d件", journal.Groups-54),
 		fmt.Sprintf("候補メタデータは計%d件", journal.Members),
 	} {
 		if !strings.Contains(string(raw), expected) {
@@ -90,7 +196,7 @@ func TestVisiblePrimaryMarkdownCountsMatchTheExecutionSnapshot(t *testing.T) {
 		t.Fatal("the public issue reference is not a numbered repository issue")
 	}
 	digits := visibleMarkdownCount(summary.Records, true)
-	expected := fmt.Sprintf("全件queueは%s出現、評価%d、最終%d、新規%d・既存統合%d・旧除外%d。評価と最終の交差%d、和集合%d、評価済未採否%d、意味と個別権利の確認が必要な候補%dを区別する。本文未取得%d・取得審査保留%d・未知の中央%d・旧除外%dの再確認と、指定%d資料の残作業を保持する。全体のIssue%sは継続する。",
+	expected := fmt.Sprintf("全件処理表は%s出現、評価%d、最終%d、新規%d・既存統合%d・旧除外%d。評価と最終の交差%d、和集合%d、評価済み未採否%d、意味と個別権利の確認が必要な候補%dを区別する。本文未取得%d・取得審査保留%d・未知の中央%d・旧除外%dの再確認と、指定%d資料の残作業を保持する。全体のIssue%sは継続する。",
 		digits, summary.Assessments, summary.Final, summary.Decisions["installed_new_adaptation"], summary.Decisions["integrated_existing"], summary.Decisions["excluded"], summary.AssessmentAndFinal, summary.AssessmentOrFinal, summary.Stages["assessed_needs_current_disposition"], summary.Stages["needs_semantic_and_individual_rights_review"], summary.Stages["held_body_unavailable"], summary.Stages["held_execution_review"], progress.CentralHold.Count, summary.Decisions["excluded"], progress.SourceCount, issue)
 	if !visibleMarkdownSummaryMatches(string(raw), expected) {
 		t.Fatal("the complete Markdown summary differs from the JSON snapshot")
@@ -152,7 +258,7 @@ func visibleMarkdownSummaryMatches(markdown, expected string) bool {
 	count := 0
 	for _, paragraph := range strings.Split(strings.ReplaceAll(markdown, "\r\n", "\n"), "\n\n") {
 		paragraph = strings.TrimSpace(paragraph)
-		if strings.HasPrefix(paragraph, "全件queueは") {
+		if strings.HasPrefix(paragraph, "全件処理表は") || strings.HasPrefix(paragraph, "全件queueは") {
 			count++
 			if paragraph != expected {
 				return false

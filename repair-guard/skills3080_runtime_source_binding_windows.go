@@ -140,8 +140,8 @@ func skillsRuntimeSourceStartBound(path string, raw []byte, r skillsRequest, reg
 	if !ok || preparation.PreviousJob != r.RuntimeSource.PreviousJob {
 		return fail("source_preparation")
 	}
-	current, ok := skillsInstalledProducer(s)
-	if !ok || preparation.Producer != current {
+	current, ok := skillsProducerObservation(s)
+	if !ok || !skillsSourceStartProducerAccepted(preparation.Producer, current) {
 		return fail("source_producer")
 	}
 	id, ok := skillsSourceDirectoryID(s, preparation.Root)
@@ -183,15 +183,22 @@ func skillsRuntimeSourceStartBound(path string, raw []byte, r skillsRequest, reg
 		}
 	}
 	env = append(env, "CODEX_ROLLOUT_TRACE_ROOT="+preparation.TraceRoot)
-	result, ok := skillsRuntimeSourceHidden("D:/CC/Tools/scheduler/scheduler.exe", []string{"dispatch-subwork", "--id", strconv.Itoa(row.ID)}, r.Writer.Workspace, env, 45*time.Second)
-	if !ok {
-		return fail("source_normal_dispatch")
+	result := skillsRuntimeSourceRunHidden("D:/CC/Tools/scheduler/scheduler.exe", []string{"dispatch-subwork", "--id", strconv.Itoa(row.ID)}, r.Writer.Workspace, env, 45*time.Second)
+	return skillsRuntimeSourceDispatch(result, row.ID, hashBytes(raw), nonce)
+}
+
+// Existing preparations remain bound to the actual observed PR662 issuer and
+// their original native call, nonce, request and physical object identities.
+// Older software without this source contract is not a source-start issuer.
+func skillsSourceStartProducerAccepted(issued, current skillsProducer) bool {
+	if !skillsDigest(issued.SHA) || !skillsGitObjectID(issued.Revision) || !skillsDigest(current.SHA) || !skillsGitObjectID(current.Revision) {
+		return false
 	}
-	return skillsRuntimeSourceDispatchReceipt(result, row.ID, hashBytes(raw), nonce)
+	return issued == current || issued == (skillsProducer{official3894SourceDispatchPredecessorSHA, official3894SourceDispatchPredecessorHead})
 }
 
 func skillsRuntimeSourceDispatchReceipt(raw []byte, task int, requestSHA, nonce string) object {
-	out := object{"qualified": false, "reason": "source", "failure_stage": "source_normal_dispatch", "launch_accepted": false, "normal_source_recorded": false, "data_access_granted": false}
+	out := object{"qualified": false, "reason": "source", "failure_stage": "source_normal_dispatch", "launch_accepted": false, "normal_source_recorded": false, "data_access_granted": false, "normal_dispatch": skillsSourceDispatchAdmission(raw, task)}
 	if !skillsNativeUniqueJSON(raw) || !skillsCreationHeaderKeys(raw, "id", "launched") {
 		return out
 	}
@@ -218,7 +225,10 @@ func skillsRuntimeSourceDispatchReceipt(raw []byte, task int, requestSHA, nonce 
 	if !skillsResultID(skillsResultRequest{Task: task, Job: job}) {
 		return out
 	}
-	return object{"qualified": true, "operation": "start_runtime_source", "request_sha256": requestSHA, "nonce": nonce, "launch_accepted": true, "normal_job": job, "normal_source_recorded": false, "data_access_granted": false, "general_access_granted": false, "original_registry_recovered": false}
+	d := obj(out["normal_dispatch"])
+	d["outcome"] = "launched"
+	delete(d, "admission_reason")
+	return object{"qualified": true, "operation": "start_runtime_source", "request_sha256": requestSHA, "nonce": nonce, "launch_accepted": true, "normal_job": job, "normal_source_recorded": false, "data_access_granted": false, "general_access_granted": false, "original_registry_recovered": false, "normal_dispatch": d}
 }
 
 func skillsRuntimeSourceSpecPath(path string, task int) bool {

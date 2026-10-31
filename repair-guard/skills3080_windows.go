@@ -244,6 +244,7 @@ func runSkillsCLI(args []string, out io.Writer, run func(string, string) object)
 		owned, preparationPartial := str(result["ownership_id"]), result["partial_preparation_possible"] == true
 		requestObject := result["request_object"]
 		attempted := result["source_attempt_recorded"] == true
+		dispatch := result["normal_dispatch"]
 		stage, _ := result["failure_stage"].(string)
 		reason := str(result["reason"])
 		if !skillsReason.MatchString(reason) {
@@ -252,6 +253,11 @@ func runSkillsCLI(args []string, out io.Writer, run func(string, string) object)
 		result = object{"qualified": false, "reason": reason}
 		if skillsFixedFailureStage(stage) {
 			result["failure_stage"] = stage
+		}
+		if len(args) == 2 && args[0] == "--start-skills3080-runtime-source" && reason == "source" && stage == "source_normal_dispatch" {
+			if d, ok := skillsSourceDispatchDiagnostic(dispatch); ok {
+				result["normal_dispatch"] = d
+			}
 		}
 		if n, ok := created.(int); ok && n >= 0 && n <= 1024 && partial == true {
 			result["created_files"] = n

@@ -1,0 +1,214 @@
+package main
+
+import (
+	"context"
+	"crypto/sha256"
+	"encoding/hex"
+	"encoding/json"
+	"errors"
+	"hash"
+	"os/exec"
+	"strings"
+	"syscall"
+	"time"
+)
+
+// Drain both pipes, retain only bounded prefixes, and hash every observed byte.
+// Only fixed error codes and selected admission metadata leave this process.
+type skillsSourceCapture struct {
+	prefix []byte
+	limit  int
+	bytes  uint64
+	hash   hash.Hash
+}
+
+func (c *skillsSourceCapture) Write(p []byte) (int, error) {
+	if c.hash == nil {
+		c.hash = sha256.New()
+	}
+	c.hash.Write(p)
+	c.bytes += uint64(len(p))
+	if remaining := c.limit - len(c.prefix); remaining > 0 {
+		if remaining > len(p) {
+			remaining = len(p)
+		}
+		c.prefix = append(c.prefix, p[:remaining]...)
+	}
+	return len(p), nil
+}
+
+func (c *skillsSourceCapture) digest() string {
+	if c.hash == nil {
+		return hashBytes(nil)
+	}
+	return hex.EncodeToString(c.hash.Sum(nil))
+}
+
+type skillsSourceCommandResult struct {
+	stdout     []byte
+	diagnostic object
+	ok         bool
+}
+
+func skillsSourceNormalError(stderr []byte) string {
+	line := strings.TrimSpace(string(stderr))
+	for _, code := range []string{"InputRejected", "TimeoutError", "TimeoutExpired", "ResourceWait", "OSError", "PermissionError", "FileNotFoundError", "ValueError", "TypeError", "AttributeError", "RuntimeError", "InvalidSubwork"} {
+		if line == "subwork dispatch failed "+code {
+			return code
+		}
+	}
+	return ""
+}
+
+func skillsRuntimeSourceRunHidden(command string, args []string, cwd string, env []string, seconds time.Duration) skillsSourceCommandResult {
+	ctx, cancel := context.WithTimeout(context.Background(), seconds)
+	defer cancel()
+	c := exec.CommandContext(ctx, command, args...)
+	c.Dir, c.Env = cwd, env
+	c.SysProcAttr = &syscall.SysProcAttr{HideWindow: true, CreationFlags: 0x08000000}
+	c.WaitDelay = time.Second
+	stdout, stderr := &skillsSourceCapture{limit: 1 << 20}, &skillsSourceCapture{limit: 64 << 10}
+	c.Stdout, c.Stderr = stdout, stderr
+	err := c.Run()
+	d := object{"outcome": "command_failed", "stdout_bytes": stdout.bytes, "stdout_sha256": stdout.digest(), "stderr_bytes": stderr.bytes, "stderr_sha256": stderr.digest()}
+	if c.ProcessState != nil {
+		d["exit_code"] = c.ProcessState.ExitCode()
+	}
+	if uint64(len(stderr.prefix)) == stderr.bytes {
+		if code := skillsSourceNormalError(stderr.prefix); code != "" {
+			d["command_error"] = code
+		}
+	}
+	var errno syscall.Errno
+	if errors.As(err, &errno) {
+		d["win32_error"] = uint32(errno)
+	}
+	result := skillsSourceCommandResult{stdout: stdout.prefix, diagnostic: d}
+	switch {
+	case ctx.Err() != nil:
+		d["outcome"] = "timeout"
+	case errors.Is(err, exec.ErrWaitDelay):
+		d["outcome"] = "drain_timeout"
+	case c.ProcessState == nil:
+		d["outcome"] = "start_failed"
+	case stdout.bytes > uint64(stdout.limit):
+		d["outcome"] = "output_limit"
+	case err == nil:
+		d["outcome"], result.ok = "completed", true
+	}
+	return result
+}
+
+func skillsSourceDispatchAdmission(raw []byte, task int) object {
+	d := object{"outcome": "invalid_response", "stdout_bytes": uint64(len(raw)), "stdout_sha256": hashBytes(raw), "stderr_bytes": uint64(0), "stderr_sha256": hashBytes(nil), "exit_code": 0}
+	if !skillsNativeUniqueJSON(raw) || !skillsCreationHeaderKeys(raw, "id", "launched", "active", "busy", "status", "phase", "priority_wait", "allowance_now", "preparation_reason") {
+		return d
+	}
+	v, ok := conversationJSON(raw)
+	if !ok || (v["id"] != nil && conversationNumber(v["id"]) != uint64(task)) {
+		return d
+	}
+	d["outcome"] = "not_launched"
+	for _, status := range []string{"todo", "doing", "done", "block", "blocked", "wait"} {
+		if v["status"] == status {
+			d["status"] = status
+		}
+	}
+	for _, phase := range []string{"queued", "running", "retry", "finished", "preparing", "resumed", "cancelled", "waiting"} {
+		if v["phase"] == phase {
+			d["phase"] = phase
+		}
+	}
+	reason := "unavailable"
+	switch {
+	case v["active"] == true:
+		reason = "active"
+	case v["busy"] == true:
+		reason = "busy"
+	case conversationNumber(v["priority_wait"]) == uint64(task):
+		reason = "priority_wait"
+	case skillsSourcePreparationReason(str(v["preparation_reason"])):
+		reason, d["preparation_reason"] = "preparation", v["preparation_reason"]
+	case v["allowance_now"] == json.Number("0"):
+		reason = "capacity"
+	case v["status"] != nil && v["status"] != "todo":
+		reason = "status_not_todo"
+	}
+	d["admission_reason"] = reason
+	return d
+}
+
+func skillsSourcePreparationReason(s string) bool {
+	switch s {
+	case "cwd_missing", "non_git", "origin_missing", "branch_mismatch", "repository_mismatch", "tool_missing", "resource_wait", "input_rejected", "subwork_parent_continuation_required", "excluded_resource", "tool_failed":
+		return true
+	}
+	return false
+}
+
+// A failed CLI callback cannot use diagnostics as an arbitrary-data channel.
+func skillsSourceDispatchDiagnostic(value any) (object, bool) {
+	var d struct {
+		Outcome      string  `json:"outcome"`
+		StdoutBytes  uint64  `json:"stdout_bytes"`
+		StdoutSHA    string  `json:"stdout_sha256"`
+		StderrBytes  uint64  `json:"stderr_bytes"`
+		StderrSHA    string  `json:"stderr_sha256"`
+		Exit         *int    `json:"exit_code,omitempty"`
+		WindowsError *uint32 `json:"win32_error,omitempty"`
+		CommandError string  `json:"command_error,omitempty"`
+		Admission    string  `json:"admission_reason,omitempty"`
+		Status       string  `json:"status,omitempty"`
+		Phase        string  `json:"phase,omitempty"`
+		Preparation  string  `json:"preparation_reason,omitempty"`
+	}
+	b, err := json.Marshal(value)
+	if err != nil || !skillsStrict(b, &d) || !skillsDigest(d.StdoutSHA) || !skillsDigest(d.StderrSHA) || d.StdoutBytes > 1<<40 || d.StderrBytes > 1<<40 || (d.Exit != nil && (*d.Exit < -1 || *d.Exit > 0xffffffff)) {
+		return nil, false
+	}
+	switch d.Outcome {
+	case "completed", "command_failed", "timeout", "drain_timeout", "start_failed", "output_limit", "not_launched", "invalid_response", "launched":
+	default:
+		return nil, false
+	}
+	if d.CommandError != "" && skillsSourceNormalError([]byte("subwork dispatch failed "+d.CommandError)) == "" {
+		return nil, false
+	}
+	switch d.Admission {
+	case "", "active", "busy", "priority_wait", "preparation", "capacity", "status_not_todo", "unavailable":
+	default:
+		return nil, false
+	}
+	switch d.Status {
+	case "", "todo", "doing", "done", "block", "blocked", "wait":
+	default:
+		return nil, false
+	}
+	switch d.Phase {
+	case "", "queued", "running", "retry", "finished", "preparing", "resumed", "cancelled", "waiting":
+	default:
+		return nil, false
+	}
+	if d.Preparation != "" && !skillsSourcePreparationReason(d.Preparation) {
+		return nil, false
+	}
+	var out object
+	if json.Unmarshal(b, &out) != nil {
+		return nil, false
+	}
+	return out, true
+}
+
+func skillsRuntimeSourceDispatch(result skillsSourceCommandResult, task int, requestSHA, nonce string) object {
+	if !result.ok {
+		return object{"qualified": false, "reason": "source", "failure_stage": "source_normal_dispatch", "normal_dispatch": result.diagnostic, "data_access_granted": false}
+	}
+	out := skillsRuntimeSourceDispatchReceipt(result.stdout, task, requestSHA, nonce)
+	d := obj(out["normal_dispatch"])
+	for _, key := range []string{"stdout_bytes", "stdout_sha256", "stderr_bytes", "stderr_sha256", "exit_code"} {
+		if v, exists := result.diagnostic[key]; exists {
+			d[key] = v
+		}
+	}
+	return out
+}

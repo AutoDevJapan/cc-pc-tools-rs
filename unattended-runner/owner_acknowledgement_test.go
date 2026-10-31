@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"net"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -660,6 +661,42 @@ func TestOwnerAcknowledgementBatchRetainsValidSourcesAfterInvalidMetadata(t *tes
 	h := f.tick()
 	if f.posts != 1 || h.OwnerAcknowledgements != 1 {
 		t.Fatal("bad first source starved valid later capture", f.posts, h)
+	}
+}
+
+type ownerAckRoundTrip func(*http.Request) (*http.Response, error)
+
+func (f ownerAckRoundTrip) RoundTrip(r *http.Request) (*http.Response, error) { return f(r) }
+
+func TestOwnerAcknowledgementConnectionFailureBeforeSendCanRetry(t *testing.T) {
+	f := newOwnerAckFixture(t)
+	original := f.r.Client.Transport
+	if original == nil {
+		original = http.DefaultTransport
+	}
+	f.r.Client.Transport = ownerAckRoundTrip(func(r *http.Request) (*http.Response, error) {
+		if r.Method == http.MethodPost {
+			return nil, &net.OpError{Op: "dial", Net: "tcp", Err: errors.New("fixture connection unavailable")}
+		}
+		return original.RoundTrip(r)
+	})
+	f.queue(t)
+	h := f.tick()
+	if f.posts != 0 || len(h.Errors) == 0 {
+		t.Fatal("fixture did not fail before sending", f.posts, h)
+	}
+	s, _ := f.r.loadOwnerAcknowledgements()
+	for _, a := range s.Receipts {
+		if a.Attempted != "" || a.NextTry == "" {
+			t.Fatal("unsent attempt became permanently uncertain", a)
+		}
+	}
+	now := f.r.Now().Add(time.Minute)
+	f.r.Now = func() time.Time { return now }
+	f.r.Client.Transport = original
+	h = f.tick()
+	if f.posts != 1 || h.OwnerAcknowledgements != 1 {
+		t.Fatal("unsent version could not retry", f.posts, h)
 	}
 }
 

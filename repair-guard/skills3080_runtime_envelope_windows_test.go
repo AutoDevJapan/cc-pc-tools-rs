@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bytes"
 	"encoding/json"
 	"strings"
 	"testing"
@@ -19,7 +20,7 @@ func TestSkills3080RuntimeFingerprintMatchesIndependentProtocolVectors(t *testin
 }
 
 func TestSkills3080RuntimeEnvelopeNeedsIndependentCheckpointContent(t *testing.T) {
-	for _, kind := range []string{"exact", "arbitrary_initial_developer", "changed_model_text", "host_body_suffix", "wrong_permission_hash", "changed_tool", "missing_tool", "duplicate_fragment", "unknown_plugin", "renamed_plugin", "catalog_added_instruction", "catalog_label_only", "self_hash_only", "section_alias", "field_alias", "drop_model", "drop_permissions", "drop_collaboration_mode", "drop_host_skills", "drop_top_level_tools", "drop_all", "empty_model", "empty_permissions", "empty_collaboration_mode", "empty_host_skills", "empty_top_level_tools", "missing_approved_prefixes", "null_approved_prefixes", "object_approved_prefixes", "string_approved_prefixes", "missing_model_id", "wrong_model_id", "missing_collaboration_model", "wrong_collaboration_model", "missing_collaboration_mode", "unknown_collaboration_mode"} {
+	for _, kind := range []string{"exact", "arbitrary_initial_developer", "changed_model_text", "host_body_suffix", "wrong_permission_hash", "changed_tool", "missing_tool", "duplicate_fragment", "unknown_plugin", "renamed_plugin", "catalog_added_instruction", "catalog_label_only", "self_hash_only", "section_alias", "field_alias", "drop_model", "drop_permissions", "drop_collaboration_mode", "drop_host_skills", "drop_top_level_tools", "drop_all", "empty_model", "empty_permissions", "empty_collaboration_mode", "empty_host_skills", "empty_top_level_tools", "missing_approved_prefixes", "null_approved_prefixes", "object_approved_prefixes", "string_approved_prefixes", "missing_model_id", "wrong_model_id", "missing_collaboration_model", "wrong_collaboration_model", "missing_collaboration_mode", "unknown_collaboration_mode", "alias_block_text", "alias_block_type"} {
 		t.Run(kind, func(t *testing.T) {
 			model, permission, collaboration, host := "runtime model instructions", "runtime permissions", "runtime collaboration", "\n## Skills\nknown catalog\n"
 			tool := object{"type": "namespace", "name": "functions", "description": "known namespace", "tools": []any{object{"type": "function", "name": "exec", "description": "known function <&>", "parameters": object{"type": "object", "properties": object{}}}}}
@@ -117,6 +118,22 @@ func TestSkills3080RuntimeEnvelopeNeedsIndependentCheckpointContent(t *testing.T
 			for _, payload := range payloads {
 				b, _ := json.Marshal(object{"payload": payload})
 				records = append(records, b)
+			}
+			if kind == "alias_block_text" {
+				old := []byte(`"text":"runtime model instructions"`)
+				changed := bytes.Replace(records[1], old, []byte(`"text":"unregistered instruction","Text":"runtime model instructions"`), 1)
+				if bytes.Equal(changed, records[1]) {
+					t.Fatal("mutation")
+				}
+				records[1] = changed
+			}
+			if kind == "alias_block_type" {
+				old := []byte(`"type":"input_text"`)
+				changed := bytes.Replace(records[1], old, []byte(`"type":"input_image","Type":"input_text"`), 1)
+				if bytes.Equal(changed, records[1]) {
+					t.Fatal("mutation")
+				}
+				records[1] = changed
 			}
 			raw, _ := json.Marshal(state)
 			if ok := skillsRuntimeEnvelopeMatches(records, raw, "gpt-6-luna"); ok != (kind == "exact") {

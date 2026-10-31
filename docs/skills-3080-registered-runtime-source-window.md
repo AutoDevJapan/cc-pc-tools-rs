@@ -24,6 +24,7 @@ permissionsのapproved_command_prefixesは配列の存在を確認し、欠落�
 modelとcollaborationのmodel識別子を実jobへ照合し、collaborationのmodeも既知の型として確認する。
 checkpoint項目と対応するdeveloper記録を両方削って空同士の一致にしても拒否する。
 hashの符号化は[公式の固定版](https://github.com/openai/codex/blob/360319d8dee62d87e2d59fc0c21805d79519cfed/codex-rs/core/src/context/world_state/mod.rs)に従う。
+本文blockもtype/textの正確なキーを検査し、大文字小文字の別名を後勝ちで読み替えない。
 plugin案内は、既知runtime catalogの全固定文と公開name/IDの組が完全一致する場合だけ扱う。
 任意のdeveloper本文、未知catalog、追記、重複block、欠落や変更のあるtool定義は拒否する。
 catalogの表示をサービスの利用許可や作業範囲へ昇格しない。
@@ -42,11 +43,14 @@ sourceや結果を別path、copy、可変な指示ファイル、未知のdigest
 bootstrap本文を取り出す際にも元jobの時間を確認し、最初の過去入力証明ではbootstrapの実在を要求する。
 再開後の現在jobには、初回bootstrapをもう一度user入力として加えられない。
 旧形式を理由に、時刻外の先行user/eventを確認せず読み飛ばさない。
+過去窓のない新規0.163でも、時間外のuser/eventやcontextを拒否する。
 未知CLI版の拒否、原author・origin・実launch親・現在consumerの区別は維持する。
 これは一般guardや中央の既存対象の解除ではない。
 
 新しい作成の正規呼出は、固定PowerShell 7からProcessStartInfoを使い、
 CreateNoWindow=true・UseShellExecute=falseを明示する。
+作成前に、現在の正常jobの元native内に同じrequestを使う一意な未完了の正規tool callがあることを確認する。
+完了済みcallや単なる成功receipt、旧direct呼出しではファイルを作成しない。
 実行物・flag・request・内外の作業場所・tool optionを固定し、stdout/stderrをUTF-8のまま待ち受け、
 結果を整形せず元のexit codeとともに返す。
 新しい私的な作成証拠には必要な呼出形式の版を記録し、その版と実native callを照合する。

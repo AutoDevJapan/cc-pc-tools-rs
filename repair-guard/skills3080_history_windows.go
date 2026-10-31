@@ -234,6 +234,7 @@ func skillsNativeWindowWithSourceOrigin(s *skillsFS, job object, proof *skillsNa
 			return nil, false
 		}
 		proof.runtimeSourceUsed = len(proof.runtimeBootstrap) > 0
+		proof.runtimeWindowBound = len(bootstrapWindow) == 2
 		proof.bootstrapBound = true
 	}
 	return skillsNativeProjectionBound(input, id, str(job["cwd"]), start, end, proof)
@@ -357,6 +358,7 @@ type skillsNativeResultProof struct {
 	runtimeProject                []byte
 	requireRuntimeSource          bool
 	runtimeSourceUsed             bool
+	runtimeWindowBound            bool
 	runtimePriorWindows           []skillsRuntimePriorWindow
 	runtimeEnvelopeRecords        map[string]bool
 	runtimeEnvelopeRequired       bool
@@ -364,6 +366,10 @@ type skillsNativeResultProof struct {
 	runtimePrefixClosed           bool
 	bootstrapSeen, bootstrapBound bool
 	frozen                        bool
+}
+
+func (p *skillsNativeResultProof) runtimeWindowChecked() bool {
+	return p.runtimeWindowBound || p.runtimeSourceUsed || len(p.runtimePriorWindows) > 0
 }
 
 func (p *skillsNativeResultProof) priorRuntimeWindow(at time.Time) bool {

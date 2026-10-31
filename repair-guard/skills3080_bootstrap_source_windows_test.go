@@ -80,7 +80,7 @@ func TestSkills3080MissingPublicProjectCannotDowngradeCurrentRuntime(t *testing.
 	}
 	project := []byte("PUBLIC project")
 	body, _ := skillsAssembleBootstrapSource([]byte("same historical owner body"), project)
-	for _, kind := range []string{"current_with_project", "current_missing_project", "known_old", "known_old_bootstrap_before_start", "known_old_bootstrap_after_end", "unknown"} {
+	for _, kind := range []string{"current_with_project", "current_missing_project", "known_old", "known_old_bootstrap_before_start", "known_old_bootstrap_after_end", "known_old_extra_outside_user", "known_old_extra_outside_event", "unknown"} {
 		version := "0.165.0"
 		if strings.HasPrefix(kind, "known_old") {
 			version = "0.163.0"
@@ -97,6 +97,12 @@ func TestSkills3080MissingPublicProjectCannotDowngradeCurrentRuntime(t *testing.
 		}
 		if kind == "known_old_bootstrap_after_end" {
 			records[2]["timestamp"] = start.Add(2 * time.Minute).Format(time.RFC3339Nano)
+		}
+		if kind == "known_old_extra_outside_user" {
+			records = append(records, msg("unregistered outside user", start.Add(-time.Second)))
+		}
+		if kind == "known_old_extra_outside_event" {
+			records = append(records, object{"type": "event_msg", "timestamp": start.Add(-time.Second).Format(time.RFC3339Nano), "payload": object{"type": "user_message", "message": "unregistered outside event"}})
 		}
 		var b bytes.Buffer
 		for _, v := range skillsCompleteRuntimeFixture(records) {

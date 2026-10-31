@@ -11,12 +11,12 @@ import (
 )
 
 func skillsRuntimeOriginFixture() (skillsTask, object, time.Time, map[string]object) {
-	start := time.Date(2026, 10, 31, 6, 0, 53, 0, time.UTC)
+	start := time.Date(2030, 1, 1, 6, 0, 0, 0, time.UTC)
 	id := "11111111-1111-7111-8111-111111111111"
-	oldID, newID := "20261031-014021-todo-4296", "20261031-055717-todo-4296"
-	current := object{"id": newID, "todo_id": json.Number("4296"), "thread_id": id, "resume_session": id, "cwd": "D:/CC/Work/synthetic-consumer", "sandbox": "read-only", "model": "gpt-6-luna", "effort": "max", "started_at": start.Format(time.RFC3339Nano)}
-	prior := object{"id": oldID, "todo_id": json.Number("4296"), "thread_id": id, "cwd": current["cwd"], "sandbox": "read-only", "model": "gpt-6-luna", "effort": "max", "status": "succeeded", "started_at": start.Add(-4 * time.Hour).Format(time.RFC3339Nano), "finished_at": start.Add(-3 * time.Hour).Format(time.RFC3339Nano)}
-	return skillsTask{ID: 4296, Jobs: []string{oldID, newID}}, current, start, map[string]object{oldID: prior}
+	oldID, newID := "20300101-010101-todo-6296", "20300101-020202-todo-6296"
+	current := object{"id": newID, "todo_id": json.Number("6296"), "thread_id": id, "resume_session": id, "cwd": "D:/CC/Work/synthetic-consumer", "sandbox": "read-only", "model": "gpt-6-luna", "effort": "max", "started_at": start.Format(time.RFC3339Nano)}
+	prior := object{"id": oldID, "todo_id": json.Number("6296"), "thread_id": id, "cwd": current["cwd"], "sandbox": "read-only", "model": "gpt-6-luna", "effort": "max", "status": "succeeded", "started_at": start.Add(-4 * time.Hour).Format(time.RFC3339Nano), "finished_at": start.Add(-3 * time.Hour).Format(time.RFC3339Nano)}
+	return skillsTask{ID: 6296, Jobs: []string{oldID, newID}}, current, start, map[string]object{oldID: prior}
 }
 
 func TestSkills3080RuntimeSourceOriginNeedsTheRegisteredContinuation(t *testing.T) {
@@ -50,7 +50,7 @@ func TestSkills3080RuntimeSourceOriginNeedsTheRegisteredContinuation(t *testing.
 			case "wrong_prior_task":
 				prior["todo_id"] = json.Number("4297")
 			case "wrong_prior_id":
-				prior["id"] = "20261031-014021-todo-4297"
+				prior["id"] = "20300101-010101-todo-6297"
 			case "wrong_thread":
 				prior["thread_id"] = "22222222-2222-7222-8222-222222222222"
 			case "wrong_cwd":
@@ -72,7 +72,7 @@ func TestSkills3080RuntimeSourceOriginNeedsTheRegisteredContinuation(t *testing.
 			case "wrong_current_start":
 				job["started_at"] = start.Add(time.Second).Format(time.RFC3339Nano)
 			case "two_continuations", "broken_middle_resume":
-				midID := "20261031-040000-todo-4296"
+				midID := "20300101-030303-todo-6296"
 				mid := object{}
 				for k, v := range prior {
 					mid[k] = v
@@ -219,7 +219,7 @@ func TestSkills3080ResumedRuntimeSourceAndCurrentTaskHaveSeparateWindows(t *test
 	// share the same frozen handle; only the metadata store is a test seam.
 	home := skillsFixtureRoot(t)
 	t.Setenv("USERPROFILE", home)
-	dir := filepath.Join(home, ".codex", "sessions", "2026", "10", "31")
+	dir := filepath.Join(home, ".codex", "sessions", "2030", "01", "01")
 	if e := os.MkdirAll(dir, 0700); e != nil {
 		t.Fatal(e)
 	}
@@ -292,7 +292,7 @@ func TestSkills3080ResumedRuntimeSourceAndCurrentTaskHaveSeparateWindows(t *test
 			}
 			home := skillsFixtureRoot(t)
 			t.Setenv("USERPROFILE", home)
-			dir := filepath.Join(home, ".codex", "sessions", "2026", "10", "31")
+			dir := filepath.Join(home, ".codex", "sessions", "2030", "01", "01")
 			if os.MkdirAll(dir, 0700) != nil || os.WriteFile(filepath.Join(dir, "rollout-legacy-"+id+".jsonl"), legacy, 0600) != nil {
 				t.Fatal("legacy fixture")
 			}

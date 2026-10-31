@@ -124,7 +124,7 @@ func skillsRuntimeEnvelopeMatches(records [][]byte, state json.RawMessage, model
 		}
 		var v struct {
 			Type, Role string
-			Content    []struct{ Type, Text string }
+			Content    []json.RawMessage
 			Tools      []json.RawMessage
 		}
 		if json.Unmarshal(raw, &e) != nil || !skillsCreationHeaderKeys(e.Payload, "type", "role", "content", "tools") || json.Unmarshal(e.Payload, &v) != nil || v.Role != "developer" {
@@ -135,8 +135,12 @@ func skillsRuntimeEnvelopeMatches(records [][]byte, state json.RawMessage, model
 			if len(v.Content) == 0 || len(v.Tools) != 0 {
 				return false
 			}
-			for _, block := range v.Content {
-				if block.Type != "input_text" {
+			for _, rawBlock := range v.Content {
+				var block struct {
+					Type string `json:"type"`
+					Text string `json:"text"`
+				}
+				if !skillsStrict(rawBlock, &block) || block.Type != "input_text" {
 					return false
 				}
 				if block.Text == skillsRuntimeRecommendationCatalog() {

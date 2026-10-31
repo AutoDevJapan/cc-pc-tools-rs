@@ -143,16 +143,17 @@ func skillsRuntimeBootstrapProjectionWithOrigin(input io.Reader, job object, pro
 				developer = append(developer, append([]byte{}, raw...))
 				continue
 			}
-			var blocks []struct {
-				Type string `json:"type"`
-				Text string `json:"text"`
-			}
+			var blocks []json.RawMessage
 			if v.Type != "message" || !started || boot || json.Unmarshal(v.Content, &blocks) != nil || len(blocks) < 1 || len(blocks) > 2 {
 				return nil, true, false
 			}
 			var text strings.Builder
-			for _, b := range blocks {
-				if b.Type != "input_text" {
+			for _, rawBlock := range blocks {
+				var b struct {
+					Type string `json:"type"`
+					Text string `json:"text"`
+				}
+				if !skillsStrict(rawBlock, &b) || b.Type != "input_text" {
 					return nil, true, false
 				}
 				text.WriteString(b.Text)

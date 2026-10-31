@@ -298,9 +298,11 @@ func skillsOperation(op, path string) object {
 		if !ok || !skillsWriterCheck(r.Writer, fresh, &fs, caller) {
 			return fail("writer")
 		}
-		count, reason := skillsCreate(manifest, skillsCentralRoot, &fs)
+		var count int
+		var reason string
+		count, reason = skillsCreateAfterLaunch(manifest, skillsCentralRoot, &fs, func() bool { return skillsForwardLaunchBeforeCreate(&fs, writer, path, r.Writer.Workspace, op) })
 		if reason != "" {
-			return object{"qualified": false, "reason": reason, "created_files": count, "partial_operation_possible": true}
+			return object{"qualified": false, "reason": reason, "created_files": count, "partial_operation_possible": reason != "native_launch"}
 		}
 		result["created_files"] = count
 		if op == "create-skills3080-forward" {

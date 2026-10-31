@@ -203,16 +203,17 @@ func TestSkills3080PreparationAliasesBindPhysicalRequestIdentity(t *testing.T) {
 		return id
 	}
 	original := identity(file)
-	for _, kind := range []string{"case_alias", "slash_alias", "renamed_spelling", "different_file", "start_retry"} {
+	for _, kind := range []string{"case_alias", "slash_alias", "renamed_spelling", "different_file", "start_retry", "partial_case_alias", "partial_slash_alias", "partial_renamed_spelling", "partial_different_file", "partial_start_retry"} {
 		t.Run(kind, func(t *testing.T) {
+			variant := strings.TrimPrefix(kind, "partial_")
 			currentID := original
-			if kind == "case_alias" {
+			if variant == "case_alias" {
 				currentID = identity(strings.ToUpper(file))
 			}
-			if kind == "slash_alias" {
+			if variant == "slash_alias" {
 				currentID = identity(filepath.ToSlash(file))
 			}
-			if kind == "different_file" {
+			if variant == "different_file" {
 				other := filepath.Join(filepath.Dir(file), "other.json")
 				if os.WriteFile(other, []byte("same bytes different object"), 0600) != nil {
 					t.Fatal("other file")
@@ -225,16 +226,16 @@ func TestSkills3080PreparationAliasesBindPhysicalRequestIdentity(t *testing.T) {
 			p := skillsSourcePreparationFixture()
 			p.RequestID = original
 			cwd, path, flag := p.Writer.Workspace, p.RequestPath, "--prepare-skills3080-runtime-source"
-			if kind == "case_alias" {
+			if variant == "case_alias" {
 				path = strings.ToUpper(path)
 			}
-			if kind == "slash_alias" {
+			if variant == "slash_alias" {
 				path = filepath.ToSlash(path)
 			}
-			if kind == "renamed_spelling" || kind == "different_file" {
+			if variant == "renamed_spelling" || variant == "different_file" {
 				path = filepath.Join(cwd, "renamed.json")
 			}
-			if kind == "start_retry" {
+			if variant == "start_retry" {
 				flag = "--start-skills3080-runtime-source"
 			}
 			// The command paths are synthetic Root paths. The IDs above are from
@@ -242,8 +243,13 @@ func TestSkills3080PreparationAliasesBindPhysicalRequestIdentity(t *testing.T) {
 			start := time.Date(2030, 1, 1, 0, 0, 0, 0, time.UTC)
 			thread := "11111111-1111-7111-8111-111111111111"
 			result := object{"qualified": true, "general_access_granted": false, "original_registry_recovered": false, "data_access_granted": false, "operation": "prepare_runtime_source", "runtime_source_preparation": p}
+			exit := 0
+			if strings.HasPrefix(kind, "partial_") {
+				result = object{"qualified": false, "reason": "source", "failure_stage": "source_prepare_write", "partial_preparation_possible": true, "ownership_id": p.OwnershipID, "request_object": original}
+				exit = 1
+			}
 			body, _ := json.Marshal(result)
-			wrapper, _ := json.Marshal(object{"exit_code": 0, "output": string(body)})
+			wrapper, _ := json.Marshal(object{"exit_code": exit, "output": string(body)})
 			var input bytes.Buffer
 			enc := json.NewEncoder(&input)
 			enc.Encode(object{"type": "session_meta", "payload": object{"id": thread, "cwd": cwd}})
@@ -251,7 +257,7 @@ func TestSkills3080PreparationAliasesBindPhysicalRequestIdentity(t *testing.T) {
 			enc.Encode(object{"type": "response_item", "timestamp": start.Add(3 * time.Second).Format(time.RFC3339Nano), "payload": object{"type": "custom_tool_call_output", "call_id": p.CallID, "output": []object{{"type": "input_text", "text": "Script completed\nWall time 0.5 seconds\nOutput:\n"}, {"type": "input_text", "text": string(wrapper)}}}})
 			enc.Encode(object{"type": "response_item", "timestamp": start.Add(4 * time.Second).Format(time.RFC3339Nano), "payload": object{"type": "custom_tool_call", "name": "exec", "call_id": "call_current", "input": skillsRuntimeSourceInvocationText(path, cwd, flag)}})
 			_, ok := skillsRuntimeSourcePendingCall(&input, thread, cwd, path, flag, start, start.Add(time.Minute), currentID)
-			if ok != (kind == "different_file" || kind == "start_retry") {
+			if ok != (variant == "different_file" || variant == "start_retry") {
 				t.Fatal("physical request identity was bypassed by a spelling change")
 			}
 		})

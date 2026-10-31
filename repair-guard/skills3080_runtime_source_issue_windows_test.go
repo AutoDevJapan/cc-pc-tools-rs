@@ -122,7 +122,7 @@ func TestSkills3080RuntimeSourceCLIIsPurposeScopedAndReportsOwnedHold(t *testing
 	for _, owned := range []string{strings.Repeat("a1", 16), "D:/private/path"} {
 		var out bytes.Buffer
 		code := runSkillsCLI([]string{"--prepare-skills3080-runtime-source", "D:/synthetic/request.json"}, &out, func(string, string) object {
-			return object{"qualified": false, "reason": "source", "failure_stage": "source_prepare_write", "ownership_id": owned, "partial_preparation_possible": true, "source_owned_root": "D:/private/path", "body": "private data"}
+			return object{"qualified": false, "reason": "source", "failure_stage": "source_prepare_write", "ownership_id": owned, "partial_preparation_possible": true, "request_object": skillsObjectID{"123", strings.Repeat("1", 32)}, "source_owned_root": "D:/private/path", "body": "private data"}
 		})
 		var value object
 		json.Unmarshal(out.Bytes(), &value)
@@ -131,6 +131,9 @@ func TestSkills3080RuntimeSourceCLIIsPurposeScopedAndReportsOwnedHold(t *testing
 		}
 		if skillsRuntimeNonce(owned) != (value["ownership_id"] == owned && value["partial_preparation_possible"] == true) {
 			t.Fatal("source hold did not retain only its validated ownership identifier")
+		}
+		if skillsRuntimeNonce(owned) != (value["request_object"] != nil) {
+			t.Fatal("partial identity was not kept only with a validated own preparation")
 		}
 	}
 }

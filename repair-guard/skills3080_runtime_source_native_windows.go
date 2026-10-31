@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"io"
 	"path/filepath"
+	"regexp"
 	"strconv"
 	"strings"
 	"time"
@@ -98,6 +99,22 @@ func skillsRuntimeSourceInvocationText(path, cwd, flag string) string {
 	return "text(await tools.exec_command(" + string(b) + "));"
 }
 
+// Recognize only the fixed hidden CLI wrapper, regardless of request spelling.
+// It does not execute or trust a path announced by a tool result.
+func skillsRuntimeSourceAnyInvocation(input, cwd, flag string) bool {
+	const prefix, suffix = "text(await tools.exec_command(", "));"
+	input = strings.TrimSpace(input)
+	if !strings.HasPrefix(input, prefix) || !strings.HasSuffix(input, suffix) {
+		return false
+	}
+	var c skillsCreationCommand
+	if !skillsStrict([]byte(strings.TrimSuffix(strings.TrimPrefix(input, prefix), suffix)), &c) || !same(c.Workdir, cwd) {
+		return false
+	}
+	args := regexp.MustCompile(`\$ccStart\.ArgumentList\.Add\('([^']+)'\)`).FindAllStringSubmatch(c.Cmd, -1)
+	return len(args) == 2 && args[0][1] == flag && skillsRuntimeSourceInvocation(input, args[1][1], c.Workdir, flag)
+}
+
 func skillsRuntimeSourcePendingCall(input io.Reader, thread, cwd, path, flag string, start, end time.Time, requestID skillsObjectID) (string, bool) {
 	if !skillsSourceObjectShape(requestID) {
 		return "", false
@@ -156,6 +173,14 @@ func skillsRuntimeSourcePendingCall(input io.Reader, thread, cwd, path, flag str
 		}
 		if p.Type == "custom_tool_call_output" {
 			if flag == "--prepare-skills3080-runtime-source" {
+				partial, completed := skillsRuntimeSourceCompletedToolResponse(p.Output)
+				if completed && partial["qualified"] == false && partial["partial_preparation_possible"] == true && skillsRuntimeNonce(str(partial["ownership_id"])) && skillsRuntimeSourceAnyInvocation(calls[p.Call], cwd, flag) {
+					var oldID skillsObjectID
+					encoded, _ := json.Marshal(partial["request_object"])
+					if skillsStrict(encoded, &oldID) && skillsSourceObjectShape(oldID) && oldID == requestID {
+						return "", false
+					}
+				}
 				result, valid := skillsRuntimeSourceToolOutput(p.Output)
 				if valid && result["operation"] == "prepare_runtime_source" {
 					encoded, _ := json.Marshal(result["runtime_source_preparation"])
@@ -281,7 +306,7 @@ func skillsRuntimeSourceNativeProjection(input io.Reader, thread, cwd, parentJob
 	return out, scan.Err() == nil && session && matched
 }
 
-func skillsRuntimeSourceToolOutput(raw json.RawMessage) (object, bool) {
+func skillsRuntimeSourceCompletedToolResponse(raw json.RawMessage) (object, bool) {
 	var encoded []json.RawMessage
 	if json.Unmarshal(raw, &encoded) != nil || len(encoded) != 2 {
 		return nil, false
@@ -299,9 +324,15 @@ func skillsRuntimeSourceToolOutput(raw json.RawMessage) (object, bool) {
 		return nil, false
 	}
 	wrapper, ok := conversationJSON([]byte(blocks[1].Text))
-	if !ok || wrapper["exit_code"] != json.Number("0") || wrapper["session_id"] != nil {
+	if !ok || (wrapper["exit_code"] != json.Number("0") && wrapper["exit_code"] != json.Number("1")) || wrapper["session_id"] != nil {
 		return nil, false
 	}
 	result, ok := conversationJSON([]byte(str(wrapper["output"])))
+	qualified, present := result["qualified"].(bool)
+	return result, ok && present && ((qualified && wrapper["exit_code"] == json.Number("0")) || (!qualified && wrapper["exit_code"] == json.Number("1")))
+}
+
+func skillsRuntimeSourceToolOutput(raw json.RawMessage) (object, bool) {
+	result, ok := skillsRuntimeSourceCompletedToolResponse(raw)
 	return result, ok && result["qualified"] == true && result["general_access_granted"] == false && result["original_registry_recovered"] == false && result["data_access_granted"] == false
 }

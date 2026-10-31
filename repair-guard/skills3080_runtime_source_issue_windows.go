@@ -173,10 +173,14 @@ func skillsRuntimeSourcePending(s *skillsFS, w skillsWriter, path, flag string) 
 
 func skillsRuntimeSourceOperation(op, path string, raw []byte, r skillsRequest, reg skillsRegistry, s *skillsFS) object {
 	ownedRoot, ownedID := "", ""
+	requestIdentity := skillsObjectID{}
 	fail := func(stage string) object {
 		v := object{"qualified": false, "reason": "source", "failure_stage": stage, "data_access_granted": false}
 		if ownedRoot != "" {
 			v["ownership_id"], v["partial_preparation_possible"] = ownedID, true
+			if skillsSourceObjectShape(requestIdentity) {
+				v["request_object"] = requestIdentity
+			}
 		}
 		return v
 	}
@@ -212,6 +216,7 @@ func skillsRuntimeSourceOperation(op, path string, raw []byte, r skillsRequest, 
 	if !ok {
 		return fail("source_request")
 	}
+	requestIdentity = requestID
 	producer, ok := skillsProducerObservation(s)
 	if !ok {
 		return fail("runtime")

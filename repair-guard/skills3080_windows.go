@@ -242,6 +242,7 @@ func runSkillsCLI(args []string, out io.Writer, run func(string, string) object)
 	if result["qualified"] != true {
 		created, partial := result["created_files"], result["partial_operation_possible"]
 		owned, preparationPartial := str(result["ownership_id"]), result["partial_preparation_possible"] == true
+		requestObject := result["request_object"]
 		stage, _ := result["failure_stage"].(string)
 		reason := str(result["reason"])
 		if !skillsReason.MatchString(reason) {
@@ -257,6 +258,11 @@ func runSkillsCLI(args []string, out io.Writer, run func(string, string) object)
 		}
 		if preparationPartial && skillsRuntimeNonce(owned) && strings.HasPrefix(stage, "source_") && skillsFixedFailureStage(stage) {
 			result["ownership_id"], result["partial_preparation_possible"] = owned, true
+			encoded, _ := json.Marshal(requestObject)
+			var id skillsObjectID
+			if skillsStrict(encoded, &id) && skillsSourceObjectShape(id) {
+				result["request_object"] = id
+			}
 		}
 	}
 	if json.NewEncoder(out).Encode(result) != nil || result["qualified"] != true {

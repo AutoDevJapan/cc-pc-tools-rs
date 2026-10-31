@@ -2107,6 +2107,654 @@
       ],
       "body_reads": 0,
       "does_not_establish_absence_from_all_history": true
+    },
+    {
+      "occurrence_id": "site:1password",
+      "repository": "x402agent/solana-clawd",
+      "fixed_commit": "fd9dc36d0b23956e18dcc2d1418a95199afdd3f5",
+      "listed_ref": "fd9dc36d0b23956e18dcc2d1418a95199afdd3f5",
+      "listed_path": "skills/1password/SKILL.md",
+      "mutable_ref": false,
+      "observed_at": "2026-10-31T11:00:52.4450448+00:00",
+      "state": "listed exact path segment absent in complete fixed subtree",
+      "absent_segment": "1password",
+      "fixed_commit_tree": "55edfe4a134d98d0c1982fb83758894a8fd4620a",
+      "walk": [
+        {
+          "node_count": 23,
+          "segment": "skills",
+          "matching_nodes": 1,
+          "case_insensitive_nodes": [
+            {
+              "path": "skills",
+              "sha": "99b8a44bc777f9dec846d72b2a7e52d340d57176",
+              "size": null,
+              "type": "tree"
+            }
+          ],
+          "tree": "55edfe4a134d98d0c1982fb83758894a8fd4620a",
+          "truncated": false
+        },
+        {
+          "node_count": 2,
+          "segment": "1password",
+          "matching_nodes": 0,
+          "case_insensitive_nodes": [],
+          "tree": "99b8a44bc777f9dec846d72b2a7e52d340d57176",
+          "truncated": false
+        }
+      ],
+      "body_reads": 0,
+      "does_not_establish_absence_from_all_history": true
+    },
+    {
+      "occurrence_id": "site:statusline-08a70b",
+      "repository": "gald3r-labs/gald3r",
+      "fixed_commit": "ff8525f4f6304ac617c0d6cefff284038ef77b26",
+      "listed_ref": "ff8525f4f6304ac617c0d6cefff284038ef77b26",
+      "listed_path": ".agent/skills/statusline/SKILL.md",
+      "mutable_ref": false,
+      "observed_at": "2026-10-31T11:00:54.9796390+00:00",
+      "state": "listed exact path segment absent in complete fixed subtree",
+      "absent_segment": ".agent",
+      "fixed_commit_tree": "a5e79356e1f73e2a747da744d12a2270bed3c4ac",
+      "walk": [
+        {
+          "node_count": 14,
+          "segment": ".agent",
+          "matching_nodes": 0,
+          "case_insensitive_nodes": [],
+          "tree": "a5e79356e1f73e2a747da744d12a2270bed3c4ac",
+          "truncated": false
+        }
+      ],
+      "body_reads": 0,
+      "does_not_establish_absence_from_all_history": true
+    },
+    {
+      "occurrence_id": "site:angular-signals",
+      "repository": "plastikaweb/plastikspace",
+      "fixed_commit": "bcafa1a6332cc0d4e7dce2a71f869ad806a0cd83",
+      "listed_ref": "bcafa1a6332cc0d4e7dce2a71f869ad806a0cd83",
+      "listed_path": ".agents/skills/angular-signals/SKILL.md",
+      "mutable_ref": false,
+      "observed_at": "2026-10-31T11:00:56.5372331+00:00",
+      "state": "listed exact path segment absent in complete fixed subtree",
+      "absent_segment": ".agents",
+      "fixed_commit_tree": "be69053dd3e3d9dff58414f41d67c353c437eb07",
+      "walk": [
+        {
+          "node_count": 33,
+          "segment": ".agents",
+          "matching_nodes": 0,
+          "case_insensitive_nodes": [],
+          "tree": "be69053dd3e3d9dff58414f41d67c353c437eb07",
+          "truncated": false
+        }
+      ],
+      "body_reads": 0,
+      "does_not_establish_absence_from_all_history": true
+    },
+    {
+      "occurrence_id": "site:spec-driven-ui",
+      "repository": "bankielewicz/devforgeai",
+      "fixed_commit": "3f503c294164a89aa5fbe2e5cae41094860aee06",
+      "listed_ref": "3f503c294164a89aa5fbe2e5cae41094860aee06",
+      "listed_path": ".claude/skills/spec-driven-ui/SKILL.md",
+      "mutable_ref": false,
+      "observed_at": "2026-10-31T11:00:58.1483038+00:00",
+      "state": "listed exact path segment absent in complete fixed subtree",
+      "absent_segment": "skills",
+      "fixed_commit_tree": "ce39435e3f4afde992f5a180c4b6100c3701f0c9",
+      "walk": [
+        {
+          "node_count": 11,
+          "segment": ".claude",
+          "matching_nodes": 1,
+          "case_insensitive_nodes": [
+            {
+              "path": ".claude",
+              "sha": "b0cd6db865f9561573f338904cd3de4b86959b7b",
+              "size": null,
+              "type": "tree"
+            }
+          ],
+          "tree": "ce39435e3f4afde992f5a180c4b6100c3701f0c9",
+          "truncated": false
+        },
+        {
+          "node_count": 1,
+          "segment": "skills",
+          "matching_nodes": 0,
+          "case_insensitive_nodes": [],
+          "tree": "b0cd6db865f9561573f338904cd3de4b86959b7b",
+          "truncated": false
+        }
+      ],
+      "body_reads": 0,
+      "does_not_establish_absence_from_all_history": true
+    },
+    {
+      "occurrence_id": "site:compliance-audit",
+      "repository": "yohayetsion/product-org-os",
+      "fixed_commit": "8b19a49c51fcdb8108115ba6a82df194db604fcc",
+      "listed_ref": "8b19a49c51fcdb8108115ba6a82df194db604fcc",
+      "listed_path": "skills-mirror/compliance-audit/SKILL.md",
+      "mutable_ref": false,
+      "observed_at": "2026-10-31T11:01:00.7010637+00:00",
+      "state": "listed exact path segment absent in complete fixed subtree",
+      "absent_segment": "skills-mirror",
+      "fixed_commit_tree": "6bece9d760bab0f5b6fcac697c976756c01c6cdd",
+      "walk": [
+        {
+          "node_count": 20,
+          "segment": "skills-mirror",
+          "matching_nodes": 0,
+          "case_insensitive_nodes": [],
+          "tree": "6bece9d760bab0f5b6fcac697c976756c01c6cdd",
+          "truncated": false
+        }
+      ],
+      "body_reads": 0,
+      "does_not_establish_absence_from_all_history": true
+    },
+    {
+      "occurrence_id": "site:review-and-ship",
+      "repository": "gald3r-labs/gald3r",
+      "fixed_commit": "ff8525f4f6304ac617c0d6cefff284038ef77b26",
+      "listed_ref": "ff8525f4f6304ac617c0d6cefff284038ef77b26",
+      "listed_path": ".agent/skills/review-and-ship/SKILL.md",
+      "mutable_ref": false,
+      "observed_at": "2026-10-31T11:01:02.2793577+00:00",
+      "state": "listed exact path segment absent in complete fixed subtree",
+      "absent_segment": ".agent",
+      "fixed_commit_tree": "a5e79356e1f73e2a747da744d12a2270bed3c4ac",
+      "walk": [
+        {
+          "node_count": 14,
+          "segment": ".agent",
+          "matching_nodes": 0,
+          "case_insensitive_nodes": [],
+          "tree": "a5e79356e1f73e2a747da744d12a2270bed3c4ac",
+          "truncated": false
+        }
+      ],
+      "body_reads": 0,
+      "does_not_establish_absence_from_all_history": true
+    },
+    {
+      "occurrence_id": "site:prompt-creation",
+      "repository": "davidsneighbour/ai",
+      "fixed_commit": "59732a29c408c8dc6a696061bda783fc893036e7",
+      "listed_ref": "59732a29c408c8dc6a696061bda783fc893036e7",
+      "listed_path": "ai/skills/prompt-creation/SKILL.md",
+      "mutable_ref": false,
+      "observed_at": "2026-10-31T11:01:02.2846897+00:00",
+      "state": "listed exact path segment absent in complete fixed subtree",
+      "absent_segment": "ai",
+      "fixed_commit_tree": "a4c878e5d98a62c44b24c93c73ec7e3f530d8304",
+      "walk": [
+        {
+          "node_count": 37,
+          "segment": "ai",
+          "matching_nodes": 0,
+          "case_insensitive_nodes": [],
+          "tree": "a4c878e5d98a62c44b24c93c73ec7e3f530d8304",
+          "truncated": false
+        }
+      ],
+      "body_reads": 0,
+      "does_not_establish_absence_from_all_history": true
+    },
+    {
+      "occurrence_id": "site:harness-25a22a",
+      "repository": "mgreenly/ikigai",
+      "fixed_commit": "35aea42fad1e198315af556ba0bc2b5f4b476f67",
+      "listed_ref": "35aea42fad1e198315af556ba0bc2b5f4b476f67",
+      "listed_path": ".claude/library/harness/SKILL.md",
+      "mutable_ref": false,
+      "observed_at": "2026-10-31T11:01:03.9625073+00:00",
+      "state": "listed exact path segment absent in complete fixed subtree",
+      "absent_segment": "library",
+      "fixed_commit_tree": "cb81e6b59f990d4621e29eee85c8488a00a7e02b",
+      "walk": [
+        {
+          "node_count": 36,
+          "segment": ".claude",
+          "matching_nodes": 1,
+          "case_insensitive_nodes": [
+            {
+              "path": ".claude",
+              "sha": "4064d6bf2022eadecbcd39acab47c69535fd73c3",
+              "size": null,
+              "type": "tree"
+            }
+          ],
+          "tree": "cb81e6b59f990d4621e29eee85c8488a00a7e02b",
+          "truncated": false
+        },
+        {
+          "node_count": 1,
+          "segment": "library",
+          "matching_nodes": 0,
+          "case_insensitive_nodes": [],
+          "tree": "4064d6bf2022eadecbcd39acab47c69535fd73c3",
+          "truncated": false
+        }
+      ],
+      "body_reads": 0,
+      "does_not_establish_absence_from_all_history": true
+    },
+    {
+      "occurrence_id": "site:vercel-blob",
+      "repository": "trytraza/fde-discovery",
+      "fixed_commit": "2eca685e310e3df2f7af9712a3dd2f7b97761b48",
+      "listed_ref": "2eca685e310e3df2f7af9712a3dd2f7b97761b48",
+      "listed_path": ".agents/skills/vercel-blob/SKILL.md",
+      "mutable_ref": false,
+      "observed_at": "2026-10-31T11:01:06.5819584+00:00",
+      "state": "listed exact path segment absent in complete fixed subtree",
+      "absent_segment": "vercel-blob",
+      "fixed_commit_tree": "940c8568bde3adc13306d055bbefd3a8d0ce050d",
+      "walk": [
+        {
+          "node_count": 23,
+          "segment": ".agents",
+          "matching_nodes": 1,
+          "case_insensitive_nodes": [
+            {
+              "path": ".agents",
+              "sha": "49502d40f52ce0adec80564c04e2f5e5ca3ff49e",
+              "size": null,
+              "type": "tree"
+            }
+          ],
+          "tree": "940c8568bde3adc13306d055bbefd3a8d0ce050d",
+          "truncated": false
+        },
+        {
+          "node_count": 1,
+          "segment": "skills",
+          "matching_nodes": 1,
+          "case_insensitive_nodes": [
+            {
+              "path": "skills",
+              "sha": "55821c77afb54f92fb52cab638c6e9d01777b77f",
+              "size": null,
+              "type": "tree"
+            }
+          ],
+          "tree": "49502d40f52ce0adec80564c04e2f5e5ca3ff49e",
+          "truncated": false
+        },
+        {
+          "node_count": 9,
+          "segment": "vercel-blob",
+          "matching_nodes": 0,
+          "case_insensitive_nodes": [],
+          "tree": "55821c77afb54f92fb52cab638c6e9d01777b77f",
+          "truncated": false
+        }
+      ],
+      "body_reads": 0,
+      "does_not_establish_absence_from_all_history": true
+    },
+    {
+      "occurrence_id": "site:find-skills-1ce3a1",
+      "repository": "martijnbokma/chain-hub",
+      "fixed_commit": "410b7fefecc449f5343faf0b5eb9fa2c877b2cb3",
+      "listed_ref": "main",
+      "listed_path": "core/skills/find-skills/SKILL.md",
+      "mutable_ref": true,
+      "observed_at": "2026-10-31T11:01:09.9016219+00:00",
+      "state": "listed exact path segment absent in complete fixed subtree",
+      "absent_segment": "core",
+      "fixed_commit_tree": "04bbe1490fd3db83e69c4c0aeb56a995864ce9a5",
+      "walk": [
+        {
+          "node_count": 23,
+          "segment": "core",
+          "matching_nodes": 0,
+          "case_insensitive_nodes": [],
+          "tree": "04bbe1490fd3db83e69c4c0aeb56a995864ce9a5",
+          "truncated": false
+        }
+      ],
+      "body_reads": 0,
+      "does_not_establish_absence_from_all_history": true,
+      "mutable_ref_pin_limit": "The literal main ref was resolved at the recorded observation time; it does not establish which commit the original listing referred to."
+    },
+    {
+      "occurrence_id": "site:market-research-f9b2af",
+      "repository": "jinyuanlu/dotfiles",
+      "fixed_commit": "91ca043f6a2d14cd272036f09b596f764a2fe22b",
+      "listed_ref": "91ca043f6a2d14cd272036f09b596f764a2fe22b",
+      "listed_path": ".claude/skills/market-research/SKILL.md",
+      "mutable_ref": false,
+      "observed_at": "2026-10-31T11:01:12.2980413+00:00",
+      "state": "listed exact path segment absent in complete fixed subtree",
+      "absent_segment": ".claude",
+      "fixed_commit_tree": "c4bf112c48f086d0a240ca7288b057ce6eb15c12",
+      "walk": [
+        {
+          "node_count": 7,
+          "segment": ".claude",
+          "matching_nodes": 0,
+          "case_insensitive_nodes": [],
+          "tree": "c4bf112c48f086d0a240ca7288b057ce6eb15c12",
+          "truncated": false
+        }
+      ],
+      "body_reads": 0,
+      "does_not_establish_absence_from_all_history": true
+    },
+    {
+      "occurrence_id": "site:notestorelab-case-review",
+      "repository": "xiaojiou176-open/notes-recover",
+      "fixed_commit": "e7ce24c1109d83988c4230dcdc18b64f79b11536",
+      "listed_ref": "e7ce24c1109d83988c4230dcdc18b64f79b11536",
+      "listed_path": "starter-bundles/openclaw/workspace/skills/notestorelab/SKILL.md",
+      "mutable_ref": false,
+      "observed_at": "2026-10-31T11:01:13.8758809+00:00",
+      "state": "listed exact path segment absent in complete fixed subtree",
+      "absent_segment": "notestorelab",
+      "fixed_commit_tree": "0da8269ff5f573bfbf3232deb24f94cf0478b1cc",
+      "walk": [
+        {
+          "node_count": 44,
+          "segment": "starter-bundles",
+          "matching_nodes": 1,
+          "case_insensitive_nodes": [
+            {
+              "path": "starter-bundles",
+              "sha": "01a4fb503041006ac5d3bf6dbb08c6b30e4622a1",
+              "size": null,
+              "type": "tree"
+            }
+          ],
+          "tree": "0da8269ff5f573bfbf3232deb24f94cf0478b1cc",
+          "truncated": false
+        },
+        {
+          "node_count": 4,
+          "segment": "openclaw",
+          "matching_nodes": 1,
+          "case_insensitive_nodes": [
+            {
+              "path": "openclaw",
+              "sha": "a5ad6f933a8b040aa430174ff5767843fc65470e",
+              "size": null,
+              "type": "tree"
+            }
+          ],
+          "tree": "01a4fb503041006ac5d3bf6dbb08c6b30e4622a1",
+          "truncated": false
+        },
+        {
+          "node_count": 2,
+          "segment": "workspace",
+          "matching_nodes": 1,
+          "case_insensitive_nodes": [
+            {
+              "path": "workspace",
+              "sha": "c6816cdca8de1ef66724136b5b617686658bc115",
+              "size": null,
+              "type": "tree"
+            }
+          ],
+          "tree": "a5ad6f933a8b040aa430174ff5767843fc65470e",
+          "truncated": false
+        },
+        {
+          "node_count": 2,
+          "segment": "skills",
+          "matching_nodes": 1,
+          "case_insensitive_nodes": [
+            {
+              "path": "skills",
+              "sha": "e8b2730b1e56e6eb36e2b1d5a1a13f79b3f9dc26",
+              "size": null,
+              "type": "tree"
+            }
+          ],
+          "tree": "c6816cdca8de1ef66724136b5b617686658bc115",
+          "truncated": false
+        },
+        {
+          "node_count": 1,
+          "segment": "notestorelab",
+          "matching_nodes": 0,
+          "case_insensitive_nodes": [],
+          "tree": "e8b2730b1e56e6eb36e2b1d5a1a13f79b3f9dc26",
+          "truncated": false
+        }
+      ],
+      "body_reads": 0,
+      "does_not_establish_absence_from_all_history": true
+    },
+    {
+      "occurrence_id": "site:vela-rulesets",
+      "repository": "ryanmr/vela-skills",
+      "fixed_commit": "651fb52c97d8667e69e4ead817e60a002c726d38",
+      "listed_ref": "651fb52c97d8667e69e4ead817e60a002c726d38",
+      "listed_path": ".agents/skills/vela-rulesets/SKILL.md",
+      "mutable_ref": false,
+      "observed_at": "2026-10-31T11:01:18.6718339+00:00",
+      "state": "listed exact path segment absent in complete fixed subtree",
+      "absent_segment": ".agents",
+      "fixed_commit_tree": "6fc738708fa8b1033f93aa2a165907a2bbc39792",
+      "walk": [
+        {
+          "node_count": 1,
+          "segment": ".agents",
+          "matching_nodes": 0,
+          "case_insensitive_nodes": [],
+          "tree": "6fc738708fa8b1033f93aa2a165907a2bbc39792",
+          "truncated": false
+        }
+      ],
+      "body_reads": 0,
+      "does_not_establish_absence_from_all_history": true
+    },
+    {
+      "occurrence_id": "site:code-verification",
+      "repository": "ewe-studios/agentic-coding-starter",
+      "fixed_commit": "d8a9bcfd755f82eecabc1c9f8c5e3194eccabcb5",
+      "listed_ref": "d8a9bcfd755f82eecabc1c9f8c5e3194eccabcb5",
+      "listed_path": "skills/code-verification/skill.md",
+      "mutable_ref": false,
+      "observed_at": "2026-10-31T11:01:20.2232626+00:00",
+      "state": "listed exact path segment absent in complete fixed subtree",
+      "absent_segment": "code-verification",
+      "fixed_commit_tree": "f0e69a65f51e42525519c2843b7c95b7f3dba796",
+      "walk": [
+        {
+          "node_count": 10,
+          "segment": "skills",
+          "matching_nodes": 1,
+          "case_insensitive_nodes": [
+            {
+              "path": "skills",
+              "sha": "953e1ffaf581c98c8d208644e689a7ce2c5387e4",
+              "size": null,
+              "type": "tree"
+            }
+          ],
+          "tree": "f0e69a65f51e42525519c2843b7c95b7f3dba796",
+          "truncated": false
+        },
+        {
+          "node_count": 7,
+          "segment": "code-verification",
+          "matching_nodes": 0,
+          "case_insensitive_nodes": [],
+          "tree": "953e1ffaf581c98c8d208644e689a7ce2c5387e4",
+          "truncated": false
+        }
+      ],
+      "body_reads": 0,
+      "does_not_establish_absence_from_all_history": true
+    },
+    {
+      "occurrence_id": "site:web-coder",
+      "repository": "github/awesome-copilot",
+      "fixed_commit": "613efc8c21d9b3ce642dff361d17006cd9967e28",
+      "listed_ref": "613efc8c21d9b3ce642dff361d17006cd9967e28",
+      "listed_path": "plugins/cms-development/skills/web-coder/SKILL.md",
+      "mutable_ref": false,
+      "observed_at": "2026-10-31T11:01:22.7169187+00:00",
+      "state": "listed exact path segment absent in complete fixed subtree",
+      "absent_segment": "skills",
+      "fixed_commit_tree": "794cc42df31f5c87b1944be7e0809685e009777a",
+      "walk": [
+        {
+          "node_count": 31,
+          "segment": "plugins",
+          "matching_nodes": 1,
+          "case_insensitive_nodes": [
+            {
+              "path": "plugins",
+              "sha": "1a70b737d72e6716b3859abd15be31e687718c18",
+              "size": null,
+              "type": "tree"
+            }
+          ],
+          "tree": "794cc42df31f5c87b1944be7e0809685e009777a",
+          "truncated": false
+        },
+        {
+          "node_count": 105,
+          "segment": "cms-development",
+          "matching_nodes": 1,
+          "case_insensitive_nodes": [
+            {
+              "path": "cms-development",
+              "sha": "a248defd2e24e9daac959b41e7da081d722e2f6c",
+              "size": null,
+              "type": "tree"
+            }
+          ],
+          "tree": "1a70b737d72e6716b3859abd15be31e687718c18",
+          "truncated": false
+        },
+        {
+          "node_count": 2,
+          "segment": "skills",
+          "matching_nodes": 0,
+          "case_insensitive_nodes": [],
+          "tree": "a248defd2e24e9daac959b41e7da081d722e2f6c",
+          "truncated": false
+        }
+      ],
+      "body_reads": 0,
+      "does_not_establish_absence_from_all_history": true
+    },
+    {
+      "occurrence_id": "site:funda-data",
+      "repository": "himself65/finance-skills",
+      "fixed_commit": "73d554d60c0a3f121a30f505680f7a06b2b1fd11",
+      "listed_ref": "73d554d60c0a3f121a30f505680f7a06b2b1fd11",
+      "listed_path": "plugins/data-providers/skills/funda-data/SKILL.md",
+      "mutable_ref": false,
+      "observed_at": "2026-10-31T11:01:26.0784422+00:00",
+      "state": "listed exact path segment absent in complete fixed subtree",
+      "absent_segment": "funda-data",
+      "fixed_commit_tree": "9164bc80f35e49aa50dd6059977c9426f9ecac3d",
+      "walk": [
+        {
+          "node_count": 14,
+          "segment": "plugins",
+          "matching_nodes": 1,
+          "case_insensitive_nodes": [
+            {
+              "path": "plugins",
+              "sha": "a307f199e5b89e03a6be2da5188864cfb4c99a29",
+              "size": null,
+              "type": "tree"
+            }
+          ],
+          "tree": "9164bc80f35e49aa50dd6059977c9426f9ecac3d",
+          "truncated": false
+        },
+        {
+          "node_count": 6,
+          "segment": "data-providers",
+          "matching_nodes": 1,
+          "case_insensitive_nodes": [
+            {
+              "path": "data-providers",
+              "sha": "fb7390207caa6edbd5d4d59757fe391ae90331ad",
+              "size": null,
+              "type": "tree"
+            }
+          ],
+          "tree": "a307f199e5b89e03a6be2da5188864cfb4c99a29",
+          "truncated": false
+        },
+        {
+          "node_count": 5,
+          "segment": "skills",
+          "matching_nodes": 1,
+          "case_insensitive_nodes": [
+            {
+              "path": "skills",
+              "sha": "d14ffe55f765d90fb48328d9acaff0c6fd45720e",
+              "size": null,
+              "type": "tree"
+            }
+          ],
+          "tree": "fb7390207caa6edbd5d4d59757fe391ae90331ad",
+          "truncated": false
+        },
+        {
+          "node_count": 6,
+          "segment": "funda-data",
+          "matching_nodes": 0,
+          "case_insensitive_nodes": [],
+          "tree": "d14ffe55f765d90fb48328d9acaff0c6fd45720e",
+          "truncated": false
+        }
+      ],
+      "body_reads": 0,
+      "does_not_establish_absence_from_all_history": true
+    },
+    {
+      "occurrence_id": "site:dynamic-cursor-interactions",
+      "repository": "jeanjfth/antigravity-pro",
+      "fixed_commit": "8f5118a1dc4f2755f0abc52b294921cfd4e586c8",
+      "listed_ref": "8f5118a1dc4f2755f0abc52b294921cfd4e586c8",
+      "listed_path": ".agents/skills/dynamic_cursor_interactions/SKILL.md",
+      "mutable_ref": false,
+      "observed_at": "2026-10-31T11:01:30.1995110+00:00",
+      "state": "listed exact path segment absent in complete fixed subtree",
+      "absent_segment": ".agents",
+      "fixed_commit_tree": "0900f9e8e6c2e2ca02d363c8caeef93ca935a68b",
+      "walk": [
+        {
+          "node_count": 12,
+          "segment": ".agents",
+          "matching_nodes": 0,
+          "case_insensitive_nodes": [],
+          "tree": "0900f9e8e6c2e2ca02d363c8caeef93ca935a68b",
+          "truncated": false
+        }
+      ],
+      "body_reads": 0,
+      "does_not_establish_absence_from_all_history": true
     }
-  ]
+  ],
+  "fixed_path_recheck_summary": {
+    "additional_metadata_only_paths": 17,
+    "permission_adoption_or_central_credit": 0,
+    "source_body_reads": 0,
+    "reused_fixed_commit_proofs": 4,
+    "original_fixed_commit_paths": 20,
+    "observed_from": "2026-10-31T11:00:52.4450448+00:00",
+    "new_metadata_http_calls": 48,
+    "literal_main_paths_pinned_at_observation": 1,
+    "occurrences": 21,
+    "all_paths_absent_at_selected_fixed_version": true,
+    "observed_through": "2026-10-31T11:01:30.1995110+00:00",
+    "does_not_establish_original_version_for_mutable_main": true
+  }
 }

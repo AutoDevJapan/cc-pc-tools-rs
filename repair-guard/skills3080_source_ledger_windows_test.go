@@ -72,7 +72,7 @@ func TestSkills3080SourceOutcomeRejectsMalformedClaims(t *testing.T) {
 }
 
 func TestSkills3080SourcePendingCallLedgerRejectsRebinding(t *testing.T) {
-	for _, kind := range []string{"normal", "ordinary", "ordinary_function", "prior_output", "duplicate_custom", "duplicate_function", "duplicate_output", "output_rebound", "source_call_hijacked", "custom_to_function", "function_to_custom", "pending_source_wrong_output", "unknown_output", "unknown_call", "unknown_unrelated_id", "unknown_empty_id", "unknown_null_id"} {
+	for _, kind := range []string{"normal", "ordinary", "ordinary_function", "prior_output", "outer_outside_window", "duplicate_custom", "duplicate_function", "duplicate_output", "output_rebound", "source_call_hijacked", "custom_to_function", "function_to_custom", "pending_source_wrong_output", "unknown_output", "unknown_call", "unknown_unrelated_id", "unknown_empty_id", "unknown_null_id", "unknown_outer", "unknown_outer_empty", "unknown_outer_null", "outer_call_id", "outer_case_alias", "outer_bad_time"} {
 		t.Run(kind, func(t *testing.T) {
 			p := skillsSourcePreparationFixture()
 			start := time.Date(2030, 1, 1, 0, 0, 0, 0, time.UTC)
@@ -147,8 +147,29 @@ func TestSkills3080SourcePendingCallLedgerRejectsRebinding(t *testing.T) {
 			if kind == "unknown_null_id" {
 				emit(object{"type": "future_result_type", "call_id": nil, "output": "unknown"})
 			}
+			if strings.HasPrefix(kind, "unknown_outer") || strings.HasPrefix(kind, "outer_") {
+				payload := object{"type": "custom_tool_call_output", "call_id": "call_current", "output": "unknown envelope"}
+				record := object{"type": "future_envelope", "timestamp": start.Add(2 * time.Second).Format(time.RFC3339Nano), "payload": payload}
+				switch kind {
+				case "unknown_outer_empty":
+					payload["call_id"] = ""
+				case "unknown_outer_null":
+					payload["call_id"] = nil
+				case "outer_call_id":
+					delete(payload, "call_id")
+					record["call_id"] = "call_current"
+				case "outer_case_alias":
+					delete(payload, "call_id")
+					record["Call_Id"] = "call_current"
+				case "outer_bad_time":
+					record["timestamp"] = "invalid"
+				case "outer_outside_window":
+					record["timestamp"] = start.Add(-time.Second).Format(time.RFC3339Nano)
+				}
+				enc.Encode(record)
+			}
 			id, ok := skillsRuntimeSourcePendingCall(&input, thread, p.Writer.Workspace, path, flag, start, start.Add(time.Minute), p.RequestID)
-			want := kind == "normal" || kind == "ordinary" || kind == "ordinary_function" || kind == "prior_output"
+			want := kind == "normal" || kind == "ordinary" || kind == "ordinary_function" || kind == "prior_output" || kind == "outer_outside_window"
 			if ok != want || (ok && id != "call_current") {
 				t.Fatalf("ledger %s accepted=%v", kind, ok)
 			}

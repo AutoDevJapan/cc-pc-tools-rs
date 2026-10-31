@@ -202,6 +202,24 @@ func skillsRuntimeSourcePendingCall(input io.Reader, thread, cwd, path, flag str
 		if !skillsNativeUniqueJSON(scan.Bytes()) || !skillsCreationHeaderKeys(scan.Bytes(), "type", "timestamp", "payload") || json.Unmarshal(scan.Bytes(), &e) != nil {
 			return "", false
 		}
+		// Inspect call identifiers before the envelope-type filter. Unknown
+		// envelopes cannot hide a result associated with an in-window call.
+		var envelope, payloadFields map[string]json.RawMessage
+		if json.Unmarshal(scan.Bytes(), &envelope) != nil || !skillsCreationHeaderKeys(scan.Bytes(), "call_id") {
+			return "", false
+		}
+		json.Unmarshal(e.Payload, &payloadFields)
+		_, outerCall := envelope["call_id"]
+		_, innerCall := payloadFields["call_id"]
+		if !skillsCreationHeaderKeys(e.Payload, "call_id") {
+			return "", false
+		}
+		if outerCall || (innerCall && e.Type != "response_item") {
+			at, err := time.Parse(time.RFC3339Nano, e.Timestamp)
+			if err != nil || (!at.Before(start) && !at.After(end)) {
+				return "", false
+			}
+		}
 		if e.Type != "session_meta" && e.Type != "response_item" {
 			continue
 		}

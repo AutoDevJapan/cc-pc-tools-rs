@@ -141,7 +141,8 @@ func TestSkills3080ResumedRuntimeSourceAndCurrentTaskHaveSeparateWindows(t *test
 		msg("user", "", skillsBootstrapFixture(str(job["cwd"]), string(body), true), initial),
 		{"type": "world_state", "timestamp": initial.Format(time.RFC3339Nano), "payload": object{"full": true, "state": object{"agents_md": object{"directory": job["cwd"], "text": string(body)}}}},
 		{"type": "turn_context", "timestamp": initial.Format(time.RFC3339Nano), "payload": object{"turn_id": turn, "cwd": job["cwd"], "model": "gpt-6-luna", "effort": "max"}},
-		msg("user", "", "old different task", initial.Add(time.Second)), msg("assistant", "final_answer", "old different final", initial.Add(2*time.Second)),
+		msg("user", "", "old different task", initial.Add(time.Second)),
+		{"type": "response_item", "timestamp": initial.Add(2 * time.Second).Format(time.RFC3339Nano), "payload": object{"type": "configuration_update", "reasoning": object{"effort": "max"}}},
 		{"type": "turn_context", "timestamp": start.Format(time.RFC3339Nano), "payload": object{"turn_id": "33333333-3333-7333-8333-333333333333", "cwd": job["cwd"], "model": "gpt-6-luna", "effort": "max"}},
 		msg("user", "", "registered current task", start.Add(time.Second)), msg("assistant", "final_answer", "current original final", start.Add(2*time.Second)),
 	}
@@ -314,7 +315,7 @@ func TestSkills3080ResumedRuntimeSourceAndCurrentTaskHaveSeparateWindows(t *test
 			}
 		})
 	}
-	for _, kind := range []string{"current", "wrong_current_input", "old_final_digest", "extra_current_user", "extra_current_final", "gap_user", "gap_event", "gap_developer", "backdated_prior_user", "inserted_prior_user", "inserted_prior_event", "inserted_prior_developer", "unverified_initial_developer", "missing_prior_input", "duplicate_prior_event", "valid_prior_context", "wrong_prior_context_model", "wrong_prior_context_cwd", "wrong_prior_context_effort", "unregistered_gap_context", "valid_prior_assistant", "missing_prior_generated_turn", "wrong_prior_generated_turn", "duplicate_prior_generated_id", "orphan_prior_tool_output", "valid_prior_tool_pair", "wrong_prior_tool_pair", "unmatched_prior_tool_call", "valid_prior_configuration", "wrong_prior_configuration", "extra_prior_configuration"} {
+	for _, kind := range []string{"current", "wrong_current_input", "old_final_digest", "extra_current_user", "extra_current_final", "gap_user", "gap_event", "gap_developer", "backdated_prior_user", "inserted_prior_user", "inserted_prior_event", "inserted_prior_developer", "unverified_initial_developer", "missing_prior_input", "duplicate_prior_event", "valid_prior_context", "wrong_prior_context_model", "wrong_prior_context_cwd", "wrong_prior_context_effort", "unregistered_gap_context", "unauthenticated_prior_assistant", "unauthenticated_prior_final", "unauthenticated_prior_reasoning", "missing_prior_generated_turn", "wrong_prior_generated_turn", "duplicate_prior_generated_id", "orphan_prior_tool_output", "unauthenticated_prior_tool_pair", "unauthenticated_prior_function_pair", "wrong_prior_tool_pair", "unmatched_prior_tool_call", "valid_prior_configuration", "wrong_prior_configuration", "extra_prior_configuration"} {
 		t.Run(kind, func(t *testing.T) {
 			b := raw.Bytes()
 			prompt, final := []byte("registered current task"), []byte("current original final")
@@ -336,9 +337,15 @@ func TestSkills3080ResumedRuntimeSourceAndCurrentTaskHaveSeparateWindows(t *test
 				prefix := append([]byte{}, b[:pos]...)
 				prefix = append(prefix, append(x, '\n')...)
 				b = append(prefix, b[pos:]...)
-			case "valid_prior_assistant", "missing_prior_generated_turn", "wrong_prior_generated_turn", "duplicate_prior_generated_id", "orphan_prior_tool_output", "valid_prior_tool_pair", "wrong_prior_tool_pair", "unmatched_prior_tool_call":
+			case "unauthenticated_prior_assistant", "unauthenticated_prior_final", "unauthenticated_prior_reasoning", "missing_prior_generated_turn", "wrong_prior_generated_turn", "duplicate_prior_generated_id", "orphan_prior_tool_output", "unauthenticated_prior_tool_pair", "unauthenticated_prior_function_pair", "wrong_prior_tool_pair", "unmatched_prior_tool_call":
 				at := initial.Add(3 * time.Second)
 				v := msg("assistant", "commentary", "generated history", at)
+				if kind == "unauthenticated_prior_final" {
+					obj(v["payload"])["phase"] = "final_answer"
+				}
+				if kind == "unauthenticated_prior_reasoning" {
+					v["payload"] = object{"type": "reasoning", "id": "reasoning_item", "summary": []object{}, "encrypted_content": "opaque", "internal_chat_message_metadata_passthrough": object{"turn_id": turn}}
+				}
 				if kind == "missing_prior_generated_turn" {
 					delete(obj(v["payload"]), "internal_chat_message_metadata_passthrough")
 				}
@@ -349,9 +356,13 @@ func TestSkills3080ResumedRuntimeSourceAndCurrentTaskHaveSeparateWindows(t *test
 					obj(v["payload"])["id"] = obj(records[6]["payload"])["id"]
 				}
 				insert := []object{v}
-				if strings.Contains(kind, "tool_") {
+				if strings.Contains(kind, "tool_") || kind == "unauthenticated_prior_function_pair" {
 					call := object{"type": "response_item", "timestamp": at.Format(time.RFC3339Nano), "payload": object{"type": "custom_tool_call", "id": "tool_call_item", "name": "exec", "call_id": "call_prior_bound", "input": "opaque", "internal_chat_message_metadata_passthrough": object{"turn_id": turn}}}
 					output := object{"type": "response_item", "timestamp": at.Add(time.Second).Format(time.RFC3339Nano), "payload": object{"type": "custom_tool_call_output", "id": "tool_output_item", "call_id": "call_prior_bound", "output": "opaque", "internal_chat_message_metadata_passthrough": object{"turn_id": turn}}}
+					if kind == "unauthenticated_prior_function_pair" {
+						obj(call["payload"])["type"] = "function_call"
+						obj(output["payload"])["type"] = "function_call_output"
+					}
 					insert = []object{call, output}
 					if kind == "orphan_prior_tool_output" {
 						insert = insert[1:]
@@ -478,7 +489,7 @@ func TestSkills3080ResumedRuntimeSourceAndCurrentTaskHaveSeparateWindows(t *test
 				proof.runtimePriorWindows[i].proof = &skillsNativeResultProof{prompt: proof.runtimePriorWindows[i].Input, inputOnly: true, exactInput: true, runtimeBootstrap: source, bootstrapBound: true, cwd: str(job["cwd"]), sandbox: "read-only"}
 			}
 			_, ok := skillsNativeProjectionBound(bytes.NewReader(b), id, str(job["cwd"]), start, end, proof)
-			if ok != (kind == "current" || kind == "valid_prior_context" || kind == "valid_prior_assistant" || kind == "valid_prior_tool_pair" || kind == "valid_prior_configuration") {
+			if ok != (kind == "current" || kind == "valid_prior_context" || kind == "valid_prior_configuration") {
 				t.Fatalf("current task/final isolation %s accepted=%v", kind, ok)
 			}
 		})

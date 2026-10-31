@@ -80,7 +80,7 @@ func TestSkills3080MissingPublicProjectCannotDowngradeCurrentRuntime(t *testing.
 	}
 	project := []byte("PUBLIC project")
 	body, _ := skillsAssembleBootstrapSource([]byte("same historical owner body"), project)
-	for _, kind := range []string{"current_with_project", "current_missing_project", "known_old", "known_old_bootstrap_before_start", "known_old_bootstrap_after_end", "known_old_extra_outside_user", "known_old_extra_outside_event", "unknown"} {
+	for _, kind := range []string{"current_with_project", "current_missing_project", "known_old", "known_old_developer_message", "known_old_developer_tools", "known_old_bootstrap_before_start", "known_old_bootstrap_after_end", "known_old_extra_outside_user", "known_old_extra_outside_event", "unknown"} {
 		version := "0.165.0"
 		if strings.HasPrefix(kind, "known_old") {
 			version = "0.163.0"
@@ -92,6 +92,13 @@ func TestSkills3080MissingPublicProjectCannotDowngradeCurrentRuntime(t *testing.
 			return object{"type": "response_item", "timestamp": at.Format(time.RFC3339Nano), "payload": object{"type": "message", "role": "user", "content": []object{{"type": "input_text", "text": text}}}}
 		}
 		records := []object{{"type": "session_meta", "timestamp": start.Format(time.RFC3339Nano), "payload": object{"id": id, "cwd": cwd, "source": "exec", "originator": "codex_exec", "cli_version": version}}, {"type": "event_msg", "timestamp": start.Format(time.RFC3339Nano), "payload": object{"type": "task_started", "turn_id": turn}}, msg(skillsBootstrapFixture(cwd, string(body), true), start), {"type": "world_state", "timestamp": start.Format(time.RFC3339Nano), "payload": object{"full": true, "state": object{"agents_md": object{"directory": cwd, "text": string(body)}}}}, {"type": "turn_context", "timestamp": start.Format(time.RFC3339Nano), "payload": object{"turn_id": turn, "cwd": cwd, "model": "gpt-6-luna", "effort": "max"}}, msg("exact task", start.Add(time.Second))}
+		if kind == "known_old_developer_message" || kind == "known_old_developer_tools" {
+			payload := object{"type": "message", "role": "developer", "content": []object{{"type": "input_text", "text": "unregistered developer instruction"}}}
+			if kind == "known_old_developer_tools" {
+				payload["type"] = "additional_tools"
+			}
+			records = append(records[:2], append([]object{{"type": "response_item", "timestamp": start.Format(time.RFC3339Nano), "payload": payload}}, records[2:]...)...)
+		}
 		if kind == "known_old_bootstrap_before_start" {
 			records[2]["timestamp"] = start.Add(-time.Second).Format(time.RFC3339Nano)
 		}
@@ -105,7 +112,11 @@ func TestSkills3080MissingPublicProjectCannotDowngradeCurrentRuntime(t *testing.
 			records = append(records, object{"type": "event_msg", "timestamp": start.Add(-time.Second).Format(time.RFC3339Nano), "payload": object{"type": "user_message", "message": "unregistered outside event"}})
 		}
 		var b bytes.Buffer
-		for _, v := range skillsCompleteRuntimeFixture(records) {
+		stream := records
+		if version != "0.163.0" {
+			stream = skillsCompleteRuntimeFixture(records)
+		}
+		for _, v := range stream {
 			raw, _ := json.Marshal(v)
 			b.Write(raw)
 			b.WriteByte('\n')

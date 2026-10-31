@@ -32,10 +32,13 @@ catalogの表示をサービスの利用許可や作業範囲へ昇格しない�
 今回の登録済み入力・現在model・final digestは、今回jobだけの窓で確認する。
 job間の未登録指示、今回の多重user/final、今回の記録より後へ時刻を戻して追記した過去userも拒否する。
 過去のturn_contextも一つの登録jobへ結び、実model・cwd・effortを照合する。
-生成された応答・推論・tool call/outputは、元のcanonical snapshot内でそのjobの検証済みturn、
-一意なitem ID、tool callと結果の対応へ結ぶ。
-本文や引数を結果受領の別経路から回収せず、生成出力を本人の指示や閲覧権限へ昇格しない。
-これは過去全文の暗号学的な真正性や、時刻をまたぐ物理的な同一性を証明するものではない。
+過去の生成応答・推論・tool call/outputは、そのlog内のturnやitem IDが整合するだけでは認証しない。
+通常登録に独立した項目一覧や記録時の認証値がないため、そのような生成履歴を含む再開結果は拒否する。
+同じlogから後付けでhashを作っても、過去の存在証明にはしない。
+旧configuration_updateは許す全値が正常jobのeffortから独立に決まるため、その厳密な形式だけを照合する。
+本文や引数を結果受領の別経路から回収しない。拒否された元結果と原jobはそのまま保持する。
+新しい実使用の再検査は、保存specを正常に登録して独立した新しいsessionで実行し、
+その実結果を確認する。元の再開結果が認証されたことにはしない。
 
 原job・spec・prompt・native・finalは変更せず、同じ長さを凍結したhandleを読み直して検証する。
 sourceや結果を別path、copy、可変な指示ファイル、未知のdigestへ置き換えない。
@@ -44,6 +47,7 @@ bootstrap本文を取り出す際にも元jobの時間を確認し、最初の�
 再開後の現在jobには、初回bootstrapをもう一度user入力として加えられない。
 旧形式を理由に、時刻外の先行user/eventを確認せず読み飛ばさない。
 過去窓のない新規0.163でも、時間外のuser/eventやcontextを拒否する。
+0.163のdeveloper指示や追加tool定義にも独立した照合根拠がないため、bootstrap前でも拒否する。
 未知CLI版の拒否、原author・origin・実launch親・現在consumerの区別は維持する。
 これは一般guardや中央の既存対象の解除ではない。
 

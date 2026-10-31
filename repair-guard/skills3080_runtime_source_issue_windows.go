@@ -137,12 +137,34 @@ func skillsRuntimeSourceHidden(command string, args []string, cwd string, env []
 
 func skillsRuntimeSourceOwnedRoot(w skillsWriter) (string, string, bool) {
 	b, ok := skillsRuntimeSourceHidden("D:/CC/Tools/safe-delete/safe-delete.exe", []string{"create", "--project", "cc-pc-tools-rs", "--content", "skills3080-runtime-source", "--root", w.Workspace}, w.Workspace, os.Environ(), 30*time.Second)
-	if !ok {
+	v, parsed := conversationJSON(b)
+	id, path := str(v["id"]), str(v["path"])
+	valid := parsed && skillsRuntimeNonce(id) && v["state"] == "owned" && v["producer_job"] == w.Job && conversationNumber(v["producer_todo"]) == 3080 && same(path, filepath.Join(w.Workspace, "codex-owned-"+id))
+	if !valid {
 		return "", "", false
 	}
-	v, ok := conversationJSON(b)
-	id, path := str(v["id"]), str(v["path"])
-	return path, id, ok && skillsRuntimeNonce(id) && v["state"] == "owned" && v["producer_job"] == w.Job && conversationNumber(v["producer_todo"]) == 3080 && same(path, filepath.Join(w.Workspace, "codex-owned-"+id))
+	return path, id, ok
+}
+
+// Claim the request object before starting any external allocation. An unknown
+// outcome (timeout, crash, malformed or missing creator output) leaves this
+// CreateNew record in place, so retries cannot allocate a second root.
+func skillsRuntimeSourceAttempt(s *skillsFS, w skillsWriter, requestID skillsObjectID, task int, requestSHA string) bool {
+	if !skillsSourceObjectShape(requestID) || !skillsResultID(skillsResultRequest{Task: w.Task, Job: w.Job}) || !skillsDigest(requestSHA) || task <= 0 {
+		return false
+	}
+	key := skillsProjectionSHA(object{"writer_job": w.Job, "request_object": requestID})
+	path := filepath.Join(w.Workspace, ".ci-work", "skills3080-source-attempt-"+key+".json")
+	body, err := json.Marshal(object{"domain": "skills-3080-source-attempt-v1", "writer_job": w.Job, "task": task, "request_object": requestID, "request_sha256": requestSHA})
+	return err == nil && skillsRuntimeSourceWriteNew(s, path, body)
+}
+
+func skillsRuntimeSourceAllocateOnce(s *skillsFS, w skillsWriter, requestID skillsObjectID, task int, requestSHA string, create func() (string, string, bool)) (string, string, bool, bool) {
+	if !skillsRuntimeSourceAttempt(s, w, requestID, task, requestSHA) {
+		return "", "", false, false
+	}
+	root, id, ok := create()
+	return root, id, ok, true
 }
 
 func skillsRuntimeSourcePending(s *skillsFS, w skillsWriter, path, flag string) (string, bool) {
@@ -230,7 +252,10 @@ func skillsRuntimeSourceOperation(op, path string, raw []byte, r skillsRequest, 
 	if !ok {
 		return fail("source_spec")
 	}
-	root, ownership, ok := skillsRuntimeSourceOwnedRoot(r.Writer)
+	root, ownership, ok, attempted := skillsRuntimeSourceAllocateOnce(s, r.Writer, requestID, row.ID, hashBytes(raw), func() (string, string, bool) { return skillsRuntimeSourceOwnedRoot(r.Writer) })
+	if !attempted {
+		return fail("source_attempt_record")
+	}
 	ownedRoot, ownedID = root, ownership
 	if !ok {
 		return fail("source_owned_root")

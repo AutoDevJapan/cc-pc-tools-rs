@@ -2,13 +2,11 @@ package main
 
 import (
 	"bytes"
-	"context"
 	"crypto/rand"
 	"encoding/hex"
 	"encoding/json"
 	"io"
 	"os"
-	"os/exec"
 	"path/filepath"
 	"strconv"
 	"strings"
@@ -125,14 +123,8 @@ func skillsRuntimeSourceWriteNew(s *skillsFS, path string, body []byte) bool {
 }
 
 func skillsRuntimeSourceHidden(command string, args []string, cwd string, env []string, seconds time.Duration) ([]byte, bool) {
-	ctx, cancel := context.WithTimeout(context.Background(), seconds)
-	defer cancel()
-	c := exec.CommandContext(ctx, command, args...)
-	c.Dir, c.Env = cwd, env
-	c.SysProcAttr = &syscall.SysProcAttr{HideWindow: true, CreationFlags: 0x08000000}
-	c.WaitDelay = time.Second
-	b, err := c.Output()
-	return b, err == nil && len(b) <= 1<<20
+	r := skillsRuntimeSourceRunHidden(command, args, cwd, env, seconds)
+	return r.stdout, r.ok
 }
 
 func skillsRuntimeSourceOwnedRoot(w skillsWriter) (string, string, bool) {

@@ -231,6 +231,13 @@ func skillsRuntimeSourcePendingCall(input io.Reader, thread, cwd, path, flag str
 		if at.Before(start) || at.After(end) {
 			continue
 		}
+		var fields map[string]json.RawMessage
+		if json.Unmarshal(e.Payload, &fields) != nil {
+			return "", false
+		}
+		if _, present := fields["call_id"]; present && (!skillsCallID.MatchString(p.Call) || (p.Type != "custom_tool_call" && p.Type != "function_call" && p.Type != "custom_tool_call_output" && p.Type != "function_call_output")) {
+			return "", false
+		}
 		if p.Type == "custom_tool_call" || p.Type == "function_call" {
 			if !session || !skillsCallID.MatchString(p.Call) || callIDs[p.Call] != "" || outputIDs[p.Call] {
 				return "", false

@@ -72,7 +72,7 @@ func TestSkills3080SourceOutcomeRejectsMalformedClaims(t *testing.T) {
 }
 
 func TestSkills3080SourcePendingCallLedgerRejectsRebinding(t *testing.T) {
-	for _, kind := range []string{"normal", "ordinary", "ordinary_function", "prior_output", "duplicate_custom", "duplicate_function", "duplicate_output", "output_rebound", "source_call_hijacked", "custom_to_function", "function_to_custom", "pending_source_wrong_output"} {
+	for _, kind := range []string{"normal", "ordinary", "ordinary_function", "prior_output", "duplicate_custom", "duplicate_function", "duplicate_output", "output_rebound", "source_call_hijacked", "custom_to_function", "function_to_custom", "pending_source_wrong_output", "unknown_output", "unknown_call", "unknown_unrelated_id", "unknown_empty_id", "unknown_null_id"} {
 		t.Run(kind, func(t *testing.T) {
 			p := skillsSourcePreparationFixture()
 			start := time.Date(2030, 1, 1, 0, 0, 0, 0, time.UTC)
@@ -128,9 +128,24 @@ func TestSkills3080SourcePendingCallLedgerRejectsRebinding(t *testing.T) {
 				emit(output)
 			}
 			path := strings.ToUpper(p.RequestPath)
+			if kind == "unknown_call" {
+				emit(object{"type": "future_call_type", "name": "exec", "call_id": "call_future", "input": "unknown"})
+			}
+			if kind == "unknown_unrelated_id" {
+				emit(object{"type": "future_result_type", "call_id": "call_future", "output": "unknown"})
+			}
 			emit(object{"type": "custom_tool_call", "name": "exec", "call_id": "call_current", "input": skillsRuntimeSourceInvocationText(path, p.Writer.Workspace, flag)})
 			if kind == "pending_source_wrong_output" {
 				emit(object{"type": "function_call_output", "call_id": "call_current", "output": "not a pending custom call"})
+			}
+			if kind == "unknown_output" {
+				emit(object{"type": "future_result_type", "call_id": "call_current", "output": "unknown"})
+			}
+			if kind == "unknown_empty_id" {
+				emit(object{"type": "future_result_type", "call_id": "", "output": "unknown"})
+			}
+			if kind == "unknown_null_id" {
+				emit(object{"type": "future_result_type", "call_id": nil, "output": "unknown"})
 			}
 			id, ok := skillsRuntimeSourcePendingCall(&input, thread, p.Writer.Workspace, path, flag, start, start.Add(time.Minute), p.RequestID)
 			want := kind == "normal" || kind == "ordinary" || kind == "ordinary_function" || kind == "prior_output"

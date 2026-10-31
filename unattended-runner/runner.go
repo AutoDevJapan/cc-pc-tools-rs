@@ -57,6 +57,8 @@ type Thread struct {
 	Managed  bool   `json:"management_intake,omitempty"`
 	Metadata struct {
 		ArchiveTimestamp string `json:"archive_timestamp"`
+		Archived         bool   `json:"archived"`
+		Locked           bool   `json:"locked"`
 	} `json:"thread_metadata"`
 }
 type Message struct {
@@ -155,47 +157,56 @@ type State struct {
 	ReplayCursor             string                         `json:"replay_cursor,omitempty"`
 }
 type Health struct {
-	Mode                     string                   `json:"mode"`
-	Started                  string                   `json:"started_at"`
-	Finished                 string                   `json:"finished_at"`
-	API                      bool                     `json:"api_verified"`
-	Scanned                  int                      `json:"threads_scanned"`
-	Captured                 int                      `json:"owner_messages_captured"`
-	Registered               int                      `json:"todos_registered"`
-	Retried                  int                      `json:"technical_waits_released"`
-	Pending                  int                      `json:"pending_requests"`
-	Scheduler                bool                     `json:"scheduler_ok"`
-	Errors                   []string                 `json:"errors"`
-	Discovery                map[string]DiscoveryPage `json:"discovery,omitempty"`
-	ProductReports           int                      `json:"product_reports_verified"`
-	SteeringSaved            int                      `json:"steering_saved"`
-	ConversationReplies      int                      `json:"conversation_replies_processed,omitempty"`
-	ConversationWaiting      int                      `json:"conversation_waiting,omitempty"`
-	ConversationChecked      int                      `json:"conversation_waiting_checked,omitempty"`
-	ConversationPollDeferred int                      `json:"conversation_poll_deferred,omitempty"`
-	ConversationPollSeconds  int                      `json:"conversation_poll_interval_seconds,omitempty"`
-	Civ6Queue                *Civ6QueueHealth         `json:"civ6_ci_queue,omitempty"`
+	Mode                            string                   `json:"mode"`
+	Started                         string                   `json:"started_at"`
+	Finished                        string                   `json:"finished_at"`
+	API                             bool                     `json:"api_verified"`
+	Scanned                         int                      `json:"threads_scanned"`
+	Captured                        int                      `json:"owner_messages_captured"`
+	Registered                      int                      `json:"todos_registered"`
+	Retried                         int                      `json:"technical_waits_released"`
+	Pending                         int                      `json:"pending_requests"`
+	Scheduler                       bool                     `json:"scheduler_ok"`
+	Errors                          []string                 `json:"errors"`
+	Discovery                       map[string]DiscoveryPage `json:"discovery,omitempty"`
+	ProductReports                  int                      `json:"product_reports_verified"`
+	SteeringSaved                   int                      `json:"steering_saved"`
+	ConversationReplies             int                      `json:"conversation_replies_processed,omitempty"`
+	ConversationWaiting             int                      `json:"conversation_waiting,omitempty"`
+	ConversationChecked             int                      `json:"conversation_waiting_checked,omitempty"`
+	ConversationPollDeferred        int                      `json:"conversation_poll_deferred,omitempty"`
+	ConversationPollSeconds         int                      `json:"conversation_poll_interval_seconds,omitempty"`
+	OwnerAcknowledgements           int                      `json:"owner_acknowledgements_verified,omitempty"`
+	OwnerAcknowledgementsSuperseded int                      `json:"owner_acknowledgements_source_replaced,omitempty"`
+	Civ6Queue                       *Civ6QueueHealth         `json:"civ6_ci_queue,omitempty"`
 }
 type Runner struct {
-	Config                      Config
-	State                       *State
-	Client                      *http.Client
-	Token                       string
-	Base                        string
-	Run                         func(context.Context, string, ...string) (string, error)
-	Now                         func() time.Time
-	TodoPath                    string
-	ProgressLinks               map[string]ProgressLink
-	BlockedProgressThreads      map[string]bool
-	ProgressLinkRegistryInvalid bool
-	KnownQuestionThreads        map[string]bool
-	DiscoveryErrors             []string
-	NoticeAttempted             bool
-	JobsPath                    string
-	ProcessAlive                func(uint32, uint64) bool
-	Civ6Verify                  func(path, sha256 string) error
-	AgentResultGuard            func(context.Context, string) bool
-	SeparatedScheduler          bool
+	Config                          Config
+	State                           *State
+	Client                          *http.Client
+	Token                           string
+	Base                            string
+	Run                             func(context.Context, string, ...string) (string, error)
+	Now                             func() time.Time
+	TodoPath                        string
+	ProgressLinks                   map[string]ProgressLink
+	BlockedProgressThreads          map[string]bool
+	ProgressLinkRegistryInvalid     bool
+	KnownQuestionThreads            map[string]bool
+	DiscoveryErrors                 []string
+	NoticeAttempted                 bool
+	JobsPath                        string
+	ProcessAlive                    func(uint32, uint64) bool
+	Civ6Verify                      func(path, sha256 string) error
+	AgentResultGuard                func(context.Context, string) bool
+	SeparatedScheduler              bool
+	OwnerAcknowledgementsActive     bool
+	OwnerAcknowledgementAttempts    int
+	ownerAcknowledgementCache       *ownerAcknowledgements
+	ownerAcknowledgementLoaded      bool
+	ownerAcknowledgementLoadError   error
+	ownerAcknowledgementQueueErrors []string
+	ownerAcknowledgementBotVerified bool
 }
 
 func readJSON(path string, ceiling int64, value any) error {
@@ -573,7 +584,21 @@ func (r *Runner) scanPage(ctx context.Context, thread Thread, replay bool) (int,
 		}
 		r.State.Discovery[key] = DiscoveryPage{Before: before, Returned: len(messages), Complete: finished, Checked: r.Now().UTC().Format(time.RFC3339Nano), Coverage: coverage, LowerBound: strconv.FormatUint(after, 10)}
 	}
-	return captured, r.save()
+	if err := r.save(); err != nil {
+		return captured, err
+	}
+	if r.OwnerAcknowledgementsActive {
+		observed := make([]Message, 0, len(messages))
+		for _, m := range messages {
+			if r.State.Requests[m.ID] != nil {
+				observed = append(observed, m.Message)
+			}
+		}
+		if err := r.queueOwnerAcknowledgements(observed); err != nil {
+			r.ownerAcknowledgementQueueErrors = append(r.ownerAcknowledgementQueueErrors, "owner_acknowledgement_queue_deferred")
+		}
+	}
+	return captured, nil
 }
 func (r *Runner) existingTodo(key string) (uint64, error) {
 	var db struct {
@@ -765,7 +790,16 @@ func (r *Runner) tick(ctx context.Context) Health {
 
 func (r *Runner) tickWithIntakeContext(ctx, intakeParent context.Context) Health {
 	r.NoticeAttempted = false
+	r.OwnerAcknowledgementsActive = true
+	r.OwnerAcknowledgementAttempts = 0
+	r.ownerAcknowledgementCache = nil
+	r.ownerAcknowledgementLoaded = false
+	r.ownerAcknowledgementLoadError = nil
+	r.ownerAcknowledgementQueueErrors = nil
+	r.ownerAcknowledgementBotVerified = false
+	defer func() { r.OwnerAcknowledgementsActive = false }()
 	health := Health{Mode: "new-owner-intake-and-repair-scheduler", Started: r.Now().UTC().Format(time.RFC3339Nano), Errors: []string{}}
+	r.recoverOwnerAcknowledgementQueue(ctx, &health)
 	conversationCtx, cancelConversations := context.WithTimeout(ctx, conversationPollStageBudget)
 	r.processConversations(conversationCtx, &health)
 	cancelConversations()
@@ -802,6 +836,8 @@ func (r *Runner) tickWithIntakeContext(ctx, intakeParent context.Context) Health
 		}
 	}
 	if health.API {
+		health.Errors = append(health.Errors, r.ownerAcknowledgementQueueErrors...)
+		r.processOwnerAcknowledgements(intakeCtx, &health)
 		r.recheckOriginBlocked(intakeCtx, &health)
 		r.admit(intakeCtx, &health)
 		ordinaryCtx, cancelOrdinary := context.WithTimeout(intakeCtx, 4*time.Second)

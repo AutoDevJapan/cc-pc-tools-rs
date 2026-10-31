@@ -194,6 +194,9 @@ func skillsOperation(op, path string) object {
 	if !ok || !skillsStrict(raw, &r) || r.Domain != "skills-3080-operation-v1" || !within(r.Writer.Workspace, path) {
 		return fail("request")
 	}
+	if r.RuntimeSource != nil {
+		return fail("request")
+	}
 	scope, ok := fs.read(skillsScopePath, 1<<20)
 	if !ok || !skillsScopeBytes(scope) {
 		return fail("scope")

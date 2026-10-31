@@ -98,16 +98,17 @@ type skillsResultRequest struct {
 	SpecPath string `json:"spec_path,omitempty"`
 }
 type skillsRequest struct {
-	Domain         string                 `json:"domain"`
-	Writer         skillsWriter           `json:"writer"`
-	ManifestCommit string                 `json:"manifest_commit,omitempty"`
-	ManifestPath   string                 `json:"manifest_path,omitempty"`
-	ManifestSHA    string                 `json:"manifest_sha256,omitempty"`
-	Review         *skillsResultRequest   `json:"review,omitempty"`
-	Result         *skillsResultRequest   `json:"result,omitempty"`
-	Runtime        *skillsRuntimeRequest  `json:"runtime,omitempty"`
-	Consume        *skillsConsumeRequest  `json:"consume,omitempty"`
-	Revision       *skillsRevisionRequest `json:"revision,omitempty"`
+	Domain         string                      `json:"domain"`
+	Writer         skillsWriter                `json:"writer"`
+	ManifestCommit string                      `json:"manifest_commit,omitempty"`
+	ManifestPath   string                      `json:"manifest_path,omitempty"`
+	ManifestSHA    string                      `json:"manifest_sha256,omitempty"`
+	Review         *skillsResultRequest        `json:"review,omitempty"`
+	Result         *skillsResultRequest        `json:"result,omitempty"`
+	Runtime        *skillsRuntimeRequest       `json:"runtime,omitempty"`
+	Consume        *skillsConsumeRequest       `json:"consume,omitempty"`
+	Revision       *skillsRevisionRequest      `json:"revision,omitempty"`
+	RuntimeSource  *skillsRuntimeSourceRequest `json:"runtime_source,omitempty"`
 }
 
 var skillsName = regexp.MustCompile(`^[a-z0-9]+(?:-[a-z0-9]+)*$`)

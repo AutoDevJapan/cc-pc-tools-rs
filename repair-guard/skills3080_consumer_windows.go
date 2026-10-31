@@ -14,16 +14,17 @@ const skillsConsumerInstructions = "元3080の正規の読み取り専用受入�
 // specification. The actual caller is derived from admission, never supplied
 // as a future job ID by the creator or impersonated through a writer request.
 type skillsConsumerScope struct {
-	Domain          string               `json:"domain"`
-	Instructions    string               `json:"instructions"`
-	Author          skillsWriter         `json:"author"`
-	AuthorSpecPath  string               `json:"author_spec_path"`
-	CreatorSpecPath string               `json:"creator_spec_path"`
-	ManifestCommit  string               `json:"manifest_commit"`
-	ManifestPath    string               `json:"manifest_path"`
-	ManifestSHA     string               `json:"manifest_sha256"`
-	Review          skillsResultRequest  `json:"review"`
-	Consume         skillsConsumeRequest `json:"consume"`
+	Domain             string               `json:"domain"`
+	Instructions       string               `json:"instructions"`
+	Author             skillsWriter         `json:"author"`
+	AuthorSpecPath     string               `json:"author_spec_path"`
+	CreatorSpecPath    string               `json:"creator_spec_path"`
+	ManifestCommit     string               `json:"manifest_commit"`
+	ManifestPath       string               `json:"manifest_path"`
+	ManifestSHA        string               `json:"manifest_sha256"`
+	Review             skillsResultRequest  `json:"review"`
+	Consume            skillsConsumeRequest `json:"consume"`
+	RuntimeSourceNonce string               `json:"runtime_source_nonce,omitempty"`
 }
 
 func skillsConsumerSpecPath(path string) bool {
@@ -31,7 +32,7 @@ func skillsConsumerSpecPath(path string) bool {
 }
 func skillsParseConsumer(raw []byte) (skillsConsumerScope, bool) {
 	var c skillsConsumerScope
-	if !skillsStrict(raw, &c) || c.Domain != "skills-3080-consumer-v1" || c.Instructions != skillsConsumerInstructions || !skillsWriterValid(c.Author) || !skillsWriterValid(c.Consume.Creator) ||
+	if !skillsStrict(raw, &c) || !skillsRuntimeNonceEncoding(raw, false) || c.Domain != "skills-3080-consumer-v1" || c.Instructions != skillsConsumerInstructions || !skillsWriterValid(c.Author) || !skillsWriterValid(c.Consume.Creator) ||
 		!skillsConsumerSpecPath(c.AuthorSpecPath) || !skillsConsumerSpecPath(c.CreatorSpecPath) || !skillsGitObjectID(c.ManifestCommit) || !skillsDigest(c.ManifestSHA) ||
 		!skillsRelative(c.ManifestPath) || !strings.HasPrefix(c.ManifestPath, "docs/skills-3080-operations/") || !strings.HasSuffix(c.ManifestPath, ".json") ||
 		!skillsResultID(c.Review) || !skillsDigest(c.Review.SpecSHA) || !skillsDigest(c.Review.FinalSHA) || c.Review.SpecPath != "" ||

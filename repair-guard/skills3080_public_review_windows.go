@@ -45,6 +45,7 @@ type skillsPublicReviewScope struct {
 	ManifestDeclaration string                        `json:"manifest_declaration"`
 	Files               []skillsPublicReviewFile      `json:"files"`
 	Comparison          *skillsPublicReviewComparison `json:"comparison,omitempty"`
+	RuntimeSourceNonce  string                        `json:"runtime_source_nonce,omitempty"`
 }
 
 const skillsPublicReviewInstructions = "固定したPUBLIC Gitのfilesとmanifest内の出力だけを読み取り専用でレビューする。別path・私的資料・追加取得・実配置・実行・ファイル保存はしない。出典と個別notice、内容、採用条件、過大な成功主張を確認し、固定commit・読了範囲・Must/Suggestion/Nitを日本語の最終返信へ返す。レビュー読了時は先頭を状態: 完了とし、全読了かつMust0の時だけ SKILLS3080_ACCEPTANCE {\"domain\":\"skills-3080-review-v1\",\"manifest_sha256\":\"manifest_sha256の値\",\"accepted\":true,\"must\":0} を独立行で返す。Mustがあればaccepted:falseと実数を返す。"
@@ -81,6 +82,9 @@ func skillsParsePublicRepair(raw []byte) (skillsPublicReviewScope, bool) {
 }
 
 func skillsPublicPurposeEncoding(raw []byte, repair bool) bool {
+	if !skillsRuntimeNonceEncoding(raw, repair) {
+		return false
+	}
 	v, ok := conversationJSON(raw)
 	if !ok {
 		return false

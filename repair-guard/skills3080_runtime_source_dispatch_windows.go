@@ -235,20 +235,22 @@ func skillsSourcePreparationReason(s string) bool {
 // A failed CLI callback cannot use diagnostics as an arbitrary-data channel.
 func skillsSourceDispatchDiagnostic(value any) (object, bool) {
 	var d struct {
-		Outcome       string  `json:"outcome"`
-		StdoutBytes   uint64  `json:"stdout_bytes"`
-		StdoutSHA     string  `json:"stdout_sha256"`
-		StderrBytes   uint64  `json:"stderr_bytes"`
-		StderrSHA     string  `json:"stderr_sha256"`
-		Exit          *int    `json:"exit_code,omitempty"`
-		WindowsError  *uint32 `json:"win32_error,omitempty"`
-		CommandError  string  `json:"command_error,omitempty"`
-		Admission     string  `json:"admission_reason,omitempty"`
-		Status        string  `json:"status,omitempty"`
-		Phase         string  `json:"phase,omitempty"`
-		Preparation   string  `json:"preparation_reason,omitempty"`
-		SubworkStage  string  `json:"subwork_stage,omitempty"`
-		SubworkReason string  `json:"subwork_reason,omitempty"`
+		Outcome           string  `json:"outcome"`
+		StdoutBytes       uint64  `json:"stdout_bytes"`
+		StdoutSHA         string  `json:"stdout_sha256"`
+		StderrBytes       uint64  `json:"stderr_bytes"`
+		StderrSHA         string  `json:"stderr_sha256"`
+		Exit              *int    `json:"exit_code,omitempty"`
+		WindowsError      *uint32 `json:"win32_error,omitempty"`
+		CommandError      string  `json:"command_error,omitempty"`
+		Admission         string  `json:"admission_reason,omitempty"`
+		Status            string  `json:"status,omitempty"`
+		Phase             string  `json:"phase,omitempty"`
+		Preparation       string  `json:"preparation_reason,omitempty"`
+		SubworkStage      string  `json:"subwork_stage,omitempty"`
+		SubworkReason     string  `json:"subwork_reason,omitempty"`
+		AdmissionAttempts *int    `json:"admission_attempts,omitempty"`
+		WaitExhausted     *bool   `json:"admission_wait_exhausted,omitempty"`
 	}
 	b, err := json.Marshal(value)
 	if err != nil || !skillsStrict(b, &d) || !skillsDigest(d.StdoutSHA) || !skillsDigest(d.StderrSHA) || d.StdoutBytes > 1<<40 || d.StderrBytes > 1<<40 || (d.Exit != nil && (*d.Exit < -1 || *d.Exit > 0xffffffff)) {
@@ -281,6 +283,12 @@ func skillsSourceDispatchDiagnostic(value any) (object, bool) {
 		return nil, false
 	}
 	if (d.SubworkStage != "" || d.SubworkReason != "") && (d.CommandError != "InvalidSubwork" || !skillsSourceSubworkFields(d.SubworkStage, d.SubworkReason)) {
+		return nil, false
+	}
+	if d.AdmissionAttempts != nil && (*d.AdmissionAttempts < 1 || *d.AdmissionAttempts > skillsSourceAdmissionAttempts) {
+		return nil, false
+	}
+	if d.WaitExhausted != nil && (!*d.WaitExhausted || d.AdmissionAttempts == nil || !skillsSourceAdmissionRetryable(object{"outcome": d.Outcome, "admission_reason": d.Admission})) {
 		return nil, false
 	}
 	var out object

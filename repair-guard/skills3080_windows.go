@@ -294,7 +294,7 @@ func skillsFixedFailureStage(stage string) bool {
 		"source_index_open", "source_index_integrity", "source_selected_paths", "source_notice_or_catalog", "source_support_package",
 		"source_tree", "source_object", "creation_binding", "current_snapshot", "writer_recheck":
 		return true
-	case "source_request", "source_registration", "source_generation", "source_active", "source_spec", "source_issuer", "source_issuer_native", "source_nonce", "source_nonce_missing", "source_producer", "source_preparation", "source_issuer_spec", "source_owned_root", "source_directory", "source_prepare_write", "source_attempt_record", "source_not_empty", "source_inputs_changed", "source_task_finished", "source_normal_dispatch", "source_bundle", "source_manifest", "source_events", "source_event_binding", "source_pending", "source_payload_reference", "source_payload", "source_input":
+	case "source_request", "source_registration", "source_generation", "source_active", "source_spec", "source_issuer", "source_issuer_native", "source_nonce", "source_nonce_missing", "source_producer", "source_preparation", "source_issuer_spec", "source_owned_root", "source_directory", "source_prepare_write", "source_attempt_record", "source_not_empty", "source_inputs_changed", "source_task_finished", "source_normal_dispatch", "source_wait_deadline", "source_bundle", "source_manifest", "source_events", "source_event_binding", "source_pending", "source_payload_reference", "source_payload", "source_input":
 		return true
 	}
 	return false

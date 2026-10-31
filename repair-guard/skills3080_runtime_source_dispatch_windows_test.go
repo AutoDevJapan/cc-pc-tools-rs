@@ -316,7 +316,7 @@ func TestSkills3080SourceDispatchFailureNeverForwardsUnselectedValues(t *testing
 func TestSkills3080SourceStartPreservesOnlyObservedPriorIssuer(t *testing.T) {
 	current := skillsProducer{strings.Repeat("b", 64), strings.Repeat("c", 40)}
 	prior := skillsProducer{official3894SourceDispatchPredecessorSHA, official3894SourceDispatchPredecessorHead}
-	for _, p := range []skillsProducer{current, prior} {
+	for _, p := range []skillsProducer{current, prior, {official3894SourceWaitPredecessorSHA, official3894SourceWaitPredecessorHead}} {
 		if !skillsSourceStartProducerAccepted(p, current) {
 			t.Fatal("current or independently observed source issuer lost")
 		}

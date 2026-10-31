@@ -83,6 +83,54 @@ func visibleCurrentSnapshotMatches(entries []any, groups, members, latestRecords
 	return err == nil && travel3Digest(raw) == pin.deltaSHA
 }
 
+func visibleCurrentQueuePointerMatches(progress, summary map[string]any) bool {
+	plan, ok := progress["current_execution_plan"].(map[string]any)
+	if !ok || plan["current_queue_rollup_field"] != "current_execution_queue" {
+		return false
+	}
+	current, ok := progress["current_execution_queue"].(map[string]any)
+	if !ok {
+		return false
+	}
+	actual, err := json.Marshal(current)
+	expected, otherErr := json.Marshal(summary)
+	return err == nil && otherErr == nil && string(actual) == string(expected)
+}
+
+func TestVisiblePrimaryCurrentQueuePointerMatchesPublishedSummary(t *testing.T) {
+	for _, change := range []string{"valid", "legacy pointer with matching value", "missing pointer", "missing target", "target is not an object", "queue hash changed", "record count changed"} {
+		t.Run(change, func(t *testing.T) {
+			var ignored any
+			progress, err := parent19Decode(loadPublicReceipt(t, "skills-3080-progress.json", &ignored))
+			if err != nil {
+				t.Fatal(err)
+			}
+			summary, err := parent19Decode(loadPublicReceipt(t, "skills-3080-execution-queue-summary.json", &ignored))
+			if err != nil {
+				t.Fatal(err)
+			}
+			switch change {
+			case "legacy pointer with matching value":
+				progress["current_execution_plan"].(map[string]any)["current_queue_rollup_field"] = "latest_retained_procedure_queue"
+				progress["latest_retained_procedure_queue"] = progress["current_execution_queue"]
+			case "missing pointer":
+				delete(progress["current_execution_plan"].(map[string]any), "current_queue_rollup_field")
+			case "missing target":
+				delete(progress, "current_execution_queue")
+			case "target is not an object":
+				progress["current_execution_queue"] = []any{}
+			case "queue hash changed":
+				progress["current_execution_queue"].(map[string]any)["queue_sha256"] = strings.Repeat("0", 64)
+			case "record count changed":
+				progress["current_execution_queue"].(map[string]any)["occurrences_with_assessment_records"] = visibleJournalNumber(0)
+			}
+			if visibleCurrentQueuePointerMatches(progress, summary) != (change == "valid") {
+				t.Fatal("the current queue reference must select the exact published summary")
+			}
+		})
+	}
+}
+
 func TestVisiblePrimaryJournalRetainsCurrentIndependentSnapshot(t *testing.T) {
 	for _, change := range []string{"valid", "new value changed", "new order changed", "new entry missing", "new entry omitted with adjusted header", "new member metadata changed", "new tail with adjusted header", "new member total changed", "latest count changed", "latest member count changed", "base value changed"} {
 		t.Run(change, func(t *testing.T) {

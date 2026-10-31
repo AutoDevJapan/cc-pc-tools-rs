@@ -46,9 +46,9 @@ func skillsRuntimeSourceIdentity(p skillsRuntimeSourcePreparation) object {
 }
 
 func skillsSourceObjectShape(id skillsObjectID) bool {
-	_, err := strconv.ParseUint(id.Volume, 10, 64)
+	volume, err := strconv.ParseUint(id.Volume, 10, 64)
 	b, err2 := hex.DecodeString(id.File)
-	return err == nil && err2 == nil && len(b) == 16 && id.File != strings.Repeat("0", 32)
+	return err == nil && strconv.FormatUint(volume, 10) == id.Volume && err2 == nil && len(b) == 16 && hex.EncodeToString(b) == id.File && id.File != strings.Repeat("0", 32)
 }
 
 func skillsRuntimeSourcePreparationShape(p skillsRuntimeSourcePreparation) bool {
@@ -125,6 +125,64 @@ func skillsRuntimeSourceBeforeAllocation(stage string) bool {
 	return false
 }
 
+// Validate the complete purpose result before classifying it. Optional boolean
+// fields retain presence: a malformed or contradictory claim is not evidence
+// of a harmless preallocation failure.
+func skillsRuntimeSourceOutcomeShape(result object) bool {
+	for _, value := range result {
+		if value == nil {
+			return false
+		}
+	}
+	var v struct {
+		Qualified   *bool                           `json:"qualified"`
+		Operation   string                          `json:"operation,omitempty"`
+		RequestSHA  string                          `json:"request_sha256,omitempty"`
+		Preparation *skillsRuntimeSourcePreparation `json:"runtime_source_preparation,omitempty"`
+		Recorded    *bool                           `json:"normal_source_recorded,omitempty"`
+		Data        *bool                           `json:"data_access_granted,omitempty"`
+		General     *bool                           `json:"general_access_granted,omitempty"`
+		Recovered   *bool                           `json:"original_registry_recovered,omitempty"`
+		Reason      string                          `json:"reason,omitempty"`
+		Stage       string                          `json:"failure_stage,omitempty"`
+		Owned       string                          `json:"ownership_id,omitempty"`
+		Partial     *bool                           `json:"partial_preparation_possible,omitempty"`
+		Attempted   *bool                           `json:"source_attempt_recorded,omitempty"`
+		RequestID   *skillsObjectID                 `json:"request_object,omitempty"`
+	}
+	b, err := json.Marshal(result)
+	if err != nil || !skillsStrict(b, &v) || v.Qualified == nil {
+		return false
+	}
+	for _, flag := range []*bool{v.Data, v.General, v.Recovered, v.Recorded} {
+		if flag != nil && *flag {
+			return false
+		}
+	}
+	if *v.Qualified {
+		return v.Reason == "" && v.Stage == "" && v.Owned == "" && v.Partial == nil && v.Attempted == nil && v.RequestID == nil
+	}
+	if v.Reason != "source" || v.Operation != "" || v.RequestSHA != "" || v.Preparation != nil || v.Recorded != nil {
+		return false
+	}
+	if (v.Partial != nil && !*v.Partial) || (v.Attempted != nil && !*v.Attempted) {
+		return false
+	}
+	if (v.Partial != nil || v.Attempted != nil) && skillsRuntimeSourceBeforeAllocation(v.Stage) {
+		return false
+	}
+	if v.Partial != nil && !skillsRuntimeNonce(v.Owned) {
+		return false
+	}
+	if v.Owned != "" && v.Partial == nil {
+		return false
+	}
+	if v.RequestID != nil && (!skillsSourceObjectShape(*v.RequestID) || (v.Partial == nil && v.Attempted == nil)) {
+		return false
+	}
+	return (v.Partial == nil && v.Attempted == nil) || v.RequestID != nil
+}
+
 func skillsRuntimeSourcePendingCall(input io.Reader, thread, cwd, path, flag string, start, end time.Time, requestID skillsObjectID) (string, bool) {
 	if !skillsSourceObjectShape(requestID) {
 		return "", false
@@ -134,6 +192,7 @@ func skillsRuntimeSourcePendingCall(input io.Reader, thread, cwd, path, flag str
 	session := false
 	pending, seen := map[string]bool{}, map[string]bool{}
 	calls := map[string]string{}
+	callIDs, outputIDs := map[string]bool{}, map[string]bool{}
 	for scan.Scan() {
 		var e struct {
 			Type      string          `json:"type"`
@@ -172,6 +231,18 @@ func skillsRuntimeSourcePendingCall(input io.Reader, thread, cwd, path, flag str
 		if at.Before(start) || at.After(end) {
 			continue
 		}
+		if p.Type == "custom_tool_call" || p.Type == "function_call" {
+			if !session || !skillsCallID.MatchString(p.Call) || callIDs[p.Call] || outputIDs[p.Call] {
+				return "", false
+			}
+			callIDs[p.Call] = true
+		}
+		if p.Type == "custom_tool_call_output" || p.Type == "function_call_output" {
+			if !session || !skillsCallID.MatchString(p.Call) || outputIDs[p.Call] {
+				return "", false
+			}
+			outputIDs[p.Call] = true
+		}
 		if p.Type == "custom_tool_call" && p.Name == "exec" && skillsCallID.MatchString(p.Call) {
 			calls[p.Call] = p.Code
 		}
@@ -185,7 +256,7 @@ func skillsRuntimeSourcePendingCall(input io.Reader, thread, cwd, path, flag str
 			if flag == "--prepare-skills3080-runtime-source" {
 				partial, completed := skillsRuntimeSourceCompletedToolResponse(p.Output)
 				canonical := skillsRuntimeSourceAnyInvocation(calls[p.Call], cwd, flag)
-				if canonical && !completed {
+				if canonical && (!completed || !skillsRuntimeSourceOutcomeShape(partial)) {
 					return "", false
 				}
 				if canonical {

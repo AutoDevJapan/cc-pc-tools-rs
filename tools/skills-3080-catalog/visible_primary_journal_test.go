@@ -42,6 +42,55 @@ func visibleAccepted112PrefixMatches(entries []any) bool {
 	return err == nil && travel3Digest(raw) == "b9035a43e567eccd8464223d0f00405f6e7f96303c01771effe2046b44233948"
 }
 
+// The next 29 entries are anchored to the original received public projection,
+// SHA b01feaa0838c25cbeb538e702f74d7281e3b3872892e1dcc9d96dd567a53cb88.
+// This anchor is independent of a caller's manifest, row count or summary.
+func visibleLatest29DeltaMatches(entries []any, groups, members, latestRecords, latestMembers int) bool {
+	if len(entries) < 141 || groups != len(entries) || members < 162 || latestRecords != 29 || latestMembers != 44 || !visibleAccepted112PrefixMatches(entries) {
+		return false
+	}
+	raw, err := json.Marshal(entries[112:141])
+	return err == nil && travel3Digest(raw) == "fb9d6283fc8d300c92587ee4fd3f3ef91fec890d186a9fba49d77aeec3c34ce6"
+}
+
+func TestVisiblePrimaryJournalRetainsOriginalLatest29(t *testing.T) {
+	for _, change := range []string{"valid", "new value changed", "new order changed", "new entry missing", "new entry omitted with adjusted header", "new member metadata changed", "latest count changed", "latest member count changed"} {
+		t.Run(change, func(t *testing.T) {
+			var ignored any
+			raw := loadPublicReceipt(t, visiblePrimaryJournalFile, &ignored)
+			v, err := parent19Decode(raw)
+			if err != nil {
+				t.Fatal(err)
+			}
+			entries := v["entries"].([]any)
+			groups, members, latestRecords, latestMembers := len(entries), 162, 29, 44
+			switch change {
+			case "new value changed":
+				entries[140].(map[string]any)["value"] = "Different meaningful text that still passes the structural validator."
+			case "new order changed":
+				entries[139], entries[140] = entries[140], entries[139]
+			case "new entry missing":
+				entries = entries[:140]
+			case "new entry omitted with adjusted header":
+				entries = entries[:140]
+				groups, latestRecords = 140, 28
+			case "new member metadata changed":
+				entries[140].(map[string]any)["bound_member_metadata"] = 999
+			case "latest count changed":
+				latestRecords = 28
+			case "latest member count changed":
+				latestMembers = 43
+			}
+			if strings.HasPrefix(change, "new ") && !visibleAccepted112PrefixMatches(entries) {
+				t.Fatal("the delta regression must leave the older accepted prefix intact")
+			}
+			if visibleLatest29DeltaMatches(entries, groups, members, latestRecords, latestMembers) != (change == "valid") {
+				t.Fatal("the newly received delta was changed, reordered, omitted or counted differently")
+			}
+		})
+	}
+}
+
 func TestVisiblePrimaryJournalRetainsNewerAcceptedSuffix(t *testing.T) {
 	for _, change := range []string{"valid", "suffix value changed", "suffix order changed", "suffix missing"} {
 		t.Run(change, func(t *testing.T) {
@@ -112,6 +161,12 @@ func TestVisiblePrimaryMarkdownCountsMatchTheExecutionSnapshot(t *testing.T) {
 		Members int `json:"bound_member_metadata"`
 	}
 	loadPublicReceipt(t, visiblePrimaryJournalFile, &journal)
+	var baseline any
+	journalRaw := loadPublicReceipt(t, visiblePrimaryJournalFile, &baseline)
+	journalValue, decodeErr := parent19Decode(journalRaw)
+	if decodeErr != nil || !visibleLatest29DeltaMatches(journalValue["entries"].([]any), journal.Groups, journal.Members, progress.LatestDelta.Records, progress.LatestDelta.Members) {
+		t.Fatal("the current latest delta differs from the independently received 29 records and 44 member metadata")
+	}
 	if progress.LatestDelta.Records <= 0 || progress.LatestDelta.Records > journal.Groups || progress.LatestDelta.Members < progress.LatestDelta.Records || progress.LatestDelta.Members > journal.Members {
 		t.Fatal("the current increment must be a nonempty subset of the cumulative journal")
 	}

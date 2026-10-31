@@ -116,10 +116,10 @@ const official3894RuntimeOriginPredecessorHead = "ae8cf2424ebbc19de2e6eb2561c1bd
 const official3894SourceDispatchPredecessorSHA = "910eb3b0f97c527861dfa6db577770bdc207e174b723204588208125d3c15fc6"
 const official3894SourceDispatchPredecessorHead = "66438ec4b80fb3c77f2825d382657f914991fd7a"
 
-// Normal PR668 distribution, independently observed before the admission-wait
-// successor is generated. docs/evidence/skills-3080-guard-before-source-wait.json
-const official3894SourceWaitPredecessorSHA = "4ba236f463cfd6e657399c50d2a690750cf278f49ddc18113872ad32b2edd776"
-const official3894SourceWaitPredecessorHead = "046b21597bc3c0510bc407557a4a2c515b15f6ab"
+// Independent normal PR668 observation precedes this successor candidate.
+// docs/evidence/skills-3080-guard-before-source-receive.json
+const official3894SourceReceivePredecessorSHA = "4ba236f463cfd6e657399c50d2a690750cf278f49ddc18113872ad32b2edd776"
+const official3894SourceReceivePredecessorHead = "046b21597bc3c0510bc407557a4a2c515b15f6ab"
 
 type official3894Source struct {
 	Head, Registration, CreatorJob, Workspace, Branch, SpecSHA string
@@ -995,7 +995,7 @@ func official3894InstalledBaseline(sha, head string) bool {
 		(sha == official3894PublicManifestPredecessorSHA && head == official3894PublicManifestPredecessorHead) ||
 		(sha == official3894RuntimeOriginPredecessorSHA && head == official3894RuntimeOriginPredecessorHead) ||
 		(sha == official3894SourceDispatchPredecessorSHA && head == official3894SourceDispatchPredecessorHead) ||
-		(sha == official3894SourceWaitPredecessorSHA && head == official3894SourceWaitPredecessorHead)
+		(sha == official3894SourceReceivePredecessorSHA && head == official3894SourceReceivePredecessorHead)
 }
 
 // Qualifies only comparison of the known previously published guard software.

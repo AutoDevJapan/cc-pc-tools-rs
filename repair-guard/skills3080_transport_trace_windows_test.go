@@ -3,6 +3,7 @@ package main
 import (
 	"bytes"
 	"encoding/json"
+	"io"
 	"os"
 	"path/filepath"
 	"strings"
@@ -53,8 +54,59 @@ func skillsTraceFixture(t *testing.T) (string, object, []byte, time.Time, time.T
 	return root, job, prompt, start, end, manifest, events
 }
 
+func TestSkills3080LiveEventPrefixIsLockedWhileAppendsContinue(t *testing.T) {
+	for _, kind := range []string{"overwrite", "truncate", "observed_bytes_changed"} {
+		t.Run(kind, func(t *testing.T) {
+			path := filepath.Join(skillsFixtureRoot(t), "trace.jsonl")
+			initial := []byte("original complete event prefix\n")
+			if os.WriteFile(path, initial, 0600) != nil {
+				t.Fatal("fixture")
+			}
+			writer, err := os.OpenFile(path, os.O_RDWR, 0600)
+			if err != nil {
+				t.Fatal("existing runtime writer")
+			}
+			defer writer.Close()
+			fs := skillsFS{blocked: func(string) bool { return false }}
+			defer fs.close()
+			r, ok := skillsSourceEventSnapshot(&fs, path, true)
+			if !ok {
+				t.Fatal("live snapshot cannot coexist with the runtime append handle")
+			}
+			if _, err := writer.WriteAt([]byte("future event\n"), int64(len(initial))); err != nil {
+				t.Fatal("append after the observed range was blocked")
+			}
+			got, err := io.ReadAll(r)
+			if err != nil || !bytes.Equal(got, initial) || !r.unchanged(int64(len(initial))) {
+				t.Fatal("append changed the fixed reference snapshot")
+			}
+			switch kind {
+			case "overwrite":
+				if _, err := writer.WriteAt([]byte("X"), 0); err == nil || !r.unchanged(int64(len(initial))) {
+					t.Fatal("writer changed the protected reference prefix")
+				}
+				if r.file.Close() != nil {
+					t.Fatal("release event range lock")
+				}
+				if _, err := writer.WriteAt([]byte("X"), 0); err != nil {
+					t.Fatal("overwrite control did not become possible after releasing the guard")
+				}
+			case "truncate":
+				if err := writer.Truncate(1); err == nil && r.unchanged(int64(len(initial))) {
+					t.Fatal("shortened reference was accepted")
+				}
+			case "observed_bytes_changed":
+				r.observed.Bytes()[0] ^= 1
+				if r.unchanged(int64(len(initial))) {
+					t.Fatal("reference byte verification did not run")
+				}
+			}
+		})
+	}
+}
+
 func TestSkills3080TraceReaderSelectsOnlyBoundRecordedInput(t *testing.T) {
-	for _, kind := range []string{"normal", "response_tail", "wrong_directory", "multiple_bundles", "wrong_schema", "wrong_manifest_thread", "wrong_manifest_layout", "manifest_before_start", "event_sequence_gap", "event_time_outside", "wrong_event_thread", "wrong_turn", "missing_turn", "duplicate_config", "missing_config", "response_kind", "path_escape", "wrong_payload_id", "leading_zero_payload", "wrong_model", "wrong_task", "unknown_event", "short_event", "payload_short", "external_hardlink", "payload_writer"} {
+	for _, kind := range []string{"normal", "response_tail", "wrong_directory", "multiple_bundles", "wrong_schema", "wrong_manifest_thread", "wrong_manifest_layout", "manifest_before_start", "event_sequence_gap", "event_time_outside", "wrong_event_thread", "wrong_turn", "missing_turn", "duplicate_config", "missing_config", "response_kind", "path_escape", "wrong_payload_id", "leading_zero_payload", "wrong_model", "wrong_task", "unknown_event", "short_event", "payload_short", "external_hardlink", "payload_writer", "completed_event_writer"} {
 		t.Run(kind, func(t *testing.T) {
 			root, job, prompt, start, end, manifest, events := skillsTraceFixture(t)
 			bundle := filepath.Join(root, "trace-"+str(manifest["trace_id"])+"-"+str(job["thread_id"]))
@@ -131,8 +183,12 @@ func TestSkills3080TraceReaderSelectsOnlyBoundRecordedInput(t *testing.T) {
 			if os.WriteFile(filepath.Join(bundle, "trace.jsonl"), data, 0600) != nil {
 				t.Fatal("fixture event spine")
 			}
-			if kind == "payload_writer" {
-				name, _ := syscall.UTF16PtrFromString(filepath.Join(bundle, "payloads", "2.json"))
+			if kind == "payload_writer" || kind == "completed_event_writer" {
+				path := filepath.Join(bundle, "payloads", "2.json")
+				if kind == "completed_event_writer" {
+					path = filepath.Join(bundle, "trace.jsonl")
+				}
+				name, _ := syscall.UTF16PtrFromString(path)
 				h, err := syscall.CreateFile(name, syscall.GENERIC_WRITE, syscall.FILE_SHARE_READ|syscall.FILE_SHARE_WRITE, nil, syscall.OPEN_EXISTING, 0, 0)
 				if err != nil {
 					t.Fatal("controlled writer")
@@ -170,6 +226,9 @@ func TestSkills3080TraceReaderSelectsOnlyBoundRecordedInput(t *testing.T) {
 			}
 			if (kind == "external_hardlink" || kind == "payload_writer") && (stage != "source_payload" || payloadAttempts != 1) {
 				t.Fatal("controlled leaf denial did not reach the actual payload open")
+			}
+			if kind == "completed_event_writer" && (stage != "source_events" || payloadAttempts != 0) {
+				t.Fatal("completed event writer was not rejected before payload selection")
 			}
 		})
 	}

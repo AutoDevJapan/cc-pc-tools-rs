@@ -38,6 +38,9 @@ guardが確認するのは、専用rootにある最初の**記録済みモデル
 記録や通常dispatchとの対応が欠ければ資格を拒否する。
 
 manifest、順序付きevent、thread/turn/model、payload kindと相対名を確認してから、最初の入力payloadだけを開く。
+完了済みjobのevent記録は書き込み共有なしで開く。
+稼働中は観測した既存範囲を共有byte-range lockで上書きから保護し、範囲の後への追記だけを許す。
+payload照合後にも選択した最初の要求までのevent bytesが一致し、元の長さより短くなっていないことを確認する。
 比較対象は、モデルとeffort、および順序付きの指示・tool schema・入力本文のprojectionである。
 正常に保存された今回の実行入力と、同じnative handleのdeveloper/bootstrap/toolを、内容・metadata・順序を保って比較する。
 その入力項目では、通常のrequest準備が再生成するitem IDと空のphase表現以外を比較から外さない。
@@ -61,6 +64,9 @@ readerは入力requestと必要なmetadataだけを扱い、response、agent res
 live入力検証、正常completed receiver、必要な同buffer検証が残る間は、入力原本を含むrootを保持する。
 これらの検証が終わり、同じ世代の再受領を終え、通常jobと実producerの終了を確認してから回収する。
 記録は本文を含めず、検証結果、入力のhash・識別番号、元の所有IDと実測容量を残す。
+回収前には、workspace内の永続した検証記録そのものを開き、hashとsource世代・最後のconsumerを照合する。
+その記録に結ぶ通常のresult requestとconsume requestを正規CLIで再検証し、最終受領と現在の同bufferの成功を確認する。
+完了を示すbooleanやhashの書式だけでは回収計画へ進めない。意味上の適用例の確認は、実際の最終返信hashに結ぶ親の検証記録へ残す。
 通常safe-deleteのplanが返した削除を別の通常呼出しで実行し、成功後にfinishと元root不在を確認する。
 実行前拒否なら同じ削除を繰り返さず、通常quarantineを使い、保持・未回収・実回収を分ける。
 将来この世代を再受領する必要があれば、削除前に保持を継続する。削除したsourceをmetadataだけで資格化し直さない。

@@ -2,6 +2,7 @@ package main
 
 import (
 	"bufio"
+	"bytes"
 	"encoding/json"
 	"io"
 	"os"
@@ -10,17 +11,19 @@ import (
 	"strings"
 	"syscall"
 	"time"
+	"unsafe"
 )
 
 type skillsRecordedTransport struct {
-	Input         skillsTransportInput
-	TraceID       string
-	InferenceID   string
-	TurnID        string
-	PayloadSHA    string
-	PayloadID     skillsObjectID
-	RecordedAt    time.Time
-	EventSequence uint64
+	Input            skillsTransportInput
+	TraceID          string
+	InferenceID      string
+	TurnID           string
+	PayloadSHA       string
+	PayloadID        skillsObjectID
+	RecordedAt       time.Time
+	EventSequence    uint64
+	EventPrefixBytes int64
 }
 
 func skillsSourceDirectoryID(s *skillsFS, path string) (skillsObjectID, bool) {
@@ -63,7 +66,7 @@ func skillsReadTransportTraceAt(s *skillsFS, root string, expected skillsObjectI
 	if !ok || !skillsStrict(raw, &manifest) || manifest.Schema != 2 || !skillsUUID.MatchString(manifest.Trace) || manifest.Rollout == "" || manifest.Thread != str(job["thread_id"]) || manifest.Started < start.UnixMilli() || manifest.Started > end.UnixMilli() || manifest.Events != "trace.jsonl" || manifest.Payloads != "payloads" || entries[0].Name() != "trace-"+manifest.Trace+"-"+manifest.Thread {
 		return empty, "source_manifest"
 	}
-	stream, ok := skillsSourceEventSnapshot(s, filepath.Join(bundle, manifest.Events))
+	stream, ok := skillsSourceEventSnapshot(s, filepath.Join(bundle, manifest.Events), job["status"] == "running")
 	if !ok {
 		return empty, "source_events"
 	}
@@ -98,6 +101,9 @@ func skillsReadTransportTraceAt(s *skillsFS, root string, expected skillsObjectI
 		return empty, "source_input"
 	}
 	trace.PayloadSHA = hashBytes(body)
+	if !stream.unchanged(trace.EventPrefixBytes) {
+		return empty, "source_events"
+	}
 	return trace, ""
 }
 
@@ -114,10 +120,13 @@ func skillsFirstRecordedRequest(input io.Reader, traceID, rollout, thread, model
 	out := skillsRecordedTransport{TraceID: traceID}
 	scan := bufio.NewScanner(input)
 	scan.Buffer(make([]byte, 64<<10), 1<<20)
+	scan.Split(skillsTraceCompleteLine)
+	var prefixBytes int64
 	seq := uint64(1)
 	root, child, configured, started, turn := false, false, false, false, ""
 	last := start.UnixMilli()
 	for scan.Scan() {
+		prefixBytes += int64(len(scan.Bytes()))
 		var e struct {
 			Schema  uint64          `json:"schema_version"`
 			Seq     uint64          `json:"seq"`
@@ -212,6 +221,7 @@ func skillsFirstRecordedRequest(input io.Reader, traceID, rollout, thread, model
 				return empty, out, "source_event_binding"
 			}
 			out.InferenceID, out.TurnID, out.RecordedAt, out.EventSequence = p.Inference, p.Turn, time.UnixMilli(e.At), e.Seq
+			out.EventPrefixBytes = prefixBytes
 			return p.Request, out, ""
 		default:
 			return empty, out, "source_event_binding"
@@ -223,12 +233,50 @@ func skillsFirstRecordedRequest(input io.Reader, traceID, rollout, thread, model
 	return empty, out, "source_pending"
 }
 
-func skillsSourceEventSnapshot(s *skillsFS, path string) (io.Reader, bool) {
+func skillsTraceCompleteLine(data []byte, atEOF bool) (int, []byte, error) {
+	if i := bytes.IndexByte(data, '\n'); i >= 0 {
+		return i + 1, data[:i+1], nil
+	}
+	if atEOF && len(data) != 0 {
+		return 0, nil, io.ErrUnexpectedEOF
+	}
+	return 0, nil, nil
+}
+
+type skillsSourceEventReader struct {
+	file     *os.File
+	snapshot skillsNativeSnapshotReader
+	observed bytes.Buffer
+}
+
+func (r *skillsSourceEventReader) Read(p []byte) (int, error) {
+	n, err := r.snapshot.Read(p)
+	r.observed.Write(p[:n])
+	return n, err
+}
+
+func (r *skillsSourceEventReader) unchanged(prefix int64) bool {
+	info, err := r.file.Stat()
+	if err != nil || info.Size() < r.snapshot.length || prefix < 1 || prefix > int64(r.observed.Len()) {
+		return false
+	}
+	before := r.observed.Bytes()[:prefix]
+	after := make([]byte, prefix)
+	n, err := r.file.ReadAt(after, 0)
+	return err == nil && n == len(after) && bytes.Equal(before, after)
+}
+
+var skillsTraceLockFileEx = syscall.NewLazyDLL("kernel32.dll").NewProc("LockFileEx")
+
+func skillsSourceEventSnapshot(s *skillsFS, path string, live bool) (*skillsSourceEventReader, bool) {
 	ph, ok := s.directory(filepath.Dir(path))
 	if !ok || s.blocked(path) {
 		return nil, false
 	}
-	h, ok := skillsOpenAtSharing(ph, filepath.Base(path), false, false, true)
+	// Completed records deny write sharing. A live runtime may keep its append
+	// handle open, so lock the observed byte range against in-place writes while
+	// allowing appends after that range. Keep the handle/lock until fs.close.
+	h, ok := skillsOpenAtSharing(ph, filepath.Base(path), false, false, live)
 	if !ok {
 		return nil, false
 	}
@@ -239,5 +287,12 @@ func skillsSourceEventSnapshot(s *skillsFS, path string) (io.Reader, bool) {
 	if err != nil || err2 != nil || !same(path, actual) || info.Size() < 1 || info.Size() > 16<<20 {
 		return nil, false
 	}
-	return &skillsNativeSnapshotReader{reader: f, remaining: info.Size(), length: info.Size()}, true
+	if live {
+		var overlap syscall.Overlapped
+		locked, _, _ := skillsTraceLockFileEx.Call(uintptr(h), 1, 0, uintptr(info.Size()), 0, uintptr(unsafe.Pointer(&overlap)))
+		if locked == 0 {
+			return nil, false
+		}
+	}
+	return &skillsSourceEventReader{file: f, snapshot: skillsNativeSnapshotReader{reader: f, remaining: info.Size(), length: info.Size()}}, true
 }

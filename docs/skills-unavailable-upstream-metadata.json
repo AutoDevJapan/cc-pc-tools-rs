@@ -25,7 +25,7 @@
   "original_unavailable428_retained": true,
   "original_acquisition_review647_retained": true,
   "whole16_complete": false,
-  "scope": "Only repository metadata for the159 upstreams named by the428 original unavailable occurrences; no contents/blob body endpoint, moving-source substitution, private body access or alternative fetch.",
+  "scope": "Only repository metadata for the 159 upstreams named by the 428 original unavailable occurrences; no contents/blob body endpoint, moving-source substitution, private body access or alternative fetch.",
   "limits": [
     "Public repository metadata does not prove that the listed fixed file exists, that the recorded author owns it, or that an individual permission has been accepted.",
     "HTTP404 is unresolved; it does not identify whether a repository is absent or private.",

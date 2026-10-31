@@ -98,8 +98,9 @@ type skillsFS struct {
 	failureStage string
 	// Populated only by the independently verified public Git tree. This is
 	// operating metadata, never a caller-provided bootstrap digest or path.
-	bootstrapProjects map[string][]byte
-	consumerOrigins   map[string]skillsConsumerOrigin
+	bootstrapProjects  map[string][]byte
+	consumerOrigins    map[string]skillsConsumerOrigin
+	sourcePreparations map[string]skillsRuntimeSourcePreparation
 }
 
 // Open only the declared regular object; keep it non-sharing until the caller

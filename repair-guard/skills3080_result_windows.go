@@ -597,6 +597,9 @@ func skillsReceive(r skillsResultRequest, reg skillsRegistry, s *skillsFS, revie
 		out.Metadata["public_input_scope"] = "immutable_admitted_public_consumer"
 		out.Metadata["manifest_sha256"] = consumerScope.ManifestSHA
 	}
+	if p, ok := s.sourcePreparations[r.Job]; ok && (publicInput || consumerInput) {
+		out.Metadata["runtime_source_identity"] = skillsRuntimeSourceIdentity(p)
+	}
 	return out, ""
 }
 
@@ -632,6 +635,7 @@ func skillsNativeProjectionBound(input io.Reader, id, cwd string, start, end tim
 	scanner.Buffer(make([]byte, 64<<10), 16<<20)
 	out := []object{}
 	session := false
+	currentWindowSeen := false
 	for scanner.Scan() {
 		raw := scanner.Bytes()
 		if !skillsNativeUniqueJSON(raw) {
@@ -666,16 +670,18 @@ func skillsNativeProjectionBound(input io.Reader, id, cwd string, start, end tim
 				return nil, false
 			}
 			if at.Before(start) || at.After(end) {
-				if proof.runtimeSourceUsed {
+				if proof.runtimeWindowChecked() {
 					var v struct {
 						Type string `json:"type"`
 					}
-					if json.Unmarshal(envelope.Payload, &v) != nil || v.Type == "user_message" {
+					if json.Unmarshal(envelope.Payload, &v) != nil || (v.Type == "user_message" && (currentWindowSeen || !proof.observePriorRuntimeInput(raw, at, true))) {
 						return nil, false
 					}
 				}
 				continue
 			}
+			currentWindowSeen = true
+
 			if !session || !proof.observeEvent(raw, at) {
 				return nil, false
 			}
@@ -687,16 +693,25 @@ func skillsNativeProjectionBound(input io.Reader, id, cwd string, start, end tim
 				return nil, false
 			}
 			if at.Before(start) || at.After(end) {
-				if proof.runtimeSourceUsed {
+				if proof.runtimeWindowChecked() {
 					var header struct {
 						Role string `json:"role"`
 					}
-					if json.Unmarshal(envelope.Payload, &header) != nil || (header.Role != "" && header.Role != "assistant") {
+					if json.Unmarshal(envelope.Payload, &header) != nil {
+						return nil, false
+					}
+					if header.Role == "" || header.Role == "assistant" {
+						if currentWindowSeen || !proof.observePriorRuntimeGenerated(raw, at) {
+							return nil, false
+						}
+					} else if currentWindowSeen || !proof.observePriorRuntimeInput(raw, at, false) {
 						return nil, false
 					}
 				}
 				continue
 			}
+			currentWindowSeen = true
+
 			if !session || !proof.observe(raw, at) {
 				return nil, false
 			}
@@ -708,6 +723,9 @@ func skillsNativeProjectionBound(input io.Reader, id, cwd string, start, end tim
 				return nil, false
 			}
 			if at.Before(start) || at.After(end) {
+				if proof != nil && (proof.runtimeWindowChecked()) && (currentWindowSeen || !proof.observePriorRuntimeContext(raw, at)) {
+					return nil, false
+				}
 				continue
 			}
 		}
@@ -720,9 +738,9 @@ func skillsNativeProjectionBound(input io.Reader, id, cwd string, start, end tim
 			if session || p["id"] != id || !same(str(p["cwd"]), cwd) {
 				return nil, false
 			}
-			if proof != nil && proof.runtimeSourceUsed {
+			if proof != nil && (proof.runtimeWindowChecked()) {
 				at, err := time.Parse(time.RFC3339Nano, envelope.Timestamp)
-				if err != nil || at.Before(start) || at.After(end) {
+				if err != nil || at.After(end) || (at.Before(start) && !proof.priorRuntimeWindow(at)) {
 					return nil, false
 				}
 			}
@@ -739,6 +757,8 @@ func skillsNativeProjectionBound(input io.Reader, id, cwd string, start, end tim
 		if value, exists := p["cwd"]; exists && (!same(str(value), cwd) || str(value) == "") {
 			return nil, false
 		}
+		currentWindowSeen = true
+
 		model := str(p["model"])
 		if !skillsModelIdentifier(model) {
 			return nil, false
@@ -767,7 +787,7 @@ func skillsNativeProjectionBound(input io.Reader, id, cwd string, start, end tim
 			return nil, false
 		}
 	}
-	return out, scanner.Err() == nil && session && len(out) > 0 && (proof == nil || proof.bound())
+	return out, scanner.Err() == nil && session && len(out) > 0 && (proof == nil || (proof.bound() && proof.priorRuntimeInputsBound()))
 }
 func skillsResultID(r skillsResultRequest) bool {
 	m := currentSubworkJobName.FindStringSubmatch(r.Job)

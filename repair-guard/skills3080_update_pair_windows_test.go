@@ -66,8 +66,8 @@ func TestSkills3080OnlyRuntimeApplyRecoveryAcceptNewFlags(t *testing.T) {
 	}
 }
 func TestSkills3080RuntimePinsOriginalTwoReviewTasks(t *testing.T) {
-	a := &skillsResultRequest{Task: 4300, Job: "20261031-010000-todo-4300", SpecSHA: strings.Repeat("a", 64), FinalSHA: strings.Repeat("b", 64)}
-	b := &skillsResultRequest{Task: 4301, Job: "20261031-010100-todo-4301", SpecSHA: strings.Repeat("c", 64), FinalSHA: strings.Repeat("d", 64)}
+	a := &skillsResultRequest{Task: 4307, Job: "20261031-010000-todo-4307", SpecSHA: strings.Repeat("a", 64), FinalSHA: strings.Repeat("b", 64)}
+	b := &skillsResultRequest{Task: 4308, Job: "20261031-010100-todo-4308", SpecSHA: strings.Repeat("c", 64), FinalSHA: strings.Repeat("d", 64)}
 	if !skillsRuntimeReviewTasks(a, b) {
 		t.Fatal("original own reviews rejected")
 	}
@@ -129,7 +129,7 @@ func TestSkills3080FrozenBootstrapSoftwareIsReadonlyAndNewPairCannotDowngrade(t 
 	if skillsRuntimeHistoricalNoticePair(r) || !skillsRuntimeNewCIReview(r) {
 		t.Fatal("changed frozen tuple escaped new CI/review gate")
 	}
-	r.Review.Task = 4300
+	r.Review.Task = 4307
 	if !skillsRuntimeNewCIReview(r) || skillsRuntimeReviewTasks(r.Review, r.Runtime.PeerReview) {
 		t.Fatal("mixed old/new pair downgraded")
 	}
@@ -159,5 +159,35 @@ func TestSkills3080FrozenAliasPairOnlyMatchesItsExactHistoricalSoftware(t *testi
 	sha, head := official3894CanonicalAssignmentPredecessorSHA, official3894CanonicalAssignmentPredecessorHead
 	if skillsGuardBaselines[sha] != head || !official3894InstalledBaseline(sha, head) || official3894InstalledBaseline(sha, strings.Repeat("a", 40)) {
 		t.Fatal("independent predecessor pair changed")
+	}
+}
+
+func TestSkills3080FrozenPublicManifestPairCannotAuthorizeRuntimeSourceWrites(t *testing.T) {
+	r := skillsRequest{Review: &skillsResultRequest{Task: 4300}, Runtime: &skillsRuntimeRequest{PeerReview: &skillsResultRequest{Task: 4301}, SourceHead: official3894RuntimeOriginPredecessorHead, ReviewedHead: "8736e9ddc4a9362cc2aa3444c0e586118163f243", CandidateSHA: official3894RuntimeOriginPredecessorSHA}}
+	if !skillsRuntimeHistoricalNoticePair(r) || skillsRuntimeNewCIReview(r) || skillsRuntimeReviewTasks(r.Review, r.Runtime.PeerReview) {
+		t.Fatal("old accepted pair lost readonly history or acquired a new write role")
+	}
+	for _, field := range []string{"source", "reviewed", "sha", "self", "peer"} {
+		a, b, u := *r.Review, *r.Runtime.PeerReview, *r.Runtime
+		switch field {
+		case "source":
+			u.SourceHead = strings.Repeat("a", 40)
+		case "reviewed":
+			u.ReviewedHead = strings.Repeat("b", 40)
+		case "sha":
+			u.CandidateSHA = strings.Repeat("c", 64)
+		case "self":
+			a.Task = 4307
+		case "peer":
+			b.Task = 4308
+		}
+		u.PeerReview = &b
+		changed := skillsRequest{Review: &a, Runtime: &u}
+		if skillsRuntimeHistoricalNoticePair(changed) || !skillsRuntimeNewCIReview(changed) || skillsRuntimeReviewTasks(changed.Review, changed.Runtime.PeerReview) {
+			t.Fatalf("historical tuple or mixed role escaped new gate: %s", field)
+		}
+	}
+	if skillsGuardBaselines[official3894RuntimeOriginPredecessorSHA] != official3894RuntimeOriginPredecessorHead || !official3894InstalledBaseline(official3894RuntimeOriginPredecessorSHA, official3894RuntimeOriginPredecessorHead) || official3894InstalledBaseline(official3894RuntimeOriginPredecessorSHA, strings.Repeat("d", 40)) {
+		t.Fatal("independent predecessor tuple broadened")
 	}
 }

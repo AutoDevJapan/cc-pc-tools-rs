@@ -10,17 +10,21 @@ import (
 	"unicode/utf8"
 )
 
-// The runtime-owned launch world_state captures the loaded agents_md version
-// independently of its user-message rendering. Its first-turn relationship and
-// PUBLIC project blob are proven from the same frozen native snapshot. No
-// current instruction file, alternate source path or caller digest is read.
+// The launch world_state and its rendering must agree within this snapshot.
+// Typed data operations additionally compare the full initial input against
+// an independent transport record; same-log agreement alone is insufficient.
+// No current instruction file, alternate result path or caller digest is read.
 func skillsRuntimeBootstrapProjection(input io.Reader, job object, project []byte, start, end time.Time) ([]byte, bool, bool) {
+	return skillsRuntimeBootstrapProjectionWithOrigin(input, job, project, start, end, nil)
+}
+func skillsRuntimeBootstrapProjectionWithOrigin(input io.Reader, job object, project []byte, start, end time.Time, origin func() (skillsRuntimeOrigin, bool), envelopes ...map[string]bool) ([]byte, bool, bool) {
 	scan := bufio.NewScanner(io.LimitReader(input, 4<<20))
 	scan.Buffer(make([]byte, 64<<10), 16<<20)
 	session, started, boot, state := false, false, false, false
 	turn, body := "", ""
 	var source []byte
-	last := start
+	var developer [][]byte
+	sourceStart, sourceEnd, last := start, end, start
 	modern := false
 	for scan.Scan() {
 		raw := scan.Bytes()
@@ -54,17 +58,41 @@ func skillsRuntimeBootstrapProjection(input io.Reader, job object, project []byt
 			if m.Source != "exec" || m.Originator != "codex_exec" {
 				return nil, true, false
 			}
-			if m.Version == "0.163.0" {
-				return nil, false, true
+			modern = m.Version != "0.163.0"
+			if m.Version != "0.165.0" && m.Version != "0.163.0" {
+				return nil, true, false
 			}
-			modern = true
-			if m.Version != "0.165.0" || at.Before(start) || at.Before(last) {
+			if at.Before(sourceStart) || str(job["resume_session"]) != "" {
+				// A real continuation keeps the first runtime-owned source in
+				// its original generation. Prove that generation from the
+				// normal same-task history; the current task/final window is
+				// independently enforced by skillsNativeProjectionBound.
+				if origin == nil {
+					return nil, modern, false
+				}
+				context, valid := origin()
+				if !valid || !context.Start.Before(start) || len(context.Windows) == 0 {
+					return nil, modern, false
+				}
+				first := context.Windows[len(context.Windows)-1]
+				if !first.Start.Equal(context.Start) || at.Before(first.Start) || at.After(first.End) {
+					return nil, modern, false
+				}
+				sourceStart, sourceEnd, last = first.Start, first.End, first.Start
+			}
+			if at.Before(last) {
 				return nil, true, false
 			}
 			last = at
+			// The old bootstrap digest contract is retained. A resumed old
+			// session must nevertheless prove its registered origin above;
+			// legacy input cannot bypass the historical-input checks.
+			if !modern {
+				return nil, false, true
+			}
 			continue
 		}
-		if at.Before(start) || at.Before(last) {
+		if at.Before(sourceStart) || at.Before(last) || at.After(sourceEnd) {
 			return nil, modern, false
 		}
 		last = at
@@ -100,31 +128,32 @@ func skillsRuntimeBootstrapProjection(input io.Reader, job object, project []byt
 				return nil, true, false
 			}
 			if v.Type == "message" && v.Role != "user" {
-				// Native developer messages before bootstrap belong to the
-				// runtime's exec launch envelope. User/task input cannot issue
-				// that role. A later developer/system/unknown message is outside
-				// this proved first-turn envelope and is rejected below.
+				// Retain the initial rendering only until the independent
+				// runtime checkpoint can prove every block's content below.
 				if v.Role != "developer" || boot || state || !started {
 					return nil, true, false
 				}
+				developer = append(developer, append([]byte{}, raw...))
 				continue
 			}
 			if v.Role != "user" {
 				if v.Role != "developer" || v.Type != "additional_tools" || boot || state || !started {
 					return nil, true, false
 				}
+				developer = append(developer, append([]byte{}, raw...))
 				continue
 			}
-			var blocks []struct {
-				Type string `json:"type"`
-				Text string `json:"text"`
-			}
+			var blocks []json.RawMessage
 			if v.Type != "message" || !started || boot || json.Unmarshal(v.Content, &blocks) != nil || len(blocks) < 1 || len(blocks) > 2 {
 				return nil, true, false
 			}
 			var text strings.Builder
-			for _, b := range blocks {
-				if b.Type != "input_text" {
+			for _, rawBlock := range blocks {
+				var b struct {
+					Type string `json:"type"`
+					Text string `json:"text"`
+				}
+				if !skillsStrict(rawBlock, &b) || b.Type != "input_text" {
 					return nil, true, false
 				}
 				text.WriteString(b.Text)
@@ -151,6 +180,14 @@ func skillsRuntimeBootstrapProjection(input io.Reader, job object, project []byt
 				return nil, true, false
 			}
 			source = []byte(a.Text)
+			if !skillsRuntimeEnvelopeMatches(developer, v.State, str(job["model"])) {
+				return nil, true, false
+			}
+			if len(envelopes) == 1 {
+				for _, raw := range developer {
+					envelopes[0][hashBytes(raw)] = true
+				}
+			}
 			state = true
 		case "turn_context":
 			var v struct {

@@ -7,6 +7,7 @@ import (
 	"path/filepath"
 	"regexp"
 	"strings"
+	"time"
 )
 
 // The complete prelaunch specification is this typed contract, not arbitrary
@@ -45,6 +46,7 @@ type skillsPublicReviewScope struct {
 	ManifestDeclaration string                        `json:"manifest_declaration"`
 	Files               []skillsPublicReviewFile      `json:"files"`
 	Comparison          *skillsPublicReviewComparison `json:"comparison,omitempty"`
+	RuntimeSourceNonce  string                        `json:"runtime_source_nonce,omitempty"`
 }
 
 const skillsPublicReviewInstructions = "固定したPUBLIC Gitのfilesとmanifest内の出力だけを読み取り専用でレビューする。別path・私的資料・追加取得・実配置・実行・ファイル保存はしない。出典と個別notice、内容、採用条件、過大な成功主張を確認し、固定commit・読了範囲・Must/Suggestion/Nitを日本語の最終返信へ返す。レビュー読了時は先頭を状態: 完了とし、全読了かつMust0の時だけ SKILLS3080_ACCEPTANCE {\"domain\":\"skills-3080-review-v1\",\"manifest_sha256\":\"manifest_sha256の値\",\"accepted\":true,\"must\":0} を独立行で返す。Mustがあればaccepted:falseと実数を返す。"
@@ -81,6 +83,9 @@ func skillsParsePublicRepair(raw []byte) (skillsPublicReviewScope, bool) {
 }
 
 func skillsPublicPurposeEncoding(raw []byte, repair bool) bool {
+	if !skillsRuntimeNonceEncoding(raw, repair) {
+		return false
+	}
 	v, ok := conversationJSON(raw)
 	if !ok {
 		return false
@@ -499,6 +504,19 @@ func skillsReviewNative(s *skillsFS, job object, spec []byte, finalSHA string) (
 		}
 	}
 	project, required := skillsTypedRuntimeProject(s, job, spec)
+	if reviewTyped || consumerTyped {
+		start, e := time.Parse(time.RFC3339Nano, str(job["started_at"]))
+		end, e2 := time.Parse(time.RFC3339Nano, str(job["finished_at"]))
+		if e != nil || e2 != nil {
+			return nil, false
+		}
+		recorded, stage := skillsRuntimeSourceForJob(s, job, spec, prompt, start, end)
+		if stage != "" {
+			s.failureStage = stage
+			return nil, false
+		}
+		return skillsCompletedReviewNativeWithBootstrap(s, job, prompt, finalSHA, true, bootstrap, project, required, &recorded)
+	}
 	return skillsCompletedReviewNativeWithBootstrap(s, job, prompt, finalSHA, reviewTyped || consumerTyped, bootstrap, project, required)
 }
 
@@ -509,8 +527,15 @@ func skillsCompletedReviewNative(s *skillsFS, job object, prompt []byte, finalSH
 	return skillsCompletedReviewNativeWithBootstrap(s, job, prompt, finalSHA, exactInput, bootstrap, nil, false)
 }
 
-func skillsCompletedReviewNativeWithBootstrap(s *skillsFS, job object, prompt []byte, finalSHA string, exactInput bool, bootstrap string, source []byte, required bool) ([]object, bool) {
-	native, ok := skillsHistoricalNative(s, job, &skillsNativeResultProof{prompt: prompt, finalSHA: finalSHA, exactInput: exactInput, bootstrapSHA: bootstrap, runtimeProject: source, requireRuntimeSource: required, cwd: str(job["cwd"]), sandbox: str(job["sandbox"]), frozen: true})
+func skillsCompletedReviewNativeWithBootstrap(s *skillsFS, job object, prompt []byte, finalSHA string, exactInput bool, bootstrap string, source []byte, required bool, transport ...*skillsRecordedTransport) ([]object, bool) {
+	p := &skillsNativeResultProof{prompt: prompt, finalSHA: finalSHA, exactInput: exactInput, bootstrapSHA: bootstrap, runtimeProject: source, requireRuntimeSource: required, cwd: str(job["cwd"]), sandbox: str(job["sandbox"]), frozen: true}
+	if len(transport) != 0 {
+		if len(transport) != 1 || transport[0] == nil {
+			return nil, false
+		}
+		p.runtimeTransport = transport[0]
+	}
+	native, ok := skillsHistoricalNative(s, job, p)
 	if !ok {
 		return nil, false
 	}

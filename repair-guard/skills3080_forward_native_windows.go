@@ -22,6 +22,13 @@ type skillsCreationCommand struct {
 }
 
 func skillsForwardCommand(path, workspace string) skillsCreationCommand {
+	return skillsCreationCommand{Cmd: skillsHiddenProcessScript(skillsRuntimeTarget, "--create-skills3080-forward", path, workspace),
+		Workdir: workspace, Login: false, Shell: skillsHiddenPowerShell, Yield: 30000, MaxTokens: 30000}
+}
+
+// Read compatibility for already issued native evidence. New preflight never
+// advertises this old direct console invocation.
+func skillsLegacyForwardCommand(path, workspace string) skillsCreationCommand {
 	return skillsCreationCommand{Cmd: "& '" + skillsRuntimeTarget + "' --create-skills3080-forward '" + path + "'",
 		Workdir: workspace, Login: false, Shell: "powershell", Yield: 30000, MaxTokens: 30000}
 }
@@ -43,28 +50,41 @@ func skillsForwardInvocation(path, workspace string) string {
 }
 
 func skillsCreationCall(input, path, workspace string) bool {
+	_, ok := skillsCreationInvocationContract(input, path, workspace)
+	return ok
+}
+
+func skillsCreationInvocationContract(input, path, workspace string) (string, bool) {
 	const prefix, suffix = "text(await tools.exec_command(", "));"
 	input = strings.TrimSpace(input)
 	if skillsForwardInvocation(path, workspace) == "" || !strings.HasPrefix(input, prefix) || !strings.HasSuffix(input, suffix) {
-		return false
+		return "", false
 	}
 	var cmd skillsCreationCommand
 	if !skillsStrict([]byte(strings.TrimSuffix(strings.TrimPrefix(input, prefix), suffix)), &cmd) {
-		return false
+		return "", false
 	}
 	expected := skillsForwardCommand(path, workspace)
+	if skillsHiddenForwardMatches(cmd.Cmd, path, workspace) {
+		if !skillsCreationPathEqual(cmd.Workdir, workspace) {
+			return "", false
+		}
+		cmd.Cmd, cmd.Workdir = expected.Cmd, expected.Workdir
+		return skillsHiddenNativeContract, cmd == expected
+	}
+	expected = skillsLegacyForwardCommand(path, workspace)
 	// Keep the executable, flag, quoting and every tool option exact. Only the
 	// quoted request path and workdir can contain repeated Windows separators.
 	const commandPrefix = "& '" + skillsRuntimeTarget + "' --create-skills3080-forward '"
 	if !strings.HasPrefix(cmd.Cmd, commandPrefix) || !strings.HasSuffix(cmd.Cmd, "'") {
-		return false
+		return "", false
 	}
 	request := strings.TrimSuffix(strings.TrimPrefix(cmd.Cmd, commandPrefix), "'")
 	if !skillsCreationPathEqual(request, path) || !skillsCreationPathEqual(cmd.Workdir, workspace) {
-		return false
+		return "", false
 	}
 	cmd.Cmd, cmd.Workdir = expected.Cmd, expected.Workdir
-	return cmd == expected
+	return "", cmd == expected
 }
 
 // This is a lexical comparison with the already bound request/workspace, not
@@ -201,6 +221,7 @@ func skillsCreationNativeProjection(input io.Reader, thread, cwd string, start, 
 	scanner := bufio.NewScanner(input)
 	scanner.Buffer(make([]byte, 64<<10), 16<<20)
 	session, called, returned := false, false, false
+	callContract := ""
 	var callAt time.Time
 	for scanner.Scan() {
 		var env struct {
@@ -248,9 +269,11 @@ func skillsCreationNativeProjection(input io.Reader, thread, cwd string, start, 
 		}
 		switch p.Type {
 		case "custom_tool_call":
-			if called || returned || p.Name != "exec" || !skillsCreationCall(p.Input, c.RequestPath, cwd) {
+			contract, valid := skillsCreationInvocationContract(p.Input, c.RequestPath, cwd)
+			if called || returned || p.Name != "exec" || !valid {
 				return evidence, false
 			}
+			callContract = contract
 			called, callAt = true, at
 		case "custom_tool_call_output":
 			if !called || returned || at.Before(callAt) {
@@ -285,9 +308,15 @@ func skillsCreationNativeProjection(input io.Reader, thread, cwd string, start, 
 				return evidence, false
 			}
 			b, err := json.Marshal(result["creation_evidence"])
-			if err != nil || !skillsStrict(b, &evidence) || evidence.Writer != c.Creator || evidence.RequestSHA != c.RequestSHA ||
+			if err != nil || !skillsCreationHeaderKeys(b, "native_invocation_contract") || !skillsStrict(b, &evidence) || evidence.Writer != c.Creator || evidence.RequestSHA != c.RequestSHA ||
 				conversationNumber(result["created_files"]) != uint64(len(evidence.Files)) || conversationNumber(result["file_count"]) != uint64(len(evidence.Files)) ||
 				result["manifest_sha256"] != evidence.ManifestSHA || result["source_commit"] != evidence.ManifestCommit {
+				return evidence, false
+			}
+			// The issuing runtime fixes the expected invocation version in its
+			// original private result. Old direct calls remain readable only
+			// for old unversioned evidence, never a new hidden-contract issue.
+			if evidence.NativeContract != "" && (evidence.NativeContract != skillsHiddenNativeContract || callContract != evidence.NativeContract) {
 				return evidence, false
 			}
 			returned = true

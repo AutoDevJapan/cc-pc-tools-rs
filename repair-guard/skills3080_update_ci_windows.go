@@ -12,7 +12,7 @@ func skillsRuntimeNewCIReview(r skillsRequest) bool {
 		return false
 	}
 	current := func(a *skillsResultRequest) bool {
-		return a != nil && (a.Task == skillsRuntimeSelfReviewTask || a.Task == skillsRuntimePeerReviewTask || a.Task == 4203 || a.Task == 4204)
+		return a != nil && (a.Task == skillsRuntimeSelfReviewTask || a.Task == skillsRuntimePeerReviewTask || a.Task == 4300 || a.Task == 4301 || a.Task == 4203 || a.Task == 4204)
 	}
 	return current(r.Review) || (r.Runtime != nil && current(r.Runtime.PeerReview))
 }

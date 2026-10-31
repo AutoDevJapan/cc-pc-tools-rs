@@ -22,6 +22,8 @@ const skillsGuardModule = "github.com/AutoDevJapan/cc-pc-tools-rs/repair-guard"
 // Independent previously accepted distribution facts (3258 and3686), not a caller
 // supplied baseline or an assertion made by the artifact being installed.
 var skillsGuardBaselines = map[string]string{
+	// Same-buffer normal PR668 observation precedes this successor candidate.
+	official3894SourceReceivePredecessorSHA: official3894SourceReceivePredecessorHead,
 	// Same-buffer normal PR662 observation precedes this successor candidate.
 	official3894SourceDispatchPredecessorSHA: official3894SourceDispatchPredecessorHead,
 	// Independent PR659 same-buffer readback, before this successor exists.

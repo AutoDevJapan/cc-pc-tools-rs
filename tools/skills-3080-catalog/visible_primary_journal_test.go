@@ -53,6 +53,131 @@ func visibleLatest29DeltaMatches(entries []any, groups, members, latestRecords, 
 	return err == nil && travel3Digest(raw) == "fb9d6283fc8d300c92587ee4fd3f3ef91fec890d186a9fba49d77aeec3c34ce6"
 }
 
+// The accepted 141-entry prefix is pinned to main ad39f1eee40772e28c66b35dba667943c436cab2,
+// file SHA 2f1785a69b40bea10c467d85909f8f1d06dd83032e439c80cd0ba0525f1c10f2.
+// The new five entries come from the independently received projection with
+// file SHA 33274c506b3b796caa82d8919f140ab41a72129d698174127ec716fb58638e0a.
+// These pins are separate from the mutable publication manifest and counters.
+var visibleCurrentSnapshotPin = struct {
+	prefix, records, members, latestRecords, latestMembers int
+	prefixSHA, deltaSHA                                    string
+}{141, 146, 167, 5, 5,
+	"de24f45a3d0fad6e211435a61a67bc4c7ed4827a42b41cd7473ca79af3803146",
+	"92f9b850c5eb4abf2920323a04c3e1fc91b58058e2007f90fe7ef370a8fbf029"}
+
+func visibleCurrentPrefixMatches(entries []any) bool {
+	pin := visibleCurrentSnapshotPin
+	if len(entries) < pin.prefix {
+		return false
+	}
+	raw, err := json.Marshal(entries[:pin.prefix])
+	return err == nil && travel3Digest(raw) == pin.prefixSHA
+}
+
+func visibleCurrentSnapshotMatches(entries []any, groups, members, latestRecords, latestMembers int) bool {
+	pin := visibleCurrentSnapshotPin
+	if pin.records != pin.prefix+pin.latestRecords || len(entries) != pin.records || groups != pin.records || members != pin.members || latestRecords != pin.latestRecords || latestMembers != pin.latestMembers || !visibleCurrentPrefixMatches(entries) {
+		return false
+	}
+	raw, err := json.Marshal(entries[pin.prefix:])
+	return err == nil && travel3Digest(raw) == pin.deltaSHA
+}
+
+func visibleCurrentQueuePointerMatches(progress, summary map[string]any) bool {
+	plan, ok := progress["current_execution_plan"].(map[string]any)
+	if !ok || plan["current_queue_rollup_field"] != "current_execution_queue" {
+		return false
+	}
+	current, ok := progress["current_execution_queue"].(map[string]any)
+	if !ok {
+		return false
+	}
+	actual, err := json.Marshal(current)
+	expected, otherErr := json.Marshal(summary)
+	return err == nil && otherErr == nil && string(actual) == string(expected)
+}
+
+func TestVisiblePrimaryCurrentQueuePointerMatchesPublishedSummary(t *testing.T) {
+	for _, change := range []string{"valid", "legacy pointer with matching value", "missing pointer", "missing target", "target is not an object", "queue hash changed", "record count changed"} {
+		t.Run(change, func(t *testing.T) {
+			var ignored any
+			progress, err := parent19Decode(loadPublicReceipt(t, "skills-3080-progress.json", &ignored))
+			if err != nil {
+				t.Fatal(err)
+			}
+			summary, err := parent19Decode(loadPublicReceipt(t, "skills-3080-execution-queue-summary.json", &ignored))
+			if err != nil {
+				t.Fatal(err)
+			}
+			switch change {
+			case "legacy pointer with matching value":
+				progress["current_execution_plan"].(map[string]any)["current_queue_rollup_field"] = "latest_retained_procedure_queue"
+				progress["latest_retained_procedure_queue"] = progress["current_execution_queue"]
+			case "missing pointer":
+				delete(progress["current_execution_plan"].(map[string]any), "current_queue_rollup_field")
+			case "missing target":
+				delete(progress, "current_execution_queue")
+			case "target is not an object":
+				progress["current_execution_queue"] = []any{}
+			case "queue hash changed":
+				progress["current_execution_queue"].(map[string]any)["queue_sha256"] = strings.Repeat("0", 64)
+			case "record count changed":
+				progress["current_execution_queue"].(map[string]any)["occurrences_with_assessment_records"] = visibleJournalNumber(0)
+			}
+			if visibleCurrentQueuePointerMatches(progress, summary) != (change == "valid") {
+				t.Fatal("the current queue reference must select the exact published summary")
+			}
+		})
+	}
+}
+
+func TestVisiblePrimaryJournalRetainsCurrentIndependentSnapshot(t *testing.T) {
+	for _, change := range []string{"valid", "new value changed", "new order changed", "new entry missing", "new entry omitted with adjusted header", "new member metadata changed", "new tail with adjusted header", "new member total changed", "latest count changed", "latest member count changed", "base value changed"} {
+		t.Run(change, func(t *testing.T) {
+			var ignored any
+			raw := loadPublicReceipt(t, visiblePrimaryJournalFile, &ignored)
+			v, err := parent19Decode(raw)
+			if err != nil {
+				t.Fatal(err)
+			}
+			entries := v["entries"].([]any)
+			pin := visibleCurrentSnapshotPin
+			groups, members, latestRecords, latestMembers := len(entries), pin.members, pin.latestRecords, pin.latestMembers
+			last := len(entries) - 1
+			switch change {
+			case "new value changed":
+				entries[last].(map[string]any)["value"] = "Different meaningful text with the same valid shape."
+			case "new order changed":
+				entries[last-1], entries[last] = entries[last], entries[last-1]
+			case "new entry missing":
+				entries = entries[:last]
+			case "new entry omitted with adjusted header":
+				entries = entries[:last]
+				groups, latestRecords = groups-1, latestRecords-1
+			case "new member metadata changed":
+				entries[last].(map[string]any)["member_metadata"].([]any)[0].(map[string]any)["path"] = "skills/fixture/changed-same-shape/SKILL.md"
+			case "new tail with adjusted header":
+				entries = append(entries, entries[last])
+				groups, members, latestRecords, latestMembers = groups+1, members+1, latestRecords+1, latestMembers+1
+			case "new member total changed":
+				members++
+			case "latest count changed":
+				latestRecords--
+			case "latest member count changed":
+				latestMembers--
+			case "base value changed":
+				entries[0].(map[string]any)["value"] = "A changed field in the previously accepted prefix."
+			}
+			if strings.HasPrefix(change, "new ") && !visibleCurrentPrefixMatches(entries) {
+				t.Fatal("the current delta case must retain the full accepted prefix")
+			}
+			if visibleCurrentSnapshotMatches(entries, groups, members, latestRecords, latestMembers) != (change == "valid") {
+				t.Fatal("the current snapshot differs from the independently pinned received data")
+			}
+		})
+	}
+}
+
 func TestVisiblePrimaryJournalRetainsOriginalLatest29(t *testing.T) {
 	for _, change := range []string{"valid", "new value changed", "new order changed", "new entry missing", "new entry omitted with adjusted header", "new member metadata changed", "new tail with adjusted header", "new member total changed", "latest count changed", "latest member count changed"} {
 		t.Run(change, func(t *testing.T) {
@@ -63,6 +188,8 @@ func TestVisiblePrimaryJournalRetainsOriginalLatest29(t *testing.T) {
 				t.Fatal(err)
 			}
 			entries := v["entries"].([]any)
+			// Keep this historical 29-entry regression fixed after later appends.
+			entries = entries[:141]
 			groups, members, latestRecords, latestMembers := len(entries), 162, 29, 44
 			switch change {
 			case "new value changed":
@@ -170,8 +297,8 @@ func TestVisiblePrimaryMarkdownCountsMatchTheExecutionSnapshot(t *testing.T) {
 	var baseline any
 	journalRaw := loadPublicReceipt(t, visiblePrimaryJournalFile, &baseline)
 	journalValue, decodeErr := parent19Decode(journalRaw)
-	if decodeErr != nil || !visibleLatest29DeltaMatches(journalValue["entries"].([]any), journal.Groups, journal.Members, progress.LatestDelta.Records, progress.LatestDelta.Members) {
-		t.Fatal("the current latest delta differs from the independently received 29 records and 44 member metadata")
+	if decodeErr != nil || !visibleCurrentSnapshotMatches(journalValue["entries"].([]any), journal.Groups, journal.Members, progress.LatestDelta.Records, progress.LatestDelta.Members) {
+		t.Fatal("the current latest delta differs from the independently received records and member metadata")
 	}
 	if progress.LatestDelta.Records <= 0 || progress.LatestDelta.Records > journal.Groups || progress.LatestDelta.Members < progress.LatestDelta.Records || progress.LatestDelta.Members > journal.Members {
 		t.Fatal("the current increment must be a nonempty subset of the cumulative journal")

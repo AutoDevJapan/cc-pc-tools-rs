@@ -46,7 +46,7 @@ func visibleAccepted112PrefixMatches(entries []any) bool {
 // SHA b01feaa0838c25cbeb538e702f74d7281e3b3872892e1dcc9d96dd567a53cb88.
 // This anchor is independent of a caller's manifest, row count or summary.
 func visibleLatest29DeltaMatches(entries []any, groups, members, latestRecords, latestMembers int) bool {
-	if len(entries) < 141 || groups != len(entries) || members < 162 || latestRecords != 29 || latestMembers != 44 || !visibleAccepted112PrefixMatches(entries) {
+	if len(entries) != 141 || groups != 141 || members != 162 || latestRecords != 29 || latestMembers != 44 || !visibleAccepted112PrefixMatches(entries) {
 		return false
 	}
 	raw, err := json.Marshal(entries[112:141])
@@ -54,7 +54,7 @@ func visibleLatest29DeltaMatches(entries []any, groups, members, latestRecords, 
 }
 
 func TestVisiblePrimaryJournalRetainsOriginalLatest29(t *testing.T) {
-	for _, change := range []string{"valid", "new value changed", "new order changed", "new entry missing", "new entry omitted with adjusted header", "new member metadata changed", "latest count changed", "latest member count changed"} {
+	for _, change := range []string{"valid", "new value changed", "new order changed", "new entry missing", "new entry omitted with adjusted header", "new member metadata changed", "new tail with adjusted header", "new member total changed", "latest count changed", "latest member count changed"} {
 		t.Run(change, func(t *testing.T) {
 			var ignored any
 			raw := loadPublicReceipt(t, visiblePrimaryJournalFile, &ignored)
@@ -75,7 +75,13 @@ func TestVisiblePrimaryJournalRetainsOriginalLatest29(t *testing.T) {
 				entries = entries[:140]
 				groups, latestRecords = 140, 28
 			case "new member metadata changed":
-				entries[140].(map[string]any)["bound_member_metadata"] = 999
+				member := entries[140].(map[string]any)["member_metadata"].([]any)[0].(map[string]any)
+				member["path"] = "skills/fixture/changed-same-shape/SKILL.md"
+			case "new tail with adjusted header":
+				entries = append(entries, entries[140])
+				groups, members = 142, 164
+			case "new member total changed":
+				members = 163
 			case "latest count changed":
 				latestRecords = 28
 			case "latest member count changed":

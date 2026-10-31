@@ -401,7 +401,7 @@
     },
     "limits": "旧7資料91+設計2+OpenAI44=137source paths。mizchi76は既存の別枠を維持し再加算しない。mirror/guideを含み独立Skill数/導入数ではない。全支持/全候補の意味・許諾監査は未完。 この137は既存の固定bucket。今回のMengTo177は別枠で数え二重加算しない。"
   },
-  "independent_acceptance_scope": "28新規とlinkv2の過去限定受入を保持。CI既存統合1のv2は3378Must0/同HEAD自動テスト成功/PR381mergeで親が限定受入。SQL2は3368本文と3378表示を分けて同一内容を限定受入。新22評価は3417と3420の固定差分読取Must0を受領。補足のb006版は3456、新19を含む1088版は3473でMust0。今回の追加差分は別確認、許諾/配置/実ターンは別。旧配置のdiagnosing-bugs1件の後続別改訂も別証拠を保持。 新2件は3564が全10file/明示A/B/C、3569がV2の6変更fileでMust0。親が両原応答を全読しjob/nativeindependent reviewer5.5/maxを照合。実配置後の10file/hash/構造/metadataは親が確認。公開差分は別レビュー前で、全モデルターンの受入ではない。 RSS/season内容は3584と3591の固定範囲だけをMust0で受領し、親が原応答を全文読みjob/nativeを照合した。実配置/読戻し/発見と自作Go fixture/modelの範囲は個別evidenceへ保存し、今回の追加45公開差分の受入とは区別する。",
+  "independent_acceptance_scope": "28新規とlinkv2の過去限定受入を保持。CI既存統合1のv2は3378Must0/同HEAD自動テスト成功/PR381mergeで親が限定受入。SQL2は3368本文と3378表示を分けて同一内容を限定受入。新22評価は3417と3420の固定差分読取Must0を受領。補足のb006版は3456、新19を含む1088版は3473でMust0。今回の追加差分は別確認、許諾/配置/実ターンは別。旧配置のdiagnosing-bugs1件の後続別改訂も別証拠を保持。 新2件は3564が全10file/明示A/B/C、3569がV2の6変更fileでMust0。親が両原応答を全読し実行記録を照合。実配置後の10file/hash/構造/metadataは親が確認。公開差分は別レビュー前で、全モデルターンの受入ではない。 RSS/season内容は3584と3591の固定範囲だけをMust0で受領し、親が原応答を全文読み実行記録を照合した。実配置/読戻し/発見と自作Go fixture/modelの範囲は個別evidenceへ保存し、今回の追加45公開差分の受入とは区別する。",
   "total_skill_named_body_read": 137,
   "obra_entrypoint_assessment": {
     "expected": 15,

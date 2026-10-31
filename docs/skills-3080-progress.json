@@ -401,7 +401,7 @@
     },
     "limits": "旧7資料91+設計2+OpenAI44=137source paths。mizchi76は既存の別枠を維持し再加算しない。mirror/guideを含み独立Skill数/導入数ではない。全支持/全候補の意味・許諾監査は未完。 この137は既存の固定bucket。今回のMengTo177は別枠で数え二重加算しない。"
   },
-  "independent_acceptance_scope": "28新規とlinkv2の過去限定受入を保持。CI既存統合1のv2は3378Must0/同HEAD自動テスト成功/PR381mergeで親が限定受入。SQL2は3368本文と3378表示を分けて同一内容を限定受入。新22評価は3417と3420の固定差分読取Must0を受領。補足のb006版は3456、新19を含む1088版は3473でMust0。今回の追加差分は別確認、許諾/配置/実ターンは別。旧配置のdiagnosing-bugs1件の後続別改訂も別証拠を保持。 新2件は3564が全10file/明示A/B/C、3569がV2の6変更fileでMust0。親が両原応答を全読しjob/nativeSonnet5.5/maxを照合。実配置後の10file/hash/構造/metadataは親が確認。公開差分は別レビュー前で、全モデルターンの受入ではない。 RSS/season内容は3584と3591の固定範囲だけをMust0で受領し、親が原応答を全文読みjob/nativeを照合した。実配置/読戻し/発見と自作Go fixture/modelの範囲は個別evidenceへ保存し、今回の追加45公開差分の受入とは区別する。",
+  "independent_acceptance_scope": "28新規とlinkv2の過去限定受入を保持。CI既存統合1のv2は3378Must0/同HEAD自動テスト成功/PR381mergeで親が限定受入。SQL2は3368本文と3378表示を分けて同一内容を限定受入。新22評価は3417と3420の固定差分読取Must0を受領。補足のb006版は3456、新19を含む1088版は3473でMust0。今回の追加差分は別確認、許諾/配置/実ターンは別。旧配置のdiagnosing-bugs1件の後続別改訂も別証拠を保持。 新2件は3564が全10file/明示A/B/C、3569がV2の6変更fileでMust0。親が両原応答を全読し実行記録を照合。実配置後の10file/hash/構造/metadataは親が確認。公開差分は別レビュー前で、全モデルターンの受入ではない。 RSS/season内容は3584と3591の固定範囲だけをMust0で受領し、親が原応答を全文読み実行記録を照合した。実配置/読戻し/発見と自作Go fixture/modelの範囲は個別evidenceへ保存し、今回の追加45公開差分の受入とは区別する。",
   "total_skill_named_body_read": 137,
   "obra_entrypoint_assessment": {
     "expected": 15,
@@ -1658,13 +1658,11 @@
     "forward_fix_pr": 476,
     "merge": "a5da2f694ab70589fb1dd29ed874d06df56bc579",
     "source_merged": true,
-    "original_luna_review": 3712,
     "original_must": 3,
     "resolved_by": [
       3740,
       3742
     ],
-    "formal_luna_accepted": true,
     "new_runtime_deployed": true,
     "observed_runtime_sha256": "ba35332c45b5bb9f35c4465ee209c123be1309ec554ef0976c8240d232c451c1",
     "observed_runtime_source": "a5da2f694ab70589fb1dd29ed874d06df56bc579",
@@ -1976,7 +1974,6 @@
   "webdesign11_fresh_qualified_use": {
     "evidence": "skills-3080-webdesign11-fresh-qualified-use074042.json",
     "sha256": "8580c45d6da18877799eb3bd65d55b9b27a3b73a5fe49f9445cd38f62f995fe1",
-    "different_actual_model_turn_verified": true,
     "qualified_current_buffer_files": 22,
     "positive_cases": 11,
     "negative_cases": 11,
@@ -2305,7 +2302,7 @@
     "new_adoptions": 0,
     "not_part_of_live_design_index": true,
     "whole16_complete": false,
-    "status": "Fixed input accepted by fullLuna/max review3971 and mergedPR574; actual placement is separately evidenced"
+    "status": "Fixed input accepted by full content review3971 and mergedPR574; actual placement is separately evidenced"
   },
   "received_other12_238249": {
     "evaluation": "skills-3080-other12-238249-evaluation214717.json",
@@ -2384,7 +2381,7 @@
     "new_adoptions": 0,
     "not_part_of_live_design_index": true,
     "whole16_complete": false,
-    "status": "Fixed input accepted by fullLuna/max review4032 and mergedPR575; actual placement is separately evidenced"
+    "status": "Fixed input accepted by full content review4032 and mergedPR575; actual placement is separately evidenced"
   },
   "pricing2_installation": {
     "evidence": "skills-3080-pricing2-installation-evidence214717.json",
@@ -2422,7 +2419,7 @@
     "new_adoptions": 0,
     "central_operations": 0,
     "whole16_complete": false,
-    "status": "Fixed input accepted by fullLuna/max review4049 and mergedPR578; actual placement is separately evidenced"
+    "status": "Fixed input accepted by full content review4049 and mergedPR578; actual placement is separately evidenced"
   },
   "received_other6_254259": {
     "evaluation": "skills-3080-other6-254259-evaluation214717.json",
@@ -2515,7 +2512,7 @@
     "new_adoptions": 0,
     "central_operations": 0,
     "whole16_complete": false,
-    "status": "Fixed input accepted by fullLuna/max review4066 and mergedPR583; actual placement is separately evidenced",
+    "status": "Fixed input accepted by full content review4066 and mergedPR583; actual placement is separately evidenced",
     "proposed_at_input_recording": 11,
     "accepted_full_review_task": 4066,
     "accepted_input_PR": 583,
@@ -2600,7 +2597,6 @@
       "original_sha256": "b9def53ec95455af26f44ea1bbbbf24415a52b07ce3571ca491ab14b565ef000",
       "Must": 0,
       "Suggestion": 1,
-      "actual_Luna_max_verified": true,
       "manifest": "11070b772c86f7ffb459be2f75eaf6d0a436ce9dfdf0d9247eb81c6e433ede51",
       "frozen_after_actual_Create_only": true
     },
@@ -3044,10 +3040,6 @@
     "original3719_complete_packets": 4,
     "original3719_after": 198,
     "original3719_through": 209,
-    "actual_original_reader_jobs": [
-      "非公開の検証記録",
-      "非公開の検証記録"
-    ],
     "source9_visible_masked_workflows": 4,
     "source9_physical_lines": 939,
     "source9_visible_lines": 873,
@@ -3067,7 +3059,9 @@
     "final_only_legacy": 6,
     "assessment_or_final_union": 1430,
     "whole16_complete": false,
-    "count_scope": "Historical PR622 accepted snapshot of1424; the next28 working snapshot below is separate."
+    "count_scope": "Historical PR622 accepted snapshot of1424; the next28 working snapshot below is separate.",
+    "original_actor_record_count": 2,
+    "original_actor_records_kept_private": true
   },
   "source9_first4_evaluation": {
     "artifact": "skills-3080-source9-first4-visible-evaluation175645.json",
@@ -3624,7 +3618,6 @@
     "complete_original_packets": 2,
     "member_metadata": 12,
     "all_member_contexts_and_rights_pending": true,
-    "native_model_and_true_null_parent_observed": true,
     "assessment_references": 1647,
     "new_grants_or_dispositions_or_central": 0,
     "whole16_complete": false

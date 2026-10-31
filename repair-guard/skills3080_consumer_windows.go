@@ -14,16 +14,17 @@ const skillsConsumerInstructions = "元3080の正規の読み取り専用受入�
 // specification. The actual caller is derived from admission, never supplied
 // as a future job ID by the creator or impersonated through a writer request.
 type skillsConsumerScope struct {
-	Domain          string               `json:"domain"`
-	Instructions    string               `json:"instructions"`
-	Author          skillsWriter         `json:"author"`
-	AuthorSpecPath  string               `json:"author_spec_path"`
-	CreatorSpecPath string               `json:"creator_spec_path"`
-	ManifestCommit  string               `json:"manifest_commit"`
-	ManifestPath    string               `json:"manifest_path"`
-	ManifestSHA     string               `json:"manifest_sha256"`
-	Review          skillsResultRequest  `json:"review"`
-	Consume         skillsConsumeRequest `json:"consume"`
+	Domain             string               `json:"domain"`
+	Instructions       string               `json:"instructions"`
+	Author             skillsWriter         `json:"author"`
+	AuthorSpecPath     string               `json:"author_spec_path"`
+	CreatorSpecPath    string               `json:"creator_spec_path"`
+	ManifestCommit     string               `json:"manifest_commit"`
+	ManifestPath       string               `json:"manifest_path"`
+	ManifestSHA        string               `json:"manifest_sha256"`
+	Review             skillsResultRequest  `json:"review"`
+	Consume            skillsConsumeRequest `json:"consume"`
+	RuntimeSourceNonce string               `json:"runtime_source_nonce,omitempty"`
 }
 
 func skillsConsumerSpecPath(path string) bool {
@@ -31,7 +32,7 @@ func skillsConsumerSpecPath(path string) bool {
 }
 func skillsParseConsumer(raw []byte) (skillsConsumerScope, bool) {
 	var c skillsConsumerScope
-	if !skillsStrict(raw, &c) || c.Domain != "skills-3080-consumer-v1" || c.Instructions != skillsConsumerInstructions || !skillsWriterValid(c.Author) || !skillsWriterValid(c.Consume.Creator) ||
+	if !skillsStrict(raw, &c) || !skillsRuntimeNonceEncoding(raw, false) || c.Domain != "skills-3080-consumer-v1" || c.Instructions != skillsConsumerInstructions || !skillsWriterValid(c.Author) || !skillsWriterValid(c.Consume.Creator) ||
 		!skillsConsumerSpecPath(c.AuthorSpecPath) || !skillsConsumerSpecPath(c.CreatorSpecPath) || !skillsGitObjectID(c.ManifestCommit) || !skillsDigest(c.ManifestSHA) ||
 		!skillsRelative(c.ManifestPath) || !strings.HasPrefix(c.ManifestPath, "docs/skills-3080-operations/") || !strings.HasSuffix(c.ManifestPath, ".json") ||
 		!skillsResultID(c.Review) || !skillsDigest(c.Review.SpecSHA) || !skillsDigest(c.Review.FinalSHA) || c.Review.SpecPath != "" ||
@@ -116,7 +117,17 @@ func skillsConsumerNativeInput(s *skillsFS, job object, spec []byte, author skil
 		return false
 	}
 	project, required := skillsTypedRuntimeProject(s, job, spec)
-	native, ok := skillsNativeWindow(s, job, &skillsNativeResultProof{prompt: prompt, inputOnly: true, exactInput: true, bootstrapSHA: bootstrap, runtimeProject: project, requireRuntimeSource: required, cwd: str(job["cwd"])}, time.Now())
+	start, err := time.Parse(time.RFC3339Nano, str(job["started_at"]))
+	observed := time.Now()
+	if err != nil {
+		return false
+	}
+	recorded, stage := skillsRuntimeSourceForJob(s, job, spec, prompt, start, observed)
+	if stage != "" {
+		s.failureStage = stage
+		return false
+	}
+	native, ok := skillsNativeWindow(s, job, &skillsNativeResultProof{prompt: prompt, inputOnly: true, exactInput: true, bootstrapSHA: bootstrap, runtimeProject: project, requireRuntimeSource: required, cwd: str(job["cwd"]), runtimeTransport: &recorded}, observed)
 	if !ok || len(native) == 0 {
 		return false
 	}
@@ -232,7 +243,11 @@ func skillsFreshConsumerOperation() object {
 	}
 	skillsConsumerProjectFromCreated(&fs, origin.Evidence)
 	if !skillsConsumerNativeInput(&fs, job, spec, c.Author) {
-		return fail("native_context")
+		v := fail("native_context")
+		if skillsFixedFailureStage(fs.failureStage) {
+			v["failure_stage"] = fs.failureStage
+		}
+		return v
 	}
 	scope, ok := fs.read(skillsScopePath, 1<<20)
 	if !ok || !skillsScopeBytes(scope) {
@@ -252,7 +267,11 @@ func skillsFreshConsumerOperation() object {
 		return fail("writer")
 	}
 	if !skillsConsumerNativeInput(&fs, actual, spec, c.Author) {
-		return fail("native_context")
+		v := fail("native_context")
+		if skillsFixedFailureStage(fs.failureStage) {
+			v["failure_stage"] = fs.failureStage
+		}
+		return v
 	}
 	result["consumer"], result["runtime_producer"], result["manifest_sha256"], result["native_call_id"] = w, current, c.ManifestSHA, c.Consume.CallID
 	result["original_creator_need_not_be_running"], result["original_producer_revalidated"] = true, true

@@ -55,7 +55,7 @@ func TestSkills3080UserEventsMustMirrorTheOneRegisteredInput(t *testing.T) {
 			}
 			records = append(records, msg("assistant", "final_answer", "original final", start.Add(3*time.Second)))
 			var b bytes.Buffer
-			for _, v := range records {
+			for _, v := range skillsCompleteRuntimeFixture(records) {
 				raw, _ := json.Marshal(v)
 				b.Write(raw)
 				b.WriteByte('\n')
@@ -80,9 +80,9 @@ func TestSkills3080MissingPublicProjectCannotDowngradeCurrentRuntime(t *testing.
 	}
 	project := []byte("PUBLIC project")
 	body, _ := skillsAssembleBootstrapSource([]byte("same historical owner body"), project)
-	for _, kind := range []string{"current_with_project", "current_missing_project", "known_old", "unknown"} {
+	for _, kind := range []string{"current_with_project", "current_missing_project", "known_old", "known_old_developer_message", "known_old_developer_tools", "known_old_bootstrap_before_start", "known_old_bootstrap_after_end", "known_old_extra_outside_user", "known_old_extra_outside_event", "unknown"} {
 		version := "0.165.0"
-		if kind == "known_old" {
+		if strings.HasPrefix(kind, "known_old") {
 			version = "0.163.0"
 		}
 		if kind == "unknown" {
@@ -92,8 +92,31 @@ func TestSkills3080MissingPublicProjectCannotDowngradeCurrentRuntime(t *testing.
 			return object{"type": "response_item", "timestamp": at.Format(time.RFC3339Nano), "payload": object{"type": "message", "role": "user", "content": []object{{"type": "input_text", "text": text}}}}
 		}
 		records := []object{{"type": "session_meta", "timestamp": start.Format(time.RFC3339Nano), "payload": object{"id": id, "cwd": cwd, "source": "exec", "originator": "codex_exec", "cli_version": version}}, {"type": "event_msg", "timestamp": start.Format(time.RFC3339Nano), "payload": object{"type": "task_started", "turn_id": turn}}, msg(skillsBootstrapFixture(cwd, string(body), true), start), {"type": "world_state", "timestamp": start.Format(time.RFC3339Nano), "payload": object{"full": true, "state": object{"agents_md": object{"directory": cwd, "text": string(body)}}}}, {"type": "turn_context", "timestamp": start.Format(time.RFC3339Nano), "payload": object{"turn_id": turn, "cwd": cwd, "model": "gpt-6-luna", "effort": "max"}}, msg("exact task", start.Add(time.Second))}
+		if kind == "known_old_developer_message" || kind == "known_old_developer_tools" {
+			payload := object{"type": "message", "role": "developer", "content": []object{{"type": "input_text", "text": "unregistered developer instruction"}}}
+			if kind == "known_old_developer_tools" {
+				payload["type"] = "additional_tools"
+			}
+			records = append(records[:2], append([]object{{"type": "response_item", "timestamp": start.Format(time.RFC3339Nano), "payload": payload}}, records[2:]...)...)
+		}
+		if kind == "known_old_bootstrap_before_start" {
+			records[2]["timestamp"] = start.Add(-time.Second).Format(time.RFC3339Nano)
+		}
+		if kind == "known_old_bootstrap_after_end" {
+			records[2]["timestamp"] = start.Add(2 * time.Minute).Format(time.RFC3339Nano)
+		}
+		if kind == "known_old_extra_outside_user" {
+			records = append(records, msg("unregistered outside user", start.Add(-time.Second)))
+		}
+		if kind == "known_old_extra_outside_event" {
+			records = append(records, object{"type": "event_msg", "timestamp": start.Add(-time.Second).Format(time.RFC3339Nano), "payload": object{"type": "user_message", "message": "unregistered outside event"}})
+		}
 		var b bytes.Buffer
-		for _, v := range records {
+		stream := records
+		if version != "0.163.0" {
+			stream = skillsCompleteRuntimeFixture(records)
+		}
+		for _, v := range stream {
 			raw, _ := json.Marshal(v)
 			b.Write(raw)
 			b.WriteByte('\n')
@@ -110,7 +133,7 @@ func TestSkills3080MissingPublicProjectCannotDowngradeCurrentRuntime(t *testing.
 		_, ok := skillsNativeWindow(&s, job, p, start.Add(time.Minute))
 		s.close()
 		if ok != (kind == "current_with_project" || kind == "known_old") {
-			t.Fatalf("missing PUBLIC source %s accepted=%v", kind, ok)
+			t.Errorf("missing PUBLIC source %s accepted=%v", kind, ok)
 		}
 	}
 }
@@ -188,6 +211,9 @@ func TestSkills3080RuntimeWorldStateAnchorsTheLaunchInstructions(t *testing.T) {
 				}
 				dev := object{"type": "response_item", "timestamp": start.Format(time.RFC3339Nano), "payload": object{"type": "message", "role": role, "content": []object{{"type": "input_text", "text": "runtime launch instructions"}}}}
 				records = append(records[:2], dev, msg)
+				if kind == "runtime_developer_prefix" {
+					obj(obj(snapshot["payload"])["state"])["model"] = object{"model": "gpt-6-luna", "instructions": skillsRuntimeFragmentHash("runtime launch instructions")}
+				}
 			}
 			if kind == "developer_after_bootstrap" {
 				records = append(records, object{"type": "response_item", "timestamp": start.Add(time.Second).Format(time.RFC3339Nano), "payload": object{"type": "message", "role": "developer", "content": []object{{"type": "input_text", "text": "extra later instruction"}}}})
@@ -207,7 +233,7 @@ func TestSkills3080RuntimeWorldStateAnchorsTheLaunchInstructions(t *testing.T) {
 				records = append(records, snapshot)
 			}
 			var b bytes.Buffer
-			for _, v := range records {
+			for _, v := range skillsCompleteRuntimeFixture(records) {
 				raw, _ := json.Marshal(v)
 				b.Write(raw)
 				b.WriteByte('\n')
@@ -260,7 +286,7 @@ func TestSkills3080DuplicateRoleCannotHideAcrossTheJobWindow(t *testing.T) {
 			extra := `{"type":"response_item","timestamp":"` + at.Format(time.RFC3339Nano) + `","payload":{"type":"message",` + role + `,"phase":"commentary","content":[]}}` + "\n"
 			proof := &skillsNativeResultProof{prompt: []byte("exact task"), finalSHA: hashBytes([]byte("original final")), exactInput: true, runtimeBootstrap: []byte("runtime instructions"), runtimeSourceUsed: true, cwd: cwd, sandbox: "read-only"}
 			_, ok := skillsNativeProjectionBound(strings.NewReader(prefix+extra+tail), id, cwd, start, start.Add(time.Minute), proof)
-			if ok == duplicate {
+			if ok != (!duplicate && !outside) {
 				t.Fatalf("role duplicate=%v outside=%v accepted=%v", duplicate, outside, ok)
 			}
 		}

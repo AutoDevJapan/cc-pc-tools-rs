@@ -158,6 +158,14 @@ func skillsHistoricalNative(s *skillsFS, job object, proof *skillsNativeResultPr
 // A live consumer has no finished_at. Its immutable input is checked only up
 // to an actual observation time, without inventing or changing job metadata.
 func skillsNativeWindow(s *skillsFS, job object, proof *skillsNativeResultProof, end time.Time) ([]object, bool) {
+	return skillsNativeWindowWithSourceOrigin(s, job, proof, end, func(start time.Time) (skillsRuntimeOrigin, bool) {
+		return skillsRuntimeSourceOrigin(s, job, start)
+	})
+}
+
+// The origin resolver is an internal test seam. Requests cannot supply a
+// historical source window or replace the registered metadata reader above.
+func skillsNativeWindowWithSourceOrigin(s *skillsFS, job object, proof *skillsNativeResultProof, end time.Time, resolve func(time.Time) (skillsRuntimeOrigin, bool)) ([]object, bool) {
 	id := str(job["thread_id"])
 	start, e := time.Parse(time.RFC3339Nano, str(job["started_at"]))
 	if e != nil || end.Before(start) || !skillsUUID.MatchString(id) {
@@ -182,21 +190,56 @@ func skillsNativeWindow(s *skillsFS, job object, proof *skillsNativeResultProof,
 		if !rewindable {
 			return nil, false
 		}
+		if proof.runtimeTransport != nil {
+			if !skillsFreshRuntimeThread(job, start, end) || !skillsNativeTransportMatches(input, id, str(job["cwd"]), start, end, proof.runtimeTransport.Input, proof.runtimeTransport.TurnID) || !snapshot.rewind() {
+				return nil, false
+			}
+		}
+		var bootstrapWindow []time.Time
 		if proof.requireRuntimeSource || len(proof.runtimeProject) > 0 {
-			source, modern, valid := skillsRuntimeBootstrapProjection(input, job, proof.runtimeProject, start, end)
+			bootstrapWindow = []time.Time{start, end}
+			envelopes := map[string]bool{}
+			source, modern, valid := skillsRuntimeBootstrapProjectionWithOrigin(input, job, proof.runtimeProject, start, end, func() (skillsRuntimeOrigin, bool) {
+				origin, valid := resolve(start)
+				if valid {
+					proof.runtimePriorWindows = origin.Windows
+				}
+				return origin, valid
+			}, envelopes)
 			if !valid || !snapshot.rewind() {
 				return nil, false
 			}
 			if modern {
 				proof.runtimeBootstrap = source
+				proof.runtimeEnvelopeRecords = envelopes
+				proof.runtimeEnvelopeRequired = true
 			}
+			for i := range proof.runtimePriorWindows {
+				w := &proof.runtimePriorWindows[i]
+				if len(w.Input) == 0 {
+					return nil, false
+				}
+				first := w.Start.Equal(proof.runtimePriorWindows[len(proof.runtimePriorWindows)-1].Start)
+				w.proof = &skillsNativeResultProof{prompt: w.Input, inputOnly: true, exactInput: true, bootstrapSHA: proof.bootstrapSHA, runtimeBootstrap: source, bootstrapBound: !first, cwd: proof.cwd, sandbox: proof.sandbox}
+				// Only the independently projected first runtime bootstrap is
+				// an extra source message. Later historical jobs have exactly
+				// their own normally stored execution input.
+				w.proof.userSeen = !first
+				if first {
+					bootstrapWindow = []time.Time{w.Start, w.End}
+				}
+			}
+			// A resumed current job has only its registered task input, not a
+			// second copy of the original source/bootstrap user message.
+			proof.userSeen = len(proof.runtimePriorWindows) > 0
 		}
 		// Session bootstrap is independent of the job's task-input window.
-		body, valid := skillsBootstrapBodyProjection(input, id, str(job["cwd"]), proof.sandbox)
+		body, valid := skillsBootstrapBodyProjection(input, id, str(job["cwd"]), proof.sandbox, bootstrapWindow...)
 		if !valid || !proof.bootstrapMatchesBody(body) || !rewindable || !snapshot.rewind() {
 			return nil, false
 		}
 		proof.runtimeSourceUsed = len(proof.runtimeBootstrap) > 0
+		proof.runtimeWindowBound = len(bootstrapWindow) == 2
 		proof.bootstrapBound = true
 	}
 	return skillsNativeProjectionBound(input, id, str(job["cwd"]), start, end, proof)
@@ -320,10 +363,139 @@ type skillsNativeResultProof struct {
 	runtimeProject                []byte
 	requireRuntimeSource          bool
 	runtimeSourceUsed             bool
+	runtimeWindowBound            bool
+	runtimePriorWindows           []skillsRuntimePriorWindow
+	runtimeEnvelopeRecords        map[string]bool
+	runtimeEnvelopeRequired       bool
 	userSeen                      bool
 	runtimePrefixClosed           bool
 	bootstrapSeen, bootstrapBound bool
 	frozen                        bool
+	runtimeTransport              *skillsRecordedTransport
+}
+
+func (p *skillsNativeResultProof) runtimeWindowChecked() bool {
+	return p.runtimeWindowBound || p.runtimeSourceUsed || len(p.runtimePriorWindows) > 0
+}
+
+func (p *skillsNativeResultProof) priorRuntimeWindow(at time.Time) bool {
+	return p.priorRuntimeWindowAt(at) != nil
+}
+
+func (p *skillsNativeResultProof) priorRuntimeWindowAt(at time.Time) *skillsRuntimePriorWindow {
+	var match *skillsRuntimePriorWindow
+	for i := range p.runtimePriorWindows {
+		w := &p.runtimePriorWindows[i]
+		if !at.Before(w.Start) && !at.After(w.End) {
+			if match != nil {
+				return nil
+			}
+			match = w
+		}
+	}
+	return match
+}
+
+func (p *skillsNativeResultProof) observePriorRuntimeInput(raw []byte, at time.Time, event bool) bool {
+	w := p.priorRuntimeWindowAt(at)
+	if w != nil {
+		if w.proof == nil || len(w.Input) == 0 {
+			return false
+		}
+		if event {
+			return w.proof.observeEvent(raw, at)
+		}
+		var e struct {
+			Payload struct {
+				Role string `json:"role"`
+			} `json:"payload"`
+		}
+		if json.Unmarshal(raw, &e) != nil {
+			return false
+		}
+		if e.Payload.Role == "developer" {
+			return p.runtimeEnvelopeRecords[hashBytes(raw)]
+		}
+		if e.Payload.Role != "user" {
+			return false
+		}
+		return w.proof.observe(raw, at)
+	}
+	return false
+}
+
+func (p *skillsNativeResultProof) priorRuntimeInputsBound() bool {
+	for _, w := range p.runtimePriorWindows {
+		if w.proof == nil || !w.proof.bound() || w.Contexts == 0 {
+			return false
+		}
+	}
+	return true
+}
+
+func (p *skillsNativeResultProof) observePriorRuntimeContext(raw []byte, at time.Time) bool {
+	match := p.priorRuntimeWindowAt(at)
+	if match == nil {
+		return false
+	}
+	var e struct {
+		Payload json.RawMessage `json:"payload"`
+	}
+	var v struct {
+		Cwd, Model, Effort string
+		Reasoning          string `json:"reasoning_effort"`
+		Turn               string `json:"turn_id"`
+	}
+	if json.Unmarshal(raw, &e) != nil || !skillsCreationHeaderKeys(e.Payload, "cwd", "model", "effort", "reasoning_effort", "turn_id") || json.Unmarshal(e.Payload, &v) != nil {
+		return false
+	}
+	if v.Effort != "" && v.Reasoning != "" && v.Effort != v.Reasoning {
+		return false
+	}
+	effort := v.Effort
+	if effort == "" {
+		effort = v.Reasoning
+	}
+	if !skillsUUID.MatchString(v.Turn) || !same(v.Cwd, str(match.Job["cwd"])) || skillsModel(v.Model) == "" || skillsModel(v.Model) != skillsModel(str(match.Job["model"])) || effort != str(match.Job["effort"]) {
+		return false
+	}
+	match.Contexts++
+	if match.Turns == nil {
+		match.Turns = map[string]bool{}
+	}
+	match.Turns[v.Turn] = true
+	return true
+}
+
+// A canonical log's own item/turn IDs cannot prove that generated history
+// existed when the prior job ran. No independently registered item inventory
+// exists for this contract, so do not authenticate any such historical output.
+// The legacy configuration item is different: its complete allowed value is
+// independently fixed by the registered job, rather than learned from the log.
+func (p *skillsNativeResultProof) observePriorRuntimeGenerated(raw []byte, at time.Time) bool {
+	w := p.priorRuntimeWindowAt(at)
+	if w == nil || w.Contexts == 0 {
+		return false
+	}
+	var e struct {
+		Payload json.RawMessage `json:"payload"`
+	}
+	var v struct {
+		Type string `json:"type"`
+	}
+	if json.Unmarshal(raw, &e) != nil || json.Unmarshal(e.Payload, &v) != nil {
+		return false
+	}
+	if v.Type == "configuration_update" {
+		var c struct {
+			Type      string `json:"type"`
+			Reasoning struct {
+				Effort string `json:"effort"`
+			} `json:"reasoning"`
+		}
+		return skillsStrict(e.Payload, &c) && c.Reasoning.Effort == str(w.Job["effort"])
+	}
+	return false
 }
 
 func (p *skillsNativeResultProof) observeEvent(raw []byte, at time.Time) bool {
@@ -377,6 +549,9 @@ func (p *skillsNativeResultProof) observe(raw []byte, at time.Time) bool {
 		return false
 	}
 	v := envelope.Payload
+	if (p.exactInput || p.inputOnly) && v.Role == "developer" && (p.runtimeEnvelopeRequired || p.runtimeWindowChecked()) {
+		return !p.runtimePrefixClosed && !p.userSeen && p.runtimeEnvelopeRecords[hashBytes(raw)]
+	}
 	if (p.exactInput || p.inputOnly) && v.Type != "message" && v.Role != "" {
 		return v.Type == "additional_tools" && v.Role == "developer" && !p.runtimePrefixClosed && !p.userSeen
 	}

@@ -63,9 +63,12 @@ review側の完了nativeはdeny-writeで開け、実modelとmax・session/cwdも
 新しいPUBLICレビューのbootstrapを作者の古い本文へ書き換えない。
 
 初回起動のレビューでは、Codex 0.165.0が起動時に記録したfull `world_state`の
-`agents_md.directory/text`を独立した実行時の指示版として照合する。
+`agents_md.directory/text`との整合を確認し、別に記録したモデル要求へ出所を照合する。
 execのsession、task_startedのturn、bootstrap、runtime snapshot、最初のturn_contextを
 同じjob窓・cwd・モデルへ結び、runtimeが記録した全文とbootstrapの全byteを照合する。
+同じnative内の本文とcheckpointだけを独立した真正性の証明にしない。
+[記録済み入力との照合](skills-3080-recorded-runtime-input.md)に従い、正常親の事前準備と
+通常dispatchに結ぶ別のrequest objectも確認する。
 現在の可変な指示ファイルや、後から書いたsnapshot・本文の自己申告hashは使わない。
 
 プロジェクト側は同じPUBLIC commitのGitHub treeで確認した`AGENTS.md` blobへ結ぶ。

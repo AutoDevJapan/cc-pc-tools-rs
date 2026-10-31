@@ -107,6 +107,8 @@ const official3894BootstrapPredecessorHead = "b78007695a7c5d73eb1f11118757e93918
 // before the public-manifest/consumer successor is generated.
 const official3894PublicManifestPredecessorSHA = "c7bd633b2eaeb8f55ba33775817398508b79fad0dcef308e216e0f3c40881ad0"
 const official3894PublicManifestPredecessorHead = "4ebfedab3794ff12e0f0be09243be3fd3544107a"
+const official3894RuntimeOriginPredecessorSHA = "f3166064c8670868077f1b201959cf5059169b3be9ccc6b73465a0e238650c09"
+const official3894RuntimeOriginPredecessorHead = "ae8cf2424ebbc19de2e6eb2561c1bd48f37f9f7e"
 
 type official3894Source struct {
 	Head, Registration, CreatorJob, Workspace, Branch, SpecSHA string
@@ -979,7 +981,8 @@ func official3894InstalledBaseline(sha, head string) bool {
 		(sha == official3894CanonicalAssignmentPredecessorSHA && head == official3894CanonicalAssignmentPredecessorHead) ||
 		(sha == official3894CreationPathPredecessorSHA && head == official3894CreationPathPredecessorHead) ||
 		(sha == official3894BootstrapPredecessorSHA && head == official3894BootstrapPredecessorHead) ||
-		(sha == official3894PublicManifestPredecessorSHA && head == official3894PublicManifestPredecessorHead)
+		(sha == official3894PublicManifestPredecessorSHA && head == official3894PublicManifestPredecessorHead) ||
+		(sha == official3894RuntimeOriginPredecessorSHA && head == official3894RuntimeOriginPredecessorHead)
 }
 
 // Qualifies only comparison of the known previously published guard software.

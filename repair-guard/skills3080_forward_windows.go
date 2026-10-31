@@ -62,6 +62,7 @@ type skillsCreatedEvidence struct {
 	Files          []skillsCreatedFile      `json:"files"`
 	ManifestAuthor *skillsWriter            `json:"manifest_author,omitempty"`
 	DecisionSHA    string                   `json:"decision_identity_sha256,omitempty"`
+	NativeContract string                   `json:"native_invocation_contract,omitempty"`
 }
 type skillsConsumeRequest struct {
 	Creator     skillsWriter `json:"creator"`
@@ -114,7 +115,7 @@ func skillsManifestDirectories(m skillsManifest) []string {
 // handle and physical directory still held. There is no issue-from-path API.
 func skillsIssueCreated(r skillsRequest, requestSHA string, m skillsManifest, root string, s *skillsFS, producer skillsProducer) (skillsCreatedEvidence, bool) {
 	e := skillsCreatedEvidence{Domain: "skills-3080-created-v2", Writer: r.Writer, RequestSHA: requestSHA,
-		ManifestCommit: r.ManifestCommit, ManifestPath: r.ManifestPath, ManifestSHA: r.ManifestSHA, Producer: producer}
+		ManifestCommit: r.ManifestCommit, ManifestPath: r.ManifestPath, ManifestSHA: r.ManifestSHA, Producer: producer, NativeContract: skillsHiddenNativeContract}
 	if r.Review == nil || len(m.Files) == 0 || len(m.Files) > 128 || len(s.created) != len(m.Files) {
 		return e, false
 	}
@@ -164,6 +165,9 @@ func skillsIssueCreated(r skillsRequest, requestSHA string, m skillsManifest, ro
 }
 
 func skillsCreatedBound(e skillsCreatedEvidence, creation skillsRequest, sha string, m skillsManifest, producer skillsProducer) bool {
+	if e.NativeContract != "" && e.NativeContract != skillsHiddenNativeContract {
+		return false
+	}
 	if m.publicV2 {
 		if e.ManifestAuthor == nil || *e.ManifestAuthor != m.proposalAuthor || e.DecisionSHA != skillsDecisionSHA {
 			return false

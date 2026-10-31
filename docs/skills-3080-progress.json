@@ -1650,7 +1650,7 @@
     "per_candidate_workers_created": 0,
     "equal_body_is_not_permission": true,
     "queue_generation_is_not_semantic_completion": true,
-    "current_queue_rollup_field": "latest_retained_procedure_queue"
+    "current_queue_rollup_field": "current_execution_queue"
   },
   "current_scope_qualification_repair": {
     "todo": 3686,
@@ -3706,32 +3706,32 @@
   },
   "visible_primary_assessment_journal": {
     "file": "skills-3080-visible-primary-assessments.json",
-    "representative_meanings": 141,
-    "bound_member_metadata": 162,
+    "representative_meanings": 146,
+    "bound_member_metadata": 167,
     "member_contexts_and_rights_pending": true,
     "source_commands_executed": false,
     "new_copy_grants": 0,
     "new_Skills": 0,
     "new_central_writes": 0,
     "whole16_complete": false,
-    "sha256": "2f1785a69b40bea10c467d85909f8f1d06dd83032e439c80cd0ba0525f1c10f2"
+    "sha256": "1fee59498adc33e309b3733d2353d98986f8e958e7c2da6e14faf0606aabd418"
   },
   "latest_visible_primary_queue": {
     "state": "complete",
     "catalog_sha256": "2d73c9a038a41cc220a9687b935bfa1e0b315b65d9bd6d3e54ddb4111972876c",
-    "manifest_sha256": "6a0a08a85c957d002ccf8ea6ae342a8fb18d733e4fb1075821e2552fed72402e",
-    "queue_sha256": "b174830effc1f5e30b9e3bac49ce814e7fae6c64fc749403f1652123d097b8f2",
+    "manifest_sha256": "744d73b72646e751e6ddca647b9de959fa888382ab1069a7a6f20dff2b67f0c9",
+    "queue_sha256": "9350c247f3dd1ed625cd54832ef5a5d3eb31e24fbbbc8c6295eb0d9b1f047113",
     "occurrences": 73220,
-    "occurrences_with_assessment_records": 2065,
+    "occurrences_with_assessment_records": 2070,
     "recorded_final_occurrences": 198,
     "occurrences_with_assessment_and_final_records": 192,
     "final_records_without_assessment_record": 6,
-    "occurrences_with_assessment_or_final_records": 2071,
+    "occurrences_with_assessment_or_final_records": 2076,
     "stages": {
-      "assessed_needs_current_disposition": 1873,
+      "assessed_needs_current_disposition": 1878,
       "held_body_unavailable": 428,
       "held_execution_review": 647,
-      "needs_semantic_and_individual_rights_review": 70074,
+      "needs_semantic_and_individual_rights_review": 70069,
       "recorded_final_disposition": 198
     },
     "recorded_final_dispositions": {
@@ -3746,7 +3746,7 @@
       "The queue is complete only when its separate summary is complete and its recorded queue SHA256 matches the actual bytes.",
       "Explicit site identity interpretations retain original archive locations and unverified historical upstream claims separately from catalog occurrence Git fields; historical exclusion claims still require reconfirmation.",
       "Additional catalog Git blob/byte-count checks cover 91 independently pinned retained v3 occurrences; other legacy formats retain their recorded identity checks.",
-      "Assessment records 2065 = assessed without final disposition 1873 + assessment/final intersection 192. Final records 198 include 6 final-only legacy records without assessment. The assessment/final union is 2071 occurrences; these categories are not additive independent totals."
+      "Assessment records 2070 = assessed without final disposition 1878 + assessment/final intersection 192. Final records 198 include 6 final-only legacy records without assessment. The assessment/final union is 2076 occurrences; these categories are not additive independent totals."
     ]
   },
   "observed_at_scope": "現在の処理表と追記評価の反映日。過去の読取・検査・配置時刻は各記録に保持する。",
@@ -3852,19 +3852,19 @@
   "current_execution_queue": {
     "state": "complete",
     "catalog_sha256": "2d73c9a038a41cc220a9687b935bfa1e0b315b65d9bd6d3e54ddb4111972876c",
-    "manifest_sha256": "6a0a08a85c957d002ccf8ea6ae342a8fb18d733e4fb1075821e2552fed72402e",
-    "queue_sha256": "b174830effc1f5e30b9e3bac49ce814e7fae6c64fc749403f1652123d097b8f2",
+    "manifest_sha256": "744d73b72646e751e6ddca647b9de959fa888382ab1069a7a6f20dff2b67f0c9",
+    "queue_sha256": "9350c247f3dd1ed625cd54832ef5a5d3eb31e24fbbbc8c6295eb0d9b1f047113",
     "occurrences": 73220,
-    "occurrences_with_assessment_records": 2065,
+    "occurrences_with_assessment_records": 2070,
     "recorded_final_occurrences": 198,
     "occurrences_with_assessment_and_final_records": 192,
     "final_records_without_assessment_record": 6,
-    "occurrences_with_assessment_or_final_records": 2071,
+    "occurrences_with_assessment_or_final_records": 2076,
     "stages": {
-      "assessed_needs_current_disposition": 1873,
+      "assessed_needs_current_disposition": 1878,
       "held_body_unavailable": 428,
       "held_execution_review": 647,
-      "needs_semantic_and_individual_rights_review": 70074,
+      "needs_semantic_and_individual_rights_review": 70069,
       "recorded_final_disposition": 198
     },
     "recorded_final_dispositions": {
@@ -3879,7 +3879,7 @@
       "The queue is complete only when its separate summary is complete and its recorded queue SHA256 matches the actual bytes.",
       "Explicit site identity interpretations retain original archive locations and unverified historical upstream claims separately from catalog occurrence Git fields; historical exclusion claims still require reconfirmation.",
       "Additional catalog Git blob/byte-count checks cover 91 independently pinned retained v3 occurrences; other legacy formats retain their recorded identity checks.",
-      "Assessment records 2065 = assessed without final disposition 1873 + assessment/final intersection 192. Final records 198 include 6 final-only legacy records without assessment. The assessment/final union is 2071 occurrences; these categories are not additive independent totals."
+      "Assessment records 2070 = assessed without final disposition 1878 + assessment/final intersection 192. Final records 198 include 6 final-only legacy records without assessment. The assessment/final union is 2076 occurrences; these categories are not additive independent totals."
     ]
   },
   "latest_retained_procedure_assessments": {
@@ -3960,17 +3960,17 @@
     "state": "complete"
   },
   "latest_visible_primary_delta": {
-    "additional_member_metadata": 44,
+    "additional_member_metadata": 5,
     "central_operations": 0,
     "current_parent_read_original_meanings": true,
-    "full_original_packets_reused": 8,
-    "new_assessment_records": 29,
+    "full_original_packets_reused": 3,
+    "new_assessment_records": 5,
     "new_final_dispositions": 0,
-    "new_unique_occurrences": 29,
-    "old112_all_fields_and_order_retained": true,
+    "new_unique_occurrences": 5,
+    "old141_all_fields_and_order_retained": true,
     "raw_full_read_grants_or_adoptions_added": 0,
-    "source_physical_lines": 4868,
-    "source_withheld_lines": 746,
+    "source_physical_lines": 1636,
+    "source_withheld_lines": 240,
     "whole16_complete": false
   },
   "saved_metadata_census": {

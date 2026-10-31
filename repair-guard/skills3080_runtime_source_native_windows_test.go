@@ -145,3 +145,40 @@ func TestSkills3080SourcePreparationRequiresOriginalControllerToolResult(t *test
 		})
 	}
 }
+
+func TestSkills3080SourcePrepareRunsOnceButDispatchCanRetry(t *testing.T) {
+	for _, kind := range []string{"first_prepare", "repeat_prepare", "retry_start", "other_request"} {
+		t.Run(kind, func(t *testing.T) {
+			p := skillsSourcePreparationFixture()
+			thread := "11111111-1111-7111-8111-111111111111"
+			start := time.Date(2030, 1, 1, 0, 0, 0, 0, time.UTC)
+			flag := "--prepare-skills3080-runtime-source"
+			if kind == "retry_start" {
+				flag = "--start-skills3080-runtime-source"
+			}
+			var input bytes.Buffer
+			enc := json.NewEncoder(&input)
+			enc.Encode(object{"type": "session_meta", "payload": object{"id": thread, "cwd": p.Writer.Workspace}})
+			call := func(id, path string) {
+				at := start.Add(time.Second)
+				if id == "call_current" {
+					at = start.Add(3 * time.Second)
+				}
+				enc.Encode(object{"type": "response_item", "timestamp": at.Format(time.RFC3339Nano), "payload": object{"type": "custom_tool_call", "name": "exec", "call_id": id, "input": skillsRuntimeSourceInvocationText(path, p.Writer.Workspace, flag)}})
+			}
+			if kind != "first_prepare" {
+				path := p.RequestPath
+				if kind == "other_request" {
+					path = filepath.Join(p.Writer.Workspace, "other.json")
+				}
+				call("call_old", path)
+				enc.Encode(object{"type": "response_item", "timestamp": start.Add(2 * time.Second).Format(time.RFC3339Nano), "payload": object{"type": "custom_tool_call_output", "call_id": "call_old"}})
+			}
+			call("call_current", p.RequestPath)
+			id, ok := skillsRuntimeSourcePendingCall(&input, thread, p.Writer.Workspace, p.RequestPath, flag, start, start.Add(time.Minute))
+			if ok != (kind != "repeat_prepare") || (ok && id != "call_current") {
+				t.Fatal("duplicate preparation allocated another root or a normal start retry was blocked")
+			}
+		})
+	}
+}

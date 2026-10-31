@@ -17,6 +17,33 @@ type skillsTransportInput struct {
 	TaskSHA string
 }
 
+// The pinned 0.165 Responses Lite source contract uses the built-in OpenAI
+// provider. Registry aliases identify the same existing OAuth family; they
+// are not accepted as prefixes in the recorded transport model slug.
+func skillsTransportModelSlug(registered string) (string, bool) {
+	parts := strings.Split(registered, "/")
+	if len(parts) > 2 {
+		return "", false
+	}
+	if len(parts) == 2 {
+		prefix := parts[0]
+		if prefix != "openai" && prefix != "main" && !(len(prefix) == 7 && prefix[0] == 'p' && skillsAccountIdentifier.MatchString(prefix[1:])) {
+			return "", false
+		}
+	}
+	slug := parts[len(parts)-1]
+	switch slug {
+	case "gpt-6.1-sol", "gpt-6-astra", "gpt-6-luna":
+		return slug, true
+	}
+	return "", false
+}
+
+func skillsTransportModelMatches(actual, registered string) bool {
+	slug, ok := skillsTransportModelSlug(registered)
+	return ok && actual == slug
+}
+
 func skillsSourceKeys(m map[string]json.RawMessage, allowed ...string) bool {
 	set := map[string]bool{}
 	for _, name := range allowed {
@@ -150,7 +177,7 @@ func skillsTransportInputProjection(raw, prompt []byte, model, effort string) (s
 		Summary string `json:"summary,omitempty"`
 		Context string `json:"context,omitempty"`
 	}
-	if json.Unmarshal(m["model"], &out.Model) != nil || skillsModel(out.Model) == "" || skillsModel(out.Model) != skillsModel(model) || !skillsStrict(m["reasoning"], &reasoning) || reasoning.Effort != effort {
+	if json.Unmarshal(m["model"], &out.Model) != nil || !skillsTransportModelMatches(out.Model, model) || !skillsStrict(m["reasoning"], &reasoning) || reasoning.Effort != effort {
 		return empty, false
 	}
 	if reasoning.Context != "" && reasoning.Context != "auto" && reasoning.Context != "current_turn" && reasoning.Context != "all_turns" {

@@ -145,6 +145,11 @@ func skillsRuntimeSourcePendingCall(input io.Reader, thread, cwd, path, flag str
 	if scan.Err() != nil || !session || len(pending) != 1 {
 		return "", false
 	}
+	// Repeating the same preparation must not allocate another owned root.
+	// Starting an already prepared task may still retry normal admission.
+	if flag == "--prepare-skills3080-runtime-source" && len(seen) != 1 {
+		return "", false
+	}
 	for id := range pending {
 		return id, true
 	}

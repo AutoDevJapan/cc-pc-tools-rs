@@ -22,7 +22,7 @@ func skillsTransportRequestFixture() (object, []byte) {
 }
 
 func TestSkills3080TransportInputRequiresCompleteInitialContext(t *testing.T) {
-	for _, kind := range []string{"http_or_logical", "full_ws", "wrong_model", "wrong_effort", "wrong_task", "unknown_field", "header", "previous_response", "warmup", "unknown_type", "assistant", "tool_result", "third_user", "late_developer", "wrong_role", "missing_tools", "primitive_tool", "reordered_tools", "attachment", "aliased_block", "null_text", "unknown_item_field", "wrong_id_type", "unknown_reasoning", "unknown_context", "second_instruction_channel", "second_tool_channel"} {
+	for _, kind := range []string{"http_or_logical", "full_ws", "wrong_model", "other_provider_model", "wrong_effort", "wrong_task", "unknown_field", "header", "previous_response", "warmup", "unknown_type", "assistant", "tool_result", "third_user", "late_developer", "wrong_role", "missing_tools", "primitive_tool", "reordered_tools", "attachment", "aliased_block", "null_text", "unknown_item_field", "wrong_id_type", "unknown_reasoning", "unknown_context", "second_instruction_channel", "second_tool_channel"} {
 		t.Run(kind, func(t *testing.T) {
 			r, prompt := skillsTransportRequestFixture()
 			input := r["input"].([]object)
@@ -31,6 +31,8 @@ func TestSkills3080TransportInputRequiresCompleteInitialContext(t *testing.T) {
 				r["type"], r["generate"] = "response.create", true
 			case "wrong_model":
 				r["model"] = "gpt-6.1-sol"
+			case "other_provider_model":
+				r["model"] = "other-provider/gpt-6-luna"
 			case "wrong_effort":
 				obj(r["reasoning"])["effort"] = "low"
 			case "wrong_task":
@@ -132,5 +134,28 @@ func TestSkills3080TransportProjectionPreservesContentMetadataAndOrder(t *testin
 				t.Fatalf("content or order was discarded for %s", kind)
 			}
 		})
+	}
+}
+
+func TestSkills3080TransportBindsKnownRegisteredModelFamily(t *testing.T) {
+	for _, c := range []struct {
+		registered, actual string
+		valid              bool
+	}{
+		{"gpt-6-luna", "gpt-6-luna", true},
+		{"openai/gpt-6-luna", "gpt-6-luna", true},
+		{"main/gpt-6.1-sol", "gpt-6.1-sol", true},
+		{"pabcdef/gpt-6-astra", "gpt-6-astra", true},
+		{"gpt-6-luna", "other-provider/gpt-6-luna", false},
+		{"gpt-6-luna", "openai/gpt-6-luna", false},
+		{"anthropic/gpt-6-luna", "gpt-6-luna", false},
+		{"other-provider/gpt-6-luna", "gpt-6-luna", false},
+		{"openai/nested/gpt-6-luna", "gpt-6-luna", false},
+		{"pABCDEF/gpt-6-luna", "gpt-6-luna", false},
+		{"gpt-6-luna", "gpt-6.1-sol", false},
+	} {
+		if skillsTransportModelMatches(c.actual, c.registered) != c.valid {
+			t.Fatalf("registered %q transport %q", c.registered, c.actual)
+		}
 	}
 }

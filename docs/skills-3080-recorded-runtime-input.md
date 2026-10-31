@@ -19,6 +19,10 @@
    `CODEX_ROLLOUT_TRACE_ROOT`は、その対象1件のdispatch子プロセスだけへ渡す。
    起動受付と入力記録の完成、本文の利用成功はそれぞれ別に扱う。
 
+同じrequest pathのprepareは親job内で一度だけ受け付け、再実行で所有rootを増やさない。
+失敗や部分準備は元の所有記録を保持して調べる。別taskや意図した新requestは別に扱う。
+通常dispatchが未受付だったstartの再試行は維持する。
+
 準備の結果は、親の正規tool call/resultと同じrequest、nonce、spec SHA、directory ID、既知producerへ結ぶ。
 callerが任意の既存bundleやbootstrap digestを指定する入口にはしない。
 nonceは相関値であり、新しい権限や資料の許可ではない。
@@ -47,6 +51,11 @@ payload照合後にも選択した最初の要求までのevent bytesが一致�
 traceのturnはnativeの最初のtask_startedとturn_contextにも一致させる。
 tool_choice、parallel_tool_calls、includeなどのprovider設定は、このnative比較による認証の対象には含めない。
 request全体の全fieldがnativeと一致したという保証にはしない。
+この0.165 Responses Lite形式では、既知のGPTモデルslugとbuilt-in provider名`OpenAI`を要求する。
+[固定runtimeのprovider定義](https://github.com/openai/codex/blob/360319d8dee62d87e2d59fc0c21805d79519cfed/codex-rs/model-provider-info/src/lib.rs#L79)を対応の根拠とする。
+登録側はbare名、`openai`、`main`、既存の小文字account別名を同じOpenAI系へ対応付ける。
+記録側のmodelはbare slugと完全一致させ、他providerのprefixを末尾だけで同一扱いしない。
+未知の提供元や別runtime形式をこの入力証明へ推定で追加しない。一般のモデル登録規則は変更しない。
 本文・tool schema・checkpointを同時に変更しても、別のruntime入力とは一致しない。
 旧形式や入力記録のない完了jobへ、この新しい証明を後付けしない。
 

@@ -34,7 +34,7 @@ func skillsTraceFixture(t *testing.T) (string, object, []byte, time.Time, time.T
 		{"type": "codex_turn_started", "thread_id": thread, "codex_turn_id": turn},
 		{"type": "protocol_event_observed", "event_type": "turn_started", "event_payload": ref("protocol_event", "101")},
 		{"type": "history_item_accepted", "item_id": "msg_synthetic"},
-		{"type": "inference_started", "inference_call_id": "inference:1", "thread_id": thread, "codex_turn_id": turn, "model": "gpt-6-luna", "provider_name": "synthetic-provider", "request_payload": ref("inference_request", "2")},
+		{"type": "inference_started", "inference_call_id": "inference:1", "thread_id": thread, "codex_turn_id": turn, "model": "gpt-6-luna", "provider_name": "OpenAI", "request_payload": ref("inference_request", "2")},
 	}
 	events := []object{}
 	for i, p := range payloads {
@@ -106,7 +106,7 @@ func TestSkills3080LiveEventPrefixIsLockedWhileAppendsContinue(t *testing.T) {
 }
 
 func TestSkills3080TraceReaderSelectsOnlyBoundRecordedInput(t *testing.T) {
-	for _, kind := range []string{"normal", "response_tail", "wrong_directory", "multiple_bundles", "wrong_schema", "wrong_manifest_thread", "wrong_manifest_layout", "manifest_before_start", "event_sequence_gap", "event_time_outside", "wrong_event_thread", "wrong_turn", "missing_turn", "duplicate_config", "missing_config", "response_kind", "path_escape", "wrong_payload_id", "leading_zero_payload", "wrong_model", "wrong_task", "unknown_event", "short_event", "payload_short", "external_hardlink", "payload_writer", "completed_event_writer"} {
+	for _, kind := range []string{"normal", "response_tail", "wrong_directory", "multiple_bundles", "wrong_schema", "wrong_manifest_thread", "wrong_manifest_layout", "manifest_before_start", "event_sequence_gap", "event_time_outside", "wrong_event_thread", "wrong_turn", "missing_turn", "duplicate_config", "missing_config", "response_kind", "path_escape", "wrong_payload_id", "leading_zero_payload", "wrong_model", "other_provider_model", "wrong_provider", "wrong_task", "unknown_event", "short_event", "payload_short", "external_hardlink", "payload_writer", "completed_event_writer"} {
 		t.Run(kind, func(t *testing.T) {
 			root, job, prompt, start, end, manifest, events := skillsTraceFixture(t)
 			bundle := filepath.Join(root, "trace-"+str(manifest["trace_id"])+"-"+str(job["thread_id"]))
@@ -149,6 +149,10 @@ func TestSkills3080TraceReaderSelectsOnlyBoundRecordedInput(t *testing.T) {
 				obj(last["request_payload"])["raw_payload_id"] = "raw_payload:02"
 			case "wrong_model":
 				last["model"] = "gpt-6.1-sol"
+			case "other_provider_model":
+				last["model"] = "other-provider/gpt-6-luna"
+			case "wrong_provider":
+				last["provider_name"] = "other-provider"
 			case "wrong_task":
 				prompt = []byte("different registered task")
 			case "unknown_event":

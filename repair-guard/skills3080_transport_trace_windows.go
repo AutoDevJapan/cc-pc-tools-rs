@@ -217,7 +217,7 @@ func skillsFirstRecordedRequest(input io.Reader, traceID, rollout, thread, model
 				Provider  string                      `json:"provider_name"`
 				Request   skillsTracePayloadReference `json:"request_payload"`
 			}
-			if !started || e.Thread == nil || *e.Thread != thread || e.Turn == nil || *e.Turn != turn || !skillsStrict(e.Payload, &p) || p.Thread != thread || p.Turn != turn || skillsModel(p.Model) == "" || skillsModel(p.Model) != skillsModel(model) || p.Inference == "" || p.Provider == "" || p.Request.Kind.Type != "inference_request" {
+			if !started || e.Thread == nil || *e.Thread != thread || e.Turn == nil || *e.Turn != turn || !skillsStrict(e.Payload, &p) || p.Thread != thread || p.Turn != turn || !skillsTransportModelMatches(p.Model, model) || p.Inference == "" || p.Provider != "OpenAI" || p.Request.Kind.Type != "inference_request" {
 				return empty, out, "source_event_binding"
 			}
 			out.InferenceID, out.TurnID, out.RecordedAt, out.EventSequence = p.Inference, p.Turn, time.UnixMilli(e.At), e.Seq

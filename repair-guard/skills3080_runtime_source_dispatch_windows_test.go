@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"strings"
 	"syscall"
@@ -131,7 +132,12 @@ func TestSkills3080SourceDispatchCapturesBoundedActualCommandOutcomes(t *testing
 }
 
 func TestSkills3080SourceDispatchPinsDoNotBlockNormalMutableFiles(t *testing.T) {
-	root := t.TempDir()
+	rawRoot := t.TempDir()
+	root, err := ownerPhysicalPath(rawRoot)
+	if err != nil {
+		t.Fatal("physical fixture resolution", err)
+	}
+	t.Logf("temporary fixture alias resolved=%t", !same(rawRoot, root))
 	for name, body := range map[string]string{"job.json": `{"status":"succeeded"}`, "scope.json": `{"synthetic":"immutable"}`, "native.jsonl": "old synthetic append\n"} {
 		if e := os.WriteFile(filepath.Join(root, name), []byte(body), 0600); e != nil {
 			t.Fatal(e)
@@ -188,6 +194,23 @@ func TestSkills3080SourceDispatchPinsDoNotBlockNormalMutableFiles(t *testing.T) 
 	if syscall.GetFileInformationByHandle(h, &info) != nil {
 		t.Fatal("append-log handle lost")
 	}
+}
+
+func TestSkills3080SourceDispatchPinsUnderAliasedTemp(t *testing.T) {
+	root := skillsFixtureRoot(t)
+	real, alias := filepath.Join(root, "real"), filepath.Join(root, "alias")
+	if os.Mkdir(real, 0700) != nil {
+		t.Fatal("physical temporary directory")
+	}
+	c := exec.Command("cmd.exe", "/d", "/c", "mklink", "/J", alias, real)
+	c.SysProcAttr = &syscall.SysProcAttr{HideWindow: true, CreationFlags: 0x08000000}
+	if _, err := c.CombinedOutput(); err != nil {
+		t.Fatal("temporary junction fixture", err)
+	}
+	defer os.Remove(alias)
+	t.Setenv("TEMP", alias)
+	t.Setenv("TMP", alias)
+	t.Run("physical_metadata_and_immutable_scope", TestSkills3080SourceDispatchPinsDoNotBlockNormalMutableFiles)
 }
 
 func TestSkills3080SourceDispatchFailureNeverForwardsUnselectedValues(t *testing.T) {

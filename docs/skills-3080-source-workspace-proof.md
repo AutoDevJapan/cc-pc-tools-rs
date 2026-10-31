@@ -16,3 +16,25 @@ Windowsでは、準備時に宣言した作業パスと実行メタデータの�
 別の場所、コマンドだけの変更、workdirだけの変更を拒否する反例を確認する。
 通常の配布更新に必要な既存Windows版の識別情報は、
 [候補生成前の同buffer観測](evidence/skills-3080-guard-before-source-receive.json)に保持する。
+
+開始処理では、元specと物理的な親をWindowsのdeny-write/deleteで固定したまま、
+通常dispatcherを1回だけ呼ぶ。
+返されたToDo番号とジョブ名だけを成功とはせず、通常の登録処理が作ったadmission、
+launch key、実specのhash、元の親、割当先、保存promptとlaunch receiptを照合してから
+開始結果を受理する。
+通常dispatcher自体への期待hash引数は追加していない。
+別の登録内容で通常ジョブが作られた場合、その結果をSourceの開始成功へ数えない。
+
+開始前には、対象ToDo、previous job、通常の再開世代に結ぶCreateNewの試行記録を同期保存する。
+タイムアウト、壊れた応答、照合できない起動結果は記録を残し、同じ世代の再開始を拒否する。
+request、nonce、issuerの世代やパス表記を変えても未確定の試行を解消しない。
+同じ通常CLIが明示的な未起動とactive=falseを返したときだけ別の正常呼び出しへ進め、
+過去の試行は上書きしない。
+記録は拒否のために使い、準備やSourceの出所を証明する代用品にはしない。
+未確定記録の削除・手書き修復・別nonceによる再起動は行わず、通常の状態照合へ戻す。
+通常の管理処理で予約を失効させて再開した場合は、todo状態、空のscheduler keyとjob、
+空のworker job、resume generationとworker receiptの世代一致を改めて確認する。
+これらが揃う新しい通常世代だけを別の試行として扱い、過去の未確定記録は保持する。
+古い未登録処理は通常のadmissionに必要な旧keyを失い、登録済みの処理は通常のactive判定で
+重ねて起動できない。
+Source開始処理自身がToDoの予約や世代を変更することはない。

@@ -183,11 +183,12 @@ func skillsRuntimeSourceStartBound(path string, raw []byte, r skillsRequest, reg
 		}
 	}
 	env = append(env, "CODEX_ROLLOUT_TRACE_ROOT="+preparation.TraceRoot)
-	result := skillsRuntimeSourceRunHidden("D:/CC/Tools/scheduler/scheduler.exe", []string{"dispatch-subwork", "--id", strconv.Itoa(row.ID)}, r.Writer.Workspace, env, 45*time.Second)
-	return skillsRuntimeSourceDispatch(result, row.ID, hashBytes(raw), nonce)
+	return skillsSourceStartGuardedDispatch(s, r, row, hashBytes(raw), nonce, func() skillsSourceCommandResult {
+		return skillsRuntimeSourceRunHidden("D:/CC/Tools/scheduler/scheduler.exe", []string{"dispatch-subwork", "--id", strconv.Itoa(row.ID)}, r.Writer.Workspace, env, 45*time.Second)
+	}, func(id string) bool { return skillsSourceLaunchedBound(s, r, row, spec, id) })
 }
 
-// Existing preparations remain bound to the actual observed PR662 issuer and
+// Existing preparations remain bound to the observed PR662/PR668 issuers and
 // their original native call, nonce, request and physical object identities.
 // Older software without this source contract is not a source-start issuer.
 func skillsSourceStartProducerAccepted(issued, current skillsProducer) bool {
@@ -197,9 +198,9 @@ func skillsSourceStartProducerAccepted(issued, current skillsProducer) bool {
 	return issued == current || issued == (skillsProducer{official3894SourceDispatchPredecessorSHA, official3894SourceDispatchPredecessorHead}) || issued == (skillsProducer{official3894SourceReceivePredecessorSHA, official3894SourceReceivePredecessorHead})
 }
 
-func skillsRuntimeSourceDispatchReceipt(raw []byte, task int, requestSHA, nonce string) object {
+func skillsRuntimeSourceDispatchReceipt(raw []byte, task int, requestSHA, nonce string, needs ...string) object {
 	v, job, outcome := skillsSourceDispatchLaunch(raw, task)
-	d := skillsSourceDispatchAdmissionValue(raw, v, outcome, task)
+	d := skillsSourceDispatchAdmissionValue(raw, v, outcome, task, needs...)
 	out := object{"qualified": false, "reason": "source", "failure_stage": "source_normal_dispatch", "launch_accepted": false, "normal_source_recorded": false, "data_access_granted": false, "normal_dispatch": d}
 	if outcome != "launched" {
 		return out

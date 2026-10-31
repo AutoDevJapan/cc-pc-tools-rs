@@ -198,36 +198,12 @@ func skillsSourceStartProducerAccepted(issued, current skillsProducer) bool {
 }
 
 func skillsRuntimeSourceDispatchReceipt(raw []byte, task int, requestSHA, nonce string) object {
-	out := object{"qualified": false, "reason": "source", "failure_stage": "source_normal_dispatch", "launch_accepted": false, "normal_source_recorded": false, "data_access_granted": false, "normal_dispatch": skillsSourceDispatchAdmission(raw, task)}
-	if !skillsNativeUniqueJSON(raw) || !skillsCreationHeaderKeys(raw, "id", "launched") {
+	v, job, outcome := skillsSourceDispatchLaunch(raw, task)
+	d := skillsSourceDispatchAdmissionValue(raw, v, outcome, task)
+	out := object{"qualified": false, "reason": "source", "failure_stage": "source_normal_dispatch", "launch_accepted": false, "normal_source_recorded": false, "data_access_granted": false, "normal_dispatch": d}
+	if outcome != "launched" {
 		return out
 	}
-	v, ok := conversationJSON(raw)
-	if !ok {
-		return out
-	}
-	job := ""
-	if id, present := v["id"]; present && conversationNumber(id) != uint64(task) {
-		return out
-	}
-	if value, text := v["launched"].(string); text {
-		if conversationNumber(v["id"]) != uint64(task) {
-			return out
-		}
-		job = value
-	} else {
-		launched := obj(v["launched"])
-		if conversationNumber(launched["item"]) != uint64(task) {
-			return out
-		}
-		job = str(launched["job"])
-	}
-	if !skillsResultID(skillsResultRequest{Task: task, Job: job}) {
-		return out
-	}
-	d := obj(out["normal_dispatch"])
-	d["outcome"] = "launched"
-	delete(d, "admission_reason")
 	return object{"qualified": true, "operation": "start_runtime_source", "request_sha256": requestSHA, "nonce": nonce, "launch_accepted": true, "normal_job": job, "normal_source_recorded": false, "data_access_granted": false, "general_access_granted": false, "original_registry_recovered": false, "normal_dispatch": d}
 }
 

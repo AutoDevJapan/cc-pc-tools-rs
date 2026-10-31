@@ -37,6 +37,58 @@ func TestSkills3080SourceStartExplainsNormalAdmission(t *testing.T) {
 	}
 }
 
+func TestSkills3080SourceDispatchNeverCallsUnknownLaunchNotLaunched(t *testing.T) {
+	for _, raw := range []string{
+		`{"id":6291}`,
+		`{}`,
+		`{"id":6291,"launched":false}`,
+		`{"id":6291,"launched":{}}`,
+		`{"id":6291,"launched":"invalid"}`,
+		`{"id":6291,"launched":"20300101-000001-todo-6292"}`,
+		`{"id":6291,"launched":{"item":6292,"job":"20300101-000001-todo-6292"}}`,
+		`{"id":6291,"launched":{"item":6291,"job":"20300101-000001-todo-6292"}}`,
+		`{"id":6291,"launched":null,"Launched":"20300101-000001-todo-6291"}`,
+	} {
+		var out bytes.Buffer
+		code := runSkillsCLI([]string{"--start-skills3080-runtime-source", "D:/synthetic/request.json"}, &out, func(string, string) object {
+			return skillsRuntimeSourceDispatchReceipt([]byte(raw), 6291, hashBytes([]byte("request")), strings.Repeat("a", 32))
+		})
+		var v object
+		json.Unmarshal(out.Bytes(), &v)
+		if code != 1 || v["qualified"] != false || obj(v["normal_dispatch"])["outcome"] != "invalid_response" {
+			t.Fatalf("unknown launch misclassified: %s", out.Bytes())
+		}
+	}
+}
+
+func TestSkills3080SourceDispatchQualificationAndDiagnosticShareOneOutcome(t *testing.T) {
+	for _, c := range []struct {
+		raw, outcome string
+		qualified    bool
+	}{
+		{`{"id":6291,"launched":"20300101-000001-todo-6291"}`, "launched", true},
+		{`{"id":6291,"active":false,"launched":{"item":6291,"job":"20300101-000001-todo-6291"},"priority_wait":null,"preparation_reason":null}`, "launched", true},
+		{`{"id":6291,"launched":null,"active":false}`, "not_launched", false},
+		{`{"id":6291,"launched":null,"active":true}`, "not_launched", false},
+		{`{"id":6291,"launched":"20300101-000001-todo-6291","active":true}`, "invalid_response", false},
+		{`{"id":6291,"launched":"20300101-000001-todo-6291","priority_wait":6291}`, "invalid_response", false},
+		{`{"launched":null}`, "invalid_response", false},
+	} {
+		v := skillsRuntimeSourceDispatchReceipt([]byte(c.raw), 6291, hashBytes([]byte("request")), strings.Repeat("a", 32))
+		if (v["qualified"] == true) != c.qualified || obj(v["normal_dispatch"])["outcome"] != c.outcome {
+			t.Fatalf("qualification and diagnostic differ: %v", v)
+		}
+		if skillsSourceDispatchAdmission([]byte(c.raw), 6291)["outcome"] != c.outcome {
+			t.Fatal("standalone diagnostic diverged")
+		}
+	}
+
+	d := skillsSourceDispatchAdmission([]byte(`{"id":6291,"launched":null,"status":"synthetic-private-value"}`), 6291)
+	if d["admission_reason"] != "unavailable" {
+		t.Fatal("unknown status became a known wait reason")
+	}
+}
+
 func sourceDispatchFixtureEnv(mode, root string) []string {
 	return append(os.Environ(), "CC_SOURCE_DISPATCH_FIXTURE="+mode, "CC_SOURCE_DISPATCH_FIXTURE_ROOT="+root)
 }

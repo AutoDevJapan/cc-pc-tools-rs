@@ -131,20 +131,74 @@ func skillsRuntimeSourceRunHidden(command string, args []string, cwd string, env
 	return result
 }
 
-func skillsSourceDispatchAdmission(raw []byte, task int) object {
-	d := object{"outcome": "invalid_response", "stdout_bytes": uint64(len(raw)), "stdout_sha256": hashBytes(raw), "stderr_bytes": uint64(0), "stderr_sha256": hashBytes(nil), "exit_code": 0}
-	if !skillsNativeUniqueJSON(raw) || !skillsCreationHeaderKeys(raw, "id", "launched", "active", "busy", "status", "phase", "priority_wait", "allowance_now", "preparation_reason") {
-		return d
+// One interpretation serves both qualification and diagnostics. Only an
+// explicit null with the exact task is a known non-launch; malformed or absent
+// launch information never means that a new launch is safe to retry.
+func skillsSourceDispatchLaunch(raw []byte, task int) (object, string, string) {
+	if task <= 0 || !skillsNativeUniqueJSON(raw) || !skillsCreationHeaderKeys(raw, "id", "launched", "active", "busy", "status", "phase", "priority_wait", "allowance_now", "preparation_reason") {
+		return nil, "", "invalid_response"
 	}
 	v, ok := conversationJSON(raw)
-	if !ok || (v["id"] != nil && conversationNumber(v["id"]) != uint64(task)) {
+	if !ok {
+		return nil, "", "invalid_response"
+	}
+	if id, present := v["id"]; present && conversationNumber(id) != uint64(task) {
+		return v, "", "invalid_response"
+	}
+	value, present := v["launched"]
+	if !present {
+		return v, "", "invalid_response"
+	}
+	if value == nil {
+		if conversationNumber(v["id"]) == uint64(task) {
+			return v, "", "not_launched"
+		}
+		return v, "", "invalid_response"
+	}
+	job := ""
+	if text, ok := value.(string); ok {
+		if conversationNumber(v["id"]) != uint64(task) {
+			return v, "", "invalid_response"
+		}
+		job = text
+	} else {
+		b, err := json.Marshal(value)
+		var launch struct {
+			Item int    `json:"item"`
+			Job  string `json:"job"`
+		}
+		if err != nil || !skillsStrict(b, &launch) || launch.Item != task {
+			return v, "", "invalid_response"
+		}
+		job = launch.Job
+	}
+	if !skillsResultID(skillsResultRequest{Task: task, Job: job}) {
+		return v, "", "invalid_response"
+	}
+	if v["active"] == true || v["busy"] == true || v["priority_wait"] != nil || v["preparation_reason"] != nil {
+		return v, "", "invalid_response"
+	}
+	return v, job, "launched"
+}
+
+func skillsSourceDispatchAdmission(raw []byte, task int) object {
+	v, _, outcome := skillsSourceDispatchLaunch(raw, task)
+	return skillsSourceDispatchAdmissionValue(raw, v, outcome, task)
+}
+
+func skillsSourceDispatchAdmissionValue(raw []byte, v object, outcome string, task int) object {
+	d := object{"outcome": "invalid_response", "stdout_bytes": uint64(len(raw)), "stdout_sha256": hashBytes(raw), "stderr_bytes": uint64(0), "stderr_sha256": hashBytes(nil), "exit_code": 0}
+	if outcome == "invalid_response" {
 		return d
 	}
-	d["outcome"] = "not_launched"
+	d["outcome"] = outcome
 	for _, status := range []string{"todo", "doing", "done", "block", "blocked", "wait"} {
 		if v["status"] == status {
 			d["status"] = status
 		}
+	}
+	if outcome == "launched" {
+		return d
 	}
 	for _, phase := range []string{"queued", "running", "retry", "finished", "preparing", "resumed", "cancelled", "waiting"} {
 		if v["phase"] == phase {
@@ -163,7 +217,7 @@ func skillsSourceDispatchAdmission(raw []byte, task int) object {
 		reason, d["preparation_reason"] = "preparation", v["preparation_reason"]
 	case v["allowance_now"] == json.Number("0"):
 		reason = "capacity"
-	case v["status"] != nil && v["status"] != "todo":
+	case d["status"] != nil && d["status"] != "todo":
 		reason = "status_not_todo"
 	}
 	d["admission_reason"] = reason

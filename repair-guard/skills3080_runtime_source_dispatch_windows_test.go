@@ -51,6 +51,10 @@ func TestSkills3080SourceDispatchFixtureProcess(t *testing.T) {
 	case "failure":
 		fmt.Fprintln(os.Stderr, "subwork dispatch failed TimeoutError")
 		os.Exit(1)
+	case "subwork_failure":
+		fmt.Fprintln(os.Stderr, "subwork validation failed stage=before_workspace reason=relation_invalid")
+		fmt.Fprintln(os.Stderr, "subwork dispatch failed InvalidSubwork")
+		os.Exit(1)
 	case "private_failure":
 		fmt.Fprintln(os.Stderr, "synthetic-private-value")
 		os.Exit(9)
@@ -102,6 +106,7 @@ func TestSkills3080SourceDispatchCapturesBoundedActualCommandOutcomes(t *testing
 		limit                    time.Duration
 	}{
 		{"failure", "command_failed", "TimeoutError", 5 * time.Second},
+		{"subwork_failure", "command_failed", "InvalidSubwork", 5 * time.Second},
 		{"private_failure", "command_failed", "", 5 * time.Second},
 		{"timeout", "timeout", "", 100 * time.Millisecond},
 		{"large", "output_limit", "", 5 * time.Second},
@@ -110,6 +115,9 @@ func TestSkills3080SourceDispatchCapturesBoundedActualCommandOutcomes(t *testing
 			r := skillsRuntimeSourceRunHidden(exe, []string{"-test.run=^TestSkills3080SourceDispatchFixtureProcess$"}, t.TempDir(), sourceDispatchFixtureEnv(c.mode, ""), c.limit)
 			if r.ok || r.diagnostic["outcome"] != c.outcome || str(r.diagnostic["command_error"]) != c.errorCode {
 				t.Fatalf("command result=%v", r.diagnostic)
+			}
+			if c.mode == "subwork_failure" && (r.diagnostic["subwork_stage"] != "before_workspace" || r.diagnostic["subwork_reason"] != "relation_invalid") {
+				t.Fatal("normal fixed subwork error unavailable")
 			}
 			if len(r.stdout) > 1<<20 {
 				t.Fatal("unbounded retained output")
@@ -128,6 +136,21 @@ func TestSkills3080SourceDispatchCapturesBoundedActualCommandOutcomes(t *testing
 	r := skillsRuntimeSourceRunHidden(filepath.Join(t.TempDir(), "absent.exe"), nil, t.TempDir(), os.Environ(), time.Second)
 	if r.ok || r.diagnostic["outcome"] != "start_failed" {
 		t.Fatal("start failure was reported as a child exit")
+	}
+}
+
+func TestSkills3080SourceDispatchNormalMultilineFailure(t *testing.T) {
+	for _, c := range []struct{ raw, want string }{
+		{"subwork validation failed stage=before_workspace reason=relation_invalid\nsubwork dispatch failed InvalidSubwork\n", "InvalidSubwork"},
+		{"subwork validation failed stage=after_workspace reason=checkout_missing\r\nsubwork dispatch failed InvalidSubwork\r\n", "InvalidSubwork"},
+		{"synthetic-private-value\nsubwork dispatch failed InvalidSubwork\n", ""},
+		{"subwork validation failed stage=synthetic-private-value reason=relation_invalid\nsubwork dispatch failed InvalidSubwork\n", ""},
+		{"subwork validation failed stage=before_workspace reason=synthetic-private-value\nsubwork dispatch failed InvalidSubwork\n", ""},
+		{"subwork validation failed stage=before_workspace reason=relation_invalid\nsubwork dispatch failed OSError\n", ""},
+	} {
+		if got := skillsSourceNormalError([]byte(c.raw)); got != c.want {
+			t.Errorf("fixed diagnostic classification=%q want=%q", got, c.want)
+		}
 	}
 }
 
@@ -177,7 +200,15 @@ func TestSkills3080SourceDispatchPinsDoNotBlockNormalMutableFiles(t *testing.T) 
 	if e != nil {
 		t.Fatal(e)
 	}
-	r := skillsRuntimeSourceRunHidden(exe, []string{"-test.run=^TestSkills3080SourceDispatchFixtureProcess$"}, root, sourceDispatchFixtureEnv("metadata", root), 5*time.Second)
+	// Production dispatch runs in the parent's workspace, not inside the deep
+	// trace directory. Keep the fixture's working directory at its physical
+	// temporary parent as well; CreateProcess has a separate cwd path limit.
+	cwd, e := ownerPhysicalPath(os.TempDir())
+	if e != nil {
+		t.Fatal("physical fixture working directory", e)
+	}
+	t.Logf("metadata root characters=%d working-directory characters=%d", len(root), len(cwd))
+	r := skillsRuntimeSourceRunHidden(exe, []string{"-test.run=^TestSkills3080SourceDispatchFixtureProcess$"}, cwd, sourceDispatchFixtureEnv("metadata", root), 5*time.Second)
 	if !r.ok {
 		t.Fatalf("normal mutable writes incompatible with retained pins: %v", r.diagnostic)
 	}
@@ -252,7 +283,7 @@ func TestSkills3080SourceStartPreservesOnlyObservedPriorIssuer(t *testing.T) {
 
 func TestSkills3080SourceDispatchDiagnosticCannotCarryExtraData(t *testing.T) {
 	good := skillsSourceDispatchAdmission([]byte(`{"id":6291,"launched":null,"active":true}`), 6291)
-	for _, field := range []string{"outcome", "command_error", "admission_reason", "status", "phase", "preparation_reason", "private_path", "stderr"} {
+	for _, field := range []string{"outcome", "command_error", "admission_reason", "status", "phase", "preparation_reason", "subwork_stage", "subwork_reason", "private_path", "stderr"} {
 		t.Run(field, func(t *testing.T) {
 			bad := object{}
 			for k, v := range good {
@@ -278,5 +309,28 @@ func TestSkills3080SourceDispatchDiagnosticCannotCarryExtraData(t *testing.T) {
 	json.Unmarshal(out.Bytes(), &v)
 	if v["normal_dispatch"] != nil {
 		t.Fatal("start diagnostic admitted on another operation")
+	}
+}
+
+func TestSkills3080SourceDispatchDiagnosticRejectsAliasesAndDuplicates(t *testing.T) {
+	good := skillsSourceDispatchAdmission([]byte(`{"id":6291,"launched":null,"active":true}`), 6291)
+	raw, _ := json.Marshal(good)
+	duplicate := bytes.Replace(raw, []byte(`"outcome":"not_launched"`), []byte(`"outcome":"synthetic-private-value","outcome":"not_launched"`), 1)
+	alias := object{}
+	for k, v := range good {
+		alias[k] = v
+	}
+	alias["Outcome"] = "not_launched"
+	alias["outcome"] = "synthetic-private-value"
+	for _, bad := range []any{json.RawMessage(duplicate), alias} {
+		var out bytes.Buffer
+		runSkillsCLI([]string{"--start-skills3080-runtime-source", "D:/synthetic/request.json"}, &out, func(string, string) object {
+			return object{"qualified": false, "reason": "source", "failure_stage": "source_normal_dispatch", "normal_dispatch": bad}
+		})
+		var v object
+		json.Unmarshal(out.Bytes(), &v)
+		if v["normal_dispatch"] != nil || strings.Contains(out.String(), "synthetic-private-value") {
+			t.Fatal("diagnostic schema accepted ambiguous fields")
+		}
 	}
 }

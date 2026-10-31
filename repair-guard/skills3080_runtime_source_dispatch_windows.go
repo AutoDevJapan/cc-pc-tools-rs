@@ -52,12 +52,41 @@ type skillsSourceCommandResult struct {
 
 func skillsSourceNormalError(stderr []byte) string {
 	line := strings.TrimSpace(string(stderr))
+	if _, _, ok := skillsSourceSubworkError(line); ok {
+		return "InvalidSubwork"
+	}
 	for _, code := range []string{"InputRejected", "TimeoutError", "TimeoutExpired", "ResourceWait", "OSError", "PermissionError", "FileNotFoundError", "ValueError", "TypeError", "AttributeError", "RuntimeError", "InvalidSubwork"} {
 		if line == "subwork dispatch failed "+code {
 			return code
 		}
 	}
 	return ""
+}
+
+func skillsSourceSubworkFields(stage, reason string) bool {
+	if stage != "before_workspace" && stage != "after_workspace" {
+		return false
+	}
+	switch reason {
+	case "parent_missing", "relation_invalid", "parent_invalid", "repository_mismatch", "pr_mismatch", "dependency_cycle", "checkout_not_independent", "checkout_missing", "multiple_live_parents", "validation_failed":
+		return true
+	}
+	return false
+}
+
+// The normal dispatcher prints this two-line grammar. Match the complete
+// bounded stderr; an arbitrary prefix is not a diagnostic classification.
+func skillsSourceSubworkError(stderr string) (string, string, bool) {
+	lines := strings.Split(strings.ReplaceAll(strings.TrimSpace(stderr), "\r\n", "\n"), "\n")
+	if len(lines) != 2 || lines[1] != "subwork dispatch failed InvalidSubwork" {
+		return "", "", false
+	}
+	const prefix = "subwork validation failed stage="
+	if !strings.HasPrefix(lines[0], prefix) {
+		return "", "", false
+	}
+	stage, reason, ok := strings.Cut(strings.TrimPrefix(lines[0], prefix), " reason=")
+	return stage, reason, ok && skillsSourceSubworkFields(stage, reason)
 }
 
 func skillsRuntimeSourceRunHidden(command string, args []string, cwd string, env []string, seconds time.Duration) skillsSourceCommandResult {
@@ -77,6 +106,9 @@ func skillsRuntimeSourceRunHidden(command string, args []string, cwd string, env
 	if uint64(len(stderr.prefix)) == stderr.bytes {
 		if code := skillsSourceNormalError(stderr.prefix); code != "" {
 			d["command_error"] = code
+			if stage, reason, ok := skillsSourceSubworkError(string(stderr.prefix)); ok {
+				d["subwork_stage"], d["subwork_reason"] = stage, reason
+			}
 		}
 	}
 	var errno syscall.Errno
@@ -149,18 +181,20 @@ func skillsSourcePreparationReason(s string) bool {
 // A failed CLI callback cannot use diagnostics as an arbitrary-data channel.
 func skillsSourceDispatchDiagnostic(value any) (object, bool) {
 	var d struct {
-		Outcome      string  `json:"outcome"`
-		StdoutBytes  uint64  `json:"stdout_bytes"`
-		StdoutSHA    string  `json:"stdout_sha256"`
-		StderrBytes  uint64  `json:"stderr_bytes"`
-		StderrSHA    string  `json:"stderr_sha256"`
-		Exit         *int    `json:"exit_code,omitempty"`
-		WindowsError *uint32 `json:"win32_error,omitempty"`
-		CommandError string  `json:"command_error,omitempty"`
-		Admission    string  `json:"admission_reason,omitempty"`
-		Status       string  `json:"status,omitempty"`
-		Phase        string  `json:"phase,omitempty"`
-		Preparation  string  `json:"preparation_reason,omitempty"`
+		Outcome       string  `json:"outcome"`
+		StdoutBytes   uint64  `json:"stdout_bytes"`
+		StdoutSHA     string  `json:"stdout_sha256"`
+		StderrBytes   uint64  `json:"stderr_bytes"`
+		StderrSHA     string  `json:"stderr_sha256"`
+		Exit          *int    `json:"exit_code,omitempty"`
+		WindowsError  *uint32 `json:"win32_error,omitempty"`
+		CommandError  string  `json:"command_error,omitempty"`
+		Admission     string  `json:"admission_reason,omitempty"`
+		Status        string  `json:"status,omitempty"`
+		Phase         string  `json:"phase,omitempty"`
+		Preparation   string  `json:"preparation_reason,omitempty"`
+		SubworkStage  string  `json:"subwork_stage,omitempty"`
+		SubworkReason string  `json:"subwork_reason,omitempty"`
 	}
 	b, err := json.Marshal(value)
 	if err != nil || !skillsStrict(b, &d) || !skillsDigest(d.StdoutSHA) || !skillsDigest(d.StderrSHA) || d.StdoutBytes > 1<<40 || d.StderrBytes > 1<<40 || (d.Exit != nil && (*d.Exit < -1 || *d.Exit > 0xffffffff)) {
@@ -190,6 +224,9 @@ func skillsSourceDispatchDiagnostic(value any) (object, bool) {
 		return nil, false
 	}
 	if d.Preparation != "" && !skillsSourcePreparationReason(d.Preparation) {
+		return nil, false
+	}
+	if (d.SubworkStage != "" || d.SubworkReason != "") && (d.CommandError != "InvalidSubwork" || !skillsSourceSubworkFields(d.SubworkStage, d.SubworkReason)) {
 		return nil, false
 	}
 	var out object

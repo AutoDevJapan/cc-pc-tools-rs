@@ -762,6 +762,19 @@ func (r *Runner) conversationReplyNeedsDelivery(q ConversationQuestion, proof *c
 }
 
 func (r *Runner) processConversationReplies(ctx context.Context, index *conversationIndex, id string, q ConversationQuestion, proof *conversationProof, health *Health) {
+	if r.OwnerAcknowledgementsActive {
+		for _, reply := range proof.Replies {
+			m := Message{ID: reply.Message, Channel: reply.Thread, Content: reply.Body, Timestamp: reply.Created}
+			m.Author.ID = reply.Author
+			if version, ok := proof.ReplyVersions[reply.Message]; ok && version.Edited != nil {
+				m.Edited = *version.Edited
+			}
+			if err := r.queueOwnerAcknowledgement(m); err != nil {
+				health.Errors = append(health.Errors, "owner_acknowledgement_queue_deferred")
+			}
+		}
+		r.processOwnerAcknowledgements(ctx, health)
+	}
 	if q.RecoveredIntake != 0 {
 		// This question was already handled by the ordinary intake worker. A
 		// minute audit must never instruct the original worker to repeat it or

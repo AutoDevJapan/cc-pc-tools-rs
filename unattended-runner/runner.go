@@ -174,28 +174,31 @@ type Health struct {
 	ConversationChecked      int                      `json:"conversation_waiting_checked,omitempty"`
 	ConversationPollDeferred int                      `json:"conversation_poll_deferred,omitempty"`
 	ConversationPollSeconds  int                      `json:"conversation_poll_interval_seconds,omitempty"`
+	OwnerAcknowledgements    int                      `json:"owner_acknowledgements_verified,omitempty"`
 	Civ6Queue                *Civ6QueueHealth         `json:"civ6_ci_queue,omitempty"`
 }
 type Runner struct {
-	Config                      Config
-	State                       *State
-	Client                      *http.Client
-	Token                       string
-	Base                        string
-	Run                         func(context.Context, string, ...string) (string, error)
-	Now                         func() time.Time
-	TodoPath                    string
-	ProgressLinks               map[string]ProgressLink
-	BlockedProgressThreads      map[string]bool
-	ProgressLinkRegistryInvalid bool
-	KnownQuestionThreads        map[string]bool
-	DiscoveryErrors             []string
-	NoticeAttempted             bool
-	JobsPath                    string
-	ProcessAlive                func(uint32, uint64) bool
-	Civ6Verify                  func(path, sha256 string) error
-	AgentResultGuard            func(context.Context, string) bool
-	SeparatedScheduler          bool
+	Config                       Config
+	State                        *State
+	Client                       *http.Client
+	Token                        string
+	Base                         string
+	Run                          func(context.Context, string, ...string) (string, error)
+	Now                          func() time.Time
+	TodoPath                     string
+	ProgressLinks                map[string]ProgressLink
+	BlockedProgressThreads       map[string]bool
+	ProgressLinkRegistryInvalid  bool
+	KnownQuestionThreads         map[string]bool
+	DiscoveryErrors              []string
+	NoticeAttempted              bool
+	JobsPath                     string
+	ProcessAlive                 func(uint32, uint64) bool
+	Civ6Verify                   func(path, sha256 string) error
+	AgentResultGuard             func(context.Context, string) bool
+	SeparatedScheduler           bool
+	OwnerAcknowledgementsActive  bool
+	OwnerAcknowledgementAttempts int
 }
 
 func readJSON(path string, ceiling int64, value any) error {
@@ -573,7 +576,20 @@ func (r *Runner) scanPage(ctx context.Context, thread Thread, replay bool) (int,
 		}
 		r.State.Discovery[key] = DiscoveryPage{Before: before, Returned: len(messages), Complete: finished, Checked: r.Now().UTC().Format(time.RFC3339Nano), Coverage: coverage, LowerBound: strconv.FormatUint(after, 10)}
 	}
-	return captured, r.save()
+	if err := r.save(); err != nil {
+		return captured, err
+	}
+	if r.OwnerAcknowledgementsActive {
+		for _, m := range messages {
+			if r.State.Requests[m.ID] != nil {
+				if err := r.queueOwnerAcknowledgement(m.Message); err != nil {
+					return captured, err
+				}
+			}
+		}
+		r.processOwnerAcknowledgements(ctx, nil)
+	}
+	return captured, nil
 }
 func (r *Runner) existingTodo(key string) (uint64, error) {
 	var db struct {
@@ -765,7 +781,11 @@ func (r *Runner) tick(ctx context.Context) Health {
 
 func (r *Runner) tickWithIntakeContext(ctx, intakeParent context.Context) Health {
 	r.NoticeAttempted = false
+	r.OwnerAcknowledgementsActive = true
+	r.OwnerAcknowledgementAttempts = 0
+	defer func() { r.OwnerAcknowledgementsActive = false }()
 	health := Health{Mode: "new-owner-intake-and-repair-scheduler", Started: r.Now().UTC().Format(time.RFC3339Nano), Errors: []string{}}
+	r.processOwnerAcknowledgements(ctx, &health)
 	conversationCtx, cancelConversations := context.WithTimeout(ctx, conversationPollStageBudget)
 	r.processConversations(conversationCtx, &health)
 	cancelConversations()

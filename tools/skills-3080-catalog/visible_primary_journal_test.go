@@ -53,17 +53,18 @@ func visibleLatest29DeltaMatches(entries []any, groups, members, latestRecords, 
 	return err == nil && travel3Digest(raw) == "fb9d6283fc8d300c92587ee4fd3f3ef91fec890d186a9fba49d77aeec3c34ce6"
 }
 
-// The accepted 141-entry prefix is pinned to main ad39f1eee40772e28c66b35dba667943c436cab2,
-// file SHA 2f1785a69b40bea10c467d85909f8f1d06dd83032e439c80cd0ba0525f1c10f2.
-// The new five entries come from the independently received projection with
-// file SHA 33274c506b3b796caa82d8919f140ab41a72129d698174127ec716fb58638e0a.
+// The accepted 146-entry prefix at main 33b5c4e99b726a170692d78d71d235642d063efd
+// has file SHA 1fee59498adc33e309b3733d2353d98986f8e958e7c2da6e14faf0606aabd418.
+// It includes the prior 141 entries and the separately received five-entry delta.
+// The next 16 entries come from the independently received projection with
+// file SHA 8e4c791a7c6edd43dde36d0186603390246363d5292fbcbfe3c5ef484c19ea3b.
 // These pins are separate from the mutable publication manifest and counters.
 var visibleCurrentSnapshotPin = struct {
 	prefix, records, members, latestRecords, latestMembers int
 	prefixSHA, deltaSHA                                    string
-}{141, 146, 167, 5, 5,
-	"de24f45a3d0fad6e211435a61a67bc4c7ed4827a42b41cd7473ca79af3803146",
-	"92f9b850c5eb4abf2920323a04c3e1fc91b58058e2007f90fe7ef370a8fbf029"}
+}{146, 162, 183, 16, 16,
+	"5158a41c90663f73f9880c6e4225761b8674510e631bfcdd49f7a16ef44a04d2",
+	"dbee42dbc135633f48c35622de64415661b573175430f59a9964157a0d83d2c9"}
 
 func visibleCurrentPrefixMatches(entries []any) bool {
 	pin := visibleCurrentSnapshotPin

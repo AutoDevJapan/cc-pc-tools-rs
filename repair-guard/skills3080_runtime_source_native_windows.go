@@ -174,7 +174,11 @@ func skillsRuntimeSourcePendingCall(input io.Reader, thread, cwd, path, flag str
 		if p.Type == "custom_tool_call_output" {
 			if flag == "--prepare-skills3080-runtime-source" {
 				partial, completed := skillsRuntimeSourceCompletedToolResponse(p.Output)
-				if completed && partial["qualified"] == false && partial["partial_preparation_possible"] == true && skillsRuntimeNonce(str(partial["ownership_id"])) && skillsRuntimeSourceAnyInvocation(calls[p.Call], cwd, flag) {
+				canonical := skillsRuntimeSourceAnyInvocation(calls[p.Call], cwd, flag)
+				if canonical && !completed {
+					return "", false
+				}
+				if completed && partial["qualified"] == false && (partial["source_attempt_recorded"] == true || (partial["partial_preparation_possible"] == true && skillsRuntimeNonce(str(partial["ownership_id"])))) && canonical {
 					var oldID skillsObjectID
 					encoded, _ := json.Marshal(partial["request_object"])
 					if skillsStrict(encoded, &oldID) && skillsSourceObjectShape(oldID) && oldID == requestID {
@@ -203,6 +207,13 @@ func skillsRuntimeSourcePendingCall(input io.Reader, thread, cwd, path, flag str
 		return "", false
 	}
 	for id := range pending {
+		if flag == "--prepare-skills3080-runtime-source" {
+			for other, code := range calls {
+				if other != id && skillsRuntimeSourceAnyInvocation(code, cwd, flag) {
+					return "", false
+				}
+			}
+		}
 		return id, true
 	}
 	return "", false

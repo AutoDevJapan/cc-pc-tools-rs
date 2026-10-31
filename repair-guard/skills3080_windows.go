@@ -243,6 +243,7 @@ func runSkillsCLI(args []string, out io.Writer, run func(string, string) object)
 		created, partial := result["created_files"], result["partial_operation_possible"]
 		owned, preparationPartial := str(result["ownership_id"]), result["partial_preparation_possible"] == true
 		requestObject := result["request_object"]
+		attempted := result["source_attempt_recorded"] == true
 		stage, _ := result["failure_stage"].(string)
 		reason := str(result["reason"])
 		if !skillsReason.MatchString(reason) {
@@ -262,6 +263,13 @@ func runSkillsCLI(args []string, out io.Writer, run func(string, string) object)
 			var id skillsObjectID
 			if skillsStrict(encoded, &id) && skillsSourceObjectShape(id) {
 				result["request_object"] = id
+			}
+		}
+		if attempted && strings.HasPrefix(stage, "source_") && skillsFixedFailureStage(stage) {
+			encoded, _ := json.Marshal(requestObject)
+			var id skillsObjectID
+			if skillsStrict(encoded, &id) && skillsSourceObjectShape(id) {
+				result["source_attempt_recorded"], result["request_object"] = true, id
 			}
 		}
 	}

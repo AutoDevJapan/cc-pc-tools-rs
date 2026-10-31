@@ -174,7 +174,11 @@ func TestSkills3080SourcePrepareRunsOnceButDispatchCanRetry(t *testing.T) {
 					path = filepath.Join(p.Writer.Workspace, "other.json")
 				}
 				call("call_old", path)
-				enc.Encode(object{"type": "response_item", "timestamp": start.Add(2 * time.Second).Format(time.RFC3339Nano), "payload": object{"type": "custom_tool_call_output", "call_id": "call_old"}})
+				// A known failure before allocation lets a different request
+				// proceed. Missing output is an uncertain outcome, not success.
+				body, _ := json.Marshal(object{"qualified": false, "reason": "source", "failure_stage": "source_spec"})
+				wrapper, _ := json.Marshal(object{"exit_code": 1, "output": string(body)})
+				enc.Encode(object{"type": "response_item", "timestamp": start.Add(2 * time.Second).Format(time.RFC3339Nano), "payload": object{"type": "custom_tool_call_output", "call_id": "call_old", "output": []object{{"type": "input_text", "text": "Script completed\nWall time 0.5 seconds\nOutput:\n"}, {"type": "input_text", "text": string(wrapper)}}}})
 			}
 			call("call_current", p.RequestPath)
 			id, ok := skillsRuntimeSourcePendingCall(&input, thread, p.Writer.Workspace, p.RequestPath, flag, start, start.Add(time.Minute), p.RequestID)

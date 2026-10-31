@@ -196,15 +196,9 @@ func skillsRuntimeSourcePending(s *skillsFS, w skillsWriter, path, flag string) 
 func skillsRuntimeSourceOperation(op, path string, raw []byte, r skillsRequest, reg skillsRegistry, s *skillsFS) object {
 	ownedRoot, ownedID := "", ""
 	requestIdentity := skillsObjectID{}
+	attemptRecorded := false
 	fail := func(stage string) object {
-		v := object{"qualified": false, "reason": "source", "failure_stage": stage, "data_access_granted": false}
-		if ownedRoot != "" {
-			v["ownership_id"], v["partial_preparation_possible"] = ownedID, true
-			if skillsSourceObjectShape(requestIdentity) {
-				v["request_object"] = requestIdentity
-			}
-		}
-		return v
+		return skillsRuntimeSourceFailure(stage, ownedRoot, ownedID, attemptRecorded, requestIdentity)
 	}
 	if r.RuntimeSource == nil || r.Writer.Task != 3080 || r.ManifestCommit != "" || r.ManifestPath != "" || r.ManifestSHA != "" || r.Review != nil || r.Result != nil || r.Runtime != nil || r.Consume != nil || r.Revision != nil {
 		return fail("source_request")
@@ -253,6 +247,7 @@ func skillsRuntimeSourceOperation(op, path string, raw []byte, r skillsRequest, 
 		return fail("source_spec")
 	}
 	root, ownership, ok, attempted := skillsRuntimeSourceAllocateOnce(s, r.Writer, requestID, row.ID, hashBytes(raw), func() (string, string, bool) { return skillsRuntimeSourceOwnedRoot(r.Writer) })
+	attemptRecorded = attempted
 	if !attempted {
 		return fail("source_attempt_record")
 	}
@@ -284,6 +279,17 @@ func skillsRuntimeSourceOperation(op, path string, raw []byte, r skillsRequest, 
 		return fail("source_prepare_write")
 	}
 	return object{"qualified": true, "operation": "prepare_runtime_source", "request_sha256": p.RequestSHA, "runtime_source_preparation": p, "normal_source_recorded": false, "data_access_granted": false, "general_access_granted": false, "original_registry_recovered": false}
+}
+
+func skillsRuntimeSourceFailure(stage, root, id string, attempted bool, requestID skillsObjectID) object {
+	v := object{"qualified": false, "reason": "source", "failure_stage": stage, "data_access_granted": false}
+	if root != "" && skillsRuntimeNonce(id) {
+		v["ownership_id"], v["partial_preparation_possible"] = id, true
+	}
+	if attempted && skillsSourceObjectShape(requestID) {
+		v["source_attempt_recorded"], v["request_object"] = true, requestID
+	}
+	return v
 }
 
 func skillsRuntimeSourceStart(path string, raw []byte, r skillsRequest, reg skillsRegistry, s *skillsFS, row skillsTask, spec []byte) object {

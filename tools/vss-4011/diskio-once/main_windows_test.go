@@ -72,14 +72,15 @@ func TestCleanupPreservesForeignAndUnknownSessions(t *testing.T) {
 		id        guid
 		handle    uint64
 		queryCode uint32
-		wantCalls int
-		wantCode  uint32
+		calls     int
+		state     string
 	}{
-		{"owned", own, 72, 0, 1, 0}, {"same_name_foreign", guid{A: 16}, 72, 0, 0, 13}, {"missing_handle", own, 0, 0, 0, 13}, {"query_refused", own, 72, 5, 0, 5}, {"absent", own, 0, 4201, 0, 4201},
+		{"owned", own, 72, 0, 1, "stopped"}, {"same_name_foreign", guid{A: 16}, 72, 0, 0, "foreign_session_present"},
+		{"missing_handle", own, 0, 0, 0, "owned_handle_unavailable"}, {"query_refused", own, 72, 5, 0, "query_failed"}, {"absent", own, 0, 4201, 0, "absent"},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			calls := 0
-			_, code := stopVerified(own, func() (*properties, uint32) { p := props(tc.id); p.W.History = tc.handle; return p, tc.queryCode }, func(h uint64, p *properties) uint32 {
+			stats, r := stopVerified(own, func() (*properties, uint32) { p := props(tc.id); p.W.History = tc.handle; return p, tc.queryCode }, func(h uint64, p *properties) uint32 {
 				calls++
 				if h != 72 || p.W.GUID != own {
 					t.Fatal("wrong native session selected")
@@ -87,13 +88,32 @@ func TestCleanupPreservesForeignAndUnknownSessions(t *testing.T) {
 				p.EventsLost = 3
 				return 0
 			})
-			if code != tc.wantCode || calls != tc.wantCalls {
-				t.Fatalf("calls=%d code=%d", calls, code)
+			if r.State != tc.state || r.QueryCode != tc.queryCode || calls != tc.calls || r.Attempted != (tc.calls == 1) {
+				t.Fatalf("result=%+v calls=%d", r, calls)
+			}
+			if tc.calls == 1 && stats.EventsLost != 3 {
+				t.Fatal("final STOP loss statistics not returned")
 			}
 		})
 	}
 }
-
+func TestOwnershipGUIDRoundtripAndBadInput(t *testing.T) {
+	own := guid{A: 15, B: 2, C: 3, D: [8]byte{1, 2, 3, 4, 5, 6, 7, 8}}
+	got, e := parseGUID(encodeGUID(own))
+	if e != nil || got != own {
+		t.Fatal("durable ownership bytes differ")
+	}
+	for _, input := range []string{"", "ab", strings.Repeat("0", 32), strings.Repeat("g", 32)} {
+		if _, e := parseGUID(input); e == nil {
+			t.Fatal("invalid ownership accepted")
+		}
+	}
+	b, _ := json.Marshal(result{OwnedGUID: encodeGUID(own), PrimaryStop: stopResult{State: "stop_failed", Attempted: true, NativeCode: 5}, CleanupStop: &stopResult{State: "stopped", Attempted: true}})
+	var r result
+	if json.Unmarshal(b, &r) != nil || r.PrimaryStop.NativeCode != 5 || r.CleanupStop.State != "stopped" || r.OwnedGUID != encodeGUID(own) {
+		t.Fatal("first failure overwritten by cleanup")
+	}
+}
 func TestNativeCallbackSignatureRegisters(t *testing.T) {
 	p := syscall.NewCallback(func(r *record) uintptr { return 0 })
 	if p == 0 {

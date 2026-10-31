@@ -6,7 +6,7 @@ package main
 
 import (
 	"bufio"
-	"crypto/rand"
+	"bytes"
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
@@ -101,11 +101,31 @@ type row struct {
 	Issuer        string `json:"issuer"`
 	Bytes, Events uint64
 }
+type ownership struct {
+	State     string `json:"state"`
+	QueryCode uint32 `json:"query_code"`
+}
+type stopResult struct {
+	State      string `json:"state"`
+	QueryCode  uint32 `json:"query_code"`
+	Attempted  bool   `json:"attempted"`
+	NativeCode uint32 `json:"native_code"`
+}
+type cleanupLog struct {
+	DeadlineStop *stopResult `json:"deadline_stop,omitempty"`
+	FinalStop    stopResult  `json:"final_stop"`
+}
 type result struct {
-	Phase                                                           string `json:"phase"`
+	OwnedGUID                                                       string      `json:"owned_guid_bytes"`
+	PrimaryStop                                                     stopResult  `json:"primary_stop"`
+	CleanupStop                                                     *stopResult `json:"cleanup_stop,omitempty"`
+	FinalSession                                                    ownership   `json:"final_session"`
+	WatchdogExit                                                    *int        `json:"watchdog_exit,omitempty"`
+	WatchdogReport                                                  *cleanupLog `json:"watchdog_report,omitempty"`
+	Phase                                                           string      `json:"phase"`
 	StartedUTC, FinishedUTC, TraceStartedUTC, TraceStoppedUTC       string
 	Seconds                                                         int `json:"seconds"`
-	StartCode, OpenCode, ProcessCode, StopCode, AbsentCode          uint32
+	StartCode, OpenCode, ProcessCode                                uint32
 	EventsLost, RealtimeLost, Unparsed, MapOverflow                 uint64
 	LayoutUnchanged, ConsumerDrained, WatchdogExited, SessionAbsent bool
 	Extents                                                         []extent
@@ -138,26 +158,62 @@ func query(id guid, code uint32) (*properties, uint32) {
 	return p, uint32(c)
 }
 
-// Stop by the queried native handle after matching the GUID; never stop by
-// the fixed display name alone or replace an existing session.
-func stopVerified(id guid, read func() (*properties, uint32), stop func(uint64, *properties) uint32) (*properties, uint32) {
-	q, c := read()
-	if c != 0 {
-		return q, c
+func ownershipOf(id guid, p *properties, c uint32) ownership {
+	state := "query_failed"
+	if c == 4201 {
+		state = "absent"
+	} else if c == 0 {
+		if p.W.GUID != id {
+			state = "foreign_session_present"
+		} else if p.W.History == 0 {
+			state = "owned_handle_unavailable"
+		} else {
+			state = "owned_session_present"
+		}
 	}
-	if q.W.GUID != id || q.W.History == 0 {
-		return q, 13
+	return ownership{State: state, QueryCode: c}
+}
+
+// Stop by the queried native handle after matching the GUID. A state tag is
+// separate from Win32 status: foreign ownership is never ERROR_INVALID_DATA.
+func stopVerified(id guid, read func() (*properties, uint32), stop func(uint64, *properties) uint32) (*properties, stopResult) {
+	q, c := read()
+	o := ownershipOf(id, q, c)
+	r := stopResult{State: o.State, QueryCode: c}
+	if o.State != "owned_session_present" {
+		return q, r
 	}
 	p := props(id)
-	return p, stop(q.W.History, p)
+	r.Attempted = true
+	r.NativeCode = stop(q.W.History, p)
+	r.State = "stop_failed"
+	if r.NativeCode == 0 {
+		r.State = "stopped"
+	}
+	return p, r
 }
-func stopMatchingStats(id guid) (*properties, uint32) {
+func stopMatchingStats(id guid) (*properties, stopResult) {
 	return stopVerified(id, func() (*properties, uint32) { return query(id, 0) }, func(h uint64, p *properties) uint32 {
-		code, _, _ := control.Call(uintptr(h), 0, uintptr(unsafe.Pointer(p)), 1)
-		return uint32(code)
+		c, _, _ := control.Call(uintptr(h), 0, uintptr(unsafe.Pointer(p)), 1)
+		return uint32(c)
 	})
 }
-func stopMatching(id guid) uint32 { _, c := stopMatchingStats(id); return c }
+func readOwnership(id guid) ownership { p, c := query(id, 0); return ownershipOf(id, p, c) }
+func encodeGUID(id guid) string {
+	return hex.EncodeToString(unsafe.Slice((*byte)(unsafe.Pointer(&id)), 16))
+}
+func parseGUID(s string) (guid, error) {
+	var id guid
+	b, e := hex.DecodeString(s)
+	if e != nil || len(b) != 16 {
+		return id, fmt.Errorf("16-byte ownership GUID required")
+	}
+	copy(unsafe.Slice((*byte)(unsafe.Pointer(&id)), 16), b)
+	if id == (guid{}) {
+		return id, fmt.Errorf("nonzero ownership GUID required")
+	}
+	return id, nil
+}
 func getExtents() ([]extent, error) {
 	var out []extent
 	for _, volume := range []string{"C:", "D:"} {
@@ -300,57 +356,59 @@ func aggregate(m map[key]sample) []row {
 func watchdog(id guid) int {
 	done := make(chan struct{})
 	go func() { _, _ = bufio.NewReader(io.LimitReader(os.Stdin, 1)).ReadByte(); close(done) }()
+	log := cleanupLog{}
 	select {
 	case <-done:
 	case <-time.After(45 * time.Second):
-		// A native start may have been delayed. Keep the cleanup companion alive
-		// beyond the caller's 65s timeout, then perform one final identity check.
-		_ = stopMatching(id)
+		_, r := stopMatchingStats(id)
+		log.DeadlineStop = &r
 		select {
 		case <-done:
 		case <-time.After(30 * time.Second):
 		}
 	}
-	code := stopMatching(id)
-	if code == 0 || code == 4201 || code == 13 {
+	_, log.FinalStop = stopMatchingStats(id)
+	if json.NewEncoder(os.Stdout).Encode(log) != nil {
+		return 1
+	}
+	if log.FinalStop.State == "stopped" || log.FinalStop.State == "absent" || log.FinalStop.State == "foreign_session_present" {
 		return 0
 	}
 	return 1
 }
-func startWatchdog(id guid) (*exec.Cmd, io.WriteCloser, error) {
+func startWatchdog(id guid) (*exec.Cmd, io.WriteCloser, *bytes.Buffer, error) {
 	self, e := os.Executable()
 	if e != nil {
-		return nil, nil, e
+		return nil, nil, nil, e
 	}
-	raw := unsafe.Slice((*byte)(unsafe.Pointer(&id)), 16)
-	c := exec.Command(self, "--owned-cleanup", hex.EncodeToString(raw))
+	c := exec.Command(self, "--owned-cleanup", encodeGUID(id))
 	c.SysProcAttr = &syscall.SysProcAttr{CreationFlags: 0x08000000, HideWindow: true}
+	out := new(bytes.Buffer)
+	c.Stdout = out
 	pipe, e := c.StdinPipe()
 	if e != nil {
-		return nil, nil, e
+		return nil, nil, nil, e
 	}
 	if e = c.Start(); e != nil {
 		pipe.Close()
-		return nil, nil, e
+		return nil, nil, nil, e
 	}
-	return c, pipe, nil
+	return c, pipe, out, nil
 }
-func collect() (r result) {
+func collect(id guid) (r result) {
+	r.OwnedGUID = encodeGUID(id)
 	r.Phase = "preparation_failed_no_trace"
 	r.StartedUTC = time.Now().UTC().Format(time.RFC3339Nano)
 	r.Seconds = 20
-	r.Limitation = "Issued disk writes only. System paging writes do not identify the original application; short current sample cannot prove a historical cause."
+	r.Limitation = "Instrument acceptance and current baseline only, not a historical cause. C writes include VSS copy-on-write, NTFS metadata and paging; C totals and System/windows categories are not independent causal writers. Thread classification occurs at the end; short-lived tools may be unattributed."
 	defer func() { r.FinishedUTC = time.Now().UTC().Format(time.RFC3339Nano) }()
 	var e error
 	r.Extents, e = getExtents()
 	if e != nil {
 		return
 	}
-	var id guid
-	if _, e = rand.Read(unsafe.Slice((*byte)(unsafe.Pointer(&id)), 16)); e != nil {
-		return
-	}
-	watch, pipe, e := startWatchdog(id)
+	watch, pipe, output, e := startWatchdog(id)
+
 	if e != nil {
 		return
 	}
@@ -361,6 +419,20 @@ func collect() (r result) {
 		select {
 		case e := <-done:
 			r.WatchdogExited = e == nil
+			if watch.ProcessState != nil {
+				code := watch.ProcessState.ExitCode()
+				r.WatchdogExit = &code
+			}
+			if output.Len() <= 4096 {
+				var log cleanupLog
+				if json.Unmarshal(output.Bytes(), &log) == nil {
+					r.WatchdogReport = &log
+				} else {
+					r.WatchdogExited = false
+				}
+			} else {
+				r.WatchdogExited = false
+			}
 		case <-time.After(7 * time.Second):
 			r.WatchdogExited = false
 		}
@@ -374,17 +446,18 @@ func collect() (r result) {
 	c, _, _ := adv.NewProc("StartTraceW").Call(uintptr(unsafe.Pointer(&handle)), uintptr(unsafe.Pointer(name)), uintptr(unsafe.Pointer(p)))
 	r.StartCode = uint32(c)
 	if c != 0 {
-		r.Phase = "start_refused_existing_sessions_untouched"
+		r.Phase = "trace_start_failed_existing_sessions_untouched"
 		return
 	}
 	r.TraceStartedUTC = time.Now().UTC().Format(time.RFC3339Nano)
 	stopped := false
 	defer func() {
 		if !stopped {
-			r.StopCode = stopMatching(id)
+			_, cleanup := stopMatchingStats(id)
+			r.CleanupStop = &cleanup
 		}
-		_, r.AbsentCode = query(id, 0)
-		r.SessionAbsent = r.AbsentCode == 4201
+		r.FinalSession = readOwnership(id)
+		r.SessionAbsent = r.FinalSession.State == "absent"
 		if !r.SessionAbsent {
 			r.Phase = "owned_trace_cleanup_unverified"
 		}
@@ -440,10 +513,10 @@ func collect() (r result) {
 		drained <- uint32(s)
 	}()
 	time.Sleep(20 * time.Second)
-	stats, stopCode := stopMatchingStats(id)
-	r.StopCode = stopCode
+	stats, stop := stopMatchingStats(id)
+	r.PrimaryStop = stop
 	r.TraceStoppedUTC = time.Now().UTC().Format(time.RFC3339Nano)
-	stopped = r.StopCode == 0
+	stopped = stop.State == "stopped"
 	// STOP flushes the real-time buffers; ProcessTrace must finish before reading totals.
 	select {
 	case s := <-drained:
@@ -460,11 +533,12 @@ func collect() (r result) {
 			return
 		}
 	}
-	adv.NewProc("CloseTrace").Call(consumer)
-	closed = true
-	// A complete result needs STOP statistics, so query immediately before STOP is
-	// insufficient: loss is also checked via the consumer's final logfile fields.
-	r.EventsLost = uint64(stats.EventsLost) + uint64(lf.EventsLost)
+	if !closed {
+		adv.NewProc("CloseTrace").Call(consumer)
+		closed = true
+	}
+	// Only STOP's documented final statistics are used. LOGFILE.EventsLost is unused.
+	r.EventsLost = uint64(stats.EventsLost)
 	r.RealtimeLost = uint64(stats.RealtimeLost)
 	after, e := getExtents()
 	r.LayoutUnchanged = e == nil && len(after) == len(r.Extents)
@@ -481,30 +555,39 @@ func collect() (r result) {
 	r.MapOverflow = overflow
 	mu.Unlock()
 	r.Phase = "sample_incomplete_not_cause_evidence"
-	if r.ConsumerDrained && r.StopCode == 0 && r.EventsLost == 0 && r.RealtimeLost == 0 && r.Unparsed == 0 && r.MapOverflow == 0 && r.LayoutUnchanged && len(r.Rows) > 0 {
+	if r.ConsumerDrained && r.PrimaryStop.State == "stopped" && r.EventsLost == 0 && r.RealtimeLost == 0 && r.Unparsed == 0 && r.MapOverflow == 0 && r.LayoutUnchanged && len(r.Rows) > 0 {
 		r.Phase = "finite_sample_complete_retention_unverified"
 	}
 	return
 }
 func main() {
-	if len(os.Args) == 3 && os.Args[1] == "--owned-cleanup" {
-		b, e := hex.DecodeString(os.Args[2])
-		if e != nil || len(b) != 16 {
-			os.Exit(2)
-		}
-		var id guid
-		copy(unsafe.Slice((*byte)(unsafe.Pointer(&id)), 16), b)
-		os.Exit(watchdog(id))
+	if len(os.Args) != 3 {
+		fmt.Fprintln(os.Stderr, "usage: diskio-once --collect-20s|--query-owned|--owned-cleanup <owned-guid-bytes>")
+		os.Exit(2)
 	}
-	if len(os.Args) != 2 || os.Args[1] != "--collect-20s" {
-		fmt.Fprintln(os.Stderr, "usage: diskio-once --collect-20s (administrative finite diagnostic)")
+	id, e := parseGUID(os.Args[2])
+	if e != nil {
+		fmt.Fprintln(os.Stderr, e)
+		os.Exit(2)
+	}
+	switch os.Args[1] {
+	case "--owned-cleanup":
+		os.Exit(watchdog(id))
+	case "--query-owned":
+		if json.NewEncoder(os.Stdout).Encode(readOwnership(id)) != nil {
+			os.Exit(1)
+		}
+		return
+	case "--collect-20s":
+	default:
+		fmt.Fprintln(os.Stderr, "unsupported diagnostic mode")
 		os.Exit(2)
 	}
 	if unsafe.Sizeof(properties{}) != 2168 || unsafe.Sizeof(logfile{}) != 448 || unsafe.Sizeof(record{}) != 112 {
 		fmt.Fprintln(os.Stderr, "unsupported native ABI")
 		os.Exit(2)
 	}
-	r := collect()
+	r := collect(id)
 	if json.NewEncoder(os.Stdout).Encode(r) != nil {
 		os.Exit(1)
 	}

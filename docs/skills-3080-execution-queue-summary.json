@@ -1,19 +1,19 @@
 {
   "state": "complete",
   "catalog_sha256": "2d73c9a038a41cc220a9687b935bfa1e0b315b65d9bd6d3e54ddb4111972876c",
-  "manifest_sha256": "9c293bc6d38ea74ee5b889ef21bd0b53abacd19e6a04ec95df8c915b520e040c",
-  "queue_sha256": "7d46e8181db7a020ad016399f59fe1c4892cf4b082ccd1bfa892342d06e9efdb",
+  "manifest_sha256": "6a0a08a85c957d002ccf8ea6ae342a8fb18d733e4fb1075821e2552fed72402e",
+  "queue_sha256": "b174830effc1f5e30b9e3bac49ce814e7fae6c64fc749403f1652123d097b8f2",
   "occurrences": 73220,
-  "occurrences_with_assessment_records": 2036,
+  "occurrences_with_assessment_records": 2065,
   "recorded_final_occurrences": 198,
   "occurrences_with_assessment_and_final_records": 192,
   "final_records_without_assessment_record": 6,
-  "occurrences_with_assessment_or_final_records": 2042,
+  "occurrences_with_assessment_or_final_records": 2071,
   "stages": {
-    "assessed_needs_current_disposition": 1844,
+    "assessed_needs_current_disposition": 1873,
     "held_body_unavailable": 428,
     "held_execution_review": 647,
-    "needs_semantic_and_individual_rights_review": 70103,
+    "needs_semantic_and_individual_rights_review": 70074,
     "recorded_final_disposition": 198
   },
   "recorded_final_dispositions": {
@@ -28,6 +28,6 @@
     "The queue is complete only when its separate summary is complete and its recorded queue SHA256 matches the actual bytes.",
     "Explicit site identity interpretations retain original archive locations and unverified historical upstream claims separately from catalog occurrence Git fields; historical exclusion claims still require reconfirmation.",
     "Additional catalog Git blob/byte-count checks cover 91 independently pinned retained v3 occurrences; other legacy formats retain their recorded identity checks.",
-    "Assessment records 2036 = assessed without final disposition 1844 + assessment/final intersection 192. Final records 198 include 6 final-only legacy records without assessment. The assessment/final union is 2042 occurrences; these categories are not additive independent totals."
+    "Assessment records 2065 = assessed without final disposition 1873 + assessment/final intersection 192. Final records 198 include 6 final-only legacy records without assessment. The assessment/final union is 2071 occurrences; these categories are not additive independent totals."
   ]
 }

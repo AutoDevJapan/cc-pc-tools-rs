@@ -10,10 +10,10 @@ import (
 	"unicode/utf8"
 )
 
-// The runtime-owned launch world_state captures the loaded agents_md version
-// independently of its user-message rendering. Its first-turn relationship and
-// PUBLIC project blob are proven from the same frozen native snapshot. No
-// current instruction file, alternate source path or caller digest is read.
+// The launch world_state and its rendering must agree within this snapshot.
+// Typed data operations additionally compare the full initial input against
+// an independent transport record; same-log agreement alone is insufficient.
+// No current instruction file, alternate result path or caller digest is read.
 func skillsRuntimeBootstrapProjection(input io.Reader, job object, project []byte, start, end time.Time) ([]byte, bool, bool) {
 	return skillsRuntimeBootstrapProjectionWithOrigin(input, job, project, start, end, nil)
 }

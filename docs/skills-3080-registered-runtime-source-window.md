@@ -13,10 +13,13 @@ first_started_atの自己申告や任意のbootstrap hashだけで、過去のso
 初回のsource prefix全体を、登録された最初のjobの開始から終了までに限定する。
 
 runtimeが記録した初回のsource・originator・既知CLI版・turn・full world_state・公開project blobの一致は維持する。
+同じnative内の整合だけでは本文とcheckpointの同時変更を検出できないため、新しいtyped public reviewとconsumerは
+[正常親が準備した別の記録済み入力](skills-3080-recorded-runtime-input.md)にも全体を照合する。
+今回の実使用はfresh sessionに限定し、記録のない過去jobへ出所を後付けしない。
 過去jobの時刻窓だけを、任意の先行入力の資格にしない。
 元jobの正常なfinite reviewに保存されたspec path・hash、launch receipt・登録元promptと
 execution inputを照合し、各過去窓のuserと対応するeventもその正規入力へ一意に結ぶ。
-初回developer envelopeは、同じ記録から得た自己hashだけでは受け入れない。
+初回developer envelopeは、別のモデル要求との内容・順序の一致を必要とする。
 既知0.165のruntime checkpointに保存されたmodel・permissions・collaborationのfragment hash、
 host skillsの完全なbody、tool定義ごとのhashと、描画された全blockを照合する。
 これら5項目は必須とし、空のhash・host body・tool catalogも受け入れない。
@@ -37,7 +40,7 @@ job間の未登録指示、今回の多重user/final、今回の記録より後�
 同じlogから後付けでhashを作っても、過去の存在証明にはしない。
 旧configuration_updateは許す全値が正常jobのeffortから独立に決まるため、その厳密な形式だけを照合する。
 本文や引数を結果受領の別経路から回収しない。拒否された元結果と原jobはそのまま保持する。
-新しい実使用の再検査は、保存specを正常に登録して独立した新しいsessionで実行し、
+新しい実使用の再検査は、親がnonceと専用の入力記録先を準備し、保存specを正常に登録して新しいsessionで実行し、
 その実結果を確認する。元の再開結果が認証されたことにはしない。
 
 原job・spec・prompt・native・finalは変更せず、同じ長さを凍結したhandleを読み直して検証する。

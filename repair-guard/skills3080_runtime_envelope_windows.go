@@ -10,8 +10,8 @@ import (
 )
 
 // These encodings are the documented 0.165.0 WorldStateHash encodings, not
-// hashes learned from the response being qualified. The checkpoint is written
-// by the runtime independently of its rendered developer messages.
+// hashes learned from a response being qualified. Checkpoint/rendering checks
+// establish consistency; typed data operations also need the transport record.
 // https://github.com/openai/codex/blob/360319d8dee62d87e2d59fc0c21805d79519cfed/codex-rs/core/src/context/world_state/mod.rs
 func skillsRuntimeFragmentHash(text string) string {
 	h := sha1.New()

@@ -190,6 +190,11 @@ func skillsNativeWindowWithSourceOrigin(s *skillsFS, job object, proof *skillsNa
 		if !rewindable {
 			return nil, false
 		}
+		if proof.runtimeTransport != nil {
+			if !skillsFreshRuntimeThread(job, start, end) || !skillsNativeTransportMatches(input, id, str(job["cwd"]), start, end, proof.runtimeTransport.Input) || !snapshot.rewind() {
+				return nil, false
+			}
+		}
 		var bootstrapWindow []time.Time
 		if proof.requireRuntimeSource || len(proof.runtimeProject) > 0 {
 			bootstrapWindow = []time.Time{start, end}
@@ -366,6 +371,7 @@ type skillsNativeResultProof struct {
 	runtimePrefixClosed           bool
 	bootstrapSeen, bootstrapBound bool
 	frozen                        bool
+	runtimeTransport              *skillsRecordedTransport
 }
 
 func (p *skillsNativeResultProof) runtimeWindowChecked() bool {

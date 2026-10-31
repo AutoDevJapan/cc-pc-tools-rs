@@ -7,6 +7,7 @@ import (
 	"path/filepath"
 	"regexp"
 	"strings"
+	"time"
 )
 
 // The complete prelaunch specification is this typed contract, not arbitrary
@@ -503,6 +504,19 @@ func skillsReviewNative(s *skillsFS, job object, spec []byte, finalSHA string) (
 		}
 	}
 	project, required := skillsTypedRuntimeProject(s, job, spec)
+	if reviewTyped || consumerTyped {
+		start, e := time.Parse(time.RFC3339Nano, str(job["started_at"]))
+		end, e2 := time.Parse(time.RFC3339Nano, str(job["finished_at"]))
+		if e != nil || e2 != nil {
+			return nil, false
+		}
+		recorded, stage := skillsRuntimeSourceForJob(s, job, spec, prompt, start, end)
+		if stage != "" {
+			s.failureStage = stage
+			return nil, false
+		}
+		return skillsCompletedReviewNativeWithBootstrap(s, job, prompt, finalSHA, true, bootstrap, project, required, &recorded)
+	}
 	return skillsCompletedReviewNativeWithBootstrap(s, job, prompt, finalSHA, reviewTyped || consumerTyped, bootstrap, project, required)
 }
 
@@ -513,8 +527,15 @@ func skillsCompletedReviewNative(s *skillsFS, job object, prompt []byte, finalSH
 	return skillsCompletedReviewNativeWithBootstrap(s, job, prompt, finalSHA, exactInput, bootstrap, nil, false)
 }
 
-func skillsCompletedReviewNativeWithBootstrap(s *skillsFS, job object, prompt []byte, finalSHA string, exactInput bool, bootstrap string, source []byte, required bool) ([]object, bool) {
-	native, ok := skillsHistoricalNative(s, job, &skillsNativeResultProof{prompt: prompt, finalSHA: finalSHA, exactInput: exactInput, bootstrapSHA: bootstrap, runtimeProject: source, requireRuntimeSource: required, cwd: str(job["cwd"]), sandbox: str(job["sandbox"]), frozen: true})
+func skillsCompletedReviewNativeWithBootstrap(s *skillsFS, job object, prompt []byte, finalSHA string, exactInput bool, bootstrap string, source []byte, required bool, transport ...*skillsRecordedTransport) ([]object, bool) {
+	p := &skillsNativeResultProof{prompt: prompt, finalSHA: finalSHA, exactInput: exactInput, bootstrapSHA: bootstrap, runtimeProject: source, requireRuntimeSource: required, cwd: str(job["cwd"]), sandbox: str(job["sandbox"]), frozen: true}
+	if len(transport) != 0 {
+		if len(transport) != 1 || transport[0] == nil {
+			return nil, false
+		}
+		p.runtimeTransport = transport[0]
+	}
+	native, ok := skillsHistoricalNative(s, job, p)
 	if !ok {
 		return nil, false
 	}

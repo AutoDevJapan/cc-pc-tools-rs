@@ -194,7 +194,8 @@ func skillsOperation(op, path string) object {
 	if !ok || !skillsStrict(raw, &r) || r.Domain != "skills-3080-operation-v1" || !within(r.Writer.Workspace, path) {
 		return fail("request")
 	}
-	if r.RuntimeSource != nil {
+	sourceOperation := op == "render-skills3080-runtime-source" || op == "prepare-skills3080-runtime-source" || op == "start-skills3080-runtime-source"
+	if (r.RuntimeSource != nil && !sourceOperation) || (sourceOperation && (r.RuntimeSource == nil || r.Writer.Task != 3080 || r.RuntimeSource.Task <= 0 || r.RuntimeSource.Task == 3080 || r.RuntimeSource.Task == 3686)) {
 		return fail("request")
 	}
 	scope, ok := fs.read(skillsScopePath, 1<<20)
@@ -211,8 +212,26 @@ func skillsOperation(op, path string) object {
 	if r.Runtime != nil && r.Runtime.PeerReview != nil {
 		ids = append(ids, r.Runtime.PeerReview.Task)
 	}
+	if sourceOperation {
+		ids = append(ids, r.RuntimeSource.Task)
+	}
 	reg, ok := skillsRegistryRead(ids)
-	if !ok || !skillsActorCheck(r.Writer, reg, &fs, caller) {
+	if !ok {
+		return fail("writer")
+	}
+	if sourceOperation {
+		// Source dispatch may wait for normal admission. Do not pin mutable
+		// job metadata while the supervisor needs to update those same files.
+		probe := skillsFS{blocked: skillsBlocked}
+		valid := skillsActorCheck(r.Writer, reg, &probe, caller)
+		probe.close()
+		if !valid {
+			return fail("writer")
+		}
+		reg.writer = r.Writer
+		return skillsRuntimeSourceOperation(op, path, raw, r, reg, &fs)
+	}
+	if !skillsActorCheck(r.Writer, reg, &fs, caller) {
 		return fail("writer")
 	}
 	reg.writer = r.Writer
@@ -229,7 +248,11 @@ func skillsOperation(op, path string) object {
 		}
 		received, reason := skillsReceive(*r.Result, reg, &fs, false)
 		if reason != "" {
-			return fail(reason)
+			v := fail(reason)
+			if skillsFixedFailureStage(fs.failureStage) {
+				v["failure_stage"] = fs.failureStage
+			}
+			return v
 		}
 		fresh, ok := skillsRegistryRead(ids)
 		if !ok || !skillsActorCheck(r.Writer, fresh, &fs, caller) {

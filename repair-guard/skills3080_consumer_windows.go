@@ -117,7 +117,17 @@ func skillsConsumerNativeInput(s *skillsFS, job object, spec []byte, author skil
 		return false
 	}
 	project, required := skillsTypedRuntimeProject(s, job, spec)
-	native, ok := skillsNativeWindow(s, job, &skillsNativeResultProof{prompt: prompt, inputOnly: true, exactInput: true, bootstrapSHA: bootstrap, runtimeProject: project, requireRuntimeSource: required, cwd: str(job["cwd"])}, time.Now())
+	start, err := time.Parse(time.RFC3339Nano, str(job["started_at"]))
+	observed := time.Now()
+	if err != nil {
+		return false
+	}
+	recorded, stage := skillsRuntimeSourceForJob(s, job, spec, prompt, start, observed)
+	if stage != "" {
+		s.failureStage = stage
+		return false
+	}
+	native, ok := skillsNativeWindow(s, job, &skillsNativeResultProof{prompt: prompt, inputOnly: true, exactInput: true, bootstrapSHA: bootstrap, runtimeProject: project, requireRuntimeSource: required, cwd: str(job["cwd"]), runtimeTransport: &recorded}, observed)
 	if !ok || len(native) == 0 {
 		return false
 	}
@@ -233,7 +243,11 @@ func skillsFreshConsumerOperation() object {
 	}
 	skillsConsumerProjectFromCreated(&fs, origin.Evidence)
 	if !skillsConsumerNativeInput(&fs, job, spec, c.Author) {
-		return fail("native_context")
+		v := fail("native_context")
+		if skillsFixedFailureStage(fs.failureStage) {
+			v["failure_stage"] = fs.failureStage
+		}
+		return v
 	}
 	scope, ok := fs.read(skillsScopePath, 1<<20)
 	if !ok || !skillsScopeBytes(scope) {
@@ -253,7 +267,11 @@ func skillsFreshConsumerOperation() object {
 		return fail("writer")
 	}
 	if !skillsConsumerNativeInput(&fs, actual, spec, c.Author) {
-		return fail("native_context")
+		v := fail("native_context")
+		if skillsFixedFailureStage(fs.failureStage) {
+			v["failure_stage"] = fs.failureStage
+		}
+		return v
 	}
 	result["consumer"], result["runtime_producer"], result["manifest_sha256"], result["native_call_id"] = w, current, c.ManifestSHA, c.Consume.CallID
 	result["original_creator_need_not_be_running"], result["original_producer_revalidated"] = true, true

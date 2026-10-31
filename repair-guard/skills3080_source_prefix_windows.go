@@ -20,12 +20,19 @@ type skillsInitialSourcePrefix struct {
 
 func skillsFreshRuntimeThread(job object, start, end time.Time) bool {
 	id := str(job["thread_id"])
-	if str(job["resume_session"]) != "" || !skillsUUID.MatchString(id) || id[14] != '7' || !strings.ContainsRune("89ab", rune(id[19])) || end.Before(start) {
-		return false
+	at, ok := skillsRuntimeThreadBirth(id)
+	return str(job["resume_session"]) == "" && ok && !end.Before(start) && !at.Before(start) && !at.After(end)
+}
+
+func skillsRuntimeThreadBirth(id string) (time.Time, bool) {
+	if !skillsUUID.MatchString(id) || id[14] != '7' || !strings.ContainsRune("89ab", rune(id[19])) {
+		return time.Time{}, false
 	}
 	birth, err := strconv.ParseInt(strings.ReplaceAll(id, "-", "")[:12], 16, 64)
-	at := time.UnixMilli(birth)
-	return err == nil && !at.Before(start) && !at.After(end)
+	if err != nil {
+		return time.Time{}, false
+	}
+	return time.UnixMilli(birth), true
 }
 
 // Scanner may read ahead. Feed it one buffered byte at a time so the digest

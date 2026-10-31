@@ -694,7 +694,14 @@ func skillsNativeProjectionBound(input io.Reader, id, cwd string, start, end tim
 					var header struct {
 						Role string `json:"role"`
 					}
-					if json.Unmarshal(envelope.Payload, &header) != nil || (header.Role != "" && header.Role != "assistant" && (currentWindowSeen || !proof.observePriorRuntimeInput(raw, at, false))) {
+					if json.Unmarshal(envelope.Payload, &header) != nil {
+						return nil, false
+					}
+					if header.Role == "" || header.Role == "assistant" {
+						if currentWindowSeen || !proof.observePriorRuntimeGenerated(raw, at) {
+							return nil, false
+						}
+					} else if currentWindowSeen || !proof.observePriorRuntimeInput(raw, at, false) {
 						return nil, false
 					}
 				}
@@ -713,6 +720,9 @@ func skillsNativeProjectionBound(input io.Reader, id, cwd string, start, end tim
 				return nil, false
 			}
 			if at.Before(start) || at.After(end) {
+				if proof != nil && (proof.runtimeSourceUsed || len(proof.runtimePriorWindows) > 0) && (currentWindowSeen || !proof.observePriorRuntimeContext(raw, at)) {
+					return nil, false
+				}
 				continue
 			}
 		}

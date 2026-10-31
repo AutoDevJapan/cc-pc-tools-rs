@@ -12,6 +12,11 @@ type skillsRuntimePriorWindow struct {
 	Job        object
 	Input      []byte
 	proof      *skillsNativeResultProof
+	Contexts   int
+	Turns      map[string]bool
+	Generated  map[string]bool
+	Calls      map[string]string
+	CallIDs    map[string]bool
 }
 type skillsRuntimeOrigin struct {
 	Start   time.Time

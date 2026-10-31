@@ -30,6 +30,11 @@ catalogの表示をサービスの利用許可や作業範囲へ昇格しない�
 これらの過去入力を、今回の共通指示や作成・閲覧の権限として継承しない。
 今回の登録済み入力・現在model・final digestは、今回jobだけの窓で確認する。
 job間の未登録指示、今回の多重user/final、今回の記録より後へ時刻を戻して追記した過去userも拒否する。
+過去のturn_contextも一つの登録jobへ結び、実model・cwd・effortを照合する。
+生成された応答・推論・tool call/outputは、元のcanonical snapshot内でそのjobの検証済みturn、
+一意なitem ID、tool callと結果の対応へ結ぶ。
+本文や引数を結果受領の別経路から回収せず、生成出力を本人の指示や閲覧権限へ昇格しない。
+これは過去全文の暗号学的な真正性や、時刻をまたぐ物理的な同一性を証明するものではない。
 
 原job・spec・prompt・native・finalは変更せず、同じ長さを凍結したhandleを読み直して検証する。
 sourceや結果を別path、copy、可変な指示ファイル、未知のdigestへ置き換えない。

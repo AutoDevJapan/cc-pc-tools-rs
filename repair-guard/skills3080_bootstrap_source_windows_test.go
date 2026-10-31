@@ -269,7 +269,7 @@ func TestSkills3080DuplicateRoleCannotHideAcrossTheJobWindow(t *testing.T) {
 			extra := `{"type":"response_item","timestamp":"` + at.Format(time.RFC3339Nano) + `","payload":{"type":"message",` + role + `,"phase":"commentary","content":[]}}` + "\n"
 			proof := &skillsNativeResultProof{prompt: []byte("exact task"), finalSHA: hashBytes([]byte("original final")), exactInput: true, runtimeBootstrap: []byte("runtime instructions"), runtimeSourceUsed: true, cwd: cwd, sandbox: "read-only"}
 			_, ok := skillsNativeProjectionBound(strings.NewReader(prefix+extra+tail), id, cwd, start, start.Add(time.Minute), proof)
-			if ok == duplicate {
+			if ok != (!duplicate && !outside) {
 				t.Fatalf("role duplicate=%v outside=%v accepted=%v", duplicate, outside, ok)
 			}
 		}

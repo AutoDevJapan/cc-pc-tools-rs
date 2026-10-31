@@ -367,20 +367,26 @@ type skillsNativeResultProof struct {
 }
 
 func (p *skillsNativeResultProof) priorRuntimeWindow(at time.Time) bool {
-	for _, w := range p.runtimePriorWindows {
+	return p.priorRuntimeWindowAt(at) != nil
+}
+
+func (p *skillsNativeResultProof) priorRuntimeWindowAt(at time.Time) *skillsRuntimePriorWindow {
+	var match *skillsRuntimePriorWindow
+	for i := range p.runtimePriorWindows {
+		w := &p.runtimePriorWindows[i]
 		if !at.Before(w.Start) && !at.After(w.End) {
-			return true
+			if match != nil {
+				return nil
+			}
+			match = w
 		}
 	}
-	return false
+	return match
 }
 
 func (p *skillsNativeResultProof) observePriorRuntimeInput(raw []byte, at time.Time, event bool) bool {
-	for i := range p.runtimePriorWindows {
-		w := &p.runtimePriorWindows[i]
-		if at.Before(w.Start) || at.After(w.End) {
-			continue
-		}
+	w := p.priorRuntimeWindowAt(at)
+	if w != nil {
 		if w.proof == nil || len(w.Input) == 0 {
 			return false
 		}
@@ -408,11 +414,115 @@ func (p *skillsNativeResultProof) observePriorRuntimeInput(raw []byte, at time.T
 
 func (p *skillsNativeResultProof) priorRuntimeInputsBound() bool {
 	for _, w := range p.runtimePriorWindows {
-		if w.proof == nil || !w.proof.bound() {
+		if w.proof == nil || !w.proof.bound() || w.Contexts == 0 || len(w.Calls) != 0 {
 			return false
 		}
 	}
 	return true
+}
+
+func (p *skillsNativeResultProof) observePriorRuntimeContext(raw []byte, at time.Time) bool {
+	match := p.priorRuntimeWindowAt(at)
+	if match == nil {
+		return false
+	}
+	var e struct {
+		Payload json.RawMessage `json:"payload"`
+	}
+	var v struct {
+		Cwd, Model, Effort string
+		Reasoning          string `json:"reasoning_effort"`
+		Turn               string `json:"turn_id"`
+	}
+	if json.Unmarshal(raw, &e) != nil || !skillsCreationHeaderKeys(e.Payload, "cwd", "model", "effort", "reasoning_effort", "turn_id") || json.Unmarshal(e.Payload, &v) != nil {
+		return false
+	}
+	if v.Effort != "" && v.Reasoning != "" && v.Effort != v.Reasoning {
+		return false
+	}
+	effort := v.Effort
+	if effort == "" {
+		effort = v.Reasoning
+	}
+	if !skillsUUID.MatchString(v.Turn) || !same(v.Cwd, str(match.Job["cwd"])) || skillsModel(v.Model) == "" || skillsModel(v.Model) != skillsModel(str(match.Job["model"])) || effort != str(match.Job["effort"]) {
+		return false
+	}
+	match.Contexts++
+	if match.Turns == nil {
+		match.Turns = map[string]bool{}
+	}
+	match.Turns[v.Turn] = true
+	return true
+}
+
+// Generated history is not an owner instruction or a result receipt. Before
+// ignoring its opaque body, bind its original runtime item/turn and tool-call
+// relationship to exactly one registered job in the same canonical snapshot.
+// No alternate final path or self-learned content digest is used.
+func (p *skillsNativeResultProof) observePriorRuntimeGenerated(raw []byte, at time.Time) bool {
+	w := p.priorRuntimeWindowAt(at)
+	if w == nil || w.Contexts == 0 {
+		return false
+	}
+	var e struct {
+		Payload json.RawMessage `json:"payload"`
+	}
+	var v struct {
+		Type, Role, Phase, ID, Name string
+		Call                        string          `json:"call_id"`
+		Meta                        json.RawMessage `json:"internal_chat_message_metadata_passthrough"`
+	}
+	var meta struct {
+		Turn string `json:"turn_id"`
+	}
+	if json.Unmarshal(raw, &e) != nil || json.Unmarshal(e.Payload, &v) != nil {
+		return false
+	}
+	if v.Type == "configuration_update" {
+		var c struct {
+			Type      string `json:"type"`
+			Reasoning struct {
+				Effort string `json:"effort"`
+			} `json:"reasoning"`
+		}
+		return skillsStrict(e.Payload, &c) && c.Reasoning.Effort == str(w.Job["effort"])
+	}
+	if !skillsCreationHeaderKeys(e.Payload, "type", "role", "phase", "id", "name", "call_id", "internal_chat_message_metadata_passthrough") || !skillsCreationHeaderKeys(v.Meta, "turn_id") || json.Unmarshal(v.Meta, &meta) != nil || !w.Turns[meta.Turn] || v.ID == "" || len(v.ID) > 256 {
+		return false
+	}
+	if w.Generated == nil {
+		w.Generated = map[string]bool{}
+	}
+	if w.Generated[v.ID] {
+		return false
+	}
+	w.Generated[v.ID] = true
+	if w.Calls == nil {
+		w.Calls = map[string]string{}
+		w.CallIDs = map[string]bool{}
+	}
+	switch v.Type {
+	case "message":
+		return v.Role == "assistant" && (v.Phase == "analysis" || v.Phase == "commentary" || v.Phase == "final_answer")
+	case "reasoning":
+		return v.Role == ""
+	case "custom_tool_call", "function_call":
+		if v.Role != "" || !skillsCallID.MatchString(v.Call) || v.Name == "" || w.CallIDs[v.Call] {
+			return false
+		}
+		w.Calls[v.Call] = v.Type + "\x00" + meta.Turn
+		w.CallIDs[v.Call] = true
+		return true
+	case "custom_tool_call_output", "function_call_output":
+		callType := strings.TrimSuffix(v.Type, "_output")
+		if v.Role != "" || w.Calls[v.Call] != callType+"\x00"+meta.Turn {
+			return false
+		}
+		delete(w.Calls, v.Call)
+		return true
+	default:
+		return false
+	}
 }
 
 func (p *skillsNativeResultProof) observeEvent(raw []byte, at time.Time) bool {

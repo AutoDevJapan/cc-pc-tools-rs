@@ -192,7 +192,7 @@ func skillsRuntimeSourcePendingCall(input io.Reader, thread, cwd, path, flag str
 	session := false
 	pending, seen := map[string]bool{}, map[string]bool{}
 	calls := map[string]string{}
-	callIDs, outputIDs := map[string]bool{}, map[string]bool{}
+	callIDs, outputIDs := map[string]string{}, map[string]bool{}
 	for scan.Scan() {
 		var e struct {
 			Type      string          `json:"type"`
@@ -232,13 +232,16 @@ func skillsRuntimeSourcePendingCall(input io.Reader, thread, cwd, path, flag str
 			continue
 		}
 		if p.Type == "custom_tool_call" || p.Type == "function_call" {
-			if !session || !skillsCallID.MatchString(p.Call) || callIDs[p.Call] || outputIDs[p.Call] {
+			if !session || !skillsCallID.MatchString(p.Call) || callIDs[p.Call] != "" || outputIDs[p.Call] {
 				return "", false
 			}
-			callIDs[p.Call] = true
+			callIDs[p.Call] = p.Type
 		}
 		if p.Type == "custom_tool_call_output" || p.Type == "function_call_output" {
 			if !session || !skillsCallID.MatchString(p.Call) || outputIDs[p.Call] {
+				return "", false
+			}
+			if kind := callIDs[p.Call]; kind != "" && p.Type != kind+"_output" {
 				return "", false
 			}
 			outputIDs[p.Call] = true

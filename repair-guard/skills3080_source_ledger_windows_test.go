@@ -72,7 +72,7 @@ func TestSkills3080SourceOutcomeRejectsMalformedClaims(t *testing.T) {
 }
 
 func TestSkills3080SourcePendingCallLedgerRejectsRebinding(t *testing.T) {
-	for _, kind := range []string{"normal", "ordinary", "prior_output", "duplicate_custom", "duplicate_function", "duplicate_output", "output_rebound", "source_call_hijacked"} {
+	for _, kind := range []string{"normal", "ordinary", "ordinary_function", "prior_output", "duplicate_custom", "duplicate_function", "duplicate_output", "output_rebound", "source_call_hijacked", "custom_to_function", "function_to_custom", "pending_source_wrong_output"} {
 		t.Run(kind, func(t *testing.T) {
 			p := skillsSourcePreparationFixture()
 			start := time.Date(2030, 1, 1, 0, 0, 0, 0, time.UTC)
@@ -88,6 +88,18 @@ func TestSkills3080SourcePendingCallLedgerRejectsRebinding(t *testing.T) {
 			output := object{"type": "custom_tool_call_output", "call_id": "call_ordinary", "output": "ordinary"}
 			switch kind {
 			case "ordinary":
+				emit(call)
+				emit(output)
+			case "ordinary_function":
+				call["type"], output["type"] = "function_call", "function_call_output"
+				emit(call)
+				emit(output)
+			case "custom_to_function":
+				emit(call)
+				output["type"] = "function_call_output"
+				emit(output)
+			case "function_to_custom":
+				call["type"] = "function_call"
 				emit(call)
 				emit(output)
 			case "prior_output":
@@ -117,8 +129,11 @@ func TestSkills3080SourcePendingCallLedgerRejectsRebinding(t *testing.T) {
 			}
 			path := strings.ToUpper(p.RequestPath)
 			emit(object{"type": "custom_tool_call", "name": "exec", "call_id": "call_current", "input": skillsRuntimeSourceInvocationText(path, p.Writer.Workspace, flag)})
+			if kind == "pending_source_wrong_output" {
+				emit(object{"type": "function_call_output", "call_id": "call_current", "output": "not a pending custom call"})
+			}
 			id, ok := skillsRuntimeSourcePendingCall(&input, thread, p.Writer.Workspace, path, flag, start, start.Add(time.Minute), p.RequestID)
-			want := kind == "normal" || kind == "ordinary" || kind == "prior_output"
+			want := kind == "normal" || kind == "ordinary" || kind == "ordinary_function" || kind == "prior_output"
 			if ok != want || (ok && id != "call_current") {
 				t.Fatalf("ledger %s accepted=%v", kind, ok)
 			}

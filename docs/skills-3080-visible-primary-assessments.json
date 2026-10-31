@@ -1,7 +1,7 @@
 {
   "all_member_contexts_read": false,
   "all_member_rights_confirmed": false,
-  "bound_member_metadata": 162,
+  "bound_member_metadata": 167,
   "catalog_sha256": "2d73c9a038a41cc220a9687b935bfa1e0b315b65d9bd6d3e54ddb4111972876c",
   "central_operations": 0,
   "domain": "skills3080-visible-primary-assessment-journal-v1",
@@ -2949,7 +2949,7 @@
       "each_member_context_and_rights_pending": true,
       "findings": [
         "可視本文は共有3D空間でm-blockをm-groupにまとめ、m-attr-anim/m-attr-lerpで動かす形式を説明する。事前の登録・入場・WebSocket接続と別Skillを前提とし、現行接続やサービスの実在を確認したものではない。",
-        "各blockを1x1x1m、整数座標、y\u003e=0、開始/終了タグ必須とし、textureはURLではなくtypeの定義名を使う。sphere等やscript属性を許さないと述べるが、実serverの検証・animation経由の制限適用は未確認。",
+        "各blockを1x1x1m、整数座標、y>=0、開始/終了タグ必須とし、textureはURLではなくtypeの定義名を使う。sphere等やscript属性を許さないと述べるが、実serverの検証・animation経由の制限適用は未確認。",
         "塔・壁・橋・部屋・地形や他者作品への追加を提案する。壁と塔の例は配置行が多く伏せられており、説明上のblock数・形・接続や実際の外観を検証できない。",
         "worldのserverUrlを使うagent APIとdocumentId、create/update/delete、contentを説明し、updateは差分ではなく以前の全文を置き換えると明示する。",
         "HTTP 200とsuccess/documentId/actionを成功応答として示すが、描画への反映、競合する更新、応答不明時の再送、権限・所有範囲の保証は可視範囲にない。",
@@ -6380,7 +6380,7 @@
         "fit-to-pageは幅/高さ比の小さいSCALEと中心offsetを使う一方、fontSizeは固定のCSS px×0.75という例を示す。図形の任意縮尺と文字の変換が同じ縮尺にならない場合があるため、inch/point/CSS pxと実canvas寸法の対応を統一する必要がある。min式や丸めない方針だけで文字の収まり・改行・全要素の可視性を保証しない。",
         "Chart.js/EChartsのdataからnative chartを作り、CSS conic-gradientやSVG polygonには近似を使う説明がある。検出dataが0なら手動で補う案もあるが、視覚近似や空の抽出を確定した元数値へ変えず、元データ・系列/labels/単位/順序との対応を確認する必要がある。現API/対応chartやdetect scriptの実抽出精度は未確認。",
         "色の監査では親子のcontrast表、HSL明度差、4.5:1/3:1等の閾値と色比率例を示し、本人指定色と主色の保持も記す。ただし簡略式・px/ptを含む閾値/例の数値は保存中の説明で、現在の基準適合や実際の合成背景での可読性を確認したものではない。gradient/rgbaの単色化・font置換・近いshapeへの置換や色overrideには原表示から変わる範囲がある。",
-        "ZIPレベルの結合案はchart/media/embeddingを改名してrelsとContent_Types等を直す一方、notesSlide relsを削除してnotesは結合しないと明記する。shape数\u003e0の事前/事後checkや生成ファイルの存在だけではnotes保持、theme/font等を含む依存関係、chart編集時の実データ、全slideの表示を確認できない。python-pptxのAPIを一律に否定する説明も実script/版/再現を確認した結論ではない。",
+        "ZIPレベルの結合案はchart/media/embeddingを改名してrelsとContent_Types等を直す一方、notesSlide relsを削除してnotesは結合しないと明記する。shape数>0の事前/事後checkや生成ファイルの存在だけではnotes保持、theme/font等を含む依存関係、chart編集時の実データ、全slideの表示を確認できない。python-pptxのAPIを一律に否定する説明も実script/版/再現を確認した結論ではない。",
         "Unicode escapeの4桁hex、UTF8 literal、wrap/margin/valign、描画順の注意は有用だが、literalやescapeの正しさだけでglyph/font・文字内容・表示を保証しない。node/python/pip等の原命令、生成や結合は実行せず、指定されたAPI reference・同梱script等の支持本文も開いていない。起動metadataのpptx/Presentations等との本文同等性や採否は調べていない。"
       ],
       "git_blob": "e6fa31102fc9689e13d3005cea5536525ae038de",
@@ -13486,11 +13486,637 @@
       ],
       "use": "指定された宿泊施設について、比較対象、季節・曜日・最低宿泊日数、施設紹介と収益仮説を分けて検討する枠組みを考えるとき。",
       "value": "市場比較、需要calendar、料金、紹介文、映像、収益見通しを別の成果に分ける構成は参考になるが、効果と例示データの信頼性には検証が必要である。"
+    },
+    {
+      "bytes": 18624,
+      "central_operations": 0,
+      "each_member_context_and_rights_pending": true,
+      "findings": [
+        "冒頭で人の介入なしに登録・賭け・対戦・精算を行うよう指示し、botの取得、鍵生成、Node.js/Pythonの実行を案内する。いずれも保存本文内の命令であり、現在の実行許可ではない。",
+        "一つの部屋だけを利用する規則、10秒の手番期限、3連続timeoutによる敗北、pending/active/finishedと勝者・終了理由の例を示す。実対局や期限の実測はない。",
+        "x402 clientが402応答を受けて署名付きで再送し、部屋作成・参加で支払う構成を示す。固定額、手数料、失敗時の不送金、返金、精算は本文の主張であり、実取引の確認結果ではない。",
+        "要求を実行してからfacilitatorがchainへ送るとの説明があり、HTTP成功と送金確定の対応、結果不明の再送、重複支払い・返金の照合は具体化されていない。",
+        "対戦相手待ちと対局のloopは期限や取消し・通信失敗を扱わず、手番の古い観測から同じ行動を重ねる場合の識別もない。戦略例のfindThreatとhasNeighborは実装を読者へ委ねており、完成botの実証ではない。",
+        "起動metadata上ではgame-development、payment-status-reconciliation等に近接するが、既存Skill本文との同等性は未確認である。"
+      ],
+      "git_blob": "5228d74f5ee20684b9dfe998e2d7be3210b31d6f",
+      "inventory_id": "github:9adbd48ba3f382b8174cf1ce7b7a60d5aadd7932bcda643a49b628cb9d3a2be3",
+      "member_metadata": [
+        {
+          "bytes": 18624,
+          "commit": "920714f17d81e0a95c7a9bc51faf0a7921cd982d",
+          "git_blob": "5228d74f5ee20684b9dfe998e2d7be3210b31d6f",
+          "inventory_id": "github:9adbd48ba3f382b8174cf1ce7b7a60d5aadd7932bcda643a49b628cb9d3a2be3",
+          "path": "skills/hellojun/boutnetwork/skill.md",
+          "repo": "6mile/skills",
+          "sha256": "00c77ac46cdaa2c1bd195a8c6404aa0a8d0d95d9cd138071394569e429f0b52b"
+        }
+      ],
+      "member_occurrences": 1,
+      "negative": "不適用例：保存本文の自律実行指示を許可とみなし、402応答に従って署名・支払いを行い、通信失敗のたびに部屋作成を再送する。",
+      "new_copy_grants": 0,
+      "new_final_disposition": false,
+      "path": "skills/hellojun/boutnetwork/skill.md",
+      "positive": "適用例：許可された検証資源で、盤面・手番・操作IDと終了結果を照合し、支払いの計画やHTTP応答をchain上の確定と分けて評価する。",
+      "read": {
+        "failed_view_calls": 0,
+        "mask_version": "primaryflow-v4-opaque-lexical-boundaries",
+        "ranges": [
+          {
+            "first": 1,
+            "range_sha256": "ac84bd959b8a2458e7ed400584a6a2ff1ae97592223f33a104b17da410c85127",
+            "through": 180,
+            "visible_lines": 138,
+            "withheld_physical_lines": [
+              2,
+              11,
+              12,
+              13,
+              15,
+              21,
+              23,
+              26,
+              29,
+              30,
+              32,
+              35,
+              36,
+              37,
+              41,
+              59,
+              62,
+              65,
+              69,
+              83,
+              87,
+              96,
+              100,
+              105,
+              108,
+              109,
+              117,
+              119,
+              121,
+              125,
+              126,
+              135,
+              136,
+              139,
+              147,
+              154,
+              158,
+              161,
+              163,
+              166,
+              171,
+              178
+            ]
+          },
+          {
+            "first": 181,
+            "range_sha256": "d7cf460696e4b772d62006610afc0caff6f17d78dd45c337b8d839aff8aafee2",
+            "through": 360,
+            "visible_lines": 152,
+            "withheld_physical_lines": [
+              186,
+              193,
+              194,
+              197,
+              199,
+              205,
+              212,
+              214,
+              216,
+              222,
+              224,
+              225,
+              233,
+              235,
+              248,
+              255,
+              256,
+              282,
+              290,
+              293,
+              294,
+              295,
+              298,
+              310,
+              320,
+              331,
+              332,
+              349
+            ]
+          },
+          {
+            "first": 361,
+            "range_sha256": "101cd90d29bcc9850c8b24bafcb503d23bf641025392296f37e0cbfdc48168f6",
+            "through": 540,
+            "visible_lines": 150,
+            "withheld_physical_lines": [
+              363,
+              366,
+              378,
+              384,
+              385,
+              388,
+              390,
+              394,
+              397,
+              409,
+              412,
+              414,
+              416,
+              421,
+              422,
+              425,
+              431,
+              432,
+              435,
+              436,
+              440,
+              444,
+              453,
+              454,
+              457,
+              458,
+              463,
+              465,
+              532,
+              534
+            ]
+          },
+          {
+            "first": 541,
+            "range_sha256": "413126cb79d8fe300bfb5f89d344d7a5e7f948ca1b85053dc9df45287de28d2e",
+            "through": 549,
+            "visible_lines": 5,
+            "withheld_physical_lines": [
+              542,
+              544,
+              545,
+              549
+            ]
+          }
+        ],
+        "raw_full": false,
+        "total_physical_lines": 549,
+        "unseen_meanings_remain_unknown": true,
+        "view_calls_returned": 4,
+        "whole_masked_view_sha256": "3b70ecc87d0be08df39f6501d25e74c64657bbfeeaac8f7830043b3f952330b8"
+      },
+      "required_changes": [
+        "自動登録・署名・賭け・送金やdownload実行を現在の研究へ持ち込まず、別用途でも実対象と既存の許可・費用条件を先に対応させる。",
+        "支払い要求のchain・asset・金額・宛先・有効期限を対象操作へ結び、受付、ゲーム状態、送信、chain確定、精算、返金、結果不明を別々に照合する。",
+        "部屋・対局・手番の版と操作IDを保持し、再送前に実状態を確認する。有限の待機、取消し、通信失敗、期限後の行動、重複処理を扱う。",
+        "新規補助コードはGoを基本とし、合法手、盤面境界、満盤、戦略関数、実行期限を検証する。秘密の保存はWindowsでの実保護を確認し、POSIXのmode指定だけを保護の実証にしない。"
+      ],
+      "source_commit": "920714f17d81e0a95c7a9bc51faf0a7921cd982d",
+      "source_repo": "6mile/skills",
+      "source_sha256": "00c77ac46cdaa2c1bd195a8c6404aa0a8d0d95d9cd138071394569e429f0b52b",
+      "source_url": "https://github.com/6mile/skills/blob/920714f17d81e0a95c7a9bc51faf0a7921cd982d/skills/hellojun/boutnetwork/skill.md",
+      "status": "visible_primary_evaluated",
+      "support_body_reads": 0,
+      "unmet": [
+        "104物理行の伏字の意味は未読であり補完していない。bot、補助script、現行SDK、実接続先、鍵保護、対局、送金・精算・返金、料金、個別の利用条件は未確認である。",
+        "各memberの文脈・支持本文・個別notice・source_or_service_rights・現在実在・採否は未確認である。"
+      ],
+      "use": "対戦agentの部屋、対局、手番、終了と、参加時の支払い・精算を別の状態として扱う設計資料。",
+      "value": "HTTP pollingによる手番処理と、ゲーム内の結果・chain上の移動を区別する検討には使えるが、そのまま動かす導入手順にはできない。"
+    },
+    {
+      "bytes": 11992,
+      "central_operations": 0,
+      "each_member_context_and_rights_pending": true,
+      "findings": [
+        "wx.cloud.init、wx.cloud.callFunction、cloud.getWXContextの4つのscenarioと共通patternを示す。本文内のAPIをcanonicalとし、識別子は常に存在し検証不要と説明するが、現行SDKや各呼出経路の実結果ではない。",
+        "資源アクセスの例はOPENIDとevent.resourceOwnerIdを比較するだけで、指定資源の所有者をserver側で取得していない。利用者が送った所有者IDとの一致は、その資源への権限を証明しない。",
+        "test functionは識別子の有無を条件にせずsuccess:trueを返し、clientもcloud function呼出しのsuccess callbackで認証成功を表示する。通信成功と認証・認可成功を分ける必要がある。",
+        "APPID、OPENID、任意のUNIONIDの意味を区別し、他利用者へOPENIDを見せないとする一方、識別子をconsoleへ出す例を繰り返している。traceUserも任意設定として推奨している。",
+        "UNIONID欠如の分岐やエラーcallbackはあるが、識別子欠如、別app・環境、改変された資源所有者、他利用者のデータへのアクセスを拒否した実テストはない。",
+        "起動metadata上ではsecurity-review、connection-scope-reconciliation等に近接するが、既存Skill本文との同等性は未確認である。"
+      ],
+      "git_blob": "f0f649d3b3ed49516016ad33080e5e550afca70a",
+      "inventory_id": "github:23496e8d2c6f753fa612caa4cb252bc0b208295e80825b8dd1782dc6a0b11736",
+      "member_metadata": [
+        {
+          "bytes": 11992,
+          "commit": "920714f17d81e0a95c7a9bc51faf0a7921cd982d",
+          "git_blob": "f0f649d3b3ed49516016ad33080e5e550afca70a",
+          "inventory_id": "github:23496e8d2c6f753fa612caa4cb252bc0b208295e80825b8dd1782dc6a0b11736",
+          "path": "skills/binggg/cloudbase/references/auth-wechat/SKILL.md",
+          "repo": "6mile/skills",
+          "sha256": "00c7a652e47a8bb8fc76692b12c2c00d0c3dc58f1e6bd32e5fc16c2e8feb4592"
+        }
+      ],
+      "member_occurrences": 1,
+      "negative": "不適用例：利用者が送ったresourceOwnerIdをそのまま比較し、function呼出しが成功しただけでアクセス許可と認証成功を表示する。",
+      "new_copy_grants": 0,
+      "new_final_disposition": false,
+      "path": "skills/binggg/cloudbase/references/auth-wechat/SKILL.md",
+      "positive": "適用例：検証済みの呼出元を、server側で取得した指定資源の所有者と照合し、他利用者や識別子欠如を拒否した結果まで確認する。",
+      "read": {
+        "failed_view_calls": 0,
+        "mask_version": "primaryflow-v4-opaque-lexical-boundaries",
+        "ranges": [
+          {
+            "first": 1,
+            "range_sha256": "d99f69841632b7958947613228bd443ce12889d98b29cb47853e227f0064f269",
+            "through": 180,
+            "visible_lines": 169,
+            "withheld_physical_lines": [
+              1,
+              2,
+              3,
+              4,
+              5,
+              64,
+              118,
+              119,
+              123,
+              152,
+              157
+            ]
+          },
+          {
+            "first": 181,
+            "range_sha256": "e610be7915679344048707f094fcf95e8af65d9df949c93ac33754c748c6c670",
+            "through": 360,
+            "visible_lines": 171,
+            "withheld_physical_lines": [
+              197,
+              199,
+              206,
+              209,
+              212,
+              253,
+              265,
+              288,
+              292
+            ]
+          },
+          {
+            "first": 361,
+            "range_sha256": "553f5643c528fa0c420254a24eb9779822663b479d596c72232f71af93459b2d",
+            "through": 440,
+            "visible_lines": 72,
+            "withheld_physical_lines": [
+              367,
+              368,
+              381,
+              384,
+              385,
+              403,
+              404,
+              436
+            ]
+          }
+        ],
+        "raw_full": false,
+        "total_physical_lines": 440,
+        "unseen_meanings_remain_unknown": true,
+        "view_calls_returned": 3,
+        "whole_masked_view_sha256": "a27fad166a02c71411764321b6fa14f85a3d6f52b9e5279484764656a2d6e3b8"
+      },
+      "required_changes": [
+        "呼出経路、APPIDと許可された既存Prd環境、識別子の存在を確認し、認証された呼出元と資源への権限を別に扱う。",
+        "確定した資源IDからserver側で所有者・利用範囲を取得して照合し、eventの所有者申告を認可の根拠にしない。",
+        "識別子欠如、他利用者・別app、改変入力、UNIONID欠如、アプリ上の拒否結果を含むテストを追加し、callback成功だけを認証成功としない。",
+        "識別子の返却・記録と利用者追跡を必要な範囲に絞り、不要なconsole出力を除く。APIと対応言語は対象版の公式仕様に照合し、本文の例を現在の正本へ自動昇格させない。"
+      ],
+      "source_commit": "920714f17d81e0a95c7a9bc51faf0a7921cd982d",
+      "source_repo": "6mile/skills",
+      "source_sha256": "00c7a652e47a8bb8fc76692b12c2c00d0c3dc58f1e6bd32e5fc16c2e8feb4592",
+      "source_url": "https://github.com/6mile/skills/blob/920714f17d81e0a95c7a9bc51faf0a7921cd982d/skills/binggg/cloudbase/references/auth-wechat/SKILL.md",
+      "status": "visible_primary_evaluated",
+      "support_body_reads": 0,
+      "unmet": [
+        "28物理行の伏字の意味は未読であり補完していない。現行SDK、実環境・appの対応、識別子の注入条件、認可、拒否系、ログと追跡の実動作は未確認である。",
+        "各memberの文脈・支持本文・個別notice・source_or_service_rights・現在実在・採否は未確認である。"
+      ],
+      "use": "CloudBaseのWeChat Mini Programで、client初期化、cloud functionの呼出元識別、利用者ごとの資源アクセスを設計する際の参考。",
+      "value": "Mini ProgramとWeb・Node側の認証を区別し、OPENIDのapp内での範囲と任意のUNIONIDを分ける説明には価値があるが、権限確認の例を修正する必要がある。"
+    },
+    {
+      "bytes": 6918,
+      "central_operations": 0,
+      "each_member_context_and_rights_pending": true,
+      "findings": [
+        "可視本文はtesting.Tを入口にするassert/require、前提と通常検証の区別、各種assertion、Eventually系、suiteのsetup/teardownとlauncher、誤用例を説明する。mock、lintersや参照先、多くのコードは伏字であり、実装や実行結果は未確認である。",
+        "EqualをDeepEqualによる比較と説明する一方、末尾はpointerに対するEqualをaddress比較と説明し、dereference/EqualExportedValuesを勧める。source内の説明が整合しておらず、採用する実版で比較目的とAPI契約を確認する必要がある。",
+        "expected/actualの順序を常に適用するという説明も、掲載されたContains・比較・error等の個別関数へ一律には移せない。pollingの共有状態・同期やcallback内の中断、suiteの実行件数・並列条件は実コードと実版で未検証である。"
+      ],
+      "git_blob": "f89931a2855d6c43097a0cf7210ab0967181b0a2",
+      "inventory_id": "github:431a124f5b698d9a47280ba76fdd05dc3bb4903070cb0f3a7ee3b79e1695d276",
+      "member_metadata": [
+        {
+          "bytes": 6918,
+          "commit": "920714f17d81e0a95c7a9bc51faf0a7921cd982d",
+          "git_blob": "f89931a2855d6c43097a0cf7210ab0967181b0a2",
+          "inventory_id": "github:431a124f5b698d9a47280ba76fdd05dc3bb4903070cb0f3a7ee3b79e1695d276",
+          "path": "skills/samber/golang-stretchr-testify/SKILL.md",
+          "repo": "6mile/skills",
+          "sha256": "03149be77384401800e2109ceb405470d896df03ed2c4ff5cf522c7c45b5a39e"
+        }
+      ],
+      "member_occurrences": 1,
+      "negative": "pointer比較の説明をそのまま信じて比較範囲を変え、callback内で検証が飛んだりsuiteが0件でも成功と報告する。",
+      "new_copy_grants": 0,
+      "new_final_disposition": false,
+      "path": "skills/samber/golang-stretchr-testify/SKILL.md",
+      "positive": "比較したい意味と失敗後の継続可否を決め、実版のassertionを選び、非同期の完了とテストの実起動を確認する。",
+      "read": {
+        "failed_view_calls": 0,
+        "mask_version": "primaryflow-v4-opaque-lexical-boundaries",
+        "ranges": [
+          {
+            "first": 1,
+            "range_sha256": "9931f0e2b36d5b6cf4b975629d3a39e95a81f099d76b62f12a31b58e981a3129",
+            "through": 180,
+            "visible_lines": 127,
+            "withheld_physical_lines": [
+              1,
+              2,
+              3,
+              4,
+              5,
+              6,
+              7,
+              8,
+              9,
+              10,
+              11,
+              12,
+              13,
+              14,
+              15,
+              16,
+              17,
+              18,
+              19,
+              20,
+              21,
+              22,
+              51,
+              57,
+              71,
+              72,
+              83,
+              98,
+              106,
+              108,
+              109,
+              110,
+              114,
+              119,
+              120,
+              128,
+              130,
+              132,
+              151,
+              153,
+              154,
+              157,
+              158,
+              159,
+              162,
+              163,
+              164,
+              166,
+              167,
+              171,
+              172,
+              176,
+              180
+            ]
+          },
+          {
+            "first": 181,
+            "range_sha256": "53cdd0fd81e4bec3b9791cfbf699fe58d8117d4a19e89394133cbcc46545c43c",
+            "through": 194,
+            "visible_lines": 10,
+            "withheld_physical_lines": [
+              181,
+              189,
+              193,
+              194
+            ]
+          }
+        ],
+        "raw_full": false,
+        "total_physical_lines": 194,
+        "unseen_meanings_remain_unknown": true,
+        "view_calls_returned": 2,
+        "whole_masked_view_sha256": "4922a26c889fc4d98d48cc4bc1bb300e5e700fb458ed089c6d929f10abe65b0a"
+      },
+      "required_changes": [
+        "assertionごとの引数契約と、値・同一性・公開field等の比較意図を分け、pointerの助言を未検証のまま導入しない。前提失敗後の処理、callback/goroutineの早期終了、共有状態と完了条件を確認し、suiteは実際に必要なテストが起動した証拠を残す。",
+        "名前is/mustやpersonaを一律に課さず、対象の振る舞いと失敗を検出できる必要なテストを選ぶ。今回はlibrary/Context7導入、参照本文取得、コード変更、テストやbuildを行わず、説明例を検証成功へ変えない。"
+      ],
+      "source_commit": "920714f17d81e0a95c7a9bc51faf0a7921cd982d",
+      "source_repo": "6mile/skills",
+      "source_sha256": "03149be77384401800e2109ceb405470d896df03ed2c4ff5cf522c7c45b5a39e",
+      "source_url": "https://github.com/6mile/skills/blob/920714f17d81e0a95c7a9bc51faf0a7921cd982d/skills/samber/golang-stretchr-testify/SKILL.md",
+      "status": "visible_primary_evaluated",
+      "support_body_reads": 0,
+      "unmet": [
+        "全194物理行を1..180、181..194の2範囲で読み、可視137行を評価した。伏字57行の意味、libraryの実版/API、参照・mock/linters、並行条件と実テスト結果は未確認。",
+        "membersで1出現のmetadataを確認したが、source_or_service_rightsと各memberの文脈・支持・個別許諾・現在実在・採否は未確認。"
+      ],
+      "use": "Goのテストで、継続可能な検証と前提失敗による中断、比較の意図、非同期完了、suiteの実起動を整理するとき。",
+      "value": "coverageの数字ではなく振る舞いを制約し、前提失敗後のpanicや、起動されないsuiteによる見かけの成功を避ける観点が参考になる。"
+    },
+    {
+      "bytes": 5545,
+      "central_operations": 0,
+      "each_member_context_and_rights_pending": true,
+      "findings": [
+        "可視本文はAPI向けのspeech/sfx/music/voices/voiceclone/quotaのPython script、v3の角括弧タグと複数出力形式を説明する。SETUPと実scriptは未読であり、現在の対応形式・機能・品質や実生成は未確認である。",
+        "clone用sample directoryの制限と--sample-dirを示すが、pathの実検証や素材の許諾を確認したものではない。声のIDが存在することも、対象accountや使用権の確認にはならない。",
+        "quotaの契約・利用量・voice数の表示例は、このオーナーの実契約や現在の残量ではない。APIの紹介、最速/低費用/用途別の評価も、既存Web契約の利用許可からAPI課金・新しいkey利用を認める根拠にはならない。"
+      ],
+      "git_blob": "631b6eb7b8be23dbc52b900a76fe572587dbdf73",
+      "inventory_id": "github:3c547aee81847ff0bcaf7b0c599da9a7568e14c4ea18c16c85b4648644fbe0a7",
+      "member_metadata": [
+        {
+          "bytes": 5545,
+          "commit": "920714f17d81e0a95c7a9bc51faf0a7921cd982d",
+          "git_blob": "631b6eb7b8be23dbc52b900a76fe572587dbdf73",
+          "inventory_id": "github:3c547aee81847ff0bcaf7b0c599da9a7568e14c4ea18c16c85b4648644fbe0a7",
+          "path": "skills/odrobnik/elevenlabs/SKILL.md",
+          "repo": "6mile/skills",
+          "sha256": "0315d0231c9940328770602de567706a9781bcc160bd0059b25d8b150189ea00"
+        }
+      ],
+      "member_occurrences": 1,
+      "negative": "quota例を本人の残枠と誤認し、Web契約の許可で新しいAPI keyを使い、生成したという応答だけで音声品質も確認済みとする。",
+      "new_copy_grants": 0,
+      "new_final_disposition": false,
+      "path": "skills/odrobnik/elevenlabs/SKILL.md",
+      "positive": "既存契約内の指定voiceと台詞版を実音声へ結び、形式・尺・聞こえ方と実利用量を確認する。",
+      "read": {
+        "failed_view_calls": 0,
+        "mask_version": "primaryflow-v4-opaque-lexical-boundaries",
+        "ranges": [
+          {
+            "first": 1,
+            "range_sha256": "bec1409e8489743144e998bbc19972cffefa6ad77369ca7cc1453eaf0e86053d",
+            "through": 167,
+            "visible_lines": 128,
+            "withheld_physical_lines": [
+              1,
+              2,
+              3,
+              4,
+              5,
+              6,
+              7,
+              8,
+              9,
+              10,
+              11,
+              12,
+              13,
+              14,
+              15,
+              30,
+              31,
+              73,
+              76,
+              79,
+              87,
+              90,
+              93,
+              101,
+              104,
+              107,
+              115,
+              118,
+              125,
+              130,
+              131,
+              134,
+              137,
+              145,
+              148,
+              151,
+              154,
+              160,
+              164
+            ]
+          }
+        ],
+        "raw_full": false,
+        "total_physical_lines": 167,
+        "unseen_meanings_remain_unknown": true,
+        "view_calls_returned": 1,
+        "whole_masked_view_sha256": "bec1409e8489743144e998bbc19972cffefa6ad77369ca7cc1453eaf0e86053d"
+      },
+      "required_changes": [
+        "本人指定の既存ElevenLabs Web契約と利用枠を保持し、API key・別課金・追加購入へ置き換えない。必要な制作時は同じaccount・voice・モデル・台詞版と権利を結び、実音声の形式、尺、発音・表現・欠落を確認する。",
+        "sample directoryの指定を保護対象や許諾の解除にせず、音声とcloneの個別条件を保持する。今回はSETUP/認証情報取得、install/script/API実行、sample収集/送信、cloneや音声/音楽生成、契約変更を行わない。"
+      ],
+      "source_commit": "920714f17d81e0a95c7a9bc51faf0a7921cd982d",
+      "source_repo": "6mile/skills",
+      "source_sha256": "0315d0231c9940328770602de567706a9781bcc160bd0059b25d8b150189ea00",
+      "source_url": "https://github.com/6mile/skills/blob/920714f17d81e0a95c7a9bc51faf0a7921cd982d/skills/odrobnik/elevenlabs/SKILL.md",
+      "status": "visible_primary_evaluated",
+      "support_body_reads": 0,
+      "unmet": [
+        "全167物理行の可視128行を評価した。伏字39行の意味、SETUP/script、現在のAPI/format/モデル条件、実契約・権利・quotaと実音声は未確認。",
+        "membersで1出現のmetadataを確認したが、source_or_service_rightsと各memberの文脈・支持・個別許諾・現在実在・採否は未確認。"
+      ],
+      "use": "ElevenLabsを扱う制作手順で、台詞・音声/効果音/音楽・声の管理・出力形式・契約枠を別々に確認する設計を検討するとき。",
+      "value": "生成種別、モデルと表現タグ、codec/sample rate/bitrate、voice一覧・clone、quotaを分けており、入力と完成した音声を対応させる整理に使える。"
+    },
+    {
+      "bytes": 6142,
+      "central_operations": 0,
+      "each_member_context_and_rights_pending": true,
+      "findings": [
+        "可視本文は複数backendの機能表、MiniMaxの既定使用、avatar側cloneの優先、sample→voice ID→合成、scene別の一括生成、下流への連携を説明する。現在のbackend能力、認証/料金、実装と実音声は未確認である。",
+        "sample入力の範囲と品質向け推奨を別々に示し、rate limitを避ける並列制限、voice IDの保存、誤解を招く他人の声の使用を避けることや商用権利の確認を挙げる。ただし例中の『自分の声』やready表示は、今回の本人の素材提供・許諾・実cloneの証拠ではない。",
+        "durationや総尺、path/format/sample rateの出力例は実ファイルの検査ではない。backend間のvoice ID対応、部分失敗・重複・sceneの順序、台詞/字幕/映像との実同期を保証する実装も確認できない。"
+      ],
+      "git_blob": "b0730c9589a3d5f1aadd4037f96d60e967e18273",
+      "inventory_id": "github:537981189607abbc29e5251dec083ebcb116181e9e1313f847191720ded0ee42",
+      "member_metadata": [
+        {
+          "bytes": 6142,
+          "commit": "920714f17d81e0a95c7a9bc51faf0a7921cd982d",
+          "git_blob": "b0730c9589a3d5f1aadd4037f96d60e967e18273",
+          "inventory_id": "github:537981189607abbc29e5251dec083ebcb116181e9e1313f847191720ded0ee42",
+          "path": "skills/oliviapp8/voice-clone-tts/SKILL.md",
+          "repo": "6mile/skills",
+          "sha256": "0317b975a08918245123a54592f9f51f4d49a2ffadbfa246ea2a69f9fff6b295"
+        }
+      ],
+      "member_occurrences": 1,
+      "negative": "backendの既定値だけで別サービスへsampleを送り、readyという例示だけでclone済みとし、失敗sceneを省いた音声一覧を完成品として渡す。",
+      "new_copy_grants": 0,
+      "new_final_disposition": false,
+      "path": "skills/oliviapp8/voice-clone-tts/SKILL.md",
+      "positive": "権利を確認した同じvoiceと台詞版をscene IDへ結び、各音声の実尺・内容・順序と下流の同期を確認する。",
+      "read": {
+        "failed_view_calls": 0,
+        "mask_version": "primaryflow-v4-opaque-lexical-boundaries",
+        "ranges": [
+          {
+            "first": 1,
+            "range_sha256": "f086b64bfa123a3cc2c64bc255f01bb2995f7f06f0e251b5c9493e234ccceddd",
+            "through": 180,
+            "visible_lines": 175,
+            "withheld_physical_lines": [
+              1,
+              2,
+              3,
+              4,
+              163
+            ]
+          },
+          {
+            "first": 181,
+            "range_sha256": "48e020bca20f017b5abc8615b87bf88781bfc3a2e486671252a4e8aed424aff9",
+            "through": 286,
+            "visible_lines": 99,
+            "withheld_physical_lines": [
+              181,
+              185,
+              189,
+              193,
+              201,
+              242,
+              260
+            ]
+          }
+        ],
+        "raw_full": false,
+        "total_physical_lines": 286,
+        "unseen_meanings_remain_unknown": true,
+        "view_calls_returned": 2,
+        "whole_masked_view_sha256": "10f55f3e32fc8f66b5ab997ba8fcccfabf8b8ac674c84f9dbdb6aa5f73cf68fb"
+      },
+      "required_changes": [
+        "現在の本人指定であるElevenLabsの既存Web契約・利用枠を保持し、sourceの既定backendやavatar優先で置き換えない。sampleの出所/許諾、backend/accountとvoice ID、台詞版・scene ID・出力を固定し、別backendや別sceneの声へ暗黙に切り替えない。",
+        "受付/clone完了/実音声、各sceneの成功/失敗と実尺・順序・無音/欠落・下流同期を区別し、結果不明の重複clone/再生成を防ぐ。今回はbackend設定、API/key利用、sample取得/送信、clone・合成・映像操作や新費用を実行しない。"
+      ],
+      "source_commit": "920714f17d81e0a95c7a9bc51faf0a7921cd982d",
+      "source_repo": "6mile/skills",
+      "source_sha256": "0317b975a08918245123a54592f9f51f4d49a2ffadbfa246ea2a69f9fff6b295",
+      "source_url": "https://github.com/6mile/skills/blob/920714f17d81e0a95c7a9bc51faf0a7921cd982d/skills/oliviapp8/voice-clone-tts/SKILL.md",
+      "status": "visible_primary_evaluated",
+      "support_body_reads": 0,
+      "unmet": [
+        "全286物理行を1..180、181..286の2範囲で読み、可視274行を評価した。伏字12行の意味、backend設定/実装、現在の機能・料金・権利と実clone/音声/連携結果は未確認。",
+        "membersで1出現のmetadataを確認したが、source_or_service_rightsと各memberの文脈・支持・個別許諾・現在実在・採否は未確認。"
+      ],
+      "use": "声のclone、単一音声、scene別の一括合成と下流映像を、同じvoice・台詞版・scene IDへ結ぶ設計を検討するとき。",
+      "value": "clone/synthesize/batchの入力と出力、scene ID、duration、backend、形式を分けており、声と音声を再利用する対応関係の整理に使える。"
     }
   ],
   "new_copy_grants": 0,
   "new_final_dispositions": 0,
-  "representative_body_groups": 141,
+  "representative_body_groups": 146,
   "scope": "Assessment of visible primary text at the fixed source tuples. Hidden text, supporting bodies and each member's full package context, individual notice and rights remain pending. Equal primary bytes do not transfer rights or certify a service. No source command, service operation, central write or installation is performed.",
   "whole16_complete": false
 }

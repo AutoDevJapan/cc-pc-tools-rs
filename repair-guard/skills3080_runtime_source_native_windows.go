@@ -115,6 +115,16 @@ func skillsRuntimeSourceAnyInvocation(input, cwd, flag string) bool {
 	return len(args) == 2 && args[0][1] == flag && skillsRuntimeSourceInvocation(input, args[1][1], c.Workdir, flag)
 }
 
+// Only these fixed failures precede the allocator. An old result or a
+// syntactically complete unknown result is not proof that nothing was created.
+func skillsRuntimeSourceBeforeAllocation(stage string) bool {
+	switch stage {
+	case "source_request", "source_registration", "source_generation", "source_active", "source_spec", "source_nonce", "source_attempt_record":
+		return true
+	}
+	return false
+}
+
 func skillsRuntimeSourcePendingCall(input io.Reader, thread, cwd, path, flag string, start, end time.Time, requestID skillsObjectID) (string, bool) {
 	if !skillsSourceObjectShape(requestID) {
 		return "", false
@@ -178,19 +188,27 @@ func skillsRuntimeSourcePendingCall(input io.Reader, thread, cwd, path, flag str
 				if canonical && !completed {
 					return "", false
 				}
-				if completed && partial["qualified"] == false && (partial["source_attempt_recorded"] == true || (partial["partial_preparation_possible"] == true && skillsRuntimeNonce(str(partial["ownership_id"])))) && canonical {
-					var oldID skillsObjectID
-					encoded, _ := json.Marshal(partial["request_object"])
-					if skillsStrict(encoded, &oldID) && skillsSourceObjectShape(oldID) && oldID == requestID {
-						return "", false
-					}
-				}
-				result, valid := skillsRuntimeSourceToolOutput(p.Output)
-				if valid && result["operation"] == "prepare_runtime_source" {
-					encoded, _ := json.Marshal(result["runtime_source_preparation"])
-					var prior skillsRuntimeSourcePreparation
-					if skillsStrict(encoded, &prior) && skillsRuntimeSourcePreparationShape(prior) && prior.RequestID == requestID && prior.CallID == p.Call && skillsRuntimeSourceInvocation(calls[p.Call], prior.RequestPath, cwd, flag) {
-						return "", false
+				if canonical {
+					if partial["qualified"] == false {
+						if partial["source_attempt_recorded"] == true || partial["partial_preparation_possible"] == true {
+							if partial["partial_preparation_possible"] == true && !skillsRuntimeNonce(str(partial["ownership_id"])) {
+								return "", false
+							}
+							var oldID skillsObjectID
+							encoded, _ := json.Marshal(partial["request_object"])
+							if !skillsStrict(encoded, &oldID) || !skillsSourceObjectShape(oldID) || oldID == requestID {
+								return "", false
+							}
+						} else if !skillsRuntimeSourceBeforeAllocation(str(partial["failure_stage"])) {
+							return "", false
+						}
+					} else {
+						result, valid := skillsRuntimeSourceToolOutput(p.Output)
+						encoded, _ := json.Marshal(result["runtime_source_preparation"])
+						var prior skillsRuntimeSourcePreparation
+						if !valid || result["operation"] != "prepare_runtime_source" || !skillsStrict(encoded, &prior) || !skillsRuntimeSourcePreparationShape(prior) || result["request_sha256"] != prior.RequestSHA || prior.CallID != p.Call || !skillsRuntimeSourceInvocation(calls[p.Call], prior.RequestPath, cwd, flag) || prior.RequestID == requestID {
+							return "", false
+						}
 					}
 				}
 			}

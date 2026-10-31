@@ -69,7 +69,7 @@ func TestSkills3080UncertainCreatorNeverAllocatesTwice(t *testing.T) {
 }
 
 func TestSkills3080UnknownAttemptNativeBlocksAfterRecordRemoval(t *testing.T) {
-	for _, outcome := range []string{"normal_failure", "malformed_output", "missing_output"} {
+	for _, outcome := range []string{"normal_failure", "legacy_failure", "empty_success", "invalid_success", "malformed_output", "missing_output"} {
 		t.Run(outcome, func(t *testing.T) {
 			workspace := skillsFixtureRoot(t)
 			if os.Mkdir(filepath.Join(workspace, ".ci-work"), 0700) != nil {
@@ -112,8 +112,19 @@ func TestSkills3080UnknownAttemptNativeBlocksAfterRecordRemoval(t *testing.T) {
 				t.Fatal("record still present")
 			}
 			var cli bytes.Buffer
-			code := runSkillsCLI([]string{"--prepare-skills3080-runtime-source", path}, &cli, func(string, string) object { return skillsRuntimeSourceFailure("source_owned_root", "", "", true, id) })
-			if code != 1 {
+			code := runSkillsCLI([]string{"--prepare-skills3080-runtime-source", path}, &cli, func(string, string) object {
+				if outcome == "legacy_failure" {
+					return object{"qualified": false, "reason": "source", "failure_stage": "source_owned_root"}
+				}
+				if outcome == "empty_success" {
+					return object{"qualified": true, "general_access_granted": false, "original_registry_recovered": false, "data_access_granted": false}
+				}
+				if outcome == "invalid_success" {
+					return object{"qualified": true, "general_access_granted": false, "original_registry_recovered": false, "data_access_granted": false, "operation": "prepare_runtime_source", "runtime_source_preparation": object{"task": 6291}}
+				}
+				return skillsRuntimeSourceFailure("source_owned_root", "", "", true, id)
+			})
+			if code != 1 && outcome != "empty_success" && outcome != "invalid_success" {
 				t.Fatal("unknown allocation must fail without fabricating ownership")
 			}
 			wrapper, _ := json.Marshal(object{"exit_code": code, "output": cli.String()})

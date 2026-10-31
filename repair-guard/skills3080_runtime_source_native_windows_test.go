@@ -207,7 +207,7 @@ func TestSkills3080PreparationAliasesBindPhysicalRequestIdentity(t *testing.T) {
 		return id
 	}
 	original := identity(file)
-	for _, kind := range []string{"case_alias", "slash_alias", "renamed_spelling", "different_file", "start_retry", "partial_case_alias", "partial_slash_alias", "partial_renamed_spelling", "partial_different_file", "partial_start_retry"} {
+	for _, kind := range []string{"case_alias", "slash_alias", "renamed_spelling", "different_file", "different_file_wrong_hash", "different_file_missing_hash", "different_file_wrong_call", "start_retry", "partial_case_alias", "partial_slash_alias", "partial_renamed_spelling", "partial_different_file", "partial_start_retry"} {
 		t.Run(kind, func(t *testing.T) {
 			variant := strings.TrimPrefix(kind, "partial_")
 			currentID := original
@@ -217,7 +217,7 @@ func TestSkills3080PreparationAliasesBindPhysicalRequestIdentity(t *testing.T) {
 			if variant == "slash_alias" {
 				currentID = identity(filepath.ToSlash(file))
 			}
-			if variant == "different_file" {
+			if strings.HasPrefix(variant, "different_file") {
 				other := filepath.Join(filepath.Dir(file), "other.json")
 				if os.WriteFile(other, []byte("same bytes different object"), 0600) != nil {
 					t.Fatal("other file")
@@ -236,7 +236,7 @@ func TestSkills3080PreparationAliasesBindPhysicalRequestIdentity(t *testing.T) {
 			if variant == "slash_alias" {
 				path = filepath.ToSlash(path)
 			}
-			if variant == "renamed_spelling" || variant == "different_file" {
+			if variant == "renamed_spelling" || strings.HasPrefix(variant, "different_file") {
 				path = filepath.Join(cwd, "renamed.json")
 			}
 			if variant == "start_retry" {
@@ -246,7 +246,18 @@ func TestSkills3080PreparationAliasesBindPhysicalRequestIdentity(t *testing.T) {
 			// real NTFS alias opens; the parser must use those IDs, not spelling.
 			start := time.Date(2030, 1, 1, 0, 0, 0, 0, time.UTC)
 			thread := "11111111-1111-7111-8111-111111111111"
-			result := object{"qualified": true, "general_access_granted": false, "original_registry_recovered": false, "data_access_granted": false, "operation": "prepare_runtime_source", "runtime_source_preparation": p}
+			result := object{"qualified": true, "general_access_granted": false, "original_registry_recovered": false, "data_access_granted": false, "operation": "prepare_runtime_source", "runtime_source_preparation": p, "request_sha256": p.RequestSHA}
+			if variant == "different_file_wrong_hash" {
+				result["request_sha256"] = hashBytes([]byte("different request"))
+			}
+			if variant == "different_file_missing_hash" {
+				delete(result, "request_sha256")
+			}
+			if variant == "different_file_wrong_call" {
+				other := p
+				other.CallID = "call_other"
+				result["runtime_source_preparation"] = other
+			}
 			exit := 0
 			if strings.HasPrefix(kind, "partial_") {
 				result = object{"qualified": false, "reason": "source", "failure_stage": "source_prepare_write", "partial_preparation_possible": true, "ownership_id": p.OwnershipID, "request_object": original}

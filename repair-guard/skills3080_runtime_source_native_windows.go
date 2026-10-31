@@ -30,10 +30,18 @@ type skillsRuntimeSourcePreparation struct {
 	TraceID       skillsObjectID `json:"trace_object"`
 	PreparedAt    string         `json:"prepared_at"`
 	RequestPath   string         `json:"request_path"`
+	RequestID     skillsObjectID `json:"request_object"`
 	RequestSHA    string         `json:"request_sha256"`
 	CallID        string         `json:"native_call_id"`
 	Producer      skillsProducer `json:"producer"`
 	SourceMeaning string         `json:"source_meaning"`
+}
+
+// Returned only after the normal protected receiver proved the complete
+// source and exact original result. This is identity metadata, not a receipt
+// that callers can supply in place of runtime validation.
+func skillsRuntimeSourceIdentity(p skillsRuntimeSourcePreparation) object {
+	return object{"task": p.Task, "spec_sha256": p.SpecSHA, "issuer_job": p.Writer.Job, "ownership_id": p.OwnershipID, "root_object": p.RootID, "request_object": p.RequestID}
 }
 
 func skillsSourceObjectShape(id skillsObjectID) bool {
@@ -49,7 +57,7 @@ func skillsRuntimeSourcePreparationShape(p skillsRuntimeSourcePreparation) bool 
 		skillsConsumerSpecPath(p.WriterSpec) && same(p.Root, filepath.Join(p.Writer.Workspace, "codex-owned-"+p.OwnershipID)) &&
 		same(p.TraceRoot, filepath.Join(p.Root, "trace")) && same(p.PreparedSpec, filepath.Join(p.Root, "scope.json")) &&
 		filepath.IsAbs(p.RequestPath) && within(p.Writer.Workspace, p.RequestPath) && filepath.Ext(p.RequestPath) == ".json" && !strings.ContainsAny(p.RequestPath, "'\r\n") &&
-		skillsSourceObjectShape(p.RootID) && skillsSourceObjectShape(p.TraceID) && skillsDigest(p.Producer.SHA) && skillsGitObjectID(p.Producer.Revision) && err == nil && p.SourceMeaning == "first_recorded_model_visible_request_object"
+		skillsSourceObjectShape(p.RootID) && skillsSourceObjectShape(p.TraceID) && skillsSourceObjectShape(p.RequestID) && skillsDigest(p.Producer.SHA) && skillsGitObjectID(p.Producer.Revision) && err == nil && p.SourceMeaning == "first_recorded_model_visible_request_object"
 }
 
 func skillsRuntimeSourceCommand(path, cwd, flag string) skillsCreationCommand {
@@ -90,11 +98,15 @@ func skillsRuntimeSourceInvocationText(path, cwd, flag string) string {
 	return "text(await tools.exec_command(" + string(b) + "));"
 }
 
-func skillsRuntimeSourcePendingCall(input io.Reader, thread, cwd, path, flag string, start, end time.Time) (string, bool) {
+func skillsRuntimeSourcePendingCall(input io.Reader, thread, cwd, path, flag string, start, end time.Time, requestID skillsObjectID) (string, bool) {
+	if !skillsSourceObjectShape(requestID) {
+		return "", false
+	}
 	scan := bufio.NewScanner(input)
 	scan.Buffer(make([]byte, 64<<10), 16<<20)
 	session := false
 	pending, seen := map[string]bool{}, map[string]bool{}
+	calls := map[string]string{}
 	for scan.Scan() {
 		var e struct {
 			Type      string          `json:"type"`
@@ -108,14 +120,15 @@ func skillsRuntimeSourcePendingCall(input io.Reader, thread, cwd, path, flag str
 			continue
 		}
 		var p struct {
-			Type string `json:"type"`
-			ID   string `json:"id"`
-			Cwd  string `json:"cwd"`
-			Name string `json:"name"`
-			Call string `json:"call_id"`
-			Code string `json:"input"`
+			Type   string          `json:"type"`
+			ID     string          `json:"id"`
+			Cwd    string          `json:"cwd"`
+			Name   string          `json:"name"`
+			Call   string          `json:"call_id"`
+			Code   string          `json:"input"`
+			Output json.RawMessage `json:"output"`
 		}
-		if !skillsCreationHeaderKeys(e.Payload, "type", "id", "cwd", "name", "call_id", "input") || json.Unmarshal(e.Payload, &p) != nil {
+		if !skillsCreationHeaderKeys(e.Payload, "type", "id", "cwd", "name", "call_id", "input", "output") || json.Unmarshal(e.Payload, &p) != nil {
 			return "", false
 		}
 		if e.Type == "session_meta" {
@@ -132,6 +145,9 @@ func skillsRuntimeSourcePendingCall(input io.Reader, thread, cwd, path, flag str
 		if at.Before(start) || at.After(end) {
 			continue
 		}
+		if p.Type == "custom_tool_call" && p.Name == "exec" && skillsCallID.MatchString(p.Call) {
+			calls[p.Call] = p.Code
+		}
 		if p.Type == "custom_tool_call" && p.Name == "exec" && skillsRuntimeSourceInvocation(p.Code, path, cwd, flag) {
 			if !session || !skillsCallID.MatchString(p.Call) || seen[p.Call] {
 				return "", false
@@ -139,6 +155,17 @@ func skillsRuntimeSourcePendingCall(input io.Reader, thread, cwd, path, flag str
 			pending[p.Call], seen[p.Call] = true, true
 		}
 		if p.Type == "custom_tool_call_output" {
+			if flag == "--prepare-skills3080-runtime-source" {
+				result, valid := skillsRuntimeSourceToolOutput(p.Output)
+				if valid && result["operation"] == "prepare_runtime_source" {
+					encoded, _ := json.Marshal(result["runtime_source_preparation"])
+					var prior skillsRuntimeSourcePreparation
+					if skillsStrict(encoded, &prior) && skillsRuntimeSourcePreparationShape(prior) && prior.RequestID == requestID && prior.CallID == p.Call && skillsRuntimeSourceInvocation(calls[p.Call], prior.RequestPath, cwd, flag) {
+						return "", false
+					}
+				}
+			}
+			delete(calls, p.Call)
 			delete(pending, p.Call)
 		}
 	}

@@ -99,7 +99,14 @@ func skillsRuntimeSourceForJob(s *skillsFS, job object, spec, prompt []byte, sta
 	if stage != "" {
 		return skillsRecordedTransport{}, stage
 	}
-	return skillsReadTransportTraceAt(s, p.TraceRoot, p.TraceID, job, prompt, start, end)
+	trace, stage := skillsReadTransportTraceAt(s, p.TraceRoot, p.TraceID, job, prompt, start, end)
+	if stage == "" {
+		if s.sourcePreparations == nil {
+			s.sourcePreparations = map[string]skillsRuntimeSourcePreparation{}
+		}
+		s.sourcePreparations[str(job["id"])] = p
+	}
+	return trace, stage
 }
 
 // Starts only an already registered finite public task, through the normal

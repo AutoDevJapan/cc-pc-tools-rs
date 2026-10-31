@@ -146,6 +146,14 @@ func skillsRuntimeSourceOwnedRoot(w skillsWriter) (string, string, bool) {
 }
 
 func skillsRuntimeSourcePending(s *skillsFS, w skillsWriter, path, flag string) (string, bool) {
+	f, opened := s.open(path, 1<<20)
+	if !opened {
+		return "", false
+	}
+	requestID, identified := skillsHandleID(syscall.Handle(f.Fd()))
+	if !identified {
+		return "", false
+	}
 	probe := skillsFS{blocked: skillsBlocked}
 	job, ok := skillsReadJob(&probe, w.Job)
 	probe.close()
@@ -160,7 +168,7 @@ func skillsRuntimeSourcePending(s *skillsFS, w skillsWriter, path, flag string) 
 	if !ok {
 		return "", false
 	}
-	return skillsRuntimeSourcePendingCall(stream, str(job["thread_id"]), w.Workspace, path, flag, start, time.Now())
+	return skillsRuntimeSourcePendingCall(stream, str(job["thread_id"]), w.Workspace, path, flag, start, time.Now(), requestID)
 }
 
 func skillsRuntimeSourceOperation(op, path string, raw []byte, r skillsRequest, reg skillsRegistry, s *skillsFS) object {
@@ -195,6 +203,14 @@ func skillsRuntimeSourceOperation(op, path string, raw []byte, r skillsRequest, 
 	call, ok := skillsRuntimeSourcePending(s, r.Writer, path, "--prepare-skills3080-runtime-source")
 	if !ok {
 		return fail("native_launch")
+	}
+	requestFile, ok := s.open(path, 1<<20)
+	if !ok {
+		return fail("source_request")
+	}
+	requestID, ok := skillsHandleID(syscall.Handle(requestFile.Fd()))
+	if !ok {
+		return fail("source_request")
 	}
 	producer, ok := skillsProducerObservation(s)
 	if !ok {
@@ -232,7 +248,7 @@ func skillsRuntimeSourceOperation(op, path string, raw []byte, r skillsRequest, 
 	if !ok {
 		return fail("source_directory")
 	}
-	p := skillsRuntimeSourcePreparation{Domain: skillsRuntimeSourceDomain, Writer: r.Writer, WriterSpec: reg.Tasks[3080].Spec, Task: row.ID, PreviousJob: r.RuntimeSource.PreviousJob, TemplateSHA: hashBytes(template), SpecSHA: hashBytes(prepared), PreparedSpec: filepath.Join(root, "scope.json"), Nonce: nonce, OwnershipID: ownership, Root: root, RootID: rootID, TraceRoot: trace, TraceID: traceID,
+	p := skillsRuntimeSourcePreparation{Domain: skillsRuntimeSourceDomain, Writer: r.Writer, WriterSpec: reg.Tasks[3080].Spec, Task: row.ID, PreviousJob: r.RuntimeSource.PreviousJob, TemplateSHA: hashBytes(template), SpecSHA: hashBytes(prepared), PreparedSpec: filepath.Join(root, "scope.json"), Nonce: nonce, OwnershipID: ownership, Root: root, RootID: rootID, TraceRoot: trace, TraceID: traceID, RequestID: requestID,
 		PreparedAt: time.Now().UTC().Format(time.RFC3339Nano), RequestPath: path, RequestSHA: hashBytes(raw), CallID: call, Producer: producer, SourceMeaning: "first_recorded_model_visible_request_object"}
 	if !skillsRuntimeSourcePreparationShape(p) || !skillsRuntimeSourceWriteNew(s, p.PreparedSpec, prepared) {
 		return fail("source_prepare_write")

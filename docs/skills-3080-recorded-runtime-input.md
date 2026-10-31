@@ -20,6 +20,8 @@
    起動受付と入力記録の完成、本文の利用成功はそれぞれ別に扱う。
 
 同じrequest pathのprepareは親job内で一度だけ受け付け、再実行で所有rootを増やさない。
+正常prepareの結果にはrequest実体のNTFS識別番号も保持する。
+表記の大文字小文字・区切り文字や名前が変わっても、同じ実体の正常準備済みrequestを再利用してrootを増やさない。
 失敗や部分準備は元の所有記録を保持して調べる。別taskや意図した新requestは別に扱う。
 通常dispatchが未受付だったstartの再試行は維持する。
 
@@ -75,7 +77,10 @@ live入力検証、正常completed receiver、必要な同buffer検証が残る�
 記録は本文を含めず、検証結果、入力のhash・識別番号、元の所有IDと実測容量を残す。
 回収前には、workspace内の永続した検証記録そのものを開き、hashとsource世代・最後のconsumerを照合する。
 その記録に結ぶ通常のresult requestとconsume requestを正規CLIで再検証し、最終受領と現在の同bufferの成功を確認する。
-完了を示すbooleanやhashの書式だけでは回収計画へ進めない。意味上の適用例の確認は、実際の最終返信hashに結ぶ親の検証記録へ残す。
+正規receiverは、実行物・起動・入力・原結果の検証を終えたSourceの所有ID・実体IDをmetadataへ返す。
+検査用Go実行物から本番実行物限定の検査を迂回せず、この正常receiverが返すmetadataを回収対象と照合する。
+完了を示すbooleanやhashの書式だけでは回収計画へ進めない。
+意味上の確認は、実finalに実在する適用例・非適用例の引用、対象index、親の判断理由を記録し、実際の最終返信hashと照合する。
 通常safe-deleteのplanが返した削除を別の通常呼出しで実行し、成功後にfinishと元root不在を確認する。
 実行前拒否なら同じ削除を繰り返さず、通常quarantineを使い、保持・未回収・実回収を分ける。
 将来この世代を再受領する必要があれば、削除前に保持を継続する。削除したsourceをmetadataだけで資格化し直さない。

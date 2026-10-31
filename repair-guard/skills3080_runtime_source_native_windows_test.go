@@ -3,8 +3,10 @@ package main
 import (
 	"bytes"
 	"encoding/json"
+	"os"
 	"path/filepath"
 	"strings"
+	"syscall"
 	"testing"
 	"time"
 )
@@ -16,7 +18,7 @@ func skillsSourcePreparationFixture() skillsRuntimeSourcePreparation {
 		WriterSpec: currentTodoSpecsRoot + "/3080-11111111111111111111111111111111.md", Task: 6291, PreviousJob: "20300101-000000-todo-6291",
 		TemplateSHA: strings.Repeat("c", 64), SpecSHA: strings.Repeat("d", 64), PreparedSpec: filepath.Join(root, "scope.json"), Nonce: strings.Repeat("e1", 16), OwnershipID: strings.Repeat("a1", 16),
 		Root: root, RootID: skillsObjectID{"123", strings.Repeat("1", 32)}, TraceRoot: filepath.Join(root, "trace"), TraceID: skillsObjectID{"123", strings.Repeat("2", 32)},
-		PreparedAt: "2030-01-01T00:00:02Z", RequestPath: filepath.Join(skillsParentRoot, ".ci-work", "source-request.json"), RequestSHA: strings.Repeat("f", 64), CallID: "call_source_preparation",
+		PreparedAt: "2030-01-01T00:00:02Z", RequestPath: filepath.Join(skillsParentRoot, ".ci-work", "source-request.json"), RequestID: skillsObjectID{"123", strings.Repeat("3", 32)}, RequestSHA: strings.Repeat("f", 64), CallID: "call_source_preparation",
 		Producer: skillsProducer{strings.Repeat("a", 64), strings.Repeat("b", 40)}, SourceMeaning: "first_recorded_model_visible_request_object",
 	}
 }
@@ -175,9 +177,82 @@ func TestSkills3080SourcePrepareRunsOnceButDispatchCanRetry(t *testing.T) {
 				enc.Encode(object{"type": "response_item", "timestamp": start.Add(2 * time.Second).Format(time.RFC3339Nano), "payload": object{"type": "custom_tool_call_output", "call_id": "call_old"}})
 			}
 			call("call_current", p.RequestPath)
-			id, ok := skillsRuntimeSourcePendingCall(&input, thread, p.Writer.Workspace, p.RequestPath, flag, start, start.Add(time.Minute))
+			id, ok := skillsRuntimeSourcePendingCall(&input, thread, p.Writer.Workspace, p.RequestPath, flag, start, start.Add(time.Minute), p.RequestID)
 			if ok != (kind != "repeat_prepare") || (ok && id != "call_current") {
 				t.Fatal("duplicate preparation allocated another root or a normal start retry was blocked")
+			}
+		})
+	}
+}
+
+func TestSkills3080PreparationAliasesBindPhysicalRequestIdentity(t *testing.T) {
+	file := filepath.Join(skillsFixtureRoot(t), "request.json")
+	if os.WriteFile(file, []byte("synthetic request"), 0600) != nil {
+		t.Fatal("physical fixture")
+	}
+	identity := func(path string) skillsObjectID {
+		f, e := os.Open(path)
+		if e != nil {
+			t.Fatal("physical alias open")
+		}
+		defer f.Close()
+		id, ok := skillsHandleID(syscall.Handle(f.Fd()))
+		if !ok {
+			t.Fatal("physical request identity")
+		}
+		return id
+	}
+	original := identity(file)
+	for _, kind := range []string{"case_alias", "slash_alias", "renamed_spelling", "different_file", "start_retry"} {
+		t.Run(kind, func(t *testing.T) {
+			currentID := original
+			if kind == "case_alias" {
+				currentID = identity(strings.ToUpper(file))
+			}
+			if kind == "slash_alias" {
+				currentID = identity(filepath.ToSlash(file))
+			}
+			if kind == "different_file" {
+				other := filepath.Join(filepath.Dir(file), "other.json")
+				if os.WriteFile(other, []byte("same bytes different object"), 0600) != nil {
+					t.Fatal("other file")
+				}
+				currentID = identity(other)
+				if currentID == original {
+					t.Fatal("identity control")
+				}
+			}
+			p := skillsSourcePreparationFixture()
+			p.RequestID = original
+			cwd, path, flag := p.Writer.Workspace, p.RequestPath, "--prepare-skills3080-runtime-source"
+			if kind == "case_alias" {
+				path = strings.ToUpper(path)
+			}
+			if kind == "slash_alias" {
+				path = filepath.ToSlash(path)
+			}
+			if kind == "renamed_spelling" || kind == "different_file" {
+				path = filepath.Join(cwd, "renamed.json")
+			}
+			if kind == "start_retry" {
+				flag = "--start-skills3080-runtime-source"
+			}
+			// The command paths are synthetic Root paths. The IDs above are from
+			// real NTFS alias opens; the parser must use those IDs, not spelling.
+			start := time.Date(2030, 1, 1, 0, 0, 0, 0, time.UTC)
+			thread := "11111111-1111-7111-8111-111111111111"
+			result := object{"qualified": true, "general_access_granted": false, "original_registry_recovered": false, "data_access_granted": false, "operation": "prepare_runtime_source", "runtime_source_preparation": p}
+			body, _ := json.Marshal(result)
+			wrapper, _ := json.Marshal(object{"exit_code": 0, "output": string(body)})
+			var input bytes.Buffer
+			enc := json.NewEncoder(&input)
+			enc.Encode(object{"type": "session_meta", "payload": object{"id": thread, "cwd": cwd}})
+			enc.Encode(object{"type": "response_item", "timestamp": start.Add(time.Second).Format(time.RFC3339Nano), "payload": object{"type": "custom_tool_call", "name": "exec", "call_id": p.CallID, "input": skillsRuntimeSourceInvocationText(p.RequestPath, cwd, "--prepare-skills3080-runtime-source")}})
+			enc.Encode(object{"type": "response_item", "timestamp": start.Add(3 * time.Second).Format(time.RFC3339Nano), "payload": object{"type": "custom_tool_call_output", "call_id": p.CallID, "output": []object{{"type": "input_text", "text": "Script completed\nWall time 0.5 seconds\nOutput:\n"}, {"type": "input_text", "text": string(wrapper)}}}})
+			enc.Encode(object{"type": "response_item", "timestamp": start.Add(4 * time.Second).Format(time.RFC3339Nano), "payload": object{"type": "custom_tool_call", "name": "exec", "call_id": "call_current", "input": skillsRuntimeSourceInvocationText(path, cwd, flag)}})
+			_, ok := skillsRuntimeSourcePendingCall(&input, thread, cwd, path, flag, start, start.Add(time.Minute), currentID)
+			if ok != (kind == "different_file" || kind == "start_retry") {
+				t.Fatal("physical request identity was bypassed by a spelling change")
 			}
 		})
 	}

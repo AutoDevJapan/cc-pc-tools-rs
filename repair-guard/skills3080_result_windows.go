@@ -597,6 +597,9 @@ func skillsReceive(r skillsResultRequest, reg skillsRegistry, s *skillsFS, revie
 		out.Metadata["public_input_scope"] = "immutable_admitted_public_consumer"
 		out.Metadata["manifest_sha256"] = consumerScope.ManifestSHA
 	}
+	if p, ok := s.sourcePreparations[r.Job]; ok && (publicInput || consumerInput) {
+		out.Metadata["runtime_source_identity"] = skillsRuntimeSourceIdentity(p)
+	}
 	return out, ""
 }
 

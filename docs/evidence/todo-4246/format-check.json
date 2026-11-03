@@ -1,0 +1,18 @@
+{
+  "stage": "format-check",
+  "started": "2026-10-30T09:08:16.3734264+09:00",
+  "ended": "2026-10-30T09:08:16.5263201+09:00",
+  "exit_code": 0,
+  "head": "5443df48b2d1de7913ae61d0376deb59f2792423",
+  "executable": "C:/Users/makhmeto/.cargo/bin/rustfmt.exe",
+  "arguments": [
+    "--edition",
+    "2024",
+    "--check",
+    "cc-todo/src/recovery/owner_wait.rs",
+    "cc-todo/src/recovery/owner_wait_tests.rs",
+    "cc-todo/src/direction_record.rs"
+  ],
+  "target": "D:\\CC\\Work\\unattended-operations-20261013-wt\\todo-4246-3387\\codex-owned-ca355ffba5561fca35a0723685ed6ebd\\target",
+  "create_no_window": true
+}

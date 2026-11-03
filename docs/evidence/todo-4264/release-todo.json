@@ -1,0 +1,23 @@
+{
+  "name": "release-todo",
+  "head": "0c910d370b59a501dd3cf58ebf54ef65f61ffb46",
+  "job": "20261030-111925-todo-4264",
+  "start": "2026-10-30T11:29:48.0835382+09:00",
+  "end": "2026-10-30T11:30:52.7447214+09:00",
+  "exe": "D:/CC/Tools/codex-jobs/cargo_gate.exe",
+  "args": [
+    "build",
+    "--locked",
+    "--release",
+    "-p",
+    "cc-todo",
+    "--bin",
+    "todo",
+    "--message-format",
+    "json-render-diagnostics"
+  ],
+  "target": "C:/Users/makhmeto/AppData/Local/Temp/codex-owned-54d7c4749feb42fe35f5482956923eac/target",
+  "exit": 0,
+  "stdout": "release-todo.stdout.log",
+  "stderr": "release-todo.stderr.log"
+}

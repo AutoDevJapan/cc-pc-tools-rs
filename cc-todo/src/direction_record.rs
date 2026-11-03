@@ -74,7 +74,7 @@ fn row(db: &Value, id: i64) -> Result<&Value> {
     }
     Ok(selected)
 }
-const HOLD_FIELDS: &[&str] = &[
+pub(crate) const HOLD_FIELDS: &[&str] = &[
     "stopped",
     "cancel_requested",
     "owner_stopped",

@@ -1,0 +1,23 @@
+{
+  "id": 4264,
+  "eligible": true,
+  "reason": null,
+  "saved": false,
+  "check_only": true,
+  "checks": {
+    "input_valid": true,
+    "task_state_allowed": true,
+    "expected_branch_matches": true,
+    "scope_allowed": true,
+    "source_owned": true,
+    "source_cwd_matches": true,
+    "source_is_current": true,
+    "unverified_competing_workers_absent": true,
+    "actual_branch_matches": true,
+    "actual_head_matches": true,
+    "task_row_unchanged": true
+  },
+  "verified_owner_waiters": 0,
+  "launched": 0,
+  "source_files_changed": false
+}

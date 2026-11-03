@@ -1,0 +1,21 @@
+{
+  "stage": "green-deadline-cas",
+  "started": "2026-10-30T09:04:51.1501947+09:00",
+  "ended": "2026-10-30T09:04:56.0126202+09:00",
+  "exit_code": 0,
+  "head": "751d18510562724d44f05f3f0ccedb3e50502b6d",
+  "executable": "D:/CC/Tools/codex-jobs/cargo_gate.exe",
+  "arguments": [
+    "nextest",
+    "run",
+    "--locked",
+    "-p",
+    "cc-todo",
+    "--lib",
+    "-E",
+    "test(unknown_start_is_rejected_and_sub_45_second_scope_is_not_renewed) | test(guards_run_without_todo_lock_and_changed_selected_source_is_rejected)",
+    "--no-fail-fast"
+  ],
+  "target": "D:\\CC\\Work\\unattended-operations-20261013-wt\\todo-4246-3387\\codex-owned-ca355ffba5561fca35a0723685ed6ebd\\target",
+  "create_no_window": true
+}

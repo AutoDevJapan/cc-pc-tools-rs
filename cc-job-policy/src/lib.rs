@@ -5,6 +5,7 @@ pub mod cargo;
 pub mod finished_review;
 pub mod finished_work_handoff;
 pub mod launch_context;
+pub mod launch_outcome;
 pub mod owner_wait_repair;
 pub mod priority;
 pub mod quota_recovery;

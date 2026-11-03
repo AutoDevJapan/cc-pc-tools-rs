@@ -1,5 +1,6 @@
 use crate::{common::*, native, policy::*};
 use serde_json::{json, Value};
+use cc_job_policy::launch_outcome::{Kind as LaunchKind, Outcome as LaunchOutcome};
 use std::{
     collections::BTreeMap,
     fs,
@@ -84,7 +85,7 @@ pub trait Backend {
     fn jobs(&mut self) -> Result<Vec<Value>>;
     fn event_mtime(&mut self, job: &Value) -> Result<f64>;
     fn mark_lost(&mut self, job: &mut Value) -> Result<bool>;
-    fn launch(&mut self, item: &Value, prompt: &Path, selection: &Value) -> Result<String>;
+    fn launch(&mut self, item: &Value, prompt: &Path, selection: &Value) -> Result<LaunchOutcome>;
     fn cancel(&mut self, job: &mut Value) -> Result<bool>;
     fn cancel_for_recovery(&mut self, job: &mut Value) -> Result<bool> {
         self.cancel(job)
@@ -789,30 +790,71 @@ impl Backend for RealBackend {
         *j = fresh;
         Ok(true)
     }
-    fn launch(&mut self, i: &Value, p: &Path, sel: &Value) -> Result<String> {
-        let c = self.launch_command(i, p, sel);
+    fn launch(&mut self, i: &Value, p: &Path, sel: &Value) -> Result<LaunchOutcome> {
+        let mut c = self.launch_command(i, p, sel);
+        // The fixed historical review launcher is a separate retained binary.
+        // Its plain-ID response has no typed evidence and stays unknown.
+        if !i["product_review_allocation"].is_object() {
+            c.args.push("--launch-outcome".into());
+        }
         let output = self
             .runner
             .run(&c)
             .map_err(crate::preparation::tool_error)?;
         if output.code != 0 {
+            if output.code == 2
+                && output.stderr.contains("--launch-outcome")
+                && output.stderr.contains("unrecognized arguments")
+            {
+                return Err(Error("LaunchOutcomeUnsupported"));
+            }
             return Err(crate::preparation::classify_output(&output));
         }
-        let jid = output
+        if output.stdout.len() > 16384 {
+            return Err(Error("LaunchOutcomeTooLarge"));
+        }
+        let returned = output
             .stdout
-            .trim()
             .lines()
-            .last()
+            .rev()
+            .find(|line| !line.trim().is_empty())
             .unwrap_or("")
-            .to_string();
+            .trim();
+        #[derive(serde::Deserialize)]
+        struct Schema {
+            schema: u32,
+        }
+        if serde_json::from_str::<Schema>(returned).is_ok_and(|header| header.schema != 1) {
+            return Err(Error("LaunchOutcomeSchemaUnsupported"));
+        }
+        if let Ok(result) = serde_json::from_str::<LaunchOutcome>(returned) {
+            if result.schema != 1 {
+                return Err(Error("LaunchOutcomeSchemaUnsupported"));
+            }
+            if !result.valid() {
+                return Err(Error("LaunchOutcomeInvalid"));
+            }
+            return Ok(result);
+        }
+        if returned.starts_with('{') {
+            return Err(Error("LaunchOutcomeInvalid"));
+        }
+        let jid = returned.to_string();
         if !regex::Regex::new(r"^[A-Za-z0-9_-]+$")
             .unwrap()
             .is_match(&jid)
         {
             return Err(Error("ValueError"));
         }
-        Ok(jid)
+        if jid.len() > 128 {
+            return Err(Error("LaunchOutcomeInvalid"));
+        }
+        Ok(LaunchOutcome::from_job(
+            LaunchKind::Unknown,
+            &json!({"id":jid}),
+        ))
     }
+
     fn cancel(&mut self, j: &mut Value) -> Result<bool> {
         self.cancel_job(j, false)
     }

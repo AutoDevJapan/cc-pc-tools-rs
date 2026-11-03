@@ -49,6 +49,21 @@ const PATHS: &[&str] = &[
     "scheduler.pending_cancel",
     "scheduler.resume",
     "scheduler.attempt",
+    "scheduler.launch_input.launch_key",
+    "scheduler.launch_input.spec_sha256",
+    "scheduler.launch_input.dispatch_sha256",
+    "scheduler.launch_outcome_deferred.reason",
+    "scheduler.launch_outcome_deferred.job",
+    "scheduler.launch_outcome_deferred.launch_key",
+    "scheduler.launch_outcome_deferred.request_fingerprint",
+    "scheduler.launch_outcome_deferred.job_state_fingerprint",
+    "scheduler.launch_outcome_deferred.receipt_id",
+    "scheduler.launch_outcome_replay.job",
+    "scheduler.launch_outcome_replay.launch_key",
+    "scheduler.launch_outcome_replay.request_fingerprint",
+    "scheduler.launch_outcome_replay.job_state_fingerprint",
+    "scheduler.launch_outcome_replay.count",
+    "scheduler.launch_outcome_replay.first_at",
     "scheduler.worktree",
     "scheduler.branch",
     "scheduler.resource_wait.reason",
@@ -353,7 +368,7 @@ impl<'de> Visitor<'de> for Control {
         serde_json::to_value(out).map_err(serde::de::Error::custom)
     }
 }
-pub(super) fn fingerprint(item: &Value, root: &Value) -> String {
+pub(crate) fn fingerprint(item: &Value, root: &Value) -> String {
     let root = if root.is_string() || root.is_null() {
         root.clone()
     } else {
@@ -612,7 +627,7 @@ impl<'de> Visitor<'de> for Store {
         Ok((item, root))
     }
 }
-pub(super) fn read(todo: &Path, id: i64) -> Result<(Value, Value)> {
+pub(crate) fn read(todo: &Path, id: i64) -> Result<(Value, Value)> {
     let file = fs::File::open(todo)?;
     if file.metadata()?.len() > STORE_LIMIT {
         return Err(Error("MetadataTooLarge"));

@@ -48,7 +48,7 @@ impl Backend for Fake {
     fn mark_lost(&mut self, _: &mut Value) -> Result<bool> {
         panic!("unexpected lost marking")
     }
-    fn launch(&mut self, _: &Value, _: &Path, _: &Value) -> Result<String> {
+    fn launch(&mut self, _: &Value, _: &Path, _: &Value) -> Result<cc_job_policy::launch_outcome::Outcome> {
         panic!("unexpected launch")
     }
     fn cancel(&mut self, _: &mut Value) -> Result<bool> {

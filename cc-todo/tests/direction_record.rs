@@ -984,7 +984,7 @@ impl cc_scheduler::backend::Backend for FinishedProduct {
         _: &Value,
         _: &std::path::Path,
         _: &Value,
-    ) -> cc_scheduler::common::Result<String> {
+    ) -> cc_scheduler::common::Result<cc_job_policy::launch_outcome::Outcome> {
         unreachable!()
     }
     fn cancel(&mut self, _: &mut Value) -> cc_scheduler::common::Result<bool> {

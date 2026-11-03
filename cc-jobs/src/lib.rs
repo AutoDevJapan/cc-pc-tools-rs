@@ -34,7 +34,7 @@ pub use platform::*;
 pub use serde_json::{Value, json};
 
 pub const LIVE: &[&str] = &["queued", "running"];
-pub const TERMINAL: &[&str] = &["succeeded", "failed", "cancelled", "lost"];
+pub use cc_job_policy::launch_outcome::TERMINAL_JOB_STATES as TERMINAL;
 pub const TOOL_KINDS: &[&str] = &[
     "command_execution",
     "file_change",

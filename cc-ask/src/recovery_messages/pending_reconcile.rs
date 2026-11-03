@@ -464,9 +464,10 @@ fn history(
             && !normalized_body.is_empty()
             && content.replace('\r', "").contains(normalized_body)
         {
-            return Err(
-                "pending reconcile found the same bot body without its exact tag; no POST".into(),
-            );
+            return Err(format!(
+                "pending reconcile found the same bot body without its exact tag; latest candidate message {} only; additional candidates may exist; reconciliation stopped",
+                core::s(&message["id"])
+            ));
         }
     }
     let end_channel = api.channel(&q.thread_id)?;

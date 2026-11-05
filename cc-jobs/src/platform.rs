@@ -860,6 +860,7 @@ pub struct FileLock {
     file: File,
     /// Sidecar describing the holder (pid + operation only, never secrets).
     owner: Option<PathBuf>,
+    remote: Option<cc_job_policy::todo_remote::Guard>,
 }
 fn lock_owner_path(path: &Path) -> PathBuf {
     let mut name = path.as_os_str().to_owned();
@@ -874,6 +875,15 @@ fn lock_owner_note(path: &Path) -> String {
     }
 }
 impl FileLock {
+    fn from_locked(file: File, path: &Path) -> io::Result<Self> {
+        let mut lock = Self {
+            file,
+            owner: None,
+            remote: None,
+        };
+        lock.remote = cc_job_policy::todo_remote::Guard::after_lock(path)?;
+        Ok(lock)
+    }
     /// Record who holds this lock and why. Best effort: diagnostics must never
     /// change locking behaviour. Removed again when the lock is released.
     pub fn set_owner(&mut self, path: &Path, operation: &str) {
@@ -940,7 +950,7 @@ impl FileLock {
                 )
             } != 0
             {
-                return Ok(Self { file, owner: None });
+                return Self::from_locked(file, path);
             }
             let error = io::Error::last_os_error();
             if error.raw_os_error() != Some(ERROR_IO_PENDING as i32) {
@@ -962,7 +972,7 @@ impl FileLock {
                 != 0
             {
                 // Completion may win the race with cancellation.
-                return Ok(Self { file, owner: None });
+                return Self::from_locked(file, path);
             }
             let completion_error = io::Error::last_os_error();
             if let Some(error) = wait_error {
@@ -996,15 +1006,40 @@ impl FileLock {
             .read(true)
             .open(path)?;
         lock_byte(&file, false)?;
-        Ok(Self { file, owner: None })
+        Self::from_locked(file, path)
     }
 }
 impl Drop for FileLock {
     fn drop(&mut self) {
+        self.remote.take();
         if let Some(owner) = self.owner.take() {
             let _ = std::fs::remove_file(owner);
         }
         let _ = lock_byte(&self.file, true);
+    }
+}
+#[cfg(all(test, windows))]
+mod todo_remote_lock_tests {
+    use super::*;
+
+    #[test]
+    fn rejected_remote_setup_releases_local_lock_for_queue_and_try_paths() {
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join("todo.lock");
+        let marker = dir.path().join("todo.remote.json");
+        for queued in [false, true] {
+            std::fs::write(&marker, b"invalid remote settings").unwrap();
+            let result = if queued {
+                FileLock::acquire(&path)
+            } else {
+                FileLock::try_acquire(&path)
+            };
+            assert!(result.is_err());
+            std::fs::remove_file(&marker).unwrap();
+            let lock =
+                FileLock::try_acquire(&path).expect("failed setup must release the byte lock");
+            drop(lock);
+        }
     }
 }
 #[cfg(windows)]

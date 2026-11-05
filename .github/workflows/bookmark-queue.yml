@@ -20,27 +20,53 @@ jobs:
       matrix:
         include:
           - os: Windows
+            hosted: windows-2025
             labels: [self-hosted, Windows, X64, cc-pc-tools-windows]
           - os: Linux
+            hosted: ubuntu-24.04
             labels: [self-hosted, Linux, X64, cc-pc-tools-linux]
-    runs-on: ${{ matrix.labels }}
+    runs-on: ${{ toJSON(github.event.repository.private) == 'false' && matrix.hosted || matrix.labels }}
     timeout-minutes: 15
     steps:
       - name: Admit current Windows source before checkout
         env:
           CI_JOB_TOKEN: ${{ github.token }}
         working-directory: ${{ runner.temp }}
-        if: runner.os == 'Windows'
+        if: runner.environment == 'self-hosted' && runner.os == 'Windows'
         shell: pwsh
         run: |
           & $env:PC_CI_ADMISSION admit
           exit $LASTEXITCODE
+      - name: Admit current hosted source before checkout
+        if: runner.environment == 'github-hosted'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          CI_REPOSITORY: ${{ github.repository }}
+          CI_BRANCH: ${{ github.head_ref || github.ref_name }}
+          CI_SOURCE_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+        working-directory: ${{ runner.temp }}
+        shell: pwsh
+        run: |
+          $branch = [Uri]::EscapeDataString($env:CI_BRANCH)
+          $current = & gh api --method GET "repos/$env:CI_REPOSITORY/git/ref/heads/$branch" --jq '.object.sha'
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          if ($current.Trim() -ne $env:CI_SOURCE_SHA) { throw 'Source revision is no longer current' }
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:
           ref: ${{ github.event.pull_request.head.sha || github.sha }}
           persist-credentials: false
       - uses: ilammy/msvc-dev-cmd@0b201ec74fa43914dc39ae48a89fd1d8cb592756 # v1
         if: runner.os == 'Windows'
+      - name: Prepare isolated hosted Rust tools
+        if: runner.environment == 'github-hosted'
+        shell: pwsh
+        run: |
+          rustup toolchain install 1.95.0 --profile minimal --component clippy --component rustfmt
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          'RUSTUP_TOOLCHAIN=1.95.0' >> $env:GITHUB_ENV
+          'CARGO_INCREMENTAL=0' >> $env:GITHUB_ENV
+          'CARGO_PROFILE_DEV_DEBUG=0' >> $env:GITHUB_ENV
+          'CARGO_PROFILE_TEST_DEBUG=0' >> $env:GITHUB_ENV
       - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
         with:
           node-version: '22'

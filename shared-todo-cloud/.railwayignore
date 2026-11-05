@@ -1,0 +1,11 @@
+**/*.db
+**/*.dpapi
+**/*.exe
+**/*.log
+**/testdata/
+**/.env*
+export/
+data/
+target/
+.git/
+**/.godd-a/

@@ -447,7 +447,7 @@ pub fn now() -> String {
 }
 
 /// OS byte lock: released immediately on a crash; never steal a live lock by age.
-pub struct Lock(File);
+pub struct Lock(File, Option<cc_job_policy::todo_remote::Guard>);
 impl Lock {
     pub fn acquire(path: &Path, timeout: Duration) -> Result<Self> {
         let file = OpenOptions::new()
@@ -459,7 +459,8 @@ impl Lock {
         let deadline = Instant::now() + timeout;
         loop {
             if platform::lock(&file) {
-                return Ok(Self(file));
+                let remote = cc_job_policy::todo_remote::Guard::after_lock(path).map_err(err)?;
+                return Ok(Self(file, remote));
             }
             if Instant::now() >= deadline {
                 return Err("todo.lock is busy".into());
@@ -470,6 +471,7 @@ impl Lock {
 }
 impl Drop for Lock {
     fn drop(&mut self) {
+        self.1.take();
         platform::unlock(&self.0);
     }
 }

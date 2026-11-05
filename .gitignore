@@ -1,4 +1,7 @@
 **/target/
+**/.godd-a/
+/target-final/
+/target-pc-transport/
 /.evidence2674-private/
 !localai-web-rs/tests/fixtures/operations/localai-web-rs/target/
 !localai-web-rs/tests/fixtures/operations/localai-web-rs/target/release/

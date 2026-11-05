@@ -1,6 +1,7 @@
 package main
 
 import (
+	"encoding/json"
 	"fmt"
 	"go/ast"
 	"go/parser"
@@ -94,7 +95,7 @@ func TestBuildSpeedConcurrency(t *testing.T) {
 }
 
 // Evaluate only the expression subset used above: literals, property lookup,
-// ==, !=, &&, || and parentheses. Go's parser supplies syntax and precedence;
+// ==, !=, &&, ||, parentheses and JSON conversion. Go's parser supplies syntax and precedence;
 // logical operators return operands and equality coerces numbers as Actions
 // specifies. Unsupported syntax fails the test rather than passing silently.
 // https://docs.github.com/en/actions/reference/workflows-and-actions/expressions
@@ -159,6 +160,29 @@ func actionsExpr(t *testing.T, input string, ctx map[string]any) any {
 			}
 		case *ast.SelectorExpr:
 			return ctx[path(x)]
+		case *ast.CallExpr:
+			name, ok := x.Fun.(*ast.Ident)
+			if !ok || len(x.Args) != 1 {
+				t.Fatal("unsupported Actions function")
+			}
+			switch name.Name {
+			case "toJSON":
+				data, err := json.Marshal(eval(x.Args[0]))
+				if err != nil {
+					t.Fatal(err)
+				}
+				return string(data)
+			case "fromJSON":
+				data, ok := eval(x.Args[0]).(string)
+				if !ok {
+					t.Fatal("fromJSON requires a string")
+				}
+				var value any
+				if err := json.Unmarshal([]byte(data), &value); err != nil {
+					t.Fatal(err)
+				}
+				return value
+			}
 		case *ast.BasicLit:
 			if x.Kind == token.STRING {
 				s, err := strconv.Unquote(x.Value)

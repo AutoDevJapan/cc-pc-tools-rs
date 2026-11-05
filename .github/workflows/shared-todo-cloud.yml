@@ -1,0 +1,60 @@
+name: Shared ToDo cloud
+on:
+  pull_request:
+    paths: ['shared-todo-cloud/**', '.github/workflows/shared-todo-cloud.yml']
+  push:
+    branches: [main]
+    paths: ['shared-todo-cloud/**', '.github/workflows/shared-todo-cloud.yml']
+permissions:
+  contents: read
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+jobs:
+  shared-todo:
+    if: github.repository == 'AutoDevJapan/cc-pc-tools-rs' && toJSON(github.event.repository.private) == 'false' && (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository)
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: windows-2025
+          - os: ubuntu-24.04
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 10
+    defaults:
+      run:
+        working-directory: shared-todo-cloud
+    steps:
+      - name: Admit current source before checkout
+        env:
+          GH_TOKEN: ${{ github.token }}
+          CI_REPOSITORY: ${{ github.repository }}
+          CI_BRANCH: ${{ github.head_ref || github.ref_name }}
+          CI_SOURCE_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+        working-directory: ${{ runner.temp }}
+        shell: pwsh
+        run: |
+          $branch = [Uri]::EscapeDataString($env:CI_BRANCH)
+          $current = & gh api --method GET "repos/$env:CI_REPOSITORY/git/ref/heads/$branch" --jq '.object.sha'
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          if ($current.Trim() -ne $env:CI_SOURCE_SHA) { throw 'Source revision is no longer current' }
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          persist-credentials: false
+      - uses: actions/setup-go@4a3601121dd01d1626a1e23e37211e3254c1c06c
+        with:
+          go-version-file: shared-todo-cloud/go.mod
+          cache: false
+      - name: Verify the Windows race toolchain
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          $compiler = Get-Command gcc -CommandType Application -ErrorAction Stop | Select-Object -First 1 -ExpandProperty Source
+          $library = & $compiler --print-file-name libsynchronization.a
+          if ($LASTEXITCODE -ne 0 -or -not (Test-Path -LiteralPath $library)) { throw 'Windows race runtime is unavailable' }
+          "CC=$compiler" >> $env:GITHUB_ENV
+          'CGO_ENABLED=1' >> $env:GITHUB_ENV
+      - run: go test -race -timeout 120s ./...
+      - run: go vet ./...
+      - run: go build ./cmd/...

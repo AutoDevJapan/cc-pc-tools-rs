@@ -42,14 +42,20 @@ var page = template.Must(template.New("page").Funcs(template.FuncMap{"statusOpti
 
 var loginPage = template.Must(template.New("login").Parse(`<!doctype html><html lang="ja"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>共有ToDoにサインイン</title><link rel="stylesheet" href="/assets/app.css"></head><body><main class="login"><h1>共有ToDo</h1><p>社内作業の管理画面です。</p>{{if .}}<p class="error">{{.}}</p>{{end}}<form method="post" action="/login"><label>管理者パスワード<input name="token" type="password" autocomplete="current-password" required></label><button class="primary">サインイン</button></form><p><a href="/connect">登録済みのPCから接続する</a></p></main></body></html>`))
 
-func (s *Server) login(w http.ResponseWriter, r *http.Request) {
+// Native form POSTs inherit the source document's referrer policy. Apply this
+// to every rendered form, including a failed sign-in that can be submitted again.
+func formPageHeaders(w http.ResponseWriter) {
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
+	w.Header().Set("Referrer-Policy", "same-origin")
+}
+func (s *Server) login(w http.ResponseWriter, r *http.Request) {
+	formPageHeaders(w)
 	_ = loginPage.Execute(w, "")
 }
 func (s *Server) signin(w http.ResponseWriter, r *http.Request) {
 	r.Body = http.MaxBytesReader(w, r.Body, 4096)
 	if r.ParseForm() != nil || !s.validOrigin(r) || !sameSecret(r.Form.Get("token"), s.Config.AdminToken) {
-		w.Header().Set("Content-Type", "text/html; charset=utf-8")
+		formPageHeaders(w)
 		w.WriteHeader(401)
 		_ = loginPage.Execute(w, "サインイン情報を確認してください。")
 		return
@@ -170,7 +176,7 @@ func (s *Server) dashboard(w http.ResponseWriter, r *http.Request) {
 			p.Detail = d
 		}
 	}
-	w.Header().Set("Content-Type", "text/html; charset=utf-8")
+	formPageHeaders(w)
 	_ = page.Execute(w, p)
 }
 func (s *Server) saveTask(w http.ResponseWriter, r *http.Request) {

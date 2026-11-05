@@ -39,7 +39,7 @@ func (s *Server) startConnect(w http.ResponseWriter, r *http.Request) {
 	id, secret := nonce(), nonce()
 	s.connectRequests[id] = browserConnect{Secret: secret, Expires: s.now().Add(5 * time.Minute)}
 	http.SetCookie(w, &http.Cookie{Name: "shared-todo-connect", Value: id + "." + secret, Path: "/connect", HttpOnly: true, Secure: s.Config.SecureCookies, SameSite: http.SameSiteLaxMode, MaxAge: 300})
-	w.Header().Set("Content-Type", "text/html; charset=utf-8")
+	formPageHeaders(w)
 	_ = connectPage.Execute(w, id)
 }
 func (s *Server) approveConnect(w http.ResponseWriter, r *http.Request) {

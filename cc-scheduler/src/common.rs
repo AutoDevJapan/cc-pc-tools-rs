@@ -105,6 +105,12 @@ pub fn resume_without_worker(item: &mut Value) {
 }
 impl From<std::io::Error> for Error {
     fn from(e: std::io::Error) -> Self {
+        if let Some(kind) = cc_job_policy::todo_remote::io_failure_kind(&e) {
+            return Self(match kind {
+                cc_job_policy::todo_remote::FailureKind::CommitUnconfirmed => "TodoRemoteCommitUnconfirmed",
+                cc_job_policy::todo_remote::FailureKind::CacheResyncRequired => "TodoRemoteCacheResyncRequired",
+            });
+        }
         Self(match e.kind() {
             std::io::ErrorKind::NotFound => "FileNotFoundError",
             std::io::ErrorKind::PermissionDenied => "PermissionError",
@@ -210,6 +216,11 @@ pub fn push(v: &mut Value, x: Value) {
     v.as_array_mut().unwrap().push(x);
 }
 pub fn read_json(path: &Path, default: Value) -> Result<Value> {
+    if path.file_name().is_some_and(|n| n == "todo.json")
+        && cc_job_policy::todo_remote::enabled(path).map_err(|_| Error("TodoRemoteError"))?
+    {
+        return cc_job_policy::todo_store::read(path).map_err(|_| Error("TodoRemoteError"));
+    }
     match fs::read_to_string(path) {
         Ok(t) => Ok(serde_json::from_str(&t)?),
         Err(e) if e.kind() == std::io::ErrorKind::NotFound => Ok(default),
@@ -245,6 +256,14 @@ fn wide(path: &Path) -> Vec<u16> {
     path.as_os_str().encode_wide().chain(Some(0)).collect()
 }
 pub fn write_json(path: &Path, v: &Value, indent: usize) -> Result<()> {
+    if path.file_name().is_some_and(|n| n == "todo.json")
+        && cc_job_policy::todo_remote::enabled(path).map_err(|_| Error("TodoRemoteError"))?
+    {
+        return cc_job_policy::todo_store::write(path, v).map_err(|e| match e {
+            cc_job_policy::todo_store::Error::Io(e) => Error::from(e),
+            _ => Error("TodoRemoteError"),
+        });
+    }
     backup(path)?;
     let temp = path.with_file_name(format!(
         "{}.{}.tmp",
@@ -280,6 +299,7 @@ pub fn write_json(path: &Path, v: &Value, indent: usize) -> Result<()> {
 /// OS byte lock: released immediately on a crash; never steal a live lock by age.
 pub struct ByteLock {
     f: File,
+    remote: Option<cc_job_policy::todo_remote::Guard>,
 }
 impl ByteLock {
     pub fn acquire(path: &Path, timeout: Duration) -> Result<Option<Self>> {
@@ -303,7 +323,9 @@ impl ByteLock {
                 )
             } != 0
             {
-                return Ok(Some(Self { f }));
+                let remote = cc_job_policy::todo_remote::Guard::after_lock(path)
+                    .map_err(Error::from)?;
+                return Ok(Some(Self { f, remote }));
             }
             let e = std::io::Error::last_os_error();
             if e.raw_os_error() != Some(33) && e.raw_os_error() != Some(32) {
@@ -318,6 +340,7 @@ impl ByteLock {
 }
 impl Drop for ByteLock {
     fn drop(&mut self) {
+        self.remote.take();
         let mut ov: OVERLAPPED = unsafe { std::mem::zeroed() };
         unsafe {
             UnlockFileEx(self.f.as_raw_handle(), 0, 1, 0, &mut ov);
@@ -325,6 +348,43 @@ impl Drop for ByteLock {
     }
 }
 pub const NO_WINDOW: u32 = 0x08000000;
+
+#[cfg(test)]
+mod remote_tests {
+    use super::*;
+
+    #[test]
+    #[ignore = "requires the Go bridge HTTP fixture"]
+    fn bridge_transaction_fixture() {
+        let home = PathBuf::from(std::env::var_os("TODO_REMOTE_FIXTURE_HOME").unwrap());
+        let path = home.join("todo.json");
+        assert!(cc_job_policy::todo_remote::enabled(&path).unwrap());
+        let _lock = ByteLock::acquire(&home.join("todo.lock"), Duration::from_secs(3))
+            .unwrap().unwrap();
+        let mut db = read_json(&path, json!({})).unwrap();
+        assert_eq!(db["items"][0]["lastJob"], "UPPER");
+        db["items"][0]["scheduler_fixture"] = json!({"generation":4,"receipt":null});
+        write_json(&path, &db, 1).unwrap();
+        assert_eq!(read_json(&path, json!({})).unwrap(), db);
+    }
+
+    #[test]
+    #[ignore = "requires the Go bridge HTTP fixture"]
+    fn bridge_unconfirmed_fixture() {
+        let home = PathBuf::from(std::env::var_os("TODO_REMOTE_FIXTURE_HOME").unwrap());
+        let path = home.join("todo.json");
+        let _lock = ByteLock::acquire(&home.join("todo.lock"), Duration::from_secs(3))
+            .unwrap()
+            .unwrap();
+        let mut db = read_json(&path, json!({})).unwrap();
+        db["items"][0]["scheduler_unknown"] = json!(true);
+        assert_eq!(
+            write_json(&path, &db, 1).unwrap_err(),
+            Error("TodoRemoteCommitUnconfirmed")
+        );
+    }
+}
+
 #[derive(Clone, Debug)]
 pub struct Invocation {
     pub program: String,

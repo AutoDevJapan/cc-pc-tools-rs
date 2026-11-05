@@ -347,6 +347,9 @@ pub fn atomic_json(p: &std::path::Path, v: &Value, indent: usize) -> Result<()> 
     }
     if p.file_name().is_some_and(|name| name == "todo.json") {
         cc_job_policy::todo_store::check_size(buf.len()).map_err(|e| e.to_string())?;
+        if cc_job_policy::todo_remote::commit(p, &buf).map_err(|e| e.to_string())? {
+            return Ok(());
+        }
     }
     let temp = p.with_file_name(format!(
         "{}.{}.tmp",
@@ -403,9 +406,45 @@ pub fn replace_file(source: &std::path::Path, target: &std::path::Path) -> Resul
     }
     Err("OSError".into())
 }
+#[cfg(test)]
+mod remote_tests {
+    use super::*;
+
+    #[test]
+    #[ignore = "requires the Go bridge HTTP fixture"]
+    fn bridge_transaction_fixture() {
+        let home = std::path::PathBuf::from(std::env::var_os("TODO_REMOTE_FIXTURE_HOME").unwrap());
+        let path = home.join("todo.json");
+        assert!(cc_job_policy::todo_remote::enabled(&path).unwrap());
+        let _lock = ByteLock::acquire(&home.join("todo.lock"), std::time::Duration::from_secs(3)).unwrap();
+        let mut db = read_json(&path).unwrap();
+        assert_eq!(db["items"][0]["lastJob"], "UPPER");
+        db["items"][0]["ask_fixture"] = json!({"generation":5,"receipt":null});
+        atomic_json(&path, &db, 2).unwrap();
+        assert_eq!(read_json(&path).unwrap(), db);
+    }
+
+    #[test]
+    #[ignore = "requires the Go bridge HTTP fixture"]
+    fn bridge_unconfirmed_fixture() {
+        let home = std::path::PathBuf::from(std::env::var_os("TODO_REMOTE_FIXTURE_HOME").unwrap());
+        let path = home.join("todo.json");
+        let _lock = ByteLock::acquire(&home.join("todo.lock"), std::time::Duration::from_secs(3))
+            .unwrap();
+        let mut db = read_json(&path).unwrap();
+        db["items"][0]["ask_unknown"] = json!(true);
+        let error = atomic_json(&path, &db, 2).unwrap_err();
+        assert_eq!(
+            cc_job_policy::todo_remote::failure_kind(&error),
+            Some(cc_job_policy::todo_remote::FailureKind::CommitUnconfirmed)
+        );
+    }
+}
+
 /// Windows releases this byte lock on process death. Never steal a live lock by age.
 pub struct ByteLock {
     file: std::fs::File,
+    remote: Option<cc_job_policy::todo_remote::Guard>,
 }
 impl ByteLock {
     pub fn acquire(path: &std::path::Path, timeout: std::time::Duration) -> Result<Self> {
@@ -443,7 +482,9 @@ impl ByteLock {
             #[cfg(not(windows))]
             let acquired = file.try_lock().is_ok();
             if acquired {
-                return Ok(Self { file });
+                let remote = cc_job_policy::todo_remote::Guard::after_lock(path)
+                    .map_err(|e| e.to_string())?;
+                return Ok(Self { file, remote });
             }
             if start.elapsed() >= timeout {
                 return Err(format!(
@@ -457,6 +498,7 @@ impl ByteLock {
 }
 impl Drop for ByteLock {
     fn drop(&mut self) {
+        self.remote.take();
         #[cfg(windows)]
         {
             use std::os::windows::io::AsRawHandle;

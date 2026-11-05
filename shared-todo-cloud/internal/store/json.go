@@ -95,40 +95,104 @@ func canonical(raw []byte) (json.RawMessage, error) {
 	if len(raw) == 0 || !utf8.Valid(raw) || !json.Valid(raw) {
 		return nil, invalid("invalid_json")
 	}
-	switch raw[0] {
-	case '{':
-		m, err := object(raw)
-		if err != nil {
-			return nil, err
-		}
-		for k, v := range m {
-			m[k], err = canonical(v)
-			if err != nil {
-				return nil, err
+	decoder := json.NewDecoder(bytes.NewReader(raw))
+	decoder.UseNumber()
+	value, err := canonicalNode(decoder)
+	if err != nil {
+		return nil, err
+	}
+	if _, err = decoder.Token(); err != io.EOF {
+		return nil, invalid("trailing_json")
+	}
+	var out bytes.Buffer
+	writeCanonicalNode(&out, value)
+	return out.Bytes(), nil
+
+}
+
+// Parse each byte once, then serialize into one buffer. Re-decoding and copying
+// every nested RawMessage makes a small deeply nested document quadratic.
+func canonicalNode(d *json.Decoder) (any, error) {
+	token, err := d.Token()
+	if err != nil {
+		return nil, invalid("invalid_json")
+	}
+	switch token {
+	case json.Delim('{'):
+		values := map[string]any{}
+		for d.More() {
+			keyToken, e := d.Token()
+			if e != nil {
+				return nil, invalid("invalid_json")
 			}
-		}
-		return encodeObject(m), nil
-	case '[':
-		var a []json.RawMessage
-		if err := json.Unmarshal(raw, &a); err != nil {
-			return nil, invalid("invalid_array")
-		}
-		for i := range a {
-			v, err := canonical(a[i])
-			if err != nil {
-				return nil, err
+			key, ok := keyToken.(string)
+			if !ok {
+				return nil, invalid("invalid_object_key")
 			}
-			a[i] = v
+			if _, exists := values[key]; exists {
+				return nil, invalid("duplicate_json_key")
+			}
+			value, e := canonicalNode(d)
+			if e != nil {
+				return nil, e
+			}
+			values[key] = value
 		}
-		return encodeArray(a), nil
-	case '"':
-		var s string
-		if err := json.Unmarshal(raw, &s); err != nil {
-			return nil, invalid("invalid_string")
+		if close, e := d.Token(); e != nil || close != json.Delim('}') {
+			return nil, invalid("invalid_json")
 		}
-		return json.Marshal(s)
+		return values, nil
+	case json.Delim('['):
+		values := []any{}
+		for d.More() {
+			value, e := canonicalNode(d)
+			if e != nil {
+				return nil, e
+			}
+			values = append(values, value)
+		}
+		if close, e := d.Token(); e != nil || close != json.Delim(']') {
+			return nil, invalid("invalid_json")
+		}
+		return values, nil
 	default:
-		return bytes.Clone(raw), nil
+		return token, nil
+	}
+}
+
+func writeCanonicalNode(out *bytes.Buffer, value any) {
+	switch v := value.(type) {
+	case map[string]any:
+		keys := make([]string, 0, len(v))
+		for key := range v {
+			keys = append(keys, key)
+		}
+		sort.Strings(keys)
+		out.WriteByte('{')
+		for i, key := range keys {
+			if i > 0 {
+				out.WriteByte(',')
+			}
+			encoded, _ := json.Marshal(key)
+			out.Write(encoded)
+			out.WriteByte(':')
+			writeCanonicalNode(out, v[key])
+		}
+		out.WriteByte('}')
+	case []any:
+		out.WriteByte('[')
+		for i, item := range v {
+			if i > 0 {
+				out.WriteByte(',')
+			}
+			writeCanonicalNode(out, item)
+		}
+		out.WriteByte(']')
+	case json.Number:
+		out.WriteString(v.String())
+	default:
+		encoded, _ := json.Marshal(v)
+		out.Write(encoded)
 	}
 }
 

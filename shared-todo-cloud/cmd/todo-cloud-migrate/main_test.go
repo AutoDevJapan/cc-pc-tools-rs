@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"errors"
 	"io"
 	"net/http"
 	"net/http/httptest"
@@ -26,6 +27,35 @@ func cliFixture(t *testing.T) (home, out string) {
 		t.Fatal("CLI fixture failed")
 	}
 	return home, out
+}
+
+type unavailableOutput struct{}
+
+func (unavailableOutput) Write([]byte) (int, error) { return 0, errors.New("stdout unavailable") }
+
+func TestQuietBackupHasTheSameResultWithoutAnOutputHandle(t *testing.T) {
+	home, _ := cliFixture(t)
+	root := filepath.Join(t.TempDir(), "backups")
+	args := []string{"backup", "--home", home, "--out", root, "--quiet"}
+	if code := run(context.Background(), args, unavailableOutput{}); code != 0 {
+		t.Fatal("successful headless backup was classified as failed")
+	}
+	files, err := filepath.Glob(filepath.Join(root, "snapshot-*", "snapshot.json"))
+	if err != nil || len(files) != 1 {
+		t.Fatal("quiet backup did not publish its verified snapshot")
+	}
+	var output bytes.Buffer
+	if code := run(context.Background(), args, &output); code != 0 || output.Len() != 0 {
+		t.Fatal("quiet backup unexpectedly wrote to standard output")
+	}
+	failedRoot := filepath.Join(t.TempDir(), "failed-backups")
+	failed := []string{"backup", "--home", home, "--out", failedRoot, "--config", filepath.Join(home, "missing.dpapi"), "--quiet"}
+	if code := run(context.Background(), failed, unavailableOutput{}); code != 1 {
+		t.Fatal("quiet mode masked a real backup failure")
+	}
+	if _, err := os.Stat(failedRoot); !os.IsNotExist(err) {
+		t.Fatal("failed quiet backup created a generation")
+	}
 }
 
 func execute(t *testing.T, args ...string) (result, int, string) {

@@ -26,8 +26,12 @@ type result struct {
 
 func run(ctx context.Context, args []string, out io.Writer) int {
 	r := result{Error: "invalid_arguments"}
+	var quiet bool
 	finish := func() int {
-		if json.NewEncoder(out).Encode(r) != nil || !r.OK {
+		if !quiet && json.NewEncoder(out).Encode(r) != nil {
+			return 1
+		}
+		if !r.OK {
 			return 1
 		}
 		return 0
@@ -50,6 +54,7 @@ func run(ctx context.Context, args []string, out io.Writer) int {
 		flags.StringVar(&home, "home", "", "")
 		flags.StringVar(&dir, "out", "", "")
 		if r.Operation == "backup" {
+			flags.BoolVar(&quiet, "quiet", false, "return the backup result through the exit code without standard output")
 			flags.IntVar(&keep, "keep", migrate.DefaultBackupKeep, "")
 			flags.StringVar(&cfgPath, "config", "", "")
 		}

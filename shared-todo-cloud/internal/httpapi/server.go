@@ -71,6 +71,12 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("X-Robots-Tag", "noindex, nofollow")
 	w.Header().Set("X-Content-Type-Options", "nosniff")
 	w.Header().Set("Referrer-Policy", "no-referrer")
+	// Native form POSTs inherit the source document's referrer policy. Keeping
+	// no-referrer on form pages makes browsers send Origin: null. Same-origin
+	// retains the origin for our forms without disclosing it to other sites.
+	if r.Method == http.MethodGet && (r.URL.Path == "/" || r.URL.Path == "/login" || r.URL.Path == "/connect") {
+		w.Header().Set("Referrer-Policy", "same-origin")
+	}
 	w.Header().Set("X-Frame-Options", "DENY")
 	w.Header().Set("Content-Security-Policy", "default-src 'self'; style-src 'self'; script-src 'none'; frame-ancestors 'none'; base-uri 'none'; form-action 'self'")
 	w.Header().Set("Cache-Control", "no-store")

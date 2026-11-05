@@ -81,3 +81,36 @@ func TestConnectionExpiresAndRestartDoesNotTrustOldNumber(t *testing.T) {
 		t.Fatal("expired connection signed in")
 	}
 }
+
+func TestFormPagesPreserveBrowserOriginWithoutRelaxingOriginChecks(t *testing.T) {
+	s := testServer(t)
+	owner := authenticated(t, s)
+	for _, path := range []string{"/", "/?q=201", "/login", "/connect"} {
+		w := perform(s, http.MethodGet, path, "", "", owner, "")
+		if got := w.Header().Get("Referrer-Policy"); got != "same-origin" {
+			t.Fatalf("form source %s has referrer policy %q", path, got)
+		}
+	}
+	for _, path := range []string{"/api/v1/state", "/tasks/201/history"} {
+		w := perform(s, http.MethodGet, path, "", testSync, owner, "")
+		if got := w.Header().Get("Referrer-Policy"); got != "no-referrer" {
+			t.Fatalf("data response %s has referrer policy %q", path, got)
+		}
+	}
+	for _, origin := range []string{"", "null", "https://elsewhere.example"} {
+		for _, path := range []string{"/connect/finish", "/login", "/tasks", "/logout"} {
+			body := "csrf=" + s.csrf(owner.Value) + "&token=" + testAdmin
+			w := perform(s, http.MethodPost, path, body, "", owner, origin)
+			want := http.StatusForbidden
+			if path == "/login" {
+				want = http.StatusUnauthorized
+			}
+			if w.Code != want || w.Header().Get("Referrer-Policy") != "no-referrer" {
+				t.Fatalf("POST %s with origin %q: status=%d policy=%q", path, origin, w.Code, w.Header().Get("Referrer-Policy"))
+			}
+		}
+	}
+	if w := perform(s, http.MethodPost, "/login", "token="+testAdmin, "", nil, testOrigin); w.Code != http.StatusSeeOther {
+		t.Fatal("same-origin password form could not sign in")
+	}
+}

@@ -81,3 +81,49 @@ func TestConnectionExpiresAndRestartDoesNotTrustOldNumber(t *testing.T) {
 		t.Fatal("expired connection signed in")
 	}
 }
+
+func TestFormPagesPreserveBrowserOriginWithoutRelaxingOriginChecks(t *testing.T) {
+	s := testServer(t)
+	owner := authenticated(t, s)
+	for _, path := range []string{"/", "/?q=201", "/login", "/connect"} {
+		cookie := owner
+		if path == "/connect" {
+			cookie = nil
+		}
+		w := perform(s, http.MethodGet, path, "", "", cookie, "")
+		if w.Code != http.StatusOK || !strings.Contains(w.Body.String(), "<form") {
+			t.Fatalf("form source %s was not rendered", path)
+		}
+		if got := w.Header().Get("Referrer-Policy"); got != "same-origin" {
+			t.Fatalf("form source %s has referrer policy %q", path, got)
+		}
+	}
+	for _, path := range []string{"/api/v1/state", "/tasks/201/history"} {
+		w := perform(s, http.MethodGet, path, "", testSync, owner, "")
+		if got := w.Header().Get("Referrer-Policy"); got != "no-referrer" {
+			t.Fatalf("data response %s has referrer policy %q", path, got)
+		}
+	}
+	for _, origin := range []string{"", "null", "https://elsewhere.example"} {
+		for _, path := range []string{"/connect/finish", "/login", "/tasks", "/logout"} {
+			body := "csrf=" + s.csrf(owner.Value) + "&token=" + testAdmin
+			w := perform(s, http.MethodPost, path, body, "", owner, origin)
+			want := http.StatusForbidden
+			policy := "no-referrer"
+			if path == "/login" {
+				want = http.StatusUnauthorized
+				policy = "same-origin"
+			}
+			if w.Code != want || w.Header().Get("Referrer-Policy") != policy {
+				t.Fatalf("POST %s with origin %q: status=%d policy=%q", path, origin, w.Code, w.Header().Get("Referrer-Policy"))
+			}
+		}
+	}
+	failed := perform(s, http.MethodPost, "/login", "token=wrong", "", nil, testOrigin)
+	if failed.Code != http.StatusUnauthorized || !strings.Contains(failed.Body.String(), `<form method="post" action="/login">`) || failed.Header().Get("Referrer-Policy") != "same-origin" {
+		t.Fatal("failed password form cannot be submitted again from the same origin")
+	}
+	if w := perform(s, http.MethodPost, "/login", "token="+testAdmin, "", nil, testOrigin); w.Code != http.StatusSeeOther {
+		t.Fatal("same-origin password form could not sign in")
+	}
+}

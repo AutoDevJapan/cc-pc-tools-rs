@@ -61,6 +61,9 @@ func (s *Store) Finalize(importID string, req FinalizeRequest) (ImportResult, er
 	if !validDigest(req.SHA256) || req.ChunkCount <= 0 || req.Bytes <= 0 {
 		return ImportResult{}, invalid("invalid_finalize")
 	}
+	if req.Bytes > MaxDocumentBytes {
+		return ImportResult{}, ErrDocumentTooLarge
+	}
 	hash, err := fingerprint("finalize", req)
 	if err != nil {
 		return ImportResult{}, err

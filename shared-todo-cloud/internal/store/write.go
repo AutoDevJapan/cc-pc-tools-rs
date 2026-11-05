@@ -140,8 +140,8 @@ func mutate(tx *bolt.Tx, requestID, hash string, base uint64, baseStateID string
 	if current == math.MaxUint64 {
 		return CommitResult{}, &Error{Code: CodeConflict, Reason: "revision_exhausted", Revision: current}
 	}
-	items := make([]rawItem, 0, len(upserts)+len(creates))
-	seen := make(map[int64]bool, len(upserts)+len(deletes))
+	items := make([]rawItem, 0, len(upserts))
+	seen := make(map[int64]bool)
 	next := nextID(tx)
 	for _, raw := range upserts {
 		fields, id, err := itemFields(raw)
@@ -225,6 +225,9 @@ func mutate(tx *bolt.Tx, requestID, hash string, base uint64, baseStateID string
 		if err := tx.Bucket(bSummaries).Delete(k); err != nil {
 			return CommitResult{}, err
 		}
+		if err := removeItemSize(tx, k); err != nil {
+			return CommitResult{}, err
+		}
 	}
 	if err := persistRevision(tx, change, next); err != nil {
 		return CommitResult{}, err
@@ -238,6 +241,9 @@ func mutate(tx *bolt.Tx, requestID, hash string, base uint64, baseStateID string
 
 func putItem(tx *bolt.Tx, item rawItem) error {
 	k := key(uint64(item.id))
+	if err := updateItemSize(tx, k, item.raw); err != nil {
+		return err
+	}
 	if tx.Bucket(bItems).Get(k) == nil {
 		order := tx.Bucket(bOrder)
 		seq, err := order.NextSequence()
@@ -262,6 +268,9 @@ func putItem(tx *bolt.Tx, item rawItem) error {
 }
 
 func persistRevision(tx *bolt.Tx, change Change, next int64) error {
+	if err := checkDocumentSize(tx, change.Meta); err != nil {
+		return err
+	}
 	control := tx.Bucket(bControl)
 	change.ParentStateID = stateID(tx)
 	var err error

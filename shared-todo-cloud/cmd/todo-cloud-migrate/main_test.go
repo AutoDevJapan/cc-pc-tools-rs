@@ -106,6 +106,57 @@ func TestCLIAlwaysReturnsSanitizedJSONForInvalidInput(t *testing.T) {
 	}
 }
 
+func TestConfiguredBackupSyncsCloudBeforeExportAndFailsWithoutSync(t *testing.T) {
+	home, _ := cliFixture(t)
+	ledger, err := store.Open(filepath.Join(t.TempDir(), "cloud.db"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer ledger.Close()
+	_, err = ledger.Update(store.UpdateRequest{RequestID: "seed-backup", Upserts: []json.RawMessage{json.RawMessage(`{"id":1,"title":"cloud-current","note":"fresh value"}`)}})
+	if err != nil {
+		t.Fatal(err)
+	}
+	token := strings.Repeat("s", 40)
+	api, err := httpapi.New(ledger, httpapi.Config{AdminToken: strings.Repeat("a", 40), SyncToken: token})
+	if err != nil {
+		t.Fatal(err)
+	}
+	server := httptest.NewServer(api)
+	defer server.Close()
+	configPath, bridge := filepath.Join(home, "config.dpapi"), filepath.Join(home, "bridge.exe")
+	cfg := transport.Config{BaseURL: server.URL, SyncToken: token, ClientID: "backup-fixture", CachePath: filepath.Join(home, "todo.json")}
+	if transport.SaveConfig(configPath, cfg) != nil || os.WriteFile(bridge, []byte("not executed"), 0600) != nil {
+		t.Fatal("backup config fixture")
+	}
+	marker, _ := json.Marshal(map[string]string{"bridge": bridge, "credentials": configPath})
+	if os.WriteFile(filepath.Join(home, "todo.remote.json"), marker, 0600) != nil {
+		t.Fatal("backup marker fixture")
+	}
+	out := filepath.Join(t.TempDir(), "backups")
+	got, code, _ := execute(t, "backup", "--home", home, "--out", out, "--config", configPath)
+	if code != 0 || got.Backup == nil || got.Backup.Items != 1 {
+		t.Fatal("configured backup failed")
+	}
+	matches, _ := filepath.Glob(filepath.Join(out, "snapshot-*", "snapshot.json"))
+	if len(matches) != 1 {
+		t.Fatal("missing backup snapshot")
+	}
+	b, err := os.ReadFile(matches[0])
+	if err != nil || !bytes.Contains(b, []byte("cloud-current")) || bytes.Contains(b, []byte("fiction-title-never-output")) {
+		t.Fatal("backup did not capture synchronized cloud state")
+	}
+	server.Close()
+	second := filepath.Join(t.TempDir(), "offline-backup")
+	got, code, _ = execute(t, "backup", "--home", home, "--out", second, "--config", configPath)
+	if code == 0 || got.Error != "pre_backup_sync_failed" {
+		t.Fatal("offline backup reported a current snapshot")
+	}
+	if _, err = os.Stat(second); !os.IsNotExist(err) {
+		t.Fatal("failed sync created a backup generation")
+	}
+}
+
 func TestCLIRemoteFailureContainsNoResponseBodyOrCredentials(t *testing.T) {
 	home, dir := cliFixture(t)
 	if _, code, _ := execute(t, "export", "--home", home, "--out", dir); code != 0 {

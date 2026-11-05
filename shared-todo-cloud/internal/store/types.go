@@ -15,6 +15,10 @@ const (
 	DefaultLimit  = 100
 	MaxLimit      = 1000
 	SnapshotKind  = "snapshot"
+	// PC readers accept at most 64 MiB, including their one-space pretty form.
+	MaxDocumentBytes = 64 << 20
+	// Leave room for envelopes below the PC client's 72 MiB HTTP ceiling.
+	MaxChangePageBytes = 64 << 20
 )
 
 type Code string
@@ -49,12 +53,13 @@ func (e *Error) Is(target error) bool {
 }
 
 var (
-	ErrConflict     = &Error{Code: CodeConflict}
-	ErrLocked       = &Error{Code: CodeLocked}
-	ErrNotFound     = &Error{Code: CodeNotFound}
-	ErrInvalid      = &Error{Code: CodeInvalid}
-	ErrClosed       = &Error{Code: CodeClosed}
-	ErrLeaseExpired = &Error{Code: CodeLocked, Reason: "lease_expired"}
+	ErrConflict         = &Error{Code: CodeConflict}
+	ErrLocked           = &Error{Code: CodeLocked}
+	ErrNotFound         = &Error{Code: CodeNotFound}
+	ErrInvalid          = &Error{Code: CodeInvalid}
+	ErrClosed           = &Error{Code: CodeClosed}
+	ErrLeaseExpired     = &Error{Code: CodeLocked, Reason: "lease_expired"}
+	ErrDocumentTooLarge = &Error{Code: CodeInvalid, Reason: "document_too_large"}
 )
 
 type Snapshot struct {

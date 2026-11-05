@@ -7,6 +7,9 @@ import (
 	"io"
 	"os"
 	"os/signal"
+	"path/filepath"
+	"runtime"
+	"strings"
 
 	"autodevjapan/shared-todo-cloud/internal/migrate"
 	"autodevjapan/shared-todo-cloud/internal/transport"
@@ -48,6 +51,7 @@ func run(ctx context.Context, args []string, out io.Writer) int {
 		flags.StringVar(&dir, "out", "", "")
 		if r.Operation == "backup" {
 			flags.IntVar(&keep, "keep", migrate.DefaultBackupKeep, "")
+			flags.StringVar(&cfgPath, "config", "", "")
 		}
 	} else {
 		flags.StringVar(&cfgPath, "config", "", "")
@@ -64,6 +68,26 @@ func run(ctx context.Context, args []string, out io.Writer) int {
 	}
 	var err error
 	if r.Operation == "backup" {
+		if cfgPath != "" {
+			cfg, loadErr := transport.LoadConfig(cfgPath)
+			if loadErr != nil {
+				r.Error = "configuration_unavailable"
+				return finish()
+			}
+			expected, pathErr := filepath.Abs(filepath.Join(home, "todo.json"))
+			matches := filepath.Clean(cfg.CachePath) == expected
+			if runtime.GOOS == "windows" {
+				matches = strings.EqualFold(filepath.Clean(cfg.CachePath), expected)
+			}
+			if pathErr != nil || !matches {
+				r.Error = "configuration_home_mismatch"
+				return finish()
+			}
+			if transport.Sync(ctx, cfg) != nil {
+				r.Error = "pre_backup_sync_failed"
+				return finish()
+			}
+		}
 		var backup migrate.BackupSummary
 		backup, err = migrate.Backup(ctx, home, dir, keep)
 		r.Backup = &backup

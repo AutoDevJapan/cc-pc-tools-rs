@@ -89,7 +89,10 @@ func Open(path string, options ...Option) (*Store, error) {
 					return fmt.Errorf("store: missing bucket %s", name)
 				}
 			}
-			return ensureStateID(tx)
+			if err := ensureStateID(tx); err != nil {
+				return err
+			}
+			return ensureDocumentSizeIndex(tx)
 		}
 		for _, name := range allBuckets {
 			if _, err := tx.CreateBucket(name); err != nil {
@@ -105,7 +108,10 @@ func Open(path string, options ...Option) (*Store, error) {
 				return err
 			}
 		}
-		return ensureStateID(tx)
+		if err := ensureStateID(tx); err != nil {
+			return err
+		}
+		return ensureDocumentSizeIndex(tx)
 	})
 	if err != nil {
 		_ = db.Close()
@@ -290,8 +296,11 @@ func (s *Store) Changes(after uint64, limit int) (ChangePage, error) {
 			return nil
 		}
 		c := tx.Bucket(bChanges).Cursor()
+		// Encoded records are already compact JSON. A conservative envelope
+		// reserve covers state IDs, cursors, separators and the final newline.
+		remaining := MaxChangePageBytes - 1024
 		for k, v := c.Seek(key(after + 1)); k != nil; k, v = c.Next() {
-			if len(result.Changes) == limit {
+			if len(result.Changes) == limit || len(result.Changes) > 0 && len(v) >= remaining {
 				result.HasMore = true
 				break
 			}
@@ -301,6 +310,13 @@ func (s *Store) Changes(after uint64, limit int) (ChangePage, error) {
 			}
 			result.Changes = append(result.Changes, change)
 			result.NextAfter = change.Revision
+			// A single oversized record still advances the cursor. Older peers
+			// can fetch it; bounded PC readers fall back to the pinned snapshot.
+			if len(v) >= remaining {
+				remaining = 0
+			} else {
+				remaining -= len(v) + 1
+			}
 		}
 		return nil
 	})

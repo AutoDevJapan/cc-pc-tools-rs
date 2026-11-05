@@ -21,6 +21,8 @@ import (
 const MaxDocumentBytes = 64 << 20
 const maxWireBytes = MaxDocumentBytes + (8 << 20)
 
+var errResponseTooLarge = errors.New("todo_remote_response_too_large")
+
 type Lease struct {
 	ID        string    `json:"id"`
 	Revision  uint64    `json:"revision"`
@@ -128,12 +130,15 @@ func (c *Client) callLimit(ctx context.Context, method, path string, body []byte
 	if out == nil {
 		return nil
 	}
+	if resp.ContentLength > limit {
+		return errResponseTooLarge
+	}
 	b, err := io.ReadAll(io.LimitReader(resp.Body, limit+1))
 	if err != nil {
 		return errors.New("todo_remote_response_read_failed")
 	}
 	if int64(len(b)) > limit {
-		return errors.New("todo_remote_response_too_large")
+		return errResponseTooLarge
 	}
 	if json.Unmarshal(b, out) != nil {
 		return errors.New("todo_remote_invalid_response")

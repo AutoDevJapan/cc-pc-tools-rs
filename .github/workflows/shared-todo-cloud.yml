@@ -50,7 +50,7 @@ jobs:
         if: runner.os == 'Windows'
         shell: pwsh
         run: |
-          $compiler = (Get-Command gcc -CommandType Application -ErrorAction Stop).Source
+          $compiler = Get-Command gcc -CommandType Application -ErrorAction Stop | Select-Object -First 1 -ExpandProperty Source
           $library = & $compiler --print-file-name libsynchronization.a
           if ($LASTEXITCODE -ne 0 -or -not (Test-Path -LiteralPath $library)) { throw 'Windows race runtime is unavailable' }
           "CC=$compiler" >> $env:GITHUB_ENV

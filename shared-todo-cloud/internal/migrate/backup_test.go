@@ -7,6 +7,7 @@ import (
 	"io/fs"
 	"os"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"testing"
 	"time"
@@ -209,9 +210,34 @@ func TestBackupRefusesSourceOverlapOtherSourceAndBusyLock(t *testing.T) {
 	if len(ownedBackups(t, f.home, out)) != 1 {
 		t.Fatal("refused backup changed retained snapshots")
 	}
-	for _, name := range []string{"..", filepath.Join("..", "outside"), f.home, "C:drive-relative"} {
+	for _, name := range []string{"", ".", "..", filepath.Join("..", "outside"), f.home} {
 		if _, err := backupMember(out, name); err == nil {
 			t.Fatal("absolute containment accepted a non-member")
+		}
+	}
+}
+
+func TestBackupMemberUsesNativePathSyntax(t *testing.T) {
+	root := t.TempDir()
+	// A Windows drive-relative path is a normal leaf filename on Unix. The
+	// containment helper uses native syntax; backup names themselves are generated.
+	const driveRelative = "C:drive-relative"
+	if runtime.GOOS == "windows" {
+		for _, name := range []string{driveRelative, `C:\absolute`, `\\server\share\file`, `\rooted`} {
+			if _, err := backupMember(root, name); err == nil {
+				t.Fatal("native Windows non-member was accepted")
+			}
+		}
+		return
+	}
+	for _, name := range []string{driveRelative, "..cache"} {
+		member, err := backupMember(root, name)
+		if err != nil || member != filepath.Join(root, name) || !filepath.IsAbs(member) {
+			t.Fatal("native leaf filename did not remain inside the absolute root")
+		}
+		rel, err := filepath.Rel(root, member)
+		if err != nil || rel != name {
+			t.Fatal("native leaf escaped its root")
 		}
 	}
 }

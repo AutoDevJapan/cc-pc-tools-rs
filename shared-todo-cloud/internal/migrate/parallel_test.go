@@ -62,11 +62,14 @@ func TestWorkersCancelOnFirstErrorAndJoinBeforeReturning(t *testing.T) {
 	groups := testGroups(make([]int64, 2*assetWorkerLimit)...)
 	entered := make(chan int, len(groups))
 	cancelledWorkers := make(chan struct{}, assetWorkerLimit)
-	start, cleanup := make(chan struct{}), make(chan struct{})
-	var startOnce, cleanupOnce sync.Once
-	releaseStart := func() { startOnce.Do(func() { close(start) }) }
+	poolContext := make(chan context.Context, 1)
+	fail, peers, cleanup := make(chan struct{}), make(chan struct{}), make(chan struct{})
+	var failOnce, peersOnce, cleanupOnce sync.Once
+	releaseFailure := func() { failOnce.Do(func() { close(fail) }) }
+	releasePeers := func() { peersOnce.Do(func() { close(peers) }) }
 	releaseCleanup := func() { cleanupOnce.Do(func() { close(cleanup) }) }
-	defer releaseStart()
+	defer releaseFailure()
+	defer releasePeers()
 	defer releaseCleanup()
 	var active atomic.Int32
 	done := make(chan assetRunResult, 1)
@@ -76,14 +79,18 @@ func TestWorkersCancelOnFirstErrorAndJoinBeforeReturning(t *testing.T) {
 			active.Add(1)
 			defer active.Add(-1)
 			entered <- index
-			select {
-			case <-start:
-			case <-ctx.Done():
-				return failure("cancelled")
-			}
 			if index == 0 {
-				return failure("fixture_first_error")
+				poolContext <- ctx
+				// Only the failing job waits for the test's trigger. Peers always
+				// acknowledge cancellation, including when it precedes their wait.
+				select {
+				case <-fail:
+					return failure("fixture_first_error")
+				case <-ctx.Done():
+					return failure("cancelled")
+				}
 			}
+			<-peers
 			<-ctx.Done()
 			cancelledWorkers <- struct{}{}
 			// Deliberately delay worker cleanup after it observes cancellation.
@@ -99,7 +106,13 @@ func TestWorkersCancelOnFirstErrorAndJoinBeforeReturning(t *testing.T) {
 	if len(seen) != assetWorkerLimit || !seen[0] {
 		t.Fatal("workers did not start distinct jobs")
 	}
-	releaseStart()
+	// Every peer has entered its callback before failure can cancel the pool.
+	// No peer races a shared start signal against the cancellation signal.
+	releaseFailure()
+	// Exercise cancellation before peers begin waiting for it, using an actual
+	// cancellation event rather than relying on OS goroutine scheduling.
+	receive(t, ctx, receive(t, ctx, poolContext).Done())
+	releasePeers()
 	for range assetWorkerLimit - 1 {
 		receive(t, ctx, cancelledWorkers)
 	}

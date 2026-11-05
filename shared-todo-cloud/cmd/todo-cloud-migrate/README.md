@@ -5,6 +5,7 @@
 ```powershell
 todo-cloud-migrate export --home <既存ホーム> --out <新しい出力ディレクトリ>
 todo-cloud-migrate backup --home <todoHome> --out <専用backupRoot> --keep 3
+todo-cloud-migrate backup --home <todoHome> --out <専用backupRoot> --keep 3 --config <DPAPI設定ファイル>
 todo-cloud-migrate verify --local --export <バックアップ世代のディレクトリ>
 todo-cloud-migrate upload --config <DPAPI設定ファイル> --export <出力ディレクトリ> --assets-only
 todo-cloud-migrate upload --config <DPAPI設定ファイル> --export <出力ディレクトリ>
@@ -32,6 +33,8 @@ backupは既存Exportを使い、`todo.json`の原bytes・manifest・履歴/spec
 専用rootの所有印は`.todo-cloud-backup-root.json`、各世代の所有・元ホーム・日時・世代・manifest SHAの記録は`backup.json`です。整理するのは両方が対応し、manifest・root・全assetのSHAが有効で、予定したメンバーだけが入っている世代に限ります。元ホーム・別所有のexport・所有印がないexport・破損・未知ファイル・symlink/junction/hardlinkは整理対象にしません。削除前に絶対パスの包含、保持したディレクトリ実体、ファイル実体とSHAを再確認し、列挙したファイルだけを削除します。ディレクトリの再帰削除は使いません。
 
 JSONの`backup`には作成/再利用、保持/削除した世代数とbytes、保護して残した件数を返します。bytesは検証済みファイル長の合計で、ディスク空き容量の増加量ではありません。失敗は終了コード1と固定エラーコードで返し、途中失敗なら`inventoryComplete:false`とします。`created:true`の後に保持整理が失敗した場合、新しく検証できた世代は残ります。古い世代の部分削除や未知メンバーを、整理完了として数えません。部分物や所有未確認のものは自動で再帰削除せず、同じ担当の記録で状態を照合してください。
+
+切替後の日次バックアップには`--config`を付け、同じホームの保護済み設定で直前に同期します。同期が失敗した場合は新しい世代を作らず、古い正常世代を保持します。切替前の原本保存には設定なしのbackupを使用できます。
 
 Windowsの既存定期実行から、同じ本人アカウント・Hiddenで上記backupを1日1回起動します。保存先・実行ファイルは固定した絶対パスとし、重複時は新しいインスタンスを起動しない設定にします。CLIにも専用rootの1バイト排他があり、競合時は`backup_lock_busy`を返します。終了コードとJSONを既存の運用記録で確認し、新しい監視ループや常駐処理は作りません。定期タスクの登録・初回実データ実行・翌日の実起動確認は運用担当の作業です。追加のクラウド保管・有料volume・APIキーを使いません。
 

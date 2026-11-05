@@ -87,8 +87,11 @@ func beginSession(ctx context.Context, c *Client, clientID, cache string, renewE
 		} else {
 			err = errLineage
 		}
-		if err != nil && (errors.Is(err, errLineage) || cacheErr != nil) {
-			raw, d, err = s.snapshot(ctx, lease)
+		if err != nil && (errors.Is(err, errLineage) || errors.Is(err, errResponseTooLarge) || cacheErr != nil) {
+			// Repeated history may exceed the bounded wire reader even when the
+			// current document fits. Keep this lease and its exact pinned state;
+			// only a fully validated snapshot is allowed to replace the cache.
+			raw, d, err = s.snapshotPreservingCache(ctx, lease, cacheErr == nil)
 		}
 	}
 	s.mu.Lock()
@@ -121,6 +124,16 @@ func beginSession(ctx context.Context, c *Client, clientID, cache string, renewE
 func sameState(rev uint64, id string, otherRev uint64, otherID string) bool {
 	return rev == otherRev && id != "" && id == otherID
 }
+
+func (s *Session) snapshotPreservingCache(ctx context.Context, pinned Lease, preserve bool) ([]byte, *document, error) {
+	if preserve {
+		if err := preserveForeign(s.cache); err != nil {
+			return nil, nil, err
+		}
+	}
+	return s.snapshot(ctx, pinned)
+}
+
 func (s *Session) snapshot(ctx context.Context, pinned Lease) ([]byte, *document, error) {
 	var snap Snapshot
 	if err := s.client.call(ctx, "GET", "/api/v1/state", nil, &snap); err != nil {
@@ -293,6 +306,16 @@ func (s *Session) Commit(ctx context.Context, b []byte) (Receipt, error) {
 func (s *Session) refreshConfirmed(ctx context.Context, receipt Receipt, pending *pendingCommit) (Receipt, error) {
 	var accepted Changes
 	err := s.client.call(ctx, "GET", fmt.Sprintf("/api/v1/changes?after=%d&limit=1", s.lease.Revision), nil, &accepted)
+	if errors.Is(err, errResponseTooLarge) && receipt.StateID != "" {
+		pinned := s.lease
+		pinned.Revision, pinned.StateID = receipt.Revision, receipt.StateID
+		raw, canonical, snapshotErr := s.snapshotPreservingCache(ctx, pinned, true)
+		if snapshotErr != nil {
+			s.failure = errors.New("todo_remote_committed_cache_refresh_required")
+			return receipt, s.failure
+		}
+		return s.installConfirmed(receipt, receipt.StateID, canonical, raw, pending)
+	}
 	if err != nil || accepted.Revision != receipt.Revision || accepted.NextAfter != receipt.Revision || accepted.HasMore || len(accepted.Changes) != 1 || accepted.Changes[0].Revision != receipt.Revision {
 		s.failure = errors.New("todo_remote_committed_cache_refresh_required")
 		return receipt, s.failure
@@ -313,18 +336,22 @@ func (s *Session) refreshConfirmed(ctx context.Context, receipt Receipt, pending
 		s.failure = errors.New("todo_remote_committed_cache_refresh_required")
 		return receipt, s.failure
 	}
+	return s.installConfirmed(receipt, change.StateID, canonical, cacheBytes, pending)
+}
+
+func (s *Session) installConfirmed(receipt Receipt, id string, canonical *document, cacheBytes []byte, pending *pendingCommit) (Receipt, error) {
 	s.lease.Revision = receipt.Revision
-	s.lease.StateID = change.StateID
+	s.lease.StateID = id
 	s.base = canonical
 	s.canonical = cacheBytes
-	if err = saveCache(s.cache, cacheBytes, receipt.Revision, change.StateID); err != nil {
+	if err := saveCache(s.cache, cacheBytes, receipt.Revision, id); err != nil {
 		s.failure = errors.New("todo_remote_committed_cache_refresh_required")
 		return receipt, s.failure
 	}
-	if err = clearResolved(s.cache, pending, "commit_confirmed_cache_current"); err != nil {
+	if err := clearResolved(s.cache, pending, "commit_confirmed_cache_current"); err != nil {
 		return receipt, err
 	}
-	if err = removeIfPresent(invalidPath(s.cache)); err != nil {
+	if err := removeIfPresent(invalidPath(s.cache)); err != nil {
 		return receipt, err
 	}
 	return receipt, nil

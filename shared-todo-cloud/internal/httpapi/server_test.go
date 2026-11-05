@@ -366,3 +366,16 @@ func TestUnrelatedUpdateDoesNotDiscardFormAndConflictsPreserveDraft(t *testing.T
 		t.Fatal("same form receipt was not recognized")
 	}
 }
+
+func TestOutOfRangePaginationIsRejectedBeforeIntegerNarrowing(t *testing.T) {
+	s := testServer(t)
+	cookie := authenticated(t, s)
+	for _, path := range []string{"/api/v1/items?limit=9223372036854775807", "/api/v1/changes?limit=9223372036854775807", "/api/v1/items?limit=184467440737095516160"} {
+		if w := perform(s, "GET", path, "", testSync, nil, ""); w.Code != 400 {
+			t.Fatalf("oversized limit accepted on %s", path)
+		}
+	}
+	if w := perform(s, "GET", "/tasks/1/history?after=184467440737095516160", "", "", cookie, ""); w.Code != 400 {
+		t.Fatal("oversized history offset accepted")
+	}
+}

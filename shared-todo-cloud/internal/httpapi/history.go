@@ -61,8 +61,11 @@ func (s *Server) history(w http.ResponseWriter, r *http.Request) {
 	}
 	_ = json.Unmarshal(m["note_history"], &inline)
 	history = append(history, inline...)
-	after := num(r, "after", 0)
-	if after < 0 || after > int64(len(history)) {
+	after := 0
+	if value := r.URL.Query().Get("after"); value != "" {
+		after, e = strconv.Atoi(value)
+	}
+	if e != nil || after < 0 || after > len(history) {
 		http.Error(w, "履歴の表示位置を確認してください", 400)
 		return
 	}
@@ -70,13 +73,13 @@ func (s *Server) history(w http.ResponseWriter, r *http.Request) {
 		ID             int64
 		Total, Missing int
 		Rows           []historyView
-		Next           int64
+		Next           int
 	}{ID: id, Total: len(history), Missing: missing}
-	for i := len(history) - 1 - int(after); i >= 0 && len(view.Rows) < 100; i-- {
+	for i := len(history) - 1 - after; i >= 0 && len(view.Rows) < 100; i-- {
 		view.Rows = append(view.Rows, historyEntry(history[i]))
 	}
-	if after+int64(len(view.Rows)) < int64(len(history)) {
-		view.Next = after + int64(len(view.Rows))
+	if after+len(view.Rows) < len(history) {
+		view.Next = after + len(view.Rows)
 	}
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
 	_ = historyPage.Execute(w, view)

@@ -283,15 +283,19 @@ func (s *Server) saveTask(w http.ResponseWriter, r *http.Request) {
 	v, e := s.Store.Update(req)
 	if e != nil {
 		var code int = 500
+		message := "保存できませんでした。入力した内容を残しています。最新のタスクを開いて確認してください。"
 		var se *store.Error
 		if errors.As(e, &se) {
 			if se.Code == store.CodeConflict {
 				code = 409
 			} else if se.Code == store.CodeLocked {
 				code = 423
+			} else if se.Code == store.CodeInvalid && se.Reason == "document_too_large" {
+				code = 413
+				message = "PC連携の保存サイズ上限に達するため、履歴を保存した整理が必要です。入力した内容は残しています。"
 			}
 		}
-		s.draftError(w, r, "保存できませんでした。入力した内容を残しています。最新のタスクを開いて確認してください。", code)
+		s.draftError(w, r, message, code)
 		return
 	}
 	if len(v.CreatedIDs) > 0 {

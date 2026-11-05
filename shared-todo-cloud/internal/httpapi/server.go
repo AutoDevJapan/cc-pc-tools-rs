@@ -187,6 +187,9 @@ func result(w http.ResponseWriter, v any, e error) {
 			status = http.StatusNotFound
 		case store.CodeInvalid:
 			status = http.StatusBadRequest
+			if se.Reason == "document_too_large" {
+				status = http.StatusRequestEntityTooLarge
+			}
 		}
 		jsonReply(w, status, se)
 		return
@@ -214,7 +217,12 @@ func (s *Server) routes() {
 		result(w, map[string]any{"revision": revision, "stateId": stateID}, err)
 	})
 	s.mux.HandleFunc("GET /api/v1/items", func(w http.ResponseWriter, r *http.Request) {
-		v, e := s.Store.ListSummaries(store.ListOptions{Status: r.URL.Query().Get("status"), Project: r.URL.Query().Get("project"), Search: r.URL.Query().Get("q"), After: num(r, "after", 0), Limit: int(num(r, "limit", 100))})
+		limit, e := queryLimit(r)
+		if e != nil {
+			jsonError(w, 400, "invalid_limit")
+			return
+		}
+		v, e := s.Store.ListSummaries(store.ListOptions{Status: r.URL.Query().Get("status"), Project: r.URL.Query().Get("project"), Search: r.URL.Query().Get("q"), After: num(r, "after", 0), Limit: limit})
 		result(w, v, e)
 	})
 	s.mux.HandleFunc("GET /api/v1/items/{id}", func(w http.ResponseWriter, r *http.Request) {
@@ -232,7 +240,12 @@ func (s *Server) routes() {
 			jsonError(w, 400, "invalid_revision")
 			return
 		}
-		v, e := s.Store.Changes(uint64(after), int(num(r, "limit", 100)))
+		limit, e := queryLimit(r)
+		if e != nil {
+			jsonError(w, 400, "invalid_limit")
+			return
+		}
+		v, e := s.Store.Changes(uint64(after), limit)
 		result(w, v, e)
 	}))
 	s.mux.HandleFunc("GET /api/v1/operations/{id}", func(w http.ResponseWriter, r *http.Request) {
@@ -358,6 +371,18 @@ func (s *Server) routes() {
 	})
 	s.uiRoutes()
 	s.connectRoutes()
+}
+
+func queryLimit(r *http.Request) (int, error) {
+	value := r.URL.Query().Get("limit")
+	if value == "" {
+		return 100, nil
+	}
+	n, err := strconv.Atoi(value)
+	if err != nil || n < 0 || n > store.MaxLimit {
+		return 0, errors.New("invalid limit")
+	}
+	return n, nil
 }
 
 type gzipWriter struct {

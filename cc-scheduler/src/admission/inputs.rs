@@ -23,6 +23,7 @@ pub(crate) const LAUNCH: &[(&str, &str, Kind)] = &[
     ("effort_origin", "effort_origin", Scalar),
     ("sandbox", "sandbox", Scalar),
     ("scope_source", "scope_source", Scalar),
+    ("capability_provenance_version", "capability_provenance_version", Scalar),
     ("explicit_capability_constraints", "explicit_capability_constraints", Tree),
     ("mcp_profile", "mcp_profile", Scalar),
     ("network", "network", Scalar),

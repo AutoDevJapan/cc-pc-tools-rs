@@ -1,6 +1,8 @@
 //! Capability choices for delegation, independent of the routed role.
 use super::{invalid, Result};
-use cc_ask::job_policy::capability_scope::{constrained, fixed as contract, legacy};
+use cc_ask::job_policy::capability_scope::{
+    constrained, fixed as contract, legacy, origin, retained,
+};
 use serde_json::{json, Value};
 
 const FIELDS: [&str; 2] = ["sandbox", "mcp_profile"];
@@ -30,6 +32,11 @@ pub(super) fn validate(value: &Value) -> Result<()> {
 
 /// The runtime needs provenance, not the private contents of contract receipts.
 pub(super) fn project(job: &mut Value, raw: &Value) {
+    job["capability_provenance_version"] = if raw["capability_provenance_version"] == 1 {
+        json!(1)
+    } else {
+        Value::Null
+    };
     job["mcp_profile"] = if valid("mcp_profile", &raw["mcp_profile"]) {
         raw["mcp_profile"].clone()
     } else {
@@ -55,7 +62,17 @@ pub(super) fn project(job: &mut Value, raw: &Value) {
 }
 
 fn current(value: &Value, field: &str) -> bool {
-    !value[field].is_null() && (value["scope_source"].is_null() || constrained(value, field))
+    !value[field].is_null()
+        && (constrained(value, field)
+            || (value["capability_provenance_version"] != 1 && value["scope_source"].is_null()))
+}
+
+pub(super) fn read_only(requested: &mut Value) {
+    let mcp = current(requested, "mcp_profile");
+    requested["sandbox"] = json!("read-only");
+    requested["scope_source"] = json!("owner_marker");
+    requested["capability_provenance_version"] = json!(1);
+    requested["explicit_capability_constraints"] = json!({"sandbox":true,"mcp_profile":mcp});
 }
 
 pub(super) fn apply(
@@ -71,8 +88,8 @@ pub(super) fn apply(
     }
     let inherited = source.filter(|_| inherit_scope);
     let fixed = inherited.filter(|source| contract(source));
-    let fixed_scope = fixed.map(cc_ask::job_policy::capability_scope::retained);
-    let mut origin = "launcher";
+    let fixed_scope = fixed.map(retained);
+    let mut scope_source = "launcher";
     for field in FIELDS {
         let changed = !requested["_todo_defaults"].is_object()
             || item.is_some_and(|item| item[field] != requested["_todo_defaults"][field]);
@@ -94,7 +111,9 @@ pub(super) fn apply(
             {
                 return Err(invalid());
             }
-            (!source[field].is_null()).then_some(source).or(explicit)
+            // Matching explicit inputs establish only that field's durable
+            // constraint; the other fixed field remains temporary.
+            explicit.or_else(|| (!source[field].is_null()).then_some(source))
         } else {
             explicit.or_else(|| {
                 inherited.filter(|source| {
@@ -104,20 +123,27 @@ pub(super) fn apply(
             })
         };
         options[field] = chosen.map_or_else(|| json!("inherit"), |value| value[field].clone());
-        if let Some(value) = chosen {
+        let durable = chosen.is_some_and(|value| {
+            if inherited.is_some_and(|source| std::ptr::eq(source, value)) {
+                fixed_scope.as_ref().map_or_else(
+                    || constrained(value, field) || legacy(value, field),
+                    |scope| scope["explicit_capability_constraints"][field] == true,
+                )
+            } else {
+                true
+            }
+        });
+        options["explicit_capability_constraints"][field] = json!(durable);
+        if let Some(value) = chosen.filter(|_| durable) {
             let source = if fixed.is_some_and(|source| std::ptr::eq(source, value)) {
                 fixed_scope.as_ref().unwrap()["scope_source"]
                     .as_str()
                     .unwrap()
             } else {
-                match value["scope_source"].as_str() {
-                    Some("owner_request") => "owner_request",
-                    Some("owner_marker") => "owner_marker",
-                    _ => "caller_constraint",
-                }
+                origin(value)
             };
-            if origin == "launcher" || matches!(source, "owner_request" | "owner_marker") {
-                origin = source;
+            if scope_source == "launcher" || matches!(source, "owner_request" | "owner_marker") {
+                scope_source = source;
             }
         }
         options["legacy_capability_constraints"][field] = json!(chosen.is_some_and(|value| {
@@ -126,6 +152,7 @@ pub(super) fn apply(
                     .is_some_and(|source| std::ptr::eq(source, value) && legacy(value, field))
         }));
     }
-    options["scope_source"] = json!(origin);
+    options["scope_source"] = json!(scope_source);
+    options["capability_provenance_version"] = json!(1);
     Ok(())
 }

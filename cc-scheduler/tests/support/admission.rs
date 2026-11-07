@@ -395,6 +395,7 @@ fn all_normal_input_fields_invalidate_metadata_while_bodies_are_presence_only() 
         ("product_review_allocation", json!({"generation":2})),
         ("sandbox", json!("read-only")),
         ("scope_source", json!("owner_request")),
+        ("capability_provenance_version", json!(1)),
         ("explicit_capability_constraints", json!({"sandbox":true})),
         ("mcp_profile", json!("none")),
         ("network", json!(true)),

@@ -176,6 +176,7 @@ pub fn parse(args: &[String]) -> Result<Args> {
                     "model-recovery-from",
                     "sandbox",
                     "scope-source",
+                    "capability-constraints",
                     "cwd",
                     "add-dir",
                     "network",
@@ -914,10 +915,21 @@ impl Context {
         // Scheduler/router options carry their own owner/contract provenance.
         let standalone = a.value("launch-key").is_none()
             && a.value("scope-source").is_none();
-        job["explicit_capability_constraints"] = json!({
-            "sandbox": standalone && a.sandbox_explicit,
-            "mcp_profile": standalone && a.mcp_profile_explicit,
-        });
+        if let Some(mask) = a.value("capability-constraints") {
+            if !["none","sandbox","mcp_profile","both"].contains(&mask) {
+                return Err(Error::new("invalid --capability-constraints"));
+            }
+            job["capability_provenance_version"] = json!(1);
+            job["explicit_capability_constraints"] = json!({
+                "sandbox":matches!(mask,"sandbox"|"both"),
+                "mcp_profile":matches!(mask,"mcp_profile"|"both")});
+        } else {
+            job["explicit_capability_constraints"] = json!({
+                "sandbox": standalone && a.sandbox_explicit,
+                "mcp_profile": standalone && a.mcp_profile_explicit,
+            });
+            if standalone { job["capability_provenance_version"] = json!(1); }
+        }
         job["sandbox"] = json!(policy.sandbox);
         job["approval_policy"] = json!(policy.approval);
         job["approvals_reviewer"] = json!(policy.reviewer);

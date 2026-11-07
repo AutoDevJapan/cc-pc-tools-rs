@@ -12,6 +12,7 @@ usage: codex_jobs.py run [-h] --name NAME [--model MODEL] [--effort EFFORT]
                          [--model-recovery-from MODEL]
                          [--effort-origin {policy,owner_request}]
                          [--model-origin {policy,owner_request}]
+                         [--capability-constraints {none,sandbox,mcp_profile,both}]
 
 options:
   -h, --help            show this help message and exit
@@ -52,3 +53,5 @@ options:
                         policy hint or recorded individual owner effort override
   --model-origin {policy,owner_request}
                         policy hint or recorded individual owner model override
+  --capability-constraints {none,sandbox,mcp_profile,both}
+                        retain caller constraints per field across relaunches

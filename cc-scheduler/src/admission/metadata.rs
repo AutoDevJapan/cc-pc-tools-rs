@@ -193,6 +193,7 @@ fn control_key(key: &str) -> bool {
         "effort_origin",
         "sandbox",
         "scope_source",
+        "capability_provenance_version",
         "explicit_capability_constraints",
         "mcp_profile",
         "network",

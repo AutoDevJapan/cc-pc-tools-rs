@@ -1694,8 +1694,16 @@ if !truth(&row["scheduler"]["key"]){let attempt=add_count(&row["scheduler"]["att
         if item["subwork"].is_object() {
             selection["task_type"] = item["subwork"]["kind"].clone();
         }
+        // Scope-only inheritance never restores a fresh request's old model,
+        // conversation or result body. Its own execution gates remain below.
+        let scope_source = if item["scheduler"]["console_request"]["options"]["scope_contract_source_job"].is_null() {
+            None
+        } else {
+            let ps = self.backend.snapshot()?;
+            crate::launch_scope::source(&item, &jobs, &ps, self.backend.clock())?
+        };
         // Restore owner scope and exact finite contracts, not old router hints.
-        crate::launch_scope::apply(&item, source, &mut selection);
+        crate::launch_scope::apply(&item, scope_source.or(source), &mut selection);
         let capability_changed = source.is_some_and(|source| {
             ["sandbox", "mcp_profile"].iter().any(|field| {
                 source[*field].as_str().is_some_and(|value| !value.is_empty())
@@ -2190,6 +2198,16 @@ if !truth(&row["scheduler"]["key"]){let attempt=add_count(&row["scheduler"]["att
                 {
                     observation.decide(&i["id"], AdmissionStage::Recheck, AdmissionReason::InputsChanged);
                     return Ok(());
+                }
+                if !current["scheduler"]["console_request"]["options"]["scope_contract_source_job"].is_null() {
+                    let source = crate::launch_scope::source(&current, &jobs, &ps, self.backend.clock())?;
+                    let selected = &prepared["scheduler"]["selection"];
+                    let mut rechecked = selected.clone();
+                    crate::launch_scope::apply(&current, source, &mut rechecked);
+                    if ["sandbox", "mcp_profile", "scope_source", "explicit_capability_constraints", "scope_contract"]
+                        .iter().any(|field| rechecked[*field] != selected[*field]) {
+                        return Err(Error("InputRejected"));
+                    }
                 }
                 // Recheck the finite receipt after preparation and sampling.
                 // A changed spec/root or a newly restored deny wins admission.

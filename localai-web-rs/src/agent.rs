@@ -2094,10 +2094,9 @@ impl Console {
                 "--launch-key",
                 &launch_key,
             ]);
-            args.extend(cc_ask::job_policy::capability_scope::launch_args(&json!({
-                "sandbox":policy.sandbox,"mcp_profile":t.options["mcp_profile"],
-                "scope_source":t.options["scope_source"]
-            })));
+            let mut scope = t.options.clone();
+            scope["sandbox"] = json!(policy.sandbox);
+            args.extend(cc_ask::job_policy::capability_scope::launch_args(&scope));
             if let Some(id) = t.todo_id {
                 args.extend(["--todo-id".into(), id.to_string()]);
             }
@@ -3484,8 +3483,7 @@ fn trigger_launch_options(
         json!({})
     };
     if trigger_read_only(t) {
-        requested["sandbox"] = json!("read-only");
-        requested["scope_source"] = json!("owner_marker");
+        capability_scope::read_only(&mut requested);
     }
     if automatic_recovery(&t.key) {
         requested.as_object_mut().unwrap().remove("_todo_defaults");
@@ -3563,10 +3561,16 @@ fn trigger_launch_options(
         "model_recovery_from",
         "review_source_jobs",
         "review_excluded_models",
+        "scope_contract_source_job",
     ] {
         options.as_object_mut().unwrap().remove(field);
     }
     if let (true, Some(source)) = (inherited, source) {
+        if cc_ask::job_policy::capability_scope::fixed(source) {
+            // Resolve and revalidate at the scheduler; fresh launches use this
+            // source for capability scope without restoring its conversation.
+            options["scope_contract_source_job"] = source["id"].clone();
+        }
         if let Some(repair) = repair.filter(|repair| {
             cc_ask::job_policy::same_model(strv(repair, "model"), strv(&options, "model"))
         }) {
@@ -3631,12 +3635,17 @@ fn compatible_recovery_scope(a: &Trigger, b: &Trigger, jobs: &[Value], db: &Valu
                 .trim_end_matches('/')
                 .to_lowercase(),
             options["isolate_worktree"].as_bool(),
-            options["mcp_profile"].as_str().unwrap_or("inherit").to_owned(),
+            options["mcp_profile"]
+                .as_str()
+                .unwrap_or("inherit")
+                .to_owned(),
+            options["explicit_capability_constraints"].clone(),
         ))
     };
     matches!((scope(a), scope(b)), (Some(a), Some(b)) if
         a.0 == b.0 && a.1 == b.1 && a.2 == b.2
-        && a.4 == b.4 && !matches!((a.3, b.3), (Some(a), Some(b)) if a != b))
+        && a.4 == b.4 && a.5 == b.5
+        && !matches!((a.3, b.3), (Some(a), Some(b)) if a != b))
 }
 fn trigger_todo_id(trigger: &Trigger, jobs: &[Value], db: &Value) -> Option<u64> {
     // A saved decision association is provisional until explicit links agree.
@@ -4731,6 +4740,7 @@ pub async fn resident(console: Arc<Console>) {
 mod tests {
     include!("delegation_model_tests.rs");
     include!("agent_capability_tests.rs");
+    include!("agent_capability_lifetime_tests.rs");
     include!("todo1842_tests.rs");
     include!("resume_recovery_tests.rs");
     include!("model_resume_tests.rs");

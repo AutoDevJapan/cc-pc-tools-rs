@@ -8923,6 +8923,22 @@ mod run_validation {
         assert_eq!(j["explicit_capability_constraints"], json!({"sandbox":false,"mcp_profile":false}));
     }
     #[test]
+    fn cli_retains_field_lifetime_mask_and_rejects_unknown_masks_before_registration() {
+        for (mask,sandbox,mcp) in [("none",false,false),("sandbox",true,false),("mcp_profile",false,true),("both",true,true)] {
+            let t=Test::new();
+            t.run(&["--sandbox","read-only","--mcp-profile","minimal","--scope-source","owner_marker",
+                "--capability-constraints",mask,"--launch-key","11111111111111111111111111111111"],b"continue bound work").unwrap();
+            let jobs=t.ctx.list_jobs(&HashSet::new());
+            assert_eq!(jobs[0]["capability_provenance_version"],1);
+            assert_eq!(jobs[0]["explicit_capability_constraints"],json!({"sandbox":sandbox,"mcp_profile":mcp}));
+            assert_eq!(jobs[0]["sandbox"],"read-only");
+            assert_eq!(jobs[0]["mcp_profile"],"minimal");
+        }
+        let t=Test::new();
+        assert!(t.run(&["--capability-constraints","unknown"],b"no registration").is_err());
+        assert!(t.ctx.list_jobs(&HashSet::new()).is_empty());
+    }
+    #[test]
     fn real_backend_arguments_and_cli_records_keep_partial_constraints_for_three_generations() {
         for (sandbox_constraint, mcp_constraint) in [(true, false), (false, true), (true, true)] {
             let t = Test::new();
@@ -8944,7 +8960,8 @@ mod run_validation {
                 assert_eq!(registered["scope_source"], "caller_constraint");
                 assert_eq!(registered["sandbox"], if sandbox_constraint { "read-only" } else { "inherit" });
                 assert_eq!(registered["mcp_profile"], if mcp_constraint { "minimal" } else { "inherit" });
-                assert_eq!(registered["explicit_capability_constraints"], json!({"sandbox":false,"mcp_profile":false}));
+                assert_eq!(registered["capability_provenance_version"],1);
+                assert_eq!(registered["explicit_capability_constraints"], json!({"sandbox":sandbox_constraint,"mcp_profile":mcp_constraint}));
                 registered["status"] = json!("succeeded");
                 t.ctx.save(&registered).unwrap();
                 source = registered;
@@ -12823,11 +12840,13 @@ mod additional_compatibility {
                     "                         [--model-recovery-from MODEL]\n",
                     "                         [--effort-origin {policy,owner_request}]\n",
                     "                         [--model-origin {policy,owner_request}]\n",
+                    "                         [--capability-constraints {none,sandbox,mcp_profile,both}]\n",
                     "  --review-source-jobs IDS\n                        comma-separated durable source jobs, including exited writers\n",
                     "  --review-excluded-models MODELS\n                        comma-separated routing exclusions; not proof of authorship\n",
                     "  --model-recovery-from MODEL\n                        one-launch routing hint after a managed model failure\n",
                     "  --effort-origin {policy,owner_request}\n                        policy hint or recorded individual owner effort override\n",
                     "  --model-origin {policy,owner_request}\n                        policy hint or recorded individual owner model override\n",
+                    "  --capability-constraints {none,sandbox,mcp_profile,both}\n                        retain caller constraints per field across relaunches\n",
                     "                        default: inherit the normal Codex configuration\n",
                 ] {
                     text = text.replace(addition, "");

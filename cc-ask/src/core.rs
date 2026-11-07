@@ -1392,6 +1392,13 @@ pub fn apply_job_scope(selection: &mut Value, source: &Value, owner_request: Opt
     selection["sandbox"] = json!(policy.sandbox);
     selection["scope_source"] = json!(origin);
     selection["mcp_profile"] = retained["mcp_profile"].clone();
+    selection["capability_provenance_version"] = json!(1);
+    selection["explicit_capability_constraints"] = retained["explicit_capability_constraints"].clone();
+    if owner_request.is_some_and(cc_job_policy::explicit_read_only) {
+        selection["explicit_capability_constraints"]["sandbox"] = json!(true);
+    } else if policy.sandbox == "inherit" {
+        selection["explicit_capability_constraints"]["sandbox"] = json!(false);
+    }
 }
 // Retain the Python launch arguments so request and continuation calls share the same contract.
 #[allow(clippy::too_many_arguments)]
@@ -1452,7 +1459,7 @@ pub fn launch_job_with_session(
         normalized["capability_resume_source"] = json!({
             "sandbox":selection["sandbox"],"mcp_profile":selection["mcp_profile"]});
         let retained = cc_job_policy::capability_scope::retained(selection);
-        for field in ["sandbox", "mcp_profile", "scope_source"] {
+        for field in ["sandbox", "mcp_profile", "scope_source", "capability_provenance_version", "explicit_capability_constraints"] {
             normalized[field] = retained[field].clone();
         }
     }
@@ -1602,9 +1609,9 @@ pub fn launch_job_with_session(
         selection["mcp_profile"].as_str().unwrap_or("inherit"),
         &prompt,
     );
-    args.extend(cc_job_policy::capability_scope::launch_args(&json!({
-        "sandbox":policy.sandbox,"mcp_profile":profile,"scope_source":selection["scope_source"]
-    })));
+    let mut scope = selection.clone();
+    scope["sandbox"] = json!(policy.sandbox); scope["mcp_profile"] = json!(profile);
+    args.extend(cc_job_policy::capability_scope::launch_args(&scope));
     args.extend([
         "--effort-origin".into(),
         if selection["effort_origin"] == "owner_request" {

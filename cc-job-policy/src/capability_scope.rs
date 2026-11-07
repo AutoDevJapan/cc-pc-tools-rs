@@ -9,6 +9,9 @@ pub fn owner(value: &Value) -> bool {
 }
 
 pub fn constrained(value: &Value, field: &str) -> bool {
+    if value["capability_provenance_version"] == 1 {
+        return value["explicit_capability_constraints"][field] == true;
+    }
     owner(value)
         || value["scope_source"] == "caller_constraint"
         || value["explicit_capability_constraints"][field] == true
@@ -73,13 +76,17 @@ pub fn retained(value: &Value) -> Value {
         "launcher"
     };
     serde_json::json!({"sandbox":sandbox.unwrap_or("inherit"),
-        "mcp_profile":mcp.unwrap_or("inherit"),"scope_source":origin})
+        "mcp_profile":mcp.unwrap_or("inherit"),"scope_source":origin,
+        "capability_provenance_version":1,
+        "explicit_capability_constraints":{
+            "sandbox":constrained(value,"sandbox") || (!fixed(value) && legacy(value,"sandbox")),
+            "mcp_profile":constrained(value,"mcp_profile") || (!fixed(value) && legacy(value,"mcp_profile"))}})
 }
 
 /// Serialize a resolved launch tuple together so relaunchers cannot drop its
 /// provenance. Values remain subject to the regular launcher's validation.
 pub fn launch_args(scope: &Value) -> Vec<String> {
-    [
+    let mut args: Vec<String> = [
         ("--sandbox", "sandbox", "inherit"),
         ("--mcp-profile", "mcp_profile", "inherit"),
         ("--scope-source", "scope_source", "launcher"),
@@ -95,5 +102,18 @@ pub fn launch_args(scope: &Value) -> Vec<String> {
                 .to_owned(),
         ]
     })
-    .collect()
+    .collect();
+    if scope["capability_provenance_version"] == 1 {
+        let mask = match (
+            scope["explicit_capability_constraints"]["sandbox"] == true,
+            scope["explicit_capability_constraints"]["mcp_profile"] == true,
+        ) {
+            (true, true) => "both",
+            (true, false) => "sandbox",
+            (false, true) => "mcp_profile",
+            _ => "none",
+        };
+        args.extend(["--capability-constraints".into(), mask.into()]);
+    }
+    args
 }

@@ -1755,12 +1755,8 @@ pub fn restart_args(
         "--launch-key".into(),
         key.into(),
     ];
-    args.extend(cc_job_policy::capability_scope::launch_args(&serde_json::json!({
-        "sandbox":sandbox.unwrap_or("inherit"),"mcp_profile":mcp.unwrap_or("inherit"),
-        "scope_source":if sandbox.is_some() || mcp.is_some() {
-            cc_job_policy::capability_scope::origin(job)
-        } else { "launcher" }
-    })));
+    args.extend(cc_job_policy::capability_scope::launch_args(
+        &cc_job_policy::capability_scope::retained(job)));
     let capability_changed = [("sandbox", sandbox.unwrap_or("inherit")),
         ("mcp_profile", mcp.unwrap_or("inherit"))].into_iter().any(|(field, next)|
             job[field].as_str().is_some_and(|previous| !previous.is_empty() && previous != next));

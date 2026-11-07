@@ -300,6 +300,7 @@ dependencies = [
 name = "cc-jobs"
 version = "0.1.0"
 dependencies = [
+ "cc-ask",
  "cc-chrome",
  "cc-job-policy",
  "cc-redact",

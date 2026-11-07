@@ -289,7 +289,10 @@ pub fn resolve_scope(
         "caller_constraint" => "caller_constraint",
         _ => "launcher",
     };
-    if source == "caller_constraint" && owner_request.is_some_and(|request| !explicit_read_only(request)) {
+    if owner_request.is_some_and(explicit_read_only) {
+        return (for_sandbox("read-only"), "owner_marker");
+    }
+    if source == "caller_constraint" && owner_request.is_some() {
         return (for_sandbox(sandbox), "caller_constraint");
     }
     if let Some(request) = owner_request.filter(|_| {
@@ -359,6 +362,8 @@ mod tests {
             ("workspace-write", "launcher", None, "workspace-write"),
             ("workspace-write", "launcher", Some("続きを進める"), "workspace-write"),
             ("read-only", "caller_constraint", Some("続きを進める"), "read-only"),
+            ("workspace-write", "launcher", Some("読むだけ: 差分を確認"), "read-only"),
+            ("workspace-write", "caller_constraint", Some("読むだけ: 差分を確認"), "read-only"),
         ] {
             assert_eq!(resolve_scope(sandbox, source, request).0.sandbox, expected);
         }

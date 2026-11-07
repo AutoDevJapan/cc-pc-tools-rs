@@ -58,6 +58,24 @@ pub fn origin(value: &Value) -> &'static str {
     }
 }
 
+/// Resolve the retained tuple before replacing a source's launch identity.
+/// Per-field provenance must not let an unrelated old hint become a constraint.
+pub fn retained(value: &Value) -> Value {
+    let sandbox = inherited(value, "sandbox");
+    let mcp = inherited(value, "mcp_profile");
+    let origin = if sandbox.is_some() || mcp.is_some() {
+        if fixed(value) {
+            value["scope_source"].as_str().unwrap_or("launcher")
+        } else {
+            origin(value)
+        }
+    } else {
+        "launcher"
+    };
+    serde_json::json!({"sandbox":sandbox.unwrap_or("inherit"),
+        "mcp_profile":mcp.unwrap_or("inherit"),"scope_source":origin})
+}
+
 /// Serialize a resolved launch tuple together so relaunchers cannot drop its
 /// provenance. Values remain subject to the regular launcher's validation.
 pub fn launch_args(scope: &Value) -> Vec<String> {

@@ -1383,22 +1383,15 @@ pub fn apply_job_scope(selection: &mut Value, source: &Value, owner_request: Opt
     // already normalized copy of the new selection.
     selection["capability_resume_source"] = json!({
         "sandbox":source["sandbox"],"mcp_profile":source["mcp_profile"]});
+    let retained = cc_job_policy::capability_scope::retained(source);
     let (policy, origin) = cc_job_policy::resolve_scope(
-        s(&source["sandbox"]),
-        s(&source["scope_source"]),
+        s(&retained["sandbox"]),
+        s(&retained["scope_source"]),
         owner_request,
     );
     selection["sandbox"] = json!(policy.sandbox);
     selection["scope_source"] = json!(origin);
-    if source["explicit_capability_constraints"]["mcp_profile"] == true
-        || source["legacy_capability_constraints"]["mcp_profile"] == true
-        || source["scope_source"] == "caller_constraint"
-        || cc_job_policy::launch_context::fixed_execution_contract(source)
-    {
-        selection["mcp_profile"] = source["mcp_profile"].clone();
-    } else {
-        selection["mcp_profile"] = json!("inherit");
-    }
+    selection["mcp_profile"] = retained["mcp_profile"].clone();
 }
 // Retain the Python launch arguments so request and continuation calls share the same contract.
 #[allow(clippy::too_many_arguments)]
@@ -1454,6 +1447,14 @@ pub fn launch_job_with_session(
             .as_object_mut()
             .unwrap()
             .remove("model_recovery_from");
+    }
+    if !normalized["capability_resume_source"].is_object() {
+        normalized["capability_resume_source"] = json!({
+            "sandbox":selection["sandbox"],"mcp_profile":selection["mcp_profile"]});
+        let retained = cc_job_policy::capability_scope::retained(selection);
+        for field in ["sandbox", "mcp_profile", "scope_source"] {
+            normalized[field] = retained[field].clone();
+        }
     }
     normalized["launch_key"] = json!(key);
     normalized["resume_session"] = session.map(|id| json!(id)).unwrap_or(Value::Null);

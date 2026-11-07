@@ -51,9 +51,9 @@ fn source(h: &Harness, context: u64) {
 #[test]
 fn owner_steering_retires_only_conversations_with_changed_capabilities() {
     for (sandbox, origin, mcp, changed) in [
-        ("read-only", "owner_marker", "minimal", true),
         ("read-only", "owner_marker", "inherit", true),
-        ("inherit", "launcher", "minimal", true),
+        ("read-only", "owner_marker", "inherit", true),
+        ("inherit", "policy", "minimal", true),
         ("inherit", "launcher", "inherit", false),
     ] {
         let mut h = Harness::new();
@@ -73,6 +73,26 @@ fn owner_steering_retires_only_conversations_with_changed_capabilities() {
         assert_eq!(next["resume_session"], if changed { "" } else { "session-job1" });
         assert_eq!(next["mcp_profile"], "inherit");
         assert_eq!(next["cwd"], h.root.path().to_string_lossy().as_ref());
+    }
+}
+
+#[test]
+fn explicit_readonly_steering_narrows_workspace_and_retires_its_conversation() {
+    for origin in ["launcher", "caller_constraint"] {
+        let mut h = Harness::new(); h.tick(); source(&h, 40);
+        let file = h.ctx.jobs.join("jobs/job1/job.json");
+        let mut job = read_json(&file).unwrap();
+        job["sandbox"] = json!("workspace-write");
+        job["scope_source"] = json!(origin);
+        job["mcp_profile"] = json!("inherit");
+        atomic_json(&file, &job, 2).unwrap();
+        h.reply("読むだけ: 変更差分を確認する", "100");
+        run(&mut h, false);
+        let fake = h.fake.borrow();
+        let next = &fake.launches[1];
+        assert_eq!(next["sandbox"], "read-only");
+        assert_eq!(next["scope_source"], "owner_marker");
+        assert_eq!(next["resume_session"], "");
     }
 }
 fn question(h: &Harness) {

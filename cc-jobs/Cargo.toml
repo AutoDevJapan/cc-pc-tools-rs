@@ -8,6 +8,7 @@ default-run = "codex_jobs"
 tempfile = "3"
 cc-todo = { path = "../cc-todo" }
 cc-scheduler = { path = "../cc-scheduler" }
+cc-ask = { path = "../cc-ask" }
 
 [dependencies]
 cc-job-policy = { path = "../cc-job-policy" }

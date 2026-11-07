@@ -8952,6 +8952,34 @@ mod run_validation {
         }
     }
     #[test]
+    fn real_discord_resolution_and_cli_records_keep_raw_and_legacy_partial_constraints() {
+        for legacy in [false, true] {
+            for (sandbox_constraint, mcp_constraint) in [(true, false), (false, true), (true, true)] {
+                let t = Test::new();
+                let prompt = t.ctx.root.join("request.md"); fs::write(&prompt, "continue saved work").unwrap();
+                let mut source = json!({"model":"gpt-6.1-sol","effort":"max","task_type":"implementation",
+                    "sandbox":if sandbox_constraint {"workspace-write"} else {"inherit"},
+                    "mcp_profile":if mcp_constraint {"minimal"} else {"inherit"},"scope_source":"launcher"});
+                if !legacy { source["explicit_capability_constraints"] = json!({"sandbox":sandbox_constraint,"mcp_profile":mcp_constraint}); }
+                for generation in 1..=3 {
+                    let mut selection = json!({"model":"gpt-6.1-sol","effort":"max","task_type":"implementation"});
+                    cc_ask::core::apply_job_scope(&mut selection, &source, Some("元の仕事を続ける"));
+                    let key = format!("{generation:032x}");
+                    let mut args = vec!["run".into(),"--name".into(),"discord-continuation".into(),
+                        "--cwd".into(),t.ctx.root.to_string_lossy().into_owned(),"--prompt-file".into(),prompt.to_string_lossy().into_owned(),
+                        "--launch-key".into(),key.clone()];
+                    args.extend(cc_job_policy::capability_scope::launch_args(&selection));
+                    t.ctx.dispatch(&args, &mut Vec::new(), &mut Vec::new()).unwrap();
+                    let mut next = t.ctx.list_jobs(&HashSet::new()).into_iter().find(|job| job["launch_key"] == key).unwrap();
+                    assert_eq!(next["scope_source"], "caller_constraint");
+                    assert_eq!(next["sandbox"], if sandbox_constraint {"workspace-write"} else {"inherit"});
+                    assert_eq!(next["mcp_profile"], if mcp_constraint {"minimal"} else {"inherit"});
+                    next["status"] = json!("succeeded"); t.ctx.save(&next).unwrap(); source = next;
+                }
+            }
+        }
+    }
+    #[test]
     fn normal_review_prompt_describes_independence_without_reducing_tools() {
         let t = Test::new();
         let j = t.put(job(json!({"id":"independent-review","task_type":"review","sandbox":"inherit"})));

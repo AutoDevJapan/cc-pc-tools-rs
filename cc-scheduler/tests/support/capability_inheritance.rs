@@ -1,5 +1,38 @@
 use super::*;
 
+#[test]
+fn retained_constraints_survive_multiple_backend_and_cli_generations() {
+    let f = Fixture::new();
+    let row = json!({"id":1,"title":"調査","project":"other",
+        "scheduler":{"worktree":"D:/fixture","key":"key"}});
+    for provenance in [
+        "explicit_capability_constraints",
+        "legacy_capability_constraints",
+    ] {
+        let mut selection = json!({"model":"gpt-6.1-sol","effort":"max","task_type":"research",
+            "sandbox":"read-only","mcp_profile":"minimal","scope_source":"launcher"});
+        selection[provenance] = json!({"sandbox":true,"mcp_profile":true});
+        for _ in 0..3 {
+            let call = RealBackend::new(f.e.root.clone()).launch_command(
+                &row,
+                Path::new("prompt"),
+                &selection,
+            );
+            let value =
+                |flag: &str| call.args.windows(2).find(|pair| pair[0] == flag).unwrap()[1].clone();
+            assert_eq!(value("--scope-source"), "caller_constraint");
+            assert_eq!(value("--sandbox"), "read-only");
+            assert_eq!(value("--mcp-profile"), "minimal");
+            // Registration stores these argv values on the next managed job;
+            // raw standalone provenance is intentionally not fabricated.
+            selection["scope_source"] = json!(value("--scope-source"));
+            selection["explicit_capability_constraints"] =
+                json!({"sandbox":false,"mcp_profile":false});
+            selection["legacy_capability_constraints"] = serde_json::Value::Null;
+        }
+    }
+}
+
 fn assert_scope(f: &Fixture, prepared: &Value, sandbox: &str, mcp: &str) {
     let selection = &prepared["scheduler"]["selection"];
     assert_eq!(selection["sandbox"], sandbox);
@@ -174,7 +207,7 @@ fn retry_retires_legacy_capability_context_and_preserves_owner_scope() {
         merge(
             source,
             json!({"status":"succeeded", "last_message":"状態: 継続中",
-            "cwd":cwd, "model":"gpt-6.1-sol", "effort":"max",
+            "cwd":cwd, "model":"mock-model", "effort":"high",
             "thread_id":"12345678-1234-4321-9234-123456789abc",
                 "sandbox":"read-only", "mcp_profile":"minimal", "scope_source":origin,
                 "todo_id":1,"launch_key":"managed"}),
@@ -194,7 +227,8 @@ fn retry_retires_legacy_capability_context_and_preserves_owner_scope() {
             if owner { "read-only" } else { "inherit" },
             if owner { "minimal" } else { "inherit" },
         );
-        assert_eq!(prepared["scheduler"]["resume_session"].is_string(), owner);
+        assert_eq!(prepared["scheduler"]["resume_session"].is_string(), owner,
+            "origin={origin}, prepared={}", prepared["scheduler"]);
         assert_eq!(f.e.backend.records[0], original);
     }
 }

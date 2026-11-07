@@ -303,6 +303,7 @@ dependencies = [
  "cc-chrome",
  "cc-job-policy",
  "cc-redact",
+ "cc-scheduler",
  "cc-task-title",
  "cc-todo",
  "chrono",

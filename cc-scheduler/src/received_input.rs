@@ -323,7 +323,7 @@ fn observe(host: &mut impl Host, l: &Layout, r: &Value) -> Result<Value> {
     {
         return reject("scope_mismatch");
     }
-    if !["launcher", "owner_marker", "owner_request"].contains(&s(&j["scope_source"])) {
+    if !["launcher", "owner_marker", "owner_request", "caller_constraint"].contains(&s(&j["scope_source"])) {
         return reject("invalid_record");
     }
     guarded(host, scope)?;

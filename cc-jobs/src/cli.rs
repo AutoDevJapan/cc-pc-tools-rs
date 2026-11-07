@@ -906,14 +906,13 @@ impl Context {
             job["model_recovery_from"] = json!(model);
         }
         let scope_source = a.value("scope-source").unwrap_or("launcher");
-        if !["launcher", "owner_marker", "owner_request"].contains(&scope_source) {
+        if !["launcher", "owner_marker", "owner_request", "caller_constraint"].contains(&scope_source) {
             return Err(Error::new("invalid --scope-source"));
         }
         job["scope_source"] = json!(scope_source);
         // A standalone explicit constraint must survive later managed resumes.
         // Scheduler/router options carry their own owner/contract provenance.
         let standalone = a.value("launch-key").is_none()
-            && a.value("todo-id").is_none()
             && a.value("scope-source").is_none();
         job["explicit_capability_constraints"] = json!({
             "sandbox": standalone && a.sandbox_explicit,

@@ -154,10 +154,11 @@ pub fn plan_continuation(
     {
         return Err("fixed review instructions changed".into());
     }
-    // An explicit role can narrow an old launcher's default, never a writer's owner request.
+    // This qualified finite contract may narrow a launcher's inherited/default
+    // scope, never replace a writer's explicit owner request.
     if job["sandbox"] != "read-only"
         && (job["scope_source"] != "launcher"
-            || !["workspace-write", "danger-full-access"].contains(&s(job, "sandbox")))
+            || !["inherit", "workspace-write", "danger-full-access"].contains(&s(job, "sandbox")))
         || job["network"] != false
     {
         return Err("fixed review cannot widen or replace an explicit execution scope".into());

@@ -11,6 +11,8 @@ fn later_result(status: &str) -> (Fixture, subwork_support::Fixture) {
     source["todo_resume_generation"] = json!(5);
     source["todo_dependency_generation"] = json!(1);
     source["effort"] = json!("max");
+    source["sandbox"] = json!("read-only");
+    source["mcp_profile"] = json!("inherit");
     source["launch_policy_version"] = json!(cc_job_policy::launch_context::VERSION);
     source["thread_id"] = json!("12345678-1234-4321-9234-123456789abc");
     source["last_message"] = json!("状態: 継続中\nLATEST_OWN_RESULT");
@@ -97,7 +99,11 @@ fn stale_request_is_inert_for_every_ordinary_result_and_preserves_its_session() 
         );
         assert_eq!(
             prepared["scheduler"]["resume_session"], "12345678-1234-4321-9234-123456789abc",
-            "{case}"
+            "{case}: scope={}/{}, source_scope={}/{}, model={}/{}, source_model={}/{}",
+            selection["sandbox"], selection["mcp_profile"],
+            original.last().unwrap()["sandbox"], original.last().unwrap()["mcp_profile"],
+            selection["model"], selection["effort"],
+            original.last().unwrap()["model"], original.last().unwrap()["effort"]
         );
         assert_eq!(prepared["subwork_continuation"], retained);
         assert_eq!(f.e.backend.records, original);
@@ -173,7 +179,7 @@ fn finite_recovery_cancel_is_ordinary_with_or_without_a_historical_request() {
         assert_eq!(outcomes[0], outcomes[1], "{case}");
         assert_eq!(
             outcomes[0]["session"],
-            "12345678-1234-4321-9234-123456789abc"
+            "12345678-1234-4321-9234-123456789abc", "{case}: outcomes={outcomes:?}"
         );
     }
 }

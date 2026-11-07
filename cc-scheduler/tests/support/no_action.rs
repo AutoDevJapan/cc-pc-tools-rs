@@ -370,6 +370,7 @@ fn automatic_successor_is_recovered_again_without_requiring_a_new_agent_start_co
     j["cwd"] = cwd;
     j["status"] = json!("succeeded");
     j["last_message"] = json!("状態: 継続中\nLATEST_SECOND_WORKER_RESULT");
+    j["sandbox"] = json!("inherit"); j["mcp_profile"] = json!("inherit");
     j["thread_id"] = json!("87654321-1234-4321-9234-123456789abc");
     j["model"] = json!("gpt-6.1-sol"); j["effort"] = json!("max");
     j["launch_policy_version"] = json!(cc_job_policy::launch_context::VERSION);

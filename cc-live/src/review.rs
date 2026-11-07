@@ -1,9 +1,9 @@
-//! Start a read-only review of a batch PR.
+//! Start an independent review of a batch PR with inherited capabilities.
 //!
 //! review.exe <name> <pr_number> <facts_file> [source_job_id]
 use crate::*;
 use serde_json::json;
-pub const TEMPLATE: &str = "Review PR #{pr} of the Civ6 MOD 「Civ6用万世紀」 (current folder = the PR branch feat/{name}; compare with `git diff origin/main...HEAD`). Follow documents/repository-rules.md and the SSOT in documents/spec/ssot (read only the relevant sections). Answer in Japanese.\n\nThis is a review only: do NOT modify, create or delete any file, do not run git commands that change state, do not use gh or the GitHub API, no API keys, do not launch Civ6/Steam, no browser tools, no sub-agents. The sandbox is read-only.\n\nCheck correctness against the SSOT and the task, engine behavior against the official files under \"C:/Program Files (x86)/Steam/steamapps/common/Sid Meier's Civilization VI\" (cite file:line), save/load and multiplayer determinism where relevant, scoping (only RULESET_JAC_BANSEIKI / Sengoku pack / Japan maps as intended), interactions with other features, tests and the live scenario's power to detect failure, and docs. Look for the same class of problem elsewhere, not only where it first appears.\n\nVerified facts (live or by tests) — if a concern contradicts them, still report it but mark it 要実機確認 with your reasoning:\n{facts}\n\nReport findings as Must / Suggestion / Nit with file:line and confidence (高/中/低). Include uncertain concerns too. End with a one-line verdict.\n";
+pub const TEMPLATE: &str = "Review PR #{pr} of the Civ6 MOD 「Civ6用万世紀」 (current folder = the PR branch feat/{name}; compare with `git diff origin/main...HEAD`). Follow documents/repository-rules.md and the SSOT in documents/spec/ssot (read only the relevant sections). Answer in Japanese.\n\nPurpose: independently verify the reviewed revision and return evidence and findings to its implementation owner. Inherit the regular tools and choose the investigations, tests and collaboration needed. Keep the reviewed revision and other workers' changes intact; coordinate any fixes and shared Civ6/Steam resources through their existing ownership and locks. Recheck the resulting revision after a fix. Preserve the owner's explicit scope, service permissions and normal approval review; do not use metered AI API keys.\n\nCheck correctness against the SSOT and the task, engine behavior against the official files under \"C:/Program Files (x86)/Steam/steamapps/common/Sid Meier's Civilization VI\" (cite file:line), save/load and multiplayer determinism where relevant, scoping (only RULESET_JAC_BANSEIKI / Sengoku pack / Japan maps as intended), interactions with other features, tests and the live scenario's power to detect failure, and docs. Look for the same class of problem elsewhere, not only where it first appears.\n\nVerified facts (live or by tests) — if a concern contradicts them, still report it but mark it 要実機確認 with your reasoning:\n{facts}\n\nReport findings as Must / Suggestion / Nit with file:line and confidence (高/中/低). Include uncertain concerns too. End with a one-line verdict.\n";
 
 fn source_models(
     p: &Paths,
@@ -101,8 +101,6 @@ pub fn cli(r: &mut impl Runner, p: &Paths, a: &[String]) -> Result<i32, String> 
         profile.model,
         "--effort",
         profile.effort,
-        "--sandbox",
-        "read-only",
         "--cwd",
         &path(p.wt.join(name)),
         "--prompt-file",
@@ -110,6 +108,7 @@ pub fn cli(r: &mut impl Runner, p: &Paths, a: &[String]) -> Result<i32, String> 
         "--task-type",
         "review",
     ]);
+    argv.extend(cc_job_policy::capability_scope::launch_args(&json!({})));
     if !sources.is_empty() {
         argv.extend(args(&["--review-source-jobs", &sources.join(",")]));
     }

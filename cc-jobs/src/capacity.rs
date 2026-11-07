@@ -89,7 +89,6 @@ pub fn candidates(job: &Value) -> Vec<&'static str> {
             *model != current
                 && (!lightweight
                     || ((review_job(job) || s(job, "task_type").starts_with("single_file_"))
-                        && s(job, "sandbox") == "read-only"
                         && *model == "gpt-6-luna"))
                 && (lightweight
                     || provider(current) != Some("openai")

@@ -134,10 +134,10 @@ fn parse(mut a: Vec<String>) -> Result<(&'static str, String, Value), String> {
             }
             let sandbox = take(&mut a, "--sandbox")?;
             if sandbox.as_deref().is_some_and(|v| {
-                !["read-only", "workspace-write", "danger-full-access"].contains(&v)
+                !["inherit", "read-only", "workspace-write", "danger-full-access"].contains(&v)
             }) {
                 return Err(
-                    "--sandbox must be read-only|workspace-write|danger-full-access".into(),
+                    "--sandbox must be inherit|read-only|workspace-write|danger-full-access".into(),
                 );
             }
             let prompt = take(&mut a, "--prompt-file")?.ok_or("--prompt-file is required")?;

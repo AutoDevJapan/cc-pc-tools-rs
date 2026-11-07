@@ -475,14 +475,6 @@ impl RealBackend {
                 s(&selection["task_type"]),
                 "--cwd",
                 s(&item["scheduler"]["worktree"]),
-                "--sandbox",
-                policy.sandbox,
-                "--scope-source",
-                if cc_ask::job_policy::explicit_read_only(s(&item["title"])) {
-                    "owner_marker"
-                } else {
-                    selection["scope_source"].as_str().unwrap_or("launcher")
-                },
                 "--add-dir",
                 self.tools.parent().unwrap().to_str().unwrap(),
                 "--prompt-file",
@@ -549,10 +541,12 @@ impl RealBackend {
         if let Some(failed) = selection["model_recovery_from"].as_str() {
             invocation.args.extend(["--model-recovery-from".into(), failed.into()]);
         }
-        invocation.args.extend([
-            "--mcp-profile".into(),
-            selection["mcp_profile"].as_str().unwrap_or("inherit").into(),
-        ]);
+        let mut scope = selection.clone();
+        scope["sandbox"] = json!(policy.sandbox);
+        if cc_ask::job_policy::explicit_read_only(s(&item["title"])) {
+            scope["scope_source"] = json!("owner_marker");
+        }
+        invocation.args.extend(cc_job_policy::capability_scope::launch_args(&scope));
         if selection["network"] == true {
             invocation.args.push("--network".into());
         }

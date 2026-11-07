@@ -134,7 +134,7 @@ fn finite_review_completion_does_not_relaunch_while_its_parent_remains_unfinishe
     );
     assert_eq!(result_outcome(text), "todo");
     let mut writer = reader.clone();
-    writer["sandbox"] = json!("workspace-write");
+    writer["task_type"] = json!("implementation");
     assert_eq!(job_result_outcome(&writer, text), "todo");
 }
 

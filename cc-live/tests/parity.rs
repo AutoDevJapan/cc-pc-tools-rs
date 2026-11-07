@@ -3294,7 +3294,9 @@ fn review_preserves_facts_and_uses_jobs_executable() {
     assert!(r.calls[0]
         .args
         .windows(2)
-        .any(|s| s == ["--sandbox", "read-only"]));
+        .any(|s| s == ["--sandbox", "inherit"]));
+    assert!(r.calls[0].args.windows(2).any(|s| s == ["--mcp-profile", "inherit"]));
+    assert!(!prompt.contains("no browser tools"));
     assert_eq!(r.printed, vec!["job-id"]);
     assert!(r.calls[0].args.windows(2).any(|a|a==["--model","anthropic/claude-opus-5-5"]));
     assert!(r.calls[0].args.windows(2).any(|a|a==["--review-source-jobs","finished-name"]));

@@ -1696,14 +1696,16 @@ if !truth(&row["scheduler"]["key"]){let attempt=add_count(&row["scheduler"]["att
         }
         // Restore owner scope and exact finite contracts, not old router hints.
         crate::launch_scope::apply(&item, source, &mut selection);
-        // A resumed conversation may restore the previous model. Reuse it only
-        // when the selected settings agree, including partial explicit choices.
-        if source.is_some_and(|source| {
+        let capability_changed = source.is_some_and(|source| {
             ["sandbox", "mcp_profile"].iter().any(|field| {
                 source[*field].as_str().is_some_and(|value| !value.is_empty())
                     && source[*field] != selection[*field]
             })
-                || (cc_ask::job_policy::review_result::is_finite_review(source)
+        });
+        // A resumed conversation may restore the previous model. Reuse it only
+        // when the selected settings agree, including partial explicit choices.
+        if capability_changed || source.is_some_and(|source| {
+                (cc_ask::job_policy::review_result::is_finite_review(source)
                     && source["finite_review"]["spec"]
                         .as_str()
                         .or(source["subwork_spec"].as_str())
@@ -1715,20 +1717,22 @@ if !truth(&row["scheduler"]["key"]){let attempt=add_count(&row["scheduler"]["att
         }) {
             resume_session = None;
         }
-        // Do not carry capabilities from a conversation that was just retired.
-        if let Some(source) = source.filter(|_| resume_session.is_some()) {
-            for field in ["network", "add_dirs"] {
+        if capability_changed {
+            prompt += "\n起動時のsandboxまたは道具の構成が変わったため、以前の会話を引き継がず、同じ元仕事・作業場所・保存済み成果から続行してください。前回結果と最新仕様を照合し、完了した工程を重複実行しないでください。\n";
+        }
+        // Current explicit settings apply even when an old conversation was
+        // retired. Only its historical fallback depends on session reuse.
+        for field in ["network", "add_dirs"] {
                 let value = if !item[field].is_null() {
                     &item[field]
                 } else if !accepted_options[field].is_null() {
                     &accepted_options[field]
                 } else {
-                    &source[field]
+                    source.filter(|_| resume_session.is_some()).map_or(&Value::Null, |source| &source[field])
                 };
                 if !value.is_null() {
                     selection[field] = value.clone();
                 }
-            }
         }
         if cc_job_policy::review_task(s(&item["title"]), s(&selection["task_type"]))
             || ["review", "research"].contains(&s(&item["subwork"]["kind"]))

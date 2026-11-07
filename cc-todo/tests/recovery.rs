@@ -574,6 +574,26 @@ fn resume_arguments_preserve_model_effort_cwd_and_fresh_fallback() {
 }
 
 #[test]
+fn restart_capabilities_keep_constraints_and_drop_old_routing_hints_with_the_session() {
+    for (origin, constrained) in [("policy", false), ("launcher", false), ("caller_constraint", true)] {
+        let j = json!({"id":"previous","todo_id":1,"launch_key":"managed",
+            "model":"gpt-6.1-sol","effort":"max","sandbox":"read-only",
+            "mcp_profile":"minimal","scope_source":origin,
+            "thread_id":"12345678-1234-4321-9234-123456789abc"});
+        let args = restart_args(&j, &json!({"id":1,"title":"続行","project":"demo"}),
+            "C:/fixture", "next-key", std::path::Path::new("prompt.md"));
+        for (flag, expected) in [
+            ("--sandbox", if constrained { "read-only" } else { "inherit" }),
+            ("--mcp-profile", if constrained { "minimal" } else { "inherit" }),
+            ("--scope-source", if constrained { "caller_constraint" } else { "launcher" }),
+        ] {
+            assert!(args.windows(2).any(|pair| pair == [flag, expected]), "{origin}/{flag}");
+        }
+        assert_eq!(args.iter().any(|arg| arg == "--resume-session"), constrained);
+    }
+}
+
+#[test]
 fn restart_model_provenance_keeps_explicit_and_legacy_choices_but_routes_automatic_defaults() {
     for (j, item, option, model) in [
         (json!({}), json!({"id":1}), "--auto-model", "gpt-6.1-sol"),

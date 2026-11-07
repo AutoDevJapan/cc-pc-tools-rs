@@ -51,3 +51,19 @@ fn browser_keywords_do_not_replace_inherited_or_explicit_tool_configuration() {
     assert_eq!(cc_chrome::profile("inherit", "Chromeで画面確認"), "inherit");
     assert_eq!(cc_chrome::profile("minimal", "Chromeで画面確認"), "minimal");
 }
+
+#[test]
+fn explicit_lightweight_model_recovery_does_not_depend_on_readonly_permissions() {
+    for sandbox in [
+        "inherit",
+        "read-only",
+        "workspace-write",
+        "danger-full-access",
+    ] {
+        let candidates = cc_jobs::capacity::candidates(&json!({
+            "model":"anthropic/claude-haiku-5-5","requested_model":"anthropic/claude-haiku-5-5",
+            "task_type":"single_file_summary","sandbox":sandbox
+        }));
+        assert!(candidates.contains(&"gpt-6-luna"), "{sandbox}");
+    }
+}

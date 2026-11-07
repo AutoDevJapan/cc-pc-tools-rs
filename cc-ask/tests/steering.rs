@@ -42,10 +42,38 @@ fn source(h: &Harness, context: u64) {
     let file = h.ctx.jobs.join("jobs/job1/job.json");
     let mut job = read_json(&file).unwrap();
     job["cwd"] = json!(h.root.path().to_string_lossy());
-    job["sandbox"] = json!("danger-full-access");
+    job["sandbox"] = json!("inherit");
     job["network"] = json!(false);
     job["context_pct"] = json!(context);
     atomic_json(&file, &job, 2).unwrap();
+}
+
+#[test]
+fn owner_steering_retires_only_conversations_with_changed_capabilities() {
+    for (sandbox, origin, mcp, changed) in [
+        ("read-only", "owner_marker", "minimal", true),
+        ("read-only", "owner_marker", "inherit", true),
+        ("inherit", "launcher", "minimal", true),
+        ("inherit", "launcher", "inherit", false),
+    ] {
+        let mut h = Harness::new();
+        h.tick();
+        source(&h, 40);
+        let file = h.ctx.jobs.join("jobs/job1/job.json");
+        let mut job = read_json(&file).unwrap();
+        job["sandbox"] = json!(sandbox);
+        job["scope_source"] = json!(origin);
+        job["mcp_profile"] = json!(mcp);
+        atomic_json(&file, &job, 2).unwrap();
+        h.reply("元の仕事の続きを進める", "100");
+        run(&mut h, false);
+        let fake = h.fake.borrow();
+        assert_eq!(fake.launches.len(), 2);
+        let next = &fake.launches[1];
+        assert_eq!(next["resume_session"], if changed { "" } else { "session-job1" });
+        assert_eq!(next["mcp_profile"], "inherit");
+        assert_eq!(next["cwd"], h.root.path().to_string_lossy().as_ref());
+    }
 }
 fn question(h: &Harness) {
     let mut state = h.state();
@@ -723,7 +751,7 @@ fn message_during_run_cancels_only_source_and_resumes_with_verbatim_quote_and_sa
         assert_eq!(f.launches.len(), 2);
         let launch = &f.launches[1];
         assert_eq!(launch["resume_session"], "session-job1");
-        assert_eq!(launch["sandbox"], "danger-full-access");
+        assert_eq!(launch["sandbox"], "inherit");
         assert_eq!(launch["cwd"], h.root.path().to_string_lossy().as_ref());
         assert_eq!(launch["model"], f.launches[0]["model"]);
         assert_eq!(launch["effort"], f.launches[0]["effort"]);

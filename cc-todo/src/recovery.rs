@@ -1711,6 +1711,8 @@ pub fn restart_args(
         }
     };
     let profile = cc_job_policy::model_profile(s(&job["name"]), s(&job["task_type"]));
+    let sandbox = cc_job_policy::capability_scope::inherited(job, "sandbox");
+    let mcp = cc_job_policy::capability_scope::inherited(job, "mcp_profile");
     // A newly explicit ToDo choice overrides an earlier automatic selection
     // only for a fresh session. Existing explicit/legacy session bindings stay.
     let model = if truth(&item["model"]) && job["model_explicit"] == false && session(job).is_none()
@@ -1748,22 +1750,27 @@ pub fn restart_args(
         val("task_type", "implementation"),
         "--cwd".into(),
         val("cwd", project_path),
-        "--sandbox".into(),
-        val("sandbox", "danger-full-access"),
-        "--mcp-profile".into(),
-        val("mcp_profile", "minimal"),
         "--prompt-file".into(),
         prompt.to_string_lossy().into(),
         "--launch-key".into(),
         key.into(),
     ];
-    if let Some(id) = session(job) {
+    args.extend(cc_job_policy::capability_scope::launch_args(&serde_json::json!({
+        "sandbox":sandbox.unwrap_or("inherit"),"mcp_profile":mcp.unwrap_or("inherit"),
+        "scope_source":if sandbox.is_some() || mcp.is_some() {
+            cc_job_policy::capability_scope::origin(job)
+        } else { "launcher" }
+    })));
+    let capability_changed = [("sandbox", sandbox.unwrap_or("inherit")),
+        ("mcp_profile", mcp.unwrap_or("inherit"))].into_iter().any(|(field, next)|
+            job[field].as_str().is_some_and(|previous| !previous.is_empty() && previous != next));
+    if let Some(id) = session(job).filter(|_| !capability_changed) {
         args.extend(["--resume-session".into(), id]);
     }
     for dir in arr(&job["add_dirs"]) {
         args.extend(["--add-dir".into(), s(&dir).into()]);
     }
-    if job["network"] == true && job["sandbox"] == "workspace-write" {
+    if job["network"] == true && sandbox == Some("workspace-write") {
         args.push("--network".into());
     }
     args

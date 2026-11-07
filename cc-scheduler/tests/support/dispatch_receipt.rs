@@ -89,6 +89,18 @@ fn ordinary_dispatch_receipt_inspection_is_read_only_and_contains_no_source_text
 }
 
 #[test]
+fn ordinary_dispatch_receipt_keeps_the_prepared_caller_scope_origin() {
+    let mut f = ordinary_dispatch(false);
+    f.e.edit(&json!(1), |row| row["scheduler"]["selection"]["scope_source"] = json!("caller_constraint")).unwrap();
+    f.e.backend.records[0]["scope_source"] = json!("caller_constraint");
+    let report = cc_scheduler::dispatch_receipt::inspect(&mut f.e, 1).unwrap();
+    assert_eq!(report["eligible"], true, "{report}");
+    f.e.backend.records[0]["scope_source"] = json!("owner_request");
+    let mismatch = cc_scheduler::dispatch_receipt::inspect(&mut f.e, 1).unwrap();
+    assert_eq!(mismatch["eligible"], false);
+}
+
+#[test]
 fn repair_tick_recovers_ordinary_dispatch_and_keeps_dependency_wait() {
     for waiting in [false, true] {
         let mut f = ordinary_dispatch(waiting);

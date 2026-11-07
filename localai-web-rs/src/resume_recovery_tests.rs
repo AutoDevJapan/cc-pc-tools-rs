@@ -592,39 +592,53 @@ fn todo2172_structural_failure_waits_for_saved_workspace_repair() {
 
 #[test]
 fn todo2172_broad_old_source_uses_registered_project_and_keeps_review_role() {
-    let f = todo1597_fixture("todo");
-    let broad = f.root.parent().unwrap();
-    let source_file = f.console.paths.jobs.join("source/job.json");
-    let mut source: Value = serde_json::from_slice(&fs::read(&source_file).unwrap()).unwrap();
-    source["cwd"] = json!(broad);
-    source["todo_id"] = json!(1);
-    source["task_type"] = json!("review");
-    source["sandbox"] = json!("read-only");
-    fs::write(source_file, source.to_string()).unwrap();
-    // This is an old broad non-Git launch, not a dedicated owned checkout.
-    let mut s = f.console.read_state().unwrap();
-    f.console
-        .dispatch(&mut s, &f.console.jobs().unwrap())
-        .unwrap();
-    assert_eq!(
-        f.launches(),
-        1,
-        "holds={:?}, failures={:?}",
-        s.suppressed,
-        s.preparation_recovery
-    );
-    let call = model_run(&f);
-    assert_eq!(model_arg(&call, "--sandbox").as_deref(), Some("read-only"));
-    assert_eq!(model_arg(&call, "--task-type").as_deref(), Some("review"));
-    assert!(model_arg(&call, "--resume-session").is_none());
-    assert_eq!(
-        s.preparation_recovery["decision:source"]["workspace_resolution"]["reason"],
-        "source_outside_registered_project"
-    );
-    assert_ne!(
-        model_arg(&call, "--cwd"),
-        Some(broad.to_string_lossy().into_owned())
-    );
+    for scope_source in ["launcher", "caller_constraint", "owner_request", "owner_marker"] {
+        let f = todo1597_fixture("todo");
+        let broad = f.root.parent().unwrap();
+        let source_file = f.console.paths.jobs.join("source/job.json");
+        let mut source: Value = serde_json::from_slice(&fs::read(&source_file).unwrap()).unwrap();
+        source["cwd"] = json!(broad);
+        source["todo_id"] = json!(1);
+        source["task_type"] = json!("review");
+        source["sandbox"] = json!("read-only");
+        source["mcp_profile"] = json!("minimal");
+        source["scope_source"] = json!(scope_source);
+        source["explicit_capability_constraints"] = json!({"sandbox":false,"mcp_profile":false});
+        fs::write(source_file, source.to_string()).unwrap();
+        // This is an old broad non-Git launch, not a dedicated owned checkout.
+        let mut s = f.console.read_state().unwrap();
+        f.console
+            .dispatch(&mut s, &f.console.jobs().unwrap())
+            .unwrap();
+        assert_eq!(
+            f.launches(),
+            1,
+            "holds={:?}, failures={:?}",
+            s.suppressed,
+            s.preparation_recovery
+        );
+        let call = model_run(&f);
+        let explicit = scope_source != "launcher";
+        assert_eq!(
+            model_arg(&call, "--sandbox").as_deref(),
+            Some(if explicit { "read-only" } else { "inherit" })
+        );
+        assert_eq!(
+            model_arg(&call, "--mcp-profile").as_deref(),
+            Some(if explicit { "minimal" } else { "inherit" })
+        );
+        assert_eq!(model_arg(&call, "--scope-source").as_deref(), Some(scope_source));
+        assert_eq!(model_arg(&call, "--task-type").as_deref(), Some("review"));
+        assert!(model_arg(&call, "--resume-session").is_none());
+        assert_eq!(
+            s.preparation_recovery["decision:source"]["workspace_resolution"]["reason"],
+            "source_outside_registered_project"
+        );
+        assert_ne!(
+            model_arg(&call, "--cwd"),
+            Some(broad.to_string_lossy().into_owned())
+        );
+    }
 }
 
 #[test]

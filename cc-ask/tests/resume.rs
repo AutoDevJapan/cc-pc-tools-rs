@@ -325,6 +325,27 @@ fn owner_reply_changes_owner_scope_but_cannot_promote_a_launcher_reader() {
 }
 
 #[test]
+fn answer_resume_retires_only_conversations_with_changed_capabilities() {
+    for (origin, mcp, changed) in [
+        ("owner_marker", "minimal", true),
+        ("owner_marker", "inherit", true),
+        ("launcher", "minimal", true),
+        ("launcher", "inherit", false),
+    ] {
+        let mut a = AnswerResume::new();
+        a.change(json!({"session_id":"original-session","job_info":{
+            "model":"gpt-6.1-sol","effort":"max","model_origin":"owner_request",
+            "effort_origin":"owner_request","task_type":"implementation","thread_id":"original-session",
+            "sandbox":"read-only","scope_source":origin,"mcp_profile":mcp}}));
+        a.answer(601., "元の仕事の続きを進める", "OWN");
+        a.resume();
+        assert_eq!(a.last()["resume_session"], if changed { "" } else { "original-session" });
+        assert_eq!(a.last()["mcp_profile"], "inherit");
+        assert_eq!(a.last()["cwd"], a.cwd.to_string_lossy().as_ref());
+    }
+}
+
+#[test]
 fn continuation_progress_and_missing_question_do_not_ping_or_remind_owner() {
     for result in [
         "状態: 継続中\ncargoの空き待ち。テストを続けます。",

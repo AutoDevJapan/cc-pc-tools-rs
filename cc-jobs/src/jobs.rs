@@ -200,6 +200,12 @@ impl Context {
             "prompt.md"
         });
         let mut text = fs::read_to_string(&source)?;
+        if !crate::execution::Profile::of(job).isolated()
+            && crate::capacity::review_job(job)
+            && !text.contains(cc_job_policy::REVIEW_GUIDANCE.trim())
+        {
+            text.push_str(cc_job_policy::REVIEW_GUIDANCE);
+        }
         let fixed_guidance = if job["fixed_read_only_review"].is_null() {
             String::new()
         } else if source == dir.join("prompt.md") {
@@ -1799,7 +1805,7 @@ pub(crate) fn codex_args_with_policy(j: &Value, policy: cc_job_policy::Policy) -
         ),
     ];
     // Omit overrides for ordinary work so Codex resolves the real user,
-    // workspace and managed settings. Inheritance never disables review.
+    // workspace and managed settings, including the configured review policy.
     if policy.sandbox != "inherit" {
         args.extend(["-s".into(), policy.sandbox.into()]);
     }

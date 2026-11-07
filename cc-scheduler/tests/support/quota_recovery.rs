@@ -267,6 +267,55 @@ fn gpt_research_fixture() -> (Fixture, subwork_support::Fixture) {
     (f, sub)
 }
 
+#[test]
+fn ordinary_inherited_review_and_research_can_recover_quota_without_scope_changes() {
+    for research in [false, true] {
+        let (mut f, mut sub) = if research { gpt_research_fixture() } else { fixture() };
+        let row = &mut sub.db["items"][1];
+        row["sandbox"] = json!("inherit");
+        row["mcp_profile"] = json!("inherit");
+        let source = &mut f.e.backend.records[1];
+        for field in ["sandbox", "mcp_profile", "approval_policy", "approvals_reviewer"] {
+            source[field] = json!("inherit");
+        }
+        let original = source.clone();
+        assert!(cc_job_policy::quota_recovery::eligible_source(row, source));
+        write_json(&f.e.todo_path, &sub.db, 1).unwrap();
+        let prepared = f.e.prepare(&sub.db["items"][1], sub.repo.to_str().unwrap()).unwrap().unwrap();
+        let selection = &prepared["scheduler"]["selection"];
+        assert!(selection["quota_recovery"].is_object());
+        assert_eq!(selection["sandbox"], "inherit");
+        assert_eq!(selection["mcp_profile"], "inherit");
+        assert_eq!(f.e.backend.records[1], original);
+        let mut fixed = original;
+        fixed["fixed_read_only_review"] = json!({"fixed":true});
+        assert!(!cc_job_policy::quota_recovery::eligible_source(&sub.db["items"][1], &fixed));
+    }
+}
+
+#[test]
+fn current_parent_can_continue_inherited_finite_research() {
+    let (mut f, mut sub) = gpt_research_fixture();
+    current_continuation_parent(&mut f, &mut sub);
+    let source = &mut f.e.backend.records[1];
+    for field in ["sandbox", "mcp_profile", "approval_policy", "approvals_reviewer"] {
+        source[field] = json!("inherit");
+    }
+    source["todo_resume_generation"] = json!(2);
+    let source = source.clone();
+    let row = &mut sub.db["items"][1];
+    row["sandbox"] = json!("inherit"); row["mcp_profile"] = json!("inherit");
+    row["resume_generation"] = json!(3); row["dependency_generation"] = json!(1);
+    let request = cc_job_policy::subwork_continuation::request(row, &source, &f.e.backend.records[0]).unwrap();
+    row["subwork_continuation"] = request;
+    write_json(&f.e.todo_path, &sub.db, 1).unwrap();
+    let prepared = f.e.prepare(&sub.db["items"][1], sub.repo.to_str().unwrap()).unwrap().unwrap();
+    let selection = &prepared["scheduler"]["selection"];
+    assert!(selection["subwork_continuation"].is_object());
+    assert_eq!(selection["sandbox"], "inherit");
+    assert_eq!(selection["mcp_profile"], "inherit");
+}
+
 fn dependency_continuation_fixture() -> (Fixture, subwork_support::Fixture) {
     let (mut f,mut sub)=gpt_research_fixture();
     current_continuation_parent(&mut f,&mut sub);

@@ -103,7 +103,12 @@ pub(crate) fn inspect_item<B: Backend>(
             "identity",
             job["todo_id"] == item["id"]
                 && job["project"] == item["project"]
-                && job["scope_source"] == "launcher"
+                && matches!(job["scope_source"].as_str(), Some("launcher" | "owner_request" | "owner_marker" | "caller_constraint"))
+                && job["scope_source"].as_str() == Some(if cc_job_policy::explicit_read_only(s(&item["title"])) {
+                    "owner_marker"
+                } else {
+                    scheduler["selection"]["scope_source"].as_str().unwrap_or("launcher")
+                })
                 && !s(&job["cwd"]).is_empty()
                 && norm(s(&job["cwd"])) == norm(s(&scheduler["worktree"]))
         );

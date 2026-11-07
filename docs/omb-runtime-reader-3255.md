@@ -16,7 +16,7 @@ PR495の内部coreへ実データを渡すための専用reader。元PR448とPR4
 この経路はCodex側の独立した通常APIを使い、OMB配布物四件を未確認のまま同byteと扱わない。
 
 現在のsource codeとCodex実行物の通常guardがclearであることを前提とし、元client保護が
-取得不能なら拒否する。既知clientまたは保護カテゴリに該当するnativeは必ず拒否する。
+取得不能なら拒否する。既存除外・受託登録・受託部・受託IDなど、既知clientの根拠があるnativeは必ず拒否する。
 一般guardのnative判定は変更せず、通常APIで元応答・実行・固定pathが一致した場合だけ、
 このmetadata射影の用途を認める。自作票・callerのtrue・要求modelだけでは認めない。
 
@@ -25,6 +25,13 @@ PR495の内部coreへ実データを渡すための専用reader。元PR448とPR4
 `ownerPolicyClassify`の`protected`/`client_project`カテゴリで、必ず拒否する。
 readerはclear/unverified/protectedと各boolean・カテゴリの整合を検証し、矛盾も拒否する。
 分類未確認の許可をclient-freeの判定へ変えず、固定用途と正常API照合に限る。
+
+2026-10-27の本人規則の配布に伴い、通常guardが
+`classification_policy=owner-client-rule-20261027`かつ
+`classification_basis=owner_rule_unattributed_location`とするnativeだけも、
+この既存の用途別照合へ進める。一般のaccess_allowedやprotectedの値は変えない。
+sourceとbinaryは従来どおりclearが必要で、正常APIとの元の結合を省略しない。
+他の根拠のprotectedや、別のpolicy、未結合の入力は拒否する。
 
 ## 原本の読取と出力
 

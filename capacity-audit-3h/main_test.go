@@ -13,6 +13,28 @@ import (
 	"time"
 )
 
+func TestOwnerRuleClassificationKeepsDefaultAttributionDistinct(t *testing.T) {
+	for _, tc := range []struct{ body, want string }{
+		{`{"client_resource":true,"classification_unverified":true}`, "protected_unclassified"},
+		{`{"client_resource":true,"classification_policy":"owner-client-rule-20261027","classification_basis":"owner_rule_unattributed_location"}`, "protected_owner_rule_unattributed"},
+		{`{"client_resource":true,"classification_policy":"owner-client-rule-20261027","classification_basis":"client_department"}`, "protected"},
+		{`{"client_resource":false}`, "clear"},
+		{`{}`, "guard_unavailable"},
+	} {
+		if classifyGuardResponse([]byte(tc.body)) != tc.want {
+			t.Fatal("classification evidence conflated")
+		}
+	}
+}
+
+func TestOwnerRuleProtectionBasisReachesCategoryReport(t *testing.T) {
+	result := protectedCategoryResult(rootSpec{Category: "synthetic"}, "protected_owner_rule_unattributed")
+	encoded, err := json.Marshal(report{Schema: 1, Categories: []categoryResult{result}})
+	if err != nil || !strings.Contains(string(encoded), `"protection_basis":"protected_owner_rule_unattributed"`) || !strings.Contains(string(encoded), `"status":"protected_unclassified"`) {
+		t.Fatal("protection basis lost in category report")
+	}
+}
+
 func TestBoundary(t *testing.T) {
 	root := t.TempDir()
 	for _, path := range []string{"", filepath.Dir(root), root + "-sibling", root} {

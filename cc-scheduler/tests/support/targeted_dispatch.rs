@@ -18,6 +18,7 @@ fn targeted_dispatch_resumes_only_the_selected_session_and_reads_the_current_spe
     source["thread_id"] = json!(session);
     source["cwd"] = cwd.clone();
     source["sandbox"] = json!("read-only");
+    source["scope_source"] = json!("owner_request");
     source["mcp_profile"] = json!("browser");
     source["network"] = json!(false);
     source["add_dirs"] = json!([]);

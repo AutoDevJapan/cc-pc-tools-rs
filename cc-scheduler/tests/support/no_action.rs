@@ -166,6 +166,7 @@ fn no_action_resume_keeps_explicit_model_and_capabilities_and_routes_auto_to_imp
         source["model"] = json!("gpt-6-luna");
         source["effort"] = json!("max");
         source["sandbox"] = json!("danger-full-access");
+        source["scope_source"] = json!("owner_request");
         source["mcp_profile"] = json!("minimal");
         source["network"] = json!(false);
         source["add_dirs"] = json!(["D:/fixture-scope"]);

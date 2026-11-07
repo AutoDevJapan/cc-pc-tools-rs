@@ -22,6 +22,8 @@ pub(crate) const LAUNCH: &[(&str, &str, Kind)] = &[
     ("model_origin", "model_origin", Scalar),
     ("effort_origin", "effort_origin", Scalar),
     ("sandbox", "sandbox", Scalar),
+    ("scope_source", "scope_source", Scalar),
+    ("explicit_capability_constraints", "explicit_capability_constraints", Tree),
     ("mcp_profile", "mcp_profile", Scalar),
     ("network", "network", Scalar),
     ("add_dirs", "add_dirs", Scalar),

@@ -8,6 +8,7 @@ pub mod admission;
 pub mod common;
 pub mod dispatch_receipt;
 pub mod engine;
+mod launch_scope;
 pub mod native;
 pub mod no_action;
 pub mod policy;

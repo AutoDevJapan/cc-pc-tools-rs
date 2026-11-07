@@ -41,12 +41,10 @@ pub fn needs_browser(task: &str) -> bool {
     .iter()
     .any(|s| task.contains(s))
 }
-pub fn profile<'a>(requested: &'a str, task: &str) -> &'a str {
-    if requested != "full" && needs_browser(task) {
-        "browser"
-    } else {
-        requested
-    }
+pub fn profile<'a>(requested: &'a str, _task: &str) -> &'a str {
+    // Prompt text neither grants tools nor narrows the inherited configuration.
+    // Keep explicit finite profiles even when shared instructions mention Chrome.
+    requested
 }
 pub fn epoch() -> i64 {
     chrono::Utc::now().timestamp()
@@ -548,8 +546,8 @@ mod tests {
     }
     #[test]
     fn profiles_and_restart_identity() {
-        assert_eq!(profile("minimal", "ログインして画面確認"), "browser");
-        assert_eq!(profile("minimal", "画面を確認して"), "browser");
+        assert_eq!(profile("minimal", "ログインして画面確認"), "minimal");
+        assert_eq!(profile("inherit", "画面を確認して"), "inherit");
         assert_eq!(profile("full", "website check"), "full");
         assert_eq!(profile("minimal", "compile Rust"), "minimal");
         let r = record("j", 1);

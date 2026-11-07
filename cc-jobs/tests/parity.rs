@@ -75,6 +75,24 @@ mod independent_subwork {
             .unwrap()
     }
     #[test]
+    fn ordinary_research_and_review_subwork_keep_inherited_capabilities_and_owner_binding() {
+        for kind in ["research", "review"] {
+            let (t, mut f) = setup(8);
+            f.db["items"][1]["subwork"]["kind"] = json!(kind);
+            f.db["items"][1]["scheduler"]["subwork_admission"] =
+                cc_job_policy::subwork::admission(&f.db["items"][1]);
+            fs::write(f.dir.path().join("todo.json"), f.db.to_string()).unwrap();
+            register(&t, &f, &["--sandbox", "inherit"]).unwrap();
+            let j = child(&t);
+            assert_eq!(j["sandbox"], "inherit");
+            assert_eq!(j["mcp_profile"], "inherit");
+            assert_eq!(j["subwork_validated"], true);
+            assert_eq!(j["parent_job_id"], "parent");
+            assert_eq!(j["subwork"]["kind"], kind);
+            assert_eq!(j["subwork"], f.db["items"][1]["subwork"]);
+        }
+    }
+    #[test]
     fn unqualified_original_research_is_not_published_as_another_ordinary_reader() {
         let (t,mut f)=setup(1);
         f.db["items"][1]["id"]=json!(2939);
@@ -8861,6 +8879,36 @@ mod auto_gto_rating {
 mod run_validation {
     use super::*;
     #[test]
+    fn registration_records_inheritance_without_claiming_effective_permissions() {
+        let t = Test::new();
+        t.run(&[], b"implement and verify").unwrap();
+        let jobs = t.ctx.list_jobs(&HashSet::new());
+        let j = &jobs[0];
+        for field in ["sandbox", "mcp_profile", "approval_policy", "approvals_reviewer"] {
+            assert_eq!(j[field], "inherit", "{field}");
+        }
+        let prompt = fs::read_to_string(t.ctx.job_dir(s(j, "id")).join("prompt.md")).unwrap();
+        assert!(prompt.contains("git push"));
+        assert!(!prompt.contains("読むだけの調査・レビューです"));
+        assert_eq!(j["explicit_capability_constraints"], json!({"sandbox":false,"mcp_profile":false}));
+    }
+    #[test]
+    fn standalone_explicit_constraints_are_distinct_from_managed_router_options() {
+        for managed in [false, true] {
+            let t = Test::new();
+            let mut args = vec!["--sandbox", "read-only", "--mcp-profile", "minimal"];
+            if managed {
+                args.extend(["--launch-key", "11111111111111111111111111111111"]);
+            }
+            t.run(&args, b"finite requested check").unwrap();
+            let jobs = t.ctx.list_jobs(&HashSet::new());
+            let j = &jobs[0];
+            assert_eq!(j["explicit_capability_constraints"], json!({"sandbox":!managed,"mcp_profile":!managed}));
+            assert_eq!(j["sandbox"], "read-only");
+            assert_eq!(j["mcp_profile"], "minimal");
+        }
+    }
+    #[test]
     fn unattended_implementation_accepts_approval_and_readonly_cannot_escalate() {
         for (sandbox, approval, reviewer) in [
             ("danger-full-access", "on-request", "auto_review"),
@@ -8878,11 +8926,7 @@ mod run_validation {
                         .any(|pair| pair[0] == "-c" && pair[1] == value)
                 );
             }
-            let expected = if sandbox == "workspace-write" {
-                "danger-full-access"
-            } else {
-                sandbox
-            };
+            let expected = sandbox;
             assert!(args.windows(2).any(|pair| pair == ["-s", expected]));
             assert!(
                 args.windows(2)
@@ -12688,7 +12732,7 @@ mod additional_compatibility {
             };
             assert_eq!(code, case["code"].as_i64().unwrap() as i32, "{args:?}");
             // Keep the old Python oracle. Only exact documented additions and
-            // the owner's intentional model/effort default change may differ.
+            // the owner's intentional model/effort/capability changes may differ.
             let strip_run_additions = |text: &str| {
                 let mut text = text.to_owned();
                 for addition in [
@@ -12702,10 +12746,14 @@ mod additional_compatibility {
                     "  --model-recovery-from MODEL\n                        one-launch routing hint after a managed model failure\n",
                     "  --effort-origin {policy,owner_request}\n                        policy hint or recorded individual owner effort override\n",
                     "  --model-origin {policy,owner_request}\n                        policy hint or recorded individual owner model override\n",
+                    "                        default: inherit the normal Codex configuration\n",
                 ] {
                     text = text.replace(addition, "");
                 }
-                text.replace("default: Opus for review, Sol for other tasks;\n                        explicit model choices win",
+                text.replace("{inherit,read-only,workspace-write,danger-full-access}", "{read-only,workspace-write,danger-full-access}")
+                    .replace("{inherit,minimal,browser,full}", "{minimal,browser,full}")
+                    .replace("default: inherit configured tools; reduced profiles\n                        apply only when explicitly requested", "minimal disables four stdio MCP servers; browser keeps\n                        node_repl; full keeps all")
+                    .replace("default: Opus for review, Sol for other tasks;\n                        explicit model choices win",
                     "default: gpt-6-luna for review/check/research/cleanup,\n                        gpt-6.1-sol for implementation; explicit values win")
                     .replace("default: max; managed AI hints follow owner policy", "default: high; max requires an explicit value")
             };

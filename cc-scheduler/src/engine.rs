@@ -1437,7 +1437,7 @@ if !truth(&row["scheduler"]["key"]){let attempt=add_count(&row["scheduler"]["att
         }
         if item["subwork"].is_object() {
             prompt += &format!(
-                "\nこの作業はToDo {}の独立した{}です。保存済み仕様の有限な範囲だけを扱い、主担当の完了を前提にせず結果を返してください。主担当のソースを編集したり、独立したPRの作成やマージを担当したりしないでください。\n",
+                "\nこの作業はToDo {}の独立した{}です。保存済み仕様の目的・対象・完了条件に従い、必要な調査・修正・テスト・連携は自分で判断して進めてください。共有する成果の所有と同時編集は担当同士で調整し、主担当の完了を前提にせず結果を返してください。独立レビューでは実装者の成果を書き換えてレビュー済みに見せず、確認した差分と結果を返してください。\n",
                 item["subwork"]["parent_todo_id"],
                 s(&item["subwork"]["kind"])
             );
@@ -1694,30 +1694,15 @@ if !truth(&row["scheduler"]["key"]){let attempt=add_count(&row["scheduler"]["att
         if item["subwork"].is_object() {
             selection["task_type"] = item["subwork"]["kind"].clone();
         }
-        // An unfinished successful conversation needs its recorded execution
-        // scope too, not only its model/session. Explicit saved inputs still win.
-        if let Some(source) = source.filter(|_| resume_session.is_some()) {
-            let sandbox = if !item["sandbox"].is_null() {
-                &item["sandbox"]
-            } else if !accepted_options["sandbox"].is_null() {
-                &accepted_options["sandbox"]
-            } else {
-                &source["sandbox"]
-            };
-            if !sandbox.is_null() {
-                selection["sandbox"] = sandbox.clone();
-            }
-        }
-        if item["scheduler"]["console_request"]["read_only"] == true
-            || ["research", "review"].contains(&s(&item["subwork"]["kind"]))
-            || cc_ask::job_policy::explicit_read_only(s(&item["title"]))
-        {
-            selection["sandbox"] = json!("read-only");
-        }
+        // Restore owner scope and exact finite contracts, not old router hints.
+        crate::launch_scope::apply(&item, source, &mut selection);
         // A resumed conversation may restore the previous model. Reuse it only
         // when the selected settings agree, including partial explicit choices.
         if source.is_some_and(|source| {
-            (selection["sandbox"] == "read-only" && source["sandbox"] != "read-only")
+            ["sandbox", "mcp_profile"].iter().any(|field| {
+                source[*field].as_str().is_some_and(|value| !value.is_empty())
+                    && source[*field] != selection[*field]
+            })
                 || (cc_ask::job_policy::review_result::is_finite_review(source)
                     && source["finite_review"]["spec"]
                         .as_str()
@@ -1732,7 +1717,7 @@ if !truth(&row["scheduler"]["key"]){let attempt=add_count(&row["scheduler"]["att
         }
         // Do not carry capabilities from a conversation that was just retired.
         if let Some(source) = source.filter(|_| resume_session.is_some()) {
-            for field in ["mcp_profile", "network", "add_dirs"] {
+            for field in ["network", "add_dirs"] {
                 let value = if !item[field].is_null() {
                     &item[field]
                 } else if !accepted_options[field].is_null() {

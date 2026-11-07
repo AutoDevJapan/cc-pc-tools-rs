@@ -293,7 +293,7 @@ fn resume_inherits_permissions_and_routing_from_source_without_preamble_classifi
             if sandbox == "read-only" {
                 "read-only"
             } else {
-                "danger-full-access"
+                "workspace-write"
             }
         );
     }
@@ -306,7 +306,7 @@ fn owner_reply_changes_owner_scope_but_cannot_promote_a_launcher_reader() {
             "read-only",
             "owner_marker",
             "直してPRをマージ",
-            "danger-full-access",
+            "inherit",
         ),
         (
             "danger-full-access",

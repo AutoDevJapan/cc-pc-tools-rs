@@ -1790,10 +1790,6 @@ pub(crate) fn codex_args_with_policy(j: &Value, policy: cc_job_policy::Policy) -
         "exec".into(),
         "--json".into(),
         "--skip-git-repo-check".into(),
-        "-c".into(),
-        format!("approval_policy={}", policy.approval),
-        "-c".into(),
-        format!("approvals_reviewer={}", policy.reviewer),
         "-m".into(),
         crate::pool_retry::launch_model(j),
         "-c".into(),
@@ -1801,9 +1797,20 @@ pub(crate) fn codex_args_with_policy(j: &Value, policy: cc_job_policy::Policy) -
             "model_reasoning_effort={}",
             cc_job_policy::effective_effort(j)
         ),
-        "-s".into(),
-        policy.sandbox.into(),
     ];
+    // Omit overrides for ordinary work so Codex resolves the real user,
+    // workspace and managed settings. Inheritance never disables review.
+    if policy.sandbox != "inherit" {
+        args.extend(["-s".into(), policy.sandbox.into()]);
+    }
+    for (key, value) in [
+        ("approval_policy", policy.approval),
+        ("approvals_reviewer", policy.reviewer),
+    ] {
+        if value != "inherit" {
+            args.extend(["-c".into(), format!("{key}={value}")]);
+        }
+    }
     if crate::pool_retry::requested_tier(s(j,"model"))==Some("fast") {
         // A user's reasoning level is independent from processing speed. Keep
         // explicit effort above, but do not inherit a slower global tier.
@@ -1859,14 +1866,13 @@ pub(crate) fn codex_args_with_policy(j: &Value, policy: cc_job_policy::Policy) -
         ]);
     }
     let disabled: &[&str] = match s(j, "mcp_profile") {
-        "full" => &[],
+        "" | "inherit" | "full" => &[],
         "browser" => &["godd-a", "headroom", "pencil"],
         _ => &["godd-a", "headroom", "pencil", "node_repl"],
     };
-    // Plugins start their own node runtimes (cua-repl + node_repl per codex process) even when
-    // mcp_servers.node_repl is off; jobs rarely need them (owner, 2026-10-02: node helpers waste CPU).
+    // Reduced profiles are explicit launch constraints, never inferred from a role.
     let plugins_off: &[&str] = match s(j, "mcp_profile") {
-        "full" => &[],
+        "" | "inherit" | "full" => &[],
         "browser" => &["visualize@openai-bundled"],
         _ => &[
             "browser@openai-bundled",

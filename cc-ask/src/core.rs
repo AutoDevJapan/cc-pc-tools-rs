@@ -1584,7 +1584,7 @@ pub fn launch_job_with_session(
         key.into(),
     ];
     let profile = cc_chrome::profile(
-        selection["mcp_profile"].as_str().unwrap_or("minimal"),
+        selection["mcp_profile"].as_str().unwrap_or("inherit"),
         &prompt,
     );
     args.extend(["--mcp-profile".into(), profile.into()]);

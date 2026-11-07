@@ -1,4 +1,4 @@
-//! Permissions for unattended jobs. Read-only work cannot escalate to write access.
+//! Explicit job constraints and inherited configuration for ordinary work.
 pub mod action_progress;
 pub mod cancellation;
 pub mod cargo;
@@ -246,11 +246,7 @@ pub fn review_source_jobs(item: &serde_json::Value, db: &serde_json::Value) -> V
 
 /// Model routing labels are not permission boundaries: a review may include fixes.
 pub fn for_task(_task_type: &str, requested_sandbox: &str) -> Policy {
-    if requested_sandbox == "read-only" {
-        for_sandbox("read-only")
-    } else {
-        for_sandbox("danger-full-access")
-    }
+    for_sandbox(requested_sandbox)
 }
 
 /// An explicit human scope marker at the start of the request, not quoted logs
@@ -295,7 +291,7 @@ pub fn resolve_scope(
         if explicit_read_only(request) {
             (for_sandbox("read-only"), "owner_marker")
         } else {
-            (for_sandbox("danger-full-access"), "owner_request")
+            (for_sandbox("inherit"), "owner_request")
         }
     } else {
         (for_task("", sandbox), source)
@@ -309,10 +305,20 @@ pub fn for_sandbox(sandbox: &str) -> Policy {
             approval: "never",
             reviewer: "user",
         },
-        _ => Policy {
+        "workspace-write" => Policy {
+            sandbox: "workspace-write",
+            approval: "on-request",
+            reviewer: "auto_review",
+        },
+        "danger-full-access" => Policy {
             sandbox: "danger-full-access",
             approval: "on-request",
             reviewer: "auto_review",
+        },
+        _ => Policy {
+            sandbox: "inherit",
+            approval: "inherit",
+            reviewer: "inherit",
         },
     }
 }
@@ -331,7 +337,7 @@ mod tests {
                 "read-only",
                 "owner_marker",
                 Some("直してPRをマージする"),
-                "danger-full-access",
+                "inherit",
             ),
             (
                 "danger-full-access",
@@ -341,7 +347,7 @@ mod tests {
             ),
             ("read-only", "launcher", Some("直して"), "read-only"),
             ("read-only", "owner_marker", None, "read-only"),
-            ("workspace-write", "launcher", None, "danger-full-access"),
+            ("workspace-write", "launcher", None, "workspace-write"),
         ] {
             assert_eq!(resolve_scope(sandbox, source, request).0.sandbox, expected);
         }
@@ -354,12 +360,12 @@ mod tests {
         }
     }
     #[test]
-    fn implementation_can_publish_even_with_old_workspace_setting() {
+    fn explicit_workspace_setting_is_preserved() {
         let p = for_task("implementation", "workspace-write");
         assert_eq!(
             p,
             Policy {
-                sandbox: "danger-full-access",
+                sandbox: "workspace-write",
                 approval: "on-request",
                 reviewer: "auto_review"
             }
@@ -370,7 +376,7 @@ mod tests {
         for task in ["research", "review", "code_review", "implementation"] {
             assert_eq!(
                 for_task(task, "workspace-write"),
-                for_sandbox("danger-full-access")
+                for_sandbox("workspace-write")
             );
             assert_eq!(for_task(task, "read-only"), for_sandbox("read-only"));
         }

@@ -1,11 +1,10 @@
-//! A completed read-only child review is not a claim that its parent is complete.
+//! A completed independent child review is not a claim that its parent is complete.
 use serde_json::Value;
 
 pub const COMPLETE: &str = "状態: 完了（レビュー作業のみ）";
 
 pub fn is_review_subwork(job: &Value) -> bool {
-    job["sandbox"] == "read-only"
-        && job["subwork_validated"] == true
+    job["subwork_validated"] == true
         && job["subwork"]["kind"] == "review"
         && job["todo_id"].as_u64().is_some_and(|id| id > 0)
         && job["subwork"]["parent_todo_id"]
@@ -34,12 +33,10 @@ pub fn completed(job: &Value, result: &str) -> bool {
 
 pub fn is_finite_review(job: &Value) -> bool {
     is_review_subwork(job)
-        || (job["sandbox"] == "read-only"
-            && crate::review_task(
-                job["name"].as_str().unwrap_or(""),
-                job["task_type"].as_str().unwrap_or(""),
-            )
-            && job["todo_id"].as_u64().is_some_and(|id| id > 0)
+        || (crate::review_task(
+            job["name"].as_str().unwrap_or(""),
+            job["task_type"].as_str().unwrap_or(""),
+        ) && job["todo_id"].as_u64().is_some_and(|id| id > 0)
             && job["finite_review"]["todo_id"] == job["todo_id"]
             && job["finite_review"]["spec"]
                 .as_str()
@@ -69,9 +66,14 @@ mod tests {
                 "owner":{"repository":"fixture/repo","git_common":"fixture-common","worktree":"fixture-tree","branch":"fixture-branch"}}})
     }
     #[test]
-    fn exact_qualified_child_header_is_scoped_to_the_readonly_review() {
+    fn exact_qualified_child_header_is_scoped_to_the_independent_review() {
         let job = review();
         assert!(completed(&job, &format!("{COMPLETE}\nMustなし。")));
+        for sandbox in ["inherit", "workspace-write", "danger-full-access"] {
+            let mut capable = job.clone();
+            capable["sandbox"] = json!(sandbox);
+            assert!(completed(&capable, COMPLETE));
+        }
         for change in [
             "root",
             "writer",
@@ -86,7 +88,7 @@ mod tests {
                 "root" => {
                     job.as_object_mut().unwrap().remove("subwork");
                 }
-                "writer" => job["sandbox"] = json!("workspace-write"),
+                "writer" => job["subwork"]["kind"] = json!("implementation"),
                 "unvalidated" => job["subwork_validated"] = json!(false),
                 "research" => job["subwork"]["kind"] = json!("research"),
                 "missing_owner" => job["subwork"]["owner"] = Value::Null,

@@ -192,6 +192,8 @@ fn control_key(key: &str) -> bool {
         "model_origin",
         "effort_origin",
         "sandbox",
+        "scope_source",
+        "explicit_capability_constraints",
         "mcp_profile",
         "network",
         "add_dirs",

@@ -109,6 +109,17 @@ fn fixture() -> (Fixture, Value) {
 }
 
 #[test]
+fn inherited_scope_retains_exact_received_body_verification() {
+    let (mut f, r) = fixture();
+    update_json(&mut f, layout().jobs.join(job_id()).join("job.json"), |v| {
+        v["sandbox"] = json!("inherit");
+    });
+    assert!(query(&mut f, &r).is_ok());
+    f.files.get_mut(&layout().jobs.join(job_id()).join("prompt.md")).unwrap().push(b'!');
+    assert_eq!(query(&mut f, &r).unwrap_err().0, "received_mismatch");
+}
+
+#[test]
 fn registered_job_scope_and_output_type_are_checked() {
     for (key, value, code) in [
         ("registered_cwd", json!("D:/another"), "scope_mismatch"),

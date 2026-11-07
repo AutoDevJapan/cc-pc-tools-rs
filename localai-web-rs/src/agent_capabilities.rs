@@ -71,6 +71,7 @@ pub(super) fn apply(
     }
     let inherited = source.filter(|_| inherit_scope);
     let fixed = inherited.filter(|source| contract(source));
+    let fixed_scope = fixed.map(cc_ask::job_policy::capability_scope::retained);
     let mut origin = "launcher";
     for field in FIELDS {
         let changed = !requested["_todo_defaults"].is_object()
@@ -104,10 +105,16 @@ pub(super) fn apply(
         };
         options[field] = chosen.map_or_else(|| json!("inherit"), |value| value[field].clone());
         if let Some(value) = chosen {
-            let source = match value["scope_source"].as_str() {
-                Some("owner_request") => "owner_request",
-                Some("owner_marker") => "owner_marker",
-                _ => "caller_constraint",
+            let source = if fixed.is_some_and(|source| std::ptr::eq(source, value)) {
+                fixed_scope.as_ref().unwrap()["scope_source"]
+                    .as_str()
+                    .unwrap()
+            } else {
+                match value["scope_source"].as_str() {
+                    Some("owner_request") => "owner_request",
+                    Some("owner_marker") => "owner_marker",
+                    _ => "caller_constraint",
+                }
             };
             if origin == "launcher" || matches!(source, "owner_request" | "owner_marker") {
                 origin = source;

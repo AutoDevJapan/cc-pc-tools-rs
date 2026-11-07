@@ -213,6 +213,25 @@ fn stop_wait_review_and_new_worker_are_not_candidates() {
 }
 
 #[test]
+fn inherited_implementation_uses_existing_progress_recovery_without_widening_finite_scopes() {
+    let row = json!({"id":1,"project":"cc-pc-tools-rs","status":"doing","dispatchable":true,
+        "spec":"saved-spec.md","resume_generation":1,"scheduler":{"job":"source"}});
+    let db = json!({"items":[row.clone()]});
+    let mut running = job();
+    for (key, value) in [("status",json!("running")),("task_type",json!("implementation")),
+        ("sandbox",json!("inherit")),("todo_id",json!(1))] { running[key] = value; }
+    assert!(eligible(&db, &row, &running));
+    for binding in ["fixed_read_only_review", "fixed_review_requalification", "original_product_retry", "initial_review"] {
+        let mut finite = running.clone(); finite[binding] = json!({"bound":true});
+        assert!(!eligible(&db, &row, &finite), "{binding}");
+    }
+    for sandbox in ["read-only","workspace-write","unknown"] {
+        let mut restricted = running.clone(); restricted["sandbox"] = json!(sandbox);
+        assert!(!eligible(&db, &row, &restricted), "{sandbox}");
+    }
+}
+
+#[test]
 fn linked_primary_job_remains_current_after_automatic_link_retires_a_start_receipt() {
     let mut j = job();
     j["status"] = json!("running");

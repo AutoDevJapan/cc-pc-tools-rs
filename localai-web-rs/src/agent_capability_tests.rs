@@ -300,3 +300,19 @@ fn changed_tool_profile_starts_a_fresh_conversation() {
     assert_eq!(options["fresh_conversation"], true);
     assert_eq!(options["source_workspace"], source["cwd"]);
 }
+
+#[test]
+fn temporary_contract_scope_is_not_promoted_to_an_ordinary_caller_constraint() {
+    for binding in ["fixed_read_only_review","original_product_retry","quota_recovery"] {
+        let mut source = json!({"id":"finite","todo_id":1,"launch_key":"finite-key",
+            "model":"gpt-6.1-sol","effort":"high","sandbox":"read-only",
+            "mcp_profile":"minimal","scope_source":"launcher"});
+        source[binding] = json!({"bound":true});
+        let mut next = launch_options(None,&json!({}),Some(&source),true).unwrap();
+        assert_eq!(next["scope_source"], "launcher");
+        next["todo_id"] = json!(1); next["launch_key"] = json!("ordinary-key");
+        let ordinary = launch_options(None,&json!({}),Some(&next),true).unwrap();
+        assert_eq!(ordinary["sandbox"], "inherit");
+        assert_eq!(ordinary["mcp_profile"], "inherit");
+    }
+}

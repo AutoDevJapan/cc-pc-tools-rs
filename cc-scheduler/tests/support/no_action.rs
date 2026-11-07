@@ -69,6 +69,23 @@ fn report_only_recovery_requeues_once_with_preserved_workspace_and_backoff() {
         original["scheduler"]["worktree"]
     );
 }
+
+#[test]
+fn inherited_ordinary_implementation_recovery_keeps_workspace_and_inherited_scope() {
+    let mut f = setup();
+    let saved_workspace = f.get(1)["scheduler"]["worktree"].clone();
+    f.e.backend.records[0]["sandbox"] = json!("inherit");
+    f.e.backend.records[0]["mcp_profile"] = json!("inherit");
+    pass(&mut f); f.e.backend.clock += 1801.; pass(&mut f);
+    assert_eq!(f.e.backend.cancelled, vec![json!("j1")]);
+    assert_eq!(f.get(1)["scheduler"]["last_stop"], "no_action");
+    f.e.backend.clock = n(&f.get(1)["scheduler"]["not_before"]) + 1.;
+    f.dispatch();
+    let selected = &f.e.backend.launched[0]["item"]["scheduler"]["selection"];
+    assert_eq!(selected["sandbox"], "inherit");
+    assert_eq!(selected["mcp_profile"], "inherit");
+    assert_eq!(f.get(1)["scheduler"]["worktree"], saved_workspace);
+}
 #[test]
 fn no_action_rechecks_stop_dependency_generation_and_worker_after_scope_check() {
     for case in ["stop", "dependency", "generation", "worker", "recovery"] {

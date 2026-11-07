@@ -59,3 +59,24 @@ fn old_caller_and_ambiguous_standalone_records_keep_constraints_without_fabricat
         );
     }
 }
+
+#[test]
+fn partial_source_keeps_its_own_constraints_while_restoring_the_missing_field() {
+    let mut source = json!({"sandbox":"workspace-write","scope_source":"owner_request"});
+    let saved = json!({"sandbox":"read-only","mcp_profile":"minimal","scope_source":"caller_constraint",
+        "capability_provenance_version":1,"explicit_capability_constraints":{"sandbox":false,"mcp_profile":true}});
+    restore_missing(&mut source, &saved);
+    assert_eq!(source["sandbox"], "workspace-write");
+    assert_eq!(source["mcp_profile"], "minimal");
+    assert_eq!(source["scope_source"], "owner_request");
+    assert_eq!(
+        source["explicit_capability_constraints"],
+        json!({"sandbox":true,"mcp_profile":true})
+    );
+    let before = source.clone();
+    restore_missing(
+        &mut source,
+        &json!({"sandbox":"inherit","mcp_profile":"full"}),
+    );
+    assert_eq!(source, before);
+}

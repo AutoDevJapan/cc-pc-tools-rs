@@ -83,6 +83,48 @@ pub fn retained(value: &Value) -> Value {
             "mcp_profile":constrained(value,"mcp_profile") || (!fixed(value) && legacy(value,"mcp_profile"))}})
 }
 
+/// Recover missing launch fields from the same job's saved selection. Existing
+/// source fields and their provenance win; a partial legacy source must not
+/// acquire another field's lifetime when the saved selection uses v1 masks.
+pub fn restore_missing(source: &mut Value, saved: &Value) {
+    let present =
+        |value: &Value, field: &str| value[field].as_str().is_some_and(|text| !text.is_empty());
+    if ["sandbox", "mcp_profile"]
+        .iter()
+        .all(|field| present(source, field))
+    {
+        return;
+    }
+    let original = source.clone();
+    let mut scope_source = if fixed(&original) {
+        original["scope_source"].as_str().unwrap_or("launcher")
+    } else {
+        "launcher"
+    };
+    for field in ["sandbox", "mcp_profile"] {
+        let chosen = if present(&original, field) {
+            &original
+        } else {
+            saved
+        };
+        source[field] = chosen[field]
+            .as_str()
+            .filter(|text| !text.is_empty())
+            .map_or_else(
+                || serde_json::json!("inherit"),
+                |text| serde_json::json!(text),
+            );
+        let durable = present(chosen, field)
+            && (constrained(chosen, field) || (!fixed(chosen) && legacy(chosen, field)));
+        source["explicit_capability_constraints"][field] = serde_json::json!(durable);
+        if durable && (scope_source == "launcher" || owner(chosen)) {
+            scope_source = origin(chosen);
+        }
+    }
+    source["capability_provenance_version"] = serde_json::json!(1);
+    source["scope_source"] = serde_json::json!(scope_source);
+}
+
 /// Serialize a resolved launch tuple together so relaunchers cannot drop its
 /// provenance. Values remain subject to the regular launcher's validation.
 pub fn launch_args(scope: &Value) -> Vec<String> {

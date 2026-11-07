@@ -75,6 +75,24 @@ mod independent_subwork {
             .unwrap()
     }
     #[test]
+    fn ordinary_research_and_review_subwork_keep_inherited_capabilities_and_owner_binding() {
+        for kind in ["research", "review"] {
+            let (t, mut f) = setup(8);
+            f.db["items"][1]["subwork"]["kind"] = json!(kind);
+            f.db["items"][1]["scheduler"]["subwork_admission"] =
+                cc_job_policy::subwork::admission(&f.db["items"][1]);
+            fs::write(f.dir.path().join("todo.json"), f.db.to_string()).unwrap();
+            register(&t, &f, &["--sandbox", "inherit"]).unwrap();
+            let j = child(&t);
+            assert_eq!(j["sandbox"], "inherit");
+            assert_eq!(j["mcp_profile"], "inherit");
+            assert_eq!(j["subwork_validated"], true);
+            assert_eq!(j["parent_job_id"], "parent");
+            assert_eq!(j["subwork"]["kind"], kind);
+            assert_eq!(j["subwork"], f.db["items"][1]["subwork"]);
+        }
+    }
+    #[test]
     fn unqualified_original_research_is_not_published_as_another_ordinary_reader() {
         let (t,mut f)=setup(1);
         f.db["items"][1]["id"]=json!(2939);
@@ -8861,6 +8879,135 @@ mod auto_gto_rating {
 mod run_validation {
     use super::*;
     #[test]
+    fn registration_records_inheritance_without_claiming_effective_permissions() {
+        let t = Test::new();
+        t.run(&[], b"implement and verify").unwrap();
+        let jobs = t.ctx.list_jobs(&HashSet::new());
+        let j = &jobs[0];
+        for field in ["sandbox", "mcp_profile", "approval_policy", "approvals_reviewer"] {
+            assert_eq!(j[field], "inherit", "{field}");
+        }
+        let prompt = fs::read_to_string(t.ctx.job_dir(s(j, "id")).join("prompt.md")).unwrap();
+        assert!(prompt.contains("git push"));
+        assert!(!prompt.contains("読むだけの調査・レビューです"));
+        assert_eq!(j["explicit_capability_constraints"], json!({"sandbox":false,"mcp_profile":false}));
+    }
+    #[test]
+    fn standalone_explicit_constraints_are_distinct_from_managed_router_options() {
+        for (managed, manual_id) in [(false, false), (false, true), (true, true)] {
+            let t = Test::new();
+            let mut args = vec!["--sandbox", "read-only", "--mcp-profile", "minimal"];
+            if manual_id { args.extend(["--todo-id", "77"]); }
+            if managed {
+                args.extend(["--launch-key", "11111111111111111111111111111111"]);
+            }
+            t.run(&args, b"finite requested check").unwrap();
+            let jobs = t.ctx.list_jobs(&HashSet::new());
+            let j = &jobs[0];
+            assert_eq!(j["explicit_capability_constraints"], json!({"sandbox":!managed,"mcp_profile":!managed}));
+            assert_eq!(j["sandbox"], "read-only");
+            assert_eq!(j["mcp_profile"], "minimal");
+        }
+    }
+    #[test]
+    fn managed_relaunch_keeps_caller_constraint_provenance_without_owner_claim() {
+        let t = Test::new();
+        t.run(&["--sandbox", "read-only", "--mcp-profile", "minimal",
+            "--scope-source", "caller_constraint", "--launch-key", "11111111111111111111111111111111"],
+            b"continue the retained scope").unwrap();
+        let jobs = t.ctx.list_jobs(&HashSet::new());
+        let j = &jobs[0];
+        assert_eq!(j["scope_source"], "caller_constraint");
+        assert_eq!(j["sandbox"], "read-only");
+        assert_eq!(j["mcp_profile"], "minimal");
+        assert_eq!(j["explicit_capability_constraints"], json!({"sandbox":false,"mcp_profile":false}));
+    }
+    #[test]
+    fn cli_retains_field_lifetime_mask_and_rejects_unknown_masks_before_registration() {
+        for (mask,sandbox,mcp) in [("none",false,false),("sandbox",true,false),("mcp_profile",false,true),("both",true,true)] {
+            let t=Test::new();
+            t.run(&["--sandbox","read-only","--mcp-profile","minimal","--scope-source","owner_marker",
+                "--capability-constraints",mask,"--launch-key","11111111111111111111111111111111"],b"continue bound work").unwrap();
+            let jobs=t.ctx.list_jobs(&HashSet::new());
+            assert_eq!(jobs[0]["capability_provenance_version"],1);
+            assert_eq!(jobs[0]["explicit_capability_constraints"],json!({"sandbox":sandbox,"mcp_profile":mcp}));
+            assert_eq!(jobs[0]["sandbox"],"read-only");
+            assert_eq!(jobs[0]["mcp_profile"],"minimal");
+        }
+        let t=Test::new();
+        assert!(t.run(&["--capability-constraints","unknown"],b"no registration").is_err());
+        assert!(t.ctx.list_jobs(&HashSet::new()).is_empty());
+    }
+    #[test]
+    fn real_backend_arguments_and_cli_records_keep_partial_constraints_for_three_generations() {
+        for (sandbox_constraint, mcp_constraint) in [(true, false), (false, true), (true, true)] {
+            let t = Test::new();
+            let prompt = t.ctx.root.join("restart-request.md");
+            fs::write(&prompt, "continue the saved work").unwrap();
+            let mut source = json!({"model":"gpt-6.1-sol","effort":"max","task_type":"implementation",
+                "sandbox":"read-only","mcp_profile":"minimal","scope_source":"launcher",
+                "explicit_capability_constraints":{"sandbox":sandbox_constraint,"mcp_profile":mcp_constraint}});
+            for generation in 1..=3 {
+                let key = format!("{generation:032x}");
+                let item = json!({"id":77,"title":"続行","project":"fixture",
+                    "scheduler":{"worktree":t.ctx.root,"key":key}});
+                let call = cc_scheduler::backend::RealBackend::new(t.ctx.root.join("scheduler"))
+                    .launch_command(&item, &prompt, &source);
+                let start = call.args.iter().position(|arg| arg == "run").unwrap();
+                t.ctx.dispatch(&call.args[start..], &mut Vec::new(), &mut Vec::new()).unwrap();
+                let mut registered = t.ctx.list_jobs(&HashSet::new()).into_iter()
+                    .find(|job| job["launch_key"] == key).unwrap();
+                assert_eq!(registered["scope_source"], "caller_constraint");
+                assert_eq!(registered["sandbox"], if sandbox_constraint { "read-only" } else { "inherit" });
+                assert_eq!(registered["mcp_profile"], if mcp_constraint { "minimal" } else { "inherit" });
+                assert_eq!(registered["capability_provenance_version"],1);
+                assert_eq!(registered["explicit_capability_constraints"], json!({"sandbox":sandbox_constraint,"mcp_profile":mcp_constraint}));
+                registered["status"] = json!("succeeded");
+                t.ctx.save(&registered).unwrap();
+                source = registered;
+            }
+        }
+    }
+    #[test]
+    fn real_discord_resolution_and_cli_records_keep_raw_and_legacy_partial_constraints() {
+        for legacy in [false, true] {
+            for (sandbox_constraint, mcp_constraint) in [(true, false), (false, true), (true, true)] {
+                let t = Test::new();
+                let prompt = t.ctx.root.join("request.md"); fs::write(&prompt, "continue saved work").unwrap();
+                let mut source = json!({"model":"gpt-6.1-sol","effort":"max","task_type":"implementation",
+                    "sandbox":if sandbox_constraint {"workspace-write"} else {"inherit"},
+                    "mcp_profile":if mcp_constraint {"minimal"} else {"inherit"},"scope_source":"launcher"});
+                if !legacy { source["explicit_capability_constraints"] = json!({"sandbox":sandbox_constraint,"mcp_profile":mcp_constraint}); }
+                for generation in 1..=3 {
+                    let mut selection = json!({"model":"gpt-6.1-sol","effort":"max","task_type":"implementation"});
+                    cc_ask::core::apply_job_scope(&mut selection, &source, Some("元の仕事を続ける"));
+                    let key = format!("{generation:032x}");
+                    let mut args = vec!["run".into(),"--name".into(),"discord-continuation".into(),
+                        "--cwd".into(),t.ctx.root.to_string_lossy().into_owned(),"--prompt-file".into(),prompt.to_string_lossy().into_owned(),
+                        "--launch-key".into(),key.clone()];
+                    args.extend(cc_job_policy::capability_scope::launch_args(&selection));
+                    t.ctx.dispatch(&args, &mut Vec::new(), &mut Vec::new()).unwrap();
+                    let mut next = t.ctx.list_jobs(&HashSet::new()).into_iter().find(|job| job["launch_key"] == key).unwrap();
+                    assert_eq!(next["scope_source"], "caller_constraint");
+                    assert_eq!(next["sandbox"], if sandbox_constraint {"workspace-write"} else {"inherit"});
+                    assert_eq!(next["mcp_profile"], if mcp_constraint {"minimal"} else {"inherit"});
+                    next["status"] = json!("succeeded"); t.ctx.save(&next).unwrap(); source = next;
+                }
+            }
+        }
+    }
+    #[test]
+    fn normal_review_prompt_describes_independence_without_reducing_tools() {
+        let t = Test::new();
+        let j = t.put(job(json!({"id":"independent-review","task_type":"review","sandbox":"inherit"})));
+        let original = "確認する版を保って根拠を返す";
+        fs::write(t.ctx.job_dir("independent-review").join("prompt.md"), original).unwrap();
+        let rendered = t.ctx.prompt_for_attempt(&j).unwrap();
+        let text = fs::read_to_string(rendered).unwrap();
+        assert_eq!(text.matches(cc_job_policy::REVIEW_GUIDANCE.trim()).count(), 1);
+        assert_eq!(fs::read_to_string(t.ctx.job_dir("independent-review").join("prompt.md")).unwrap(), original);
+    }
+    #[test]
     fn unattended_implementation_accepts_approval_and_readonly_cannot_escalate() {
         for (sandbox, approval, reviewer) in [
             ("danger-full-access", "on-request", "auto_review"),
@@ -8878,11 +9025,7 @@ mod run_validation {
                         .any(|pair| pair[0] == "-c" && pair[1] == value)
                 );
             }
-            let expected = if sandbox == "workspace-write" {
-                "danger-full-access"
-            } else {
-                sandbox
-            };
+            let expected = sandbox;
             assert!(args.windows(2).any(|pair| pair == ["-s", expected]));
             assert!(
                 args.windows(2)
@@ -12031,7 +12174,7 @@ mod end_to_end {
         assert_eq!(j["steps"], 2);
         assert_eq!(j["tokens"]["total"], 105710);
         let mut expected_prompt = prompt.to_vec();
-        expected_prompt.extend_from_slice(cc_job_policy::READ_GUIDANCE.as_bytes());
+        expected_prompt.extend_from_slice(cc_job_policy::WRITE_GUIDANCE.as_bytes());
         expected_prompt.extend_from_slice("\n\n## 最新の保存済みオーナー指示\n以下はPCの保存済み運用指示です。元の作業対象・閲覧専用指定・承認審査の範囲を広げません。GitHub所有者は実際の所有者を確認し、保護対象はscrub391 --guard-pathで除外してください。稼働中の担当は途中成果を保存し、次の区切りで反映してください。\nfixture owner instructions v1".as_bytes());
         expected_prompt.extend_from_slice("\n\n## 実行時のサイト制限\n".as_bytes());
         expected_prompt.extend_from_slice(cc_job_policy::REGISTRAR_GUIDANCE.as_bytes());
@@ -12688,7 +12831,7 @@ mod additional_compatibility {
             };
             assert_eq!(code, case["code"].as_i64().unwrap() as i32, "{args:?}");
             // Keep the old Python oracle. Only exact documented additions and
-            // the owner's intentional model/effort default change may differ.
+            // the owner's intentional model/effort/capability changes may differ.
             let strip_run_additions = |text: &str| {
                 let mut text = text.to_owned();
                 for addition in [
@@ -12697,15 +12840,21 @@ mod additional_compatibility {
                     "                         [--model-recovery-from MODEL]\n",
                     "                         [--effort-origin {policy,owner_request}]\n",
                     "                         [--model-origin {policy,owner_request}]\n",
+                    "                         [--capability-constraints {none,sandbox,mcp_profile,both}]\n",
                     "  --review-source-jobs IDS\n                        comma-separated durable source jobs, including exited writers\n",
                     "  --review-excluded-models MODELS\n                        comma-separated routing exclusions; not proof of authorship\n",
                     "  --model-recovery-from MODEL\n                        one-launch routing hint after a managed model failure\n",
                     "  --effort-origin {policy,owner_request}\n                        policy hint or recorded individual owner effort override\n",
                     "  --model-origin {policy,owner_request}\n                        policy hint or recorded individual owner model override\n",
+                    "  --capability-constraints {none,sandbox,mcp_profile,both}\n                        retain caller constraints per field across relaunches\n",
+                    "                        default: inherit the normal Codex configuration\n",
                 ] {
                     text = text.replace(addition, "");
                 }
-                text.replace("default: Opus for review, Sol for other tasks;\n                        explicit model choices win",
+                text.replace("{inherit,read-only,workspace-write,danger-full-access}", "{read-only,workspace-write,danger-full-access}")
+                    .replace("{inherit,minimal,browser,full}", "{minimal,browser,full}")
+                    .replace("default: inherit configured tools; reduced profiles\n                        apply only when explicitly requested", "minimal disables four stdio MCP servers; browser keeps\n                        node_repl; full keeps all")
+                    .replace("default: Opus for review, Sol for other tasks;\n                        explicit model choices win",
                     "default: gpt-6-luna for review/check/research/cleanup,\n                        gpt-6.1-sol for implementation; explicit values win")
                     .replace("default: max; managed AI hints follow owner policy", "default: high; max requires an explicit value")
             };

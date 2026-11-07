@@ -15,7 +15,7 @@ fn finite_root_review_closes_only_its_bound_spec_and_keeps_parent_work_separate(
     changed["spec"] = json!("new-head.md");
     assert!(!matches_item(&job, &changed));
     let mut writer = job.clone();
-    writer["sandbox"] = json!("workspace-write");
+    writer["task_type"] = json!("implementation");
     assert!(!completed(&writer, COMPLETE));
     let mut unbound = job.clone();
     unbound["finite_review"] = serde_json::Value::Null;

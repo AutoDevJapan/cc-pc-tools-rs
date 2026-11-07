@@ -418,7 +418,6 @@ pub fn eligible_source(item: &Value, source: &Value) -> bool {
         && source["model_origin"] != "owner_request"
         && (review(source)
             || (source["subwork"] == item["subwork"] && source["subwork"]["kind"] == "research"))
-        && source["sandbox"] == "read-only"
         && !crate::launch_context::fixed_execution_contract(source)
         && finite_spec(source)["todo_id"] == item["id"]
         && finite_spec(source)["spec"] == item["spec"]
@@ -469,7 +468,6 @@ fn receipt_version(item:&Value,source:&Value,target:&Value,health:&Value,now:f64
         || item["wait_on"].as_array().is_some_and(|v| !v.is_empty())
         || target["model_origin"] != "policy"
         || review(source) != review(target)
-        || target["sandbox"] != "read-only"
         || target["effort"] != "max"
         || scope(source) != scope(target)
         || s(target, "launch_key").is_empty()

@@ -1378,13 +1378,27 @@ pub const REQUEST_PREAMBLE: &str = include_str!("request_preamble.txt");
 pub const RESUME_PREAMBLE: &str = include_str!("resume_preamble.txt");
 
 pub fn apply_job_scope(selection: &mut Value, source: &Value, owner_request: Option<&str>) {
+    // Preserve the actual previous launch values before resolving new scope.
+    // The final launcher compares these with defaults included, not with an
+    // already normalized copy of the new selection.
+    selection["capability_resume_source"] = json!({
+        "sandbox":source["sandbox"],"mcp_profile":source["mcp_profile"]});
+    let retained = cc_job_policy::capability_scope::retained(source);
     let (policy, origin) = cc_job_policy::resolve_scope(
-        s(&source["sandbox"]),
-        s(&source["scope_source"]),
+        s(&retained["sandbox"]),
+        s(&retained["scope_source"]),
         owner_request,
     );
     selection["sandbox"] = json!(policy.sandbox);
     selection["scope_source"] = json!(origin);
+    selection["mcp_profile"] = retained["mcp_profile"].clone();
+    selection["capability_provenance_version"] = json!(1);
+    selection["explicit_capability_constraints"] = retained["explicit_capability_constraints"].clone();
+    if owner_request.is_some_and(cc_job_policy::explicit_read_only) {
+        selection["explicit_capability_constraints"]["sandbox"] = json!(true);
+    } else if policy.sandbox == "inherit" {
+        selection["explicit_capability_constraints"]["sandbox"] = json!(false);
+    }
 }
 // Retain the Python launch arguments so request and continuation calls share the same contract.
 #[allow(clippy::too_many_arguments)]
@@ -1441,14 +1455,29 @@ pub fn launch_job_with_session(
             .unwrap()
             .remove("model_recovery_from");
     }
+    if !normalized["capability_resume_source"].is_object() {
+        normalized["capability_resume_source"] = json!({
+            "sandbox":selection["sandbox"],"mcp_profile":selection["mcp_profile"]});
+        let retained = cc_job_policy::capability_scope::retained(selection);
+        for field in ["sandbox", "mcp_profile", "scope_source", "capability_provenance_version", "explicit_capability_constraints"] {
+            normalized[field] = retained[field].clone();
+        }
+    }
     normalized["launch_key"] = json!(key);
     normalized["resume_session"] = session.map(|id| json!(id)).unwrap_or(Value::Null);
+    for field in ["sandbox", "mcp_profile"] {
+        if normalized[field].as_str().is_none_or(str::is_empty) {
+            normalized[field] = json!("inherit");
+        }
+    }
     for origin in ["model_origin", "effort_origin"] {
         if normalized[origin] != "owner_request" {
             normalized[origin] = json!("policy");
         }
     }
     cc_job_policy::apply_managed_launch_policy(&mut normalized);
+    let prior_capabilities = normalized["capability_resume_source"].clone();
+    cc_job_policy::launch_context::reconcile_resume(&mut normalized, &prior_capabilities);
     let session = cc_job_policy::launch_context::usable_resume_session(&normalized);
     let selection = &normalized;
     let root = ctx.jobs.join("jobs");
@@ -1565,13 +1594,6 @@ pub fn launch_job_with_session(
         s(&selection["model"]).into(),
         "--effort".into(),
         s(&selection["effort"]).into(),
-        "--sandbox".into(),
-        policy.sandbox.into(),
-        "--scope-source".into(),
-        selection["scope_source"]
-            .as_str()
-            .unwrap_or("launcher")
-            .into(),
         "--cwd".into(),
         cwd.unwrap_or(REQUEST_CWD).into(),
         "--add-dir".into(),
@@ -1584,10 +1606,12 @@ pub fn launch_job_with_session(
         key.into(),
     ];
     let profile = cc_chrome::profile(
-        selection["mcp_profile"].as_str().unwrap_or("minimal"),
+        selection["mcp_profile"].as_str().unwrap_or("inherit"),
         &prompt,
     );
-    args.extend(["--mcp-profile".into(), profile.into()]);
+    let mut scope = selection.clone();
+    scope["sandbox"] = json!(policy.sandbox); scope["mcp_profile"] = json!(profile);
+    args.extend(cc_job_policy::capability_scope::launch_args(&scope));
     args.extend([
         "--effort-origin".into(),
         if selection["effort_origin"] == "owner_request" {

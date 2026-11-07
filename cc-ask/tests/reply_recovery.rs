@@ -100,7 +100,7 @@ fn request_retry_expires_without_closing_and_a_new_answer_resumes_the_same_autho
     let dir = h.ctx.jobs.join("jobs/original");
     std::fs::create_dir_all(&dir).unwrap();
     let source = json!({"status":"running","model":"gpt-6.1-sol","effort":"max",
-        "cwd":h.root.path(),"sandbox":"danger-full-access","discord_thread_id":"200","thread_id":"authors-session"});
+        "cwd":h.root.path(),"sandbox":"inherit","mcp_profile":"inherit","discord_thread_id":"200","thread_id":"authors-session"});
     std::fs::write(dir.join("job.json"), source.to_string()).unwrap();
     let mut record = json!({"thread_id":"200","title":"配布方法","after":"200","job":"original","selection":source});
     let mut state = json!({"questions":[],"requests":{"200":record}});
@@ -211,7 +211,7 @@ fn sessionless_posted_and_request_answers_resume_the_failed_author_session_once(
             let dir = h.ctx.jobs.join("jobs/original");
             std::fs::create_dir_all(&dir).unwrap();
             let mut job = json!({"status":"failed","model":"gpt-6.1-sol","effort":"max",
-                "cwd":h.root.path(),"sandbox":"danger-full-access","discord_thread_id":"200"});
+                "cwd":h.root.path(),"sandbox":"inherit","mcp_profile":"inherit","discord_thread_id":"200"});
             job[session_field] = json!("authors-session");
             std::fs::write(dir.join("job.json"), job.to_string()).unwrap();
             std::fs::write(dir.join("prompt.md"), "元の作業を進める").unwrap();

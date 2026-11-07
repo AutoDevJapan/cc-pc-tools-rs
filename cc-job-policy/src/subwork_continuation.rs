@@ -155,7 +155,7 @@ pub fn latest_worker(item: &Value, source: &Value) -> bool {
         && source["subwork"] == item["subwork"]
         && ["research", "review"].contains(&text(&item["subwork"], "kind"))
         && item["jobs"].as_array().and_then(|ids| ids.last()) == Some(&source["id"])
-        && source["sandbox"] == "read-only"
+        && !crate::launch_context::fixed_execution_contract(source)
         && !quota::collection_pending(source)
         && crate::work_owner::norm(std::path::Path::new(text(source, "cwd")))
             == crate::work_owner::norm(std::path::Path::new(text(&item["scheduler"], "worktree")))
@@ -236,7 +236,6 @@ fn request_source(item: &Value, source: &Value) -> Option<SourceRequest> {
             .as_array()
             .is_some_and(|ids| ids.contains(&source["id"]))
         || item["jobs"].as_array().and_then(|ids| ids.last()) != Some(&source["id"])
-        || source["sandbox"] != "read-only"
         || crate::launch_context::fixed_execution_contract(source)
         || quota::collection_pending(source)
         || end < begin

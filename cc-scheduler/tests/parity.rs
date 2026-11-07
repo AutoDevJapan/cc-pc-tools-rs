@@ -31,6 +31,8 @@ mod quota_recovery_tests;
 mod initial_review_tests;
 #[path = "support/admission.rs"]
 mod admission_tests;
+#[path = "support/capability_inheritance.rs"]
+mod capability_inheritance_tests;
 
 #[test]
 fn review_preparation_failures_stop_after_three_and_recover_on_new_evidence() {
@@ -132,7 +134,7 @@ fn finite_review_completion_does_not_relaunch_while_its_parent_remains_unfinishe
     );
     assert_eq!(result_outcome(text), "todo");
     let mut writer = reader.clone();
-    writer["sandbox"] = json!("workspace-write");
+    writer["task_type"] = json!("implementation");
     assert_eq!(job_result_outcome(&writer, text), "todo");
 }
 
@@ -2829,15 +2831,16 @@ fn scheduler_implementation_and_readonly_launches_have_distinct_permissions() {
     let f = Fixture::new();
     let backend = RealBackend::new(f.temp.path().to_path_buf());
     for (task, sandbox, expected) in [
-        ("implementation", "", "danger-full-access"),
-        ("code_review", "", "danger-full-access"),
+        ("implementation", "", "inherit"),
+        ("code_review", "", "inherit"),
         ("research", "read-only", "read-only"),
+        ("review", "workspace-write", "workspace-write"),
     ] {
         let command = backend.launch_command(
             &json!({"id":1,"title":"作業","project":"demo",
             "scheduler":{"worktree":"D:/work","key":"key"}}),
             Path::new("prompt.md"),
-            &json!({"model":"gpt-6.1-sol","effort":"high","task_type":task,"sandbox":sandbox}),
+            &json!({"model":"gpt-6.1-sol","effort":"high","task_type":task,"sandbox":sandbox,"scope_source":"owner_request"}),
         );
         assert!(
             command
@@ -3602,6 +3605,7 @@ fn durable_automatic_cancel_reconciles_and_prepares_original_work_without_pendin
             source["effort"] = json!("high");
             source["effort_origin"] = json!(origin);
             source["sandbox"] = json!("read-only");
+            source["scope_source"] = json!("owner_request");
             let saved_source = source.clone();
             f.e.backend.ps.clear();
             // The same job is eligible in the watchdog after item-side intent vanished.

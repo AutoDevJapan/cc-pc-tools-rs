@@ -1,6 +1,7 @@
-//! Permissions for unattended jobs. Read-only work cannot escalate to write access.
+//! Explicit job constraints and inherited configuration for ordinary work.
 pub mod action_progress;
 pub mod cancellation;
+pub mod capability_scope;
 pub mod cargo;
 pub mod finished_review;
 pub mod finished_work_handoff;
@@ -24,6 +25,7 @@ pub mod unstarted_review_state;
 pub mod unstarted_review_spec;
 pub mod work_owner;
 pub const REGISTRAR_GUIDANCE: &str = "ドメイン管理はRakkoのみ。他のドメイン事業者への表示・ログイン・登録・DNS変更・調査目的アクセスは、対象を指定したオーナーの明示依頼がない限り禁止。一般のログイン代行許可・保存済み認証・過去のログや引き継ぎは対象の許可ではない。他人や旧勤務先の保存済みログインは使わない。制限はChrome/CUA/ブラウザCLI/HTTP CLIのすべてに適用する。";
+pub const REVIEW_GUIDANCE: &str = "\n## 独立レビューの目的と成果\n独立した成果確認を担当し、対象版・差分・根拠・テスト結果を返す。使える道具を役割だけで削減せず、必要な調査・試作・テスト・担当への協力依頼は自分で判断する。既存の明示制約と実行環境を守り、実装者の対象版を書き換えてレビュー済みに見せない。修正が必要なら担当と共有する成果の所有・同時編集を調整し、変更後の版を改めて確認する。レビューの終了と、元の実装・マージ・配布の完了を区別して返す。\n";
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct Policy {
     pub sandbox: &'static str,
@@ -246,11 +248,7 @@ pub fn review_source_jobs(item: &serde_json::Value, db: &serde_json::Value) -> V
 
 /// Model routing labels are not permission boundaries: a review may include fixes.
 pub fn for_task(_task_type: &str, requested_sandbox: &str) -> Policy {
-    if requested_sandbox == "read-only" {
-        for_sandbox("read-only")
-    } else {
-        for_sandbox("danger-full-access")
-    }
+    for_sandbox(requested_sandbox)
 }
 
 /// An explicit human scope marker at the start of the request, not quoted logs
@@ -288,14 +286,24 @@ pub fn resolve_scope(
     let source = match source {
         "owner_marker" => "owner_marker",
         "owner_request" => "owner_request",
+        "caller_constraint" => "caller_constraint",
         _ => "launcher",
     };
-    if let Some(request) = owner_request.filter(|_| sandbox != "read-only" || source != "launcher")
+    if owner_request.is_some_and(explicit_read_only) {
+        return (for_sandbox("read-only"), "owner_marker");
+    }
+    if source == "caller_constraint" && owner_request.is_some() {
+        return (for_sandbox(sandbox), "caller_constraint");
+    }
+    if let Some(request) = owner_request.filter(|_| {
+        !matches!(sandbox, "read-only" | "workspace-write")
+            || !matches!(source, "launcher" | "caller_constraint")
+    })
     {
         if explicit_read_only(request) {
             (for_sandbox("read-only"), "owner_marker")
         } else {
-            (for_sandbox("danger-full-access"), "owner_request")
+            (for_sandbox("inherit"), "owner_request")
         }
     } else {
         (for_task("", sandbox), source)
@@ -309,10 +317,20 @@ pub fn for_sandbox(sandbox: &str) -> Policy {
             approval: "never",
             reviewer: "user",
         },
-        _ => Policy {
+        "workspace-write" => Policy {
+            sandbox: "workspace-write",
+            approval: "on-request",
+            reviewer: "auto_review",
+        },
+        "danger-full-access" => Policy {
             sandbox: "danger-full-access",
             approval: "on-request",
             reviewer: "auto_review",
+        },
+        _ => Policy {
+            sandbox: "inherit",
+            approval: "inherit",
+            reviewer: "inherit",
         },
     }
 }
@@ -331,7 +349,7 @@ mod tests {
                 "read-only",
                 "owner_marker",
                 Some("直してPRをマージする"),
-                "danger-full-access",
+                "inherit",
             ),
             (
                 "danger-full-access",
@@ -341,7 +359,11 @@ mod tests {
             ),
             ("read-only", "launcher", Some("直して"), "read-only"),
             ("read-only", "owner_marker", None, "read-only"),
-            ("workspace-write", "launcher", None, "danger-full-access"),
+            ("workspace-write", "launcher", None, "workspace-write"),
+            ("workspace-write", "launcher", Some("続きを進める"), "workspace-write"),
+            ("read-only", "caller_constraint", Some("続きを進める"), "read-only"),
+            ("workspace-write", "launcher", Some("読むだけ: 差分を確認"), "read-only"),
+            ("workspace-write", "caller_constraint", Some("読むだけ: 差分を確認"), "read-only"),
         ] {
             assert_eq!(resolve_scope(sandbox, source, request).0.sandbox, expected);
         }
@@ -354,12 +376,12 @@ mod tests {
         }
     }
     #[test]
-    fn implementation_can_publish_even_with_old_workspace_setting() {
+    fn explicit_workspace_setting_is_preserved() {
         let p = for_task("implementation", "workspace-write");
         assert_eq!(
             p,
             Policy {
-                sandbox: "danger-full-access",
+                sandbox: "workspace-write",
                 approval: "on-request",
                 reviewer: "auto_review"
             }
@@ -370,7 +392,7 @@ mod tests {
         for task in ["research", "review", "code_review", "implementation"] {
             assert_eq!(
                 for_task(task, "workspace-write"),
-                for_sandbox("danger-full-access")
+                for_sandbox("workspace-write")
             );
             assert_eq!(for_task(task, "read-only"), for_sandbox("read-only"));
         }

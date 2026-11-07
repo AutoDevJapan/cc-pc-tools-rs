@@ -977,11 +977,12 @@ pub fn recover(
             Slot::Request => &record["selection"],
             Slot::Question(_) => &record["continuation"]["selection"],
         };
-        for field in ["model", "effort", "task_type", "sandbox", "scope_source"] {
+        for field in ["model", "effort", "task_type"] {
             if !truth(&source[field]) {
                 source[field] = selection[field].clone();
             }
         }
+        cc_job_policy::capability_scope::restore_missing(&mut source, selection);
         if !truth(&source["cwd"]) {
             source["cwd"] = match slot {
                 Slot::Request => json!(REQUEST_CWD),

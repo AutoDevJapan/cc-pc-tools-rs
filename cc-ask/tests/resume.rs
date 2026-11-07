@@ -293,7 +293,7 @@ fn resume_inherits_permissions_and_routing_from_source_without_preamble_classifi
             if sandbox == "read-only" {
                 "read-only"
             } else {
-                "danger-full-access"
+                "workspace-write"
             }
         );
     }
@@ -306,7 +306,7 @@ fn owner_reply_changes_owner_scope_but_cannot_promote_a_launcher_reader() {
             "read-only",
             "owner_marker",
             "直してPRをマージ",
-            "danger-full-access",
+            "inherit",
         ),
         (
             "danger-full-access",
@@ -321,6 +321,43 @@ fn owner_reply_changes_owner_scope_but_cannot_promote_a_launcher_reader() {
         a.answer(601., reply, "OWN");
         a.resume();
         assert_eq!(a.last()["sandbox"], expected);
+    }
+}
+
+#[test]
+fn answer_resume_retires_only_conversations_with_changed_capabilities() {
+    for (origin, mcp, changed) in [
+        ("owner_marker", "inherit", true),
+        ("owner_marker", "inherit", true),
+        ("policy", "minimal", true),
+        ("launcher", "inherit", false),
+    ] {
+        let mut a = AnswerResume::new();
+        a.change(json!({"session_id":"original-session","job_info":{
+            "model":"gpt-6.1-sol","effort":"max","model_origin":"owner_request",
+            "effort_origin":"owner_request","task_type":"implementation","thread_id":"original-session",
+            "sandbox":"read-only","scope_source":origin,"mcp_profile":mcp}}));
+        a.answer(601., "元の仕事の続きを進める", "OWN");
+        a.resume();
+        assert_eq!(a.last()["resume_session"], if changed { "" } else { "original-session" });
+        assert_eq!(a.last()["mcp_profile"], "inherit");
+        assert_eq!(a.last()["cwd"], a.cwd.to_string_lossy().as_ref());
+    }
+}
+
+#[test]
+fn explicit_readonly_answer_narrows_workspace_and_retires_its_old_conversation() {
+    for origin in ["launcher", "caller_constraint"] {
+        let mut a = AnswerResume::new();
+        a.change(json!({"session_id":"original-session","job_info":{
+            "model":"gpt-6.1-sol","effort":"max","model_origin":"owner_request",
+            "effort_origin":"owner_request","task_type":"implementation","thread_id":"original-session",
+            "sandbox":"workspace-write","scope_source":origin,"mcp_profile":"inherit"}}));
+        a.answer(601., "読むだけ: 変更差分を確認する", "OWN");
+        a.resume();
+        assert_eq!(a.last()["sandbox"], "read-only");
+        assert_eq!(a.last()["scope_source"], "owner_marker");
+        assert_eq!(a.last()["resume_session"], "");
     }
 }
 

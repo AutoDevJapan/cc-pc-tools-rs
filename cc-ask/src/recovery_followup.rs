@@ -489,7 +489,7 @@ fn deliver(ctx: &mut Context, state: &mut State, mid: &str) -> Result<()> {
     if parent_active(ctx, state)? {
         return deliver(ctx, state, mid);
     }
-    let args = vec![
+    let mut args = vec![
         "run".into(),
         "--name".into(),
         format!("owner-reply-{}-{}", state.watch.work_todo, mid),
@@ -503,11 +503,8 @@ fn deliver(ctx: &mut Context, state: &mut State, mid: &str) -> Result<()> {
         record.key.clone(),
         "--task-type".into(),
         "implementation".into(),
-        "--sandbox".into(),
-        "danger-full-access".into(),
-        "--mcp-profile".into(),
-        "minimal".into(),
     ];
+    args.extend(cc_job_policy::capability_scope::launch_args(&json!({})));
     let command = ctx
         .here
         .parent()

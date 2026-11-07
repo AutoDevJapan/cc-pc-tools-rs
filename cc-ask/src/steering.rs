@@ -984,11 +984,12 @@ pub fn deliver(
         }
         source["id"] = json!(jid);
         todo_scope(&db, &mut source, &ownership);
-        for field in ["model", "effort", "task_type", "sandbox", "scope_source"] {
+        for field in ["model", "effort", "task_type"] {
             if !truth(&source[field]) {
                 source[field] = current["selection"][field].clone();
             }
         }
+        cc_job_policy::capability_scope::restore_missing(&mut source, &current["selection"]);
         if !truth(&source["cwd"]) {
             source["cwd"] = current["cwd"].clone();
         }

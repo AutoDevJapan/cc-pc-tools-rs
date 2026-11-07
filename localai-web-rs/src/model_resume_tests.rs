@@ -51,8 +51,11 @@ fn explicit_console_resume_excludes_retired_threads_and_keeps_compatible_threads
 
 #[test]
 fn watchdog_review_model_recovery_requires_the_current_saved_transition() {
+    // Review routing survives while historical launcher capability hints retire.
     let source = json!({"id":"source","todo_id":1,"status":"failed","cwd":"D:/fixture/work",
         "model":"gpt-6.1-sol","effort":"max","task_type":"review","sandbox":"read-only",
+        "scope_source":"launcher","mcp_profile":"minimal",
+        "explicit_capability_constraints":{"sandbox":false,"mcp_profile":false},
         "review_source_jobs":["original-writer"],"review_excluded_models":["anthropic/claude-opus-5-5"]});
     let repaired =
         cc_ask::recovery_failure::repaired_job(&source, cc_ask::recovery_failure::Failure::Model);
@@ -74,7 +77,10 @@ fn watchdog_review_model_recovery_requires_the_current_saved_transition() {
         options["review_excluded_models"],
         source["review_excluded_models"]
     );
-    assert_eq!(options["sandbox"], "read-only");
+    assert_eq!(options["sandbox"], "inherit");
+    assert_eq!(options["mcp_profile"], "inherit");
+    assert_eq!(options["scope_source"], "launcher");
+    assert_eq!(options["task_type"], "review");
     assert_eq!(options["model_origin"], "policy");
     assert_eq!(options["effort_origin"], "policy");
     let mut owner_effort = source.clone();
@@ -125,7 +131,16 @@ fn watchdog_review_model_recovery_requires_the_current_saved_transition() {
 
 #[test]
 fn watchdog_review_recovery_passes_scoped_routing_and_provenance_through_tick() {
-    for current in [true, false] {
+    for (current, scope_source, expected_sandbox, expected_mcp) in [
+        (true, "launcher", "inherit", "inherit"),
+        (false, "launcher", "inherit", "inherit"),
+        (true, "caller_constraint", "read-only", "minimal"),
+        (false, "caller_constraint", "read-only", "minimal"),
+        (true, "owner_request", "read-only", "minimal"),
+        (false, "owner_request", "read-only", "minimal"),
+        (true, "owner_marker", "read-only", "minimal"),
+        (false, "owner_marker", "read-only", "minimal"),
+    ] {
         let f = Fixture::new();
         f.on();
         f.job(
@@ -138,6 +153,8 @@ fn watchdog_review_recovery_passes_scoped_routing_and_provenance_through_tick() 
         let source = json!({"id":"source","name":"todo-1","status":"failed","todo_id":1,
             "cwd":f.root,"model":"gpt-6.1-sol","effort":"max","model_origin":"policy",
             "effort_origin":"policy","task_type":"review","sandbox":"read-only",
+            "scope_source":scope_source,"mcp_profile":"minimal",
+            "explicit_capability_constraints":{"sandbox":false,"mcp_profile":false},
             "review_source_jobs":["original-writer"],"review_excluded_models":["anthropic/claude-opus-5-5"]});
         fs::write(
             f.console.paths.jobs.join("source/job.json"),
@@ -196,10 +213,65 @@ fn watchdog_review_recovery_passes_scoped_routing_and_provenance_through_tick() 
             Some("policy")
         );
         assert_eq!(model_arg(&call, "--effort").as_deref(), Some("max"));
-        assert_eq!(model_arg(&call, "--sandbox").as_deref(), Some("read-only"));
+        assert_eq!(
+            model_arg(&call, "--sandbox").as_deref(),
+            Some(expected_sandbox)
+        );
+        assert_eq!(
+            model_arg(&call, "--mcp-profile").as_deref(),
+            Some(expected_mcp)
+        );
+        assert_eq!(
+            model_arg(&call, "--scope-source").as_deref(),
+            Some(scope_source)
+        );
+        assert_eq!(model_arg(&call, "--task-type").as_deref(), Some("review"));
         assert_eq!(
             f.console.todos().unwrap()["items"][0]["model"],
             "gpt-6.1-sol"
         );
+    }
+}
+
+#[test]
+fn watchdog_fixed_review_recovery_keeps_the_original_model_and_scope() {
+    for marker in [
+        "fixed_read_only_review",
+        "fixed_review_requalification",
+        "original_product_retry",
+    ] {
+        let mut source = json!({"id":"source","todo_id":1,"status":"failed","cwd":"D:/fixture/work",
+            "model":"gpt-6.1-sol","effort":"high","task_type":"review",
+            "sandbox":"read-only","mcp_profile":"minimal","scope_source":"launcher",
+            "review_source_jobs":["original-writer"]});
+        source[marker] = json!({"binding":"fixture"});
+        let repaired = cc_ask::recovery_failure::repaired_job(
+            &source,
+            cc_ask::recovery_failure::Failure::Model,
+        );
+        assert_eq!(repaired, source);
+        let item = json!({"id":1,"jobs":["source"],"stall_recovery":{"pending":{
+            "request":"stall-1-1","job":repaired}}});
+        let trigger = Trigger {
+            key: "manual:stall-1-1".into(),
+            name: "stall-todo-1".into(),
+            cwd: "D:/fixture/work".into(),
+            prompt: "同じ固定契約の作業を続ける。".into(),
+            todo_id: Some(1),
+            options: json!({"source_job_id":"source"}),
+        };
+        let options =
+            trigger_launch_options(&trigger, Some(&item), &trigger.options, Some(&source)).unwrap();
+        for field in [
+            "model",
+            "effort",
+            "sandbox",
+            "mcp_profile",
+            "task_type",
+            "review_source_jobs",
+        ] {
+            assert_eq!(options[field], source[field], "{marker}/{field}");
+        }
+        assert!(options["model_recovery_from"].is_null());
     }
 }

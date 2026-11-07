@@ -323,7 +323,7 @@ fn observe(host: &mut impl Host, l: &Layout, r: &Value) -> Result<Value> {
     {
         return reject("scope_mismatch");
     }
-    if !["launcher", "owner_marker", "owner_request"].contains(&s(&j["scope_source"])) {
+    if !["launcher", "owner_marker", "owner_request", "caller_constraint"].contains(&s(&j["scope_source"])) {
         return reject("invalid_record");
     }
     guarded(host, scope)?;
@@ -372,7 +372,7 @@ fn observe(host: &mut impl Host, l: &Layout, r: &Value) -> Result<Value> {
     }
     let mut guidance = match s(&j["sandbox"]) {
         "read-only" => cc_job_policy::READ_GUIDANCE,
-        "workspace-write" | "danger-full-access" => cc_job_policy::WRITE_GUIDANCE,
+        "inherit" | "workspace-write" | "danger-full-access" => cc_job_policy::WRITE_GUIDANCE,
         _ => return reject("invalid_record"),
     };
     if j["fixed_review_requalification"].is_object() {

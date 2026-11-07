@@ -17,6 +17,7 @@ var hostedWorkflows = []struct{ file, job string }{
 	{"build-speed.yml", "cc-jobs"},
 	{"channel-reports.yml", "verify"},
 	{"bookmark-queue.yml", "test"},
+	{"chatgpt-web.yml", "fixtures"},
 }
 
 func workflowSteps(t *testing.T, job map[string]any) []map[string]any {

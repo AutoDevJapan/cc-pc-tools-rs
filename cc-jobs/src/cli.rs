@@ -63,6 +63,8 @@ pub fn with_usage(mut e: Error) -> Error {
 #[derive(Debug, Clone)]
 pub struct Args {
     pub model_explicit: bool,
+    pub sandbox_explicit: bool,
+    pub mcp_profile_explicit: bool,
     pub cmd: String,
     pub id: String,
     pub values: BTreeMap<String, String>,
@@ -125,6 +127,8 @@ pub fn parse(args: &[String]) -> Result<Args> {
         });
     }
     let mut a = Args {
+        sandbox_explicit: false,
+        mcp_profile_explicit: false,
         model_explicit: false,
         cmd: cmd.clone(),
         id: String::new(),
@@ -172,6 +176,7 @@ pub fn parse(args: &[String]) -> Result<Args> {
                     "model-recovery-from",
                     "sandbox",
                     "scope-source",
+                    "capability-constraints",
                     "cwd",
                     "add-dir",
                     "network",
@@ -277,6 +282,8 @@ pub fn parse(args: &[String]) -> Result<Args> {
         i += 1;
     }
     if cmd == "run" {
+        a.sandbox_explicit = a.value("sandbox").is_some();
+        a.mcp_profile_explicit = a.value("mcp-profile").is_some();
         if a.value("auto-model").is_some() && a.value("model").is_some() {
             return Err(Error::new(
                 "--model and --auto-model are mutually exclusive",
@@ -306,17 +313,17 @@ pub fn parse(args: &[String]) -> Result<Args> {
         for (name, default) in [
             ("model", profile.model),
             ("effort", profile.effort),
-            ("sandbox", "read-only"),
-            ("mcp-profile", "minimal"),
+            ("sandbox", "inherit"),
+            ("mcp-profile", "inherit"),
         ] {
             a.values.entry(name.into()).or_insert(default.into());
         }
         for (name, choices) in [
             (
                 "sandbox",
-                &["read-only", "workspace-write", "danger-full-access"][..],
+                &["inherit", "read-only", "workspace-write", "danger-full-access"][..],
             ),
-            ("mcp-profile", &["minimal", "browser", "full"][..]),
+            ("mcp-profile", &["inherit", "minimal", "browser", "full"][..]),
         ] {
             let v = a.required(name)?;
             if !choices.contains(&v) {
@@ -900,10 +907,29 @@ impl Context {
             job["model_recovery_from"] = json!(model);
         }
         let scope_source = a.value("scope-source").unwrap_or("launcher");
-        if !["launcher", "owner_marker", "owner_request"].contains(&scope_source) {
+        if !["launcher", "owner_marker", "owner_request", "caller_constraint"].contains(&scope_source) {
             return Err(Error::new("invalid --scope-source"));
         }
         job["scope_source"] = json!(scope_source);
+        // A standalone explicit constraint must survive later managed resumes.
+        // Scheduler/router options carry their own owner/contract provenance.
+        let standalone = a.value("launch-key").is_none()
+            && a.value("scope-source").is_none();
+        if let Some(mask) = a.value("capability-constraints") {
+            if !["none","sandbox","mcp_profile","both"].contains(&mask) {
+                return Err(Error::new("invalid --capability-constraints"));
+            }
+            job["capability_provenance_version"] = json!(1);
+            job["explicit_capability_constraints"] = json!({
+                "sandbox":matches!(mask,"sandbox"|"both"),
+                "mcp_profile":matches!(mask,"mcp_profile"|"both")});
+        } else {
+            job["explicit_capability_constraints"] = json!({
+                "sandbox": standalone && a.sandbox_explicit,
+                "mcp_profile": standalone && a.mcp_profile_explicit,
+            });
+            if standalone { job["capability_provenance_version"] = json!(1); }
+        }
         job["sandbox"] = json!(policy.sandbox);
         job["approval_policy"] = json!(policy.approval);
         job["approvals_reviewer"] = json!(policy.reviewer);
@@ -1148,13 +1174,8 @@ impl Context {
                 job["assigned_needs"] = json!(needs);
                 job["subwork"] = item["subwork"].clone();
                 job["subwork_spec"] = item["spec"].clone();
-                if ["research", "review"].contains(&s(&job["subwork"], "kind"))
-                    && s(&job, "sandbox") != "read-only"
-                {
-                    return Err(Error::new(
-                        "independent research/review requires read-only scope",
-                    ));
-                }
+                // Independence is checked against the saved work owner and
+                // allocation below. A role label is not a permission boundary.
                 let mut jobs = registrations.clone();
                 if let Some(requested) = a.value("parent-job-id") {
                     let p = self.load(requested)?;
@@ -1272,7 +1293,6 @@ impl Context {
         cc_job_policy::launch_context::reconcile_resume(&mut job, &conversation_source);
         self.inherit_subwork_continuation(&mut job,&quota_inventory)?;
         if (crate::capacity::review_job(&job) || job["subwork"]["kind"] == "research")
-            && job["sandbox"] == "read-only"
             && job["todo_id"].as_u64().is_some_and(|id| id > 0)
             && !s(&job, "launch_key").is_empty()
         {

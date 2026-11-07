@@ -22,6 +22,8 @@ const LIMIT: usize = 128 * 1024;
 use crate::command_capture;
 #[path = "agent_workspace.rs"]
 mod source_workspace;
+#[path = "agent_capabilities.rs"]
+mod capability_scope;
 #[path = "todo_receipts.rs"]
 mod todo_receipts;
 const HISTORY_SECONDS: u64 = 7 * 24 * 60 * 60;
@@ -595,6 +597,7 @@ impl Console {
             ] {
                 job[key] = raw[key].clone();
             }
+            capability_scope::project(&mut job, &raw);
             if terminal(&job) {
                 let last = dir.join("last_message.md");
                 job["last_message"] = json!(if last.exists() {
@@ -1750,7 +1753,7 @@ impl Console {
                     }
                 };
                 let request = json!({"key":t.key,"launch_key":key_hash(&t.key),"prompt":t.prompt,
-                    "options":accepted,"read_only":trigger_read_only(&t) || accepted["sandbox"] == "read-only"});
+                    "options":accepted,"read_only":trigger_read_only(&t)});
                 match self.runner.dispatch_subwork(
                     &self.paths,
                     item["id"].as_u64().ok_or_else(invalid)?,
@@ -2084,17 +2087,16 @@ impl Console {
                 t.options["model"].as_str().unwrap_or("gpt-6.1-sol"),
                 "--effort",
                 t.options["effort"].as_str().unwrap_or("high"),
-                "--sandbox",
-                policy.sandbox,
                 "--cwd",
                 &launch_cwd,
                 "--prompt-file",
                 &pf.to_string_lossy(),
-                "--mcp-profile",
-                cc_chrome::profile("minimal", &t.prompt),
                 "--launch-key",
                 &launch_key,
             ]);
+            let mut scope = t.options.clone();
+            scope["sandbox"] = json!(policy.sandbox);
+            args.extend(cc_ask::job_policy::capability_scope::launch_args(&scope));
             if let Some(id) = t.todo_id {
                 args.extend(["--todo-id".into(), id.to_string()]);
             }
@@ -3074,14 +3076,7 @@ impl Console {
                 if v["isolate_worktree"].as_bool().is_none() && !v["isolate_worktree"].is_null() {
                     return Err(invalid());
                 }
-                if !v["sandbox"].is_null()
-                    && !matches!(
-                        v["sandbox"].as_str(),
-                        Some("read-only" | "workspace-write" | "danger-full-access")
-                    )
-                {
-                    return Err(invalid());
-                }
+                capability_scope::validate(&v)?;
                 if !v["task_type"].is_null() && v["task_type"].as_str().is_none() {
                     return Err(invalid());
                 }
@@ -3148,11 +3143,12 @@ impl Console {
                     "effort",
                     "task_type",
                     "sandbox",
+                    "mcp_profile",
                 ]
                 .iter()
                 .any(|field| !v[*field].is_null())
                 {
-                    json!({"source_job_id":v["source_job_id"],"resume_session":v["resume_session"],"isolate_worktree":v["isolate_worktree"],"model":v["model"],"effort":v["effort"],"task_type":v["task_type"],"sandbox":v["sandbox"]})
+                    json!({"source_job_id":v["source_job_id"],"resume_session":v["resume_session"],"isolate_worktree":v["isolate_worktree"],"model":v["model"],"effort":v["effort"],"task_type":v["task_type"],"sandbox":v["sandbox"],"mcp_profile":v["mcp_profile"]})
                 } else {
                     s.request_options.get(&key).cloned().unwrap_or_else(|| {
                         if s.fingerprints.contains_key(&key) { Value::Null } else {
@@ -3175,6 +3171,7 @@ impl Console {
                         "effort",
                         "task_type",
                         "sandbox",
+                        "mcp_profile",
                     ] {
                         if !incoming[field].is_null() {
                             options[field] = incoming[field].clone();
@@ -3193,7 +3190,7 @@ impl Console {
                     && (!s.fingerprints.contains_key(&key) || upgrade_baseline)
                 {
                     options["_todo_defaults"] =
-                        json!({"model":item["model"],"effort":item["effort"]});
+                        json!({"model":item["model"],"effort":item["effort"],"sandbox":item["sandbox"],"mcp_profile":item["mcp_profile"]});
                 }
                 // Recovery settings are derived from a mutable ToDo. Retrying its
                 // reservation keeps the accepted identity; dispatch rechecks the ToDo.
@@ -3486,7 +3483,7 @@ fn trigger_launch_options(
         json!({})
     };
     if trigger_read_only(t) {
-        requested["sandbox"] = json!("read-only");
+        capability_scope::read_only(&mut requested);
     }
     if automatic_recovery(&t.key) {
         requested.as_object_mut().unwrap().remove("_todo_defaults");
@@ -3564,10 +3561,16 @@ fn trigger_launch_options(
         "model_recovery_from",
         "review_source_jobs",
         "review_excluded_models",
+        "scope_contract_source_job",
     ] {
         options.as_object_mut().unwrap().remove(field);
     }
     if let (true, Some(source)) = (inherited, source) {
+        if cc_ask::job_policy::capability_scope::fixed(source) {
+            // Resolve and revalidate at the scheduler; fresh launches use this
+            // source for capability scope without restoring its conversation.
+            options["scope_contract_source_job"] = source["id"].clone();
+        }
         if let Some(repair) = repair.filter(|repair| {
             cc_ask::job_policy::same_model(strv(repair, "model"), strv(&options, "model"))
         }) {
@@ -3632,10 +3635,16 @@ fn compatible_recovery_scope(a: &Trigger, b: &Trigger, jobs: &[Value], db: &Valu
                 .trim_end_matches('/')
                 .to_lowercase(),
             options["isolate_worktree"].as_bool(),
+            options["mcp_profile"]
+                .as_str()
+                .unwrap_or("inherit")
+                .to_owned(),
+            options["explicit_capability_constraints"].clone(),
         ))
     };
     matches!((scope(a), scope(b)), (Some(a), Some(b)) if
         a.0 == b.0 && a.1 == b.1 && a.2 == b.2
+        && a.4 == b.4 && a.5 == b.5
         && !matches!((a.3, b.3), (Some(a), Some(b)) if a != b))
 }
 fn trigger_todo_id(trigger: &Trigger, jobs: &[Value], db: &Value) -> Option<u64> {
@@ -3676,6 +3685,7 @@ fn options_upgrade(old: &Value, new: &Value) -> bool {
         "isolate_worktree",
         "task_type",
         "sandbox",
+        "mcp_profile",
     ] {
         if !old.contains_key(field) {
             if let Some(value) = new.get(field) {
@@ -3723,19 +3733,20 @@ fn launch_options(
             .unwrap_or(default);
         options[field] = json!(value);
     }
-    for field in ["sandbox", "task_type"] {
-        if inherit_scope && options[field].is_null() {
-            if let Some(value) = source.and_then(|s| s[field].as_str()) {
-                options[field] = json!(value);
-            }
+    if inherit_scope && options["task_type"].is_null() {
+        if let Some(value) = source.and_then(|s| s["task_type"].as_str()) {
+            options["task_type"] = json!(value);
         }
     }
+    capability_scope::apply(item, requested, source, inherit_scope, &mut options)?;
     // A previous conversation can restore its own model. Start a separate conversation
     // and checkout whenever either requested setting differs (or cannot be verified).
     if source.is_some_and(|s| {
         cc_ask::job_policy::for_task(strv(s, "task_type"), strv(s, "sandbox")).sandbox
             != cc_ask::job_policy::for_task(strv(&options, "task_type"), strv(&options, "sandbox"))
                 .sandbox
+            || s["mcp_profile"].as_str().unwrap_or("inherit")
+                != options["mcp_profile"].as_str().unwrap_or("inherit")
             || s["task_type"].as_str().unwrap_or("implementation")
                 != options["task_type"].as_str().unwrap_or("implementation")
             || ["model", "effort"].iter().any(|field| {
@@ -4728,6 +4739,8 @@ pub async fn resident(console: Arc<Console>) {
 #[cfg(test)]
 mod tests {
     include!("delegation_model_tests.rs");
+    include!("agent_capability_tests.rs");
+    include!("agent_capability_lifetime_tests.rs");
     include!("todo1842_tests.rs");
     include!("resume_recovery_tests.rs");
     include!("model_resume_tests.rs");
@@ -5663,7 +5676,8 @@ mod tests {
             .unwrap();
         assert!(launch
             .windows(2)
-            .any(|pair| pair == ["--mcp-profile", "browser"]));
+            .any(|pair| pair == ["--mcp-profile", "inherit"]));
+        assert!(launch.windows(2).any(|pair| pair == ["--sandbox", "inherit"]));
     }
     #[test]
     fn inbox_does_not_redelegate_consumed_answers_after_question_closes() {
@@ -5978,9 +5992,10 @@ mod tests {
     #[test]
     fn delegation_preserves_readonly_options_across_queue_reload() {
         for (task, sandbox, expected) in [
-            ("implementation", "workspace-write", "danger-full-access"),
+            ("implementation", "workspace-write", "workspace-write"),
             ("research", "danger-full-access", "danger-full-access"),
             ("implementation", "read-only", "read-only"),
+            ("review", "inherit", "inherit"),
         ] {
             let f = Fixture::new();
             f.on();
@@ -6155,6 +6170,7 @@ mod tests {
         let jp = f.console.paths.jobs.join("readonly-source/job.json");
         let mut job: Value = serde_json::from_slice(&fs::read(&jp).unwrap()).unwrap();
         job["sandbox"] = json!("read-only");
+        job["scope_source"] = json!("caller_constraint");
         job["todo_id"] = json!(1);
         fs::write(jp, job.to_string()).unwrap();
         let mut db = f.console.todos().unwrap();
@@ -6186,8 +6202,9 @@ mod tests {
             .find(|c| c[0] == "dispatch_subwork")
             .expect("must reach scheduler adapter");
         let request: Value = serde_json::from_str(&call[1]).unwrap();
-        assert_eq!(request["read_only"], true);
+        assert_eq!(request["read_only"], false);
         assert_eq!(request["options"]["sandbox"], "read-only");
+        assert_eq!(request["options"]["scope_source"], "caller_constraint");
     }
     #[test]
     fn artifact_home_is_rejected_independently_of_registration_drive() {

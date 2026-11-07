@@ -428,8 +428,10 @@ impl RealBackend {
         Ok(output.stdout)
     }
     pub fn launch_command(&self, item: &Value, prompt: &Path, selection: &Value) -> Invocation {
-        let sandbox = if ["research", "review"].contains(&s(&item["subwork"]["kind"]))
-            || cc_ask::job_policy::explicit_read_only(s(&item["title"]))
+        let mut normalized = selection.clone();
+        crate::launch_scope::apply(item, None, &mut normalized);
+        let selection = &normalized;
+        let sandbox = if cc_ask::job_policy::explicit_read_only(s(&item["title"]))
         {
             "read-only"
         } else {
@@ -473,8 +475,6 @@ impl RealBackend {
                 s(&selection["task_type"]),
                 "--cwd",
                 s(&item["scheduler"]["worktree"]),
-                "--sandbox",
-                policy.sandbox,
                 "--add-dir",
                 self.tools.parent().unwrap().to_str().unwrap(),
                 "--prompt-file",
@@ -541,11 +541,12 @@ impl RealBackend {
         if let Some(failed) = selection["model_recovery_from"].as_str() {
             invocation.args.extend(["--model-recovery-from".into(), failed.into()]);
         }
-        if let Some(value) = selection["mcp_profile"].as_str() {
-            invocation
-                .args
-                .extend(["--mcp-profile".into(), value.into()]);
+        let mut scope = selection.clone();
+        scope["sandbox"] = json!(policy.sandbox);
+        if cc_ask::job_policy::explicit_read_only(s(&item["title"])) {
+            scope["scope_source"] = json!("owner_marker");
         }
+        invocation.args.extend(cc_job_policy::capability_scope::launch_args(&scope));
         if selection["network"] == true {
             invocation.args.push("--network".into());
         }

@@ -48,7 +48,8 @@ pub fn usable_thread_session(job: &Value) -> Option<&str> {
 }
 
 pub(crate) fn source_settings(source: &Value) -> Value {
-    let mut settings = json!({"model":source["model"],"effort":source["effort"]});
+    let mut settings = json!({"model":source["model"],"effort":source["effort"],
+        "sandbox":source["sandbox"],"mcp_profile":source["mcp_profile"]});
     // Older executables already saved the normalized settings but left the
     // pre-policy conversation attached. Retire that context once; an existing
     // reset receipt identifies the later, compatible native conversation.
@@ -97,11 +98,13 @@ pub fn reconcile_resume(job: &mut Value, source: &Value) {
         return;
     }
     let source = source_settings(source);
-    let changed = ["model", "effort"].iter().any(|field| {
+    let changed = ["model", "effort", "sandbox", "mcp_profile"].iter().any(|field| {
         let Some(before) = source[*field].as_str().filter(|value| !value.is_empty()) else {
             return false;
         };
-        let Some(after) = job[*field].as_str().filter(|value| !value.is_empty()) else {
+        let after = job[*field].as_str().filter(|value| !value.is_empty())
+            .or_else(|| matches!(*field, "sandbox" | "mcp_profile").then_some("inherit"));
+        let Some(after) = after else {
             return false;
         };
         if *field == "model" {
@@ -112,7 +115,9 @@ pub fn reconcile_resume(job: &mut Value, source: &Value) {
     });
     if changed {
         job["policy_resume_reset"] = json!({"session":session,"from_model":source["model"],
-            "from_effort":source["effort"],"to_model":job["model"],"to_effort":job["effort"]});
+            "from_effort":source["effort"],"to_model":job["model"],"to_effort":job["effort"],
+            "from_sandbox":source["sandbox"],"to_sandbox":job["sandbox"],
+            "from_mcp_profile":source["mcp_profile"],"to_mcp_profile":job["mcp_profile"]});
         job["resume_session"] = Value::Null;
     }
 }

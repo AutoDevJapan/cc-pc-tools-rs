@@ -14,25 +14,53 @@ permissions:
 jobs:
   fixtures:
     if: github.repository == 'AutoDevJapan/cc-pc-tools-rs' && (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository)
-    runs-on: [self-hosted, Windows, X64, cc-pc-tools-windows]
+    runs-on: ${{ toJSON(github.event.repository.private) == 'false' && 'windows-2025' || fromJSON('["self-hosted","Windows","X64","cc-pc-tools-windows"]') }}
     timeout-minutes: 15
     steps:
       - name: Admit current Windows source before checkout
         env:
           CI_JOB_TOKEN: ${{ github.token }}
         working-directory: ${{ runner.temp }}
-        if: runner.os == 'Windows'
+        if: runner.environment == 'self-hosted' && runner.os == 'Windows'
         shell: pwsh
         run: |
           & $env:PC_CI_ADMISSION admit
           exit $LASTEXITCODE
+      - name: Admit current hosted source before checkout
+        if: runner.environment == 'github-hosted'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          CI_REPOSITORY: ${{ github.repository }}
+          CI_BRANCH: ${{ github.head_ref || github.ref_name }}
+          CI_SOURCE_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+        working-directory: ${{ runner.temp }}
+        shell: pwsh
+        run: |
+          $branch = [Uri]::EscapeDataString($env:CI_BRANCH)
+          $current = & gh api --method GET "repos/$env:CI_REPOSITORY/git/ref/heads/$branch" --jq '.object.sha'
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          if ($current.Trim() -ne $env:CI_SOURCE_SHA) { throw 'Source revision is no longer current' }
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:
           ref: ${{ github.event.pull_request.head.sha || github.sha }}
           persist-credentials: false
+      - name: Prepare isolated hosted Rust tools
+        if: runner.environment == 'github-hosted'
+        shell: pwsh
+        run: |
+          rustup toolchain install 1.95.0 --profile minimal --component clippy
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          'RUSTUP_TOOLCHAIN=1.95.0' >> $env:GITHUB_ENV
+          'CARGO_INCREMENTAL=0' >> $env:GITHUB_ENV
+          'CARGO_PROFILE_DEV_DEBUG=0' >> $env:GITHUB_ENV
+          'CARGO_PROFILE_TEST_DEBUG=0' >> $env:GITHUB_ENV
+          cargo +1.95.0 install cargo-nextest --locked --version 0.9.146
+          exit $LASTEXITCODE
       - uses: ilammy/msvc-dev-cmd@0b201ec74fa43914dc39ae48a89fd1d8cb592756 # v1
         if: runner.os == 'Windows'
       - name: Require real Chrome for the fixtures
+        env:
+          CI_RUNNER_KIND: ${{ runner.environment }}
         shell: pwsh
         run: |
           $chrome = @($env:ProgramFiles, ${env:ProgramFiles(x86)}, $env:LOCALAPPDATA) |
@@ -41,8 +69,16 @@ jobs:
             Where-Object { Test-Path -LiteralPath $_ -PathType Leaf } |
             Select-Object -First 1
           if (!$chrome) { throw 'Chrome is required; browser fixtures must not be skipped.' }
-          if (!(Test-Path -LiteralPath $env:PC_CI_CHROME -PathType Leaf)) { throw 'The real-Chrome CPU launcher is required.' }
-          "CHATGPT_WEB_CHROME=$env:PC_CI_CHROME" >> $env:GITHUB_ENV
+          # A hosted VM owns its Chrome processes. The PC retains its existing
+          # preinstalled CPU launcher and admission boundary.
+          $fixtureChrome = $chrome
+          if ($env:CI_RUNNER_KIND -eq 'self-hosted') {
+            if (!$env:PC_CI_CHROME -or !(Test-Path -LiteralPath $env:PC_CI_CHROME -PathType Leaf)) { throw 'The real-Chrome CPU launcher is required.' }
+            $fixtureChrome = $env:PC_CI_CHROME
+          } elseif ($env:CI_RUNNER_KIND -ne 'github-hosted') {
+            throw 'Unknown runner environment'
+          }
+          "CHATGPT_WEB_CHROME=$fixtureChrome" >> $env:GITHUB_ENV
       - run: cargo nextest run --locked -p chatgpt-web -p cc-chrome
       # This package has only a binary target; Cargo cannot run --doc for it.
       - run: cargo clippy --locked -p chatgpt-web -p cc-chrome --all-targets -- -D warnings

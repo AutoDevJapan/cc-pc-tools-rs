@@ -56,6 +56,10 @@ fn submit(t: &Test, key: &str, extra: &[&str], body: &[u8]) -> Result<i32> {
         key,
         "--resume-session",
         SOURCE_SESSION,
+        "--sandbox",
+        "read-only",
+        "--mcp-profile",
+        "minimal",
     ];
     args.extend(extra);
     t.run(&args, body)
@@ -597,6 +601,10 @@ fn concurrent_replays_create_only_one_queued_job_and_one_supervisor() {
         &key,
         "--resume-session",
         SOURCE_SESSION,
+        "--sandbox",
+        "read-only",
+        "--mcp-profile",
+        "minimal",
     ]
     .iter()
     .map(|s| (*s).to_owned())

@@ -9,12 +9,12 @@ use std::{
 const COMPLETE: &str = "状態: 完了\n直しました https://example.test/pr/1";
 
 #[test]
-fn request_and_resume_use_implementation_permissions_but_reviews_stay_readonly() {
+fn request_and_resume_inherit_permissions_and_preserve_explicit_constraints() {
     for prefix in ["req", "resume"] {
         for (task, requested, expected) in [
-            ("implementation", "workspace-write", "danger-full-access"),
+            ("implementation", "workspace-write", "workspace-write"),
             ("review", "read-only", "read-only"),
-            ("code_review", "", "danger-full-access"),
+            ("code_review", "", "inherit"),
         ] {
             let mut h = Harness::new();
             let cwd = h.root.path().to_string_lossy().into_owned();
@@ -798,7 +798,7 @@ fn legacy_owner_registration_merges_request_fields_and_keeps_question_routes() {
     assert_eq!(saved["opaque"], json!({"kept":true}));
 }
 #[test]
-fn website_login_and_screen_check_enable_owner_chrome() {
+fn website_login_and_screen_check_inherit_configured_owner_chrome() {
     for task in [
         "https://example.com の表示を確認して",
         "サイトにログインして",
@@ -807,7 +807,7 @@ fn website_login_and_screen_check_enable_owner_chrome() {
         let mut h = Harness::new();
         h.fake.borrow_mut().messages.get_mut("100").unwrap()[0]["content"] = json!(task);
         h.tick();
-        assert_eq!(h.fake.borrow().launches[0]["mcp_profile"], "browser");
+        assert_eq!(h.fake.borrow().launches[0]["mcp_profile"], "inherit");
     }
 }
 fn complete(h: &Harness, jid: &str) {

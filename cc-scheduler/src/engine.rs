@@ -1437,7 +1437,7 @@ if !truth(&row["scheduler"]["key"]){let attempt=add_count(&row["scheduler"]["att
         }
         if item["subwork"].is_object() {
             prompt += &format!(
-                "\nこの作業はToDo {}の独立した{}です。保存済み仕様の有限な範囲だけを扱い、主担当の完了を前提にせず結果を返してください。主担当のソースを編集したり、独立したPRの作成やマージを担当したりしないでください。\n",
+                "\nこの作業はToDo {}の独立した{}です。保存済み仕様の目的・対象・完了条件に従い、必要な調査・修正・テスト・連携は自分で判断して進めてください。共有する成果の所有と同時編集は担当同士で調整し、主担当の完了を前提にせず結果を返してください。独立レビューでは実装者の成果を書き換えてレビュー済みに見せず、確認した差分と結果を返してください。\n",
                 item["subwork"]["parent_todo_id"],
                 s(&item["subwork"]["kind"])
             );
@@ -1694,31 +1694,26 @@ if !truth(&row["scheduler"]["key"]){let attempt=add_count(&row["scheduler"]["att
         if item["subwork"].is_object() {
             selection["task_type"] = item["subwork"]["kind"].clone();
         }
-        // An unfinished successful conversation needs its recorded execution
-        // scope too, not only its model/session. Explicit saved inputs still win.
-        if let Some(source) = source.filter(|_| resume_session.is_some()) {
-            let sandbox = if !item["sandbox"].is_null() {
-                &item["sandbox"]
-            } else if !accepted_options["sandbox"].is_null() {
-                &accepted_options["sandbox"]
-            } else {
-                &source["sandbox"]
-            };
-            if !sandbox.is_null() {
-                selection["sandbox"] = sandbox.clone();
-            }
-        }
-        if item["scheduler"]["console_request"]["read_only"] == true
-            || ["research", "review"].contains(&s(&item["subwork"]["kind"]))
-            || cc_ask::job_policy::explicit_read_only(s(&item["title"]))
-        {
-            selection["sandbox"] = json!("read-only");
-        }
+        // Scope-only inheritance never restores a fresh request's old model,
+        // conversation or result body. Its own execution gates remain below.
+        let scope_source = if item["scheduler"]["console_request"]["options"]["scope_contract_source_job"].is_null() {
+            None
+        } else {
+            let ps = self.backend.snapshot()?;
+            crate::launch_scope::source(&item, &jobs, &ps, self.backend.clock())?
+        };
+        // Restore owner scope and exact finite contracts, not old router hints.
+        crate::launch_scope::apply(&item, scope_source.or(source), &mut selection);
+        let capability_changed = source.is_some_and(|source| {
+            ["sandbox", "mcp_profile"].iter().any(|field| {
+                source[*field].as_str().is_some_and(|value| !value.is_empty())
+                    && source[*field] != selection[*field]
+            })
+        });
         // A resumed conversation may restore the previous model. Reuse it only
         // when the selected settings agree, including partial explicit choices.
-        if source.is_some_and(|source| {
-            (selection["sandbox"] == "read-only" && source["sandbox"] != "read-only")
-                || (cc_ask::job_policy::review_result::is_finite_review(source)
+        if capability_changed || source.is_some_and(|source| {
+                (cc_ask::job_policy::review_result::is_finite_review(source)
                     && source["finite_review"]["spec"]
                         .as_str()
                         .or(source["subwork_spec"].as_str())
@@ -1730,20 +1725,22 @@ if !truth(&row["scheduler"]["key"]){let attempt=add_count(&row["scheduler"]["att
         }) {
             resume_session = None;
         }
-        // Do not carry capabilities from a conversation that was just retired.
-        if let Some(source) = source.filter(|_| resume_session.is_some()) {
-            for field in ["mcp_profile", "network", "add_dirs"] {
+        if capability_changed {
+            prompt += "\n起動時のsandboxまたは道具の構成が変わったため、以前の会話を引き継がず、同じ元仕事・作業場所・保存済み成果から続行してください。前回結果と最新仕様を照合し、完了した工程を重複実行しないでください。\n";
+        }
+        // Current explicit settings apply even when an old conversation was
+        // retired. Only its historical fallback depends on session reuse.
+        for field in ["network", "add_dirs"] {
                 let value = if !item[field].is_null() {
                     &item[field]
                 } else if !accepted_options[field].is_null() {
                     &accepted_options[field]
                 } else {
-                    &source[field]
+                    source.filter(|_| resume_session.is_some()).map_or(&Value::Null, |source| &source[field])
                 };
                 if !value.is_null() {
                     selection[field] = value.clone();
                 }
-            }
         }
         if cc_job_policy::review_task(s(&item["title"]), s(&selection["task_type"]))
             || ["review", "research"].contains(&s(&item["subwork"]["kind"]))
@@ -2201,6 +2198,16 @@ if !truth(&row["scheduler"]["key"]){let attempt=add_count(&row["scheduler"]["att
                 {
                     observation.decide(&i["id"], AdmissionStage::Recheck, AdmissionReason::InputsChanged);
                     return Ok(());
+                }
+                if !current["scheduler"]["console_request"]["options"]["scope_contract_source_job"].is_null() {
+                    let source = crate::launch_scope::source(&current, &jobs, &ps, self.backend.clock())?;
+                    let selected = &prepared["scheduler"]["selection"];
+                    let mut rechecked = selected.clone();
+                    crate::launch_scope::apply(&current, source, &mut rechecked);
+                    if ["sandbox", "mcp_profile", "scope_source", "explicit_capability_constraints", "scope_contract"]
+                        .iter().any(|field| rechecked[*field] != selected[*field]) {
+                        return Err(Error("InputRejected"));
+                    }
                 }
                 // Recheck the finite receipt after preparation and sampling.
                 // A changed spec/root or a newly restored deny wins admission.

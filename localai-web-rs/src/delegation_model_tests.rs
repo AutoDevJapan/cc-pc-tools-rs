@@ -655,7 +655,7 @@ fn todo1624_read_only_supplement_does_not_consume_implementation_recovery() {
         assert_eq!(f.launches(), 1);
         assert!(state.queue.iter().any(|q| q.key == "manual:supplement"));
         let args = model_run(&f);
-        assert_eq!(model_arg(&args, "--sandbox").as_deref(), Some("danger-full-access"));
+        assert_eq!(model_arg(&args, "--sandbox").as_deref(), Some("inherit"));
     }
 }
 
@@ -665,6 +665,7 @@ fn todo1624_source_read_only_scope_survives_new_model_conversation() {
     f.on();
     let mut source = model_source(&f);
     source["sandbox"] = json!("read-only");
+    source["scope_source"] = json!("caller_constraint");
     source["task_type"] = json!("review");
     fs::write(f.console.paths.jobs.join("source/job.json"), source.to_string()).unwrap();
     model_item(&f, json!("gpt-6-luna"), json!("max"));
@@ -729,7 +730,7 @@ fn todo1624_new_manual_implementation_does_not_inherit_supplemental_review_scope
     f.delegate("implementation-after-supplement").unwrap();
     f.console.tick().unwrap();
     let args = model_run(&f);
-    assert_eq!(model_arg(&args, "--sandbox").as_deref(), Some("danger-full-access"));
+    assert_eq!(model_arg(&args, "--sandbox").as_deref(), Some("inherit"));
     assert_eq!(model_arg(&args, "--resume-session"), None);
     assert_eq!(model_arg(&args, "--model").as_deref(), Some("gpt-6.1-sol"));
 }
@@ -765,7 +766,7 @@ fn todo1624_missing_explicit_source_cannot_grant_fallback_review_scope() {
         "source_job_id":"missing","prompt":"元の実装を進める"})).unwrap();
     f.console.tick().unwrap();
     let args = model_run(&f);
-    assert_eq!(model_arg(&args, "--sandbox").as_deref(), Some("danger-full-access"));
+    assert_eq!(model_arg(&args, "--sandbox").as_deref(), Some("inherit"));
     assert_eq!(model_arg(&args, "--resume-session"), None);
 }
 #[test]

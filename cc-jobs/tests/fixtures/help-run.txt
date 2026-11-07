@@ -1,7 +1,7 @@
 usage: codex_jobs.py run [-h] --name NAME [--model MODEL] [--effort EFFORT]
-                         [--sandbox {read-only,workspace-write,danger-full-access}]
+                         [--sandbox {inherit,read-only,workspace-write,danger-full-access}]
                          [--cwd CWD] [--add-dir ADD_DIR] [--network]
-                         [--mcp-profile {minimal,browser,full}] --prompt-file
+                         [--mcp-profile {inherit,minimal,browser,full}] --prompt-file
                          PROMPT_FILE [--task-type TASK_TYPE]
                          [--notes-hint NOTES_HINT] [--launch-key LAUNCH_KEY]
                          [--original-product-retry-key ORIGINAL_PRODUCT_RETRY_KEY]
@@ -12,6 +12,7 @@ usage: codex_jobs.py run [-h] --name NAME [--model MODEL] [--effort EFFORT]
                          [--model-recovery-from MODEL]
                          [--effort-origin {policy,owner_request}]
                          [--model-origin {policy,owner_request}]
+                         [--capability-constraints {none,sandbox,mcp_profile,both}]
 
 options:
   -h, --help            show this help message and exit
@@ -19,13 +20,14 @@ options:
   --model MODEL         default: Opus for review, Sol for other tasks;
                         explicit model choices win
   --effort EFFORT       default: max; managed AI hints follow owner policy
-  --sandbox {read-only,workspace-write,danger-full-access}
+  --sandbox {inherit,read-only,workspace-write,danger-full-access}
+                        default: inherit the normal Codex configuration
   --cwd CWD
   --add-dir ADD_DIR
   --network             allow network (workspace-write only)
-  --mcp-profile {minimal,browser,full}
-                        minimal disables four stdio MCP servers; browser keeps
-                        node_repl; full keeps all
+  --mcp-profile {inherit,minimal,browser,full}
+                        default: inherit configured tools; reduced profiles
+                        apply only when explicitly requested
   --prompt-file PROMPT_FILE
   --task-type TASK_TYPE
   --notes-hint NOTES_HINT
@@ -51,3 +53,5 @@ options:
                         policy hint or recorded individual owner effort override
   --model-origin {policy,owner_request}
                         policy hint or recorded individual owner model override
+  --capability-constraints {none,sandbox,mcp_profile,both}
+                        retain caller constraints per field across relaunches

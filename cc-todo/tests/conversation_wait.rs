@@ -15,75 +15,124 @@ const DELIVERIES: &str = "owner_question_delivery_receipts";
 
 #[test]
 fn resumed_actor_edit_puts_one_normalized_reply_in_the_correct_pending_prompt() {
-    for waiting in [false, true] {
+    for (actor_id, origin_id, project, status) in [
+        (3277, 1171, "GitDo", "recovery_unverified"),
+        (3350, 3264, "localai-web-rs", "wait"),
+    ] {
+        for waiting in [false, true] {
+            let f = Fixture::new();
+            let spec = f.temp.path().join("specs/original.md");
+            let spec_sha = sha(&fs::read(&spec).unwrap());
+            let mut db = f.read();
+            db["projects"] = json!({project:f.temp.path().to_str().unwrap()});
+            db["items"][0]["id"] = json!(actor_id);
+            db["items"][0]["project"] = json!(project);
+            db["items"][0]["spec"] = json!(spec);
+            db["items"][0]["note"] = json!("元のメモ\n");
+            db["items"][0]["scheduler"]["owner_instruction"] = json!("以前の指示");
+            db["items"][1] = json!({"id":origin_id,"project":project,"status":status,"spec":spec,"note":"保持する元の回答"});
+            if waiting {
+                let mut q = question();
+                q["todo_id"] = json!(actor_id.to_string());
+                let qfile = f.file("actor-question.json", &q);
+                cc_todo::conversation_wait::register(&mut db, &f.paths, actor_id, &qfile).unwrap();
+            }
+            let before = db.clone();
+            f.write(&db);
+            let origin_file = f.file("origin-state.json", &db["items"][1]);
+            let scope = f.file("actor-scope.json", &json!({"domain":"discord-conversation-actor-todo-scope-v1","todo_id":actor_id.to_string(),"project":project,"project_path_sha256":sha(f.temp.path().to_str().unwrap().as_bytes()),"origin_state_file":origin_file,"actor_spec_sha256":spec_sha,"origin_spec_sha256":spec_sha}));
+            let expected = f.file("actor-state.json", &db["items"][0]);
+            let marker = "conversation-owner-reply:sender:202:aaaaaaaaaaaaaaaa";
+            let note = format!(
+                "{}\n\n{marker}\n本人回答の全文\nconversation-owner-reply-end:sender:202:aaaaaaaaaaaaaaaa",
+                db["items"][0]["note"].as_str().unwrap()
+            );
+            let note_file = f.temp.path().join("actor-note.txt");
+            fs::write(
+                &note_file,
+                format!("\u{feff}{}", note.replace('\n', "\r\n")),
+            )
+            .unwrap();
+            let out = f
+                .command(&[
+                    "edit",
+                    &actor_id.to_string(),
+                    "--note-file",
+                    note_file.to_str().unwrap(),
+                    "--expected-note-sha256",
+                    &sha(db["items"][0]["note"].as_str().unwrap().as_bytes()),
+                    "--expected-state-file",
+                    expected.to_str().unwrap(),
+                    "--scope-file",
+                    scope.to_str().unwrap(),
+                ])
+                .output()
+                .unwrap();
+            assert!(
+                out.status.success(),
+                "{}",
+                String::from_utf8_lossy(&out.stderr)
+            );
+            let after = f.read();
+            assert_eq!(after["items"][1], before["items"][1]);
+            assert_eq!(after["items"][0]["status"], before["items"][0]["status"]);
+            assert_eq!(after["items"][0][WAIT], before["items"][0][WAIT]);
+            assert_eq!(after["items"][0]["note"], note);
+            let instruction = after["items"][0]["scheduler"]["owner_instruction"]
+                .as_str()
+                .unwrap();
+            if waiting {
+                assert_eq!(instruction, "以前の指示");
+            } else {
+                assert_eq!(instruction.matches(marker).count(), 1);
+                assert!(instruction.contains("本人回答の全文"));
+                assert!(!instruction.contains('\r'));
+            }
+        }
+    }
+}
+
+#[test]
+fn current_actor_lock_rejects_foreign_scope_changed_specs_and_original_stop() {
+    for changed in [
+        "actor",
+        "origin",
+        "actor_spec",
+        "origin_spec",
+        "origin_stop",
+        "project",
+        "root",
+    ] {
         let f = Fixture::new();
         let spec = f.temp.path().join("specs/original.md");
-        let spec_sha = sha(&fs::read(&spec).unwrap());
+        let hash = sha(&fs::read(&spec).unwrap());
         let mut db = f.read();
-        db["projects"] = json!({"GitDo":f.temp.path().to_str().unwrap()});
-        db["items"][0]["id"] = json!(3277);
-        db["items"][0]["project"] = json!("GitDo");
+        db["projects"] = json!({"localai-web-rs":f.temp.path().to_str().unwrap()});
+        db["items"][0]["id"] = json!(3350);
+        db["items"][0]["project"] = json!("localai-web-rs");
         db["items"][0]["spec"] = json!(spec);
-        db["items"][0]["note"] = json!("元のメモ\n");
-        db["items"][0]["scheduler"]["owner_instruction"] = json!("以前の指示");
-        db["items"][1] = json!({"id":1171,"project":"GitDo","status":"recovery_unverified","spec":spec,"note":"保持する元の回答"});
-        if waiting {
-            let mut q = question();
-            q["todo_id"] = json!("3277");
-            let qfile = f.file("actor-question.json", &q);
-            cc_todo::conversation_wait::register(&mut db, &f.paths, 3277, &qfile).unwrap();
+        db["items"][1] = json!({"id":3264,"project":"localai-web-rs","status":"wait","spec":spec});
+        let origin = f.file("origin-state.json", &db["items"][1]);
+        let mut scope = json!({"domain":"discord-conversation-actor-todo-scope-v1","todo_id":"3350","project":"localai-web-rs","project_path_sha256":sha(f.temp.path().to_str().unwrap().as_bytes()),"origin_state_file":origin,"actor_spec_sha256":hash,"origin_spec_sha256":hash});
+        let valid = f.file("valid-scope.json", &scope);
+        cc_todo::conversation_wait::check_scope(&db, 3350, &valid).unwrap();
+        match changed {
+            "actor" => scope["todo_id"] = json!("3351"),
+            "origin" => db["items"][1]["id"] = json!(3265),
+            "actor_spec" => scope["actor_spec_sha256"] = json!("a".repeat(64)),
+            "origin_spec" => scope["origin_spec_sha256"] = json!("b".repeat(64)),
+            "origin_stop" => db["items"][1]["owner_stopped"] = json!(true),
+            "project" => db["items"][0]["project"] = json!("other"),
+            "root" => db["projects"]["localai-web-rs"] = json!("changed"),
+            _ => unreachable!(),
         }
+        let invalid = f.file("invalid-scope.json", &scope);
         let before = db.clone();
-        f.write(&db);
-        let origin_file = f.file("origin-state.json", &db["items"][1]);
-        let scope = f.file("actor-scope.json", &json!({"domain":"discord-conversation-actor-todo-scope-v1","todo_id":"3277","project":"GitDo","project_path_sha256":sha(f.temp.path().to_str().unwrap().as_bytes()),"origin_state_file":origin_file,"actor_spec_sha256":spec_sha,"origin_spec_sha256":spec_sha}));
-        let expected = f.file("actor-state.json", &db["items"][0]);
-        let marker = "conversation-owner-reply:sender:202:aaaaaaaaaaaaaaaa";
-        let note = format!(
-            "{}\n\n{marker}\n本人回答の全文\nconversation-owner-reply-end:sender:202:aaaaaaaaaaaaaaaa",
-            db["items"][0]["note"].as_str().unwrap()
-        );
-        let note_file = f.temp.path().join("actor-note.txt");
-        fs::write(
-            &note_file,
-            format!("\u{feff}{}", note.replace('\n', "\r\n")),
-        )
-        .unwrap();
-        let out = f
-            .command(&[
-                "edit",
-                "3277",
-                "--note-file",
-                note_file.to_str().unwrap(),
-                "--expected-note-sha256",
-                &sha(db["items"][0]["note"].as_str().unwrap().as_bytes()),
-                "--expected-state-file",
-                expected.to_str().unwrap(),
-                "--scope-file",
-                scope.to_str().unwrap(),
-            ])
-            .output()
-            .unwrap();
         assert!(
-            out.status.success(),
-            "{}",
-            String::from_utf8_lossy(&out.stderr)
+            cc_todo::conversation_wait::check_scope(&db, 3350, &invalid).is_err(),
+            "{changed}"
         );
-        let after = f.read();
-        assert_eq!(after["items"][1], before["items"][1]);
-        assert_eq!(after["items"][0]["status"], before["items"][0]["status"]);
-        assert_eq!(after["items"][0][WAIT], before["items"][0][WAIT]);
-        assert_eq!(after["items"][0]["note"], note);
-        let instruction = after["items"][0]["scheduler"]["owner_instruction"]
-            .as_str()
-            .unwrap();
-        if waiting {
-            assert_eq!(instruction, "以前の指示");
-        } else {
-            assert_eq!(instruction.matches(marker).count(), 1);
-            assert!(instruction.contains("本人回答の全文"));
-            assert!(!instruction.contains('\r'));
-        }
+        assert_eq!(db, before);
     }
 }
 

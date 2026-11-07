@@ -96,6 +96,8 @@ func skillsReceiveTypedRepair(r skillsResultRequest, reg skillsRegistry, s *skil
 		p.bootstrapSHA = bootstrap
 		p.cwd = str(job["cwd"])
 		p.exactInput = true
+		p.runtimeProject, p.requireRuntimeSource = skillsTypedRuntimeProject(s, job, spec)
+		p.frozen = true
 		return skillsHistoricalNative(s, job, p)
 	})
 	if reason != "" {

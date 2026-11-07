@@ -18,7 +18,7 @@ func executionFixture() (string, ExecutionManifest, ExecutionEvidence) {
 		_ = enc.Encode(r)
 	}
 	h := sha256.Sum256(text.Bytes())
-	return text.String(), ExecutionManifest{CatalogSHA: hex.EncodeToString(h[:]), Records: 4}, ExecutionEvidence{Assessments: map[string]executionIdentity{"first": {ID: "first", SHA: hash, Path: "first/SKILL.md", Commit: strings.Repeat("c", 40)}}, References: map[string][]ExecutionReference{"first": {{"assessment.json", 1}}}, Decisions: map[string]executionIdentity{}}
+	return text.String(), ExecutionManifest{CatalogSHA: hex.EncodeToString(h[:]), Records: 4}, ExecutionEvidence{Assessments: map[string]executionIdentity{"first": {ID: "first", SHA: hash, Path: "first/SKILL.md", Commit: strings.Repeat("c", 40)}}, References: map[string][]ExecutionReference{"first": {{File: "assessment.json", Row: 1}}}, Decisions: map[string]executionIdentity{}}
 }
 
 func TestExecutionQueueKeepsAllOccurrencesAndDoesNotApproveEqualBodies(t *testing.T) {
@@ -41,6 +41,49 @@ func TestExecutionQueueKeepsAllOccurrencesAndDoesNotApproveEqualBodies(t *testin
 	}
 	if len(first.References) != 1 || len(alias.References) != 0 || alias.RelatedBody != "first" || alias.Decision != "" || alias.Stage != "needs_semantic_and_individual_rights_review" {
 		t.Fatal("body relationship became approval or lost its reference")
+	}
+}
+
+func TestExecutionQueueChecksPinnedBlobAndByteCount(t *testing.T) {
+	for _, name := range []string{"valid", "changed_blob", "changed_bytes", "missing_tuple"} {
+		t.Run(name, func(t *testing.T) {
+			input, m, e := executionFixture()
+			e.PinnedSources = map[string]executionSourceTuple{"first": {Blob: strings.Repeat("b", 40), Bytes: 33}}
+			lines := strings.Split(strings.TrimSuffix(input, "\n"), "\n")
+			var row map[string]any
+			if err := json.Unmarshal([]byte(lines[0]), &row); err != nil {
+				t.Fatal(err)
+			}
+			if name != "missing_tuple" {
+				row["git_blob"] = strings.Repeat("b", 40)
+				row["bytes"] = 33
+			}
+			if name == "changed_blob" {
+				row["git_blob"] = strings.Repeat("d", 40)
+			}
+			if name == "changed_bytes" {
+				row["bytes"] = 34
+			}
+			encoded, err := json.Marshal(row)
+			if err != nil {
+				t.Fatal(err)
+			}
+			lines[0] = string(encoded)
+			input = strings.Join(lines, "\n") + "\n"
+			// Update the input pin too: the source tuple must be independently
+			// checked, rather than accidentally rejected only by the catalog hash.
+			h := sha256.Sum256([]byte(input))
+			m.CatalogSHA = hex.EncodeToString(h[:])
+			var out bytes.Buffer
+			_, err = executionQueue(strings.NewReader(input), &out, m, e)
+			if name == "valid" {
+				if err != nil {
+					t.Fatal(err)
+				}
+			} else if err == nil {
+				t.Fatal("queue accepted a changed or missing independently pinned source tuple")
+			}
+		})
 	}
 }
 

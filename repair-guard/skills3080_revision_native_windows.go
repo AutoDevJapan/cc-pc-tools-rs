@@ -11,7 +11,7 @@ import (
 )
 
 func skillsRevisionCommand(op, path, workspace string) skillsCreationCommand {
-	cmd := skillsForwardCommand(path, workspace)
+	cmd := skillsLegacyForwardCommand(path, workspace)
 	cmd.Cmd = "& '" + skillsRuntimeTarget + "' --" + op + " '" + path + "'"
 	return cmd
 }

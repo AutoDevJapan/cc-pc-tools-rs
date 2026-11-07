@@ -158,6 +158,14 @@ func skillsHistoricalNative(s *skillsFS, job object, proof *skillsNativeResultPr
 // A live consumer has no finished_at. Its immutable input is checked only up
 // to an actual observation time, without inventing or changing job metadata.
 func skillsNativeWindow(s *skillsFS, job object, proof *skillsNativeResultProof, end time.Time) ([]object, bool) {
+	return skillsNativeWindowWithSourceOrigin(s, job, proof, end, func(start time.Time) (skillsRuntimeOrigin, bool) {
+		return skillsRuntimeSourceOrigin(s, job, start)
+	})
+}
+
+// The origin resolver is an internal test seam. Requests cannot supply a
+// historical source window or replace the registered metadata reader above.
+func skillsNativeWindowWithSourceOrigin(s *skillsFS, job object, proof *skillsNativeResultProof, end time.Time, resolve func(time.Time) (skillsRuntimeOrigin, bool)) ([]object, bool) {
 	id := str(job["thread_id"])
 	start, e := time.Parse(time.RFC3339Nano, str(job["started_at"]))
 	if e != nil || end.Before(start) || !skillsUUID.MatchString(id) {
@@ -174,11 +182,64 @@ func skillsNativeWindow(s *skillsFS, job object, proof *skillsNativeResultProof,
 		return nil, false
 	}
 	if proof != nil && (proof.inputOnly || proof.exactInput) {
-		// Session bootstrap is independent of the job's task-input window.
-		bootstrap, valid := skillsBootstrapForJob(s, job)
-		if !valid || !skillsDigest(proof.bootstrapSHA) || bootstrap != proof.bootstrapSHA {
+		// Every typed caller, including live consumers and repair results, gets
+		// its environment from the real job here rather than an optional caller
+		// initializer. This cannot be supplied in an operation request.
+		proof.sandbox = str(job["sandbox"])
+		snapshot, rewindable := input.(*skillsNativeSnapshotReader)
+		if !rewindable {
 			return nil, false
 		}
+		if proof.runtimeTransport != nil {
+			if !skillsFreshRuntimeThread(job, start, end) || !skillsNativeTransportMatches(input, id, str(job["cwd"]), start, end, proof.runtimeTransport.Input, proof.runtimeTransport.TurnID) || !snapshot.rewind() {
+				return nil, false
+			}
+		}
+		var bootstrapWindow []time.Time
+		if proof.requireRuntimeSource || len(proof.runtimeProject) > 0 {
+			bootstrapWindow = []time.Time{start, end}
+			envelopes := map[string]bool{}
+			source, modern, valid := skillsRuntimeBootstrapProjectionWithOrigin(input, job, proof.runtimeProject, start, end, func() (skillsRuntimeOrigin, bool) {
+				origin, valid := resolve(start)
+				if valid {
+					proof.runtimePriorWindows = origin.Windows
+				}
+				return origin, valid
+			}, envelopes)
+			if !valid || !snapshot.rewind() {
+				return nil, false
+			}
+			if modern {
+				proof.runtimeBootstrap = source
+				proof.runtimeEnvelopeRecords = envelopes
+				proof.runtimeEnvelopeRequired = true
+			}
+			for i := range proof.runtimePriorWindows {
+				w := &proof.runtimePriorWindows[i]
+				if len(w.Input) == 0 {
+					return nil, false
+				}
+				first := w.Start.Equal(proof.runtimePriorWindows[len(proof.runtimePriorWindows)-1].Start)
+				w.proof = &skillsNativeResultProof{prompt: w.Input, inputOnly: true, exactInput: true, bootstrapSHA: proof.bootstrapSHA, runtimeBootstrap: source, bootstrapBound: !first, cwd: proof.cwd, sandbox: proof.sandbox}
+				// Only the independently projected first runtime bootstrap is
+				// an extra source message. Later historical jobs have exactly
+				// their own normally stored execution input.
+				w.proof.userSeen = !first
+				if first {
+					bootstrapWindow = []time.Time{w.Start, w.End}
+				}
+			}
+			// A resumed current job has only its registered task input, not a
+			// second copy of the original source/bootstrap user message.
+			proof.userSeen = len(proof.runtimePriorWindows) > 0
+		}
+		// Session bootstrap is independent of the job's task-input window.
+		body, valid := skillsBootstrapBodyProjection(input, id, str(job["cwd"]), proof.sandbox, bootstrapWindow...)
+		if !valid || !proof.bootstrapMatchesBody(body) || !rewindable || !snapshot.rewind() {
+			return nil, false
+		}
+		proof.runtimeSourceUsed = len(proof.runtimeBootstrap) > 0
+		proof.runtimeWindowBound = len(bootstrapWindow) == 2
 		proof.bootstrapBound = true
 	}
 	return skillsNativeProjectionBound(input, id, str(job["cwd"]), start, end, proof)
@@ -249,7 +310,7 @@ func skillsNativeSnapshotWithSharing(s *skillsFS, job object, appendLog bool) (i
 	// Freeze the observed length through this same handle. Bootstrap extraction
 	// separately stops at 4 MiB; full projections retain per-record bounds and the
 	// original task window, exact input/final/call checks and duplicate detection.
-	return &skillsNativeSnapshotReader{reader: f, remaining: info.Size()}, true
+	return &skillsNativeSnapshotReader{reader: f, remaining: info.Size(), length: info.Size()}, true
 }
 
 // Unlike LimitReader, an early underlying EOF must not authenticate a shortened
@@ -259,6 +320,19 @@ func skillsNativeSnapshotWithSharing(s *skillsFS, job object, appendLog bool) (i
 type skillsNativeSnapshotReader struct {
 	reader    io.Reader
 	remaining int64
+	length    int64
+}
+
+func (s *skillsNativeSnapshotReader) rewind() bool {
+	r, ok := s.reader.(io.Seeker)
+	if !ok {
+		return false
+	}
+	if _, err := r.Seek(0, io.SeekStart); err != nil {
+		return false
+	}
+	s.remaining = s.length
+	return true
 }
 
 func (s *skillsNativeSnapshotReader) Read(p []byte) (int, error) {
@@ -279,16 +353,192 @@ func (s *skillsNativeSnapshotReader) Read(p []byte) (int, error) {
 type skillsNativeResultProof struct {
 	prompt, body, lastFinal       []byte
 	promptAt, finalAt             time.Time
+	inputEventAt                  time.Time
 	finalSHA                      string
 	inputOnly                     bool
 	exactInput                    bool
 	bootstrapSHA, cwd             string
+	sandbox                       string
+	runtimeBootstrap              []byte
+	runtimeProject                []byte
+	requireRuntimeSource          bool
+	runtimeSourceUsed             bool
+	runtimeWindowBound            bool
+	runtimePriorWindows           []skillsRuntimePriorWindow
+	runtimeEnvelopeRecords        map[string]bool
+	runtimeEnvelopeRequired       bool
 	userSeen                      bool
+	runtimePrefixClosed           bool
 	bootstrapSeen, bootstrapBound bool
 	frozen                        bool
+	runtimeTransport              *skillsRecordedTransport
+}
+
+func (p *skillsNativeResultProof) runtimeWindowChecked() bool {
+	return p.runtimeWindowBound || p.runtimeSourceUsed || len(p.runtimePriorWindows) > 0
+}
+
+func (p *skillsNativeResultProof) priorRuntimeWindow(at time.Time) bool {
+	return p.priorRuntimeWindowAt(at) != nil
+}
+
+func (p *skillsNativeResultProof) priorRuntimeWindowAt(at time.Time) *skillsRuntimePriorWindow {
+	var match *skillsRuntimePriorWindow
+	for i := range p.runtimePriorWindows {
+		w := &p.runtimePriorWindows[i]
+		if !at.Before(w.Start) && !at.After(w.End) {
+			if match != nil {
+				return nil
+			}
+			match = w
+		}
+	}
+	return match
+}
+
+func (p *skillsNativeResultProof) observePriorRuntimeInput(raw []byte, at time.Time, event bool) bool {
+	w := p.priorRuntimeWindowAt(at)
+	if w != nil {
+		if w.proof == nil || len(w.Input) == 0 {
+			return false
+		}
+		if event {
+			return w.proof.observeEvent(raw, at)
+		}
+		var e struct {
+			Payload struct {
+				Role string `json:"role"`
+			} `json:"payload"`
+		}
+		if json.Unmarshal(raw, &e) != nil {
+			return false
+		}
+		if e.Payload.Role == "developer" {
+			return p.runtimeEnvelopeRecords[hashBytes(raw)]
+		}
+		if e.Payload.Role != "user" {
+			return false
+		}
+		return w.proof.observe(raw, at)
+	}
+	return false
+}
+
+func (p *skillsNativeResultProof) priorRuntimeInputsBound() bool {
+	for _, w := range p.runtimePriorWindows {
+		if w.proof == nil || !w.proof.bound() || w.Contexts == 0 {
+			return false
+		}
+	}
+	return true
+}
+
+func (p *skillsNativeResultProof) observePriorRuntimeContext(raw []byte, at time.Time) bool {
+	match := p.priorRuntimeWindowAt(at)
+	if match == nil {
+		return false
+	}
+	var e struct {
+		Payload json.RawMessage `json:"payload"`
+	}
+	var v struct {
+		Cwd, Model, Effort string
+		Reasoning          string `json:"reasoning_effort"`
+		Turn               string `json:"turn_id"`
+	}
+	if json.Unmarshal(raw, &e) != nil || !skillsCreationHeaderKeys(e.Payload, "cwd", "model", "effort", "reasoning_effort", "turn_id") || json.Unmarshal(e.Payload, &v) != nil {
+		return false
+	}
+	if v.Effort != "" && v.Reasoning != "" && v.Effort != v.Reasoning {
+		return false
+	}
+	effort := v.Effort
+	if effort == "" {
+		effort = v.Reasoning
+	}
+	if !skillsUUID.MatchString(v.Turn) || !same(v.Cwd, str(match.Job["cwd"])) || skillsModel(v.Model) == "" || skillsModel(v.Model) != skillsModel(str(match.Job["model"])) || effort != str(match.Job["effort"]) {
+		return false
+	}
+	match.Contexts++
+	if match.Turns == nil {
+		match.Turns = map[string]bool{}
+	}
+	match.Turns[v.Turn] = true
+	return true
+}
+
+// A canonical log's own item/turn IDs cannot prove that generated history
+// existed when the prior job ran. No independently registered item inventory
+// exists for this contract, so do not authenticate any such historical output.
+// The legacy configuration item is different: its complete allowed value is
+// independently fixed by the registered job, rather than learned from the log.
+func (p *skillsNativeResultProof) observePriorRuntimeGenerated(raw []byte, at time.Time) bool {
+	w := p.priorRuntimeWindowAt(at)
+	if w == nil || w.Contexts == 0 {
+		return false
+	}
+	var e struct {
+		Payload json.RawMessage `json:"payload"`
+	}
+	var v struct {
+		Type string `json:"type"`
+	}
+	if json.Unmarshal(raw, &e) != nil || json.Unmarshal(e.Payload, &v) != nil {
+		return false
+	}
+	if v.Type == "configuration_update" {
+		var c struct {
+			Type      string `json:"type"`
+			Reasoning struct {
+				Effort string `json:"effort"`
+			} `json:"reasoning"`
+		}
+		return skillsStrict(e.Payload, &c) && c.Reasoning.Effort == str(w.Job["effort"])
+	}
+	return false
+}
+
+func (p *skillsNativeResultProof) observeEvent(raw []byte, at time.Time) bool {
+	if !p.exactInput && !p.inputOnly {
+		return true
+	}
+	var e struct {
+		Payload json.RawMessage `json:"payload"`
+	}
+	if json.Unmarshal(raw, &e) != nil {
+		return false
+	}
+	var v struct {
+		Type     string            `json:"type"`
+		Message  string            `json:"message"`
+		Images   []json.RawMessage `json:"images"`
+		Local    []json.RawMessage `json:"local_images"`
+		Elements []json.RawMessage `json:"text_elements"`
+	}
+	if !skillsStrict(e.Payload, &v) {
+		return false
+	}
+	if v.Type != "user_message" {
+		return true
+	}
+	if !p.inputEventAt.IsZero() || v.Message != string(p.prompt) || len(v.Images) != 0 || len(v.Local) != 0 || len(v.Elements) != 0 {
+		return false
+	}
+	p.inputEventAt = at
+	return true
+}
+
+func (p *skillsNativeResultProof) bootstrapMatchesBody(body string) bool {
+	if len(p.runtimeBootstrap) > 0 {
+		return skillsBootstrapSourceMatches(body, p.runtimeBootstrap)
+	}
+	return skillsDigest(p.bootstrapSHA) && hashBytes([]byte(body)) == p.bootstrapSHA
 }
 
 func (p *skillsNativeResultProof) observe(raw []byte, at time.Time) bool {
+	if _, ok := conversationJSON(raw); !ok {
+		return false
+	}
 	var envelope struct {
 		Payload struct {
 			Type, Role, Phase string
@@ -299,6 +549,18 @@ func (p *skillsNativeResultProof) observe(raw []byte, at time.Time) bool {
 		return false
 	}
 	v := envelope.Payload
+	if (p.exactInput || p.inputOnly) && v.Role == "developer" && (p.runtimeEnvelopeRequired || p.runtimeWindowChecked()) {
+		return !p.runtimePrefixClosed && !p.userSeen && p.runtimeEnvelopeRecords[hashBytes(raw)]
+	}
+	if (p.exactInput || p.inputOnly) && v.Type != "message" && v.Role != "" {
+		return v.Type == "additional_tools" && v.Role == "developer" && !p.runtimePrefixClosed && !p.userSeen
+	}
+	if (p.exactInput || p.inputOnly) && v.Type == "message" && v.Role != "user" && v.Role != "assistant" {
+		return v.Role == "developer" && !p.runtimePrefixClosed && !p.userSeen
+	}
+	if v.Role == "user" && v.Type != "message" {
+		return false
+	}
 	if p.inputOnly && v.Role == "assistant" {
 		return true
 	}
@@ -313,15 +575,19 @@ func (p *skillsNativeResultProof) observe(raw []byte, at time.Time) bool {
 	if v.Role == "assistant" && (p.promptAt.IsZero() || at.Before(p.promptAt)) {
 		return true
 	}
-	if _, ok := conversationJSON(raw); !ok {
-		return false
-	}
-	var blocks []struct{ Type, Text string }
+	var blocks []json.RawMessage
 	if json.Unmarshal(v.Content, &blocks) != nil {
 		return false
 	}
 	var text strings.Builder
-	for _, block := range blocks {
+	for _, raw := range blocks {
+		var block struct {
+			Type string `json:"type"`
+			Text string `json:"text"`
+		}
+		if !skillsCreationHeaderKeys(raw, "type", "text") || json.Unmarshal(raw, &block) != nil {
+			return false
+		}
 		if v.Role == "user" && (p.exactInput || p.inputOnly) && block.Type != "input_text" {
 			return false
 		}
@@ -330,10 +596,11 @@ func (p *skillsNativeResultProof) observe(raw []byte, at time.Time) bool {
 		}
 	}
 	if v.Role == "user" && (p.exactInput || p.inputOnly) {
+		p.runtimePrefixClosed = true
 		first := !p.userSeen
 		p.userSeen = true
-		if first && skillsDigest(p.bootstrapSHA) {
-			if sha, ok := skillsBootstrapIdentity(text.String(), p.cwd); ok && sha == p.bootstrapSHA {
+		if first {
+			if body, ok := skillsBootstrapBodyWithSandbox(text.String(), p.cwd, p.sandbox); ok && p.bootstrapMatchesBody(body) {
 				p.bootstrapSeen = true
 				return true
 			}
@@ -344,6 +611,9 @@ func (p *skillsNativeResultProof) observe(raw []byte, at time.Time) bool {
 		matched = strings.Contains(text.String(), string(p.prompt))
 	}
 	if v.Role == "user" && matched {
+		if !p.promptAt.IsZero() {
+			return false
+		}
 		p.promptAt = at
 	} else if v.Role == "user" && ((p.finalSHA != "" && !p.promptAt.IsZero()) || p.inputOnly || p.exactInput) {
 		// The typed contract fixes the review's complete user input. An unknown
@@ -351,6 +621,9 @@ func (p *skillsNativeResultProof) observe(raw []byte, at time.Time) bool {
 		return false
 	}
 	if v.Role == "assistant" {
+		if !p.finalAt.IsZero() {
+			return false
+		}
 		p.lastFinal = []byte(text.String())
 		p.finalAt = at
 	}
@@ -358,6 +631,11 @@ func (p *skillsNativeResultProof) observe(raw []byte, at time.Time) bool {
 }
 
 func (p *skillsNativeResultProof) bound() bool {
+	// Some native versions mirror a user message as an event. It must be the
+	// same exact input at the same recorded instant, never a second turn.
+	if !p.inputEventAt.IsZero() && !p.inputEventAt.Equal(p.promptAt) {
+		return false
+	}
 	if (p.inputOnly || p.exactInput) && !p.bootstrapBound && !p.bootstrapSeen {
 		return false
 	}

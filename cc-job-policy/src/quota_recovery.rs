@@ -398,6 +398,10 @@ pub fn eligible_source(item: &Value, source: &Value) -> bool {
     !s(source, "id").is_empty()
         && source["todo_id"] == item["id"]
         && item["scheduler"]["last_job"] == source["id"]
+        && (!item["subwork"].is_object()
+            || item["worker_receipt"]["generation"] != item["resume_generation"]
+            || !item["worker_receipt"]["job"].is_string()
+            || item["worker_receipt"]["job"] == source["id"])
         && item["jobs"]
             .as_array()
             .is_some_and(|ids| ids.contains(&source["id"]))

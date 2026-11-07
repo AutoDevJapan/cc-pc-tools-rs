@@ -41,7 +41,18 @@ func skillsCreatedProvenanceWith(creation skillsRequest, c skillsConsumeRequest,
 		return m, e, current, "created_manifest"
 	}
 	m, ok = skillsParseManifest(raw)
-	if !ok || m.Writer != c.Creator {
+	if !ok {
+		return m, e, current, "manifest_shape"
+	}
+	if m.publicV2 {
+		if e.ManifestAuthor == nil || e.DecisionSHA != skillsDecisionSHA {
+			return m, e, current, "manifest_shape"
+		}
+		m, ok = skillsBindPublicManifest(m, c.Creator, *e.ManifestAuthor)
+		if !ok {
+			return m, e, current, "manifest_shape"
+		}
+	} else if m.Writer != c.Creator {
 		return m, e, current, "manifest_shape"
 	}
 	s.failureStage = ""
@@ -75,6 +86,13 @@ func skillsCreatedFailureReason(stage string) string {
 // canonical tool issuer/call/request/time/regular-session checks. It is not a
 // request-supplied receipt or an independent bool that classifies source data.
 func skillsCreationHeaderBound(e skillsCreatedEvidence, r skillsRequest, sha string, current skillsProducer) bool {
+	if e.ManifestAuthor != nil {
+		if !skillsWriterValid(*e.ManifestAuthor) || e.DecisionSHA != skillsDecisionSHA {
+			return false
+		}
+	} else if e.DecisionSHA != "" {
+		return false
+	}
 	return e.Domain == "skills-3080-created-v2" && r.Domain == "skills-3080-operation-v1" && r.Review != nil && e.Review == *r.Review && e.Writer == r.Writer &&
 		skillsWriterValid(e.Writer) && skillsDigest(sha) && e.RequestSHA == sha && e.ManifestCommit == r.ManifestCommit && e.ManifestPath == r.ManifestPath && e.ManifestSHA == r.ManifestSHA &&
 		skillsGitObjectID(e.ManifestCommit) && skillsDigest(e.ManifestSHA) && skillsRelative(e.ManifestPath) && strings.HasPrefix(e.ManifestPath, "docs/skills-3080-operations/") && strings.HasSuffix(e.ManifestPath, ".json") &&

@@ -47,13 +47,49 @@ type skillsOutput struct {
 	body    []byte
 }
 type skillsManifest struct {
-	Domain   string         `json:"domain"`
-	Todo     int            `json:"todo_id"`
-	Decision string         `json:"decision_identity_sha256"`
-	Writer   skillsWriter   `json:"writer"`
-	Sources  []skillsSource `json:"sources"`
-	Files    []skillsOutput `json:"files"`
+	Domain         string         `json:"domain"`
+	Todo           int            `json:"todo_id"`
+	Decision       string         `json:"decision_identity_sha256"`
+	Writer         skillsWriter   `json:"writer"`
+	Sources        []skillsSource `json:"sources"`
+	Files          []skillsOutput `json:"files"`
+	publicV2       bool
+	proposalAuthor skillsWriter
 }
+
+type skillsPublicManifest struct {
+	Domain  string         `json:"domain"`
+	Sources []skillsSource `json:"sources"`
+	Files   []skillsOutput `json:"files"`
+}
+
+type skillsPublicSourceMetadata struct {
+	Schema      string       `json:"schema"`
+	Source      skillsSource `json:"source"`
+	SourceBytes int64        `json:"source_bytes"`
+	SourceBlob  string       `json:"source_git_blob"`
+	Adaptation  string       `json:"adaptation,omitempty"`
+}
+
+func (m skillsManifest) MarshalJSON() ([]byte, error) {
+	if m.publicV2 {
+		return json.Marshal(skillsPublicManifest{m.Domain, m.Sources, m.Files})
+	}
+	type plain skillsManifest
+	return json.Marshal(plain(m))
+}
+
+func skillsBindPublicManifest(m skillsManifest, creator, author skillsWriter) (skillsManifest, bool) {
+	if !m.publicV2 {
+		return m, m.Writer == creator && m.Writer == author
+	}
+	if !skillsWriterValid(creator) || !skillsWriterValid(author) {
+		return m, false
+	}
+	m.Writer, m.proposalAuthor, m.Decision = creator, author, skillsDecisionSHA
+	return m, true
+}
+
 type skillsResultRequest struct {
 	Task     int    `json:"task"`
 	Job      string `json:"job"`
@@ -62,16 +98,17 @@ type skillsResultRequest struct {
 	SpecPath string `json:"spec_path,omitempty"`
 }
 type skillsRequest struct {
-	Domain         string                 `json:"domain"`
-	Writer         skillsWriter           `json:"writer"`
-	ManifestCommit string                 `json:"manifest_commit,omitempty"`
-	ManifestPath   string                 `json:"manifest_path,omitempty"`
-	ManifestSHA    string                 `json:"manifest_sha256,omitempty"`
-	Review         *skillsResultRequest   `json:"review,omitempty"`
-	Result         *skillsResultRequest   `json:"result,omitempty"`
-	Runtime        *skillsRuntimeRequest  `json:"runtime,omitempty"`
-	Consume        *skillsConsumeRequest  `json:"consume,omitempty"`
-	Revision       *skillsRevisionRequest `json:"revision,omitempty"`
+	Domain         string                      `json:"domain"`
+	Writer         skillsWriter                `json:"writer"`
+	ManifestCommit string                      `json:"manifest_commit,omitempty"`
+	ManifestPath   string                      `json:"manifest_path,omitempty"`
+	ManifestSHA    string                      `json:"manifest_sha256,omitempty"`
+	Review         *skillsResultRequest        `json:"review,omitempty"`
+	Result         *skillsResultRequest        `json:"result,omitempty"`
+	Runtime        *skillsRuntimeRequest       `json:"runtime,omitempty"`
+	Consume        *skillsConsumeRequest       `json:"consume,omitempty"`
+	Revision       *skillsRevisionRequest      `json:"revision,omitempty"`
+	RuntimeSource  *skillsRuntimeSourceRequest `json:"runtime_source,omitempty"`
 }
 
 var skillsName = regexp.MustCompile(`^[a-z0-9]+(?:-[a-z0-9]+)*$`)
@@ -109,7 +146,20 @@ func skillsWriterValid(w skillsWriter) bool {
 }
 func skillsParseManifest(raw []byte) (skillsManifest, bool) {
 	var m skillsManifest
-	if !skillsStrict(raw, &m) || m.Domain != "skills-3080-create-v1" || m.Todo != 3080 || m.Decision != skillsDecisionSHA || !skillsWriterValid(m.Writer) || len(m.Sources) < 1 || len(m.Sources) > 128 || len(m.Files) < 1 || len(m.Files) > 1024 {
+	value, valid := conversationJSON(raw)
+	if !valid {
+		return m, false
+	}
+	if value["domain"] == "skills-3080-create-v2" {
+		var public skillsPublicManifest
+		if !skillsStrict(raw, &public) {
+			return m, false
+		}
+		m = skillsManifest{Domain: public.Domain, Todo: 3080, Sources: public.Sources, Files: public.Files, publicV2: true}
+	} else if !skillsStrict(raw, &m) || m.Domain != "skills-3080-create-v1" || m.Todo != 3080 || m.Decision != skillsDecisionSHA || !skillsWriterValid(m.Writer) {
+		return m, false
+	}
+	if len(m.Sources) < 1 || len(m.Sources) > 128 || len(m.Files) < 1 || len(m.Files) > 1024 {
 		return m, false
 	}
 	for _, s := range m.Sources {
@@ -128,6 +178,17 @@ func skillsParseManifest(raw []byte) (skillsManifest, bool) {
 		body, e := base64.StdEncoding.Strict().DecodeString(f.Content)
 		if e != nil || len(body) < 1 || len(body) > 2<<20 || !utf8.Valid(body) || bytes.IndexByte(body, 0) >= 0 || hashBytes(body) != f.SHA {
 			return m, false
+		}
+		if m.publicV2 && len(parts) == 3 && strings.EqualFold(parts[1], "references") && strings.EqualFold(parts[2], "source.json") {
+			// Reserve one spelling before parsing metadata: Windows aliases
+			// must not bypass its public-only schema or later source binding.
+			if parts[1] != "references" || parts[2] != "source.json" {
+				return m, false
+			}
+			var metadata skillsPublicSourceMetadata
+			if !skillsStrict(body, &metadata) || metadata.Schema != "skills-3080-source-v2" || metadata.SourceBytes < 1 || !skillsGitObjectID(metadata.SourceBlob) {
+				return m, false
+			}
 		}
 		seen[strings.ToLower(f.Target)] = true
 		names[parts[0]] = true
@@ -155,7 +216,7 @@ func skillsParseManifest(raw []byte) (skillsManifest, bool) {
 func skillsFlag(args []string) bool {
 	for _, a := range args {
 		a = strings.TrimLeft(a, "-")
-		for _, f := range []string{"qualify-skills3080", "create-skills3080", "create-skills3080-forward", "consume-skills3080", "consume-skills3080-admitted", "receive-skills3080-result", "verify-skills3080-update", "apply-skills3080-update", "recover-skills3080-update", "qualify-skills3080-revision", "prepare-skills3080-revision", "apply-skills3080-revision", "consume-skills3080-revision"} {
+		for _, f := range []string{"qualify-skills3080", "create-skills3080", "create-skills3080-forward", "consume-skills3080", "consume-skills3080-admitted", "receive-skills3080-result", "verify-skills3080-update", "apply-skills3080-update", "recover-skills3080-update", "qualify-skills3080-revision", "prepare-skills3080-revision", "apply-skills3080-revision", "consume-skills3080-revision", "render-skills3080-runtime-source", "prepare-skills3080-runtime-source", "start-skills3080-runtime-source"} {
 			if a == f || strings.HasPrefix(a, f+"=") {
 				return true
 			}
@@ -172,7 +233,7 @@ func runSkillsCLI(args []string, out io.Writer, run func(string, string) object)
 		op := strings.TrimPrefix(strings.TrimPrefix(args[0], "-"), "-")
 		if args[0] == "-"+op || args[0] == "--"+op {
 			switch op {
-			case "qualify-skills3080", "create-skills3080", "create-skills3080-forward", "consume-skills3080", "receive-skills3080-result", "verify-skills3080-update", "apply-skills3080-update", "recover-skills3080-update", "qualify-skills3080-revision", "prepare-skills3080-revision", "apply-skills3080-revision", "consume-skills3080-revision":
+			case "qualify-skills3080", "create-skills3080", "create-skills3080-forward", "consume-skills3080", "receive-skills3080-result", "verify-skills3080-update", "apply-skills3080-update", "recover-skills3080-update", "qualify-skills3080-revision", "prepare-skills3080-revision", "apply-skills3080-revision", "consume-skills3080-revision", "render-skills3080-runtime-source", "prepare-skills3080-runtime-source", "start-skills3080-runtime-source":
 				result = run(op, args[1])
 			}
 		}
@@ -180,6 +241,10 @@ func runSkillsCLI(args []string, out io.Writer, run func(string, string) object)
 	// Never leak callback error text, names, paths or arbitrary metadata on refusal.
 	if result["qualified"] != true {
 		created, partial := result["created_files"], result["partial_operation_possible"]
+		owned, preparationPartial := str(result["ownership_id"]), result["partial_preparation_possible"] == true
+		requestObject := result["request_object"]
+		attempted := result["source_attempt_recorded"] == true
+		dispatch := result["normal_dispatch"]
 		stage, _ := result["failure_stage"].(string)
 		reason := str(result["reason"])
 		if !skillsReason.MatchString(reason) {
@@ -189,9 +254,29 @@ func runSkillsCLI(args []string, out io.Writer, run func(string, string) object)
 		if skillsFixedFailureStage(stage) {
 			result["failure_stage"] = stage
 		}
+		if len(args) == 2 && args[0] == "--start-skills3080-runtime-source" && reason == "source" && stage == "source_normal_dispatch" {
+			if d, ok := skillsSourceDispatchDiagnostic(dispatch); ok {
+				result["normal_dispatch"] = d
+			}
+		}
 		if n, ok := created.(int); ok && n >= 0 && n <= 1024 && partial == true {
 			result["created_files"] = n
 			result["partial_operation_possible"] = true
+		}
+		if preparationPartial && skillsRuntimeNonce(owned) && strings.HasPrefix(stage, "source_") && skillsFixedFailureStage(stage) {
+			result["ownership_id"], result["partial_preparation_possible"] = owned, true
+			encoded, _ := json.Marshal(requestObject)
+			var id skillsObjectID
+			if skillsStrict(encoded, &id) && skillsSourceObjectShape(id) {
+				result["request_object"] = id
+			}
+		}
+		if attempted && strings.HasPrefix(stage, "source_") && skillsFixedFailureStage(stage) {
+			encoded, _ := json.Marshal(requestObject)
+			var id skillsObjectID
+			if skillsStrict(encoded, &id) && skillsSourceObjectShape(id) {
+				result["source_attempt_recorded"], result["request_object"] = true, id
+			}
 		}
 	}
 	if json.NewEncoder(out).Encode(result) != nil || result["qualified"] != true {
@@ -208,6 +293,8 @@ func skillsFixedFailureStage(stage string) bool {
 		"source_provenance", "source_claims", "source_catalog_open", "source_catalog_integrity", "source_anchor", "source_commit",
 		"source_index_open", "source_index_integrity", "source_selected_paths", "source_notice_or_catalog", "source_support_package",
 		"source_tree", "source_object", "creation_binding", "current_snapshot", "writer_recheck":
+		return true
+	case "source_request", "source_registration", "source_generation", "source_active", "source_spec", "source_issuer", "source_issuer_native", "source_nonce", "source_nonce_missing", "source_producer", "source_preparation", "source_issuer_spec", "source_owned_root", "source_directory", "source_prepare_write", "source_attempt_record", "source_not_empty", "source_inputs_changed", "source_task_finished", "source_normal_dispatch", "source_bundle", "source_manifest", "source_events", "source_event_binding", "source_pending", "source_payload_reference", "source_payload", "source_input":
 		return true
 	}
 	return false

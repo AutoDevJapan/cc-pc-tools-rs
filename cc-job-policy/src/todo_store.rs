@@ -50,6 +50,10 @@ pub fn write(path: &Path, db: &Value) -> Result<(), Error> {
     serde::Serialize::serialize(db, &mut serializer).map_err(Error::InvalidJson)?;
     check_size(bytes.len())?;
 
+    if crate::todo_remote::commit(path, &bytes).map_err(Error::Io)? {
+        return Ok(());
+    }
+
     let mut backup = path.as_os_str().to_os_string();
     backup.push(".bak-20260930d");
     let backup = Path::new(&backup);
@@ -111,7 +115,25 @@ fn replace(from: &Path, to: &Path) -> io::Result<()> {
 /// Bound actual reads, including a file which grows after it is opened.
 /// Parsing uses exactly the bytes read; redaction belongs to presentation.
 pub fn read(path: &Path) -> Result<Value, Error> {
-    read_bounded(path, MAX_BYTES)
+    let remote = crate::todo_remote::enabled(path).map_err(Error::Io)?;
+    let mut result = read_bounded(path, MAX_BYTES);
+    if remote {
+        for _ in 0..49 {
+            if !matches!(&result, Err(Error::Io(e)) if
+                e.kind() == io::ErrorKind::PermissionDenied || matches!(e.raw_os_error(), Some(5 | 32 | 33)))
+            {
+                break;
+            }
+            std::thread::sleep(Duration::from_millis(20));
+            result = read_bounded(path, MAX_BYTES);
+        }
+    }
+    result.map_err(|e| match e {
+        Error::Io(e) if remote && e.kind() == io::ErrorKind::NotFound => {
+            Error::Io(io::Error::other("todo_remote_cache_unavailable"))
+        }
+        e => e,
+    })
 }
 /// Preserve immutable history bytes for independent digest validation.
 pub fn read_bytes(path: &Path) -> Result<Vec<u8>, Error> {

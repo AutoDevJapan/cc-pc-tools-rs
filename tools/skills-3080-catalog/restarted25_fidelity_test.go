@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"sort"
 	"testing"
+	"time"
 )
 
 const resumedPrimary13File = "skills-3080-primaryflow-next13-plus-held1-after216-evaluation095653.json"
@@ -32,18 +33,29 @@ type resumedPlanMember struct {
 }
 
 func validateResumedThirteenAndHeld(v map[string]any) error {
+	return validateResumedVisibleSnapshot(v, 13, 1, 14, 3,
+		map[string]any{"records": float64(216), "sha256": "abc54e47f783c03ecb1e235a2b556e191b0d215f285148c698d7373e393d14a6", "all_records_and64_original_contexts_exactly_retained": true},
+		map[string]any{"records": float64(229), "held_groups": float64(1), "acknowledged_groups": float64(230), "original_packets": float64(67), "sha256": "9b34f3cec8b9895826d64cc289a5c41736f75c36e16f87d58834afa38303be0e"},
+		map[string][5]string{
+			"77584462e0028ffd4941707f2341d0ac9efce930717ae20ee805aac6327f69aa": {"20261029-174543-todo-4133", "20261029-170905-todo-3080", "p5a4c66/gpt-6.1-sol", "9336a02f41b267d04f4f406815ff048938055a11ea4582f8514d79708881c9ff", "20261029-170905-todo-3080"},
+			"c5866fcb34261c82de2d1c0825eddc6d78a21bc05110e39c93a4592ac84c4489": {"20261029-174632-todo-4134", "20261029-170905-todo-3080", "gpt-6.1-sol", "b0bfc631a8d355a1c406003da7c417b668dabd49dccf48b1d11ffa18a3132b72", "20261029-170905-todo-3080"},
+			"19665e6f7aab6488fa8c1e224cc2f4999c4a18a5830b8c402b28a379fdc2c3f3": {"20261030-033405-todo-4134", "20261030-095653-todo-3080", "gpt-6.1-sol", "b0bfc631a8d355a1c406003da7c417b668dabd49dccf48b1d11ffa18a3132b72", ""},
+		})
+}
+
+func validateResumedVisibleSnapshot(v map[string]any, semanticCount, heldCount, expectedMembers, packetCount int, prior, current map[string]any, actors map[string][5]string) error {
 	if err := next4Fields(v, map[string]any{
 		"domain": "skills3080-primaryflow-parent-shared-snapshot-v1", "publisher_job": "20261030-095653-todo-3080",
-		"representative_body_groups": float64(13), "acknowledged_body_groups": float64(14), "held_body_groups": float64(1),
-		"bound_member_metadata": float64(14), "complete_original_packets": float64(3),
+		"representative_body_groups": float64(semanticCount), "acknowledged_body_groups": float64(semanticCount + heldCount), "held_body_groups": float64(heldCount),
+		"bound_member_metadata": float64(expectedMembers), "complete_original_packets": float64(packetCount),
 		"all_original_packets_losslessly_reconstructed": true, "all_member_contexts_read": false, "all_member_rights_confirmed": false, "whole16_complete": false,
 	}); err != nil {
 		return err
 	}
-	if err := next4Fields(next4Object(v["prior_snapshot"]), map[string]any{"records": float64(216), "sha256": "abc54e47f783c03ecb1e235a2b556e191b0d215f285148c698d7373e393d14a6", "all_records_and64_original_contexts_exactly_retained": true}); err != nil {
+	if err := next4Fields(next4Object(v["prior_snapshot"]), prior); err != nil {
 		return err
 	}
-	if err := next4Fields(next4Object(v["current_snapshot"]), map[string]any{"records": float64(229), "held_groups": float64(1), "acknowledged_groups": float64(230), "original_packets": float64(67), "sha256": "9b34f3cec8b9895826d64cc289a5c41736f75c36e16f87d58834afa38303be0e"}); err != nil {
+	if err := next4Fields(next4Object(v["current_snapshot"]), current); err != nil {
 		return err
 	}
 	prep := next4Object(v["publication_preparation"])
@@ -56,8 +68,8 @@ func validateResumedThirteenAndHeld(v map[string]any) error {
 	entries, eok := v["entries"].([]any)
 	held, hok := v["held_records"].([]any)
 	contexts := next4Object(v["shared_original_contexts"])
-	if !rok || !eok || !hok || len(records) != 13 || len(entries) != 13 || len(held) != 1 || len(contexts) != 3 {
-		return fmt.Errorf("13 semantic entries and one separate unread group required")
+	if !rok || !eok || !hok || len(records) != semanticCount || len(entries) != semanticCount || len(held) != heldCount || len(contexts) != packetCount || len(actors) != packetCount {
+		return fmt.Errorf("fixed semantic entries, separate held groups and original packets required")
 	}
 	groups := map[string][]any{}
 	rowsByOrdinal := map[string]map[string]any{}
@@ -140,30 +152,59 @@ func validateResumedThirteenAndHeld(v map[string]any) error {
 		if err != nil || travel3Digest(b) != sha || common["parent_origin_job"] != "20261027-175645-todo-3080" || c["all_original_fields_reconstructed"] != true {
 			return fmt.Errorf("complete original packet changed")
 		}
-		reader, consumer, model, spec, parent := "", "", "", "", ""
-		switch sha {
-		case "77584462e0028ffd4941707f2341d0ac9efce930717ae20ee805aac6327f69aa":
-			reader, consumer, model, spec, parent = "20261029-174543-todo-4133", "20261029-170905-todo-3080", "p5a4c66/gpt-6.1-sol", "9336a02f41b267d04f4f406815ff048938055a11ea4582f8514d79708881c9ff", "20261029-170905-todo-3080"
-		case "c5866fcb34261c82de2d1c0825eddc6d78a21bc05110e39c93a4592ac84c4489":
-			reader, consumer, model, spec, parent = "20261029-174632-todo-4134", "20261029-170905-todo-3080", "gpt-6.1-sol", "b0bfc631a8d355a1c406003da7c417b668dabd49dccf48b1d11ffa18a3132b72", "20261029-170905-todo-3080"
-		case "19665e6f7aab6488fa8c1e224cc2f4999c4a18a5830b8c402b28a379fdc2c3f3":
-			reader, consumer, model, spec = "20261030-033405-todo-4134", "20261030-095653-todo-3080", "gpt-6.1-sol", "b0bfc631a8d355a1c406003da7c417b668dabd49dccf48b1d11ffa18a3132b72"
-		default:
+		actor, ok := actors[sha]
+		if !ok {
 			return fmt.Errorf("unexpected original packet")
 		}
+		reader, consumer, model, spec, parent := actor[0], actor[1], actor[2], actor[3], actor[4]
 		ack := next4Object(c["independent_parent_ack"])
 		meaning := next4Object(c["independent_parent_meaning"])
 		native := next4Object(c["independent_native_metadata"])
+		first, through := next4Object(originals[0])["ordinal"], next4Object(originals[len(originals)-1])["ordinal"]
+		if err := next4Fields(ack, map[string]any{"domain": "skills3080-primaryflow-parent-ack-v1", "packet_id": common["packet_id"], "packet_sha256": sha, "acknowledged_through": through, "cohort": common["cohort"], "plan_sha256": common["plan_sha256"], "parent_origin_job": common["parent_origin_job"]}); err != nil {
+			return err
+		}
+		if err := next4Fields(meaning, map[string]any{"packet_id": common["packet_id"], "packet_sha256": sha, "first": first, "through": through}); err != nil {
+			return err
+		}
 		if common["reader_job"] != reader || c["actual_assessment_reader"] != reader || ack["reader_job"] != reader || ack["consumer_job"] != consumer || meaning["reader_job"] != reader || meaning["consumer_job"] != consumer || meaning["all_entry_meanings_and_limits_read"] != true {
 			return fmt.Errorf("actual reader or resumed consumer changed")
 		}
-		if err := next4Fields(native, map[string]any{"reader_job": reader, "registered_spec_sha256": spec, "actual_model": model, "actual_effort": "max", "thread_matches": true, "cwd_matches": true, "immutable_origin_job": "20261027-175645-todo-3080"}); err != nil {
+		if err := next4Fields(native, map[string]any{"reader_job": reader, "actual_consumer_job": consumer, "registered_spec_sha256": spec, "actual_model": model, "actual_effort": "max", "thread_matches": true, "cwd_matches": true, "immutable_origin_job": "20261027-175645-todo-3080"}); err != nil {
 			return err
+		}
+		turns, ok := native["native_turn_contexts"].([]any)
+		if !ok || len(turns) == 0 {
+			return fmt.Errorf("actual native turn contexts missing")
+		}
+		startText, _ := native["strict_window_start"].(string)
+		endText, _ := native["strict_window_observed_end"].(string)
+		start, startErr := time.Parse(time.RFC3339Nano, startText)
+		end, endErr := time.Parse(time.RFC3339Nano, endText)
+		if startErr != nil || endErr != nil || end.Before(start) {
+			return fmt.Errorf("actual native time window invalid")
+		}
+		for _, value := range turns {
+			turn := next4Object(value)
+			if turn["model"] != model || turn["effort"] != "max" {
+				return fmt.Errorf("actual native turn model or effort differs")
+			}
+			stamp, _ := turn["timestamp"].(string)
+			at, err := time.Parse(time.RFC3339Nano, stamp)
+			if err != nil || at.Before(start) || at.After(end) {
+				return fmt.Errorf("native turn outside the same reader observation window")
+			}
 		}
 		observed, present := native["actual_launch_parent"]
 		if !present || (parent == "" && observed != nil) || (parent != "" && observed != parent) {
 			return fmt.Errorf("actual parent null/missing/empty/retained origin conflated")
 		}
+		meaningParent, meaningParentPresent := meaning["actual_reader_launch_parent"]
+		if meaningParentPresent && meaningParent != observed || reader == "20261030-033405-todo-4134" && !meaningParentPresent {
+			return fmt.Errorf("parent meaning and actual native launch parent observations differ")
+		}
+		// Older consumers did not record this observation. Keep it absent,
+		// rather than inventing a parent value for their historical meaning.
 		members := next4Object(c["member_metadata"])
 		if len(members) != len(originals) {
 			return fmt.Errorf("original member groups omitted")
@@ -203,8 +244,8 @@ func validateResumedThirteenAndHeld(v map[string]any) error {
 			}
 		}
 	}
-	if memberCount != 14 {
-		return fmt.Errorf("all14 individual member contexts must remain pending")
+	if memberCount != expectedMembers {
+		return fmt.Errorf("all individual member contexts must remain pending")
 	}
 	return nil
 }

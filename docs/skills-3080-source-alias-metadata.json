@@ -1,0 +1,582 @@
+{
+  "accepted_occurrences": 179,
+  "accepted_without_joinable_catalog_primary": [],
+  "adoption_ledger_sha256": "f2dddb6f978ef1b1690e54d12e855dac0df6e0b3ab40cfad2f572c8208ada4c7",
+  "catalog_rows": 73220,
+  "catalog_sha256": "2d73c9a038a41cc220a9687b935bfa1e0b315b65d9bd6d3e54ddb4111972876c",
+  "counts": {
+    "by_unit/github_skill_entry": 2,
+    "by_unit/site_index_entry": 7,
+    "same_SHA_different_or_missing_URL": 5,
+    "same_URL_and_SHA": 4
+  },
+  "definition": "Complete metadata comparison of179 accepted source occurrences against the73220-row fixed catalog. effective_attempt determines the saved primary SHA/read state while catalog_original_sha256 preserves the original field. Matching URL and primary bytes identify possible reuse of an existing workflow and its own notice; they do not transfer package or service rights. Site Git fields remain unknown and different URLs require separate provenance review.",
+  "domain": "skills3080-current179-alias-metadata-only-v2",
+  "effective_attempt_precedence_matches_current_catalog_reader": true,
+  "matches": [
+    {
+      "unclassified_occurrence": {
+        "inventory_id": "github:4a1d011a577bc3059719d059698ce8e385148b0e528052bc57edfb80f573522f",
+        "inventory_unit": "github_skill_entry",
+        "sha256": "a071ef6564486bd02096fc87e0600e0dbf8fe696111df1aed6f5507a7c0ca21d",
+        "catalog_original_sha256": "a071ef6564486bd02096fc87e0600e0dbf8fe696111df1aed6f5507a7c0ca21d",
+        "repo": "6mile/skills",
+        "commit": "920714f17d81e0a95c7a9bc51faf0a7921cd982d",
+        "path": "skills/kdegeek/api-gateway-1/SKILL.md",
+        "git_blob": "4b5dfc780f363806effb79003986897f2f91fd7d",
+        "bytes": 28160,
+        "normalized_canonical_url": "https://raw.githubusercontent.com/6mile/skills/920714f17d81e0a95c7a9bc51faf0a7921cd982d/skills/kdegeek/api-gateway-1/SKILL.md",
+        "machine_body_read": true,
+        "effective_attempt": null
+      },
+      "accepted_matches": [
+        {
+          "adoption": {
+            "inventory_id": "github:5934bb2fc7fed07a55396d0c4f003f0d9ff75b7ff7142d6bc5fd7e99c0f78889",
+            "target": "connection-scope-reconciliation",
+            "disposition": "installed_new_adaptation",
+            "manifest": "skills-3080-installed-recovery-connections-manifest175645.json",
+            "source_notice_preserved": true
+          },
+          "catalog_occurrence": {
+            "inventory_id": "github:5934bb2fc7fed07a55396d0c4f003f0d9ff75b7ff7142d6bc5fd7e99c0f78889",
+            "inventory_unit": "github_skill_entry",
+            "sha256": "a071ef6564486bd02096fc87e0600e0dbf8fe696111df1aed6f5507a7c0ca21d",
+            "catalog_original_sha256": "a071ef6564486bd02096fc87e0600e0dbf8fe696111df1aed6f5507a7c0ca21d",
+            "repo": "6mile/skills",
+            "commit": "920714f17d81e0a95c7a9bc51faf0a7921cd982d",
+            "path": "skills/mbright4497/api-gateway-1-0-46/SKILL.md",
+            "git_blob": "4b5dfc780f363806effb79003986897f2f91fd7d",
+            "bytes": 28160,
+            "normalized_canonical_url": "https://raw.githubusercontent.com/6mile/skills/920714f17d81e0a95c7a9bc51faf0a7921cd982d/skills/mbright4497/api-gateway-1-0-46/SKILL.md",
+            "machine_body_read": true,
+            "effective_attempt": null
+          },
+          "same_primary_SHA_only_does_not_transfer_package_or_rights": true,
+          "same_recorded_canonical_URL": false
+        }
+      ],
+      "same_actual_canonical_URL_and_saved_SHA": false,
+      "final_disposition_applied": false
+    },
+    {
+      "unclassified_occurrence": {
+        "inventory_id": "github:89c1e0ff1ded5167fb07d6426a3506765b8df2f2bd9399af494cd00e8f7ff446",
+        "inventory_unit": "github_skill_entry",
+        "sha256": "1d838f736ef09ac06b965f1d540f86c52e001042ffeaf9e40609abba996f9f90",
+        "catalog_original_sha256": "1d838f736ef09ac06b965f1d540f86c52e001042ffeaf9e40609abba996f9f90",
+        "repo": "6mile/skills",
+        "commit": "920714f17d81e0a95c7a9bc51faf0a7921cd982d",
+        "path": "skills/joeavaib/cxm-neural-memory/SKILL.md",
+        "git_blob": "daaad64f15f30d6901a97db5533e70457317a17d",
+        "bytes": 2794,
+        "normalized_canonical_url": "https://raw.githubusercontent.com/6mile/skills/920714f17d81e0a95c7a9bc51faf0a7921cd982d/skills/joeavaib/cxm-neural-memory/SKILL.md",
+        "machine_body_read": true,
+        "effective_attempt": null
+      },
+      "accepted_matches": [
+        {
+          "adoption": {
+            "inventory_id": "github:192881db536eb8fa09e04f09aa051710b7540b92da63234eddecb424982996cc",
+            "target": "codebase-impact-context",
+            "disposition": "installed_new_adaptation",
+            "manifest": "skills-3080-installed-next-four-manifest175645.json",
+            "source_notice_preserved": true
+          },
+          "catalog_occurrence": {
+            "inventory_id": "github:192881db536eb8fa09e04f09aa051710b7540b92da63234eddecb424982996cc",
+            "inventory_unit": "github_skill_entry",
+            "sha256": "1d838f736ef09ac06b965f1d540f86c52e001042ffeaf9e40609abba996f9f90",
+            "catalog_original_sha256": "1d838f736ef09ac06b965f1d540f86c52e001042ffeaf9e40609abba996f9f90",
+            "repo": "6mile/skills",
+            "commit": "920714f17d81e0a95c7a9bc51faf0a7921cd982d",
+            "path": "skills/joeavaib/cxm-neural-memory/docs/cxm-neural-memory/SKILL.md",
+            "git_blob": "daaad64f15f30d6901a97db5533e70457317a17d",
+            "bytes": 2794,
+            "normalized_canonical_url": "https://raw.githubusercontent.com/6mile/skills/920714f17d81e0a95c7a9bc51faf0a7921cd982d/skills/joeavaib/cxm-neural-memory/docs/cxm-neural-memory/SKILL.md",
+            "machine_body_read": true,
+            "effective_attempt": null
+          },
+          "same_primary_SHA_only_does_not_transfer_package_or_rights": true,
+          "same_recorded_canonical_URL": false
+        }
+      ],
+      "same_actual_canonical_URL_and_saved_SHA": false,
+      "final_disposition_applied": false
+    },
+    {
+      "unclassified_occurrence": {
+        "inventory_id": "site:algorithmic-art-a6e3ba",
+        "inventory_unit": "site_index_entry",
+        "sha256": "3bc4092c09804853186524c826bc0621b940bb6122c05b84496dff95388e6eef",
+        "catalog_original_sha256": "",
+        "repo": "",
+        "commit": "",
+        "path": "",
+        "git_blob": "",
+        "bytes": 0,
+        "normalized_canonical_url": "https://raw.githubusercontent.com/anthropics/skills/dbd4588f9e1033efb41dad4bef2f7947c8993d44/skills/algorithmic-art/SKILL.md",
+        "machine_body_read": true,
+        "effective_attempt": {
+          "sha256": "3bc4092c09804853186524c826bc0621b940bb6122c05b84496dff95388e6eef",
+          "machine_body_read": true
+        }
+      },
+      "accepted_matches": [
+        {
+          "adoption": {
+            "inventory_id": "github:0e27bad8cfdc1ad12b137d1eff7224e2405dde247c53a32755b4996a3862371f",
+            "target": "generative-art-reproducibility",
+            "disposition": "integrated_existing",
+            "manifest": "skills-3080-installed-consolidation-art-manifest175645.json",
+            "source_notice_preserved": true
+          },
+          "catalog_occurrence": {
+            "inventory_id": "github:0e27bad8cfdc1ad12b137d1eff7224e2405dde247c53a32755b4996a3862371f",
+            "inventory_unit": "github_skill_entry",
+            "sha256": "3bc4092c09804853186524c826bc0621b940bb6122c05b84496dff95388e6eef",
+            "catalog_original_sha256": "3bc4092c09804853186524c826bc0621b940bb6122c05b84496dff95388e6eef",
+            "repo": "6mile/skills",
+            "commit": "920714f17d81e0a95c7a9bc51faf0a7921cd982d",
+            "path": "skills/zhaom0/feifei/SKILL.md",
+            "git_blob": "634f6fa42e4e697fa6afd293acd7fb8246574876",
+            "bytes": 19769,
+            "normalized_canonical_url": "https://raw.githubusercontent.com/6mile/skills/920714f17d81e0a95c7a9bc51faf0a7921cd982d/skills/zhaom0/feifei/SKILL.md",
+            "machine_body_read": true,
+            "effective_attempt": null
+          },
+          "same_primary_SHA_only_does_not_transfer_package_or_rights": true,
+          "same_recorded_canonical_URL": false
+        },
+        {
+          "adoption": {
+            "inventory_id": "github:4009f77084478acb9c85713217edbf36ff5a162763380e8337aecfccc0b1b411",
+            "target": "generative-art-reproducibility",
+            "disposition": "integrated_existing",
+            "manifest": "skills-3080-installed-consolidation-art-manifest175645.json",
+            "source_notice_preserved": true
+          },
+          "catalog_occurrence": {
+            "inventory_id": "github:4009f77084478acb9c85713217edbf36ff5a162763380e8337aecfccc0b1b411",
+            "inventory_unit": "github_skill_entry",
+            "sha256": "3bc4092c09804853186524c826bc0621b940bb6122c05b84496dff95388e6eef",
+            "catalog_original_sha256": "3bc4092c09804853186524c826bc0621b940bb6122c05b84496dff95388e6eef",
+            "repo": "6mile/skills",
+            "commit": "920714f17d81e0a95c7a9bc51faf0a7921cd982d",
+            "path": "skills/pupuking723/algorithmic-art-anthropic/SKILL.md",
+            "git_blob": "634f6fa42e4e697fa6afd293acd7fb8246574876",
+            "bytes": 19769,
+            "normalized_canonical_url": "https://raw.githubusercontent.com/6mile/skills/920714f17d81e0a95c7a9bc51faf0a7921cd982d/skills/pupuking723/algorithmic-art-anthropic/SKILL.md",
+            "machine_body_read": true,
+            "effective_attempt": null
+          },
+          "same_primary_SHA_only_does_not_transfer_package_or_rights": true,
+          "same_recorded_canonical_URL": false
+        },
+        {
+          "adoption": {
+            "inventory_id": "github:41e0779f37283f1b4785ea1a6953616b257d0f488306c16f76e605b8b54e429f",
+            "target": "generative-art-reproducibility",
+            "disposition": "integrated_existing",
+            "manifest": "skills-3080-installed-consolidation-art-manifest175645.json",
+            "source_notice_preserved": true
+          },
+          "catalog_occurrence": {
+            "inventory_id": "github:41e0779f37283f1b4785ea1a6953616b257d0f488306c16f76e605b8b54e429f",
+            "inventory_unit": "github_skill_entry",
+            "sha256": "3bc4092c09804853186524c826bc0621b940bb6122c05b84496dff95388e6eef",
+            "catalog_original_sha256": "3bc4092c09804853186524c826bc0621b940bb6122c05b84496dff95388e6eef",
+            "repo": "6mile/skills",
+            "commit": "920714f17d81e0a95c7a9bc51faf0a7921cd982d",
+            "path": "skills/seanphan/algorithmic-art/SKILL.md",
+            "git_blob": "634f6fa42e4e697fa6afd293acd7fb8246574876",
+            "bytes": 19769,
+            "normalized_canonical_url": "https://raw.githubusercontent.com/6mile/skills/920714f17d81e0a95c7a9bc51faf0a7921cd982d/skills/seanphan/algorithmic-art/SKILL.md",
+            "machine_body_read": true,
+            "effective_attempt": null
+          },
+          "same_primary_SHA_only_does_not_transfer_package_or_rights": true,
+          "same_recorded_canonical_URL": false
+        },
+        {
+          "adoption": {
+            "inventory_id": "github:90b1a9685fdafcbaa8fecf283beb103c9c8955e14a2949e3cf16fc67d130e4a2",
+            "target": "generative-art-reproducibility",
+            "disposition": "integrated_existing",
+            "manifest": "skills-3080-installed-consolidation-art-manifest175645.json",
+            "source_notice_preserved": true
+          },
+          "catalog_occurrence": {
+            "inventory_id": "github:90b1a9685fdafcbaa8fecf283beb103c9c8955e14a2949e3cf16fc67d130e4a2",
+            "inventory_unit": "github_skill_entry",
+            "sha256": "3bc4092c09804853186524c826bc0621b940bb6122c05b84496dff95388e6eef",
+            "catalog_original_sha256": "3bc4092c09804853186524c826bc0621b940bb6122c05b84496dff95388e6eef",
+            "repo": "6mile/skills",
+            "commit": "920714f17d81e0a95c7a9bc51faf0a7921cd982d",
+            "path": "skills/zhao202404/excel-skill/SKILL.md",
+            "git_blob": "634f6fa42e4e697fa6afd293acd7fb8246574876",
+            "bytes": 19769,
+            "normalized_canonical_url": "https://raw.githubusercontent.com/6mile/skills/920714f17d81e0a95c7a9bc51faf0a7921cd982d/skills/zhao202404/excel-skill/SKILL.md",
+            "machine_body_read": true,
+            "effective_attempt": null
+          },
+          "same_primary_SHA_only_does_not_transfer_package_or_rights": true,
+          "same_recorded_canonical_URL": false
+        },
+        {
+          "adoption": {
+            "inventory_id": "github:db3a296d432ef9beb84fb1c5a128b5297b2f0112b5c61ab1ac248005c2f97a0f",
+            "target": "generative-art-reproducibility",
+            "disposition": "installed_new_adaptation",
+            "manifest": "skills-3080-installed-consolidation-art-manifest175645.json",
+            "source_notice_preserved": true
+          },
+          "catalog_occurrence": {
+            "inventory_id": "github:db3a296d432ef9beb84fb1c5a128b5297b2f0112b5c61ab1ac248005c2f97a0f",
+            "inventory_unit": "github_skill_entry",
+            "sha256": "3bc4092c09804853186524c826bc0621b940bb6122c05b84496dff95388e6eef",
+            "catalog_original_sha256": "3bc4092c09804853186524c826bc0621b940bb6122c05b84496dff95388e6eef",
+            "repo": "6mile/skills",
+            "commit": "920714f17d81e0a95c7a9bc51faf0a7921cd982d",
+            "path": "skills/moyu0032/mo-test-1/SKILL.md",
+            "git_blob": "634f6fa42e4e697fa6afd293acd7fb8246574876",
+            "bytes": 19769,
+            "normalized_canonical_url": "https://raw.githubusercontent.com/6mile/skills/920714f17d81e0a95c7a9bc51faf0a7921cd982d/skills/moyu0032/mo-test-1/SKILL.md",
+            "machine_body_read": true,
+            "effective_attempt": null
+          },
+          "same_primary_SHA_only_does_not_transfer_package_or_rights": true,
+          "same_recorded_canonical_URL": false
+        },
+        {
+          "adoption": {
+            "inventory_id": "github:f330d4f9f639ab1bad13dc0b4cfcc5a4235ac8dc6a3b9d21343b75a2e6f0fc70",
+            "target": "generative-art-reproducibility",
+            "disposition": "integrated_existing",
+            "manifest": "skills-3080-installed-consolidation-art-manifest175645.json",
+            "source_notice_preserved": true
+          },
+          "catalog_occurrence": {
+            "inventory_id": "github:f330d4f9f639ab1bad13dc0b4cfcc5a4235ac8dc6a3b9d21343b75a2e6f0fc70",
+            "inventory_unit": "github_skill_entry",
+            "sha256": "3bc4092c09804853186524c826bc0621b940bb6122c05b84496dff95388e6eef",
+            "catalog_original_sha256": "3bc4092c09804853186524c826bc0621b940bb6122c05b84496dff95388e6eef",
+            "repo": "6mile/skills",
+            "commit": "920714f17d81e0a95c7a9bc51faf0a7921cd982d",
+            "path": "skills/darinouyang/algorithmic-art-2/SKILL.md",
+            "git_blob": "634f6fa42e4e697fa6afd293acd7fb8246574876",
+            "bytes": 19769,
+            "normalized_canonical_url": "https://raw.githubusercontent.com/6mile/skills/920714f17d81e0a95c7a9bc51faf0a7921cd982d/skills/darinouyang/algorithmic-art-2/SKILL.md",
+            "machine_body_read": true,
+            "effective_attempt": null
+          },
+          "same_primary_SHA_only_does_not_transfer_package_or_rights": true,
+          "same_recorded_canonical_URL": false
+        }
+      ],
+      "same_actual_canonical_URL_and_saved_SHA": false,
+      "final_disposition_applied": false
+    },
+    {
+      "unclassified_occurrence": {
+        "inventory_id": "site:cloudflare-deploy",
+        "inventory_unit": "site_index_entry",
+        "sha256": "d7632537cf19be17cf33d2c696b9d9c2ea3ee51026030e9b203d5b9255e75b15",
+        "catalog_original_sha256": "",
+        "repo": "",
+        "commit": "",
+        "path": "",
+        "git_blob": "",
+        "bytes": 0,
+        "normalized_canonical_url": "https://raw.githubusercontent.com/openai/skills/49f948faa9258a0c61caceaf225e179651397431/skills/.curated/cloudflare-deploy/SKILL.md",
+        "machine_body_read": true,
+        "effective_attempt": {
+          "sha256": "d7632537cf19be17cf33d2c696b9d9c2ea3ee51026030e9b203d5b9255e75b15",
+          "machine_body_read": true
+        }
+      },
+      "accepted_matches": [
+        {
+          "adoption": {
+            "inventory_id": "github:0ab793e37d3b44eaf3a16af08020907fd32239fbbafa1813a00f57d13497e095",
+            "target": "cloudflare-deploy",
+            "disposition": "installed_new_adaptation",
+            "manifest": "skills-3080-installed-openai11-manifest214717.json",
+            "source_notice_preserved": true
+          },
+          "catalog_occurrence": {
+            "inventory_id": "github:0ab793e37d3b44eaf3a16af08020907fd32239fbbafa1813a00f57d13497e095",
+            "inventory_unit": "github_skill_entry",
+            "sha256": "d7632537cf19be17cf33d2c696b9d9c2ea3ee51026030e9b203d5b9255e75b15",
+            "catalog_original_sha256": "d7632537cf19be17cf33d2c696b9d9c2ea3ee51026030e9b203d5b9255e75b15",
+            "repo": "openai/skills",
+            "commit": "49f948faa9258a0c61caceaf225e179651397431",
+            "path": "skills/.curated/cloudflare-deploy/SKILL.md",
+            "git_blob": "e2d73abb7e5a550af3d9e40797a28259bddba97d",
+            "bytes": 7377,
+            "normalized_canonical_url": "https://raw.githubusercontent.com/openai/skills/49f948faa9258a0c61caceaf225e179651397431/skills/.curated/cloudflare-deploy/SKILL.md",
+            "machine_body_read": true,
+            "effective_attempt": null
+          },
+          "same_primary_SHA_only_does_not_transfer_package_or_rights": true,
+          "same_recorded_canonical_URL": true
+        }
+      ],
+      "same_actual_canonical_URL_and_saved_SHA": true,
+      "final_disposition_applied": false
+    },
+    {
+      "unclassified_occurrence": {
+        "inventory_id": "site:netlify-deploy",
+        "inventory_unit": "site_index_entry",
+        "sha256": "bb2c29bf599a043cade932f60cc64f632ca100e8767ccdfa2ba1a42c8d43958f",
+        "catalog_original_sha256": "",
+        "repo": "",
+        "commit": "",
+        "path": "",
+        "git_blob": "",
+        "bytes": 0,
+        "normalized_canonical_url": "https://raw.githubusercontent.com/openai/skills/49f948faa9258a0c61caceaf225e179651397431/skills/.curated/netlify-deploy/SKILL.md",
+        "machine_body_read": true,
+        "effective_attempt": {
+          "sha256": "bb2c29bf599a043cade932f60cc64f632ca100e8767ccdfa2ba1a42c8d43958f",
+          "machine_body_read": true
+        }
+      },
+      "accepted_matches": [
+        {
+          "adoption": {
+            "inventory_id": "github:17350a87d59037557bf9e8c20b6ed1ebcefc4fac682f541e50445c77cc333a85",
+            "target": "netlify-deploy",
+            "disposition": "installed_new_adaptation",
+            "manifest": "skills-3080-installed-openai11-manifest214717.json",
+            "source_notice_preserved": true
+          },
+          "catalog_occurrence": {
+            "inventory_id": "github:17350a87d59037557bf9e8c20b6ed1ebcefc4fac682f541e50445c77cc333a85",
+            "inventory_unit": "github_skill_entry",
+            "sha256": "bb2c29bf599a043cade932f60cc64f632ca100e8767ccdfa2ba1a42c8d43958f",
+            "catalog_original_sha256": "bb2c29bf599a043cade932f60cc64f632ca100e8767ccdfa2ba1a42c8d43958f",
+            "repo": "openai/skills",
+            "commit": "49f948faa9258a0c61caceaf225e179651397431",
+            "path": "skills/.curated/netlify-deploy/SKILL.md",
+            "git_blob": "52075090a6644b104fc34837c9923b403d949369",
+            "bytes": 7011,
+            "normalized_canonical_url": "https://raw.githubusercontent.com/openai/skills/49f948faa9258a0c61caceaf225e179651397431/skills/.curated/netlify-deploy/SKILL.md",
+            "machine_body_read": true,
+            "effective_attempt": null
+          },
+          "same_primary_SHA_only_does_not_transfer_package_or_rights": true,
+          "same_recorded_canonical_URL": true
+        }
+      ],
+      "same_actual_canonical_URL_and_saved_SHA": true,
+      "final_disposition_applied": false
+    },
+    {
+      "unclassified_occurrence": {
+        "inventory_id": "site:notion-meeting-intelligence-88fc92",
+        "inventory_unit": "site_index_entry",
+        "sha256": "bad61faccbbe0f2cab53bcfbc4cb22f847ba8593ef14c2e37fea5b9b03346332",
+        "catalog_original_sha256": "",
+        "repo": "",
+        "commit": "",
+        "path": "",
+        "git_blob": "",
+        "bytes": 0,
+        "normalized_canonical_url": "https://raw.githubusercontent.com/davila7/claude-code-templates/ffcb267ccdd1660ecf5e250eae0f1f6a458cd05d/cli-tool/components/skills/productivity/notion-meeting-intelligence/SKILL.md",
+        "machine_body_read": true,
+        "effective_attempt": {
+          "sha256": "bad61faccbbe0f2cab53bcfbc4cb22f847ba8593ef14c2e37fea5b9b03346332",
+          "machine_body_read": true
+        }
+      },
+      "accepted_matches": [
+        {
+          "adoption": {
+            "inventory_id": "github:7b658f121e9d4342e5b1cec58dd8ba332a665951c9865116d74c729c0411d362",
+            "target": "notion-meeting-intelligence",
+            "disposition": "installed_new_adaptation",
+            "manifest": "skills-3080-installed-openai11-manifest214717.json",
+            "source_notice_preserved": true
+          },
+          "catalog_occurrence": {
+            "inventory_id": "github:7b658f121e9d4342e5b1cec58dd8ba332a665951c9865116d74c729c0411d362",
+            "inventory_unit": "github_skill_entry",
+            "sha256": "bad61faccbbe0f2cab53bcfbc4cb22f847ba8593ef14c2e37fea5b9b03346332",
+            "catalog_original_sha256": "bad61faccbbe0f2cab53bcfbc4cb22f847ba8593ef14c2e37fea5b9b03346332",
+            "repo": "openai/skills",
+            "commit": "49f948faa9258a0c61caceaf225e179651397431",
+            "path": "skills/.curated/notion-meeting-intelligence/SKILL.md",
+            "git_blob": "efc716839ee614cf57efb3858fcfb538e0c4a8d9",
+            "bytes": 3418,
+            "normalized_canonical_url": "https://raw.githubusercontent.com/openai/skills/49f948faa9258a0c61caceaf225e179651397431/skills/.curated/notion-meeting-intelligence/SKILL.md",
+            "machine_body_read": true,
+            "effective_attempt": null
+          },
+          "same_primary_SHA_only_does_not_transfer_package_or_rights": true,
+          "same_recorded_canonical_URL": false
+        }
+      ],
+      "same_actual_canonical_URL_and_saved_SHA": false,
+      "final_disposition_applied": false
+    },
+    {
+      "unclassified_occurrence": {
+        "inventory_id": "site:notion-research-documentation-84f961",
+        "inventory_unit": "site_index_entry",
+        "sha256": "e88a46da978cf6f088a788fa92ee736df699a355a72f41f14bdc258bf3ef57e7",
+        "catalog_original_sha256": "",
+        "repo": "",
+        "commit": "",
+        "path": "",
+        "git_blob": "",
+        "bytes": 0,
+        "normalized_canonical_url": "https://raw.githubusercontent.com/davila7/claude-code-templates/ffcb267ccdd1660ecf5e250eae0f1f6a458cd05d/cli-tool/components/skills/productivity/notion-research-documentation/SKILL.md",
+        "machine_body_read": true,
+        "effective_attempt": {
+          "sha256": "e88a46da978cf6f088a788fa92ee736df699a355a72f41f14bdc258bf3ef57e7",
+          "machine_body_read": true
+        }
+      },
+      "accepted_matches": [
+        {
+          "adoption": {
+            "inventory_id": "github:6db0198e9c1a2218b74f7340ad30372e658f739cd06a3a80f4ca0ee1019579d5",
+            "target": "notion-research-documentation",
+            "disposition": "installed_new_adaptation",
+            "manifest": "skills-3080-installed-openai11-manifest214717.json",
+            "source_notice_preserved": true
+          },
+          "catalog_occurrence": {
+            "inventory_id": "github:6db0198e9c1a2218b74f7340ad30372e658f739cd06a3a80f4ca0ee1019579d5",
+            "inventory_unit": "github_skill_entry",
+            "sha256": "e88a46da978cf6f088a788fa92ee736df699a355a72f41f14bdc258bf3ef57e7",
+            "catalog_original_sha256": "e88a46da978cf6f088a788fa92ee736df699a355a72f41f14bdc258bf3ef57e7",
+            "repo": "openai/skills",
+            "commit": "49f948faa9258a0c61caceaf225e179651397431",
+            "path": "skills/.curated/notion-research-documentation/SKILL.md",
+            "git_blob": "4bd40dbe0eb8d9d8920e3a4d705b38b4887623c7",
+            "bytes": 3404,
+            "normalized_canonical_url": "https://raw.githubusercontent.com/openai/skills/49f948faa9258a0c61caceaf225e179651397431/skills/.curated/notion-research-documentation/SKILL.md",
+            "machine_body_read": true,
+            "effective_attempt": null
+          },
+          "same_primary_SHA_only_does_not_transfer_package_or_rights": true,
+          "same_recorded_canonical_URL": false
+        }
+      ],
+      "same_actual_canonical_URL_and_saved_SHA": false,
+      "final_disposition_applied": false
+    },
+    {
+      "unclassified_occurrence": {
+        "inventory_id": "site:render-deploy",
+        "inventory_unit": "site_index_entry",
+        "sha256": "c17c75adeb1834ed5cee1e440a651ae476c4101cd63762fcd9a58eada917552d",
+        "catalog_original_sha256": "",
+        "repo": "",
+        "commit": "",
+        "path": "",
+        "git_blob": "",
+        "bytes": 0,
+        "normalized_canonical_url": "https://raw.githubusercontent.com/openai/skills/49f948faa9258a0c61caceaf225e179651397431/skills/.curated/render-deploy/SKILL.md",
+        "machine_body_read": true,
+        "effective_attempt": {
+          "sha256": "c17c75adeb1834ed5cee1e440a651ae476c4101cd63762fcd9a58eada917552d",
+          "machine_body_read": true
+        }
+      },
+      "accepted_matches": [
+        {
+          "adoption": {
+            "inventory_id": "github:a1627daf67cfce95b3702c81bfe6414a3612300cb6832ffd24e1b42cafe419bb",
+            "target": "render-deploy",
+            "disposition": "installed_new_adaptation",
+            "manifest": "skills-3080-installed-openai11-manifest214717.json",
+            "source_notice_preserved": true
+          },
+          "catalog_occurrence": {
+            "inventory_id": "github:a1627daf67cfce95b3702c81bfe6414a3612300cb6832ffd24e1b42cafe419bb",
+            "inventory_unit": "github_skill_entry",
+            "sha256": "c17c75adeb1834ed5cee1e440a651ae476c4101cd63762fcd9a58eada917552d",
+            "catalog_original_sha256": "c17c75adeb1834ed5cee1e440a651ae476c4101cd63762fcd9a58eada917552d",
+            "repo": "openai/skills",
+            "commit": "49f948faa9258a0c61caceaf225e179651397431",
+            "path": "skills/.curated/render-deploy/SKILL.md",
+            "git_blob": "a0f78c13b07df3def82c16bccf4a1c17c4d8e30d",
+            "bytes": 17582,
+            "normalized_canonical_url": "https://raw.githubusercontent.com/openai/skills/49f948faa9258a0c61caceaf225e179651397431/skills/.curated/render-deploy/SKILL.md",
+            "machine_body_read": true,
+            "effective_attempt": null
+          },
+          "same_primary_SHA_only_does_not_transfer_package_or_rights": true,
+          "same_recorded_canonical_URL": true
+        }
+      ],
+      "same_actual_canonical_URL_and_saved_SHA": true,
+      "final_disposition_applied": false
+    },
+    {
+      "unclassified_occurrence": {
+        "inventory_id": "site:vercel-deploy-110b98",
+        "inventory_unit": "site_index_entry",
+        "sha256": "f4a6cbfbb378a320fae179a79f727a881d19677e9b3db96ed49d2dc02a74fa46",
+        "catalog_original_sha256": "",
+        "repo": "",
+        "commit": "",
+        "path": "",
+        "git_blob": "",
+        "bytes": 0,
+        "normalized_canonical_url": "https://raw.githubusercontent.com/openai/skills/49f948faa9258a0c61caceaf225e179651397431/skills/.curated/vercel-deploy/SKILL.md",
+        "machine_body_read": true,
+        "effective_attempt": {
+          "sha256": "f4a6cbfbb378a320fae179a79f727a881d19677e9b3db96ed49d2dc02a74fa46",
+          "machine_body_read": true
+        }
+      },
+      "accepted_matches": [
+        {
+          "adoption": {
+            "inventory_id": "github:059212fb5a1656ec6c064ad7a99b9df9b3cd4300aff43bf514a715d092963a00",
+            "target": "vercel-deploy",
+            "disposition": "installed_new_adaptation",
+            "manifest": "skills-3080-installed-openai11-manifest214717.json",
+            "source_notice_preserved": true
+          },
+          "catalog_occurrence": {
+            "inventory_id": "github:059212fb5a1656ec6c064ad7a99b9df9b3cd4300aff43bf514a715d092963a00",
+            "inventory_unit": "github_skill_entry",
+            "sha256": "f4a6cbfbb378a320fae179a79f727a881d19677e9b3db96ed49d2dc02a74fa46",
+            "catalog_original_sha256": "f4a6cbfbb378a320fae179a79f727a881d19677e9b3db96ed49d2dc02a74fa46",
+            "repo": "openai/skills",
+            "commit": "49f948faa9258a0c61caceaf225e179651397431",
+            "path": "skills/.curated/vercel-deploy/SKILL.md",
+            "git_blob": "a7e6faf3b999d31e8224e232d39fbf58952b7a5b",
+            "bytes": 2653,
+            "normalized_canonical_url": "https://raw.githubusercontent.com/openai/skills/49f948faa9258a0c61caceaf225e179651397431/skills/.curated/vercel-deploy/SKILL.md",
+            "machine_body_read": true,
+            "effective_attempt": null
+          },
+          "same_primary_SHA_only_does_not_transfer_package_or_rights": true,
+          "same_recorded_canonical_URL": true
+        }
+      ],
+      "same_actual_canonical_URL_and_saved_SHA": true,
+      "final_disposition_applied": false
+    }
+  ],
+  "matching_unclassified_occurrences": 9,
+  "new_central_writes": 0,
+  "new_final_dispositions": 0,
+  "new_permissions": 0,
+  "prior_final_occurrences": 194,
+  "same_URL_and_SHA_inventory_ids": [
+    "site:cloudflare-deploy",
+    "site:netlify-deploy",
+    "site:render-deploy",
+    "site:vercel-deploy-110b98"
+  ],
+  "source_body_opens": 0,
+  "whole16_complete": false
+}

@@ -597,6 +597,9 @@ func skillsReceive(r skillsResultRequest, reg skillsRegistry, s *skillsFS, revie
 		out.Metadata["public_input_scope"] = "immutable_admitted_public_consumer"
 		out.Metadata["manifest_sha256"] = consumerScope.ManifestSHA
 	}
+	if p, ok := s.sourcePreparations[r.Job]; ok && (publicInput || consumerInput) {
+		out.Metadata["runtime_source_identity"] = skillsRuntimeSourceIdentity(p)
+	}
 	return out, ""
 }
 
@@ -632,17 +635,56 @@ func skillsNativeProjectionBound(input io.Reader, id, cwd string, start, end tim
 	scanner.Buffer(make([]byte, 64<<10), 16<<20)
 	out := []object{}
 	session := false
+	currentWindowSeen := false
 	for scanner.Scan() {
 		raw := scanner.Bytes()
+		if !skillsNativeUniqueJSON(raw) {
+			return nil, false
+		}
 		var envelope struct {
 			Type      string          `json:"type"`
 			Timestamp string          `json:"timestamp"`
 			Payload   json.RawMessage `json:"payload"`
 		}
-		if json.Unmarshal(raw, &envelope) != nil {
+		if !skillsCreationHeaderKeys(raw, "type", "timestamp", "payload") || json.Unmarshal(raw, &envelope) != nil {
 			return nil, false
 		}
-		if envelope.Type != "session_meta" && envelope.Type != "turn_context" && (proof == nil || envelope.Type != "response_item") {
+		if envelope.Type != "session_meta" && envelope.Type != "turn_context" && (proof == nil || (envelope.Type != "response_item" && envelope.Type != "event_msg")) {
+			continue
+		}
+		if !skillsCreationHeaderKeys(envelope.Payload, "type", "id", "cwd", "role", "phase", "content", "model", "effort", "reasoning_effort", "service_tier", "message", "images", "local_images", "text_elements") {
+			return nil, false
+		}
+		if envelope.Type == "event_msg" {
+			var kind struct {
+				Type string `json:"type"`
+			}
+			if json.Unmarshal(envelope.Payload, &kind) != nil {
+				return nil, false
+			}
+			if kind.Type != "user_message" {
+				continue
+			}
+			at, err := time.Parse(time.RFC3339Nano, envelope.Timestamp)
+			if err != nil {
+				return nil, false
+			}
+			if at.Before(start) || at.After(end) {
+				if proof.runtimeWindowChecked() {
+					var v struct {
+						Type string `json:"type"`
+					}
+					if json.Unmarshal(envelope.Payload, &v) != nil || (v.Type == "user_message" && (currentWindowSeen || !proof.observePriorRuntimeInput(raw, at, true))) {
+						return nil, false
+					}
+				}
+				continue
+			}
+			currentWindowSeen = true
+
+			if !session || !proof.observeEvent(raw, at) {
+				return nil, false
+			}
 			continue
 		}
 		if envelope.Type == "response_item" {
@@ -651,12 +693,41 @@ func skillsNativeProjectionBound(input io.Reader, id, cwd string, start, end tim
 				return nil, false
 			}
 			if at.Before(start) || at.After(end) {
+				if proof.runtimeWindowChecked() {
+					var header struct {
+						Role string `json:"role"`
+					}
+					if json.Unmarshal(envelope.Payload, &header) != nil {
+						return nil, false
+					}
+					if header.Role == "" || header.Role == "assistant" {
+						if currentWindowSeen || !proof.observePriorRuntimeGenerated(raw, at) {
+							return nil, false
+						}
+					} else if currentWindowSeen || !proof.observePriorRuntimeInput(raw, at, false) {
+						return nil, false
+					}
+				}
 				continue
 			}
+			currentWindowSeen = true
+
 			if !session || !proof.observe(raw, at) {
 				return nil, false
 			}
 			continue
+		}
+		if envelope.Type == "turn_context" {
+			at, err := time.Parse(time.RFC3339Nano, envelope.Timestamp)
+			if err != nil {
+				return nil, false
+			}
+			if at.Before(start) || at.After(end) {
+				if proof != nil && (proof.runtimeWindowChecked()) && (currentWindowSeen || !proof.observePriorRuntimeContext(raw, at)) {
+					return nil, false
+				}
+				continue
+			}
 		}
 		m, ok := conversationJSON(raw)
 		if !ok {
@@ -666,6 +737,12 @@ func skillsNativeProjectionBound(input io.Reader, id, cwd string, start, end tim
 		if envelope.Type == "session_meta" {
 			if session || p["id"] != id || !same(str(p["cwd"]), cwd) {
 				return nil, false
+			}
+			if proof != nil && (proof.runtimeWindowChecked()) {
+				at, err := time.Parse(time.RFC3339Nano, envelope.Timestamp)
+				if err != nil || at.After(end) || (at.Before(start) && !proof.priorRuntimeWindow(at)) {
+					return nil, false
+				}
 			}
 			session = true
 			continue
@@ -680,6 +757,8 @@ func skillsNativeProjectionBound(input io.Reader, id, cwd string, start, end tim
 		if value, exists := p["cwd"]; exists && (!same(str(value), cwd) || str(value) == "") {
 			return nil, false
 		}
+		currentWindowSeen = true
+
 		model := str(p["model"])
 		if !skillsModelIdentifier(model) {
 			return nil, false
@@ -708,7 +787,7 @@ func skillsNativeProjectionBound(input io.Reader, id, cwd string, start, end tim
 			return nil, false
 		}
 	}
-	return out, scanner.Err() == nil && session && len(out) > 0 && (proof == nil || proof.bound())
+	return out, scanner.Err() == nil && session && len(out) > 0 && (proof == nil || (proof.bound() && proof.priorRuntimeInputsBound()))
 }
 func skillsResultID(r skillsResultRequest) bool {
 	m := currentSubworkJobName.FindStringSubmatch(r.Job)

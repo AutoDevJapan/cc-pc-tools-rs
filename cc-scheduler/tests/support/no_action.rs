@@ -362,4 +362,25 @@ fn automatic_successor_is_recovered_again_without_requiring_a_new_agent_start_co
         n(&f.get(1)["scheduler"]["not_before"])
             >= f.e.backend.clock + cc_scheduler::recovery_failure::SLOW_RETRY_S
     );
+    // A normal root's old agent receipt must not replace its newer result on
+    // the third preparation. Normal roots do not advance that agent receipt.
+    let cwd = f.get(1)["scheduler"]["worktree"].clone();
+    let j = f.e.backend.records.last_mut().unwrap();
+    j["cwd"] = cwd;
+    j["status"] = json!("succeeded");
+    j["last_message"] = json!("状態: 継続中\nLATEST_SECOND_WORKER_RESULT");
+    j["thread_id"] = json!("87654321-1234-4321-9234-123456789abc");
+    j["model"] = json!("gpt-6.1-sol"); j["effort"] = json!("max");
+    j["launch_policy_version"] = json!(cc_job_policy::launch_context::VERSION);
+    f.e.backend.records[0]["last_message"] = json!("状態: 継続中\nSTALE_FIRST_WORKER_RESULT");
+    f.e.backend.ps.clear();
+    f.e.backend.clock = n(&f.get(1)["scheduler"]["not_before"]) + 1.;
+    f.e.edit(&json!(1), |r| r["scheduler"]["workspace_receipt"] = Value::Null).unwrap();
+    let current = f.get(1);
+    let prepared = f.e.prepare(&current, &f.repo.to_string_lossy()).unwrap().unwrap();
+    let prompt = fs::read_to_string(s(&prepared["scheduler"]["prompt"])).unwrap();
+    assert!(prompt.contains("LATEST_SECOND_WORKER_RESULT"));
+    assert!(!prompt.contains("STALE_FIRST_WORKER_RESULT"));
+    assert_eq!(prepared["scheduler"]["resume_session"], "87654321-1234-4321-9234-123456789abc");
+    assert_eq!(prepared["worker_receipt"]["job"], "j1");
 }

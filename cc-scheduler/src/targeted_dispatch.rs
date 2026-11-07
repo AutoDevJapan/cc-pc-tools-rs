@@ -88,6 +88,7 @@ fn run_with_wait<B: Backend>(engine: &mut Scheduler<B>, id: i64, wait: Duration)
         "tool_missing",
         "resource_wait",
         "input_rejected",
+        "subwork_parent_continuation_required",
         "excluded_resource",
         "tool_failed",
     ]

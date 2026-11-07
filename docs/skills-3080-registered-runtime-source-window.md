@@ -1,0 +1,69 @@
+# 登録済みの再開元と今回の入力・結果の窓を分ける
+
+同じsessionを正常に再開しても、runtimeが記録した初回の指示snapshotは再発行されない場合がある。
+初回snapshotを今回jobの開始以後に限定すると、保存済みの正しい入力まで拒否する。
+初回sourceの窓と、今回のtask・finalの厳密な窓を別々に証明する。
+
+sourceの開始は、正常登録された同じToDoの履歴から導く。
+現在jobのresume_sessionとthreadが一致し、先行する同threadのjobが同じcwd・sandbox・model・effortを持ち、
+正常な終端状態と重ならない開始・終了時刻を持つことを確認する。
+途中の再開関係が欠ける、原sessionの登録がない、別ToDoや環境、時刻の逆転や重複がある場合は拒否する。
+first_started_atの自己申告や任意のbootstrap hashだけで、過去のsourceを資格化しない。
+再開jobではsession metaの時刻を書き換えて今回の開始に見せても再開元の照合を省略しない。
+初回のsource prefix全体を、登録された最初のjobの開始から終了までに限定する。
+
+runtimeが記録した初回のsource・originator・既知CLI版・turn・full world_state・公開project blobの一致は維持する。
+同じnative内の整合だけでは本文とcheckpointの同時変更を検出できないため、新しいtyped public reviewとconsumerは
+[正常親が準備した別の記録済み入力](skills-3080-recorded-runtime-input.md)にも全体を照合する。
+今回の実使用はfresh sessionに限定し、記録のない過去jobへ出所を後付けしない。
+過去jobの時刻窓だけを、任意の先行入力の資格にしない。
+元jobの正常なfinite reviewに保存されたspec path・hash、launch receipt・登録元promptと
+execution inputを照合し、各過去窓のuserと対応するeventもその正規入力へ一意に結ぶ。
+初回developer envelopeは、別のモデル要求との内容・順序の一致を必要とする。
+既知0.165のruntime checkpointに保存されたmodel・permissions・collaborationのfragment hash、
+host skillsの完全なbody、tool定義ごとのhashと、描画された全blockを照合する。
+これら5項目は必須とし、空のhash・host body・tool catalogも受け入れない。
+permissionsのapproved_command_prefixesは配列の存在を確認し、欠落・null・他の型を空配列と同一視しない。
+modelとcollaborationのmodel識別子を実jobへ照合し、collaborationのmodeも既知の型として確認する。
+checkpoint項目と対応するdeveloper記録を両方削って空同士の一致にしても拒否する。
+hashの符号化は[公式の固定版](https://github.com/openai/codex/blob/360319d8dee62d87e2d59fc0c21805d79519cfed/codex-rs/core/src/context/world_state/mod.rs)に従う。
+本文blockもtype/textの正確なキーを検査し、大文字小文字の別名を後勝ちで読み替えない。
+plugin案内は、既知runtime catalogの全固定文と公開name/IDの組が完全一致する場合だけ扱う。
+任意のdeveloper本文、未知catalog、追記、重複block、欠落や変更のあるtool定義は拒否する。
+catalogの表示をサービスの利用許可や作業範囲へ昇格しない。
+これらの過去入力を、今回の共通指示や作成・閲覧の権限として継承しない。
+今回の登録済み入力・現在model・final digestは、今回jobだけの窓で確認する。
+job間の未登録指示、今回の多重user/final、今回の記録より後へ時刻を戻して追記した過去userも拒否する。
+過去のturn_contextも一つの登録jobへ結び、実model・cwd・effortを照合する。
+過去の生成応答・推論・tool call/outputは、そのlog内のturnやitem IDが整合するだけでは認証しない。
+通常登録に独立した項目一覧や記録時の認証値がないため、そのような生成履歴を含む再開結果は拒否する。
+同じlogから後付けでhashを作っても、過去の存在証明にはしない。
+旧configuration_updateは許す全値が正常jobのeffortから独立に決まるため、その厳密な形式だけを照合する。
+本文や引数を結果受領の別経路から回収しない。拒否された元結果と原jobはそのまま保持する。
+新しい実使用の再検査は、親がnonceと専用の入力記録先を準備し、保存specを正常に登録して新しいsessionで実行し、
+その実結果を確認する。元の再開結果が認証されたことにはしない。
+
+原job・spec・prompt・native・finalは変更せず、同じ長さを凍結したhandleを読み直して検証する。
+sourceや結果を別path、copy、可変な指示ファイル、未知のdigestへ置き換えない。
+古い0.163は元のbootstrap digest照合を保ち、再開元の登録と各過去入力の照合も必要とする。
+bootstrap本文を取り出す際にも元jobの時間を確認し、最初の過去入力証明ではbootstrapの実在を要求する。
+再開後の現在jobには、初回bootstrapをもう一度user入力として加えられない。
+旧形式を理由に、時刻外の先行user/eventを確認せず読み飛ばさない。
+過去窓のない新規0.163でも、時間外のuser/eventやcontextを拒否する。
+0.163のdeveloper指示や追加tool定義にも独立した照合根拠がないため、bootstrap前でも拒否する。
+未知CLI版の拒否、原author・origin・実launch親・現在consumerの区別は維持する。
+これは一般guardや中央の既存対象の解除ではない。
+
+新しい作成の正規呼出は、固定PowerShell 7からProcessStartInfoを使い、
+CreateNoWindow=true・UseShellExecute=falseを明示する。
+作成前に、現在の正常jobの元native内に同じrequestを使う一意な未完了の正規tool callがあることを確認する。
+完了済みcallや単なる成功receipt、旧direct呼出しではファイルを作成しない。
+実行物・flag・request・内外の作業場所・tool optionを固定し、stdout/stderrをUTF-8のまま待ち受け、
+結果を整形せず元のexit codeとともに返す。
+新しい私的な作成証拠には必要な呼出形式の版を記録し、その版と実native callを照合する。
+旧direct呼出は版のない過去の証拠を読む互換に限り、新しい版の証拠には使えない。
+この版は起動結果の自己証明や作業範囲の追加ではなく、元の同buffer・ID・hash検証にも従う。
+
+正負例と関連Goテスト、正式二役、対象headのCI、通常merge、同ソースのWindows更新と
+親による同bufferの実使用を、それぞれの実結果として確認する。
+再開元が証明されたことだけを、利用成功や依頼全体の完了と扱わない。

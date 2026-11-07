@@ -14,6 +14,36 @@ func maskedGroup(raw []byte) Group {
 	h.Write(raw)
 	return Group{Ordinal: 1, SHA: Hash(raw), Bytes: int64(len(raw)), Members: []Member{{Blob: hex.EncodeToString(h.Sum(nil))}}}
 }
+
+func TestSectionHashesPreserveWholeViewTerminalNewlineAndNormalizeDisplayedRange(t *testing.T) {
+	for _, ending := range []string{"", "\n", "\r\n"} {
+		t.Run(fmt.Sprintf("ending_%x", ending), func(t *testing.T) {
+			raw := []byte("public example" + ending)
+			view, err := CheckAndMask(raw, maskedGroup(raw))
+			if err != nil {
+				t.Fatal(err)
+			}
+			section, err := Section(view, 1, 1)
+			if err != nil {
+				t.Fatal(err)
+			}
+			rangeView := section.(map[string]any)
+			expectedWhole := "public example"
+			if ending != "" {
+				expectedWhole += "\n"
+			}
+			if view.MaskedSHA != Hash([]byte(expectedWhole)) || rangeView["masked_range"] != "public example\n" || rangeView["range_sha256"] != Hash([]byte("public example\n")) {
+				t.Fatal("whole view or displayed range byte representation changed")
+			}
+			if (rangeView["range_sha256"] == view.MaskedSHA) != (ending != "") {
+				t.Fatal("a full physical range need not share the whole-view digest when the source lacks terminal LF")
+			}
+			if view.NewRawReadCredit != 0 || !view.UnseenMeaningsUnknown {
+				t.Fatal("digest representation check changed read authority")
+			}
+		})
+	}
+}
 func TestViewMasksBeforeOutputAndKeepsPhysicalLineIdentity(t *testing.T) {
 	raw := []byte("---\r\nname: x\r\n---\r\n# compare visible conditions\r\nauthorization: synthetic-test-value\r\n-----BEGIN TEST PRIVATE KEY-----\r\nshort dummy material\r\n-----END TEST PRIVATE KEY-----\r\ncard identifier fragment 1234\r\nnormal final text\r\n")
 	v, e := CheckAndMask(raw, maskedGroup(raw))

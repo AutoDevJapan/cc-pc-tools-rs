@@ -1,0 +1,17 @@
+{
+  "domain": "skills3080-software-predecessor-observation-v1",
+  "observed_at": "2026-10-31T04:05:22.8563462+09:00",
+  "sha256": "c7bd633b2eaeb8f55ba33775817398508b79fad0dcef308e216e0f3c40881ad0",
+  "source": "4ebfedab3794ff12e0f0be09243be3fd3544107a",
+  "bytes": 13510144,
+  "module": "github.com/AutoDevJapan/cc-pc-tools-rs/repair-guard",
+  "goos": "windows",
+  "goarch": "amd64",
+  "vcs_modified": false,
+  "normal_deployment_pull_request": 657,
+  "independent_same_buffer_verified": true,
+  "old_backup_id_and_hash_preserved": true,
+  "owner_group_dacl_equal": true,
+  "sacl_verified": false,
+  "new_successor_candidate_built": false
+}

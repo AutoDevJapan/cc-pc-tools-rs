@@ -1,4 +1,5 @@
 use crate::{backend::Backend, common::*, policy::*};
+use cc_job_policy::cancellation;
 use serde_json::{Value, json};
 
 pub(crate) fn prepare(
@@ -15,16 +16,15 @@ pub(crate) fn prepare(
         .as_object_mut()
         .unwrap()
         .remove("model_recovery_from");
-    // A completed new worker may retain historical failure metadata. Its own
-    // successful result is an ordinary continuation, not another quota source.
-    if source.is_some_and(|source| source["status"]=="succeeded"
-        && cc_job_policy::subwork_continuation::consumed(item,source)) {return Ok(false);}
     if crate::subwork_continuation::requested(backend,item,source,jobs)? {
         let source=source.ok_or(Error("InputRejected"))?;
         for field in ["sandbox","mcp_profile","network","add_dirs"] {selection[field]=source[field].clone();}
         selection["task_type"]=item["subwork"]["kind"].clone();
         return Ok(false);
     }
+    if source.is_some_and(live) { return Err(Error("ResourceWait")); }
+    if source.is_some_and(|s| cc_job_policy::quota_recovery::quota_source(s)
+        && cancellation::owner_stopped(item,s)) { return Err(Error("InputRejected")); }
     let Some(source) = source.filter(|s| cc_job_policy::quota_recovery::quota_source(s)) else {
         return Ok(false);
     };
@@ -39,7 +39,24 @@ pub(crate) fn prepare(
     {
         return Ok(false);
     }
+    if cancellation::blocks_recovery(item, source) { return Err(Error("InputRejected")); }
+    // Preserve ordinary owner-choice and legacy routes before rejecting an
+    // unknown cancellation. Explicit stops above always retain precedence.
+    // Finite recovery cancellation is an ordinary result, never a new quota failure.
+    let finite = ["research", "review"].contains(&s(&item["subwork"]["kind"]));
+    if source["status"] != "failed" && (finite || !cancellation::cancelled(source)) {
+        return Ok(false);
+    }
     let now = backend.clock();
+    if cc_job_policy::subwork_continuation::quota_dependency_changed(item, source) {
+        if cc_job_policy::quota_retry::tracked(source) && cc_job_policy::quota_retry::terminal_reason(source).is_some() {
+            return Err(Error("QuotaRetryEnded"));
+        }
+        if !cc_job_policy::subwork_continuation::source_request_eligible(item, source) {
+            return Err(Error("InputRejected"));
+        }
+        return Err(Error("SubworkParentContinuationRequired"));
+    }
     if !cc_job_policy::quota_recovery::eligible_source(item, source) {
         return Err(Error("InputRejected"));
     }

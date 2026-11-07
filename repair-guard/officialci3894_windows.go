@@ -98,6 +98,24 @@ const official3894CanonicalAssignmentPredecessorHead = "a71330f543969b4585f01b73
 const official3894CreationPathPredecessorSHA = "eab69e4fc8e52f2ad6858ef4e8498e8cc6030ac8ce7f788251a1aae476dc5d55"
 const official3894CreationPathPredecessorHead = "034520d84d52f76dcd7dc7ef371910d6acd8ae9f"
 
+// Prior normal PR627 deployment, independently observed before this candidate.
+// docs/evidence/skills-3080-guard-before-runtime-bootstrap.json
+const official3894BootstrapPredecessorSHA = "7fb45b8a411ca2e1dd64a034b94c51ce5ca51324ad7c0c4b778eecb9f4538d36"
+const official3894BootstrapPredecessorHead = "b78007695a7c5d73eb1f11118757e93918aa3234"
+
+// Normal PR657 deployment and independent same-buffer readback, observed
+// before the public-manifest/consumer successor is generated.
+const official3894PublicManifestPredecessorSHA = "c7bd633b2eaeb8f55ba33775817398508b79fad0dcef308e216e0f3c40881ad0"
+const official3894PublicManifestPredecessorHead = "4ebfedab3794ff12e0f0be09243be3fd3544107a"
+const official3894RuntimeOriginPredecessorSHA = "f3166064c8670868077f1b201959cf5059169b3be9ccc6b73465a0e238650c09"
+const official3894RuntimeOriginPredecessorHead = "ae8cf2424ebbc19de2e6eb2561c1bd48f37f9f7e"
+
+// Independently observed normal PR662 distribution, before its source-start
+// diagnostic successor is built. This is a software identity, not a data grant.
+// docs/evidence/skills-3080-guard-before-source-dispatch.json
+const official3894SourceDispatchPredecessorSHA = "910eb3b0f97c527861dfa6db577770bdc207e174b723204588208125d3c15fc6"
+const official3894SourceDispatchPredecessorHead = "66438ec4b80fb3c77f2825d382657f914991fd7a"
+
 type official3894Source struct {
 	Head, Registration, CreatorJob, Workspace, Branch, SpecSHA string
 }
@@ -967,7 +985,11 @@ func official3894InstalledBaseline(sha, head string) bool {
 		(sha == official3894NoticePredecessorSHA && head == official3894NoticePredecessorHead) ||
 		(sha == official3894AliasPredecessorSHA && head == official3894AliasPredecessorHead) ||
 		(sha == official3894CanonicalAssignmentPredecessorSHA && head == official3894CanonicalAssignmentPredecessorHead) ||
-		(sha == official3894CreationPathPredecessorSHA && head == official3894CreationPathPredecessorHead)
+		(sha == official3894CreationPathPredecessorSHA && head == official3894CreationPathPredecessorHead) ||
+		(sha == official3894BootstrapPredecessorSHA && head == official3894BootstrapPredecessorHead) ||
+		(sha == official3894PublicManifestPredecessorSHA && head == official3894PublicManifestPredecessorHead) ||
+		(sha == official3894RuntimeOriginPredecessorSHA && head == official3894RuntimeOriginPredecessorHead) ||
+		(sha == official3894SourceDispatchPredecessorSHA && head == official3894SourceDispatchPredecessorHead)
 }
 
 // Qualifies only comparison of the known previously published guard software.

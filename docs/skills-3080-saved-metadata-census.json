@@ -1,0 +1,54 @@
+{
+  "domain": "skills3080-saved-metadata-census-v1",
+  "source_repository": "6mile/skills",
+  "source_commit": "920714f17d81e0a95c7a9bc51faf0a7921cd982d",
+  "fixed_content_index_sha256": "799bd907887120d83b82e64fbf37094c653a5144b764fef0b70dd4d5e2219607",
+  "fixed_content_index_records": 204532,
+  "selected_metadata_descriptors": 52665,
+  "selection": "already saved paths ending in /_meta.json",
+  "immutable_batches": 328,
+  "all_source_fields_and_contiguous_record_chain_checked": true,
+  "machine_metadata_parsed": 52663,
+  "guard_held": 1,
+  "invalid_source_encoding": 1,
+  "normal_guard_objects_recorded_for_parsed": 52473,
+  "historical_parsed_records_without_normal_guard_object": 190,
+  "missing_historical_flags_not_filled": true,
+  "declaration_key_occurrences": 21,
+  "safe_SPDX_declarations_not_permissions": {
+    "MIT": 18,
+    "MIT-0": 3
+  },
+  "held_record": {
+    "descriptor_ordinal": 6443,
+    "source_sha256": "d32a2831261135b6382af97566d06a3769e3729965026ca7bac9c671b696b4d3",
+    "source_bytes": 267,
+    "state": "guard_changed_after_call_no_open",
+    "source_not_retried": true
+  },
+  "encoding_anomaly": {
+    "same_original_buffer_hash_and_size_checked": true,
+    "source_sha256": "e9048cf4c20ec707d0817b7fdf94066a646b810b8d87a33c992edc495a41b59c",
+    "no_guess_conversion": true,
+    "original_material_unchanged": true,
+    "source_bytes": 136,
+    "NUL_bytes": 1,
+    "source_git_blob": "3cbefaec7258d1aebe4946d06d8809af53568caf",
+    "descriptor_ordinal": 46213,
+    "strict_UTF8_valid": false,
+    "recognized_UTF16_BOM": false
+  },
+  "unknown_metadata_values_disclosed": false,
+  "new_workflow_read_credit": 0,
+  "new_license_grants": 0,
+  "new_final_dispositions": 0,
+  "central_operations": 0,
+  "whole16_complete": false,
+  "limits": [
+    "Metadata key census only; primary procedures and supporting files were not read by this stage.",
+    "Only English license/licence, SPDX and copyright key spellings were classified.",
+    "Missing metadata keys do not prove no licence exists elsewhere, and an SPDX declaration does not establish authorship or a grant.",
+    "Historical guard fields absent from saved records remain absent; source identity matches are not promoted into unrecorded guard decisions.",
+    "The encoding anomaly is preserved under its fixed source digest; no guessed normalization or supplemental successful parse was recorded."
+  ]
+}

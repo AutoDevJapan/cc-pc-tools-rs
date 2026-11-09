@@ -161,7 +161,7 @@ func nativeQuestionRepositoryGuard(ctx context.Context, path string) (bool, erro
 
 func nativeQuestionAssignmentTodo(first string, todo uint64) bool {
 	// Do not consume the trailing delimiter: it may introduce a second ID.
-	id := regexp.MustCompile(`(?:^|[[:space:]、。』])(?:担当)?(?:元|ToDo|ToDo番号)([0-9]+)`).FindAllStringSubmatchIndex(first, -1)
+	id := regexp.MustCompile(`(?:元|ToDo(?:番号)?)([0-9]+)`).FindAllStringSubmatchIndex(first, -1)
 	count := 0
 	for _, m := range id {
 		if first[m[2]:m[3]] != fmtUint(todo) || (m[1] < len(first) && !strings.ContainsAny(first[m[1]:m[1]+1], " \r\n\t") && !strings.HasPrefix(first[m[1]:], "、") && !strings.HasPrefix(first[m[1]:], "。")) {

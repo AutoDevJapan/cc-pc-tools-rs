@@ -71,6 +71,8 @@ func nativeQuestionMemoryFixture(t *testing.T) (nativeQuestionEvidence, nativeQu
 	records[6], _ = json.Marshal(async)
 	e.Async.SHA = bytesHash(records[6])
 	e.Accepted = add(7, "function_call_output", "", "async", `{"accepted":true}`, "")
+	e.AsyncTitle = "表示した2枚目の構図は？"
+	e.AsyncOptions = []string{"a", "b"}
 	d := nativeQuestionDeps{Sessions: filepath.Join(root, "sessions"), Now: func() time.Time { return now }, Read: func(p string, max int64) ([]byte, error) {
 		b, ok := files[p]
 		if !ok || int64(len(b)) > max {
@@ -95,7 +97,7 @@ func nativeQuestionMemoryFixture(t *testing.T) (nativeQuestionEvidence, nativeQu
 		return nil
 	}
 	d.Capture = func(nativeQuestionEvidence) error { return nil }
-	d.ImageGuard = func(context.Context, string) error { return nil }
+	d.ImageGuard = func(context.Context, string, bool) error { return nil }
 	return e, d, files
 }
 
@@ -178,3 +180,84 @@ func TestNativeQuestionMemoryLiteralContent(t *testing.T) {
 	}
 }
 func mustNativeJSON(v any) []byte { b, _ := json.Marshal(v); return b }
+
+func TestNativeQuestionMemoryGuardPurposeNeverClearsReferenceOrExplicitProtection(t *testing.T) {
+	raw := []byte(`{"access_allowed":false,"client_resource":true,"classification_unverified":false,"classification_basis":"owner_rule_unattributed_location","protection_status":"protected","protection_categories":["client_project"]}`)
+	if nativeQuestionGuardVerdict(raw, true) != nil {
+		t.Fatal("native candidate location gap")
+	}
+	if nativeQuestionGuardVerdict(raw, false) == nil {
+		t.Fatal("reference accepted outside normal clear")
+	}
+	for _, changed := range []string{strings.Replace(string(raw), "owner_rule_unattributed_location", "client_department", 1), strings.Replace(string(raw), `"classification_unverified":false`, `"classification_unverified":true`, 1), strings.Replace(string(raw), `["client_project"]`, `["client_project","owner_card"]`, 1), strings.Replace(string(raw), `"access_allowed":false`, `"access_allowed":false,"access_allowed":true`, 1)} {
+		if nativeQuestionGuardVerdict([]byte(changed), true) == nil {
+			t.Fatal("explicit/unknown protection accepted")
+		}
+	}
+}
+func TestNativeQuestionMemoryMetadataNeverChangesAuditedCommand(t *testing.T) {
+	code := `text(await tools.exec_command({cmd:"literal,max_output_tokens:123",max_output_tokens:1000}));`
+	got := nativeQuestionMetadata(code)
+	if got != `text(await tools.exec_command({cmd:"literal,max_output_tokens:123"}));` {
+		t.Fatal("command string changed")
+	}
+}
+
+func TestNativeQuestionMemoryCaptureRequiresCompletedExecutionAndExactCopyReceipt(t *testing.T) {
+	for _, kind := range []string{"valid", "failed-run", "fake-command", "different-copy", "different-receipt", "missing-producer", "protected-reference"} {
+		t.Run(kind, func(t *testing.T) {
+			e, d, _ := nativeQuestionMemoryFixture(t)
+			e.Question.Line = 20
+			e.Images[1].Producer = filepath.Join(e.Worktree, "test-results", "live-3d-fixture", "live-3d-dark-round-end.png")
+			e.Producer = nativeQuestionEvent{Line: 8}
+			e.Copy = nativeQuestionEvent{Line: 9}
+			e.CopyResult = nativeQuestionEvent{Line: 10}
+			exit := 0
+			if kind == "failed-run" {
+				exit = 1
+			}
+			script := "$env:E2E_PORT='3137'\n$env:PLAYWRIGHT_BROWSERS_PATH='D:/CC/ToolCache/ms-playwright'\nnode node_modules/@playwright/test/cli.js test --project=chromium --workers=1 --retries=0 --reporter=line e2e/live-3d.spec.ts *> '../result.log'\nexit $LASTEXITCODE"
+			if kind == "fake-command" {
+				script = "echo " + script
+			}
+			run := mustNativeJSON(map[string]any{"type": "event_msg", "payload": map[string]any{"type": "item_completed", "item": map[string]any{"type": "CommandExecution", "exit_code": exit, "command": []string{"pwsh.exe", "-Command", script}}}})
+			src, _ := filepath.Rel(e.Worktree, e.Images[1].Producer)
+			dst, _ := filepath.Rel(e.Worktree, e.Images[1].Path)
+			command := "Copy-Item -LiteralPath '" + filepath.ToSlash(src) + "' -Destination '" + filepath.ToSlash(dst) + "'"
+			if kind == "different-copy" {
+				command += "; echo true"
+			}
+			call := mustNativeJSON(map[string]any{"type": "response_item", "payload": map[string]any{"type": "custom_tool_call", "name": "exec", "call_id": "copy", "input": "text(await tools.exec_command({cmd:" + string(mustNativeJSON(command)) + "}));"}})
+			hash := e.Images[1].SHA
+			if kind == "different-receipt" {
+				hash = strings.Repeat("a", 64)
+			}
+			output := string(mustNativeJSON([]map[string]any{{"Path": e.Images[1].Path, "Hash": hash}}))
+			result := mustNativeJSON(map[string]any{"type": "response_item", "payload": map[string]any{"type": "custom_tool_call_output", "call_id": "copy", "output": []map[string]any{{"type": "input_text", "text": string(mustNativeJSON(map[string]any{"exit_code": 0, "output": output}))}}}})
+			raw := map[int]json.RawMessage{8: run, 9: call, 10: result}
+			e.Producer.SHA = bytesHash(run)
+			e.Copy.SHA = bytesHash(call)
+			e.CopyResult.SHA = bytesHash(result)
+			d.Records = func(_ string, b []nativeQuestionEvent) ([]json.RawMessage, error) {
+				var out []json.RawMessage
+				for _, v := range b {
+					if bytesHash(raw[v.Line]) != v.SHA {
+						return nil, errConversationMedia
+					}
+					out = append(out, raw[v.Line])
+				}
+				return out, nil
+			}
+			if kind == "missing-producer" {
+				e.Images[1].Producer = ""
+			}
+			if kind == "protected-reference" {
+				e.Images[0].Producer = e.Images[1].Producer
+			}
+			err := nativeQuestionCapture(e, d)
+			if (err == nil) != (kind == "valid") {
+				t.Fatal("capture guard", kind, err)
+			}
+		})
+	}
+}

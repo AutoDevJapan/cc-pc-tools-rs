@@ -8,11 +8,15 @@ import (
 	"strings"
 )
 
-func nativeQuestionImageGuard(ctx context.Context, path string) error {
+func nativeQuestionImageGuard(ctx context.Context, path string, produced bool) error {
 	raw, err := runCommand(ctx, "D:/CC/Tools/client-records/scrub391.exe", "--guard-path", path)
 	if err != nil || len(raw) > 64<<10 {
 		return errConversationMedia
 	}
+	return nativeQuestionGuardVerdict([]byte(raw), produced)
+}
+
+func nativeQuestionGuardVerdict(raw []byte, produced bool) error {
 	var p struct {
 		Allowed    bool     `json:"access_allowed"`
 		Client     bool     `json:"client_resource"`
@@ -21,7 +25,7 @@ func nativeQuestionImageGuard(ctx context.Context, path string) error {
 		Status     string   `json:"protection_status"`
 		Categories []string `json:"protection_categories"`
 	}
-	if json.Unmarshal([]byte(raw), &p) != nil {
+	if historyStrictJSON(raw, &map[string]any{}) != nil || json.Unmarshal(raw, &p) != nil {
 		return errConversationMedia
 	}
 	// Explicit protection and uncertain metadata never qualify. The only
@@ -30,18 +34,18 @@ func nativeQuestionImageGuard(ctx context.Context, path string) error {
 	if p.Allowed && !p.Client && !p.Unverified && p.Status == "clear" {
 		return nil
 	}
-	if !p.Allowed && p.Client && !p.Unverified && p.Status == "protected" && p.Basis == "owner_rule_unattributed_location" && len(p.Categories) == 1 && p.Categories[0] == "client_project" {
+	if produced && !p.Allowed && p.Client && !p.Unverified && p.Status == "protected" && p.Basis == "owner_rule_unattributed_location" && len(p.Categories) == 1 && p.Categories[0] == "client_project" {
 		return nil
 	}
 	return errConversationMedia
 }
 
 func nativeQuestionCapture(e nativeQuestionEvidence, d nativeQuestionDeps) error {
-	if e.Producer.Line <= 1 || e.Producer.Line >= e.Copy.Line || e.Copy.Line >= e.Question.Line || !shaPattern.MatchString(e.Producer.SHA) || !shaPattern.MatchString(e.Copy.SHA) {
+	if e.Producer.Line <= 1 || e.Producer.Line >= e.Copy.Line || e.Copy.Line >= e.CopyResult.Line || e.CopyResult.Line >= e.Question.Line || !shaPattern.MatchString(e.Producer.SHA) || !shaPattern.MatchString(e.Copy.SHA) || !shaPattern.MatchString(e.CopyResult.SHA) {
 		return errConversationMedia
 	}
-	records, err := d.Records(e.Rollout, []nativeQuestionEvent{e.Producer, e.Copy})
-	if err != nil || len(records) != 2 {
+	records, err := d.Records(e.Rollout, []nativeQuestionEvent{e.Producer, e.Copy, e.CopyResult})
+	if err != nil || len(records) != 3 {
 		return errConversationMedia
 	}
 	var production struct {
@@ -58,15 +62,25 @@ func nativeQuestionCapture(e nativeQuestionEvidence, d nativeQuestionDeps) error
 	if json.Unmarshal(records[0], &production) != nil || production.Type != "event_msg" || production.Payload.Type != "item_completed" || production.Payload.Item.Type != "CommandExecution" || production.Payload.Item.Exit == nil || *production.Payload.Item.Exit != 0 {
 		return errConversationMedia
 	}
-	command := strings.Join(production.Payload.Item.Command, "\n")
-	if !strings.Contains(command, "node node_modules/@playwright/test/cli.js test ") || !strings.Contains(command, "--project=chromium") || !strings.Contains(command, "--workers=1") || !strings.Contains(command, "--retries=0") || !strings.Contains(command, "e2e/live-3d.spec.ts") {
+	command := production.Payload.Item.Command
+	if len(command) != 3 || command[1] != "-Command" || !strings.HasSuffix(strings.ToLower(command[0]), "pwsh.exe") {
+		return errConversationMedia
+	}
+	lines := strings.Split(strings.TrimSpace(strings.ReplaceAll(command[2], "\r\n", "\n")), "\n")
+	if len(lines) != 4 || !regexp.MustCompile(`^\$env:E2E_PORT='[0-9]{4,5}'$`).MatchString(lines[0]) || lines[1] != "$env:PLAYWRIGHT_BROWSERS_PATH='D:/CC/ToolCache/ms-playwright'" || !regexp.MustCompile(`^node node_modules/@playwright/test/cli\.js test --project=chromium --workers=1 --retries=0 --reporter=line e2e/live-3d\.spec\.ts \*> '[^']+\.log'$`).MatchString(lines[2]) || lines[3] != "exit $LASTEXITCODE" {
 		return errConversationMedia
 	}
 	var copied nativeQuestionRecord
 	if json.Unmarshal(records[1], &copied) != nil || copied.Type != "response_item" || copied.Payload.Type != "custom_tool_call" || copied.Payload.Name != "exec" {
 		return errConversationMedia
 	}
-	code := strings.ReplaceAll(copied.Payload.Input, "\\\\", "\\")
+	// Parse only direct native commands; pasted examples inside another string
+	// do not constitute the Copy-Item that actually ran.
+	commands, err := nativeQuestionTokenCommands(nativeQuestionMetadata(copied.Payload.Input))
+	if err != nil {
+		return errConversationMedia
+	}
+	code := strings.Join(commands, "\n")
 	if len(e.Images) != 2 || e.Images[0].Producer != "" || e.Images[1].Producer == "" || !generatedWithin(e.Worktree, e.Images[0].Path) {
 		return errConversationMedia
 	}
@@ -92,6 +106,48 @@ func nativeQuestionCapture(e nativeQuestionEvidence, d nativeQuestionDeps) error
 		}
 	}
 	if sourceCount != 1 {
+		return errConversationMedia
+	}
+	var result nativeQuestionRecord
+	if json.Unmarshal(records[2], &result) != nil || result.Type != "response_item" || result.Payload.Type != "custom_tool_call_output" || result.Payload.Call != copied.Payload.Call {
+		return errConversationMedia
+	}
+	var blocks []struct{ Type, Text string }
+	if json.Unmarshal(result.Payload.Output, &blocks) != nil {
+		return errConversationMedia
+	}
+	verified := 0
+	for _, block := range blocks {
+		if block.Type != "input_text" {
+			continue
+		}
+		var commandResult struct {
+			Exit   *int   `json:"exit_code"`
+			Output string `json:"output"`
+		}
+		if json.Unmarshal([]byte(block.Text), &commandResult) != nil || commandResult.Exit == nil || *commandResult.Exit != 0 {
+			continue
+		}
+		s := commandResult.Output
+		if strings.HasPrefix(s, "Using Node ") {
+			if n := strings.Index(s, "\n"); n >= 0 {
+				s = s[n+1:]
+			}
+		}
+		var hashes []struct {
+			Path string
+			Hash string
+		}
+		if json.Unmarshal([]byte(s), &hashes) != nil {
+			continue
+		}
+		for _, h := range hashes {
+			if conversationMediaSamePath(filepath.Clean(filepath.FromSlash(h.Path)), filepath.FromSlash(e.Images[1].Path)) && strings.EqualFold(h.Hash, e.Images[1].SHA) {
+				verified++
+			}
+		}
+	}
+	if verified != 1 {
 		return errConversationMedia
 	}
 	return nil

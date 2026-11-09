@@ -55,11 +55,14 @@ type nativeQuestionEvidence struct {
 	Content       nativeQuestionEvent    `json:"question_content_event"`
 	Producer      nativeQuestionEvent    `json:"producer_event"`
 	Copy          nativeQuestionEvent    `json:"copy_event"`
+	CopyResult    nativeQuestionEvent    `json:"copy_result_event"`
 	Preview       nativeQuestionEvent    `json:"preview_event"`
 	PreviewResult nativeQuestionEvent    `json:"preview_result_event"`
 	Async         nativeQuestionEvent    `json:"async_event"`
 	Accepted      nativeQuestionEvent    `json:"accepted_event"`
 	ContentReview string                 `json:"content_review"`
+	AsyncTitle    string                 `json:"async_title"`
+	AsyncOptions  []string               `json:"async_options"`
 }
 type nativeQuestionProof struct {
 	Domain      string                 `json:"domain"`
@@ -81,7 +84,7 @@ type nativeQuestionDeps struct {
 	Bind       func(context.Context, nativeQuestionEvidence, json.RawMessage) error
 	Content    func(nativeQuestionEvidence, []byte, []byte) error
 	Capture    func(nativeQuestionEvidence) error
-	ImageGuard func(context.Context, string) error
+	ImageGuard func(context.Context, string, bool) error
 	Clear      func(string) bool
 }
 type nativeQuestionRecord struct {
@@ -339,6 +342,14 @@ func validateNativeQuestion(ctx context.Context, e nativeQuestionEvidence, d nat
 	if historyStrictJSON([]byte(r[3].Payload.Arguments), &question) != nil || len(question.Questions) != 1 || len(question.Questions[0].Options) < 2 {
 		return bad()
 	}
+	if question.Questions[0].Title != e.AsyncTitle || len(e.AsyncOptions) != len(question.Questions[0].Options) || e.AsyncTitle == "" {
+		return bad()
+	}
+	for i, v := range e.AsyncOptions {
+		if v != question.Questions[0].Options[i] {
+			return bad()
+		}
+	}
 	stage = "current_question"
 	body, err := d.Read(e.Body, 128<<10)
 	if err != nil || bytesHash(bytes.TrimPrefix(body, []byte("\xef\xbb\xbf"))) != e.Scope.Body {
@@ -370,7 +381,7 @@ func validateNativeQuestion(ctx context.Context, e nativeQuestionEvidence, d nat
 	}
 	stage = "current_image"
 	for _, im := range e.Images {
-		if d.ImageGuard(ctx, im.Path) != nil {
+		if d.ImageGuard(ctx, im.Path, im.Producer != "") != nil {
 			return bad()
 		}
 		data, err := d.Read(im.Path, conversationMediaLimit)
@@ -440,7 +451,7 @@ func nativeQuestionMetadata(code string) string {
 			continue
 		}
 		if code[i] == ',' {
-			m := regexp.MustCompile(`^,\s*(?:max_output_tokens|yield_time_ms)\s*:\s*[0-9]+`).FindString(code[i:])
+			m := regexp.MustCompile(`^,\s*(?:"(?:max_output_tokens|yield_time_ms)"|(?:max_output_tokens|yield_time_ms))\s*:\s*[0-9]+`).FindString(code[i:])
 			if m != "" {
 				i += len(m)
 				continue

@@ -3276,6 +3276,15 @@ fn execute_inner(
         }
         _ => return Err("exact recovery ask input is required".into()),
     };
+    // Reject an async-associated native scope before image-difference or
+    // origin-correction helpers can append any event or inspect HTTP.
+    if ledger.events.iter().any(|event| matches!(event,
+        Event::Intent { request: saved } if saved.native_evidence.is_some()
+            && (saved.request_id == incoming.request_id || (saved.destination == incoming.destination
+            && matches!((&saved.operation,&incoming.operation),
+                (Kind::Ask {decision_identity:a,..},Kind::Ask {decision_identity:b,..}) if a==b))))) {
+        return Err("native recovered intent is stage-only; existing async question retained".into());
+    }
     if let Some(report) = different_question_images(ctx, &mut ledger, &incoming)? {
         return Ok(report);
     }

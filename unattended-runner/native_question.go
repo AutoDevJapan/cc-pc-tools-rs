@@ -20,7 +20,13 @@ const nativeQuestionDomain = "owner-native-question-proof-v1"
 
 func canonicalJSON(b []byte) ([]byte, error) {
 	var v any
-	if historyStrictJSON(bytes.TrimPrefix(b, []byte("\xef\xbb\xbf")), &v) != nil {
+	raw := bytes.TrimPrefix(b, []byte("\xef\xbb\xbf"))
+	if historyStrictJSON(raw, &v) != nil {
+		return nil, errConversationMedia
+	}
+	decoder := json.NewDecoder(bytes.NewReader(raw))
+	decoder.UseNumber()
+	if decoder.Decode(&v) != nil {
 		return nil, errConversationMedia
 	}
 	var buffer bytes.Buffer

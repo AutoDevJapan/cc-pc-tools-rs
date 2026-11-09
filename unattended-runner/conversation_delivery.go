@@ -788,11 +788,23 @@ func (r *Runner) processConversationReplies(ctx context.Context, index *conversa
 		}
 	}
 	if len(selected) == 0 && len(proof.Replies) != 0 {
-		// A single rotating audit catches source-only edits on old senders and
-		// observes application. Never re-fetch the whole delivered history.
-		cursor, _ := number(q.ReplyCursor)
-		next := sort.Search(len(proof.Replies), func(i int) bool { n, _ := number(proof.Replies[i].Message); return n > cursor })
-		selected = append(selected, proof.Replies[next%len(proof.Replies)])
+		if r.ConversationReceiverOnly {
+			// A delivered version does not need another task write or history
+			// audit on restart. Source-only captures still need an exact
+			// canonical-answer observation, without implying application.
+			for _, reply := range proof.Replies {
+				req := r.conversationRequest(reply.Message)
+				if req != nil && req.Phase == "conversation_source_verified" {
+					selected = append(selected, reply)
+				}
+			}
+		} else {
+			// A single rotating audit catches source-only edits on old senders and
+			// observes application. Never re-fetch the whole delivered history.
+			cursor, _ := number(q.ReplyCursor)
+			next := sort.Search(len(proof.Replies), func(i int) bool { n, _ := number(proof.Replies[i].Message); return n > cursor })
+			selected = append(selected, proof.Replies[next%len(proof.Replies)])
+		}
 	}
 	for _, reply := range selected {
 		if ctx.Err() != nil {
@@ -800,6 +812,15 @@ func (r *Runner) processConversationReplies(ctx context.Context, index *conversa
 			return
 		}
 		req, err := r.captureConversationReply(ctx, q, proof, reply)
+		if err == nil && r.ConversationReceiverOnly {
+			ready, checkErr := r.conversationReceiverDelivery(ctx, q, proof, reply, req, health)
+			if checkErr != nil {
+				health.Errors = append(health.Errors, "conversation_receiver_delivery_held")
+			}
+			if !ready {
+				continue
+			}
+		}
 		if err == nil {
 			err = r.deliverConversationReply(ctx, q, reply, req)
 		}
@@ -824,7 +845,7 @@ func (r *Runner) processConversationReplies(ctx context.Context, index *conversa
 		// Full close verification reads every reply's source. Do that only when
 		// all replies have potential application evidence, never on each newly
 		// delivered answer or on each minute's audit of a long unpaid history.
-		if !r.conversationApplicationMayBeReady(proof) {
+		if r.ConversationReceiverOnly || !r.conversationApplicationMayBeReady(proof) {
 			health.ConversationReplies++
 			continue
 		}

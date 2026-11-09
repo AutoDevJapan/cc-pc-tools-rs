@@ -174,6 +174,8 @@ type Health struct {
 	ConversationChecked      int                      `json:"conversation_waiting_checked,omitempty"`
 	ConversationPollDeferred int                      `json:"conversation_poll_deferred,omitempty"`
 	ConversationPollSeconds  int                      `json:"conversation_poll_interval_seconds,omitempty"`
+	ReceiverAlreadyAnswered  int                      `json:"receiver_already_answered,omitempty"`
+	ReceiverDeliveryHeld     int                      `json:"receiver_delivery_held,omitempty"`
 	Civ6Queue                *Civ6QueueHealth         `json:"civ6_ci_queue,omitempty"`
 }
 type Runner struct {
@@ -196,6 +198,7 @@ type Runner struct {
 	Civ6Verify                  func(path, sha256 string) error
 	AgentResultGuard            func(context.Context, string) bool
 	SeparatedScheduler          bool
+	ConversationReceiverOnly    bool
 }
 
 func readJSON(path string, ceiling int64, value any) error {
@@ -970,6 +973,9 @@ func (r *Runner) recheckOriginBlocked(ctx context.Context, health *Health) {
 }
 
 func main() {
+	if len(os.Args) > 1 && os.Args[1] == "conversation-receiver-tick" {
+		os.Exit(conversationReceiverCLI(os.Args[2:], os.Stdout))
+	}
 	if len(os.Args) > 1 && os.Args[1] == "--check-conversation-origin-reference" {
 		os.Exit(conversationOriginReferenceCLI(os.Args[2:], os.Stdout))
 	}

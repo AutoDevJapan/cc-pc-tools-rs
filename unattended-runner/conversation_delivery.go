@@ -788,8 +788,9 @@ func (r *Runner) processConversationReplies(ctx context.Context, index *conversa
 		}
 	}
 	if len(selected) == 0 && len(proof.Replies) != 0 {
-		// A single rotating audit catches source-only edits on old senders and
-		// observes application. Never re-fetch the whole delivered history.
+		// A single rotating audit also retries attachment metadata after the
+		// body was accepted. Canonical delivery remains deduplicated; suppressing
+		// the audit would silently drop a transient media failure on restart.
 		cursor, _ := number(q.ReplyCursor)
 		next := sort.Search(len(proof.Replies), func(i int) bool { n, _ := number(proof.Replies[i].Message); return n > cursor })
 		selected = append(selected, proof.Replies[next%len(proof.Replies)])
@@ -800,15 +801,43 @@ func (r *Runner) processConversationReplies(ctx context.Context, index *conversa
 			return
 		}
 		req, err := r.captureConversationReply(ctx, q, proof, reply)
+		bodyDelivered, canonicalBefore := false, false
+		if err == nil && r.ConversationReceiverOnly {
+			bodyDelivered = receiverDelivered(req)
+			ready, prior, checkErr := r.conversationReceiverDelivery(ctx, q, proof, reply, req, health)
+			canonicalBefore = prior
+			if checkErr != nil {
+				health.Errors = append(health.Errors, "conversation_receiver_delivery_held")
+			}
+			if !ready {
+				continue
+			}
+		}
 		if err == nil {
 			err = r.deliverConversationReply(ctx, q, reply, req)
 		}
 		if err != nil {
+			if r.ConversationReceiverOnly && health.receiver != nil && req == nil {
+				health.receiver.SourceUnknown++
+			}
 			health.Errors = append(health.Errors, "conversation_delivery_deferred")
 			return
 		}
 		q.ReplyCursor = reply.Message
+		if r.ConversationReceiverOnly && health.receiver != nil {
+			switch {
+			case bodyDelivered:
+				health.receiver.Audited++
+			case canonicalBefore:
+				health.receiver.Recovered++
+			default:
+				health.receiver.Processed++
+			}
+		}
 		if r.deliverOwnerReplyMediaObservation(ctx, q, reply, req) != nil {
+			if r.ConversationReceiverOnly && health.receiver != nil {
+				health.receiver.MediaDeferred++
+			}
 			health.Errors = append(health.Errors, "conversation_owner_media_deferred")
 		}
 		wasClosed := q.Phase == "closed"
@@ -824,7 +853,7 @@ func (r *Runner) processConversationReplies(ctx context.Context, index *conversa
 		// Full close verification reads every reply's source. Do that only when
 		// all replies have potential application evidence, never on each newly
 		// delivered answer or on each minute's audit of a long unpaid history.
-		if !r.conversationApplicationMayBeReady(proof) {
+		if r.ConversationReceiverOnly || !r.conversationApplicationMayBeReady(proof) {
 			health.ConversationReplies++
 			continue
 		}

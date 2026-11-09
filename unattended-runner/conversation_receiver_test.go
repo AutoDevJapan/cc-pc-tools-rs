@@ -118,7 +118,7 @@ func TestConversationReceiverWritesOnlyDedicatedHealthAndUnlocks(t *testing.T) {
 	code := conversationReceiverCLIWith(nil, &out, func() (*Runner, func(), error) {
 		return f.r, func() { unlocked = true }, nil
 	})
-	var h Health
+	var h conversationReceiverHealth
 	if code != 0 || !unlocked || json.Unmarshal([]byte(out.String()), &h) != nil || h.Mode != "discord-conversation-receiver-only" {
 		t.Fatal("receiver CLI completion contract differs", code, out.String())
 	}
@@ -126,7 +126,7 @@ func TestConversationReceiverWritesOnlyDedicatedHealthAndUnlocks(t *testing.T) {
 	if string(b) != "old general health" {
 		t.Fatal("receiver overwrote general/scheduler health")
 	}
-	if readJSON(filepath.Join(f.r.Config.Home, "conversation-receiver-health.json"), maxState, &h) != nil || h.ConversationChecked != 1 {
+	if readJSON(filepath.Join(f.r.Config.Home, "conversation-receiver-health.json"), maxState, &h) != nil || h.Attempted != 1 || h.Succeeded != 1 {
 		t.Fatal("receiver did not persist actual poll health")
 	}
 }
@@ -186,20 +186,35 @@ func TestConversationReceiverObservesManualAnswerWithoutForgingDesktopApplicatio
 			f := conversationTest(t, true)
 			f.ask(t)
 			reply := f.reply(t, 8, "既に手動で受領して同じ元作業へ反映した全文")
-			f.r.processConversations(context.Background(), &Health{})
-			req := f.r.State.Requests[reply.Message]
-			req.Phase, req.Todo = "conversation_source_verified", 0
-			if f.r.save() != nil {
-				t.Fatal("fixture capture save failed")
+			proof, err := f.r.conversationProof(context.Background(), f.q)
+			if err != nil {
+				t.Fatal(err)
 			}
+			acquired, err := f.r.conversationSourceReacquire(context.Background(), f.q, proof, reply)
+			if err != nil || acquired["reacquired"] != true {
+				t.Fatal("real source generation not created", err)
+			}
+			req := f.r.State.Requests[reply.Message]
+			path, err := f.r.conversationSourcePath(f.q, reply.Message)
+			if err != nil || req.ConversationSourceGeneration == "" || filepath.Base(filepath.Dir(path)) != reply.Message+".sources" {
+				t.Fatal("generation path differs", path, err)
+			}
+			original, err := os.ReadFile(path)
+			if err != nil || bytesHash(original) != req.ConversationSourceGeneration {
+				t.Fatal("generation bytes differ", err)
+			}
+			answer, input := conversationAnswerBytes(f.q, reply, req, original)
+			wait := map[string]any{"question_receipt_sha256": f.q.ReceiptSHA, "question": map[string]any{"request_id": f.q.SenderID}}
 			f.mutateTodo(t, func(row map[string]any) {
 				row["status"] = "done"
-				record := row["owner_question_answer_receipts"].([]any)[0].(map[string]any)
-				record["domain"] = "todo-owner-question-answer-receipt-v1"
-				record["applied_at"] = f.r.Now().UTC().Format(time.RFC3339Nano)
+				delete(row, "owner_question_wait")
+				record := map[string]any{"domain": "todo-owner-question-answer-receipt-v1", "answer": answer, "answer_file_sha256": bytesHash(input), "wait": wait, "applied_at": f.r.Now().UTC().Format(time.RFC3339Nano)}
 				if changed {
-					record["answer"].(map[string]any)["reply_sha256"] = strings.Repeat("f", 64)
+					old := answer
+					old.ReceiptSHA = strings.Repeat("f", 64)
+					record["answer"] = old
 				}
+				row["owner_question_answer_receipts"] = []any{record}
 			})
 			before, _ := os.ReadFile(f.r.TodoPath)
 			base := f.r.Run
@@ -211,8 +226,12 @@ func TestConversationReceiverObservesManualAnswerWithoutForgingDesktopApplicatio
 			}
 			h := f.r.conversationReceiverTick(context.Background())
 			after, _ := os.ReadFile(f.r.TodoPath)
+			unchanged, _ := os.ReadFile(path)
 			if string(before) != string(after) || req.Phase != "conversation_source_verified" || req.Todo != 0 {
 				t.Fatal("receiver manufactured delivery/application or changed the original", h)
+			}
+			if string(original) != string(unchanged) || req.ConversationSourceGeneration != bytesHash(original) {
+				t.Fatal("generation changed during observation")
 			}
 			if !changed && (h.ReceiverAlreadyAnswered != 1 || len(h.Errors) != 0) {
 				t.Fatal("exact manual canonical answer was not recognized", h)
@@ -320,10 +339,10 @@ func TestConversationReceiverKnownTaskHoldsAreNotFailures(t *testing.T) {
 			}
 			var out strings.Builder
 			code := conversationReceiverCLIWith(nil, &out, func() (*Runner, func(), error) { return f.r, func() {}, nil })
-			var h Health
+			var h conversationReceiverHealth
 			after, _ := os.ReadFile(f.r.TodoPath)
 			saved, _ := os.ReadFile(source)
-			if code != 0 || json.Unmarshal([]byte(out.String()), &h) != nil || len(h.Errors) != 0 || h.ReceiverDeliveryHeld != 1 || h.ConversationReplies != 0 || string(before) != string(after) || string(original) != string(saved) {
+			if code != 0 || json.Unmarshal([]byte(out.String()), &h) != nil || len(h.Errors) != 0 || h.KnownHold != 1 || h.Processed != 0 || len(h.Holds) != 1 || h.Holds[0].Message != reply.Message || string(before) != string(after) || string(original) != string(saved) {
 				t.Fatal("a known task hold was reported as failure or lost its source", code, out.String())
 			}
 		})
@@ -358,11 +377,91 @@ func TestConversationReceiverUnknownScopeOrSourceStillFails(t *testing.T) {
 			before, _ := os.ReadFile(f.r.TodoPath)
 			var out strings.Builder
 			code := conversationReceiverCLIWith(nil, &out, func() (*Runner, func(), error) { return f.r, func() {}, nil })
-			var h Health
+			var h conversationReceiverHealth
 			after, _ := os.ReadFile(f.r.TodoPath)
 			if code != 1 || json.Unmarshal([]byte(out.String()), &h) != nil || len(h.Errors) == 0 || string(before) != string(after) {
 				t.Fatal("unknown scope/source was hidden as an intentional hold", code, out.String())
 			}
 		})
+	}
+}
+
+func TestConversationReceiverHealthShapeAndAcquisitionCounts(t *testing.T) {
+	for _, mode := range []string{"zero", "success", "failure"} {
+		t.Run(mode, func(t *testing.T) {
+			f := conversationTest(t, true)
+			if mode != "zero" {
+				f.ask(t)
+			}
+			if mode == "success" {
+				f.reply(t, 8, "a\n新しい回答の全文")
+			}
+			if mode == "failure" {
+				base := f.r.Run
+				f.r.Run = func(ctx context.Context, path string, args ...string) (string, error) {
+					if path == conversationSender && args[0] == "recovery-replies" {
+						return "", errors.New("API unavailable")
+					}
+					return base(ctx, path, args...)
+				}
+			}
+			var out strings.Builder
+			code := conversationReceiverCLIWith(nil, &out, func() (*Runner, func(), error) { return f.r, func() {}, nil })
+			var raw map[string]json.RawMessage
+			if json.Unmarshal([]byte(out.String()), &raw) != nil {
+				t.Fatal("invalid JSON", out.String())
+			}
+			keys := []string{"mode", "started_at", "finished_at", "questions", "attempted", "succeeded", "deferred", "processed", "audited", "recovered", "known_hold", "already_answered", "source_unknown", "media_deferred", "holds", "errors"}
+			if len(raw) != len(keys) {
+				t.Fatal("unexpected general health fields", out.String())
+			}
+			for _, k := range keys {
+				if _, ok := raw[k]; !ok {
+					t.Fatal("missing zero field", k, out.String())
+				}
+			}
+			var h conversationReceiverHealth
+			if json.Unmarshal([]byte(out.String()), &h) != nil {
+				t.Fatal("invalid receiver health")
+			}
+			switch mode {
+			case "zero":
+				if code != 0 || h.Questions != 0 || h.Attempted != 0 || h.Succeeded != 0 || h.Deferred != 0 || h.Processed != 0 {
+					t.Fatal(out.String())
+				}
+			case "success":
+				if code != 0 || h.Questions != 1 || h.Attempted != 1 || h.Succeeded != 1 || h.Deferred != 0 || h.Processed != 1 || h.Audited != 0 {
+					t.Fatal(out.String())
+				}
+				again := receiverHealth(f.r.conversationReceiverTick(context.Background()))
+				if again.Processed != 0 || again.Audited != 1 {
+					t.Fatal("巡回を実配送へ計上", again)
+				}
+			case "failure":
+				if code != 1 || h.Questions != 1 || h.Attempted != 1 || h.Succeeded != 0 || h.Deferred != 1 || h.Processed != 0 || len(h.Errors) == 0 {
+					t.Fatal(out.String())
+				}
+			}
+		})
+	}
+}
+
+func TestConversationReceiverRecoversSavedAnswerStateWithoutAnotherTodoWrite(t *testing.T) {
+	f := conversationTest(t, true)
+	f.ask(t)
+	reply := f.reply(t, 8, "a")
+	f.r.conversationReceiverTick(context.Background())
+	req := f.r.State.Requests[reply.Message]
+	req.Phase, req.Todo = "conversation_reply_saved", 0
+	f.mutateTodo(t, func(row map[string]any) {
+		record := row["owner_question_answer_receipts"].([]any)[0].(map[string]any)
+		record["domain"] = "todo-owner-question-answer-receipt-v1"
+		record["applied_at"] = f.r.Now().UTC().Format(time.RFC3339Nano)
+	})
+	before, _ := os.ReadFile(f.r.TodoPath)
+	h := receiverHealth(f.r.conversationReceiverTick(context.Background()))
+	after, _ := os.ReadFile(f.r.TodoPath)
+	if len(h.Errors) != 0 || h.Processed != 0 || h.Recovered != 1 || req.Phase != "conversation_reply_delivered" || string(before) != string(after) {
+		t.Fatal("existing canonical recovery was lost or counted as new delivery", h)
 	}
 }

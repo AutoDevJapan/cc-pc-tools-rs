@@ -14,6 +14,65 @@ import (
 // the minute cadence; this command never runs the general periodic pipeline.
 const conversationReceiverBudget = 50 * time.Second
 
+type conversationReceiverHold struct {
+	Request string `json:"request_id"`
+	Todo    uint64 `json:"todo_id"`
+	Message string `json:"message_id"`
+	Reason  string `json:"reason"`
+}
+
+type conversationReceiverCounts struct {
+	Processed     int
+	Audited       int
+	Recovered     int
+	SourceUnknown int
+	MediaDeferred int
+	Holds         []conversationReceiverHold
+}
+
+// This projection reports only work performed by the receiver, with explicit
+// zeros. General discovery/scheduler health is deliberately not serialized.
+type conversationReceiverHealth struct {
+	Mode            string                     `json:"mode"`
+	Started         string                     `json:"started_at"`
+	Finished        string                     `json:"finished_at"`
+	Questions       int                        `json:"questions"`
+	Attempted       int                        `json:"attempted"`
+	Succeeded       int                        `json:"succeeded"`
+	Deferred        int                        `json:"deferred"`
+	Processed       int                        `json:"processed"`
+	Audited         int                        `json:"audited"`
+	Recovered       int                        `json:"recovered"`
+	KnownHold       int                        `json:"known_hold"`
+	AlreadyAnswered int                        `json:"already_answered"`
+	SourceUnknown   int                        `json:"source_unknown"`
+	MediaDeferred   int                        `json:"media_deferred"`
+	Holds           []conversationReceiverHold `json:"holds"`
+	Errors          []string                   `json:"errors"`
+}
+
+func receiverHealth(h Health) conversationReceiverHealth {
+	c := h.receiver
+	if c == nil {
+		c = &conversationReceiverCounts{}
+	}
+	holds := append([]conversationReceiverHold{}, c.Holds...)
+	return conversationReceiverHealth{Mode: h.Mode, Started: h.Started, Finished: h.Finished,
+		Questions: h.ConversationWaiting, Attempted: h.ConversationChecked,
+		Succeeded: max(0, h.ConversationWaiting-h.ConversationPollDeferred), Deferred: h.ConversationPollDeferred,
+		Processed: c.Processed, Audited: c.Audited, Recovered: c.Recovered, KnownHold: len(holds),
+		AlreadyAnswered: h.ReceiverAlreadyAnswered, SourceUnknown: c.SourceUnknown,
+		MediaDeferred: c.MediaDeferred, Holds: holds, Errors: append([]string{}, h.Errors...)}
+}
+
+func receiverDelivered(req *Request) bool {
+	switch req.Phase {
+	case "conversation_reply_delivered", "conversation_reply_applied", "conversation_direction_recorded", "conversation_implementation_recorded":
+		return true
+	}
+	return false
+}
+
 func conversationReceiverCLI(args []string, out io.Writer) int {
 	return conversationReceiverCLIWith(args, out, func() (*Runner, func(), error) {
 		backend, unlock, err := loadConversationCLIRunner(conversationDefaultConfig)
@@ -47,11 +106,12 @@ func conversationReceiverCLIWith(args []string, out io.Writer, load func() (*Run
 	ctx, cancel := context.WithTimeout(context.Background(), conversationReceiverBudget)
 	defer cancel()
 	h := r.conversationReceiverTick(ctx)
-	if publish(filepath.Join(r.Config.Home, "conversation-receiver-health.json"), h) != nil {
+	report := receiverHealth(h)
+	if publish(filepath.Join(r.Config.Home, "conversation-receiver-health.json"), report) != nil {
 		fmt.Fprintln(out, "conversation receiver health unavailable")
 		return 1
 	}
-	if json.NewEncoder(out).Encode(h) != nil {
+	if json.NewEncoder(out).Encode(report) != nil {
 		return 1
 	}
 	if len(h.Errors) != 0 {
@@ -65,6 +125,7 @@ func (r *Runner) conversationReceiverTick(ctx context.Context) Health {
 	r.ConversationReceiverOnly = true
 	defer func() { r.ConversationReceiverOnly = previous }()
 	h := Health{Mode: "discord-conversation-receiver-only", Started: r.Now().UTC().Format(time.RFC3339Nano), Errors: []string{}}
+	h.receiver = &conversationReceiverCounts{}
 	r.processConversations(ctx, &h)
 	if ctx.Err() != nil {
 		h.Errors = append(h.Errors, "conversation_receiver_deadline")
@@ -78,19 +139,20 @@ func (r *Runner) conversationReceiverTick(ctx context.Context) Health {
 // Existing exact answer receipts may prove historical acceptance even for a
 // desktop worker which has no codex-jobs execution receipt. This observation
 // neither invents an applied receipt nor changes any phase, owner or wait.
-func (r *Runner) conversationReceiverDelivery(ctx context.Context, q ConversationQuestion, proof *conversationProof, reply conversationReply, req *Request, h *Health) (bool, error) {
+func (r *Runner) conversationReceiverDelivery(ctx context.Context, q ConversationQuestion, proof *conversationProof, reply conversationReply, req *Request, h *Health) (bool, bool, error) {
 	row, err := r.conversationDeliveryTask(ctx, q)
 	if err != nil || row.Project != q.Project {
 		h.ReceiverDeliveryHeld++
-		return false, errors.New("receiver task scope unverified")
+		return false, false, errors.New("receiver task scope unverified")
 	}
-	if q.Actor == nil && req.Phase == "conversation_source_verified" && r.conversationReceiverAnswered(ctx, row, q, proof, reply, req) {
+	canonicalBefore := q.Actor == nil && !receiverDelivered(req) && r.conversationReceiverAnswered(ctx, row, q, proof, reply, req)
+	if req.Phase == "conversation_source_verified" && canonicalBefore {
 		h.ReceiverAlreadyAnswered++
-		return false, nil
+		return false, true, nil
 	}
 	if row.Status == "recovery_unverified" {
 		h.ReceiverDeliveryHeld++
-		return false, errors.New("receiver task recovery unverified")
+		return false, false, errors.New("receiver task recovery unverified")
 	}
 	if row.Status == "done" || conversationActorHeld(row.conversationState) {
 		// Holding an explicitly stopped/completed task is a normal outcome,
@@ -99,16 +161,23 @@ func (r *Runner) conversationReceiverDelivery(ctx context.Context, q Conversatio
 		_, ready, err := r.conversationReplySource(ctx, q, proof, reply)
 		if err != nil || !ready {
 			h.ReceiverDeliveryHeld++
-			return false, errors.New("receiver held source unverified")
+			h.receiver.SourceUnknown++
+			return false, false, errors.New("receiver held source unverified")
 		}
 		h.ReceiverDeliveryHeld++
-		return false, nil
+		reason := "task_hold"
+		if row.Status == "done" {
+			reason = "task_done"
+		}
+		h.receiver.Holds = append(h.receiver.Holds, conversationReceiverHold{Request: q.RequestID, Todo: row.ID, Message: reply.Message, Reason: reason})
+		return false, canonicalBefore, nil
 	}
 	if req.Phase == "conversation_source_verified" && req.Todo == 0 {
 		h.ReceiverDeliveryHeld++
-		return false, errors.New("receiver retains source without task mutation")
+		h.receiver.SourceUnknown++
+		return false, false, errors.New("receiver retains source without task mutation")
 	}
-	return true, nil
+	return true, canonicalBefore, nil
 }
 
 func (r *Runner) conversationReceiverAnswered(ctx context.Context, row *TodoRow, q ConversationQuestion, proof *conversationProof, reply conversationReply, req *Request) bool {

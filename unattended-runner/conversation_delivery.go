@@ -801,8 +801,11 @@ func (r *Runner) processConversationReplies(ctx context.Context, index *conversa
 			return
 		}
 		req, err := r.captureConversationReply(ctx, q, proof, reply)
+		bodyDelivered, canonicalBefore := false, false
 		if err == nil && r.ConversationReceiverOnly {
-			ready, checkErr := r.conversationReceiverDelivery(ctx, q, proof, reply, req, health)
+			bodyDelivered = receiverDelivered(req)
+			ready, prior, checkErr := r.conversationReceiverDelivery(ctx, q, proof, reply, req, health)
+			canonicalBefore = prior
 			if checkErr != nil {
 				health.Errors = append(health.Errors, "conversation_receiver_delivery_held")
 			}
@@ -814,11 +817,27 @@ func (r *Runner) processConversationReplies(ctx context.Context, index *conversa
 			err = r.deliverConversationReply(ctx, q, reply, req)
 		}
 		if err != nil {
+			if r.ConversationReceiverOnly && health.receiver != nil && req == nil {
+				health.receiver.SourceUnknown++
+			}
 			health.Errors = append(health.Errors, "conversation_delivery_deferred")
 			return
 		}
 		q.ReplyCursor = reply.Message
+		if r.ConversationReceiverOnly && health.receiver != nil {
+			switch {
+			case bodyDelivered:
+				health.receiver.Audited++
+			case canonicalBefore:
+				health.receiver.Recovered++
+			default:
+				health.receiver.Processed++
+			}
+		}
 		if r.deliverOwnerReplyMediaObservation(ctx, q, reply, req) != nil {
+			if r.ConversationReceiverOnly && health.receiver != nil {
+				health.receiver.MediaDeferred++
+			}
 			health.Errors = append(health.Errors, "conversation_owner_media_deferred")
 		}
 		wasClosed := q.Phase == "closed"

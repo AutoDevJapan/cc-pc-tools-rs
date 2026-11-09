@@ -12,20 +12,28 @@
 
 一般の新規依頼受付、ToDo登録、質問の送信や再試行、一般scheduler、技術待ち解除、
 製品/結果報告、Civ6キュー、スレッドの閉鎖は呼ばない。
+actor付きposted質問の`question-wait`記録も作らず、元の待機・依存を保持する。
 既存の引数なしtick、通常ask/replies/closeの動作は変更しない。
 
 `conversation-receiver-health.json` に実行開始・終了・対象件数・取得確認・配送の
 結果を保存する。従来の全体healthやschedulerの健康記録を上書きしない。
+受信専用JSONは全件0でも同じキーを出し、一般の`api_verified`・`scheduler_ok`等は出さない。
+`questions`は対象質問数、`attempted`は取得を試した数、`succeeded`は照合成功数、
+`deferred`は未試行または取得失敗数。`processed`は新たにcanonical配送した本文の数、
+`audited`は配送済み版の再確認数、`recovered`は既存回答のstateだけを復旧した数である。
+`known_hold`と`holds`の返信ID・理由は正常保持、`already_answered`は手動既回答観測、
+`source_unknown`は原受領未確認、`media_deferred`は添付情報の未完件数を表す。
+`errors`は取得・照合・保存・配送の技術失敗で、0件でも空配列を出す。
 終了コード0はこの有限工程で既知エラーがない場合、1は取得/配送/保存が未完の場合、
 2は引数不正または既存runnerとの排他待ちを表す。
 一部の質問が失敗しても、他の質問の確認と保存は有限の期限内で続ける。
 現在の原受領を確認できた完了・明示停止・既存の待機は、
-`receiver_delivery_held` の保持件数へ記録し、技術失敗には数えない。
+`known_hold` の保持件数へ記録し、技術失敗には数えない。
 取得・原受領・scope・復旧状態が未確認の場合はエラーを残す。
 
 同じ返信の配送済み版は再配送しない。通常CLIで既に回答を受け入れた場合も、
 現在の正規原受領とcanonical回答receiptの本人・元質問・本文/受領SHAが一致すれば
-`receiver_already_answered` として観測する。この観測は原受領のphaseやToDoを
+`already_answered` として観測する。この観測は原受領のphaseやToDoを
 書き換えず、appliedや閉鎖の証拠を作らない。異なる版には古い受領を流用しない。
 
 元ToDoに保存した原文と次回指示は、実行中desktopセッションへのprompt配送とは
@@ -36,3 +44,10 @@
 運用変更では既存タスク・action・VBS・実行物の版と退避を先に確認し、同時writerを
 一つにする。管理者処理・配布・taskの有効化は既存の正規経路で行い、個別の
 受信許可を全自動化の再開へ広げない。
+
+`TestConversationReceiverActualCanonicalAnswerRoundTrip` は
+`CC_CONVERSATION_TODO_BINARY`が未指定ならskipする任意のローカル結合テストであり、
+通常CIの成功をこの結合の成功とは扱わない。ローカル確認では
+`D:/CC/Tools/todo/todo.exe`（SHA256
+`e080b9c9b92534c8505420e4fae27e20ac5606f50795c80a860174fe9cc6b5ed`）を指定し、
+隔離したHOME/JOBS/通知設定で実行した。使用版と実行ログを対応させて保存する。

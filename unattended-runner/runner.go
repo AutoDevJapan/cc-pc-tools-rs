@@ -177,6 +177,7 @@ type Health struct {
 	ReceiverAlreadyAnswered  int                      `json:"receiver_already_answered,omitempty"`
 	ReceiverDeliveryHeld     int                      `json:"receiver_delivery_held,omitempty"`
 	Civ6Queue                *Civ6QueueHealth         `json:"civ6_ci_queue,omitempty"`
+	receiver                 *conversationReceiverCounts
 }
 type Runner struct {
 	Config                      Config

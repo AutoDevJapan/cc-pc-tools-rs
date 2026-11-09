@@ -252,3 +252,40 @@ func TestConversationReceiverActualCanonicalAnswerRoundTrip(t *testing.T) {
 		t.Fatal("real canonical answer was applied twice", h)
 	}
 }
+
+func TestConversationReceiverRetriesFailedMediaWithoutRedeliveringAnswer(t *testing.T) {
+	f, reply, req, _ := ownerReplyMediaFixture(t, true)
+	base := f.r.Run
+	mediaEdits, answers := 0, 0
+	f.r.Run = func(ctx context.Context, path string, args ...string) (string, error) {
+		if path == conversationTodo && args[0] == "question-answer" {
+			answers++
+		}
+		if path == conversationTodo && args[0] == "edit" {
+			mediaEdits++
+			if mediaEdits == 1 {
+				return "", errors.New("transient media-note write failure")
+			}
+		}
+		return base(ctx, path, args...)
+	}
+	before, _ := f.r.todo(42)
+	h := f.r.conversationReceiverTick(context.Background())
+	if !containsString(h.Errors, "conversation_owner_media_deferred") || req.Phase != "conversation_reply_delivered" || mediaEdits != 1 || answers != 0 {
+		t.Fatal("fixture did not retain a failed attachment delivery after the accepted body", h, mediaEdits, answers)
+	}
+	h = f.r.conversationReceiverTick(context.Background())
+	after, _ := f.r.todo(42)
+	if len(h.Errors) != 0 || mediaEdits != 2 || answers != 0 || !strings.HasPrefix(after.Note, before.Note) || strings.Count(after.Note, "conversation-owner-media:") != 1 {
+		t.Fatal("failed attachment information was lost or the answer was redelivered", h, mediaEdits, answers)
+	}
+	latest := filepath.Join(f.r.Config.Home, "conversations", f.q.RequestID, "owner-media", reply.Message+".latest.private.json")
+	if _, err := os.Stat(latest); err != nil {
+		t.Fatal("successful attachment readback was not retained", err)
+	}
+	h = f.r.conversationReceiverTick(context.Background())
+	again, _ := f.r.todo(42)
+	if len(h.Errors) != 0 || mediaEdits != 2 || answers != 0 || again.Note != after.Note || f.close != 0 {
+		t.Fatal("accepted attachment information was duplicated or closed the question", h)
+	}
+}

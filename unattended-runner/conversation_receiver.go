@@ -84,7 +84,7 @@ func (r *Runner) conversationReceiverDelivery(ctx context.Context, q Conversatio
 		h.ReceiverDeliveryHeld++
 		return false, errors.New("receiver task scope unverified")
 	}
-	if q.Actor == nil && r.conversationReceiverAnswered(ctx, row, q, proof, reply, req) {
+	if q.Actor == nil && req.Phase == "conversation_source_verified" && r.conversationReceiverAnswered(ctx, row, q, proof, reply, req) {
 		h.ReceiverAlreadyAnswered++
 		return false, nil
 	}

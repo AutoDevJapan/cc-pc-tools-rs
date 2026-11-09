@@ -788,23 +788,12 @@ func (r *Runner) processConversationReplies(ctx context.Context, index *conversa
 		}
 	}
 	if len(selected) == 0 && len(proof.Replies) != 0 {
-		if r.ConversationReceiverOnly {
-			// A delivered version does not need another task write or history
-			// audit on restart. Source-only captures still need an exact
-			// canonical-answer observation, without implying application.
-			for _, reply := range proof.Replies {
-				req := r.conversationRequest(reply.Message)
-				if req != nil && req.Phase == "conversation_source_verified" {
-					selected = append(selected, reply)
-				}
-			}
-		} else {
-			// A single rotating audit catches source-only edits on old senders and
-			// observes application. Never re-fetch the whole delivered history.
-			cursor, _ := number(q.ReplyCursor)
-			next := sort.Search(len(proof.Replies), func(i int) bool { n, _ := number(proof.Replies[i].Message); return n > cursor })
-			selected = append(selected, proof.Replies[next%len(proof.Replies)])
-		}
+		// A single rotating audit also retries attachment metadata after the
+		// body was accepted. Canonical delivery remains deduplicated; suppressing
+		// the audit would silently drop a transient media failure on restart.
+		cursor, _ := number(q.ReplyCursor)
+		next := sort.Search(len(proof.Replies), func(i int) bool { n, _ := number(proof.Replies[i].Message); return n > cursor })
+		selected = append(selected, proof.Replies[next%len(proof.Replies)])
 	}
 	for _, reply := range selected {
 		if ctx.Err() != nil {

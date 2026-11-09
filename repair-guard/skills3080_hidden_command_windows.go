@@ -14,6 +14,7 @@ const skillsHiddenNativeContract = "hidden-process-v1"
 // also lets the test binary exercise the real Windows process/stdio contract.
 func skillsHiddenProcessScript(exe, flag, path, workspace string) string {
 	return fmt.Sprintf(`$ErrorActionPreference = 'Stop'
+[Console]::OutputEncoding = [System.Text.UTF8Encoding]::new($false, $true)
 $ccStart = [System.Diagnostics.ProcessStartInfo]::new()
 $ccStart.FileName = '%s'
 $ccStart.WorkingDirectory = '%s'

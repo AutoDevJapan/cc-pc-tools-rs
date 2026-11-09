@@ -102,6 +102,9 @@ func TestSkills3080HiddenProcessPreservesActualConsoleStdioAndExit(t *testing.T)
 		t.Fatal("fixture path grammar")
 	}
 	script := skillsHiddenProcessScript(exe, "-test.run=^TestSkills3080HiddenProcessProbeChild$", skillsHiddenProbeArgument, cwd)
+	// Hosted runners can start with an ASCII console output encoding. Force
+	// that precondition so the wrapper itself must preserve the UTF-8 bytes.
+	script = "[Console]::OutputEncoding = [System.Text.ASCIIEncoding]::new()\n" + script
 	ctx, cancel := context.WithTimeout(context.Background(), 20*time.Second)
 	defer cancel()
 	cmd := exec.CommandContext(ctx, skillsHiddenPowerShell, "-NoLogo", "-NoProfile", "-NonInteractive", "-Command", script)

@@ -49,14 +49,11 @@ func nativeQuestionBind(ctx context.Context, e nativeQuestionEvidence, d nativeQ
 	if err != nil || !allowed {
 		return bad()
 	}
-	var job struct {
-		ID      string `json:"id"`
-		Todo    uint64 `json:"todo_id"`
-		Cwd     string `json:"cwd"`
-		Session string `json:"thread_id"`
-		Created string `json:"created_at"`
-	}
+	var job nativeQuestionOriginJob
 	if readJSON(filepath.Join(jobs, e.Job, "job.json"), 1<<20, &job) != nil || job.ID != e.Job || job.Session != e.Session || !conversationMediaSamePath(filepath.FromSlash(job.Cwd), filepath.FromSlash(e.Worktree)) || (job.Todo != 0 && job.Todo != e.Scope.Todo) {
+		return bad()
+	}
+	if nativeQuestionJobStopped(job) {
 		return bad()
 	}
 	if e.Assignment.Line <= 1 || e.Assignment.Line >= e.Question.Line || !shaPattern.MatchString(e.Assignment.SHA) {
@@ -134,4 +131,21 @@ func nativeQuestionBind(ctx context.Context, e nativeQuestionEvidence, d nativeQ
 		return bad()
 	}
 	return nil
+}
+
+type nativeQuestionOriginJob struct {
+	ID           string `json:"id"`
+	Todo         uint64 `json:"todo_id"`
+	Cwd          string `json:"cwd"`
+	Session      string `json:"thread_id"`
+	Stopped      bool   `json:"stopped"`
+	OwnerStopped bool   `json:"owner_stopped"`
+	Cancelled    bool   `json:"cancel_requested"`
+	CancelReason string `json:"cancel_reason"`
+}
+
+// Match the shared cancellation policy's explicit manual/person stops even
+// when the original task itself has not yet received its stop flag.
+func nativeQuestionJobStopped(job nativeQuestionOriginJob) bool {
+	return job.Stopped || job.OwnerStopped || job.Cancelled || job.CancelReason == "manual" || job.CancelReason == "person"
 }

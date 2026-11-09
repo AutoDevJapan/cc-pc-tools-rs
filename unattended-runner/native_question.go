@@ -181,7 +181,7 @@ func nativeQuestionAskMatches(input string, e nativeQuestionEvidence) bool {
 				}
 			}
 			for _, part := range expected {
-				if strings.Count(line, part) != 1 {
+				if len(regexp.MustCompile(`(?:^|[ \t])`+regexp.QuoteMeta(part)+`(?:[ \t]|$)`).FindAllStringIndex(line, -1)) != 1 {
 					return false
 				}
 			}

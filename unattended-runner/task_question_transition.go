@@ -107,8 +107,7 @@ func (r taskQuestionRegistry) questionState(e taskQuestionEvidence, q *Conversat
 		WorkOn     []uint64                   `json:"work_owner_wait_on"`
 	}
 	null := func(b json.RawMessage) bool { return len(b) == 0 || string(b) == "null" }
-	if json.Unmarshal(current.current, &row) != nil || row.Status != "todo" || !null(row.Wait) || !null(row.Scheduler.Job) || !null(row.Scheduler.Key) ||
-		row.Scheduler.Phase != "resumed" || !row.Scheduler.Resume || row.Scheduler.Last != e.Session || len(row.WaitOn) != 0 || len(row.WorkOn) != 0 {
+	if json.Unmarshal(current.current, &row) != nil || (row.Status != "todo" && row.Status != "doing") || !null(row.Wait) || len(row.WaitOn) != 0 || len(row.WorkOn) != 0 {
 		return current, errTaskQuestion
 	}
 	var matched *taskQuestionRelease
@@ -161,12 +160,11 @@ func (r taskQuestionRegistry) questionState(e taskQuestionEvidence, q *Conversat
 			return current, errTaskQuestion
 		}
 		var generation uint64
-		if json.Unmarshal(before.Generation, &generation) != nil || generation == 0 || generation == math.MaxUint64 || current.Worker.Generation != generation+1 ||
-			string(current.Generation) != fmtUint(generation+1) || before.Worker.Job != e.Session || before.Scheduler.Job != e.Session || before.Worker.Generation != generation {
+		if json.Unmarshal(before.Generation, &generation) != nil || generation == 0 || generation == math.MaxUint64 ||
+			before.Worker.Job != e.Session || before.Scheduler.Job != e.Session || before.Worker.Generation != generation {
 			return current, errTaskQuestion
 		}
-		worker, _ := json.Marshal(map[string]any{"job": nil, "generation": generation + 1})
-		if canonicalHash(row.Worker) != canonicalHash(json.RawMessage(worker)) {
+		if r.continuationCurrent(current, witness, record.At) != nil {
 			return current, errTaskQuestion
 		}
 		preserved := 0
@@ -229,7 +227,7 @@ func (r taskQuestionRegistry) questionState(e taskQuestionEvidence, q *Conversat
 		return current, errTaskQuestion
 	}
 	bound := current
-	bound.Generation, bound.Worker, bound.Scheduler = matched.Before.Generation, matched.Before.Worker, matched.Before.Scheduler
+	bound.Generation, bound.Worker, bound.Scheduler, bound.Jobs = matched.Before.Generation, matched.Before.Worker, matched.Before.Scheduler, matched.Before.Jobs
 	if canonicalHash(bound) != registration.State {
 		return current, errTaskQuestion
 	}

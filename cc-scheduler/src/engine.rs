@@ -264,6 +264,8 @@ impl<B: Backend> Scheduler<B> {
                 return Err(Error("InputRejected"));
             }
         }
+        let root = db["items"].as_array().and_then(|items| items.iter().find(|row| row["id"] == *id))
+            .map(|row| db["projects"][s(&row["project"])].clone()).unwrap_or(Value::Null);
         let row = db["items"]
             .as_array_mut()
             .ok_or(Error("ValueError"))?
@@ -274,6 +276,24 @@ impl<B: Backend> Scheduler<B> {
         action(row);
         if *row == before {
             return Ok(before);
+        }
+        let operation = if row["scheduler"]["phase"] == "preparing"
+            && before["scheduler"]["phase"] != "preparing"
+            && !truth(&row["scheduler"]["job"])
+        {
+            Some("scheduler_prepare")
+        } else if row["scheduler"]["phase"] == "prepared"
+            && before["scheduler"]["phase"] == "preparing"
+            && !truth(&row["scheduler"]["job"])
+        {
+            Some("scheduler_prepared")
+        } else if !truth(&before["scheduler"]["job"])
+            && truth(&row["scheduler"]["job"]) && row["scheduler"]["phase"] == "running"
+        {
+            Some("scheduler_link")
+        } else { None };
+        if let Some(operation) = operation {
+            crate::question_continuation::record(&before, row, &root, operation);
         }
         row["updated"] = json!(chrono::Local::now().format("%Y-%m-%d %H:%M").to_string());
         let out = row.clone();

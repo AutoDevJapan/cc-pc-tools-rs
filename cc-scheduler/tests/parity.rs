@@ -33,6 +33,8 @@ mod initial_review_tests;
 mod admission_tests;
 #[path = "support/capability_inheritance.rs"]
 mod capability_inheritance_tests;
+#[path = "support/question_continuation.rs"]
+mod question_continuation_tests;
 
 #[test]
 fn review_preparation_failures_stop_after_three_and_recover_on_new_evidence() {

@@ -125,7 +125,7 @@ func TestSkills3080HiddenProcessPreservesActualConsoleStdioAndExit(t *testing.T)
 }
 
 func TestSkills3080NewIssuanceCannotUseTheHistoricalDirectContract(t *testing.T) {
-	for _, kind := range []string{"new_hidden", "new_direct", "old_direct", "unknown_contract"} {
+	for _, kind := range []string{"new_hidden", "new_direct", "old_direct", "old_hidden", "new_using_old_hidden", "unknown_contract"} {
 		t.Run(kind, func(t *testing.T) {
 			_, _, e, _ := skillsForwardFixture(t)
 			if e.NativeContract != skillsHiddenNativeContract {
@@ -133,6 +133,9 @@ func TestSkills3080NewIssuanceCannotUseTheHistoricalDirectContract(t *testing.T)
 			}
 			if kind == "old_direct" {
 				e.NativeContract = ""
+			}
+			if kind == "old_hidden" {
+				e.NativeContract = skillsPreviousHiddenNativeContract
 			}
 			if kind == "unknown_contract" {
 				e.NativeContract = "unrecognized"
@@ -143,13 +146,19 @@ func TestSkills3080NewIssuanceCannotUseTheHistoricalDirectContract(t *testing.T)
 				b, _ := json.Marshal(skillsLegacyForwardCommand(c.RequestPath, c.Creator.Workspace))
 				obj(records[1]["payload"])["input"] = "text(await tools.exec_command(" + string(b) + "));"
 			}
+			if kind == "old_hidden" || kind == "new_using_old_hidden" {
+				cmd := skillsForwardCommand(c.RequestPath, c.Creator.Workspace)
+				cmd.Cmd = skillsPreviousHiddenProcessScript(skillsRuntimeTarget, "--create-skills3080-forward", c.RequestPath, c.Creator.Workspace)
+				b, _ := json.Marshal(cmd)
+				obj(records[1]["payload"])["input"] = "text(await tools.exec_command(" + string(b) + "));"
+			}
 			var stream bytes.Buffer
 			for _, r := range records {
 				json.NewEncoder(&stream).Encode(r)
 			}
 			start, _ := time.Parse(time.RFC3339, "2026-10-25T12:00:00Z")
 			_, ok := skillsCreationNativeProjection(&stream, "synthetic-thread", c.Creator.Workspace, start, start.Add(time.Minute), c)
-			if ok != (kind == "new_hidden" || kind == "old_direct") {
+			if ok != (kind == "new_hidden" || kind == "old_direct" || kind == "old_hidden") {
 				t.Fatalf("issuance contract %s accepted=%v", kind, ok)
 			}
 			if kind == "old_direct" {

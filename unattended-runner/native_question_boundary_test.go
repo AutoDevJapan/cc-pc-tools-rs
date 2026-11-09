@@ -36,3 +36,25 @@ func TestNativeQuestionMemoryPreservesOriginalJobOwnerStops(t *testing.T) {
 		}
 	}
 }
+
+func TestNativeQuestionMemoryAssignmentRejectsAdjacentTodoIDs(t *testing.T) {
+	if !nativeQuestionAssignmentTodo("本人依頼。元42、対象の実装。", 42) {
+		t.Fatal("positive control")
+	}
+	for _, first := range []string{"元42 ToDo43", "元42、ToDo43", "元42 ToDo42", "元420", "元42suffix"} {
+		if nativeQuestionAssignmentTodo(first, 42) {
+			t.Fatal("ambiguous original task accepted", first)
+		}
+	}
+}
+
+func TestNativeQuestionMemoryAsyncCannotFollowAnotherUserOrTool(t *testing.T) {
+	preview, async := `{"type":"response_item","payload":{"type":"custom_tool_call_output"}}`, `{"type":"response_item","payload":{"type":"function_call"}}`
+	for _, middle := range []string{`{"type":"response_item","payload":{"type":"reasoning"}}`, `{"type":"response_item","payload":{"type":"message","role":"user"}}`, `{"type":"response_item","payload":{"type":"function_call"}}`, `{"type":"event_msg","payload":{"type":"item_completed","item":{"type":"CommandExecution"}}}`} {
+		input := preview + "\n" + middle + "\n" + async + "\n"
+		err := nativeQuestionAssociationScan(strings.NewReader(input), nativeQuestionEvent{1, bytesHash([]byte(preview))}, nativeQuestionEvent{3, bytesHash([]byte(async))})
+		if (err == nil) != strings.Contains(middle, `"reasoning"`) {
+			t.Fatal("intervening event association")
+		}
+	}
+}

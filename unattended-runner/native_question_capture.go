@@ -104,6 +104,9 @@ func nativeQuestionCapture(e nativeQuestionEvidence, d nativeQuestionDeps) error
 		if !regexp.MustCompile(`(?m)^` + regexp.QuoteMeta(copyLine) + `\r?$`).MatchString(normalized) {
 			return errConversationMedia
 		}
+		if !nativeQuestionCopySuffix(commands, copyLine, e) {
+			return errConversationMedia
+		}
 	}
 	if sourceCount != 1 {
 		return errConversationMedia
@@ -151,4 +154,51 @@ func nativeQuestionCapture(e nativeQuestionEvidence, d nativeQuestionDeps) error
 		return errConversationMedia
 	}
 	return nil
+}
+
+// After the retained image is copied, only other screenshots to distinct
+// destinations and a hash-only readback may follow. Another command or write
+// could otherwise replace the very image whose copy lineage is being proved.
+func nativeQuestionCopySuffix(commands []string, copyLine string, e nativeQuestionEvidence) bool {
+	found := false
+	for _, command := range commands {
+		if found {
+			return false
+		}
+		lines := strings.Split(strings.ReplaceAll(strings.ReplaceAll(command, "\\", "/"), "\r\n", "\n"), "\n")
+		for _, line := range lines {
+			if !found {
+				if line == copyLine {
+					found = true
+				}
+				continue
+			}
+			if strings.TrimSpace(line) == "" {
+				continue
+			}
+			m := regexp.MustCompile(`^Copy-Item -LiteralPath '([^']+\.png)' -Destination '([^']+\.png)'$`).FindStringSubmatch(line)
+			if len(m) == 3 {
+				resolve := func(p string) string {
+					p = filepath.FromSlash(p)
+					if !filepath.IsAbs(p) {
+						p = filepath.Join(e.Worktree, p)
+					}
+					return filepath.Clean(p)
+				}
+				if !generatedWithin(filepath.Join(e.Worktree, "test-results"), resolve(m[1])) {
+					return false
+				}
+				for _, im := range e.Images {
+					if conversationMediaSamePath(resolve(m[2]), filepath.FromSlash(im.Path)) || (im.Producer != "" && conversationMediaSamePath(resolve(m[2]), filepath.FromSlash(im.Producer))) {
+						return false
+					}
+				}
+				continue
+			}
+			if !regexp.MustCompile(`^Get-FileHash -LiteralPath '[^']+'(?:,'[^']+')* -Algorithm SHA256 \| Select-Object Path,Hash \| ConvertTo-Json$`).MatchString(line) {
+				return false
+			}
+		}
+	}
+	return found
 }

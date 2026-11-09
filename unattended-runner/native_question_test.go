@@ -98,6 +98,7 @@ func nativeQuestionMemoryFixture(t *testing.T) (nativeQuestionEvidence, nativeQu
 	}
 	d.Capture = func(nativeQuestionEvidence) error { return nil }
 	d.ImageGuard = func(context.Context, string, bool) error { return nil }
+	d.Association = func(nativeQuestionEvidence) error { return nil }
 	return e, d, files
 }
 
@@ -215,7 +216,7 @@ func TestNativeQuestionMemoryCanonicalMatchesSenderEscaping(t *testing.T) {
 }
 
 func TestNativeQuestionMemoryCaptureRequiresCompletedExecutionAndExactCopyReceipt(t *testing.T) {
-	for _, kind := range []string{"valid", "failed-run", "fake-command", "different-copy", "different-receipt", "missing-producer", "protected-reference"} {
+	for _, kind := range []string{"valid", "failed-run", "fake-command", "different-copy", "different-receipt", "missing-producer", "protected-reference", "overwrite-after-copy", "different-copy-overwrites", "second-command-overwrites"} {
 		t.Run(kind, func(t *testing.T) {
 			e, d, _ := nativeQuestionMemoryFixture(t)
 			e.Question.Line = 20
@@ -238,7 +239,17 @@ func TestNativeQuestionMemoryCaptureRequiresCompletedExecutionAndExactCopyReceip
 			if kind == "different-copy" {
 				command += "; echo true"
 			}
-			call := mustNativeJSON(map[string]any{"type": "response_item", "payload": map[string]any{"type": "custom_tool_call", "name": "exec", "call_id": "copy", "input": "text(await tools.exec_command({cmd:" + string(mustNativeJSON(command)) + "}));"}})
+			if kind == "overwrite-after-copy" {
+				command += "\nSet-Content -LiteralPath '" + filepath.ToSlash(dst) + "' -Value 'changed'"
+			}
+			if kind == "different-copy-overwrites" {
+				command += "\nCopy-Item -LiteralPath 'other.png' -Destination '" + filepath.ToSlash(dst) + "'"
+			}
+			input := "text(await tools.exec_command({cmd:" + string(mustNativeJSON(command)) + "}));"
+			if kind == "second-command-overwrites" {
+				input += "\ntext(await tools.exec_command({cmd:\"Set-Content changed.png changed\"}));"
+			}
+			call := mustNativeJSON(map[string]any{"type": "response_item", "payload": map[string]any{"type": "custom_tool_call", "name": "exec", "call_id": "copy", "input": input}})
 			hash := e.Images[1].SHA
 			if kind == "different-receipt" {
 				hash = strings.Repeat("a", 64)

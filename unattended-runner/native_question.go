@@ -89,15 +89,16 @@ type nativeQuestionProof struct {
 	EvidenceSHA string                 `json:"evidence_sha256"`
 }
 type nativeQuestionDeps struct {
-	Sessions   string
-	Now        func() time.Time
-	Read       func(string, int64) ([]byte, error)
-	Records    func(string, []nativeQuestionEvent) ([]json.RawMessage, error)
-	Bind       func(context.Context, nativeQuestionEvidence, json.RawMessage) error
-	Content    func(nativeQuestionEvidence, []byte, []byte) error
-	Capture    func(nativeQuestionEvidence) error
-	ImageGuard func(context.Context, string, bool) error
-	Clear      func(string) bool
+	Sessions    string
+	Now         func() time.Time
+	Read        func(string, int64) ([]byte, error)
+	Records     func(string, []nativeQuestionEvent) ([]json.RawMessage, error)
+	Bind        func(context.Context, nativeQuestionEvidence, json.RawMessage) error
+	Content     func(nativeQuestionEvidence, []byte, []byte) error
+	Capture     func(nativeQuestionEvidence) error
+	ImageGuard  func(context.Context, string, bool) error
+	Association func(nativeQuestionEvidence) error
+	Clear       func(string) bool
 }
 type nativeQuestionRecord struct {
 	Timestamp time.Time `json:"timestamp"`
@@ -243,7 +244,7 @@ func validateNativeQuestion(ctx context.Context, e nativeQuestionEvidence, d nat
 	bad := func() (nativeQuestionProof, error) {
 		return nativeQuestionProof{}, generatedFailure(stage, "native_evidence_unqualified")
 	}
-	if d.Now == nil || d.Read == nil || d.Records == nil || d.Bind == nil || d.Content == nil || d.Capture == nil || d.ImageGuard == nil || d.Clear == nil || ctx.Err() != nil || e.Domain != nativeEvidenceDomain || !conversationID.MatchString(e.Request) || !validJob(e.Job) || !generatedUUID.MatchString(e.Session) || !shaPattern.MatchString(e.SessionSHA) || !generatedWithin(d.Sessions, e.Rollout) || !strings.HasSuffix(e.Rollout, "-"+e.Session+".jsonl") || e.Scope.Todo == 0 || len(e.Images) == 0 || len(e.Images) > 10 || len(e.ContentReview) < 16 || len(e.ContentReview) > 4096 {
+	if d.Now == nil || d.Read == nil || d.Records == nil || d.Bind == nil || d.Content == nil || d.Capture == nil || d.ImageGuard == nil || d.Association == nil || d.Clear == nil || ctx.Err() != nil || e.Domain != nativeEvidenceDomain || !conversationID.MatchString(e.Request) || !validJob(e.Job) || !generatedUUID.MatchString(e.Session) || !shaPattern.MatchString(e.SessionSHA) || !generatedWithin(d.Sessions, e.Rollout) || !strings.HasSuffix(e.Rollout, "-"+e.Session+".jsonl") || e.Scope.Todo == 0 || len(e.Images) == 0 || len(e.Images) > 10 || len(e.ContentReview) < 16 || len(e.ContentReview) > 4096 {
 		return bad()
 	}
 	for _, id := range []string{e.Origin, e.Scope.Owner, e.Scope.Guild, e.Scope.Forum} {
@@ -331,6 +332,9 @@ func validateNativeQuestion(ctx context.Context, e nativeQuestionEvidence, d nat
 		return bad()
 	}
 	stage = "async_association"
+	if d.Association(e) != nil {
+		return bad()
+	}
 	if r[3].Payload.Type != "function_call" || r[3].Payload.Name != "request_user_input_async" || r[4].Payload.Type != "function_call_output" || r[3].Payload.Call == "" || r[4].Payload.Call != r[3].Payload.Call {
 		return bad()
 	}
@@ -388,7 +392,10 @@ func validateNativeQuestion(ctx context.Context, e nativeQuestionEvidence, d nat
 		return bad()
 	}
 	stage = "current_origin"
-	if d.Bind(ctx, e, records[0]) != nil || ctx.Err() != nil {
+	if err := d.Bind(ctx, e, records[0]); err != nil {
+		return nativeQuestionProof{}, err
+	}
+	if ctx.Err() != nil {
 		return bad()
 	}
 	stage = "current_image"

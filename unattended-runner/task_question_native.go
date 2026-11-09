@@ -9,7 +9,6 @@ import (
 	"regexp"
 	"strings"
 	"time"
-	"unicode"
 )
 
 type taskQuestionTurn struct {
@@ -154,11 +153,14 @@ func taskQuestionNative(e taskQuestionEvidence, state taskQuestionState, records
 }
 
 func taskQuestionRepositoryURL(text, fullName string) bool {
-	// Split prose/Markdown delimiters first, then parse the whole URL. A GitHub
-	// spelling embedded in another host's URL is not a repository request.
-	for _, token := range strings.FieldsFunc(text, func(r rune) bool {
-		return unicode.IsSpace(r) || strings.ContainsRune("[]()\"'<>`", r)
-	}) {
+	// Preserve each whitespace-delimited URL in full, including quotes or
+	// parentheses inside a foreign URL. Only unwrap a Markdown link prefix
+	// when that prefix is not itself part of another URL.
+	for _, token := range strings.Fields(text) {
+		if at := strings.Index(token, "]("); at >= 0 && !strings.Contains(token[:at], "://") {
+			token = token[at+2:]
+		}
+		token = strings.Trim(token, "[]()\"'<>`")
 		found, err := url.Parse(token)
 		if err == nil && found.Scheme == "https" && found.Host == "github.com" && found.User == nil && found.Path == "/"+fullName && found.RawPath == "" && found.RawQuery == "" && found.Fragment == "" {
 			return true

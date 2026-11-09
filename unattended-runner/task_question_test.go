@@ -485,6 +485,8 @@ func TestTaskQuestionRepositoryRequiresWholeCanonicalURL(t *testing.T) {
 	}
 	for _, text := range []string{
 		"https://evil.example/https://github.com/AutoDevJapan/Example",
+		"https://evil.example/?q='https://github.com/AutoDevJapan/Example'",
+		"https://evil.example/(https://github.com/AutoDevJapan/Example)",
 		"xhttps://github.com/AutoDevJapan/Example",
 		"https://github.com.evil.example/AutoDevJapan/Example",
 		"https://github.com@evil.example/AutoDevJapan/Example",

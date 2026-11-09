@@ -476,3 +476,28 @@ func TestTaskQuestionNormalBridgeSnapshotAndPreSendChanges(t *testing.T) {
 		})
 	}
 }
+
+func TestTaskQuestionRepositoryRequiresWholeCanonicalURL(t *testing.T) {
+	for _, text := range []string{"https://github.com/AutoDevJapan/Example", "Please maintain [Example](https://github.com/AutoDevJapan/Example \"Example\")"} {
+		if !taskQuestionRepositoryURL(text, "AutoDevJapan/Example") {
+			t.Fatal("canonical requested URL rejected")
+		}
+	}
+	for _, text := range []string{
+		"https://evil.example/https://github.com/AutoDevJapan/Example",
+		"xhttps://github.com/AutoDevJapan/Example",
+		"https://github.com.evil.example/AutoDevJapan/Example",
+		"https://github.com@evil.example/AutoDevJapan/Example",
+		"https://evil@github.com/AutoDevJapan/Example",
+		"https://github.com/AutoDevJapan/Example-extra",
+		"https://github.com/AutoDevJapan/Example/other",
+		"https://github.com/AutoDevJapan/Example?next=other",
+		"https://github.com/AutoDevJapan/Example#other",
+		"https://github.com/AutoDevJapan%2fExample",
+		"http://github.com/AutoDevJapan/Example",
+	} {
+		if taskQuestionRepositoryURL(text, "AutoDevJapan/Example") {
+			t.Fatal("partial or foreign URL accepted")
+		}
+	}
+}

@@ -9,6 +9,7 @@ import (
 	"regexp"
 	"strings"
 	"time"
+	"unicode"
 )
 
 type taskQuestionTurn struct {
@@ -153,9 +154,13 @@ func taskQuestionNative(e taskQuestionEvidence, state taskQuestionState, records
 }
 
 func taskQuestionRepositoryURL(text, fullName string) bool {
-	pattern := regexp.MustCompile(`https://github\.com/[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+`)
-	for _, found := range pattern.FindAllString(text, -1) {
-		if found == "https://github.com/"+fullName {
+	// Split prose/Markdown delimiters first, then parse the whole URL. A GitHub
+	// spelling embedded in another host's URL is not a repository request.
+	for _, token := range strings.FieldsFunc(text, func(r rune) bool {
+		return unicode.IsSpace(r) || strings.ContainsRune("[]()\"'<>`", r)
+	}) {
+		found, err := url.Parse(token)
+		if err == nil && found.Scheme == "https" && found.Host == "github.com" && found.User == nil && found.Path == "/"+fullName && found.RawPath == "" && found.RawQuery == "" && found.Fragment == "" {
 			return true
 		}
 	}

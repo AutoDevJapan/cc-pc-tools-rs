@@ -465,3 +465,24 @@ func TestConversationReceiverRecoversSavedAnswerStateWithoutAnotherTodoWrite(t *
 		t.Fatal("existing canonical recovery was lost or counted as new delivery", h)
 	}
 }
+
+func TestConversationReceiverRecoversSecondReplyDeliveryOnlyState(t *testing.T) {
+	f := conversationTest(t, true)
+	f.ask(t)
+	f.reply(t, 8, "a")
+	f.r.conversationReceiverTick(context.Background())
+	reply := f.reply(t, 9, "同じ質問への二件目の回答全文")
+	f.r.conversationReceiverTick(context.Background())
+	row, err := f.r.todo(42)
+	if err != nil || len(row.QuestionDeliveries) != 1 {
+		t.Fatal("fixture did not record the second delivery-only answer", err)
+	}
+	req := f.r.State.Requests[reply.Message]
+	req.Phase, req.Todo = "conversation_reply_saved", 0
+	before, _ := os.ReadFile(f.r.TodoPath)
+	h := receiverHealth(f.r.conversationReceiverTick(context.Background()))
+	after, _ := os.ReadFile(f.r.TodoPath)
+	if len(h.Errors) != 0 || h.Processed != 0 || h.Recovered != 1 || req.Phase != "conversation_reply_delivered" || req.Todo != 42 || string(before) != string(after) {
+		t.Fatal("delivery-only receipt recovery counted as new delivery or changed ToDo", h)
+	}
+}

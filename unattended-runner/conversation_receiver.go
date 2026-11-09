@@ -186,6 +186,15 @@ func (r *Runner) conversationReceiverAnswered(ctx context.Context, row *TodoRow,
 		return false
 	}
 	expected := conversationAnswerReceipt{Domain: "discord-conversation-answer-v1", RequestID: q.SenderID, Todo: fmt.Sprint(q.Todo), Thread: q.Thread, Question: q.Message, Fingerprint: q.Fingerprint, QuestionSHA: q.ReceiptSHA, Message: reply.Message, Author: reply.Author, Source: "discord-api-v10", ReplySHA: stamp.ReplySHA, Acquired: req.Acquired, ReceiptSHA: stamp.SourceSHA}
+	// Follow-up answers use the existing delivery-only receipt namespace.
+	// Reuse its exact envelope/byte-hash check, just as delivery recovery does.
+	input, err := json.MarshalIndent(expected, "", "  ")
+	if err != nil {
+		return false
+	}
+	if conversationDeliveryRecorded(row, q, expected, input) {
+		return true
+	}
 	matched := 0
 	for _, raw := range row.QuestionAnswers {
 		var record struct {

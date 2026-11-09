@@ -166,11 +166,21 @@ func validateGeneratedQuestionNative(records []json.RawMessage, s generatedQuest
 			continue
 		}
 		count++
-		if i+1 >= len(blocks) || blocks[i+1].Type != "input_text" || !strings.HasPrefix(block.URL, "data:image/png;base64,") {
+		if i+1 >= len(blocks) || blocks[i+1].Type != "input_text" {
 			return errConversationMedia
 		}
-		data, err := base64.StdEncoding.DecodeString(strings.TrimPrefix(block.URL, "data:image/png;base64,"))
+		// The native tool result carries the original file bytes. Some image
+		// providers return JPEG data under the same exec-*.png name, so the declared
+		// type must be PNG or JPEG and must agree with the decoded magic bytes.
+		declared, payload, ok := strings.Cut(block.URL, ";base64,")
+		if !ok || (declared != "data:image/png" && declared != "data:image/jpeg") {
+			return errConversationMedia
+		}
+		data, err := base64.StdEncoding.DecodeString(payload)
 		if err != nil || int64(len(data)) > conversationMediaLimit {
+			return errConversationMedia
+		}
+		if mime, _, magicErr := conversationMediaMagic(data); magicErr != nil || declared != "data:"+mime {
 			return errConversationMedia
 		}
 		found := false

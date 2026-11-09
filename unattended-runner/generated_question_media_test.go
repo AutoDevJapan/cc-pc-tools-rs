@@ -26,12 +26,16 @@ func generatedFixture(t *testing.T) (generatedQuestionSpec, string) {
 
 func generatedFixtureAt(t *testing.T, root string, todo uint64, session string) (generatedQuestionSpec, string) {
 	t.Helper()
+	return generatedFixtureWithImage(t, root, todo, session, []byte("\x89PNG\r\n\x1a\nnew-generated-image"), "image/png")
+}
+
+func generatedFixtureWithImage(t *testing.T, root string, todo uint64, session string, data []byte, declared string) (generatedQuestionSpec, string) {
+	t.Helper()
 	var err error
 	image := filepath.Join(root, "generated_images", session, "exec-01234567-0123-0123-0123-012345678902.png")
 	if err = os.MkdirAll(filepath.Dir(image), 0700); err != nil {
 		t.Fatal(err)
 	}
-	data := []byte("\x89PNG\r\n\x1a\nnew-generated-image")
 	if err = os.WriteFile(image, data, 0600); err != nil {
 		t.Fatal(err)
 	}
@@ -80,7 +84,7 @@ func generatedFixtureAt(t *testing.T, root string, todo uint64, session string) 
 			payload["arguments"] = `{"cell_id":"25"}`
 		}
 		if i == 3 {
-			payload["output"] = []any{map[string]any{"type": "input_image", "image_url": "data:image/png;base64," + base64.StdEncoding.EncodeToString(data)}, map[string]any{"type": "input_text", "text": "Generated images are saved to " + filepath.Dir(image) + " as " + image + " by default.\n"}}
+			payload["output"] = []any{map[string]any{"type": "input_image", "image_url": "data:" + declared + ";base64," + base64.StdEncoding.EncodeToString(data)}, map[string]any{"type": "input_text", "text": "Generated images are saved to " + filepath.Dir(image) + " as " + image + " by default.\n"}}
 		}
 		raw, _ := json.Marshal(map[string]any{"type": "response_item", "timestamp": created.Add(time.Duration(i) * time.Second), "payload": payload})
 		s.Events = append(s.Events, generatedEventBound{i + 3, bytesHash(raw), kind, names[i], calls[i]})
@@ -215,5 +219,52 @@ func TestGeneratedQuestionQualificationFlowsThroughMediaVerifierButCannotBeUsedF
 	deps.Question = &q
 	if _, err = verifyConversationMedia(context.Background(), image, "conversation-v1-"+strings.Repeat("a", 32), deps); err == nil {
 		t.Fatal("qualification was reused for another original task")
+	}
+}
+
+func TestGeneratedQuestionAcceptsProviderJPEGOnlyWhenNativeBytesAndTypeAgree(t *testing.T) {
+	jpeg := []byte("\xff\xd8\xff\xe0\x00\x10JFIFnew-generated-image")
+	png := []byte("\x89PNG\r\n\x1a\nnew-generated-image")
+	for _, tc := range []struct {
+		name     string
+		data     []byte
+		declared string
+		accepted bool
+		mime     string
+		ext      string
+	}{
+		{"jpeg bytes with jpeg type", jpeg, "image/jpeg", true, "image/jpeg", "jpg"},
+		{"png bytes with png type", png, "image/png", true, "image/png", "png"},
+		{"jpeg bytes declared png", jpeg, "image/png", false, "", ""},
+		{"png bytes declared jpeg", png, "image/jpeg", false, "", ""},
+		{"gif bytes declared jpeg", []byte("GIF89anew-generated-image"), "image/jpeg", false, "", ""},
+		{"gif bytes declared gif", []byte("GIF89anew-generated-image"), "image/gif", false, "", ""},
+		{"unknown bytes declared jpeg", []byte("not an image"), "image/jpeg", false, "", ""},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			root, err := filepath.EvalSymlinks(t.TempDir())
+			if err != nil {
+				t.Fatal(err)
+			}
+			s, image := generatedFixtureWithImage(t, root, 3084, "01234567-0123-0123-0123-012345678901", tc.data, tc.declared)
+			p, err := qualifyGeneratedQuestionImage(context.Background(), image, s.Scope, s)
+			if tc.accepted != (err == nil) {
+				t.Fatalf("accepted=%v err=%v", tc.accepted, err)
+			}
+			if tc.accepted && (p.MIME != tc.mime || p.Extension != tc.ext || p.SHA256 != bytesHash(tc.data) || p.Size != int64(len(tc.data))) {
+				t.Fatalf("wrong qualification: %+v", p)
+			}
+		})
+	}
+	root, err := filepath.EvalSymlinks(t.TempDir())
+	if err != nil {
+		t.Fatal(err)
+	}
+	s, image := generatedFixtureWithImage(t, root, 3084, "01234567-0123-0123-0123-012345678901", jpeg, "image/jpeg")
+	if err = os.WriteFile(image, append(append([]byte{}, jpeg...), 0), 0600); err != nil {
+		t.Fatal(err)
+	}
+	if _, err = qualifyGeneratedQuestionImage(context.Background(), image, s.Scope, s); err == nil {
+		t.Fatal("changed JPEG original qualified")
 	}
 }

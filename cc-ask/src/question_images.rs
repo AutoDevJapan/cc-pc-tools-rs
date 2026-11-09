@@ -87,8 +87,10 @@ impl Qualification {
                 .all(|b| b.is_ascii_hexdigit() && !b.is_ascii_uppercase())
             && self.size > 0
             && self.size <= 10 * 1024 * 1024
-            && self.mime == "image/png"
-            && self.extension == "png"
+            && matches!(
+                (self.mime.as_str(), self.extension.as_str()),
+                ("image/png", "png") | ("image/jpeg", "jpg")
+            )
     }
 }
 
@@ -114,4 +116,45 @@ pub(crate) fn preflight(
         return Err(FAILED.into());
     };
     Ok(proof)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn qualification(mime: &str, extension: &str) -> (Scope, Qualification) {
+        let scope = Scope {
+            todo_id: 4431,
+            question_sha256: "a".repeat(64),
+            decision_sha256: "b".repeat(64),
+            owner_id: "1".into(),
+            guild_id: "2".into(),
+            forum_id: "3".into(),
+        };
+        let qualification = Qualification {
+            domain: "owner-generated-question-image-v1".into(),
+            qualified: true,
+            scope: scope.clone(),
+            sha256: "c".repeat(64),
+            size: 1024,
+            mime: mime.into(),
+            extension: extension.into(),
+        };
+        (scope, qualification)
+    }
+
+    #[test]
+    fn qualification_accepts_only_matching_png_or_jpeg_pairs() {
+        for (mime, extension, accepted) in [
+            ("image/png", "png", true),
+            ("image/jpeg", "jpg", true),
+            ("image/png", "jpg", false),
+            ("image/jpeg", "png", false),
+            ("image/gif", "gif", false),
+            ("image/webp", "webp", false),
+        ] {
+            let (scope, qualification) = qualification(mime, extension);
+            assert_eq!(qualification.matches(&scope), accepted, "{mime} {extension}");
+        }
+    }
 }

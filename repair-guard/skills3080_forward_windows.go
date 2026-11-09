@@ -165,7 +165,7 @@ func skillsIssueCreated(r skillsRequest, requestSHA string, m skillsManifest, ro
 }
 
 func skillsCreatedBound(e skillsCreatedEvidence, creation skillsRequest, sha string, m skillsManifest, producer skillsProducer) bool {
-	if e.NativeContract != "" && e.NativeContract != skillsHiddenNativeContract {
+	if e.NativeContract != "" && !skillsKnownHiddenContract(e.NativeContract) {
 		return false
 	}
 	if m.publicV2 {

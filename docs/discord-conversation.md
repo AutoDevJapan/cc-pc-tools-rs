@@ -191,6 +191,10 @@ Goから渡された期待SHAと異なればHTTP送信前に拒否する。
 
 ### 新しく生成した確認画像の送信資格
 
+原Playwright実行・native preview・既存async受付へ結び付いた未送信質問のcheck/stageは、
+別用途の[native question recovery](native-question-recovery.md)を使う。
+この保存操作は画像送信やUI承認を意味せず、一般の保護分類を変更しない。
+
 一般の `scrub391 --guard-path` の未分類結果は変更しない。
 通常の[用途別証拠登録](generated-question-evidence.md)で、元imagegen session・実ツールイベントのSHA・
 元出力パス・生成記録と入力promptのSHA・画像SHA/サイズを質問ごとに照合する。

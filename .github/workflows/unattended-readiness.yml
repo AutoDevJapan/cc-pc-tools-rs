@@ -25,14 +25,14 @@ jobs:
           - os: Linux
             labels: [self-hosted, Linux, X64, cc-pc-tools-linux]
         module: [resident-guard, capacity-audit-3h, unattended-runner, tools/linux-runner-bridge]
-    runs-on: ${{ matrix.labels }}
+    runs-on: ${{ toJSON(github.event.repository.private) == 'false' && (matrix.os == 'Windows' && 'windows-2025' || 'ubuntu-24.04') || fromJSON(toJSON(matrix.labels)) }}
     timeout-minutes: 10
     defaults:
       run:
         working-directory: ${{ matrix.module }}
     steps:
       - name: Admit current Windows source before checkout
-        if: runner.os == 'Windows'
+        if: runner.os == 'Windows' && runner.environment == 'self-hosted'
         env:
           CI_JOB_TOKEN: ${{ github.token }}
         working-directory: ${{ runner.temp }}
@@ -40,6 +40,20 @@ jobs:
         run: |
           & $env:PC_CI_ADMISSION admit
           exit $LASTEXITCODE
+      - name: Admit current hosted source before checkout
+        if: runner.environment == 'github-hosted'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          CI_REPOSITORY: ${{ github.repository }}
+          CI_BRANCH: ${{ github.head_ref || github.ref_name }}
+          CI_SOURCE_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+        shell: pwsh
+        working-directory: ${{ runner.temp }}
+        run: |
+          $branch = [Uri]::EscapeDataString($env:CI_BRANCH)
+          $current = & gh api --method GET "repos/$env:CI_REPOSITORY/git/ref/heads/$branch" --jq '.object.sha'
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          if ($current.Trim() -ne $env:CI_SOURCE_SHA) { throw 'Source revision is no longer current' }
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:
           ref: ${{ github.event.pull_request.head.sha || github.sha }}
@@ -65,7 +79,7 @@ jobs:
       - run: go build -trimpath .
   repair-guard:
     if: github.repository == 'AutoDevJapan/cc-pc-tools-rs' && (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository)
-    runs-on: [self-hosted, Windows, X64, cc-pc-tools-windows]
+    runs-on: ${{ toJSON(github.event.repository.private) == 'false' && 'windows-2025' || fromJSON('["self-hosted","Windows","X64","cc-pc-tools-windows"]') }}
     # The expanded guard suite includes 333 top-level tests and serial real-Git
     # lineage checks (one seven-product group takes several minutes). A 10m
     # job canceled it while tests were still progressing, before Go could emit
@@ -76,6 +90,7 @@ jobs:
         working-directory: repair-guard
     steps:
       - name: Admit current Windows source before checkout
+        if: runner.environment == 'self-hosted'
         env:
           CI_JOB_TOKEN: ${{ github.token }}
         working-directory: ${{ runner.temp }}
@@ -83,6 +98,20 @@ jobs:
         run: |
           & $env:PC_CI_ADMISSION admit
           exit $LASTEXITCODE
+      - name: Admit current hosted source before checkout
+        if: runner.environment == 'github-hosted'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          CI_REPOSITORY: ${{ github.repository }}
+          CI_BRANCH: ${{ github.head_ref || github.ref_name }}
+          CI_SOURCE_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+        shell: pwsh
+        working-directory: ${{ runner.temp }}
+        run: |
+          $branch = [Uri]::EscapeDataString($env:CI_BRANCH)
+          $current = & gh api --method GET "repos/$env:CI_REPOSITORY/git/ref/heads/$branch" --jq '.object.sha'
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          if ($current.Trim() -ne $env:CI_SOURCE_SHA) { throw 'Source revision is no longer current' }
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:
           ref: ${{ github.event.pull_request.head.sha || github.sha }}

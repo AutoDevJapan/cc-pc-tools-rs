@@ -974,6 +974,9 @@ func (r *Runner) recheckOriginBlocked(ctx context.Context, health *Health) {
 }
 
 func main() {
+	if len(os.Args) > 1 && os.Args[1] == "--check-native-question-evidence" {
+		os.Exit(nativeQuestionCLIWithDeps(os.Args[2:], os.Stdout, nativeQuestionProduction()))
+	}
 	if len(os.Args) > 1 && os.Args[1] == "conversation-receiver-tick" {
 		os.Exit(conversationReceiverCLI(os.Args[2:], os.Stdout))
 	}

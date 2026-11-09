@@ -102,7 +102,7 @@ func TestConversationOriginReferenceProductionContractIsFinite(t *testing.T) {
 }
 
 func TestConversationSenderFailureProtocolDoesNotExposeRawDiagnostics(t *testing.T) {
-	for _, stage := range []string{"origin_scope", "source_scope", "busy", "network", "rate_limited", "deadline"} {
+	for _, stage := range []string{"origin_scope", "source_scope", "busy", "network", "rate_limited", "deadline", "image_qualification"} {
 		b, _ := json.Marshal(map[string]string{"domain": "new-owner-recovery-messages", "delivery": "not_verified", "failure_stage": stage})
 		if err := conversationSenderFailure(string(b)); err == nil || conversationFailureStage(err) != "sender_"+stage {
 			t.Fatal("fixed sender cause collapsed", stage, err)

@@ -72,6 +72,13 @@ func skillsCreationInvocationContract(input, path, workspace string) (string, bo
 		cmd.Cmd, cmd.Workdir = expected.Cmd, expected.Workdir
 		return skillsHiddenNativeContract, cmd == expected
 	}
+	if skillsPreviousHiddenForwardMatches(cmd.Cmd, path, workspace) {
+		if !skillsCreationPathEqual(cmd.Workdir, workspace) {
+			return "", false
+		}
+		cmd.Cmd, cmd.Workdir = expected.Cmd, expected.Workdir
+		return skillsPreviousHiddenNativeContract, cmd == expected
+	}
 	expected = skillsLegacyForwardCommand(path, workspace)
 	// Keep the executable, flag, quoting and every tool option exact. Only the
 	// quoted request path and workdir can contain repeated Windows separators.
@@ -316,7 +323,7 @@ func skillsCreationNativeProjection(input io.Reader, thread, cwd string, start, 
 			// The issuing runtime fixes the expected invocation version in its
 			// original private result. Old direct calls remain readable only
 			// for old unversioned evidence, never a new hidden-contract issue.
-			if evidence.NativeContract != "" && (evidence.NativeContract != skillsHiddenNativeContract || callContract != evidence.NativeContract) {
+			if evidence.NativeContract != "" && (!skillsKnownHiddenContract(evidence.NativeContract) || callContract != evidence.NativeContract) {
 				return evidence, false
 			}
 			returned = true

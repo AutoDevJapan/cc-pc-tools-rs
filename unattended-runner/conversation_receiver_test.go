@@ -289,3 +289,80 @@ func TestConversationReceiverRetriesFailedMediaWithoutRedeliveringAnswer(t *test
 		t.Fatal("accepted attachment information was duplicated or closed the question", h)
 	}
 }
+
+func TestConversationReceiverKnownTaskHoldsAreNotFailures(t *testing.T) {
+	for _, mode := range []string{"done", "owner-stop", "readiness-wait"} {
+		t.Run(mode, func(t *testing.T) {
+			f, reply, _, _ := ownerReplyMediaFixture(t, true)
+			f.mutateTodo(t, func(row map[string]any) {
+				switch mode {
+				case "done":
+					row["status"] = "done"
+				case "owner-stop":
+					row["owner_stopped"] = true
+				case "readiness-wait":
+					row["status"] = "wait"
+					row["wait_ready"] = map[string]any{"next_at": "2026-10-14T00:00:00Z"}
+				}
+			})
+			before, _ := os.ReadFile(f.r.TodoPath)
+			source := filepath.Join(f.r.Config.Home, "conversations", f.q.RequestID, "replies", reply.Message+".json")
+			original, err := os.ReadFile(source)
+			if err != nil {
+				t.Fatal(err)
+			}
+			base := f.r.Run
+			f.r.Run = func(ctx context.Context, path string, args ...string) (string, error) {
+				if path == conversationTodo {
+					t.Fatal("known hold was mutated", args)
+				}
+				return base(ctx, path, args...)
+			}
+			var out strings.Builder
+			code := conversationReceiverCLIWith(nil, &out, func() (*Runner, func(), error) { return f.r, func() {}, nil })
+			var h Health
+			after, _ := os.ReadFile(f.r.TodoPath)
+			saved, _ := os.ReadFile(source)
+			if code != 0 || json.Unmarshal([]byte(out.String()), &h) != nil || len(h.Errors) != 0 || h.ReceiverDeliveryHeld != 1 || h.ConversationReplies != 0 || string(before) != string(after) || string(original) != string(saved) {
+				t.Fatal("a known task hold was reported as failure or lost its source", code, out.String())
+			}
+		})
+	}
+}
+
+func TestConversationReceiverUnknownScopeOrSourceStillFails(t *testing.T) {
+	for _, mode := range []string{"scope", "source", "recovery-unverified", "done-unknown-source", "stopped-unknown-source"} {
+		t.Run(mode, func(t *testing.T) {
+			f, _, req, _ := ownerReplyMediaFixture(t, true)
+			switch mode {
+			case "scope":
+				f.deny = true
+			case "source":
+				req.Phase, req.Todo = "conversation_source_verified", 0
+				f.mutateTodo(t, func(row map[string]any) { delete(row, "owner_question_answer_receipts") })
+			case "recovery-unverified":
+				f.mutateTodo(t, func(row map[string]any) { row["status"] = "recovery_unverified" })
+			case "done-unknown-source", "stopped-unknown-source":
+				f.mutateTodo(t, func(row map[string]any) {
+					if mode == "done-unknown-source" {
+						row["status"] = "done"
+					} else {
+						row["owner_stopped"] = true
+					}
+				})
+				path := filepath.Join(f.r.Config.Home, "conversations", f.q.RequestID, "replies", req.Message+".json")
+				if err := os.WriteFile(path, []byte(`{"source":"invalid"}`), 0600); err != nil {
+					t.Fatal(err)
+				}
+			}
+			before, _ := os.ReadFile(f.r.TodoPath)
+			var out strings.Builder
+			code := conversationReceiverCLIWith(nil, &out, func() (*Runner, func(), error) { return f.r, func() {}, nil })
+			var h Health
+			after, _ := os.ReadFile(f.r.TodoPath)
+			if code != 1 || json.Unmarshal([]byte(out.String()), &h) != nil || len(h.Errors) == 0 || string(before) != string(after) {
+				t.Fatal("unknown scope/source was hidden as an intentional hold", code, out.String())
+			}
+		})
+	}
+}

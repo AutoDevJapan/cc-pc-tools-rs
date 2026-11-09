@@ -88,7 +88,23 @@ func (r *Runner) conversationReceiverDelivery(ctx context.Context, q Conversatio
 		h.ReceiverAlreadyAnswered++
 		return false, nil
 	}
-	if row.Status == "done" || row.Status == "recovery_unverified" || conversationActorHeld(row.conversationState) || (req.Phase == "conversation_source_verified" && req.Todo == 0) {
+	if row.Status == "recovery_unverified" {
+		h.ReceiverDeliveryHeld++
+		return false, errors.New("receiver task recovery unverified")
+	}
+	if row.Status == "done" || conversationActorHeld(row.conversationState) {
+		// Holding an explicitly stopped/completed task is a normal outcome,
+		// not a recurring technical failure. Still verify its current source:
+		// an unknown or changed acquisition must not inherit a healthy skip.
+		_, ready, err := r.conversationReplySource(ctx, q, proof, reply)
+		if err != nil || !ready {
+			h.ReceiverDeliveryHeld++
+			return false, errors.New("receiver held source unverified")
+		}
+		h.ReceiverDeliveryHeld++
+		return false, nil
+	}
+	if req.Phase == "conversation_source_verified" && req.Todo == 0 {
 		h.ReceiverDeliveryHeld++
 		return false, errors.New("receiver retains source without task mutation")
 	}

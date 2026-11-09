@@ -13,6 +13,9 @@ discord_ask.exe ask ... --body-file <body> --decision-file <decision> --attach <
 最初のコマンドは原証拠の読取検証だけを行う。次のコマンドが用途別の資格データを登録する。
 通常のaskは登録を元pathと質問scopeで引き、同じ原証拠を再検証する。
 新しい画像にも同じコマンドと形式を使う。画像ごとのコード追加・ビルド・配布は不要。
+通常askで添付するときのdecision-fileには、通常の`todo_id`/`decision`/`resources`/`scope`に加えて、
+設定済みの`owner`・`guild`・`parent`（質問forum）のIDを含める。askはこれらから質問scopeを作り、
+decisionの正規JSONのSHAとして証拠に結ぶ。含まれない場合は用途資格を引けず、画像は送信されない。
 質問本文やdecisionを変える場合は、新しいscopeの証拠を検証して登録し直す。
 
 停止した段階を調べるときは、同じcheckに`--diagnostic`を付ける。
@@ -65,7 +68,11 @@ guard未成立を、実際の顧客内容の検出や、後続の`fictional_data
   requestはpromptと任意のtransparent_background、inputImagesは空とする。参照画像や既存原本は対象外。
 - `events`: 実行call/resultと、非同期の場合のwait call/resultの行番号・SHA・kind・name・call_id。
   `exec_cell_id`も指定する。原rollout内の対応、実行時刻、imagegen呼出しを照合する。
-  結果にあるPNGのdata URLと出力hintの元pathを解析し、元画像の全バイトのSHA・サイズと一致させる。
+  結果にあるPNGまたはJPEGのdata URLと出力hintの元pathを解析し、元画像の全バイトのSHA・サイズと一致させる。
+  画像providerによっては、元の`exec-*.png`名のファイルがJPEGバイトのことがある。data URLの宣言型は
+  PNG/JPEGのどちらかで、復号したバイトのmagicと一致しなければ拒否する。資格のMIMEは元バイトのmagicから
+  `image/png`/`png`または`image/jpeg`/`jpg`となり、送信側も同じ組だけを受け付ける。
+  JPEGを受け付けても、原バイト全体の一致、他の画像形式の拒否、コピー先・差替の拒否は変わらない。
   execの文字列にimagegenがあるだけでは許可しない。許可した構文を解析し、実tool戻り値だけが
   generatedImageへ渡ることを確認する。画像の差替・別load結果・組み込み関数の差替は拒否する。
   元rolloutは最大256MiB、1行36MiBまで読む。上限を超えた場合も分類を緩和しない。

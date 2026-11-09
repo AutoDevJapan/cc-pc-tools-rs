@@ -291,7 +291,7 @@ func qualifyGeneratedQuestionImage(ctx context.Context, path string, scope gener
 		return nil, errConversationMedia
 	}
 	mime, ext, err := conversationMediaMagic(b)
-	if err != nil || mime != "image/png" {
+	if err != nil || (mime != "image/png" && mime != "image/jpeg") {
 		return nil, errConversationMedia
 	}
 	return &generatedImageQualification{generatedQuestionDomain, true, scope, image.SHA256, image.Size, mime, ext}, nil

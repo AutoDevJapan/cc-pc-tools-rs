@@ -433,6 +433,8 @@ func conversationFailureStage(err error) string {
 		return "sender_origin_scope"
 	case "conversation sender source_scope":
 		return "sender_source_scope"
+	case "conversation sender image_qualification":
+		return "sender_image_qualification"
 	case "conversation sender busy":
 		return "sender_busy"
 	case "conversation sender network":

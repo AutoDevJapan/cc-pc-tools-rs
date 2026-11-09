@@ -37,7 +37,9 @@ const LOCK: &str = "recovery-messages.lock";
 const DOMAIN: &str = "new-owner-recovery-messages";
 
 mod decision_lookup;
+mod native_question;
 pub use decision_lookup::lookup_decision;
+pub use native_question::{check_native_intent, NativeIntentArgs};
 const EMBEDS: u64 = 4;
 const TEXT_BYTES: usize = 128 * 1024;
 const LEDGER_BYTES: usize = 32 * 1024 * 1024;
@@ -798,6 +800,8 @@ struct Request {
     /// Retained on the original intent, including retries that omit the flag.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     program_evidence: Option<PathBuf>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    native_evidence: Option<PathBuf>,
     operation: Kind,
     fingerprint: String,
 }
@@ -878,6 +882,13 @@ struct Reply {
 enum Event {
     Intent {
         request: Box<Request>,
+    },
+    /// Current append-only recovery evidence; never a historical POST receipt.
+    NativeAssociation {
+        request_id: String,
+        fingerprint: String,
+        evidence_sha256: String,
+        async_call_id: String,
     },
     /// Only an unsent question's mistaken question-thread origin can be moved
     /// to that exact question's already verified silent progress thread.
@@ -972,8 +983,12 @@ impl Ledger {
     }
 
     fn append(&mut self, home: &Path, event: Event) -> Result<()> {
+        self.append_all(home, vec![event])
+    }
+
+    fn append_all(&mut self, home: &Path, events: Vec<Event>) -> Result<()> {
         ensure_storage(home)?;
-        self.events.push(event);
+        self.events.extend(events);
         self.validate()?;
         let bytes =
             serde_json::to_vec_pretty(self).map_err(|_| "cannot encode recovery receipt")?;
@@ -1106,6 +1121,7 @@ impl Ledger {
         let mut verified: BTreeMap<(String, String), &Receipt> = BTreeMap::new();
         let mut complete = BTreeMap::new();
         let mut origin_repairs = BTreeMap::new();
+        let mut native_associations = BTreeMap::new();
         for event in &self.events {
             match event {
                 Event::Intent { request } => {
@@ -1117,6 +1133,31 @@ impl Ledger {
                         || aliases.contains_key(&request.request_id)
                     {
                         return Err("invalid or duplicate recovery intent".into());
+                    }
+                }
+                Event::NativeAssociation {
+                    request_id,
+                    fingerprint,
+                    evidence_sha256,
+                    async_call_id,
+                } => {
+                    let request = requests
+                        .get(request_id)
+                        .ok_or("native association has no intent")?;
+                    if request.native_evidence.is_none()
+                        || request.fingerprint != *fingerprint
+                        || evidence_sha256.len() != 64
+                        || !evidence_sha256
+                            .bytes()
+                            .all(|b| b.is_ascii_hexdigit() && !b.is_ascii_uppercase())
+                        || async_call_id.is_empty()
+                        || async_call_id.len() > 128
+                        || native_associations
+                            .insert(request_id.clone(), true)
+                            .is_some()
+                        || phases.keys().any(|(id, _)| id == request_id)
+                    {
+                        return Err("native association changed or follows a possible POST".into());
                     }
                 }
                 Event::OriginCorrected { request } => {
@@ -1255,7 +1296,10 @@ impl Ledger {
                     phase,
                     effect,
                 } => {
-                    if !bots.contains_key(request_id)
+                    if requests
+                        .get(request_id)
+                        .is_some_and(|r| r.native_evidence.is_some())
+                        || !bots.contains_key(request_id)
                         || phases
                             .insert((request_id.clone(), phase.clone()), effect)
                             .is_some()
@@ -2601,6 +2645,7 @@ fn prepare_log_body(
         notify: args.notify,
         images: images.iter().map(|image| image.receipt.clone()).collect(),
         program_evidence: None,
+        native_evidence: None,
         operation: Kind::Log {
             thread: args.thread.as_deref().map(snowflake).transpose()?,
         },
@@ -2652,6 +2697,7 @@ fn prepare_ask(ctx: &Context, args: &AskArgs) -> Result<Request> {
         notify: true,
         images: vec![],
         program_evidence: args.program_evidence.clone(),
+        native_evidence: None,
         operation: Kind::Ask {
             todo_id: args.todo_id,
             origin_thread: origin,
@@ -2767,6 +2813,16 @@ pub fn check_clarification(ctx: &mut Context, args: &LogArgs, manifest: &Path) -
 /// The original decision scope and question text are retained even when another
 /// title/request ID is a semantic duplicate. Question text stays in its thread.
 pub fn ask(ctx: &mut Context, args: &AskArgs) -> Result<Value> {
+    // A restored async-associated intent cannot be stripped of its stage-only
+    // restriction by retrying the older ask command without purpose flags.
+    if Ledger::load(&ctx.here)?
+        .request(&args.request_id)
+        .is_some_and(|r| r.native_evidence.is_some())
+    {
+        return Err(
+            "native recovered intent is stage-only; existing async question retained".into(),
+        );
+    }
     let mut incoming = prepare_ask(ctx, args)?;
     let images =
         if let Some((saved, recovering)) = saved_question_image_input(ctx, args, &incoming)? {
@@ -3232,8 +3288,24 @@ fn execute_inner(
                 (Kind::Ask {decision_identity:a,..},Kind::Ask {decision_identity:b,..})
                     if request.destination == incoming.destination && a == b))
         });
+    if ledger.events.iter().any(|event| {
+        matches!(event,
+        Event::Intent { request: saved } if saved.native_evidence.is_some()
+            && saved.destination == incoming.destination
+            && matches!((&saved.operation,&incoming.operation),
+                (Kind::Ask {decision_identity:a,..},Kind::Ask {decision_identity:b,..}) if a==b))
+    }) {
+        return Err(
+            "native recovered intent is stage-only; existing async question retained".into(),
+        );
+    }
     let reserved = reserve(&mut ledger, &home, &incoming)?;
     let request = ledger.effective_request(&reserved)?;
+    if request.native_evidence.is_some() {
+        return Err(
+            "native recovered intent is stage-only; existing async question retained".into(),
+        );
+    }
     // Use the canonical intent's retained binding, never the retry's optional
     // flag. Normal wait/stop updates share this lock through delivery.
     let _task_control = if request.program_evidence.is_some() || source_request.is_some() {
@@ -4203,15 +4275,15 @@ mod tests {
         }
     }
 
-    struct Fixture {
-        root: tempfile::TempDir,
-        home: PathBuf,
+    pub(super) struct Fixture {
+        pub(super) root: tempfile::TempDir,
+        pub(super) home: PathBuf,
         server: Arc<Mutex<Server>>,
         guards: Vec<(PathBuf, Vec<u8>)>,
     }
 
     impl Fixture {
-        fn new() -> Self {
+        pub(super) fn new() -> Self {
             let root = tempfile::tempdir().unwrap();
             let home = root.path().join("message-home");
             fs::create_dir(&home).unwrap();
@@ -4266,7 +4338,7 @@ mod tests {
                 guards,
             }
         }
-        fn context(&self) -> Context {
+        pub(super) fn context(&self) -> Context {
             context(&self.home, self.root.path(), self.server.clone(), None)
         }
         fn log(&self, id: &str, body: &str, notify: bool) -> LogArgs {
@@ -4281,7 +4353,7 @@ mod tests {
                 attach: vec![],
             }
         }
-        fn ask(&self, id: &str, body: &str) -> AskArgs {
+        pub(super) fn ask(&self, id: &str, body: &str) -> AskArgs {
             let body_file = self.root.path().join(format!("{id}.txt"));
             let decision_file = self.root.path().join(format!("{id}.json"));
             fs::write(&body_file, body).unwrap();

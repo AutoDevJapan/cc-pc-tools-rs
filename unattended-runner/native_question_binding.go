@@ -1,0 +1,132 @@
+package main
+
+import (
+	"context"
+	"encoding/json"
+	"path/filepath"
+	"regexp"
+	"strings"
+	"time"
+)
+
+func nativeQuestionProduction() nativeQuestionDeps {
+	d := nativeQuestionDeps{Sessions: "C:/Users/makhmeto/.codex/sessions", Now: time.Now, Read: generatedQuestionRead, Clear: generatedQuestionSourceClear}
+	d.Records = func(path string, bounds []nativeQuestionEvent) ([]json.RawMessage, error) {
+		b := make([]generatedEventBound, len(bounds))
+		for i, v := range bounds {
+			b[i] = generatedEventBound{Line: v.Line, SHA: v.SHA}
+		}
+		return generatedQuestionRecords(path, b)
+	}
+	d.Content = func(e nativeQuestionEvidence, body, decision []byte) error {
+		return nativeQuestionContent(e, body, decision, d)
+	}
+	d.Capture = func(e nativeQuestionEvidence) error { return nativeQuestionCapture(e, d) }
+	d.ImageGuard = nativeQuestionImageGuard
+	d.Bind = func(ctx context.Context, e nativeQuestionEvidence, _ json.RawMessage) error {
+		return nativeQuestionBind(ctx, e, d, "D:/CC/Tools/codex-jobs/jobs", "D:/CC/Tools/todo/todo.json", func() (Destination, error) {
+			var cfg Config
+			var dst Destination
+			if readJSON(conversationDefaultConfig, 1<<20, &cfg) != nil || readJSON(cfg.NotifyConfig, 1<<20, &dst) != nil {
+				return dst, errConversationMedia
+			}
+			return dst, nil
+		}, conversationMediaLiveGuard)
+	}
+	return d
+}
+
+// The native record and original registered job supply origin, not a caller's
+// "approved" field. Older ordinary jobs may lack todo_id; their saved prompt
+// must then be the exact native first assignment with an explicit original ID.
+func nativeQuestionBind(ctx context.Context, e nativeQuestionEvidence, d nativeQuestionDeps, jobs, todos string, destination func() (Destination, error), guard func(context.Context, string) (bool, error)) error {
+	bad := func() error { return errConversationMedia }
+	dst, err := destination()
+	if err != nil || dst.Owner != e.Scope.Owner || dst.Guild != e.Scope.Guild || dst.Forum != e.Scope.Forum {
+		return bad()
+	}
+	allowed, err := guard(ctx, e.Worktree)
+	if err != nil || !allowed {
+		return bad()
+	}
+	var job struct {
+		ID      string `json:"id"`
+		Todo    uint64 `json:"todo_id"`
+		Cwd     string `json:"cwd"`
+		Session string `json:"thread_id"`
+		Created string `json:"created_at"`
+	}
+	if readJSON(filepath.Join(jobs, e.Job, "job.json"), 1<<20, &job) != nil || job.ID != e.Job || job.Session != e.Session || !conversationMediaSamePath(filepath.FromSlash(job.Cwd), filepath.FromSlash(e.Worktree)) || (job.Todo != 0 && job.Todo != e.Scope.Todo) {
+		return bad()
+	}
+	if e.Assignment.Line <= 1 || e.Assignment.Line >= e.Question.Line || !shaPattern.MatchString(e.Assignment.SHA) {
+		return bad()
+	}
+	records, err := d.Records(e.Rollout, []nativeQuestionEvent{e.Assignment})
+	if err != nil || len(records) != 1 {
+		return bad()
+	}
+	var assignment nativeQuestionRecord
+	if json.Unmarshal(records[0], &assignment) != nil || assignment.Type != "response_item" || assignment.Payload.Type != "message" || assignment.Payload.Role != "user" {
+		return bad()
+	}
+	var text string
+	for _, part := range assignment.Payload.Content {
+		if part.Type == "input_text" {
+			text += part.Text + "\n"
+		}
+	}
+	prompt, err := d.Read(filepath.Join(jobs, e.Job, "prompt.md"), 128<<10)
+	if err != nil || len(prompt) == 0 {
+		return bad()
+	}
+	saved := strings.TrimSpace(strings.TrimPrefix(string(prompt), "\ufeff"))
+	if !strings.HasPrefix(strings.TrimSpace(text), saved) {
+		return bad()
+	}
+	first := strings.SplitN(saved, "\n", 2)[0]
+	id := regexp.MustCompile(`(?:^|[[:space:]、。』])(?:担当)?(?:元|ToDo|ToDo番号)([0-9]+)(?:[[:space:]、。]|$)`).FindAllStringSubmatch(first, -1)
+	count := 0
+	for _, m := range id {
+		if m[1] != fmtUint(e.Scope.Todo) {
+			return bad()
+		}
+		count++
+	}
+	if count != 1 {
+		return bad()
+	}
+	// Every earlier substantive user assignment would make a caller-selected
+	// later message unsafe. Reuse the original dedicated-session scan.
+	spec := generatedQuestionSpec{Rollout: e.Rollout, Assignment: generatedEventBound{Line: e.Assignment.Line, SHA: e.Assignment.SHA}}
+	if generatedFirstAssignment(spec) != nil {
+		return bad()
+	}
+	var db struct {
+		Items []struct {
+			ID           uint64 `json:"id"`
+			Status       string `json:"status"`
+			Stopped      bool   `json:"stopped"`
+			OwnerStopped bool   `json:"owner_stopped"`
+			Cancelled    bool   `json:"cancel_requested"`
+			StopKind     string `json:"stop_kind"`
+			Postponed    bool   `json:"owner_postponement_recorded"`
+		}
+	}
+	if readJSON(todos, maxTodo, &db) != nil {
+		return bad()
+	}
+	found := 0
+	for _, row := range db.Items {
+		if row.ID == e.Scope.Todo {
+			found++
+			if row.Stopped || row.OwnerStopped || row.Cancelled || row.Postponed || row.StopKind != "" || (row.Status != "doing" && row.Status != "todo" && row.Status != "wait" && row.Status != "block") {
+				return bad()
+			}
+		}
+	}
+	if found != 1 || ctx.Err() != nil {
+		return bad()
+	}
+	return nil
+}

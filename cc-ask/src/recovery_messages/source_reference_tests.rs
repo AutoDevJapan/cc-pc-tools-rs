@@ -166,3 +166,31 @@ fn source_reader_deadline_is_distinct_from_scope_rejection_before_http() {
     assert!(f.server.lock().unwrap().posts.is_empty());
     f.unchanged();
 }
+
+#[test]
+fn image_failures_have_a_distinct_fixed_diagnostic_without_implying_a_send_reservation() {
+    for error in [
+        "image protection list is unavailable; no image is sent",
+        "protected files cannot be recovery attachments",
+        "image is outside the generated proposal receipt; no image is sent",
+        "new conversation image verification unavailable; no image is sent",
+        "確認画像の作成証拠と質問の資格を確認できません。画像は送信していません",
+        "Go drawing evidence does not qualify this exact question; no image is sent",
+    ] {
+        let report = ask_failure_report(error);
+        assert_eq!(
+            report,
+            json!({"domain":DOMAIN,"delivery":"not_verified","failure_stage":"image_qualification"})
+        );
+        assert!(!report.to_string().contains(error));
+    }
+    for unknown in [
+        "private customer/path/png info",
+        "protected files cannot be recovery attachments private detail",
+        "RecoveryMessagePending: delivery is unconfirmed; retained receipt requires GET inspection, never another POST",
+    ] {
+        let report = ask_failure_report(unknown);
+        assert_eq!(report["failure_stage"], "operation_pending");
+        assert!(!report.to_string().contains(unknown));
+    }
+}

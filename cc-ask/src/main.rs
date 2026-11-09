@@ -29,6 +29,8 @@ enum Commands {
     },
     /// Create one new owner decision and its separate silent progress post.
     RecoveryAsk(cc_ask::recovery_messages::AskArgs),
+    /// Verify or stage one original native image question without HTTP or waits.
+    RecoveryNativeIntent(cc_ask::recovery_messages::NativeIntentArgs),
     /// Repair one exact unsent recovery ask to a previously verified progress post.
     RecoveryRepairOrigin(cc_ask::recovery_messages::RepairOriginArgs),
     /// Resume one repaired ask from its unchanged saved intent.
@@ -412,6 +414,12 @@ fn run(command: Commands) -> Result<()> {
                 );
             }
         },
+        Commands::RecoveryNativeIntent(args) => {
+            println!(
+                "{}",
+                cc_ask::recovery_messages::check_native_intent(&mut ctx, &args)?
+            );
+        }
         Commands::RecoveryRepairOrigin(args) => {
             println!(
                 "{}",

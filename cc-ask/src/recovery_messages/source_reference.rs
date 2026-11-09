@@ -129,6 +129,12 @@ pub(super) fn failure_stage(error: &str) -> &'static str {
         "recovery-messages.lock is busy" | "todo.lock is busy" => "busy",
         _ if error.starts_with("Discord API rate limited") || error.starts_with("Discord upload rate limited") => "rate_limited",
         _ if error.starts_with("URLError:") => "network",
+        "image protection list is unavailable; no image is sent"
+        | "protected files cannot be recovery attachments"
+        | "image is outside the generated proposal receipt; no image is sent"
+        | "new conversation image verification unavailable; no image is sent"
+        | "確認画像の作成証拠と質問の資格を確認できません。画像は送信していません"
+        | "Go drawing evidence does not qualify this exact question; no image is sent" => "image_qualification",
         _ => "operation_pending",
     }
 }

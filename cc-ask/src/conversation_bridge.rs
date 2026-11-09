@@ -522,6 +522,7 @@ fn execute(
                 | "input_mismatch"
                 | "sender_origin_scope"
                 | "sender_source_scope"
+                | "sender_image_qualification"
                 | "sender_busy"
                 | "sender_network"
                 | "sender_rate_limited"

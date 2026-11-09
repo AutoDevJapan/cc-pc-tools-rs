@@ -163,6 +163,7 @@ func (r *Runner) questionContext(ctx context.Context, request *Request) error {
 }
 
 type TodoRow struct {
+	conversationTaskQuestion bool
 	conversationRoot         string
 	conversationOriginState  json.RawMessage
 	conversationActorBinding *conversationActor

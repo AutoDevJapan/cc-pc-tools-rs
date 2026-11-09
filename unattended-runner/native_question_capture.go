@@ -170,6 +170,21 @@ func nativeQuestionCopySuffix(commands []string, copyLine string, e nativeQuesti
 			if !found {
 				if line == copyLine {
 					found = true
+				} else {
+					// A command before the selected copy must not already operate
+					// on its producer or retained attachment through a literal path.
+					// Those exact paths belong only to the selected copy/readback.
+					for _, image := range e.Images {
+						for _, path := range []string{image.Path, image.Producer} {
+							if path == "" {
+								continue
+							}
+							rel, err := filepath.Rel(e.Worktree, filepath.FromSlash(path))
+							if err != nil || strings.Contains(strings.ToLower(line), strings.ToLower(filepath.ToSlash(path))) || strings.Contains(strings.ToLower(line), strings.ToLower(filepath.ToSlash(rel))) {
+								return false
+							}
+						}
+					}
 				}
 				continue
 			}

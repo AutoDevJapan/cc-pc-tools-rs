@@ -286,7 +286,7 @@ func TestNativeQuestionMemoryCanonicalMatchesSenderEscaping(t *testing.T) {
 }
 
 func TestNativeQuestionMemoryCaptureRequiresCompletedExecutionAndExactCopyReceipt(t *testing.T) {
-	for _, kind := range []string{"valid", "failed-run", "fake-command", "different-copy", "different-receipt", "missing-producer", "protected-reference", "overwrite-after-copy", "different-copy-overwrites", "second-command-overwrites"} {
+	for _, kind := range []string{"valid", "failed-run", "fake-command", "different-copy", "different-receipt", "missing-producer", "protected-reference", "overwrite-before-copy", "overwrite-after-copy", "different-copy-overwrites", "second-command-overwrites"} {
 		t.Run(kind, func(t *testing.T) {
 			e, d, _ := nativeQuestionMemoryFixture(t)
 			e.Question.Line = 20
@@ -311,6 +311,9 @@ func TestNativeQuestionMemoryCaptureRequiresCompletedExecutionAndExactCopyReceip
 			}
 			if kind == "overwrite-after-copy" {
 				command += "\nSet-Content -LiteralPath '" + filepath.ToSlash(dst) + "' -Value 'changed'"
+			}
+			if kind == "overwrite-before-copy" {
+				command = "Set-Content -LiteralPath '" + filepath.ToSlash(src) + "' -Value 'changed'\n" + command
 			}
 			if kind == "different-copy-overwrites" {
 				command += "\nCopy-Item -LiteralPath 'other.png' -Destination '" + filepath.ToSlash(dst) + "'"

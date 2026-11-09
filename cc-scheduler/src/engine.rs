@@ -291,6 +291,9 @@ impl<B: Backend> Scheduler<B> {
             && truth(&row["scheduler"]["job"]) && row["scheduler"]["phase"] == "running"
         {
             Some("scheduler_link")
+        } else if truth(&before["scheduler"]["job"])
+            && row["scheduler"]["phase"]=="resumed" && row["scheduler"]["last_stop"]=="stale_prepared_input" {
+            Some("scheduler_input_requeue")
         } else { None };
         if let Some(operation) = operation {
             crate::question_continuation::record(&before, row, &root, operation);
@@ -415,6 +418,18 @@ impl<B: Backend> Scheduler<B> {
         self.edit(id, |i| {
             if expected.is_some_and(|expected| expected != i) || cancellation::owner_stopped(i, &Value::Null) { return; }
             if s(&i["status"]) != "doing" || i["scheduler"]["job"] != *jid {
+                return;
+            }
+            if reason=="stale_prepared_input" {
+                if crate::targeted_dispatch::held(i) || ["paused","stopped","cancel_requested"].iter().any(|field|i[*field]==true) || park_waiting(i,Some(jid)) {return;}
+                // The queue rejected this attempt before running publication.
+                // Use normal retirement; preserve every reply and pending input.
+                record_result(i,jid,reason);
+                resume_without_worker(i);
+                i["status"]=json!("todo");
+                i["scheduler"]["last_stop"]=json!(reason);
+                i["scheduler"]["not_before"]=json!(0);
+                applied=true;
                 return;
             }
             if park_waiting(i, Some(jid)) {
@@ -1025,6 +1040,8 @@ impl<B: Backend> Scheduler<B> {
                 &j["id"],
                 if truth(&m["pending_cancel"]) {
                     s(&m["pending_cancel"])
+                } else if j["last_failure_kind"]=="stale_prepared_input" && j["status"]=="failed" && j["started_at"].is_null() {
+                    "stale_prepared_input"
                 } else {
                     s(&j["status"])
                 },
@@ -1782,6 +1799,7 @@ if !truth(&row["scheduler"]["key"]){let attempt=add_count(&row["scheduler"]["att
             s(&item["scheduler"]["key"])
         ));
         backup(&target)?;
+        let prepared_input=cc_job_policy::prepared_input::receipt(&item,&json!(repo),prompt.as_bytes());
         fs::write(&target, prompt)?;
         let selection_input = json!({"model":item["model"],"effort":item["effort"]});
         let prepared = self.edit(&item["id"], |row| {
@@ -1790,7 +1808,7 @@ if !truth(&row["scheduler"]["key"]){let attempt=add_count(&row["scheduler"]["att
                 && launch_inputs(row) == launch_inputs(&item) {
                 merge(
                     &mut row["scheduler"],
-                    json!({"phase":"prepared","selection":selection,"prompt":target,"resume_session":resume_session,"selection_input":selection_input}),
+                    json!({"phase":"prepared","selection":selection,"prompt":target,"resume_session":resume_session,"selection_input":selection_input,"prepared_input":prepared_input}),
                 );
             }
         })?;

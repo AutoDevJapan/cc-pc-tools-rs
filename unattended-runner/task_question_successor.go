@@ -60,6 +60,17 @@ func (r taskQuestionRegistry) continuationCurrent(current taskQuestionState, rel
 	anchor.Worker.Generation = anchor.Generation
 	anchor.Scheduler.Phase, anchor.Scheduler.Resume, anchor.Scheduler.Last = "resumed", true, &release.Before.Worker.Job
 	lastAt := applied
+	var liveInput struct {
+		Scheduler struct {
+			Instruction json.RawMessage `json:"owner_instruction"`
+		}
+		Answers    json.RawMessage `json:"owner_question_answer_receipts"`
+		Deliveries json.RawMessage `json:"owner_question_delivery_receipts"`
+	}
+	if json.Unmarshal(current.current, &liveInput) != nil {
+		return errTaskQuestion
+	}
+	version := canonicalHash(map[string]any{"instruction": liveInput.Scheduler.Instruction, "answers": liveInput.Answers, "deliveries": liveInput.Deliveries})
 	for _, raw := range row.Transitions {
 		var edge struct {
 			Domain    string               `json:"domain"`
@@ -80,7 +91,7 @@ func (r taskQuestionRegistry) continuationCurrent(current taskQuestionState, rel
 		}
 		if edge.Domain != "todo-owner-question-continuation-v1" || edge.Question != release.QuestionSHA || edge.Answer != release.AnswerSHA ||
 			canonicalHash(edge.Metadata) != canonicalHash(taskQuestionMetadataOf(release.Before)) || canonicalHash(edge.Before) != canonicalHash(anchor) ||
-			edge.At.Before(lastAt) || edge.At.After(r.Now()) || r.continuationEdge(edge.Operation, edge.Before, edge.After, current.ID, applied, edge.At) != nil {
+			edge.At.Before(lastAt) || edge.At.After(r.Now()) || r.continuationEdge(edge.Operation, edge.Before, edge.After, taskQuestionMetadataOf(release.Before), version, applied, edge.At) != nil {
 			return errTaskQuestion
 		}
 		anchor, lastAt = edge.After, edge.At
@@ -94,7 +105,8 @@ func (r taskQuestionRegistry) continuationCurrent(current taskQuestionState, rel
 	return nil
 }
 
-func (r taskQuestionRegistry) continuationEdge(operation string, before, after taskQuestionControl, todo uint64, applied, recorded time.Time) error {
+func (r taskQuestionRegistry) continuationEdge(operation string, before, after taskQuestionControl, metadata taskQuestionMetadata, version string, applied, recorded time.Time) error {
+	todo := metadata.ID
 	if before.Generation == 0 || before.Worker.Generation != before.Generation || after.Worker.Generation != after.Generation ||
 		(before.Status != "todo" && before.Status != "doing") || !before.Scheduler.Resume || !after.Scheduler.Resume {
 		return errTaskQuestion
@@ -102,7 +114,11 @@ func (r taskQuestionRegistry) continuationEdge(operation string, before, after t
 	expected := before
 	switch operation {
 	case "scheduler_prepare":
-		if before.Status != "todo" || before.Scheduler.Job != nil || before.Worker.Job != nil || before.Scheduler.Key != nil || before.Scheduler.Phase != "resumed" ||
+		// prepare reserves a fresh key only once. Capacity rechecks can leave a
+		// prepared reservation to be prepared again with the exact same key.
+		fresh := before.Scheduler.Phase == "resumed" && before.Scheduler.Key == nil
+		repeated := before.Scheduler.Phase == "prepared" && before.Scheduler.Key != nil && taskQuestionString(before.Scheduler.Key) == taskQuestionString(after.Scheduler.Key)
+		if before.Status != "todo" || before.Scheduler.Job != nil || before.Worker.Job != nil || (!fresh && !repeated) ||
 			after.Scheduler.Key == nil || !regexp.MustCompile(`^[a-f0-9]{32}$`).MatchString(*after.Scheduler.Key) {
 			return errTaskQuestion
 		}
@@ -112,29 +128,84 @@ func (r taskQuestionRegistry) continuationEdge(operation string, before, after t
 			return errTaskQuestion
 		}
 		expected.Scheduler.Phase = "prepared"
-	case "canonical_start", "scheduler_link":
-		job := taskQuestionString(after.Scheduler.Job)
-		if job == "" || !validJob(job) || len(job) > 200 || job == taskQuestionString(before.Scheduler.Job) {
+	case "scheduler_input_requeue":
+		job := taskQuestionString(before.Scheduler.Job)
+		if before.Status != "doing" || job == "" || !validJob(job) || before.Generation == math.MaxUint64 || r.continuationJob(job, todo, taskQuestionString(before.Scheduler.Key), applied, recorded) != nil {
 			return errTaskQuestion
 		}
-		expected.Status, expected.Scheduler.Job, expected.Scheduler.Phase = "doing", after.Scheduler.Job, "running"
-		expected.Jobs = append(append([]string{}, before.Jobs...), job)
-		for _, old := range before.Jobs {
-			if old == job {
-				return errTaskQuestion
-			}
+		b, err := r.Read(filepath.Join(filepath.FromSlash(r.Jobs), job, "job.json"), 1<<20)
+		var stale struct {
+			Status  string
+			Kind    string          `json:"last_failure_kind"`
+			Started json.RawMessage `json:"started_at"`
+			Input   struct {
+				Domain  string `json:"domain"`
+				Project string `json:"project"`
+				Todo    uint64 `json:"todo_id"`
+				Key     string `json:"launch_key"`
+				Scope   string `json:"scope_sha256"`
+				Version string `json:"input_sha256"`
+				Prompt  string `json:"source_prompt_sha256"`
+			} `json:"prepared_input"`
 		}
+		if err != nil || json.Unmarshal(b, &stale) != nil || stale.Status != "failed" || stale.Kind != "stale_prepared_input" || (len(stale.Started) != 0 && string(stale.Started) != "null") || stale.Input.Domain != "todo-prepared-input-v1" || stale.Input.Project != metadata.Project || stale.Input.Todo != todo || stale.Input.Key != taskQuestionString(before.Scheduler.Key) || stale.Input.Scope != canonicalHash(metadata) || stale.Input.Version == version || !shaPattern.MatchString(stale.Input.Version) || !shaPattern.MatchString(stale.Input.Prompt) {
+			return errTaskQuestion
+		}
+		expected.Status = "todo"
+		expected.Generation++
+		expected.Worker.Job = nil
+		expected.Worker.Generation = expected.Generation
+		expected.Scheduler.Job = nil
+		expected.Scheduler.Key = nil
+		expected.Scheduler.Last = before.Scheduler.Job
+		expected.Scheduler.Phase = "resumed"
+	case "canonical_start", "scheduler_link":
+		job := taskQuestionString(after.Scheduler.Job)
+		if job == "" || !validJob(job) || len(job) > 200 {
+			return errTaskQuestion
+		}
+		sameJob := job == taskQuestionString(before.Scheduler.Job)
+		expected.Status = "doing"
 		if operation == "canonical_start" {
-			if before.Generation == math.MaxUint64 {
+			// Match common::assign_worker: a linked job first binds its worker
+			// receipt without changing jobs/key. A fully bound same-job start is
+			// a no-op and therefore cannot manufacture another native edge.
+			bound := sameJob && taskQuestionString(before.Worker.Job) == job && before.Status == "doing"
+			if before.Generation == math.MaxUint64 || bound {
 				return errTaskQuestion
 			}
 			expected.Generation++
-			expected.Worker.Job, expected.Worker.Generation, expected.Scheduler.Key = after.Scheduler.Job, expected.Generation, nil
-			if before.Scheduler.Job != nil {
+			expected.Worker.Job, expected.Worker.Generation = after.Scheduler.Job, expected.Generation
+			if !sameJob && before.Scheduler.Job != nil {
 				expected.Scheduler.Last = before.Scheduler.Job
+			}
+			if !sameJob {
+				expected.Scheduler.Key = nil
 			}
 		} else if before.Status != "todo" || (before.Scheduler.Phase != "preparing" && before.Scheduler.Phase != "prepared") || before.Scheduler.Job != nil || before.Scheduler.Key == nil {
 			return errTaskQuestion
+		}
+		if sameJob {
+			if operation != "canonical_start" || before.Scheduler.Phase != "running" || before.Worker.Job != nil {
+				return errTaskQuestion
+			}
+			found := 0
+			for _, old := range before.Jobs {
+				if old == job {
+					found++
+				}
+			}
+			if found != 1 {
+				return errTaskQuestion
+			}
+		} else {
+			expected.Scheduler.Job, expected.Scheduler.Phase = after.Scheduler.Job, "running"
+			expected.Jobs = append(append([]string{}, before.Jobs...), job)
+			for _, old := range before.Jobs {
+				if old == job {
+					return errTaskQuestion
+				}
+			}
 		}
 		if r.continuationJob(job, todo, taskQuestionString(expected.Scheduler.Key), applied, recorded) != nil {
 			return errTaskQuestion
@@ -168,8 +239,20 @@ func (r taskQuestionRegistry) continuationJob(id string, todo uint64, key string
 	}
 	var date string
 	var created time.Time
+	precision := time.Nanosecond
 	if json.Unmarshal(job.Created, &date) == nil {
 		created, err = time.Parse(time.RFC3339Nano, date)
+		// The native job writer uses SecondsFormat::Secs. A timestamp denotes
+		// its recorded interval, not an invented subsecond instant. The exact
+		// canonical Task/key/transition checks above supply independent order.
+		if parts := regexp.MustCompile(`^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:[.,](\d{1,9}))?(?:Z|[+-]\d{2}:\d{2})$`).FindStringSubmatch(date); parts != nil {
+			precision = time.Second
+			for range len(parts[1]) {
+				precision /= 10
+			}
+		} else {
+			return errTaskQuestion
+		}
 	} else {
 		var seconds float64
 		err = json.Unmarshal(job.Created, &seconds)
@@ -177,7 +260,7 @@ func (r taskQuestionRegistry) continuationJob(id string, todo uint64, key string
 			created = time.Unix(0, int64(seconds*1e9))
 		}
 	}
-	if err != nil || created.IsZero() || created.Before(applied) || created.After(recorded) {
+	if err != nil || created.IsZero() || !created.Add(precision).After(applied) || created.After(recorded) {
 		return errTaskQuestion
 	}
 	return nil

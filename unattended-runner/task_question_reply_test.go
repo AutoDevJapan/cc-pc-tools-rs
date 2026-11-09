@@ -17,9 +17,15 @@ import (
 // Reuse the ordinary sender/API/ToDo fixture and the independent native proof.
 // Every HTTP request is served locally; no real owner question is posted.
 func taskQuestionConversationTest(t *testing.T) (*conversationFixture, *taskQuestionFixture) {
+	return taskQuestionConversationSetup(t, nil)
+}
+func taskQuestionConversationSetup(t *testing.T, setup func(*taskQuestionFixture)) (*conversationFixture, *taskQuestionFixture) {
 	t.Helper()
 	f := taskQuestionTestAt(t, time.Now().UTC().Truncate(time.Second))
 	f.row["note"] = "Preserve original work"
+	if setup != nil {
+		setup(f)
+	}
 	f.saveTask(t)
 	if err := f.r.register(context.Background(), f.path); err != nil {
 		t.Fatal(err)

@@ -35,6 +35,8 @@ mod admission_tests;
 mod capability_inheritance_tests;
 #[path = "support/question_continuation.rs"]
 mod question_continuation_tests;
+#[path = "support/question_native.rs"]
+mod question_native_tests;
 
 #[test]
 fn review_preparation_failures_stop_after_three_and_recover_on_new_evidence() {
@@ -1724,6 +1726,9 @@ fn test_orphan_minimum_age_and_missing_job() {
 }
 
 struct Fake {
+    question_measure: Option<Box<dyn FnOnce()+Send>>,
+    question_launch: Option<Box<dyn FnOnce()+Send>>,
+    question_store: Option<PathBuf>,
     quota_inventory_calls: usize,
     quota_spec_edit: Option<(PathBuf,String)>,
     quota_inventory: Value,
@@ -1779,6 +1784,9 @@ struct Fake {
 impl Default for Fake {
     fn default() -> Self {
         Self {
+            question_measure: None,
+            question_launch: None,
+            question_store: None,
             quota_inventory_calls: 0,
             quota_spec_edit: None,
             quota_inventory: Value::Null,
@@ -1924,6 +1932,7 @@ impl Backend for Fake {
         if self.m["measure_error"] == true {return Err(Error("OSError"));}
         self.measure_count += 1;
         if self.measure_count == 2 {
+            if let Some(action) = self.question_measure.take() { action(); }
             if let Some((path, settings)) = self.settings_change.take() {
                 let mut db = read_json(&path, json!({}))?;
                 merge(&mut db["items"][0], settings);
@@ -1956,6 +1965,14 @@ impl Backend for Fake {
         Ok(true)
     }
     fn launch(&mut self, i: &Value, p: &Path, _: &Value) -> Result<String> {
+        if let Some(action) = self.question_launch.take() { action(); }
+        if let Some(store)=&self.question_store {
+            let _lock=ByteLock::acquire(&store.with_file_name("todo.lock"),Duration::from_secs(2))?.ok_or(Error("TimeoutError"))?;
+            let db=read_json(store,json!({}))?;
+            let job=json!({"todo_id":i["id"],"project":i["project"],"launch_key":i["scheduler"]["key"],"prepared_input":i["scheduler"]["prepared_input"]});
+            cc_job_policy::prepared_input::validate(&db,&job).map_err(|_|Error("InputRejected"))?;
+            if i["scheduler"]["prepared_input"]["source_prompt_sha256"]!=cc_job_policy::product_retry::digest(&fs::read(p)?) {return Err(Error("InputRejected"));}
+        }
         if let Some(j) = self
             .records
             .iter()

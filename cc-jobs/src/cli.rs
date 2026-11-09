@@ -185,6 +185,8 @@ pub fn parse(args: &[String]) -> Result<Args> {
                     "task-type",
                     "notes-hint",
                     "launch-key",
+                    "scheduler-input-sha256",
+                    "scheduler-prompt-sha256",
                     "original-product-retry-key",
                     "resume-session",
                     "parent-job-id",
@@ -742,6 +744,13 @@ impl Context {
     // A launch receipt is reusable after a crash/bind/expiry, but only for the
     // identical request. Never create or restart a supervisor during replay.
     fn validate_product_retry_replay(&self, a: &Args, job: &Value) -> Result<()> {
+        if (a.value("scheduler-input-sha256").is_some() || a.value("scheduler-prompt-sha256").is_some()
+                || job.get("prepared_input").is_some() || job.get("prepared_job_prompt_sha256").is_some())
+            && (job["prepared_input"]["domain"]!="todo-prepared-input-v1"
+                || job["prepared_input"]["input_sha256"].as_str()!=a.value("scheduler-input-sha256")
+                || job["prepared_input"]["source_prompt_sha256"].as_str()!=a.value("scheduler-prompt-sha256")) {
+            return Err(Error::new("prepared_input_replay_changed"));
+        }
         if a.value("original-product-retry-key").is_none()
             && job.get("original_product_retry").is_none()
         {
@@ -1140,6 +1149,17 @@ impl Context {
         let store = self.todo_store();
         if store.exists() {
             let db = self.read_json(&store)?;
+            if a.value("scheduler-input-sha256").is_some() || a.value("scheduler-prompt-sha256").is_some() {
+                let row=db["items"].as_array().and_then(|rows|rows.iter().find(|r|r["id"]==job["todo_id"]))
+                    .ok_or_else(||Error::new("prepared_input_task_missing"))?;
+                job["prepared_input"]=row["scheduler"]["prepared_input"].clone();
+                if job["prepared_input"]["input_sha256"].as_str()!=a.value("scheduler-input-sha256")
+                    || job["prepared_input"]["source_prompt_sha256"].as_str()!=a.value("scheduler-prompt-sha256")
+                    || job["prepared_input"]["source_prompt_sha256"]!=cc_job_policy::product_retry::digest(&bytes) {
+                    return Err(Error::new("prepared_input_request_changed"));
+                }
+                cc_job_policy::prepared_input::validate(&db,&job).map_err(Error::new)?;
+            }
             // The separately reserved original-product retry has its own exact
             // source/permission binding above; do not reinterpret its history.
             if retry_key.is_none() {
@@ -1204,6 +1224,8 @@ impl Context {
                     job["approvals_reviewer"] = json!("auto_review");
                 }
             }
+        } else if a.value("scheduler-input-sha256").is_some() || a.value("scheduler-prompt-sha256").is_some() {
+            return Err(Error::new("prepared_input_task_missing"));
         } else if a.value("subwork-of").is_some() {
             return Err(Error::new("subwork ToDo store is missing"));
         }
@@ -1376,6 +1398,9 @@ impl Context {
             crate::finite_research::append_guidance(&mut stored_prompt);
             job["finite_research_approval"]["prompt_sha256"] =
                 json!(cc_job_policy::product_retry::digest(&stored_prompt));
+        }
+        if job["prepared_input"].is_object() {
+            job["prepared_job_prompt_sha256"]=json!(cc_job_policy::product_retry::digest(&stored_prompt));
         }
         fs::write(&dst, stored_prompt).map_err(|e| Error::file_io("write prompt", &dst, e))?;
         let mut stored = json!({"id":jid});

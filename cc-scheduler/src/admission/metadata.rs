@@ -2,6 +2,7 @@
 use super::inputs::{self, Kind};
 use super::*;
 use serde::de::{DeserializeSeed, IgnoredAny, MapAccess, SeqAccess, Visitor};
+use serde::Deserialize;
 use std::fmt;
 use std::io::BufRead;
 use std::sync::LazyLock;
@@ -414,6 +415,8 @@ impl<'de> Visitor<'de> for Project<'_> {
             let p = path(self.0, &key);
             let value = if inputs::kind(&p) == Some(Kind::Truth) {
                 Some(map.next_value_seed(TruthValue)?)
+            } else if inputs::kind(&p) == Some(Kind::Digest) {
+                Some(map.next_value_seed(InputDigest)?)
             } else if inputs::kind(&p) == Some(Kind::Tree) {
                 Some(map.next_value_seed(Control)?)
             } else if PATHS.contains(&p.as_str()) || inputs::kind(&p) == Some(Kind::Scalar) {
@@ -433,6 +436,14 @@ impl<'de> Visitor<'de> for Project<'_> {
         out.insert("$shape".into(), json!("object"));
         out.insert("$truth".into(), json!(any));
         serde_json::to_value(out).map_err(serde::de::Error::custom)
+    }
+}
+struct InputDigest;
+impl<'de> DeserializeSeed<'de> for InputDigest {
+    type Value=Value;
+    fn deserialize<D:serde::Deserializer<'de>>(self,d:D)->std::result::Result<Value,D::Error>{
+        let value=Value::deserialize(d)?;
+        Ok(json!(cc_job_policy::prepared_input::digest(&value)))
     }
 }
 struct Leaf;
@@ -628,4 +639,19 @@ pub(super) fn read(todo: &Path, id: i64) -> Result<(Value, Value)> {
     let value = Store(id).deserialize(&mut de)?;
     de.end()?;
     Ok(value)
+}
+
+#[cfg(test)]
+mod owner_input_projection_tests {
+    use super::*;
+    #[test]
+    fn pending_input_changes_the_projection_without_exposing_its_body() {
+        let mut row=json!({"id":1,"scheduler":{"owner_instruction":"PRIVATE_OWNER_REPLY<&>"}});
+        let first=project(&row);
+        assert!(!first.to_string().contains("PRIVATE_OWNER_REPLY"));
+        row["scheduler"]["owner_instruction"]=json!("CORRECTED_OWNER_REPLY");
+        let second=project(&row);
+        assert_ne!(first,second);
+        assert!(!second.to_string().contains("CORRECTED_OWNER_REPLY"));
+    }
 }

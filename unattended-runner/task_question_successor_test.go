@@ -11,13 +11,19 @@ import (
 	"time"
 )
 
-func taskQuestionReleasedFixture(t *testing.T, lost bool) (*conversationFixture, *taskQuestionFixture, conversationReply) {
+func taskQuestionReleasedFixture(t *testing.T, lost bool, setup ...func(*taskQuestionFixture)) (*conversationFixture, *taskQuestionFixture, conversationReply) {
 	t.Helper()
 	candidate := os.Getenv("CC_CONVERSATION_TODO_BINARY")
 	if candidate == "" {
 		t.Skip("canonical CLI required")
 	}
-	c, f := taskQuestionConversationTest(t)
+	var c *conversationFixture
+	var f *taskQuestionFixture
+	if len(setup) == 1 {
+		c, f = taskQuestionConversationSetup(t, setup[0])
+	} else {
+		c, f = taskQuestionConversationTest(t)
+	}
 	taskQuestionUseCanonicalTodo(t, c, f, candidate, true)
 	c.ask(t)
 	mediaJSON(t, filepath.Join(f.r.Jobs, f.e.Session, "job.json"), map[string]any{"id": f.e.Session, "status": "succeeded", "todo_id": 42})

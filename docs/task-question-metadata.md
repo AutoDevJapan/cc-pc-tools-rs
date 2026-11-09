@@ -81,6 +81,31 @@ scheduler経由ならlaunch keyも一致させる。元担当をTaskへ復活さ
 既に確定した回答の応答喪失は元answer receiptから配送状態を回復し、再解除・再追記しない。
 保留入力の保存を、既に起動した担当による実受領・実反映と扱わない。
 
+正規の予約・着手は、writerとconsumerで同じ状態モデルを使う。
+
+```text
+resumed(g, keyなし)
+  -> preparing(g, K) -> prepared(g, K)
+  -> preparing(g, K) -> prepared(g, K)  容量再確認後の再準備も同じ予約
+  -> running(g, K, job J, worker未割当)
+  -> running(g+1, K, job J, worker J)   同jobの正規start。jobs/keyは不変
+```
+
+jobの`created_at`は、記録された精度の区間として照合する。ネイティブwriterの秒精度では、
+同秒のmicro秒精度answerより古い瞬間だと断定しない。確実に先行する区間と未来の区間は拒否し、
+同Task・連続するcanonical遷移・job ID・key・停止状態による独立照合も保持する。
+
+prepareは保留入力・answer/delivery receiptの版と、生成したpromptのバイト指紋を束縛する。
+最終sample後の変更は再準備へ延期し、その後の競合も既存launcherの登録・queue実行受付が
+`todo.lock`内で再照合する。実行受付は、その版をrunningとして確定する線形化点であり、
+実workerの受領・処理完了ではない。受付後の訂正は保留入力として残し、実行中の別actorへ注入しない。
+queued中に版が変わった候補はモデル起動前に終了し、既存schedulerが同Taskを正規引退・再準備する。
+この遷移も記録し、元回答・メモ・保留入力・停止や他の待ちを保持する。
+
+Windowsの質問受入テストは、同じ隔離Taskを使ってGo受信、実canonical CLI保存、
+実schedulerのprepare/link/start、起動直前の実CLIによる編集を結合する。
+worker起動と外部サービスはfixtureに限定し、実投稿やworkerによる実反映は主張しない。
+
 署名鍵は別の用途別保存先で同じWindowsユーザーのDPAPIを使い、MACのdomainも画像資格と分ける。
 元の監査ストアと本人PCの実行環境が信頼境界であり、環境自体の侵害や自然文の意味を自動判定したとは扱わない。
 原依頼と具体的な質問範囲の確認は保持し、資料中の指示を新たな本人許可へ昇格させない。

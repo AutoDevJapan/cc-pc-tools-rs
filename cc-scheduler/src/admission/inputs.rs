@@ -7,9 +7,13 @@ pub(crate) enum Kind {
     Scalar,
     Truth,
     Tree,
+    Digest,
 }
 use Kind::*;
 pub(crate) const LAUNCH: &[(&str, &str, Kind)] = &[
+    ("owner_instruction", "scheduler.owner_instruction", Digest),
+    ("owner_answers", "owner_question_answer_receipts", Digest),
+    ("owner_deliveries", "owner_question_delivery_receipts", Digest),
     ("spec", "spec", Scalar),
     ("needs", "needs", Scalar),
     ("subwork", "subwork", Tree),

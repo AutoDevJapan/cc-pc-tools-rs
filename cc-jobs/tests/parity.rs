@@ -1,5 +1,7 @@
 use cc_jobs::notify::*;
 use cc_jobs::*;
+#[path = "support/prepared_input.rs"]
+mod prepared_input_tests;
 #[cfg(windows)]
 #[path = "support/dependency_diagnostics.rs"]
 mod dependency_diagnostics;

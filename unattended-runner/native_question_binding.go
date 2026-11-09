@@ -104,13 +104,17 @@ func nativeQuestionBind(ctx context.Context, e nativeQuestionEvidence, d nativeQ
 	}
 	var db struct {
 		Items []struct {
-			ID           uint64 `json:"id"`
-			Status       string `json:"status"`
-			Stopped      bool   `json:"stopped"`
-			OwnerStopped bool   `json:"owner_stopped"`
-			Cancelled    bool   `json:"cancel_requested"`
-			StopKind     string `json:"stop_kind"`
-			Postponed    bool   `json:"owner_postponement_recorded"`
+			ID           uint64          `json:"id"`
+			Status       string          `json:"status"`
+			Stopped      bool            `json:"stopped"`
+			OwnerStopped bool            `json:"owner_stopped"`
+			Cancelled    bool            `json:"cancel_requested"`
+			StopKind     string          `json:"stop_kind"`
+			Postponed    bool            `json:"owner_postponement_recorded"`
+			Decision     json.RawMessage `json:"decision_wait"`
+			Scheduler    struct {
+				OwnerStop json.RawMessage `json:"owner_stop_job"`
+			} `json:"scheduler"`
 		}
 	}
 	if readJSON(todos, maxTodo, &db) != nil {
@@ -120,7 +124,8 @@ func nativeQuestionBind(ctx context.Context, e nativeQuestionEvidence, d nativeQ
 	for _, row := range db.Items {
 		if row.ID == e.Scope.Todo {
 			found++
-			if row.Stopped || row.OwnerStopped || row.Cancelled || row.Postponed || row.StopKind != "" || (row.Status != "doing" && row.Status != "todo" && row.Status != "wait" && row.Status != "block") {
+			nonnull := func(b json.RawMessage) bool { return len(b) > 0 && strings.TrimSpace(string(b)) != "null" }
+			if row.Stopped || row.OwnerStopped || row.Cancelled || row.Postponed || row.StopKind != "" || nonnull(row.Scheduler.OwnerStop) || nonnull(row.Decision) || (row.Status != "doing" && row.Status != "todo" && row.Status != "wait" && row.Status != "block") {
 				return bad()
 			}
 		}

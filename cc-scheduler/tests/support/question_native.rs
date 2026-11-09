@@ -28,7 +28,31 @@ fn native_question_fixture() {
     f.e.backend.clock = now().max(n(&row["scheduler"]["not_before"]) + 1.);
     f.e.backend.question_store = Some(store.clone());
     let mode = s(&cfg["mode"]);
-    if mode == "input_requeue" {
+    let mut scalar_cases = vec![];
+    if mode == "scalar_contract" {
+        for text in [
+            "1700000000",
+            "1700000000.0",
+            "1.7e9",
+            "1700000000.125",
+            "0.00012345",
+            "18446744073709551615",
+            "null",
+            "\"1700000000\"",
+            "\"<&>\\u2028\\u2029\"",
+        ] {
+            let value: Value = serde_json::from_str(text).unwrap();
+            let mut scalar_row = row.clone();
+            scalar_row["spec"] = value.clone();
+            scalar_row["scheduler"]["owner_instruction"] = value.clone();
+            let scope = json!({"id":scalar_row["id"],"project":scalar_row["project"],"root":db["projects"][s(&row["project"])],
+                "spec":value,"title":scalar_row["title"],"created_s":scalar_row["created_s"]});
+            let pending = json!({"instruction":scalar_row["scheduler"]["owner_instruction"],
+                "answers":scalar_row["owner_question_answer_receipts"],"deliveries":scalar_row["owner_question_delivery_receipts"]});
+            scalar_cases.push(json!({"value":value,"digest":cc_job_policy::prepared_input::digest(&value),"scope":scope,"pending":pending,
+                "receipt":cc_job_policy::prepared_input::receipt(&scalar_row,&db["projects"][s(&row["project"])],b"fixed prompt")}));
+        }
+    } else if mode == "input_requeue" {
         let id = s(&row["scheduler"]["job"]).to_owned();
         let path = PathBuf::from(s(&cfg["jobs"])).join(&id).join("job.json");
         let mut job = read_json(&path, Value::Null).unwrap();
@@ -96,7 +120,7 @@ fn native_question_fixture() {
     }
     write_json(
         Path::new(s(&cfg["output"])),
-        &json!({"launched":f.e.backend.launched,"task":f.get(42)}),
+        &json!({"launched":f.e.backend.launched,"task":f.get(42),"scalar_cases":scalar_cases}),
         1,
     )
     .unwrap();

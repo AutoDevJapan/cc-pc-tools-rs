@@ -317,10 +317,20 @@ func (r taskQuestionRegistry) load(ctx context.Context, input ConversationAskInp
 	if r.readSigned(taskQuestionName(input.RequestID), &saved) != nil {
 		return zero, errConversationMedia
 	}
-	e, current, err := r.checkForQuestion(ctx, saved.Evidence, input.heldQuestion, &saved)
-	observed := current.observed
-	current.observed = ""
-	if err != nil || current != saved || observed != canonicalHash(state) || e.Request != input.RequestID || e.Scope.Todo != input.Todo || e.Origin != input.OriginThread || e.Title != input.Title || e.Wait != input.Wait || input.ActorTodo != 0 || input.ActorJob != "" {
+	var e taskQuestionEvidence
+	var err error
+	if input.heldQuestion != nil {
+		e, err = r.admitted(ctx, input, saved, state)
+	} else {
+		var current taskQuestionReceipt
+		e, current, err = r.checkForQuestion(ctx, saved.Evidence, nil, &saved)
+		observed := current.observed
+		current.observed = ""
+		if current != saved || observed != canonicalHash(state) {
+			err = errConversationMedia
+		}
+	}
+	if err != nil || !taskQuestionInputMatches(input, e) {
 		return zero, errConversationMedia
 	}
 	body, err := r.Read(input.BodyFile, 128<<10)

@@ -665,6 +665,11 @@ func (r *Runner) conversationAsk(ctx context.Context, input ConversationAskInput
 		if err = writeConversationOnce(q.ReceiptFile, b); err != nil {
 			return zero, err
 		}
+		if row.conversationTaskQuestion {
+			if err = r.recordTaskQuestionAdmission(ctx, q, proof); err != nil {
+				return zero, errTaskQuestion
+			}
+		}
 		q.Phase = "posted"
 		index.Questions[q.RequestID] = q
 		if err = publish(r.conversationPath(), index); err != nil {

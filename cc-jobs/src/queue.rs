@@ -1437,9 +1437,18 @@ impl Context {
         } else {
             None
         };
-        if store.exists() {
-            let db = self.read_json(&store)?;
-            if job.get("prepared_input").is_some() || job.get("prepared_job_prompt_sha256").is_some() {
+        let prepared = job.get("prepared_input").is_some()
+            || job.get("prepared_job_prompt_sha256").is_some();
+        if store.exists() || prepared {
+            let db = match self.read_json(&store) {
+                Ok(db) => db,
+                Err(_) if prepared => {
+                    self.save_admission_wait(&mut job, &json!({"code":"prepared_input_store_unavailable","text":"元Task正本の再確認待ち"}))?;
+                    return Ok(None);
+                }
+                Err(error) => return Err(error),
+            };
+            if prepared {
                 match cc_job_policy::prepared_input::validate(&db,&job) {
                     Ok(())=>(),
                     Err("prepared_input_changed")=>{

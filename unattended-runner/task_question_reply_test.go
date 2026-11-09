@@ -122,7 +122,7 @@ func TestTaskQuestionOwnerReplyReachesOriginalTaskAndPendingInstructions(t *test
 }
 
 func TestTaskQuestionReplyRejectsUnboundOrStaleEvidenceWithoutTaskMutation(t *testing.T) {
-	for _, kind := range []string{"unregistered", "different_question", "different_task", "different_recipient", "actor", "body", "decision", "image", "declared_image", "question_receipt", "source_receipt", "source_context", "owner_changed", "live_false_owner", "live_bot", "live_edit", "generation", "wait_generation", "wait_recipient", "wait_question_owner", "scheduler_key", "stopped", "paused", "done", "registration", "expired", "destination"} {
+	for _, kind := range []string{"unregistered", "different_question", "different_task", "different_recipient", "actor", "body", "decision", "image", "declared_image", "question_receipt", "source_receipt", "source_context", "owner_changed", "live_false_owner", "live_bot", "live_edit", "generation", "wait_generation", "wait_recipient", "wait_question_owner", "scheduler_key", "stopped", "paused", "done", "registration", "admission", "destination"} {
 		t.Run(kind, func(t *testing.T) {
 			c, f := taskQuestionConversationTest(t)
 			q := c.ask(t)
@@ -151,7 +151,12 @@ func TestTaskQuestionReplyRejectsUnboundOrStaleEvidenceWithoutTaskMutation(t *te
 			case "decision":
 				_ = os.WriteFile(q.DecisionFile, []byte(`{"todo_id":42}`), 0600)
 			case "image":
-				_ = os.WriteFile(f.media.Images[0].Path, []byte("changed image"), 0600)
+				q.Attachments = []string{filepath.Join(f.home, "another-image.png")}
+				index, _ := c.r.loadConversations()
+				index.Questions[q.RequestID] = q
+				if publish(c.r.conversationPath(), index) != nil {
+					t.Fatal("index fixture")
+				}
 			case "declared_image":
 				q.AttachmentHashes = []string{strings.Repeat("c", 64)}
 				q.InputSHA = canonicalHash([]any{q.Todo, q.OriginThread, q.QuestionSHA, canonicalHash(c.originalDecision), q.Title, q.Wait, q.AttachmentHashes})
@@ -216,9 +221,8 @@ func TestTaskQuestionReplyRejectsUnboundOrStaleEvidenceWithoutTaskMutation(t *te
 				c.mutateTodo(t, func(row map[string]any) { row["status"] = "done" })
 			case "registration":
 				_ = os.WriteFile(filepath.Join(f.r.Keys.Home, taskQuestionName(f.e.Request)), []byte(`{"payload":{},"mac":"00"}`), 0600)
-			case "expired":
-				f.r.Now = func() time.Time { return time.Now().Add(2 * time.Hour) }
-				c.r.Now = f.r.Now
+			case "admission":
+				_ = os.WriteFile(filepath.Join(f.r.Keys.Home, taskQuestionAdmissionName(q.RequestID, true)), []byte(`{"payload":{},"mac":"00"}`), 0600)
 			case "destination":
 				f.r.Dst = func(generatedQuestionScope) bool { return false }
 			}

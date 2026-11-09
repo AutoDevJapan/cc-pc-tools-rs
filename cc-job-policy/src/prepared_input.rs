@@ -1,26 +1,61 @@
 //! Bind a normal prepared prompt to its pending owner input, not actor authority.
-use serde_json::{json, Value};
+use serde_json::{Value, json};
 
 pub fn digest(value: &Value) -> String {
-    fn ordered(v: &Value) -> Value {
+    fn number(text: &str) -> String {
+        let (sign, rest) = text.strip_prefix('-').map_or(("", text), |s| ("-", s));
+        let (mantissa, exponent) = rest
+            .split_once(['e', 'E'])
+            .map_or((rest, 0), |(a, b)| (a, b.parse::<i64>().unwrap()));
+        let fraction = mantissa.split_once('.').map_or(0, |(_, s)| s.len());
+        let digits = mantissa.replace('.', "");
+        let digits = digits.trim_start_matches('0');
+        if digits.is_empty() {
+            return "0".into();
+        }
+        let coefficient = digits.trim_end_matches('0');
+        let exponent = exponent - fraction as i64 + (digits.len() - coefficient.len()) as i64;
+        if exponent == 0 {
+            format!("{sign}{coefficient}")
+        } else {
+            format!("{sign}{coefficient}e{exponent}")
+        }
+    }
+    fn write(v: &Value, out: &mut String) {
         match v {
             Value::Object(m) => {
                 let mut keys: Vec<_> = m.keys().collect();
                 keys.sort();
-                let mut out = serde_json::Map::new();
-                for key in keys {
-                    out.insert(key.clone(), ordered(&m[key]));
+                out.push('{');
+                for (index, key) in keys.into_iter().enumerate() {
+                    if index > 0 {
+                        out.push(',');
+                    }
+                    out.push_str(&serde_json::to_string(key).unwrap());
+                    out.push(':');
+                    write(&m[key], out);
                 }
-                Value::Object(out)
+                out.push('}');
             }
-            Value::Array(a) => Value::Array(a.iter().map(ordered).collect()),
-            v => v.clone(),
+            Value::Array(a) => {
+                out.push('[');
+                for (index, v) in a.iter().enumerate() {
+                    if index > 0 {
+                        out.push(',');
+                    }
+                    write(v, out);
+                }
+                out.push(']');
+            }
+            Value::Number(n) => out.push_str(&number(&n.to_string())),
+            v => out.push_str(&serde_json::to_string(v).unwrap()),
         }
     }
-    // The Go consumer disables HTML escaping but still escapes line separators.
-    // Keep that exact encoding; no raw instruction leaves this module.
-    let encoded = serde_json::to_string(&ordered(value))
-        .unwrap()
+    // JSON number values share an exact decimal coefficient/exponent spelling;
+    // no float conversion or integer rounding is performed by this encoder.
+    let mut encoded = String::new();
+    write(value, &mut encoded);
+    let encoded = encoded
         .replace('\u{2028}', "\\u2028")
         .replace('\u{2029}', "\\u2029");
     crate::product_retry::digest(encoded.as_bytes())
@@ -112,5 +147,31 @@ mod tests {
             digest(&json!({"b":2,"a":"<&>\u{2028}\u{2029}"})),
             crate::product_retry::digest(br#"{"a":"<&>\u2028\u2029","b":2}"#)
         );
+    }
+    #[test]
+    fn canonical_numbers_keep_exact_decimal_values_and_scalar_types() {
+        for (raw, canonical) in [
+            ("1700000000", "17e8"),
+            ("1700000000.0", "17e8"),
+            ("1.7e9", "17e8"),
+            ("1700000000.125", "1700000000125e-3"),
+            ("0.00012345", "12345e-8"),
+            ("-0.0", "0"),
+            ("18446744073709551615", "18446744073709551615"),
+            ("null", "null"),
+            ("\"1700000000\"", "\"1700000000\""),
+        ] {
+            let value: Value = serde_json::from_str(raw).unwrap();
+            assert_eq!(
+                digest(&value),
+                crate::product_retry::digest(canonical.as_bytes()),
+                "{raw}"
+            );
+        }
+        assert_ne!(
+            digest(&json!(9007199254740993u64)),
+            digest(&json!(9007199254740992u64))
+        );
+        assert_ne!(digest(&Value::Null), digest(&json!("null")));
     }
 }

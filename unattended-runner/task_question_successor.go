@@ -70,7 +70,7 @@ func (r taskQuestionRegistry) continuationCurrent(current taskQuestionState, rel
 	if json.Unmarshal(current.current, &liveInput) != nil {
 		return errTaskQuestion
 	}
-	version := canonicalHash(map[string]any{"instruction": liveInput.Scheduler.Instruction, "answers": liveInput.Answers, "deliveries": liveInput.Deliveries})
+	version := taskQuestionPreparedDigest(map[string]any{"instruction": liveInput.Scheduler.Instruction, "answers": liveInput.Answers, "deliveries": liveInput.Deliveries})
 	for _, raw := range row.Transitions {
 		var edge struct {
 			Domain    string               `json:"domain"`
@@ -148,7 +148,7 @@ func (r taskQuestionRegistry) continuationEdge(operation string, before, after t
 				Prompt  string `json:"source_prompt_sha256"`
 			} `json:"prepared_input"`
 		}
-		if err != nil || json.Unmarshal(b, &stale) != nil || stale.Status != "failed" || stale.Kind != "stale_prepared_input" || (len(stale.Started) != 0 && string(stale.Started) != "null") || stale.Input.Domain != "todo-prepared-input-v1" || stale.Input.Project != metadata.Project || stale.Input.Todo != todo || stale.Input.Key != taskQuestionString(before.Scheduler.Key) || stale.Input.Scope != canonicalHash(metadata) || stale.Input.Version == version || !shaPattern.MatchString(stale.Input.Version) || !shaPattern.MatchString(stale.Input.Prompt) {
+		if err != nil || json.Unmarshal(b, &stale) != nil || stale.Status != "failed" || stale.Kind != "stale_prepared_input" || (len(stale.Started) != 0 && string(stale.Started) != "null") || stale.Input.Domain != "todo-prepared-input-v1" || stale.Input.Project != metadata.Project || stale.Input.Todo != todo || stale.Input.Key != taskQuestionString(before.Scheduler.Key) || stale.Input.Scope != taskQuestionPreparedDigest(metadata) || stale.Input.Version == version || !shaPattern.MatchString(stale.Input.Version) || !shaPattern.MatchString(stale.Input.Prompt) {
 			return errTaskQuestion
 		}
 		expected.Status = "todo"

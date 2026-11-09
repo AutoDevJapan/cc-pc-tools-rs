@@ -173,7 +173,7 @@ func (r *Runner) deliverTaskQuestionReply(ctx context.Context, row *TodoRow, q C
 			return err
 		}
 	}
-	// Revalidate source/registration, expiry, stops and original generation after
+	// Revalidate source/admission/registration, stops and original generation after
 	// the durable append. Never mark the intake delivered before wait release.
 	row, err = r.conversationDeliveryTask(ctx, q, req)
 	if err != nil {
@@ -186,10 +186,7 @@ func (r *Runner) deliverTaskQuestionReply(ctx context.Context, row *TodoRow, q C
 	if err != nil {
 		return err
 	}
-	registry := taskQuestionProduction()
-	if r.TaskQuestion != nil {
-		registry = *r.TaskQuestion
-	}
+	registry := r.taskQuestionRegistry()
 	if err := registry.recordRelease(row, q, answer, b); err != nil {
 		return err
 	}

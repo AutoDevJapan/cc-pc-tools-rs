@@ -167,10 +167,7 @@ func (r *Runner) verifyTaskQuestion(ctx context.Context, input ConversationAskIn
 			return errTaskQuestion
 		}
 		if q, exists := index.Questions[input.RequestID]; exists {
-			var row TodoRow
-			_ = json.Unmarshal(original.current, &row)
-			held := len(row.QuestionWait) != 0 && string(row.QuestionWait) != "null"
-			if q.Phase == "waiting" || q.Phase == "answered" || (q.Phase == "posted" && held) {
+			if q.Phase == "waiting" || q.Phase == "answered" || q.Phase == "posted" {
 				retained, _, err := r.taskQuestionRetainedInput(ctx, q)
 				if err != nil {
 					return errTaskQuestion
@@ -179,13 +176,15 @@ func (r *Runner) verifyTaskQuestion(ctx context.Context, input ConversationAskIn
 			}
 		}
 	}
-	registry := taskQuestionProduction()
-	if r.TaskQuestion != nil {
-		registry = *r.TaskQuestion
-	}
+	registry := r.taskQuestionRegistry()
 	e, err := registry.load(ctx, input, original)
-	if err != nil || e.Scope.Owner != r.State.Destination.Owner || e.Scope.Guild != r.State.Destination.Guild || e.Scope.Forum != r.State.Destination.Forum || !registry.images(ctx, input, e, filepath.Dir(r.Config.Home)) {
+	if err != nil || e.Scope.Owner != r.State.Destination.Owner || e.Scope.Guild != r.State.Destination.Guild || e.Scope.Forum != r.State.Destination.Forum {
 		return errTaskQuestion
+	}
+	if input.heldQuestion == nil {
+		if !registry.images(ctx, input, e, filepath.Dir(r.Config.Home)) || registry.stageAdmission(e) != nil {
+			return errTaskQuestion
+		}
 	}
 	return nil
 }

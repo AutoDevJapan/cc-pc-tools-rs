@@ -191,7 +191,7 @@ func TestTaskQuestionSchedulerSuccessor(t *testing.T) {
 }
 
 func TestTaskQuestionAssignedSuccessorRejectsUnprovenChanges(t *testing.T) {
-	for _, kind := range []string{"generation", "worker", "hold", "question_wait", "dependency", "missing_ledger", "edge_before", "edge_after", "edge_metadata", "edge_answer", "edge_question", "edge_operation", "edge_time", "job_missing", "job_id", "job_task", "job_stop", "job_created", "scope", "expired"} {
+	for _, kind := range []string{"generation", "worker", "hold", "question_wait", "dependency", "missing_ledger", "edge_before", "edge_after", "edge_metadata", "edge_answer", "edge_question", "edge_operation", "edge_time", "job_missing", "job_id", "job_task", "job_stop", "job_created", "scope", "admission_missing"} {
 		t.Run(kind, func(t *testing.T) {
 			c, f, _ := taskQuestionReleasedFixture(t, false)
 			id := taskQuestionStartSuccessor(t, c, f)
@@ -216,9 +216,10 @@ func TestTaskQuestionAssignedSuccessorRejectsUnprovenChanges(t *testing.T) {
 					job["created_at"] = time.Now().Add(-time.Hour).UTC().Format(time.RFC3339Nano)
 				}
 				mediaJSON(t, jobFile, job)
-			case "expired":
-				f.r.Now = func() time.Time { return time.Now().Add(2 * time.Hour) }
-				c.r.Now = f.r.Now
+			case "admission_missing":
+				if os.Remove(filepath.Join(f.r.Keys.Home, taskQuestionAdmissionName(c.q.RequestID, true))) != nil {
+					t.Fatal("fixture admission")
+				}
 			default:
 				c.mutateTodo(t, func(row map[string]any) {
 					switch kind {

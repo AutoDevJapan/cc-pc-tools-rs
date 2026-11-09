@@ -113,7 +113,7 @@ func TestTaskQuestionFinishedOwnerRejectsUnprovenSuccessors(t *testing.T) {
 	if candidate == "" {
 		t.Skip("canonical CLI required")
 	}
-	for _, kind := range []string{"generation", "new_worker", "old_worker", "new_hold", "dependency", "scheduler_phase", "last_job", "key", "result", "answer_owner", "answer_wait", "answer_hash", "applied_at", "delivery", "intent_mac", "intent_question", "intent_registration", "intent_before", "job_running", "job_stop", "job_other_task", "expired", "other_scope"} {
+	for _, kind := range []string{"generation", "new_worker", "old_worker", "new_hold", "dependency", "scheduler_phase", "last_job", "key", "result", "answer_owner", "answer_wait", "answer_hash", "applied_at", "delivery", "intent_mac", "intent_question", "intent_registration", "intent_before", "job_running", "job_stop", "job_other_task", "admission_missing", "other_scope"} {
 		t.Run(kind, func(t *testing.T) {
 			c, f := taskQuestionConversationTest(t)
 			taskQuestionUseCanonicalTodo(t, c, f, candidate, true)
@@ -212,9 +212,10 @@ func TestTaskQuestionFinishedOwnerRejectsUnprovenSuccessors(t *testing.T) {
 				mediaJSON(t, jobPath, map[string]any{"id": f.e.Session, "status": "succeeded", "todo_id": 42, "owner_stopped": true})
 			case "job_other_task":
 				mediaJSON(t, jobPath, map[string]any{"id": f.e.Session, "status": "succeeded", "todo_id": 43})
-			case "expired":
-				f.r.Now = func() time.Time { return time.Now().Add(2 * time.Hour) }
-				c.r.Now = f.r.Now
+			case "admission_missing":
+				if os.Remove(filepath.Join(f.r.Keys.Home, taskQuestionAdmissionName(q.RequestID, true))) != nil {
+					t.Fatal("fixture admission")
+				}
 			case "other_scope":
 				f.e.Scope.Owner = "301"
 				f.saveEvidence(t)

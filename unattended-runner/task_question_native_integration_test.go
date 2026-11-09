@@ -7,6 +7,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"testing"
 	"time"
@@ -156,7 +157,7 @@ func TestTaskQuestionNativeUnstartedInputRequeue(t *testing.T) {
 		} `json:"prepared_input"`
 	}
 	_ = json.Unmarshal(jb, &proof)
-	if proof.Input.Scope != canonicalHash(taskQuestionMetadataOf(state)) {
+	if proof.Input.Scope != taskQuestionPreparedDigest(taskQuestionMetadataOf(state)) {
 		t.Fatal("native/Go canonical scope encoding differs")
 	}
 	reply := c.reply(t, 10, "follow-up after normal unstarted reprepare")
@@ -165,6 +166,32 @@ func TestTaskQuestionNativeUnstartedInputRequeue(t *testing.T) {
 	row, _ = c.r.todo(42)
 	if len(h.Errors) != 0 || strings.Count(row.conversationInstruction(), reply.Body) != 1 {
 		t.Fatal("unstarted retry broke the same question lineage", h.Errors)
+	}
+}
+
+func TestTaskQuestionIntegralCreatedNativeRequeue(t *testing.T) {
+	setupNative := taskQuestionNativeSetup(t)
+	setup := func(f *taskQuestionFixture) {
+		setupNative(f)
+		created := f.row["created_s"].(float64)
+		f.row["created_s"] = json.Number(strconv.FormatFloat(created-0.5, 'f', 1, 64))
+	}
+	c, f, first := taskQuestionReleasedFixture(t, false, setup)
+	taskQuestionNativeTransition(t, c, f, "linked_start", nil)
+	c.replies[0].Body = "integral-created edit before retry"
+	c.edited = map[string]string{first.Message: time.Now().UTC().Format(time.RFC3339Nano)}
+	h := Health{}
+	c.r.processConversations(context.Background(), &h)
+	if len(h.Errors) != 0 {
+		t.Fatal(h.Errors)
+	}
+	taskQuestionNativeTransition(t, c, f, "input_requeue", nil)
+	reply := c.reply(t, 10, "full follow-up with integral float creation timestamp")
+	h = Health{}
+	c.r.processConversations(context.Background(), &h)
+	row, _ := c.r.todo(42)
+	if len(h.Errors) != 0 || strings.Count(row.conversationInstruction(), reply.Body) != 1 {
+		t.Fatal("valid scalar contract rejected", h.Errors)
 	}
 }
 

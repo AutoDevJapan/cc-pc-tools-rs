@@ -207,6 +207,13 @@ func TestNativeQuestionMemoryMetadataNeverChangesAuditedCommand(t *testing.T) {
 	}
 }
 
+func TestNativeQuestionMemoryCanonicalMatchesSenderEscaping(t *testing.T) {
+	b, err := canonicalJSON([]byte(`{"z":"<a>&b","a":"日本語"}`))
+	if err != nil || string(b) != `{"a":"日本語","z":"<a>&b"}` {
+		t.Fatal("sender canonical bytes differ")
+	}
+}
+
 func TestNativeQuestionMemoryCaptureRequiresCompletedExecutionAndExactCopyReceipt(t *testing.T) {
 	for _, kind := range []string{"valid", "failed-run", "fake-command", "different-copy", "different-receipt", "missing-producer", "protected-reference"} {
 		t.Run(kind, func(t *testing.T) {

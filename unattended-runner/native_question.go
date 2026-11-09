@@ -23,7 +23,13 @@ func canonicalJSON(b []byte) ([]byte, error) {
 	if historyStrictJSON(bytes.TrimPrefix(b, []byte("\xef\xbb\xbf")), &v) != nil {
 		return nil, errConversationMedia
 	}
-	return json.Marshal(v)
+	var buffer bytes.Buffer
+	encoder := json.NewEncoder(&buffer)
+	encoder.SetEscapeHTML(false)
+	if encoder.Encode(v) != nil {
+		return nil, errConversationMedia
+	}
+	return bytes.TrimSuffix(buffer.Bytes(), []byte("\n")), nil
 }
 
 type nativeQuestionEvent struct {

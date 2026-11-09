@@ -155,8 +155,12 @@ func TestNativeQuestionMemoryStrictEvidenceAndNonreflectiveCLI(t *testing.T) {
 	manifest, _ := json.Marshal(e)
 	files["evidence"] = manifest
 	var out bytes.Buffer
-	if nativeQuestionCLIWithDeps([]string{"--evidence", "evidence"}, &out, d) != 0 || strings.Contains(out.String(), e.Images[0].Path) {
+	if nativeQuestionCLIWithDeps([]string{"--evidence", "evidence"}, &out, d) != 0 {
 		t.Fatal("CLI validation or redaction", out.String())
+	}
+	var proof nativeQuestionProof
+	if json.Unmarshal(out.Bytes(), &proof) != nil || proof.Images[0].Path != e.Images[0].Path || proof.SendAllowed {
+		t.Fatal("purpose proof differs")
 	}
 	out.Reset()
 	if nativeQuestionCLIWithDeps([]string{"--evidence", "missing-private"}, &out, d) != 1 || strings.Contains(out.String(), "missing-private") {

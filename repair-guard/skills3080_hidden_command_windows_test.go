@@ -117,7 +117,7 @@ func TestSkills3080HiddenProcessPreservesActualConsoleStdioAndExit(t *testing.T)
 	want, _ := json.Marshal(object{"console_window": false, "cwd": cwd, "utf8": "日本語"})
 	want = append(want, '\n')
 	if !bytes.Equal(stdout.Bytes(), want) || stderr.String() != "controlled stderr 日本語\n" {
-		t.Fatal("hidden CUI child console/stdout/stderr contract changed")
+		t.Fatalf("hidden CUI child console/stdout/stderr contract changed: got stdout %q want %q stderr %q", stdout.Bytes(), want, stderr.String())
 	}
 }
 

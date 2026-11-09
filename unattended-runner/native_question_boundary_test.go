@@ -24,6 +24,13 @@ func TestNativeQuestionMemoryRejectsPartialNumericArguments(t *testing.T) {
 			t.Fatal("partial numeric argument accepted", pair[0])
 		}
 	}
+	commands, _ := nativeQuestionTokenCommands(nativeQuestionMetadata(r.Payload.Input))
+	for _, extra := range []string{"Set-Location elsewhere\n", "Push-Location elsewhere\n", commands[0] + "\n  ", "& \"D:/CC/Tools/discord-ask/discord_ask.exe\" recovery-ask other\n"} {
+		input := "text(await tools.exec_command({cmd:" + string(mustNativeJSON(extra+commands[0])) + "}));"
+		if nativeQuestionAskMatches(input, e) {
+			t.Fatal("extra original command accepted")
+		}
+	}
 }
 
 func TestNativeQuestionMemoryPreservesOriginalJobOwnerStops(t *testing.T) {

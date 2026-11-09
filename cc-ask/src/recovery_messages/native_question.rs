@@ -247,11 +247,13 @@ mod tests {
             stage: false,
         };
         let before = fs::read(f.home.join(LEDGER)).ok();
+        let lock_before = fs::read(f.home.join(LOCK)).ok();
         assert_eq!(
             check_native_intent(&mut ctx, &args).unwrap()["staged"],
             false
         );
         assert_eq!(fs::read(f.home.join(LEDGER)).ok(), before);
+        assert_eq!(fs::read(f.home.join(LOCK)).ok(), lock_before);
         args.stage = true;
         assert_eq!(
             check_native_intent(&mut ctx, &args).unwrap()["staged"],
@@ -268,6 +270,9 @@ mod tests {
         assert!(ledger
             .effect(&args.question.request_id, "question:0")
             .is_none());
+        assert!(ask(&mut ctx, &args.question)
+            .unwrap_err()
+            .contains("stage-only"));
         let request = ledger.request(&args.question.request_id).unwrap();
         let result = execute_inner(&mut ctx, Some(request.clone()), None, &[], None, None);
         assert!(result.unwrap_err().contains("stage-only"));
@@ -280,6 +285,43 @@ mod tests {
             .contains("stage-only"));
         assert_eq!(fs::read(f.home.join(LEDGER)).unwrap(), once);
         assert_eq!(effects.lock().unwrap().1, 0);
+        // A different retry key for the same decision cannot create an intent.
+        let mut conflicting_question = f.ask(
+            "another-native-key",
+            "この構図で進めますか？\na:進める\nb:修正する",
+        );
+        conflicting_question.attach = args.question.attach.clone();
+        conflicting_question.expected_image_sha256 = args.question.expected_image_sha256.clone();
+        let mut conflict = NativeIntentArgs {
+            question: conflicting_question,
+            evidence: args.evidence.clone(),
+            stage: true,
+        };
+        conflict.question.request_id = "another-native-key".into();
+        let mut other_proof = proof.clone();
+        other_proof["request_id"] = json!("another-native-key");
+        ctx.effects = Box::new(NativeMock {
+            proof: other_proof,
+            effects: effects.clone(),
+        });
+        assert!(check_native_intent(&mut ctx, &conflict)
+            .unwrap_err()
+            .contains("another request"));
+        assert_eq!(fs::read(f.home.join(LEDGER)).unwrap(), once);
+        ctx.effects = Box::new(NativeMock {
+            proof: proof.clone(),
+            effects: effects.clone(),
+        });
+        // A missing association must not be silently reconstituted on retry.
+        let mut incomplete = Ledger::load(&f.home).unwrap();
+        incomplete.events.pop();
+        fs::write(f.home.join(LEDGER), serde_json::to_vec(&incomplete).unwrap()).unwrap();
+        let damaged = fs::read(f.home.join(LEDGER)).unwrap();
+        assert!(check_native_intent(&mut ctx, &args)
+            .unwrap_err()
+            .contains("association unavailable"));
+        assert_eq!(fs::read(f.home.join(LEDGER)).unwrap(), damaged);
+        fs::write(f.home.join(LEDGER), &once).unwrap();
         for (field, value) in [
             ("send_allowed", json!(true)),
             ("request_id", json!("other")),

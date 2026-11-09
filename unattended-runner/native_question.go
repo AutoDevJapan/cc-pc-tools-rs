@@ -172,8 +172,18 @@ func nativeQuestionAskMatches(input string, e nativeQuestionEvidence) bool {
 	count := 0
 	for _, command := range commands {
 		for _, line := range strings.Split(strings.ReplaceAll(command, "\r\n", "\n"), "\n") {
-			if !strings.HasPrefix(line, "& 'D:/CC/Tools/discord-ask/discord_ask.exe' recovery-ask ") {
+			line = strings.TrimSpace(line)
+			if line == "" {
 				continue
+			}
+			if !strings.HasPrefix(line, "& 'D:/CC/Tools/discord-ask/discord_ask.exe' recovery-ask ") {
+				if !regexp.MustCompile(`^Get-Content -LiteralPath '[^'\r\n]+'(?: -Raw| -Tail [0-9]+| -ErrorAction SilentlyContinue)*$`).MatchString(line) {
+					return false
+				}
+				continue
+			}
+			if strings.ContainsAny(line, ";`$|()") {
+				return false
 			}
 			count++
 			for _, flag := range []string{"--request-id", "--todo-id", "--origin-thread", "--title", "--body-file", "--decision-file"} {

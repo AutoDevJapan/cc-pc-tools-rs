@@ -110,7 +110,7 @@ func TestNativeQuestionMemoryExactScopeAndOriginalBytes(t *testing.T) {
 	}
 }
 func TestNativeQuestionMemoryRejectsChanges(t *testing.T) {
-	for _, kind := range []string{"request", "body", "decision", "image-order", "image-path", "async", "accepted", "session", "future", "expired", "task", "excluded"} {
+	for _, kind := range []string{"request", "body", "decision", "image-order", "image-path", "image-bytes", "async", "accepted", "session", "future", "expired", "task", "excluded"} {
 		t.Run(kind, func(t *testing.T) {
 			e, d, files := nativeQuestionMemoryFixture(t)
 			switch kind {
@@ -124,6 +124,8 @@ func TestNativeQuestionMemoryRejectsChanges(t *testing.T) {
 				e.Images[0], e.Images[1] = e.Images[1], e.Images[0]
 			case "image-path":
 				e.Images[1].Path += ".copy.png"
+			case "image-bytes":
+				files[e.Images[1].Path][len(files[e.Images[1].Path])-1] ^= 1
 			case "async":
 				e.Async.SHA = strings.Repeat("a", 64)
 			case "accepted":
@@ -141,6 +143,74 @@ func TestNativeQuestionMemoryRejectsChanges(t *testing.T) {
 			}
 			if _, err := validateNativeQuestion(context.Background(), e, d); err == nil {
 				t.Fatal("changed input accepted")
+			}
+		})
+	}
+}
+
+func TestNativeQuestionMemoryRejectsSemanticAsyncAndSessionChanges(t *testing.T) {
+	for _, kind := range []string{"accepted-false", "wrong-function", "wrong-call", "wrong-options", "wrong-session", "wrong-cwd"} {
+		t.Run(kind, func(t *testing.T) {
+			e, d, _ := nativeQuestionMemoryFixture(t)
+			event := &e.Accepted
+			if kind == "wrong-function" || kind == "wrong-call" || kind == "wrong-options" {
+				event = &e.Async
+			}
+			selected := *event
+			if kind == "wrong-session" || kind == "wrong-cwd" {
+				selected = nativeQuestionEvent{Line: 1, SHA: e.SessionSHA}
+			}
+			original := d.Records
+			raw, err := original(e.Rollout, []nativeQuestionEvent{selected})
+			if err != nil {
+				t.Fatal(err)
+			}
+			var v map[string]any
+			_ = json.Unmarshal(raw[0], &v)
+			payload := v["payload"].(map[string]any)
+			switch kind {
+			case "accepted-false":
+				payload["output"] = `{"accepted":false}`
+			case "wrong-function":
+				payload["name"] = "other"
+			case "wrong-call":
+				payload["call_id"] = "other"
+			case "wrong-options":
+				payload["arguments"] = `{"questions":[{"title":"表示した2枚目の構図は？","options":["a","other"]}]}`
+			case "wrong-session":
+				payload["id"] = "22222222-2222-2222-2222-222222222222"
+			case "wrong-cwd":
+				payload["cwd"] = filepath.Join(e.Worktree, "other")
+			}
+			changed := mustNativeJSON(v)
+			newBound := nativeQuestionEvent{Line: selected.Line, SHA: bytesHash(changed)}
+			if selected.Line == 1 {
+				e.SessionSHA = newBound.SHA
+			} else {
+				*event = newBound
+			}
+			d.Records = func(path string, bounds []nativeQuestionEvent) ([]json.RawMessage, error) {
+				var out []json.RawMessage
+				for _, b := range bounds {
+					if b == newBound {
+						out = append(out, changed)
+					} else {
+						r, err := original(path, []nativeQuestionEvent{b})
+						if err != nil {
+							return nil, err
+						}
+						out = append(out, r[0])
+					}
+				}
+				return out, nil
+			}
+			_, err = validateNativeQuestion(context.Background(), e, d)
+			want := "async_association"
+			if selected.Line == 1 {
+				want = "native_records"
+			}
+			if err == nil || generatedDiagnostic(err).Stage != want {
+				t.Fatal("wrong semantic rejection stage", generatedDiagnostic(err))
 			}
 		})
 	}

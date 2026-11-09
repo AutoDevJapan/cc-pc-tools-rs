@@ -12,8 +12,22 @@ It additionally pins the successful single-worker Playwright command event,
 original retention call, original question call, literal body/decision creation,
 ordered native image previews, and the original async call/accepted result.
 Native records are read from the canonical session store with bounded sizes and
-line hashes. Unknown wrappers, JSON fields, duplicate keys, different bytes,
-paths, tasks, recipients and expired evidence fail closed.
+line hashes. Evidence and async argument/result objects reject unknown fields
+and duplicate keys. Native record envelopes, job/task metadata and guard output
+are projected from their existing extensible schemas; selected native records
+are additionally pinned by their complete line hashes. Unknown executable
+wrappers, different bytes, paths, tasks, recipients and expired evidence fail
+closed.
+
+This bounded capture contract currently supports exactly two images: an
+existing reference within the originating worktree, followed by a retained
+`test-results/live-3d-*/live-3d-dark-round-end.png` output from the successful
+single-worker `e2e/live-3d.spec.ts` command. `copy_result_event` pins its successful
+hash readback. `async_title` and `async_options` must match the original native
+call, with no intervening user or tool event after the image previews. The
+original question cell permits only its single exact sender call and literal
+read-only `Get-Content` diagnostics; changing cwd or adding another sender call
+is rejected.
 
 The current producer file can have changed after another test run. Its current
 contents never replace the pinned original preview. Only the exact retained
@@ -63,3 +77,11 @@ Keep existing sender/receiver, source, imagegen, program-image and secret
 boundaries in the regression scope. Distribute only reviewed binaries built
 from the same merged source, preserve previous software, and record/read back
 the actual binary hashes before running the original request check/stage.
+
+Install and verify the new sender and runner before staging the production
+ledger. Staging adds `native_evidence` and `native_association`, which older
+strict Rust readers do not understand. A pre-stage rollback can restore the
+previous software directly. After staging, keep a reader that understands the
+new events; restoring an old sender requires an explicit compatible migration
+that preserves every ledger event. Never discard the ledger or remove the
+native association to make an old reader or sender accept it.

@@ -110,10 +110,11 @@ func taskQuestionReadState(path string, id uint64) (taskQuestionState, error) {
 		return state, errTaskQuestion
 	}
 	nonnull := func(b json.RawMessage) bool { return len(b) != 0 && string(b) != "null" }
-	if (flags.Status != "doing" && flags.Status != "todo") || flags.Stopped || flags.OwnerStopped || flags.Cancelled || flags.Postponed || flags.Stop != "" || nonnull(flags.Decision) || nonnull(flags.Wait) || nonnull(flags.Scheduler.Stop) {
+	if (flags.Status != "doing" && flags.Status != "todo" && flags.Status != "block") || flags.Stopped || flags.OwnerStopped || flags.Cancelled || flags.Postponed || flags.Stop != "" || nonnull(flags.Decision) || nonnull(flags.Scheduler.Stop) || conversationActorHeld(found) {
 		return state, errTaskQuestion
 	}
 	state.Root = db.Projects[state.Project]
+	state.current = found
 	if !filepath.IsAbs(filepath.FromSlash(state.Root)) {
 		return state, errTaskQuestion
 	}
@@ -160,6 +161,24 @@ func (r taskQuestionRegistry) images(ctx context.Context, input ConversationAskI
 }
 
 func (r *Runner) verifyTaskQuestion(ctx context.Context, input ConversationAskInput, original taskQuestionState) error {
+	if input.heldQuestion == nil {
+		index, err := r.loadConversations()
+		if err != nil {
+			return errTaskQuestion
+		}
+		if q, exists := index.Questions[input.RequestID]; exists {
+			var row TodoRow
+			_ = json.Unmarshal(original.current, &row)
+			held := len(row.QuestionWait) != 0 && string(row.QuestionWait) != "null"
+			if q.Phase == "waiting" || q.Phase == "answered" || (q.Phase == "posted" && held) {
+				retained, _, err := r.taskQuestionRetainedInput(ctx, q)
+				if err != nil {
+					return errTaskQuestion
+				}
+				input.heldQuestion = retained.heldQuestion
+			}
+		}
+	}
 	registry := taskQuestionProduction()
 	if r.TaskQuestion != nil {
 		registry = *r.TaskQuestion

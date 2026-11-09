@@ -24,6 +24,7 @@ const conversationSender = "D:/CC/Tools/discord-ask/discord_ask.exe"
 const conversationTodo = "D:/CC/Tools/todo/todo.exe"
 
 type ConversationAskInput struct {
+	heldQuestion                                           *ConversationQuestion // Only an already retained, source-verified reply may set this.
 	RequestID, OriginThread, BodyFile, DecisionFile, Title string
 	Todo                                                   uint64
 	ActorTodo                                              uint64
@@ -360,6 +361,7 @@ func (r *Runner) conversationTaskForQuestion(ctx context.Context, id uint64, que
 			return nil, errTaskQuestion
 		}
 		original.Root = root
+		original.current = selected
 		if err := r.verifyTaskQuestion(ctx, *question, original); err != nil {
 			return nil, errTaskQuestion
 		}

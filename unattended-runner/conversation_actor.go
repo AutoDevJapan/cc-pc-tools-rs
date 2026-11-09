@@ -282,12 +282,20 @@ func (r *Runner) conversationActorRowWithProof(ctx context.Context, q Conversati
 	return row, nil
 }
 
-func (r *Runner) conversationDeliveryTask(ctx context.Context, q ConversationQuestion) (*TodoRow, error) {
+func (r *Runner) conversationDeliveryTask(ctx context.Context, q ConversationQuestion, source ...*Request) (*TodoRow, error) {
 	if q.deliveryActor != nil {
 		q.Todo, q.Actor = q.originTodo, q.deliveryActor
 		return r.conversationActorRow(ctx, q)
 	}
-	return r.conversationTask(ctx, q.Todo)
+	row, err := r.conversationTask(ctx, q.Todo)
+	if err == nil || len(source) != 1 || q.Actor != nil {
+		return row, err
+	}
+	input, verifyErr := r.taskQuestionReplyInput(ctx, q, source[0])
+	if verifyErr != nil {
+		return nil, errTaskQuestion
+	}
+	return r.conversationTaskForQuestion(ctx, q.Todo, &input)
 }
 
 // This is a local recipient envelope, not a replacement of the API's origin

@@ -50,6 +50,7 @@ type taskQuestionEvidence struct {
 // Relevant original metadata, not mutable progress/notes. Status and explicit
 // stops are checked separately on every registration and consumption.
 type taskQuestionState struct {
+	current    json.RawMessage
 	ID         uint64          `json:"id"`
 	Project    string          `json:"project"`
 	Title      string          `json:"title"`
@@ -62,7 +63,10 @@ type taskQuestionState struct {
 		Job        string
 		Generation uint64
 	} `json:"worker_receipt"`
-	Scheduler struct{ Job string } `json:"scheduler"`
+	Scheduler struct {
+		Job string
+		Key json.RawMessage
+	} `json:"scheduler"`
 }
 
 type taskQuestionReceipt struct {
@@ -102,6 +106,10 @@ func (r taskQuestionRegistry) guarded(ctx context.Context, path string, limit in
 }
 
 func (r taskQuestionRegistry) check(ctx context.Context, path string) (taskQuestionEvidence, taskQuestionReceipt, error) {
+	return r.checkForQuestion(ctx, path, nil)
+}
+
+func (r taskQuestionRegistry) checkForQuestion(ctx context.Context, path string, question *ConversationQuestion) (taskQuestionEvidence, taskQuestionReceipt, error) {
 	e, receipt := taskQuestionEvidence{}, taskQuestionReceipt{}
 	bad := func(stage string) (taskQuestionEvidence, taskQuestionReceipt, error) {
 		return taskQuestionEvidence{}, taskQuestionReceipt{}, generatedFailure(stage, "task_question_metadata_unverified")
@@ -127,7 +135,7 @@ func (r taskQuestionRegistry) check(ctx context.Context, path string) (taskQuest
 		return bad("task_source_current")
 	}
 	state, err := r.Task(ctx, e.Scope.Todo)
-	if err != nil || !conversationMediaSamePath(filepath.FromSlash(e.Root), filepath.FromSlash(state.Root)) || state.Worker.Job != e.Session || state.Scheduler.Job != e.Session || len(state.Jobs) != 1 || state.Jobs[0] != e.Session || state.Worker.Generation == 0 || !r.Root(ctx, e.Root) {
+	if err != nil || !state.eligible(question, e.Scope.Owner) || !conversationMediaSamePath(filepath.FromSlash(e.Root), filepath.FromSlash(state.Root)) || state.Worker.Job != e.Session || state.Scheduler.Job != e.Session || len(state.Jobs) != 1 || state.Jobs[0] != e.Session || state.Worker.Generation == 0 || !r.Root(ctx, e.Root) {
 		return bad("task_source_task")
 	}
 	if err = taskQuestionNative(e, state, r.Records); err != nil {
@@ -176,7 +184,7 @@ func (r taskQuestionRegistry) check(ctx context.Context, path string) (taskQuest
 		return bad("task_source_question")
 	}
 	current, err := r.Task(ctx, e.Scope.Todo)
-	if err != nil || canonicalHash(current) != canonicalHash(state) || !r.Dst(e.Scope) || ctx.Err() != nil {
+	if err != nil || !current.eligible(question, e.Scope.Owner) || canonicalHash(current) != canonicalHash(state) || !r.Dst(e.Scope) || ctx.Err() != nil {
 		return bad("task_source_current")
 	}
 	receipt = taskQuestionReceipt{Evidence: path, SHA: bytesHash(b), State: canonicalHash(state)}
@@ -288,7 +296,7 @@ func (r taskQuestionRegistry) load(ctx context.Context, input ConversationAskInp
 	if historyStrictJSON(envelope.Payload, &saved) != nil {
 		return zero, errConversationMedia
 	}
-	e, current, err := r.check(ctx, saved.Evidence)
+	e, current, err := r.checkForQuestion(ctx, saved.Evidence, input.heldQuestion)
 	if err != nil || current != saved || current.State != canonicalHash(state) || e.Request != input.RequestID || e.Scope.Todo != input.Todo || e.Origin != input.OriginThread || e.Title != input.Title || e.Wait != input.Wait || input.ActorTodo != 0 || input.ActorJob != "" {
 		return zero, errConversationMedia
 	}

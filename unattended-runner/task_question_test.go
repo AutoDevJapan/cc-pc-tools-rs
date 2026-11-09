@@ -26,13 +26,16 @@ type taskQuestionFixture struct {
 }
 
 func taskQuestionTest(t *testing.T) *taskQuestionFixture {
+	return taskQuestionTestAt(t, time.Date(2026, 10, 8, 12, 0, 0, 0, time.UTC))
+}
+
+func taskQuestionTestAt(t *testing.T, now time.Time) *taskQuestionFixture {
 	t.Helper()
 	root, err := filepath.EvalSymlinks(t.TempDir())
 	if err != nil {
 		t.Fatal(err)
 	}
 	f := &taskQuestionFixture{path: filepath.Join(root, "evidence.json"), todos: filepath.Join(root, "todo.json"), home: root}
-	now := time.Date(2026, 10, 8, 12, 0, 0, 0, time.UTC)
 	session := "00000000-0000-4000-8000-000000000001"
 	turnID := func(n int) string { return fmt.Sprintf("00000000-0000-4000-8000-%012d", n) }
 	f.e = taskQuestionEvidence{Domain: taskQuestionDomain, Origin: "500", Title: "画面の方向", Wait: true, Session: session, Root: root, Rollout: filepath.Join(root, "rollout-"+session+".jsonl"), Body: filepath.Join(root, "body.txt"), Decision: filepath.Join(root, "decision.json"), Media: filepath.Join(root, "media.json"), Created: now.Add(-time.Minute), Expires: now.Add(time.Hour), Repository: taskQuestionRepository{ID: 900, OwnerID: 80, FullName: "AutoDevJapan/Example"}, Scope: generatedQuestionScope{Todo: 42, Owner: "300", Guild: "100", Forum: "200"}}

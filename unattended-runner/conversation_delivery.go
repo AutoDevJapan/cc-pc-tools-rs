@@ -192,7 +192,7 @@ func (r *Runner) deliverConversationReply(ctx context.Context, q ConversationQue
 	if q.Actor != nil {
 		return r.deliverConversationActorReply(ctx, q, reply, req)
 	}
-	row, err := r.conversationDeliveryTask(ctx, q)
+	row, err := r.conversationDeliveryTask(ctx, q, req)
 	if err != nil {
 		return err
 	}
@@ -209,6 +209,9 @@ func (r *Runner) deliverConversationReply(ctx context.Context, q ConversationQue
 		return err
 	}
 	marker := conversationReplyMarker(q, req)
+	if row.conversationTaskQuestion {
+		return r.deliverTaskQuestionReply(ctx, row, q, reply, req, receipt, marker)
+	}
 	if q.Wait {
 		// Every waiting reply, including a second reply, gets an immutable input
 		// before any edit. Reacquisition must not silently replace that version.
@@ -331,7 +334,7 @@ func (r *Runner) deliverConversationReply(ctx context.Context, q ConversationQue
 		if _, err = r.Run(ctx, conversationTodo, "edit", fmt.Sprint(q.Todo), "--note-file", noteFile, "--expected-note-sha256", bytesHash([]byte(row.Note)), "--scope-file", scopeFile, "--expected-state-file", expectedFile); err != nil {
 			return errors.New("conversation normal task delivery deferred")
 		}
-		row, err = r.conversationDeliveryTask(ctx, q)
+		row, err = r.conversationDeliveryTask(ctx, q, req)
 		if err != nil || row.Project != q.Project || !hasNoteMarker(row.Note, marker) {
 			return errors.New("conversation task delivery readback deferred")
 		}
@@ -548,49 +551,56 @@ func (r *Runner) deliverContinuedConversationReply(ctx context.Context, row *Tod
 }
 
 func (r *Runner) deliverConversationReplyKeepingWait(ctx context.Context, row *TodoRow, q ConversationQuestion, reply conversationReply, req *Request, receipt []byte, marker string, preserve bool) error {
+	if _, err := r.recordConversationReplyKeepingWait(ctx, row, q, reply, req, receipt, marker, preserve); err != nil {
+		return err
+	}
+	req.Todo, req.Phase = q.Todo, "conversation_reply_delivered"
+	return r.save()
+}
+
+func (r *Runner) recordConversationReplyKeepingWait(ctx context.Context, row *TodoRow, q ConversationQuestion, reply conversationReply, req *Request, receipt []byte, marker string, preserve bool) (*TodoRow, error) {
 	note := row.Note + "\n\n" + r.conversationReplyInstructions(q, reply, req, receipt, marker)
 	if len(note) > 1<<20 {
-		return errors.New("conversation delivery note limit exceeded")
+		return nil, errors.New("conversation delivery note limit exceeded")
 	}
 	dir := filepath.Join(r.Config.Home, "conversations", q.RequestID, "replies")
 	noteFile := filepath.Join(dir, reply.Message+".note.txt")
 	if err := writeText(noteFile, note); err != nil {
-		return err
+		return nil, err
 	}
 	scopeFile, err := r.conversationScopeFile(row, q)
 	if err != nil {
-		return err
+		return nil, err
 	}
 	expectedFile, err := r.conversationSnapshotFile(row, q, reply.Message)
 	if err != nil {
-		return err
+		return nil, err
 	}
 	answer, b, answerFile, err := r.prepareConversationAnswer(q, reply, req, receipt)
 	if err != nil {
-		return err
+		return nil, err
 	}
 	args := []string{"question-answer", fmt.Sprint(q.Todo), "--answer-file", answerFile, "--delivery-only", "--delivery-note-file", noteFile, "--expected-state-file", expectedFile, "--scope-file", scopeFile}
 	if preserve {
 		args = append(args, "--preserve-question-wait")
 	}
 	if _, err := r.Run(ctx, conversationTodo, args...); err != nil {
-		return errors.New("conversation continued answer delivery deferred")
+		return nil, errors.New("conversation continued answer delivery deferred")
 	}
 	current, err := r.todo(q.Todo)
 	if preserve {
-		current, err = r.conversationTask(ctx, q.Todo)
+		current, err = r.conversationDeliveryTask(ctx, q, req)
 	}
 	if err != nil || current.Project != q.Project || !conversationDeliveryRecordedWithMode(current, q, answer, b, preserve) {
-		return errors.New("conversation continued answer readback deferred")
+		return nil, errors.New("conversation continued answer readback deferred")
 	}
 	if preserve {
 		ready, err := conversationPreservedReplyReady(current, q, answer, b)
 		if err != nil || !ready {
-			return errors.New("conversation preserved answer readback deferred")
+			return nil, errors.New("conversation preserved answer readback deferred")
 		}
 	}
-	req.Todo, req.Phase = q.Todo, "conversation_reply_delivered"
-	return r.save()
+	return current, nil
 }
 
 // Keep construction separate from the immutable input and its recovery checks.

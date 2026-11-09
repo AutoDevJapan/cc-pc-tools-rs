@@ -106,6 +106,14 @@ func (r *Runner) taskQuestionRetainedInput(ctx context.Context, q ConversationQu
 	if err != nil || canonicalHash(index.Questions[q.RequestID]) != canonicalHash(q) {
 		return bad()
 	}
+	return r.taskQuestionRetainedProof(ctx, q)
+}
+
+// Also used before publishing an interrupted, independently signed admission.
+// Its caller must authenticate the candidate against either the index or MAC.
+func (r *Runner) taskQuestionRetainedProof(ctx context.Context, q ConversationQuestion) (ConversationAskInput, *conversationProof, error) {
+	input := ConversationAskInput{}
+	bad := func() (ConversationAskInput, *conversationProof, error) { return input, nil, errTaskQuestion }
 	dir := filepath.Join(r.Config.Home, "conversations", q.RequestID)
 	if q.BodyFile != filepath.Join(dir, "question.txt") || q.DecisionFile != filepath.Join(dir, "decision.json") || q.ReceiptFile != filepath.Join(dir, "question.json") {
 		return bad()

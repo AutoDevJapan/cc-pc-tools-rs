@@ -385,6 +385,9 @@ func (r *Runner) conversationAsk(ctx context.Context, input ConversationAskInput
 	if _, ok := number(input.OriginThread); !ok {
 		return zero, errors.New("conversation origin invalid")
 	}
+	if err := r.recoverTaskQuestionIndex(ctx, input); err != nil {
+		return zero, err
+	}
 	row, err := r.conversationTaskForQuestion(ctx, input.Todo, &input)
 	if err != nil {
 		return zero, err
@@ -553,6 +556,13 @@ func (r *Runner) conversationAsk(ctx context.Context, input ConversationAskInput
 			return zero, errors.New("conversation reserved task is held")
 		}
 		args := []string{"recovery-ask", "--request-id", q.SenderID, "--todo-id", fmt.Sprint(q.Todo), "--origin-thread", q.OriginThread, "--body-file", q.BodyFile, "--decision-file", q.DecisionFile}
+		if row.conversationTaskQuestion {
+			before, err := r.taskQuestionSendBefore(input)
+			if err != nil {
+				return zero, errTaskQuestion
+			}
+			args = append(args, "--send-before", before)
+		}
 		if q.Actor != nil && q.RequestID == fixedConversationOrigin.RequestID {
 			args = append(args, "--conversation-source-request", q.RequestID)
 		}

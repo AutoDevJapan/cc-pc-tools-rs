@@ -2,6 +2,9 @@ package main
 
 import (
 	"context"
+	"fmt"
+	"os"
+	"path/filepath"
 	"time"
 )
 
@@ -111,4 +114,98 @@ func (r taskQuestionRegistry) admitted(ctx context.Context, input ConversationAs
 // Keep the complete retained decision binding separate from sender identity.
 func taskQuestionInputMatches(input ConversationAskInput, e taskQuestionEvidence) bool {
 	return e.Request == input.RequestID && e.Scope.Todo == input.Todo && e.Origin == input.OriginThread && e.Title == input.Title && e.Wait == input.Wait && input.ActorTodo == 0 && input.ActorJob == ""
+}
+
+func (r *Runner) taskQuestionSendBefore(input ConversationAskInput) (string, error) {
+	registry := r.taskQuestionRegistry()
+	var staged taskQuestionAdmission
+	var registration taskQuestionReceipt
+	if registry.readSigned(taskQuestionAdmissionName(input.RequestID, false), &staged) != nil || registry.readSigned(taskQuestionName(input.RequestID), &registration) != nil ||
+		staged.Registration != registration || !taskQuestionInputMatches(input, staged.Evidence) || !registry.Now().Before(staged.Evidence.Expires) {
+		return "", errTaskQuestion
+	}
+	return staged.Evidence.Expires.UTC().Format(time.RFC3339Nano), nil
+}
+
+// The admission is the durable authority; index publication is a recoverable
+// projection. Never call the sender to repair this already posted question.
+func (r *Runner) recoverTaskQuestionIndex(ctx context.Context, input ConversationAskInput) error {
+	if !conversationMediaNormal.MatchString(input.RequestID) {
+		return nil
+	}
+	index, err := r.loadConversations()
+	if err != nil {
+		return errTaskQuestion
+	}
+	reserved, ok := index.Questions[input.RequestID]
+	if !ok || reserved.Phase != "reserved" {
+		return nil
+	}
+	registry := r.taskQuestionRegistry()
+	if _, err := os.Lstat(filepath.Join(filepath.FromSlash(registry.Keys.Home), taskQuestionAdmissionName(input.RequestID, true))); os.IsNotExist(err) {
+		return nil
+	}
+	var admission taskQuestionAdmission
+	if registry.readSigned(taskQuestionAdmissionName(input.RequestID, true), &admission) != nil || admission.Domain != "owner-task-question-admission-v1" || !shaPattern.MatchString(admission.Question) || !taskQuestionInputMatches(input, admission.Evidence) ||
+		reserved.Actor != nil || reserved.RecoveredIntake != 0 || !reserved.Wait || reserved.SenderID != "conversation-v1-"+bytesHash([]byte(reserved.RequestID))[:32] {
+		return errTaskQuestion
+	}
+	if reserved.Thread != "" || reserved.Message != "" || reserved.Progress != "" || reserved.Fingerprint != "" || reserved.QuestionSHA != "" || reserved.DecisionSHA != "" || reserved.ReceiptSHA != "" || reserved.ReceiptFile != "" {
+		return errTaskQuestion
+	}
+	if _, _, err := conversationQuestionRetryImages(index, input); err != nil {
+		return errTaskQuestion
+	}
+	dir := filepath.Join(r.Config.Home, "conversations", reserved.RequestID)
+	if reserved.BodyFile != filepath.Join(dir, "question.txt") || reserved.DecisionFile != filepath.Join(dir, "decision.json") {
+		return errTaskQuestion
+	}
+	q := reserved
+	q.ReceiptFile = filepath.Join(dir, "question.json")
+	b, err := registry.Read(q.ReceiptFile, 128<<10)
+	var receipt conversationQuestionReceipt
+	if err != nil || historyStrictJSON(b, &receipt) != nil {
+		return errTaskQuestion
+	}
+	q.ReceiptSHA = bytesHash(b)
+	q.Thread, q.Message, q.Progress, q.Fingerprint = receipt.Thread, receipt.Message, receipt.Progress, receipt.Fingerprint
+	want := conversationQuestionReceipt{Domain: "discord-conversation-question-v1", RequestID: q.SenderID, Todo: fmt.Sprint(q.Todo), Guild: r.State.Destination.Guild, Owner: r.State.Destination.Owner, Bot: r.State.Destination.Bot, Thread: q.Thread, Message: q.Message, Progress: q.Progress, Fingerprint: q.Fingerprint, Created: receipt.Created}
+	if receipt != want || q.Thread != q.Message || !shaPattern.MatchString(q.Fingerprint) {
+		return errTaskQuestion
+	}
+	for _, id := range []string{q.Thread, q.Progress} {
+		if _, ok := number(id); !ok {
+			return errTaskQuestion
+		}
+	}
+	// Discovery is read-only and request-bound by the existing sender. The full
+	// proof is checked again after matching the immutable signed question hash.
+	raw, err := r.Run(ctx, conversationSender, "recovery-replies", "--thread", q.Thread, "--message", q.Message, "--request-id", q.SenderID, "--todo-id", fmt.Sprint(q.Todo), "--read-only")
+	var found conversationProof
+	if err != nil || historyStrictJSON([]byte(raw), &found) != nil {
+		return errTaskQuestion
+	}
+	q.QuestionSHA, q.DecisionSHA = bytesHash([]byte(found.Body)), canonicalHash(found.Decision)
+	q.Phase = "posted"
+	if admission.Question != taskQuestionAdmittedIdentity(q) {
+		return errTaskQuestion
+	}
+	if _, _, err = r.taskQuestionRetainedProof(ctx, q); err != nil {
+		return errTaskQuestion
+	}
+	state, err := registry.Task(ctx, q.Todo)
+	if err != nil {
+		return errTaskQuestion
+	}
+	checked := input
+	checked.heldQuestion = &q
+	if err = r.verifyTaskQuestion(ctx, checked, state); err != nil {
+		return errTaskQuestion
+	}
+	latest, err := r.loadConversations()
+	if err != nil || canonicalHash(latest.Questions[q.RequestID]) != canonicalHash(reserved) {
+		return errTaskQuestion
+	}
+	latest.Questions[q.RequestID] = q
+	return publish(r.conversationPath(), latest)
 }

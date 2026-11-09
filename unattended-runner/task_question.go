@@ -197,7 +197,7 @@ func (r taskQuestionRegistry) checkForQuestion(ctx context.Context, path string,
 	if err == nil {
 		current, err = r.questionState(e, question, registration, current)
 	}
-	if err != nil || !current.eligible(question, e.Scope.Owner) || canonicalHash(current) != canonicalHash(state) || !r.Dst(e.Scope) || ctx.Err() != nil {
+	if err != nil || !current.eligible(question, e.Scope.Owner) || canonicalHash(current) != canonicalHash(state) || !r.Dst(e.Scope) || ctx.Err() != nil || !r.Now().Before(e.Expires) {
 		return bad("task_source_current")
 	}
 	receipt = taskQuestionReceipt{Evidence: path, SHA: bytesHash(b), State: canonicalHash(state), observed: observed}

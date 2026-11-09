@@ -182,7 +182,7 @@ func (r *Runner) verifyTaskQuestion(ctx context.Context, input ConversationAskIn
 		return errTaskQuestion
 	}
 	if input.heldQuestion == nil {
-		if !registry.images(ctx, input, e, filepath.Dir(r.Config.Home)) || registry.stageAdmission(e) != nil {
+		if !registry.images(ctx, input, e, filepath.Dir(r.Config.Home)) || !registry.Now().Before(e.Expires) || registry.stageAdmission(e) != nil {
 			return errTaskQuestion
 		}
 	}

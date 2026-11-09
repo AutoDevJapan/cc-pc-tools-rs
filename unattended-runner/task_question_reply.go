@@ -12,6 +12,9 @@ import (
 // The signature pins the original generation/recipient. Only the same canonical
 // question wait (or its answer receipt) may change the task's eligible phase.
 func (s taskQuestionState) eligible(q *ConversationQuestion, owner string) bool {
+	if s.retired {
+		return q != nil
+	}
 	var row TodoRow
 	var generation uint64
 	if json.Unmarshal(s.current, &row) != nil || json.Unmarshal(s.Generation, &generation) != nil || generation == 0 || generation != s.Worker.Generation {
@@ -181,6 +184,13 @@ func (r *Runner) deliverTaskQuestionReply(ctx context.Context, row *TodoRow, q C
 	}
 	scope, err := r.conversationScopeFile(row, q)
 	if err != nil {
+		return err
+	}
+	registry := taskQuestionProduction()
+	if r.TaskQuestion != nil {
+		registry = *r.TaskQuestion
+	}
+	if err := registry.recordRelease(row, q, answer, b); err != nil {
 		return err
 	}
 	if _, err = r.Run(ctx, conversationTodo, "question-answer", fmt.Sprint(q.Todo), "--answer-file", answerFile, "--scope-file", scope); err != nil {

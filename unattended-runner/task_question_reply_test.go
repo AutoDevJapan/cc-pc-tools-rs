@@ -402,6 +402,7 @@ func taskQuestionUseCanonicalTodo(t *testing.T, c *conversationFixture, f *taskQ
 	notify := filepath.Join(f.home, "isolated-notify.json")
 	mediaJSON(t, notify, map[string]any{"guild_id": "100", "owner_user_id": "300", "application_id": "400", "task_channel_id": "200"})
 	jobs := filepath.Join(f.home, "isolated-jobs")
+	f.r.Jobs = jobs
 	if active {
 		if os.MkdirAll(filepath.Join(jobs, f.e.Session), 0700) != nil {
 			t.Fatal("job fixture")

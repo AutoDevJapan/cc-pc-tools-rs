@@ -51,6 +51,7 @@ type taskQuestionEvidence struct {
 // stops are checked separately on every registration and consumption.
 type taskQuestionState struct {
 	current    json.RawMessage
+	retired    bool
 	ID         uint64          `json:"id"`
 	Project    string          `json:"project"`
 	Title      string          `json:"title"`
@@ -70,6 +71,7 @@ type taskQuestionState struct {
 }
 
 type taskQuestionReceipt struct {
+	observed string
 	Evidence string `json:"evidence_path"`
 	SHA      string `json:"evidence_sha256"`
 	State    string `json:"original_metadata_sha256"`
@@ -88,6 +90,7 @@ type taskQuestionRegistry struct {
 	Root     func(context.Context, string) bool
 	Media    func(context.Context, string) (generatedQuestionBundle, error)
 	Now      func() time.Time
+	Jobs     string
 }
 
 func taskQuestionMAC(key, payload []byte) string {
@@ -106,10 +109,10 @@ func (r taskQuestionRegistry) guarded(ctx context.Context, path string, limit in
 }
 
 func (r taskQuestionRegistry) check(ctx context.Context, path string) (taskQuestionEvidence, taskQuestionReceipt, error) {
-	return r.checkForQuestion(ctx, path, nil)
+	return r.checkForQuestion(ctx, path, nil, nil)
 }
 
-func (r taskQuestionRegistry) checkForQuestion(ctx context.Context, path string, question *ConversationQuestion) (taskQuestionEvidence, taskQuestionReceipt, error) {
+func (r taskQuestionRegistry) checkForQuestion(ctx context.Context, path string, question *ConversationQuestion, registration *taskQuestionReceipt) (taskQuestionEvidence, taskQuestionReceipt, error) {
 	e, receipt := taskQuestionEvidence{}, taskQuestionReceipt{}
 	bad := func(stage string) (taskQuestionEvidence, taskQuestionReceipt, error) {
 		return taskQuestionEvidence{}, taskQuestionReceipt{}, generatedFailure(stage, "task_question_metadata_unverified")
@@ -122,7 +125,7 @@ func (r taskQuestionRegistry) checkForQuestion(ctx context.Context, path string,
 	if err != nil || historyStrictJSON(b, &e) != nil {
 		return bad("task_source_evidence")
 	}
-	if e.Domain != taskQuestionDomain || !conversationMediaNormal.MatchString(e.Request) || !strings.HasPrefix(e.Request, "normal-ask-") || e.Scope.Todo == 0 || !generatedUUID.MatchString(e.Session) || !shaPattern.MatchString(e.SessionSHA) || !shaPattern.MatchString(e.Scope.Body) || !shaPattern.MatchString(e.Scope.Decision) || !shaPattern.MatchString(e.MediaSHA) || strings.TrimSpace(e.Title) == "" || !generatedWithin(r.Sessions, e.Rollout) || !strings.HasSuffix(filepath.Base(filepath.FromSlash(e.Rollout)), "-"+e.Session+".jsonl") || !filepath.IsAbs(filepath.FromSlash(e.Root)) || !r.Clear(e.Root) || !r.Clear(e.Rollout) {
+	if e.Domain != taskQuestionDomain || !e.Wait || !conversationMediaNormal.MatchString(e.Request) || !strings.HasPrefix(e.Request, "normal-ask-") || e.Scope.Todo == 0 || !generatedUUID.MatchString(e.Session) || !shaPattern.MatchString(e.SessionSHA) || !shaPattern.MatchString(e.Scope.Body) || !shaPattern.MatchString(e.Scope.Decision) || !shaPattern.MatchString(e.MediaSHA) || strings.TrimSpace(e.Title) == "" || !generatedWithin(r.Sessions, e.Rollout) || !strings.HasSuffix(filepath.Base(filepath.FromSlash(e.Rollout)), "-"+e.Session+".jsonl") || !filepath.IsAbs(filepath.FromSlash(e.Root)) || !r.Clear(e.Root) || !r.Clear(e.Rollout) {
 		return bad("task_source_contract")
 	}
 	for _, id := range []string{e.Scope.Owner, e.Scope.Guild, e.Scope.Forum, e.Origin} {
@@ -135,6 +138,10 @@ func (r taskQuestionRegistry) checkForQuestion(ctx context.Context, path string,
 		return bad("task_source_current")
 	}
 	state, err := r.Task(ctx, e.Scope.Todo)
+	observed := canonicalHash(state)
+	if err == nil {
+		state, err = r.questionState(e, question, registration, state)
+	}
 	if err != nil || !state.eligible(question, e.Scope.Owner) || !conversationMediaSamePath(filepath.FromSlash(e.Root), filepath.FromSlash(state.Root)) || state.Worker.Job != e.Session || state.Scheduler.Job != e.Session || len(state.Jobs) != 1 || state.Jobs[0] != e.Session || state.Worker.Generation == 0 || !r.Root(ctx, e.Root) {
 		return bad("task_source_task")
 	}
@@ -184,10 +191,16 @@ func (r taskQuestionRegistry) checkForQuestion(ctx context.Context, path string,
 		return bad("task_source_question")
 	}
 	current, err := r.Task(ctx, e.Scope.Todo)
+	if err == nil && canonicalHash(current) != observed {
+		return bad("task_source_current")
+	}
+	if err == nil {
+		current, err = r.questionState(e, question, registration, current)
+	}
 	if err != nil || !current.eligible(question, e.Scope.Owner) || canonicalHash(current) != canonicalHash(state) || !r.Dst(e.Scope) || ctx.Err() != nil {
 		return bad("task_source_current")
 	}
-	receipt = taskQuestionReceipt{Evidence: path, SHA: bytesHash(b), State: canonicalHash(state)}
+	receipt = taskQuestionReceipt{Evidence: path, SHA: bytesHash(b), State: canonicalHash(state), observed: observed}
 	return e, receipt, nil
 }
 
@@ -241,6 +254,10 @@ func (r taskQuestionRegistry) register(ctx context.Context, path string) error {
 	if err != nil {
 		return err
 	}
+	return r.writeSigned(taskQuestionName(e.Request), receipt)
+}
+
+func (r taskQuestionRegistry) writeSigned(name string, value any) error {
 	home := filepath.FromSlash(r.Keys.Home)
 	if os.MkdirAll(home, 0700) != nil {
 		return errConversationMedia
@@ -254,12 +271,12 @@ func (r taskQuestionRegistry) register(ctx context.Context, path string) error {
 		return errConversationMedia
 	}
 	defer eraseGeneratedKey(key)
-	payload, _ := json.Marshal(receipt)
+	payload, _ := json.Marshal(value)
 	b, _ := json.Marshal(generatedQuestionEnvelope{Payload: payload, MAC: taskQuestionMAC(key, payload)})
-	name := filepath.Join(physical, taskQuestionName(e.Request))
-	err = generatedWriteNew(name, b)
+	path := filepath.Join(physical, name)
+	err = generatedWriteNew(path, b)
 	if os.IsExist(err) {
-		old, readErr := r.Read(name, 128<<10)
+		old, readErr := r.Read(path, 128<<10)
 		if readErr == nil && bytes.Equal(old, b) {
 			return nil
 		}
@@ -267,37 +284,43 @@ func (r taskQuestionRegistry) register(ctx context.Context, path string) error {
 	return err
 }
 
-func (r taskQuestionRegistry) load(ctx context.Context, input ConversationAskInput, state taskQuestionState) (taskQuestionEvidence, error) {
-	zero := taskQuestionEvidence{}
-	if !conversationMediaNormal.MatchString(input.RequestID) {
-		return zero, errConversationMedia
-	}
+func (r taskQuestionRegistry) readSigned(name string, value any) error {
 	home := filepath.FromSlash(r.Keys.Home)
 	physical, _, err := conversationMediaPhysical(home)
 	if err != nil || !conversationMediaSamePath(physical, home) {
-		return zero, errConversationMedia
+		return errConversationMedia
 	}
-	b, err := r.Read(filepath.Join(physical, taskQuestionName(input.RequestID)), 128<<10)
+	b, err := r.Read(filepath.Join(physical, name), 128<<10)
 	var envelope generatedQuestionEnvelope
 	if err != nil || historyStrictJSON(b, &envelope) != nil {
-		return zero, errConversationMedia
+		return errConversationMedia
 	}
 	key, err := r.Keys.key(false)
 	if err != nil {
-		return zero, errConversationMedia
+		return errConversationMedia
 	}
 	defer eraseGeneratedKey(key)
 	mac, err := hex.DecodeString(envelope.MAC)
 	expected, _ := hex.DecodeString(taskQuestionMAC(key, envelope.Payload))
 	if err != nil || !hmac.Equal(mac, expected) {
+		return errConversationMedia
+	}
+	return historyStrictJSON(envelope.Payload, value)
+}
+
+func (r taskQuestionRegistry) load(ctx context.Context, input ConversationAskInput, state taskQuestionState) (taskQuestionEvidence, error) {
+	zero := taskQuestionEvidence{}
+	if !input.Wait || !conversationMediaNormal.MatchString(input.RequestID) {
 		return zero, errConversationMedia
 	}
 	var saved taskQuestionReceipt
-	if historyStrictJSON(envelope.Payload, &saved) != nil {
+	if r.readSigned(taskQuestionName(input.RequestID), &saved) != nil {
 		return zero, errConversationMedia
 	}
-	e, current, err := r.checkForQuestion(ctx, saved.Evidence, input.heldQuestion)
-	if err != nil || current != saved || current.State != canonicalHash(state) || e.Request != input.RequestID || e.Scope.Todo != input.Todo || e.Origin != input.OriginThread || e.Title != input.Title || e.Wait != input.Wait || input.ActorTodo != 0 || input.ActorJob != "" {
+	e, current, err := r.checkForQuestion(ctx, saved.Evidence, input.heldQuestion, &saved)
+	observed := current.observed
+	current.observed = ""
+	if err != nil || current != saved || observed != canonicalHash(state) || e.Request != input.RequestID || e.Scope.Todo != input.Todo || e.Origin != input.OriginThread || e.Title != input.Title || e.Wait != input.Wait || input.ActorTodo != 0 || input.ActorJob != "" {
 		return zero, errConversationMedia
 	}
 	body, err := r.Read(input.BodyFile, 128<<10)

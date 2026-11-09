@@ -16,7 +16,7 @@ func taskQuestionProduction() taskQuestionRegistry {
 		Keys: keys, Sessions: keys.Sessions, Read: generatedQuestionRead,
 		Guard: conversationMediaLiveGuard, Clear: generatedQuestionSourceClear,
 		Records: generatedQuestionRecords, Media: generatedQuestionRegistryProduction().check,
-		Now: time.Now, Dst: keys.Destination,
+		Now: time.Now, Dst: keys.Destination, Jobs: "D:/CC/Tools/codex-jobs/jobs",
 		Task: func(_ context.Context, id uint64) (taskQuestionState, error) {
 			return taskQuestionReadState("D:/CC/Tools/todo/todo.json", id)
 		},

@@ -154,7 +154,11 @@ mod tests {
             ("image/webp", "webp", false),
         ] {
             let (scope, qualification) = qualification(mime, extension);
-            assert_eq!(qualification.matches(&scope), accepted, "{mime} {extension}");
+            assert_eq!(
+                qualification.matches(&scope),
+                accepted,
+                "{mime} {extension}"
+            );
         }
     }
 }

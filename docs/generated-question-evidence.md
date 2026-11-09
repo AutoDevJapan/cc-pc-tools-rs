@@ -12,10 +12,10 @@ discord_ask.exe ask ... --body-file <body> --decision-file <decision> --attach <
 
 最初のコマンドは原証拠の読取検証だけを行う。次のコマンドが用途別の資格データを登録する。
 通常のaskは登録を元pathと質問scopeで引き、同じ原証拠を再検証する。
-新しい画像にも同じコマンドと形式を使う。
+新しい画像にも同じコマンドと形式を使う。画像ごとのコード追加・ビルド・配布は不要。
 通常askで添付するときのdecision-fileには、通常の`todo_id`/`decision`/`resources`/`scope`に加えて、
 設定済みの`owner`・`guild`・`parent`（質問forum）のIDを含める。askはこれらから質問scopeを作り、
-decisionの正規JSONのSHAとして証拠に結ぶ。含まれない場合は用途資格を引けず、画像は送信されない。画像ごとのコード追加・ビルド・配布は不要。
+decisionの正規JSONのSHAとして証拠に結ぶ。含まれない場合は用途資格を引けず、画像は送信されない。
 質問本文やdecisionを変える場合は、新しいscopeの証拠を検証して登録し直す。
 
 停止した段階を調べるときは、同じcheckに`--diagnostic`を付ける。

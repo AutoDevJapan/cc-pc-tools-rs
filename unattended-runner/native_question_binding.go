@@ -32,7 +32,7 @@ func nativeQuestionProduction() nativeQuestionDeps {
 				return dst, errConversationMedia
 			}
 			return dst, nil
-		}, conversationMediaLiveGuard)
+		}, nativeQuestionRepositoryGuard)
 	}
 	return d
 }
@@ -49,7 +49,10 @@ func nativeQuestionBind(ctx context.Context, e nativeQuestionEvidence, d nativeQ
 	}
 	stage = "origin_repository"
 	allowed, err := guard(ctx, e.Worktree)
-	if err != nil || !allowed {
+	if err != nil {
+		return err
+	}
+	if !allowed {
 		return bad()
 	}
 	stage = "origin_job"
@@ -131,6 +134,29 @@ func nativeQuestionBind(ctx context.Context, e nativeQuestionEvidence, d nativeQ
 		return bad()
 	}
 	return nil
+}
+
+func nativeQuestionRepositoryGuard(ctx context.Context, path string) (bool, error) {
+	ctx, cancel := context.WithTimeout(ctx, 10*time.Second)
+	defer cancel()
+	raw, err := runCommand(ctx, "D:/CC/Tools/client-records/scrub391.exe", "--guard-path", path)
+	if err != nil {
+		return false, generatedFailure("origin_repository_command", "native_evidence_unqualified")
+	}
+	var p struct {
+		Client     *bool `json:"client_resource"`
+		Unverified *bool `json:"classification_unverified"`
+	}
+	if len(raw) > 64<<10 || json.Unmarshal([]byte(raw), &p) != nil || p.Client == nil || p.Unverified == nil {
+		return false, generatedFailure("origin_repository_metadata", "native_evidence_unqualified")
+	}
+	if *p.Client {
+		return false, generatedFailure("origin_repository_protected", "native_evidence_unqualified")
+	}
+	if *p.Unverified {
+		return false, generatedFailure("origin_repository_unverified", "native_evidence_unqualified")
+	}
+	return true, nil
 }
 
 func nativeQuestionAssignmentTodo(first string, todo uint64) bool {

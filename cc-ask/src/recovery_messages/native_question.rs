@@ -315,7 +315,11 @@ mod tests {
         // A missing association must not be silently reconstituted on retry.
         let mut incomplete = Ledger::load(&f.home).unwrap();
         incomplete.events.pop();
-        fs::write(f.home.join(LEDGER), serde_json::to_vec(&incomplete).unwrap()).unwrap();
+        fs::write(
+            f.home.join(LEDGER),
+            serde_json::to_vec(&incomplete).unwrap(),
+        )
+        .unwrap();
         let damaged = fs::read(f.home.join(LEDGER)).unwrap();
         assert!(check_native_intent(&mut ctx, &args)
             .unwrap_err()

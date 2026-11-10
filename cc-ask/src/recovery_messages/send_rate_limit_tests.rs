@@ -3,7 +3,7 @@ mod send_rate_limit_tests {
     use crate::core::RealEffects;
     use std::{
         io::{Read, Write},
-        net::TcpListener,
+        net::{TcpListener, TcpStream},
         sync::atomic::{AtomicBool, Ordering},
         thread,
         time::Instant,
@@ -14,6 +14,44 @@ mod send_rate_limit_tests {
         Success,
         Expires,
         Lost,
+    }
+    fn prepare_stream(stream: &TcpStream) {
+        // Windows inherits the listener's nonblocking mode on accept. A read
+        // timeout alone does not make that socket wait for later TCP segments.
+        stream.set_nonblocking(false).unwrap();
+        stream
+            .set_read_timeout(Some(Duration::from_secs(2)))
+            .unwrap();
+    }
+    fn read_http_body(stream: &mut impl Read) -> Vec<u8> {
+        let mut raw = vec![];
+        let mut chunk = [0u8; 4096];
+        let split = loop {
+            let n = stream.read(&mut chunk).unwrap();
+            assert!(n > 0);
+            raw.extend_from_slice(&chunk[..n]);
+            assert!(raw.len() < 1 << 20);
+            if let Some(i) = raw.windows(4).position(|w| w == b"\r\n\r\n") {
+                break i + 4;
+            }
+        };
+        let header = std::str::from_utf8(&raw[..split]).unwrap();
+        assert!(header.starts_with("POST /question "));
+        let length = header
+            .lines()
+            .find_map(|line| {
+                line.split_once(':')
+                    .filter(|(k, _)| k.eq_ignore_ascii_case("content-length"))
+                    .map(|(_, v)| v.trim().parse::<usize>().unwrap())
+            })
+            .unwrap();
+        assert!(length < 1 << 20);
+        while raw.len() - split < length {
+            let n = stream.read(&mut chunk).unwrap();
+            assert!(n > 0);
+            raw.extend_from_slice(&chunk[..n]);
+        }
+        raw[split..split + length].to_vec()
     }
     struct LocalServer {
         url: String,
@@ -37,38 +75,11 @@ mod send_rate_limit_tests {
                     match socket.accept() {
                         Ok((mut stream, peer)) => {
                             assert!(peer.ip().is_loopback());
-                            stream
-                                .set_read_timeout(Some(Duration::from_secs(2)))
-                                .unwrap();
-                            let mut raw = vec![];
-                            let mut chunk = [0u8; 4096];
-                            let split = loop {
-                                let n = stream.read(&mut chunk).unwrap();
-                                assert!(n > 0);
-                                raw.extend_from_slice(&chunk[..n]);
-                                assert!(raw.len() < 1 << 20);
-                                if let Some(i) = raw.windows(4).position(|w| w == b"\r\n\r\n") {
-                                    break i + 4;
-                                }
-                            };
-                            let header = std::str::from_utf8(&raw[..split]).unwrap();
-                            assert!(header.starts_with("POST /question "));
-                            let length = header
-                                .lines()
-                                .find_map(|line| {
-                                    line.split_once(':')
-                                        .filter(|(k, _)| k.eq_ignore_ascii_case("content-length"))
-                                        .map(|(_, v)| v.trim().parse::<usize>().unwrap())
-                                })
-                                .unwrap();
-                            while raw.len() - split < length {
-                                let n = stream.read(&mut chunk).unwrap();
-                                assert!(n > 0);
-                                raw.extend_from_slice(&chunk[..n]);
-                            }
+                            prepare_stream(&stream);
+                            let body = read_http_body(&mut stream);
                             let count = {
                                 let mut b = seen.lock().unwrap();
-                                b.push(raw[split..split + length].to_vec());
+                                b.push(body);
                                 b.len()
                             };
                             if count == 1 {
@@ -110,6 +121,87 @@ mod send_rate_limit_tests {
             self.stop.store(true, Ordering::SeqCst);
             self.handle.take().unwrap().join().unwrap();
         }
+    }
+
+    fn inherited_connection() -> (TcpStream, TcpStream) {
+        let listener = TcpListener::bind("127.0.0.1:0").unwrap();
+        listener.set_nonblocking(true).unwrap();
+        let client = TcpStream::connect(listener.local_addr().unwrap()).unwrap();
+        let until = Instant::now() + Duration::from_secs(2);
+        let stream = loop {
+            match listener.accept() {
+                Ok((stream, _)) => break stream,
+                Err(e) if e.kind() == std::io::ErrorKind::WouldBlock => {
+                    assert!(Instant::now() < until);
+                    thread::yield_now();
+                }
+                Err(e) => panic!("accept failed: {e}"),
+            }
+        };
+        // Model Windows inheritance explicitly on every test platform.
+        stream.set_nonblocking(true).unwrap();
+        prepare_stream(&stream);
+        (client, stream)
+    }
+    #[test]
+    fn accepted_stream_has_finite_blocking_read_before_any_client_data() {
+        let (_client, mut stream) = inherited_connection();
+        let before = Instant::now();
+        let error = stream.read(&mut [0u8; 1]).unwrap_err();
+        #[cfg(windows)]
+        assert_ne!(
+            error.raw_os_error(),
+            Some(10035),
+            "nonblocking mode survived accept setup"
+        );
+        assert!(matches!(
+            error.kind(),
+            std::io::ErrorKind::WouldBlock | std::io::ErrorKind::TimedOut
+        ));
+        assert!(
+            before.elapsed() >= Duration::from_secs(1),
+            "read returned before finite timeout: {error}"
+        );
+    }
+    #[test]
+    fn accepted_stream_decodes_separately_arriving_header_and_body_fragments() {
+        struct Observed {
+            stream: TcpStream,
+            read: mpsc::Sender<usize>,
+        }
+        impl Read for Observed {
+            fn read(&mut self, buf: &mut [u8]) -> std::io::Result<usize> {
+                let n = self.stream.read(buf)?;
+                self.read.send(n).unwrap();
+                Ok(n)
+            }
+        }
+        let (mut client, stream) = inherited_connection();
+        let fragments: [&[u8]; 5] = [
+            b"POST /que",
+            b"stion HTTP/1.1\r\nContent-Len",
+            b"gth: 5\r\n\r",
+            b"\nhe",
+            b"llo",
+        ];
+        let (tx, rx) = mpsc::channel();
+        // Only one fragment can be in flight: consume it before releasing the
+        // next. TCP cannot coalesce these into one initial request read.
+        client.write_all(fragments[0]).unwrap();
+        let reader = thread::spawn(move || read_http_body(&mut Observed { stream, read: tx }));
+        for (index, fragment) in fragments.iter().enumerate() {
+            let mut received = 0;
+            while received < fragment.len() {
+                let n = rx.recv_timeout(Duration::from_secs(3)).unwrap();
+                assert!(n > 0);
+                received += n;
+            }
+            assert_eq!(received, fragment.len());
+            if let Some(next) = fragments.get(index + 1) {
+                client.write_all(next).unwrap();
+            }
+        }
+        assert_eq!(reader.join().unwrap(), b"hello");
     }
 
     // Only POST transport is real, and it is hard-bound to the local listener.

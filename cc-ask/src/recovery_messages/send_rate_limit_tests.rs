@@ -264,6 +264,136 @@ mod send_rate_limit_tests {
             result
         }
     }
+    struct PausedClock {
+        inner: Box<dyn Effects>,
+        reads: std::sync::atomic::AtomicUsize,
+        sample: Arc<Mutex<Option<f64>>>,
+        pause: Duration,
+        first_post: Arc<Mutex<Option<f64>>>,
+    }
+    impl Effects for PausedClock {
+        fn now(&self) -> f64 {
+            let sampled = self.inner.now();
+            if self.reads.fetch_add(1, Ordering::SeqCst) == 1 {
+                // The wall clock has been read, but the caller has not resumed.
+                *self.sample.lock().unwrap() = Some(sampled);
+                thread::sleep(self.pause);
+            }
+            sampled
+        }
+        fn run(&mut self, args: &[String], timeout: u64) -> Result<Output> {
+            self.inner.run(args, timeout)
+        }
+        fn http(
+            &mut self,
+            method: &str,
+            url: &str,
+            body: Option<&Value>,
+            discord: bool,
+        ) -> Result<Value> {
+            if method == "POST"
+                && body.is_some_and(|b| {
+                    core::s(&b.get("message").unwrap_or(b)["content"]).contains(":question:0")
+                })
+            {
+                self.first_post.lock().unwrap().replace(RealEffects.now());
+            }
+            self.inner.http(method, url, body, discord)
+        }
+        fn multipart(&mut self, url: &str, kind: &str, bytes: &[u8]) -> Result<Value> {
+            self.first_post.lock().unwrap().replace(RealEffects.now());
+            self.inner.multipart(url, kind, bytes)
+        }
+    }
+    fn paused_clock_trial(with_image: bool, expired: bool) {
+        unsafe {
+            std::env::set_var("GODD_DISCORD_BOT_TOKEN", "only-local-http-fixture");
+        }
+        let f = Fixture::new();
+        let local = LocalServer::new(Outcome::Success);
+        let mut ctx = f.context();
+        let first_post = Arc::new(Mutex::new(None));
+        let sample = Arc::new(Mutex::new(None));
+        let inner = ctx.effects;
+        ctx.effects = Box::new(PausedClock {
+            inner: Box::new(LocalTransport {
+                inner,
+                url: local.url.clone(),
+                accepted: local.accepted.clone(),
+                home: f.home.clone(),
+                request: "sampled-question".into(),
+                phase: "question:0".into(),
+            }),
+            reads: std::sync::atomic::AtomicUsize::new(0),
+            sample: sample.clone(),
+            pause: if expired {
+                Duration::from_secs(4)
+            } else {
+                Duration::from_millis(20)
+            },
+            first_post: first_post.clone(),
+        });
+        let mut args = f.ask("sampled-question", "choose the original direction");
+        if with_image {
+            let path = f.root.path().join("owned.png");
+            fs::write(&path, b"\x89PNG\r\n\x1a\nsynthetic image fixture").unwrap();
+            args.attach.push(path);
+        }
+        let expires = chrono::Utc::now() + chrono::Duration::seconds(3);
+        let expiry = expires.timestamp() as f64 + expires.timestamp_subsec_nanos() as f64 / 1e9;
+        args.send_before = Some(expires.to_rfc3339());
+        let result = ask(&mut ctx, &args);
+        assert!(
+            sample
+                .lock()
+                .unwrap()
+                .expect("submit clock was not sampled")
+                < expiry
+        );
+        let started = *first_post.lock().unwrap();
+        let calls = local.bodies.lock().unwrap().len();
+        println!("image={with_image} expired={expired} result_ok={} post_after_deadline_ms={:?} loopback_posts={calls}", result.is_ok(), started.map(|at| (at - expiry) * 1000.));
+        if expired {
+            assert!(
+                RealEffects.now() > expiry,
+                "pause did not cross the deadline"
+            );
+            assert!(result.is_err(), "expired sampled time authorized POST");
+            assert!(started.is_none(), "expired request reached the transport");
+            assert_eq!(calls, 0);
+        } else {
+            assert_eq!(result.unwrap()["delivery"], "verified");
+            assert!(started.unwrap() < expiry);
+            assert_eq!(
+                calls, 2,
+                "short 429 must still retry within the original budget"
+            );
+        }
+        let ledger = Ledger::load(&f.home).unwrap();
+        assert!(ledger.effect(&args.request_id, "question:0").is_some());
+        assert_eq!(
+            ledger.receipt(&args.request_id, "question:0").is_none(),
+            expired
+        );
+        args.send_before = None;
+        assert_eq!(ask(&mut ctx, &args).is_err(), expired);
+        assert_eq!(
+            local.bodies.lock().unwrap().len(),
+            calls,
+            "same intent recovery must not POST again"
+        );
+        f.unchanged();
+    }
+    #[test]
+    fn clock_sample_pause_never_extends_json_send_deadline() {
+        paused_clock_trial(false, false);
+        paused_clock_trial(false, true);
+    }
+    #[test]
+    fn clock_sample_pause_never_extends_multipart_send_deadline() {
+        paused_clock_trial(true, false);
+        paused_clock_trial(true, true);
+    }
     fn trial(with_image: bool, deadline: bool, outcome: Outcome) -> (bool, usize) {
         // Nextest isolates each test process. Override before creating any
         // transport thread; never read a real token or fall back to user auth.

@@ -18,21 +18,17 @@ thread_local! {
 pub struct Deadline;
 impl Deadline {
     pub fn new(limit: Duration) -> Self {
-        Self::push(limit, true)
+        Self::push(Instant::now() + limit, true)
     }
     /// Bound an ordinary command's IO without enabling periodic tick policy
     /// (shorter network timeouts, rate-limit suppression or tick span output).
-    /// An enclosing periodic deadline still applies all its existing rules.
-    pub fn budget(limit: Duration) -> Self {
-        Self::push(limit, false)
+    /// Keep the caller's already anchored instant, including elapsed sampling
+    /// or preparation time. An enclosing periodic deadline still applies.
+    pub fn budget(until: Instant) -> Self {
+        Self::push(until, false)
     }
-    fn push(limit: Duration, periodic: bool) -> Self {
-        DEADLINES.with(|d| {
-            d.borrow_mut().push(Limit {
-                until: Instant::now() + limit,
-                periodic,
-            })
-        });
+    fn push(until: Instant, periodic: bool) -> Self {
+        DEADLINES.with(|d| d.borrow_mut().push(Limit { until, periodic }));
         Self
     }
 }
@@ -180,12 +176,12 @@ mod tests {
     #[test]
     fn command_budget_bounds_io_without_changing_tick_policy() {
         assert!(!active());
-        let send = Deadline::budget(Duration::from_secs(10));
+        let send = Deadline::budget(Instant::now() + Duration::from_secs(10));
         assert!(!active());
         assert!(timeout(Duration::from_secs(20)).unwrap() <= Duration::from_secs(10));
         {
             let _tick = Deadline::new(Duration::from_secs(1));
-            let _nested = Deadline::budget(Duration::from_secs(30));
+            let _nested = Deadline::budget(Instant::now() + Duration::from_secs(30));
             assert!(active());
             assert!(timeout(Duration::from_secs(20)).unwrap() <= Duration::from_secs(1));
         }
@@ -193,12 +189,21 @@ mod tests {
         drop(send);
         assert!(remaining().is_none());
         {
-            let _expired = Deadline::budget(Duration::ZERO);
+            let _expired = Deadline::budget(Instant::now());
             assert!(!active());
             assert!(check().is_err());
             assert!(timeout(Duration::from_secs(1)).is_err());
         }
         assert!(remaining().is_none());
+    }
+    #[test]
+    fn command_budget_never_restarts_an_elapsed_sample() {
+        let sampled = Instant::now() - Duration::from_secs(2);
+        let _budget = Deadline::budget(sampled + Duration::from_secs(1));
+        assert!(!active());
+        assert_eq!(remaining(), Some(Duration::ZERO));
+        assert!(check().is_err());
+        assert!(timeout(Duration::from_secs(20)).is_err());
     }
     #[test]
     fn nested_deadlines_cannot_extend_outer_budget_and_restore_on_exit() {

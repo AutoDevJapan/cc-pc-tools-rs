@@ -2435,9 +2435,13 @@ impl<'a> RecoveryApi<'a> {
                 json!(&digest(&json!({"fingerprint":request.fingerprint,"phase":phase}))?[..24]);
             body["enforce_nonce"] = json!(true);
         }
+        // Sample the monotonic origin before reading wall time: a scheduling
+        // pause inside or after now() must consume, never restart, that budget.
+        let sampled = std::time::Instant::now();
+        let _send_deadline = question_send_budget(request, phase, self.effects.now())?
+            .map(|left| crate::tick_runtime::Deadline::budget(sampled + left));
         if effect.images.is_empty() {
-            let _send_deadline = question_send_budget(request, phase, self.effects.now())?
-                .map(crate::tick_runtime::Deadline::budget);
+            crate::tick_runtime::check()?;
             return self
                 .effects
                 .http("POST", &format!("{API}{route}"), Some(&body), true)
@@ -2470,8 +2474,7 @@ impl<'a> RecoveryApi<'a> {
             bytes.extend_from_slice(b"\r\n");
         }
         bytes.extend_from_slice(format!("--{boundary}--\r\n").as_bytes());
-        let _send_deadline = question_send_budget(request, phase, self.effects.now())?
-            .map(crate::tick_runtime::Deadline::budget);
+        crate::tick_runtime::check()?;
         self.effects
             .multipart(
                 &format!("{API}{route}"),

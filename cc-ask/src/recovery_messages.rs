@@ -2437,7 +2437,7 @@ impl<'a> RecoveryApi<'a> {
         }
         if effect.images.is_empty() {
             let _send_deadline = question_send_budget(request, phase, self.effects.now())?
-                .map(crate::tick_runtime::Deadline::new);
+                .map(crate::tick_runtime::Deadline::budget);
             return self
                 .effects
                 .http("POST", &format!("{API}{route}"), Some(&body), true)
@@ -2471,7 +2471,7 @@ impl<'a> RecoveryApi<'a> {
         }
         bytes.extend_from_slice(format!("--{boundary}--\r\n").as_bytes());
         let _send_deadline = question_send_budget(request, phase, self.effects.now())?
-            .map(crate::tick_runtime::Deadline::new);
+            .map(crate::tick_runtime::Deadline::budget);
         self.effects
             .multipart(
                 &format!("{API}{route}"),
@@ -3840,6 +3840,7 @@ mod tests {
     use crate::core::{Effects, Output};
     use std::sync::{mpsc, Arc, Mutex};
     include!("recovery_messages/send_deadline_tests.rs");
+    include!("recovery_messages/send_rate_limit_tests.rs");
 
     const GUILD: &str = "102";
     const FORUM: &str = "103";

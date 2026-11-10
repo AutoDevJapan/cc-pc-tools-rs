@@ -7,14 +7,32 @@ use std::{
 
 pub const TICK_LIMIT: Duration = Duration::from_secs(50);
 pub const EXTERNAL_LIMIT: Duration = Duration::from_secs(20);
+struct Limit {
+    until: Instant,
+    periodic: bool,
+}
 thread_local! {
-    static DEADLINES: RefCell<Vec<Instant>> = const { RefCell::new(Vec::new()) };
+    static DEADLINES: RefCell<Vec<Limit>> = const { RefCell::new(Vec::new()) };
 }
 
 pub struct Deadline;
 impl Deadline {
     pub fn new(limit: Duration) -> Self {
-        DEADLINES.with(|d| d.borrow_mut().push(Instant::now() + limit));
+        Self::push(limit, true)
+    }
+    /// Bound an ordinary command's IO without enabling periodic tick policy
+    /// (shorter network timeouts, rate-limit suppression or tick span output).
+    /// An enclosing periodic deadline still applies all its existing rules.
+    pub fn budget(limit: Duration) -> Self {
+        Self::push(limit, false)
+    }
+    fn push(limit: Duration, periodic: bool) -> Self {
+        DEADLINES.with(|d| {
+            d.borrow_mut().push(Limit {
+                until: Instant::now() + limit,
+                periodic,
+            })
+        });
         Self
     }
 }
@@ -25,13 +43,16 @@ impl Drop for Deadline {
         });
     }
 }
+/// Whether periodic execution policy applies. Ordinary command budgets still
+/// participate in remaining/check/timeout without changing command behavior.
 pub fn active() -> bool {
-    DEADLINES.with(|d| !d.borrow().is_empty())
+    DEADLINES.with(|d| d.borrow().iter().any(|limit| limit.periodic))
 }
 pub fn remaining() -> Option<Duration> {
     DEADLINES.with(|d| {
         d.borrow()
             .iter()
+            .map(|limit| limit.until)
             .min()
             .map(|t| t.saturating_duration_since(Instant::now()))
     })
@@ -156,6 +177,29 @@ impl Drop for Span {
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[test]
+    fn command_budget_bounds_io_without_changing_tick_policy() {
+        assert!(!active());
+        let send = Deadline::budget(Duration::from_secs(10));
+        assert!(!active());
+        assert!(timeout(Duration::from_secs(20)).unwrap() <= Duration::from_secs(10));
+        {
+            let _tick = Deadline::new(Duration::from_secs(1));
+            let _nested = Deadline::budget(Duration::from_secs(30));
+            assert!(active());
+            assert!(timeout(Duration::from_secs(20)).unwrap() <= Duration::from_secs(1));
+        }
+        assert!(!active());
+        drop(send);
+        assert!(remaining().is_none());
+        {
+            let _expired = Deadline::budget(Duration::ZERO);
+            assert!(!active());
+            assert!(check().is_err());
+            assert!(timeout(Duration::from_secs(1)).is_err());
+        }
+        assert!(remaining().is_none());
+    }
     #[test]
     fn nested_deadlines_cannot_extend_outer_budget_and_restore_on_exit() {
         let _outer = Deadline::new(Duration::from_millis(25));

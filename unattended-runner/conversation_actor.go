@@ -282,12 +282,20 @@ func (r *Runner) conversationActorRowWithProof(ctx context.Context, q Conversati
 	return row, nil
 }
 
-func (r *Runner) conversationDeliveryTask(ctx context.Context, q ConversationQuestion) (*TodoRow, error) {
+func (r *Runner) conversationDeliveryTask(ctx context.Context, q ConversationQuestion, source ...*Request) (*TodoRow, error) {
 	if q.deliveryActor != nil {
 		q.Todo, q.Actor = q.originTodo, q.deliveryActor
 		return r.conversationActorRow(ctx, q)
 	}
-	return r.conversationTask(ctx, q.Todo)
+	row, err := r.conversationTask(ctx, q.Todo)
+	if err == nil || len(source) != 1 || q.Actor != nil {
+		return row, err
+	}
+	input, verifyErr := r.taskQuestionReplyInput(ctx, q, source[0])
+	if verifyErr != nil {
+		return nil, errTaskQuestion
+	}
+	return r.conversationTaskForQuestion(ctx, q.Todo, &input)
 }
 
 // This is a local recipient envelope, not a replacement of the API's origin
@@ -445,7 +453,7 @@ func conversationFailureStage(err error) string {
 		return "sender_deadline"
 	case "conversation actor unverified", "conversation actor differs", "conversation actor receipt differs", "conversation actor held":
 		return "actor_scope"
-	case "conversation task scope unavailable", "conversation task scope unverified", "conversation original project differs":
+	case "conversation task scope unavailable", "conversation task scope unverified", "conversation task source unverified", "conversation original project differs":
 		return "task_scope"
 	case "conversation original task unavailable", "conversation task is already held", "conversation reserved task is held":
 		return "original_task"

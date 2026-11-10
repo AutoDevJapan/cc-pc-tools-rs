@@ -24,6 +24,7 @@ const conversationSender = "D:/CC/Tools/discord-ask/discord_ask.exe"
 const conversationTodo = "D:/CC/Tools/todo/todo.exe"
 
 type ConversationAskInput struct {
+	heldQuestion                                           *ConversationQuestion // Only an already retained, source-verified reply may set this.
 	RequestID, OriginThread, BodyFile, DecisionFile, Title string
 	Todo                                                   uint64
 	ActorTodo                                              uint64
@@ -314,6 +315,10 @@ func (r *Runner) loadConversations() (*conversationIndex, error) {
 }
 
 func (r *Runner) conversationTask(ctx context.Context, id uint64) (*TodoRow, error) {
+	return r.conversationTaskForQuestion(ctx, id, nil)
+}
+
+func (r *Runner) conversationTaskForQuestion(ctx context.Context, id uint64, question *ConversationAskInput) (*TodoRow, error) {
 	var db struct {
 		Projects map[string]string `json:"projects"`
 		Items    []json.RawMessage `json:"items"`
@@ -348,7 +353,18 @@ func (r *Runner) conversationTask(ctx context.Context, id uint64) (*TodoRow, err
 		Unverified *bool `json:"classification_unverified"`
 	}
 	if err != nil || json.Unmarshal([]byte(raw), &proof) != nil || proof.Client == nil || *proof.Client || proof.Unverified == nil || *proof.Unverified {
-		return nil, errors.New("conversation task scope unverified")
+		if question == nil || err != nil || !taskQuestionUnattributed(raw) {
+			return nil, errors.New("conversation task scope unverified")
+		}
+		var original taskQuestionState
+		if json.Unmarshal(selected, &original) != nil {
+			return nil, errTaskQuestion
+		}
+		original.Root = root
+		original.current = selected
+		if err := r.verifyTaskQuestion(ctx, *question, original); err != nil {
+			return nil, errTaskQuestion
+		}
 	}
 	var row TodoRow
 	if json.Unmarshal(selected, &row) != nil {
@@ -356,6 +372,7 @@ func (r *Runner) conversationTask(ctx context.Context, id uint64) (*TodoRow, err
 	}
 	row.conversationState = selected
 	row.conversationRoot = root
+	row.conversationTaskQuestion = proof.Client != nil && *proof.Client
 	row.conversationScope = conversationTodoScope{Domain: "discord-conversation-todo-scope-v1", Todo: fmt.Sprint(id), Project: project, RootSHA: bytesHash([]byte(root))}
 	return &row, nil
 }
@@ -368,7 +385,10 @@ func (r *Runner) conversationAsk(ctx context.Context, input ConversationAskInput
 	if _, ok := number(input.OriginThread); !ok {
 		return zero, errors.New("conversation origin invalid")
 	}
-	row, err := r.conversationTask(ctx, input.Todo)
+	if err := r.recoverTaskQuestionIndex(ctx, input); err != nil {
+		return zero, err
+	}
+	row, err := r.conversationTaskForQuestion(ctx, input.Todo, &input)
 	if err != nil {
 		return zero, err
 	}
@@ -522,6 +542,11 @@ func (r *Runner) conversationAsk(ctx context.Context, input ConversationAskInput
 		return zero, errors.New("conversation original project differs")
 	}
 	if q.Phase == "reserved" {
+		if row.conversationTaskQuestion {
+			if err := r.recheckTaskQuestion(ctx, input); err != nil {
+				return zero, errTaskQuestion
+			}
+		}
 		if q.Actor != nil {
 			if _, err := r.conversationActorRow(ctx, q); err != nil {
 				return zero, err
@@ -531,6 +556,13 @@ func (r *Runner) conversationAsk(ctx context.Context, input ConversationAskInput
 			return zero, errors.New("conversation reserved task is held")
 		}
 		args := []string{"recovery-ask", "--request-id", q.SenderID, "--todo-id", fmt.Sprint(q.Todo), "--origin-thread", q.OriginThread, "--body-file", q.BodyFile, "--decision-file", q.DecisionFile}
+		if row.conversationTaskQuestion {
+			before, err := r.taskQuestionSendBefore(input)
+			if err != nil {
+				return zero, errTaskQuestion
+			}
+			args = append(args, "--send-before", before)
+		}
 		if q.Actor != nil && q.RequestID == fixedConversationOrigin.RequestID {
 			args = append(args, "--conversation-source-request", q.RequestID)
 		}
@@ -643,6 +675,11 @@ func (r *Runner) conversationAsk(ctx context.Context, input ConversationAskInput
 		if err = writeConversationOnce(q.ReceiptFile, b); err != nil {
 			return zero, err
 		}
+		if row.conversationTaskQuestion {
+			if err = r.recordTaskQuestionAdmission(ctx, q, proof); err != nil {
+				return zero, errTaskQuestion
+			}
+		}
 		q.Phase = "posted"
 		index.Questions[q.RequestID] = q
 		if err = publish(r.conversationPath(), index); err != nil {
@@ -650,6 +687,11 @@ func (r *Runner) conversationAsk(ctx context.Context, input ConversationAskInput
 		}
 	}
 	if q.Wait && q.Phase == "posted" {
+		if row.conversationTaskQuestion {
+			if err := r.recheckTaskQuestion(ctx, input); err != nil {
+				return zero, errTaskQuestion
+			}
+		}
 		if q.Actor != nil {
 			return r.conversationActorWait(ctx, index, q)
 		}

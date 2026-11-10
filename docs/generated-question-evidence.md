@@ -4,6 +4,10 @@
 今回の本人依頼のために正規imagegenが新しく作った、秘密や顧客内容のない確認画像だけを、
 特定のオーナー質問へ結び付ける。通常の質問送信と同じ設定済み本人・guild・forumを使う。
 
+元Taskのproject rootの帰属を確認できない場合は、画像資格とは独立した
+[本人の依頼と質問用Taskメタデータの照合](task-question-metadata.md)が必要となる。
+画像資格をTaskやRepoへの一般アクセス許可へ広げない。
+
 ```text
 unattended-runner.exe --check-generated-question-evidence --evidence <evidence.json>
 unattended-runner.exe --register-generated-question-media --evidence <evidence.json>

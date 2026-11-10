@@ -140,7 +140,7 @@ func (r *Runner) conversationReceiverTick(ctx context.Context) Health {
 // desktop worker which has no codex-jobs execution receipt. This observation
 // neither invents an applied receipt nor changes any phase, owner or wait.
 func (r *Runner) conversationReceiverDelivery(ctx context.Context, q ConversationQuestion, proof *conversationProof, reply conversationReply, req *Request, h *Health) (bool, bool, error) {
-	row, err := r.conversationDeliveryTask(ctx, q)
+	row, err := r.conversationDeliveryTask(ctx, q, req)
 	if err != nil || row.Project != q.Project {
 		h.ReceiverDeliveryHeld++
 		return false, false, errors.New("receiver task scope unverified")

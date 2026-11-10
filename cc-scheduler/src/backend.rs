@@ -492,6 +492,12 @@ impl RealBackend {
                 .args
                 .extend(["--resume-session".into(), session.into()]);
         }
+        if item["scheduler"]["prepared_input"].is_object() {
+            invocation.args.extend([
+                "--scheduler-input-sha256".into(),s(&item["scheduler"]["prepared_input"]["input_sha256"]).into(),
+                "--scheduler-prompt-sha256".into(),s(&item["scheduler"]["prepared_input"]["source_prompt_sha256"]).into(),
+            ]);
+        }
         if item["subwork"].is_object() {
             invocation.args.extend([
                 "--subwork-of".into(),

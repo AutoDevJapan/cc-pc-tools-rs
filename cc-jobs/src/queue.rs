@@ -1437,8 +1437,42 @@ impl Context {
         } else {
             None
         };
-        if store.exists() {
-            let db = self.read_json(&store)?;
+        let prepared = job.get("prepared_input").is_some()
+            || job.get("prepared_job_prompt_sha256").is_some();
+        if store.exists() || prepared {
+            let db = match self.read_json(&store) {
+                Ok(db) => db,
+                Err(_) if prepared => {
+                    self.save_admission_wait(&mut job, &json!({"code":"prepared_input_store_unavailable","text":"元Task正本の再確認待ち"}))?;
+                    return Ok(None);
+                }
+                Err(error) => return Err(error),
+            };
+            if prepared {
+                match cc_job_policy::prepared_input::validate(&db,&job) {
+                    Ok(())=>(),
+                    Err("prepared_input_changed")=>{
+                        // Never start a queued prompt superseded by a canonical
+                        // answer. The existing scheduler requeues this unstarted
+                        // attempt and prepares the current input with a new key.
+                        job["last_failure_kind"]=json!("stale_prepared_input");
+                        job["last_error"]=json!("pending owner input changed before execution admission");
+                        finish(&mut job,Some(1),0,&self.rt.now());
+                        self.save(&job)?;
+                        return Ok(None);
+                    }
+                    Err(code)=>{
+                        self.save_admission_wait(&mut job,&json!({"code":code,"text":"準備した入力と元Taskの再確認待ち"}))?;
+                        return Ok(None);
+                    }
+                }
+                let bytes=self.read_file(Path::new(s(&job,"prompt")))?;
+                if job["prepared_job_prompt_sha256"]!=cc_job_policy::product_retry::digest(&bytes) {
+                    self.save_admission_wait(&mut job,&json!({"code":"prepared_prompt_changed","text":"準備したpromptの再確認待ち"}))?;
+                    return Ok(None);
+                }
+                job["prepared_input_admitted"]=job["prepared_input"].clone();
+            }
             if job["quota_recovery"].is_object() || job["unstarted_review"].is_object() || job["initial_review"].is_object() || job["subwork_continuation"].is_object() {
                 let row=db["items"].as_array().into_iter().flatten().find(|r| r["id"] == job["todo_id"]);
                 let result=row.ok_or_else(|| Error::new("quota recovery ToDo is missing"))

@@ -26,7 +26,7 @@ jobs:
             labels: [self-hosted, Linux, X64, cc-pc-tools-linux]
         module: [resident-guard, capacity-audit-3h, unattended-runner, tools/linux-runner-bridge]
     runs-on: ${{ toJSON(github.event.repository.private) == 'false' && (matrix.os == 'Windows' && 'windows-2025' || 'ubuntu-24.04') || fromJSON(toJSON(matrix.labels)) }}
-    timeout-minutes: 10
+    timeout-minutes: ${{ matrix.os == 'Windows' && matrix.module == 'unattended-runner' && 20 || 10 }}
     defaults:
       run:
         working-directory: ${{ matrix.module }}
@@ -71,10 +71,33 @@ jobs:
         with:
           go-version: '1.27.x'
           cache: false
-      # The receiver retains a real 21-second subprocess-budget regression.
-      # Cold Windows integration tests consumed 111s before that test began.
-      # Bound this package separately, without shortening its runtime checks.
-      - run: go test -race -timeout ${{ matrix.module == 'unattended-runner' && '180s' || '120s' }} ./...
+      - name: Build the native question acceptance fixtures
+        if: runner.os == 'Windows' && matrix.module == 'unattended-runner'
+        working-directory: ${{ github.workspace }}
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          rustup toolchain install 1.95.0 --profile minimal
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          $env:RUSTUP_TOOLCHAIN = '1.95.0'
+          $env:CARGO_INCREMENTAL = '0'
+          $env:CARGO_PROFILE_DEV_DEBUG = '0'
+          $env:CARGO_PROFILE_TEST_DEBUG = '0'
+          $todo = & cargo build --locked -p cc-todo --bin todo --message-format=json
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          $todoPath = @($todo | ForEach-Object { $_ | ConvertFrom-Json } | Where-Object { $_.reason -eq 'compiler-artifact' -and $_.target.name -eq 'todo' -and $_.executable })[-1].executable
+          $fixture = & cargo test --locked -p cc-scheduler --test parity --no-run --message-format=json
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          $fixturePath = @($fixture | ForEach-Object { $_ | ConvertFrom-Json } | Where-Object { $_.reason -eq 'compiler-artifact' -and $_.target.name -eq 'parity' -and $_.executable })[-1].executable
+          if (-not $todoPath -or -not $fixturePath) { throw 'Native acceptance artifacts are missing' }
+          "CC_CONVERSATION_TODO_BINARY=$todoPath" >> $env:GITHUB_ENV
+          "CC_CONVERSATION_SCHEDULER_FIXTURE=$fixturePath" >> $env:GITHUB_ENV
+      # Hosted Windows exhausted the package-wide 180s budget in different
+      # existing tests (one only 7s into its real timing checks, another at 0s).
+      # Retain every case and real deadline check with finite package headroom.
+      # Windows also runs the real CLI/scheduler roundtrips instead of skipping
+      # them; keep a finite package budget for those additional process fixtures.
+      - run: go test -race -timeout ${{ matrix.module == 'unattended-runner' && (matrix.os == 'Windows' && '600s' || '180s') || '120s' }} ./...
       - run: go vet ./...
       - run: go build -trimpath .
   repair-guard:

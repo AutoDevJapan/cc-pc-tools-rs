@@ -1235,6 +1235,8 @@ pub fn execute(db: &mut Value, cmd: &Command, paths: &Paths) -> Result<Vec<Strin
                 .as_array()
                 .and_then(|items| items.iter().find(|i| i["id"] == *id))
                 .ok_or_else(|| format!("no item {id}"))?;
+            let before = item.clone();
+            let root = db["projects"][item["project"].as_str().unwrap_or("")].clone();
             if item["status"] == "recovery_unverified" {
                 return Err(
                     "復旧したToDoはresume-verifiedで元の状態と保存記録を照合してください".into(),
@@ -1270,6 +1272,7 @@ pub fn execute(db: &mut Value, cmd: &Command, paths: &Paths) -> Result<Vec<Strin
                 }
             }
             i["updated"] = json!(now());
+            cc_scheduler::question_continuation::record(&before, i, &root, "canonical_start");
         }
         Command::ResumeVerified {
             id,

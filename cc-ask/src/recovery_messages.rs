@@ -94,6 +94,9 @@ pub struct AskArgs {
     /// Internal normal-conversation source qualification; never a write target.
     #[arg(long, hide = true)]
     pub conversation_source_request: Option<String>,
+    /// Last instant to initiate this question; retained on the original intent.
+    #[arg(long)]
+    pub send_before: Option<String>,
 }
 
 /// Rebind only a not-yet-sent ask to an exact previously verified progress post.
@@ -802,6 +805,8 @@ struct Request {
     program_evidence: Option<PathBuf>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     native_evidence: Option<PathBuf>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    send_before: Option<String>,
     operation: Kind,
     fingerprint: String,
 }
@@ -826,6 +831,30 @@ impl Request {
             "body":self.body,"notify":self.notify,"images":self.images,"operation":operation}),
         )
     }
+}
+
+// This restriction does not change the presentation fingerprint or retry key.
+// Once question:0 has been attempted, recovery is GET-only under the existing
+// journal. Later phases complete that same question, never create another one.
+fn question_send_budget(request: &Request, phase: &str, now: f64) -> Result<Option<Duration>> {
+    let Some(text) = request.send_before.as_deref() else {
+        return Ok(None);
+    };
+    let at =
+        chrono::DateTime::parse_from_rfc3339(text).map_err(|_| "invalid question send deadline")?;
+    if text.len() > 64 || !matches!(request.operation, Kind::Ask { .. }) {
+        return Err("invalid question send deadline".into());
+    }
+    if phase != "question:0" {
+        return Ok(None);
+    }
+    let remaining = at.timestamp() as f64 + at.timestamp_subsec_nanos() as f64 / 1e9 - now;
+    if !remaining.is_finite() || remaining <= 0. {
+        return Err("question send deadline expired; existing receipts retained".into());
+    }
+    // Match the existing maximum upload budget and avoid an unbounded Instant
+    // addition from a caller's far-future date. This never extends the deadline.
+    Ok(Some(Duration::from_secs_f64(remaining.min(300.))))
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize, PartialEq)]
@@ -1126,6 +1155,7 @@ impl Ledger {
             match event {
                 Event::Intent { request } => {
                     request_key(&request.request_id)?;
+                    question_send_budget(request, "validate", 0.)?;
                     if request.fingerprint != request.fingerprint()?
                         || requests
                             .insert(request.request_id.clone(), request)
@@ -1904,6 +1934,9 @@ fn correct_unposted_origin(
 
 fn reserve(ledger: &mut Ledger, home: &Path, incoming: &Request) -> Result<Request> {
     if let Some(existing) = ledger.request(&incoming.request_id) {
+        if incoming.send_before.is_some() && incoming.send_before != existing.send_before {
+            return Err("saved question send deadline differs".into());
+        }
         if incoming
             .program_evidence
             .as_ref()
@@ -1950,6 +1983,9 @@ fn reserve(ledger: &mut Ledger, home: &Path, incoming: &Request) -> Result<Reque
             .flatten()
     });
     if let Some(request) = duplicate {
+        if incoming.send_before.is_some() && incoming.send_before != request.send_before {
+            return Err("original question send deadline differs".into());
+        }
         if incoming
             .program_evidence
             .as_ref()
@@ -2399,7 +2435,13 @@ impl<'a> RecoveryApi<'a> {
                 json!(&digest(&json!({"fingerprint":request.fingerprint,"phase":phase}))?[..24]);
             body["enforce_nonce"] = json!(true);
         }
+        // Sample the monotonic origin before reading wall time: a scheduling
+        // pause inside or after now() must consume, never restart, that budget.
+        let sampled = std::time::Instant::now();
+        let _send_deadline = question_send_budget(request, phase, self.effects.now())?
+            .map(|left| crate::tick_runtime::Deadline::budget(sampled + left));
         if effect.images.is_empty() {
+            crate::tick_runtime::check()?;
             return self
                 .effects
                 .http("POST", &format!("{API}{route}"), Some(&body), true)
@@ -2432,6 +2474,7 @@ impl<'a> RecoveryApi<'a> {
             bytes.extend_from_slice(b"\r\n");
         }
         bytes.extend_from_slice(format!("--{boundary}--\r\n").as_bytes());
+        crate::tick_runtime::check()?;
         self.effects
             .multipart(
                 &format!("{API}{route}"),
@@ -2551,6 +2594,7 @@ fn ensure(
         if !api.allow_new_posts {
             return Err("current program question qualification permits GET recovery only".into());
         }
+        question_send_budget(request, phase, api.effects.now())?;
         ledger.append(
             home,
             Event::Pending {
@@ -2646,6 +2690,7 @@ fn prepare_log_body(
         images: images.iter().map(|image| image.receipt.clone()).collect(),
         program_evidence: None,
         native_evidence: None,
+        send_before: None,
         operation: Kind::Log {
             thread: args.thread.as_deref().map(snowflake).transpose()?,
         },
@@ -2698,6 +2743,7 @@ fn prepare_ask(ctx: &Context, args: &AskArgs) -> Result<Request> {
         images: vec![],
         program_evidence: args.program_evidence.clone(),
         native_evidence: None,
+        send_before: args.send_before.clone(),
         operation: Kind::Ask {
             todo_id: args.todo_id,
             origin_thread: origin,
@@ -3796,6 +3842,8 @@ mod tests {
     use super::*;
     use crate::core::{Effects, Output};
     use std::sync::{mpsc, Arc, Mutex};
+    include!("recovery_messages/send_deadline_tests.rs");
+    include!("recovery_messages/send_rate_limit_tests.rs");
 
     const GUILD: &str = "102";
     const FORUM: &str = "103";
@@ -4380,6 +4428,7 @@ mod tests {
                 expected_image_sha256: vec![],
                 program_evidence: None,
                 conversation_source_request: None,
+                send_before: None,
             }
         }
         fn unchanged(&self) {

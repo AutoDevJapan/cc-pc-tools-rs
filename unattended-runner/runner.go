@@ -200,6 +200,7 @@ type Runner struct {
 	AgentResultGuard            func(context.Context, string) bool
 	SeparatedScheduler          bool
 	ConversationReceiverOnly    bool
+	TaskQuestion                *taskQuestionRegistry
 }
 
 func readJSON(path string, ceiling int64, value any) error {
@@ -974,6 +975,9 @@ func (r *Runner) recheckOriginBlocked(ctx context.Context, health *Health) {
 }
 
 func main() {
+	if len(os.Args) > 1 && (os.Args[1] == "--check-task-question-evidence" || os.Args[1] == "--register-task-question-evidence") {
+		os.Exit(taskQuestionCLI(os.Args[2:], os.Stdout, taskQuestionProduction(), os.Args[1] == "--register-task-question-evidence"))
+	}
 	if len(os.Args) > 1 && os.Args[1] == "--check-native-question-evidence" {
 		os.Exit(nativeQuestionCLIWithDeps(os.Args[2:], os.Stdout, nativeQuestionProduction()))
 	}

@@ -71,6 +71,9 @@ func ownerCachedIdentityAt(ctx context.Context, repository, home string, now fun
 		return 0, "", "", false
 	}
 	id, actual, owner, ok := fetch(ctx, repository)
+	if observed, _ := ctx.Value(ownerRefreshObservationKey{}).(*ownerRefreshObservation); observed != nil {
+		observed.fetched = ok
+	}
 	if !ok || !strings.EqualFold(actual, repository) || !ownerSelfGitHubOwner(owner) {
 		return 0, "", "", false
 	}
@@ -78,8 +81,14 @@ func ownerCachedIdentityAt(ctx context.Context, repository, home string, now fun
 	if !ownerIdentityValid(r, repository, now()) {
 		return 0, "", "", false
 	}
+	if observed, _ := ctx.Value(ownerRefreshObservationKey{}).(*ownerRefreshObservation); observed != nil {
+		observed.validated = true
+	}
 	if ctx.Err() != nil || !ownerWriteSealedWith(ctx, home, hashBytes([]byte(strings.ToLower(repository)))+".dpapi", r, os.Rename) {
 		return 0, "", "", false
+	}
+	if observed, _ := ctx.Value(ownerRefreshObservationKey{}).(*ownerRefreshObservation); observed != nil {
+		observed.saved = ctx.Err() == nil
 	}
 	return id, actual, owner, ctx.Err() == nil
 }

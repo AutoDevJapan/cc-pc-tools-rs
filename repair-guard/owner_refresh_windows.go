@@ -180,7 +180,18 @@ func ownerRefreshIdentityRequest(path, request string) bool {
 	return ownerRefreshIdentityRequestWith(path, request, ownerIdentityHome, time.Now, ownerOrganizationQuery, ownerGitHubIdentityWith)
 }
 
-func ownerRefreshIdentityRequestWith(path, request, home string, now func() time.Time, query func(context.Context, string, ownerSourceAccess) ownerPathVerdict, fetch func(context.Context, string) (int64, string, string, bool)) bool {
+func ownerRefreshIdentityRequestWith(path, request, home string, now func() time.Time, query func(context.Context, string, ownerSourceAccess) ownerPathVerdict, fetch func(context.Context, string) (int64, string, string, bool), diagnostics ...*ownerRefreshObservation) bool {
+	return ownerRefreshIdentityRequestContextWith(context.Background(), path, request, home, now, query, fetch, diagnostics...)
+}
+
+func ownerRefreshIdentityRequestContextWith(parent context.Context, path, request, home string, now func() time.Time, query func(context.Context, string, ownerSourceAccess) ownerPathVerdict, fetch func(context.Context, string) (int64, string, string, bool), diagnostics ...*ownerRefreshObservation) bool {
+	observation := &ownerRefreshObservation{started: time.Now(), claimValid: request == ""}
+	if len(diagnostics) != 0 && diagnostics[0] != nil {
+		observation = diagnostics[0]
+		observation.started = time.Now()
+		observation.claimValid = request == ""
+	}
+
 	var claim ownerRefreshClaim
 	if request != "" {
 		var ok bool
@@ -188,31 +199,43 @@ func ownerRefreshIdentityRequestWith(path, request, home string, now func() time
 		if !ok || claim.ID != request || claim.Catalog != hashBytes(ownerDepartmentCatalog) {
 			return false
 		}
+		observation.claimValid = true
 		defer func() { _ = ownerDropRefreshClaim(home, request, now()) }()
 	}
-	ctx, cancel := context.WithTimeout(context.Background(), 8*time.Second)
+	ctx, cancel := context.WithTimeout(parent, 8*time.Second)
 	defer cancel()
+	ctx = context.WithValue(ctx, ownerRefreshObservationKey{}, observation)
 	identityReady := false
 	access := ownerSourceAccess{git: func(root string, args ...string) (string, bool) { return ownerSourceGit(ctx, root, args...) }, identity: func(repo string) (int64, string, string, bool) {
+		detail := &ownerRefreshObservation{started: observation.started, claimValid: true}
+		identityOK := false
+		defer func() { observation.includeIdentity(detail, identityOK) }()
+		ctx := context.WithValue(ctx, ownerRefreshObservationKey{}, detail)
 		if claim.Repository != "" && !strings.EqualFold(claim.Repository, repo) {
 			return 0, "", "", false
 		}
+		detail.binding = true
 		unlock, locked := ownerLockIdentityRefresh(ctx, home, repo)
 		if !locked {
+			detail.lockUnavailable = true
 			return 0, "", "", false
 		}
 		defer unlock()
 		if ownerRefreshCooling(home, repo, now()) {
+			detail.cooling = true
 			id, name, owner, ok := ownerCachedIdentityAt(ctx, repo, home, now, func(context.Context, string) (int64, string, string, bool) { return 0, "", "", false })
 			identityReady = identityReady || ok
+			identityOK = ok
 			return id, name, owner, ok
 		}
 		attempted := false
 		id, name, owner, ok := ownerCachedIdentityAt(ctx, repo, home, now, func(ctx context.Context, repository string) (int64, string, string, bool) {
 			attempted = true
+			detail.attempted = true
 			return fetch(ctx, repository)
 		}, ownerIdentityAging(repo, home, now()))
 		identityReady = identityReady || ok
+		identityOK = ok
 		if !ok && attempted {
 			_ = ownerWriteSealed(home, ownerRefreshFailureName(repo), ownerRefreshFailure{"owner-source-refresh-failure-v1", repo, hashBytes(ownerDepartmentCatalog), now().Unix()})
 		}
@@ -224,5 +247,11 @@ func ownerRefreshIdentityRequestWith(path, request, home string, now func() time
 	// turning the already verified repository identity into a network failure.
 	// The next normal guard still rechecks its current registration and stop.
 	success := identityReady && ctx.Err() == nil
+	if ctx.Err() != nil {
+		observation.timeout = true
+	}
+	if success {
+		observation.saved = true
+	}
 	return success
 }

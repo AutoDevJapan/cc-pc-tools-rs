@@ -82,6 +82,30 @@ func TestRefreshDiagnosticCLIChild(t *testing.T) {
 	os.Exit(1)
 }
 
+func TestRefreshDiagnosticErasesEveryWrittenBackingArray(t *testing.T) {
+	var buffer ownerRefreshErrorBuffer
+	var aliases [][]byte
+	for _, size := range []int{1, 512, 4096, 8192, 8192} {
+		chunk := bytes.Repeat([]byte{0x73}, size)
+		n, err := buffer.Write(chunk)
+		if n != size || err != nil {
+			t.Fatal("stderr drain contract")
+		}
+		aliases = append(aliases, buffer.data)
+	}
+	if len(buffer.data) != 16384 || len(aliases) != 5 {
+		t.Fatal("counter did not exercise bound")
+	}
+	buffer.erase()
+	for index, old := range aliases {
+		for _, value := range old {
+			if value != 0 {
+				t.Fatalf("stderr retained in prior backing array %d", index)
+			}
+		}
+	}
+}
+
 func TestRefreshDiagnosticActualPersistenceFailureAndBindingMismatch(t *testing.T) {
 	const repo = "AutoDevJapan/diagnostic-fixture"
 	for _, mismatch := range []bool{false, true} {

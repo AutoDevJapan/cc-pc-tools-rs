@@ -67,6 +67,9 @@ func refreshDiagnosticFlagPresent(args []string) bool {
 type ownerRefreshErrorBuffer struct{ data []byte }
 
 func (b *ownerRefreshErrorBuffer) Write(p []byte) (int, error) {
+	if b.data == nil {
+		b.data = make([]byte, 0, 16384)
+	}
 	if len(b.data) < 16384 {
 		n := 16384 - len(b.data)
 		if n > len(p) {

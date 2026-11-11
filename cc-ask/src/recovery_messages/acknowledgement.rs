@@ -284,6 +284,21 @@ pub(super) fn authorize(
     if recovering && !new_phase {
         return Ok(());
     }
+    if CloseLedger::load(home)?
+        .records
+        .get(&binding.thread_id)
+        .is_some_and(|closed| {
+            closed.binding.request_id == binding.question_request_id
+                && (matches!(closed.phase.as_str(), "verified" | "patch_pending")
+                    || closed.outcome.is_some()
+                    || closed.patch_attempted)
+        })
+    {
+        return Err(
+            "original question has an explicit close record; no new acknowledgement phase reserved"
+                .into(),
+        );
+    }
     let reply = api.get(&format!(
         "/channels/{}/messages/{}",
         binding.thread_id, binding.reply_message_id

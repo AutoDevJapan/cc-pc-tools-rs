@@ -309,3 +309,62 @@ fn owner_receipt_does_not_reuse_a_different_edited_version_marker() {
     let result = check_acknowledgement(&mut ctx, &args, &path).unwrap();
     assert!(result["existing_acknowledgement"].is_null());
 }
+
+fn explicit_close_record(f: &Fixture, proof: &Value) {
+    let mut close = CloseLedger::load(&f.home).unwrap();
+    close
+        .save(
+            &f.home,
+            CloseRecord {
+                binding: CloseBinding {
+                    request_id: core::s(&proof["question_request_id"]).into(),
+                    thread_id: core::s(&proof["thread_id"]).into(),
+                    question_message_id: core::s(&proof["question_message_id"]).into(),
+                    origin_todo_id: 2472,
+                    todo_id: 2472,
+                    message_id: core::s(&proof["reply_message_id"]).into(),
+                    author_id: OWNER.into(),
+                    job_id: "fixture-job".into(),
+                    revision: "a".repeat(40),
+                    question_fingerprint: core::s(&proof["question_fingerprint"]).into(),
+                    reply_sha256: "a".repeat(64),
+                    receipt_sha256: "a".repeat(64),
+                    verification_sha256: "a".repeat(64),
+                    completion: "fixture complete".into(),
+                },
+                phase: "verified".into(),
+                outcome: Some("closed".into()),
+                pending_reply_ids: vec![],
+                patch_attempted: true,
+            },
+        )
+        .unwrap();
+}
+
+#[test]
+fn owner_receipt_cannot_reopen_explicitly_closed_question_but_can_recover_old_effect() {
+    let f = Fixture::new();
+    let mut ctx = f.context();
+    let (args, path, proof) = receipt_case(&f, &mut ctx);
+    explicit_close_record(&f, &proof);
+    let posts = f.server.lock().unwrap().posts.len();
+    assert!(log_acknowledgement(&mut ctx, &args, &path)
+        .unwrap_err()
+        .contains("explicit close"));
+    assert_eq!(f.server.lock().unwrap().posts.len(), posts);
+    assert!(Ledger::load(&f.home)
+        .unwrap()
+        .effect(&args.request_id, "log:0")
+        .is_none());
+    let other = Fixture::new();
+    let mut other_ctx = other.context();
+    let (args, path, proof) = receipt_case(&other, &mut other_ctx);
+    log_acknowledgement(&mut other_ctx, &args, &path).unwrap();
+    explicit_close_record(&other, &proof);
+    let posts = other.server.lock().unwrap().posts.len();
+    assert_eq!(
+        log_acknowledgement(&mut other_ctx, &args, &path).unwrap()["delivery"],
+        "verified"
+    );
+    assert_eq!(other.server.lock().unwrap().posts.len(), posts);
+}

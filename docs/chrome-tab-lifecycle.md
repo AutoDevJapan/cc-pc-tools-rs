@@ -13,6 +13,47 @@
 - 古い試行順に回収し、切断したプロフィールが他のタブを妨げないようにする。時間・件数の上限で残ったものはdeferredを記録する。
 - 閉じた、または既に閉じていた記録は `chrome-tab-history` に残す。毎分の処理と終了処理は同じロックを使う。
 
+## 通常の接続情報と個別終了
+
+`owner_chrome open` は、その実行中ジョブの通常のBrowser Use中継が受け取った
+attach成功応答に対応する接続情報だけを再利用する。実session・turn・Chromeの
+instance/generationが一致し、記録から60秒以内の情報を使う。通常の
+`getNetworkPolicy` が合成した制約とrequest header設定を変更せず渡し、
+未取得・別session・期限切れではcreateTabとattachの前に失敗する。
+空の許可policyを生成したり、別sessionとして接続したりしない。
+終了・別turnへの移行・detachの失効世代はジョブ内の共有記録へ保存し、
+送信時の世代をattach応答時とcontext読込時にも照合する。
+終了前に送ったattachの遅延成功応答はcontextを再作成できず、
+released tabをclaimする前にも有効なcontextとChrome identityを確認する。
+通常proxyが保持するWindowsの終了時削除leaseも照合し、proxy終了や失効時は
+JSON保存・lock取得に失敗しても先にleaseを解放する。
+ローカルの失効保存・activity記録が失敗しても、正規のturnEnded・finalize・detachを
+拡張へ転送する。終了通知の失敗をローカルの記録成功で隠さない。
+この記録を取得する中継はジョブの監督プロセス内で動くため、CLIだけの更新では
+既に動く旧監督プロセスへ新しい記録機能は追加されない。
+`chatgpt-web`のstandalone live経路は`owner-tabs`へこのjob/contextを用意しないため、
+本変更では通常active-jobのCUA attachを必要とする未接続の呼出元として扱う。
+この場合は作成・接続の前に依存を示す診断を返し、架空jobやpolicyは生成しない。
+file/localhost fixtureの既存経路はそのまま使う。
+begin/publishでcontext取得が失敗した場合は`chrome-context-error.json`へ時刻・処理段階・
+固定理由とOSエラー種別だけを残す。loadは未記録、期限切れ、identity不一致、失効、
+lease喪失等の固定理由をエラーとして返し、毎回の永続記録は行わない。
+いずれもpolicy・request header・raw error値は書かない。
+
+通常の終了でagent-created tabは拡張自身が閉じる。個別回収時にnetwork contextが
+期限切れでも、元session/turnがactiveかつ既にdebugger接続済みなら、cachedの
+`Page.close`だけを送る。拡張の所有検証を通し、新しいpolicy・attach・claimを与えない。
+元sessionがinactiveなら再activationせず、全inventoryで対象不在を確認できたときだけ
+履歴へ退役させる。対象が残る場合、別session所有、世代変更、debugger未接続、拒否は
+失敗として原記録を保持し、global tabs.removeや別sessionへ迂回しない。
+
+旧CLIが作った専用session（`cc-chrome-<UUID>`、turn `open`）の個別終了では、
+同じChrome identityとsession内の対象1枚だけを確認してから通常のfinalizeを使う。
+複数枚・所有解放済み・世代変更は終了を拒否し、成功後も全体inventoryで不在を確認する。
+keep指定は従来の終了要求と同じ優先順位で保持する。
+保存失敗に伴うrollbackも成功・既存不在の履歴を残し、履歴保存が失敗した場合は
+emergency記録を残して既存の回収処理へ引き継ぐ。
+
 ## 原因を確認した記録
 
 2026-10-08の調査で直近2日分654ジョブを走査。成功したChrome作成101回のうち9回（5ジョブ）で記録用フォルダーが無かった。5ジョブはすべてminimalでChromeの中継が無かった。終了処理を毎分へ後回しにしたジョブは9件。読めないジョブ、イベント、監督ログは0件。単純な文字列検索の数字は実行回数に使っていない。

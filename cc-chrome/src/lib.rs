@@ -7,11 +7,13 @@ use std::{
 };
 
 pub mod completion;
+#[cfg(windows)]
+mod context;
 pub mod guard;
 pub mod lifecycle;
-pub mod registrar;
 #[cfg(windows)]
 pub mod native;
+pub mod registrar;
 
 pub fn needs_browser(task: &str) -> bool {
     let task = task.to_lowercase();

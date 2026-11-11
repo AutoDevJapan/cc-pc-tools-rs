@@ -50,7 +50,7 @@ func (r *Runner) releaseRetries(ctx context.Context, health *Health) {
 		due = append(due, candidate{id: productRetryID, product: product})
 	}
 	for _, row := range db.Items {
-		if row.ID == 0 || row.ID == productRetryID || row.Status != "wait" || (row.Project != "cc-pc-tools-rs" && row.Project != "pc-capacity-audit" && row.Project != "localai-web-rs") {
+		if row.ID == 0 || row.ID == productRetryID || row.Status != "wait" || (row.Project != "cc-pc-tools-rs" && row.Project != "pc-capacity-audit" && row.Project != "localai-web-rs" && row.Project != "x-bookmarks") {
 			continue
 		}
 		var wait struct {

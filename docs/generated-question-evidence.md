@@ -77,7 +77,11 @@ guard未成立を、実際の顧客内容の検出や、後続の`fictional_data
   この用途は1枚の新規生成に限る。既存複数案・番号接頭語の経路は変更しない。
   正規job/Task辺、API metadata、原item/contextが取得できない場合は拒否し、仮job・後の引用・
   原Task/assignmentの書換え・手製資格で補わない。`CC_JOB_ID`の注入は不要で、代用にもならない。
-  15秒の親予算・応答4MiB/通知32件・終了回収1秒の後に所有readerを終了する。
+  WindowsではPATHが返した正規Codex Desktopインストール実体をそのまま使い、
+  インストール場所・reparse不在・OpenAIの有効署名・同ユーザー所有を検証する。
+  write/delete共有なしのhandleで同じソフト実体をinitializeまで保持し、別コピーへ付け替えない。
+  ソフトの信頼判定を資料分類guardと混同せず、evidence/Task/job/imageのguardは維持する。
+  15秒の親予算・応答4MiB/通知32件・EOF後の終了回収3秒で、未終了の所有readerは取消してWaitする。
   原証拠のguardは引き続き本文前に適用する。このselectorは保護された原証拠を読む権限ではない。
 - `proof_path`、`proof_sha256`: 正規の生成証拠をまとめた原JSON。
 - `images`: 元path、sha256、size、record_path、record_sha256、prompt_sha256、option、revision、order。

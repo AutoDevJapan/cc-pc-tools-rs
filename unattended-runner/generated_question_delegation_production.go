@@ -32,10 +32,11 @@ func generatedQuestionStartRPC(ctx context.Context) (*generatedQuestionRPC, erro
 	if err != nil {
 		return nil, errConversationMedia
 	}
-	allowed, err := conversationMediaLiveGuard(ctx, path)
-	if err != nil || !allowed {
+	software, err := generatedQuestionOpenSoftware(ctx, path)
+	if err != nil {
 		return nil, errConversationMedia
 	}
+	defer software.Close()
 	child, cancel := context.WithCancel(ctx)
 	cmd := exec.CommandContext(child, path, "app-server", "--listen", "stdio://")
 	hide(cmd)
@@ -136,7 +137,7 @@ func (r *generatedQuestionRPC) close() error {
 	select {
 	case err := <-done:
 		return err
-	case <-time.After(time.Second):
+	case <-time.After(3 * time.Second):
 		r.cancel()
 		return <-done
 	}

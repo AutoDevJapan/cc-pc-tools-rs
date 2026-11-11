@@ -111,6 +111,9 @@ func TestGeneratedQuestionRPCFixtureProcess(t *testing.T) {
 	if mode == "" {
 		return
 	}
+	if mode == "normal" {
+		defer os.Exit(0)
+	}
 	scanner := bufio.NewScanner(os.Stdin)
 	for scanner.Scan() {
 		var request struct {
@@ -159,8 +162,11 @@ func TestGeneratedQuestionRPCProcessBudgetAndClose(t *testing.T) {
 			if mode != "normal" && err == nil {
 				t.Fatal("unanswered request or stalled reader accepted")
 			}
-			if cmd.ProcessState == nil || !cmd.ProcessState.Exited() {
+			if cmd.ProcessState == nil {
 				t.Fatal("reader process not reaped")
+			}
+			if mode == "normal" && !cmd.ProcessState.Success() {
+				t.Fatal("normal child did not exit successfully")
 			}
 		})
 	}

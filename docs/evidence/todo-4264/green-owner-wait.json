@@ -1,0 +1,23 @@
+{
+  "name": "green-owner-wait",
+  "head": "d054be634230b3c974a4f4fb32ce23404de242a4",
+  "job": "20261030-111925-todo-4264",
+  "start": "2026-10-30T11:25:44.6750401+09:00",
+  "end": "2026-10-30T11:25:55.5895940+09:00",
+  "exe": "D:/CC/Tools/codex-jobs/cargo_gate.exe",
+  "args": [
+    "nextest",
+    "run",
+    "--locked",
+    "-p",
+    "cc-todo",
+    "--lib",
+    "-E",
+    "test(recovery::owner_wait::tests::)",
+    "--no-fail-fast"
+  ],
+  "target": "C:/Users/makhmeto/AppData/Local/Temp/codex-owned-54d7c4749feb42fe35f5482956923eac/target",
+  "exit": 0,
+  "stdout": "green-owner-wait.stdout.log",
+  "stderr": "green-owner-wait.stderr.log"
+}

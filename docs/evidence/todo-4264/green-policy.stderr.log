@@ -1,0 +1,39 @@
+   Compiling proc-macro2 v1.0.107
+   Compiling quote v1.0.47
+   Compiling windows-sys v0.61.2
+   Compiling memchr v2.8.3
+   Compiling once_cell v1.21.4
+   Compiling chrono v0.4.45
+   Compiling serde_json v1.0.151
+   Compiling tempfile v3.27.0
+   Compiling syn v3.0.6
+   Compiling serde_derive v1.0.229
+   Compiling serde v1.0.229
+   Compiling cc-job-policy v0.1.0 (D:\CC\Work\unattended-operations-20261013-wt\todo-4264-work\cc-job-policy)
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 5.28s
+────────────
+ Nextest run ID 2a53ad4f-c1c0-47a8-8396-c33be6d365d5 with nextest profile: default
+    Starting 21 tests across 1 binary (29 tests skipped)
+        PASS [   0.011s] ( 1/21) cc-job-policy todo_wait::tests::readiness_wait_uses_exact_job_links_and_never_invents_dependency_edges
+        PASS [   0.013s] ( 2/21) cc-job-policy todo_wait::tests::missing_target_stays_waiting_even_if_status_was_overwritten
+        PASS [   0.017s] ( 3/21) cc-job-policy todo_wait::tests::scoped_release_preserves_unverified_rows_and_missing_edges
+        PASS [   0.020s] ( 4/21) cc-job-policy todo_wait::tests::every_release_has_a_new_generation_and_preserves_owner_stop
+        PASS [   0.024s] ( 5/21) cc-job-policy cancellation::tests::durable_intent_survives_reservation_removal_but_explicit_stops_win
+        PASS [   0.028s] ( 6/21) cc-job-policy cancellation::tests::unknown_or_incomplete_intent_and_unrelated_legacy_holds_are_not_automatic
+        PASS [   0.032s] ( 7/21) cc-job-policy todo_wait::tests::cycle_and_missing_ids_are_rejected_without_mutation
+        PASS [   0.036s] ( 8/21) cc-job-policy todo_wait::tests::all_targets_must_finish_and_owner_block_is_preserved
+        PASS [   0.029s] ( 9/21) cc-job-policy work_owner::tests::automatic_owner_waits_release_only_disproved_claims_and_keep_manual_edges
+        PASS [   0.029s] (10/21) cc-job-policy work_owner::tests::branch_is_scoped_and_detached_is_not_a_shared_branch
+        PASS [   0.028s] (11/21) cc-job-policy work_owner::tests::cancelling_active_owner_still_blocks_but_cancelled_waiter_does_not
+        PASS [   0.029s] (12/21) cc-job-policy work_owner::tests::first_queued_owner_beats_priority_and_releases_on_completion
+        PASS [   0.029s] (13/21) cc-job-policy work_owner::tests::independent_clones_on_main_only_collide_if_the_pr_matches
+        PASS [   0.029s] (14/21) cc-job-policy work_owner::tests::pr_scope_children_and_same_checkout
+        PASS [   0.030s] (15/21) cc-job-policy work_owner::tests::remembered_claims_keep_real_pr_and_branch_dependencies_after_worker_exit
+        PASS [   0.030s] (16/21) cc-job-policy work_owner::tests::remembered_db_fallback_requires_typed_automatic_provenance
+        PASS [   0.033s] (17/21) cc-job-policy work_owner::tests::title_numbers_are_not_substrings_of_other_identifiers
+        PASS [   0.061s] (18/21) cc-job-policy work_owner::tests::todo_collision_preserves_spec_and_evidence_and_is_idempotent
+        PASS [   0.119s] (19/21) cc-job-policy work_owner::tests::untracked_registered_subfolders_of_real_repo_keep_worktree_exclusion
+        PASS [   0.165s] (20/21) cc-job-policy work_owner::tests::stale_ancestor_identity_recovers_actual_nested_checkout
+        PASS [   0.349s] (21/21) cc-job-policy work_owner::tests::registered_folders_do_not_inherit_home_git_ownership
+────────────
+     Summary [   0.382s] 21 tests run: 21 passed, 29 skipped

@@ -1,0 +1,20 @@
+   Compiling cc-todo v0.1.0 (D:\CC\Work\unattended-operations-20261013-wt\todo-4264-work\cc-todo)
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 6.76s
+────────────
+ Nextest run ID aeaca41b-19e5-4654-b310-458df5786dfd with nextest profile: default
+    Starting 13 tests across 4 binaries (120 tests skipped)
+        PASS [   0.203s] ( 1/13) cc-todo::capacity_cycle disabled_and_unanswered_rows_retain_their_generation_with_observable_reasons
+        PASS [   0.502s] ( 2/13) cc-todo::capacity_cycle no_wait_or_running_job_is_released_by_new_measurement
+        PASS [   0.086s] ( 3/13) cc-todo::recovery concrete_owner_decisions_and_explicit_stops_are_preserved_but_missing_details_are_not_blocks
+        PASS [   0.722s] ( 4/13) cc-todo::capacity_cycle explicit_stop_flags_on_completed_row_or_job_survive_next_cycle
+        PASS [   0.012s] ( 5/13) cc-todo::recovery duplicate_pr_recovery_becomes_owner_completion_wait_without_dispatch
+        PASS [   0.012s] ( 6/13) cc-todo::recovery intentional_cancel_is_not_restarted_by_stall_watchdog
+        PASS [   0.242s] ( 7/13) cc-todo::recovery dependency_release_is_consumed_after_started_or_accepted_and_retries_obey_history
+        PASS [   0.855s] ( 8/13) cc-todo::direction_record unchanged_numeric_work_owner_dependency_is_not_a_new_hold
+        PASS [   1.247s] ( 9/13) cc-todo::direction_record a_new_block_is_distinct_even_if_a_block_existed_when_the_record_was_written
+        PASS [   1.319s] (10/13) cc-todo::direction_record actual_block_then_start_recovers_the_saved_record_without_restoring_old_note
+        PASS [   1.335s] (11/13) cc-todo::direction_record direction_rejects_changed_scope_snapshot_and_new_stops_even_with_same_note
+        PASS [   1.757s] (12/13) cc-todo::conversation_wait normal_answer_consumes_only_the_exact_preserved_instruction_once
+        PASS [   1.805s] (13/13) cc-todo::conversation_wait original_delivery_rejects_other_generations_waits_and_holds
+────────────
+     Summary [   1.809s] 13 tests run: 13 passed, 120 skipped

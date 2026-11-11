@@ -1,0 +1,298 @@
+   Compiling proc-macro2 v1.0.107
+   Compiling unicode-ident v1.0.26
+   Compiling quote v1.0.47
+   Compiling windows-link v0.2.1
+   Compiling memchr v2.8.3
+   Compiling cfg-if v1.0.5
+   Compiling stable_deref_trait v1.2.1
+   Compiling itoa v1.0.18
+   Compiling windows-sys v0.61.2
+   Compiling pin-project-lite v0.2.17
+   Compiling futures-core v0.3.34
+   Compiling writeable v0.6.4
+   Compiling smallvec v1.16.2
+   Compiling litemap v0.8.3
+   Compiling serde_core v1.0.229
+   Compiling utf8_iter v1.0.4
+   Compiling icu_normalizer_data v2.3.0
+   Compiling bytes v1.12.1
+   Compiling icu_properties_data v2.3.0
+   Compiling once_cell v1.21.4
+   Compiling percent-encoding v2.3.2
+   Compiling serde v1.0.229
+   Compiling equivalent v1.0.2
+   Compiling zmij v1.0.23
+   Compiling hashbrown v0.17.1
+   Compiling futures-sink v0.3.34
+   Compiling find-msvc-tools v0.1.14
+   Compiling version_check v0.9.5
+   Compiling shlex v2.0.1
+   Compiling futures-channel v0.3.34
+   Compiling indexmap v2.14.2
+   Compiling generic-array v0.14.7
+   Compiling serde_json v1.0.151
+   Compiling cc v1.6.0
+   Compiling futures-task v0.3.34
+   Compiling slab v0.4.12
+   Compiling syn v3.0.6
+   Compiling futures-io v0.3.34
+   Compiling zeroize v1.9.1
+   Compiling ring v0.17.14
+   Compiling syn v2.0.119
+   Compiling form_urlencoded v1.2.2
+   Compiling socket2 v0.6.5
+   Compiling mio v1.2.4
+   Compiling rustls-pki-types v1.15.1
+   Compiling crc32fast v1.5.2
+   Compiling typenum v1.20.1
+   Compiling log v0.4.34
+   Compiling synstructure v0.14.0
+   Compiling displaydoc v0.2.7
+   Compiling zerovec-derive v0.11.6
+   Compiling serde_derive v1.0.229
+   Compiling futures-macro v0.3.34
+   Compiling zerofrom-derive v0.1.8
+   Compiling yoke-derive v0.8.4
+   Compiling tokio-macros v2.7.2
+   Compiling futures-util v0.3.34
+   Compiling zerofrom v0.1.8
+   Compiling simd-adler32 v0.3.10
+   Compiling autocfg v1.5.1
+   Compiling yoke v0.8.3
+   Compiling num-traits v0.2.19
+   Compiling tokio v1.53.2
+   Compiling windows-interface v0.59.3
+   Compiling zerovec v0.11.8
+   Compiling zerotrie v0.2.5
+   Compiling windows-implement v0.60.2
+   Compiling http v1.5.0
+   Compiling getrandom v0.2.17
+   Compiling windows-result v0.4.1
+   Compiling windows-strings v0.5.1
+   Compiling tinystr v0.8.4
+   Compiling potential_utf v0.1.6
+   Compiling adler2 v2.0.1
+   Compiling untrusted v0.9.0
+   Compiling windows-core v0.62.2
+   Compiling miniz_oxide v0.9.1
+   Compiling icu_collections v2.3.0
+   Compiling icu_locale_core v2.3.0
+   Compiling http-body v1.1.0
+   Compiling crypto-common v0.1.7
+   Compiling block-buffer v0.10.4
+   Compiling windows_x86_64_msvc v0.52.6
+   Compiling getrandom v0.4.3
+   Compiling rustls v0.23.45
+   Compiling httparse v1.10.1
+   Compiling digest v0.10.7
+   Compiling flate2 v1.1.10
+   Compiling webpki-roots v1.0.9
+   Compiling aho-corasick v1.1.5
+   Compiling subtle v2.6.1
+   Compiling anstyle v1.0.14
+   Compiling native-tls v0.2.18
+   Compiling libc v0.2.190
+   Compiling try-lock v0.2.5
+   Compiling thiserror v2.0.21
+   Compiling regex-syntax v0.8.11
+   Compiling tower-service v0.3.3
+   Compiling utf8parse v0.2.2
+   Compiling icu_provider v2.3.1
+   Compiling once_cell_polyfill v1.70.2
+   Compiling cpufeatures v0.2.17
+   Compiling base64 v0.22.1
+   Compiling sha2 v0.10.9
+   Compiling anstyle-wincon v3.0.11
+   Compiling anstyle-parse v1.0.0
+   Compiling regex-automata v0.4.18
+   Compiling want v0.3.2
+   Compiling icu_normalizer v2.3.0
+   Compiling icu_properties v2.3.0
+   Compiling rustls-webpki v0.103.15
+   Compiling webpki-roots v0.26.11
+   Compiling chrono v0.4.45
+   Compiling thiserror-impl v2.0.21
+   Compiling schannel v0.1.29
+   Compiling anstyle-query v1.1.5
+   Compiling tracing-core v0.1.36
+   Compiling windows-threading v0.2.1
+   Compiling is_terminal_polyfill v1.70.2
+   Compiling atomic-waker v1.1.2
+   Compiling colorchoice v1.0.5
+   Compiling tracing v0.1.44
+   Compiling windows-future v0.3.2
+   Compiling hyper v1.12.0
+   Compiling anstream v1.0.0
+   Compiling regex v1.13.1
+   Compiling windows-targets v0.52.6
+   Compiling futures-executor v0.3.34
+   Compiling windows-collections v0.3.2
+   Compiling windows-numerics v0.3.1
+   Compiling sync_wrapper v1.0.2
+   Compiling ipnet v2.12.2
+   Compiling bumpalo v3.20.3
+   Compiling clap_lex v1.1.1
+   Compiling idna_adapter v1.2.2
+   Compiling base64 v0.23.1
+   Compiling fastrand v2.5.0
+   Compiling heck v0.5.0
+   Compiling strsim v0.11.1
+   Compiling tower-layer v0.3.3
+   Compiling zip v2.4.2
+   Compiling idna v1.1.0
+   Compiling zopfli v0.8.3
+   Compiling clap_derive v4.6.7
+   Compiling hyper-util v0.1.21
+   Compiling tempfile v3.27.0
+   Compiling clap_builder v4.6.7
+   Compiling tower v0.5.3
+   Compiling windows v0.62.2
+   Compiling url v2.5.8
+   Compiling futures v0.3.34
+   Compiling windows-sys v0.59.0
+   Compiling tokio-native-tls v0.3.1
+   Compiling uuid v1.27.0
+   Compiling ureq v2.12.1
+   Compiling cc-job-policy v0.1.0 (D:\CC\Work\unattended-operations-20261013-wt\todo-4264-work\cc-job-policy)
+   Compiling http-body-util v0.1.5
+   Compiling ryu v1.0.23
+   Compiling bitflags v2.13.2
+   Compiling hyper-tls v0.6.0
+   Compiling serde_urlencoded v0.7.1
+   Compiling winreg v0.55.0
+   Compiling tower-http v0.6.11
+   Compiling cc-chrome v0.1.0 (D:\CC\Work\unattended-operations-20261013-wt\todo-4264-work\cc-chrome)
+   Compiling clap v4.6.7
+   Compiling reqwest v0.12.28
+   Compiling wmi v0.18.4
+   Compiling cc-task-title v0.1.0 (D:\CC\Work\unattended-operations-20261013-wt\todo-4264-work\cc-task-title)
+   Compiling cc-local-llm v0.1.0 (D:\CC\Work\unattended-operations-20261013-wt\todo-4264-work\cc-local-llm)
+   Compiling cc-live v0.1.0 (D:\CC\Work\unattended-operations-20261013-wt\todo-4264-work\cc-live)
+   Compiling cc-ask v0.1.0 (D:\CC\Work\unattended-operations-20261013-wt\todo-4264-work\cc-ask)
+   Compiling cc-scheduler v0.1.0 (D:\CC\Work\unattended-operations-20261013-wt\todo-4264-work\cc-scheduler)
+   Compiling cc-todo v0.1.0 (D:\CC\Work\unattended-operations-20261013-wt\todo-4264-work\cc-todo)
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 1m 05s
+────────────
+ Nextest run ID c6c78fff-b1c3-43ce-8c59-3c31b735d0fa with nextest profile: default
+    Starting 28 tests across 1 binary (33 tests skipped)
+        PASS [   0.033s] ( 1/28) cc-todo recovery::owner_wait::tests::durable_pr_or_branch_owner_claim_is_not_released
+        PASS [   0.064s] ( 2/28) cc-todo recovery::owner_wait::tests::changed_exact_job_and_busy_normal_job_lock_are_rejected
+        FAIL [   0.070s] ( 3/28) cc-todo recovery::owner_wait::tests::answered_question_history_allows_only_the_existing_automatic_release
+  stdout ───
+
+    running 1 test
+    test recovery::owner_wait::tests::answered_question_history_allows_only_the_existing_automatic_release ... FAILED
+
+    failures:
+
+    failures:
+        recovery::owner_wait::tests::answered_question_history_allows_only_the_existing_automatic_release
+
+    test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 60 filtered out; finished in 0.04s
+
+  stderr ───
+
+    thread 'recovery::owner_wait::tests::answered_question_history_allows_only_the_existing_automatic_release' (28884) panicked at cc-todo\src\recovery\owner_wait_tests.rs:263:13:
+    assertion `left == right` failed: rows=[0] answer="recorded reply"
+      left: Ok([])
+     right: Ok([1])
+    note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+
+        FAIL [   0.064s] ( 4/28) cc-todo recovery::owner_wait::tests::conversation_wait_on_candidate_or_owner_is_preserved
+  stdout ───
+
+    running 1 test
+    test recovery::owner_wait::tests::conversation_wait_on_candidate_or_owner_is_preserved ... FAILED
+
+    failures:
+
+    failures:
+        recovery::owner_wait::tests::conversation_wait_on_candidate_or_owner_is_preserved
+
+    test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 60 filtered out; finished in 0.04s
+
+  stderr ───
+
+    thread 'recovery::owner_wait::tests::conversation_wait_on_candidate_or_owner_is_preserved' (60800) panicked at cc-todo\src\recovery\owner_wait_tests.rs:370:17:
+    assertion `left == right` failed: row=0 scheduler=false value=true
+      left: Ok([1])
+     right: Ok([])
+    note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+
+        FAIL [   0.074s] ( 5/28) cc-todo recovery::owner_wait::tests::dependency_reopened_during_second_guard_never_commits
+  stdout ───
+
+    running 1 test
+    test recovery::owner_wait::tests::dependency_reopened_during_second_guard_never_commits ... FAILED
+
+    failures:
+
+    failures:
+        recovery::owner_wait::tests::dependency_reopened_during_second_guard_never_commits
+
+    test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 60 filtered out; finished in 0.06s
+
+  stderr ───
+
+    thread 'recovery::owner_wait::tests::dependency_reopened_during_second_guard_never_commits' (51600) panicked at cc-todo\src\recovery\owner_wait_tests.rs:405:9:
+    assertion `left == right` failed: dependency of row=0
+      left: Ok([1])
+     right: Ok([])
+    note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+
+        PASS [   0.078s] ( 6/28) cc-todo recovery::owner_wait::tests::cross_project_owner_is_rejected_without_reinterpreting_its_scope
+        PASS [   0.056s] ( 7/28) cc-todo recovery::owner_wait::tests::guard_paths_are_unique_per_pass_and_every_pass_is_fresh
+        PASS [   0.051s] ( 8/28) cc-todo recovery::owner_wait::tests::guards_never_hold_shared_todo_or_referenced_job_locks
+        PASS [   0.067s] ( 9/28) cc-todo recovery::owner_wait::tests::host_budget_begins_after_initial_scope_snapshot_and_lock_release
+        PASS [   0.114s] (10/28) cc-todo recovery::owner_wait::tests::liveness_change_snapshot_error_and_expired_guard_cannot_commit
+        PASS [   0.097s] (11/28) cc-todo recovery::owner_wait::tests::manual_dependencies_and_unproven_automatic_edges_stay_untouched
+        PASS [   0.185s] (12/28) cc-todo recovery::owner_wait::tests::inactive_hold_markers_except_wait_ready_keep_legitimate_release
+        PASS [   0.211s] (13/28) cc-todo recovery::owner_wait::tests::guards_run_without_todo_lock_and_changed_selected_source_is_rejected
+        PASS [   0.034s] (14/28) cc-todo recovery::owner_wait::tests::normal_registered_root_fallback_and_ancestor_git_scope_are_preserved
+        PASS [   0.317s] (15/28) cc-todo recovery::owner_wait::tests::actual_owner_question_stops_and_terminal_items_never_save
+        PASS [   0.052s] (16/28) cc-todo recovery::owner_wait::tests::positive_uses_current_guard_without_reading_legacy_list
+        PASS [   0.104s] (17/28) cc-todo recovery::owner_wait::tests::null_or_absent_wait_ready_allows_complete_release
+        PASS [   0.289s] (18/28) cc-todo recovery::owner_wait::tests::malformed_scheduler_worktree_on_either_source_never_saves
+        PASS [   0.068s] (19/28) cc-todo recovery::owner_wait::tests::queued_running_surviving_and_unknown_processes_never_save
+        PASS [   0.049s] (20/28) cc-todo recovery::owner_wait::tests::unknown_start_is_rejected_and_sub_45_second_scope_is_not_renewed
+        FAIL [   0.294s] (21/28) cc-todo recovery::owner_wait::tests::non_null_wait_ready_never_saves_a_partial_automatic_release
+  stdout ───
+
+    running 1 test
+    test recovery::owner_wait::tests::non_null_wait_ready_never_saves_a_partial_automatic_release ... FAILED
+
+    failures:
+
+    failures:
+        recovery::owner_wait::tests::non_null_wait_ready_never_saves_a_partial_automatic_release
+
+    test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 60 filtered out; finished in 0.28s
+
+  stderr ───
+
+    thread 'recovery::owner_wait::tests::non_null_wait_ready_never_saves_a_partial_automatic_release' (53800) panicked at cc-todo\src\recovery\owner_wait_tests.rs:336:5:
+    non-null readiness was released/saved:
+    row=0 scheduler=false value=false: result=Ok([1]) saves=1 candidate_status="wait" wait_on=null work_owner_job=null work_owner_wait_on=null bytes_unchanged=false
+    row=0 scheduler=false value="": result=Ok([1]) saves=1 candidate_status="wait" wait_on=null work_owner_job=null work_owner_wait_on=null bytes_unchanged=false
+    row=0 scheduler=true value=false: result=Ok([1]) saves=1 candidate_status="todo" wait_on=null work_owner_job=null work_owner_wait_on=null bytes_unchanged=false
+    row=0 scheduler=true value="": result=Ok([1]) saves=1 candidate_status="todo" wait_on=null work_owner_job=null work_owner_wait_on=null bytes_unchanged=false
+    row=1 scheduler=false value=false: result=Ok([1]) saves=1 candidate_status="todo" wait_on=null work_owner_job=null work_owner_wait_on=null bytes_unchanged=false
+    row=1 scheduler=false value="": result=Ok([1]) saves=1 candidate_status="todo" wait_on=null work_owner_job=null work_owner_wait_on=null bytes_unchanged=false
+    row=1 scheduler=true value=false: result=Ok([1]) saves=1 candidate_status="todo" wait_on=null work_owner_job=null work_owner_wait_on=null bytes_unchanged=false
+    row=1 scheduler=true value="": result=Ok([1]) saves=1 candidate_status="todo" wait_on=null work_owner_job=null work_owner_wait_on=null bytes_unchanged=false
+    note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+
+        PASS [   0.084s] (22/28) cc-todo recovery::owner_wait::tests::unrelated_item_changes_are_preserved_and_other_items_never_reevaluated
+        PASS [   0.322s] (23/28) cc-todo recovery::owner_wait::tests::missing_or_wrong_project_owner_and_reference_sources_never_save
+        PASS [   0.164s] (24/28) cc-todo recovery::owner_wait::tests::wrong_job_bindings_or_omitted_receipt_sources_never_save
+        PASS [   0.390s] (25/28) cc-todo recovery::owner_wait::tests::owner_block_delay_dependency_and_malformed_hold_containers_never_save
+        PASS [   0.637s] (26/28) cc-todo recovery::owner_wait::tests::guard_denial_unknown_malformed_missing_cli_error_and_timeout_never_save
+        PASS [   0.438s] (27/28) cc-todo recovery::owner_wait::tests::question_prerequisites_and_recorded_stops_survive_answers_on_either_row
+        PASS [   4.161s] (28/28) cc-todo recovery::owner_wait::tests::explicit_holds_on_candidate_or_owner_never_release_or_save
+────────────
+     Summary [   4.165s] 28 tests run: 24 passed, 4 failed, 33 skipped
+        FAIL [   0.070s] ( 3/28) cc-todo recovery::owner_wait::tests::answered_question_history_allows_only_the_existing_automatic_release
+        FAIL [   0.064s] ( 4/28) cc-todo recovery::owner_wait::tests::conversation_wait_on_candidate_or_owner_is_preserved
+        FAIL [   0.074s] ( 5/28) cc-todo recovery::owner_wait::tests::dependency_reopened_during_second_guard_never_commits
+        FAIL [   0.294s] (21/28) cc-todo recovery::owner_wait::tests::non_null_wait_ready_never_saves_a_partial_automatic_release
+error: test run failed

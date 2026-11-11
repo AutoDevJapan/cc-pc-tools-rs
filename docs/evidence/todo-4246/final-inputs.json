@@ -1,0 +1,153 @@
+{
+  "todo_id": 4246,
+  "parent_todo_id": 3387,
+  "job": "20261030-085825-todo-4246",
+  "source_commit": "5443df48b2d1de7913ae61d0376deb59f2792423",
+  "starting_commit": "0d919ed9d0bd68e7005ce2168b6aeaa5225e5a0e",
+  "fixed_commit": "05a18daddcc4a47eb0ffeb3d748d26c5c594755f",
+  "specified_base": "9c9a1f30ee0dc5dde0fd1af99035cbc76adaa4e5",
+  "specified_base_tree": "f8d17addb2fe9c0f77773adee02f3467af721e45",
+  "release_eligible": false,
+  "candidate_created": false,
+  "input_scope": "selected source and manifests, not a release candidate depinfo closure",
+  "inputs": [
+    {
+      "path": "Cargo.toml",
+      "bytes": 312,
+      "sha256": "85ceffdad72c64902ba086495d785bc6560e7f9f6576f94d534ed5c6f65a4087",
+      "filtered_blob": "4d0ac6b922b76f926c669030ab0ae2bfa638a7fa",
+      "commit_blob": "4d0ac6b922b76f926c669030ab0ae2bfa638a7fa"
+    },
+    {
+      "path": "Cargo.lock",
+      "bytes": 66265,
+      "sha256": "c4c19f2fae3563e26d09d6359dd1ed49d4e3256dab98ab1cb118ad39e920533d",
+      "filtered_blob": "a2fc3a4ad0d8c6652f7baf8fe4f23ecdc11ee055",
+      "commit_blob": "a2fc3a4ad0d8c6652f7baf8fe4f23ecdc11ee055"
+    },
+    {
+      "path": "cc-todo/Cargo.toml",
+      "bytes": 744,
+      "sha256": "752d4ef308b0e31cf53351018cee25cd1e4e8af50f22e57e8550a1f590ce16a0",
+      "filtered_blob": "9d28aad133270d20e008b0a143c8f57dda2361df",
+      "commit_blob": "9d28aad133270d20e008b0a143c8f57dda2361df"
+    },
+    {
+      "path": "cc-scheduler/Cargo.toml",
+      "bytes": 877,
+      "sha256": "e822f4879a745963f739c69db7af2ad18c42af9e693acdc9b88d667a666e06ef",
+      "filtered_blob": "eff400bd3f09606a9e005010a9329370600956ff",
+      "commit_blob": "eff400bd3f09606a9e005010a9329370600956ff"
+    },
+    {
+      "path": "cc-job-policy/Cargo.toml",
+      "bytes": 488,
+      "sha256": "d4cb4d71e00d8758ee080453ee4ce05b0e23e25d8e9ec37523b93fd7a4bd5086",
+      "filtered_blob": "e1044b7b9506283c129e5538f9fc6e8cce511cd4",
+      "commit_blob": "e1044b7b9506283c129e5538f9fc6e8cce511cd4"
+    },
+    {
+      "path": "cc-ask/Cargo.toml",
+      "bytes": 1186,
+      "sha256": "3948d4f551d73cb3be9e7d20e24407e89721b6473e15eeb7901c6c27f8c8bdad",
+      "filtered_blob": "8de155877f938e0e6ffafecb7d74f8158f63a47f",
+      "commit_blob": "8de155877f938e0e6ffafecb7d74f8158f63a47f"
+    },
+    {
+      "path": "cc-task-title/Cargo.toml",
+      "bytes": 217,
+      "sha256": "32d4ed190be49c405d6ae189eef020df2a05d3727f1d82983bfe7ea8ec59cbc5",
+      "filtered_blob": "078ba05305419b1f218f74e18f55a638dbc6a117",
+      "commit_blob": "078ba05305419b1f218f74e18f55a638dbc6a117"
+    },
+    {
+      "path": "cc-todo/src/lib.rs",
+      "bytes": 68498,
+      "sha256": "12e65205a87981dd78c0bba79997612be8c4c56ae23e57af5916ba3d0f565c4d",
+      "filtered_blob": "399a9c90eb9ebede59b57426f7ddec3b2f922752",
+      "commit_blob": "399a9c90eb9ebede59b57426f7ddec3b2f922752"
+    },
+    {
+      "path": "cc-todo/src/recovery.rs",
+      "bytes": 72955,
+      "sha256": "aac266ed9ec06c123416678305787cfe7ff32c99c8a8d7499dc6c94eda351c22",
+      "filtered_blob": "428be8e5840e00e25cdf88e72d9771ae7c5083a6",
+      "commit_blob": "428be8e5840e00e25cdf88e72d9771ae7c5083a6"
+    },
+    {
+      "path": "cc-todo/src/direction_record.rs",
+      "bytes": 23195,
+      "sha256": "7c0abe8cf5514bf3c1cb9b79d6729587cb9a204dca4ac976998ba9bf525137db",
+      "filtered_blob": "36a7c2c1ea50bd8872cc1f097695c647e921c2d2",
+      "commit_blob": "36a7c2c1ea50bd8872cc1f097695c647e921c2d2"
+    },
+    {
+      "path": "cc-todo/src/conversation_wait.rs",
+      "bytes": 57666,
+      "sha256": "f76278abc9c2b87aa40ef6a06e2c2b8758f29d2f932d9df838e62feac4f36035",
+      "filtered_blob": "a77d0a03e1c43045d1e02995dec2506c8040e9b1",
+      "commit_blob": "a77d0a03e1c43045d1e02995dec2506c8040e9b1"
+    },
+    {
+      "path": "cc-todo/src/recovery/owner_wait.rs",
+      "bytes": 12056,
+      "sha256": "b09908523d6a9254b40ce862b8c4a85f991d892406a6de4f1cd6d416bb0c10b4",
+      "filtered_blob": "facbde74e9598b7798aa4d888f7f1306f9fc39eb",
+      "commit_blob": "facbde74e9598b7798aa4d888f7f1306f9fc39eb"
+    },
+    {
+      "path": "cc-todo/src/recovery/owner_wait_tests.rs",
+      "bytes": 26235,
+      "sha256": "cc8311260bfa02e6025950bbdb5a4b40b4f10a099300dd8c48364b281a2d5b8d",
+      "filtered_blob": "fad8c08cadedc44d36623b56f4fd02d1414e4e7b",
+      "commit_blob": "fad8c08cadedc44d36623b56f4fd02d1414e4e7b"
+    },
+    {
+      "path": "cc-scheduler/src/received_input/system.rs",
+      "bytes": 9523,
+      "sha256": "f9d3a83a382ec54e1cf1a448201855349fab739bdbf3594631ed24eeb2a9dead",
+      "filtered_blob": "5d986e922ca94164548d4ce76796af61fe883a73",
+      "commit_blob": "5d986e922ca94164548d4ce76796af61fe883a73"
+    }
+  ],
+  "base_proof": [
+    {
+      "path": "cc-todo/src/recovery/owner_wait.rs",
+      "base9c_blob": "aac0d69144662f6acc6af2b8bb6a1835f633f31a",
+      "implementation05_blob": "aac0d69144662f6acc6af2b8bb6a1835f633f31a"
+    },
+    {
+      "path": "cc-todo/src/recovery/owner_wait_tests.rs",
+      "base9c_blob": "3d8165c0407e959a0e208ba1b9f3ccfea7a38d72",
+      "implementation05_blob": "3d8165c0407e959a0e208ba1b9f3ccfea7a38d72"
+    },
+    {
+      "path": "cc-todo/src/recovery.rs",
+      "base9c_blob": "428be8e5840e00e25cdf88e72d9771ae7c5083a6",
+      "implementation05_blob": "428be8e5840e00e25cdf88e72d9771ae7c5083a6"
+    },
+    {
+      "path": "cc-scheduler/src/received_input/system.rs",
+      "base9c_blob": "5d986e922ca94164548d4ce76796af61fe883a73",
+      "implementation05_blob": "5d986e922ca94164548d4ce76796af61fe883a73"
+    }
+  ],
+  "patches": [
+    {
+      "path": "docs/evidence/todo-4246/must-from-fixed.patch",
+      "bytes": 27014,
+      "sha256": "199b25b9d3db6f6662e673ce3f4fa0b7395bcc7ba0c66d5e77a68e0b64ca57d7"
+    },
+    {
+      "path": "docs/evidence/todo-4246/full-from-start.patch",
+      "bytes": 53784,
+      "sha256": "bb0e6e8a9975e77508fc6a0cbdcd7ade263de0ba1be9a1268f90db51718d07d0"
+    }
+  ],
+  "toolchain_receipt": "toolchain.stdout.log",
+  "notes": [
+    "No production code changed after green-related-cli and before source commit. That receipt predates commit but used these same production files.",
+    "green-owner-wait-v2 had 21 tests; new deadline and scheduler-worktree CAS assertions were then added, and green-final-owner-wait tests all final 22.",
+    "Initial green compilation failed because a test used slice::repeat on String; the assertion was corrected before successful tests."
+  ]
+}

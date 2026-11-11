@@ -1,0 +1,11 @@
+   Compiling cc-scheduler v0.1.0 (D:\CC\Work\unattended-operations-20261013-wt\todo-4264-work\cc-scheduler)
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 2.51s
+────────────
+ Nextest run ID 43c5597c-37c6-4b77-81e1-60a4d7eb428f with nextest profile: default
+    Starting 4 tests across 1 binary (17 tests skipped)
+        PASS [   0.018s] (1/4) cc-scheduler::received_input denied_missing_duplicate_and_changed_records_do_not_succeed
+        PASS [   0.023s] (2/4) cc-scheduler::received_input system_host_bounds_regular_files_and_rejects_hardlinks
+        PASS [   0.023s] (3/4) cc-scheduler::received_input file_permission_utf8_size_and_duplicate_keys_fail_without_echoing_input
+        PASS [   0.035s] (4/4) cc-scheduler::received_input system_host_read_can_coexist_with_the_normal_store_writer
+────────────
+     Summary [   0.035s] 4 tests run: 4 passed, 17 skipped

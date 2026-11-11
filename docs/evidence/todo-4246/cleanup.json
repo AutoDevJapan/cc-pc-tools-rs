@@ -1,0 +1,26 @@
+{
+  "todo_id": 4246,
+  "build": {
+    "id": "ca355ffba5561fca35a0723685ed6ebd",
+    "bytes": 2295336794,
+    "entries": 3411,
+    "plan_action": "quarantine",
+    "reason": "size",
+    "state": "quarantined",
+    "destination": "D:/削除希望/20261030-todo-4246-build-target-ca355ffb",
+    "source_absent": true,
+    "destination_exists": true,
+    "space_reclaimed": false,
+    "next": "既存の清掃工程へ所有記録とともに返す",
+    "owner_judgment_required": false
+  },
+  "helper": {
+    "id": "fb358fdfedb926f235710748ada866ad",
+    "bytes": 1977,
+    "entries": 1,
+    "plan_action": "submit_to_exec_tool",
+    "deletion_exit_code": 0,
+    "finish_state": "source_absent"
+  },
+  "other_actor_data_touched": false
+}

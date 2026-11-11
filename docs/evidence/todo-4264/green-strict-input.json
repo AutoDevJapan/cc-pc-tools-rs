@@ -1,0 +1,24 @@
+{
+  "name": "green-strict-input",
+  "head": "0c910d370b59a501dd3cf58ebf54ef65f61ffb46",
+  "job": "20261030-111925-todo-4264",
+  "start": "2026-10-30T11:28:55.5664559+09:00",
+  "end": "2026-10-30T11:28:59.2431838+09:00",
+  "exe": "D:/CC/Tools/codex-jobs/cargo_gate.exe",
+  "args": [
+    "nextest",
+    "run",
+    "--locked",
+    "-p",
+    "cc-scheduler",
+    "--test",
+    "received_input",
+    "-E",
+    "test(file_permission_utf8_size_and_duplicate_keys) | test(denied_missing_duplicate_and_changed_records) | test(system_host_bounds_regular_files) | test(system_host_read_can_coexist)",
+    "--no-fail-fast"
+  ],
+  "target": "C:/Users/makhmeto/AppData/Local/Temp/codex-owned-54d7c4749feb42fe35f5482956923eac/target",
+  "exit": 0,
+  "stdout": "green-strict-input.stdout.log",
+  "stderr": "green-strict-input.stderr.log"
+}

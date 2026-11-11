@@ -4,6 +4,7 @@ package main
 // Source qualification reads metadata, may request finite identity refresh,
 // and never changes an owner stop or the original protection registry.
 import (
+	"bytes"
 	"context"
 	_ "embed"
 	"encoding/json"
@@ -311,11 +312,34 @@ func ownerOriginRepository(origin string) (string, bool) {
 }
 
 func ownerGitHubIdentityWith(ctx context.Context, repository string) (int64, string, string, bool) {
+	return ownerGitHubIdentityOutputWith(ctx, repository, (*exec.Cmd).Output)
+}
+
+func ownerGitHubIdentityOutputWith(ctx context.Context, repository string, output func(*exec.Cmd) ([]byte, error)) (int64, string, string, bool) {
 	cmd := exec.CommandContext(ctx, currentGitHubCLI, "api", "--hostname", "github.com", "repos/"+repository, "--jq", "[.id, .full_name, .owner.login] | @tsv")
 	cmd.SysProcAttr = &syscall.SysProcAttr{HideWindow: true, CreationFlags: 0x08000000}
 	cmd.WaitDelay = 20 * time.Millisecond
 	cmd.Env = currentGitHubCLIEnvironment(os.Environ())
-	b, err := cmd.Output()
+	var failure ownerRefreshErrorBuffer
+	defer failure.erase()
+	cmd.Stderr = &failure
+	b, err := output(cmd)
+	if observed, _ := ctx.Value(ownerRefreshObservationKey{}).(*ownerRefreshObservation); observed != nil {
+		if exit, ok := err.(*exec.ExitError); ok {
+			code := exit.ExitCode()
+			observed.cliExit = &code
+		}
+		if err == nil {
+			code := 0
+			observed.cliExit = &code
+		}
+		// Only fixed categories escape the local buffer. Never return error text.
+		if bytes.Contains(failure.data, []byte("HTTP 401")) {
+			observed.http = 401
+		} else if bytes.Contains(failure.data, []byte("HTTP 403")) {
+			observed.http = 403
+		}
+	}
 	if err != nil {
 		return 0, "", "", false
 	}

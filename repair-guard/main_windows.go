@@ -252,6 +252,8 @@ type guardArgs struct {
 	refreshSet        bool
 	refreshRequest    string
 	refreshRequestSet bool
+	diagnostic        bool
+	diagnosticSet     bool
 	product           int
 	pathSet           bool
 	productSet        bool
@@ -267,10 +269,12 @@ func parseGuardArgs(args []string) (guardArgs, error) {
 	succession := flags.String("verify-current-succession", "", "verify one declared current product successor; no launch or mutation")
 	refresh := flags.String("refresh-owner-source", "", "refresh one positively registered self-source identity; no source content read")
 	refreshRequest := flags.String("refresh-request", "", "owned finite refresh request identity")
+	diagnostic := flags.Bool("diagnostic", false, "report fixed refresh metadata without source, credentials or error bodies")
 	runtimeUpdate := flags.String("verify-capacity-runtime-update", "", "qualify one exact ToDo3085 software update; grants no data access")
 	err := flags.Parse(args)
 	parsed := guardArgs{path: *path, succession: *succession, product: *product, refresh: *refresh, refreshRequest: *refreshRequest, remainingArgs: flags.NArg() != 0}
 	parsed.runtimeUpdate = *runtimeUpdate
+	parsed.diagnostic = *diagnostic
 	flags.Visit(func(f *flag.Flag) {
 		switch f.Name {
 		case "verify-capacity-runtime-update":
@@ -285,6 +289,8 @@ func parseGuardArgs(args []string) (guardArgs, error) {
 			parsed.refreshSet = true
 		case "refresh-request":
 			parsed.refreshRequestSet = true
+		case "diagnostic":
+			parsed.diagnosticSet = true
 		}
 	})
 	return parsed, err
@@ -319,6 +325,7 @@ func printGuardUsage(output io.Writer) {
 	fmt.Fprintln(output, "  -verify-current-succession int")
 	fmt.Fprintln(output, "    \tverify one declared current product successor; no launch or mutation")
 	fmt.Fprintln(output, "  -refresh-owner-source string\n    \trefresh one positively registered self-source identity (bounded metadata only)")
+	fmt.Fprintln(output, "  -diagnostic\n    \treport fixed refresh metadata; requires refresh-owner-source")
 	fmt.Fprintln(output, "  -verify-capacity-runtime-update string")
 	fmt.Fprintln(output, "    \tqualify one exact ToDo3085 software update; grants no data access")
 	fmt.Fprintln(output, "  -verify-model-runtime-update string")
@@ -364,6 +371,13 @@ func verifyCurrentSuccession(taskID int) object {
 }
 
 func runGuardCLI(args []string, stdout, stderr io.Writer, currentVerifier func(int) object) int {
+	return runGuardCLIWithRefresh(args, stdout, stderr, currentVerifier, ownerRefreshRun)
+}
+
+func runGuardCLIWithRefresh(args []string, stdout, stderr io.Writer, currentVerifier func(int) object, refresh func(string, string, bool) (bool, ownerRefreshDiagnostic)) int {
+	if refreshDiagnosticFlagPresent(args) {
+		return runGuardCLIWithVerifiersAndRefresh(args, stdout, stderr, currentVerifier, capacity3085RuntimeReceipt, classifyOwnerPath, refresh)
+	}
 	if official3894Flag(args) {
 		return runOfficial3894CLI(args, stdout, official3894Operation)
 	}
@@ -379,7 +393,7 @@ func runGuardCLI(args []string, stdout, stderr io.Writer, currentVerifier func(i
 	if model3081FlagPresent(args) {
 		return runModel3081CLI(args, stdout, model3081RuntimeReceipt)
 	}
-	return runGuardCLIWithRuntime(args, stdout, stderr, currentVerifier, capacity3085RuntimeReceipt)
+	return runGuardCLIWithVerifiersAndRefresh(args, stdout, stderr, currentVerifier, capacity3085RuntimeReceipt, classifyOwnerPath, refresh)
 }
 
 func runGuardCLIWithRuntime(args []string, stdout, stderr io.Writer, currentVerifier func(int) object, runtimeVerifier func(string) object) int {
@@ -391,8 +405,16 @@ func runGuardCLIWithPath(args []string, stdout, stderr io.Writer, currentVerifie
 }
 
 func runGuardCLIWithVerifiers(args []string, stdout, stderr io.Writer, currentVerifier func(int) object, runtimeVerifier func(string) object, pathVerifier func(string) ownerPathVerdict) int {
+	return runGuardCLIWithVerifiersAndRefresh(args, stdout, stderr, currentVerifier, runtimeVerifier, pathVerifier, ownerRefreshRun)
+}
+
+func runGuardCLIWithVerifiersAndRefresh(args []string, stdout, stderr io.Writer, currentVerifier func(int) object, runtimeVerifier func(string) object, pathVerifier func(string) ownerPathVerdict, refresh func(string, string, bool) (bool, ownerRefreshDiagnostic)) int {
 	parsed, err := parseGuardArgs(args)
 	if err != nil {
+		if refreshDiagnosticFlagPresent(args) {
+			fmt.Fprintln(stderr, "invalid refresh diagnostic arguments")
+			return 2
+		}
 		if capacity3085FlagPresent(args) {
 			_ = json.NewEncoder(stdout).Encode(object{"qualified": false})
 			return 1
@@ -407,6 +429,10 @@ func runGuardCLIWithVerifiers(args []string, stdout, stderr io.Writer, currentVe
 		}
 		fmt.Fprintln(stderr, err)
 		printGuardUsage(stderr)
+		return 2
+	}
+	if parsed.diagnosticSet && (!parsed.refreshSet || parsed.pathSet || parsed.productSet || parsed.successionSet || parsed.runtimeUpdateSet || parsed.remainingArgs) {
+		_ = json.NewEncoder(stdout).Encode(object{"refreshed": false})
 		return 2
 	}
 	if capacity3085FlagPresent(args) {
@@ -427,13 +453,25 @@ func runGuardCLIWithVerifiers(args []string, stdout, stderr io.Writer, currentVe
 		_ = json.NewEncoder(stdout).Encode(object{"verified": false})
 		return 1
 	}
+	if parsed.diagnostic && !parsed.refreshSet {
+		_ = json.NewEncoder(stdout).Encode(object{"refreshed": false})
+		return 2
+	}
 	if parsed.refreshSet {
 		if parsed.pathSet || parsed.productSet || parsed.successionSet || parsed.remainingArgs || !filepath.IsAbs(parsed.refresh) {
 			_ = json.NewEncoder(stdout).Encode(object{"refreshed": false})
 			return 2
 		}
-		ok := ownerRefreshIdentityRequest(parsed.refresh, parsed.refreshRequest)
-		_ = json.NewEncoder(stdout).Encode(object{"refreshed": ok, "original_registry_recovered": false})
+		ok, diagnostic := refresh(parsed.refresh, parsed.refreshRequest, parsed.diagnostic)
+		var encodeErr error
+		if parsed.diagnostic {
+			encodeErr = json.NewEncoder(stdout).Encode(diagnostic)
+		} else {
+			encodeErr = json.NewEncoder(stdout).Encode(object{"refreshed": ok, "original_registry_recovered": false})
+		}
+		if encodeErr != nil {
+			return 1
+		}
 		if !ok {
 			return 1
 		}

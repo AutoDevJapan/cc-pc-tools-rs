@@ -180,7 +180,18 @@ func ownerRefreshIdentityRequest(path, request string) bool {
 	return ownerRefreshIdentityRequestWith(path, request, ownerIdentityHome, time.Now, ownerOrganizationQuery, ownerGitHubIdentityWith)
 }
 
-func ownerRefreshIdentityRequestWith(path, request, home string, now func() time.Time, query func(context.Context, string, ownerSourceAccess) ownerPathVerdict, fetch func(context.Context, string) (int64, string, string, bool)) bool {
+func ownerRefreshIdentityRequestWith(path, request, home string, now func() time.Time, query func(context.Context, string, ownerSourceAccess) ownerPathVerdict, fetch func(context.Context, string) (int64, string, string, bool), diagnostics ...*ownerRefreshObservation) bool {
+	return ownerRefreshIdentityRequestContextWith(context.Background(), path, request, home, now, query, fetch, diagnostics...)
+}
+
+func ownerRefreshIdentityRequestContextWith(parent context.Context, path, request, home string, now func() time.Time, query func(context.Context, string, ownerSourceAccess) ownerPathVerdict, fetch func(context.Context, string) (int64, string, string, bool), diagnostics ...*ownerRefreshObservation) bool {
+	observation := &ownerRefreshObservation{started: time.Now(), claimValid: request == ""}
+	if len(diagnostics) != 0 && diagnostics[0] != nil {
+		observation = diagnostics[0]
+		observation.started = time.Now()
+		observation.claimValid = request == ""
+	}
+
 	var claim ownerRefreshClaim
 	if request != "" {
 		var ok bool
@@ -188,21 +199,25 @@ func ownerRefreshIdentityRequestWith(path, request, home string, now func() time
 		if !ok || claim.ID != request || claim.Catalog != hashBytes(ownerDepartmentCatalog) {
 			return false
 		}
+		observation.claimValid = true
 		defer func() { _ = ownerDropRefreshClaim(home, request, now()) }()
 	}
-	ctx, cancel := context.WithTimeout(context.Background(), 8*time.Second)
+	ctx, cancel := context.WithTimeout(parent, 8*time.Second)
 	defer cancel()
+	ctx = context.WithValue(ctx, ownerRefreshObservationKey{}, observation)
 	identityReady := false
 	access := ownerSourceAccess{git: func(root string, args ...string) (string, bool) { return ownerSourceGit(ctx, root, args...) }, identity: func(repo string) (int64, string, string, bool) {
 		if claim.Repository != "" && !strings.EqualFold(claim.Repository, repo) {
 			return 0, "", "", false
 		}
+		observation.binding = true
 		unlock, locked := ownerLockIdentityRefresh(ctx, home, repo)
 		if !locked {
 			return 0, "", "", false
 		}
 		defer unlock()
 		if ownerRefreshCooling(home, repo, now()) {
+			observation.cooling = true
 			id, name, owner, ok := ownerCachedIdentityAt(ctx, repo, home, now, func(context.Context, string) (int64, string, string, bool) { return 0, "", "", false })
 			identityReady = identityReady || ok
 			return id, name, owner, ok
@@ -210,6 +225,7 @@ func ownerRefreshIdentityRequestWith(path, request, home string, now func() time
 		attempted := false
 		id, name, owner, ok := ownerCachedIdentityAt(ctx, repo, home, now, func(ctx context.Context, repository string) (int64, string, string, bool) {
 			attempted = true
+			observation.attempted = true
 			return fetch(ctx, repository)
 		}, ownerIdentityAging(repo, home, now()))
 		identityReady = identityReady || ok
@@ -224,5 +240,11 @@ func ownerRefreshIdentityRequestWith(path, request, home string, now func() time
 	// turning the already verified repository identity into a network failure.
 	// The next normal guard still rechecks its current registration and stop.
 	success := identityReady && ctx.Err() == nil
+	if ctx.Err() != nil {
+		observation.timeout = true
+	}
+	if success {
+		observation.saved = true
+	}
 	return success
 }

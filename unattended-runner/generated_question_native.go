@@ -2,6 +2,7 @@ package main
 
 import (
 	"bufio"
+	"context"
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
@@ -17,6 +18,10 @@ import (
 // The actual user assignment in the generation session binds the source task.
 // A caller cannot relabel an image by editing its JSON generation summary.
 func validateGeneratedAssignment(s generatedQuestionSpec) error {
+	return validateGeneratedAssignmentContext(context.Background(), s)
+}
+
+func validateGeneratedAssignmentContext(ctx context.Context, s generatedQuestionSpec) error {
 	records, err := s.Records(s.Rollout, []generatedEventBound{{Line: 1, SHA: s.SessionSHA}, s.Assignment})
 	if err != nil || len(records) != 2 {
 		return errConversationMedia
@@ -34,6 +39,12 @@ func validateGeneratedAssignment(s generatedQuestionSpec) error {
 	}
 	if json.Unmarshal(records[0], &meta) != nil || meta.Type != "session_meta" || meta.Payload.ID != s.Session || json.Unmarshal(records[1], &assignment) != nil || assignment.Type != "response_item" || assignment.Payload.Type != "message" || assignment.Payload.Role != "user" {
 		return errConversationMedia
+	}
+	if s.Delegation != nil {
+		if s.Lineage == nil || len(assignment.Payload.Content) != 1 || assignment.Payload.Content[0].Type != "input_text" || generatedFirstAssignment(s) != nil {
+			return errConversationMedia
+		}
+		return s.Lineage(ctx, s, strings.TrimSpace(assignment.Payload.Content[0].Text))
 	}
 	pattern := regexp.MustCompile(`^(?:担当)?ToDo(?:番号)?([0-9]+)(?:[^0-9]|$)`)
 	matched := 0
@@ -131,7 +142,8 @@ func validateGeneratedQuestionNative(records []json.RawMessage, s generatedQuest
 	}
 	r := make([]native, len(records))
 	for i, raw := range records {
-		if json.Unmarshal(raw, &r[i]) != nil || r[i].Type != "response_item" || r[i].Timestamp.IsZero() || r[i].Timestamp.Before(s.Created) || r[i].Timestamp.After(s.Now()) || (i > 0 && r[i].Timestamp.Before(r[i-1].Timestamp)) {
+		var exact map[string]json.RawMessage
+		if historyStrictJSON(raw, &exact) != nil || json.Unmarshal(raw, &r[i]) != nil || r[i].Type != "response_item" || r[i].Timestamp.IsZero() || r[i].Timestamp.Before(s.Created) || r[i].Timestamp.After(s.Now()) || (i > 0 && r[i].Timestamp.Before(r[i-1].Timestamp)) {
 			return errConversationMedia
 		}
 	}

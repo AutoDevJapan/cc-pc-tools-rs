@@ -66,6 +66,19 @@ guard未成立を、実際の顧客内容の検出や、後続の`fictional_data
   本文の別の行・引用・コードから番号を探したり、自然文の導入を読み飛ばしたりしない。
   元ToDoは生成記録のtodoと実ユーザー依頼の両方で一致させる。
   後の別件に触れた文や引用へ付け替えない。AGENTSと環境情報の導入文は作業依頼と区別する。
+- 通常のnative subagentが生成した場合は、番号接頭語の代わりに任意の`native_delegation`を使える。
+  これは資格や親子関係の自己申告ではなく、再取得する正規記録のselectorである。
+  `job_id`、`parent_thread_id`、`parent_turn_id`、`spawn_item_id`、`generation_turn_id`、
+  `generation_item_id`、`generation_context`（元行とSHA）を指定する。
+  現Taskのjobs・worker・schedulerと同じ元job、そのjobのTask番号・thread・cwd・停止状態を独立照合する。
+  続いて読取専用`thread/read`で親子関係、`thread/items/read`で親の正常完了spawnと元割当全文、
+  同生成turnの正常完了imageGenerationと元pathを照合する。最初の実割当である条件は保持する。
+  生成contextから最終結果まで別turnの混入を拒否し、job/Taskと子metadataは確認後にも再照合する。
+  この用途は1枚の新規生成に限る。既存複数案・番号接頭語の経路は変更しない。
+  正規job/Task辺、API metadata、原item/contextが取得できない場合は拒否し、仮job・後の引用・
+  原Task/assignmentの書換え・手製資格で補わない。`CC_JOB_ID`の注入は不要で、代用にもならない。
+  15秒の親予算・応答4MiB/通知32件・終了回収1秒の後に所有readerを終了する。
+  原証拠のguardは引き続き本文前に適用する。このselectorは保護された原証拠を読む権限ではない。
 - `proof_path`、`proof_sha256`: 正規の生成証拠をまとめた原JSON。
 - `images`: 元path、sha256、size、record_path、record_sha256、prompt_sha256、option、revision、order。
   生成記録はnew_generation/image_gen__imagegen/functions.exec、同じsession・cell・順番・元pathとし、

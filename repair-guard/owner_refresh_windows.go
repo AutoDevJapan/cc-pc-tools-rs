@@ -192,7 +192,6 @@ func ownerRefreshIdentityRequestWith(path, request, home string, now func() time
 	}
 	ctx, cancel := context.WithTimeout(context.Background(), 8*time.Second)
 	defer cancel()
-	attempted := ""
 	identityReady := false
 	access := ownerSourceAccess{git: func(root string, args ...string) (string, bool) { return ownerSourceGit(ctx, root, args...) }, identity: func(repo string) (int64, string, string, bool) {
 		if claim.Repository != "" && !strings.EqualFold(claim.Repository, repo) {
@@ -208,13 +207,14 @@ func ownerRefreshIdentityRequestWith(path, request, home string, now func() time
 			identityReady = identityReady || ok
 			return id, name, owner, ok
 		}
+		attempted := false
 		id, name, owner, ok := ownerCachedIdentityAt(ctx, repo, home, now, func(ctx context.Context, repository string) (int64, string, string, bool) {
-			attempted = repository
+			attempted = true
 			return fetch(ctx, repository)
 		}, ownerIdentityAging(repo, home, now()))
 		identityReady = identityReady || ok
-		if !ok && attempted != "" {
-			_ = ownerWriteSealed(home, ownerRefreshFailureName(attempted), ownerRefreshFailure{"owner-source-refresh-failure-v1", attempted, hashBytes(ownerDepartmentCatalog), now().Unix()})
+		if !ok && attempted {
+			_ = ownerWriteSealed(home, ownerRefreshFailureName(repo), ownerRefreshFailure{"owner-source-refresh-failure-v1", repo, hashBytes(ownerDepartmentCatalog), now().Unix()})
 		}
 		return id, name, owner, ok
 	}, plain: currentPlain, denied: legacyMatch, membership: ownerDepartmentMembership}
@@ -224,8 +224,5 @@ func ownerRefreshIdentityRequestWith(path, request, home string, now func() time
 	// turning the already verified repository identity into a network failure.
 	// The next normal guard still rechecks its current registration and stop.
 	success := identityReady && ctx.Err() == nil
-	if !success && attempted != "" {
-		_ = ownerWriteSealed(home, ownerRefreshFailureName(attempted), ownerRefreshFailure{"owner-source-refresh-failure-v1", attempted, hashBytes(ownerDepartmentCatalog), now().Unix()})
-	}
 	return success
 }

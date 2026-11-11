@@ -3,6 +3,7 @@
 package main
 
 import (
+	"bytes"
 	"context"
 	"fmt"
 	"os"
@@ -137,4 +138,34 @@ func TestOwnerExplicitRefreshDifferentRepositoriesStaySeparate(t *testing.T) {
 	t.Setenv("F4431_REFRESH_FAIL", "")
 	t.Setenv("F4431_TEST_SEPARATE_REPO", "1")
 	TestOwnerExplicitRefreshSingleflightTwoProcesses(t)
+}
+
+func TestOwnerRefreshFailureIsNotRewrittenAfterRepositoryLock(t *testing.T) {
+	home, err := physical(t.TempDir())
+	if err != nil {
+		t.Fatal(err)
+	}
+	repo := "AutoDevJapan/failure-singleflight"
+	now := time.Now()
+	var held []byte
+	query := func(ctx context.Context, _ string, a ownerSourceAccess) ownerPathVerdict {
+		a.identity(repo)
+		var e error
+		held, e = os.ReadFile(filepath.Join(home, ownerRefreshFailureName(repo)))
+		if e != nil {
+			t.Fatal(e)
+		}
+		return ownerUnverified()
+	}
+	ok := ownerRefreshIdentityRequestWith("unused", "", home, func() time.Time { return now }, query, func(context.Context, string) (int64, string, string, bool) { return 0, "", "", false })
+	if ok {
+		t.Fatal("failed fetch accepted")
+	}
+	after, e := os.ReadFile(filepath.Join(home, ownerRefreshFailureName(repo)))
+	if e != nil {
+		t.Fatal(e)
+	}
+	if !bytes.Equal(held, after) {
+		t.Fatal("failure was rewritten after repository lock released")
+	}
 }

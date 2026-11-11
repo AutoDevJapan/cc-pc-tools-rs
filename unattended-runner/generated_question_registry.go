@@ -31,20 +31,21 @@ type generatedContentReview struct {
 	Reference      string `json:"reference"`
 }
 type generatedQuestionBundle struct {
-	Domain     string                 `json:"domain"`
-	Scope      generatedQuestionScope `json:"scope"`
-	Session    string                 `json:"session"`
-	Proof      string                 `json:"proof_path"`
-	ProofSHA   string                 `json:"proof_sha256"`
-	Rollout    string                 `json:"rollout_path"`
-	Created    time.Time              `json:"created_at"`
-	Expires    time.Time              `json:"expires_at"`
-	Cell       string                 `json:"exec_cell_id"`
-	Content    generatedContentReview `json:"content_review"`
-	Images     []generatedImageBound  `json:"images"`
-	Events     []generatedEventBound  `json:"events"`
-	SessionSHA string                 `json:"session_record_sha256"`
-	Assignment generatedEventBound    `json:"assignment_event"`
+	Domain     string                       `json:"domain"`
+	Scope      generatedQuestionScope       `json:"scope"`
+	Session    string                       `json:"session"`
+	Proof      string                       `json:"proof_path"`
+	ProofSHA   string                       `json:"proof_sha256"`
+	Rollout    string                       `json:"rollout_path"`
+	Created    time.Time                    `json:"created_at"`
+	Expires    time.Time                    `json:"expires_at"`
+	Cell       string                       `json:"exec_cell_id"`
+	Content    generatedContentReview       `json:"content_review"`
+	Images     []generatedImageBound        `json:"images"`
+	Events     []generatedEventBound        `json:"events"`
+	SessionSHA string                       `json:"session_record_sha256"`
+	Assignment generatedEventBound          `json:"assignment_event"`
+	Delegation *generatedQuestionDelegation `json:"native_delegation,omitempty"`
 }
 type generatedQuestionEnvelope struct {
 	Payload json.RawMessage `json:"payload"`
@@ -59,6 +60,7 @@ type generatedQuestionRegistry struct {
 	SourceClear               func(string) bool
 	Now                       func() time.Time
 	Protect, Unprotect        func([]byte) ([]byte, error)
+	Lineage                   func(context.Context, generatedQuestionSpec, string) error
 }
 
 func generatedQuestionRegistryProduction() generatedQuestionRegistry {
@@ -71,10 +73,15 @@ func generatedQuestionRegistryProduction() generatedQuestionRegistry {
 			var dst Destination
 			return readJSON(conversationDefaultConfig, 1<<20, &cfg) == nil && readJSON(cfg.NotifyConfig, 1<<20, &dst) == nil && scope.Owner == dst.Owner && scope.Guild == dst.Guild && scope.Forum == dst.Forum
 		}, SourceClear: generatedQuestionSourceClear, Now: time.Now, Protect: generatedQuestionProtect, Unprotect: generatedQuestionUnprotect,
+		Lineage: generatedQuestionDelegationProduction,
 	}
 }
 
 func generatedStrictJSON(b []byte, out any) error {
+	var exact any
+	if historyStrictJSON(b, &exact) != nil {
+		return errConversationMedia
+	}
 	d := json.NewDecoder(bytes.NewReader(b))
 	d.DisallowUnknownFields()
 	if err := d.Decode(out); err != nil {
@@ -132,6 +139,7 @@ func (r generatedQuestionRegistry) spec(b generatedQuestionBundle) (generatedQue
 	s = generatedQuestionSpec{Scope: b.Scope, Session: b.Session, Proof: b.Proof, ProofSHA: b.ProofSHA, Rollout: b.Rollout, Images: b.Images, Events: b.Events, Cell: b.Cell, Created: b.Created, Expires: b.Expires, Read: r.Read, Guard: r.Guard, Records: generatedQuestionRecords, Task: func() bool { return r.Task(b.Scope.Todo) && r.Destination(b.Scope) }, SourceClear: r.SourceClear, Now: r.Now}
 	s.SessionSHA = b.SessionSHA
 	s.Assignment = b.Assignment
+	s.Delegation, s.Lineage = b.Delegation, r.Lineage
 	if !shaPattern.MatchString(s.SessionSHA) || s.Assignment.Line <= 1 || !shaPattern.MatchString(s.Assignment.SHA) || s.Assignment.Line >= s.Events[0].Line {
 		return generatedQuestionSpec{}, errConversationMedia
 	}
@@ -240,6 +248,10 @@ func (r generatedQuestionRegistry) check(ctx context.Context, evidence string) (
 	}
 	for _, image := range bundle.Images {
 		if _, err = qualifyGeneratedQuestionImage(ctx, image.Path, bundle.Scope, s); err != nil {
+			var failure *generatedQuestionFailure
+			if errors.As(err, &failure) {
+				return empty, err
+			}
 			return empty, generatedFailure("image_validation", "original_generation_or_image_not_qualified")
 		}
 	}

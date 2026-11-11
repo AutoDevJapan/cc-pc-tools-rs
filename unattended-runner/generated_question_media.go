@@ -70,6 +70,8 @@ type generatedQuestionSpec struct {
 	Task                              func() bool
 	SourceClear                       func(string) bool
 	Now                               func() time.Time
+	Delegation                        *generatedQuestionDelegation
+	Lineage                           func(context.Context, generatedQuestionSpec, string) error
 }
 
 func generatedQuestionProduction() generatedQuestionSpec {
@@ -208,8 +210,8 @@ func qualifyGeneratedQuestionImage(ctx context.Context, path string, scope gener
 	if image == nil {
 		return nil, errConversationMedia
 	}
-	if validateGeneratedAssignment(s) != nil {
-		return nil, errConversationMedia
+	if err := validateGeneratedAssignmentContext(ctx, s); err != nil {
+		return nil, err
 	}
 	if !s.SourceClear(physical) {
 		return nil, errConversationMedia

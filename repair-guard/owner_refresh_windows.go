@@ -207,28 +207,34 @@ func ownerRefreshIdentityRequestContextWith(parent context.Context, path, reques
 	ctx = context.WithValue(ctx, ownerRefreshObservationKey{}, observation)
 	identityReady := false
 	access := ownerSourceAccess{git: func(root string, args ...string) (string, bool) { return ownerSourceGit(ctx, root, args...) }, identity: func(repo string) (int64, string, string, bool) {
+		detail := &ownerRefreshObservation{started: observation.started, claimValid: true}
+		identityOK := false
+		defer func() { observation.includeIdentity(detail, identityOK) }()
+		ctx := context.WithValue(ctx, ownerRefreshObservationKey{}, detail)
 		if claim.Repository != "" && !strings.EqualFold(claim.Repository, repo) {
 			return 0, "", "", false
 		}
-		observation.binding = true
+		detail.binding = true
 		unlock, locked := ownerLockIdentityRefresh(ctx, home, repo)
 		if !locked {
 			return 0, "", "", false
 		}
 		defer unlock()
 		if ownerRefreshCooling(home, repo, now()) {
-			observation.cooling = true
+			detail.cooling = true
 			id, name, owner, ok := ownerCachedIdentityAt(ctx, repo, home, now, func(context.Context, string) (int64, string, string, bool) { return 0, "", "", false })
 			identityReady = identityReady || ok
+			identityOK = ok
 			return id, name, owner, ok
 		}
 		attempted := false
 		id, name, owner, ok := ownerCachedIdentityAt(ctx, repo, home, now, func(ctx context.Context, repository string) (int64, string, string, bool) {
 			attempted = true
-			observation.attempted = true
+			detail.attempted = true
 			return fetch(ctx, repository)
 		}, ownerIdentityAging(repo, home, now()))
 		identityReady = identityReady || ok
+		identityOK = ok
 		if !ok && attempted {
 			_ = ownerWriteSealed(home, ownerRefreshFailureName(repo), ownerRefreshFailure{"owner-source-refresh-failure-v1", repo, hashBytes(ownerDepartmentCatalog), now().Unix()})
 		}

@@ -10,6 +10,7 @@ type ownerRefreshDiagnostic struct {
 	Refreshed                 bool   `json:"refreshed"`
 	OriginalRegistryRecovered bool   `json:"original_registry_recovered"`
 	Stage                     string `json:"stage"`
+	IdentityFailure           string `json:"identity_failure,omitempty"`
 	Attempted                 bool   `json:"attempted"`
 	CLIExit                   *int   `json:"cli_exit,omitempty"`
 	Timeout                   bool   `json:"timeout"`
@@ -20,6 +21,33 @@ type ownerRefreshObservation struct {
 	http                                                                        int
 	cliExit                                                                     *int
 	started                                                                     time.Time
+	identityFailed                                                              bool
+	failureStage                                                                string
+	cliExitMixed                                                                bool
+}
+
+func (o *ownerRefreshObservation) includeIdentity(detail *ownerRefreshObservation, success bool) {
+	o.binding = o.binding || detail.binding
+	o.attempted = o.attempted || detail.attempted
+	o.timeout = o.timeout || detail.timeout
+	if detail.cliExit != nil && !o.cliExitMixed {
+		if o.cliExit == nil {
+			code := *detail.cliExit
+			o.cliExit = &code
+		} else if *o.cliExit != *detail.cliExit {
+			o.cliExit = nil
+			o.cliExitMixed = true
+		}
+	}
+	if !success {
+		o.identityFailed = true
+		stage := ownerRefreshProject(context.Background(), detail, false, time.Now()).Stage
+		if o.failureStage == "" {
+			o.failureStage = stage
+		} else if o.failureStage != stage {
+			o.failureStage = "multiple_identity_failures"
+		}
+	}
 }
 
 func ownerRefreshProject(ctx context.Context, o *ownerRefreshObservation, success bool, at time.Time) ownerRefreshDiagnostic {
@@ -31,6 +59,13 @@ func ownerRefreshProject(ctx context.Context, o *ownerRefreshObservation, succes
 	case ctx.Err() != nil || o.timeout:
 		r.Stage = "deadline_exceeded"
 		r.Timeout = true
+	case o.identityFailed:
+		if success {
+			r.Stage = "partial_identity_failure"
+			r.IdentityFailure = o.failureStage
+		} else {
+			r.Stage = o.failureStage
+		}
 	case success:
 		r.Stage = "complete"
 	case !o.claimValid:

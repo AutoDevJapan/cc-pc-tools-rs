@@ -31,6 +31,153 @@ func diagnosticQuery(repo string) func(context.Context, string, ownerSourceAcces
 	}
 }
 
+func TestRefreshDiagnosticRecordConsumerDoesNotHidePartialFailure(t *testing.T) {
+	home := diagnosticHome(t)
+	config, _ := ownerRuleFixture(t)
+	root := filepath.Join(config.dev, "ADJ", "diagnostic-cwd")
+	if err := os.MkdirAll(root, 0700); err != nil {
+		t.Fatal(err)
+	}
+	currentFixtureGit(t, root, "init", "-q")
+	currentFixtureGit(t, root, "remote", "add", "origin", "https://github.com/AutoDevJapan/diagnostic-B.git")
+	ob := &ownerRefreshObservation{}
+	calls := 0
+	var verdict ownerPathVerdict
+	query := func(ctx context.Context, _ string, a ownerSourceAccess) ownerPathVerdict {
+		verdict = ownerRuleRecordOriginSource(ctx, ownerRecordMetadata{project: "diagnostic", cwd: root, repository: "AutoDevJapan/diagnostic-A"}, object{}, a, config)
+		return verdict
+	}
+	fetch := func(ctx context.Context, repo string) (int64, string, string, bool) {
+		calls++
+		if strings.HasSuffix(repo, "/diagnostic-A") {
+			return 12345, repo, "AutoDevJapan", true
+		}
+		return ownerGitHubIdentityOutputWith(ctx, repo, func(cmd *exec.Cmd) ([]byte, error) {
+			_, _ = cmd.Stderr.Write([]byte("gh: Bad credentials (HTTP 401)\n"))
+			cmd.Path = os.Args[0]
+			cmd.Args = []string{os.Args[0], "-test.run=^TestRefreshDiagnosticCLIChild$"}
+			cmd.Env = append(cmd.Env, "F4431_DIAGNOSTIC_CHILD=1")
+			return cmd.Output()
+		})
+	}
+	ok := ownerRefreshIdentityRequestWith(root, "", home, time.Now, query, fetch, ob)
+	d := ownerRefreshProject(context.Background(), ob, ok, time.Now())
+	if !ok || calls != 2 || verdict.AccessAllowed || verdict.Basis != "repository_identity_unavailable" {
+		t.Fatal("consumer counter did not reach original two identities", ok, calls, verdict)
+	}
+	if d.Stage != "partial_identity_failure" || d.IdentityFailure != "identity_http_401" {
+		t.Fatal("partial failure reported as complete", d)
+	}
+}
+
+func TestRefreshDiagnosticAggregateIsOrderIndependent(t *testing.T) {
+	for _, tc := range []struct {
+		name                   string
+		order                  []string
+		wantStage, wantFailure string
+		wantCalls              int
+		wantOK                 bool
+		wantExit               *int
+	}{
+		{"success_then_failure", []string{"good", "bad401"}, "partial_identity_failure", "identity_http_401", 2, true, nil},
+		{"failure_then_success", []string{"bad401", "good"}, "partial_identity_failure", "identity_http_401", 2, true, nil},
+		{"same_repo_cached", []string{"good", "good"}, "complete", "", 1, true, nil},
+		{"two_failures", []string{"bad401", "bad403"}, "multiple_identity_failures", "", 2, false, nil},
+		{"two_failures_reverse", []string{"bad403", "bad401"}, "multiple_identity_failures", "", 2, false, nil},
+		{"failure_then_cooldown", []string{"bad401", "bad401"}, "multiple_identity_failures", "", 1, false, nil},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			home := diagnosticHome(t)
+			ob := &ownerRefreshObservation{}
+			calls := 0
+			query := func(ctx context.Context, _ string, a ownerSourceAccess) ownerPathVerdict {
+				for _, name := range tc.order {
+					a.identity("AutoDevJapan/" + name)
+				}
+				return ownerUnverified()
+			}
+			fetch := func(ctx context.Context, repo string) (int64, string, string, bool) {
+				calls++
+				if strings.HasSuffix(repo, "/good") {
+					return ownerGitHubIdentityOutputWith(ctx, repo, func(*exec.Cmd) ([]byte, error) { return []byte("12345\t" + repo + "\tAutoDevJapan"), nil })
+				}
+				status := "401"
+				if strings.HasSuffix(repo, "403") {
+					status = "403"
+				}
+				return ownerGitHubIdentityOutputWith(ctx, repo, func(cmd *exec.Cmd) ([]byte, error) {
+					_, _ = cmd.Stderr.Write([]byte("gh: fixture (HTTP " + status + ")\n"))
+					cmd.Path = os.Args[0]
+					cmd.Args = []string{os.Args[0], "-test.run=^TestRefreshDiagnosticCLIChild$"}
+					cmd.Env = append(cmd.Env, "F4431_DIAGNOSTIC_CHILD=1")
+					return cmd.Output()
+				})
+			}
+			ok := ownerRefreshIdentityRequestWith("unused", "", home, time.Now, query, fetch, ob)
+			d := ownerRefreshProject(context.Background(), ob, ok, time.Now())
+			if ok != tc.wantOK || calls != tc.wantCalls || d.Stage != tc.wantStage || d.IdentityFailure != tc.wantFailure {
+				t.Fatal("aggregate", d, calls)
+			}
+			if strings.HasPrefix(tc.name, "success_then") || strings.HasPrefix(tc.name, "failure_then_success") {
+				if d.CLIExit != nil {
+					t.Fatal("mixed CLI exit must be omitted")
+				}
+			}
+			b, _ := json.Marshal(d)
+			if bytes.Contains(b, []byte("AutoDevJapan/")) || bytes.Contains(b, []byte(home)) {
+				t.Fatal("diagnostic identity exposed")
+			}
+		})
+	}
+}
+
+func TestRefreshDiagnosticRecordConsumerStopsOrReusesSameIdentity(t *testing.T) {
+	for _, tc := range []struct {
+		name, recordRepo, cwdRepo string
+		fail                      bool
+		wantCalls                 int
+		wantOK                    bool
+	}{
+		{"record_failure_stops_before_cwd", "diagnostic-bad", "diagnostic-good", true, 1, false},
+		{"same_repository_cache_reused", "diagnostic-good", "diagnostic-good", false, 1, true},
+		{"distinct_both_succeed", "diagnostic-A", "diagnostic-B", false, 2, true},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			home := diagnosticHome(t)
+			config, _ := ownerRuleFixture(t)
+			root := filepath.Join(config.dev, "ADJ", "diagnostic-cwd")
+			if os.MkdirAll(root, 0700) != nil {
+				t.Fatal("fixture mkdir")
+			}
+			currentFixtureGit(t, root, "init", "-q")
+			currentFixtureGit(t, root, "remote", "add", "origin", "https://github.com/AutoDevJapan/"+tc.cwdRepo+".git")
+			ob := &ownerRefreshObservation{}
+			calls := 0
+			var verdict ownerPathVerdict
+			query := func(ctx context.Context, _ string, a ownerSourceAccess) ownerPathVerdict {
+				verdict = ownerRuleRecordOriginSource(ctx, ownerRecordMetadata{project: "diagnostic", cwd: root, repository: "AutoDevJapan/" + tc.recordRepo}, object{}, a, config)
+				return verdict
+			}
+			fetch := func(ctx context.Context, repo string) (int64, string, string, bool) {
+				calls++
+				if tc.fail {
+					return 0, "", "", false
+				}
+				return 12345, repo, "AutoDevJapan", true
+			}
+			ok := ownerRefreshIdentityRequestWith(root, "", home, time.Now, query, fetch, ob)
+			d := ownerRefreshProject(context.Background(), ob, ok, time.Now())
+			want := "complete"
+			if tc.fail {
+				want = "identity_fetch_failed"
+			}
+			if ok != tc.wantOK || calls != tc.wantCalls || d.Stage != want || verdict.AccessAllowed != tc.wantOK {
+				t.Fatal("actual consumer order/cache changed", ok, calls, d, verdict)
+			}
+		})
+	}
+}
+
 func TestRefreshDiagnosticActualHTTPAndErrorBuffer(t *testing.T) {
 	for _, tc := range []struct{ label, stderr, stage string }{
 		{"401", "HTTP 401 SECRET_TOKEN", "identity_http_401"},

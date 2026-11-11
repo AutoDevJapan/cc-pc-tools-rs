@@ -236,6 +236,26 @@ fn owner_receipt_reuses_existing_linked_steering_receipt_without_a_second_post()
 }
 
 #[test]
+fn owner_receipt_keeps_own_verified_identity_when_a_later_external_receipt_exists() {
+    let f = Fixture::new();
+    let mut ctx = f.context();
+    let (args, path, proof) = receipt_case(&f, &mut ctx);
+    let first = log_acknowledgement(&mut ctx, &args, &path).unwrap();
+    {
+        let mut server = f.server.lock().unwrap();
+        let thread = args.thread.as_ref().unwrap();
+        server.messages.get_mut(thread).unwrap().push(json!({"id":"9002","channel_id":thread,
+            "author":{"id":BOT,"bot":true},"type":19,"content":"受け取りました。",
+            "timestamp":"2026-10-12T00:00:02Z","flags":SILENT,"mentions":[],"mention_roles":[],
+            "mention_everyone":false,"attachments":[],"message_reference":{"message_id":proof["reply_message_id"],"channel_id":thread}}));
+    }
+    let posts = f.server.lock().unwrap().posts.len();
+    let again = log_acknowledgement(&mut ctx, &args, &path).unwrap();
+    assert_eq!(first["message_id"], again["message_id"]);
+    assert_eq!(f.server.lock().unwrap().posts.len(), posts);
+}
+
+#[test]
 fn owner_receipt_pins_the_version_before_post_and_keeps_get_recovery_after_an_edit() {
     let f = Fixture::new();
     let mut ctx = f.context();

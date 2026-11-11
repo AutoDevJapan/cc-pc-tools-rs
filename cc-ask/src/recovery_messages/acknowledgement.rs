@@ -389,10 +389,33 @@ pub(super) fn existing(
 ) -> Result<Option<Value>> {
     let mut journal = Journal::load(home)?;
     let saved = journal.existing.get(&binding.request_id).cloned();
+    // A second path's receipt must not replace our already reserved/posted
+    // identity or conceal the outcome of an uncertain accepted POST.
+    if saved.is_none()
+        && (ledger.receipt(&request.request_id, "log:0").is_some()
+            || ledger.posted(&request.request_id, "log:0").is_some())
+    {
+        return Ok(None);
+    }
+    let history = if saved.is_none() {
+        Some(api.history(&binding.thread_id)?)
+    } else {
+        None
+    };
+    if let (Some(history), Some(effect)) = (&history, ledger.effect(&request.request_id, "log:0")) {
+        if history.iter().any(|message| {
+            message["content"] == effect.content
+                && message["author"]["id"] == binding.bot_id
+                && message["message_reference"]["message_id"] == binding.reply_message_id
+        }) {
+            return Ok(None);
+        }
+    }
     let matches = if let Some(id) = &saved {
         vec![api.get(&format!("/channels/{}/messages/{id}", binding.thread_id))?]
     } else {
-        api.history(&binding.thread_id)?
+        history
+            .unwrap_or_default()
             .into_iter()
             .filter(|m| {
                 existing_matches(m, binding)

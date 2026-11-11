@@ -147,7 +147,7 @@ func validateGeneratedQuestionNative(records []json.RawMessage, s generatedQuest
 		var wait struct {
 			Cell string `json:"cell_id"`
 		}
-		if json.Unmarshal(r[1].Payload.Output, &pending) != nil || !strings.HasPrefix(pending, "Script running with cell ID "+s.Cell+"\n") || r[2].Payload.Type != "function_call" || r[2].Payload.Name != "wait" || json.Unmarshal([]byte(r[2].Payload.Arguments), &wait) != nil || wait.Cell != s.Cell || r[3].Payload.Type != "function_call_output" || r[2].Payload.Call != r[3].Payload.Call {
+		if s.Cell == "" || json.Unmarshal(r[1].Payload.Output, &pending) != nil || !strings.HasPrefix(pending, "Script running with cell ID "+s.Cell+"\n") || r[2].Payload.Type != "function_call" || r[2].Payload.Name != "wait" || json.Unmarshal([]byte(r[2].Payload.Arguments), &wait) != nil || wait.Cell != s.Cell || r[3].Payload.Type != "function_call_output" || r[2].Payload.Call != r[3].Payload.Call {
 			return errConversationMedia
 		}
 	}

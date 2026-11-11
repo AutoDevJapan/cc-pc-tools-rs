@@ -9,6 +9,75 @@ const MAX_CONTEXT: u64 = 128 * 1024;
 const MAX_STATE: u64 = 1024 * 1024;
 const MAX_AGE: i64 = 60;
 
+type Leases = std::collections::HashMap<
+    PathBuf,
+    std::collections::HashMap<String, (String, String, fs::File)>,
+>;
+fn leases() -> &'static std::sync::Mutex<Leases> {
+    static LEASES: std::sync::OnceLock<std::sync::Mutex<Leases>> = std::sync::OnceLock::new();
+    LEASES.get_or_init(Default::default)
+}
+
+fn lease_path(dir: &Path, generation: &str) -> io::Result<PathBuf> {
+    let id = uuid::Uuid::parse_str(generation)
+        .map_err(|_| io::Error::other("invalid browser context lease"))?;
+    Ok(dir.join(format!("chrome-browser-context-lease-{id}.lock")))
+}
+
+fn lease_alive(dir: &Path, permit: &AttachmentPermit) -> bool {
+    use std::os::windows::fs::OpenOptionsExt;
+    let Ok(path) = lease_path(dir, &permit.generation) else {
+        return false;
+    };
+    fs::OpenOptions::new()
+        .read(true)
+        .share_mode(7)
+        .open(&path)
+        .and_then(|file| file.metadata())
+        .is_ok_and(|meta| meta.is_file() && meta.len() == 0)
+}
+
+fn new_lease(dir: &Path, permit: &AttachmentPermit) -> io::Result<()> {
+    use std::os::windows::fs::OpenOptionsExt;
+    let file = fs::OpenOptions::new()
+        .read(true)
+        .write(true)
+        .create_new(true)
+        .share_mode(5) // read/delete sharing, no external writer
+        .custom_flags(0x0400_0000) // FILE_FLAG_DELETE_ON_CLOSE
+        .open(lease_path(dir, &permit.generation)?)?;
+    leases()
+        .lock()
+        .map_err(|_| io::Error::other("context lease lock poisoned"))?
+        .entry(dir.to_path_buf())
+        .or_default()
+        .insert(
+            permit.generation.clone(),
+            (permit.session.clone(), permit.turn.clone(), file),
+        );
+    Ok(())
+}
+
+fn revoke_leases(dir: &Path, identity: Option<(&Value, &Value)>) -> io::Result<()> {
+    // This does not depend on the JSON state or its serialization lock. Closing
+    // the original OS handles revokes cached contexts even if state saving fails.
+    let mut all = leases()
+        .lock()
+        .map_err(|_| io::Error::other("context lease lock poisoned"))?;
+    if let Some((session, turn)) = identity {
+        if let Some(entries) = all.get_mut(dir) {
+            entries.retain(|_, (s, t, _)| session != s || turn != t);
+        }
+    } else {
+        all.remove(dir);
+    }
+    Ok(())
+}
+
+pub(crate) fn release(dir: &Path) {
+    let _ = revoke_leases(dir, None);
+}
+
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub(crate) struct AttachmentPermit {
@@ -31,7 +100,8 @@ fn lock(dir: &Path) -> io::Result<fs::File> {
         .read(true)
         .write(true)
         .open(dir.join("chrome-browser-context.lock"))?;
-    file.lock()?;
+    // Local bookkeeping must not hang an ordinary Browser Use end notification.
+    file.try_lock().map_err(io::Error::other)?;
     Ok(file)
 }
 
@@ -48,11 +118,12 @@ fn state(dir: &Path) -> io::Result<ContextState> {
     Ok(serde_json::from_slice(&fs::read(path)?)?)
 }
 
-fn current(state: &ContextState, permit: &AttachmentPermit) -> bool {
+fn current(dir: &Path, state: &ContextState, permit: &AttachmentPermit) -> bool {
     state.active.as_ref() == Some(permit)
         && !state
             .ended
             .contains(&(permit.session.clone(), permit.turn.clone()))
+        && lease_alive(dir, permit)
 }
 
 /// Bind the request before forwarding it. The permit survives in the pending
@@ -86,18 +157,28 @@ pub(crate) fn begin_attachment(
         && permit.session == session
         && permit.turn == turn
     {
-        return Ok(permit.clone());
+        if lease_alive(dir, permit) {
+            return Ok(permit.clone());
+        }
+        return Err(io::Error::other("normal browser context lease was revoked"));
     }
     let permit = AttachmentPermit {
         session: session.into(),
         turn: turn.into(),
         generation: uuid::Uuid::new_v4().to_string(),
     };
-    if let Some(previous) = state.active.take() {
+    if let Some(previous) = state.active.take()
+        && (previous.session != session || previous.turn != turn)
+    {
         state.ended.insert((previous.session, previous.turn));
     }
+    revoke_leases(dir, None)?;
+    new_lease(dir, &permit)?;
     state.active = Some(permit.clone());
-    lifecycle::atomic_json(&dir.join(STATE_FILE), &state)?;
+    if let Err(error) = lifecycle::atomic_json(&dir.join(STATE_FILE), &state) {
+        revoke_leases(dir, None)?;
+        return Err(error);
+    }
     Ok(permit)
 }
 
@@ -232,7 +313,7 @@ pub(crate) fn publish_attachment(
     permit: &AttachmentPermit,
 ) -> io::Result<()> {
     let _lock = lock(dir)?;
-    if !current(&state(dir)?, permit)
+    if !current(dir, &state(dir)?, permit)
         || params["session_id"] != permit.session
         || params["turn_id"] != permit.turn
     {
@@ -288,7 +369,9 @@ pub(crate) fn load(dir: &Path, job: &str, info: &Value) -> io::Result<BrowserCon
         return Err(io::Error::other("normal browser context unavailable"));
     }
     let context: BrowserContext = serde_json::from_slice(&fs::read(path)?)?;
-    if !context.matches(job, &owner, info, epoch()) || !current(&state(dir)?, &context.authority) {
+    if !context.matches(job, &owner, info, epoch())
+        || !current(dir, &state(dir)?, &context.authority)
+    {
         return Err(io::Error::other("normal browser context unavailable"));
     }
     Ok(context)
@@ -305,6 +388,7 @@ pub(crate) fn invalidate(
     turn: &Value,
     terminal: bool,
 ) -> io::Result<()> {
+    revoke_leases(dir, Some((session, turn)))?;
     let _lock = lock(dir)?;
     let (Some(session), Some(turn)) = (session.as_str(), turn.as_str()) else {
         return Err(io::Error::other(
@@ -484,5 +568,47 @@ mod tests {
         assert!(load(root.path(), "job", &info).is_err());
         assert!(begin_attachment(root.path(), "job", &next).is_err());
         assert!(publish_attachment(root.path(), "job", "pipe", &info, &next, &new).is_err());
+    }
+
+    #[test]
+    fn failed_invalidation_persistence_revokes_os_lease_and_blocked_lock_does_not_wait() {
+        let root = tempfile::tempdir().unwrap();
+        fs::write(
+            root.path().join("job.json"),
+            json!({"id":"job","thread_id":"session","status":"running"}).to_string(),
+        )
+        .unwrap();
+        let info = json!({"type":"extension","family":"chrome","metadata":{"extensionInstanceId":"instance"},"browserTabMentions":{"generation":"generation"}});
+        let params = json!({"session_id":"session","turn_id":"turn","session_context":"live","networkPolicy":{"constraints":[{"kind":"domains","mode":"denylist","patterns":["blocked.invalid"]}]}});
+        let old = begin_attachment(root.path(), "job", &params).unwrap();
+        publish_attachment(root.path(), "job", "pipe", &info, &params, &old).unwrap();
+        let blocked = fs::OpenOptions::new()
+            .read(true)
+            .write(true)
+            .open(root.path().join("chrome-browser-context.lock"))
+            .unwrap();
+        blocked.lock().unwrap();
+        let start = std::time::Instant::now();
+        assert!(invalidate(root.path(), &json!("session"), &json!("turn"), true).is_err());
+        assert!(start.elapsed() < std::time::Duration::from_secs(1));
+        drop(blocked);
+        assert!(
+            !lease_alive(root.path(), &old),
+            "OS revocation does not depend on state lock/write"
+        );
+        assert!(load(root.path(), "job", &info).is_err());
+        assert!(publish_attachment(root.path(), "job", "pipe", &info, &params, &old).is_err());
+        assert!(
+            begin_attachment(root.path(), "job", &params).is_err(),
+            "failed tombstone persistence cannot revive the same turn"
+        );
+        invalidate(root.path(), &json!("session"), &json!("turn"), true).unwrap();
+        let mut next = params.clone();
+        next["turn_id"] = json!("next");
+        let fresh = begin_attachment(root.path(), "job", &next).unwrap();
+        publish_attachment(root.path(), "job", "pipe", &info, &next, &fresh).unwrap();
+        release(root.path());
+        assert!(!lease_alive(root.path(), &fresh));
+        assert!(load(root.path(), "job", &info).is_err());
     }
 }

@@ -25,8 +25,19 @@ instance/generationが一致し、記録から60秒以内の情報を使う。�
 送信時の世代をattach応答時とcontext読込時にも照合する。
 終了前に送ったattachの遅延成功応答はcontextを再作成できず、
 released tabをclaimする前にも有効なcontextとChrome identityを確認する。
+通常proxyが保持するWindowsの終了時削除leaseも照合し、proxy終了や失効時は
+JSON保存・lock取得に失敗しても先にleaseを解放する。
+ローカルの失効保存・activity記録が失敗しても、正規のturnEnded・finalize・detachを
+拡張へ転送する。終了通知の失敗をローカルの記録成功で隠さない。
 この記録を取得する中継はジョブの監督プロセス内で動くため、CLIだけの更新では
 既に動く旧監督プロセスへ新しい記録機能は追加されない。
+
+通常の終了でagent-created tabは拡張自身が閉じる。個別回収時にnetwork contextが
+期限切れでも、元session/turnがactiveかつ既にdebugger接続済みなら、cachedの
+`Page.close`だけを送る。拡張の所有検証を通し、新しいpolicy・attach・claimを与えない。
+元sessionがinactiveなら再activationせず、全inventoryで対象不在を確認できたときだけ
+履歴へ退役させる。対象が残る場合、別session所有、世代変更、debugger未接続、拒否は
+失敗として原記録を保持し、global tabs.removeや別sessionへ迂回しない。
 
 旧CLIが作った専用session（`cc-chrome-<UUID>`、turn `open`）の個別終了では、
 同じChrome identityとsession内の対象1枚だけを確認してから通常のfinalizeを使う。

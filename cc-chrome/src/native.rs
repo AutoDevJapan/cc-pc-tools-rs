@@ -279,7 +279,21 @@ async fn close_record_with_attachment(
     if legacy_dedicated_session(r) {
         return close_dedicated_record(&mut rpc, r).await;
     }
-    let tabs = rpc.call("getTabs", r.params()).await?;
+    let mut cached = r.params();
+    cached["session_context"] = json!("cached");
+    let tabs = match rpc.call("getTabs", cached).await {
+        Ok(tabs) => tabs,
+        Err(error) => {
+            // A normally ended turn is not reactivated to obtain authority.
+            // It can still retire a positively absent record without mutation.
+            let all = rpc.call("getUserTabs", r.params()).await?;
+            if !has_tab(&all, r.tab)? {
+                verify_close_identity(&mut rpc, r).await?;
+                return Ok(false);
+            }
+            return Err(error);
+        }
+    };
     let tabs = tabs
         .as_array()
         .ok_or_else(|| io::Error::other("invalid session tab inventory"))?;
@@ -292,6 +306,11 @@ async fn close_record_with_attachment(
             verify_close_identity(&mut rpc, r).await?;
             return Ok(false);
         }
+    }
+    // Cached close lets the extension check current ownership without granting
+    // fresh network/debugger authority or activating an ended turn.
+    if attachment(&info).is_err() && !released {
+        return close_owned_cached(&mut rpc, r).await;
     }
     // Check all attachment authority before any claim changes browser ownership.
     let _ = attachment(&info)?;
@@ -335,6 +354,35 @@ async fn close_record_with_attachment(
         tokio::time::sleep(Duration::from_millis(25)).await;
     }
     verify_close_identity(&mut rpc, r).await?;
+    Ok(true)
+}
+
+async fn close_owned_cached(rpc: &mut Rpc, r: &Record) -> io::Result<bool> {
+    // Cached session context must be genuinely active; never activate an ended
+    // turn just to gain a management operation, or invent a cleanup session.
+    let mut cached = r.params();
+    cached["session_context"] = json!("cached");
+    verify_close_identity(rpc, r).await?;
+    let owned = rpc.call("getTabs", cached.clone()).await?;
+    if !has_tab(&owned, r.tab)? {
+        return Err(io::Error::other(
+            "recorded tab is no longer owned by this session",
+        ));
+    }
+    cached["target"] = json!({"tabId":r.tab});
+    cached["method"] = json!("Page.close");
+    cached["commandParams"] = json!({});
+    cached["timeoutMs"] = json!(3000);
+    // requireSessionTab in the installed extension validates ownership inside
+    // this RPC. Never use a global remove/claim/attach fallback.
+    rpc.call("executeCdp", cached).await?;
+    let after = rpc.call("getUserTabs", r.params()).await?;
+    if has_tab(&after, r.tab)? {
+        return Err(io::Error::other(
+            "owned tab still open after cached cleanup",
+        ));
+    }
+    verify_close_identity(rpc, r).await?;
     Ok(true)
 }
 async fn verify_close_identity(rpc: &mut Rpc, r: &Record) -> io::Result<()> {
@@ -510,6 +558,7 @@ pub fn start(dir: &Path, job: &str) -> io::Result<Proxy> {
     let job = job.to_owned();
     let service_pipe = pipe.clone();
     let thread = std::thread::spawn(move || {
+        let context_dir = path.clone();
         let result = (|| -> io::Result<()> {
             runtime()?.block_on(async {
                 let server = ServerOptions::new()
@@ -529,6 +578,7 @@ pub fn start(dir: &Path, job: &str) -> io::Result<Proxy> {
                 Ok(())
             })
         })();
+        context::release(&context_dir);
         if let Err(e) = result {
             let _ = ready_tx.send(Err(e.to_string()));
         }
@@ -635,18 +685,29 @@ async fn forward_streams(
                     }
                     continue;
                 }
-                if matches!(
+                let lifecycle_end = matches!(
                     v["method"].as_str(),
                     Some("turnEnded" | "finalizeTabs" | "detach")
-                ) {
-                    context::invalidate(
+                );
+                if lifecycle_end
+                    && let Err(error) = context::invalidate(
                         dir,
                         &v["params"]["session_id"],
                         &v["params"]["turn_id"],
                         v["method"] != "detach",
-                    )?;
+                    )
+                {
+                    // Never suppress the normal extension cleanup. The OS
+                    // context lease has already been revoked independently.
+                    let _ = lifecycle::atomic_json(
+                        &dir.join("chrome-context-error.json"),
+                        &json!({"at":epoch(),"operation":"invalidate","error_kind":format!("{:?}",error.kind()),"normal_lifecycle_forward_requested":true}),
+                    );
                 }
-                lifecycle::activity(dir)?;
+                let activity = lifecycle::activity(dir);
+                if !lifecycle_end {
+                    activity?;
+                }
                 if matches!(v["method"].as_str(), Some("createTab" | "attach"))
                     && v.get("id").is_some()
                 {
@@ -1105,6 +1166,113 @@ mod tests {
                 };
                 let (result,())=tokio::time::timeout(Duration::from_secs(4),async{tokio::join!(close_record_in(root.path(),&record),mock)}).await.unwrap();
                 assert!(result.is_err());
+            }
+        });
+    }
+    #[test]
+    fn expired_policy_cleanup_uses_only_cached_close_for_still_owned_attached_target() {
+        runtime().unwrap().block_on(async {
+            let root=tempfile::tempdir().unwrap();
+            fs::write(root.path().join("job.json"),json!({"id":"job","thread_id":"session","status":"failed"}).to_string()).unwrap();
+            let pipe=format!(r"\\.\pipe\cc-chrome-ended-cleanup-{}",uuid::Uuid::new_v4());
+            let mut server=ServerOptions::new().first_pipe_instance(true).create(&pipe).unwrap();
+            let r=Record{job:"job".into(),pipe,instance:"instance".into(),generation:"generation".into(),session:"session".into(),turn:"ended-turn".into(),tab:42,created:100};
+            let info=json!({"type":"extension","family":"chrome","metadata":{"extensionInstanceId":"instance"},"browserTabMentions":{"generation":"generation"},"capabilities":{"browser":[{"id":"management"}]}});
+            let mock=async {
+                server.connect().await.unwrap();
+                for (method,result) in [("getInfo",info.clone()),("getTabs",json!([{"id":42},{"id":99}])),("getInfo",info.clone()),("getTabs",json!([{"id":42},{"id":99}])),("executeCdp",json!({})),("getUserTabs",json!([{"id":99}])),("getInfo",info.clone())] {
+                    let request=read_frame(&mut server).await.unwrap();assert_eq!(request["method"],method);
+                    if method=="executeCdp" {
+                        assert_eq!(request["params"]["target"],json!({"tabId":42}));
+                        assert_eq!(request["params"]["method"],"Page.close");
+                        assert!(request["params"].get("networkPolicy").is_none());
+                        assert_eq!(request["params"]["session_context"],"cached");
+                        assert_eq!(request["params"]["session_id"],"session");
+                        assert_eq!(request["params"]["turn_id"],"ended-turn");
+                    }
+                    write_frame(&mut server,&json!({"id":request["id"],"result":result})).await.unwrap();
+                }
+                assert!(read_frame(&mut server).await.is_err(),"no claim/attach/navigation or other-tab operation");
+            };
+            let (result,())=tokio::time::timeout(Duration::from_secs(4),async{tokio::join!(close_record_in(root.path(),&r),mock)}).await.unwrap();
+            assert!(result.unwrap());
+        });
+    }
+    #[test]
+    fn bookkeeping_failure_still_forwards_normal_end_and_cannot_publish_late_context() {
+        runtime().unwrap().block_on(async {
+            for method in ["turnEnded","finalizeTabs","detach"] {
+                let root=tempfile::tempdir().unwrap();
+                fs::write(root.path().join("job.json"),json!({"id":"job","thread_id":"session","status":"running"}).to_string()).unwrap();
+                let info=json!({"type":"extension","family":"chrome","metadata":{"extensionInstanceId":"instance"},"browserTabMentions":{"generation":"generation"}});
+                let params=json!({"session_id":"session","turn_id":"turn","session_context":"live","tabId":42,"networkPolicy":{"constraints":[{"kind":"domains","mode":"denylist","patterns":["blocked.invalid"]}]}});
+                let (mut agent,proxy_agent)=tokio::io::duplex(65536);
+                let (proxy_backend,mut backend)=tokio::io::duplex(65536);
+                let proxy=forward_streams(proxy_agent,proxy_backend,"fixture",&info,root.path(),"job");
+                let check=async {
+                    write_frame(&mut agent,&json!({"id":1,"method":"attach","params":params})).await.unwrap();
+                    assert_eq!(read_frame(&mut backend).await.unwrap()["method"],"attach");
+                    fs::write(root.path().join("chrome-browser-context-state.json"),"not JSON").unwrap();
+                    let end=json!({"id":2,"method":method,"params":{"session_id":"session","turn_id":"turn","session_context":"live","tabId":42,"keep":[]}});
+                    write_frame(&mut agent,&end).await.unwrap();
+                    assert_eq!(read_frame(&mut backend).await.unwrap(),end,"normal lifecycle must be forwarded despite local state failure");
+                    write_frame(&mut backend,&json!({"id":1,"result":{}})).await.unwrap();
+                    assert_eq!(read_frame(&mut agent).await.unwrap()["id"],1);
+                    assert!(context::load(root.path(),"job",&info).is_err());
+                    write_frame(&mut backend,&json!({"id":2,"result":{}})).await.unwrap();
+                    assert_eq!(read_frame(&mut agent).await.unwrap()["id"],2);
+                    agent.shutdown().await.unwrap();
+                };
+                let (result,())=tokio::time::timeout(Duration::from_secs(3),async{tokio::join!(proxy,check)}).await.unwrap();
+                assert!(result.is_err());
+            }
+        });
+    }
+    #[test]
+    fn cached_cleanup_rejects_inactive_session_lost_debugger_and_owner_races() {
+        runtime().unwrap().block_on(async {
+            for scenario in ["owner-changed","generation-changed","cached-ended","denied","debugger-missing","foreign-owner","still-present","already-gone","inactive-present"] {
+                let pipe=format!(r"\\.\pipe\cc-chrome-management-guard-{}",uuid::Uuid::new_v4());
+                let mut server=ServerOptions::new().first_pipe_instance(true).create(&pipe).unwrap();
+                let record=Record{job:"job".into(),pipe,instance:"instance".into(),generation:"generation".into(),session:"session".into(),turn:"turn".into(),tab:42,created:100};
+                let info=json!({"type":"extension","family":"chrome","metadata":{"extensionInstanceId":"instance"},"browserTabMentions":{"generation":"generation"}});
+                let mut changed=info.clone();changed["browserTabMentions"]["generation"]=json!("other");
+                let mock=async {
+                    server.connect().await.unwrap();
+                    let inactive=["already-gone","inactive-present"].contains(&scenario);
+                    let mut steps=vec![("getInfo",info.clone(),false),("getTabs",if inactive {json!({"message":"turn has ended"})} else {json!([{"id":42},{"id":99}])},inactive)];
+                    if inactive {
+                        steps.push(("getUserTabs",if scenario=="already-gone" {json!([{"id":99}])} else {json!([{"id":42},{"id":99}])},false));
+                        if scenario=="already-gone" {steps.push(("getInfo",info.clone(),false));}
+                    } else {
+                        steps.push(("getInfo",if scenario=="generation-changed" {changed} else {info.clone()},false));
+                        if scenario!="generation-changed" {
+                            steps.push(("getTabs",match scenario {"owner-changed"=>json!([{"id":99}]),"cached-ended"=>json!({"message":"turn has ended"}),_=>json!([{"id":42},{"id":99}])},scenario=="cached-ended"));
+                            if !["owner-changed","cached-ended"].contains(&scenario) {
+                                let rejected=["denied","debugger-missing","foreign-owner"].contains(&scenario);
+                                let message=match scenario {"denied"=>"Permission denied","debugger-missing"=>"Debugger unattached",_=>"Tab 42 is not part of browser session session"};
+                                steps.push(("executeCdp",if rejected {json!({"message":message})} else {json!({})},rejected));
+                                if !rejected {
+                                    steps.push(("getUserTabs",json!([{"id":42},{"id":99}]),false));
+                                }
+                            }
+                        }
+                    }
+                    for (method,result,error) in steps {
+                        let req=read_frame(&mut server).await.unwrap();assert_eq!(req["method"],method,"{scenario}");
+                        if method=="getTabs" {assert_eq!(req["params"]["session_context"],"cached");}
+                        if method=="executeCdp" {
+                            assert_eq!(req["params"]["target"],json!({"tabId":42}));
+                            assert_eq!(req["params"]["method"],"Page.close");
+                            assert_eq!(req["params"]["session_context"],"cached");
+                            assert!(req["params"].get("networkPolicy").is_none());
+                        }
+                        write_frame(&mut server,&if error {json!({"id":req["id"],"error":result})} else {json!({"id":req["id"],"result":result})}).await.unwrap();
+                    }
+                    assert!(read_frame(&mut server).await.is_err(),"no fallback claim/attach/retry after {scenario}");
+                };
+                let (result,())=tokio::time::timeout(Duration::from_secs(4),async{tokio::join!(close_record_with_attachment(&record,|_|Err(io::Error::other("expired context"))),mock)}).await.unwrap();
+                if scenario=="already-gone" {assert!(!result.unwrap());} else {assert!(result.is_err(),"{scenario}");}
             }
         });
     }

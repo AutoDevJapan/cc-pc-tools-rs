@@ -9,6 +9,50 @@ const MAX_CONTEXT: u64 = 128 * 1024;
 const MAX_STATE: u64 = 1024 * 1024;
 const MAX_AGE: i64 = 60;
 
+#[derive(Debug)]
+struct ContextFailure(&'static str);
+impl std::fmt::Display for ContextFailure {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "normal browser context unavailable: {}", self.0)
+    }
+}
+impl std::error::Error for ContextFailure {}
+fn failure(reason: &'static str) -> io::Error {
+    io::Error::other(ContextFailure(reason))
+}
+pub(crate) fn diagnostic(dir: &Path, operation: &'static str, error: &io::Error) {
+    let reason = error
+        .get_ref()
+        .and_then(|e| e.downcast_ref::<ContextFailure>())
+        .map_or("io", |e| e.0);
+    // Only stable classifications; never persist policy/header values, paths,
+    // backend diagnostics or arbitrary error display strings.
+    let _ = lifecycle::atomic_json(
+        &dir.join("chrome-context-error.json"),
+        &json!({"at":epoch(),"operation":operation,"reason":reason,"error_kind":format!("{:?}",error.kind())}),
+    );
+}
+fn owner(dir: &Path) -> io::Result<Value> {
+    let bytes = fs::read(dir.join("job.json")).map_err(|e| {
+        if e.kind() == io::ErrorKind::NotFound {
+            failure("job_missing")
+        } else {
+            failure("job_read")
+        }
+    })?;
+    serde_json::from_slice(&bytes).map_err(|_| failure("job_invalid"))
+}
+pub(crate) fn require_owner(dir: &Path, job: &str) -> io::Result<()> {
+    let value = owner(dir)?;
+    if value["id"] != job
+        || value["status"] != "running"
+        || value["thread_id"].as_str().is_none_or(|s| s.is_empty())
+    {
+        return Err(failure("job_identity"));
+    }
+    Ok(())
+}
+
 type Leases = std::collections::HashMap<
     PathBuf,
     std::collections::HashMap<String, (String, String, fs::File)>,
@@ -101,7 +145,7 @@ fn lock(dir: &Path) -> io::Result<fs::File> {
         .write(true)
         .open(dir.join("chrome-browser-context.lock"))?;
     // Local bookkeeping must not hang an ordinary Browser Use end notification.
-    file.try_lock().map_err(io::Error::other)?;
+    file.try_lock().map_err(|_| failure("state_lock"))?;
     Ok(file)
 }
 
@@ -111,11 +155,11 @@ fn state(dir: &Path) -> io::Result<ContextState> {
         Err(e) if e.kind() == io::ErrorKind::NotFound => return Ok(ContextState::default()),
         Err(e) => return Err(e),
         Ok(meta) if !meta.is_file() || meta.file_type().is_symlink() || meta.len() > MAX_STATE => {
-            return Err(io::Error::other("normal browser context state unavailable"));
+            return Err(failure("state_invalid"));
         }
         Ok(_) => {}
     }
-    Ok(serde_json::from_slice(&fs::read(path)?)?)
+    serde_json::from_slice(&fs::read(path)?).map_err(|_| failure("state_invalid"))
 }
 
 fn current(dir: &Path, state: &ContextState, permit: &AttachmentPermit) -> bool {
@@ -134,24 +178,22 @@ pub(crate) fn begin_attachment(
     params: &Value,
 ) -> io::Result<AttachmentPermit> {
     let _lock = lock(dir)?;
-    let owner: Value = serde_json::from_slice(&fs::read(dir.join("job.json"))?)?;
+    let owner = owner(dir)?;
     let session = params["session_id"].as_str().filter(|s| !s.is_empty());
     let turn = params["turn_id"].as_str().filter(|s| !s.is_empty());
     let (Some(session), Some(turn)) = (session, turn) else {
-        return Err(io::Error::other(
-            "normal browser context identity unavailable",
-        ));
+        return Err(failure("identity_missing"));
     };
     if owner["id"] != job
         || owner["thread_id"] != session
         || owner["status"] != "running"
         || params["session_context"] != "live"
     {
-        return Err(io::Error::other("normal browser context identity differs"));
+        return Err(failure("identity_mismatch"));
     }
     let mut state = state(dir)?;
     if state.ended.contains(&(session.into(), turn.into())) {
-        return Err(io::Error::other("normal browser turn has ended"));
+        return Err(failure("turn_ended"));
     }
     if let Some(permit) = &state.active
         && permit.session == session
@@ -160,7 +202,7 @@ pub(crate) fn begin_attachment(
         if lease_alive(dir, permit) {
             return Ok(permit.clone());
         }
-        return Err(io::Error::other("normal browser context lease was revoked"));
+        return Err(failure("lease_revoked"));
     }
     let permit = AttachmentPermit {
         session: session.into(),
@@ -173,11 +215,11 @@ pub(crate) fn begin_attachment(
         state.ended.insert((previous.session, previous.turn));
     }
     revoke_leases(dir, None)?;
-    new_lease(dir, &permit)?;
+    new_lease(dir, &permit).map_err(|_| failure("lease_create"))?;
     state.active = Some(permit.clone());
-    if let Err(error) = lifecycle::atomic_json(&dir.join(STATE_FILE), &state) {
+    if lifecycle::atomic_json(&dir.join(STATE_FILE), &state).is_err() {
         revoke_leases(dir, None)?;
-        return Err(error);
+        return Err(failure("state_write"));
     }
     Ok(permit)
 }
@@ -317,11 +359,12 @@ pub(crate) fn publish_attachment(
         || params["session_id"] != permit.session
         || params["turn_id"] != permit.turn
     {
-        return Err(io::Error::other(
-            "normal browser attachment was invalidated",
-        ));
+        return Err(failure("invalidated"));
     }
-    let owner: Value = serde_json::from_slice(&fs::read(dir.join("job.json"))?)?;
+    let owner = owner(dir)?;
+    if !policy_shape(&params["networkPolicy"]) {
+        return Err(failure("policy_shape"));
+    }
     let mut session_params = json!({});
     for key in [
         "session_id",
@@ -355,24 +398,47 @@ pub(crate) fn publish_attachment(
         session_params,
     };
     if !context.matches(job, &owner, info, epoch()) {
-        return Err(io::Error::other("normal browser context unavailable"));
+        return Err(failure("identity_mismatch"));
     }
     lifecycle::atomic_json(&dir.join(CONTEXT_FILE), &context)
 }
 
 pub(crate) fn load(dir: &Path, job: &str, info: &Value) -> io::Result<BrowserContext> {
     let _lock = lock(dir)?;
-    let owner: Value = serde_json::from_slice(&fs::read(dir.join("job.json"))?)?;
+    let owner = owner(dir)?;
     let path = dir.join(CONTEXT_FILE);
-    let metadata = fs::symlink_metadata(&path)?;
+    let metadata = fs::symlink_metadata(&path).map_err(|e| {
+        if e.kind() == io::ErrorKind::NotFound {
+            failure("not_recorded")
+        } else {
+            failure("context_read")
+        }
+    })?;
     if !metadata.is_file() || metadata.file_type().is_symlink() || metadata.len() > MAX_CONTEXT {
-        return Err(io::Error::other("normal browser context unavailable"));
+        return Err(failure("context_invalid"));
     }
-    let context: BrowserContext = serde_json::from_slice(&fs::read(path)?)?;
-    if !context.matches(job, &owner, info, epoch())
-        || !current(dir, &state(dir)?, &context.authority)
+    let context: BrowserContext =
+        serde_json::from_slice(&fs::read(path)?).map_err(|_| failure("context_invalid"))?;
+    if !policy_shape(&context.network_policy) {
+        return Err(failure("policy_shape"));
+    }
+    let now = epoch();
+    if now < context.recorded_at || now - context.recorded_at > MAX_AGE {
+        return Err(failure("expired"));
+    }
+    if !context.matches(job, &owner, info, now) {
+        return Err(failure("identity_mismatch"));
+    }
+    let state = state(dir)?;
+    if state.active.as_ref() != Some(&context.authority)
+        || state
+            .ended
+            .contains(&(context.session.clone(), context.turn.clone()))
     {
-        return Err(io::Error::other("normal browser context unavailable"));
+        return Err(failure("invalidated"));
+    }
+    if !lease_alive(dir, &context.authority) {
+        return Err(failure("lease_lost"));
     }
     Ok(context)
 }
@@ -610,5 +676,65 @@ mod tests {
         release(root.path());
         assert!(!lease_alive(root.path(), &fresh));
         assert!(load(root.path(), "job", &info).is_err());
+    }
+
+    #[test]
+    fn context_failure_messages_distinguish_safe_fixed_reasons() {
+        let root = tempfile::tempdir().unwrap();
+        let info = json!({"type":"extension","family":"chrome","metadata":{"extensionInstanceId":"instance"},"browserTabMentions":{"generation":"generation"}});
+        assert!(
+            load(root.path(), "job", &info)
+                .unwrap_err()
+                .to_string()
+                .ends_with("job_missing")
+        );
+        fs::write(
+            root.path().join("job.json"),
+            json!({"id":"job","thread_id":"session","status":"running"}).to_string(),
+        )
+        .unwrap();
+        assert!(
+            load(root.path(), "job", &info)
+                .unwrap_err()
+                .to_string()
+                .ends_with("not_recorded")
+        );
+        let params = json!({"session_id":"session","turn_id":"turn","session_context":"live","networkPolicy":{"constraints":[{"kind":"domains","mode":"denylist","patterns":["blocked.invalid"]}]}});
+        observe_attachment(root.path(), "job", "pipe", &info, &params).unwrap();
+        let path = root.path().join(CONTEXT_FILE);
+        let bytes = fs::read(&path).unwrap();
+        let mut expired: Value = serde_json::from_slice(&bytes).unwrap();
+        expired["recorded_at"] = json!(epoch() - 61);
+        fs::write(&path, expired.to_string()).unwrap();
+        assert!(
+            load(root.path(), "job", &info)
+                .unwrap_err()
+                .to_string()
+                .ends_with("expired")
+        );
+        fs::write(&path, &bytes).unwrap();
+        let mut wrong = info.clone();
+        wrong["browserTabMentions"]["generation"] = json!("other");
+        assert!(
+            load(root.path(), "job", &wrong)
+                .unwrap_err()
+                .to_string()
+                .ends_with("identity_mismatch")
+        );
+        release(root.path());
+        assert!(
+            load(root.path(), "job", &info)
+                .unwrap_err()
+                .to_string()
+                .ends_with("lease_lost")
+        );
+        diagnostic(
+            root.path(),
+            "load",
+            &io::Error::other("secret fixture header should not be written"),
+        );
+        let saved = fs::read_to_string(root.path().join("chrome-context-error.json")).unwrap();
+        assert!(!saved.contains("secret fixture"));
+        assert!(saved.contains("\"reason\": \"io\""));
     }
 }

@@ -717,7 +717,13 @@ async fn forward_streams(
                             v["method"].as_str().unwrap().into(),
                             v["params"].clone(),
                             if v["method"] == "attach" {
-                                context::begin_attachment(dir, job, &v["params"]).ok()
+                                match context::begin_attachment(dir, job, &v["params"]) {
+                                    Ok(permit) => Some(permit),
+                                    Err(error) => {
+                                        context::diagnostic(dir, "begin", &error);
+                                        None
+                                    }
+                                }
                             } else {
                                 None
                             },
@@ -741,7 +747,11 @@ async fn forward_streams(
             {
                 // Observe the unmodified normal CUA policy only after the
                 // extension accepted it. Do not inject a fallback into CUA.
-                let _ = context::publish_attachment(dir, job, upstream, info, params, permit);
+                if let Err(error) =
+                    context::publish_attachment(dir, job, upstream, info, params, permit)
+                {
+                    context::diagnostic(dir, "publish", &error);
+                }
             }
             if v.get("method").is_none()
                 && let Some((method, params, _)) = request
@@ -841,6 +851,7 @@ async fn open_inner(dir: &Path, job: &str, url: &str) -> io::Result<Record> {
         return Err(io::Error::other("invalid job or URL"));
     }
     {
+        context::require_owner(dir,job).map_err(|error|if job=="chatgpt-web" {io::Error::other("normal browser job context missing or inactive; standalone chatgpt-web live transport requires a normal active-job CUA attachment before opening a tab")}else{error})?;
         lifecycle::activity(dir)?;
         let (pipe, info) = discover().await?;
         open_with_backend(dir, job, url, pipe, info).await
@@ -1097,6 +1108,62 @@ mod tests {
                     agent.shutdown().await.unwrap();
                 };
                 let (result, ()) = tokio::time::timeout(Duration::from_secs(2), async {tokio::join!(proxy, check)}).await.unwrap();
+                assert!(result.is_err());
+            }
+        });
+    }
+    #[test]
+    fn standalone_chatgpt_web_fails_with_actionable_normal_context_error_before_discovery() {
+        let root = tempfile::tempdir().unwrap();
+        let dir = root.path().join("owner-tabs");
+        let error = runtime()
+            .unwrap()
+            .block_on(open_inner(&dir, "chatgpt-web", "https://chatgpt.com/"))
+            .unwrap_err();
+        assert!(
+            error
+                .to_string()
+                .contains("normal browser job context missing"),
+            "{error}"
+        );
+        assert!(
+            error
+                .to_string()
+                .contains("normal active-job CUA attachment"),
+            "{error}"
+        );
+        assert!(
+            !dir.exists(),
+            "no activity folder, discovery or tab before owner context"
+        );
+    }
+    #[test]
+    fn rejected_context_capture_records_only_fixed_phase_and_reason() {
+        runtime().unwrap().block_on(async {
+            for phase in ["begin","publish"] {
+                let root=tempfile::tempdir().unwrap();
+                fs::write(root.path().join("job.json"),json!({"id":"job","thread_id":"session","status":"running"}).to_string()).unwrap();
+                if phase=="begin" {fs::write(root.path().join("chrome-browser-context-state.json"),"private marker secret-context-fixture").unwrap();}
+                let info=json!({"type":"extension","family":"chrome","metadata":{"extensionInstanceId":"instance"},"browserTabMentions":{"generation":"generation"}});
+                let params=json!({"session_id":"session","turn_id":"turn","session_context":"live","tabId":42,"networkPolicy":null,"request_headers":{"fixture":"secret-context-fixture"}});
+                let (mut agent,proxy_agent)=tokio::io::duplex(65536);
+                let (proxy_backend,mut backend)=tokio::io::duplex(65536);
+                let proxy=forward_streams(proxy_agent,proxy_backend,"fixture",&info,root.path(),"job");
+                let check=async {
+                    write_frame(&mut agent,&json!({"id":1,"method":"attach","params":params})).await.unwrap();
+                    assert_eq!(read_frame(&mut backend).await.unwrap()["method"],"attach");
+                    write_frame(&mut backend,&json!({"id":1,"result":{}})).await.unwrap();
+                    assert_eq!(read_frame(&mut agent).await.unwrap()["id"],1);
+                    let bytes=fs::read(root.path().join("chrome-context-error.json")).unwrap();
+                    let error:Value=serde_json::from_slice(&bytes).unwrap();
+                    assert_eq!(error["operation"],phase);
+                    assert_eq!(error["reason"],if phase=="begin" {"state_invalid"} else {"policy_shape"});
+                    assert!(error["at"].as_i64().is_some());
+                    assert!(!String::from_utf8(bytes).unwrap().contains("secret-context-fixture"));
+                    assert!(error.as_object().unwrap().keys().all(|k|["at","operation","reason","error_kind"].contains(&k.as_str())));
+                    agent.shutdown().await.unwrap();
+                };
+                let (result,())=tokio::time::timeout(Duration::from_secs(3),async{tokio::join!(proxy,check)}).await.unwrap();
                 assert!(result.is_err());
             }
         });

@@ -31,6 +31,13 @@ JSON保存・lock取得に失敗しても先にleaseを解放する。
 拡張へ転送する。終了通知の失敗をローカルの記録成功で隠さない。
 この記録を取得する中継はジョブの監督プロセス内で動くため、CLIだけの更新では
 既に動く旧監督プロセスへ新しい記録機能は追加されない。
+`chatgpt-web`のstandalone live経路は`owner-tabs`へこのjob/contextを用意しないため、
+本変更では通常active-jobのCUA attachを必要とする未接続の呼出元として扱う。
+この場合は作成・接続の前に依存を示す診断を返し、架空jobやpolicyは生成しない。
+file/localhost fixtureの既存経路はそのまま使う。
+context取得が失敗した場合は`chrome-context-error.json`へ時刻・処理段階・固定理由と
+OSエラー種別だけを残す。policy形状不一致、状態破損、lock、lease、未記録、期限切れ、
+identity不一致、失効を区別し、policy・request header・raw error値は書かない。
 
 通常の終了でagent-created tabは拡張自身が閉じる。個別回収時にnetwork contextが
 期限切れでも、元session/turnがactiveかつ既にdebugger接続済みなら、cachedの

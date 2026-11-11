@@ -178,6 +178,23 @@ func TestRefreshDiagnosticRecordConsumerStopsOrReusesSameIdentity(t *testing.T) 
 	}
 }
 
+func TestRefreshDiagnosticLockPreparationFailureHasDistinctStage(t *testing.T) {
+	home := filepath.Join(diagnosticHome(t), "not-a-directory")
+	if err := os.WriteFile(home, []byte("owned fixture"), 0600); err != nil {
+		t.Fatal(err)
+	}
+	ob := &ownerRefreshObservation{}
+	calls := 0
+	ok := ownerRefreshIdentityRequestWith("unused", "", home, time.Now, diagnosticQuery("AutoDevJapan/lock-fixture"), func(context.Context, string) (int64, string, string, bool) { calls++; return 0, "", "", false }, ob)
+	d := ownerRefreshProject(context.Background(), ob, ok, time.Now())
+	if ok || calls != 0 || d.Attempted || !ob.binding {
+		t.Fatal("lock fixture not exercised", d, calls)
+	}
+	if d.Stage != "identity_lock_unavailable" {
+		t.Fatal("lock failure misclassified", d.Stage)
+	}
+}
+
 func TestRefreshDiagnosticActualHTTPAndErrorBuffer(t *testing.T) {
 	for _, tc := range []struct{ label, stderr, stage string }{
 		{"401", "HTTP 401 SECRET_TOKEN", "identity_http_401"},

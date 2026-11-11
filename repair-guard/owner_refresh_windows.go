@@ -217,6 +217,7 @@ func ownerRefreshIdentityRequestContextWith(parent context.Context, path, reques
 		detail.binding = true
 		unlock, locked := ownerLockIdentityRefresh(ctx, home, repo)
 		if !locked {
+			detail.lockUnavailable = true
 			return 0, "", "", false
 		}
 		defer unlock()

@@ -24,6 +24,7 @@ type ownerRefreshObservation struct {
 	identityFailed                                                              bool
 	failureStage                                                                string
 	cliExitMixed                                                                bool
+	lockUnavailable                                                             bool
 }
 
 func (o *ownerRefreshObservation) includeIdentity(detail *ownerRefreshObservation, success bool) {
@@ -72,6 +73,8 @@ func ownerRefreshProject(ctx context.Context, o *ownerRefreshObservation, succes
 		r.Stage = "claim_unavailable"
 	case !o.binding:
 		r.Stage = "binding_unavailable"
+	case o.lockUnavailable:
+		r.Stage = "identity_lock_unavailable"
 	case o.cooling:
 		r.Stage = "cooldown_no_valid_identity"
 	case o.attempted && !o.fetched && o.http == 401:

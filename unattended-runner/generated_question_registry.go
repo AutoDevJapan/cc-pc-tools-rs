@@ -107,7 +107,7 @@ func (r generatedQuestionRegistry) spec(b generatedQuestionBundle) (generatedQue
 	if !b.Content.Fictional {
 		return s, generatedFailure("content_review", "fictional_data_required")
 	}
-	if !r.Destination(b.Scope) || !r.Task(b.Scope.Todo) || !shaPattern.MatchString(b.ProofSHA) || len(b.Images) == 0 || len(b.Images) > 10 || (len(b.Events) != 2 && len(b.Events) != 4) || b.Cell == "" {
+	if !r.Destination(b.Scope) || !r.Task(b.Scope.Todo) || !shaPattern.MatchString(b.ProofSHA) || len(b.Images) == 0 || len(b.Images) > 10 || (len(b.Events) != 2 && len(b.Events) != 4) || (len(b.Events) == 4 && b.Cell == "") {
 		return s, errConversationMedia
 	}
 	if !generatedWithin(r.Sessions, b.Rollout) || !strings.HasSuffix(filepath.Base(filepath.FromSlash(b.Rollout)), "-"+b.Session+".jsonl") {

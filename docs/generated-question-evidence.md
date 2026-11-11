@@ -71,7 +71,10 @@ guard未成立を、実際の顧客内容の検出や、後続の`fictional_data
   生成記録はnew_generation/image_gen__imagegen/functions.exec、同じsession・cell・順番・元pathとし、
   requestはpromptと任意のtransparent_background、inputImagesは空とする。参照画像や既存原本は対象外。
 - `events`: 実行call/resultと、非同期の場合のwait call/resultの行番号・SHA・kind・name・call_id。
-  `exec_cell_id`も指定する。原rollout内の対応、実行時刻、imagegen呼出しを照合する。
+  非同期では実際に返った`exec_cell_id`も指定する。同期完了でcell IDが返らない場合は、
+  `events`を元call/resultの2件、証拠と生成記録のcellを空文字列にして照合する。
+  架空のcellを追加しない。既存のcell付き同期記録も引き続き受け付ける。
+  原rollout内のcall/resultの対応、実行時刻、imagegen呼出しを照合する。
   結果にあるPNGまたはJPEGのdata URLと出力hintの元pathを解析し、元画像の全バイトのSHA・サイズと一致させる。
   画像providerによっては、元の`exec-*.png`名のファイルがJPEGバイトのことがある。data URLの宣言型は
   PNG/JPEGのどちらかで、復号したバイトのmagicと一致しなければ拒否する。資格のMIMEは元バイトのmagicから

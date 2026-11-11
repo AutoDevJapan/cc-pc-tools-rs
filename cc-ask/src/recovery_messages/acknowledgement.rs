@@ -357,6 +357,7 @@ fn existing_matches(message: &Value, binding: &Binding) -> bool {
         && message["message_reference"]["message_id"] == binding.reply_message_id
         && message["message_reference"]["channel_id"] == binding.thread_id
         && (text == "受け取りました。"
+            || text == "追加の依頼を受け取りました。実行中の担当が終わった後に、元の作業と追加依頼を照合して進めます。"
             || (text.starts_with('【')
                 && text.ends_with("】受け取りました。今の作業に反映します。")
                 && !text.contains('\n')))

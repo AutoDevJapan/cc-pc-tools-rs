@@ -213,6 +213,8 @@ fn owner_receipt_reuses_linked_silent_ack_from_another_path() {
 
 #[test]
 fn owner_receipt_reuses_existing_linked_steering_receipt_without_a_second_post() {
+    for content in ["【対象製品】受け取りました。今の作業に反映します。",
+        "追加の依頼を受け取りました。実行中の担当が終わった後に、元の作業と追加依頼を照合して進めます。"] {
     let f = Fixture::new();
     let mut ctx = f.context();
     let (args, path, proof) = receipt_case(&f, &mut ctx);
@@ -221,7 +223,7 @@ fn owner_receipt_reuses_existing_linked_steering_receipt_without_a_second_post()
         let thread = args.thread.as_ref().unwrap();
         server.messages.get_mut(thread).unwrap().push(json!({"id":"9001","channel_id":thread,
             "author":{"id":BOT,"bot":true},"type":19,
-            "content":"【対象製品】受け取りました。今の作業に反映します。",
+            "content":content,
             "timestamp":"2026-10-12T00:00:02Z","flags":SILENT,"mentions":[],"mention_roles":[],
             "mention_everyone":false,"attachments":[],"message_reference":{"message_id":proof["reply_message_id"],"channel_id":thread}}));
     }
@@ -230,6 +232,7 @@ fn owner_receipt_reuses_existing_linked_steering_receipt_without_a_second_post()
     assert_eq!(result["existing_acknowledgement"], true);
     assert_eq!(result["message_id"], "9001");
     assert_eq!(f.server.lock().unwrap().posts.len(), posts);
+    }
 }
 
 #[test]

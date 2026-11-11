@@ -356,7 +356,10 @@ fn existing_matches(message: &Value, binding: &Binding) -> bool {
         && message.get("webhook_id").is_none_or(|v| v.is_null())
         && message["message_reference"]["message_id"] == binding.reply_message_id
         && message["message_reference"]["channel_id"] == binding.thread_id
-        && text == "受け取りました。"
+        && (text == "受け取りました。"
+            || (text.starts_with('【')
+                && text.ends_with("】受け取りました。今の作業に反映します。")
+                && !text.contains('\n')))
         && version_matches
         && core::n(&message["id"]) > core::n(&json!(binding.reply_message_id))
         && stamp

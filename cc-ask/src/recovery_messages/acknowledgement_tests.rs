@@ -212,6 +212,27 @@ fn owner_receipt_reuses_linked_silent_ack_from_another_path() {
 }
 
 #[test]
+fn owner_receipt_reuses_existing_linked_steering_receipt_without_a_second_post() {
+    let f = Fixture::new();
+    let mut ctx = f.context();
+    let (args, path, proof) = receipt_case(&f, &mut ctx);
+    {
+        let mut server = f.server.lock().unwrap();
+        let thread = args.thread.as_ref().unwrap();
+        server.messages.get_mut(thread).unwrap().push(json!({"id":"9001","channel_id":thread,
+            "author":{"id":BOT,"bot":true},"type":19,
+            "content":"【対象製品】受け取りました。今の作業に反映します。",
+            "timestamp":"2026-10-12T00:00:02Z","flags":SILENT,"mentions":[],"mention_roles":[],
+            "mention_everyone":false,"attachments":[],"message_reference":{"message_id":proof["reply_message_id"],"channel_id":thread}}));
+    }
+    let posts = f.server.lock().unwrap().posts.len();
+    let result = log_acknowledgement(&mut ctx, &args, &path).unwrap();
+    assert_eq!(result["existing_acknowledgement"], true);
+    assert_eq!(result["message_id"], "9001");
+    assert_eq!(f.server.lock().unwrap().posts.len(), posts);
+}
+
+#[test]
 fn owner_receipt_pins_the_version_before_post_and_keeps_get_recovery_after_an_edit() {
     let f = Fixture::new();
     let mut ctx = f.context();

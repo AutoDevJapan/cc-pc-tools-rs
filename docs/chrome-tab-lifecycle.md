@@ -21,6 +21,10 @@ instance/generationが一致し、記録から60秒以内の情報を使う。�
 `getNetworkPolicy` が合成した制約とrequest header設定を変更せず渡し、
 未取得・別session・期限切れではcreateTabとattachの前に失敗する。
 空の許可policyを生成したり、別sessionとして接続したりしない。
+終了・別turnへの移行・detachの失効世代はジョブ内の共有記録へ保存し、
+送信時の世代をattach応答時とcontext読込時にも照合する。
+終了前に送ったattachの遅延成功応答はcontextを再作成できず、
+released tabをclaimする前にも有効なcontextとChrome identityを確認する。
 この記録を取得する中継はジョブの監督プロセス内で動くため、CLIだけの更新では
 既に動く旧監督プロセスへ新しい記録機能は追加されない。
 

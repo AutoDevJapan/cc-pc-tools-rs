@@ -283,7 +283,8 @@ async fn close_record_with_attachment(
     let tabs = tabs
         .as_array()
         .ok_or_else(|| io::Error::other("invalid session tab inventory"))?;
-    if !tabs.iter().any(|t| t["id"].as_u64() == Some(r.tab)) {
+    let released = !has_tab(&Value::Array(tabs.clone()), r.tab)?;
+    if released {
         // A turn-end hook may release a marked tab from session control while
         // leaving it open. Reclaim only this positively recorded agent-created ID.
         let all = rpc.call("getUserTabs", r.params()).await?;
@@ -291,13 +292,18 @@ async fn close_record_with_attachment(
             verify_close_identity(&mut rpc, r).await?;
             return Ok(false);
         }
+    }
+    // Check all attachment authority before any claim changes browser ownership.
+    let _ = attachment(&info)?;
+    verify_close_identity(&mut rpc, r).await?;
+    if released {
+        let _ = attachment(&info)?;
         let mut p = r.params();
         p["tabId"] = json!(r.tab);
         rpc.call("claimUserTab", p).await?;
+        verify_close_identity(&mut rpc, r).await?;
     }
-    let p = attachment(&info)?;
-    verify_close_identity(&mut rpc, r).await?;
-    rpc.call("attach", p).await?;
+    rpc.call("attach", attachment(&info)?).await?;
     if let Err(error) = send_recorded_close(&mut rpc, r).await {
         if !debugger_not_attached(&error, r.tab) {
             return Err(error);
@@ -606,7 +612,10 @@ async fn forward_streams(
     let (mut ar, aw) = tokio::io::split(server);
     let aw = Arc::new(tokio::sync::Mutex::new(aw));
     let (mut br, mut bw) = tokio::io::split(client);
-    let pending = Arc::new(Mutex::new(HashMap::<String, (String, Value)>::new()));
+    let pending = Arc::new(Mutex::new(HashMap::<
+        String,
+        (String, Value, Option<context::AttachmentPermit>),
+    >::new()));
     let sending = pending.clone();
     let up = async {
         loop {
@@ -630,7 +639,12 @@ async fn forward_streams(
                     v["method"].as_str(),
                     Some("turnEnded" | "finalizeTabs" | "detach")
                 ) {
-                    context::invalidate(dir, &v["params"]["session_id"], &v["params"]["turn_id"]);
+                    context::invalidate(
+                        dir,
+                        &v["params"]["session_id"],
+                        &v["params"]["turn_id"],
+                        v["method"] != "detach",
+                    )?;
                 }
                 lifecycle::activity(dir)?;
                 if matches!(v["method"].as_str(), Some("createTab" | "attach"))
@@ -638,7 +652,15 @@ async fn forward_streams(
                 {
                     sending.lock().unwrap().insert(
                         v["id"].to_string(),
-                        (v["method"].as_str().unwrap().into(), v["params"].clone()),
+                        (
+                            v["method"].as_str().unwrap().into(),
+                            v["params"].clone(),
+                            if v["method"] == "attach" {
+                                context::begin_attachment(dir, job, &v["params"]).ok()
+                            } else {
+                                None
+                            },
+                        ),
                     );
                 }
             }
@@ -653,15 +675,15 @@ async fn forward_streams(
             let request = { pending.lock().unwrap().get(&v["id"].to_string()).cloned() };
             if v.get("method").is_none()
                 && v.get("error").is_none()
-                && let Some((method, params)) = &request
+                && let Some((method, params, Some(permit))) = &request
                 && method == "attach"
             {
                 // Observe the unmodified normal CUA policy only after the
                 // extension accepted it. Do not inject a fallback into CUA.
-                let _ = context::observe_attachment(dir, job, upstream, info, params);
+                let _ = context::publish_attachment(dir, job, upstream, info, params, permit);
             }
             if v.get("method").is_none()
-                && let Some((method, params)) = request
+                && let Some((method, params, _)) = request
                 && method == "createTab"
                 && v.get("error").is_none()
             {
@@ -1019,6 +1041,74 @@ mod tests {
         });
     }
     #[test]
+    fn late_attach_success_cannot_resurrect_an_ended_turn_context() {
+        runtime().unwrap().block_on(async {
+            for end_method in ["turnEnded", "finalizeTabs", "detach"] {
+                let root = tempfile::tempdir().unwrap();
+                fs::write(root.path().join("job.json"), json!({"id":"job","thread_id":"session","status":"running"}).to_string()).unwrap();
+                let info = json!({"type":"extension","family":"chrome","metadata":{"extensionInstanceId":"instance"},"browserTabMentions":{"generation":"generation"}});
+                let params = json!({"session_id":"session","turn_id":"turn","session_context":"live","tabId":42,"networkPolicy":{"constraints":[{"kind":"domains","mode":"denylist","patterns":["blocked.invalid"]}]}});
+                let (mut agent, proxy_agent) = tokio::io::duplex(65536);
+                let (proxy_backend, mut backend) = tokio::io::duplex(65536);
+                let proxy = forward_streams(proxy_agent, proxy_backend, "fixture", &info, root.path(), "job");
+                let check = async {
+                    write_frame(&mut agent, &json!({"id":1,"method":"attach","params":params})).await.unwrap();
+                    assert_eq!(read_frame(&mut backend).await.unwrap()["method"], "attach");
+                    write_frame(&mut agent, &json!({"id":2,"method":end_method,"params":{"session_id":"session","turn_id":"turn","session_context":"live","tabId":42,"keep":[]}})).await.unwrap();
+                    assert_eq!(read_frame(&mut backend).await.unwrap()["method"], end_method);
+                    // Only after invalidation has been forwarded does the first attach complete.
+                    write_frame(&mut backend, &json!({"id":1,"result":{}})).await.unwrap();
+                    assert_eq!(read_frame(&mut agent).await.unwrap()["id"], 1);
+                    assert!(context::load(root.path(), "job", &info).is_err(), "{end_method}: ended context must not reappear");
+                    assert!(!root.path().join("chrome-browser-context.json").exists());
+                    let pipe=format!(r"\\.\pipe\cc-chrome-ended-open-{}",uuid::Uuid::new_v4());
+                    let server=ServerOptions::new().first_pipe_instance(true).create(&pipe).unwrap();
+                    assert!(open_with_backend(root.path(),"job","https://allowed.invalid",pipe,info.clone()).await.is_err());
+                    assert!(tokio::time::timeout(Duration::from_millis(20),server.connect()).await.is_err(),"invalidated context: create0/attach0");
+                    write_frame(&mut backend, &json!({"id":2,"result":{}})).await.unwrap();
+                    assert_eq!(read_frame(&mut agent).await.unwrap()["id"], 2);
+                    agent.shutdown().await.unwrap();
+                };
+                let (result, ()) = tokio::time::timeout(Duration::from_secs(3), async {tokio::join!(proxy, check)}).await.unwrap();
+                assert!(result.is_err());
+            }
+        });
+    }
+    #[test]
+    fn released_tab_without_current_context_never_claims_or_attaches() {
+        runtime().unwrap().block_on(async {
+            for scenario in ["missing", "stale", "wrong-turn"] {
+                let root = tempfile::tempdir().unwrap();
+                fs::write(root.path().join("job.json"),json!({"id":"job","thread_id":"session","status":"running"}).to_string()).unwrap();
+                let pipe = format!(r"\\.\pipe\cc-chrome-no-claim-{}", uuid::Uuid::new_v4());
+                let mut server = ServerOptions::new().first_pipe_instance(true).create(&pipe).unwrap();
+                let record = Record{job:"job".into(),pipe,instance:"instance".into(),generation:"generation".into(),session:"session".into(),turn:"turn".into(),tab:42,created:100};
+                let info = json!({"type":"extension","family":"chrome","metadata":{"extensionInstanceId":"instance"},"browserTabMentions":{"generation":"generation"}});
+                if scenario != "missing" {
+                    context::observe_attachment(root.path(),"job",&record.pipe,&info,&json!({"session_id":"session","turn_id":if scenario=="wrong-turn" {"other-turn"} else {"turn"},"session_context":"live","networkPolicy":{"constraints":[{"kind":"domains","mode":"denylist","patterns":["blocked.invalid"]}]}})).unwrap();
+                    if scenario=="stale" {
+                        let path=root.path().join("chrome-browser-context.json");
+                        let mut value:Value=serde_json::from_slice(&fs::read(&path).unwrap()).unwrap();
+                        value["recorded_at"]=json!(epoch()-61);
+                        fs::write(path,value.to_string()).unwrap();
+                    }
+                }
+                let mock = async {
+                    server.connect().await.unwrap();
+                    for (method,result) in [("getInfo",info.clone()),("getTabs",json!([])),("getUserTabs",json!([{"id":42},{"id":99}]))] {
+                        let request=read_frame(&mut server).await.unwrap();
+                        assert_eq!(request["method"],method);
+                        write_frame(&mut server,&json!({"id":request["id"],"result":result})).await.unwrap();
+                    }
+                    let next=read_frame(&mut server).await;
+                    assert!(next.is_err(),"{scenario}: claim0/attach0, got {next:?}");
+                };
+                let (result,())=tokio::time::timeout(Duration::from_secs(4),async{tokio::join!(close_record_in(root.path(),&record),mock)}).await.unwrap();
+                assert!(result.is_err());
+            }
+        });
+    }
+    #[test]
     fn discovery_refuses_two_distinct_chrome_profiles() {
         runtime().unwrap().block_on(async {
             let mut servers = Vec::new();
@@ -1164,6 +1254,7 @@ mod tests {
                 for (method,result) in [
                     ("getInfo",json!({"type":"extension","family":"chrome","metadata":{"extensionInstanceId":"extension"},"browserTabMentions":{"generation":"generation"}})),
                     ("getTabs",json!([])),("getUserTabs",json!([{"id":"11"},{"id":"99"}])),
+                    ("getInfo",json!({"type":"extension","family":"chrome","metadata":{"extensionInstanceId":"extension"},"browserTabMentions":{"generation":"generation"}})),
                     ("claimUserTab",json!({"id":11})),
                     ("getInfo",json!({"type":"extension","family":"chrome","metadata":{"extensionInstanceId":"extension"},"browserTabMentions":{"generation":"generation"}})),
                     ("attach",json!({})),

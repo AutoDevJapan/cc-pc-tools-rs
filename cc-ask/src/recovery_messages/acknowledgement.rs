@@ -96,7 +96,10 @@ impl Binding {
         if request.request_id != self.request_id
             || request.notify
             || !request.images.is_empty()
-            || request.body.trim() != "受け取りました。"
+            || !matches!(
+                request.body.as_str(),
+                "受け取りました。" | "受け取りました。\n"
+            )
             || hash(&request.body) != self.body_sha256
             || request.destination.owner != self.owner_id
             || !matches!(&request.operation, Kind::Log {thread:Some(thread)} if thread == &self.thread_id)
@@ -120,14 +123,20 @@ impl Binding {
     pub(super) fn bind_effect(&self, effect: &mut Effect) {
         // Keep the original intent fingerprint, but distinguish identical short
         // acknowledgements to different messages or edited versions in GET recovery.
-        effect.content.push_str(&format!(
-            "\n-# owner-receipt:{}:{}",
+        effect
+            .content
+            .push_str(&format!("\n-# {}", self.version_marker()));
+    }
+
+    fn version_marker(&self) -> String {
+        format!(
+            "owner-receipt:{}:{}",
             self.reply_message_id,
             &hash(&format!(
                 "{}|{}",
                 self.reply_body_sha256, self.reply_edited_timestamp
             ))[..24]
-        ));
+        )
     }
 
     fn same_version(&self, other: &Self) -> bool {
@@ -319,6 +328,13 @@ fn existing_matches(message: &Value, binding: &Binding) -> bool {
         .as_str()
         .unwrap_or(&binding.reply_timestamp);
     let version = chrono::DateTime::parse_from_rfc3339(version).ok();
+    let markers: Vec<_> = body
+        .lines()
+        .filter_map(|line| line.strip_prefix("-# owner-receipt:"))
+        .collect();
+    let version_matches = markers.is_empty()
+        || (markers.len() == 1
+            && format!("owner-receipt:{}", markers[0]) == binding.version_marker());
     message["channel_id"] == binding.thread_id
         && message["author"]["id"] == binding.bot_id
         && message["author"]["bot"] == true
@@ -326,6 +342,7 @@ fn existing_matches(message: &Value, binding: &Binding) -> bool {
         && message["message_reference"]["message_id"] == binding.reply_message_id
         && message["message_reference"]["channel_id"] == binding.thread_id
         && text == "受け取りました。"
+        && version_matches
         && core::n(&message["id"]) > core::n(&json!(binding.reply_message_id))
         && stamp
             .zip(version)

@@ -27,6 +27,44 @@ func TestConversationReceiverRejectsArgumentsBeforeLoading(t *testing.T) {
 	}
 }
 
+func TestConversationReceiverDeliveryFailurePinsIDsAndRedactsRawDiagnostic(t *testing.T) {
+	f := conversationTest(t, true)
+	q := f.ask(t)
+	reply := f.reply(t, 8, "owner-private-body")
+	base := f.r.Run
+	f.r.Run = func(ctx context.Context, path string, args ...string) (string, error) {
+		if strings.HasSuffix(path, "scrub391.exe") {
+			return "private-root-and-token", errors.New("private-subprocess-error")
+		}
+		return base(ctx, path, args...)
+	}
+	h := receiverHealth(f.r.conversationReceiverTick(context.Background()))
+	if len(h.DeliveryFailures) != 1 {
+		t.Fatalf("missing failure correlation: %+v", h)
+	}
+	failure := h.DeliveryFailures[0]
+	if failure.Request != q.RequestID || failure.Todo != q.Todo || failure.Message != reply.Message || failure.Code != "task_guard_command" || failure.Stage != "receiver_delivery_check" {
+		t.Fatalf("incorrect fixed-stage association: %+v", failure)
+	}
+	b, _ := json.Marshal(h)
+	for _, secret := range []string{"private-root-and-token", "private-subprocess-error", "owner-private-body"} {
+		if strings.Contains(string(b), secret) {
+			t.Fatal("raw error/source leaked into health")
+		}
+	}
+}
+
+func TestConversationReceiverNormalHoldDoesNotProduceDeliveryFailure(t *testing.T) {
+	f := conversationTest(t, true)
+	f.ask(t)
+	f.reply(t, 8, "a")
+	f.mutateTodo(t, func(row map[string]any) { row["owner_stopped"] = true })
+	h := receiverHealth(f.r.conversationReceiverTick(context.Background()))
+	if len(h.DeliveryFailures) != 0 || len(h.Errors) != 0 || h.KnownHold != 1 {
+		t.Fatalf("normal hold mislabeled: %+v", h)
+	}
+}
+
 func TestConversationReceiverHonorsExistingBusyLock(t *testing.T) {
 	var out strings.Builder
 	code := conversationReceiverCLIWith(nil, &out, func() (*Runner, func(), error) {
@@ -411,7 +449,7 @@ func TestConversationReceiverHealthShapeAndAcquisitionCounts(t *testing.T) {
 			if json.Unmarshal([]byte(out.String()), &raw) != nil {
 				t.Fatal("invalid JSON", out.String())
 			}
-			keys := []string{"mode", "started_at", "finished_at", "questions", "attempted", "succeeded", "deferred", "processed", "audited", "recovered", "known_hold", "already_answered", "source_unknown", "media_deferred", "holds", "errors"}
+			keys := []string{"mode", "started_at", "finished_at", "questions", "attempted", "succeeded", "deferred", "processed", "audited", "recovered", "known_hold", "already_answered", "source_unknown", "media_deferred", "holds", "errors", "delivery_failures"}
 			if len(raw) != len(keys) {
 				t.Fatal("unexpected general health fields", out.String())
 			}

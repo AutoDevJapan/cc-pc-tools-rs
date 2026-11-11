@@ -275,7 +275,7 @@ reply_timestamp、reply_edited_timestamp（未編集はnull）、body_sha256（�
 これらを元のverified question:0、現在の本人返信、設定先と正規GETで照合する。
 正規化した回答receiptのSHAと生content SHAは別の値なので取り違えない。
 
-本文は「受け取りました。」だけ（前後の空白は可）、通知・メンション・添付は不可。
+本文は「受け取りました。」だけ（末尾の改行1つは可）、通知・メンション・添付は不可。
 用途と完全なlog入力を `recovery-owner-acknowledgements.json` に保存し、同じ本人返信の
 同じ本文・編集版を別requestへ結び直さない。POST前は本人返信版を再検証する。
 新しい送信はその返信へのmessage_reference付き、replied_user=false、silentで行い、
@@ -284,3 +284,9 @@ reply_timestamp、reply_edited_timestamp（未編集はnull）、body_sha256（�
 そのIDを保存・GETで読み戻して追送を抑止する。削除・改変された既存連絡を再作成しない。
 
 質問の一般ログ資格や本人回答・適用済み・閉鎖の記録は変更しない。
+
+受信専用healthの `delivery_failures` は配送前の失敗に対し、同周期のrequest_id・todo_id・
+message_id・固定stage/codeだけを残す。guardの生JSON、子プロセス出力、パス、本人の本文は
+含めない。正常なtask_hold/task_doneはこの異常一覧に入れず、取得失敗はpollの記録と区別する。
+既存の成功・保留・失敗の判定と元仕事の状態は変えない。過去の未保存理由をこの項目で遡って
+確定したことにはしない。

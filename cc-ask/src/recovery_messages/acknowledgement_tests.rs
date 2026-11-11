@@ -277,3 +277,35 @@ fn owner_receipt_new_message_with_identical_text_has_a_distinct_effect_and_nonce
     assert_ne!(tail[0].1["nonce"], tail[1].1["nonce"]);
     assert_ne!(tail[0].1["content"], tail[1].1["content"]);
 }
+
+#[test]
+fn owner_receipt_rejects_long_whitespace_without_multiple_posts() {
+    let f = Fixture::new();
+    let mut ctx = f.context();
+    let (args, path, mut proof) = receipt_case(&f, &mut ctx);
+    let body = format!("{}受け取りました。", " ".repeat(4000));
+    fs::write(&args.body_file, &body).unwrap();
+    proof["body_sha256"] = json!(format!("{:x}", Sha256::digest(body.as_bytes())));
+    fs::write(&path, serde_json::to_vec(&proof).unwrap()).unwrap();
+    let before = f.server.lock().unwrap().posts.len();
+    assert!(log_acknowledgement(&mut ctx, &args, &path).is_err());
+    assert_eq!(f.server.lock().unwrap().posts.len(), before);
+}
+
+#[test]
+fn owner_receipt_does_not_reuse_a_different_edited_version_marker() {
+    let f = Fixture::new();
+    let mut ctx = f.context();
+    let (args, path, proof) = receipt_case(&f, &mut ctx);
+    {
+        let mut server = f.server.lock().unwrap();
+        let thread = args.thread.as_ref().unwrap();
+        server.messages.get_mut(thread).unwrap().push(json!({"id":"9000", "channel_id":thread,
+            "author":{"id":BOT,"bot":true},"type":19,
+            "content":format!("受け取りました。\n\n-# recovery:other:log:0\n-# owner-receipt:{}:{}",proof["reply_message_id"].as_str().unwrap(),"0".repeat(24)),
+            "timestamp":"2026-10-12T00:00:02Z","flags":SILENT,"mentions":[],"mention_roles":[],
+            "mention_everyone":false,"attachments":[],"message_reference":{"message_id":proof["reply_message_id"],"channel_id":thread}}));
+    }
+    let result = check_acknowledgement(&mut ctx, &args, &path).unwrap();
+    assert!(result["existing_acknowledgement"].is_null());
+}

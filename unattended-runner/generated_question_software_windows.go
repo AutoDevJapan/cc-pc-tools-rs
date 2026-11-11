@@ -26,17 +26,8 @@ func generatedQuestionOpenSoftware(ctx context.Context, path string) (io.Closer,
 	if !generatedQuestionInstalledPath(cache, path) {
 		return nil, errConversationMedia
 	}
-	for current := filepath.Dir(path); ; current = filepath.Dir(current) {
-		info, err := os.Lstat(current)
-		if err != nil || !info.IsDir() || info.Mode()&os.ModeSymlink != 0 {
-			return nil, errConversationMedia
-		}
-		if conversationMediaSamePath(current, cache) {
-			break
-		}
-		if filepath.Dir(current) == current {
-			return nil, errConversationMedia
-		}
+	if generatedQuestionSoftwareParents(cache, path, os.Lstat) != nil {
+		return nil, errConversationMedia
 	}
 	p, err := syscall.UTF16PtrFromString(path)
 	if err != nil {
@@ -94,4 +85,19 @@ func generatedQuestionInstalledPath(cache, path string) bool {
 
 func generatedQuestionSoftwareFacts(valid bool, publisher string, sameOwner bool) bool {
 	return valid && publisher == "OpenAI OpCo, LLC" && sameOwner
+}
+
+func generatedQuestionSoftwareParents(cache, path string, lstat func(string) (os.FileInfo, error)) error {
+	for current := filepath.Dir(path); ; current = filepath.Dir(current) {
+		info, err := lstat(current)
+		if err != nil || !info.IsDir() || conversationMediaReparse(info) {
+			return errConversationMedia
+		}
+		if conversationMediaSamePath(current, cache) {
+			return nil
+		}
+		if filepath.Dir(current) == current {
+			return errConversationMedia
+		}
+	}
 }

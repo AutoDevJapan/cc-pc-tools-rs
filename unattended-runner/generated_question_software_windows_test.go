@@ -80,3 +80,23 @@ func TestGeneratedQuestionSoftwareRequiresSignerPublisherAndOwner(t *testing.T) 
 		}
 	}
 }
+
+func TestGeneratedQuestionSoftwareRejectsNonSymlinkParentReparse(t *testing.T) {
+	root := filepath.Clean(t.TempDir())
+	info, err := os.Stat(root)
+	if err != nil {
+		t.Fatal(err)
+	}
+	path := filepath.Join(root, "OpenAI", "Codex", "bin", "0123456789abcdef", "codex.exe")
+	if err := generatedQuestionSoftwareParents(root, path, func(string) (os.FileInfo, error) { return info, nil }); err != nil {
+		t.Fatal("plain parent control failed", err)
+	}
+	reads := 0
+	err = generatedQuestionSoftwareParents(root, path, func(string) (os.FileInfo, error) { reads++; return conversationMediaReparseInfo{info}, nil })
+	if err == nil {
+		t.Fatal("non-symlink reparse parent accepted")
+	}
+	if reads != 1 {
+		t.Fatal("continued through rejected parent", reads)
+	}
+}

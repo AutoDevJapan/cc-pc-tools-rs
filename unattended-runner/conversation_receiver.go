@@ -28,27 +28,62 @@ type conversationReceiverCounts struct {
 	SourceUnknown int
 	MediaDeferred int
 	Holds         []conversationReceiverHold
+	Failures      []conversationReceiverFailure
+}
+
+// Fixed codes and exact IDs only: never persist subprocess output or source text.
+type conversationReceiverFailure struct {
+	Request string `json:"request_id"`
+	Todo    uint64 `json:"todo_id"`
+	Message string `json:"message_id"`
+	Stage   string `json:"stage"`
+	Code    string `json:"code"`
+}
+
+type conversationDiagnosticError struct {
+	code string
+	err  error
+}
+
+func (e *conversationDiagnosticError) Error() string { return e.err.Error() }
+func (e *conversationDiagnosticError) Unwrap() error { return e.err }
+func conversationDiagnostic(code string, err error) error {
+	return &conversationDiagnosticError{code: code, err: err}
+}
+func receiverDiagnosticCode(err error) string {
+	var diagnostic *conversationDiagnosticError
+	if errors.As(err, &diagnostic) {
+		switch diagnostic.code {
+		case "task_store_read", "task_row_decode", "task_duplicate", "task_scope_unavailable",
+			"task_guard_command", "task_guard_json", "task_guard_unverified", "task_guard_protected",
+			"task_question_metadata", "task_question_reply_qualification", "task_project_mismatch",
+			"task_recovery_unverified", "held_source_unverified", "source_without_recipient":
+			return diagnostic.code
+		}
+	}
+	return "delivery_scope_unverified"
 }
 
 // This projection reports only work performed by the receiver, with explicit
 // zeros. General discovery/scheduler health is deliberately not serialized.
 type conversationReceiverHealth struct {
-	Mode            string                     `json:"mode"`
-	Started         string                     `json:"started_at"`
-	Finished        string                     `json:"finished_at"`
-	Questions       int                        `json:"questions"`
-	Attempted       int                        `json:"attempted"`
-	Succeeded       int                        `json:"succeeded"`
-	Deferred        int                        `json:"deferred"`
-	Processed       int                        `json:"processed"`
-	Audited         int                        `json:"audited"`
-	Recovered       int                        `json:"recovered"`
-	KnownHold       int                        `json:"known_hold"`
-	AlreadyAnswered int                        `json:"already_answered"`
-	SourceUnknown   int                        `json:"source_unknown"`
-	MediaDeferred   int                        `json:"media_deferred"`
-	Holds           []conversationReceiverHold `json:"holds"`
-	Errors          []string                   `json:"errors"`
+	Mode             string                        `json:"mode"`
+	Started          string                        `json:"started_at"`
+	Finished         string                        `json:"finished_at"`
+	Questions        int                           `json:"questions"`
+	Attempted        int                           `json:"attempted"`
+	Succeeded        int                           `json:"succeeded"`
+	Deferred         int                           `json:"deferred"`
+	Processed        int                           `json:"processed"`
+	Audited          int                           `json:"audited"`
+	Recovered        int                           `json:"recovered"`
+	KnownHold        int                           `json:"known_hold"`
+	AlreadyAnswered  int                           `json:"already_answered"`
+	SourceUnknown    int                           `json:"source_unknown"`
+	MediaDeferred    int                           `json:"media_deferred"`
+	Holds            []conversationReceiverHold    `json:"holds"`
+	Errors           []string                      `json:"errors"`
+	DeliveryFailures []conversationReceiverFailure `json:"delivery_failures"`
 }
 
 func receiverHealth(h Health) conversationReceiverHealth {
@@ -62,7 +97,8 @@ func receiverHealth(h Health) conversationReceiverHealth {
 		Succeeded: max(0, h.ConversationWaiting-h.ConversationPollDeferred), Deferred: h.ConversationPollDeferred,
 		Processed: c.Processed, Audited: c.Audited, Recovered: c.Recovered, KnownHold: len(holds),
 		AlreadyAnswered: h.ReceiverAlreadyAnswered, SourceUnknown: c.SourceUnknown,
-		MediaDeferred: c.MediaDeferred, Holds: holds, Errors: append([]string{}, h.Errors...)}
+		MediaDeferred: c.MediaDeferred, Holds: holds, Errors: append([]string{}, h.Errors...),
+		DeliveryFailures: append([]conversationReceiverFailure{}, c.Failures...)}
 }
 
 func receiverDelivered(req *Request) bool {
@@ -143,7 +179,10 @@ func (r *Runner) conversationReceiverDelivery(ctx context.Context, q Conversatio
 	row, err := r.conversationDeliveryTask(ctx, q, req)
 	if err != nil || row.Project != q.Project {
 		h.ReceiverDeliveryHeld++
-		return false, false, errors.New("receiver task scope unverified")
+		if err != nil {
+			return false, false, err
+		}
+		return false, false, conversationDiagnostic("task_project_mismatch", errors.New("receiver task scope unverified"))
 	}
 	canonicalBefore := q.Actor == nil && !receiverDelivered(req) && r.conversationReceiverAnswered(ctx, row, q, proof, reply, req)
 	if req.Phase == "conversation_source_verified" && canonicalBefore {
@@ -152,7 +191,7 @@ func (r *Runner) conversationReceiverDelivery(ctx context.Context, q Conversatio
 	}
 	if row.Status == "recovery_unverified" {
 		h.ReceiverDeliveryHeld++
-		return false, false, errors.New("receiver task recovery unverified")
+		return false, false, conversationDiagnostic("task_recovery_unverified", errors.New("receiver task recovery unverified"))
 	}
 	if row.Status == "done" || conversationActorHeld(row.conversationState) {
 		// Holding an explicitly stopped/completed task is a normal outcome,
@@ -162,7 +201,7 @@ func (r *Runner) conversationReceiverDelivery(ctx context.Context, q Conversatio
 		if err != nil || !ready {
 			h.ReceiverDeliveryHeld++
 			h.receiver.SourceUnknown++
-			return false, false, errors.New("receiver held source unverified")
+			return false, false, conversationDiagnostic("held_source_unverified", errors.New("receiver held source unverified"))
 		}
 		h.ReceiverDeliveryHeld++
 		reason := "task_hold"
@@ -175,7 +214,7 @@ func (r *Runner) conversationReceiverDelivery(ctx context.Context, q Conversatio
 	if req.Phase == "conversation_source_verified" && req.Todo == 0 {
 		h.ReceiverDeliveryHeld++
 		h.receiver.SourceUnknown++
-		return false, false, errors.New("receiver retains source without task mutation")
+		return false, false, conversationDiagnostic("source_without_recipient", errors.New("receiver retains source without task mutation"))
 	}
 	return true, canonicalBefore, nil
 }

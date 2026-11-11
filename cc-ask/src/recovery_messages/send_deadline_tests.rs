@@ -131,7 +131,8 @@ mod send_deadline_tests {
                 };
                 request.images = images.iter().map(|i| i.receipt.clone()).collect();
                 request.fingerprint = request.fingerprint().unwrap();
-                let result = execute_inner(&mut ctx, Some(request), None, &images, None, None);
+                let result =
+                    execute_inner(&mut ctx, Some(request), None, &images, None, None, None);
                 assert_eq!(
                     result.is_err(),
                     expired,

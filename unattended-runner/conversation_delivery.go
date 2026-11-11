@@ -818,6 +818,11 @@ func (r *Runner) processConversationReplies(ctx context.Context, index *conversa
 			canonicalBefore = prior
 			if checkErr != nil {
 				health.Errors = append(health.Errors, "conversation_receiver_delivery_held")
+				if health.receiver != nil {
+					health.receiver.Failures = append(health.receiver.Failures, conversationReceiverFailure{
+						Request: q.RequestID, Todo: q.Todo, Message: reply.Message,
+						Stage: "receiver_delivery_check", Code: receiverDiagnosticCode(checkErr)})
+				}
 			}
 			if !ready {
 				continue

@@ -26,6 +26,7 @@ use std::{
 };
 
 const API: &str = "https://discord.com/api/v10";
+mod acknowledgement;
 mod clarification;
 mod pending_reconcile;
 mod program_question;
@@ -623,6 +624,7 @@ pub fn close(ctx: &mut Context, args: &CloseArgs) -> Result<Value> {
         destination,
         bot: bot.into(),
         allow_new_posts: false,
+        acknowledgement: None,
     };
     let forum = api.get(&format!("/channels/{}", api.destination.forum))?;
     if forum["id"] != api.destination.forum
@@ -2027,6 +2029,7 @@ struct RecoveryApi<'a> {
     destination: Destination,
     bot: String,
     allow_new_posts: bool,
+    acknowledgement: Option<(acknowledgement::Binding, PathBuf)>,
 }
 
 impl<'a> RecoveryApi<'a> {
@@ -2075,6 +2078,7 @@ impl<'a> RecoveryApi<'a> {
             destination: request.destination.clone(),
             bot,
             allow_new_posts: true,
+            acknowledgement: None,
         };
         let channel = api.get(&format!("/channels/{}", api.destination.forum))?;
         if channel["id"] != api.destination.forum
@@ -2347,6 +2351,11 @@ impl<'a> RecoveryApi<'a> {
         {
             return Err("recovery GET body/author/thread verification failed".into());
         }
+        if let Some((binding, _)) = &self.acknowledgement {
+            if matches!(request.operation, Kind::Log { .. }) {
+                binding.check_posted(request, &message)?;
+            }
+        }
         let flags = message["flags"]
             .as_u64()
             .ok_or("recovery GET flags missing")?;
@@ -2423,7 +2432,16 @@ impl<'a> RecoveryApi<'a> {
                 format!("/channels/{}/messages", snowflake(thread)?)
             }
         };
-        let payload = effect.payload(&self.destination.owner);
+        if let Some((binding, home)) = self.acknowledgement.clone() {
+            acknowledgement::authorize(self, ledger, &home, request, &binding, true, true)?;
+            if acknowledgement::existing(self, ledger, &home, request, &binding, true)?.is_some() {
+                return Err("existing owner acknowledgement found before POST; retry the same request for GET readback".into());
+            }
+        }
+        let mut payload = effect.payload(&self.destination.owner);
+        if let Some((binding, _)) = &self.acknowledgement {
+            payload["message_reference"] = binding.message_reference();
+        }
         let mut body = match &effect.target {
             Target::Forum { title } => {
                 json!({"name":title,"message":payload,"auto_archive_duration":1440})
@@ -2431,8 +2449,12 @@ impl<'a> RecoveryApi<'a> {
             Target::Thread { .. } => payload,
         };
         if matches!(effect.target, Target::Thread { .. }) {
-            body["nonce"] =
-                json!(&digest(&json!({"fingerprint":request.fingerprint,"phase":phase}))?[..24]);
+            let nonce = if let Some((binding, _)) = &self.acknowledgement {
+                binding.nonce(request, phase)?
+            } else {
+                digest(&json!({"fingerprint":request.fingerprint,"phase":phase}))?
+            };
+            body["nonce"] = json!(&nonce[..24]);
             body["enforce_nonce"] = json!(true);
         }
         // Sample the monotonic origin before reading wall time: a scheduling
@@ -2801,6 +2823,42 @@ pub fn log(ctx: &mut Context, args: &LogArgs) -> Result<Value> {
     execute(ctx, incoming, &images)
 }
 
+/// Deliver only the acknowledgement bound to one verified owner reply.
+pub fn log_acknowledgement(ctx: &mut Context, args: &LogArgs, manifest: &Path) -> Result<Value> {
+    if args.notify || !args.attach.is_empty() || args.thread.is_none() {
+        return Err("acknowledgement requires the exact silent text-only destination".into());
+    }
+    let binding = acknowledgement::Binding::read(manifest)?;
+    let (request, _) = prepare_clarification(ctx, args)?;
+    binding.check_input(&request)?;
+    execute_inner(ctx, Some(request), None, &[], None, None, Some(&binding))
+}
+
+pub fn check_acknowledgement(ctx: &mut Context, args: &LogArgs, manifest: &Path) -> Result<Value> {
+    if args.notify || !args.attach.is_empty() || args.thread.is_none() {
+        return Err("acknowledgement check requires the exact silent text-only destination".into());
+    }
+    let binding = acknowledgement::Binding::read(manifest)?;
+    let (request, _) = prepare_clarification(ctx, args)?;
+    binding.check_input(&request)?;
+    let home = ctx.here.clone();
+    if !fs::symlink_metadata(home.join(LOCK))
+        .is_ok_and(|m| m.is_file() && !m.file_type().is_symlink())
+    {
+        return Err("acknowledgement requires an existing question ledger lock".into());
+    }
+    let _lock = ByteLock::acquire(&home.join(LOCK), Duration::ZERO)?;
+    let mut ledger = Ledger::load(&home)?;
+    let mut api = RecoveryApi::inspect(ctx, &mut ledger, &request)?;
+    acknowledgement::authorize(&mut api, &ledger, &home, &request, &binding, false, false)?;
+    let existing = acknowledgement::existing(&mut api, &ledger, &home, &request, &binding, false)?;
+    Ok(
+        json!({"domain":DOMAIN,"request_id":request.request_id,"check_only":true,
+        "delivery":"not_sent","ledger_written":false,"existing_acknowledgement":existing,
+        "body_sha256":format!("{:x}",Sha256::digest(request.body.as_bytes()))}),
+    )
+}
+
 /// Resume an exact explanation through the same log delivery journal.
 pub fn log_clarification(ctx: &mut Context, args: &LogArgs, manifest: &Path) -> Result<Value> {
     if args.notify || !args.attach.is_empty() || args.thread.is_none() {
@@ -2809,7 +2867,7 @@ pub fn log_clarification(ctx: &mut Context, args: &LogArgs, manifest: &Path) -> 
     let binding = clarification::Binding::read(manifest)?;
     let (request, _) = prepare_clarification(ctx, args)?;
     binding.check_input(&request)?;
-    execute_inner(ctx, Some(request), None, &[], Some(&binding), None)
+    execute_inner(ctx, Some(request), None, &[], Some(&binding), None, None)
 }
 
 fn prepare_clarification(ctx: &mut Context, args: &LogArgs) -> Result<(Request, String)> {
@@ -2917,6 +2975,7 @@ pub fn ask(ctx: &mut Context, args: &AskArgs) -> Result<Value> {
         &images,
         None,
         args.conversation_source_request.as_deref(),
+        None,
     )
 }
 
@@ -3191,7 +3250,7 @@ pub fn repair_origin(ctx: &mut Context, args: &RepairOriginArgs) -> Result<Value
 }
 
 fn execute(ctx: &mut Context, incoming: Request, images: &[Image]) -> Result<Value> {
-    execute_inner(ctx, Some(incoming), None, images, None, None)
+    execute_inner(ctx, Some(incoming), None, images, None, None, None)
 }
 
 // --notify requests attention, but a report alone never requires owner action.
@@ -3259,7 +3318,15 @@ fn execute_saved(
     todo_id: u64,
     images: &[Image],
 ) -> Result<Value> {
-    execute_inner(ctx, None, Some((request_id, todo_id)), images, None, None)
+    execute_inner(
+        ctx,
+        None,
+        Some((request_id, todo_id)),
+        images,
+        None,
+        None,
+        None,
+    )
 }
 
 fn execute_inner(
@@ -3269,17 +3336,27 @@ fn execute_inner(
     images: &[Image],
     clarification: Option<&clarification::Binding>,
     source_request: Option<&str>,
+    acknowledgement: Option<&acknowledgement::Binding>,
 ) -> Result<Value> {
     let home = ctx.here.clone();
     ensure_storage(&home)?;
-    if clarification.is_some()
+    if (clarification.is_some() || acknowledgement.is_some())
         && !fs::symlink_metadata(home.join(LOCK))
             .is_ok_and(|m| m.is_file() && !m.file_type().is_symlink())
     {
-        return Err("clarification requires an existing original question lock".into());
+        return Err("purpose-bound message requires an existing original question lock".into());
     }
     let _lock = ByteLock::acquire(&home.join(LOCK), Duration::ZERO)?;
     let mut ledger = Ledger::load(&home)?;
+    if let (Some(binding), Some(request)) = (acknowledgement, incoming.as_ref()) {
+        let mut api = RecoveryApi::inspect(ctx, &mut ledger, request)?;
+        acknowledgement::authorize(&mut api, &ledger, &home, request, binding, true, false)?;
+        if let Some(existing) =
+            acknowledgement::existing(&mut api, &ledger, &home, request, binding, true)?
+        {
+            return Ok(existing);
+        }
+    }
     if let (Some(binding), Some(request)) = (clarification, incoming.as_ref()) {
         let mut api = RecoveryApi::inspect(ctx, &mut ledger, request)?;
         // Authenticate against the independent question before creating the
@@ -3354,7 +3431,19 @@ fn execute_inner(
             "native recovered intent is stage-only; existing async question retained".into(),
         );
     }
-    let reserved = reserve(&mut ledger, &home, &incoming)?;
+    // Receipt identity is the pinned source reply/version, not its fixed short
+    // text. A different reply may legitimately have an identical log fingerprint.
+    let reserved = if acknowledgement.is_some() && ledger.request(&incoming.request_id).is_none() {
+        ledger.append(
+            &home,
+            Event::Intent {
+                request: Box::new(incoming.clone()),
+            },
+        )?;
+        incoming.clone()
+    } else {
+        reserve(&mut ledger, &home, &incoming)?
+    };
     let request = ledger.effective_request(&reserved)?;
     if request.native_evidence.is_some() {
         return Err(
@@ -3376,6 +3465,10 @@ fn execute_inner(
         .map(|normal| source_reference::qualify(ctx, &request, normal))
         .transpose()?;
     let mut api = RecoveryApi::bind(ctx, &mut ledger, &request)?;
+    if let Some(binding) = acknowledgement {
+        acknowledgement::authorize(&mut api, &ledger, &home, &request, binding, true, false)?;
+        api.acknowledgement = Some((binding.clone(), home.clone()));
+    }
     if let Some(proof) = &reference {
         source_reference::verify_source(&mut api, proof)?;
     }
@@ -3395,7 +3488,7 @@ fn execute_inner(
                 request.notify && log_requires_owner_action(&request.body)?
             };
             if let Some(thread) = thread {
-                if clarification.is_none() {
+                if clarification.is_none() && acknowledgement.is_none() {
                     let is_progress =
                         RecoveryApi::known_progress(&ledger, &api.destination, &api.bot, thread)
                             .ok_or(
@@ -3425,7 +3518,7 @@ fn execute_inner(
                         title: request.title.clone(),
                     },
                 };
-                let delivery = effect(
+                let mut delivery = effect(
                     &request,
                     &phase,
                     target,
@@ -3433,6 +3526,9 @@ fn execute_inner(
                     index == 0 && notify,
                     index == 0,
                 )?;
+                if let Some(binding) = acknowledgement {
+                    binding.bind_effect(&mut delivery);
+                }
                 let receipt = ensure(
                     &mut api,
                     &mut ledger,
@@ -3795,6 +3891,7 @@ pub fn replies(ctx: &mut Context, args: &RepliesArgs) -> Result<Value> {
         destination,
         bot: bot.into(),
         allow_new_posts: false,
+        acknowledgement: None,
     };
     let evidence = owner_replies(&mut api, &ledger, request)?;
     // Extra version evidence is outside the existing reply hashes/close inputs.
@@ -4081,6 +4178,10 @@ mod tests {
             "content":payload["content"],"flags":payload["flags"],"mentions":mentions,
             "mention_everyone":false,"mention_roles":[],"type":0,"timestamp":"2026-10-12T00:00:00+00:00",
             "attachments":payload.get("attachments").cloned().unwrap_or(json!([]))});
+        if let Some(reference) = payload.get("message_reference") {
+            message["message_reference"] = reference.clone();
+            message["type"] = json!(19);
+        }
         if state.wrong_flags {
             message["flags"] = json!(core::n(&message["flags"]) ^ SILENT);
         }
@@ -4498,6 +4599,10 @@ mod tests {
 
     mod pending_reconcile_tests {
         include!("recovery_messages/pending_reconcile_tests.rs");
+    }
+
+    mod acknowledgement_tests {
+        include!("recovery_messages/acknowledgement_tests.rs");
     }
 
     fn clarification_fixture(f: &Fixture, ctx: &mut Context) -> (LogArgs, PathBuf, Value) {

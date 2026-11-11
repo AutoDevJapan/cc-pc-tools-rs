@@ -198,6 +198,11 @@ func ownerRefreshIdentityRequestWith(path, request, home string, now func() time
 		if claim.Repository != "" && !strings.EqualFold(claim.Repository, repo) {
 			return 0, "", "", false
 		}
+		unlock, locked := ownerLockIdentityRefresh(ctx, home, repo)
+		if !locked {
+			return 0, "", "", false
+		}
+		defer unlock()
 		if ownerRefreshCooling(home, repo, now()) {
 			id, name, owner, ok := ownerCachedIdentityAt(ctx, repo, home, now, func(context.Context, string) (int64, string, string, bool) { return 0, "", "", false })
 			identityReady = identityReady || ok
@@ -208,6 +213,9 @@ func ownerRefreshIdentityRequestWith(path, request, home string, now func() time
 			return fetch(ctx, repository)
 		}, ownerIdentityAging(repo, home, now()))
 		identityReady = identityReady || ok
+		if !ok && attempted != "" {
+			_ = ownerWriteSealed(home, ownerRefreshFailureName(attempted), ownerRefreshFailure{"owner-source-refresh-failure-v1", attempted, hashBytes(ownerDepartmentCatalog), now().Unix()})
+		}
 		return id, name, owner, ok
 	}, plain: currentPlain, denied: legacyMatch, membership: ownerDepartmentMembership}
 	_ = query(ctx, path, access)

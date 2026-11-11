@@ -365,6 +365,9 @@ func (r *Runner) conversationTaskForQuestion(ctx context.Context, id uint64, que
 			case proof.Client != nil && *proof.Client:
 				code = "task_guard_protected"
 			}
+			if err != nil {
+				return nil, conversationDiagnostic(code, err)
+			}
 			return nil, conversationDiagnostic(code, errors.New("conversation task scope unverified"))
 		}
 		var original taskQuestionState

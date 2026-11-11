@@ -295,7 +295,7 @@ func (r *Runner) conversationDeliveryTask(ctx context.Context, q ConversationQue
 	if verifyErr != nil {
 		// Retain the original fixed scope reason. A failed fallback does not
 		// establish which additional source requirement failed.
-		return nil, conversationDiagnostic(receiverDiagnosticCode(err), errTaskQuestion)
+		return nil, err
 	}
 	return r.conversationTaskForQuestion(ctx, q.Todo, &input)
 }

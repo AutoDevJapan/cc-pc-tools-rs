@@ -14,6 +14,11 @@ import (
 // the minute cadence; this command never runs the general periodic pipeline.
 const conversationReceiverBudget = 50 * time.Second
 
+// One slow unchanged-source audit must leave room for the other questions.
+// Captures/transactions still run sequentially, with the original identity and
+// locks. New/edited answers retain the original transaction deadline.
+const conversationReceiverReplyBudget = 5 * time.Second
+
 type conversationReceiverHold struct {
 	Request string `json:"request_id"`
 	Todo    uint64 `json:"todo_id"`
@@ -33,11 +38,14 @@ type conversationReceiverCounts struct {
 
 // Fixed codes and exact IDs only: never persist subprocess output or source text.
 type conversationReceiverFailure struct {
-	Request string `json:"request_id"`
-	Todo    uint64 `json:"todo_id"`
-	Message string `json:"message_id"`
-	Stage   string `json:"stage"`
-	Code    string `json:"code"`
+	Request          string `json:"request_id"`
+	Todo             uint64 `json:"todo_id"`
+	Message          string `json:"message_id"`
+	Stage            string `json:"stage"`
+	Code             string `json:"code"`
+	CommandCause     string `json:"command_cause,omitempty"`
+	CommandElapsedMS *int64 `json:"command_elapsed_ms,omitempty"`
+	CommandExitCode  *int   `json:"command_exit_code,omitempty"`
 }
 
 type conversationDiagnosticError struct {
@@ -45,7 +53,12 @@ type conversationDiagnosticError struct {
 	err  error
 }
 
-func (e *conversationDiagnosticError) Error() string { return e.err.Error() }
+func (e *conversationDiagnosticError) Error() string {
+	if e.code == "task_guard_command" {
+		return "conversation task scope unverified"
+	}
+	return e.err.Error()
+}
 func (e *conversationDiagnosticError) Unwrap() error { return e.err }
 func conversationDiagnostic(code string, err error) error {
 	return &conversationDiagnosticError{code: code, err: err}
@@ -62,6 +75,23 @@ func receiverDiagnosticCode(err error) string {
 		}
 	}
 	return "delivery_scope_unverified"
+}
+
+func receiverFailure(q ConversationQuestion, reply conversationReply, err error) conversationReceiverFailure {
+	failure := conversationReceiverFailure{Request: q.RequestID, Todo: q.Todo, Message: reply.Message,
+		Stage: "receiver_delivery_check", Code: receiverDiagnosticCode(err)}
+	var command *commandFailure
+	if failure.Code == "task_guard_command" && errors.As(err, &command) {
+		failure.CommandCause, failure.CommandElapsedMS, failure.CommandExitCode = command.Cause, &command.ElapsedMS, command.ExitCode
+	} else if failure.Code == "task_guard_command" {
+		switch {
+		case errors.Is(err, context.DeadlineExceeded):
+			failure.CommandCause = "caller_deadline"
+		case errors.Is(err, context.Canceled):
+			failure.CommandCause = "caller_cancelled"
+		}
+	}
+	return failure
 }
 
 // This projection reports only work performed by the receiver, with explicit

@@ -78,6 +78,14 @@ func TestOwnerExplicitRefreshSingleflightTwoProcesses(t *testing.T) {
 		t.Fatal(err)
 	}
 	children := []*exec.Cmd{}
+	defer func() {
+		for _, c := range children {
+			if c.ProcessState == nil {
+				c.Process.Kill()
+				c.Wait()
+			}
+		}
+	}()
 	for i := 0; i < 2; i++ {
 		cmd := exec.Command(os.Args[0], "-test.run=^TestOwnerExplicitRefreshSingleflightChild$")
 		cmd.SysProcAttr = &syscall.SysProcAttr{HideWindow: true, CreationFlags: 0x08000000}
@@ -91,14 +99,7 @@ func TestOwnerExplicitRefreshSingleflightTwoProcesses(t *testing.T) {
 		}
 		children = append(children, cmd)
 	}
-	defer func() {
-		for _, c := range children {
-			if c.ProcessState == nil {
-				c.Process.Kill()
-				c.Wait()
-			}
-		}
-	}()
+
 	deadline := time.Now().Add(6 * time.Second)
 	for {
 		_, a := os.Stat(filepath.Join(home, "ready0"))

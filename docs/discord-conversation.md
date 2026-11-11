@@ -258,3 +258,29 @@ Botが所有する設定先のスレッドであることを検査し、変更�
 確認済みの質問を人が開き直した場合は `reopened` を記録し、自動で閉じ直さない。
 すでにアーカイブされている質問も現在の全返信を確認する。新しい反映が不足していれば
 以前の閉鎖記録を完了の根拠に使わない。旧台帳と旧閉鎖記録は変更しない。
+
+## 元質問への短い受領連絡
+
+通常の `recovery-log --thread` は質問を進捗スレッドとして使えない。
+本人返信の受領だけを元質問へ返す場合は、同じ固定requestと本文のまま
+`recovery-log --acknowledgement-file <JSON>` を使う。
+`--check-only` は正規GETとローカル記録の読取だけで、POST・用途登録をしない。
+`--clarification-file` とは併用できず、説明を求めたことにはしない。
+
+用途JSONのdomainは `discord-owner-reply-acknowledgement-v1`、purposeは
+`acknowledge_owner_reply`。必須項目はrequest_id、question_request_id（送信CLIの元ask ID）、
+todo_id、thread_id、question_message_id、question_fingerprint、question_body_sha256、
+bot_id、owner_id、reply_message_id、reply_body_sha256（Discordの生contentのSHA256）、
+reply_timestamp、reply_edited_timestamp（未編集はnull）、body_sha256（固定log入力）とする。
+これらを元のverified question:0、現在の本人返信、設定先と正規GETで照合する。
+正規化した回答receiptのSHAと生content SHAは別の値なので取り違えない。
+
+本文は「受け取りました。」だけ（前後の空白は可）、通知・メンション・添付は不可。
+用途と完全なlog入力を `recovery-owner-acknowledgements.json` に保存し、同じ本人返信の
+同じ本文・編集版を別requestへ結び直さない。POST前は本人返信版を再検証する。
+新しい送信はその返信へのmessage_reference付き、replied_user=false、silentで行い、
+既存のPending/Posted/Verifiedで応答紛失と再起動を回収する。成否不明時はGETだけで、
+同じ要求を再POSTしない。他経路の同じ返信版に結ぶ無通知の受領連絡が既にあれば、
+そのIDを保存・GETで読み戻して追送を抑止する。削除・改変された既存連絡を再作成しない。
+
+質問の一般ログ資格や本人回答・適用済み・閉鎖の記録は変更しない。

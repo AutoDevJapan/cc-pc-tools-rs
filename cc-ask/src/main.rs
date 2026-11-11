@@ -19,12 +19,17 @@ enum Commands {
     /// Audit full archived histories with an ID-only checkpoint; never posts or launches.
     AuditHistory(cc_ask::history_audit::Args),
     /// Send a new explicitly requested message using independent append-only receipts.
+    #[command(group(clap::ArgGroup::new("clarification_file_or_acknowledgement_file")
+        .args(["clarification_file", "acknowledgement_file"]).multiple(false)))]
     RecoveryLog {
         #[command(flatten)]
         args: cc_ask::recovery_messages::LogArgs,
         #[arg(long)]
         clarification_file: Option<PathBuf>,
-        #[arg(long, requires = "clarification_file")]
+        /// Bind a silent receipt to one exact verified owner reply version.
+        #[arg(long, conflicts_with = "clarification_file")]
+        acknowledgement_file: Option<PathBuf>,
+        #[arg(long, requires = "clarification_file_or_acknowledgement_file")]
         check_only: bool,
     },
     /// Create one new owner decision and its separate silent progress post.
@@ -394,14 +399,24 @@ fn run(command: Commands) -> Result<()> {
         Commands::RecoveryLog {
             args,
             clarification_file,
+            acknowledgement_file,
             check_only,
         } => {
-            let result = match clarification_file {
-                Some(path) if check_only => {
+            let result = match (clarification_file, acknowledgement_file) {
+                (None, Some(path)) if check_only => {
+                    cc_ask::recovery_messages::check_acknowledgement(&mut ctx, &args, &path)?
+                }
+                (None, Some(path)) => {
+                    cc_ask::recovery_messages::log_acknowledgement(&mut ctx, &args, &path)?
+                }
+                (Some(path), None) if check_only => {
                     cc_ask::recovery_messages::check_clarification(&mut ctx, &args, &path)?
                 }
-                Some(path) => cc_ask::recovery_messages::log_clarification(&mut ctx, &args, &path)?,
-                None => cc_ask::recovery_messages::log(&mut ctx, &args)?,
+                (Some(path), None) => {
+                    cc_ask::recovery_messages::log_clarification(&mut ctx, &args, &path)?
+                }
+                (None, None) => cc_ask::recovery_messages::log(&mut ctx, &args)?,
+                _ => return Err("one recovery purpose binding is required".into()),
             };
             println!("{result}");
         }
@@ -733,6 +748,36 @@ mod tests {
         assert_eq!(args.message.as_deref(), Some("123"));
         assert_eq!(args.todo_id, Some(2472));
         assert!(args.read_only);
+    }
+
+    #[test]
+    fn acknowledgement_cli_uses_a_distinct_purpose_and_get_only_check() {
+        let base = [
+            "discord_ask",
+            "recovery-log",
+            "--request-id",
+            "receipt-id",
+            "--title",
+            "受領",
+            "--body-file",
+            "receipt.txt",
+            "--thread",
+            "123",
+        ];
+        let mut args = base.to_vec();
+        args.extend(["--acknowledgement-file", "receipt.json", "--check-only"]);
+        assert!(Cli::try_parse_from(args).is_ok());
+        let mut invalid = base.to_vec();
+        invalid.push("--check-only");
+        assert!(Cli::try_parse_from(invalid).is_err());
+        let mut mixed = base.to_vec();
+        mixed.extend([
+            "--acknowledgement-file",
+            "receipt.json",
+            "--clarification-file",
+            "explain.json",
+        ]);
+        assert!(Cli::try_parse_from(mixed).is_err());
     }
 
     #[test]

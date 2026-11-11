@@ -347,7 +347,17 @@ func (r *Runner) conversationTaskForQuestion(ctx context.Context, id uint64, que
 	if selected == nil || project == "owner" || !filepath.IsAbs(root) {
 		return nil, conversationDiagnostic("task_scope_unavailable", errors.New("conversation task scope unavailable"))
 	}
-	raw, err := r.Run(ctx, "D:/CC/Tools/client-records/scrub391.exe", "--guard-path", root)
+	guardContext := ctx
+	cancelGuard := func() {}
+	if r.ConversationReceiverOnly {
+		guardContext, cancelGuard = context.WithTimeout(ctx, conversationReceiverGuardBudget)
+	}
+	started := time.Now()
+	raw, err := r.Run(guardContext, "D:/CC/Tools/client-records/scrub391.exe", "--guard-path", root)
+	if err != nil && errors.Is(guardContext.Err(), context.DeadlineExceeded) && ctx.Err() == nil {
+		err = &commandFailure{Cause: "guard_deadline", ElapsedMS: time.Since(started).Milliseconds()}
+	}
+	cancelGuard()
 	var proof struct {
 		Client     *bool `json:"client_resource"`
 		Unverified *bool `json:"classification_unverified"`
@@ -364,6 +374,9 @@ func (r *Runner) conversationTaskForQuestion(ctx context.Context, id uint64, que
 				code = "task_guard_unverified"
 			case proof.Client != nil && *proof.Client:
 				code = "task_guard_protected"
+			}
+			if err != nil {
+				return nil, conversationDiagnostic(code, err)
 			}
 			return nil, conversationDiagnostic(code, errors.New("conversation task scope unverified"))
 		}

@@ -717,6 +717,7 @@ func commandBudget(path string, args []string) time.Duration {
 }
 
 func runCommandBounded(ctx context.Context, budget time.Duration, path string, args ...string) (string, error) {
+	started := time.Now()
 	child, stop := context.WithTimeout(ctx, budget)
 	defer stop()
 	command := exec.CommandContext(child, path, args...)
@@ -737,7 +738,7 @@ func runCommandBounded(ctx context.Context, budget time.Duration, path string, a
 				}
 			}
 		}
-		return "", errors.New("command unavailable or timed out")
+		return "", commandFailed(ctx, child, err, started)
 	}
 	if stdout.Overflow {
 		return "", errors.New("command output incomplete")

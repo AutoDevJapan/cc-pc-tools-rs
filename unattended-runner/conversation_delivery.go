@@ -772,19 +772,6 @@ func (r *Runner) conversationReplyNeedsDelivery(q ConversationQuestion, proof *c
 }
 
 func (r *Runner) processConversationReplies(ctx context.Context, index *conversationIndex, id string, q ConversationQuestion, proof *conversationProof, health *Health) {
-	// Only unchanged-source audits get the shorter deadline. A new or edited
-	// answer retains the original transaction budget and delivery priority.
-	if r.ConversationReceiverOnly && !r.conversationQuestionNeedsDelivery(q, proof) {
-		parent := ctx
-		var cancel context.CancelFunc
-		ctx, cancel = context.WithTimeout(ctx, conversationReceiverReplyBudget)
-		defer func() {
-			if errors.Is(ctx.Err(), context.DeadlineExceeded) && parent.Err() == nil {
-				health.Errors = append(health.Errors, "conversation_receiver_question_deadline")
-			}
-			cancel()
-		}()
-	}
 	if q.RecoveredIntake != 0 {
 		// This question was already handled by the ordinary intake worker. A
 		// minute audit must never instruct the original worker to repeat it or
@@ -907,15 +894,6 @@ func (r *Runner) processConversationReplies(ctx context.Context, index *conversa
 		// Deliver all replies already observed for this question while the
 		// caller has budget. No old delivered answer masks a newer message.
 	}
-}
-
-func (r *Runner) conversationQuestionNeedsDelivery(q ConversationQuestion, proof *conversationProof) bool {
-	for _, reply := range proof.Replies {
-		if r.conversationReplyNeedsDelivery(q, proof, reply) {
-			return true
-		}
-	}
-	return false
 }
 
 func (r *Runner) conversationApplicationMayBeReady(proof *conversationProof) bool {

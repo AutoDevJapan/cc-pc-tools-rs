@@ -111,6 +111,9 @@ func TestReceiverSlowGuardLeavesBudgetForNextDelivery(t *testing.T) {
 	if !guardStarted || parent.Err() != nil {
 		t.Fatal("one guard exhausted the whole receiver deadline")
 	}
+	if len(health.receiver.Failures) != 1 || health.receiver.Failures[0].CommandCause != "guard_deadline" {
+		t.Fatal("the bounded guard deadline lost its distinct cause")
+	}
 	before, _ := os.ReadFile(f.r.TodoPath)
 	if string(before) != string(originalNote) {
 		t.Fatal("timed-out audit changed the existing answer")
@@ -158,5 +161,60 @@ func TestReceiverNewAnswerRetainsTransactionBudget(t *testing.T) {
 	f.r.processConversationReplies(ctx, index, q.RequestID, q, proof, &health)
 	if !checked || health.ConversationReplies != 1 || len(health.Errors) != 0 {
 		t.Fatal("new answer did not complete through the canonical transaction", health.Errors)
+	}
+}
+
+func TestReceiverPendingHoldAlsoBoundsItsGuard(t *testing.T) {
+	f := conversationTest(t, true)
+	q := f.ask(t)
+	f.reply(t, 8, "pending held answer")
+	f.mutateTodo(t, func(row map[string]any) { row["owner_stopped"] = true })
+	f.r.ConversationReceiverOnly = true
+	base := f.r.Run
+	checked := false
+	f.r.Run = func(ctx context.Context, path string, args ...string) (string, error) {
+		if strings.HasSuffix(path, "scrub391.exe") {
+			deadline, exists := ctx.Deadline()
+			if !exists || time.Until(deadline) > conversationReceiverGuardBudget {
+				t.Fatal("pending held reply kept the twenty-second guard allowance")
+			}
+			checked = true
+		}
+		return base(ctx, path, args...)
+	}
+	before, _ := os.ReadFile(f.r.TodoPath)
+	ctx, cancel := context.WithTimeout(context.Background(), conversationReceiverBudget)
+	defer cancel()
+	h := receiverHealth(f.r.conversationReceiverTick(ctx))
+	after, _ := os.ReadFile(f.r.TodoPath)
+	if !checked || h.KnownHold != 1 || string(before) != string(after) || len(h.Errors) != 0 || h.Holds[0].Request != q.RequestID {
+		t.Fatal("held source lost its guard/stop boundary", h)
+	}
+}
+
+func TestReceiverAuditMediaWriteRetainsTransactionBudget(t *testing.T) {
+	f, reply, _, _ := ownerReplyMediaFixture(t, true)
+	f.r.ConversationReceiverOnly = true
+	base := f.r.Run
+	checked := false
+	f.r.Run = func(ctx context.Context, path string, args ...string) (string, error) {
+		if path == conversationTodo && args[0] == "edit" {
+			deadline, exists := ctx.Deadline()
+			if !exists || time.Until(deadline) < 10*time.Second {
+				t.Fatal("delivered reply's media write inherited a short guard budget")
+			}
+			checked = true
+		}
+		return base(ctx, path, args...)
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), conversationReceiverBudget)
+	defer cancel()
+	h := receiverHealth(f.r.conversationReceiverTick(ctx))
+	row, err := f.r.todo(42)
+	if err != nil || !checked || h.Audited != 1 || h.Processed != 0 || len(h.Errors) != 0 || !strings.Contains(row.Note, "conversation-owner-media:") {
+		t.Fatal("same-source media retry failed or repeated the answer", h, err)
+	}
+	if req := f.r.conversationRequest(reply.Message); req.Phase != "conversation_reply_delivered" {
+		t.Fatal("media write changed answer delivery identity")
 	}
 }

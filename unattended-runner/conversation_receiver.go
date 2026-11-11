@@ -14,10 +14,10 @@ import (
 // the minute cadence; this command never runs the general periodic pipeline.
 const conversationReceiverBudget = 50 * time.Second
 
-// One slow unchanged-source audit must leave room for the other questions.
-// Captures/transactions still run sequentially, with the original identity and
-// locks. New/edited answers retain the original transaction deadline.
-const conversationReceiverReplyBudget = 5 * time.Second
+// Each receiver guard command is bounded independently. Read-only scope checks
+// on held replies cannot consume the old twenty-second command allowance;
+// composite qualification and actual writes retain the original parent budget.
+const conversationReceiverGuardBudget = 5 * time.Second
 
 type conversationReceiverHold struct {
 	Request string `json:"request_id"`

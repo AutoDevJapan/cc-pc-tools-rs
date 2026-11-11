@@ -287,14 +287,16 @@ reply_timestamp、reply_edited_timestamp（未編集はnull）、body_sha256（�
 
 受信専用healthの `delivery_failures` は配送前の失敗に対し、同周期のrequest_id・todo_id・
 message_id・固定stage/codeを残す。`task_guard_command`には取得できた場合だけ
-`command_cause`（呼出し元/コマンドの期限・取消、pipe待機期限、異常終了、起動/I/O失敗）、
+`command_cause`（guard/呼出し元/コマンドの期限・取消、pipe待機期限、異常終了、起動/I/O失敗）、
 `command_elapsed_ms`、`command_exit_code`を付ける。guardの生JSON、子プロセス出力、パス、本人の本文は
 含めない。正常なtask_hold/task_doneはこの異常一覧に入れず、取得失敗はpollの記録と区別する。
 既存の成功・保留・失敗の判定と元仕事の状態は変えない。過去の未保存理由をこの項目で遡って
 確定したことにはしない。
 
-受信専用の全体期限は50秒のままとし、本文・編集版が変わっていない質問の監査には
-質問単位で5秒の期限を設ける。監査が遅い場合も次の質問の残り時間を保ち、
-`conversation_receiver_question_deadline`として記録して次の通常周期へ引き継ぐ。
-新規・編集・未配送の回答は元の全体期限で優先して処理し、短い監査期限を適用しない。
+受信専用の全体期限は50秒のままとし、元タスクのguardコマンド1回ごとに5秒の期限を設ける。
+未配送のまま保留された回答にも同じ上限を使い、独立したguard期限は
+`task_guard_command`の`command_cause:guard_deadline`として記録して次の通常周期へ引き継ぐ。
+複数の資格確認と回答・添付情報の書き込み全体には元の期限を保持し、短い期限を適用しない。
+新規・編集・未配送の回答の優先順位を保持し、同期ファイル読取やすべての確認が遅い場合は
+全件が同じ周期内に完了するとは限らない。後続は既存の配送確認時刻の順で次周期へ回す。
 guardと元仕事の状態は毎回確認し、期限切れの結果から配送・実適用・閉鎖を推定しない。

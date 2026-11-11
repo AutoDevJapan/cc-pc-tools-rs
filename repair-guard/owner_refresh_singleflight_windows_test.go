@@ -127,3 +127,14 @@ func TestOwnerExplicitRefreshSingleflightTwoProcesses(t *testing.T) {
 		t.Fatalf("same canonical repository fetched %d times; want 1", len(matches))
 	}
 }
+
+func TestOwnerExplicitRefreshFailureIsShared(t *testing.T) {
+	t.Setenv("F4431_REFRESH_FAIL", "1")
+	t.Setenv("F4431_TEST_SEPARATE_REPO", "")
+	TestOwnerExplicitRefreshSingleflightTwoProcesses(t)
+}
+func TestOwnerExplicitRefreshDifferentRepositoriesStaySeparate(t *testing.T) {
+	t.Setenv("F4431_REFRESH_FAIL", "")
+	t.Setenv("F4431_TEST_SEPARATE_REPO", "1")
+	TestOwnerExplicitRefreshSingleflightTwoProcesses(t)
+}

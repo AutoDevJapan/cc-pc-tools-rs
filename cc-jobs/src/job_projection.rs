@@ -19,7 +19,7 @@ pub(crate) fn project(
     id: &str,
     purpose: &str,
     result: Option<&Path>,
-    associations: Option<&Value>,
+    _associations: Option<&Value>,
     stderr: &[u8],
 ) -> Result<Value> {
     if s(job, "id") != id {
@@ -31,33 +31,9 @@ pub(crate) fn project(
                 .as_str()
                 .filter(|p| Path::new(p).is_absolute() && !p.contains(['\r', '\n', '\0']))
                 .map_or(Value::Null, |p| json!(p));
-            let mut question = snowflake(&job["original_question_id"]);
-            if question.is_null()
-                && let Some(a) = associations
-                && let Some(routes) = a["question_routes"].as_object()
-            {
-                let declared = a["question_thread_ids"].as_array();
-                let candidates: Vec<_> = routes
-                    .iter()
-                    .filter(|(key, r)| {
-                        s(r, "posting_job") == id
-                            && r["todo_id"].as_u64() == Some(1157)
-                            && r["question_thread_id"].as_str() == Some(key.as_str())
-                            && declared.is_some_and(|ids| {
-                                ids.iter()
-                                    .filter(|v| v.as_str() == Some(key.as_str()))
-                                    .count()
-                                    == 1
-                            })
-                    })
-                    .map(|(_, r)| r)
-                    .map(|r| snowflake(&r["question_thread_id"]))
-                    .filter(|v| !v.is_null())
-                    .collect();
-                if candidates.len() == 1 {
-                    question = candidates[0].clone()
-                }
-            }
+            // A route records a posted question, not its original-question
+            // status. Only that explicit stored attribute is evidence here.
+            let question = snowflake(&job["original_question_id"]);
             Ok(
                 json!({"metadata_only":true,"purpose":purpose,"id":id,"cwd":cwd,"resultLocator":result.map(|p|p.to_string_lossy().to_string()),"originalQuestionId":question}),
             )
@@ -82,7 +58,7 @@ pub(crate) fn project(
                 "session_in_use"
             } else if has(b"session") && (has(b"not found") || has(b"no session")) {
                 "session_unavailable"
-            } else if has(b"authentication") || has(b"unauthorized") || has(b"401") {
+            } else if has(b"authentication") || has(b"unauthorized") || http_401(message) {
                 "authentication"
             } else if has(b"config") && (has(b"invalid") || has(b"unknown") || has(b"parse")) {
                 "configuration"
@@ -129,24 +105,12 @@ impl Context {
             // Resolve the locator through a metadata handle, never its body.
             // Use the same plain/single-link rules as the other source files.
             let exists = open_projection_file(self, &output).is_ok();
-            let association_path = dir.join("discord-threads.json");
-            let associations = if self.rt.before_load(&association_path).is_ok() {
-                read_projection_file(self, &association_path, 65536, false)
-                    .ok()
-                    .and_then(|mut bytes| {
-                        let value = parse_projection_json(&bytes).ok();
-                        bytes.fill(0);
-                        value
-                    })
-            } else {
-                None
-            };
             project(
                 &job,
                 id,
                 purpose,
                 exists.then_some(output.as_path()),
-                associations.as_ref(),
+                None,
                 &[],
             )
         } else {
@@ -171,18 +135,49 @@ impl Context {
     }
 }
 
+fn http_401(message: &[u8]) -> bool {
+    [
+        b"HTTP 401".as_slice(),
+        b"HTTP status 401".as_slice(),
+        b"status code: 401".as_slice(),
+    ]
+    .iter()
+    .any(|needle| {
+        message.windows(needle.len()).enumerate().any(|(i, part)| {
+            part.eq_ignore_ascii_case(needle)
+                && (i == 0 || !message[i - 1].is_ascii_alphanumeric())
+                && (i + needle.len() == message.len()
+                    || !message[i + needle.len()].is_ascii_alphanumeric())
+        })
+    })
+}
+
 fn read_projection_file(ctx: &Context, path: &Path, max: u64, prefix: bool) -> Result<Vec<u8>> {
     let (file, _parents) = open_projection_file(ctx, path)?;
-    let mut raw = Vec::new();
-    if file.take(max + 1).read_to_end(&mut raw).is_err() {
-        raw.fill(0);
-        return Err(Error::new("job projection source unavailable"));
-    }
+    let mut raw = vec![0u8; (max + 1) as usize];
+    let n = fill_projection_buffer(file, &mut raw)?;
+    raw.truncate(n);
     if !prefix && raw.len() as u64 > max {
         raw.fill(0);
         return Err(Error::new("job projection source too large"));
     }
     Ok(raw)
+}
+
+fn fill_projection_buffer(mut reader: impl Read, buffer: &mut [u8]) -> Result<usize> {
+    let mut n = 0;
+    while n < buffer.len() {
+        match reader.read(&mut buffer[n..]) {
+            Ok(0) => break,
+            Ok(read) => n += read,
+            Err(e) if e.kind() == std::io::ErrorKind::Interrupted => continue,
+            Err(_) => {
+                buffer.fill(0);
+                return Err(Error::new("job projection source unavailable"));
+            }
+        }
+    }
+    Ok(n)
 }
 
 fn open_projection_file(ctx: &Context, path: &Path) -> Result<(File, Vec<File>)> {
@@ -380,7 +375,7 @@ mod tests {
         let job = json!({"id":KARAOKE_JOB,"todo_id":1157});
         let id = "1557593952604131370";
         let associations = json!({"question_thread_ids":[id],"question_routes":{id:{"posting_job":KARAOKE_JOB,"todo_id":1157,"question_thread_id":id}}});
-        assert_eq!(
+        assert!(
             project(
                 &job,
                 KARAOKE_JOB,
@@ -389,8 +384,8 @@ mod tests {
                 Some(&associations),
                 &[]
             )
-            .unwrap()["originalQuestionId"],
-            id
+            .unwrap()["originalQuestionId"]
+                .is_null()
         );
         for case in [
             "other_job",
@@ -430,6 +425,103 @@ mod tests {
                 "{case}"
             );
         }
+    }
+    #[test]
+    fn a_later_unique_route_cannot_be_promoted_to_original_question() {
+        let job = json!({"id":KARAOKE_JOB,"todo_id":1157});
+        let id = "1557593952604131370";
+        let association = json!({"question_thread_ids":[id],"question_routes":{id:{"posting_job":KARAOKE_JOB,"todo_id":1157,"question_thread_id":id}}});
+        assert!(
+            project(
+                &job,
+                KARAOKE_JOB,
+                "karaoke-1157-locators",
+                None,
+                Some(&association),
+                &[]
+            )
+            .unwrap()["originalQuestionId"]
+                .is_null()
+        );
+    }
+    #[test]
+    fn launch_reason_http_status_needs_token_boundaries() {
+        let job = json!({"id":FOUR_JOB,"status":"failed","resume_session":FOUR_SESSION,"launch_key":FOUR_LAUNCH});
+        for (raw, want) in [
+            ("request id 401923; rate limit exceeded", "usage_limit"),
+            ("session returned 4012 during request", "unknown"),
+            ("HTTP 401 Unauthorized", "authentication"),
+        ] {
+            assert_eq!(
+                project(
+                    &job,
+                    FOUR_JOB,
+                    "fourbros-1245-launch-failure",
+                    None,
+                    None,
+                    raw.as_bytes()
+                )
+                .unwrap()["reason"],
+                want
+            )
+        }
+    }
+    #[test]
+    fn secret_read_uses_same_fixed_buffer_and_erases_it_on_error() {
+        struct Chunked {
+            remaining: usize,
+            error: bool,
+            expected: usize,
+            offset: usize,
+        }
+        impl Read for Chunked {
+            fn read(&mut self, out: &mut [u8]) -> std::io::Result<usize> {
+                assert_eq!(out.as_ptr() as usize, self.expected + self.offset);
+                if self.remaining == 0 {
+                    return if self.error {
+                        Err(std::io::Error::other("synthetic_private"))
+                    } else {
+                        Ok(0)
+                    };
+                }
+                let n = self.remaining.min(out.len()).min(19);
+                out[..n].fill(b'S');
+                self.remaining -= n;
+                self.offset += n;
+                Ok(n)
+            }
+        }
+        let mut buffer = vec![0; 16385];
+        let address = buffer.as_ptr() as usize;
+        assert_eq!(
+            fill_projection_buffer(
+                Chunked {
+                    remaining: 11200,
+                    error: false,
+                    expected: address,
+                    offset: 0
+                },
+                &mut buffer
+            )
+            .unwrap(),
+            11200
+        );
+        assert_eq!(buffer.as_ptr() as usize, address);
+        buffer.fill(0);
+        assert!(
+            fill_projection_buffer(
+                Chunked {
+                    remaining: 1024,
+                    error: true,
+                    expected: address,
+                    offset: 0
+                },
+                &mut buffer
+            )
+            .is_err()
+        );
+        assert!(buffer.iter().all(|x| *x == 0));
+        assert_eq!(buffer.as_ptr() as usize, address);
     }
     #[test]
     fn exact_projection_retains_missing_fields_as_null() {

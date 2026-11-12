@@ -4,9 +4,9 @@ Normal `status --job-id ID --json` keeps its existing fixed metadata output.
 An exact `--purpose` may request one of the two assigned recovery projections:
 
 - `karaoke-1157-locators`: the stored absolute working directory, an existing
-  result locator, and the original question identifier when it is explicitly
-  stored or uniquely associated with that job and task. Missing, ambiguous or
-  unverified values remain `null`.
+  result locator, and the original question identifier only when that original
+  attribute is explicitly stored. A later question route is not evidence of
+  original status. Missing or unverified values remain `null`.
 - `fourbros-1245-launch-failure`: a fixed failure category for the original
   failed launch, after validating its job/session/launch binding. It returns no
   command, diagnostic text, credentials, or source bodies. An absent or

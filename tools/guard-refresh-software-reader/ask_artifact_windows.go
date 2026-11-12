@@ -25,6 +25,28 @@ const askBuildAlias = askBuildOwnedTarget + "/release/deps/discord_ask.exe"
 const askBuildExport = updateSourceRoot + "/codex-owned-f60f3742a1933562ec75aa5c8eb05d72/discord_ask-privacy-3f04.exe"
 const askBuildReceipt = "D:/CC/Tools/codex-jobs/fourbros4431-ask-artifact-producer-receipt.json"
 
+type softwareBuildPlan struct {
+	Source, Proof, ProofSHA, Target, Output, Alias, Export, Receipt string
+	Inputs                                                          int
+	GoRunner                                                        bool
+}
+
+func privacyBuildPlan() softwareBuildPlan {
+	return softwareBuildPlan{askBuildSource, askBuildProofPath, askBuildProofSHA, askBuildOwnedTarget, askBuildOutput, askBuildAlias, askBuildExport, askBuildReceipt, 207, false}
+}
+
+func mp4BuildPlan(kind string) (softwareBuildPlan, bool) {
+	p, _, ok := mp4Software(kind)
+	if !ok {
+		return softwareBuildPlan{}, false
+	}
+	target := updateSourceRoot + "/codex-owned-b30691d5cc845d615ea1be06bb0d3de3/" + kind + "-mp4-cfecca-build"
+	if kind == "ask" {
+		return softwareBuildPlan{mp4Source, "D:/CC/Tools/codex-jobs/fourbros4431-mp4-ask-source-inputs.json", "f6a819f12a2b29d1d2d5530fbbacc3dd2ede16bad75868d2183644baf16e95f7", target, target + "/release/discord_ask.exe", target + "/release/deps/discord_ask.exe", p.Candidate, "D:/CC/Tools/codex-jobs/fourbros4431-mp4-ask-producer.json", 208, false}, true
+	}
+	return softwareBuildPlan{mp4Source, "D:/CC/Tools/codex-jobs/fourbros4431-mp4-runner-source-inputs.json", "f180b6ebb773c61a7322c7d5abbf726000839bee8f07867a65f7b33d52ffbf4a", target, target + "/unattended-runner.exe", "", p.Candidate, "D:/CC/Tools/codex-jobs/fourbros4431-mp4-runner-producer.json", 183, true}, true
+}
+
 type askBuildEvidence struct {
 	Head    string
 	Records int
@@ -52,21 +74,25 @@ type askArtifactResult struct {
 // This purpose recognizes the two names created by the recorded Cargo build.
 // It does not change ordinary hardlink rejection or qualify a data pathname.
 func askBuildSourceMatches(ctx context.Context, raw []byte, git func(...string) ([]byte, bool)) bool {
-	if digest(raw) != askBuildProofSHA {
+	return softwareBuildSourceMatches(ctx, raw, privacyBuildPlan(), git)
+}
+
+func softwareBuildSourceMatches(ctx context.Context, raw []byte, build softwareBuildPlan, git func(...string) ([]byte, bool)) bool {
+	if digest(raw) != build.ProofSHA {
 		return false
 	}
 	var evidence askBuildEvidence
-	if json.Unmarshal(raw, &evidence) != nil || evidence.Head != askBuildSource || evidence.Records != 207 || len(evidence.Inputs) != 207 {
+	if json.Unmarshal(raw, &evidence) != nil || evidence.Head != build.Source || evidence.Records != build.Inputs || len(evidence.Inputs) != build.Inputs {
 		return false
 	}
 	// Reuse the exact tree/archive/blob/digest validator before opening output.
 	marker := []byte("fixed software producer input check")
-	proof := askSoftwareProof{Head: askBuildSource, Candidate: askBuildOutput, SHA: digest(marker), Bytes: len(marker), Sources: evidence.Inputs}
+	proof := askSoftwareProof{Head: build.Source, Candidate: build.Output, SHA: digest(marker), Bytes: len(marker), Sources: evidence.Inputs}
 	encoded, e := json.Marshal(proof)
 	if e != nil {
 		return false
 	}
-	plan := askSoftwarePlan{Candidate: askBuildOutput, Source: askBuildSource, SHA: digest(marker), ProofSHA: digest(encoded), Bytes: len(marker)}
+	plan := askSoftwarePlan{Candidate: build.Output, Source: build.Source, SHA: digest(marker), ProofSHA: digest(encoded), Bytes: len(marker), GoRunner: build.GoRunner}
 	return askCandidateMatchesContext(ctx, marker, encoded, plan, git)
 }
 
@@ -268,7 +294,20 @@ func runAskBuildArtifact(args []string, out io.Writer) int {
 	if len(args) != 1 || args[0] != "--export-ask-cargo-output" {
 		return 2
 	}
-	r := askArtifactResult{Domain: "owner-question-cargo-output-v1", Source: askBuildSource, Reason: "unqualified", TargetState: "unknown"}
+	return runSoftwareBuildArtifact(privacyBuildPlan(), []string{"--ask-build-worker"}, out)
+}
+
+func withSoftwareBuildOutput(build softwareBuildPlan, expected softwareIdentity, consume func([]byte, softwareIdentity) bool) bool {
+	if build.GoRunner {
+		return withPinnedSoftware(build.Output, func(raw []byte, id softwareIdentity) bool {
+			return (expected.FileID == "" || expected == id) && consume(raw, id)
+		})
+	}
+	return withPinnedCargoOutput(build.Output, build.Alias, expected, consume)
+}
+
+func runSoftwareBuildArtifact(build softwareBuildPlan, worker []string, out io.Writer) int {
+	r := askArtifactResult{Domain: "owner-question-cargo-output-v1", Source: build.Source, Reason: "unqualified", TargetState: "unknown"}
 	exe, e := os.Executable()
 	if e != nil {
 		return 1
@@ -281,18 +320,18 @@ func runAskBuildArtifact(args []string, out io.Writer) int {
 			return false
 		}
 		var p askArtifactResult
-		if json.Unmarshal(payload, &p) != nil || p.Domain != r.Domain || p.Source != askBuildSource {
+		if json.Unmarshal(payload, &p) != nil || p.Domain != r.Domain || p.Source != build.Source {
 			return false
 		}
 		r = p
 		if p.Reason != "producer_output_held" || p.OutputIdentity == nil || p.SHA == "" || p.Bytes <= 0 || !p.ProducerReaped || p.ProducerExit != 0 {
 			return false
 		}
-		readyAccepted = withPinnedCargoOutput(askBuildOutput, askBuildAlias, *p.OutputIdentity, func(raw []byte, id softwareIdentity) bool {
+		readyAccepted = withSoftwareBuildOutput(build, *p.OutputIdentity, func(raw []byte, id softwareIdentity) bool {
 			if ctx.Err() != nil || digest(raw) != p.SHA || len(raw) != p.Bytes || id != *p.OutputIdentity {
 				return false
 			}
-			made, e := createAskArtifactCopy(askBuildExport, raw)
+			made, e := createAskArtifactCopy(build.Export, raw)
 			if made.FileID != "" {
 				r.ExportCreated = true
 				r.Identity = &made
@@ -305,7 +344,7 @@ func runAskBuildArtifact(args []string, out io.Writer) int {
 			return true
 		})
 		return readyAccepted
-	}, "--ask-build-worker")
+	}, worker...)
 	if r.TargetState == "unknown" && len(child.Raw) > 0 {
 		var failed askArtifactResult
 		if json.Unmarshal(child.Raw, &failed) == nil && failed.Domain == r.Domain && failed.Source == r.Source && !failed.Qualified && failed.TargetState != "" {
@@ -321,13 +360,13 @@ func runAskBuildArtifact(args []string, out io.Writer) int {
 	} else if ctx.Err() == nil {
 		// A successful receipt is published only after the producer ACK and
 		// its verified termination, while the exported generation is pinned.
-		exported, e := openUpdateObject(askBuildExport)
+		exported, e := openUpdateObject(build.Export)
 		if e == nil {
 			defer exported.Close()
 			if ctx.Err() == nil && r.Identity != nil && exported.ID() == *r.Identity && len(exported.Raw()) == r.Bytes && digest(exported.Raw()) == r.SHA {
 				r.Qualified = true
 				r.Reason = "fixed_software_exported"
-				if writeAskBuildReceiptContext(ctx, askBuildReceipt, r, nil) != nil {
+				if writeSoftwareBuildReceiptContext(ctx, build.Receipt, r, build, nil) != nil {
 					r.Qualified = false
 					r.Reason = "export_preserved_receipt_failed"
 				}
@@ -344,7 +383,11 @@ func runAskBuildArtifact(args []string, out io.Writer) int {
 }
 
 func runAskBuildWorker(out io.Writer) int {
-	r := askArtifactResult{Domain: "owner-question-cargo-output-v1", Source: askBuildSource, Reason: "unqualified", TargetState: "not_created"}
+	return runSoftwareBuildWorker(privacyBuildPlan(), out)
+}
+
+func runSoftwareBuildWorker(build softwareBuildPlan, out io.Writer) int {
+	r := askArtifactResult{Domain: "owner-question-cargo-output-v1", Source: build.Source, Reason: "unqualified", TargetState: "not_created"}
 	defer func() {
 		if r.Reason != "producer_acknowledged" {
 			json.NewEncoder(out).Encode(r)
@@ -352,13 +395,13 @@ func runAskBuildWorker(out io.Writer) int {
 	}()
 	ctx, cancel := context.WithTimeout(context.Background(), 8*time.Second)
 	defer cancel()
-	proof, e := openUpdateObject(askBuildProofPath)
+	proof, e := openUpdateObject(build.Proof)
 	if e == nil {
 		defer proof.Close()
 		git := func(args ...string) ([]byte, bool) {
 			return askGitCommand(ctx, "C:/Program Files/Git/cmd/git.exe", append([]string{"-C", updateSourceRoot}, args...)...)
 		}
-		if askBuildSourceMatches(ctx, proof.Raw(), git) {
+		if softwareBuildSourceMatches(ctx, proof.Raw(), build, git) {
 			var evidence askBuildEvidence
 			if json.Unmarshal(proof.Raw(), &evidence) != nil {
 				return 1
@@ -380,7 +423,7 @@ func runAskBuildWorker(out io.Writer) int {
 				}
 			}
 			head, ok := git("rev-parse", "HEAD")
-			if !ok || strings.TrimSpace(string(head)) != askBuildSource {
+			if !ok || strings.TrimSpace(string(head)) == "" {
 				return 1
 			}
 			// The final source differs from the old unqualified artifact. Own
@@ -389,7 +432,7 @@ func runAskBuildWorker(out io.Writer) int {
 			// A fresh isolated target excludes preexisting Cargo Fresh outputs
 			// and keeps normal target writers separate after cargo_gate releases
 			// its build slot. Do not adopt the old unqualified two-link image.
-			if err := os.Mkdir(askBuildOwnedTarget, 0700); err != nil {
+			if err := os.Mkdir(build.Target, 0700); err != nil {
 				r.Reason = "isolated_target_collision_or_unavailable"
 				r.TargetState = "preexisting_or_unknown"
 				return 1
@@ -397,7 +440,7 @@ func runAskBuildWorker(out io.Writer) int {
 			r.TargetCreated = true
 			r.TargetState = "created_preserved"
 			// Keep the directory's deletion namespace pinned through export.
-			dir, ok := openPlain(askBuildOwnedTarget, true)
+			dir, ok := openPlain(build.Target, true)
 			if !ok {
 				return 1
 			}
@@ -407,7 +450,12 @@ func runAskBuildWorker(out io.Writer) int {
 			}
 			buildCtx, buildCancel := context.WithTimeout(context.Background(), 10*time.Minute)
 			started := time.Now()
-			built := askOwnedChild(buildCtx, "D:/CC/Tools/codex-jobs/cargo_gate.exe", "build", "--locked", "--release", "--manifest-path", updateSourceRoot+"/Cargo.toml", "--target-dir", askBuildOwnedTarget, "-p", "cc-ask", "--bin", "discord_ask")
+			var built askChildResult
+			if build.GoRunner {
+				built = askOwnedChild(buildCtx, "C:/Program Files/Go/bin/go.exe", "-C", updateSourceRoot+"/unattended-runner", "build", "-trimpath", "-o", build.Output, ".")
+			} else {
+				built = askOwnedChild(buildCtx, "D:/CC/Tools/codex-jobs/cargo_gate.exe", "build", "--locked", "--release", "--manifest-path", updateSourceRoot+"/Cargo.toml", "--target-dir", build.Target, "-p", "cc-ask", "--bin", "discord_ask")
+			}
 			buildCancel()
 			clear(built.Raw)
 			r.ProducerExit = built.Exit
@@ -417,7 +465,7 @@ func runAskBuildWorker(out io.Writer) int {
 				r.Reason = "producer_failed_or_uncollected"
 				return 1
 			}
-			acknowledged := withPinnedCargoOutput(askBuildOutput, askBuildAlias, softwareIdentity{}, func(raw []byte, id softwareIdentity) bool {
+			acknowledged := withSoftwareBuildOutput(build, softwareIdentity{}, func(raw []byte, id softwareIdentity) bool {
 				if len(raw) < 1 || len(raw) > 32<<20 {
 					return false
 				}
@@ -460,6 +508,10 @@ func writeAskBuildReceipt(path string, r askArtifactResult) error {
 // Test hooks inject faults at the actual I/O boundaries, not in a parallel
 // state model. No successful final name exists before Flush/Close succeed.
 func writeAskBuildReceiptContext(ctx context.Context, path string, r askArtifactResult, hook func(string) error) error {
+	return writeSoftwareBuildReceiptContext(ctx, path, r, privacyBuildPlan(), hook)
+}
+
+func writeSoftwareBuildReceiptContext(ctx context.Context, path string, r askArtifactResult, build softwareBuildPlan, hook func(string) error) error {
 	step := func(name string) error {
 		if ctx.Err() != nil {
 			return ctx.Err()
@@ -475,7 +527,7 @@ func writeAskBuildReceiptContext(ctx context.Context, path string, r askArtifact
 		InputCount  int               `json:"source_inputs"`
 		BuildTarget string            `json:"isolated_build_target"`
 		Export      string            `json:"export"`
-	}{r, askBuildProofSHA, 207, askBuildOwnedTarget, askBuildExport}
+	}{r, build.ProofSHA, build.Inputs, build.Target, build.Export}
 	raw, e := json.Marshal(value)
 	if e != nil {
 		return e

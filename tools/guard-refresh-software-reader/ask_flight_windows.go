@@ -267,6 +267,10 @@ loop:
 // A failed/stopped producer is followed by a separate bounded read-only
 // reconciliation. Unknown is preserved and can never authorize a switch.
 func supervisedAskSoftware(prepare bool) updateResult {
+	return supervisedFixedSoftware(prepare, []string{"--ask-software-worker"}, []string{"--ask-software-inspection-worker"})
+}
+
+func supervisedFixedSoftware(prepare bool, workerArgs, inspectionArgs []string) updateResult {
 	exe, err := os.Executable()
 	if err != nil {
 		return updateResult{Reason: "qualification_unavailable"}
@@ -276,7 +280,7 @@ func supervisedAskSoftware(prepare bool) updateResult {
 		operation = "prepare"
 	}
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
-	child := askOwnedChild(ctx, exe, "--ask-software-worker", operation)
+	child := askOwnedChild(ctx, exe, append(workerArgs, operation)...)
 	cancel()
 	defer clear(child.Raw)
 	var r updateResult
@@ -295,7 +299,7 @@ func supervisedAskSoftware(prepare bool) updateResult {
 		return r
 	}
 	ctx, cancel = context.WithTimeout(context.Background(), 2*time.Second)
-	observed := askOwnedChild(ctx, exe, "--ask-software-inspection-worker")
+	observed := askOwnedChild(ctx, exe, inspectionArgs...)
 	cancel()
 	defer clear(observed.Raw)
 	var snapshot askReconciliation
@@ -308,6 +312,16 @@ func supervisedAskSoftware(prepare bool) updateResult {
 func runAskWorker(args []string, out io.Writer) int {
 	if !askWorkerParent() {
 		return 2
+	}
+	if len(args) == 2 && args[0] == "--mp4-build-worker" {
+		build, ok := mp4BuildPlan(args[1])
+		if !ok {
+			return 2
+		}
+		return runSoftwareBuildWorker(build, out)
+	}
+	if len(args) > 0 && (args[0] == "--mp4-software-worker" || args[0] == "--mp4-inspection-worker") {
+		return runMP4SoftwareWorker(args, out)
 	}
 	if len(args) == 1 && args[0] == "--ask-software-inspection-worker" {
 		return runAskReconciliation([]string{"--inspect-ask-privacy-update"}, out)

@@ -207,7 +207,10 @@ func TestRegisteredMP4RequiresActualNormalQuestionAndScope(t *testing.T) {
 		t.Fatal("owned question save")
 	}
 	base := conversationIndex{Domain: conversationDomain, Destination: Destination{Owner: "300", Guild: "100", Forum: "200"}, Questions: map[string]ConversationQuestion{f.normal: q}}
-	for _, fault := range []string{"none", "missing", "phase", "todo", "sender", "hash", "body", "scope", "title", "origin", "unicode-bom"} {
+	for _, fault := range []string{"none", "missing", "phase", "todo", "sender", "hash", "body", "scope", "title", "origin", "unicode-bom", "omitted-title", "omitted-title-mismatch"} {
+		if os.WriteFile(q.BodyFile, body, 0600) != nil || os.WriteFile(q.DecisionFile, decision, 0600) != nil {
+			t.Fatal("reset owned question inputs")
+		}
 		current := base
 		current.Questions = map[string]ConversationQuestion{f.normal: q}
 		changed := q
@@ -228,6 +231,8 @@ func TestRegisteredMP4RequiresActualNormalQuestionAndScope(t *testing.T) {
 			changed.Title = "Other context"
 		case "origin":
 			changed.OriginThread = "511"
+		case "omitted-title", "omitted-title-mismatch":
+			changed.Title = ""
 		}
 		if fault != "missing" {
 			current.Questions[f.normal] = changed
@@ -237,6 +242,10 @@ func TestRegisteredMP4RequiresActualNormalQuestionAndScope(t *testing.T) {
 		deps.Question = &scope
 		deps.VideoTitle, deps.VideoOrigin = "Review", "510"
 		deps.VideoQuestion = registeredConversationVideoQuestionWithContext(f.home, "Review", "510")
+		if fault == "omitted-title" {
+			deps.VideoTitle = string(body)
+			deps.VideoQuestion = registeredConversationVideoQuestionWithContext(f.home, string(body), "510")
+		}
 		if fault == "unicode-bom" {
 			utfBody := append([]byte{0xef, 0xbb, 0xbf}, body...)
 			utfDecision := []byte("{\"value\":\"\u2028\u2029\",\"todo_id\":42}")
@@ -253,11 +262,11 @@ func TestRegisteredMP4RequiresActualNormalQuestionAndScope(t *testing.T) {
 			deps.Question = &bad
 		}
 		_, err := verifyConversationMedia(context.Background(), f.snapshot, f.sender, deps)
-		if (err == nil) != (fault == "none" || fault == "unicode-bom") {
+		if (err == nil) != (fault == "none" || fault == "unicode-bom" || fault == "omitted-title") {
 			t.Fatalf("fault=%s accepted=%v", fault, err == nil)
 		}
-		if fault == "none" || fault == "unicode-bom" {
-			args := []string{"--path", f.snapshot, "--request-id", f.sender, "--question-title", "Review", "--question-origin-thread", "510"}
+		if fault == "none" || fault == "unicode-bom" || fault == "omitted-title" {
+			args := []string{"--path", f.snapshot, "--request-id", f.sender, "--question-title", deps.VideoTitle, "--question-origin-thread", "510"}
 			args = append(args, generatedQuestionScopeArgs(*deps.Question)...)
 			var result bytes.Buffer
 			if code := conversationMediaCLIWithDependencies(args, &result, f.deps()); code != 0 {

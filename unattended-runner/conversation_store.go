@@ -450,7 +450,9 @@ func (r *Runner) conversationAsk(ctx context.Context, input ConversationAskInput
 	if err != nil {
 		return zero, err
 	}
-	paths, hashes, err := conversationQuestionRetryImages(index, input, r.conversationQuestionVideoCheck(ctx, input))
+	videoInput := input
+	videoInput.Title = normalQuestionVideoTitle(input.Title, body)
+	paths, hashes, err := conversationQuestionRetryImages(index, input, r.conversationQuestionVideoCheck(ctx, videoInput))
 	if err != nil {
 		return zero, err
 	}

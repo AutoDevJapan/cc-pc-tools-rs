@@ -179,7 +179,7 @@ func registeredConversationVideoQuestionWithContext(home, title, origin string) 
 			return errConversationMedia
 		}
 		q, ok := index.Questions[key]
-		if !ok || q.RequestID != key || q.SenderID != request || q.Todo != scope.Todo || q.Phase != "reserved" || q.Project == "" || title == "" || origin == "" || strings.TrimSpace(q.Title) != title || q.OriginThread != origin || len(q.Attachments) != len(q.AttachmentHashes) {
+		if !ok || q.RequestID != key || q.SenderID != request || q.Todo != scope.Todo || q.Phase != "reserved" || q.Project == "" || title == "" || origin == "" || q.OriginThread != origin || len(q.Attachments) != len(q.AttachmentHashes) {
 			return errConversationMedia
 		}
 		matched := false
@@ -206,11 +206,23 @@ func registeredConversationVideoQuestionWithContext(home, title, origin string) 
 		}
 		defer clear(decision)
 		var value json.RawMessage
-		if historyStrictJSON(decision, &value) != nil || bytesHash([]byte(strings.TrimLeft(string(body), "\ufeff"))) != scope.Body || normalQuestionDecisionHash(value) != scope.Decision {
+		if historyStrictJSON(decision, &value) != nil || bytesHash([]byte(strings.TrimLeft(string(body), "\ufeff"))) != scope.Body || normalQuestionDecisionHash(value) != scope.Decision || normalQuestionVideoTitle(q.Title, body) != title {
 			return errConversationMedia
 		}
 		return nil
 	}
+}
+
+func normalQuestionVideoTitle(title string, body []byte) string {
+	if title != "" {
+		return strings.TrimSpace(title)
+	}
+	for _, line := range strings.Split(strings.TrimLeft(string(body), "\ufeff"), "\n") {
+		if strings.TrimSpace(line) != "" {
+			return strings.TrimSpace(line)
+		}
+	}
+	return ""
 }
 
 // Rust serde_json emits these Unicode separators literally; Go's JSON encoder

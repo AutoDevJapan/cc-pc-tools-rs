@@ -361,6 +361,39 @@ func TestFreshMP4AcceptsCompleteNormalGuardMetadata(t *testing.T) {
 	}
 }
 
+func TestFreshMP4OmittedTitleUsesSenderBodyFallback(t *testing.T) {
+	f := conversationTest(t, false)
+	path := normalQuestionVideoPath(t, f, fixtureVideoMP4(1, "vide"))
+	f.input.Title = ""
+	f.input.Attachments = []string{path}
+	args := []string{"ask", "--request-id", f.input.RequestID, "--todo-id", "42", "--origin-thread", f.input.OriginThread, "--body-file", f.input.BodyFile, "--decision-file", f.input.DecisionFile, "--attach", path}
+	var out bytes.Buffer
+	// The synthetic sender omits attachment readback, so the reservation stays
+	// pending after its one call. The normal CLI must still reach that sender.
+	code := conversationCLIWithLoader(args, &out, func(string) (conversationCLIBackend, func(), error) {
+		return f.r, func() {}, nil
+	})
+	if f.posts != 1 || code != 1 {
+		t.Fatalf("omitted title blocked preflight posts=%d code=%d", f.posts, code)
+	}
+	index, err := f.r.loadConversations()
+	if err != nil {
+		t.Fatal(err)
+	}
+	q := index.Questions[f.input.RequestID]
+	if q.Title != "" || q.RequestID != f.input.RequestID || q.InputSHA == "" || q.Phase != "reserved" {
+		t.Fatal("effective title changed stored request or retry identity")
+	}
+	_, _ = f.r.conversationAsk(context.Background(), f.input)
+	index, err = f.r.loadConversations()
+	if err != nil || index.Questions[q.RequestID].InputSHA != q.InputSHA || index.Questions[q.RequestID].Title != "" {
+		t.Fatal("omitted title retry changed saved identity")
+	}
+	if got := normalQuestionVideoTitle("", []byte("\ufeff\n  Review\r\nbody")); got != "Review" {
+		t.Fatal(got)
+	}
+}
+
 func conversationQuestionImagePath(t *testing.T, f *conversationFixture) string {
 	t.Helper()
 	// Windows service TEMP may contain 8.3 aliases. Synthetic input must obey

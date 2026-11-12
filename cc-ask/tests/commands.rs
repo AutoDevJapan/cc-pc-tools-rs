@@ -4,6 +4,91 @@ use common::{message, Harness, SharedFake};
 use serde_json::{json, Value};
 use std::{collections::BTreeMap, path::PathBuf};
 
+// Reuse the actual bridge fixture in this already-consumed Linux target. The
+// focused integration target remains available; no production API is added.
+#[cfg(unix)]
+#[path = "conversation_bridge.rs"]
+mod unix_bridge_acceptance;
+
+// This test target is already consumed by the Linux workflow. Keep the Unix
+// intake acceptance here as well as the focused bridge target, without adding
+// a workflow trigger or claiming an unselected test has run.
+#[cfg(unix)]
+mod unix_source_intake {
+    use super::*;
+    use std::os::unix::ffi::OsStrExt;
+
+    #[test]
+    fn no_writer_fifo_is_bounded_and_regular_file_is_accepted() {
+        const CHILD: &str = "CC_ASK_UNIX_INTAKE_CHILD";
+        if std::env::var_os(CHILD).is_none() {
+            let mut child = std::process::Command::new(std::env::current_exe().unwrap())
+                .args([
+                    "--exact",
+                    "unix_source_intake::no_writer_fifo_is_bounded_and_regular_file_is_accepted",
+                    "--nocapture",
+                ])
+                .env(CHILD, "1")
+                .spawn()
+                .unwrap();
+            let before = std::time::Instant::now();
+            loop {
+                if let Some(status) = child.try_wait().unwrap() {
+                    assert!(status.success());
+                    break;
+                }
+                if before.elapsed() > std::time::Duration::from_secs(2) {
+                    child.kill().unwrap();
+                    child.wait().unwrap();
+                    panic!("FIFO source blocked before guard");
+                }
+                std::thread::sleep(std::time::Duration::from_millis(10));
+            }
+            return;
+        }
+        let mut h = Harness::new();
+        std::fs::remove_file(&h.ctx.client_projects).unwrap();
+        let body = h.root.path().join("question.md");
+        std::fs::write(&body, "画面案を選んでください").unwrap();
+        let path = h.root.path().join("input.png");
+        let name = std::ffi::CString::new(path.as_os_str().as_bytes()).unwrap();
+        assert_eq!(unsafe { libc::mkfifo(name.as_ptr(), 0o600) }, 0);
+        let args = AskArgs {
+            title: "画像案".into(),
+            body_file: body,
+            cwd: Some("D:/repos/KaraokeMaker".into()),
+            attach: vec![path.clone()],
+            ..Default::default()
+        };
+        assert!(cc_ask::project::qualify_question_sources(
+            &mut *h.ctx.effects,
+            &h.ctx.client_projects,
+            &args
+        )
+        .is_err());
+        assert!(h.fake.borrow().http_calls.is_empty());
+        assert!(h.fake.borrow().launches.is_empty());
+        std::fs::remove_file(&path).unwrap();
+        std::fs::write(&path, b"owned regular image").unwrap();
+        let held = cc_ask::project::qualify_question_sources(
+            &mut *h.ctx.effects,
+            &h.ctx.client_projects,
+            &args,
+        )
+        .unwrap();
+        // The actual CLI fallthrough advice function consumes this pathname
+        // again after qualification. Replacing its name must not block it.
+        let advice_path = args.body_file.clone();
+        std::fs::rename(&advice_path, advice_path.with_extension("held")).unwrap();
+        let name = std::ffi::CString::new(advice_path.as_os_str().as_bytes()).unwrap();
+        assert_eq!(unsafe { libc::mkfifo(name.as_ptr(), 0o600) }, 0);
+        cc_ask::ja_check::advise_body(&mut *h.ctx.effects, "", Some(&advice_path));
+        drop(held);
+        assert!(h.fake.borrow().http_calls.is_empty());
+        assert!(h.fake.borrow().launches.is_empty());
+    }
+}
+
 #[test]
 fn ask_existing_thread_creates_separate_question_and_progress_with_work_link() {
     let mut h = Harness::new();

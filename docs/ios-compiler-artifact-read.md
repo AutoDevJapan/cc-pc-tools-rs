@@ -39,6 +39,16 @@ The eleven files are `input.swift`, `input-sha256.txt`, `scope.txt`,
 and `status.txt`. Other bounded regular ZIP diagnostic entries are not opened
 or returned. Handles close and temporary buffers are erased on success and
 failure. Cleanup failure remains explicit and prevents a successful CLI exit.
+File and ZIP reads use one explicitly allocated bounded buffer; output streams
+base64 through one erased scratch buffer instead of pooling diagnostic content
+in a JSON encoder. The guarantee covers these owned buffers and the returned
+platform allocation, not complete secure erasure of Go runtime, compression
+library, operating-system or consumer-owned copies.
+
+The fixed metadata provider is created inside an owned Windows job before it
+can run. Its gate and descendants are terminated and the kernel active-process
+count must reach zero on normal exit, deadline and failure. This does not prove
+the behavior of unrelated processes or containers.
 
 This feature does not establish Swift ABI correctness, runtime drain behavior,
 or product completion. Those remain the original SDK consumer's acceptance.

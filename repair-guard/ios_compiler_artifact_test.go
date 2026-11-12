@@ -4,7 +4,9 @@ import (
 	"archive/zip"
 	"bytes"
 	"context"
+	"io"
 	"testing"
+	"unsafe"
 )
 
 type iosCompilerTestAuthority struct {
@@ -164,6 +166,77 @@ func TestIOSCompilerArchiveRejectsWrongNamespaceBeforeSeal(t *testing.T) {
 			want := name == "public-metadata.txt"
 			if r.Qualified != want || (a.seals != 0) != want {
 				t.Fatal("archive namespace qualification", r)
+			}
+		})
+	}
+}
+
+type iosCompilerTrackedReader struct {
+	remaining  int
+	fail       bool
+	first, all []byte
+	start      uintptr
+	offset     int
+	swapped    bool
+}
+
+func (r *iosCompilerTrackedReader) Read(p []byte) (int, error) {
+	if r.first == nil {
+		r.first = p
+		r.start = uintptr(unsafe.Pointer(&p[0]))
+	}
+	if uintptr(unsafe.Pointer(&p[0])) != r.start+uintptr(r.offset) {
+		r.swapped = true
+	}
+	if r.remaining == 0 {
+		if r.fail {
+			return 0, io.ErrUnexpectedEOF
+		}
+		return 0, io.EOF
+	}
+	n := min(r.remaining, len(p), 23)
+	for i := range p[:n] {
+		p[i] = 'S'
+	}
+	r.remaining -= n
+	r.offset += n
+	r.all = append(r.all, p[:n]...)
+	return n, nil
+}
+func TestIOSCompilerFixedReadRetainsOneBackingBufferAndErasesFailures(t *testing.T) {
+	for _, name := range []string{"normal", "read-error", "oversize", "short", "empty"} {
+		t.Run(name, func(t *testing.T) {
+			size := int64(20000)
+			r := &iosCompilerTrackedReader{remaining: 20000}
+			switch name {
+			case "read-error":
+				r.remaining = 1024
+				r.fail = true
+			case "oversize":
+				r.remaining++
+			case "short":
+				r.remaining--
+			case "empty":
+				size = 0
+				r.remaining = 0
+			}
+			raw, err := iosCompilerReadFixed(r, size, 20000)
+			if name == "normal" || name == "empty" {
+				if err != nil || len(raw) != int(size) || r.swapped {
+					t.Fatal("fixed read buffer changed", name, err, r.swapped)
+				}
+				if len(raw) > 0 && uintptr(unsafe.Pointer(&raw[0])) != r.start {
+					t.Fatal("returned a copied backing buffer")
+				}
+				clear(raw)
+			} else {
+				if err == nil {
+					clear(raw)
+					t.Fatal("bad read accepted")
+				}
+				if !bytes.Equal(r.first, make([]byte, len(r.first))) {
+					t.Fatal("failed buffer retained bytes")
+				}
 			}
 		})
 	}

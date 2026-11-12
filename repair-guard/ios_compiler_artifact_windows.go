@@ -1,8 +1,8 @@
 package main
 
 import (
-	"bytes"
 	"context"
+	"encoding/base64"
 	"encoding/json"
 	"io"
 	"os"
@@ -53,7 +53,7 @@ func iosCompilerProvider(ctx context.Context, command func(context.Context, stri
 type iosCompilerWindowsAuthority struct{}
 
 func (iosCompilerWindowsAuthority) Provider(ctx context.Context) error {
-	return iosCompilerProvider(ctx, official3894Command)
+	return iosCompilerProvider(ctx, iosCompilerCommand)
 }
 func (iosCompilerWindowsAuthority) PinOriginal(ctx context.Context) (iosCompilerSnapshot, error) {
 	if ctx.Err() != nil {
@@ -91,7 +91,12 @@ func iosCompilerDPAPI(raw []byte, seal bool) ([]byte, error) {
 	}
 	ok, _, _ := syscall.NewLazyDLL("crypt32.dll").NewProc(operation).Call(uintptr(unsafe.Pointer(&in)), 0, uintptr(unsafe.Pointer(&salt)), 0, 0, 1, uintptr(unsafe.Pointer(&out)))
 	if out.Data != nil {
-		defer syscall.NewLazyDLL("kernel32.dll").NewProc("LocalFree").Call(uintptr(unsafe.Pointer(out.Data)))
+		defer func() {
+			if out.Size <= 64<<10 {
+				clear(unsafe.Slice(out.Data, int(out.Size)))
+			}
+			syscall.NewLazyDLL("kernel32.dll").NewProc("LocalFree").Call(uintptr(unsafe.Pointer(out.Data)))
+		}()
 	}
 	if ok == 0 || out.Data == nil || out.Size == 0 || out.Size > 64<<10 {
 		return nil, errIOSCompiler
@@ -164,7 +169,7 @@ func (s *iosCompilerWindowsSnapshot) open(path string, limit int64) (iosCompiler
 	if syscall.GetFileInformationByHandle(syscall.Handle(f.Fd()), &before) != nil {
 		return iosCompilerPinnedFile{}, errIOSCompiler
 	}
-	raw, err := io.ReadAll(io.LimitReader(f, limit+1))
+	raw, err := iosCompilerReadFixed(f, stat.Size(), limit)
 	if err != nil || int64(len(raw)) > limit || syscall.GetFileInformationByHandle(syscall.Handle(f.Fd()), &after) != nil || !iosCompilerSameFileInfo(before, after) {
 		clear(raw)
 		return iosCompilerPinnedFile{}, errIOSCompiler
@@ -245,55 +250,98 @@ func runIOSCompilerCLI(args []string, out io.Writer, authority iosCompilerAuthor
 	}
 	ctx, cancel := context.WithTimeout(context.Background(), 25*time.Second)
 	defer cancel()
-	var payload []byte
-	var consumedManifest iosCompilerManifest
-	defer func() { clear(payload) }()
+	started := false
+	writeFailed := false
 	var consume func(iosCompilerManifest, map[string][]byte) error
 	if args[0] == "--consume-ios-compiler-artifact" {
 		consume = func(m iosCompilerManifest, files map[string][]byte) error {
-			var err error
-			consumedManifest = m
-			payload, err = json.Marshal(struct {
-				Domain   string              `json:"domain"`
-				Manifest iosCompilerManifest `json:"manifest"`
-				Files    map[string][]byte   `json:"files"`
-			}{iosCompilerDomain, m, files})
+			started = true
+			err := iosCompilerWriteFiles(out, m, files)
+			writeFailed = err != nil
 			return err
 		}
 	}
 	r := iosCompilerRead(ctx, authority, iosCompilerDigest, consume)
+	if writeFailed {
+		return 1
+	}
+	if started {
+		if iosCompilerWrite(out, []byte(`,"metadata":`)) != nil {
+			return 1
+		}
+		// This encoder sees only fixed metadata/digests, never file contents.
+		if json.NewEncoder(out).Encode(r) != nil || iosCompilerWrite(out, []byte("}\n")) != nil {
+			return 1
+		}
+	} else if json.NewEncoder(out).Encode(r) != nil {
+		return 1
+	}
 	if !r.Qualified || !r.CleanupComplete || (consume != nil && !r.Consumed) {
-		_ = json.NewEncoder(out).Encode(r)
-		return 1
-	}
-	if consume != nil {
-		// Only a successful close can publish the captured, already validated
-		// response. Cleanup status is not guessed from the callback's success.
-		envelope, err := json.Marshal(struct {
-			Metadata iosCompilerResult   `json:"metadata"`
-			Manifest iosCompilerManifest `json:"manifest"`
-			Payload  json.RawMessage     `json:"payload"`
-		}{r, consumedManifest, payload})
-		if err != nil {
-			return 1
-		}
-		defer clear(envelope)
-		n, err := out.Write(envelope)
-		if err != nil || n != len(envelope) {
-			return 1
-		}
-		if n, err := out.Write([]byte{'\n'}); err != nil || n != 1 {
-			return 1
-		}
-		return 0
-	}
-	var b bytes.Buffer
-	if json.NewEncoder(&b).Encode(r) != nil {
-		return 1
-	}
-	n, err := out.Write(b.Bytes())
-	if err != nil || n != b.Len() {
 		return 1
 	}
 	return 0
+}
+
+func iosCompilerWrite(out io.Writer, p []byte) error {
+	n, err := out.Write(p)
+	if err != nil || n != len(p) {
+		return errIOSCompiler
+	}
+	return nil
+}
+
+// The caller captures stdout programmatically and requires exit zero. We
+// stream the original verified buffers while pinned; no encoding/json pool
+// receives file contents. The only owned encoded scratch is erased on all exits.
+func iosCompilerWriteFiles(out io.Writer, m iosCompilerManifest, files map[string][]byte) error {
+	if len(files) != len(iosCompilerNames) {
+		return errIOSCompiler
+	}
+	if iosCompilerWrite(out, []byte(`{"manifest":`)) != nil {
+		return errIOSCompiler
+	}
+	if err := json.NewEncoder(out).Encode(m); err != nil {
+		return errIOSCompiler
+	}
+	if iosCompilerWrite(out, []byte(`,"files":{`)) != nil {
+		return errIOSCompiler
+	}
+	scratch := make([]byte, 4096)
+	defer clear(scratch)
+	for i, name := range iosCompilerNames {
+		data, ok := files[name]
+		if !ok {
+			return errIOSCompiler
+		}
+		if i != 0 && iosCompilerWrite(out, []byte{','}) != nil {
+			return errIOSCompiler
+		}
+		if iosCompilerWrite(out, []byte(`"`+name+`":"`)) != nil {
+			return errIOSCompiler
+		}
+		if err := iosCompilerWriteBase64(out, data, scratch); err != nil {
+			return err
+		}
+		if iosCompilerWrite(out, []byte{'"'}) != nil {
+			return errIOSCompiler
+		}
+	}
+	return iosCompilerWrite(out, []byte{'}'})
+}
+func iosCompilerWriteBase64(out io.Writer, data, scratch []byte) error {
+	defer clear(scratch)
+	if len(scratch) < 4096 {
+		return errIOSCompiler
+	}
+	for len(data) > 0 {
+		n := min(len(data), 3072)
+		encoded := base64.StdEncoding.EncodedLen(n)
+		base64.StdEncoding.Encode(scratch[:encoded], data[:n])
+		if iosCompilerWrite(out, scratch[:encoded]) != nil {
+			return errIOSCompiler
+		}
+		clear(scratch[:encoded])
+		data = data[n:]
+	}
+	return nil
 }

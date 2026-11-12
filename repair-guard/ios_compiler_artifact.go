@@ -58,6 +58,31 @@ func iosCompilerHash(b []byte) string {
 	return hex.EncodeToString(h[:])
 }
 
+func iosCompilerReadFixed(input io.Reader, size, limit int64) ([]byte, error) {
+	if size < 0 || size > limit {
+		return nil, errIOSCompiler
+	}
+	raw := make([]byte, int(size)+1)
+	n := 0
+	for n < len(raw) {
+		got, err := input.Read(raw[n:])
+		n += got
+		if err != nil {
+			if err == io.EOF && n == int(size) {
+				return raw[:n], nil
+			}
+			clear(raw)
+			return nil, errIOSCompiler
+		}
+		if got == 0 {
+			clear(raw)
+			return nil, errIOSCompiler
+		}
+	}
+	clear(raw)
+	return nil, errIOSCompiler
+}
+
 // The same archive buffer is hashed and parsed. Only the eleven declared
 // snapshots are compared/consumed; other bounded regular diagnostic entries
 // are never opened. No extraction, copy, download, or execution occurs here.
@@ -89,7 +114,7 @@ func iosCompilerMatchArchive(raw []byte, digest string, files map[string][]byte)
 		if err != nil {
 			return false
 		}
-		got, readErr := io.ReadAll(io.LimitReader(r, 8<<20+1))
+		got, readErr := iosCompilerReadFixed(r, int64(entry.UncompressedSize64), 8<<20)
 		closeErr := r.Close()
 		equal := readErr == nil && closeErr == nil && len(got) <= 8<<20 && bytes.Equal(got, want)
 		clear(got)

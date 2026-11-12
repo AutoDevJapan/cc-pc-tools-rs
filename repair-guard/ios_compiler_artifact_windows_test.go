@@ -3,7 +3,9 @@ package main
 import (
 	"bytes"
 	"context"
+	"encoding/base64"
 	"encoding/json"
+	"io"
 	"os"
 	"path/filepath"
 	"syscall"
@@ -118,6 +120,55 @@ func TestIOSCompilerIdentityOnlyIgnoresReadAccessTime(t *testing.T) {
 		if iosCompilerSameFileInfo(a, b) {
 			t.Fatal("non access field ignored")
 		}
+	}
+}
+
+type iosCompilerObservingWriter struct {
+	data  []byte
+	fail  bool
+	calls int
+}
+
+func (w *iosCompilerObservingWriter) Write(p []byte) (int, error) {
+	w.calls++
+	if w.fail {
+		return 0, io.ErrClosedPipe
+	}
+	w.data = append(w.data, p...)
+	return len(p), nil
+}
+func TestIOSCompilerOutputScratchAndControllerFailureAreErased(t *testing.T) {
+	for _, fail := range []bool{false, true} {
+		scratch := make([]byte, 4096)
+		w := &iosCompilerObservingWriter{fail: fail}
+		raw := bytes.Repeat([]byte("synthetic-private"), 1000)
+		err := iosCompilerWriteBase64(w, raw, scratch)
+		if (err != nil) != fail || !bytes.Equal(scratch, make([]byte, len(scratch))) {
+			t.Fatal("encoded scratch retained")
+		}
+		if !fail {
+			got, err := base64.StdEncoding.DecodeString(string(w.data))
+			if err != nil || !bytes.Equal(got, raw) {
+				t.Fatal("streaming output changed bytes")
+			}
+			clear(got)
+		}
+		clear(w.data)
+		clear(raw)
+	}
+	for _, fail := range []bool{false, true} {
+		a, digest := iosCompilerFixture(t, "")
+		w := &iosCompilerObservingWriter{fail: fail}
+		r := iosCompilerRead(context.Background(), a, digest, func(m iosCompilerManifest, files map[string][]byte) error { return iosCompilerWriteFiles(w, m, files) })
+		if r.Consumed == fail || !r.CleanupComplete || !a.snapshot.closed {
+			t.Fatal("controller output/cleanup result", r)
+		}
+		for _, data := range a.snapshot.files {
+			if !bytes.Equal(data, make([]byte, len(data))) {
+				t.Fatal("output failure retained input")
+			}
+		}
+		clear(w.data)
 	}
 }
 

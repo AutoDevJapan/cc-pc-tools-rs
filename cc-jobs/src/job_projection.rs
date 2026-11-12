@@ -110,6 +110,9 @@ impl Context {
             return Err(Error::new("job projection purpose unavailable"));
         }
         let dir = self.job_dir(id);
+        // Keep the normal installed job-store spelling and each physical parent
+        // stable for every read participating in this projection.
+        let _parents = pin_projection_parents(&dir)?;
         let mut job_bytes = read_projection_file(self, &dir.join("job.json"), 1 << 20, false)?;
         let job = parse_projection_json(&job_bytes);
         job_bytes.fill(0);
@@ -123,9 +126,9 @@ impl Context {
                 return Err(Error::new("job projection purpose or binding unavailable"));
             }
             let output = dir.join("last_message.md");
-            let exists = self.rt.before_load(&output).is_ok()
-                && std::fs::symlink_metadata(&output)
-                    .is_ok_and(|m| m.is_file() && !m.file_type().is_symlink());
+            // Resolve the locator through a metadata handle, never its body.
+            // Use the same plain/single-link rules as the other source files.
+            let exists = open_projection_file(self, &output).is_ok();
             let association_path = dir.join("discord-threads.json");
             let associations = if self.rt.before_load(&association_path).is_ok() {
                 read_projection_file(self, &association_path, 65536, false)
@@ -169,9 +172,27 @@ impl Context {
 }
 
 fn read_projection_file(ctx: &Context, path: &Path, max: u64, prefix: bool) -> Result<Vec<u8>> {
+    let (file, _parents) = open_projection_file(ctx, path)?;
+    let mut raw = Vec::new();
+    if file.take(max + 1).read_to_end(&mut raw).is_err() {
+        raw.fill(0);
+        return Err(Error::new("job projection source unavailable"));
+    }
+    if !prefix && raw.len() as u64 > max {
+        raw.fill(0);
+        return Err(Error::new("job projection source too large"));
+    }
+    Ok(raw)
+}
+
+fn open_projection_file(ctx: &Context, path: &Path) -> Result<(File, Vec<File>)> {
     ctx.rt
         .before_load(path)
         .map_err(|_| Error::new("job projection source unavailable"))?;
+    let parents = pin_projection_parents(
+        path.parent()
+            .ok_or_else(|| Error::new("job projection source unavailable"))?,
+    )?;
     let mut options = File::options();
     options.read(true);
     #[cfg(windows)]
@@ -209,16 +230,54 @@ fn read_projection_file(ctx: &Context, path: &Path, max: u64, prefix: bool) -> R
             return Err(Error::new("job projection source unavailable"));
         }
     }
-    let mut raw = Vec::new();
-    if file.take(max + 1).read_to_end(&mut raw).is_err() {
-        raw.fill(0);
-        return Err(Error::new("job projection source unavailable"));
+    Ok((file, parents))
+}
+
+fn pin_projection_parents(dir: &Path) -> Result<Vec<File>> {
+    let mut directories = Vec::new();
+    let mut names = dir.ancestors().collect::<Vec<_>>();
+    names.reverse();
+    for name in names {
+        if name.as_os_str().is_empty() {
+            return Err(Error::new("job projection parent unavailable"));
+        }
+        let mut options = File::options();
+        options.read(true);
+        #[cfg(windows)]
+        {
+            use std::os::windows::fs::OpenOptionsExt;
+            options
+                .access_mode(0x81)
+                .share_mode(3)
+                .custom_flags(0x02000000 | 0x00200000);
+        }
+        let file = options
+            .open(name)
+            .map_err(|_| Error::new("job projection parent unavailable"))?;
+        let meta = file
+            .metadata()
+            .map_err(|_| Error::new("job projection parent unavailable"))?;
+        if !meta.is_dir() {
+            return Err(Error::new("job projection parent unavailable"));
+        }
+        #[cfg(windows)]
+        {
+            use std::os::windows::fs::MetadataExt;
+            if meta.file_attributes() & 0x400 != 0 {
+                return Err(Error::new("job projection parent unavailable"));
+            }
+        }
+        #[cfg(not(windows))]
+        {
+            if !std::fs::symlink_metadata(name)
+                .is_ok_and(|m| m.is_dir() && !m.file_type().is_symlink())
+            {
+                return Err(Error::new("job projection parent unavailable"));
+            }
+        }
+        directories.push(file);
     }
-    if !prefix && raw.len() as u64 > max {
-        raw.fill(0);
-        return Err(Error::new("job projection source too large"));
-    }
-    Ok(raw)
+    Ok(directories)
 }
 
 // Stored records can evolve, so unknown fields remain valid. Duplicate JSON

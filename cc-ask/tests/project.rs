@@ -319,6 +319,27 @@ fn qualified_source_lease_keeps_named_bytes_until_consumer_finishes() {
 }
 
 #[test]
+fn missing_registry_qualified_routine_question_keeps_gate_before_config_or_http() {
+    let mut h = Harness::new();
+    std::fs::remove_file(&h.ctx.client_projects).unwrap();
+    let body = h.root.path().join("body.md");
+    std::fs::write(&body, "許可をお願いします").unwrap();
+    let result = qualify_question_sources(
+        &mut *h.ctx.effects,
+        &h.ctx.client_projects,
+        &AskArgs {
+            title: "Chromeの画面の計測".into(),
+            body_file: body,
+            cwd: Some("D:/repos/KaraokeMaker".into()),
+            ..Default::default()
+        },
+    );
+    assert!(matches!(result,Err(error) if error == cc_ask::ask_gate::BLOCKED_MESSAGE));
+    assert!(h.fake.borrow().http_calls.is_empty());
+    assert!(h.fake.borrow().launches.is_empty());
+}
+
+#[test]
 fn existing_unreadable_names_source_is_not_treated_as_missing() {
     let h = Harness::new();
     assert!(ProjectNames::load(h.root.path()).is_err());

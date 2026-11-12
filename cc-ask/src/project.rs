@@ -174,6 +174,26 @@ mod unix_source_tests {
 
     #[test]
     fn no_writer_fifo_and_directory_are_rejected_before_content_read() {
+        const CHILD: &str = "CC_ASK_OWNED_FIFO_UNIT";
+        if std::env::var_os(CHILD).is_none() {
+            let mut child = std::process::Command::new(std::env::current_exe().unwrap())
+                .args(["--exact", "project::unix_source_tests::no_writer_fifo_and_directory_are_rejected_before_content_read", "--nocapture"])
+                .env(CHILD,"1").spawn().unwrap();
+            let start = std::time::Instant::now();
+            loop {
+                if let Some(status) = child.try_wait().unwrap() {
+                    assert!(status.success());
+                    break;
+                }
+                if start.elapsed() > std::time::Duration::from_secs(2) {
+                    child.kill().unwrap();
+                    child.wait().unwrap();
+                    panic!("FIFO unit open did not return");
+                }
+                std::thread::sleep(std::time::Duration::from_millis(10));
+            }
+            return;
+        }
         use std::os::unix::ffi::OsStrExt;
         let root = tempfile::tempdir().unwrap();
         let fifo = root.path().join("input.png");

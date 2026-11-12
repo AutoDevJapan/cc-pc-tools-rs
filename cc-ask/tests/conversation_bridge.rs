@@ -451,7 +451,12 @@ fn conversation_bridge_disabled_and_dry_run_never_start_children_or_snapshot_inp
         .is_none());
     assert!(fake.calls.is_empty());
     assert_eq!(fake.http_calls, 0);
-    assert!(!f.root.path().join("conversation-bridge").exists());
+    assert_eq!(
+        fs::read_dir(f.root.path().join("conversation-bridge"))
+            .unwrap()
+            .count(),
+        0
+    );
     f.unchanged_legacy();
 }
 

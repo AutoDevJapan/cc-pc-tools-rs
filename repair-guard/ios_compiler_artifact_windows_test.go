@@ -1,0 +1,195 @@
+package main
+
+import (
+	"bytes"
+	"context"
+	"encoding/json"
+	"os"
+	"path/filepath"
+	"syscall"
+	"testing"
+)
+
+func TestIOSCompilerCLIEntryRejectsMixedFlagsWithoutProvider(t *testing.T) {
+	var out, stderr bytes.Buffer
+	code := runGuardCLI([]string{"--verify-ios-compiler-artifact", "--guard-path", "C:/unopened"}, &out, &stderr, func(int) object { t.Fatal("unrelated verifier"); return nil })
+	var v iosCompilerResult
+	if code != 2 || stderr.Len() != 0 || json.Unmarshal(out.Bytes(), &v) != nil || v.Stage != "invalid_arguments" {
+		t.Fatal("purpose CLI not connected before ordinary flag parser", code, stderr.Len(), out.Len())
+	}
+}
+
+func TestIOSCompilerProviderValidatesEveryFixedAPIObservation(t *testing.T) {
+	for mutate := -1; mutate < len(iosCompilerPins()); mutate++ {
+		calls := 0
+		err := iosCompilerProvider(context.Background(), func(_ context.Context, exe string, args ...string) ([]byte, error) {
+			pins := iosCompilerPins()
+			if exe != official3894Gate || len(args) != 6 || args[0] != "api" || args[1] != "--hostname" || args[2] != "github.com" || args[3] != pins[calls].endpoint || args[4] != "--jq" || args[5] != pins[calls].query {
+				t.Fatal("unexpected provider operation")
+			}
+			row := pins[calls].expected
+			if calls == mutate {
+				row = object{"unqualified": "private token must not leave this boundary"}
+			}
+			calls++
+			return json.Marshal(row)
+		})
+		if (err == nil) != (mutate == -1) || (mutate != -1 && calls != mutate+1) {
+			t.Fatal("provider pin/order failure", mutate, calls, err)
+		}
+	}
+	calls := 0
+	ctx, cancel := context.WithCancel(context.Background())
+	cancel()
+	if iosCompilerProvider(ctx, func(context.Context, string, ...string) ([]byte, error) { calls++; return nil, nil }) == nil || calls != 0 {
+		t.Fatal("cancelled provider made a request")
+	}
+}
+
+func TestIOSCompilerPlatformSealHasDedicatedDomainAndRejectsTampering(t *testing.T) {
+	payload := []byte(`{"domain":"original-ios-compiler-abi-read-v1","source":"synthetic"}`)
+	sealed, err := iosCompilerDPAPI(payload, true)
+	if err != nil {
+		t.Fatal("platform issuer", err)
+	}
+	defer clear(sealed)
+	plain, err := iosCompilerDPAPI(sealed, false)
+	defer clear(plain)
+	if err != nil || !bytes.Equal(plain, payload) {
+		t.Fatal("platform seal roundtrip")
+	}
+	sealed[len(sealed)/2] ^= 1
+	if got, err := iosCompilerDPAPI(sealed, false); err == nil || len(got) != 0 {
+		clear(got)
+		t.Fatal("tampered issuer accepted")
+	}
+	if got, ok := official3894Seal(payload, true); !ok {
+		t.Fatal("control platform issuer unavailable")
+	} else {
+		defer clear(got)
+		if raw, err := iosCompilerDPAPI(got, false); err == nil {
+			clear(raw)
+			t.Fatal("other purpose issuer accepted")
+		}
+	}
+}
+
+type iosCompilerShortWriter struct{}
+
+func (iosCompilerShortWriter) Write(p []byte) (int, error) { return len(p) - 1, nil }
+
+func TestIOSCompilerCLIOutputAndUnqualifiedBoundaries(t *testing.T) {
+	for _, args := range [][]string{nil, {"--verify-ios-compiler-artifact", "other"}, {"--consume-ios-compiler-artifact=path"}} {
+		a, _ := iosCompilerFixture(t, "")
+		var out bytes.Buffer
+		if runIOSCompilerCLI(args, &out, a) != 2 || a.pins != 0 || a.seals != 0 {
+			t.Fatal("invalid CLI performed work")
+		}
+	}
+	a, _ := iosCompilerFixture(t, "")
+	a.providerErr = errIOSCompiler
+	var out bytes.Buffer
+	if runIOSCompilerCLI([]string{"--consume-ios-compiler-artifact"}, &out, a) != 1 || a.pins != 0 || bytes.Contains(out.Bytes(), []byte("synthetic private")) {
+		t.Fatal("provider failure consumed original")
+	}
+	// A failing metadata writer cannot turn a refused operation into success.
+	if runIOSCompilerCLI([]string{"--verify-ios-compiler-artifact"}, iosCompilerShortWriter{}, a) != 1 {
+		t.Fatal("short output reported success")
+	}
+}
+
+func TestIOSCompilerIdentityOnlyIgnoresReadAccessTime(t *testing.T) {
+	a := syscall.ByHandleFileInformation{VolumeSerialNumber: 1, FileIndexLow: 2, FileSizeLow: 3, NumberOfLinks: 1}
+	b := a
+	b.LastAccessTime.LowDateTime = 4
+	if !iosCompilerSameFileInfo(a, b) {
+		t.Fatal("read access time changed identity")
+	}
+	for _, mutate := range []func(*syscall.ByHandleFileInformation){
+		func(i *syscall.ByHandleFileInformation) { i.FileIndexLow++ },
+		func(i *syscall.ByHandleFileInformation) { i.FileSizeLow++ },
+		func(i *syscall.ByHandleFileInformation) { i.LastWriteTime.LowDateTime++ },
+		func(i *syscall.ByHandleFileInformation) { i.CreationTime.LowDateTime++ },
+		func(i *syscall.ByHandleFileInformation) { i.NumberOfLinks++ },
+		func(i *syscall.ByHandleFileInformation) { i.FileAttributes++ },
+	} {
+		b = a
+		mutate(&b)
+		if iosCompilerSameFileInfo(a, b) {
+			t.Fatal("non access field ignored")
+		}
+	}
+}
+
+func TestIOSCompilerWindowsOwnedSameHandleAndMutationExclusion(t *testing.T) {
+	root := os.Getenv("IOS_COMPILER_OWNED_FIXTURE")
+	if root == "" {
+		t.Skip("explicit normally owned fixture required")
+	}
+	if !filepath.IsAbs(root) {
+		t.Fatal("fixture root must be absolute")
+	}
+	for _, name := range []string{"artifact", "artifact.zip"} {
+		if _, err := os.Lstat(filepath.Join(root, name)); err != nil && !os.IsNotExist(err) {
+			t.Fatal("fixture unavailable")
+		}
+	}
+	output := filepath.Join(root, "artifact")
+	if err := os.Mkdir(output, 0700); err != nil && !os.IsExist(err) {
+		t.Fatal(err)
+	}
+	a, digest := iosCompilerFixture(t, "")
+	archive := filepath.Join(root, "artifact.zip")
+	if err := os.WriteFile(archive, a.snapshot.archive, 0600); err != nil {
+		t.Fatal(err)
+	}
+	for name, data := range a.snapshot.files {
+		if err := os.WriteFile(filepath.Join(output, name), data, 0600); err != nil {
+			t.Fatal(err)
+		}
+	}
+	s, err := iosCompilerPinAt(archive, output)
+	if err != nil {
+		fs := skillsFS{blocked: func(p string) bool { return legacyMatch(p) || ownerCardPath(p) }}
+		defer fs.close()
+		_, dirOK := fs.directory(output)
+		t.Logf("pin diagnostic: blocked=%t alias=%t directory=%t", fs.blocked(archive), ownerWindowsAlias(archive), dirOK)
+		t.Fatal("native pin", err)
+	}
+	defer s.Close()
+	raw, id := s.Archive()
+	if id == "" || iosCompilerHash(raw) != digest {
+		t.Fatal("native archive mismatch")
+	}
+	files := map[string][]byte{}
+	for _, name := range iosCompilerNames {
+		data, id, err := s.File(name)
+		if err != nil || id == "" {
+			t.Fatal("native file pin", name, err)
+		}
+		files[name] = data
+	}
+	if !iosCompilerMatchArchive(raw, digest, files) || s.Recheck() != nil {
+		t.Fatal("native same bytes validation")
+	}
+	if f, err := os.OpenFile(archive, os.O_WRONLY, 0); err == nil {
+		f.Close()
+		t.Fatal("held archive allowed writer")
+	}
+	if err := os.Rename(filepath.Join(output, "input.swift"), filepath.Join(output, "foreign.swift")); err == nil {
+		t.Fatal("held original allowed rename")
+	}
+	if err := s.Close(); err != nil {
+		t.Fatal("native close", err)
+	}
+	if f, err := os.OpenFile(archive, os.O_WRONLY, 0); err != nil {
+		t.Fatal("native handle leaked", err)
+	} else {
+		f.Close()
+	}
+	for _, data := range files {
+		if !bytes.Equal(data, make([]byte, len(data))) {
+			t.Fatal("native snapshot buffer not erased")
+		}
+	}
+}

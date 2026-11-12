@@ -375,6 +375,9 @@ func runGuardCLI(args []string, stdout, stderr io.Writer, currentVerifier func(i
 }
 
 func runGuardCLIWithRefresh(args []string, stdout, stderr io.Writer, currentVerifier func(int) object, refresh func(string, string, bool) (bool, ownerRefreshDiagnostic)) int {
+	if iosCompilerFlag(args) {
+		return runIOSCompilerCLI(args, stdout, iosCompilerWindowsAuthority{})
+	}
 	if refreshDiagnosticFlagPresent(args) {
 		return runGuardCLIWithVerifiersAndRefresh(args, stdout, stderr, currentVerifier, capacity3085RuntimeReceipt, classifyOwnerPath, refresh)
 	}

@@ -15,6 +15,9 @@
 - `cc-ocx-watchdog`: opencodexの応答停止を検出し、対象プロセスを終了してサービスの復旧を確認するRust監視。
 - `chatgpt-web`: ChatGPTのブラウザ版（専用プロフィールのChrome）へ質問を送り、回答の本文を返すCLIと毎日のログイン確認。
 
+既存iOS compiler diagnosticの用途限定読取は
+[元artifactの確認と読取](docs/ios-compiler-artifact-read.md)を参照してください。
+
 稼働中のソースは `D:/CC/Tools/rs/` にあります。Windows上で `cargo test --manifest-path cc-ask/Cargo.toml`、`cargo build --release --manifest-path cc-ask/Cargo.toml` を実行します。ビルドと配置の前に別モデルでレビューし、Mustを解消します。
 
 作業一覧の仕様と状態ファイルは [BOARD.md](cc-ask/BOARD.md) を参照してください。初回の検証は2026-10-06にWindowsで全430件成功、配布物を指定する必要がある既存の1件は対象の配布物がないため未実行です。一覧の11件はすべて成功しました。別モデルgpt-6-lunaの再レビューでMustは0件でした。

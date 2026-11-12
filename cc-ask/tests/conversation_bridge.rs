@@ -1382,12 +1382,13 @@ fn bridge_image_guard_and_snapshot_share_a_pinned_original_generation() {
 fn bridge_fifo_without_writer_is_rejected_before_guard_snapshot_or_child() {
     const CHILD: &str = "CC_ASK_OWNED_FIFO_TEST";
     if std::env::var_os(CHILD).is_none() {
+        let test_name = if module_path!().ends_with("unix_bridge_acceptance") {
+            "unix_bridge_acceptance::bridge_fifo_without_writer_is_rejected_before_guard_snapshot_or_child"
+        } else {
+            "bridge_fifo_without_writer_is_rejected_before_guard_snapshot_or_child"
+        };
         let mut child = Command::new(std::env::current_exe().unwrap())
-            .args([
-                "--exact",
-                "bridge_fifo_without_writer_is_rejected_before_guard_snapshot_or_child",
-                "--nocapture",
-            ])
+            .args(["--exact", test_name, "--nocapture"])
             .env(CHILD, "1")
             .spawn()
             .unwrap();

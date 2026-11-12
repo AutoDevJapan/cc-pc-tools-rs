@@ -4,6 +4,12 @@ use common::{message, Harness, SharedFake};
 use serde_json::{json, Value};
 use std::{collections::BTreeMap, path::PathBuf};
 
+// Reuse the actual bridge fixture in this already-consumed Linux target. The
+// focused integration target remains available; no production API is added.
+#[cfg(unix)]
+#[path = "conversation_bridge.rs"]
+mod unix_bridge_acceptance;
+
 // This test target is already consumed by the Linux workflow. Keep the Unix
 // intake acceptance here as well as the focused bridge target, without adding
 // a workflow trigger or claiming an unselected test has run.

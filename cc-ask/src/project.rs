@@ -46,7 +46,7 @@ pub struct QuestionSourceLease {
 pub(crate) fn question_text(path: &Path) -> Result<String> {
     use std::io::Read;
     const LIMIT: u64 = 1 << 20;
-    let file = std::fs::File::open(path).map_err(|_| "question source read unavailable")?;
+    let file = open_regular_source(path).map_err(|_| "question source read unavailable")?;
     let meta = file
         .metadata()
         .map_err(|_| "question source read unavailable")?;
@@ -166,6 +166,17 @@ fn open_plain_unix_source(path: &Path) -> std::io::Result<std::fs::File> {
         ));
     }
     Ok(file)
+}
+
+pub(crate) fn open_regular_source(path: &Path) -> std::io::Result<std::fs::File> {
+    #[cfg(unix)]
+    {
+        open_plain_unix_source(path)
+    }
+    #[cfg(not(unix))]
+    {
+        std::fs::File::open(path)
+    }
 }
 
 #[cfg(all(test, unix))]

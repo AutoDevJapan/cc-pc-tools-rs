@@ -11,8 +11,35 @@ import (
 	"os"
 	"path/filepath"
 	"runtime/debug"
+	"syscall"
 	"testing"
 )
+
+// Hosted Windows may spell TEMP through a short name or drive alias. Pin the
+// owned fixture's physical spelling; production exact-path checks stay strict.
+func physicalSoftwareFixture(t *testing.T) string {
+	t.Helper()
+	root := t.TempDir()
+	ptr, err := syscall.UTF16PtrFromString(root)
+	if err != nil {
+		t.Fatal(err)
+	}
+	h, err := syscall.CreateFile(ptr, 0x80, syscall.FILE_SHARE_READ|syscall.FILE_SHARE_WRITE|syscall.FILE_SHARE_DELETE, nil, syscall.OPEN_EXISTING, 0x02000000, 0)
+	if err != nil {
+		t.Fatal("fixture metadata open", err)
+	}
+	actual, ok := handlePath(h)
+	syscall.CloseHandle(h)
+	if !ok {
+		t.Fatal("fixture canonical path unavailable")
+	}
+	before, e1 := os.Stat(root)
+	after, e2 := os.Stat(actual)
+	if e1 != nil || e2 != nil || !os.SameFile(before, after) {
+		t.Fatal("fixture identity differs after physical spelling")
+	}
+	return actual
+}
 
 func TestSoftwareReaderBadArgsReadNothing(t *testing.T) {
 	for _, args := range [][]string{nil, {"--verify-installed-refresh-guard", "D:/other"}, {"--verify-installed-refresh-guard=true"}, {"--guard-path", "D:/other"}, {"--verify-installed-refresh-guard", "--verify-installed-refresh-guard"}} {
@@ -63,7 +90,7 @@ func TestSoftwareReaderExactBytesBeforeBuildParsing(t *testing.T) {
 }
 
 func TestSoftwareReaderHoldsActualFileAgainstReplacement(t *testing.T) {
-	root := t.TempDir()
+	root := physicalSoftwareFixture(t)
 	path := filepath.Join(root, "owned.exe")
 	if os.WriteFile(path, []byte("owned synthetic software"), 0600) != nil {
 		t.Fatal("fixture")
@@ -90,7 +117,7 @@ func TestSoftwareReaderHoldsActualFileAgainstReplacement(t *testing.T) {
 }
 
 func TestSoftwareReaderRejectsHardlinkBeforeConsume(t *testing.T) {
-	root := t.TempDir()
+	root := physicalSoftwareFixture(t)
 	path := filepath.Join(root, "owned.exe")
 	if os.WriteFile(path, []byte("synthetic"), 0600) != nil {
 		t.Fatal("fixture")

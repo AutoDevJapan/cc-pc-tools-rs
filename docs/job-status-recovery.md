@@ -13,6 +13,8 @@ An exact `--purpose` may request one of the two assigned recovery projections:
   unrecognized diagnostic returns `unknown`.
   Fixed diagnostic tags, a bounded OS error number and the launcher kind can
   narrow that unknown result without returning diagnostic text or a path.
+  OS numbers use the first valid bounded `os error N` token and the fixed
+  original Windows job's numeric meaning; they are diagnostic evidence.
 
 These purposes accept only their compiled original job identifiers and JSON
 output. They do not enumerate other jobs, change records, grant data access,

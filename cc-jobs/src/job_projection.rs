@@ -125,8 +125,12 @@ fn bounded_os_error(message: &[u8]) -> Option<u32> {
     let prefix = b"os error ";
     message
         .windows(prefix.len())
-        .position(|v| v.eq_ignore_ascii_case(prefix))
-        .and_then(|at| {
+        .enumerate()
+        .filter(|(at, v)| {
+            v.eq_ignore_ascii_case(prefix)
+                && (*at == 0 || !message[*at - 1].is_ascii_alphanumeric())
+        })
+        .find_map(|(at, _)| {
             let tail = &message[at + prefix.len()..];
             let count = tail.iter().take_while(|b| b.is_ascii_digit()).count();
             if count == 0 || count > 10 || tail.get(count).is_some_and(u8::is_ascii_alphanumeric) {
@@ -493,6 +497,19 @@ mod tests {
                 .iter()
                 .any(|v| v == "permission")
         );
+    }
+    #[test]
+    fn malformed_os_error_does_not_hide_a_later_valid_os_error() {
+        assert_eq!(bounded_os_error(b"os error invalid; os error 5"), Some(5));
+        assert_eq!(
+            bounded_os_error(b"os error 4294967296; os error 2"),
+            Some(2)
+        );
+        assert_eq!(bounded_os_error(b"os error 5x; os error 13"), Some(13));
+        assert_eq!(bounded_os_error(b"chaos error 5"), None);
+        assert_eq!(bounded_os_error(b"BIOS error 5; (os error 2)"), Some(2));
+        assert_eq!(bounded_os_error(b"(OS error 4294967295)"), Some(u32::MAX));
+        assert_eq!(bounded_os_error(b"(os error 2) then (os error 5)"), Some(2));
     }
     #[test]
     fn stored_projection_rejects_duplicate_keys_before_selecting_identity() {

@@ -1,4 +1,4 @@
-//! Purpose-limited metadata for two already assigned recovery jobs.
+//! Purpose-limited metadata for explicitly assigned recovery attempts.
 use crate::*;
 use std::{collections::BTreeSet, fs::File, io::Read, path::Path};
 
@@ -6,6 +6,16 @@ const KARAOKE_JOB: &str = "20261008-100555-orch-todo-1157";
 const FOUR_JOB: &str = "20261112-093913-4431-fourbros-pr1245-normal-job-prd-qa";
 const FOUR_SESSION: &str = "01a1bdce-c2db-7792-a036-79044f46d9fb";
 const FOUR_LAUNCH: &str = "7e5809fa41664dc988379e7163284acc";
+const FOUR_RETRY_JOB: &str = "20261112-160237-4431-fourbros-d5e-normal-job-prd-qa";
+const FOUR_RETRY_LAUNCH: &str = "833000ec664b46b3ba3356da827a4321";
+
+fn four_launch(id: &str) -> Option<&'static str> {
+    match id {
+        FOUR_JOB => Some(FOUR_LAUNCH),
+        FOUR_RETRY_JOB => Some(FOUR_RETRY_LAUNCH),
+        _ => None,
+    }
+}
 
 fn snowflake(value: &Value) -> Value {
     value
@@ -39,10 +49,10 @@ pub(crate) fn project(
             )
         }
         "fourbros-1245-launch-failure"
-            if id == FOUR_JOB
+            if four_launch(id).is_some()
                 && job["status"] == "failed"
                 && job["resume_session"] == FOUR_SESSION
-                && job["launch_key"] == FOUR_LAUNCH =>
+                && job["launch_key"].as_str() == four_launch(id) =>
         {
             let message = &stderr[..stderr.len().min(16384)];
             // The bounded reader retains one lookahead byte. An alphanumeric
@@ -159,7 +169,8 @@ impl Context {
     pub(crate) fn purpose_job_metadata(&self, id: &str, purpose: &str) -> Result<Value> {
         if !matches!(
             (id, purpose),
-            (KARAOKE_JOB, "karaoke-1157-locators") | (FOUR_JOB, "fourbros-1245-launch-failure")
+            (KARAOKE_JOB, "karaoke-1157-locators")
+                | (FOUR_JOB | FOUR_RETRY_JOB, "fourbros-1245-launch-failure")
         ) {
             return Err(Error::new("job projection purpose unavailable"));
         }
@@ -172,7 +183,7 @@ impl Context {
         job_bytes.fill(0);
         let job = job?;
         // Bind the original failed attempt before opening its diagnostic file.
-        if id == FOUR_JOB {
+        if four_launch(id).is_some() {
             project(&job, id, purpose, None, None, &[])?;
         }
         if id == KARAOKE_JOB {
@@ -433,6 +444,49 @@ fn parse_projection_json(bytes: &[u8]) -> Result<Value> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[test]
+    fn original_resumed_attempt_uses_its_own_exact_launch_binding() {
+        let job = json!({"id":FOUR_RETRY_JOB,"status":"failed","resume_session":FOUR_SESSION,"launch_key":FOUR_RETRY_LAUNCH,"exit_code":1,"steps":0});
+        let p = project(
+            &job,
+            FOUR_RETRY_JOB,
+            "fourbros-1245-launch-failure",
+            None,
+            None,
+            b"session not found",
+        )
+        .unwrap();
+        assert_eq!(p["id"], FOUR_RETRY_JOB);
+        assert_eq!(p["reason"], "session_unavailable");
+        for field in ["resume_session", "launch_key", "status", "id"] {
+            let mut bad = job.clone();
+            bad[field] = json!("other");
+            assert!(
+                project(
+                    &bad,
+                    FOUR_RETRY_JOB,
+                    "fourbros-1245-launch-failure",
+                    None,
+                    None,
+                    b"SECRET"
+                )
+                .is_err()
+            )
+        }
+        let mut old_key = job;
+        old_key["launch_key"] = json!(FOUR_LAUNCH);
+        assert!(
+            project(
+                &old_key,
+                FOUR_RETRY_JOB,
+                "fourbros-1245-launch-failure",
+                None,
+                None,
+                b"SECRET"
+            )
+            .is_err()
+        );
+    }
     #[test]
     fn original_unknown_diagnostic_returns_only_fixed_cause_signals() {
         let job = json!({"id":FOUR_JOB,"status":"failed","resume_session":FOUR_SESSION,"launch_key":FOUR_LAUNCH,"codex":"C:/owned/codex.cmd"});

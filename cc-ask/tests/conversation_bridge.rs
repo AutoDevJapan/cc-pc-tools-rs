@@ -1376,3 +1376,49 @@ fn bridge_image_guard_and_snapshot_share_a_pinned_original_generation() {
     assert_eq!(fs::read(image).unwrap(), original);
     assert_eq!(fake.http_calls, 0);
 }
+
+#[cfg(unix)]
+#[test]
+fn bridge_fifo_without_writer_is_rejected_before_guard_snapshot_or_child() {
+    const CHILD: &str = "CC_ASK_OWNED_FIFO_TEST";
+    if std::env::var_os(CHILD).is_none() {
+        let mut child = Command::new(std::env::current_exe().unwrap())
+            .args([
+                "--exact",
+                "bridge_fifo_without_writer_is_rejected_before_guard_snapshot_or_child",
+                "--nocapture",
+            ])
+            .env(CHILD, "1")
+            .spawn()
+            .unwrap();
+        let started = std::time::Instant::now();
+        loop {
+            if let Some(status) = child.try_wait().unwrap() {
+                assert!(status.success());
+                break;
+            }
+            if started.elapsed() > std::time::Duration::from_secs(2) {
+                child.kill().unwrap();
+                child.wait().unwrap();
+                panic!("FIFO blocked the actual bridge before its child deadline");
+            }
+            std::thread::sleep(std::time::Duration::from_millis(10));
+        }
+        return;
+    }
+    use std::os::unix::ffi::OsStrExt;
+    let f = Fixture::new();
+    let path = f.root.path().join("input.png");
+    let name = std::ffi::CString::new(path.as_os_str().as_bytes()).unwrap();
+    assert_eq!(unsafe { libc::mkfifo(name.as_ptr(), 0o600) }, 0);
+    let mut args = f.ask();
+    args.attach.push(path);
+    let mut fake = Fake::default();
+    assert!(bridge::try_ask(f.root.path(), &mut fake, &args).is_err());
+    assert!(fake.guard_calls.is_empty());
+    assert!(fake.calls.is_empty());
+    assert_eq!(fake.qualification_calls, 0);
+    assert_eq!(fake.http_calls, 0);
+    assert!(!f.root.path().join("conversation-bridge").exists());
+    f.unchanged_legacy();
+}

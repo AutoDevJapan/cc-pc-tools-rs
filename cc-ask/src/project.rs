@@ -130,12 +130,75 @@ pub(crate) fn pin_plain_source(path: &Path) -> Result<QuestionSourceLease> {
         }
         files.push(file);
     }
-    #[cfg(not(windows))]
-    let files =
-        vec![std::fs::File::open(&resolved).map_err(|_| "question source identity unavailable")?];
+    #[cfg(unix)]
+    let files = {
+        let file =
+            open_plain_unix_source(path).map_err(|_| "question source identity unavailable")?;
+        if std::fs::canonicalize(path).map_err(|_| "question source identity unavailable")?
+            != resolved
+        {
+            return Err("question source identity changed".into());
+        }
+        vec![file]
+    };
+    #[cfg(not(any(windows, unix)))]
+    let files = {
+        return Err("question source identity unavailable".into());
+    };
     // Windows handles now exclude file writes/deletes and parent replacement;
     // reclassify that still-named object before any caller consumes its bytes.
     Ok(QuestionSourceLease { files })
+}
+
+#[cfg(unix)]
+fn open_plain_unix_source(path: &Path) -> std::io::Result<std::fs::File> {
+    use std::os::unix::fs::OpenOptionsExt;
+    let file = std::fs::OpenOptions::new()
+        .read(true)
+        .custom_flags(libc::O_NONBLOCK | libc::O_NOFOLLOW)
+        .open(path)?;
+    // Check the opened object, not a pathname checked before open. In
+    // particular, opening a FIFO must not wait for a writer before rejection.
+    if !file.metadata()?.is_file() {
+        return Err(std::io::Error::new(
+            std::io::ErrorKind::InvalidInput,
+            "question source must be a regular file",
+        ));
+    }
+    Ok(file)
+}
+
+#[cfg(all(test, unix))]
+mod unix_source_tests {
+    use super::*;
+
+    #[test]
+    fn no_writer_fifo_and_directory_are_rejected_before_content_read() {
+        use std::os::unix::ffi::OsStrExt;
+        let root = tempfile::tempdir().unwrap();
+        let fifo = root.path().join("input.png");
+        let name = std::ffi::CString::new(fifo.as_os_str().as_bytes()).unwrap();
+        assert_eq!(unsafe { libc::mkfifo(name.as_ptr(), 0o600) }, 0);
+        let before = std::time::Instant::now();
+        assert!(pin_plain_source(&fifo).is_err());
+        assert!(before.elapsed() < std::time::Duration::from_secs(1));
+        assert!(pin_plain_source(root.path()).is_err());
+    }
+
+    #[test]
+    fn held_regular_object_passes_and_final_link_is_not_followed() {
+        use std::os::unix::fs::symlink;
+        let root = tempfile::tempdir().unwrap();
+        let plain = root.path().join("regular.png");
+        std::fs::write(&plain, b"owned image fixture").unwrap();
+        let file = open_plain_unix_source(&plain).unwrap();
+        assert!(file.metadata().unwrap().is_file());
+        assert!(pin_plain_source(&plain).is_ok());
+        let link = root.path().join("link.png");
+        symlink(&plain, &link).unwrap();
+        assert!(open_plain_unix_source(&link).is_err());
+        assert_eq!(std::fs::read(plain).unwrap(), b"owned image fixture");
+    }
 }
 
 pub fn qualify_question_sources(

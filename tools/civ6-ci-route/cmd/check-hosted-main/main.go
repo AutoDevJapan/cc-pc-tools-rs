@@ -43,7 +43,13 @@ func git(ctx context.Context, root string, args ...string) ([]byte, error) {
 	return command(ctx, root, "git", args...)
 }
 func commit(ctx context.Context, root, ref string) (hostedsource.Commit, error) {
-	b, e := git(ctx, root, "show", "-s", "--format=%H%n%T%n%P", ref)
+	return readCommit(ctx, root, ref, git)
+}
+
+type sourceRead func(context.Context, string, ...string) ([]byte, error)
+
+func readCommit(ctx context.Context, root, ref string, read sourceRead) (hostedsource.Commit, error) {
+	b, e := read(ctx, root, "show", "-s", "--format=%H%n%T%n%P", ref)
 	if e != nil {
 		return hostedsource.Commit{}, e
 	}
@@ -58,7 +64,11 @@ func commit(ctx context.Context, root, ref string) (hostedsource.Commit, error) 
 	return c, nil
 }
 func tree(ctx context.Context, root, ref string) ([]hostedsource.Entry, error) {
-	b, e := git(ctx, root, "ls-tree", "-r", "-t", "-z", ref)
+	return readTree(ctx, root, ref, git)
+}
+
+func readTree(ctx context.Context, root, ref string, read sourceRead) ([]hostedsource.Entry, error) {
+	b, e := read(ctx, root, "ls-tree", "-r", "-t", "-z", ref)
 	if e != nil {
 		return nil, e
 	}
@@ -78,34 +88,38 @@ func tree(ctx context.Context, root, ref string) ([]hostedsource.Entry, error) {
 	return out, nil
 }
 func observe(ctx context.Context, root string) (hostedsource.Snapshot, error) {
+	return observeWith(ctx, root, git)
+}
+
+func observeWith(ctx context.Context, root string, read sourceRead) (hostedsource.Snapshot, error) {
 	var s hostedsource.Snapshot
 	var e error
-	if s.Old, e = commit(ctx, root, hostedsource.OldHead); e != nil {
+	if s.Old, e = readCommit(ctx, root, hostedsource.OldHead, read); e != nil {
 		return s, e
 	}
-	if s.Main, e = commit(ctx, root, hostedsource.Main); e != nil {
+	if s.Main, e = readCommit(ctx, root, hostedsource.Main, read); e != nil {
 		return s, e
 	}
-	if s.Candidate, e = commit(ctx, root, "HEAD"); e != nil {
+	if s.Candidate, e = readCommit(ctx, root, "HEAD", read); e != nil {
 		return s, e
 	}
-	if s.MainTree, e = tree(ctx, root, hostedsource.Main); e != nil {
+	if s.MainTree, e = readTree(ctx, root, hostedsource.Main, read); e != nil {
 		return s, e
 	}
-	if s.CandidateTree, e = tree(ctx, root, "HEAD"); e != nil {
+	if s.CandidateTree, e = readTree(ctx, root, s.Candidate.SHA, read); e != nil {
 		return s, e
 	}
 	s.MainFiles = map[string][]byte{}
 	s.CandidateFiles = map[string][]byte{}
 	for _, w := range hostedsource.Workflows() {
-		if s.MainFiles[w.Path], e = git(ctx, root, "show", hostedsource.Main+":"+w.Path); e != nil {
+		if s.MainFiles[w.Path], e = read(ctx, root, "show", hostedsource.Main+":"+w.Path); e != nil {
 			return s, e
 		}
-		if s.CandidateFiles[w.Path], e = git(ctx, root, "show", "HEAD:"+w.Path); e != nil {
+		if s.CandidateFiles[w.Path], e = read(ctx, root, "show", s.Candidate.SHA+":"+w.Path); e != nil {
 			return s, e
 		}
 	}
-	s.CandidateFiles[hostedsource.AssetTestPath], e = git(ctx, root, "show", "HEAD:"+hostedsource.AssetTestPath)
+	s.CandidateFiles[hostedsource.AssetTestPath], e = read(ctx, root, "show", s.Candidate.SHA+":"+hostedsource.AssetTestPath)
 	return s, e
 }
 func main() {

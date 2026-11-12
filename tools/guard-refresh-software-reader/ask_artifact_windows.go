@@ -415,7 +415,6 @@ func runAskBuildWorker(out io.Writer) int {
 			r.ProducerElapsedMS = time.Since(started).Milliseconds()
 			if !built.Started || !built.Assigned || !built.WaitVerified || !built.Reaped || built.TimedOut || built.Exit != 0 {
 				r.Reason = "producer_failed_or_uncollected"
-				json.NewEncoder(out).Encode(r)
 				return 1
 			}
 			acknowledged := withPinnedCargoOutput(askBuildOutput, askBuildAlias, softwareIdentity{}, func(raw []byte, id softwareIdentity) bool {

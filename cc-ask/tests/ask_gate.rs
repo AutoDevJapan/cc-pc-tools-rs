@@ -164,11 +164,17 @@ fn cli_blocks_before_config_and_returns_78() {
     let dir = tempfile::tempdir().unwrap();
     let body = dir.path().join("q.txt");
     std::fs::write(&body, "許可をお願いします").unwrap();
+    // This CLI test isolates the gate-before-config contract. A hosted PC
+    // does not contain the owner's installed classification executable.
+    // Missing-registry source admission has separate fake-effects controls.
+    let registry = dir.path().join("fixture-projects.txt");
+    std::fs::write(&registry, "# owned synthetic project registry\n").unwrap();
     let out = Command::new(env!("CARGO_BIN_EXE_discord_ask"))
         .args(["ask", "--title", "Chromeの画面の計測", "--body-file"])
         .arg(&body)
         .env("CC_ASK_CONFIG", dir.path().join("missing.json"))
         .env("CC_ASK_HOME", dir.path().join("not-created"))
+        .env("CC_ASK_CLIENT_PROJECTS", &registry)
         .output()
         .unwrap();
     assert_eq!(
@@ -185,6 +191,7 @@ fn cli_blocks_before_config_and_returns_78() {
         .args(["--owner-only", "other"])
         .env("CC_ASK_CONFIG", dir.path().join("missing.json"))
         .env("CC_ASK_HOME", dir.path().join("not-created"))
+        .env("CC_ASK_CLIENT_PROJECTS", &registry)
         .output()
         .unwrap();
     assert_eq!(invalid.status.code(), Some(2));

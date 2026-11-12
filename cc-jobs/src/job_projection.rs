@@ -45,6 +45,17 @@ pub(crate) fn project(
                 && job["launch_key"] == FOUR_LAUNCH =>
         {
             let message = &stderr[..stderr.len().min(16384)];
+            // The bounded reader retains one lookahead byte. An alphanumeric
+            // continuation means the final token has no observed right edge;
+            // a delimiter (or actual EOF) still completes a short numeric token.
+            let complete = if stderr.get(16384).is_some_and(u8::is_ascii_alphanumeric) {
+                message
+                    .iter()
+                    .rposition(|b| !b.is_ascii_alphanumeric())
+                    .map_or(&message[..0], |at| &message[..=at])
+            } else {
+                message
+            };
             let has = |needle: &[u8]| {
                 message
                     .windows(needle.len())
@@ -58,7 +69,7 @@ pub(crate) fn project(
                 "session_in_use"
             } else if has(b"session") && (has(b"not found") || has(b"no session")) {
                 "session_unavailable"
-            } else if has(b"authentication") || has(b"unauthorized") || http_401(message) {
+            } else if has(b"authentication") || has(b"unauthorized") || http_401(complete) {
                 "authentication"
             } else if has(b"config") && (has(b"invalid") || has(b"unknown") || has(b"parse")) {
                 "configuration"
@@ -94,7 +105,7 @@ pub(crate) fn project(
             .into_iter()
             .filter_map(|(tag, word)| has(word).then_some(tag))
             .collect();
-            let os_error = bounded_os_error(message);
+            let os_error = bounded_os_error(complete);
             let launcher = match Path::new(s(job, "codex"))
                 .extension()
                 .and_then(|e| e.to_str())
@@ -510,6 +521,132 @@ mod tests {
         assert_eq!(bounded_os_error(b"BIOS error 5; (os error 2)"), Some(2));
         assert_eq!(bounded_os_error(b"(OS error 4294967295)"), Some(u32::MAX));
         assert_eq!(bounded_os_error(b"(os error 2) then (os error 5)"), Some(2));
+    }
+    #[test]
+    fn truncated_status_token_is_not_treated_as_complete() {
+        let job = json!({"id":FOUR_JOB,"status":"failed","resume_session":FOUR_SESSION,"launch_key":FOUR_LAUNCH});
+        let mut raw = vec![b' '; 16385];
+        raw[16374..].copy_from_slice(b"os error 50");
+        let p = project(
+            &job,
+            FOUR_JOB,
+            "fourbros-1245-launch-failure",
+            None,
+            None,
+            &raw,
+        )
+        .unwrap();
+        assert!(p["osErrorCode"].is_null());
+        assert!(
+            !p["diagnosticSignals"]
+                .as_array()
+                .unwrap()
+                .iter()
+                .any(|v| v == "permission")
+        );
+        raw.fill(b' ');
+        raw[16376..].copy_from_slice(b"HTTP 4010");
+        let p = project(
+            &job,
+            FOUR_JOB,
+            "fourbros-1245-launch-failure",
+            None,
+            None,
+            &raw,
+        )
+        .unwrap();
+        assert_ne!(p["reason"], "authentication");
+    }
+    #[test]
+    fn lookahead_keeps_complete_numeric_tokens_and_rejects_continuations() {
+        let job = json!({"id":FOUR_JOB,"status":"failed","resume_session":FOUR_SESSION,"launch_key":FOUR_LAUNCH});
+        for (token, suffix, number, reason) in [
+            (b"os error 5".as_slice(), b"".as_slice(), Some(5), "unknown"),
+            (
+                b"os error 5".as_slice(),
+                b")".as_slice(),
+                Some(5),
+                "unknown",
+            ),
+            (b"os error 5".as_slice(), b"0".as_slice(), None, "unknown"),
+            (b"os error 5".as_slice(), b"x".as_slice(), None, "unknown"),
+            (
+                b"os error 13".as_slice(),
+                b" ".as_slice(),
+                Some(13),
+                "unknown",
+            ),
+            (
+                b"HTTP 401".as_slice(),
+                b"".as_slice(),
+                None,
+                "authentication",
+            ),
+            (
+                b"HTTP 401".as_slice(),
+                b" ".as_slice(),
+                None,
+                "authentication",
+            ),
+            (b"HTTP 401".as_slice(), b"0".as_slice(), None, "unknown"),
+            (b"HTTP 401".as_slice(), b"x".as_slice(), None, "unknown"),
+        ] {
+            let mut raw = vec![b' '; 16384];
+            raw[16384 - token.len()..].copy_from_slice(token);
+            raw.extend_from_slice(suffix);
+            let p = project(
+                &job,
+                FOUR_JOB,
+                "fourbros-1245-launch-failure",
+                None,
+                None,
+                &raw,
+            )
+            .unwrap();
+            assert_eq!(p["osErrorCode"], number.map_or(Value::Null, |n| json!(n)));
+            assert_eq!(p["reason"], reason);
+            assert_eq!(p["stderrTruncated"], !suffix.is_empty());
+            assert_eq!(
+                p["diagnosticSignals"]
+                    .as_array()
+                    .unwrap()
+                    .iter()
+                    .any(|v| v == "permission"),
+                number == Some(5)
+            );
+        }
+        // An earlier complete token remains available when the last token is
+        // incomplete; lookahead cannot create a new token outside the prefix.
+        let mut raw = vec![b' '; 16385];
+        raw[..12].copy_from_slice(b"(os error 2)");
+        raw[16374..].copy_from_slice(b"os error 50");
+        assert_eq!(
+            project(
+                &job,
+                FOUR_JOB,
+                "fourbros-1245-launch-failure",
+                None,
+                None,
+                &raw
+            )
+            .unwrap()["osErrorCode"],
+            2
+        );
+        raw.fill(b' ');
+        raw[16376..].copy_from_slice(b"HTTP 4010");
+        raw[16384] = b' ';
+        assert_eq!(
+            project(
+                &job,
+                FOUR_JOB,
+                "fourbros-1245-launch-failure",
+                None,
+                None,
+                &raw
+            )
+            .unwrap()["reason"],
+            "authentication"
+        );
     }
     #[test]
     fn stored_projection_rejects_duplicate_keys_before_selecting_identity() {

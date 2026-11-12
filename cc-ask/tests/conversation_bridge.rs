@@ -451,12 +451,7 @@ fn conversation_bridge_disabled_and_dry_run_never_start_children_or_snapshot_inp
         .is_none());
     assert!(fake.calls.is_empty());
     assert_eq!(fake.http_calls, 0);
-    assert_eq!(
-        fs::read_dir(f.root.path().join("conversation-bridge"))
-            .unwrap()
-            .count(),
-        0
-    );
+    assert!(!f.root.path().join("conversation-bridge").exists());
     f.unchanged_legacy();
 }
 
@@ -1424,6 +1419,11 @@ fn bridge_fifo_without_writer_is_rejected_before_guard_snapshot_or_child() {
     assert!(fake.calls.is_empty());
     assert_eq!(fake.qualification_calls, 0);
     assert_eq!(fake.http_calls, 0);
-    assert!(!f.root.path().join("conversation-bridge").exists());
+    assert_eq!(
+        fs::read_dir(f.root.path().join("conversation-bridge"))
+            .unwrap()
+            .count(),
+        0
+    );
     f.unchanged_legacy();
 }

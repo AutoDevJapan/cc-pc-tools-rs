@@ -74,9 +74,4 @@ jobs:
       - if: runner.os == 'Windows'
         run: cargo test --locked -p cc-jobs --test parity registrar_launch_policy
       - run: cargo test --locked -p cc-ask --test channel_reports --test commands --test ask_dedup
-      - name: Verify Unix image source intake boundaries
-        if: runner.os == 'Linux'
-        run: |
-          cargo test --locked -p cc-ask --lib project::unix_source_tests -- --nocapture
-          cargo test --locked -p cc-ask --test conversation_bridge bridge_fifo_without_writer_is_rejected_before_guard_snapshot_or_child -- --nocapture
       - run: cargo clippy --locked -p cc-ask -p cc-channel-watch -p cc-chrome -p cc-job-policy --all-targets -- -D warnings

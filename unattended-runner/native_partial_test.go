@@ -308,3 +308,12 @@ func TestNativePartialRejectsFutureTimeAndMisleadingArtifactFields(t *testing.T)
 		})
 	}
 }
+
+func TestNativePartialWriterKeepsFixedVerificationBudget(t *testing.T) {
+	if commandBudget(conversationTodo, []string{"native-implementation-record"}) != 50*time.Second || nativePartialCLIDeadline != 180*time.Second {
+		t.Fatal("native re-verification transaction lost its bounded budget")
+	}
+	if commandBudget(conversationTodo, []string{"implementation-record"}) != 20*time.Second || conversationCLIDeadline != 60*time.Second {
+		t.Fatal("native budget changed ordinary command deadlines")
+	}
+}

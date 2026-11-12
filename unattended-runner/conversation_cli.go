@@ -16,6 +16,7 @@ import (
 
 const conversationDefaultConfig = "D:/CC/Tools/discord-ask/unattended/config.json"
 const conversationCLIDeadline = 60 * time.Second
+const nativePartialCLIDeadline = 180 * time.Second
 
 var errConversationArguments = errors.New("invalid conversation arguments")
 var errConversationBusy = errors.New("conversation busy")
@@ -351,7 +352,11 @@ func conversationCLIWithGuard(args []string, out io.Writer, load func(string) (c
 		_, _ = io.WriteString(out, "invalid conversation arguments\n")
 		return 1
 	}
-	ctx, cancel := context.WithTimeout(context.Background(), conversationCLIDeadline)
+	budget := conversationCLIDeadline
+	if opts.Command == "native-implementation-record" {
+		budget = nativePartialCLIDeadline
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), budget)
 	defer cancel()
 	if opts.Output != "" && !conversationRepliesOutput(ctx, opts.Output, guard) {
 		_, _ = io.WriteString(out, "conversation unavailable\n")

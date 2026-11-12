@@ -45,6 +45,12 @@ func askOwnedChild(ctx context.Context, executable string, args ...string) (resu
 	return askOwnedChildWithHandshake(ctx, executable, nil, args...)
 }
 
+type askChildWorkingDirectory struct{}
+
+func askOwnedChildAt(ctx context.Context, cwd, executable string, args ...string) askChildResult {
+	return askOwnedChild(context.WithValue(ctx, askChildWorkingDirectory{}, cwd), executable, args...)
+}
+
 type askReadyCapture struct {
 	askGitOutput
 	ready chan []byte
@@ -98,6 +104,9 @@ func askOwnedChildWithHandshake(ctx context.Context, executable string, onReady 
 		return
 	}
 	cmd := exec.CommandContext(ctx, executable, args...)
+	if dir, _ := ctx.Value(askChildWorkingDirectory{}).(string); dir != "" {
+		cmd.Dir = dir
+	}
 	cmd.SysProcAttr = &syscall.SysProcAttr{HideWindow: true, CreationFlags: 0x08000000 | 0x00000004}
 	permitRead, permitWrite, permitErr := os.Pipe()
 	if permitErr != nil {

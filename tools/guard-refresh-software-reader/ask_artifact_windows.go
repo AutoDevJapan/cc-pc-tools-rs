@@ -453,18 +453,44 @@ func runSoftwareBuildWorker(build softwareBuildPlan, out io.Writer) int {
 				return 1
 			}
 			defer syscall.CloseHandle(dir)
+			var snapshot *softwareBuildSnapshot
+			if build.Source == mp4Source {
+				if !compilerEnvironmentFixed() {
+					r.Reason = "compiler_environment_unqualified"
+					return 1
+				}
+				snapshot, e = materializeMP4BuildSnapshot(build, evidence, sources)
+				if e != nil {
+					r.Reason = "source_snapshot_incomplete_preserved"
+					return 1
+				}
+				defer snapshot.Close()
+				if build.GoRunner {
+					goFiles = snapshotSelectedGoFiles(goFiles, snapshot)
+				}
+			}
 			if os.Setenv("CODEX_JOBS_REAL_CARGO", "C:/Users/makhmeto/.rustup/toolchains/1.95.0-x86_64-pc-windows-msvc/bin/cargo.exe") != nil {
 				return 1
 			}
 			buildCtx, buildCancel := context.WithTimeout(context.Background(), 10*time.Minute)
 			started := time.Now()
 			var built askChildResult
+			compileRoot := updateSourceRoot
+			if snapshot != nil {
+				compileRoot = snapshot.Root
+			}
 			if build.GoRunner {
-				argv := []string{"-C", updateSourceRoot + "/unattended-runner", "build", "-mod=readonly", "-trimpath", "-o", build.Output}
-				argv = append(argv, goFiles...)
+				argv := softwareProducerGoArgs(compileRoot, build.Output, goFiles)
 				built = askOwnedChild(buildCtx, "C:/Program Files/Go/bin/go.exe", argv...)
 			} else {
-				built = askOwnedChild(buildCtx, "D:/CC/Tools/codex-jobs/cargo_gate.exe", "build", "--locked", "--release", "--manifest-path", updateSourceRoot+"/Cargo.toml", "--target-dir", build.Target, "-p", "cc-ask", "--bin", "discord_ask")
+				if snapshot != nil {
+					// cargo -C pins config discovery to the new source namespace;
+					// +nightly is not required: the executable accepts no -C until
+					// unstable, so spawn from that cwd using the owned child helper.
+					built = askOwnedChildAt(buildCtx, compileRoot, "D:/CC/Tools/codex-jobs/cargo_gate.exe", "build", "--locked", "--release", "--manifest-path", compileRoot+"/Cargo.toml", "--target-dir", build.Target, "-p", "cc-ask", "--bin", "discord_ask")
+				} else {
+					built = askOwnedChild(buildCtx, "D:/CC/Tools/codex-jobs/cargo_gate.exe", "build", "--locked", "--release", "--manifest-path", compileRoot+"/Cargo.toml", "--target-dir", build.Target, "-p", "cc-ask", "--bin", "discord_ask")
+				}
 			}
 			buildCancel()
 			clear(built.Raw)
@@ -473,6 +499,10 @@ func runSoftwareBuildWorker(build softwareBuildPlan, out io.Writer) int {
 			r.ProducerElapsedMS = time.Since(started).Milliseconds()
 			if !built.Started || !built.Assigned || !built.WaitVerified || !built.Reaped || built.TimedOut || built.Exit != 0 {
 				r.Reason = "producer_failed_or_uncollected"
+				return 1
+			}
+			if snapshot != nil && !snapshot.exact() {
+				r.Reason = "source_snapshot_changed_preserved"
 				return 1
 			}
 			acknowledged := withSoftwareBuildOutput(build, softwareIdentity{}, func(raw []byte, id softwareIdentity) bool {

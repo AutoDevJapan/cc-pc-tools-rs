@@ -52,3 +52,18 @@ continue to apply. Preparing software grants no access to neighboring records.
 
 Windows validation: `go test -count=1 -v .` and `go vet .`. Tests use only owned
 synthetic software and do not prepare the installed program's actual leaves.
+
+The separate Cargo software purpose owns one final-source producer and its
+fresh isolated target. It retains all 207 source inputs, then keeps both output
+aliases held while the receiving process checks the same identity and bytes,
+creates its fixed export and acknowledges receipt. A successful producer exit
+and re-pinned export precede publication of the completed producer receipt.
+The ordinary resource guard and its hardlink rejection remain unchanged.
+
+Producer receipts are written and flushed under a new `.pending` name before
+an overwrite-free final rename. Cancellation observed before publication keeps
+the pending file and reports failure. A successful final rename is the commit
+point: cancellation racing after that final check does not undo or relabel the
+completed receipt. Synchronous Windows I/O is not claimed to be interruptible.
+Incomplete targets and exports are retained and reported, never adopted on a
+later run merely because their file IDs or sizes match.

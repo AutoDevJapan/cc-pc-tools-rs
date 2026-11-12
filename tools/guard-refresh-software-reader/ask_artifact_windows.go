@@ -327,7 +327,7 @@ func runAskBuildArtifact(args []string, out io.Writer) int {
 			if ctx.Err() == nil && r.Identity != nil && exported.ID() == *r.Identity && len(exported.Raw()) == r.Bytes && digest(exported.Raw()) == r.SHA {
 				r.Qualified = true
 				r.Reason = "fixed_software_exported"
-				if writeAskBuildReceipt(askBuildReceipt, r) != nil {
+				if writeAskBuildReceiptContext(ctx, askBuildReceipt, r, nil) != nil {
 					r.Qualified = false
 					r.Reason = "export_preserved_receipt_failed"
 				}
@@ -454,6 +454,21 @@ func runAskBuildWorker(out io.Writer) int {
 }
 
 func writeAskBuildReceipt(path string, r askArtifactResult) error {
+	return writeAskBuildReceiptContext(context.Background(), path, r, nil)
+}
+
+// Test hooks inject faults at the actual I/O boundaries, not in a parallel
+// state model. No successful final name exists before Flush/Close succeed.
+func writeAskBuildReceiptContext(ctx context.Context, path string, r askArtifactResult, hook func(string) error) error {
+	step := func(name string) error {
+		if ctx.Err() != nil {
+			return ctx.Err()
+		}
+		if hook != nil {
+			return hook(name)
+		}
+		return nil
+	}
 	value := struct {
 		Result      askArtifactResult `json:"result"`
 		ProofSHA    string            `json:"source_proof_sha256"`
@@ -465,14 +480,50 @@ func writeAskBuildReceipt(path string, r askArtifactResult) error {
 	if e != nil {
 		return e
 	}
-	f, e := os.OpenFile(path, os.O_WRONLY|os.O_CREATE|os.O_EXCL, 0600)
+	if e = step("before_create"); e != nil {
+		return e
+	}
+	f, e := os.OpenFile(path+".pending", os.O_WRONLY|os.O_CREATE|os.O_EXCL, 0600)
 	if e != nil {
 		return e
 	}
-	defer f.Close()
+	closed := false
+	defer func() {
+		if !closed {
+			f.Close()
+		}
+	}()
 	n, e := f.Write(raw)
 	if e != nil || n != len(raw) {
 		return errUpdateObject
 	}
-	return f.Sync()
+	if e = step("before_sync"); e != nil {
+		return e
+	}
+	if e = f.Sync(); e != nil {
+		return e
+	}
+	if e = step("after_sync"); e != nil {
+		return e
+	}
+	if e = f.Close(); e != nil {
+		return e
+	}
+	closed = true
+	if e = step("before_publish"); e != nil {
+		return e
+	}
+	from, e := syscall.UTF16PtrFromString(path + ".pending")
+	if e != nil {
+		return e
+	}
+	to, e := syscall.UTF16PtrFromString(path)
+	if e != nil {
+		return e
+	}
+	ok, _, err := syscall.NewLazyDLL("kernel32.dll").NewProc("MoveFileExW").Call(uintptr(unsafe.Pointer(from)), uintptr(unsafe.Pointer(to)), 8)
+	if ok == 0 {
+		return err
+	}
+	return nil
 }

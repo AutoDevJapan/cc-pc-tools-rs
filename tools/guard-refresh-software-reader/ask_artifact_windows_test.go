@@ -4,7 +4,9 @@ package main
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
+	"errors"
 	"os"
 	"path/filepath"
 	"testing"
@@ -122,5 +124,54 @@ func TestProducerReceiptBindsOutputAndExportWithoutOverwrite(t *testing.T) {
 	}
 	if json.Unmarshal(b, &got) != nil || got.Result.SHA != r.SHA || *got.Result.OutputIdentity != *r.OutputIdentity || *got.Result.Identity != *r.Identity || !got.Result.ProducerReaped || got.Inputs != 207 || got.ProofSHA != askBuildProofSHA {
 		t.Fatal("producer/output/receipt binding lost")
+	}
+}
+
+func TestReceiptFailureOrExpiryBeforePublishPreservesPendingNotSuccess(t *testing.T) {
+	for _, fault := range []string{"sync_fail", "after_sync_fail", "expiry", "collision", "normal"} {
+		t.Run(fault, func(t *testing.T) {
+			root := physicalSoftwareFixture(t)
+			p := filepath.Join(root, "receipt.json")
+			ctx, cancel := context.WithCancel(context.Background())
+			defer cancel()
+			r := askArtifactResult{Qualified: true, Reason: "fixed_software_exported", Source: askBuildSource}
+			if fault == "collision" {
+				if e := os.WriteFile(p, []byte("existing"), 0600); e != nil {
+					t.Fatal(e)
+				}
+			}
+			hook := func(step string) error {
+				if fault == "sync_fail" && step == "before_sync" || fault == "after_sync_fail" && step == "after_sync" {
+					return errors.New("owned IO fault")
+				}
+				if fault == "expiry" && step == "after_sync" {
+					cancel()
+				}
+				return nil
+			}
+			err := writeAskBuildReceiptContext(ctx, p, r, hook)
+			if fault == "normal" {
+				if err != nil {
+					t.Fatal(err)
+				}
+				if _, e := os.Stat(p); e != nil {
+					t.Fatal(e)
+				}
+				return
+			}
+			if err == nil {
+				t.Fatal("fault published success")
+			}
+			if fault == "collision" {
+				if b, e := os.ReadFile(p); e != nil || string(b) != "existing" {
+					t.Fatal("existing receipt clobbered")
+				}
+			} else if _, e := os.Stat(p); !os.IsNotExist(e) {
+				t.Fatal("failed/expired success marker exists")
+			}
+			if _, e := os.Stat(p + ".pending"); e != nil {
+				t.Fatal("pending recovery bytes lost")
+			}
+		})
 	}
 }

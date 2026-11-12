@@ -5,7 +5,7 @@ $adapter='D:/CC/Tools/codex-jobs/fourbros4431-ios-native-guard-install.ps1'
 if((Get-FileHash -LiteralPath $adapter -Algorithm SHA256).Hash.ToLowerInvariant() -cne '7bf0a58d67bf2742dbac7e93efaf78a16907dcf19b719e0ff7b5a2917eee91b3'){throw 'deployment_adapter_changed'}
 . $adapter -LibraryOnly
 $caller=Join-Path $PSScriptRoot 'Invoke-AskSoftwareOperation.ps1'
-if((Get-FileHash -LiteralPath $caller -Algorithm SHA256).Hash.ToLowerInvariant() -cne '8df15e85cced717e889b8982dbbd21186e9c6f8351c84e4b5cfb22dcd6935a3e'){throw 'ask_operation_caller_changed'}
+if((Get-FileHash -LiteralPath $caller -Algorithm SHA256).Hash.ToLowerInvariant() -cne 'b74d6ebd050dc04269ad4060e1e5dbdb88ed665bfa9c773869f340a0df9f3925'){throw 'ask_operation_caller_changed'}
 . $caller
 
 function Convert-AskSoftwareResponse([int]$Exit,[string]$Output,[string]$ErrorOutput,$Expected){

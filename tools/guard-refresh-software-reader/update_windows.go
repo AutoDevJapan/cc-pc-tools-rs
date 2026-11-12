@@ -20,19 +20,19 @@ import (
 
 // This input-free software operation implements the requested installed-program
 // repair. Its namespace is two compiled CreateNew leaves, never guard data.
-const updateCandidatePath = "C:/Users/makhmeto/Documents/Codex/2026-11-07/ika-x20/work/4431-ui-tools/codex-owned-f60f3742a1933562ec75aa5c8eb05d72/guard-ios-921a.exe"
-const updateCandidateSHA = "b7a1f024f03ec600ada7aa0b28d435b022cd9f4cd384a31cacf67a80b5e355cb"
-const updateBuildProofPath = "D:/CC/Tools/codex-jobs/fourbros4431-ios-921a-build-proof.json"
-const updateBuildProofSHA = "392eb2b7e82a65a4834cabd1a817f4bb8d7f82af057ae9f7fa0d75d3034dfc57"
+const updateCandidatePath = "C:/Users/makhmeto/Documents/Codex/2026-11-07/ika-x20/work/4431-ui-tools/codex-owned-f60f3742a1933562ec75aa5c8eb05d72/guard-ios-0abf9bf4.exe"
+const updateCandidateSHA = "793d88d572c1865df086dce71dfe4d3ca98389ca8035fa75ff04a71093f985d1"
+const updateBuildProofPath = "D:/CC/Tools/codex-jobs/fourbros4431-ios-0abf9bf4-build-proof.json"
+const updateBuildProofSHA = "0d7931ad06c54d23495b0e3244db0cc2470a8ba78b9c369c8dc70225e97d8826"
 const updateSourceRoot = "C:/Users/makhmeto/Documents/Codex/2026-11-07/ika-x20/work/4431-ui-tools"
-const updateSourceHead = "921a071838eaf459d3a95beca6069bce8713f0bf"
-const updateMergedHead = "5ef561b67bbc845c2a494960358d875c71e366f1"
-const updateStagePath = "D:/CC/Tools/client-records/scrub391.ios4431.stage.exe"
-const updateBackupPath = "D:/CC/Tools/client-records/scrub391.ios4431.before-edd86.exe"
-const updateCandidateBytes = 14151680
+const updateSourceHead = "0abf9bf4715c52d981fd21303815365f9284f42c"
+const updateMergedHead = "c796dcccd854470d68927d94809ca6c919d2fa18"
+const updateStagePath = "D:/CC/Tools/client-records/scrub391.iosnative4431.stage.exe"
+const updateBackupPath = "D:/CC/Tools/client-records/scrub391.iosnative4431.before-b7a1.exe"
+const updateCandidateBytes = 14166016
 const updateOldVolume = "1215965535"
-const updateOldFileID = "281474992779615"
-const updateOldCreated = "134389254103560300"
+const updateOldFileID = "281474994043756"
+const updateOldCreated = "134389581184299033"
 
 type updateResult struct {
 	Qualified              bool              `json:"qualified"`

@@ -3,9 +3,11 @@
 package main
 
 import (
+	"bytes"
 	"context"
 	"encoding/binary"
 	"encoding/json"
+	"errors"
 	"io"
 	"os"
 	"os/exec"
@@ -30,15 +32,59 @@ type askJobAccounting struct {
 	Faults, Total, Active, Terminated      uint32
 }
 type askChildResult struct {
-	Raw              []byte
-	Exit             int
-	TimedOut, Reaped bool
+	Raw                             []byte
+	Exit                            int
+	TimedOut, Reaped                bool
+	Started, Assigned, WaitVerified bool
 }
 
 // Start suspended, assign the exact process to an owned kill-on-close job, then
 // resume. This includes future Git children before any worker code executes.
 // No goroutine performing native writes is abandoned by the parent.
 func askOwnedChild(ctx context.Context, executable string, args ...string) (result askChildResult) {
+	return askOwnedChildWithHandshake(ctx, executable, nil, args...)
+}
+
+type askReadyCapture struct {
+	askGitOutput
+	ready chan []byte
+	sent  bool
+}
+
+func (w *askReadyCapture) ReadFrom(r io.Reader) (int64, error) {
+	var total int64
+	buf := make([]byte, 4096)
+	defer clear(buf)
+	for {
+		n, e := r.Read(buf)
+		if n > 0 {
+			written, we := w.Write(buf[:n])
+			total += int64(written)
+			if we != nil {
+				return total, we
+			}
+		}
+		if e == io.EOF {
+			return total, nil
+		}
+		if e != nil {
+			return total, e
+		}
+	}
+}
+
+func (w *askReadyCapture) Write(p []byte) (int, error) {
+	n, e := w.askGitOutput.Write(p)
+	if e == nil && !w.sent {
+		if i := bytes.IndexByte(w.Bytes(), '\n'); i >= 0 {
+			w.sent = true
+			w.ready <- append([]byte(nil), w.Bytes()[:i]...)
+		}
+	}
+	return n, e
+}
+
+func askOwnedChildWithHandshake(ctx context.Context, executable string, onReady func([]byte) bool, args ...string) (result askChildResult) {
 	result.Exit = -1
 	kernel := syscall.NewLazyDLL("kernel32.dll")
 	job, _, _ := kernel.NewProc("CreateJobObjectW").Call(0, 0)
@@ -69,9 +115,22 @@ func askOwnedChild(ctx context.Context, executable string, args ...string) (resu
 	errOut := askGitOutput{limit: 65536}
 	cmd.Stdout = &out
 	cmd.Stderr = &errOut
+	var ready *askReadyCapture
+	var input io.WriteCloser
+	if onReady != nil {
+		ready = &askReadyCapture{askGitOutput: askGitOutput{limit: 65536}, ready: make(chan []byte, 1)}
+		cmd.Stdout = ready
+		var pipeError error
+		input, pipeError = cmd.StdinPipe()
+		if pipeError != nil {
+			return
+		}
+		defer input.Close()
+	}
 	if cmd.Start() != nil {
 		return
 	}
+	result.Started = true
 	process, err := syscall.OpenProcess(0x0100|0x0001|0x0800, false, uint32(cmd.Process.Pid))
 	assigned := false
 	if err == nil {
@@ -95,6 +154,7 @@ func askOwnedChild(ctx context.Context, executable string, args ...string) (resu
 			_ = cmd.Process.Kill()
 		}
 	}
+	result.Assigned = assigned
 	permitWrite.Close()
 	permitRead.Close()
 	waited := make(chan error, 1)
@@ -142,10 +202,26 @@ loop:
 		select {
 		case waitErr = <-waited:
 			break loop
+		case payload := <-func() <-chan []byte {
+			if ready != nil {
+				return ready.ready
+			}
+			return nil
+		}():
+			accepted := onReady(payload)
+			clear(payload)
+			if accepted && ctx.Err() == nil {
+				_, _ = input.Write([]byte("ACCEPT\n"))
+			} else {
+				_, _ = input.Write([]byte("REJECT\n"))
+			}
+			input.Close()
 		case <-time.After(5 * time.Millisecond):
 		}
 	}
 	result.TimedOut = ctx.Err() != nil
+	var exitError *exec.ExitError
+	result.WaitVerified = cmd.ProcessState != nil && (waitErr == nil || errors.As(waitErr, &exitError))
 	if cmd.ProcessState != nil {
 		result.Exit = cmd.ProcessState.ExitCode()
 	}
@@ -176,7 +252,10 @@ loop:
 			result.Reaped = false
 		}
 	}
-	if assigned && result.Reaped && !result.TimedOut && (waitErr == nil || result.Exit == 1) && errOut.Len() == 0 {
+	if assigned && result.WaitVerified && result.Reaped && !result.TimedOut && (waitErr == nil || result.Exit == 1) && errOut.Len() == 0 {
+		if ready != nil {
+			out.Buffer = ready.Buffer
+		}
 		result.Raw = append([]byte(nil), out.Bytes()...)
 	}
 	clear(out.Bytes())
@@ -232,6 +311,9 @@ func runAskWorker(args []string, out io.Writer) int {
 	}
 	if len(args) == 1 && args[0] == "--ask-software-inspection-worker" {
 		return runAskReconciliation([]string{"--inspect-ask-privacy-update"}, out)
+	}
+	if len(args) == 1 && args[0] == "--ask-build-worker" {
+		return runAskBuildWorker(out)
 	}
 	if len(args) != 2 || args[0] != "--ask-software-worker" || args[1] != "verify" && args[1] != "prepare" {
 		return 2

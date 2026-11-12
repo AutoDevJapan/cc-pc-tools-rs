@@ -4,6 +4,7 @@ package main
 
 import (
 	"archive/tar"
+	"bufio"
 	"bytes"
 	"context"
 	"crypto/sha1"
@@ -261,6 +262,31 @@ func TestAskOwnedSupervisorChild(t *testing.T) {
 	if !askWorkerParent() {
 		os.Exit(6)
 	}
+	if mode == "handshake_failure" {
+		json.NewEncoder(os.Stdout).Encode(askArtifactResult{Domain: "owner-question-cargo-output-v1", Source: askBuildSource, Reason: "owned_producer_failure", TargetCreated: true, TargetState: "created_preserved"})
+		os.Exit(1)
+	}
+	if mode == "handshake_never_ready" {
+		time.Sleep(20 * time.Second)
+		os.Exit(1)
+	}
+	if mode == "handshake" || mode == "handshake_ack_lost" {
+		a := filepath.Join(os.Getenv("ASK_OWNED_ROOT"), "output.exe")
+		b := filepath.Join(os.Getenv("ASK_OWNED_ROOT"), "alias.exe")
+		ok := withPinnedCargoOutput(a, b, softwareIdentity{}, func(raw []byte, id softwareIdentity) bool {
+			json.NewEncoder(os.Stdout).Encode(askArtifactResult{Domain: "owner-question-cargo-output-v1", Reason: "producer_output_held", Bytes: len(raw), SHA: digest(raw), OutputIdentity: &id})
+			if mode == "handshake_ack_lost" {
+				time.Sleep(20 * time.Second)
+				return false
+			}
+			line, e := bufio.NewReader(os.Stdin).ReadString('\n')
+			return e == nil && line == "ACCEPT\n"
+		})
+		if ok {
+			os.Exit(0)
+		}
+		os.Exit(1)
+	}
 	if mode == "leaf" {
 		if os.WriteFile(filepath.Join(os.Getenv("ASK_OWNED_ROOT"), "backup.exe"), []byte("owned partial"), 0600) != nil {
 			os.Exit(3)
@@ -279,6 +305,96 @@ func TestAskOwnedSupervisorChild(t *testing.T) {
 	}
 	fmt.Fprintln(os.Stdout, `{"owned":true}`)
 	os.Exit(0)
+}
+
+func TestProducerParentHandshakeHoldsSameGenerationUntilAck(t *testing.T) {
+	for _, fault := range []string{"normal", "wrong_identity", "reject"} {
+		t.Run(fault, func(t *testing.T) {
+			root := physicalSoftwareFixture(t)
+			a := filepath.Join(root, "output.exe")
+			b := filepath.Join(root, "alias.exe")
+			if os.WriteFile(a, []byte("owned-produced"), 0600) != nil || os.Link(a, b) != nil {
+				t.Fatal("owned producer fixture")
+			}
+			t.Setenv("ASK_OWNED_SUPERVISOR_CHILD", "1")
+			t.Setenv("ASK_OWNED_MODE", "handshake")
+			t.Setenv("ASK_OWNED_ROOT", root)
+			ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
+			defer cancel()
+			held := false
+			r := askOwnedChildWithHandshake(ctx, os.Args[0], func(raw []byte) bool {
+				var ready askArtifactResult
+				if json.Unmarshal(raw, &ready) != nil || ready.OutputIdentity == nil {
+					t.Fatal("producer readiness invalid")
+				}
+				if fault == "wrong_identity" {
+					ready.OutputIdentity.FileID = "different"
+				}
+				held = withPinnedCargoOutput(a, b, *ready.OutputIdentity, func(p []byte, id softwareIdentity) bool {
+					if digest(p) != ready.SHA || len(p) != ready.Bytes {
+						t.Fatal("producer buffer mismatch")
+					}
+					if os.WriteFile(a, []byte("changed"), 0600) == nil || os.Rename(b, b+".changed") == nil {
+						t.Fatal("handoff lease lost")
+					}
+					return true
+				})
+				return held && fault != "reject"
+			}, "-test.run=^TestAskOwnedSupervisorChild$")
+			if !r.Started || !r.Assigned || !r.WaitVerified || !r.Reaped || r.TimedOut {
+				t.Fatal("handshake process not collected", r)
+			}
+			if fault == "normal" {
+				if !held || r.Exit != 0 {
+					t.Fatal("normal handoff failed", r)
+				}
+			} else if r.Exit != 1 {
+				t.Fatal("invalid handoff accepted", r)
+			}
+		})
+	}
+}
+
+func TestProducerHandshakeReadyAbsentAndAckLostAreCollected(t *testing.T) {
+	for _, mode := range []string{"handshake_never_ready", "handshake_ack_lost"} {
+		t.Run(mode, func(t *testing.T) {
+			root := physicalSoftwareFixture(t)
+			a := filepath.Join(root, "output.exe")
+			b := filepath.Join(root, "alias.exe")
+			if os.WriteFile(a, []byte("owned-produced"), 0600) != nil || os.Link(a, b) != nil {
+				t.Fatal("fixture")
+			}
+			t.Setenv("ASK_OWNED_SUPERVISOR_CHILD", "1")
+			t.Setenv("ASK_OWNED_MODE", mode)
+			t.Setenv("ASK_OWNED_ROOT", root)
+			ctx, cancel := context.WithTimeout(context.Background(), 300*time.Millisecond)
+			defer cancel()
+			ready := 0
+			r := askOwnedChildWithHandshake(ctx, os.Args[0], func([]byte) bool { ready++; return true }, "-test.run=^TestAskOwnedSupervisorChild$")
+			if !r.Started || !r.Assigned || !r.Reaped || !r.TimedOut || r.Exit == 0 {
+				t.Fatal("unacknowledged producer succeeded", r)
+			}
+			if mode == "handshake_never_ready" && ready != 0 || mode == "handshake_ack_lost" && ready != 1 {
+				t.Fatal("wrong handshake boundary", ready)
+			}
+			if e := os.WriteFile(a, []byte("after collection"), 0600); e != nil {
+				t.Fatal("failed producer left a held output")
+			}
+		})
+	}
+}
+
+func TestProducerEarlyFailureTargetStateSurvivesWaitOrdering(t *testing.T) {
+	t.Setenv("ASK_OWNED_SUPERVISOR_CHILD", "1")
+	t.Setenv("ASK_OWNED_MODE", "handshake_failure")
+	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
+	defer cancel()
+	got := askOwnedChildWithHandshake(ctx, os.Args[0], func([]byte) bool { return false }, "-test.run=^TestAskOwnedSupervisorChild$")
+	defer clear(got.Raw)
+	var r askArtifactResult
+	if !got.Reaped || got.TimedOut || got.Exit != 1 || json.Unmarshal(got.Raw, &r) != nil || !r.TargetCreated || r.TargetState != "created_preserved" {
+		t.Fatal("early failure state lost", got, r)
+	}
 }
 
 func TestAskDirectWorkerAndInspectionHaveNoAuthority(t *testing.T) {

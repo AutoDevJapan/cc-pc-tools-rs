@@ -197,7 +197,7 @@ pub fn parse(args: &[String]) -> Result<Args> {
                     "pr-url",
                 ]
                 .contains(&name.as_str()),
-                "status" => ["all", "json", "summary", "job-id"].contains(&name.as_str()),
+                "status" => ["all", "json", "summary", "job-id", "purpose"].contains(&name.as_str()),
                 "tail" => ["n", "follow"].contains(&name.as_str()),
                 "wait" => name == "timeout",
                 "watch" => name == "interval",
@@ -1458,6 +1458,13 @@ impl Context {
         Ok(0)
     }
     pub fn cmd_status(&self, a: &Args, out: &mut dyn Write) -> Result<i32> {
+        if let Some(purpose) = a.value("purpose") {
+            let id=a.value("job-id").ok_or_else(||Error::new("purpose metadata requires exact job-id"))?;
+            if !a.flag("json") || a.flag("all") || a.flag("summary") {return Err(Error::new("purpose metadata requires JSON only"))}
+            let metadata=self.purpose_job_metadata(id,purpose)?;
+            writeln!(out,"{metadata}")?;
+            return Ok(0);
+        }
         if let Some(id) = a.value("job-id") {
             if !valid_job_id(id) || !a.flag("json") || a.flag("all") || a.flag("summary") {
                 return Err(Error {code:2,message:"status --job-id requires one valid id and --json only".into()});

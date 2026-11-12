@@ -45,6 +45,49 @@ func iosCompilerCommand(ctx context.Context, path string, args ...string) ([]byt
 	return iosCompilerCommandObserved(ctx, path, args, nil)
 }
 
+// Some native tool hosts intentionally omit APPDATA. Letting gh silently use
+// a different config directory then loses the current user's normal account.
+// Recover only this missing location from Windows, never credentials or a
+// caller-supplied account/cache. Existing nonempty environment values survive.
+func iosCompilerEnvironment(lookup func(string) (string, bool), roaming func() (string, error)) ([]string, error) {
+	env := official3894EnvWith(lookup)
+	if value, ok := lookup("APPDATA"); ok && value != "" {
+		return env, nil
+	}
+	value, err := roaming()
+	if err != nil || !filepath.IsAbs(value) || strings.ContainsAny(value, "\x00\r\n") {
+		return nil, errIOSCompiler
+	}
+	for i, field := range env {
+		if strings.HasPrefix(field, "APPDATA=") {
+			env[i] = "APPDATA=" + value
+			return env, nil
+		}
+	}
+	return append(env, "APPDATA="+value), nil
+}
+
+func iosCompilerRoamingData() (string, error) {
+	id := syscall.GUID{Data1: 0x3eb685db, Data2: 0x65f9, Data3: 0x4cf6, Data4: [8]byte{0xa0, 0x3a, 0xe3, 0xef, 0x65, 0x72, 0x9f, 0x3d}}
+	var path *uint16
+	hr, _, _ := syscall.NewLazyDLL("shell32.dll").NewProc("SHGetKnownFolderPath").Call(uintptr(unsafe.Pointer(&id)), 0, 0, uintptr(unsafe.Pointer(&path)))
+	if path != nil {
+		defer syscall.NewLazyDLL("ole32.dll").NewProc("CoTaskMemFree").Call(uintptr(unsafe.Pointer(path)))
+	}
+	if hr != 0 || path == nil {
+		return "", errIOSCompiler
+	}
+	chars := make([]uint16, 0, 256)
+	for i := 0; i < 32768; i++ {
+		ch := *(*uint16)(unsafe.Add(unsafe.Pointer(path), i*2))
+		if ch == 0 {
+			return syscall.UTF16ToString(chars), nil
+		}
+		chars = append(chars, ch)
+	}
+	return "", errIOSCompiler
+}
+
 func iosCompilerCommandObserved(ctx context.Context, path string, args []string, observe func(uint32, uint32)) ([]byte, error) {
 	if ctx.Err() != nil || !filepath.IsAbs(path) {
 		return nil, errIOSCompiler
@@ -123,7 +166,10 @@ func iosCompilerCommandObserved(ctx context.Context, path string, args []string,
 	if err != nil {
 		return nil, errIOSCompiler
 	}
-	env := official3894Env()
+	env, err := iosCompilerEnvironment(os.LookupEnv, iosCompilerRoamingData)
+	if err != nil {
+		return nil, errIOSCompiler
+	}
 	sort.Slice(env, func(i, j int) bool { return strings.ToUpper(env[i]) < strings.ToUpper(env[j]) })
 	for _, v := range env {
 		if strings.ContainsRune(v, 0) {

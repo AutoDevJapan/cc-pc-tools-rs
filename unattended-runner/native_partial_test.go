@@ -408,3 +408,78 @@ func TestNativePartialRecordRoundTripKeepsExactReceiptAndRejectsLostReadback(t *
 		})
 	}
 }
+
+func TestNativePartialRequiresCurrentVersionTimeAndEmptyReplySHA(t *testing.T) {
+	for _, kind := range []string{"control", "before_reply", "before_acquired", "before_assignment", "empty_missing_sha", "empty_with_sha"} {
+		t.Run(kind, func(t *testing.T) {
+			n := nativePartialTest(t)
+			switch kind {
+			case "before_reply":
+				created, _ := time.Parse(time.RFC3339Nano, n.reply.Created)
+				n.items["verification"]["startedAtMs"] = created.Add(-time.Second).UnixMilli()
+			case "before_acquired":
+				at, _ := time.Parse(time.RFC3339Nano, n.c.r.conversationRequest(n.v.Message).Acquired)
+				n.items["verification"]["startedAtMs"] = at.Add(-time.Millisecond).UnixMilli()
+			case "before_assignment":
+				n.items["assignment"]["startedAtMs"] = time.Now().UnixMilli()
+			case "empty_missing_sha", "empty_with_sha":
+				n.reply.Body = ""
+				prompt := n.items["assignment"]["prompt"].(string)
+				if kind == "empty_missing_sha" {
+					prompt = strings.ReplaceAll(prompt, n.v.ReplySHA, "")
+				}
+				n.items["assignment"]["prompt"] = prompt
+				n.v.Assignment.PromptSHA = bytesHash([]byte(prompt))
+			}
+			_, err := nativePartialLineage(context.Background(), n.v, n.q, n.reply, n.f.home, time.Now(), func() time.Time {
+				v, _ := time.Parse(time.RFC3339Nano, n.c.r.conversationRequest(n.v.Message).Acquired)
+				return v
+			}(), n.rpc)
+			good := kind == "control" || kind == "empty_with_sha"
+			if (err == nil) != good {
+				t.Fatal("lineage version/time boundary", kind, err)
+			}
+		})
+	}
+}
+
+func TestNativePartialCanonicalVerifierRequiresExactImmutableNamespace(t *testing.T) {
+	n := nativePartialTest(t)
+	b, _ := json.Marshal(n.v)
+	file := nativePartialFile(n.c.r, n.v, b)
+	if writeConversationOnce(file, b) != nil {
+		t.Fatal("canonical input")
+	}
+	state, _, err := n.c.r.nativePartialState(context.Background(), n.v)
+	if err != nil {
+		t.Fatal(err)
+	}
+	stateFile := file + "-" + bytesHash(state) + ".state.json"
+	if writeConversationOnce(stateFile, state) != nil {
+		t.Fatal("canonical state")
+	}
+	opts := conversationCLIOptions{Command: "verify-native-implementation", InputFile: file, OriginStateFile: stateFile}
+	if _, err = n.c.r.conversationNativePartial(context.Background(), opts); err != nil {
+		t.Fatal("canonical verifier unavailable", err)
+	}
+	for _, kind := range []string{"foreign_input", "wrong_state_name", "wrong_filename"} {
+		t.Run(kind, func(t *testing.T) {
+			o := opts
+			switch kind {
+			case "foreign_input":
+				o.InputFile = filepath.Join(n.f.home, "input.json")
+			case "wrong_state_name":
+				o.OriginStateFile = stateFile + ".other"
+			case "wrong_filename":
+				o.InputFile = file + ".other"
+			}
+			before := n.rpcCalls
+			if _, err := n.c.r.conversationNativePartial(context.Background(), o); err == nil {
+				t.Fatal("arbitrary path accepted")
+			}
+			if n.rpcCalls != before {
+				t.Fatal("rejected namespace reached native API")
+			}
+		})
+	}
+}

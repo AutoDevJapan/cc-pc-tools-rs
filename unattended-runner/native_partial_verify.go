@@ -171,7 +171,11 @@ func (r *Runner) nativePartialVerify(ctx context.Context, v nativePartialInput, 
 		}()
 		call = rpc.call
 	}
-	nativeSHA, err := nativePartialLineage(ctx, v, q, reply, root, r.Now(), call)
+	acquired, err := time.Parse(time.RFC3339Nano, r.conversationRequest(v.Message).Acquired)
+	if err != nil {
+		return zero, errNativePartial
+	}
+	nativeSHA, err := nativePartialLineage(ctx, v, q, reply, root, r.Now(), acquired, call)
 	if err != nil {
 		return zero, nativePartialFailed("lineage")
 	}
@@ -251,7 +255,7 @@ func nativePartialArtifactIdentity(b []byte, v nativePartialInput) bool {
 	return match([]string{"revision", "main"}, v.Revision) && match([]string{"owner_reply", "ownerReply"}, v.Message)
 }
 
-func nativePartialLineage(ctx context.Context, v nativePartialInput, q ConversationQuestion, reply conversationReply, root string, now time.Time, call func(context.Context, string, map[string]any) (json.RawMessage, error)) (string, error) {
+func nativePartialLineage(ctx context.Context, v nativePartialInput, q ConversationQuestion, reply conversationReply, root string, now, acquired time.Time, call func(context.Context, string, map[string]any) (json.RawMessage, error)) (string, error) {
 	read := func(method string, args map[string]any, out any) bool {
 		b, err := call(ctx, method, args)
 		var raw any
@@ -343,7 +347,7 @@ func nativePartialLineage(ctx context.Context, v nativePartialInput, q Conversat
 		if !ok || c.Type != "commandExecution" || c.Status != "completed" || c.Source != "unifiedExecStartup" || c.Exit == nil || *c.Exit != 0 || c.Started == nil || c.Completed == nil || *c.Started <= 0 || *c.Completed < *c.Started || *c.Completed > now.UnixMilli() || *c.Completed > appliedAt.UnixMilli() || !conversationMediaSamePath(filepath.FromSlash(c.Cwd), filepath.FromSlash(root)) || bytesHash([]byte(c.Command)) != selector.CommandSHA || bytesHash([]byte(c.Output)) != selector.OutputSHA {
 			return "", errNativePartial
 		}
-		if *c.Started < repliedAt.UnixMilli() || (a.Started != nil && *c.Started < *a.Started) {
+		if *c.Started < repliedAt.UnixMilli() || *c.Started < acquired.UnixMilli() || (a.Started != nil && *c.Started < *a.Started) {
 			return "", errNativePartial
 		}
 		if len(c.Actions) == 1 && c.Actions[0].Type == "unknown" && nativePartialHashCommand(c.Command, c.Actions[0].Command, c.Output, v.Artifact) {

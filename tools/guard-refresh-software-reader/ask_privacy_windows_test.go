@@ -262,6 +262,10 @@ func TestAskOwnedSupervisorChild(t *testing.T) {
 	if !askWorkerParent() {
 		os.Exit(6)
 	}
+	if mode == "handshake_failure" {
+		json.NewEncoder(os.Stdout).Encode(askArtifactResult{Domain: "owner-question-cargo-output-v1", Source: askBuildSource, Reason: "owned_producer_failure", TargetCreated: true, TargetState: "created_preserved"})
+		os.Exit(1)
+	}
 	if mode == "handshake_never_ready" {
 		time.Sleep(20 * time.Second)
 		os.Exit(1)
@@ -377,6 +381,19 @@ func TestProducerHandshakeReadyAbsentAndAckLostAreCollected(t *testing.T) {
 				t.Fatal("failed producer left a held output")
 			}
 		})
+	}
+}
+
+func TestProducerEarlyFailureTargetStateSurvivesWaitOrdering(t *testing.T) {
+	t.Setenv("ASK_OWNED_SUPERVISOR_CHILD", "1")
+	t.Setenv("ASK_OWNED_MODE", "handshake_failure")
+	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
+	defer cancel()
+	got := askOwnedChildWithHandshake(ctx, os.Args[0], func([]byte) bool { return false }, "-test.run=^TestAskOwnedSupervisorChild$")
+	defer clear(got.Raw)
+	var r askArtifactResult
+	if !got.Reaped || got.TimedOut || got.Exit != 1 || json.Unmarshal(got.Raw, &r) != nil || !r.TargetCreated || r.TargetState != "created_preserved" {
+		t.Fatal("early failure state lost", got, r)
 	}
 }
 

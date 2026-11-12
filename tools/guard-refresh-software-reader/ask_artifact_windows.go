@@ -277,6 +277,9 @@ func runAskBuildArtifact(args []string, out io.Writer) int {
 	defer cancel()
 	readyAccepted := false
 	child := askOwnedChildWithHandshake(ctx, exe, func(payload []byte) bool {
+		if ctx.Err() != nil {
+			return false
+		}
 		var p askArtifactResult
 		if json.Unmarshal(payload, &p) != nil || p.Domain != r.Domain || p.Source != askBuildSource {
 			return false
@@ -286,7 +289,7 @@ func runAskBuildArtifact(args []string, out io.Writer) int {
 			return false
 		}
 		readyAccepted = withPinnedCargoOutput(askBuildOutput, askBuildAlias, *p.OutputIdentity, func(raw []byte, id softwareIdentity) bool {
-			if digest(raw) != p.SHA || len(raw) != p.Bytes || id != *p.OutputIdentity {
+			if ctx.Err() != nil || digest(raw) != p.SHA || len(raw) != p.Bytes || id != *p.OutputIdentity {
 				return false
 			}
 			made, e := createAskArtifactCopy(askBuildExport, raw)
@@ -295,7 +298,7 @@ func runAskBuildArtifact(args []string, out io.Writer) int {
 				r.Identity = &made
 				r.Reason = "incomplete_export_preserved"
 			}
-			if e != nil {
+			if e != nil || ctx.Err() != nil {
 				return false
 			}
 			r.Reason = "export_awaiting_producer_exit"
@@ -303,19 +306,25 @@ func runAskBuildArtifact(args []string, out io.Writer) int {
 		})
 		return readyAccepted
 	}, "--ask-build-worker")
+	if r.TargetState == "unknown" && len(child.Raw) > 0 {
+		var failed askArtifactResult
+		if json.Unmarshal(child.Raw, &failed) == nil && failed.Domain == r.Domain && failed.Source == r.Source && !failed.Qualified && failed.TargetState != "" {
+			r = failed
+		}
+	}
 	clear(child.Raw)
 	if !readyAccepted || !child.Started || !child.Assigned || !child.WaitVerified || !child.Reaped || child.TimedOut || child.Exit != 0 {
 		r.Qualified = false
 		if r.Reason == "export_awaiting_producer_exit" {
 			r.Reason = "export_preserved_producer_exit_unknown"
 		}
-	} else {
+	} else if ctx.Err() == nil {
 		// A successful receipt is published only after the producer ACK and
 		// its verified termination, while the exported generation is pinned.
 		exported, e := openUpdateObject(askBuildExport)
 		if e == nil {
 			defer exported.Close()
-			if r.Identity != nil && exported.ID() == *r.Identity && len(exported.Raw()) == r.Bytes && digest(exported.Raw()) == r.SHA {
+			if ctx.Err() == nil && r.Identity != nil && exported.ID() == *r.Identity && len(exported.Raw()) == r.Bytes && digest(exported.Raw()) == r.SHA {
 				r.Qualified = true
 				r.Reason = "fixed_software_exported"
 				if writeAskBuildReceipt(askBuildReceipt, r) != nil {

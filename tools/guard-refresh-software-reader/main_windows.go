@@ -153,7 +153,14 @@ func observeInstalledGuard() softwareObservation {
 	return result
 }
 
-func run(args []string, out io.Writer, observe func() softwareObservation) int {
+func run(args []string, out io.Writer, observe func() softwareObservation, operations ...updateOperations) int {
+	if len(args) == 1 && (args[0] == "--verify-refresh-guard-update" || args[0] == "--prepare-refresh-guard-update") {
+		op := updateOperations{verify: observeFixedUpdate, prepare: prepareFixedUpdate}
+		if len(operations) == 1 {
+			op = operations[0]
+		}
+		return runUpdate(args, out, op)
+	}
 	if len(args) != 1 || args[0] != "--verify-installed-refresh-guard" {
 		_ = json.NewEncoder(out).Encode(softwareObservation{})
 		return 2

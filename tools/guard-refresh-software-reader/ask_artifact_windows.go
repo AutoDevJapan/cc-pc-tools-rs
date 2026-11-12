@@ -3,6 +3,7 @@
 package main
 
 import (
+	"bufio"
 	"context"
 	"encoding/json"
 	"io"
@@ -44,6 +45,8 @@ type askArtifactResult struct {
 	ProducerReaped    bool              `json:"producer_reaped"`
 	ProducerElapsedMS int64             `json:"producer_elapsed_ms"`
 	OutputIdentity    *softwareIdentity `json:"output_identity,omitempty"`
+	TargetCreated     bool              `json:"target_created"`
+	TargetState       string            `json:"target_state"`
 }
 
 // This purpose recognizes the two names created by the recorded Cargo build.
@@ -265,7 +268,79 @@ func runAskBuildArtifact(args []string, out io.Writer) int {
 	if len(args) != 1 || args[0] != "--export-ask-cargo-output" {
 		return 2
 	}
-	r := askArtifactResult{Domain: "owner-question-cargo-output-v1", Source: askBuildSource, Reason: "unqualified"}
+	r := askArtifactResult{Domain: "owner-question-cargo-output-v1", Source: askBuildSource, Reason: "unqualified", TargetState: "unknown"}
+	exe, e := os.Executable()
+	if e != nil {
+		return 1
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), 12*time.Minute)
+	defer cancel()
+	readyAccepted := false
+	child := askOwnedChildWithHandshake(ctx, exe, func(payload []byte) bool {
+		var p askArtifactResult
+		if json.Unmarshal(payload, &p) != nil || p.Domain != r.Domain || p.Source != askBuildSource {
+			return false
+		}
+		r = p
+		if p.Reason != "producer_output_held" || p.OutputIdentity == nil || p.SHA == "" || p.Bytes <= 0 || !p.ProducerReaped || p.ProducerExit != 0 {
+			return false
+		}
+		readyAccepted = withPinnedCargoOutput(askBuildOutput, askBuildAlias, *p.OutputIdentity, func(raw []byte, id softwareIdentity) bool {
+			if digest(raw) != p.SHA || len(raw) != p.Bytes || id != *p.OutputIdentity {
+				return false
+			}
+			made, e := createAskArtifactCopy(askBuildExport, raw)
+			if made.FileID != "" {
+				r.ExportCreated = true
+				r.Identity = &made
+				r.Reason = "incomplete_export_preserved"
+			}
+			if e != nil {
+				return false
+			}
+			r.Reason = "export_awaiting_producer_exit"
+			return true
+		})
+		return readyAccepted
+	}, "--ask-build-worker")
+	clear(child.Raw)
+	if !readyAccepted || !child.Started || !child.Assigned || !child.WaitVerified || !child.Reaped || child.TimedOut || child.Exit != 0 {
+		r.Qualified = false
+		if r.Reason == "export_awaiting_producer_exit" {
+			r.Reason = "export_preserved_producer_exit_unknown"
+		}
+	} else {
+		// A successful receipt is published only after the producer ACK and
+		// its verified termination, while the exported generation is pinned.
+		exported, e := openUpdateObject(askBuildExport)
+		if e == nil {
+			defer exported.Close()
+			if r.Identity != nil && exported.ID() == *r.Identity && len(exported.Raw()) == r.Bytes && digest(exported.Raw()) == r.SHA {
+				r.Qualified = true
+				r.Reason = "fixed_software_exported"
+				if writeAskBuildReceipt(askBuildReceipt, r) != nil {
+					r.Qualified = false
+					r.Reason = "export_preserved_receipt_failed"
+				}
+			}
+		}
+	}
+	if r.ExportCreated && !r.Qualified && r.Reason == "export_awaiting_producer_exit" {
+		r.Reason = "export_preserved_receipt_unavailable"
+	}
+	if json.NewEncoder(out).Encode(r) != nil || !r.Qualified {
+		return 1
+	}
+	return 0
+}
+
+func runAskBuildWorker(out io.Writer) int {
+	r := askArtifactResult{Domain: "owner-question-cargo-output-v1", Source: askBuildSource, Reason: "unqualified", TargetState: "not_created"}
+	defer func() {
+		if r.Reason != "producer_acknowledged" {
+			json.NewEncoder(out).Encode(r)
+		}
+	}()
 	ctx, cancel := context.WithTimeout(context.Background(), 8*time.Second)
 	defer cancel()
 	proof, e := openUpdateObject(askBuildProofPath)
@@ -306,8 +381,12 @@ func runAskBuildArtifact(args []string, out io.Writer) int {
 			// and keeps normal target writers separate after cargo_gate releases
 			// its build slot. Do not adopt the old unqualified two-link image.
 			if err := os.Mkdir(askBuildOwnedTarget, 0700); err != nil {
+				r.Reason = "isolated_target_collision_or_unavailable"
+				r.TargetState = "preexisting_or_unknown"
 				return 1
 			}
+			r.TargetCreated = true
+			r.TargetState = "created_preserved"
 			// Keep the directory's deletion namespace pinned through export.
 			dir, ok := openPlain(askBuildOwnedTarget, true)
 			if !ok {
@@ -325,12 +404,12 @@ func runAskBuildArtifact(args []string, out io.Writer) int {
 			r.ProducerExit = built.Exit
 			r.ProducerReaped = built.Reaped
 			r.ProducerElapsedMS = time.Since(started).Milliseconds()
-			if !built.Reaped || built.TimedOut || built.Exit != 0 {
+			if !built.Started || !built.Assigned || !built.WaitVerified || !built.Reaped || built.TimedOut || built.Exit != 0 {
 				r.Reason = "producer_failed_or_uncollected"
 				json.NewEncoder(out).Encode(r)
 				return 1
 			}
-			withPinnedCargoOutput(askBuildOutput, askBuildAlias, softwareIdentity{}, func(raw []byte, id softwareIdentity) bool {
+			acknowledged := withPinnedCargoOutput(askBuildOutput, askBuildAlias, softwareIdentity{}, func(raw []byte, id softwareIdentity) bool {
 				if len(raw) < 1 || len(raw) > 32<<20 {
 					return false
 				}
@@ -341,34 +420,29 @@ func runAskBuildArtifact(args []string, out io.Writer) int {
 						return false
 					}
 				}
-				made, e := createAskArtifactCopy(askBuildExport, raw)
-				if made.FileID != "" {
-					r.ExportCreated = true
-					r.Identity = &made
-					r.Reason = "incomplete_export_preserved"
-				}
-				if e != nil {
-					return false
-				}
-				r.ExportCreated = true
 				r.Bytes = len(raw)
 				r.SHA = digest(raw)
 				r.OutputIdentity = &id
-				r.Reason = "exported_receipt_pending"
-				if writeAskBuildReceipt(askBuildReceipt, r) != nil {
-					r.Reason = "export_preserved_receipt_failed"
+				r.Reason = "producer_output_held"
+				if json.NewEncoder(out).Encode(r) != nil {
 					return false
 				}
-				r.Qualified = true
-				r.Reason = "fixed_software_exported"
+				// Parent completion is acknowledged while both aliases and all
+				// source handles remain held. No EOF/exit implies acceptance.
+				line, e := bufio.NewReader(io.LimitReader(os.Stdin, 32)).ReadString('\n')
+				if e != nil || line != "ACCEPT\n" {
+					r.Reason = "producer_rejected_or_ack_unknown"
+					return false
+				}
+				r.Reason = "producer_acknowledged"
 				return true
 			})
+			if acknowledged {
+				return 0
+			}
 		}
 	}
-	if json.NewEncoder(out).Encode(r) != nil || !r.Qualified {
-		return 1
-	}
-	return 0
+	return 1
 }
 
 func writeAskBuildReceipt(path string, r askArtifactResult) error {

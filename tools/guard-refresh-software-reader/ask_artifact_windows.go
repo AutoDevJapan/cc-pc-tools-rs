@@ -16,13 +16,13 @@ import (
 	"unsafe"
 )
 
-const askBuildSource = "05877dad16c1fb3bd31e1d7350a2758f60a067ac"
-const askBuildProofPath = "D:/CC/Tools/codex-jobs/fourbros4431-ask-artifact-0587-source-proof.json"
-const askBuildProofSHA = "a4f9f5d1b8f00a8f8e760b5d60735d37c53045332a19b78df41777caf036b8e1"
-const askBuildOwnedTarget = updateSourceRoot + "/codex-owned-b30691d5cc845d615ea1be06bb0d3de3/cargo-final-0587"
+const askBuildSource = "c9401fa001e4c8ef131180caa5522f27b18c4ad5"
+const askBuildProofPath = "D:/CC/Tools/codex-jobs/fourbros4431-ask-artifact-c940-source-proof.json"
+const askBuildProofSHA = "a99748d69a953cc7a0a39fc2a1ebdceea04c68c7a9f044edba46203a285bb29b"
+const askBuildOwnedTarget = updateSourceRoot + "/codex-owned-b30691d5cc845d615ea1be06bb0d3de3/cargo-final-c940"
 const askBuildOutput = askBuildOwnedTarget + "/release/discord_ask.exe"
 const askBuildAlias = askBuildOwnedTarget + "/release/deps/discord_ask.exe"
-const askBuildExport = updateSourceRoot + "/codex-owned-f60f3742a1933562ec75aa5c8eb05d72/discord_ask-privacy-0587.exe"
+const askBuildExport = updateSourceRoot + "/codex-owned-f60f3742a1933562ec75aa5c8eb05d72/discord_ask-privacy-c940.exe"
 const askBuildReceipt = "D:/CC/Tools/codex-jobs/fourbros4431-ask-artifact-producer-receipt.json"
 
 type askBuildEvidence struct {

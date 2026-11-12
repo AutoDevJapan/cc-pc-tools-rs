@@ -274,15 +274,17 @@ mod tests {
             .unwrap_err()
             .contains("stage-only"));
         let request = ledger.request(&args.question.request_id).unwrap();
-        let result = execute_inner(&mut ctx, Some(request.clone()), None, &[], None, None);
+        let result = execute_inner(&mut ctx, Some(request.clone()), None, &[], None, None, None);
         assert!(result.unwrap_err().contains("stage-only"));
         let mut alias = request.clone();
         alias.request_id = "native-fixture-another-title".into();
         alias.title = "renamed".into();
         alias.fingerprint = alias.fingerprint().unwrap();
-        assert!(execute_inner(&mut ctx, Some(alias), None, &[], None, None)
-            .unwrap_err()
-            .contains("stage-only"));
+        assert!(
+            execute_inner(&mut ctx, Some(alias), None, &[], None, None, None)
+                .unwrap_err()
+                .contains("stage-only")
+        );
         assert_eq!(fs::read(f.home.join(LEDGER)).unwrap(), once);
         assert_eq!(effects.lock().unwrap().1, 0);
         // A different retry key for the same decision cannot create an intent.

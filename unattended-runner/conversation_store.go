@@ -324,7 +324,7 @@ func (r *Runner) conversationTaskForQuestion(ctx context.Context, id uint64, que
 		Items    []json.RawMessage `json:"items"`
 	}
 	if readJSON(r.TodoPath, maxTodo, &db) != nil {
-		return nil, errors.New("conversation task scope unavailable")
+		return nil, conversationDiagnostic("task_store_read", errors.New("conversation task scope unavailable"))
 	}
 	var selected json.RawMessage
 	var project string
@@ -334,41 +334,65 @@ func (r *Runner) conversationTaskForQuestion(ctx context.Context, id uint64, que
 			Project string `json:"project"`
 		}
 		if json.Unmarshal(raw, &header) != nil {
-			return nil, errors.New("conversation task unavailable")
+			return nil, conversationDiagnostic("task_row_decode", errors.New("conversation task unavailable"))
 		}
 		if header.ID == id {
 			if selected != nil {
-				return nil, errors.New("conversation duplicate task")
+				return nil, conversationDiagnostic("task_duplicate", errors.New("conversation duplicate task"))
 			}
 			selected, project = raw, header.Project
 		}
 	}
 	root := db.Projects[project]
 	if selected == nil || project == "owner" || !filepath.IsAbs(root) {
-		return nil, errors.New("conversation task scope unavailable")
+		return nil, conversationDiagnostic("task_scope_unavailable", errors.New("conversation task scope unavailable"))
 	}
-	raw, err := r.Run(ctx, "D:/CC/Tools/client-records/scrub391.exe", "--guard-path", root)
+	guardContext := ctx
+	cancelGuard := func() {}
+	if r.ConversationReceiverOnly {
+		guardContext, cancelGuard = context.WithTimeout(ctx, conversationReceiverGuardBudget)
+	}
+	started := time.Now()
+	raw, err := r.Run(guardContext, "D:/CC/Tools/client-records/scrub391.exe", "--guard-path", root)
+	if err != nil && errors.Is(guardContext.Err(), context.DeadlineExceeded) && ctx.Err() == nil {
+		err = &commandFailure{Cause: "guard_deadline", ElapsedMS: time.Since(started).Milliseconds()}
+	}
+	cancelGuard()
 	var proof struct {
 		Client     *bool `json:"client_resource"`
 		Unverified *bool `json:"classification_unverified"`
 	}
 	if err != nil || json.Unmarshal([]byte(raw), &proof) != nil || proof.Client == nil || *proof.Client || proof.Unverified == nil || *proof.Unverified {
 		if question == nil || err != nil || !taskQuestionUnattributed(raw) {
-			return nil, errors.New("conversation task scope unverified")
+			code := "task_guard_unverified"
+			switch {
+			case err != nil:
+				code = "task_guard_command"
+			case json.Unmarshal([]byte(raw), &proof) != nil:
+				code = "task_guard_json"
+			case proof.Unverified != nil && *proof.Unverified:
+				code = "task_guard_unverified"
+			case proof.Client != nil && *proof.Client:
+				code = "task_guard_protected"
+			}
+			if err != nil {
+				return nil, conversationDiagnostic(code, err)
+			}
+			return nil, conversationDiagnostic(code, errors.New("conversation task scope unverified"))
 		}
 		var original taskQuestionState
 		if json.Unmarshal(selected, &original) != nil {
-			return nil, errTaskQuestion
+			return nil, conversationDiagnostic("task_question_metadata", errTaskQuestion)
 		}
 		original.Root = root
 		original.current = selected
 		if err := r.verifyTaskQuestion(ctx, *question, original); err != nil {
-			return nil, errTaskQuestion
+			return nil, conversationDiagnostic("task_question_metadata", errTaskQuestion)
 		}
 	}
 	var row TodoRow
 	if json.Unmarshal(selected, &row) != nil {
-		return nil, errors.New("conversation task unavailable")
+		return nil, conversationDiagnostic("task_row_decode", errors.New("conversation task unavailable"))
 	}
 	row.conversationState = selected
 	row.conversationRoot = root

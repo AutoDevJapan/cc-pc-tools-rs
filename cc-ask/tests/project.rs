@@ -377,6 +377,35 @@ fn qualified_input_limit_rejects_body_and_decision_before_child_or_post() {
 }
 
 #[test]
+fn existing_registry_decision_limit_and_bom_json_semantics_are_preserved() {
+    let mut h = Harness::new();
+    let body = h.root.path().join("body.md");
+    std::fs::write(&body, "製品の方向を選んでください。").unwrap();
+    let decision = h.root.path().join("decision.json");
+    let value = json!({"todo_id":1157,"decision":"direction","resources":[{"kind":"service","id":"KaraokeMaker"}],"scope":{"revision":1}});
+    std::fs::write(&decision, format!("\u{feff}{}", value)).unwrap();
+    let mut args = AskArgs {
+        title: "製品方向".into(),
+        body_file: body,
+        decision_file: Some(decision.clone()),
+        cwd: Some("D:/repos/KaraokeMaker".into()),
+        dry_run: true,
+        ..Default::default()
+    };
+    let result = cmd_ask(&mut h.ctx, &args).unwrap();
+    assert_eq!(result["decision_identity"]["todo_id"], 1157);
+    let file = std::fs::File::create(&decision).unwrap();
+    file.set_len((1 << 20) + 1).unwrap();
+    drop(file);
+    let error = cmd_ask(&mut h.ctx, &args).unwrap_err();
+    assert!(error.contains("1 MiB"));
+    args.dry_run = false;
+    let error = cmd_ask(&mut h.ctx, &args).unwrap_err();
+    assert!(error.contains("1 MiB"));
+    assert!(h.fake.borrow().http_calls.is_empty());
+}
+
+#[test]
 fn explicit_empty_cwd_matches_normal_current_directory_fallback() {
     struct CurrentRoot(common::SharedFake);
     impl cc_ask::core::Effects for CurrentRoot {

@@ -150,6 +150,9 @@ pub(crate) fn qualify_question_sources_with(
             &question_text(&args.body_file)?,
             args.owner_only,
         )?;
+        if let Some(path) = &args.decision_file {
+            question_text(path)?;
+        }
         return Ok(QuestionSourceLease { files: Vec::new() });
     }
     let cwd = args

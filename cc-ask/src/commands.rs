@@ -112,7 +112,12 @@ pub fn cmd_ask(ctx: &mut Context, args: &AskArgs) -> Result<Value> {
         return Err("判断の記録は1つだけ指定してください".into());
     }
     let decision = match &args.decision_file {
-        Some(path) => Some(read_json(path)?),
+        Some(path) => Some(
+            serde_json::from_str::<Value>(
+                crate::project::question_text(path)?.trim_start_matches('\u{feff}'),
+            )
+            .map_err(|_| "invalid question decision JSON")?,
+        ),
         None => embedded,
     };
     crate::recovery_messages::validate_followup_text(&args.title)?;

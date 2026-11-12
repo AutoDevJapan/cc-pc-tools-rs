@@ -158,6 +158,9 @@ func observeInstalledGuard() softwareObservation {
 }
 
 func run(args []string, out io.Writer, observe func() softwareObservation, operations ...updateOperations) int {
+	if len(args) > 0 && args[0] == "--export-ask-cargo-output" {
+		return runAskBuildArtifact(args, out)
+	}
 	if len(args) > 0 && (args[0] == "--ask-software-worker" || args[0] == "--ask-software-inspection-worker") {
 		return runAskWorker(args, out)
 	}

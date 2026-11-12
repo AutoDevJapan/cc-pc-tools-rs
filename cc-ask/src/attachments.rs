@@ -52,6 +52,7 @@ pub fn fingerprints(prepared: Option<&Prepared>) -> Result<Vec<String>> {
 
 struct Policy {
     clients: Vec<String>,
+    catalog: Option<crate::project_catalog::Catalog>,
     secrets: Vec<String>,
     pattern: regex::Regex,
 }
@@ -117,7 +118,22 @@ fn production_pattern() -> regex::Regex {
 }
 impl Policy {
     fn load(ctx: &Context) -> Result<Self> {
-        let mut clients: Vec<String> = read_text(&ctx.client_projects)?
+        let (text, catalog) = match fs::read_to_string(&ctx.client_projects) {
+            Ok(text) => (text, None),
+            Err(error)
+                if error.kind() == std::io::ErrorKind::NotFound
+                    && fs::symlink_metadata(&ctx.client_projects)
+                        .is_err_and(|error| error.kind() == std::io::ErrorKind::NotFound) =>
+            {
+                (
+                    String::new(),
+                    Some(crate::project_catalog::Catalog::embedded()?),
+                )
+            }
+            Err(_) => return Err("project privacy source unreadable".into()),
+        };
+        let text = text.replace("\r\n", "\n").replace('\r', "\n");
+        let mut clients: Vec<String> = text
             .trim_start_matches('\u{feff}')
             .lines()
             .map(str::trim)
@@ -141,13 +157,19 @@ impl Policy {
         let pattern = production_pattern();
         Ok(Self {
             clients,
+            catalog,
             secrets,
             pattern,
         })
     }
     fn path(&self, path: &Path) -> Result<()> {
         let value = path.to_string_lossy().replace('\\', "/").to_lowercase();
-        if self.clients.iter().any(|entry| value.contains(entry)) {
+        if self.clients.iter().any(|entry| value.contains(entry))
+            || self
+                .catalog
+                .as_ref()
+                .is_some_and(|catalog| catalog.contains_protected(&value))
+        {
             return Err("顧客案件のファイルは添付できません".into());
         }
         for part in value.split('/') {
@@ -601,8 +623,16 @@ pub fn prepare(ctx: &mut Context, paths: &[PathBuf]) -> Result<Option<Prepared>>
     let temp = tempfile::tempdir().map_err(|_| "添付用の一時フォルダを作成できません")?;
     let mut snapshots = Vec::new();
     for path in paths {
+        let _source = if policy.catalog.is_some() {
+            Some(crate::project::lease_source(&mut *ctx.effects, path)?)
+        } else {
+            None
+        };
         policy.path(path)?;
         let resolved = fs::canonicalize(path).map_err(|_| "添付ファイルが見つかりません")?;
+        if policy.catalog.is_some() {
+            crate::project::qualify_source(&mut *ctx.effects, &resolved)?;
+        }
         policy.path(&resolved)?;
         let input = fs::File::open(&resolved).map_err(|_| "添付ファイルを読み取れません")?;
         if !input
@@ -1125,6 +1155,7 @@ mod tests {
     fn credential_pattern_fixture() -> Policy {
         Policy {
             clients: vec![],
+            catalog: None,
             secrets: vec![],
             pattern: production_pattern(),
         }
@@ -1374,6 +1405,7 @@ mod tests {
         // values cannot be checked here; synthetic known values are tested separately.
         let p = Policy {
             clients: vec![],
+            catalog: None,
             secrets: vec![],
             pattern: production_pattern(),
         };
@@ -1390,6 +1422,7 @@ mod tests {
     fn known_non_ascii_secrets_are_detected_in_both_utf16_byte_orders_and_alignments() {
         let policy = Policy {
             clients: vec![],
+            catalog: None,
             secrets: vec!["日本語の秘密".into()],
             pattern: regex::Regex::new("never-match-this-pattern").unwrap(),
         };

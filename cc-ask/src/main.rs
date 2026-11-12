@@ -176,10 +176,7 @@ enum Commands {
 
 /// Owner posts get the phrasing advice on stderr first; the post is never blocked.
 fn advise(ctx: &mut Context, text: &str, body_file: Option<&std::path::Path>) {
-    let body = body_file
-        .and_then(|p| std::fs::read_to_string(p).ok())
-        .unwrap_or_default();
-    cc_ask::ja_check::advise(ctx.effects.as_mut(), &format!("{text}\n{body}"));
+    cc_ask::ja_check::advise_body(ctx.effects.as_mut(), text, body_file);
 }
 
 fn env_path(key: &str, default: &str) -> PathBuf {
@@ -226,10 +223,19 @@ fn context(tick: bool) -> Result<Context> {
 
 fn run(command: Commands) -> Result<()> {
     // Check the original full text before config, lint/model calls, locks or Discord.
-    if let Commands::Ask(args) = &command {
-        cc_ask::ask_gate::enforce(&args.title, &read_text(&args.body_file)?, args.owner_only)?;
-    }
     let home = env_path("CC_ASK_HOME", "D:/CC/Tools/discord-ask");
+    // Retain the same input namespace across bridge fallthrough, advice and
+    // ordinary command consumption, rather than releasing it at `None`.
+    let _ask_sources = if let Commands::Ask(args) = &command {
+        Some(cc_ask::conversation_bridge::qualify_ask_sources(
+            &home,
+            &mut RealEffects,
+            &env_path("CC_ASK_CLIENT_PROJECTS", "D:/CC/Tools/client-projects.txt"),
+            args,
+        )?)
+    } else {
+        None
+    };
     let bridged = match &command {
         Commands::Ask(args) => cc_ask::conversation_bridge::try_ask(&home, &mut RealEffects, args)?,
         Commands::Log {
@@ -356,7 +362,7 @@ fn run(command: Commands) -> Result<()> {
     }
     if let Commands::Lint { text, body_file } = &command {
         let body = match body_file {
-            Some(p) => std::fs::read_to_string(p).map_err(|e| format!("OSError: {e}"))?,
+            Some(p) => cc_ask::project::question_text(p)?,
             None => String::new(),
         };
         let found = cc_ask::ja_check::check(&mut RealEffects, &format!("{text}\n{body}"));

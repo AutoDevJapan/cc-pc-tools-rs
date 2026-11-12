@@ -3,13 +3,365 @@ use crate::core::*;
 use regex::{Regex, RegexBuilder};
 use std::path::Path;
 
+/// This is ordinary source classification, never an image-purpose grant.
+pub(crate) fn qualify_source(effects: &mut dyn Effects, path: &Path) -> Result<()> {
+    #[derive(serde::Deserialize)]
+    struct Proof {
+        ok: bool,
+        access_allowed: bool,
+        client_resource: bool,
+        classification_unverified: bool,
+    }
+    let path =
+        std::path::absolute(path).map_err(|_| "question source qualification unavailable")?;
+    let output = effects
+        .run(
+            &[
+                "D:/CC/Tools/client-records/scrub391.exe".into(),
+                "--guard-path".into(),
+                path.to_string_lossy().into_owned(),
+            ],
+            10,
+        )
+        .map_err(|_| "question source qualification unavailable")?;
+    if output.code != 0 || !output.stderr.is_empty() || output.stdout.len() > 65536 {
+        return Err("question source qualification unavailable".into());
+    }
+    let proof = serde_json::from_str::<Proof>(&output.stdout)
+        .map_err(|_| "question source qualification unavailable")?;
+    if !proof.ok
+        || !proof.access_allowed
+        || proof.client_resource
+        || proof.classification_unverified
+    {
+        return Err("question source is protected or unverified".into());
+    }
+    Ok(())
+}
+
+pub struct QuestionSourceLease {
+    files: Vec<std::fs::File>,
+}
+
+pub fn question_text(path: &Path) -> Result<String> {
+    use std::io::Read;
+    const LIMIT: u64 = 1 << 20;
+    let file = open_regular_source(path).map_err(|_| "question source read unavailable")?;
+    let meta = file
+        .metadata()
+        .map_err(|_| "question source read unavailable")?;
+    if !meta.is_file() || meta.len() > LIMIT {
+        return Err("question input exceeds 1 MiB".into());
+    }
+    let mut bytes = Vec::with_capacity(meta.len() as usize);
+    file.take(LIMIT + 1)
+        .read_to_end(&mut bytes)
+        .map_err(|_| "question source read unavailable")?;
+    if bytes.len() as u64 > LIMIT {
+        return Err("question input exceeds 1 MiB".into());
+    }
+    String::from_utf8(bytes)
+        .map(|text| text.replace("\r\n", "\n").replace('\r', "\n"))
+        .map_err(|_| "question source must be UTF-8".into())
+}
+
+pub(crate) fn lease_source(effects: &mut dyn Effects, path: &Path) -> Result<QuestionSourceLease> {
+    qualify_source(effects, path)?;
+    let resolved =
+        std::fs::canonicalize(path).map_err(|_| "question source qualification unavailable")?;
+    let normal =
+        std::path::PathBuf::from(crate::resume::strip_verbatim(&resolved.to_string_lossy()));
+    qualify_source(effects, &normal)?;
+    let lease = pin_plain_source(path)?;
+    qualify_source(effects, path)?;
+    qualify_source(effects, &normal)?;
+    Ok(lease)
+}
+
+/// Retain a plain named object without reading its content. Authorization is
+/// supplied by the caller's ordinary source or exact image-purpose verifier.
+pub(crate) fn pin_plain_source(path: &Path) -> Result<QuestionSourceLease> {
+    let resolved =
+        std::fs::canonicalize(path).map_err(|_| "question source identity unavailable")?;
+    #[cfg(windows)]
+    let mut files = Vec::new();
+    #[cfg(windows)]
+    {
+        use std::os::windows::fs::{MetadataExt, OpenOptionsExt};
+        // Pin the original namespace, including every parent component. A
+        // canonical target lease alone does not retain a mutable source link.
+        let absolute =
+            std::path::absolute(path).map_err(|_| "question source identity unavailable")?;
+        let parents: Vec<_> = absolute.ancestors().skip(1).collect();
+        for parent in parents.into_iter().rev() {
+            let file = std::fs::OpenOptions::new()
+                .access_mode(0x80)
+                .share_mode(3)
+                .custom_flags(0x02200000)
+                .open(parent)
+                .map_err(|_| "question source identity unavailable")?;
+            if file
+                .metadata()
+                .map_err(|_| "question source identity unavailable")?
+                .file_attributes()
+                & 0x400
+                != 0
+            {
+                return Err("question source identity unavailable".into());
+            }
+            files.push(file);
+        }
+        let file = std::fs::OpenOptions::new()
+            .read(true)
+            .share_mode(1)
+            .custom_flags(0x00200000)
+            .open(&absolute)
+            .map_err(|_| "question source identity unavailable")?;
+        let meta = file
+            .metadata()
+            .map_err(|_| "question source identity unavailable")?;
+        if !meta.is_file() || meta.file_attributes() & 0x400 != 0 {
+            return Err("question source identity unavailable".into());
+        }
+        if std::fs::canonicalize(&absolute).map_err(|_| "question source identity unavailable")?
+            != resolved
+        {
+            return Err("question source identity changed".into());
+        }
+        files.push(file);
+    }
+    #[cfg(unix)]
+    let files = {
+        let file =
+            open_plain_unix_source(path).map_err(|_| "question source identity unavailable")?;
+        if std::fs::canonicalize(path).map_err(|_| "question source identity unavailable")?
+            != resolved
+        {
+            return Err("question source identity changed".into());
+        }
+        vec![file]
+    };
+    #[cfg(not(any(windows, unix)))]
+    let files = {
+        return Err("question source identity unavailable".into());
+    };
+    // Windows handles now exclude file writes/deletes and parent replacement;
+    // reclassify that still-named object before any caller consumes its bytes.
+    Ok(QuestionSourceLease { files })
+}
+
+#[cfg(unix)]
+fn open_plain_unix_source(path: &Path) -> std::io::Result<std::fs::File> {
+    use std::os::unix::fs::OpenOptionsExt;
+    let file = std::fs::OpenOptions::new()
+        .read(true)
+        .custom_flags(libc::O_NONBLOCK | libc::O_NOFOLLOW)
+        .open(path)?;
+    // Check the opened object, not a pathname checked before open. In
+    // particular, opening a FIFO must not wait for a writer before rejection.
+    if !file.metadata()?.is_file() {
+        return Err(std::io::Error::new(
+            std::io::ErrorKind::InvalidInput,
+            "question source must be a regular file",
+        ));
+    }
+    Ok(file)
+}
+
+pub(crate) fn open_regular_source(path: &Path) -> std::io::Result<std::fs::File> {
+    #[cfg(unix)]
+    {
+        open_plain_unix_source(path)
+    }
+    #[cfg(not(unix))]
+    {
+        std::fs::File::open(path)
+    }
+}
+
+#[cfg(all(test, unix))]
+mod unix_source_tests {
+    use super::*;
+
+    #[test]
+    fn no_writer_fifo_and_directory_are_rejected_before_content_read() {
+        const CHILD: &str = "CC_ASK_OWNED_FIFO_UNIT";
+        if std::env::var_os(CHILD).is_none() {
+            let mut child = std::process::Command::new(std::env::current_exe().unwrap())
+                .args(["--exact", "project::unix_source_tests::no_writer_fifo_and_directory_are_rejected_before_content_read", "--nocapture"])
+                .env(CHILD,"1").spawn().unwrap();
+            let start = std::time::Instant::now();
+            loop {
+                if let Some(status) = child.try_wait().unwrap() {
+                    assert!(status.success());
+                    break;
+                }
+                if start.elapsed() > std::time::Duration::from_secs(2) {
+                    child.kill().unwrap();
+                    child.wait().unwrap();
+                    panic!("FIFO unit open did not return");
+                }
+                std::thread::sleep(std::time::Duration::from_millis(10));
+            }
+            return;
+        }
+        use std::os::unix::ffi::OsStrExt;
+        let root = tempfile::tempdir().unwrap();
+        let fifo = root.path().join("input.png");
+        let name = std::ffi::CString::new(fifo.as_os_str().as_bytes()).unwrap();
+        assert_eq!(unsafe { libc::mkfifo(name.as_ptr(), 0o600) }, 0);
+        let before = std::time::Instant::now();
+        assert!(pin_plain_source(&fifo).is_err());
+        assert!(before.elapsed() < std::time::Duration::from_secs(1));
+        assert!(pin_plain_source(root.path()).is_err());
+    }
+
+    #[test]
+    fn held_regular_object_passes_and_final_link_is_not_followed() {
+        use std::os::unix::fs::symlink;
+        let root = tempfile::tempdir().unwrap();
+        let plain = root.path().join("regular.png");
+        std::fs::write(&plain, b"owned image fixture").unwrap();
+        let file = open_plain_unix_source(&plain).unwrap();
+        assert!(file.metadata().unwrap().is_file());
+        assert!(pin_plain_source(&plain).is_ok());
+        let link = root.path().join("link.png");
+        symlink(&plain, &link).unwrap();
+        assert!(open_plain_unix_source(&link).is_err());
+        assert_eq!(std::fs::read(plain).unwrap(), b"owned image fixture");
+    }
+}
+
+pub fn qualify_question_sources(
+    effects: &mut dyn Effects,
+    registry: &Path,
+    args: &crate::commands::AskArgs,
+) -> Result<QuestionSourceLease> {
+    qualify_question_sources_with(effects, registry, args, true)
+}
+
+pub(crate) fn qualify_question_sources_with(
+    effects: &mut dyn Effects,
+    registry: &Path,
+    args: &crate::commands::AskArgs,
+    ordinary_attachments: bool,
+) -> Result<QuestionSourceLease> {
+    let names = ProjectNames::load_for_owner_questions(registry)?;
+    if !names.catalog_only() {
+        crate::ask_gate::enforce(
+            &args.title,
+            &question_text(&args.body_file)?,
+            args.owner_only,
+        )?;
+        if let Some(path) = &args.decision_file {
+            question_text(path)?;
+        }
+        return Ok(QuestionSourceLease { files: Vec::new() });
+    }
+    let cwd = args
+        .cwd
+        .clone()
+        .filter(|cwd| !cwd.is_empty())
+        .map(std::path::PathBuf::from)
+        .map(Ok)
+        .unwrap_or_else(std::env::current_dir)
+        .map_err(|_| "question source qualification unavailable")?;
+    qualify_source(effects, &cwd)?;
+    let mut held = QuestionSourceLease { files: Vec::new() };
+    for path in std::iter::once(&args.body_file)
+        .chain(args.decision_file.iter())
+        .chain(args.attach.iter().filter(|_| ordinary_attachments))
+    {
+        held.files.extend(lease_source(effects, path)?.files);
+    }
+    // The ordinary question gate must precede project-label discovery and
+    // config/model/network work. Read only after the source lease qualifies
+    // it, and reuse this same bounded text below.
+    let body = question_text(&args.body_file)?;
+    crate::ask_gate::enforce(&args.title, &body, args.owner_only)?;
+    let root = effects.run(
+        &[
+            "git".into(),
+            "-C".into(),
+            cwd.to_string_lossy().into_owned(),
+            "rev-parse".into(),
+            "--show-toplevel".into(),
+        ],
+        10,
+    );
+    let folder = root
+        .as_ref()
+        .ok()
+        .filter(|out| out.code == 0)
+        .and_then(|out| out.stdout.lines().next())
+        .filter(|line| !line.trim().is_empty())
+        .map(str::to_owned)
+        .unwrap_or_else(|| cwd.to_string_lossy().into_owned());
+    if names.label(&project_from_folder(&folder)) == "プロジェクト不明" {
+        return Err("project privacy classification unavailable for this project".into());
+    }
+    // Classifying a source never asserts that arbitrary prose is public. Keep
+    // the sender's credential checks, and reject rather than rewrite a bound
+    // question when catalog-protected text occurs in its original inputs.
+    for text in std::iter::once(args.title.clone())
+        .chain(std::iter::once(body))
+        .chain(
+            args.decision_file
+                .iter()
+                .map(|path| question_text(path))
+                .collect::<Result<Vec<_>>>()?,
+        )
+    {
+        crate::recovery_messages::validate_followup_text(&text)?;
+        if names.redact(&text) != text {
+            return Err("question input contains protected project information".into());
+        }
+    }
+    Ok(held)
+}
+
 pub struct ProjectNames {
     clients: Vec<Regex>,
+    catalog: Option<crate::project_catalog::Catalog>,
 }
 
 impl ProjectNames {
+    pub fn catalog_only(&self) -> bool {
+        self.catalog.is_some()
+    }
     pub fn load(path: &Path) -> Result<Self> {
-        let text = read_text(path)?;
+        Self::load_inner(path, false)
+    }
+
+    /// Existing question displays may use the normal department projection.
+    /// Original decision text continues to require its original name registry.
+    pub fn load_for_owner_questions(path: &Path) -> Result<Self> {
+        Self::load_inner(path, true)
+    }
+
+    fn load_inner(path: &Path, use_catalog: bool) -> Result<Self> {
+        let text = match std::fs::read_to_string(path) {
+            Ok(text) => text,
+            Err(error)
+                if use_catalog
+                    && error.kind() == std::io::ErrorKind::NotFound
+                    && std::fs::symlink_metadata(path)
+                        .is_err_and(|error| error.kind() == std::io::ErrorKind::NotFound) =>
+            {
+                return Ok(Self {
+                    clients: Vec::new(),
+                    catalog: Some(crate::project_catalog::Catalog::embedded()?),
+                });
+            }
+            Err(error) => {
+                return Err(format!(
+                    "OSError: project privacy source unreadable (kind={:?}, code={:?})",
+                    error.kind(),
+                    error.raw_os_error()
+                ))
+            }
+        };
+        let text = text.replace("\r\n", "\n").replace('\r', "\n");
         let mut names: Vec<_> = text
             .trim_start_matches('\u{feff}')
             .lines()
@@ -28,17 +380,32 @@ impl ProjectNames {
                         .unwrap()
                 })
                 .collect(),
+            catalog: None,
         })
     }
 
     pub fn redact(&self, text: &str) -> String {
-        self.clients.iter().fold(text.to_owned(), |text, name| {
+        let text = self.clients.iter().fold(text.to_owned(), |text, name| {
             name.replace_all(&text, "クライアント案件").into_owned()
-        })
+        });
+        self.catalog
+            .as_ref()
+            .map_or(text.clone(), |catalog| catalog.redact(&text))
     }
 
     pub fn label(&self, project: &str) -> String {
-        if self.clients.iter().any(|name| name.is_match(project)) {
+        if self
+            .catalog
+            .as_ref()
+            .is_some_and(|catalog| !catalog.known_project(project))
+        {
+            "プロジェクト不明".into()
+        } else if self.clients.iter().any(|name| name.is_match(project))
+            || self
+                .catalog
+                .as_ref()
+                .is_some_and(|catalog| catalog.redact(project) != project)
+        {
             "クライアント案件".into()
         } else {
             project.to_owned()

@@ -41,6 +41,7 @@ mod process_guard;
 /// Own the transient subprocess tree while permitting explicit successful detachment.
 pub use process_guard::Group as ProcessGroup;
 pub mod project;
+mod project_catalog;
 pub mod prompt_context;
 pub mod question_progress;
 pub mod question_store;

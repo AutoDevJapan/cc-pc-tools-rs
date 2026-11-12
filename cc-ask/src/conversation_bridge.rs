@@ -50,7 +50,7 @@ pub fn enabled(home: &Path) -> Result<bool> {
 }
 
 fn read_bounded(path: &Path, limit: u64) -> Result<Vec<u8>> {
-    let file = fs::File::open(path).map_err(|_| INVALID_INPUT)?;
+    let file = crate::project::open_regular_source(path).map_err(|_| INVALID_INPUT)?;
     let info = file.metadata().map_err(|_| INVALID_INPUT)?;
     if !info.is_file() || info.len() > limit {
         return Err(INVALID_INPUT.into());
@@ -213,16 +213,19 @@ fn attachments(
         ) {
             return Err("新しい投稿の添付は現在は画像だけに対応しています".into());
         }
+        // Retain the original spelling's namespace before resolving it. The
+        // same lease stays alive through qualification and byte snapshotting.
+        let source_lease = crate::project::pin_plain_source(path)?;
         let source = image_source(path)?;
         let info = fs::metadata(&source).map_err(|_| INVALID_INPUT)?;
         total = total.checked_add(info.len()).ok_or(INVALID_INPUT)?;
         if !info.is_file() || info.len() > IMAGE_LIMIT || total > IMAGE_TOTAL_LIMIT {
             return Err(INVALID_INPUT.into());
         }
-        inputs.push((source, extension, info.len()));
+        inputs.push((source, extension, info.len(), source_lease));
     }
     let mut result = Vec::new();
-    for (source, extension, expected_size) in inputs {
+    for (source, extension, expected_size, _image_source) in inputs {
         // Fresh Go verification rechecks this original scope and the immutable
         // source receipt. A generic snapshot name never grants image authority.
         let guard = effects
@@ -260,7 +263,7 @@ fn attachments(
         } else {
             return Err("添付元の保護範囲を確認できません。画像は送信していません".into());
         };
-        let input = fs::File::open(&source).map_err(|_| INVALID_INPUT)?;
+        let input = crate::project::open_regular_source(&source).map_err(|_| INVALID_INPUT)?;
         let info = input.metadata().map_err(|_| INVALID_INPUT)?;
         if !info.is_file() || info.len() != expected_size || info.len() > IMAGE_LIMIT {
             return Err(INVALID_INPUT.into());
@@ -338,6 +341,14 @@ fn save_media_source(
 }
 
 fn install(file: tempfile::NamedTempFile, path: &Path, expected: &str, size: u64) -> Result<()> {
+    // tempfile's Windows publication uses native paths. Canonicalizing the
+    // existing parent retains this exact destination and its long-path form.
+    #[cfg(windows)]
+    let native_path = fs::canonicalize(path.parent().ok_or(SAVE_FAILED)?)
+        .map_err(|_| SAVE_FAILED)?
+        .join(path.file_name().ok_or(SAVE_FAILED)?);
+    #[cfg(windows)]
+    let path = native_path.as_path();
     match file.persist_noclobber(path) {
         Ok(_) => Ok(()),
         Err(error) if error.error.kind() == std::io::ErrorKind::AlreadyExists => {
@@ -345,7 +356,7 @@ fn install(file: tempfile::NamedTempFile, path: &Path, expected: &str, size: u64
             if !info.is_file() || info.len() != size {
                 return Err(SAVE_FAILED.into());
             }
-            let mut input = fs::File::open(path)
+            let mut input = crate::project::open_regular_source(path)
                 .map_err(|_| SAVE_FAILED)?
                 .take(size.checked_add(1).ok_or(SAVE_FAILED)?);
             let mut digest = Sha256::new();
@@ -620,6 +631,30 @@ pub fn try_ask(home: &Path, effects: &mut dyn Effects, args: &AskArgs) -> Result
     }
     append_attachments(&root, &directory, snapshots, &mut argv)?;
     execute(effects, &argv, true, false)
+}
+
+/// The normal CLI uses this entry before either transport consumes its inputs.
+/// Existing request identity and body bytes are never rewritten by privacy checks.
+pub fn try_qualified_ask(
+    home: &Path,
+    effects: &mut dyn Effects,
+    registry: &Path,
+    args: &AskArgs,
+) -> Result<Option<Value>> {
+    // Generated images retain their existing exact question-purpose admission.
+    // Ordinary body/decision sources never inherit that separate qualification.
+    let _sources = qualify_ask_sources(home, effects, registry, args)?;
+    try_ask(home, effects, args)
+}
+
+pub fn qualify_ask_sources(
+    home: &Path,
+    effects: &mut dyn Effects,
+    registry: &Path,
+    args: &AskArgs,
+) -> Result<crate::project::QuestionSourceLease> {
+    let ordinary_attachments = !args.dry_run && !enabled(home)?;
+    crate::project::qualify_question_sources_with(effects, registry, args, ordinary_attachments)
 }
 
 pub fn try_log(

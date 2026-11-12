@@ -101,17 +101,34 @@ pub fn cmd_check(ctx: &mut Context) -> Result<Value> {
 
 /// Ask in a forum or text channel, retaining the original working directory.
 pub fn cmd_ask(ctx: &mut Context, args: &AskArgs) -> Result<Value> {
+    let _sources = crate::project::qualify_question_sources_with(
+        &mut *ctx.effects,
+        &ctx.client_projects,
+        args,
+        !args.dry_run,
+    )?;
     if !args.dry_run {
         crate::state_work::recovery_guard(ctx)?;
     }
-    let (raw_body, embedded) = crate::decision_identity::extract(&read_text(&args.body_file)?)?;
+    let (raw_body, embedded) =
+        crate::decision_identity::extract(&crate::project::question_text(&args.body_file)?)?;
     if args.decision_file.is_some() && embedded.is_some() {
         return Err("判断の記録は1つだけ指定してください".into());
     }
     let decision = match &args.decision_file {
-        Some(path) => Some(read_json(path)?),
+        Some(path) => Some(
+            serde_json::from_str::<Value>(
+                crate::project::question_text(path)?.trim_start_matches('\u{feff}'),
+            )
+            .map_err(|_| "invalid question decision JSON")?,
+        ),
         None => embedded,
     };
+    crate::recovery_messages::validate_followup_text(&args.title)?;
+    crate::recovery_messages::validate_followup_text(&raw_body)?;
+    if let Some(decision) = &decision {
+        crate::recovery_messages::validate_followup_text(&decision.to_string())?;
+    }
     crate::ask_gate::enforce(&args.title, &raw_body, args.owner_only)?;
     let cwd = match args.cwd.as_deref().filter(|v| !v.is_empty()) {
         Some(v) => v.to_owned(),
@@ -120,8 +137,11 @@ pub fn cmd_ask(ctx: &mut Context, args: &AskArgs) -> Result<Value> {
             .to_string_lossy()
             .into_owned(),
     };
-    let names = ProjectNames::load(&ctx.client_projects)?;
+    let names = ProjectNames::load_for_owner_questions(&ctx.client_projects)?;
     let mut project = determine_project(ctx, &cwd, &names);
+    if project == "プロジェクト不明" && names.catalog_only() {
+        return Err("project privacy classification unavailable for this project".into());
+    }
     let body = names.redact(&raw_body);
     let owner = ctx.owner();
     let mut title = thread_title(
@@ -129,7 +149,11 @@ pub fn cmd_ask(ctx: &mut Context, args: &AskArgs) -> Result<Value> {
         &names.redact(&args.agent),
         &names.redact(&args.title),
     );
-    if crate::task_title::clean(&args.title).is_empty() {
+    if crate::task_title::clean(&args.title).is_empty() && names.catalog_only() {
+        // The body and project have already been filtered by the department
+        // catalog. Do not reopen the missing legacy source through task titles.
+        title = thread_title(&project, "", &body);
+    } else if crate::task_title::clean(&args.title).is_empty() {
         let todo = if ctx.todo.is_file() {
             read_json(&ctx.todo)?
         } else {
@@ -149,7 +173,7 @@ pub fn cmd_ask(ctx: &mut Context, args: &AskArgs) -> Result<Value> {
     }
     let content = question_body(&project, &owner, &body);
     if args.dry_run {
-        let value = json!({"project":project,"cwd":names.redact(&cwd),"title":title,"body":content,
+        let value = json!({"project":project,"cwd":names.redact(&cwd),"title":title,"body":content,"attachments_checked":false,
             "reminder":reminder_text(&project, &owner, &title),"owner_only":args.owner_only.map(|r| r.as_str()),
             "decision_identity":decision.as_ref().map(|v| crate::decision_identity::normalize(ctx,v)).transpose()?});
         print_json(&value, Some(2))?;

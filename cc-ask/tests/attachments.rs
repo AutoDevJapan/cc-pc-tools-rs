@@ -50,7 +50,7 @@ impl Effects for FakeHttp {
         self.base.http("POST", url, Some(&payload), true)
     }
     fn run(&mut self, argv: &[String], timeout: u64) -> Result<Output> {
-        if argv[0] == "git" {
+        if argv[0] == "git" || argv[0].ends_with("/scrub391.exe") {
             return self.base.run(argv, timeout);
         }
         let mut c = self.capture.borrow_mut();
@@ -114,6 +114,51 @@ fn body(h: &Harness, text: &str) -> PathBuf {
     let p = h.root.path().join("body.md");
     std::fs::write(&p, text).unwrap();
     p
+}
+
+#[test]
+fn missing_legacy_names_uses_catalog_for_attachment_privacy_without_posting() {
+    let (mut h, capture) = fixture();
+    std::fs::remove_file(&h.ctx.client_projects).unwrap();
+    let media = attachment(&h, "public.png", 128);
+    let prepared = prepare(&mut h.ctx, &[media]).unwrap().unwrap();
+    assert_eq!(prepared.files.len(), 1);
+    assert_eq!(prepared.files[0].size, 128);
+    assert!(capture.borrow().uploads.is_empty());
+    assert!(h.fake.borrow().posts.is_empty());
+    assert!(!h.ctx.client_projects.exists());
+}
+
+#[test]
+fn unreadable_existing_privacy_source_still_rejects_attachment_before_http() {
+    let (mut h, capture) = fixture();
+    let media = attachment(&h, "public.png", 128);
+    h.ctx.client_projects = h.root.path().to_path_buf();
+    assert!(prepare(&mut h.ctx, &[media]).is_err());
+    assert!(capture.borrow().uploads.is_empty());
+    assert!(h.fake.borrow().http_calls.is_empty());
+}
+
+#[test]
+fn missing_registry_protected_or_unknown_attachment_rejects_before_read() {
+    for unverified in [false, true] {
+        let (mut h, capture) = fixture();
+        std::fs::remove_file(&h.ctx.client_projects).unwrap();
+        h.fake.borrow_mut().source_guard_output = Some(Output {
+            stdout:json!({"ok":true,"access_allowed":false,"client_resource":true,"classification_unverified":unverified}).to_string(),
+            ..Default::default()
+        });
+        let media = attachment(&h, "opaque-workspace.png", 128);
+        let result = prepare(&mut h.ctx, &[media]);
+        assert!(
+            result.is_err(),
+            "unqualified attachment was accepted before any source guard"
+        );
+        let error = result.err().unwrap();
+        assert!(error.contains("question source"));
+        assert!(h.fake.borrow().http_calls.is_empty());
+        assert!(capture.borrow().uploads.is_empty());
+    }
 }
 
 #[test]

@@ -223,6 +223,7 @@ dependencies = [
  "cc-task-title",
  "chrono",
  "clap",
+ "libc",
  "regex",
  "serde",
  "serde_json",

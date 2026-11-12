@@ -26,6 +26,11 @@ impl Fixture {
         fs::write(&decision, json!({"todo_id":2823,"resources":[{"kind":"service","id":"fixture-resource"}],"decision":"direction","scope":{"origin_thread_id":"500","specification":"fixture"}}).to_string()).unwrap();
         fs::write(root.path().join("state.json"), "lost-legacy-sentinel").unwrap();
         fs::write(
+            root.path().join("client-projects.txt"),
+            "# isolated legacy privacy fixture\n",
+        )
+        .unwrap();
+        fs::write(
             root.path().join("question-recovery-required.json"),
             "recovery-sentinel",
         )
@@ -79,6 +84,13 @@ struct Fake {
     qualification_calls: usize,
     mismatched_qualification: bool,
     busy_once: bool,
+    source_proof: Option<Value>,
+    try_write_image_on_guard: Option<PathBuf>,
+    image_write_was_blocked: bool,
+    #[cfg(unix)]
+    replace_with_fifo_on_guard: Option<PathBuf>,
+    #[cfg(unix)]
+    replace_guard_count: usize,
 }
 
 fn argument<'a>(args: &'a [String], key: &str) -> &'a str {
@@ -282,12 +294,38 @@ impl Effects for Fake {
         {
             assert_eq!(timeout, 10);
             self.guard_calls.push(argument(args, "--guard-path").into());
+            #[cfg(unix)]
+            if let Some(path) = self.replace_with_fifo_on_guard.as_ref() {
+                if Path::new(argument(args, "--guard-path")) == path {
+                    self.replace_guard_count += 1;
+                    if self.replace_guard_count == 3 {
+                        use std::os::unix::ffi::OsStrExt;
+                        let path = self.replace_with_fifo_on_guard.take().unwrap();
+                        fs::rename(&path, path.with_extension("held-original")).unwrap();
+                        let name = std::ffi::CString::new(path.as_os_str().as_bytes()).unwrap();
+                        assert_eq!(unsafe { libc::mkfifo(name.as_ptr(), 0o600) }, 0);
+                    }
+                }
+            }
+            if argument(args, "--guard-path").ends_with("generated.png") {
+                if let Some(path) = self.try_write_image_on_guard.take() {
+                    self.image_write_was_blocked = fs::write(path, b"swapped-image").is_err();
+                }
+            }
+            let is_source = self.source_proof.is_some()
+                && !argument(args, "--guard-path").ends_with("generated.png");
             return Ok(Output {
                 code: 0,
-                stdout: self.guard_image_proof.clone().unwrap_or_else(||
+                stdout: (if is_source {self.source_proof.clone()} else {self.guard_image_proof.clone()}).unwrap_or_else(||
                     json!({"client_resource":self.deny_images,"classification_unverified":self.unverified_images}))
                     .to_string(),
                 stderr: String::new(),
+            });
+        }
+        if args.first().is_some_and(|arg| arg == "git") {
+            return Ok(Output {
+                code: 128,
+                ..Default::default()
             });
         }
         if args
@@ -801,6 +839,68 @@ fn conversation_bridge_ask_keeps_gate_decision_origin_and_canonical_wait() {
 }
 
 #[test]
+fn qualified_bridge_missing_registry_checks_sources_before_enabled_dispatch() {
+    let f = Fixture::new();
+    let missing = f.root.path().join("absent-client-list.txt");
+    let mut args = f.ask();
+    args.cwd = Some("D:/repos/KaraokeMaker".into());
+    let allow = json!({"ok":true,"access_allowed":true,"client_resource":false,"classification_unverified":false});
+    let mut fake = Fake {
+        source_proof: Some(allow),
+        ..Default::default()
+    };
+    let result = bridge::try_qualified_ask(f.root.path(), &mut fake, &missing, &args)
+        .unwrap()
+        .unwrap();
+    assert_eq!(result["phase"], "waiting");
+    assert_eq!(fake.calls.len(), 1);
+    assert_eq!(fake.bodies[0], fs::read(&f.body).unwrap());
+    assert!(fake.guard_calls.len() >= 3);
+    assert_eq!(fake.http_calls, 0);
+    f.unchanged_legacy();
+}
+
+#[test]
+fn qualified_bridge_denies_unknown_protected_secret_before_snapshots_and_children() {
+    for variant in ["protected", "unknown", "guard_unavailable", "secret"] {
+        let f = Fixture::new();
+        let missing = f.root.path().join("absent-client-list.txt");
+        let mut args = f.ask();
+        args.cwd = Some(
+            if variant == "unknown" {
+                "D:/unknown-root"
+            } else {
+                "D:/repos/KaraokeMaker"
+            }
+            .into(),
+        );
+        if variant == "secret" {
+            fs::write(&f.body, "password=synthetic-private-value").unwrap();
+        }
+        let proof = match variant {
+            "protected" => {
+                json!({"ok":true,"access_allowed":false,"client_resource":true,"classification_unverified":false})
+            }
+            "guard_unavailable" => {
+                json!({"ok":true,"client_resource":false,"classification_unverified":false})
+            }
+            _ => {
+                json!({"ok":true,"access_allowed":true,"client_resource":false,"classification_unverified":false})
+            }
+        };
+        let mut fake = Fake {
+            source_proof: Some(proof),
+            ..Default::default()
+        };
+        assert!(bridge::try_qualified_ask(f.root.path(), &mut fake, &missing, &args).is_err());
+        assert!(fake.calls.is_empty(), "{variant}");
+        assert_eq!(fake.http_calls, 0);
+        assert!(!f.root.path().join("conversation-bridge").exists());
+        f.unchanged_legacy();
+    }
+}
+
+#[test]
 fn conversation_bridge_ask_identity_is_stable_across_json_key_order_and_body_path() {
     let f = Fixture::new();
     let mut fake = Fake::default();
@@ -1059,6 +1159,10 @@ fn binary(f: &Fixture) -> Command {
     let mut command = Command::new(env!("CARGO_BIN_EXE_discord_ask"));
     command
         .env("CC_ASK_HOME", f.root.path())
+        .env(
+            "CC_ASK_CLIENT_PROJECTS",
+            f.root.path().join("client-projects.txt"),
+        )
         .env("CC_ASK_CONFIG", f.root.path().join("missing-config.json"));
     #[cfg(windows)]
     {
@@ -1159,17 +1263,238 @@ fn conversation_bridge_owner_rule_default_still_requires_question_specific_proof
         qualify_images: true,
         ..Default::default()
     };
-    assert!(
-        bridge::try_log(
-            f.root.path(),
-            &mut log,
-            "進捗",
-            "本文",
-            None,
-            false,
-            &args.attach
-        )
-        .is_err()
-    );
+    assert!(bridge::try_log(
+        f.root.path(),
+        &mut log,
+        "進捗",
+        "本文",
+        None,
+        false,
+        &args.attach
+    )
+    .is_err());
     assert_eq!(log.qualification_calls, 0);
+}
+
+#[test]
+fn qualified_normal_bridge_preserves_existing_exact_generated_image_admission() {
+    let f = Fixture::new();
+    let image = f.root.path().join("generated.png");
+    fs::write(&image, b"\x89PNG\r\n\x1a\nsynthetic-image").unwrap();
+    let mut decision: Value = serde_json::from_slice(&fs::read(&f.decision).unwrap()).unwrap();
+    decision["owner"] = json!("100");
+    decision["guild"] = json!("101");
+    decision["parent"] = json!("102");
+    fs::write(&f.decision, decision.to_string()).unwrap();
+    let mut args = f.ask();
+    args.cwd = Some("D:/repos/KaraokeMaker".into());
+    args.attach.push(image);
+    let allow = json!({"ok":true,"access_allowed":true,"client_resource":false,"classification_unverified":false});
+    let unattributed = json!({"client_resource":true,"classification_unverified":false,"access_allowed":false,"protection_status":"protected","protection_categories":["client_project"],"classification_policy":"owner-client-rule-20261027","classification_basis":"owner_rule_unattributed_location"});
+    let mut fake = Fake {
+        source_proof: Some(allow.clone()),
+        guard_image_proof: Some(unattributed.clone()),
+        qualify_images: true,
+        ..Default::default()
+    };
+    let registry = f.root.path().join("missing-list.txt");
+    bridge::try_qualified_ask(f.root.path(), &mut fake, &registry, &args).unwrap();
+    assert_eq!(fake.qualification_calls, 1);
+    assert_eq!(fake.attachments.len(), 1);
+    let mut denied = Fake {
+        source_proof: Some(allow),
+        guard_image_proof: Some(unattributed),
+        qualify_images: true,
+        mismatched_qualification: true,
+        ..Default::default()
+    };
+    assert!(bridge::try_qualified_ask(f.root.path(), &mut denied, &registry, &args).is_err());
+    assert!(denied.calls.is_empty());
+    assert_eq!(denied.http_calls, 0);
+}
+
+#[test]
+fn qualified_dryrun_does_not_promote_or_require_attachment_qualification() {
+    let f = Fixture::new();
+    let mut args = f.ask();
+    args.cwd = Some("D:/repos/KaraokeMaker".into());
+    args.dry_run = true;
+    args.attach
+        .push(f.root.path().join("unread-unqualified-image.png"));
+    let mut fake = Fake {
+        source_proof: Some(
+            json!({"ok":true,"access_allowed":true,"client_resource":false,"classification_unverified":false}),
+        ),
+        ..Default::default()
+    };
+    assert!(bridge::try_qualified_ask(
+        f.root.path(),
+        &mut fake,
+        &f.root.path().join("missing-list.txt"),
+        &args
+    )
+    .unwrap()
+    .is_none());
+    assert_eq!(fake.qualification_calls, 0);
+    assert!(fake.calls.is_empty());
+    assert!(!f.root.path().join("conversation-bridge").exists());
+}
+
+#[cfg(windows)]
+#[test]
+fn ordinary_cli_fallthrough_keeps_source_lease_until_after_advice_consumption() {
+    let f = Fixture::new();
+    f.mode(r#"{"domain":"discord-conversation-mode-v1","enabled":false}"#);
+    let mut args = f.ask();
+    args.cwd = Some("D:/repos/KaraokeMaker".into());
+    let mut fake = Fake {
+        source_proof: Some(
+            json!({"ok":true,"access_allowed":true,"client_resource":false,"classification_unverified":false}),
+        ),
+        ..Default::default()
+    };
+    let held = bridge::qualify_ask_sources(
+        f.root.path(),
+        &mut fake,
+        &f.root.path().join("missing-list.txt"),
+        &args,
+    )
+    .unwrap();
+    assert!(bridge::try_ask(f.root.path(), &mut fake, &args)
+        .unwrap()
+        .is_none());
+    assert!(fs::write(&f.body, "changed before advice").is_err());
+    assert_eq!(
+        fs::read_to_string(&f.body).unwrap(),
+        "画面案を選んでください"
+    );
+    drop(held);
+    fs::write(&f.body, "released").unwrap();
+    assert!(fake.calls.is_empty());
+    assert_eq!(fake.http_calls, 0);
+}
+
+#[cfg(windows)]
+#[test]
+fn bridge_image_guard_and_snapshot_share_a_pinned_original_generation() {
+    let f = Fixture::new();
+    let image = f.root.path().join("generated.png");
+    let original = b"\x89PNG\r\n\x1a\noriginal-image";
+    fs::write(&image, original).unwrap();
+    let mut args = f.ask();
+    args.attach.push(image.clone());
+    let mut fake = Fake {
+        try_write_image_on_guard: Some(image.clone()),
+        ..Default::default()
+    };
+    bridge::try_ask(f.root.path(), &mut fake, &args).unwrap();
+    assert!(fake.image_write_was_blocked);
+    assert_eq!(fake.attachments[0], original);
+    assert_eq!(fs::read(image).unwrap(), original);
+    assert_eq!(fake.http_calls, 0);
+}
+
+#[cfg(unix)]
+#[test]
+fn bridge_fifo_without_writer_is_rejected_before_guard_snapshot_or_child() {
+    const CHILD: &str = "CC_ASK_OWNED_FIFO_TEST";
+    if std::env::var_os(CHILD).is_none() {
+        let test_name = if module_path!().ends_with("unix_bridge_acceptance") {
+            "unix_bridge_acceptance::bridge_fifo_without_writer_is_rejected_before_guard_snapshot_or_child"
+        } else {
+            "bridge_fifo_without_writer_is_rejected_before_guard_snapshot_or_child"
+        };
+        let mut child = Command::new(std::env::current_exe().unwrap())
+            .args(["--exact", test_name, "--nocapture"])
+            .env(CHILD, "1")
+            .spawn()
+            .unwrap();
+        let started = std::time::Instant::now();
+        loop {
+            if let Some(status) = child.try_wait().unwrap() {
+                assert!(status.success());
+                break;
+            }
+            if started.elapsed() > std::time::Duration::from_secs(2) {
+                child.kill().unwrap();
+                child.wait().unwrap();
+                panic!("FIFO blocked the actual bridge before its child deadline");
+            }
+            std::thread::sleep(std::time::Duration::from_millis(10));
+        }
+        return;
+    }
+    use std::os::unix::ffi::OsStrExt;
+    let f = Fixture::new();
+    let path = f.root.path().join("input.png");
+    let name = std::ffi::CString::new(path.as_os_str().as_bytes()).unwrap();
+    assert_eq!(unsafe { libc::mkfifo(name.as_ptr(), 0o600) }, 0);
+    let mut args = f.ask();
+    args.attach.push(path);
+    let mut fake = Fake::default();
+    assert!(bridge::try_ask(f.root.path(), &mut fake, &args).is_err());
+    assert!(fake.guard_calls.is_empty());
+    assert!(fake.calls.is_empty());
+    assert_eq!(fake.qualification_calls, 0);
+    assert_eq!(fake.http_calls, 0);
+    assert_eq!(
+        fs::read_dir(f.root.path().join("conversation-bridge"))
+            .unwrap()
+            .count(),
+        0
+    );
+    f.unchanged_legacy();
+}
+
+#[cfg(unix)]
+#[test]
+fn held_regular_body_replaced_with_fifo_is_rejected_without_blocking() {
+    const CHILD: &str = "CC_ASK_REOPEN_FIFO_CHILD";
+    if std::env::var_os(CHILD).is_none() {
+        let name = if module_path!().ends_with("unix_bridge_acceptance") {
+            "unix_bridge_acceptance::held_regular_body_replaced_with_fifo_is_rejected_without_blocking"
+        } else {
+            "held_regular_body_replaced_with_fifo_is_rejected_without_blocking"
+        };
+        let mut child = Command::new(std::env::current_exe().unwrap())
+            .args(["--exact", name, "--nocapture"])
+            .env(CHILD, "1")
+            .spawn()
+            .unwrap();
+        let before = std::time::Instant::now();
+        loop {
+            if let Some(status) = child.try_wait().unwrap() {
+                assert!(status.success());
+                break;
+            }
+            if before.elapsed() > std::time::Duration::from_secs(2) {
+                child.kill().unwrap();
+                child.wait().unwrap();
+                panic!("source reopen blocked on replaced FIFO")
+            };
+            std::thread::sleep(std::time::Duration::from_millis(10));
+        }
+        return;
+    }
+    let f = Fixture::new();
+    let mut args = f.ask();
+    args.cwd = Some("D:/repos/KaraokeMaker".into());
+    let mut fake = Fake {
+        source_proof: Some(
+            json!({"ok":true,"access_allowed":true,"client_resource":false,"classification_unverified":false}),
+        ),
+        replace_with_fifo_on_guard: Some(f.body.clone()),
+        ..Default::default()
+    };
+    assert!(bridge::try_qualified_ask(
+        f.root.path(),
+        &mut fake,
+        &f.root.path().join("missing-list.txt"),
+        &args
+    )
+    .is_err());
+    assert_eq!(fake.replace_guard_count, 3);
+    assert!(fake.calls.is_empty());
+    assert_eq!(fake.http_calls, 0);
+    f.unchanged_legacy();
 }

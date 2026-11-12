@@ -35,6 +35,30 @@ fn creates(h: &Harness) -> usize {
         .count()
 }
 
+#[test]
+fn missing_registry_reuse_and_changed_scope_return_references_without_posting() {
+    let mut h = Harness::new();
+    let first_args = args(&h, "元の判断", "D:/models/one");
+    let first = cmd_ask(&mut h.ctx, &first_args).unwrap();
+    let reply = h.reply("合成本人回答: 元対象だけ", s(&first["thread_id"]));
+    let before = creates(&h);
+    std::fs::remove_file(&h.ctx.client_projects).unwrap();
+    let mut same = args(&h, "元の判断", "D:/models/one");
+    same.cwd = Some("D:/repos/KaraokeMaker".into());
+    let result = cmd_ask(&mut h.ctx, &same).unwrap();
+    assert_eq!(result["suppressed"], "already_answered");
+    assert_eq!(result["text_available"], false);
+    assert!(result.to_string().contains(&reply));
+    assert!(!result.to_string().contains("合成本人回答"));
+    let mut other = args(&h, "別の判断", "D:/models/two");
+    other.cwd = Some("D:/repos/KaraokeMaker".into());
+    let result = cmd_ask(&mut h.ctx, &other).unwrap();
+    assert_eq!(result["suppressed"], "owner_context_required");
+    assert_eq!(result["text_available"], false);
+    assert!(result.get("owner_context_digest").is_none());
+    assert_eq!(creates(&h), before);
+}
+
 fn legacy_multi_todo_route(h: &mut Harness, ids: &[u64]) -> Value {
     let first = cc_ask::question_progress::ask(
         &mut h.ctx,

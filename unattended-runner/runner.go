@@ -704,7 +704,7 @@ func runCommand(ctx context.Context, path string, args ...string) (string, error
 
 func commandBudget(path string, args []string) time.Duration {
 	if path == conversationTodo && len(args) > 0 && args[0] == "native-implementation-record" {
-		return 50 * time.Second
+		return 80 * time.Second
 	}
 	if path == "D:/CC/Tools/scheduler/scheduler.exe" && len(args) == 1 && args[0] == "repair-step" {
 		return 35 * time.Second

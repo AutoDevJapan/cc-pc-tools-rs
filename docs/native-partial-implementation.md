@@ -67,7 +67,9 @@ snapshotと登録rootをCAS照合する。固定配備runnerの
 
 追記先は元Taskの`owner_native_partial_implementation_records`だけ。
 従来の完全な実反映票とは別に保ち、同版の部分成果がある間は従来のapplied票へ
-fallbackして質問を閉じない。他row、仕様、メモ、停止、依存、世代、jobsは変更しない。
+fallbackして質問を閉じない。その後に同じ版の正規`implementation-record`で完全な
+実反映が検証された場合は、その正規票で閉鎖を判定する。
+他row、仕様、メモ、停止、依存、世代、jobsは変更しない。
 同じ入力の再試行・応答消失後の読戻しは同じreceiptを返す。同じreply/sourceに
 異なる入力を上書きせず、競合は元データを保持して返す。
 

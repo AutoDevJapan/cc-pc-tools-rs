@@ -327,15 +327,23 @@ func nativePartialLineage(ctx context.Context, v nativePartialInput, q Conversat
 	if !nativePartialToken(a.Prompt, v.Message) || (!requestBound && (!nativePartialToken(a.Prompt, v.Origin) || !nativePartialToken(a.Prompt, q.Message))) {
 		return "", errNativePartial
 	}
-	if !strings.Contains(a.Prompt, v.SourceSHA) || (!strings.Contains(a.Prompt, reply.Body) && !strings.Contains(a.Prompt, v.ReplySHA)) {
+	bodyBound := reply.Body != "" && strings.Contains(a.Prompt, reply.Body)
+	if !strings.Contains(a.Prompt, v.SourceSHA) || (!bodyBound && !strings.Contains(a.Prompt, v.ReplySHA)) {
 		return "", errNativePartial
 	}
 	witness := []any{parent, child, a}
 	artifactBound := false
 	appliedAt, _ := time.Parse(time.RFC3339Nano, v.Evidence.AppliedAt)
+	repliedAt, err := time.Parse(time.RFC3339Nano, reply.Created)
+	if err != nil {
+		return "", errNativePartial
+	}
 	for _, selector := range v.Commands {
 		c, ok := get(v.Child, selector.Turn, selector.Item)
 		if !ok || c.Type != "commandExecution" || c.Status != "completed" || c.Source != "unifiedExecStartup" || c.Exit == nil || *c.Exit != 0 || c.Started == nil || c.Completed == nil || *c.Started <= 0 || *c.Completed < *c.Started || *c.Completed > now.UnixMilli() || *c.Completed > appliedAt.UnixMilli() || !conversationMediaSamePath(filepath.FromSlash(c.Cwd), filepath.FromSlash(root)) || bytesHash([]byte(c.Command)) != selector.CommandSHA || bytesHash([]byte(c.Output)) != selector.OutputSHA {
+			return "", errNativePartial
+		}
+		if *c.Started < repliedAt.UnixMilli() || (a.Started != nil && *c.Started < *a.Started) {
 			return "", errNativePartial
 		}
 		if len(c.Actions) == 1 && c.Actions[0].Type == "unknown" && nativePartialHashCommand(c.Command, c.Actions[0].Command, c.Output, v.Artifact) {

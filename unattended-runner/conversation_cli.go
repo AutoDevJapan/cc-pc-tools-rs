@@ -16,7 +16,7 @@ import (
 
 const conversationDefaultConfig = "D:/CC/Tools/discord-ask/unattended/config.json"
 const conversationCLIDeadline = 60 * time.Second
-const nativePartialCLIDeadline = 180 * time.Second
+const nativePartialCLIDeadline = 240 * time.Second
 
 var errConversationArguments = errors.New("invalid conversation arguments")
 var errConversationBusy = errors.New("conversation busy")

@@ -61,6 +61,7 @@ func nativePartialTest(t *testing.T) *nativePartialFixture {
 		"assignment":   {"id": "assignment", "type": "collabAgentToolCall", "tool": "sendInput", "status": "completed", "senderThreadId": v.Parent, "receiverThreadIds": []string{v.Child}, "prompt": prompt},
 		"verification": {"id": "verification", "type": "commandExecution", "status": "completed", "source": "unifiedExecStartup", "command": rawCommand, "commandActions": []any{map[string]string{"type": "unknown", "command": command}}, "aggregatedOutput": output, "cwd": f.home, "exitCode": 0, "startedAtMs": time.Now().Add(-time.Minute).UnixMilli(), "completedAtMs": time.Now().Add(-time.Second).UnixMilli()},
 	}, parent: map[string]any{"id": v.Parent, "cwd": f.home, "source": "vscode"}, child: map[string]any{"id": v.Child, "cwd": f.home, "parentThreadId": v.Parent, "source": map[string]any{"subAgent": map[string]any{"thread_spawn": map[string]any{"parent_thread_id": v.Parent, "depth": 1}}}}}
+	n.items["verification"]["startedAtMs"] = time.Now().Add(-2 * time.Second).UnixMilli()
 	c.r.NativePartialGuard = func(context.Context, string) bool { return true }
 	c.r.NativePartialRPC = n.rpc
 	return n
@@ -310,10 +311,100 @@ func TestNativePartialRejectsFutureTimeAndMisleadingArtifactFields(t *testing.T)
 }
 
 func TestNativePartialWriterKeepsFixedVerificationBudget(t *testing.T) {
-	if commandBudget(conversationTodo, []string{"native-implementation-record"}) != 50*time.Second || nativePartialCLIDeadline != 180*time.Second {
+	if commandBudget(conversationTodo, []string{"native-implementation-record"}) != 80*time.Second || nativePartialCLIDeadline != 240*time.Second {
 		t.Fatal("native re-verification transaction lost its bounded budget")
 	}
 	if commandBudget(conversationTodo, []string{"implementation-record"}) != 20*time.Second || conversationCLIDeadline != 60*time.Second {
 		t.Fatal("native budget changed ordinary command deadlines")
+	}
+}
+
+func TestNativePartialDoesNotOverrideVerifiedFullImplementation(t *testing.T) {
+	for _, order := range []string{"partial_first", "full_first"} {
+		t.Run(order, func(t *testing.T) {
+			f, opts := implementationNative(t)
+			partial := func() {
+				f.mutateTodo(t, func(row map[string]any) {
+					row["owner_native_partial_implementation_records"] = []any{nativePartialReceipt{Domain: nativePartialReceiptDomain, Kind: nativePartialKind, InputSHA: strings.Repeat("f", 64), Input: nativePartialInput{Origin: "42", Project: f.q.Project, Request: f.q.RequestID, Message: opts.Message, SourceSHA: opts.SourceSHA}}}
+				})
+			}
+			if order == "partial_first" {
+				partial()
+			}
+			if code, result := implementationCLI(t, f, opts); code != 0 || result["recorded"] != true {
+				t.Fatal("full implementation fixture failed", code)
+			}
+			if order == "full_first" {
+				partial()
+			}
+			closeOpts := opts
+			closeOpts.Command = "close"
+			code, result := implementationCLI(t, f, closeOpts)
+			if code != 0 || result["question_closed_get_verified"] != true || f.close != 1 {
+				t.Fatal("partial suppressed verified full receipt", code, result)
+			}
+		})
+	}
+}
+
+func TestNativePartialRecordRoundTripKeepsExactReceiptAndRejectsLostReadback(t *testing.T) {
+	for _, kind := range []string{"normal", "lost_readback", "wrong_receipt"} {
+		t.Run(kind, func(t *testing.T) {
+			n := nativePartialTest(t)
+			path := filepath.Join(n.f.home, "input.private.json")
+			b, _ := json.Marshal(n.v)
+			if os.WriteFile(path, b, 0600) != nil {
+				t.Fatal("input")
+			}
+			base := n.c.r.Run
+			calls := 0
+			n.c.r.Run = func(ctx context.Context, program string, args ...string) (string, error) {
+				if program != conversationTodo || len(args) == 0 || args[0] != "native-implementation-record" {
+					return base(ctx, program, args...)
+				}
+				calls++
+				inputPath := argValue(args, "--input-file")
+				statePath := argValue(args, "--origin-state-file")
+				input, err := os.ReadFile(inputPath)
+				if err != nil || string(input) != string(b) {
+					t.Fatal("immutable input lost")
+				}
+				state, err := os.ReadFile(statePath)
+				if err != nil {
+					t.Fatal("snapshot missing")
+				}
+				live, root, err := n.c.r.nativePartialState(ctx, n.v)
+				if err != nil || bytesHash(live) != bytesHash(state) {
+					t.Fatal("snapshot mismatch")
+				}
+				if _, err = n.c.r.nativePartialVerify(ctx, n.v, input, state, root); err != nil {
+					t.Fatal("inner read-only verification", err)
+				}
+				if calls == 1 && argPresent(args, "--verify-only") {
+					t.Fatal("write not requested")
+				}
+				if calls == 2 && !argPresent(args, "--verify-only") {
+					t.Fatal("readback not requested")
+				}
+				if calls == 2 && kind == "lost_readback" {
+					return "", errors.New("lost response")
+				}
+				sha := strings.Repeat("e", 64)
+				if calls == 2 && kind == "wrong_receipt" {
+					sha = strings.Repeat("f", 64)
+				}
+				result, _ := json.Marshal(nativePartialResult{Domain: nativePartialReceiptDomain, Kind: nativePartialKind, Recorded: true, Changed: calls == 1, InputSHA: bytesHash(b), ReceiptSHA: sha, Acceptance: "pending"})
+				return string(result), nil
+			}
+			stateBefore, _ := json.Marshal(n.c.r.State)
+			result, err := n.c.r.nativePartialRecord(context.Background(), path)
+			if (kind == "normal" && (err != nil || result["recorded"] != true || result["application_inferred"] != false)) || (kind != "normal" && err == nil) || calls != 2 {
+				t.Fatal("record/readback contract", kind, err, calls)
+			}
+			stateAfter, _ := json.Marshal(n.c.r.State)
+			if string(stateBefore) != string(stateAfter) {
+				t.Fatal("native record altered capture state")
+			}
+		})
 	}
 }

@@ -69,12 +69,75 @@ pub(crate) fn project(
             } else {
                 "unknown"
             };
+            let signals: Vec<_> = [
+                ("error", b"error".as_slice()),
+                ("warning", b"warn".as_slice()),
+                ("panic", b"panic".as_slice()),
+                ("configuration", b"config".as_slice()),
+                ("filesystem", b"os error".as_slice()),
+                ("permission", b"permission".as_slice()),
+                ("database", b"database".as_slice()),
+                ("provider", b"provider".as_slice()),
+                ("model", b"model".as_slice()),
+                ("session", b"session".as_slice()),
+                ("transport", b"connect".as_slice()),
+                ("tls", b"certificate".as_slice()),
+                ("sandbox", b"sandbox".as_slice()),
+                ("policy", b"policy".as_slice()),
+                ("mcp", b"mcp".as_slice()),
+                ("chrome", b"chrome".as_slice()),
+                ("argument", b"argument".as_slice()),
+                ("timeout", b"timed out".as_slice()),
+                ("quota", b"quota".as_slice()),
+                ("cancel", b"cancel".as_slice()),
+            ]
+            .into_iter()
+            .filter_map(|(tag, word)| has(word).then_some(tag))
+            .collect();
+            let os_error = bounded_os_error(message);
+            let launcher = match Path::new(s(job, "codex"))
+                .extension()
+                .and_then(|e| e.to_str())
+                .map(str::to_ascii_lowercase)
+                .as_deref()
+            {
+                Some("cmd" | "bat") => "cmd",
+                Some("exe") => "exe",
+                _ => "unknown",
+            };
+            let mut signals = signals;
+            if matches!(os_error, Some(5 | 13)) && !signals.contains(&"permission") {
+                let at = signals
+                    .iter()
+                    .position(|v| *v == "database")
+                    .unwrap_or(signals.len());
+                signals.insert(at, "permission")
+            }
             Ok(
-                json!({"metadata_only":true,"purpose":purpose,"id":id,"status":"failed","reason":reason,"exitCode":job["exit_code"].as_i64(),"steps":job["steps"].as_u64(),"stderrPresent":!stderr.is_empty(),"stderrTruncated":stderr.len()>16384,"resumeSession":FOUR_SESSION,"sourceBodiesReturned":false}),
+                json!({"metadata_only":true,"purpose":purpose,"id":id,"status":"failed","reason":reason,"diagnosticSignals":signals,"osErrorCode":os_error,"launcherKind":launcher,"exitCode":job["exit_code"].as_i64(),"steps":job["steps"].as_u64(),"stderrPresent":!stderr.is_empty(),"stderrTruncated":stderr.len()>16384,"resumeSession":FOUR_SESSION,"sourceBodiesReturned":false}),
             )
         }
         _ => Err(Error::new("job projection purpose or binding unavailable")),
     }
+}
+
+fn bounded_os_error(message: &[u8]) -> Option<u32> {
+    let prefix = b"os error ";
+    message
+        .windows(prefix.len())
+        .position(|v| v.eq_ignore_ascii_case(prefix))
+        .and_then(|at| {
+            let tail = &message[at + prefix.len()..];
+            let count = tail.iter().take_while(|b| b.is_ascii_digit()).count();
+            if count == 0 || count > 10 {
+                return None;
+            }
+            let mut value = 0u32;
+            for b in &tail[..count] {
+                value = value.checked_mul(10)?.checked_add(u32::from(*b - b'0'))?
+            }
+            Some(value)
+        })
 }
 
 impl Context {
@@ -355,6 +418,61 @@ fn parse_projection_json(bytes: &[u8]) -> Result<Value> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[test]
+    fn original_unknown_diagnostic_returns_only_fixed_cause_signals() {
+        let job = json!({"id":FOUR_JOB,"status":"failed","resume_session":FOUR_SESSION,"launch_key":FOUR_LAUNCH,"codex":"C:/owned/codex.cmd"});
+        let raw=b"Error: failed to read configuration from PRIVATE (os error 5). State database unavailable.";
+        let out = project(
+            &job,
+            FOUR_JOB,
+            "fourbros-1245-launch-failure",
+            None,
+            None,
+            raw,
+        )
+        .unwrap();
+        assert_eq!(
+            out["diagnosticSignals"],
+            json!([
+                "error",
+                "configuration",
+                "filesystem",
+                "permission",
+                "database"
+            ])
+        );
+        assert_eq!(out["osErrorCode"], 5);
+        assert_eq!(out["launcherKind"], "cmd");
+        assert!(!out.to_string().contains("PRIVATE"));
+    }
+    #[test]
+    fn extra_launch_signals_never_return_unmatched_text_or_unbounded_numbers() {
+        let job = json!({"id":FOUR_JOB,"status":"failed","resume_session":FOUR_SESSION,"launch_key":FOUR_LAUNCH,"codex":"C:/PRIVATE/codex.exe"});
+        for (input, number) in [
+            ("PRIVATE arbitrary", None),
+            ("error PRIVATE os error 4294967296", None),
+            ("os error 5x", Some(5)),
+        ] {
+            let p = project(
+                &job,
+                FOUR_JOB,
+                "fourbros-1245-launch-failure",
+                None,
+                None,
+                input.as_bytes(),
+            )
+            .unwrap();
+            assert!(!p.to_string().contains("PRIVATE"));
+            assert_eq!(p["osErrorCode"], number.map_or(Value::Null, |n| json!(n)));
+            assert_eq!(p["launcherKind"], "exe");
+            for tag in p["diagnosticSignals"].as_array().unwrap() {
+                assert!(matches!(
+                    tag.as_str(),
+                    Some("error" | "filesystem" | "permission")
+                ));
+            }
+        }
+    }
     #[test]
     fn stored_projection_rejects_duplicate_keys_before_selecting_identity() {
         for raw in [

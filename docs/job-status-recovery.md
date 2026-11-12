@@ -11,6 +11,8 @@ An exact `--purpose` may request one of the two assigned recovery projections:
   failed launch, after validating its job/session/launch binding. It returns no
   command, diagnostic text, credentials, or source bodies. An absent or
   unrecognized diagnostic returns `unknown`.
+  Fixed diagnostic tags, a bounded OS error number and the launcher kind can
+  narrow that unknown result without returning diagnostic text or a path.
 
 These purposes accept only their compiled original job identifiers and JSON
 output. They do not enumerate other jobs, change records, grant data access,

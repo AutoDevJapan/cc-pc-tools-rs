@@ -9,6 +9,7 @@ import (
 	"os"
 	"path/filepath"
 	"reflect"
+	"strings"
 	"testing"
 )
 
@@ -192,6 +193,204 @@ func TestConversationQuestionImageReadbackMustMatchBeforeWait(t *testing.T) {
 				t.Fatal("missing image was reported as a delivered owner question")
 			}
 		})
+	}
+}
+
+func TestConversationQuestionMP4ReadbackMustMatchBeforeWait(t *testing.T) {
+	for _, verified := range []bool{false, true} {
+		f := conversationTest(t, true)
+		data := fixtureVideoMP4(1, "vide")
+		path := normalQuestionVideoPath(t, f, data)
+		f.input.Attachments = []string{path}
+		base := f.r.Run
+		f.r.Run = func(ctx context.Context, executable string, args ...string) (string, error) {
+			if len(args) > 0 && args[0] == "--verify-conversation-media" {
+				b, _ := json.Marshal(conversationMediaVerification{Domain: conversationMediaDomain, Verified: true, MIME: "video/mp4", Extension: "mp4", Size: int64(len(data)), SHA256: bytesHash(data)})
+				return string(b), nil
+			}
+			raw, err := base(ctx, executable, args...)
+			if err == nil && len(args) > 0 && args[0] == "recovery-ask" && verified {
+				var result map[string]any
+				if json.Unmarshal([]byte(raw), &result) != nil {
+					t.Fatal("invalid synthetic sender result")
+				}
+				result["image_sha256"] = []string{bytesHash(data)}
+				b, _ := json.Marshal(result)
+				raw = string(b)
+			}
+			return raw, err
+		}
+		q, err := f.r.conversationAsk(context.Background(), f.input)
+		row, rowErr := f.r.todo(42)
+		if rowErr != nil {
+			t.Fatal(rowErr)
+		}
+		if verified {
+			if err != nil || q.Phase != "waiting" || row.Status != "block" {
+				t.Fatal("verified video not bound to wait", err)
+			}
+		} else if err == nil || row.Status != "doing" || f.posts != 1 {
+			t.Fatal("missing video receipt reported delivered")
+		}
+	}
+}
+
+func TestFreshMP4DirectCallerQualifiesBeforeSender(t *testing.T) {
+	f := conversationTest(t, false)
+	path := normalQuestionVideoPath(t, f, fixtureVideoMP4(1, "vide"))
+	f.input.Attachments = []string{path}
+	base := f.r.Run
+	checks := 0
+	f.r.Run = func(ctx context.Context, executable string, args ...string) (string, error) {
+		if strings.Contains(executable, "scrub391") && len(args) > 1 && strings.HasSuffix(args[1], "original.mp4") {
+			checks++
+			return `{"client_resource":true,"classification_unverified":false}`, nil
+		}
+		return base(ctx, executable, args...)
+	}
+	_, err := f.r.conversationAsk(context.Background(), f.input)
+	if err == nil || checks != 1 || f.posts != 0 {
+		t.Fatalf("unqualified MP4 reached sender: checks=%d posts=%d err=%v", checks, f.posts, err)
+	}
+}
+
+func normalQuestionVideoPath(t *testing.T, f *conversationFixture, data []byte) string {
+	t.Helper()
+	home, err := filepath.EvalSymlinks(f.r.Config.Home)
+	if err != nil {
+		t.Fatal(err)
+	}
+	f.r.Config.Home = filepath.Join(home, "unattended")
+	if err := os.MkdirAll(f.r.Config.Home, 0700); err != nil {
+		t.Fatal(err)
+	}
+	f.input.RequestID = "normal-ask-" + strings.Repeat("b", 64)
+	path := filepath.Join(home, "conversation-bridge", f.input.RequestID, "attachment-0.mp4")
+	source := filepath.Join(f.r.Config.Home, "original.mp4")
+	if err = os.MkdirAll(filepath.Dir(path), 0700); err != nil {
+		t.Fatal(err)
+	}
+	if err = os.WriteFile(source, data, 0600); err != nil {
+		t.Fatal(err)
+	}
+	if err = os.WriteFile(path, data, 0600); err != nil {
+		t.Fatal(err)
+	}
+	mediaJSON(t, filepath.Join(home, "conversation-mode.json"), map[string]any{"domain": "discord-conversation-mode-v1", "enabled": true})
+	mediaJSON(t, strings.TrimSuffix(path, ".mp4")+".source.json", conversationMediaSource{Domain: conversationMediaSourceDomain, SourcePath: source, SnapshotPath: path, SHA256: bytesHash(data), Size: int64(len(data))})
+	base := f.r.Run
+	f.r.Run = func(ctx context.Context, exe string, args ...string) (string, error) {
+		if strings.Contains(exe, "scrub391") && len(args) > 1 && args[1] == source {
+			return `{"ok":true,"access_allowed":true,"client_resource":false,"classification_unverified":false,"classification_basis":"verified_self_repository","classification_policy":"owner-client-rule-20261027","original_registry_recovered":false,"ci_retirement_qualified":false,"protection_status":"clear","protection_categories":[],"scope":"owner protection policy"}`, nil
+		}
+		return base(ctx, exe, args...)
+	}
+	return path
+}
+
+func TestFreshMP4GuardMetadataFailsClosed(t *testing.T) {
+	for _, raw := range []string{
+		`{"access_allowed":false,"client_resource":false,"classification_unverified":false}`,
+		`{"access_allowed":true,"client_resource":true,"classification_unverified":false}`,
+		`{"access_allowed":true,"client_resource":false,"classification_unverified":true}`,
+		`{"access_allowed":true,"client_resource":false}`,
+		`{"client_resource":false,"classification_unverified":false}`,
+		`{"access_allowed":"true","client_resource":false,"classification_unverified":false}`,
+		`{"access_allowed":true,"client_resource":false,"classification_unverified":null}`,
+		`{"access_allowed":true,"ACCESS_ALLOWED":false,"client_resource":false,"classification_unverified":false}`,
+		`{"access_allowed":true,"client_resource":false,"classification_unverified":false,"caller_approved":true}`,
+	} {
+		f := conversationTest(t, false)
+		path := normalQuestionVideoPath(t, f, fixtureVideoMP4(1, "vide"))
+		base := f.r.Run
+		f.r.Run = func(ctx context.Context, exe string, args ...string) (string, error) {
+			if strings.Contains(exe, "scrub391") && len(args) > 1 && strings.HasSuffix(args[1], "original.mp4") {
+				return raw, nil
+			}
+			return base(ctx, exe, args...)
+		}
+		if _, err := f.r.conversationQuestionVideoCheck(context.Background(), f.input)(path); err == nil {
+			t.Fatal("invalid guard proof accepted")
+		}
+	}
+}
+
+func TestFreshMP4QualificationFailureReadsZeroBytes(t *testing.T) {
+	for _, kind := range []string{"denied", "error", "canceled", "wrong-proof", "missing-check"} {
+		t.Run(kind, func(t *testing.T) {
+			reads, checks := 0, 0
+			var check func(string) (conversationMediaVerification, error)
+			if kind != "missing-check" {
+				check = func(string) (conversationMediaVerification, error) {
+					checks++
+					switch kind {
+					case "denied":
+						return conversationMediaVerification{}, nil
+					case "canceled":
+						return conversationMediaVerification{}, context.Canceled
+					case "error":
+						return conversationMediaVerification{}, errors.New("owned source guard failed")
+					case "wrong-proof":
+						return conversationMediaVerification{Verified: true, MIME: "image/png"}, nil
+					}
+					return conversationMediaVerification{}, errConversationMedia
+				}
+			}
+			read := func(string, int64) ([]byte, os.FileInfo, error) { reads++; return fixtureVideoMP4(1, "vide"), nil, nil }
+			_, _, err := conversationQuestionImagesWithRead([]string{filepath.Join(t.TempDir(), "input.mp4")}, check, read)
+			if err == nil || reads != 0 || (kind != "missing-check" && checks != 1) {
+				t.Fatal("read before qualified source", reads, checks, err)
+			}
+		})
+	}
+}
+
+func TestFreshMP4AcceptsCompleteNormalGuardMetadata(t *testing.T) {
+	f := conversationTest(t, false)
+	path := normalQuestionVideoPath(t, f, fixtureVideoMP4(1, "vide"))
+	base := f.r.Run
+	f.r.Run = func(ctx context.Context, exe string, args ...string) (string, error) {
+		if strings.Contains(exe, "scrub391") {
+			return `{"ok":true,"access_allowed":true,"client_resource":false,"classification_unverified":false,"classification_basis":"verified_self_repository","classification_policy":"owner-client-rule-20261027","original_registry_recovered":false,"ci_retirement_qualified":false,"protection_status":"clear","protection_categories":[],"scope":"owner protection policy"}`, nil
+		}
+		return base(ctx, exe, args...)
+	}
+	proof, err := f.r.conversationQuestionVideoCheck(context.Background(), f.input)(path)
+	if err != nil || !proof.Verified || proof.MIME != "video/mp4" {
+		t.Fatal("normal full guard metadata rejected", err)
+	}
+}
+
+func TestFreshMP4OmittedTitleUsesSenderBodyFallback(t *testing.T) {
+	f := conversationTest(t, false)
+	path := normalQuestionVideoPath(t, f, fixtureVideoMP4(1, "vide"))
+	f.input.Title = ""
+	f.input.Attachments = []string{path}
+	args := []string{"ask", "--request-id", f.input.RequestID, "--todo-id", "42", "--origin-thread", f.input.OriginThread, "--body-file", f.input.BodyFile, "--decision-file", f.input.DecisionFile, "--attach", path}
+	var out bytes.Buffer
+	// The synthetic sender omits attachment readback, so the reservation stays
+	// pending after its one call. The normal CLI must still reach that sender.
+	code := conversationCLIWithLoader(args, &out, func(string) (conversationCLIBackend, func(), error) {
+		return f.r, func() {}, nil
+	})
+	if f.posts != 1 || code != 1 {
+		t.Fatalf("omitted title blocked preflight posts=%d code=%d", f.posts, code)
+	}
+	index, err := f.r.loadConversations()
+	if err != nil {
+		t.Fatal(err)
+	}
+	q := index.Questions[f.input.RequestID]
+	if q.Title != "" || q.RequestID != f.input.RequestID || q.InputSHA == "" || q.Phase != "reserved" {
+		t.Fatal("effective title changed stored request or retry identity")
+	}
+	_, _ = f.r.conversationAsk(context.Background(), f.input)
+	index, err = f.r.loadConversations()
+	if err != nil || index.Questions[q.RequestID].InputSHA != q.InputSHA || index.Questions[q.RequestID].Title != "" {
+		t.Fatal("omitted title retry changed saved identity")
+	}
+	if got := normalQuestionVideoTitle("", []byte("\ufeff\n  Review\r\nbody")); got != "Review" {
+		t.Fatal(got)
 	}
 }
 

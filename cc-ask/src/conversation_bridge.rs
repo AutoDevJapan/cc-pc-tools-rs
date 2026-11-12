@@ -195,6 +195,7 @@ fn attachments(
     effects: &mut dyn Effects,
     paths: &[PathBuf],
     question: Option<&crate::question_images::Scope>,
+    allow_video: bool,
 ) -> Result<Vec<Attachment>> {
     if paths.len() > 10 {
         return Err("新しい投稿に添付できる画像は10件までです".into());
@@ -209,9 +210,12 @@ fn attachments(
             .to_ascii_lowercase();
         if !matches!(
             extension.as_str(),
-            "png" | "jpg" | "jpeg" | "webp" | "gif" | "bmp" | "tif" | "tiff"
+            "png" | "jpg" | "jpeg" | "webp" | "gif" | "bmp" | "tif" | "tiff" | "mp4"
         ) {
-            return Err("新しい投稿の添付は現在は画像だけに対応しています".into());
+            return Err("新しい投稿は画像またはMP4動画の添付に対応しています".into());
+        }
+        if extension == "mp4" && !allow_video {
+            return Err("MP4動画は判断範囲を指定した通常の質問へ添付してください".into());
         }
         // Retain the original spelling's namespace before resolving it. The
         // same lease stays alive through qualification and byte snapshotting.
@@ -219,13 +223,18 @@ fn attachments(
         let source = image_source(path)?;
         let info = fs::metadata(&source).map_err(|_| INVALID_INPUT)?;
         total = total.checked_add(info.len()).ok_or(INVALID_INPUT)?;
-        if !info.is_file() || info.len() > IMAGE_LIMIT || total > IMAGE_TOTAL_LIMIT {
+        let limit = if extension == "mp4" {
+            crate::conversation_video::LIMIT as u64
+        } else {
+            IMAGE_LIMIT
+        };
+        if !info.is_file() || info.len() > limit || total > IMAGE_TOTAL_LIMIT {
             return Err(INVALID_INPUT.into());
         }
-        inputs.push((source, extension, info.len(), source_lease));
+        inputs.push((source, extension, info.len(), limit, source_lease));
     }
     let mut result = Vec::new();
-    for (source, extension, expected_size, _image_source) in inputs {
+    for (source, extension, expected_size, limit, _image_source) in inputs {
         // Fresh Go verification rechecks this original scope and the immutable
         // source receipt. A generic snapshot name never grants image authority.
         let guard = effects
@@ -250,6 +259,9 @@ fn attachments(
                     && proof["classification_unverified"] == false
                     && proof["protection_categories"] == json!(["client_project"])))
         {
+            if extension == "mp4" {
+                return Err("動画の元ファイルの資格を確認できません。送信していません".into());
+            }
             Some(crate::question_images::preflight(
                 effects,
                 &source,
@@ -265,7 +277,7 @@ fn attachments(
         };
         let input = crate::project::open_regular_source(&source).map_err(|_| INVALID_INPUT)?;
         let info = input.metadata().map_err(|_| INVALID_INPUT)?;
-        if !info.is_file() || info.len() != expected_size || info.len() > IMAGE_LIMIT {
+        if !info.is_file() || info.len() != expected_size || info.len() > limit {
             return Err(INVALID_INPUT.into());
         }
         let mut input = input.take(info.len().checked_add(1).ok_or(INVALID_INPUT)?);
@@ -289,6 +301,25 @@ fn attachments(
         }
         if size != info.len() {
             return Err(INVALID_INPUT.into());
+        }
+        if extension == "mp4" {
+            use std::io::{Seek, SeekFrom};
+            snapshot
+                .as_file_mut()
+                .seek(SeekFrom::Start(0))
+                .map_err(|_| SAVE_FAILED)?;
+            let mut video = vec![0; size as usize];
+            let read = snapshot.as_file_mut().read_exact(&mut video);
+            let mut extra = [0];
+            let ended = snapshot.as_file_mut().read(&mut extra);
+            let checked = if read.is_err() || !matches!(ended, Ok(0)) {
+                Err(INVALID_INPUT.into())
+            } else {
+                crate::conversation_video::validate(&video)
+            };
+            video.fill(0);
+            extra.fill(0);
+            checked?;
         }
         let hash = format!("{:x}", digest.finalize());
         if qualified.is_some_and(|proof| proof.sha256 != hash || proof.size != size) {
@@ -574,7 +605,7 @@ pub fn try_ask(home: &Path, effects: &mut dyn Effects, args: &AskArgs) -> Result
     let root = home.join("conversation-bridge");
     private_directory(&root)?;
     let scope = crate::question_images::Scope::from_decision(todo, &text, &decision);
-    let snapshots = attachments(&root, effects, &args.attach, scope.as_ref())?;
+    let snapshots = attachments(&root, effects, &args.attach, scope.as_ref(), true)?;
     let decision = canonical(&decision).to_string();
     let mut identity = json!([
         "normal-ask-v1",
@@ -792,7 +823,7 @@ fn send_log(
     if clarification.is_none() {
         private_directory(&root)?;
     }
-    let snapshots = attachments(&root, effects, attach, None)?;
+    let snapshots = attachments(&root, effects, attach, None, false)?;
     let files: Vec<_> = snapshots
         .iter()
         .map(|file| json!([file.hash, file.extension]))

@@ -472,6 +472,77 @@ fn conversation_bridge_disabled_and_dry_run_never_start_children_or_snapshot_inp
     f.unchanged_legacy();
 }
 
+fn mp4_fixture(size: usize) -> Vec<u8> {
+    fn block(name: &[u8; 4], bytes: &[u8]) -> Vec<u8> {
+        let mut out = ((bytes.len() + 8) as u32).to_be_bytes().to_vec();
+        out.extend_from_slice(name);
+        out.extend_from_slice(bytes);
+        out
+    }
+    let mut handler = vec![0; 12];
+    handler[8..].copy_from_slice(b"vide");
+    let mut out = block(b"ftyp", b"isom\0\0\0\0isommp42");
+    out.extend(block(
+        b"moov",
+        &block(b"trak", &block(b"mdia", &block(b"hdlr", &handler))),
+    ));
+    out.extend(block(b"mdat", &vec![0; size]));
+    out
+}
+
+#[test]
+fn normal_question_mp4_keeps_original_bytes_and_stable_request() {
+    let f = Fixture::new();
+    let path = f.root.path().join("review.mp4");
+    let original = mp4_fixture(10 * 1024 * 1024 + 1);
+    fs::write(&path, &original).unwrap();
+    let mut args = f.ask();
+    args.attach.push(path.clone());
+    let mut fake = Fake::default();
+    bridge::try_ask(f.root.path(), &mut fake, &args).unwrap();
+    let request = argument(&fake.calls[0].0, "--request-id").to_owned();
+    assert_eq!(fake.attachments[0], original);
+    assert_eq!(
+        Path::new(argument(&fake.calls[0].0, "--attach"))
+            .extension()
+            .unwrap(),
+        "mp4"
+    );
+    bridge::try_ask(f.root.path(), &mut fake, &args).unwrap();
+    assert_eq!(argument(&fake.calls[1].0, "--request-id"), request);
+    assert_eq!(fake.attachments[1], original);
+    assert_eq!(fake.http_calls, 0);
+    f.unchanged_legacy();
+}
+
+#[test]
+fn normal_question_mp4_rejects_unqualified_oversize_or_changed_type() {
+    let f = Fixture::new();
+    let video = f.root.path().join("review.mp4");
+    fs::write(&video, mp4_fixture(1)).unwrap();
+    let mut args = f.ask();
+    args.attach.push(video.clone());
+    let mut denied = Fake {
+        deny_images: true,
+        ..Default::default()
+    };
+    assert!(bridge::try_ask(f.root.path(), &mut denied, &args).is_err());
+    assert!(denied.calls.is_empty());
+    assert!(denied.attachments.is_empty());
+    assert_eq!(denied.qualification_calls, 0);
+    let file = fs::File::create(&video).unwrap();
+    file.set_len(20 * 1024 * 1024 + 1).unwrap();
+    drop(file);
+    let mut fake = Fake::default();
+    assert!(bridge::try_ask(f.root.path(), &mut fake, &args).is_err());
+    assert!(fake.calls.is_empty());
+    assert!(fake.guard_calls.is_empty());
+    fs::write(&video, b"\x89PNG\r\n\x1a\nnot-mp4").unwrap();
+    assert!(bridge::try_ask(f.root.path(), &mut fake, &args).is_err());
+    assert!(fake.calls.is_empty());
+    assert_eq!(fake.http_calls, 0);
+}
+
 #[test]
 fn conversation_bridge_log_forwards_fixed_runner_arguments_and_immutable_body() {
     let f = Fixture::new();

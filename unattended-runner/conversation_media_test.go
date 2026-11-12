@@ -299,6 +299,105 @@ func TestNormalQuestionDecisionDigestKeepsRustUnicodeAndLiteralEscapesDistinct(t
 	}
 }
 
+func TestNormalQuestionDecisionDigestMatchesSenderNumbers(t *testing.T) {
+	for _, tc := range []struct{ raw, sender string }{
+		{"3", "3"}, {"3.00", "3.0"}, {"1e-5", "0.00001"},
+		{"0.000001", "1e-6"}, {"1e15", "1000000000000000.0"},
+		{"1e16", "1e+16"}, {"1.2345678901234568e-10", "1.2345678901234568e-10"},
+		{"-0", "-0.0"}, {"-0.00", "-0.0"}, {"0e0", "0.0"},
+		{"18446744073709551615", "18446744073709551615"},
+		{"-9223372036854775808", "-9223372036854775808"},
+		{"18446744073709551616", "1.8446744073709552e+19"},
+		{"-9223372036854775809", "-9.223372036854776e+18"},
+		{"1e-999", "0.0"}, {"-1e-999", "-0.0"},
+		{"5e-324", "5e-324"}, {"1.7976931348623157e308", "1.7976931348623157e+308"},
+	} {
+		t.Run(tc.raw, func(t *testing.T) {
+			raw := json.RawMessage(`{"todo_id":42,"scope":{"amount":[` + tc.raw + `]}}`)
+			want := bytesHash([]byte(`{"scope":{"amount":[` + tc.sender + `]},"todo_id":42}`))
+			if normalQuestionDecisionHash(raw) != want {
+				t.Fatal("normal question numeric digest differs from sender")
+			}
+		})
+	}
+	if normalQuestionDecisionHash(json.RawMessage(`{"amount":3.0}`)) == normalQuestionDecisionHash(json.RawMessage(`{"amount":4.0}`)) {
+		t.Fatal("different numeric scope accepted")
+	}
+}
+
+func TestNormalQuestionNumericDecisionThroughCLIAndReservedVerifier(t *testing.T) {
+	for _, tc := range []struct{ raw, sender string }{
+		{"3.00", "3.0"}, {"1e-5", "0.00001"},
+		{"18446744073709551615", "18446744073709551615"},
+		{"-0.00", "-0.0"},
+	} {
+		t.Run(tc.raw, func(t *testing.T) {
+			f := conversationTest(t, false)
+			video := fixtureVideoMP4(1, "vide")
+			path := normalQuestionVideoPath(t, f, video)
+			f.input.Attachments = []string{path}
+			decision := []byte(`{"todo_id":42,"decision":"direction","scope":{"amount":` + tc.raw + `}}`)
+			if os.WriteFile(f.input.DecisionFile, decision, 0600) != nil {
+				t.Fatal("write owned numeric decision")
+			}
+			base := f.r.Run
+			verified := 0
+			f.r.Run = func(ctx context.Context, exe string, args ...string) (string, error) {
+				if len(args) == 0 || args[0] != "recovery-ask" {
+					return base(ctx, exe, args...)
+				}
+				f.posts++
+				index, err := f.r.loadConversations()
+				if err != nil {
+					t.Fatal(err)
+				}
+				q := index.Questions[f.input.RequestID]
+				stored, err := os.ReadFile(q.DecisionFile)
+				if err != nil || !bytes.Equal(stored, decision) {
+					t.Fatal("normalization changed retained decision")
+				}
+				body, err := os.ReadFile(q.BodyFile)
+				if err != nil {
+					t.Fatal(err)
+				}
+				scope := generatedQuestionScope{Todo: q.Todo, Body: bytesHash(body), Decision: bytesHash([]byte(`{"decision":"direction","scope":{"amount":` + tc.sender + `},"todo_id":42}`)), Owner: f.r.State.Destination.Owner, Guild: f.r.State.Destination.Guild, Forum: f.r.State.Destination.Forum}
+				verifyArgs := []string{"--path", path, "--request-id", q.SenderID, "--question-title", q.Title, "--question-origin-thread", q.OriginThread}
+				verifyArgs = append(verifyArgs, generatedQuestionScopeArgs(scope)...)
+				deps := conversationMediaDependencies{Home: filepath.Dir(f.r.Config.Home), Guard: func(context.Context, string) (bool, error) { return true, nil }}
+				var out bytes.Buffer
+				if code := conversationMediaCLIWithDependencies(verifyArgs, &out, deps); code != 0 {
+					t.Fatalf("same numeric scope rejected by actual verifier CLI: %d", code)
+				}
+				verified++
+				badScope := scope
+				badScope.Decision = bytesHash([]byte(`{"decision":"direction","scope":{"amount":4.0},"todo_id":42}`))
+				badArgs := append([]string{}, verifyArgs[:8]...)
+				badArgs = append(badArgs, generatedQuestionScopeArgs(badScope)...)
+				out.Reset()
+				if code := conversationMediaCLIWithDependencies(badArgs, &out, deps); code == 0 {
+					t.Fatal("changed numeric scope accepted")
+				}
+				return "", errConversationMedia // synthetic sender stops before HTTP
+			}
+			args := []string{"ask", "--request-id", f.input.RequestID, "--todo-id", "42", "--origin-thread", f.input.OriginThread, "--body-file", f.input.BodyFile, "--decision-file", f.input.DecisionFile, "--title", f.input.Title, "--attach", path}
+			var output bytes.Buffer
+			code := conversationCLIWithLoader(args, &output, func(string) (conversationCLIBackend, func(), error) { return f.r, func() {}, nil })
+			if code != 1 || f.posts != 1 || verified != 1 {
+				t.Fatalf("numeric input did not reach sender verifier: code=%d posts=%d verified=%d", code, f.posts, verified)
+			}
+			index, err := f.r.loadConversations()
+			if err != nil {
+				t.Fatal(err)
+			}
+			q := index.Questions[f.input.RequestID]
+			body, err := os.ReadFile(q.BodyFile)
+			if err != nil || q.InputSHA != canonicalHash([]any{q.Todo, q.OriginThread, bytesHash(body), canonicalHash(json.RawMessage(decision)), q.Title, q.Wait, []string{bytesHash(video)}}) {
+				t.Fatal("numeric comparison changed retry identity")
+			}
+		})
+	}
+}
+
 func TestConversationMediaQuestionNamespaceKeepsOriginalGuardAndRequestBinding(t *testing.T) {
 	f := mediaFixture(t)
 	f.normal = "normal-ask-" + strings.Repeat("b", 64)

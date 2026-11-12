@@ -7,6 +7,7 @@ import (
 	"errors"
 	"os"
 	"path/filepath"
+	"strconv"
 	"strings"
 )
 
@@ -235,6 +236,10 @@ func normalQuestionDecisionHash(raw json.RawMessage) string {
 	if d.Decode(&value) != nil {
 		return ""
 	}
+	value, err := normalQuestionDecisionNumbers(value)
+	if err != nil {
+		return ""
+	}
 	var encoded bytes.Buffer
 	e := json.NewEncoder(&encoded)
 	e.SetEscapeHTML(false)
@@ -261,4 +266,69 @@ func normalQuestionDecisionHash(raw json.RawMessage) string {
 		out = append(out, b[i])
 	}
 	return bytesHash(out)
+}
+
+// The sender parses decisions as serde_json::Value: in-range integers retain
+// their type; decimal/exponent and out-of-range integer tokens become f64.
+// Match that representation only for this normal-question comparison. Stored
+// decisions and the existing request/retry identity stay byte-for-byte intact.
+func normalQuestionDecisionNumbers(value any) (any, error) {
+	switch v := value.(type) {
+	case json.Number:
+		token := v.String()
+		if !strings.ContainsAny(token, ".eE") && token != "-0" {
+			if strings.HasPrefix(token, "-") {
+				if _, err := strconv.ParseInt(token, 10, 64); err == nil {
+					return json.RawMessage(token), nil
+				}
+			} else if _, err := strconv.ParseUint(token, 10, 64); err == nil {
+				return json.RawMessage(token), nil
+			}
+		}
+		f, err := strconv.ParseFloat(token, 64)
+		if err != nil {
+			return nil, err
+		}
+		// serde_json's f64 formatter uses fixed notation for exponents -5..15,
+		// always marking fixed integral floats with .0. Exponents have no zero
+		// padding and retain a positive sign outside that interval.
+		scientific := strconv.FormatFloat(f, 'e', -1, 64)
+		i := strings.IndexByte(scientific, 'e')
+		if i < 0 {
+			return nil, errConversationMedia
+		}
+		exponent, err := strconv.Atoi(scientific[i+1:])
+		if err != nil {
+			return nil, err
+		}
+		if exponent >= -5 && exponent <= 15 {
+			fixed := strconv.FormatFloat(f, 'f', -1, 64)
+			if !strings.Contains(fixed, ".") {
+				fixed += ".0"
+			}
+			return json.RawMessage(fixed), nil
+		}
+		sign := ""
+		if exponent >= 0 {
+			sign = "+"
+		}
+		return json.RawMessage(scientific[:i] + "e" + sign + strconv.Itoa(exponent)), nil
+	case map[string]any:
+		for key, item := range v {
+			normal, err := normalQuestionDecisionNumbers(item)
+			if err != nil {
+				return nil, err
+			}
+			v[key] = normal
+		}
+	case []any:
+		for i, item := range v {
+			normal, err := normalQuestionDecisionNumbers(item)
+			if err != nil {
+				return nil, err
+			}
+			v[i] = normal
+		}
+	}
+	return value, nil
 }

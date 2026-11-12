@@ -171,7 +171,12 @@ fn cli_blocks_before_config_and_returns_78() {
         .env("CC_ASK_HOME", dir.path().join("not-created"))
         .output()
         .unwrap();
-    assert_eq!(out.status.code(), Some(78));
+    assert_eq!(
+        out.status.code(),
+        Some(78),
+        "{}",
+        String::from_utf8_lossy(&out.stderr)
+    );
     assert!(String::from_utf8_lossy(&out.stderr).contains("聞かずに進めること"));
     assert!(!dir.path().join("not-created").exists());
     let invalid = Command::new(env!("CARGO_BIN_EXE_discord_ask"))

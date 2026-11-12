@@ -274,6 +274,11 @@ pub(crate) fn qualify_question_sources_with(
     {
         held.files.extend(lease_source(effects, path)?.files);
     }
+    // The ordinary question gate must precede project-label discovery and
+    // config/model/network work. Read only after the source lease qualifies
+    // it, and reuse this same bounded text below.
+    let body = question_text(&args.body_file)?;
+    crate::ask_gate::enforce(&args.title, &body, args.owner_only)?;
     let root = effects.run(
         &[
             "git".into(),
@@ -298,8 +303,6 @@ pub(crate) fn qualify_question_sources_with(
     // Classifying a source never asserts that arbitrary prose is public. Keep
     // the sender's credential checks, and reject rather than rewrite a bound
     // question when catalog-protected text occurs in its original inputs.
-    let body = question_text(&args.body_file)?;
-    crate::ask_gate::enforce(&args.title, &body, args.owner_only)?;
     for text in std::iter::once(args.title.clone())
         .chain(std::iter::once(body))
         .chain(

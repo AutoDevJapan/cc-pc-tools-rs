@@ -183,6 +183,7 @@ type TodoRow struct {
 	QuestionDeliveries       []json.RawMessage                   `json:"owner_question_delivery_receipts,omitempty"`
 	DirectionRecords         []conversationDirectionReceipt      `json:"owner_direction_records,omitempty"`
 	ImplementationRecords    []conversationImplementationReceipt `json:"owner_implementation_records,omitempty"`
+	NativePartialRecords     []json.RawMessage                   `json:"owner_native_partial_implementation_records,omitempty"`
 	ResumeGeneration         json.RawMessage                     `json:"resume_generation,omitempty"`
 	Qualification            struct {
 		Receipt productRetryProof `json:"receipt"`

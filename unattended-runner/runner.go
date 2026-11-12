@@ -201,6 +201,8 @@ type Runner struct {
 	SeparatedScheduler          bool
 	ConversationReceiverOnly    bool
 	TaskQuestion                *taskQuestionRegistry
+	NativePartialRPC            func(context.Context, string, map[string]any) (json.RawMessage, error)
+	NativePartialGuard          func(context.Context, string) bool
 }
 
 func readJSON(path string, ceiling int64, value any) error {

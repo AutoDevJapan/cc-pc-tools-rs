@@ -438,6 +438,10 @@ func conversationFailureStage(err error) string {
 	if err == nil {
 		return "deadline"
 	}
+	var native *nativePartialError
+	if errors.As(err, &native) {
+		return "native_" + native.stage
+	}
 	switch err.Error() {
 	case "conversation sender origin_scope":
 		return "sender_origin_scope"

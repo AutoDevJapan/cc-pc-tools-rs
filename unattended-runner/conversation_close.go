@@ -304,6 +304,11 @@ func (r *Runner) conversationCloseReply(ctx context.Context, q ConversationQuest
 		return stamp, false, err
 	}
 	req := r.conversationRequest(reply.Message)
+	if pending, err := nativePartialPending(row, q, reply.Message, stamp.SourceSHA); err != nil {
+		return stamp, false, err
+	} else if pending {
+		return stamp, false, nil
+	}
 	if found, err := findImplementation(row, q, reply.Message, stamp.SourceSHA); err != nil {
 		return stamp, false, err
 	} else if found != nil {

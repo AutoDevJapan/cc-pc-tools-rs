@@ -33,6 +33,7 @@ pub mod answered_wait;
 pub mod capacity_cycle;
 pub mod conversation_wait;
 pub mod direction_record;
+mod native_implementation;
 mod ordinary_assignment;
 mod continue_subwork;
 pub mod product_resume;
@@ -227,6 +228,8 @@ pub enum Command {
         #[arg(long, requires = "verify_only")]
         check_holds: bool,
     },
+    /// Record a verified native partial result without accepting or closing the original work.
+    NativeImplementationRecord(native_implementation::Options),
     /// Preserve selected old notes in immutable segments; preview unless --apply.
     ArchiveHistory {
         id: i64,
@@ -1047,6 +1050,9 @@ pub fn rename_project(
 }
 
 pub fn execute(db: &mut Value, cmd: &Command, paths: &Paths) -> Result<Vec<String>> {
+    if let Command::NativeImplementationRecord(options) = cmd {
+        return native_implementation::command(db, paths, options);
+    }
     // All conversation mutations bind the exact guarded project and registered
     // root before their existing locked transition, including replay paths.
     match cmd {
@@ -1377,6 +1383,7 @@ pub fn execute(db: &mut Value, cmd: &Command, paths: &Paths) -> Result<Vec<Strin
             )?
             .to_string(),
         ),
+        Command::NativeImplementationRecord(..) => unreachable!("native command dispatched separately"),
         Command::DirectionRecord {
             input_file,
             origin_scope_file,
@@ -1671,6 +1678,7 @@ pub fn run(cli: Cli, paths: &Paths, notifier: &mut dyn Notifier) -> Result<()> {
             | Command::AnsweredWait { .. }
             | Command::DirectionRecord { .. }
             | Command::ImplementationRecord { .. }
+            | Command::NativeImplementationRecord(..)
     ) && output
         .first()
         .and_then(|line| serde_json::from_str::<Value>(line).ok())

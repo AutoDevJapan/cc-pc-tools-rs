@@ -76,6 +76,13 @@ mod unix_source_intake {
             &args,
         )
         .unwrap();
+        // The actual CLI fallthrough advice function consumes this pathname
+        // again after qualification. Replacing its name must not block it.
+        let advice_path = args.body_file.clone();
+        std::fs::rename(&advice_path, advice_path.with_extension("held")).unwrap();
+        let name = std::ffi::CString::new(advice_path.as_os_str().as_bytes()).unwrap();
+        assert_eq!(unsafe { libc::mkfifo(name.as_ptr(), 0o600) }, 0);
+        cc_ask::ja_check::advise_body(&mut *h.ctx.effects, "", Some(&advice_path));
         drop(held);
         assert!(h.fake.borrow().http_calls.is_empty());
         assert!(h.fake.borrow().launches.is_empty());

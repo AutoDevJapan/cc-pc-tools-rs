@@ -43,7 +43,7 @@ pub struct QuestionSourceLease {
     files: Vec<std::fs::File>,
 }
 
-pub(crate) fn question_text(path: &Path) -> Result<String> {
+pub fn question_text(path: &Path) -> Result<String> {
     use std::io::Read;
     const LIMIT: u64 = 1 << 20;
     let file = open_regular_source(path).map_err(|_| "question source read unavailable")?;

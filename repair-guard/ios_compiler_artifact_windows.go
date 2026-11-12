@@ -244,6 +244,9 @@ func iosCompilerFlag(args []string) bool {
 }
 
 func runIOSCompilerCLI(args []string, out io.Writer, authority iosCompilerAuthority) int {
+	return runIOSCompilerCLIWithDigest(args, out, authority, iosCompilerDigest)
+}
+func runIOSCompilerCLIWithDigest(args []string, out io.Writer, authority iosCompilerAuthority, digest string) int {
 	if len(args) != 1 || (args[0] != "--verify-ios-compiler-artifact" && args[0] != "--consume-ios-compiler-artifact") {
 		_ = json.NewEncoder(out).Encode(iosCompilerResult{Domain: iosCompilerDomain, Stage: "invalid_arguments", CleanupComplete: true})
 		return 2
@@ -261,7 +264,7 @@ func runIOSCompilerCLI(args []string, out io.Writer, authority iosCompilerAuthor
 			return err
 		}
 	}
-	r := iosCompilerRead(ctx, authority, iosCompilerDigest, consume)
+	r := iosCompilerRead(ctx, authority, digest, consume)
 	if writeFailed {
 		return 1
 	}

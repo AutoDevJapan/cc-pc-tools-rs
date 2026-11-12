@@ -172,6 +172,57 @@ func TestIOSCompilerOutputScratchAndControllerFailureAreErased(t *testing.T) {
 	}
 }
 
+func TestIOSCompilerFullCLIConsumerCommitsOnlyAfterCleanup(t *testing.T) {
+	for _, mode := range []string{"verify", "consume", "cleanup-fail", "short-output"} {
+		a, digest := iosCompilerFixture(t, "")
+		if mode == "cleanup-fail" {
+			a.snapshot.closeErr = errIOSCompiler
+		}
+		var output bytes.Buffer
+		var writer io.Writer = &output
+		if mode == "short-output" {
+			writer = iosCompilerShortWriter{}
+		}
+		args := []string{"--consume-ios-compiler-artifact"}
+		if mode == "verify" {
+			args[0] = "--verify-ios-compiler-artifact"
+		}
+		code := runIOSCompilerCLIWithDigest(args, writer, a, digest)
+		wantFailure := mode == "cleanup-fail" || mode == "short-output"
+		if (code != 0) != wantFailure || !a.snapshot.closed {
+			t.Fatal("full CLI status", mode, code)
+		}
+		if mode == "short-output" {
+			continue
+		}
+		var v map[string]json.RawMessage
+		if json.Unmarshal(output.Bytes(), &v) != nil {
+			t.Fatal("full CLI returned invalid JSON")
+		}
+		if mode == "verify" {
+			if _, ok := v["files"]; ok {
+				t.Fatal("verify emitted contents")
+			}
+			continue
+		}
+		var files map[string][]byte
+		if json.Unmarshal(v["files"], &files) != nil || len(files) != 11 {
+			t.Fatal("read-only output missing files")
+		}
+		for name, data := range files {
+			if string(data) != "synthetic private "+name {
+				t.Fatal("CLI changed verified bytes")
+			}
+			clear(data)
+		}
+		var metadata iosCompilerResult
+		if json.Unmarshal(v["metadata"], &metadata) != nil || metadata.CleanupComplete == (mode == "cleanup-fail") {
+			t.Fatal("cleanup not surfaced")
+		}
+		clear(output.Bytes())
+	}
+}
+
 func TestIOSCompilerWindowsOwnedSameHandleAndMutationExclusion(t *testing.T) {
 	root := os.Getenv("IOS_COMPILER_OWNED_FIXTURE")
 	if root == "" {

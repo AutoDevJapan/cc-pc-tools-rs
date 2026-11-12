@@ -259,6 +259,28 @@ func TestIOSCompilerContentWriterRunsAfterOriginalHandlesClose(t *testing.T) {
 	clear(c.raw)
 }
 
+type iosCompilerMetadataShortWriter struct{ bytes.Buffer }
+
+func (w *iosCompilerMetadataShortWriter) Write(p []byte) (int, error) {
+	if bytes.Contains(p, []byte(`"cleanup_complete"`)) {
+		n := len(p) / 2
+		w.Buffer.Write(p[:n])
+		return n, nil
+	}
+	return w.Buffer.Write(p)
+}
+func TestIOSCompilerMetadataShortWriteCannotSucceed(t *testing.T) {
+	for _, flag := range []string{"--verify-ios-compiler-artifact", "--consume-ios-compiler-artifact"} {
+		a, digest := iosCompilerFixture(t, "")
+		w := &iosCompilerMetadataShortWriter{}
+		if runIOSCompilerCLIWithDigest([]string{flag}, w, a, digest) == 0 {
+			clear(w.Bytes())
+			t.Fatal("short metadata output succeeded")
+		}
+		clear(w.Bytes())
+	}
+}
+
 func TestIOSCompilerWindowsOwnedSameHandleAndMutationExclusion(t *testing.T) {
 	root := os.Getenv("IOS_COMPILER_OWNED_FIXTURE")
 	if root == "" {

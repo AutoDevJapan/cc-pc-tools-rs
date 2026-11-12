@@ -247,6 +247,7 @@ func runIOSCompilerCLI(args []string, out io.Writer, authority iosCompilerAuthor
 	return runIOSCompilerCLIWithDigest(args, out, authority, iosCompilerDigest)
 }
 func runIOSCompilerCLIWithDigest(args []string, out io.Writer, authority iosCompilerAuthority, digest string) int {
+	out = iosCompilerExactWriter{out}
 	if len(args) != 1 || (args[0] != "--verify-ios-compiler-artifact" && args[0] != "--consume-ios-compiler-artifact") {
 		_ = json.NewEncoder(out).Encode(iosCompilerResult{Domain: iosCompilerDomain, Stage: "invalid_arguments", CleanupComplete: true})
 		return 2
@@ -296,6 +297,16 @@ func runIOSCompilerCLIWithDigest(args []string, out io.Writer, authority iosComp
 type iosCompilerCapture struct {
 	raw []byte
 	n   int
+}
+
+type iosCompilerExactWriter struct{ out io.Writer }
+
+func (w iosCompilerExactWriter) Write(p []byte) (int, error) {
+	n, err := w.out.Write(p)
+	if err == nil && n != len(p) {
+		err = io.ErrShortWrite
+	}
+	return n, err
 }
 
 func (c *iosCompilerCapture) Write(p []byte) (int, error) {

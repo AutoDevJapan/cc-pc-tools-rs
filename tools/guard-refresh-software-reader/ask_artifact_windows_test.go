@@ -4,6 +4,7 @@ package main
 
 import (
 	"bytes"
+	"encoding/json"
 	"os"
 	"path/filepath"
 	"testing"
@@ -97,5 +98,29 @@ func TestAskArtifactCopyCreateNewAndSameHeldReadback(t *testing.T) {
 	var out bytes.Buffer
 	if runAskBuildArtifact([]string{"--export-ask-cargo-output", "other"}, &out) != 2 || out.Len() != 0 {
 		t.Fatal("caller changed fixed purpose")
+	}
+}
+
+func TestProducerReceiptBindsOutputAndExportWithoutOverwrite(t *testing.T) {
+	root := physicalSoftwareFixture(t)
+	path := filepath.Join(root, "receipt.json")
+	r := askArtifactResult{Source: askBuildSource, ProducerExit: 0, ProducerReaped: true, Bytes: 16, SHA: "owned-digest", OutputIdentity: &softwareIdentity{"1", "2", "3"}, Identity: &softwareIdentity{"1", "4", "5"}, ExportCreated: true}
+	if e := writeAskBuildReceipt(path, r); e != nil {
+		t.Fatal(e)
+	}
+	if e := writeAskBuildReceipt(path, r); e == nil {
+		t.Fatal("producer receipt overwritten")
+	}
+	b, e := os.ReadFile(path)
+	if e != nil {
+		t.Fatal(e)
+	}
+	var got struct {
+		Result   askArtifactResult
+		ProofSHA string `json:"source_proof_sha256"`
+		Inputs   int    `json:"source_inputs"`
+	}
+	if json.Unmarshal(b, &got) != nil || got.Result.SHA != r.SHA || *got.Result.OutputIdentity != *r.OutputIdentity || *got.Result.Identity != *r.Identity || !got.Result.ProducerReaped || got.Inputs != 207 || got.ProofSHA != askBuildProofSHA {
+		t.Fatal("producer/output/receipt binding lost")
 	}
 }

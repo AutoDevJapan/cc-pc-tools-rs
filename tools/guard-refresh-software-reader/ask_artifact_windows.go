@@ -15,12 +15,14 @@ import (
 	"unsafe"
 )
 
-const askBuildSource = "d5f2d73327bcc39d565c2ce0917b0bdb614c2333"
-const askBuildProofPath = "D:/CC/Tools/codex-jobs/fourbros4431-ask-artifact-d5f2-source-proof-v2.json"
-const askBuildProofSHA = "a99a2e11e8dbeb766284237cbfdb3d49c016b972ac76eea8e71cead22c7c2662"
-const askBuildOutput = updateSourceRoot + "/target/release/discord_ask.exe"
-const askBuildAlias = updateSourceRoot + "/target/release/deps/discord_ask.exe"
-const askBuildExport = updateSourceRoot + "/codex-owned-f60f3742a1933562ec75aa5c8eb05d72/discord_ask-privacy-d5f2.exe"
+const askBuildSource = "05877dad16c1fb3bd31e1d7350a2758f60a067ac"
+const askBuildProofPath = "D:/CC/Tools/codex-jobs/fourbros4431-ask-artifact-0587-source-proof.json"
+const askBuildProofSHA = "a4f9f5d1b8f00a8f8e760b5d60735d37c53045332a19b78df41777caf036b8e1"
+const askBuildOwnedTarget = updateSourceRoot + "/codex-owned-b30691d5cc845d615ea1be06bb0d3de3/cargo-final-0587"
+const askBuildOutput = askBuildOwnedTarget + "/release/discord_ask.exe"
+const askBuildAlias = askBuildOwnedTarget + "/release/deps/discord_ask.exe"
+const askBuildExport = updateSourceRoot + "/codex-owned-f60f3742a1933562ec75aa5c8eb05d72/discord_ask-privacy-0587.exe"
+const askBuildReceipt = "D:/CC/Tools/codex-jobs/fourbros4431-ask-artifact-producer-receipt.json"
 
 type askBuildEvidence struct {
 	Head    string
@@ -38,6 +40,10 @@ type askArtifactResult struct {
 	DataAccessGranted bool              `json:"data_access_granted"`
 	UpdatePerformed   bool              `json:"update_performed"`
 	Reason            string            `json:"reason"`
+	ProducerExit      int               `json:"producer_exit"`
+	ProducerReaped    bool              `json:"producer_reaped"`
+	ProducerElapsedMS int64             `json:"producer_elapsed_ms"`
+	OutputIdentity    *softwareIdentity `json:"output_identity,omitempty"`
 }
 
 // This purpose recognizes the two names created by the recorded Cargo build.
@@ -269,9 +275,71 @@ func runAskBuildArtifact(args []string, out io.Writer) int {
 			return askGitCommand(ctx, "C:/Program Files/Git/cmd/git.exe", append([]string{"-C", updateSourceRoot}, args...)...)
 		}
 		if askBuildSourceMatches(ctx, proof.Raw(), git) {
-			withPinnedCargoOutput(askBuildOutput, askBuildAlias, softwareIdentity{Volume: "2229119083", FileID: "1970324853903258"}, func(raw []byte, id softwareIdentity) bool {
-				if len(raw) != 13400576 || ctx.Err() != nil {
+			var evidence askBuildEvidence
+			if json.Unmarshal(proof.Raw(), &evidence) != nil {
+				return 1
+			}
+			var sources []updateObject
+			defer func() {
+				for _, o := range sources {
+					o.Close()
+				}
+			}()
+			for _, s := range evidence.Inputs {
+				o, err := openUpdateObject(filepath.Join(updateSourceRoot, filepath.FromSlash(s.Path)))
+				if err != nil {
+					return 1
+				}
+				sources = append(sources, o)
+				if digest(o.Raw()) != s.SHA {
+					return 1
+				}
+			}
+			head, ok := git("rev-parse", "HEAD")
+			if !ok || strings.TrimSpace(string(head)) != askBuildSource {
+				return 1
+			}
+			// The final source differs from the old unqualified artifact. Own
+			// this necessary producer invocation and retain its exact source
+			// buffers and parent names through output collection/export.
+			// A fresh isolated target excludes preexisting Cargo Fresh outputs
+			// and keeps normal target writers separate after cargo_gate releases
+			// its build slot. Do not adopt the old unqualified two-link image.
+			if err := os.Mkdir(askBuildOwnedTarget, 0700); err != nil {
+				return 1
+			}
+			// Keep the directory's deletion namespace pinned through export.
+			dir, ok := openPlain(askBuildOwnedTarget, true)
+			if !ok {
+				return 1
+			}
+			defer syscall.CloseHandle(dir)
+			if os.Setenv("CODEX_JOBS_REAL_CARGO", "C:/Users/makhmeto/.rustup/toolchains/1.95.0-x86_64-pc-windows-msvc/bin/cargo.exe") != nil {
+				return 1
+			}
+			buildCtx, buildCancel := context.WithTimeout(context.Background(), 10*time.Minute)
+			started := time.Now()
+			built := askOwnedChild(buildCtx, "D:/CC/Tools/codex-jobs/cargo_gate.exe", "build", "--locked", "--release", "--manifest-path", updateSourceRoot+"/Cargo.toml", "--target-dir", askBuildOwnedTarget, "-p", "cc-ask", "--bin", "discord_ask")
+			buildCancel()
+			clear(built.Raw)
+			r.ProducerExit = built.Exit
+			r.ProducerReaped = built.Reaped
+			r.ProducerElapsedMS = time.Since(started).Milliseconds()
+			if !built.Reaped || built.TimedOut || built.Exit != 0 {
+				r.Reason = "producer_failed_or_uncollected"
+				json.NewEncoder(out).Encode(r)
+				return 1
+			}
+			withPinnedCargoOutput(askBuildOutput, askBuildAlias, softwareIdentity{}, func(raw []byte, id softwareIdentity) bool {
+				if len(raw) < 1 || len(raw) > 32<<20 {
 					return false
+				}
+				// Pinned input bytes and namespace stayed held throughout build;
+				// compare them again at the same consumption boundary.
+				for i, o := range sources {
+					if digest(o.Raw()) != evidence.Inputs[i].SHA {
+						return false
+					}
 				}
 				made, e := createAskArtifactCopy(askBuildExport, raw)
 				if made.FileID != "" {
@@ -282,12 +350,17 @@ func runAskBuildArtifact(args []string, out io.Writer) int {
 				if e != nil {
 					return false
 				}
-				r.Qualified = true
-				r.Reason = "fixed_software_exported"
 				r.ExportCreated = true
 				r.Bytes = len(raw)
 				r.SHA = digest(raw)
-				_ = id
+				r.OutputIdentity = &id
+				r.Reason = "exported_receipt_pending"
+				if writeAskBuildReceipt(askBuildReceipt, r) != nil {
+					r.Reason = "export_preserved_receipt_failed"
+					return false
+				}
+				r.Qualified = true
+				r.Reason = "fixed_software_exported"
 				return true
 			})
 		}
@@ -296,4 +369,28 @@ func runAskBuildArtifact(args []string, out io.Writer) int {
 		return 1
 	}
 	return 0
+}
+
+func writeAskBuildReceipt(path string, r askArtifactResult) error {
+	value := struct {
+		Result      askArtifactResult `json:"result"`
+		ProofSHA    string            `json:"source_proof_sha256"`
+		InputCount  int               `json:"source_inputs"`
+		BuildTarget string            `json:"isolated_build_target"`
+		Export      string            `json:"export"`
+	}{r, askBuildProofSHA, 207, askBuildOwnedTarget, askBuildExport}
+	raw, e := json.Marshal(value)
+	if e != nil {
+		return e
+	}
+	f, e := os.OpenFile(path, os.O_WRONLY|os.O_CREATE|os.O_EXCL, 0600)
+	if e != nil {
+		return e
+	}
+	defer f.Close()
+	n, e := f.Write(raw)
+	if e != nil || n != len(raw) {
+		return errUpdateObject
+	}
+	return f.Sync()
 }

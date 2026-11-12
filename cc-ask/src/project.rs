@@ -72,6 +72,17 @@ pub(crate) fn lease_source(effects: &mut dyn Effects, path: &Path) -> Result<Que
     let normal =
         std::path::PathBuf::from(crate::resume::strip_verbatim(&resolved.to_string_lossy()));
     qualify_source(effects, &normal)?;
+    let lease = pin_plain_source(path)?;
+    qualify_source(effects, path)?;
+    qualify_source(effects, &normal)?;
+    Ok(lease)
+}
+
+/// Retain a plain named object without reading its content. Authorization is
+/// supplied by the caller's ordinary source or exact image-purpose verifier.
+pub(crate) fn pin_plain_source(path: &Path) -> Result<QuestionSourceLease> {
+    let resolved =
+        std::fs::canonicalize(path).map_err(|_| "question source identity unavailable")?;
     #[cfg(windows)]
     let mut files = Vec::new();
     #[cfg(windows)]
@@ -124,8 +135,6 @@ pub(crate) fn lease_source(effects: &mut dyn Effects, path: &Path) -> Result<Que
         vec![std::fs::File::open(&resolved).map_err(|_| "question source identity unavailable")?];
     // Windows handles now exclude file writes/deletes and parent replacement;
     // reclassify that still-named object before any caller consumes its bytes.
-    qualify_source(effects, path)?;
-    qualify_source(effects, &normal)?;
     Ok(QuestionSourceLease { files })
 }
 

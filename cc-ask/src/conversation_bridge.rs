@@ -223,6 +223,7 @@ fn attachments(
     }
     let mut result = Vec::new();
     for (source, extension, expected_size) in inputs {
+        let _image_source = crate::project::pin_plain_source(&source)?;
         // Fresh Go verification rechecks this original scope and the immutable
         // source receipt. A generic snapshot name never grants image authority.
         let guard = effects
@@ -640,14 +641,18 @@ pub fn try_qualified_ask(
 ) -> Result<Option<Value>> {
     // Generated images retain their existing exact question-purpose admission.
     // Ordinary body/decision sources never inherit that separate qualification.
-    let ordinary_attachments = args.dry_run || !enabled(home)?;
-    let _sources = crate::project::qualify_question_sources_with(
-        effects,
-        registry,
-        args,
-        ordinary_attachments,
-    )?;
+    let _sources = qualify_ask_sources(home, effects, registry, args)?;
     try_ask(home, effects, args)
+}
+
+pub fn qualify_ask_sources(
+    home: &Path,
+    effects: &mut dyn Effects,
+    registry: &Path,
+    args: &AskArgs,
+) -> Result<crate::project::QuestionSourceLease> {
+    let ordinary_attachments = !args.dry_run && !enabled(home)?;
+    crate::project::qualify_question_sources_with(effects, registry, args, ordinary_attachments)
 }
 
 pub fn try_log(

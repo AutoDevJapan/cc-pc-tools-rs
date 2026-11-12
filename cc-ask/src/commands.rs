@@ -101,8 +101,12 @@ pub fn cmd_check(ctx: &mut Context) -> Result<Value> {
 
 /// Ask in a forum or text channel, retaining the original working directory.
 pub fn cmd_ask(ctx: &mut Context, args: &AskArgs) -> Result<Value> {
-    let _sources =
-        crate::project::qualify_question_sources(&mut *ctx.effects, &ctx.client_projects, args)?;
+    let _sources = crate::project::qualify_question_sources_with(
+        &mut *ctx.effects,
+        &ctx.client_projects,
+        args,
+        !args.dry_run,
+    )?;
     if !args.dry_run {
         crate::state_work::recovery_guard(ctx)?;
     }
@@ -169,7 +173,7 @@ pub fn cmd_ask(ctx: &mut Context, args: &AskArgs) -> Result<Value> {
     }
     let content = question_body(&project, &owner, &body);
     if args.dry_run {
-        let value = json!({"project":project,"cwd":names.redact(&cwd),"title":title,"body":content,
+        let value = json!({"project":project,"cwd":names.redact(&cwd),"title":title,"body":content,"attachments_checked":false,
             "reminder":reminder_text(&project, &owner, &title),"owner_only":args.owner_only.map(|r| r.as_str()),
             "decision_identity":decision.as_ref().map(|v| crate::decision_identity::normalize(ctx,v)).transpose()?});
         print_json(&value, Some(2))?;

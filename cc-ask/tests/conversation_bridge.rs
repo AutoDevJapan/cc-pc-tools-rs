@@ -85,6 +85,8 @@ struct Fake {
     mismatched_qualification: bool,
     busy_once: bool,
     source_proof: Option<Value>,
+    try_write_image_on_guard: Option<PathBuf>,
+    image_write_was_blocked: bool,
 }
 
 fn argument<'a>(args: &'a [String], key: &str) -> &'a str {
@@ -288,6 +290,11 @@ impl Effects for Fake {
         {
             assert_eq!(timeout, 10);
             self.guard_calls.push(argument(args, "--guard-path").into());
+            if argument(args, "--guard-path").ends_with("generated.png") {
+                if let Some(path) = self.try_write_image_on_guard.take() {
+                    self.image_write_was_blocked = fs::write(path, b"swapped-image").is_err();
+                }
+            }
             let is_source = self.source_proof.is_some()
                 && !argument(args, "--guard-path").ends_with("generated.png");
             return Ok(Output {
@@ -1287,4 +1294,85 @@ fn qualified_normal_bridge_preserves_existing_exact_generated_image_admission() 
     assert!(bridge::try_qualified_ask(f.root.path(), &mut denied, &registry, &args).is_err());
     assert!(denied.calls.is_empty());
     assert_eq!(denied.http_calls, 0);
+}
+
+#[test]
+fn qualified_dryrun_does_not_promote_or_require_attachment_qualification() {
+    let f = Fixture::new();
+    let mut args = f.ask();
+    args.cwd = Some("D:/repos/KaraokeMaker".into());
+    args.dry_run = true;
+    args.attach
+        .push(f.root.path().join("unread-unqualified-image.png"));
+    let mut fake = Fake {
+        source_proof: Some(
+            json!({"ok":true,"access_allowed":true,"client_resource":false,"classification_unverified":false}),
+        ),
+        ..Default::default()
+    };
+    assert!(bridge::try_qualified_ask(
+        f.root.path(),
+        &mut fake,
+        &f.root.path().join("missing-list.txt"),
+        &args
+    )
+    .unwrap()
+    .is_none());
+    assert_eq!(fake.qualification_calls, 0);
+    assert!(fake.calls.is_empty());
+    assert!(!f.root.path().join("conversation-bridge").exists());
+}
+
+#[cfg(windows)]
+#[test]
+fn ordinary_cli_fallthrough_keeps_source_lease_until_after_advice_consumption() {
+    let f = Fixture::new();
+    f.mode(r#"{"domain":"discord-conversation-mode-v1","enabled":false}"#);
+    let mut args = f.ask();
+    args.cwd = Some("D:/repos/KaraokeMaker".into());
+    let mut fake = Fake {
+        source_proof: Some(
+            json!({"ok":true,"access_allowed":true,"client_resource":false,"classification_unverified":false}),
+        ),
+        ..Default::default()
+    };
+    let held = bridge::qualify_ask_sources(
+        f.root.path(),
+        &mut fake,
+        &f.root.path().join("missing-list.txt"),
+        &args,
+    )
+    .unwrap();
+    assert!(bridge::try_ask(f.root.path(), &mut fake, &args)
+        .unwrap()
+        .is_none());
+    assert!(fs::write(&f.body, "changed before advice").is_err());
+    assert_eq!(
+        fs::read_to_string(&f.body).unwrap(),
+        "画面案を選んでください"
+    );
+    drop(held);
+    fs::write(&f.body, "released").unwrap();
+    assert!(fake.calls.is_empty());
+    assert_eq!(fake.http_calls, 0);
+}
+
+#[cfg(windows)]
+#[test]
+fn bridge_image_guard_and_snapshot_share_a_pinned_original_generation() {
+    let f = Fixture::new();
+    let image = f.root.path().join("generated.png");
+    let original = b"\x89PNG\r\n\x1a\noriginal-image";
+    fs::write(&image, original).unwrap();
+    let mut args = f.ask();
+    args.attach.push(image.clone());
+    let mut fake = Fake {
+        try_write_image_on_guard: Some(image.clone()),
+        ..Default::default()
+    };
+    bridge::try_ask(f.root.path(), &mut fake, &args).unwrap();
+    assert!(fake.image_write_was_blocked);
+    assert_eq!(fake.attachments[0], original);
+    assert_eq!(fs::read(image).unwrap(), original);
+    assert_eq!(fake.http_calls, 0);
 }

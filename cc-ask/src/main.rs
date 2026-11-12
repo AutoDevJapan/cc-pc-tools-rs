@@ -227,13 +227,20 @@ fn context(tick: bool) -> Result<Context> {
 fn run(command: Commands) -> Result<()> {
     // Check the original full text before config, lint/model calls, locks or Discord.
     let home = env_path("CC_ASK_HOME", "D:/CC/Tools/discord-ask");
-    let bridged = match &command {
-        Commands::Ask(args) => cc_ask::conversation_bridge::try_qualified_ask(
+    // Retain the same input namespace across bridge fallthrough, advice and
+    // ordinary command consumption, rather than releasing it at `None`.
+    let _ask_sources = if let Commands::Ask(args) = &command {
+        Some(cc_ask::conversation_bridge::qualify_ask_sources(
             &home,
             &mut RealEffects,
             &env_path("CC_ASK_CLIENT_PROJECTS", "D:/CC/Tools/client-projects.txt"),
             args,
-        )?,
+        )?)
+    } else {
+        None
+    };
+    let bridged = match &command {
+        Commands::Ask(args) => cc_ask::conversation_bridge::try_ask(&home, &mut RealEffects, args)?,
         Commands::Log {
             topic,
             text,

@@ -115,6 +115,24 @@ func TestIOSCompilerEnvironmentKeepsExistingAndUsesOnlyNativeMissingLocation(t *
 	}
 }
 
+func TestIOSCompilerCancellationDuringEnvironmentDoesNotStartChild(t *testing.T) {
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	environments, observations := 0, 0
+	cmd := filepath.Join(os.Getenv("SystemRoot"), "System32", "cmd.exe")
+	raw, err := iosCompilerCommandWithEnvironment(ctx, cmd, []string{"/d", "/c", "exit 0"}, func(uint32, uint32) {
+		observations++
+	}, func() ([]string, error) {
+		environments++
+		cancel()
+		return official3894Env(), nil
+	})
+	defer clear(raw)
+	if err == nil || len(raw) != 0 || environments != 1 || observations != 0 {
+		t.Fatalf("expired preparation started child: err=%v bytes=%d environments=%d observations=%d", err, len(raw), environments, observations)
+	}
+}
+
 func TestIOSCompilerNativeCommandContainsAndReapsGateChildren(t *testing.T) {
 	exe, err := os.Executable()
 	if err != nil {

@@ -70,7 +70,9 @@ func iosCompilerEnvironment(lookup func(string) (string, bool), roaming func() (
 func iosCompilerRoamingData() (string, error) {
 	id := syscall.GUID{Data1: 0x3eb685db, Data2: 0x65f9, Data3: 0x4cf6, Data4: [8]byte{0xa0, 0x3a, 0xe3, 0xef, 0x65, 0x72, 0x9f, 0x3d}}
 	var path *uint16
-	hr, _, _ := syscall.NewLazyDLL("shell32.dll").NewProc("SHGetKnownFolderPath").Call(uintptr(unsafe.Pointer(&id)), 0, 0, uintptr(unsafe.Pointer(&path)))
+	// Resolve the configured current-user path without probing a redirected
+	// network folder. The metadata consumer performs its own bounded I/O.
+	hr, _, _ := syscall.NewLazyDLL("shell32.dll").NewProc("SHGetKnownFolderPath").Call(uintptr(unsafe.Pointer(&id)), 0x4000, 0, uintptr(unsafe.Pointer(&path)))
 	if path != nil {
 		defer syscall.NewLazyDLL("ole32.dll").NewProc("CoTaskMemFree").Call(uintptr(unsafe.Pointer(path)))
 	}
@@ -89,6 +91,12 @@ func iosCompilerRoamingData() (string, error) {
 }
 
 func iosCompilerCommandObserved(ctx context.Context, path string, args []string, observe func(uint32, uint32)) ([]byte, error) {
+	return iosCompilerCommandWithEnvironment(ctx, path, args, observe, func() ([]string, error) {
+		return iosCompilerEnvironment(os.LookupEnv, iosCompilerRoamingData)
+	})
+}
+
+func iosCompilerCommandWithEnvironment(ctx context.Context, path string, args []string, observe func(uint32, uint32), environment func() ([]string, error)) ([]byte, error) {
 	if ctx.Err() != nil || !filepath.IsAbs(path) {
 		return nil, errIOSCompiler
 	}
@@ -166,8 +174,8 @@ func iosCompilerCommandObserved(ctx context.Context, path string, args []string,
 	if err != nil {
 		return nil, errIOSCompiler
 	}
-	env, err := iosCompilerEnvironment(os.LookupEnv, iosCompilerRoamingData)
-	if err != nil {
+	env, err := environment()
+	if err != nil || ctx.Err() != nil {
 		return nil, errIOSCompiler
 	}
 	sort.Slice(env, func(i, j int) bool { return strings.ToUpper(env[i]) < strings.ToUpper(env[j]) })
@@ -180,6 +188,9 @@ func iosCompilerCommandObserved(ctx context.Context, path string, args []string,
 	defer clear(block)
 	si := iosCompilerStartupEx{StartupInfo: syscall.StartupInfo{Cb: uint32(unsafe.Sizeof(iosCompilerStartupEx{})), Flags: 0x100, StdInput: handles[0], StdOutput: handles[1], StdErr: handles[0]}, Attributes: attr}
 	var pi syscall.ProcessInformation
+	if ctx.Err() != nil {
+		return nil, errIOSCompiler
+	}
 	ok, _, _ = iosCompilerKernel.NewProc("CreateProcessW").Call(uintptr(unsafe.Pointer(application)), uintptr(unsafe.Pointer(&line[0])), 0, 0, 1, 0x08000000|0x80000|0x400, uintptr(unsafe.Pointer(&block[0])), uintptr(unsafe.Pointer(dir)), uintptr(unsafe.Pointer(&si)), uintptr(unsafe.Pointer(&pi)))
 	runtime.KeepAlive(handles)
 	runtime.KeepAlive(jobs)

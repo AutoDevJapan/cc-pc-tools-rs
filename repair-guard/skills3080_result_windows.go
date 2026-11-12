@@ -32,21 +32,24 @@ type skillsAdmission struct {
 
 type skillsTask struct {
 	// Derived from the original canonical JSON, never caller request fields.
-	assignmentKeyNull    bool
-	assignmentJob        string
-	assignmentGeneration uint64
-	ID                   int      `json:"id"`
-	Project              string   `json:"project"`
-	Status               string   `json:"status"`
-	Spec                 string   `json:"spec"`
-	Jobs                 []string `json:"jobs"`
-	OwnerStopped         bool     `json:"owner_stopped"`
-	Postponed            bool     `json:"owner_postponement_recorded"`
-	StopKind             string   `json:"stop_kind"`
-	OwnerQuestion        any      `json:"owner_question_wait"`
-	DecisionWait         any      `json:"decision_wait"`
-	WaitReady            any      `json:"wait_ready"`
-	Scheduler            struct {
+	assignmentKeyNull          bool
+	assignmentJob              string
+	assignmentGeneration       uint64
+	sourceReadyGeneration      uint64
+	sourceReadyGenerationKnown bool
+	ID                         int      `json:"id"`
+	Project                    string   `json:"project"`
+	Status                     string   `json:"status"`
+	Spec                       string   `json:"spec"`
+	Needs                      []string `json:"needs"`
+	Jobs                       []string `json:"jobs"`
+	OwnerStopped               bool     `json:"owner_stopped"`
+	Postponed                  bool     `json:"owner_postponement_recorded"`
+	StopKind                   string   `json:"stop_kind"`
+	OwnerQuestion              any      `json:"owner_question_wait"`
+	DecisionWait               any      `json:"decision_wait"`
+	WaitReady                  any      `json:"wait_ready"`
+	Scheduler                  struct {
 		Job           string           `json:"job"`
 		LastJob       string           `json:"last_job"`
 		Worktree      string           `json:"worktree"`
@@ -171,6 +174,9 @@ func skillsRegistryProjectionWith(input io.Reader, ids []int, project func([]byt
 					}
 					if (row.ID == 3080 || row.ID == 3686) && !skillsProjectActorAssignment(metadata, &row) {
 						return out, false
+					}
+					if row.Subwork.Parent == 3080 && row.Subwork.Kind == "review" {
+						row.sourceReadyGeneration, row.sourceReadyGenerationKnown = skillsSourceReadyGeneration(metadata)
 					}
 					out.Tasks[id.ID] = row
 				}

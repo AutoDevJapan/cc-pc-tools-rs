@@ -135,7 +135,7 @@ func skillsRuntimeSourceRunHidden(command string, args []string, cwd string, env
 // explicit null with the exact task is a known non-launch; malformed or absent
 // launch information never means that a new launch is safe to retry.
 func skillsSourceDispatchLaunch(raw []byte, task int) (object, string, string) {
-	if task <= 0 || !skillsNativeUniqueJSON(raw) || !skillsCreationHeaderKeys(raw, "id", "launched", "active", "busy", "status", "phase", "priority_wait", "allowance_now", "preparation_reason") {
+	if task <= 0 || !skillsNativeUniqueJSON(raw) || !skillsCreationHeaderKeys(raw, "id", "launched", "active", "busy", "busy_resources", "status", "phase", "priority_wait", "allowance_now", "preparation_reason") {
 		return nil, "", "invalid_response"
 	}
 	v, ok := conversationJSON(raw)
@@ -186,7 +186,7 @@ func skillsSourceDispatchAdmission(raw []byte, task int) object {
 	return skillsSourceDispatchAdmissionValue(raw, v, outcome, task)
 }
 
-func skillsSourceDispatchAdmissionValue(raw []byte, v object, outcome string, task int) object {
+func skillsSourceDispatchAdmissionValue(raw []byte, v object, outcome string, task int, needs ...string) object {
 	d := object{"outcome": "invalid_response", "stdout_bytes": uint64(len(raw)), "stdout_sha256": hashBytes(raw), "stderr_bytes": uint64(0), "stderr_sha256": hashBytes(nil), "exit_code": 0}
 	if outcome == "invalid_response" {
 		return d
@@ -209,7 +209,9 @@ func skillsSourceDispatchAdmissionValue(raw []byte, v object, outcome string, ta
 	switch {
 	case v["active"] == true:
 		reason = "active"
-	case v["busy"] == true:
+	case d["status"] != nil && d["status"] != "todo":
+		reason = "status_not_todo"
+	case v["busy"] == true || skillsSourceBusyNeeds(v["busy_resources"], needs):
 		reason = "busy"
 	case conversationNumber(v["priority_wait"]) == uint64(task):
 		reason = "priority_wait"
@@ -217,11 +219,30 @@ func skillsSourceDispatchAdmissionValue(raw []byte, v object, outcome string, ta
 		reason, d["preparation_reason"] = "preparation", v["preparation_reason"]
 	case v["allowance_now"] == json.Number("0"):
 		reason = "capacity"
-	case d["status"] != nil && d["status"] != "todo":
-		reason = "status_not_todo"
 	}
 	d["admission_reason"] = reason
 	return d
+}
+
+func skillsSourceBusyNeeds(value any, needs []string) bool {
+	resources, ok := value.([]any)
+	if !ok {
+		return false
+	}
+	for _, raw := range resources {
+		if _, ok := raw.(string); !ok {
+			return false
+		}
+	}
+	for _, raw := range resources {
+		resource := raw.(string)
+		for _, need := range needs {
+			if resource == need {
+				return true
+			}
+		}
+	}
+	return false
 }
 
 func skillsSourcePreparationReason(s string) bool {
@@ -290,11 +311,11 @@ func skillsSourceDispatchDiagnostic(value any) (object, bool) {
 	return out, true
 }
 
-func skillsRuntimeSourceDispatch(result skillsSourceCommandResult, task int, requestSHA, nonce string) object {
+func skillsRuntimeSourceDispatch(result skillsSourceCommandResult, task int, requestSHA, nonce string, needs ...string) object {
 	if !result.ok {
 		return object{"qualified": false, "reason": "source", "failure_stage": "source_normal_dispatch", "normal_dispatch": result.diagnostic, "data_access_granted": false}
 	}
-	out := skillsRuntimeSourceDispatchReceipt(result.stdout, task, requestSHA, nonce)
+	out := skillsRuntimeSourceDispatchReceipt(result.stdout, task, requestSHA, nonce, needs...)
 	d := obj(out["normal_dispatch"])
 	for _, key := range []string{"stdout_bytes", "stdout_sha256", "stderr_bytes", "stderr_sha256", "exit_code"} {
 		if v, exists := result.diagnostic[key]; exists {

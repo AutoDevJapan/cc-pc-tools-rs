@@ -1,0 +1,10 @@
+{
+  "bytes": 13882368,
+  "candidate_generated": false,
+  "data_access_granted": false,
+  "normal_deployment_pr": 668,
+  "same_buffer_verified": true,
+  "schema": 1,
+  "sha256": "4ba236f463cfd6e657399c50d2a690750cf278f49ddc18113872ad32b2edd776",
+  "source_head": "046b21597bc3c0510bc407557a4a2c515b15f6ab"
+}

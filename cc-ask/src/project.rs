@@ -50,6 +50,7 @@ pub(crate) fn lease_source(effects: &mut dyn Effects, path: &Path) -> Result<Que
     let normal =
         std::path::PathBuf::from(crate::resume::strip_verbatim(&resolved.to_string_lossy()));
     qualify_source(effects, &normal)?;
+    #[cfg(windows)]
     let mut files = Vec::new();
     #[cfg(windows)]
     {
@@ -88,7 +89,8 @@ pub(crate) fn lease_source(effects: &mut dyn Effects, path: &Path) -> Result<Que
         files.push(file);
     }
     #[cfg(not(windows))]
-    files.push(std::fs::File::open(&resolved).map_err(|_| "question source identity unavailable")?);
+    let files =
+        vec![std::fs::File::open(&resolved).map_err(|_| "question source identity unavailable")?];
     // Windows handles now exclude file writes/deletes and parent replacement;
     // reclassify that still-named object before any caller consumes its bytes.
     qualify_source(effects, path)?;

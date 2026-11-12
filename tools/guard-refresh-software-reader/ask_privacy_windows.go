@@ -38,10 +38,10 @@ type askSoftwarePlan struct {
 // These identify the separately reviewed source and compiled distribution.
 var compiledAskPlan = askSoftwarePlan{
 	Candidate: "C:/Users/makhmeto/Documents/Codex/2026-11-07/ika-x20/work/4431-ui-tools/codex-owned-f60f3742a1933562ec75aa5c8eb05d72/discord_ask-privacy-3f04.exe",
-	Proof:     "D:/CC/Tools/codex-jobs/fourbros4431-ask-privacy-3f04-candidate-proof.json",
+	Proof:     "D:/CC/Tools/codex-jobs/fourbros4431-ask-privacy-3f04-candidate-proof-v2.json",
 	Source:    "3f04e69df159bb4f0df1fe80af3b92c611b9f30a",
 	SHA:       "6d22dc15797c821794a56e9d05c432b4a1694369e6d97628925580ec42c29a28",
-	ProofSHA:  "c60514f2d5281818bdd8407d4aac535a02e312ad05d2deb86918bd394f15b05e",
+	ProofSHA:  "6870872ecb63c64b4021762383f711d82f06500c52d61a46a4f7a4b8180a84e8",
 	Bytes:     13416448,
 }
 

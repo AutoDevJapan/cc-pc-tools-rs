@@ -106,7 +106,7 @@ pub(crate) fn project(
                 _ => "unknown",
             };
             let mut signals = signals;
-            if matches!(os_error, Some(5 | 13)) && !signals.contains(&"permission") {
+            if os_error == Some(5) && !signals.contains(&"permission") {
                 let at = signals
                     .iter()
                     .position(|v| *v == "database")
@@ -472,6 +472,27 @@ mod tests {
                 ));
             }
         }
+    }
+    #[test]
+    fn windows_invalid_data_code_is_not_permission_denial() {
+        let job = json!({"id":FOUR_JOB,"status":"failed","resume_session":FOUR_SESSION,"launch_key":FOUR_LAUNCH});
+        let p = project(
+            &job,
+            FOUR_JOB,
+            "fourbros-1245-launch-failure",
+            None,
+            None,
+            b"os error 13",
+        )
+        .unwrap();
+        assert_eq!(p["osErrorCode"], 13);
+        assert!(
+            !p["diagnosticSignals"]
+                .as_array()
+                .unwrap()
+                .iter()
+                .any(|v| v == "permission")
+        );
     }
     #[test]
     fn stored_projection_rejects_duplicate_keys_before_selecting_identity() {

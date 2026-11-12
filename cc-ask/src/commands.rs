@@ -106,7 +106,8 @@ pub fn cmd_ask(ctx: &mut Context, args: &AskArgs) -> Result<Value> {
     if !args.dry_run {
         crate::state_work::recovery_guard(ctx)?;
     }
-    let (raw_body, embedded) = crate::decision_identity::extract(&read_text(&args.body_file)?)?;
+    let (raw_body, embedded) =
+        crate::decision_identity::extract(&crate::project::question_text(&args.body_file)?)?;
     if args.decision_file.is_some() && embedded.is_some() {
         return Err("判断の記録は1つだけ指定してください".into());
     }

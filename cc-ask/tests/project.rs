@@ -340,6 +340,126 @@ fn missing_registry_qualified_routine_question_keeps_gate_before_config_or_http(
 }
 
 #[test]
+fn qualified_input_limit_rejects_body_and_decision_before_child_or_post() {
+    for decision_too_large in [false, true] {
+        let mut h = Harness::new();
+        std::fs::remove_file(&h.ctx.client_projects).unwrap();
+        let body = h.root.path().join("body.md");
+        let decision = h.root.path().join("decision.json");
+        std::fs::write(
+            &body,
+            if decision_too_large {
+                "評価してください。"
+            } else {
+                "x"
+            },
+        )
+        .unwrap();
+        let oversized = if decision_too_large { &decision } else { &body };
+        let file = std::fs::File::create(oversized).unwrap();
+        file.set_len((1 << 20) + 1).unwrap();
+        drop(file);
+        let result = qualify_question_sources(
+            &mut *h.ctx.effects,
+            &h.ctx.client_projects,
+            &AskArgs {
+                title: "評価".into(),
+                body_file: body,
+                decision_file: decision_too_large.then_some(decision),
+                cwd: Some("D:/repos/KaraokeMaker".into()),
+                ..Default::default()
+            },
+        );
+        assert!(matches!(result,Err(error) if error.contains("1 MiB")));
+        assert!(h.fake.borrow().http_calls.is_empty());
+        assert!(h.fake.borrow().launches.is_empty());
+    }
+}
+
+#[test]
+fn explicit_empty_cwd_matches_normal_current_directory_fallback() {
+    struct CurrentRoot(common::SharedFake);
+    impl cc_ask::core::Effects for CurrentRoot {
+        fn http(
+            &mut self,
+            method: &str,
+            url: &str,
+            body: Option<&serde_json::Value>,
+            discord: bool,
+        ) -> cc_ask::core::Result<serde_json::Value> {
+            self.0.http(method, url, body, discord)
+        }
+        fn run(
+            &mut self,
+            args: &[String],
+            timeout: u64,
+        ) -> cc_ask::core::Result<cc_ask::core::Output> {
+            if args.first().is_some_and(|arg| arg == "git") {
+                assert!(!args[2].is_empty());
+                return Ok(cc_ask::core::Output {
+                    stdout: "D:/repos/KaraokeMaker\n".into(),
+                    ..Default::default()
+                });
+            }
+            self.0.run(args, timeout)
+        }
+    }
+    let mut h = Harness::new();
+    std::fs::remove_file(&h.ctx.client_projects).unwrap();
+    h.ctx.effects = Box::new(CurrentRoot(common::SharedFake(h.fake.clone())));
+    let body = h.root.path().join("body.md");
+    std::fs::write(&body, "評価してください。").unwrap();
+    qualify_question_sources(
+        &mut *h.ctx.effects,
+        &h.ctx.client_projects,
+        &AskArgs {
+            title: "評価".into(),
+            body_file: body,
+            cwd: Some(String::new()),
+            ..Default::default()
+        },
+    )
+    .unwrap();
+    assert!(h.fake.borrow().http_calls.is_empty());
+}
+
+#[cfg(windows)]
+#[test]
+fn qualified_input_rejects_original_parent_junction_before_consumption() {
+    let mut h = Harness::new();
+    std::fs::remove_file(&h.ctx.client_projects).unwrap();
+    let destination = h.root.path().join("owned-target");
+    std::fs::create_dir(&destination).unwrap();
+    std::fs::write(destination.join("body.md"), "合成入力").unwrap();
+    let link = h.root.path().join("source-link");
+    let mut cmd = Command::new("cmd.exe");
+    use std::os::windows::process::CommandExt;
+    cmd.creation_flags(0x08000000)
+        .args(["/d", "/c", "mklink", "/J"])
+        .arg(&link)
+        .arg(&destination);
+    let output = cmd.output().unwrap();
+    assert!(output.status.success());
+    let result = qualify_question_sources(
+        &mut *h.ctx.effects,
+        &h.ctx.client_projects,
+        &AskArgs {
+            title: "評価".into(),
+            body_file: link.join("body.md"),
+            cwd: Some("D:/repos/KaraokeMaker".into()),
+            ..Default::default()
+        },
+    );
+    assert!(matches!(result,Err(error) if error.contains("identity")));
+    std::fs::remove_dir(&link).unwrap();
+    assert_eq!(
+        std::fs::read_to_string(destination.join("body.md")).unwrap(),
+        "合成入力"
+    );
+    assert!(h.fake.borrow().http_calls.is_empty());
+}
+
+#[test]
 fn existing_unreadable_names_source_is_not_treated_as_missing() {
     let h = Harness::new();
     assert!(ProjectNames::load(h.root.path()).is_err());

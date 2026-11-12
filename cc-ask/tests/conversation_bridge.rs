@@ -288,9 +288,11 @@ impl Effects for Fake {
         {
             assert_eq!(timeout, 10);
             self.guard_calls.push(argument(args, "--guard-path").into());
+            let is_source = self.source_proof.is_some()
+                && !argument(args, "--guard-path").ends_with("generated.png");
             return Ok(Output {
                 code: 0,
-                stdout: self.source_proof.clone().or_else(|| self.guard_image_proof.clone()).unwrap_or_else(||
+                stdout: (if is_source {self.source_proof.clone()} else {self.guard_image_proof.clone()}).unwrap_or_else(||
                     json!({"client_resource":self.deny_images,"classification_unverified":self.unverified_images}))
                     .to_string(),
                 stderr: String::new(),
@@ -1248,4 +1250,41 @@ fn conversation_bridge_owner_rule_default_still_requires_question_specific_proof
     )
     .is_err());
     assert_eq!(log.qualification_calls, 0);
+}
+
+#[test]
+fn qualified_normal_bridge_preserves_existing_exact_generated_image_admission() {
+    let f = Fixture::new();
+    let image = f.root.path().join("generated.png");
+    fs::write(&image, b"\x89PNG\r\n\x1a\nsynthetic-image").unwrap();
+    let mut decision: Value = serde_json::from_slice(&fs::read(&f.decision).unwrap()).unwrap();
+    decision["owner"] = json!("100");
+    decision["guild"] = json!("101");
+    decision["parent"] = json!("102");
+    fs::write(&f.decision, decision.to_string()).unwrap();
+    let mut args = f.ask();
+    args.cwd = Some("D:/repos/KaraokeMaker".into());
+    args.attach.push(image);
+    let allow = json!({"ok":true,"access_allowed":true,"client_resource":false,"classification_unverified":false});
+    let unattributed = json!({"client_resource":true,"classification_unverified":false,"access_allowed":false,"protection_status":"protected","protection_categories":["client_project"],"classification_policy":"owner-client-rule-20261027","classification_basis":"owner_rule_unattributed_location"});
+    let mut fake = Fake {
+        source_proof: Some(allow.clone()),
+        guard_image_proof: Some(unattributed.clone()),
+        qualify_images: true,
+        ..Default::default()
+    };
+    let registry = f.root.path().join("missing-list.txt");
+    bridge::try_qualified_ask(f.root.path(), &mut fake, &registry, &args).unwrap();
+    assert_eq!(fake.qualification_calls, 1);
+    assert_eq!(fake.attachments.len(), 1);
+    let mut denied = Fake {
+        source_proof: Some(allow),
+        guard_image_proof: Some(unattributed),
+        qualify_images: true,
+        mismatched_qualification: true,
+        ..Default::default()
+    };
+    assert!(bridge::try_qualified_ask(f.root.path(), &mut denied, &registry, &args).is_err());
+    assert!(denied.calls.is_empty());
+    assert_eq!(denied.http_calls, 0);
 }

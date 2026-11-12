@@ -638,7 +638,15 @@ pub fn try_qualified_ask(
     registry: &Path,
     args: &AskArgs,
 ) -> Result<Option<Value>> {
-    let _sources = crate::project::qualify_question_sources(effects, registry, args)?;
+    // Generated images retain their existing exact question-purpose admission.
+    // Ordinary body/decision sources never inherit that separate qualification.
+    let ordinary_attachments = args.dry_run || !enabled(home)?;
+    let _sources = crate::project::qualify_question_sources_with(
+        effects,
+        registry,
+        args,
+        ordinary_attachments,
+    )?;
     try_ask(home, effects, args)
 }
 

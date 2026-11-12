@@ -43,6 +43,28 @@ pub struct QuestionSourceLease {
     files: Vec<std::fs::File>,
 }
 
+pub(crate) fn question_text(path: &Path) -> Result<String> {
+    use std::io::Read;
+    const LIMIT: u64 = 1 << 20;
+    let file = std::fs::File::open(path).map_err(|_| "question source read unavailable")?;
+    let meta = file
+        .metadata()
+        .map_err(|_| "question source read unavailable")?;
+    if !meta.is_file() || meta.len() > LIMIT {
+        return Err("question input exceeds 1 MiB".into());
+    }
+    let mut bytes = Vec::with_capacity(meta.len() as usize);
+    file.take(LIMIT + 1)
+        .read_to_end(&mut bytes)
+        .map_err(|_| "question source read unavailable")?;
+    if bytes.len() as u64 > LIMIT {
+        return Err("question input exceeds 1 MiB".into());
+    }
+    String::from_utf8(bytes)
+        .map(|text| text.replace("\r\n", "\n").replace('\r', "\n"))
+        .map_err(|_| "question source must be UTF-8".into())
+}
+
 pub(crate) fn lease_source(effects: &mut dyn Effects, path: &Path) -> Result<QuestionSourceLease> {
     qualify_source(effects, path)?;
     let resolved =
@@ -55,7 +77,11 @@ pub(crate) fn lease_source(effects: &mut dyn Effects, path: &Path) -> Result<Que
     #[cfg(windows)]
     {
         use std::os::windows::fs::{MetadataExt, OpenOptionsExt};
-        let parents: Vec<_> = resolved.ancestors().skip(1).collect();
+        // Pin the original namespace, including every parent component. A
+        // canonical target lease alone does not retain a mutable source link.
+        let absolute =
+            std::path::absolute(path).map_err(|_| "question source identity unavailable")?;
+        let parents: Vec<_> = absolute.ancestors().skip(1).collect();
         for parent in parents.into_iter().rev() {
             let file = std::fs::OpenOptions::new()
                 .access_mode(0x80)
@@ -78,13 +104,18 @@ pub(crate) fn lease_source(effects: &mut dyn Effects, path: &Path) -> Result<Que
             .read(true)
             .share_mode(1)
             .custom_flags(0x00200000)
-            .open(&resolved)
+            .open(&absolute)
             .map_err(|_| "question source identity unavailable")?;
         let meta = file
             .metadata()
             .map_err(|_| "question source identity unavailable")?;
         if !meta.is_file() || meta.file_attributes() & 0x400 != 0 {
             return Err("question source identity unavailable".into());
+        }
+        if std::fs::canonicalize(&absolute).map_err(|_| "question source identity unavailable")?
+            != resolved
+        {
+            return Err("question source identity changed".into());
         }
         files.push(file);
     }
@@ -103,14 +134,28 @@ pub fn qualify_question_sources(
     registry: &Path,
     args: &crate::commands::AskArgs,
 ) -> Result<QuestionSourceLease> {
+    qualify_question_sources_with(effects, registry, args, true)
+}
+
+pub(crate) fn qualify_question_sources_with(
+    effects: &mut dyn Effects,
+    registry: &Path,
+    args: &crate::commands::AskArgs,
+    ordinary_attachments: bool,
+) -> Result<QuestionSourceLease> {
     let names = ProjectNames::load_for_owner_questions(registry)?;
     if !names.catalog_only() {
-        crate::ask_gate::enforce(&args.title, &read_text(&args.body_file)?, args.owner_only)?;
+        crate::ask_gate::enforce(
+            &args.title,
+            &question_text(&args.body_file)?,
+            args.owner_only,
+        )?;
         return Ok(QuestionSourceLease { files: Vec::new() });
     }
     let cwd = args
         .cwd
         .clone()
+        .filter(|cwd| !cwd.is_empty())
         .map(std::path::PathBuf::from)
         .map(Ok)
         .unwrap_or_else(std::env::current_dir)
@@ -119,7 +164,7 @@ pub fn qualify_question_sources(
     let mut held = QuestionSourceLease { files: Vec::new() };
     for path in std::iter::once(&args.body_file)
         .chain(args.decision_file.iter())
-        .chain(&args.attach)
+        .chain(args.attach.iter().filter(|_| ordinary_attachments))
     {
         held.files.extend(lease_source(effects, path)?.files);
     }
@@ -147,14 +192,14 @@ pub fn qualify_question_sources(
     // Classifying a source never asserts that arbitrary prose is public. Keep
     // the sender's credential checks, and reject rather than rewrite a bound
     // question when catalog-protected text occurs in its original inputs.
-    let body = read_text(&args.body_file)?;
+    let body = question_text(&args.body_file)?;
     crate::ask_gate::enforce(&args.title, &body, args.owner_only)?;
     for text in std::iter::once(args.title.clone())
         .chain(std::iter::once(body))
         .chain(
             args.decision_file
                 .iter()
-                .map(|path| read_text(path))
+                .map(|path| question_text(path))
                 .collect::<Result<Vec<_>>>()?,
         )
     {

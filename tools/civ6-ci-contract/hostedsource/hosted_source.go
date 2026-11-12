@@ -19,12 +19,14 @@ import (
 const OldHead = "2bd3a366f8974ba54df83927102aa5bdad3983e5"
 const Main = "f0e993f8dd486620d9b41471456fd106b12c700b"
 const MainTree = "08f5d09ac07e071cb773fbd7d8030c1f2b122e1c"
+const InitialHostedHead = "daff9d61edfb9a54f07288bcaf8b2ece6c3e82a5"
+const InitialHostedTree = "f535804473b261a3025747ff62adafafd198c6e1"
 const Generation = "pr149-hosted-main-f0e993f8"
 const AssetTestPath = "tools/civ6-assets-rs/tests/cli_contract.rs"
 const AssetTestBlob = "18aca67c4a635d8739abfa5a2dc92d21835f8488"
 
 const checkout = "${{ github.event.pull_request.head.sha || github.sha }}"
-const concurrency = "concurrency:\n  group: ${{ github.workflow }}-${{ github.event_name }}-${{ github.event.pull_request.number || github.run_id }}\n  cancel-in-progress: ${{ github.event_name == 'pull_request' }}\n\n"
+const concurrency = "concurrency:\n  group: ${{ github.workflow }}-pr-head-v2-${{ github.event_name == 'pull_request' && github.run_attempt == 1 && github.event.pull_request.number || github.run_id }}\n  cancel-in-progress: ${{ github.event_name == 'pull_request' && github.run_attempt == 1 }}\n\n"
 const hashStep = `      - name: Record release binary hashes
         shell: pwsh
         run: |
@@ -133,6 +135,7 @@ type Commit struct {
 type Entry struct{ Path, Mode, Type, SHA string }
 type Snapshot struct {
 	Old, Main, Candidate      Commit
+	InitialHosted             Commit
 	MainTree, CandidateTree   []Entry
 	MainFiles, CandidateFiles map[string][]byte
 }
@@ -160,8 +163,12 @@ func Verify(s Snapshot) error {
 		return errors.New("fixed main identity differs")
 	}
 	c := s.Candidate
-	if !validSHA(c.SHA) || !validSHA(c.Tree) || c.SHA == OldHead || c.SHA == Main || len(c.Parents) != 2 || c.Parents[0] != OldHead || c.Parents[1] != Main {
-		return errors.New("exact old-tip/current-main merge parents required")
+	i := s.InitialHosted
+	if i.SHA != InitialHostedHead || i.Tree != InitialHostedTree || len(i.Parents) != 2 || i.Parents[0] != OldHead || i.Parents[1] != Main {
+		return errors.New("fixed initial hosted merge required")
+	}
+	if !validSHA(c.SHA) || !validSHA(c.Tree) || c.SHA == OldHead || c.SHA == Main || len(c.Parents) != 1 || c.Parents[0] != InitialHostedHead {
+		return errors.New("exact initial-hosted continuation parent required")
 	}
 	expected := map[string]string{AssetTestPath: AssetTestBlob}
 	for _, w := range workflowPins {

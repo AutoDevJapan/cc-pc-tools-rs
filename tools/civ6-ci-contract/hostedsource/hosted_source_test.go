@@ -54,6 +54,17 @@ func TestCurrentMainKeepsLinuxCoverage(t *testing.T) {
 		}
 	}
 }
+
+func TestOnlyInitialPRRunsCanCancelThePRHeadGroup(t *testing.T) {
+	_, proposed := fixtures(t)
+	const group = "group: ${{ github.workflow }}-pr-head-v2-${{ github.event_name == 'pull_request' && github.run_attempt == 1 && github.event.pull_request.number || github.run_id }}"
+	const cancel = "cancel-in-progress: ${{ github.event_name == 'pull_request' && github.run_attempt == 1 }}"
+	for file, b := range proposed {
+		if !strings.Contains(string(b), group) || !strings.Contains(string(b), cancel) {
+			t.Errorf("%s lets an old-head rerun cancel a newer PR run", file)
+		}
+	}
+}
 func TestRejectChangedMainAndInvalidWorkflow(t *testing.T) {
 	for _, w := range Workflows() {
 		b, e := os.ReadFile(filepath.Join("testdata", filepath.Base(w.Path)))
@@ -76,7 +87,7 @@ func sourceFixture(t *testing.T) Snapshot {
 	t.Helper()
 	a, b := fixtures(t)
 	s := Snapshot{Old: Commit{OldHead, "a4e37a064e0f2ea316d0f15d9aaf710abf9b65f6", []string{"f3e26f45682ac04b8a9bf07821ce5b96d83ce012"}},
-		Main: Commit{Main, MainTree, nil}, Candidate: Commit{strings.Repeat("a", 40), strings.Repeat("b", 40), []string{OldHead, Main}}, MainFiles: a, CandidateFiles: b}
+		Main: Commit{Main, MainTree, nil}, InitialHosted: Commit{InitialHostedHead, InitialHostedTree, []string{OldHead, Main}}, Candidate: Commit{strings.Repeat("a", 40), strings.Repeat("b", 40), []string{InitialHostedHead}}, MainFiles: a, CandidateFiles: b}
 	for _, w := range Workflows() {
 		s.MainTree = append(s.MainTree, Entry{w.Path, "100644", "blob", Blob(a[w.Path])})
 		s.CandidateTree = append(s.CandidateTree, Entry{w.Path, "100644", "blob", Blob(b[w.Path])})

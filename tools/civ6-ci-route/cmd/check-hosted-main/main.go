@@ -100,6 +100,9 @@ func observeWith(ctx context.Context, root string, read sourceRead) (hostedsourc
 	if s.Main, e = readCommit(ctx, root, hostedsource.Main, read); e != nil {
 		return s, e
 	}
+	if s.InitialHosted, e = readCommit(ctx, root, hostedsource.InitialHostedHead, read); e != nil {
+		return s, e
+	}
 	if s.Candidate, e = readCommit(ctx, root, "HEAD", read); e != nil {
 		return s, e
 	}

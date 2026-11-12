@@ -163,6 +163,15 @@ pub fn advise(effects: &mut dyn Effects, text: &str) {
     }
 }
 
+/// The normal CLI advice consumer shares the bounded regular source reader.
+/// Invalid optional advice remains non-blocking and cannot open a FIFO.
+pub fn advise_body(effects: &mut dyn Effects, text: &str, path: Option<&std::path::Path>) {
+    let body = path
+        .and_then(|p| crate::project::question_text(p).ok())
+        .unwrap_or_default();
+    advise(effects, &format!("{text}\n{body}"));
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

@@ -176,10 +176,7 @@ enum Commands {
 
 /// Owner posts get the phrasing advice on stderr first; the post is never blocked.
 fn advise(ctx: &mut Context, text: &str, body_file: Option<&std::path::Path>) {
-    let body = body_file
-        .and_then(|p| std::fs::read_to_string(p).ok())
-        .unwrap_or_default();
-    cc_ask::ja_check::advise(ctx.effects.as_mut(), &format!("{text}\n{body}"));
+    cc_ask::ja_check::advise_body(ctx.effects.as_mut(), text, body_file);
 }
 
 fn env_path(key: &str, default: &str) -> PathBuf {
@@ -365,7 +362,7 @@ fn run(command: Commands) -> Result<()> {
     }
     if let Commands::Lint { text, body_file } = &command {
         let body = match body_file {
-            Some(p) => std::fs::read_to_string(p).map_err(|e| format!("OSError: {e}"))?,
+            Some(p) => cc_ask::project::question_text(p)?,
             None => String::new(),
         };
         let found = cc_ask::ja_check::check(&mut RealEffects, &format!("{text}\n{body}"));

@@ -50,7 +50,7 @@ pub fn enabled(home: &Path) -> Result<bool> {
 }
 
 fn read_bounded(path: &Path, limit: u64) -> Result<Vec<u8>> {
-    let file = fs::File::open(path).map_err(|_| INVALID_INPUT)?;
+    let file = crate::project::open_regular_source(path).map_err(|_| INVALID_INPUT)?;
     let info = file.metadata().map_err(|_| INVALID_INPUT)?;
     if !info.is_file() || info.len() > limit {
         return Err(INVALID_INPUT.into());
@@ -263,7 +263,7 @@ fn attachments(
         } else {
             return Err("添付元の保護範囲を確認できません。画像は送信していません".into());
         };
-        let input = fs::File::open(&source).map_err(|_| INVALID_INPUT)?;
+        let input = crate::project::open_regular_source(&source).map_err(|_| INVALID_INPUT)?;
         let info = input.metadata().map_err(|_| INVALID_INPUT)?;
         if !info.is_file() || info.len() != expected_size || info.len() > IMAGE_LIMIT {
             return Err(INVALID_INPUT.into());
@@ -356,7 +356,7 @@ fn install(file: tempfile::NamedTempFile, path: &Path, expected: &str, size: u64
             if !info.is_file() || info.len() != size {
                 return Err(SAVE_FAILED.into());
             }
-            let mut input = fs::File::open(path)
+            let mut input = crate::project::open_regular_source(path)
                 .map_err(|_| SAVE_FAILED)?
                 .take(size.checked_add(1).ok_or(SAVE_FAILED)?);
             let mut digest = Sha256::new();

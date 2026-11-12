@@ -87,6 +87,10 @@ struct Fake {
     source_proof: Option<Value>,
     try_write_image_on_guard: Option<PathBuf>,
     image_write_was_blocked: bool,
+    #[cfg(unix)]
+    replace_with_fifo_on_guard: Option<PathBuf>,
+    #[cfg(unix)]
+    replace_guard_count: usize,
 }
 
 fn argument<'a>(args: &'a [String], key: &str) -> &'a str {
@@ -290,6 +294,19 @@ impl Effects for Fake {
         {
             assert_eq!(timeout, 10);
             self.guard_calls.push(argument(args, "--guard-path").into());
+            #[cfg(unix)]
+            if let Some(path) = self.replace_with_fifo_on_guard.as_ref() {
+                if Path::new(argument(args, "--guard-path")) == path {
+                    self.replace_guard_count += 1;
+                    if self.replace_guard_count == 3 {
+                        use std::os::unix::ffi::OsStrExt;
+                        let path = self.replace_with_fifo_on_guard.take().unwrap();
+                        fs::rename(&path, path.with_extension("held-original")).unwrap();
+                        let name = std::ffi::CString::new(path.as_os_str().as_bytes()).unwrap();
+                        assert_eq!(unsafe { libc::mkfifo(name.as_ptr(), 0o600) }, 0);
+                    }
+                }
+            }
             if argument(args, "--guard-path").ends_with("generated.png") {
                 if let Some(path) = self.try_write_image_on_guard.take() {
                     self.image_write_was_blocked = fs::write(path, b"swapped-image").is_err();
@@ -1375,4 +1392,109 @@ fn bridge_image_guard_and_snapshot_share_a_pinned_original_generation() {
     assert_eq!(fake.attachments[0], original);
     assert_eq!(fs::read(image).unwrap(), original);
     assert_eq!(fake.http_calls, 0);
+}
+
+#[cfg(unix)]
+#[test]
+fn bridge_fifo_without_writer_is_rejected_before_guard_snapshot_or_child() {
+    const CHILD: &str = "CC_ASK_OWNED_FIFO_TEST";
+    if std::env::var_os(CHILD).is_none() {
+        let test_name = if module_path!().ends_with("unix_bridge_acceptance") {
+            "unix_bridge_acceptance::bridge_fifo_without_writer_is_rejected_before_guard_snapshot_or_child"
+        } else {
+            "bridge_fifo_without_writer_is_rejected_before_guard_snapshot_or_child"
+        };
+        let mut child = Command::new(std::env::current_exe().unwrap())
+            .args(["--exact", test_name, "--nocapture"])
+            .env(CHILD, "1")
+            .spawn()
+            .unwrap();
+        let started = std::time::Instant::now();
+        loop {
+            if let Some(status) = child.try_wait().unwrap() {
+                assert!(status.success());
+                break;
+            }
+            if started.elapsed() > std::time::Duration::from_secs(2) {
+                child.kill().unwrap();
+                child.wait().unwrap();
+                panic!("FIFO blocked the actual bridge before its child deadline");
+            }
+            std::thread::sleep(std::time::Duration::from_millis(10));
+        }
+        return;
+    }
+    use std::os::unix::ffi::OsStrExt;
+    let f = Fixture::new();
+    let path = f.root.path().join("input.png");
+    let name = std::ffi::CString::new(path.as_os_str().as_bytes()).unwrap();
+    assert_eq!(unsafe { libc::mkfifo(name.as_ptr(), 0o600) }, 0);
+    let mut args = f.ask();
+    args.attach.push(path);
+    let mut fake = Fake::default();
+    assert!(bridge::try_ask(f.root.path(), &mut fake, &args).is_err());
+    assert!(fake.guard_calls.is_empty());
+    assert!(fake.calls.is_empty());
+    assert_eq!(fake.qualification_calls, 0);
+    assert_eq!(fake.http_calls, 0);
+    assert_eq!(
+        fs::read_dir(f.root.path().join("conversation-bridge"))
+            .unwrap()
+            .count(),
+        0
+    );
+    f.unchanged_legacy();
+}
+
+#[cfg(unix)]
+#[test]
+fn held_regular_body_replaced_with_fifo_is_rejected_without_blocking() {
+    const CHILD: &str = "CC_ASK_REOPEN_FIFO_CHILD";
+    if std::env::var_os(CHILD).is_none() {
+        let name = if module_path!().ends_with("unix_bridge_acceptance") {
+            "unix_bridge_acceptance::held_regular_body_replaced_with_fifo_is_rejected_without_blocking"
+        } else {
+            "held_regular_body_replaced_with_fifo_is_rejected_without_blocking"
+        };
+        let mut child = Command::new(std::env::current_exe().unwrap())
+            .args(["--exact", name, "--nocapture"])
+            .env(CHILD, "1")
+            .spawn()
+            .unwrap();
+        let before = std::time::Instant::now();
+        loop {
+            if let Some(status) = child.try_wait().unwrap() {
+                assert!(status.success());
+                break;
+            }
+            if before.elapsed() > std::time::Duration::from_secs(2) {
+                child.kill().unwrap();
+                child.wait().unwrap();
+                panic!("source reopen blocked on replaced FIFO")
+            };
+            std::thread::sleep(std::time::Duration::from_millis(10));
+        }
+        return;
+    }
+    let f = Fixture::new();
+    let mut args = f.ask();
+    args.cwd = Some("D:/repos/KaraokeMaker".into());
+    let mut fake = Fake {
+        source_proof: Some(
+            json!({"ok":true,"access_allowed":true,"client_resource":false,"classification_unverified":false}),
+        ),
+        replace_with_fifo_on_guard: Some(f.body.clone()),
+        ..Default::default()
+    };
+    assert!(bridge::try_qualified_ask(
+        f.root.path(),
+        &mut fake,
+        &f.root.path().join("missing-list.txt"),
+        &args
+    )
+    .is_err());
+    assert_eq!(fake.replace_guard_count, 3);
+    assert!(fake.calls.is_empty());
+    assert_eq!(fake.http_calls, 0);
+    f.unchanged_legacy();
 }

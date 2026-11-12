@@ -43,10 +43,10 @@ pub struct QuestionSourceLease {
     files: Vec<std::fs::File>,
 }
 
-pub(crate) fn question_text(path: &Path) -> Result<String> {
+pub fn question_text(path: &Path) -> Result<String> {
     use std::io::Read;
     const LIMIT: u64 = 1 << 20;
-    let file = std::fs::File::open(path).map_err(|_| "question source read unavailable")?;
+    let file = open_regular_source(path).map_err(|_| "question source read unavailable")?;
     let meta = file
         .metadata()
         .map_err(|_| "question source read unavailable")?;
@@ -130,12 +130,106 @@ pub(crate) fn pin_plain_source(path: &Path) -> Result<QuestionSourceLease> {
         }
         files.push(file);
     }
-    #[cfg(not(windows))]
-    let files =
-        vec![std::fs::File::open(&resolved).map_err(|_| "question source identity unavailable")?];
+    #[cfg(unix)]
+    let files = {
+        let file =
+            open_plain_unix_source(path).map_err(|_| "question source identity unavailable")?;
+        if std::fs::canonicalize(path).map_err(|_| "question source identity unavailable")?
+            != resolved
+        {
+            return Err("question source identity changed".into());
+        }
+        vec![file]
+    };
+    #[cfg(not(any(windows, unix)))]
+    let files = {
+        return Err("question source identity unavailable".into());
+    };
     // Windows handles now exclude file writes/deletes and parent replacement;
     // reclassify that still-named object before any caller consumes its bytes.
     Ok(QuestionSourceLease { files })
+}
+
+#[cfg(unix)]
+fn open_plain_unix_source(path: &Path) -> std::io::Result<std::fs::File> {
+    use std::os::unix::fs::OpenOptionsExt;
+    let file = std::fs::OpenOptions::new()
+        .read(true)
+        .custom_flags(libc::O_NONBLOCK | libc::O_NOFOLLOW)
+        .open(path)?;
+    // Check the opened object, not a pathname checked before open. In
+    // particular, opening a FIFO must not wait for a writer before rejection.
+    if !file.metadata()?.is_file() {
+        return Err(std::io::Error::new(
+            std::io::ErrorKind::InvalidInput,
+            "question source must be a regular file",
+        ));
+    }
+    Ok(file)
+}
+
+pub(crate) fn open_regular_source(path: &Path) -> std::io::Result<std::fs::File> {
+    #[cfg(unix)]
+    {
+        open_plain_unix_source(path)
+    }
+    #[cfg(not(unix))]
+    {
+        std::fs::File::open(path)
+    }
+}
+
+#[cfg(all(test, unix))]
+mod unix_source_tests {
+    use super::*;
+
+    #[test]
+    fn no_writer_fifo_and_directory_are_rejected_before_content_read() {
+        const CHILD: &str = "CC_ASK_OWNED_FIFO_UNIT";
+        if std::env::var_os(CHILD).is_none() {
+            let mut child = std::process::Command::new(std::env::current_exe().unwrap())
+                .args(["--exact", "project::unix_source_tests::no_writer_fifo_and_directory_are_rejected_before_content_read", "--nocapture"])
+                .env(CHILD,"1").spawn().unwrap();
+            let start = std::time::Instant::now();
+            loop {
+                if let Some(status) = child.try_wait().unwrap() {
+                    assert!(status.success());
+                    break;
+                }
+                if start.elapsed() > std::time::Duration::from_secs(2) {
+                    child.kill().unwrap();
+                    child.wait().unwrap();
+                    panic!("FIFO unit open did not return");
+                }
+                std::thread::sleep(std::time::Duration::from_millis(10));
+            }
+            return;
+        }
+        use std::os::unix::ffi::OsStrExt;
+        let root = tempfile::tempdir().unwrap();
+        let fifo = root.path().join("input.png");
+        let name = std::ffi::CString::new(fifo.as_os_str().as_bytes()).unwrap();
+        assert_eq!(unsafe { libc::mkfifo(name.as_ptr(), 0o600) }, 0);
+        let before = std::time::Instant::now();
+        assert!(pin_plain_source(&fifo).is_err());
+        assert!(before.elapsed() < std::time::Duration::from_secs(1));
+        assert!(pin_plain_source(root.path()).is_err());
+    }
+
+    #[test]
+    fn held_regular_object_passes_and_final_link_is_not_followed() {
+        use std::os::unix::fs::symlink;
+        let root = tempfile::tempdir().unwrap();
+        let plain = root.path().join("regular.png");
+        std::fs::write(&plain, b"owned image fixture").unwrap();
+        let file = open_plain_unix_source(&plain).unwrap();
+        assert!(file.metadata().unwrap().is_file());
+        assert!(pin_plain_source(&plain).is_ok());
+        let link = root.path().join("link.png");
+        symlink(&plain, &link).unwrap();
+        assert!(open_plain_unix_source(&link).is_err());
+        assert_eq!(std::fs::read(plain).unwrap(), b"owned image fixture");
+    }
 }
 
 pub fn qualify_question_sources(
@@ -180,6 +274,11 @@ pub(crate) fn qualify_question_sources_with(
     {
         held.files.extend(lease_source(effects, path)?.files);
     }
+    // The ordinary question gate must precede project-label discovery and
+    // config/model/network work. Read only after the source lease qualifies
+    // it, and reuse this same bounded text below.
+    let body = question_text(&args.body_file)?;
+    crate::ask_gate::enforce(&args.title, &body, args.owner_only)?;
     let root = effects.run(
         &[
             "git".into(),
@@ -204,8 +303,6 @@ pub(crate) fn qualify_question_sources_with(
     // Classifying a source never asserts that arbitrary prose is public. Keep
     // the sender's credential checks, and reject rather than rewrite a bound
     // question when catalog-protected text occurs in its original inputs.
-    let body = question_text(&args.body_file)?;
-    crate::ask_gate::enforce(&args.title, &body, args.owner_only)?;
     for text in std::iter::once(args.title.clone())
         .chain(std::iter::once(body))
         .chain(

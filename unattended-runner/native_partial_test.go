@@ -61,7 +61,10 @@ func nativePartialTest(t *testing.T) *nativePartialFixture {
 		"assignment":   {"id": "assignment", "type": "collabAgentToolCall", "tool": "sendInput", "status": "completed", "senderThreadId": v.Parent, "receiverThreadIds": []string{v.Child}, "prompt": prompt},
 		"verification": {"id": "verification", "type": "commandExecution", "status": "completed", "source": "unifiedExecStartup", "command": rawCommand, "commandActions": []any{map[string]string{"type": "unknown", "command": command}}, "aggregatedOutput": output, "cwd": f.home, "exitCode": 0, "startedAtMs": time.Now().Add(-time.Minute).UnixMilli(), "completedAtMs": time.Now().Add(-time.Second).UnixMilli()},
 	}, parent: map[string]any{"id": v.Parent, "cwd": f.home, "source": "vscode"}, child: map[string]any{"id": v.Child, "cwd": f.home, "parentThreadId": v.Parent, "source": map[string]any{"subAgent": map[string]any{"thread_spawn": map[string]any{"parent_thread_id": v.Parent, "depth": 1}}}}}
-	n.items["verification"]["startedAtMs"] = time.Now().Add(-2 * time.Second).UnixMilli()
+	acquiredAt, _ := time.Parse(time.RFC3339Nano, c.r.conversationRequest(v.Message).Acquired)
+	appliedAt, _ := time.Parse(time.RFC3339Nano, v.Evidence.AppliedAt)
+	n.items["verification"]["startedAtMs"] = acquiredAt.UnixMilli()
+	n.items["verification"]["completedAtMs"] = appliedAt.UnixMilli()
 	c.r.NativePartialGuard = func(context.Context, string) bool { return true }
 	c.r.NativePartialRPC = n.rpc
 	return n

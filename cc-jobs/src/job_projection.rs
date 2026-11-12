@@ -129,7 +129,7 @@ fn bounded_os_error(message: &[u8]) -> Option<u32> {
         .and_then(|at| {
             let tail = &message[at + prefix.len()..];
             let count = tail.iter().take_while(|b| b.is_ascii_digit()).count();
-            if count == 0 || count > 10 {
+            if count == 0 || count > 10 || tail.get(count).is_some_and(u8::is_ascii_alphanumeric) {
                 return None;
             }
             let mut value = 0u32;
@@ -449,9 +449,9 @@ mod tests {
     fn extra_launch_signals_never_return_unmatched_text_or_unbounded_numbers() {
         let job = json!({"id":FOUR_JOB,"status":"failed","resume_session":FOUR_SESSION,"launch_key":FOUR_LAUNCH,"codex":"C:/PRIVATE/codex.exe"});
         for (input, number) in [
-            ("PRIVATE arbitrary", None),
+            ("PRIVATE arbitrary", None::<u32>),
             ("error PRIVATE os error 4294967296", None),
-            ("os error 5x", Some(5)),
+            ("os error 5x", None),
         ] {
             let p = project(
                 &job,

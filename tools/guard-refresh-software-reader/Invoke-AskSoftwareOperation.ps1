@@ -1,3 +1,12 @@
+function Stop-AskSoftwareOperation($Process) {
+    try{
+        if(-not $Process.HasExited){
+            try{$Process.Kill($true)}catch{if(-not $Process.HasExited){return $false}}
+        }
+        return $Process.WaitForExit(3000)
+    }catch{return $false}
+}
+
 function Invoke-AskSoftwareOperation {
     param([string]$Reader,[string]$Operation,[scriptblock]$Parse)
     if($Operation -cnotin @('--verify-ask-privacy-update','--prepare-ask-privacy-update') -or -not $Parse){throw 'ask_software_operation_invalid'}
@@ -12,7 +21,8 @@ function Invoke-AskSoftwareOperation {
         # Producer10s + collection2s + inspection2s + collection2s. A separate
         # outer deadline must not cut off the reader's ordinary recovery result.
         if(-not $proc.WaitForExit(20000)){
-            $proc.Kill($true);$proc.WaitForExit()
+            $collected=Stop-AskSoftwareOperation $proc
+            if(-not $collected){throw 'ask_software_tree_collection_unknown'}
             # No bytes from an interrupted producer are a successful response.
             # This explicit unknown result is retained by the deployment journal.
             return @{qualified=$false;prepared=$false;reason='qualification_unavailable';software_replace_allowed=$false;data_access_granted=$false;update_performed=$false;reconciliation=@{domain='owner-question-fixed-software-reconcile-v1';Target=@{state='unknown'};Stage=@{state='unknown'};Backup=@{state='unknown'};switch_allowed=$false}}

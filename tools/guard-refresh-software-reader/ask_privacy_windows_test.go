@@ -98,6 +98,31 @@ func TestAskReconciliationFixedNamesAbsentPresentUnknownNeverGrant(t *testing.T)
 	}
 }
 
+func TestAskReconciliationRejectsIncompleteAndMalformedSnapshots(t *testing.T) {
+	good := askReconciliation{Domain: "owner-question-fixed-software-reconcile-v1", Target: askReconciledObject{State: "present", Identity: &softwareIdentity{"1", "2", "3"}, SHA: strings.Repeat("a", 64), ACL: strings.Repeat("b", 64)}, Stage: askReconciledObject{State: "absent"}, Backup: askReconciledObject{State: "unknown"}}
+	if !validAskReconciliation(good) {
+		t.Fatal("complete fixed snapshot rejected")
+	}
+	for _, fault := range []string{"missing", "state", "identity", "digest", "switch"} {
+		bad := good
+		switch fault {
+		case "missing":
+			bad.Backup = askReconciledObject{}
+		case "state":
+			bad.Stage.State = "created"
+		case "identity":
+			bad.Target.Identity = nil
+		case "digest":
+			bad.Target.SHA = "invalid"
+		case "switch":
+			bad.SwitchAllowed = true
+		}
+		if validAskReconciliation(bad) {
+			t.Fatal("incomplete snapshot admitted", fault)
+		}
+	}
+}
+
 func TestAskPrivacySoftwarePurposeEntryNeverFallsBackToGuardData(t *testing.T) {
 	var out bytes.Buffer
 	calls := 0

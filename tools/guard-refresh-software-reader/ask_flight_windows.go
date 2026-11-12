@@ -220,7 +220,7 @@ func supervisedAskSoftware(prepare bool) updateResult {
 	cancel()
 	defer clear(observed.Raw)
 	var snapshot askReconciliation
-	if observed.Reaped && !observed.TimedOut && observed.Exit == 0 && json.Unmarshal(observed.Raw, &snapshot) == nil && snapshot.Domain == unknown.Domain && !snapshot.SwitchAllowed {
+	if observed.Reaped && !observed.TimedOut && observed.Exit == 0 && json.Unmarshal(observed.Raw, &snapshot) == nil && validAskReconciliation(snapshot) {
 		r.Reconciliation = &snapshot
 	}
 	return r

@@ -293,6 +293,33 @@ type askReconciliation struct {
 	SwitchAllowed         bool `json:"switch_allowed"`
 }
 
+func validAskReconciliation(r askReconciliation) bool {
+	if r.Domain != "owner-question-fixed-software-reconcile-v1" || r.SwitchAllowed {
+		return false
+	}
+	for _, o := range []askReconciledObject{r.Target, r.Stage, r.Backup} {
+		switch o.State {
+		case "absent", "unknown":
+			if o.Identity != nil || o.SHA != "" || o.ACL != "" {
+				return false
+			}
+		case "present":
+			if o.Identity == nil || o.Identity.FileID == "" || o.Identity.Volume == "" || o.Identity.Created == "" || len(o.SHA) != 64 || len(o.ACL) != 64 {
+				return false
+			}
+			if _, e := hex.DecodeString(o.SHA); e != nil {
+				return false
+			}
+			if _, e := hex.DecodeString(o.ACL); e != nil {
+				return false
+			}
+		default:
+			return false
+		}
+	}
+	return true
+}
+
 func reconcileAskObjects(ctx context.Context, open func(string) (updateObject, error), stat func(string) (os.FileInfo, error)) askReconciliation {
 	r := askReconciliation{Domain: "owner-question-fixed-software-reconcile-v1"}
 	observe := func(path string) askReconciledObject {

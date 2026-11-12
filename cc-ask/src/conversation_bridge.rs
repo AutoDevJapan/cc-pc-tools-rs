@@ -213,17 +213,19 @@ fn attachments(
         ) {
             return Err("新しい投稿の添付は現在は画像だけに対応しています".into());
         }
+        // Retain the original spelling's namespace before resolving it. The
+        // same lease stays alive through qualification and byte snapshotting.
+        let source_lease = crate::project::pin_plain_source(path)?;
         let source = image_source(path)?;
         let info = fs::metadata(&source).map_err(|_| INVALID_INPUT)?;
         total = total.checked_add(info.len()).ok_or(INVALID_INPUT)?;
         if !info.is_file() || info.len() > IMAGE_LIMIT || total > IMAGE_TOTAL_LIMIT {
             return Err(INVALID_INPUT.into());
         }
-        inputs.push((source, extension, info.len()));
+        inputs.push((source, extension, info.len(), source_lease));
     }
     let mut result = Vec::new();
-    for (source, extension, expected_size) in inputs {
-        let _image_source = crate::project::pin_plain_source(&source)?;
+    for (source, extension, expected_size, _image_source) in inputs {
         // Fresh Go verification rechecks this original scope and the immutable
         // source receipt. A generic snapshot name never grants image authority.
         let guard = effects

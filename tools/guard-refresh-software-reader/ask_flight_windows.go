@@ -4,10 +4,12 @@ package main
 
 import (
 	"context"
+	"encoding/binary"
 	"encoding/json"
 	"io"
 	"os"
 	"os/exec"
+	"strconv"
 	"syscall"
 	"time"
 	"unsafe"
@@ -51,6 +53,17 @@ func askOwnedChild(ctx context.Context, executable string, args ...string) (resu
 	}
 	cmd := exec.CommandContext(ctx, executable, args...)
 	cmd.SysProcAttr = &syscall.SysProcAttr{HideWindow: true, CreationFlags: 0x08000000 | 0x00000004}
+	permitRead, permitWrite, permitErr := os.Pipe()
+	if permitErr != nil {
+		return
+	}
+	defer permitRead.Close()
+	defer permitWrite.Close()
+	if syscall.SetHandleInformation(syscall.Handle(permitRead.Fd()), 1, 1) != nil {
+		return
+	}
+	cmd.SysProcAttr.AdditionalInheritedHandles = []syscall.Handle{syscall.Handle(permitRead.Fd())}
+	cmd.Env = append(os.Environ(), "ASK_SOFTWARE_PARENT_HANDLE="+strconv.FormatUint(uint64(permitRead.Fd()), 10))
 	cmd.WaitDelay = 100 * time.Millisecond
 	out := askGitOutput{limit: 65536}
 	errOut := askGitOutput{limit: 65536}
@@ -74,7 +87,16 @@ func askOwnedChild(ctx context.Context, executable string, args ...string) (resu
 	}
 	if !assigned {
 		_ = cmd.Process.Kill()
+	} else {
+		var permit [12]byte
+		copy(permit[:8], "ASKSW001")
+		binary.LittleEndian.PutUint32(permit[8:], uint32(os.Getpid()))
+		if _, e := permitWrite.Write(permit[:]); e != nil {
+			_ = cmd.Process.Kill()
+		}
 	}
+	permitWrite.Close()
+	permitRead.Close()
 	waited := make(chan error, 1)
 	go func() { waited <- cmd.Wait() }()
 	// Pin members observed while the root is alive. Job accounting can reach
@@ -205,6 +227,9 @@ func supervisedAskSoftware(prepare bool) updateResult {
 }
 
 func runAskWorker(args []string, out io.Writer) int {
+	if !askWorkerParent() {
+		return 2
+	}
 	if len(args) == 1 && args[0] == "--ask-software-inspection-worker" {
 		return runAskReconciliation([]string{"--inspect-ask-privacy-update"}, out)
 	}
@@ -216,4 +241,78 @@ func runAskWorker(args []string, out io.Writer) int {
 		return 1
 	}
 	return 0
+}
+
+// A CLI string or environment value alone is not an internal-worker permit.
+// Require a real inherited pipe and the actual OS parent to be this same
+// executable. Direct shell callers cannot claim that native parent identity.
+func askWorkerParent() bool {
+	value, err := strconv.ParseUint(os.Getenv("ASK_SOFTWARE_PARENT_HANDLE"), 10, 64)
+	if err != nil || value == 0 {
+		return false
+	}
+	h := syscall.Handle(value)
+	k := syscall.NewLazyDLL("kernel32.dll")
+	typ, _, _ := k.NewProc("GetFileType").Call(uintptr(h))
+	if typ != 3 {
+		return false
+	}
+	defer syscall.CloseHandle(h)
+	var available uint32
+	deadline := time.Now().Add(time.Second)
+	for time.Now().Before(deadline) {
+		ok, _, _ := k.NewProc("PeekNamedPipe").Call(uintptr(h), 0, 0, 0, uintptr(unsafe.Pointer(&available)), 0)
+		if ok == 0 {
+			return false
+		}
+		if available >= 12 {
+			break
+		}
+		time.Sleep(time.Millisecond)
+	}
+	if available < 12 {
+		return false
+	}
+	var raw [12]byte
+	var n uint32
+	if syscall.ReadFile(h, raw[:], &n, nil) != nil || n != 12 || string(raw[:8]) != "ASKSW001" {
+		return false
+	}
+	want := binary.LittleEndian.Uint32(raw[8:])
+	var basic struct {
+		Exit     uintptr
+		Peb      uintptr
+		Affinity uintptr
+		Priority uintptr
+		PID      uintptr
+		Parent   uintptr
+	}
+	code, _, _ := syscall.NewLazyDLL("ntdll.dll").NewProc("NtQueryInformationProcess").Call(^uintptr(0), 0, uintptr(unsafe.Pointer(&basic)), unsafe.Sizeof(basic), 0)
+	if code != 0 || uint32(basic.Parent) != want {
+		return false
+	}
+	parent, err := syscall.OpenProcess(0x1000, false, want)
+	if err != nil {
+		return false
+	}
+	defer syscall.CloseHandle(parent)
+	name := make([]uint16, 32768)
+	size := uint32(len(name))
+	ok, _, _ := k.NewProc("QueryFullProcessImageNameW").Call(uintptr(parent), 0, uintptr(unsafe.Pointer(&name[0])), uintptr(unsafe.Pointer(&size)))
+	if ok == 0 {
+		return false
+	}
+	exe, err := os.Executable()
+	if err != nil {
+		return false
+	}
+	a, err := os.Stat(exe)
+	if err != nil {
+		return false
+	}
+	b, err := os.Stat(syscall.UTF16ToString(name[:size]))
+	if err != nil {
+		return false
+	}
+	return os.SameFile(a, b)
 }

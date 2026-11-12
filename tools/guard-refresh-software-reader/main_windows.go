@@ -161,9 +161,6 @@ func run(args []string, out io.Writer, observe func() softwareObservation, opera
 	if len(args) > 0 && (args[0] == "--ask-software-worker" || args[0] == "--ask-software-inspection-worker") {
 		return runAskWorker(args, out)
 	}
-	if len(args) > 0 && args[0] == "--inspect-ask-privacy-update" {
-		return runAskReconciliation(args, out)
-	}
 	if len(args) == 1 && (args[0] == "--verify-ask-privacy-update" || args[0] == "--prepare-ask-privacy-update") {
 		ops := updateOperations{verify: func() updateResult {
 			return supervisedAskSoftware(false)

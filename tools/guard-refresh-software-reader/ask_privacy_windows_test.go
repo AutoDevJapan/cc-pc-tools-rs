@@ -191,6 +191,9 @@ func TestAskOwnedSupervisorChild(t *testing.T) {
 	if os.Getenv("ASK_OWNED_SUPERVISOR_CHILD") != "1" {
 		return
 	}
+	if !askWorkerParent() {
+		os.Exit(6)
+	}
 	mode := os.Getenv("ASK_OWNED_MODE")
 	if mode == "leaf" {
 		if os.WriteFile(filepath.Join(os.Getenv("ASK_OWNED_ROOT"), "backup.exe"), []byte("owned partial"), 0600) != nil {
@@ -210,6 +213,20 @@ func TestAskOwnedSupervisorChild(t *testing.T) {
 	}
 	fmt.Fprintln(os.Stdout, `{"owned":true}`)
 	os.Exit(0)
+}
+
+func TestAskDirectWorkerAndInspectionHaveNoAuthority(t *testing.T) {
+	t.Setenv("ASK_SOFTWARE_PARENT_HANDLE", "")
+	for _, args := range [][]string{{"--ask-software-worker", "prepare"}, {"--ask-software-worker", "verify"}, {"--ask-software-inspection-worker"}, {"--inspect-ask-privacy-update"}} {
+		var out bytes.Buffer
+		if run(args, &out, func() softwareObservation { t.Fatal("direct worker reached guard"); return softwareObservation{} }) != 2 {
+			t.Fatal("unbound worker admitted", args)
+		}
+	}
+	t.Setenv("ASK_SOFTWARE_PARENT_HANDLE", "9999999")
+	if askWorkerParent() {
+		t.Fatal("forged handle admitted")
+	}
 }
 
 func TestAskOwnedSupervisorCollectsTreeAndPreservesPartial(t *testing.T) {

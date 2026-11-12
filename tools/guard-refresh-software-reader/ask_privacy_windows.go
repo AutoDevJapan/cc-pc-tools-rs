@@ -37,12 +37,12 @@ type askSoftwarePlan struct {
 
 // These identify the separately reviewed source and compiled distribution.
 var compiledAskPlan = askSoftwarePlan{
-	Candidate: "C:/Users/makhmeto/Documents/Codex/2026-11-07/ika-x20/work/4431-ui-tools/codex-owned-f60f3742a1933562ec75aa5c8eb05d72/discord_ask-privacy-f102.exe",
-	Proof:     "D:/CC/Tools/codex-jobs/fourbros4431-ask-privacy-f102-candidate-proof.json",
-	Source:    "f102a759524ab2cbefc690fbaf4f9710cc1ddee0",
-	SHA:       "d0b6e7db813211ae078f403cb6a9743e696b8f53397bf34d9c8d86be54f1f96d",
-	ProofSHA:  "7b218213add39363696283065dc07187d17b08e99f37bc4e22359fa7bcfb677e",
-	Bytes:     13400576,
+	Candidate: "C:/Users/makhmeto/Documents/Codex/2026-11-07/ika-x20/work/4431-ui-tools/codex-owned-f60f3742a1933562ec75aa5c8eb05d72/discord_ask-privacy-3f04.exe",
+	Proof:     "D:/CC/Tools/codex-jobs/fourbros4431-ask-privacy-3f04-candidate-proof.json",
+	Source:    "3f04e69df159bb4f0df1fe80af3b92c611b9f30a",
+	SHA:       "6d22dc15797c821794a56e9d05c432b4a1694369e6d97628925580ec42c29a28",
+	ProofSHA:  "c60514f2d5281818bdd8407d4aac535a02e312ad05d2deb86918bd394f15b05e",
+	Bytes:     13416448,
 }
 
 type askSoftwareProof struct {

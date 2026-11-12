@@ -39,9 +39,9 @@ function New-AskDeploymentOperations($Plan,[string]$Receipt,[scriptblock]$Qualif
 }
 if($askLibrary){return}
 $repo='C:/Users/makhmeto/Documents/Codex/2026-11-07/ika-x20/work/4431-ui-tools'
-$reader=$repo+'/codex-owned-b30691d5cc845d615ea1be06bb0d3de3/ask-software-reader.exe'
-$readerSha='' # Fixed after the reviewed final reader build; empty refuses Apply.
-$plan=@{target='D:/CC/Tools/discord-ask/discord_ask.exe';beforeSha256='f5dfeaea2013d83f165da7801595a795d71aedba4c93ed9cc24e8492bdf67ad7';beforeIdentity='1215965535:844424946112908';candidate=$repo+'/codex-owned-f60f3742a1933562ec75aa5c8eb05d72/discord_ask-privacy-f102.exe';candidateSha256='d0b6e7db813211ae078f403cb6a9743e696b8f53397bf34d9c8d86be54f1f96d';candidateBytes=13400576;source='f102a759524ab2cbefc690fbaf4f9710cc1ddee0';sourceMerged='f102a759524ab2cbefc690fbaf4f9710cc1ddee0';stage='D:/CC/Tools/discord-ask/discord_ask.privacy4431.stage.exe';backup='D:/CC/Tools/discord-ask/discord_ask.privacy4431.before.exe'}
+$reader=$repo+'/codex-owned-b30691d5cc845d615ea1be06bb0d3de3/ask-software-reader-final-3f04.exe'
+$readerSha='aada8a89ed51e3747bcad55d8beb8ae109c555f5ef3ae5b2b8c62ec808205c0d'
+$plan=@{target='D:/CC/Tools/discord-ask/discord_ask.exe';beforeSha256='f5dfeaea2013d83f165da7801595a795d71aedba4c93ed9cc24e8492bdf67ad7';beforeIdentity='1215965535:844424946112908';candidate=$repo+'/codex-owned-f60f3742a1933562ec75aa5c8eb05d72/discord_ask-privacy-3f04.exe';candidateSha256='6d22dc15797c821794a56e9d05c432b4a1694369e6d97628925580ec42c29a28';candidateBytes=13416448;source='3f04e69df159bb4f0df1fe80af3b92c611b9f30a';sourceMerged='3f04e69df159bb4f0df1fe80af3b92c611b9f30a';stage='D:/CC/Tools/discord-ask/discord_ask.privacy4431.stage.exe';backup='D:/CC/Tools/discord-ask/discord_ask.privacy4431.before.exe'}
 $receipt='D:/CC/Tools/codex-jobs/fourbros4431-ask-privacy-install-result.json'
 if(-not $askApply){@{apply=$false;readerPinned=($readerSha.Length -eq 64);targetRead=0}|ConvertTo-Json -Compress;return}
 if($readerSha -cnotmatch '^[a-f0-9]{64}$'){throw 'reviewed_reader_build_not_bound'}

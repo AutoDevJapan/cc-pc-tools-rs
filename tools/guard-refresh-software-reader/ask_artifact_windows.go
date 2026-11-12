@@ -426,6 +426,14 @@ func runSoftwareBuildWorker(build softwareBuildPlan, out io.Writer) int {
 			if !ok || strings.TrimSpace(string(head)) == "" {
 				return 1
 			}
+			var goFiles []string
+			if build.GoRunner {
+				goFiles, ok = softwareProducerGoFiles(ctx, evidence)
+				if !ok {
+					r.Reason = "compiler_input_set_unqualified"
+					return 1
+				}
+			}
 			// The final source differs from the old unqualified artifact. Own
 			// this necessary producer invocation and retain its exact source
 			// buffers and parent names through output collection/export.
@@ -452,7 +460,9 @@ func runSoftwareBuildWorker(build softwareBuildPlan, out io.Writer) int {
 			started := time.Now()
 			var built askChildResult
 			if build.GoRunner {
-				built = askOwnedChild(buildCtx, "C:/Program Files/Go/bin/go.exe", "-C", updateSourceRoot+"/unattended-runner", "build", "-trimpath", "-o", build.Output, ".")
+				argv := []string{"-C", updateSourceRoot + "/unattended-runner", "build", "-mod=readonly", "-trimpath", "-o", build.Output}
+				argv = append(argv, goFiles...)
+				built = askOwnedChild(buildCtx, "C:/Program Files/Go/bin/go.exe", argv...)
 			} else {
 				built = askOwnedChild(buildCtx, "D:/CC/Tools/codex-jobs/cargo_gate.exe", "build", "--locked", "--release", "--manifest-path", updateSourceRoot+"/Cargo.toml", "--target-dir", build.Target, "-p", "cc-ask", "--bin", "discord_ask")
 			}

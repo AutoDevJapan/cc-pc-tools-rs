@@ -62,6 +62,82 @@ fn quota_status_reads_one_job_without_returning_bodies_paths_or_account_metadata
     assert!(t.cli(&["status", "--job-id", "quota-reader"]).0.is_err());
     assert!(t.cli(&["status", "--job-id", "quota-reader", "--json", "--all"]).0.is_err());
 }
+
+#[test]
+fn purpose_status_returns_only_original_karaoke_locators() {
+    let t=Test::new();let id="20261008-100555-orch-todo-1157";
+    t.put(json!({"id":id,"todo_id":1157,"status":"succeeded","cwd":t.ctx.root,"original_question_id":"1557593952604131370","last_message":"PRIVATE_REPLY","last_error":"PRIVATE_ERROR"}));
+    fs::write(t.ctx.job_dir(id).join("last_message.md"),"PRIVATE_REPLY_BODY").unwrap();
+    let (code,out,_)=t.cli(&["status","--job-id",id,"--json","--purpose","karaoke-1157-locators"]);
+    assert_eq!(code.unwrap(),0);let p:Value=serde_json::from_str(&out).unwrap();
+    assert_eq!(p["cwd"],json!(t.ctx.root));assert!(p["resultLocator"].as_str().unwrap().ends_with("last_message.md"));assert_eq!(p["originalQuestionId"],"1557593952604131370");assert!(!out.contains("PRIVATE"));
+    assert!(t.cli(&["status","--job-id","other","--json","--purpose","karaoke-1157-locators"]).0.is_err());
+}
+
+#[test]
+fn purpose_status_classifies_one_actual_failed_launch_without_returning_stderr() {
+    let t=Test::new();let id="20261112-093913-4431-fourbros-pr1245-normal-job-prd-qa";
+    t.put(json!({"id":id,"status":"failed","resume_session":"01a1bdce-c2db-7792-a036-79044f46d9fb","launch_key":"7e5809fa41664dc988379e7163284acc","exit_code":1,"steps":0}));
+    fs::write(t.ctx.job_dir(id).join("stderr.log"),"error: unexpected argument --PRIVATEFLAG").unwrap();
+    let (code,out,_)=t.cli(&["status","--job-id",id,"--json","--purpose","fourbros-1245-launch-failure"]);
+    assert_eq!(code.unwrap(),0);let p:Value=serde_json::from_str(&out).unwrap();assert_eq!(p["reason"],"cli_arguments");assert_eq!(p["exitCode"],1);assert!(!out.contains("PRIVATE"));
+    assert!(t.cli(&["status","--job-id",id,"--purpose","fourbros-1245-launch-failure"]).0.is_err());
+}
+
+#[test]
+fn purpose_status_rejects_original_binding_before_diagnostic_open(){
+    let t=Test::new();let id="20261112-093913-4431-fourbros-pr1245-normal-job-prd-qa";
+    t.put(json!({"id":id,"status":"failed","resume_session":"other","launch_key":"7e5809fa41664dc988379e7163284acc"}));
+    let stderr=t.ctx.job_dir(id).join("stderr.log");fs::write(&stderr,"PRIVATE").unwrap();
+    let opened=Arc::new(AtomicBool::new(false));let seen=opened.clone();
+    *t.rt.load_hook.lock().unwrap()=Some(Box::new(move|path,_|{if path==stderr{seen.store(true,Ordering::Relaxed)}}));
+    assert!(t.cli(&["status","--job-id",id,"--json","--purpose","fourbros-1245-launch-failure"]).0.is_err());
+    assert!(!opened.load(Ordering::Relaxed));
+}
+
+#[test]
+fn purpose_status_missing_stderr_is_unknown_and_oversize_stderr_is_bounded(){
+    let t=Test::new();let id="20261112-093913-4431-fourbros-pr1245-normal-job-prd-qa";
+    t.put(json!({"id":id,"status":"failed","resume_session":"01a1bdce-c2db-7792-a036-79044f46d9fb","launch_key":"7e5809fa41664dc988379e7163284acc","exit_code":1,"steps":0}));
+    let (code,out,_)=t.cli(&["status","--job-id",id,"--json","--purpose","fourbros-1245-launch-failure"]);assert_eq!(code.unwrap(),0);let v:Value=serde_json::from_str(&out).unwrap();assert_eq!(v["reason"],"unknown");assert_eq!(v["stderrPresent"],false);
+    fs::write(t.ctx.job_dir(id).join("stderr.log"),format!("{}PRIVATE", "x".repeat(17000))).unwrap();
+    let (code,out,_)=t.cli(&["status","--job-id",id,"--json","--purpose","fourbros-1245-launch-failure"]);assert_eq!(code.unwrap(),0);let v:Value=serde_json::from_str(&out).unwrap();assert_eq!(v["stderrTruncated"],true);assert!(!out.contains("PRIVATE"));
+}
+
+#[cfg(windows)]
+#[test]
+fn purpose_status_rejects_redirected_job_parent_before_diagnostic_read(){
+    let t=Test::new();let id="20261112-093913-4431-fourbros-pr1245-normal-job-prd-qa";
+    let other=t.ctx.root.join("owned-other");fs::create_dir(&other).unwrap();
+    fs::write(other.join("job.json"),serde_json::to_vec(&json!({"id":id,"status":"failed","resume_session":"01a1bdce-c2db-7792-a036-79044f46d9fb","launch_key":"7e5809fa41664dc988379e7163284acc","exit_code":1,"steps":0})).unwrap()).unwrap();
+    fs::write(other.join("stderr.log"),"error: unexpected argument PRIVATE").unwrap();
+    fs::create_dir_all(&t.ctx.jobs).unwrap();let alias=t.ctx.job_dir(id);std::os::windows::fs::symlink_dir(&other,&alias).unwrap();
+    let result=t.cli(&["status","--job-id",id,"--json","--purpose","fourbros-1245-launch-failure"]);
+    fs::remove_dir(&alias).unwrap();
+    assert!(result.0.is_err(),"redirected parent was accepted: {}",result.1);
+}
+
+#[cfg(windows)]
+#[test]
+fn purpose_status_holds_job_parent_during_all_source_reads(){
+    let t=Test::new();let id="20261112-093913-4431-fourbros-pr1245-normal-job-prd-qa";
+    t.put(json!({"id":id,"status":"failed","resume_session":"01a1bdce-c2db-7792-a036-79044f46d9fb","launch_key":"7e5809fa41664dc988379e7163284acc","exit_code":1,"steps":0}));
+    let dir=t.ctx.job_dir(id);let stderr=dir.join("stderr.log");fs::write(&stderr,"error: unexpected argument PRIVATE").unwrap();
+    let blocked=Arc::new(AtomicBool::new(false));let seen=blocked.clone();
+    *t.rt.load_hook.lock().unwrap()=Some(Box::new(move|path,_|{if path==stderr{assert!(fs::rename(&dir,dir.with_extension("moved")).is_err(),"held job directory could move");seen.store(true,Ordering::Relaxed)}}));
+    let (code,out,_)=t.cli(&["status","--job-id",id,"--json","--purpose","fourbros-1245-launch-failure"]);assert_eq!(code.unwrap(),0);assert!(blocked.load(Ordering::Relaxed));let value:Value=serde_json::from_str(&out).unwrap();assert_eq!(value["reason"],"cli_arguments");
+}
+
+#[test]
+fn purpose_status_does_not_return_a_hardlinked_result_locator(){
+    let t=Test::new();let id="20261008-100555-orch-todo-1157";
+    t.put(json!({"id":id,"todo_id":1157,"status":"succeeded","cwd":t.ctx.root}));
+    let original=t.ctx.root.join("owned-shared-result");fs::write(&original,"PRIVATE").unwrap();
+    fs::hard_link(&original,t.ctx.job_dir(id).join("last_message.md")).unwrap();
+    let (code,out,_)=t.cli(&["status","--job-id",id,"--json","--purpose","karaoke-1157-locators"]);assert_eq!(code.unwrap(),0);let p:Value=serde_json::from_str(&out).unwrap();
+    #[cfg(windows)] assert!(p["resultLocator"].is_null());
+    assert!(!out.contains("PRIVATE"));
+}
 fn register(t: &Test) -> Result<i32> {
     let prompt = format!(
         "Scheduler prompt\n依頼:\n{}",

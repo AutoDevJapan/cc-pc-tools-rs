@@ -12871,10 +12871,11 @@ mod additional_compatibility {
             } else {
                 out
             };
-            let strip_status_addition=|text:String| text.replace("[--summary] [--job-id ID]","[--summary]")
+            let strip_status_addition=|text:String| text.replace("[--purpose PURPOSE]","").replace("[--job-id ID] ","[--job-id ID]").replace("[--summary] [--job-id ID]","[--summary]")
+                .replace("  --purpose PURPOSE  exact assigned recovery purpose only; returns fixed metadata, never source bodies\n", "")
                 .replace("  --job-id ID  with --json only, read one job's fixed metadata without bodies or refresh\n","");
             let legacy_out=if args.first()==Some(&"status") {
-                if args.iter().any(|arg|["-h","--help"].contains(arg)) {assert_eq!(legacy_out.matches("[--job-id ID]").count(),1);}
+                if args.iter().any(|arg|["-h","--help"].contains(arg)) {assert_eq!(legacy_out.matches("[--job-id ID]").count(),1);assert_eq!(legacy_out.matches("[--purpose PURPOSE]").count(),1);}
                 strip_status_addition(legacy_out)
             }else{legacy_out};
             assert_eq!(legacy_out, s(&case, "stdout"), "{args:?} stdout");

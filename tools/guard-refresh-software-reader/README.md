@@ -27,6 +27,13 @@ Preparation creates only its two fixed sibling software leaves and preserves
 their inherited ACL and exact held bytes. Partial failures stay unsuccessful
 and report every created identity; they do not grant record or media access.
 
+Source verification uses one bounded Git archive, compares every input's Git
+blob ID and SHA-256, and shares an eight-second context across all Git calls.
+The limit is not renewed for each child. No preparation starts if that context
+has expired; any partial creation remains unsuccessful and is reported. Local
+remote-tracking refs do not prove fresh remote state: deployment must also bind
+the exact input tree to its current merge and fetch evidence.
+
 The deployment controller independently reacquires the original and both new
 objects and checks their identities, bytes and ACL before changing a name.
 The controller's separate review, runtime acceptance and publication conditions

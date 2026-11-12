@@ -3,11 +3,21 @@
 package main
 
 import (
+	"archive/tar"
 	"bytes"
+	"context"
+	"crypto/sha1"
+	"encoding/hex"
 	"encoding/json"
 	"errors"
+	"fmt"
+	"os"
+	"path/filepath"
+	"strconv"
 	"strings"
+	"syscall"
 	"testing"
+	"time"
 )
 
 func TestAskPrivacySoftwarePurposeEntryNeverFallsBackToGuardData(t *testing.T) {
@@ -22,6 +32,134 @@ func TestAskPrivacySoftwarePurposeEntryNeverFallsBackToGuardData(t *testing.T) {
 	}})
 	if code != 0 || calls != 1 {
 		t.Fatalf("fixed ask software purpose is unavailable: exit=%d calls=%d", code, calls)
+	}
+}
+
+// Explicit opt-in local measurement. The source is not merged yet: only the
+// local-main comparison is mapped to the pinned source for timing. This never
+// calls the installed target or creates its two software leaves.
+func TestAskFull207SourceFlightOwnedTiming(t *testing.T) {
+	if os.Getenv("FOURBROS_ASK_FLIGHT_TIMING") != "1" {
+		t.Skip("explicit owned full-flight measurement")
+	}
+	started := time.Now()
+	ctx, cancel := context.WithTimeout(context.Background(), 8*time.Second)
+	defer cancel()
+	raw, err := os.ReadFile(compiledAskPlan.Candidate)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer clear(raw)
+	proof, err := os.ReadFile(compiledAskPlan.Proof)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer clear(proof)
+	var parsed askSoftwareProof
+	if json.Unmarshal(proof, &parsed) != nil || len(parsed.Sources) != 207 {
+		t.Fatal("fixed proof differs")
+	}
+	calls := 0
+	git := func(args ...string) ([]byte, bool) {
+		args = append([]string(nil), args...)
+		for i := range args {
+			if args[i] == "refs/remotes/origin/main" {
+				args[i] = compiledAskPlan.Source
+			}
+		}
+		calls++
+		return askGitCommand(ctx, "C:/Program Files/Git/cmd/git.exe", append([]string{"-C", updateSourceRoot}, args...)...)
+	}
+	old := &fakeUpdateObject{raw: make([]byte, askOldBytes), id: softwareIdentity{askOldVolume, askOldID, askOldCreated}, acl: "owned-acl"}
+	candidate := &fakeUpdateObject{raw: raw}
+	p := &fakeUpdateObject{raw: proof}
+	writes := 0
+	old.write = func(string, []byte, string) (softwareIdentity, error) {
+		writes++
+		return softwareIdentity{}, errors.New("forbidden timing write")
+	}
+	b := updateBoundary{open: func(path string) (updateObject, error) {
+		switch path {
+		case askTarget:
+			return old, nil
+		case compiledAskPlan.Candidate:
+			return candidate, nil
+		case compiledAskPlan.Proof:
+			return p, nil
+		}
+		return nil, errUpdateObject
+	}, absent: func(string) bool { return true }, oldMatches: func([]byte) bool { return true }, candidateMatches: func(a, b []byte) bool { return askCandidateMatchesContext(ctx, a, b, compiledAskPlan, git) }}
+	r := executeAskSoftware(false, compiledAskPlan, b)
+	elapsed := time.Since(started)
+	if !r.Qualified || r.Prepared || writes != 0 || calls != 4 || elapsed >= 10*time.Second || !old.closed || !candidate.closed || !p.closed {
+		t.Fatalf("flight failed calls=%d writes=%d elapsed=%v result=%+v", calls, writes, elapsed, r)
+	}
+	t.Logf("records=207 actual_git_children=%d full_flight_ms=%.3f source_local_parity_only=true real_target_open=0 fixed_leaf_create=0 handles_closed=true", calls, float64(elapsed)/float64(time.Millisecond))
+}
+
+func TestAskGitDeadlineChild(t *testing.T) {
+	for i, arg := range os.Args {
+		if arg == "ask-owned-deadline-child" && i+1 < len(os.Args) {
+			if os.WriteFile(os.Args[i+1], []byte(strconv.Itoa(os.Getpid())), 0600) != nil {
+				os.Exit(3)
+			}
+			time.Sleep(10 * time.Second)
+			os.Exit(0)
+		}
+	}
+}
+
+func TestAskSharedDeadlineReapsChildBeforeAnyLeaf(t *testing.T) {
+	root := physicalSoftwareFixture(t)
+	marker := filepath.Join(root, "owned-child-pid")
+	ctx, cancel := context.WithTimeout(context.Background(), 300*time.Millisecond)
+	defer cancel()
+	start := time.Now()
+	_, ok := askGitCommand(ctx, os.Args[0], "-test.run=^TestAskGitDeadlineChild$", "--", "ask-owned-deadline-child", marker)
+	if ok || ctx.Err() != context.DeadlineExceeded || time.Since(start) > 2*time.Second {
+		t.Fatal("common deadline not enforced")
+	}
+	raw, e := os.ReadFile(marker)
+	if e != nil {
+		t.Fatal("owned child did not start", e)
+	}
+	pid, e := strconv.Atoi(string(raw))
+	if e != nil {
+		t.Fatal(e)
+	}
+	h, e := syscall.OpenProcess(syscall.SYNCHRONIZE, false, uint32(pid))
+	if e == nil {
+		defer syscall.CloseHandle(h)
+		state, e := syscall.WaitForSingleObject(h, 0)
+		if e != nil || state != syscall.WAIT_OBJECT_0 {
+			t.Fatal("child still active")
+		}
+	}
+	b := askSoftwareBoundaryContext(ctx, compiledAskPlan)
+	r := executeAskSoftware(true, compiledAskPlan, b)
+	if r.Qualified || r.Prepared || len(r.Created) != 0 {
+		t.Fatal("expired operation created leaves")
+	}
+	for _, leaf := range []string{"stage.exe", "backup.exe"} {
+		if _, e := os.Stat(filepath.Join(root, leaf)); !os.IsNotExist(e) {
+			t.Fatal("owned leaf state unknown")
+		}
+	}
+	t.Logf("deadline_ms=300 elapsed_ms=%.3f child_started=1 child_reaped=true qualified=false prepared=false created=0 owned_stage_absent=true owned_backup_absent=true", float64(time.Since(start))/float64(time.Millisecond))
+}
+
+func TestAskBoundedGitOutputAndCanceledHashWork(t *testing.T) {
+	b := askGitOutput{limit: 4}
+	if n, e := b.Write([]byte("abcd")); n != 4 || e != nil {
+		t.Fatal(n, e)
+	}
+	if n, e := b.Write([]byte("e")); n != 0 || e == nil || b.Len() != 4 {
+		t.Fatal("output limit failed")
+	}
+	ctx, cancel := context.WithCancel(context.Background())
+	cancel()
+	if askCandidateMatchesContext(ctx, nil, nil, askSoftwarePlan{}, func(...string) ([]byte, bool) { t.Fatal("canceled work reached git"); return nil, false }) {
+		t.Fatal("canceled source accepted")
 	}
 }
 
@@ -138,7 +276,10 @@ func TestAskCandidateProofMatchesMergedInputBlobsAndRejectsChanges(t *testing.T)
 			raw := []byte("owned PE fixture")
 			blob := []byte("owned source\n")
 			source := strings.Repeat("1", 40)
-			id := strings.Repeat("2", 40)
+			h := sha1.New()
+			fmt.Fprintf(h, "blob %d\x00", len(blob))
+			h.Write(blob)
+			id := hex.EncodeToString(h.Sum(nil))
 			proof := askSoftwareProof{Head: source, Candidate: "candidate", SHA: digest(raw), Bytes: len(raw), Sources: []buildSourceRecord{{Path: "cc-ask/src/main.rs", Blob: id, SHA: digest(blob)}}}
 			switch fault {
 			case "source":
@@ -169,11 +310,16 @@ func TestAskCandidateProofMatchesMergedInputBlobsAndRejectsChanges(t *testing.T)
 						return []byte("changed"), true
 					}
 					return []byte("100644 blob " + id + "\tcc-ask/src/main.rs\x00"), true
-				case "cat-file":
+				case "archive":
 					if fault == "blob" {
-						return []byte("other"), true
+						blob = []byte("other")
 					}
-					return blob, true
+					var out bytes.Buffer
+					writer := tar.NewWriter(&out)
+					_ = writer.WriteHeader(&tar.Header{Name: "cc-ask/src/main.rs", Typeflag: tar.TypeReg, Mode: 0600, Size: int64(len(blob))})
+					_, _ = writer.Write(blob)
+					_ = writer.Close()
+					return out.Bytes(), true
 				}
 				t.Fatal("unexpected git command")
 				return nil, false

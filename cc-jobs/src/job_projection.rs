@@ -24,6 +24,31 @@ fn snowflake(value: &Value) -> Value {
         .map_or(Value::Null, |s| json!(s))
 }
 
+// Saved supervisor diagnostics are already part of this exact bound job's
+// metadata read. Return only a fixed stage, never the error or its path suffix.
+fn saved_failure_stage(job: &Value) -> &'static str {
+    let error = s(job, "last_error");
+    for (prefix, stage) in [
+        (
+            "supervisor error: Chrome tracking setup failed:",
+            "chrome_proxy_start",
+        ),
+        (
+            "supervisor error: process tree root identity is unavailable",
+            "supervisor_identity",
+        ),
+        (
+            "supervisor error: live child process identity is unavailable",
+            "child_identity",
+        ),
+    ] {
+        if error.starts_with(prefix) {
+            return stage;
+        }
+    }
+    "unknown"
+}
+
 pub(crate) fn project(
     job: &Value,
     id: &str,
@@ -135,7 +160,7 @@ pub(crate) fn project(
                 signals.insert(at, "permission")
             }
             Ok(
-                json!({"metadata_only":true,"purpose":purpose,"id":id,"status":"failed","reason":reason,"diagnosticSignals":signals,"osErrorCode":os_error,"launcherKind":launcher,"exitCode":job["exit_code"].as_i64(),"steps":job["steps"].as_u64(),"stderrPresent":!stderr.is_empty(),"stderrTruncated":stderr.len()>16384,"resumeSession":FOUR_SESSION,"sourceBodiesReturned":false}),
+                json!({"metadata_only":true,"purpose":purpose,"id":id,"status":"failed","reason":reason,"savedFailureStage":saved_failure_stage(job),"diagnosticSignals":signals,"osErrorCode":os_error,"launcherKind":launcher,"exitCode":job["exit_code"].as_i64(),"steps":job["steps"].as_u64(),"stderrPresent":!stderr.is_empty(),"stderrTruncated":stderr.len()>16384,"resumeSession":FOUR_SESSION,"sourceBodiesReturned":false}),
             )
         }
         _ => Err(Error::new("job projection purpose or binding unavailable")),
@@ -444,6 +469,38 @@ fn parse_projection_json(bytes: &[u8]) -> Result<Value> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[test]
+    fn saved_supervisor_failure_stage_never_returns_saved_error_text() {
+        for (error, stage) in [
+            (
+                "supervisor error: Chrome tracking setup failed: synthetic private suffix",
+                "chrome_proxy_start",
+            ),
+            (
+                "supervisor error: process tree root identity is unavailable",
+                "supervisor_identity",
+            ),
+            (
+                "supervisor error: live child process identity is unavailable",
+                "child_identity",
+            ),
+            ("unclassified private error", "unknown"),
+        ] {
+            let job = json!({"id":FOUR_RETRY_JOB,"status":"failed","resume_session":FOUR_SESSION,"launch_key":FOUR_RETRY_LAUNCH,"exit_code":1,"steps":0,"last_error":error});
+            let p = project(
+                &job,
+                FOUR_RETRY_JOB,
+                "fourbros-1245-launch-failure",
+                None,
+                None,
+                &[],
+            )
+            .unwrap();
+            assert_eq!(p["savedFailureStage"], stage);
+            assert!(!p.to_string().contains(error));
+            assert_eq!(p["sourceBodiesReturned"], false);
+        }
+    }
     #[test]
     fn original_resumed_attempt_uses_its_own_exact_launch_binding() {
         let job = json!({"id":FOUR_RETRY_JOB,"status":"failed","resume_session":FOUR_SESSION,"launch_key":FOUR_RETRY_LAUNCH,"exit_code":1,"steps":0});

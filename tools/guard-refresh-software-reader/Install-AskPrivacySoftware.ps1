@@ -39,8 +39,8 @@ function New-AskDeploymentOperations($Plan,[string]$Receipt,[scriptblock]$Qualif
 }
 if($askLibrary){return}
 $repo='C:/Users/makhmeto/Documents/Codex/2026-11-07/ika-x20/work/4431-ui-tools'
-$reader=$repo+'/codex-owned-b30691d5cc845d615ea1be06bb0d3de3/ask-software-reader-final-3f04.exe'
-$readerSha='aada8a89ed51e3747bcad55d8beb8ae109c555f5ef3ae5b2b8c62ec808205c0d'
+$reader=$repo+'/codex-owned-b30691d5cc845d615ea1be06bb0d3de3/ask-software-reader-final-schema-v2.exe'
+$readerSha='6173f1e960f796e53effb2efc9043407e9a44881a1967f34c183f25749f2cdb4'
 $plan=@{target='D:/CC/Tools/discord-ask/discord_ask.exe';beforeSha256='f5dfeaea2013d83f165da7801595a795d71aedba4c93ed9cc24e8492bdf67ad7';beforeIdentity='1215965535:844424946112908';candidate=$repo+'/codex-owned-f60f3742a1933562ec75aa5c8eb05d72/discord_ask-privacy-3f04.exe';candidateSha256='6d22dc15797c821794a56e9d05c432b4a1694369e6d97628925580ec42c29a28';candidateBytes=13416448;source='3f04e69df159bb4f0df1fe80af3b92c611b9f30a';sourceMerged='3f04e69df159bb4f0df1fe80af3b92c611b9f30a';stage='D:/CC/Tools/discord-ask/discord_ask.privacy4431.stage.exe';backup='D:/CC/Tools/discord-ask/discord_ask.privacy4431.before.exe'}
 $receipt='D:/CC/Tools/codex-jobs/fourbros4431-ask-privacy-install-result.json'
 if(-not $askApply){@{apply=$false;readerPinned=($readerSha.Length -eq 64);targetRead=0}|ConvertTo-Json -Compress;return}

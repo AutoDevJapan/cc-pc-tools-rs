@@ -159,6 +159,9 @@ Go側の失敗時は旧APIへ切り替えず、同じ入力での再試行を案
 動画は拡張子だけで許可せず、MP4のbox境界・対応brand・video track・非空のmedia dataを確認する。
 これはcontainer形式の確認で、全codecの再生や内容の評価を保証しない。
 元動画とsnapshotのpath・SHA・size・同バイトを送信時に再照合し、変更・不適格・画像資格の動画流用を拒否する。
+Goの新規質問も動画をhashする前に元sourceを確認する。送信側は動画を読む前に、
+実際のnormal-ask予約、sender ID、snapshotの来歴、元ToDo・本文・判断範囲と添付hashを確認する。
+request IDの見た目だけでは動画の送信資格にならず、log操作に質問形式のIDを渡しても拒否する。
 無通知logや旧recoveryの任意投稿へ動画を広げず、再試行は同じ質問・判断範囲・元動画を保つ。
 上限の根拠は[Discord APIの通常添付仕様](https://docs.discord.com/developers/reference#uploading-files)。
 

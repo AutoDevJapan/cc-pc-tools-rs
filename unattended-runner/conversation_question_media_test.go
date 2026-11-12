@@ -199,14 +199,15 @@ func TestConversationQuestionImageReadbackMustMatchBeforeWait(t *testing.T) {
 func TestConversationQuestionMP4ReadbackMustMatchBeforeWait(t *testing.T) {
 	for _, verified := range []bool{false, true} {
 		f := conversationTest(t, true)
-		path := strings.TrimSuffix(conversationQuestionImagePath(t, f), ".png") + ".mp4"
 		data := fixtureVideoMP4(1, "vide")
-		if err := os.WriteFile(path, data, 0600); err != nil {
-			t.Fatal(err)
-		}
+		path := normalQuestionVideoPath(t, f, data)
 		f.input.Attachments = []string{path}
 		base := f.r.Run
 		f.r.Run = func(ctx context.Context, executable string, args ...string) (string, error) {
+			if len(args) > 0 && args[0] == "--verify-conversation-media" {
+				b, _ := json.Marshal(conversationMediaVerification{Domain: conversationMediaDomain, Verified: true, MIME: "video/mp4", Extension: "mp4", Size: int64(len(data)), SHA256: bytesHash(data)})
+				return string(b), nil
+			}
 			raw, err := base(ctx, executable, args...)
 			if err == nil && len(args) > 0 && args[0] == "recovery-ask" && verified {
 				var result map[string]any
@@ -231,6 +232,82 @@ func TestConversationQuestionMP4ReadbackMustMatchBeforeWait(t *testing.T) {
 		} else if err == nil || row.Status != "doing" || f.posts != 1 {
 			t.Fatal("missing video receipt reported delivered")
 		}
+	}
+}
+
+func TestFreshMP4DirectCallerQualifiesBeforeSender(t *testing.T) {
+	f := conversationTest(t, false)
+	path := normalQuestionVideoPath(t, f, fixtureVideoMP4(1, "vide"))
+	f.input.Attachments = []string{path}
+	base := f.r.Run
+	checks := 0
+	f.r.Run = func(ctx context.Context, executable string, args ...string) (string, error) {
+		if strings.Contains(executable, "scrub391") && len(args) > 1 && strings.HasSuffix(args[1], "original.mp4") {
+			checks++
+			return `{"client_resource":true,"classification_unverified":false}`, nil
+		}
+		return base(ctx, executable, args...)
+	}
+	_, err := f.r.conversationAsk(context.Background(), f.input)
+	if err == nil || checks != 1 || f.posts != 0 {
+		t.Fatalf("unqualified MP4 reached sender: checks=%d posts=%d err=%v", checks, f.posts, err)
+	}
+}
+
+func normalQuestionVideoPath(t *testing.T, f *conversationFixture, data []byte) string {
+	t.Helper()
+	home, err := filepath.EvalSymlinks(f.r.Config.Home)
+	if err != nil {
+		t.Fatal(err)
+	}
+	f.r.Config.Home = filepath.Join(home, "unattended")
+	if err := os.MkdirAll(f.r.Config.Home, 0700); err != nil {
+		t.Fatal(err)
+	}
+	f.input.RequestID = "normal-ask-" + strings.Repeat("b", 64)
+	path := filepath.Join(home, "conversation-bridge", f.input.RequestID, "attachment-0.mp4")
+	source := filepath.Join(f.r.Config.Home, "original.mp4")
+	if err = os.MkdirAll(filepath.Dir(path), 0700); err != nil {
+		t.Fatal(err)
+	}
+	if err = os.WriteFile(source, data, 0600); err != nil {
+		t.Fatal(err)
+	}
+	if err = os.WriteFile(path, data, 0600); err != nil {
+		t.Fatal(err)
+	}
+	mediaJSON(t, filepath.Join(home, "conversation-mode.json"), map[string]any{"domain": "discord-conversation-mode-v1", "enabled": true})
+	mediaJSON(t, strings.TrimSuffix(path, ".mp4")+".source.json", conversationMediaSource{Domain: conversationMediaSourceDomain, SourcePath: source, SnapshotPath: path, SHA256: bytesHash(data), Size: int64(len(data))})
+	return path
+}
+
+func TestFreshMP4QualificationFailureReadsZeroBytes(t *testing.T) {
+	for _, kind := range []string{"denied", "error", "canceled", "wrong-proof", "missing-check"} {
+		t.Run(kind, func(t *testing.T) {
+			reads, checks := 0, 0
+			var check func(string) (conversationMediaVerification, error)
+			if kind != "missing-check" {
+				check = func(string) (conversationMediaVerification, error) {
+					checks++
+					switch kind {
+					case "denied":
+						return conversationMediaVerification{}, nil
+					case "canceled":
+						return conversationMediaVerification{}, context.Canceled
+					case "error":
+						return conversationMediaVerification{}, errors.New("owned source guard failed")
+					case "wrong-proof":
+						return conversationMediaVerification{Verified: true, MIME: "image/png"}, nil
+					}
+					return conversationMediaVerification{}, errConversationMedia
+				}
+			}
+			read := func(string, int64) ([]byte, os.FileInfo, error) { reads++; return fixtureVideoMP4(1, "vide"), nil, nil }
+			_, _, err := conversationQuestionImagesWithRead([]string{filepath.Join(t.TempDir(), "input.mp4")}, check, read)
+			if err == nil || reads != 0 || (kind != "missing-check" && checks != 1) {
+				t.Fatal("read before qualified source", reads, checks, err)
+			}
+		})
 	}
 }
 

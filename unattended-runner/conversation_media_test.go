@@ -119,11 +119,17 @@ func TestConversationMP4PreservesSourceAndQuestionScope(t *testing.T) {
 	}
 	f.data = fixtureVideoMP4((10<<20)+1, "vide")
 	f.write(t)
-	p := f.verify(t, f.snapshot)
+	deps := f.deps()
+	deps.VideoQuestion = func(context.Context, string, string, conversationMediaSource, *generatedQuestionScope) error {
+		return nil
+	}
+	p, err := verifyConversationMedia(context.Background(), f.snapshot, f.sender, deps)
+	if err != nil {
+		t.Fatal(err)
+	}
 	if p.MIME != "video/mp4" || p.Extension != "mp4" || len(f.guardPaths) != 1 || f.guardPaths[0] != f.source {
 		t.Fatal("MP4 original scope lost")
 	}
-	deps := f.deps()
 	f.deny = true
 	qualificationCalls := 0
 	deps.Question = &generatedQuestionScope{}
@@ -136,7 +142,7 @@ func TestConversationMP4PreservesSourceAndQuestionScope(t *testing.T) {
 	}
 	f.deny = false
 	f.onGuard = func() { _ = os.WriteFile(f.source, fixtureVideoMP4(1, "vide"), 0600) }
-	if _, err := verifyConversationMedia(context.Background(), f.snapshot, f.sender, f.deps()); err == nil {
+	if _, err := verifyConversationMedia(context.Background(), f.snapshot, f.sender, deps); err == nil {
 		t.Fatal("changed original video accepted")
 	}
 }
@@ -168,9 +174,78 @@ func TestConversationMP4FormatSizeAndRetryBoundaries(t *testing.T) {
 	if _, e := verifyConversationMedia(context.Background(), f.source, f.sender, f.deps()); e == nil {
 		t.Fatal("video enabled for silent log")
 	}
-	paths, hashes, e := conversationQuestionImages([]string{f.source})
+	paths, hashes, e := conversationQuestionImages([]string{f.source}, func(string) (conversationMediaVerification, error) {
+		return conversationMediaVerification{Domain: conversationMediaDomain, Verified: true, MIME: "video/mp4", Extension: "mp4", Size: int64(len(valid)), SHA256: bytesHash(valid)}, nil
+	})
 	if e != nil || len(paths) != 1 || len(hashes) != 1 || hashes[0] != bytesHash(valid) {
 		t.Fatal("question video retry binding lost", e)
+	}
+}
+
+func TestRegisteredMP4RequiresActualNormalQuestionAndScope(t *testing.T) {
+	f := mediaFixture(t)
+	f.normal = "normal-ask-" + strings.Repeat("b", 64)
+	f.sender = "conversation-v1-" + bytesHash([]byte(f.normal))[:32]
+	f.source = filepath.Join(f.root, "original.mp4")
+	f.snapshot = filepath.Join(f.home, "conversation-bridge", f.normal, "attachment-0.mp4")
+	f.descriptor = strings.TrimSuffix(f.snapshot, ".mp4") + ".source.json"
+	f.data = fixtureVideoMP4(1, "vide")
+	if err := os.MkdirAll(filepath.Dir(f.snapshot), 0700); err != nil {
+		t.Fatal(err)
+	}
+	f.write(t)
+	body := []byte("owned normal question")
+	decision := json.RawMessage(`{"todo_id":42,"decision":"direction"}`)
+	scope := generatedQuestionScope{Todo: 42, Body: bytesHash(body), Decision: canonicalHash(decision), Owner: "300", Guild: "100", Forum: "200"}
+	dir := filepath.Join(f.home, "unattended", "conversations", f.normal)
+	if err := os.MkdirAll(dir, 0700); err != nil {
+		t.Fatal(err)
+	}
+	q := ConversationQuestion{RequestID: f.normal, SenderID: f.sender, Todo: 42, Project: "fixture", Phase: "reserved", BodyFile: filepath.Join(dir, "question.txt"), DecisionFile: filepath.Join(dir, "decision.json"), Attachments: []string{f.snapshot}, AttachmentHashes: []string{bytesHash(f.data)}}
+	if os.WriteFile(q.BodyFile, body, 0600) != nil || os.WriteFile(q.DecisionFile, decision, 0600) != nil {
+		t.Fatal("owned question save")
+	}
+	base := conversationIndex{Domain: conversationDomain, Destination: Destination{Owner: "300", Guild: "100", Forum: "200"}, Questions: map[string]ConversationQuestion{f.normal: q}}
+	for _, fault := range []string{"none", "missing", "phase", "todo", "sender", "hash", "body", "scope"} {
+		current := base
+		current.Questions = map[string]ConversationQuestion{f.normal: q}
+		changed := q
+		switch fault {
+		case "missing":
+			delete(current.Questions, f.normal)
+		case "phase":
+			changed.Phase = "posted"
+		case "todo":
+			changed.Todo++
+		case "sender":
+			changed.SenderID = "conversation-v1-" + strings.Repeat("c", 32)
+		case "hash":
+			changed.AttachmentHashes = []string{strings.Repeat("0", 64)}
+		case "body":
+			changed.BodyFile = filepath.Join(dir, "other.txt")
+		}
+		if fault != "missing" {
+			current.Questions[f.normal] = changed
+		}
+		mediaJSON(t, filepath.Join(f.home, "unattended", "conversation-questions.json"), current)
+		deps := f.deps()
+		deps.Question = &scope
+		deps.VideoQuestion = registeredConversationVideoQuestion(f.home)
+		if fault == "scope" {
+			bad := scope
+			bad.Body = strings.Repeat("0", 64)
+			deps.Question = &bad
+		}
+		_, err := verifyConversationMedia(context.Background(), f.snapshot, f.sender, deps)
+		if (err == nil) != (fault == "none") {
+			t.Fatalf("fault=%s accepted=%v", fault, err == nil)
+		}
+	}
+	deps := f.deps()
+	deps.Question = &scope
+	deps.VideoQuestion = registeredConversationVideoQuestion(f.home)
+	if _, err := verifyConversationMedia(context.Background(), f.source, f.sender, deps); err == nil {
+		t.Fatal("direct arbitrary video source accepted")
 	}
 }
 

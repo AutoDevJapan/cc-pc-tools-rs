@@ -1684,15 +1684,12 @@ struct ConversationMediaVerification {
     question_qualification: Option<crate::question_images::Qualification>,
 }
 
-fn verify_conversation_image(
+fn conversation_media_proof(
     ctx: &mut Context,
     request: &str,
     path: &Path,
-    bytes: &[u8],
-    mime: &str,
-    extension: &str,
     scope: Option<&crate::question_images::Scope>,
-) -> Result<()> {
+) -> Result<ConversationMediaVerification> {
     const FAILED: &str = "new conversation image verification unavailable; no image is sent";
     let mut args = vec![
         "D:/CC/Tools/discord-ask/unattended-runner.exe".into(),
@@ -1709,8 +1706,17 @@ fn verify_conversation_image(
     if output.code != 0 || output.stdout.len() > 64 * 1024 {
         return Err(FAILED.into());
     }
-    let proof: ConversationMediaVerification =
-        serde_json::from_str(&output.stdout).map_err(|_| FAILED)?;
+    serde_json::from_str(&output.stdout).map_err(|_| FAILED.into())
+}
+
+fn match_conversation_media(
+    proof: ConversationMediaVerification,
+    bytes: &[u8],
+    mime: &str,
+    extension: &str,
+    scope: Option<&crate::question_images::Scope>,
+) -> Result<()> {
+    const FAILED: &str = "new conversation image verification unavailable; no image is sent";
     if proof.domain != "discord-conversation-media-v1"
         || !proof.verified
         || proof.sha256 != format!("{:x}", Sha256::digest(bytes))
@@ -1733,12 +1739,60 @@ fn verify_conversation_image(
     Ok(())
 }
 
+fn verify_conversation_image(
+    ctx: &mut Context,
+    request: &str,
+    path: &Path,
+    bytes: &[u8],
+    mime: &str,
+    extension: &str,
+    scope: Option<&crate::question_images::Scope>,
+) -> Result<()> {
+    match_conversation_media(
+        conversation_media_proof(ctx, request, path, scope)?,
+        bytes,
+        mime,
+        extension,
+        scope,
+    )
+}
+
+fn qualified_question_video_bytes(
+    ctx: &mut Context,
+    request: &str,
+    path: &Path,
+    scope: Option<&crate::question_images::Scope>,
+    read: impl FnOnce() -> Result<Vec<u8>>,
+) -> Result<Vec<u8>> {
+    let proof = conversation_media_proof(ctx, request, path, scope)?;
+    if proof.domain != "discord-conversation-media-v1"
+        || !proof.verified
+        || proof.size == 0
+        || proof.size > crate::conversation_video::LIMIT as u64
+        || proof.sha256.len() != 64
+        || proof.mime != "video/mp4"
+        || proof.extension != "mp4"
+        || proof.question_qualification.is_some()
+    {
+        return Err("normal question video source qualification unavailable".into());
+    }
+    let mut bytes = read()?;
+    if let Err(err) = crate::conversation_video::validate(&bytes)
+        .and_then(|_| match_conversation_media(proof, &bytes, "video/mp4", "mp4", scope))
+    {
+        bytes.fill(0);
+        return Err(err);
+    }
+    Ok(bytes)
+}
+
 fn images(
     ctx: &mut Context,
     request: &str,
     paths: &[PathBuf],
     secrets: &SecretCheck,
     scope: Option<&crate::question_images::Scope>,
+    normal_question: bool,
 ) -> Result<Vec<Image>> {
     if paths.is_empty() {
         return Ok(vec![]);
@@ -1769,6 +1823,36 @@ fn images(
     let mut result = Vec::new();
     let mut total = 0;
     for path in paths {
+        if path
+            .extension()
+            .is_some_and(|value| value.eq_ignore_ascii_case("mp4"))
+        {
+            if !normal_question || !conversation || !request.starts_with("conversation-v1-") {
+                return Err("MP4 requires an original normal question snapshot".into());
+            }
+            let bytes = qualified_question_video_bytes(ctx, request, path, scope, || {
+                let _lease = crate::project::pin_plain_source(path)?;
+                let input = crate::project::open_regular_source(path)
+                    .map_err(|_| "qualified video read unavailable")?;
+                read_bounded(input, crate::conversation_video::LIMIT)
+            })?;
+            secrets.bytes(&bytes)?;
+            total += bytes.len();
+            if total > UPLOAD_BYTES {
+                return Err("recovery media exceed the total upload size limit".into());
+            }
+            let sha256 = format!("{:x}", Sha256::digest(&bytes));
+            result.push(Image {
+                receipt: ImageReceipt {
+                    filename: format!("image-{}.mp4", &sha256[..20]),
+                    mime: "video/mp4".into(),
+                    size: bytes.len(),
+                    sha256,
+                },
+                bytes,
+            });
+            continue;
+        }
         let resolved = fs::canonicalize(path).map_err(|_| "cannot resolve recovery image")?;
         // This is a path/time preflight only. The original source and the
         // actual candidate bytes are independently verified below before HTTP.
@@ -1818,26 +1902,11 @@ fn images(
         {
             return Err("a recovery attachment must be a regular image file".into());
         }
-        let video = conversation
-            && request.starts_with("conversation-v1-")
-            && path
-                .extension()
-                .is_some_and(|value| value.eq_ignore_ascii_case("mp4"));
-        let bytes = read_bounded(
-            file,
-            if video {
-                crate::conversation_video::LIMIT
-            } else {
-                IMAGE_BYTES
-            },
-        )?;
+        let bytes = read_bounded(file, IMAGE_BYTES)?;
         if clients.is_none() && !conversation {
             verify_generated_proposal(request, path, &resolved, &bytes)?;
         }
-        let (mime, extension) = if video {
-            crate::conversation_video::validate(&bytes)?;
-            ("video/mp4", "mp4")
-        } else if bytes.starts_with(b"\x89PNG\r\n\x1a\n") {
+        let (mime, extension) = if bytes.starts_with(b"\x89PNG\r\n\x1a\n") {
             ("image/png", "png")
         } else if bytes.starts_with(b"\xff\xd8\xff") {
             ("image/jpeg", "jpg")
@@ -2717,7 +2786,7 @@ fn prepare_log_body(
     if args.notify {
         log_requires_owner_action(&body)?;
     }
-    let images = images(ctx, &args.request_id, &args.attach, &secrets, None)?;
+    let images = images(ctx, &args.request_id, &args.attach, &secrets, None, false)?;
     let mut request = Request {
         request_id: args.request_id.clone(),
         title: title_input(&args.title, &secrets)?,
@@ -2969,6 +3038,7 @@ pub fn ask(ctx: &mut Context, args: &AskArgs) -> Result<Value> {
                 &args.attach,
                 &SecretCheck::new(),
                 scope.as_ref(),
+                true,
             )?;
             if !args.expected_image_sha256.is_empty()
                 && images
@@ -3077,6 +3147,7 @@ pub fn resume_ask(ctx: &mut Context, args: &ResumeAskArgs) -> Result<Value> {
             &args.attach,
             &SecretCheck::new(),
             scope.as_ref(),
+            true,
         )?
     };
     execute_saved(ctx, &args.request_id, args.todo_id, &images)
@@ -5608,6 +5679,50 @@ mod tests {
             assert_eq!(calls.lock().unwrap().len(), 1);
             f.unchanged();
         }
+    }
+
+    #[test]
+    fn normal_question_mp4_sender_qualifies_before_any_content_read() {
+        for mode in ["denied", "wrong-type", "qualified"] {
+            let f = Fixture::new();
+            let mut ctx = f.context();
+            let body = b"owned synthetic bytes";
+            let proof = json!({"domain":"discord-conversation-media-v1","verified":true,"sha256":format!("{:x}",Sha256::digest(body)),"size":body.len(),"mime":if mode == "wrong-type" {"image/png"} else {"video/mp4"},"extension":"mp4"});
+            let calls = media_mock(&f, &mut ctx, proof, if mode == "denied" { 1 } else { 0 });
+            let mut reads = 0;
+            let result = qualified_question_video_bytes(
+                &mut ctx,
+                &format!("conversation-v1-{}", "c".repeat(32)),
+                &f.root.path().join("unopened.mp4"),
+                None,
+                || {
+                    reads += 1;
+                    Err("owned read spy".into())
+                },
+            );
+            assert!(result.is_err());
+            assert_eq!(reads, usize::from(mode == "qualified"));
+            assert_eq!(calls.lock().unwrap().len(), 1);
+            assert!(f.server.lock().unwrap().calls.is_empty());
+        }
+    }
+
+    #[test]
+    fn normal_question_mp4_cannot_be_enabled_by_log_request_prefix() {
+        let f = Fixture::new();
+        let mut ctx = f.context();
+        let calls = media_mock(&f, &mut ctx, json!({}), 1);
+        let mut args = f.log(
+            &format!("conversation-v1-{}", "d".repeat(32)),
+            "確認用の記録です。",
+            false,
+        );
+        args.attach.push(f.root.path().join("unopened.mp4"));
+        assert!(log(&mut ctx, &args).is_err());
+        assert!(calls.lock().unwrap().is_empty());
+        assert!(f.server.lock().unwrap().calls.is_empty());
+        assert!(!f.home.join(LEDGER).exists());
+        f.unchanged();
     }
 
     struct ProgramVerifierMock {

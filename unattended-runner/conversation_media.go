@@ -31,10 +31,11 @@ var conversationMediaNormal = regexp.MustCompile(`^normal-(log|ask)-[a-f0-9]{64}
 var conversationMediaAttachment = regexp.MustCompile(`^attachment-([0-9])\.(png|jpg|jpeg|gif|webp|bmp|tif|tiff|mp4)$`)
 
 type conversationMediaDependencies struct {
-	Home     string
-	Guard    func(context.Context, string) (bool, error)
-	Question *generatedQuestionScope
-	Qualify  func(context.Context, string, generatedQuestionScope) (*generatedImageQualification, error)
+	Home          string
+	Guard         func(context.Context, string) (bool, error)
+	Question      *generatedQuestionScope
+	Qualify       func(context.Context, string, generatedQuestionScope) (*generatedImageQualification, error)
+	VideoQuestion func(context.Context, string, string, conversationMediaSource, *generatedQuestionScope) error
 }
 
 type conversationMediaSource struct {
@@ -370,6 +371,16 @@ func verifyConversationMedia(ctx context.Context, path, request string, deps con
 			return result, errConversationMedia
 		}
 	}
+	// MP4 support belongs to normal questions with a retained source receipt,
+	// not an arbitrary recovery caller choosing the conversation-v1 prefix.
+	if strings.EqualFold(filepath.Ext(path), ".mp4") && source.Domain == "" {
+		return result, errConversationMedia
+	}
+	if strings.EqualFold(filepath.Ext(path), ".mp4") {
+		if deps.VideoQuestion == nil || deps.VideoQuestion(ctx, path, request, source, deps.Question) != nil {
+			return result, errConversationMedia
+		}
+	}
 	allowed, err := deps.Guard(ctx, sourcePath)
 	if err != nil || ctx.Err() != nil {
 		return result, errConversationMedia
@@ -428,7 +439,7 @@ func conversationMediaCLI(args []string, out io.Writer) int {
 	if !exists {
 		home = "D:/CC/Tools/discord-ask"
 	}
-	return conversationMediaCLIWithDependencies(args, out, conversationMediaDependencies{Home: home, Guard: conversationMediaLiveGuard, Qualify: func(ctx context.Context, path string, scope generatedQuestionScope) (*generatedImageQualification, error) {
+	return conversationMediaCLIWithDependencies(args, out, conversationMediaDependencies{Home: home, Guard: conversationMediaLiveGuard, VideoQuestion: registeredConversationVideoQuestion(home), Qualify: func(ctx context.Context, path string, scope generatedQuestionScope) (*generatedImageQualification, error) {
 		return qualifyGeneratedQuestionImage(ctx, path, scope, generatedQuestionProduction())
 	}})
 }

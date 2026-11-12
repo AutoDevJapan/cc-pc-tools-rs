@@ -21,8 +21,8 @@ import (
 // This input-free reader identifies one previously observed installed program.
 // It does not admit client-records, update a file, or issue a data-access grant.
 const installedGuardPath = "D:/CC/Tools/client-records/scrub391.exe"
-const installedGuardSHA = "edd86d52143b469b4d08493563dfab66db382f278de15791f8a97cc80a143900"
-const installedGuardRevision = "4ede82ea7d6e274c518f2e23a3ade685e8c4c3a2"
+const installedGuardSHA = "b7a1f024f03ec600ada7aa0b28d435b022cd9f4cd384a31cacf67a80b5e355cb"
+const installedGuardRevision = "921a071838eaf459d3a95beca6069bce8713f0bf"
 
 // The accepted predecessor recorded a dirty build. Its exact PE hash and
 // reviewed original input proof remain the authority, never dirty metadata alone.

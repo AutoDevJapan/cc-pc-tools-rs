@@ -28,6 +28,28 @@ fn setup(text: &str) -> Harness {
 }
 
 #[test]
+fn dryrun_recovery_uses_catalog_if_legacy_registry_is_absent_without_mutations() {
+    let mut h = setup("進めてよいですか？");
+    std::fs::remove_file(&h.ctx.client_projects).unwrap();
+    let before = std::fs::read(h.ctx.here.join("state.json")).unwrap();
+    let result = questions::recover(&mut h.ctx, &args(false)).unwrap();
+    assert_eq!(result["inspected"], 1);
+    assert_eq!(result["registered"], 0);
+    assert_eq!(
+        std::fs::read(h.ctx.here.join("state.json")).unwrap(),
+        before
+    );
+    assert!(!h.ctx.client_projects.exists());
+    assert!(h
+        .fake
+        .borrow()
+        .http_calls
+        .iter()
+        .all(|call| call["method"] == "GET"));
+    assert!(h.fake.borrow().posts.is_empty());
+}
+
+#[test]
 fn notified_question_first_line_is_tracked_but_reports_and_quoted_questions_are_not() {
     for (text, expected) in [
         ("公開してよいですか？\na 公開する\nb 準備を続ける", 1),
@@ -242,7 +264,9 @@ fn failed_second_post_chunk_leaves_first_question_registered() {
     assert_eq!(h.state()["questions"][0]["work_thread_id"], "200");
     assert_ne!(h.state()["questions"][0]["posting_complete"], true);
     let records: Vec<_> = std::fs::read_dir(h.ctx.here.join("question-progress"))
-        .unwrap().map(|e| read_json(&e.unwrap().path()).unwrap()).collect();
+        .unwrap()
+        .map(|e| read_json(&e.unwrap().path()).unwrap())
+        .collect();
     assert_eq!(records.len(), 1);
     assert_eq!(records[0]["question"]["starter"], "300");
 }

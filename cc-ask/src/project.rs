@@ -5,11 +5,46 @@ use std::path::Path;
 
 pub struct ProjectNames {
     clients: Vec<Regex>,
+    catalog: Option<crate::project_catalog::Catalog>,
 }
 
 impl ProjectNames {
+    pub fn catalog_only(&self) -> bool {
+        self.catalog.is_some()
+    }
     pub fn load(path: &Path) -> Result<Self> {
-        let text = read_text(path)?;
+        Self::load_inner(path, false)
+    }
+
+    /// Existing question displays may use the normal department projection.
+    /// Original decision text continues to require its original name registry.
+    pub fn load_for_owner_questions(path: &Path) -> Result<Self> {
+        Self::load_inner(path, true)
+    }
+
+    fn load_inner(path: &Path, use_catalog: bool) -> Result<Self> {
+        let text = match std::fs::read_to_string(path) {
+            Ok(text) => text,
+            Err(error)
+                if use_catalog
+                    && error.kind() == std::io::ErrorKind::NotFound
+                    && std::fs::symlink_metadata(path)
+                        .is_err_and(|error| error.kind() == std::io::ErrorKind::NotFound) =>
+            {
+                return Ok(Self {
+                    clients: Vec::new(),
+                    catalog: Some(crate::project_catalog::Catalog::embedded()?),
+                });
+            }
+            Err(error) => {
+                return Err(format!(
+                    "OSError: project privacy source unreadable (kind={:?}, code={:?})",
+                    error.kind(),
+                    error.raw_os_error()
+                ))
+            }
+        };
+        let text = text.replace("\r\n", "\n").replace('\r', "\n");
         let mut names: Vec<_> = text
             .trim_start_matches('\u{feff}')
             .lines()
@@ -28,17 +63,32 @@ impl ProjectNames {
                         .unwrap()
                 })
                 .collect(),
+            catalog: None,
         })
     }
 
     pub fn redact(&self, text: &str) -> String {
-        self.clients.iter().fold(text.to_owned(), |text, name| {
+        let text = self.clients.iter().fold(text.to_owned(), |text, name| {
             name.replace_all(&text, "クライアント案件").into_owned()
-        })
+        });
+        self.catalog
+            .as_ref()
+            .map_or(text.clone(), |catalog| catalog.redact(&text))
     }
 
     pub fn label(&self, project: &str) -> String {
-        if self.clients.iter().any(|name| name.is_match(project)) {
+        if self
+            .catalog
+            .as_ref()
+            .is_some_and(|catalog| !catalog.known_project(project))
+        {
+            "プロジェクト不明".into()
+        } else if self.clients.iter().any(|name| name.is_match(project))
+            || self
+                .catalog
+                .as_ref()
+                .is_some_and(|catalog| catalog.redact(project) != project)
+        {
             "クライアント案件".into()
         } else {
             project.to_owned()

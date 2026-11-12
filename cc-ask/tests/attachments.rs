@@ -117,6 +117,29 @@ fn body(h: &Harness, text: &str) -> PathBuf {
 }
 
 #[test]
+fn missing_legacy_names_uses_catalog_for_attachment_privacy_without_posting() {
+    let (mut h, capture) = fixture();
+    std::fs::remove_file(&h.ctx.client_projects).unwrap();
+    let media = attachment(&h, "public.png", 128);
+    let prepared = prepare(&mut h.ctx, &[media]).unwrap().unwrap();
+    assert_eq!(prepared.files.len(), 1);
+    assert_eq!(prepared.files[0].size, 128);
+    assert!(capture.borrow().uploads.is_empty());
+    assert!(h.fake.borrow().posts.is_empty());
+    assert!(!h.ctx.client_projects.exists());
+}
+
+#[test]
+fn unreadable_existing_privacy_source_still_rejects_attachment_before_http() {
+    let (mut h, capture) = fixture();
+    let media = attachment(&h, "public.png", 128);
+    h.ctx.client_projects = h.root.path().to_path_buf();
+    assert!(prepare(&mut h.ctx, &[media]).is_err());
+    assert!(capture.borrow().uploads.is_empty());
+    assert!(h.fake.borrow().http_calls.is_empty());
+}
+
+#[test]
 fn multipart_exact_fields_binary_bytes_and_silent_post() {
     let (mut h, c) = fixture();
     let p = h.root.path().join("日本語.png");

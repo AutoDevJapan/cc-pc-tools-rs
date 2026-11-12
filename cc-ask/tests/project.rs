@@ -198,6 +198,86 @@ fn unreadable_client_list_prevents_posting() {
 }
 
 #[test]
+fn missing_legacy_names_uses_existing_privacy_catalog_for_known_product_dryrun() {
+    let mut h = Harness::new();
+    std::fs::remove_file(&h.ctx.client_projects).unwrap();
+    let body = h.root.path().join("body.md");
+    std::fs::write(&body, "191秒全編の評価を確認してください。").unwrap();
+    let value = cmd_ask(
+        &mut h.ctx,
+        &AskArgs {
+            title: "全編評価".into(),
+            body_file: body,
+            cwd: Some("D:/repos/KaraokeMaker".into()),
+            dry_run: true,
+            ..Default::default()
+        },
+    )
+    .unwrap();
+    assert_eq!(value["project"], "KaraokeMaker");
+    assert!(h.fake.borrow().http_calls.is_empty());
+    assert!(h.fake.borrow().posts.is_empty());
+    assert!(!h.ctx.client_projects.exists());
+}
+
+#[test]
+fn missing_legacy_names_rejects_unknown_project_without_http() {
+    let mut h = Harness::new();
+    std::fs::remove_file(&h.ctx.client_projects).unwrap();
+    let body = h.root.path().join("body.md");
+    std::fs::write(&body, "確認してください。").unwrap();
+    let result = cmd_ask(
+        &mut h.ctx,
+        &AskArgs {
+            title: "確認".into(),
+            body_file: body,
+            cwd: Some("D:/repos/unknown-catalog-fixture".into()),
+            ..Default::default()
+        },
+    );
+    assert!(result.is_err());
+    assert!(h.fake.borrow().http_calls.is_empty());
+    assert!(h.fake.borrow().posts.is_empty());
+}
+
+#[test]
+fn existing_unreadable_names_source_is_not_treated_as_missing() {
+    let h = Harness::new();
+    assert!(ProjectNames::load(h.root.path()).is_err());
+}
+
+#[test]
+fn original_decision_text_keeps_strict_registry_requirement() {
+    let h = Harness::new();
+    std::fs::remove_file(&h.ctx.client_projects).unwrap();
+    assert!(ProjectNames::load(&h.ctx.client_projects).is_err());
+    assert!(ProjectNames::load_for_owner_questions(&h.ctx.client_projects).is_ok());
+}
+
+#[test]
+fn missing_legacy_names_known_project_empty_title_uses_filtered_body() {
+    let mut h = Harness::new();
+    std::fs::remove_file(&h.ctx.client_projects).unwrap();
+    let body = h.root.path().join("body.md");
+    std::fs::write(&body, "191秒版を評価してよいですか？").unwrap();
+    let result = cmd_ask(
+        &mut h.ctx,
+        &AskArgs {
+            body_file: body,
+            cwd: Some("D:/repos/KaraokeMaker".into()),
+            dry_run: true,
+            ..Default::default()
+        },
+    )
+    .unwrap();
+    assert!(result["title"]
+        .as_str()
+        .unwrap()
+        .starts_with("【KaraokeMaker】"));
+    assert!(h.fake.borrow().http_calls.is_empty());
+}
+
+#[test]
 fn real_git_nested_folder_and_worktree_dry_run() {
     let temp = tempfile::tempdir().unwrap();
     let repo = temp.path().join("alpha");

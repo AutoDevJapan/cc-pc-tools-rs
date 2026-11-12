@@ -481,7 +481,7 @@ pub fn recover(ctx: &mut Context, args: &RecoverArgs) -> Result<Value> {
     if me["bot"] != true || s(&me["id"]).is_empty() {
         return Err("bot identity unavailable".into());
     }
-    let names = ProjectNames::load(&ctx.client_projects)?;
+    let names = ProjectNames::load_for_owner_questions(&ctx.client_projects)?;
     let mut rows = vec![];
     let mut registered = 0;
     // Recent threads first; bounded explicit inspection never replays the old 182-question batch.

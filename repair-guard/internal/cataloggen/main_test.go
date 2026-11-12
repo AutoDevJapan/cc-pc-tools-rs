@@ -22,6 +22,7 @@ func TestProjectionKeepsDepartmentAndConcatAliasesWithoutNames(t *testing.T) {
 		Groups []struct {
 			Kind    string
 			Aliases []string
+			Lengths []int `json:"normalized_lengths"`
 		}
 	}
 	if json.Unmarshal(b, &result) != nil || len(result.Groups) != 2 || result.Groups[1].Kind != "client_project" {
@@ -33,6 +34,9 @@ func TestProjectionKeepsDepartmentAndConcatAliasesWithoutNames(t *testing.T) {
 	}
 	if !match {
 		t.Fatal("concat alias lost")
+	}
+	if len(result.Groups[0].Lengths) != 2 || result.Groups[0].Lengths[0] != 9 || result.Groups[0].Lengths[1] != 11 || len(result.Groups[1].Lengths) != 2 || result.Groups[1].Lengths[0] != 11 || result.Groups[1].Lengths[1] != 13 {
+		t.Fatal("normalized alias character lengths lost")
 	}
 	if _, err := generate([]byte("unrecognized")); err == nil {
 		t.Fatal("unsupported source silently produced classification")

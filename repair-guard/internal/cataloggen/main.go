@@ -57,6 +57,7 @@ func generate(source []byte, departmentSources ...[]byte) ([]byte, error) {
 	type group struct {
 		Kind    string   `json:"kind"`
 		Aliases []string `json:"aliases"`
+		Lengths []int    `json:"normalized_lengths"`
 	}
 	groups := []group{}
 	for _, block := range regexp.MustCompile(`(?s)Product\s*\{(.*?)\}`).FindAllSubmatch(section[1], -1) {
@@ -91,6 +92,7 @@ func generate(source []byte, departmentSources ...[]byte) ([]byte, error) {
 			combined = append(combined, value)
 		}
 		set := map[string]bool{}
+		lengths := map[int]bool{}
 		for _, value := range combined {
 			value = strings.TrimPrefix(strings.ToLower(value), "resume-")
 			normalized := strings.Map(func(r rune) rune {
@@ -100,12 +102,18 @@ func generate(source []byte, departmentSources ...[]byte) ([]byte, error) {
 				return -1
 			}, value)
 			set[digest([]byte(normalized))] = true
+			lengths[len([]rune(normalized))] = true
 		}
 		hashes := []string{}
 		for value := range set {
 			hashes = append(hashes, value)
 		}
 		sort.Strings(hashes)
+		widths := []int{}
+		for n := range lengths {
+			widths = append(widths, n)
+		}
+		sort.Ints(widths)
 		kind := "self"
 		department, err := strconv.Atoi(string(dept[1]))
 		if err != nil || department < 0 || department >= count {
@@ -114,7 +122,7 @@ func generate(source []byte, departmentSources ...[]byte) ([]byte, error) {
 		if department == contracted {
 			kind = "client_project"
 		}
-		groups = append(groups, group{kind, hashes})
+		groups = append(groups, group{kind, hashes, widths})
 	}
 	if len(groups) == 0 {
 		return nil, fmt.Errorf("empty catalogue")

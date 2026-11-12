@@ -120,8 +120,11 @@ pub fn cmd_ask(ctx: &mut Context, args: &AskArgs) -> Result<Value> {
             .to_string_lossy()
             .into_owned(),
     };
-    let names = ProjectNames::load(&ctx.client_projects)?;
+    let names = ProjectNames::load_for_owner_questions(&ctx.client_projects)?;
     let mut project = determine_project(ctx, &cwd, &names);
+    if project == "プロジェクト不明" && names.catalog_only() {
+        return Err("project privacy classification unavailable for this project".into());
+    }
     let body = names.redact(&raw_body);
     let owner = ctx.owner();
     let mut title = thread_title(
@@ -129,7 +132,11 @@ pub fn cmd_ask(ctx: &mut Context, args: &AskArgs) -> Result<Value> {
         &names.redact(&args.agent),
         &names.redact(&args.title),
     );
-    if crate::task_title::clean(&args.title).is_empty() {
+    if crate::task_title::clean(&args.title).is_empty() && names.catalog_only() {
+        // The body and project have already been filtered by the department
+        // catalog. Do not reopen the missing legacy source through task titles.
+        title = thread_title(&project, "", &body);
+    } else if crate::task_title::clean(&args.title).is_empty() {
         let todo = if ctx.todo.is_file() {
             read_json(&ctx.todo)?
         } else {

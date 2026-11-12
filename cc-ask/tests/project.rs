@@ -241,6 +241,84 @@ fn missing_legacy_names_rejects_unknown_project_without_http() {
 }
 
 #[test]
+fn missing_registry_rejects_unqualified_body_before_read_and_post() {
+    for proof in [
+        json!({"ok":true,"access_allowed":false,"client_resource":true,"classification_unverified":false}),
+        json!({"ok":true,"access_allowed":false,"client_resource":true,"classification_unverified":true}),
+        json!({"ok":true,"access_allowed":"true","client_resource":false,"classification_unverified":false}),
+        json!({"ok":true,"client_resource":false,"classification_unverified":false}),
+    ] {
+        let mut h = Harness::new();
+        std::fs::remove_file(&h.ctx.client_projects).unwrap();
+        h.fake.borrow_mut().source_guard_output = Some(cc_ask::core::Output {
+            stdout: proof.to_string(),
+            ..Default::default()
+        });
+        let result = cmd_ask(
+            &mut h.ctx,
+            &AskArgs {
+                title: "評価してください".into(),
+                body_file: h.root.path().join("not-created-body.md"),
+                cwd: Some("D:/repos/KaraokeMaker".into()),
+                dry_run: true,
+                ..Default::default()
+            },
+        );
+        let error = result.unwrap_err();
+        assert!(error.contains("question source"), "{error}");
+        assert!(h.fake.borrow().http_calls.is_empty());
+        assert!(h.fake.borrow().posts.is_empty());
+    }
+}
+
+#[test]
+fn missing_registry_known_project_still_rejects_credentials_before_post() {
+    let mut h = Harness::new();
+    std::fs::remove_file(&h.ctx.client_projects).unwrap();
+    let body = h.root.path().join("body.md");
+    std::fs::write(&body, "password=synthetic-private-value").unwrap();
+    let error = cmd_ask(
+        &mut h.ctx,
+        &AskArgs {
+            title: "評価してください".into(),
+            body_file: body,
+            cwd: Some("D:/repos/KaraokeMaker".into()),
+            dry_run: true,
+            ..Default::default()
+        },
+    )
+    .unwrap_err();
+    assert!(error.contains("credential-like"));
+    assert!(!error.contains("synthetic-private-value"));
+    assert!(h.fake.borrow().http_calls.is_empty());
+}
+
+#[cfg(windows)]
+#[test]
+fn qualified_source_lease_keeps_named_bytes_until_consumer_finishes() {
+    let mut h = Harness::new();
+    std::fs::remove_file(&h.ctx.client_projects).unwrap();
+    let body = h.root.path().join("body.md");
+    std::fs::write(&body, "評価してください。").unwrap();
+    let args = AskArgs {
+        title: "評価".into(),
+        body_file: body.clone(),
+        cwd: Some("D:/repos/KaraokeMaker".into()),
+        ..Default::default()
+    };
+    let lease =
+        qualify_question_sources(&mut *h.ctx.effects, &h.ctx.client_projects, &args).unwrap();
+    assert!(std::fs::write(&body, "changed").is_err());
+    assert!(std::fs::rename(&body, h.root.path().join("moved.md")).is_err());
+    assert_eq!(
+        std::fs::read_to_string(&body).unwrap(),
+        "評価してください。"
+    );
+    drop(lease);
+    std::fs::write(&body, "changed after release").unwrap();
+}
+
+#[test]
 fn existing_unreadable_names_source_is_not_treated_as_missing() {
     let h = Harness::new();
     assert!(ProjectNames::load(h.root.path()).is_err());
@@ -252,6 +330,20 @@ fn original_decision_text_keeps_strict_registry_requirement() {
     std::fs::remove_file(&h.ctx.client_projects).unwrap();
     assert!(ProjectNames::load(&h.ctx.client_projects).is_err());
     assert!(ProjectNames::load_for_owner_questions(&h.ctx.client_projects).is_ok());
+}
+
+#[test]
+fn missing_legacy_names_accepts_exact_resume_prefix_of_known_product() {
+    let h = Harness::new();
+    std::fs::remove_file(&h.ctx.client_projects).unwrap();
+    let names = ProjectNames::load_for_owner_questions(&h.ctx.client_projects).unwrap();
+    assert_eq!(names.label("resume-KaraokeMaker"), "resume-KaraokeMaker");
+    assert_eq!(names.label("RESUME-KaraokeMaker"), "RESUME-KaraokeMaker");
+    assert_eq!(names.label("notresume-KaraokeMaker"), "プロジェクト不明");
+    assert_eq!(
+        names.label("resume-unknown-catalog-fixture"),
+        "プロジェクト不明"
+    );
 }
 
 #[test]

@@ -26,6 +26,11 @@ impl Fixture {
         fs::write(&decision, json!({"todo_id":2823,"resources":[{"kind":"service","id":"fixture-resource"}],"decision":"direction","scope":{"origin_thread_id":"500","specification":"fixture"}}).to_string()).unwrap();
         fs::write(root.path().join("state.json"), "lost-legacy-sentinel").unwrap();
         fs::write(
+            root.path().join("client-projects.txt"),
+            "# isolated legacy privacy fixture\n",
+        )
+        .unwrap();
+        fs::write(
             root.path().join("question-recovery-required.json"),
             "recovery-sentinel",
         )
@@ -79,6 +84,7 @@ struct Fake {
     qualification_calls: usize,
     mismatched_qualification: bool,
     busy_once: bool,
+    source_proof: Option<Value>,
 }
 
 fn argument<'a>(args: &'a [String], key: &str) -> &'a str {
@@ -284,10 +290,16 @@ impl Effects for Fake {
             self.guard_calls.push(argument(args, "--guard-path").into());
             return Ok(Output {
                 code: 0,
-                stdout: self.guard_image_proof.clone().unwrap_or_else(||
+                stdout: self.source_proof.clone().or_else(|| self.guard_image_proof.clone()).unwrap_or_else(||
                     json!({"client_resource":self.deny_images,"classification_unverified":self.unverified_images}))
                     .to_string(),
                 stderr: String::new(),
+            });
+        }
+        if args.first().is_some_and(|arg| arg == "git") {
+            return Ok(Output {
+                code: 128,
+                ..Default::default()
             });
         }
         if args
@@ -801,6 +813,68 @@ fn conversation_bridge_ask_keeps_gate_decision_origin_and_canonical_wait() {
 }
 
 #[test]
+fn qualified_bridge_missing_registry_checks_sources_before_enabled_dispatch() {
+    let f = Fixture::new();
+    let missing = f.root.path().join("absent-client-list.txt");
+    let mut args = f.ask();
+    args.cwd = Some("D:/repos/KaraokeMaker".into());
+    let allow = json!({"ok":true,"access_allowed":true,"client_resource":false,"classification_unverified":false});
+    let mut fake = Fake {
+        source_proof: Some(allow),
+        ..Default::default()
+    };
+    let result = bridge::try_qualified_ask(f.root.path(), &mut fake, &missing, &args)
+        .unwrap()
+        .unwrap();
+    assert_eq!(result["phase"], "waiting");
+    assert_eq!(fake.calls.len(), 1);
+    assert_eq!(fake.bodies[0], fs::read(&f.body).unwrap());
+    assert!(fake.guard_calls.len() >= 3);
+    assert_eq!(fake.http_calls, 0);
+    f.unchanged_legacy();
+}
+
+#[test]
+fn qualified_bridge_denies_unknown_protected_secret_before_snapshots_and_children() {
+    for variant in ["protected", "unknown", "guard_unavailable", "secret"] {
+        let f = Fixture::new();
+        let missing = f.root.path().join("absent-client-list.txt");
+        let mut args = f.ask();
+        args.cwd = Some(
+            if variant == "unknown" {
+                "D:/unknown-root"
+            } else {
+                "D:/repos/KaraokeMaker"
+            }
+            .into(),
+        );
+        if variant == "secret" {
+            fs::write(&f.body, "password=synthetic-private-value").unwrap();
+        }
+        let proof = match variant {
+            "protected" => {
+                json!({"ok":true,"access_allowed":false,"client_resource":true,"classification_unverified":false})
+            }
+            "guard_unavailable" => {
+                json!({"ok":true,"client_resource":false,"classification_unverified":false})
+            }
+            _ => {
+                json!({"ok":true,"access_allowed":true,"client_resource":false,"classification_unverified":false})
+            }
+        };
+        let mut fake = Fake {
+            source_proof: Some(proof),
+            ..Default::default()
+        };
+        assert!(bridge::try_qualified_ask(f.root.path(), &mut fake, &missing, &args).is_err());
+        assert!(fake.calls.is_empty(), "{variant}");
+        assert_eq!(fake.http_calls, 0);
+        assert!(!f.root.path().join("conversation-bridge").exists());
+        f.unchanged_legacy();
+    }
+}
+
+#[test]
 fn conversation_bridge_ask_identity_is_stable_across_json_key_order_and_body_path() {
     let f = Fixture::new();
     let mut fake = Fake::default();
@@ -1059,6 +1133,10 @@ fn binary(f: &Fixture) -> Command {
     let mut command = Command::new(env!("CARGO_BIN_EXE_discord_ask"));
     command
         .env("CC_ASK_HOME", f.root.path())
+        .env(
+            "CC_ASK_CLIENT_PROJECTS",
+            f.root.path().join("client-projects.txt"),
+        )
         .env("CC_ASK_CONFIG", f.root.path().join("missing-config.json"));
     #[cfg(windows)]
     {
@@ -1159,17 +1237,15 @@ fn conversation_bridge_owner_rule_default_still_requires_question_specific_proof
         qualify_images: true,
         ..Default::default()
     };
-    assert!(
-        bridge::try_log(
-            f.root.path(),
-            &mut log,
-            "進捗",
-            "本文",
-            None,
-            false,
-            &args.attach
-        )
-        .is_err()
-    );
+    assert!(bridge::try_log(
+        f.root.path(),
+        &mut log,
+        "進捗",
+        "本文",
+        None,
+        false,
+        &args.attach
+    )
+    .is_err());
     assert_eq!(log.qualification_calls, 0);
 }

@@ -101,6 +101,8 @@ pub fn cmd_check(ctx: &mut Context) -> Result<Value> {
 
 /// Ask in a forum or text channel, retaining the original working directory.
 pub fn cmd_ask(ctx: &mut Context, args: &AskArgs) -> Result<Value> {
+    let _sources =
+        crate::project::qualify_question_sources(&mut *ctx.effects, &ctx.client_projects, args)?;
     if !args.dry_run {
         crate::state_work::recovery_guard(ctx)?;
     }
@@ -112,6 +114,11 @@ pub fn cmd_ask(ctx: &mut Context, args: &AskArgs) -> Result<Value> {
         Some(path) => Some(read_json(path)?),
         None => embedded,
     };
+    crate::recovery_messages::validate_followup_text(&args.title)?;
+    crate::recovery_messages::validate_followup_text(&raw_body)?;
+    if let Some(decision) = &decision {
+        crate::recovery_messages::validate_followup_text(&decision.to_string())?;
+    }
     crate::ask_gate::enforce(&args.title, &raw_body, args.owner_only)?;
     let cwd = match args.cwd.as_deref().filter(|v| !v.is_empty()) {
         Some(v) => v.to_owned(),

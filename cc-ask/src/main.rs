@@ -226,12 +226,14 @@ fn context(tick: bool) -> Result<Context> {
 
 fn run(command: Commands) -> Result<()> {
     // Check the original full text before config, lint/model calls, locks or Discord.
-    if let Commands::Ask(args) = &command {
-        cc_ask::ask_gate::enforce(&args.title, &read_text(&args.body_file)?, args.owner_only)?;
-    }
     let home = env_path("CC_ASK_HOME", "D:/CC/Tools/discord-ask");
     let bridged = match &command {
-        Commands::Ask(args) => cc_ask::conversation_bridge::try_ask(&home, &mut RealEffects, args)?,
+        Commands::Ask(args) => cc_ask::conversation_bridge::try_qualified_ask(
+            &home,
+            &mut RealEffects,
+            &env_path("CC_ASK_CLIENT_PROJECTS", "D:/CC/Tools/client-projects.txt"),
+            args,
+        )?,
         Commands::Log {
             topic,
             text,

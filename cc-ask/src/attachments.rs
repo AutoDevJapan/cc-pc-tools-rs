@@ -623,8 +623,16 @@ pub fn prepare(ctx: &mut Context, paths: &[PathBuf]) -> Result<Option<Prepared>>
     let temp = tempfile::tempdir().map_err(|_| "添付用の一時フォルダを作成できません")?;
     let mut snapshots = Vec::new();
     for path in paths {
+        let _source = if policy.catalog.is_some() {
+            Some(crate::project::lease_source(&mut *ctx.effects, path)?)
+        } else {
+            None
+        };
         policy.path(path)?;
         let resolved = fs::canonicalize(path).map_err(|_| "添付ファイルが見つかりません")?;
+        if policy.catalog.is_some() {
+            crate::project::qualify_source(&mut *ctx.effects, &resolved)?;
+        }
         policy.path(&resolved)?;
         let input = fs::File::open(&resolved).map_err(|_| "添付ファイルを読み取れません")?;
         if !input

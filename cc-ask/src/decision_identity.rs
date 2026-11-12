@@ -364,7 +364,29 @@ pub(crate) fn reuse(
         out["latest_owner_reply"] = latest.clone();
     }
     // Preserve original evidence privately, but never emit credentials or client names.
-    redact(ctx, &out)
+    match redact(ctx, &out) {
+        Ok(out) => Ok(out),
+        Err(_)
+            if crate::project::ProjectNames::load_for_owner_questions(&ctx.client_projects)
+                .is_ok_and(|names| names.catalog_only()) =>
+        {
+            Ok(question_reference(&out))
+        }
+        Err(error) => Err(error),
+    }
+}
+
+fn question_reference(out: &Value) -> Value {
+    let answers = out["owner_answers"].as_array().into_iter().flatten().map(|answer| {
+        json!({"id":answer["id"],"thread_id":answer["thread_id"],"author_id":answer["author_id"],
+            "timestamp":answer["timestamp"],"edited_timestamp":answer["edited_timestamp"],
+            "acquisition_source":answer["acquisition_source"]})
+    }).collect::<Vec<_>>();
+    json!({"thread_id":out["thread_id"],"after":out["after"],"url":out["url"],
+        "progress_thread_id":out["progress_thread_id"],"work_thread_id":out["work_thread_id"],
+        "reused":true,"suppressed":out["suppressed"],"delivery":"inspection_only",
+        "text_available":false,"redaction":"original_registry_unavailable","approval":"not_inferred",
+        "owner_answers":answers,"next_action":"元の質問と本人回答は参照だけを返しました。正規の元記録読取で本文と同じ範囲を確認してください。未確認の回答を承認に読み替えず、新しい質問を作成しません。"})
 }
 
 pub(crate) fn redact(ctx: &Context, out: &Value) -> Result<Value> {
@@ -528,6 +550,10 @@ pub(crate) fn preflight(
         return Ok(None);
     }
     let mut out = reuse(ctx, &prior, &prior[0], true)?;
+    if out["text_available"] == false {
+        out["suppressed"] = json!("owner_context_required");
+        return Ok(Some(out));
+    }
     if out["owner_answers"].as_array().is_none_or(|a| a.is_empty()) {
         return Ok(None);
     }

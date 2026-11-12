@@ -86,6 +86,8 @@ impl Catalog {
     }
 
     pub(crate) fn known_project(&self, text: &str) -> bool {
+        let normalized = text.to_lowercase();
+        let text = normalized.strip_prefix("resume-").unwrap_or(&normalized);
         let letters = letters(text);
         self.known.contains(&digest(letters.iter().map(|v| v.0)))
     }

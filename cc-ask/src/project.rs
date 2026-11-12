@@ -3,6 +3,167 @@ use crate::core::*;
 use regex::{Regex, RegexBuilder};
 use std::path::Path;
 
+/// This is ordinary source classification, never an image-purpose grant.
+pub(crate) fn qualify_source(effects: &mut dyn Effects, path: &Path) -> Result<()> {
+    #[derive(serde::Deserialize)]
+    struct Proof {
+        ok: bool,
+        access_allowed: bool,
+        client_resource: bool,
+        classification_unverified: bool,
+    }
+    let path =
+        std::path::absolute(path).map_err(|_| "question source qualification unavailable")?;
+    let output = effects
+        .run(
+            &[
+                "D:/CC/Tools/client-records/scrub391.exe".into(),
+                "--guard-path".into(),
+                path.to_string_lossy().into_owned(),
+            ],
+            10,
+        )
+        .map_err(|_| "question source qualification unavailable")?;
+    if output.code != 0 || !output.stderr.is_empty() || output.stdout.len() > 65536 {
+        return Err("question source qualification unavailable".into());
+    }
+    let proof = serde_json::from_str::<Proof>(&output.stdout)
+        .map_err(|_| "question source qualification unavailable")?;
+    if !proof.ok
+        || !proof.access_allowed
+        || proof.client_resource
+        || proof.classification_unverified
+    {
+        return Err("question source is protected or unverified".into());
+    }
+    Ok(())
+}
+
+pub struct QuestionSourceLease {
+    files: Vec<std::fs::File>,
+}
+
+pub(crate) fn lease_source(effects: &mut dyn Effects, path: &Path) -> Result<QuestionSourceLease> {
+    qualify_source(effects, path)?;
+    let resolved =
+        std::fs::canonicalize(path).map_err(|_| "question source qualification unavailable")?;
+    let normal =
+        std::path::PathBuf::from(crate::resume::strip_verbatim(&resolved.to_string_lossy()));
+    qualify_source(effects, &normal)?;
+    let mut files = Vec::new();
+    #[cfg(windows)]
+    {
+        use std::os::windows::fs::{MetadataExt, OpenOptionsExt};
+        let parents: Vec<_> = resolved.ancestors().skip(1).collect();
+        for parent in parents.into_iter().rev() {
+            let file = std::fs::OpenOptions::new()
+                .access_mode(0x80)
+                .share_mode(3)
+                .custom_flags(0x02200000)
+                .open(parent)
+                .map_err(|_| "question source identity unavailable")?;
+            if file
+                .metadata()
+                .map_err(|_| "question source identity unavailable")?
+                .file_attributes()
+                & 0x400
+                != 0
+            {
+                return Err("question source identity unavailable".into());
+            }
+            files.push(file);
+        }
+        let file = std::fs::OpenOptions::new()
+            .read(true)
+            .share_mode(1)
+            .custom_flags(0x00200000)
+            .open(&resolved)
+            .map_err(|_| "question source identity unavailable")?;
+        let meta = file
+            .metadata()
+            .map_err(|_| "question source identity unavailable")?;
+        if !meta.is_file() || meta.file_attributes() & 0x400 != 0 {
+            return Err("question source identity unavailable".into());
+        }
+        files.push(file);
+    }
+    #[cfg(not(windows))]
+    files.push(std::fs::File::open(&resolved).map_err(|_| "question source identity unavailable")?);
+    // Windows handles now exclude file writes/deletes and parent replacement;
+    // reclassify that still-named object before any caller consumes its bytes.
+    qualify_source(effects, path)?;
+    qualify_source(effects, &normal)?;
+    Ok(QuestionSourceLease { files })
+}
+
+pub fn qualify_question_sources(
+    effects: &mut dyn Effects,
+    registry: &Path,
+    args: &crate::commands::AskArgs,
+) -> Result<QuestionSourceLease> {
+    let names = ProjectNames::load_for_owner_questions(registry)?;
+    if !names.catalog_only() {
+        crate::ask_gate::enforce(&args.title, &read_text(&args.body_file)?, args.owner_only)?;
+        return Ok(QuestionSourceLease { files: Vec::new() });
+    }
+    let cwd = args
+        .cwd
+        .clone()
+        .map(std::path::PathBuf::from)
+        .map(Ok)
+        .unwrap_or_else(std::env::current_dir)
+        .map_err(|_| "question source qualification unavailable")?;
+    qualify_source(effects, &cwd)?;
+    let mut held = QuestionSourceLease { files: Vec::new() };
+    for path in std::iter::once(&args.body_file)
+        .chain(args.decision_file.iter())
+        .chain(&args.attach)
+    {
+        held.files.extend(lease_source(effects, path)?.files);
+    }
+    let root = effects.run(
+        &[
+            "git".into(),
+            "-C".into(),
+            cwd.to_string_lossy().into_owned(),
+            "rev-parse".into(),
+            "--show-toplevel".into(),
+        ],
+        10,
+    );
+    let folder = root
+        .as_ref()
+        .ok()
+        .filter(|out| out.code == 0)
+        .and_then(|out| out.stdout.lines().next())
+        .filter(|line| !line.trim().is_empty())
+        .map(str::to_owned)
+        .unwrap_or_else(|| cwd.to_string_lossy().into_owned());
+    if names.label(&project_from_folder(&folder)) == "プロジェクト不明" {
+        return Err("project privacy classification unavailable for this project".into());
+    }
+    // Classifying a source never asserts that arbitrary prose is public. Keep
+    // the sender's credential checks, and reject rather than rewrite a bound
+    // question when catalog-protected text occurs in its original inputs.
+    let body = read_text(&args.body_file)?;
+    crate::ask_gate::enforce(&args.title, &body, args.owner_only)?;
+    for text in std::iter::once(args.title.clone())
+        .chain(std::iter::once(body))
+        .chain(
+            args.decision_file
+                .iter()
+                .map(|path| read_text(path))
+                .collect::<Result<Vec<_>>>()?,
+        )
+    {
+        crate::recovery_messages::validate_followup_text(&text)?;
+        if names.redact(&text) != text {
+            return Err("question input contains protected project information".into());
+        }
+    }
+    Ok(held)
+}
+
 pub struct ProjectNames {
     clients: Vec<Regex>,
     catalog: Option<crate::project_catalog::Catalog>,

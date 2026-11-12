@@ -14,6 +14,7 @@ pub struct Harness {
     pub fake: Rc<RefCell<Fake>>,
 }
 pub struct Fake {
+    pub source_guard_output: Option<Output>,
     pub chronology: Vec<String>,
     pub recover_fail: bool,
     pub reboot_recover_fail: bool,
@@ -147,6 +148,7 @@ impl Harness {
         .unwrap();
         std::fs::create_dir(path.join("discord-tasks")).unwrap();
         let fake = Rc::new(RefCell::new(Fake {
+            source_guard_output: None,
             chronology: vec![],
             recover_fail: false,
             reboot_recover_fail: false,
@@ -516,6 +518,17 @@ impl Fake {
             .ok_or("unknown thread".into())
     }
     pub fn run(&mut self, argv: &[String], timeout: u64) -> Result<Output> {
+        if argv
+            .first()
+            .is_some_and(|arg| arg.ends_with("/scrub391.exe"))
+            && argv.get(1).is_some_and(|arg| arg == "--guard-path")
+        {
+            self.runs.push((argv.to_vec(), timeout));
+            return Ok(self.source_guard_output.clone().unwrap_or_else(|| Output {
+                stdout: json!({"ok":true,"access_allowed":true,"client_resource":false,"classification_unverified":false}).to_string(),
+                ..Default::default()
+            }));
+        }
         self.chronology.push(format!(
             "run:{}:{}",
             argv.join("|"),

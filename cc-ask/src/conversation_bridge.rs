@@ -338,6 +338,14 @@ fn save_media_source(
 }
 
 fn install(file: tempfile::NamedTempFile, path: &Path, expected: &str, size: u64) -> Result<()> {
+    // tempfile's Windows publication uses native paths. Canonicalizing the
+    // existing parent retains this exact destination and its long-path form.
+    #[cfg(windows)]
+    let native_path = fs::canonicalize(path.parent().ok_or(SAVE_FAILED)?)
+        .map_err(|_| SAVE_FAILED)?
+        .join(path.file_name().ok_or(SAVE_FAILED)?);
+    #[cfg(windows)]
+    let path = native_path.as_path();
     match file.persist_noclobber(path) {
         Ok(_) => Ok(()),
         Err(error) if error.error.kind() == std::io::ErrorKind::AlreadyExists => {
@@ -620,6 +628,18 @@ pub fn try_ask(home: &Path, effects: &mut dyn Effects, args: &AskArgs) -> Result
     }
     append_attachments(&root, &directory, snapshots, &mut argv)?;
     execute(effects, &argv, true, false)
+}
+
+/// The normal CLI uses this entry before either transport consumes its inputs.
+/// Existing request identity and body bytes are never rewritten by privacy checks.
+pub fn try_qualified_ask(
+    home: &Path,
+    effects: &mut dyn Effects,
+    registry: &Path,
+    args: &AskArgs,
+) -> Result<Option<Value>> {
+    let _sources = crate::project::qualify_question_sources(effects, registry, args)?;
+    try_ask(home, effects, args)
 }
 
 pub fn try_log(

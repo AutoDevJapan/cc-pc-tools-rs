@@ -278,7 +278,41 @@ func normalQuestionVideoPath(t *testing.T, f *conversationFixture, data []byte) 
 	}
 	mediaJSON(t, filepath.Join(home, "conversation-mode.json"), map[string]any{"domain": "discord-conversation-mode-v1", "enabled": true})
 	mediaJSON(t, strings.TrimSuffix(path, ".mp4")+".source.json", conversationMediaSource{Domain: conversationMediaSourceDomain, SourcePath: source, SnapshotPath: path, SHA256: bytesHash(data), Size: int64(len(data))})
+	base := f.r.Run
+	f.r.Run = func(ctx context.Context, exe string, args ...string) (string, error) {
+		if strings.Contains(exe, "scrub391") && len(args) > 1 && args[1] == source {
+			return `{"ok":true,"access_allowed":true,"client_resource":false,"classification_unverified":false,"classification_basis":"verified_self_repository","classification_policy":"owner-client-rule-20261027","original_registry_recovered":false,"ci_retirement_qualified":false,"protection_status":"clear","protection_categories":[],"scope":"owner protection policy"}`, nil
+		}
+		return base(ctx, exe, args...)
+	}
 	return path
+}
+
+func TestFreshMP4GuardMetadataFailsClosed(t *testing.T) {
+	for _, raw := range []string{
+		`{"access_allowed":false,"client_resource":false,"classification_unverified":false}`,
+		`{"access_allowed":true,"client_resource":true,"classification_unverified":false}`,
+		`{"access_allowed":true,"client_resource":false,"classification_unverified":true}`,
+		`{"access_allowed":true,"client_resource":false}`,
+		`{"client_resource":false,"classification_unverified":false}`,
+		`{"access_allowed":"true","client_resource":false,"classification_unverified":false}`,
+		`{"access_allowed":true,"client_resource":false,"classification_unverified":null}`,
+		`{"access_allowed":true,"ACCESS_ALLOWED":false,"client_resource":false,"classification_unverified":false}`,
+		`{"access_allowed":true,"client_resource":false,"classification_unverified":false,"caller_approved":true}`,
+	} {
+		f := conversationTest(t, false)
+		path := normalQuestionVideoPath(t, f, fixtureVideoMP4(1, "vide"))
+		base := f.r.Run
+		f.r.Run = func(ctx context.Context, exe string, args ...string) (string, error) {
+			if strings.Contains(exe, "scrub391") && len(args) > 1 && strings.HasSuffix(args[1], "original.mp4") {
+				return raw, nil
+			}
+			return base(ctx, exe, args...)
+		}
+		if _, err := f.r.conversationQuestionVideoCheck(context.Background(), f.input)(path); err == nil {
+			t.Fatal("invalid guard proof accepted")
+		}
+	}
 }
 
 func TestFreshMP4QualificationFailureReadsZeroBytes(t *testing.T) {
@@ -308,6 +342,22 @@ func TestFreshMP4QualificationFailureReadsZeroBytes(t *testing.T) {
 				t.Fatal("read before qualified source", reads, checks, err)
 			}
 		})
+	}
+}
+
+func TestFreshMP4AcceptsCompleteNormalGuardMetadata(t *testing.T) {
+	f := conversationTest(t, false)
+	path := normalQuestionVideoPath(t, f, fixtureVideoMP4(1, "vide"))
+	base := f.r.Run
+	f.r.Run = func(ctx context.Context, exe string, args ...string) (string, error) {
+		if strings.Contains(exe, "scrub391") {
+			return `{"ok":true,"access_allowed":true,"client_resource":false,"classification_unverified":false,"classification_basis":"verified_self_repository","classification_policy":"owner-client-rule-20261027","original_registry_recovered":false,"ci_retirement_qualified":false,"protection_status":"clear","protection_categories":[],"scope":"owner protection policy"}`, nil
+		}
+		return base(ctx, exe, args...)
+	}
+	proof, err := f.r.conversationQuestionVideoCheck(context.Background(), f.input)(path)
+	if err != nil || !proof.Verified || proof.MIME != "video/mp4" {
+		t.Fatal("normal full guard metadata rejected", err)
 	}
 }
 

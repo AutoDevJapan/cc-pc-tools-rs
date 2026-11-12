@@ -31,11 +31,12 @@ var conversationMediaNormal = regexp.MustCompile(`^normal-(log|ask)-[a-f0-9]{64}
 var conversationMediaAttachment = regexp.MustCompile(`^attachment-([0-9])\.(png|jpg|jpeg|gif|webp|bmp|tif|tiff|mp4)$`)
 
 type conversationMediaDependencies struct {
-	Home          string
-	Guard         func(context.Context, string) (bool, error)
-	Question      *generatedQuestionScope
-	Qualify       func(context.Context, string, generatedQuestionScope) (*generatedImageQualification, error)
-	VideoQuestion func(context.Context, string, string, conversationMediaSource, *generatedQuestionScope) error
+	Home                    string
+	Guard                   func(context.Context, string) (bool, error)
+	Question                *generatedQuestionScope
+	VideoTitle, VideoOrigin string
+	Qualify                 func(context.Context, string, generatedQuestionScope) (*generatedImageQualification, error)
+	VideoQuestion           func(context.Context, string, string, conversationMediaSource, *generatedQuestionScope) error
 }
 
 type conversationMediaSource struct {
@@ -377,7 +378,7 @@ func verifyConversationMedia(ctx context.Context, path, request string, deps con
 		return result, errConversationMedia
 	}
 	if strings.EqualFold(filepath.Ext(path), ".mp4") {
-		if deps.VideoQuestion == nil || deps.VideoQuestion(ctx, path, request, source, deps.Question) != nil {
+		if deps.VideoTitle == "" || deps.VideoOrigin == "" || deps.VideoQuestion == nil || deps.VideoQuestion(ctx, path, request, source, deps.Question) != nil {
 			return result, errConversationMedia
 		}
 	}
@@ -450,6 +451,8 @@ func conversationMediaCLIWithDependencies(args []string, out io.Writer, deps con
 	var path, request string
 	conversationStringFlag(fs, "path", &path)
 	conversationStringFlag(fs, "request-id", &request)
+	conversationStringFlag(fs, "question-title", &deps.VideoTitle)
+	conversationStringFlag(fs, "question-origin-thread", &deps.VideoOrigin)
 	getScope := generatedQuestionScopeFlags(fs)
 	if fs.Parse(args) != nil || fs.NArg() != 0 || path == "" || request == "" {
 		_, _ = io.WriteString(out, "invalid conversation media arguments\n")
@@ -463,6 +466,9 @@ func conversationMediaCLIWithDependencies(args []string, out io.Writer, deps con
 		return 1
 	}
 	deps.Question = scope
+	if strings.EqualFold(filepath.Ext(path), ".mp4") {
+		deps.VideoQuestion = registeredConversationVideoQuestionWithContext(deps.Home, deps.VideoTitle, deps.VideoOrigin)
+	}
 	verified, err := verifyConversationMedia(ctx, path, request, deps)
 	if err != nil {
 		_, _ = io.WriteString(out, "conversation media verification unavailable\n")

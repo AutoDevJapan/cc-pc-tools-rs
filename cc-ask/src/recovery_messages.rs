@@ -1689,6 +1689,7 @@ fn conversation_media_proof(
     request: &str,
     path: &Path,
     scope: Option<&crate::question_images::Scope>,
+    context: Option<(&str, &str)>,
 ) -> Result<ConversationMediaVerification> {
     const FAILED: &str = "new conversation image verification unavailable; no image is sent";
     let mut args = vec![
@@ -1701,6 +1702,14 @@ fn conversation_media_proof(
     ];
     if let Some(scope) = scope {
         scope.append_args(&mut args)
+    }
+    if let Some((title, origin)) = context {
+        args.extend([
+            "--question-title".into(),
+            title.into(),
+            "--question-origin-thread".into(),
+            origin.into(),
+        ]);
     }
     let output = ctx.effects.run(&args, 20).map_err(|_| FAILED)?;
     if output.code != 0 || output.stdout.len() > 64 * 1024 {
@@ -1749,7 +1758,7 @@ fn verify_conversation_image(
     scope: Option<&crate::question_images::Scope>,
 ) -> Result<()> {
     match_conversation_media(
-        conversation_media_proof(ctx, request, path, scope)?,
+        conversation_media_proof(ctx, request, path, scope, None)?,
         bytes,
         mime,
         extension,
@@ -1762,14 +1771,19 @@ fn qualified_question_video_bytes(
     request: &str,
     path: &Path,
     scope: Option<&crate::question_images::Scope>,
+    context: (&str, &str),
     read: impl FnOnce() -> Result<Vec<u8>>,
 ) -> Result<Vec<u8>> {
-    let proof = conversation_media_proof(ctx, request, path, scope)?;
+    let proof = conversation_media_proof(ctx, request, path, scope, Some(context))?;
     if proof.domain != "discord-conversation-media-v1"
         || !proof.verified
         || proof.size == 0
         || proof.size > crate::conversation_video::LIMIT as u64
         || proof.sha256.len() != 64
+        || !proof
+            .sha256
+            .bytes()
+            .all(|byte| byte.is_ascii_hexdigit() && !byte.is_ascii_uppercase())
         || proof.mime != "video/mp4"
         || proof.extension != "mp4"
         || proof.question_qualification.is_some()
@@ -1792,7 +1806,7 @@ fn images(
     paths: &[PathBuf],
     secrets: &SecretCheck,
     scope: Option<&crate::question_images::Scope>,
-    normal_question: bool,
+    normal_question: Option<(&str, &str)>,
 ) -> Result<Vec<Image>> {
     if paths.is_empty() {
         return Ok(vec![]);
@@ -1827,15 +1841,26 @@ fn images(
             .extension()
             .is_some_and(|value| value.eq_ignore_ascii_case("mp4"))
         {
-            if !normal_question || !conversation || !request.starts_with("conversation-v1-") {
+            if normal_question.is_none()
+                || !conversation
+                || !request.starts_with("conversation-v1-")
+            {
                 return Err("MP4 requires an original normal question snapshot".into());
             }
-            let bytes = qualified_question_video_bytes(ctx, request, path, scope, || {
-                let _lease = crate::project::pin_plain_source(path)?;
-                let input = crate::project::open_regular_source(path)
-                    .map_err(|_| "qualified video read unavailable")?;
-                read_bounded(input, crate::conversation_video::LIMIT)
-            })?;
+            let _source_generation = crate::project::pin_plain_source(path)?;
+            let bytes = qualified_question_video_bytes(
+                ctx,
+                request,
+                path,
+                scope,
+                normal_question.unwrap(),
+                || {
+                    let _lease = crate::project::pin_plain_source(path)?;
+                    let input = crate::project::open_regular_source(path)
+                        .map_err(|_| "qualified video read unavailable")?;
+                    read_bounded(input, crate::conversation_video::LIMIT)
+                },
+            )?;
             secrets.bytes(&bytes)?;
             total += bytes.len();
             if total > UPLOAD_BYTES {
@@ -2786,7 +2811,7 @@ fn prepare_log_body(
     if args.notify {
         log_requires_owner_action(&body)?;
     }
-    let images = images(ctx, &args.request_id, &args.attach, &secrets, None, false)?;
+    let images = images(ctx, &args.request_id, &args.attach, &secrets, None, None)?;
     let mut request = Request {
         request_id: args.request_id.clone(),
         title: title_input(&args.title, &secrets)?,
@@ -3038,7 +3063,7 @@ pub fn ask(ctx: &mut Context, args: &AskArgs) -> Result<Value> {
                 &args.attach,
                 &SecretCheck::new(),
                 scope.as_ref(),
-                true,
+                question_video_context(&incoming),
             )?;
             if !args.expected_image_sha256.is_empty()
                 && images
@@ -3126,7 +3151,7 @@ pub fn resume_ask(ctx: &mut Context, args: &ResumeAskArgs) -> Result<Value> {
     if args.todo_id == 0 {
         return Err("original ToDo ID is required".into());
     }
-    let (scope, recovering) = {
+    let (scope, recovering, title, origin) = {
         let home = ctx.here.clone();
         let _lock = ByteLock::acquire(&home.join(LOCK), Duration::ZERO)?;
         let ledger = Ledger::load(&home)?;
@@ -3136,6 +3161,10 @@ pub fn resume_ask(ctx: &mut Context, args: &ResumeAskArgs) -> Result<Value> {
         (
             question_image_scope(ctx, request),
             ledger.effect(&request.request_id, "question:0").is_some(),
+            request.title.clone(),
+            question_video_context(request)
+                .map(|(_, origin)| origin.to_owned())
+                .unwrap_or_default(),
         )
     };
     let images = if recovering {
@@ -3147,7 +3176,7 @@ pub fn resume_ask(ctx: &mut Context, args: &ResumeAskArgs) -> Result<Value> {
             &args.attach,
             &SecretCheck::new(),
             scope.as_ref(),
-            true,
+            Some((&title, &origin)),
         )?
     };
     execute_saved(ctx, &args.request_id, args.todo_id, &images)
@@ -3166,6 +3195,14 @@ fn question_image_scope(ctx: &Context, request: &Request) -> Option<crate::quest
             &request.body,
             decision_original,
         ))
+    } else {
+        None
+    }
+}
+
+fn question_video_context(request: &Request) -> Option<(&str, &str)> {
+    if let Kind::Ask { origin_thread, .. } = &request.operation {
+        Some((&request.title, origin_thread))
     } else {
         None
     }
@@ -5683,11 +5720,11 @@ mod tests {
 
     #[test]
     fn normal_question_mp4_sender_qualifies_before_any_content_read() {
-        for mode in ["denied", "wrong-type", "qualified"] {
+        for mode in ["denied", "wrong-type", "wrong-sha", "qualified"] {
             let f = Fixture::new();
             let mut ctx = f.context();
             let body = b"owned synthetic bytes";
-            let proof = json!({"domain":"discord-conversation-media-v1","verified":true,"sha256":format!("{:x}",Sha256::digest(body)),"size":body.len(),"mime":if mode == "wrong-type" {"image/png"} else {"video/mp4"},"extension":"mp4"});
+            let proof = json!({"domain":"discord-conversation-media-v1","verified":true,"sha256":if mode == "wrong-sha" {"g".repeat(64)} else {format!("{:x}",Sha256::digest(body))},"size":body.len(),"mime":if mode == "wrong-type" {"image/png"} else {"video/mp4"},"extension":"mp4"});
             let calls = media_mock(&f, &mut ctx, proof, if mode == "denied" { 1 } else { 0 });
             let mut reads = 0;
             let result = qualified_question_video_bytes(
@@ -5695,6 +5732,7 @@ mod tests {
                 &format!("conversation-v1-{}", "c".repeat(32)),
                 &f.root.path().join("unopened.mp4"),
                 None,
+                ("Review", "510"),
                 || {
                     reads += 1;
                     Err("owned read spy".into())
@@ -5703,6 +5741,13 @@ mod tests {
             assert!(result.is_err());
             assert_eq!(reads, usize::from(mode == "qualified"));
             assert_eq!(calls.lock().unwrap().len(), 1);
+            let captured = calls.lock().unwrap();
+            assert!(captured[0]
+                .windows(2)
+                .any(|pair| pair == ["--question-title", "Review"]));
+            assert!(captured[0]
+                .windows(2)
+                .any(|pair| pair == ["--question-origin-thread", "510"]));
             assert!(f.server.lock().unwrap().calls.is_empty());
         }
     }

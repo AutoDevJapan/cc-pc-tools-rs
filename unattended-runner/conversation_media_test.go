@@ -120,6 +120,7 @@ func TestConversationMP4PreservesSourceAndQuestionScope(t *testing.T) {
 	f.data = fixtureVideoMP4((10<<20)+1, "vide")
 	f.write(t)
 	deps := f.deps()
+	deps.VideoTitle, deps.VideoOrigin = "Review", "510"
 	deps.VideoQuestion = func(context.Context, string, string, conversationMediaSource, *generatedQuestionScope) error {
 		return nil
 	}
@@ -201,12 +202,12 @@ func TestRegisteredMP4RequiresActualNormalQuestionAndScope(t *testing.T) {
 	if err := os.MkdirAll(dir, 0700); err != nil {
 		t.Fatal(err)
 	}
-	q := ConversationQuestion{RequestID: f.normal, SenderID: f.sender, Todo: 42, Project: "fixture", Phase: "reserved", BodyFile: filepath.Join(dir, "question.txt"), DecisionFile: filepath.Join(dir, "decision.json"), Attachments: []string{f.snapshot}, AttachmentHashes: []string{bytesHash(f.data)}}
+	q := ConversationQuestion{RequestID: f.normal, SenderID: f.sender, Todo: 42, Project: "fixture", Phase: "reserved", Title: "Review", OriginThread: "510", BodyFile: filepath.Join(dir, "question.txt"), DecisionFile: filepath.Join(dir, "decision.json"), Attachments: []string{f.snapshot}, AttachmentHashes: []string{bytesHash(f.data)}}
 	if os.WriteFile(q.BodyFile, body, 0600) != nil || os.WriteFile(q.DecisionFile, decision, 0600) != nil {
 		t.Fatal("owned question save")
 	}
 	base := conversationIndex{Domain: conversationDomain, Destination: Destination{Owner: "300", Guild: "100", Forum: "200"}, Questions: map[string]ConversationQuestion{f.normal: q}}
-	for _, fault := range []string{"none", "missing", "phase", "todo", "sender", "hash", "body", "scope"} {
+	for _, fault := range []string{"none", "missing", "phase", "todo", "sender", "hash", "body", "scope", "title", "origin", "unicode-bom"} {
 		current := base
 		current.Questions = map[string]ConversationQuestion{f.normal: q}
 		changed := q
@@ -223,6 +224,10 @@ func TestRegisteredMP4RequiresActualNormalQuestionAndScope(t *testing.T) {
 			changed.AttachmentHashes = []string{strings.Repeat("0", 64)}
 		case "body":
 			changed.BodyFile = filepath.Join(dir, "other.txt")
+		case "title":
+			changed.Title = "Other context"
+		case "origin":
+			changed.OriginThread = "511"
 		}
 		if fault != "missing" {
 			current.Questions[f.normal] = changed
@@ -230,22 +235,58 @@ func TestRegisteredMP4RequiresActualNormalQuestionAndScope(t *testing.T) {
 		mediaJSON(t, filepath.Join(f.home, "unattended", "conversation-questions.json"), current)
 		deps := f.deps()
 		deps.Question = &scope
-		deps.VideoQuestion = registeredConversationVideoQuestion(f.home)
+		deps.VideoTitle, deps.VideoOrigin = "Review", "510"
+		deps.VideoQuestion = registeredConversationVideoQuestionWithContext(f.home, "Review", "510")
+		if fault == "unicode-bom" {
+			utfBody := append([]byte{0xef, 0xbb, 0xbf}, body...)
+			utfDecision := []byte("{\"value\":\"\u2028\u2029\",\"todo_id\":42}")
+			if os.WriteFile(q.BodyFile, utfBody, 0600) != nil || os.WriteFile(q.DecisionFile, utfDecision, 0600) != nil {
+				t.Fatal("owned unicode fixture")
+			}
+			unicodeScope := scope
+			unicodeScope.Decision = bytesHash([]byte("{\"todo_id\":42,\"value\":\"\u2028\u2029\"}"))
+			deps.Question = &unicodeScope
+		}
 		if fault == "scope" {
 			bad := scope
 			bad.Body = strings.Repeat("0", 64)
 			deps.Question = &bad
 		}
 		_, err := verifyConversationMedia(context.Background(), f.snapshot, f.sender, deps)
-		if (err == nil) != (fault == "none") {
+		if (err == nil) != (fault == "none" || fault == "unicode-bom") {
 			t.Fatalf("fault=%s accepted=%v", fault, err == nil)
+		}
+		if fault == "none" || fault == "unicode-bom" {
+			args := []string{"--path", f.snapshot, "--request-id", f.sender, "--question-title", "Review", "--question-origin-thread", "510"}
+			args = append(args, generatedQuestionScopeArgs(*deps.Question)...)
+			var result bytes.Buffer
+			if code := conversationMediaCLIWithDependencies(args, &result, f.deps()); code != 0 {
+				t.Fatalf("actual CLI video proof failed: %d %s", code, result.String())
+			}
+			var proof conversationMediaVerification
+			if json.Unmarshal(result.Bytes(), &proof) != nil || !proof.Verified || proof.MIME != "video/mp4" {
+				t.Fatal("actual CLI proof not bound")
+			}
 		}
 	}
 	deps := f.deps()
 	deps.Question = &scope
-	deps.VideoQuestion = registeredConversationVideoQuestion(f.home)
+	deps.VideoTitle, deps.VideoOrigin = "Review", "510"
+	deps.VideoQuestion = registeredConversationVideoQuestionWithContext(f.home, "Review", "510")
 	if _, err := verifyConversationMedia(context.Background(), f.source, f.sender, deps); err == nil {
 		t.Fatal("direct arbitrary video source accepted")
+	}
+}
+
+func TestNormalQuestionDecisionDigestKeepsRustUnicodeAndLiteralEscapesDistinct(t *testing.T) {
+	for _, input := range []string{`{"value":"\u2028\u2029"}`, "{\"value\":\"\u2028\u2029\"}"} {
+		want := bytesHash([]byte("{\"value\":\"\u2028\u2029\"}"))
+		if normalQuestionDecisionHash(json.RawMessage(input)) != want {
+			t.Fatal("Rust literal Unicode digest differs")
+		}
+	}
+	if normalQuestionDecisionHash(json.RawMessage(`{"value":"\\u2028\\u2029"}`)) == normalQuestionDecisionHash(json.RawMessage(`{"value":"\u2028\u2029"}`)) {
+		t.Fatal("literal slash confused with Unicode escape")
 	}
 }
 

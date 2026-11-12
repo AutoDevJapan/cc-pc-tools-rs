@@ -70,6 +70,7 @@ type updateACLMetadata struct {
 	ACEs      uint16
 	Inherited uint16
 	Hash      string
+	Parts     [3]string
 }
 
 func testUpdateACLMetadata(t *testing.T, f *os.File) updateACLMetadata {
@@ -103,7 +104,18 @@ func testUpdateACLMetadata(t *testing.T, f *os.File) updateACLMetadata {
 	if e != nil {
 		t.Fatal(e)
 	}
-	return updateACLMetadata{control, count, inherited, digest([]byte(s))}
+	var parts [3]string
+	for i, mask := range []uint32{1, 2, 4} {
+		var text *uint16
+		var size uint32
+		ok, _, _ := updateSDString.Call(sd, 1, uintptr(mask), uintptr(unsafe.Pointer(&text)), uintptr(unsafe.Pointer(&size)))
+		if ok == 0 || text == nil || size > 1<<20 {
+			t.Fatal("component metadata")
+		}
+		parts[i] = digest([]byte(syscall.UTF16ToString(unsafe.Slice(text, size))))
+		updateLocalFree.Call(uintptr(unsafe.Pointer(text)))
+	}
+	return updateACLMetadata{control, count, inherited, digest([]byte(s)), parts}
 }
 
 func TestUpdateACLCreateDescriptorInheritanceThenExactHandleCopy(t *testing.T) {
@@ -149,8 +161,68 @@ func TestUpdateACLCreateDescriptorInheritanceThenExactHandleCopy(t *testing.T) {
 		t.Fatal(e)
 	}
 	corrected := testUpdateACLMetadata(t, f)
+	t.Logf("GetSecurityInfoFlags=7 CreateNewSDDLHash=%s old=%+v creation=%+v afterHandleSet=%+v", digest([]byte(acl)), old, created, corrected)
 	if old.Hash != corrected.Hash {
 		t.Fatal("held descriptor did not restore exact ACL")
 	}
-	t.Logf("GetSecurityInfoFlags=7 CreateNewSDDLHash=%s old=%+v creation=%+v afterHandleSet=%+v", digest([]byte(acl)), old, created, corrected)
+}
+
+func TestUpdateACLWithoutAutoInheritedBitPreservesExactDescriptor(t *testing.T) {
+	root := physicalSoftwareFixture(t)
+	path := filepath.Join(root, "old.exe")
+	if e := os.WriteFile(path, []byte("owned"), 0600); e != nil {
+		t.Fatal(e)
+	}
+	p, e := syscall.UTF16PtrFromString(path)
+	if e != nil {
+		t.Fatal(e)
+	}
+	h, e := syscall.CreateFile(p, syscall.GENERIC_READ|0xe0000, syscall.FILE_SHARE_READ, nil, syscall.OPEN_EXISTING, 0x00200000, 0)
+	if e != nil {
+		t.Fatal(e)
+	}
+	f := os.NewFile(uintptr(h), path)
+	var sd uintptr
+	c, _, _ := updateGetSecurity.Call(f.Fd(), 1, 7, 0, 0, 0, 0, uintptr(unsafe.Pointer(&sd)))
+	if c != 0 || sd == 0 {
+		f.Close()
+		t.Fatal("source capture")
+	}
+	defer updateLocalFree.Call(sd)
+	ok, _, _ := updateAdvapi.NewProc("SetSecurityDescriptorControl").Call(sd, 0x0400, 0)
+	if ok == 0 {
+		f.Close()
+		t.Fatal("owned descriptor control")
+	}
+	status, _, _ := syscall.NewLazyDLL("ntdll.dll").NewProc("NtSetSecurityObject").Call(f.Fd(), 7, sd)
+	f.Close()
+	if status != 0 {
+		t.Fatal("owned source control set", status)
+	}
+	obj, e := openUpdateObject(path)
+	if e != nil {
+		t.Fatal(e)
+	}
+	defer obj.Close()
+	o := obj.(*nativeUpdateObject)
+	old := testUpdateACLMetadata(t, o.f)
+	acl, e := o.ACL()
+	if e != nil {
+		t.Fatal(e)
+	}
+	id, e := o.createNewSibling(filepath.Join(root, "stage.exe"), []byte("owned-new"), acl)
+	if e != nil {
+		t.Logf("old=%+v createdID=%+v", old, id)
+		t.Fatal("non-auto inherited source ACL changed", e)
+	}
+	stage, e := openUpdateObject(filepath.Join(root, "stage.exe"))
+	if e != nil {
+		t.Fatal(e)
+	}
+	defer stage.Close()
+	after := testUpdateACLMetadata(t, stage.(*nativeUpdateObject).f)
+	t.Logf("sourceWithoutAutoInherited=%+v stageAfterCopy=%+v", old, after)
+	if old.Hash != after.Hash {
+		t.Fatal("non-auto descriptor readback differs")
+	}
 }

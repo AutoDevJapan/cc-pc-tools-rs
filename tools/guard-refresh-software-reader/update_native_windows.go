@@ -19,6 +19,7 @@ var updateGetSecurity = updateAdvapi.NewProc("GetSecurityInfo")
 var updateSDString = updateAdvapi.NewProc("ConvertSecurityDescriptorToStringSecurityDescriptorW")
 var updateStringSD = updateAdvapi.NewProc("ConvertStringSecurityDescriptorToSecurityDescriptorW")
 var updateSetSecurity = updateAdvapi.NewProc("SetSecurityInfo")
+var updateNTSetSecurity = syscall.NewLazyDLL("ntdll.dll").NewProc("NtSetSecurityObject")
 var updateSDControl = updateAdvapi.NewProc("GetSecurityDescriptorControl")
 var updateLocalFree = syscall.NewLazyDLL("kernel32.dll").NewProc("LocalFree")
 var errUpdateObject = errors.New("software_object_unavailable")
@@ -206,11 +207,18 @@ func copyUpdateACL(source, target *os.File) error {
 	if ok == 0 {
 		return errors.New("software_acl_control_failed")
 	}
-	flags := uint32(7 | 0x20000000)
-	if control&0x1000 != 0 {
-		flags = 7 | 0x80000000
+	// The high-level unprotected update always enables auto-inheritance. Use
+	// it only when the original descriptor has that bit; otherwise apply the
+	// held descriptor directly. Strict readback checks both representations.
+	if control&0x0400 != 0 {
+		flags := uint32(7 | 0x20000000)
+		if control&0x1000 != 0 {
+			flags = 7 | 0x80000000
+		}
+		code, _, _ = updateSetSecurity.Call(target.Fd(), 1, uintptr(flags), owner, group, dacl, 0)
+	} else {
+		code, _, _ = updateNTSetSecurity.Call(target.Fd(), 7, sd)
 	}
-	code, _, _ = updateSetSecurity.Call(target.Fd(), 1, uintptr(flags), owner, group, dacl, 0)
 	if code != 0 {
 		return errors.New("software_acl_apply_failed")
 	}

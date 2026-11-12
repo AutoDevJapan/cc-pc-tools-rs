@@ -20,19 +20,19 @@ import (
 
 // This input-free software operation implements the requested installed-program
 // repair. Its namespace is two compiled CreateNew leaves, never guard data.
-const updateCandidatePath = "C:/Users/makhmeto/Documents/Codex/2026-11-07/ika-x20/work/4431-ui-tools/codex-owned-f60f3742a1933562ec75aa5c8eb05d72/guard-refresh-diagnostic-4ede.exe"
-const updateCandidateSHA = "edd86d52143b469b4d08493563dfab66db382f278de15791f8a97cc80a143900"
-const updateBuildProofPath = "D:/CC/Tools/codex-jobs/fourbros4431-diagnostic-4ede-build-proof.json"
-const updateBuildProofSHA = "5e8fd9232cdafa35d784394dc2509529c2c9445439154303435b0b543e0d13d6"
+const updateCandidatePath = "C:/Users/makhmeto/Documents/Codex/2026-11-07/ika-x20/work/4431-ui-tools/codex-owned-f60f3742a1933562ec75aa5c8eb05d72/guard-ios-921a.exe"
+const updateCandidateSHA = "b7a1f024f03ec600ada7aa0b28d435b022cd9f4cd384a31cacf67a80b5e355cb"
+const updateBuildProofPath = "D:/CC/Tools/codex-jobs/fourbros4431-ios-921a-build-proof.json"
+const updateBuildProofSHA = "392eb2b7e82a65a4834cabd1a817f4bb8d7f82af057ae9f7fa0d75d3034dfc57"
 const updateSourceRoot = "C:/Users/makhmeto/Documents/Codex/2026-11-07/ika-x20/work/4431-ui-tools"
-const updateSourceHead = "4ede82ea7d6e274c518f2e23a3ade685e8c4c3a2"
-const updateMergedHead = "aca933238d13d10649e2e563f8c4f32fcf3a46e1"
-const updateStagePath = "D:/CC/Tools/client-records/scrub391.refresh4431.stage.exe"
-const updateBackupPath = "D:/CC/Tools/client-records/scrub391.refresh4431.before-f136.exe"
-const updateCandidateBytes = 14056960
+const updateSourceHead = "921a071838eaf459d3a95beca6069bce8713f0bf"
+const updateMergedHead = "5ef561b67bbc845c2a494960358d875c71e366f1"
+const updateStagePath = "D:/CC/Tools/client-records/scrub391.ios4431.stage.exe"
+const updateBackupPath = "D:/CC/Tools/client-records/scrub391.ios4431.before-edd86.exe"
+const updateCandidateBytes = 14151680
 const updateOldVolume = "1215965535"
-const updateOldFileID = "2814749781084419"
-const updateOldCreated = "134385555870411097"
+const updateOldFileID = "281474992779615"
+const updateOldCreated = "134389254103560300"
 
 type updateResult struct {
 	Qualified              bool              `json:"qualified"`
@@ -78,7 +78,7 @@ func candidateMatches(raw, proofRaw []byte, git func(...string) ([]byte, bool)) 
 		return false
 	}
 	var proof updateBuildProof
-	if json.Unmarshal(proofRaw, &proof) != nil || proof.Head != updateSourceHead || proof.Merge != updateMergedHead || proof.Candidate != updateCandidatePath || proof.Bytes != len(raw) || !strings.EqualFold(proof.SHA, updateCandidateSHA) || len(proof.Sources) != 227 {
+	if json.Unmarshal(proofRaw, &proof) != nil || proof.Head != updateSourceHead || proof.Merge != updateMergedHead || proof.Candidate != updateCandidatePath || proof.Bytes != len(raw) || !strings.EqualFold(proof.SHA, updateCandidateSHA) || len(proof.Sources) != 244 {
 		return false
 	}
 	info, err := buildinfo.Read(bytes.NewReader(raw))

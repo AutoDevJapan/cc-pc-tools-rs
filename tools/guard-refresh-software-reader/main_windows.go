@@ -21,8 +21,12 @@ import (
 // This input-free reader identifies one previously observed installed program.
 // It does not admit client-records, update a file, or issue a data-access grant.
 const installedGuardPath = "D:/CC/Tools/client-records/scrub391.exe"
-const installedGuardSHA = "428d97e198b09ba7c2a10a319553aa0ed178fa5b74971ac158d72ae2b2eba841"
-const installedGuardRevision = "f13663f77577b5cc7578a16b0695186f31e832cd"
+const installedGuardSHA = "edd86d52143b469b4d08493563dfab66db382f278de15791f8a97cc80a143900"
+const installedGuardRevision = "4ede82ea7d6e274c518f2e23a3ade685e8c4c3a2"
+
+// The accepted predecessor recorded a dirty build. Its exact PE hash and
+// reviewed original input proof remain the authority, never dirty metadata alone.
+const installedGuardModified = "true"
 const installedGuardModule = "github.com/AutoDevJapan/cc-pc-tools-rs/repair-guard"
 
 type softwareIdentity struct {
@@ -58,7 +62,7 @@ func pinnedBuildMatches(raw []byte, expectedSHA string, read func([]byte) (*debu
 		}
 		settings[s.Key] = s.Value
 	}
-	return settings["vcs"] == "git" && settings["vcs.revision"] == installedGuardRevision && settings["vcs.modified"] == "false" && settings["GOOS"] == "windows" && settings["GOARCH"] == "amd64"
+	return settings["vcs"] == "git" && settings["vcs.revision"] == installedGuardRevision && settings["vcs.modified"] == installedGuardModified && settings["GOOS"] == "windows" && settings["GOARCH"] == "amd64"
 }
 
 func handlePath(handle syscall.Handle) (string, bool) {

@@ -56,7 +56,7 @@ func TestSoftwareReaderExactBytesBeforeBuildParsing(t *testing.T) {
 	hash := sha256.Sum256(raw)
 	want := hex.EncodeToString(hash[:])
 	good := func() *debug.BuildInfo {
-		return &debug.BuildInfo{Path: installedGuardModule, Settings: []debug.BuildSetting{{Key: "vcs", Value: "git"}, {Key: "vcs.revision", Value: installedGuardRevision}, {Key: "vcs.modified", Value: "false"}, {Key: "GOOS", Value: "windows"}, {Key: "GOARCH", Value: "amd64"}}}
+		return &debug.BuildInfo{Path: installedGuardModule, Settings: []debug.BuildSetting{{Key: "vcs", Value: "git"}, {Key: "vcs.revision", Value: installedGuardRevision}, {Key: "vcs.modified", Value: installedGuardModified}, {Key: "GOOS", Value: "windows"}, {Key: "GOARCH", Value: "amd64"}}}
 	}
 	for _, name := range []string{"valid", "hash", "module", "revision", "dirty", "duplicate", "parse"} {
 		t.Run(name, func(t *testing.T) {
@@ -74,7 +74,7 @@ func TestSoftwareReaderExactBytesBeforeBuildParsing(t *testing.T) {
 				case "revision":
 					info.Settings[1].Value = "other"
 				case "dirty":
-					info.Settings[2].Value = "true"
+					info.Settings[2].Value = "false"
 				case "duplicate":
 					info.Settings = append(info.Settings, info.Settings[0])
 				case "parse":

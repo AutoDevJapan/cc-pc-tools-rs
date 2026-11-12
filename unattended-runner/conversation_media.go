@@ -3,6 +3,7 @@ package main
 import (
 	"bytes"
 	"context"
+	"encoding/binary"
 	"encoding/json"
 	"errors"
 	"flag"
@@ -20,10 +21,14 @@ const conversationMediaDomain = "discord-conversation-media-v1"
 const conversationMediaSourceDomain = "discord-conversation-media-source-v1"
 const conversationMediaLimit int64 = 10 << 20
 
+// Normal MP4 uploads use Discord's documented default per-file limit. This
+// does not enlarge the generated-image qualification or image byte ceiling.
+const conversationVideoLimit int64 = 20 << 20
+
 var errConversationMedia = errors.New("conversation media verification unavailable")
 var conversationMediaSender = regexp.MustCompile(`^conversation-(log|v1)-[a-f0-9]{32}$`)
 var conversationMediaNormal = regexp.MustCompile(`^normal-(log|ask)-[a-f0-9]{64}$`)
-var conversationMediaAttachment = regexp.MustCompile(`^attachment-([0-9])\.(png|jpg|jpeg|gif|webp|bmp|tif|tiff)$`)
+var conversationMediaAttachment = regexp.MustCompile(`^attachment-([0-9])\.(png|jpg|jpeg|gif|webp|bmp|tif|tiff|mp4)$`)
 
 type conversationMediaDependencies struct {
 	Home     string
@@ -212,9 +217,93 @@ func conversationMediaMagic(b []byte) (string, string, error) {
 	}
 }
 
+// Parse the bounded ISO BMFF box structure, rather than trusting the suffix or
+// an ftyp substring. A video track and nonempty media data are required; this
+// container check is not a claim that every codec can be decoded by Discord.
+func conversationVideoMagic(b []byte) bool {
+	if len(b) < 24 || string(b[4:8]) != "ftyp" {
+		return false
+	}
+	brand, video, media := false, false, false
+	var walk func([]byte, string, int) bool
+	walk = func(data []byte, parent string, depth int) bool {
+		if depth > 4 {
+			return false
+		}
+		for len(data) > 0 {
+			if len(data) < 8 {
+				return false
+			}
+			n, header := uint64(binary.BigEndian.Uint32(data)), uint64(8)
+			kind := string(data[4:8])
+			if n == 1 {
+				if len(data) < 16 {
+					return false
+				}
+				n = binary.BigEndian.Uint64(data[8:16])
+				header = 16
+			}
+			if n == 0 {
+				n = uint64(len(data))
+			}
+			if n < header || n > uint64(len(data)) {
+				return false
+			}
+			payload := data[header:n]
+			switch {
+			case depth == 0 && kind == "ftyp":
+				if brand || len(payload) < 8 || (len(payload)-8)%4 != 0 {
+					return false
+				}
+				allowed := func(s string) bool {
+					return s == "isom" || s == "iso2" || s == "mp41" || s == "mp42" || s == "avc1" || s == "dash" || s == "M4V "
+				}
+				brand = allowed(string(payload[:4]))
+				for p := 8; p+4 <= len(payload); p += 4 {
+					brand = brand || allowed(string(payload[p:p+4]))
+				}
+				if !brand {
+					return false
+				}
+			case depth == 0 && kind == "mdat":
+				media = media || len(payload) > 0
+			case depth == 0 && kind == "moov", parent == "moov" && kind == "trak", parent == "trak" && kind == "mdia":
+				if !walk(payload, kind, depth+1) {
+					return false
+				}
+			case parent == "mdia" && kind == "hdlr":
+				video = video || len(payload) >= 12 && string(payload[8:12]) == "vide"
+			}
+			data = data[n:]
+		}
+		return true
+	}
+	return walk(b, "", 0) && brand && video && media
+}
+
+func conversationAttachmentLimit(path string) int64 {
+	if strings.EqualFold(filepath.Ext(path), ".mp4") {
+		return conversationVideoLimit
+	}
+	return conversationMediaLimit
+}
+
+func conversationAttachmentMagic(b []byte, path string) (string, string, error) {
+	if strings.EqualFold(filepath.Ext(path), ".mp4") {
+		if int64(len(b)) <= conversationVideoLimit && conversationVideoMagic(b) {
+			return "video/mp4", "mp4", nil
+		}
+		return "", "", errConversationMedia
+	}
+	return conversationMediaMagic(b)
+}
+
 func verifyConversationMedia(ctx context.Context, path, request string, deps conversationMediaDependencies) (conversationMediaVerification, error) {
 	var result conversationMediaVerification
 	if deps.Guard == nil || !conversationMediaSender.MatchString(request) {
+		return result, errConversationMedia
+	}
+	if strings.EqualFold(filepath.Ext(path), ".mp4") && !strings.HasPrefix(request, "conversation-v1-") {
 		return result, errConversationMedia
 	}
 	home, info, err := conversationMediaPhysical(filepath.Clean(filepath.FromSlash(deps.Home)))
@@ -233,11 +322,11 @@ func verifyConversationMedia(ctx context.Context, path, request string, deps con
 		return result, errConversationMedia
 	}
 	path, info, err = conversationMediaPhysical(path)
-	if err != nil || !info.Mode().IsRegular() || info.Size() > conversationMediaLimit {
+	if err != nil || !info.Mode().IsRegular() || info.Size() > conversationAttachmentLimit(path) {
 		return result, errConversationMedia
 	}
 	switch strings.ToLower(filepath.Ext(path)) {
-	case ".png", ".jpg", ".jpeg", ".gif", ".webp", ".bmp", ".tif", ".tiff":
+	case ".png", ".jpg", ".jpeg", ".gif", ".webp", ".bmp", ".tif", ".tiff", ".mp4":
 	default:
 		return result, errConversationMedia
 	}
@@ -258,7 +347,7 @@ func verifyConversationMedia(ctx context.Context, path, request string, deps con
 		}
 		descriptor := strings.TrimSuffix(path, filepath.Ext(path)) + ".source.json"
 		b, _, err := conversationMediaRead(descriptor, 64<<10)
-		if err != nil || conversationMediaObject(b, "domain", "source_path", "snapshot_path", "sha256", "size") != nil || json.Unmarshal(b, &source) != nil || source.Domain != conversationMediaSourceDomain || !shaPattern.MatchString(source.SHA256) || source.Size < 1 || source.Size > conversationMediaLimit {
+		if err != nil || conversationMediaObject(b, "domain", "source_path", "snapshot_path", "sha256", "size") != nil || json.Unmarshal(b, &source) != nil || source.Domain != conversationMediaSourceDomain || !shaPattern.MatchString(source.SHA256) || source.Size < 1 || source.Size > conversationAttachmentLimit(path) {
 			return result, errConversationMedia
 		}
 		snapshot, err := conversationMediaPath(source.SnapshotPath)
@@ -270,8 +359,11 @@ func verifyConversationMedia(ctx context.Context, path, request string, deps con
 			return result, errConversationMedia
 		}
 		switch strings.ToLower(filepath.Ext(sourcePath)) {
-		case ".png", ".jpg", ".jpeg", ".gif", ".webp", ".bmp", ".tif", ".tiff":
+		case ".png", ".jpg", ".jpeg", ".gif", ".webp", ".bmp", ".tif", ".tiff", ".mp4":
 		default:
+			return result, errConversationMedia
+		}
+		if strings.EqualFold(filepath.Ext(sourcePath), ".mp4") != strings.EqualFold(filepath.Ext(path), ".mp4") {
 			return result, errConversationMedia
 		}
 		if _, inside := conversationMediaInside(bridge, sourcePath); inside {
@@ -284,6 +376,9 @@ func verifyConversationMedia(ctx context.Context, path, request string, deps con
 	}
 	var qualification *generatedImageQualification
 	if !allowed {
+		if strings.EqualFold(filepath.Ext(path), ".mp4") {
+			return result, errConversationMedia
+		}
 		if deps.Question == nil || deps.Qualify == nil || !strings.HasPrefix(request, "conversation-v1-") {
 			return result, errConversationMedia
 		}
@@ -292,17 +387,19 @@ func verifyConversationMedia(ctx context.Context, path, request string, deps con
 			return result, errConversationMedia
 		}
 	}
-	b, snapshotInfo, err := conversationMediaRead(path, conversationMediaLimit)
+	b, snapshotInfo, err := conversationMediaRead(path, conversationAttachmentLimit(path))
 	if err != nil {
 		return result, errConversationMedia
 	}
+	defer clear(b)
 	if source.Domain != "" {
-		original, originalInfo, err := conversationMediaRead(sourcePath, conversationMediaLimit)
+		original, originalInfo, err := conversationMediaRead(sourcePath, conversationAttachmentLimit(sourcePath))
+		defer clear(original)
 		if err != nil || os.SameFile(snapshotInfo, originalInfo) || source.Size != int64(len(b)) || source.SHA256 != bytesHash(b) || !bytes.Equal(original, b) {
 			return result, errConversationMedia
 		}
 	}
-	mime, extension, err := conversationMediaMagic(b)
+	mime, extension, err := conversationAttachmentMagic(b, path)
 	if err != nil || ctx.Err() != nil {
 		return result, errConversationMedia
 	}

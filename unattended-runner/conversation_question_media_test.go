@@ -9,6 +9,7 @@ import (
 	"os"
 	"path/filepath"
 	"reflect"
+	"strings"
 	"testing"
 )
 
@@ -192,6 +193,44 @@ func TestConversationQuestionImageReadbackMustMatchBeforeWait(t *testing.T) {
 				t.Fatal("missing image was reported as a delivered owner question")
 			}
 		})
+	}
+}
+
+func TestConversationQuestionMP4ReadbackMustMatchBeforeWait(t *testing.T) {
+	for _, verified := range []bool{false, true} {
+		f := conversationTest(t, true)
+		path := strings.TrimSuffix(conversationQuestionImagePath(t, f), ".png") + ".mp4"
+		data := fixtureVideoMP4(1, "vide")
+		if err := os.WriteFile(path, data, 0600); err != nil {
+			t.Fatal(err)
+		}
+		f.input.Attachments = []string{path}
+		base := f.r.Run
+		f.r.Run = func(ctx context.Context, executable string, args ...string) (string, error) {
+			raw, err := base(ctx, executable, args...)
+			if err == nil && len(args) > 0 && args[0] == "recovery-ask" && verified {
+				var result map[string]any
+				if json.Unmarshal([]byte(raw), &result) != nil {
+					t.Fatal("invalid synthetic sender result")
+				}
+				result["image_sha256"] = []string{bytesHash(data)}
+				b, _ := json.Marshal(result)
+				raw = string(b)
+			}
+			return raw, err
+		}
+		q, err := f.r.conversationAsk(context.Background(), f.input)
+		row, rowErr := f.r.todo(42)
+		if rowErr != nil {
+			t.Fatal(rowErr)
+		}
+		if verified {
+			if err != nil || q.Phase != "waiting" || row.Status != "block" {
+				t.Fatal("verified video not bound to wait", err)
+			}
+		} else if err == nil || row.Status != "doing" || f.posts != 1 {
+			t.Fatal("missing video receipt reported delivered")
+		}
 	}
 }
 

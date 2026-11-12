@@ -1818,11 +1818,26 @@ fn images(
         {
             return Err("a recovery attachment must be a regular image file".into());
         }
-        let bytes = read_bounded(file, IMAGE_BYTES)?;
+        let video = conversation
+            && request.starts_with("conversation-v1-")
+            && path
+                .extension()
+                .is_some_and(|value| value.eq_ignore_ascii_case("mp4"));
+        let bytes = read_bounded(
+            file,
+            if video {
+                crate::conversation_video::LIMIT
+            } else {
+                IMAGE_BYTES
+            },
+        )?;
         if clients.is_none() && !conversation {
             verify_generated_proposal(request, path, &resolved, &bytes)?;
         }
-        let (mime, extension) = if bytes.starts_with(b"\x89PNG\r\n\x1a\n") {
+        let (mime, extension) = if video {
+            crate::conversation_video::validate(&bytes)?;
+            ("video/mp4", "mp4")
+        } else if bytes.starts_with(b"\x89PNG\r\n\x1a\n") {
             ("image/png", "png")
         } else if bytes.starts_with(b"\xff\xd8\xff") {
             ("image/jpeg", "jpg")
@@ -5543,6 +5558,56 @@ mod tests {
 
     fn media_proof(bytes: &[u8]) -> Value {
         json!({"domain":"discord-conversation-media-v1","verified":true,"sha256":format!("{:x}",Sha256::digest(bytes)),"size":bytes.len(),"mime":"image/png","extension":"png"})
+    }
+
+    #[test]
+    fn normal_question_mp4_sender_checks_exact_bytes_and_get_receipt() {
+        fn block(kind: &[u8; 4], value: &[u8]) -> Vec<u8> {
+            let mut out = ((value.len() + 8) as u32).to_be_bytes().to_vec();
+            out.extend_from_slice(kind);
+            out.extend_from_slice(value);
+            out
+        }
+        let mut handler = vec![0; 12];
+        handler[8..].copy_from_slice(b"vide");
+        let mut bytes = block(b"ftyp", b"isom\0\0\0\0isommp42");
+        bytes.extend(block(
+            b"moov",
+            &block(b"trak", &block(b"mdia", &block(b"hdlr", &handler))),
+        ));
+        bytes.extend(block(b"mdat", &vec![0; 10 * 1024 * 1024 + 1]));
+        for wrong_hash in [false, true] {
+            let f = Fixture::new();
+            let mut ctx = f.context();
+            fs::remove_file(&ctx.client_projects).unwrap();
+            let path = f.root.path().join("review.mp4");
+            fs::write(&path, &bytes).unwrap();
+            let hash = format!("{:x}", Sha256::digest(&bytes));
+            let proof = json!({"domain":"discord-conversation-media-v1","verified":true,"sha256":if wrong_hash {"0".repeat(64)} else {hash.clone()},"size":bytes.len(),"mime":"video/mp4","extension":"mp4"});
+            let calls = media_mock(&f, &mut ctx, proof, 0);
+            let mut args = f.ask(
+                &format!("conversation-v1-{}", "c".repeat(32)),
+                "全編動画を評価してください。\na 採用\nb 修正",
+            );
+            args.attach.push(path);
+            args.expected_image_sha256.push(hash.clone());
+            let result = ask(&mut ctx, &args);
+            if wrong_hash {
+                assert!(result.is_err());
+                assert!(f.server.lock().unwrap().calls.is_empty());
+            } else {
+                let result = result.unwrap();
+                assert_eq!(result["delivery"], "verified");
+                assert_eq!(result["image_sha256"][0], hash);
+                let state = f.server.lock().unwrap();
+                assert_eq!(state.multipart_uploads, 1);
+                let first = &state.messages[core::s(&result["thread_id"])][0]["attachments"][0];
+                assert_eq!(first["size"], bytes.len());
+                assert!(core::s(&first["filename"]).ends_with(".mp4"));
+            }
+            assert_eq!(calls.lock().unwrap().len(), 1);
+            f.unchanged();
+        }
     }
 
     struct ProgramVerifierMock {

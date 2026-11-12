@@ -153,7 +153,14 @@ Go側の失敗時は旧APIへ切り替えず、同じ入力での再試行を案
 画像はコピー前に1枚10MiB、合計23MiB、10枚までを検査する。
 対応形式はPNG・JPEG・GIF・WebP・BMP・TIFFで、拡張子だけでなく実際の先頭バイトも照合する。
 元ファイルの秘密値を示す場所、シンボリックリンク、reparse point、通常ファイル以外、
-コードやZIPなど画像以外の入力は拒否する。動画と音声の対応は追加しない。
+コードやZIP、音声などの非対応入力は拒否する。
+通常の `ask` には、元の保護判定が成立するMP4動画も1件20MiBまで添付できる。
+画像の10MiB、添付合計23MiB・10件の上限と、生成画像の用途資格は変えない。
+動画は拡張子だけで許可せず、MP4のbox境界・対応brand・video track・非空のmedia dataを確認する。
+これはcontainer形式の確認で、全codecの再生や内容の評価を保証しない。
+元動画とsnapshotのpath・SHA・size・同バイトを送信時に再照合し、変更・不適格・画像資格の動画流用を拒否する。
+無通知logや旧recoveryの任意投稿へ動画を広げず、再試行は同じ質問・判断範囲・元動画を保つ。
+上限の根拠は[Discord APIの通常添付仕様](https://docs.discord.com/developers/reference#uploading-files)。
 
 通常CLIのコピーには、同じ場所の `attachment-N.source.json` を変更できない形で保存する。
 用途は `discord-conversation-media-source-v1` で、元の正規パス、コピーのパス、SHAとサイズだけを持つ。
@@ -161,11 +168,11 @@ Go側の失敗時は旧APIへ切り替えず、同じ入力での再試行を案
 
 新しい送信側は、用途が有効な設定と `conversation-log-<32桁のSHA>` または
 質問の `conversation-v1-<32桁のSHA>` の送信IDだけについて、
-固定したGo実行ファイルの `--verify-conversation-media --path <画像> --request-id <送信ID>` を呼ぶ。
+固定したGo実行ファイルの `--verify-conversation-media --path <添付> --request-id <送信ID>` を呼ぶ。
 これは `runner.lock` を取らない読取専用の検証で、HTTP・モデル・旧台帳の読込や状態の書込を行わない。
 元ファイルを毎回 `scrub391` で調べ、保護対象ではなく、判定未確認でもないことを確認する。
 
-コピーはツール保存先の `conversation-bridge/<normal-log-ID または normal-ask-ID>/attachment-N.<画像形式>` に限定する。
+コピーはツール保存先の `conversation-bridge/<normal-log-ID または normal-ask-ID>/attachment-N.<形式>` に限定する。
 送信ID、証跡の厳密な形式、両パス、サイズ、元の現在の内容とコピーのSHAを照合する。
 コピーの一般的なファイル名で元の保護範囲を隠さない。新規アップロード前に元ファイルが変更・移動・削除されていれば送らない。
 Go CLIへ元画像を直接渡す場合も、同じ現在の保護判定とサイズ・形式検査を通す。

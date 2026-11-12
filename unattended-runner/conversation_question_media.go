@@ -19,20 +19,24 @@ func conversationQuestionImages(paths []string) ([]string, []string, error) {
 		if err != nil {
 			return nil, nil, errConversationMedia
 		}
-		data, _, err := conversationMediaRead(absolute, conversationMediaLimit)
+		data, _, err := conversationMediaRead(absolute, conversationAttachmentLimit(absolute))
 		if err != nil || len(data) == 0 || seen[absolute] {
+			clear(data)
 			return nil, nil, errConversationMedia
 		}
-		if _, _, err = conversationMediaMagic(data); err != nil {
+		if _, _, err = conversationAttachmentMagic(data, absolute); err != nil {
+			clear(data)
 			return nil, nil, err
 		}
 		total += len(data)
 		if total > 23<<20 {
+			clear(data)
 			return nil, nil, errConversationMedia
 		}
 		seen[absolute] = true
 		canonical = append(canonical, absolute)
 		hashes = append(hashes, bytesHash(data))
+		clear(data)
 	}
 	return canonical, hashes, nil
 }

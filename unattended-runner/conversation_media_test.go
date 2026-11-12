@@ -3,6 +3,7 @@ package main
 import (
 	"bytes"
 	"context"
+	"encoding/binary"
 	"encoding/json"
 	"errors"
 	"os"
@@ -88,6 +89,88 @@ func TestConversationMediaDirectAndBridgeSourcesAreCheckedLive(t *testing.T) {
 	f.deny = true
 	if _, err := verifyConversationMedia(context.Background(), f.snapshot, f.sender, f.deps()); err == nil {
 		t.Fatal("protected source was accepted from an old private receipt")
+	}
+}
+
+func fixtureVideoMP4(payload int, handler string) []byte {
+	box := func(kind string, data []byte) []byte {
+		r := make([]byte, 8+len(data))
+		binary.BigEndian.PutUint32(r, uint32(len(r)))
+		copy(r[4:8], kind)
+		copy(r[8:], data)
+		return r
+	}
+	h := make([]byte, 12)
+	copy(h[8:], handler)
+	data := box("ftyp", []byte("isom\x00\x00\x00\x00isommp42"))
+	data = append(data, box("moov", box("trak", box("mdia", box("hdlr", h))))...)
+	return append(data, box("mdat", make([]byte, payload))...)
+}
+
+func TestConversationMP4PreservesSourceAndQuestionScope(t *testing.T) {
+	f := mediaFixture(t)
+	f.normal = "normal-ask-" + strings.Repeat("b", 64)
+	f.sender = "conversation-v1-" + bytesHash([]byte(f.normal))[:32]
+	f.source = filepath.Join(f.root, "original.mp4")
+	f.snapshot = filepath.Join(f.home, "conversation-bridge", f.normal, "attachment-0.mp4")
+	f.descriptor = filepath.Join(filepath.Dir(f.snapshot), "attachment-0.source.json")
+	if err := os.MkdirAll(filepath.Dir(f.snapshot), 0700); err != nil {
+		t.Fatal(err)
+	}
+	f.data = fixtureVideoMP4((10<<20)+1, "vide")
+	f.write(t)
+	p := f.verify(t, f.snapshot)
+	if p.MIME != "video/mp4" || p.Extension != "mp4" || len(f.guardPaths) != 1 || f.guardPaths[0] != f.source {
+		t.Fatal("MP4 original scope lost")
+	}
+	deps := f.deps()
+	f.deny = true
+	qualificationCalls := 0
+	deps.Question = &generatedQuestionScope{}
+	deps.Qualify = func(context.Context, string, generatedQuestionScope) (*generatedImageQualification, error) {
+		qualificationCalls++
+		return nil, errConversationMedia
+	}
+	if _, err := verifyConversationMedia(context.Background(), f.snapshot, f.sender, deps); err == nil || qualificationCalls != 0 {
+		t.Fatal("video used image authority")
+	}
+	f.deny = false
+	f.onGuard = func() { _ = os.WriteFile(f.source, fixtureVideoMP4(1, "vide"), 0600) }
+	if _, err := verifyConversationMedia(context.Background(), f.snapshot, f.sender, f.deps()); err == nil {
+		t.Fatal("changed original video accepted")
+	}
+}
+
+func TestConversationMP4FormatSizeAndRetryBoundaries(t *testing.T) {
+	valid := fixtureVideoMP4(1, "vide")
+	for _, bad := range [][]byte{nil, []byte("ftyp isom"), valid[:len(valid)-1], fixtureVideoMP4(1, "soun"), fixtureVideoMP4(0, "vide")} {
+		if conversationVideoMagic(bad) {
+			t.Fatal("invalid or audio-only MP4 accepted")
+		}
+	}
+	oversize := make([]byte, conversationVideoLimit+1)
+	copy(oversize, valid)
+	if _, _, e := conversationAttachmentMagic(oversize, "fixture.mp4"); e == nil {
+		t.Fatal("oversize video accepted")
+	}
+	if _, _, e := conversationAttachmentMagic(valid, "fixture.png"); e == nil {
+		t.Fatal("video relabeled as image accepted")
+	}
+	if _, _, e := conversationAttachmentMagic([]byte("\x89PNG\r\n\x1a\nimage"), "fixture.mp4"); e == nil {
+		t.Fatal("image relabeled as video accepted")
+	}
+	f := mediaFixture(t)
+	f.source = filepath.Join(f.root, "direct.mp4")
+	f.data = valid
+	if e := os.WriteFile(f.source, f.data, 0600); e != nil {
+		t.Fatal(e)
+	}
+	if _, e := verifyConversationMedia(context.Background(), f.source, f.sender, f.deps()); e == nil {
+		t.Fatal("video enabled for silent log")
+	}
+	paths, hashes, e := conversationQuestionImages([]string{f.source})
+	if e != nil || len(paths) != 1 || len(hashes) != 1 || hashes[0] != bytesHash(valid) {
+		t.Fatal("question video retry binding lost", e)
 	}
 }
 

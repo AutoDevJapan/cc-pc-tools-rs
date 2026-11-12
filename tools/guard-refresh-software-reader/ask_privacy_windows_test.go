@@ -123,6 +123,40 @@ func TestAskReconciliationRejectsIncompleteAndMalformedSnapshots(t *testing.T) {
 	}
 }
 
+func TestAskPreCreateProducerJSONForActualCaller(t *testing.T) {
+	path := os.Getenv("FOURBROS_ASK_PRECREATE_JSON")
+	if path == "" {
+		t.Skip("explicit owned producer/consumer handoff")
+	}
+	old := &fakeUpdateObject{raw: make([]byte, askOldBytes), id: softwareIdentity{askOldVolume, askOldID, askOldCreated}, acl: "owned"}
+	old.write = func(string, []byte, string) (softwareIdentity, error) { return softwareIdentity{}, errUpdateObject }
+	plan := askSoftwarePlan{Candidate: "owned-candidate", Proof: "owned-proof"}
+	b := updateBoundary{open: func(p string) (updateObject, error) {
+		if p == askTarget {
+			return old, nil
+		}
+		return &fakeUpdateObject{raw: []byte("owned")}, nil
+	}, oldMatches: func([]byte) bool { return true }, candidateMatches: func([]byte, []byte) bool { return true }, absent: func(string) bool { return true }}
+	r := executeAskSoftware(true, plan, b)
+	r.Reconciliation = &askReconciliation{Domain: "owner-question-fixed-software-reconcile-v1", Target: askReconciledObject{State: "unknown"}, Stage: askReconciledObject{State: "absent"}, Backup: askReconciledObject{State: "absent"}}
+	var out bytes.Buffer
+	if runAskSoftware([]string{"--prepare-ask-privacy-update"}, &out, updateOperations{prepare: func() updateResult { return r }}) != 1 || r.Reason != "qualification_unavailable" {
+		t.Fatal("producer precreate result incompatible")
+	}
+	f, e := os.OpenFile(path, os.O_WRONLY|os.O_CREATE|os.O_EXCL, 0600)
+	if e != nil {
+		t.Fatal(e)
+	}
+	defer f.Close()
+	if _, e = f.Write(out.Bytes()); e != nil {
+		t.Fatal(e)
+	}
+	if e = f.Sync(); e != nil {
+		t.Fatal(e)
+	}
+	t.Log("actual_producer_serialized=true before_create_error=true created0=true reconciliation_preserved=true exit1=true")
+}
+
 func TestAskPrivacySoftwarePurposeEntryNeverFallsBackToGuardData(t *testing.T) {
 	var out bytes.Buffer
 	calls := 0
@@ -373,7 +407,7 @@ func TestAskBoundedGitOutputAndCanceledHashWork(t *testing.T) {
 }
 
 func TestAskPurposeFixedObjectsPartialFailureAndNoDataGrant(t *testing.T) {
-	for _, fault := range []string{"verify", "prepare", "old", "identity", "candidate", "proof", "acl", "collision", "backup_write", "stage_write"} {
+	for _, fault := range []string{"verify", "prepare", "old", "identity", "candidate", "proof", "acl", "collision", "backup_write", "stage_write", "before_create"} {
 		t.Run(fault, func(t *testing.T) {
 			old := &fakeUpdateObject{raw: make([]byte, askOldBytes), id: softwareIdentity{askOldVolume, askOldID, askOldCreated}, acl: "owned-acl"}
 			proof := &fakeUpdateObject{raw: []byte("proof")}
@@ -383,6 +417,9 @@ func TestAskPurposeFixedObjectsPartialFailureAndNoDataGrant(t *testing.T) {
 			objects := []*fakeUpdateObject{}
 			old.write = func(path string, raw []byte, acl string) (softwareIdentity, error) {
 				writes = append(writes, path)
+				if fault == "before_create" {
+					return softwareIdentity{}, errUpdateObject
+				}
 				want := old.raw
 				if path == askStage {
 					want = candidate.raw
@@ -441,6 +478,10 @@ func TestAskPurposeFixedObjectsPartialFailureAndNoDataGrant(t *testing.T) {
 			case "backup_write", "stage_write":
 				if r.Qualified || r.Prepared || r.Reason != "prepare_incomplete_preserved" || len(r.Created) == 0 {
 					t.Fatal(r)
+				}
+			case "before_create":
+				if r.Qualified || r.Prepared || r.Reason != "qualification_unavailable" || len(r.Created) != 0 || len(writes) != 1 {
+					t.Fatal("pre-create failure protocol mismatch", r)
 				}
 			default:
 				if r.Qualified || len(writes) != 0 {

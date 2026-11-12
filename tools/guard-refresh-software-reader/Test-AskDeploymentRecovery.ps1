@@ -1,4 +1,4 @@
-param([Parameter(Mandatory=$true)][string]$OwnedRoot)
+param([Parameter(Mandatory=$true)][string]$OwnedRoot,[string]$ProducerJSON)
 $ErrorActionPreference='Stop'
 . (Join-Path $PSScriptRoot 'Install-AskPrivacySoftware.ps1') -LibraryOnly
 Assert-SyncGuard $OwnedRoot
@@ -16,7 +16,8 @@ foreach($case in @('normal','exit_race','kill_failed','wait_unknown')){
 }
 $results=@()
 $invocation=[Guid]::NewGuid().ToString('N')
-foreach($case in @('absent','partial','unknown')){
+$cases=@('absent','partial','unknown');if($ProducerJSON){$cases+='producer'}
+foreach($case in $cases){
     $case=$case+'-'+$invocation
     $target=Join-Path $OwnedRoot ('recover-'+$case+'-old.exe')
     $candidate=Join-Path $OwnedRoot ('recover-'+$case+'-candidate.exe')
@@ -30,7 +31,7 @@ foreach($case in @('absent','partial','unknown')){
     try{$newHash=Get-SyncHash $new;$newBytes=$new.Length}finally{$new.Dispose()}
     $plan=@{target=$target;candidate=$candidate;beforeSha256=$oldHash;beforeIdentity=$oldId;candidateSha256=$newHash;candidateBytes=$newBytes;stage=$stage;backup=$backup;source=('a'*40);sourceMerged=('a'*40)}
     $proof=@{qualified=$true;domain='owner-refresh-fixed-software-prepare-v1';target=$target;stage=$stage;backup=$backup;current_sha256=$oldHash;candidate_sha256=$newHash;current_identity=@{volume=$oldId.Split(':')[0];file_id=$oldId.Split(':')[1];created='1'};data_access_granted=$false}
-    $ctx=@{case=$case.Split('-')[0];plan=$plan;proof=$proof;acl=$acl;aclHash=$aclHash;hash=${function:Get-SyncHash};parse=${function:Convert-AskSoftwareResponse}}
+    $ctx=@{case=$case.Split('-')[0];plan=$plan;proof=$proof;acl=$acl;aclHash=$aclHash;hash=${function:Get-SyncHash};parse=${function:Convert-AskSoftwareResponse};producer=$ProducerJSON}
     $qualify={return $ctx.proof}.GetNewClosure()
     $prepare={
         $r=@{qualified=$false;prepared=$false;reason='qualification_unavailable';software_replace_allowed=$false;data_access_granted=$false;update_performed=$false;reconciliation=@{domain='owner-question-fixed-software-reconcile-v1';Target=@{state='unknown'};Stage=@{state='absent'};Backup=@{state='absent'};switch_allowed=$false}}
@@ -41,7 +42,7 @@ foreach($case in @('absent','partial','unknown')){
             try{$id=[RunnerImageLease]::Identity($f);$sha=& $ctx.hash $f}finally{$f.Dispose()}
             $r.reconciliation.Backup=@{state='present';identity=@{volume=$id.Split(':')[0];file_id=$id.Split(':')[1];created='1'};sha256=$sha;acl_sha256=$ctx.aclHash}
         }
-        $raw=$r|ConvertTo-Json -Depth 12 -Compress
+        $raw=if($ctx.case -ceq 'producer'){[IO.File]::ReadAllText($ctx.producer)}else{$r|ConvertTo-Json -Depth 12 -Compress}
         return & $ctx.parse 1 $raw '' $ctx.plan
     }.GetNewClosure()
     $ops=New-AskDeploymentOperations $plan $receipt $qualify {param($p)} $prepare

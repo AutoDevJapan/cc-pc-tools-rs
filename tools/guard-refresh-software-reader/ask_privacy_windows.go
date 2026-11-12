@@ -244,6 +244,14 @@ func executeAskSoftwareContext(ctx context.Context, prepare bool, plan askSoftwa
 		}
 		if e != nil {
 			r.Qualified = false
+			// Before CREATE_NEW succeeds there is no returned created identity.
+			// Preserve the failure as unqualified rather than claiming a partial
+			// protocol that requires at least one created leaf. The supervisor
+			// separately inspects collisions/unknown state without granting use.
+			if len(r.Created) == 0 {
+				r = updateResult{Reason: "qualification_unavailable"}
+				return
+			}
 			r.Reason = "prepare_incomplete_preserved"
 			return
 		}

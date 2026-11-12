@@ -45,6 +45,17 @@ pub(crate) fn project(
                 && job["launch_key"] == FOUR_LAUNCH =>
         {
             let message = &stderr[..stderr.len().min(16384)];
+            // The bounded reader retains one lookahead byte. An alphanumeric
+            // continuation means the final token has no observed right edge;
+            // a delimiter (or actual EOF) still completes a short numeric token.
+            let complete = if stderr.get(16384).is_some_and(u8::is_ascii_alphanumeric) {
+                message
+                    .iter()
+                    .rposition(|b| !b.is_ascii_alphanumeric())
+                    .map_or(&message[..0], |at| &message[..=at])
+            } else {
+                message
+            };
             let has = |needle: &[u8]| {
                 message
                     .windows(needle.len())
@@ -58,7 +69,7 @@ pub(crate) fn project(
                 "session_in_use"
             } else if has(b"session") && (has(b"not found") || has(b"no session")) {
                 "session_unavailable"
-            } else if has(b"authentication") || has(b"unauthorized") || http_401(message) {
+            } else if has(b"authentication") || has(b"unauthorized") || http_401(complete) {
                 "authentication"
             } else if has(b"config") && (has(b"invalid") || has(b"unknown") || has(b"parse")) {
                 "configuration"
@@ -69,12 +80,79 @@ pub(crate) fn project(
             } else {
                 "unknown"
             };
+            let signals: Vec<_> = [
+                ("error", b"error".as_slice()),
+                ("warning", b"warn".as_slice()),
+                ("panic", b"panic".as_slice()),
+                ("configuration", b"config".as_slice()),
+                ("filesystem", b"os error".as_slice()),
+                ("permission", b"permission".as_slice()),
+                ("database", b"database".as_slice()),
+                ("provider", b"provider".as_slice()),
+                ("model", b"model".as_slice()),
+                ("session", b"session".as_slice()),
+                ("transport", b"connect".as_slice()),
+                ("tls", b"certificate".as_slice()),
+                ("sandbox", b"sandbox".as_slice()),
+                ("policy", b"policy".as_slice()),
+                ("mcp", b"mcp".as_slice()),
+                ("chrome", b"chrome".as_slice()),
+                ("argument", b"argument".as_slice()),
+                ("timeout", b"timed out".as_slice()),
+                ("quota", b"quota".as_slice()),
+                ("cancel", b"cancel".as_slice()),
+            ]
+            .into_iter()
+            .filter_map(|(tag, word)| has(word).then_some(tag))
+            .collect();
+            let os_error = bounded_os_error(complete);
+            let launcher = match Path::new(s(job, "codex"))
+                .extension()
+                .and_then(|e| e.to_str())
+                .map(str::to_ascii_lowercase)
+                .as_deref()
+            {
+                Some("cmd" | "bat") => "cmd",
+                Some("exe") => "exe",
+                _ => "unknown",
+            };
+            let mut signals = signals;
+            if os_error == Some(5) && !signals.contains(&"permission") {
+                let at = signals
+                    .iter()
+                    .position(|v| *v == "database")
+                    .unwrap_or(signals.len());
+                signals.insert(at, "permission")
+            }
             Ok(
-                json!({"metadata_only":true,"purpose":purpose,"id":id,"status":"failed","reason":reason,"exitCode":job["exit_code"].as_i64(),"steps":job["steps"].as_u64(),"stderrPresent":!stderr.is_empty(),"stderrTruncated":stderr.len()>16384,"resumeSession":FOUR_SESSION,"sourceBodiesReturned":false}),
+                json!({"metadata_only":true,"purpose":purpose,"id":id,"status":"failed","reason":reason,"diagnosticSignals":signals,"osErrorCode":os_error,"launcherKind":launcher,"exitCode":job["exit_code"].as_i64(),"steps":job["steps"].as_u64(),"stderrPresent":!stderr.is_empty(),"stderrTruncated":stderr.len()>16384,"resumeSession":FOUR_SESSION,"sourceBodiesReturned":false}),
             )
         }
         _ => Err(Error::new("job projection purpose or binding unavailable")),
     }
+}
+
+fn bounded_os_error(message: &[u8]) -> Option<u32> {
+    let prefix = b"os error ";
+    message
+        .windows(prefix.len())
+        .enumerate()
+        .filter(|(at, v)| {
+            v.eq_ignore_ascii_case(prefix)
+                && (*at == 0 || !message[*at - 1].is_ascii_alphanumeric())
+        })
+        .find_map(|(at, _)| {
+            let tail = &message[at + prefix.len()..];
+            let count = tail.iter().take_while(|b| b.is_ascii_digit()).count();
+            if count == 0 || count > 10 || tail.get(count).is_some_and(u8::is_ascii_alphanumeric) {
+                return None;
+            }
+            let mut value = 0u32;
+            for b in &tail[..count] {
+                value = value.checked_mul(10)?.checked_add(u32::from(*b - b'0'))?
+            }
+            Some(value)
+        })
 }
 
 impl Context {
@@ -355,6 +433,221 @@ fn parse_projection_json(bytes: &[u8]) -> Result<Value> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[test]
+    fn original_unknown_diagnostic_returns_only_fixed_cause_signals() {
+        let job = json!({"id":FOUR_JOB,"status":"failed","resume_session":FOUR_SESSION,"launch_key":FOUR_LAUNCH,"codex":"C:/owned/codex.cmd"});
+        let raw=b"Error: failed to read configuration from PRIVATE (os error 5). State database unavailable.";
+        let out = project(
+            &job,
+            FOUR_JOB,
+            "fourbros-1245-launch-failure",
+            None,
+            None,
+            raw,
+        )
+        .unwrap();
+        assert_eq!(
+            out["diagnosticSignals"],
+            json!([
+                "error",
+                "configuration",
+                "filesystem",
+                "permission",
+                "database"
+            ])
+        );
+        assert_eq!(out["osErrorCode"], 5);
+        assert_eq!(out["launcherKind"], "cmd");
+        assert!(!out.to_string().contains("PRIVATE"));
+    }
+    #[test]
+    fn extra_launch_signals_never_return_unmatched_text_or_unbounded_numbers() {
+        let job = json!({"id":FOUR_JOB,"status":"failed","resume_session":FOUR_SESSION,"launch_key":FOUR_LAUNCH,"codex":"C:/PRIVATE/codex.exe"});
+        for (input, number) in [
+            ("PRIVATE arbitrary", None::<u32>),
+            ("error PRIVATE os error 4294967296", None),
+            ("os error 5x", None),
+        ] {
+            let p = project(
+                &job,
+                FOUR_JOB,
+                "fourbros-1245-launch-failure",
+                None,
+                None,
+                input.as_bytes(),
+            )
+            .unwrap();
+            assert!(!p.to_string().contains("PRIVATE"));
+            assert_eq!(p["osErrorCode"], number.map_or(Value::Null, |n| json!(n)));
+            assert_eq!(p["launcherKind"], "exe");
+            for tag in p["diagnosticSignals"].as_array().unwrap() {
+                assert!(matches!(
+                    tag.as_str(),
+                    Some("error" | "filesystem" | "permission")
+                ));
+            }
+        }
+    }
+    #[test]
+    fn windows_invalid_data_code_is_not_permission_denial() {
+        let job = json!({"id":FOUR_JOB,"status":"failed","resume_session":FOUR_SESSION,"launch_key":FOUR_LAUNCH});
+        let p = project(
+            &job,
+            FOUR_JOB,
+            "fourbros-1245-launch-failure",
+            None,
+            None,
+            b"os error 13",
+        )
+        .unwrap();
+        assert_eq!(p["osErrorCode"], 13);
+        assert!(
+            !p["diagnosticSignals"]
+                .as_array()
+                .unwrap()
+                .iter()
+                .any(|v| v == "permission")
+        );
+    }
+    #[test]
+    fn malformed_os_error_does_not_hide_a_later_valid_os_error() {
+        assert_eq!(bounded_os_error(b"os error invalid; os error 5"), Some(5));
+        assert_eq!(
+            bounded_os_error(b"os error 4294967296; os error 2"),
+            Some(2)
+        );
+        assert_eq!(bounded_os_error(b"os error 5x; os error 13"), Some(13));
+        assert_eq!(bounded_os_error(b"chaos error 5"), None);
+        assert_eq!(bounded_os_error(b"BIOS error 5; (os error 2)"), Some(2));
+        assert_eq!(bounded_os_error(b"(OS error 4294967295)"), Some(u32::MAX));
+        assert_eq!(bounded_os_error(b"(os error 2) then (os error 5)"), Some(2));
+    }
+    #[test]
+    fn truncated_status_token_is_not_treated_as_complete() {
+        let job = json!({"id":FOUR_JOB,"status":"failed","resume_session":FOUR_SESSION,"launch_key":FOUR_LAUNCH});
+        let mut raw = vec![b' '; 16385];
+        raw[16374..].copy_from_slice(b"os error 50");
+        let p = project(
+            &job,
+            FOUR_JOB,
+            "fourbros-1245-launch-failure",
+            None,
+            None,
+            &raw,
+        )
+        .unwrap();
+        assert!(p["osErrorCode"].is_null());
+        assert!(
+            !p["diagnosticSignals"]
+                .as_array()
+                .unwrap()
+                .iter()
+                .any(|v| v == "permission")
+        );
+        raw.fill(b' ');
+        raw[16376..].copy_from_slice(b"HTTP 4010");
+        let p = project(
+            &job,
+            FOUR_JOB,
+            "fourbros-1245-launch-failure",
+            None,
+            None,
+            &raw,
+        )
+        .unwrap();
+        assert_ne!(p["reason"], "authentication");
+    }
+    #[test]
+    fn lookahead_keeps_complete_numeric_tokens_and_rejects_continuations() {
+        let job = json!({"id":FOUR_JOB,"status":"failed","resume_session":FOUR_SESSION,"launch_key":FOUR_LAUNCH});
+        for (token, suffix, number, reason) in [
+            (b"os error 5".as_slice(), b"".as_slice(), Some(5), "unknown"),
+            (
+                b"os error 5".as_slice(),
+                b")".as_slice(),
+                Some(5),
+                "unknown",
+            ),
+            (b"os error 5".as_slice(), b"0".as_slice(), None, "unknown"),
+            (b"os error 5".as_slice(), b"x".as_slice(), None, "unknown"),
+            (
+                b"os error 13".as_slice(),
+                b" ".as_slice(),
+                Some(13),
+                "unknown",
+            ),
+            (
+                b"HTTP 401".as_slice(),
+                b"".as_slice(),
+                None,
+                "authentication",
+            ),
+            (
+                b"HTTP 401".as_slice(),
+                b" ".as_slice(),
+                None,
+                "authentication",
+            ),
+            (b"HTTP 401".as_slice(), b"0".as_slice(), None, "unknown"),
+            (b"HTTP 401".as_slice(), b"x".as_slice(), None, "unknown"),
+        ] {
+            let mut raw = vec![b' '; 16384];
+            raw[16384 - token.len()..].copy_from_slice(token);
+            raw.extend_from_slice(suffix);
+            let p = project(
+                &job,
+                FOUR_JOB,
+                "fourbros-1245-launch-failure",
+                None,
+                None,
+                &raw,
+            )
+            .unwrap();
+            assert_eq!(p["osErrorCode"], number.map_or(Value::Null, |n| json!(n)));
+            assert_eq!(p["reason"], reason);
+            assert_eq!(p["stderrTruncated"], !suffix.is_empty());
+            assert_eq!(
+                p["diagnosticSignals"]
+                    .as_array()
+                    .unwrap()
+                    .iter()
+                    .any(|v| v == "permission"),
+                number == Some(5)
+            );
+        }
+        // An earlier complete token remains available when the last token is
+        // incomplete; lookahead cannot create a new token outside the prefix.
+        let mut raw = vec![b' '; 16385];
+        raw[..12].copy_from_slice(b"(os error 2)");
+        raw[16374..].copy_from_slice(b"os error 50");
+        assert_eq!(
+            project(
+                &job,
+                FOUR_JOB,
+                "fourbros-1245-launch-failure",
+                None,
+                None,
+                &raw
+            )
+            .unwrap()["osErrorCode"],
+            2
+        );
+        raw.fill(b' ');
+        raw[16376..].copy_from_slice(b"HTTP 4010");
+        raw[16384] = b' ';
+        assert_eq!(
+            project(
+                &job,
+                FOUR_JOB,
+                "fourbros-1245-launch-failure",
+                None,
+                None,
+                &raw
+            )
+            .unwrap()["reason"],
+            "authentication"
+        );
+    }
     #[test]
     fn stored_projection_rejects_duplicate_keys_before_selecting_identity() {
         for raw in [

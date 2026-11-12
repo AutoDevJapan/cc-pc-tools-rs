@@ -2,6 +2,10 @@
 
 Issueと実装は同じ受入条件で管理する。実データ・本人原文・私的IDは公開しない。
 
+CLI jobを持たないデスクトップ担当の部分成果は、別の
+[native部分成果の記録](native-partial-implementation.md)を使う。
+部分成果をこの文書の完全な実反映や質問閉鎖へ変換しない。
+
 ## 仕様
 
 `conversation source-verify` は正規APIの現在の質問・回答版と、保存済みの

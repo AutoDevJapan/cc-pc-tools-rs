@@ -201,6 +201,8 @@ type Runner struct {
 	SeparatedScheduler          bool
 	ConversationReceiverOnly    bool
 	TaskQuestion                *taskQuestionRegistry
+	NativePartialRPC            func(context.Context, string, map[string]any) (json.RawMessage, error)
+	NativePartialGuard          func(context.Context, string) bool
 }
 
 func readJSON(path string, ceiling int64, value any) error {
@@ -701,6 +703,9 @@ func runCommand(ctx context.Context, path string, args ...string) (string, error
 }
 
 func commandBudget(path string, args []string) time.Duration {
+	if path == conversationTodo && len(args) > 0 && args[0] == "native-implementation-record" {
+		return 80 * time.Second
+	}
 	if path == "D:/CC/Tools/scheduler/scheduler.exe" && len(args) == 1 && args[0] == "repair-step" {
 		return 35 * time.Second
 	}

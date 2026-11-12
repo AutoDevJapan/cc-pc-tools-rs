@@ -16,6 +16,7 @@ import (
 
 const conversationDefaultConfig = "D:/CC/Tools/discord-ask/unattended/config.json"
 const conversationCLIDeadline = 60 * time.Second
+const nativePartialCLIDeadline = 240 * time.Second
 
 var errConversationArguments = errors.New("invalid conversation arguments")
 var errConversationBusy = errors.New("conversation busy")
@@ -45,6 +46,8 @@ type conversationCLIOptions struct {
 	BodySHA           string
 	Revision          string
 	EvidenceFile      string
+	InputFile         string
+	OriginStateFile   string
 }
 
 // Diagnostics from flag must never repeat an argument, body path or secret.
@@ -92,6 +95,11 @@ func parseConversationCLI(args []string) (conversationCLIOptions, error) {
 	var actor string
 	var intakeTodo string
 	switch opts.Command {
+	case "native-implementation-record", "check-native-implementation":
+		conversationStringFlag(fs, "input-file", &opts.InputFile)
+	case "verify-native-implementation":
+		conversationStringFlag(fs, "input-file", &opts.InputFile)
+		conversationStringFlag(fs, "origin-state-file", &opts.OriginStateFile)
 	case "ask":
 		conversationStringFlag(fs, "scheduler-item", &actor)
 		conversationStringFlag(fs, "scheduler-job", &opts.ActorJob)
@@ -149,6 +157,10 @@ func parseConversationCLI(args []string) (conversationCLIOptions, error) {
 		return opts, errConversationArguments
 	}
 	switch opts.Command {
+	case "native-implementation-record", "check-native-implementation", "verify-native-implementation":
+		if opts.InputFile == "" || opts.Config != conversationDefaultConfig || (opts.Command == "verify-native-implementation" && opts.OriginStateFile == "") {
+			return opts, errConversationArguments
+		}
 	case "ask":
 		var ok bool
 		if actor != "" || opts.ActorJob != "" {
@@ -320,6 +332,9 @@ func conversationCLI(args []string, out io.Writer) int {
 		if opts.Command == "status" {
 			return conversationCLIWithLoader(args, out, loadConversationStatusRunner)
 		}
+		if opts.Command == "verify-native-implementation" || opts.Command == "check-native-implementation" {
+			return conversationCLIWithLoader(args, out, loadConversationRepliesRunner)
+		}
 		if (opts.Command == "replies" && opts.Output != "") || (opts.Command == "log" && opts.CheckOnly) {
 			return conversationCLIWithLoader(args, out, loadConversationRepliesRunner)
 		}
@@ -337,7 +352,11 @@ func conversationCLIWithGuard(args []string, out io.Writer, load func(string) (c
 		_, _ = io.WriteString(out, "invalid conversation arguments\n")
 		return 1
 	}
-	ctx, cancel := context.WithTimeout(context.Background(), conversationCLIDeadline)
+	budget := conversationCLIDeadline
+	if opts.Command == "native-implementation-record" {
+		budget = nativePartialCLIDeadline
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), budget)
 	defer cancel()
 	if opts.Output != "" && !conversationRepliesOutput(ctx, opts.Output, guard) {
 		_, _ = io.WriteString(out, "conversation unavailable\n")
@@ -356,6 +375,14 @@ func conversationCLIWithGuard(args []string, out io.Writer, load func(string) (c
 	var result any
 	if ctx.Err() == nil {
 		switch opts.Command {
+		case "native-implementation-record", "check-native-implementation", "verify-native-implementation":
+			if backend, ok := runner.(interface {
+				conversationNativePartial(context.Context, conversationCLIOptions) (any, error)
+			}); ok {
+				result, err = backend.conversationNativePartial(ctx, opts)
+			} else {
+				err = errConversationArguments
+			}
 		case "ask":
 			var question ConversationQuestion
 			question, err = runner.conversationAsk(ctx, ConversationAskInput{RequestID: opts.RequestID, Todo: opts.Todo, ActorTodo: opts.ActorTodo, ActorJob: opts.ActorJob, OriginThread: opts.OriginThread, BodyFile: opts.BodyFile, DecisionFile: opts.DecisionFile, Title: opts.Title, Wait: opts.Wait, Attachments: opts.Attachments})

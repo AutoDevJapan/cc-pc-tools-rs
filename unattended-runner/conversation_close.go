@@ -309,6 +309,11 @@ func (r *Runner) conversationCloseReply(ctx context.Context, q ConversationQuest
 	} else if found != nil {
 		return r.conversationImplementationApplied(ctx, q, current, reply, found, stamp)
 	}
+	if pending, err := nativePartialPending(row, q, reply.Message, stamp.SourceSHA); err != nil {
+		return stamp, false, err
+	} else if pending {
+		return stamp, false, nil
+	}
 	// Saved sources are verifiable, but never stand for delivery or application.
 	if req.Phase == "conversation_reply_saved" || req.Phase == "conversation_source_verified" || req.Todo == 0 {
 		return stamp, false, nil

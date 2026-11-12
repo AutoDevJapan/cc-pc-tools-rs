@@ -12,7 +12,7 @@ the caller. Neither replaces the installed executable or changes the generic
 resource guard.
 
 Preparation pins the original program, candidate, build proof and their plain
-parents. The original file identity and clean build must match the independently
+parents. The original file identity and recorded build flags must match the independently
 observed baseline. The candidate digest and dirty build record must match the
 fixed input proof and its merged source blobs. The exact held buffers are used
 for copying; Owner, Group and DACL are copied from the original handle, then

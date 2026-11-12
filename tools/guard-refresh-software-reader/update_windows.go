@@ -35,25 +35,26 @@ const updateOldFileID = "281474994043756"
 const updateOldCreated = "134389581184299033"
 
 type updateResult struct {
-	Qualified              bool              `json:"qualified"`
-	Prepared               bool              `json:"prepared"`
-	Reason                 string            `json:"reason"`
-	Domain                 string            `json:"domain,omitempty"`
-	Target                 string            `json:"target,omitempty"`
-	Stage                  string            `json:"stage,omitempty"`
-	Backup                 string            `json:"backup,omitempty"`
-	CurrentSHA             string            `json:"current_sha256,omitempty"`
-	CandidateSHA           string            `json:"candidate_sha256,omitempty"`
-	CurrentIdentity        *softwareIdentity `json:"current_identity,omitempty"`
-	StageIdentity          *softwareIdentity `json:"stage_identity,omitempty"`
-	BackupIdentity         *softwareIdentity `json:"backup_identity,omitempty"`
-	ACLHash                string            `json:"acl_sha256,omitempty"`
-	SourceHead             string            `json:"source_head,omitempty"`
-	SourceMerged           string            `json:"source_merged,omitempty"`
-	Created                []string          `json:"created,omitempty"`
-	SoftwareReplaceAllowed bool              `json:"software_replace_allowed"`
-	DataAccessGranted      bool              `json:"data_access_granted"`
-	UpdatePerformed        bool              `json:"update_performed"`
+	Reconciliation         *askReconciliation `json:"reconciliation,omitempty"`
+	Qualified              bool               `json:"qualified"`
+	Prepared               bool               `json:"prepared"`
+	Reason                 string             `json:"reason"`
+	Domain                 string             `json:"domain,omitempty"`
+	Target                 string             `json:"target,omitempty"`
+	Stage                  string             `json:"stage,omitempty"`
+	Backup                 string             `json:"backup,omitempty"`
+	CurrentSHA             string             `json:"current_sha256,omitempty"`
+	CandidateSHA           string             `json:"candidate_sha256,omitempty"`
+	CurrentIdentity        *softwareIdentity  `json:"current_identity,omitempty"`
+	StageIdentity          *softwareIdentity  `json:"stage_identity,omitempty"`
+	BackupIdentity         *softwareIdentity  `json:"backup_identity,omitempty"`
+	ACLHash                string             `json:"acl_sha256,omitempty"`
+	SourceHead             string             `json:"source_head,omitempty"`
+	SourceMerged           string             `json:"source_merged,omitempty"`
+	Created                []string           `json:"created,omitempty"`
+	SoftwareReplaceAllowed bool               `json:"software_replace_allowed"`
+	DataAccessGranted      bool               `json:"data_access_granted"`
+	UpdatePerformed        bool               `json:"update_performed"`
 }
 
 type updateOperations struct{ verify, prepare func() updateResult }

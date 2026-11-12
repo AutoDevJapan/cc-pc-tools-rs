@@ -177,7 +177,24 @@ func askCandidateMatchesContext(ctx context.Context, raw, proofRaw []byte, plan 
 }
 
 func executeAskSoftware(prepare bool, plan askSoftwarePlan, b updateBoundary) (r updateResult) {
+	return executeAskSoftwareContext(context.Background(), prepare, plan, b)
+}
+
+func executeAskSoftwareContext(ctx context.Context, prepare bool, plan askSoftwarePlan, b updateBoundary) (r updateResult) {
 	r.Reason = "qualification_unavailable"
+	defer func() {
+		if ctx.Err() != nil {
+			r.Qualified, r.Prepared = false, false
+			if len(r.Created) != 0 {
+				r.Reason = "prepare_incomplete_preserved"
+			} else {
+				r = updateResult{Reason: "qualification_unavailable"}
+			}
+		}
+	}()
+	if ctx.Err() != nil {
+		return
+	}
 	old, err := b.open(askTarget)
 	if err != nil {
 		return
@@ -204,7 +221,7 @@ func executeAskSoftware(prepare bool, plan askSoftwarePlan, b updateBoundary) (r
 		return
 	}
 	acl, err := old.ACL()
-	if err != nil || acl == "" {
+	if err != nil || acl == "" || ctx.Err() != nil {
 		return
 	}
 	id := old.ID()
@@ -217,6 +234,9 @@ func executeAskSoftware(prepare bool, plan askSoftwarePlan, b updateBoundary) (r
 		raw  []byte
 		dest **softwareIdentity
 	}{{askBackup, old.Raw(), &r.BackupIdentity}, {askStage, candidate.Raw(), &r.StageIdentity}} {
+		if ctx.Err() != nil {
+			return
+		}
 		newID, e := old.CreateNew(item.path, item.raw, acl)
 		if newID.FileID != "" {
 			r.Created = append(r.Created, item.path)
@@ -255,7 +275,77 @@ func (o askNativeObject) CreateNew(path string, raw []byte, acl string) (softwar
 func performAskSoftware(prepare bool) updateResult {
 	ctx, cancel := context.WithTimeout(context.Background(), 8*time.Second)
 	defer cancel()
-	return executeAskSoftware(prepare, compiledAskPlan, askSoftwareBoundaryContext(ctx, compiledAskPlan))
+	return executeAskSoftwareContext(ctx, prepare, compiledAskPlan, askSoftwareBoundaryContext(ctx, compiledAskPlan))
+}
+
+// Reconciliation never grants a switch. It observes only these three fixed
+// software names after the caller has terminated and waited for the producer.
+// An interrupted CreateNew may exist without a returned identity.
+type askReconciledObject struct {
+	State    string            `json:"state"`
+	Identity *softwareIdentity `json:"identity,omitempty"`
+	SHA      string            `json:"sha256,omitempty"`
+	ACL      string            `json:"acl_sha256,omitempty"`
+}
+type askReconciliation struct {
+	Domain                string `json:"domain"`
+	Target, Stage, Backup askReconciledObject
+	SwitchAllowed         bool `json:"switch_allowed"`
+}
+
+func reconcileAskObjects(ctx context.Context, open func(string) (updateObject, error), stat func(string) (os.FileInfo, error)) askReconciliation {
+	r := askReconciliation{Domain: "owner-question-fixed-software-reconcile-v1"}
+	observe := func(path string) askReconciledObject {
+		unknown := askReconciledObject{State: "unknown"}
+		if ctx.Err() != nil {
+			return unknown
+		}
+		_, err := stat(path)
+		if os.IsNotExist(err) {
+			return askReconciledObject{State: "absent"}
+		}
+		if err != nil {
+			return unknown
+		}
+		o, err := open(path)
+		if err != nil {
+			return unknown
+		}
+		defer o.Close()
+		acl, err := o.ACL()
+		if err != nil || ctx.Err() != nil {
+			return unknown
+		}
+		id := o.ID()
+		if id.FileID == "" {
+			return unknown
+		}
+		return askReconciledObject{State: "present", Identity: &id, SHA: digest(o.Raw()), ACL: digest([]byte(acl))}
+	}
+	r.Target = observe(askTarget)
+	r.Stage = observe(askStage)
+	r.Backup = observe(askBackup)
+	return r
+}
+
+func runAskReconciliation(args []string, out io.Writer) int {
+	if len(args) != 1 || args[0] != "--inspect-ask-privacy-update" {
+		return 2
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), 8*time.Second)
+	defer cancel()
+	// Only the input-free compiled software names can be inspected. No record,
+	// proof supplied by a caller or image path is accepted here.
+	r := reconcileAskObjects(ctx, func(path string) (updateObject, error) {
+		if path != askTarget && path != askStage && path != askBackup {
+			return nil, errUpdateObject
+		}
+		return openUpdateObject(path)
+	}, os.Lstat)
+	if json.NewEncoder(out).Encode(r) != nil {
+		return 1
+	}
+	return 0
 }
 
 // Return only bounded stdout and a completed wait. All Git calls share the

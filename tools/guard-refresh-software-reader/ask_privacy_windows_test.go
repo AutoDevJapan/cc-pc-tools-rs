@@ -12,6 +12,7 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"strconv"
 	"strings"
@@ -19,6 +20,83 @@ import (
 	"testing"
 	"time"
 )
+
+type slowAskObject struct {
+	*fakeUpdateObject
+	delay time.Duration
+}
+
+func (o slowAskObject) ACL() (string, error) { time.Sleep(o.delay); return o.fakeUpdateObject.ACL() }
+
+func TestAskExpiredSynchronousACLAndCreationNeverReportSuccess(t *testing.T) {
+	for _, prepare := range []bool{false, true} {
+		t.Run(strconv.FormatBool(prepare), func(t *testing.T) {
+			ctx, cancel := context.WithTimeout(context.Background(), 10*time.Millisecond)
+			defer cancel()
+			old := &fakeUpdateObject{raw: make([]byte, askOldBytes), id: softwareIdentity{askOldVolume, askOldID, askOldCreated}, acl: "owned-acl"}
+			writes := 0
+			old.write = func(string, []byte, string) (softwareIdentity, error) {
+				writes++
+				time.Sleep(30 * time.Millisecond)
+				return softwareIdentity{FileID: "owned-created"}, nil
+			}
+			plan := askSoftwarePlan{Proof: "proof", Candidate: "candidate"}
+			b := updateBoundary{open: func(path string) (updateObject, error) {
+				if path == askTarget {
+					if !prepare {
+						return slowAskObject{old, 30 * time.Millisecond}, nil
+					}
+					return old, nil
+				}
+				return &fakeUpdateObject{raw: []byte("owned")}, nil
+			}, oldMatches: func([]byte) bool { return true }, candidateMatches: func([]byte, []byte) bool { return true }, absent: func(string) bool { return true }}
+			r := executeAskSoftwareContext(ctx, prepare, plan, b)
+			if ctx.Err() != context.DeadlineExceeded || r.Qualified || r.Prepared {
+				t.Fatal("deadline success misreported", r)
+			}
+			if prepare {
+				if writes != 1 || len(r.Created) != 1 || r.BackupIdentity == nil || r.Reason != "prepare_incomplete_preserved" {
+					t.Fatal("partial not retained", r)
+				}
+			} else if writes != 0 {
+				t.Fatal("verify wrote")
+			}
+		})
+	}
+}
+
+func TestAskReconciliationFixedNamesAbsentPresentUnknownNeverGrant(t *testing.T) {
+	opened := 0
+	closed := []*fakeUpdateObject{}
+	r := reconcileAskObjects(context.Background(), func(path string) (updateObject, error) {
+		opened++
+		if path == askBackup {
+			return nil, errUpdateObject
+		}
+		o := &fakeUpdateObject{raw: []byte("owned"), id: softwareIdentity{FileID: "5"}, acl: "owned"}
+		closed = append(closed, o)
+		return o, nil
+	}, func(path string) (os.FileInfo, error) {
+		if path == askStage {
+			return nil, os.ErrNotExist
+		}
+		return nil, nil
+	})
+	if r.SwitchAllowed || r.Target.State != "present" || r.Stage.State != "absent" || r.Backup.State != "unknown" || opened != 2 {
+		t.Fatal(r)
+	}
+	for _, o := range closed {
+		if !o.closed {
+			t.Fatal("reconcile handle leak")
+		}
+	}
+	ctx, cancel := context.WithCancel(context.Background())
+	cancel()
+	r = reconcileAskObjects(ctx, func(string) (updateObject, error) { t.Fatal("expired open"); return nil, nil }, func(string) (os.FileInfo, error) { t.Fatal("expired stat"); return nil, nil })
+	if r.Target.State != "unknown" || r.Stage.State != "unknown" || r.Backup.State != "unknown" || r.SwitchAllowed {
+		t.Fatal(r)
+	}
+}
 
 func TestAskPrivacySoftwarePurposeEntryNeverFallsBackToGuardData(t *testing.T) {
 	var out bytes.Buffer
@@ -106,6 +184,85 @@ func TestAskGitDeadlineChild(t *testing.T) {
 			time.Sleep(10 * time.Second)
 			os.Exit(0)
 		}
+	}
+}
+
+func TestAskOwnedSupervisorChild(t *testing.T) {
+	if os.Getenv("ASK_OWNED_SUPERVISOR_CHILD") != "1" {
+		return
+	}
+	mode := os.Getenv("ASK_OWNED_MODE")
+	if mode == "leaf" {
+		if os.WriteFile(filepath.Join(os.Getenv("ASK_OWNED_ROOT"), "backup.exe"), []byte("owned partial"), 0600) != nil {
+			os.Exit(3)
+		}
+		child := exec.Command(os.Args[0], "-test.run=^TestAskOwnedSupervisorChild$")
+		child.Env = append(os.Environ(), "ASK_OWNED_MODE=descendant")
+		if child.Start() != nil {
+			os.Exit(4)
+		}
+		if os.WriteFile(filepath.Join(os.Getenv("ASK_OWNED_ROOT"), "descendant.pid"), []byte(strconv.Itoa(child.Process.Pid)), 0600) != nil {
+			os.Exit(5)
+		}
+	}
+	if mode != "normal" {
+		time.Sleep(20 * time.Second)
+	}
+	fmt.Fprintln(os.Stdout, `{"owned":true}`)
+	os.Exit(0)
+}
+
+func TestAskOwnedSupervisorCollectsTreeAndPreservesPartial(t *testing.T) {
+	for _, mode := range []string{"normal", "leaf"} {
+		t.Run(mode, func(t *testing.T) {
+			root := physicalSoftwareFixture(t)
+			t.Setenv("ASK_OWNED_SUPERVISOR_CHILD", "1")
+			t.Setenv("ASK_OWNED_MODE", mode)
+			t.Setenv("ASK_OWNED_ROOT", root)
+			budget := 300 * time.Millisecond
+			if mode == "normal" {
+				budget = 2 * time.Second
+			}
+			ctx, cancel := context.WithTimeout(context.Background(), budget)
+			defer cancel()
+			got := askOwnedChild(ctx, os.Args[0], "-test.run=^TestAskOwnedSupervisorChild$")
+			defer clear(got.Raw)
+			if !got.Reaped {
+				t.Fatal("job not reaped")
+			}
+			if mode == "normal" {
+				if got.TimedOut || got.Exit != 0 || !bytes.Contains(got.Raw, []byte(`"owned":true`)) {
+					t.Fatal(got)
+				}
+				return
+			}
+			if !got.TimedOut || len(got.Raw) != 0 {
+				t.Fatal("timeout mistaken for result", got)
+			}
+			if b, e := os.ReadFile(filepath.Join(root, "backup.exe")); e != nil || string(b) != "owned partial" {
+				t.Fatal("partial lost")
+			}
+			if _, e := os.Stat(filepath.Join(root, "stage.exe")); !os.IsNotExist(e) {
+				t.Fatal("unknown stage")
+			}
+			pid, e := os.ReadFile(filepath.Join(root, "descendant.pid"))
+			if e != nil {
+				t.Fatal(e)
+			}
+			n, e := strconv.Atoi(string(pid))
+			if e != nil {
+				t.Fatal(e)
+			}
+			h, e := syscall.OpenProcess(syscall.SYNCHRONIZE, false, uint32(n))
+			if e == nil {
+				defer syscall.CloseHandle(h)
+				state, e := syscall.WaitForSingleObject(h, 1000)
+				if e != nil || state != syscall.WAIT_OBJECT_0 {
+					t.Fatal("descendant alive")
+				}
+			}
+			t.Log("actual_owned_job_deadline=true root_descendant_reaped=true partial_backup_retained=true stage_absent=true real_target=0")
+		})
 	}
 }
 

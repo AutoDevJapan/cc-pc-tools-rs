@@ -34,6 +34,17 @@ has expired; any partial creation remains unsuccessful and is reported. Local
 remote-tracking refs do not prove fresh remote state: deployment must also bind
 the exact input tree to its current merge and fetch evidence.
 
+The eight-second context does not interrupt synchronous Windows I/O. The public
+ask verify/prepare entry owns a separate suspended worker in a kill-on-close
+Windows Job, gives it ten seconds, and waits for its process tree to terminate.
+An expired worker cannot report qualification or preparation success. Failure
+or timeout then uses a separate two-second read-only inspection of the three
+compiled software names. Its `reconciliation` reports present identity/hash/ACL,
+absent, or unknown and always denies switching. Up to two seconds are reserved
+for collection after each worker: the caller must await this recovery result,
+not kill the outer supervisor at the old ten-second producer limit. If that
+outer result is unavailable, preserve all leaves and perform no replacement.
+
 The deployment controller independently reacquires the original and both new
 objects and checks their identities, bytes and ACL before changing a name.
 The controller's separate review, runtime acceptance and publication conditions

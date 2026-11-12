@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"encoding/json"
 	"io"
 	"os"
 	"path/filepath"
@@ -38,6 +39,78 @@ type iosCompilerStartupEx struct {
 
 var iosCompilerKernel = syscall.NewLazyDLL("kernel32.dll")
 
+const iosCompilerUserConfigFlag = "--ios-compiler-user-config-location"
+
+type iosCompilerUserConfigLocation struct {
+	Domain string `json:"domain"`
+	Path   string `json:"path"`
+}
+
+func iosCompilerUserConfigFlagPresent(args []string) bool {
+	for _, arg := range args {
+		if arg == iosCompilerUserConfigFlag || strings.HasPrefix(arg, iosCompilerUserConfigFlag+"=") {
+			return true
+		}
+	}
+	return false
+}
+
+// This fixed helper only reads the current user's configured folder location.
+// It does not read credentials, qualify resources, create files or run an API.
+func runIOSCompilerUserConfigCLI(args []string, out io.Writer, location func() (string, error)) int {
+	if len(args) != 1 || args[0] != iosCompilerUserConfigFlag {
+		return 2
+	}
+	path, err := location()
+	if err != nil || !iosCompilerUserConfigPath(path) {
+		return 1
+	}
+	if json.NewEncoder(iosCompilerExactWriter{out}).Encode(iosCompilerUserConfigLocation{"ios-compiler-current-user-config-v1", path}) != nil {
+		return 1
+	}
+	return 0
+}
+
+func iosCompilerUserConfigPath(path string) bool {
+	return filepath.IsAbs(path) && !strings.ContainsAny(path, "\x00\r\n")
+}
+
+func iosCompilerReadUserConfig(raw []byte) (string, error) {
+	var location iosCompilerUserConfigLocation
+	if len(raw) > 64<<10 || !skillsStrict(raw, &location) || location.Domain != "ios-compiler-current-user-config-v1" || !iosCompilerUserConfigPath(location.Path) {
+		return "", errIOSCompiler
+	}
+	return location.Path, nil
+}
+
+func iosCompilerRoamingCommand(ctx context.Context, exe string, args []string, observe func(uint32, uint32)) (string, error) {
+	// Use the unaugmented projection here: the helper must never recursively
+	// resolve its own APPDATA. Its entire synchronous API lives in the owned job.
+	raw, err := iosCompilerCommandWithEnvironment(ctx, exe, args, observe, func() ([]string, error) {
+		return official3894Env(), nil
+	})
+	defer clear(raw)
+	if err != nil {
+		return "", errIOSCompiler
+	}
+	return iosCompilerReadUserConfig(raw)
+}
+
+func iosCompilerRoamingIsolated(ctx context.Context) (string, error) {
+	exe, err := os.Executable()
+	if err != nil {
+		return "", errIOSCompiler
+	}
+	// Retain the ordinary executable handle through child creation/collection.
+	// Windows keeps this named helper from being replaced during the invocation.
+	pin, err := os.Open(exe)
+	if err != nil {
+		return "", errIOSCompiler
+	}
+	defer pin.Close()
+	return iosCompilerRoamingCommand(ctx, exe, []string{iosCompilerUserConfigFlag}, nil)
+}
+
 // JOB_LIST attaches the process and future gate/gh children atomically before
 // execution. Killing only CommandContext's immediate gate is insufficient.
 // This is limited to fixed metadata GETs; it starts no artifact or GUI.
@@ -55,7 +128,7 @@ func iosCompilerEnvironment(lookup func(string) (string, bool), roaming func() (
 		return env, nil
 	}
 	value, err := roaming()
-	if err != nil || !filepath.IsAbs(value) || strings.ContainsAny(value, "\x00\r\n") {
+	if err != nil || !iosCompilerUserConfigPath(value) {
 		return nil, errIOSCompiler
 	}
 	for i, field := range env {
@@ -92,7 +165,7 @@ func iosCompilerRoamingData() (string, error) {
 
 func iosCompilerCommandObserved(ctx context.Context, path string, args []string, observe func(uint32, uint32)) ([]byte, error) {
 	return iosCompilerCommandWithEnvironment(ctx, path, args, observe, func() ([]string, error) {
-		return iosCompilerEnvironment(os.LookupEnv, iosCompilerRoamingData)
+		return iosCompilerEnvironment(os.LookupEnv, func() (string, error) { return iosCompilerRoamingIsolated(ctx) })
 	})
 }
 

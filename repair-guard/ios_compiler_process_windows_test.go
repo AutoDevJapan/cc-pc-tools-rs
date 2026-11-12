@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bytes"
 	"context"
 	"os"
 	"path/filepath"
@@ -10,6 +11,14 @@ import (
 	"time"
 	"unsafe"
 )
+
+func init() {
+	// The test executable stands in for the same production image's fixed
+	// self-helper entry, so the ordinary command path exercises isolation too.
+	if len(os.Args) == 2 && os.Args[1] == iosCompilerUserConfigFlag {
+		os.Exit(runGuardCLIWithRefresh(os.Args[1:], os.Stdout, os.Stderr, nil, nil))
+	}
+}
 
 func TestIOSCompilerNativeRoamingFolderChild(t *testing.T) {
 	if len(os.Args) == 0 || os.Args[len(os.Args)-1] != "ios4431-config-child" {
@@ -49,6 +58,67 @@ func TestIOSCompilerNativeCommandKeepsUserConfigWithoutAppData(t *testing.T) {
 	defer clear(raw)
 	if err != nil || !strings.Contains(string(raw), "PASS") {
 		t.Fatal("missing APPDATA changed metadata child's normal config", err, string(raw))
+	}
+}
+
+func TestIOSCompilerUserConfigIsolationChild(t *testing.T) {
+	if len(os.Args) < 2 || os.Args[len(os.Args)-2] != "ios4431-isolation" {
+		t.Skip("owned subprocess only")
+	}
+	if os.Args[len(os.Args)-1] == "hang" {
+		time.Sleep(time.Minute)
+		os.Exit(3)
+	}
+	os.Exit(runIOSCompilerUserConfigCLI([]string{iosCompilerUserConfigFlag}, os.Stdout, iosCompilerRoamingData))
+}
+
+func TestIOSCompilerIsolatedUserConfigNormalAndTimeout(t *testing.T) {
+	exe, err := os.Executable()
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, mode := range []string{"normal", "hang"} {
+		t.Run(mode, func(t *testing.T) {
+			timeout := 3 * time.Second
+			if mode == "hang" {
+				timeout = 150 * time.Millisecond
+			}
+			ctx, cancel := context.WithTimeout(context.Background(), timeout)
+			defer cancel()
+			var before, after uint32
+			started := time.Now()
+			path, err := iosCompilerRoamingCommand(ctx, exe, []string{"-test.run=^TestIOSCompilerUserConfigIsolationChild$", "--", "ios4431-isolation", mode}, func(a, b uint32) { before, after = a, b })
+			if mode == "normal" {
+				want, nativeErr := iosCompilerRoamingData()
+				if err != nil || nativeErr != nil || !strings.EqualFold(path, want) || after != 0 {
+					t.Fatal("native helper did not preserve the current user", err, nativeErr, after)
+				}
+			} else if err == nil || path != "" || ctx.Err() == nil || time.Since(started) > 2*time.Second || before < 1 || after != 0 {
+				t.Fatal("stalled helper escaped deadline or cleanup", err, before, after, time.Since(started))
+			}
+		})
+	}
+}
+
+func TestIOSCompilerUserConfigProtocolRejectsCallerOverrides(t *testing.T) {
+	for _, args := range [][]string{{}, {iosCompilerUserConfigFlag, "C:/caller"}, {iosCompilerUserConfigFlag + "=C:/caller"}, {iosCompilerUserConfigFlag, "--guard-path", "C:/unopened"}} {
+		calls := 0
+		var out bytes.Buffer
+		if code := runIOSCompilerUserConfigCLI(args, &out, func() (string, error) { calls++; return "C:/native", nil }); code != 2 || calls != 0 || out.Len() != 0 {
+			t.Fatal("caller-selected helper admitted", code, calls, out.Len())
+		}
+	}
+	for _, raw := range []string{`{}`, `{"domain":"ios-compiler-current-user-config-v1","path":"relative"}`, `{"domain":"wrong","path":"C:/native"}`, `{"domain":"ios-compiler-current-user-config-v1","path":"C:/a","path":"C:/b"}`, `{"domain":"ios-compiler-current-user-config-v1","Path":"C:/a"}`, `{"domain":"ios-compiler-current-user-config-v1","path":"C:/a","grant":true}`} {
+		if path, err := iosCompilerReadUserConfig([]byte(raw)); err == nil || path != "" {
+			t.Fatal("unverified helper output admitted")
+		}
+	}
+	var out bytes.Buffer
+	if runGuardCLIWithRefresh([]string{iosCompilerUserConfigFlag, "--guard-path", "C:/unopened"}, &out, &out, nil, nil) != 2 || out.Len() != 0 {
+		t.Fatal("real dispatch bypassed helper argument check")
+	}
+	if runIOSCompilerUserConfigCLI([]string{iosCompilerUserConfigFlag}, iosCompilerShortWriter{}, func() (string, error) { return "C:/native", nil }) != 1 {
+		t.Fatal("short helper output admitted")
 	}
 }
 

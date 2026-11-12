@@ -61,9 +61,11 @@ and re-pinned export precede publication of the completed producer receipt.
 The ordinary resource guard and its hardlink rejection remain unchanged.
 
 Producer receipts are written and flushed under a new `.pending` name before
-an overwrite-free final rename. Cancellation observed before publication keeps
-the pending file and reports failure. A successful final rename is the commit
+an overwrite-free final rename. Cancellation detected after pending creation
+and by the final check before publication preserves that pending file and
+reports failure; cancellation before creation leaves no pending file. A successful final rename is the commit
 point: cancellation racing after that final check does not undo or relabel the
 completed receipt. Synchronous Windows I/O is not claimed to be interruptible.
-Incomplete targets and exports are retained and reported, never adopted on a
-later run merely because their file IDs or sizes match.
+Incomplete targets and exports are preserved where present. Creation and state
+are reported when observed and remain unknown otherwise. They are never adopted
+on a later run merely because their file IDs or sizes match.

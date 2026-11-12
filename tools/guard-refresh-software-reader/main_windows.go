@@ -158,6 +158,17 @@ func observeInstalledGuard() softwareObservation {
 }
 
 func run(args []string, out io.Writer, observe func() softwareObservation, operations ...updateOperations) int {
+	if len(args) == 1 && (args[0] == "--verify-ask-privacy-update" || args[0] == "--prepare-ask-privacy-update") {
+		ops := updateOperations{verify: func() updateResult {
+			return executeAskSoftware(false, compiledAskPlan, askSoftwareBoundary(compiledAskPlan))
+		}, prepare: func() updateResult {
+			return executeAskSoftware(true, compiledAskPlan, askSoftwareBoundary(compiledAskPlan))
+		}}
+		if len(operations) == 1 {
+			ops = operations[0]
+		}
+		return runAskSoftware(args, out, ops)
+	}
 	if len(args) == 1 && (args[0] == "--verify-refresh-guard-update" || args[0] == "--prepare-refresh-guard-update") {
 		op := updateOperations{verify: observeFixedUpdate, prepare: prepareFixedUpdate}
 		if len(operations) == 1 {

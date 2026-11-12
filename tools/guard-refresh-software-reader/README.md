@@ -19,6 +19,32 @@ for copying; Owner, Group and DACL are copied from the original handle, then
 bytes, file identity and ACL are read back. An existing output is preserved.
 Partial preparation is reported and retained for inspection.
 
+`--verify-ask-privacy-update` and `--prepare-ask-privacy-update` maintain the
+one compiled `discord_ask.exe` privacy repair. They accept no caller path or
+proof. The predecessor's exact bytes and file identity, the candidate and its
+input proof, and unchanged repository input blobs on merged main must match.
+Preparation creates only its two fixed sibling software leaves and preserves
+their inherited ACL and exact held bytes. Partial failures stay unsuccessful
+and report every created identity; they do not grant record or media access.
+
+Source verification uses one bounded Git archive, compares every input's Git
+blob ID and SHA-256, and shares an eight-second context across all Git calls.
+The limit is not renewed for each child. No preparation starts if that context
+has expired; any partial creation remains unsuccessful and is reported. Local
+remote-tracking refs do not prove fresh remote state: deployment must also bind
+the exact input tree to its current merge and fetch evidence.
+
+The eight-second context does not interrupt synchronous Windows I/O. The public
+ask verify/prepare entry owns a separate suspended worker in a kill-on-close
+Windows Job, gives it ten seconds, and waits for its process tree to terminate.
+An expired worker cannot report qualification or preparation success. Failure
+or timeout then uses a separate two-second read-only inspection of the three
+compiled software names. Its `reconciliation` reports present identity/hash/ACL,
+absent, or unknown and always denies switching. Up to two seconds are reserved
+for collection after each worker: the caller must await this recovery result,
+not kill the outer supervisor at the old ten-second producer limit. If that
+outer result is unavailable, preserve all leaves and perform no replacement.
+
 The deployment controller independently reacquires the original and both new
 objects and checks their identities, bytes and ACL before changing a name.
 The controller's separate review, runtime acceptance and publication conditions

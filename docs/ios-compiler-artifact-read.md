@@ -39,9 +39,13 @@ The eleven files are `input.swift`, `input-sha256.txt`, `scope.txt`,
 and `status.txt`. Other bounded regular ZIP diagnostic entries are not opened
 or returned. Handles close and temporary buffers are erased on success and
 failure. Cleanup failure remains explicit and prevents a successful CLI exit.
-File and ZIP reads use one explicitly allocated bounded buffer; output streams
-base64 through one erased scratch buffer instead of pooling diagnostic content
-in a JSON encoder. The guarantee covers these owned buffers and the returned
+File and ZIP reads use one explicitly allocated bounded buffer. Output is
+captured in one bounded owned buffer through one erased base64 scratch buffer,
+instead of pooling diagnostic content in a JSON encoder. It is published only
+after original handles close successfully. The caller must capture the complete
+response and require exit zero plus qualified, consumed and cleanup-complete
+metadata before using any file bytes. Incomplete output is discarded.
+The guarantee covers these owned buffers and the returned
 platform allocation, not complete secure erasure of Go runtime, compression
 library, operating-system or consumer-owned copies.
 

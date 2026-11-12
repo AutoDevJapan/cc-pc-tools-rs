@@ -195,9 +195,19 @@ func TestIOSCompilerFullCLIConsumerCommitsOnlyAfterCleanup(t *testing.T) {
 		if mode == "short-output" {
 			continue
 		}
+		if mode == "cleanup-fail" && bytes.Contains(output.Bytes(), []byte(`"files"`)) {
+			t.Fatal("cleanup failed but original contents were delivered")
+		}
 		var v map[string]json.RawMessage
 		if json.Unmarshal(output.Bytes(), &v) != nil {
 			t.Fatal("full CLI returned invalid JSON")
+		}
+		if mode == "cleanup-fail" {
+			var result iosCompilerResult
+			if json.Unmarshal(output.Bytes(), &result) != nil || result.CleanupComplete {
+				t.Fatal("failed cleanup response")
+			}
+			continue
 		}
 		if mode == "verify" {
 			if _, ok := v["files"]; ok {
@@ -221,6 +231,32 @@ func TestIOSCompilerFullCLIConsumerCommitsOnlyAfterCleanup(t *testing.T) {
 		}
 		clear(output.Bytes())
 	}
+}
+
+type iosCompilerClosedBeforeWriter struct {
+	snapshot *iosCompilerTestSnapshot
+	calls    int
+	bad      bool
+}
+
+func (w *iosCompilerClosedBeforeWriter) Write(p []byte) (int, error) {
+	w.calls++
+	if !w.snapshot.closed {
+		w.bad = true
+	}
+	return len(p), nil
+}
+func TestIOSCompilerContentWriterRunsAfterOriginalHandlesClose(t *testing.T) {
+	a, digest := iosCompilerFixture(t, "")
+	w := &iosCompilerClosedBeforeWriter{snapshot: a.snapshot}
+	if runIOSCompilerCLIWithDigest([]string{"--consume-ios-compiler-artifact"}, w, a, digest) != 0 || w.calls == 0 || w.bad {
+		t.Fatal("external writer preceded snapshot close")
+	}
+	c := iosCompilerCapture{raw: make([]byte, 3)}
+	if _, err := c.Write([]byte("large")); err == nil || c.n != 0 {
+		t.Fatal("capture grew beyond fixed bound")
+	}
+	clear(c.raw)
 }
 
 func TestIOSCompilerWindowsOwnedSameHandleAndMutationExclusion(t *testing.T) {

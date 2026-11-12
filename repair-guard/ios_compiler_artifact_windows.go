@@ -253,22 +253,30 @@ func runIOSCompilerCLIWithDigest(args []string, out io.Writer, authority iosComp
 	}
 	ctx, cancel := context.WithTimeout(context.Background(), 25*time.Second)
 	defer cancel()
-	started := false
-	writeFailed := false
+	var captured iosCompilerCapture
+	defer func() { clear(captured.raw) }()
 	var consume func(iosCompilerManifest, map[string][]byte) error
 	if args[0] == "--consume-ios-compiler-artifact" {
 		consume = func(m iosCompilerManifest, files map[string][]byte) error {
-			started = true
-			err := iosCompilerWriteFiles(out, m, files)
-			writeFailed = err != nil
-			return err
+			capacity := 64 << 10
+			for _, data := range files {
+				capacity += base64.StdEncoding.EncodedLen(len(data))
+			}
+			captured.raw = make([]byte, capacity)
+			return iosCompilerWriteFiles(&captured, m, files)
 		}
 	}
 	r := iosCompilerRead(ctx, authority, digest, consume)
-	if writeFailed {
+	if !r.Qualified || !r.CleanupComplete || (consume != nil && !r.Consumed) {
+		_ = json.NewEncoder(out).Encode(r)
 		return 1
 	}
-	if started {
+	if consume != nil {
+		// The exact verified content copy is owned and erased. All original
+		// file handles are already closed before an external writer can block.
+		if iosCompilerWrite(out, captured.raw[:captured.n]) != nil {
+			return 1
+		}
 		if iosCompilerWrite(out, []byte(`,"metadata":`)) != nil {
 			return 1
 		}
@@ -283,6 +291,20 @@ func runIOSCompilerCLIWithDigest(args []string, out io.Writer, authority iosComp
 		return 1
 	}
 	return 0
+}
+
+type iosCompilerCapture struct {
+	raw []byte
+	n   int
+}
+
+func (c *iosCompilerCapture) Write(p []byte) (int, error) {
+	if len(p) > len(c.raw)-c.n {
+		return 0, errIOSCompiler
+	}
+	copy(c.raw[c.n:], p)
+	c.n += len(p)
+	return len(p), nil
 }
 
 func iosCompilerWrite(out io.Writer, p []byte) error {

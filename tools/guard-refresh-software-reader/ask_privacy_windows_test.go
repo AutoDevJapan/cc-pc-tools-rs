@@ -191,10 +191,17 @@ func TestAskOwnedSupervisorChild(t *testing.T) {
 	if os.Getenv("ASK_OWNED_SUPERVISOR_CHILD") != "1" {
 		return
 	}
+	mode := os.Getenv("ASK_OWNED_MODE")
+	if mode == "descendant" {
+		if os.WriteFile(filepath.Join(os.Getenv("ASK_OWNED_ROOT"), "descendant.ready"), []byte("active"), 0600) != nil {
+			os.Exit(7)
+		}
+		time.Sleep(20 * time.Second)
+		os.Exit(0)
+	}
 	if !askWorkerParent() {
 		os.Exit(6)
 	}
-	mode := os.Getenv("ASK_OWNED_MODE")
 	if mode == "leaf" {
 		if os.WriteFile(filepath.Join(os.Getenv("ASK_OWNED_ROOT"), "backup.exe"), []byte("owned partial"), 0600) != nil {
 			os.Exit(3)
@@ -261,6 +268,9 @@ func TestAskOwnedSupervisorCollectsTreeAndPreservesPartial(t *testing.T) {
 			}
 			if _, e := os.Stat(filepath.Join(root, "stage.exe")); !os.IsNotExist(e) {
 				t.Fatal("unknown stage")
+			}
+			if b, e := os.ReadFile(filepath.Join(root, "descendant.ready")); e != nil || string(b) != "active" {
+				t.Fatal("descendant never reached its active wait")
 			}
 			pid, e := os.ReadFile(filepath.Join(root, "descendant.pid"))
 			if e != nil {

@@ -258,27 +258,6 @@ func askWorkerParent() bool {
 		return false
 	}
 	defer syscall.CloseHandle(h)
-	var available uint32
-	deadline := time.Now().Add(time.Second)
-	for time.Now().Before(deadline) {
-		ok, _, _ := k.NewProc("PeekNamedPipe").Call(uintptr(h), 0, 0, 0, uintptr(unsafe.Pointer(&available)), 0)
-		if ok == 0 {
-			return false
-		}
-		if available >= 12 {
-			break
-		}
-		time.Sleep(time.Millisecond)
-	}
-	if available < 12 {
-		return false
-	}
-	var raw [12]byte
-	var n uint32
-	if syscall.ReadFile(h, raw[:], &n, nil) != nil || n != 12 || string(raw[:8]) != "ASKSW001" {
-		return false
-	}
-	want := binary.LittleEndian.Uint32(raw[8:])
 	var basic struct {
 		Exit     uintptr
 		Peb      uintptr
@@ -288,9 +267,10 @@ func askWorkerParent() bool {
 		Parent   uintptr
 	}
 	code, _, _ := syscall.NewLazyDLL("ntdll.dll").NewProc("NtQueryInformationProcess").Call(^uintptr(0), 0, uintptr(unsafe.Pointer(&basic)), unsafe.Sizeof(basic), 0)
-	if code != 0 || uint32(basic.Parent) != want {
+	if code != 0 || basic.Parent == 0 {
 		return false
 	}
+	want := uint32(basic.Parent)
 	parent, err := syscall.OpenProcess(0x1000, false, want)
 	if err != nil {
 		return false
@@ -314,5 +294,24 @@ func askWorkerParent() bool {
 	if err != nil {
 		return false
 	}
-	return os.SameFile(a, b)
+	if !os.SameFile(a, b) {
+		return false
+	}
+	// Read only after independently validating the actual parent. Use one
+	// non-consuming kernel snapshot; Peek->Read could block if another reader
+	// consumed bytes between the two calls.
+	var raw [12]byte
+	var n, available uint32
+	deadline := time.Now().Add(time.Second)
+	for time.Now().Before(deadline) {
+		ok, _, _ := k.NewProc("PeekNamedPipe").Call(uintptr(h), uintptr(unsafe.Pointer(&raw[0])), 12, uintptr(unsafe.Pointer(&n)), uintptr(unsafe.Pointer(&available)), 0)
+		if ok == 0 {
+			return false
+		}
+		if n == 12 {
+			return string(raw[:8]) == "ASKSW001" && binary.LittleEndian.Uint32(raw[8:]) == want
+		}
+		time.Sleep(time.Millisecond)
+	}
+	return false
 }

@@ -4,9 +4,9 @@ env:
 on:
   push:
     branches: [main]
-    paths: ['resident-guard/**', 'capacity-audit-3h/**', 'unattended-runner/**', 'repair-guard/**', 'tools/civ6-ci-contract/**', 'localai-web-rs/src/operations_catalog.rs', 'localai-web-rs/src/operations.rs', 'tools/linux-runner-bridge/**', '.github/workflows/unattended-readiness.yml']
+    paths: ['resident-guard/**', 'capacity-audit-3h/**', 'unattended-runner/**', 'repair-guard/**', 'tools/guard-refresh-software-reader/**', 'tools/civ6-ci-contract/**', 'localai-web-rs/src/operations_catalog.rs', 'localai-web-rs/src/operations.rs', 'tools/linux-runner-bridge/**', '.github/workflows/unattended-readiness.yml']
   pull_request:
-    paths: ['resident-guard/**', 'capacity-audit-3h/**', 'unattended-runner/**', 'repair-guard/**', 'tools/civ6-ci-contract/**', 'localai-web-rs/src/operations_catalog.rs', 'localai-web-rs/src/operations.rs', 'tools/linux-runner-bridge/**', '.github/workflows/unattended-readiness.yml']
+    paths: ['resident-guard/**', 'capacity-audit-3h/**', 'unattended-runner/**', 'repair-guard/**', 'tools/guard-refresh-software-reader/**', 'tools/civ6-ci-contract/**', 'localai-web-rs/src/operations_catalog.rs', 'localai-web-rs/src/operations.rs', 'tools/linux-runner-bridge/**', '.github/workflows/unattended-readiness.yml']
 permissions:
   contents: read
 concurrency:
@@ -150,3 +150,12 @@ jobs:
       - run: go test -count=1 -v -timeout 20m ./...
       - run: go vet ./...
       - run: go build -trimpath .
+      - name: Test the known guard software reader
+        working-directory: tools/guard-refresh-software-reader
+        run: |
+          go test -count=1 -v .
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          go vet .
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          go build -trimpath .
+          exit $LASTEXITCODE

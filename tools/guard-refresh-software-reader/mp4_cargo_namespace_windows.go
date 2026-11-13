@@ -3,6 +3,7 @@
 package main
 
 import (
+	"context"
 	"errors"
 	"os"
 	"path/filepath"
@@ -16,6 +17,50 @@ var mp4QueryDosDevice = mp4DosKernel.NewProc("QueryDosDeviceW")
 var mp4DefineDosDevice = mp4DosKernel.NewProc("DefineDosDeviceW")
 
 type mp4CargoDirectory struct{}
+type mp4SupervisedCargoDirectory struct{}
+
+func prepareSupervisedCargoDirectory(build softwareBuildPlan) (result *softwareBuildSnapshot, err error) {
+	return prepareSupervisedCargoDirectoryWith(build, func(s *softwareBuildSnapshot) error { return s.sealDirectories() })
+}
+
+func prepareSupervisedCargoDirectoryWith(build softwareBuildPlan, seal func(*softwareBuildSnapshot) error) (result *softwareBuildSnapshot, err error) {
+	root := build.Target + "-cargo-supervisor"
+	if e := os.Mkdir(root, 0700); e != nil {
+		return nil, e
+	}
+	s := &softwareBuildSnapshot{Root: root, paths: map[string]bool{}}
+	defer func() {
+		if err != nil {
+			err = errors.Join(err, s.Close())
+		}
+	}()
+	if e := snapshotDirectories(root, root, s); e != nil {
+		return nil, e
+	}
+	if e := s.bindCargoDirectory(); e != nil {
+		return nil, e
+	}
+	if e := seal(s); e != nil {
+		return nil, e
+	}
+	if !s.cargoDirectoryUnchanged() {
+		return nil, errUpdateObject
+	}
+	return s, nil
+}
+
+func borrowedCargoDirectory(ctx context.Context) *softwareBuildSnapshot {
+	directory, _ := ctx.Value(mp4SupervisedCargoDirectory{}).(*softwareBuildSnapshot)
+	return directory
+}
+
+func admitSupervisedCargoDirectory(build softwareBuildPlan, drive string) (*softwareBuildSnapshot, bool) {
+	if len(drive) != 2 || drive[1] != ':' || drive[0] < 'P' || drive[0] > 'Z' {
+		return nil, false
+	}
+	s := &softwareBuildSnapshot{Root: build.Target + "-cargo-supervisor", cargoDrive: drive, cargoDriveTarget: "\\??\\" + filepath.Join(build.Target+"-cargo-supervisor", "cwd"), borrowedCargoDrive: true}
+	return s, s.cargoDirectoryUnchanged()
+}
 
 func acquireCargoDriveLease(letter rune) (func() error, bool) {
 	type lease struct {
@@ -106,7 +151,7 @@ func (s *softwareBuildSnapshot) bindCargoDirectory() error {
 	return errors.New("cargo_owned_root_unavailable")
 }
 
-func (s *softwareBuildSnapshot) cargoDirectoryUnchanged() bool {
+func (s *softwareBuildSnapshot) cargoMappingIdentityUnchanged() bool {
 	if s.cargoDrive == "" || s.cargoDriveTarget == "" {
 		return false
 	}
@@ -114,17 +159,45 @@ func (s *softwareBuildSnapshot) cargoDirectoryUnchanged() bool {
 	if e != nil || mapping != s.cargoDriveTarget {
 		return false
 	}
-	physical, e1 := os.Stat(filepath.Join(s.Root, "cwd"))
+	path := filepath.Join(s.Root, "cwd")
+	if s.borrowedCargoDrive {
+		path = s.cargoDriveTarget[len("\\??\\"):]
+	}
+	physical, e1 := os.Stat(path)
 	view, e2 := os.Stat(s.cargoDrive + "\\")
 	return e1 == nil && e2 == nil && os.SameFile(physical, view)
+}
+
+func (s *softwareBuildSnapshot) cargoDirectoryUnchanged() bool {
+	if !s.cargoMappingIdentityUnchanged() {
+		return false
+	}
+	entries, e := os.ReadDir(s.cargoDrive + "\\")
+	return e == nil && len(entries) == 0
+}
+
+func finishSupervisedCargoDirectory(s *softwareBuildSnapshot, child askChildResult) (bool, string) {
+	if child.Started && !child.Reaped {
+		return false, "cargo_supervisor_child_unknown_mapping_preserved"
+	}
+	if e := s.Close(); e != nil {
+		return false, "cargo_supervisor_cleanup_failed_preserved"
+	}
+	return true, "cargo_supervisor_cleanup_complete"
 }
 
 func (s *softwareBuildSnapshot) closeCargoDirectory() error {
 	if s.cargoDrive == "" {
 		return nil
 	}
+	if s.borrowedCargoDrive {
+		if !s.cargoDirectoryUnchanged() {
+			return errors.New("cargo_parent_owned_root_mapping_unknown")
+		}
+		return nil
+	}
 	var errs []error
-	if !s.cargoDirectoryUnchanged() {
+	if !s.cargoMappingIdentityUnchanged() {
 		errs = append(errs, errors.New("cargo_owned_root_mapping_unknown"))
 	} else {
 		device, _ := syscall.UTF16PtrFromString(s.cargoDrive)

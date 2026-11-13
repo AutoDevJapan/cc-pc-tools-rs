@@ -4,6 +4,7 @@ package main
 
 import (
 	"context"
+	"fmt"
 	"os"
 	"path/filepath"
 	"syscall"
@@ -11,6 +12,176 @@ import (
 	"time"
 	"unsafe"
 )
+
+func TestSupervisedCargoDirectoryChild(t *testing.T) {
+	mode := os.Getenv("MP4_SUPERVISOR_TEST_CHILD")
+	if mode == "" {
+		return
+	}
+	if mode == "timeout" {
+		time.Sleep(20 * time.Second)
+	}
+	if mode == "crash" {
+		os.Exit(7)
+	}
+	fmt.Fprintln(os.Stdout, "owned-child")
+	os.Exit(0)
+}
+
+func TestSupervisedCargoDirectoryReclaimsNormalKilledCrashAndEarlyStop(t *testing.T) {
+	for _, mode := range []string{"normal", "timeout", "crash", "not_started"} {
+		t.Run(mode, func(t *testing.T) {
+			root := physicalSoftwareFixture(t)
+			build := softwareBuildPlan{Target: filepath.Join(root, "build")}
+			parent, e := prepareSupervisedCargoDirectory(build)
+			if e != nil {
+				t.Fatal(e)
+			}
+			drive := parent.cargoDrive
+			defer parent.Close()
+			result := askChildResult{}
+			if mode != "not_started" {
+				t.Setenv("MP4_SUPERVISOR_TEST_CHILD", mode)
+				budget := 2 * time.Second
+				if mode == "timeout" {
+					budget = 200 * time.Millisecond
+				}
+				ctx, cancel := context.WithTimeout(context.Background(), budget)
+				result = askOwnedChild(ctx, os.Args[0], "-test.run=^TestSupervisedCargoDirectoryChild$")
+				cancel()
+				defer clear(result.Raw)
+				if !result.Started || !result.Reaped || mode == "timeout" && !result.TimedOut || mode == "crash" && result.Exit != 7 {
+					t.Fatal("owned child lifecycle mismatch", result.Exit, result.Reaped)
+				}
+			}
+			if !parent.cargoDirectoryUnchanged() {
+				t.Fatal("mapping vanished before parent reconciliation")
+			}
+			if ok, reason := finishSupervisedCargoDirectory(parent, result); !ok {
+				t.Fatal(reason)
+			}
+			if _, e := cargoDriveMapping(drive); e != syscall.ERROR_FILE_NOT_FOUND {
+				t.Fatal("parent mapping remained after collected child", e)
+			}
+		})
+	}
+}
+
+func TestSupervisedCargoDirectoryUnknownAndForeignNeverRemoved(t *testing.T) {
+	for _, mode := range []string{"unknown_child", "foreign_mapping"} {
+		t.Run(mode, func(t *testing.T) {
+			root := physicalSoftwareFixture(t)
+			parent, e := prepareSupervisedCargoDirectory(softwareBuildPlan{Target: filepath.Join(root, "build")})
+			if e != nil {
+				t.Fatal(e)
+			}
+			drive, target := parent.cargoDrive, parent.cargoDriveTarget
+			defer parent.Close()
+			if mode == "unknown_child" {
+				if ok, _ := finishSupervisedCargoDirectory(parent, askChildResult{Started: true}); ok || !parent.cargoDirectoryUnchanged() {
+					t.Fatal("uncollected child mapping was removed")
+				}
+				return
+			}
+			foreign := filepath.Join(root, "foreign")
+			if e := os.Mkdir(foreign, 0700); e != nil {
+				t.Fatal(e)
+			}
+			device, _ := syscall.UTF16PtrFromString(drive)
+			foreignTarget := "\\??\\" + foreign
+			native, _ := syscall.UTF16PtrFromString(foreignTarget)
+			ok, _, e := mp4DefineDosDevice.Call(1|8, uintptr(unsafe.Pointer(device)), uintptr(unsafe.Pointer(native)))
+			if ok == 0 {
+				t.Fatal(e)
+			}
+			if accepted, _ := finishSupervisedCargoDirectory(parent, askChildResult{Started: true, Reaped: true}); accepted {
+				t.Fatal("foreign mapping cleanup reported success")
+			}
+			if mapping, _ := cargoDriveMapping(drive); mapping != foreignTarget {
+				t.Fatal("foreign mapping changed")
+			}
+			// Remove only this test's two definitions after observing preservation.
+			mp4DefineDosDevice.Call(1|2|4|8, uintptr(unsafe.Pointer(device)), uintptr(unsafe.Pointer(native)))
+			native, _ = syscall.UTF16PtrFromString(target)
+			mp4DefineDosDevice.Call(1|2|4|8, uintptr(unsafe.Pointer(device)), uintptr(unsafe.Pointer(native)))
+			if _, e := cargoDriveMapping(drive); e != syscall.ERROR_FILE_NOT_FOUND {
+				t.Fatal("owned fixture mapping cleanup failed", e)
+			}
+		})
+	}
+}
+
+func TestSupervisedCargoDirectoryRejectsConfigurationInsertedBeforeSeal(t *testing.T) {
+	root := physicalSoftwareFixture(t)
+	build := softwareBuildPlan{Target: filepath.Join(root, "build")}
+	drive := ""
+	result, e := prepareSupervisedCargoDirectoryWith(build, func(s *softwareBuildSnapshot) error {
+		drive = s.cargoDrive
+		config := filepath.Join(s.Root, "cwd", ".cargo")
+		if e := os.Mkdir(config, 0700); e != nil {
+			return e
+		}
+		if e := os.WriteFile(filepath.Join(config, "config.toml"), []byte("[env]\nUNPROVED=\"1\"\n"), 0600); e != nil {
+			return e
+		}
+		return s.sealDirectories()
+	})
+	if e == nil || result != nil || drive == "" {
+		t.Fatal("pre-seal Cargo configuration admitted")
+	}
+	if _, e := cargoDriveMapping(drive); e != syscall.ERROR_FILE_NOT_FOUND {
+		t.Fatal("failed preparation mapping remained", e)
+	}
+}
+
+func TestCargoWorkerBorrowsParentNamespaceUntilCollected(t *testing.T) {
+	if _, e := os.Stat(mp4PublicCargoRegistry); e != nil {
+		t.Skip("explicit workstation public registry integration")
+	}
+	root := physicalSoftwareFixture(t)
+	build := softwareBuildPlan{Target: filepath.Join(root, "build")}
+	parent, e := prepareSupervisedCargoDirectory(build)
+	if e != nil {
+		t.Fatal(e)
+	}
+	defer parent.Close()
+	if os.Mkdir(build.Target, 0700) != nil {
+		t.Fatal("owned build namespace")
+	}
+	admitted, ok := admitSupervisedCargoDirectory(build, parent.cargoDrive)
+	if !ok {
+		t.Fatal("exact supervised namespace rejected")
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
+	ctx = context.WithValue(ctx, mp4SupervisedCargoDirectory{}, admitted)
+	ctx, config, e := prepareMP4CargoContext(ctx, build)
+	if e != nil {
+		t.Fatal(e)
+	}
+	defer config.Close()
+	project := filepath.Join(root, "project")
+	if os.Mkdir(project, 0700) != nil || os.Mkdir(filepath.Join(project, "src"), 0700) != nil {
+		t.Fatal("owned source directories")
+	}
+	if os.WriteFile(filepath.Join(project, "Cargo.toml"), []byte("[package]\nname=\"owned-borrowed-cwd\"\nversion=\"0.1.0\"\nedition=\"2021\"\n[workspace]\n"), 0600) != nil || os.WriteFile(filepath.Join(project, "src", "main.rs"), []byte("fn main(){}"), 0600) != nil {
+		t.Fatal("owned source bytes")
+	}
+	result := askOwnedChildAt(ctx, ctx.Value(mp4CargoDirectory{}).(string), snapshotTestTool(t, "cargo"), "build", "--offline", "--manifest-path", filepath.Join(project, "Cargo.toml"), "--target-dir", filepath.Join(root, "target"))
+	defer clear(result.Raw)
+	if result.Exit != 0 || !result.Reaped || !config.cargoConfigurationUnchanged() {
+		t.Fatal("supervised normal Cargo input flow failed", result.Exit)
+	}
+	if e := config.Close(); e != nil || !parent.cargoDirectoryUnchanged() {
+		t.Fatal("worker closed parent-owned mapping", e)
+	}
+	if ok, reason := finishSupervisedCargoDirectory(parent, result); !ok {
+		t.Fatal(reason)
+	}
+	if _, e := cargoDriveMapping(admitted.cargoDrive); e != syscall.ERROR_FILE_NOT_FOUND {
+		t.Fatal("mapping remained after actual Cargo collection", e)
+	}
+}
 
 func TestOwnedDriveCargoDoesNotDiscoverPhysicalAncestorConfiguration(t *testing.T) {
 	root := physicalSoftwareFixture(t)

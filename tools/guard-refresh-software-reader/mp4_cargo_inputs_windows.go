@@ -52,7 +52,11 @@ func (s *softwareBuildSnapshot) cargoConfigurationUnchanged() bool {
 		return false
 	}
 	entries, e := os.ReadDir(s.Root)
-	if e != nil || len(entries) != 3 {
+	want := 3
+	if s.borrowedCargoDrive {
+		want = 2
+	}
+	if e != nil || len(entries) != want {
 		return false
 	}
 	for _, entry := range entries {
@@ -106,7 +110,12 @@ func prepareMP4CargoContext(ctx context.Context, build softwareBuildPlan) (resul
 	if e := config.create(filepath.Join(home, "config.toml"), []byte(mp4CargoConfiguration)); e != nil {
 		return ctx, nil, e
 	}
-	if e := config.bindCargoDirectory(); e != nil {
+	if parent := borrowedCargoDirectory(ctx); parent != nil {
+		if !parent.cargoDirectoryUnchanged() {
+			return ctx, nil, errUpdateObject
+		}
+		config.cargoDrive, config.cargoDriveTarget, config.borrowedCargoDrive = parent.cargoDrive, parent.cargoDriveTarget, true
+	} else if e := config.bindCargoDirectory(); e != nil {
 		return ctx, nil, e
 	}
 	if e := config.sealDirectories(); e != nil {

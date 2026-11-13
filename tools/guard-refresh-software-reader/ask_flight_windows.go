@@ -358,9 +358,22 @@ func runAskWorker(args []string, out io.Writer) int {
 	if !askWorkerParent() {
 		return 2
 	}
-	if len(args) == 2 && args[0] == "--mp4-build-worker" {
+	if (len(args) == 2 || len(args) == 3) && args[0] == "--mp4-build-worker" {
 		build, ok := mp4BuildPlan(args[1])
 		if !ok {
+			return 2
+		}
+		if !build.GoRunner {
+			if len(args) != 3 {
+				return 2
+			}
+			directory, ok := admitSupervisedCargoDirectory(build, args[2])
+			if !ok {
+				return 2
+			}
+			return runSoftwareBuildWorker(build, out, context.WithValue(context.Background(), mp4SupervisedCargoDirectory{}, directory))
+		}
+		if len(args) != 2 {
 			return 2
 		}
 		return runSoftwareBuildWorker(build, out)

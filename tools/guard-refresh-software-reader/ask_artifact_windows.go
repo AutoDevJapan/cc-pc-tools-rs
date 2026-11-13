@@ -54,6 +54,8 @@ type askBuildEvidence struct {
 	Inputs  []buildSourceRecord
 }
 type askArtifactResult struct {
+	CargoDrive          string            `json:"cargo_drive,omitempty"`
+	CargoNamespaceState string            `json:"cargo_namespace_state,omitempty"`
 	SnapshotManifestSHA string            `json:"snapshot_manifest_sha256,omitempty"`
 	ResolvedLockSHA     string            `json:"resolved_lock_sha256,omitempty"`
 	ConfigurationSHA    string            `json:"compiler_configuration_sha256,omitempty"`
@@ -319,6 +321,16 @@ func runSoftwareBuildArtifact(build softwareBuildPlan, worker []string, out io.W
 	}
 	ctx, cancel := context.WithTimeout(context.Background(), 12*time.Minute)
 	defer cancel()
+	var cargoSupervisor *softwareBuildSnapshot
+	if build.Source == mp4Source && !build.GoRunner {
+		cargoSupervisor, e = prepareSupervisedCargoDirectory(build)
+		if e != nil {
+			r.Reason = "cargo_supervisor_namespace_incomplete_preserved"
+			_ = json.NewEncoder(out).Encode(r)
+			return 1
+		}
+		worker = append(append([]string(nil), worker...), cargoSupervisor.cargoDrive)
+	}
 	readyAccepted := false
 	child := askOwnedChildWithHandshake(ctx, exe, func(payload []byte) bool {
 		if ctx.Err() != nil {
@@ -365,6 +377,18 @@ func runSoftwareBuildArtifact(build softwareBuildPlan, worker []string, out io.W
 		r.SnapshotCleanup = final.SnapshotCleanup
 	}
 	clear(child.Raw)
+	if cargoSupervisor != nil {
+		r.CargoDrive = cargoSupervisor.cargoDrive
+		cleanup, reason := finishSupervisedCargoDirectory(cargoSupervisor, child)
+		if !cleanup {
+			r.Qualified = false
+			r.Reason = reason
+			r.CargoNamespaceState = "preserved_unknown"
+			_ = json.NewEncoder(out).Encode(r)
+			return 1
+		}
+		r.CargoNamespaceState = "removed_after_worker_collection"
+	}
 	if !readyAccepted || !finalCleanupOK || !child.Started || !child.Assigned || !child.WaitVerified || !child.Reaped || child.TimedOut || child.Exit != 0 {
 		r.Qualified = false
 		if r.Reason == "export_awaiting_producer_exit" {
@@ -404,7 +428,7 @@ func runAskBuildWorker(out io.Writer) int {
 	return runSoftwareBuildWorker(privacyBuildPlan(), out)
 }
 
-func runSoftwareBuildWorker(build softwareBuildPlan, out io.Writer) (exit int) {
+func runSoftwareBuildWorker(build softwareBuildPlan, out io.Writer, inherited ...context.Context) (exit int) {
 	r := askArtifactResult{Domain: "owner-question-cargo-output-v1", Source: build.Source, Reason: "unqualified", TargetState: "not_created"}
 	defer func() {
 		if r.Reason != "producer_acknowledged" {
@@ -474,7 +498,11 @@ func runSoftwareBuildWorker(build softwareBuildPlan, out io.Writer) (exit int) {
 			var cargoConfig *softwareBuildSnapshot
 			var cargoCtx context.Context
 			if build.Source == mp4Source && !build.GoRunner {
-				cargoCtx, cargoConfig, e = prepareMP4CargoContext(context.Background(), build)
+				input := context.Background()
+				if len(inherited) == 1 {
+					input = inherited[0]
+				}
+				cargoCtx, cargoConfig, e = prepareMP4CargoContext(input, build)
 				if e != nil {
 					r.Reason = "compiler_configuration_unqualified"
 					if errors.Is(e, errSnapshotCleanup) {

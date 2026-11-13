@@ -82,11 +82,14 @@ already occurs in the original lock; its digest is recorded with the snapshot.
 The Rust child uses a separate Cargo home containing a fixed compiler/cache
 configuration and the existing public registry cache only. Its directory is
 sealed against new entries through acknowledgement, so a later legacy `config`
-cannot override `config.toml`. The held configuration and the two-entry home
+cannot override `config.toml`. The held configuration and the exact home
 namespace are rechecked before output acknowledgement. It starts at an
 operation-owned temporary drive root backed by a sealed empty directory,
 excluding physical ancestor configuration without changing shared ACLs. The
-exact local drive mapping is checked and removed on release. Ordinary user
+exact local drive mapping and empty cwd are checked after sealing. The outer
+supervisor owns the mapping and removes it after confirmed worker-tree
+termination, including timeout or crash; a changed mapping or unknown child
+state is preserved and reported unsuccessfully. Ordinary user
 configuration and credentials are not copied. The child environment is explicit;
 selected Windows/toolchain paths and the fixed compiler/cache inputs join the
 configuration digest, while inherited Cargo profile/linker overrides and product

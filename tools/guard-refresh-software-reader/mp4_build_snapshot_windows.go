@@ -23,17 +23,18 @@ func softwareProducerGoArgs(root, output string, files []string) []string {
 }
 
 type softwareBuildSnapshot struct {
-	Root              string
-	files             []*os.File
-	dirs              []syscall.Handle
-	paths             map[string]bool
-	sealed            []snapshotDirectoryACL
-	cacheLink         string
-	cargoDrive        string
-	cargoDriveTarget  string
-	releaseCargoDrive func() error
-	LockSHA           string
-	ManifestSHA       string
+	Root               string
+	files              []*os.File
+	dirs               []syscall.Handle
+	paths              map[string]bool
+	sealed             []snapshotDirectoryACL
+	cacheLink          string
+	cargoDrive         string
+	cargoDriveTarget   string
+	releaseCargoDrive  func() error
+	borrowedCargoDrive bool
+	LockSHA            string
+	ManifestSHA        string
 }
 
 type snapshotDirectoryACL struct {

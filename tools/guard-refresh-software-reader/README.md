@@ -129,7 +129,12 @@ complete-output and empty-stderr requirements. A diagnostic never authorizes
 preparation or makes a failed build successful.
 Archive-input failures also retain fixed read/qualification stages, OS error
 numbers when available, completed/expected archive counts and elapsed time.
-These counters describe admitted work, not a completed or qualified snapshot.
+Materialized bytes count only file creation and held-content verification that
+succeeded; entry counts describe processed headers. Budget reservation remains
+separate. These counters do not prove a completed or qualified snapshot.
+If guard completion and cancellation cannot be ordered, the diagnostic keeps
+the input unqualified and reports the observed context separately; it does not
+invent a primary timeout. OS codes are limited to the documented fixed causes.
 The existing input deadline and all verification checks remain in force.
 The pipe reader also owns and clears its fixed read scratch buffer; this is a
 bounded application-buffer guarantee, not complete erasure of Go or OS memory.

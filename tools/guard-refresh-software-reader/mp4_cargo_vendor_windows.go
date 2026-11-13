@@ -171,11 +171,15 @@ type cargoArchiveReadError struct {
 func (e *cargoArchiveReadError) Error() string { return "archive_read_failed" }
 func (e *cargoArchiveReadError) Unwrap() error { return e.err }
 
+type cargoArchiveGuardError struct{ contextState string }
+
+func (e *cargoArchiveGuardError) Error() string { return "public_archive_source_unqualified" }
+
 type cargoArchiveProgress struct {
 	Expected  int   `json:"archives_expected"`
 	Completed int   `json:"archives_completed"`
 	Entries   int   `json:"entries_processed"`
-	Bytes     int64 `json:"bytes_admitted"`
+	Bytes     int64 `json:"bytes_materialized"`
 	ElapsedMS int64 `json:"elapsed_ms"`
 }
 
@@ -189,7 +193,11 @@ func cargoInputDiagnostic(err error) *compilerDiagnostic {
 			cause := input.cause
 			var errno syscall.Errno
 			var read *cargoArchiveReadError
+			var guard *cargoArchiveGuardError
 			d := &compilerDiagnostic{Cause: cause, InputStage: input.stage, ArchiveProgress: input.progress}
+			if errors.As(input.err, &guard) {
+				d.InputContextState = guard.contextState
+			}
 			if errors.As(input.err, &read) {
 				d.InputStage = read.stage
 				if read.stage == "root_qualification" || read.stage == "leaf_qualification" {
@@ -202,13 +210,15 @@ func cargoInputDiagnostic(err error) *compilerDiagnostic {
 			case errors.Is(input.err, context.Canceled):
 				cause = "archive_input_canceled"
 			case errors.As(input.err, &errno):
-				d.InputOSCode = uint32(errno)
 				switch errno {
 				case 32:
+					d.InputOSCode = uint32(errno)
 					cause = "archive_sharing_violation"
 				case 5:
+					d.InputOSCode = uint32(errno)
 					cause = "archive_access_denied"
 				case 2, 3:
+					d.InputOSCode = uint32(errno)
 					cause = "archive_file_unavailable"
 				}
 			}

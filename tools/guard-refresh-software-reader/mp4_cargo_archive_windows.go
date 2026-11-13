@@ -56,14 +56,21 @@ func qualifyPublicCargoPathResult(ctx context.Context, path string) error {
 	}
 	r := askOwnedChild(ctx, installedGuardPath, "--guard-path", path)
 	defer clear(r.Raw)
-	if r.TimedOut {
-		if err := ctx.Err(); err != nil {
-			return err
-		}
-		return errArchiveSourceUnqualified
+	return qualifyPublicCargoChildResult(ctx, r)
+}
+
+func qualifyPublicCargoChildResult(ctx context.Context, r askChildResult) error {
+	// TimedOut samples the context after Wait. It cannot establish whether an
+	// earlier denial or the cancellation happened first; retain that ambiguity.
+	failure := &cargoArchiveGuardError{}
+	switch ctx.Err() {
+	case context.Canceled:
+		failure.contextState = "canceled"
+	case context.DeadlineExceeded:
+		failure.contextState = "deadline"
 	}
 	if !r.Started || !r.Assigned || !r.WaitVerified || !r.Reaped || r.TimedOut || r.Exit != 0 {
-		return errArchiveSourceUnqualified
+		return failure
 	}
 	var v struct {
 		Allowed    bool   `json:"access_allowed"`
@@ -72,7 +79,7 @@ func qualifyPublicCargoPathResult(ctx context.Context, path string) error {
 		Status     string `json:"protection_status"`
 	}
 	if json.Unmarshal(r.Raw, &v) != nil || !v.Allowed || v.Client || v.Unverified || v.Status != "clear" {
-		return errArchiveSourceUnqualified
+		return failure
 	}
 	return nil
 }
@@ -205,9 +212,10 @@ func readCargoArchiveAt(ctx context.Context, archiveRoot, name, checksum string,
 }
 
 type cargoExpansionBudget struct {
-	bytes    int64
-	entries  int
-	expanded int64
+	bytes        int64
+	materialized int64
+	entries      int
+	expanded     int64
 }
 
 func (s *softwareBuildSnapshot) createVendorDirectories(path string) error {
@@ -312,6 +320,7 @@ func (s *softwareBuildSnapshot) extractCargoArchive(ctx context.Context, name, c
 			}
 			if err == nil {
 				files[rel] = digest(content)
+				budget.materialized += header.Size
 			}
 			clear(content)
 			if err != nil {
@@ -338,11 +347,11 @@ func (s *softwareBuildSnapshot) extractCargoArchive(ctx context.Context, name, c
 		if err == io.EOF {
 			break
 		}
-		if err := ctx.Err(); err != nil {
-			return err
-		}
 		if err != nil || expanded.N <= 0 {
 			return errUpdateObject
+		}
+		if err := ctx.Err(); err != nil {
+			return err
 		}
 	}
 	metadata, err := json.Marshal(map[string]any{"package": checksum, "files": files})
@@ -354,7 +363,11 @@ func (s *softwareBuildSnapshot) extractCargoArchive(ctx context.Context, name, c
 		return errors.New("archive_metadata_budget_exceeded")
 	}
 	budget.bytes += int64(len(metadata))
-	return s.create(filepath.Join(root, ".cargo-checksum.json"), metadata)
+	if err := s.create(filepath.Join(root, ".cargo-checksum.json"), metadata); err != nil {
+		return err
+	}
+	budget.materialized += int64(len(metadata))
+	return nil
 }
 
 func (s *softwareBuildSnapshot) extractLockedCargoVendor(ctx context.Context, lock []byte, read cargoArchiveReader) error {
@@ -392,7 +405,7 @@ func (s *softwareBuildSnapshot) extractLockedCargoVendorWithLimit(ctx context.Co
 	var compressed int64
 	completed := 0
 	failure := func(stage, cause string, err error) error {
-		return &cargoInputError{cause: cause, stage: stage, err: err, progress: &cargoArchiveProgress{Expected: len(packages), Completed: completed, Entries: budget.entries, Bytes: budget.bytes, ElapsedMS: time.Since(started).Milliseconds()}}
+		return &cargoInputError{cause: cause, stage: stage, err: err, progress: &cargoArchiveProgress{Expected: len(packages), Completed: completed, Entries: budget.entries, Bytes: budget.materialized, ElapsedMS: time.Since(started).Milliseconds()}}
 	}
 	for _, pkg := range packages {
 		if err := ctx.Err(); err != nil {

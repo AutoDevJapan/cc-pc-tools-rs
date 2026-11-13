@@ -10,6 +10,7 @@ import (
 	"os"
 	"path/filepath"
 	"sync/atomic"
+	"syscall"
 	"testing"
 	"time"
 )
@@ -77,6 +78,7 @@ func TestArchiveLastWriterCancellationCannotPublishChecksum(t *testing.T) {
 	var active atomic.Int32
 	var payload []byte
 	var completion *archiveFileCompletion
+	var created *os.File
 	released, observed := false, false
 	t.Cleanup(func() {
 		cancel()
@@ -86,9 +88,13 @@ func TestArchiveLastWriterCancellationCannotPublishChecksum(t *testing.T) {
 		if !observed {
 			select {
 			case <-done:
+				observed = true
 			case <-time.After(2 * time.Second):
 				t.Error("controller not collected during cleanup")
 			}
+		}
+		if observed && created != nil {
+			_ = created.Close()
 		}
 	})
 	go func() {
@@ -100,6 +106,9 @@ func TestArchiveLastWriterCancellationCannotPublishChecksum(t *testing.T) {
 			<-release
 			fragment := &softwareBuildSnapshot{Root: s.Root, paths: map[string]bool{}}
 			err := fragment.create(path, b)
+			if len(fragment.files) == 1 {
+				created = fragment.files[0]
+			}
 			completion = &archiveFileCompletion{path: path, fragment: fragment, sha: digest(b), size: int64(len(b)), err: err}
 			return completion
 		}})
@@ -131,6 +140,26 @@ func TestArchiveLastWriterCancellationCannotPublishChecksum(t *testing.T) {
 	if active.Load() != 0 || completion == nil || completion.fragment == nil || len(completion.fragment.files) != 0 {
 		t.Fatal("writer or snapshot handles not collected")
 	}
+	transferred := 0
+	for _, f := range s.files {
+		if f == created {
+			transferred++
+		}
+	}
+	if created == nil || transferred != 1 {
+		t.Fatal("creator handle not transferred exactly once to parent")
+	}
+	if _, err := created.Stat(); err != nil {
+		t.Fatal("transferred handle closed before parent release", err)
+	}
+	heldHandle := syscall.Handle(created.Fd())
+	if err := s.Close(); err != nil {
+		t.Fatal("parent release failed", err)
+	}
+	var closedInfo syscall.ByHandleFileInformation
+	if err := syscall.GetFileInformationByHandle(heldHandle, &closedInfo); !errors.Is(err, syscall.Errno(6)) {
+		t.Fatal("parent release did not close the transferred handle", err)
+	}
 	for _, b := range payload {
 		if b != 0 {
 			t.Fatal("writer payload not erased before return")
@@ -149,12 +178,42 @@ func TestArchiveEarlierWriterFailureIsNotReplacedByCancellation(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 	primary := errors.New("owned_first_create_failure")
+	var failedFile *os.File
+	t.Cleanup(func() {
+		if failedFile != nil {
+			_ = failedFile.Close()
+		}
+	})
 	err := s.extractCargoArchiveWithCreator(ctx, "owned-1.0.0", digest(raw), raw, &cargoExpansionBudget{}, func(path string, b []byte) *archiveFileCompletion {
+		fragment := &softwareBuildSnapshot{Root: s.Root, paths: map[string]bool{}}
+		if err := fragment.create(path, b); err != nil {
+			return &archiveFileCompletion{path: path, fragment: fragment, err: err}
+		}
+		if len(fragment.files) == 1 {
+			failedFile = fragment.files[0]
+		}
 		cancel()
-		return &archiveFileCompletion{path: path, fragment: &softwareBuildSnapshot{Root: s.Root, paths: map[string]bool{}}, err: primary}
+		return &archiveFileCompletion{path: path, fragment: fragment, err: primary}
 	})
 	if !errors.Is(err, primary) {
 		t.Fatal("primary writer failure discarded", err)
+	}
+	owned := 0
+	for _, f := range s.files {
+		if f == failedFile {
+			owned++
+		}
+	}
+	if failedFile == nil || owned != 1 {
+		t.Fatal("failed writer handle not transferred to parent")
+	}
+	held := syscall.Handle(failedFile.Fd())
+	if err := s.Close(); err != nil {
+		t.Fatal("failed writer parent release", err)
+	}
+	var info syscall.ByHandleFileInformation
+	if err := syscall.GetFileInformationByHandle(held, &info); !errors.Is(err, syscall.Errno(6)) {
+		t.Fatal("failed writer handle remained open", err)
 	}
 	if _, err := os.Lstat(filepath.Join(s.Root, "vendor", "owned-1.0.0", ".cargo-checksum.json")); !os.IsNotExist(err) {
 		t.Fatal("metadata after earlier failure")

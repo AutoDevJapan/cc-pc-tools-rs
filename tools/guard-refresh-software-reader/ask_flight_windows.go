@@ -74,6 +74,7 @@ type askCaptureOutput struct {
 	data     []byte
 	n        int
 	overflow bool
+	eof      bool
 }
 
 func (w *askCaptureOutput) Write(p []byte) (int, error) {
@@ -83,6 +84,52 @@ func (w *askCaptureOutput) Write(p []byte) (int, error) {
 	// Keep draining after overflow. No caller-supplied Read/Write function can
 	// block the process supervisor, and retained storage never grows.
 	return len(p), nil
+}
+
+func (w *askCaptureOutput) ReadFrom(r io.Reader) (int64, error) {
+	var scratch [65536]byte
+	defer clear(scratch[:])
+	var total int64
+	for {
+		n, err := r.Read(scratch[:])
+		if n > 0 {
+			_, _ = w.Write(scratch[:n])
+			total += int64(n)
+		}
+		if err == io.EOF {
+			w.eof = true
+			return total, nil
+		}
+		if err != nil {
+			return total, err
+		}
+	}
+}
+
+type askCaptureDiagnostic struct {
+	buffer *compilerCapture
+	eof    bool
+}
+
+func (w *askCaptureDiagnostic) Write(p []byte) (int, error) { return w.buffer.Write(p) }
+func (w *askCaptureDiagnostic) ReadFrom(r io.Reader) (int64, error) {
+	var scratch [65536]byte
+	defer clear(scratch[:])
+	var total int64
+	for {
+		n, err := r.Read(scratch[:])
+		if n > 0 {
+			_, _ = w.Write(scratch[:n])
+			total += int64(n)
+		}
+		if err == io.EOF {
+			w.eof = true
+			return total, nil
+		}
+		if err != nil {
+			return total, err
+		}
+	}
 }
 
 func askChildEnvironmentValues(ctx context.Context, parent []string, permit string) []string {
@@ -214,6 +261,7 @@ func askOwnedChildWithHandshake(ctx context.Context, executable string, onReady 
 		cmd.Stdin = bytes.NewReader(fixedInput)
 	}
 	var compilerOut, compilerErr *compilerCapture
+	var captureErr *askCaptureDiagnostic
 	if compilerMode {
 		compilerOut, compilerErr = new(compilerCapture), new(compilerCapture)
 		defer compilerOut.erase()
@@ -225,8 +273,9 @@ func askOwnedChildWithHandshake(ctx context.Context, executable string, onReady 
 		if compilerErr == nil {
 			compilerErr = new(compilerCapture)
 			defer compilerErr.erase()
-			cmd.Stderr = compilerErr
 		}
+		captureErr = &askCaptureDiagnostic{buffer: compilerErr}
+		cmd.Stderr = captureErr
 	}
 	var ready *askReadyCapture
 	var input io.WriteCloser
@@ -382,7 +431,7 @@ loop:
 		}
 	}
 	if hasCapture {
-		result.Capture.Complete = assigned && result.WaitVerified && result.Reaped && !result.TimedOut && ctx.Err() == nil && !captured.overflow
+		result.Capture.Complete = assigned && result.WaitVerified && result.Reaped && !result.TimedOut && ctx.Err() == nil && !captured.overflow && captured.eof && captureErr.eof
 	}
 	if compilerMode && assigned && result.WaitVerified && result.Reaped && !result.TimedOut && result.Exit != 0 {
 		result.Diagnostic = compilerCause(compilerOut.data[:compilerOut.n], compilerErr.data[:compilerErr.n], compilerOut.truncated || compilerErr.truncated)

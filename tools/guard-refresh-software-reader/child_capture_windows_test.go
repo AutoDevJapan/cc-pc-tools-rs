@@ -7,6 +7,7 @@ import (
 	"context"
 	"io"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"testing"
 	"time"
@@ -19,6 +20,16 @@ func TestAskFiniteCaptureChild(t *testing.T) {
 	}
 	if !askWorkerParent() {
 		os.Exit(6)
+	}
+	if mode == "hold-output" {
+		child := exec.Command(os.Args[0], "-test.run=^TestAskFiniteCaptureHeldOutputChild$")
+		child.Env = append(os.Environ(), "ASK_CAPTURE_HOLD_OUTPUT=1")
+		child.Stdout, child.Stderr = os.Stdout, os.Stderr
+		if child.Start() != nil {
+			os.Exit(11)
+		}
+		_, _ = os.Stdout.Write([]byte("owned partial"))
+		os.Exit(3)
 	}
 	if mode == "not-reading" {
 		if os.WriteFile(filepath.Join(os.Getenv("ASK_CAPTURE_ROOT"), "ready"), []byte("owned"), 0600) != nil {
@@ -57,6 +68,30 @@ func TestAskFiniteCaptureChild(t *testing.T) {
 		os.Exit(3)
 	}
 	os.Exit(0)
+}
+
+func TestAskFiniteCaptureHeldOutputChild(t *testing.T) {
+	if os.Getenv("ASK_CAPTURE_HOLD_OUTPUT") != "1" {
+		return
+	}
+	time.Sleep(10 * time.Second)
+	_, _ = os.Stdout.Write([]byte("late output"))
+	os.Exit(0)
+}
+
+func TestAskFiniteCaptureNonzeroExitDoesNotHideMissingOutputEOF(t *testing.T) {
+	t.Setenv("ASK_FINITE_CAPTURE_CHILD", "hold-output")
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+	ctx = context.WithValue(ctx, askChildCaptureKey{}, askChildCapture{})
+	r := askOwnedChild(ctx, os.Args[0], "-test.run=^TestAskFiniteCaptureChild$")
+	defer clear(r.Raw)
+	if r.Capture != nil {
+		defer clear(r.Capture.Stdout)
+	}
+	if !r.Started || !r.WaitVerified || !r.Reaped || r.TimedOut || r.Exit != 3 || r.Capture == nil || r.Capture.Complete || !bytes.Contains(r.Capture.Stdout, []byte("owned partial")) || bytes.Contains(r.Capture.Stdout, []byte("late output")) {
+		t.Fatal("nonzero exit masked incomplete stdout capture")
+	}
 }
 
 func TestAskFiniteCaptureOwnsBuffersAndCollects(t *testing.T) {

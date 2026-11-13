@@ -69,7 +69,7 @@ func acceptUnslopHistoryProtocolFrame(raw []byte, expected int64) (json.RawMessa
 }
 
 func unslopHistoryInput(requests []unslopHistoryRequest) ([]byte, error) {
-	if len(requests) == 0 || len(requests) > 16 {
+	if len(requests) == 0 || len(requests) > 15 {
 		return nil, errUnslopOrigin
 	}
 	var input bytes.Buffer

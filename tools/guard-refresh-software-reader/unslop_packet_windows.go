@@ -284,7 +284,8 @@ func runUnslopPurpose(ctx context.Context, args []string, out io.Writer, runtime
 		value = r
 		qualified = r.Qualified
 	case "--verify-unslop-update", "--prepare-unslop-update":
-		value = executeUnslopUpdate(ctx, args[0] == "--prepare-unslop-update", unslopUpdateAccess{})
+		r := executeUnslopUpdate(ctx, args[0] == "--prepare-unslop-update", unslopUpdateAccess{})
+		value = r
 	case "--inspect-unslop-evaluation-origin":
 		value = inspectUnslopEvaluationOrigin(ctx, runtime.history, runtime.historyThreads)
 	case "--read-unslop-evaluation-packet":

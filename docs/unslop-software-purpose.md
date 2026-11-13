@@ -40,6 +40,9 @@ Cargo JSONでは、対象のbinと固定された出力先、`fresh=false`、最
 保持処理のcallbackが呼ばれなかった場合、二度呼ばれた場合、callbackの後で保持処理が失敗した場合も、正式なreceiptは発行しない。
 開始前の取消は、入力確認後とnative子の開始直前にも確認する。
 nativeの実PID・作成時刻と、上位toolのCall IDは別の値として記録し、取得できないtool IDを生成値で埋めない。
+`CargoJSONSHA` は、検証したJSONと同じバッファから計算し、一致しなければartifactの読取・stage・Commitへ進めない。
+native側で診断文を除いたJSONを作る場合は、上限付きparserが元streamの全行を処理した後、対象binのmetadataと完了結果だけを投影する。
+元stream全体のdigestは `CargoStreamSHA` として分け、投影JSONのdigestと混同しない。
 
 `unslopCapturedManifest` は、入力一覧の構造と前後の同一性を確認する処理である。
 それだけで、実ファイルを読み取ったことや、コンパイラが使った全入力を確認したことにはしない。
@@ -70,6 +73,7 @@ packet readerへ渡すのは、固定された4つのleaf名だけであり、�
 packetを扱える条件が成立した場合だけ、確認した同じ保持バッファから原文・今回のcontext・生成本文を取り出す。
 contextは文体・チャンネル・関係・親しさ・toneの定義済みの値だけを評価側へ渡し、宛名や自由文、未知の項目は含めない。
 省いた項目があれば `context_omitted` をtrueにし、評価に使えた背景が限定されていることを伝える。
+toneのnullは数値0へ変換せず拒否し、明示された0とは区別する。
 未知の実行情報、相手の設定、認証、思考内容は評価側へ返さない。
 1件でも失敗した場合は、途中までの本文も返さない。
 readerは評価の合否を作らず、作者の判定を独立評価へコピーしない。

@@ -187,3 +187,17 @@ func TestUnslopHistoryMetadataDoesNotInventPacketAuthority(t *testing.T) {
 		})
 	}
 }
+
+func TestUnslopContextDoesNotTurnNullIntoToneZero(t *testing.T) {
+	for _, name := range []string{"formality", "warmth", "directness"} {
+		t.Run(name, func(t *testing.T) {
+			if _, _, valid := unslopEvaluationContext(json.RawMessage(`{"tone":{"` + name + `":null}}`)); valid {
+				t.Fatal("null interpreted as explicit tone")
+			}
+			raw, omitted, valid := unslopEvaluationContext(json.RawMessage(`{"tone":{"` + name + `":0}}`))
+			if !valid || omitted || !strings.Contains(string(raw), `":0`) {
+				t.Fatal("explicit zero rejected")
+			}
+		})
+	}
+}

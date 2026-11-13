@@ -245,6 +245,7 @@ type unslopCapturedInputs struct {
 
 type unslopBuildInvocation struct {
 	CommandSHA, CargoJSONSHA                          string
+	CargoStreamSHA                                    string
 	ToolCallID                                        *string
 	NativeProcess                                     *unslopProcessIdentity
 	Started, Assigned, WaitVerified, Reaped, TimedOut bool
@@ -269,6 +270,7 @@ type unslopProducerSession interface {
 type unslopCaptureReceipt struct {
 	Domain, Source, InstalledTarget, Namespace, InputManifestSHA string
 	CandidateSHA, CargoJSONSHA, CommandSHA                       string
+	CargoStreamSHA                                               string
 	ToolCallID                                                   *string
 	NativeProcess                                                *unslopProcessIdentity
 	CandidateIdentity                                            softwareIdentity
@@ -342,7 +344,7 @@ func captureUnslopRelease(ctx context.Context, access unslopCaptureAccess) (resu
 		result.Reason = "capture_producer_failed_or_uncollected"
 		return
 	}
-	if !unslopCargoOutput(built.CargoJSON) {
+	if digest(built.CargoJSON) != built.CargoJSONSHA || !unslopCargoOutput(built.CargoJSON) {
 		result.Reason = "capture_cargo_evidence_unqualified"
 		return
 	}
@@ -373,6 +375,7 @@ func captureUnslopRelease(ctx context.Context, access unslopCaptureAccess) (resu
 		}
 		process := *built.NativeProcess
 		receipt = unslopCaptureReceipt{Domain: unslopCaptureDomain, Source: unslopCaptureSource, InstalledTarget: unslopInstalledPath, Namespace: unslopCaptureRoot, InputManifestSHA: manifest, CandidateSHA: digest(raw), CargoJSONSHA: built.CargoJSONSHA, ToolCallID: built.ToolCallID, NativeProcess: &process, CommandSHA: built.CommandSHA, CandidateIdentity: id, Bytes: len(raw), CompleteCompiledInputs: true, ProducerAcknowledged: true, ProducerReaped: true}
+		receipt.CargoStreamSHA = built.CargoStreamSHA
 		var e error
 		pending, e = access.stage(ctx, receipt, raw)
 		if e != nil || pending == nil {

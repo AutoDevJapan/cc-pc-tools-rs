@@ -229,11 +229,11 @@ func unslopEvaluationContext(raw json.RawMessage) (json.RawMessage, bool, bool) 
 					}
 					out[k] = s
 				} else if key == "tone" && (k == "formality" || k == "warmth" || k == "directness") {
-					var n uint8
-					if json.Unmarshal(v, &n) != nil || n > 4 {
+					var n *uint8
+					if json.Unmarshal(v, &n) != nil || n == nil || *n > 4 {
 						return nil, false, false
 					}
-					out[k] = n
+					out[k] = *n
 				} else {
 					omitted = true
 				}

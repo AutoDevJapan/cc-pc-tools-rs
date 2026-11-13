@@ -106,7 +106,7 @@ func syntheticUnslopCapture() *unslopSyntheticCapture {
 }
 
 func TestUnslopCaptureRequiresBeforeAfterCargoAndController(t *testing.T) {
-	for _, fault := range []string{"normal", "missing_provider", "source_missing_before", "config_missing_before", "dependency_missing_before", "embedded_guide_missing", "input_added_after", "input_identity_changed", "wrong_command", "missing_call_id", "failed_child", "uncollected_child", "missing_cargo_json", "cargo_failed", "cargo_fresh", "cargo_wrong_output", "cargo_duplicate_output", "cancelled", "cancelled_in_before", "ack_failed", "pin_final_failed", "pin_skipped_callback", "pin_repeated_callback", "publish_failed", "commit_failed", "close_failed"} {
+	for _, fault := range []string{"normal", "missing_provider", "source_missing_before", "config_missing_before", "dependency_missing_before", "embedded_guide_missing", "input_added_after", "input_identity_changed", "wrong_command", "missing_call_id", "failed_child", "uncollected_child", "missing_cargo_json", "cargo_hash_mismatch", "cargo_failed", "cargo_fresh", "cargo_wrong_output", "cargo_duplicate_output", "cancelled", "cancelled_in_before", "ack_failed", "pin_final_failed", "pin_skipped_callback", "pin_repeated_callback", "publish_failed", "commit_failed", "close_failed"} {
 		t.Run(fault, func(t *testing.T) {
 			s := syntheticUnslopCapture()
 			s.fault = fault
@@ -133,6 +133,8 @@ func TestUnslopCaptureRequiresBeforeAfterCargoAndController(t *testing.T) {
 				s.build.Reaped = false
 			case "missing_cargo_json":
 				s.build.CargoJSON = nil
+			case "cargo_hash_mismatch":
+				s.build.CargoJSONSHA = strings.Repeat("0", 64)
 			case "cargo_failed":
 				s.build.CargoJSON = []byte(`{"reason":"build-finished","success":false}`)
 			case "cargo_fresh":

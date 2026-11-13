@@ -4,6 +4,7 @@
   "source_declaration_sha256": "ab5670a5a22a68a757b16130fe139f3d1b6095baec9b1eadd18437003f5b76a7",
   "department_source": "localai-web-rs/src/operations.rs",
   "department_declaration_sha256": "cb863376fbdc2401666ea40e477a65751b5ccb5ae5b4b48d19b6274c2d2c3a18",
+  "internal_project_declaration_sha256": "6cab2510b00ce5a8a3635fd7dee64317adf965141e542f9b5782f704129144af",
   "contract_department": 4,
   "groups": [
     {
@@ -325,6 +326,15 @@
       ],
       "normalized_lengths": [
         7
+      ]
+    },
+    {
+      "kind": "self",
+      "aliases": [
+        "5abc02e4bbd1aede0a59f231ddc87a575cf54ff0669dba33efcf2eeb307e55dd"
+      ],
+      "normalized_lengths": [
+        13
       ]
     }
   ]

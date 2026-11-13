@@ -7,7 +7,6 @@ import (
 	"context"
 	"encoding/binary"
 	"encoding/json"
-	"errors"
 	"io"
 	"os"
 	"os/exec"
@@ -480,8 +479,7 @@ loop:
 		producerACKSent = (<-producerWrite) == nil
 	}
 	result.TimedOut = ctx.Err() != nil
-	var exitError *exec.ExitError
-	result.WaitVerified = cmd.ProcessState != nil && (waitErr == nil || errors.As(waitErr, &exitError))
+	result.WaitVerified = askRootWaitVerified(cmd.ProcessState, waitErr)
 	if cmd.ProcessState != nil {
 		result.Exit = cmd.ProcessState.ExitCode()
 	}
@@ -536,6 +534,13 @@ loop:
 	}
 	clear(errOut.Bytes())
 	return
+}
+
+func askRootWaitVerified(state *os.ProcessState, _ error) bool {
+	// Cmd.Wait may return a context or pipe-copy error after Process.Wait has
+	// already collected an exiting root. Keep that native fact separate from
+	// cancellation, EOF and protocol completion, which remain failure gates.
+	return state != nil && state.Exited()
 }
 
 // Ten seconds bounds the producer process tree, not each synchronous API.

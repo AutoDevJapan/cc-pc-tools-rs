@@ -8,6 +8,7 @@ import (
 	"context"
 	"encoding/json"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"strings"
 	"testing"
@@ -131,5 +132,24 @@ func TestOwnedProducerFlightRetainsArtifactUntilRealACKAndExit(t *testing.T) {
 func TestOwnedProducerLaunchRejectsNonfixedTuple(t *testing.T) {
 	if _, e := askOwnedProducerStart(context.Background(), "other.exe", nil, askProducerExpected{}); e == nil {
 		t.Fatal("arbitrary producer accepted")
+	}
+}
+
+func TestOwnedRootNativeWaitIsSeparateFromContextAndIOErrors(t *testing.T) {
+	if os.Getenv("ASK_NATIVE_WAIT_CHILD") == "1" {
+		os.Exit(0)
+	}
+	t.Setenv("ASK_NATIVE_WAIT_CHILD", "1")
+	cmd := exec.Command(os.Args[0], "-test.run=^TestOwnedRootNativeWaitIsSeparateFromContextAndIOErrors$")
+	if err := cmd.Run(); err != nil || cmd.ProcessState == nil || !cmd.ProcessState.Exited() || cmd.ProcessState.ExitCode() != 0 {
+		t.Fatal("native wait fixture", err)
+	}
+	for _, waitErr := range []error{nil, context.Canceled, context.DeadlineExceeded, exec.ErrWaitDelay} {
+		if !askRootWaitVerified(cmd.ProcessState, waitErr) {
+			t.Fatal("collected native root lost due to aggregate wait error", waitErr)
+		}
+		if askRootWaitVerified(nil, waitErr) {
+			t.Fatal("missing native root accepted")
+		}
 	}
 }

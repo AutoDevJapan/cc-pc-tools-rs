@@ -10,6 +10,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"testing"
 	"time"
@@ -194,6 +195,23 @@ func TestUnslopOwnedLiveProducerRetainsFilesUntilACKAndReaps(t *testing.T) {
 	}
 }
 
+// The compiler/input fixtures are synthetic; WithArtifact, Acknowledge and
+// AwaitCompletion are the product methods, and the artifact is a held Windows
+// file with its real numeric identity. No product output path is written.
+type unslopLiveFixtureSession struct {
+	*unslopLiveSession
+	fixture *unslopSyntheticCapture
+}
+
+func (s *unslopLiveFixtureSession) Before() unslopCapturedInputs { return s.fixture.before }
+func (s *unslopLiveFixtureSession) Build(context.Context) (unslopBuildInvocation, error) {
+	return s.fixture.build, nil
+}
+func (s *unslopLiveFixtureSession) After(context.Context) (unslopCapturedInputs, error) {
+	return s.fixture.after, nil
+}
+func (s *unslopLiveFixtureSession) Close() error { s.closed = true; return nil }
+
 func TestUnslopLiveReadyIncludesCreationIdentityAtHeldArtifact(t *testing.T) {
 	root := physicalSoftwareFixture(t)
 	a, b := filepath.Join(root, "image.exe"), filepath.Join(root, "alias.exe")
@@ -202,21 +220,97 @@ func TestUnslopLiveReadyIncludesCreationIdentityAtHeldArtifact(t *testing.T) {
 		t.Fatal("owned alias fixture")
 	}
 	var observed softwareIdentity
-	if !withPinnedCargoOutput(a, b, softwareIdentity{}, func(_ []byte, id softwareIdentity) bool { observed = id; return true }) {
-		t.Fatal("metadata observation failed")
+	if !withPinnedCargoOutput(a, b, softwareIdentity{}, func(_ []byte, id softwareIdentity) bool { observed = id; return true }) || !askProducerID(observed) {
+		t.Fatal("numeric native metadata observation failed")
 	}
-	ready := syntheticUnslopReady()
-	ready.ArtifactIdentity = observed
-	ready.ArtifactSHA = digest(raw)
-	ready.ArtifactBytes = len(raw)
-	for _, fault := range []bool{false, true} {
-		current := ready
-		if fault {
-			current.ArtifactIdentity.Created = "different-created"
-		}
-		accepted := withPinnedCargoOutput(a, b, current.ArtifactIdentity, func(data []byte, id softwareIdentity) bool { return unslopLiveArtifactMatches(current, data, id) })
-		if accepted == fault {
-			t.Fatal("Ready creation identity not enforced", fault)
+	created, err := strconv.ParseUint(observed.Created, 10, 64)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, boundary := range []string{"native-pinner", "caller-gate"} {
+		for _, fault := range []string{"matching", "different-created"} {
+			t.Run(boundary+"/"+fault, func(t *testing.T) {
+				fixture := syntheticUnslopCapture()
+				manifest, valid := unslopCapturedManifest(fixture.before)
+				if !valid {
+					t.Fatal("input fixture")
+				}
+				r := syntheticUnslopReady()
+				r.InputManifestSHA = manifest
+				r.ArtifactIdentity = observed
+				r.EvidenceIdentity = observed
+				r.ArtifactSHA, r.ArtifactBytes = digest(raw), len(raw)
+				if fault == "different-created" {
+					r.ArtifactIdentity.Created = strconv.FormatUint(created^1, 10)
+				}
+				frame, err := json.Marshal(r)
+				if err != nil {
+					t.Fatal(err)
+				}
+				parser := &askProducerRuntime{expected: askProducerExpected{r.Domain, r.Nonce, r.Source, manifest}, ready: make(chan askProducerReady, 1)}
+				if !parser.receiveReady(frame) {
+					t.Fatal("fixture rejected by actual Ready parser")
+				}
+				r = fromOwnedReady(<-parser.ready)
+				flight := &syntheticUnslopFlight{ready: r}
+				live := &unslopLiveSession{unslopNativeSession: &unslopNativeSession{}, flight: flight, ready: r}
+				pins, observedCallbacks := 0, 0
+				var heldData []byte
+				live.pinArtifact = func(expected softwareIdentity, use func([]byte, softwareIdentity) bool) bool {
+					pins++
+					if expected != r.ArtifactIdentity {
+						t.Fatal("Ready identity not passed to pinner")
+					}
+					if boundary == "caller-gate" {
+						// A deficient provider still returns the real held identity.
+						// Isolate the caller gate so a second guard cannot hide its deletion.
+						expected = softwareIdentity{}
+					}
+					return withPinnedCargoOutput(a, b, expected, func(data []byte, id softwareIdentity) bool {
+						observedCallbacks++
+						heldData = data
+						return use(data, id)
+					})
+				}
+				session := &unslopLiveFixtureSession{unslopLiveSession: live, fixture: fixture}
+				stages := 0
+				pending := &syntheticUnslopPending{}
+				result := captureUnslopRelease(context.Background(), unslopCaptureAccess{
+					begin: func(context.Context) (unslopProducerSession, error) { return session, nil },
+					stage: func(_ context.Context, receipt unslopCaptureReceipt, data []byte) (unslopPendingCapture, error) {
+						stages++
+						if !live.artifactHeld || receipt.CandidateIdentity != observed || receipt.CandidateSHA != digest(raw) || receipt.ProducerAcknowledged || receipt.ProducerReaped || string(data) != string(raw) || len(heldData) != len(data) || &heldData[0] != &data[0] {
+							t.Fatal("stage not bound to live held artifact")
+						}
+						if os.WriteFile(a, []byte("replacement"), 0600) == nil {
+							t.Fatal("stage lost the native artifact hold")
+						}
+						return pending, nil
+					},
+				})
+				matching := fault == "matching"
+				wantStages := 0
+				if matching {
+					wantStages = 1
+				}
+				if result.Qualified != matching || stages != wantStages || flight.sent != matching || pending.commits != wantStages || live.acknowledged != matching || live.producerConfirmed != matching || !live.closed || live.artifactHeld || pins != 1 {
+					t.Fatalf("Created boundary reached stage or ACK incorrectly: boundary=%s fault=%s qualified=%t stages=%d ACK=%t commits=%d result=%+v", boundary, fault, result.Qualified, stages, flight.sent, pending.commits, result)
+				}
+				if !matching && result.Reason != "capture_artifact_unqualified" {
+					t.Fatal("wrong rejection gate", result.Reason)
+				}
+				wantCallbacks := wantStages
+				if boundary == "caller-gate" {
+					wantCallbacks = 1
+				}
+				if observedCallbacks != wantCallbacks {
+					t.Fatal("wrong identity gate exercised", observedCallbacks, wantCallbacks)
+				}
+				if matching && flight.ack != unslopACKFor(r) {
+					t.Fatal("ACK differs from parsed Ready")
+				}
+				t.Logf("actual Ready parser=true WithArtifact=true stage=%d ACK=%t numeric-created=true boundary=%s", stages, flight.sent, boundary)
+			})
 		}
 	}
 }

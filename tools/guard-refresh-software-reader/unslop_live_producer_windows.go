@@ -334,11 +334,12 @@ type unslopLiveStart func(context.Context, string, string, string) (unslopLiveFl
 
 type unslopLiveSession struct {
 	*unslopNativeSession
-	start     unslopLiveStart
-	flight    unslopLiveFlight
-	ready     unslopLiveReady
-	evidence  updateObject
-	completed bool
+	start       unslopLiveStart
+	flight      unslopLiveFlight
+	ready       unslopLiveReady
+	evidence    updateObject
+	completed   bool
+	pinArtifact func(softwareIdentity, func([]byte, softwareIdentity) bool) bool
 }
 
 func (s *unslopLiveSession) Build(ctx context.Context) (unslopBuildInvocation, error) {
@@ -401,15 +402,11 @@ func (s *unslopLiveSession) WithArtifact(use func([]byte, softwareIdentity) bool
 	if !unslopReadyShape(s.ready) || s.flight == nil || s.completed || s.closed {
 		return false
 	}
-	names, e := softwareLinks(unslopCaptureOutput)
-	if e != nil {
-		return false
+	pin := s.pinArtifact
+	if pin == nil {
+		pin = pinUnslopLiveArtifact
 	}
-	alias, ok := unslopCargoAlias(names)
-	if !ok {
-		return false
-	}
-	return withPinnedCargoOutput(unslopCaptureOutput, alias, s.ready.ArtifactIdentity, func(raw []byte, id softwareIdentity) bool {
+	return pin(s.ready.ArtifactIdentity, func(raw []byte, id softwareIdentity) bool {
 		if !unslopLiveArtifactMatches(s.ready, raw, id) {
 			return false
 		}
@@ -417,6 +414,16 @@ func (s *unslopLiveSession) WithArtifact(use func([]byte, softwareIdentity) bool
 		defer func() { s.artifactHeld = false }()
 		return use(raw, id)
 	})
+}
+
+// The normal reader keeps the fixed output and exact two-link checks.
+func pinUnslopLiveArtifact(expected softwareIdentity, use func([]byte, softwareIdentity) bool) bool {
+	names, e := softwareLinks(unslopCaptureOutput)
+	if e != nil {
+		return false
+	}
+	alias, ok := unslopCargoAlias(names)
+	return ok && withPinnedCargoOutput(unslopCaptureOutput, alias, expected, use)
 }
 func unslopLiveArtifactMatches(ready unslopLiveReady, raw []byte, id softwareIdentity) bool {
 	return id == ready.ArtifactIdentity && len(raw) == ready.ArtifactBytes && digest(raw) == ready.ArtifactSHA

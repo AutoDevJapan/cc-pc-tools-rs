@@ -112,3 +112,39 @@ func TestClassificationOwnedGitLaunchTiming(t *testing.T) {
 		t.Logf("known_installation_entry=%s elapsed_ms=%v", filepath.ToSlash(strings.TrimPrefix(path, "C:/Program Files/Git/")), samples)
 	}
 }
+
+func TestClassificationNestedWorktreeReusesOnlySameAttemptTopProbe(t *testing.T) {
+	config, access := ownerRuleFixture(t)
+	registered := filepath.Join(config.dev, "ADJ", "registered")
+	top := registered + "-wt/owned"
+	if os.MkdirAll(filepath.Join(top, ".git"), 0700) != nil {
+		t.Fatal("fixture repo")
+	}
+	projects := object{"self-fixture": registered, "second-self": registered}
+	queries, topQueries := 0, 0
+	access.git = func(root string, args ...string) (string, bool) {
+		queries++
+		if len(args) == 3 && args[0] == "remote" {
+			return "https://github.com/AutoDevJapan/owned", true
+		}
+		if len(args) > 0 && args[0] == "remote" {
+			return "https://github.com/AutoDevJapan/owned", true
+		}
+		if same(root, top) {
+			topQueries++
+		}
+		return root + "\nC:/owned-common", true
+	}
+	v := ownerRuleWith(context.Background(), top, projects, access, config, nil)
+	if !v.AccessAllowed {
+		t.Fatal("normal nested worktree rejected", v.Basis, queries)
+	}
+	if topQueries != 1 {
+		t.Fatal("same current worktree metadata probed repeatedly", topQueries, queries)
+	}
+	before := queries
+	v = ownerRuleWith(context.Background(), top, projects, access, config, nil)
+	if !v.AccessAllowed || queries == before {
+		t.Fatal("probe cache leaked into another attempt")
+	}
+}

@@ -134,6 +134,7 @@ func ownerRuleWith(ctx context.Context, path string, projects object, access own
 			}
 			return ownerRuleProtected("owner_rule_unattributed_repository")
 		}
+		linkedProbe, linkedReady, linkedOK := "", false, false
 		for _, root := range worktreeRoots {
 			// For stored output, the bound original producer and real GitHub
 			// identity establish provenance. It does not admit this source tree
@@ -142,7 +143,15 @@ func ownerRuleWith(ctx context.Context, path string, projects object, access own
 				break
 			}
 			registered, ok := access.git(root, "rev-parse", "--path-format=absolute", "--show-toplevel", "--git-common-dir")
-			linked, otherOK := access.git(top, "rev-parse", "--path-format=absolute", "--show-toplevel", "--git-common-dir")
+			// Multiple covering registrations can refer to the same current
+			// worktree. Read its identical metadata once within this attempt;
+			// every registration is still independently checked and retried
+			// registration snapshots start a new attempt with no cached result.
+			if !linkedReady {
+				linkedProbe, linkedOK = access.git(top, "rev-parse", "--path-format=absolute", "--show-toplevel", "--git-common-dir")
+				linkedReady = true
+			}
+			linked, otherOK := linkedProbe, linkedOK
 			a := strings.Split(strings.ReplaceAll(registered, "\r\n", "\n"), "\n")
 			b := strings.Split(strings.ReplaceAll(linked, "\r\n", "\n"), "\n")
 			if !ok || !otherOK {

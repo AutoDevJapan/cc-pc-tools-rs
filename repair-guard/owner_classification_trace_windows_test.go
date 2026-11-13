@@ -14,6 +14,90 @@ import (
 	"time"
 )
 
+func TestIdentityTraceDeadlinePositionDoesNotAlterLookup(t *testing.T) {
+	for _, mode := range []string{"live", "before", "during"} {
+		t.Run(mode, func(t *testing.T) {
+			trace := &ownerClassificationTrace{}
+			ctx, cancel := context.WithCancel(context.WithValue(context.Background(), ownerClassificationTraceKey{}, trace))
+			defer cancel()
+			if mode == "before" {
+				cancel()
+			}
+			done := ownerClassificationPhase(ctx, "identity")
+			if mode == "during" {
+				cancel()
+			}
+			done()
+			if trace.IdentityCalls != 1 {
+				t.Fatal("identity phase count changed")
+			}
+			want := mode
+			if mode == "live" {
+				want = "not_observed"
+			}
+			if trace.IdentityContext != want {
+				t.Fatal("incorrect identity deadline position", trace.IdentityContext)
+			}
+			data, _ := json.Marshal(trace)
+			if len(data) > 2048 || bytes.Contains(data, []byte("synthetic-secret")) {
+				t.Fatal("identity trace escaped fixed metadata")
+			}
+		})
+	}
+}
+
+func TestIdentityTraceMultipleCallsDoNotHideDifferentContext(t *testing.T) {
+	trace := &ownerClassificationTrace{}
+	ctx, cancel := context.WithCancel(context.WithValue(context.Background(), ownerClassificationTraceKey{}, trace))
+	ownerClassificationPhase(ctx, "identity")()
+	cancel()
+	ownerClassificationPhase(ctx, "identity")()
+	if trace.IdentityCalls != 2 || trace.IdentityContext != "multiple" {
+		t.Fatal("mixed identity contexts were collapsed")
+	}
+}
+
+func TestIdentityTraceDoesNotChangeVerdictOrExposeInput(t *testing.T) {
+	input := filepath.Join(t.TempDir(), "synthetic-secret-leaf")
+	for _, tc := range []struct {
+		name     string
+		verdict  ownerPathVerdict
+		physical func(string) (string, error)
+	}{
+		{"clear", ownerRuleClear("verified_self_repository"), func(p string) (string, error) { return p, nil }},
+		{"unknown", ownerRuleUnknown("repository_identity_unavailable"), func(p string) (string, error) { return p, nil }},
+		{"protected", ownerRuleProtected("client_registration"), func(p string) (string, error) { return p, nil }},
+		{"physical-mismatch", ownerRuleClear("unreachable"), func(p string) (string, error) { return p + "-other", nil }},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			makeAccess := func() ownerPolicyAccess {
+				return ownerPolicyAccess{
+					legacy: func(string) ownerLegacyState { return ownerLegacyClear }, physical: tc.physical,
+					organization: func(string) ownerPathVerdict { return tc.verdict },
+				}
+			}
+			expected := ownerPolicyClassify(input, makeAccess())
+			var out, stderr bytes.Buffer
+			code := runClassificationDiagnosticCLI([]string{"--guard-path", input, "--classification-diagnostic"}, &out, &stderr, func(p string) (ownerPathVerdict, *ownerClassificationTrace) {
+				trace := &ownerClassificationTrace{}
+				return ownerPolicyClassifyTraced(p, makeAccess(), trace), trace
+			})
+			var got struct {
+				AccessAllowed bool                      `json:"access_allowed"`
+				Status        string                    `json:"protection_status"`
+				Basis         string                    `json:"classification_basis"`
+				Trace         *ownerClassificationTrace `json:"classification_diagnostic"`
+			}
+			if code != 0 || stderr.Len() != 0 || json.Unmarshal(out.Bytes(), &got) != nil || got.Trace == nil || got.AccessAllowed != expected.AccessAllowed || got.Status != expected.Status || got.Basis != expected.Basis {
+				t.Fatal("diagnostic changed final verdict")
+			}
+			if out.Len() > 4096 || bytes.Contains(out.Bytes(), []byte("synthetic-secret-leaf")) {
+				t.Fatal("diagnostic output exceeded or exposed input")
+			}
+		})
+	}
+}
+
 func TestClassificationDiagnosticCLIIsOptInAndDoesNotChangeVerdict(t *testing.T) {
 	calls := 0
 	classify := func(string) (ownerPathVerdict, *ownerClassificationTrace) {

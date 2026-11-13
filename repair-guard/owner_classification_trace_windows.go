@@ -5,6 +5,7 @@ import (
 	"context"
 	"encoding/json"
 	"io"
+	"os"
 	"path/filepath"
 	"strings"
 	"time"
@@ -55,12 +56,16 @@ type ownerClassificationTrace struct {
 	Stage              string `json:"stage"`
 	PolicyStage        string `json:"policy_stage,omitempty"`
 	DurationMS         int64  `json:"duration_ms"`
+	PhysicalMS         int64  `json:"physical_ms"`
+	PhysicalCalls      int    `json:"physical_calls"`
+	PhysicalState      string `json:"physical_state,omitempty"`
 	RegistrationMS     int64  `json:"registration_ms"`
 	RegistrationReads  int    `json:"registration_reads"`
 	GitMS              int64  `json:"git_ms"`
 	GitCalls           int    `json:"git_calls"`
 	IdentityMS         int64  `json:"identity_ms"`
 	IdentityCalls      int    `json:"identity_calls"`
+	IdentityContext    string `json:"identity_context,omitempty"`
 	RulesMS            int64  `json:"rules_ms"`
 	MembershipMS       int64  `json:"membership_ms"`
 	MembershipCalls    int    `json:"membership_calls"`
@@ -89,6 +94,7 @@ func ownerClassificationPhase(ctx context.Context, stage string) func() {
 		return func() {}
 	}
 	start := time.Now()
+	identityBefore := false
 	switch stage {
 	case "registration":
 		t.RegistrationReads++
@@ -96,6 +102,7 @@ func ownerClassificationPhase(ctx context.Context, stage string) func() {
 		t.GitCalls++
 	case "identity":
 		t.IdentityCalls++
+		identityBefore = ctx.Err() != nil
 	case "membership":
 		t.MembershipCalls++
 	case "plain":
@@ -110,6 +117,17 @@ func ownerClassificationPhase(ctx context.Context, stage string) func() {
 			t.GitMS += elapsed
 		case "identity":
 			t.IdentityMS += elapsed
+			state := "not_observed"
+			if identityBefore {
+				state = "before"
+			} else if ctx.Err() != nil {
+				state = "during"
+			}
+			if t.IdentityContext == "" {
+				t.IdentityContext = state
+			} else if t.IdentityContext != state {
+				t.IdentityContext = "multiple"
+			}
 		case "rules":
 			t.RulesMS += elapsed
 		case "membership":
@@ -123,6 +141,28 @@ func ownerClassificationPhase(ctx context.Context, stage string) func() {
 			t.DeadlineStage = stage
 		}
 	}
+}
+
+func ownerPolicyClassifyTraced(path string, access ownerPolicyAccess, trace *ownerClassificationTrace) ownerPathVerdict {
+	physical := access.physical
+	access.physical = func(input string) (string, error) {
+		started := time.Now()
+		target, err := physical(input)
+		trace.PhysicalCalls++
+		trace.PhysicalMS += time.Since(started).Milliseconds()
+		switch {
+		case err == nil && same(input, target):
+			trace.PhysicalState = "same"
+		case err == nil:
+			trace.PhysicalState = "mismatch"
+		case os.IsNotExist(err):
+			trace.PhysicalState = "not_found"
+		default:
+			trace.PhysicalState = "unavailable"
+		}
+		return target, err
+	}
+	return ownerPolicyClassify(path, access)
 }
 
 func ownerClassificationIdentity(ctx context.Context, record ownerIdentityRecord, repository string, now time.Time) {
@@ -148,7 +188,7 @@ func ownerClassificationIdentity(ctx context.Context, record ownerIdentityRecord
 
 func classifyOwnerPathTraced(path string) (ownerPathVerdict, *ownerClassificationTrace) {
 	t := &ownerClassificationTrace{started: time.Now()}
-	v := ownerPolicyClassify(path, ownerPolicyAccess{legacy: ownerLegacyProtection, repair: repairPathAllowed, source: ownerRegisteredSource, physical: ownerRulePhysicalPath, organization: func(path string) ownerPathVerdict { return ownerOrganizationPathObserved(path, t) }})
+	v := ownerPolicyClassifyTraced(path, ownerPolicyAccess{legacy: ownerLegacyProtection, repair: repairPathAllowed, source: ownerRegisteredSource, physical: ownerRulePhysicalPath, organization: func(path string) ownerPathVerdict { return ownerOrganizationPathObserved(path, t) }}, t)
 	t.DurationMS = time.Since(t.started).Milliseconds()
 	t.Stage = v.Basis
 	return v, t

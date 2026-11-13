@@ -170,6 +170,7 @@ pub const PRODUCTS: &[Product] = &[
 
 /// Existing internal work projects have department membership, not product identity.
 /// The owner's recurring communication assignment is registered as its own project.
+#[allow(dead_code)] // Read by repair-guard/internal/cataloggen; excluded from product UI.
 pub const INTERNAL_PROJECTS: &[(&str, usize)] = &[("Discord チェック担当", 5)];
 
 fn key(name: &str) -> String {

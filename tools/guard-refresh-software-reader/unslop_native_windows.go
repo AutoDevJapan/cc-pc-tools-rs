@@ -138,12 +138,15 @@ const unslopRustcExe = "C:/Users/makhmeto/.rustup/toolchains/1.95.0-x86_64-pc-wi
 type unslopNativeSession struct {
 	source, configuration                        *softwareBuildSnapshot
 	tools                                        []updateObject
+	manifest                                     updateObject
 	parents                                      []syscall.Handle
 	namespace                                    softwareIdentity
 	before                                       unslopCapturedInputs
+	manifestSettings                             map[string]string
 	build                                        unslopBuildInvocation
 	sealed                                       bool
 	building, artifactHeld, acknowledged, closed bool
+	producerConfirmed                            bool
 	run                                          unslopNativeBuildRun
 }
 
@@ -296,6 +299,7 @@ func beginUnslopNative(ctx context.Context, run unslopNativeBuildRun) (result *u
 		return nil, errUpdateObject
 	}
 	s.sealed = true
+	s.manifestSettings = mp4CompilerEnvironment(s.configuration.Root)
 	s.before, e = s.snapshot(ctx)
 	if e != nil {
 		return nil, e
@@ -349,7 +353,10 @@ func (s *unslopNativeSession) snapshot(ctx context.Context) (unslopCapturedInput
 			}
 		}
 	}
-	settings := mp4CompilerEnvironment(s.configuration.Root)
+	settings := s.manifestSettings
+	if settings == nil {
+		settings = mp4CompilerEnvironment(s.configuration.Root)
+	}
 	configCtx := context.WithValue(ctx, askChildEnvironment{}, settings)
 	r.ConfigurationSHA = mp4ConfigurationDigest(configCtx)
 	var tools []string
@@ -442,11 +449,10 @@ func unslopCargoAlias(names []string) (string, bool) {
 	return alias, output && alias != ""
 }
 func (s *unslopNativeSession) Acknowledge(ctx context.Context) error {
-	if ctx.Err() != nil || !s.artifactHeld || !s.build.Reaped || s.build.Exit != 0 {
-		return errUnslopOrigin
-	}
-	s.acknowledged = true
-	return nil
+	return errors.New("live_producer_ack_not_connected")
+}
+func (s *unslopNativeSession) AwaitCompletion(context.Context) (unslopProducerCompletion, error) {
+	return unslopProducerCompletion{}, errors.New("live_producer_ack_not_connected")
 }
 func (s *unslopNativeSession) Close() error {
 	if s.closed {
@@ -464,6 +470,10 @@ func (s *unslopNativeSession) Close() error {
 	if s.configuration != nil {
 		errs = append(errs, s.configuration.Close())
 	}
+	if s.manifest != nil {
+		errs = append(errs, s.manifest.Close())
+		s.manifest = nil
+	}
 	for _, o := range s.tools {
 		errs = append(errs, o.Close())
 	}
@@ -480,6 +490,9 @@ type unslopNativePending struct {
 	exportIdentity softwareIdentity
 	session        *unslopNativeSession
 	committed      bool
+	export         updateObject
+	sealed         bool
+	receiptPath    string
 }
 
 type unslopNativeReceiptRecord struct {
@@ -488,29 +501,53 @@ type unslopNativeReceiptRecord struct {
 }
 
 func (s *unslopNativeSession) stage(ctx context.Context, r unslopCaptureReceipt, raw []byte) (unslopPendingCapture, error) {
-	if ctx.Err() != nil || !s.artifactHeld || !s.acknowledged || r.Source != unslopCaptureSource || r.Namespace != unslopCaptureRoot || r.Domain != unslopCaptureDomain || !r.CompleteCompiledInputs || digest(raw) != r.CandidateSHA {
+	if ctx.Err() != nil || !s.artifactHeld || r.ProducerAcknowledged || r.ProducerReaped || r.Source != unslopCaptureSource || r.Namespace != unslopCaptureRoot || r.Domain != unslopCaptureDomain || !r.CompleteCompiledInputs || digest(raw) != r.CandidateSHA {
 		return nil, errUnslopOrigin
 	}
-	p := &unslopNativePending{receipt: r, session: s}
+	p := &unslopNativePending{receipt: r, session: s, receiptPath: unslopNativeReceipt}
 	id, e := createAskArtifactCopy(unslopNativeExport, raw)
 	p.exportIdentity = id
+	if e == nil {
+		p.export, e = openUpdateObject(unslopNativeExport)
+		if e == nil && (p.export.ID() != id || digest(p.export.Raw()) != r.CandidateSHA) {
+			e = errUnslopOrigin
+		}
+	}
 	return p, e
 }
-func (p *unslopNativePending) Abort() error { return nil } // preserve partial export; never overwrite or silently delete it
-func (p *unslopNativePending) Commit(ctx context.Context) error {
-	if ctx.Err() != nil || p.committed || p.session == nil || !p.session.closed || !p.session.acknowledged || !unslopCompleteIdentity(p.exportIdentity) {
+func (p *unslopNativePending) Seal(r unslopCaptureReceipt) error {
+	before, after := p.receipt, r
+	before.ProducerAcknowledged = false
+	before.ProducerReaped = false
+	after.ProducerAcknowledged = false
+	after.ProducerReaped = false
+	left, _ := json.Marshal(before)
+	right, _ := json.Marshal(after)
+	if !r.ProducerAcknowledged || !r.ProducerReaped || p.session == nil || !p.session.acknowledged || !p.session.producerConfirmed || !bytes.Equal(left, right) {
 		return errUnslopOrigin
 	}
-	export, e := openUpdateObject(unslopNativeExport)
-	if e != nil {
-		return e
+	p.receipt = r
+	p.sealed = true
+	return nil
+}
+func (p *unslopNativePending) Abort() error    { return nil } // preserve partial export; never overwrite or silently delete it
+func (p *unslopNativePending) Published() bool { return p.committed }
+func (p *unslopNativePending) Close() error {
+	if p.export == nil {
+		return nil
 	}
-	closed := false
-	defer func() {
-		if !closed {
-			export.Close()
-		}
-	}()
+	e := p.export.Close()
+	p.export = nil
+	return e
+}
+func (p *unslopNativePending) Commit(ctx context.Context) error {
+	if ctx.Err() != nil || p.committed || !p.sealed || p.session == nil || !p.session.closed || !p.session.acknowledged || !unslopCompleteIdentity(p.exportIdentity) {
+		return errUnslopOrigin
+	}
+	export := p.export
+	if export == nil {
+		return errUnslopOrigin
+	}
 	if export.ID() != p.exportIdentity || digest(export.Raw()) != p.receipt.CandidateSHA || len(export.Raw()) != p.receipt.Bytes {
 		return errUpdateObject
 	}
@@ -519,7 +556,10 @@ func (p *unslopNativePending) Commit(ctx context.Context) error {
 	if e != nil {
 		return e
 	}
-	if e = unslopPublishReceiptWithHook(ctx, unslopNativeReceipt, raw, func() error { closed = true; return export.Close() }); e != nil {
+	if p.receiptPath == "" {
+		return errUnslopOrigin
+	}
+	if e = unslopPublishReceiptWithHook(ctx, p.receiptPath, raw, nil); e != nil {
 		return e
 	}
 	p.committed = true
@@ -557,6 +597,9 @@ func unslopPublishReceiptWithHook(ctx context.Context, path string, raw []byte, 
 			return e
 		}
 	}
+	if ctx.Err() != nil {
+		return ctx.Err()
+	}
 	from, e := syscall.UTF16PtrFromString(path + ".pending")
 	if e != nil {
 		return e
@@ -572,54 +615,6 @@ func unslopPublishReceiptWithHook(ctx context.Context, path string, raw []byte, 
 	return nil
 }
 
-func unslopNativeCaptureAccess(run unslopNativeBuildRun) unslopCaptureAccess {
-	var session *unslopNativeSession
-	return unslopCaptureAccess{begin: func(ctx context.Context) (unslopProducerSession, error) {
-		s, e := beginUnslopNative(ctx, run)
-		if e != nil {
-			return nil, e
-		}
-		session = s
-		return s, nil
-	}, stage: func(ctx context.Context, r unslopCaptureReceipt, raw []byte) (unslopPendingCapture, error) {
-		if session == nil {
-			return nil, errUnslopOrigin
-		}
-		return session.stage(ctx, r, raw)
-	}}
-}
-
-// Installed as a dependency by the shared dispatcher. Calling the factory
-// does not execute Cargo; only capture's begin/Build path creates a producer.
-func normalUnslopNativeCaptureAccess() unslopCaptureAccess {
-	var session *unslopNativeSession
-	run := func(ctx context.Context) askChildResult {
-		if session == nil || ctx.Err() != nil {
-			return askChildResult{}
-		}
-		buildCtx, cancel := context.WithTimeout(ctx, 12*time.Minute)
-		defer cancel()
-		settings := mp4CompilerEnvironment(session.configuration.Root)
-		buildCtx = context.WithValue(buildCtx, askChildEnvironment{}, settings)
-		buildCtx = context.WithValue(buildCtx, askChildExactEnvironment{}, true)
-		buildCtx = context.WithValue(buildCtx, askChildCaptureKey{}, askChildCapture{})
-		return askOwnedChildAt(buildCtx, session.configuration.cargoDrive+"\\", "D:/CC/Tools/codex-jobs/cargo_gate.exe", unslopCaptureCommand()...)
-	}
-	return unslopCaptureAccess{begin: func(ctx context.Context) (unslopProducerSession, error) {
-		s, e := beginUnslopNative(ctx, run)
-		if e != nil {
-			return nil, e
-		}
-		session = s
-		return s, nil
-	}, stage: func(ctx context.Context, r unslopCaptureReceipt, raw []byte) (unslopPendingCapture, error) {
-		if session == nil {
-			return nil, errUnslopOrigin
-		}
-		return session.stage(ctx, r, raw)
-	}}
-}
-
 // The shared main dispatches only this exact finite operation set. Capturing a
 // fresh artifact does not authorize using its unsigned receipt as an update
 // grant: the install consumer is pinned/reviewed after observing that artifact.
@@ -631,7 +626,7 @@ func runNormalUnslopPurpose(args []string, out io.Writer) int {
 	defer cancel()
 	runtime := unslopPurposeRuntime{}
 	if args[0] == "--capture-unslop-release" {
-		runtime.capture = normalUnslopNativeCaptureAccess()
+		runtime.capture = normalUnslopLiveCaptureAccess()
 	}
 	return runUnslopPurpose(ctx, args, out, runtime)
 }

@@ -34,6 +34,25 @@ func TestUnslopNormalRoutingDoesNotPromoteUnknownReceiptOrSelectors(t *testing.T
 	}
 }
 
+func TestUnslopSharedRoutingReachesOnlyFixedNormalOperations(t *testing.T) {
+	for _, flag := range []string{"--verify-unslop-update", "--prepare-unslop-update", "--read-unslop-evaluation-packet", "--inspect-unslop-evaluation-origin"} {
+		t.Run(flag, func(t *testing.T) {
+			var out bytes.Buffer
+			code := run([]string{flag}, &out, func() softwareObservation { t.Fatal("known Unslop route fell through"); return softwareObservation{} })
+			var r map[string]any
+			if code != 1 || json.Unmarshal(out.Bytes(), &r) != nil || r["reason"] == nil || r["qualified"] == true {
+				t.Fatal("Unslop route not qualified safely", code, out.String())
+			}
+		})
+	}
+	for _, args := range [][]string{{"--capture-unslop-release", "--untrusted"}, {"--verify-unslop-update", "--path", "untrusted"}, {"--unknown-unslop"}} {
+		var out bytes.Buffer
+		if code := run(args, &out, func() softwareObservation { t.Fatal("invalid route observed software"); return softwareObservation{} }); code != 2 {
+			t.Fatal("extra input accepted", code)
+		}
+	}
+}
+
 func TestUnslopNativeBuildUsesActualProcessAndDrainedEvidence(t *testing.T) {
 	t.Setenv("UNSLOP_TEST_COMPILER", "1")
 	called := 0
@@ -89,7 +108,7 @@ func TestUnslopNativeCaptureFailureClearsOutput(t *testing.T) {
 }
 
 func TestUnslopReceiptPublicationPreservesFailureAndCollision(t *testing.T) {
-	for _, mode := range []string{"normal", "cancel", "pending_collision", "final_collision", "close_failure"} {
+	for _, mode := range []string{"normal", "cancel", "cancel_in_hook", "pending_collision", "final_collision", "close_failure"} {
 		t.Run(mode, func(t *testing.T) {
 			root := physicalSoftwareFixture(t)
 			dest := filepath.Join(root, "receipt.json")
@@ -107,6 +126,9 @@ func TestUnslopReceiptPublicationPreservesFailureAndCollision(t *testing.T) {
 			var hook func() error
 			if mode == "close_failure" {
 				hook = func() error { return errors.New("owned close failure") }
+			}
+			if mode == "cancel_in_hook" {
+				hook = func() error { cancel(); return nil }
 			}
 			err := unslopPublishReceiptWithHook(ctx, dest, []byte(`{"owned":true}`), hook)
 			if mode == "normal" {
@@ -141,6 +163,48 @@ func TestUnslopCargoAliasIsConfinedToProducedPair(t *testing.T) {
 		if ok != (name == valid) {
 			t.Fatal("alias boundary", name, ok)
 		}
+	}
+}
+
+func TestUnslopPendingRetainsExportAcrossReceiptPublication(t *testing.T) {
+	root := physicalSoftwareFixture(t)
+	exportPath := filepath.Join(root, "owned.exe")
+	receiptPath := filepath.Join(root, "receipt.json")
+	raw := []byte("owned generated software")
+	if e := os.WriteFile(exportPath, raw, 0600); e != nil {
+		t.Fatal(e)
+	}
+	image, e := openUpdateObject(exportPath)
+	if e != nil {
+		t.Fatal(e)
+	}
+	before := unslopCaptureReceipt{Domain: unslopCaptureDomain, Source: unslopCaptureSource, Namespace: unslopCaptureRoot, InstalledTarget: unslopInstalledPath, CandidateSHA: digest(raw), CandidateIdentity: image.ID(), Bytes: len(raw), CompleteCompiledInputs: true}
+	session := &unslopNativeSession{acknowledged: true, producerConfirmed: true, closed: true}
+	p := &unslopNativePending{receipt: before, exportIdentity: image.ID(), session: session, export: image, receiptPath: receiptPath}
+	defer p.Close()
+	sealed := before
+	sealed.ProducerAcknowledged = true
+	sealed.ProducerReaped = true
+	if e = p.Seal(sealed); e != nil {
+		t.Fatal(e)
+	}
+	if os.WriteFile(exportPath, []byte("replacement"), 0600) == nil {
+		t.Fatal("export not pinned before publish")
+	}
+	if e = p.Commit(context.Background()); e != nil || !p.Published() {
+		t.Fatal("receipt not published", e)
+	}
+	if _, e = os.Stat(receiptPath); e != nil {
+		t.Fatal(e)
+	}
+	if os.WriteFile(exportPath, []byte("replacement"), 0600) == nil {
+		t.Fatal("export pin lost at publication")
+	}
+	if e = p.Close(); e != nil {
+		t.Fatal(e)
+	}
+	if e = os.WriteFile(exportPath, []byte("after controller close"), 0600); e != nil {
+		t.Fatal("export handle leaked", e)
 	}
 }
 

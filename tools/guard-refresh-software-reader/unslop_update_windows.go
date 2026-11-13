@@ -265,7 +265,13 @@ type unslopProducerSession interface {
 	After(context.Context) (unslopCapturedInputs, error)
 	WithArtifact(func([]byte, softwareIdentity) bool) bool
 	Acknowledge(context.Context) error
+	AwaitCompletion(context.Context) (unslopProducerCompletion, error)
 	Close() error
+}
+
+type unslopProducerCompletion struct {
+	ACKReceived, Reaped, WaitVerified bool
+	Exit                              int
 }
 
 type unslopCaptureReceipt struct {
@@ -289,8 +295,11 @@ type unslopCaptureAccess struct {
 }
 
 type unslopPendingCapture interface {
+	Seal(unslopCaptureReceipt) error
 	Commit(context.Context) error
 	Abort() error
+	Published() bool
+	Close() error
 }
 
 type unslopCaptureResult struct {
@@ -299,6 +308,7 @@ type unslopCaptureResult struct {
 	Receipt           *unslopCaptureReceipt `json:"receipt,omitempty"`
 	DataAccessGranted bool                  `json:"data_access_granted"`
 	UpdatePerformed   bool                  `json:"update_performed"`
+	ReceiptPublished  bool                  `json:"receipt_published"`
 }
 
 func unslopCaptureCommand() []string {
@@ -364,6 +374,13 @@ func captureUnslopRelease(ctx context.Context, access unslopCaptureAccess) (resu
 		if pending != nil && !committed && pending.Abort() != nil {
 			result.Reason = "capture_pending_preserved"
 		}
+		if pending != nil {
+			result.ReceiptPublished = pending.Published()
+			if pending.Close() != nil {
+				result.Qualified = false
+				result.Reason = "capture_export_close_failed"
+			}
+		}
 	}()
 	var receipt unslopCaptureReceipt
 	callbacks := 0
@@ -373,12 +390,8 @@ func captureUnslopRelease(ctx context.Context, access unslopCaptureAccess) (resu
 		if callbacks != 1 || ctx.Err() != nil || len(raw) == 0 || len(raw) > 32<<20 || !unslopCompleteIdentity(id) {
 			return false
 		}
-		if session.Acknowledge(ctx) != nil || ctx.Err() != nil {
-			result.Reason = "capture_ack_failed"
-			return false
-		}
 		process := *built.NativeProcess
-		receipt = unslopCaptureReceipt{Domain: unslopCaptureDomain, Source: unslopCaptureSource, InstalledTarget: unslopInstalledPath, Namespace: unslopCaptureRoot, InputManifestSHA: manifest, CandidateSHA: digest(raw), CargoJSONSHA: built.CargoJSONSHA, ToolCallID: built.ToolCallID, NativeProcess: &process, CommandSHA: built.CommandSHA, CandidateIdentity: id, Bytes: len(raw), CompleteCompiledInputs: true, ProducerAcknowledged: true, ProducerReaped: true}
+		receipt = unslopCaptureReceipt{Domain: unslopCaptureDomain, Source: unslopCaptureSource, InstalledTarget: unslopInstalledPath, Namespace: unslopCaptureRoot, InputManifestSHA: manifest, CandidateSHA: digest(raw), CargoJSONSHA: built.CargoJSONSHA, ToolCallID: built.ToolCallID, NativeProcess: &process, CommandSHA: built.CommandSHA, CandidateIdentity: id, Bytes: len(raw), CompleteCompiledInputs: true}
 		receipt.CargoStreamSHA = built.CargoStreamSHA
 		var e error
 		pending, e = access.stage(ctx, receipt, raw)
@@ -386,6 +399,17 @@ func captureUnslopRelease(ctx context.Context, access unslopCaptureAccess) (resu
 			result.Reason = "capture_pending_failed_preserved"
 			return false
 		}
+		if session.Acknowledge(ctx) != nil || ctx.Err() != nil {
+			result.Reason = "capture_ack_failed"
+			return false
+		}
+		completed, e := session.AwaitCompletion(ctx)
+		if e != nil || !completed.ACKReceived || !completed.Reaped || !completed.WaitVerified || completed.Exit != 0 {
+			result.Reason = "capture_producer_ack_or_exit_unverified"
+			return false
+		}
+		receipt.ProducerAcknowledged = true
+		receipt.ProducerReaped = true
 		return true
 	})
 	if !pinned || callbacks != 1 || pending == nil || ctx.Err() != nil {
@@ -400,13 +424,19 @@ func captureUnslopRelease(ctx context.Context, access unslopCaptureAccess) (resu
 		result.Reason = "unslop_cancelled"
 		return
 	}
+	if pending.Seal(receipt) != nil {
+		result.Reason = "capture_receipt_seal_failed_preserved"
+		return
+	}
 	// Commit rechecks the held export and publishes only after successful ACK,
 	// producer collection, original-input comparison, and snapshot cleanup.
 	if pending.Commit(ctx) != nil {
+		result.ReceiptPublished = pending.Published()
 		result.Reason = "capture_receipt_failed_preserved"
 		return
 	}
 	committed = true
+	result.ReceiptPublished = pending.Published()
 	result.Qualified = true
 	result.Reason = "captured_release_receipt_published"
 	result.Receipt = &receipt

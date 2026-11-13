@@ -31,6 +31,17 @@ type unslopSyntheticCapture struct {
 type syntheticUnslopPending struct {
 	commits, aborts int
 	fault           string
+	published       bool
+}
+
+func (p *syntheticUnslopPending) Seal(r unslopCaptureReceipt) error {
+	if p.fault == "seal_failed" {
+		return errors.New("synthetic seal failed")
+	}
+	if !r.ProducerAcknowledged || !r.ProducerReaped {
+		return errors.New("synthetic completion missing")
+	}
+	return nil
 }
 
 func (p *syntheticUnslopPending) Commit(context.Context) error {
@@ -38,9 +49,17 @@ func (p *syntheticUnslopPending) Commit(context.Context) error {
 	if p.fault == "commit_failed" {
 		return errors.New("synthetic commit failed")
 	}
+	p.published = true
 	return nil
 }
-func (p *syntheticUnslopPending) Abort() error { p.aborts++; return nil }
+func (p *syntheticUnslopPending) Abort() error    { p.aborts++; return nil }
+func (p *syntheticUnslopPending) Published() bool { return p.published }
+func (p *syntheticUnslopPending) Close() error {
+	if p.fault == "export_close_failed" {
+		return errors.New("synthetic export close failed")
+	}
+	return nil
+}
 
 func (s *unslopSyntheticCapture) Before() unslopCapturedInputs {
 	if s.cancelBefore != nil {
@@ -72,6 +91,21 @@ func (s *unslopSyntheticCapture) Acknowledge(context.Context) error {
 		return errors.New("synthetic ack failed")
 	}
 	return nil
+}
+func (s *unslopSyntheticCapture) AwaitCompletion(context.Context) (unslopProducerCompletion, error) {
+	if s.acks != 1 {
+		return unslopProducerCompletion{}, errors.New("synthetic ACK absent")
+	}
+	if s.fault == "ack_not_received" {
+		return unslopProducerCompletion{Reaped: true, WaitVerified: true}, nil
+	}
+	if s.fault == "worker_unreaped" {
+		return unslopProducerCompletion{ACKReceived: true, WaitVerified: true}, nil
+	}
+	if s.fault == "worker_failed" {
+		return unslopProducerCompletion{ACKReceived: true, Reaped: true, WaitVerified: true, Exit: 1}, nil
+	}
+	return unslopProducerCompletion{ACKReceived: true, Reaped: true, WaitVerified: true, Exit: 0}, nil
 }
 func (s *unslopSyntheticCapture) Close() error {
 	s.closed = true
@@ -106,7 +140,7 @@ func syntheticUnslopCapture() *unslopSyntheticCapture {
 }
 
 func TestUnslopCaptureRequiresBeforeAfterCargoAndController(t *testing.T) {
-	for _, fault := range []string{"normal", "missing_provider", "source_missing_before", "config_missing_before", "dependency_missing_before", "embedded_guide_missing", "input_added_after", "input_identity_changed", "wrong_command", "missing_call_id", "failed_child", "uncollected_child", "missing_cargo_json", "cargo_hash_mismatch", "stream_missing", "stream_digest_invalid", "stream_changed", "cargo_failed", "cargo_fresh", "cargo_wrong_output", "cargo_duplicate_output", "cancelled", "cancelled_in_before", "ack_failed", "pin_final_failed", "pin_skipped_callback", "pin_repeated_callback", "publish_failed", "commit_failed", "close_failed"} {
+	for _, fault := range []string{"normal", "missing_provider", "source_missing_before", "config_missing_before", "dependency_missing_before", "embedded_guide_missing", "input_added_after", "input_identity_changed", "wrong_command", "missing_call_id", "failed_child", "uncollected_child", "missing_cargo_json", "cargo_hash_mismatch", "stream_missing", "stream_digest_invalid", "stream_changed", "cargo_failed", "cargo_fresh", "cargo_wrong_output", "cargo_duplicate_output", "cancelled", "cancelled_in_before", "ack_failed", "ack_not_received", "worker_unreaped", "worker_failed", "seal_failed", "export_close_failed", "pin_final_failed", "pin_skipped_callback", "pin_repeated_callback", "publish_failed", "commit_failed", "close_failed"} {
 		t.Run(fault, func(t *testing.T) {
 			s := syntheticUnslopCapture()
 			s.fault = fault
@@ -168,7 +202,7 @@ func TestUnslopCaptureRequiresBeforeAfterCargoAndController(t *testing.T) {
 			pending := &syntheticUnslopPending{fault: fault}
 			a := unslopCaptureAccess{begin: func(context.Context) (unslopProducerSession, error) { return s, nil }, stage: func(_ context.Context, r unslopCaptureReceipt, b []byte) (unslopPendingCapture, error) {
 				pubs++
-				if len(b) != len(s.raw) || &b[0] != &s.raw[0] || r.CandidateSHA != digest(s.raw) || r.InstalledTarget != unslopInstalledPath || r.CandidateIdentity != s.id || !r.CompleteCompiledInputs || !r.ProducerReaped || !r.ProducerAcknowledged {
+				if len(b) != len(s.raw) || &b[0] != &s.raw[0] || r.CandidateSHA != digest(s.raw) || r.InstalledTarget != unslopInstalledPath || r.CandidateIdentity != s.id || !r.CompleteCompiledInputs || r.ProducerReaped || r.ProducerAcknowledged {
 					t.Fatal("publisher received unbound artifact")
 				}
 				if fault == "publish_failed" {
@@ -184,14 +218,17 @@ func TestUnslopCaptureRequiresBeforeAfterCargoAndController(t *testing.T) {
 				if !r.Qualified || r.Receipt == nil || pubs != 1 || pending.commits != 1 || pending.aborts != 0 || s.builds != 1 || s.artifactReads != 1 || s.acks != 1 || !s.closed {
 					t.Fatal(r)
 				}
-			} else if r.Qualified || r.Receipt != nil {
+			} else if r.Qualified || r.Receipt != nil && fault != "export_close_failed" {
 				t.Fatal("unproven capture accepted", r)
 			}
-			if fault != "normal" && fault != "commit_failed" && pending.commits != 0 {
+			if fault != "normal" && fault != "commit_failed" && fault != "export_close_failed" && pending.commits != 0 {
 				t.Fatal("failed capture published final receipt")
 			}
-			if pubs > 0 && fault != "normal" && pending.aborts != 1 {
+			if pubs > 0 && fault != "normal" && fault != "export_close_failed" && pending.aborts != 1 {
 				t.Fatal("failed capture abandoned pending result")
+			}
+			if fault == "export_close_failed" && (!r.ReceiptPublished || pending.commits != 1 || r.Qualified) {
+				t.Fatal("published outcome lost after cleanup failure", r)
 			}
 			if fault == "source_missing_before" || fault == "config_missing_before" || fault == "dependency_missing_before" || fault == "embedded_guide_missing" || fault == "cancelled" || fault == "cancelled_in_before" || fault == "missing_provider" {
 				if s.builds != 0 || s.artifactReads != 0 || pubs != 0 {

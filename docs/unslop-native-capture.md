@@ -5,7 +5,7 @@
 
 ## 配布物を生成する
 
-`normalUnslopNativeCaptureAccess` は、固定したUnslopのcommitと10個のGit blobを照合し、新しい専用namespaceへソースを展開します。
+`normalUnslopLiveCaptureAccess` は、固定したUnslopのcommitと10個のGit blobを照合し、新しい専用namespaceへソースを展開します。
 Cargo.lockに対応する依存、実際に使う設定、toolchainを保持し、ビルド前後の内容とidentityを比較します。
 既存のCargo設定や認証ファイル、旧リリース、保護された評価packetは読みません。
 
@@ -18,8 +18,11 @@ PIDと作成時刻、終了コード、Job全体の回収、stdoutとstderrの�
 元出力と投影JSONのハッシュは別に照合します。
 元出力は結果に含めず、成功・失敗ともにメモリから消去します。
 
-生成された実行物の二つのCargo aliasを保持し、同じバッファからpendingのexportを作ります。
-入力と設定の後片付けが終わった後、exportのidentity・内容を読み返して、非上書きのreceiptを発行します。
+生成側workerは入力と実行物の二つのCargo aliasを保持したまま、nonce・入力manifest・内容のハッシュとidentityをReadyで通知します。
+親は同じ保持バッファを照合し、pendingのexportを作った後に同じnonce・hash・identityを含むACKを返します。
+workerはACKを受領したことを明示してから終了し、親が正常終了・EOF・Job全体の回収を確認した後にだけreceiptを確定します。
+入力と設定の後片付けが終わった後、exportの保持を継続してidentity・内容を照合し、非上書きのreceiptを発行します。
+公開直前の取消は拒否し、公開後にCloseが失敗した場合はreceiptが公開済みであることと後片付け失敗を分けて返します。
 このreceiptを読み直すだけで、次回のインストールを許可する入口は設けません。
 生成後に確認した実行物・receipt・identityをレビュー済みconsumerへ固定する工程を残します。
 

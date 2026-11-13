@@ -56,6 +56,7 @@ type askChildCaptureKey struct{}
 type askChildCapture struct {
 	BeforeResume func(uint32, uint64) error
 	Stdout       io.Writer
+	Stdin        io.Reader
 }
 
 func askChildEnvironmentValues(ctx context.Context, parent []string, permit string) []string {
@@ -166,6 +167,9 @@ func askOwnedChildWithHandshake(ctx context.Context, executable string, onReady 
 	compilerMode = compilerMode && onReady == nil
 	capture, hasCapture := ctx.Value(askChildCaptureKey{}).(askChildCapture)
 	hasCapture = hasCapture && onReady == nil
+	if hasCapture && capture.Stdin != nil {
+		cmd.Stdin = capture.Stdin
+	}
 	var compilerOut, compilerErr *compilerCapture
 	if compilerMode {
 		compilerOut, compilerErr = new(compilerCapture), new(compilerCapture)

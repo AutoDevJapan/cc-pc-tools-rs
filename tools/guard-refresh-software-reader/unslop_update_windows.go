@@ -81,6 +81,10 @@ func executeUnslopReleasePlan(ctx context.Context, prepare bool, plan unslopRele
 	if err != nil {
 		return result
 	}
+	if !proof.CompleteCompiledInputs {
+		result.Reason = "missing_compiled_input_provenance"
+		return result
+	}
 	validID := func(id softwareIdentity) bool { return id.Volume != "" && id.FileID != "" && id.Created != "" }
 	if proof.ID != unslopOriginID || proof.Source != plan.source || proof.Merge != plan.merge || proof.CandidateSHA != plan.candidateSHA || proof.InstalledSHA != plan.installedSHA ||
 		proof.ProducerRecord != plan.producerRecord || proof.ProducerResult != plan.producerResult || proof.BuildEvidenceSHA != plan.buildEvidenceSHA || proof.AcceptanceSHA != plan.acceptanceSHA ||
@@ -110,6 +114,9 @@ func executeUnslopReleasePlan(ctx context.Context, prepare bool, plan unslopRele
 		}
 		old, err := access.open(unslopInstalledPath)
 		if err != nil {
+			if old != nil {
+				_ = old.Close()
+			}
 			result.Reason = "unslop_installed_unqualified"
 			return false
 		}
@@ -147,9 +154,7 @@ func executeUnslopReleasePlan(ctx context.Context, prepare bool, plan unslopRele
 		result.ACLHash = digest([]byte(acl))
 		result.SourceHead = plan.source
 		result.SourceMerged = plan.merge
-		// Historical records do not contain a complete compiled-input proof.
-		// The separately admitted exact artifact must never claim one here.
-		result.CompleteCompiledInputs = false
+		result.CompleteCompiledInputs = true
 		if !prepare {
 			return true
 		}
@@ -239,10 +244,17 @@ type unslopCapturedInputs struct {
 }
 
 type unslopBuildInvocation struct {
-	CallID, CommandSHA                                string
+	CommandSHA, CargoJSONSHA                          string
+	ToolCallID                                        *string
+	NativeProcess                                     *unslopProcessIdentity
 	Started, Assigned, WaitVerified, Reaped, TimedOut bool
 	Exit                                              int
 	CargoJSON                                         []byte
+}
+
+type unslopProcessIdentity struct {
+	PID     uint32
+	Created uint64
 }
 
 type unslopProducerSession interface {
@@ -256,7 +268,9 @@ type unslopProducerSession interface {
 
 type unslopCaptureReceipt struct {
 	Domain, Source, InstalledTarget, Namespace, InputManifestSHA string
-	CandidateSHA, CargoJSONSHA, ProducerCallID, CommandSHA       string
+	CandidateSHA, CargoJSONSHA, CommandSHA                       string
+	ToolCallID                                                   *string
+	NativeProcess                                                *unslopProcessIdentity
 	CandidateIdentity                                            softwareIdentity
 	Bytes                                                        int
 	CompleteCompiledInputs, ProducerAcknowledged, ProducerReaped bool
@@ -316,10 +330,15 @@ func captureUnslopRelease(ctx context.Context, access unslopCaptureAccess) (resu
 		result.Reason = "capture_inputs_unqualified_before_build"
 		return
 	}
+	if ctx.Err() != nil {
+		result.Reason = "unslop_cancelled"
+		return
+	}
 	built, err := session.Build(ctx)
 	defer clear(built.CargoJSON)
 	command, _ := json.Marshal(unslopCaptureCommand())
-	if err != nil || ctx.Err() != nil || built.CallID == "" || len(built.CallID) > 256 || strings.ContainsAny(built.CallID, "\r\n\x00") || built.CommandSHA != digest(command) || !built.Started || !built.Assigned || !built.WaitVerified || !built.Reaped || built.TimedOut || built.Exit != 0 {
+	processBound := built.NativeProcess != nil && built.NativeProcess.PID != 0 && built.NativeProcess.Created != 0
+	if err != nil || ctx.Err() != nil || !processBound || !unslopHex(built.CargoJSONSHA, 64) || built.CommandSHA != digest(command) || !built.Started || !built.Assigned || !built.WaitVerified || !built.Reaped || built.TimedOut || built.Exit != 0 {
 		result.Reason = "capture_producer_failed_or_uncollected"
 		return
 	}
@@ -352,7 +371,8 @@ func captureUnslopRelease(ctx context.Context, access unslopCaptureAccess) (resu
 			result.Reason = "capture_ack_failed"
 			return false
 		}
-		receipt = unslopCaptureReceipt{Domain: unslopCaptureDomain, Source: unslopCaptureSource, InstalledTarget: unslopInstalledPath, Namespace: unslopCaptureRoot, InputManifestSHA: manifest, CandidateSHA: digest(raw), CargoJSONSHA: digest(built.CargoJSON), ProducerCallID: built.CallID, CommandSHA: built.CommandSHA, CandidateIdentity: id, Bytes: len(raw), CompleteCompiledInputs: true, ProducerAcknowledged: true, ProducerReaped: true}
+		process := *built.NativeProcess
+		receipt = unslopCaptureReceipt{Domain: unslopCaptureDomain, Source: unslopCaptureSource, InstalledTarget: unslopInstalledPath, Namespace: unslopCaptureRoot, InputManifestSHA: manifest, CandidateSHA: digest(raw), CargoJSONSHA: built.CargoJSONSHA, ToolCallID: built.ToolCallID, NativeProcess: &process, CommandSHA: built.CommandSHA, CandidateIdentity: id, Bytes: len(raw), CompleteCompiledInputs: true, ProducerAcknowledged: true, ProducerReaped: true}
 		var e error
 		pending, e = access.stage(ctx, receipt, raw)
 		if e != nil || pending == nil {

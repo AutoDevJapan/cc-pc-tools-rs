@@ -11,7 +11,7 @@ import (
 )
 
 func TestUnslopPacketProjectsOnlyBoundInputsAndGeneratedText(t *testing.T) {
-	for _, fault := range []string{"normal", "missing_provider", "wrong_origin", "duplicate_case", "failed_generation", "missing_thread", "wrong_input_sha", "changed_response", "same_hash_new_identity", "reader_failure", "cancelled"} {
+	for _, fault := range []string{"normal", "sensitive_context", "missing_provider", "wrong_origin", "duplicate_case", "failed_generation", "missing_thread", "wrong_input_sha", "changed_response", "same_hash_new_identity", "reader_failure", "cancelled"} {
 		t.Run(fault, func(t *testing.T) {
 			plans := unslopFixedCases()
 			data := map[string]*fakeUpdateObject{}
@@ -19,6 +19,9 @@ func TestUnslopPacketProjectsOnlyBoundInputsAndGeneratedText(t *testing.T) {
 			for i := range plans {
 				p := &plans[i]
 				request := []byte(`{"text":"保存しました。","context":{"channel":"chat"}}`)
+				if fault == "sensitive_context" {
+					request = []byte(`{"text":"保存しました。","context":{"channel":"chat","recipient":{"relation":"superior","closeness":"normal","address":"sensitive-identity"},"company_style":"sensitive-house-style","access_token":"sensitive-token","tone":{"warmth":3,"emoji":"none"}}}`)
+				}
 				response := []byte(`{"status":"rewritten","backend":"codex_subscription","original":"保存しました。","rewritten_text":"保存しました。","semantic_equality":"not_established","private_internal":"synthetic-secret"}`)
 				p.requestSHA, p.responseSHA = digest(request), digest(response)
 				qid, rid := softwareIdentity{"v", p.id + "q", "c"}, softwareIdentity{"v", p.id + "r", "c"}
@@ -65,13 +68,16 @@ func TestUnslopPacketProjectsOnlyBoundInputsAndGeneratedText(t *testing.T) {
 				access.origin = nil
 			}
 			result := consumeUnslopCases(ctx, plans, access)
-			if fault == "normal" {
+			if fault == "normal" || fault == "sensitive_context" {
 				if !result.Qualified || len(result.Cases) != 2 || reads != 4 {
 					t.Fatal(result)
 				}
 				b, _ := json.Marshal(result)
-				if strings.Contains(string(b), "synthetic-secret") || strings.Contains(string(b), "private_internal") {
+				if strings.Contains(string(b), "synthetic-secret") || strings.Contains(string(b), "private_internal") || strings.Contains(string(b), "sensitive-") {
 					t.Fatal("runtime content forwarded")
+				}
+				if fault == "sensitive_context" && !strings.Contains(string(b), `"relation":"superior"`) {
+					t.Fatal("required style context omitted")
 				}
 			} else if result.Qualified || len(result.Cases) != 0 {
 				t.Fatal("partial or failed packet leaked", result)

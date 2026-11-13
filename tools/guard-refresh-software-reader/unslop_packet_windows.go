@@ -42,10 +42,11 @@ type unslopPacketAccess struct {
 }
 
 type unslopEvaluationCase struct {
-	ID        string          `json:"id"`
-	Original  string          `json:"original"`
-	Context   json.RawMessage `json:"context"`
-	Rewritten string          `json:"rewritten_text"`
+	ID             string          `json:"id"`
+	Original       string          `json:"original"`
+	Context        json.RawMessage `json:"context"`
+	ContextOmitted bool            `json:"context_omitted"`
+	Rewritten      string          `json:"rewritten_text"`
 }
 
 type unslopPacketResult struct {
@@ -111,6 +112,13 @@ func consumeUnslopCases(ctx context.Context, plans []unslopCasePlan, access unsl
 			}
 			o, err := access.open(path)
 			if err != nil {
+				if o != nil {
+					held = append(held, o)
+				}
+				result.Reason = "unslop_packet_read_failed"
+				return result
+			}
+			if o == nil {
 				result.Reason = "unslop_packet_read_failed"
 				return result
 			}
@@ -140,7 +148,12 @@ func consumeUnslopCases(ctx context.Context, plans []unslopCasePlan, access unsl
 			result.Reason = "unslop_packet_response_invalid"
 			return result
 		}
-		cases = append(cases, unslopEvaluationCase{ID: p.id, Original: request.Text, Context: append(json.RawMessage(nil), request.Context...), Rewritten: response.Rewritten})
+		context, omitted, valid := unslopEvaluationContext(request.Context)
+		if !valid {
+			result.Reason = "unslop_packet_context_invalid"
+			return result
+		}
+		cases = append(cases, unslopEvaluationCase{ID: p.id, Original: request.Text, Context: context, ContextOmitted: omitted, Rewritten: response.Rewritten})
 	}
 	if ctx.Err() != nil {
 		result.Reason = "unslop_cancelled"
@@ -150,6 +163,90 @@ func consumeUnslopCases(ctx context.Context, plans []unslopCasePlan, access unsl
 	result.Reason = "verified_same_buffer_evaluation_inputs"
 	result.Cases = cases
 	return result
+}
+
+// Only categorical style settings are exposed. Free text, names, addresses,
+// credentials, company text and unknown nested data are never forwarded.
+func unslopEvaluationContext(raw json.RawMessage) (json.RawMessage, bool, bool) {
+	if len(raw) == 0 {
+		return nil, false, true
+	}
+	var fields map[string]json.RawMessage
+	if json.Unmarshal(raw, &fields) != nil || fields == nil {
+		return nil, false, false
+	}
+	result := map[string]any{}
+	omitted := false
+	choice := func(raw json.RawMessage, choices ...string) (string, bool) {
+		var v string
+		if json.Unmarshal(raw, &v) != nil {
+			return "", false
+		}
+		for _, s := range choices {
+			if s == v {
+				return v, true
+			}
+		}
+		return "", false
+	}
+	for key, value := range fields {
+		switch key {
+		case "register":
+			v, ok := choice(value, "internal_casual", "internal", "formal")
+			if !ok {
+				return nil, false, false
+			}
+			result[key] = v
+		case "channel":
+			v, ok := choice(value, "chat", "email", "report", "official")
+			if !ok {
+				return nil, false, false
+			}
+			result[key] = v
+		case "recipient", "tone":
+			var nested map[string]json.RawMessage
+			if json.Unmarshal(value, &nested) != nil || nested == nil {
+				return nil, false, false
+			}
+			out := map[string]any{}
+			for k, v := range nested {
+				if key == "recipient" && k == "relation" {
+					s, ok := choice(v, "subordinate", "peer", "superior", "external", "unknown")
+					if !ok {
+						return nil, false, false
+					}
+					out[k] = s
+				} else if key == "recipient" && k == "closeness" {
+					s, ok := choice(v, "close", "normal", "distant")
+					if !ok {
+						return nil, false, false
+					}
+					out[k] = s
+				} else if key == "tone" && k == "emoji" {
+					s, ok := choice(v, "none", "light", "match")
+					if !ok {
+						return nil, false, false
+					}
+					out[k] = s
+				} else if key == "tone" && (k == "formality" || k == "warmth" || k == "directness") {
+					var n uint8
+					if json.Unmarshal(v, &n) != nil || n > 4 {
+						return nil, false, false
+					}
+					out[k] = n
+				} else {
+					omitted = true
+				}
+			}
+			if len(out) > 0 {
+				result[key] = out
+			}
+		default:
+			omitted = true
+		}
+	}
+	encoded, e := json.Marshal(result)
+	return encoded, omitted, e == nil
 }
 
 // Only the documented, read-only metadata RPCs are used here. History without

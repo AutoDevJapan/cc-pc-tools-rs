@@ -25,6 +25,7 @@ type unslopSyntheticCapture struct {
 	fault                       string
 	builds, artifactReads, acks int
 	closed                      bool
+	cancelBefore                func()
 }
 
 type syntheticUnslopPending struct {
@@ -41,7 +42,12 @@ func (p *syntheticUnslopPending) Commit(context.Context) error {
 }
 func (p *syntheticUnslopPending) Abort() error { p.aborts++; return nil }
 
-func (s *unslopSyntheticCapture) Before() unslopCapturedInputs { return s.before }
+func (s *unslopSyntheticCapture) Before() unslopCapturedInputs {
+	if s.cancelBefore != nil {
+		s.cancelBefore()
+	}
+	return s.before
+}
 func (s *unslopSyntheticCapture) Build(context.Context) (unslopBuildInvocation, error) {
 	s.builds++
 	return s.build, nil
@@ -96,11 +102,11 @@ func syntheticUnslopCapture() *unslopSyntheticCapture {
 	output := map[string]any{"reason": "compiler-artifact", "target": map[string]any{"name": "godd-unslop", "kind": []string{"bin"}}, "executable": unslopCaptureOutput, "fresh": false}
 	b, _ := json.Marshal(output)
 	b = append(b, []byte("\n{\"reason\":\"build-finished\",\"success\":true}\n")...)
-	return &unslopSyntheticCapture{before: before, after: after, raw: []byte("synthetic new exe"), id: softwareIdentity{"v", "new exe", "created"}, build: unslopBuildInvocation{CallID: "native-call-bound-by-controller", CommandSHA: digest(cmd), Started: true, Assigned: true, WaitVerified: true, Reaped: true, Exit: 0, CargoJSON: b}}
+	return &unslopSyntheticCapture{before: before, after: after, raw: []byte("synthetic new exe"), id: softwareIdentity{"v", "new exe", "created"}, build: unslopBuildInvocation{NativeProcess: &unslopProcessIdentity{PID: 1, Created: 1}, CommandSHA: digest(cmd), CargoJSONSHA: digest(b), Started: true, Assigned: true, WaitVerified: true, Reaped: true, Exit: 0, CargoJSON: b}}
 }
 
 func TestUnslopCaptureRequiresBeforeAfterCargoAndController(t *testing.T) {
-	for _, fault := range []string{"normal", "missing_provider", "source_missing_before", "config_missing_before", "dependency_missing_before", "embedded_guide_missing", "input_added_after", "input_identity_changed", "wrong_command", "missing_call_id", "failed_child", "uncollected_child", "missing_cargo_json", "cargo_failed", "cargo_fresh", "cargo_wrong_output", "cargo_duplicate_output", "cancelled", "ack_failed", "pin_final_failed", "pin_skipped_callback", "pin_repeated_callback", "publish_failed", "commit_failed", "close_failed"} {
+	for _, fault := range []string{"normal", "missing_provider", "source_missing_before", "config_missing_before", "dependency_missing_before", "embedded_guide_missing", "input_added_after", "input_identity_changed", "wrong_command", "missing_call_id", "failed_child", "uncollected_child", "missing_cargo_json", "cargo_failed", "cargo_fresh", "cargo_wrong_output", "cargo_duplicate_output", "cancelled", "cancelled_in_before", "ack_failed", "pin_final_failed", "pin_skipped_callback", "pin_repeated_callback", "publish_failed", "commit_failed", "close_failed"} {
 		t.Run(fault, func(t *testing.T) {
 			s := syntheticUnslopCapture()
 			s.fault = fault
@@ -120,7 +126,7 @@ func TestUnslopCaptureRequiresBeforeAfterCargoAndController(t *testing.T) {
 			case "wrong_command":
 				s.build.CommandSHA = strings.Repeat("0", 64)
 			case "missing_call_id":
-				s.build.CallID = ""
+				s.build.NativeProcess = nil
 			case "failed_child":
 				s.build.Exit = 1
 			case "uncollected_child":
@@ -140,6 +146,9 @@ func TestUnslopCaptureRequiresBeforeAfterCargoAndController(t *testing.T) {
 			defer cancel()
 			if fault == "cancelled" {
 				cancel()
+			}
+			if fault == "cancelled_in_before" {
+				s.cancelBefore = cancel
 			}
 			pubs := 0
 			pending := &syntheticUnslopPending{fault: fault}
@@ -170,7 +179,7 @@ func TestUnslopCaptureRequiresBeforeAfterCargoAndController(t *testing.T) {
 			if pubs > 0 && fault != "normal" && pending.aborts != 1 {
 				t.Fatal("failed capture abandoned pending result")
 			}
-			if fault == "source_missing_before" || fault == "config_missing_before" || fault == "dependency_missing_before" || fault == "embedded_guide_missing" || fault == "cancelled" || fault == "missing_provider" {
+			if fault == "source_missing_before" || fault == "config_missing_before" || fault == "dependency_missing_before" || fault == "embedded_guide_missing" || fault == "cancelled" || fault == "cancelled_in_before" || fault == "missing_provider" {
 				if s.builds != 0 || s.artifactReads != 0 || pubs != 0 {
 					t.Fatal("invalid before-capture reached build")
 				}
@@ -198,7 +207,7 @@ func (p unslopTestProvider) Packet(context.Context) (unslopPacketOrigin, error) 
 }
 
 func TestUnslopReleaseConsumerUsesOriginBeforeHeldSoftware(t *testing.T) {
-	for _, fault := range []string{"verify", "prepare", "missing_provider", "provider_error", "bad_producer", "failed_build", "failed_acceptance", "source_unverified", "same_hash_wrong_identity", "bad_candidate", "bad_old", "collision", "partial", "pin_failed_after_callback", "pin_skipped_callback", "pin_repeated_callback", "cancelled"} {
+	for _, fault := range []string{"verify", "prepare", "missing_provider", "provider_error", "bad_producer", "failed_build", "failed_acceptance", "incomplete_inputs", "source_unverified", "same_hash_wrong_identity", "bad_candidate", "bad_old", "collision", "partial", "pin_failed_after_callback", "pin_skipped_callback", "pin_repeated_callback", "cancelled"} {
 		t.Run(fault, func(t *testing.T) {
 			plan := unslopReleasePlan{source: unslopSourceHead, merge: unslopMergedHead, candidateSHA: unslopCandidateSHA, installedSHA: unslopInstalledSHA, producerRecord: "synthetic-producer-record", producerResult: "synthetic-producer-result", buildEvidenceSHA: digest([]byte("synthetic-build-evidence")), acceptanceSHA: digest([]byte("synthetic-acceptance"))}
 			candidate := []byte("owned synthetic new software")
@@ -206,6 +215,7 @@ func TestUnslopReleaseConsumerUsesOriginBeforeHeldSoftware(t *testing.T) {
 			plan.candidateSHA, plan.installedSHA = digest(candidate), digest(before)
 			oldID, newID := softwareIdentity{"v", "old", "c"}, softwareIdentity{"v", "new", "c"}
 			proof := unslopReleaseOrigin{ID: unslopOriginID, Source: plan.source, Merge: plan.merge, CandidateSHA: plan.candidateSHA, InstalledSHA: plan.installedSHA, ProducerRecord: plan.producerRecord, ProducerResult: plan.producerResult, BuildEvidenceSHA: plan.buildEvidenceSHA, AcceptanceSHA: plan.acceptanceSHA, CandidateIdentity: newID, InstalledIdentity: oldID, SourceIdentity: "verified-original-source", ProducerExit: 0, CLIExit: 0, MCPExit: 0}
+			proof.CompleteCompiledInputs = fault != "incomplete_inputs"
 			if fault == "bad_producer" {
 				proof.ProducerResult = "caller-asserted"
 			}
@@ -299,7 +309,7 @@ func TestUnslopReleaseConsumerUsesOriginBeforeHeldSoftware(t *testing.T) {
 					t.Fatal("invalid reached prepare", result)
 				}
 			}
-			if fault == "missing_provider" || fault == "provider_error" || fault == "bad_producer" || fault == "failed_build" || fault == "failed_acceptance" || fault == "source_unverified" || fault == "cancelled" {
+			if fault == "missing_provider" || fault == "provider_error" || fault == "bad_producer" || fault == "failed_build" || fault == "failed_acceptance" || fault == "incomplete_inputs" || fault == "source_unverified" || fault == "cancelled" {
 				if opens != 0 || candidateReads != 0 {
 					t.Fatal("unqualified origin reached software")
 				}
@@ -307,7 +317,7 @@ func TestUnslopReleaseConsumerUsesOriginBeforeHeldSoftware(t *testing.T) {
 			if opens > 0 && !old.closed {
 				t.Fatal("old handle not closed")
 			}
-			if result.CompleteCompiledInputs || result.SoftwareReplaceAllowed || result.DataAccessGranted || result.UpdatePerformed {
+			if result.Qualified && !result.CompleteCompiledInputs || result.SoftwareReplaceAllowed || result.DataAccessGranted || result.UpdatePerformed {
 				t.Fatal("preparation invented provenance or installation")
 			}
 		})

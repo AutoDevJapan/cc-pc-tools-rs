@@ -14,7 +14,8 @@ import (
 // A duplicated reduced-rights handle still retains the original Windows file
 // object's write sharing state. ReOpenFile creates a new read-only file object.
 // During that transition, a temporary DACL on this newly created owned file
-// excludes new writers; overlapping handles continuously exclude replacement.
+// blocks ordinary new writers; overlapping handles exclude replacement.
+// The final pinned digest rejects changes after same-owner ACL regrant.
 func (s *softwareBuildSnapshot) readOnlySnapshotFile(creator *os.File, hook func(string) error) (result *os.File, err error) {
 	step := func(name string) error {
 		if hook != nil {

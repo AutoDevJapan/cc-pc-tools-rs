@@ -58,8 +58,8 @@ function New-MP4DeploymentOperations($Plan,[string]$Receipt,[scriptblock]$Qualif
 if($mp4Library){return}
 $plan=Get-MP4DeploymentPlan $Kind
 $repo='C:/Users/makhmeto/Documents/Codex/2026-11-07/ika-x20/work/4431-ui-tools'
-$reader=$repo+'/codex-owned-b30691d5cc845d615ea1be06bb0d3de3/project-software-reader-final.exe'
-$readerSha='f1107fd6ce7bc6f0aee8e0a63b72ef375515b05e80d8885e3598d6248f9c187c'
+$reader=$repo+'/codex-owned-b30691d5cc845d615ea1be06bb0d3de3/project-software-reader-history.exe'
+$readerSha='f4a037b36dd9b9a4f7b4d23d6e69c2f47c0c735325ab0c87efa041011c28dd15'
 $receipt='D:/CC/Tools/codex-jobs/fourbros4431-project-'+$Kind+'-installed.json'
 if(-not $mp4Apply){@{apply=$false;kind=$Kind;targetRead=0;candidateBound=($plan.candidateSha256.Length -eq 64);readerBound=($readerSha.Length -eq 64)}|ConvertTo-Json -Compress;return}
 if($readerSha -cnotmatch '^[a-f0-9]{64}$' -or $plan.candidateSha256 -cnotmatch '^[a-f0-9]{64}$' -or $plan.candidateBytes -le 0){throw 'reviewed_mp4_binary_not_bound'}

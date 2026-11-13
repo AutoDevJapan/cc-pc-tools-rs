@@ -3,6 +3,8 @@
 package main
 
 import (
+	"archive/tar"
+	"context"
 	"errors"
 	"fmt"
 	"os"
@@ -60,6 +62,58 @@ func TestArchiveFileWriterOverlapsOnlyTwoAndCollectsBeforeReturn(t *testing.T) {
 	close(release)
 	if err := <-done; err != nil || maximum.Load() != 2 || collected.Load() != 3 || active.Load() != 0 {
 		t.Fatal("not fully collected", err)
+	}
+}
+
+func TestArchiveLastWriterCancellationCannotPublishChecksum(t *testing.T) {
+	s := newArchiveSnapshot(t)
+	content := []byte("owned pending payload")
+	raw := ownedCargoArchive(t, []*tar.Header{{Name: "owned-1.0.0/source.rs", Size: int64(len(content)), Mode: 0600, Typeflag: tar.TypeReg}}, [][]byte{content})
+	defer clear(raw)
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	entered, release := make(chan struct{}), make(chan struct{})
+	done := make(chan error, 1)
+	go func() {
+		done <- s.extractCargoArchiveWithCreator(ctx, "owned-1.0.0", digest(raw), raw, &cargoExpansionBudget{}, func(path string, b []byte) *archiveFileCompletion {
+			close(entered)
+			<-release
+			fragment := &softwareBuildSnapshot{Root: s.Root, paths: map[string]bool{}}
+			err := fragment.create(path, b)
+			return &archiveFileCompletion{path: path, fragment: fragment, sha: digest(b), size: int64(len(b)), err: err}
+		})
+	}()
+	<-entered
+	// The single tiny archive has already queued its only writer; the tar
+	// controller can reach EOF while that writer remains explicitly held.
+	cancel()
+	close(release)
+	err := <-done
+	if !errors.Is(err, context.Canceled) {
+		t.Fatalf("late cancellation became success: %v", err)
+	}
+	if _, err := os.Lstat(filepath.Join(s.Root, "vendor", "owned-1.0.0", ".cargo-checksum.json")); !os.IsNotExist(err) {
+		t.Fatal("checksum published after cancellation")
+	}
+}
+
+func TestArchiveEarlierWriterFailureIsNotReplacedByCancellation(t *testing.T) {
+	s := newArchiveSnapshot(t)
+	content := []byte("owned pending payload")
+	raw := ownedCargoArchive(t, []*tar.Header{{Name: "owned-1.0.0/source.rs", Size: int64(len(content)), Mode: 0600, Typeflag: tar.TypeReg}}, [][]byte{content})
+	defer clear(raw)
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	primary := errors.New("owned_first_create_failure")
+	err := s.extractCargoArchiveWithCreator(ctx, "owned-1.0.0", digest(raw), raw, &cargoExpansionBudget{}, func(path string, b []byte) *archiveFileCompletion {
+		cancel()
+		return &archiveFileCompletion{path: path, fragment: &softwareBuildSnapshot{Root: s.Root, paths: map[string]bool{}}, err: primary}
+	})
+	if !errors.Is(err, primary) {
+		t.Fatal("primary writer failure discarded", err)
+	}
+	if _, err := os.Lstat(filepath.Join(s.Root, "vendor", "owned-1.0.0", ".cargo-checksum.json")); !os.IsNotExist(err) {
+		t.Fatal("metadata after earlier failure")
 	}
 }
 

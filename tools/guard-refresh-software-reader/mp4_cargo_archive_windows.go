@@ -398,6 +398,10 @@ func (s *softwareBuildSnapshot) createVendorDirectoriesReserved(path string, res
 }
 
 func (s *softwareBuildSnapshot) extractCargoArchive(ctx context.Context, name, checksum string, raw []byte, budget *cargoExpansionBudget) (result error) {
+	return s.extractCargoArchiveWithCreator(ctx, name, checksum, raw, budget, nil)
+}
+
+func (s *softwareBuildSnapshot) extractCargoArchiveWithCreator(ctx context.Context, name, checksum string, raw []byte, budget *cargoExpansionBudget, create func(string, []byte) *archiveFileCompletion) (result error) {
 	if ctx.Err() != nil {
 		return ctx.Err()
 	}
@@ -425,6 +429,9 @@ func (s *softwareBuildSnapshot) extractCargoArchive(ctx context.Context, name, c
 	files := map[string]string{}
 	createdFiles := map[string]string{}
 	writers := s.fileCreationWorker(budget, createdFiles)
+	if create != nil {
+		writers.create = create
+	}
 	defer func() { result = errors.Join(result, writers.finish()) }()
 	names := map[string]bool{}
 	for {
@@ -495,6 +502,9 @@ func (s *softwareBuildSnapshot) extractCargoArchive(ctx context.Context, name, c
 	if err := writers.finish(); err != nil {
 		return err
 	}
+	if err := ctx.Err(); err != nil {
+		return err
+	}
 	for path, sha := range createdFiles {
 		rel, err := filepath.Rel(root, path)
 		if err != nil {
@@ -539,6 +549,9 @@ func (s *softwareBuildSnapshot) extractCargoArchive(ctx context.Context, name, c
 		return err
 	}
 	budget.materialized += int64(len(metadata))
+	if err := ctx.Err(); err != nil {
+		return err
+	}
 	return nil
 }
 
@@ -602,6 +615,9 @@ func (s *softwareBuildSnapshot) extractLockedCargoVendorWithLimit(ctx context.Co
 			return failure("archive_expansion", "archive_expansion_rejected", err)
 		}
 		completed++
+	}
+	if err := ctx.Err(); err != nil {
+		return failure("archive_complete", "locked_archive_unavailable", err)
 	}
 	return s.exactOrError()
 }

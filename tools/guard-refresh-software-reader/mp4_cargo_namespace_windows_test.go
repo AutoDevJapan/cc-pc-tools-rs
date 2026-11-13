@@ -4,6 +4,7 @@ package main
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -224,6 +225,58 @@ func TestCargoSupervisorRestoresDirectoryWithoutAutoInheritedControl(t *testing.
 	}
 	if e := s.Close(); e != nil {
 		t.Fatal("exact non-auto inherited directory restore", e)
+	}
+}
+
+func TestCargoPreparationFailureReportsExactMappingAndCleanupState(t *testing.T) {
+	for _, foreign := range []bool{false, true} {
+		t.Run(fmt.Sprint(foreign), func(t *testing.T) {
+			root := physicalSoftwareFixture(t)
+			build := softwareBuildPlan{Target: filepath.Join(root, "build")}
+			drive, target, foreignTarget := "", "", ""
+			primary := errors.New("injected_seal_failure")
+			result, e := prepareSupervisedCargoDirectoryWith(build, func(s *softwareBuildSnapshot) error {
+				drive, target = s.cargoDrive, s.cargoDriveTarget
+				if foreign {
+					path := filepath.Join(root, "owned-foreign")
+					if e := os.Mkdir(path, 0700); e != nil {
+						return e
+					}
+					foreignTarget = "\\??\\" + path
+					device, _ := syscall.UTF16PtrFromString(drive)
+					native, _ := syscall.UTF16PtrFromString(foreignTarget)
+					ok, _, _ := mp4DefineDosDevice.Call(1|8, uintptr(unsafe.Pointer(device)), uintptr(unsafe.Pointer(native)))
+					if ok == 0 {
+						return errors.New("owned foreign definition failed")
+					}
+				}
+				return primary
+			})
+			var failure *cargoPreparationError
+			if result != nil || !errors.Is(e, primary) || !errors.As(e, &failure) || failure.Drive != drive || drive == "" {
+				t.Fatal("preparation identity or primary failure lost", e)
+			}
+			if !foreign {
+				if failure.State != "removed_after_preparation_failure" {
+					t.Fatal("cleanup success not reported", failure.State)
+				}
+				if _, e := cargoDriveMapping(drive); e != syscall.ERROR_FILE_NOT_FOUND {
+					t.Fatal("owned mapping retained", e)
+				}
+				return
+			}
+			if mapping, _ := cargoDriveMapping(drive); mapping != foreignTarget || failure.State != "preserved_unknown" {
+				t.Fatal("foreign mapping altered or residual identity lost")
+			}
+			device, _ := syscall.UTF16PtrFromString(drive)
+			for _, value := range []string{foreignTarget, target} {
+				native, _ := syscall.UTF16PtrFromString(value)
+				mp4DefineDosDevice.Call(1|2|4|8, uintptr(unsafe.Pointer(device)), uintptr(unsafe.Pointer(native)))
+			}
+			if _, e := cargoDriveMapping(drive); e != syscall.ERROR_FILE_NOT_FOUND {
+				t.Fatal("test-owned mapping cleanup incomplete", e)
+			}
+		})
 	}
 }
 

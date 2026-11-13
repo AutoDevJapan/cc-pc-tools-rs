@@ -87,9 +87,11 @@ namespace are rechecked before output acknowledgement. It starts at an
 operation-owned temporary drive root backed by a sealed empty directory,
 excluding physical ancestor configuration without changing shared ACLs. The
 exact local drive mapping and empty cwd are checked after sealing. The outer
-supervisor owns the mapping and removes it after confirmed worker-tree
-termination, including timeout or crash; a changed mapping or unknown child
-state is preserved and reported unsuccessfully. Ordinary user
+supervisor owns the mapping and, while it remains alive, removes it after
+confirmed worker-tree termination, including worker timeout or crash. A changed
+mapping or unknown child state is preserved and reported unsuccessfully.
+Preparation failure also reports the exact drive and observed cleanup state;
+this does not guarantee cleanup after the supervisor itself is killed. Ordinary user
 configuration and credentials are not copied. The child environment is explicit;
 selected Windows/toolchain paths and the fixed compiler/cache inputs join the
 configuration digest, while inherited Cargo profile/linker overrides and product

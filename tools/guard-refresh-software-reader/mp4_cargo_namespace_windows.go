@@ -19,6 +19,15 @@ var mp4DefineDosDevice = mp4DosKernel.NewProc("DefineDosDeviceW")
 type mp4CargoDirectory struct{}
 type mp4SupervisedCargoDirectory struct{}
 
+type cargoPreparationError struct {
+	Cause error
+	Drive string
+	State string
+}
+
+func (e *cargoPreparationError) Error() string { return "cargo_supervisor_preparation_failed" }
+func (e *cargoPreparationError) Unwrap() error { return e.Cause }
+
 func prepareSupervisedCargoDirectory(build softwareBuildPlan) (result *softwareBuildSnapshot, err error) {
 	return prepareSupervisedCargoDirectoryWith(build, func(s *softwareBuildSnapshot) error { return s.sealDirectories() })
 }
@@ -31,7 +40,16 @@ func prepareSupervisedCargoDirectoryWith(build softwareBuildPlan, seal func(*sof
 	s := &softwareBuildSnapshot{Root: root, paths: map[string]bool{}}
 	defer func() {
 		if err != nil {
-			err = errors.Join(err, s.Close())
+			drive := s.cargoDrive
+			cleanup := s.Close()
+			state := "not_created"
+			if drive != "" {
+				state = "removed_after_preparation_failure"
+			}
+			if cleanup != nil {
+				state = "preserved_unknown"
+			}
+			err = &cargoPreparationError{Cause: errors.Join(err, cleanup), Drive: drive, State: state}
 		}
 	}()
 	if e := snapshotDirectories(root, root, s); e != nil {

@@ -326,6 +326,10 @@ func runSoftwareBuildArtifact(build softwareBuildPlan, worker []string, out io.W
 		cargoSupervisor, e = prepareSupervisedCargoDirectory(build)
 		if e != nil {
 			r.Reason = "cargo_supervisor_namespace_incomplete_preserved"
+			var prepared *cargoPreparationError
+			if errors.As(e, &prepared) {
+				r.CargoDrive, r.CargoNamespaceState = prepared.Drive, prepared.State
+			}
 			_ = json.NewEncoder(out).Encode(r)
 			return 1
 		}

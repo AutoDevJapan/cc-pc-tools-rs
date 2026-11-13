@@ -41,11 +41,11 @@ func mp4BuildPlan(kind string) (softwareBuildPlan, bool) {
 	if !ok {
 		return softwareBuildPlan{}, false
 	}
-	target := updateSourceRoot + "/codex-owned-b30691d5cc845d615ea1be06bb0d3de3/" + kind + "-project-f664-build"
+	target := updateSourceRoot + "/codex-owned-b30691d5cc845d615ea1be06bb0d3de3/" + kind + "-project-3a69-build"
 	if kind == "ask" {
-		return softwareBuildPlan{mp4Source, "D:/CC/Tools/codex-jobs/fourbros4431-project-source-f664-inputs.json", "94f310c0f37b92fb8528f5df1ef8723c37f1c20dfa24549adb9b6b1d2705cab6", target, target + "/release/discord_ask.exe", target + "/release/deps/discord_ask.exe", p.Candidate, "D:/CC/Tools/codex-jobs/fourbros4431-project-ask-producer.json", 208, false}, true
+		return softwareBuildPlan{mp4Source, "D:/CC/Tools/codex-jobs/fourbros4431-project-source-3a69-inputs.json", "956ad08d964b9cdf710698e429c606279e0f93cf766a52a58a989a9baf9fba7f", target, target + "/release/discord_ask.exe", target + "/release/deps/discord_ask.exe", p.Candidate, "D:/CC/Tools/codex-jobs/fourbros4431-project-ask-producer.json", 209, false}, true
 	}
-	return softwareBuildPlan{mp4Source, "D:/CC/Tools/codex-jobs/fourbros4431-project-runner-f664-inputs.json", "fbdc357cb35de1591ae3e94f84e6343053b277ade7d66567341f938c2b0913ce", target, target + "/unattended-runner.exe", "", p.Candidate, "D:/CC/Tools/codex-jobs/fourbros4431-project-runner-producer.json", 183, true}, true
+	return softwareBuildPlan{mp4Source, "D:/CC/Tools/codex-jobs/fourbros4431-project-runner-3a69-inputs.json", "3863066939e5110b0014029c5559ad1c11e6a094695ca34620d2c825803598c7", target, target + "/unattended-runner.exe", "", p.Candidate, "D:/CC/Tools/codex-jobs/fourbros4431-project-runner-producer.json", 183, true}, true
 }
 
 type askBuildEvidence struct {

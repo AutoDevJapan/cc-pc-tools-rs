@@ -12,19 +12,19 @@ import (
 )
 
 func TestProjectDistributionPinsMergedHistoryWithoutReusingOldBuild(t *testing.T) {
-	const source = "f6649b1a7062c4d54058f65a1872b8959e156222"
+	const source = "3a69da420e2797c501eb40dd3c660394f8b7cb3b"
 	if mp4Source != source || privacyBuildPlan().Source == source {
 		t.Fatal("new project source replaced the prior privacy purpose")
 	}
 	for _, kind := range []string{"ask", "runner"} {
 		plan, baseline, ok := mp4Software(kind)
 		build, built := mp4BuildPlan(kind)
-		if !ok || !built || plan.Source != source || build.Source != source || build.Export != plan.Candidate || !strings.Contains(build.Target, "-project-f664-build") || strings.Contains(build.Export, "cfecca") || !strings.Contains(baseline.Stage, ".projectf664.stage.exe") || !strings.Contains(baseline.Backup, ".projectf664.before.exe") {
+		if !ok || !built || plan.Source != source || build.Source != source || build.Export != plan.Candidate || !strings.Contains(build.Target, "-project-3a69-build") || strings.Contains(build.Export, "cfecca") || !strings.Contains(baseline.Stage, ".project3a69.stage.exe") || !strings.Contains(baseline.Backup, ".project3a69.before.exe") {
 			t.Fatal("old generation was adopted or fixed namespaces diverged")
 		}
-		wantInputs, wantProof := 208, "94f310c0f37b92fb8528f5df1ef8723c37f1c20dfa24549adb9b6b1d2705cab6"
+		wantInputs, wantProof := 209, "956ad08d964b9cdf710698e429c606279e0f93cf766a52a58a989a9baf9fba7f"
 		if kind == "runner" {
-			wantInputs, wantProof = 183, "fbdc357cb35de1591ae3e94f84e6343053b277ade7d66567341f938c2b0913ce"
+			wantInputs, wantProof = 183, "3863066939e5110b0014029c5559ad1c11e6a094695ca34620d2c825803598c7"
 		}
 		if build.Inputs != wantInputs || build.ProofSHA != wantProof {
 			t.Fatal("reviewed source set does not match its purpose")

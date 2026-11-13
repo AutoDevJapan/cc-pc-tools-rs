@@ -12,26 +12,26 @@ import (
 	"time"
 )
 
-const mp4Source = "f6649b1a7062c4d54058f65a1872b8959e156222"
+const mp4Source = "3a69da420e2797c501eb40dd3c660394f8b7cb3b"
 
 // Exact build pins are supplied by the reviewed software source revision,
 // never arguments, environment values or a data-file permission claim.
 var mp4AskPlan = askSoftwarePlan{
-	Candidate: updateSourceRoot + "/codex-owned-f60f3742a1933562ec75aa5c8eb05d72/discord_ask-project-f664.exe",
+	Candidate: updateSourceRoot + "/codex-owned-f60f3742a1933562ec75aa5c8eb05d72/discord_ask-project-3a69.exe",
 	Proof:     "D:/CC/Tools/codex-jobs/fourbros4431-project-ask-candidate-proof.json", Source: mp4Source,
 }
 var mp4RunnerPlan = askSoftwarePlan{
-	Candidate: updateSourceRoot + "/codex-owned-f60f3742a1933562ec75aa5c8eb05d72/unattended-runner-project-f664.exe",
+	Candidate: updateSourceRoot + "/codex-owned-f60f3742a1933562ec75aa5c8eb05d72/unattended-runner-project-3a69.exe",
 	Proof:     "D:/CC/Tools/codex-jobs/fourbros4431-project-runner-candidate-proof.json", Source: mp4Source, GoRunner: true,
 }
 
 var mp4AskBaseline = softwareBaseline{
-	Target: askTarget, Stage: "D:/CC/Tools/discord-ask/discord_ask.projectf664.stage.exe", Backup: "D:/CC/Tools/discord-ask/discord_ask.projectf664.before.exe",
+	Target: askTarget, Stage: "D:/CC/Tools/discord-ask/discord_ask.project3a69.stage.exe", Backup: "D:/CC/Tools/discord-ask/discord_ask.project3a69.before.exe",
 	SHA: "6d22dc15797c821794a56e9d05c432b4a1694369e6d97628925580ec42c29a28", Bytes: 13416448,
 	Identity: softwareIdentity{"1215965535", "281474995436467", "134389898427447729"},
 }
 var mp4RunnerBaseline = softwareBaseline{
-	Target: "D:/CC/Tools/discord-ask/unattended-runner.exe", Stage: "D:/CC/Tools/discord-ask/unattended-runner.projectf664.stage.exe", Backup: "D:/CC/Tools/discord-ask/unattended-runner.projectf664.before.exe",
+	Target: "D:/CC/Tools/discord-ask/unattended-runner.exe", Stage: "D:/CC/Tools/discord-ask/unattended-runner.project3a69.stage.exe", Backup: "D:/CC/Tools/discord-ask/unattended-runner.project3a69.before.exe",
 	SHA: "385f4207dd5491cc0c88060f71f1e270b543e42a1c45898b1de15348afb7efb4", Bytes: 14110208,
 	Identity: softwareIdentity{"1215965535", "844424946531910", "134386801692725612"},
 }

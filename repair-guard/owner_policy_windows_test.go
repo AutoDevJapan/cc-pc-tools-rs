@@ -3,11 +3,49 @@ package main
 import (
 	"bytes"
 	"encoding/json"
+	"errors"
 	"os"
 	"path/filepath"
 	"strings"
 	"testing"
 )
+
+func TestIdentityTracePhysicalDecisionIsObservational(t *testing.T) {
+	root := t.TempDir()
+	path := filepath.Join(root, "synthetic-owned")
+	for _, tc := range []struct {
+		name, target, wantBasis, wantPhysical string
+		err                                   error
+		allow                                 bool
+	}{
+		{"same", path, "fixture_clear", "same", nil, true},
+		{"different", filepath.Join(root, "other"), "physical_identity_mismatch", "mismatch", nil, false},
+		{"missing", "", "fixture_clear", "not_found", os.ErrNotExist, true},
+		{"unavailable", "", "physical_metadata_unavailable", "unavailable", errors.New("secret-error"), false},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			calls := 0
+			access := ownerPolicyAccess{
+				legacy:       func(string) ownerLegacyState { return ownerLegacyClear },
+				physical:     func(string) (string, error) { calls++; return tc.target, tc.err },
+				organization: func(string) ownerPathVerdict { return ownerRuleClear("fixture_clear") },
+			}
+			plain := ownerPolicyClassify(path, access)
+			trace := &ownerClassificationTrace{}
+			observed := ownerPolicyClassifyTraced(path, access, trace)
+			if plain.AccessAllowed != tc.allow || observed.AccessAllowed != plain.AccessAllowed || observed.Basis != tc.wantBasis || observed.Status != plain.Status || calls != 2 {
+				t.Fatal("trace changed classification or physical call count", plain.Basis, observed.Basis, calls)
+			}
+			if trace.PhysicalState != tc.wantPhysical || trace.PhysicalCalls != 1 || trace.PhysicalMS < 0 {
+				t.Fatal("physical stage not recorded", trace.PhysicalState, trace.PhysicalCalls)
+			}
+			data, _ := json.Marshal(trace)
+			if bytes.Contains(data, []byte(root)) || bytes.Contains(data, []byte("secret-error")) {
+				t.Fatal("physical diagnostic exposed path or error")
+			}
+		})
+	}
+}
 
 func ownerFixturePolicy(path string, qualified bool, legacy ownerLegacyState) ownerPathVerdict {
 	return ownerPolicyClassify(path, ownerPolicyAccess{

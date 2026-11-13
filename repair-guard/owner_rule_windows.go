@@ -134,6 +134,7 @@ func ownerRuleWith(ctx context.Context, path string, projects object, access own
 			}
 			return ownerRuleProtected("owner_rule_unattributed_repository")
 		}
+		linkedProbe, linkedReady, linkedOK := "", false, false
 		for _, root := range worktreeRoots {
 			// For stored output, the bound original producer and real GitHub
 			// identity establish provenance. It does not admit this source tree
@@ -142,7 +143,15 @@ func ownerRuleWith(ctx context.Context, path string, projects object, access own
 				break
 			}
 			registered, ok := access.git(root, "rev-parse", "--path-format=absolute", "--show-toplevel", "--git-common-dir")
-			linked, otherOK := access.git(top, "rev-parse", "--path-format=absolute", "--show-toplevel", "--git-common-dir")
+			// Multiple covering registrations can refer to the same current
+			// worktree. Read its identical metadata once within this attempt;
+			// every registration is still independently checked and retried
+			// registration snapshots start a new attempt with no cached result.
+			if !linkedReady {
+				linkedProbe, linkedOK = access.git(top, "rev-parse", "--path-format=absolute", "--show-toplevel", "--git-common-dir")
+				linkedReady = true
+			}
+			linked, otherOK := linkedProbe, linkedOK
 			a := strings.Split(strings.ReplaceAll(registered, "\r\n", "\n"), "\n")
 			b := strings.Split(strings.ReplaceAll(linked, "\r\n", "\n"), "\n")
 			if !ok || !otherOK {
@@ -342,6 +351,7 @@ func ownerOrganizationQueryWith(ctx context.Context, path string, access ownerSo
 			}
 		}
 		if inputID != "" {
+			done := ownerClassificationPhase(ctx, "registration")
 			snapshot, ok = read(ctx, func(input io.Reader) (object, bool) {
 				projects, m, valid := ownerTaskRegistrationProjection(ctx, input, inputID)
 				if valid {
@@ -350,8 +360,11 @@ func ownerOrganizationQueryWith(ctx context.Context, path string, access ownerSo
 				}
 				return projects, valid && projects != nil
 			})
+			done()
 		} else {
+			done := ownerClassificationPhase(ctx, "registration")
 			snapshot, ok = read(ctx, func(input io.Reader) (object, bool) { return ownerProjectProjection(ctx, input) })
+			done()
 		}
 		if ctx.Err() != nil {
 			return ownerRuleUnknown("classification_deadline")
@@ -362,16 +375,21 @@ func ownerOrganizationQueryWith(ctx context.Context, path string, access ownerSo
 			}
 			return ownerRuleUnknown("registration_snapshot_unavailable")
 		}
+		doneRules := ownerClassificationPhase(ctx, "rules")
 		result := ownerRuleWith(ctx, path, snapshot.projects, access, config, func(p string) ownerPathVerdict {
 			return ownerRuleOwnedTemporary(ctx, p, snapshot.projects, access, config)
 		})
+		doneRules()
 		if result.Status == "protected" && result.Basis != "owner_rule_unattributed_location" {
 			return result
 		}
 		if ctx.Err() != nil {
 			return ownerRuleUnknown("classification_deadline")
 		}
-		if snapshot.current() {
+		doneSnapshot := ownerClassificationPhase(ctx, "final_snapshot")
+		current := snapshot.current()
+		doneSnapshot()
+		if current {
 			return result
 		}
 		if attempt == 1 || !snapshot.replaced() {
@@ -382,17 +400,34 @@ func ownerOrganizationQueryWith(ctx context.Context, path string, access ownerSo
 }
 
 func ownerOrganizationPath(path string) ownerPathVerdict {
+	return ownerOrganizationPathObserved(path, nil)
+}
+
+func ownerOrganizationPathObserved(path string, trace *ownerClassificationTrace) ownerPathVerdict {
 	ctx, cancel := context.WithTimeout(context.Background(), 750*time.Millisecond)
 	defer cancel()
+	if trace != nil {
+		ctx = context.WithValue(ctx, ownerClassificationTraceKey{}, trace)
+	}
 	refresh := ""
 	access := ownerSourceAccess{git: func(root string, args ...string) (string, bool) { return ownerSourceGit(ctx, root, args...) },
 		identity: func(repo string) (int64, string, string, bool) {
+			done := ownerClassificationPhase(ctx, "identity")
+			defer done()
 			id, name, owner, ok := ownerCachedIdentity(ctx, repo)
 			if !ok || ownerIdentityAging(repo, ownerIdentityHome, time.Now()) {
 				refresh = repo
 			}
 			return id, name, owner, ok
-		}, plain: currentPlain, denied: legacyMatch, membership: ownerDepartmentMembership,
+		}, plain: func(path string, directory bool) bool {
+			done := ownerClassificationPhase(ctx, "plain")
+			defer done()
+			return currentPlain(path, directory)
+		}, denied: legacyMatch, membership: func(project, repo string) string {
+			done := ownerClassificationPhase(ctx, "membership")
+			defer done()
+			return ownerDepartmentMembership(project, repo)
+		},
 	}
 	result := ownerOrganizationQuery(ctx, path, access)
 	if refresh != "" && ctx.Err() == nil {

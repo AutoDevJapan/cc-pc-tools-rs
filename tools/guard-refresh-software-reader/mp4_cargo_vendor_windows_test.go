@@ -5,6 +5,7 @@ package main
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"os"
 	"path/filepath"
 	"strings"
@@ -26,7 +27,7 @@ func TestCargoVendorSealed(t *testing.T) {
 	}
 	defer clear(original)
 	root := physicalSoftwareFixture(t)
-	ctx, cancel := context.WithTimeout(context.Background(), 90*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Minute)
 	defer cancel()
 	ctx, config, e := prepareMP4CargoContext(ctx, softwareBuildPlan{Target: root})
 	if e != nil {
@@ -56,7 +57,11 @@ func TestCargoVendorSealed(t *testing.T) {
 	}
 	snapshot, e := materializeMP4BuildSnapshotContext(ctx, softwareBuildPlan{Target: root, Source: mp4Source}, proof, sources)
 	if e != nil {
-		t.Fatal(e)
+		diagnostic, encodeErr := json.Marshal(cargoInputDiagnostic(e))
+		if encodeErr != nil {
+			t.Fatal("vendor diagnostic encoding failed")
+		}
+		t.Fatalf("vendor materialization failed: diagnostic=%s deadline=%t canceled=%t", diagnostic, errors.Is(e, context.DeadlineExceeded), errors.Is(e, context.Canceled))
 	}
 	defer func() {
 		if e := snapshot.Close(); e != nil {

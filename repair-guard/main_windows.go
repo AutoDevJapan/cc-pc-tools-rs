@@ -245,20 +245,21 @@ func repairPathAllowed(path string) bool {
 }
 
 type guardArgs struct {
-	path, succession  string
-	runtimeUpdate     string
-	runtimeUpdateSet  bool
-	refresh           string
-	refreshSet        bool
-	refreshRequest    string
-	refreshRequestSet bool
-	diagnostic        bool
-	diagnosticSet     bool
-	product           int
-	pathSet           bool
-	productSet        bool
-	successionSet     bool
-	remainingArgs     bool
+	path, succession         string
+	runtimeUpdate            string
+	runtimeUpdateSet         bool
+	refresh                  string
+	refreshSet               bool
+	refreshRequest           string
+	refreshRequestSet        bool
+	diagnostic               bool
+	diagnosticSet            bool
+	classificationDiagnostic bool
+	product                  int
+	pathSet                  bool
+	productSet               bool
+	successionSet            bool
+	remainingArgs            bool
 }
 
 func parseGuardArgs(args []string) (guardArgs, error) {
@@ -270,11 +271,13 @@ func parseGuardArgs(args []string) (guardArgs, error) {
 	refresh := flags.String("refresh-owner-source", "", "refresh one positively registered self-source identity; no source content read")
 	refreshRequest := flags.String("refresh-request", "", "owned finite refresh request identity")
 	diagnostic := flags.Bool("diagnostic", false, "report fixed refresh metadata without source, credentials or error bodies")
+	classificationDiagnostic := flags.Bool("classification-diagnostic", false, "report fixed classification phase timings; requires guard-path")
 	runtimeUpdate := flags.String("verify-capacity-runtime-update", "", "qualify one exact ToDo3085 software update; grants no data access")
 	err := flags.Parse(args)
 	parsed := guardArgs{path: *path, succession: *succession, product: *product, refresh: *refresh, refreshRequest: *refreshRequest, remainingArgs: flags.NArg() != 0}
 	parsed.runtimeUpdate = *runtimeUpdate
 	parsed.diagnostic = *diagnostic
+	parsed.classificationDiagnostic = *classificationDiagnostic
 	flags.Visit(func(f *flag.Flag) {
 		switch f.Name {
 		case "verify-capacity-runtime-update":
@@ -326,6 +329,7 @@ func printGuardUsage(output io.Writer) {
 	fmt.Fprintln(output, "    \tverify one declared current product successor; no launch or mutation")
 	fmt.Fprintln(output, "  -refresh-owner-source string\n    \trefresh one positively registered self-source identity (bounded metadata only)")
 	fmt.Fprintln(output, "  -diagnostic\n    \treport fixed refresh metadata; requires refresh-owner-source")
+	fmt.Fprintln(output, "  -classification-diagnostic\n    \treport fixed phase timings and cache validity metadata; requires guard-path")
 	fmt.Fprintln(output, "  -verify-capacity-runtime-update string")
 	fmt.Fprintln(output, "    \tqualify one exact ToDo3085 software update; grants no data access")
 	fmt.Fprintln(output, "  -verify-model-runtime-update string")
@@ -375,6 +379,9 @@ func runGuardCLI(args []string, stdout, stderr io.Writer, currentVerifier func(i
 }
 
 func runGuardCLIWithRefresh(args []string, stdout, stderr io.Writer, currentVerifier func(int) object, refresh func(string, string, bool) (bool, ownerRefreshDiagnostic)) int {
+	if classificationDiagnosticFlagPresent(args) {
+		return runClassificationDiagnosticCLI(args, stdout, stderr, classifyOwnerPathTraced)
+	}
 	if iosCompilerUserConfigFlagPresent(args) {
 		return runIOSCompilerUserConfigCLI(args, stdout, iosCompilerRoamingData)
 	}

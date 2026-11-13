@@ -419,7 +419,9 @@ pub(super) fn authorize(
                 &binding.thread_id,
                 &binding.reply_message_id,
                 &binding.owner_id,
-            ) || post["author"]["bot"] != false
+            ) || post["author"]
+                .get("bot")
+                .is_some_and(|value| value != false)
                 || hash(post["content"].as_str().ok_or(INVALID)?) != binding.reply_body_sha256
                 || post["timestamp"] != binding.reply_timestamp
                 || post["edited_timestamp"] != binding.reply_edited_timestamp

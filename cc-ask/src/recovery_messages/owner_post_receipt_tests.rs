@@ -219,3 +219,38 @@ fn owner_post_receipt_rechecks_edit_at_post_boundary_and_rejects_request_rebindi
     assert!(log_owner_post_receipt(&mut ctx, &alias, &path).is_err());
     assert_eq!(f.server.lock().unwrap().posts.len(), count);
 }
+
+#[test]
+fn owner_post_receipt_allows_omitted_optional_bot_flag_but_rejects_non_owner_bot_values() {
+    for value in [
+        None,
+        Some(json!(false)),
+        Some(json!(true)),
+        Some(json!("false")),
+    ] {
+        let f = Fixture::new();
+        let mut ctx = f.context();
+        let (args, path, proof) = post_case(&f, &mut ctx);
+        let allowed = value.is_none() || value == Some(json!(false));
+        let mut server = f.server.lock().unwrap();
+        let original = server
+            .messages
+            .get_mut(ORIGIN)
+            .unwrap()
+            .iter_mut()
+            .find(|m| m["id"] == proof["message_id"])
+            .unwrap();
+        match value {
+            None => {
+                original["author"].as_object_mut().unwrap().remove("bot");
+            }
+            Some(value) => {
+                original["author"]["bot"] = value;
+            }
+        }
+        drop(server);
+        let result = log_owner_post_receipt(&mut ctx, &args, &path);
+        assert_eq!(result.is_ok(), allowed);
+        assert_eq!(f.server.lock().unwrap().posts.len(), usize::from(allowed));
+    }
+}

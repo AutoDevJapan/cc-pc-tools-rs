@@ -45,7 +45,7 @@ func mp4BuildPlan(kind string) (softwareBuildPlan, bool) {
 	if kind == "ask" {
 		// Preserve both failed registry-alias attempts. This generation uses
 		// checked, held offline vendor inputs in a new producer namespace.
-		target += "-v6"
+		target += "-v7"
 	}
 	if kind == "ask" {
 		return softwareBuildPlan{mp4Source, "D:/CC/Tools/codex-jobs/fourbros4431-project-source-3a69-inputs.json", "956ad08d964b9cdf710698e429c606279e0f93cf766a52a58a989a9baf9fba7f", target, target + "/release/discord_ask.exe", target + "/release/deps/discord_ask.exe", p.Candidate, "D:/CC/Tools/codex-jobs/fourbros4431-project-ask-producer.json", 209, false}, true

@@ -36,6 +36,8 @@ pub struct Fake {
     pub launches: Vec<Value>,
     pub git_calls: Vec<(String, Vec<String>)>,
     pub git_roots: BTreeMap<String, String>,
+    pub git_origins: BTreeMap<String, String>,
+    pub git_origin_changes: VecDeque<String>,
     pub pick_down: bool,
     pub remove_session_on_pick: Option<PathBuf>,
     pub launch_error: bool,
@@ -182,6 +184,8 @@ impl Harness {
             launches: vec![],
             git_calls: vec![],
             git_roots: BTreeMap::new(),
+            git_origins: BTreeMap::new(),
+            git_origin_changes: VecDeque::new(),
             pick_down: false,
             remove_session_on_pick: None,
             launch_error: false,
@@ -609,11 +613,11 @@ impl Fake {
                 let target = &args[args.len() - 2];
                 std::fs::create_dir_all(target).unwrap();
                 std::fs::write(PathBuf::from(target).join(".git"), "mock worktree").unwrap();
-                self.git_roots.insert(target.clone(), cwd);
+                self.git_roots.insert(target.clone(), cwd.clone());
             }
             if args.first().map(String::as_str) == Some("remote") {
                 return Ok(Output {
-                    stdout: "fixture-origin".into(),
+                    stdout: self.git_origin_changes.pop_front().or_else(||self.git_origins.get(&cwd).cloned()).unwrap_or_else(|| "fixture-origin".into()),
                     ..Default::default()
                 });
             }

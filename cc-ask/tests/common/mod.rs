@@ -38,6 +38,10 @@ pub struct Fake {
     pub git_roots: BTreeMap<String, String>,
     pub git_origins: BTreeMap<String, String>,
     pub git_origin_changes: VecDeque<String>,
+    pub git_head_commit: Option<String>,
+    pub git_origin_head: Option<String>,
+    pub git_origin_ancestor: Option<String>,
+    pub provider_commit: Option<String>,
     pub pick_down: bool,
     pub remove_session_on_pick: Option<PathBuf>,
     pub launch_error: bool,
@@ -186,6 +190,10 @@ impl Harness {
             git_roots: BTreeMap::new(),
             git_origins: BTreeMap::new(),
             git_origin_changes: VecDeque::new(),
+            git_head_commit: None,
+            git_origin_head: None,
+            git_origin_ancestor: None,
+            provider_commit: None,
             pick_down: false,
             remove_session_on_pick: None,
             launch_error: false,
@@ -588,6 +596,9 @@ impl Fake {
                 });
             }
             if args[0] == "rev-parse" {
+                if args.get(1).map(String::as_str) == Some("--verify") {
+                    return Ok(Output { code: if self.git_head_commit.is_some() {0} else {1}, stdout:self.git_head_commit.clone().unwrap_or_default(), ..Default::default() });
+                }
                 let key = |p: &str| p.replace('\\', "/").to_lowercase();
                 let c = key(&cwd);
                 for (root, repo) in self.git_roots.iter().rev() {
@@ -609,6 +620,12 @@ impl Fake {
                     ..Default::default()
                 });
             }
+            if args[0] == "symbolic-ref" {
+                return Ok(Output {code:if self.git_origin_head.is_some(){0}else{1},stdout:self.git_origin_head.clone().unwrap_or_default(),..Default::default()});
+            }
+            if args[0] == "merge-base" {
+                return Ok(Output {code:if self.git_origin_ancestor.is_some(){0}else{1},stdout:self.git_origin_ancestor.clone().unwrap_or_default(),..Default::default()});
+            }
             if args[0] == "worktree" {
                 let target = &args[args.len() - 2];
                 std::fs::create_dir_all(target).unwrap();
@@ -628,6 +645,9 @@ impl Fake {
                 });
             }
             return Ok(Output::default());
+        }
+        if argv.first().is_some_and(|s| s.ends_with("GitHub CLI/gh.exe")) {
+            return Ok(Output {code:if self.provider_commit.is_some(){0}else{1},stdout:self.provider_commit.clone().unwrap_or_default(),..Default::default()});
         }
         let arg = |flag: &str| {
             argv.iter()

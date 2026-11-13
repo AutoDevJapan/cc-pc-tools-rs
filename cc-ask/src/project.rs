@@ -280,7 +280,7 @@ pub(crate) fn qualify_question_sources_with(
     let body = question_text(&args.body_file)?;
     crate::ask_gate::enforce(&args.title, &body, args.owner_only)?;
     if determine_project_with(
-        &mut |args, budget| effects.run(args, budget),
+        &mut |args, budget| effects.repository_probe(args, budget),
         &cwd.to_string_lossy(),
         &names,
     ) == "プロジェクト不明"
@@ -428,7 +428,11 @@ pub fn project_from_folder(folder: &str) -> String {
 }
 
 pub fn determine_project(ctx: &mut Context, cwd: &str, names: &ProjectNames) -> String {
-    determine_project_with(&mut |args, budget| ctx.run(args, budget), cwd, names)
+    determine_project_with(
+        &mut |args, budget| ctx.repository_probe(args, budget),
+        cwd,
+        names,
+    )
 }
 
 fn determine_project_with(
@@ -479,6 +483,7 @@ fn verified_repository_label(
                 root.into(),
                 "remote".into(),
                 "get-url".into(),
+                "--all".into(),
                 "origin".into(),
             ],
             10,
@@ -542,7 +547,76 @@ fn verified_repository_label(
     {
         return None;
     }
+    repository_commit_anchor(run, root, repository)?;
+    if origin(run, root)? != before {
+        return None;
+    }
     Some(label)
+}
+
+fn repository_commit_anchor(
+    run: &mut dyn FnMut(&[String], u64) -> Result<Output>,
+    root: &str,
+    repository: &str,
+) -> Option<()> {
+    fn read(out: Result<Output>) -> Option<String> {
+        let out = out.ok()?;
+        (out.code == 0
+            && out.stderr.is_empty()
+            && out.stdout.len() <= 256
+            && out.stdout.trim().lines().count() == 1)
+            .then(|| out.stdout.trim().to_owned())
+    }
+    fn object(value: &str) -> bool {
+        value.len() == 40 && value.bytes().all(|b| b.is_ascii_hexdigit())
+    }
+    let git = |args: &[&str]| {
+        let mut out = vec!["git".into(), "-C".into(), root.into()];
+        out.extend(args.iter().map(|s| s.to_string()));
+        out
+    };
+    let head = read(run(&git(&["rev-parse", "--verify", "HEAD^{commit}"]), 10))?;
+    if !object(&head) {
+        return None;
+    }
+    let branch = read(run(
+        &git(&["symbolic-ref", "-q", "refs/remotes/origin/HEAD"]),
+        10,
+    ))?;
+    let name = branch.strip_prefix("refs/remotes/origin/")?;
+    if name.is_empty()
+        || name.len() > 100
+        || !name
+            .bytes()
+            .all(|b| b.is_ascii_alphanumeric() || b"_.-/".contains(&b))
+        || name.contains("..")
+        || name.starts_with('/')
+        || name.ends_with('/')
+    {
+        return None;
+    }
+    let ancestor = read(run(&git(&["merge-base", &head, &branch]), 10))?;
+    if !object(&ancestor) {
+        return None;
+    }
+    let provider = read(run(
+        &[
+            "C:/Program Files/GitHub CLI/gh.exe".into(),
+            "api".into(),
+            "--hostname".into(),
+            "github.com".into(),
+            format!("repos/{repository}/commits/{ancestor}"),
+            "--jq".into(),
+            ".sha".into(),
+        ],
+        10,
+    ))?;
+    if provider != ancestor
+        || read(run(&git(&["rev-parse", "--verify", "HEAD^{commit}"]), 10))? != head
+    {
+        return None;
+    }
+    Some(())
 }
 
 /// Posted/recovered questions often have a title but no working directory.

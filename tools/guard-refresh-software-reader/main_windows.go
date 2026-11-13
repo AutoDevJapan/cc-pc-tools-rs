@@ -158,6 +158,13 @@ func observeInstalledGuard() softwareObservation {
 }
 
 func run(args []string, out io.Writer, observe func() softwareObservation, operations ...updateOperations) int {
+	if len(args)>0 && args[0]=="--unslop-native-build-worker" { return runUnslopNativeBuildWorker(args,out) }
+	if len(args) > 0 {
+		switch args[0] {
+		case "--capture-unslop-release", "--verify-unslop-update", "--prepare-unslop-update", "--inspect-unslop-evaluation-origin", "--read-unslop-evaluation-packet":
+			return runNormalUnslopPurpose(args, out)
+		}
+	}
 	if len(args) == 1 && (args[0] == "--export-mp4-ask-software" || args[0] == "--export-mp4-runner-software") {
 		kind := "ask"
 		if args[0] == "--export-mp4-runner-software" {

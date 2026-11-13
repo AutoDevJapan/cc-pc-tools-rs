@@ -75,12 +75,27 @@ build/export names. Neither accepts a caller-selected path or digest. Source
 buffers are matched to merged input blobs, then materialized under a new build
 namespace and held through output acknowledgement. The Go compiler receives
 only selected, proved files and explicitly disables automatic PGO inputs.
-Rust uses the six required crates in a deterministic workspace. An offline
-derived lock is admitted only when every package version, registry and checksum
-already occurs in the original lock; its digest is recorded with the snapshot.
+Rust uses the six required crates in a deterministic workspace. Before any
+resolution, the fixed software purpose verifies and expands every public
+package archive selected by the original admitted lock. Each archive's held
+bytes must hash to its locked checksum; those same bytes become the owned
+compiler inputs. Resolution then derives a smaller lock from those verified
+inputs. Every resulting package version, registry and checksum must already
+occur in the original lock; its digest is recorded with the snapshot.
+The fixed logical cache and its separately qualified physical root must have
+the same held directory identity before a package body is opened. Resolution
+then uses the verified directory source and a Cargo home without a shared
+registry link; it cannot unpack an unverified shared archive first.
+Creation rejects traversal, links, duplicate or aliased paths and special
+entries, with finite compressed, expanded, file and entry limits checked
+before file creation. Extracted files remain held through compilation. An
+explicit Cargo source replacement selects this namespace; generated checksum
+metadata alone cannot qualify content. The shared registry cache is not
+modified, and failed preparations preserve their incomplete target.
 
-The Rust child uses a separate Cargo home containing a fixed compiler/cache
-configuration and the existing public registry cache only. Its directory is
+The MP4 Rust child uses a separate Cargo home containing the fixed compiler
+configuration and no shared registry link. The earlier privacy-only software
+purpose retains its separate existing public-registry cache setup. The home is
 sealed against new entries through acknowledgement, so a later legacy `config`
 cannot override `config.toml`. The held configuration and the exact home
 namespace are rechecked before output acknowledgement. It starts at an

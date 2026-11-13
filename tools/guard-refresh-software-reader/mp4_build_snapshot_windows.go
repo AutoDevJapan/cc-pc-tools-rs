@@ -205,7 +205,7 @@ func materializeMP4BuildSnapshotWith(ctx context.Context, build softwareBuildPla
 			for i, source := range evidence.Inputs {
 				if source.Path == "Cargo.lock" {
 					found = true
-					if err := snapshot.resolveCargoLock(ctx, sources[i].Raw()); err != nil {
+					if err := snapshot.prepareLockedCargoInputsWith(ctx, sources[i].Raw(), readLockedCargoArchive, snapshot.resolveCargoLock); err != nil {
 						return nil, err
 					}
 				}
@@ -229,6 +229,13 @@ func materializeMP4BuildSnapshotWith(ctx context.Context, build softwareBuildPla
 		keys = append(keys, path)
 	}
 	sort.Strings(keys)
+	heldFiles := make(map[string]*os.File, len(snapshot.files))
+	for _, f := range snapshot.files {
+		if heldFiles[f.Name()] != nil {
+			return nil, errUpdateObject
+		}
+		heldFiles[f.Name()] = f
+	}
 	var manifest []byte
 	for _, path := range keys {
 		info, e := os.Stat(path)
@@ -238,21 +245,21 @@ func materializeMP4BuildSnapshotWith(ctx context.Context, build softwareBuildPla
 		if info.IsDir() {
 			continue
 		}
-		for _, f := range snapshot.files {
-			if sameCleanPath(f.Name(), path) {
-				if _, e = f.Seek(0, io.SeekStart); e != nil {
-					return nil, e
-				}
-				b, e := io.ReadAll(io.LimitReader(f, 8<<20))
-				if e != nil {
-					return nil, e
-				}
-				rel, _ := filepath.Rel(snapshot.Root, path)
-				manifest = append(manifest, []byte(filepath.ToSlash(rel)+"\n"+digest(b)+"\n")...)
-				clear(b)
-				break
-			}
+		f := heldFiles[path]
+		if f == nil {
+			return nil, errUpdateObject
 		}
+		if _, e = f.Seek(0, io.SeekStart); e != nil {
+			return nil, e
+		}
+		b, e := io.ReadAll(io.LimitReader(f, cargoVendorFileLimit+1))
+		if e != nil || len(b) > cargoVendorFileLimit || int64(len(b)) != info.Size() {
+			clear(b)
+			return nil, errors.Join(errUpdateObject, e)
+		}
+		rel, _ := filepath.Rel(snapshot.Root, path)
+		manifest = append(manifest, []byte(filepath.ToSlash(rel)+"\n"+digest(b)+"\n")...)
+		clear(b)
 	}
 	snapshot.ManifestSHA = digest(manifest)
 	clear(manifest)

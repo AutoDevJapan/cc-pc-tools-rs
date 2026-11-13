@@ -48,13 +48,16 @@ func mp4ConfigurationDigest(ctx context.Context) string {
 }
 
 func (s *softwareBuildSnapshot) cargoConfigurationUnchanged() bool {
-	if s == nil || len(s.files) != 1 || s.cacheLink == "" || !s.cargoDirectoryUnchanged() {
+	if s == nil || len(s.files) != 1 || !s.cargoDirectoryUnchanged() {
 		return false
 	}
 	entries, e := os.ReadDir(s.Root)
 	want := 3
 	if s.borrowedCargoDrive {
 		want = 2
+	}
+	if s.cacheLink == "" {
+		want--
 	}
 	if e != nil || len(entries) != want {
 		return false
@@ -64,9 +67,11 @@ func (s *softwareBuildSnapshot) cargoConfigurationUnchanged() bool {
 			return false
 		}
 	}
-	link, e := os.Readlink(s.cacheLink)
-	if e != nil || !sameCleanPath(link, mp4PublicCargoRegistry) {
-		return false
+	if s.cacheLink != "" {
+		link, e := os.Readlink(s.cacheLink)
+		if e != nil || !sameCleanPath(link, mp4PublicCargoRegistry) {
+			return false
+		}
 	}
 	f := s.files[0]
 	held, e1 := f.Stat()
@@ -91,11 +96,16 @@ func prepareMP4CargoContext(ctx context.Context, build softwareBuildPlan) (resul
 		return ctx, nil, errUpdateObject
 	}
 	registry := filepath.Join(home, "registry")
-	if e := os.Symlink(mp4PublicCargoRegistry, registry); e != nil {
-		return ctx, nil, e
+	sharedCache := build.Source != mp4Source
+	if sharedCache {
+		if e := os.Symlink(mp4PublicCargoRegistry, registry); e != nil {
+			return ctx, nil, e
+		}
 	}
 	config := &softwareBuildSnapshot{Root: home, paths: map[string]bool{}}
-	config.cacheLink = registry
+	if sharedCache {
+		config.cacheLink = registry
+	}
 	ok := false
 	defer func() {
 		if !ok {

@@ -14,6 +14,7 @@ import (
 	"sort"
 	"strconv"
 	"strings"
+	"syscall"
 )
 
 const cargoVendorFileLimit = 64 << 20
@@ -156,8 +157,26 @@ func (s *softwareBuildSnapshot) holdVendorFile(path string, total *int64) ([]byt
 type cargoArchiveReader func(context.Context, string, string) ([]byte, error)
 
 type cargoInputError struct {
-	cause string
+	cause    string
+	stage    string
+	err      error
+	progress *cargoArchiveProgress
+}
+
+type cargoArchiveReadError struct {
+	stage string
 	err   error
+}
+
+func (e *cargoArchiveReadError) Error() string { return "archive_read_failed" }
+func (e *cargoArchiveReadError) Unwrap() error { return e.err }
+
+type cargoArchiveProgress struct {
+	Expected  int   `json:"archives_expected"`
+	Completed int   `json:"archives_completed"`
+	Entries   int   `json:"entries_processed"`
+	Bytes     int64 `json:"bytes_admitted"`
+	ElapsedMS int64 `json:"elapsed_ms"`
 }
 
 func (e *cargoInputError) Error() string { return "cargo_input_" + e.cause }
@@ -167,7 +186,34 @@ func cargoInputDiagnostic(err error) *compilerDiagnostic {
 	if errors.As(err, &input) {
 		switch input.cause {
 		case "locked_archive_unavailable", "archive_expansion_rejected":
-			return &compilerDiagnostic{Cause: input.cause}
+			cause := input.cause
+			var errno syscall.Errno
+			var read *cargoArchiveReadError
+			d := &compilerDiagnostic{Cause: cause, InputStage: input.stage, ArchiveProgress: input.progress}
+			if errors.As(input.err, &read) {
+				d.InputStage = read.stage
+				if read.stage == "root_qualification" || read.stage == "leaf_qualification" {
+					cause = "archive_source_unqualified"
+				}
+			}
+			switch {
+			case errors.Is(input.err, context.DeadlineExceeded):
+				cause = "archive_input_deadline"
+			case errors.Is(input.err, context.Canceled):
+				cause = "archive_input_canceled"
+			case errors.As(input.err, &errno):
+				d.InputOSCode = uint32(errno)
+				switch errno {
+				case 32:
+					cause = "archive_sharing_violation"
+				case 5:
+					cause = "archive_access_denied"
+				case 2, 3:
+					cause = "archive_file_unavailable"
+				}
+			}
+			d.Cause = cause
+			return d
 		}
 	}
 	return nil

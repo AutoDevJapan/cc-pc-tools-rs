@@ -41,14 +41,29 @@ func cargoPackageDirectory(name string) bool {
 // Resolve the fixed public-cache directory by metadata, then retain the plain
 // physical namespace and the exact archive handle; no credentials are read.
 func readLockedCargoArchive(ctx context.Context, name, checksum string) ([]byte, error) {
-	return readQualifiedCargoArchive(ctx, cargoPublicArchiveAlias, cargoPublicArchiveRoot, name, checksum, qualifyPublicCargoPath)
+	return readQualifiedCargoArchiveWithQualifier(ctx, cargoPublicArchiveAlias, cargoPublicArchiveRoot, name, checksum, qualifyPublicCargoPathResult)
 }
 
 func qualifyPublicCargoPath(ctx context.Context, path string) bool {
+	return qualifyPublicCargoPathResult(ctx, path) == nil
+}
+
+var errArchiveSourceUnqualified = errors.New("public_archive_source_unqualified")
+
+func qualifyPublicCargoPathResult(ctx context.Context, path string) error {
+	if err := ctx.Err(); err != nil {
+		return err
+	}
 	r := askOwnedChild(ctx, installedGuardPath, "--guard-path", path)
 	defer clear(r.Raw)
+	if r.TimedOut {
+		if err := ctx.Err(); err != nil {
+			return err
+		}
+		return errArchiveSourceUnqualified
+	}
 	if !r.Started || !r.Assigned || !r.WaitVerified || !r.Reaped || r.TimedOut || r.Exit != 0 {
-		return false
+		return errArchiveSourceUnqualified
 	}
 	var v struct {
 		Allowed    bool   `json:"access_allowed"`
@@ -56,16 +71,34 @@ func qualifyPublicCargoPath(ctx context.Context, path string) bool {
 		Unverified bool   `json:"classification_unverified"`
 		Status     string `json:"protection_status"`
 	}
-	return json.Unmarshal(r.Raw, &v) == nil && v.Allowed && !v.Client && !v.Unverified && v.Status == "clear"
+	if json.Unmarshal(r.Raw, &v) != nil || !v.Allowed || v.Client || v.Unverified || v.Status != "clear" {
+		return errArchiveSourceUnqualified
+	}
+	return nil
 }
 
 func readQualifiedCargoArchive(ctx context.Context, alias, root, name, checksum string, qualify func(context.Context, string) bool) ([]byte, error) {
-	if ctx.Err() != nil || !cargoPackageDirectory(name) || !vendorSHA(checksum) || qualify == nil {
+	if qualify == nil {
+		return nil, errUpdateObject
+	}
+	return readQualifiedCargoArchiveWithQualifier(ctx, alias, root, name, checksum, func(ctx context.Context, path string) error {
+		if !qualify(ctx, path) {
+			return errArchiveSourceUnqualified
+		}
+		return nil
+	})
+}
+
+func readQualifiedCargoArchiveWithQualifier(ctx context.Context, alias, root, name, checksum string, qualify func(context.Context, string) error) ([]byte, error) {
+	if err := ctx.Err(); err != nil {
+		return nil, err
+	}
+	if !cargoPackageDirectory(name) || !vendorSHA(checksum) || qualify == nil {
 		return nil, errUpdateObject
 	}
 	physical, ok := openPlain(root, true)
 	if !ok {
-		return nil, errUpdateObject
+		return nil, &cargoArchiveReadError{stage: "root_open_or_identity", err: errUpdateObject}
 	}
 	defer syscall.CloseHandle(physical)
 	p, err := syscall.UTF16PtrFromString(alias)
@@ -74,12 +107,12 @@ func readQualifiedCargoArchive(ctx context.Context, alias, root, name, checksum 
 	}
 	logical, err := syscall.CreateFile(p, 0x80, syscall.FILE_SHARE_READ|syscall.FILE_SHARE_WRITE, nil, syscall.OPEN_EXISTING, 0x02000000, 0)
 	if err != nil {
-		return nil, errUpdateObject
+		return nil, &cargoArchiveReadError{stage: "alias_open", err: err}
 	}
 	defer syscall.CloseHandle(logical)
 	var a, b syscall.ByHandleFileInformation
 	if syscall.GetFileInformationByHandle(logical, &a) != nil || syscall.GetFileInformationByHandle(physical, &b) != nil || a.VolumeSerialNumber != b.VolumeSerialNumber || a.FileIndexHigh != b.FileIndexHigh || a.FileIndexLow != b.FileIndexLow {
-		return nil, errors.New("public_archive_root_identity_mismatch")
+		return nil, &cargoArchiveReadError{stage: "alias_identity", err: errUpdateObject}
 	}
 	// Pin the leaf's metadata before asking the ordinary path guard. This
 	// handle excludes replacement, but reads no body until qualification passes.
@@ -90,28 +123,41 @@ func readQualifiedCargoArchive(ctx context.Context, alias, root, name, checksum 
 	}
 	metadata, err := syscall.CreateFile(p, syscall.GENERIC_READ, syscall.FILE_SHARE_READ, nil, syscall.OPEN_EXISTING, 0x00200000, 0)
 	if err != nil {
-		return nil, errUpdateObject
+		return nil, &cargoArchiveReadError{stage: "leaf_open", err: err}
 	}
 	defer syscall.CloseHandle(metadata)
 	var leafInfo syscall.ByHandleFileInformation
 	actual, ok := handlePath(metadata)
 	if !ok || !sameCleanPath(actual, leaf) || syscall.GetFileInformationByHandle(metadata, &leafInfo) != nil || leafInfo.NumberOfLinks != 1 || leafInfo.FileAttributes&(syscall.FILE_ATTRIBUTE_REPARSE_POINT|syscall.FILE_ATTRIBUTE_DIRECTORY) != 0 {
-		return nil, errUpdateObject
+		return nil, &cargoArchiveReadError{stage: "leaf_identity", err: errUpdateObject}
 	}
-	if !qualify(ctx, root) || !qualify(ctx, filepath.Join(root, name+".crate")) {
-		return nil, errors.New("public_archive_source_unqualified")
+	for i, path := range []string{root, leaf} {
+		if err := qualify(ctx, path); err != nil {
+			stage := "root_qualification"
+			if i == 1 {
+				stage = "leaf_qualification"
+			}
+			return nil, &cargoArchiveReadError{stage: stage, err: err}
+		}
 	}
-	return readCargoArchiveAt(ctx, root, name, checksum, func(object *nativeUpdateObject) error {
+	raw, err := readCargoArchiveAt(ctx, root, name, checksum, func(object *nativeUpdateObject) error {
 		var current syscall.ByHandleFileInformation
 		if syscall.GetFileInformationByHandle(syscall.Handle(object.f.Fd()), &current) != nil || leafInfo.VolumeSerialNumber != current.VolumeSerialNumber || leafInfo.FileIndexHigh != current.FileIndexHigh || leafInfo.FileIndexLow != current.FileIndexLow {
 			return errUpdateObject
 		}
 		return nil
 	})
+	if err != nil {
+		return nil, &cargoArchiveReadError{stage: "body_read_or_verification", err: err}
+	}
+	return raw, nil
 }
 
 func readCargoArchiveAt(ctx context.Context, archiveRoot, name, checksum string, held func(*nativeUpdateObject) error) ([]byte, error) {
-	if ctx.Err() != nil || !cargoPackageDirectory(name) || !vendorSHA(checksum) {
+	if err := ctx.Err(); err != nil {
+		return nil, err
+	}
+	if !cargoPackageDirectory(name) || !vendorSHA(checksum) {
 		return nil, errUpdateObject
 	}
 	p, err := syscall.UTF16PtrFromString(archiveRoot)
@@ -142,7 +188,10 @@ func readCargoArchiveAt(ctx context.Context, archiveRoot, name, checksum string,
 		}
 	}
 	raw := object.Raw()
-	if ctx.Err() != nil || len(raw) == 0 || len(raw) > cargoArchiveLimit || digest(raw) != checksum {
+	if err := ctx.Err(); err != nil {
+		return nil, err
+	}
+	if len(raw) == 0 || len(raw) > cargoArchiveLimit || digest(raw) != checksum {
 		return nil, errors.New("locked_archive_checksum_mismatch")
 	}
 	// openUpdateObject's buffer remains pinned during this exact copy. Only
@@ -289,7 +338,10 @@ func (s *softwareBuildSnapshot) extractCargoArchive(ctx context.Context, name, c
 		if err == io.EOF {
 			break
 		}
-		if err != nil || expanded.N <= 0 || ctx.Err() != nil {
+		if err := ctx.Err(); err != nil {
+			return err
+		}
+		if err != nil || expanded.N <= 0 {
 			return errUpdateObject
 		}
 	}
@@ -316,6 +368,7 @@ func (s *softwareBuildSnapshot) extractLockedCargoVendorWithLimit(ctx context.Co
 	}
 	ctx, cancel := context.WithTimeout(ctx, 2*time.Minute)
 	defer cancel()
+	started := time.Now()
 	type archive struct{ name, sha string }
 	var packages []archive
 	seen := map[string]bool{}
@@ -337,25 +390,30 @@ func (s *softwareBuildSnapshot) extractLockedCargoVendorWithLimit(ctx context.Co
 	}
 	budget := cargoExpansionBudget{}
 	var compressed int64
+	completed := 0
+	failure := func(stage, cause string, err error) error {
+		return &cargoInputError{cause: cause, stage: stage, err: err, progress: &cargoArchiveProgress{Expected: len(packages), Completed: completed, Entries: budget.entries, Bytes: budget.bytes, ElapsedMS: time.Since(started).Milliseconds()}}
+	}
 	for _, pkg := range packages {
 		if err := ctx.Err(); err != nil {
-			return err
+			return failure("before_read", "locked_archive_unavailable", err)
 		}
 		raw, err := read(ctx, pkg.name, pkg.sha)
 		if err != nil {
 			clear(raw)
-			return &cargoInputError{cause: "locked_archive_unavailable", err: err}
+			return failure("archive_read", "locked_archive_unavailable", err)
 		}
 		if compressed > compressedLimit-int64(len(raw)) {
 			clear(raw)
-			return &cargoInputError{cause: "archive_expansion_rejected", err: errors.New("archive_compressed_budget_exceeded")}
+			return failure("compressed_budget", "archive_expansion_rejected", errors.New("archive_compressed_budget_exceeded"))
 		}
 		compressed += int64(len(raw))
 		err = s.extractCargoArchive(ctx, pkg.name, pkg.sha, raw, &budget)
 		clear(raw)
 		if err != nil {
-			return &cargoInputError{cause: "archive_expansion_rejected", err: err}
+			return failure("archive_expansion", "archive_expansion_rejected", err)
 		}
+		completed++
 	}
 	return s.exactOrError()
 }

@@ -13,9 +13,12 @@ import (
 type compilerDiagnosticContext struct{}
 
 type compilerDiagnostic struct {
-	Cause     string `json:"cause"`
-	RustCode  string `json:"rust_code,omitempty"`
-	Truncated bool   `json:"truncated"`
+	Cause           string                `json:"cause"`
+	RustCode        string                `json:"rust_code,omitempty"`
+	Truncated       bool                  `json:"truncated"`
+	ArchiveProgress *cargoArchiveProgress `json:"archive_progress,omitempty"`
+	InputStage      string                `json:"input_stage,omitempty"`
+	InputOSCode     uint32                `json:"input_os_code,omitempty"`
 }
 
 // Retain the end, where Cargo reports its cause, without allocating growing

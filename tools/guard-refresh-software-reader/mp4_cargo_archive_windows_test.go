@@ -12,6 +12,7 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"syscall"
 	"testing"
 	"time"
 )
@@ -246,6 +247,147 @@ func TestCargoArchiveInputFailureHasOnlyFixedDiagnostic(t *testing.T) {
 	}
 	if cargoInputDiagnostic(errors.New(secret)) != nil {
 		t.Fatal("raw error promoted to fixed cause")
+	}
+}
+
+func TestCargoArchiveDiagnosticDistinguishesDeadlineCancelAndOpen(t *testing.T) {
+	for _, tc := range []struct {
+		name string
+		err  error
+		want string
+	}{
+		{"deadline", context.DeadlineExceeded, "archive_input_deadline"},
+		{"cancel", context.Canceled, "archive_input_canceled"},
+		{"sharing", syscall.Errno(32), "archive_sharing_violation"},
+		{"denied", syscall.Errno(5), "archive_access_denied"},
+		{"missing", syscall.Errno(2), "archive_file_unavailable"},
+		{"unknown", errors.New("sensitive-owned-placeholder"), "locked_archive_unavailable"},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			s := newArchiveSnapshot(t)
+			lock := []byte("version = 4\n[[package]]\nname = \"owned\"\nversion = \"1.0.0\"\nsource = \"registry+https://github.com/rust-lang/crates.io-index\"\nchecksum = \"" + strings.Repeat("a", 64) + "\"\n")
+			err := s.admitCargoVendor(context.Background(), lock, func(context.Context, string, string) ([]byte, error) { return nil, tc.err })
+			d := cargoInputDiagnostic(err)
+			if d == nil || d.Cause != tc.want {
+				t.Fatalf("fixed diagnostic: got %#v, want %s", d, tc.want)
+			}
+			raw, e := json.Marshal(d)
+			if e != nil || bytes.Contains(raw, []byte("sensitive-owned-placeholder")) || strings.Contains(err.Error(), "sensitive-owned-placeholder") {
+				t.Fatal("raw archive failure exposed")
+			}
+		})
+	}
+}
+
+func TestCargoArchiveInputFailureReportsCompletedWorkWithoutPaths(t *testing.T) {
+	s := newArchiveSnapshot(t)
+	content := []byte("owned input")
+	raw := ownedCargoArchive(t, []*tar.Header{{Name: "first-1.0.0/source.rs", Size: int64(len(content)), Mode: 0600, Typeflag: tar.TypeReg}}, [][]byte{content})
+	defer clear(raw)
+	lock := []byte("version = 4\n[[package]]\nname = \"first\"\nversion = \"1.0.0\"\nsource = \"registry+https://github.com/rust-lang/crates.io-index\"\nchecksum = \"" + digest(raw) + "\"\n[[package]]\nname = \"second\"\nversion = \"1.0.0\"\nsource = \"registry+https://github.com/rust-lang/crates.io-index\"\nchecksum = \"" + strings.Repeat("b", 64) + "\"\n")
+	calls := 0
+	err := s.admitCargoVendor(context.Background(), lock, func(context.Context, string, string) ([]byte, error) {
+		calls++
+		if calls == 1 {
+			return append([]byte(nil), raw...), nil
+		}
+		return nil, context.DeadlineExceeded
+	})
+	d := cargoInputDiagnostic(err)
+	if d == nil || d.Cause != "archive_input_deadline" || d.ArchiveProgress == nil || d.ArchiveProgress.Expected != 2 || d.ArchiveProgress.Completed != 1 || d.ArchiveProgress.Entries != 1 || d.ArchiveProgress.Bytes < int64(len(content)) || d.ArchiveProgress.ElapsedMS < 0 || calls != 2 {
+		t.Fatalf("actual completed work unavailable: %#v", d)
+	}
+	b, e := json.Marshal(d)
+	if e != nil || bytes.Contains(b, []byte(s.Root)) || bytes.Contains(b, []byte("first-1.0.0")) || bytes.Contains(b, []byte("second-1.0.0")) {
+		t.Fatal("archive identity or source path exposed")
+	}
+}
+
+func TestCargoArchiveActualReadBoundariesRetainFixedCause(t *testing.T) {
+	for _, mode := range []string{"normal", "root_denied", "leaf_denied", "late_cancel", "missing", "sharing"} {
+		t.Run(mode, func(t *testing.T) {
+			root := physicalSoftwareFixture(t)
+			file := filepath.Join(root, "owned-1.0.0.crate")
+			raw := []byte("owned public software")
+			if mode != "missing" && os.WriteFile(file, raw, 0600) != nil {
+				t.Fatal("fixture write")
+			}
+			if mode == "sharing" {
+				p, _ := syscall.UTF16PtrFromString(file)
+				h, err := syscall.CreateFile(p, syscall.GENERIC_READ|syscall.GENERIC_WRITE, 0, nil, syscall.OPEN_EXISTING, 0, 0)
+				if err != nil {
+					t.Fatal("owned writer", err)
+				}
+				defer syscall.CloseHandle(h)
+			}
+			ctx, cancel := context.WithCancel(context.Background())
+			defer cancel()
+			calls := 0
+			got, err := readQualifiedCargoArchive(ctx, root, root, "owned-1.0.0", digest(raw), func(context.Context, string) bool {
+				calls++
+				if mode == "late_cancel" {
+					cancel()
+					return false
+				}
+				return !(mode == "root_denied" && calls == 1 || mode == "leaf_denied" && calls == 2)
+			})
+			defer clear(got)
+			if mode == "normal" {
+				if err != nil || !bytes.Equal(got, raw) || calls != 2 {
+					t.Fatal("normal read", err, calls)
+				}
+				return
+			}
+			if err == nil || got != nil {
+				t.Fatal("failed read returned bytes")
+			}
+			d := cargoInputDiagnostic(&cargoInputError{cause: "locked_archive_unavailable", err: err})
+			wantCause, wantStage, wantCode := "archive_source_unqualified", "root_qualification", uint32(0)
+			switch mode {
+			case "leaf_denied":
+				wantStage = "leaf_qualification"
+			case "late_cancel":
+				// A false qualification is the primary failure even when the
+				// context is canceled before its callback returns.
+				wantCause = "archive_source_unqualified"
+			case "missing":
+				wantCause, wantStage, wantCode = "archive_file_unavailable", "leaf_open", 2
+			case "sharing":
+				wantCause, wantStage, wantCode = "archive_sharing_violation", "leaf_open", 32
+			}
+			if d == nil || d.Cause != wantCause || d.InputStage != wantStage || d.InputOSCode != wantCode {
+				t.Fatalf("boundary diagnostic: %#v", d)
+			}
+			encoded, e := json.Marshal(d)
+			if e != nil || bytes.Contains(encoded, []byte(root)) || bytes.Contains(encoded, []byte("owned-1.0.0")) {
+				t.Fatal("path exposed")
+			}
+		})
+	}
+}
+
+func TestCargoArchiveExplicitQualifierFailureRetainsContextCause(t *testing.T) {
+	for _, tc := range []struct {
+		name string
+		err  error
+		want string
+	}{
+		{"deadline", context.DeadlineExceeded, "archive_input_deadline"},
+		{"canceled", context.Canceled, "archive_input_canceled"},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			root := physicalSoftwareFixture(t)
+			raw := []byte("owned archive")
+			if os.WriteFile(filepath.Join(root, "owned-1.0.0.crate"), raw, 0600) != nil {
+				t.Fatal("fixture")
+			}
+			calls := 0
+			got, err := readQualifiedCargoArchiveWithQualifier(context.Background(), root, root, "owned-1.0.0", digest(raw), func(context.Context, string) error { calls++; return tc.err })
+			d := cargoInputDiagnostic(&cargoInputError{cause: "locked_archive_unavailable", err: err})
+			if got != nil || calls != 1 || d == nil || d.Cause != tc.want || d.InputStage != "root_qualification" {
+				t.Fatalf("reported qualifier failure lost: %#v", d)
+			}
+		})
 	}
 }
 

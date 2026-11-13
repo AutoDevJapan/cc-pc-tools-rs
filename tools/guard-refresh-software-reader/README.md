@@ -127,6 +127,10 @@ tail buffers and erased on return; paths, source lines and error messages are
 not returned or written to receipts. Protocol workers retain their stricter
 complete-output and empty-stderr requirements. A diagnostic never authorizes
 preparation or makes a failed build successful.
+Archive-input failures also retain fixed read/qualification stages, OS error
+numbers when available, completed/expected archive counts and elapsed time.
+These counters describe admitted work, not a completed or qualified snapshot.
+The existing input deadline and all verification checks remain in force.
 The pipe reader also owns and clears its fixed read scratch buffer; this is a
 bounded application-buffer guarantee, not complete erasure of Go or OS memory.
 

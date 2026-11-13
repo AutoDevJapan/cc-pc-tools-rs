@@ -51,6 +51,13 @@ type askChildWorkingDirectory struct{}
 type askChildEnvironment struct{}
 type askChildExactEnvironment struct{}
 
+type askChildCaptureKey struct{}
+
+type askChildCapture struct {
+	BeforeResume func(uint32, uint64) error
+	Stdout       io.Writer
+}
+
 func askChildEnvironmentValues(ctx context.Context, parent []string, permit string) []string {
 	var result []string
 	if exact, _ := ctx.Value(askChildExactEnvironment{}).(bool); !exact {
@@ -157,12 +164,22 @@ func askOwnedChildWithHandshake(ctx context.Context, executable string, onReady 
 	cmd.Stderr = &errOut
 	compilerMode, _ := ctx.Value(compilerDiagnosticContext{}).(bool)
 	compilerMode = compilerMode && onReady == nil
+	capture, hasCapture := ctx.Value(askChildCaptureKey{}).(askChildCapture)
+	hasCapture = hasCapture && onReady == nil
 	var compilerOut, compilerErr *compilerCapture
 	if compilerMode {
 		compilerOut, compilerErr = new(compilerCapture), new(compilerCapture)
 		defer compilerOut.erase()
 		defer compilerErr.erase()
 		cmd.Stdout, cmd.Stderr = compilerOut, compilerErr
+	}
+	if hasCapture && capture.Stdout != nil {
+		cmd.Stdout = capture.Stdout
+		if compilerErr == nil {
+			compilerErr = new(compilerCapture)
+			defer compilerErr.erase()
+			cmd.Stderr = compilerErr
+		}
 	}
 	var ready *askReadyCapture
 	var input io.WriteCloser
@@ -180,11 +197,19 @@ func askOwnedChildWithHandshake(ctx context.Context, executable string, onReady 
 		return
 	}
 	result.Started = true
-	process, err := syscall.OpenProcess(0x0100|0x0001|0x0800, false, uint32(cmd.Process.Pid))
+	process, err := syscall.OpenProcess(0x0100|0x0001|0x0800|0x1000, false, uint32(cmd.Process.Pid))
 	assigned := false
 	if err == nil {
 		ok, _, _ = kernel.NewProc("AssignProcessToJobObject").Call(job, uintptr(process))
 		assigned = ok != 0
+		if assigned && hasCapture {
+			var created, exited, kernelTime, userTime syscall.Filetime
+			if syscall.GetProcessTimes(process, &created, &exited, &kernelTime, &userTime) != nil || capture.BeforeResume == nil {
+				assigned = false
+			} else if capture.BeforeResume(uint32(cmd.Process.Pid), uint64(created.HighDateTime)<<32|uint64(created.LowDateTime)) != nil || ctx.Err() != nil {
+				assigned = false
+			}
+		}
 		if assigned {
 			code, _, _ := syscall.NewLazyDLL("ntdll.dll").NewProc("NtResumeProcess").Call(uintptr(process))
 			if code != 0 {
@@ -304,7 +329,7 @@ loop:
 	if compilerMode && assigned && result.WaitVerified && result.Reaped && !result.TimedOut && result.Exit != 0 {
 		result.Diagnostic = compilerCause(compilerOut.data[:compilerOut.n], compilerErr.data[:compilerErr.n], compilerOut.truncated || compilerErr.truncated)
 	}
-	if !compilerMode && assigned && result.WaitVerified && result.Reaped && !result.TimedOut && (waitErr == nil || result.Exit == 1) && errOut.Len() == 0 {
+	if !compilerMode && !hasCapture && assigned && result.WaitVerified && result.Reaped && !result.TimedOut && (waitErr == nil || result.Exit == 1) && errOut.Len() == 0 {
 		if ready != nil {
 			out.Buffer = ready.Buffer
 			if out.Len() == 0 && result.Exit != 0 {

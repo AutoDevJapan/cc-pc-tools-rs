@@ -85,6 +85,40 @@ fn purpose_status_classifies_one_actual_failed_launch_without_returning_stderr()
 }
 
 #[test]
+fn purpose_status_current_assigned_attempt_preserves_binding_before_stderr() {
+    let t = Test::new();
+    let id = "20261113-082647-4431-fourbros-310-current-job-next-pwa";
+    let saved = json!({"id":id,"status":"failed","resume_session":"01a1bdce-c2db-7792-a036-79044f46d9fb","launch_key":"9dca71420eaa43458ad8d9c5cfe310f3","exit_code":1,"steps":0});
+    t.put(saved.clone());
+    let stderr = t.ctx.job_dir(id).join("stderr.log");
+    fs::write(&stderr, "session not found PRIVATE_BOUND_INPUT").unwrap();
+    let args = ["status", "--job-id", id, "--json", "--purpose", "fourbros-1245-launch-failure"];
+    let (code, output, _) = t.cli(&args);
+    assert_eq!(code.unwrap(), 0);
+    let value: Value = serde_json::from_str(&output).unwrap();
+    assert_eq!(value["reason"], "session_unavailable");
+    assert_eq!(value["id"], id);
+    assert!(!output.contains("PRIVATE_BOUND_INPUT"));
+    for (field, wrong) in [
+        ("resume_session", "other-session"),
+        ("launch_key", "833000ec664b46b3ba3356da827a4321"),
+        ("status", "running"),
+    ] {
+        let mut job = saved.clone();
+        job[field] = json!(wrong);
+        t.put(job);
+        let opened = Arc::new(AtomicBool::new(false));
+        let spy = opened.clone();
+        let exact = stderr.clone();
+        *t.rt.load_hook.lock().unwrap() = Some(Box::new(move |path, _| {
+            if path == exact { spy.store(true, Ordering::Relaxed); }
+        }));
+        assert!(t.cli(&args).0.is_err());
+        assert!(!opened.load(Ordering::Relaxed));
+    }
+}
+
+#[test]
 fn purpose_status_rejects_original_binding_before_diagnostic_open(){
     let t=Test::new();let id="20261112-093913-4431-fourbros-pr1245-normal-job-prd-qa";
     t.put(json!({"id":id,"status":"failed","resume_session":"other","launch_key":"7e5809fa41664dc988379e7163284acc"}));

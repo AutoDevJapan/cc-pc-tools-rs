@@ -34,6 +34,7 @@ type askSoftwarePlan struct {
 	Candidate, Proof, Source, SHA, ProofSHA string
 	Bytes                                   int
 	GoRunner                                bool
+	VerifiedMerge                           string
 }
 
 type softwareBaseline struct {
@@ -97,6 +98,10 @@ func askCandidateMatches(raw, proofRaw []byte, plan askSoftwarePlan, git func(..
 }
 
 func askCandidateMatchesContext(ctx context.Context, raw, proofRaw []byte, plan askSoftwarePlan, git func(...string) ([]byte, bool)) bool {
+	return askCandidateMatchesWithReference(ctx, raw, proofRaw, plan, git, askSourceComparison)
+}
+
+func askCandidateMatchesWithReference(ctx context.Context, raw, proofRaw []byte, plan askSoftwarePlan, git func(...string) ([]byte, bool), selectReference func(askSoftwarePlan, func(...string) ([]byte, bool)) (string, bool)) bool {
 	if ctx.Err() != nil {
 		return false
 	}
@@ -115,7 +120,11 @@ func askCandidateMatchesContext(ctx context.Context, raw, proofRaw []byte, plan 
 	if !ok {
 		return false
 	}
-	treeArgs[3] = "refs/remotes/origin/main"
+	comparison, ok := selectReference(plan, git)
+	if !ok {
+		return false
+	}
+	treeArgs[3] = comparison
 	merged, ok := git(treeArgs...)
 	if !ok || !bytes.Equal(tree, merged) {
 		return false
@@ -199,6 +208,25 @@ func askCandidateMatchesContext(ctx context.Context, raw, proofRaw []byte, plan 
 		verified[header.Name] = true
 	}
 	return ctx.Err() == nil && len(verified) == len(proof.Sources)
+}
+
+func askSourceComparison(plan askSoftwarePlan, git func(...string) ([]byte, bool)) (string, bool) {
+	if plan.VerifiedMerge == "" {
+		return "refs/remotes/origin/main", true
+	}
+	// The completed fixed project artifact remains bound to the source tree
+	// independently reviewed before its producer ran. Later main commits do
+	// not change that history or make an old artifact a build of the new source.
+	if plan.GoRunner || plan.Source != mp4Source || plan.Candidate != mp4AskPlan.Candidate || plan.Proof != mp4AskPlan.Proof || plan.SHA != "0a693fa7013d733b3e7fbb009227cb37f4e2705e1d087ab40a4f5bf8857e9747" || plan.ProofSHA != "85dfadb0b549d4a9970c24ee4c1b11c7cd2d4b59019ce3c8bdbc92709ac9ddeb" || plan.Bytes != 13560320 || plan.VerifiedMerge != "60bf5f02db14813a8fe6a1c16ca780b9e9048cef" {
+		return "", false
+	}
+	if _, ok := git("merge-base", "--is-ancestor", plan.Source, plan.VerifiedMerge); !ok {
+		return "", false
+	}
+	if _, ok := git("merge-base", "--is-ancestor", plan.VerifiedMerge, "refs/remotes/origin/main"); !ok {
+		return "", false
+	}
+	return plan.VerifiedMerge, true
 }
 
 func executeAskSoftware(prepare bool, plan askSoftwarePlan, b updateBoundary) (r updateResult) {

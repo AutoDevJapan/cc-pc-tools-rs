@@ -75,12 +75,27 @@ build/export names. Neither accepts a caller-selected path or digest. Source
 buffers are matched to merged input blobs, then materialized under a new build
 namespace and held through output acknowledgement. The Go compiler receives
 only selected, proved files and explicitly disables automatic PGO inputs.
-Rust uses the six required crates in a deterministic workspace. An offline
-derived lock is admitted only when every package version, registry and checksum
-already occurs in the original lock; its digest is recorded with the snapshot.
+Rust uses the six required crates in a deterministic workspace. Before any
+resolution, the fixed software purpose verifies and expands every public
+package archive selected by the original admitted lock. Each archive's held
+bytes must hash to its locked checksum; those same bytes become the owned
+compiler inputs. Resolution then derives a smaller lock from those verified
+inputs. Every resulting package version, registry and checksum must already
+occur in the original lock; its digest is recorded with the snapshot.
+The fixed logical cache and its separately qualified physical root must have
+the same held directory identity before a package body is opened. Resolution
+then uses the verified directory source and a Cargo home without a shared
+registry link; it cannot unpack an unverified shared archive first.
+Creation rejects traversal, links, duplicate or aliased paths and special
+entries, with finite compressed, expanded, file and entry limits checked
+before file creation. Extracted files remain held through compilation. An
+explicit Cargo source replacement selects this namespace; generated checksum
+metadata alone cannot qualify content. The shared registry cache is not
+modified, and failed preparations preserve their incomplete target.
 
-The Rust child uses a separate Cargo home containing a fixed compiler/cache
-configuration and the existing public registry cache only. Its directory is
+The MP4 Rust child uses a separate Cargo home containing the fixed compiler
+configuration and no shared registry link. The earlier privacy-only software
+purpose retains its separate existing public-registry cache setup. The home is
 sealed against new entries through acknowledgement, so a later legacy `config`
 cannot override `config.toml`. The held configuration and the exact home
 namespace are rechecked before output acknowledgement. It starts at an
@@ -112,12 +127,37 @@ tail buffers and erased on return; paths, source lines and error messages are
 not returned or written to receipts. Protocol workers retain their stricter
 complete-output and empty-stderr requirements. A diagnostic never authorizes
 preparation or makes a failed build successful.
+Archive-input failures also retain fixed read/qualification stages, OS error
+numbers when available, completed/expected archive counts and elapsed time.
+Materialized bytes count only file creation and held-content verification that
+succeeded; entry counts describe processed headers. Budget reservation remains
+separate. These counters do not prove a completed or qualified snapshot.
+If guard completion and cancellation cannot be ordered, the diagnostic keeps
+the input unqualified and reports the observed context separately; it does not
+invent a primary timeout. OS codes are limited to the documented fixed causes.
+Within one archive-expansion operation, an already qualified root is reused
+only while a read/list handle pins its exact identity without delete sharing.
+Every archive leaf still receives its ordinary qualification and held checksum
+verification. Root leases end with that operation; no cross-operation cache or
+deadline extension is introduced.
+Archive payload validation and total-budget reservation remain serial. Up to
+two operation-owned file writers may flush and complete their usual held
+verification concurrently. The controller alone collects files and counters,
+and drains every started writer before success or failure is returned.
+The existing input deadline and all verification checks remain in force.
 The pipe reader also owns and clears its fixed read scratch buffer; this is a
 bounded application-buffer guarantee, not complete erasure of Go or OS memory.
 
 New snapshot directories temporarily exclude new entries. Original ACLs are
 captured before any directory is sealed, restored in parent-first order, and
 read back. A final exact namespace check follows sealing before compilation.
+New files are flushed and checked through their creator handle, then handed
+to a read-only file object for compiler compatibility. During this handoff,
+overlapping handles exclude replacement and a temporary read-only DACL on
+only that operation-owned file blocks ordinary new writers. After acquiring
+the final read-only sharing pin, the complete held content is hashed again
+against its pre-handoff digest. A same-owner ACL change cannot make altered
+content pass that check. The original DACL is then restored and read back.
 Cleanup attempts every handle even when one operation fails, including failed
 construction; primary and cleanup errors remain distinguishable. The
 producer's final response must confirm cleanup and match its ready artifact,

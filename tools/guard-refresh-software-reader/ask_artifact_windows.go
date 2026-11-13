@@ -43,9 +43,9 @@ func mp4BuildPlan(kind string) (softwareBuildPlan, bool) {
 	}
 	target := updateSourceRoot + "/codex-owned-b30691d5cc845d615ea1be06bb0d3de3/" + kind + "-project-3a69-build"
 	if kind == "ask" {
-		// The first attempt failed without exporting. Preserve that snapshot
-		// and start the diagnostic-qualified producer in a fresh namespace.
-		target += "-v2"
+		// Preserve both failed registry-alias attempts. This generation uses
+		// checked, held offline vendor inputs in a new producer namespace.
+		target += "-v7"
 	}
 	if kind == "ask" {
 		return softwareBuildPlan{mp4Source, "D:/CC/Tools/codex-jobs/fourbros4431-project-source-3a69-inputs.json", "956ad08d964b9cdf710698e429c606279e0f93cf766a52a58a989a9baf9fba7f", target, target + "/release/discord_ask.exe", target + "/release/deps/discord_ask.exe", p.Candidate, "D:/CC/Tools/codex-jobs/fourbros4431-project-ask-producer.json", 209, false}, true
@@ -531,6 +531,7 @@ func runSoftwareBuildWorker(build softwareBuildPlan, out io.Writer, inherited ..
 				}
 				snapshot, e = materializeMP4BuildSnapshotContext(inputCtx, build, evidence, sources)
 				if e != nil {
+					r.CompilerDiagnostic = cargoInputDiagnostic(e)
 					r.Reason = "source_snapshot_incomplete_preserved"
 					if errors.Is(e, errSnapshotCleanup) {
 						r.Reason = "source_snapshot_cleanup_failed_preserved"
@@ -571,7 +572,9 @@ func runSoftwareBuildWorker(build softwareBuildPlan, out io.Writer, inherited ..
 					// +nightly is not required: the executable accepts no -C until
 					// unstable, so spawn from that cwd using the owned child helper.
 					cwd, _ := cargoCtx.Value(mp4CargoDirectory{}).(string)
-					built = askOwnedChildAt(buildCtx, cwd, "D:/CC/Tools/codex-jobs/cargo_gate.exe", "build", "--locked", "--offline", "--release", "--manifest-path", compileRoot+"/Cargo.toml", "--target-dir", build.Target, "-p", "cc-ask", "--bin", "discord_ask")
+					argv := []string{"build", "--locked", "--offline", "--release", "--manifest-path", compileRoot + "/Cargo.toml", "--target-dir", build.Target, "-p", "cc-ask", "--bin", "discord_ask"}
+					argv = append(argv, cargoVendorBuildArgs(compileRoot)...)
+					built = askOwnedChildAt(buildCtx, cwd, "D:/CC/Tools/codex-jobs/cargo_gate.exe", argv...)
 				} else {
 					built = askOwnedChild(buildCtx, "D:/CC/Tools/codex-jobs/cargo_gate.exe", "build", "--locked", "--release", "--manifest-path", compileRoot+"/Cargo.toml", "--target-dir", build.Target, "-p", "cc-ask", "--bin", "discord_ask")
 				}

@@ -82,7 +82,9 @@ func (s *softwareBuildSnapshot) resolveCargoLock(ctx context.Context, original [
 	if cwd == "" {
 		return errUpdateObject
 	}
-	r := askOwnedChildAt(ctx, cwd, "C:/Users/makhmeto/.rustup/toolchains/1.95.0-x86_64-pc-windows-msvc/bin/cargo.exe", "tree", "--offline", "--manifest-path", filepath.Join(s.Root, "Cargo.toml"), "-p", "cc-ask", "--depth", "0")
+	argv := []string{"tree", "--offline", "--manifest-path", filepath.Join(s.Root, "Cargo.toml"), "-p", "cc-ask", "--depth", "0"}
+	argv = append(argv, cargoVendorBuildArgs(s.Root)...)
+	r := askOwnedChildAt(ctx, cwd, "C:/Users/makhmeto/.rustup/toolchains/1.95.0-x86_64-pc-windows-msvc/bin/cargo.exe", argv...)
 	defer clear(r.Raw)
 	if r.Exit != 0 || !r.Reaped || r.TimedOut {
 		return errUpdateObject
@@ -105,4 +107,14 @@ func (s *softwareBuildSnapshot) resolveCargoLock(ctx context.Context, original [
 	n.raw = nil
 	s.paths[path] = true
 	return nil
+}
+
+func (s *softwareBuildSnapshot) prepareLockedCargoInputsWith(ctx context.Context, original []byte, read cargoArchiveReader, resolve func(context.Context, []byte) error) error {
+	if resolve == nil {
+		return errUpdateObject
+	}
+	if err := s.admitCargoVendor(ctx, original, read); err != nil {
+		return err
+	}
+	return resolve(ctx, original)
 }

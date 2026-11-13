@@ -29,3 +29,10 @@ which reports `attempted: false` may only have reused a still-valid identity;
 it does not renew that time. An expired identity and a classification deadline
 are different failures. The diagnostic performs no extra network lookup or
 cache write. Existing finite background refresh behavior remains unchanged.
+
+Physical resolution has its own call count, elapsed milliseconds and fixed
+state (`same`, `mismatch`, `not_found` or `unavailable`). This precheck is
+outside the classification context budget. Identity phase context state
+records cancellation observed before the call, during the call, or different
+observations across multiple calls. It does not identify the cause of a slow
+lookup or expose paths, repository names or error text.

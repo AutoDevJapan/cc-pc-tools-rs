@@ -9,7 +9,7 @@ function Get-MP4DeploymentPlan([string]$Selected){
     $root='C:/Users/makhmeto/Documents/Codex/2026-11-07/ika-x20/work/4431-ui-tools'
     $source='3a69da420e2797c501eb40dd3c660394f8b7cb3b'
     switch -CaseSensitive ($Selected){
-        'ask' {return @{target='D:/CC/Tools/discord-ask/discord_ask.exe';beforeSha256='6d22dc15797c821794a56e9d05c432b4a1694369e6d97628925580ec42c29a28';beforeIdentity='1215965535:281474995436467';beforeAcl='6064032359202b73f60c351b40ceb9d609c84d4205d745321ede80762345587c';candidate=$root+'/codex-owned-f60f3742a1933562ec75aa5c8eb05d72/discord_ask-project-3a69.exe';candidateSha256='';candidateBytes=0;source=$source;sourceMerged=$source;stage='D:/CC/Tools/discord-ask/discord_ask.project3a69.stage.exe';backup='D:/CC/Tools/discord-ask/discord_ask.project3a69.before.exe'}}
+        'ask' {return @{target='D:/CC/Tools/discord-ask/discord_ask.exe';beforeSha256='6d22dc15797c821794a56e9d05c432b4a1694369e6d97628925580ec42c29a28';beforeIdentity='1215965535:281474995436467';beforeAcl='6064032359202b73f60c351b40ceb9d609c84d4205d745321ede80762345587c';candidate=$root+'/codex-owned-f60f3742a1933562ec75aa5c8eb05d72/discord_ask-project-3a69.exe';candidateSha256='0a693fa7013d733b3e7fbb009227cb37f4e2705e1d087ab40a4f5bf8857e9747';candidateBytes=13560320;source=$source;sourceMerged=$source;stage='D:/CC/Tools/discord-ask/discord_ask.project3a69.stage.exe';backup='D:/CC/Tools/discord-ask/discord_ask.project3a69.before.exe'}}
         'runner' {return @{target='D:/CC/Tools/discord-ask/unattended-runner.exe';beforeSha256='385f4207dd5491cc0c88060f71f1e270b543e42a1c45898b1de15348afb7efb4';beforeIdentity='1215965535:844424946531910';beforeAcl='44dc0d97e005be11daca911fc4677371297dc38382d44d6151c1b8679f181b08';candidate=$root+'/codex-owned-f60f3742a1933562ec75aa5c8eb05d72/unattended-runner-project-3a69.exe';candidateSha256='';candidateBytes=0;source=$source;sourceMerged=$source;stage='D:/CC/Tools/discord-ask/unattended-runner.project3a69.stage.exe';backup='D:/CC/Tools/discord-ask/unattended-runner.project3a69.before.exe'}}
         default {throw 'unknown_fixed_software'}
     }
@@ -58,8 +58,8 @@ function New-MP4DeploymentOperations($Plan,[string]$Receipt,[scriptblock]$Qualif
 if($mp4Library){return}
 $plan=Get-MP4DeploymentPlan $Kind
 $repo='C:/Users/makhmeto/Documents/Codex/2026-11-07/ika-x20/work/4431-ui-tools'
-$reader=$repo+'/codex-owned-b30691d5cc845d615ea1be06bb0d3de3/project-software-reader-final.exe'
-$readerSha=''
+$reader=$repo+'/codex-owned-b30691d5cc845d615ea1be06bb0d3de3/project-software-reader-history.exe'
+$readerSha='f4a037b36dd9b9a4f7b4d23d6e69c2f47c0c735325ab0c87efa041011c28dd15'
 $receipt='D:/CC/Tools/codex-jobs/fourbros4431-project-'+$Kind+'-installed.json'
 if(-not $mp4Apply){@{apply=$false;kind=$Kind;targetRead=0;candidateBound=($plan.candidateSha256.Length -eq 64);readerBound=($readerSha.Length -eq 64)}|ConvertTo-Json -Compress;return}
 if($readerSha -cnotmatch '^[a-f0-9]{64}$' -or $plan.candidateSha256 -cnotmatch '^[a-f0-9]{64}$' -or $plan.candidateBytes -le 0){throw 'reviewed_mp4_binary_not_bound'}

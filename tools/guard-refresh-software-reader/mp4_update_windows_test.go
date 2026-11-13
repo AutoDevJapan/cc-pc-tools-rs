@@ -3,13 +3,113 @@
 package main
 
 import (
+	"archive/tar"
 	"bytes"
 	"context"
+	"crypto/sha1"
+	"encoding/hex"
+	"encoding/json"
 	"errors"
+	"fmt"
 	"os"
 	"strings"
 	"testing"
 )
+
+func TestMP4AskReviewedMergeRemainsBoundWhenMainAdvances(t *testing.T) {
+	for _, fault := range []string{"normal", "merge_not_ancestor", "source_not_ancestor", "history_tree_changed", "archive_changed", "wrong_fixed_artifact", "wrong_history_merge", "legacy_main_changed"} {
+		t.Run(fault, func(t *testing.T) {
+			plan := mp4AskPlan
+			body := []byte("owned immutable source\n")
+			h := sha1.New()
+			fmt.Fprintf(h, "blob %d\x00", len(body))
+			h.Write(body)
+			blob := hex.EncodeToString(h.Sum(nil))
+			rawArtifact := []byte("owned artifact")
+			proof := askSoftwareProof{Head: plan.Source, Candidate: plan.Candidate, SHA: digest(rawArtifact), Bytes: len(rawArtifact), Sources: []buildSourceRecord{{Path: "cc-ask/src/main.rs", Blob: blob, SHA: digest(body)}}}
+			encoded, _ := json.Marshal(proof)
+			sourcePlan := plan
+			sourcePlan.SHA, sourcePlan.ProofSHA, sourcePlan.Bytes = digest([]byte("owned artifact")), digest(encoded), len("owned artifact")
+			// Exercise the immutable comparison selector separately with its exact
+			// completed-artifact pins; the shared validator still checks all bytes.
+			if fault == "wrong_fixed_artifact" {
+				plan.SHA = strings.Repeat("0", 64)
+			}
+			if fault == "wrong_history_merge" {
+				plan.VerifiedMerge = strings.Repeat("f", 40)
+			}
+			if fault == "legacy_main_changed" {
+				plan.VerifiedMerge = ""
+			}
+			calls := 0
+			comparison, ok := askSourceComparison(plan, func(args ...string) ([]byte, bool) {
+				calls++
+				if strings.Join(args, "\x00") == strings.Join([]string{"merge-base", "--is-ancestor", plan.Source, plan.VerifiedMerge}, "\x00") {
+					return nil, fault != "source_not_ancestor"
+				}
+				if strings.Join(args, "\x00") == strings.Join([]string{"merge-base", "--is-ancestor", plan.VerifiedMerge, "refs/remotes/origin/main"}, "\x00") {
+					return nil, fault != "merge_not_ancestor"
+				}
+				t.Fatal("unexpected history command")
+				return nil, false
+			})
+			want := fault == "normal" || fault == "history_tree_changed" || fault == "archive_changed" || fault == "legacy_main_changed"
+			if ok != want {
+				t.Fatal("history selector outcome", fault, ok)
+			}
+			if !ok {
+				return
+			}
+			if fault == "legacy_main_changed" {
+				if comparison != "refs/remotes/origin/main" || calls != 0 {
+					t.Fatal("legacy current-main contract changed")
+				}
+			} else if comparison != "60bf5f02db14813a8fe6a1c16ca780b9e9048cef" || calls != 2 {
+				t.Fatal("history merge not pinned")
+			}
+			var archive bytes.Buffer
+			w := tar.NewWriter(&archive)
+			_ = w.WriteHeader(&tar.Header{Name: "cc-ask/src/main.rs", Mode: 0600, Typeflag: tar.TypeReg, Size: int64(len(body))})
+			archivedBody := append([]byte(nil), body...)
+			if fault == "archive_changed" {
+				archivedBody[0] = 'X'
+			}
+			_, _ = w.Write(archivedBody)
+			_ = w.Close()
+			trees := 0
+			archiveCalls := 0
+			valid := askCandidateMatchesWithReference(context.Background(), rawArtifact, encoded, sourcePlan, func(args ...string) ([]byte, bool) {
+				switch args[0] {
+				case "merge-base":
+					if strings.Join(args, "\x00") != strings.Join([]string{"merge-base", "--is-ancestor", sourcePlan.Source, "refs/remotes/origin/main"}, "\x00") {
+						t.Fatal("source ancestry arguments changed")
+					}
+					return nil, true
+				case "ls-tree":
+					trees++
+					if trees == 2 && args[3] != comparison {
+						t.Fatal("validator did not consume selected reference")
+					}
+					if trees == 2 && (fault == "history_tree_changed" || fault == "legacy_main_changed") {
+						return []byte("changed tree"), true
+					}
+					return []byte("100644 blob " + blob + "\tcc-ask/src/main.rs\x00"), true
+				case "archive":
+					archiveCalls++
+					return archive.Bytes(), true
+				}
+				t.Fatal("unexpected proof command")
+				return nil, false
+			}, func(askSoftwarePlan, func(...string) ([]byte, bool)) (string, bool) { return comparison, true })
+			if valid != (fault == "normal") {
+				t.Fatal("history tree/archive accepted mismatched source", fault, valid)
+			}
+			if fault == "normal" && archiveCalls != 1 || (fault == "history_tree_changed" || fault == "legacy_main_changed") && archiveCalls != 0 {
+				t.Fatal("source stage order changed")
+			}
+		})
+	}
+}
 
 func TestProjectDistributionPinsMergedHistoryWithoutReusingOldBuild(t *testing.T) {
 	const source = "3a69da420e2797c501eb40dd3c660394f8b7cb3b"
@@ -29,8 +129,11 @@ func TestProjectDistributionPinsMergedHistoryWithoutReusingOldBuild(t *testing.T
 		if build.Inputs != wantInputs || build.ProofSHA != wantProof {
 			t.Fatal("reviewed source set does not match its purpose")
 		}
-		if mp4PlanReady(plan, baseline) {
-			t.Fatal("unbuilt distribution gained preparation permission")
+		if mp4PlanReady(plan, baseline) != (kind == "ask") {
+			t.Fatal("only the completed ask producer may enable preparation")
+		}
+		if kind == "ask" && (plan.SHA != "0a693fa7013d733b3e7fbb009227cb37f4e2705e1d087ab40a4f5bf8857e9747" || plan.ProofSHA != "85dfadb0b549d4a9970c24ee4c1b11c7cd2d4b59019ce3c8bdbc92709ac9ddeb" || plan.Bytes != 13560320) {
+			t.Fatal("completed artifact or source proof changed")
 		}
 	}
 }

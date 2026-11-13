@@ -127,15 +127,53 @@ func generate(source []byte, departmentSources ...[]byte) ([]byte, error) {
 	if len(groups) == 0 {
 		return nil, fmt.Errorf("empty catalogue")
 	}
+	// Internal work projects are not products or aliases of software. Project
+	// registration still supplies the actual root; this declares only department.
+	internalSHA := ""
+	internal := regexp.MustCompile(`(?s)pub const INTERNAL_PROJECTS: &\[\(&str, usize\)\] = &\[(.*?)\];`).FindAllSubmatch(source, -1)
+	if len(internal) > 1 || (len(internal) == 0 && bytes.Contains(source, []byte("pub const INTERNAL_PROJECTS"))) {
+		return nil, fmt.Errorf("internal project declaration ambiguous")
+	}
+	if len(internal) == 1 {
+		internalSHA = digest(internal[0][0])
+		entry := regexp.MustCompile(`\(\s*("[^"\\]*(?:\\.[^"\\]*)*")\s*,\s*([0-9]+)\s*\)`)
+		if rest := strings.TrimSpace(string(entry.ReplaceAll(internal[0][1], nil))); strings.Trim(rest, ", \r\n\t") != "" {
+			return nil, fmt.Errorf("internal project declaration invalid")
+		}
+		seen := map[string]bool{}
+		for _, row := range entry.FindAllSubmatch(internal[0][1], -1) {
+			var name string
+			department, err := strconv.Atoi(string(row[2]))
+			if err != nil || department < 0 || department >= count || json.Unmarshal(row[1], &name) != nil {
+				return nil, fmt.Errorf("internal project membership invalid")
+			}
+			normalized := strings.Map(func(r rune) rune {
+				if unicode.IsLetter(r) || unicode.IsDigit(r) {
+					return r
+				}
+				return -1
+			}, strings.ToLower(name))
+			if normalized == "" || seen[normalized] {
+				return nil, fmt.Errorf("internal project membership ambiguous")
+			}
+			seen[normalized] = true
+			kind := "self"
+			if department == contracted {
+				kind = "client_project"
+			}
+			groups = append(groups, group{kind, []string{digest([]byte(normalized))}, []int{len([]rune(normalized))}})
+		}
+	}
 	result := struct {
 		Domain             string  `json:"domain"`
 		Source             string  `json:"source"`
 		SHA                string  `json:"source_declaration_sha256"`
 		DepartmentSource   string  `json:"department_source"`
 		DepartmentSHA      string  `json:"department_declaration_sha256"`
+		InternalSHA        string  `json:"internal_project_declaration_sha256,omitempty"`
 		ContractDepartment int     `json:"contract_department"`
 		Groups             []group `json:"groups"`
-	}{"owner-department-classification-v1", "localai-web-rs/src/operations_catalog.rs", digest(section[0]), "localai-web-rs/src/operations.rs", digest(decl[0]), contracted, groups}
+	}{"owner-department-classification-v1", "localai-web-rs/src/operations_catalog.rs", digest(section[0]), "localai-web-rs/src/operations.rs", digest(decl[0]), internalSHA, contracted, groups}
 	b, err := json.MarshalIndent(result, "", "  ")
 	return append(b, '\n'), err
 }

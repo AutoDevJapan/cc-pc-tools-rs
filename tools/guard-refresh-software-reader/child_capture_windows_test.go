@@ -5,101 +5,152 @@ package main
 import (
 	"bytes"
 	"context"
-	"errors"
 	"io"
 	"os"
 	"path/filepath"
-	"syscall"
 	"testing"
 	"time"
 )
 
-func TestAskChildCaptureFixedStdinChild(t *testing.T) {
-	if os.Getenv("ASK_CAPTURE_STDIN_CHILD") != "1" {
+func TestAskFiniteCaptureChild(t *testing.T) {
+	mode := os.Getenv("ASK_FINITE_CAPTURE_CHILD")
+	if mode == "" {
 		return
 	}
 	if !askWorkerParent() {
 		os.Exit(6)
 	}
-	var raw [32]byte
-	n, err := io.ReadFull(os.Stdin, raw[:])
-	defer clear(raw[:])
-	if err != io.ErrUnexpectedEOF || string(raw[:n]) != "owned-fixed-request\n" {
-		os.Exit(7)
+	if mode == "not-reading" {
+		if os.WriteFile(filepath.Join(os.Getenv("ASK_CAPTURE_ROOT"), "ready"), []byte("owned"), 0600) != nil {
+			os.Exit(7)
+		}
+		time.Sleep(10 * time.Second)
+		os.Exit(0)
 	}
-	_, _ = os.Stdout.Write(raw[:n])
+	if mode == "overflow" {
+		var block [65536]byte
+		for i := range block {
+			block[i] = 'x'
+		}
+		for i := 0; i < 129; i++ {
+			if _, err := os.Stdout.Write(block[:]); err != nil {
+				os.Exit(8)
+			}
+		}
+		os.Exit(0)
+	}
+	var input [32]byte
+	n, err := io.ReadFull(os.Stdin, input[:])
+	defer clear(input[:])
+	if mode == "nil" {
+		if n != 0 || err != io.EOF {
+			os.Exit(9)
+		}
+		_, _ = os.Stdout.Write([]byte("owned-eof"))
+		os.Exit(0)
+	}
+	if err != io.ErrUnexpectedEOF || string(input[:n]) != "owned-fixed-request\n" {
+		os.Exit(10)
+	}
+	_, _ = os.Stdout.Write(input[:n])
+	if mode == "failure" {
+		os.Exit(3)
+	}
 	os.Exit(0)
 }
 
-func TestAskChildCaptureFixedStdinReachesEOFAndCollects(t *testing.T) {
-	t.Setenv("ASK_CAPTURE_STDIN_CHILD", "1")
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-	defer cancel()
-	observed := 0
-	var output bytes.Buffer
-	ctx = context.WithValue(ctx, askChildCaptureKey{}, askChildCapture{
-		BeforeResume: func(pid uint32, created uint64) error { observed++; return nil },
-		Stdout:       &output,
-		Stdin:        bytes.NewReader([]byte("owned-fixed-request\n")),
-	})
-	r := askOwnedChild(ctx, os.Args[0], "-test.run=^TestAskChildCaptureFixedStdinChild$")
-	defer clear(r.Raw)
-	defer clear(output.Bytes())
-	if observed != 1 || !r.Assigned || !r.Reaped || !r.WaitVerified || r.TimedOut || r.Exit != 0 || len(r.Raw) != 0 || output.String() != "owned-fixed-request\n" {
-		t.Fatal("fixed stdin/EOF child not collected", observed, r)
+func TestAskFiniteCaptureOwnsBuffersAndCollects(t *testing.T) {
+	for _, mode := range []string{"normal", "nil", "failure", "overflow", "already-canceled", "oversize"} {
+		t.Run(mode, func(t *testing.T) {
+			t.Setenv("ASK_FINITE_CAPTURE_CHILD", mode)
+			ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+			defer cancel()
+			input := []byte("owned-fixed-request\n")
+			if mode == "nil" {
+				input = nil
+			}
+			if mode == "oversize" {
+				input = make([]byte, (1<<20)+1)
+			}
+			if mode == "already-canceled" {
+				cancel()
+			}
+			ctx = context.WithValue(ctx, askChildCaptureKey{}, askChildCapture{Stdin: input})
+			r := askOwnedChild(ctx, os.Args[0], "-test.run=^TestAskFiniteCaptureChild$")
+			defer clear(r.Raw)
+			if r.Capture == nil || len(r.Raw) != 0 {
+				t.Fatal("capture result missing or exposed legacy raw")
+			}
+			defer clear(r.Capture.Stdout)
+			if mode == "already-canceled" || mode == "oversize" {
+				if r.Started || r.Capture.Complete || len(r.Capture.Stdout) != 0 || r.Capture.NativeProcess != nil {
+					t.Fatal("invalid input started native process")
+				}
+				return
+			}
+			if !r.Started || !r.Assigned || !r.WaitVerified || !r.Reaped || r.TimedOut || r.Capture.NativeProcess == nil || r.Capture.NativeProcess.PID == 0 || r.Capture.NativeProcess.Creation == 0 {
+				t.Fatal("native identity or collection incomplete")
+			}
+			if mode == "overflow" {
+				if !r.Capture.Overflow || r.Capture.Complete || len(r.Capture.Stdout) != 8<<20 || r.Exit != 0 {
+					t.Fatal("overflow not bounded and drained")
+				}
+				return
+			}
+			want := []byte("owned-fixed-request\n")
+			if mode == "nil" {
+				want = []byte("owned-eof")
+			}
+			wantExit := 0
+			if mode == "failure" {
+				wantExit = 3
+			}
+			if !r.Capture.Complete || r.Capture.Overflow || r.Exit != wantExit || !bytes.Equal(r.Capture.Stdout, want) {
+				t.Fatal("finite capture bytes or exit mismatch")
+			}
+		})
 	}
 }
 
-func TestAskChildCaptureBeforeResumeAndOwnedStdout(t *testing.T) {
-	for _, mode := range []string{"normal", "reject", "cancel"} {
-		t.Run(mode, func(t *testing.T) {
-			root := physicalSoftwareFixture(t)
-			t.Setenv("ASK_OWNED_SUPERVISOR_CHILD", "1")
-			t.Setenv("ASK_OWNED_MODE", "normal")
-			t.Setenv("ASK_OWNED_ROOT", root)
-			ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-			defer cancel()
-			observed := 0
-			var captured bytes.Buffer
-			ctx = context.WithValue(ctx, askChildCaptureKey{}, askChildCapture{Stdout: &captured, BeforeResume: func(pid uint32, creation uint64) error {
-				observed++
-				if pid == 0 || creation == 0 {
-					t.Error("missing native process identity")
-				}
-				h, err := syscall.OpenProcess(0x1000, false, pid)
-				if err != nil {
-					t.Error("observer process unavailable", err)
-				} else {
-					var c, e, k, u syscall.Filetime
-					if syscall.GetProcessTimes(h, &c, &e, &k, &u) != nil || creation != uint64(c.HighDateTime)<<32|uint64(c.LowDateTime) {
-						t.Error("observer identity mismatch")
-					}
-					syscall.CloseHandle(h)
-				}
-				if mode == "cancel" {
-					cancel()
-				}
-				if mode == "reject" {
-					return errors.New("owned_reject")
-				}
-				return nil
-			}})
-			r := askOwnedChild(ctx, os.Args[0], "-test.run=^TestAskOwnedSupervisorChild$")
-			defer clear(r.Raw)
-			if observed != 1 || !r.Started || !r.WaitVerified || !r.Reaped {
-				t.Fatal("native child capture or collection missing", observed, r)
+func TestAskFiniteCaptureCancelsChildThatDoesNotReadInput(t *testing.T) {
+	root := physicalSoftwareFixture(t)
+	t.Setenv("ASK_FINITE_CAPTURE_CHILD", "not-reading")
+	t.Setenv("ASK_CAPTURE_ROOT", root)
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+	input := make([]byte, 1<<20)
+	defer clear(input)
+	ctx = context.WithValue(ctx, askChildCaptureKey{}, askChildCapture{Stdin: input})
+	done := make(chan askChildResult, 1)
+	go func() { done <- askOwnedChild(ctx, os.Args[0], "-test.run=^TestAskFiniteCaptureChild$") }()
+	ready := false
+	deadline := time.NewTimer(3 * time.Second)
+	ticker := time.NewTicker(5 * time.Millisecond)
+	defer deadline.Stop()
+	defer ticker.Stop()
+wait:
+	for {
+		select {
+		case <-ticker.C:
+			if _, err := os.Stat(filepath.Join(root, "ready")); err == nil {
+				ready = true
+				break wait
 			}
-			if mode == "normal" {
-				if !r.Assigned || r.Exit != 0 || !bytes.Contains(captured.Bytes(), []byte(`{"owned":true}`)) || len(r.Raw) != 0 {
-					t.Fatal("stdout not delegated to owned capture", r)
-				}
-			} else if r.Exit == 0 || captured.Len() != 0 {
-				t.Fatal("rejected child ran", r)
-			}
-			if _, err := os.Stat(filepath.Join(root, "backup.exe")); !os.IsNotExist(err) {
-				t.Fatal("unexpected child side effect")
-			}
-			clear(captured.Bytes())
-		})
+		case <-deadline.C:
+			break wait
+		}
+	}
+	cancel()
+	select {
+	case r := <-done:
+		defer clear(r.Raw)
+		if r.Capture != nil {
+			defer clear(r.Capture.Stdout)
+		}
+		if !ready || !r.Started || !r.Reaped || !r.WaitVerified || !r.TimedOut || r.Capture == nil || r.Capture.Complete {
+			t.Fatal("blocked native stdin not canceled and joined")
+		}
+	case <-time.After(3 * time.Second):
+		t.Fatal("finite input copy remained blocked")
 	}
 }

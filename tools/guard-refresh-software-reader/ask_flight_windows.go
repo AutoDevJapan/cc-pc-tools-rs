@@ -38,6 +38,7 @@ type askChildResult struct {
 	Exit                            int
 	TimedOut, Reaped                bool
 	Started, Assigned, WaitVerified bool
+	Capture                         *askChildCaptureResult
 }
 
 // Start suspended, assign the exact process to an owned kill-on-close job, then
@@ -54,9 +55,34 @@ type askChildExactEnvironment struct{}
 type askChildCaptureKey struct{}
 
 type askChildCapture struct {
-	BeforeResume func(uint32, uint64) error
-	Stdout       io.Writer
-	Stdin        io.Reader
+	Stdin []byte
+}
+
+type askNativeProcess struct {
+	PID      uint32
+	Creation uint64
+}
+
+type askChildCaptureResult struct {
+	NativeProcess *askNativeProcess
+	Stdout        []byte
+	Overflow      bool
+	Complete      bool
+}
+
+type askCaptureOutput struct {
+	data     []byte
+	n        int
+	overflow bool
+}
+
+func (w *askCaptureOutput) Write(p []byte) (int, error) {
+	n := copy(w.data[w.n:], p)
+	w.n += n
+	w.overflow = w.overflow || n != len(p)
+	// Keep draining after overflow. No caller-supplied Read/Write function can
+	// block the process supervisor, and retained storage never grows.
+	return len(p), nil
 }
 
 func askChildEnvironmentValues(ctx context.Context, parent []string, permit string) []string {
@@ -131,6 +157,25 @@ func (w *askReadyCapture) Write(p []byte) (int, error) {
 
 func askOwnedChildWithHandshake(ctx context.Context, executable string, onReady func([]byte) bool, args ...string) (result askChildResult) {
 	result.Exit = -1
+	capture, hasCapture := ctx.Value(askChildCaptureKey{}).(askChildCapture)
+	if hasCapture && onReady != nil {
+		return
+	}
+	var captured *askCaptureOutput
+	var fixedInput []byte
+	if hasCapture {
+		result.Capture = &askChildCaptureResult{}
+		if len(capture.Stdin) > 1<<20 || ctx.Err() != nil {
+			return
+		}
+		fixedInput = append([]byte(nil), capture.Stdin...)
+		defer clear(fixedInput)
+		captured = &askCaptureOutput{data: make([]byte, 8<<20)}
+		defer func() {
+			result.Capture.Stdout = captured.data[:captured.n]
+			result.Capture.Overflow = captured.overflow
+		}()
+	}
 	kernel := syscall.NewLazyDLL("kernel32.dll")
 	job, _, _ := kernel.NewProc("CreateJobObjectW").Call(0, 0)
 	if job == 0 {
@@ -165,10 +210,8 @@ func askOwnedChildWithHandshake(ctx context.Context, executable string, onReady 
 	cmd.Stderr = &errOut
 	compilerMode, _ := ctx.Value(compilerDiagnosticContext{}).(bool)
 	compilerMode = compilerMode && onReady == nil
-	capture, hasCapture := ctx.Value(askChildCaptureKey{}).(askChildCapture)
-	hasCapture = hasCapture && onReady == nil
-	if hasCapture && capture.Stdin != nil {
-		cmd.Stdin = capture.Stdin
+	if hasCapture {
+		cmd.Stdin = bytes.NewReader(fixedInput)
 	}
 	var compilerOut, compilerErr *compilerCapture
 	if compilerMode {
@@ -177,8 +220,8 @@ func askOwnedChildWithHandshake(ctx context.Context, executable string, onReady 
 		defer compilerErr.erase()
 		cmd.Stdout, cmd.Stderr = compilerOut, compilerErr
 	}
-	if hasCapture && capture.Stdout != nil {
-		cmd.Stdout = capture.Stdout
+	if hasCapture {
+		cmd.Stdout = captured
 		if compilerErr == nil {
 			compilerErr = new(compilerCapture)
 			defer compilerErr.erase()
@@ -201,17 +244,25 @@ func askOwnedChildWithHandshake(ctx context.Context, executable string, onReady 
 		return
 	}
 	result.Started = true
-	process, err := syscall.OpenProcess(0x0100|0x0001|0x0800|0x1000, false, uint32(cmd.Process.Pid))
+	access := uint32(0x0100 | 0x0001 | 0x0800)
+	if hasCapture {
+		access |= 0x1000
+	}
+	process, err := syscall.OpenProcess(access, false, uint32(cmd.Process.Pid))
 	assigned := false
 	if err == nil {
 		ok, _, _ = kernel.NewProc("AssignProcessToJobObject").Call(job, uintptr(process))
 		assigned = ok != 0
 		if assigned && hasCapture {
 			var created, exited, kernelTime, userTime syscall.Filetime
-			if syscall.GetProcessTimes(process, &created, &exited, &kernelTime, &userTime) != nil || capture.BeforeResume == nil {
+			creation := uint64(0)
+			if syscall.GetProcessTimes(process, &created, &exited, &kernelTime, &userTime) == nil {
+				creation = uint64(created.HighDateTime)<<32 | uint64(created.LowDateTime)
+			}
+			if creation == 0 || ctx.Err() != nil {
 				assigned = false
-			} else if capture.BeforeResume(uint32(cmd.Process.Pid), uint64(created.HighDateTime)<<32|uint64(created.LowDateTime)) != nil || ctx.Err() != nil {
-				assigned = false
+			} else {
+				result.Capture.NativeProcess = &askNativeProcess{PID: uint32(cmd.Process.Pid), Creation: creation}
 			}
 		}
 		if assigned {
@@ -329,6 +380,9 @@ loop:
 		if e != nil || state != syscall.WAIT_OBJECT_0 {
 			result.Reaped = false
 		}
+	}
+	if hasCapture {
+		result.Capture.Complete = assigned && result.WaitVerified && result.Reaped && !result.TimedOut && ctx.Err() == nil && !captured.overflow
 	}
 	if compilerMode && assigned && result.WaitVerified && result.Reaped && !result.TimedOut && result.Exit != 0 {
 		result.Diagnostic = compilerCause(compilerOut.data[:compilerOut.n], compilerErr.data[:compilerErr.n], compilerOut.truncated || compilerErr.truncated)

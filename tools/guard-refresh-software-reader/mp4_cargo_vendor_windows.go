@@ -14,7 +14,6 @@ import (
 	"sort"
 	"strconv"
 	"strings"
-	"time"
 )
 
 const cargoVendorFileLimit = 64 << 20
@@ -31,7 +30,24 @@ func vendorSHA(value string) bool {
 }
 
 func vendorRelativePath(path string) bool {
-	return len(path) > 0 && len(path) <= 4096 && !strings.ContainsAny(path, "\\:\x00") && filepath.IsLocal(filepath.FromSlash(path)) && filepath.ToSlash(filepath.Clean(filepath.FromSlash(path))) == path
+	if len(path) == 0 || len(path) > 4096 || strings.ContainsAny(path, "\\:\x00*?\"<>|") || !filepath.IsLocal(filepath.FromSlash(path)) || filepath.ToSlash(filepath.Clean(filepath.FromSlash(path))) != path {
+		return false
+	}
+	parts := strings.Split(path, "/")
+	if len(parts) > 64 {
+		return false
+	}
+	for _, part := range parts {
+		if strings.HasSuffix(part, ".") || strings.HasSuffix(part, " ") {
+			return false
+		}
+		for _, ch := range part {
+			if ch < 32 {
+				return false
+			}
+		}
+	}
+	return true
 }
 
 // Cargo produces this metadata from its locked registry packages. Reject
@@ -137,7 +153,36 @@ func (s *softwareBuildSnapshot) holdVendorFile(path string, total *int64) ([]byt
 	return raw, nil
 }
 
-func (s *softwareBuildSnapshot) admitCargoVendor(ctx context.Context, lock []byte) error {
+type cargoArchiveReader func(context.Context, string, string) ([]byte, error)
+
+type cargoInputError struct {
+	cause string
+	err   error
+}
+
+func (e *cargoInputError) Error() string { return "cargo_input_" + e.cause }
+func (e *cargoInputError) Unwrap() error { return e.err }
+func cargoInputDiagnostic(err error) *compilerDiagnostic {
+	var input *cargoInputError
+	if errors.As(err, &input) {
+		switch input.cause {
+		case "locked_archive_unavailable", "archive_expansion_rejected":
+			return &compilerDiagnostic{Cause: input.cause}
+		}
+	}
+	return nil
+}
+
+func (s *softwareBuildSnapshot) admitCargoVendor(ctx context.Context, lock []byte, archives ...cargoArchiveReader) error {
+	if len(archives) != 1 || archives[0] == nil {
+		return errors.New("locked_archive_reader_unavailable")
+	}
+	return s.extractLockedCargoVendor(ctx, lock, archives[0])
+}
+
+// Validation of an already materialized namespace remains separate from the
+// archive trust boundary. It cannot authorize unverified files on its own.
+func (s *softwareBuildSnapshot) validateCargoVendor(ctx context.Context, lock []byte) error {
 	identities, ok := cargoLockIdentities(lock)
 	if !ok {
 		return errUpdateObject
@@ -205,21 +250,10 @@ func (s *softwareBuildSnapshot) admitCargoVendor(ctx context.Context, lock []byt
 	return nil
 }
 
-// Use Cargo's normal offline vendoring rather than compiling through an alias
-// of the shared registry. Its package checksums and every consumed file remain
-// bound to the already admitted lock and held in this operation's snapshot.
+// Extract verified locked archives instead of trusting Cargo's cached archive
+// or generated checksum metadata. The same retained compressed bytes are
+// hashed and consumed, with finite expansion limits before each creation.
 func (s *softwareBuildSnapshot) materializeCargoVendor(ctx context.Context) error {
-	cwd, _ := ctx.Value(mp4CargoDirectory{}).(string)
-	if cwd == "" {
-		return errUpdateObject
-	}
-	ctx, cancel := context.WithTimeout(ctx, 2*time.Minute)
-	defer cancel()
-	r := askOwnedChildAt(compilerContext(ctx), cwd, "C:/Users/makhmeto/.rustup/toolchains/1.95.0-x86_64-pc-windows-msvc/bin/cargo.exe", "vendor", "--locked", "--offline", "--versioned-dirs", "--no-delete", "--manifest-path", filepath.Join(s.Root, "Cargo.toml"), filepath.Join(s.Root, "vendor"))
-	defer clear(r.Raw)
-	if !r.Started || !r.Assigned || !r.WaitVerified || !r.Reaped || r.TimedOut || r.Exit != 0 {
-		return errors.New("vendor_child_failed_or_uncollected")
-	}
 	for _, f := range s.files {
 		if sameCleanPath(f.Name(), filepath.Join(s.Root, "Cargo.lock")) {
 			if _, err := f.Seek(0, io.SeekStart); err != nil {
@@ -230,7 +264,7 @@ func (s *softwareBuildSnapshot) materializeCargoVendor(ctx context.Context) erro
 			if err != nil || digest(raw) != s.LockSHA {
 				return errUpdateObject
 			}
-			return s.admitCargoVendor(ctx, raw)
+			return s.admitCargoVendor(ctx, raw, readLockedCargoArchive)
 		}
 	}
 	return errUpdateObject

@@ -116,7 +116,7 @@ func TestCargoVendorChecksumProtocolRejectsAliasesAndDuplicateKeys(t *testing.T)
 	}
 }
 
-func TestCargoVendorAdmissionBindsLockedPackagesAndEveryFile(t *testing.T) {
+func TestCargoVendorGeneratedMetadataIsOnlySelfConsistency(t *testing.T) {
 	for _, fault := range []string{"normal", "file_changed", "package_changed", "missing_package", "extra_package", "extra_file", "missing_file", "link", "canceled"} {
 		t.Run(fault, func(t *testing.T) {
 			root := physicalSoftwareFixture(t)
@@ -163,7 +163,7 @@ func TestCargoVendorAdmissionBindsLockedPackagesAndEveryFile(t *testing.T) {
 					t.Error(e)
 				}
 			}()
-			err := s.admitCargoVendor(ctx, lock)
+			err := s.validateCargoVendor(ctx, lock)
 			if (err == nil) != (fault == "normal") {
 				t.Fatal("unexpected admission", fault, err)
 			}
@@ -176,5 +176,25 @@ func TestCargoVendorAdmissionBindsLockedPackagesAndEveryFile(t *testing.T) {
 				}
 			}
 		})
+	}
+}
+
+func TestCargoVendorRejectsSelfConsistentFilesWithoutLockedArchive(t *testing.T) {
+	root := physicalSoftwareFixture(t)
+	packageRoot := filepath.Join(root, "vendor", "owned-1.0.0")
+	if os.MkdirAll(packageRoot, 0700) != nil {
+		t.Fatal("fixture directories")
+	}
+	sha := strings.Repeat("a", 64)
+	raw := []byte("unverified archive contents\n")
+	metadata, _ := json.Marshal(map[string]any{"package": sha, "files": map[string]string{"source.rs": digest(raw)}})
+	if os.WriteFile(filepath.Join(packageRoot, "source.rs"), raw, 0600) != nil || os.WriteFile(filepath.Join(packageRoot, ".cargo-checksum.json"), metadata, 0600) != nil {
+		t.Fatal("fixture files")
+	}
+	lock := []byte("version = 4\n[[package]]\nname = \"owned\"\nversion = \"1.0.0\"\nsource = \"registry+https://github.com/rust-lang/crates.io-index\"\nchecksum = \"" + sha + "\"\n")
+	s := &softwareBuildSnapshot{Root: root, paths: map[string]bool{root: true}}
+	defer s.Close()
+	if s.admitCargoVendor(context.Background(), lock) == nil {
+		t.Fatal("self-consistent files admitted without hashing locked archive bytes")
 	}
 }

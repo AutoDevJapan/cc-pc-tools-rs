@@ -531,6 +531,7 @@ func runSoftwareBuildWorker(build softwareBuildPlan, out io.Writer, inherited ..
 				}
 				snapshot, e = materializeMP4BuildSnapshotContext(inputCtx, build, evidence, sources)
 				if e != nil {
+					r.CompilerDiagnostic = cargoInputDiagnostic(e)
 					r.Reason = "source_snapshot_incomplete_preserved"
 					if errors.Is(e, errSnapshotCleanup) {
 						r.Reason = "source_snapshot_cleanup_failed_preserved"

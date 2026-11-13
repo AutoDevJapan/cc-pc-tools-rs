@@ -1,0 +1,283 @@
+//go:build windows
+
+package main
+
+import (
+	"archive/tar"
+	"bytes"
+	"compress/gzip"
+	"context"
+	"encoding/json"
+	"errors"
+	"os"
+	"path/filepath"
+	"strings"
+	"testing"
+)
+
+func ownedCargoArchive(t *testing.T, headers []*tar.Header, contents [][]byte) []byte {
+	t.Helper()
+	var output bytes.Buffer
+	z := gzip.NewWriter(&output)
+	w := tar.NewWriter(z)
+	for i, h := range headers {
+		if err := w.WriteHeader(h); err != nil {
+			t.Fatal(err)
+		}
+		if h.Typeflag == tar.TypeReg {
+			if _, err := w.Write(contents[i]); err != nil {
+				t.Fatal(err)
+			}
+		}
+	}
+	if w.Close() != nil || z.Close() != nil {
+		t.Fatal("owned archive close")
+	}
+	return append([]byte(nil), output.Bytes()...)
+}
+
+func newArchiveSnapshot(t *testing.T) *softwareBuildSnapshot {
+	t.Helper()
+	root := physicalSoftwareFixture(t)
+	s := &softwareBuildSnapshot{Root: root, paths: map[string]bool{}}
+	if err := snapshotDirectories(root, root, s); err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() {
+		if err := s.Close(); err != nil {
+			t.Error(err)
+		}
+	})
+	return s
+}
+
+func TestCargoArchiveActualBytesBindLockAndCompilerFiles(t *testing.T) {
+	content := []byte("pub fn owned(){}\n")
+	header := &tar.Header{Name: "owned-1.0.0/src/lib.rs", Size: int64(len(content)), Mode: 0600, Typeflag: tar.TypeReg}
+	original := ownedCargoArchive(t, []*tar.Header{header}, [][]byte{content})
+	defer clear(original)
+	changedContent := []byte("pub fn replaced(){}\n")
+	changed := ownedCargoArchive(t, []*tar.Header{{Name: header.Name, Size: int64(len(changedContent)), Mode: 0600, Typeflag: tar.TypeReg}}, [][]byte{changedContent})
+	defer clear(changed)
+	for _, fault := range []string{"normal", "valid_substitute", "wrong_digest", "read_failure", "canceled"} {
+		t.Run(fault, func(t *testing.T) {
+			s := newArchiveSnapshot(t)
+			sha := digest(original)
+			if fault == "wrong_digest" {
+				sha = strings.Repeat("a", 64)
+			}
+			lock := []byte("version = 4\n[[package]]\nname = \"owned\"\nversion = \"1.0.0\"\nsource = \"registry+https://github.com/rust-lang/crates.io-index\"\nchecksum = \"" + sha + "\"\n")
+			calls := 0
+			read := func(ctx context.Context, name, want string) ([]byte, error) {
+				calls++
+				if name != "owned-1.0.0" || want != sha {
+					t.Fatal("reader scope changed")
+				}
+				if fault == "read_failure" {
+					return nil, errors.New("injected_read_failure")
+				}
+				if fault == "valid_substitute" {
+					return append([]byte(nil), changed...), nil
+				}
+				return append([]byte(nil), original...), nil
+			}
+			ctx, cancel := context.WithCancel(context.Background())
+			defer cancel()
+			if fault == "canceled" {
+				cancel()
+			}
+			err := s.admitCargoVendor(ctx, lock, read)
+			if (err == nil) != (fault == "normal") {
+				t.Fatal("wrong locked archive result", fault, err)
+			}
+			if fault == "canceled" && calls != 0 {
+				t.Fatal("read after cancellation")
+			}
+			file := filepath.Join(s.Root, "vendor", "owned-1.0.0", "src", "lib.rs")
+			if fault != "normal" {
+				if _, e := os.Lstat(file); !os.IsNotExist(e) {
+					t.Fatal("unverified archive materialized")
+				}
+				return
+			}
+			b, e := os.ReadFile(file)
+			if e != nil || !bytes.Equal(b, content) {
+				t.Fatal("compiler input differs from verified archive")
+			}
+			if !s.exact() {
+				t.Fatal("namespace differs")
+			}
+			if s.sealDirectories() != nil {
+				t.Fatal("seal")
+			}
+			if os.WriteFile(file, changedContent, 0600) == nil || os.Rename(file, file+".replaced") == nil {
+				t.Fatal("verified bytes changed after extraction")
+			}
+		})
+	}
+}
+
+func TestCargoArchiveRejectsUnsafeEntriesBeforeCreation(t *testing.T) {
+	for _, fault := range []string{"traversal", "absolute", "foreign_root", "symlink", "hardlink", "duplicate", "case_alias", "checksum_override", "special", "oversize", "total_budget", "entry_budget", "bad_gzip", "truncated"} {
+		t.Run(fault, func(t *testing.T) {
+			s := newArchiveSnapshot(t)
+			content := []byte("source")
+			header := &tar.Header{Name: "owned-1.0.0/source.rs", Size: int64(len(content)), Mode: 0600, Typeflag: tar.TypeReg}
+			budget := cargoExpansionBudget{}
+			switch fault {
+			case "traversal":
+				header.Name = "owned-1.0.0/../foreign.rs"
+			case "absolute":
+				header.Name = "C:/foreign.rs"
+			case "foreign_root":
+				header.Name = "other-1.0.0/source.rs"
+			case "symlink":
+				header.Typeflag = tar.TypeSymlink
+				header.Linkname = "source.rs"
+				header.Size = 0
+			case "hardlink":
+				header.Typeflag = tar.TypeLink
+				header.Linkname = "source.rs"
+				header.Size = 0
+			case "checksum_override":
+				header.Name = "owned-1.0.0/.cargo-checksum.json"
+			case "special":
+				header.Typeflag = tar.TypeFifo
+				header.Size = 0
+			case "total_budget":
+				budget.bytes = cargoVendorTotalLimit - int64(len(content)) + 1
+			case "entry_budget":
+				budget.entries = cargoVendorEntryLimit
+			}
+			headers := []*tar.Header{header}
+			contents := [][]byte{content}
+			if fault == "duplicate" || fault == "case_alias" {
+				copy := *header
+				if fault == "case_alias" {
+					copy.Name = "owned-1.0.0/SOURCE.rs"
+				}
+				headers = append(headers, &copy)
+				contents = append(contents, content)
+			}
+			var raw []byte
+			if fault == "oversize" {
+				var b bytes.Buffer
+				z := gzip.NewWriter(&b)
+				w := tar.NewWriter(z)
+				header.Size = cargoVendorFileLimit + 1
+				if w.WriteHeader(header) != nil {
+					t.Fatal("header")
+				}
+				z.Close()
+				raw = b.Bytes()
+			} else {
+				raw = ownedCargoArchive(t, headers, contents)
+			}
+			if fault == "bad_gzip" {
+				raw = []byte("not gzip")
+			}
+			if fault == "truncated" {
+				raw = raw[:len(raw)/2]
+			}
+			err := s.extractCargoArchive(context.Background(), "owned-1.0.0", digest(raw), raw, &budget)
+			clear(raw)
+			if err == nil {
+				t.Fatal("invalid archive accepted", fault)
+			}
+			if fault == "oversize" || fault == "total_budget" || fault == "entry_budget" {
+				if _, err := os.Lstat(filepath.Join(s.Root, "vendor", "owned-1.0.0", "source.rs")); !os.IsNotExist(err) {
+					t.Fatal("budget checked after file creation")
+				}
+			}
+		})
+	}
+}
+
+func TestCargoArchiveHeldWindowsReaderConsumesExactBytes(t *testing.T) {
+	root := physicalSoftwareFixture(t)
+	content := []byte("owned native source")
+	raw := ownedCargoArchive(t, []*tar.Header{{Name: "owned-1.0.0/source.rs", Size: int64(len(content)), Mode: 0600, Typeflag: tar.TypeReg}}, [][]byte{content})
+	defer clear(raw)
+	file := filepath.Join(root, "owned-1.0.0.crate")
+	if os.WriteFile(file, raw, 0600) != nil {
+		t.Fatal("fixture archive")
+	}
+	calls := 0
+	held := func(o *nativeUpdateObject) error {
+		calls++
+		if !bytes.Equal(o.Raw(), raw) {
+			t.Fatal("held archive bytes differ")
+		}
+		if os.WriteFile(file, []byte("replaced"), 0600) == nil || os.Rename(file, file+".changed") == nil {
+			t.Fatal("archive changed while held")
+		}
+		return nil
+	}
+	result, err := readCargoArchiveAt(context.Background(), root, "owned-1.0.0", digest(raw), held)
+	defer clear(result)
+	if err != nil || calls != 1 || !bytes.Equal(result, raw) {
+		t.Fatal("native archive read", err, calls)
+	}
+	if _, err := readCargoArchiveAt(context.Background(), root, "owned-1.0.0", strings.Repeat("a", 64), nil); err == nil {
+		t.Fatal("native archive checksum bypass")
+	}
+	if result, err := readCargoArchiveAt(context.Background(), root, "../owned", digest(raw), nil); err == nil || len(result) != 0 {
+		t.Fatal("unbound native name read")
+	}
+	s := newArchiveSnapshot(t)
+	if err := s.extractCargoArchive(context.Background(), "owned-1.0.0", digest(raw), result, &cargoExpansionBudget{}); err != nil {
+		t.Fatal(err)
+	}
+}
+
+func TestCargoArchiveInputFailureHasOnlyFixedDiagnostic(t *testing.T) {
+	s := newArchiveSnapshot(t)
+	lock := []byte("version = 4\n[[package]]\nname = \"owned\"\nversion = \"1.0.0\"\nsource = \"registry+https://github.com/rust-lang/crates.io-index\"\nchecksum = \"" + strings.Repeat("a", 64) + "\"\n")
+	secret := "sensitive-owned-placeholder"
+	err := s.admitCargoVendor(context.Background(), lock, func(context.Context, string, string) ([]byte, error) { return nil, errors.New(secret) })
+	d := cargoInputDiagnostic(err)
+	if d == nil || d.Cause != "locked_archive_unavailable" {
+		t.Fatal("archive failure diagnostic discarded")
+	}
+	raw, e := json.Marshal(d)
+	if e != nil || bytes.Contains(raw, []byte(secret)) || strings.Contains(err.Error(), secret) {
+		t.Fatal("unbounded archive error exposed")
+	}
+	if cargoInputDiagnostic(errors.New(secret)) != nil {
+		t.Fatal("raw error promoted to fixed cause")
+	}
+}
+
+func TestCargoArchiveMultiplePackagesShareExpansionBudget(t *testing.T) {
+	s := newArchiveSnapshot(t)
+	content := []byte("owned payload")
+	budget := cargoExpansionBudget{bytes: cargoVendorTotalLimit - 4096}
+	for i, name := range []string{"first-1.0.0", "second-1.0.0"} {
+		raw := ownedCargoArchive(t, []*tar.Header{{Name: name + "/source.rs", Size: int64(len(content)), Mode: 0600, Typeflag: tar.TypeReg}}, [][]byte{content})
+		if i == 1 {
+			budget.bytes = cargoVendorTotalLimit - int64(len(content)) + 1
+		}
+		err := s.extractCargoArchive(context.Background(), name, digest(raw), raw, &budget)
+		clear(raw)
+		if i == 0 && err != nil {
+			t.Fatal("normal first archive", err)
+		}
+		if i == 1 {
+			if err == nil {
+				t.Fatal("second archive ignored accumulated payload budget")
+			}
+			if _, err := os.Lstat(filepath.Join(s.Root, "vendor", name, "source.rs")); !os.IsNotExist(err) {
+				t.Fatal("overflow file created")
+			}
+		}
+	}
+	budget.expanded = cargoVendorTotalLimit + (32 << 20)
+	raw := ownedCargoArchive(t, []*tar.Header{{Name: "third-1.0.0/source.rs", Size: int64(len(content)), Mode: 0600, Typeflag: tar.TypeReg}}, [][]byte{content})
+	defer clear(raw)
+	if s.extractCargoArchive(context.Background(), "third-1.0.0", digest(raw), raw, &budget) == nil {
+		t.Fatal("aggregate expanded-stream limit ignored")
+	}
+	if _, err := os.Lstat(filepath.Join(s.Root, "vendor", "third-1.0.0")); !os.IsNotExist(err) {
+		t.Fatal("stream overflow package created")
+	}
+}

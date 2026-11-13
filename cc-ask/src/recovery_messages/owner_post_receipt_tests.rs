@@ -62,6 +62,8 @@ fn owner_post_receipt_resumes_original_request_and_normal_readback_without_repos
         ..f.log("ordinary-log", "進捗です。", false)
     };
     assert!(log(&mut ctx, &other).is_err());
+    let question = f.ask("after-owner-read-receipt", "続ける内容を選んでください。");
+    assert_eq!(ask(&mut ctx, &question).unwrap()["delivery"], "verified");
     f.unchanged();
 }
 

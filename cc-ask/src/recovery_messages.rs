@@ -2252,6 +2252,16 @@ impl<'a> RecoveryApi<'a> {
                 return None;
             };
             let request = ledger.request(request_id)?;
+            // Purpose-bound read receipts are neither general logs nor progress
+            // posts, even though they reuse the durable log delivery phases.
+            if ledger.effect(request_id, phase).is_some_and(|effect| {
+                effect
+                    .content
+                    .lines()
+                    .any(|line| line.starts_with("-# owner-receipt:"))
+            }) {
+                return None;
+            }
             (request.destination == *destination
                 && receipt.author_id == bot
                 && receipt.thread_id == thread

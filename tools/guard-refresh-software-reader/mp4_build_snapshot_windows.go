@@ -28,6 +28,7 @@ type softwareBuildSnapshot struct {
 	dirs               []syscall.Handle
 	paths              map[string]bool
 	sealed             []snapshotDirectoryACL
+	handoffACLs        []snapshotDirectoryACL
 	cacheLink          string
 	cargoDrive         string
 	cargoDriveTarget   string
@@ -45,45 +46,55 @@ type snapshotDirectoryACL struct {
 }
 
 func (s *softwareBuildSnapshot) Close() error {
-	return s.closeWithRestore(func(a snapshotDirectoryACL) error {
-		flags := uint32(4 | 0x20000000)
-		if a.protected {
-			flags = 4 | 0x80000000
+	return s.closeWithRestore(restoreSnapshotACL)
+}
+
+func restoreSnapshotACL(a snapshotDirectoryACL) error {
+	flags := uint32(4 | 0x20000000)
+	if a.protected {
+		flags = 4 | 0x80000000
+	}
+	var code uintptr
+	if a.autoInherited {
+		code, _, _ = updateSetSecurity.Call(uintptr(a.handle), 1, uintptr(flags), 0, 0, a.dacl, 0)
+	} else {
+		code, _, _ = updateNTSetSecurity.Call(uintptr(a.handle), 4, a.descriptor)
+	}
+	if code != 0 {
+		return errors.New("snapshot_acl_restore_failed")
+	}
+	var actual uintptr
+	code, _, _ = updateGetSecurity.Call(uintptr(a.handle), 1, 4, 0, 0, 0, 0, uintptr(unsafe.Pointer(&actual)))
+	if code != 0 {
+		return errors.New("snapshot_acl_restore_readback_failed")
+	}
+	defer updateLocalFree.Call(actual)
+	capture := func(sd uintptr) string {
+		var p *uint16
+		var n uint32
+		ok, _, _ := updateSDString.Call(sd, 1, 4, uintptr(unsafe.Pointer(&p)), uintptr(unsafe.Pointer(&n)))
+		if ok == 0 || p == nil {
+			return ""
 		}
-		var code uintptr
-		if a.autoInherited {
-			code, _, _ = updateSetSecurity.Call(uintptr(a.handle), 1, uintptr(flags), 0, 0, a.dacl, 0)
-		} else {
-			code, _, _ = updateNTSetSecurity.Call(uintptr(a.handle), 4, a.descriptor)
-		}
-		if code != 0 {
-			return errors.New("snapshot_acl_restore_failed")
-		}
-		var actual uintptr
-		code, _, _ = updateGetSecurity.Call(uintptr(a.handle), 1, 4, 0, 0, 0, 0, uintptr(unsafe.Pointer(&actual)))
-		if code != 0 {
-			return errors.New("snapshot_acl_restore_readback_failed")
-		}
-		defer updateLocalFree.Call(actual)
-		capture := func(sd uintptr) string {
-			var p *uint16
-			var n uint32
-			ok, _, _ := updateSDString.Call(sd, 1, 4, uintptr(unsafe.Pointer(&p)), uintptr(unsafe.Pointer(&n)))
-			if ok == 0 || p == nil {
-				return ""
-			}
-			defer updateLocalFree.Call(uintptr(unsafe.Pointer(p)))
-			return syscall.UTF16ToString(unsafe.Slice(p, n))
-		}
-		if before, after := capture(a.descriptor), capture(actual); before == "" || before != after {
-			return errors.New("snapshot_acl_restore_mismatch")
-		}
-		return nil
-	})
+		defer updateLocalFree.Call(uintptr(unsafe.Pointer(p)))
+		return syscall.UTF16ToString(unsafe.Slice(p, n))
+	}
+	if before, after := capture(a.descriptor), capture(actual); before == "" || before != after {
+		return errors.New("snapshot_acl_restore_mismatch")
+	}
+	return nil
 }
 
 func (s *softwareBuildSnapshot) closeWithRestore(restore func(snapshotDirectoryACL) error) error {
 	var errs []error
+	for _, a := range s.handoffACLs {
+		if e := restoreSnapshotACL(a); e != nil {
+			errs = append(errs, e)
+		}
+		updateLocalFree.Call(a.descriptor)
+		syscall.CloseHandle(a.handle)
+	}
+	s.handoffACLs = nil
 	if e := s.closeCargoDirectory(); e != nil {
 		errs = append(errs, e)
 	}
@@ -381,9 +392,17 @@ func (s *softwareBuildSnapshot) create(path string, raw []byte) error {
 	if _, e = fileSoftwareIdentity(f); e != nil {
 		return e
 	}
-	// Retain the original creator handle. Go/Rust ordinary readers share write
-	// and may read it, while new write/delete opens remain excluded by this
-	// handle's FILE_SHARE_READ. No pathname close/reopen gap is introduced.
+	// MSVC does not share an existing writer file object. Transfer this exact
+	// owned generation to read-only file objects without an unprotected close
+	// or pathname reopen gap, retaining write/delete exclusion throughout.
+	reader, e := s.readOnlySnapshotFile(f, nil)
+	if e != nil {
+		if reader != nil {
+			reader.Close()
+		}
+		return e
+	}
+	f = reader
 	s.files = append(s.files, f)
 	s.paths[path] = true
 	keep = true

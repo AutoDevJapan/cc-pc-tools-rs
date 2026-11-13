@@ -208,7 +208,7 @@ func withPinnedCargoOutput(a, b string, expected softwareIdentity, consume func(
 		}
 		id = got
 	}
-	if expected.FileID != "" && (id.Volume != expected.Volume || id.FileID != expected.FileID) {
+	if expected.FileID != "" && expected != id {
 		return false
 	}
 	names, e := softwareLinks(a)

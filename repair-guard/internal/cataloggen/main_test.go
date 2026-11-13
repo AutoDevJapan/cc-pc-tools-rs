@@ -96,3 +96,27 @@ func TestInternalProjectsRetainDepartmentWithoutBecomingProducts(t *testing.T) {
 		}
 	}
 }
+
+func TestInternalDeclarationWhitespaceAndSeparators(t *testing.T) {
+	products := fixtureDepartments + "pub const PRODUCTS: &[Product] = &[\nProduct { name: \"fixture\", department: 0, aliases: &[] },\n];\n"
+	valid := `pub const INTERNAL_PROJECTS: &[(&str, usize)] = &[("first", 5), ("second", 4),];`
+	compact := strings.Replace(valid, "&str, usize", "&str,usize", 1)
+	multiline := strings.ReplaceAll(strings.Replace(valid, "pub const", "pub\nconst", 1), "&str, usize", "&str,\nusize")
+	for _, declaration := range []string{valid, compact, multiline} {
+		if _, err := generate([]byte(products + declaration)); err != nil {
+			t.Fatal("valid internal list rejected", err)
+		}
+	}
+	for _, declaration := range []string{
+		valid + compact, valid + multiline,
+		strings.Replace(valid, "), (", ") (", 1),
+		strings.Replace(valid, "), (", "),, (", 1),
+		strings.Replace(valid, "&[(", "&[,(", 1),
+		strings.Replace(valid, "),];", "),,];", 1),
+		strings.Replace(valid, "usize", "u64", 1),
+	} {
+		if _, err := generate([]byte(products + declaration)); err == nil {
+			t.Fatal("ambiguous or malformed internal list accepted")
+		}
+	}
+}

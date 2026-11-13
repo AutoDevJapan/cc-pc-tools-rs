@@ -130,18 +130,28 @@ func generate(source []byte, departmentSources ...[]byte) ([]byte, error) {
 	// Internal work projects are not products or aliases of software. Project
 	// registration still supplies the actual root; this declares only department.
 	internalSHA := ""
-	internal := regexp.MustCompile(`(?s)pub const INTERNAL_PROJECTS: &\[\(&str, usize\)\] = &\[(.*?)\];`).FindAllSubmatch(source, -1)
-	if len(internal) > 1 || (len(internal) == 0 && bytes.Contains(source, []byte("pub const INTERNAL_PROJECTS"))) {
+	declarations = regexp.MustCompile(`\bconst\s+INTERNAL_PROJECTS\b`).FindAllSubmatch(source, -1)
+	internal := regexp.MustCompile(`(?s)\bpub\s+const\s+INTERNAL_PROJECTS\s*:\s*&\s*\[\s*\(\s*&\s*str\s*,\s*usize\s*\)\s*\]\s*=\s*&\s*\[(.*?)\]\s*;`).FindAllSubmatch(source, -1)
+	if len(declarations) > 1 || len(declarations) != len(internal) {
 		return nil, fmt.Errorf("internal project declaration ambiguous")
 	}
 	if len(internal) == 1 {
 		internalSHA = digest(internal[0][0])
-		entry := regexp.MustCompile(`\(\s*("[^"\\]*(?:\\.[^"\\]*)*")\s*,\s*([0-9]+)\s*\)`)
-		if rest := strings.TrimSpace(string(entry.ReplaceAll(internal[0][1], nil))); strings.Trim(rest, ", \r\n\t") != "" {
-			return nil, fmt.Errorf("internal project declaration invalid")
-		}
+		entry := regexp.MustCompile(`^\(\s*("[^"\\]*(?:\\.[^"\\]*)*")\s*,\s*([0-9]+)\s*\)`)
 		seen := map[string]bool{}
-		for _, row := range entry.FindAllSubmatch(internal[0][1], -1) {
+		remaining := bytes.TrimSpace(internal[0][1])
+		for len(remaining) != 0 {
+			row := entry.FindSubmatch(remaining)
+			if len(row) != 3 {
+				return nil, fmt.Errorf("internal project declaration invalid")
+			}
+			remaining = bytes.TrimSpace(remaining[len(row[0]):])
+			if len(remaining) != 0 {
+				if remaining[0] != ',' {
+					return nil, fmt.Errorf("internal project separator missing")
+				}
+				remaining = bytes.TrimSpace(remaining[1:])
+			}
 			var name string
 			department, err := strconv.Atoi(string(row[2]))
 			if err != nil || department < 0 || department >= count || json.Unmarshal(row[1], &name) != nil {
@@ -152,7 +162,7 @@ func generate(source []byte, departmentSources ...[]byte) ([]byte, error) {
 					return r
 				}
 				return -1
-			}, strings.ToLower(name))
+			}, strings.TrimPrefix(strings.ToLower(name), "resume-"))
 			if normalized == "" || seen[normalized] {
 				return nil, fmt.Errorf("internal project membership ambiguous")
 			}

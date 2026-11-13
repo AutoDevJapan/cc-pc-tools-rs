@@ -133,6 +133,11 @@ bounded application-buffer guarantee, not complete erasure of Go or OS memory.
 New snapshot directories temporarily exclude new entries. Original ACLs are
 captured before any directory is sealed, restored in parent-first order, and
 read back. A final exact namespace check follows sealing before compilation.
+New files are flushed and checked through their creator handle, then handed
+to a read-only file object for compiler compatibility. During this handoff,
+overlapping handles exclude replacement and a temporary read-only DACL on
+only that operation-owned file excludes new writers. The original DACL is
+restored and read back after the final read-only sharing pin is held.
 Cleanup attempts every handle even when one operation fails, including failed
 construction; primary and cleanup errors remain distinguishable. The
 producer's final response must confirm cleanup and match its ready artifact,

@@ -246,6 +246,7 @@ type unslopCapturedInputs struct {
 type unslopBuildInvocation struct {
 	CommandSHA, CargoJSONSHA                          string
 	CargoStreamSHA                                    string
+	CargoStream                                       []byte
 	ToolCallID                                        *string
 	NativeProcess                                     *unslopProcessIdentity
 	Started, Assigned, WaitVerified, Reaped, TimedOut bool
@@ -338,13 +339,16 @@ func captureUnslopRelease(ctx context.Context, access unslopCaptureAccess) (resu
 	}
 	built, err := session.Build(ctx)
 	defer clear(built.CargoJSON)
+	defer clear(built.CargoStream)
 	command, _ := json.Marshal(unslopCaptureCommand())
 	processBound := built.NativeProcess != nil && built.NativeProcess.PID != 0 && built.NativeProcess.Created != 0
-	if err != nil || ctx.Err() != nil || !processBound || !unslopHex(built.CargoJSONSHA, 64) || built.CommandSHA != digest(command) || !built.Started || !built.Assigned || !built.WaitVerified || !built.Reaped || built.TimedOut || built.Exit != 0 {
+	if err != nil || ctx.Err() != nil || !processBound || built.ToolCallID != nil || !unslopHex(built.CargoJSONSHA, 64) || !unslopHex(built.CargoStreamSHA, 64) || built.CommandSHA != digest(command) || !built.Started || !built.Assigned || !built.WaitVerified || !built.Reaped || built.TimedOut || built.Exit != 0 {
 		result.Reason = "capture_producer_failed_or_uncollected"
 		return
 	}
-	if digest(built.CargoJSON) != built.CargoJSONSHA || !unslopCargoOutput(built.CargoJSON) {
+	projection, projected := unslopCargoProjection(built.CargoStream)
+	defer clear(projection)
+	if digest(built.CargoJSON) != built.CargoJSONSHA || digest(built.CargoStream) != built.CargoStreamSHA || !projected || !bytes.Equal(projection, built.CargoJSON) {
 		result.Reason = "capture_cargo_evidence_unqualified"
 		return
 	}
@@ -407,6 +411,14 @@ func captureUnslopRelease(ctx context.Context, access unslopCaptureAccess) (resu
 	result.Reason = "captured_release_receipt_published"
 	result.Receipt = &receipt
 	return
+}
+
+func unslopCargoProjection(raw []byte) ([]byte, bool) {
+	if !unslopCargoOutput(raw) {
+		return nil, false
+	}
+	artifact, _ := json.Marshal(map[string]any{"reason": "compiler-artifact", "target": map[string]any{"name": "godd-unslop", "kind": []string{"bin"}}, "executable": unslopCaptureOutput, "fresh": false})
+	return append(artifact, []byte("\n{\"reason\":\"build-finished\",\"success\":true}\n")...), true
 }
 
 func unslopCapturedManifest(inputs unslopCapturedInputs) (string, bool) {

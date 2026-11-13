@@ -6,7 +6,8 @@
 ## 今回の実装と、残っている接続
 
 実装したのは、ビルドの記録を確認する処理、配布準備の処理、文体2例の入力を取り出す処理、履歴の存在を確認する処理である。
-実ファイルを保持してビルドするproviderと共通CLIへの接続は、まだ行っていない。
+追加のnative実装では、固定ソースを新しいnamespaceへ保持し、正常な子プロセスからCargoの全出力を読み取る接続を用意した。
+共通CLIへのrouting、正式ビルドの実行、生成後の固定consumerへの接続は別の受入工程として残る。
 合成データのテストが通っても、インストールや独立評価が済んだことにはしない。
 
 旧リリースには、ビルドの正常終了と、同じ実行物でCLI・MCPが動いた記録がある。
@@ -43,6 +44,9 @@ nativeの実PID・作成時刻と、上位toolのCall IDは別の値として記
 `CargoJSONSHA` は、検証したJSONと同じバッファから計算し、一致しなければartifactの読取・stage・Commitへ進めない。
 native側で診断文を除いたJSONを作る場合は、上限付きparserが元streamの全行を処理した後、対象binのmetadataと完了結果だけを投影する。
 元stream全体のdigestは `CargoStreamSHA` として分け、投影JSONのdigestと混同しない。
+成功receiptの検証側でも、上限付きの元stream全体を同じバッファから再確認し、`CargoStreamSHA`、そこから作る投影JSON、`CargoJSONSHA`の三つが一致することを確認する。
+元streamが欠けている場合、不正なdigest、別の元streamに対する正しいdigestも成功にしない。
+元streamは照合後に消去し、公開結果にはハッシュと必要なmetadataだけを残す。
 
 `unslopCapturedManifest` は、入力一覧の構造と前後の同一性を確認する処理である。
 それだけで、実ファイルを読み取ったことや、コンパイラが使った全入力を確認したことにはしない。
@@ -94,6 +98,15 @@ readerは評価の合否を作らず、作者の判定を独立評価へコピ�
 
 共通dispatcherへの専用routingは、そのファイルの既存所有担当が行う。
 routingを追加しただけでは、出所を確認するfactoryが成立したことにはしない。
+
+`runNormalUnslopPurpose` のcaptureだけがnativeの生成処理へつながる。
+新しいreceiptを単に読み直して、次回のverifyやprepareへ許可を与える仕組みにはしない。
+正式ビルド後は、その実行物とreceiptの実値をレビュー済みconsumerへ固定するか、同じ正常controllerが保持した状態で受入・反映を続ける必要がある。
+現時点のverify・prepare・packet読取は、不足理由を返す状態を保っている。
+
+nativeの履歴接続は、正常なlauncherと現在のWindowsアカウントを使ってapp-serverへ接続する。
+`initialize` と履歴のread/listだけを送り、新しい生成turnやresumeは要求しない。
+元のthread・turn・command itemの対応が取得できなければ、接続できたことだけでpacketを読む資格を作らない。
 
 既存の `softwareBuildSourceMatches`、`runSoftwareBuildWorker`、`withSoftwareBuildOutput`、`softwareBuildCompletionMatches`、`writeSoftwareBuildReceiptContext` を、native側の保持・ACK・終了回収・非上書きreceipt発行の接続元として使う。
 既存処理の製品固有のパスやsource条件を、Unslopへそのまま流用しない。

@@ -102,11 +102,11 @@ func syntheticUnslopCapture() *unslopSyntheticCapture {
 	output := map[string]any{"reason": "compiler-artifact", "target": map[string]any{"name": "godd-unslop", "kind": []string{"bin"}}, "executable": unslopCaptureOutput, "fresh": false}
 	b, _ := json.Marshal(output)
 	b = append(b, []byte("\n{\"reason\":\"build-finished\",\"success\":true}\n")...)
-	return &unslopSyntheticCapture{before: before, after: after, raw: []byte("synthetic new exe"), id: softwareIdentity{"v", "new exe", "created"}, build: unslopBuildInvocation{NativeProcess: &unslopProcessIdentity{PID: 1, Created: 1}, CommandSHA: digest(cmd), CargoJSONSHA: digest(b), Started: true, Assigned: true, WaitVerified: true, Reaped: true, Exit: 0, CargoJSON: b}}
+	return &unslopSyntheticCapture{before: before, after: after, raw: []byte("synthetic new exe"), id: softwareIdentity{"v", "new exe", "created"}, build: unslopBuildInvocation{NativeProcess: &unslopProcessIdentity{PID: 1, Created: 1}, CommandSHA: digest(cmd), CargoJSONSHA: digest(b), CargoStreamSHA: digest(b), CargoStream: append([]byte(nil), b...), Started: true, Assigned: true, WaitVerified: true, Reaped: true, Exit: 0, CargoJSON: b}}
 }
 
 func TestUnslopCaptureRequiresBeforeAfterCargoAndController(t *testing.T) {
-	for _, fault := range []string{"normal", "missing_provider", "source_missing_before", "config_missing_before", "dependency_missing_before", "embedded_guide_missing", "input_added_after", "input_identity_changed", "wrong_command", "missing_call_id", "failed_child", "uncollected_child", "missing_cargo_json", "cargo_hash_mismatch", "cargo_failed", "cargo_fresh", "cargo_wrong_output", "cargo_duplicate_output", "cancelled", "cancelled_in_before", "ack_failed", "pin_final_failed", "pin_skipped_callback", "pin_repeated_callback", "publish_failed", "commit_failed", "close_failed"} {
+	for _, fault := range []string{"normal", "missing_provider", "source_missing_before", "config_missing_before", "dependency_missing_before", "embedded_guide_missing", "input_added_after", "input_identity_changed", "wrong_command", "missing_call_id", "failed_child", "uncollected_child", "missing_cargo_json", "cargo_hash_mismatch", "stream_missing", "stream_digest_invalid", "stream_changed", "cargo_failed", "cargo_fresh", "cargo_wrong_output", "cargo_duplicate_output", "cancelled", "cancelled_in_before", "ack_failed", "pin_final_failed", "pin_skipped_callback", "pin_repeated_callback", "publish_failed", "commit_failed", "close_failed"} {
 		t.Run(fault, func(t *testing.T) {
 			s := syntheticUnslopCapture()
 			s.fault = fault
@@ -135,6 +135,13 @@ func TestUnslopCaptureRequiresBeforeAfterCargoAndController(t *testing.T) {
 				s.build.CargoJSON = nil
 			case "cargo_hash_mismatch":
 				s.build.CargoJSONSHA = strings.Repeat("0", 64)
+			case "stream_missing":
+				s.build.CargoStream = nil
+				s.build.CargoStreamSHA = ""
+			case "stream_digest_invalid":
+				s.build.CargoStreamSHA = "invalid-not-a-digest"
+			case "stream_changed":
+				s.build.CargoStream = []byte("changed source stream")
 			case "cargo_failed":
 				s.build.CargoJSON = []byte(`{"reason":"build-finished","success":false}`)
 			case "cargo_fresh":
@@ -143,6 +150,11 @@ func TestUnslopCaptureRequiresBeforeAfterCargoAndController(t *testing.T) {
 				s.build.CargoJSON = []byte(strings.ReplaceAll(string(s.build.CargoJSON), unslopCaptureOutput, unslopCaptureOutput+".other"))
 			case "cargo_duplicate_output":
 				s.build.CargoJSON = append(s.build.CargoJSON, s.build.CargoJSON...)
+			}
+			if fault == "cargo_failed" || fault == "cargo_fresh" || fault == "cargo_wrong_output" || fault == "cargo_duplicate_output" {
+				s.build.CargoJSONSHA = digest(s.build.CargoJSON)
+				s.build.CargoStream = append([]byte(nil), s.build.CargoJSON...)
+				s.build.CargoStreamSHA = digest(s.build.CargoStream)
 			}
 			ctx, cancel := context.WithCancel(context.Background())
 			defer cancel()

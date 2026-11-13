@@ -6,11 +6,21 @@ import (
 	"bytes"
 	"context"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"strings"
 	"testing"
 	"time"
 )
+
+func snapshotTestTool(t *testing.T, name string) string {
+	t.Helper()
+	path, e := exec.LookPath(name)
+	if e != nil {
+		t.Fatalf("required test tool %s missing", name)
+	}
+	return path
+}
 
 func TestMP4SnapshotExcludesUnlistedBuildScriptAndPinsKnownSource(t *testing.T) {
 	root := physicalSoftwareFixture(t)
@@ -61,7 +71,7 @@ func TestMP4SelectedGoSnapshotBuildIgnoresUnlistedFilesAndPGO(t *testing.T) {
 	ctxPGO, cancelPGO := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancelPGO()
 	args := softwareProducerGoArgs(plain, filepath.Join(plain, "nopgo.exe"), []string{selected})
-	profileResult := askOwnedChild(ctxPGO, "C:/Program Files/Go/bin/go.exe", args...)
+	profileResult := askOwnedChild(ctxPGO, snapshotTestTool(t, "go"), args...)
 	defer clear(profileResult.Raw)
 	if profileResult.Exit != 0 || !profileResult.Reaped {
 		t.Fatal("producer consumed unproved profile", profileResult.Exit)
@@ -83,7 +93,7 @@ func TestMP4SelectedGoSnapshotBuildIgnoresUnlistedFilesAndPGO(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
 	output := filepath.Join(root, "fixture.exe")
-	r := askOwnedChild(ctx, "C:/Program Files/Go/bin/go.exe", "-C", dir, "build", "-pgo=off", "-mod=readonly", "-trimpath", "-o", output, filepath.Join(dir, "main.go"))
+	r := askOwnedChild(ctx, snapshotTestTool(t, "go"), "-C", dir, "build", "-pgo=off", "-mod=readonly", "-trimpath", "-o", output, filepath.Join(dir, "main.go"))
 	defer clear(r.Raw)
 	if r.Exit != 0 || !r.Reaped || r.TimedOut {
 		t.Fatal("selected pinned ordinary source failed", r.Exit)
@@ -124,7 +134,7 @@ func TestMP4RustSnapshotCargoDoesNotDiscoverLiveBuildScript(t *testing.T) {
 	}
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
-	r := askOwnedChildAt(ctx, snapshot.Root, "C:/Users/makhmeto/.rustup/toolchains/1.95.0-x86_64-pc-windows-msvc/bin/cargo.exe", "metadata", "--offline", "--no-deps", "--format-version", "1", "--manifest-path", filepath.Join(snapshot.Root, "Cargo.toml"))
+	r := askOwnedChildAt(ctx, snapshot.Root, snapshotTestTool(t, "cargo"), "metadata", "--offline", "--no-deps", "--format-version", "1", "--manifest-path", filepath.Join(snapshot.Root, "Cargo.toml"))
 	defer clear(r.Raw)
 	if r.Exit != 0 || !r.Reaped || r.TimedOut || bytes.Contains(r.Raw, []byte("custom-build")) {
 		t.Fatal("snapshot Cargo selection failed", r.Exit)

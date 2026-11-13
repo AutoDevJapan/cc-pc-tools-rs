@@ -158,6 +158,9 @@ func observeInstalledGuard() softwareObservation {
 }
 
 func run(args []string, out io.Writer, observe func() softwareObservation, operations ...updateOperations) int {
+	if len(args) == 1 && args[0] == "--export-current-fourbros-job-software" {
+		return runCurrentJobOutput(out)
+	}
 	if len(args) == 1 && (args[0] == "--export-mp4-ask-software" || args[0] == "--export-mp4-runner-software") {
 		kind := "ask"
 		if args[0] == "--export-mp4-runner-software" {

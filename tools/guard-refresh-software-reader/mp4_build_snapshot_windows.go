@@ -41,6 +41,7 @@ type snapshotDirectoryACL struct {
 	handle           syscall.Handle
 	descriptor, dacl uintptr
 	protected        bool
+	autoInherited    bool
 }
 
 func (s *softwareBuildSnapshot) Close() error {
@@ -49,7 +50,12 @@ func (s *softwareBuildSnapshot) Close() error {
 		if a.protected {
 			flags = 4 | 0x80000000
 		}
-		code, _, _ := updateSetSecurity.Call(uintptr(a.handle), 1, uintptr(flags), 0, 0, a.dacl, 0)
+		var code uintptr
+		if a.autoInherited {
+			code, _, _ = updateSetSecurity.Call(uintptr(a.handle), 1, uintptr(flags), 0, 0, a.dacl, 0)
+		} else {
+			code, _, _ = updateNTSetSecurity.Call(uintptr(a.handle), 4, a.descriptor)
+		}
 		if code != 0 {
 			return errors.New("snapshot_acl_restore_failed")
 		}
@@ -322,7 +328,7 @@ func (s *softwareBuildSnapshot) sealDirectories() error {
 			syscall.CloseHandle(h)
 			return errUpdateObject
 		}
-		s.sealed = append(s.sealed, snapshotDirectoryACL{h, original, oldDacl, control&0x1000 != 0})
+		s.sealed = append(s.sealed, snapshotDirectoryACL{handle: h, descriptor: original, dacl: oldDacl, protected: control&0x1000 != 0, autoInherited: control&0x0400 != 0})
 	}
 	// Capture every original child descriptor before changing any parent.
 	for _, a := range s.sealed {

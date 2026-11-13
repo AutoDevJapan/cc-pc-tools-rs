@@ -183,6 +183,50 @@ func TestCargoWorkerBorrowsParentNamespaceUntilCollected(t *testing.T) {
 	}
 }
 
+func TestCargoSupervisorRestoresDirectoryWithoutAutoInheritedControl(t *testing.T) {
+	root := physicalSoftwareFixture(t)
+	var s *softwareBuildSnapshot
+	var descriptor uintptr
+	var identity syscall.Handle
+	build := softwareBuildPlan{Target: filepath.Join(root, "build")}
+	s, e := prepareSupervisedCargoDirectoryWith(build, func(s *softwareBuildSnapshot) error {
+		p, _ := syscall.UTF16PtrFromString(s.Root)
+		h, e := syscall.CreateFile(p, 0x00020000|0x00040000, syscall.FILE_SHARE_READ|syscall.FILE_SHARE_WRITE, nil, syscall.OPEN_EXISTING, 0x02000000|0x00200000, 0)
+		if e != nil {
+			return e
+		}
+		identity = h
+		code, _, _ := updateGetSecurity.Call(uintptr(h), 1, 4, 0, 0, 0, 0, uintptr(unsafe.Pointer(&descriptor)))
+		if code != 0 {
+			return fmt.Errorf("owned descriptor capture")
+		}
+		ok, _, _ := updateAdvapi.NewProc("SetSecurityDescriptorControl").Call(descriptor, 0x0400, 0)
+		if ok == 0 {
+			return fmt.Errorf("owned control")
+		}
+		code, _, _ = updateNTSetSecurity.Call(uintptr(h), 4, descriptor)
+		if code != 0 {
+			return fmt.Errorf("owned control set")
+		}
+		return s.sealDirectories()
+	})
+	defer func() {
+		if identity != 0 {
+			updateNTSetSecurity.Call(uintptr(identity), 4, descriptor)
+			syscall.CloseHandle(identity)
+		}
+		if descriptor != 0 {
+			updateLocalFree.Call(descriptor)
+		}
+	}()
+	if e != nil {
+		t.Fatal(e)
+	}
+	if e := s.Close(); e != nil {
+		t.Fatal("exact non-auto inherited directory restore", e)
+	}
+}
+
 func TestOwnedDriveCargoDoesNotDiscoverPhysicalAncestorConfiguration(t *testing.T) {
 	root := physicalSoftwareFixture(t)
 	for _, name := range []string{"cwd", ".cargo", "project", "project/src", "home"} {

@@ -287,7 +287,7 @@ func TestAskOwnedSupervisorChild(t *testing.T) {
 		}
 		os.Exit(1)
 	}
-	if mode == "leaf" {
+	if mode == "leaf" || mode == "leaf_barrier" {
 		if os.WriteFile(filepath.Join(os.Getenv("ASK_OWNED_ROOT"), "backup.exe"), []byte("owned partial"), 0600) != nil {
 			os.Exit(3)
 		}
@@ -298,6 +298,19 @@ func TestAskOwnedSupervisorChild(t *testing.T) {
 		}
 		if os.WriteFile(filepath.Join(os.Getenv("ASK_OWNED_ROOT"), "descendant.pid"), []byte(strconv.Itoa(child.Process.Pid)), 0600) != nil {
 			os.Exit(5)
+		}
+		if mode == "leaf_barrier" {
+			deadline := time.Now().Add(5 * time.Second)
+			for {
+				if raw, e := os.ReadFile(filepath.Join(os.Getenv("ASK_OWNED_ROOT"), "descendant.ready")); e == nil && string(raw) == "active" {
+					break
+				}
+				if time.Now().After(deadline) {
+					os.Exit(8)
+				}
+				time.Sleep(time.Millisecond)
+			}
+			fmt.Fprintln(os.Stdout, `{"ready":true}`)
 		}
 	}
 	if mode != "normal" {
@@ -426,20 +439,41 @@ func TestAskDirectWorkerAndInspectionHaveNoAuthority(t *testing.T) {
 }
 
 func TestAskOwnedSupervisorCollectsTreeAndPreservesPartial(t *testing.T) {
-	for _, mode := range []string{"normal", "leaf"} {
+	for _, mode := range []string{"normal", "leaf_barrier", "early_cancel"} {
 		t.Run(mode, func(t *testing.T) {
 			root := physicalSoftwareFixture(t)
 			t.Setenv("ASK_OWNED_SUPERVISOR_CHILD", "1")
 			t.Setenv("ASK_OWNED_MODE", mode)
 			t.Setenv("ASK_OWNED_ROOT", root)
-			budget := 300 * time.Millisecond
-			if mode == "normal" {
-				budget = 2 * time.Second
-			}
-			ctx, cancel := context.WithTimeout(context.Background(), budget)
+			ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 			defer cancel()
-			got := askOwnedChild(ctx, os.Args[0], "-test.run=^TestAskOwnedSupervisorChild$")
+			ready := 0
+			var got askChildResult
+			if mode == "leaf_barrier" {
+				got = askOwnedChildWithHandshake(ctx, os.Args[0], func(raw []byte) bool {
+					if string(raw) != `{"ready":true}` {
+						t.Error("unexpected readiness")
+					}
+					ready++
+					cancel()
+					return false
+				}, "-test.run=^TestAskOwnedSupervisorChild$")
+			} else {
+				if mode == "early_cancel" {
+					cancel()
+				}
+				got = askOwnedChild(ctx, os.Args[0], "-test.run=^TestAskOwnedSupervisorChild$")
+			}
 			defer clear(got.Raw)
+			if mode == "early_cancel" {
+				if got.Started {
+					t.Fatal("cancelled before start still spawned")
+				}
+				if _, e := os.Stat(filepath.Join(root, "backup.exe")); !os.IsNotExist(e) {
+					t.Fatal("early cancellation created a leaf")
+				}
+				return
+			}
 			if !got.Reaped {
 				t.Fatal("job not reaped")
 			}
@@ -451,6 +485,9 @@ func TestAskOwnedSupervisorCollectsTreeAndPreservesPartial(t *testing.T) {
 			}
 			if !got.TimedOut || len(got.Raw) != 0 {
 				t.Fatal("timeout mistaken for result", got)
+			}
+			if ready != 1 {
+				t.Fatal("partial-state cancellation did not follow readiness", ready)
 			}
 			if b, e := os.ReadFile(filepath.Join(root, "backup.exe")); e != nil || string(b) != "owned partial" {
 				t.Fatal("partial lost")
@@ -485,11 +522,37 @@ func TestAskOwnedSupervisorCollectsTreeAndPreservesPartial(t *testing.T) {
 func TestAskSharedDeadlineReapsChildBeforeAnyLeaf(t *testing.T) {
 	root := physicalSoftwareFixture(t)
 	marker := filepath.Join(root, "owned-child-pid")
-	ctx, cancel := context.WithTimeout(context.Background(), 300*time.Millisecond)
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 	start := time.Now()
+	ready := make(chan time.Time, 1)
+	done := make(chan struct{})
+	go func() {
+		defer close(done)
+		ticker := time.NewTicker(time.Millisecond)
+		defer ticker.Stop()
+		for {
+			select {
+			case <-ctx.Done():
+				return
+			case <-ticker.C:
+				if _, e := os.Stat(marker); e == nil {
+					ready <- time.Now()
+					cancel()
+					return
+				}
+			}
+		}
+	}()
 	_, ok := askGitCommand(ctx, os.Args[0], "-test.run=^TestAskGitDeadlineChild$", "--", "ask-owned-deadline-child", marker)
-	if ok || ctx.Err() != context.DeadlineExceeded || time.Since(start) > 2*time.Second {
+	<-done
+	var at time.Time
+	select {
+	case at = <-ready:
+	default:
+		t.Fatal("child never reached readiness before outer timeout")
+	}
+	if ok || ctx.Err() != context.Canceled || time.Since(at) > 2*time.Second {
 		t.Fatal("common deadline not enforced")
 	}
 	raw, e := os.ReadFile(marker)
@@ -518,7 +581,7 @@ func TestAskSharedDeadlineReapsChildBeforeAnyLeaf(t *testing.T) {
 			t.Fatal("owned leaf state unknown")
 		}
 	}
-	t.Logf("deadline_ms=300 elapsed_ms=%.3f child_started=1 child_reaped=true qualified=false prepared=false created=0 owned_stage_absent=true owned_backup_absent=true", float64(time.Since(start))/float64(time.Millisecond))
+	t.Logf("cancellation_after_child_ready=true elapsed_ms=%.3f child_started=1 child_reaped=true qualified=false prepared=false created=0 owned_stage_absent=true owned_backup_absent=true", float64(time.Since(start))/float64(time.Millisecond))
 }
 
 func TestAskBoundedGitOutputAndCanceledHashWork(t *testing.T) {

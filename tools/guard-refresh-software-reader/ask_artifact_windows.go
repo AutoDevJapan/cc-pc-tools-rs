@@ -440,11 +440,8 @@ func runAskBuildWorker(out io.Writer) int {
 
 func runSoftwareBuildWorker(build softwareBuildPlan, out io.Writer, inherited ...context.Context) (exit int) {
 	r := askArtifactResult{Domain: "owner-question-cargo-output-v1", Source: build.Source, Reason: "unqualified", TargetState: "not_created"}
-	defer func() {
-		if r.Reason != "producer_acknowledged" {
-			json.NewEncoder(out).Encode(r)
-		}
-	}()
+	completion := softwareWorkerCompletion{}
+	defer completion.finish(out, &r, &exit, build)
 	ctx, cancel := context.WithTimeout(context.Background(), 8*time.Second)
 	defer cancel()
 	proof, e := openUpdateObject(build.Proof)
@@ -520,13 +517,7 @@ func runSoftwareBuildWorker(build softwareBuildPlan, out io.Writer, inherited ..
 					}
 					return 1
 				}
-				defer func() {
-					if e := cargoConfig.Close(); e != nil {
-						r.Reason = "compiler_configuration_cleanup_failed"
-						exit = 1
-						_ = json.NewEncoder(out).Encode(r)
-					}
-				}()
+				completion.config = cargoConfig.Close
 			}
 			var snapshot *softwareBuildSnapshot
 			if build.Source == mp4Source {
@@ -546,14 +537,7 @@ func runSoftwareBuildWorker(build softwareBuildPlan, out io.Writer, inherited ..
 					}
 					return 1
 				}
-				defer func() {
-					if e := snapshot.Close(); e != nil {
-						r.Reason = "source_snapshot_cleanup_failed_preserved"
-						r.Qualified = false
-						exit = 1
-						_ = json.NewEncoder(out).Encode(r)
-					}
-				}()
+				completion.snapshot = snapshot.Close
 				r.SnapshotManifestSHA = snapshot.ManifestSHA
 				r.ResolvedLockSHA = snapshot.LockSHA
 				if cargoConfig != nil {
@@ -639,28 +623,6 @@ func runSoftwareBuildWorker(build softwareBuildPlan, out io.Writer, inherited ..
 				return true
 			})
 			if acknowledged {
-				if snapshot != nil {
-					e := snapshot.Close()
-					ok := e == nil
-					r.SnapshotCleanup = &ok
-					if e != nil {
-						r.Reason = "source_snapshot_cleanup_failed_preserved"
-						_ = json.NewEncoder(out).Encode(r)
-						return 1
-					}
-				}
-				if cargoConfig != nil {
-					if e := cargoConfig.Close(); e != nil {
-						r.Reason = "compiler_configuration_cleanup_failed"
-						_ = json.NewEncoder(out).Encode(r)
-						return 1
-					}
-				}
-				if build.Source == mp4Source {
-					if json.NewEncoder(out).Encode(r) != nil {
-						return 1
-					}
-				}
 				return 0
 			}
 		}

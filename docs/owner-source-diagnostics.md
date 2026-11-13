@@ -3,6 +3,7 @@
 `scrub391 --guard-path <absolute-path> --classification-diagnostic` runs the
 ordinary classification and adds fixed timing and identity-validity metadata.
 The normal guard output remains unchanged when the option is omitted.
+An explicit `--classification-diagnostic=false` also selects ordinary output.
 
 The diagnostic reports registration reads, local Git calls, identity checks,
 rules and the final registration snapshot check in milliseconds. Git, identity,
@@ -11,6 +12,10 @@ they must not be added together as independent elapsed periods. A fixed
 `deadline_stage` identifies a measured phase which observed cancellation.
 The option neither extends the 750 ms classification budget nor converts an
 unknown classification into access.
+`stage` matches the final returned classification basis, including any existing
+independently qualified retirement receipt. `policy_stage` preserves the
+underlying pre-receipt policy observation; it does not create a new receipt or
+change whether an existing one qualifies.
 
 For one normally decoded and validated repository identity, the output includes
 its checked time, expiry, observation time and current validity. It contains no

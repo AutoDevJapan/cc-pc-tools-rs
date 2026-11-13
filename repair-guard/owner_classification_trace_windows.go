@@ -21,7 +21,7 @@ func classificationDiagnosticFlagPresent(args []string) bool {
 
 func runClassificationDiagnosticCLI(args []string, stdout, stderr io.Writer, classify func(string) (ownerPathVerdict, *ownerClassificationTrace)) int {
 	p, err := parseGuardArgs(args)
-	if err != nil || !p.classificationDiagnostic || !p.pathSet || !filepath.IsAbs(p.path) || p.productSet || p.successionSet || p.refreshSet || p.refreshRequestSet || p.runtimeUpdateSet || p.diagnosticSet || p.remainingArgs {
+	if err != nil || !p.pathSet || !filepath.IsAbs(p.path) || p.productSet || p.successionSet || p.refreshSet || p.refreshRequestSet || p.runtimeUpdateSet || p.diagnosticSet || p.remainingArgs {
 		_, _ = io.WriteString(stderr, "invalid classification diagnostic arguments\n")
 		return 2
 	}
@@ -32,7 +32,15 @@ func runClassificationDiagnosticCLI(args []string, stdout, stderr io.Writer, cla
 	if exit != 0 || json.Unmarshal(output.Bytes(), &result) != nil {
 		return 1
 	}
-	result["classification_diagnostic"] = trace
+	if p.classificationDiagnostic {
+		if trace != nil {
+			trace.PolicyStage = trace.Stage
+			if basis, ok := result["classification_basis"].(string); ok {
+				trace.Stage = basis
+			}
+		}
+		result["classification_diagnostic"] = trace
+	}
 	if json.NewEncoder(stdout).Encode(result) != nil {
 		return 1
 	}
@@ -45,6 +53,7 @@ func runClassificationDiagnosticCLI(args []string, stdout, stderr io.Writer, cla
 type ownerClassificationTrace struct {
 	started            time.Time
 	Stage              string `json:"stage"`
+	PolicyStage        string `json:"policy_stage,omitempty"`
 	DurationMS         int64  `json:"duration_ms"`
 	RegistrationMS     int64  `json:"registration_ms"`
 	RegistrationReads  int    `json:"registration_reads"`

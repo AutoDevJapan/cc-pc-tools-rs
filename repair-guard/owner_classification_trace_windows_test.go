@@ -178,3 +178,37 @@ func TestClassificationMalformedIdentityNeverPublishesValidMetadata(t *testing.T
 		t.Fatal("decode failure published valid identity metadata")
 	}
 }
+
+func TestClassificationExplicitFalseUsesOrdinaryGuard(t *testing.T) {
+	var out, err bytes.Buffer
+	calls := 0
+	code := runClassificationDiagnosticCLI([]string{"--guard-path", "C:/owned/source", "--classification-diagnostic=false"}, &out, &err, func(string) (ownerPathVerdict, *ownerClassificationTrace) {
+		calls++
+		return ownerRuleClear("verified_self_repository"), &ownerClassificationTrace{Stage: "verified_self_repository"}
+	})
+	if code != 0 || calls != 1 || err.Len() != 0 || bytes.Contains(out.Bytes(), []byte("classification_diagnostic")) {
+		t.Fatal("false option rejected ordinary classification", code, calls)
+	}
+}
+
+func TestClassificationTraceStageTracksFinalReceiptVerdict(t *testing.T) {
+	v := ownerRuleRetirementVerdict(ownerRuleUnknown("classification_deadline"), "C:/owned/software", true)
+	if !v.AccessAllowed || v.Basis != "verified_retirement_receipt" {
+		t.Fatal("normal receipt fixture")
+	}
+	trace := &ownerClassificationTrace{Stage: "classification_deadline"}
+	var out bytes.Buffer
+	var stderr bytes.Buffer
+	if runClassificationDiagnosticCLI([]string{"--guard-path", "C:/owned/software", "--classification-diagnostic"}, &out, &stderr, func(string) (ownerPathVerdict, *ownerClassificationTrace) { return v, trace }) != 0 {
+		t.Fatal("output")
+	}
+	var result struct {
+		Trace struct {
+			Stage       string `json:"stage"`
+			PolicyStage string `json:"policy_stage"`
+		} `json:"classification_diagnostic"`
+	}
+	if json.Unmarshal(out.Bytes(), &result) != nil || result.Trace.Stage != v.Basis || result.Trace.PolicyStage != "classification_deadline" {
+		t.Fatal("diagnostic disagrees with final receipt")
+	}
+}

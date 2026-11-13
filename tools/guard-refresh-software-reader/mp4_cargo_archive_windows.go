@@ -402,6 +402,15 @@ func (s *softwareBuildSnapshot) extractCargoArchive(ctx context.Context, name, c
 }
 
 func (s *softwareBuildSnapshot) extractCargoArchiveWithCreator(ctx context.Context, name, checksum string, raw []byte, budget *cargoExpansionBudget, create func(string, []byte) *archiveFileCompletion) (result error) {
+	return s.extractCargoArchiveWithHooks(ctx, name, checksum, raw, budget, archiveCreationHooks{create: create})
+}
+
+type archiveCreationHooks struct {
+	create      func(string, []byte) *archiveFileCompletion
+	beforeDrain func()
+}
+
+func (s *softwareBuildSnapshot) extractCargoArchiveWithHooks(ctx context.Context, name, checksum string, raw []byte, budget *cargoExpansionBudget, hooks archiveCreationHooks) (result error) {
 	if ctx.Err() != nil {
 		return ctx.Err()
 	}
@@ -429,8 +438,8 @@ func (s *softwareBuildSnapshot) extractCargoArchiveWithCreator(ctx context.Conte
 	files := map[string]string{}
 	createdFiles := map[string]string{}
 	writers := s.fileCreationWorker(budget, createdFiles)
-	if create != nil {
-		writers.create = create
+	if hooks.create != nil {
+		writers.create = hooks.create
 	}
 	defer func() { result = errors.Join(result, writers.finish()) }()
 	names := map[string]bool{}
@@ -498,6 +507,9 @@ func (s *softwareBuildSnapshot) extractCargoArchiveWithCreator(ctx context.Conte
 		default:
 			return errors.New("archive_link_or_special_entry_rejected")
 		}
+	}
+	if hooks.beforeDrain != nil {
+		hooks.beforeDrain()
 	}
 	if err := writers.finish(); err != nil {
 		return err

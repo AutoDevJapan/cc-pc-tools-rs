@@ -72,25 +72,69 @@ func TestArchiveLastWriterCancellationCannotPublishChecksum(t *testing.T) {
 	defer clear(raw)
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
-	entered, release := make(chan struct{}), make(chan struct{})
+	entered, release, beforeDrain := make(chan struct{}), make(chan struct{}), make(chan struct{})
 	done := make(chan error, 1)
+	var active atomic.Int32
+	var payload []byte
+	var completion *archiveFileCompletion
+	released, observed := false, false
+	t.Cleanup(func() {
+		cancel()
+		if !released {
+			close(release)
+		}
+		if !observed {
+			select {
+			case <-done:
+			case <-time.After(2 * time.Second):
+				t.Error("controller not collected during cleanup")
+			}
+		}
+	})
 	go func() {
-		done <- s.extractCargoArchiveWithCreator(ctx, "owned-1.0.0", digest(raw), raw, &cargoExpansionBudget{}, func(path string, b []byte) *archiveFileCompletion {
+		done <- s.extractCargoArchiveWithHooks(ctx, "owned-1.0.0", digest(raw), raw, &cargoExpansionBudget{}, archiveCreationHooks{beforeDrain: func() { close(beforeDrain) }, create: func(path string, b []byte) *archiveFileCompletion {
+			active.Add(1)
+			defer active.Add(-1)
+			payload = b
 			close(entered)
 			<-release
 			fragment := &softwareBuildSnapshot{Root: s.Root, paths: map[string]bool{}}
 			err := fragment.create(path, b)
-			return &archiveFileCompletion{path: path, fragment: fragment, sha: digest(b), size: int64(len(b)), err: err}
-		})
+			completion = &archiveFileCompletion{path: path, fragment: fragment, sha: digest(b), size: int64(len(b)), err: err}
+			return completion
+		}})
 	}()
-	<-entered
-	// The single tiny archive has already queued its only writer; the tar
-	// controller can reach EOF while that writer remains explicitly held.
+	select {
+	case <-entered:
+	case <-time.After(time.Second):
+		t.Fatal("writer did not start")
+	}
+	// EOF is observed by the actual controller before this separate signal.
+	select {
+	case <-beforeDrain:
+	case <-time.After(time.Second):
+		t.Fatal("controller did not reach EOF drain")
+	}
 	cancel()
 	close(release)
-	err := <-done
+	released = true
+	var err error
+	select {
+	case err = <-done:
+		observed = true
+	case <-time.After(2 * time.Second):
+		t.Fatal("controller did not collect the released writer")
+	}
 	if !errors.Is(err, context.Canceled) {
 		t.Fatalf("late cancellation became success: %v", err)
+	}
+	if active.Load() != 0 || completion == nil || completion.fragment == nil || len(completion.fragment.files) != 0 {
+		t.Fatal("writer or snapshot handles not collected")
+	}
+	for _, b := range payload {
+		if b != 0 {
+			t.Fatal("writer payload not erased before return")
+		}
 	}
 	if _, err := os.Lstat(filepath.Join(s.Root, "vendor", "owned-1.0.0", ".cargo-checksum.json")); !os.IsNotExist(err) {
 		t.Fatal("checksum published after cancellation")

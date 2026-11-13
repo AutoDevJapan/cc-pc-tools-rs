@@ -1,7 +1,7 @@
 //! Optional remote authority for the legacy shared ToDo byte-lock transaction.
 //! A per-cache activation marker is installed only when every writer is upgraded.
 //! HTTP and owner-protected credentials belong to the Go bridge, not this crate.
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 use serde_json::{Value, json};
 use std::{
     collections::HashMap,
@@ -104,6 +104,55 @@ fn settings(path: &Path) -> io::Result<Option<Settings>> {
 /// second local ledger. Old readers use the one shared cache without HTTP.
 pub fn enabled(path: &Path) -> io::Result<bool> {
     Ok(settings(path)?.is_some())
+}
+
+/// One note and its digest from a single remote read transaction.
+#[derive(Debug, Deserialize, Serialize)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+pub struct CurrentNote {
+    pub id: i64,
+    pub note: String,
+    pub note_sha256: String,
+    pub revision: u64,
+    pub state_id: String,
+}
+
+/// The caller owns todo.lock. Unlike a write guard, this never begins a lease
+/// or refreshes the complete local cache.
+pub fn current_note_after_lock(path: &Path, id: i64) -> io::Result<Option<CurrentNote>> {
+    use sha2::{Digest, Sha256};
+    if id <= 0 {
+        return Err(error("todo_remote_invalid_note_request"));
+    }
+    let Some(cfg) = settings(path)? else {
+        return Ok(None);
+    };
+    let mut bridge = Bridge::spawn_with_reply_limit(&cfg, 6 * crate::todo_store::MAX_BYTES + 8192)?;
+    let reply = bridge.exchange_value(
+        json!({"op":"current-note","cachePath":std::path::absolute(path)?,"itemId":id}),
+        Duration::from_secs(30),
+    )?;
+    let projection: CurrentNote = serde_json::from_value(
+        reply
+            .get("currentNote")
+            .cloned()
+            .ok_or_else(|| error("todo_remote_invalid_control_reply"))?,
+    )
+    .map_err(|_| error("todo_remote_invalid_control_reply"))?;
+    let valid_digest = |s: &str| {
+        s.len() == 64
+            && s.bytes()
+                .all(|b| b.is_ascii_digit() || (b'a'..=b'f').contains(&b))
+    };
+    if projection.id != id
+        || projection.note.len() > crate::todo_store::MAX_BYTES
+        || !valid_digest(&projection.state_id)
+        || !valid_digest(&projection.note_sha256)
+        || format!("{:x}", Sha256::digest(projection.note.as_bytes())) != projection.note_sha256
+    {
+        return Err(error("todo_remote_invalid_control_reply"));
+    }
+    Ok(Some(projection))
 }
 
 type Shared = Arc<Mutex<Bridge>>;
@@ -233,6 +282,9 @@ struct Bridge {
 }
 impl Bridge {
     fn spawn(cfg: &Settings) -> io::Result<Self> {
+        Self::spawn_with_reply_limit(cfg, 4096)
+    }
+    fn spawn_with_reply_limit(cfg: &Settings, limit: usize) -> io::Result<Self> {
         let mut cmd = Command::new(&cfg.bridge);
         cmd.arg("session")
             .arg("--config")
@@ -258,12 +310,14 @@ impl Bridge {
             let mut stdout = BufReader::new(stdout);
             loop {
                 let mut line = Vec::new();
-                let result = (&mut stdout).take(4097).read_until(b'\n', &mut line);
+                let result = (&mut stdout)
+                    .take(limit as u64 + 1)
+                    .read_until(b'\n', &mut line);
                 if matches!(result, Ok(0)) {
                     break;
                 }
                 let result = match result {
-                    Ok(_) if line.len() <= 4096 => serde_json::from_slice(&line)
+                    Ok(_) if line.len() <= limit => serde_json::from_slice(&line)
                         .map_err(|_| error("todo_remote_invalid_control_reply")),
                     _ => Err(error("todo_remote_bridge_read_failed")),
                 };
@@ -311,6 +365,9 @@ impl Bridge {
         result
     }
     fn exchange(&mut self, request: Value, timeout: Duration) -> io::Result<()> {
+        self.exchange_value(request, timeout).map(|_| ())
+    }
+    fn exchange_value(&mut self, request: Value, timeout: Duration) -> io::Result<Value> {
         let input = self
             .input
             .as_mut()
@@ -330,9 +387,13 @@ impl Bridge {
             let code = match reply["error"].as_str().unwrap_or("") {
                 "todo_remote_http_401" => "todo_remote_http_401",
                 "todo_remote_http_403" => "todo_remote_http_403",
+                "todo_remote_http_404" => "todo_remote_http_404",
                 "todo_remote_http_409" => "todo_remote_http_409",
                 "todo_remote_http_413" => "todo_remote_http_413",
                 "todo_remote_http_423" => "todo_remote_http_423",
+                "todo_remote_http_500" => "todo_remote_http_500",
+                "todo_remote_network_failed" => "todo_remote_network_failed",
+                "todo_remote_invalid_response" => "todo_remote_invalid_response",
                 "todo_remote_document_too_large" => "todo_remote_document_too_large",
                 "todo_remote_commit_unconfirmed" => "todo_remote_commit_unconfirmed",
                 "todo_remote_cache_resync_required" => "todo_remote_cache_resync_required",
@@ -351,7 +412,7 @@ impl Bridge {
             };
             return Err(error(code));
         }
-        Ok(())
+        Ok(reply)
     }
     fn close(&mut self) {
         if self.closed {

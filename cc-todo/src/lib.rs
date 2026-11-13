@@ -62,8 +62,57 @@ pub struct SubworkOptions {
     #[arg(long, requires = "subwork_of", value_parser=["research", "check", "review"])]
     pub subwork_kind: Option<String>,
 }
+#[derive(clap::Args, Debug)]
+// These two argument groups are built separately to keep the derived CLI's
+// debug-build stack below the Windows executable's default stack reserve.
+pub struct DirectionRecordOptions {
+    #[arg(long)]
+    input_file: PathBuf,
+    #[arg(long)]
+    origin_scope_file: PathBuf,
+    #[arg(long)]
+    origin_state_file: PathBuf,
+    #[arg(long)]
+    actor_scope_file: PathBuf,
+    #[arg(long)]
+    actor_state_file: PathBuf,
+    #[arg(long)]
+    verify_only: bool,
+    /// Immediately check the note written by this invocation, not later task notes.
+    #[arg(long, requires = "verify_only")]
+    verify_note: bool,
+    /// Check new task holds before first closing this answer version.
+    #[arg(long, requires = "verify_only")]
+    check_holds: bool,
+}
+
+#[derive(clap::Args, Debug)]
+pub struct ImplementationRecordOptions {
+    #[arg(long)]
+    input_file: PathBuf,
+    #[arg(long)]
+    origin_scope_file: PathBuf,
+    #[arg(long)]
+    origin_state_file: PathBuf,
+    #[arg(long)]
+    actor_scope_file: PathBuf,
+    #[arg(long)]
+    actor_state_file: PathBuf,
+    #[arg(long)]
+    verify_only: bool,
+    #[arg(long, requires = "verify_only")]
+    verify_note: bool,
+    #[arg(long, requires = "verify_only")]
+    check_holds: bool,
+}
+
 #[derive(Subcommand, Debug)]
 pub enum Command {
+    /// Read only one current note and its CAS digest.
+    CurrentNote {
+        #[arg(value_parser=clap::value_parser!(i64).range(1..))]
+        id: i64,
+    },
     /// Queue or reuse the one finite capacity-decision worker; never launch it.
     CapacityCycle {
         #[arg(long)]
@@ -189,45 +238,9 @@ pub enum Command {
         expected_state_file: Option<PathBuf>,
     },
     /// Record an API-verified direction as a specification note, never feature completion.
-    DirectionRecord {
-        #[arg(long)]
-        input_file: PathBuf,
-        #[arg(long)]
-        origin_scope_file: PathBuf,
-        #[arg(long)]
-        origin_state_file: PathBuf,
-        #[arg(long)]
-        actor_scope_file: PathBuf,
-        #[arg(long)]
-        actor_state_file: PathBuf,
-        #[arg(long)]
-        verify_only: bool,
-        /// Immediately check the note written by this invocation, not later task notes.
-        #[arg(long, requires = "verify_only")]
-        verify_note: bool,
-        /// Check new task holds before first closing this answer version.
-        #[arg(long, requires = "verify_only")]
-        check_holds: bool,
-    },
+    DirectionRecord(DirectionRecordOptions),
     /// Record a separate actor's actual implementation without resuming the origin.
-    ImplementationRecord {
-        #[arg(long)]
-        input_file: PathBuf,
-        #[arg(long)]
-        origin_scope_file: PathBuf,
-        #[arg(long)]
-        origin_state_file: PathBuf,
-        #[arg(long)]
-        actor_scope_file: PathBuf,
-        #[arg(long)]
-        actor_state_file: PathBuf,
-        #[arg(long)]
-        verify_only: bool,
-        #[arg(long, requires = "verify_only")]
-        verify_note: bool,
-        #[arg(long, requires = "verify_only")]
-        check_holds: bool,
-    },
+    ImplementationRecord(ImplementationRecordOptions),
     /// Record a verified native partial result without accepting or closing the original work.
     NativeImplementationRecord(native_implementation::Options),
     /// Preserve selected old notes in immutable segments; preview unless --apply.
@@ -453,6 +466,12 @@ pub fn now() -> String {
 pub struct Lock(File, Option<cc_job_policy::todo_remote::Guard>);
 impl Lock {
     pub fn acquire(path: &Path, timeout: Duration) -> Result<Self> {
+        Self::acquire_inner(path, timeout, true)
+    }
+    fn acquire_local(path: &Path, timeout: Duration) -> Result<Self> {
+        Self::acquire_inner(path, timeout, false)
+    }
+    fn acquire_inner(path: &Path, timeout: Duration, remote: bool) -> Result<Self> {
         let file = OpenOptions::new()
             .create(true)
             .append(true)
@@ -462,8 +481,12 @@ impl Lock {
         let deadline = Instant::now() + timeout;
         loop {
             if platform::lock(&file) {
-                let remote = cc_job_policy::todo_remote::Guard::after_lock(path).map_err(err)?;
-                return Ok(Self(file, remote));
+                let guard = if remote {
+                    cc_job_policy::todo_remote::Guard::after_lock(path).map_err(err)?
+                } else {
+                    None
+                };
+                return Ok(Self(file, guard));
             }
             if Instant::now() >= deadline {
                 return Err("todo.lock is busy".into());
@@ -1357,7 +1380,7 @@ pub fn execute(db: &mut Value, cmd: &Command, paths: &Paths) -> Result<Vec<Strin
                 find(db, *id)?["scheduler"]["owner_instruction"] = json!(instruction);
             }
         }
-        Command::ImplementationRecord {
+        Command::ImplementationRecord(ImplementationRecordOptions {
             input_file,
             origin_scope_file,
             origin_state_file,
@@ -1366,7 +1389,7 @@ pub fn execute(db: &mut Value, cmd: &Command, paths: &Paths) -> Result<Vec<Strin
             verify_only,
             verify_note,
             check_holds,
-        } => output.push(
+        }) => output.push(
             direction_record::record_implementation(
                 db,
                 paths,
@@ -1384,7 +1407,7 @@ pub fn execute(db: &mut Value, cmd: &Command, paths: &Paths) -> Result<Vec<Strin
             .to_string(),
         ),
         Command::NativeImplementationRecord(..) => unreachable!("native command dispatched separately"),
-        Command::DirectionRecord {
+        Command::DirectionRecord(DirectionRecordOptions {
             input_file,
             origin_scope_file,
             origin_state_file,
@@ -1393,7 +1416,7 @@ pub fn execute(db: &mut Value, cmd: &Command, paths: &Paths) -> Result<Vec<Strin
             verify_only,
             verify_note,
             check_holds,
-        } => output.push(
+        }) => output.push(
             direction_record::record(
                 db,
                 paths,
@@ -1595,7 +1618,8 @@ pub fn execute(db: &mut Value, cmd: &Command, paths: &Paths) -> Result<Vec<Strin
             }
             item["updated"] = json!(now());
         }
-        Command::Watch
+        Command::CurrentNote { .. }
+        | Command::Watch
         | Command::ReconcileIntake
         | Command::WatchPreview { .. }
         | Command::ProductResume { .. }
@@ -1607,6 +1631,25 @@ pub fn execute(db: &mut Value, cmd: &Command, paths: &Paths) -> Result<Vec<Strin
     Ok(output)
 }
 pub fn run(cli: Cli, paths: &Paths, notifier: &mut dyn Notifier) -> Result<()> {
+    if let Command::CurrentNote { id } = &cli.command {
+        use sha2::{Digest, Sha256};
+        let _lock = Lock::acquire_local(&paths.lock, Duration::from_secs(30))?;
+        if let Some(remote) =
+            cc_job_policy::todo_remote::current_note_after_lock(&paths.store, *id).map_err(err)?
+        {
+            println!("{}", serde_json::to_string(&remote).map_err(err)?);
+        } else {
+            let mut db = load(&paths.store)?;
+            let note = &find(&mut db, *id)?["note"];
+            if !note.is_null() && !note.is_string() {
+                return Err("invalid_note".into());
+            }
+            let note = note.as_str().unwrap_or("");
+            let digest = format!("{:x}", Sha256::digest(note.as_bytes()));
+            println!("{}", json!({"id":id,"note":note,"noteSha256":digest}));
+        }
+        return Ok(());
+    }
     if let Command::ProductRetryReserve {
         key,
         expected_worker,
@@ -1676,8 +1719,8 @@ pub fn run(cli: Cli, paths: &Paths, notifier: &mut dyn Notifier) -> Result<()> {
             | Command::QuestionAnswer { .. }
             | Command::QuestionWithdraw { .. }
             | Command::AnsweredWait { .. }
-            | Command::DirectionRecord { .. }
-            | Command::ImplementationRecord { .. }
+            | Command::DirectionRecord(..)
+            | Command::ImplementationRecord(..)
             | Command::NativeImplementationRecord(..)
     ) && output
         .first()

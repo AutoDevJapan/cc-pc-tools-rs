@@ -4,6 +4,9 @@ package main
 
 import (
 	"errors"
+	"fmt"
+	"os"
+	"path/filepath"
 	"sync/atomic"
 	"testing"
 	"time"
@@ -57,6 +60,38 @@ func TestArchiveFileWriterOverlapsOnlyTwoAndCollectsBeforeReturn(t *testing.T) {
 	close(release)
 	if err := <-done; err != nil || maximum.Load() != 2 || collected.Load() != 3 || active.Load() != 0 {
 		t.Fatal("not fully collected", err)
+	}
+}
+
+func TestArchiveDirectoryCreationRechecksAfterRecursiveParents(t *testing.T) {
+	s := newArchiveSnapshot(t)
+	for i := 0; len(s.paths) < cargoVendorEntryLimit-1; i++ {
+		s.paths[filepath.Join(s.Root, fmt.Sprintf("counted-%d", i))] = true
+	}
+	path := filepath.Join(s.Root, "first", "second")
+	err := s.createVendorDirectories(path)
+	if err == nil || len(s.paths) > cargoVendorEntryLimit {
+		t.Fatal("recursive directories exceeded namespace entry limit", len(s.paths))
+	}
+	if _, err := os.Lstat(path); !os.IsNotExist(err) {
+		t.Fatal("directory created past limit")
+	}
+}
+
+func TestArchiveDirectoryCreationCountsPendingFileReservations(t *testing.T) {
+	s := newArchiveSnapshot(t)
+	for i := 0; len(s.paths) < cargoVendorEntryLimit-1; i++ {
+		s.paths[filepath.Join(s.Root, fmt.Sprintf("counted-%d", i))] = true
+	}
+	path := filepath.Join(s.Root, "pending-reserved")
+	if s.createVendorDirectoriesReserved(path, 1) == nil {
+		t.Fatal("pending file was not counted")
+	}
+	if _, err := os.Lstat(path); !os.IsNotExist(err) {
+		t.Fatal("directory consumed reserved slot")
+	}
+	if err := s.createVendorDirectoriesReserved(path, 0); err != nil || len(s.paths) != cargoVendorEntryLimit {
+		t.Fatal("normal last slot rejected", err)
 	}
 }
 

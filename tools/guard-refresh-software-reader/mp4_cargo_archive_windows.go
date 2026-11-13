@@ -368,15 +368,22 @@ func (s *softwareBuildSnapshot) fileCreationWorker(budget *cargoExpansionBudget,
 }
 
 func (s *softwareBuildSnapshot) createVendorDirectories(path string) error {
+	return s.createVendorDirectoriesReserved(path, 0)
+}
+
+func (s *softwareBuildSnapshot) createVendorDirectoriesReserved(path string, reserved int) error {
 	if s.paths[path] {
 		return nil
 	}
 	rel, err := filepath.Rel(s.Root, path)
-	if err != nil || !s.paths[s.Root] || rel == ".." || strings.HasPrefix(rel, ".."+string(filepath.Separator)) || len(s.paths) >= cargoVendorEntryLimit {
+	if err != nil || !s.paths[s.Root] || rel == ".." || strings.HasPrefix(rel, ".."+string(filepath.Separator)) || reserved < 0 || len(s.paths)+reserved >= cargoVendorEntryLimit {
 		return errUpdateObject
 	}
-	if err := s.createVendorDirectories(filepath.Dir(path)); err != nil {
+	if err := s.createVendorDirectoriesReserved(filepath.Dir(path), reserved); err != nil {
 		return err
+	}
+	if len(s.paths)+reserved >= cargoVendorEntryLimit {
+		return errUpdateObject
 	}
 	if os.Mkdir(path, 0700) != nil {
 		return errUpdateObject
@@ -450,7 +457,7 @@ func (s *softwareBuildSnapshot) extractCargoArchive(ctx context.Context, name, c
 			if header.Size != 0 {
 				return errUpdateObject
 			}
-			if err := s.createVendorDirectories(filepath.Join(root, filepath.FromSlash(rel))); err != nil {
+			if err := s.createVendorDirectoriesReserved(filepath.Join(root, filepath.FromSlash(rel)), len(writers.pending)); err != nil {
 				return err
 			}
 		case tar.TypeReg, tar.TypeRegA:
@@ -465,7 +472,14 @@ func (s *softwareBuildSnapshot) extractCargoArchive(ctx context.Context, name, c
 				return errUpdateObject
 			}
 			path := filepath.Join(root, filepath.FromSlash(rel))
-			if err = s.createVendorDirectories(filepath.Dir(path)); err == nil && len(s.paths)+len(writers.pending) < cargoVendorEntryLimit {
+			if len(writers.pending) == 2 {
+				writers.take()
+			}
+			if writers.first != nil {
+				clear(content)
+				return writers.first
+			}
+			if err = s.createVendorDirectoriesReserved(filepath.Dir(path), len(writers.pending)); err == nil && len(s.paths)+len(writers.pending) < cargoVendorEntryLimit {
 				err = writers.submit(path, content)
 			} else if err == nil {
 				err = errUpdateObject

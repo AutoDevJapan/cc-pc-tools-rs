@@ -20,7 +20,8 @@ import (
 
 const cargoArchiveLimit = 64 << 20
 const cargoArchiveTotalLimit = 256 << 20
-const cargoPublicArchiveRoot = mp4PublicCargoRegistry + "/cache/index.crates.io-1949cf8c6b5b557f"
+const cargoPublicArchiveRoot = "D:/CC/ToolCache/cargo-registry/cache/index.crates.io-1949cf8c6b5b557f"
+const cargoPublicArchiveAlias = mp4PublicCargoRegistry + "/cache/index.crates.io-1949cf8c6b5b557f"
 
 func cargoPackageDirectory(name string) bool {
 	if name == "" || len(name) > 256 {
@@ -40,7 +41,50 @@ func cargoPackageDirectory(name string) bool {
 // Resolve the fixed public-cache directory by metadata, then retain the plain
 // physical namespace and the exact archive handle; no credentials are read.
 func readLockedCargoArchive(ctx context.Context, name, checksum string) ([]byte, error) {
-	return readCargoArchiveAt(ctx, cargoPublicArchiveRoot, name, checksum, nil)
+	return readQualifiedCargoArchive(ctx, cargoPublicArchiveAlias, cargoPublicArchiveRoot, name, checksum, qualifyPublicCargoPath)
+}
+
+func qualifyPublicCargoPath(ctx context.Context, path string) bool {
+	r := askOwnedChild(ctx, installedGuardPath, "--guard-path", path)
+	defer clear(r.Raw)
+	if !r.Started || !r.Assigned || !r.WaitVerified || !r.Reaped || r.TimedOut || r.Exit != 0 {
+		return false
+	}
+	var v struct {
+		Allowed    bool   `json:"access_allowed"`
+		Client     bool   `json:"client_resource"`
+		Unverified bool   `json:"classification_unverified"`
+		Status     string `json:"protection_status"`
+	}
+	return json.Unmarshal(r.Raw, &v) == nil && v.Allowed && !v.Client && !v.Unverified && v.Status == "clear"
+}
+
+func readQualifiedCargoArchive(ctx context.Context, alias, root, name, checksum string, qualify func(context.Context, string) bool) ([]byte, error) {
+	if ctx.Err() != nil || !cargoPackageDirectory(name) || !vendorSHA(checksum) || qualify == nil {
+		return nil, errUpdateObject
+	}
+	physical, ok := openPlain(root, true)
+	if !ok {
+		return nil, errUpdateObject
+	}
+	defer syscall.CloseHandle(physical)
+	p, err := syscall.UTF16PtrFromString(alias)
+	if err != nil {
+		return nil, errUpdateObject
+	}
+	logical, err := syscall.CreateFile(p, 0x80, syscall.FILE_SHARE_READ|syscall.FILE_SHARE_WRITE, nil, syscall.OPEN_EXISTING, 0x02000000, 0)
+	if err != nil {
+		return nil, errUpdateObject
+	}
+	defer syscall.CloseHandle(logical)
+	var a, b syscall.ByHandleFileInformation
+	if syscall.GetFileInformationByHandle(logical, &a) != nil || syscall.GetFileInformationByHandle(physical, &b) != nil || a.VolumeSerialNumber != b.VolumeSerialNumber || a.FileIndexHigh != b.FileIndexHigh || a.FileIndexLow != b.FileIndexLow {
+		return nil, errors.New("public_archive_root_identity_mismatch")
+	}
+	if !qualify(ctx, root) || !qualify(ctx, filepath.Join(root, name+".crate")) {
+		return nil, errors.New("public_archive_source_unqualified")
+	}
+	return readCargoArchiveAt(ctx, root, name, checksum, nil)
 }
 
 func readCargoArchiveAt(ctx context.Context, archiveRoot, name, checksum string, held func(*nativeUpdateObject) error) ([]byte, error) {
@@ -239,6 +283,10 @@ func (s *softwareBuildSnapshot) extractCargoArchive(ctx context.Context, name, c
 }
 
 func (s *softwareBuildSnapshot) extractLockedCargoVendor(ctx context.Context, lock []byte, read cargoArchiveReader) error {
+	return s.extractLockedCargoVendorWithLimit(ctx, lock, read, cargoArchiveTotalLimit)
+}
+
+func (s *softwareBuildSnapshot) extractLockedCargoVendorWithLimit(ctx context.Context, lock []byte, read cargoArchiveReader, compressedLimit int64) error {
 	identities, ok := cargoLockIdentities(lock)
 	if !ok || read == nil {
 		return errUpdateObject
@@ -275,9 +323,9 @@ func (s *softwareBuildSnapshot) extractLockedCargoVendor(ctx context.Context, lo
 			clear(raw)
 			return &cargoInputError{cause: "locked_archive_unavailable", err: err}
 		}
-		if compressed > cargoArchiveTotalLimit-int64(len(raw)) {
+		if compressed > compressedLimit-int64(len(raw)) {
 			clear(raw)
-			return errors.New("archive_compressed_budget_exceeded")
+			return &cargoInputError{cause: "archive_expansion_rejected", err: errors.New("archive_compressed_budget_exceeded")}
 		}
 		compressed += int64(len(raw))
 		err = s.extractCargoArchive(ctx, pkg.name, pkg.sha, raw, &budget)

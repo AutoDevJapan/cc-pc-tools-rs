@@ -13,6 +13,7 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+	"time"
 )
 
 func ownedCargoArchive(t *testing.T, headers []*tar.Header, contents [][]byte) []byte {
@@ -279,5 +280,144 @@ func TestCargoArchiveMultiplePackagesShareExpansionBudget(t *testing.T) {
 	}
 	if _, err := os.Lstat(filepath.Join(s.Root, "vendor", "third-1.0.0")); !os.IsNotExist(err) {
 		t.Fatal("stream overflow package created")
+	}
+}
+
+func TestCargoArchiveQualifiedPhysicalRootRejectsRedirectBeforeBody(t *testing.T) {
+	base := physicalSoftwareFixture(t)
+	root, other, alias := filepath.Join(base, "qualified"), filepath.Join(base, "foreign"), filepath.Join(base, "alias")
+	if os.Mkdir(root, 0700) != nil || os.Mkdir(other, 0700) != nil {
+		t.Fatal("fixture roots")
+	}
+	raw := []byte("same matching public software archive")
+	for _, p := range []string{root, other} {
+		if os.WriteFile(filepath.Join(p, "owned-1.0.0.crate"), raw, 0600) != nil {
+			t.Fatal("fixture file")
+		}
+	}
+	if os.Symlink(other, alias) != nil {
+		t.Fatal("fixture redirect")
+	}
+	qualifyCalls := 0
+	qualify := func(context.Context, string) bool { qualifyCalls++; return true }
+	if got, err := readQualifiedCargoArchive(context.Background(), alias, root, "owned-1.0.0", digest(raw), qualify); err == nil || got != nil || qualifyCalls != 0 {
+		t.Fatal("foreign root reached qualification or body")
+	}
+	if os.Remove(alias) != nil || os.Symlink(root, alias) != nil {
+		t.Fatal("fixture normal alias")
+	}
+	got, err := readQualifiedCargoArchive(context.Background(), alias, root, "owned-1.0.0", digest(raw), qualify)
+	defer clear(got)
+	if err != nil || !bytes.Equal(got, raw) || qualifyCalls != 2 {
+		t.Fatal("qualified root rejected", err, qualifyCalls)
+	}
+	if got, err := readQualifiedCargoArchive(context.Background(), alias, root, "owned-1.0.0", digest(raw), func(context.Context, string) bool { return false }); err == nil || got != nil {
+		t.Fatal("unqualified source body read")
+	}
+}
+
+func TestCargoArchiveCompressedLimitReachesConsumerDiagnostic(t *testing.T) {
+	s := newArchiveSnapshot(t)
+	content := []byte("owned source")
+	raw := ownedCargoArchive(t, []*tar.Header{{Name: "owned-1.0.0/source.rs", Size: int64(len(content)), Mode: 0600, Typeflag: tar.TypeReg}}, [][]byte{content})
+	defer clear(raw)
+	lock := []byte("version = 4\n[[package]]\nname = \"owned\"\nversion = \"1.0.0\"\nsource = \"registry+https://github.com/rust-lang/crates.io-index\"\nchecksum = \"" + digest(raw) + "\"\n")
+	err := s.extractLockedCargoVendorWithLimit(context.Background(), lock, func(context.Context, string, string) ([]byte, error) { return append([]byte(nil), raw...), nil }, int64(len(raw))-1)
+	diagnostic := cargoInputDiagnostic(err)
+	if err == nil || diagnostic == nil || diagnostic.Cause != "archive_expansion_rejected" {
+		t.Fatal("compressed limit cause discarded")
+	}
+	if _, err := os.Stat(filepath.Join(s.Root, "vendor", "owned-1.0.0")); !os.IsNotExist(err) {
+		t.Fatal("compressed limit checked after package creation")
+	}
+}
+
+func TestCargoArchiveVerifiedBeforeResolverCanRun(t *testing.T) {
+	for _, fault := range []string{"normal", "substitute", "missing"} {
+		t.Run(fault, func(t *testing.T) {
+			s := newArchiveSnapshot(t)
+			content := []byte("owned source")
+			raw := ownedCargoArchive(t, []*tar.Header{{Name: "owned-1.0.0/source.rs", Size: int64(len(content)), Mode: 0600, Typeflag: tar.TypeReg}}, [][]byte{content})
+			defer clear(raw)
+			lock := []byte("version = 4\n[[package]]\nname = \"owned\"\nversion = \"1.0.0\"\nsource = \"registry+https://github.com/rust-lang/crates.io-index\"\nchecksum = \"" + digest(raw) + "\"\n")
+			resolved := 0
+			err := s.prepareLockedCargoInputsWith(context.Background(), lock, func(context.Context, string, string) ([]byte, error) {
+				if fault == "missing" {
+					return nil, errors.New("missing")
+				}
+				if fault == "substitute" {
+					return []byte("changed archive"), nil
+				}
+				return append([]byte(nil), raw...), nil
+			}, func(context.Context, []byte) error {
+				resolved++
+				b, e := os.ReadFile(filepath.Join(s.Root, "vendor", "owned-1.0.0", "source.rs"))
+				if e != nil || !bytes.Equal(b, content) {
+					t.Fatal("resolver ran before verified file creation")
+				}
+				return nil
+			})
+			if fault == "normal" {
+				if err != nil || resolved != 1 {
+					t.Fatal("normal resolver", err, resolved)
+				}
+			} else if err == nil || resolved != 0 {
+				t.Fatal("unverified archive reached resolver")
+			}
+		})
+	}
+}
+
+func TestCargoArchiveOwnedResolverHasNoSharedRegistry(t *testing.T) {
+	if _, err := os.Stat("C:/Users/makhmeto/.rustup/toolchains/1.95.0-x86_64-pc-windows-msvc/bin/cargo.exe"); os.IsNotExist(err) {
+		t.Skip("explicit workstation Cargo resolution")
+	}
+	root := physicalSoftwareFixture(t)
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
+	ctx, config, err := prepareMP4CargoContext(ctx, softwareBuildPlan{Target: root, Source: mp4Source})
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer config.Close()
+	if config.cacheLink != "" {
+		t.Fatal("new resolver inherited shared registry")
+	}
+	if _, err := os.Lstat(filepath.Join(config.Root, "registry")); !os.IsNotExist(err) {
+		t.Fatal("shared registry path exists")
+	}
+	s := &softwareBuildSnapshot{Root: filepath.Join(root, "source"), paths: map[string]bool{}}
+	if os.Mkdir(s.Root, 0700) != nil || snapshotDirectories(s.Root, s.Root, s) != nil {
+		t.Fatal("snapshot")
+	}
+	defer s.Close()
+	if s.create(filepath.Join(s.Root, "Cargo.toml"), []byte(mp4CargoWorkspace)) != nil {
+		t.Fatal("workspace")
+	}
+	for _, name := range []string{"cc-ask", "cc-chrome", "cc-job-policy", "cc-live", "cc-local-llm", "cc-task-title"} {
+		manifest := "[package]\nname=\"" + name + "\"\nversion=\"0.1.0\"\nedition=\"2021\"\n"
+		if name == "cc-ask" {
+			manifest += "[dependencies]\nowned=\"=1.0.0\"\n"
+		}
+		if snapshotDirectories(filepath.Join(s.Root, name, "src"), s.Root, s) != nil || s.create(filepath.Join(s.Root, name, "Cargo.toml"), []byte(manifest)) != nil || s.create(filepath.Join(s.Root, name, "src/lib.rs"), []byte("pub fn local(){}\n")) != nil {
+			t.Fatal("local fixture")
+		}
+	}
+	manifest := []byte("[package]\nname=\"owned\"\nversion=\"1.0.0\"\nedition=\"2021\"\n")
+	lib := []byte("pub fn archived(){}\n")
+	raw := ownedCargoArchive(t, []*tar.Header{{Name: "owned-1.0.0/Cargo.toml", Size: int64(len(manifest)), Mode: 0600, Typeflag: tar.TypeReg}, {Name: "owned-1.0.0/src/lib.rs", Size: int64(len(lib)), Mode: 0600, Typeflag: tar.TypeReg}}, [][]byte{manifest, lib})
+	defer clear(raw)
+	lock := []byte("version = 4\n[[package]]\nname = \"owned\"\nversion = \"1.0.0\"\nsource = \"registry+https://github.com/rust-lang/crates.io-index\"\nchecksum = \"" + digest(raw) + "\"\n")
+	for _, name := range []string{"cc-ask", "cc-chrome", "cc-job-policy", "cc-live", "cc-local-llm", "cc-task-title"} {
+		lock = append(lock, []byte("[[package]]\nname = \""+name+"\"\nversion = \"0.1.0\"\n")...)
+		if name == "cc-ask" {
+			lock = append(lock, []byte("dependencies = [\n \"owned\",\n]\n")...)
+		}
+	}
+	if err := s.prepareLockedCargoInputsWith(ctx, lock, func(context.Context, string, string) ([]byte, error) { return append([]byte(nil), raw...), nil }, s.resolveCargoLock); err != nil {
+		t.Fatal("owned resolution", err)
+	}
+	if !s.exact() || !config.cargoConfigurationUnchanged() {
+		t.Fatal("resolution changed owned namespace")
 	}
 }

@@ -81,6 +81,10 @@ already occurs in the original lock; its digest is recorded with the snapshot.
 The fixed software purpose reads only the public package archives selected
 by that admitted lock. Each archive's held bytes must hash to its locked
 checksum; those same verified bytes are then expanded into the snapshot.
+The fixed logical cache and its separately qualified physical root must have
+the same held directory identity before a package body is opened. Resolution
+then uses the verified directory source and a Cargo home without a shared
+registry link; it cannot unpack an unverified shared archive first.
 Creation rejects traversal, links, duplicate or aliased paths and special
 entries, with finite compressed, expanded, file and entry limits checked
 before file creation. Extracted files remain held through compilation. An

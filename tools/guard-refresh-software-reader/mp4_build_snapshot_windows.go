@@ -205,16 +205,13 @@ func materializeMP4BuildSnapshotWith(ctx context.Context, build softwareBuildPla
 			for i, source := range evidence.Inputs {
 				if source.Path == "Cargo.lock" {
 					found = true
-					if err := snapshot.resolveCargoLock(ctx, sources[i].Raw()); err != nil {
+					if err := snapshot.prepareLockedCargoInputsWith(ctx, sources[i].Raw(), readLockedCargoArchive, snapshot.resolveCargoLock); err != nil {
 						return nil, err
 					}
 				}
 			}
 			if !found {
 				return nil, errUpdateObject
-			}
-			if err := snapshot.materializeCargoVendor(ctx); err != nil {
-				return nil, err
 			}
 		}
 	}

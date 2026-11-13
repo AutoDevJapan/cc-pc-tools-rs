@@ -112,6 +112,8 @@ tail buffers and erased on return; paths, source lines and error messages are
 not returned or written to receipts. Protocol workers retain their stricter
 complete-output and empty-stderr requirements. A diagnostic never authorizes
 preparation or makes a failed build successful.
+The pipe reader also owns and clears its fixed read scratch buffer; this is a
+bounded application-buffer guarantee, not complete erasure of Go or OS memory.
 
 New snapshot directories temporarily exclude new entries. Original ACLs are
 captured before any directory is sealed, restored in parent-first order, and

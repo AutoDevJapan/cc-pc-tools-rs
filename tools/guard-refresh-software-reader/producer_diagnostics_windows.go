@@ -5,6 +5,7 @@ package main
 import (
 	"bytes"
 	"context"
+	"io"
 )
 
 // Only compiler invocations opt in. Protocol workers keep their existing
@@ -23,6 +24,31 @@ type compilerCapture struct {
 	data      [65536]byte
 	n         int
 	truncated bool
+}
+
+func (b *compilerCapture) ReadFrom(r io.Reader) (total int64, err error) {
+	var scratch [8192]byte
+	defer clear(scratch[:])
+	empty := 0
+	for {
+		n, readErr := r.Read(scratch[:])
+		if n > 0 {
+			_, _ = b.Write(scratch[:n])
+			total += int64(n)
+			empty = 0
+		} else {
+			empty++
+		}
+		if readErr == io.EOF {
+			return total, nil
+		}
+		if readErr != nil {
+			return total, readErr
+		}
+		if empty >= 100 {
+			return total, io.ErrNoProgress
+		}
+	}
 }
 
 func (b *compilerCapture) Write(p []byte) (int, error) {

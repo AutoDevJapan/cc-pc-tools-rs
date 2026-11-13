@@ -6,12 +6,58 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
+	"io"
 	"os"
 	"strings"
 	"testing"
 	"time"
 )
+
+type compilerScratchProbe struct {
+	observed []byte
+	done     bool
+	failure  bool
+}
+
+func (r *compilerScratchProbe) Read(p []byte) (int, error) {
+	r.observed = p
+	if r.done {
+		return 0, io.EOF
+	}
+	r.done = true
+	n := copy(p, []byte("DO_NOT_RETURN_PRIVATE_VALUE"))
+	if r.failure {
+		return n, errors.New("owned partial read")
+	}
+	return n, io.EOF
+}
+
+func TestCompilerReaderFromErasesOwnedScratchOnAllReturns(t *testing.T) {
+	for _, failure := range []bool{false, true} {
+		r := &compilerScratchProbe{failure: failure}
+		var capture compilerCapture
+		var reader io.ReaderFrom = &capture
+		n, err := reader.ReadFrom(r)
+		if n == 0 || (err != nil) != failure || len(r.observed) != 8192 || !bytes.Equal(r.observed, make([]byte, len(r.observed))) {
+			t.Fatal("scratch not controlled/erased")
+		}
+		capture.erase()
+	}
+	read, write, err := os.Pipe()
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer read.Close()
+	go func() { _, _ = write.Write([]byte("owned pipe")); _ = write.Close() }()
+	var capture compilerCapture
+	n, err := io.Copy(&capture, read)
+	if err != nil || n != 10 || string(capture.data[:capture.n]) != "owned pipe" {
+		t.Fatal("actual file pipe transfer failed")
+	}
+	capture.erase()
+}
 
 func TestCompilerCaptureRetainsBoundedTailAndErasesEveryByte(t *testing.T) {
 	var b compilerCapture

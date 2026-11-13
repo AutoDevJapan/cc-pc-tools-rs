@@ -48,6 +48,27 @@ func askOwnedChild(ctx context.Context, executable string, args ...string) (resu
 
 type askChildWorkingDirectory struct{}
 type askChildEnvironment struct{}
+type askChildExactEnvironment struct{}
+
+func askChildEnvironmentValues(ctx context.Context, parent []string, permit string) []string {
+	var result []string
+	if exact, _ := ctx.Value(askChildExactEnvironment{}).(bool); !exact {
+		result = append(result, parent...)
+	}
+	result = append(result, permit)
+	if changes, _ := ctx.Value(askChildEnvironment{}).(map[string]string); changes != nil {
+		for key, value := range changes {
+			filtered := result[:0]
+			for _, entry := range result {
+				if !strings.HasPrefix(strings.ToUpper(entry), strings.ToUpper(key)+"=") {
+					filtered = append(filtered, entry)
+				}
+			}
+			result = append(filtered, key+"="+value)
+		}
+	}
+	return result
+}
 
 func askOwnedChildAt(ctx context.Context, cwd, executable string, args ...string) askChildResult {
 	return askOwnedChild(context.WithValue(ctx, askChildWorkingDirectory{}, cwd), executable, args...)
@@ -127,18 +148,7 @@ func askOwnedChildWithHandshake(ctx context.Context, executable string, onReady 
 		return
 	}
 	cmd.SysProcAttr.AdditionalInheritedHandles = []syscall.Handle{syscall.Handle(permitRead.Fd())}
-	cmd.Env = append(os.Environ(), "ASK_SOFTWARE_PARENT_HANDLE="+strconv.FormatUint(uint64(permitRead.Fd()), 10))
-	if changes, _ := ctx.Value(askChildEnvironment{}).(map[string]string); changes != nil {
-		for key, value := range changes {
-			filtered := cmd.Env[:0]
-			for _, entry := range cmd.Env {
-				if !strings.HasPrefix(strings.ToUpper(entry), strings.ToUpper(key)+"=") {
-					filtered = append(filtered, entry)
-				}
-			}
-			cmd.Env = append(filtered, key+"="+value)
-		}
-	}
+	cmd.Env = askChildEnvironmentValues(ctx, os.Environ(), "ASK_SOFTWARE_PARENT_HANDLE="+strconv.FormatUint(uint64(permitRead.Fd()), 10))
 	cmd.WaitDelay = 100 * time.Millisecond
 	out := askGitOutput{limit: 65536}
 	errOut := askGitOutput{limit: 65536}

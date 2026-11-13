@@ -53,10 +53,60 @@ func TestSnapshotCloseReportsRestoreFailureAndContinuesOtherCleanup(t *testing.T
 	}
 }
 
-func TestCargoNeutralContextHasOwnedConfigAndCacheLinkOnly(t *testing.T) {
-	if !cargoNeutralConfigurationAbsent(mp4CargoNeutralCWD) {
-		t.Skip("neutral installed cwd not present on hosted runner")
+func TestSnapshotConstructionFailureIncludesPrimaryAndCleanupFailure(t *testing.T) {
+	root := physicalSoftwareFixture(t)
+	raw := []byte("package main\nfunc main(){}\n")
+	proof := askBuildEvidence{Inputs: []buildSourceRecord{{Path: "unattended-runner/main.go", SHA: digest(raw)}}}
+	primary := errors.New("injected_partial_seal_failure")
+	restore := errors.New("injected_restore_observation_failure")
+	closed := 0
+	result, e := materializeMP4BuildSnapshotWith(context.Background(), softwareBuildPlan{Target: root, GoRunner: true}, proof, []updateObject{&fakeUpdateObject{raw: raw}}, func(s *softwareBuildSnapshot) error {
+		if e := s.sealDirectories(); e != nil {
+			return e
+		}
+		return primary
+	}, func(s *softwareBuildSnapshot) error {
+		closed++
+		return errors.Join(s.Close(), restore)
+	})
+	if result != nil || !errors.Is(e, primary) || !errors.Is(e, restore) || !errors.Is(e, errSnapshotCleanup) || closed != 1 {
+		t.Fatal("construction or cleanup failure discarded", e, closed)
 	}
+	if e := os.WriteFile(filepath.Join(root, "source", "restored.txt"), []byte("restored"), 0600); e != nil {
+		t.Fatal("owned cleanup was not performed", e)
+	}
+}
+
+func TestSnapshotRejectsUnlistedInputInsertedBeforeFinalSeal(t *testing.T) {
+	root := physicalSoftwareFixture(t)
+	raw := []byte("fn main(){}\n")
+	proof := askBuildEvidence{Inputs: []buildSourceRecord{{Path: "cc-ask/src/main.rs", SHA: digest(raw)}}}
+	result, e := materializeMP4BuildSnapshotWith(context.Background(), softwareBuildPlan{Target: root}, proof, []updateObject{&fakeUpdateObject{raw: raw}}, func(s *softwareBuildSnapshot) error {
+		if e := os.WriteFile(filepath.Join(s.Root, "cc-ask", "build.rs"), []byte("fn main(){}"), 0600); e != nil {
+			return e
+		}
+		return s.sealDirectories()
+	}, func(s *softwareBuildSnapshot) error { return s.Close() })
+	if result != nil || !errors.Is(e, errUpdateObject) {
+		t.Fatal("unlisted compiler input survived final sealed namespace check", e)
+	}
+}
+
+func TestCargoExactChildEnvironmentDoesNotChangeOrdinaryChildren(t *testing.T) {
+	parent := []string{"PATH=owned-toolchain", "CARGO_PROFILE_RELEASE_DEBUG_ASSERTIONS=true", "CC_PRODUCT_MCP_CONTRACT_REPOSITORY_ID=707001"}
+	ordinary := askChildEnvironmentValues(context.Background(), parent, "ASK_SOFTWARE_PARENT_HANDLE=7")
+	if len(ordinary) != 4 {
+		t.Fatal("ordinary child inheritance changed")
+	}
+	ctx := context.WithValue(context.Background(), askChildExactEnvironment{}, true)
+	ctx = context.WithValue(ctx, askChildEnvironment{}, map[string]string{"PATH": "owned-toolchain", "CARGO_HOME": "owned-home"})
+	exact := strings.Join(askChildEnvironmentValues(ctx, parent, "ASK_SOFTWARE_PARENT_HANDLE=7"), "\n")
+	if strings.Contains(exact, "DEBUG_ASSERTIONS") || strings.Contains(exact, "CC_PRODUCT") || !strings.Contains(exact, "ASK_SOFTWARE_PARENT_HANDLE=7") || !strings.Contains(exact, "CARGO_HOME=owned-home") {
+		t.Fatal("unproved child input inherited or explicit required input omitted")
+	}
+}
+
+func TestCargoNeutralContextHasOwnedConfigAndCacheLinkOnly(t *testing.T) {
 	if _, e := os.Stat(mp4PublicCargoRegistry); e != nil {
 		t.Skip("explicit workstation public registry integration")
 	}
@@ -82,9 +132,6 @@ func TestCargoNeutralContextHasOwnedConfigAndCacheLinkOnly(t *testing.T) {
 }
 
 func TestCargoOwnedHomeRejectsLegacyConfigurationUntilRelease(t *testing.T) {
-	if !cargoNeutralConfigurationAbsent(mp4CargoNeutralCWD) {
-		t.Skip("neutral installed cwd not present on hosted runner")
-	}
 	if _, e := os.Stat(mp4PublicCargoRegistry); e != nil {
 		t.Skip("explicit workstation public registry integration")
 	}
@@ -111,7 +158,7 @@ func TestCargoOwnedHomeRejectsLegacyConfigurationUntilRelease(t *testing.T) {
 		t.Fatal("owned Cargo source")
 	}
 	output := filepath.Join(root, "target")
-	built := askOwnedChildAt(ctx, mp4CargoNeutralCWD, snapshotTestTool(t, "cargo"), "build", "--offline", "--manifest-path", filepath.Join(project, "Cargo.toml"), "--target-dir", output)
+	built := askOwnedChildAt(ctx, ctx.Value(mp4CargoDirectory{}).(string), snapshotTestTool(t, "cargo"), "build", "--offline", "--manifest-path", filepath.Join(project, "Cargo.toml"), "--target-dir", output)
 	defer clear(built.Raw)
 	if built.Exit != 0 || !built.Reaped || built.TimedOut {
 		t.Fatal("sealed Cargo home ordinary build failed", built.Exit)
@@ -157,7 +204,7 @@ func TestCargoControlledContextIgnoresUnboundAncestorFlagsAndEnv(t *testing.T) {
 		t.Fatal(e)
 	}
 	defer config.Close()
-	result := askOwnedChildAt(ctx, mp4CargoNeutralCWD, snapshotTestTool(t, "cargo"), "build", "--offline", "--manifest-path", filepath.Join(project, "Cargo.toml"), "--target-dir", filepath.Join(root, "target"))
+	result := askOwnedChildAt(ctx, ctx.Value(mp4CargoDirectory{}).(string), snapshotTestTool(t, "cargo"), "build", "--offline", "--manifest-path", filepath.Join(project, "Cargo.toml"), "--target-dir", filepath.Join(root, "target"))
 	defer clear(result.Raw)
 	if result.Exit != 0 || !result.Reaped {
 		t.Fatal("controlled Cargo build failed", result.Exit)
@@ -166,6 +213,42 @@ func TestCargoControlledContextIgnoresUnboundAncestorFlagsAndEnv(t *testing.T) {
 	defer clear(ran.Raw)
 	if ran.Exit != 0 || !ran.Reaped {
 		t.Fatal("unboundancestorconfiguration consumed", ran.Exit)
+	}
+}
+
+func TestCargoPurposeExcludesInheritedReleaseLinkerAndProductInputs(t *testing.T) {
+	if _, e := os.Stat(mp4PublicCargoRegistry); e != nil {
+		t.Skip("explicit workstation Cargo integration")
+	}
+	t.Setenv("CARGO_PROFILE_RELEASE_DEBUG_ASSERTIONS", "true")
+	t.Setenv("CARGO_TARGET_X86_64_PC_WINDOWS_MSVC_LINKER", "unqualified-linker.exe")
+	t.Setenv("CC_PRODUCT_MCP_CONTRACT_REPOSITORY_ID", "707001")
+	t.Setenv("CC_PRODUCT_MCP_CONTRACT_OWNER_ID", "707002")
+	root := physicalSoftwareFixture(t)
+	project := filepath.Join(root, "project")
+	if os.Mkdir(project, 0700) != nil || os.Mkdir(filepath.Join(project, "src"), 0700) != nil {
+		t.Fatal("owned Cargo directories")
+	}
+	if os.WriteFile(filepath.Join(project, "Cargo.toml"), []byte("[package]\nname=\"owned-cargo-env\"\nversion=\"0.1.0\"\nedition=\"2021\"\n[workspace]\n"), 0600) != nil || os.WriteFile(filepath.Join(project, "src", "main.rs"), []byte("fn main(){assert!(!cfg!(debug_assertions));assert!(option_env!(\"CC_PRODUCT_MCP_CONTRACT_REPOSITORY_ID\").is_none());assert!(option_env!(\"CC_PRODUCT_MCP_CONTRACT_OWNER_ID\").is_none());}\n"), 0600) != nil {
+		t.Fatal("owned Cargo source")
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
+	ctx, config, e := prepareMP4CargoContext(ctx, softwareBuildPlan{Target: root})
+	if e != nil {
+		t.Fatal(e)
+	}
+	defer config.Close()
+	output := filepath.Join(root, "target")
+	built := askOwnedChildAt(ctx, ctx.Value(mp4CargoDirectory{}).(string), snapshotTestTool(t, "cargo"), "build", "--offline", "--release", "--manifest-path", filepath.Join(project, "Cargo.toml"), "--target-dir", output)
+	defer clear(built.Raw)
+	if built.Exit != 0 || !built.Reaped || built.TimedOut {
+		t.Fatal("inherited unqualified linker reached Cargo", built.Exit)
+	}
+	ran := askOwnedChild(ctx, filepath.Join(output, "release", "owned-cargo-env.exe"))
+	defer clear(ran.Raw)
+	if ran.Exit != 0 || !ran.Reaped || ran.TimedOut {
+		t.Fatal("inherited release or product-binding input reached compiler", ran.Exit)
 	}
 }
 

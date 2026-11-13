@@ -23,14 +23,17 @@ func softwareProducerGoArgs(root, output string, files []string) []string {
 }
 
 type softwareBuildSnapshot struct {
-	Root        string
-	files       []*os.File
-	dirs        []syscall.Handle
-	paths       map[string]bool
-	sealed      []snapshotDirectoryACL
-	cacheLink   string
-	LockSHA     string
-	ManifestSHA string
+	Root              string
+	files             []*os.File
+	dirs              []syscall.Handle
+	paths             map[string]bool
+	sealed            []snapshotDirectoryACL
+	cacheLink         string
+	cargoDrive        string
+	cargoDriveTarget  string
+	releaseCargoDrive func() error
+	LockSHA           string
+	ManifestSHA       string
 }
 
 type snapshotDirectoryACL struct {
@@ -74,6 +77,9 @@ func (s *softwareBuildSnapshot) Close() error {
 
 func (s *softwareBuildSnapshot) closeWithRestore(restore func(snapshotDirectoryACL) error) error {
 	var errs []error
+	if e := s.closeCargoDirectory(); e != nil {
+		errs = append(errs, e)
+	}
 	for i := 0; i < len(s.sealed); i++ {
 		a := s.sealed[i]
 		if e := restore(a); e != nil {
@@ -138,7 +144,13 @@ func materializeMP4BuildSnapshot(build softwareBuildPlan, evidence askBuildEvide
 	return materializeMP4BuildSnapshotContext(context.Background(), build, evidence, sources)
 }
 
-func materializeMP4BuildSnapshotContext(ctx context.Context, build softwareBuildPlan, evidence askBuildEvidence, sources []updateObject) (*softwareBuildSnapshot, error) {
+func materializeMP4BuildSnapshotContext(ctx context.Context, build softwareBuildPlan, evidence askBuildEvidence, sources []updateObject) (result *softwareBuildSnapshot, err error) {
+	return materializeMP4BuildSnapshotWith(ctx, build, evidence, sources,
+		func(s *softwareBuildSnapshot) error { return s.sealDirectories() },
+		func(s *softwareBuildSnapshot) error { return s.Close() })
+}
+
+func materializeMP4BuildSnapshotWith(ctx context.Context, build softwareBuildPlan, evidence askBuildEvidence, sources []updateObject, seal func(*softwareBuildSnapshot) error, closeSnapshot func(*softwareBuildSnapshot) error) (result *softwareBuildSnapshot, err error) {
 	root := filepath.Join(build.Target, "source")
 	if len(sources) != len(evidence.Inputs) || os.Mkdir(root, 0700) != nil {
 		return nil, errUpdateObject
@@ -147,7 +159,9 @@ func materializeMP4BuildSnapshotContext(ctx context.Context, build softwareBuild
 	ok := false
 	defer func() {
 		if !ok {
-			snapshot.Close()
+			if cleanup := closeSnapshot(snapshot); cleanup != nil {
+				err = errors.Join(err, errSnapshotCleanup, cleanup)
+			}
 		}
 	}()
 	if err := snapshotDirectories(root, root, snapshot); err != nil {
@@ -197,8 +211,11 @@ func materializeMP4BuildSnapshotContext(ctx context.Context, build softwareBuild
 	if !snapshot.exact() {
 		return nil, errUpdateObject
 	}
-	if err := snapshot.sealDirectories(); err != nil {
+	if err := seal(snapshot); err != nil {
 		return nil, err
+	}
+	if !snapshot.exact() {
+		return nil, errUpdateObject
 	}
 	keys := make([]string, 0, len(snapshot.paths))
 	for path := range snapshot.paths {

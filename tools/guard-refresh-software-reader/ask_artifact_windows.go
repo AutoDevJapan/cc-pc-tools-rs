@@ -6,6 +6,7 @@ import (
 	"bufio"
 	"context"
 	"encoding/json"
+	"errors"
 	"io"
 	"os"
 	"path/filepath"
@@ -476,6 +477,9 @@ func runSoftwareBuildWorker(build softwareBuildPlan, out io.Writer) (exit int) {
 				cargoCtx, cargoConfig, e = prepareMP4CargoContext(context.Background(), build)
 				if e != nil {
 					r.Reason = "compiler_configuration_unqualified"
+					if errors.Is(e, errSnapshotCleanup) {
+						r.Reason = "compiler_configuration_cleanup_failed_preserved"
+					}
 					return 1
 				}
 				defer func() {
@@ -499,6 +503,9 @@ func runSoftwareBuildWorker(build softwareBuildPlan, out io.Writer) (exit int) {
 				snapshot, e = materializeMP4BuildSnapshotContext(inputCtx, build, evidence, sources)
 				if e != nil {
 					r.Reason = "source_snapshot_incomplete_preserved"
+					if errors.Is(e, errSnapshotCleanup) {
+						r.Reason = "source_snapshot_cleanup_failed_preserved"
+					}
 					return 1
 				}
 				defer func() {
@@ -512,7 +519,7 @@ func runSoftwareBuildWorker(build softwareBuildPlan, out io.Writer) (exit int) {
 				r.SnapshotManifestSHA = snapshot.ManifestSHA
 				r.ResolvedLockSHA = snapshot.LockSHA
 				if cargoConfig != nil {
-					r.ConfigurationSHA = digest([]byte(mp4CargoConfiguration))
+					r.ConfigurationSHA = mp4ConfigurationDigest(cargoCtx)
 				}
 				if build.GoRunner {
 					goFiles = snapshotSelectedGoFiles(goFiles, snapshot)
@@ -530,6 +537,7 @@ func runSoftwareBuildWorker(build softwareBuildPlan, out io.Writer) (exit int) {
 			}
 			if cargoCtx != nil {
 				buildCtx = context.WithValue(buildCtx, askChildEnvironment{}, cargoCtx.Value(askChildEnvironment{}))
+				buildCtx = context.WithValue(buildCtx, askChildExactEnvironment{}, true)
 			}
 			if build.GoRunner {
 				argv := softwareProducerGoArgs(compileRoot, build.Output, goFiles)
@@ -539,7 +547,8 @@ func runSoftwareBuildWorker(build softwareBuildPlan, out io.Writer) (exit int) {
 					// cargo -C pins config discovery to the new source namespace;
 					// +nightly is not required: the executable accepts no -C until
 					// unstable, so spawn from that cwd using the owned child helper.
-					built = askOwnedChildAt(buildCtx, mp4CargoNeutralCWD, "D:/CC/Tools/codex-jobs/cargo_gate.exe", "build", "--locked", "--offline", "--release", "--manifest-path", compileRoot+"/Cargo.toml", "--target-dir", build.Target, "-p", "cc-ask", "--bin", "discord_ask")
+					cwd, _ := cargoCtx.Value(mp4CargoDirectory{}).(string)
+					built = askOwnedChildAt(buildCtx, cwd, "D:/CC/Tools/codex-jobs/cargo_gate.exe", "build", "--locked", "--offline", "--release", "--manifest-path", compileRoot+"/Cargo.toml", "--target-dir", build.Target, "-p", "cc-ask", "--bin", "discord_ask")
 				} else {
 					built = askOwnedChild(buildCtx, "D:/CC/Tools/codex-jobs/cargo_gate.exe", "build", "--locked", "--release", "--manifest-path", compileRoot+"/Cargo.toml", "--target-dir", build.Target, "-p", "cc-ask", "--bin", "discord_ask")
 				}
@@ -557,7 +566,7 @@ func runSoftwareBuildWorker(build softwareBuildPlan, out io.Writer) (exit int) {
 				r.Reason = "source_snapshot_changed_preserved"
 				return 1
 			}
-			if cargoConfig != nil && (!cargoNeutralConfigurationAbsent(mp4CargoNeutralCWD) || !cargoConfig.cargoConfigurationUnchanged()) {
+			if cargoConfig != nil && !cargoConfig.cargoConfigurationUnchanged() {
 				r.Reason = "compiler_configuration_changed_preserved"
 				return 1
 			}

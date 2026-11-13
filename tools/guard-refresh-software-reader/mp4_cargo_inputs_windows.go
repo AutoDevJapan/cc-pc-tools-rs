@@ -4,25 +4,59 @@ package main
 
 import (
 	"context"
+	"errors"
 	"io"
 	"os"
 	"path/filepath"
+	"sort"
 )
 
-const mp4CargoNeutralCWD = "D:/CC/Tools/codex-jobs"
 const mp4CargoConfiguration = "[build]\nrustc = \"C:/Users/makhmeto/.rustup/toolchains/1.95.0-x86_64-pc-windows-msvc/bin/rustc.exe\"\nrustc-wrapper = \"D:/CC/Tools/sccache/sccache.exe\"\nrustc-workspace-wrapper = \"\"\nrustflags = []\n"
 const mp4PublicCargoRegistry = "C:/Users/makhmeto/.cargo/registry"
 
+var errSnapshotCleanup = errors.New("compiler_snapshot_cleanup_failed_preserved")
+
+func mp4CompilerEnvironment(home string) map[string]string {
+	settings := map[string]string{"CARGO_HOME": home, "CARGO_NET_OFFLINE": "true", "RUSTC": "C:/Users/makhmeto/.rustup/toolchains/1.95.0-x86_64-pc-windows-msvc/bin/rustc.exe", "RUSTC_WRAPPER": "D:/CC/Tools/sccache/sccache.exe", "RUSTC_WORKSPACE_WRAPPER": "", "CARGO_ENCODED_RUSTFLAGS": "", "RUSTFLAGS": "", "CODEX_JOBS_REAL_CARGO": "C:/Users/makhmeto/.rustup/toolchains/1.95.0-x86_64-pc-windows-msvc/bin/cargo.exe", "SCCACHE_DIR": "D:/CC/BuildCache/sccache", "SCCACHE_CACHE_SIZE": "30G", "SCCACHE_SERVER_PORT": "42259"}
+	// Preserve the existing Windows/MSVC toolchain search inputs deliberately;
+	// Cargo/Rust profile, linker overrides, credentials and product-binding
+	// variables are not inherited. These selected values join the config digest.
+	for _, key := range []string{"SystemRoot", "WINDIR", "COMSPEC", "SystemDrive", "PATH", "PATHEXT", "TEMP", "TMP", "LOCALAPPDATA", "APPDATA", "USERPROFILE", "ProgramData", "ProgramFiles", "ProgramFiles(x86)", "ProgramW6432", "INCLUDE", "LIB", "LIBPATH", "VSINSTALLDIR", "VCINSTALLDIR", "VCToolsInstallDir", "WindowsSdkDir", "WindowsSDKVersion", "UniversalCRTSdkDir", "UCRTVersion"} {
+		if value, ok := os.LookupEnv(key); ok {
+			settings[key] = value
+		}
+	}
+	return settings
+}
+
+func mp4ConfigurationDigest(ctx context.Context) string {
+	settings, _ := ctx.Value(askChildEnvironment{}).(map[string]string)
+	keys := make([]string, 0, len(settings))
+	for key := range settings {
+		keys = append(keys, key)
+	}
+	sort.Strings(keys)
+	raw := []byte(mp4CargoConfiguration)
+	defer clear(raw)
+	for _, key := range keys {
+		raw = append(raw, key...)
+		raw = append(raw, 0)
+		raw = append(raw, settings[key]...)
+		raw = append(raw, 0)
+	}
+	return digest(raw)
+}
+
 func (s *softwareBuildSnapshot) cargoConfigurationUnchanged() bool {
-	if s == nil || len(s.files) != 1 || s.cacheLink == "" {
+	if s == nil || len(s.files) != 1 || s.cacheLink == "" || !s.cargoDirectoryUnchanged() {
 		return false
 	}
 	entries, e := os.ReadDir(s.Root)
-	if e != nil || len(entries) != 2 {
+	if e != nil || len(entries) != 3 {
 		return false
 	}
 	for _, entry := range entries {
-		if entry.Name() != "config.toml" && entry.Name() != "registry" {
+		if entry.Name() != "config.toml" && entry.Name() != "registry" && entry.Name() != "cwd" {
 			return false
 		}
 	}
@@ -44,28 +78,10 @@ func (s *softwareBuildSnapshot) cargoConfigurationUnchanged() bool {
 	return e == nil && string(raw) == mp4CargoConfiguration
 }
 
-func cargoNeutralConfigurationAbsent(cwd string) bool {
-	for parent := filepath.Clean(cwd); ; parent = filepath.Dir(parent) {
-		for _, leaf := range []string{"config", "config.toml"} {
-			_, e := os.Lstat(filepath.Join(parent, ".cargo", leaf))
-			if !os.IsNotExist(e) {
-				return false
-			}
-		}
-		if filepath.Dir(parent) == parent {
-			break
-		}
-	}
-	return true
-}
-
 // Only the normal public package registry cache is shared. No existing Cargo
 // config, bin directory or credentials are read or copied. Cargo config
-// discovery starts at the separately admitted neutral software cwd.
-func prepareMP4CargoContext(ctx context.Context, build softwareBuildPlan) (context.Context, *softwareBuildSnapshot, error) {
-	if !cargoNeutralConfigurationAbsent(mp4CargoNeutralCWD) {
-		return ctx, nil, errUpdateObject
-	}
+// discovery starts at the new sealed operation-owned drive root.
+func prepareMP4CargoContext(ctx context.Context, build softwareBuildPlan) (result context.Context, snapshot *softwareBuildSnapshot, err error) {
 	home := filepath.Join(build.Target, "cargo-home")
 	if os.Mkdir(home, 0700) != nil {
 		return ctx, nil, errUpdateObject
@@ -76,18 +92,31 @@ func prepareMP4CargoContext(ctx context.Context, build softwareBuildPlan) (conte
 	}
 	config := &softwareBuildSnapshot{Root: home, paths: map[string]bool{}}
 	config.cacheLink = registry
+	ok := false
+	defer func() {
+		if !ok {
+			if cleanup := config.Close(); cleanup != nil {
+				err = errors.Join(err, errSnapshotCleanup, cleanup)
+			}
+		}
+	}()
 	if e := snapshotDirectories(home, home, config); e != nil {
-		config.Close()
 		return ctx, nil, e
 	}
 	if e := config.create(filepath.Join(home, "config.toml"), []byte(mp4CargoConfiguration)); e != nil {
-		config.Close()
+		return ctx, nil, e
+	}
+	if e := config.bindCargoDirectory(); e != nil {
 		return ctx, nil, e
 	}
 	if e := config.sealDirectories(); e != nil {
-		config.Close()
 		return ctx, nil, e
 	}
-	settings := map[string]string{"CARGO_HOME": home, "CARGO_NET_OFFLINE": "true", "RUSTC": "C:/Users/makhmeto/.rustup/toolchains/1.95.0-x86_64-pc-windows-msvc/bin/rustc.exe", "RUSTC_WRAPPER": "D:/CC/Tools/sccache/sccache.exe", "RUSTC_WORKSPACE_WRAPPER": "", "CARGO_ENCODED_RUSTFLAGS": "", "RUSTFLAGS": ""}
-	return context.WithValue(ctx, askChildEnvironment{}, settings), config, nil
+	if !config.cargoConfigurationUnchanged() {
+		return ctx, nil, errUpdateObject
+	}
+	ctx = context.WithValue(ctx, askChildEnvironment{}, mp4CompilerEnvironment(home))
+	ctx = context.WithValue(ctx, mp4CargoDirectory{}, config.cargoDrive+"\\")
+	ok = true
+	return context.WithValue(ctx, askChildExactEnvironment{}, true), config, nil
 }

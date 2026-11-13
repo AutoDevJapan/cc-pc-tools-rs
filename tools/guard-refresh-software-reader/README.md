@@ -83,15 +83,22 @@ The Rust child uses a separate Cargo home containing a fixed compiler/cache
 configuration and the existing public registry cache only. Its directory is
 sealed against new entries through acknowledgement, so a later legacy `config`
 cannot override `config.toml`. The held configuration and the two-entry home
-namespace are rechecked before output acknowledgement. It starts in a
-neutral software directory after checking ancestor Cargo configurations are
-absent; ordinary user configuration and credentials are not copied. The known
+namespace are rechecked before output acknowledgement. It starts at an
+operation-owned temporary drive root backed by a sealed empty directory,
+excluding physical ancestor configuration without changing shared ACLs. The
+exact local drive mapping is checked and removed on release. Ordinary user
+configuration and credentials are not copied. The child environment is explicit;
+selected Windows/toolchain paths and the fixed compiler/cache inputs join the
+configuration digest, while inherited Cargo profile/linker overrides and product
+binding variables are omitted. The known
 compiler and sccache remain enabled. The build recipe and effective configuration
 are separate from application source provenance.
 
 New snapshot directories temporarily exclude new entries. Original ACLs are
 captured before any directory is sealed, restored in parent-first order, and
-read back. Cleanup attempts every handle even when one operation fails. The
+read back. A final exact namespace check follows sealing before compilation.
+Cleanup attempts every handle even when one operation fails, including failed
+construction; primary and cleanup errors remain distinguishable. The
 producer's final response must confirm cleanup and match its ready artifact,
 snapshot, lock and configuration before a successful export receipt is issued.
 An incomplete restore or unknown child result preserves artifacts and cannot

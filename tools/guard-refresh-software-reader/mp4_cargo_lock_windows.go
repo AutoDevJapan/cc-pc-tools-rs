@@ -78,7 +78,11 @@ func (s *softwareBuildSnapshot) resolveCargoLock(ctx context.Context, original [
 	if err := os.WriteFile(path, original, 0600); err != nil {
 		return err
 	}
-	r := askOwnedChildAt(ctx, mp4CargoNeutralCWD, "C:/Users/makhmeto/.rustup/toolchains/1.95.0-x86_64-pc-windows-msvc/bin/cargo.exe", "tree", "--offline", "--manifest-path", filepath.Join(s.Root, "Cargo.toml"), "-p", "cc-ask", "--depth", "0")
+	cwd, _ := ctx.Value(mp4CargoDirectory{}).(string)
+	if cwd == "" {
+		return errUpdateObject
+	}
+	r := askOwnedChildAt(ctx, cwd, "C:/Users/makhmeto/.rustup/toolchains/1.95.0-x86_64-pc-windows-msvc/bin/cargo.exe", "tree", "--offline", "--manifest-path", filepath.Join(s.Root, "Cargo.toml"), "-p", "cc-ask", "--depth", "0")
 	defer clear(r.Raw)
 	if r.Exit != 0 || !r.Reaped || r.TimedOut {
 		return errUpdateObject

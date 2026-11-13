@@ -410,13 +410,16 @@ func (s *unslopLiveSession) WithArtifact(use func([]byte, softwareIdentity) bool
 		return false
 	}
 	return withPinnedCargoOutput(unslopCaptureOutput, alias, s.ready.ArtifactIdentity, func(raw []byte, id softwareIdentity) bool {
-		if len(raw) != s.ready.ArtifactBytes || digest(raw) != s.ready.ArtifactSHA {
+		if !unslopLiveArtifactMatches(s.ready, raw, id) {
 			return false
 		}
 		s.artifactHeld = true
 		defer func() { s.artifactHeld = false }()
 		return use(raw, id)
 	})
+}
+func unslopLiveArtifactMatches(ready unslopLiveReady, raw []byte, id softwareIdentity) bool {
+	return id == ready.ArtifactIdentity && len(raw) == ready.ArtifactBytes && digest(raw) == ready.ArtifactSHA
 }
 func (s *unslopLiveSession) Acknowledge(ctx context.Context) error {
 	if ctx.Err() != nil || !s.artifactHeld || s.acknowledged || s.flight == nil {

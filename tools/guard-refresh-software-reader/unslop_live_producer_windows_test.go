@@ -194,6 +194,33 @@ func TestUnslopOwnedLiveProducerRetainsFilesUntilACKAndReaps(t *testing.T) {
 	}
 }
 
+func TestUnslopLiveReadyIncludesCreationIdentityAtHeldArtifact(t *testing.T) {
+	root := physicalSoftwareFixture(t)
+	a, b := filepath.Join(root, "image.exe"), filepath.Join(root, "alias.exe")
+	raw := []byte("owned artifact")
+	if os.WriteFile(a, raw, 0600) != nil || os.Link(a, b) != nil {
+		t.Fatal("owned alias fixture")
+	}
+	var observed softwareIdentity
+	if !withPinnedCargoOutput(a, b, softwareIdentity{}, func(_ []byte, id softwareIdentity) bool { observed = id; return true }) {
+		t.Fatal("metadata observation failed")
+	}
+	ready := syntheticUnslopReady()
+	ready.ArtifactIdentity = observed
+	ready.ArtifactSHA = digest(raw)
+	ready.ArtifactBytes = len(raw)
+	for _, fault := range []bool{false, true} {
+		current := ready
+		if fault {
+			current.ArtifactIdentity.Created = "different-created"
+		}
+		accepted := withPinnedCargoOutput(a, b, current.ArtifactIdentity, func(data []byte, id softwareIdentity) bool { return unslopLiveArtifactMatches(current, data, id) })
+		if accepted == fault {
+			t.Fatal("Ready creation identity not enforced", fault)
+		}
+	}
+}
+
 func TestUnslopLiveManifestMatchesCoreAndHoldsEmptyInput(t *testing.T) {
 	input := syntheticUnslopCapture().before
 	for i, j := 0, len(input.Sources)-1; i < j; i, j = i+1, j-1 {

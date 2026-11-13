@@ -29,8 +29,11 @@ func TestProjectDistributionPinsMergedHistoryWithoutReusingOldBuild(t *testing.T
 		if build.Inputs != wantInputs || build.ProofSHA != wantProof {
 			t.Fatal("reviewed source set does not match its purpose")
 		}
-		if mp4PlanReady(plan, baseline) {
-			t.Fatal("unbuilt distribution gained preparation permission")
+		if mp4PlanReady(plan, baseline) != (kind == "ask") {
+			t.Fatal("only the completed ask producer may enable preparation")
+		}
+		if kind == "ask" && (plan.SHA != "0a693fa7013d733b3e7fbb009227cb37f4e2705e1d087ab40a4f5bf8857e9747" || plan.ProofSHA != "85dfadb0b549d4a9970c24ee4c1b11c7cd2d4b59019ce3c8bdbc92709ac9ddeb" || plan.Bytes != 13560320) {
+			t.Fatal("completed artifact or source proof changed")
 		}
 	}
 }

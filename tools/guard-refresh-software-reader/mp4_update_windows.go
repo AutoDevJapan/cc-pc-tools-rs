@@ -19,6 +19,9 @@ const mp4Source = "3a69da420e2797c501eb40dd3c660394f8b7cb3b"
 var mp4AskPlan = askSoftwarePlan{
 	Candidate: updateSourceRoot + "/codex-owned-f60f3742a1933562ec75aa5c8eb05d72/discord_ask-project-3a69.exe",
 	Proof:     "D:/CC/Tools/codex-jobs/fourbros4431-project-ask-candidate-proof.json", Source: mp4Source,
+	SHA:      "0a693fa7013d733b3e7fbb009227cb37f4e2705e1d087ab40a4f5bf8857e9747",
+	ProofSHA: "85dfadb0b549d4a9970c24ee4c1b11c7cd2d4b59019ce3c8bdbc92709ac9ddeb",
+	Bytes:    13560320,
 }
 var mp4RunnerPlan = askSoftwarePlan{
 	Candidate: updateSourceRoot + "/codex-owned-f60f3742a1933562ec75aa5c8eb05d72/unattended-runner-project-3a69.exe",

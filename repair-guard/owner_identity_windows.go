@@ -35,7 +35,7 @@ func ownerReadIdentity(home, repository string, now time.Time) (ownerIdentityRec
 	}
 	data, ok := ownerIdentityDPAPI(sealed, false)
 	if !ok || json.Unmarshal(data, &r) != nil {
-		return r, false
+		return ownerIdentityRecord{}, false
 	}
 	return r, ownerIdentityValid(r, repository, now)
 }

@@ -148,3 +148,33 @@ func TestClassificationNestedWorktreeReusesOnlySameAttemptTopProbe(t *testing.T)
 		t.Fatal("probe cache leaked into another attempt")
 	}
 }
+
+func TestClassificationMalformedIdentityNeverPublishesValidMetadata(t *testing.T) {
+	home := diagnosticHome(t)
+	repo := "AutoDevJapan/owned-trace"
+	now := time.Now()
+	valid := ownerIdentityRecord{Domain: "owner-source-identity-v1", Catalog: hashBytes(ownerDepartmentCatalog), Repository: repo, Owner: "AutoDevJapan", ID: 12345, Checked: now.Unix()}
+	raw, e := json.Marshal(valid)
+	if e != nil {
+		t.Fatal(e)
+	}
+	raw = append(raw[:len(raw)-1], []byte(`,"id":"not-an-integer"}`)...)
+	sealed, ok := ownerIdentityDPAPI(raw, true)
+	clear(raw)
+	if !ok {
+		t.Fatal("owned DPAPI fixture")
+	}
+	if os.WriteFile(filepath.Join(home, hashBytes([]byte(strings.ToLower(repo)))+".dpapi"), sealed, 0600) != nil {
+		t.Fatal("owned sealed write")
+	}
+	clear(sealed)
+	trace := &ownerClassificationTrace{}
+	ctx := context.WithValue(context.Background(), ownerClassificationTraceKey{}, trace)
+	_, _, _, verified := ownerCachedIdentityAt(ctx, repo, home, func() time.Time { return now }, func(context.Context, string) (int64, string, string, bool) { return 0, "", "", false })
+	if verified {
+		t.Fatal("malformed record allowed")
+	}
+	if trace.IdentityValid != nil || trace.Checked != nil || trace.Expires != nil {
+		t.Fatal("decode failure published valid identity metadata")
+	}
+}

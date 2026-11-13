@@ -2433,7 +2433,10 @@ impl<'a> RecoveryApi<'a> {
             Kind::Ask { origin_thread, .. } if origin_thread == thread => {
                 self.assert_origin(ledger, thread)?
             }
-            _ => self.assert_bot_thread(thread)?,
+            _ => match self.acknowledgement.clone() {
+                Some((binding, _)) => binding.assert_thread(self, thread)?,
+                None => self.assert_bot_thread(thread)?,
+            },
         }
         if let Target::Thread { thread: expected } = &effect.target {
             if expected != thread {
@@ -2536,7 +2539,10 @@ impl<'a> RecoveryApi<'a> {
                     Kind::Ask { origin_thread, .. } if origin_thread == thread => {
                         self.assert_origin(ledger, thread)?
                     }
-                    _ => self.assert_bot_thread(thread)?,
+                    _ => match self.acknowledgement.clone() {
+                        Some((binding, _)) => binding.assert_thread(self, thread)?,
+                        None => self.assert_bot_thread(thread)?,
+                    },
                 }
                 format!("/channels/{}/messages", snowflake(thread)?)
             }
@@ -2943,11 +2949,39 @@ pub fn log_acknowledgement(ctx: &mut Context, args: &LogArgs, manifest: &Path) -
     execute_inner(ctx, Some(request), None, &[], None, None, Some(&binding))
 }
 
+/// Read reports for standalone posts retain the original log ID and journal.
+pub fn log_owner_post_receipt(ctx: &mut Context, args: &LogArgs, manifest: &Path) -> Result<Value> {
+    if args.notify || !args.attach.is_empty() || args.thread.is_none() {
+        return Err("owner post receipt requires the exact silent text-only destination".into());
+    }
+    let binding = acknowledgement::Binding::read_owner_post(manifest)?;
+    let (request, _) = prepare_clarification(ctx, args)?;
+    binding.check_input(&request)?;
+    execute_inner(ctx, Some(request), None, &[], None, None, Some(&binding))
+}
+
+pub fn check_owner_post_receipt(
+    ctx: &mut Context,
+    args: &LogArgs,
+    manifest: &Path,
+) -> Result<Value> {
+    let binding = acknowledgement::Binding::read_owner_post(manifest)?;
+    check_receipt_binding(ctx, args, binding)
+}
+
 pub fn check_acknowledgement(ctx: &mut Context, args: &LogArgs, manifest: &Path) -> Result<Value> {
+    let binding = acknowledgement::Binding::read(manifest)?;
+    check_receipt_binding(ctx, args, binding)
+}
+
+fn check_receipt_binding(
+    ctx: &mut Context,
+    args: &LogArgs,
+    binding: acknowledgement::Binding,
+) -> Result<Value> {
     if args.notify || !args.attach.is_empty() || args.thread.is_none() {
         return Err("acknowledgement check requires the exact silent text-only destination".into());
     }
-    let binding = acknowledgement::Binding::read(manifest)?;
     let (request, _) = prepare_clarification(ctx, args)?;
     binding.check_input(&request)?;
     let home = ctx.here.clone();
@@ -3471,6 +3505,13 @@ fn execute_inner(
     }
     let _lock = ByteLock::acquire(&home.join(LOCK), Duration::ZERO)?;
     let mut ledger = Ledger::load(&home)?;
+    // Read back the same normal log through its pinned owner-post purpose.
+    let retained_owner_post = incoming
+        .as_ref()
+        .map(|request| acknowledgement::Binding::retained_owner_post(&home, request))
+        .transpose()?
+        .flatten();
+    let acknowledgement = acknowledgement.or(retained_owner_post.as_ref());
     if let (Some(binding), Some(request)) = (acknowledgement, incoming.as_ref()) {
         let mut api = RecoveryApi::inspect(ctx, &mut ledger, request)?;
         acknowledgement::authorize(&mut api, &ledger, &home, request, binding, true, false)?;
@@ -3621,7 +3662,10 @@ fn execute_inner(
                         return Err("recovery progress posts must stay silent".into());
                     }
                 }
-                api.assert_bot_thread(thread)?;
+                match acknowledgement {
+                    Some(binding) => binding.assert_thread(&mut api, thread)?,
+                    None => api.assert_bot_thread(thread)?,
+                }
             }
             let mut destination = thread.clone();
             for (index, body) in text.iter().enumerate() {
@@ -4258,6 +4302,7 @@ mod tests {
         transport_failure: Option<(String, String)>,
         transport_error: Option<String>,
         source_reference_timeout: bool,
+        owner_post_edit_on_get: Option<(String, String, usize)>,
     }
 
     struct Mock {
@@ -4453,6 +4498,23 @@ mod tests {
                     .ok_or("missing mock channel".into());
             }
             if method == "GET" && segments.len() == 4 && segments[2] == "messages" {
+                if let Some((thread, id, remaining)) = state.owner_post_edit_on_get.as_mut() {
+                    if thread == segments[1] && id == segments[3] {
+                        *remaining -= 1;
+                        if *remaining == 0 {
+                            let source = state
+                                .messages
+                                .get_mut(segments[1])
+                                .unwrap()
+                                .iter_mut()
+                                .find(|message| message["id"] == segments[3])
+                                .unwrap();
+                            source["content"] = json!("changed just before POST");
+                            source["edited_timestamp"] = json!("2026-10-12T00:00:03Z");
+                            state.owner_post_edit_on_get = None;
+                        }
+                    }
+                }
                 return state
                     .messages
                     .get(segments[1])
@@ -4726,6 +4788,10 @@ mod tests {
 
     mod acknowledgement_tests {
         include!("recovery_messages/acknowledgement_tests.rs");
+    }
+
+    mod owner_post_receipt_tests {
+        include!("recovery_messages/owner_post_receipt_tests.rs");
     }
 
     fn clarification_fixture(f: &Fixture, ctx: &mut Context) -> (LogArgs, PathBuf, Value) {

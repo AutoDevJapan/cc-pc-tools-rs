@@ -2,6 +2,7 @@
 use super::*;
 
 const DOMAIN: &str = "discord-owner-reply-acknowledgement-v1";
+const POST_DOMAIN: &str = "discord-owner-post-receipt-v1";
 const FILE: &str = "recovery-owner-acknowledgements.json";
 const INVALID: &str =
     "acknowledgement must match the exact verified question and owner reply version";
@@ -25,6 +26,34 @@ pub(super) struct Binding {
     reply_timestamp: String,
     reply_edited_timestamp: Value,
     body_sha256: String,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    owner_post_origin: Option<PostOrigin>,
+}
+
+#[derive(Clone, Debug, Serialize, Deserialize, PartialEq)]
+#[serde(deny_unknown_fields)]
+struct PostOrigin {
+    guild_id: String,
+    request_forum_id: String,
+}
+
+/// A standalone owner post has no question, ToDo wait, or approval binding.
+#[derive(Deserialize)]
+#[serde(deny_unknown_fields)]
+struct OwnerPost {
+    domain: String,
+    purpose: String,
+    request_id: String,
+    guild_id: String,
+    request_forum_id: String,
+    thread_id: String,
+    bot_id: String,
+    owner_id: String,
+    message_id: String,
+    message_body_sha256: String,
+    message_timestamp: String,
+    message_edited_timestamp: Value,
+    body_sha256: String,
 }
 
 #[derive(Default, Serialize, Deserialize)]
@@ -41,6 +70,59 @@ fn hash(value: &str) -> String {
 }
 
 impl Binding {
+    pub(super) fn retained_owner_post(home: &Path, request: &Request) -> Result<Option<Self>> {
+        if !matches!(request.operation, Kind::Log { .. }) || !home.join(FILE).exists() {
+            return Ok(None);
+        }
+        Ok(Journal::load(home)?
+            .records
+            .get(&request.request_id)
+            .filter(|binding| binding.is_owner_post())
+            .cloned())
+    }
+    pub(super) fn is_owner_post(&self) -> bool {
+        self.domain == POST_DOMAIN
+    }
+
+    pub(super) fn read_owner_post(path: &Path) -> Result<Self> {
+        let metadata = fs::symlink_metadata(path).map_err(|_| INVALID)?;
+        if !metadata.is_file() || metadata.file_type().is_symlink() {
+            return Err(INVALID.into());
+        }
+        let p: OwnerPost = serde_json::from_slice(&read_bounded(
+            fs::File::open(path).map_err(|_| INVALID)?,
+            16 * 1024,
+        )?)
+        .map_err(|_| INVALID)?;
+        let binding = Self {
+            domain: p.domain,
+            purpose: p.purpose,
+            request_id: p.request_id,
+            question_request_id: String::new(),
+            todo_id: 0,
+            question_message_id: String::new(),
+            question_fingerprint: String::new(),
+            question_body_sha256: String::new(),
+            thread_id: p.thread_id,
+            bot_id: p.bot_id,
+            owner_id: p.owner_id,
+            reply_message_id: p.message_id,
+            reply_body_sha256: p.message_body_sha256,
+            reply_timestamp: p.message_timestamp,
+            reply_edited_timestamp: p.message_edited_timestamp,
+            body_sha256: p.body_sha256,
+            owner_post_origin: Some(PostOrigin {
+                guild_id: p.guild_id,
+                request_forum_id: p.request_forum_id,
+            }),
+        };
+        binding.validate()?;
+        if !binding.is_owner_post() {
+            return Err(INVALID.into());
+        }
+        Ok(binding)
+    }
+
     pub(super) fn read(path: &Path) -> Result<Self> {
         let metadata = fs::symlink_metadata(path).map_err(|_| INVALID)?;
         if !metadata.is_file() || metadata.file_type().is_symlink() {
@@ -49,37 +131,51 @@ impl Binding {
         let bytes = read_bounded(fs::File::open(path).map_err(|_| INVALID)?, 16 * 1024)?;
         let binding: Self = serde_json::from_slice(&bytes).map_err(|_| INVALID)?;
         binding.validate()?;
+        if binding.is_owner_post() {
+            return Err(INVALID.into());
+        }
         Ok(binding)
     }
 
     fn validate(&self) -> Result<()> {
-        if self.domain != DOMAIN || self.purpose != "acknowledge_owner_reply" || self.todo_id == 0 {
-            return Err(INVALID.into());
+        if self.is_owner_post() {
+            let origin = self.owner_post_origin.as_ref().ok_or(INVALID)?;
+            if self.purpose != "acknowledge_owner_post"
+                || self.todo_id != 0
+                || !self.question_request_id.is_empty()
+                || !self.question_message_id.is_empty()
+                || !self.question_fingerprint.is_empty()
+                || !self.question_body_sha256.is_empty()
+            {
+                return Err(INVALID.into());
+            }
+            snowflake(&origin.guild_id)?;
+            snowflake(&origin.request_forum_id)?;
+        } else {
+            if self.domain != DOMAIN
+                || self.purpose != "acknowledge_owner_reply"
+                || self.todo_id == 0
+                || self.owner_post_origin.is_some()
+            {
+                return Err(INVALID.into());
+            }
+            request_key(&self.question_request_id)?;
+            snowflake(&self.question_message_id)?;
+            for sha in [&self.question_fingerprint, &self.question_body_sha256] {
+                valid_sha(sha)?;
+            }
         }
         request_key(&self.request_id)?;
-        request_key(&self.question_request_id)?;
         for id in [
             &self.thread_id,
-            &self.question_message_id,
             &self.bot_id,
             &self.owner_id,
             &self.reply_message_id,
         ] {
             snowflake(id)?;
         }
-        for sha in [
-            &self.question_fingerprint,
-            &self.question_body_sha256,
-            &self.reply_body_sha256,
-            &self.body_sha256,
-        ] {
-            if sha.len() != 64
-                || !sha
-                    .bytes()
-                    .all(|b| b.is_ascii_hexdigit() && !b.is_ascii_uppercase())
-            {
-                return Err(INVALID.into());
-            }
+        for sha in [&self.reply_body_sha256, &self.body_sha256] {
+            valid_sha(sha)?;
         }
         chrono::DateTime::parse_from_rfc3339(&self.reply_timestamp).map_err(|_| INVALID)?;
         if !self.reply_edited_timestamp.is_null() {
@@ -88,18 +184,33 @@ impl Binding {
             )
             .map_err(|_| INVALID)?;
         }
+        if self.is_owner_post() {
+            let created =
+                chrono::DateTime::parse_from_rfc3339(&self.reply_timestamp).map_err(|_| INVALID)?;
+            if self.reply_edited_timestamp.as_str().is_some_and(|edit| {
+                chrono::DateTime::parse_from_rfc3339(edit).is_ok_and(|stamp| stamp < created)
+            }) {
+                return Err(INVALID.into());
+            }
+        }
         Ok(())
     }
 
     pub(super) fn check_input(&self, request: &Request) -> Result<()> {
         self.validate()?;
+        let body_allowed = matches!(
+            request.body.as_str(),
+            "受け取りました。" | "受け取りました。\n"
+        ) || (self.is_owner_post()
+            && matches!(
+                request.body.as_str(),
+                "受け取りました。Skills化の依頼として元の管理担当へ伝えました。"
+                    | "受け取りました。Skills化の依頼として元の管理担当へ伝えました。\n"
+            ));
         if request.request_id != self.request_id
             || request.notify
             || !request.images.is_empty()
-            || !matches!(
-                request.body.as_str(),
-                "受け取りました。" | "受け取りました。\n"
-            )
+            || !body_allowed
             || hash(&request.body) != self.body_sha256
             || request.destination.owner != self.owner_id
             || !matches!(&request.operation, Kind::Log {thread:Some(thread)} if thread == &self.thread_id)
@@ -107,6 +218,33 @@ impl Binding {
             return Err(INVALID.into());
         }
         no_mentions(&request.body)
+    }
+
+    pub(super) fn assert_thread(&self, api: &mut RecoveryApi<'_>, thread: &str) -> Result<()> {
+        if !self.is_owner_post() {
+            return api.assert_bot_thread(thread);
+        }
+        let origin = self.owner_post_origin.as_ref().ok_or(INVALID)?;
+        if thread != self.thread_id
+            || origin.guild_id != api.destination.guild
+            || origin.request_forum_id != api.destination.request_forum
+            || self.owner_id != api.destination.owner
+            || self.bot_id != api.bot
+        {
+            return Err(INVALID.into());
+        }
+        let channel = api.channel(thread)?;
+        if channel["id"] != thread
+            || channel["type"] != 11
+            || channel["guild_id"] != origin.guild_id
+            || channel["parent_id"] != origin.request_forum_id
+            || channel["owner_id"] != self.owner_id
+        {
+            return Err(
+                "owner post receipt must target the exact configured owner request thread".into(),
+            );
+        }
+        Ok(())
     }
 
     pub(super) fn message_reference(&self) -> Value {
@@ -140,7 +278,9 @@ impl Binding {
     }
 
     fn same_version(&self, other: &Self) -> bool {
-        self.owner_id == other.owner_id
+        self.domain == other.domain
+            && self.owner_post_origin == other.owner_post_origin
+            && self.owner_id == other.owner_id
             && self.thread_id == other.thread_id
             && self.reply_message_id == other.reply_message_id
             && self.reply_body_sha256 == other.reply_body_sha256
@@ -157,6 +297,17 @@ impl Binding {
         }
         Ok(())
     }
+}
+
+fn valid_sha(sha: &str) -> Result<()> {
+    if sha.len() != 64
+        || !sha
+            .bytes()
+            .all(|b| b.is_ascii_hexdigit() && !b.is_ascii_uppercase())
+    {
+        return Err(INVALID.into());
+    }
+    Ok(())
 }
 
 impl Journal {
@@ -251,6 +402,42 @@ pub(super) fn authorize(
         && ledger.effect(&request.request_id, "log:0").is_some()
     {
         return Err(INVALID.into());
+    }
+    if binding.is_owner_post() {
+        binding.assert_thread(api, &binding.thread_id)?;
+        // Once a phase exists it is GET recovery only. Preserve the pinned old
+        // version after edits; any new POST still requires the live exact version.
+        let recovering = journal.records.get(&binding.request_id) == Some(binding)
+            && ledger.effect(&request.request_id, "log:0").is_some();
+        if !recovering || new_phase {
+            let post = api.get(&format!(
+                "/channels/{}/messages/{}",
+                binding.thread_id, binding.reply_message_id
+            ))?;
+            if !exact_owner_reply(
+                &post,
+                &binding.thread_id,
+                &binding.reply_message_id,
+                &binding.owner_id,
+            ) || post["author"]["bot"] != false
+                || hash(post["content"].as_str().ok_or(INVALID)?) != binding.reply_body_sha256
+                || post["timestamp"] != binding.reply_timestamp
+                || post["edited_timestamp"] != binding.reply_edited_timestamp
+            {
+                return Err("exact owner post version differs; no receipt POST".into());
+            }
+            SecretCheck::new().text(post["content"].as_str().ok_or(INVALID)?)?;
+        }
+        if persist && !journal.records.contains_key(&binding.request_id) {
+            journal
+                .records
+                .insert(binding.request_id.clone(), binding.clone());
+            journal
+                .requests
+                .insert(binding.request_id.clone(), request.clone());
+            journal.save(home)?;
+        }
+        return Ok(());
     }
     let question = ledger
         .request(&binding.question_request_id)
@@ -347,7 +534,8 @@ fn existing_matches(message: &Value, binding: &Binding) -> bool {
         .lines()
         .filter_map(|line| line.strip_prefix("-# owner-receipt:"))
         .collect();
-    let version_matches = markers.is_empty()
+    let version_matches = (markers.is_empty()
+        && (!binding.is_owner_post() || binding.reply_edited_timestamp.is_null()))
         || (markers.len() == 1
             && format!("owner-receipt:{}", markers[0]) == binding.version_marker());
     message["channel_id"] == binding.thread_id
@@ -357,6 +545,7 @@ fn existing_matches(message: &Value, binding: &Binding) -> bool {
         && message["message_reference"]["message_id"] == binding.reply_message_id
         && message["message_reference"]["channel_id"] == binding.thread_id
         && (text == "受け取りました。"
+            || (binding.is_owner_post() && text == "受け取りました。Skills化の依頼として元の管理担当へ伝えました。")
             || text == "追加の依頼を受け取りました。実行中の担当が終わった後に、元の作業と追加依頼を照合して進めます。"
             || (text.starts_with('【')
                 && text.ends_with("】受け取りました。今の作業に反映します。")

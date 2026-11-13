@@ -421,3 +421,29 @@ func TestCargoArchiveOwnedResolverHasNoSharedRegistry(t *testing.T) {
 		t.Fatal("resolution changed owned namespace")
 	}
 }
+
+func TestCargoArchiveLeafCannotChangeAfterQualification(t *testing.T) {
+	root := physicalSoftwareFixture(t)
+	file := filepath.Join(root, "owned-1.0.0.crate")
+	raw := []byte("same archive bytes across unrelated generation")
+	if os.WriteFile(file, raw, 0600) != nil {
+		t.Fatal("fixture file")
+	}
+	swapped := false
+	qualify := func(_ context.Context, path string) bool {
+		if sameCleanPath(path, file) {
+			if os.Rename(file, file+".old") == nil {
+				if os.WriteFile(file, raw, 0600) != nil {
+					t.Fatal("fixture replacement")
+				}
+				swapped = true
+			}
+		}
+		return true
+	}
+	got, err := readQualifiedCargoArchive(context.Background(), root, root, "owned-1.0.0", digest(raw), qualify)
+	defer clear(got)
+	if swapped || err != nil || !bytes.Equal(got, raw) {
+		t.Fatal("leaf generation was not held through qualification", swapped, err)
+	}
+}

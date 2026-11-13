@@ -81,10 +81,33 @@ func readQualifiedCargoArchive(ctx context.Context, alias, root, name, checksum 
 	if syscall.GetFileInformationByHandle(logical, &a) != nil || syscall.GetFileInformationByHandle(physical, &b) != nil || a.VolumeSerialNumber != b.VolumeSerialNumber || a.FileIndexHigh != b.FileIndexHigh || a.FileIndexLow != b.FileIndexLow {
 		return nil, errors.New("public_archive_root_identity_mismatch")
 	}
+	// Pin the leaf's metadata before asking the ordinary path guard. This
+	// handle excludes replacement, but reads no body until qualification passes.
+	leaf := filepath.Join(root, name+".crate")
+	p, err = syscall.UTF16PtrFromString(leaf)
+	if err != nil {
+		return nil, errUpdateObject
+	}
+	metadata, err := syscall.CreateFile(p, syscall.GENERIC_READ, syscall.FILE_SHARE_READ, nil, syscall.OPEN_EXISTING, 0x00200000, 0)
+	if err != nil {
+		return nil, errUpdateObject
+	}
+	defer syscall.CloseHandle(metadata)
+	var leafInfo syscall.ByHandleFileInformation
+	actual, ok := handlePath(metadata)
+	if !ok || !sameCleanPath(actual, leaf) || syscall.GetFileInformationByHandle(metadata, &leafInfo) != nil || leafInfo.NumberOfLinks != 1 || leafInfo.FileAttributes&(syscall.FILE_ATTRIBUTE_REPARSE_POINT|syscall.FILE_ATTRIBUTE_DIRECTORY) != 0 {
+		return nil, errUpdateObject
+	}
 	if !qualify(ctx, root) || !qualify(ctx, filepath.Join(root, name+".crate")) {
 		return nil, errors.New("public_archive_source_unqualified")
 	}
-	return readCargoArchiveAt(ctx, root, name, checksum, nil)
+	return readCargoArchiveAt(ctx, root, name, checksum, func(object *nativeUpdateObject) error {
+		var current syscall.ByHandleFileInformation
+		if syscall.GetFileInformationByHandle(syscall.Handle(object.f.Fd()), &current) != nil || leafInfo.VolumeSerialNumber != current.VolumeSerialNumber || leafInfo.FileIndexHigh != current.FileIndexHigh || leafInfo.FileIndexLow != current.FileIndexLow {
+			return errUpdateObject
+		}
+		return nil
+	})
 }
 
 func readCargoArchiveAt(ctx context.Context, archiveRoot, name, checksum string, held func(*nativeUpdateObject) error) ([]byte, error) {

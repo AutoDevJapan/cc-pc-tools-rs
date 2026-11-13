@@ -215,6 +215,59 @@ func TestCurrentNoteRustBridgeNetworkFailureHasNoCacheFallback(t *testing.T) {
 	}
 }
 
+func TestCurrentNoteRustRejectsMalformedBridgeFrames(t *testing.T) {
+	cli, helper := os.Getenv("TODO_REMOTE_TEST_CLI"), os.Getenv("TODO_REMOTE_TEST_REPLY")
+	if cli == "" || helper == "" {
+		t.Skip("fresh Rust CLI and synthetic reply producer not supplied")
+	}
+	note := "synthetic note"
+	projection := string(wire(CurrentNote{ID: 7, Note: note, NoteSHA256: digest([]byte(note)), Revision: 5, StateID: strings.Repeat("a", 64)}))
+	duplicateID := strings.Replace(projection, `"id":7`, `"id":8,"id":7`, 1)
+	duplicateNote := strings.Replace(projection, `"note":"synthetic note"`, `"note":"stale","note":"synthetic note"`, 1)
+	for _, tc := range []struct {
+		name, reply string
+		ok          bool
+	}{
+		{"valid", `{"ok":true,"currentNote":` + projection + `}`, true},
+		{"duplicate-ok", `{"ok":false,"ok":true,"currentNote":` + projection + `}`, false},
+		{"duplicate-projection", `{"ok":true,"currentNote":` + projection + `,"currentNote":` + projection + `}`, false},
+		{"duplicate-id", `{"ok":true,"currentNote":` + duplicateID + `}`, false},
+		{"duplicate-note", `{"ok":true,"currentNote":` + duplicateNote + `}`, false},
+		{"success-with-error", `{"ok":true,"error":"todo_remote_http_500","currentNote":` + projection + `}`, false},
+		{"failure-with-projection", `{"ok":false,"error":"todo_remote_http_500","currentNote":` + projection + `}`, false},
+		{"unknown-root", `{"ok":true,"unknown":0,"currentNote":` + projection + `}`, false},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			home := t.TempDir()
+			path := filepath.Join(home, "todo.json")
+			before := []byte(`{"items":[{"id":7,"note":"private-stale"}],"next_id":8}`)
+			if err := os.WriteFile(path, before, 0600); err != nil {
+				t.Fatal(err)
+			}
+			if err := os.WriteFile(filepath.Join(home, "todo.remote.json"), wire(map[string]string{"bridge": helper, "credentials": filepath.Join(home, "unused-synthetic-config")}), 0600); err != nil {
+				t.Fatal(err)
+			}
+			cmd := exec.Command(cli, "current-note", "7")
+			hideCommand(cmd)
+			cmd.Env = append(os.Environ(), "CC_TODO_HOME="+home, "CC_TODO_JOBS="+home, "TODO_REMOTE_SYNTHETIC_REPLY="+tc.reply)
+			var stdout, stderr bytes.Buffer
+			cmd.Stdout, cmd.Stderr = &stdout, &stderr
+			err := cmd.Run()
+			if tc.ok {
+				var got CurrentNote
+				if err != nil || json.Unmarshal(stdout.Bytes(), &got) != nil || got.Note != note || got.NoteSHA256 != digest([]byte(note)) {
+					t.Fatal("valid bridge frame rejected")
+				}
+			} else if err == nil || stdout.Len() != 0 || !strings.Contains(stderr.String(), "todo_remote_invalid_control_reply") {
+				t.Fatal("malformed bridge frame did not fail closed")
+			}
+			if !bytes.Equal(read(t, path), before) {
+				t.Fatal("projection changed stale cache")
+			}
+		})
+	}
+}
+
 func TestCurrentNoteHTTPFailureNeverFallsBackToSnapshot(t *testing.T) {
 	for _, status := range []int{401, 403, 404, 413, 500} {
 		t.Run(fmt.Sprint(status), func(t *testing.T) {

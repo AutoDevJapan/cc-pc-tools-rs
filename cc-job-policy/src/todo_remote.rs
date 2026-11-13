@@ -117,6 +117,70 @@ pub struct CurrentNote {
     pub state_id: String,
 }
 
+#[derive(Clone, Copy)]
+enum ReplyKind {
+    Control,
+    CurrentNote,
+}
+
+#[derive(Deserialize)]
+#[serde(deny_unknown_fields)]
+struct NoteSuccess {
+    ok: bool,
+    #[serde(rename = "currentNote")]
+    current_note: CurrentNote,
+}
+
+#[derive(Deserialize)]
+#[serde(deny_unknown_fields)]
+struct NoteFailure {
+    ok: bool,
+    error: String,
+}
+
+#[derive(Deserialize)]
+#[serde(untagged)]
+enum NoteReply {
+    Success(NoteSuccess),
+    Failure(NoteFailure),
+}
+impl ReplyKind {
+    fn limit(self) -> usize {
+        match self {
+            Self::Control => 4096,
+            Self::CurrentNote => 6 * crate::todo_store::MAX_BYTES + 8192,
+        }
+    }
+}
+
+fn read_bridge_reply(reader: &mut impl BufRead, kind: ReplyKind) -> io::Result<Option<Value>> {
+    let limit = kind.limit();
+    let mut line = Vec::new();
+    match reader.take(limit as u64 + 1).read_until(b'\n', &mut line) {
+        Ok(0) => Ok(None),
+        Ok(_) if line.len() <= limit => {
+            let reply = match kind {
+                ReplyKind::Control => serde_json::from_slice(&line),
+                ReplyKind::CurrentNote => {
+                    serde_json::from_slice::<NoteReply>(&line).and_then(|reply| match reply {
+                        NoteReply::Success(reply) if reply.ok => {
+                            Ok(json!({"ok":true,"currentNote":reply.current_note}))
+                        }
+                        NoteReply::Failure(reply) if !reply.ok && !reply.error.is_empty() => {
+                            Ok(json!({"ok":false,"error":reply.error}))
+                        }
+                        _ => Err(serde::de::Error::custom("inconsistent note reply")),
+                    })
+                }
+            };
+            reply
+                .map(Some)
+                .map_err(|_| error("todo_remote_invalid_control_reply"))
+        }
+        _ => Err(error("todo_remote_bridge_read_failed")),
+    }
+}
+
 /// The caller owns todo.lock. Unlike a write guard, this never begins a lease
 /// or refreshes the complete local cache.
 pub fn current_note_after_lock(path: &Path, id: i64) -> io::Result<Option<CurrentNote>> {
@@ -127,7 +191,7 @@ pub fn current_note_after_lock(path: &Path, id: i64) -> io::Result<Option<Curren
     let Some(cfg) = settings(path)? else {
         return Ok(None);
     };
-    let mut bridge = Bridge::spawn_with_reply_limit(&cfg, 6 * crate::todo_store::MAX_BYTES + 8192)?;
+    let mut bridge = Bridge::spawn_with_reply_kind(&cfg, ReplyKind::CurrentNote)?;
     let reply = bridge.exchange_value(
         json!({"op":"current-note","cachePath":std::path::absolute(path)?,"itemId":id}),
         Duration::from_secs(30),
@@ -282,9 +346,9 @@ struct Bridge {
 }
 impl Bridge {
     fn spawn(cfg: &Settings) -> io::Result<Self> {
-        Self::spawn_with_reply_limit(cfg, 4096)
+        Self::spawn_with_reply_kind(cfg, ReplyKind::Control)
     }
-    fn spawn_with_reply_limit(cfg: &Settings, limit: usize) -> io::Result<Self> {
+    fn spawn_with_reply_kind(cfg: &Settings, kind: ReplyKind) -> io::Result<Self> {
         let mut cmd = Command::new(&cfg.bridge);
         cmd.arg("session")
             .arg("--config")
@@ -309,17 +373,10 @@ impl Bridge {
         let reader = thread::spawn(move || {
             let mut stdout = BufReader::new(stdout);
             loop {
-                let mut line = Vec::new();
-                let result = (&mut stdout)
-                    .take(limit as u64 + 1)
-                    .read_until(b'\n', &mut line);
-                if matches!(result, Ok(0)) {
-                    break;
-                }
-                let result = match result {
-                    Ok(_) if line.len() <= limit => serde_json::from_slice(&line)
-                        .map_err(|_| error("todo_remote_invalid_control_reply")),
-                    _ => Err(error("todo_remote_bridge_read_failed")),
+                let result = match read_bridge_reply(&mut stdout, kind) {
+                    Ok(None) => break,
+                    Ok(Some(reply)) => Ok(reply),
+                    Err(failure) => Err(failure),
                 };
                 let failed = result.is_err();
                 if send.send(result).is_err() || failed {
@@ -448,6 +505,72 @@ impl Drop for Bridge {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    fn note_projection() -> Value {
+        use sha2::{Digest, Sha256};
+        json!({"id":7,"note":"fixture","noteSha256":format!("{:x}",Sha256::digest(b"fixture")),
+            "revision":3,"stateId":"a".repeat(64)})
+    }
+
+    #[test]
+    fn current_note_bridge_reader_rejects_duplicate_and_inconsistent_envelopes() {
+        let projection = note_projection().to_string();
+        let duplicate_note = projection.replacen(
+            "\"note\":\"fixture\"",
+            "\"note\":\"old\",\"note\":\"fixture\"",
+            1,
+        );
+        let duplicate_id = projection.replacen("\"id\":7", "\"id\":8,\"id\":7", 1);
+        for raw in [
+            format!(r#"{{"ok":false,"ok":true,"currentNote":{projection}}}"#),
+            format!(r#"{{"ok":true,"currentNote":{projection},"currentNote":{projection}}}"#),
+            format!(r#"{{"ok":true,"currentNote":{duplicate_note}}}"#),
+            format!(r#"{{"ok":true,"currentNote":{duplicate_id}}}"#),
+            format!(r#"{{"ok":true,"currentNote":{projection},"unknown":0}}"#),
+            format!(r#"{{"ok":false,"error":"todo_remote_http_404","currentNote":{projection}}}"#),
+            format!(r#"{{"ok":true,"error":"todo_remote_http_404","currentNote":{projection}}}"#),
+            format!(r#"{{"ok":true,"error":null,"currentNote":{projection}}}"#),
+            r#"{"ok":true}"#.to_owned(),
+            r#"{"ok":false,"error":"one","error":"two"}"#.to_owned(),
+            r#"{"ok":false,"error":null}"#.to_owned(),
+            r#"{"ok":true,"currentNote":null}"#.to_owned(),
+        ] {
+            assert!(
+                read_bridge_reply(&mut std::io::Cursor::new(raw), ReplyKind::CurrentNote).is_err(),
+                "inconsistent note reply was accepted"
+            );
+        }
+    }
+
+    #[test]
+    fn current_note_bridge_reader_preserves_valid_reply_and_control_cap() {
+        let projection = note_projection();
+        let raw = json!({"ok":true,"currentNote":projection}).to_string();
+        let reply = read_bridge_reply(&mut std::io::Cursor::new(raw), ReplyKind::CurrentNote)
+            .unwrap()
+            .unwrap();
+        assert_eq!(reply["ok"], true);
+        assert_eq!(reply["currentNote"], projection);
+        let failure = r#"{"ok":false,"error":"todo_remote_http_404"}"#;
+        let reply = read_bridge_reply(&mut std::io::Cursor::new(failure), ReplyKind::CurrentNote)
+            .unwrap()
+            .unwrap();
+        assert_eq!(reply["ok"], false);
+        assert_eq!(reply["error"], "todo_remote_http_404");
+        let mut projection = projection;
+        projection["note"] = json!("x".repeat(5000));
+        let raw = json!({"ok":true,"currentNote":projection}).to_string();
+        assert!(read_bridge_reply(&mut std::io::Cursor::new(&raw), ReplyKind::CurrentNote).is_ok());
+        assert!(read_bridge_reply(&mut std::io::Cursor::new(&raw), ReplyKind::Control).is_err());
+        let reply = read_bridge_reply(
+            &mut std::io::Cursor::new(r#"{"ok":true,"revision":2}"#),
+            ReplyKind::Control,
+        )
+        .unwrap()
+        .unwrap();
+        assert_eq!(reply["revision"], 2);
+    }
+
     #[test]
     fn uncertain_outcome_remains_typed_through_store_and_string_boundaries() {
         let uncertain = error("todo_remote_commit_unconfirmed");

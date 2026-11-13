@@ -23,6 +23,81 @@ const cargoArchiveTotalLimit = 256 << 20
 const cargoPublicArchiveRoot = "D:/CC/ToolCache/cargo-registry/cache/index.crates.io-1949cf8c6b5b557f"
 const cargoPublicArchiveAlias = mp4PublicCargoRegistry + "/cache/index.crates.io-1949cf8c6b5b557f"
 
+type cargoArchiveOperationKey struct{}
+type cargoArchiveRootPin struct {
+	handle syscall.Handle
+	info   syscall.ByHandleFileInformation
+}
+type cargoArchiveOperation struct {
+	roots map[string]cargoArchiveRootPin
+}
+
+func sameArchiveRoot(a, b syscall.ByHandleFileInformation) bool {
+	return a.VolumeSerialNumber == b.VolumeSerialNumber && a.FileIndexHigh == b.FileIndexHigh && a.FileIndexLow == b.FileIndexLow && a.CreationTime == b.CreationTime
+}
+
+func qualifyArchiveRoot(ctx context.Context, root string, handle syscall.Handle, qualify func(context.Context, string) error) error {
+	op, _ := ctx.Value(cargoArchiveOperationKey{}).(*cargoArchiveOperation)
+	if op == nil {
+		return qualify(ctx, root)
+	}
+	if err := ctx.Err(); err != nil {
+		return err
+	}
+	var current syscall.ByHandleFileInformation
+	actual, ok := handlePath(handle)
+	if !ok || !sameCleanPath(actual, root) || syscall.GetFileInformationByHandle(handle, &current) != nil {
+		return errUpdateObject
+	}
+	key := strings.ToLower(filepath.Clean(root))
+	if pinned, exists := op.roots[key]; exists {
+		var held syscall.ByHandleFileInformation
+		if syscall.GetFileInformationByHandle(pinned.handle, &held) != nil || !sameArchiveRoot(held, current) || !sameArchiveRoot(pinned.info, current) {
+			return errUpdateObject
+		}
+		return nil
+	}
+	// Attribute-only directory handles do not enforce rename sharing on Windows.
+	// Pin and compare the same namespace before ordinary qualification starts.
+	path, err := syscall.UTF16PtrFromString(root)
+	if err != nil {
+		return err
+	}
+	pin, err := syscall.CreateFile(path, 0x81, syscall.FILE_SHARE_READ|syscall.FILE_SHARE_WRITE, nil, syscall.OPEN_EXISTING, 0x02200000, 0)
+	if err != nil {
+		return err
+	}
+	retained := false
+	defer func() {
+		if !retained {
+			syscall.CloseHandle(pin)
+		}
+	}()
+	var checked syscall.ByHandleFileInformation
+	resolved, plain := handlePath(pin)
+	if !plain || !sameCleanPath(resolved, root) || syscall.GetFileInformationByHandle(pin, &checked) != nil || checked.FileAttributes&syscall.FILE_ATTRIBUTE_REPARSE_POINT != 0 || !sameArchiveRoot(current, checked) {
+		return errUpdateObject
+	}
+	if err := qualify(ctx, root); err != nil {
+		return err
+	}
+	if err := ctx.Err(); err != nil {
+		return err
+	}
+	op.roots[key] = cargoArchiveRootPin{handle: pin, info: current}
+	retained = true
+	return nil
+}
+
+func (op *cargoArchiveOperation) close() error {
+	var errs []error
+	for key, pin := range op.roots {
+		errs = append(errs, syscall.CloseHandle(pin.handle))
+		delete(op.roots, key)
+	}
+	return errors.Join(errs...)
+}
+
 func cargoPackageDirectory(name string) bool {
 	if name == "" || len(name) > 256 {
 		return false
@@ -139,7 +214,13 @@ func readQualifiedCargoArchiveWithQualifier(ctx context.Context, alias, root, na
 		return nil, &cargoArchiveReadError{stage: "leaf_identity", err: errUpdateObject}
 	}
 	for i, path := range []string{root, leaf} {
-		if err := qualify(ctx, path); err != nil {
+		var err error
+		if i == 0 {
+			err = qualifyArchiveRoot(ctx, root, physical, qualify)
+		} else {
+			err = qualify(ctx, path)
+		}
+		if err != nil {
 			stage := "root_qualification"
 			if i == 1 {
 				stage = "leaf_qualification"
@@ -374,13 +455,16 @@ func (s *softwareBuildSnapshot) extractLockedCargoVendor(ctx context.Context, lo
 	return s.extractLockedCargoVendorWithLimit(ctx, lock, read, cargoArchiveTotalLimit)
 }
 
-func (s *softwareBuildSnapshot) extractLockedCargoVendorWithLimit(ctx context.Context, lock []byte, read cargoArchiveReader, compressedLimit int64) error {
+func (s *softwareBuildSnapshot) extractLockedCargoVendorWithLimit(ctx context.Context, lock []byte, read cargoArchiveReader, compressedLimit int64) (result error) {
 	identities, ok := cargoLockIdentities(lock)
 	if !ok || read == nil {
 		return errUpdateObject
 	}
 	ctx, cancel := context.WithTimeout(ctx, 2*time.Minute)
 	defer cancel()
+	op := &cargoArchiveOperation{roots: map[string]cargoArchiveRootPin{}}
+	ctx = context.WithValue(ctx, cargoArchiveOperationKey{}, op)
+	defer func() { result = errors.Join(result, op.close()) }()
 	started := time.Now()
 	type archive struct{ name, sha string }
 	var packages []archive

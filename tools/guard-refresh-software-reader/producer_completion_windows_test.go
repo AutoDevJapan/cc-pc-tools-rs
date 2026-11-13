@@ -105,3 +105,11 @@ func TestCompilerCompletionOutputFailureIsNotSuccess(t *testing.T) {
 		t.Fatal("failed final output succeeded")
 	}
 }
+
+func TestCompilerCompletionWithoutCallbacksRetainsFirstCloseResult(t *testing.T) {
+	r := askArtifactResult{}
+	c := softwareWorkerCompletion{}
+	if !c.close(&r) || !c.close(&r) || r.SnapshotCleanup != nil {
+		t.Fatal("empty completion changed its first close result")
+	}
+}

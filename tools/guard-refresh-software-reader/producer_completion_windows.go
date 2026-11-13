@@ -12,11 +12,12 @@ import (
 type softwareWorkerCompletion struct {
 	snapshot, config func() error
 	run              bool
+	ok               bool
 }
 
 func (c *softwareWorkerCompletion) close(r *askArtifactResult) bool {
 	if c.run {
-		return r.SnapshotCleanup != nil && *r.SnapshotCleanup
+		return c.ok
 	}
 	c.run = true
 	ok := true
@@ -42,6 +43,7 @@ func (c *softwareWorkerCompletion) close(r *askArtifactResult) bool {
 	if !ok {
 		r.Qualified = false
 	}
+	c.ok = ok
 	return ok
 }
 

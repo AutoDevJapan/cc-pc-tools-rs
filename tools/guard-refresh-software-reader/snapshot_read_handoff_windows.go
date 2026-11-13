@@ -3,7 +3,9 @@
 package main
 
 import (
+	"crypto/sha256"
 	"errors"
+	"io"
 	"os"
 	"syscall"
 	"unsafe"
@@ -21,6 +23,10 @@ func (s *softwareBuildSnapshot) readOnlySnapshotFile(creator *os.File, hook func
 		return nil
 	}
 	id, err := fileSoftwareIdentity(creator)
+	if err != nil {
+		return nil, err
+	}
+	before, err := snapshotHeldFileDigest(creator)
 	if err != nil {
 		return nil, err
 	}
@@ -128,6 +134,9 @@ func (s *softwareBuildSnapshot) readOnlySnapshotFile(creator *os.File, hook func
 	if current, e := fileSoftwareIdentity(reader); e != nil || current != id {
 		return nil, errUpdateObject
 	}
+	if after, e := snapshotHeldFileDigest(reader); e != nil || after != before {
+		return nil, errors.New("snapshot_handoff_content_changed")
+	}
 	if e := step("reader_held"); e != nil {
 		return nil, e
 	}
@@ -143,4 +152,26 @@ func (s *softwareBuildSnapshot) readOnlySnapshotFile(creator *os.File, hook func
 		return nil, e
 	}
 	return reader, nil
+}
+
+func snapshotHeldFileDigest(file *os.File) ([32]byte, error) {
+	var zero [32]byte
+	info, err := file.Stat()
+	if err != nil || info.Size() < 0 || info.Size() > cargoVendorFileLimit {
+		return zero, errUpdateObject
+	}
+	if _, err = file.Seek(0, io.SeekStart); err != nil {
+		return zero, err
+	}
+	hash := sha256.New()
+	var scratch [8192]byte
+	defer clear(scratch[:])
+	n, err := io.CopyBuffer(hash, io.LimitReader(file, info.Size()+1), scratch[:])
+	if err != nil || n != info.Size() {
+		return zero, errUpdateObject
+	}
+	var digest [32]byte
+	copy(digest[:], hash.Sum(nil))
+	_, err = file.Seek(0, io.SeekStart)
+	return digest, err
 }

@@ -4,12 +4,14 @@ package main
 
 import (
 	"errors"
+	"io"
 	"os"
 	"os/exec"
 	"path/filepath"
 	"strings"
 	"syscall"
 	"testing"
+	"unsafe"
 )
 
 func TestSnapshotReadHandoffKeepsIdentityAndRejectsWriters(t *testing.T) {
@@ -100,5 +102,67 @@ func TestSnapshotReadHandoffAllowsMSVC(t *testing.T) {
 			}
 		}
 		t.Fatal("handoff compiler failed", cause)
+	}
+}
+
+func TestSnapshotReadHandoffRejectsOwnerACLMutation(t *testing.T) {
+	root := physicalSoftwareFixture(t)
+	path := filepath.Join(root, "source.txt")
+	ptr, e := syscall.UTF16PtrFromString(path)
+	if e != nil {
+		t.Fatal(e)
+	}
+	h, e := syscall.CreateFile(ptr, syscall.GENERIC_READ|syscall.GENERIC_WRITE, syscall.FILE_SHARE_READ, nil, syscall.CREATE_NEW, 0x00200000, 0)
+	if e != nil {
+		t.Fatal(e)
+	}
+	f := os.NewFile(uintptr(h), path)
+	defer f.Close()
+	if _, e := f.Write([]byte("original")); e != nil {
+		t.Fatal(e)
+	}
+	f.Sync()
+	acl, e := updateFileACL(f)
+	if e != nil {
+		t.Fatal(e)
+	}
+	s := &softwareBuildSnapshot{Root: root, paths: map[string]bool{root: true}}
+	defer s.Close()
+	mutated := false
+	reader, err := s.readOnlySnapshotFile(f, func(stage string) error {
+		if stage != "creator_closed" {
+			return nil
+		}
+		control, e := syscall.CreateFile(ptr, 0x00040000|0x00020000, syscall.FILE_SHARE_READ|syscall.FILE_SHARE_WRITE, nil, syscall.OPEN_EXISTING, 0x00200000, 0)
+		if e != nil {
+			t.Fatal("owned ACL control", e)
+		}
+		defer syscall.CloseHandle(control)
+		text, e := syscall.UTF16PtrFromString(acl)
+		if e != nil {
+			t.Fatal(e)
+		}
+		var sd uintptr
+		ok, _, _ := updateStringSD.Call(uintptr(unsafe.Pointer(text)), 1, uintptr(unsafe.Pointer(&sd)), 0)
+		if ok == 0 {
+			t.Fatal("ACL parse")
+		}
+		defer updateLocalFree.Call(sd)
+		code, _, _ := updateNTSetSecurity.Call(uintptr(control), 4, sd)
+		if code != 0 {
+			t.Fatal("ACL mutation", code)
+		}
+		if os.WriteFile(path, []byte("replaced"), 0600) != nil {
+			t.Fatal("owned mutation not reached")
+		}
+		mutated = true
+		return nil
+	})
+	if reader != nil {
+		defer reader.Close()
+		reader.Seek(0, io.SeekStart)
+	}
+	if !mutated || err == nil {
+		t.Fatal("owner ACL rewrite was not rejected by final content check", mutated, err)
 	}
 }

@@ -136,8 +136,10 @@ read back. A final exact namespace check follows sealing before compilation.
 New files are flushed and checked through their creator handle, then handed
 to a read-only file object for compiler compatibility. During this handoff,
 overlapping handles exclude replacement and a temporary read-only DACL on
-only that operation-owned file excludes new writers. The original DACL is
-restored and read back after the final read-only sharing pin is held.
+only that operation-owned file blocks ordinary new writers. After acquiring
+the final read-only sharing pin, the complete held content is hashed again
+against its pre-handoff digest. A same-owner ACL change cannot make altered
+content pass that check. The original DACL is then restored and read back.
 Cleanup attempts every handle even when one operation fails, including failed
 construction; primary and cleanup errors remain distinguishable. The
 producer's final response must confirm cleanup and match its ready artifact,

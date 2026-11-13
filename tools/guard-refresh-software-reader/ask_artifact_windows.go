@@ -43,6 +43,11 @@ func mp4BuildPlan(kind string) (softwareBuildPlan, bool) {
 	}
 	target := updateSourceRoot + "/codex-owned-b30691d5cc845d615ea1be06bb0d3de3/" + kind + "-project-3a69-build"
 	if kind == "ask" {
+		// The first attempt failed without exporting. Preserve that snapshot
+		// and start the diagnostic-qualified producer in a fresh namespace.
+		target += "-v2"
+	}
+	if kind == "ask" {
 		return softwareBuildPlan{mp4Source, "D:/CC/Tools/codex-jobs/fourbros4431-project-source-3a69-inputs.json", "956ad08d964b9cdf710698e429c606279e0f93cf766a52a58a989a9baf9fba7f", target, target + "/release/discord_ask.exe", target + "/release/deps/discord_ask.exe", p.Candidate, "D:/CC/Tools/codex-jobs/fourbros4431-project-ask-producer.json", 209, false}, true
 	}
 	return softwareBuildPlan{mp4Source, "D:/CC/Tools/codex-jobs/fourbros4431-project-runner-3a69-inputs.json", "3863066939e5110b0014029c5559ad1c11e6a094695ca34620d2c825803598c7", target, target + "/unattended-runner.exe", "", p.Candidate, "D:/CC/Tools/codex-jobs/fourbros4431-project-runner-producer.json", 183, true}, true
@@ -54,28 +59,29 @@ type askBuildEvidence struct {
 	Inputs  []buildSourceRecord
 }
 type askArtifactResult struct {
-	CargoDrive          string            `json:"cargo_drive,omitempty"`
-	CargoNamespaceState string            `json:"cargo_namespace_state,omitempty"`
-	SnapshotManifestSHA string            `json:"snapshot_manifest_sha256,omitempty"`
-	ResolvedLockSHA     string            `json:"resolved_lock_sha256,omitempty"`
-	ConfigurationSHA    string            `json:"compiler_configuration_sha256,omitempty"`
-	SnapshotCleanup     *bool             `json:"snapshot_cleanup_ok,omitempty"`
-	Qualified           bool              `json:"qualified"`
-	Domain              string            `json:"domain"`
-	SHA                 string            `json:"sha256,omitempty"`
-	Bytes               int               `json:"bytes,omitempty"`
-	Source              string            `json:"source"`
-	ExportCreated       bool              `json:"export_created"`
-	Identity            *softwareIdentity `json:"identity,omitempty"`
-	DataAccessGranted   bool              `json:"data_access_granted"`
-	UpdatePerformed     bool              `json:"update_performed"`
-	Reason              string            `json:"reason"`
-	ProducerExit        int               `json:"producer_exit"`
-	ProducerReaped      bool              `json:"producer_reaped"`
-	ProducerElapsedMS   int64             `json:"producer_elapsed_ms"`
-	OutputIdentity      *softwareIdentity `json:"output_identity,omitempty"`
-	TargetCreated       bool              `json:"target_created"`
-	TargetState         string            `json:"target_state"`
+	CompilerDiagnostic  *compilerDiagnostic `json:"compiler_diagnostic,omitempty"`
+	CargoDrive          string              `json:"cargo_drive,omitempty"`
+	CargoNamespaceState string              `json:"cargo_namespace_state,omitempty"`
+	SnapshotManifestSHA string              `json:"snapshot_manifest_sha256,omitempty"`
+	ResolvedLockSHA     string              `json:"resolved_lock_sha256,omitempty"`
+	ConfigurationSHA    string              `json:"compiler_configuration_sha256,omitempty"`
+	SnapshotCleanup     *bool               `json:"snapshot_cleanup_ok,omitempty"`
+	Qualified           bool                `json:"qualified"`
+	Domain              string              `json:"domain"`
+	SHA                 string              `json:"sha256,omitempty"`
+	Bytes               int                 `json:"bytes,omitempty"`
+	Source              string              `json:"source"`
+	ExportCreated       bool                `json:"export_created"`
+	Identity            *softwareIdentity   `json:"identity,omitempty"`
+	DataAccessGranted   bool                `json:"data_access_granted"`
+	UpdatePerformed     bool                `json:"update_performed"`
+	Reason              string              `json:"reason"`
+	ProducerExit        int                 `json:"producer_exit"`
+	ProducerReaped      bool                `json:"producer_reaped"`
+	ProducerElapsedMS   int64               `json:"producer_elapsed_ms"`
+	OutputIdentity      *softwareIdentity   `json:"output_identity,omitempty"`
+	TargetCreated       bool                `json:"target_created"`
+	TargetState         string              `json:"target_state"`
 }
 
 // This purpose recognizes the two names created by the recorded Cargo build.
@@ -571,6 +577,7 @@ func runSoftwareBuildWorker(build softwareBuildPlan, out io.Writer, inherited ..
 				buildCtx = context.WithValue(buildCtx, askChildEnvironment{}, cargoCtx.Value(askChildEnvironment{}))
 				buildCtx = context.WithValue(buildCtx, askChildExactEnvironment{}, true)
 			}
+			buildCtx = compilerContext(buildCtx)
 			if build.GoRunner {
 				argv := softwareProducerGoArgs(compileRoot, build.Output, goFiles)
 				built = askOwnedChild(buildCtx, "C:/Program Files/Go/bin/go.exe", argv...)
@@ -586,6 +593,7 @@ func runSoftwareBuildWorker(build softwareBuildPlan, out io.Writer, inherited ..
 				}
 			}
 			buildCancel()
+			r.CompilerDiagnostic = built.Diagnostic
 			clear(built.Raw)
 			r.ProducerExit = built.Exit
 			r.ProducerReaped = built.Reaped

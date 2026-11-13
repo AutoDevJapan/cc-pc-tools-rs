@@ -106,6 +106,13 @@ An old exported binary or producer receipt cannot satisfy this new generation.
 Candidate digests remain unbound until the reviewed producer completes; source
 verification alone cannot authorize installation or a real question.
 
+Compiler failures report only a fixed cause and, when present, a validated
+Rust error code. Compiler stdout and stderr are drained into fixed-capacity
+tail buffers and erased on return; paths, source lines and error messages are
+not returned or written to receipts. Protocol workers retain their stricter
+complete-output and empty-stderr requirements. A diagnostic never authorizes
+preparation or makes a failed build successful.
+
 New snapshot directories temporarily exclude new entries. Original ACLs are
 captured before any directory is sealed, restored in parent-first order, and
 read back. A final exact namespace check follows sealing before compilation.

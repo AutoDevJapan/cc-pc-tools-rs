@@ -34,6 +34,7 @@ type askJobAccounting struct {
 }
 type askChildResult struct {
 	Raw                             []byte
+	Diagnostic                      *compilerDiagnostic
 	Exit                            int
 	TimedOut, Reaped                bool
 	Started, Assigned, WaitVerified bool
@@ -154,6 +155,15 @@ func askOwnedChildWithHandshake(ctx context.Context, executable string, onReady 
 	errOut := askGitOutput{limit: 65536}
 	cmd.Stdout = &out
 	cmd.Stderr = &errOut
+	compilerMode, _ := ctx.Value(compilerDiagnosticContext{}).(bool)
+	compilerMode = compilerMode && onReady == nil
+	var compilerOut, compilerErr *compilerCapture
+	if compilerMode {
+		compilerOut, compilerErr = new(compilerCapture), new(compilerCapture)
+		defer compilerOut.erase()
+		defer compilerErr.erase()
+		cmd.Stdout, cmd.Stderr = compilerOut, compilerErr
+	}
 	var ready *askReadyCapture
 	var input io.WriteCloser
 	if onReady != nil {
@@ -291,7 +301,10 @@ loop:
 			result.Reaped = false
 		}
 	}
-	if assigned && result.WaitVerified && result.Reaped && !result.TimedOut && (waitErr == nil || result.Exit == 1) && errOut.Len() == 0 {
+	if compilerMode && assigned && result.WaitVerified && result.Reaped && !result.TimedOut && result.Exit != 0 {
+		result.Diagnostic = compilerCause(compilerOut.data[:compilerOut.n], compilerErr.data[:compilerErr.n], compilerOut.truncated || compilerErr.truncated)
+	}
+	if !compilerMode && assigned && result.WaitVerified && result.Reaped && !result.TimedOut && (waitErr == nil || result.Exit == 1) && errOut.Len() == 0 {
 		if ready != nil {
 			out.Buffer = ready.Buffer
 			if out.Len() == 0 && result.Exit != 0 {

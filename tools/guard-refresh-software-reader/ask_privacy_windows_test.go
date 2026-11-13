@@ -367,10 +367,24 @@ func TestProducerHandshakeReadyAbsentAndAckLostAreCollected(t *testing.T) {
 			t.Setenv("ASK_OWNED_SUPERVISOR_CHILD", "1")
 			t.Setenv("ASK_OWNED_MODE", mode)
 			t.Setenv("ASK_OWNED_ROOT", root)
-			ctx, cancel := context.WithTimeout(context.Background(), 300*time.Millisecond)
+			budget := 300 * time.Millisecond
+			if mode == "handshake_ack_lost" {
+				budget = 3 * time.Second
+			}
+			ctx, cancel := context.WithTimeout(context.Background(), budget)
 			defer cancel()
 			ready := 0
-			r := askOwnedChildWithHandshake(ctx, os.Args[0], func([]byte) bool { ready++; return true }, "-test.run=^TestAskOwnedSupervisorChild$")
+			var ackTimer *time.Timer
+			defer func() {
+				if ackTimer != nil {
+					ackTimer.Stop()
+				}
+			}()
+			r := askOwnedChildWithHandshake(ctx, os.Args[0], func([]byte) bool {
+				ready++
+				ackTimer = time.AfterFunc(100*time.Millisecond, cancel)
+				return true
+			}, "-test.run=^TestAskOwnedSupervisorChild$")
 			if !r.Started || !r.Assigned || !r.Reaped || !r.TimedOut || r.Exit == 0 {
 				t.Fatal("unacknowledged producer succeeded", r)
 			}

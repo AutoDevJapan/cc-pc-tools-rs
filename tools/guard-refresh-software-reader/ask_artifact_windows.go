@@ -557,7 +557,7 @@ func runSoftwareBuildWorker(build softwareBuildPlan, out io.Writer) (exit int) {
 				r.Reason = "source_snapshot_changed_preserved"
 				return 1
 			}
-			if cargoConfig != nil && !cargoNeutralConfigurationAbsent(mp4CargoNeutralCWD) {
+			if cargoConfig != nil && (!cargoNeutralConfigurationAbsent(mp4CargoNeutralCWD) || !cargoConfig.cargoConfigurationUnchanged()) {
 				r.Reason = "compiler_configuration_changed_preserved"
 				return 1
 			}

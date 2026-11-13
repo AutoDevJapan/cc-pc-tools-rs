@@ -80,7 +80,10 @@ derived lock is admitted only when every package version, registry and checksum
 already occurs in the original lock; its digest is recorded with the snapshot.
 
 The Rust child uses a separate Cargo home containing a fixed compiler/cache
-configuration and the existing public registry cache only. It starts in a
+configuration and the existing public registry cache only. Its directory is
+sealed against new entries through acknowledgement, so a later legacy `config`
+cannot override `config.toml`. The held configuration and the two-entry home
+namespace are rechecked before output acknowledgement. It starts in a
 neutral software directory after checking ancestor Cargo configurations are
 absent; ordinary user configuration and credentials are not copied. The known
 compiler and sccache remain enabled. The build recipe and effective configuration

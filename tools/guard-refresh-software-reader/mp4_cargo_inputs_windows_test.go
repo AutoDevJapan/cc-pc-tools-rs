@@ -81,6 +81,60 @@ func TestCargoNeutralContextHasOwnedConfigAndCacheLinkOnly(t *testing.T) {
 	}
 }
 
+func TestCargoOwnedHomeRejectsLegacyConfigurationUntilRelease(t *testing.T) {
+	if !cargoNeutralConfigurationAbsent(mp4CargoNeutralCWD) {
+		t.Skip("neutral installed cwd not present on hosted runner")
+	}
+	if _, e := os.Stat(mp4PublicCargoRegistry); e != nil {
+		t.Skip("explicit workstation public registry integration")
+	}
+	root := physicalSoftwareFixture(t)
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
+	ctx, config, e := prepareMP4CargoContext(ctx, softwareBuildPlan{Target: root})
+	if e != nil {
+		t.Fatal(e)
+	}
+	defer config.Close()
+	legacy := filepath.Join(config.Root, "config")
+	if e := os.WriteFile(legacy, []byte("[env]\nSNAPSHOT_HOME_PROBE=\"unbound\"\n"), 0600); e == nil {
+		t.Fatal("unbound legacy Cargo configuration admitted while the owned home is active")
+	}
+	if _, e := os.Stat(config.cacheLink); e != nil {
+		t.Fatal("ordinary public cache lookup blocked", e)
+	}
+	project := filepath.Join(root, "project")
+	if os.Mkdir(project, 0700) != nil || os.Mkdir(filepath.Join(project, "src"), 0700) != nil {
+		t.Fatal("owned Cargo source directories")
+	}
+	if os.WriteFile(filepath.Join(project, "Cargo.toml"), []byte("[package]\nname=\"owned-sealed-home\"\nversion=\"0.1.0\"\nedition=\"2021\"\n[workspace]\n"), 0600) != nil || os.WriteFile(filepath.Join(project, "src", "main.rs"), []byte("fn main(){assert!(option_env!(\"SNAPSHOT_HOME_PROBE\").is_none());}\n"), 0600) != nil {
+		t.Fatal("owned Cargo source")
+	}
+	output := filepath.Join(root, "target")
+	built := askOwnedChildAt(ctx, mp4CargoNeutralCWD, snapshotTestTool(t, "cargo"), "build", "--offline", "--manifest-path", filepath.Join(project, "Cargo.toml"), "--target-dir", output)
+	defer clear(built.Raw)
+	if built.Exit != 0 || !built.Reaped || built.TimedOut {
+		t.Fatal("sealed Cargo home ordinary build failed", built.Exit)
+	}
+	ran := askOwnedChild(ctx, filepath.Join(output, "debug", "owned-sealed-home.exe"))
+	defer clear(ran.Raw)
+	if ran.Exit != 0 || !ran.Reaped || ran.TimedOut {
+		t.Fatal("legacy Cargo configuration influenced the controlled child", ran.Exit)
+	}
+	if !config.cargoConfigurationUnchanged() {
+		t.Fatal("held Cargo configuration changed during compilation")
+	}
+	if e := config.Close(); e != nil {
+		t.Fatal(e)
+	}
+	if e := os.WriteFile(legacy, []byte("released"), 0600); e != nil {
+		t.Fatal("original owned namespace ACL not restored", e)
+	}
+	if config.cargoConfigurationUnchanged() {
+		t.Fatal("released configuration accepted before acknowledgement")
+	}
+}
+
 func TestCargoControlledContextIgnoresUnboundAncestorFlagsAndEnv(t *testing.T) {
 	if _, e := os.Stat(mp4PublicCargoRegistry); e != nil {
 		t.Skip("explicit workstation Cargo integration")

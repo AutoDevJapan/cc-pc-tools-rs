@@ -4,9 +4,12 @@ package main
 
 import (
 	"bytes"
+	"context"
+	"errors"
 	"io"
 	"os"
 	"path/filepath"
+	"sort"
 	"strings"
 	"syscall"
 	"unsafe"
@@ -20,11 +23,14 @@ func softwareProducerGoArgs(root, output string, files []string) []string {
 }
 
 type softwareBuildSnapshot struct {
-	Root   string
-	files  []*os.File
-	dirs   []syscall.Handle
-	paths  map[string]bool
-	sealed []snapshotDirectoryACL
+	Root        string
+	files       []*os.File
+	dirs        []syscall.Handle
+	paths       map[string]bool
+	sealed      []snapshotDirectoryACL
+	cacheLink   string
+	LockSHA     string
+	ManifestSHA string
 }
 
 type snapshotDirectoryACL struct {
@@ -33,23 +39,74 @@ type snapshotDirectoryACL struct {
 	protected        bool
 }
 
-func (s *softwareBuildSnapshot) Close() {
-	for i := len(s.sealed) - 1; i >= 0; i-- {
-		a := s.sealed[i]
+func (s *softwareBuildSnapshot) Close() error {
+	return s.closeWithRestore(func(a snapshotDirectoryACL) error {
 		flags := uint32(4 | 0x20000000)
 		if a.protected {
 			flags = 4 | 0x80000000
 		}
-		updateSetSecurity.Call(uintptr(a.handle), 1, uintptr(flags), 0, 0, a.dacl, 0)
+		code, _, _ := updateSetSecurity.Call(uintptr(a.handle), 1, uintptr(flags), 0, 0, a.dacl, 0)
+		if code != 0 {
+			return errors.New("snapshot_acl_restore_failed")
+		}
+		var actual uintptr
+		code, _, _ = updateGetSecurity.Call(uintptr(a.handle), 1, 4, 0, 0, 0, 0, uintptr(unsafe.Pointer(&actual)))
+		if code != 0 {
+			return errors.New("snapshot_acl_restore_readback_failed")
+		}
+		defer updateLocalFree.Call(actual)
+		capture := func(sd uintptr) string {
+			var p *uint16
+			var n uint32
+			ok, _, _ := updateSDString.Call(sd, 1, 4, uintptr(unsafe.Pointer(&p)), uintptr(unsafe.Pointer(&n)))
+			if ok == 0 || p == nil {
+				return ""
+			}
+			defer updateLocalFree.Call(uintptr(unsafe.Pointer(p)))
+			return syscall.UTF16ToString(unsafe.Slice(p, n))
+		}
+		if before, after := capture(a.descriptor), capture(actual); before == "" || before != after {
+			return errors.New("snapshot_acl_restore_mismatch")
+		}
+		return nil
+	})
+}
+
+func (s *softwareBuildSnapshot) closeWithRestore(restore func(snapshotDirectoryACL) error) error {
+	var errs []error
+	for i := 0; i < len(s.sealed); i++ {
+		a := s.sealed[i]
+		if e := restore(a); e != nil {
+			errs = append(errs, e)
+		}
 		updateLocalFree.Call(a.descriptor)
-		syscall.CloseHandle(a.handle)
+		if e := syscall.CloseHandle(a.handle); e != nil {
+			errs = append(errs, errors.New("snapshot_acl_handle_close_failed"))
+		}
 	}
+	s.sealed = nil
 	for i := len(s.files) - 1; i >= 0; i-- {
-		s.files[i].Close()
+		if e := s.files[i].Close(); e != nil {
+			errs = append(errs, errors.New("snapshot_file_close_failed"))
+		}
 	}
+	s.files = nil
 	for i := len(s.dirs) - 1; i >= 0; i-- {
-		syscall.CloseHandle(s.dirs[i])
+		if e := syscall.CloseHandle(s.dirs[i]); e != nil {
+			errs = append(errs, errors.New("snapshot_directory_close_failed"))
+		}
 	}
+	s.dirs = nil
+	if s.cacheLink != "" {
+		target, e := os.Readlink(s.cacheLink)
+		if e != nil || !sameCleanPath(target, mp4PublicCargoRegistry) {
+			errs = append(errs, errors.New("snapshot_cache_link_identity_unknown"))
+		} else if e = os.Remove(s.cacheLink); e != nil {
+			errs = append(errs, errors.New("snapshot_cache_link_cleanup_failed"))
+		}
+		s.cacheLink = ""
+	}
+	return errors.Join(errs...)
 }
 
 func snapshotDirectories(path, root string, snapshot *softwareBuildSnapshot) error {
@@ -78,6 +135,10 @@ func snapshotDirectories(path, root string, snapshot *softwareBuildSnapshot) err
 // namespace. No input is taken from the mutable checkout during compilation.
 // File handles and directory identities remain held through the producer ACK.
 func materializeMP4BuildSnapshot(build softwareBuildPlan, evidence askBuildEvidence, sources []updateObject) (*softwareBuildSnapshot, error) {
+	return materializeMP4BuildSnapshotContext(context.Background(), build, evidence, sources)
+}
+
+func materializeMP4BuildSnapshotContext(ctx context.Context, build softwareBuildPlan, evidence askBuildEvidence, sources []updateObject) (*softwareBuildSnapshot, error) {
 	root := filepath.Join(build.Target, "source")
 	if len(sources) != len(evidence.Inputs) || os.Mkdir(root, 0700) != nil {
 		return nil, errUpdateObject
@@ -94,6 +155,9 @@ func materializeMP4BuildSnapshot(build softwareBuildPlan, evidence askBuildEvide
 	}
 	for i, source := range evidence.Inputs {
 		if source.Path == "Cargo.toml" && !build.GoRunner {
+			continue
+		}
+		if source.Path == "Cargo.lock" && !build.GoRunner && build.Source == mp4Source {
 			continue
 		}
 		if !askPlanSourcePath(source.Path, askSoftwarePlan{GoRunner: build.GoRunner}) {
@@ -115,6 +179,20 @@ func materializeMP4BuildSnapshot(build softwareBuildPlan, evidence askBuildEvide
 		if err := snapshot.create(filepath.Join(root, "Cargo.toml"), []byte(mp4CargoWorkspace)); err != nil {
 			return nil, err
 		}
+		if build.Source == mp4Source {
+			found := false
+			for i, source := range evidence.Inputs {
+				if source.Path == "Cargo.lock" {
+					found = true
+					if err := snapshot.resolveCargoLock(ctx, sources[i].Raw()); err != nil {
+						return nil, err
+					}
+				}
+			}
+			if !found {
+				return nil, errUpdateObject
+			}
+		}
 	}
 	if !snapshot.exact() {
 		return nil, errUpdateObject
@@ -122,6 +200,38 @@ func materializeMP4BuildSnapshot(build softwareBuildPlan, evidence askBuildEvide
 	if err := snapshot.sealDirectories(); err != nil {
 		return nil, err
 	}
+	keys := make([]string, 0, len(snapshot.paths))
+	for path := range snapshot.paths {
+		keys = append(keys, path)
+	}
+	sort.Strings(keys)
+	var manifest []byte
+	for _, path := range keys {
+		info, e := os.Stat(path)
+		if e != nil {
+			return nil, e
+		}
+		if info.IsDir() {
+			continue
+		}
+		for _, f := range snapshot.files {
+			if sameCleanPath(f.Name(), path) {
+				if _, e = f.Seek(0, io.SeekStart); e != nil {
+					return nil, e
+				}
+				b, e := io.ReadAll(io.LimitReader(f, 8<<20))
+				if e != nil {
+					return nil, e
+				}
+				rel, _ := filepath.Rel(snapshot.Root, path)
+				manifest = append(manifest, []byte(filepath.ToSlash(rel)+"\n"+digest(b)+"\n")...)
+				clear(b)
+				break
+			}
+		}
+	}
+	snapshot.ManifestSHA = digest(manifest)
+	clear(manifest)
 	ok = true
 	return snapshot, nil
 }
@@ -143,7 +253,7 @@ func (s *softwareBuildSnapshot) sealDirectories() error {
 	if e != nil {
 		return e
 	}
-	text, e := syscall.UTF16PtrFromString("D:P(A;OICI;GRGX;;;" + sid + ")")
+	text, e := syscall.UTF16PtrFromString("D:P(A;;GRGX;;;" + sid + ")")
 	if e != nil {
 		return e
 	}
@@ -159,7 +269,12 @@ func (s *softwareBuildSnapshot) sealDirectories() error {
 	if ok == 0 || present == 0 {
 		return errUpdateObject
 	}
+	paths := make([]string, 0, len(s.paths))
 	for path := range s.paths {
+		paths = append(paths, path)
+	}
+	sort.Slice(paths, func(i, j int) bool { return len(paths[i]) < len(paths[j]) })
+	for _, path := range paths {
 		info, e := os.Stat(path)
 		if e != nil {
 			return e
@@ -190,7 +305,10 @@ func (s *softwareBuildSnapshot) sealDirectories() error {
 			return errUpdateObject
 		}
 		s.sealed = append(s.sealed, snapshotDirectoryACL{h, original, oldDacl, control&0x1000 != 0})
-		code, _, _ = updateSetSecurity.Call(uintptr(h), 1, 4|0x80000000, 0, 0, dacl, 0)
+	}
+	// Capture every original child descriptor before changing any parent.
+	for _, a := range s.sealed {
+		code, _, _ := updateNTSetSecurity.Call(uintptr(a.handle), 4, restricted)
 		if code != 0 {
 			return errUpdateObject
 		}

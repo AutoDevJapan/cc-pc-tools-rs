@@ -69,3 +69,28 @@ completed receipt. Synchronous Windows I/O is not claimed to be interruptible.
 Incomplete targets and exports are preserved where present. Creation and state
 are reported when observed and remain unknown otherwise. They are never adopted
 on a later run merely because their file IDs or sizes match.
+
+The MP4 sender and verifier use separate fixed software purposes and fresh
+build/export names. Neither accepts a caller-selected path or digest. Source
+buffers are matched to merged input blobs, then materialized under a new build
+namespace and held through output acknowledgement. The Go compiler receives
+only selected, proved files and explicitly disables automatic PGO inputs.
+Rust uses the six required crates in a deterministic workspace. An offline
+derived lock is admitted only when every package version, registry and checksum
+already occurs in the original lock; its digest is recorded with the snapshot.
+
+The Rust child uses a separate Cargo home containing a fixed compiler/cache
+configuration and the existing public registry cache only. It starts in a
+neutral software directory after checking ancestor Cargo configurations are
+absent; ordinary user configuration and credentials are not copied. The known
+compiler and sccache remain enabled. The build recipe and effective configuration
+are separate from application source provenance.
+
+New snapshot directories temporarily exclude new entries. Original ACLs are
+captured before any directory is sealed, restored in parent-first order, and
+read back. Cleanup attempts every handle even when one operation fails. The
+producer's final response must confirm cleanup and match its ready artifact,
+snapshot, lock and configuration before a successful export receipt is issued.
+An incomplete restore or unknown child result preserves artifacts and cannot
+report a qualified completed distribution. This maintenance grants no access
+to conversation records, images or neighboring files.

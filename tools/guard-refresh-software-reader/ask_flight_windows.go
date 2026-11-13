@@ -12,6 +12,7 @@ import (
 	"os"
 	"os/exec"
 	"strconv"
+	"strings"
 	"syscall"
 	"time"
 	"unsafe"
@@ -46,6 +47,7 @@ func askOwnedChild(ctx context.Context, executable string, args ...string) (resu
 }
 
 type askChildWorkingDirectory struct{}
+type askChildEnvironment struct{}
 
 func askOwnedChildAt(ctx context.Context, cwd, executable string, args ...string) askChildResult {
 	return askOwnedChild(context.WithValue(ctx, askChildWorkingDirectory{}, cwd), executable, args...)
@@ -55,6 +57,7 @@ type askReadyCapture struct {
 	askGitOutput
 	ready chan []byte
 	sent  bool
+	first []byte
 }
 
 func (w *askReadyCapture) ReadFrom(r io.Reader) (int64, error) {
@@ -84,7 +87,13 @@ func (w *askReadyCapture) Write(p []byte) (int, error) {
 	if e == nil && !w.sent {
 		if i := bytes.IndexByte(w.Bytes(), '\n'); i >= 0 {
 			w.sent = true
+			w.first = append([]byte(nil), w.Bytes()[:i]...)
 			w.ready <- append([]byte(nil), w.Bytes()[:i]...)
+			remainder := append([]byte(nil), w.Bytes()[i+1:]...)
+			clear(w.Bytes())
+			w.Buffer.Reset()
+			w.Buffer.Write(remainder)
+			clear(remainder)
 		}
 	}
 	return n, e
@@ -119,6 +128,17 @@ func askOwnedChildWithHandshake(ctx context.Context, executable string, onReady 
 	}
 	cmd.SysProcAttr.AdditionalInheritedHandles = []syscall.Handle{syscall.Handle(permitRead.Fd())}
 	cmd.Env = append(os.Environ(), "ASK_SOFTWARE_PARENT_HANDLE="+strconv.FormatUint(uint64(permitRead.Fd()), 10))
+	if changes, _ := ctx.Value(askChildEnvironment{}).(map[string]string); changes != nil {
+		for key, value := range changes {
+			filtered := cmd.Env[:0]
+			for _, entry := range cmd.Env {
+				if !strings.HasPrefix(strings.ToUpper(entry), strings.ToUpper(key)+"=") {
+					filtered = append(filtered, entry)
+				}
+			}
+			cmd.Env = append(filtered, key+"="+value)
+		}
+	}
 	cmd.WaitDelay = 100 * time.Millisecond
 	out := askGitOutput{limit: 65536}
 	errOut := askGitOutput{limit: 65536}
@@ -264,10 +284,16 @@ loop:
 	if assigned && result.WaitVerified && result.Reaped && !result.TimedOut && (waitErr == nil || result.Exit == 1) && errOut.Len() == 0 {
 		if ready != nil {
 			out.Buffer = ready.Buffer
+			if out.Len() == 0 && result.Exit != 0 {
+				out.Buffer.Write(ready.first)
+			}
 		}
 		result.Raw = append([]byte(nil), out.Bytes()...)
 	}
 	clear(out.Bytes())
+	if ready != nil {
+		clear(ready.first)
+	}
 	clear(errOut.Bytes())
 	return
 }

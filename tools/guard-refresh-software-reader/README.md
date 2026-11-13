@@ -90,7 +90,7 @@ exact local drive mapping and empty cwd are checked after sealing. The outer
 supervisor owns the mapping and, while it remains alive, removes it after
 confirmed worker-tree termination, including worker timeout or crash. A changed
 mapping or unknown child state is preserved and reported unsuccessfully.
-Preparation failure also reports the exact drive and observed cleanup state;
+After a drive is defined, preparation failure reports its exact name and cleanup state;
 this does not guarantee cleanup after the supervisor itself is killed. Ordinary user
 configuration and credentials are not copied. The child environment is explicit;
 selected Windows/toolchain paths and the fixed compiler/cache inputs join the

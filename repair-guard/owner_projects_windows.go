@@ -307,6 +307,8 @@ func ownerReadProjectSnapshotUsing(ctx context.Context, path string, denied func
 }
 
 func ownerSourceGit(ctx context.Context, root string, args ...string) (string, bool) {
+	done := ownerClassificationPhase(ctx, "git")
+	defer done()
 	cmd := exec.CommandContext(ctx, "git", append([]string{"-C", root}, args...)...)
 	cmd.SysProcAttr = &syscall.SysProcAttr{HideWindow: true, CreationFlags: 0x08000000}
 	cmd.WaitDelay = 20 * time.Millisecond

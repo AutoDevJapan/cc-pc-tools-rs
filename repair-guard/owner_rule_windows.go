@@ -342,6 +342,7 @@ func ownerOrganizationQueryWith(ctx context.Context, path string, access ownerSo
 			}
 		}
 		if inputID != "" {
+			done := ownerClassificationPhase(ctx, "registration")
 			snapshot, ok = read(ctx, func(input io.Reader) (object, bool) {
 				projects, m, valid := ownerTaskRegistrationProjection(ctx, input, inputID)
 				if valid {
@@ -350,8 +351,11 @@ func ownerOrganizationQueryWith(ctx context.Context, path string, access ownerSo
 				}
 				return projects, valid && projects != nil
 			})
+			done()
 		} else {
+			done := ownerClassificationPhase(ctx, "registration")
 			snapshot, ok = read(ctx, func(input io.Reader) (object, bool) { return ownerProjectProjection(ctx, input) })
+			done()
 		}
 		if ctx.Err() != nil {
 			return ownerRuleUnknown("classification_deadline")
@@ -362,16 +366,21 @@ func ownerOrganizationQueryWith(ctx context.Context, path string, access ownerSo
 			}
 			return ownerRuleUnknown("registration_snapshot_unavailable")
 		}
+		doneRules := ownerClassificationPhase(ctx, "rules")
 		result := ownerRuleWith(ctx, path, snapshot.projects, access, config, func(p string) ownerPathVerdict {
 			return ownerRuleOwnedTemporary(ctx, p, snapshot.projects, access, config)
 		})
+		doneRules()
 		if result.Status == "protected" && result.Basis != "owner_rule_unattributed_location" {
 			return result
 		}
 		if ctx.Err() != nil {
 			return ownerRuleUnknown("classification_deadline")
 		}
-		if snapshot.current() {
+		doneSnapshot := ownerClassificationPhase(ctx, "final_snapshot")
+		current := snapshot.current()
+		doneSnapshot()
+		if current {
 			return result
 		}
 		if attempt == 1 || !snapshot.replaced() {
@@ -382,17 +391,34 @@ func ownerOrganizationQueryWith(ctx context.Context, path string, access ownerSo
 }
 
 func ownerOrganizationPath(path string) ownerPathVerdict {
+	return ownerOrganizationPathObserved(path, nil)
+}
+
+func ownerOrganizationPathObserved(path string, trace *ownerClassificationTrace) ownerPathVerdict {
 	ctx, cancel := context.WithTimeout(context.Background(), 750*time.Millisecond)
 	defer cancel()
+	if trace != nil {
+		ctx = context.WithValue(ctx, ownerClassificationTraceKey{}, trace)
+	}
 	refresh := ""
 	access := ownerSourceAccess{git: func(root string, args ...string) (string, bool) { return ownerSourceGit(ctx, root, args...) },
 		identity: func(repo string) (int64, string, string, bool) {
+			done := ownerClassificationPhase(ctx, "identity")
+			defer done()
 			id, name, owner, ok := ownerCachedIdentity(ctx, repo)
 			if !ok || ownerIdentityAging(repo, ownerIdentityHome, time.Now()) {
 				refresh = repo
 			}
 			return id, name, owner, ok
-		}, plain: currentPlain, denied: legacyMatch, membership: ownerDepartmentMembership,
+		}, plain: func(path string, directory bool) bool {
+			done := ownerClassificationPhase(ctx, "plain")
+			defer done()
+			return currentPlain(path, directory)
+		}, denied: legacyMatch, membership: func(project, repo string) string {
+			done := ownerClassificationPhase(ctx, "membership")
+			defer done()
+			return ownerDepartmentMembership(project, repo)
+		},
 	}
 	result := ownerOrganizationQuery(ctx, path, access)
 	if refresh != "" && ctx.Err() == nil {

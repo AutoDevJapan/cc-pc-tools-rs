@@ -63,7 +63,9 @@ func ownerCachedIdentityAt(ctx context.Context, repository, home string, now fun
 		return 0, "", "", false
 	}
 	if len(force) == 0 || !force[0] {
-		if r, ok := ownerReadIdentity(home, repository, now()); ok {
+		r, ok := ownerReadIdentity(home, repository, now())
+		ownerClassificationIdentity(ctx, r, repository, now())
+		if ok {
 			return r.ID, r.Repository, r.Owner, true
 		}
 	}

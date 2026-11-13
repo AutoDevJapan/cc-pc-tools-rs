@@ -299,6 +299,74 @@ type cargoExpansionBudget struct {
 	expanded     int64
 }
 
+type archiveFileCompletion struct {
+	path     string
+	size     int64
+	sha      string
+	fragment *softwareBuildSnapshot
+	err      error
+}
+type archiveFileWriter struct {
+	create  func(string, []byte) *archiveFileCompletion
+	collect func(*archiveFileCompletion) error
+	pending []<-chan *archiveFileCompletion
+	first   error
+}
+
+func (w *archiveFileWriter) submit(path string, raw []byte) error {
+	if len(w.pending) == 2 {
+		w.take()
+	}
+	if w.first != nil {
+		clear(raw)
+		return w.first
+	}
+	done := make(chan *archiveFileCompletion, 1)
+	w.pending = append(w.pending, done)
+	go func() { r := w.create(path, raw); clear(raw); done <- r }()
+	return nil
+}
+func (w *archiveFileWriter) take() {
+	r := <-w.pending[0]
+	w.pending = w.pending[1:]
+	if err := w.collect(r); err != nil && w.first == nil {
+		w.first = err
+	}
+}
+func (w *archiveFileWriter) finish() error {
+	for len(w.pending) > 0 {
+		w.take()
+	}
+	return w.first
+}
+
+func (s *softwareBuildSnapshot) fileCreationWorker(budget *cargoExpansionBudget, files map[string]string) *archiveFileWriter {
+	return &archiveFileWriter{create: func(path string, raw []byte) *archiveFileCompletion {
+		fragment := &softwareBuildSnapshot{Root: s.Root, paths: map[string]bool{}}
+		err := fragment.create(path, raw)
+		return &archiveFileCompletion{path: path, size: int64(len(raw)), sha: digest(raw), fragment: fragment, err: err}
+	}, collect: func(r *archiveFileCompletion) error {
+		if r.fragment == nil {
+			return errUpdateObject
+		}
+		// Collection is called only by the tar/controller goroutine, after the
+		// writer has finished. No snapshot maps or budgets are shared by workers.
+		s.files = append(s.files, r.fragment.files...)
+		r.fragment.files = nil
+		s.handoffACLs = append(s.handoffACLs, r.fragment.handoffACLs...)
+		r.fragment.handoffACLs = nil
+		for path := range r.fragment.paths {
+			s.paths[path] = true
+		}
+		if r.err != nil {
+			return r.err
+		}
+		files[r.path] = r.sha
+		budget.materialized += r.size
+		return nil
+	}}
+}
+
 func (s *softwareBuildSnapshot) createVendorDirectories(path string) error {
 	if s.paths[path] {
 		return nil
@@ -322,7 +390,7 @@ func (s *softwareBuildSnapshot) createVendorDirectories(path string) error {
 	return nil
 }
 
-func (s *softwareBuildSnapshot) extractCargoArchive(ctx context.Context, name, checksum string, raw []byte, budget *cargoExpansionBudget) error {
+func (s *softwareBuildSnapshot) extractCargoArchive(ctx context.Context, name, checksum string, raw []byte, budget *cargoExpansionBudget) (result error) {
 	if ctx.Err() != nil {
 		return ctx.Err()
 	}
@@ -348,6 +416,9 @@ func (s *softwareBuildSnapshot) extractCargoArchive(ctx context.Context, name, c
 		return err
 	}
 	files := map[string]string{}
+	createdFiles := map[string]string{}
+	writers := s.fileCreationWorker(budget, createdFiles)
+	defer func() { result = errors.Join(result, writers.finish()) }()
 	names := map[string]bool{}
 	for {
 		if err := ctx.Err(); err != nil {
@@ -394,22 +465,28 @@ func (s *softwareBuildSnapshot) extractCargoArchive(ctx context.Context, name, c
 				return errUpdateObject
 			}
 			path := filepath.Join(root, filepath.FromSlash(rel))
-			if err = s.createVendorDirectories(filepath.Dir(path)); err == nil && len(s.paths) < cargoVendorEntryLimit {
-				err = s.create(path, content)
+			if err = s.createVendorDirectories(filepath.Dir(path)); err == nil && len(s.paths)+len(writers.pending) < cargoVendorEntryLimit {
+				err = writers.submit(path, content)
 			} else if err == nil {
 				err = errUpdateObject
 			}
-			if err == nil {
-				files[rel] = digest(content)
-				budget.materialized += header.Size
-			}
-			clear(content)
 			if err != nil {
+				clear(content)
 				return err
 			}
 		default:
 			return errors.New("archive_link_or_special_entry_rejected")
 		}
+	}
+	if err := writers.finish(); err != nil {
+		return err
+	}
+	for path, sha := range createdFiles {
+		rel, err := filepath.Rel(root, path)
+		if err != nil {
+			return err
+		}
+		files[filepath.ToSlash(rel)] = sha
 	}
 	if len(files) == 0 || expanded.N <= 0 {
 		return errUpdateObject

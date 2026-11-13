@@ -140,6 +140,10 @@ only while a read/list handle pins its exact identity without delete sharing.
 Every archive leaf still receives its ordinary qualification and held checksum
 verification. Root leases end with that operation; no cross-operation cache or
 deadline extension is introduced.
+Archive payload validation and total-budget reservation remain serial. Up to
+two operation-owned file writers may flush and complete their usual held
+verification concurrently. The controller alone collects files and counters,
+and drains every started writer before success or failure is returned.
 The existing input deadline and all verification checks remain in force.
 The pipe reader also owns and clears its fixed read scratch buffer; this is a
 bounded application-buffer guarantee, not complete erasure of Go or OS memory.

@@ -135,6 +135,11 @@ separate. These counters do not prove a completed or qualified snapshot.
 If guard completion and cancellation cannot be ordered, the diagnostic keeps
 the input unqualified and reports the observed context separately; it does not
 invent a primary timeout. OS codes are limited to the documented fixed causes.
+Within one archive-expansion operation, an already qualified root is reused
+only while a read/list handle pins its exact identity without delete sharing.
+Every archive leaf still receives its ordinary qualification and held checksum
+verification. Root leases end with that operation; no cross-operation cache or
+deadline extension is introduced.
 The existing input deadline and all verification checks remain in force.
 The pipe reader also owns and clears its fixed read scratch buffer; this is a
 bounded application-buffer guarantee, not complete erasure of Go or OS memory.

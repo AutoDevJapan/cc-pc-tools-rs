@@ -303,6 +303,153 @@ func TestCargoArchiveInputFailureReportsCompletedWorkWithoutPaths(t *testing.T) 
 	}
 }
 
+func TestCargoArchiveOneOperationPinsRootAndQualifiesEveryLeaf(t *testing.T) {
+	s := newArchiveSnapshot(t)
+	archiveRoot := physicalSoftwareFixture(t)
+	content := []byte("owned archive payload")
+	lock := []byte("version = 4\n")
+	for _, name := range []string{"first", "second"} {
+		packageName := name + "-1.0.0"
+		raw := ownedCargoArchive(t, []*tar.Header{{Name: packageName + "/source.rs", Size: int64(len(content)), Mode: 0600, Typeflag: tar.TypeReg}}, [][]byte{content})
+		if os.WriteFile(filepath.Join(archiveRoot, packageName+".crate"), raw, 0600) != nil {
+			t.Fatal("fixture archive")
+		}
+		lock = append(lock, []byte("[[package]]\nname = \""+name+"\"\nversion = \"1.0.0\"\nsource = \"registry+https://github.com/rust-lang/crates.io-index\"\nchecksum = \""+digest(raw)+"\"\n")...)
+	}
+	rootCalls, leafCalls := 0, 0
+	read := func(ctx context.Context, name, sha string) ([]byte, error) {
+		return readQualifiedCargoArchiveWithQualifier(ctx, archiveRoot, archiveRoot, name, sha, func(_ context.Context, path string) error {
+			if sameCleanPath(path, archiveRoot) {
+				rootCalls++
+			} else {
+				leafCalls++
+			}
+			return nil
+		})
+	}
+	if err := s.admitCargoVendor(context.Background(), lock, read); err != nil {
+		t.Fatal(err)
+	}
+	if rootCalls != 1 || leafCalls != 2 {
+		t.Fatalf("duplicate root qualification: root=%d leaf=%d", rootCalls, leafCalls)
+	}
+	// The operation must release its own retained root after extraction.
+	if os.Rename(archiveRoot, archiveRoot+".after") != nil {
+		t.Fatal("root lease leaked")
+	}
+	if os.Rename(archiveRoot+".after", archiveRoot) != nil {
+		t.Fatal("fixture restore")
+	}
+}
+
+func TestCargoArchiveRootReuseIsBoundToOneHeldOperation(t *testing.T) {
+	for _, mode := range []string{"normal", "denied", "canceled", "different_path", "different_identity", "next_operation"} {
+		t.Run(mode, func(t *testing.T) {
+			root := physicalSoftwareFixture(t)
+			other := physicalSoftwareFixture(t)
+			h, ok := openPlain(root, true)
+			if !ok {
+				t.Fatal("root handle")
+			}
+			defer syscall.CloseHandle(h)
+			op := &cargoArchiveOperation{roots: map[string]cargoArchiveRootPin{}}
+			defer op.close()
+			ctx, cancel := context.WithCancel(context.WithValue(context.Background(), cargoArchiveOperationKey{}, op))
+			defer cancel()
+			calls := 0
+			q := func(context.Context, string) error {
+				calls++
+				if mode == "denied" {
+					return errArchiveSourceUnqualified
+				}
+				return nil
+			}
+			err := qualifyArchiveRoot(ctx, root, h, q)
+			if mode == "denied" {
+				if err == nil || len(op.roots) != 0 {
+					t.Fatal("denial reused")
+				}
+				return
+			}
+			if err != nil {
+				t.Fatal(err)
+			}
+			if os.Rename(root, root+".changed") == nil {
+				t.Fatal("held namespace moved")
+			}
+			switch mode {
+			case "canceled":
+				cancel()
+				if qualifyArchiveRoot(ctx, root, h, q) == nil || calls != 1 {
+					t.Fatal("canceled root reused")
+				}
+			case "different_path":
+				h2, ok := openPlain(other, true)
+				if !ok {
+					t.Fatal("other handle")
+				}
+				defer syscall.CloseHandle(h2)
+				if qualifyArchiveRoot(ctx, other, h2, q) != nil || calls != 2 {
+					t.Fatal("other path inherited qualification")
+				}
+			case "different_identity":
+				h2, ok := openPlain(other, true)
+				if !ok {
+					t.Fatal("other handle")
+				}
+				defer syscall.CloseHandle(h2)
+				if qualifyArchiveRoot(ctx, root, h2, q) == nil || calls != 1 {
+					t.Fatal("different generation accepted")
+				}
+			case "next_operation":
+				otherOp := &cargoArchiveOperation{roots: map[string]cargoArchiveRootPin{}}
+				defer otherOp.close()
+				if qualifyArchiveRoot(context.WithValue(context.Background(), cargoArchiveOperationKey{}, otherOp), root, h, q) != nil || calls != 2 {
+					t.Fatal("qualification escaped operation")
+				}
+			default:
+				if qualifyArchiveRoot(ctx, root, h, q) != nil || calls != 1 {
+					t.Fatal("held root requalified")
+				}
+			}
+		})
+	}
+}
+
+func TestCargoArchiveCachedRootNeverReusesLeafQualification(t *testing.T) {
+	root := physicalSoftwareFixture(t)
+	raw := []byte("owned fixed leaf")
+	for _, name := range []string{"first-1.0.0", "second-1.0.0"} {
+		if os.WriteFile(filepath.Join(root, name+".crate"), raw, 0600) != nil {
+			t.Fatal("fixture")
+		}
+	}
+	op := &cargoArchiveOperation{roots: map[string]cargoArchiveRootPin{}}
+	defer op.close()
+	ctx := context.WithValue(context.Background(), cargoArchiveOperationKey{}, op)
+	rootCalls, leafCalls := 0, 0
+	q := func(_ context.Context, path string) error {
+		if sameCleanPath(path, root) {
+			rootCalls++
+			return nil
+		}
+		leafCalls++
+		if leafCalls == 2 {
+			return errArchiveSourceUnqualified
+		}
+		return nil
+	}
+	first, err := readQualifiedCargoArchiveWithQualifier(ctx, root, root, "first-1.0.0", digest(raw), q)
+	defer clear(first)
+	if err != nil || !bytes.Equal(first, raw) {
+		t.Fatal("first", err)
+	}
+	second, err := readQualifiedCargoArchiveWithQualifier(ctx, root, root, "second-1.0.0", digest(raw), q)
+	if err == nil || second != nil || rootCalls != 1 || leafCalls != 2 {
+		t.Fatal("leaf denial bypassed")
+	}
+}
+
 func TestCargoArchiveProgressDoesNotCountFailedPayloadAsMaterialized(t *testing.T) {
 	for _, mode := range []string{"normal", "truncated", "create_collision"} {
 		t.Run(mode, func(t *testing.T) {

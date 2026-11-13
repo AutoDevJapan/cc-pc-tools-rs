@@ -8,11 +8,16 @@ const FOUR_SESSION: &str = "01a1bdce-c2db-7792-a036-79044f46d9fb";
 const FOUR_LAUNCH: &str = "7e5809fa41664dc988379e7163284acc";
 const FOUR_RETRY_JOB: &str = "20261112-160237-4431-fourbros-d5e-normal-job-prd-qa";
 const FOUR_RETRY_LAUNCH: &str = "833000ec664b46b3ba3356da827a4321";
+// The same assigned recovery purpose follows this normally registered attempt;
+// its stored session and launch key still bind before any stderr read.
+const FOUR_CURRENT_JOB: &str = "20261113-082647-4431-fourbros-310-current-job-next-pwa";
+const FOUR_CURRENT_LAUNCH: &str = "9dca71420eaa43458ad8d9c5cfe310f3";
 
 fn four_launch(id: &str) -> Option<&'static str> {
     match id {
         FOUR_JOB => Some(FOUR_LAUNCH),
         FOUR_RETRY_JOB => Some(FOUR_RETRY_LAUNCH),
+        FOUR_CURRENT_JOB => Some(FOUR_CURRENT_LAUNCH),
         _ => None,
     }
 }
@@ -195,7 +200,10 @@ impl Context {
         if !matches!(
             (id, purpose),
             (KARAOKE_JOB, "karaoke-1157-locators")
-                | (FOUR_JOB | FOUR_RETRY_JOB, "fourbros-1245-launch-failure")
+                | (
+                    FOUR_JOB | FOUR_RETRY_JOB | FOUR_CURRENT_JOB,
+                    "fourbros-1245-launch-failure"
+                )
         ) {
             return Err(Error::new("job projection purpose unavailable"));
         }
@@ -469,6 +477,46 @@ fn parse_projection_json(bytes: &[u8]) -> Result<Value> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[test]
+    fn current_assigned_four_attempt_keeps_its_exact_saved_binding() {
+        let id = "20261113-082647-4431-fourbros-310-current-job-next-pwa";
+        let launch = "9dca71420eaa43458ad8d9c5cfe310f3";
+        let job = json!({"id":id,"status":"failed","resume_session":FOUR_SESSION,"launch_key":launch,"exit_code":1,"steps":0});
+        let result = project(
+            &job,
+            id,
+            "fourbros-1245-launch-failure",
+            None,
+            None,
+            b"session not found",
+        )
+        .unwrap();
+        assert_eq!(result["id"], id);
+        assert_eq!(result["reason"], "session_unavailable");
+        assert_eq!(result["sourceBodiesReturned"], false);
+        for (field, value) in [
+            ("resume_session", "other-session"),
+            ("launch_key", FOUR_LAUNCH),
+            ("launch_key", FOUR_RETRY_LAUNCH),
+            ("launch_key", "other-launch"),
+            ("id", "other-job"),
+            ("status", "running"),
+        ] {
+            let mut wrong = job.clone();
+            wrong[field] = json!(value);
+            assert!(
+                project(
+                    &wrong,
+                    id,
+                    "fourbros-1245-launch-failure",
+                    None,
+                    None,
+                    b"SECRET"
+                )
+                .is_err()
+            );
+        }
+    }
     #[test]
     fn saved_supervisor_failure_stage_never_returns_saved_error_text() {
         for (error, stage) in [

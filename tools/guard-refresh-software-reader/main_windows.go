@@ -158,10 +158,21 @@ func observeInstalledGuard() softwareObservation {
 }
 
 func run(args []string, out io.Writer, observe func() softwareObservation, operations ...updateOperations) int {
+	if len(args) == 1 && (args[0] == "--export-mp4-ask-software" || args[0] == "--export-mp4-runner-software") {
+		kind := "ask"
+		if args[0] == "--export-mp4-runner-software" {
+			kind = "runner"
+		}
+		build, _ := mp4BuildPlan(kind)
+		return runSoftwareBuildArtifact(build, []string{"--mp4-build-worker", kind}, out)
+	}
+	if len(args) == 1 && isMP4SoftwareFlag(args[0]) {
+		return runMP4Software(args[0], out)
+	}
 	if len(args) > 0 && args[0] == "--export-ask-cargo-output" {
 		return runAskBuildArtifact(args, out)
 	}
-	if len(args) > 0 && (args[0] == "--ask-software-worker" || args[0] == "--ask-software-inspection-worker" || args[0] == "--ask-build-worker") {
+	if len(args) > 0 && (args[0] == "--ask-software-worker" || args[0] == "--ask-software-inspection-worker" || args[0] == "--ask-build-worker" || args[0] == "--mp4-software-worker" || args[0] == "--mp4-inspection-worker" || args[0] == "--mp4-build-worker") {
 		return runAskWorker(args, out)
 	}
 	if len(args) == 1 && (args[0] == "--verify-ask-privacy-update" || args[0] == "--prepare-ask-privacy-update") {

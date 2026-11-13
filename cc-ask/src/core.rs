@@ -59,6 +59,10 @@ pub trait Effects {
         discord: bool,
     ) -> Result<Value>;
     fn run(&mut self, argv: &[String], timeout_s: u64) -> Result<Output>;
+    /// Repository-label probes must share the guard's non-injected Git view.
+    fn repository_probe(&mut self, argv: &[String], timeout_s: u64) -> Result<Output> {
+        self.run(argv, timeout_s)
+    }
     /// Structured output must be complete; diagnostic text capture may be capped.
     fn run_json(&mut self, argv: &[String], timeout_s: u64) -> Result<Value> {
         let out = self.run(argv, timeout_s)?;
@@ -122,6 +126,10 @@ impl Context {
     pub fn run(&mut self, argv: &[String], timeout_s: u64) -> Result<Output> {
         crate::state_work::check(self)?;
         self.effects.run(argv, timeout_s)
+    }
+    pub fn repository_probe(&mut self, argv: &[String], timeout_s: u64) -> Result<Output> {
+        crate::state_work::check(self)?;
+        self.effects.repository_probe(argv, timeout_s)
     }
     pub fn load(&self) -> Result<Value> {
         if let Some(state) = crate::state_work::snapshot(self) {
@@ -886,6 +894,9 @@ impl Effects for RealEffects {
     fn run(&mut self, argv: &[String], timeout_s: u64) -> Result<Output> {
         run_hidden(argv, timeout_s)
     }
+    fn repository_probe(&mut self, argv: &[String], timeout_s: u64) -> Result<Output> {
+        run_hidden_captured_mode(argv, timeout_s, &[], true, read_hidden_text)
+    }
     fn run_json(&mut self, argv: &[String], timeout_s: u64) -> Result<Value> {
         run_hidden_json(argv, timeout_s)
     }
@@ -899,22 +910,24 @@ pub fn run_hidden_with_env(
     timeout_s: u64,
     environment: &[(String, String)],
 ) -> Result<Output> {
-    run_hidden_captured(argv, timeout_s, environment, |code, stdout, stderr| {
-        use std::io::{Read, Seek};
-        let read = |file: &mut std::fs::File| -> Result<String> {
-            file.rewind().map_err(|e| e.to_string())?;
-            let mut bytes = Vec::new();
-            file.take(8 * 1024 * 1024)
-                .read_to_end(&mut bytes)
-                .map_err(|e| e.to_string())?;
-            Ok(String::from_utf8_lossy(&bytes).into_owned())
-        };
-        Ok(Output {
-            code,
-            stdout: read(stdout)?,
-            stderr: read(stderr)?,
-        })
-    })
+    run_hidden_captured(argv, timeout_s, environment, read_hidden_text)
+}
+
+fn read_hidden_text(
+    code: i32,
+    stdout: &mut std::fs::File,
+    stderr: &mut std::fs::File,
+) -> Result<Output> {
+    use std::io::{Read, Seek};
+    let read = |file: &mut std::fs::File| -> Result<String> {
+        file.rewind().map_err(|e| e.to_string())?;
+        let mut bytes = Vec::new();
+        file.take(8 * 1024 * 1024)
+            .read_to_end(&mut bytes)
+            .map_err(|e| e.to_string())?;
+        Ok(String::from_utf8_lossy(&bytes).into_owned())
+    };
+    Ok(Output { code, stdout: read(stdout)?, stderr: read(stderr)? })
 }
 /// Parse the entire captured stream, including its end, without the text log cap.
 /// No output or parser excerpt is included in errors because it can be private.
@@ -935,6 +948,16 @@ fn run_hidden_captured<T>(
     argv: &[String],
     timeout_s: u64,
     environment: &[(String, String)],
+    consume: impl FnOnce(i32, &mut std::fs::File, &mut std::fs::File) -> Result<T>,
+) -> Result<T> {
+    run_hidden_captured_mode(argv, timeout_s, environment, false, consume)
+}
+
+fn run_hidden_captured_mode<T>(
+    argv: &[String],
+    timeout_s: u64,
+    environment: &[(String, String)],
+    repository_probe: bool,
     consume: impl FnOnce(i32, &mut std::fs::File, &mut std::fs::File) -> Result<T>,
 ) -> Result<T> {
     use std::process::{Command, Stdio};
@@ -958,6 +981,18 @@ fn run_hidden_captured<T>(
     let mut stdout = tempfile::tempfile().map_err(|e| e.to_string())?;
     let mut stderr = tempfile::tempfile().map_err(|e| e.to_string())?;
     let mut cmd = Command::new(argv.first().ok_or("ValueError")?);
+    if repository_probe {
+        for (key, _) in std::env::vars_os() {
+            let upper = key.to_string_lossy().to_ascii_uppercase();
+            if upper.starts_with("GIT_")
+                || (argv[0].ends_with("gh.exe") && matches!(upper.as_str(),
+                    "GH_TOKEN" | "GITHUB_TOKEN" | "GH_ENTERPRISE_TOKEN" |
+                    "GITHUB_ENTERPRISE_TOKEN" | "GH_CONFIG_DIR" | "GH_HOST"))
+            {
+                cmd.env_remove(key);
+            }
+        }
+    }
     cmd.args(&argv[1..])
         .envs(environment.iter().map(|(key, value)| (key, value)))
         .stdin(Stdio::null())

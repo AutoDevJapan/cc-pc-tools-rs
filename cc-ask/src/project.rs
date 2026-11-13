@@ -279,25 +279,12 @@ pub(crate) fn qualify_question_sources_with(
     // it, and reuse this same bounded text below.
     let body = question_text(&args.body_file)?;
     crate::ask_gate::enforce(&args.title, &body, args.owner_only)?;
-    let root = effects.run(
-        &[
-            "git".into(),
-            "-C".into(),
-            cwd.to_string_lossy().into_owned(),
-            "rev-parse".into(),
-            "--show-toplevel".into(),
-        ],
-        10,
-    );
-    let folder = root
-        .as_ref()
-        .ok()
-        .filter(|out| out.code == 0)
-        .and_then(|out| out.stdout.lines().next())
-        .filter(|line| !line.trim().is_empty())
-        .map(str::to_owned)
-        .unwrap_or_else(|| cwd.to_string_lossy().into_owned());
-    if names.label(&project_from_folder(&folder)) == "プロジェクト不明" {
+    if determine_project_with(
+        &mut |args, budget| effects.repository_probe(args, budget),
+        &cwd.to_string_lossy(),
+        &names,
+    ) == "プロジェクト不明"
+    {
         return Err("project privacy classification unavailable for this project".into());
     }
     // Classifying a source never asserts that arbitrary prose is public. Keep
@@ -441,7 +428,19 @@ pub fn project_from_folder(folder: &str) -> String {
 }
 
 pub fn determine_project(ctx: &mut Context, cwd: &str, names: &ProjectNames) -> String {
-    let root = ctx.run(
+    determine_project_with(
+        &mut |args, budget| ctx.repository_probe(args, budget),
+        cwd,
+        names,
+    )
+}
+
+fn determine_project_with(
+    run: &mut dyn FnMut(&[String], u64) -> Result<Output>,
+    cwd: &str,
+    names: &ProjectNames,
+) -> String {
+    let root = run(
         &[
             "git".into(),
             "-C".into(),
@@ -458,7 +457,166 @@ pub fn determine_project(ctx: &mut Context, cwd: &str, names: &ProjectNames) -> 
         .and_then(|out| out.stdout.lines().next())
         .filter(|line| !line.trim().is_empty())
         .unwrap_or(cwd);
-    names.label(&project_from_folder(folder))
+    let label = names.label(&project_from_folder(folder));
+    if label != "プロジェクト不明"
+        || !names.catalog_only()
+        || !root.as_ref().is_ok_and(|out| out.code == 0)
+    {
+        return label;
+    }
+    verified_repository_label(run, folder, names).unwrap_or(label)
+}
+
+// Directory names are not repository identities. Use the existing guard's
+// independently verified repository classification before resolving a known
+// catalog label from the same origin. This grants no source/media permission.
+fn verified_repository_label(
+    run: &mut dyn FnMut(&[String], u64) -> Result<Output>,
+    root: &str,
+    names: &ProjectNames,
+) -> Option<String> {
+    fn origin(run: &mut dyn FnMut(&[String], u64) -> Result<Output>, root: &str) -> Option<String> {
+        let out = run(
+            &[
+                "git".into(),
+                "-C".into(),
+                root.into(),
+                "remote".into(),
+                "get-url".into(),
+                "--all".into(),
+                "origin".into(),
+            ],
+            10,
+        )
+        .ok()?;
+        (out.code == 0
+            && out.stderr.is_empty()
+            && out.stdout.len() <= 4096
+            && out.stdout.trim().lines().count() == 1)
+            .then(|| out.stdout.trim().to_owned())
+    }
+    let before = origin(run, root)?;
+    let repository = before
+        .strip_prefix("https://github.com/")
+        .or_else(|| before.strip_prefix("git@github.com:"))?;
+    let repository = repository.strip_suffix(".git").unwrap_or(repository);
+    let (owner, name) = repository.split_once('/')?;
+    if !["AutoDevJapan", "BM1314", "mashfromband"]
+        .iter()
+        .any(|allowed| owner.eq_ignore_ascii_case(allowed))
+        || name.is_empty()
+        || name == "."
+        || name == ".."
+        || !name
+            .bytes()
+            .all(|c| c.is_ascii_alphanumeric() || b"_.-".contains(&c))
+    {
+        return None;
+    }
+    let label = names.label(name);
+    if label == "プロジェクト不明" || label == "クライアント案件" {
+        return None;
+    }
+    #[derive(serde::Deserialize)]
+    struct RepositoryProof {
+        ok: bool,
+        access_allowed: bool,
+        client_resource: bool,
+        classification_unverified: bool,
+        classification_basis: String,
+    }
+    let out = run(
+        &[
+            "D:/CC/Tools/client-records/scrub391.exe".into(),
+            "--guard-path".into(),
+            root.into(),
+        ],
+        10,
+    )
+    .ok()?;
+    if out.code != 0 || !out.stderr.is_empty() || out.stdout.len() > 65536 {
+        return None;
+    }
+    let proof: RepositoryProof = serde_json::from_str(&out.stdout).ok()?;
+    if !proof.ok
+        || !proof.access_allowed
+        || proof.client_resource
+        || proof.classification_unverified
+        || proof.classification_basis != "verified_self_repository"
+        || origin(run, root)? != before
+    {
+        return None;
+    }
+    repository_commit_anchor(run, root, repository)?;
+    if origin(run, root)? != before {
+        return None;
+    }
+    Some(label)
+}
+
+fn repository_commit_anchor(
+    run: &mut dyn FnMut(&[String], u64) -> Result<Output>,
+    root: &str,
+    repository: &str,
+) -> Option<()> {
+    fn read(out: Result<Output>) -> Option<String> {
+        let out = out.ok()?;
+        (out.code == 0
+            && out.stderr.is_empty()
+            && out.stdout.len() <= 256
+            && out.stdout.trim().lines().count() == 1)
+            .then(|| out.stdout.trim().to_owned())
+    }
+    fn object(value: &str) -> bool {
+        value.len() == 40 && value.bytes().all(|b| b.is_ascii_hexdigit())
+    }
+    let git = |args: &[&str]| {
+        let mut out = vec!["git".into(), "-C".into(), root.into()];
+        out.extend(args.iter().map(|s| s.to_string()));
+        out
+    };
+    let head = read(run(&git(&["rev-parse", "--verify", "HEAD^{commit}"]), 10))?;
+    if !object(&head) {
+        return None;
+    }
+    let branch = read(run(
+        &git(&["symbolic-ref", "-q", "refs/remotes/origin/HEAD"]),
+        10,
+    ))?;
+    let name = branch.strip_prefix("refs/remotes/origin/")?;
+    if name.is_empty()
+        || name.len() > 100
+        || !name
+            .bytes()
+            .all(|b| b.is_ascii_alphanumeric() || b"_.-/".contains(&b))
+        || name.contains("..")
+        || name.starts_with('/')
+        || name.ends_with('/')
+    {
+        return None;
+    }
+    let ancestor = read(run(&git(&["merge-base", &head, &branch]), 10))?;
+    if !object(&ancestor) {
+        return None;
+    }
+    let provider = read(run(
+        &[
+            "C:/Program Files/GitHub CLI/gh.exe".into(),
+            "api".into(),
+            "--hostname".into(),
+            "github.com".into(),
+            format!("repos/{repository}/commits/{ancestor}"),
+            "--jq".into(),
+            ".sha".into(),
+        ],
+        10,
+    ))?;
+    if provider != ancestor
+        || read(run(&git(&["rev-parse", "--verify", "HEAD^{commit}"]), 10))? != head
+    {
+        return None;
+    }
+    Some(())
 }
 
 /// Posted/recovered questions often have a title but no working directory.

@@ -13,9 +13,10 @@ they must not be added together as independent elapsed periods. A fixed
 The option neither extends the 750 ms classification budget nor converts an
 unknown classification into access.
 `stage` matches the final returned classification basis, including any existing
-independently qualified retirement receipt. `policy_stage` preserves the
-underlying pre-receipt policy observation; it does not create a new receipt or
-change whether an existing one qualifies.
+independently qualified retirement receipt. `policy_stage` preserves the policy
+return before that final retirement adjustment. Earlier operational or
+conversation receipt fallbacks may already be included in that policy return.
+The diagnostic neither creates a receipt nor changes whether one qualifies.
 
 For one normally decoded and validated repository identity, the output includes
 its checked time, expiry, observation time and current validity. It contains no

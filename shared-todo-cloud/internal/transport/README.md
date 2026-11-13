@@ -43,6 +43,17 @@ zero, length one, throughout the session and until the child exits. Responses
 contain only `ok`, `revision`, or a fixed error code. EOF releases the lease.
 The Rust caller starts the bridge without a console window.
 
+`current-note` with `cachePath` and a positive `itemId` is a separate, one-shot
+read in this protocol. It requires the same active configuration and local byte
+lock, calls only `GET /api/v1/items/{id}/note`, and exits after its response.
+It does not acquire a server lease, begin a write session, or refresh the cache.
+Its response contains `ok` and `currentNote`, with exactly `id`, `note`,
+`noteSha256`, `revision`, and `stateId`. The server reads those fields in one
+read transaction. Missing/null notes use the empty-string digest; invalid note
+types and failed reads return an error without a cache fallback. Only this
+exchange accepts the bounded larger reply needed for a note; ordinary control
+replies keep their 4 KiB limit. Upgrade the server, bridge, then CLI before use.
+
 One `watch --config <path>` process per cache can pull browser changes every five
 seconds. Its own OS lock prevents duplicate watchers. `sync --config <path>` runs
 one pull. Both use the legacy byte lock; ordinary readers only read the shared

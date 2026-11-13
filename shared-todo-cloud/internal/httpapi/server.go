@@ -234,6 +234,15 @@ func (s *Server) routes() {
 		v, e := s.Store.Item(id)
 		result(w, v, e)
 	})
+	s.mux.HandleFunc("GET /api/v1/items/{id}/note", func(w http.ResponseWriter, r *http.Request) {
+		id, e := strconv.ParseInt(r.PathValue("id"), 10, 64)
+		if e != nil || id < 1 {
+			jsonError(w, 400, "invalid_task_id")
+			return
+		}
+		v, e := s.Store.CurrentNote(id)
+		result(w, v, e)
+	})
 	s.mux.HandleFunc("GET /api/v1/changes", compressed(func(w http.ResponseWriter, r *http.Request) {
 		after := num(r, "after", 0)
 		if after < 0 {

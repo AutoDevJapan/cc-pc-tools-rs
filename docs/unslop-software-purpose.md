@@ -6,8 +6,8 @@
 ## 今回の実装と、残っている接続
 
 実装したのは、ビルドの記録を確認する処理、配布準備の処理、文体2例の入力を取り出す処理、履歴の存在を確認する処理である。
-このcoreには、実ファイルを保持してビルドするnative providerや、共通CLIへのroutingは含まれていない。
-それらの実装、正式ビルドの実行、生成後の固定consumerへの接続は別の受入工程として残る。
+この追加候補には、固定ソースを新しいnamespaceへ保持するnative providerと、有限の子プロセス出力を扱う接続を含める。
+共通CLIへのrouting、正式ビルドの実行、生成後の固定consumerへの接続は別の受入工程として残る。
 合成データのテストが通っても、インストールや独立評価が済んだことにはしない。
 
 旧リリースには、ビルドの正常終了と、同じ実行物でCLI・MCPが動いた記録がある。
@@ -99,14 +99,17 @@ readerは評価の合否を作らず、作者の判定を独立評価へコピ�
 共通dispatcherへの専用routingは、そのファイルの既存所有担当が行う。
 routingを追加しただけでは、出所を確認するfactoryが成立したことにはしない。
 
-今後のnative接続では、captureの固定入口からのみ正常な生成処理を呼ぶ。
+`runNormalUnslopPurpose` は、captureの固定入口からのみnativeの生成処理を呼ぶ。
 新しいreceiptを単に読み直して、次回のverifyやprepareへ許可を与える仕組みにはしない。
 正式ビルド後は、その実行物とreceiptの実値をレビュー済みconsumerへ固定するか、同じ正常controllerが保持した状態で受入・反映を続ける必要がある。
-このcoreのverify・prepare・packet読取は、不足理由を返す状態を保っている。
+verify・prepare・packet読取は、不足理由を返す状態を保っている。
 
-今後のnativeの履歴接続では、正常なlauncherと現在のWindowsアカウントを使ってapp-serverへ接続する必要がある。
+nativeの履歴接続候補では、正常なlauncherと現在のWindowsアカウントを使ってapp-serverへ接続する。
 `initialize` と履歴のread/listだけを送り、新しい生成turnやresumeは要求しない。
 元のthread・turn・command itemの対応が取得できなければ、接続できたことだけでpacketを読む資格を作らない。
+現在の有限batch方式は、実metadata読取で必要な応答がそろわず、接続成功の受入を満たしていない。
+初期化への応答を確認してから次の読取要求を送る具体的な有限protocolは、値の構築と正負のテストまで用意し、共有の実行処理への接続を残している。
+接続失敗を、元packet本文の解放や別経路の読取で補わない。
 
 既存の `softwareBuildSourceMatches`、`runSoftwareBuildWorker`、`withSoftwareBuildOutput`、`softwareBuildCompletionMatches`、`writeSoftwareBuildReceiptContext` を、native側の保持・ACK・終了回収・非上書きreceipt発行の接続元として使う。
 既存処理の製品固有のパスやsource条件を、Unslopへそのまま流用しない。

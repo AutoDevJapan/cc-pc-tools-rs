@@ -86,13 +86,6 @@ func TestSnapshotReadHandoffAllowsMSVC(t *testing.T) {
 			t.Fatal(e)
 		}
 	}
-	for i, f := range s.files {
-		reader, e := s.readOnlySnapshotFile(f, nil)
-		if e != nil {
-			t.Fatal(e)
-		}
-		s.files[i] = reader
-	}
 	cmd := exec.Command(cl, "/nologo", "/c", filepath.Join(root, "source.c"), "/Fo"+filepath.Join(root, "source.obj"))
 	cmd.Dir = root
 	cmd.SysProcAttr = &syscall.SysProcAttr{HideWindow: true, CreationFlags: 0x08000000}

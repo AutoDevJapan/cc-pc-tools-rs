@@ -240,9 +240,8 @@ fn missing_legacy_names_rejects_unknown_project_without_http() {
     assert!(h.fake.borrow().posts.is_empty());
 }
 
-#[test]
-fn missing_names_resolves_verified_repository_without_changing_original_cwd() {
-    let mut h = Harness::new();
+fn verified_repository_fixture() -> (Harness, &'static str) {
+    let h = Harness::new();
     std::fs::remove_file(&h.ctx.client_projects).unwrap();
     let cwd = "D:/repos/PassShare-completion";
     h.fake.borrow_mut().git_roots.insert(cwd.into(), cwd.into());
@@ -254,23 +253,33 @@ fn missing_names_resolves_verified_repository_without_changing_original_cwd() {
     h.fake.borrow_mut().git_origin_head = Some("refs/remotes/origin/main".into());
     h.fake.borrow_mut().git_origin_ancestor = Some("b".repeat(40));
     h.fake.borrow_mut().provider_commit = Some("b".repeat(40));
-    h.fake.borrow_mut().source_guard_output = Some(cc_ask::core::Output {
+    h.fake.borrow_mut().repository_guard_output = Some(cc_ask::core::Output {
         stdout: json!({"ok":true,"access_allowed":true,"client_resource":false,"classification_unverified":false,"classification_basis":"verified_self_repository"}).to_string(),
         ..Default::default()
     });
+    (h, cwd)
+}
+
+fn repository_owner_question(h: &Harness, cwd: &str) -> AskArgs {
     let body = h.root.path().join("body.md");
     std::fs::write(&body, "既存の認証を再認可できますか？").unwrap();
     let decision = h.root.path().join("decision.json");
     std::fs::write(&decision, json!({"todo_id":4431,"resources":[{"kind":"service","id":"github.com/workflow-scope"}],"decision":"access","scope":{"specification":"existing OAuth scope reauthorization"}}).to_string()).unwrap();
-    let mut args = AskArgs {
+    AskArgs {
         title: "既存認証の再認可".into(),
         body_file: body,
         cwd: Some(cwd.into()),
         decision_file: Some(decision),
         owner_only: Some(cc_ask::ask_gate::OwnerOnly::Access),
-        dry_run: true,
         ..Default::default()
-    };
+    }
+}
+
+#[test]
+fn missing_names_resolves_verified_repository_without_changing_original_cwd() {
+    let (mut h, cwd) = verified_repository_fixture();
+    let mut args = repository_owner_question(&h, cwd);
+    args.dry_run = true;
     let result = cmd_ask(&mut h.ctx, &args)
         .expect("verified original repository should resolve its existing catalog label");
     assert_eq!(result["project"], "PassShare");
@@ -293,6 +302,13 @@ fn missing_names_resolves_verified_repository_without_changing_original_cwd() {
         .http_calls
         .iter()
         .any(|call| call["method"] == "POST"));
+    assert!(h
+        .fake
+        .borrow()
+        .repository_guard_paths
+        .iter()
+        .all(|root| root == cwd));
+    assert!(!h.fake.borrow().repository_guard_paths.is_empty());
 }
 
 #[test]
@@ -312,10 +328,18 @@ fn repository_label_requires_existing_self_identity_and_exact_origin() {
         "malformed",
         "git_failure",
     ] {
-        let mut h = Harness::new();
-        std::fs::remove_file(&h.ctx.client_projects).unwrap();
-        let cwd = "D:/repos/PassShare-completion";
-        h.fake.borrow_mut().git_roots.insert(cwd.into(), cwd.into());
+        // Each negative starts from a fixture that can reach the same posting
+        // consumer. A missing history anchor must not mask a rejected proof.
+        let (mut control, cwd) = verified_repository_fixture();
+        let args = repository_owner_question(&control, cwd);
+        cmd_ask(&mut control.ctx, &args).expect("unmutated consumer control must post");
+        assert!(control
+            .fake
+            .borrow()
+            .http_calls
+            .iter()
+            .any(|call| call["method"] == "POST"));
+        let (mut h, _) = verified_repository_fixture();
         let mut origin = "git@github.com:AutoDevJapan/PassShare.git";
         let mut proof = json!({"ok":true,"access_allowed":true,"client_resource":false,"classification_unverified":false,"classification_basis":"verified_self_repository"});
         match fault {
@@ -341,7 +365,7 @@ fn repository_label_requires_existing_self_identity_and_exact_origin() {
             .borrow_mut()
             .git_origins
             .insert(cwd.into(), origin.into());
-        h.fake.borrow_mut().source_guard_output = Some(cc_ask::core::Output {
+        h.fake.borrow_mut().repository_guard_output = Some(cc_ask::core::Output {
             stdout: proof.to_string(),
             ..Default::default()
         });
@@ -353,28 +377,27 @@ fn repository_label_requires_existing_self_identity_and_exact_origin() {
         );
         assert!(h.fake.borrow().http_calls.is_empty(), "{fault}");
         assert!(h.fake.borrow().posts.is_empty(), "{fault}");
-        let body = h.root.path().join("denied-body.md");
-        std::fs::write(&body, "既存の認証を再認可できますか？").unwrap();
-        let decision = h.root.path().join("denied-decision.json");
-        std::fs::write(&decision,json!({"todo_id":4431,"resources":[{"kind":"service","id":"github.com/workflow-scope"}],"decision":"access","scope":{"specification":"existing OAuth scope reauthorization"}}).to_string()).unwrap();
+        let args = repository_owner_question(&h, cwd);
         if fault == "changed_origin" {
             h.fake.borrow_mut().git_origin_changes.extend([
                 "git@github.com:AutoDevJapan/PassShare.git".into(),
                 "git@github.com:OtherOwner/PassShare.git".into(),
             ]);
         }
-        let result = cmd_ask(
-            &mut h.ctx,
-            &AskArgs {
-                title: "既存認証の再認可".into(),
-                body_file: body,
-                decision_file: Some(decision),
-                cwd: Some(cwd.into()),
-                owner_only: Some(cc_ask::ask_gate::OwnerOnly::Access),
-                ..Default::default()
-            },
+        h.fake.borrow_mut().git_calls.clear();
+        h.fake.borrow_mut().repository_guard_paths.clear();
+        let result = cmd_ask(&mut h.ctx, &args);
+        assert_eq!(
+            result.unwrap_err(),
+            "project privacy classification unavailable for this project",
+            "consumer failed at another boundary for {fault}"
         );
-        assert!(result.is_err(), "consumer unexpectedly accepted {fault}");
+        if matches!(
+            fault,
+            "unverified" | "protected" | "wrong_basis" | "missing_basis" | "malformed"
+        ) {
+            assert_eq!(h.fake.borrow().repository_guard_paths, [cwd], "{fault}");
+        }
         assert!(
             h.fake.borrow().http_calls.is_empty(),
             "consumer dispatched HTTP for {fault}"
@@ -384,6 +407,27 @@ fn repository_label_requires_existing_self_identity_and_exact_origin() {
             "consumer posted for {fault}"
         );
     }
+}
+
+#[test]
+fn repository_guard_failure_stops_actual_question_consumer() {
+    let (mut h, cwd) = verified_repository_fixture();
+    let args = repository_owner_question(&h, cwd);
+    let output = h.fake.borrow().repository_guard_output.clone().unwrap();
+    let mut proof: serde_json::Value = serde_json::from_str(&output.stdout).unwrap();
+    proof["classification_basis"] = json!("verified_operational_receipt");
+    h.fake.borrow_mut().repository_guard_output = Some(cc_ask::core::Output {
+        stdout: proof.to_string(),
+        ..output
+    });
+    let result = cmd_ask(&mut h.ctx, &args);
+    assert_eq!(
+        result.unwrap_err(),
+        "project privacy classification unavailable for this project"
+    );
+    assert_eq!(h.fake.borrow().repository_guard_paths, [cwd]);
+    assert!(h.fake.borrow().http_calls.is_empty());
+    assert!(h.fake.borrow().posts.is_empty());
 }
 
 #[test]

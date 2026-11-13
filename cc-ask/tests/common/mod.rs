@@ -15,6 +15,8 @@ pub struct Harness {
 }
 pub struct Fake {
     pub source_guard_output: Option<Output>,
+    pub repository_guard_output: Option<Output>,
+    pub repository_guard_paths: Vec<String>,
     pub chronology: Vec<String>,
     pub recover_fail: bool,
     pub reboot_recover_fail: bool,
@@ -155,6 +157,8 @@ impl Harness {
         std::fs::create_dir(path.join("discord-tasks")).unwrap();
         let fake = Rc::new(RefCell::new(Fake {
             source_guard_output: None,
+            repository_guard_output: None,
+            repository_guard_paths: Vec::new(),
             chronology: vec![],
             recover_fail: false,
             reboot_recover_fail: false,
@@ -272,6 +276,18 @@ impl Harness {
 }
 pub struct SharedFake(pub Rc<RefCell<Fake>>);
 impl Effects for SharedFake {
+    fn repository_probe(&mut self, argv: &[String], timeout: u64) -> Result<Output> {
+        if argv.first().is_some_and(|arg| arg.ends_with("/scrub391.exe"))
+            && argv.get(1).is_some_and(|arg| arg == "--guard-path")
+        {
+            let mut fake = self.0.borrow_mut();
+            fake.repository_guard_paths.push(argv[2].clone());
+            if let Some(output) = &fake.repository_guard_output {
+                return Ok(output.clone());
+            }
+        }
+        self.run(argv, timeout)
+    }
     fn local_llm(
         &mut self,
         prompt: &str,

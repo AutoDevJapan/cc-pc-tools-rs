@@ -57,15 +57,8 @@ func qualifyArchiveRoot(ctx context.Context, root string, handle syscall.Handle,
 		}
 		return nil
 	}
-	if err := qualify(ctx, root); err != nil {
-		return err
-	}
-	if err := ctx.Err(); err != nil {
-		return err
-	}
 	// Attribute-only directory handles do not enforce rename sharing on Windows.
-	// Retain list/read access without delete sharing, then compare the object
-	// before accepting the operation-scoped qualification.
+	// Pin and compare the same namespace before ordinary qualification starts.
 	path, err := syscall.UTF16PtrFromString(root)
 	if err != nil {
 		return err
@@ -74,13 +67,25 @@ func qualifyArchiveRoot(ctx context.Context, root string, handle syscall.Handle,
 	if err != nil {
 		return err
 	}
+	retained := false
+	defer func() {
+		if !retained {
+			syscall.CloseHandle(pin)
+		}
+	}()
 	var checked syscall.ByHandleFileInformation
 	resolved, plain := handlePath(pin)
 	if !plain || !sameCleanPath(resolved, root) || syscall.GetFileInformationByHandle(pin, &checked) != nil || checked.FileAttributes&syscall.FILE_ATTRIBUTE_REPARSE_POINT != 0 || !sameArchiveRoot(current, checked) {
-		syscall.CloseHandle(pin)
 		return errUpdateObject
 	}
+	if err := qualify(ctx, root); err != nil {
+		return err
+	}
+	if err := ctx.Err(); err != nil {
+		return err
+	}
 	op.roots[key] = cargoArchiveRootPin{handle: pin, info: current}
+	retained = true
 	return nil
 }
 

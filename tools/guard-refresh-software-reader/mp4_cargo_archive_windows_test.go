@@ -450,6 +450,31 @@ func TestCargoArchiveCachedRootNeverReusesLeafQualification(t *testing.T) {
 	}
 }
 
+func TestCargoArchiveRootCannotBeExchangedWhileQualificationRuns(t *testing.T) {
+	root := physicalSoftwareFixture(t)
+	h, ok := openPlain(root, true)
+	if !ok {
+		t.Fatal("metadata handle")
+	}
+	defer syscall.CloseHandle(h)
+	op := &cargoArchiveOperation{roots: map[string]cargoArchiveRootPin{}}
+	defer op.close()
+	ctx := context.WithValue(context.Background(), cargoArchiveOperationKey{}, op)
+	swapped := false
+	err := qualifyArchiveRoot(ctx, root, h, func(context.Context, string) error {
+		if os.Rename(root, root+".old") == nil {
+			swapped = true
+			if os.Mkdir(root, 0700) != nil || os.Remove(root) != nil || os.Rename(root+".old", root) != nil {
+				t.Fatal("fixture exchange restore")
+			}
+		}
+		return nil
+	})
+	if err != nil || swapped {
+		t.Fatalf("qualification observed exchangeable root: swapped=%v err=%v", swapped, err)
+	}
+}
+
 func TestCargoArchiveProgressDoesNotCountFailedPayloadAsMaterialized(t *testing.T) {
 	for _, mode := range []string{"normal", "truncated", "create_collision"} {
 		t.Run(mode, func(t *testing.T) {

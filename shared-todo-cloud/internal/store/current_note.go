@@ -2,6 +2,7 @@ package store
 
 import (
 	"bytes"
+	"encoding/binary"
 	"encoding/json"
 	"strconv"
 
@@ -38,7 +39,11 @@ func (s *Store) CurrentNote(id int64) (CurrentNote, error) {
 				return invalid("invalid_note")
 			}
 		}
-		result = CurrentNote{ID: id, Note: note, NoteSHA256: digest([]byte(note)), Revision: revision(tx), StateID: stateID(tx)}
+		revisionBytes := tx.Bucket(bControl).Get(kRevision)
+		if len(revisionBytes) != 8 {
+			return invalid("invalid_revision")
+		}
+		result = CurrentNote{ID: id, Note: note, NoteSHA256: digest([]byte(note)), Revision: binary.BigEndian.Uint64(revisionBytes), StateID: stateID(tx)}
 		if !validDigest(result.StateID) {
 			return invalid("invalid_state_id")
 		}

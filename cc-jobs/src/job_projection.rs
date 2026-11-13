@@ -8,11 +8,14 @@ const FOUR_SESSION: &str = "01a1bdce-c2db-7792-a036-79044f46d9fb";
 const FOUR_LAUNCH: &str = "7e5809fa41664dc988379e7163284acc";
 const FOUR_RETRY_JOB: &str = "20261112-160237-4431-fourbros-d5e-normal-job-prd-qa";
 const FOUR_RETRY_LAUNCH: &str = "833000ec664b46b3ba3356da827a4321";
+const FOUR_PWA_JOB: &str = "20261113-082647-4431-fourbros-310-current-job-next-pwa";
+const FOUR_PWA_LAUNCH: &str = "9dca71420eaa43458ad8d9c5cfe310f3";
 
 fn four_launch(id: &str) -> Option<&'static str> {
     match id {
         FOUR_JOB => Some(FOUR_LAUNCH),
         FOUR_RETRY_JOB => Some(FOUR_RETRY_LAUNCH),
+        FOUR_PWA_JOB => Some(FOUR_PWA_LAUNCH),
         _ => None,
     }
 }
@@ -195,7 +198,10 @@ impl Context {
         if !matches!(
             (id, purpose),
             (KARAOKE_JOB, "karaoke-1157-locators")
-                | (FOUR_JOB | FOUR_RETRY_JOB, "fourbros-1245-launch-failure")
+                | (
+                    FOUR_JOB | FOUR_RETRY_JOB | FOUR_PWA_JOB,
+                    "fourbros-1245-launch-failure"
+                )
         ) {
             return Err(Error::new("job projection purpose unavailable"));
         }
@@ -469,6 +475,50 @@ fn parse_projection_json(bytes: &[u8]) -> Result<Value> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn pwa_resumed_attempt_has_its_own_exact_launch_binding() {
+        let id = "20261113-082647-4431-fourbros-310-current-job-next-pwa";
+        let key = "9dca71420eaa43458ad8d9c5cfe310f3";
+        let job = json!({"id":id,"status":"failed","resume_session":FOUR_SESSION,"launch_key":key,"exit_code":1,"steps":0});
+        let proof = project(
+            &job,
+            id,
+            "fourbros-1245-launch-failure",
+            None,
+            None,
+            b"session not found",
+        )
+        .expect("assigned current failure must project");
+        assert_eq!(proof["reason"], "session_unavailable");
+        for field in ["resume_session", "launch_key", "status", "id"] {
+            let mut wrong = job.clone();
+            wrong[field] = json!("other");
+            assert!(
+                project(
+                    &wrong,
+                    id,
+                    "fourbros-1245-launch-failure",
+                    None,
+                    None,
+                    b"PRIVATE"
+                )
+                .is_err()
+            );
+        }
+        assert!(
+            project(
+                &job,
+                FOUR_RETRY_JOB,
+                "fourbros-1245-launch-failure",
+                None,
+                None,
+                b"PRIVATE"
+            )
+            .is_err()
+        );
+        assert!(project(&job, id, "karaoke-1157-locators", None, None, b"PRIVATE").is_err());
+    }
     #[test]
     fn saved_supervisor_failure_stage_never_returns_saved_error_text() {
         for (error, stage) in [

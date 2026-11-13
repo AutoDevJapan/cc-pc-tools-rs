@@ -12,6 +12,7 @@ import (
 	"os"
 	"os/exec"
 	"strconv"
+	"strings"
 	"syscall"
 	"time"
 	"unsafe"
@@ -45,10 +46,39 @@ func askOwnedChild(ctx context.Context, executable string, args ...string) (resu
 	return askOwnedChildWithHandshake(ctx, executable, nil, args...)
 }
 
+type askChildWorkingDirectory struct{}
+type askChildEnvironment struct{}
+type askChildExactEnvironment struct{}
+
+func askChildEnvironmentValues(ctx context.Context, parent []string, permit string) []string {
+	var result []string
+	if exact, _ := ctx.Value(askChildExactEnvironment{}).(bool); !exact {
+		result = append(result, parent...)
+	}
+	result = append(result, permit)
+	if changes, _ := ctx.Value(askChildEnvironment{}).(map[string]string); changes != nil {
+		for key, value := range changes {
+			filtered := result[:0]
+			for _, entry := range result {
+				if !strings.HasPrefix(strings.ToUpper(entry), strings.ToUpper(key)+"=") {
+					filtered = append(filtered, entry)
+				}
+			}
+			result = append(filtered, key+"="+value)
+		}
+	}
+	return result
+}
+
+func askOwnedChildAt(ctx context.Context, cwd, executable string, args ...string) askChildResult {
+	return askOwnedChild(context.WithValue(ctx, askChildWorkingDirectory{}, cwd), executable, args...)
+}
+
 type askReadyCapture struct {
 	askGitOutput
 	ready chan []byte
 	sent  bool
+	first []byte
 }
 
 func (w *askReadyCapture) ReadFrom(r io.Reader) (int64, error) {
@@ -78,7 +108,13 @@ func (w *askReadyCapture) Write(p []byte) (int, error) {
 	if e == nil && !w.sent {
 		if i := bytes.IndexByte(w.Bytes(), '\n'); i >= 0 {
 			w.sent = true
+			w.first = append([]byte(nil), w.Bytes()[:i]...)
 			w.ready <- append([]byte(nil), w.Bytes()[:i]...)
+			remainder := append([]byte(nil), w.Bytes()[i+1:]...)
+			clear(w.Bytes())
+			w.Buffer.Reset()
+			w.Buffer.Write(remainder)
+			clear(remainder)
 		}
 	}
 	return n, e
@@ -98,6 +134,9 @@ func askOwnedChildWithHandshake(ctx context.Context, executable string, onReady 
 		return
 	}
 	cmd := exec.CommandContext(ctx, executable, args...)
+	if dir, _ := ctx.Value(askChildWorkingDirectory{}).(string); dir != "" {
+		cmd.Dir = dir
+	}
 	cmd.SysProcAttr = &syscall.SysProcAttr{HideWindow: true, CreationFlags: 0x08000000 | 0x00000004}
 	permitRead, permitWrite, permitErr := os.Pipe()
 	if permitErr != nil {
@@ -109,7 +148,7 @@ func askOwnedChildWithHandshake(ctx context.Context, executable string, onReady 
 		return
 	}
 	cmd.SysProcAttr.AdditionalInheritedHandles = []syscall.Handle{syscall.Handle(permitRead.Fd())}
-	cmd.Env = append(os.Environ(), "ASK_SOFTWARE_PARENT_HANDLE="+strconv.FormatUint(uint64(permitRead.Fd()), 10))
+	cmd.Env = askChildEnvironmentValues(ctx, os.Environ(), "ASK_SOFTWARE_PARENT_HANDLE="+strconv.FormatUint(uint64(permitRead.Fd()), 10))
 	cmd.WaitDelay = 100 * time.Millisecond
 	out := askGitOutput{limit: 65536}
 	errOut := askGitOutput{limit: 65536}
@@ -255,10 +294,16 @@ loop:
 	if assigned && result.WaitVerified && result.Reaped && !result.TimedOut && (waitErr == nil || result.Exit == 1) && errOut.Len() == 0 {
 		if ready != nil {
 			out.Buffer = ready.Buffer
+			if out.Len() == 0 && result.Exit != 0 {
+				out.Buffer.Write(ready.first)
+			}
 		}
 		result.Raw = append([]byte(nil), out.Bytes()...)
 	}
 	clear(out.Bytes())
+	if ready != nil {
+		clear(ready.first)
+	}
 	clear(errOut.Bytes())
 	return
 }
@@ -267,6 +312,10 @@ loop:
 // A failed/stopped producer is followed by a separate bounded read-only
 // reconciliation. Unknown is preserved and can never authorize a switch.
 func supervisedAskSoftware(prepare bool) updateResult {
+	return supervisedFixedSoftware(prepare, []string{"--ask-software-worker"}, []string{"--ask-software-inspection-worker"})
+}
+
+func supervisedFixedSoftware(prepare bool, workerArgs, inspectionArgs []string) updateResult {
 	exe, err := os.Executable()
 	if err != nil {
 		return updateResult{Reason: "qualification_unavailable"}
@@ -276,7 +325,7 @@ func supervisedAskSoftware(prepare bool) updateResult {
 		operation = "prepare"
 	}
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
-	child := askOwnedChild(ctx, exe, "--ask-software-worker", operation)
+	child := askOwnedChild(ctx, exe, append(workerArgs, operation)...)
 	cancel()
 	defer clear(child.Raw)
 	var r updateResult
@@ -295,7 +344,7 @@ func supervisedAskSoftware(prepare bool) updateResult {
 		return r
 	}
 	ctx, cancel = context.WithTimeout(context.Background(), 2*time.Second)
-	observed := askOwnedChild(ctx, exe, "--ask-software-inspection-worker")
+	observed := askOwnedChild(ctx, exe, inspectionArgs...)
 	cancel()
 	defer clear(observed.Raw)
 	var snapshot askReconciliation
@@ -308,6 +357,29 @@ func supervisedAskSoftware(prepare bool) updateResult {
 func runAskWorker(args []string, out io.Writer) int {
 	if !askWorkerParent() {
 		return 2
+	}
+	if (len(args) == 2 || len(args) == 3) && args[0] == "--mp4-build-worker" {
+		build, ok := mp4BuildPlan(args[1])
+		if !ok {
+			return 2
+		}
+		if !build.GoRunner {
+			if len(args) != 3 {
+				return 2
+			}
+			directory, ok := admitSupervisedCargoDirectory(build, args[2])
+			if !ok {
+				return 2
+			}
+			return runSoftwareBuildWorker(build, out, context.WithValue(context.Background(), mp4SupervisedCargoDirectory{}, directory))
+		}
+		if len(args) != 2 {
+			return 2
+		}
+		return runSoftwareBuildWorker(build, out)
+	}
+	if len(args) > 0 && (args[0] == "--mp4-software-worker" || args[0] == "--mp4-inspection-worker") {
+		return runMP4SoftwareWorker(args, out)
 	}
 	if len(args) == 1 && args[0] == "--ask-software-inspection-worker" {
 		return runAskReconciliation([]string{"--inspect-ask-privacy-update"}, out)

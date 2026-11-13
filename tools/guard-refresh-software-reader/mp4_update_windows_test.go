@@ -19,7 +19,7 @@ func TestProjectDistributionPinsMergedHistoryWithoutReusingOldBuild(t *testing.T
 	for _, kind := range []string{"ask", "runner"} {
 		plan, baseline, ok := mp4Software(kind)
 		build, built := mp4BuildPlan(kind)
-		if !ok || !built || plan.Source != source || build.Source != source || build.Export != plan.Candidate || !strings.Contains(build.Target, "-project-3a69-build") || kind == "ask" && !strings.HasSuffix(build.Target, "-build-v2") || strings.Contains(build.Export, "cfecca") || !strings.Contains(baseline.Stage, ".project3a69.stage.exe") || !strings.Contains(baseline.Backup, ".project3a69.before.exe") {
+		if !ok || !built || plan.Source != source || build.Source != source || build.Export != plan.Candidate || !strings.Contains(build.Target, "-project-3a69-build") || kind == "ask" && !strings.HasSuffix(build.Target, "-build-v3") || strings.Contains(build.Export, "cfecca") || !strings.Contains(baseline.Stage, ".project3a69.stage.exe") || !strings.Contains(baseline.Backup, ".project3a69.before.exe") {
 			t.Fatal("old generation was adopted or fixed namespaces diverged")
 		}
 		wantInputs, wantProof := 209, "956ad08d964b9cdf710698e429c606279e0f93cf766a52a58a989a9baf9fba7f"

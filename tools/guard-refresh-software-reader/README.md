@@ -78,6 +78,13 @@ only selected, proved files and explicitly disables automatic PGO inputs.
 Rust uses the six required crates in a deterministic workspace. An offline
 derived lock is admitted only when every package version, registry and checksum
 already occurs in the original lock; its digest is recorded with the snapshot.
+Cargo's locked offline vendor operation materializes the required public
+dependencies in that same snapshot. Each package checksum must match the
+admitted lock, and every listed file is hashed and held before compilation.
+Unlisted packages or files, links, duplicate paths and changed content fail
+closed. An explicit source replacement selects this held vendor namespace;
+the shared registry cache is not modified. Snapshot and memory size limits
+remain finite, and failed preparations preserve their incomplete target.
 
 The Rust child uses a separate Cargo home containing a fixed compiler/cache
 configuration and the existing public registry cache only. Its directory is

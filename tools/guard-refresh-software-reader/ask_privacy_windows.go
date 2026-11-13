@@ -33,6 +33,31 @@ const askOldCreated = "134386801684208828"
 type askSoftwarePlan struct {
 	Candidate, Proof, Source, SHA, ProofSHA string
 	Bytes                                   int
+	GoRunner                                bool
+}
+
+type softwareBaseline struct {
+	Target, Stage, Backup, SHA string
+	Bytes                      int
+	Identity                   softwareIdentity
+}
+
+func privacyBaseline() softwareBaseline {
+	return softwareBaseline{askTarget, askStage, askBackup, askOldSHA, askOldBytes, softwareIdentity{askOldVolume, askOldID, askOldCreated}}
+}
+
+func askInputPaths(plan askSoftwarePlan) []string {
+	if plan.GoRunner {
+		return []string{"unattended-runner"}
+	}
+	return []string{"Cargo.toml", "Cargo.lock", "cc-ask", "cc-chrome", "cc-job-policy", "cc-live", "cc-local-llm", "cc-task-title", "repair-guard/owner_catalog.json"}
+}
+
+func askPlanSourcePath(path string, plan askSoftwarePlan) bool {
+	if plan.GoRunner {
+		return strings.HasPrefix(path, "unattended-runner/") && !strings.ContainsAny(path, "\\:") && !strings.Contains(path, "..")
+	}
+	return askSourcePath(path)
 }
 
 // These identify the separately reviewed source and compiled distribution.
@@ -85,7 +110,7 @@ func askCandidateMatchesContext(ctx context.Context, raw, proofRaw []byte, plan 
 	if _, ok := git("merge-base", "--is-ancestor", plan.Source, "refs/remotes/origin/main"); !ok {
 		return false
 	}
-	treeArgs := []string{"ls-tree", "-r", "-z", plan.Source, "--", "Cargo.toml", "Cargo.lock", "cc-ask", "cc-chrome", "cc-job-policy", "cc-live", "cc-local-llm", "cc-task-title", "repair-guard/owner_catalog.json"}
+	treeArgs := append([]string{"ls-tree", "-r", "-z", plan.Source, "--"}, askInputPaths(plan)...)
 	tree, ok := git(treeArgs...)
 	if !ok {
 		return false
@@ -105,7 +130,7 @@ func askCandidateMatchesContext(ctx context.Context, raw, proofRaw []byte, plan 
 			return false
 		}
 		fields := strings.Fields(string(pair[0]))
-		if len(fields) != 3 || fields[1] != "blob" || !askSourcePath(string(pair[1])) {
+		if len(fields) != 3 || fields[1] != "blob" || !askPlanSourcePath(string(pair[1]), plan) {
 			return false
 		}
 		entries[string(pair[1])] = fields[2]
@@ -118,7 +143,7 @@ func askCandidateMatchesContext(ctx context.Context, raw, proofRaw []byte, plan 
 		if ctx.Err() != nil {
 			return false
 		}
-		if seen[source.Path] || !askSourcePath(source.Path) || entries[source.Path] != source.Blob || len(source.SHA) != 64 {
+		if seen[source.Path] || !askPlanSourcePath(source.Path, plan) || entries[source.Path] != source.Blob || len(source.SHA) != 64 {
 			return false
 		}
 		seen[source.Path] = true
@@ -181,6 +206,10 @@ func executeAskSoftware(prepare bool, plan askSoftwarePlan, b updateBoundary) (r
 }
 
 func executeAskSoftwareContext(ctx context.Context, prepare bool, plan askSoftwarePlan, b updateBoundary) (r updateResult) {
+	return executeSoftwareContext(ctx, prepare, plan, privacyBaseline(), b)
+}
+
+func executeSoftwareContext(ctx context.Context, prepare bool, plan askSoftwarePlan, baseline softwareBaseline, b updateBoundary) (r updateResult) {
 	r.Reason = "qualification_unavailable"
 	defer func() {
 		if ctx.Err() != nil {
@@ -195,12 +224,12 @@ func executeAskSoftwareContext(ctx context.Context, prepare bool, plan askSoftwa
 	if ctx.Err() != nil {
 		return
 	}
-	old, err := b.open(askTarget)
+	old, err := b.open(baseline.Target)
 	if err != nil {
 		return
 	}
 	defer old.Close()
-	if len(old.Raw()) != askOldBytes || !b.oldMatches(old.Raw()) || old.ID() != (softwareIdentity{askOldVolume, askOldID, askOldCreated}) {
+	if len(old.Raw()) != baseline.Bytes || !b.oldMatches(old.Raw()) || old.ID() != baseline.Identity {
 		return
 	}
 	proof, err := b.open(plan.Proof)
@@ -216,7 +245,7 @@ func executeAskSoftwareContext(ctx context.Context, prepare bool, plan askSoftwa
 	if !b.candidateMatches(candidate.Raw(), proof.Raw()) {
 		return
 	}
-	if !b.absent(askStage) || !b.absent(askBackup) {
+	if !b.absent(baseline.Stage) || !b.absent(baseline.Backup) {
 		r.Reason = "software_leaf_collision"
 		return
 	}
@@ -225,7 +254,7 @@ func executeAskSoftwareContext(ctx context.Context, prepare bool, plan askSoftwa
 		return
 	}
 	id := old.ID()
-	r = updateResult{Qualified: true, Reason: "verified_no_write", Domain: "owner-refresh-fixed-software-prepare-v1", Target: askTarget, Stage: askStage, Backup: askBackup, CurrentSHA: askOldSHA, CandidateSHA: plan.SHA, CurrentIdentity: &id, ACLHash: digest([]byte(acl)), SourceHead: plan.Source, SourceMerged: plan.Source}
+	r = updateResult{Qualified: true, Reason: "verified_no_write", Domain: "owner-refresh-fixed-software-prepare-v1", Target: baseline.Target, Stage: baseline.Stage, Backup: baseline.Backup, CurrentSHA: baseline.SHA, CandidateSHA: plan.SHA, CurrentIdentity: &id, ACLHash: digest([]byte(acl)), SourceHead: plan.Source, SourceMerged: plan.Source}
 	if !prepare {
 		return
 	}
@@ -233,7 +262,7 @@ func executeAskSoftwareContext(ctx context.Context, prepare bool, plan askSoftwa
 		path string
 		raw  []byte
 		dest **softwareIdentity
-	}{{askBackup, old.Raw(), &r.BackupIdentity}, {askStage, candidate.Raw(), &r.StageIdentity}} {
+	}{{baseline.Backup, old.Raw(), &r.BackupIdentity}, {baseline.Stage, candidate.Raw(), &r.StageIdentity}} {
 		if ctx.Err() != nil {
 			return
 		}
@@ -329,6 +358,10 @@ func validAskReconciliation(r askReconciliation) bool {
 }
 
 func reconcileAskObjects(ctx context.Context, open func(string) (updateObject, error), stat func(string) (os.FileInfo, error)) askReconciliation {
+	return reconcileSoftwareObjects(ctx, open, stat, privacyBaseline())
+}
+
+func reconcileSoftwareObjects(ctx context.Context, open func(string) (updateObject, error), stat func(string) (os.FileInfo, error), baseline softwareBaseline) askReconciliation {
 	r := askReconciliation{Domain: "owner-question-fixed-software-reconcile-v1"}
 	observe := func(path string) askReconciledObject {
 		unknown := askReconciledObject{State: "unknown"}
@@ -357,9 +390,9 @@ func reconcileAskObjects(ctx context.Context, open func(string) (updateObject, e
 		}
 		return askReconciledObject{State: "present", Identity: &id, SHA: digest(o.Raw()), ACL: digest([]byte(acl))}
 	}
-	r.Target = observe(askTarget)
-	r.Stage = observe(askStage)
-	r.Backup = observe(askBackup)
+	r.Target = observe(baseline.Target)
+	r.Stage = observe(baseline.Stage)
+	r.Backup = observe(baseline.Backup)
 	return r
 }
 

@@ -626,7 +626,7 @@ func runNormalUnslopPurpose(args []string, out io.Writer) int {
 	defer cancel()
 	runtime := unslopPurposeRuntime{}
 	if args[0] == "--capture-unslop-release" {
-		runtime.capture = normalUnslopLiveCaptureAccess()
+		return runNormalUnslopOwnedCapture(ctx, out)
 	}
 	return runUnslopPurpose(ctx, args, out, runtime)
 }

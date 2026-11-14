@@ -1,5 +1,7 @@
 use cc_jobs::notify::*;
 use cc_jobs::*;
+#[path = "support/fixed_unslop_capture.rs"]
+mod fixed_unslop_capture;
 #[path = "support/prepared_input.rs"]
 mod prepared_input_tests;
 #[cfg(windows)]

@@ -32,7 +32,7 @@ func ghaGuardServerJSON(ctx context.Context,client *http.Client,endpoint string,
     noRedirect:=*client;noRedirect.CheckRedirect=func(*http.Request,[]*http.Request)error{return errGHAGuardUnqualified}
     response,err:=noRedirect.Do(req)
     if err!=nil||response==nil||response.Body==nil{return errGHAGuardUnqualified}
-    if response.StatusCode!=http.StatusOK||response.Header.Get("Link")!="" {_=response.Body.Close();return errGHAGuardUnqualified}
+    if response.StatusCode!=http.StatusOK||!ghaGuardSinglePageLink(response.Header) {_=response.Body.Close();return errGHAGuardUnqualified}
     raw,readErr:=io.ReadAll(io.LimitReader(response.Body,2<<20+1));closeErr:=response.Body.Close()
     if readErr!=nil||closeErr!=nil||len(raw)>2<<20||ctx.Err()!=nil {clear(raw);return errGHAGuardUnqualified}
     defer clear(raw)

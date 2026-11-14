@@ -56,7 +56,7 @@ func ghaGuardGitGet(ctx context.Context, client *http.Client, endpoint, accept s
         if response != nil && response.Body != nil { _ = response.Body.Close() }
         return nil, errGHAGuardUnqualified
     }
-    if response.StatusCode != http.StatusOK || response.Header.Get("Link") != "" {
+    if response.StatusCode != http.StatusOK || !ghaGuardSinglePageLink(response.Header) {
         _ = response.Body.Close()
         return nil, errGHAGuardUnqualified
     }

@@ -85,7 +85,7 @@ func ownerInstalledFailureVerdict(primary string,cancelled,cleanup bool) ownerPa
 	case "verified_installed_development_tool": primary="installed_tool"
 	case "installed_tool_cancelled": primary="installed_tool";cancelled=true
 	case "installed_tool_cleanup_failed": primary="installed_tool";cleanup=true
-	case "installed_tool_origin_unavailable","installed_tool_alias_mismatch","installed_tool_identity_unavailable","installed_tool_parent_untrusted","installed_tool_identity_mismatch","installed_tool_bytes_mismatch","installed_tool_identity_changed","installed_tool_alias_changed","installed_tool_origin_changed":
+	case "installed_tool_origin_unavailable","installed_tool_alias_mismatch","installed_tool_identity_unavailable","installed_tool_parent_untrusted","installed_tool_identity_mismatch","installed_tool_bytes_mismatch","installed_tool_identity_changed","installed_tool_alias_changed","installed_tool_origin_changed","installed_tool_read_failed":
 	default: primary="installed_tool_origin_unavailable"
 	}
 	if cancelled { primary+="_cancelled" }
@@ -148,6 +148,7 @@ func ownerInstalledToolVerify(ctx context.Context, plan ownerInstalledToolPlan, 
 		lease, openErr := access.Open(ctx, alias)
 		if lease!=nil { leases=append(leases,lease) }
 		observeFailure(openErr)
+		if openErr==context.Canceled || openErr==context.DeadlineExceeded { return ownerRuleUnknown("installed_tool_cancelled") }
 		if openErr!=nil || lease==nil { return ownerRuleUnknown("installed_tool_identity_unavailable") }
 		if ctx.Err()!=nil { return ownerRuleUnknown("installed_tool_cancelled") }
 		state, stateErr := lease.State()
@@ -164,7 +165,9 @@ func ownerInstalledToolVerify(ctx context.Context, plan ownerInstalledToolPlan, 
 	raw, readErr := leases[0].Read(ctx,plan.size)
 	defer clear(raw)
 	observeFailure(readErr)
-	if readErr!=nil || int64(len(raw))!=plan.size || hashBytes(raw)!=plan.sha { return ownerRuleUnknown("installed_tool_bytes_mismatch") }
+	if readErr==context.Canceled || readErr==context.DeadlineExceeded { return ownerRuleUnknown("installed_tool_cancelled") }
+	if readErr!=nil { return ownerRuleUnknown("installed_tool_read_failed") }
+	if int64(len(raw))!=plan.size || hashBytes(raw)!=plan.sha { return ownerRuleUnknown("installed_tool_bytes_mismatch") }
 	if ctx.Err()!=nil { return ownerRuleUnknown("installed_tool_cancelled") }
 	for i,lease := range leases {
 		now, stateErr := lease.State()
@@ -282,7 +285,7 @@ func ownerInstalledTokenSID(token ownerInstalledToken) (sid string,failure error
 }
 
 func (ownerInstalledToolNative) Open(ctx context.Context,path string) (ownerInstalledToolLease,error) {
-	if ctx.Err()!=nil { return nil,errOwnerInstalledTool }
+	if err:=ctx.Err();err!=nil { return nil,err }
 	lease:=&ownerInstalledToolFile{}
 	var dirs []string
 	for d:=filepath.Dir(path);;d=filepath.Dir(d) { dirs=append(dirs,d);if filepath.Dir(d)==d { break } }
@@ -294,8 +297,9 @@ func (ownerInstalledToolNative) Open(ctx context.Context,path string) (ownerInst
 		var info syscall.ByHandleFileInformation
 		actual,pathErr:=ownerHandlePath(h)
 		if syscall.GetFileInformationByHandle(h,&info)!=nil || info.FileAttributes&syscall.FILE_ATTRIBUTE_DIRECTORY==0 || info.FileAttributes&syscall.FILE_ATTRIBUTE_REPARSE_POINT!=0 || pathErr!=nil || !same(actual,dirs[i]) { return lease,errOwnerInstalledTool }
-		if ctx.Err()!=nil { return lease,errOwnerInstalledTool }
+		if err:=ctx.Err();err!=nil { return lease,err }
 	}
+	if err:=ctx.Err();err!=nil { return lease,err }
 	p,err:=syscall.UTF16PtrFromString(path);if err!=nil { return lease,errOwnerInstalledTool }
 	h,err:=syscall.CreateFile(p,syscall.GENERIC_READ|0x20000,syscall.FILE_SHARE_READ,nil,syscall.OPEN_EXISTING,0x00200000,0)
 	if err!=nil { return lease,errOwnerInstalledTool };lease.f=os.NewFile(uintptr(h),path)
@@ -336,14 +340,23 @@ func ownerInstalledToolParents(parents []ownerInstalledToolParent,user string) (
 	return hashBytes([]byte(proof.String())),allowed,nil
 }
 
-func (f *ownerInstalledToolFile) Read(ctx context.Context,size int64) (raw []byte,failure error) {
-	if f.f==nil || size<=0 || size>64<<20 || ctx.Err()!=nil { return nil,errOwnerInstalledTool }
+func (f *ownerInstalledToolFile) Read(ctx context.Context,size int64) ([]byte,error) {
+	if err:=ctx.Err();err!=nil { return nil,err }
+	if f.f==nil { return nil,errOwnerInstalledTool }
+	return ownerInstalledToolRead(ctx,f.f,size)
+}
+
+// The controller owns this bounded loop. The native receiver supplies its
+// already-held file; only tests substitute a deterministic ReaderAt.
+func ownerInstalledToolRead(ctx context.Context,reader io.ReaderAt,size int64) (raw []byte,failure error) {
+	if err:=ctx.Err();err!=nil { return nil,err }
+	if reader==nil || size<=0 || size>64<<20 { return nil,errOwnerInstalledTool }
 	raw=make([]byte,int(size))
 	defer func(){if failure!=nil { clear(raw);raw=nil }}()
 	for offset:=0;offset<len(raw); {
-		if ctx.Err()!=nil { return raw,errOwnerInstalledTool }
+		if err:=ctx.Err();err!=nil { return raw,err }
 		end:=offset+65536;if end>len(raw) { end=len(raw) }
-		n,err:=f.f.ReadAt(raw[offset:end],int64(offset));offset+=n
+		n,err:=reader.ReadAt(raw[offset:end],int64(offset));offset+=n
 		if err!=nil && !(err==io.EOF && offset==len(raw)) || n==0 { return raw,errOwnerInstalledTool }
 	}
 	if len(raw)<64 || !bytes.Equal(raw[:2],[]byte("MZ")) { return raw,errOwnerInstalledTool }

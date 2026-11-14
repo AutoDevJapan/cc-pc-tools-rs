@@ -81,15 +81,21 @@ message leaves the provider. The final fixed classification basis preserves
 the controller's refusal and adds `_cancelled` and/or `_cleanup_failed` when
 both facts occur. For example, a content mismatch followed by cancellation and
 failed cleanup is `installed_tool_bytes_mismatch_cancelled_cleanup_failed`.
-No combination can become clear. Normal classification, diagnostics and
+No combination can become clear. A read interrupted solely by cancellation
+returns the cancellation basis without inventing a content mismatch. Open
+cancellation likewise does not invent a failed identity observation. Actual
+read failures use `installed_tool_read_failed`; a complete-buffer digest
+mismatch retains its own basis even when cancellation also occurs.
+Normal classification, diagnostics and
 `--classification-diagnostic=false` share the same installed-tool callback set.
 
 ## Verification status and rollout
 
-The initial PR733 `4df6e610151c1d3c6465fb49aeb2146162aec6a4` passed its hosted
-Windows controller tests, vet and build. Those results apply to that input only.
-The later trace/cancellation/cleanup/token/INHERIT_ONLY correction has additional
-test source and requires its own fixed-input hosted verification. The local
+PR733 `4df6e610151c1d3c6465fb49aeb2146162aec6a4` and the subsequent
+`8126e6d16275395be837fe56ee4ae4d41ce27119` passed their hosted Windows
+controller tests, vet and build. Those results apply to those inputs only.
+The current Open/Read cancellation correction has additional test source and
+requires its own fixed-input hosted verification. The local
 Git, Go and gofmt executables have not been used to manufacture a successful
 local result. No actual installed-executable qualification, update or normal
 consumer acceptance is claimed by either source-test result. Public archive

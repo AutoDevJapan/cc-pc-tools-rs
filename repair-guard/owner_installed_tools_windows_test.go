@@ -5,6 +5,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"io"
 	"path/filepath"
 	"strings"
 	"testing"
@@ -379,4 +380,100 @@ func TestInstalledToolLegacyProtectionSurvivesCancellation(t *testing.T) {
 	fixture:=newInstalledToolFixture("normal",cancel)
 	v:=ownerInstalledToolVerify(ctx,fixture.plan,fixture,func(string)ownerLegacyState{cancel();return ownerLegacyClient})
 	if v.AccessAllowed || v.Status!="protected" || v.Basis!="legacy_exclusion" || fixture.originCalls!=0 || fixture.opens!=0 || fixture.reads!=0 {t.Fatal("cancellation erased a confirmed client exclusion or opened content")}
+}
+
+type installedToolBoundaryFixture struct {
+	*installedToolFixture
+	ctx context.Context
+	cancel context.CancelFunc
+	boundary string
+	data []byte
+	readerCalls int
+	views [][]byte
+}
+
+func (f *installedToolBoundaryFixture) Open(ctx context.Context,path string) (ownerInstalledToolLease,error) {
+	lease,err:=f.installedToolFixture.Open(ctx,path)
+	if err!=nil { return lease,err }
+	if strings.HasPrefix(f.boundary,"open-") {
+		f.cancel()
+		if f.boundary=="open-error" { return lease,errOwnerInstalledTool }
+		return lease,ctx.Err()
+	}
+	return &installedToolBoundaryLease{owner:f,lease:lease},nil
+}
+
+type installedToolBoundaryLease struct {
+	owner *installedToolBoundaryFixture
+	lease ownerInstalledToolLease
+}
+func (l *installedToolBoundaryLease) State() (ownerInstalledToolState,error) { return l.lease.State() }
+func (l *installedToolBoundaryLease) Close() error { return l.lease.Close() }
+func (l *installedToolBoundaryLease) Read(ctx context.Context,size int64) ([]byte,error) {
+	l.owner.reads++
+	if l.owner.boundary=="read-before" { l.owner.cancel() }
+	raw,err:=ownerInstalledToolRead(ctx,l.owner,size)
+	l.owner.returned=raw
+	return raw,err
+}
+
+func (f *installedToolBoundaryFixture) ReadAt(out []byte,offset int64) (int,error) {
+	f.readerCalls++
+	f.views=append(f.views,out)
+	if offset<0 || offset>=int64(len(f.data)) { return 0,io.EOF }
+	if f.boundary=="read-error" {
+		n:=copy(out[:len(out)/2],f.data[int(offset):]);f.cancel()
+		return n,io.ErrUnexpectedEOF
+	}
+	n:=copy(out,f.data[int(offset):])
+	if f.boundary=="read-mid" { f.cancel() }
+	if int(offset)+n==len(f.data) && (f.boundary=="read-complete" || f.boundary=="read-mismatch") {
+		if f.boundary=="read-mismatch" { out[n-1]^=1 }
+		f.cancel()
+	}
+	return n,nil
+}
+
+func TestInstalledToolNativeReadBoundaryDistinguishesCancelIOAndMismatch(t *testing.T) {
+	for _,boundary:=range []string{"normal","open-cancel","open-error","read-before","read-mid","read-complete","read-error","read-mismatch"} {
+		for _,closeFail:=range []bool{false,true} {
+			name:=boundary;if closeFail {name+="/close-failure"}
+			t.Run(name,func(t *testing.T){
+				ctx,cancel:=context.WithCancel(context.Background());defer cancel()
+				base:=newInstalledToolFixture("normal",cancel)
+				data:=bytes.Repeat([]byte{'a'},65537);copy(data,[]byte("MZ"))
+				base.plan.size=int64(len(data));base.plan.sha=hashBytes(data)
+				for _,lease:=range base.leases {lease.state.size=base.plan.size}
+				if closeFail {base.mode="close-error"}
+				fixture:=&installedToolBoundaryFixture{installedToolFixture:base,ctx:ctx,cancel:cancel,boundary:boundary,data:data}
+				got:=ownerInstalledToolVerify(ctx,base.plan,fixture,func(string)ownerLegacyState{return ownerLegacyClear})
+				want:="verified_installed_development_tool"
+				switch boundary {
+				case "open-cancel","read-before","read-mid","read-complete":want="installed_tool_cancelled"
+				case "open-error":want="installed_tool_identity_unavailable_cancelled"
+				case "read-error":want="installed_tool_read_failed_cancelled"
+				case "read-mismatch":want="installed_tool_bytes_mismatch_cancelled"
+				}
+				if closeFail {if boundary=="normal" {want="installed_tool_cleanup_failed"} else {want+="_cleanup_failed"}}
+				if got.Basis!=want || got.AccessAllowed!=(boundary=="normal" && !closeFail) {t.Fatal("Open/Read cancellation invented or erased a primary fact",boundary,got.Basis,want)}
+				wantReads:=1;wantReaderCalls:=2
+				if strings.HasPrefix(boundary,"open-") {wantReads=0;wantReaderCalls=0}
+				if boundary=="read-before" {wantReaderCalls=0}
+				if boundary=="read-mid" || boundary=="read-error" {wantReaderCalls=1}
+				if base.reads!=wantReads || fixture.readerCalls!=wantReaderCalls {t.Fatal("wrong bounded native-read phase count")}
+				for i,lease:=range base.leases {wantCloses:=0;if i<base.opens {wantCloses=1};if lease.closed!=wantCloses {t.Fatal("Open/Read cancellation did not close each acquired lease once")}}
+				for _,view:=range fixture.views {for _,b:=range view {if b!=0 {t.Fatal("native read success/failure retained buffer")}}}
+				if boundary!="normal" && (base.originCalls!=1 || base.aliasCalls!=1) {t.Fatal("failure continued beyond observed Open/Read boundary")}
+				if strings.Contains(got.Basis,"C:/") || strings.Contains(got.Basis,"private") {t.Fatal("native error text escaped fixed classification")}
+			})
+		}
+	}
+}
+
+func TestInstalledToolNativeOpenAndReadInitialCancellationDoNotTouchAPath(t *testing.T) {
+	ctx,cancel:=context.WithCancel(context.Background());cancel()
+	lease,err:=(ownerInstalledToolNative{}).Open(ctx,"not-an-installed-path")
+	if lease!=nil || err!=context.Canceled {t.Fatal("native Open initial cancellation lost or allocated a lease")}
+	raw,err:=(&ownerInstalledToolFile{}).Read(ctx,64)
+	if raw!=nil || err!=context.Canceled {t.Fatal("native Read initial cancellation lost before file validation")}
 }

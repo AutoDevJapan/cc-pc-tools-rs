@@ -165,6 +165,8 @@ type unslopCaptureLifetimeSession struct {
 	*unslopSyntheticCapture
 	provider *unslopCaptureLifetimeProvider
 	t *testing.T
+	afterDone func()
+	failClose bool
 }
 func (s *unslopCaptureLifetimeSession) event(name string) {
 	s.t.Helper()
@@ -176,8 +178,18 @@ func (s *unslopCaptureLifetimeSession) Build(ctx context.Context) (unslopBuildIn
 func (s *unslopCaptureLifetimeSession) After(ctx context.Context) (unslopCapturedInputs, error) { s.event("after"); return s.unslopSyntheticCapture.After(ctx) }
 func (s *unslopCaptureLifetimeSession) WithArtifact(use func([]byte, softwareIdentity) bool) bool { s.event("artifact"); return s.unslopSyntheticCapture.WithArtifact(use) }
 func (s *unslopCaptureLifetimeSession) Acknowledge(ctx context.Context) error { s.event("ack"); return s.unslopSyntheticCapture.Acknowledge(ctx) }
-func (s *unslopCaptureLifetimeSession) AwaitCompletion(ctx context.Context) (unslopProducerCompletion, error) { s.event("done"); return s.unslopSyntheticCapture.AwaitCompletion(ctx) }
-func (s *unslopCaptureLifetimeSession) Close() error { s.event("input-close"); return s.unslopSyntheticCapture.Close() }
+func (s *unslopCaptureLifetimeSession) AwaitCompletion(ctx context.Context) (unslopProducerCompletion, error) {
+	s.event("done")
+	done,err:=s.unslopSyntheticCapture.AwaitCompletion(ctx)
+	if s.afterDone!=nil { s.afterDone() }
+	return done,err
+}
+func (s *unslopCaptureLifetimeSession) Close() error {
+	s.event("input-close")
+	err:=s.unslopSyntheticCapture.Close()
+	if s.failClose { return errors.New("live_worker_collection_unknown_inputs_preserved") }
+	return err
+}
 type unslopCaptureLifetimePending struct {
 	*syntheticUnslopPending
 	provider *unslopCaptureLifetimeProvider
@@ -207,7 +219,7 @@ func TestUnslopToolchainCaptureRetainsInputsThroughReceiptAndLateClose(t *testin
 			if mode == "duplicate-callback" { provider.mode = "two-callbacks" }
 			fixture := syntheticUnslopCapture()
 			if mode == "capture-failed" { fixture.fault = "worker_failed" }
-			session := &unslopCaptureLifetimeSession{fixture,provider,t}
+			session := &unslopCaptureLifetimeSession{unslopSyntheticCapture:fixture,provider:provider,t:t}
 			pending := &unslopCaptureLifetimePending{syntheticUnslopPending:&syntheticUnslopPending{},provider:provider,t:t}
 			factories := 0
 			factory := func(_ context.Context, held rustToolchainHeld, binding unslopRustToolchainBinding) (unslopCaptureAccess,error) {
@@ -306,6 +318,65 @@ func TestUnslopWorkerRequiresItsOwnMatchingHeldBinding(t *testing.T) {
 			})
 			if (exit==0)!=(mode=="matching") || ((mode=="mismatch" || mode=="cancelled" || mode=="no-provider") && calls!=0) || calls>1 { t.Fatal("worker binding/exit contract",mode,exit,calls) }
 			if mode=="worker-failure" && exit!=7 { t.Fatal("worker failure exit lost",exit) }
+		})
+	}
+}
+
+// A synthetic uncollected result reaches the real core's deferred Close path.
+// This proves result preservation, not native collection or lease handoff.
+func TestUnslopCaptureKeepsCleanupFailureAlongsideToolchainFailure(t *testing.T) {
+	for _, mode := range []string{"cleanup-only", "cleanup-and-cancel", "cleanup-and-provider-close", "cleanup-and-postcheck"} {
+		t.Run(mode,func(t *testing.T) {
+			provider:=&unslopCaptureLifetimeProvider{syntheticUnslopToolchainProvider:newSyntheticUnslopToolchainProvider()}
+			ctx,cancel:=context.WithCancel(context.Background());defer cancel()
+			fixture:=syntheticUnslopCapture()
+			fixture.fault="worker_unreaped"
+			session:=&unslopCaptureLifetimeSession{unslopSyntheticCapture:fixture,provider:provider,t:t,failClose:true}
+			if mode=="cleanup-and-cancel" { session.afterDone=cancel }
+			if mode=="cleanup-and-provider-close" { provider.mode="close-error" }
+			if mode=="cleanup-and-postcheck" { provider.mode="after-check" }
+			pending:=&unslopCaptureLifetimePending{syntheticUnslopPending:&syntheticUnslopPending{},provider:provider,t:t}
+			calls:=0
+			result:=captureUnslopReleaseWithToolchain(ctx,provider,func(context.Context,rustToolchainHeld,unslopRustToolchainBinding)(unslopCaptureAccess,error){
+				calls++
+				return unslopCaptureAccess{
+					begin:func(context.Context)(unslopProducerSession,error){return session,nil},
+					stage:func(context.Context,unslopCaptureReceipt,[]byte)(unslopPendingCapture,error){return pending,nil},
+				},nil
+			})
+			wantToolchain:="toolchain_inputs_consumed"
+			wantReason:="capture_cleanup_failed_preserved"
+			if mode=="cleanup-and-cancel" { wantToolchain="toolchain_cancelled";wantReason=wantToolchain }
+			if mode=="cleanup-and-provider-close"||mode=="cleanup-and-postcheck" { wantToolchain="toolchain_origin_unavailable";wantReason=wantToolchain }
+			if result.Qualified||result.ReceiptPublished||result.Receipt!=nil||!result.CaptureAttempted||result.CaptureReason!="capture_cleanup_failed_preserved"||result.ToolchainReason!=wantToolchain||result.Reason!=wantReason {
+				t.Fatal("compound failure lost capture or toolchain outcome",mode,result)
+			}
+			if calls!=1||pending.commits!=0||pending.aborts!=1||provider.active {t.Fatal("compound failure repeated capture or changed pending state",mode)}
+			raw,err:=json.Marshal(result)
+			if err!=nil||!strings.Contains(string(raw),"capture_cleanup_failed_preserved")||!strings.Contains(string(raw),wantToolchain)||strings.Contains(string(raw),"private failure") {t.Fatal("compound outcome not safely serializable",mode,string(raw))}
+		})
+	}
+}
+
+func TestUnslopCaptureKeepsPublishedCleanupFailureAlongsideProviderFailure(t *testing.T) {
+	for _,mode:=range []string{"export-close-and-provider-close","export-close-and-postcheck","export-close-and-cancel"} {
+		t.Run(mode,func(t *testing.T){
+			p:=&unslopCaptureLifetimeProvider{syntheticUnslopToolchainProvider:newSyntheticUnslopToolchainProvider()}
+			if mode=="export-close-and-provider-close" {p.mode="close-error"}
+			if mode=="export-close-and-postcheck" {p.mode="after-check"}
+			ctx,cancel:=context.WithCancel(context.Background());defer cancel()
+			s:=&unslopCaptureLifetimeSession{unslopSyntheticCapture:syntheticUnslopCapture(),provider:p,t:t}
+			pending:=&unslopCaptureLifetimePending{syntheticUnslopPending:&syntheticUnslopPending{fault:"export_close_failed"},provider:p,t:t}
+			if mode=="export-close-and-cancel" {pending.afterClose=cancel}
+			factories:=0
+			r:=captureUnslopReleaseWithToolchain(ctx,p,func(context.Context,rustToolchainHeld,unslopRustToolchainBinding)(unslopCaptureAccess,error){
+				factories++
+				return unslopCaptureAccess{begin:func(context.Context)(unslopProducerSession,error){return s,nil},stage:func(context.Context,unslopCaptureReceipt,[]byte)(unslopPendingCapture,error){return pending,nil}},nil
+			})
+			wantToolchain:="toolchain_origin_unavailable"
+			if mode=="export-close-and-cancel" {wantToolchain="toolchain_cancelled"}
+			if r.Qualified||r.Receipt!=nil||!r.ReceiptPublished||!r.CaptureAttempted||r.CaptureReason!="capture_export_close_failed"||r.ToolchainReason!=wantToolchain||r.Reason!=wantToolchain {t.Fatal("published compound failure lost either outcome",mode,r)}
+			if !pending.published||pending.commits!=1||pending.aborts!=0||factories!=1||p.active {t.Fatal("published result rolled back or committed again",mode)}
 		})
 	}
 }

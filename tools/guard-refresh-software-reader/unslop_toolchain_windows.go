@@ -215,9 +215,18 @@ func bindUnslopRustToolchain(purpose unslopToolchainPurpose, held rustToolchainH
 // parser for constructing a capture access or a software-origin provider.
 type unslopToolchainCaptureFactory func(context.Context, rustToolchainHeld, unslopRustToolchainBinding) (unslopCaptureAccess,error)
 
-func captureUnslopReleaseWithToolchain(ctx context.Context, provider rustToolchainOriginProvider, factory unslopToolchainCaptureFactory) unslopCaptureResult {
-	result := unslopCaptureResult{Reason:"missing_producer_provenance"}
-	if ctx.Err()!=nil { result.Reason="unslop_cancelled"; return result }
+// Keep both layers' outcomes: cancellation or provider cleanup must not erase
+// the capture's own cleanup failure. No worker collection fact is inferred.
+type unslopToolchainCaptureResult struct {
+	unslopCaptureResult
+	CaptureAttempted bool `json:"capture_attempted"`
+	CaptureReason string `json:"capture_reason,omitempty"`
+	ToolchainReason string `json:"toolchain_reason,omitempty"`
+}
+
+func captureUnslopReleaseWithToolchain(ctx context.Context, provider rustToolchainOriginProvider, factory unslopToolchainCaptureFactory) unslopToolchainCaptureResult {
+	result := unslopToolchainCaptureResult{unslopCaptureResult:unslopCaptureResult{Reason:"missing_producer_provenance"}}
+	if ctx.Err()!=nil { result.Reason="unslop_cancelled"; result.ToolchainReason="toolchain_cancelled"; return result }
 	if factory==nil { return result }
 	called:=false
 	outcome:=consumeUnslopToolchainHeld(ctx,fixedUnslopToolchainPurpose(),provider,func(ctx context.Context, held rustToolchainHeld)bool {
@@ -226,11 +235,15 @@ func captureUnslopReleaseWithToolchain(ctx context.Context, provider rustToolcha
 		access,err:=factory(ctx,held,binding)
 		if err!=nil { return false }
 		called=true
-		// All snapshot/worker/artifact/ACK/receipt operations complete here.
-		// WithHeld cannot return and close the toolchain between these steps.
-		result=captureUnslopRelease(ctx,access)
+		// Normal and collected-worker capture paths finish inside this lease.
+		// The uncollected-worker path still needs a retained owner before
+		// normal wiring; returning from this callback alone cannot provide it.
+		result.CaptureAttempted=true
+		result.unslopCaptureResult=captureUnslopRelease(ctx,access)
+		result.CaptureReason=result.unslopCaptureResult.Reason
 		return true
 	})
+	result.ToolchainReason=outcome.Reason
 	if !outcome.Verified {
 		result.Qualified=false
 		result.Receipt=nil
@@ -239,7 +252,7 @@ func captureUnslopReleaseWithToolchain(ctx context.Context, provider rustToolcha
 		// cleanup fails later. Do not undo it or retry the same receipt here.
 		return result
 	}
-	if !called { return unslopCaptureResult{Reason:"toolchain_callback_invalid"} }
+	if !called { result.Reason="toolchain_callback_invalid";return result }
 	return result
 }
 

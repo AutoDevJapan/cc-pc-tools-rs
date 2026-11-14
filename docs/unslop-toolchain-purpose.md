@@ -64,6 +64,10 @@ final receiptはproviderの後処理より先に公開され得るため、そ�
 将来のinstall consumerには、providerの後処理と実際の返却結果を永続的に結び、失敗・未確認の実行を保留にする接続が必要です。
 現在の合成テストは返却値と公開済み状態の区別を確認するもので、再起動後のreceipt判定や実インストールを実証するものではありません。
 
+wrapperの結果には、capture coreを呼んだかと、capture側・toolchain側それぞれの固定理由を残します。
+たとえば取消と入力の後片付け失敗が重なっても、外向きの理由で後片付け失敗を消しません。
+この情報は実workerの回収状態や保持担当を表すものではなく、それらは通常配線前に別途接続する必要があります。
+
 worker用の `runUnslopWorkerWithToolchain` は、worker自身の正常なproviderが保持した内容からbindingを作り、親からの期待値と一致したときだけworker処理を呼びます。
 期待digest、PID、親から来たJSONだけでは、providerを構築したり入力の読取資格を与えたりしません。
 このcallback内に入力保持、Cargo、Ready、ACK受領、Final送信を置き、providerのClose後に終了コードを決めます。

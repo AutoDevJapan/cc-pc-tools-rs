@@ -13,6 +13,7 @@ import (
 	"path/filepath"
 	"strconv"
 	"strings"
+	"sync"
 	"testing"
 	"time"
 )
@@ -37,34 +38,147 @@ func historyReadStep(t *testing.T, x *unslopHistoryExchange, want []byte) {
 	clear(actual)
 }
 
+
+type historyReadTestResult struct { data []byte; err error }
+
+type historyReadTestOwner struct {
+	cancel context.CancelFunc
+	done chan historyReadTestResult
+	result historyReadTestResult
+	received bool
+}
+
+func (o *historyReadTestOwner) receive(limit time.Duration) bool {
+	if o.received { return true }
+	timer:=time.NewTimer(limit);defer timer.Stop()
+	select {case o.result=<-o.done:o.received=true;return true;case <-timer.C:return false}
+}
+
+// The cleanup is registered before the goroutine starts. A failed assertion
+// cannot abandon its result or make a canceled read count as a failure signal.
+func historyStartBlockedRead(t *testing.T, x *unslopHistoryExchange, cancel context.CancelFunc, step int) *historyReadTestOwner {
+	t.Helper()
+	o:=&historyReadTestOwner{cancel:cancel,done:make(chan historyReadTestResult,1)}
+	t.Cleanup(func(){
+		o.cancel()
+		if !o.receive(3*time.Second) {t.Error("history read cleanup unknown: result was not received");return}
+		clear(o.result.data)
+	})
+	go func(){buffer:=make([]byte,1<<20);n,err:=x.Read(buffer);o.done<-historyReadTestResult{buffer[:n],err}}()
+	timer:=time.NewTimer(time.Second);defer timer.Stop()
+	select {
+	case waiting:=<-x.waiting:if waiting!=step {t.Fatal("reader witness belongs to a different step",waiting,step)}
+	case o.result=<-o.done:o.received=true;t.Fatal("reader returned before the failure boundary",o.result.err)
+	case <-timer.C:t.Fatal("reader did not reach the response boundary")
+	}
+	return o
+}
+
+func historyRequireFailureWake(t *testing.T, o *historyReadTestOwner) {
+	t.Helper()
+	// The caller has not canceled, closed stdout, or supplied another response.
+	// Removing failLocked's signal must fail here, before cleanup can cancel.
+	if !o.receive(time.Second) {t.Fatal("failure did not wake the already blocked reader")}
+	if len(o.result.data)!=0||o.result.err!=errUnslopHistoryProtocol {t.Fatal("failure woke the reader with input or the wrong error",o.result.err)}
+}
+
+type historyChildTestOwner struct {
+	ctx context.Context
+	cancel context.CancelFunc
+	done chan askChildResult
+	result askChildResult
+	plan unslopHistoryProtocol
+	root string
+	launched,received,retained bool
+}
+
+// Unknown cleanup keeps the exact test owner, result channel and private fixture.
+// It never means an actual native process or Job was observed as collected.
+var historyChildTestUncollected=struct{sync.Mutex;owners []*historyChildTestOwner}{}
+
+func (o *historyChildTestOwner) receive(limit time.Duration) bool {
+	if o.received {return true}
+	timer:=time.NewTimer(limit);defer timer.Stop()
+	select {case o.result=<-o.done:o.received=true;return true;case <-timer.C:return false}
+}
+
+func (o *historyChildTestOwner) retain() {
+	if o.retained {return}
+	o.retained=true
+	historyChildTestUncollected.Lock();defer historyChildTestUncollected.Unlock()
+	historyChildTestUncollected.owners=append(historyChildTestUncollected.owners,o)
+}
+
+func historyNewChildTestOwner(t *testing.T, cancel context.CancelFunc) *historyChildTestOwner {
+	t.Helper()
+	o:=&historyChildTestOwner{cancel:cancel,done:make(chan askChildResult,1)}
+	// Register before fixture acquisition or launch. This is the only result
+	// receiver and remains responsible after Fatal, setup errors and timeouts.
+	t.Cleanup(func(){
+		o.cancel()
+		if o.launched&&!o.receive(3*time.Second) {
+			o.retain();t.Error("history child cleanup unknown: same result not received; owner and fixture retained");return
+		}
+		if o.received {
+			r:=&o.result
+			clear(r.Raw)
+			if r.Capture!=nil {clear(r.Capture.Stdout)}
+			if r.Started&&(!r.WaitVerified||!r.Reaped) {
+				o.retain();t.Error("history child cleanup incomplete; fixture retained",r.Started,r.Assigned,r.WaitVerified,r.Reaped,r.TimedOut,r.CollectionReason,r.CollectionObserved,r.CollectionTotal,r.CollectionTotalKnown);return
+			}
+		}
+		o.plan.erase()
+		if o.root!="" {if err:=os.RemoveAll(o.root);err!=nil {o.retain();t.Error("history test fixture cleanup failed; owner retained")}}
+	})
+	return o
+}
+
+func historyStartNativeTestChild(t *testing.T, mode string) *historyChildTestOwner {
+	t.Helper()
+	ctx,cancel:=context.WithTimeout(context.Background(),5*time.Second)
+	o:=historyNewChildTestOwner(t,cancel)
+	o.ctx=ctx
+	var err error
+	o.root,err=os.MkdirTemp("","unslop-history-")
+	if err!=nil {t.Fatal("history private fixture unavailable",err)}
+	ctx=context.WithValue(ctx,askChildEnvironment{},map[string]string{"UNSLOP_PROTOCOL_CHILD":mode,"UNSLOP_PROTOCOL_ROOT":o.root})
+	o.plan,err=buildUnslopHistoryProtocol([]unslopHistoryRequest{{"thread/read",map[string]any{"threadId":"synthetic-owned"}},{"thread/read",map[string]any{"threadId":"synthetic-owned"}}})
+	if err!=nil {t.Fatal(err)}
+	ctx=context.WithValue(ctx,askChildCaptureKey{},askChildCapture{})
+	ctx=context.WithValue(ctx,unslopHistoryProtocolKey{},o.plan)
+	o.launched=true
+	go func(){o.done<-askOwnedChild(ctx,os.Args[0],"-test.run=^TestUnslopHistoryProtocolChild$")}()
+	return o
+}
+
+func historyWaitNativeBoundary(o *historyChildTestOwner, name string) bool {
+	deadline:=time.NewTimer(3*time.Second);ticker:=time.NewTicker(time.Millisecond)
+	defer deadline.Stop();defer ticker.Stop()
+	for {select {
+	case <-ticker.C:if _,err:=os.Stat(filepath.Join(o.root,name));err==nil {return true}
+	case <-deadline.C:return false
+	}}
+}
+
 func TestUnslopHistoryExchangeWaitsForActualResponseAndFinalEOF(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 	plan, x := historyProtocolFixture(t, ctx, 2)
 	historyReadStep(t, x, plan.Steps[0].Input)
 	for i := range plan.Steps {
-		type readResult struct{ data []byte; err error }
-		done := make(chan readResult, 1)
-		go func(){ buffer:=make([]byte,1<<20); n,err:=x.Read(buffer); done<-readResult{buffer[:n],err} }()
-		select { case waiting:=<-x.waiting: if waiting!=i {cancel();r:=<-done;clear(r.data);t.Fatal("reader witness belongs to a different step",waiting,i)}; case <-time.After(time.Second): cancel();r:=<-done;clear(r.data); t.Fatal("reader did not reach the response boundary") }
-		select { case r:=<-done: clear(r.data); t.Fatal("reader advanced or returned EOF before matching response",r.err); default: }
+		o:=historyStartBlockedRead(t,x,cancel,i)
 		frame := []byte("{\"id\":"+strconv.Itoa(i+1)+",\"result\":{}}\n")
 		x.observe(frame[:len(frame)-1])
-		select { case r:=<-done: clear(r.data); t.Fatal("partial JSONL frame advanced input",r.err); default: }
+		select {case o.result=<-o.done:o.received=true;t.Fatal("partial JSONL frame advanced input",o.result.err);default:}
 		x.observe(frame[len(frame)-1:])
-		select {
-		case r:=<-done:
-			if i+1 == len(plan.Steps) {
-				if r.err != io.EOF || len(r.data)!=0 { clear(r.data); t.Fatal("final response did not close stdin") }
-			} else if r.err != nil || !bytes.Equal(r.data, plan.Steps[i+1].Input) {
-				clear(r.data); t.Fatal("matching response did not release the exact next input",r.err)
-			}
-			clear(r.data)
-		case <-time.After(time.Second): cancel();r:=<-done;clear(r.data); t.Fatal("matching response did not wake the reader")
-		}
+		if !o.receive(time.Second) {t.Fatal("matching response did not wake the reader")}
+		if i+1==len(plan.Steps) {
+			if o.result.err!=io.EOF||len(o.result.data)!=0 {t.Fatal("final response did not close stdin")}
+		} else if o.result.err!=nil||!bytes.Equal(o.result.data,plan.Steps[i+1].Input) {t.Fatal("matching response did not release the exact next input",o.result.err)}
+		clear(o.result.data)
 	}
 	x.endOutput(true)
-	if reason:=x.resultReason(); reason!="history_protocol_complete" { t.Fatal("complete sequence was rejected",reason) }
+	if reason:=x.resultReason();reason!="history_protocol_complete" {t.Fatal("complete sequence was rejected",reason)}
 }
 
 func TestUnslopHistoryExchangeRejectsInvalidFramesAndEndsBlockedReads(t *testing.T) {
@@ -85,9 +199,9 @@ func TestUnslopHistoryExchangeRejectsInvalidFramesAndEndsBlockedReads(t *testing
 		ctx,cancel:=context.WithCancel(context.Background());defer cancel()
 		plan,x:=historyProtocolFixture(t,ctx,1)
 		historyReadStep(t,x,plan.Steps[0].Input)
+		o:=historyStartBlockedRead(t,x,cancel,0)
 		x.observe([]byte(c.wire));if c.end {x.endOutput(true)}
-		var p [16]byte
-		if n,err:=x.Read(p[:]);n!=0||err==nil||err==io.EOF { t.Fatal("invalid response supplied next request",n,err) }
+		historyRequireFailureWake(t,o)
 		if reason:=x.resultReason();!strings.HasPrefix(reason,"history_protocol_")||strings.Contains(reason,"private")||strings.Contains(reason,"token") { t.Fatal("raw response reached reason",reason) }
 	}) }
 }
@@ -108,6 +222,7 @@ func TestUnslopHistoryExchangeChunkingLimitsAndDuplicateResponse(t *testing.T) {
 		ctx,cancel:=context.WithCancel(context.Background());defer cancel()
 		plan,x:=historyProtocolFixture(t,ctx,1)
 		historyReadStep(t,x,plan.Steps[0].Input)
+		o:=historyStartBlockedRead(t,x,cancel,0)
 		switch mode {
 		case "duplicate-response": x.observe([]byte("{\"id\":1,\"result\":{}}\n{\"id\":1,\"result\":{}}\n"))
 		case "frame-limit": x.observe(bytes.Repeat([]byte{'x'},unslopHistoryFrameLimit+1))
@@ -116,8 +231,9 @@ func TestUnslopHistoryExchangeChunkingLimitsAndDuplicateResponse(t *testing.T) {
 		case "close": _=x.Close()
 		case "cancel": cancel()
 		}
-		var p [16]byte
-		if n,err:=x.Read(p[:]);n!=0||err==nil||err==io.EOF { t.Fatal("failure did not terminate stdin reader",n,err) }
+		if mode=="cancel" {
+			if !o.receive(time.Second)||o.result.err!=errUnslopHistoryProtocol||len(o.result.data)!=0 {t.Fatal("cancel did not terminate the blocked reader")}
+		} else {historyRequireFailureWake(t,o)}
 	})}
 }
 
@@ -207,48 +323,70 @@ func TestUnslopHistoryProtocolHeldOutputChild(t *testing.T) {
 
 func TestUnslopHistoryProtocolNativeChildConsumesFixedStepsAndCollects(t *testing.T) {
 	for _,mode:=range []string{"normal","delayed","early-exit","partial","wrong-id","duplicate","notification","error","request-error","request-wrong-id","request-early-exit","request-timeout","request-cancel","overflow","held-output","timeout","cancel"} {t.Run(mode,func(t *testing.T){
-		root:=physicalSoftwareFixture(t)
-		t.Setenv("UNSLOP_PROTOCOL_CHILD",mode);t.Setenv("UNSLOP_PROTOCOL_ROOT",root)
-		ctx,cancel:=context.WithTimeout(context.Background(),5*time.Second)
-		defer cancel()
-		plan,err:=buildUnslopHistoryProtocol([]unslopHistoryRequest{{"thread/read",map[string]any{"threadId":"synthetic-owned"}},{"thread/read",map[string]any{"threadId":"synthetic-owned"}}})
-		if err!=nil {t.Fatal(err)}
-		defer plan.erase()
-		ctx=context.WithValue(ctx,askChildCaptureKey{},askChildCapture{})
-		ctx=context.WithValue(ctx,unslopHistoryProtocolKey{},plan)
-		done:=make(chan askChildResult,1)
-		go func(){done<-askOwnedChild(ctx,os.Args[0],"-test.run=^TestUnslopHistoryProtocolChild$")}()
-		// The marker confirms the child reached the intended response boundary;
-		// it is not a sleep-based assumption that native startup already finished.
-		deadline:=time.NewTimer(3*time.Second);ticker:=time.NewTicker(time.Millisecond)
-		ready:=false
+		o:=historyStartNativeTestChild(t,mode)
 		boundary:="initialize-received"
 		if mode=="request-cancel"||mode=="request-timeout"||mode=="request-early-exit" {boundary="request-2"}
-	wait:
-		for {select {
-		case <-ticker.C:
-			if _,err:=os.Stat(filepath.Join(root,boundary));err==nil {ready=true;break wait}
-		case <-deadline.C:break wait
-		}}
-		deadline.Stop();ticker.Stop()
-		if mode=="delayed" {if err:=os.WriteFile(filepath.Join(root,"release"),[]byte("synthetic"),0600);err!=nil {cancel();r:=<-done;if r.Capture!=nil {clear(r.Capture.Stdout)};t.Fatal(err)}}
-		if mode=="cancel"||mode=="request-cancel"||!ready {cancel()}
-		var r askChildResult
-		select {case r=<-done:case <-time.After(8*time.Second):cancel();t.Fatal("same child copy/Wait/collection did not terminate")}
-		defer clear(r.Raw)
-		if r.Capture!=nil {defer clear(r.Capture.Stdout)}
+		ready:=historyWaitNativeBoundary(o,boundary)
+		if mode=="delayed" {if err:=os.WriteFile(filepath.Join(o.root,"release"),[]byte("synthetic"),0600);err!=nil {t.Fatal(err)}}
+		if mode=="cancel"||mode=="request-cancel"||!ready {o.cancel()}
+		if !o.receive(8*time.Second) {t.Fatal("same child copy/Wait/collection did not terminate")}
+		r:=&o.result
 		if !ready||!r.Started||!r.Assigned||!r.WaitVerified||!r.Reaped||r.Capture==nil||r.Capture.NativeProcess==nil {t.Fatal("original native child was not collected",r.CollectionReason)}
 		if len(r.Raw)!=0||strings.Contains(r.Capture.protocolReason,"private") {t.Fatal("raw response reached ordinary output")}
 		valid:=mode=="normal"||mode=="delayed"||mode=="notification"
 		if valid {
 			if !r.Capture.Complete||r.Capture.protocolReason!="history_protocol_complete"||r.Exit!=0||r.TimedOut {t.Fatal("valid fixed step exchange failed",r.Capture.protocolReason,r.Exit)}
-			for _,name:=range []string{"request-2","request-3","stdin-eof"} {if _,err:=os.Stat(filepath.Join(root,name));err!=nil {t.Fatal("fixed request/final EOF was not consumed",name)}}
+			for _,name:=range []string{"request-2","request-3","stdin-eof"} {if _,err:=os.Stat(filepath.Join(o.root,name));err!=nil {t.Fatal("fixed request/final EOF was not consumed",name)}}
 			answers,err:=parseUnslopHistoryBatch(r.Capture.Stdout,2);if err!=nil||len(answers)!=2 {t.Fatal("same child responses were not usable",err)}
 			for _,answer:=range answers {clear(answer)}
 		} else if r.Capture.Complete||r.Capture.protocolReason=="history_protocol_complete" {t.Fatal("invalid exchange became a successful capture",mode)}
 		if mode=="cancel"||mode=="timeout"||mode=="request-cancel"||mode=="request-timeout" {if !r.TimedOut {t.Fatal("deadline/cancel was not preserved")}}
-		if mode!="duplicate" {if _,err:=os.Stat(filepath.Join(root,"unexpected-input"));err==nil {t.Fatal("invalid response supplied a later request")}}
+		if mode!="duplicate" {if _,err:=os.Stat(filepath.Join(o.root,"unexpected-input"));err==nil {t.Fatal("invalid response supplied a later request")}}
 	})}
+}
+
+// This subprocess deliberately calls Fatal after a receive deadline. Its marker
+// is written only after the registered owner has consumed and erased the result.
+func TestUnslopHistoryNativeFatalCleanupChild(t *testing.T) {
+	if os.Getenv("UNSLOP_HISTORY_FATAL_CLEANUP_CHILD")!="1" {return}
+	if !askWorkerParent() {os.Exit(6)}
+	outerRoot:=os.Getenv("UNSLOP_HISTORY_FATAL_CLEANUP_ROOT")
+	var owner *historyChildTestOwner
+	t.Cleanup(func(){
+		if owner==nil||!owner.received||owner.retained||owner.ctx.Err()==nil {return}
+		r:=&owner.result
+		if !r.Started||!r.Assigned||!r.WaitVerified||!r.Reaped||!r.TimedOut||r.Capture==nil||r.Capture.NativeProcess==nil||r.Capture.Complete {return}
+		for _,b:=range r.Raw {if b!=0 {return}}
+		for _,b:=range r.Capture.Stdout {if b!=0 {return}}
+		if _,err:=os.Stat(owner.root);!os.IsNotExist(err) {return}
+		_ = os.WriteFile(filepath.Join(outerRoot,"fatal-cleanup-collected"),[]byte("same-result-collected"),0600)
+	})
+	owner=historyStartNativeTestChild(t,"request-cancel")
+	if !historyWaitNativeBoundary(owner,"request-2") {t.Fatal("child did not reach delayed response boundary")}
+	if owner.receive(time.Millisecond) {t.Fatal("delayed native child completed before cancel")}
+	if owner.ctx.Err()!=nil||owner.received {t.Fatal("receive deadline was replaced by context cancellation")}
+	t.Fatal("synthetic receive deadline: exercise registered cleanup")
+}
+
+func TestUnslopHistoryNativeReceiveDeadlineCollectsOriginalChild(t *testing.T) {
+	ctx,cancel:=context.WithTimeout(context.Background(),5*time.Second)
+	o:=historyNewChildTestOwner(t,cancel)
+	o.ctx=ctx
+	var err error
+	o.root,err=os.MkdirTemp("","unslop-history-fatal-")
+	if err!=nil {t.Fatal(err)}
+	ctx=context.WithValue(ctx,askChildEnvironment{},map[string]string{"UNSLOP_HISTORY_FATAL_CLEANUP_CHILD":"1","UNSLOP_HISTORY_FATAL_CLEANUP_ROOT":o.root})
+	// Plain finite capture observes the expected testing failure, rather than
+	// parsing testing's output as a history response. It uses the same Job owner.
+	ctx=context.WithValue(ctx,askChildCaptureKey{},askChildCapture{})
+	o.launched=true
+	go func(){o.done<-askOwnedChild(ctx,os.Args[0],"-test.run=^TestUnslopHistoryNativeFatalCleanupChild$")}()
+	if !o.receive(8*time.Second) {t.Fatal("Fatal cleanup subprocess did not finish")}
+	r:=&o.result
+	if !r.Started||!r.Assigned||!r.WaitVerified||!r.Reaped||r.TimedOut||r.Exit!=1||r.Capture==nil||!r.Capture.Complete {t.Fatal("expected test failure was not collected",r.CollectionReason)}
+	if !bytes.Contains(r.Capture.Stdout,[]byte("synthetic receive deadline: exercise registered cleanup")) {t.Fatal("test did not reach the intended Fatal branch")}
+	marker,err:=os.ReadFile(filepath.Join(o.root,"fatal-cleanup-collected"))
+	if err!=nil||string(marker)!="same-result-collected" {t.Fatal("Fatal cleanup dropped the original result or buffers")}
 }
 
 func TestUnslopHistoryExchangeCopiesPlanAndRejectsMixedCaptureBeforeSpawn(t *testing.T) {
@@ -296,10 +434,10 @@ func TestUnslopHistoryNotificationsNeverAdvanceStepsAndRemainBounded(t *testing.
 	ctx,cancel:=context.WithCancel(context.Background());defer cancel()
 	plan,x:=historyProtocolFixture(t,ctx,1)
 	historyReadStep(t,x,plan.Steps[0].Input)
+	o:=historyStartBlockedRead(t,x,cancel,0)
 	for n:=0;n<33;n++ {x.observe([]byte("{\"method\":\"warning\",\"params\":{}}\n"))}
 	if x.resultReason()!="history_protocol_notification_limit" {t.Fatal("notification flood did not terminate at its fixed bound")}
-	var p [1]byte
-	if n,err:=x.Read(p[:]);n!=0||err==nil||err==io.EOF {t.Fatal("notification overflow released later input")}
+	historyRequireFailureWake(t,o)
 }
 
 func TestUnslopHistoryNotificationPayloadIsNotAnAuthorityOrResponse(t *testing.T) {

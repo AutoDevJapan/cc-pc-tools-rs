@@ -1068,6 +1068,7 @@ impl Context {
         }
     }
     pub fn supervise(&self, jid: &str) -> Result<()> {
+        crate::fixed_unslop_capture::reject_model_route(&self.load(jid)?)?;
         // A duplicate supervisor cannot start the same job while another waits.
         let owner_path = self.job_dir(jid).join("supervisor.lock");
         let _owner = FileLock::try_acquire(&owner_path).map_err(|e| {

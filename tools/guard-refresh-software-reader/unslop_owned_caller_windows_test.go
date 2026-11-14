@@ -15,6 +15,7 @@ import (
 	"sync"
 	"time"
 	"testing"
+	"unsafe"
 )
 
 func ownedCallerFixture(t *testing.T, collected bool) (*unslopOwnedCaller, *normalOwnedSyntheticCapture, *syntheticUnslopPending, *softwareRustSyntheticAccess, chan askProducerFlightResult) {
@@ -220,20 +221,52 @@ func (s *ownedCallerCloseSession) Build(ctx context.Context) (unslopBuildInvocat
 func TestUnslopOwnedCallerConstructorReturnsUnusedRootCleanupFailure(t *testing.T) {
 	for _,fail:=range []bool{false,true} {
 		t.Run(fmt.Sprintf("close-failure-%t",fail),func(t *testing.T){
-			root,err:=newUnslopCallerHeldRoot(newDurableTestStore(t));if err!=nil {t.Fatal(err)}
-			var closed syscall.Handle
+			store:=newDurableTestStore(t)
+			root,err:=newUnslopCallerHeldRoot(store);if err!=nil {t.Fatal(err)}
+			heldRoot:=root.heldRoot
+			t.Cleanup(func(){unslopCallerRoots.Lock();defer unslopCallerRoots.Unlock();delete(unslopCallerRoots.stores,store);delete(unslopCallerRoots.identities,root.identity)})
+			var protected syscall.Handle
+			var parentInfo syscall.ByHandleFileInformation
+			var originalFlags uint32
+			getFlags:=syscall.NewLazyDLL("kernel32.dll").NewProc("GetHandleInformation")
+			const protectFromClose uint32=0x00000002 // HANDLE_FLAG_PROTECT_FROM_CLOSE
 			if fail {
 				if len(root.heldParents)==0 {t.Fatal("fixture has no owned ancestor")}
-				closed=root.heldParents[0];if err=syscall.CloseHandle(closed);err!=nil {t.Fatal(err)}
+				protected=root.heldParents[0]
+				if err=syscall.GetFileInformationByHandle(protected,&parentInfo);err!=nil {t.Fatal("owned ancestor is not a live directory handle",err)}
+				if ok,_,getErr:=getFlags.Call(uintptr(protected),uintptr(unsafe.Pointer(&originalFlags)));ok==0 {t.Fatal("cannot read owned ancestor flags",getErr)}
+				if originalFlags&protectFromClose!=0 {t.Fatal("fixture ancestor already has Close protection")}
+				// Register restoration before changing the flag, including setup failures.
+				t.Cleanup(func(){
+					var actual syscall.ByHandleFileInformation
+					if syscall.GetFileInformationByHandle(protected,&actual)!=nil||actual.VolumeSerialNumber!=parentInfo.VolumeSerialNumber||actual.FileIndexHigh!=parentInfo.FileIndexHigh||actual.FileIndexLow!=parentInfo.FileIndexLow||actual.CreationTime!=parentInfo.CreationTime {t.Error("cannot collect a changed test ancestor");return}
+					if err:=syscall.SetHandleInformation(protected,protectFromClose,originalFlags);err!=nil {t.Error("cannot restore test ancestor flags",err);return}
+					var restored uint32
+					if ok,_,getErr:=getFlags.Call(uintptr(protected),uintptr(unsafe.Pointer(&restored)));ok==0||restored!=originalFlags {t.Error("test ancestor flags were not restored",getErr);return}
+					// Setup failures leave the handle in the store; its registered cleanup
+					// still owns Close. After the failed store Close, collect it here once.
+					store.mu.Lock();stillOwned:=false;for _,parent:=range store.parents {stillOwned=stillOwned||parent==protected};store.mu.Unlock()
+					if !stillOwned {if err:=syscall.CloseHandle(protected);err!=nil {t.Error("cannot collect the protected test ancestor",err)}}
+				})
+				// Keep the actual handle live. Closing it first would let Windows reuse
+				// its numeric value before the store's Close, making the fault racy.
+				if err=syscall.SetHandleInformation(protected,protectFromClose,originalFlags|protectFromClose);err!=nil {t.Fatal("cannot protect the owned ancestor from Close",err)}
+				var flags uint32
+				if ok,_,getErr:=getFlags.Call(uintptr(protected),uintptr(unsafe.Pointer(&flags)));ok==0||flags!=originalFlags|protectFromClose {t.Fatal("owned ancestor protection was not applied",getErr)}
 			}
 			caller,err:=newUnslopOwnedCaller(root,nil,nil)
 			if caller!=nil||!errors.Is(err,errUnslopCallerOwnerUnavailable)||errors.Is(err,errUnslopCallerRootCleanup)!=fail||!root.closeAttempted {t.Fatal("unused-root primary and cleanup failure were not both returned",err)}
 			var cleanup *unslopCallerInitializationError
 			if fail {
-				if !errors.As(err,&cleanup)||!cleanup.CleanupFailed||cleanup.root!=root||root.store==nil||len(root.heldParents)==0||root.heldParents[0]!=closed {t.Fatal("cleanup error lost the actual root references")}
+				if !errors.As(err,&cleanup)||!cleanup.CleanupFailed||cleanup.root!=root||root.store!=store||root.heldRoot!=heldRoot||len(root.heldParents)==0||root.heldParents[0]!=protected||store.root!=nil||len(store.parents)!=0 {t.Fatal("cleanup error lost the actual root references or skipped the store Close")}
+				if root.closeError==nil {t.Fatal("actual store Close did not report the protected handle failure")}
 				firstErr:=root.closeError
 				if repeated,repeatErr:=newUnslopOwnedCaller(root,nil,nil);repeated!=nil||!errors.Is(repeatErr,errUnslopCallerRootCleanup)||root.closeError!=firstErr {t.Fatal("same failed root lost its cleanup result")}
 				if root.abandon()==nil||root.closeError!=firstErr||err.Error()!="capture_owner_unavailable" {t.Fatal("constructor error retried Close or leaked native text")}
+				var flags uint32
+				if ok,_,getErr:=getFlags.Call(uintptr(protected),uintptr(unsafe.Pointer(&flags)));ok==0||flags!=originalFlags|protectFromClose {t.Fatal("rejected retry changed the retained handle protection",getErr)}
+				var after syscall.ByHandleFileInformation
+				if syscall.GetFileInformationByHandle(protected,&after)!=nil||after.VolumeSerialNumber!=parentInfo.VolumeSerialNumber||after.FileIndexHigh!=parentInfo.FileIndexHigh||after.FileIndexLow!=parentInfo.FileIndexLow||after.CreationTime!=parentInfo.CreationTime {t.Fatal("rejected retry closed or replaced the original ancestor")}
 			} else if errors.As(err,&cleanup)||root.store!=nil {t.Fatal("successful unused-root cleanup was misclassified")}
 		})
 	}

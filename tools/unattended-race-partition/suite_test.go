@@ -6,15 +6,26 @@ import (
 	"io"
 	"os"
 	"path/filepath"
+	"runtime"
 	"slices"
 	"strings"
 	"testing"
 	"time"
 )
 
+// requireWindows skips tests that start processes: the command runs owned
+// process trees only on Windows, where the workflow uses it.
+func requireWindows(t *testing.T) {
+	t.Helper()
+	if runtime.GOOS != "windows" {
+		t.Skip("the command runs owned process trees only on Windows")
+	}
+}
+
 // runFixture runs the command against one fixture module in testdata.
 func runFixture(t *testing.T, fixture, partitionTimeout string) (int, string) {
 	t.Helper()
+	requireWindows(t)
 	t.Setenv("GOWORK", "off")
 	var out bytes.Buffer
 	code := run([]string{
@@ -128,6 +139,7 @@ func TestRunFailsClosedForSeveralPackages(t *testing.T) {
 // binary digest and case census.
 func compileFixture(t *testing.T, fixture string) (string, string, string, census) {
 	t.Helper()
+	requireWindows(t)
 	t.Setenv("GOWORK", "off")
 	ctx := context.Background()
 	dir, err := filepath.Abs(filepath.Join("testdata", fixture))

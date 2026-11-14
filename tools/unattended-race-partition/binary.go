@@ -35,10 +35,28 @@ func compileTestBinary(ctx context.Context, dir, bin string, race bool, out io.W
 	cmd.Dir = dir
 	cmd.Stdout = out
 	cmd.Stderr = out
-	if err := cmd.Run(); err != nil {
+	cmd.WaitDelay = ioWaitDelay
+	owned, err := runOwned(cmd)
+	if err != nil {
 		return fmt.Errorf("go %s: %w", strings.Join(args, " "), err)
 	}
+	reportLeftovers(out, "the compile step", owned.leftovers)
+	if owned.runErr != nil {
+		return fmt.Errorf("go %s: %w", strings.Join(args, " "), owned.runErr)
+	}
 	return nil
+}
+
+// ownedResult is the outcome of runOwned.
+type ownedResult struct {
+	runErr    error    // the result of waiting for the root process
+	leftovers []string // processes that were stopped after the root ended
+}
+
+func reportLeftovers(out io.Writer, step string, leftovers []string) {
+	if len(leftovers) > 0 {
+		fmt.Fprintf(out, "race-partition: %s left %d processes running; stopped them: %s\n", step, len(leftovers), strings.Join(leftovers, " "))
+	}
 }
 
 // fileDigest returns the SHA-256 and the size of a file.
@@ -81,8 +99,13 @@ func listCases(ctx context.Context, bin, dir string, out io.Writer) (string, err
 	cmd.Stdout = &stdout
 	cmd.Stderr = out
 	cmd.WaitDelay = ioWaitDelay
-	if err := cmd.Run(); err != nil {
+	owned, err := runOwned(cmd)
+	if err != nil {
 		return "", fmt.Errorf("list the cases of the test binary: %w", err)
+	}
+	reportLeftovers(out, "the case listing", owned.leftovers)
+	if owned.runErr != nil {
+		return "", fmt.Errorf("list the cases of the test binary: %w", owned.runErr)
 	}
 	return stdout.String(), nil
 }
@@ -110,7 +133,8 @@ func effectiveTimeout(configured, remaining time.Duration, hasDeadline bool) (ti
 
 // runPartition runs one partition of the compiled binary. An error means
 // that the partition could not run as planned; failed or missing cases are
-// result problems.
+// result problems. The partition's processes, including every descendant
+// that did not break away on purpose, have exited when it returns.
 func runPartition(ctx context.Context, bin, dir, digest string, p partition, configured time.Duration, out io.Writer) (partitionResult, error) {
 	var res partitionResult
 	deadline, hasDeadline := ctx.Deadline()
@@ -136,11 +160,19 @@ func runPartition(ctx context.Context, bin, dir, digest string, p partition, con
 	cmd.Stderr = scanner
 	cmd.WaitDelay = ioWaitDelay
 	start := time.Now()
-	runErr := cmd.Run()
+	owned, treeErr := runOwned(cmd)
 	res.elapsed = time.Since(start)
 	scanner.Flush()
 	res.started = scanner.started
+	if treeErr != nil {
+		return res, fmt.Errorf("run the test binary: %w", treeErr)
+	}
+	if len(owned.leftovers) > 0 {
+		fmt.Fprintf(out, "race-partition: partition %d/2 stopped %d processes still running after the test binary ended: %s\n",
+			p.index, len(owned.leftovers), strings.Join(owned.leftovers, " "))
+	}
 
+	runErr := owned.runErr
 	var exitErr *exec.ExitError
 	switch {
 	case runErr == nil:

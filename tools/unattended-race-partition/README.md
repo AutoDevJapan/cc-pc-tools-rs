@@ -27,6 +27,11 @@ package全体の時間予算が足りないので、test・subtest・各test内�
 7. test2jsonの枠行（先頭が `^V` の `=== RUN`）から開始したtopcaseを集め、partitionごとに計画との
    欠落・計画外・重複が0で、両partitionの合併が一覧と一致し、交差が0であることを確認する。
 8. 片方が失敗しても両方を実行する。失敗があればexit 1、引数の誤りはexit 2。
+9. compile・`go list`・一覧の取得・各partitionは、それぞれ専用のjob objectの中で実行する。rootは停止状態で起動し、
+   jobへ入れてから再開するので、rootが起動したprocessはすべてjobに属する。`CREATE_BREAKAWAY_FROM_JOB` で
+   意図的にjobから外れたprocessは例外で、native fixtureと同じく止めない。rootが終了して出力を読み終えたら、
+   jobに残ったprocessを止め、それぞれの終了を確かめてから次へ進む。10秒以内に確かめられなければ失敗とする。
+   期限切れや取消しでrootを止めるときもjob全体を止める。この仕組みはWindowsだけにあり、ほかのOSでは実行しない。
 
 ## 受入条件
 
@@ -38,6 +43,8 @@ package全体の時間予算が足りないので、test・subtest・各test内�
 | test中の `os.Exit(0)` を成功にしない | `TestRunTreatsOSExitAsAFailure` |
 | 一覧に出ないcaseは計画外の開始として失敗する | `TestSecondPartitionReportsACaseMissingFromTheCensus` |
 | compile後に差し替えたbinaryは実行しない | `TestPartitionRefusesABinaryReplacedAfterTheCensus` |
+| test binaryの終了後に残る子process、出力を保持し続ける子process、期限切れ時の子processを止め、終了を確かめてから次のpartitionへ進む | `TestRunStopsAChildThatOutlivesTheTestBinary`、`TestRunFailsAndStopsAChildThatHoldsTheOutput`、`TestRunStopsTheTreeAtThePartitionDeadline` |
+| jobから意図的に外れた子processは止めない | `TestRunLeavesAChildThatBreaksAwayOnPurpose` |
 | 対象0件・複数package・不正な一覧・2件未満・長すぎるcommand lineで失敗する | `TestRunFailsClosedWithoutRunnableCases`、`TestRunFailsClosedForSeveralPackages`、`TestParseCensusFailsClosed`、`TestPlanPartitionsNeedsTwoCases`、`TestCheckCommandLineFailsClosedAboveTheLimit` |
 | patternは完全一致でmetacharacterをescapeし、分割は排他的で完全 | `TestExactNamePatternEscapesMetacharacters`、`TestPlanPartitionsIsExclusiveCompleteAndOrdered`、`TestVerifyCoverageNeedsUnionAndNoIntersection` |
 | partitionの期限をsuite全体の期限内に収める | `TestEffectiveTimeoutStaysInsideTheSuiteDeadline` |

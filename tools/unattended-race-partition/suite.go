@@ -123,7 +123,12 @@ func goOutput(ctx context.Context, dir string, args ...string) (string, error) {
 	var stdout, stderr bytes.Buffer
 	cmd.Stdout = &stdout
 	cmd.Stderr = &stderr
-	if err := cmd.Run(); err != nil {
+	cmd.WaitDelay = ioWaitDelay
+	owned, err := runOwned(cmd)
+	if err == nil {
+		err = owned.runErr
+	}
+	if err != nil {
 		return "", fmt.Errorf("go %s: %w: %s", strings.Join(args, " "), err, strings.TrimSpace(stderr.String()))
 	}
 	return stdout.String(), nil

@@ -11,6 +11,7 @@ pub mod cli;
 pub mod context_rotation;
 pub mod events;
 mod execution;
+mod fixed_unslop_capture;
 mod finished_review;
 mod finished_work_handoff;
 mod finite_research;

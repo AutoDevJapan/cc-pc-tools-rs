@@ -47,6 +47,58 @@ type softwareRustProviderAccess interface {
 
 type softwareRustOriginProvider struct{ access softwareRustProviderAccess }
 
+// openRetained returns ownership of one verified session to the normal
+// controller. The caller must keep it until native collection is proven, or
+// move it to the retained owner. It does not enable the normal factory.
+func (p *softwareRustOriginProvider) openRetained(ctx context.Context) (session softwareRustHeldSession, result error) {
+	if ctx == nil || ctx.Err() != nil {
+		return nil, context.Canceled
+	}
+	if p == nil || p.access == nil {
+		return nil, errors.New("toolchain_origin_provider_unavailable")
+	}
+	origin, err := p.access.Origin(ctx)
+	if err != nil {
+		return nil, softwareRustFixedError(ctx, err)
+	}
+	if ctx.Err() != nil {
+		return nil, ctx.Err()
+	}
+	opened, err := p.access.Open(ctx, origin)
+	transferred := false
+	defer func() {
+		if !transferred && opened != nil {
+			if opened.Close() != nil && result == nil {
+				result = errSoftwareRustUnavailable
+			}
+		}
+	}()
+	if err != nil || opened == nil {
+		return nil, softwareRustFixedError(ctx, err)
+	}
+	if ctx.Err() != nil {
+		return nil, ctx.Err()
+	}
+	held := opened.Held()
+	if held.Origin != origin || !rustToolchainInputsMatch(held) {
+		return nil, errSoftwareRustMismatch
+	}
+	if err = held.Recheck(ctx); err != nil {
+		return nil, softwareRustFixedError(ctx, err)
+	}
+	if ctx.Err() != nil {
+		return nil, ctx.Err()
+	}
+	if !rustToolchainInputsMatch(held) {
+		return nil, errSoftwareRustMismatch
+	}
+	if ctx.Err() != nil {
+		return nil, ctx.Err()
+	}
+	transferred = true
+	return opened, nil
+}
+
 func (p *softwareRustOriginProvider) WithHeld(ctx context.Context, visit func(rustToolchainHeld) bool) (result error) {
 	if ctx == nil || ctx.Err() != nil {
 		return context.Canceled
@@ -57,34 +109,16 @@ func (p *softwareRustOriginProvider) WithHeld(ctx context.Context, visit func(ru
 	if visit == nil {
 		return errSoftwareRustConsumer
 	}
-	origin, err := p.access.Origin(ctx)
+	session, err := p.openRetained(ctx)
 	if err != nil {
-		return softwareRustFixedError(ctx, err)
+		return err
 	}
-	if ctx.Err() != nil {
-		return ctx.Err()
-	}
-	session, err := p.access.Open(ctx, origin)
-	if session != nil {
-		defer func() {
-			if session.Close() != nil && result == nil {
-				result = errSoftwareRustUnavailable
-			}
-		}()
-	}
-	if err != nil || session == nil {
-		return softwareRustFixedError(ctx, err)
-	}
+	defer func() {
+		if session.Close() != nil && result == nil {
+			result = errSoftwareRustUnavailable
+		}
+	}()
 	held := session.Held()
-	if held.Origin != origin || !rustToolchainInputsMatch(held) {
-		return errSoftwareRustMismatch
-	}
-	if err = held.Recheck(ctx); err != nil {
-		return softwareRustFixedError(ctx, err)
-	}
-	if !rustToolchainInputsMatch(held) {
-		return errSoftwareRustMismatch
-	}
 	if ctx.Err() != nil {
 		return ctx.Err()
 	}

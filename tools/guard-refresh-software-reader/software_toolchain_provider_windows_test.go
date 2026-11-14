@@ -172,6 +172,66 @@ func TestSoftwareRustProviderRetainsThenClosesAndNeverTurnsLateFailureIntoSucces
 	if normalSoftwareRustOriginProvider(fixedUnslopToolchainPurpose()) != nil { t.Fatal("native purpose qualification was fabricated") }
 }
 
+type softwareRustRetainedOpeningAccess struct {
+	base *softwareRustSyntheticAccess
+	cancel context.CancelFunc
+	mode string
+}
+
+func (a *softwareRustRetainedOpeningAccess) Origin(ctx context.Context) (rustToolchainOrigin, error) {
+	origin, err := a.base.Origin(ctx)
+	if a.mode == "cancel-origin" { a.cancel() }
+	return origin, err
+}
+
+func (a *softwareRustRetainedOpeningAccess) Open(ctx context.Context, origin rustToolchainOrigin) (softwareRustHeldSession, error) {
+	if a.mode == "missing-session" { a.base.opens++; return nil, nil }
+	session, err := a.base.Open(ctx, origin)
+	if a.mode == "cancel-open" { a.cancel() }
+	return session, err
+}
+
+func TestSoftwareRustProviderOpenRetainedTransfersOnlyVerifiedSameLease(t *testing.T) {
+	for _, mode := range []string{"normal", "origin-error", "open-error", "missing-session", "origin-mismatch", "held-mismatch", "before-check", "before-mutates", "cancel-before", "cancel-origin", "cancel-open", "cancel-recheck"} {
+		t.Run(mode, func(t *testing.T) {
+			_, access := syntheticSoftwareRustProvider()
+			session := access.session
+			access.mode, session.mode = mode, mode
+			ctx, cancel := context.WithCancel(context.Background())
+			defer cancel()
+			provider := &softwareRustOriginProvider{access: &softwareRustRetainedOpeningAccess{base: access, cancel: cancel, mode: mode}}
+			if mode == "origin-mismatch" { access.origin.ManifestSHA = strings.Repeat("b", 64) }
+			if mode == "held-mismatch" { session.held.Cargo.Identity.Created = "other" }
+			if mode == "cancel-before" { cancel() }
+			if mode == "cancel-recheck" {
+				original := session.held.Recheck
+				session.held.Recheck = func(ctx context.Context) error { err := original(ctx); cancel(); return err }
+			}
+			lease, err := provider.openRetained(ctx)
+			if mode == "normal" {
+				if err != nil || lease != session || session.closed != 0 || session.checks != 1 { t.Fatal("verified lease was not transferred", err) }
+				held := lease.Held()
+				if !rustToolchainInputsMatch(held) || &held.Cargo.Raw[0] != &session.held.Cargo.Raw[0] { t.Fatal("lease did not retain original buffers") }
+				if lease.Close() != nil || session.closed != 1 { t.Fatal("caller did not release exact lease") }
+				for _, raw := range [][]byte{held.Cargo.Raw, held.Rustc.Raw} {
+					for _, value := range raw { if value != 0 { t.Fatal("caller release left tool bytes") } }
+				}
+			} else {
+				if err == nil || lease != nil { t.Fatal("invalid or cancelled opening returned a lease", mode) }
+				wantClosed := 1
+				if mode == "cancel-before" || mode == "cancel-origin" || mode == "origin-error" || mode == "missing-session" { wantClosed = 0 }
+				if session.closed != wantClosed { t.Fatal("failed opening did not retain and close its own resources once", mode, session.closed) }
+				if strings.Contains(err.Error(), "private") { t.Fatal("opening exposed free error text") }
+			}
+			if (mode == "cancel-before" || mode == "cancel-origin" || mode == "origin-error") && access.opens != 0 { t.Fatal("opening continued after origin failure") }
+		})
+	}
+	var absent *softwareRustOriginProvider
+	if lease, err := absent.openRetained(context.Background()); lease != nil || err == nil { t.Fatal("absent provider returned a lease") }
+	provider, access := syntheticSoftwareRustProvider()
+	if lease, err := provider.openRetained(nil); lease != nil || err == nil || access.origins != 0 { t.Fatal("nil context reached provider") }
+}
+
 type softwareRustSyntheticTransport struct { calls int; response *http.Response }
 func (s *softwareRustSyntheticTransport) RoundTrip(*http.Request) (*http.Response, error) { s.calls++; return s.response, nil }
 

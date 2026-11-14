@@ -622,7 +622,95 @@ func TestAskJobCollectionSupervisorKeepsFastCancelFacts(t *testing.T) {
 	if !called || !result.Started || !result.Assigned || !result.WaitVerified || !result.TimedOut || !result.Reaped {
 		t.Fatal("supervised fast cancellation was not collected", result)
 	}
-	if result.CollectionReason != "" || !result.CollectionTotalKnown || result.CollectionObserved != result.CollectionTotal || result.CollectionTotal == 0 {
+	if result.CollectionQuery != (askJobQueryDiagnostic{}) || result.CollectionReason != "" || !result.CollectionTotalKnown || result.CollectionObserved != result.CollectionTotal || result.CollectionTotal == 0 {
 		t.Fatal("collection facts were not preserved", result)
+	}
+}
+
+
+func TestAskJobNativeQueryDiagnosticsKeepActualFailure(t *testing.T) {
+	for _, mode := range []string{"normal", "native", "unknown-native", "capacity", "counts", "invalid-pid"} {
+		t.Run(mode, func(t *testing.T) {
+			buffer := &askJobNativeProcessList{assigned: 2, returned: 2}
+			buffer.ids[0], buffer.ids[1] = 1, 2
+			ok, nativeErr := uintptr(1), error(syscall.Errno(5))
+			want := askJobQueryDiagnostic{Assigned: 2, Returned: 2, ReturnLength: 24}
+			switch mode {
+			case "native": ok = 0; want.Kind = "native_query_failed"; want.Win32Code = 5
+			case "unknown-native": ok = 0; nativeErr = fmt.Errorf("private native path must not escape"); want.Kind = "native_query_failed"
+			case "capacity": buffer.assigned = 4097; buffer.returned = 4097; want.Kind = "capacity_exceeded"; want.Assigned = 4097; want.Returned = 4097
+			case "counts": buffer.assigned = 3; want.Kind = "count_mismatch"; want.Assigned = 3
+			case "invalid-pid": buffer.ids[1] = 0; want.Kind = "invalid_pid"
+			}
+			list, err := decodeAskJobProcessList(ok, nativeErr, 24, buffer)
+			if mode == "normal" {
+				if err != nil || list.assigned != 2 || len(list.pids) != 2 || list.pids[0] != 1 || list.pids[1] != 2 { t.Fatal("successful native list was changed", list, err) }
+				return
+			}
+			failure, typed := err.(*askJobQueryError)
+			if !typed || failure.diagnostic != want || list.assigned != 0 || len(list.pids) != 0 { t.Fatal("native query cause was discarded or treated as a list", mode, failure, list) }
+			if err.Error() != "job_collection_native_unavailable" || strings.Contains(fmt.Sprint(err), "private") { t.Fatal("raw native error escaped") }
+		})
+	}
+}
+
+func TestAskJobQueryDiagnosticKeepsFirstFailureAndPhase(t *testing.T) {
+	for _, phase := range []string{"normal", "observe", "finish", "unclassified"} {
+		t.Run(phase, func(t *testing.T) {
+			m := newAskJobCollectionModel()
+			m.clock = time.Unix(100, 0)
+			c := newAskJobCollection(m, 9999, 11, 1, true)
+			defer c.Close()
+			deadline := m.clock.Add(time.Second)
+			want := askJobQueryDiagnostic{}
+			if phase != "normal" {
+				want = askJobQueryDiagnostic{Kind: "native_query_failed", Phase: phase, Win32Code: 5, Assigned: 2, Returned: 1, ReturnLength: 16}
+				m.listError = &askJobQueryError{diagnostic: want}
+			}
+			if phase == "unclassified" { m.listError = fmt.Errorf("private query text"); want = askJobQueryDiagnostic{Kind: "unclassified_query_failure", Phase: "observe"} }
+			if phase == "observe" || phase == "unclassified" {
+				c.Observe()
+				m.listError = &askJobQueryError{diagnostic: askJobQueryDiagnostic{Kind: "count_mismatch", Assigned: 99, Returned: 98, ReturnLength: 80}}
+				c.Observe()
+				m.listError = nil
+				c.Observe()
+			}
+			r := c.Finish(true, deadline)
+			if r.Query != want || r.Reaped != (phase == "normal") || phase != "normal" && r.Reason != "job_member_query_failed" { t.Fatal("query diagnostic changed collection proof or first cause", phase, r, want) }
+			if again := c.Finish(true, deadline); again != r { t.Fatal("completed query observation changed") }
+		})
+	}
+}
+
+func TestAskChildCollectionCarriesFirstQueryToFinalResult(t *testing.T) {
+	for _, phase := range []string{"normal", "observe", "finish"} {
+		t.Run(phase, func(t *testing.T) {
+			m := newAskJobCollectionModel()
+			m.clock = time.Unix(100, 0)
+			c := newAskJobCollection(m, 9999, 11, 1, true)
+			defer c.Close()
+			want := askJobQueryDiagnostic{}
+			if phase == "finish" { c.Observe() }
+			if phase != "normal" {
+				want = askJobQueryDiagnostic{Kind: "native_query_failed", Phase: phase, Win32Code: 5, Assigned: 2, Returned: 1, ReturnLength: 16}
+				m.listError = &askJobQueryError{diagnostic: want}
+			}
+			if phase == "observe" {
+				c.Observe()
+				m.listError = &askJobQueryError{diagnostic: askJobQueryDiagnostic{Kind: "count_mismatch", Assigned: 9, Returned: 8, ReturnLength: 80}}
+				c.Observe()
+				m.listError = nil
+			}
+			child := askChildResult{Started: true, Assigned: true, WaitVerified: true, TimedOut: phase != "normal", Exit: 1}
+			// This is the supervisor's actual Finish-to-Child projection, not a
+			// test copy of its assignments. Nonzero Query is the required outlet.
+			finishAskChildCollection(&child, c, m.clock.Add(time.Second))
+			if child.CollectionQuery != want { t.Fatal("first query diagnostic did not reach final Child", child.CollectionQuery, want) }
+			if child.Reaped != (phase == "normal") || child.CollectionObserved != 2 || !child.CollectionTotalKnown || child.CollectionTotal != 2 { t.Fatal("final Child lost collection facts or changed strict proof", child) }
+			if phase != "normal" && child.CollectionReason != "job_member_query_failed" || phase == "normal" && child.CollectionReason != "" { t.Fatal("final Child lost fixed collection reason", child) }
+			if !child.Started || !child.Assigned || !child.WaitVerified || child.TimedOut != (phase != "normal") || child.Exit != 1 { t.Fatal("collection projection changed independent child facts", child) }
+			if m.accountingCalls == 0 || c.result.Query != want { t.Fatal("control did not traverse real collector Finish", c.result) }
+			if strings.Contains(fmt.Sprint(child.CollectionQuery), "private") { t.Fatal("query outlet exposed error text") }
+		})
 	}
 }

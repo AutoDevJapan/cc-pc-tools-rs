@@ -13,3 +13,5 @@ The hosted step checks for at least ten minutes before starting `go test`; its `
 The known GitHub API-version deprecation link is informational. The common response check rejects pagination, mixed or repeated Link fields, and unknown or malformed Link values; it still requires one matching fixed attestation and the pinned bundle digest.
 
 The HTTP consumer controls use the fixed public bundle inside a fabricated envelope with a non-routable placeholder URL. They exercise HTTP response handling and pinned bytes without a network request or a signature-verification claim.
+
+If public bundle acquisition fails, the test reports only fixed stage and transport/context classifications, HTTP status, Link counts, hash and explicitly labeled case-insensitive substring markers, selection counts, bundle size and digest, and read/close flags. A substring marker is not a parsed Link relation. It does not print response bodies, URLs, credentials, or lower-level error text. These diagnostics do not change acceptance or expiry handling.

@@ -7,9 +7,13 @@ import (
     "bytes"
     "compress/gzip"
     "context"
+    "crypto/sha256"
+    "crypto/x509"
     "encoding/json"
     "errors"
+    "fmt"
     "io"
+    "net"
     "net/http"
     "net/url"
     "os"
@@ -58,6 +62,78 @@ func ghaGuardActualHasWindow(now,expiry time.Time,reserve time.Duration) bool {
     return reserve>0&&now.Before(expiry)&&expiry.Sub(now)>=reserve
 }
 func ghaGuardActualSkip(t *testing.T,reason string) {t.Helper();t.Skip("GUARD_ACTUAL_NOT_EXECUTED="+reason)}
+
+// Diagnostics contain fixed classifications, counts and SHA-256 values only.
+// Response bytes, URLs, credentials and lower-level error text are not printed.
+type ghaGuardActualBundleDiagnostic struct {
+    stage,linkMarker,context,transport string
+    status,linkKeys,linkValues,linkBytes,bodyBytes,entries,matches,bundleBytes int
+    linkKnown,linkHasSHA,bundleHasSHA,bundleDigestMatch,readFailed,closeFailed,hard bool
+    linkSHA,bundleSHA [32]byte
+}
+func ghaGuardDiagnosticEnum(value string,allowed ...string) string {
+    for _,v:=range allowed {if value==v{return v}}
+    return "unknown"
+}
+func ghaGuardBundleTransportKind(err error) string {
+    if err==nil{return "none"}
+    if ghaGuardActualExpiryCauseOnly(err){return "deadline"}
+    if errors.Is(err,context.Canceled){return "cancelled"}
+    var dns *net.DNSError;if errors.As(err,&dns){return "dns"}
+    var unknown x509.UnknownAuthorityError;if errors.As(err,&unknown){return "tls_certificate"}
+    var hostname x509.HostnameError;if errors.As(err,&hostname){return "tls_certificate"}
+    var invalid x509.CertificateInvalidError;if errors.As(err,&invalid){return "tls_certificate"}
+    var network net.Error
+    if errors.As(err,&network){if network.Timeout(){return "timeout"};return "network"}
+    return "other"
+}
+func (d *ghaGuardActualBundleDiagnostic) noteLink(headers http.Header) {
+    if d==nil{return}
+    d.linkMarker="no_link"
+    var first string
+    for name,values:=range headers {
+        if !strings.EqualFold(name,"Link") {continue}
+        d.linkKeys++
+        for _,value:=range values {
+            d.linkValues++
+            if d.linkValues==1 {first=value;d.linkBytes=len(value)}
+        }
+    }
+    if d.linkKeys==0{return}
+    if d.linkKeys!=1||d.linkValues!=1 {d.linkMarker="non_single_field";return}
+    if len(first)>8192 {d.linkMarker="oversize";return}
+    d.linkSHA=sha256.Sum256([]byte(first));d.linkHasSHA=true
+    if ghaGuardSinglePageLink(headers) {d.linkKnown=true;d.linkMarker="known_deprecation";return}
+    if strings.Trim(first," \t")=="" {d.linkMarker="empty";return}
+    // These are case-insensitive substring markers, not parsed RFC Link relations.
+    lower:=strings.ToLower(first)
+    markers:=[]struct{marker,name string}{{`rel="next"`,"contains_next_marker"},{`rel="prev"`,"contains_prev_marker"},{`rel="first"`,"contains_first_marker"},{`rel="last"`,"contains_last_marker"}}
+    found:=0
+    for _,r:=range markers {if strings.Contains(lower,r.marker){d.linkMarker=r.name;found++}}
+    if found>1||found>0&&strings.Contains(lower,`rel="deprecation"`){d.linkMarker="contains_multiple_markers";return}
+    if found==0 {d.linkMarker="other"}
+}
+func (d *ghaGuardActualBundleDiagnostic) finish(ctx context.Context,trace *ghaGuardActualWindowTrace) {
+    if d==nil{return}
+    if trace!=nil {d.hard=trace.hard.Load();if trace.deadline.Load(){d.context="window_deadline";return}}
+    if ctx==nil {d.context="unknown";return}
+    switch ctx.Err() {
+    case nil:d.context="active"
+    case context.DeadlineExceeded:d.context="deadline"
+    case context.Canceled:d.context="cancelled"
+    default:d.context="other"
+    }
+}
+func (d ghaGuardActualBundleDiagnostic) safeString() string {
+    stage:=ghaGuardDiagnosticEnum(d.stage,"init","request","transport","status","link","read","close","read_close","bound","context","select_json","select_match","select_compact","pinned_length","pinned_digest","ok")
+    marker:=ghaGuardDiagnosticEnum(d.linkMarker,"unobserved","no_link","known_deprecation","contains_next_marker","contains_prev_marker","contains_first_marker","contains_last_marker","contains_multiple_markers","non_single_field","empty","other","oversize")
+    ctx:=ghaGuardDiagnosticEnum(d.context,"unknown","active","window_deadline","deadline","cancelled","other")
+    transport:=ghaGuardDiagnosticEnum(d.transport,"none","deadline","cancelled","dns","tls_certificate","timeout","network","other")
+    linkSHA,bundleSHA:="-","-"
+    if d.linkHasSHA {linkSHA=fmt.Sprintf("%x",d.linkSHA)}
+    if d.bundleHasSHA {bundleSHA=fmt.Sprintf("%x",d.bundleSHA)}
+    return fmt.Sprintf("stage=%s status=%d link_keys=%d link_values=%d link_known=%t link_marker=%s link_first_bytes=%d link_sha256=%s body_bytes=%d entries=%d matches=%d bundle_bytes=%d bundle_sha256=%s bundle_digest_match=%t context=%s transport=%s hard=%t read_error=%t close_error=%t",stage,d.status,d.linkKeys,d.linkValues,d.linkKnown,marker,d.linkBytes,linkSHA,d.bodyBytes,d.entries,d.matches,d.bundleBytes,bundleSHA,d.bundleDigestMatch,ctx,transport,d.hard,d.readFailed,d.closeFailed)
+}
 
 // Only a network operation cancelled by the fixed evidence-window deadline
 // can be classified as not executed. Other HTTP, read and close failures win.
@@ -129,14 +205,17 @@ func (o *ghaGuardActualTestObject) RoundTrip(r *http.Request)(*http.Response,err
 
 // Read the public API response without authentication. The signed URL is used
 // only to check the server-provided identifier; it is never followed or logged.
-func ghaGuardActualTestBundle(ctx context.Context,cutoff time.Time,trace *ghaGuardActualWindowTrace) ([]byte,error) {
+func ghaGuardActualTestBundle(ctx context.Context,cutoff time.Time,trace *ghaGuardActualWindowTrace,diag *ghaGuardActualBundleDiagnostic) ([]byte,error) {
     transport:=&http.Transport{Proxy:nil};defer transport.CloseIdleConnections()
-    return ghaGuardActualTestBundleWithTransport(ctx,cutoff,trace,transport)
+    return ghaGuardActualTestBundleWithTransport(ctx,cutoff,trace,transport,diag)
 }
 
 // The test-only seam injects only the RoundTripper. The URL, headers, checks,
 // response bounds, digest and caller-owned result remain fixed below.
-func ghaGuardActualTestBundleWithTransport(ctx context.Context,cutoff time.Time,trace *ghaGuardActualWindowTrace,transport http.RoundTripper) ([]byte,error) {
+func ghaGuardActualTestBundleWithTransport(ctx context.Context,cutoff time.Time,trace *ghaGuardActualWindowTrace,transport http.RoundTripper,diag *ghaGuardActualBundleDiagnostic) ([]byte,error) {
+    if diag==nil {diag=&ghaGuardActualBundleDiagnostic{}}
+    *diag=ghaGuardActualBundleDiagnostic{stage:"request",linkMarker:"unobserved",context:"unknown",transport:"none",bodyBytes:-1,entries:-1,matches:-1,bundleBytes:-1}
+    defer diag.finish(ctx,trace)
     if ctx==nil||trace==nil||transport==nil{return nil,errGHAGuardUnqualified}
     endpoint:="https://api.github.com/repos/AutoDevJapan/cc-pc-tools-rs/attestations/sha256:a61e25065ae35d51f1ac8133959176b21e2c3740c1516b76f799371f1c27f9a2?per_page=100"
     req,err:=http.NewRequestWithContext(ctx,http.MethodGet,endpoint,nil);if err!=nil{return nil,errGHAGuardUnqualified}
@@ -150,30 +229,58 @@ func ghaGuardActualTestBundleWithTransport(ctx context.Context,cutoff time.Time,
         return response,err
     })
     client:=&http.Client{Transport:guarded,Timeout:30*time.Second,CheckRedirect:func(*http.Request,[]*http.Request)error{return http.ErrUseLastResponse}}
+    diag.stage="transport"
     response,err:=client.Do(req)
+    diag.transport=ghaGuardBundleTransportKind(err)
+    if response!=nil {
+        if response.StatusCode>=100&&response.StatusCode<=599 {diag.status=response.StatusCode}
+        diag.noteLink(response.Header)
+    }
     if err!=nil||response==nil||response.Body==nil{return nil,errGHAGuardUnqualified}
-    if response.StatusCode!=http.StatusOK||!ghaGuardSinglePageLink(response.Header) {_=response.Body.Close();return nil,errGHAGuardUnqualified}
+    if response.StatusCode!=http.StatusOK {
+        diag.stage="status";diag.closeFailed=response.Body.Close()!=nil;return nil,errGHAGuardUnqualified
+    }
+    if !ghaGuardSinglePageLink(response.Header) {
+        diag.stage="link";diag.closeFailed=response.Body.Close()!=nil;return nil,errGHAGuardUnqualified
+    }
     raw,readErr:=io.ReadAll(io.LimitReader(response.Body,4<<20+1));closeErr:=response.Body.Close()
-    if readErr!=nil||closeErr!=nil||len(raw)>4<<20||ctx.Err()!=nil {clear(raw);return nil,errGHAGuardUnqualified}
+    diag.bodyBytes=len(raw);diag.readFailed=readErr!=nil;diag.closeFailed=closeErr!=nil
+    if readErr!=nil||closeErr!=nil {
+        switch {case readErr!=nil&&closeErr!=nil:diag.stage="read_close";case readErr!=nil:diag.stage="read";default:diag.stage="close"}
+        clear(raw);return nil,errGHAGuardUnqualified
+    }
+    if len(raw)>4<<20 {diag.stage="bound";clear(raw);return nil,errGHAGuardUnqualified}
+    if ctx.Err()!=nil {diag.stage="context";clear(raw);return nil,errGHAGuardUnqualified}
     defer clear(raw)
-    bundle,selectErr:=ghaGuardActualSelectBundle(raw)
+    bundle,selectErr:=ghaGuardActualSelectBundleWithDiagnostic(raw,diag)
     if selectErr!=nil{return nil,errGHAGuardUnqualified}
-    if len(bundle)!=11619||digest(bundle)!="c7c63a9adc5d342674e61116f732f4fd6dd1b82a8a039228ce80e9ff5fee85e1" {clear(bundle);return nil,errGHAGuardUnqualified}
+    diag.bundleBytes=len(bundle);diag.bundleSHA=sha256.Sum256(bundle);diag.bundleHasSHA=true
+    diag.bundleDigestMatch=digest(bundle)=="c7c63a9adc5d342674e61116f732f4fd6dd1b82a8a039228ce80e9ff5fee85e1"
+    if len(bundle)!=11619 {diag.stage="pinned_length";clear(bundle);return nil,errGHAGuardUnqualified}
+    if !diag.bundleDigestMatch {diag.stage="pinned_digest";clear(bundle);return nil,errGHAGuardUnqualified}
+    diag.stage="ok"
     return bundle,nil
 }
 
 // A single matching public attestation is data; the caller still checks its
 // pinned bytes and verifies its real signature before issuing a candidate.
 func ghaGuardActualSelectBundle(raw []byte) ([]byte,error) {
+    return ghaGuardActualSelectBundleWithDiagnostic(raw,nil)
+}
+func ghaGuardActualSelectBundleWithDiagnostic(raw []byte,diag *ghaGuardActualBundleDiagnostic) ([]byte,error) {
+    if diag!=nil {diag.stage="select_json"}
     var envelope struct {Attestations []struct{RepositoryID int64 `json:"repository_id"`;BundleURL string `json:"bundle_url"`;Bundle json.RawMessage `json:"bundle"`} `json:"attestations"`}
     dec:=json.NewDecoder(bytes.NewReader(raw));if dec.Decode(&envelope)!=nil||dec.Decode(new(any))!=io.EOF{return nil,errGHAGuardUnqualified}
+    if diag!=nil {diag.entries=len(envelope.Attestations)}
     var found json.RawMessage;matches:=0
     for _,item:=range envelope.Attestations {
         u,err:=url.Parse(item.BundleURL)
         if err!=nil||u.Scheme!="https"||item.RepositoryID!=1406818713||!strings.HasSuffix(u.Path,"/67491128.json.sn") {continue}
         found=item.Bundle;matches++
     }
+    if diag!=nil {diag.matches=matches;diag.stage="select_match"}
     if matches!=1||len(found)==0{return nil,errGHAGuardUnqualified}
+    if diag!=nil {diag.stage="select_compact"}
     var compact bytes.Buffer
     if json.Compact(&compact,found)!=nil{return nil,errGHAGuardUnqualified}
     bundle:=append([]byte(nil),compact.Bytes()...)
@@ -336,10 +443,11 @@ func TestGHAGuardActualSignedSourceIntegration(t *testing.T) {
     ctx,cancel:=context.WithTimeout(context.Background(),6*time.Minute);defer cancel()
     trace:=&ghaGuardActualWindowTrace{}
     cutoff:=expiry.Add(-ghaGuardActualNetworkReserve)
-    bundle,err:=ghaGuardActualTestBundle(ctx,cutoff,trace)
+    var bundleDiag ghaGuardActualBundleDiagnostic
+    bundle,err:=ghaGuardActualTestBundle(ctx,cutoff,trace,&bundleDiag)
     if err!=nil {
         if ghaGuardActualNotExecuted(ghaGuardActualAcquisition,err,trace) {ghaGuardActualSkip(t,"acquisition_deadline")}
-        t.Fatal("fixed public bundle acquisition failed")
+        t.Fatalf("fixed public bundle acquisition failed: %s",bundleDiag.safeString())
     }
     defer clear(bundle)
     apiTransport:=&http.Transport{Proxy:nil};defer apiTransport.CloseIdleConnections()

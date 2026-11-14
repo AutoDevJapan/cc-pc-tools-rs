@@ -50,6 +50,15 @@ must have the same volume/file ID/creation identity and ACL, and must remain
 pinned with read sharing only. Other tools must each have exactly one name.
 No reparse-point ancestor or alternate final path is accepted.
 
+Every retained directory in the installation's parent chain also has its
+identity, final name, owner and DACL checked from that same handle. Its proof
+is rechecked together with the leaf before returning. Effective add-file,
+add-directory, delete-child, delete and ACL/owner-change rights for untrusted
+principals prevent a clear result. An `INHERIT_ONLY` ACE is not effective on
+the current object; each actual descendant and executable descriptor is checked
+separately, so an effective inherited write on the leaf still fails. Unknown
+descriptor forms remain unknown.
+
 The controller verifies the installation registration, opens all fixed names,
 then reads a single bounded buffer from a held object. That exact buffer is
 hashed against the public pin. The controller rechecks full identities, size,
@@ -65,13 +74,26 @@ cannot forcibly interrupt a synchronous Windows kernel call. Returning clear
 does not keep handles across a later caller's process launch and does not claim
 an all-time filesystem transaction.
 
+Registry, hardlink-search, token and file/parent-handle closes are accounted for
+separately from the operation which used them. Internal wrapped errors retain
+their primary/cancellation and cleanup markers through `errors.Is`; no native
+message leaves the provider. The final fixed classification basis preserves
+the controller's refusal and adds `_cancelled` and/or `_cleanup_failed` when
+both facts occur. For example, a content mismatch followed by cancellation and
+failed cleanup is `installed_tool_bytes_mismatch_cancelled_cleanup_failed`.
+No combination can become clear. Normal classification, diagnostics and
+`--classification-diagnostic=false` share the same installed-tool callback set.
+
 ## Verification status and rollout
 
-The new controller, ACL parser, fixed-path classifier integration and synthetic
-fault controls have test source. At source preparation time the local Git, Go
-and gofmt executables did not have current qualification; compilation, test
-execution and installed validation have not been performed. Public archive
-verification is separate from this unperformed installed-byte comparison.
+The initial PR733 `4df6e610151c1d3c6465fb49aeb2146162aec6a4` passed its hosted
+Windows controller tests, vet and build. Those results apply to that input only.
+The later trace/cancellation/cleanup/token/INHERIT_ONLY correction has additional
+test source and requires its own fixed-input hosted verification. The local
+Git, Go and gofmt executables have not been used to manufacture a successful
+local result. No actual installed-executable qualification, update or normal
+consumer acceptance is claimed by either source-test result. Public archive
+verification remains separate from the unperformed installed-byte comparison.
 
 The candidate must receive independent review and a Windows build/test through
 an already qualified normal producer. The installed guard must then be updated

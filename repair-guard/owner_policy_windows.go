@@ -149,12 +149,17 @@ type ownerPolicyAccess struct {
 	installed    func(string) ownerPathVerdict
 }
 
-func classifyOwnerPath(path string) ownerPathVerdict {
-	return ownerPolicyClassify(path, ownerPolicyAccess{
+// Normal and diagnostic classification share the complete provider set.
+func ownerNormalPolicyAccess(organization func(string) ownerPathVerdict) ownerPolicyAccess {
+	return ownerPolicyAccess{
 		legacy: ownerLegacyProtection, repair: repairPathAllowed,
-		source: ownerRegisteredSource, physical: ownerRulePhysicalPath, organization: ownerOrganizationPath,
+		source: ownerRegisteredSource, physical: ownerRulePhysicalPath, organization: organization,
 		installed: ownerInstalledToolClassification,
-	})
+	}
+}
+
+func classifyOwnerPath(path string) ownerPathVerdict {
+	return ownerPolicyClassify(path, ownerNormalPolicyAccess(ownerOrganizationPath))
 }
 
 func ownerPolicyClassify(path string, access ownerPolicyAccess) ownerPathVerdict {
@@ -167,8 +172,10 @@ func ownerPolicyClassify(path string, access ownerPolicyAccess) ownerPathVerdict
 	// alias/identity/public-origin check. It is not a general hardlink exception.
 	// Preserve lexical exclusions before invoking that purpose-specific reader.
 	if _, fixed := ownerInstalledToolPlanFor(path); fixed && access.installed != nil {
-		if access.legacy(path)==ownerLegacyClient { return ownerRuleProtected("legacy_exclusion") }
-		if access.legacy(path)==ownerLegacyUnavailable { return ownerRuleUnknown("existing_exclusion_unavailable") }
+		if access.legacy==nil { return ownerRuleUnknown("existing_exclusion_unavailable") }
+		legacy:=access.legacy(path)
+		if legacy==ownerLegacyClient { return ownerRuleProtected("legacy_exclusion") }
+		if legacy==ownerLegacyUnavailable { return ownerRuleUnknown("existing_exclusion_unavailable") }
 		if ownerCardPath(path) || ownerWindowsAlias(path) { return ownerRuleUnknown("windows_alias_or_exclusion_unavailable") }
 		return access.installed(path)
 	}

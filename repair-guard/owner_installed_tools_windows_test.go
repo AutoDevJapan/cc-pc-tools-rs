@@ -1,7 +1,9 @@
 package main
 
 import (
+	"bytes"
 	"context"
+	"encoding/json"
 	"errors"
 	"path/filepath"
 	"strings"
@@ -116,7 +118,7 @@ func TestInstalledToolControllerUsesSameHeldBytesAndRejectsChanges(t *testing.T)
 			for _,b:=range f.returned { if b!=0 { t.Fatal("verified or failed buffer retained after classification") } }
 			if strings.Contains(v.Basis,"private") || strings.Contains(v.Basis,"C:/") { t.Fatal("raw error leaked") }
 			if mode=="origin" || mode=="publisher" || mode=="version" || mode=="cancel-before" || mode=="cancel-origin" { if f.opens!=0 || f.reads!=0 { t.Fatal("origin failure opened installed body") } }
-			if mode=="cancel-and-close-error" && v.Basis!="installed_tool_cleanup_failed" { t.Fatal("cleanup failure hidden by cancellation") }
+			if mode=="cancel-and-close-error" && v.Basis!="installed_tool_cancelled_cleanup_failed" { t.Fatal("cleanup failure hidden by cancellation") }
 			if strings.HasSuffix(mode,"-close") && (strings.HasPrefix(mode,"origin") || strings.HasPrefix(mode,"alias") || strings.HasPrefix(mode,"late-")) && v.Basis!="installed_tool_cleanup_failed" { t.Fatal("native resource close failure was lost") }
 			if (mode=="parent-acl" || mode=="parent-missing") && f.reads!=0 { t.Fatal("untrusted parent reached executable content") }
 		})
@@ -131,7 +133,7 @@ func TestInstalledToolDirectoryACLRejectsReplacementRights(t *testing.T) {
 }
 
 func TestInstalledToolNativeCloseFailureCannotReturnSuccess(t *testing.T) {
-	for _,primary:=range []error{nil,errors.New("private operation failure")} {
+	for _,primary:=range []error{nil,errors.New("private operation failure"),context.Canceled,context.DeadlineExceeded} {
 		for _,closeFailure:=range []bool{false,true} {
 			calls:=0
 			operation:=func()(failure error){
@@ -140,6 +142,158 @@ func TestInstalledToolNativeCloseFailureCannotReturnSuccess(t *testing.T) {
 			}
 			err:=operation()
 			if calls!=1 || closeFailure && !errors.Is(err,errOwnerInstalledToolCleanup) || !closeFailure && err!=primary { t.Fatal("native close result not preserved once") }
+			if closeFailure && primary!=nil && !errors.Is(err,primary) { t.Fatal("primary error lost during native close") }
+			if closeFailure && err.Error()!=errOwnerInstalledToolCleanup.Error() { t.Fatal("native text exposed") }
+		}
+	}
+}
+
+type installedToolTokenFixture struct {
+	primary error
+	cleanup error
+	reads,closes int
+}
+func (t *installedToolTokenFixture) SID() (string,error) { t.reads++;return "S-1-5-21-100-200-300-1001",t.primary }
+func (t *installedToolTokenFixture) Close() error { t.closes++;return t.cleanup }
+
+func TestInstalledToolTokenSIDPreservesFailureAndClosesOnce(t *testing.T) {
+	for _,primary:=range []error{nil,errOwnerInstalledTool,context.Canceled,context.DeadlineExceeded} {
+		for _,closeFail:=range []bool{false,true} {
+			fixture:=&installedToolTokenFixture{primary:primary}
+			if closeFail { fixture.cleanup=errors.New("private token close failure") }
+			sid,err:=ownerInstalledTokenSID(fixture)
+			if fixture.reads!=1 || fixture.closes!=1 { t.Fatal("token helper did not own exactly one read/close") }
+			if primary==nil && !closeFail { if err!=nil || sid=="" { t.Fatal("normal token identity rejected") };continue }
+			if sid!="" || err==nil { t.Fatal("failed token operation returned an identity") }
+			if primary!=nil && !errors.Is(err,primary) { t.Fatal("token primary or cancellation disappeared") }
+			if closeFail && (!errors.Is(err,errOwnerInstalledToolCleanup) || err.Error()!=errOwnerInstalledToolCleanup.Error()) { t.Fatal("token cleanup was erased or free text escaped") }
+		}
+	}
+}
+
+type installedToolFaultOverlay struct {
+	base *installedToolFixture
+	stage string
+	primary error
+	closeFailure bool
+	cancel context.CancelFunc
+	closes int
+	stateAt int
+}
+
+func (o *installedToolFaultOverlay) failure() error {
+	err:=o.primary
+	if o.cancel!=nil { o.cancel() }
+	o.closes++
+	var closeErr error
+	if o.closeFailure { closeErr=errors.New("private native cleanup") }
+	ownerInstalledCloseResult(&err,closeErr)
+	return err
+}
+
+func (o *installedToolFaultOverlay) Origin(ctx context.Context,plan ownerInstalledToolPlan) error {
+	if o.stage=="origin" { return o.failure() }
+	return o.base.Origin(ctx,plan)
+}
+func (o *installedToolFaultOverlay) Aliases(ctx context.Context,path string) ([]string,error) {
+	if o.stage=="aliases" { return nil,o.failure() }
+	return o.base.Aliases(ctx,path)
+}
+func (o *installedToolFaultOverlay) Open(ctx context.Context,path string) (ownerInstalledToolLease,error) {
+	lease,err:=o.base.Open(ctx,path)
+	if err==nil && o.stage=="token" { return &installedToolTokenOverlay{lease:lease,owner:o},nil }
+	return lease,err
+}
+type installedToolTokenOverlay struct { lease ownerInstalledToolLease; owner *installedToolFaultOverlay; states int }
+func (o *installedToolTokenOverlay) State() (ownerInstalledToolState,error) {
+	state,err:=o.lease.State();o.states++
+	if err!=nil || o.owner.stateAt>0 && o.states!=o.owner.stateAt { return state,err }
+	return state,o.owner.failure()
+}
+func (o *installedToolTokenOverlay) Read(ctx context.Context,n int64) ([]byte,error) { return o.lease.Read(ctx,n) }
+func (o *installedToolTokenOverlay) Close() error { return o.lease.Close() }
+
+func TestInstalledToolPreservesPrimaryCancellationAndCleanupFacts(t *testing.T) {
+	for _,stage:=range []string{"origin","aliases","token"} {
+		for _,fault:=range []string{"primary","cleanup","primary-cleanup","cancel-primary-cleanup","returned-cancel-cleanup"} {
+			t.Run(stage+"/"+fault,func(t *testing.T){
+				ctx,cancel:=context.WithCancel(context.Background());defer cancel()
+				base:=newInstalledToolFixture("normal",cancel)
+				o:=&installedToolFaultOverlay{base:base,stage:stage}
+				primary:="installed_tool_origin_unavailable"
+				if stage=="aliases" { primary="installed_tool_alias_mismatch" }
+				if stage=="token" { primary="installed_tool_identity_mismatch" }
+				want:=primary
+				switch fault {
+				case "primary":o.primary=errOwnerInstalledTool
+				case "cleanup":o.closeFailure=true;if stage!="token" { want="installed_tool" };want+="_cleanup_failed"
+				case "primary-cleanup":o.primary=errOwnerInstalledTool;o.closeFailure=true;want+="_cleanup_failed"
+				case "cancel-primary-cleanup":o.primary=errOwnerInstalledTool;o.closeFailure=true;o.cancel=cancel;want+="_cancelled_cleanup_failed"
+				case "returned-cancel-cleanup":o.primary=context.Canceled;o.closeFailure=true;want+="_cancelled_cleanup_failed"
+				}
+				got:=ownerInstalledToolVerify(ctx,base.plan,o,func(string)ownerLegacyState{return ownerLegacyClear})
+				if got.AccessAllowed || got.Status!="unverified" || got.Basis!=want || o.closes!=1 { t.Fatal("compound failure facts lost",stage,fault,got.Basis,want,o.closes) }
+				for i,lease:=range base.leases { expected:=0;if i<base.opens { expected=1 };if lease.closed!=expected { t.Fatal("compound failure close count differs") } }
+				if base.reads!=0 { t.Fatal("failed origin or metadata reached installed body") }
+			})
+		}
+	}
+	for _,mode:=range []string{"bytes-close","bytes-cancel-close","parent-close"} {
+		t.Run(mode,func(t *testing.T){
+			ctx,cancel:=context.WithCancel(context.Background());defer cancel()
+			f:=newInstalledToolFixture("close-error",cancel)
+			want:="installed_tool_bytes_mismatch_cleanup_failed"
+			if mode=="parent-close" { f.leases[0].state.parentsAllowed=false;want="installed_tool_parent_untrusted_cleanup_failed" } else { f.plan.sha=strings.Repeat("0",64) }
+			if mode=="bytes-cancel-close" { f.mode="cancel-and-close-error";want="installed_tool_bytes_mismatch_cancelled_cleanup_failed" }
+			got:=ownerInstalledToolVerify(ctx,f.plan,f,func(string)ownerLegacyState{return ownerLegacyClear})
+			if got.AccessAllowed || got.Basis!=want { t.Fatal("controller refusal was erased by late cleanup",got.Basis,want) }
+		})
+	}
+}
+
+func TestInstalledToolInheritOnlyIsNotAnEffectiveCurrentObjectGrant(t *testing.T) {
+	for _,directory:=range []bool{false,true} {
+		for _,flags:=range []string{"IO","OIIO","CIIO","OICIIO"} {
+			sddl:="O:BAG:BAD:(A;;FA;;;BA)(A;"+flags+";FA;;;BU)"
+			if !ownerInstalledToolACLMode(sddl,"",directory) { t.Fatal("inherit-only entry treated as effective write",flags,directory) }
+		}
+		if ownerInstalledToolACLMode("O:BAG:BAD:(A;;FA;;;BA)(A;OI;FA;;;BU)","",directory) { t.Fatal("effective inheritable write was ignored") }
+	}
+	// A child with an effective inherited grant is still rejected by its own
+	// descriptor, even if its parent's grant was inherit-only there.
+	if ownerInstalledToolACLMode("O:BAG:BAD:(A;;FA;;;BA)(A;ID;FA;;;BU)","",false) { t.Fatal("effective child ACL was ignored") }
+}
+
+func TestInstalledToolNormalTraceAndExplicitFalseSharePolicy(t *testing.T) {
+	for _,plan:=range ownerInstalledToolPlans() {
+		for _,mode:=range []string{"clear","unknown","cleanup","client","unavailable","ordinary"} {
+			t.Run(plan.name+"/"+mode,func(t *testing.T){
+				path:=plan.path;if mode=="ordinary" { path="C:/ordinary/fixture.txt" }
+				providerCalls,physicalCalls:=0,0
+				makeAccess:=func()ownerPolicyAccess {
+					a:=ownerNormalPolicyAccess(func(string)ownerPathVerdict{return ownerRuleUnknown("ordinary")})
+					if a.installed==nil { t.Fatal("normal provider set omitted installed callback") }
+					a.legacy=func(string)ownerLegacyState{if mode=="client" { return ownerLegacyClient };if mode=="unavailable" {return ownerLegacyUnavailable};return ownerLegacyClear}
+					a.physical=func(string)(string,error){physicalCalls++;return "",errors.New("synthetic ordinary physical failure")}
+					a.installed=func(string)ownerPathVerdict{providerCalls++;switch mode {case "clear":return ownerRuleClear("verified_installed_development_tool");case "cleanup":return ownerInstalledFailureVerdict("installed_tool_origin_unavailable",true,true);default:return ownerRuleUnknown("installed_tool_origin_unavailable")}}
+					return a
+				}
+				ordinary:=ownerPolicyClassify(path,makeAccess())
+				trace:=&ownerClassificationTrace{}
+				traced:=ownerPolicyClassifyTraced(path,makeAccess(),trace)
+				if ordinary.AccessAllowed!=traced.AccessAllowed || ordinary.Basis!=traced.Basis || ordinary.Status!=traced.Status { t.Fatal("trace changes fixed tool verdict") }
+				wantProviders,wantPhysical:=2,0
+				if mode=="client" || mode=="unavailable" {wantProviders=0}
+				if mode=="ordinary" {wantProviders=0;wantPhysical=2}
+				if providerCalls!=wantProviders || physicalCalls!=wantPhysical { t.Fatal("trace or exclusion bypass changed") }
+				for _,option:=range []string{"--classification-diagnostic","--classification-diagnostic=false"} {
+					var out,stderr bytes.Buffer
+					code:=runClassificationDiagnosticCLI([]string{"--guard-path",path,option},&out,&stderr,func(input string)(ownerPathVerdict,*ownerClassificationTrace){tr:=&ownerClassificationTrace{};return ownerPolicyClassifyTraced(input,makeAccess(),tr),tr})
+					var got map[string]any
+					if code!=0 || stderr.Len()!=0 || json.Unmarshal(out.Bytes(),&got)!=nil || got["access_allowed"]!=ordinary.AccessAllowed || got["classification_basis"]!=ordinary.Basis { t.Fatal("diagnostic CLI diverged from ordinary classifier") }
+					_,has:=got["classification_diagnostic"];if has!=(option=="--classification-diagnostic") {t.Fatal("explicit false emitted diagnostic metadata")}
+				}
+			})
 		}
 	}
 }
@@ -190,4 +344,39 @@ func TestInstalledToolNormalPolicyCallbackIsExactAndPreservesExclusions(t *testi
 		if (mode=="client" || mode=="unavailable" || mode=="ordinary-file") && calls!=0 { t.Fatal("special provider used outside fixed excluded scope") }
 		if mode=="ordinary-file" && (physicalCalls!=1 || v.Basis!="physical_metadata_unavailable") { t.Fatal("generic hardlink policy weakened") }
 	}
+}
+
+func TestInstalledToolTokenCleanupAtEachStateCannotBecomeClear(t *testing.T) {
+	for _,at:=range []int{1,2,3} {
+		for _,fault:=range []string{"cleanup","primary-cleanup","cancel-primary-cleanup","returned-cancel-cleanup"} {
+			t.Run([]string{"initial","after-read","final"}[at-1]+"/"+fault,func(t *testing.T){
+				ctx,cancel:=context.WithCancel(context.Background());defer cancel()
+				base:=newInstalledToolFixture("normal",cancel)
+				o:=&installedToolFaultOverlay{base:base,stage:"token",stateAt:at,closeFailure:true}
+				want:="installed_tool_identity_mismatch"
+				if at>1 {want="installed_tool_identity_changed"}
+				switch fault {
+				case "primary-cleanup":o.primary=errOwnerInstalledTool
+				case "cancel-primary-cleanup":o.primary=errOwnerInstalledTool;o.cancel=cancel
+				case "returned-cancel-cleanup":o.primary=context.Canceled
+				}
+				if strings.Contains(fault,"cancel") {want+="_cancelled"};want+="_cleanup_failed"
+				v:=ownerInstalledToolVerify(ctx,base.plan,o,func(string)ownerLegacyState{return ownerLegacyClear})
+				if v.AccessAllowed || v.Status!="unverified" || v.Basis!=want || o.closes!=1 {t.Fatal("state cleanup/cancellation facts disappeared",at,fault,v.Basis,want)}
+				wantReads:=1;if at==1 {wantReads=0}
+				if base.reads!=wantReads {t.Fatal("state fault reached wrong body boundary")}
+				wantOrigins:=1;if at==3 {wantOrigins=2}
+				if base.originCalls!=wantOrigins {t.Fatal("state fault hit wrong recheck phase")}
+				for i,lease:=range base.leases {wantClose:=0;if i<base.opens {wantClose=1};if lease.closed!=wantClose {t.Fatal("state fault leaked or repeated a lease close")}}
+				for _,b:=range base.returned {if b!=0 {t.Fatal("state fault retained installed content")}}
+			})
+		}
+	}
+}
+
+func TestInstalledToolLegacyProtectionSurvivesCancellation(t *testing.T) {
+	ctx,cancel:=context.WithCancel(context.Background());defer cancel()
+	fixture:=newInstalledToolFixture("normal",cancel)
+	v:=ownerInstalledToolVerify(ctx,fixture.plan,fixture,func(string)ownerLegacyState{cancel();return ownerLegacyClient})
+	if v.AccessAllowed || v.Status!="protected" || v.Basis!="legacy_exclusion" || fixture.originCalls!=0 || fixture.opens!=0 || fixture.reads!=0 {t.Fatal("cancellation erased a confirmed client exclusion or opened content")}
 }

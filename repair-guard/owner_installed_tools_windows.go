@@ -66,8 +66,31 @@ type ownerInstalledToolAccess interface {
 var errOwnerInstalledTool = errors.New("installed_tool_verification_failed")
 var errOwnerInstalledToolCleanup = errors.New("installed_tool_cleanup_failed")
 
+// Native primary errors remain available to the controller through errors.Is,
+// while Error exposes only a fixed cleanup identifier, never native text.
+type ownerInstalledResourceFailure struct { primary error }
+func (e *ownerInstalledResourceFailure) Error() string { return errOwnerInstalledToolCleanup.Error() }
+func (e *ownerInstalledResourceFailure) Unwrap() []error { return []error{e.primary,errOwnerInstalledToolCleanup} }
+
 func ownerInstalledCloseResult(failure *error, closeErr error) {
-	if closeErr!=nil { *failure=errOwnerInstalledToolCleanup }
+	if closeErr==nil { return }
+	if *failure==nil { *failure=errOwnerInstalledToolCleanup;return }
+	if !errors.Is(*failure,errOwnerInstalledToolCleanup) { *failure=&ownerInstalledResourceFailure{primary:*failure} }
+}
+
+func ownerInstalledFailureVerdict(primary string,cancelled,cleanup bool) ownerPathVerdict {
+	// Only controller-owned fixed identifiers can be combined. The primary
+	// refusal, cancellation and cleanup are independent facts, not raw strings.
+	switch primary {
+	case "verified_installed_development_tool": primary="installed_tool"
+	case "installed_tool_cancelled": primary="installed_tool";cancelled=true
+	case "installed_tool_cleanup_failed": primary="installed_tool";cleanup=true
+	case "installed_tool_origin_unavailable","installed_tool_alias_mismatch","installed_tool_identity_unavailable","installed_tool_parent_untrusted","installed_tool_identity_mismatch","installed_tool_bytes_mismatch","installed_tool_identity_changed","installed_tool_alias_changed","installed_tool_origin_changed":
+	default: primary="installed_tool_origin_unavailable"
+	}
+	if cancelled { primary+="_cancelled" }
+	if cleanup { primary+="_cleanup_failed" }
+	return ownerRuleUnknown(primary)
 }
 
 func ownerInstalledToolClassification(path string) (verdict ownerPathVerdict) {
@@ -88,8 +111,14 @@ func ownerInstalledToolWith(ctx context.Context, path string, access ownerInstal
 func ownerInstalledToolVerify(ctx context.Context, plan ownerInstalledToolPlan, access ownerInstalledToolAccess, legacy func(string) ownerLegacyState) (verdict ownerPathVerdict) {
 	verdict = ownerRuleUnknown("installed_tool_origin_unavailable")
 	if ctx == nil || access == nil || legacy == nil || len(plan.aliases)==0 || len(plan.aliases)>2 { return }
+	cleanupFailed,cancelledFailure:=false,false
+	observeFailure:=func(err error) {
+		cleanupFailed=cleanupFailed || errors.Is(err,errOwnerInstalledToolCleanup)
+		cancelledFailure=cancelledFailure || errors.Is(err,context.Canceled) || errors.Is(err,context.DeadlineExceeded)
+	}
 	defer func() {
-		if ctx.Err()!=nil && verdict.Basis!="installed_tool_cleanup_failed" { verdict=ownerRuleUnknown("installed_tool_cancelled") }
+		if verdict.Status=="protected" { return }
+		if cleanupFailed || cancelledFailure || ctx.Err()!=nil { verdict=ownerInstalledFailureVerdict(verdict.Basis,cancelledFailure || ctx.Err()!=nil,cleanupFailed) }
 	}()
 	if ctx.Err() != nil { return ownerRuleUnknown("installed_tool_cancelled") }
 	for _, alias := range plan.aliases {
@@ -100,27 +129,29 @@ func ownerInstalledToolVerify(ctx context.Context, plan ownerInstalledToolPlan, 
 		}
 	}
 	if err:=access.Origin(ctx, plan);err!=nil {
-		if errors.Is(err,errOwnerInstalledToolCleanup) { return ownerRuleUnknown("installed_tool_cleanup_failed") }
+		observeFailure(err)
+		if err==errOwnerInstalledToolCleanup { return ownerRuleUnknown("installed_tool_cleanup_failed") }
 		return
 	}
 	if ctx.Err()!=nil { return }
 	aliases, err := access.Aliases(ctx, plan.path)
-	if errors.Is(err,errOwnerInstalledToolCleanup) { return ownerRuleUnknown("installed_tool_cleanup_failed") }
+	observeFailure(err)
+	if err==errOwnerInstalledToolCleanup { return ownerRuleUnknown("installed_tool_cleanup_failed") }
 	if err != nil || !ownerInstalledToolAliases(aliases, plan.aliases) { return ownerRuleUnknown("installed_tool_alias_mismatch") }
 	var leases []ownerInstalledToolLease
 	defer func() {
-		failed := false
-		for i:=len(leases)-1;i>=0;i-- { if leases[i].Close()!=nil { failed=true } }
-		if failed { verdict=ownerRuleUnknown("installed_tool_cleanup_failed") }
+		for i:=len(leases)-1;i>=0;i-- { if leases[i].Close()!=nil { cleanupFailed=true } }
 	}()
 	var states []ownerInstalledToolState
 	for _, alias := range plan.aliases {
 		if ctx.Err()!=nil { return ownerRuleUnknown("installed_tool_cancelled") }
 		lease, openErr := access.Open(ctx, alias)
 		if lease!=nil { leases=append(leases,lease) }
+		observeFailure(openErr)
 		if openErr!=nil || lease==nil { return ownerRuleUnknown("installed_tool_identity_unavailable") }
 		if ctx.Err()!=nil { return ownerRuleUnknown("installed_tool_cancelled") }
 		state, stateErr := lease.State()
+		observeFailure(stateErr)
 		if stateErr==nil && (!state.parentsAllowed || state.parentProof=="") { return ownerRuleUnknown("installed_tool_parent_untrusted") }
 		if stateErr!=nil || state.id.volume==0 || state.id.file==0 || state.id.created==0 || state.size!=plan.size || state.links!=uint32(len(plan.aliases)) || state.acl=="" || !state.aclAllowed || !same(state.resolved,alias) {
 			return ownerRuleUnknown("installed_tool_identity_mismatch")
@@ -132,23 +163,28 @@ func ownerInstalledToolVerify(ctx context.Context, plan ownerInstalledToolPlan, 
 	if ctx.Err()!=nil { return ownerRuleUnknown("installed_tool_cancelled") }
 	raw, readErr := leases[0].Read(ctx,plan.size)
 	defer clear(raw)
-	if ctx.Err()!=nil { return ownerRuleUnknown("installed_tool_cancelled") }
+	observeFailure(readErr)
 	if readErr!=nil || int64(len(raw))!=plan.size || hashBytes(raw)!=plan.sha { return ownerRuleUnknown("installed_tool_bytes_mismatch") }
+	if ctx.Err()!=nil { return ownerRuleUnknown("installed_tool_cancelled") }
 	for i,lease := range leases {
 		now, stateErr := lease.State()
+		observeFailure(stateErr)
 		if stateErr!=nil || now!=states[i] { return ownerRuleUnknown("installed_tool_identity_changed") }
 	}
 	after, err := access.Aliases(ctx,plan.path)
-	if errors.Is(err,errOwnerInstalledToolCleanup) { return ownerRuleUnknown("installed_tool_cleanup_failed") }
+	observeFailure(err)
+	if err==errOwnerInstalledToolCleanup { return ownerRuleUnknown("installed_tool_cleanup_failed") }
 	if err!=nil || !ownerInstalledToolAliases(after,plan.aliases) { return ownerRuleUnknown("installed_tool_alias_changed") }
 	if err:=access.Origin(ctx,plan);err!=nil {
-		if errors.Is(err,errOwnerInstalledToolCleanup) { return ownerRuleUnknown("installed_tool_cleanup_failed") }
+		observeFailure(err)
+		if err==errOwnerInstalledToolCleanup { return ownerRuleUnknown("installed_tool_cleanup_failed") }
 		return ownerRuleUnknown("installed_tool_origin_changed")
 	}
 	// Registry/alias observations are not an atomic filesystem transaction.
 	// Recheck the actual held objects after those observations as well.
 	for i,lease := range leases {
 		now, stateErr := lease.State()
+		observeFailure(stateErr)
 		if stateErr!=nil || now!=states[i] { return ownerRuleUnknown("installed_tool_identity_changed") }
 	}
 	if ctx.Err()!=nil { return ownerRuleUnknown("installed_tool_cancelled") }
@@ -171,13 +207,14 @@ func ownerInstalledToolAliases(actual, expected []string) bool {
 type ownerInstalledToolNative struct{}
 
 func (ownerInstalledToolNative) Origin(ctx context.Context, plan ownerInstalledToolPlan) (failure error) {
-	if ctx.Err()!=nil { return errOwnerInstalledTool }
+	if ctx.Err()!=nil { return ctx.Err() }
 	name,err:=syscall.UTF16PtrFromString(plan.registry)
 	if err!=nil { return errOwnerInstalledTool }
 	var key syscall.Handle
 	if syscall.RegOpenKeyEx(syscall.HKEY_LOCAL_MACHINE,name,0,syscall.KEY_QUERY_VALUE|0x0100,&key)!=nil { return errOwnerInstalledTool }
 	defer func(){ownerInstalledCloseResult(&failure,syscall.RegCloseKey(key))}()
 	for field,want:=range map[string]string{"DisplayVersion":plan.version,"Publisher":plan.publisher} {
+		if ctx.Err()!=nil { return ctx.Err() }
 		p,_:=syscall.UTF16PtrFromString(field)
 		var kind uint32
 		var data [4096]byte
@@ -186,11 +223,12 @@ func (ownerInstalledToolNative) Origin(ctx context.Context, plan ownerInstalledT
 		words:=unsafe.Slice((*uint16)(unsafe.Pointer(&data[0])),int(n)/2)
 		if words[len(words)-1]!=0 || syscall.UTF16ToString(words)!=want { return errOwnerInstalledTool }
 	}
+	if ctx.Err()!=nil { return ctx.Err() }
 	return nil
 }
 
 func (ownerInstalledToolNative) Aliases(ctx context.Context, path string) (names []string,failure error) {
-	if ctx.Err()!=nil { return nil,errOwnerInstalledTool }
+	if ctx.Err()!=nil { return nil,ctx.Err() }
 	p,err:=syscall.UTF16PtrFromString(path)
 	if err!=nil { return nil,errOwnerInstalledTool }
 	var buffer [32768]uint16
@@ -209,6 +247,7 @@ func (ownerInstalledToolNative) Aliases(ctx context.Context, path string) (names
 		ok,_,callErr:=k.NewProc("FindNextFileNameW").Call(h,uintptr(unsafe.Pointer(&n)),uintptr(unsafe.Pointer(&buffer[0])))
 		if ok==0 { if callErr==syscall.Errno(38) { return names,nil };return nil,errOwnerInstalledTool }
 	}
+	if ctx.Err()!=nil { return nil,ctx.Err() }
 	return nil,errOwnerInstalledTool
 }
 
@@ -218,6 +257,29 @@ type ownerInstalledToolFile struct {
 }
 
 type ownerInstalledToolParent struct { file *os.File; path string }
+
+type ownerInstalledToken interface {
+	SID() (string,error)
+	Close() error
+}
+type ownerInstalledNativeToken struct { token syscall.Token }
+func (t ownerInstalledNativeToken) SID() (string,error) {
+	user,err:=t.token.GetTokenUser()
+	if err!=nil { return "",errOwnerInstalledTool }
+	sid,err:=user.User.Sid.String()
+	if err!=nil { return "",errOwnerInstalledTool }
+	return sid,nil
+}
+func (t ownerInstalledNativeToken) Close() error { return t.token.Close() }
+
+func ownerInstalledTokenSID(token ownerInstalledToken) (sid string,failure error) {
+	if token==nil { return "",errOwnerInstalledTool }
+	defer func(){
+		ownerInstalledCloseResult(&failure,token.Close())
+		if failure!=nil { sid="" }
+	}()
+	return token.SID()
+}
 
 func (ownerInstalledToolNative) Open(ctx context.Context,path string) (ownerInstalledToolLease,error) {
 	if ctx.Err()!=nil { return nil,errOwnerInstalledTool }
@@ -248,9 +310,8 @@ func (f *ownerInstalledToolFile) State() (ownerInstalledToolState,error) {
 	resolved,err:=ownerHandlePath(h);if err!=nil { return ownerInstalledToolState{},errOwnerInstalledTool }
 	acl,err:=skillsUpdateSDDL(f.f);if err!=nil { return ownerInstalledToolState{},errOwnerInstalledTool }
 	token,err:=syscall.OpenCurrentProcessToken();if err!=nil { return ownerInstalledToolState{},errOwnerInstalledTool }
-	user,err:=token.GetTokenUser();closeErr:=token.Close()
-	if err!=nil || closeErr!=nil { return ownerInstalledToolState{},errOwnerInstalledTool }
-	sid,err:=user.User.Sid.String();if err!=nil { return ownerInstalledToolState{},errOwnerInstalledTool }
+	sid,err:=ownerInstalledTokenSID(ownerInstalledNativeToken{token})
+	if err!=nil { return ownerInstalledToolState{},err }
 	parentProof,parentsAllowed,err:=ownerInstalledToolParents(f.parents,sid)
 	if err!=nil { return ownerInstalledToolState{},errOwnerInstalledTool }
 	return ownerInstalledToolState{id:ownerInstalledToolIdentity{uint64(i.VolumeSerialNumber),uint64(i.FileIndexHigh)<<32|uint64(i.FileIndexLow),uint64(i.CreationTime.HighDateTime)<<32|uint64(i.CreationTime.LowDateTime)},size:int64(uint64(i.FileSizeHigh)<<32|uint64(i.FileSizeLow)),links:i.NumberOfLinks,acl:hashBytes([]byte(acl)),resolved:resolved,aclAllowed:ownerInstalledToolACL(acl,sid),parentProof:parentProof,parentsAllowed:parentsAllowed},nil
@@ -320,7 +381,9 @@ func ownerInstalledToolACLMode(sddl, user string,directory bool) bool {
 		aceFlags:=fields[1]
 		for _,flag:=range []string{"OI","CI","NP","IO","ID"} { aceFlags=strings.ReplaceAll(aceFlags,flag,"") }
 		if aceFlags!="" { return false }
-		if fields[0]=="A" && mask&writes!=0 && !trusted(fields[5]) { return false }
+		// INHERIT_ONLY is not effective on this already-existing object.
+		// The actual child/leaf descriptor is independently checked as well.
+		if fields[0]=="A" && !strings.Contains(fields[1],"IO") && mask&writes!=0 && !trusted(fields[5]) { return false }
 		aces++;dacl=dacl[end+1:]
 	}
 	return aces>0

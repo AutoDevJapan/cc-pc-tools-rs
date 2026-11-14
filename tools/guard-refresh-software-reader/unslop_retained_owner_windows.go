@@ -22,6 +22,19 @@ var errUnslopRetainedCapacity = errors.New("retained_owner_capacity")
 // only a correlation value; no JSON or ID lookup can release a resource.
 type unslopRetainedTicket struct { sequence uint64 }
 
+// A reservation pins one owner's ticket before a durable intent is attempted.
+// It is retained on save failure and cannot be moved to another owner/session.
+type unslopRetainedReservation struct {
+	owner *unslopRetainedOwner
+	ticket *unslopRetainedTicket
+	source *unslopLiveSession
+	lease softwareRustHeldSession
+	claimed []io.Closer
+	handles []syscall.Handle
+	flight *askOwnedProducerFlight
+	report unslopRetainedReport
+}
+
 type unslopRetainedReport struct {
 	OwnerID string `json:"owner_id"`
 	State string `json:"state"`
@@ -52,6 +65,8 @@ type unslopRetainedEntry struct {
 	observed bool
 	abortRequested bool
 	gate chan struct{}
+	durable *unslopDurableController
+	saved *unslopRetainedSaveProof
 }
 
 type unslopRetainedOwner struct {
@@ -64,13 +79,14 @@ type unslopRetainedOwner struct {
 	handles map[syscall.Handle]*unslopRetainedTicket
 	flights map[*askOwnedProducerFlight]*unslopRetainedTicket
 	done map[<-chan askProducerFlightResult]*unslopRetainedTicket
+	reservations map[*unslopRetainedTicket]*unslopRetainedReservation
 }
 
 func newUnslopRetainedOwner(limit int) (*unslopRetainedOwner,error) {
 	if limit<1||limit>128 {return nil,errUnslopRetainedCapacity}
 	var nonce [16]byte
 	if _,err:=rand.Read(nonce[:]);err!=nil {return nil,errUnslopRetainedInput}
-	return &unslopRetainedOwner{limit:limit,identity:hex.EncodeToString(nonce[:]),entries:make(map[*unslopRetainedTicket]*unslopRetainedEntry),claims:make(map[io.Closer]*unslopRetainedTicket),handles:make(map[syscall.Handle]*unslopRetainedTicket),flights:make(map[*askOwnedProducerFlight]*unslopRetainedTicket),done:make(map[<-chan askProducerFlightResult]*unslopRetainedTicket)},nil
+	return &unslopRetainedOwner{limit:limit,identity:hex.EncodeToString(nonce[:]),entries:make(map[*unslopRetainedTicket]*unslopRetainedEntry),claims:make(map[io.Closer]*unslopRetainedTicket),handles:make(map[syscall.Handle]*unslopRetainedTicket),flights:make(map[*askOwnedProducerFlight]*unslopRetainedTicket),done:make(map[<-chan askProducerFlightResult]*unslopRetainedTicket),reservations:make(map[*unslopRetainedTicket]*unslopRetainedReservation)},nil
 }
 
 // Retain is called by the normal controller at an exclusive transfer boundary.
@@ -78,7 +94,15 @@ func newUnslopRetainedOwner(limit int) (*unslopRetainedOwner,error) {
 // read a toolchain. The worker may still run, but no other caller may use the
 // old session or receive from its flight while ownership is being transferred.
 func (o *unslopRetainedOwner) Retain(source **unslopLiveSession, lease *softwareRustHeldSession, extra []io.Closer, capture unslopToolchainCaptureResult) (*unslopRetainedTicket,error) {
-	if o==nil||o.entries==nil||o.claims==nil||o.handles==nil||o.flights==nil||o.done==nil||len(o.identity)!=32||len(extra)>256||source==nil||*source==nil||lease==nil||!unslopRetainedPointer(*lease) {return nil,errUnslopRetainedInput}
+	return o.retainBeforeMove(source,lease,extra,capture,nil)
+}
+
+func (o *unslopRetainedOwner) retainBeforeMove(source **unslopLiveSession, lease *softwareRustHeldSession, extra []io.Closer, capture unslopToolchainCaptureResult, before func(unslopRetainedReport)error) (*unslopRetainedTicket,error) {
+	return o.retainReserved(source,lease,extra,capture,nil,before)
+}
+
+func (o *unslopRetainedOwner) retainReserved(source **unslopLiveSession, lease *softwareRustHeldSession, extra []io.Closer, capture unslopToolchainCaptureResult, reservation **unslopRetainedReservation, before func(unslopRetainedReport)error) (*unslopRetainedTicket,error) {
+	if o==nil||o.entries==nil||o.claims==nil||o.handles==nil||o.flights==nil||o.done==nil||o.reservations==nil||len(o.identity)!=32||len(extra)>256||source==nil||*source==nil||lease==nil||!unslopRetainedPointer(*lease) {return nil,errUnslopRetainedInput}
 	live:=*source
 	if live.unslopNativeSession==nil||live.closed {return nil,errUnslopRetainedInput}
 	owned,ok:=live.flight.(*unslopOwnedFlight)
@@ -87,15 +111,38 @@ func (o *unslopRetainedOwner) Retain(source **unslopLiveSession, lease *software
 	// projection is a consistency check, not a replacement for that provider.
 	o.mu.Lock()
 	defer o.mu.Unlock()
-	if len(o.entries)>=o.limit||o.next==^uint64(0) {return nil,errUnslopRetainedCapacity}
-	if o.flights[owned.flight]!=nil||o.done[owned.flight.Done]!=nil {return nil,errUnslopRetainedInput}
-	extras,claims,handles,valid:=o.unslopRetainedUniqueInputs(live,*lease,extra)
+	var reserved *unslopRetainedReservation
+	var reservedTicket *unslopRetainedTicket
+	if reservation!=nil {reserved=*reservation}
+	if reserved!=nil {
+		if reserved.owner!=o||reserved.source!=live||reserved.lease!=*lease||o.reservations[reserved.ticket]!=reserved {return nil,errUnslopRetainedInput}
+		reservedTicket=reserved.ticket
+	} else if len(o.entries)+len(o.reservations)>=o.limit||o.next==^uint64(0) {return nil,errUnslopRetainedCapacity}
+	for _,prior:=range o.reservations {
+		if prior!=reserved&&(prior.source==live||prior.lease==*lease){return nil,errUnslopRetainedInput}
+	}
+	if o.flights[owned.flight]!=nil&&o.flights[owned.flight]!=reservedTicket||o.done[owned.flight.Done]!=nil&&o.done[owned.flight.Done]!=reservedTicket {return nil,errUnslopRetainedInput}
+	extras,claims,handles,valid:=o.unslopRetainedUniqueInputs(live,*lease,extra,reservedTicket)
 	if !valid {return nil,errUnslopRetainedInput}
-	for _,object:=range claims {if o.claims[object]!=nil {return nil,errUnslopRetainedInput}}
-	for _,h:=range handles {if o.handles[h]!=nil {return nil,errUnslopRetainedInput}}
+	for _,object:=range claims {if o.claims[object]!=nil&&o.claims[object]!=reservedTicket {return nil,errUnslopRetainedInput}}
+	for _,h:=range handles {if o.handles[h]!=nil&&o.handles[h]!=reservedTicket {return nil,errUnslopRetainedInput}}
+	if reserved!=nil {
+		if owned.flight!=reserved.flight||len(claims)!=len(reserved.claimed)||len(handles)!=len(reserved.handles){return nil,errUnslopRetainedInput}
+		for _,object:=range claims {if o.claims[object]!=reservedTicket{return nil,errUnslopRetainedInput}}
+		for _,h:=range handles {if o.handles[h]!=reservedTicket{return nil,errUnslopRetainedInput}}
+	}
 	if !rustToolchainInputsMatch((*lease).Held()) {return nil,errUnslopRetainedInput}
-	o.next++
-	ticket:=&unslopRetainedTicket{sequence:o.next}
+	next:=o.next+1
+	ticket:=&unslopRetainedTicket{sequence:next}
+	if reserved!=nil {ticket=reserved.ticket;next=o.next} else if reservation!=nil {
+		reserved=&unslopRetainedReservation{owner:o,ticket:ticket,source:live,lease:*lease,claimed:claims,handles:handles,flight:owned.flight}
+		o.reservations[ticket]=reserved
+		for _,object:=range claims {o.claims[object]=ticket}
+		for _,h:=range handles {o.handles[h]=ticket}
+		o.flights[owned.flight]=ticket;o.done[owned.flight.Done]=ticket
+		o.next=next
+		*reservation=reserved
+	}
 	base:=*live.unslopNativeSession
 	moved:=*live
 	moved.unslopNativeSession=&base
@@ -104,6 +151,9 @@ func (o *unslopRetainedOwner) Retain(source **unslopLiveSession, lease *software
 	capture.Qualified=false
 	capture.Receipt=nil
 	entry:=&unslopRetainedEntry{ticket:ticket,live:&moved,lease:*lease,extra:extras,claimed:claims,claimedHandles:handles,flight:owned.flight,cached:owned.result,gate:make(chan struct{},1),report:unslopRetainedReport{OwnerID:"unslop-retained-"+o.identity+"-"+strconv.FormatUint(ticket.sequence,10),State:"retained",Collection:"pending",Recheck:"not_attempted",Reason:"retained_owner_collection_pending",Capture:capture}}
+	if reserved!=nil {reserved.report=unslopRetainedCopyReport(entry.report)}
+	if before!=nil {if err:=before(unslopRetainedCopyReport(entry.report));err!=nil{return nil,err}}
+	o.next=next
 	entry.gate<-struct{}{}
 	// Move all internal ownership before returning the capability. Old live
 	// aliases become closed tombstones and cannot consume Done or inputs.
@@ -113,6 +163,8 @@ func (o *unslopRetainedOwner) Retain(source **unslopLiveSession, lease *software
 	*source=nil
 	*lease=nil
 	o.entries[ticket]=entry
+	delete(o.reservations,ticket)
+	if reservation!=nil {*reservation=nil}
 	o.flights[entry.flight]=ticket
 	o.done[entry.flight.Done]=ticket
 	for _,object:=range claims {o.claims[object]=ticket}
@@ -128,11 +180,11 @@ func unslopRetainedPointer(value any) bool {
 
 // The controller passes concrete owners, not arbitrary Close callbacks. Their
 // known file/handle leaves must be disjoint across the whole ownership graph.
-func (o *unslopRetainedOwner) unslopRetainedUniqueInputs(live *unslopLiveSession, lease softwareRustHeldSession, inputs []io.Closer) ([]io.Closer, []io.Closer, []syscall.Handle, bool) {
+func (o *unslopRetainedOwner) unslopRetainedUniqueInputs(live *unslopLiveSession, lease softwareRustHeldSession, inputs []io.Closer,reservation *unslopRetainedTicket) ([]io.Closer, []io.Closer, []syscall.Handle, bool) {
 	seen := make(map[io.Closer]bool)
 	handles := make(map[syscall.Handle]bool)
 	add := func(c io.Closer) bool {
-		if !unslopRetainedPointer(c) || seen[c] || o.claims[c] != nil { return false }
+		if !unslopRetainedPointer(c) || seen[c] || o.claims[c] != nil&&o.claims[c]!=reservation { return false }
 		seen[c] = true
 		return true
 	}
@@ -232,7 +284,7 @@ func (o *unslopRetainedOwner) Tickets() []*unslopRetainedTicket {
 func (o *unslopRetainedOwner) Forget(ticket *unslopRetainedTicket) bool {
 	if o==nil {return false};o.mu.Lock();defer o.mu.Unlock()
 	entry:=o.entries[ticket]
-	if entry==nil||entry.report.State!="released" {return false}
+	if entry==nil||entry.report.State!="released"||!entry.saved.matches(o,ticket,entry) {return false}
 	for _,object:=range entry.claimed {if o.claims[object]==ticket {delete(o.claims,object)}}
 	for _,h:=range entry.claimedHandles {if o.handles[h]==ticket {delete(o.handles,h)}}
 	for flight,owner:=range o.flights {if owner==ticket {delete(o.flights,flight)}}

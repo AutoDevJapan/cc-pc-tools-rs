@@ -82,11 +82,11 @@ type guardTargetPurposeLease interface {
 // These two normal factories are intentionally not created from JSON, hashes,
 // old installer pins, a caller boolean, or a claimed owner identity. Their
 // source adapters need separate review with the genuine producer capability.
-func guardTargetOpenNormalArtifact(context.Context) (guardTargetArtifact, error) {
-	return nil, errGuardTargetArtifactUnavailable
+func guardTargetOpenNormalArtifact(ctx context.Context) (guardTargetArtifact, error) {
+	return guardTargetNormalArtifactFromServer(ctx)
 }
-func guardTargetOpenNormalPurpose(context.Context, guardTargetArtifact) (guardTargetPurposeLease, error) {
-	return nil, errGuardTargetPurposeUnavailable
+func guardTargetOpenNormalPurpose(ctx context.Context, artifact guardTargetArtifact) (guardTargetPurposeLease, error) {
+	return guardTargetNormalPurposeForArtifact(ctx, artifact)
 }
 
 func guardTargetObserveError(r *guardTargetMetadataResult, err error) {

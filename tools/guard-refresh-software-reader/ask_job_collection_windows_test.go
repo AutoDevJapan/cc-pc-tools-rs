@@ -34,6 +34,9 @@ type askJobCollectionModel struct {
 	closeError bool
 	clock time.Time
 	closeAdvance time.Duration
+	accountingCalls int
+	accountingFailAfter int
+	accountingAdvance time.Duration
 }
 
 func newAskJobCollectionModel() *askJobCollectionModel {
@@ -73,6 +76,9 @@ func (m *askJobCollectionModel) wait(h syscall.Handle) (uint32, error) {
 	return m.states[h], m.waitError
 }
 func (m *askJobCollectionModel) accounting(syscall.Handle) (askJobAccounting, error) {
+	m.accountingCalls++
+	if m.accountingFailAfter != 0 && m.accountingCalls > m.accountingFailAfter { return askJobAccounting{}, errAskJobCollection }
+	if !m.clock.IsZero() { m.clock = m.clock.Add(m.accountingAdvance) }
 	return m.account, m.accountingError
 }
 func (m *askJobCollectionModel) terminate(syscall.Handle) error {
@@ -164,6 +170,33 @@ func TestAskJobCollectionDeadlineIncludesClose(t *testing.T) {
 			if r.Reaped != !late || late && r.Reason != "job_collection_deadline_exceeded" || !late && r.Reason != "" {
 				t.Fatal("post-close deadline result", r, late)
 			}
+		})
+	}
+}
+
+func TestAskJobCollectionKeepsLastObservedTotal(t *testing.T) {
+	for _, fault := range []string{"active", "unsignalled", "accounting-fails", "after-accounting-fails", "before-deadline", "normal", "history-gap"} {
+		t.Run(fault, func(t *testing.T) {
+			m := newAskJobCollectionModel()
+			m.clock = time.Unix(100, 0)
+			c := newAskJobCollection(m, 9999, 11, 1, true)
+			defer c.Close()
+			deadline := m.clock.Add(5*time.Millisecond)
+			switch fault {
+			case "active": m.account.Active = 1; m.accountingAdvance = 10*time.Millisecond
+			case "unsignalled": m.states[12] = syscall.WAIT_TIMEOUT; m.accountingAdvance = 10*time.Millisecond
+			case "accounting-fails": m.accountingError = errAskJobCollection
+			case "after-accounting-fails": m.account.Active = 1; m.accountingFailAfter = 1
+			case "before-deadline": deadline = m.clock.Add(-time.Second)
+			case "history-gap": m.account.Total = 3
+			}
+			r := c.Finish(true, deadline)
+			known := fault != "accounting-fails" && fault != "before-deadline"
+			want := uint32(2)
+			if fault == "history-gap" { want = 3 }
+			if !known { want = 0 }
+			if r.TotalKnown != known || r.Total != want || r.Reaped != (fault == "normal") { t.Fatal("last observation lost or promoted to proof", fault, r) }
+			if known && m.accountingCalls == 0 || !known && r.Total != 0 { t.Fatal("missing observation represented as known", fault, r) }
 		})
 	}
 }
@@ -581,11 +614,11 @@ func TestAskJobCollectionSupervisorKeepsFastCancelFacts(t *testing.T) {
 		return false
 	}, "-test.run=^TestAskJobCollectionProcessHelper$")
 	defer clear(result.Raw)
-	t.Logf("fast_cancel started=%t assigned=%t root_wait=%t timed_out=%t reaped=%t collection_reason=%s observed=%d total=%d", result.Started, result.Assigned, result.WaitVerified, result.TimedOut, result.Reaped, result.CollectionReason, result.CollectionObserved, result.CollectionTotal)
+	t.Logf("fast_cancel started=%t assigned=%t root_wait=%t timed_out=%t reaped=%t collection_reason=%s observed=%d total=%d total_known=%t", result.Started, result.Assigned, result.WaitVerified, result.TimedOut, result.Reaped, result.CollectionReason, result.CollectionObserved, result.CollectionTotal, result.CollectionTotalKnown)
 	if !called || !result.Started || !result.Assigned || !result.WaitVerified || !result.TimedOut || !result.Reaped {
 		t.Fatal("supervised fast cancellation was not collected", result)
 	}
-	if result.CollectionReason != "" || result.CollectionObserved != result.CollectionTotal || result.CollectionTotal == 0 {
+	if result.CollectionReason != "" || !result.CollectionTotalKnown || result.CollectionObserved != result.CollectionTotal || result.CollectionTotal == 0 {
 		t.Fatal("collection facts were not preserved", result)
 	}
 }

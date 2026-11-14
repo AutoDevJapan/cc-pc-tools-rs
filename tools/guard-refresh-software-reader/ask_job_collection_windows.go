@@ -24,6 +24,8 @@ type askJobCollection struct {
 	closed    bool
 	finished  bool
 	result    askJobCollectionResult
+	lastTotal uint32
+	totalKnown bool
 }
 
 type askJobMember struct {
@@ -42,6 +44,9 @@ type askJobCollectionResult struct {
 	Reason   string
 	Observed uint32
 	Total    uint32
+	// On failure, Total is only the last successful observation, not a
+	// final process count or collection proof. False means no count was read.
+	TotalKnown bool
 }
 
 // This internal OS seam is not decoded from a caller, CLI or receipt. The
@@ -204,6 +209,7 @@ func (c *askJobCollection) Finish(rootWaitVerified bool, deadline time.Time) ask
 			c.unknown("job_accounting_unverified")
 			break
 		}
+		c.lastTotal, c.totalKnown = accounting.Total, true
 		allSignalled := len(c.members) != 0 && c.rootID.Creation != 0
 		observed := len(c.members)
 		for _, member := range c.members {
@@ -234,6 +240,7 @@ func (c *askJobCollection) Finish(rootWaitVerified bool, deadline time.Time) ask
 				c.unknown("job_accounting_unverified")
 				break
 			}
+			c.lastTotal, c.totalKnown = final.Total, true
 			// A newly observed member has not necessarily been waited yet.
 			// Never finish using the previous iteration's signal results.
 			if final.Active != 0 || final.Total != accounting.Total || len(c.members) != observed {
@@ -254,7 +261,7 @@ func (c *askJobCollection) Finish(rootWaitVerified bool, deadline time.Time) ask
 			if !c.api.now().Before(deadline) {
 				c.unknown("job_collection_deadline_exceeded")
 			}
-			c.result = askJobCollectionResult{Reaped: c.reason == "", Reason: c.reason, Observed: uint32(len(c.members)), Total: final.Total}
+			c.result = askJobCollectionResult{Reaped: c.reason == "", Reason: c.reason, Observed: uint32(len(c.members)), Total: final.Total, TotalKnown: true}
 			c.finished = true
 			return c.result
 		}
@@ -262,7 +269,7 @@ func (c *askJobCollection) Finish(rootWaitVerified bool, deadline time.Time) ask
 	}
 	c.unknown("job_collection_deadline_exceeded")
 	c.finished = true
-	c.result = askJobCollectionResult{Reason: c.reason, Observed: uint32(len(c.members))}
+	c.result = askJobCollectionResult{Reason: c.reason, Observed: uint32(len(c.members)), Total: c.lastTotal, TotalKnown: c.totalKnown}
 	return c.result
 }
 

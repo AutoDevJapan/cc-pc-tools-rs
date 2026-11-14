@@ -40,6 +40,7 @@ type askChildResult struct {
 	Capture                         *askChildCaptureResult
 	CollectionReason                string
 	CollectionObserved, CollectionTotal uint32
+	CollectionTotalKnown             bool
 }
 
 // Start suspended, assign the exact process to an owned kill-on-close job, then
@@ -466,6 +467,7 @@ loop:
 	result.Reaped = collected.Reaped
 	result.CollectionReason = collected.Reason
 	result.CollectionObserved, result.CollectionTotal = collected.Observed, collected.Total
+	result.CollectionTotalKnown = collected.TotalKnown
 	if hasCapture {
 		result.Capture.Complete = assigned && result.WaitVerified && result.Reaped && !result.TimedOut && ctx.Err() == nil && !captured.overflow && captured.eof && captureErr.eof
 	}

@@ -233,8 +233,8 @@ func (o *unslopRetainedOwner) Forget(ticket *unslopRetainedTicket) bool {
 	if o==nil {return false};o.mu.Lock();defer o.mu.Unlock()
 	entry:=o.entries[ticket]
 	if entry==nil||entry.report.State!="released" {return false}
-	for _,object:=range entry.claimed {delete(o.claims,object)}
-	for _,h:=range entry.claimedHandles {delete(o.handles,h)}
+	for _,object:=range entry.claimed {if o.claims[object]==ticket {delete(o.claims,object)}}
+	for _,h:=range entry.claimedHandles {if o.handles[h]==ticket {delete(o.handles,h)}}
 	for flight,owner:=range o.flights {if owner==ticket {delete(o.flights,flight)}}
 	for done,owner:=range o.done {if owner==ticket {delete(o.done,done)}}
 	delete(o.entries,ticket)
@@ -332,7 +332,19 @@ func (o *unslopRetainedOwner) Drain(ctx context.Context,ticket *unslopRetainedTi
 	entry.report.CloseFailures=failures
 	entry.report.Recheck="verified"
 	if checkErr!=nil {entry.report.Recheck="failed"}
-	if failures>0||checkErr!=nil {entry.report.State="release_failed";entry.report.Reason="retained_owner_release_failed"} else {entry.report.State="released";entry.report.Reason="retained_owner_released";entry.live=nil;entry.lease=nil;entry.extra=nil;entry.flight=nil}
+	if failures>0||checkErr!=nil {
+		entry.report.State="release_failed"
+		entry.report.Reason="retained_owner_release_failed"
+	} else {
+		// Closed Windows handle values can be reused before this result is
+		// persisted and forgotten. Retain the result and object references,
+		// but stop reserving numeric handles whose release is now proven.
+		for _,h:=range entry.claimedHandles {if o.handles[h]==ticket {delete(o.handles,h)}}
+		entry.claimedHandles=nil
+		entry.report.State="released"
+		entry.report.Reason="retained_owner_released"
+		entry.live=nil;entry.lease=nil;entry.extra=nil;entry.flight=nil
+	}
 	r:=unslopRetainedCopyReport(entry.report)
 	o.mu.Unlock()
 	return r

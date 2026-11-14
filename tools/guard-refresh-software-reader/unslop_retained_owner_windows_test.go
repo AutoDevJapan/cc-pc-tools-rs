@@ -432,3 +432,81 @@ func TestUnslopRetainedOwnerRejectsExtraNativeHandleAlias(t *testing.T) {
 	})
 	}
 }
+
+func TestUnslopRetainedOwnerReleasesHandleClaimsBeforeForgettingResult(t *testing.T) {
+	owner,err:=newUnslopRetainedOwner(2);if err!=nil {t.Fatal(err)}
+	live,lease,done:=retainedTestInputSession(t)
+	f:=retainedTestOpenFile(t)
+	live.evidence=&nativeUpdateObject{f:f}
+	handle:=syscall.Handle(f.Fd())
+	ticket,err:=owner.Retain(&live,&lease,nil,unslopToolchainCaptureResult{});if err!=nil {t.Fatal(err)}
+	done<-retainedTestCompletion()
+	r:=owner.Drain(context.Background(),ticket)
+	if r.State!="released"||owner.Snapshot(ticket).OwnerID!=r.OwnerID||len(owner.Tickets())!=1 {t.Fatal("release discarded the result before it could be saved",r)}
+	owner.mu.Lock()
+	stillReserved:=owner.handles[handle]!=nil
+	owner.mu.Unlock()
+	if stillReserved {t.Fatal("released owner still reserves a closed native handle")}
+	// A new independent file may reuse the closed value. Its registration must
+	// not wait for the previous result to be persisted and forgotten.
+	newLive,newLease,newDone:=retainedTestInputSession(t)
+	other:=retainedTestOpenFile(t)
+	newTicket,err:=owner.Retain(&newLive,&newLease,[]io.Closer{other},unslopToolchainCaptureResult{});if err!=nil {t.Fatal("new independent owner rejected before old Forget",err)}
+	if !owner.Forget(ticket) {t.Fatal("released result could not be forgotten")}
+	newDone<-retainedTestCompletion()
+	if owner.Drain(context.Background(),newTicket).State!="released" {t.Fatal("new owner did not retain its independent handle")}
+}
+
+func TestUnslopRetainedOwnerForgetCannotEraseReassignedHandleClaim(t *testing.T) {
+	for _,concurrent:=range []bool{false,true} {
+		t.Run(map[bool]string{false:"ordered",true:"concurrent-retain-forget"}[concurrent],func(t *testing.T){
+			owner,err:=newUnslopRetainedOwner(3);if err!=nil {t.Fatal(err)}
+			first,firstLease,firstDone:=retainedTestInputSession(t)
+			old,err:=owner.Retain(&first,&firstLease,nil,unslopToolchainCaptureResult{});if err!=nil {t.Fatal(err)}
+			firstDone<-retainedTestCompletion()
+			if owner.Drain(context.Background(),old).State!="released" {t.Fatal("first owner did not release")}
+			second,secondLease,secondDone:=retainedTestInputSession(t)
+			f:=retainedTestOpenFile(t)
+			handle:=syscall.Handle(f.Fd())
+			// Model a stale numeric audit record after Windows reassigns a
+			// closed handle. This changes no OS handle and is not reuse proof.
+			owner.mu.Lock();owner.entries[old].claimedHandles=[]syscall.Handle{handle};owner.mu.Unlock()
+			var newTicket *unslopRetainedTicket
+			var adoptErr error
+			forgot:=make(chan bool,1)
+			if concurrent {go func(){forgot<-owner.Forget(old)}()}
+			newTicket,adoptErr=owner.Retain(&second,&secondLease,[]io.Closer{f},unslopToolchainCaptureResult{})
+			if !concurrent {forgot<-owner.Forget(old)}
+			if !<-forgot||adoptErr!=nil||newTicket==nil {t.Fatal("old result blocked a new owner",adoptErr)}
+			third,thirdLease,_:=retainedTestInputSession(t)
+			other:=retainedTestOpenFile(t)
+			alias:=&nativeUpdateObject{f:other,parents:[]syscall.Handle{handle}}
+			oldThird,oldLease:=third,thirdLease
+			if ticket,err:=owner.Retain(&third,&thirdLease,[]io.Closer{alias},unslopToolchainCaptureResult{});err==nil||ticket!=nil||third!=oldThird||thirdLease!=oldLease {t.Fatal("old Forget erased a current handle owner's claim")}
+			if _,err:=f.Stat();err!=nil {t.Fatal("new owner's file was closed")}
+			secondDone<-retainedTestCompletion()
+			if owner.Drain(context.Background(),newTicket).State!="released" {t.Fatal("new owner could not release")}
+		})
+	}
+}
+
+func TestUnslopRetainedOwnerKeepsHandleClaimsAfterReleaseFailure(t *testing.T) {
+	for _,mode:=range []string{"lease-close","input-close","cancel-recheck"} {
+	t.Run(mode,func(t *testing.T){
+	owner,err:=newUnslopRetainedOwner(1);if err!=nil {t.Fatal(err)}
+	live,lease,done:=retainedTestInputSession(t)
+	f:=retainedTestOpenFile(t)
+	live.evidence=&nativeUpdateObject{f:f}
+	handle:=syscall.Handle(f.Fd())
+	ctx,cancel:=context.WithCancel(context.Background());defer cancel()
+	if mode=="lease-close" {lease.(*retainedTestLease).fail=true}
+	if mode=="cancel-recheck" {lease.(*retainedTestLease).held.Recheck=func(context.Context)error {cancel();return context.Canceled}}
+	ticket,err:=owner.Retain(&live,&lease,nil,unslopToolchainCaptureResult{});if err!=nil {t.Fatal(err)}
+	if mode=="input-close" {if err:=f.Close();err!=nil {t.Fatal(err)}}
+	done<-retainedTestCompletion()
+	if r:=owner.Drain(ctx,ticket);r.State!="release_failed" {t.Fatal("failed release was accepted",r)}
+	owner.mu.Lock();claim:=owner.handles[handle];owner.mu.Unlock()
+	if claim!=ticket||owner.Forget(ticket) {t.Fatal("unknown release discarded its native handle claim")}
+	})
+	}
+}

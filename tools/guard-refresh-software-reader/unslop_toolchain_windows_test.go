@@ -324,7 +324,7 @@ func TestUnslopWorkerRequiresItsOwnMatchingHeldBinding(t *testing.T) {
 
 // A synthetic uncollected result reaches the real core's deferred Close path.
 // This proves result preservation, not native collection or lease handoff.
-func TestUnslopCaptureKeepsCleanupFailureAlongsideToolchainFailure(t *testing.T) {
+func TestUnslopToolchainCaptureKeepsCleanupFailureAlongsideToolchainFailure(t *testing.T) {
 	for _, mode := range []string{"cleanup-only", "cleanup-and-cancel", "cleanup-and-provider-close", "cleanup-and-postcheck"} {
 		t.Run(mode,func(t *testing.T) {
 			provider:=&unslopCaptureLifetimeProvider{syntheticUnslopToolchainProvider:newSyntheticUnslopToolchainProvider()}
@@ -358,7 +358,7 @@ func TestUnslopCaptureKeepsCleanupFailureAlongsideToolchainFailure(t *testing.T)
 	}
 }
 
-func TestUnslopCaptureKeepsPublishedCleanupFailureAlongsideProviderFailure(t *testing.T) {
+func TestUnslopToolchainCaptureKeepsPublishedCleanupFailureAlongsideProviderFailure(t *testing.T) {
 	for _,mode:=range []string{"export-close-and-provider-close","export-close-and-postcheck","export-close-and-cancel"} {
 		t.Run(mode,func(t *testing.T){
 			p:=&unslopCaptureLifetimeProvider{syntheticUnslopToolchainProvider:newSyntheticUnslopToolchainProvider()}

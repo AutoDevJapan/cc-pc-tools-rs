@@ -18,7 +18,7 @@ import (
 
 func newDurableTestStore(t *testing.T) *unslopDurableStore {
 	t.Helper()
-	root:=t.TempDir()
+	root:=physicalSoftwareFixture(t)
 	h,ok:=openPlain(root,true);if !ok {t.Fatal("cannot hold test directory")}
 	f:=os.NewFile(uintptr(h),root)
 	t.Cleanup(func(){_ = f.Close()})

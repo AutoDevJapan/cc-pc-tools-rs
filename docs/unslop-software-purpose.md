@@ -110,8 +110,13 @@ verify・prepare・packet読取は、不足理由を返す状態を保ってい�
 nativeの履歴接続候補では、正常なlauncherと現在のWindowsアカウントを使ってapp-serverへ接続する。
 `initialize` と履歴のread/listだけを送り、新しい生成turnやresumeは要求しない。
 元のthread・turn・command itemの対応が取得できなければ、接続できたことだけでpacketを読む資格を作らない。
-現在の有限batch方式は、実metadata読取で必要な応答がそろわず、接続成功の受入を満たしていない。
-初期化への応答を確認してから次の読取要求を送る具体的な有限protocolは、値の構築と正負のテストまで用意し、共有の実行処理への接続を残している。
+以前の一括stdin方式は、実metadata読取で必要な応答がそろわず失敗した。
+今回の候補は、固定Stepsを共有実行処理へ渡し、初期化と各読取要求の応答IDを同じ子のstdoutで確認してから次の入力へ進む。
+最後の応答後にstdinを閉じ、stdout・stderrと子全体の回収を確認する。
+IDを持たない通知は32件までstepを進めずに消費する。
+未知・重複ID、対応していないサーバー要求、エラー、不完全な応答、上限超過では固定理由で失敗させ、元の本文や秘密を理由に含めない。
+ソースと合成テストを用意した段階であり、この候補の実行結果と実履歴の取得成功は未確認である。
+通常のselector・履歴providerと元の出所照合は未接続のままにする。
 接続失敗を、元packet本文の解放や別経路の読取で補わない。
 
 既存の `softwareBuildSourceMatches`、`runSoftwareBuildWorker`、`withSoftwareBuildOutput`、`softwareBuildCompletionMatches`、`writeSoftwareBuildReceiptContext` を、native側の保持・ACK・終了回収・非上書きreceipt発行の接続元として使う。

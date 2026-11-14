@@ -13,6 +13,7 @@ import (
 	"path/filepath"
 	"syscall"
 	"time"
+	"unicode/utf8"
 )
 
 const unslopHistoryLauncher = "D:/CC/Tools/codex-progress-tui/codex-launch.exe"
@@ -58,14 +59,41 @@ func buildUnslopHistoryProtocol(requests []unslopHistoryRequest) (unslopHistoryP
 }
 
 func acceptUnslopHistoryProtocolFrame(raw []byte, expected int64) (json.RawMessage, error) {
-	if len(raw) == 0 || len(raw) > 2<<20 {
-		return nil, errUnslopOrigin
+	result,notification,err:=classifyUnslopHistoryFrame(raw,expected)
+	if err!=nil||notification {clear(result);return nil,errUnslopOrigin}
+	return result,nil
+}
+
+// Match responses by ID, but consume bounded ID-less notifications without
+// advancing a request. Server requests need an explicit handler and are rejected.
+func classifyUnslopHistoryFrame(raw []byte, expected int64) (json.RawMessage, bool, error) {
+	if expected < 1 || expected > 16 || len(raw)==0 || len(raw)>unslopHistoryFrameLimit || !utf8.Valid(raw) { return nil,false,errUnslopOrigin }
+	decoder:=json.NewDecoder(bytes.NewReader(raw))
+	token,err:=decoder.Token()
+	if err!=nil||token!=json.Delim('{') {return nil,false,errUnslopOrigin}
+	fields:=make(map[string]json.RawMessage)
+	defer func(){for _,value:=range fields {clear(value)}}()
+	for decoder.More() {
+		keyToken,err:=decoder.Token();key,ok:=keyToken.(string)
+		if err!=nil||!ok||fields[key]!=nil {return nil,false,errUnslopOrigin}
+		switch key {case "id","method","params","result","error","jsonrpc":default:return nil,false,errUnslopOrigin}
+		var value json.RawMessage
+		if decoder.Decode(&value)!=nil {return nil,false,errUnslopOrigin}
+		fields[key]=value
 	}
-	var frame unslopHistoryFrame
-	if json.Unmarshal(raw, &frame) != nil || frame.ID == nil || *frame.ID != expected || frame.Method != "" || len(frame.Error) > 0 && string(frame.Error) != "null" || len(frame.Result) == 0 || string(frame.Result) == "null" {
-		return nil, errUnslopOrigin
+	if _,err:=decoder.Token();err!=nil||decoder.Decode(new(any))!=io.EOF {return nil,false,errUnslopOrigin}
+	if version:=fields["jsonrpc"];version!=nil&&string(version)!="\"2.0\"" {return nil,false,errUnslopOrigin}
+	if fields["id"]==nil {
+		var method string
+		if json.Unmarshal(fields["method"],&method)!=nil||method==""||fields["result"]!=nil||fields["error"]!=nil {return nil,false,errUnslopOrigin}
+		return nil,true,nil
 	}
-	return frame.Result, nil
+	var id int64
+	if json.Unmarshal(fields["id"],&id)!=nil||id!=expected||fields["method"]!=nil||fields["params"]!=nil {return nil,false,errUnslopOrigin}
+	if failure:=fields["error"];failure!=nil&&string(failure)!="null" {return nil,false,errUnslopOrigin}
+	result:=fields["result"]
+	if len(result)==0||result[0]!='{' {return nil,false,errUnslopOrigin}
+	return append(json.RawMessage(nil),result...),false,nil
 }
 
 func unslopHistoryInput(requests []unslopHistoryRequest) ([]byte, error) {
@@ -153,11 +181,11 @@ func parseUnslopHistoryBatch(raw []byte, count int) ([]json.RawMessage, error) {
 }
 
 func runUnslopHistoryBatch(ctx context.Context, requests []unslopHistoryRequest) ([]json.RawMessage, error) {
-	input, e := unslopHistoryInput(requests)
+	plan, e := buildUnslopHistoryProtocol(requests)
 	if e != nil {
 		return nil, e
 	}
-	defer clear(input)
+	defer plan.erase()
 	raw, ok := askGitCommand(ctx, installedGuardPath, "--guard-path", unslopHistoryLauncher)
 	var q struct {
 		Allowed bool `json:"access_allowed"`
@@ -192,13 +220,17 @@ func runUnslopHistoryBatch(ctx context.Context, requests []unslopHistoryRequest)
 	defer cancel()
 	childCtx = context.WithValue(childCtx, askChildEnvironment{}, settings)
 	childCtx = context.WithValue(childCtx, askChildExactEnvironment{}, true)
-	childCtx = context.WithValue(childCtx, askChildCaptureKey{}, askChildCapture{Stdin: input})
+	childCtx = context.WithValue(childCtx, askChildCaptureKey{}, askChildCapture{})
+	childCtx = context.WithValue(childCtx, unslopHistoryProtocolKey{}, plan)
 	child := askOwnedChildAt(childCtx, filepath.Dir(unslopHistoryLauncher), unslopHistoryLauncher, "app-server", "--listen", "stdio://")
 	defer clear(child.Raw)
 	if child.Capture == nil {
 		return nil, errors.New("history_capture_unavailable")
 	}
 	defer clear(child.Capture.Stdout)
+	if child.Capture.protocolReason != "history_protocol_complete" {
+		return nil, errors.New("history_protocol_unavailable")
+	}
 	if !child.Capture.Complete || child.Capture.Overflow || !child.Reaped || !child.WaitVerified || child.Exit != 0 || child.TimedOut {
 		return nil, errors.New("history_process_collection_unavailable")
 	}

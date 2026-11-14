@@ -68,6 +68,17 @@ wrapperの結果には、capture coreを呼んだかと、capture側・toolchain
 たとえば取消と入力の後片付け失敗が重なっても、外向きの理由で後片付け失敗を消しません。
 この情報は実workerの回収状態や保持担当を表すものではなく、それらは通常配線前に別途接続する必要があります。
 
+providerの後片付けに失敗した場合は、主な失敗理由とは別に、その事実も残します。
+内部consumerのJSONでは`cleanup_failed`、capture wrapperのJSONでは`toolchain_cleanup_failed`をtrueにします。
+値はproviderが返す固定のcleanup markerを`errors.Is`で確認した結果だけで、エラーの自由文や元pathを転記しません。
+取消とClose失敗が重なった場合も、Reasonは既存の取消理由を保ち、cleanupの値を残します。
+入力不一致やcallback失敗が先に起きた場合も同じです。cleanup失敗がある結果をVerifiedやQualifiedにはしません。
+既にreceiptを公開していた場合のReceiptPublished・CaptureReason・ToolchainReasonの意味は変えず、公開済みファイルの削除や再Commitもしません。
+固定markerがない失敗から、cleanup失敗を推測することはありません。
+
+この追加の複合失敗テストは、前候補のCI成功後に加えた別の変更です。
+providerの固定ソースと合わせてコンパイル・実行する必要があり、通常factoryやnative回収処理を接続するものではありません。
+
 worker用の `runUnslopWorkerWithToolchain` は、worker自身の正常なproviderが保持した内容からbindingを作り、親からの期待値と一致したときだけworker処理を呼びます。
 期待digest、PID、親から来たJSONだけでは、providerを構築したり入力の読取資格を与えたりしません。
 このcallback内に入力保持、Cargo、Ready、ACK受領、Final送信を置き、providerのClose後に終了コードを決めます。

@@ -380,3 +380,87 @@ func TestUnslopToolchainCaptureKeepsPublishedCleanupFailureAlongsideProviderFail
 		})
 	}
 }
+
+func TestUnslopToolchainConsumerPreservesProviderCleanupFact(t *testing.T) {
+	for _,mode:=range []string{"normal","accepted-close","cancel-close","primary-close","open-close","callback-primary-close","markerless-error"} {
+		t.Run(mode,func(t *testing.T){
+			provider,access:=syntheticSoftwareRustProvider()
+			ctx,cancel:=context.WithCancel(context.Background());defer cancel()
+			wantCleanup:=mode!="normal"&&mode!="markerless-error"
+			access.session.closeError=wantCleanup
+			if mode=="primary-close" {access.session.held.Cargo.Identity.Created="changed"}
+			if mode=="open-close" {access.mode="open-error"}
+			if mode=="markerless-error" {access.session.mode="before-check"}
+			wantReason:="toolchain_origin_unavailable"
+			if mode=="normal" {wantReason="toolchain_inputs_consumed"}
+			if mode=="primary-close" {wantReason="toolchain_inputs_mismatch"}
+			if mode=="cancel-close" {wantReason="toolchain_cancelled"}
+			if mode=="callback-primary-close" {wantReason="toolchain_consumer_failed"}
+			calls:=0
+			r:=consumeUnslopToolchain(ctx,fixedUnslopToolchainPurpose(),provider,func(context.Context,[]byte,[]byte)bool {
+				calls++
+				if mode=="cancel-close" {cancel()}
+				return mode!="callback-primary-close"
+			})
+			wantCalls:=1
+			if mode=="primary-close"||mode=="open-close"||mode=="markerless-error" {wantCalls=0}
+			if r.CleanupFailed!=wantCleanup||r.Reason!=wantReason||r.Verified!=(mode=="normal")||r.Consumed!=(wantCalls==1)||calls!=wantCalls||access.session.closed!=1 {t.Fatal("provider cleanup fact was lost at consumer boundary",mode,r,calls,access.session.closed)}
+			raw,err:=json.Marshal(r)
+			if err!=nil||strings.Contains(string(raw),"private")||strings.Contains(string(raw),"owned-cargo")||strings.Contains(string(raw),"InstallPath") {t.Fatal("cleanup projection leaked provider detail")}
+			var jsonResult map[string]any
+			if json.Unmarshal(raw,&jsonResult)!=nil {t.Fatal("cleanup projection was not JSON")}
+			if jsonResult["cleanup_failed"]!=wantCleanup {t.Fatal("cleanup fact not visible in serialized consumer result",string(raw))}
+		})
+	}
+}
+
+type unslopCleanupFactProvider struct { base rustToolchainOriginProvider; after func(error); forceMarker bool }
+func (p *unslopCleanupFactProvider) WithHeld(ctx context.Context,visit func(rustToolchainHeld)bool) error {
+	err:=p.base.WithHeld(ctx,visit)
+	if p.after!=nil {p.after(err)}
+	if p.forceMarker {return errSoftwareRustCleanup}
+	return err
+}
+
+func TestUnslopToolchainCapturePreservesCleanupFactAfterPublication(t *testing.T) {
+	for _,mode:=range []string{"normal","accepted-close","cancel-close","primary-close","capture-and-provider-close"} {
+		t.Run(mode,func(t *testing.T){
+			provider,access:=syntheticSoftwareRustProvider()
+			ctx,cancel:=context.WithCancel(context.Background());defer cancel()
+			wantCleanup:=mode!="normal"
+			access.session.closeError=wantCleanup
+			if mode=="primary-close" {access.session.held.Cargo.Identity.Created="changed"}
+			fixture:=syntheticUnslopCapture()
+			pending:=&syntheticUnslopPending{}
+			if mode=="capture-and-provider-close" {pending.fault="export_close_failed"}
+			var origin rustToolchainOriginProvider=provider
+			if mode=="cancel-close" {origin=&unslopCleanupFactProvider{base:provider,after:func(error){cancel()}}}
+			factories:=0
+			r:=captureUnslopReleaseWithToolchain(ctx,origin,func(context.Context,rustToolchainHeld,unslopRustToolchainBinding)(unslopCaptureAccess,error){
+				factories++
+				return unslopCaptureAccess{begin:func(context.Context)(unslopProducerSession,error){return fixture,nil},stage:func(context.Context,unslopCaptureReceipt,[]byte)(unslopPendingCapture,error){return pending,nil}},nil
+			})
+			wantReason:="toolchain_origin_unavailable"
+			if mode=="normal" {wantReason="captured_release_receipt_published"}
+			if mode=="cancel-close" {wantReason="toolchain_cancelled"}
+			if mode=="primary-close" {wantReason="toolchain_inputs_mismatch"}
+			if r.Reason!=wantReason {t.Fatal("primary reason changed",mode,r)}
+			wantPublished:=mode!="primary-close"
+			if r.ToolchainCleanupFailed!=wantCleanup||r.Qualified!=(mode=="normal")||r.ReceiptPublished!=wantPublished||access.session.closed!=1 {t.Fatal("cleanup fact or publication lost at capture boundary",mode,r)}
+			if mode!="normal"&&r.Receipt!=nil {t.Fatal("cleanup failure returned a usable receipt")}
+			if wantPublished&&(factories!=1||pending.commits!=1||pending.aborts!=0) {t.Fatal("published capture was rolled back or repeated",mode)}
+			if mode=="primary-close"&&(factories!=0||r.CaptureAttempted) {t.Fatal("failed admission reached capture")}
+			if mode=="capture-and-provider-close"&&r.CaptureReason!="capture_export_close_failed" {t.Fatal("provider cleanup erased capture cleanup",r)}
+			raw,err:=json.Marshal(r)
+			if err!=nil||strings.Contains(string(raw),"private") {t.Fatal("capture cleanup exposed provider detail")}
+			var jsonResult map[string]any
+			if json.Unmarshal(raw,&jsonResult)!=nil||jsonResult["toolchain_cleanup_failed"]!=wantCleanup {t.Fatal("cleanup fact not visible in serialized capture result",string(raw))}
+		})
+	}
+}
+
+func TestUnslopToolchainCleanupMarkerCannotBecomeVerified(t *testing.T) {
+	provider:=&unslopCleanupFactProvider{base:newSyntheticUnslopToolchainProvider(),forceMarker:true}
+	r:=consumeUnslopToolchain(context.Background(),fixedUnslopToolchainPurpose(),provider,func(context.Context,[]byte,[]byte)bool{return true})
+	if r.Verified||!r.Consumed||!r.CleanupFailed||r.Reason!="toolchain_origin_unavailable" {t.Fatal("cleanup-only marker became success",r)}
+}

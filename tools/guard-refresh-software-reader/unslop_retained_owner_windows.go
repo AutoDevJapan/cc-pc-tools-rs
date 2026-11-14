@@ -153,6 +153,11 @@ func (o *unslopRetainedOwner) retainReserved(source **unslopLiveSession, lease *
 	entry:=&unslopRetainedEntry{ticket:ticket,live:&moved,lease:*lease,extra:extras,claimed:claims,claimedHandles:handles,flight:owned.flight,cached:owned.result,gate:make(chan struct{},1),report:unslopRetainedReport{OwnerID:"unslop-retained-"+o.identity+"-"+strconv.FormatUint(ticket.sequence,10),State:"retained",Collection:"pending",Recheck:"not_attempted",Reason:"retained_owner_collection_pending",Capture:capture}}
 	if reserved!=nil {reserved.report=unslopRetainedCopyReport(entry.report)}
 	if before!=nil {if err:=before(unslopRetainedCopyReport(entry.report));err!=nil{return nil,err}}
+	if ownedLease,ok:=entry.lease.(*softwareRustOwnedSession);ok {
+		movedLease,err:=ownedLease.move();if err!=nil{return nil,errUnslopRetainedInput}
+		movedLease.owner=o;movedLease.ticket=ticket
+		entry.lease=movedLease
+	}
 	o.next=next
 	entry.gate<-struct{}{}
 	// Move all internal ownership before returning the capability. Old live
@@ -220,7 +225,13 @@ func (o *unslopRetainedOwner) unslopRetainedUniqueInputs(live *unslopLiveSession
 		return add(c)
 	}
 	if !add(live) || !add(live.unslopNativeSession) || !add(lease) { return nil, nil, nil, false }
-	if native, ok := lease.(*softwareRustNativeSession); ok {
+	actualLease:=lease
+	if owned,ok:=lease.(*softwareRustOwnedSession);ok {
+		actual,valid:=owned.actual()
+		if !valid||!add(owned.capability)||!add(actual) {return nil,nil,nil,false}
+		actualLease=actual
+	}
+	if native, ok := actualLease.(*softwareRustNativeSession); ok {
 		for _, node := range native.nodes { if !addFile(node.f) { return nil, nil, nil, false } }
 	}
 	if live.evidence != nil && !addObject(live.evidence) { return nil, nil, nil, false }

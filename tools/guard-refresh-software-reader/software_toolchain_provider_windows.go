@@ -17,6 +17,7 @@ import (
 	"path/filepath"
 	"strconv"
 	"strings"
+	"sync"
 	"syscall"
 	"time"
 	"unicode/utf16"
@@ -63,12 +64,134 @@ type softwareRustProviderAccess interface {
 	Open(context.Context, rustToolchainOrigin) (softwareRustHeldSession, error)
 }
 
-type softwareRustOriginProvider struct{ access softwareRustProviderAccess }
+type softwareRustOriginProvider struct{
+	access softwareRustProviderAccess
+	mu sync.Mutex
+	borrowing bool
+	retained bool
+	owned map[softwareRustHeldSession]*softwareRustOwnedCapability
+}
+
+// Only openOwned records an acquired session in its issuer's private ledger.
+// The borrowed WithHeld tuple cannot be converted into this capability.
+type softwareRustOwnedCapability struct {
+	mu sync.Mutex
+	issuer *softwareRustOriginProvider
+	session softwareRustHeldSession
+	lease,holder *softwareRustOwnedSession
+	held rustToolchainHeld
+	claimed,closed,closing bool
+	proof *unslopOwnedCaptureProof
+	closeErr error
+}
+
+func (p *softwareRustOriginProvider) openOwned(ctx context.Context) (*softwareRustOwnedCapability,error) {
+	if p==nil{return nil,errSoftwareRustUnavailable}
+	p.mu.Lock();defer p.mu.Unlock()
+	// One issuer instance represents one owned lifecycle, including after Close.
+	// A later acquisition needs a fresh issuer and cannot revive its old proof.
+	if p.borrowing||p.retained||len(p.owned)!=0{return nil,errSoftwareRustMismatch}
+	session,err:=p.openRetainedSession(ctx)
+	if err!=nil{return nil,err}
+	if !unslopRetainedPointer(session){if session!=nil {_ = session.Close()};return nil,errSoftwareRustMismatch}
+	if p.owned[session]!=nil{return nil,errSoftwareRustMismatch}
+	if _,wrapped:=session.(*softwareRustOwnedSession);wrapped{return nil,errSoftwareRustMismatch}
+	if p.owned==nil {p.owned=make(map[softwareRustHeldSession]*softwareRustOwnedCapability)}
+	c:=&softwareRustOwnedCapability{issuer:p,session:session,held:session.Held()}
+	c.lease=&softwareRustOwnedSession{capability:c};c.holder=c.lease
+	p.owned[session]=c
+	return c,nil
+}
+
+func (c *softwareRustOwnedCapability) current() bool {
+	if c==nil||c.issuer==nil||!unslopRetainedPointer(c.session){return false}
+	c.issuer.mu.Lock();issued:=c.issuer.owned[c.session]==c;c.issuer.mu.Unlock()
+	c.mu.Lock();defer c.mu.Unlock()
+	if !issued||c.closed{return false}
+	held:=c.session.Held()
+	return len(held.Cargo.Raw)>0&&len(held.Rustc.Raw)>0&&len(c.held.Cargo.Raw)>0&&len(c.held.Rustc.Raw)>0&&&held.Cargo.Raw[0]==&c.held.Cargo.Raw[0]&&&held.Rustc.Raw[0]==&c.held.Rustc.Raw[0]&&rustToolchainInputsMatch(held)
+}
+
+func (c *softwareRustOwnedCapability) claim(proof *unslopOwnedCaptureProof) bool {
+	if !c.current(){return false}
+	c.mu.Lock();defer c.mu.Unlock()
+	if c.claimed||c.closed||proof==nil||proof.capability!=c||proof.controller==nil||proof.controller.journal==nil||proof.generation!=proof.controller.journal.generation {return false}
+	c.claimed=true;c.proof=proof;return true
+}
+
+func (c *softwareRustOwnedCapability) Close() error {
+	if c==nil{return nil}
+	c.mu.Lock();claimed:=c.claimed;lease:=c.lease;c.mu.Unlock()
+	if claimed||lease==nil{return errSoftwareRustMismatch}
+	return lease.Close()
+}
+
+type softwareRustOwnedSession struct {
+	capability *softwareRustOwnedCapability
+	owner *unslopRetainedOwner
+	ticket *unslopRetainedTicket
+}
+
+func (s *softwareRustOwnedSession) current() bool {
+	if s==nil||s.capability==nil||!s.capability.current(){return false}
+	c:=s.capability;c.mu.Lock();defer c.mu.Unlock()
+	return !c.closed&&c.holder==s
+}
+
+func (s *softwareRustOwnedSession) Held() rustToolchainHeld {
+	if !s.current(){return rustToolchainHeld{}}
+	return s.capability.session.Held()
+}
+
+func (s *softwareRustOwnedSession) move() (*softwareRustOwnedSession,error) {
+	if !s.current(){return nil,errSoftwareRustMismatch}
+	c:=s.capability;c.mu.Lock();defer c.mu.Unlock()
+	if c.closed||c.holder!=s{return nil,errSoftwareRustMismatch}
+	next:=&softwareRustOwnedSession{capability:c};c.holder=next
+	return next,nil
+}
+
+func (s *softwareRustOwnedSession) actual() (softwareRustHeldSession,bool) {
+	if !s.current(){return nil,false}
+	return s.capability.session,true
+}
+
+func (s *softwareRustOwnedSession) Close() error {
+	if s==nil||s.capability==nil{return errSoftwareRustMismatch}
+	c:=s.capability
+	if c.issuer==nil||!unslopRetainedPointer(c.session){return errSoftwareRustMismatch}
+	c.issuer.mu.Lock();issued:=c.issuer.owned[c.session]==c;c.issuer.mu.Unlock()
+	if !issued{return errSoftwareRustMismatch}
+	c.mu.Lock()
+	if c.holder!=s{c.mu.Unlock();return errSoftwareRustMismatch}
+	if c.closed{err:=c.closeErr;if c.closing{err=errSoftwareRustCleanup};c.mu.Unlock();return err}
+	proof:=c.proof;c.mu.Unlock()
+	if s.owner!=nil {
+		s.owner.mu.Lock();entry:=s.owner.entries[s.ticket]
+		allowed:=entry!=nil&&entry.lease==s&&entry.report.State=="release_in_progress"&&entry.report.Collection=="verified"&&entry.report.CloseAttempts==1
+		s.owner.mu.Unlock();if !allowed{return errSoftwareRustMismatch}
+	} else if proof!=nil&&!proof.canCloseLease(){return errSoftwareRustMismatch}
+	c.mu.Lock()
+	if c.holder!=s||c.closed{c.mu.Unlock();return errSoftwareRustMismatch}
+	// Invalidate before native Close. Even failure never permits a second Close.
+	c.closed=true;c.closing=true;session:=c.session;c.mu.Unlock()
+	err:=session.Close()
+	c.mu.Lock();c.closeErr=err;c.closing=false;c.mu.Unlock()
+	return err
+}
 
 // openRetained returns ownership of one verified session to the normal
 // controller. The caller must keep it until native collection is proven, or
 // move it to the retained owner. It does not enable the normal factory.
 func (p *softwareRustOriginProvider) openRetained(ctx context.Context) (session softwareRustHeldSession, result error) {
+	if p==nil{return nil,errSoftwareRustUnavailable}
+	p.mu.Lock();defer p.mu.Unlock()
+	if p.borrowing||p.retained||len(p.owned)!=0{return nil,errSoftwareRustMismatch}
+	session,err:=p.openRetainedSession(ctx);if err==nil {p.retained=true}
+	return session,err
+}
+
+func (p *softwareRustOriginProvider) openRetainedSession(ctx context.Context) (session softwareRustHeldSession, result error) {
 	if ctx == nil {
 		return nil, context.Canceled
 	}
@@ -129,7 +252,11 @@ func (p *softwareRustOriginProvider) WithHeld(ctx context.Context, visit func(ru
 	if visit == nil {
 		return errSoftwareRustConsumer
 	}
-	session, err := p.openRetained(ctx)
+	p.mu.Lock()
+	if p.borrowing||p.retained||len(p.owned)!=0 {p.mu.Unlock();return errSoftwareRustMismatch}
+	p.borrowing=true;p.mu.Unlock()
+	defer func(){p.mu.Lock();p.borrowing=false;p.mu.Unlock()}()
+	session, err := p.openRetainedSession(ctx)
 	if err != nil {
 		return err
 	}

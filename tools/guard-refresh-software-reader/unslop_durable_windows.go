@@ -381,6 +381,7 @@ type unslopDurableCaptureResult struct {
 	ResultSaved bool `json:"result_saved"`
 	DurableReason string `json:"durable_reason"`
 	RetainedOwner *unslopRetainedReport `json:"retained_owner,omitempty"`
+	OwnedInputsRetained bool `json:"owned_inputs_retained,omitempty"`
 }
 
 type unslopDurableController struct {
@@ -393,6 +394,7 @@ type unslopDurableController struct {
 	observedLive *unslopLiveSession
 	observedHeld rustToolchainHeld
 	observedBinding unslopRustToolchainBinding
+	ownedCapture *unslopOwnedCaptureProof
 	owner *unslopRetainedOwner
 	ticket *unslopRetainedTicket
 	pendingSource *unslopLiveSession
@@ -444,9 +446,34 @@ func (p *unslopDurablePending) Commit(ctx context.Context) error {
 func (c *unslopDurableController) Capture(ctx context.Context) unslopDurableCaptureResult {
 	if c==nil{return unslopDurableCaptureResult{DurableReason:"durable_controller_unavailable"}}
 	c.mu.Lock();defer c.mu.Unlock()
+	return c.captureLocked(ctx,nil)
+}
+
+// This separate route acquires an owned session. The existing Capture keeps
+// its borrowed WithHeld contract and cannot mint an owned capture proof.
+func (c *unslopDurableController) CaptureOwned(ctx context.Context,provider *softwareRustOriginProvider) unslopDurableCaptureResult {
+	if c==nil||provider==nil||ctx==nil{return unslopDurableCaptureResult{DurableReason:"durable_controller_unavailable"}}
+	c.mu.Lock();defer c.mu.Unlock()
+	return c.captureLocked(ctx,provider)
+}
+
+func (c *unslopDurableController) captureLocked(ctx context.Context,ownedProvider *softwareRustOriginProvider) unslopDurableCaptureResult {
 	if c.attempted||c.recovered||c.owner!=nil{return c.currentResult(false,"durable_generation_already_used")}
 	if c.begin(ctx)!=nil{return c.currentResult(false,"durable_start_save_failed")}
 	c.attempted=true
+	provider:=c.provider
+	if ownedProvider!=nil {
+		capability,err:=ownedProvider.openOwned(ctx)
+		if err!=nil||capability==nil {
+			reason:=unslopToolchainFailureReason(ctx,err)
+			result:=unslopToolchainCaptureResult{unslopCaptureResult:unslopCaptureResult{Reason:reason},ToolchainReason:reason,ToolchainCleanupFailed:errors.Is(err,errSoftwareRustCleanup)}
+			c.result=&result;return c.saveFinal(ctx)
+		}
+		proof:=&unslopOwnedCaptureProof{controller:c,generation:c.journal.generation,capability:capability,lease:capability.lease}
+		if !capability.claim(proof) {closeErr:=capability.Close();result:=unslopToolchainCaptureResult{unslopCaptureResult:unslopCaptureResult{Reason:"toolchain_inputs_mismatch"},ToolchainReason:"toolchain_inputs_mismatch",ToolchainCleanupFailed:closeErr!=nil};c.result=&result;return c.saveFinal(ctx)}
+		c.ownedCapture=proof
+		provider=&unslopOwnedCaptureLeaseProvider{proof:c.ownedCapture}
+	}
 	factory:=func(ctx context.Context,held rustToolchainHeld,binding unslopRustToolchainBinding)(unslopCaptureAccess,error){
 		if c.factory==nil{return unslopCaptureAccess{},errUnslopDurable}
 		if _,err:=c.journal.append(ctx,unslopDurableEvent{Kind:"binding",BindingSHA:binding.SHA});err!=nil{return unslopCaptureAccess{},err}
@@ -455,6 +482,12 @@ func (c *unslopDurableController) Capture(ctx context.Context) unslopDurableCapt
 		access.begin=func(ctx context.Context)(unslopProducerSession,error){
 			if begin==nil{return nil,errUnslopDurable}
 			session,err:=begin(ctx)
+			if c.ownedCapture!=nil&&err!=nil&&session!=nil {c.ownedCapture.rejectedSession=session}
+			if c.ownedCapture!=nil&&err==nil {
+				wrapped,wrapErr:=c.ownedCapture.observe(session,held,binding)
+				if wrapErr!=nil{c.ownedCapture.rejectedSession=session;return session,wrapErr}
+				session=wrapped
+			}
 			if live,ok:=session.(*unslopLiveSession);ok&&err==nil {c.observedLive=live;c.observedHeld=held;c.observedBinding=binding}
 			return session,err
 		}
@@ -469,7 +502,10 @@ func (c *unslopDurableController) Capture(ctx context.Context) unslopDurableCapt
 		}
 		return access,nil
 	}
-	result:=captureUnslopReleaseWithToolchain(ctx,c.provider,factory)
+	result:=captureUnslopReleaseWithToolchain(ctx,provider,factory)
+	if c.ownedCapture!=nil&&c.ownedCapture.live==nil&&c.ownedCapture.rejectedSession==nil {
+		if err:=c.ownedCapture.lease.Close();err!=nil {result.Qualified=false;result.Receipt=nil;result.ToolchainCleanupFailed=true;result.ToolchainReason="toolchain_origin_unavailable";result.Reason="toolchain_origin_unavailable"}
+	}
 	copy:=unslopDurableCloneResult(result);c.result=&copy
 	return c.saveFinal(ctx)
 }
@@ -478,8 +514,9 @@ func (c *unslopDurableController) currentResult(saved bool,reason string) unslop
 	r:=unslopDurableCaptureResult{ResultSaved:saved,DurableReason:reason}
 	if c.journal!=nil {r.Generation=c.journal.generation}
 	if c.result!=nil{r.unslopToolchainCaptureResult=unslopDurableCloneResult(*c.result)}
-	if c.owner!=nil&&c.ticket!=nil {report:=c.owner.Snapshot(c.ticket);if unslopDurableOwnerValid(report){r.RetainedOwner=&report}}
-	if c.owner==nil&&c.pendingReservation!=nil {report:=unslopRetainedCopyReport(c.pendingReservation.report);if unslopDurableOwnerValid(report){r.RetainedOwner=&report}}
+	if p:=c.ownedCapture;p!=nil {r.OwnedInputsRetained=p.rejectedSession!=nil||p.live!=nil&&!p.live.closed&&(p.flight!=nil||p.unverifiedStart!=nil||p.live.flight!=nil)}
+	if c.owner!=nil&&c.ticket!=nil {report:=c.owner.Snapshot(c.ticket);if unslopDurableOwnerValid(report){r.RetainedOwner=&report;if c.ownedCapture!=nil {r.OwnedInputsRetained=report.State!="released"}}}
+	if c.owner==nil&&c.pendingReservation!=nil {report:=unslopRetainedCopyReport(c.pendingReservation.report);if unslopDurableOwnerValid(report){r.RetainedOwner=&report;if c.ownedCapture!=nil {r.OwnedInputsRetained=true}}}
 	if !unslopDurableReason(r.Reason)||!unslopDurableReason(r.CaptureReason)||!unslopDurableReason(r.ToolchainReason) {
 		r.unslopToolchainCaptureResult=unslopToolchainCaptureResult{unslopCaptureResult:unslopCaptureResult{Reason:"missing_producer_provenance",ReceiptPublished:r.ReceiptPublished}}
 		r.ResultSaved=false;r.DurableReason="durable_result_invalid"
@@ -638,6 +675,7 @@ func (c *unslopDurableController) Retain(ctx context.Context,owner *unslopRetain
 	c.mu.Lock()
 	if c.recovered||!c.attempted||c.result==nil||c.owner!=nil||len(extra)!=0||source==nil||*source==nil||lease==nil||!unslopRetainedPointer(*lease) {c.mu.Unlock();return nil,errUnslopDurableConflict}
 	if c.observedLive==nil||c.observedLive!=*source {c.mu.Unlock();return nil,errUnslopDurableConflict}
+	if c.ownedCapture!=nil&&!c.ownedCapture.matches(c,*source,*lease) {c.mu.Unlock();return nil,errUnslopDurableConflict}
 	if c.pendingSource!=nil&&(c.pendingSource!=*source||c.pendingLease!=*lease){c.mu.Unlock();return nil,errUnslopDurableConflict}
 	if c.pendingReservation!=nil&&c.pendingReservation.owner!=owner {c.mu.Unlock();return nil,errUnslopDurableConflict}
 	held:=(*lease).Held()
@@ -652,6 +690,7 @@ func (c *unslopDurableController) Retain(ctx context.Context,owner *unslopRetain
 	if err!=nil {c.mu.Unlock();return nil,err}
 	owner.mu.Lock();owner.entries[ticket].durable=c;owner.mu.Unlock()
 	c.owner=owner;c.ticket=ticket
+	if c.ownedCapture!=nil {c.ownedCapture.moved=true}
 	c.pendingSource=nil;c.pendingLease=nil
 	c.mu.Unlock()
 	// A failed save does not undo the move: the returned ticket and registry

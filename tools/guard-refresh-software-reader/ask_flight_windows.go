@@ -41,6 +41,7 @@ type askChildResult struct {
 	CollectionReason                string
 	CollectionObserved, CollectionTotal uint32
 	CollectionTotalKnown             bool
+	CollectionQuery                  askJobQueryDiagnostic
 }
 
 // Start suspended, assign the exact process to an owned kill-on-close job, then
@@ -463,11 +464,7 @@ loop:
 	}
 	// Root Wait, all retained process signals and the job's complete lifetime
 	// member count must agree. Observation failures remain unknown throughout.
-	collected := collection.Finish(result.WaitVerified, time.Now().Add(2*time.Second))
-	result.Reaped = collected.Reaped
-	result.CollectionReason = collected.Reason
-	result.CollectionObserved, result.CollectionTotal = collected.Observed, collected.Total
-	result.CollectionTotalKnown = collected.TotalKnown
+	finishAskChildCollection(&result, collection, time.Now().Add(2*time.Second))
 	if hasCapture {
 		result.Capture.Complete = assigned && result.WaitVerified && result.Reaped && !result.TimedOut && ctx.Err() == nil && !captured.overflow && captured.eof && captureErr.eof
 	}
@@ -492,6 +489,17 @@ loop:
 	}
 	clear(errOut.Bytes())
 	return
+}
+
+// The supervisor and focused collection controls use the same final result path.
+// Collection diagnostics do not grant protocol, input or process authority.
+func finishAskChildCollection(result *askChildResult, collection *askJobCollection, deadline time.Time) {
+	collected := collection.Finish(result.WaitVerified, deadline)
+	result.Reaped = collected.Reaped
+	result.CollectionReason = collected.Reason
+	result.CollectionObserved, result.CollectionTotal = collected.Observed, collected.Total
+	result.CollectionTotalKnown = collected.TotalKnown
+	result.CollectionQuery = collected.Query
 }
 
 func askRootWaitVerified(state *os.ProcessState, _ error) bool {

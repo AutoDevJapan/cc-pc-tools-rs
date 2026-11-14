@@ -523,3 +523,41 @@ func TestUnslopRetainedOwnerRejectsForgetBeforeDurableSave(t *testing.T) {
 	after:=f.owner.Snapshot(f.ticket)
 	if after.OwnerID!=before.OwnerID||after.State!="released"||len(f.owner.Tickets())!=1 {t.Fatal("unsaved result or ticket was lost")}
 }
+
+type retainedOwnedNativeAccess struct {session *softwareRustNativeSession}
+func (a *retainedOwnedNativeAccess) Origin(context.Context) (rustToolchainOrigin,error) {return a.session.held.Origin,nil}
+func (a *retainedOwnedNativeAccess) Open(context.Context,rustToolchainOrigin) (softwareRustHeldSession,error) {return a.session,nil}
+
+func TestUnslopRetainedOwnerChecksIssuedLeaseFileClaims(t *testing.T) {
+	for _,mode:=range []string{"same-file","same-handle","unissued-wrapper","independent"} {
+		t.Run(mode,func(t *testing.T){
+			owner,err:=newUnslopRetainedOwner(1);if err!=nil {t.Fatal(err)}
+			file:=retainedTestOpenFile(t)
+			actual:=&softwareRustNativeSession{held:newSyntheticUnslopToolchainProvider().held,nodes:[]softwareRustNativeNode{{f:file}}}
+			provider:=&softwareRustOriginProvider{access:&retainedOwnedNativeAccess{actual}}
+			capability,err:=provider.openOwned(context.Background());if err!=nil {t.Fatal(err)}
+			live,_,done:=retainedTestInputSession(t)
+			var lease softwareRustHeldSession=capability.lease
+			other:=retainedTestOpenFile(t)
+			extra:=[]io.Closer{other}
+			switch mode {
+			case "same-file":extra=[]io.Closer{&nativeUpdateObject{f:file}}
+			case "same-handle":extra=[]io.Closer{&nativeUpdateObject{f:other,parents:[]syscall.Handle{syscall.Handle(file.Fd())}}}
+			case "unissued-wrapper":lease=&softwareRustOwnedSession{capability:capability}
+			}
+			beforeLive,beforeLease:=live,lease
+			ticket,err:=owner.Retain(&live,&lease,extra,unslopToolchainCaptureResult{})
+			if mode!="independent" {
+				if err==nil||ticket!=nil||live!=beforeLive||lease!=beforeLease||!capability.current() {t.Fatal("invalid issued-lease alias transferred ownership",mode)}
+				if _,err:=file.Stat();err!=nil {t.Fatal("rejected alias closed original file")}
+				if err:=capability.Close();err!=nil {t.Fatal(err)}
+				return
+			}
+			if err!=nil||ticket==nil||live!=nil||lease!=nil {t.Fatal("independent input could not transfer",err)}
+			if beforeLease.Close()==nil||!capability.current(){t.Fatal("old holder could close retained lease")}
+			done<-retainedTestCompletion()
+			if r:=owner.Drain(context.Background(),ticket);r.State!="released"||capability.current(){t.Fatal("retained lease did not close and invalidate once",r)}
+			if _,err:=file.Stat();err==nil {t.Fatal("actual session file was not closed")}
+		})
+	}
+}

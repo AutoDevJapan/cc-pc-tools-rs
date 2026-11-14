@@ -26,6 +26,7 @@ type askJobCollection struct {
 	result    askJobCollectionResult
 	lastTotal uint32
 	totalKnown bool
+	query askJobQueryDiagnostic
 }
 
 type askJobMember struct {
@@ -47,6 +48,36 @@ type askJobCollectionResult struct {
 	// On failure, Total is only the last successful observation, not a
 	// final process count or collection proof. False means no count was read.
 	TotalKnown bool
+	Query askJobQueryDiagnostic
+}
+
+// Only fixed operation labels and numeric native results leave this boundary.
+// A query observation is diagnostic, never evidence of process collection.
+type askJobQueryDiagnostic struct {
+	Kind string
+	Phase string
+	Win32Code uint32
+	Assigned uint32
+	Returned uint32
+	ReturnLength uint32
+	// Sampling history is not collection authority. Recovered describes only
+	// this observation; any issued unknown remains sticky.
+	Samples uint32
+	Recovered bool
+}
+
+type askJobQueryError struct { diagnostic askJobQueryDiagnostic }
+
+func (e *askJobQueryError) Error() string { return "job_collection_native_unavailable" }
+func (e *askJobQueryError) Unwrap() error { return errAskJobCollection }
+
+func (c *askJobCollection) rememberQueryFailure(err error, deadline time.Time) {
+	if c.query.Kind != "" { return }
+	q := askJobQueryDiagnostic{Kind: "unclassified_query_failure"}
+	if native, ok := err.(*askJobQueryError); ok && native != nil { q = native.diagnostic }
+	q.Phase = "observe"
+	if !deadline.IsZero() { q.Phase = "finish" }
+	c.query = q
 }
 
 // This internal OS seam is not decoded from a caller, CLI or receipt. The
@@ -115,8 +146,13 @@ func (c *askJobCollection) observeUntil(deadline time.Time) {
 	if !withinBudget() {
 		return
 	}
-	list, err := c.api.list(c.job)
+	list, err := c.sampleList(deadline)
 	if err != nil {
+		if errors.Is(err, errAskJobCollectionDeadline) {
+			c.unknown("job_collection_deadline_exceeded")
+			return
+		}
+		c.rememberQueryFailure(err, deadline)
 		c.unknown("job_member_query_failed")
 		return
 	}
@@ -173,6 +209,40 @@ func (c *askJobCollection) observeUntil(deadline time.Time) {
 			continue
 		}
 		c.members[pid] = askJobMember{process: h, id: id, owned: owned}
+	}
+}
+
+
+// Assemble one observation from at most four samples. A count mismatch is
+// never a usable member list. Only a subsequent complete sample can proceed,
+// and Finish must still prove every held identity, signal and lifetime count.
+func (c *askJobCollection) sampleList(deadline time.Time) (askJobMemberList, error) {
+	limit := c.api.now().Add(5 * time.Millisecond)
+	if !deadline.IsZero() && deadline.Before(limit) { limit = deadline }
+	captured := false
+	for attempt := 0; ; attempt++ {
+		list, err := c.api.list(c.job)
+		if err == nil && !deadline.IsZero() && !c.api.now().Before(deadline) {
+			if captured { c.query.Samples = uint32(attempt+1) }
+			return askJobMemberList{}, errAskJobCollectionDeadline
+		}
+		if err == nil {
+			if captured { c.query.Samples = uint32(attempt+1); c.query.Recovered = true }
+			return list, nil
+		}
+		first := c.query.Kind == ""
+		c.rememberQueryFailure(err, deadline)
+		captured = captured || first
+		if captured { c.query.Samples = uint32(attempt+1) }
+		native, typed := err.(*askJobQueryError)
+		if !typed || native == nil || native.diagnostic.Kind != "count_mismatch" ||
+			native.diagnostic.Returned >= native.diagnostic.Assigned ||
+			native.diagnostic.Assigned > 4096 || !askJobListLengthValid(native.diagnostic.Returned, native.diagnostic.ReturnLength) ||
+			attempt == 3 || !c.api.now().Before(limit) {
+			return askJobMemberList{}, err
+		}
+		time.Sleep(time.Millisecond)
+		if !c.api.now().Before(limit) { return askJobMemberList{}, err }
 	}
 }
 
@@ -261,7 +331,7 @@ func (c *askJobCollection) Finish(rootWaitVerified bool, deadline time.Time) ask
 			if !c.api.now().Before(deadline) {
 				c.unknown("job_collection_deadline_exceeded")
 			}
-			c.result = askJobCollectionResult{Reaped: c.reason == "", Reason: c.reason, Observed: uint32(len(c.members)), Total: final.Total, TotalKnown: true}
+			c.result = askJobCollectionResult{Reaped: c.reason == "", Reason: c.reason, Observed: uint32(len(c.members)), Total: final.Total, TotalKnown: true, Query: c.query}
 			c.finished = true
 			return c.result
 		}
@@ -269,7 +339,7 @@ func (c *askJobCollection) Finish(rootWaitVerified bool, deadline time.Time) ask
 	}
 	c.unknown("job_collection_deadline_exceeded")
 	c.finished = true
-	c.result = askJobCollectionResult{Reason: c.reason, Observed: uint32(len(c.members)), Total: c.lastTotal, TotalKnown: c.totalKnown}
+	c.result = askJobCollectionResult{Reason: c.reason, Observed: uint32(len(c.members)), Total: c.lastTotal, TotalKnown: c.totalKnown, Query: c.query}
 	return c.result
 }
 
@@ -297,23 +367,45 @@ func (c *askJobCollection) Close() error {
 
 var askJobCollectionKernel = syscall.NewLazyDLL("kernel32.dll")
 var errAskJobCollection = errors.New("job_collection_native_unavailable")
+var errAskJobCollectionDeadline = errors.New("job_collection_deadline_exceeded")
 
 type askNativeJobCollectionAPI struct{}
 
+type askJobNativeProcessList struct {
+	assigned, returned uint32
+	ids [4096]uintptr
+}
+
 func (askNativeJobCollectionAPI) list(job syscall.Handle) (askJobMemberList, error) {
-	var buffer struct {
-		assigned, returned uint32
-		ids                [4096]uintptr
+	var buffer askJobNativeProcessList
+	var returnedLength uint32
+	ok, _, nativeErr := askJobCollectionKernel.NewProc("QueryInformationJobObject").Call(uintptr(job), 3, uintptr(unsafe.Pointer(&buffer)), unsafe.Sizeof(buffer), uintptr(unsafe.Pointer(&returnedLength)))
+	return decodeAskJobProcessList(ok, nativeErr, returnedLength, &buffer)
+}
+
+// Keep the actual failing branch rather than replacing it with a later count.
+// The raw native error text and process identifiers are never copied here.
+func askJobListLengthValid(returned, returnedLength uint32) bool {
+	var shape askJobNativeProcessList
+	needed := uint64(unsafe.Offsetof(shape.ids)) + uint64(returned)*uint64(unsafe.Sizeof(shape.ids[0]))
+	return needed <= uint64(returnedLength) && uint64(returnedLength) <= uint64(unsafe.Sizeof(shape))
+}
+
+func decodeAskJobProcessList(ok uintptr, nativeErr error, returnedLength uint32, buffer *askJobNativeProcessList) (askJobMemberList, error) {
+	failure := func(kind string) (askJobMemberList, error) {
+		q := askJobQueryDiagnostic{Kind: kind, Assigned: buffer.assigned, Returned: buffer.returned, ReturnLength: returnedLength}
+		if ok == 0 {
+			if code, known := nativeErr.(syscall.Errno); known { q.Win32Code = uint32(code) }
+		}
+		return askJobMemberList{}, &askJobQueryError{diagnostic: q}
 	}
-	ok, _, _ := askJobCollectionKernel.NewProc("QueryInformationJobObject").Call(uintptr(job), 3, uintptr(unsafe.Pointer(&buffer)), unsafe.Sizeof(buffer), 0)
-	if ok == 0 || buffer.returned > uint32(len(buffer.ids)) || buffer.assigned != buffer.returned {
-		return askJobMemberList{}, errAskJobCollection
-	}
+	if ok == 0 { return failure("native_query_failed") }
+	if buffer.returned > uint32(len(buffer.ids)) { return failure("capacity_exceeded") }
+	if !askJobListLengthValid(buffer.returned, returnedLength) { return failure("invalid_length") }
+	if buffer.assigned != buffer.returned { return failure("count_mismatch") }
 	result := askJobMemberList{assigned: buffer.assigned, pids: make([]uint32, buffer.returned)}
 	for i := range result.pids {
-		if buffer.ids[i] == 0 || uint64(buffer.ids[i]) > uint64(^uint32(0)) {
-			return askJobMemberList{}, errAskJobCollection
-		}
+		if buffer.ids[i] == 0 || uint64(buffer.ids[i]) > uint64(^uint32(0)) { return failure("invalid_pid") }
 		result.pids[i] = uint32(buffer.ids[i])
 	}
 	return result, nil

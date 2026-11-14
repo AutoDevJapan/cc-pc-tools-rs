@@ -46,6 +46,7 @@ The test uses the included real public bundle and official TUF root to verify
 both fixed digest claims. It also checks altered signatures, a different run,
 a different workflow revision, and a different subject. It does not include
 or validate the actual guard binary or source-proof bytes in the repository.
-The first dependency-generation run and its lock output do not establish a
-fixed final dependency set; a subsequent reviewed version must check the
-committed lock in read-only mode.
+The first dependency-generation run and its lock output have been collected.
+The fixed-lock workflow checks the committed go.mod and go.sum using
+go mod tidy -diff and -mod=readonly; this dependency check alone does not
+establish cryptographic verification, payload validation or update authority.

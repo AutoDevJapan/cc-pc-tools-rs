@@ -382,21 +382,21 @@ jobs:
         with:
           go-version: 1.27.x
           cache: false
-      - name: Generate and retain the initial dependency lock
+      - name: Verify and retain the committed dependency lock
         id: verifier_lock
         timeout-minutes: 5
         run: |
           $ErrorActionPreference = 'Stop'
           $destination = Join-Path $env:RUNNER_TEMP ('guard-attestation-diagnostic/' + $env:GITHUB_RUN_ID + '/' + $env:GITHUB_RUN_ATTEMPT)
           New-Item -ItemType Directory -Path $destination -ErrorAction Stop | Out-Null
-          $inputNames = @('main.go', 'main_test.go', 'actual_attestation_test.go', 'fixture_driver.go', 'go.mod', 'README.md', 'actual-attestation.sigstore.json')
+          $inputNames = @('main.go', 'main_test.go', 'actual_attestation_test.go', 'fixture_driver.go', 'go.mod', 'go.sum', 'README.md', 'actual-attestation.sigstore.json')
           $before = @($inputNames | ForEach-Object {
             $bytes = [IO.File]::ReadAllBytes((Join-Path (Get-Location).Path $_))
             [ordered]@{ path = $_; bytes = $bytes.Length; sha256 = [Convert]::ToHexString([Security.Cryptography.SHA256]::HashData($bytes)).ToLowerInvariant() }
           })
-          # Initial dependency generation is provisional. A later reviewed commit must
-          # retain both files and replace this command with go mod tidy -diff.
-          go mod tidy
+          # Check the committed lock without modifying go.mod or go.sum.
+          # A clean diff verifies module consistency, not update authority.
+          go mod tidy -diff
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
           $locks = @('go.mod', 'go.sum') | ForEach-Object {
             $bytes = [IO.File]::ReadAllBytes((Join-Path (Get-Location).Path $_))
@@ -405,20 +405,24 @@ jobs:
             try { $stream.Write($bytes); $stream.Flush($true) } finally { $stream.Dispose() }
             [ordered]@{ path = $_; bytes = $bytes.Length; sha256 = [Convert]::ToHexString([Security.Cryptography.SHA256]::HashData($bytes)).ToLowerInvariant() }
           }
-          $inputs = @($before | Where-Object { $_.path -ne 'go.mod' }) + @($locks)
+          foreach ($lock in $locks) {
+            $prior = @($before | Where-Object { $_.path -ceq $lock.path })
+            if ($prior.Count -ne 1 -or $prior[0].bytes -ne $lock.bytes -or $prior[0].sha256 -cne $lock.sha256) { throw 'verifier_committed_lock_changed' }
+          }
+          $inputs = $before
           $record = [ordered]@{
-            domain = 'guard-attestation-first-lock-v1'
+            domain = 'guard-attestation-locked-check-v1'
             source_sha = $env:VERIFIER_SOURCE_SHA
             workflow_sha = $env:VERIFIER_WORKFLOW_SHA
             run_head_sha = $env:GITHUB_SHA
             run_id = $env:GITHUB_RUN_ID
             run_attempt = $env:GITHUB_RUN_ATTEMPT
             job = $env:GITHUB_JOB
-            dependency_state = 'initial_generated_unreviewed'
-            dependency_lock_final = $false
+            dependency_state = 'committed_lock_tidy_diff_clean'
+            dependency_lock_final = $true
             update_authorized = $false
             before_inputs = $before
-            generated_inputs = $inputs
+            verified_inputs = $inputs
           }
           $json = $record | ConvertTo-Json -Depth 8
           [IO.File]::WriteAllText((Join-Path $destination 'lock-manifest.json'), $json, [Text.UTF8Encoding]::new($false))
@@ -473,16 +477,16 @@ jobs:
         run: |
           $ErrorActionPreference = 'Stop'
           $record = Get-Content -LiteralPath (Join-Path $env:GUARD_ATTESTATION_DIAGNOSTIC_DIR 'lock-manifest.json') -Raw | ConvertFrom-Json
-          foreach ($expected in $record.generated_inputs) {
+          foreach ($expected in $record.verified_inputs) {
             $bytes = [IO.File]::ReadAllBytes((Join-Path (Get-Location).Path $expected.path))
             $sha = [Convert]::ToHexString([Security.Cryptography.SHA256]::HashData($bytes)).ToLowerInvariant()
             if ($bytes.Length -ne $expected.bytes -or $sha -cne $expected.sha256) { throw 'verifier_captured_input_changed' }
           }
-      - name: Retain the provisional locks and available diagnostic output
+      - name: Retain the committed locks and available diagnostic output
         if: ${{ always() && steps.verifier_lock.outcome == 'success' }}
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
         with:
-          name: guard-attestation-first-lock-${{ github.run_id }}-${{ github.run_attempt }}
+          name: guard-attestation-locked-${{ github.run_id }}-${{ github.run_attempt }}
           path: ${{ env.GUARD_ATTESTATION_DIAGNOSTIC_DIR }}/
           if-no-files-found: error
           retention-days: 1

@@ -74,6 +74,7 @@ func TestUnslopRetainedOwnerKeepsInputsUntilNativeCollection(t *testing.T) {
 	f.owner.Drain(context.Background(),f.ticket)
 	f.owner.Close(context.Background(),f.ticket)
 	if f.resource.calls!=1||f.oldLease.calls!=1 {t.Fatal("terminal Close repeated")}
+	durableTestSaveBeforeForget(t,f.owner,f.ticket)
 	if !f.owner.Forget(f.ticket)||f.owner.Forget(f.ticket) {t.Fatal("released record forget contract")}
 }
 
@@ -452,6 +453,7 @@ func TestUnslopRetainedOwnerReleasesHandleClaimsBeforeForgettingResult(t *testin
 	newLive,newLease,newDone:=retainedTestInputSession(t)
 	other:=retainedTestOpenFile(t)
 	newTicket,err:=owner.Retain(&newLive,&newLease,[]io.Closer{other},unslopToolchainCaptureResult{});if err!=nil {t.Fatal("new independent owner rejected before old Forget",err)}
+	durableTestSaveBeforeForget(t,owner,ticket)
 	if !owner.Forget(ticket) {t.Fatal("released result could not be forgotten")}
 	newDone<-retainedTestCompletion()
 	if owner.Drain(context.Background(),newTicket).State!="released" {t.Fatal("new owner did not retain its independent handle")}
@@ -465,6 +467,7 @@ func TestUnslopRetainedOwnerForgetCannotEraseReassignedHandleClaim(t *testing.T)
 			old,err:=owner.Retain(&first,&firstLease,nil,unslopToolchainCaptureResult{});if err!=nil {t.Fatal(err)}
 			firstDone<-retainedTestCompletion()
 			if owner.Drain(context.Background(),old).State!="released" {t.Fatal("first owner did not release")}
+			durableTestSaveBeforeForget(t,owner,old)
 			second,secondLease,secondDone:=retainedTestInputSession(t)
 			f:=retainedTestOpenFile(t)
 			handle:=syscall.Handle(f.Fd())
@@ -509,4 +512,14 @@ func TestUnslopRetainedOwnerKeepsHandleClaimsAfterReleaseFailure(t *testing.T) {
 	if claim!=ticket||owner.Forget(ticket) {t.Fatal("unknown release discarded its native handle claim")}
 	})
 	}
+}
+
+func TestUnslopRetainedOwnerRejectsForgetBeforeDurableSave(t *testing.T) {
+	f:=newRetainedTestFixture(t)
+	f.done<-retainedTestCompletion()
+	if r:=f.owner.Drain(context.Background(),f.ticket);r.State!="released" {t.Fatal("fixture did not reach released state",r)}
+	before:=f.owner.Snapshot(f.ticket)
+	if f.owner.Forget(f.ticket) {t.Fatal("released result forgotten before durable same-generation save")}
+	after:=f.owner.Snapshot(f.ticket)
+	if after.OwnerID!=before.OwnerID||after.State!="released"||len(f.owner.Tickets())!=1 {t.Fatal("unsaved result or ticket was lost")}
 }

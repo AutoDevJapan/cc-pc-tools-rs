@@ -44,7 +44,8 @@ stateがreleasedになるのは、回収後のtoolchain再確認とCloseがす�
 
 owner自身は監視goroutineやtimerを作りません。既supervisorが明示的にDrainを呼ぶ必要があり、自動運用へ接続済みとはしません。
 回収済み・解放成功の記録を保存した後だけregistryから忘れられます。失敗中のownerを忘れて入力を失う入口は作りません。
-Forget自体が確認するのはreleased状態です。記録の永続保存とForgetの順序は、接続するcontroller側で保証する必要があります。
+Forgetはreleased状態と、同じgeneration・ticket・reportの永続保存を読み返した内部proofを確認します。
+proofがなければ解放済みのreportも忘れません。保存と回収の通常callerは[結果の永続化](unslop-durable-results.md)へ接続します。
 解放がすべて成功した時点で、数値のhandle予約だけは解除します。
 Windowsが閉じたhandle値を別のファイルへ再利用しても、前の結果を保存する間に新しい入力を受け取れるようにするためです。
 結果・ticket・objectの参照はForgetまで残し、古いticketのForgetが新しいentryのhandle予約を削除しないよう所有者も照合します。
@@ -99,5 +100,5 @@ WithHeldのcallbackからheld viewだけを外へ返す方法は使いません�
 固定した前候補では、WindowsのCIで保持処理の20テスト・51サブケース、consumerの14テスト、providerの8テスト、readerのvet・ビルドが成功しました。
 今回追加した解放後のhandle予約・旧Forget・失敗時の保持の対照は、その成功後に加えた別の変更で、まだコンパイル・実行していません。
 この文書と合成テストは実OSの回収・実lease移管・実authority・再起動耐性の証明ではありません。
-ローカルGo/gofmtの資格は成立していないため、ローカルでのコンパイル・テスト・整形も未実行です。
+今回の変更については、コンパイル・テスト・整形をまだ実行していません。
 合成テストの実行とReaped条件を外す負対照は、同じソースを使うWindowsのCIへ引き継ぎます。

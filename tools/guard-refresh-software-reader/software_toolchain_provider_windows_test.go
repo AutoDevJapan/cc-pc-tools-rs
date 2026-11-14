@@ -232,6 +232,58 @@ func TestSoftwareRustProviderOpenRetainedTransfersOnlyVerifiedSameLease(t *testi
 	if lease, err := provider.openRetained(nil); lease != nil || err == nil || access.origins != 0 { t.Fatal("nil context reached provider") }
 }
 
+func TestSoftwareRustProviderPreservesPrimaryAndCleanupFailures(t *testing.T) {
+	for _, entry := range []string{"open-retained", "with-held"} {
+		for _, mode := range []string{"open-error", "cancel-open", "origin-mismatch", "held-mismatch", "before-check", "before-mutates", "cancel-recheck", "normal", "consumer-failed", "consumer-mutates", "cancel-during", "after-check"} {
+			if entry == "open-retained" && (mode == "normal" || mode == "consumer-failed" || mode == "consumer-mutates" || mode == "cancel-during" || mode == "after-check") { continue }
+			t.Run(entry+"/"+mode, func(t *testing.T) {
+				_, access := syntheticSoftwareRustProvider()
+				session := access.session
+				session.closeError, access.mode, session.mode = true, mode, mode
+				ctx, cancel := context.WithCancel(context.Background())
+				defer cancel()
+				provider := &softwareRustOriginProvider{access: &softwareRustRetainedOpeningAccess{base: access, cancel: cancel, mode: mode}}
+				primary := error(errSoftwareRustUnavailable)
+				switch mode {
+				case "origin-mismatch": access.origin.ManifestSHA = strings.Repeat("b", 64); primary = errSoftwareRustMismatch
+				case "held-mismatch": session.held.Cargo.Identity.Created = "other"; primary = errSoftwareRustMismatch
+				case "before-mutates", "consumer-mutates": primary = errSoftwareRustMismatch
+				case "cancel-open", "cancel-during": primary = context.Canceled
+				case "cancel-recheck":
+					original := session.held.Recheck
+					session.held.Recheck = func(ctx context.Context) error { err := original(ctx); cancel(); return err }
+					primary = context.Canceled
+				case "consumer-failed": primary = errSoftwareRustConsumer
+				}
+				calls := 0
+				var err error
+				if entry == "open-retained" {
+					var lease softwareRustHeldSession
+					lease, err = provider.openRetained(ctx)
+					if lease != nil { _ = lease.Close(); t.Fatal("failed opening transferred a lease") }
+				} else {
+					err = provider.WithHeld(ctx, func(held rustToolchainHeld) bool {
+						calls++
+						if mode == "cancel-during" { cancel() }
+						if mode == "consumer-mutates" { held.Cargo.Raw[0] ^= 1 }
+						return mode != "consumer-failed"
+					})
+				}
+				if !errors.Is(err, primary) || !errors.Is(err, errSoftwareRustCleanup) || err.Error() != primary.Error() {
+					t.Fatal("primary or independent cleanup failure was lost", mode)
+				}
+				if session.closed != 1 || access.opens != 1 { t.Fatal("failed session was not closed exactly once", session.closed, access.opens) }
+				wantCalls := 0
+				if entry == "with-held" && (mode == "normal" || mode == "consumer-failed" || mode == "consumer-mutates" || mode == "cancel-during" || mode == "after-check") { wantCalls = 1 }
+				if calls != wantCalls { t.Fatal("failed opening reached consumer", calls, wantCalls) }
+				// Reclassification at another boundary must preserve both facts.
+				fixed := softwareRustFixedError(ctx, err)
+				if !errors.Is(fixed, primary) || !errors.Is(fixed, errSoftwareRustCleanup) || fixed.Error() != primary.Error() { t.Fatal("fixed projection erased a cause") }
+			})
+		}
+	}
+}
+
 type softwareRustSyntheticTransport struct { calls int; response *http.Response }
 func (s *softwareRustSyntheticTransport) RoundTrip(*http.Request) (*http.Response, error) { s.calls++; return s.response, nil }
 
@@ -259,6 +311,7 @@ type softwareRustOpeningFixture struct {
 	mode string
 	cancel context.CancelFunc
 	opens, reads, closed int
+	closeError bool
 }
 
 func (s *softwareRustOpeningFixture) state() *rustToolchainHeld { return &s.held }
@@ -287,7 +340,20 @@ func (s *softwareRustOpeningFixture) recheck(ctx context.Context) error { return
 func (s *softwareRustOpeningFixture) Close() error {
 	s.closed++
 	clear(s.held.Cargo.Raw); clear(s.held.Rustc.Raw)
+	if s.closeError { return errors.New("private native cleanup text") }
 	return nil
+}
+
+func TestSoftwareRustNativeOpeningCleanupSurvivesProviderProjection(t *testing.T) {
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	base := newSyntheticUnslopToolchainProvider()
+	session := &softwareRustOpeningFixture{template:base.held, mode:"parent", cancel:cancel, closeError:true}
+	lease, err := softwareRustOpenWithSession(ctx, base.held.Origin, session)
+	if lease != nil || session.closed != 1 || session.opens != 1 || session.reads != 0 { t.Fatal("native opening continued after cancellation") }
+	fixed := softwareRustFixedError(ctx, err)
+	if !errors.Is(err, context.Canceled) || !errors.Is(err, errSoftwareRustCleanup) || !errors.Is(fixed, context.Canceled) || !errors.Is(fixed, errSoftwareRustCleanup) { t.Fatal("native cleanup or cancellation was lost") }
+	if fixed.Error() != context.Canceled.Error() { t.Fatal("native error text escaped") }
 }
 
 func TestSoftwareRustOpeningCancellationStopsLaterStages(t *testing.T) {

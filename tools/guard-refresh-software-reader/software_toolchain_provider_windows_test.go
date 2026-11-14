@@ -193,3 +193,61 @@ func TestSoftwareRustPublicReadRejectsAddressAndStatusBeforeBody(t *testing.T) {
 		})
 	}
 }
+
+type softwareRustOpeningFixture struct {
+	held, template rustToolchainHeld
+	mode string
+	cancel context.CancelFunc
+	opens, reads, closed int
+}
+
+func (s *softwareRustOpeningFixture) state() *rustToolchainHeld { return &s.held }
+func (s *softwareRustOpeningFixture) Held() rustToolchainHeld { return s.held }
+func (s *softwareRustOpeningFixture) openNode(path, resolved string, directory, reparse bool) (softwareRustNativeNode, error) {
+	s.opens++
+	id, acl := s.template.Alias.TargetIdentity, s.template.Alias.TargetACLSHA
+	if reparse { id, acl = s.template.Alias.AliasIdentity, s.template.Alias.AliasACLSHA }
+	if !directory {
+		file := s.template.Rustc
+		if strings.HasSuffix(path, "/cargo.exe") { file = s.template.Cargo }
+		id, acl = file.Identity, file.ACLSHA
+	}
+	if s.mode == "parent" && s.opens == 1 || s.mode == "cargo-open" && !directory && strings.HasSuffix(path, "/cargo.exe") { s.cancel() }
+	return softwareRustNativeNode{path:path, resolved:resolved, id:id, aclSHA:acl, reparse:reparse}, nil
+}
+func (s *softwareRustOpeningFixture) fixedJunction(softwareRustNativeNode) bool { return true }
+func (s *softwareRustOpeningFixture) readNode(_ softwareRustNativeNode, index int) ([]byte, error) {
+	s.reads++
+	raw := bytes.Clone(s.template.Rustc.Raw)
+	if index == 0 { raw = bytes.Clone(s.template.Cargo.Raw); s.held.Cargo.Raw = raw } else { s.held.Rustc.Raw = raw }
+	if s.mode == "cargo-read" && index == 0 { s.cancel() }
+	return raw, nil
+}
+func (s *softwareRustOpeningFixture) recheck(ctx context.Context) error { return ctx.Err() }
+func (s *softwareRustOpeningFixture) Close() error {
+	s.closed++
+	clear(s.held.Cargo.Raw); clear(s.held.Rustc.Raw)
+	return nil
+}
+
+func TestSoftwareRustOpeningCancellationStopsLaterStages(t *testing.T) {
+	for _, mode := range []string{"normal", "before", "parent", "cargo-open", "cargo-read"} {
+		t.Run(mode, func(t *testing.T) {
+			ctx, cancel := context.WithCancel(context.Background()); defer cancel()
+			base := newSyntheticUnslopToolchainProvider()
+			s := &softwareRustOpeningFixture{template:base.held, mode:mode, cancel:cancel}
+			if mode == "before" { cancel() }
+			result, err := softwareRustOpenWithSession(ctx, base.held.Origin, s)
+			if mode == "normal" {
+				if err != nil || result == nil || s.reads != 2 || s.closed != 0 { t.Fatal("normal opening failed", err) }
+				if result.Close() != nil || s.closed != 1 { t.Fatal("normal session close") }
+				return
+			}
+			if err == nil || result != nil || s.closed != 1 { t.Fatal("cancelled opening accepted or not closed", err) }
+			wantReads := 0
+			if mode == "cargo-read" { wantReads = 1 }
+			if s.reads != wantReads { t.Fatal("cancelled opening performed later body read", mode, s.reads, wantReads) }
+			if mode == "before" && s.opens != 0 || mode == "parent" && s.opens != 1 { t.Fatal("cancelled opening performed later metadata open", mode, s.opens) }
+		})
+	}
+}

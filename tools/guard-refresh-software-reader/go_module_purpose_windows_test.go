@@ -177,3 +177,32 @@ func TestGoPurposeEnforcesZIPLimits(t *testing.T) {
 		t.Fatal("expanded file limit was not enforced")
 	}
 }
+
+// These declarations are made from the general Go module grammar, not from
+// any local or upstream copy of the purpose's actual module payload.
+func TestGoPurposeModuleDeclarationSyntheticGoSyntax(t *testing.T) {
+	for _, tc := range []struct { name, raw string; want bool }{
+		{"identifier", "module "+goPurposeModule+"\n", true},
+		{"interpreted", "module \""+goPurposeModule+"\"\n", true},
+		{"raw", "module `"+goPurposeModule+"`\n", true},
+		{"escape", "module \"\\x67opkg.in/yaml.v3\"\n", true},
+		{"comment", "// synthetic declaration\nmodule "+goPurposeModule+" // synthetic suffix\n", true},
+		{"block", "module (\n\t\""+goPurposeModule+"\"\n)\n", true},
+		{"crlf", "module\t"+goPurposeModule+"\r\n", true},
+		{"other", "module example.com/other\n", false},
+		{"quoted-other", "module \"example.com/other\"\n", false},
+		{"duplicate", "module "+goPurposeModule+"\nmodule \""+goPurposeModule+"\"\n", false},
+		{"missing", "// module "+goPurposeModule+"\n", false},
+		{"unfinished", "module \""+goPurposeModule+"\n", false},
+		{"bad-escape", "module \"\\qgopkg.in/yaml.v3\"\n", false},
+		{"trailing", "module "+goPurposeModule+" other\n", false},
+		{"two-block-paths", "module (\n"+goPurposeModule+"\nexample.com/other\n)\n", false},
+		{"unclosed-block", "module (\n"+goPurposeModule+"\n", false},
+		{"nested-block", "module (\n(\n"+goPurposeModule+"\n)\n)\n", false},
+		{"block-comment", "module /* ignored? */ "+goPurposeModule+"\n", false},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			if got := goPurposeModuleDeclaration([]byte(tc.raw)); got != tc.want { t.Fatal("module declaration syntax mismatch", tc.name, got, tc.want) }
+		})
+	}
+}

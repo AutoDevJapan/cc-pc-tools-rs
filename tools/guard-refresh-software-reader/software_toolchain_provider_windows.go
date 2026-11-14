@@ -358,6 +358,23 @@ type softwareRustNativeSession struct {
 
 func (softwareRustNativeAccess) Open(ctx context.Context, origin rustToolchainOrigin) (softwareRustHeldSession, error) {
 	s := &softwareRustNativeSession{held: rustToolchainHeld{Origin: origin}}
+	return softwareRustOpenWithSession(ctx, origin, s)
+}
+
+// Native access and owned synthetic controls call the same opening controller.
+// No caller supplies this interface through a runtime argument or a receipt.
+type softwareRustOpeningSession interface {
+	softwareRustHeldSession
+	state() *rustToolchainHeld
+	openNode(string, string, bool, bool) (softwareRustNativeNode, error)
+	fixedJunction(softwareRustNativeNode) bool
+	readNode(softwareRustNativeNode, int) ([]byte, error)
+	recheck(context.Context) error
+}
+
+func softwareRustOpenWithSession(ctx context.Context, origin rustToolchainOrigin, s softwareRustOpeningSession) (softwareRustHeldSession, error) {
+	held := s.state()
+	held.Origin = origin
 	good := false
 	defer func() { if !good { _ = s.Close() } }()
 	// Plain ancestors are pinned on both sides. The only reparse exception is
@@ -370,12 +387,12 @@ func (softwareRustNativeAccess) Open(ctx context.Context, origin rustToolchainOr
 		}
 	}
 	alias, err := s.openNode(rustToolchainInstallRoot, rustToolchainInstallRoot, true, true)
-	if err != nil || !softwareRustFixedJunction(alias.f) { return nil, errSoftwareRustMismatch }
+	if err != nil || !s.fixedJunction(alias) { return nil, errSoftwareRustMismatch }
 	resolved, err := s.openNode(rustToolchainInstallRoot, rustToolchainPhysicalRoot, true, false)
 	if err != nil { return nil, err }
 	target, err := s.openNode(rustToolchainPhysicalRoot, rustToolchainPhysicalRoot, true, false)
 	if err != nil || resolved.id != target.id { return nil, errSoftwareRustMismatch }
-	s.held.Alias = rustToolchainAlias{InstallRoot: rustToolchainInstallRoot, PhysicalRoot: rustToolchainPhysicalRoot, AliasIdentity: alias.id, ResolvedIdentity: resolved.id, TargetIdentity: target.id, AliasACLSHA: alias.aclSHA, TargetACLSHA: target.aclSHA}
+	held.Alias = rustToolchainAlias{InstallRoot: rustToolchainInstallRoot, PhysicalRoot: rustToolchainPhysicalRoot, AliasIdentity: alias.id, ResolvedIdentity: resolved.id, TargetIdentity: target.id, AliasACLSHA: alias.aclSHA, TargetACLSHA: target.aclSHA}
 	for i, name := range []string{"cargo", "rustc"} {
 		suffix := "/toolchains/"+rustToolchainName
 		for _, tail := range []string{"/toolchains", suffix, suffix+"/bin"} {
@@ -384,17 +401,27 @@ func (softwareRustNativeAccess) Open(ctx context.Context, origin rustToolchainOr
 		install, physical := rustToolchainInstallRoot+suffix+"/bin/"+name+".exe", rustToolchainPhysicalRoot+suffix+"/bin/"+name+".exe"
 		node, err := s.openNode(install, physical, false, false)
 		if err != nil { return nil, err }
-		stat, err := node.f.Stat()
-		if err != nil || stat.Size() <= 0 || stat.Size() > 64<<20 { return nil, errSoftwareRustMismatch }
-		raw := make([]byte, int(stat.Size()))
+		raw, err := s.readNode(node, i)
+		if err != nil { return nil, err }
 		file := rustToolchainHeldFile{InstallPath: install, PhysicalPath: physical, Identity: node.id, ViaInstallIdentity: node.id, ACLSHA: node.aclSHA, Raw: raw}
-		if i == 0 { s.held.Cargo = file } else { s.held.Rustc = file }
-		if _, err := io.ReadFull(node.f, raw); err != nil || digest(raw) != origin.Components[i].ExecutableSHA { return nil, errSoftwareRustMismatch }
+		if i == 0 { held.Cargo = file } else { held.Rustc = file }
+		if digest(raw) != origin.Components[i].ExecutableSHA { return nil, errSoftwareRustMismatch }
 	}
-	s.held.Recheck = s.recheck
-	if !rustToolchainInputsMatch(s.held) || s.recheck(ctx) != nil { return nil, errSoftwareRustMismatch }
+	held.Recheck = s.recheck
+	if !rustToolchainInputsMatch(*held) || s.recheck(ctx) != nil { return nil, errSoftwareRustMismatch }
 	good = true
 	return s, nil
+}
+
+func (s *softwareRustNativeSession) state() *rustToolchainHeld { return &s.held }
+func (s *softwareRustNativeSession) fixedJunction(node softwareRustNativeNode) bool { return softwareRustFixedJunction(node.f) }
+func (s *softwareRustNativeSession) readNode(node softwareRustNativeNode, index int) ([]byte, error) {
+	stat, err := node.f.Stat()
+	if err != nil || stat.Size() <= 0 || stat.Size() > 64<<20 { return nil, errSoftwareRustMismatch }
+	raw := make([]byte, int(stat.Size()))
+	if index == 0 { s.held.Cargo.Raw = raw } else { s.held.Rustc.Raw = raw }
+	if _, err := io.ReadFull(node.f, raw); err != nil { return nil, errSoftwareRustMismatch }
+	return raw, nil
 }
 
 func (s *softwareRustNativeSession) openNode(path, resolved string, directory, reparse bool) (softwareRustNativeNode, error) {

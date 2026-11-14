@@ -89,10 +89,13 @@ type historyChildTestOwner struct {
 	result askChildResult
 	plan unslopHistoryProtocol
 	root string
+	cleanupRoot string
+	nestedRoot string
 	launched,received,retained bool
 }
 
-// Unknown cleanup keeps the exact test owner, result channel and private fixture.
+// Unknown cleanup keeps this process's exact owner and result channel.
+// Borrowed nested fixtures remain owned by the outer test process.
 // It never means an actual native process or Job was observed as collected.
 var historyChildTestUncollected=struct{sync.Mutex;owners []*historyChildTestOwner}{}
 
@@ -128,19 +131,33 @@ func historyNewChildTestOwner(t *testing.T, cancel context.CancelFunc) *historyC
 			}
 		}
 		o.plan.erase()
-		if o.root!="" {if err:=os.RemoveAll(o.root);err!=nil {o.retain();t.Error("history test fixture cleanup failed; owner retained")}}
+		if o.cleanupRoot!="" {if err:=os.RemoveAll(o.cleanupRoot);err!=nil {o.retain();t.Error("history test fixture cleanup failed; owner retained")}}
 	})
 	return o
 }
 
 func historyStartNativeTestChild(t *testing.T, mode string) *historyChildTestOwner {
 	t.Helper()
+	return historyStartNativeTestChildAt(t,mode,"")
+}
+
+// A nonempty fixture is the fixed subdirectory created before the outer child
+// launched. This process borrows it; only the outer collected Job owns removal.
+func historyStartNativeTestChildAt(t *testing.T, mode, fixture string) *historyChildTestOwner {
+	t.Helper()
 	ctx,cancel:=context.WithTimeout(context.Background(),5*time.Second)
 	o:=historyNewChildTestOwner(t,cancel)
 	o.ctx=ctx
 	var err error
-	o.root,err=os.MkdirTemp("","unslop-history-")
-	if err!=nil {t.Fatal("history private fixture unavailable",err)}
+	if fixture=="" {
+		o.root,err=os.MkdirTemp("","unslop-history-")
+		if err!=nil {t.Fatal("history private fixture unavailable",err)}
+		o.cleanupRoot=o.root
+	} else {
+		o.root=fixture
+		info,err:=os.Stat(fixture)
+		if err!=nil||!info.IsDir() {t.Fatal("outer-owned history fixture unavailable")}
+	}
 	ctx=context.WithValue(ctx,askChildEnvironment{},map[string]string{"UNSLOP_PROTOCOL_CHILD":mode,"UNSLOP_PROTOCOL_ROOT":o.root})
 	o.plan,err=buildUnslopHistoryProtocol([]unslopHistoryRequest{{"thread/read",map[string]any{"threadId":"synthetic-owned"}},{"thread/read",map[string]any{"threadId":"synthetic-owned"}}})
 	if err!=nil {t.Fatal(err)}
@@ -345,12 +362,14 @@ func TestUnslopHistoryProtocolNativeChildConsumesFixedStepsAndCollects(t *testin
 	})}
 }
 
-// This subprocess deliberately calls Fatal after a receive deadline. Its marker
-// is written only after the registered owner has consumed and erased the result.
+// This subprocess deliberately calls Fatal after a receive deadline. The outer
+// process created its exact fixture before launch and retains removal ownership.
 func TestUnslopHistoryNativeFatalCleanupChild(t *testing.T) {
 	if os.Getenv("UNSLOP_HISTORY_FATAL_CLEANUP_CHILD")!="1" {return}
 	if !askWorkerParent() {os.Exit(6)}
 	outerRoot:=os.Getenv("UNSLOP_HISTORY_FATAL_CLEANUP_ROOT")
+	if !filepath.IsAbs(outerRoot) {t.Fatal("outer-owned history namespace is missing")}
+	fixture:=filepath.Join(outerRoot,"nested-capture")
 	var owner *historyChildTestOwner
 	t.Cleanup(func(){
 		if owner==nil||!owner.received||owner.retained||owner.ctx.Err()==nil {return}
@@ -358,35 +377,57 @@ func TestUnslopHistoryNativeFatalCleanupChild(t *testing.T) {
 		if !r.Started||!r.Assigned||!r.WaitVerified||!r.Reaped||!r.TimedOut||r.Capture==nil||r.Capture.NativeProcess==nil||r.Capture.Complete {return}
 		for _,b:=range r.Raw {if b!=0 {return}}
 		for _,b:=range r.Capture.Stdout {if b!=0 {return}}
-		if _,err:=os.Stat(owner.root);!os.IsNotExist(err) {return}
+		if owner.root!=fixture||owner.cleanupRoot!="" {return}
+		if info,err:=os.Stat(fixture);err!=nil||!info.IsDir() {return}
 		_ = os.WriteFile(filepath.Join(outerRoot,"fatal-cleanup-collected"),[]byte("same-result-collected"),0600)
 	})
-	owner=historyStartNativeTestChild(t,"request-cancel")
+	owner=historyStartNativeTestChildAt(t,"request-cancel",fixture)
 	if !historyWaitNativeBoundary(owner,"request-2") {t.Fatal("child did not reach delayed response boundary")}
+	if os.Getenv("UNSLOP_HISTORY_FATAL_CLEANUP_MODE")=="abrupt-inner-exit" {
+		// Deliberately lose this process's registry before it can run cleanup.
+		// The actual nested fixture is still known to the outer Job owner.
+		os.Exit(3)
+	}
 	if owner.receive(time.Millisecond) {t.Fatal("delayed native child completed before cancel")}
 	if owner.ctx.Err()!=nil||owner.received {t.Fatal("receive deadline was replaced by context cancellation")}
 	t.Fatal("synthetic receive deadline: exercise registered cleanup")
 }
 
 func TestUnslopHistoryNativeReceiveDeadlineCollectsOriginalChild(t *testing.T) {
-	ctx,cancel:=context.WithTimeout(context.Background(),5*time.Second)
-	o:=historyNewChildTestOwner(t,cancel)
-	o.ctx=ctx
-	var err error
-	o.root,err=os.MkdirTemp("","unslop-history-fatal-")
-	if err!=nil {t.Fatal(err)}
-	ctx=context.WithValue(ctx,askChildEnvironment{},map[string]string{"UNSLOP_HISTORY_FATAL_CLEANUP_CHILD":"1","UNSLOP_HISTORY_FATAL_CLEANUP_ROOT":o.root})
-	// Plain finite capture observes the expected testing failure, rather than
-	// parsing testing's output as a history response. It uses the same Job owner.
-	ctx=context.WithValue(ctx,askChildCaptureKey{},askChildCapture{})
-	o.launched=true
-	go func(){o.done<-askOwnedChild(ctx,os.Args[0],"-test.run=^TestUnslopHistoryNativeFatalCleanupChild$")}()
-	if !o.receive(8*time.Second) {t.Fatal("Fatal cleanup subprocess did not finish")}
-	r:=&o.result
-	if !r.Started||!r.Assigned||!r.WaitVerified||!r.Reaped||r.TimedOut||r.Exit!=1||r.Capture==nil||!r.Capture.Complete {t.Fatal("expected test failure was not collected",r.CollectionReason)}
-	if !bytes.Contains(r.Capture.Stdout,[]byte("synthetic receive deadline: exercise registered cleanup")) {t.Fatal("test did not reach the intended Fatal branch")}
-	marker,err:=os.ReadFile(filepath.Join(o.root,"fatal-cleanup-collected"))
-	if err!=nil||string(marker)!="same-result-collected" {t.Fatal("Fatal cleanup dropped the original result or buffers")}
+	for _,mode:=range []string{"fatal-after-deadline","abrupt-inner-exit"} {
+		var outer *historyChildTestOwner
+		if !t.Run(mode,func(t *testing.T){
+			ctx,cancel:=context.WithTimeout(context.Background(),5*time.Second)
+			o:=historyNewChildTestOwner(t,cancel)
+			outer=o;o.ctx=ctx
+			var err error
+			o.root,err=os.MkdirTemp("","unslop-history-fatal-")
+			if err!=nil {t.Fatal(err)}
+			o.cleanupRoot=o.root
+			o.nestedRoot=filepath.Join(o.root,"nested-capture")
+			if err:=os.Mkdir(o.nestedRoot,0700);err!=nil {t.Fatal("outer nested fixture creation failed",err)}
+			ctx=context.WithValue(ctx,askChildEnvironment{},map[string]string{"UNSLOP_HISTORY_FATAL_CLEANUP_CHILD":"1","UNSLOP_HISTORY_FATAL_CLEANUP_ROOT":o.root,"UNSLOP_HISTORY_FATAL_CLEANUP_MODE":mode})
+			// Plain capture observes the expected failed test/abrupt exit. The
+			// outer Job must collect the subprocess and every nested native child.
+			ctx=context.WithValue(ctx,askChildCaptureKey{},askChildCapture{})
+			o.launched=true
+			go func(){o.done<-askOwnedChild(ctx,os.Args[0],"-test.run=^TestUnslopHistoryNativeFatalCleanupChild$")}()
+			if !o.receive(8*time.Second) {t.Fatal("Fatal cleanup subprocess did not finish")}
+			r:=&o.result
+			exit:=1;if mode=="abrupt-inner-exit" {exit=3}
+			if !r.Started||!r.Assigned||!r.WaitVerified||!r.Reaped||r.TimedOut||r.Exit!=exit||r.Capture==nil||!r.Capture.Complete {t.Fatal("expected failed subprocess and Job were not collected",r.CollectionReason)}
+			if mode=="fatal-after-deadline"&&!bytes.Contains(r.Capture.Stdout,[]byte("synthetic receive deadline: exercise registered cleanup")) {t.Fatal("test did not reach the intended Fatal branch")}
+			// Even after inner cleanup (or its complete loss), removal is still
+			// the outer owner's responsibility and has not happened early.
+			if _,err:=os.Stat(filepath.Join(o.nestedRoot,"request-2"));err!=nil {t.Fatal("outer owner lost the actual nested fixture",err)}
+			marker,err:=os.ReadFile(filepath.Join(o.root,"fatal-cleanup-collected"))
+			if mode=="fatal-after-deadline" {
+				if err!=nil||string(marker)!="same-result-collected" {t.Fatal("Fatal cleanup dropped the original result or buffers")}
+			} else if !os.IsNotExist(err) {t.Fatal("abrupt inner exit unexpectedly ran cleanup")}
+		}) {continue}
+		if outer==nil||!outer.received||outer.retained {t.Fatal("outer owner did not finish nested fixture cleanup")}
+		if _,err:=os.Stat(outer.root);!os.IsNotExist(err) {t.Fatal("collected outer fixture was not removed")}
+	}
 }
 
 func TestUnslopHistoryExchangeCopiesPlanAndRejectsMixedCaptureBeforeSpawn(t *testing.T) {

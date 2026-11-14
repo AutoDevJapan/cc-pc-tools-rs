@@ -156,7 +156,7 @@ func TestGHAGuardConstructorSyntheticStages(t *testing.T) {
     }
     for _,fault:=range []string{"none","wrong-job","wrong-artifact","bad-publication","archive-corrupt","source-error","source-mutates-archive","signature-error","payload-change","cancelled"} {
         t.Run(fault,func(t *testing.T) {
-            m:=mk();local:=context.Background();calls:=0
+            m:=mk();local:=context.Background();calls:=0;sourceCalls:=0
             switch fault {
             case "wrong-job":m.job.JobID++
             case "wrong-artifact":m.artifact.ID++
@@ -172,6 +172,7 @@ func TestGHAGuardConstructorSyntheticStages(t *testing.T) {
                 return nil
             }
             sourceVerifier:=func(ctx context.Context,archive []byte,got ghaGuardManifest)error {
+                sourceCalls++
                 if got!=manifest||len(archive)==0{return errGHAGuardUnqualified}
                 if fault=="source-error"{return errGHAGuardUnqualified}
                 if fault=="source-mutates-archive"{archive[0]^=1}
@@ -182,6 +183,7 @@ func TestGHAGuardConstructorSyntheticStages(t *testing.T) {
                 if err!=nil||candidate==nil||calls!=1||!candidate.VerifySourceGeneration(){t.Fatal("valid synthetic stages rejected",err)}
                 if err=candidate.Close();err!=nil{t.Fatal(err)}
             }else if err==nil||candidate!=nil {t.Fatal("bad stage issued candidate",fault)}
+            if fault=="source-mutates-archive"&&(sourceCalls!=1||calls!=0) {t.Fatal("archive mutation reached signature or source was not exercised",sourceCalls,calls)}
         })
     }
     calls:=0

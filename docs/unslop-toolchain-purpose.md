@@ -51,11 +51,18 @@ Unslop側は固定用途の一致と保持中の再確認が成立した場合�
 ## 保持範囲をcaptureへ結ぶ
 
 `captureUnslopReleaseWithToolchain` は、正常なproviderの `WithHeld` の中で `captureUnslopRelease` 全体を呼びます。
-入力のBefore・Build・After、成果物の保持、ACKとworker回収、入力の後片付け、receiptのSeal・Commitが終わるまで、providerのcallbackから戻りません。
+正常終了またはworkerの回収を確認できた分岐では、Before・Build・Afterから、成果物の保持、ACK、入力の後片付け、receiptのSeal・Commitまでをcallback内で行います。
 準備関数だけを `WithHeld` で囲み、保持を閉じてからsessionを返す使い方はしません。
+
+一方、workerの回収を確認できず `live_worker_collection_unknown_inputs_preserved` が返る分岐では、captureの失敗返却後に同期callbackも終わるため、現wrapperはtoolchainの保持継続を保証しません。
+通常入口へ接続する前に、workerの実回収を確認するか、回収まで保持を継続する正規のownerへ引き継ぐ必要があります。
+この条件が未成立の間はnormalfactoryとnative・workerの配線を有効にしません。
 
 Commit後にproviderの再確認やCloseが失敗した場合は、公開済みの `ReceiptPublished` を残して `Qualified=false` とし、返却するreceiptを外します。
 公開済みのファイルを削除したり、未公開に書き戻したり、同じreceiptを自動で再Commitしたりしません。
+final receiptはproviderの後処理より先に公開され得るため、その存在や内容だけで処理全体の成功を推定できません。
+将来のinstall consumerには、providerの後処理と実際の返却結果を永続的に結び、失敗・未確認の実行を保留にする接続が必要です。
+現在の合成テストは返却値と公開済み状態の区別を確認するもので、再起動後のreceipt判定や実インストールを実証するものではありません。
 
 worker用の `runUnslopWorkerWithToolchain` は、worker自身の正常なproviderが保持した内容からbindingを作り、親からの期待値と一致したときだけworker処理を呼びます。
 期待digest、PID、親から来たJSONだけでは、providerを構築したり入力の読取資格を与えたりしません。

@@ -139,6 +139,36 @@ func syntheticSoftwareRustProvider() (*softwareRustOriginProvider, *softwareRust
 	return &softwareRustOriginProvider{access: a}, a
 }
 
+func TestSoftwareRustOwnedCapabilityComesFromOpenRetained(t *testing.T) {
+	provider,access:=syntheticSoftwareRustProvider()
+	capability,err:=provider.openOwned(context.Background())
+	if err!=nil||capability==nil||capability.session!=access.session||access.opens!=1||access.session.closed!=0||!capability.current() {t.Fatal("owned capability did not come from the acquired session",err)}
+	forged:=&softwareRustOwnedCapability{issuer:provider,session:access.session,held:access.session.Held()}
+	if forged.current() {t.Fatal("caller-built capability was accepted")}
+	if another,err:=provider.openOwned(context.Background());err==nil||another!=nil||access.session.closed!=0 {t.Fatal("same session obtained a second capability or was closed")}
+	if err:=provider.WithHeld(context.Background(),func(rustToolchainHeld)bool{return true});err==nil||access.session.closed!=0 {t.Fatal("borrowed route reused owned session")}
+	if raw,err:=provider.openRetained(context.Background());err==nil||raw!=nil||access.session.closed!=0 {t.Fatal("raw retained route reused owned session")}
+	if err=capability.Close();err!=nil||capability.current()||access.session.closed!=1 {t.Fatal("Close did not invalidate owned capability",err)}
+	if err=capability.Close();err!=nil||access.session.closed!=1 {t.Fatal("capability closed its session twice")}
+	if reused,err:=provider.openOwned(context.Background());err==nil||reused!=nil||access.session.closed!=1 {t.Fatal("closed issuer reopened an old session")}
+}
+
+func TestSoftwareRustBorrowedAndFailedOpenMintNoCapability(t *testing.T) {
+	for _,mode:=range []string{"borrowed","open-error","cancelled"} {
+		t.Run(mode,func(t *testing.T){
+			provider,access:=syntheticSoftwareRustProvider()
+			if mode=="borrowed" {
+				if err:=provider.WithHeld(context.Background(),func(rustToolchainHeld)bool{return true});err!=nil {t.Fatal(err)}
+				if len(provider.owned)!=0||access.session.closed!=1 {t.Fatal("borrowed tuple minted ownership")}
+				return
+			}
+			ctx,cancel:=context.WithCancel(context.Background());defer cancel()
+			if mode=="cancelled" {cancel()}else{access.mode="open-error"}
+			if capability,err:=provider.openOwned(ctx);err==nil||capability!=nil||len(provider.owned)!=0 {t.Fatal("failed open minted ownership",mode)}
+		})
+	}
+}
+
 func TestSoftwareRustProviderRetainsThenClosesAndNeverTurnsLateFailureIntoSuccess(t *testing.T) {
 	for _, mode := range []string{"normal", "origin-error", "open-error", "origin-mismatch", "held-mismatch", "before-check", "before-mutates", "after-check", "close-error", "consumer-failed", "consumer-mutates", "cancel-before", "cancel-during"} {
 		t.Run(mode, func(t *testing.T) {

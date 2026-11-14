@@ -611,3 +611,49 @@ func TestUnslopDurableCancelledSaveRejectsUnboundFlight(t *testing.T) {
 		})
 	}
 }
+
+func TestUnslopDurableOwnedCaptureKeepsUnavailableFactoryClosed(t *testing.T) {
+	for _,mode:=range []string{"nil-provider","nil-factory","open-cleanup-failure"} {
+		t.Run(mode,func(t *testing.T){
+			provider,access:=syntheticSoftwareRustProvider()
+			c,err:=newUnslopDurableController(newDurableTestStore(t),nil,nil);if err!=nil {t.Fatal(err)}
+			if mode=="nil-provider" {provider=nil}
+			if mode=="open-cleanup-failure" {access.mode="open-error";access.session.closeError=true}
+			r:=c.CaptureOwned(context.Background(),provider)
+			if r.Qualified||r.Receipt!=nil||r.ReceiptPublished {t.Fatal("missing owned input activated capture",r)}
+			if mode=="nil-provider" {if access.opens!=0||c.ownedCapture!=nil {t.Fatal("nil provider acquired ownership")};return}
+			if mode=="open-cleanup-failure" {if !r.ResultSaved||!r.ToolchainCleanupFailed||access.opens!=1||access.session.closed!=1||c.ownedCapture!=nil {t.Fatal("failed owned acquisition lost cleanup failure",r)};return}
+			if !r.ResultSaved||access.opens!=1||access.session.closed!=1||c.ownedCapture==nil||c.ownedCapture.capability.current() {t.Fatal("unused owned session was not closed exactly once",r)}
+		})
+	}
+}
+
+func TestUnslopDurableOwnedBeginFailureKeepsReturnedSession(t *testing.T) {
+	for _,mode:=range []string{"nil-session","partial-no-flight","partial-active-flight"} {
+		t.Run(mode,func(t *testing.T){
+			provider,access:=syntheticSoftwareRustProvider()
+			resource:=&retainedTestResource{}
+			live:=&unslopLiveSession{unslopNativeSession:&unslopNativeSession{},evidence:resource}
+			done:=make(chan askProducerFlightResult,1)
+			aborts:=0
+			if mode=="partial-active-flight" {live.flight=&unslopOwnedFlight{flight:&askOwnedProducerFlight{Done:done,Abort:func(){aborts++}}}}
+			var partial unslopProducerSession=live
+			if mode=="nil-session" {partial=nil}
+			c,err:=newUnslopDurableController(newDurableTestStore(t),nil,func(context.Context,rustToolchainHeld,unslopRustToolchainBinding)(unslopCaptureAccess,error){
+				return unslopCaptureAccess{begin:func(context.Context)(unslopProducerSession,error){return partial,errors.New("private begin failure")},stage:func(context.Context,unslopCaptureReceipt,[]byte)(unslopPendingCapture,error){t.Fatal("failed begin reached stage");return nil,errUnslopDurable}},nil
+			});if err!=nil {t.Fatal(err)}
+			r:=c.CaptureOwned(context.Background(),provider)
+			retained:=mode!="nil-session"
+			wantClosed:=1;if retained {wantClosed=0}
+			if !r.ResultSaved||r.Qualified||r.Receipt!=nil||r.ReceiptPublished||r.OwnedInputsRetained!=retained||access.opens!=1||access.session.closed!=wantClosed||c.ownedCapture==nil||c.ownedCapture.rejectedSession!=partial {t.Fatal("failed begin lost its returned session or closed its lease",mode,r)}
+			if retained&&(!c.ownedCapture.capability.current()||resource.calls!=0||aborts!=0||len(done)!=0||live.closed) {t.Fatal("partial session cleanup ran without collection proof",mode)}
+			if retained {if err:=c.ownedCapture.lease.Close();err==nil||access.session.closed!=0 {t.Fatal("partial session lease allowed caller Close",mode)}}
+			if retry:=c.RetryFinal(context.Background());!retry.ResultSaved||retry.OwnedInputsRetained!=retained||access.session.closed!=wantClosed||resource.calls!=0||aborts!=0 {t.Fatal("same-result retry changed partial ownership",mode,retry)}
+			encoded,err:=json.Marshal(r)
+			if err!=nil||bytes.Contains(encoded,[]byte("private"))||bytes.Contains(encoded,[]byte(c.journal.store.path)) {t.Fatal("partial ownership result exposed error or path")}
+			var consumer map[string]any
+			if json.Unmarshal(encoded,&consumer)!=nil {t.Fatal("partial ownership was not serializable")}
+			if retained&&consumer["owned_inputs_retained"]!=true {t.Fatal("partial ownership did not reach serialized consumer")}
+		})
+	}
+}

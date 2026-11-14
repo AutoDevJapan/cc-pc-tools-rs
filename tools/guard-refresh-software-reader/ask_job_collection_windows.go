@@ -55,6 +55,7 @@ type askJobCollectionAPI interface {
 	accounting(syscall.Handle) (askJobAccounting, error)
 	terminate(syscall.Handle) error
 	close(syscall.Handle) error
+	now() time.Time
 }
 
 func newAskJobCollector(job, root syscall.Handle, pid uint32, assigned bool) *askJobCollection {
@@ -100,7 +101,7 @@ func (c *askJobCollection) observeUntil(deadline time.Time) {
 		return
 	}
 	withinBudget := func() bool {
-		if !deadline.IsZero() && !time.Now().Before(deadline) {
+		if !deadline.IsZero() && !c.api.now().Before(deadline) {
 			c.unknown("job_collection_deadline_exceeded")
 			return false
 		}
@@ -196,7 +197,7 @@ func (c *askJobCollection) Finish(rootWaitVerified bool, deadline time.Time) ask
 		c.result = askJobCollectionResult{Reason: c.reason}
 		return c.result
 	}
-	for time.Now().Before(deadline) {
+	for c.api.now().Before(deadline) {
 		c.observeUntil(deadline)
 		accounting, err := c.api.accounting(c.job)
 		if err != nil {
@@ -206,7 +207,7 @@ func (c *askJobCollection) Finish(rootWaitVerified bool, deadline time.Time) ask
 		allSignalled := len(c.members) != 0 && c.rootID.Creation != 0
 		observed := len(c.members)
 		for _, member := range c.members {
-			if !time.Now().Before(deadline) {
+			if !c.api.now().Before(deadline) {
 				allSignalled = false
 				break
 			}
@@ -224,7 +225,7 @@ func (c *askJobCollection) Finish(rootWaitVerified bool, deadline time.Time) ask
 				allSignalled = false
 			}
 		}
-		if accounting.Active == 0 && allSignalled && time.Now().Before(deadline) {
+		if accounting.Active == 0 && allSignalled && c.api.now().Before(deadline) {
 			// Requery after the last handle wait. A late child cannot hide
 			// behind root exit or a transient earlier active=0 snapshot.
 			c.observeUntil(deadline)
@@ -238,7 +239,7 @@ func (c *askJobCollection) Finish(rootWaitVerified bool, deadline time.Time) ask
 			if final.Active != 0 || final.Total != accounting.Total || len(c.members) != observed {
 				continue
 			}
-			if !time.Now().Before(deadline) {
+			if !c.api.now().Before(deadline) {
 				break
 			}
 			if uint64(observed) != uint64(final.Total) {
@@ -250,7 +251,7 @@ func (c *askJobCollection) Finish(rootWaitVerified bool, deadline time.Time) ask
 			if c.Close() != nil {
 				c.unknown("job_member_close_failed")
 			}
-			if !time.Now().Before(deadline) {
+			if !c.api.now().Before(deadline) {
 				c.unknown("job_collection_deadline_exceeded")
 			}
 			c.result = askJobCollectionResult{Reaped: c.reason == "", Reason: c.reason, Observed: uint32(len(c.members)), Total: final.Total}
@@ -356,4 +357,8 @@ func (askNativeJobCollectionAPI) terminate(job syscall.Handle) error {
 
 func (askNativeJobCollectionAPI) close(process syscall.Handle) error {
 	return syscall.CloseHandle(process)
+}
+
+func (askNativeJobCollectionAPI) now() time.Time {
+	return time.Now()
 }

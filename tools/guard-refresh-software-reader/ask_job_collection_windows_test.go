@@ -32,7 +32,8 @@ type askJobCollectionModel struct {
 	latePID uint32
 	lateWaitPID uint32
 	closeError bool
-	closeDelay time.Duration
+	clock time.Time
+	closeAdvance time.Duration
 }
 
 func newAskJobCollectionModel() *askJobCollectionModel {
@@ -88,15 +89,20 @@ func (m *askJobCollectionModel) terminate(syscall.Handle) error {
 }
 func (m *askJobCollectionModel) close(h syscall.Handle) error {
 	m.closes[h]++
-	if m.closeDelay != 0 { time.Sleep(m.closeDelay) }
+	if !m.clock.IsZero() { m.clock = m.clock.Add(m.closeAdvance) }
 	if m.closeError {
 		return errAskJobCollection
 	}
 	return nil
 }
 
+func (m *askJobCollectionModel) now() time.Time {
+	if !m.clock.IsZero() { return m.clock }
+	return time.Now()
+}
+
 func TestAskJobCollectionKeepsFailuresUnknown(t *testing.T) {
-	for _, fault := range []string{"query", "truncated", "open", "creation", "membership-error", "not-member", "zero-pid", "duplicate-pid", "held-generation", "root-wait", "active", "unsignalled", "wait-error", "accounting", "termination", "historical-gap", "close-error", "late-close", "deadline"} {
+	for _, fault := range []string{"query", "truncated", "open", "creation", "membership-error", "not-member", "zero-pid", "duplicate-pid", "held-generation", "root-wait", "active", "unsignalled", "wait-error", "accounting", "termination", "historical-gap", "close-error", "deadline"} {
 		t.Run(fault, func(t *testing.T) {
 			m := newAskJobCollectionModel()
 			c := newAskJobCollection(m, 9999, 11, 1, true)
@@ -120,7 +126,6 @@ func TestAskJobCollectionKeepsFailuresUnknown(t *testing.T) {
 			case "termination": m.terminateError = errAskJobCollection
 			case "historical-gap": m.account.Total = 3
 			case "close-error": m.closeError = true
-			case "late-close": m.closeDelay = 10*time.Millisecond
 			case "deadline": deadline = time.Now().Add(-time.Second)
 			}
 			r := c.Finish(rootWait, deadline)
@@ -136,6 +141,28 @@ func TestAskJobCollectionKeepsFailuresUnknown(t *testing.T) {
 			firstClose, secondClose := c.Close(), c.Close()
 			if (firstClose != nil) != (fault == "close-error") || firstClose != secondClose || m.closes[11] != 0 || m.closes[9999] != 0 || m.closes[12] > m.opens[2] {
 				t.Fatal("borrowed handles were closed")
+			}
+		})
+	}
+}
+
+func TestAskJobCollectionDeadlineIncludesClose(t *testing.T) {
+	for _, late := range []bool{false, true} {
+		t.Run(strconv.FormatBool(late), func(t *testing.T) {
+			m := newAskJobCollectionModel()
+			m.clock = time.Unix(100, 0)
+			if late { m.closeAdvance = 10*time.Millisecond }
+			deadline := m.clock.Add(5*time.Millisecond)
+			c := newAskJobCollection(m, 9999, 11, 1, true)
+			defer c.Close()
+			r := c.Finish(true, deadline)
+			// These asserts precede any separate Close call, so a timeout
+			// before reaching the intended cleanup cannot satisfy the case.
+			if m.closes[12] != 1 || r.Observed != 2 || r.Total != 2 || m.waits[11] == 0 || m.waits[12] == 0 {
+				t.Fatal("close boundary was not exercised", r, m.closes, m.waits)
+			}
+			if r.Reaped != !late || late && r.Reason != "job_collection_deadline_exceeded" || !late && r.Reason != "" {
+				t.Fatal("post-close deadline result", r, late)
 			}
 		})
 	}
@@ -300,10 +327,12 @@ func TestAskJobCollectionOwnedWindowsTree(t *testing.T) {
 				_ = input.Close()
 				cancel()
 				if !joined {
-					select { case <-waited: case <-time.After(2*time.Second): t.Error("owned root not reaped") }
+					select { case <-waited: joined = true; case <-time.After(2*time.Second): t.Error("owned root not reaped") }
 				}
 				if cleanupCollector != nil {
-					cleanup := cleanupCollector.Finish(askRootWaitVerified(cmd.ProcessState, nil), time.Now().Add(2*time.Second))
+					rootWaitVerified := false
+					if joined { rootWaitVerified = askRootWaitVerified(cmd.ProcessState, nil) }
+					cleanup := cleanupCollector.Finish(rootWaitVerified, time.Now().Add(2*time.Second))
 					if !cleanup.Reaped { t.Error("owned fixture collection not established", cleanup) }
 					if cleanupCollector.Close() != nil { t.Error("owned cleanup pins not closed") }
 				}
@@ -360,11 +389,15 @@ func TestAskJobCollectionOwnedWindowsTree(t *testing.T) {
 			belongs, memberErr := api.belongs(child, syscall.Handle(job))
 			state, waitErr := api.wait(child)
 			if err != nil || id.PID != uint32(childPID) || id.Creation == 0 || memberErr != nil || !belongs || waitErr != nil || state != syscall.WAIT_TIMEOUT { t.Fatal("live child precondition failed") }
+			rootID, err := api.identity(root)
+			if err != nil || rootID.Creation == 0 { t.Fatal("root fixture identity unavailable") }
 			cleanupCollector.Observe()
 			collector.Observe()
 			logAskJobCollectionFixture(t, collector, "first-child")
 			logAskJobCollectionFixture(t, cleanupCollector, "first-child-cleanup")
-			if fault != "query-failure" && len(collector.members) != 2 { t.Fatal("actual job members not pinned") }
+			assertAskJobFixtureMembers(t, cleanupCollector, rootID, id)
+			if fault != "query-failure" { assertAskJobFixtureMembers(t, collector, rootID, id) }
+			expectedIDs := []askNativeProcess{rootID, id}
 			if fault == "late-child" {
 				if _, err := input.Write([]byte("SPAWN\n")); err != nil { t.Fatal(err) }
 				select {
@@ -376,21 +409,29 @@ func TestAskJobCollectionOwnedWindowsTree(t *testing.T) {
 					if err != nil { t.Fatal(err) }
 					member, err := api.belongs(lateChild, syscall.Handle(job))
 					if err != nil || !member { t.Fatal("late child job membership") }
+					lateID, err := api.identity(lateChild)
+					if err != nil || lateID.PID != uint32(pid) || lateID.Creation == 0 { t.Fatal("late child fixture identity unavailable") }
+					expectedIDs = append(expectedIDs, lateID)
 				case <-ctx.Done(): t.Fatal("late child readiness deadline")
 				}
 				cleanupCollector.Observe()
 				collector.Observe()
 				logAskJobCollectionFixture(t, collector, "late-child")
-				if len(collector.members) != 3 { t.Fatal("late child not pinned") }
+				assertAskJobFixtureMembers(t, cleanupCollector, expectedIDs...)
+				assertAskJobFixtureMembers(t, collector, expectedIDs...)
 			}
 			if _, err := input.Write([]byte("EXIT\n")); err != nil { t.Fatal(err) }
 			input.Close()
 			select { case <-waited: joined = true; case <-ctx.Done(): t.Fatal("root exit deadline") }
+			cleanupCollector.Observe()
+			collector.Observe()
+			logAskJobCollectionFixture(t, cleanupCollector, "root-exited")
 			// A normal root exits before its descendant. Only Finish may turn
 			// this into a tree-completion fact, after retained-handle signals.
 			if state, err := api.wait(child); err != nil || state != syscall.WAIT_TIMEOUT { t.Fatal("root exit did not leave child live") }
 			result := collector.Finish(askRootWaitVerified(cmd.ProcessState, nil), time.Now().Add(2*time.Second))
 			if result.Reaped != (fault != "query-failure") { t.Fatal("actual collection result", fault, result) }
+			if result.Reaped && (result.Observed != result.Total || result.Total < uint32(len(expectedIDs))) { t.Fatal("full Job inventory was not collected", result) }
 			state, err = syscall.WaitForSingleObject(child, 2000)
 			if err != nil || state != syscall.WAIT_OBJECT_0 { t.Fatal("same held child was not terminated") }
 			if lateChild != 0 {
@@ -400,6 +441,25 @@ func TestAskJobCollectionOwnedWindowsTree(t *testing.T) {
 			if err != nil || state != syscall.WAIT_OBJECT_0 { t.Fatal("same held root was not terminated") }
 			select { case <-readyDone: case <-ctx.Done(): t.Fatal("stdout EOF deadline") }
 		})
+	}
+}
+
+func assertAskJobFixtureMembers(t *testing.T, c *askJobCollection, expected ...askNativeProcess) {
+	t.Helper()
+	a, err := c.api.accounting(c.job)
+	if err != nil || c.reason != "" || uint64(a.Total) != uint64(len(c.members)) || a.Active > a.Total {
+		t.Fatal("complete owned Job inventory not pinned", a, c.reason, len(c.members))
+	}
+	for _, id := range expected {
+		member, exists := c.members[id.PID]
+		if !exists || id.Creation == 0 || member.id != id { t.Fatal("expected process generation not pinned", id) }
+	}
+	// Console hosts or any other genuine members are retained as well.
+	// Neither their names nor an assumed fixed process count is an exemption.
+	for _, member := range c.members {
+		id, identityErr := c.api.identity(member.process)
+		belongs, memberErr := c.api.belongs(member.process, c.job)
+		if identityErr != nil || id != member.id || memberErr != nil || !belongs { t.Fatal("held Job member identity changed") }
 	}
 }
 
@@ -465,15 +525,27 @@ func TestAskJobCollectionProcessHelper(t *testing.T) {
 	case "early-exit":
 		os.Exit(0)
 	case "child":
+		fmt.Printf("READY %d\n", os.Getpid())
 		time.Sleep(30*time.Second)
 	case "root":
 		exe, err := os.Executable()
 		if err != nil { t.Fatal(err) }
 		spawn := func() {
+			readyRead, readyWrite, err := os.Pipe()
+			if err != nil { t.Fatal(err) }
+			defer readyRead.Close()
+			defer readyWrite.Close()
 			child := exec.Command(exe, "-test.run=^TestAskJobCollectionProcessHelper$")
 			child.Env = append(os.Environ(), "ASK_JOB_COLLECTION_TEST=child")
 			child.SysProcAttr = &syscall.SysProcAttr{HideWindow: true, CreationFlags: 0x08000000}
+			child.Stdout = readyWrite
 			if err := child.Start(); err != nil { t.Fatal(err) }
+			if err := readyWrite.Close(); err != nil { t.Fatal(err) }
+			// The parent's outer deadline owns this whole Job, including a
+			// child that never reaches READY. Report the child only after its
+			// runtime/console startup reached the explicit pipe barrier.
+			s := bufio.NewScanner(readyRead)
+			if !s.Scan() || s.Text() != fmt.Sprintf("READY %d", child.Process.Pid) || s.Err() != nil { t.Fatal("owned descendant not ready") }
 			pid := child.Process.Pid
 			if err := child.Process.Release(); err != nil { t.Fatal(err) }
 			fmt.Printf("CHILD %d\n", pid)

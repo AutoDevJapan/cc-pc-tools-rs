@@ -38,6 +38,9 @@ type askChildResult struct {
 	TimedOut, Reaped                bool
 	Started, Assigned, WaitVerified bool
 	Capture                         *askChildCaptureResult
+	CollectionReason                string
+	CollectionObserved, CollectionTotal uint32
+	CollectionTotalKnown             bool
 }
 
 // Start suspended, assign the exact process to an owned kill-on-close job, then
@@ -307,13 +310,15 @@ func askOwnedChildWithHandshake(ctx context.Context, executable string, onReady 
 		return
 	}
 	result.Started = true
-	access := uint32(0x0100 | 0x0001 | 0x0800)
+	access := uint32(0x0100 | 0x0001 | 0x0800 | syscall.SYNCHRONIZE | 0x1000)
 	if hasCapture || hasProducer {
 		access |= 0x1000
 	}
 	process, err := syscall.OpenProcess(access, false, uint32(cmd.Process.Pid))
 	assigned := false
+	var collection *askJobCollection
 	if err == nil {
+		defer syscall.CloseHandle(process)
 		ok, _, _ = kernel.NewProc("AssignProcessToJobObject").Call(job, uintptr(process))
 		assigned = ok != 0
 		if assigned && (hasCapture || hasProducer) {
@@ -335,12 +340,13 @@ func askOwnedChildWithHandshake(ctx context.Context, executable string, onReady 
 			}
 		}
 		if assigned {
+			collection = newAskJobCollector(syscall.Handle(job), process, uint32(cmd.Process.Pid), true)
+			collection.Observe()
 			code, _, _ := syscall.NewLazyDLL("ntdll.dll").NewProc("NtResumeProcess").Call(uintptr(process))
 			if code != 0 {
 				assigned = false
 			}
 		}
-		syscall.CloseHandle(process)
 	}
 	if !assigned {
 		_ = cmd.Process.Kill()
@@ -357,48 +363,16 @@ func askOwnedChildWithHandshake(ctx context.Context, executable string, onReady 
 	permitRead.Close()
 	waited := make(chan error, 1)
 	go func() { waited <- cmd.Wait() }()
-	// Pin members observed while the root is alive. Job accounting can reach
-	// active0 shortly before a terminated process's handle becomes signalled.
-	members := map[uint32]syscall.Handle{}
-	defer func() {
-		for _, h := range members {
-			syscall.CloseHandle(h)
-		}
-	}()
-	collect := func() {
-		var ids [130]uintptr
-		ok, _, _ := kernel.NewProc("QueryInformationJobObject").Call(job, 3, uintptr(unsafe.Pointer(&ids[0])), unsafe.Sizeof(ids), 0)
-		if ok == 0 {
-			return
-		}
-		n := *(*uint32)(unsafe.Add(unsafe.Pointer(&ids[0]), 4))
-		if n > 128 {
-			return
-		}
-		for _, pid := range ids[1 : n+1] {
-			id := uint32(pid)
-			if _, exists := members[id]; exists {
-				continue
-			}
-			h, e := syscall.OpenProcess(syscall.SYNCHRONIZE|0x1000, false, id)
-			if e != nil {
-				continue
-			}
-			var belongs uint32
-			ok, _, _ := kernel.NewProc("IsProcessInJob").Call(uintptr(h), job, uintptr(unsafe.Pointer(&belongs)))
-			if ok != 0 && belongs != 0 {
-				members[id] = h
-			} else {
-				syscall.CloseHandle(h)
-			}
-		}
+	if collection == nil {
+		collection = newAskJobCollector(syscall.Handle(job), process, uint32(cmd.Process.Pid), false)
 	}
+	defer collection.Close()
 	var waitErr error
 	producerReady, producerACKSent, producerACKAttempted := false, false, false
 	var producerWrite chan error
 loop:
 	for {
-		collect()
+		collection.Observe()
 		select {
 		case waitErr = <-waited:
 			break loop
@@ -413,6 +387,9 @@ loop:
 			}
 			return nil
 		}():
+			// Capture any startup members before exposing Ready or allowing
+			// a rejected Final to cancel and terminate the producer.
+			collection.Observe()
 			if !producerReady {
 				if !producer.receiveReady(frame) {
 					producer.cancel()
@@ -463,6 +440,7 @@ loop:
 			}
 			return nil
 		}():
+			collection.Observe()
 			accepted := onReady(payload)
 			clear(payload)
 			if accepted && ctx.Err() == nil {
@@ -483,33 +461,13 @@ loop:
 	if cmd.ProcessState != nil {
 		result.Exit = cmd.ProcessState.ExitCode()
 	}
-	// Wait is over before reconciliation. A root exit alone does not prove
-	// descendants gone; terminate the exact job and require its active count0.
-	killed, _, _ := kernel.NewProc("TerminateJobObject").Call(job, 1)
-	deadline := time.Now().Add(2 * time.Second)
-	for killed != 0 && time.Now().Before(deadline) {
-		var a askJobAccounting
-		ok, _, _ = kernel.NewProc("QueryInformationJobObject").Call(job, 1, uintptr(unsafe.Pointer(&a)), unsafe.Sizeof(a), 0)
-		if ok == 0 {
-			break
-		}
-		if a.Active == 0 {
-			result.Reaped = true
-			break
-		}
-		time.Sleep(5 * time.Millisecond)
-	}
-	for _, h := range members {
-		left := time.Until(deadline)
-		if left < 0 {
-			result.Reaped = false
-			break
-		}
-		state, e := syscall.WaitForSingleObject(h, uint32(left/time.Millisecond))
-		if e != nil || state != syscall.WAIT_OBJECT_0 {
-			result.Reaped = false
-		}
-	}
+	// Root Wait, all retained process signals and the job's complete lifetime
+	// member count must agree. Observation failures remain unknown throughout.
+	collected := collection.Finish(result.WaitVerified, time.Now().Add(2*time.Second))
+	result.Reaped = collected.Reaped
+	result.CollectionReason = collected.Reason
+	result.CollectionObserved, result.CollectionTotal = collected.Observed, collected.Total
+	result.CollectionTotalKnown = collected.TotalKnown
 	if hasCapture {
 		result.Capture.Complete = assigned && result.WaitVerified && result.Reaped && !result.TimedOut && ctx.Err() == nil && !captured.overflow && captured.eof && captureErr.eof
 	}

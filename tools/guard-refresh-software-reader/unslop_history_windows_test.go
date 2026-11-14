@@ -109,3 +109,29 @@ func TestUnslopHistoryProtocolWaitsForMatchingResponseBeforeNextStep(t *testing.
 		})
 	}
 }
+
+func TestUnslopHistoryResponseRejectsAmbiguousOrUnsupportedMembers(t *testing.T) {
+	for _,wire:=range []string{
+		"{\"id\":9,\"id\":1,\"result\":{}}",
+		"{\"ID\":1,\"result\":{}}",
+		"{\"id\":1,\"result\":{},\"result\":{}}",
+		"{\"id\":1,\"result\":true}",
+		"{\"id\":1,\"result\":[]}",
+		"{\"id\":1,\"result\":{},\"method\":\"\"}",
+		"{\"id\":1,\"result\":{},\"unknown\":\"private\"}",
+		"{\"id\":1,\"result\":{},\"jsonrpc\":\"1.0\"}",
+		"{\"id\":1,\"result\":{}}{\"id\":2,\"result\":{}}",
+	} {
+		if result,err:=acceptUnslopHistoryProtocolFrame([]byte(wire),1);err==nil||result!=nil {clear(result);t.Fatal("ambiguous frame became a matching response")}
+	}
+	result,err:=acceptUnslopHistoryProtocolFrame([]byte("{\"jsonrpc\":\"2.0\",\"id\":1,\"result\":{},\"error\":null}"),1)
+	defer clear(result)
+	if err!=nil||string(result)!="{}" {t.Fatal("supported response envelope was rejected",err)}
+}
+
+func TestUnslopNormalHistorySelectorsRemainUnconnected(t *testing.T) {
+	for _,threads:=range [][2]string{{"",""},{"synthetic-owned",""},{"synthetic-owned","synthetic-owned"}} {
+		result:=normalUnslopHistoryInspection(context.Background(),threads)
+		if result.Reason!="normal_history_binding_unavailable"||result.ThreadsMatched!=0||result.CompletedTurns!=0 {t.Fatal("unissued selectors reached history runtime",result)}
+	}
+}

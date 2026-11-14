@@ -147,3 +147,320 @@ func TestUnslopToolchainFailureTextIsProjectedOnce(t *testing.T) {
 	err := &changingUnslopProviderError{}
 	if got := unslopToolchainFailureReason(context.Background(), err); got != "toolchain_inputs_mismatch" || err.calls != 1 { t.Fatal("mutable error text was reused", got, err.calls) }
 }
+
+// These probes run the real capture controller inside the toolchain callback.
+// Compiler inputs and the publisher stay synthetic; no installed tool is read.
+type unslopCaptureLifetimeProvider struct {
+	*syntheticUnslopToolchainProvider
+	active bool
+	events []string
+}
+func (p *unslopCaptureLifetimeProvider) WithHeld(ctx context.Context, use func(rustToolchainHeld) bool) error {
+	p.active = true
+	p.events = append(p.events, "held")
+	defer func() { p.active = false; p.events = append(p.events, "toolchain-close") }()
+	return p.syntheticUnslopToolchainProvider.WithHeld(ctx, use)
+}
+type unslopCaptureLifetimeSession struct {
+	*unslopSyntheticCapture
+	provider *unslopCaptureLifetimeProvider
+	t *testing.T
+	afterDone func()
+	failClose bool
+}
+func (s *unslopCaptureLifetimeSession) event(name string) {
+	s.t.Helper()
+	if !s.provider.active { s.t.Fatal("toolchain released before capture completed", name) }
+	s.provider.events = append(s.provider.events, name)
+}
+func (s *unslopCaptureLifetimeSession) Before() unslopCapturedInputs { s.event("before"); return s.unslopSyntheticCapture.Before() }
+func (s *unslopCaptureLifetimeSession) Build(ctx context.Context) (unslopBuildInvocation, error) { s.event("build"); return s.unslopSyntheticCapture.Build(ctx) }
+func (s *unslopCaptureLifetimeSession) After(ctx context.Context) (unslopCapturedInputs, error) { s.event("after"); return s.unslopSyntheticCapture.After(ctx) }
+func (s *unslopCaptureLifetimeSession) WithArtifact(use func([]byte, softwareIdentity) bool) bool { s.event("artifact"); return s.unslopSyntheticCapture.WithArtifact(use) }
+func (s *unslopCaptureLifetimeSession) Acknowledge(ctx context.Context) error { s.event("ack"); return s.unslopSyntheticCapture.Acknowledge(ctx) }
+func (s *unslopCaptureLifetimeSession) AwaitCompletion(ctx context.Context) (unslopProducerCompletion, error) {
+	s.event("done")
+	done,err:=s.unslopSyntheticCapture.AwaitCompletion(ctx)
+	if s.afterDone!=nil { s.afterDone() }
+	return done,err
+}
+func (s *unslopCaptureLifetimeSession) Close() error {
+	s.event("input-close")
+	err:=s.unslopSyntheticCapture.Close()
+	if s.failClose { return errors.New("live_worker_collection_unknown_inputs_preserved") }
+	return err
+}
+type unslopCaptureLifetimePending struct {
+	*syntheticUnslopPending
+	provider *unslopCaptureLifetimeProvider
+	t *testing.T
+	afterClose func()
+}
+func (p *unslopCaptureLifetimePending) event(name string) {
+	p.t.Helper()
+	if !p.provider.active { p.t.Fatal("toolchain released before receipt completed", name) }
+	p.provider.events = append(p.provider.events, name)
+}
+func (p *unslopCaptureLifetimePending) Seal(r unslopCaptureReceipt) error { p.event("seal"); return p.syntheticUnslopPending.Seal(r) }
+func (p *unslopCaptureLifetimePending) Commit(ctx context.Context) error { p.event("commit"); return p.syntheticUnslopPending.Commit(ctx) }
+func (p *unslopCaptureLifetimePending) Close() error {
+	p.event("export-close")
+	err:=p.syntheticUnslopPending.Close()
+	if p.afterClose!=nil { p.afterClose() }
+	return err
+}
+
+func TestUnslopToolchainCaptureRetainsInputsThroughReceiptAndLateClose(t *testing.T) {
+	for _, mode := range []string{"normal", "provider-close", "capture-failed", "cancel-before", "no-provider", "no-factory", "factory-error", "duplicate-callback", "provider-postcheck", "cancel-after-publication", "mutation-after-publication"} {
+		t.Run(mode, func(t *testing.T) {
+			provider := &unslopCaptureLifetimeProvider{syntheticUnslopToolchainProvider:newSyntheticUnslopToolchainProvider()}
+			if mode == "provider-close" { provider.mode = "close-error" }
+			if mode == "provider-postcheck" { provider.mode = "after-check" }
+			if mode == "duplicate-callback" { provider.mode = "two-callbacks" }
+			fixture := syntheticUnslopCapture()
+			if mode == "capture-failed" { fixture.fault = "worker_failed" }
+			session := &unslopCaptureLifetimeSession{unslopSyntheticCapture:fixture,provider:provider,t:t}
+			pending := &unslopCaptureLifetimePending{syntheticUnslopPending:&syntheticUnslopPending{},provider:provider,t:t}
+			factories := 0
+			factory := func(_ context.Context, held rustToolchainHeld, binding unslopRustToolchainBinding) (unslopCaptureAccess,error) {
+				factories++
+				if !provider.active || &held.Cargo.Raw[0] != &provider.held.Cargo.Raw[0] || !unslopHex(binding.SHA,64) { t.Fatal("factory not inside original toolchain lease") }
+				if mode == "factory-error" { return unslopCaptureAccess{},errors.New("private factory error") }
+				return unslopCaptureAccess{
+					begin:func(context.Context)(unslopProducerSession,error){ session.event("begin"); return session,nil },
+					stage:func(context.Context,unslopCaptureReceipt,[]byte)(unslopPendingCapture,error){ pending.event("stage"); return pending,nil },
+				},nil
+			}
+			ctx,cancel := context.WithCancel(context.Background()); defer cancel()
+			if mode == "cancel-after-publication" { pending.afterClose=cancel }
+			if mode == "mutation-after-publication" { pending.afterClose=func(){ provider.held.Cargo.Raw[0]^=1 } }
+			var origin rustToolchainOriginProvider = provider
+			if mode == "cancel-before" { cancel() }
+			if mode == "no-provider" { origin = nil }
+			if mode == "no-factory" { factory = nil }
+			r := captureUnslopReleaseWithToolchain(ctx,origin,factory)
+			wantPublished := mode == "normal" || mode == "provider-close" || mode == "duplicate-callback" || mode == "provider-postcheck" || mode == "cancel-after-publication" || mode == "mutation-after-publication"
+			if r.Qualified != (mode == "normal") || r.ReceiptPublished != wantPublished || provider.active { t.Fatal("capture result lost late failure or published state",r,provider.events) }
+			if mode != "normal" && r.Receipt != nil { t.Fatal("failed capture returned usable receipt") }
+			if mode == "provider-close" && (pending.commits != 1 || r.Reason != "toolchain_origin_unavailable") { t.Fatal("late close replayed or hid publication",r,pending.commits) }
+			if mode == "duplicate-callback" && (pending.commits != 1 || factories != 1 || r.Reason != "toolchain_callback_invalid") { t.Fatal("duplicate callback repeated capture",r,factories,pending.commits) }
+			if mode == "provider-postcheck" || mode == "cancel-after-publication" || mode == "mutation-after-publication" {
+				wantReason:="toolchain_origin_unavailable"
+				if mode == "cancel-after-publication" { wantReason="toolchain_cancelled" }
+				if mode == "mutation-after-publication" { wantReason="toolchain_inputs_mismatch" }
+				if !pending.published || pending.commits!=1 || pending.aborts!=0 || factories!=1 || r.Reason!=wantReason { t.Fatal("post-publication failure lost outcome or repeated work",mode,r,pending.commits,pending.aborts) }
+				if len(provider.events)==0 || provider.events[len(provider.events)-1]!="toolchain-close" { t.Fatal("provider cleanup did not finish",provider.events) }
+			}
+			if (mode == "cancel-before" || mode == "no-provider" || mode == "no-factory") && (factories != 0 || provider.opens != 0) { t.Fatal("invalid call reached provider") }
+			if mode == "capture-failed" && (pending.commits != 0 || r.Reason != "capture_producer_ack_or_exit_unverified") { t.Fatal("capture failure was overwritten",r) }
+			if mode == "normal" {
+				want := "held,begin,before,build,after,artifact,stage,ack,done,input-close,seal,commit,export-close,toolchain-close"
+				if strings.Join(provider.events,",") != want { t.Fatal("input lifetime did not cover complete capture",provider.events) }
+			}
+		})
+	}
+}
+
+func TestUnslopToolchainBindingChangesForEveryIdentityAndOriginField(t *testing.T) {
+	provider := newSyntheticUnslopToolchainProvider()
+	purpose := fixedUnslopToolchainPurpose()
+	original,ok := bindUnslopRustToolchain(purpose,provider.held)
+	if !ok || !unslopHex(original.SHA,64) { t.Fatal("valid binding fixture") }
+	again,ok := bindUnslopRustToolchain(purpose,provider.held)
+	if !ok || original != again { t.Fatal("binding is not deterministic") }
+	for _,mode := range []string{"origin","components","alias-id","alias-resolved","alias-acl","target-acl","cargo-id","cargo-acl","cargo-bytes","rustc-id","rustc-acl","rustc-bytes","purpose","nil-check"} {
+		t.Run(mode,func(t *testing.T){
+			p := newSyntheticUnslopToolchainProvider()
+			request := purpose
+			switch mode {
+			case "origin": p.held.Origin.ManifestSHA = strings.Repeat("a",64)
+			case "components": p.held.Origin.Components[0],p.held.Origin.Components[1]=p.held.Origin.Components[1],p.held.Origin.Components[0]
+			case "alias-id": p.held.Alias.AliasIdentity.Created = "20"
+			case "alias-resolved": p.held.Alias.ResolvedIdentity.Created="40";p.held.Alias.TargetIdentity=p.held.Alias.ResolvedIdentity
+			case "alias-acl": p.held.Alias.AliasACLSHA = digest([]byte("changed acl"))
+			case "target-acl": p.held.Alias.TargetACLSHA=digest([]byte("changed target acl"))
+			case "cargo-id": p.held.Cargo.Identity.Created = "30"; p.held.Cargo.ViaInstallIdentity = p.held.Cargo.Identity
+			case "cargo-acl": p.held.Cargo.ACLSHA = digest([]byte("changed file acl"))
+			case "cargo-bytes": p.held.Cargo.Raw[0] ^= 1; p.held.Origin.Components[0].ExecutableSHA = digest(p.held.Cargo.Raw)
+			case "rustc-id": p.held.Rustc.Identity.Created="50";p.held.Rustc.ViaInstallIdentity=p.held.Rustc.Identity
+			case "rustc-acl": p.held.Rustc.ACLSHA=digest([]byte("changed rustc acl"))
+			case "rustc-bytes": p.held.Rustc.Raw[0]^=1;p.held.Origin.Components[1].ExecutableSHA=digest(p.held.Rustc.Raw)
+			case "purpose": request.CommandSHA = digest([]byte("different command"))
+			case "nil-check": p.held.Recheck = nil
+			}
+			got,valid := bindUnslopRustToolchain(request,p.held)
+			if valid && got.SHA == original.SHA { t.Fatal("binding omitted changed field",mode) }
+			mustReject := mode == "origin" || mode == "components" || mode == "purpose" || mode == "nil-check"
+			if mustReject && valid { t.Fatal("invalid binding accepted",mode) }
+			if !mustReject && !valid { t.Fatal("consistent changed generation fixture rejected before binding",mode) }
+		})
+	}
+}
+
+func TestUnslopWorkerRequiresItsOwnMatchingHeldBinding(t *testing.T) {
+	for _,mode := range []string{"matching","mismatch","provider-close","worker-failure","cancelled","no-provider"} {
+		t.Run(mode,func(t *testing.T){
+			p := newSyntheticUnslopToolchainProvider()
+			binding,ok := bindUnslopRustToolchain(fixedUnslopToolchainPurpose(),p.held)
+			if !ok { t.Fatal("binding fixture") }
+			expected := binding.SHA
+			if mode == "mismatch" { expected = strings.Repeat("a",64) }
+			if mode == "provider-close" { p.mode = "close-error" }
+			ctx,cancel := context.WithCancel(context.Background()); defer cancel()
+			if mode == "cancelled" { cancel() }
+			var origin rustToolchainOriginProvider = p
+			if mode == "no-provider" { origin = nil }
+			calls:=0
+			exit:=runUnslopWorkerWithToolchain(ctx,origin,expected,func(_ context.Context,h rustToolchainHeld,got unslopRustToolchainBinding)int {
+				calls++
+				if got.SHA != expected || &h.Rustc.Raw[0] != &p.held.Rustc.Raw[0] { t.Fatal("worker used other generation") }
+				if mode == "worker-failure" { return 7 }; return 0
+			})
+			if (exit==0)!=(mode=="matching") || ((mode=="mismatch" || mode=="cancelled" || mode=="no-provider") && calls!=0) || calls>1 { t.Fatal("worker binding/exit contract",mode,exit,calls) }
+			if mode=="worker-failure" && exit!=7 { t.Fatal("worker failure exit lost",exit) }
+		})
+	}
+}
+
+// A synthetic uncollected result reaches the real core's deferred Close path.
+// This proves result preservation, not native collection or lease handoff.
+func TestUnslopToolchainCaptureKeepsCleanupFailureAlongsideToolchainFailure(t *testing.T) {
+	for _, mode := range []string{"cleanup-only", "cleanup-and-cancel", "cleanup-and-provider-close", "cleanup-and-postcheck"} {
+		t.Run(mode,func(t *testing.T) {
+			provider:=&unslopCaptureLifetimeProvider{syntheticUnslopToolchainProvider:newSyntheticUnslopToolchainProvider()}
+			ctx,cancel:=context.WithCancel(context.Background());defer cancel()
+			fixture:=syntheticUnslopCapture()
+			fixture.fault="worker_unreaped"
+			session:=&unslopCaptureLifetimeSession{unslopSyntheticCapture:fixture,provider:provider,t:t,failClose:true}
+			if mode=="cleanup-and-cancel" { session.afterDone=cancel }
+			if mode=="cleanup-and-provider-close" { provider.mode="close-error" }
+			if mode=="cleanup-and-postcheck" { provider.mode="after-check" }
+			pending:=&unslopCaptureLifetimePending{syntheticUnslopPending:&syntheticUnslopPending{},provider:provider,t:t}
+			calls:=0
+			result:=captureUnslopReleaseWithToolchain(ctx,provider,func(context.Context,rustToolchainHeld,unslopRustToolchainBinding)(unslopCaptureAccess,error){
+				calls++
+				return unslopCaptureAccess{
+					begin:func(context.Context)(unslopProducerSession,error){return session,nil},
+					stage:func(context.Context,unslopCaptureReceipt,[]byte)(unslopPendingCapture,error){return pending,nil},
+				},nil
+			})
+			wantToolchain:="toolchain_inputs_consumed"
+			wantReason:="capture_cleanup_failed_preserved"
+			if mode=="cleanup-and-cancel" { wantToolchain="toolchain_cancelled";wantReason=wantToolchain }
+			if mode=="cleanup-and-provider-close"||mode=="cleanup-and-postcheck" { wantToolchain="toolchain_origin_unavailable";wantReason=wantToolchain }
+			if result.Qualified||result.ReceiptPublished||result.Receipt!=nil||!result.CaptureAttempted||result.CaptureReason!="capture_cleanup_failed_preserved"||result.ToolchainReason!=wantToolchain||result.Reason!=wantReason {
+				t.Fatal("compound failure lost capture or toolchain outcome",mode,result)
+			}
+			if calls!=1||pending.commits!=0||pending.aborts!=1||provider.active {t.Fatal("compound failure repeated capture or changed pending state",mode)}
+			raw,err:=json.Marshal(result)
+			if err!=nil||!strings.Contains(string(raw),"capture_cleanup_failed_preserved")||!strings.Contains(string(raw),wantToolchain)||strings.Contains(string(raw),"private failure") {t.Fatal("compound outcome not safely serializable",mode,string(raw))}
+		})
+	}
+}
+
+func TestUnslopToolchainCaptureKeepsPublishedCleanupFailureAlongsideProviderFailure(t *testing.T) {
+	for _,mode:=range []string{"export-close-and-provider-close","export-close-and-postcheck","export-close-and-cancel"} {
+		t.Run(mode,func(t *testing.T){
+			p:=&unslopCaptureLifetimeProvider{syntheticUnslopToolchainProvider:newSyntheticUnslopToolchainProvider()}
+			if mode=="export-close-and-provider-close" {p.mode="close-error"}
+			if mode=="export-close-and-postcheck" {p.mode="after-check"}
+			ctx,cancel:=context.WithCancel(context.Background());defer cancel()
+			s:=&unslopCaptureLifetimeSession{unslopSyntheticCapture:syntheticUnslopCapture(),provider:p,t:t}
+			pending:=&unslopCaptureLifetimePending{syntheticUnslopPending:&syntheticUnslopPending{fault:"export_close_failed"},provider:p,t:t}
+			if mode=="export-close-and-cancel" {pending.afterClose=cancel}
+			factories:=0
+			r:=captureUnslopReleaseWithToolchain(ctx,p,func(context.Context,rustToolchainHeld,unslopRustToolchainBinding)(unslopCaptureAccess,error){
+				factories++
+				return unslopCaptureAccess{begin:func(context.Context)(unslopProducerSession,error){return s,nil},stage:func(context.Context,unslopCaptureReceipt,[]byte)(unslopPendingCapture,error){return pending,nil}},nil
+			})
+			wantToolchain:="toolchain_origin_unavailable"
+			if mode=="export-close-and-cancel" {wantToolchain="toolchain_cancelled"}
+			if r.Qualified||r.Receipt!=nil||!r.ReceiptPublished||!r.CaptureAttempted||r.CaptureReason!="capture_export_close_failed"||r.ToolchainReason!=wantToolchain||r.Reason!=wantToolchain {t.Fatal("published compound failure lost either outcome",mode,r)}
+			if !pending.published||pending.commits!=1||pending.aborts!=0||factories!=1||p.active {t.Fatal("published result rolled back or committed again",mode)}
+		})
+	}
+}
+
+func TestUnslopToolchainConsumerPreservesProviderCleanupFact(t *testing.T) {
+	for _,mode:=range []string{"normal","accepted-close","cancel-close","primary-close","open-close","callback-primary-close","markerless-error"} {
+		t.Run(mode,func(t *testing.T){
+			provider,access:=syntheticSoftwareRustProvider()
+			ctx,cancel:=context.WithCancel(context.Background());defer cancel()
+			wantCleanup:=mode!="normal"&&mode!="markerless-error"
+			access.session.closeError=wantCleanup
+			if mode=="primary-close" {access.session.held.Cargo.Identity.Created="changed"}
+			if mode=="open-close" {access.mode="open-error"}
+			if mode=="markerless-error" {access.session.mode="before-check"}
+			wantReason:="toolchain_origin_unavailable"
+			if mode=="normal" {wantReason="toolchain_inputs_consumed"}
+			if mode=="primary-close" {wantReason="toolchain_inputs_mismatch"}
+			if mode=="cancel-close" {wantReason="toolchain_cancelled"}
+			if mode=="callback-primary-close" {wantReason="toolchain_consumer_failed"}
+			calls:=0
+			r:=consumeUnslopToolchain(ctx,fixedUnslopToolchainPurpose(),provider,func(context.Context,[]byte,[]byte)bool {
+				calls++
+				if mode=="cancel-close" {cancel()}
+				return mode!="callback-primary-close"
+			})
+			wantCalls:=1
+			if mode=="primary-close"||mode=="open-close"||mode=="markerless-error" {wantCalls=0}
+			if r.CleanupFailed!=wantCleanup||r.Reason!=wantReason||r.Verified!=(mode=="normal")||r.Consumed!=(wantCalls==1)||calls!=wantCalls||access.session.closed!=1 {t.Fatal("provider cleanup fact was lost at consumer boundary",mode,r,calls,access.session.closed)}
+			raw,err:=json.Marshal(r)
+			if err!=nil||strings.Contains(string(raw),"private")||strings.Contains(string(raw),"owned-cargo")||strings.Contains(string(raw),"InstallPath") {t.Fatal("cleanup projection leaked provider detail")}
+			var jsonResult map[string]any
+			if json.Unmarshal(raw,&jsonResult)!=nil {t.Fatal("cleanup projection was not JSON")}
+			if jsonResult["cleanup_failed"]!=wantCleanup {t.Fatal("cleanup fact not visible in serialized consumer result",string(raw))}
+		})
+	}
+}
+
+type unslopCleanupFactProvider struct { base rustToolchainOriginProvider; after func(error); forceMarker bool }
+func (p *unslopCleanupFactProvider) WithHeld(ctx context.Context,visit func(rustToolchainHeld)bool) error {
+	err:=p.base.WithHeld(ctx,visit)
+	if p.after!=nil {p.after(err)}
+	if p.forceMarker {return errSoftwareRustCleanup}
+	return err
+}
+
+func TestUnslopToolchainCapturePreservesCleanupFactAfterPublication(t *testing.T) {
+	for _,mode:=range []string{"normal","accepted-close","cancel-close","primary-close","capture-and-provider-close"} {
+		t.Run(mode,func(t *testing.T){
+			provider,access:=syntheticSoftwareRustProvider()
+			ctx,cancel:=context.WithCancel(context.Background());defer cancel()
+			wantCleanup:=mode!="normal"
+			access.session.closeError=wantCleanup
+			if mode=="primary-close" {access.session.held.Cargo.Identity.Created="changed"}
+			fixture:=syntheticUnslopCapture()
+			pending:=&syntheticUnslopPending{}
+			if mode=="capture-and-provider-close" {pending.fault="export_close_failed"}
+			var origin rustToolchainOriginProvider=provider
+			if mode=="cancel-close" {origin=&unslopCleanupFactProvider{base:provider,after:func(error){cancel()}}}
+			factories:=0
+			r:=captureUnslopReleaseWithToolchain(ctx,origin,func(context.Context,rustToolchainHeld,unslopRustToolchainBinding)(unslopCaptureAccess,error){
+				factories++
+				return unslopCaptureAccess{begin:func(context.Context)(unslopProducerSession,error){return fixture,nil},stage:func(context.Context,unslopCaptureReceipt,[]byte)(unslopPendingCapture,error){return pending,nil}},nil
+			})
+			wantReason:="toolchain_origin_unavailable"
+			if mode=="normal" {wantReason="captured_release_receipt_published"}
+			if mode=="cancel-close" {wantReason="toolchain_cancelled"}
+			if mode=="primary-close" {wantReason="toolchain_inputs_mismatch"}
+			if r.Reason!=wantReason {t.Fatal("primary reason changed",mode,r)}
+			wantPublished:=mode!="primary-close"
+			if r.ToolchainCleanupFailed!=wantCleanup||r.Qualified!=(mode=="normal")||r.ReceiptPublished!=wantPublished||access.session.closed!=1 {t.Fatal("cleanup fact or publication lost at capture boundary",mode,r)}
+			if mode!="normal"&&r.Receipt!=nil {t.Fatal("cleanup failure returned a usable receipt")}
+			if wantPublished&&(factories!=1||pending.commits!=1||pending.aborts!=0) {t.Fatal("published capture was rolled back or repeated",mode)}
+			if mode=="primary-close"&&(factories!=0||r.CaptureAttempted) {t.Fatal("failed admission reached capture")}
+			if mode=="capture-and-provider-close"&&r.CaptureReason!="capture_export_close_failed" {t.Fatal("provider cleanup erased capture cleanup",r)}
+			raw,err:=json.Marshal(r)
+			if err!=nil||strings.Contains(string(raw),"private") {t.Fatal("capture cleanup exposed provider detail")}
+			var jsonResult map[string]any
+			if json.Unmarshal(raw,&jsonResult)!=nil||jsonResult["toolchain_cleanup_failed"]!=wantCleanup {t.Fatal("cleanup fact not visible in serialized capture result",string(raw))}
+		})
+	}
+}
+
+func TestUnslopToolchainCleanupMarkerCannotBecomeVerified(t *testing.T) {
+	provider:=&unslopCleanupFactProvider{base:newSyntheticUnslopToolchainProvider(),forceMarker:true}
+	r:=consumeUnslopToolchain(context.Background(),fixedUnslopToolchainPurpose(),provider,func(context.Context,[]byte,[]byte)bool{return true})
+	if r.Verified||!r.Consumed||!r.CleanupFailed||r.Reason!="toolchain_origin_unavailable" {t.Fatal("cleanup-only marker became success",r)}
+}

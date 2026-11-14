@@ -12,7 +12,8 @@ Unslopの正式ビルドには、固定したRust 1.95.0のWindows向けtoolchai
 公開された配布ハッシュだけでは、手元の実行ファイルが同じものだと確認できません。
 
 今回のconsumerは、この確認を行う正常なproviderとの接続点です。
-新しいconsumerとテストは作成しましたが、Go工具の資格が未成立のため、コンパイルとテストは未実行です。
+固定した前候補のconsumerは、通常のhosted CIでコンパイルと合成テストを確認しました。
+今回追加した保持範囲とbindingの接続テストは、ローカル工具の資格が未成立のため、まだ実行していません。
 providerが未接続なら、固定された取得不能の理由を返し、toolchainを開いたり、コンパイラを起動したりしません。
 
 ## 入力と使える範囲
@@ -46,3 +47,48 @@ Unslop側は固定用途の一致と保持中の再確認が成立した場合�
 元の配布・評価の契約は[Unslopの専用処理](unslop-software-purpose.md)、生成と履歴の工程は[native生成と履歴取得](unslop-native-capture.md)を参照してください。
 
 公開配布の形式は、[Rustupのtoolchainの説明](https://rust-lang.github.io/rustup/concepts/toolchains.html)と[公式の配布manifest](https://static.rust-lang.org/dist/channel-rust-1.95.0.toml)を参照します。
+
+## 保持範囲をcaptureへ結ぶ
+
+`captureUnslopReleaseWithToolchain` は、正常なproviderの `WithHeld` の中で `captureUnslopRelease` 全体を呼びます。
+正常終了またはworkerの回収を確認できた分岐では、Before・Build・Afterから、成果物の保持、ACK、入力の後片付け、receiptのSeal・Commitまでをcallback内で行います。
+準備関数だけを `WithHeld` で囲み、保持を閉じてからsessionを返す使い方はしません。
+
+一方、workerの回収を確認できず `live_worker_collection_unknown_inputs_preserved` が返る分岐では、captureの失敗返却後に同期callbackも終わるため、現wrapperはtoolchainの保持継続を保証しません。
+通常入口へ接続する前に、workerの実回収を確認するか、回収まで保持を継続する正規のownerへ引き継ぐ必要があります。
+この条件が未成立の間はnormalfactoryとnative・workerの配線を有効にしません。
+
+Commit後にproviderの再確認やCloseが失敗した場合は、公開済みの `ReceiptPublished` を残して `Qualified=false` とし、返却するreceiptを外します。
+公開済みのファイルを削除したり、未公開に書き戻したり、同じreceiptを自動で再Commitしたりしません。
+final receiptはproviderの後処理より先に公開され得るため、その存在や内容だけで処理全体の成功を推定できません。
+将来のinstall consumerには、providerの後処理と実際の返却結果を永続的に結び、失敗・未確認の実行を保留にする接続が必要です。
+現在の合成テストは返却値と公開済み状態の区別を確認するもので、再起動後のreceipt判定や実インストールを実証するものではありません。
+
+wrapperの結果には、capture coreを呼んだかと、capture側・toolchain側それぞれの固定理由を残します。
+たとえば取消と入力の後片付け失敗が重なっても、外向きの理由で後片付け失敗を消しません。
+この情報は実workerの回収状態や保持担当を表すものではなく、それらは通常配線前に別途接続する必要があります。
+
+providerの後片付けに失敗した場合は、主な失敗理由とは別に、その事実も残します。
+内部consumerのJSONでは`cleanup_failed`、capture wrapperのJSONでは`toolchain_cleanup_failed`をtrueにします。
+値はproviderが返す固定のcleanup markerを`errors.Is`で確認した結果だけで、エラーの自由文や元pathを転記しません。
+取消とClose失敗が重なった場合も、Reasonは既存の取消理由を保ち、cleanupの値を残します。
+入力不一致やcallback失敗が先に起きた場合も同じです。cleanup失敗がある結果をVerifiedやQualifiedにはしません。
+既にreceiptを公開していた場合のReceiptPublished・CaptureReason・ToolchainReasonの意味は変えず、公開済みファイルの削除や再Commitもしません。
+固定markerがない失敗から、cleanup失敗を推測することはありません。
+
+この追加の複合失敗テストは、前候補のCI成功後に加えた別の変更です。
+providerの固定ソースと合わせてコンパイル・実行する必要があり、通常factoryやnative回収処理を接続するものではありません。
+
+worker用の `runUnslopWorkerWithToolchain` は、worker自身の正常なproviderが保持した内容からbindingを作り、親からの期待値と一致したときだけworker処理を呼びます。
+期待digest、PID、親から来たJSONだけでは、providerを構築したり入力の読取資格を与えたりしません。
+このcallback内に入力保持、Cargo、Ready、ACK受領、Final送信を置き、providerのClose後に終了コードを決めます。
+
+## bindingが示す範囲
+
+`unslopRustToolchainBinding` は、固定用途、公式Rust origin、installaliasと解決先のfull identity・ACL、保持中cargo・rustcのSHAとサイズを、固定順の構造から計算する比較値です。
+既存の4実行物ハッシュをまとめる `ToolchainSHA` の意味は変えません。
+この新digestはRustの2実行物の範囲であり、gate・sccache、標準ライブラリ、DLL、リンカー全体の実行入力を証明するものではありません。
+
+normalfactoryとnative・workerの実routingは、この変更だけでは有効にしません。
+次の統合では、元manifestのBefore/After、workerの独立保持、最終receiptに同じbindingを結び、入力資格とACL方針の受入を正常なprovider側で済ませる必要があります。
+古いreceiptに新しいbindingを後から補いません。

@@ -368,59 +368,89 @@ type softwareRustOpeningSession interface {
 	state() *rustToolchainHeld
 	openNode(string, string, bool, bool) (softwareRustNativeNode, error)
 	fixedJunction(softwareRustNativeNode) bool
-	readNode(softwareRustNativeNode, int) ([]byte, error)
+	readNode(context.Context, softwareRustNativeNode, int) ([]byte, error)
 	recheck(context.Context) error
 }
 
-func softwareRustOpenWithSession(ctx context.Context, origin rustToolchainOrigin, s softwareRustOpeningSession) (softwareRustHeldSession, error) {
+func softwareRustOpenWithSession(ctx context.Context, origin rustToolchainOrigin, s softwareRustOpeningSession) (result softwareRustHeldSession, failure error) {
 	held := s.state()
 	held.Origin = origin
 	good := false
-	defer func() { if !good { _ = s.Close() } }()
+	defer func() {
+		if !good && s.Close() != nil { failure = errors.Join(failure, errSoftwareRustUnavailable) }
+	}()
+	if ctx.Err() != nil { return nil, ctx.Err() }
+	open := func(path, resolved string, directory, reparse bool) (softwareRustNativeNode, error) {
+		if err := ctx.Err(); err != nil { return softwareRustNativeNode{}, err }
+		node, err := s.openNode(path, resolved, directory, reparse)
+		if ctx.Err() != nil { return softwareRustNativeNode{}, ctx.Err() }
+		return node, err
+	}
 	// Plain ancestors are pinned on both sides. The only reparse exception is
 	// the one fixed install junction, checked by its native reparse payload.
 	for _, root := range []string{filepath.Dir(rustToolchainInstallRoot), rustToolchainPhysicalRoot} {
 		var parents []string
 		for p := root; ; p = filepath.Dir(p) { parents = append(parents, p); if filepath.Dir(p) == p { break } }
 		for i := len(parents)-1; i >= 0; i-- {
-			if _, err := s.openNode(parents[i], parents[i], true, false); err != nil { return nil, err }
+			if _, err := open(parents[i], parents[i], true, false); err != nil { return nil, err }
 		}
 	}
-	alias, err := s.openNode(rustToolchainInstallRoot, rustToolchainInstallRoot, true, true)
-	if err != nil || !s.fixedJunction(alias) { return nil, errSoftwareRustMismatch }
-	resolved, err := s.openNode(rustToolchainInstallRoot, rustToolchainPhysicalRoot, true, false)
+	alias, err := open(rustToolchainInstallRoot, rustToolchainInstallRoot, true, true)
 	if err != nil { return nil, err }
-	target, err := s.openNode(rustToolchainPhysicalRoot, rustToolchainPhysicalRoot, true, false)
-	if err != nil || resolved.id != target.id { return nil, errSoftwareRustMismatch }
+	if !s.fixedJunction(alias) { return nil, errSoftwareRustMismatch }
+	if ctx.Err() != nil { return nil, ctx.Err() }
+	resolved, err := open(rustToolchainInstallRoot, rustToolchainPhysicalRoot, true, false)
+	if err != nil { return nil, err }
+	target, err := open(rustToolchainPhysicalRoot, rustToolchainPhysicalRoot, true, false)
+	if err != nil { return nil, err }
+	if resolved.id != target.id { return nil, errSoftwareRustMismatch }
 	held.Alias = rustToolchainAlias{InstallRoot: rustToolchainInstallRoot, PhysicalRoot: rustToolchainPhysicalRoot, AliasIdentity: alias.id, ResolvedIdentity: resolved.id, TargetIdentity: target.id, AliasACLSHA: alias.aclSHA, TargetACLSHA: target.aclSHA}
 	for i, name := range []string{"cargo", "rustc"} {
+		if ctx.Err() != nil { return nil, ctx.Err() }
 		suffix := "/toolchains/"+rustToolchainName
 		for _, tail := range []string{"/toolchains", suffix, suffix+"/bin"} {
-			if _, err := s.openNode(rustToolchainInstallRoot+tail, rustToolchainPhysicalRoot+tail, true, false); err != nil { return nil, err }
+			if _, err := open(rustToolchainInstallRoot+tail, rustToolchainPhysicalRoot+tail, true, false); err != nil { return nil, err }
 		}
 		install, physical := rustToolchainInstallRoot+suffix+"/bin/"+name+".exe", rustToolchainPhysicalRoot+suffix+"/bin/"+name+".exe"
-		node, err := s.openNode(install, physical, false, false)
+		node, err := open(install, physical, false, false)
 		if err != nil { return nil, err }
-		raw, err := s.readNode(node, i)
+		if ctx.Err() != nil { return nil, ctx.Err() }
+		raw, err := s.readNode(ctx, node, i)
 		if err != nil { return nil, err }
 		file := rustToolchainHeldFile{InstallPath: install, PhysicalPath: physical, Identity: node.id, ViaInstallIdentity: node.id, ACLSHA: node.aclSHA, Raw: raw}
 		if i == 0 { held.Cargo = file } else { held.Rustc = file }
+		if ctx.Err() != nil { return nil, ctx.Err() }
 		if digest(raw) != origin.Components[i].ExecutableSHA { return nil, errSoftwareRustMismatch }
 	}
 	held.Recheck = s.recheck
-	if !rustToolchainInputsMatch(*held) || s.recheck(ctx) != nil { return nil, errSoftwareRustMismatch }
+	if ctx.Err() != nil { return nil, ctx.Err() }
+	if !rustToolchainInputsMatch(*held) { return nil, errSoftwareRustMismatch }
+	if err := s.recheck(ctx); err != nil { return nil, err }
+	if ctx.Err() != nil { return nil, ctx.Err() }
 	good = true
 	return s, nil
 }
 
 func (s *softwareRustNativeSession) state() *rustToolchainHeld { return &s.held }
 func (s *softwareRustNativeSession) fixedJunction(node softwareRustNativeNode) bool { return softwareRustFixedJunction(node.f) }
-func (s *softwareRustNativeSession) readNode(node softwareRustNativeNode, index int) ([]byte, error) {
+func (s *softwareRustNativeSession) readNode(ctx context.Context, node softwareRustNativeNode, index int) ([]byte, error) {
+	if ctx.Err() != nil { return nil, ctx.Err() }
 	stat, err := node.f.Stat()
 	if err != nil || stat.Size() <= 0 || stat.Size() > 64<<20 { return nil, errSoftwareRustMismatch }
+	if ctx.Err() != nil { return nil, ctx.Err() }
 	raw := make([]byte, int(stat.Size()))
 	if index == 0 { s.held.Cargo.Raw = raw } else { s.held.Rustc.Raw = raw }
-	if _, err := io.ReadFull(node.f, raw); err != nil { return nil, errSoftwareRustMismatch }
+	// A synchronous file read is not forcibly interrupted. Check the context
+	// before and after each bounded read and never begin another after cancel.
+	for offset := 0; offset < len(raw); {
+		if ctx.Err() != nil { return nil, ctx.Err() }
+		end := offset + (64 << 10)
+		if end > len(raw) { end = len(raw) }
+		n, readErr := node.f.Read(raw[offset:end])
+		offset += n
+		if ctx.Err() != nil { return nil, ctx.Err() }
+		if readErr != nil && !(readErr == io.EOF && offset == len(raw)) || n == 0 { return nil, errSoftwareRustMismatch }
+	}
 	return raw, nil
 }
 
@@ -469,11 +499,13 @@ func (s *softwareRustNativeSession) Held() rustToolchainHeld { return s.held }
 func (s *softwareRustNativeSession) recheck(ctx context.Context) error {
 	if ctx.Err() != nil { return ctx.Err() }
 	for _, node := range s.nodes {
+		if ctx.Err() != nil { return ctx.Err() }
 		info, err := node.f.Stat()
 		if err != nil { return errSoftwareRustUnavailable }
 		id, err := softwareRustNodeInfo(node.f, info.IsDir(), node.reparse)
 		path, ok := handlePath(syscall.Handle(node.f.Fd()))
 		acl, aclErr := updateFileACL(node.f)
+		if ctx.Err() != nil { return ctx.Err() }
 		if err != nil || id != node.id || !ok || !strings.EqualFold(filepath.Clean(path), filepath.Clean(node.resolved)) || aclErr != nil || digest([]byte(acl)) != node.aclSHA || node.reparse && !softwareRustFixedJunction(node.f) { return errSoftwareRustMismatch }
 	}
 	if !rustToolchainInputsMatch(s.held) { return errSoftwareRustMismatch }

@@ -206,3 +206,25 @@ func TestGoPurposeModuleDeclarationSyntheticGoSyntax(t *testing.T) {
 		})
 	}
 }
+
+func TestGoPurposeQuotedSyntheticZIPKeepsIndependentH1Binding(t *testing.T) {
+	prefix := goPurposeModule+"@"+goPurposeVersion+"/"
+	for _, tc := range []struct { name, mod, moduleH1, modH1 string }{
+		{"interpreted", "module \"gopkg.in/yaml.v3\"\n", "h1:B6xzZ5fhjc6KRcruT0r4O5IP+mrS4oyr56FbmopG9ag=", "h1:1ahYjIJ/HbvfI0hgGaHwMbBlYgTQyra1Zto1CL1k36Y="},
+		{"raw", "module `gopkg.in/yaml.v3`\n", "h1:xDvk3CeSJ4aL5+t4RojoNcoRVBZcdFlKMq133BdEb1c=", "h1:GdWIPI89QlKa+8cJRC06eXNZgSIILKKB+YAvF32IUMY="},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			mod := []byte(tc.mod)
+			archive := goPurposeFixtureArchive(t, []goPurposeFixture{{name:prefix+"go.mod", body:mod}, {name:prefix+"sample.go", body:[]byte("package synthetic\n")}}, zip.Deflate)
+			proof := goModulePurposeProof{Producer:goPurposeProducer, Module:goPurposeModule, Version:goPurposeVersion, ModuleH1:tc.moduleH1, ModH1:tc.modH1, ArchiveSHA256:goPurposeSHA(archive), GoModSHA256:goPurposeSHA(mod)}
+			result, err := validateGoModulePurpose(archive, mod, proof)
+			if err != nil || result == nil { t.Fatal("synthetic quoted module rejected", err) }
+			if !bytes.Equal(result.Archive, archive) || !bytes.Equal(result.GoMod, mod) { t.Fatal("different bytes returned") }
+			clear(result.Archive); clear(result.GoMod)
+			// Sums from an unquoted declaration must not authenticate quoted
+			// bytes, even though they declare the same module identity.
+			proof.ModuleH1, proof.ModH1 = fixtureModuleH1, fixtureGoModH1
+			if value, err := validateGoModulePurpose(archive, mod, proof); err == nil || value != nil { t.Fatal("old h1 adopted for changed declaration bytes") }
+		})
+	}
+}

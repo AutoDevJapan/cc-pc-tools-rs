@@ -216,7 +216,7 @@ func (s *softwareRustOpeningFixture) openNode(path, resolved string, directory, 
 	return softwareRustNativeNode{path:path, resolved:resolved, id:id, aclSHA:acl, reparse:reparse}, nil
 }
 func (s *softwareRustOpeningFixture) fixedJunction(softwareRustNativeNode) bool { return true }
-func (s *softwareRustOpeningFixture) readNode(_ softwareRustNativeNode, index int) ([]byte, error) {
+func (s *softwareRustOpeningFixture) readNode(_ context.Context, _ softwareRustNativeNode, index int) ([]byte, error) {
 	s.reads++
 	raw := bytes.Clone(s.template.Rustc.Raw)
 	if index == 0 { raw = bytes.Clone(s.template.Cargo.Raw); s.held.Cargo.Raw = raw } else { s.held.Rustc.Raw = raw }

@@ -12,6 +12,7 @@ import (
 	"fmt"
 	"io"
 	"sort"
+	"strconv"
 	"strings"
 )
 
@@ -159,21 +160,82 @@ func goPurposeZipH1(raw []byte) (string, []byte, error) {
 }
 
 func goPurposeModuleDeclaration(raw []byte) bool {
-	// Purpose-specific strict subset, not a general go.mod parser. The binder
-	// may not treat a declared path merely prefixed by the expected module as
-	// the same module, and duplicate declarations fail closed.
-	seen := false
+	// Parse the module declaration's tokens, including Go string literals and
+	// the module block form. This checks one fixed module identity, not the
+	// semantics of every other go.mod directive or any producer's authority.
+	seen, moduleBlock, blockValue := false, false, false
+	otherBlock := false
 	for _, line := range strings.Split(string(raw), "\n") {
-		line = strings.TrimSpace(strings.TrimSuffix(line, "\r"))
-		if !strings.HasPrefix(line, "module ") && !strings.HasPrefix(line, "module\t") && line != "module" {
+		tokens, ok := goPurposeDeclarationTokens(strings.TrimSuffix(line, "\r"))
+		if !ok { return false }
+		if len(tokens) == 0 { continue }
+		if moduleBlock {
+			if len(tokens) != 1 { return false }
+			if !tokens[0].quoted && tokens[0].value == ")" {
+				if !blockValue { return false }
+				moduleBlock = false
+				continue
+			}
+			if blockValue || tokens[0].value != goPurposeModule { return false }
+			blockValue = true
 			continue
 		}
-		if seen || len(strings.Fields(line)) != 2 || strings.Fields(line)[1] != goPurposeModule {
-			return false
+		if otherBlock {
+			if len(tokens) == 1 && !tokens[0].quoted && tokens[0].value == ")" { otherBlock = false }
+			continue
 		}
+		if tokens[0].quoted || tokens[0].value != "module" {
+			if len(tokens) == 2 && !tokens[1].quoted && tokens[1].value == "(" { otherBlock = true }
+			continue
+		}
+		if seen || len(tokens) != 2 { return false }
 		seen = true
+		if !tokens[1].quoted && tokens[1].value == "(" { moduleBlock = true; continue }
+		if tokens[1].value != goPurposeModule { return false }
 	}
-	return seen
+	return seen && !moduleBlock && !otherBlock
+}
+
+type goPurposeDeclarationToken struct { value string; quoted bool }
+
+func goPurposeDeclarationTokens(line string) ([]goPurposeDeclarationToken, bool) {
+	var result []goPurposeDeclarationToken
+	for i := 0; i < len(line); {
+		if line[i] == ' ' || line[i] == '\t' { i++; continue }
+		if line[i] == '/' && i+1 < len(line) {
+			if line[i+1] == '/' { break }
+			if line[i+1] == '*' { return nil, false }
+		}
+		if line[i] < 32 || line[i] == 127 { return nil, false }
+		if line[i] == '(' || line[i] == ')' {
+			result = append(result, goPurposeDeclarationToken{value:line[i:i+1]}); i++; continue
+		}
+		if line[i] == '"' || line[i] == '`' {
+			start, quote := i, line[i]
+			i++
+			closed := false
+			for i < len(line) {
+				if quote == '"' && line[i] == '\\' { i += 2; continue }
+				if line[i] == quote { i++; closed = true; break }
+				i++
+			}
+			if !closed || i > len(line) { return nil, false }
+			value, err := strconv.Unquote(line[start:i])
+			if err != nil { return nil, false }
+			result = append(result, goPurposeDeclarationToken{value:value, quoted:true})
+			if i < len(line) && line[i] != ' ' && line[i] != '\t' && line[i] != ')' && !(line[i] == '/' && i+1 < len(line) && line[i+1] == '/') { return nil, false }
+			continue
+		}
+		start := i
+		for i < len(line) && line[i] != ' ' && line[i] != '\t' && line[i] != '(' && line[i] != ')' {
+			if line[i] == '"' || line[i] == '`' || line[i] == '\\' || line[i] < 32 { return nil, false }
+			if line[i] == '/' && i+1 < len(line) && (line[i+1] == '/' || line[i+1] == '*') { break }
+			i++
+		}
+		if i == start { return nil, false }
+		result = append(result, goPurposeDeclarationToken{value:line[start:i]})
+	}
+	return result, true
 }
 
 func goPurposePath(rel string) bool {

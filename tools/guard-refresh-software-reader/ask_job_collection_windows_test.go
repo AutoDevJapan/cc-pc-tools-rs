@@ -522,6 +522,10 @@ func (askJobCollectionQueryFailure) list(syscall.Handle) (askJobMemberList, erro
 
 func TestAskJobCollectionProcessHelper(t *testing.T) {
 	switch os.Getenv("ASK_JOB_COLLECTION_TEST") {
+	case "supervised-hold":
+		if !askWorkerParent() { os.Exit(7) }
+		fmt.Fprintln(os.Stdout, "READY")
+		time.Sleep(30*time.Second)
 	case "early-exit":
 		os.Exit(0)
 	case "child":
@@ -560,5 +564,28 @@ func TestAskJobCollectionProcessHelper(t *testing.T) {
 			}
 		}
 		t.Fatal("owned root command missing")
+	}
+}
+
+func TestAskJobCollectionSupervisorKeepsFastCancelFacts(t *testing.T) {
+	exe, err := os.Executable()
+	if err != nil { t.Fatal(err) }
+	t.Setenv("ASK_JOB_COLLECTION_TEST", "supervised-hold")
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+	called := false
+	result := askOwnedChildWithHandshake(ctx, exe, func(raw []byte) bool {
+		if string(raw) != "READY" { t.Fatal("supervised fixture readiness") }
+		called = true
+		cancel()
+		return false
+	}, "-test.run=^TestAskJobCollectionProcessHelper$")
+	defer clear(result.Raw)
+	t.Logf("fast_cancel started=%t assigned=%t root_wait=%t timed_out=%t reaped=%t collection_reason=%s observed=%d total=%d", result.Started, result.Assigned, result.WaitVerified, result.TimedOut, result.Reaped, result.CollectionReason, result.CollectionObserved, result.CollectionTotal)
+	if !called || !result.Started || !result.Assigned || !result.WaitVerified || !result.TimedOut || !result.Reaped {
+		t.Fatal("supervised fast cancellation was not collected", result)
+	}
+	if result.CollectionReason != "" || result.CollectionObserved != result.CollectionTotal || result.CollectionTotal == 0 {
+		t.Fatal("collection facts were not preserved", result)
 	}
 }

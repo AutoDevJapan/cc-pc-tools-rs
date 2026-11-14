@@ -38,6 +38,8 @@ type askChildResult struct {
 	TimedOut, Reaped                bool
 	Started, Assigned, WaitVerified bool
 	Capture                         *askChildCaptureResult
+	CollectionReason                string
+	CollectionObserved, CollectionTotal uint32
 }
 
 // Start suspended, assign the exact process to an owned kill-on-close job, then
@@ -384,6 +386,9 @@ loop:
 			}
 			return nil
 		}():
+			// Capture any startup members before exposing Ready or allowing
+			// a rejected Final to cancel and terminate the producer.
+			collection.Observe()
 			if !producerReady {
 				if !producer.receiveReady(frame) {
 					producer.cancel()
@@ -434,6 +439,7 @@ loop:
 			}
 			return nil
 		}():
+			collection.Observe()
 			accepted := onReady(payload)
 			clear(payload)
 			if accepted && ctx.Err() == nil {
@@ -456,7 +462,10 @@ loop:
 	}
 	// Root Wait, all retained process signals and the job's complete lifetime
 	// member count must agree. Observation failures remain unknown throughout.
-	result.Reaped = collection.Finish(result.WaitVerified, time.Now().Add(2*time.Second)).Reaped
+	collected := collection.Finish(result.WaitVerified, time.Now().Add(2*time.Second))
+	result.Reaped = collected.Reaped
+	result.CollectionReason = collected.Reason
+	result.CollectionObserved, result.CollectionTotal = collected.Observed, collected.Total
 	if hasCapture {
 		result.Capture.Complete = assigned && result.WaitVerified && result.Reaped && !result.TimedOut && ctx.Err() == nil && !captured.overflow && captured.eof && captureErr.eof
 	}

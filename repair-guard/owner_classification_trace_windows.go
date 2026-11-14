@@ -188,7 +188,7 @@ func ownerClassificationIdentity(ctx context.Context, record ownerIdentityRecord
 
 func classifyOwnerPathTraced(path string) (ownerPathVerdict, *ownerClassificationTrace) {
 	t := &ownerClassificationTrace{started: time.Now()}
-	v := ownerPolicyClassifyTraced(path, ownerPolicyAccess{legacy: ownerLegacyProtection, repair: repairPathAllowed, source: ownerRegisteredSource, physical: ownerRulePhysicalPath, organization: func(path string) ownerPathVerdict { return ownerOrganizationPathObserved(path, t) }}, t)
+	v := ownerPolicyClassifyTraced(path, ownerNormalPolicyAccess(func(path string) ownerPathVerdict { return ownerOrganizationPathObserved(path, t) }), t)
 	t.DurationMS = time.Since(t.started).Milliseconds()
 	t.Stage = v.Basis
 	return v, t

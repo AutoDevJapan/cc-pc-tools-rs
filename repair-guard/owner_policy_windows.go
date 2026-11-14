@@ -146,13 +146,20 @@ type ownerPolicyAccess struct {
 	source       func(string) ownerPathVerdict
 	physical     func(string) (string, error)
 	organization func(string) ownerPathVerdict
+	installed    func(string) ownerPathVerdict
+}
+
+// Normal and diagnostic classification share the complete provider set.
+func ownerNormalPolicyAccess(organization func(string) ownerPathVerdict) ownerPolicyAccess {
+	return ownerPolicyAccess{
+		legacy: ownerLegacyProtection, repair: repairPathAllowed,
+		source: ownerRegisteredSource, physical: ownerRulePhysicalPath, organization: organization,
+		installed: ownerInstalledToolClassification,
+	}
 }
 
 func classifyOwnerPath(path string) ownerPathVerdict {
-	return ownerPolicyClassify(path, ownerPolicyAccess{
-		legacy: ownerLegacyProtection, repair: repairPathAllowed,
-		source: ownerRegisteredSource, physical: ownerRulePhysicalPath, organization: ownerOrganizationPath,
-	})
+	return ownerPolicyClassify(path, ownerNormalPolicyAccess(ownerOrganizationPath))
 }
 
 func ownerPolicyClassify(path string, access ownerPolicyAccess) ownerPathVerdict {
@@ -161,6 +168,17 @@ func ownerPolicyClassify(path string, access ownerPolicyAccess) ownerPathVerdict
 		return ownerRuleUnknown("invalid_absolute_path")
 	}
 	path = filepath.Clean(path)
+	// A fixed installed-development-tool provider performs its own complete
+	// alias/identity/public-origin check. It is not a general hardlink exception.
+	// Preserve lexical exclusions before invoking that purpose-specific reader.
+	if _, fixed := ownerInstalledToolPlanFor(path); fixed && access.installed != nil {
+		if access.legacy==nil { return ownerRuleUnknown("existing_exclusion_unavailable") }
+		legacy:=access.legacy(path)
+		if legacy==ownerLegacyClient { return ownerRuleProtected("legacy_exclusion") }
+		if legacy==ownerLegacyUnavailable { return ownerRuleUnknown("existing_exclusion_unavailable") }
+		if ownerCardPath(path) || ownerWindowsAlias(path) { return ownerRuleUnknown("windows_alias_or_exclusion_unavailable") }
+		return access.installed(path)
+	}
 	// Check lexical and resolved names before admitting any source/receipt.
 	paths := []string{path}
 	if target, err := access.physical(path); err == nil && !same(path, target) {

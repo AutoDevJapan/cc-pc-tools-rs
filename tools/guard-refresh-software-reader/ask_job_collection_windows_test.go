@@ -37,6 +37,8 @@ type askJobCollectionModel struct {
 	accountingCalls int
 	accountingFailAfter int
 	accountingAdvance time.Duration
+	waitAdvanceHandle syscall.Handle
+	waitAdvance time.Duration
 }
 
 func newAskJobCollectionModel() *askJobCollectionModel {
@@ -64,6 +66,7 @@ func (m *askJobCollectionModel) belongs(syscall.Handle, syscall.Handle) (bool, e
 }
 func (m *askJobCollectionModel) wait(h syscall.Handle) (uint32, error) {
 	m.waits[h]++
+	if h == m.waitAdvanceHandle && !m.clock.IsZero() { m.clock = m.clock.Add(m.waitAdvance) }
 	if m.lateWaitPID != 0 {
 		id := m.lateWaitPID
 		m.lateWaitPID = 0
@@ -184,7 +187,7 @@ func TestAskJobCollectionKeepsLastObservedTotal(t *testing.T) {
 			deadline := m.clock.Add(5*time.Millisecond)
 			switch fault {
 			case "active": m.account.Active = 1; m.accountingAdvance = 10*time.Millisecond
-			case "unsignalled": m.states[12] = syscall.WAIT_TIMEOUT; m.accountingAdvance = 10*time.Millisecond
+			case "unsignalled": m.states[12] = syscall.WAIT_TIMEOUT; m.waitAdvanceHandle = 12; m.waitAdvance = 10*time.Millisecond
 			case "accounting-fails": m.accountingError = errAskJobCollection
 			case "after-accounting-fails": m.account.Active = 1; m.accountingFailAfter = 1
 			case "before-deadline": deadline = m.clock.Add(-time.Second)
@@ -197,6 +200,7 @@ func TestAskJobCollectionKeepsLastObservedTotal(t *testing.T) {
 			if !known { want = 0 }
 			if r.TotalKnown != known || r.Total != want || r.Reaped != (fault == "normal") { t.Fatal("last observation lost or promoted to proof", fault, r) }
 			if known && m.accountingCalls == 0 || !known && r.Total != 0 { t.Fatal("missing observation represented as known", fault, r) }
+			if fault == "unsignalled" && (m.waits[12] == 0 || r.Reason != "job_collection_deadline_exceeded") { t.Fatal("unsignalled wait boundary was not reached", r, m.waits) }
 		})
 	}
 }

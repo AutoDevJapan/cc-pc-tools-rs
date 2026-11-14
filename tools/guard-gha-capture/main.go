@@ -126,6 +126,7 @@ func captureInventory(root string) ([]sourceRecord,error) {
             if readErr!=nil||closeErr!=nil||int64(len(raw))!=info.Size() {return errCapture}
             total+=int64(len(raw));if total>totalLimit{return errCapture}
             result=append(result,sourceRecord{Path:relative,Size:int64(len(raw)),SHA:hashBytes(raw),Blob:gitBlob(raw)})
+            return nil
         })
         if err!=nil{return nil,err}
     }

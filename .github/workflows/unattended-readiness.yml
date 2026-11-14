@@ -2,11 +2,12 @@ name: Unattended readiness tools
 env:
   CC_LINUX_RUNNER_MODE: normal
 on:
+  workflow_dispatch:
   push:
     branches: [main]
-    paths: ['resident-guard/**', 'capacity-audit-3h/**', 'unattended-runner/**', 'repair-guard/**', 'tools/guard-refresh-software-reader/**', 'tools/civ6-ci-contract/**', 'localai-web-rs/src/operations_catalog.rs', 'localai-web-rs/src/operations.rs', 'tools/linux-runner-bridge/**', '.github/workflows/unattended-readiness.yml']
+    paths: ['resident-guard/**', 'capacity-audit-3h/**', 'unattended-runner/**', 'repair-guard/**', 'tools/guard-refresh-software-reader/**', 'tools/guard-gha-capture/**', 'tools/civ6-ci-contract/**', 'localai-web-rs/src/operations_catalog.rs', 'localai-web-rs/src/operations.rs', 'tools/linux-runner-bridge/**', '.github/workflows/unattended-readiness.yml']
   pull_request:
-    paths: ['resident-guard/**', 'capacity-audit-3h/**', 'unattended-runner/**', 'repair-guard/**', 'tools/guard-refresh-software-reader/**', 'tools/civ6-ci-contract/**', 'localai-web-rs/src/operations_catalog.rs', 'localai-web-rs/src/operations.rs', 'tools/linux-runner-bridge/**', '.github/workflows/unattended-readiness.yml']
+    paths: ['resident-guard/**', 'capacity-audit-3h/**', 'unattended-runner/**', 'repair-guard/**', 'tools/guard-refresh-software-reader/**', 'tools/guard-gha-capture/**', 'tools/civ6-ci-contract/**', 'localai-web-rs/src/operations_catalog.rs', 'localai-web-rs/src/operations.rs', 'tools/linux-runner-bridge/**', '.github/workflows/unattended-readiness.yml']
 permissions:
   contents: read
 concurrency:
@@ -14,7 +15,7 @@ concurrency:
   cancel-in-progress: ${{ github.event_name == 'pull_request' && github.run_attempt == 1 }}
 jobs:
   go:
-    if: github.repository == 'AutoDevJapan/cc-pc-tools-rs' && (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository)
+    if: github.event_name != 'workflow_dispatch' && github.repository == 'AutoDevJapan/cc-pc-tools-rs' && (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository)
     strategy:
       fail-fast: false
       matrix:
@@ -101,7 +102,7 @@ jobs:
       - run: go vet ./...
       - run: go build -trimpath .
   repair-guard:
-    if: github.repository == 'AutoDevJapan/cc-pc-tools-rs' && (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository)
+    if: github.event_name != 'workflow_dispatch' && github.repository == 'AutoDevJapan/cc-pc-tools-rs' && (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository)
     runs-on: ${{ toJSON(github.event.repository.private) == 'false' && 'windows-2025' || fromJSON('["self-hosted","Windows","X64","cc-pc-tools-windows"]') }}
     # The expanded guard suite includes 333 top-level tests and serial real-Git
     # lineage checks (one seven-product group takes several minutes). A 10m
@@ -159,3 +160,168 @@ jobs:
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
           go build -trimpath .
           exit $LASTEXITCODE
+      - name: Test the fixed guard capture helper
+        working-directory: tools/guard-gha-capture
+        run: |
+          go test -count=1 -timeout 3m .
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          go vet .
+          exit $LASTEXITCODE
+  guard-bootstrap:
+    name: Guard bootstrap artifact
+    if: github.event_name == 'workflow_dispatch' && github.repository == 'AutoDevJapan/cc-pc-tools-rs' && github.ref == 'refs/heads/main' && github.event.repository.private == false
+    runs-on: windows-2025
+    timeout-minutes: 15
+    permissions:
+      contents: read
+      actions: read
+      id-token: write
+      attestations: write
+    outputs:
+      artifact-id: ${{ steps.guard_upload.outputs.artifact-id }}
+      artifact-digest: ${{ steps.guard_upload.outputs.artifact-digest }}
+      job-id: ${{ steps.guard_capture.outputs.job-id }}
+      guard-sha256: ${{ steps.guard_capture.outputs.guard-sha256 }}
+      source-manifest-sha256: ${{ steps.guard_capture.outputs.source-manifest-sha256 }}
+    steps:
+      - name: Check out the reviewed producer revision
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        env:
+          GIT_CONFIG_COUNT: '2'
+          GIT_CONFIG_KEY_0: core.autocrlf
+          GIT_CONFIG_VALUE_0: 'false'
+          GIT_CONFIG_KEY_1: core.eol
+          GIT_CONFIG_VALUE_1: lf
+        with:
+          ref: ${{ github.sha }}
+          path: producer
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Check out the fixed reviewed guard source
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        env:
+          GIT_CONFIG_COUNT: '2'
+          GIT_CONFIG_KEY_0: core.autocrlf
+          GIT_CONFIG_VALUE_0: 'false'
+          GIT_CONFIG_KEY_1: core.eol
+          GIT_CONFIG_VALUE_1: lf
+        with:
+          ref: 80c4ed5cbd864585f4894c6286d3d5c92194c1f5
+          path: guard-source
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Set up the guard Go toolchain
+        uses: actions/setup-go@4a3601121dd01d1626a1e23e37211e3254c1c06c # v6.4.0
+        with:
+          go-version-file: guard-source/repair-guard/go.mod
+          cache: false
+      # Capture source before and after the only formal guard build.
+      # The producer revision and fixed guard source remain separate.
+      - name: Capture the fixed guard build
+        id: guard_capture
+        working-directory: producer/tools/guard-gha-capture
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GUARD_CHECK_RUN_ID: ${{ job.check_run_id }}
+          RUNNER_ENVIRONMENT: ${{ runner.environment }}
+        run: |
+          go run .
+          exit $LASTEXITCODE
+      - name: Check the exact captured files
+        shell: pwsh
+        env:
+          ARTIFACT_DIRECTORY: ${{ steps.guard_capture.outputs.artifact-directory }}
+          ARTIFACT_NAME: ${{ steps.guard_capture.outputs.artifact-name }}
+          CAPTURE_JOB_ID: ${{ steps.guard_capture.outputs.job-id }}
+          GUARD_SHA256: ${{ steps.guard_capture.outputs.guard-sha256 }}
+          CAPTURE_SHA256: ${{ steps.guard_capture.outputs.capture-sha256 }}
+          SOURCE_MANIFEST_SHA256: ${{ steps.guard_capture.outputs.source-manifest-sha256 }}
+        run: |
+          $ErrorActionPreference = 'Stop'
+          if ($env:CAPTURE_JOB_ID -notmatch '^[1-9][0-9]{0,18}$') { throw 'guard_capture_job_invalid' }
+          foreach ($sha in @($env:GUARD_SHA256, $env:CAPTURE_SHA256, $env:SOURCE_MANIFEST_SHA256)) {
+            if ($sha -notmatch '^[0-9a-f]{64}$') { throw 'guard_capture_digest_invalid' }
+          }
+          $expectedName = 'guard-bootstrap-' + $env:GITHUB_RUN_ID + '-' + $env:GITHUB_RUN_ATTEMPT + '-' + $env:CAPTURE_JOB_ID
+          if ($env:ARTIFACT_NAME -cne $expectedName) { throw 'guard_capture_name_invalid' }
+          $expectedDir = [IO.Path]::GetFullPath((Join-Path $env:RUNNER_TEMP ('guard-gha-capture/' + $env:GITHUB_RUN_ID + '/' + $env:GITHUB_RUN_ATTEMPT + '/' + $env:CAPTURE_JOB_ID)))
+          if (-not [string]::Equals([IO.Path]::GetFullPath($env:ARTIFACT_DIRECTORY), $expectedDir, [StringComparison]::OrdinalIgnoreCase)) { throw 'guard_capture_directory_invalid' }
+          $directory = Get-Item -LiteralPath $expectedDir
+          if (-not $directory.PSIsContainer -or ($directory.Attributes -band [IO.FileAttributes]::ReparsePoint)) { throw 'guard_capture_directory_invalid' }
+          $files = @(Get-ChildItem -LiteralPath $expectedDir -Force)
+          if ($files.Count -ne 3) { throw 'guard_capture_inventory_invalid' }
+          $expected = @{
+            'guard.exe' = @($env:GUARD_SHA256, [long](32MB))
+            'capture.json' = @($env:CAPTURE_SHA256, [long](64KB))
+            'source-proof.json' = @($env:SOURCE_MANIFEST_SHA256, [long](8MB))
+          }
+          foreach ($file in $files) {
+            if (-not $expected.ContainsKey($file.Name) -or $file.PSIsContainer -or ($file.Attributes -band [IO.FileAttributes]::ReparsePoint) -or $file.Length -le 0 -or $file.Length -gt $expected[$file.Name][1]) { throw 'guard_capture_file_invalid' }
+            $actual = (Get-FileHash -LiteralPath $file.FullName -Algorithm SHA256).Hash.ToLowerInvariant()
+            if ($actual -cne $expected[$file.Name][0]) { throw 'guard_capture_file_changed' }
+          }
+      - name: Attest the guard and source evidence
+        id: guard_attest
+        uses: actions/attest@1e69f48acb82d1966a394da916b4c1698aa569d6 # v4
+        with:
+          subject-path: |
+            ${{ steps.guard_capture.outputs.artifact-directory }}/guard.exe
+            ${{ steps.guard_capture.outputs.artifact-directory }}/source-proof.json
+          push-to-registry: false
+          create-storage-record: false
+      - name: Upload the fixed guard capture
+        id: guard_upload
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: ${{ steps.guard_capture.outputs.artifact-name }}
+          path: |
+            ${{ steps.guard_capture.outputs.artifact-directory }}/guard.exe
+            ${{ steps.guard_capture.outputs.artifact-directory }}/capture.json
+            ${{ steps.guard_capture.outputs.artifact-directory }}/source-proof.json
+          if-no-files-found: error
+          retention-days: 1
+          compression-level: 0
+          overwrite: false
+          include-hidden-files: false
+      - name: Record the server-assigned capture artifact
+        shell: pwsh
+        env:
+          ARTIFACT_ID: ${{ steps.guard_upload.outputs.artifact-id }}
+          ARTIFACT_DIGEST: ${{ steps.guard_upload.outputs.artifact-digest }}
+          ARTIFACT_NAME: ${{ steps.guard_capture.outputs.artifact-name }}
+          CAPTURE_JOB_ID: ${{ steps.guard_capture.outputs.job-id }}
+          CAPTURE_CHECK_RUN_ID: ${{ job.check_run_id }}
+          GUARD_SHA256: ${{ steps.guard_capture.outputs.guard-sha256 }}
+          CAPTURE_SHA256: ${{ steps.guard_capture.outputs.capture-sha256 }}
+          SOURCE_MANIFEST_SHA256: ${{ steps.guard_capture.outputs.source-manifest-sha256 }}
+          ATTESTATION_ID: ${{ steps.guard_attest.outputs.attestation-id }}
+        run: |
+          $ErrorActionPreference = 'Stop'
+          foreach ($id in @($env:ARTIFACT_ID, $env:CAPTURE_JOB_ID, $env:CAPTURE_CHECK_RUN_ID)) {
+            if ($id -notmatch '^[1-9][0-9]{0,18}$') { throw 'guard_artifact_server_id_missing' }
+          }
+          if ($env:ARTIFACT_DIGEST -notmatch '^[0-9a-f]{64}$') { throw 'guard_artifact_server_digest_missing' }
+          if ($env:ATTESTATION_ID -notmatch '^[0-9A-Za-z_-]{1,128}$') { throw 'guard_attestation_id_missing' }
+          $result = [ordered]@{
+            domain = 'guard-gha-publication-v1'
+            repository_id = [long]$env:GITHUB_REPOSITORY_ID
+            source = '80c4ed5cbd864585f4894c6286d3d5c92194c1f5'
+            source_tree = '84437789dfbe1bf1d56e4b96698b5c8da4a3dfb7'
+            producer_revision = $env:GITHUB_SHA
+            run_id = [long]$env:GITHUB_RUN_ID
+            run_attempt = [int]$env:GITHUB_RUN_ATTEMPT
+            job_id = [long]$env:CAPTURE_JOB_ID
+            check_run_id = [long]$env:CAPTURE_CHECK_RUN_ID
+            artifact_id = [long]$env:ARTIFACT_ID
+            artifact_name = $env:ARTIFACT_NAME
+            archive_sha256 = $env:ARTIFACT_DIGEST
+            output_sha256 = $env:GUARD_SHA256
+            capture_sha256 = $env:CAPTURE_SHA256
+            source_manifest_sha256 = $env:SOURCE_MANIFEST_SHA256
+            attestation_id = $env:ATTESTATION_ID
+          }
+          $json = $result | ConvertTo-Json -Depth 4 -Compress
+          if ([Text.Encoding]::UTF8.GetByteCount($json) -gt 8192) { throw 'guard_artifact_record_too_large' }
+          Write-Output ('guard_gha_publication_v1=' + $json)
+          [IO.File]::AppendAllText($env:GITHUB_STEP_SUMMARY, 'guard_gha_publication_v1=' + $json + [Environment]::NewLine, [Text.UTF8Encoding]::new($false))

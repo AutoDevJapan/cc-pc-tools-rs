@@ -73,6 +73,7 @@ type askChildCaptureResult struct {
 	Stdout        []byte
 	Overflow      bool
 	Complete      bool
+	protocolReason string
 }
 
 type askCaptureOutput struct {
@@ -215,6 +216,8 @@ func askOwnedChildWithHandshake(ctx context.Context, executable string, onReady 
 		return
 	}
 	var captured *askCaptureOutput
+	var history *unslopHistoryExchange
+	var historyFailure <-chan struct{}
 	var fixedInput []byte
 	if hasCapture {
 		result.Capture = &askChildCaptureResult{}
@@ -228,7 +231,17 @@ func askOwnedChildWithHandshake(ctx context.Context, executable string, onReady 
 			result.Capture.Stdout = captured.data[:captured.n]
 			result.Capture.Overflow = captured.overflow
 		}()
+		if value := ctx.Value(unslopHistoryProtocolKey{}); value != nil {
+			plan, valid := value.(unslopHistoryProtocol)
+			if !valid || len(capture.Stdin) != 0 { result.Capture.protocolReason = "history_protocol_plan_invalid"; return }
+			var err error
+			history, err = newUnslopHistoryExchange(ctx, plan)
+			if err != nil { result.Capture.protocolReason = "history_protocol_plan_invalid"; return }
+			defer history.Close()
+			historyFailure = history.failed
+		}
 	}
+	if ctx.Value(unslopHistoryProtocolKey{}) != nil && !hasCapture { return }
 	kernel := syscall.NewLazyDLL("kernel32.dll")
 	job, _, _ := kernel.NewProc("CreateJobObjectW").Call(0, 0)
 	if job == 0 {
@@ -264,7 +277,7 @@ func askOwnedChildWithHandshake(ctx context.Context, executable string, onReady 
 	compilerMode, _ := ctx.Value(compilerDiagnosticContext{}).(bool)
 	compilerMode = compilerMode && onReady == nil
 	if hasCapture {
-		cmd.Stdin = bytes.NewReader(fixedInput)
+		if history != nil { cmd.Stdin = history } else { cmd.Stdin = bytes.NewReader(fixedInput) }
 	}
 	var compilerOut, compilerErr *compilerCapture
 	var captureErr *askCaptureDiagnostic
@@ -276,6 +289,7 @@ func askOwnedChildWithHandshake(ctx context.Context, executable string, onReady 
 	}
 	if hasCapture {
 		cmd.Stdout = captured
+		if history != nil { cmd.Stdout = &unslopHistoryCaptureOutput{capture:captured,exchange:history} }
 		if compilerErr == nil {
 			compilerErr = new(compilerCapture)
 			defer compilerErr.erase()
@@ -377,6 +391,9 @@ loop:
 		select {
 		case waitErr = <-waited:
 			break loop
+		case <-historyFailure:
+			historyFailure = nil
+			_ = cmd.Process.Kill()
 		case <-ctx.Done():
 			if input != nil {
 				input.Close()
@@ -466,7 +483,8 @@ loop:
 	// member count must agree. Observation failures remain unknown throughout.
 	finishAskChildCollection(&result, collection, time.Now().Add(2*time.Second))
 	if hasCapture {
-		result.Capture.Complete = assigned && result.WaitVerified && result.Reaped && !result.TimedOut && ctx.Err() == nil && !captured.overflow && captured.eof && captureErr.eof
+		if history != nil { result.Capture.protocolReason = history.resultReason() }
+		result.Capture.Complete = assigned && result.WaitVerified && result.Reaped && !result.TimedOut && ctx.Err() == nil && !captured.overflow && captured.eof && captureErr.eof && (history == nil || result.Capture.protocolReason == "history_protocol_complete")
 	}
 	if hasProducer {
 		producer.finish(result, producerACKSent, captureErr.eof)

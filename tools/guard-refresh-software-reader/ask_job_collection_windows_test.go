@@ -155,6 +155,19 @@ func TestAskJobCollectionKeepsFailuresUnknown(t *testing.T) {
 	}
 }
 
+// Reproduce the observed one-held/two-lifetime boundary without relying on a
+// short-lived OS member to be scheduled at a particular instant.
+func TestAskJobCollectionEarlyExitHistoricalGapStaysUnknown(t *testing.T) {
+	m := newAskJobCollectionModel()
+	m.listValue = askJobMemberList{assigned: 1, pids: []uint32{1}}
+	c := newAskJobCollection(m, 9999, 11, 1, true)
+	defer c.Close()
+	r := c.Finish(true, time.Now().Add(time.Second))
+	if r.Reaped || r.Reason != "job_lifetime_members_unverified" || r.Observed != 1 || r.Total != 2 || !r.TotalKnown || m.waits[11] == 0 {
+		t.Fatal("unobserved early member was promoted to collection proof", r, m.waits)
+	}
+}
+
 func TestAskJobCollectionDeadlineIncludesClose(t *testing.T) {
 	for _, late := range []bool{false, true} {
 		t.Run(strconv.FormatBool(late), func(t *testing.T) {
@@ -408,14 +421,30 @@ func TestAskJobCollectionOwnedWindowsTree(t *testing.T) {
 			var childPID uint64
 			select {
 			case line, live := <-ready:
-				if !live {
-					if fault != "early-exit" { t.Fatal("missing owned child identity") }
+				if fault == "early-exit" {
+					// Pin the complete live Job before releasing its root. A root
+					// that exits during runtime/console startup can leave an
+					// unobserved lifetime member; that must remain unknown.
+					if !live || line != fmt.Sprintf("EARLY %d", cmd.Process.Pid) { t.Fatal("early root readiness", line) }
+					rootID, err := api.identity(root)
+					state, waitErr := api.wait(root)
+					if err != nil || rootID.PID != uint32(cmd.Process.Pid) || rootID.Creation == 0 || waitErr != nil || state != syscall.WAIT_TIMEOUT { t.Fatal("early root live identity unavailable") }
+					cleanupCollector.Observe()
+					collector.Observe()
+					logAskJobCollectionFixture(t, cleanupCollector, "early-root-ready")
+					assertAskJobFixtureMembers(t, cleanupCollector, rootID)
+					assertAskJobFixtureMembers(t, collector, rootID)
+					if _, err := input.Write([]byte("EXIT\n")); err != nil { t.Fatal("release early root", err) }
+					_ = input.Close()
 					select { case <-waited: joined = true; case <-ctx.Done(): t.Fatal("early root exit not collected") }
+					result := collector.Finish(askRootWaitVerified(cmd.ProcessState, nil), time.Now().Add(2*time.Second))
+					if !result.Reaped || !result.TotalKnown || result.Observed != result.Total || result.Total == 0 { t.Fatal("early root full Job collection not established", result) }
+					select { case extra, live := <-ready: if live { t.Fatal("early root emitted a child line", extra) }; case <-ctx.Done(): t.Fatal("early root stdout did not reach EOF") }
 					select { case err := <-readerErr: if err != nil { t.Fatal("early exit read error", err) }; case <-ctx.Done(): t.Fatal("early exit reader not complete") }
 					readerErr = nil
 					return
 				}
-				if fault == "early-exit" || !strings.HasPrefix(line, "CHILD ") { t.Fatal("missing owned child identity", line) }
+				if !live || !strings.HasPrefix(line, "CHILD ") { t.Fatal("missing owned child identity", line) }
 				childPID, err = strconv.ParseUint(strings.TrimPrefix(line, "CHILD "), 10, 32)
 				if err != nil || childPID == 0 { t.Fatal("invalid owned child identity") }
 			case <-ctx.Done(): t.Fatal("owned child readiness deadline")
@@ -564,6 +593,9 @@ func TestAskJobCollectionProcessHelper(t *testing.T) {
 		fmt.Fprintln(os.Stdout, "READY")
 		time.Sleep(30*time.Second)
 	case "early-exit":
+		fmt.Printf("EARLY %d\n", os.Getpid())
+		input := bufio.NewScanner(os.Stdin)
+		if !input.Scan() || input.Text() != "EXIT" || input.Err() != nil { os.Exit(7) }
 		os.Exit(0)
 	case "child":
 		fmt.Printf("READY %d\n", os.Getpid())

@@ -6,8 +6,8 @@
 ## 今回の実装と、残っている接続
 
 実装したのは、ビルドの記録を確認する処理、配布準備の処理、文体2例の入力を取り出す処理、履歴の存在を確認する処理である。
-このcoreには、実ファイルを保持してビルドするnative providerや、共通CLIへのroutingは含まれていない。
-それらの実装、正式ビルドの実行、生成後の固定consumerへの接続は別の受入工程として残る。
+この追加候補には、固定ソースを新しいnamespaceへ保持するnative providerと、有限の子プロセス出力を扱う接続を含める。
+共通CLIへのrouting、正式ビルドの実行、生成後の固定consumerへの接続は別の受入工程として残る。
 合成データのテストが通っても、インストールや独立評価が済んだことにはしない。
 
 旧リリースには、ビルドの正常終了と、同じ実行物でCLI・MCPが動いた記録がある。
@@ -33,12 +33,15 @@
 | `Build` | 共有ゲートを使い、固定コマンドを1回だけ実行する。新namespace、オフラインの依存、Cargo JSON、元の実call、子プロセスの開始・Job割当・終了・回収を結ぶ | 成果物を開かない |
 | `After` | 同じ保持ファイルとnamespaceを再確認する。ファイルの追加、内容・identity・設定・依存の変化を確認する | 成果物を配布しない |
 | `WithArtifact` | Cargoが報告した新しい実行物と、その許されたaliasを保持する。後続へ渡すのは、確認した同じバッファだけにする | 配布記録を発行しない |
-| `Acknowledge` / `Close` | producerとのACK、終了回収、入力snapshotや設定の後片付けを確認する | 未完了の生成物を保持し、理由を返す |
-| `stage` / `Commit` | 同じバッファをCreateNewの非公開pendingへ書く。最後にexportを再保持し、内容・identity・ACLを照合してから、上書きせず正式なreceiptを発行する | pendingを失敗のまま保持する |
+| `stage` | 同じバッファをCreateNewの非公開pendingへ書き、exportを保持する。ACK・回収済みのフラグはまだfalseにする | pendingを失敗のまま保持する |
+| `Acknowledge` / `AwaitCompletion` | 同じ出力を保持しているproducerへ明示ACKを送り、同じACKの受領通知、正常終了、自然EOF、Jobの回収を確認する | receiptを発行しない |
+| `Close` / `Seal` / `Commit` | 入力の後片付けを確認し、受領・回収済みのreceiptをSealする。exportの保持を継続して内容・identityを照合し、上書きせず正式なreceiptを発行する | pendingと実際の公開状態を保持して理由を返す |
 
 Cargo JSONでは、対象のbinと固定された出力先、`fresh=false`、最後の `build-finished` の成功を確認する。
 出力の重複、途中で切れたJSON、別の出力先、過去のFresh出力は受け入れない。
 保持処理のcallbackが呼ばれなかった場合、二度呼ばれた場合、callbackの後で保持処理が失敗した場合も、正式なreceiptは発行しない。
+生成側のACK受領を、親controller内のboolだけで代用しない。
+公開直前の取消は拒否するが、既に公開が成立した後のClose失敗は公開を取り消したことにはせず、`receipt_published` と失敗理由を分けて返す。
 開始前の取消は、入力確認後とnative子の開始直前にも確認する。
 nativeの実PID・作成時刻と、上位toolのCall IDは別の値として記録し、取得できないtool IDを生成値で埋めない。
 `CargoJSONSHA` は、検証したJSONと同じバッファから計算し、一致しなければartifactの読取・stage・Commitへ進めない。
@@ -99,14 +102,17 @@ readerは評価の合否を作らず、作者の判定を独立評価へコピ�
 共通dispatcherへの専用routingは、そのファイルの既存所有担当が行う。
 routingを追加しただけでは、出所を確認するfactoryが成立したことにはしない。
 
-今後のnative接続では、captureの固定入口からのみ正常な生成処理を呼ぶ。
+`runNormalUnslopPurpose` は、captureの固定入口からのみnativeの生成処理を呼ぶ。
 新しいreceiptを単に読み直して、次回のverifyやprepareへ許可を与える仕組みにはしない。
 正式ビルド後は、その実行物とreceiptの実値をレビュー済みconsumerへ固定するか、同じ正常controllerが保持した状態で受入・反映を続ける必要がある。
-このcoreのverify・prepare・packet読取は、不足理由を返す状態を保っている。
+verify・prepare・packet読取は、不足理由を返す状態を保っている。
 
-今後のnativeの履歴接続では、正常なlauncherと現在のWindowsアカウントを使ってapp-serverへ接続する必要がある。
+nativeの履歴接続候補では、正常なlauncherと現在のWindowsアカウントを使ってapp-serverへ接続する。
 `initialize` と履歴のread/listだけを送り、新しい生成turnやresumeは要求しない。
 元のthread・turn・command itemの対応が取得できなければ、接続できたことだけでpacketを読む資格を作らない。
+現在の有限batch方式は、実metadata読取で必要な応答がそろわず、接続成功の受入を満たしていない。
+初期化への応答を確認してから次の読取要求を送る具体的な有限protocolは、値の構築と正負のテストまで用意し、共有の実行処理への接続を残している。
+接続失敗を、元packet本文の解放や別経路の読取で補わない。
 
 既存の `softwareBuildSourceMatches`、`runSoftwareBuildWorker`、`withSoftwareBuildOutput`、`softwareBuildCompletionMatches`、`writeSoftwareBuildReceiptContext` を、native側の保持・ACK・終了回収・非上書きreceipt発行の接続元として使う。
 既存処理の製品固有のパスやsource条件を、Unslopへそのまま流用しない。

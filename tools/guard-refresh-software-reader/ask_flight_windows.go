@@ -7,7 +7,6 @@ import (
 	"context"
 	"encoding/binary"
 	"encoding/json"
-	"errors"
 	"io"
 	"os"
 	"os/exec"
@@ -53,6 +52,8 @@ type askChildEnvironment struct{}
 type askChildExactEnvironment struct{}
 
 type askChildCaptureKey struct{}
+
+type askOwnedProducerKey struct{}
 
 type askChildCapture struct {
 	Stdin []byte
@@ -204,8 +205,9 @@ func (w *askReadyCapture) Write(p []byte) (int, error) {
 
 func askOwnedChildWithHandshake(ctx context.Context, executable string, onReady func([]byte) bool, args ...string) (result askChildResult) {
 	result.Exit = -1
+	producer, hasProducer := ctx.Value(askOwnedProducerKey{}).(*askProducerRuntime)
 	capture, hasCapture := ctx.Value(askChildCaptureKey{}).(askChildCapture)
-	if hasCapture && onReady != nil {
+	if hasProducer && (hasCapture || onReady != nil) || hasCapture && onReady != nil {
 		return
 	}
 	var captured *askCaptureOutput
@@ -289,12 +291,24 @@ func askOwnedChildWithHandshake(ctx context.Context, executable string, onReady 
 		}
 		defer input.Close()
 	}
+	if hasProducer {
+		cmd.Stdout = &producer.output
+		captureErr = &askCaptureDiagnostic{buffer: new(compilerCapture)}
+		defer captureErr.buffer.erase()
+		cmd.Stderr = captureErr
+		var pipeErr error
+		input, pipeErr = cmd.StdinPipe()
+		if pipeErr != nil {
+			return
+		}
+		defer input.Close()
+	}
 	if cmd.Start() != nil {
 		return
 	}
 	result.Started = true
 	access := uint32(0x0100 | 0x0001 | 0x0800)
-	if hasCapture {
+	if hasCapture || hasProducer {
 		access |= 0x1000
 	}
 	process, err := syscall.OpenProcess(access, false, uint32(cmd.Process.Pid))
@@ -302,7 +316,7 @@ func askOwnedChildWithHandshake(ctx context.Context, executable string, onReady 
 	if err == nil {
 		ok, _, _ = kernel.NewProc("AssignProcessToJobObject").Call(job, uintptr(process))
 		assigned = ok != 0
-		if assigned && hasCapture {
+		if assigned && (hasCapture || hasProducer) {
 			var created, exited, kernelTime, userTime syscall.Filetime
 			creation := uint64(0)
 			if syscall.GetProcessTimes(process, &created, &exited, &kernelTime, &userTime) == nil {
@@ -311,7 +325,13 @@ func askOwnedChildWithHandshake(ctx context.Context, executable string, onReady 
 			if creation == 0 || ctx.Err() != nil {
 				assigned = false
 			} else {
-				result.Capture.NativeProcess = &askNativeProcess{PID: uint32(cmd.Process.Pid), Creation: creation}
+				identity := &askNativeProcess{PID: uint32(cmd.Process.Pid), Creation: creation}
+				if hasCapture {
+					result.Capture.NativeProcess = identity
+				}
+				if hasProducer {
+					producer.native = identity
+				}
 			}
 		}
 		if assigned {
@@ -374,12 +394,69 @@ func askOwnedChildWithHandshake(ctx context.Context, executable string, onReady 
 		}
 	}
 	var waitErr error
+	producerReady, producerACKSent, producerACKAttempted := false, false, false
+	var producerWrite chan error
 loop:
 	for {
 		collect()
 		select {
 		case waitErr = <-waited:
 			break loop
+		case <-ctx.Done():
+			if input != nil {
+				input.Close()
+			}
+			_ = cmd.Process.Kill()
+		case frame := <-func() <-chan []byte {
+			if hasProducer {
+				return producer.output.frames
+			}
+			return nil
+		}():
+			if !producerReady {
+				if !producer.receiveReady(frame) {
+					producer.cancel()
+				} else {
+					producerReady = true
+				}
+			} else {
+				producer.receiveFinal(frame, producerACKAttempted)
+			}
+			clear(frame)
+		case ack := <-func() <-chan askProducerACK {
+			if hasProducer && producerReady && !producerACKAttempted {
+				return producer.accept
+			}
+			return nil
+		}():
+			if !producer.validACK(ack) || ctx.Err() != nil {
+				producer.cancel()
+				continue
+			}
+			payload, err := json.Marshal(ack)
+			if err != nil || len(payload) >= 4096 {
+				clear(payload)
+				producer.cancel()
+				continue
+			}
+			payload = append(payload, '\n')
+			producerACKAttempted = true
+			producerWrite = make(chan error, 1)
+			go func(raw []byte, done chan error) {
+				defer clear(raw)
+				n, err := input.Write(raw)
+				if err == nil && n != len(raw) {
+					err = io.ErrShortWrite
+				}
+				input.Close()
+				done <- err
+			}(payload, producerWrite)
+		case err := <-producerWrite:
+			producerACKSent = err == nil
+			producerWrite = nil
+			if err != nil {
+				producer.cancel()
+			}
 		case payload := <-func() <-chan []byte {
 			if ready != nil {
 				return ready.ready
@@ -397,9 +474,12 @@ loop:
 		case <-time.After(5 * time.Millisecond):
 		}
 	}
+	if hasProducer && producerWrite != nil {
+		input.Close()
+		producerACKSent = (<-producerWrite) == nil
+	}
 	result.TimedOut = ctx.Err() != nil
-	var exitError *exec.ExitError
-	result.WaitVerified = cmd.ProcessState != nil && (waitErr == nil || errors.As(waitErr, &exitError))
+	result.WaitVerified = askRootWaitVerified(cmd.ProcessState, waitErr)
 	if cmd.ProcessState != nil {
 		result.Exit = cmd.ProcessState.ExitCode()
 	}
@@ -433,10 +513,13 @@ loop:
 	if hasCapture {
 		result.Capture.Complete = assigned && result.WaitVerified && result.Reaped && !result.TimedOut && ctx.Err() == nil && !captured.overflow && captured.eof && captureErr.eof
 	}
+	if hasProducer {
+		producer.finish(result, producerACKSent, captureErr.eof)
+	}
 	if compilerMode && assigned && result.WaitVerified && result.Reaped && !result.TimedOut && result.Exit != 0 {
 		result.Diagnostic = compilerCause(compilerOut.data[:compilerOut.n], compilerErr.data[:compilerErr.n], compilerOut.truncated || compilerErr.truncated)
 	}
-	if !compilerMode && !hasCapture && assigned && result.WaitVerified && result.Reaped && !result.TimedOut && (waitErr == nil || result.Exit == 1) && errOut.Len() == 0 {
+	if !compilerMode && !hasCapture && !hasProducer && assigned && result.WaitVerified && result.Reaped && !result.TimedOut && (waitErr == nil || result.Exit == 1) && errOut.Len() == 0 {
 		if ready != nil {
 			out.Buffer = ready.Buffer
 			if out.Len() == 0 && result.Exit != 0 {
@@ -451,6 +534,13 @@ loop:
 	}
 	clear(errOut.Bytes())
 	return
+}
+
+func askRootWaitVerified(state *os.ProcessState, _ error) bool {
+	// Cmd.Wait may return a context or pipe-copy error after Process.Wait has
+	// already collected an exiting root. Keep that native fact separate from
+	// cancellation, EOF and protocol completion, which remain failure gates.
+	return state != nil && state.Exited()
 }
 
 // Ten seconds bounds the producer process tree, not each synchronous API.

@@ -130,10 +130,17 @@ func (o *ghaGuardActualTestObject) RoundTrip(r *http.Request)(*http.Response,err
 // Read the public API response without authentication. The signed URL is used
 // only to check the server-provided identifier; it is never followed or logged.
 func ghaGuardActualTestBundle(ctx context.Context,cutoff time.Time,trace *ghaGuardActualWindowTrace) ([]byte,error) {
+    transport:=&http.Transport{Proxy:nil};defer transport.CloseIdleConnections()
+    return ghaGuardActualTestBundleWithTransport(ctx,cutoff,trace,transport)
+}
+
+// The test-only seam injects only the RoundTripper. The URL, headers, checks,
+// response bounds, digest and caller-owned result remain fixed below.
+func ghaGuardActualTestBundleWithTransport(ctx context.Context,cutoff time.Time,trace *ghaGuardActualWindowTrace,transport http.RoundTripper) ([]byte,error) {
+    if ctx==nil||trace==nil||transport==nil{return nil,errGHAGuardUnqualified}
     endpoint:="https://api.github.com/repos/AutoDevJapan/cc-pc-tools-rs/attestations/sha256:a61e25065ae35d51f1ac8133959176b21e2c3740c1516b76f799371f1c27f9a2?per_page=100"
     req,err:=http.NewRequestWithContext(ctx,http.MethodGet,endpoint,nil);if err!=nil{return nil,errGHAGuardUnqualified}
     req.Header.Set("Accept","application/vnd.github+json");req.Header.Set("X-GitHub-Api-Version","2022-11-28")
-    transport:=&http.Transport{Proxy:nil};defer transport.CloseIdleConnections()
     guarded:=ghaGuardActualTestRT(func(r *http.Request)(*http.Response,error){
         if r==nil||r.URL==nil||r.URL.Scheme!="https"||r.URL.Host!="api.github.com"||r.URL.Path!="/repos/AutoDevJapan/cc-pc-tools-rs/attestations/sha256:a61e25065ae35d51f1ac8133959176b21e2c3740c1516b76f799371f1c27f9a2"||r.Header.Get("Authorization")!=""||r.Header.Get("Cookie")!="" {
             if trace!=nil {trace.hard.Store(true)};return nil,errGHAGuardUnqualified
@@ -145,10 +152,19 @@ func ghaGuardActualTestBundle(ctx context.Context,cutoff time.Time,trace *ghaGua
     client:=&http.Client{Transport:guarded,Timeout:30*time.Second,CheckRedirect:func(*http.Request,[]*http.Request)error{return http.ErrUseLastResponse}}
     response,err:=client.Do(req)
     if err!=nil||response==nil||response.Body==nil{return nil,errGHAGuardUnqualified}
-    if response.StatusCode!=http.StatusOK||response.Header.Get("Link")!="" {_=response.Body.Close();return nil,errGHAGuardUnqualified}
+    if response.StatusCode!=http.StatusOK||!ghaGuardSinglePageLink(response.Header) {_=response.Body.Close();return nil,errGHAGuardUnqualified}
     raw,readErr:=io.ReadAll(io.LimitReader(response.Body,4<<20+1));closeErr:=response.Body.Close()
     if readErr!=nil||closeErr!=nil||len(raw)>4<<20||ctx.Err()!=nil {clear(raw);return nil,errGHAGuardUnqualified}
     defer clear(raw)
+    bundle,selectErr:=ghaGuardActualSelectBundle(raw)
+    if selectErr!=nil{return nil,errGHAGuardUnqualified}
+    if len(bundle)!=11619||digest(bundle)!="c7c63a9adc5d342674e61116f732f4fd6dd1b82a8a039228ce80e9ff5fee85e1" {clear(bundle);return nil,errGHAGuardUnqualified}
+    return bundle,nil
+}
+
+// A single matching public attestation is data; the caller still checks its
+// pinned bytes and verifies its real signature before issuing a candidate.
+func ghaGuardActualSelectBundle(raw []byte) ([]byte,error) {
     var envelope struct {Attestations []struct{RepositoryID int64 `json:"repository_id"`;BundleURL string `json:"bundle_url"`;Bundle json.RawMessage `json:"bundle"`} `json:"attestations"`}
     dec:=json.NewDecoder(bytes.NewReader(raw));if dec.Decode(&envelope)!=nil||dec.Decode(new(any))!=io.EOF{return nil,errGHAGuardUnqualified}
     var found json.RawMessage;matches:=0
@@ -161,7 +177,6 @@ func ghaGuardActualTestBundle(ctx context.Context,cutoff time.Time,trace *ghaGua
     var compact bytes.Buffer
     if json.Compact(&compact,found)!=nil{return nil,errGHAGuardUnqualified}
     bundle:=append([]byte(nil),compact.Bytes()...)
-    if len(bundle)!=11619||digest(bundle)!="c7c63a9adc5d342674e61116f732f4fd6dd1b82a8a039228ce80e9ff5fee85e1" {clear(bundle);return nil,errGHAGuardUnqualified}
     return bundle,nil
 }
 

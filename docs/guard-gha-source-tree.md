@@ -8,4 +8,4 @@ The reader obtains the fixed commit and checks its root tree, reconstructs and h
 
 This is source evidence. It does not establish the entire compiler, dependency cache, runner image, installed target identity or operating-system authority. Run/job binding, artifact verification and Sigstore verification remain separate required checks. The normal authenticated transport and installed target are not connected by these files.
 
-The optional actual-artifact test uses synthetic source verification; it is not an end-to-end proof of this Git comparison. A dedicated real-source test and hosted CI are needed before deployment.
+The fixed-source integration test uses 249 public source inputs and their Git tree with a synthetic capture proof, payload, publication and signature callback. It runs the same constructor and source comparison, including negative blob responses. It does not establish actual-signature verification or an authenticated transport. The optional actual-artifact test uses synthetic source verification and is not an end-to-end proof of this Git comparison. Hosted CI and actual signed-artifact acceptance remain separate.

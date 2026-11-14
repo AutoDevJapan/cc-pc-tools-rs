@@ -152,14 +152,14 @@ type ghaGuardAcquiredEvidence struct {
 }
 
 func ghaGuardConstructVerifiedCandidate(ctx context.Context,e ghaGuardMetadataExpectation,material *ghaGuardAcquiredEvidence) (*ghaGuardVerifiedCandidate,error) {
-    return ghaGuardConstructVerifiedCandidateWith(ctx,e,material,ghaGuardVerifyActualSignature)
+    return ghaGuardConstructVerifiedCandidateWith(ctx,e,material,ghaGuardVerifyActualSignature,ghaGuardVerifyArchiveGitSource)
 }
 
 // verify is injected by package tests only. The normal constructor above fixes
 // this to in-process Sigstore verification, never a report or a caller bool.
-func ghaGuardConstructVerifiedCandidateWith(ctx context.Context,e ghaGuardMetadataExpectation,material *ghaGuardAcquiredEvidence,verifySignature func(context.Context,[]byte,[]byte,ghaGuardManifest)error) (*ghaGuardVerifiedCandidate,error) {
+func ghaGuardConstructVerifiedCandidateWith(ctx context.Context,e ghaGuardMetadataExpectation,material *ghaGuardAcquiredEvidence,verifySignature func(context.Context,[]byte,[]byte,ghaGuardManifest)error,verifySource func(context.Context,[]byte,ghaGuardManifest)error) (*ghaGuardVerifiedCandidate,error) {
     if material!=nil {defer clear(material.archive);defer clear(material.bundle);defer clear(material.jobLog)}
-    if ctx==nil||ctx.Err()!=nil||material==nil||verifySignature==nil{return nil,errGHAGuardUnqualified}
+    if ctx==nil||ctx.Err()!=nil||material==nil||verifySignature==nil||verifySource==nil{return nil,errGHAGuardUnqualified}
     bounded,cancel:=context.WithTimeout(ctx,2*time.Minute);defer cancel();ctx=bounded
     if len(material.jobLog)==0||len(material.jobLog)>8<<20||len(material.archive)==0||len(material.archive)>ghaGuardArchiveLimit||len(material.bundle)==0||len(material.bundle)>4<<20{return nil,errGHAGuardUnqualified}
     if material.workflowID<=0||!material.workflowActive||material.workflowPath!=e.WorkflowPath{return nil,errGHAGuardUnqualified}
@@ -178,6 +178,7 @@ func ghaGuardConstructVerifiedCandidateWith(ctx context.Context,e ghaGuardMetada
     if err!=nil{return nil,errGHAGuardUnqualified}
     transferred:=false
     defer func(){if !transferred {clear(payload)}}()
+    if verifySource(ctx,material.archive,m)!=nil||ctx.Err()!=nil||digest(material.archive)!=archiveSHA||digest(payload)!=m.OutputSHA{return nil,errGHAGuardUnqualified}
     if verifySignature(ctx,material.bundle,payload,m)!=nil||ctx.Err()!=nil||digest(material.jobLog)!=logSHA||digest(material.bundle)!=bundleSHA||digest(material.archive)!=archiveSHA||digest(payload)!=m.OutputSHA{return nil,errGHAGuardUnqualified}
     afterPub,afterErr:=ghaGuardPublicationFromLog(material.jobLog)
     if afterErr!=nil||afterPub!=pub||!ghaGuardMetadataMatches(e,material.run,material.job,material.artifact,binding,time.Now().UTC())||!ghaGuardPublicationMatches(e,material.artifact,pub){return nil,errGHAGuardUnqualified}

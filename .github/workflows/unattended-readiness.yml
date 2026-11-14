@@ -4,9 +4,9 @@ env:
 on:
   push:
     branches: [main]
-    paths: ['resident-guard/**', 'capacity-audit-3h/**', 'unattended-runner/**', 'repair-guard/**', 'tools/guard-refresh-software-reader/**', 'tools/civ6-ci-contract/**', 'localai-web-rs/src/operations_catalog.rs', 'localai-web-rs/src/operations.rs', 'tools/linux-runner-bridge/**', '.github/workflows/unattended-readiness.yml']
+    paths: ['resident-guard/**', 'capacity-audit-3h/**', 'unattended-runner/**', 'repair-guard/**', 'tools/guard-refresh-software-reader/**', 'tools/civ6-ci-contract/**', 'localai-web-rs/src/operations_catalog.rs', 'localai-web-rs/src/operations.rs', 'tools/linux-runner-bridge/**', 'tools/unattended-race-partition/**', '.github/workflows/unattended-readiness.yml']
   pull_request:
-    paths: ['resident-guard/**', 'capacity-audit-3h/**', 'unattended-runner/**', 'repair-guard/**', 'tools/guard-refresh-software-reader/**', 'tools/civ6-ci-contract/**', 'localai-web-rs/src/operations_catalog.rs', 'localai-web-rs/src/operations.rs', 'tools/linux-runner-bridge/**', '.github/workflows/unattended-readiness.yml']
+    paths: ['resident-guard/**', 'capacity-audit-3h/**', 'unattended-runner/**', 'repair-guard/**', 'tools/guard-refresh-software-reader/**', 'tools/civ6-ci-contract/**', 'localai-web-rs/src/operations_catalog.rs', 'localai-web-rs/src/operations.rs', 'tools/linux-runner-bridge/**', 'tools/unattended-race-partition/**', '.github/workflows/unattended-readiness.yml']
 permissions:
   contents: read
 concurrency:
@@ -26,7 +26,11 @@ jobs:
             labels: [self-hosted, Linux, X64, cc-pc-tools-linux]
         module: [resident-guard, capacity-audit-3h, unattended-runner, tools/linux-runner-bridge]
     runs-on: ${{ toJSON(github.event.repository.private) == 'false' && (matrix.os == 'Windows' && 'windows-2025' || 'ubuntu-24.04') || fromJSON(toJSON(matrix.labels)) }}
-    timeout-minutes: ${{ matrix.os == 'Windows' && matrix.module == 'unattended-runner' && 20 || 10 }}
+    # Windows unattended-runner needs about 3m for setup and native fixtures,
+    # 2m for the partition helper checks, at most 22m for the race suite and
+    # 3m for vet and build. The finite suite budget, not this job limit, ends
+    # a stuck partition, so Go prints its own timeout trace first.
+    timeout-minutes: ${{ matrix.os == 'Windows' && matrix.module == 'unattended-runner' && 35 || 10 }}
     defaults:
       run:
         working-directory: ${{ matrix.module }}
@@ -95,9 +99,26 @@ jobs:
       # Hosted Windows exhausted the package-wide 180s budget in different
       # existing tests (one only 7s into its real timing checks, another at 0s).
       # Retain every case and real deadline check with finite package headroom.
+      - if: runner.os != 'Windows' || matrix.module != 'unattended-runner'
+        run: go test -race -timeout ${{ matrix.module == 'unattended-runner' && '180s' || '120s' }} ./...
       # Windows also runs the real CLI/scheduler roundtrips instead of skipping
-      # them; keep a finite package budget for those additional process fixtures.
-      - run: go test -race -timeout ${{ matrix.module == 'unattended-runner' && (matrix.os == 'Windows' && '600s' || '180s') || '120s' }} ./...
+      # them. That single-package race suite took 416-579s on hosted runners and
+      # exceeded its 600s package deadline in a different test each time, 4-14s
+      # after that test began. Compile one race test binary, list every
+      # top-level case from it and run two exclusive partitions in order, each
+      # with the same 600s deadline, inside a finite 22m budget for the suite.
+      - name: Test the race partition helper
+        if: runner.os == 'Windows' && matrix.module == 'unattended-runner'
+        working-directory: tools/unattended-race-partition
+        run: |
+          go test -race -count=1 -timeout 180s ./...
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          go vet ./...
+          exit $LASTEXITCODE
+      - name: Run the race tests as two partitions of one binary
+        if: runner.os == 'Windows' && matrix.module == 'unattended-runner'
+        working-directory: tools/unattended-race-partition
+        run: go run . -dir ../../unattended-runner -partition-timeout 600s -suite-timeout 22m
       - run: go vet ./...
       - run: go build -trimpath .
   repair-guard:

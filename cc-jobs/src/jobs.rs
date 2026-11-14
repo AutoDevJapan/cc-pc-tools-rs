@@ -1113,34 +1113,54 @@ impl Context {
         } else {
             (None, None)
         };
-        {
-            let _state = self.job_lock(jid, "state.lock")?;
-            let mut job = self.load(jid)?;
-            if s(&job, "status") != "queued" || job["cancel_requested"] == true {
-                return Ok(());
+        let mut next_initial_read_diagnostic = 0.;
+        loop {
+            let retry = {
+                let _state = self.job_lock(jid, "state.lock")?;
+                match self.load(jid) {
+                    Ok(mut job) => {
+                        if s(&job, "status") != "queued" || job["cancel_requested"] == true {
+                            return Ok(());
+                        }
+                        if process_tree.is_some() {
+                            job["process_tree_version"] = json!(1);
+                        } else if let Some(fields) = job.as_object_mut() {
+                            fields.remove("process_tree_version");
+                        }
+                        job["pid"] = json!(pid);
+                        job["pid_created"] =
+                            json!(process_tree_root_created.or_else(|| self.rt.proc_created(pid)));
+                        job["queue_supervisor_version"] = json!(5);
+                        job["fixed_review_protocol"] = json!({"version":cc_job_policy::finished_review::EXECUTION_PROTOCOL,"pid":job["pid"],"created":job["pid_created"]});
+                        job["queue_restart_pending"] = json!(false);
+                        job["reboot_launch_pending"] = json!(false);
+                        job["queue_dependency_version"] = json!(1);
+                        job["last_event_at"] = json!(self.rt.now());
+                        job["activity"] = json!(if truth(&job["retry_count"])
+                            || truth(&job["capacity_retry_count"])
+                        {
+                            s(&job, "activity")
+                        } else {
+                            "順番待ち"
+                        });
+                        self.save(&job)?;
+                        None
+                    }
+                    Err(error) if error.code == 75 => Some(error),
+                    Err(error) => return Err(error),
+                }
+            };
+            let Some(error) = retry else { break };
+            // The per-read retry budget is exhausted. Keep this same queued
+            // job, release state.lock, and reload cancellation on the next poll.
+            if self.rt.mono() >= next_initial_read_diagnostic {
+                self.rt.diagnostic(&format!(
+                    "順番待ちの状態読取りを再試行: {}",
+                    redact_local_log_secrets(&error.message, &self.rt.env())
+                ));
+                next_initial_read_diagnostic = self.rt.mono() + 60.;
             }
-            if process_tree.is_some() {
-                job["process_tree_version"] = json!(1);
-            } else if let Some(fields) = job.as_object_mut() {
-                fields.remove("process_tree_version");
-            }
-            job["pid"] = json!(pid);
-            job["pid_created"] =
-                json!(process_tree_root_created.or_else(|| self.rt.proc_created(pid)));
-            job["queue_supervisor_version"] = json!(5);
-            job["fixed_review_protocol"] = json!({"version":cc_job_policy::finished_review::EXECUTION_PROTOCOL,"pid":job["pid"],"created":job["pid_created"]});
-            job["queue_restart_pending"] = json!(false);
-            job["reboot_launch_pending"] = json!(false);
-            job["queue_dependency_version"] = json!(1);
-            job["last_event_at"] = json!(self.rt.now());
-            job["activity"] = json!(if truth(&job["retry_count"])
-                || truth(&job["capacity_retry_count"])
-            {
-                s(&job, "activity")
-            } else {
-                "順番待ち"
-            });
-            self.save(&job)?;
+            self.rt.sleep(3.);
         }
         // Recovered supervisors may start with tabs from a yielded or rate-limited worker.
         self.close_chrome_tabs(jid);

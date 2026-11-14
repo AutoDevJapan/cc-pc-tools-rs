@@ -31,11 +31,29 @@ const softwareRustEntryLimit = 131072
 var errSoftwareRustUnavailable = errors.New("toolchain_origin_unavailable")
 var errSoftwareRustMismatch = errors.New("toolchain_inputs_mismatch")
 var errSoftwareRustConsumer = errors.New("toolchain_consumer_failed")
+var errSoftwareRustCleanup = errors.New("toolchain_cleanup_failed")
+
+// Keep the established primary classification while exposing cleanup failure
+// independently through errors.Is. Neither cause contains an operating-system
+// message, path, response body or other free-form native error text.
+type softwareRustCleanupFailure struct{ primary error }
+
+func (e *softwareRustCleanupFailure) Error() string { return e.primary.Error() }
+func (e *softwareRustCleanupFailure) Unwrap() []error {
+	return []error{e.primary, errSoftwareRustCleanup}
+}
+
+func softwareRustWithCleanupFailure(primary error) error {
+	if primary == nil { primary = errSoftwareRustUnavailable }
+	if errors.Is(primary, errSoftwareRustCleanup) { return primary }
+	return &softwareRustCleanupFailure{primary: primary}
+}
 
 // These interfaces are internal test seams. Only the concrete, fixed-purpose
 // constructor below supplies production access; no JSON, path or digest is
 // decoded into an implementation of these interfaces.
 type softwareRustHeldSession interface {
+	// Held returns the same tuple and borrowed buffers for the session lifetime.
 	Held() rustToolchainHeld
 	Close() error
 }
@@ -47,44 +65,80 @@ type softwareRustProviderAccess interface {
 
 type softwareRustOriginProvider struct{ access softwareRustProviderAccess }
 
+// openRetained returns ownership of one verified session to the normal
+// controller. The caller must keep it until native collection is proven, or
+// move it to the retained owner. It does not enable the normal factory.
+func (p *softwareRustOriginProvider) openRetained(ctx context.Context) (session softwareRustHeldSession, result error) {
+	if ctx == nil {
+		return nil, context.Canceled
+	}
+	if ctx.Err() != nil { return nil, ctx.Err() }
+	if p == nil || p.access == nil {
+		return nil, errors.New("toolchain_origin_provider_unavailable")
+	}
+	origin, err := p.access.Origin(ctx)
+	if err != nil {
+		return nil, softwareRustFixedError(ctx, err)
+	}
+	if ctx.Err() != nil {
+		return nil, ctx.Err()
+	}
+	opened, err := p.access.Open(ctx, origin)
+	transferred := false
+	defer func() {
+		if !transferred && opened != nil {
+			if opened.Close() != nil {
+				result = softwareRustWithCleanupFailure(softwareRustFixedError(ctx, result))
+			}
+		}
+	}()
+	if err != nil || opened == nil {
+		return nil, softwareRustFixedError(ctx, err)
+	}
+	if ctx.Err() != nil {
+		return nil, ctx.Err()
+	}
+	held := opened.Held()
+	if held.Origin != origin || !rustToolchainInputsMatch(held) {
+		return nil, errSoftwareRustMismatch
+	}
+	if err = held.Recheck(ctx); err != nil {
+		return nil, softwareRustFixedError(ctx, err)
+	}
+	if ctx.Err() != nil {
+		return nil, ctx.Err()
+	}
+	if !rustToolchainInputsMatch(held) {
+		return nil, errSoftwareRustMismatch
+	}
+	if ctx.Err() != nil {
+		return nil, ctx.Err()
+	}
+	transferred = true
+	return opened, nil
+}
+
 func (p *softwareRustOriginProvider) WithHeld(ctx context.Context, visit func(rustToolchainHeld) bool) (result error) {
-	if ctx == nil || ctx.Err() != nil {
+	if ctx == nil {
 		return context.Canceled
 	}
+	if ctx.Err() != nil { return ctx.Err() }
 	if p == nil || p.access == nil {
 		return errors.New("toolchain_origin_provider_unavailable")
 	}
 	if visit == nil {
 		return errSoftwareRustConsumer
 	}
-	origin, err := p.access.Origin(ctx)
+	session, err := p.openRetained(ctx)
 	if err != nil {
-		return softwareRustFixedError(ctx, err)
+		return err
 	}
-	if ctx.Err() != nil {
-		return ctx.Err()
-	}
-	session, err := p.access.Open(ctx, origin)
-	if session != nil {
-		defer func() {
-			if session.Close() != nil && result == nil {
-				result = errSoftwareRustUnavailable
-			}
-		}()
-	}
-	if err != nil || session == nil {
-		return softwareRustFixedError(ctx, err)
-	}
+	defer func() {
+		if session.Close() != nil {
+			result = softwareRustWithCleanupFailure(softwareRustFixedError(ctx, result))
+		}
+	}()
 	held := session.Held()
-	if held.Origin != origin || !rustToolchainInputsMatch(held) {
-		return errSoftwareRustMismatch
-	}
-	if err = held.Recheck(ctx); err != nil {
-		return softwareRustFixedError(ctx, err)
-	}
-	if !rustToolchainInputsMatch(held) {
-		return errSoftwareRustMismatch
-	}
 	if ctx.Err() != nil {
 		return ctx.Err()
 	}
@@ -107,16 +161,20 @@ func (p *softwareRustOriginProvider) WithHeld(ctx context.Context, visit func(ru
 }
 
 func softwareRustFixedError(ctx context.Context, err error) error {
+	var primary error = errSoftwareRustUnavailable
 	if ctx != nil && ctx.Err() != nil {
-		return ctx.Err()
+		primary = ctx.Err()
+	} else if errors.Is(err, context.Canceled) {
+		primary = context.Canceled
+	} else if errors.Is(err, context.DeadlineExceeded) {
+		primary = context.DeadlineExceeded
+	} else if errors.Is(err, errSoftwareRustMismatch) {
+		primary = errSoftwareRustMismatch
+	} else if errors.Is(err, errSoftwareRustConsumer) {
+		primary = errSoftwareRustConsumer
 	}
-	if errors.Is(err, context.Canceled) {
-		return context.Canceled
-	}
-	if errors.Is(err, context.DeadlineExceeded) {
-		return context.DeadlineExceeded
-	}
-	return errSoftwareRustUnavailable
+	if errors.Is(err, errSoftwareRustCleanup) { return softwareRustWithCleanupFailure(primary) }
+	return primary
 }
 
 // The normal factory remains closed until the native adapter's current-object
@@ -377,7 +435,7 @@ func softwareRustOpenWithSession(ctx context.Context, origin rustToolchainOrigin
 	held.Origin = origin
 	good := false
 	defer func() {
-		if !good && s.Close() != nil { failure = errors.Join(failure, errSoftwareRustUnavailable) }
+		if !good && s.Close() != nil { failure = softwareRustWithCleanupFailure(softwareRustFixedError(ctx, failure)) }
 	}()
 	if ctx.Err() != nil { return nil, ctx.Err() }
 	open := func(path, resolved string, directory, reparse bool) (softwareRustNativeNode, error) {
@@ -519,6 +577,6 @@ func (s *softwareRustNativeSession) Close() error {
 	var failed bool
 	for i := len(s.nodes)-1; i >= 0; i-- { if s.nodes[i].f.Close() != nil { failed = true } }
 	s.nodes = nil
-	if failed { return errSoftwareRustUnavailable }
+	if failed { return errSoftwareRustCleanup }
 	return nil
 }

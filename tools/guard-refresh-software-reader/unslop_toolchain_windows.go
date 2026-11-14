@@ -18,6 +18,7 @@ type unslopToolchainResult struct {
 	Verified bool   `json:"verified"`
 	Consumed bool   `json:"consumed"`
 	Reason   string `json:"reason"`
+	CleanupFailed bool `json:"cleanup_failed"`
 }
 
 // Consumed records callback invocation, even when a later check or provider
@@ -67,6 +68,9 @@ func consumeUnslopToolchainHeld(ctx context.Context, purpose unslopToolchainPurp
 	}
 	callbacks := 0
 	accepted := false
+	recordCleanup := func(err error) {
+		result.CleanupFailed = result.CleanupFailed || errors.Is(err, errSoftwareRustCleanup)
+	}
 	result.Reason = "toolchain_origin_unavailable"
 	err := provider.WithHeld(ctx, func(held rustToolchainHeld) bool {
 		callbacks++
@@ -86,6 +90,7 @@ func consumeUnslopToolchainHeld(ctx context.Context, purpose unslopToolchainPurp
 			return false
 		}
 		if err := held.Recheck(ctx); err != nil {
+			recordCleanup(err)
 			result.Reason = unslopToolchainFailureReason(ctx, err)
 			return false
 		}
@@ -102,6 +107,7 @@ func consumeUnslopToolchainHeld(ctx context.Context, purpose unslopToolchainPurp
 		// Run both checks even after consumption fails. The provider still
 		// owns the same input buffers and is responsible for closing them.
 		checkErr := held.Recheck(ctx)
+		recordCleanup(checkErr)
 		matches := rustToolchainInputsMatch(held)
 		if ctx.Err() != nil {
 			result.Reason = "toolchain_cancelled"
@@ -122,6 +128,9 @@ func consumeUnslopToolchainHeld(ctx context.Context, purpose unslopToolchainPurp
 		accepted = true
 		return true
 	})
+	// Capture the typed fact before cancellation or primary reason projection.
+	// No provider error text is copied into the serialized result.
+	recordCleanup(err)
 	if ctx.Err() != nil {
 		result.Reason = "toolchain_cancelled"
 		return
@@ -140,7 +149,7 @@ func consumeUnslopToolchainHeld(ctx context.Context, purpose unslopToolchainPurp
 		}
 		return
 	}
-	if !accepted {
+	if !accepted || result.CleanupFailed {
 		return
 	}
 	result.Verified = true
@@ -222,6 +231,7 @@ type unslopToolchainCaptureResult struct {
 	CaptureAttempted bool `json:"capture_attempted"`
 	CaptureReason string `json:"capture_reason,omitempty"`
 	ToolchainReason string `json:"toolchain_reason,omitempty"`
+	ToolchainCleanupFailed bool `json:"toolchain_cleanup_failed"`
 }
 
 func captureUnslopReleaseWithToolchain(ctx context.Context, provider rustToolchainOriginProvider, factory unslopToolchainCaptureFactory) unslopToolchainCaptureResult {
@@ -244,6 +254,7 @@ func captureUnslopReleaseWithToolchain(ctx context.Context, provider rustToolcha
 		return true
 	})
 	result.ToolchainReason=outcome.Reason
+	result.ToolchainCleanupFailed=outcome.CleanupFailed
 	if !outcome.Verified {
 		result.Qualified=false
 		result.Receipt=nil

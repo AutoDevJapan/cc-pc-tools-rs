@@ -18,6 +18,13 @@ registryはstrong referenceを保持し、返すopaque ticketは同registry内�
 flightのpointerが別でも、同じDoneチャネルを共有する登録は断ります。
 別registryへ同じ資源を重ねて渡さないことは、単一controllerが所有権を移管する際の前提です。
 
+追加inputとして渡せるのは、`*os.File`・`*nativeUpdateObject`・`*softwareBuildSnapshot`の3種類です。
+外側のpointerだけでなく、native objectのfileと親handle、snapshotのfiles・directory/ACL handle、native leaseのnodes内のfileまで、同じ所有グラフとして照合します。
+別のラッパーに入っていても同じfileやhandleを閉じる場合は、同じentry内・別entry間とも移管を断ります。
+同じラッパーを繰り返し渡した場合と、内部で既に所有しているfile leafをそのまま追加した場合は、追加のCloseを省きます。
+未知のio.Closerから内部所有を推定したり、任意のClose callbackを追加inputとして受け取ったりはしません。
+内部updateObjectやleaseの合成実装は既存のテスト用接続点であり、外部入力から組み立てる型ではありません。
+
 ## DrainとClose
 
 Drainは移管されたexact ownedflight.Doneから一度だけ実結果を受け取ります。
@@ -53,6 +60,11 @@ WithHeldのcallbackからheld viewだけを外へ返す方法は使いません�
 元のunslopOwnedFlight receiverを別に保持したcallerへのnil guardも、通常controllerを接続する前に必要です。
 このモジュールは移管元を空にしますが、既存receiverのReady・SendACK・Done・Abortの実装は変更していません。
 
+通常接続では、既存live sessionがReapedだけでcompletedやClose可否を決める分岐も、同じ回収条件にそろえる必要があります。
+早期returnや既消費の結果が旧Closeへ流れ、ownerへの移管前に入力を解放する経路を残してはいけません。
+また、native側でJob memberの列挙・handle確保に欠落がある場合や、最終列挙後の子の追加を確認できない場合は、回収不明を維持する必要があります。
+このモジュールはその列挙や実handleの待機を実装しておらず、合成Doneの成功で実OSの回収契約を証明しません。
+
 既flight.Doneが最終的にReaped=falseを返した後は、そのchannelだけから将来の回収を追加証明できません。
 この場合は保持を続けます。Job/processの実handleを所有する正規native reaperへ移管し、同identityのWaitとJob回収を証明できる接続が別途必要です。
 その接続をPIDやboolで代用したり、channelが閉じたことだけで解放したりしません。
@@ -65,6 +77,7 @@ WithHeldのcallbackからheld viewだけを外へ返す方法は使いません�
 | 同じflightから実回収を示す結果が届いた | Drainを呼ぶ | 入力、追加input、toolchainの順に一度だけ閉じる |
 | Reapedがfalseの結果を受け取った | 取消、再Drain、別の結果投入を行う | ownerを保持し、別結果を回収の証拠にしない |
 | すでにleaseかDoneを引き受けている | 重複する移管を要求する | 新しいslotを変更せず、移管を断る |
+| fileをnative object・snapshot・native leaseのいずれかで所有している | 同じfileを別の追加ラッパーに入れて渡す | 同一entry・別entryとも移管を断り、元slotと既存entryとfileを保持する |
 | 回収後の解放が進んでいる | Closeへ再入する | 進行中の状態を返し、二度閉じない |
 
 - 終了結果が来る前のClose要求・取消ではinput/toolchain Closeが0、ownerとcapture状態が残る。
@@ -77,6 +90,8 @@ WithHeldのcallbackからheld viewだけを外へ返す方法は使いません�
 - 回収の確認ができた場合もできなかった場合も、受け取った終了結果のrawとstdoutを消去し、レポートへ転記しない。
 - Reapedの必須確認だけを除くmutantが未回収ケースで失敗することを、正常工具の検証工程で確認する。
 
+固定した前候補では、WindowsのCIで保持処理の16テスト・22サブケースとconsumerの11テスト、readerのvet・ビルドが成功しました。
+今回追加した所有leafの重複対照は、その成功後に加えた別の変更で、まだコンパイル・実行していません。
 この文書と合成テストは実OSの回収・実lease移管・実authority・再起動耐性の証明ではありません。
-ローカルGo/gofmtの資格が成立していないため、新コードのコンパイル/テスト/整形は未実行です。
+ローカルGo/gofmtの資格は成立していないため、ローカルでのコンパイル・テスト・整形も未実行です。
 合成テストの実行とReaped条件を外す負対照は、同じソースを使うWindowsのCIへ引き継ぎます。

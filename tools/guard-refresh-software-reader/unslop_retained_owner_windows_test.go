@@ -7,13 +7,15 @@ import (
 	"encoding/json"
 	"errors"
 	"io"
+	"os"
 	"strings"
 	"sync"
+	"syscall"
 	"testing"
 	"time"
 )
 
-type retainedTestResource struct { calls int; name string; order *[]string; fail bool; duringClose func() }
+type retainedTestResource struct { fakeUpdateObject; calls int; name string; order *[]string; fail bool; duringClose func() }
 func (r *retainedTestResource) Close() error { r.calls++; if r.order!=nil {*r.order=append(*r.order,r.name)};if r.duringClose!=nil {r.duringClose()};if r.fail {return errors.New("private resource failure")};return nil }
 type retainedTestLease struct { held rustToolchainHeld; calls int; order *[]string; fail bool; onClose func() }
 func (l *retainedTestLease) Held() rustToolchainHeld {return l.held}
@@ -41,11 +43,11 @@ func newRetainedTestFixture(t *testing.T, cached ...askProducerFlightResult) *re
 	f.lease=f.oldLease
 	f.resource=&retainedTestResource{name:"input",order:&f.order}
 	flight:=&askOwnedProducerFlight{Done:f.done,Abort:func(){f.aborts++}}
-	f.live=&unslopLiveSession{unslopNativeSession:&unslopNativeSession{},flight:&unslopOwnedFlight{flight:flight}}
+	f.live=&unslopLiveSession{unslopNativeSession:&unslopNativeSession{},evidence:f.resource,flight:&unslopOwnedFlight{flight:flight}}
 	f.oldLive=f.live
 	if len(cached)>0 {value:=cached[0];f.live.flight.(*unslopOwnedFlight).result=&value}
 	outcome:=unslopToolchainCaptureResult{unslopCaptureResult:unslopCaptureResult{Reason:"toolchain_cancelled",ReceiptPublished:true},CaptureAttempted:true,CaptureReason:"capture_cleanup_failed_preserved",ToolchainReason:"toolchain_cancelled"}
-	f.ticket,err=owner.Retain(&f.live,&f.lease,[]io.Closer{f.resource,f.resource},outcome)
+	f.ticket,err=owner.Retain(&f.live,&f.lease,nil,outcome)
 	if err!=nil {t.Fatal(err)}
 	return f
 }
@@ -188,9 +190,9 @@ func TestUnslopRetainedOwnerFailedAdoptionPreservesOriginalSlots(t *testing.T) {
 			flight:=&askOwnedProducerFlight{Done:done,Abort:func(){}}
 			resource:=&retainedTestResource{}
 			live:=&unslopLiveSession{unslopNativeSession:&unslopNativeSession{},flight:&unslopOwnedFlight{flight:flight}}
-			extra:=[]io.Closer{resource}
+			var extra []io.Closer
 			if mode=="duplicate-lease" {lease=first.oldLease}
-			if mode=="duplicate-input" {extra=[]io.Closer{first.resource}}
+			if mode=="duplicate-input" {live.evidence=first.resource}
 			if mode=="duplicate-flight" {live.flight=&unslopOwnedFlight{flight:first.owner.entries[first.ticket].flight}}
 			if mode=="duplicate-done" {flight.Done=first.owner.entries[first.ticket].flight.Done}
 			if mode=="nil-input" {extra=[]io.Closer{(*retainedTestResource)(nil)}}
@@ -220,7 +222,7 @@ func TestUnslopRetainedOwnerMovesCaptureInputsAndClearsOldAlias(t *testing.T) {
 	done:=make(chan askProducerFlightResult,1)
 	live:=&unslopLiveSession{unslopNativeSession:&unslopNativeSession{manifest:manifest},evidence:input,flight:&unslopOwnedFlight{flight:&askOwnedProducerFlight{Done:done,Abort:func(){}}}}
 	old,oldBase:=live,live.unslopNativeSession
-	ticket,err:=owner.Retain(&live,&lease,[]io.Closer{input,manifest},unslopToolchainCaptureResult{})
+	ticket,err:=owner.Retain(&live,&lease,nil,unslopToolchainCaptureResult{})
 	if err!=nil {t.Fatal(err)}
 	if err:=old.Close();err!=nil {t.Fatal(err)}
 	if err:=oldBase.Close();err!=nil {t.Fatal(err)}
@@ -306,5 +308,127 @@ func TestUnslopRetainedOwnerClearsTerminalBuffers(t *testing.T) {
 			encoded,err:=json.Marshal(r)
 			if err!=nil||strings.Contains(string(encoded),"private") {t.Fatal("terminal buffer appeared in report")}
 		})
+	}
+}
+
+func retainedTestOpenFile(t *testing.T) *os.File {
+	t.Helper()
+	f,err:=os.CreateTemp(t.TempDir(),"input-")
+	if err!=nil {t.Fatal(err)}
+	t.Cleanup(func(){_ = f.Close()})
+	return f
+}
+
+func retainedTestInputSession(t *testing.T) (*unslopLiveSession,softwareRustHeldSession,chan askProducerFlightResult) {
+	t.Helper()
+	done:=make(chan askProducerFlightResult,1)
+	live:=&unslopLiveSession{unslopNativeSession:&unslopNativeSession{},flight:&unslopOwnedFlight{flight:&askOwnedProducerFlight{Done:done,Abort:func(){}}}}
+	lease:=&retainedTestLease{held:newSyntheticUnslopToolchainProvider().held}
+	return live,lease,done
+}
+
+func retainedTestSetInput(live *unslopLiveSession, lease *softwareRustHeldSession, mode string, f *os.File) []io.Closer {
+	switch mode {
+	case "native":live.evidence=&nativeUpdateObject{f:f}
+	case "snapshot":live.source=&softwareBuildSnapshot{files:[]*os.File{f}}
+	case "extra":return []io.Closer{&nativeUpdateObject{f:f}}
+	case "lease":*lease=&softwareRustNativeSession{held:newSyntheticUnslopToolchainProvider().held,nodes:[]softwareRustNativeNode{{f:f}}}
+	}
+	return nil
+}
+
+func TestUnslopRetainedOwnerRejectsDistinctWrappersForSameOwnedFile(t *testing.T) {
+	for _,ownerMode:=range []string{"native","snapshot","extra","lease"} {
+		for _,extraMode:=range []string{"native","snapshot"} {
+			t.Run(ownerMode+"/"+extraMode,func(t *testing.T){
+				owner,err:=newUnslopRetainedOwner(2);if err!=nil {t.Fatal(err)}
+				f:=retainedTestOpenFile(t)
+				live,lease,_:=retainedTestInputSession(t)
+				extra:=retainedTestSetInput(live,&lease,ownerMode,f)
+				var alias io.Closer=&nativeUpdateObject{f:f}
+				if extraMode=="snapshot" {alias=&softwareBuildSnapshot{files:[]*os.File{f}}}
+				extra=append(extra,alias)
+				oldLive,oldLease:=live,lease
+				if ticket,err:=owner.Retain(&live,&lease,extra,unslopToolchainCaptureResult{});err==nil||ticket!=nil||live!=oldLive||lease!=oldLease||len(owner.Tickets())!=0 {t.Fatal("overlapping ownership was transferred")}
+				if _,err:=f.Stat();err!=nil {t.Fatal("rejected ownership closed the original file")}
+			})
+		}
+	}
+}
+
+func TestUnslopRetainedOwnerRejectsFileSharedWithAnotherEntry(t *testing.T) {
+	for _,ownerMode:=range []string{"native","snapshot","extra","lease"} {
+		for _,extraMode:=range []string{"file","native","snapshot"} {
+			t.Run(ownerMode+"/"+extraMode,func(t *testing.T){
+				owner,err:=newUnslopRetainedOwner(2);if err!=nil {t.Fatal(err)}
+				f:=retainedTestOpenFile(t)
+				first,firstLease,firstDone:=retainedTestInputSession(t)
+				firstExtra:=retainedTestSetInput(first,&firstLease,ownerMode,f)
+				ticket,err:=owner.Retain(&first,&firstLease,firstExtra,unslopToolchainCaptureResult{});if err!=nil {t.Fatal(err)}
+				before:=owner.Snapshot(ticket)
+				second,secondLease,_:=retainedTestInputSession(t)
+				var alias io.Closer=f
+				if extraMode=="native" {alias=&nativeUpdateObject{f:f}}
+				if extraMode=="snapshot" {alias=&softwareBuildSnapshot{files:[]*os.File{f}}}
+				oldSecond,oldLease:=second,secondLease
+				if other,err:=owner.Retain(&second,&secondLease,[]io.Closer{alias},unslopToolchainCaptureResult{});err==nil||other!=nil||second!=oldSecond||secondLease!=oldLease||len(owner.Tickets())!=1 {t.Fatal("another entry adopted the original file")}
+				after:=owner.Snapshot(ticket)
+				if before.OwnerID!=after.OwnerID||after.State!="retained"||after.CloseAttempts!=0 {t.Fatal("rejection changed the existing entry",after)}
+				if _,err:=f.Stat();err!=nil {t.Fatal("rejection closed an existing entry's file")}
+				firstDone<-retainedTestCompletion()
+				if r:=owner.Drain(context.Background(),ticket);r.State!="released" {t.Fatal("original entry could not release once",r)}
+			})
+		}
+	}
+}
+
+func TestUnslopRetainedOwnerAcceptsOnlyKnownIndependentExtraOwners(t *testing.T) {
+	for _,mode:=range []string{"file","native","snapshot","same-outer","internal-wrapper","internal-file-leaf","independent-files"} {
+		t.Run(mode,func(t *testing.T){
+			owner,err:=newUnslopRetainedOwner(1);if err!=nil {t.Fatal(err)}
+			live,lease,done:=retainedTestInputSession(t)
+			f:=retainedTestOpenFile(t)
+			var input io.Closer=f
+			if mode=="native"||mode=="same-outer"||mode=="internal-wrapper" {input=&nativeUpdateObject{f:f}}
+			if mode=="snapshot" {input=&softwareBuildSnapshot{files:[]*os.File{f}}}
+			if mode=="internal-file-leaf" {live.evidence=&nativeUpdateObject{f:f}}
+			if mode=="internal-wrapper" {live.evidence=input.(*nativeUpdateObject)}
+			extra:=[]io.Closer{input,input}
+			var other *os.File
+			if mode=="independent-files" {other=retainedTestOpenFile(t);extra=append(extra,&nativeUpdateObject{f:other})}
+			ticket,err:=owner.Retain(&live,&lease,extra,unslopToolchainCaptureResult{});if err!=nil {t.Fatal(err)}
+			done<-retainedTestCompletion()
+			if r:=owner.Drain(context.Background(),ticket);r.State!="released"||r.CloseFailures!=0 {t.Fatal("independent or identical input did not close once",r)}
+			if _,err:=f.Stat();err==nil {t.Fatal("accepted input was not closed")}
+			if other!=nil {if _,err:=other.Stat();err==nil {t.Fatal("independent second file was not closed")}}
+		})
+	}
+	owner,err:=newUnslopRetainedOwner(1);if err!=nil {t.Fatal(err)}
+	live,lease,_:=retainedTestInputSession(t)
+	unknown:=&retainedTestResource{}
+	oldLive,oldLease:=live,lease
+	if ticket,err:=owner.Retain(&live,&lease,[]io.Closer{unknown},unslopToolchainCaptureResult{});err==nil||ticket!=nil||live!=oldLive||lease!=oldLease||unknown.calls!=0 {t.Fatal("unknown extra ownership was inferred")}
+}
+
+func TestUnslopRetainedOwnerRejectsExtraNativeHandleAlias(t *testing.T) {
+	for _,crossEntry:=range []bool{false,true} {
+	t.Run(map[bool]string{false:"same-entry",true:"another-entry"}[crossEntry],func(t *testing.T){
+	owner,err:=newUnslopRetainedOwner(2);if err!=nil {t.Fatal(err)}
+	live,lease,done:=retainedTestInputSession(t)
+	f,other:=retainedTestOpenFile(t),retainedTestOpenFile(t)
+	live.evidence=&nativeUpdateObject{f:f}
+	var firstTicket *unslopRetainedTicket
+	var firstDone chan askProducerFlightResult
+	if crossEntry {
+		firstDone=done
+		firstTicket,err=owner.Retain(&live,&lease,nil,unslopToolchainCaptureResult{});if err!=nil {t.Fatal(err)}
+		live,lease,_=retainedTestInputSession(t)
+	}
+	alias:=&nativeUpdateObject{f:other,parents:[]syscall.Handle{syscall.Handle(f.Fd())}}
+	oldLive,oldLease:=live,lease
+	if ticket,err:=owner.Retain(&live,&lease,[]io.Closer{alias},unslopToolchainCaptureResult{});err==nil||ticket!=nil||live!=oldLive||lease!=oldLease {t.Fatal("extra parent handle aliased an owned file")}
+	for _,file:=range []*os.File{f,other} {if _,err:=file.Stat();err!=nil {t.Fatal("rejected alias closed a file")}}
+	if crossEntry {firstDone<-retainedTestCompletion();if r:=owner.Drain(context.Background(),firstTicket);r.State!="released" {t.Fatal("first owner changed after handle rejection",r)}}
+	})
 	}
 }

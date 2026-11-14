@@ -8,9 +8,11 @@ import (
 	"encoding/hex"
 	"errors"
 	"io"
+	"os"
 	"reflect"
 	"strconv"
 	"sync"
+	"syscall"
 )
 
 var errUnslopRetainedInput = errors.New("retained_owner_input_invalid")
@@ -44,6 +46,7 @@ type unslopRetainedEntry struct {
 	lease softwareRustHeldSession
 	extra []io.Closer
 	claimed []io.Closer
+	claimedHandles []syscall.Handle
 	flight *askOwnedProducerFlight
 	cached *askProducerFlightResult
 	observed bool
@@ -58,6 +61,7 @@ type unslopRetainedOwner struct {
 	next uint64
 	entries map[*unslopRetainedTicket]*unslopRetainedEntry
 	claims map[io.Closer]*unslopRetainedTicket
+	handles map[syscall.Handle]*unslopRetainedTicket
 	flights map[*askOwnedProducerFlight]*unslopRetainedTicket
 	done map[<-chan askProducerFlightResult]*unslopRetainedTicket
 }
@@ -66,7 +70,7 @@ func newUnslopRetainedOwner(limit int) (*unslopRetainedOwner,error) {
 	if limit<1||limit>128 {return nil,errUnslopRetainedCapacity}
 	var nonce [16]byte
 	if _,err:=rand.Read(nonce[:]);err!=nil {return nil,errUnslopRetainedInput}
-	return &unslopRetainedOwner{limit:limit,identity:hex.EncodeToString(nonce[:]),entries:make(map[*unslopRetainedTicket]*unslopRetainedEntry),claims:make(map[io.Closer]*unslopRetainedTicket),flights:make(map[*askOwnedProducerFlight]*unslopRetainedTicket),done:make(map[<-chan askProducerFlightResult]*unslopRetainedTicket)},nil
+	return &unslopRetainedOwner{limit:limit,identity:hex.EncodeToString(nonce[:]),entries:make(map[*unslopRetainedTicket]*unslopRetainedEntry),claims:make(map[io.Closer]*unslopRetainedTicket),handles:make(map[syscall.Handle]*unslopRetainedTicket),flights:make(map[*askOwnedProducerFlight]*unslopRetainedTicket),done:make(map[<-chan askProducerFlightResult]*unslopRetainedTicket)},nil
 }
 
 // Retain is called by the normal controller at an exclusive transfer boundary.
@@ -74,20 +78,21 @@ func newUnslopRetainedOwner(limit int) (*unslopRetainedOwner,error) {
 // read a toolchain. The worker may still run, but no other caller may use the
 // old session or receive from its flight while ownership is being transferred.
 func (o *unslopRetainedOwner) Retain(source **unslopLiveSession, lease *softwareRustHeldSession, extra []io.Closer, capture unslopToolchainCaptureResult) (*unslopRetainedTicket,error) {
-	if o==nil||o.entries==nil||o.claims==nil||o.flights==nil||o.done==nil||len(o.identity)!=32||len(extra)>256||source==nil||*source==nil||lease==nil||!unslopRetainedPointer(*lease) {return nil,errUnslopRetainedInput}
+	if o==nil||o.entries==nil||o.claims==nil||o.handles==nil||o.flights==nil||o.done==nil||len(o.identity)!=32||len(extra)>256||source==nil||*source==nil||lease==nil||!unslopRetainedPointer(*lease) {return nil,errUnslopRetainedInput}
 	live:=*source
 	if live.unslopNativeSession==nil||live.closed {return nil,errUnslopRetainedInput}
 	owned,ok:=live.flight.(*unslopOwnedFlight)
 	if !ok||owned==nil||owned.flight==nil||owned.flight.Done==nil||owned.flight.Abort==nil {return nil,errUnslopRetainedInput}
 	// Only a source-bound provider can supply this lease. Matching its held
 	// projection is a consistency check, not a replacement for that provider.
-	extras,claims,valid:=unslopRetainedUniqueInputs(live,*lease,extra)
-	if !valid {return nil,errUnslopRetainedInput}
 	o.mu.Lock()
 	defer o.mu.Unlock()
 	if len(o.entries)>=o.limit||o.next==^uint64(0) {return nil,errUnslopRetainedCapacity}
 	if o.flights[owned.flight]!=nil||o.done[owned.flight.Done]!=nil {return nil,errUnslopRetainedInput}
+	extras,claims,handles,valid:=o.unslopRetainedUniqueInputs(live,*lease,extra)
+	if !valid {return nil,errUnslopRetainedInput}
 	for _,object:=range claims {if o.claims[object]!=nil {return nil,errUnslopRetainedInput}}
+	for _,h:=range handles {if o.handles[h]!=nil {return nil,errUnslopRetainedInput}}
 	if !rustToolchainInputsMatch((*lease).Held()) {return nil,errUnslopRetainedInput}
 	o.next++
 	ticket:=&unslopRetainedTicket{sequence:o.next}
@@ -98,7 +103,7 @@ func (o *unslopRetainedOwner) Retain(source **unslopLiveSession, lease *software
 	moved.flight=&movedOwned
 	capture.Qualified=false
 	capture.Receipt=nil
-	entry:=&unslopRetainedEntry{ticket:ticket,live:&moved,lease:*lease,extra:extras,claimed:claims,flight:owned.flight,cached:owned.result,gate:make(chan struct{},1),report:unslopRetainedReport{OwnerID:"unslop-retained-"+o.identity+"-"+strconv.FormatUint(ticket.sequence,10),State:"retained",Collection:"pending",Recheck:"not_attempted",Reason:"retained_owner_collection_pending",Capture:capture}}
+	entry:=&unslopRetainedEntry{ticket:ticket,live:&moved,lease:*lease,extra:extras,claimed:claims,claimedHandles:handles,flight:owned.flight,cached:owned.result,gate:make(chan struct{},1),report:unslopRetainedReport{OwnerID:"unslop-retained-"+o.identity+"-"+strconv.FormatUint(ticket.sequence,10),State:"retained",Collection:"pending",Recheck:"not_attempted",Reason:"retained_owner_collection_pending",Capture:capture}}
 	entry.gate<-struct{}{}
 	// Move all internal ownership before returning the capability. Old live
 	// aliases become closed tombstones and cannot consume Done or inputs.
@@ -111,6 +116,7 @@ func (o *unslopRetainedOwner) Retain(source **unslopLiveSession, lease *software
 	o.flights[entry.flight]=ticket
 	o.done[entry.flight.Done]=ticket
 	for _,object:=range claims {o.claims[object]=ticket}
+	for _,h:=range handles {o.handles[h]=ticket}
 	return ticket,nil
 }
 
@@ -120,33 +126,82 @@ func unslopRetainedPointer(value any) bool {
 	return v.Kind()==reflect.Pointer&&!v.IsNil()
 }
 
-func unslopRetainedUniqueInputs(live *unslopLiveSession, lease softwareRustHeldSession, inputs []io.Closer) ([]io.Closer,[]io.Closer,bool) {
-	seen:=make(map[io.Closer]bool)
-	add:=func(c io.Closer) bool {
-		if !unslopRetainedPointer(c)||seen[c] {return false}
-		seen[c]=true;return true
-	}
-	if !add(live)||!add(live.unslopNativeSession)||!add(lease) {return nil,nil,false}
-	addObject:=func(c updateObject) bool {
-		if !add(c) {return false}
-		if native,ok:=c.(*nativeUpdateObject);ok&&native.f!=nil {return add(native.f)}
+// The controller passes concrete owners, not arbitrary Close callbacks. Their
+// known file/handle leaves must be disjoint across the whole ownership graph.
+func (o *unslopRetainedOwner) unslopRetainedUniqueInputs(live *unslopLiveSession, lease softwareRustHeldSession, inputs []io.Closer) ([]io.Closer, []io.Closer, []syscall.Handle, bool) {
+	seen := make(map[io.Closer]bool)
+	handles := make(map[syscall.Handle]bool)
+	add := func(c io.Closer) bool {
+		if !unslopRetainedPointer(c) || seen[c] || o.claims[c] != nil { return false }
+		seen[c] = true
 		return true
 	}
-	if live.evidence!=nil&&!addObject(live.evidence) {return nil,nil,false}
-	if live.manifest!=nil&&!addObject(live.manifest) {return nil,nil,false}
-	for _,c:=range live.tools {if !addObject(c) {return nil,nil,false}}
-	for _,s:=range []*softwareBuildSnapshot{live.source,live.configuration} {
-		if s==nil {continue};if !add(s) {return nil,nil,false}
-		for _,f:=range s.files {if !add(f) {return nil,nil,false}}
+	addHandle := func(h syscall.Handle) bool {
+		if h == 0 || h == syscall.InvalidHandle || handles[h] { return false }
+		handles[h] = true
+		return true
 	}
+	addHandles := func(values []syscall.Handle) bool {
+		for _, h := range values { if !addHandle(h) { return false } }
+		return true
+	}
+	addFile := func(f *os.File) bool {
+		return add(f) && addHandle(syscall.Handle(f.Fd()))
+	}
+	addSnapshot := func(s *softwareBuildSnapshot) bool {
+		if !add(s) { return false }
+		for _, f := range s.files { if !addFile(f) { return false } }
+		if !addHandles(s.dirs) { return false }
+		for _, a := range s.sealed { if !addHandle(a.handle) { return false } }
+		for _, a := range s.handoffACLs { if !addHandle(a.handle) { return false } }
+		return true
+	}
+	addNative := func(c *nativeUpdateObject) bool {
+		if !add(c) { return false }
+		if c.f != nil && !addFile(c.f) { return false }
+		return addHandles(c.parents)
+	}
+	addObject := func(c updateObject) bool {
+		if native, ok := c.(*nativeUpdateObject); ok { return addNative(native) }
+		// Other implementations are the existing internal updateObject seams.
+		// They are not accepted as caller-supplied extra owners below.
+		return add(c)
+	}
+	if !add(live) || !add(live.unslopNativeSession) || !add(lease) { return nil, nil, nil, false }
+	if native, ok := lease.(*softwareRustNativeSession); ok {
+		for _, node := range native.nodes { if !addFile(node.f) { return nil, nil, nil, false } }
+	}
+	if live.evidence != nil && !addObject(live.evidence) { return nil, nil, nil, false }
+	if live.manifest != nil && !addObject(live.manifest) { return nil, nil, nil, false }
+	for _, c := range live.tools { if !addObject(c) { return nil, nil, nil, false } }
+	for _, s := range []*softwareBuildSnapshot{live.source, live.configuration} {
+		if s != nil && !addSnapshot(s) { return nil, nil, nil, false }
+	}
+	if !addHandles(live.parents) { return nil, nil, nil, false }
 	var unique []io.Closer
-	for _,c:=range inputs {
-		if !unslopRetainedPointer(c) {return nil,nil,false}
-		if seen[c] {continue};seen[c]=true;unique=append(unique,c)
+	for _, c := range inputs {
+		if !unslopRetainedPointer(c) { return nil, nil, nil, false }
+		// Repeated identical owners, including an already-owned file leaf,
+		// are not closed again. Distinct wrappers must have disjoint leaves.
+		switch c.(type) {
+		case *os.File, *nativeUpdateObject, *softwareBuildSnapshot:
+		default: return nil, nil, nil, false
+		}
+		if seen[c] { continue }
+		valid := false
+		switch value := c.(type) {
+		case *os.File: valid = addFile(value)
+		case *nativeUpdateObject: valid = addNative(value)
+		case *softwareBuildSnapshot: valid = addSnapshot(value)
+		}
+		if !valid { return nil, nil, nil, false }
+		unique = append(unique, c)
 	}
-	claims:=make([]io.Closer,0,len(seen))
-	for object:=range seen {claims=append(claims,object)}
-	return unique,claims,true
+	claims := make([]io.Closer, 0, len(seen))
+	for object := range seen { claims = append(claims, object) }
+	claimedHandles := make([]syscall.Handle, 0, len(handles))
+	for h := range handles { claimedHandles = append(claimedHandles, h) }
+	return unique, claims, claimedHandles, true
 }
 
 func (o *unslopRetainedOwner) Snapshot(ticket *unslopRetainedTicket) unslopRetainedReport {
@@ -179,6 +234,7 @@ func (o *unslopRetainedOwner) Forget(ticket *unslopRetainedTicket) bool {
 	entry:=o.entries[ticket]
 	if entry==nil||entry.report.State!="released" {return false}
 	for _,object:=range entry.claimed {delete(o.claims,object)}
+	for _,h:=range entry.claimedHandles {delete(o.handles,h)}
 	for flight,owner:=range o.flights {if owner==ticket {delete(o.flights,flight)}}
 	for done,owner:=range o.done {if owner==ticket {delete(o.done,done)}}
 	delete(o.entries,ticket)

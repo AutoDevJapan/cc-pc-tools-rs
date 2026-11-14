@@ -250,6 +250,9 @@ func (c *askJobCollection) Finish(rootWaitVerified bool, deadline time.Time) ask
 			if c.Close() != nil {
 				c.unknown("job_member_close_failed")
 			}
+			if !time.Now().Before(deadline) {
+				c.unknown("job_collection_deadline_exceeded")
+			}
 			c.result = askJobCollectionResult{Reaped: c.reason == "", Reason: c.reason, Observed: uint32(len(c.members)), Total: final.Total}
 			c.finished = true
 			return c.result

@@ -6,8 +6,10 @@ import (
 	"bufio"
 	"context"
 	"fmt"
+	"io"
 	"os"
 	"os/exec"
+	"path/filepath"
 	"strconv"
 	"strings"
 	"syscall"
@@ -30,6 +32,7 @@ type askJobCollectionModel struct {
 	latePID uint32
 	lateWaitPID uint32
 	closeError bool
+	closeDelay time.Duration
 }
 
 func newAskJobCollectionModel() *askJobCollectionModel {
@@ -85,6 +88,7 @@ func (m *askJobCollectionModel) terminate(syscall.Handle) error {
 }
 func (m *askJobCollectionModel) close(h syscall.Handle) error {
 	m.closes[h]++
+	if m.closeDelay != 0 { time.Sleep(m.closeDelay) }
 	if m.closeError {
 		return errAskJobCollection
 	}
@@ -92,7 +96,7 @@ func (m *askJobCollectionModel) close(h syscall.Handle) error {
 }
 
 func TestAskJobCollectionKeepsFailuresUnknown(t *testing.T) {
-	for _, fault := range []string{"query", "truncated", "open", "creation", "membership-error", "not-member", "zero-pid", "duplicate-pid", "held-generation", "root-wait", "active", "unsignalled", "wait-error", "accounting", "termination", "historical-gap", "close-error", "deadline"} {
+	for _, fault := range []string{"query", "truncated", "open", "creation", "membership-error", "not-member", "zero-pid", "duplicate-pid", "held-generation", "root-wait", "active", "unsignalled", "wait-error", "accounting", "termination", "historical-gap", "close-error", "late-close", "deadline"} {
 		t.Run(fault, func(t *testing.T) {
 			m := newAskJobCollectionModel()
 			c := newAskJobCollection(m, 9999, 11, 1, true)
@@ -116,6 +120,7 @@ func TestAskJobCollectionKeepsFailuresUnknown(t *testing.T) {
 			case "termination": m.terminateError = errAskJobCollection
 			case "historical-gap": m.account.Total = 3
 			case "close-error": m.closeError = true
+			case "late-close": m.closeDelay = 10*time.Millisecond
 			case "deadline": deadline = time.Now().Add(-time.Second)
 			}
 			r := c.Finish(rootWait, deadline)
@@ -251,7 +256,7 @@ func TestAskJobCollectionRejectsRootAndPidReuse(t *testing.T) {
 // suspended and assigned to a kill-on-close job before it can spawn children.
 // The descendant stays alive until the test terminates that exact job.
 func TestAskJobCollectionOwnedWindowsTree(t *testing.T) {
-	for _, fault := range []string{"normal", "late-child", "query-failure"} {
+	for _, fault := range []string{"normal", "late-child", "query-failure", "early-exit"} {
 		t.Run(fault, func(t *testing.T) {
 			ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 			defer cancel()
@@ -266,21 +271,27 @@ func TestAskJobCollectionOwnedWindowsTree(t *testing.T) {
 			exe, err := os.Executable()
 			if err != nil { t.Fatal(err) }
 			cmd := exec.CommandContext(ctx, exe, "-test.run=^TestAskJobCollectionProcessHelper$")
-			cmd.Env = append(os.Environ(), "ASK_JOB_COLLECTION_TEST=root")
+			mode := "root"
+			if fault == "early-exit" { mode = "early-exit" }
+			cmd.Env = append(os.Environ(), "ASK_JOB_COLLECTION_TEST="+mode)
 			cmd.SysProcAttr = &syscall.SysProcAttr{HideWindow: true, CreationFlags: 0x08000000 | 0x00000004}
-			output, err := cmd.StdoutPipe()
+			output, outputWrite, err := os.Pipe()
 			if err != nil { t.Fatal(err) }
 			defer output.Close()
+			defer outputWrite.Close()
+			cmd.Stdout = outputWrite
 			input, err := cmd.StdinPipe()
 			if err != nil { t.Fatal(err) }
 			defer input.Close()
 			if err := cmd.Start(); err != nil { t.Fatal(err) }
+			if err := outputWrite.Close(); err != nil { t.Error("parent stdout writer close", err) }
 			waited := make(chan error, 1)
 			go func() { waited <- cmd.Wait() }()
 			var root, child, lateChild syscall.Handle
 			var collector *askJobCollection
 			var cleanupCollector *askJobCollection
 			var readyDone chan struct{}
+			var readerErr chan error
 			joined := false
 			defer func() {
 				if cleanupCollector != nil { cleanupCollector.Observe() }
@@ -299,6 +310,9 @@ func TestAskJobCollectionOwnedWindowsTree(t *testing.T) {
 				_ = output.Close()
 				if readyDone != nil {
 					select { case <-readyDone: case <-time.After(time.Second): t.Error("owned reader not reaped") }
+				}
+				if readerErr != nil {
+					select { case err := <-readerErr: if err != nil { t.Error("owned stdout reader", err) }; default: t.Error("reader completion not observed") }
 				}
 				for _, handle := range []syscall.Handle{child, lateChild, root} {
 					if handle != 0 {
@@ -323,17 +337,19 @@ func TestAskJobCollectionOwnedWindowsTree(t *testing.T) {
 			if code != 0 { t.Fatal("resume owned root") }
 			ready := make(chan string, 4)
 			readyDone = make(chan struct{})
-			go func() {
-				defer close(readyDone)
-				s := bufio.NewScanner(output)
-				for s.Scan() {
-					select { case ready <- s.Text(): case <-ctx.Done(): return }
-				}
-			}()
+			readerErr = make(chan error, 1)
+			go readAskJobFixtureOutput(ctx, output, ready, readerErr, readyDone)
 			var childPID uint64
 			select {
-			case line := <-ready:
-				if !strings.HasPrefix(line, "CHILD ") { t.Fatal("missing owned child identity", line) }
+			case line, live := <-ready:
+				if !live {
+					if fault != "early-exit" { t.Fatal("missing owned child identity") }
+					select { case <-waited: joined = true; case <-ctx.Done(): t.Fatal("early root exit not collected") }
+					select { case err := <-readerErr: if err != nil { t.Fatal("early exit read error", err) }; case <-ctx.Done(): t.Fatal("early exit reader not complete") }
+					readerErr = nil
+					return
+				}
+				if fault == "early-exit" || !strings.HasPrefix(line, "CHILD ") { t.Fatal("missing owned child identity", line) }
 				childPID, err = strconv.ParseUint(strings.TrimPrefix(line, "CHILD "), 10, 32)
 				if err != nil || childPID == 0 { t.Fatal("invalid owned child identity") }
 			case <-ctx.Done(): t.Fatal("owned child readiness deadline")
@@ -346,12 +362,14 @@ func TestAskJobCollectionOwnedWindowsTree(t *testing.T) {
 			if err != nil || id.PID != uint32(childPID) || id.Creation == 0 || memberErr != nil || !belongs || waitErr != nil || state != syscall.WAIT_TIMEOUT { t.Fatal("live child precondition failed") }
 			cleanupCollector.Observe()
 			collector.Observe()
+			logAskJobCollectionFixture(t, collector, "first-child")
+			logAskJobCollectionFixture(t, cleanupCollector, "first-child-cleanup")
 			if fault != "query-failure" && len(collector.members) != 2 { t.Fatal("actual job members not pinned") }
 			if fault == "late-child" {
 				if _, err := input.Write([]byte("SPAWN\n")); err != nil { t.Fatal(err) }
 				select {
-				case line := <-ready:
-					if !strings.HasPrefix(line, "CHILD ") { t.Fatal("late child readiness", line) }
+				case line, live := <-ready:
+					if !live || !strings.HasPrefix(line, "CHILD ") { t.Fatal("late child readiness", line) }
 					pid, err := strconv.ParseUint(strings.TrimPrefix(line, "CHILD "), 10, 32)
 					if err != nil || pid == 0 || pid == childPID { t.Fatal("late child identity") }
 					lateChild, err = api.open(uint32(pid))
@@ -362,6 +380,7 @@ func TestAskJobCollectionOwnedWindowsTree(t *testing.T) {
 				}
 				cleanupCollector.Observe()
 				collector.Observe()
+				logAskJobCollectionFixture(t, collector, "late-child")
 				if len(collector.members) != 3 { t.Fatal("late child not pinned") }
 			}
 			if _, err := input.Write([]byte("EXIT\n")); err != nil { t.Fatal(err) }
@@ -379,7 +398,60 @@ func TestAskJobCollectionOwnedWindowsTree(t *testing.T) {
 			}
 			state, err = api.wait(root)
 			if err != nil || state != syscall.WAIT_OBJECT_0 { t.Fatal("same held root was not terminated") }
+			select { case <-readyDone: case <-ctx.Done(): t.Fatal("stdout EOF deadline") }
 		})
+	}
+}
+
+func readAskJobFixtureOutput(ctx context.Context, input io.Reader, ready chan<- string, terminal chan<- error, done chan<- struct{}) {
+	defer close(done)
+	defer close(ready)
+	s := bufio.NewScanner(input)
+	for s.Scan() {
+		select { case ready <- s.Text(): case <-ctx.Done(): terminal <- ctx.Err(); return }
+	}
+	terminal <- s.Err()
+}
+
+type askJobFixtureReadError struct{}
+func (askJobFixtureReadError) Read([]byte) (int, error) { return 0, io.ErrUnexpectedEOF }
+
+func TestAskJobFixtureReaderReportsTerminal(t *testing.T) {
+	for _, mode := range []string{"normal", "early-eof", "read-error"} {
+		t.Run(mode, func(t *testing.T) {
+			ctx, cancel := context.WithTimeout(context.Background(), time.Second)
+			defer cancel()
+			var input io.Reader = strings.NewReader("CHILD 42\n")
+			if mode == "early-eof" { input = strings.NewReader("") }
+			if mode == "read-error" { input = askJobFixtureReadError{} }
+			ready, terminal, done := make(chan string, 2), make(chan error, 1), make(chan struct{})
+			go readAskJobFixtureOutput(ctx, input, ready, terminal, done)
+			select { case <-done: case <-ctx.Done(): t.Fatal("reader terminal not signalled") }
+			var lines []string
+			for line := range ready { lines = append(lines, line) }
+			err := <-terminal
+			if mode == "normal" && (len(lines) != 1 || lines[0] != "CHILD 42" || err != nil) { t.Fatal("normal reader result", lines, err) }
+			if mode == "early-eof" && (len(lines) != 0 || err != nil) { t.Fatal("EOF was hidden", lines, err) }
+			if mode == "read-error" && (len(lines) != 0 || err != io.ErrUnexpectedEOF) { t.Fatal("reader error was hidden", lines, err) }
+		})
+	}
+}
+
+// Only objects already pinned and verified to belong to this owned fixture
+// are diagnosed. No command lines, environment or unrelated processes are read.
+func logAskJobCollectionFixture(t *testing.T, c *askJobCollection, phase string) {
+	t.Helper()
+	a, err := c.api.accounting(c.job)
+	t.Logf("phase=%s observed=%d total=%d active=%d reason=%s accounting_ok=%t", phase, len(c.members), a.Total, a.Active, c.reason, err == nil)
+	for _, member := range c.members {
+		belongs, err := c.api.belongs(member.process, c.job)
+		if err != nil || !belongs { t.Log("owned member membership unavailable"); continue }
+		var path [512]uint16
+		length := uint32(len(path))
+		ok, _, _ := askJobCollectionKernel.NewProc("QueryFullProcessImageNameW").Call(uintptr(member.process), 0, uintptr(unsafe.Pointer(&path[0])), uintptr(unsafe.Pointer(&length)))
+		name := "unavailable"
+		if ok != 0 && length <= uint32(len(path)) { name = filepath.Base(syscall.UTF16ToString(path[:length])) }
+		t.Logf("member pid=%d creation=%d image=%s", member.id.PID, member.id.Creation, name)
 	}
 }
 
@@ -390,6 +462,8 @@ func (askJobCollectionQueryFailure) list(syscall.Handle) (askJobMemberList, erro
 
 func TestAskJobCollectionProcessHelper(t *testing.T) {
 	switch os.Getenv("ASK_JOB_COLLECTION_TEST") {
+	case "early-exit":
+		os.Exit(0)
 	case "child":
 		time.Sleep(30*time.Second)
 	case "root":

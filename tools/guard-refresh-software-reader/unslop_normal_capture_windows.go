@@ -15,6 +15,13 @@ type unslopOwnedCaptureSubject struct {
 	live *unslopLiveSession
 }
 
+// An observation is not an authority. No completed actual Close remains the
+// zero state, including while a native Close call is still in progress.
+type unslopCaptureCloseObservation struct {
+	mu sync.Mutex
+	attempted,failed bool
+}
+
 type unslopOwnedCaptureProof struct {
 	controller *unslopDurableController
 	generation string
@@ -30,6 +37,7 @@ type unslopOwnedCaptureProof struct {
 	inputManifest string
 	native *askNativeProcess
 	moved,adopted bool
+	captureClose *unslopCaptureCloseObservation
 }
 
 func (p *unslopOwnedCaptureProof) observe(session unslopProducerSession,held rustToolchainHeld,binding unslopRustToolchainBinding) (unslopProducerSession,error) {
@@ -47,6 +55,7 @@ func (p *unslopOwnedCaptureProof) observe(session unslopProducerSession,held rus
 	if len(actual.Cargo.Raw)==0||len(actual.Rustc.Raw)==0||len(held.Cargo.Raw)==0||len(held.Rustc.Raw)==0||&actual.Cargo.Raw[0]!=&held.Cargo.Raw[0]||&actual.Rustc.Raw[0]!=&held.Rustc.Raw[0] {return nil,errUnslopDurableConflict}
 	bound,valid:=bindUnslopRustToolchain(fixedUnslopToolchainPurpose(),actual)
 	if !valid||bound!=binding {return nil,errUnslopDurableConflict}
+	p.captureClose=&unslopCaptureCloseObservation{}
 	p.live=live;p.inputManifest=inputManifest
 	p.controller.observedLive=live;p.controller.observedHeld=held;p.controller.observedBinding=binding
 	start:=live.start
@@ -87,6 +96,12 @@ func (p *unslopOwnedCaptureProof) canCloseLease() bool {
 	return p.observeNative()&&unslopRetainedCollectionVerified(true,*p.flight.result)
 }
 
+func (p *unslopOwnedCaptureProof) captureCloseResult() (bool,bool) {
+	if p==nil||p.captureClose==nil {return false,false}
+	state:=p.captureClose;state.mu.Lock();defer state.mu.Unlock()
+	return state.attempted,state.failed
+}
+
 type unslopOwnedCaptureSession struct {
 	unslopProducerSession
 	proof *unslopOwnedCaptureProof
@@ -109,7 +124,12 @@ func (s *unslopOwnedCaptureSession) Close() error {
 		// Only this same flight's full collection record permits old live.Close.
 		p.live.completed=true
 	}
-	s.closeOnce.Do(func(){s.closeErr=p.live.Close()})
+	s.closeOnce.Do(func(){
+		s.closeErr=p.live.Close()
+		if state:=p.captureClose;state!=nil {
+			state.mu.Lock();state.attempted=true;state.failed=s.closeErr!=nil;state.mu.Unlock()
+		}
+	})
 	return s.closeErr
 }
 

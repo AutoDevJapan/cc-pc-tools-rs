@@ -146,12 +146,14 @@ type ownerPolicyAccess struct {
 	source       func(string) ownerPathVerdict
 	physical     func(string) (string, error)
 	organization func(string) ownerPathVerdict
+	installed    func(string) ownerPathVerdict
 }
 
 func classifyOwnerPath(path string) ownerPathVerdict {
 	return ownerPolicyClassify(path, ownerPolicyAccess{
 		legacy: ownerLegacyProtection, repair: repairPathAllowed,
 		source: ownerRegisteredSource, physical: ownerRulePhysicalPath, organization: ownerOrganizationPath,
+		installed: ownerInstalledToolClassification,
 	})
 }
 
@@ -161,6 +163,15 @@ func ownerPolicyClassify(path string, access ownerPolicyAccess) ownerPathVerdict
 		return ownerRuleUnknown("invalid_absolute_path")
 	}
 	path = filepath.Clean(path)
+	// A fixed installed-development-tool provider performs its own complete
+	// alias/identity/public-origin check. It is not a general hardlink exception.
+	// Preserve lexical exclusions before invoking that purpose-specific reader.
+	if _, fixed := ownerInstalledToolPlanFor(path); fixed && access.installed != nil {
+		if access.legacy(path)==ownerLegacyClient { return ownerRuleProtected("legacy_exclusion") }
+		if access.legacy(path)==ownerLegacyUnavailable { return ownerRuleUnknown("existing_exclusion_unavailable") }
+		if ownerCardPath(path) || ownerWindowsAlias(path) { return ownerRuleUnknown("windows_alias_or_exclusion_unavailable") }
+		return access.installed(path)
+	}
 	// Check lexical and resolved names before admitting any source/receipt.
 	paths := []string{path}
 	if target, err := access.physical(path); err == nil && !same(path, target) {

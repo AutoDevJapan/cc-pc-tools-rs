@@ -60,6 +60,10 @@ type askJobQueryDiagnostic struct {
 	Assigned uint32
 	Returned uint32
 	ReturnLength uint32
+	// Sampling history is not collection authority. Recovered describes only
+	// this observation; any issued unknown remains sticky.
+	Samples uint32
+	Recovered bool
 }
 
 type askJobQueryError struct { diagnostic askJobQueryDiagnostic }
@@ -142,8 +146,12 @@ func (c *askJobCollection) observeUntil(deadline time.Time) {
 	if !withinBudget() {
 		return
 	}
-	list, err := c.api.list(c.job)
+	list, err := c.sampleList(deadline)
 	if err != nil {
+		if errors.Is(err, errAskJobCollectionDeadline) {
+			c.unknown("job_collection_deadline_exceeded")
+			return
+		}
 		c.rememberQueryFailure(err, deadline)
 		c.unknown("job_member_query_failed")
 		return
@@ -201,6 +209,40 @@ func (c *askJobCollection) observeUntil(deadline time.Time) {
 			continue
 		}
 		c.members[pid] = askJobMember{process: h, id: id, owned: owned}
+	}
+}
+
+
+// Assemble one observation from at most four samples. A count mismatch is
+// never a usable member list. Only a subsequent complete sample can proceed,
+// and Finish must still prove every held identity, signal and lifetime count.
+func (c *askJobCollection) sampleList(deadline time.Time) (askJobMemberList, error) {
+	limit := c.api.now().Add(5 * time.Millisecond)
+	if !deadline.IsZero() && deadline.Before(limit) { limit = deadline }
+	captured := false
+	for attempt := 0; ; attempt++ {
+		list, err := c.api.list(c.job)
+		if err == nil && !deadline.IsZero() && !c.api.now().Before(deadline) {
+			if captured { c.query.Samples = uint32(attempt+1) }
+			return askJobMemberList{}, errAskJobCollectionDeadline
+		}
+		if err == nil {
+			if captured { c.query.Samples = uint32(attempt+1); c.query.Recovered = true }
+			return list, nil
+		}
+		first := c.query.Kind == ""
+		c.rememberQueryFailure(err, deadline)
+		captured = captured || first
+		if captured { c.query.Samples = uint32(attempt+1) }
+		native, typed := err.(*askJobQueryError)
+		if !typed || native == nil || native.diagnostic.Kind != "count_mismatch" ||
+			native.diagnostic.Returned >= native.diagnostic.Assigned ||
+			native.diagnostic.Assigned > 4096 || !askJobListLengthValid(native.diagnostic.Returned, native.diagnostic.ReturnLength) ||
+			attempt == 3 || !c.api.now().Before(limit) {
+			return askJobMemberList{}, err
+		}
+		time.Sleep(time.Millisecond)
+		if !c.api.now().Before(limit) { return askJobMemberList{}, err }
 	}
 }
 
@@ -325,6 +367,7 @@ func (c *askJobCollection) Close() error {
 
 var askJobCollectionKernel = syscall.NewLazyDLL("kernel32.dll")
 var errAskJobCollection = errors.New("job_collection_native_unavailable")
+var errAskJobCollectionDeadline = errors.New("job_collection_deadline_exceeded")
 
 type askNativeJobCollectionAPI struct{}
 
@@ -342,6 +385,12 @@ func (askNativeJobCollectionAPI) list(job syscall.Handle) (askJobMemberList, err
 
 // Keep the actual failing branch rather than replacing it with a later count.
 // The raw native error text and process identifiers are never copied here.
+func askJobListLengthValid(returned, returnedLength uint32) bool {
+	var shape askJobNativeProcessList
+	needed := uint64(unsafe.Offsetof(shape.ids)) + uint64(returned)*uint64(unsafe.Sizeof(shape.ids[0]))
+	return needed <= uint64(returnedLength) && uint64(returnedLength) <= uint64(unsafe.Sizeof(shape))
+}
+
 func decodeAskJobProcessList(ok uintptr, nativeErr error, returnedLength uint32, buffer *askJobNativeProcessList) (askJobMemberList, error) {
 	failure := func(kind string) (askJobMemberList, error) {
 		q := askJobQueryDiagnostic{Kind: kind, Assigned: buffer.assigned, Returned: buffer.returned, ReturnLength: returnedLength}
@@ -352,6 +401,7 @@ func decodeAskJobProcessList(ok uintptr, nativeErr error, returnedLength uint32,
 	}
 	if ok == 0 { return failure("native_query_failed") }
 	if buffer.returned > uint32(len(buffer.ids)) { return failure("capacity_exceeded") }
+	if !askJobListLengthValid(buffer.returned, returnedLength) { return failure("invalid_length") }
 	if buffer.assigned != buffer.returned { return failure("count_mismatch") }
 	result := askJobMemberList{assigned: buffer.assigned, pids: make([]uint32, buffer.returned)}
 	for i := range result.pids {

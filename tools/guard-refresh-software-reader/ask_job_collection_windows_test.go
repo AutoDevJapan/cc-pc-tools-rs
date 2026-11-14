@@ -622,14 +622,15 @@ func TestAskJobCollectionSupervisorKeepsFastCancelFacts(t *testing.T) {
 	if !called || !result.Started || !result.Assigned || !result.WaitVerified || !result.TimedOut || !result.Reaped {
 		t.Fatal("supervised fast cancellation was not collected", result)
 	}
-	if result.CollectionQuery != (askJobQueryDiagnostic{}) || result.CollectionReason != "" || !result.CollectionTotalKnown || result.CollectionObserved != result.CollectionTotal || result.CollectionTotal == 0 {
+	if q := result.CollectionQuery; q != (askJobQueryDiagnostic{}) && (q.Kind != "count_mismatch" || !q.Recovered || q.Samples < 2 || q.Samples > 4) { t.Fatal("successful collection lost bounded sampling history", q) }
+	if result.CollectionReason != "" || !result.CollectionTotalKnown || result.CollectionObserved != result.CollectionTotal || result.CollectionTotal == 0 {
 		t.Fatal("collection facts were not preserved", result)
 	}
 }
 
 
 func TestAskJobNativeQueryDiagnosticsKeepActualFailure(t *testing.T) {
-	for _, mode := range []string{"normal", "native", "unknown-native", "capacity", "counts", "invalid-pid"} {
+	for _, mode := range []string{"normal", "native", "unknown-native", "capacity", "counts", "invalid-pid", "short-length", "long-length"} {
 		t.Run(mode, func(t *testing.T) {
 			buffer := &askJobNativeProcessList{assigned: 2, returned: 2}
 			buffer.ids[0], buffer.ids[1] = 1, 2
@@ -641,8 +642,10 @@ func TestAskJobNativeQueryDiagnosticsKeepActualFailure(t *testing.T) {
 			case "capacity": buffer.assigned = 4097; buffer.returned = 4097; want.Kind = "capacity_exceeded"; want.Assigned = 4097; want.Returned = 4097
 			case "counts": buffer.assigned = 3; want.Kind = "count_mismatch"; want.Assigned = 3
 			case "invalid-pid": buffer.ids[1] = 0; want.Kind = "invalid_pid"
+			case "short-length": want.Kind = "invalid_length"; want.ReturnLength = 8
+			case "long-length": want.Kind = "invalid_length"; want.ReturnLength = uint32(unsafe.Sizeof(*buffer))+1
 			}
-			list, err := decodeAskJobProcessList(ok, nativeErr, 24, buffer)
+			list, err := decodeAskJobProcessList(ok, nativeErr, want.ReturnLength, buffer)
 			if mode == "normal" {
 				if err != nil || list.assigned != 2 || len(list.pids) != 2 || list.pids[0] != 1 || list.pids[1] != 2 { t.Fatal("successful native list was changed", list, err) }
 				return
@@ -664,10 +667,10 @@ func TestAskJobQueryDiagnosticKeepsFirstFailureAndPhase(t *testing.T) {
 			deadline := m.clock.Add(time.Second)
 			want := askJobQueryDiagnostic{}
 			if phase != "normal" {
-				want = askJobQueryDiagnostic{Kind: "native_query_failed", Phase: phase, Win32Code: 5, Assigned: 2, Returned: 1, ReturnLength: 16}
+				want = askJobQueryDiagnostic{Kind: "native_query_failed", Phase: phase, Win32Code: 5, Assigned: 2, Returned: 1, ReturnLength: 16, Samples: 1}
 				m.listError = &askJobQueryError{diagnostic: want}
 			}
-			if phase == "unclassified" { m.listError = fmt.Errorf("private query text"); want = askJobQueryDiagnostic{Kind: "unclassified_query_failure", Phase: "observe"} }
+			if phase == "unclassified" { m.listError = fmt.Errorf("private query text"); want = askJobQueryDiagnostic{Kind: "unclassified_query_failure", Phase: "observe", Samples: 1} }
 			if phase == "observe" || phase == "unclassified" {
 				c.Observe()
 				m.listError = &askJobQueryError{diagnostic: askJobQueryDiagnostic{Kind: "count_mismatch", Assigned: 99, Returned: 98, ReturnLength: 80}}
@@ -692,7 +695,7 @@ func TestAskChildCollectionCarriesFirstQueryToFinalResult(t *testing.T) {
 			want := askJobQueryDiagnostic{}
 			if phase == "finish" { c.Observe() }
 			if phase != "normal" {
-				want = askJobQueryDiagnostic{Kind: "native_query_failed", Phase: phase, Win32Code: 5, Assigned: 2, Returned: 1, ReturnLength: 16}
+				want = askJobQueryDiagnostic{Kind: "native_query_failed", Phase: phase, Win32Code: 5, Assigned: 2, Returned: 1, ReturnLength: 16, Samples: 1}
 				m.listError = &askJobQueryError{diagnostic: want}
 			}
 			if phase == "observe" {
@@ -712,5 +715,132 @@ func TestAskChildCollectionCarriesFirstQueryToFinalResult(t *testing.T) {
 			if m.accountingCalls == 0 || c.result.Query != want { t.Fatal("control did not traverse real collector Finish", c.result) }
 			if strings.Contains(fmt.Sprint(child.CollectionQuery), "private") { t.Fatal("query outlet exposed error text") }
 		})
+	}
+}
+
+type askJobSampleReply struct {
+	list askJobMemberList
+	err error
+}
+type askJobSamplingModel struct {
+	*askJobCollectionModel
+	replies []askJobSampleReply
+	calls int
+	advance time.Duration
+}
+func (m *askJobSamplingModel) list(job syscall.Handle) (askJobMemberList, error) {
+	m.calls++
+	if !m.clock.IsZero() { m.clock = m.clock.Add(m.advance) }
+	if len(m.replies) == 0 { return m.askJobCollectionModel.list(job) }
+	r := m.replies[0]
+	m.replies = m.replies[1:]
+	return r.list, r.err
+}
+
+func TestAskJobSamplingKeepsIncompleteHistoryAndStrictProof(t *testing.T) {
+	for _, mode := range []string{"normal", "recover-observe", "recover-complete", "recover-finish", "persistent", "deadline", "first-success-late", "late-success",
+		"native-failure", "invalid-pid", "over-capacity", "reverse-counts", "invalid-length", "generic-error", "mismatch-then-native", "unsignalled", "late-child", "history-gap", "prior-unknown"} {
+		t.Run(mode, func(t *testing.T) {
+			model := newAskJobCollectionModel()
+			model.clock = time.Unix(100, 0)
+			m := &askJobSamplingModel{askJobCollectionModel: model}
+			c := newAskJobCollection(m, 9999, 11, 1, true)
+			defer c.Close()
+			// Pin both exact process objects before the incomplete exit sample.
+			c.Observe()
+			model.listValue = askJobMemberList{assigned: 0}
+			m.calls = 0
+			q := askJobQueryDiagnostic{Kind: "count_mismatch", Assigned: 1, Returned: 0, ReturnLength: 16}
+			errFor := func(q askJobQueryDiagnostic) error { return &askJobQueryError{diagnostic: q} }
+			mismatch := askJobSampleReply{err: errFor(q)}
+			complete := askJobSampleReply{list: askJobMemberList{assigned: 0}}
+			m.replies = []askJobSampleReply{mismatch, complete}
+			deadline := m.clock.Add(time.Second)
+			wantPhase := "observe"
+			wantKind := q.Kind
+			wantReaped := true
+			wantSamples, wantRecovered := uint32(2), true
+			switch mode {
+			case "normal": m.replies = []askJobSampleReply{complete}; wantKind = ""; wantSamples = 0; wantRecovered = false
+			case "recover-complete": m.replies = []askJobSampleReply{mismatch, {list:askJobMemberList{assigned:2,pids:[]uint32{1,2}}}}
+			case "recover-finish": wantPhase = "finish"
+			case "persistent":
+				m.replies = []askJobSampleReply{mismatch, mismatch, mismatch, mismatch}
+				wantReaped = false
+			case "deadline":
+				m.advance = 10*time.Millisecond
+				deadline = m.clock.Add(5*time.Millisecond)
+				wantReaped = false
+			case "first-success-late":
+				m.replies = []askJobSampleReply{{list:askJobMemberList{assigned:1,pids:[]uint32{3}}}}
+				m.advance = 10*time.Millisecond; deadline = m.clock.Add(5*time.Millisecond)
+				wantKind = ""; wantSamples = 0; wantRecovered = false; wantReaped = false
+			case "late-success":
+				m.replies = []askJobSampleReply{mismatch, {list:askJobMemberList{assigned:1,pids:[]uint32{3}}}}
+				m.advance = 2*time.Millisecond; deadline = m.clock.Add(3*time.Millisecond); wantReaped = false; wantRecovered = false; wantPhase = "finish"
+			case "native-failure":
+				q.Kind = "native_query_failed"; q.Win32Code = 5
+				m.replies = []askJobSampleReply{{err:errFor(q)}, complete}; wantKind = q.Kind; wantReaped = false
+			case "invalid-pid":
+				q.Kind = "invalid_pid"; m.replies = []askJobSampleReply{{err:errFor(q)}, complete}; wantKind = q.Kind; wantReaped = false
+			case "over-capacity":
+				q.Assigned = 4097; m.replies = []askJobSampleReply{{err:errFor(q)}, complete}; wantReaped = false
+			case "reverse-counts":
+				q.Assigned = 0; q.Returned = 1; m.replies = []askJobSampleReply{{err:errFor(q)}, complete}; wantReaped = false
+			case "invalid-length":
+				q.ReturnLength = 1; m.replies = []askJobSampleReply{{err:errFor(q)}, complete}; wantReaped = false
+			case "generic-error":
+				m.replies = []askJobSampleReply{{err:fmt.Errorf("private native query text")}, complete}
+				wantKind = "unclassified_query_failure"; wantReaped = false
+			case "mismatch-then-native":
+				m.replies = []askJobSampleReply{mismatch, {err:errFor(askJobQueryDiagnostic{Kind:"native_query_failed", Win32Code:5})}, complete}; wantReaped = false; wantRecovered = false
+			case "unsignalled":
+				m.states[12] = syscall.WAIT_TIMEOUT; m.waitAdvanceHandle = 12; m.waitAdvance = 2*time.Second; wantReaped = false
+			case "late-child":
+				m.lateWaitPID = 3; m.waitAdvanceHandle = 13; m.waitAdvance = 2*time.Second; wantReaped = false
+			case "history-gap": m.account.Total = 3; wantReaped = false
+			case "prior-unknown": c.unknown("job_member_query_failed"); wantReaped = false
+			}
+			if mode == "persistent" { wantSamples = 4; wantRecovered = false }
+			if mode == "deadline" || mode == "native-failure" || mode == "invalid-pid" || mode == "over-capacity" || mode == "reverse-counts" || mode == "invalid-length" || mode == "generic-error" { wantSamples = 1; wantRecovered = false }
+			if mode != "recover-finish" {
+				if mode == "late-success" || mode == "first-success-late" { c.observeUntil(deadline) } else { c.Observe() }
+			}
+			callsAfterObservation := m.calls
+			r := c.Finish(true, deadline)
+			if wantKind == "" {
+				if r.Query != (askJobQueryDiagnostic{}) { t.Fatal("normal sample invented history", r) }
+			} else {
+				if r.Query.Kind != wantKind || r.Query.Phase != wantPhase { t.Fatal("first incomplete sample history was lost", mode, r.Query) }
+				if mode != "generic-error" && (r.Query.Assigned != q.Assigned || r.Query.Returned != q.Returned || r.Query.ReturnLength != q.ReturnLength || r.Query.Win32Code != q.Win32Code) { t.Fatal("sample numeric cause changed", mode, r.Query) }
+			}
+			if r.Query.Samples != wantSamples || r.Query.Recovered != wantRecovered { t.Fatal("first observation sampling history changed", mode, r.Query) }
+			if r.Reaped != wantReaped { t.Fatal("sampling changed strict collection proof", mode, r) }
+			if mode == "mismatch-then-native" && callsAfterObservation != 2 { t.Fatal("native error did not stop sampling", callsAfterObservation) }
+			if mode == "late-success" && callsAfterObservation != 2 { t.Fatal("late complete sample boundary was not reached", callsAfterObservation) }
+			if mode == "late-success" || mode == "first-success-late" {
+				wantCalls := 2; if mode == "first-success-late" { wantCalls = 1 }
+				if callsAfterObservation != wantCalls || r.Reaped || r.Reason != "job_collection_deadline_exceeded" || m.opens[3] != 0 || len(c.members) != 2 || r.Query.Recovered { t.Fatal("late successful query was adopted or classified as native failure", mode, r, m.calls, m.opens) }
+			}
+			if mode == "native-failure" && (r.Reason != "job_member_query_failed" || r.Query.Kind != "native_query_failed") { t.Fatal("actual API failure became a deadline", r) }
+			if mode == "late-child" && (m.opens[3] == 0 || m.waits[13] == 0) { t.Fatal("late child proof boundary was not reached", m.opens, m.waits) }
+			if mode == "unsignalled" && m.waits[12] == 0 { t.Fatal("unsignalled proof boundary was not reached") }
+			if mode == "persistent" && callsAfterObservation != 4 { t.Fatal("sample retry bound was not reached", callsAfterObservation) }
+			if mode == "deadline" && (callsAfterObservation != 1 || len(m.replies) != 1) { t.Fatal("late observation started another query", callsAfterObservation, len(m.replies)) }
+			if mode == "native-failure" || mode == "invalid-pid" || mode == "over-capacity" || mode == "reverse-counts" || mode == "invalid-length" || mode == "generic-error" {
+				if callsAfterObservation != 1 { t.Fatal("non-retryable query was retried within one observation", mode, callsAfterObservation) }
+			}
+			if wantReaped && (m.waits[11] == 0 || m.waits[12] == 0 || !r.TotalKnown || r.Total != 2 || r.Observed != 2) { t.Fatal("complete sample bypassed held objects or final count", r, m.waits) }
+			if !wantReaped && r.Reason == "" { t.Fatal("failed sample cleared unknown state", mode, r) }
+			if again := c.Finish(true, m.clock.Add(time.Second)); again != r { t.Fatal("returned unknown was rewritten", mode, again, r) }
+		})
+	}
+}
+
+func TestAskJobNativeListLayoutMatchesPublicShape(t *testing.T) {
+	var buffer askJobNativeProcessList
+	if unsafe.Offsetof(buffer.assigned) != 0 || unsafe.Offsetof(buffer.returned) != 4 || unsafe.Offsetof(buffer.ids) != 8 ||
+		unsafe.Sizeof(buffer.ids[0]) != unsafe.Sizeof(uintptr(0)) || unsafe.Sizeof(buffer) != 8+4096*unsafe.Sizeof(uintptr(0)) {
+		t.Fatal("native Job PID list layout does not match DWORD/DWORD/ULONG_PTR")
 	}
 }

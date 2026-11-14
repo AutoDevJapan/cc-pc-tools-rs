@@ -154,7 +154,7 @@ func TestGHAGuardConstructorSyntheticStages(t *testing.T) {
             workflowID:e.WorkflowID,workflowPath:e.WorkflowPath,workflowActive:true,jobLog:append([]byte("2026-11-14T08:09:31.3203023Z guard_gha_publication_v1="),record...),manifest:manifest,archive:append([]byte(nil),archive...),bundle:[]byte("synthetic-signature"),
         }
     }
-    for _,fault:=range []string{"none","wrong-job","wrong-artifact","bad-publication","archive-corrupt","signature-error","payload-change","cancelled"} {
+    for _,fault:=range []string{"none","wrong-job","wrong-artifact","bad-publication","archive-corrupt","source-error","source-mutates-archive","signature-error","payload-change","cancelled"} {
         t.Run(fault,func(t *testing.T) {
             m:=mk();local:=context.Background();calls:=0
             switch fault {
@@ -171,18 +171,26 @@ func TestGHAGuardConstructorSyntheticStages(t *testing.T) {
                 if fault=="payload-change"{payload[0]^=1}
                 return nil
             }
-            candidate,err:=ghaGuardConstructVerifiedCandidateWith(local,e,m,verifier)
+            sourceVerifier:=func(ctx context.Context,archive []byte,got ghaGuardManifest)error {
+                if got!=manifest||len(archive)==0{return errGHAGuardUnqualified}
+                if fault=="source-error"{return errGHAGuardUnqualified}
+                if fault=="source-mutates-archive"{archive[0]^=1}
+                return nil
+            }
+            candidate,err:=ghaGuardConstructVerifiedCandidateWith(local,e,m,verifier,sourceVerifier)
             if fault=="none" {
                 if err!=nil||candidate==nil||calls!=1||!candidate.VerifySourceGeneration(){t.Fatal("valid synthetic stages rejected",err)}
                 if err=candidate.Close();err!=nil{t.Fatal(err)}
             }else if err==nil||candidate!=nil {t.Fatal("bad stage issued candidate",fault)}
         })
     }
+    calls:=0
+    if candidate,err:=ghaGuardConstructVerifiedCandidateWith(context.Background(),e,mk(),func(context.Context,[]byte,[]byte,ghaGuardManifest)error{calls++;return nil},func(context.Context,[]byte,ghaGuardManifest)error{return errGHAGuardUnqualified});err==nil||candidate!=nil||calls!=0{t.Fatal("source rejection issued a candidate")}
     if candidate,err:=ghaGuardOpenVerifiedCandidate(context.Background());err==nil||candidate!=nil{t.Fatal("normal transport absence issued a candidate")}
 }
 
-// This exercises the same constructor as production with the retained public
-// artifact and real cryptography; GitHub metadata is synthetic. The binary
+// This exercises the constructor with the retained public artifact and real
+// cryptography; GitHub metadata and source verification are synthetic. The binary
 // fixture is not committed, and absence never counts as a positive run.
 func TestGHAGuardActualArtifactConstructor(t *testing.T) {
     if os.Getenv("GUARD_GHA_ACTUAL_FIXTURE")!="1" {t.Skip("actual retained public artifact not supplied")}
@@ -222,7 +230,7 @@ func TestGHAGuardActualArtifactConstructor(t *testing.T) {
             }
             verifyFn:=verifyReal
             if fault=="payload-mutated-during-verification" {verifyFn=func(ctx context.Context,bundle,payload []byte,m ghaGuardManifest)error{err:=verifyReal(ctx,bundle,payload,m);payload[0]^=1;return err}}
-            candidate,err:=ghaGuardConstructVerifiedCandidateWith(localCtx,e,material,verifyFn)
+            candidate,err:=ghaGuardConstructVerifiedCandidateWith(localCtx,e,material,verifyFn,func(context.Context,[]byte,ghaGuardManifest)error{return nil})
             if fault=="none" {
                 if err!=nil||candidate==nil||!candidate.VerifySourceGeneration(){t.Fatal("valid material rejected",err)}
                 if err=candidate.WithPinnedPayload(func(b []byte)error{if digest(b)!=manifest.OutputSHA{t.Fatal("wrong payload")};return nil});err!=nil{t.Fatal(err)}

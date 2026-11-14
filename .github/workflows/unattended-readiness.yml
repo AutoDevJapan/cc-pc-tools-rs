@@ -102,6 +102,9 @@ jobs:
       - run: go vet ./...
       - run: go build -trimpath .
   repair-guard:
+    permissions:
+      contents: read
+      actions: read
     if: github.event_name != 'workflow_dispatch' && github.repository == 'AutoDevJapan/cc-pc-tools-rs' && (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository)
     runs-on: ${{ toJSON(github.event.repository.private) == 'false' && 'windows-2025' || fromJSON('["self-hosted","Windows","X64","cc-pc-tools-windows"]') }}
     # The expanded guard suite includes 333 top-level tests and serial real-Git
@@ -160,6 +163,36 @@ jobs:
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
           go build -trimpath .
           exit $LASTEXITCODE
+      - name: Verify fixed signed-source evidence while retained
+        if: runner.environment == 'github-hosted'
+        working-directory: tools/guard-refresh-software-reader
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GUARD_GHA_ACTUAL_SIGNED_SOURCE: '1'
+        run: |
+          $expiry = [DateTimeOffset]::Parse('2026-11-15T08:09:29Z')
+          # go test -timeout covers the test binary, not compilation.
+          # Allow compilation time before the binary makes its own window check.
+          if (($expiry - [DateTimeOffset]::UtcNow) -lt [TimeSpan]::FromMinutes(10)) {
+            Write-Output 'GUARD_ACTUAL_NOT_EXECUTED=workflow_window'
+            exit 0
+          }
+          $lines = @(& go test -count=1 -v -timeout 8m -run '^TestGHAGuardActualSignedSourceIntegration$' . 2>&1)
+          $testExit = $LASTEXITCODE
+          $lines | ForEach-Object { Write-Output $_ }
+          if ($testExit -ne 0) { exit $testExit }
+          $output = [string]::Join([Environment]::NewLine, [string[]]$lines)
+          if ($output -match '(?m)^--- SKIP: TestGHAGuardActualSignedSourceIntegration \(') {
+            if ($output -notmatch 'GUARD_ACTUAL_NOT_EXECUTED=(entry_window|acquisition_deadline|phase_window)') { throw 'Unclassified signed-source skip.' }
+            Write-Output 'Fixed signed-source acceptance not executed.'
+            exit 0
+          }
+          if ($output -notmatch '(?m)^--- PASS: TestGHAGuardActualSignedSourceIntegration \(') { throw 'Fixed signed-source positive was not executed.' }
+          foreach ($caseName in @('none','blob-mutated','blob-missing','bundle-mutated','archive-mutated','proof-mutated')) {
+            $pattern = '(?m)^\s*--- PASS: TestGHAGuardActualSignedSourceIntegration/' + [regex]::Escape($caseName) + ' \('
+            if ($output -notmatch $pattern) { throw 'A fixed signed-source control was not executed.' }
+          }
       - name: Test the fixed guard capture helper
         working-directory: tools/guard-gha-capture
         run: |

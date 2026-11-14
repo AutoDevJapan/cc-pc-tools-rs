@@ -182,6 +182,7 @@ type unslopCaptureLifetimePending struct {
 	*syntheticUnslopPending
 	provider *unslopCaptureLifetimeProvider
 	t *testing.T
+	afterClose func()
 }
 func (p *unslopCaptureLifetimePending) event(name string) {
 	p.t.Helper()
@@ -190,18 +191,24 @@ func (p *unslopCaptureLifetimePending) event(name string) {
 }
 func (p *unslopCaptureLifetimePending) Seal(r unslopCaptureReceipt) error { p.event("seal"); return p.syntheticUnslopPending.Seal(r) }
 func (p *unslopCaptureLifetimePending) Commit(ctx context.Context) error { p.event("commit"); return p.syntheticUnslopPending.Commit(ctx) }
-func (p *unslopCaptureLifetimePending) Close() error { p.event("export-close"); return p.syntheticUnslopPending.Close() }
+func (p *unslopCaptureLifetimePending) Close() error {
+	p.event("export-close")
+	err:=p.syntheticUnslopPending.Close()
+	if p.afterClose!=nil { p.afterClose() }
+	return err
+}
 
 func TestUnslopToolchainCaptureRetainsInputsThroughReceiptAndLateClose(t *testing.T) {
-	for _, mode := range []string{"normal", "provider-close", "capture-failed", "cancel-before", "no-provider", "no-factory", "factory-error", "duplicate-callback"} {
+	for _, mode := range []string{"normal", "provider-close", "capture-failed", "cancel-before", "no-provider", "no-factory", "factory-error", "duplicate-callback", "provider-postcheck", "cancel-after-publication", "mutation-after-publication"} {
 		t.Run(mode, func(t *testing.T) {
 			provider := &unslopCaptureLifetimeProvider{syntheticUnslopToolchainProvider:newSyntheticUnslopToolchainProvider()}
 			if mode == "provider-close" { provider.mode = "close-error" }
+			if mode == "provider-postcheck" { provider.mode = "after-check" }
 			if mode == "duplicate-callback" { provider.mode = "two-callbacks" }
 			fixture := syntheticUnslopCapture()
 			if mode == "capture-failed" { fixture.fault = "worker_failed" }
 			session := &unslopCaptureLifetimeSession{fixture,provider,t}
-			pending := &unslopCaptureLifetimePending{&syntheticUnslopPending{},provider,t}
+			pending := &unslopCaptureLifetimePending{syntheticUnslopPending:&syntheticUnslopPending{},provider:provider,t:t}
 			factories := 0
 			factory := func(_ context.Context, held rustToolchainHeld, binding unslopRustToolchainBinding) (unslopCaptureAccess,error) {
 				factories++
@@ -213,16 +220,25 @@ func TestUnslopToolchainCaptureRetainsInputsThroughReceiptAndLateClose(t *testin
 				},nil
 			}
 			ctx,cancel := context.WithCancel(context.Background()); defer cancel()
+			if mode == "cancel-after-publication" { pending.afterClose=cancel }
+			if mode == "mutation-after-publication" { pending.afterClose=func(){ provider.held.Cargo.Raw[0]^=1 } }
 			var origin rustToolchainOriginProvider = provider
 			if mode == "cancel-before" { cancel() }
 			if mode == "no-provider" { origin = nil }
 			if mode == "no-factory" { factory = nil }
 			r := captureUnslopReleaseWithToolchain(ctx,origin,factory)
-			wantPublished := mode == "normal" || mode == "provider-close" || mode == "duplicate-callback"
+			wantPublished := mode == "normal" || mode == "provider-close" || mode == "duplicate-callback" || mode == "provider-postcheck" || mode == "cancel-after-publication" || mode == "mutation-after-publication"
 			if r.Qualified != (mode == "normal") || r.ReceiptPublished != wantPublished || provider.active { t.Fatal("capture result lost late failure or published state",r,provider.events) }
 			if mode != "normal" && r.Receipt != nil { t.Fatal("failed capture returned usable receipt") }
 			if mode == "provider-close" && (pending.commits != 1 || r.Reason != "toolchain_origin_unavailable") { t.Fatal("late close replayed or hid publication",r,pending.commits) }
 			if mode == "duplicate-callback" && (pending.commits != 1 || factories != 1 || r.Reason != "toolchain_callback_invalid") { t.Fatal("duplicate callback repeated capture",r,factories,pending.commits) }
+			if mode == "provider-postcheck" || mode == "cancel-after-publication" || mode == "mutation-after-publication" {
+				wantReason:="toolchain_origin_unavailable"
+				if mode == "cancel-after-publication" { wantReason="toolchain_cancelled" }
+				if mode == "mutation-after-publication" { wantReason="toolchain_inputs_mismatch" }
+				if !pending.published || pending.commits!=1 || pending.aborts!=0 || factories!=1 || r.Reason!=wantReason { t.Fatal("post-publication failure lost outcome or repeated work",mode,r,pending.commits,pending.aborts) }
+				if len(provider.events)==0 || provider.events[len(provider.events)-1]!="toolchain-close" { t.Fatal("provider cleanup did not finish",provider.events) }
+			}
 			if (mode == "cancel-before" || mode == "no-provider" || mode == "no-factory") && (factories != 0 || provider.opens != 0) { t.Fatal("invalid call reached provider") }
 			if mode == "capture-failed" && (pending.commits != 0 || r.Reason != "capture_producer_ack_or_exit_unverified") { t.Fatal("capture failure was overwritten",r) }
 			if mode == "normal" {

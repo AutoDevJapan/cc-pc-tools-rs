@@ -199,13 +199,24 @@ impl Context {
     pub(crate) fn purpose_job_metadata(&self, id: &str, purpose: &str) -> Result<Value> {
         if !matches!(
             (id, purpose),
-            (KARAOKE_JOB, "karaoke-1157-locators")
+            (
+                KARAOKE_JOB,
+                "karaoke-1157-locators" | "karaoke-1157-result-identity"
+            )
                 | (
                     FOUR_JOB | FOUR_RETRY_JOB | FOUR_CURRENT_JOB,
                     "fourbros-1245-launch-failure"
                 )
         ) {
             return Err(Error::new("job projection purpose unavailable"));
+        }
+        // This purpose relies on Windows' held namespace and single-link
+        // checks. Other purposes retain their existing platform behavior.
+        #[cfg(not(windows))]
+        {
+            if purpose == "karaoke-1157-result-identity" {
+                return Err(Error::new("job projection purpose unavailable"));
+            }
         }
         let dir = self.job_dir(id);
         // Keep the normal installed job-store spelling and each physical parent
@@ -214,7 +225,11 @@ impl Context {
         let mut job_bytes = read_projection_file(self, &dir.join("job.json"), 1 << 20, false)?;
         let job = parse_projection_json(&job_bytes);
         job_bytes.fill(0);
-        let job = job?;
+        let job = if purpose == "karaoke-1157-result-identity" {
+            job.map_err(|_| Error::new("job projection source unavailable"))?
+        } else {
+            job?
+        };
         // Bind the original failed attempt before opening its diagnostic file.
         if four_launch(id).is_some() {
             project(&job, id, purpose, None, None, &[])?;
@@ -224,6 +239,19 @@ impl Context {
                 return Err(Error::new("job projection purpose or binding unavailable"));
             }
             let output = dir.join("last_message.md");
+            if purpose == "karaoke-1157-result-identity" {
+                let mut raw = read_projection_file(self, &output, 65_536, false)?;
+                let (bytes, sha256) = result_identity(&mut raw);
+                return Ok(json!({
+                    "metadata_only": true,
+                    "purpose": purpose,
+                    "id": id,
+                    "resultLocator": output.to_string_lossy(),
+                    "resultBytes": bytes,
+                    "resultSha256": sha256,
+                    "bodyReturned": false,
+                }));
+            }
             // Resolve the locator through a metadata handle, never its body.
             // Use the same plain/single-link rules as the other source files.
             let exists = open_projection_file(self, &output).is_ok();
@@ -255,6 +283,13 @@ impl Context {
             result
         }
     }
+}
+
+fn result_identity(raw: &mut [u8]) -> (usize, String) {
+    let bytes = raw.len();
+    let sha256 = cc_job_policy::product_retry::digest(raw);
+    raw.fill(0);
+    (bytes, sha256)
 }
 
 fn http_401(message: &[u8]) -> bool {
@@ -477,6 +512,20 @@ fn parse_projection_json(bytes: &[u8]) -> Result<Value> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[test]
+    fn karaoke_result_identity_erases_the_supplied_buffer() {
+        let mut raw = b"PRIVATE_REPLY_BODY".to_vec();
+        let address = raw.as_ptr();
+        let result = result_identity(&mut raw);
+        assert_eq!(result.0, 18);
+        assert_eq!(
+            result.1,
+            cc_job_policy::product_retry::digest(b"PRIVATE_REPLY_BODY")
+        );
+        assert!(raw.iter().all(|byte| *byte == 0));
+        assert_eq!(raw.as_ptr(), address);
+    }
+
     #[test]
     fn current_assigned_four_attempt_keeps_its_exact_saved_binding() {
         let id = "20261113-082647-4431-fourbros-310-current-job-next-pwa";

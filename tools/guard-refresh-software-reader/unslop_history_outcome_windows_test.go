@@ -10,6 +10,7 @@ import (
 	"io"
 	"os"
 	"os/exec"
+	"path/filepath"
 	"strings"
 	"syscall"
 	"testing"
@@ -140,12 +141,48 @@ func TestUnslopHistorySuccessfulObservedOutcomeIncludesCleanupFacts(t *testing.T
 }
 
 func TestUnslopNativePartialCleanupReportsActualFailedHandle(t *testing.T) {
-	object:=&nativeUpdateObject{parents:[]syscall.Handle{syscall.InvalidHandle},raw:[]byte("private buffered bytes")}
-	err:=finishSoftwareAcquisition(errUpdateObject,object)
-	if !errors.Is(err,errUpdateObject)||!errors.Is(err,errSoftwareCleanupUnconfirmed) {t.Fatal("native partial failure lost its markers")}
-	report:=softwareCleanupFacts(err)
-	if report.Attempted!=1||report.Failed!=1||len(object.raw)!=0||len(object.unconfirmedResources)!=1 {t.Fatal("native failed handle was discarded")}
-	if object.Close()==nil {t.Fatal("unconfirmed cleanup became successful on repeat")}
+	for _,protect:=range []bool{false,true} {t.Run(map[bool]string{false:"closed",true:"protected"}[protect],func(t *testing.T){
+		path:=filepath.Join(physicalSoftwareFixture(t),"partial-owned-leaf")
+		if err:=os.WriteFile(path,[]byte("owned partial acquisition"),0600);err!=nil {t.Fatal("partial fixture creation failed")}
+		handle,err:=openPlainDetailed(path,false)
+		if err!=nil {t.Fatal("partial fixture acquisition failed")}
+		file:=os.NewFile(uintptr(handle),path)
+		if file==nil {_ = syscall.CloseHandle(handle);t.Fatal("partial fixture file unavailable")}
+		owner:=newSoftwareOwnedFile(file)
+		object:=&nativeUpdateObject{f:file,leaf:owner,raw:[]byte("private buffered bytes")}
+		id,generation:=owner.identity,owner.generation
+		protected:=false
+		t.Cleanup(func(){
+			_ = object.Close()
+			if !protected {return}
+			flags,known:=historyOwnedHandleFlags(handle)
+			if !known||flags&2==0||!owner.identityKnown||!historyOwnedLeafMatches(handle,id) {t.Error("partial cleanup owner not identified");return}
+			owner.mu.Lock()
+			failedClose:=owner.closeCompleted&&owner.closeErr!=nil
+			owner.mu.Unlock()
+			if !failedClose {t.Error("partial cleanup close result unavailable");return}
+			if err:=syscall.SetHandleInformation(handle,2,0);err!=nil {t.Error("partial cleanup protection reset failed");return}
+			if err:=syscall.CloseHandle(handle);err!=nil {t.Error("partial cleanup native release failed");return}
+			protected=false
+		})
+		if !owner.identityKnown||generation==0||!historyOwnedLeafMatches(handle,id) {t.Fatal("partial fixture native identity unavailable")}
+		if protect {
+			if err:=syscall.SetHandleInformation(handle,2,2);err!=nil {t.Fatal("partial fixture protection failed")}
+			protected=true
+		}
+		err=finishSoftwareAcquisition(errUpdateObject,object)
+		primary,unconfirmed:=errors.Is(err,errUpdateObject),errors.Is(err,errSoftwareCleanupUnconfirmed)
+		report:=softwareCleanupFacts(err)
+		wantFailed:=0;if protect {wantFailed=1}
+		if !primary||unconfirmed!=protect||report.Attempted!=1||report.Failed!=wantFailed||len(object.raw)!=0||owner.closeCalls!=1 {
+			t.Fatalf("native_partial_cleanup primary=%t unconfirmed=%t protected=%t attempted=%d failed=%d raw_cleared=%t close_calls=%d",primary,unconfirmed,protect,report.Attempted,report.Failed,len(object.raw)==0,owner.closeCalls)
+		}
+		if protect {
+			sameOwner:=owner.handle==handle&&owner.identity==id&&owner.generation==generation&&historyOwnedLeafMatches(handle,id)&&historyCleanupRegistryContains(owner)
+			if !sameOwner||len(object.unconfirmedResources)!=1||owner.file.Fd()!=uintptr(syscall.InvalidHandle) {t.Fatal("partial cleanup lost original native owner")}
+			if object.Close()==nil||owner.Close()==nil||owner.closeCalls!=1 {t.Fatal("partial cleanup retried failed close")}
+		} else if object.Close()!=nil||owner.closeCalls!=1 {t.Fatal("partial cleanup repeated native close")}
+	})}
 }
 
 func TestUnslopHistoryFinalCollectionFactsSurviveProjection(t *testing.T) {

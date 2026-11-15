@@ -98,9 +98,8 @@ func (x *unslopHistoryExchange) failLocked(reason string) {
 	x.signalLocked()
 }
 
-// exec.Cmd uses io.Copy for its own stdin pipe. WriterTo records every actual
-// write instead of treating a Reader.Read as proof that bytes reached the child.
-// A fallback reader cannot produce an untracked successful exchange.
+// The parent-owned stdin goroutine uses WriteTo to record actual pipe writes.
+// Read cannot prove delivery to the child and never releases request bytes.
 func (x *unslopHistoryExchange) Read(p []byte) (int, error) {
 	if len(p) == 0 { return 0, nil }
 	x.mu.Lock(); defer x.mu.Unlock()
@@ -108,8 +107,8 @@ func (x *unslopHistoryExchange) Read(p []byte) (int, error) {
 	return 0, errUnslopHistoryProtocol
 }
 
-// The only normal caller is os/exec's copier with its newly owned pipe. No
-// arbitrary Writer is accepted through the finite protocol context.
+// The parent-owned stdin goroutine passes this attempt's pipe write end.
+// Cmd.Stdin is the read end; the parent records the copy and Close results.
 func (x *unslopHistoryExchange) WriteTo(writer io.Writer) (int64, error) {
 	pipe, ok := writer.(*os.File)
 	x.mu.Lock()

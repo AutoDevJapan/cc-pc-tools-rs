@@ -1,0 +1,246 @@
+//go:build windows
+
+package main
+
+import (
+    "archive/tar"
+    "bytes"
+    "compress/gzip"
+    "context"
+    "errors"
+    "io"
+    "net/http"
+    "os"
+    "strconv"
+    "strings"
+    "sync/atomic"
+    "testing"
+    "time"
+)
+
+type ghaGuardSourceTestEntry struct {name string; body []byte; mode int64; kind byte; link string}
+
+func ghaGuardSourceTestRecords() []ghaGuardSourceRecord {
+    files:=[]ghaGuardSourceTestEntry{{name:"repair-guard/a.go",body:[]byte("alpha")},{name:"tools/civ6-ci-contract/b.go",body:[]byte("bravo")}}
+    out:=make([]ghaGuardSourceRecord,0,len(files))
+    for _,f:=range files {out=append(out,ghaGuardSourceRecord{Path:f.name,Size:int64(len(f.body)),SHA:digest(f.body),Blob:ghaGuardGitObjectID("blob",f.body)})}
+    return out
+}
+
+func ghaGuardSourceTestArchive(t *testing.T,entries []ghaGuardSourceTestEntry,global string,extraTail bool) []byte {
+    t.Helper();var out bytes.Buffer
+    zw:=gzip.NewWriter(&out);tw:=tar.NewWriter(zw)
+    if global!="" {if err:=tw.WriteHeader(&tar.Header{Name:"pax_global_header",Typeflag:tar.TypeXGlobalHeader,PAXRecords:map[string]string{"comment":global}});err!=nil {t.Fatal(err)}}
+    for _,e:=range entries {
+        kind:=e.kind;if kind==0 {kind=tar.TypeReg};mode:=e.mode;if mode==0 {mode=0664}
+        size:=int64(len(e.body));if kind!=tar.TypeReg {size=0}
+        h:=&tar.Header{Name:ghaGuardSourceArchivePrefix+e.name,Typeflag:kind,Mode:mode,Size:size,Linkname:e.link}
+        if err:=tw.WriteHeader(h);err!=nil {t.Fatal(err)}
+        if size!=0 {if _,err:=tw.Write(e.body);err!=nil {t.Fatal(err)}}
+    }
+    if err:=tw.Close();err!=nil {t.Fatal(err)}
+    if extraTail {if _,err:=zw.Write([]byte{1});err!=nil {t.Fatal(err)}}
+    if err:=zw.Close();err!=nil {t.Fatal(err)}
+    return out.Bytes()
+}
+
+func TestGHAGuardPinnedSourceArchive(t *testing.T) {
+    records:=ghaGuardSourceTestRecords()
+    a:=ghaGuardSourceTestEntry{name:records[0].Path,body:[]byte("alpha")}
+    b:=ghaGuardSourceTestEntry{name:records[1].Path,body:[]byte("bravo")}
+    cases:=[]struct{name string; entries []ghaGuardSourceTestEntry; global string; extraTail,valid bool}{
+        {name:"valid",entries:[]ghaGuardSourceTestEntry{a,b},global:ghaGuardSource,valid:true},
+        {name:"missing",entries:[]ghaGuardSourceTestEntry{a},global:ghaGuardSource},
+        {name:"duplicate",entries:[]ghaGuardSourceTestEntry{a,a,b},global:ghaGuardSource},
+        {name:"extra-target",entries:[]ghaGuardSourceTestEntry{a,b,{name:"repair-guard/extra.go",body:[]byte("x")}},global:ghaGuardSource},
+        {name:"changed-bytes",entries:[]ghaGuardSourceTestEntry{{name:a.name,body:[]byte("alphb")},b},global:ghaGuardSource},
+        {name:"executable-mode",entries:[]ghaGuardSourceTestEntry{{name:a.name,body:a.body,mode:0775},b},global:ghaGuardSource},
+        {name:"wrong-read-mode",entries:[]ghaGuardSourceTestEntry{{name:a.name,body:a.body,mode:0444},b},global:ghaGuardSource},
+        {name:"symlink",entries:[]ghaGuardSourceTestEntry{{name:a.name,kind:tar.TypeSymlink,link:"b"},b},global:ghaGuardSource},
+        {name:"hardlink",entries:[]ghaGuardSourceTestEntry{{name:a.name,kind:tar.TypeLink,link:"b"},b},global:ghaGuardSource},
+        {name:"missing-global",entries:[]ghaGuardSourceTestEntry{a,b}},
+        {name:"wrong-global",entries:[]ghaGuardSourceTestEntry{a,b},global:"other"},
+        {name:"nonzero-tail",entries:[]ghaGuardSourceTestEntry{a,b},global:ghaGuardSource,extraTail:true},
+    }
+    for _,tc:=range cases {t.Run(tc.name,func(t *testing.T){
+        archive:=ghaGuardSourceTestArchive(t,tc.entries,tc.global,tc.extraTail)
+        err:=ghaGuardValidatePinnedSourceArchive(context.Background(),archive,records)
+        if (err==nil)!=tc.valid {t.Fatalf("unexpected result: %v",err)}
+    })}
+    valid:=ghaGuardSourceTestArchive(t,[]ghaGuardSourceTestEntry{a,b},ghaGuardSource,false)
+    t.Run("compressed-trailing",func(t *testing.T){bad:=append(append([]byte(nil),valid...),1);if ghaGuardValidatePinnedSourceArchive(context.Background(),bad,records)==nil {t.Fatal("trailing compressed data accepted")}})
+    t.Run("truncated",func(t *testing.T){if ghaGuardValidatePinnedSourceArchive(context.Background(),valid[:len(valid)-1],records)==nil {t.Fatal("truncated archive accepted")}})
+    t.Run("cancelled",func(t *testing.T){ctx,cancel:=context.WithCancel(context.Background());cancel();if ghaGuardValidatePinnedSourceArchive(ctx,valid,records)==nil {t.Fatal("cancel accepted")}})
+    t.Run("wrong-record-hash",func(t *testing.T){bad:=append([]ghaGuardSourceRecord(nil),records...);bad[0].SHA=digest([]byte("wrong"));if ghaGuardValidatePinnedSourceArchive(context.Background(),valid,bad)==nil {t.Fatal("wrong SHA accepted")}})
+    t.Run("wrong-record-blob",func(t *testing.T){bad:=append([]ghaGuardSourceRecord(nil),records...);bad[0].Blob=ghaGuardGitObjectID("blob",[]byte("wrong"));if ghaGuardValidatePinnedSourceArchive(context.Background(),valid,bad)==nil {t.Fatal("wrong Git blob accepted")}})
+}
+
+// This positive uses the production public fetch and fixed source fixture.
+// It proves archive input equivalence, not issuer or installed authority.
+func TestGHAGuardOfficialSourceArchiveReal(t *testing.T) {
+    if os.Getenv("GUARD_GHA_ACTUAL_SIGNED_SOURCE")!="1" {t.Skip("actual public archive not requested")}
+    fixture:=ghaGuardActualTestSourceFixture(t)
+    records:=make([]ghaGuardSourceRecord,len(fixture.Inputs))
+    for i,x:=range fixture.Inputs {records[i]=ghaGuardSourceRecord{Path:x.Path,Size:x.Size,SHA:x.SHA,Blob:x.Blob}}
+    if len(records)!=249 {t.Fatal("wrong fixed input count")}
+    ctx,cancel:=context.WithTimeout(context.Background(),110*time.Second);defer cancel()
+    tr:=&http.Transport{Proxy:nil};defer tr.CloseIdleConnections()
+    client:=&http.Client{Transport:tr,Timeout:30*time.Second,CheckRedirect:func(*http.Request,[]*http.Request)error{return http.ErrUseLastResponse}}
+    if err:=ghaGuardVerifyGitSnapshotViaPublicArchive(ctx,client,ghaGuardSource,ghaGuardSourceTree,records);err!=nil {t.Fatal("official root or archive inputs mismatch")}
+}
+
+func TestGHAGuardOfficialSourceArchiveTransport(t *testing.T) {
+    body:=&ghaGuardPublicTestBody{Reader:bytes.NewReader([]byte("archive"))}
+    calls:=0
+    rt:=ghaGuardPublicTestRT(func(req *http.Request)(*http.Response,error){calls++;if req.Method!=http.MethodGet||req.URL.String()!=ghaGuardPublicSourceURL||req.Header.Get("Authorization")!=""||req.Header.Get("Cookie")!="" {t.Fatal("unexpected source request")};return &http.Response{StatusCode:200,Header:http.Header{},Body:body,Request:req},nil})
+    got,err:=ghaGuardReadPinnedSourceArchive(context.Background(),rt)
+    if err!=nil||!bytes.Equal(got,[]byte("archive"))||body.closed!=1||calls!=1 {t.Fatalf("transport failed: %v",err)}
+    clear(got)
+    ctx,cancel:=context.WithCancel(context.Background());cancel()
+    if got,err=ghaGuardReadPinnedSourceArchive(ctx,rt);got!=nil||!errors.Is(err,errGHAGuardUnqualified)||calls!=1 {t.Fatal("cancelled fetch accepted")}
+}
+
+func TestGHAGuardPinnedSourceArchiveRejectsDamagedEnd(t *testing.T) {
+    records:=ghaGuardSourceTestRecords()
+    entries:=[]ghaGuardSourceTestEntry{{name:records[0].Path,body:[]byte("alpha")},{name:records[1].Path,body:[]byte("bravo")}}
+    valid:=ghaGuardSourceTestArchive(t,entries,ghaGuardSource,false)
+    t.Run("gzip-checksum",func(t *testing.T){
+        bad:=append([]byte(nil),valid...);bad[len(bad)-8]^=1
+        if ghaGuardValidatePinnedSourceArchive(context.Background(),bad,records)==nil {t.Fatal("damaged gzip checksum accepted")}
+    })
+    t.Run("missing-tar-end-blocks",func(t *testing.T){
+        zr,err:=gzip.NewReader(bytes.NewReader(valid));if err!=nil {t.Fatal(err)}
+        plain,readErr:=io.ReadAll(zr);closeErr:=zr.Close();if readErr!=nil||closeErr!=nil||len(plain)<1024 {t.Fatal("fixture read failed")}
+        var out bytes.Buffer;zw:=gzip.NewWriter(&out)
+        if _,err=zw.Write(plain[:len(plain)-1024]);err!=nil {t.Fatal(err)}
+        if err=zw.Close();err!=nil {t.Fatal(err)}
+        if ghaGuardValidatePinnedSourceArchive(context.Background(),out.Bytes(),records)==nil {t.Fatal("tar without end blocks accepted")}
+    })
+}
+
+// The fixed source fixture drives both validators. No issuer is created.
+func TestGHAGuardArchiveAndBlobSourceEquivalence(t *testing.T) {
+    fixture:=ghaGuardActualTestSourceFixture(t)
+    records:=make([]ghaGuardSourceRecord,len(fixture.Inputs))
+    entries:=make([]ghaGuardSourceTestEntry,0,len(fixture.Inputs))
+    for i,x:=range fixture.Inputs {
+        records[i]=ghaGuardSourceRecord{Path:x.Path,Size:x.Size,SHA:x.SHA,Blob:x.Blob}
+        body,ok:=fixture.Blobs[x.Blob];if !ok {t.Fatal("fixture blob missing")}
+        entries=append(entries,ghaGuardSourceTestEntry{name:x.Path,body:body})
+    }
+    if len(records)!=249 {t.Fatal("wrong fixture count")}
+    archive:=ghaGuardSourceTestArchive(t,entries,ghaGuardSource,false)
+    var blobCalls atomic.Int64
+    client:=&http.Client{Transport:ghaGuardTreeTestTransport(func(req *http.Request)(*http.Response,error){
+        if req.URL.Scheme!="https"||req.URL.Host!="api.github.com" {return nil,errGHAGuardUnqualified}
+        key:=strings.TrimPrefix(req.URL.Path,"/repos/AutoDevJapan/cc-pc-tools-rs")
+        var body []byte;status:=http.StatusOK
+        switch {
+        case key=="":body=fixture.RepoResponse
+        case key=="/git/commits/"+ghaGuardSource:body=fixture.CommitResponse
+        case strings.HasPrefix(key,"/git/trees/"):body=fixture.Trees[strings.TrimPrefix(key,"/git/trees/")]
+        case strings.HasPrefix(key,"/git/blobs/"):blobCalls.Add(1);body=fixture.Blobs[strings.TrimPrefix(key,"/git/blobs/")]
+        default:status=http.StatusNotFound
+        }
+        if body==nil {status=http.StatusNotFound}
+        return &http.Response{StatusCode:status,Header:http.Header{},Body:io.NopCloser(bytes.NewReader(body)),Request:req},nil
+    })}
+    if ghaGuardVerifyGitSnapshot(context.Background(),client,ghaGuardSource,ghaGuardSourceTree,records)!=nil || blobCalls.Load()!=249 {t.Fatal("old validator failed fixture")}
+    blobCalls.Store(0)
+    if ghaGuardVerifyGitTreeSnapshot(context.Background(),client,ghaGuardSource,ghaGuardSourceTree,records)!=nil || blobCalls.Load()!=0 {t.Fatal("tree validation mismatch")}
+    if ghaGuardValidatePinnedSourceArchive(context.Background(),archive,records)!=nil {t.Fatal("archive validator rejected same inputs")}
+}
+
+
+func ghaGuardSourceTestPlainTar(t *testing.T, archive []byte) []byte {
+    t.Helper();zr,err:=gzip.NewReader(bytes.NewReader(archive));if err!=nil {t.Fatal(err)}
+    plain,readErr:=io.ReadAll(zr);closeErr:=zr.Close()
+    if readErr!=nil||closeErr!=nil||len(plain)<1024 {t.Fatal("invalid fixture")}
+    return plain
+}
+
+func ghaGuardSourceTestGzipTar(t *testing.T, plain []byte) []byte {
+    t.Helper();var out bytes.Buffer;zw:=gzip.NewWriter(&out)
+    if _,err:=zw.Write(plain);err!=nil {t.Fatal(err)}
+    if err:=zw.Close();err!=nil {t.Fatal(err)}
+    return out.Bytes()
+}
+
+// Generate a real PAX or GNU extension and remove the following ordinary file.
+func ghaGuardSourceTestSpecialPrefix(t *testing.T, format tar.Format, name string, pax map[string]string, kind byte) []byte {
+    t.Helper();var out bytes.Buffer;tw:=tar.NewWriter(&out)
+    h:=&tar.Header{Name:name,Typeflag:tar.TypeReg,Mode:0644,Format:format,PAXRecords:pax}
+    if err:=tw.WriteHeader(h);err!=nil {t.Fatal(err)}
+    if err:=tw.Close();err!=nil {t.Fatal(err)}
+    raw:=out.Bytes()
+    if len(raw)<512||raw[156]!=kind {t.Fatal("special fixture not generated")}
+    size,err:=strconv.ParseInt(strings.Trim(string(raw[124:136])," \x00"),8,64)
+    if err!=nil||size<1||size>1<<20 {t.Fatal("invalid special fixture size")}
+    end:=512+int((size+511)/512)*512
+    if end>len(raw) {t.Fatal("truncated special fixture")}
+    return append([]byte(nil),raw[:end]...)
+}
+
+func TestGHAGuardPinnedSourceArchiveExactTarEnd(t *testing.T) {
+    records:=ghaGuardSourceTestRecords()
+    entries:=[]ghaGuardSourceTestEntry{{name:records[0].Path,body:[]byte("alpha")},{name:records[1].Path,body:[]byte("bravo")}}
+    plain:=ghaGuardSourceTestPlainTar(t,ghaGuardSourceTestArchive(t,entries,ghaGuardSource,false))
+    if !bytes.Equal(plain[len(plain)-1024:],make([]byte,1024)) {t.Fatal("fixture lacks end blocks")}
+    prefix:=append([]byte(nil),plain[:len(plain)-1024]...)
+    pax:=ghaGuardSourceTestSpecialPrefix(t,tar.FormatPAX,"fixture",map[string]string{"comment":"probe"},tar.TypeXHeader)
+    gnu:=ghaGuardSourceTestSpecialPrefix(t,tar.FormatGNU,strings.Repeat("g",1300),nil,tar.TypeGNULongName)
+    gnuZeros:=append([]byte(nil),gnu...)
+    for i:=512;i<len(gnuZeros);i++ {gnuZeros[i]=0}
+    makeEnd:=func(ext []byte, blocks int) []byte {
+        raw:=append([]byte(nil),prefix...);raw=append(raw,ext...)
+        return append(raw,make([]byte,512*blocks)...)
+    }
+    cases:=[]struct{name string; raw []byte; valid bool}{
+        {"normal",plain,true},
+        {"extra-zero-block",append(append([]byte(nil),plain...),make([]byte,512)...),true},
+        {"no-end-block",makeEnd(nil,0),false},
+        {"one-end-block",makeEnd(nil,1),false},
+        {"dangling-pax-no-end",makeEnd(pax,0),false},
+        {"dangling-pax-one-end",makeEnd(pax,1),false},
+        {"dangling-pax-two-end",makeEnd(pax,2),false},
+        {"dangling-gnu-no-end",makeEnd(gnu,0),false},
+        {"dangling-gnu-one-end",makeEnd(gnu,1),false},
+        {"dangling-gnu-two-end",makeEnd(gnu,2),false},
+        {"dangling-gnu-all-zero-body",makeEnd(gnuZeros,0),false},
+        {"nonzero-after-end",append(append([]byte(nil),plain...),1),false},
+    }
+    for _,tc:=range cases {t.Run(tc.name,func(t *testing.T){
+        err:=ghaGuardValidatePinnedSourceArchive(context.Background(),ghaGuardSourceTestGzipTar(t,tc.raw),records)
+        if (err==nil)!=tc.valid {t.Fatalf("unexpected archive result: %v",err)}
+    })}
+    // A local PAX header followed by its ordinary selected file remains valid.
+    t.Run("attached-pax",func(t *testing.T){
+        var out bytes.Buffer;zw:=gzip.NewWriter(&out);tw:=tar.NewWriter(zw)
+        if err:=tw.WriteHeader(&tar.Header{Name:"pax_global_header",Typeflag:tar.TypeXGlobalHeader,PAXRecords:map[string]string{"comment":ghaGuardSource}});err!=nil {t.Fatal(err)}
+        for i,e:=range entries {
+            h:=&tar.Header{Name:ghaGuardSourceArchivePrefix+e.name,Typeflag:tar.TypeReg,Mode:0664,Size:int64(len(e.body))}
+            if i==1 {h.Format=tar.FormatPAX;h.PAXRecords=map[string]string{"comment":"probe"}}
+            if err:=tw.WriteHeader(h);err!=nil {t.Fatal(err)}
+            if _,err:=tw.Write(e.body);err!=nil {t.Fatal(err)}
+        }
+        if err:=tw.Close();err!=nil {t.Fatal(err)}
+        if err:=zw.Close();err!=nil {t.Fatal(err)}
+        if err:=ghaGuardValidatePinnedSourceArchive(context.Background(),out.Bytes(),records);err!=nil {t.Fatalf("attached PAX rejected: %v",err)}
+    })
+}
+
+type ghaGuardSourceTestLastEOF struct { raw []byte }
+func (r *ghaGuardSourceTestLastEOF) Read(p []byte) (int,error) {
+    if len(r.raw)==0 {return 0,io.EOF}
+    n:=copy(p,r.raw);r.raw=r.raw[n:]
+    if len(r.raw)==0 {return n,io.EOF}
+    return n,nil
+}
+
+func TestGHAGuardArchiveReaderTracksEmptyEOF(t *testing.T) {
+    r:=&ghaGuardArchiveContextReader{ctx:context.Background(),reader:&ghaGuardSourceTestLastEOF{raw:[]byte("abc")}}
+    b:=make([]byte,3);n,err:=r.Read(b)
+    if n!=3||err!=io.EOF||r.emptyEOF {t.Fatal("nonempty final read misclassified")}
+    n,err=r.Read(b)
+    if n!=0||err!=io.EOF||!r.emptyEOF {t.Fatal("empty EOF not observed")}
+}

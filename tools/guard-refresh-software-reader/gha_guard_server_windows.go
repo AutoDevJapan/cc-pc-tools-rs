@@ -14,9 +14,9 @@ import (
     "time"
 )
 
-// The server reader is not a verifier or update authority. It is used only by
-// a future fixed provider after independently authenticating its publication
-// binding and validating the actual attestation. No normal runtime wires it.
+// Server evidence alone is not a verifier or update authority. The candidate
+// still authenticates the owner, publication binding and actual attestation.
+// This source packet does not install or connect a runtime factory.
 type ghaGuardServerEvidence struct {
     run ghaGuardRun
     job ghaGuardJob
@@ -119,9 +119,12 @@ func ghaGuardFetchServerEvidence(ctx context.Context,client *http.Client,e ghaGu
 // existing GitHub connection. A caller-supplied observation is not authority.
 type ghaGuardEvidenceAuthority struct {
     client *http.Client
+    credential *ghaGuardCredentialSession
 }
 
-func ghaGuardNormalEvidenceAuthority() *ghaGuardEvidenceAuthority { return nil }
+func ghaGuardNormalEvidenceAuthority(ctx context.Context) (*ghaGuardEvidenceAuthority,error) {
+    return ghaGuardOpenWinCredAuthority(ctx)
+}
 
 func ghaGuardActualExpectation() ghaGuardMetadataExpectation {
     return ghaGuardMetadataExpectation{
@@ -137,7 +140,7 @@ func ghaGuardActualExpectation() ghaGuardMetadataExpectation {
 }
 
 // The production entry may call this constructor only with a code-owned,
-// authenticated transport. The normal authority factory below is not wired.
+// authenticated transport. This candidate does not grant installed access.
 type ghaGuardAcquiredEvidence struct {
     run ghaGuardRun
     job ghaGuardJob
@@ -190,11 +193,12 @@ func ghaGuardConstructVerifiedCandidateWith(ctx context.Context,e ghaGuardMetada
     return candidate,nil
 }
 
-// The normal GitHub transport and download-to-held-buffer operation remain
-// unconnected; absence is a fixed failure and not a new authorization grant.
+// This source candidate connects fixed acquisition. Installed routing is
+// unchanged; failed or expired inputs cannot produce an authority.
 func ghaGuardOpenVerifiedCandidate(ctx context.Context) (*ghaGuardVerifiedCandidate,error) {
-    if ctx==nil||ctx.Err()!=nil||ghaGuardNormalEvidenceAuthority()==nil{return nil,errGHAGuardUnqualified}
-    return nil,errGHAGuardUnqualified
+    if ctx==nil||ctx.Err()!=nil{return nil,errGHAGuardUnqualified}
+    // The live opener checks the real owner before obtaining a public bundle.
+    return ghaGuardLiveOpen(ctx,nil)
 }
 
 // The issuer is constructed only after the bound acquisition and cryptographic
@@ -211,7 +215,7 @@ type ghaGuardGeneration struct {
 
 // The active callback pins the buffer until it returns. Close invalidates
 // admission immediately and defers erasure until the last borrower returns.
-// No current factory can mark this structure issued or fill it from JSON.
+// Only the fixed verifier can mark it issued; JSON cannot issue authority.
 type ghaGuardVerifiedCandidate struct {
     self *ghaGuardVerifiedCandidate
     mu sync.Mutex

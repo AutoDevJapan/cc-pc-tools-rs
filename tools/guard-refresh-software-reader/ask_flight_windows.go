@@ -32,6 +32,129 @@ type askJobAccounting struct {
 	User, Kernel, PeriodUser, PeriodKernel int64
 	Faults, Total, Active, Terminated      uint32
 }
+
+// Strict collection is requested only by the fixed fresh-guard inspection.
+// Faults can only remove evidence and are package-private test controls.
+type askStrictJobKey struct{}
+type askStrictJobFaultKey struct{}
+type askStrictJobFaults struct {
+    failListOnce, partialListOnce, failMemberOpenOnce, failMembershipOnce, failRootIdentityOnce, failRootMembershipOnce, omitNonRoot, failWaitOnce bool
+    listFaultSeen, partialSeen, openFaultSeen, membershipFaultSeen, rootIdentityFaultSeen, rootMembershipFaultSeen, waitFaultSeen bool
+    listCalls int
+    finalTotal, finalActive uint32
+    finalHeld, finalSignalled int
+    finalRootCreation uint64
+    zeroObserved, finalQueryOK bool
+}
+
+type askStrictJobMember struct { handle syscall.Handle; created uint64 }
+
+type askStrictJobCollector struct {
+    root uint32
+    members map[uint32]askStrictJobMember
+    unknown bool
+    faults *askStrictJobFaults
+}
+
+func askStrictProcessCreation(kernel *syscall.LazyDLL,handle syscall.Handle,pid uint32) (uint64,bool) {
+    if kernel==nil||handle==0||pid==0{return 0,false}
+    actual,_,_:=kernel.NewProc("GetProcessId").Call(uintptr(handle))
+    if actual==0||uint64(actual)!=uint64(pid){return 0,false}
+    var created,exited,kernelTime,userTime syscall.Filetime
+    if syscall.GetProcessTimes(handle,&created,&exited,&kernelTime,&userTime)!=nil{return 0,false}
+    value:=uint64(created.HighDateTime)<<32|uint64(created.LowDateTime)
+    return value,value!=0
+}
+
+func (c *askStrictJobCollector) collect(kernel *syscall.LazyDLL,job uintptr) {
+    if c==nil||kernel==nil||job==0 {if c!=nil {c.unknown=true};return}
+    if c.faults!=nil {
+        c.faults.listCalls++
+        if c.faults.failListOnce {c.faults.failListOnce=false;c.faults.listFaultSeen=true;c.unknown=true;return}
+    }
+    var list struct {
+        assigned,listed uint32
+        ids [128]uintptr
+    }
+    ok,_,_:=kernel.NewProc("QueryInformationJobObject").Call(job,3,uintptr(unsafe.Pointer(&list)),unsafe.Sizeof(list),0)
+    if ok==0 {c.unknown=true;return}
+    if c.faults!=nil&&c.faults.partialListOnce {
+        c.faults.partialListOnce=false;c.faults.partialSeen=true
+        if list.listed==^uint32(0){c.unknown=true;return}
+        list.assigned=list.listed+1
+    }
+    if list.listed>uint32(len(list.ids))||list.assigned!=list.listed {c.unknown=true;return}
+    for _,raw:=range list.ids[:list.listed] {
+        if raw==0||uint64(raw)>uint64(^uint32(0)){c.unknown=true;continue}
+        id:=uint32(raw)
+        if _,exists:=c.members[id];exists{continue}
+        if c.faults!=nil&&c.faults.omitNonRoot&&id!=c.root {continue}
+        if c.faults!=nil&&c.faults.failMemberOpenOnce&&id!=c.root {
+            c.faults.failMemberOpenOnce=false;c.faults.openFaultSeen=true;c.unknown=true;continue
+        }
+        handle,err:=syscall.OpenProcess(syscall.SYNCHRONIZE|0x1000,false,id)
+        if err!=nil {c.unknown=true;continue}
+        if c.faults!=nil&&c.faults.failMembershipOnce&&id!=c.root {
+            c.faults.failMembershipOnce=false;c.faults.membershipFaultSeen=true
+            if syscall.CloseHandle(handle)!=nil {c.unknown=true};c.unknown=true;continue
+        }
+        var belongs uint32
+        ok,_,_:=kernel.NewProc("IsProcessInJob").Call(uintptr(handle),job,uintptr(unsafe.Pointer(&belongs)))
+        if ok==0||belongs==0 {
+            if syscall.CloseHandle(handle)!=nil {c.unknown=true}
+            c.unknown=true;continue
+        }
+        created,valid:=askStrictProcessCreation(kernel,handle,id)
+        if !valid {if syscall.CloseHandle(handle)!=nil {c.unknown=true};c.unknown=true;continue}
+        c.members[id]=askStrictJobMember{handle:handle,created:created}
+    }
+}
+
+func (c *askStrictJobCollector) finish(kernel *syscall.LazyDLL,job uintptr,deadline time.Time,terminated,assigned,rootWaitVerified bool) bool {
+    if c==nil||kernel==nil||job==0{return false}
+    if !terminated||!assigned||!rootWaitVerified {c.unknown=true}
+    var initial askJobAccounting
+    zero:=false
+    for terminated&&time.Now().Before(deadline) {
+        var a askJobAccounting
+        ok,_,_:=kernel.NewProc("QueryInformationJobObject").Call(job,1,uintptr(unsafe.Pointer(&a)),unsafe.Sizeof(a),0)
+        if ok==0 {c.unknown=true;break}
+        if a.Active==0 {initial=a;zero=true;break}
+        time.Sleep(5*time.Millisecond)
+    }
+    if !zero {c.unknown=true}
+    signalled:=0
+    for pid,member:=range c.members {
+        created,valid:=askStrictProcessCreation(kernel,member.handle,pid)
+        if !valid||created!=member.created {c.unknown=true;continue}
+        left:=time.Until(deadline)
+        if left<0 {c.unknown=true;continue}
+        if c.faults!=nil&&c.faults.failWaitOnce {
+            c.faults.failWaitOnce=false;c.faults.waitFaultSeen=true;c.unknown=true;continue
+        }
+        state,err:=syscall.WaitForSingleObject(member.handle,uint32(left/time.Millisecond))
+        if err!=nil||state!=syscall.WAIT_OBJECT_0 {c.unknown=true;continue}
+        after,valid:=askStrictProcessCreation(kernel,member.handle,pid)
+        if !valid||after!=member.created {c.unknown=true;continue}
+        signalled++
+    }
+    var final askJobAccounting
+    ok,_,_:=kernel.NewProc("QueryInformationJobObject").Call(job,1,uintptr(unsafe.Pointer(&final)),unsafe.Sizeof(final),0)
+    if ok==0||!zero||final.Active!=0||final.Total!=initial.Total {c.unknown=true}
+    rootMember,rootHeld:=c.members[c.root]
+    if !rootHeld||rootMember.created==0||final.Total==0||uint64(final.Total)!=uint64(len(c.members))||signalled!=len(c.members) {c.unknown=true}
+    if c.faults!=nil {c.faults.finalTotal=final.Total;c.faults.finalActive=final.Active;c.faults.finalHeld=len(c.members);c.faults.finalSignalled=signalled;c.faults.finalRootCreation=rootMember.created;c.faults.zeroObserved=zero;c.faults.finalQueryOK=ok!=0}
+    return !c.unknown
+}
+
+func (c *askStrictJobCollector) closeAll() bool {
+    if c==nil{return false}
+    ok:=true
+    for _,member:=range c.members {if syscall.CloseHandle(member.handle)!=nil {ok=false}}
+    c.members=nil
+    return ok
+}
+
 type askChildResult struct {
 	Raw                             []byte
 	Diagnostic                      *compilerDiagnostic
@@ -204,6 +327,12 @@ func (w *askReadyCapture) Write(p []byte) (int, error) {
 
 func askOwnedChildWithHandshake(ctx context.Context, executable string, onReady func([]byte) bool, args ...string) (result askChildResult) {
 	result.Exit = -1
+	strict, _ := ctx.Value(askStrictJobKey{}).(bool)
+	var strictCollector *askStrictJobCollector
+	if strict {
+		faults, _ := ctx.Value(askStrictJobFaultKey{}).(*askStrictJobFaults)
+		strictCollector = &askStrictJobCollector{members: make(map[uint32]askStrictJobMember), faults: faults}
+	}
 	capture, hasCapture := ctx.Value(askChildCaptureKey{}).(askChildCapture)
 	if hasCapture && onReady != nil {
 		return
@@ -228,7 +357,24 @@ func askOwnedChildWithHandshake(ctx context.Context, executable string, onReady 
 	if job == 0 {
 		return
 	}
-	defer syscall.CloseHandle(syscall.Handle(job))
+	if strict {
+		defer func() {
+			if syscall.CloseHandle(syscall.Handle(job)) != nil {
+				result.Reaped = false
+				clear(result.Raw); result.Raw = nil
+				if result.Capture != nil { result.Capture.Complete = false }
+			}
+		}()
+		defer func() {
+			if !strictCollector.closeAll() {
+				result.Reaped = false
+				clear(result.Raw); result.Raw = nil
+				if result.Capture != nil { result.Capture.Complete = false }
+			}
+		}()
+	} else {
+		defer syscall.CloseHandle(syscall.Handle(job))
+	}
 	limits := askJobLimits{Flags: 0x2000}
 	ok, _, _ := kernel.NewProc("SetInformationJobObject").Call(job, 9, uintptr(unsafe.Pointer(&limits)), unsafe.Sizeof(limits))
 	if ok == 0 {
@@ -294,14 +440,30 @@ func askOwnedChildWithHandshake(ctx context.Context, executable string, onReady 
 	}
 	result.Started = true
 	access := uint32(0x0100 | 0x0001 | 0x0800)
+	if strict { access |= syscall.SYNCHRONIZE | 0x1000 }
 	if hasCapture {
 		access |= 0x1000
 	}
 	process, err := syscall.OpenProcess(access, false, uint32(cmd.Process.Pid))
-	assigned := false
+	assigned, retainedRoot := false, false
 	if err == nil {
 		ok, _, _ = kernel.NewProc("AssignProcessToJobObject").Call(job, uintptr(process))
 		assigned = ok != 0
+		if strict && assigned {
+			strictCollector.root = uint32(cmd.Process.Pid)
+			created, valid := askStrictProcessCreation(kernel, process, strictCollector.root)
+			if strictCollector.faults != nil && strictCollector.faults.failRootIdentityOnce {
+				strictCollector.faults.failRootIdentityOnce = false; strictCollector.faults.rootIdentityFaultSeen = true; valid = false
+			}
+			var belongs uint32
+			memberOK, _, _ := kernel.NewProc("IsProcessInJob").Call(uintptr(process), job, uintptr(unsafe.Pointer(&belongs)))
+			if strictCollector.faults != nil && strictCollector.faults.failRootMembershipOnce {
+				strictCollector.faults.failRootMembershipOnce = false; strictCollector.faults.rootMembershipFaultSeen = true; belongs = 0
+			}
+			if !valid || memberOK == 0 || belongs == 0 { strictCollector.unknown = true; assigned = false }
+			strictCollector.members[strictCollector.root] = askStrictJobMember{handle: process, created: created}
+			retainedRoot = true
+		}
 		if assigned && hasCapture {
 			var created, exited, kernelTime, userTime syscall.Filetime
 			creation := uint64(0)
@@ -320,10 +482,15 @@ func askOwnedChildWithHandshake(ctx context.Context, executable string, onReady 
 				assigned = false
 			}
 		}
-		syscall.CloseHandle(process)
+		if !retainedRoot { syscall.CloseHandle(process) }
+	} else if strict {
+		strictCollector.unknown = true
 	}
 	if !assigned {
 		_ = cmd.Process.Kill()
+		if strict && retainedRoot {
+			if stopped, _, _ := kernel.NewProc("TerminateJobObject").Call(job, 1); stopped == 0 { strictCollector.unknown = true }
+		}
 	} else {
 		var permit [12]byte
 		copy(permit[:8], "ASKSW001")
@@ -346,6 +513,7 @@ func askOwnedChildWithHandshake(ctx context.Context, executable string, onReady 
 		}
 	}()
 	collect := func() {
+		if strict { strictCollector.collect(kernel, job); return }
 		var ids [130]uintptr
 		ok, _, _ := kernel.NewProc("QueryInformationJobObject").Call(job, 3, uintptr(unsafe.Pointer(&ids[0])), unsafe.Sizeof(ids), 0)
 		if ok == 0 {
@@ -403,10 +571,17 @@ loop:
 	if cmd.ProcessState != nil {
 		result.Exit = cmd.ProcessState.ExitCode()
 	}
+	if strict && (cmd.ProcessState == nil || cmd.ProcessState.Pid() != int(strictCollector.root)) {
+		strictCollector.unknown = true
+	}
 	// Wait is over before reconciliation. A root exit alone does not prove
 	// descendants gone; terminate the exact job and require its active count0.
+	if strict { collect() }
 	killed, _, _ := kernel.NewProc("TerminateJobObject").Call(job, 1)
 	deadline := time.Now().Add(2 * time.Second)
+	if strict {
+		result.Reaped = strictCollector.finish(kernel, job, deadline, killed != 0, assigned, result.WaitVerified)
+	} else {
 	for killed != 0 && time.Now().Before(deadline) {
 		var a askJobAccounting
 		ok, _, _ = kernel.NewProc("QueryInformationJobObject").Call(job, 1, uintptr(unsafe.Pointer(&a)), unsafe.Sizeof(a), 0)
@@ -429,6 +604,7 @@ loop:
 		if e != nil || state != syscall.WAIT_OBJECT_0 {
 			result.Reaped = false
 		}
+	}
 	}
 	if hasCapture {
 		result.Capture.Complete = assigned && result.WaitVerified && result.Reaped && !result.TimedOut && ctx.Err() == nil && !captured.overflow && captured.eof && captureErr.eof
@@ -502,6 +678,9 @@ func supervisedFixedSoftware(prepare bool, workerArgs, inspectionArgs []string) 
 func runAskWorker(args []string, out io.Writer) int {
 	if !askWorkerParent() {
 		return 2
+	}
+	if len(args) == 1 && args[0] == ghaFreshWorkerFlag {
+		return runGHAFreshInspectionWorker(args, out)
 	}
 	if (len(args) == 2 || len(args) == 3) && args[0] == "--mp4-build-worker" {
 		build, ok := mp4BuildPlan(args[1])

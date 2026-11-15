@@ -24,10 +24,10 @@ import (
     "github.com/sigstore/sigstore-go/pkg/verify"
 )
 
-// A public locator is only a bounded lookup hint. A real candidate is issued
+// A server locator is only a bounded lookup hint. A real candidate is issued
 // only after authenticated metadata, source bytes and signatures agree.
 func ghaFreshLocatorValid(l ghaFreshPublicLocator, now time.Time) bool {
-    return ghaFreshHintShape(l.hint) && l.jobID>0 && l.checkRunID>0 &&
+    return ghaFreshHintShape(l.hint) && !l.hint.superseded && l.jobID>0 && l.checkRunID>0 &&
         l.artifactID>0 && l.archiveBytes>0 && l.archiveBytes<=ghaGuardArchiveLimit &&
         ghaGuardHex(l.archiveSHA,64) && !now.IsZero() && !l.expiresAt.IsZero() &&
         l.expiresAt.After(now)
@@ -156,7 +156,7 @@ func ghaFreshReadPublicBundle(ctx context.Context,client *http.Client,pub ghaGua
     response,err:=isolated.Do(request)
     if err!=nil||response==nil||response.Body==nil {
         var closeErr error;if response!=nil&&response.Body!=nil{closeErr=response.Body.Close()}
-        return nil,ghaGuardResponseFailure(errGHAGuardUnqualified,closeErr,bounded.Err())
+        return nil,errors.Join(ghaGuardResponseFailure(errGHAGuardUnqualified,closeErr,bounded.Err()),ghaFreshContextFailure(bounded,err))
     }
     if response.StatusCode!=http.StatusOK {
         primary:=errors.Join(errGHAGuardUnqualified,&ghaFreshHTTPStatusError{phase:"attestation",status:response.StatusCode})
@@ -165,7 +165,7 @@ func ghaFreshReadPublicBundle(ctx context.Context,client *http.Client,pub ghaGua
     if !ghaGuardSinglePageLink(response.Header){return nil,ghaGuardResponseFailure(errGHAGuardUnqualified,response.Body.Close(),bounded.Err())}
     raw,readErr:=io.ReadAll(io.LimitReader(response.Body,ghaFreshListingLimit+1))
     closeErr:=response.Body.Close();defer clear(raw)
-    if readErr!=nil||closeErr!=nil||len(raw)>ghaFreshListingLimit||bounded.Err()!=nil{return nil,ghaGuardResponseFailure(errGHAGuardUnqualified,closeErr,bounded.Err())}
+    if readErr!=nil||closeErr!=nil||len(raw)>ghaFreshListingLimit||bounded.Err()!=nil{return nil,errors.Join(ghaGuardResponseFailure(errGHAGuardUnqualified,closeErr,bounded.Err()),ghaFreshContextFailure(bounded,readErr))}
     return ghaFreshBundleFromJSON(raw,pub)
 }
 
@@ -225,7 +225,7 @@ func ghaFreshVerifyActualSignature(ctx context.Context,l ghaFreshPublicLocator,r
 
 
 // Repeat the run/actor check using the same owned authenticated client.
-// The public response is never promoted into an authority by itself.
+// The run hint is never promoted into an authority by itself.
 func ghaFreshAuthenticatedRunMatches(ctx context.Context,client *http.Client,h ghaFreshRunHint) error {
     if ctx==nil||ctx.Err()!=nil||client==nil||!ghaFreshHintShape(h){return errGHAGuardUnqualified}
     endpoint:=fmt.Sprintf("https://api.github.com/repos/AutoDevJapan/cc-pc-tools-rs/actions/runs/%d",h.runID)
@@ -237,7 +237,7 @@ func ghaFreshAuthenticatedRunMatches(ctx context.Context,client *http.Client,h g
     response,err:=isolated.Do(req)
     if err!=nil||response==nil||response.Body==nil {
         var closeErr error;if response!=nil&&response.Body!=nil{closeErr=response.Body.Close()}
-        return ghaGuardResponseFailure(errGHAGuardUnqualified,closeErr,ctx.Err())
+        return errors.Join(ghaGuardResponseFailure(errGHAGuardUnqualified,closeErr,ctx.Err()),ghaFreshContextFailure(ctx,err))
     }
     if response.StatusCode!=http.StatusOK {
         primary:=errors.Join(ghaGuardHTTPFailure("authenticated_run",response.StatusCode),ghaGuardCredentialStatusError(response.StatusCode))
@@ -246,7 +246,7 @@ func ghaFreshAuthenticatedRunMatches(ctx context.Context,client *http.Client,h g
     if !ghaGuardSinglePageLink(response.Header) {return ghaGuardResponseFailure(errGHAGuardUnqualified,response.Body.Close(),ctx.Err())}
     raw,readErr:=io.ReadAll(io.LimitReader(response.Body,ghaFreshListingLimit+1))
     closeErr:=response.Body.Close();defer clear(raw)
-    if readErr!=nil||closeErr!=nil||len(raw)>ghaFreshListingLimit||ctx.Err()!=nil{return ghaGuardResponseFailure(errGHAGuardUnqualified,closeErr,ctx.Err())}
+    if readErr!=nil||closeErr!=nil||len(raw)>ghaFreshListingLimit||ctx.Err()!=nil{return errors.Join(ghaGuardResponseFailure(errGHAGuardUnqualified,closeErr,ctx.Err()),ghaFreshContextFailure(ctx,readErr))}
     var envelope bytes.Buffer
     envelope.WriteString("{\"total_count\":1,\"workflow_runs\":[")
     envelope.Write(raw)
@@ -260,11 +260,13 @@ func ghaFreshAuthenticatedRunMatches(ctx context.Context,client *http.Client,h g
 
 // This wrapper observes only the fixed source API's HTTP status/close result;
 // it delegates every request to the same code-owned credential transport.
+var errGHAFreshSourceRead = errors.New("guard_github_source_read_failed")
+
 type ghaFreshSourceStatusTransport struct {
     base http.RoundTripper
     mu sync.Mutex
     status int
-    conflicting,closeFailed,canceled,deadline bool
+    conflicting,closeFailed,canceled,deadline,readFailed bool
 }
 
 type ghaFreshSourceStatusBody struct {
@@ -282,6 +284,7 @@ func (b *ghaFreshSourceStatusBody) Read(p []byte)(int,error){
         if errors.Is(err,context.DeadlineExceeded){b.owner.deadline=true}
         if errors.Is(err,context.Canceled)&&(b.ctx==nil||b.ctx.Err()==nil){b.owner.canceled=true}
         if errors.Is(err,errGHAGuardResponseCleanup){b.owner.closeFailed=true}
+        if err!=io.EOF&&!errors.Is(err,context.DeadlineExceeded)&&!errors.Is(err,context.Canceled)&&!errors.Is(err,errGHAGuardResponseCleanup){b.owner.readFailed=true}
         b.owner.mu.Unlock()
     }
     return n,err
@@ -323,9 +326,10 @@ func (t *ghaFreshSourceStatusTransport) RoundTrip(req *http.Request)(*http.Respo
 
 func (t *ghaFreshSourceStatusTransport) sourceFailure(ctx context.Context) error {
     if t==nil{return errGHAGuardUnqualified}
-    t.mu.Lock();status,conflicting,closeFailed,canceled,deadline:=t.status,t.conflicting,t.closeFailed,t.canceled,t.deadline;t.mu.Unlock()
+    t.mu.Lock();status,conflicting,closeFailed,canceled,deadline,readFailed:=t.status,t.conflicting,t.closeFailed,t.canceled,t.deadline,t.readFailed;t.mu.Unlock()
     primary:=error(errGHAGuardUnqualified)
     if status!=0&&!conflicting {primary=ghaGuardHTTPFailure("source_metadata",status)}
+    if readFailed {primary=errors.Join(primary,errGHAFreshSourceRead)}
     var contextErr error;if ctx!=nil {contextErr=ctx.Err()}
     if canceled {contextErr=errors.Join(contextErr,context.Canceled)}
     if deadline {contextErr=errors.Join(contextErr,context.DeadlineExceeded)}
@@ -336,7 +340,7 @@ func (t *ghaFreshSourceStatusTransport) sourceFailure(ctx context.Context) error
 func (t *ghaFreshSourceStatusTransport) observedFailure() bool {
     if t==nil{return true}
     t.mu.Lock();defer t.mu.Unlock()
-    return t.status!=0||t.conflicting||t.closeFailed||t.canceled||t.deadline
+    return t.status!=0||t.conflicting||t.closeFailed||t.canceled||t.deadline||t.readFailed
 }
 
 func ghaFreshVerifySourceWithStatus(ctx context.Context,authority *ghaGuardEvidenceAuthority,client *http.Client,archive []byte,m ghaGuardManifest) error {
@@ -368,10 +372,7 @@ func ghaFreshOpenVerifiedCandidateCaptured(ctx context.Context,audit *ghaFreshCr
     transport:=&http.Transport{Proxy:nil,TLSHandshakeTimeout:10*time.Second,ResponseHeaderTimeout:15*time.Second,MaxResponseHeaderBytes:64<<10}
     defer transport.CloseIdleConnections()
     public:=&http.Client{Transport:transport,Timeout:30*time.Second}
-    hint,err:=ghaFreshReadRunHint(ctx,public);if err!=nil{return nil,err}
-    loc,err:=ghaFreshPublicPreflight(ctx,public,hint,time.Now().UTC());if err!=nil{return nil,err}
-    if capture!=nil {if err:=capture.Start(loc);err!=nil{return nil,err}}
-    authority,err:=ghaFreshOpenWinCredAuthorityObserved(ctx,loc,audit)
+    authority,err:=ghaFreshOpenWinCredDiscovery(ctx,audit)
     if authority==nil{return nil,errors.Join(errGHAGuardUnqualified,err)}
     defer func(){
         if closeErr:=ghaFreshCloseCredentialAuthority(authority,nil,audit);closeErr!=nil {
@@ -383,6 +384,8 @@ func ghaFreshOpenVerifiedCandidateCaptured(ctx context.Context,audit *ghaFreshCr
         }
     }()
     if err!=nil||authority.client==nil{return nil,errors.Join(errGHAGuardUnqualified,err)}
+    loc,err:=ghaFreshDiscoverOwned(ctx,authority,time.Now().UTC());if err!=nil{return nil,err}
+    if capture!=nil {if err=capture.Start(loc);err!=nil{return nil,err}}
     return ghaFreshAcquireFromAuthorityCaptured(ctx,authority,public,loc,capture)
 }
 

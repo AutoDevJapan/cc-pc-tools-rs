@@ -177,6 +177,7 @@ func TestGHAFreshRunHintUsesExplicitArtifactExpiry(t *testing.T) {
                 switch {
                 case r.URL.String()==ghaFreshListingURL:body=string(listing)
                 case strings.HasSuffix(r.URL.Path,"/actions/workflows/unattended-readiness.yml"):body=workflow
+                case strings.HasSuffix(r.URL.Path,"/contents/.github/workflows/unattended-readiness.yml"):body=`{}`
                 case strings.HasSuffix(r.URL.Path,"/actions/runs/12345/attempts/1/jobs"):body=firstJobs
                 case strings.HasSuffix(r.URL.Path,"/actions/runs/12346/attempts/1/jobs"):body=jobs2
                 case strings.HasSuffix(r.URL.Path,"/actions/runs/12345/artifacts"):body=firstArtifact
@@ -188,7 +189,7 @@ func TestGHAFreshRunHintUsesExplicitArtifactExpiry(t *testing.T) {
             now:=time.Date(2026,11,16,12,0,0,0,time.UTC)
             if name=="missing-past"||name=="missing-unknown" {now=time.Date(2026,11,17,12,0,0,0,time.UTC)}
             hint,err:=ghaFreshReadRunHintWith(context.Background(),client,client,now)
-            if name=="expired-and-live"||name=="missing-past" {if err!=nil||hint.runID!=12346 {t.Fatal("expired candidate not separated",name,err)}} else if err==nil||hint.runID!=0 {t.Fatal("unproved multiple candidates accepted",name)}
+            if name=="expired-and-live" {if err!=nil||hint.runID!=12346 {t.Fatal("expired candidate not separated",name,err)}} else if err==nil||hint.runID!=0 {t.Fatal("unproved multiple candidates accepted",name)}
         })
     }
 }
@@ -200,7 +201,7 @@ func TestGHAFreshWorkflowPaginationRequiresCompleteStablePages(t *testing.T) {
         var envelope struct{Runs []map[string]any `json:"workflow_runs"`}
         if json.Unmarshal([]byte(ghaFreshTestGood),&envelope)!=nil||len(envelope.Runs)!=1 {t.Fatal("fixture")}
         good:=envelope.Runs[0];noise:=make([]map[string]any,100)
-        for i:=range noise {noise[i]=map[string]any{"id":int64(50000+i),"workflow_id":ghaFreshWorkflowID,"created_at":"2026-11-15T17:21:18Z","status":"completed","conclusion":"failure"}}
+        for i:=range noise {noise[i]=map[string]any{"id":int64(50000+i),"workflow_id":ghaFreshWorkflowID,"created_at":"2026-11-15T17:21:18Z","status":"completed","conclusion":"failure","run_attempt":1}}
         calls:=0
         client:=&http.Client{Transport:ghaFreshTestTransport(func(r *http.Request)(*http.Response,error){
             calls++;if r.Method!=http.MethodGet||r.URL.Path!="/repos/AutoDevJapan/cc-pc-tools-rs/actions/workflows/382798887/runs" {t.Fatal("wrong fixed workflow request")}

@@ -189,7 +189,7 @@ func ghaCurrentTestArchive(t *testing.T,records []ghaGuardSourceRecord) (ghaGuar
     return m,out.Bytes()
 }
 
-func ghaCurrentTestCandidate(t *testing.T,ctx context.Context,m ghaGuardManifest) *guardTargetCandidate {
+func ghaCurrentTestCandidateManual(t *testing.T,ctx context.Context,m ghaGuardManifest) *guardTargetCandidate {
     t.Helper()
     generation:=ghaGuardGeneration{Source:m.Source,SourceTree:m.SourceTree,ProducerRevision:m.ProducerRevision,
         RunID:m.RunID,RunAttempt:m.RunAttempt,JobID:m.JobID,CheckRunID:m.CheckRunID,
@@ -199,8 +199,12 @@ func ghaCurrentTestCandidate(t *testing.T,ctx context.Context,m ghaGuardManifest
     value,err:=guardTargetArtifactFromServer(ctx,func(context.Context)(*ghaGuardVerifiedCandidate,error){return source,nil})
     if err!=nil {t.Fatal("owned candidate fixture",err)}
     artifact,ok:=value.(*guardTargetCandidate);if !ok{t.Fatal("candidate type")}
-    t.Cleanup(func(){_ = artifact.Close()})
     return artifact
+}
+
+func ghaCurrentTestCandidate(t *testing.T,ctx context.Context,m ghaGuardManifest) *guardTargetCandidate {
+    t.Helper();artifact:=ghaCurrentTestCandidateManual(t,ctx,m)
+    t.Cleanup(func(){_ = artifact.Close()});return artifact
 }
 
 func ghaCurrentTestLocator(m ghaGuardManifest,archive []byte) ghaFreshPublicLocator {
@@ -228,13 +232,18 @@ func ghaCurrentTestInstallLocator(t *testing.T,f *ghaCurrentTestFixture,l ghaFre
     }}})
 }
 
-func ghaCurrentTestAuthority(t *testing.T,f *ghaCurrentTestFixture,m ghaGuardManifest,archive []byte) *ghaGuardEvidenceAuthority {
+func ghaCurrentTestAuthorityManual(t *testing.T,f *ghaCurrentTestFixture,m ghaGuardManifest,archive []byte) *ghaGuardEvidenceAuthority {
     t.Helper()
     loc:=ghaCurrentTestLocator(m,archive);ghaCurrentTestInstallLocator(t,f,loc)
     root,cancel:=context.WithCancel(context.Background())
     session:=&ghaGuardCredentialSession{fresh:&loc,secret:[]byte("fictional"),base:f.client.Transport,root:root,cancel:cancel,ready:true,drain:make(chan struct{})}
     authority:=&ghaGuardEvidenceAuthority{client:&http.Client{Transport:session},credential:session}
-    t.Cleanup(func(){ctx,done:=context.WithTimeout(context.Background(),time.Second);defer done();if session.close(ctx)!=nil{t.Error("credential fixture cleanup")}})
+    return authority
+}
+
+func ghaCurrentTestAuthority(t *testing.T,f *ghaCurrentTestFixture,m ghaGuardManifest,archive []byte) *ghaGuardEvidenceAuthority {
+    t.Helper();authority:=ghaCurrentTestAuthorityManual(t,f,m,archive)
+    t.Cleanup(func(){ctx,done:=context.WithTimeout(context.Background(),time.Second);defer done();if authority.credential.close(ctx)!=nil{t.Error("credential fixture cleanup")}})
     return authority
 }
 
@@ -447,18 +456,37 @@ func TestGHAFreshMovingMainUsesBoundedPublicQuota(t *testing.T) {
     if p>60||a<249{t.Fatalf("wrong public/authenticated split: public=%d auth=%d",p,a)}
 }
 
+// Test owners are retained on an unjoined worker or an unconfirmed Close.
+var ghaCurrentUnconfirmedTestOwners = struct{sync.Mutex; values []any}{}
+func ghaCurrentRetainTestOwners(values ...any) {
+    ghaCurrentUnconfirmedTestOwners.Lock();defer ghaCurrentUnconfirmedTestOwners.Unlock()
+    ghaCurrentUnconfirmedTestOwners.values=append(ghaCurrentUnconfirmedTestOwners.values,values...)
+}
+
 func TestGHAFreshCaptureCloseDuringBindKeepsOwnership(t *testing.T) {
     for _,phase:=range []string{"active","before-pending"} {t.Run(phase,func(t *testing.T){
-        ctx,cancel:=context.WithTimeout(context.Background(),5*time.Second);defer cancel()
-        f:=ghaCurrentTestFixtureFor(t,"");m,archive:=ghaCurrentTestArchive(t,f.records);artifact:=ghaCurrentTestCandidate(t,ctx,m)
-        capture:=ghaFreshNewUpdateArchiveCapture();if capture.Start(ghaCurrentTestLocator(m,archive))!=nil||capture.Hold(archive,m)!=nil{t.Fatal("capture fixture")}
-        held:=capture.archive;entered:=make(chan struct{});release:=make(chan struct{});defer func(){select{case <-release:default:close(release)}}()
+        ctx,cancel:=context.WithTimeout(context.Background(),5*time.Second)
+        f:=ghaCurrentTestFixtureFor(t,"");m,archive:=ghaCurrentTestArchive(t,f.records);artifact:=ghaCurrentTestCandidateManual(t,ctx,m)
+        capture:=ghaFreshNewUpdateArchiveCapture();entered:=make(chan struct{});release:=make(chan struct{});var releaseOnce sync.Once
         type result struct{proof *ghaFreshCurrentInputs;err error};done:=make(chan result,1)
-        go func(){p,e:=capture.bindWith(ctx,artifact,f.client,func(step string){if step==phase{close(entered);<-release}});done<-result{p,e}}()
+        started,joined:=false,false;var got result
+        t.Cleanup(func(){
+            releaseOnce.Do(func(){close(release)});cancel()
+            if started&&!joined {
+                select{case got=<-done:joined=true;case <-time.After(2*time.Second):
+                    ghaCurrentRetainTestOwners(artifact,capture,done);t.Error("bind worker did not join");return}
+            }
+            if got.proof!=nil {if err:=capture.DiscardBound(got.proof);err!=nil {ghaCurrentRetainTestOwners(artifact,capture,got.proof);t.Error("pending proof cleanup",err);return}}
+            if err:=capture.Close();err!=nil {ghaCurrentRetainTestOwners(artifact,capture);t.Error("capture cleanup",err);return}
+            if err:=artifact.Close();err!=nil {ghaCurrentRetainTestOwners(artifact);t.Error("artifact cleanup",err)}
+        })
+        if capture.Start(ghaCurrentTestLocator(m,archive))!=nil||capture.Hold(archive,m)!=nil{t.Fatal("capture fixture")}
+        held:=capture.archive
+        started=true;go func(){p,e:=capture.bindWith(ctx,artifact,f.client,func(step string){if step==phase{close(entered);<-release}});done<-result{p,e}}()
         select{case <-entered:case <-ctx.Done():t.Fatal("bind did not reach barrier")}
         if err:=capture.Close();!errors.Is(err,errGuardTargetCleanup){t.Fatal("active close reported completion",err)}
-        close(release)
-        var got result;select{case got=<-done:case <-ctx.Done():t.Fatal("bind did not drain")}
+        releaseOnce.Do(func(){close(release)})
+        select{case got=<-done:joined=true;case <-ctx.Done():t.Fatal("bind did not drain")}
         if got.err==nil||got.proof!=nil{t.Fatal("revoked bind returned proof")}
         for _,b:=range held {if b!=0 {t.Fatal("held archive not erased")}}
         if err:=capture.Close();err!=nil{t.Fatal("owner could not finish close",err)}
@@ -488,9 +516,9 @@ func TestGHAFreshCapturePendingRequiresClaimOrDiscard(t *testing.T) {
 
 func TestGHAFreshProofCloseDuringRecheckAndObservation(t *testing.T) {
     for _,phase:=range []string{"last-listing","standalone-recheck","observation"} {t.Run(phase,func(t *testing.T){
-        ctx,cancel:=context.WithTimeout(context.Background(),10*time.Second);defer cancel()
-        f:=ghaCurrentTestFixtureFor(t,"");m,archive:=ghaCurrentTestArchive(t,f.records);artifact:=ghaCurrentTestCandidate(t,ctx,m)
-        entered:=make(chan struct{});release:=make(chan struct{});defer func(){select{case <-release:default:close(release)}}()
+        ctx,cancel:=context.WithTimeout(context.Background(),10*time.Second)
+        f:=ghaCurrentTestFixtureFor(t,"");m,archive:=ghaCurrentTestArchive(t,f.records);artifact:=ghaCurrentTestCandidateManual(t,ctx,m)
+        entered:=make(chan struct{});release:=make(chan struct{});var releaseOnce sync.Once
         base:=f.client.Transport;listCount:=0
         f.client=&http.Client{Transport:ghaGuardTreeTestTransport(func(r *http.Request)(*http.Response,error){
             if r.URL.Path=="/repos/AutoDevJapan/cc-pc-tools-rs/actions/workflows/382798887/runs" {
@@ -498,10 +526,22 @@ func TestGHAFreshProofCloseDuringRecheckAndObservation(t *testing.T) {
             }
             return base.RoundTrip(r)
         })}
-        authority:=ghaCurrentTestAuthority(t,f,m,archive);proof,err:=ghaCurrentTestBoundProof(t,ctx,f,m,archive,artifact)
+        authority:=ghaCurrentTestAuthorityManual(t,f,m,archive);var proof *ghaFreshCurrentInputs;var err error
+        observed:=false;done:=make(chan error,1);started,joined:=false,false
+        t.Cleanup(func(){
+            releaseOnce.Do(func(){close(release)});cancel()
+            if started&&!joined {
+                select{case <-done:joined=true;case <-time.After(2*time.Second):
+                    ghaCurrentRetainTestOwners(artifact,authority,proof,done);t.Error("proof worker did not join");return}
+            }
+            if proof!=nil {if e:=proof.Close();e!=nil {ghaCurrentRetainTestOwners(artifact,authority,proof);t.Error("proof cleanup",e);return}}
+            cleanup,finish:=context.WithTimeout(context.Background(),time.Second);defer finish()
+            if e:=authority.credential.close(cleanup);e!=nil {ghaCurrentRetainTestOwners(artifact,authority);t.Error("credential cleanup",e);return}
+            if e:=artifact.Close();e!=nil {ghaCurrentRetainTestOwners(artifact);t.Error("artifact cleanup",e)}
+        })
+        proof,err=ghaCurrentTestBoundProof(t,ctx,f,m,archive,artifact)
         if err!=nil||proof==nil{t.Fatal("proof fixture",err)}
-        observed:=false;done:=make(chan error,1)
-        go func(){
+        started=true;go func(){
             if phase=="standalone-recheck" {done<-proof.recheckWith(ctx,artifact,f.client,authority,f.policy);return}
             done<-ghaFreshHandoffWithoutIssuerWith(ctx,artifact,proof,f.client,authority,f.policy,func(*guardTargetCandidate,*ghaFreshCurrentInputs,[]byte)error{
                 observed=true;if phase=="observation"{close(entered);<-release};return nil
@@ -509,8 +549,8 @@ func TestGHAFreshProofCloseDuringRecheckAndObservation(t *testing.T) {
         }()
         select{case <-entered:case <-ctx.Done():t.Fatal("proof did not reach barrier")}
         if err=proof.Close();!errors.Is(err,errGuardTargetCleanup){t.Fatal("active proof close reported completion",err)}
-        close(release)
-        select{case err=<-done:case <-ctx.Done():t.Fatal("handoff did not drain")}
+        releaseOnce.Do(func(){close(release)})
+        select{case err=<-done:joined=true;case <-ctx.Done():t.Fatal("handoff did not drain")}
         if !errors.Is(err,errGuardTargetCleanup){t.Fatal("revocation not reported",err)}
         if (phase=="last-listing"||phase=="standalone-recheck")&&observed {t.Fatal("revoked proof reached observer")}
         if phase=="observation"&&!observed {t.Fatal("observation barrier not reached")}

@@ -40,7 +40,7 @@ func ghaFreshAcquisitionReason(err error) string {
     var service *ghaGuardHTTPStatusError
     if errors.As(err,&service)&&service!=nil&&service.status>=100&&service.status<=599 {
         switch service.phase {
-        case "credential_owner","authenticated_run","metadata","job_log","job_log_object","artifact","artifact_object","source_metadata":
+        case "credential_owner","authenticated_run","authenticated_runs","authenticated_metadata","metadata","job_log","job_log_object","artifact","artifact_object","source_metadata":
             return fmt.Sprintf("guard_github_%s_http_%d",service.phase,service.status)
         }
     }
@@ -50,6 +50,7 @@ func ghaFreshAcquisitionReason(err error) string {
         return fmt.Sprintf("guard_fresh_public_%s_http_%d",status.phase,status.status)
     }
     switch {
+    case errors.Is(err,errGHAFreshSourceRead):return "guard_github_source_read_failed"
     case errors.Is(err,context.Canceled),errors.Is(err,context.DeadlineExceeded):return "guard_target_cancelled"
     case errors.Is(err,errGHAGuardCredentialCleanup):return "guard_github_credential_cleanup_failed"
     case errors.Is(err,errGHAGuardResponseCleanup):return "guard_github_response_cleanup_failed"
@@ -66,7 +67,7 @@ func ghaFreshAcquisitionReason(err error) string {
 func ghaFreshHTTPReasonAllowed(value string) bool {
     prefixes:=[]string{
         "guard_fresh_public_runs_http_","guard_fresh_public_metadata_http_","guard_fresh_public_attestation_http_",
-        "guard_github_credential_owner_http_","guard_github_authenticated_run_http_",
+        "guard_github_credential_owner_http_","guard_github_authenticated_run_http_","guard_github_authenticated_runs_http_","guard_github_authenticated_metadata_http_",
         "guard_github_metadata_http_","guard_github_job_log_http_","guard_github_job_log_object_http_",
         "guard_github_artifact_http_","guard_github_artifact_object_http_","guard_github_source_metadata_http_",
     }
@@ -204,7 +205,7 @@ func ghaFreshInspectionFromChild(child askChildResult) ghaFreshInspectionResult 
                 case "guard_target_cancelled","guard_github_artifact_expired","guard_github_credential_not_found",
                     "guard_github_credential_access_denied","guard_github_credential_identity_mismatch",
                     "guard_github_credential_unauthorized","guard_github_credential_forbidden",
-                    "guard_github_credential_cleanup_failed","guard_github_credential_cleanup_unobserved","guard_github_response_cleanup_failed",
+                    "guard_github_credential_cleanup_failed","guard_github_credential_cleanup_unobserved","guard_github_response_cleanup_failed","guard_github_source_read_failed",
                     "guard_target_artifact_unavailable","guard_target_purpose_unavailable",
                     "guard_target_metadata_unavailable","guard_target_generation_changed",
                     "guard_target_cleanup_failed":

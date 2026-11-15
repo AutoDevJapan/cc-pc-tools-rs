@@ -16,8 +16,9 @@ import (
 // This is a bounded observation of current public source, not an update permit.
 type ghaFreshMainSample struct { head, tree string }
 
-// Only fixed repository tree/blob reads use the owned authenticated
-// transport. Other source observations use the credential-free transport.
+// Fixed repository tree/blob reads use the supplied authenticated transport.
+// Other observations use the supplied public transport, which may be the same
+// owned session when the caller requires authenticated discovery.
 type ghaFreshSplitSourceTransport struct { public,authenticated http.RoundTripper }
 func (t *ghaFreshSplitSourceTransport) RoundTrip(req *http.Request) (*http.Response,error) {
     if t==nil||t.public==nil||t.authenticated==nil||req==nil||req.URL==nil||req.Method!=http.MethodGet||
@@ -252,7 +253,7 @@ func ghaFreshSameLocator(a,b ghaFreshPublicLocator) bool {
 func ghaFreshCheckHintGeneration(ctx context.Context,public,authenticated *http.Client,g ghaGuardGeneration,expected ghaFreshPublicLocator) error {
     if ctx==nil{return errGHAGuardUnqualified}
     if ctx.Err()!=nil||public==nil||authenticated==nil{return errors.Join(errGHAGuardUnqualified,ctx.Err())}
-    h,err:=ghaFreshReadRunHintWith(ctx,authenticated,public,time.Now().UTC())
+    h,err:=ghaFreshReadRunHintWith(ctx,authenticated,authenticated,time.Now().UTC())
     if err!=nil{return ghaFreshSafeCurrentFailure(ctx,err)}
     if h.runID!=g.RunID||h.attempt!=int64(g.RunAttempt)||h.producerRevision!=g.ProducerRevision{return errGHAGuardUnqualified}
     observed,err:=ghaFreshPublicPreflight(ctx,authenticated,h,time.Now().UTC())
@@ -267,11 +268,12 @@ func ghaFreshSafeCurrentFailure(ctx context.Context,failure error) error {
     primary:=error(errGHAGuardUnqualified)
     var status *ghaGuardHTTPStatusError
     var public *ghaFreshHTTPStatusError
-    if errors.As(failure,&status)&&status!=nil&&status.phase=="source_metadata" {
-        primary=ghaGuardHTTPFailure("source_metadata",status.status)
+    if errors.As(failure,&status)&&status!=nil {
+        primary=ghaGuardHTTPFailure(status.phase,status.status)
     } else if errors.As(failure,&public)&&public!=nil&&public.status>=100&&public.status<=599 {
-        primary=ghaGuardHTTPFailure("source_metadata",public.status)
+        switch public.phase {case "runs","metadata","attestation":primary=errors.Join(primary,&ghaFreshHTTPStatusError{phase:public.phase,status:public.status})}
     }
+    if errors.Is(failure,errGHAFreshSourceRead){primary=errors.Join(primary,errGHAFreshSourceRead)}
     var closeErr,cancelErr error
     if errors.Is(failure,errGHAGuardResponseCleanup){closeErr=errGHAGuardResponseCleanup}
     if errors.Is(failure,context.Canceled){cancelErr=context.Canceled}

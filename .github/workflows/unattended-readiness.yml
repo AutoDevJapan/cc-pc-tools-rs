@@ -163,6 +163,27 @@ jobs:
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
           go build -trimpath .
           exit $LASTEXITCODE
+      - name: Verify the fixed public source archive
+        working-directory: tools/guard-refresh-software-reader
+        shell: pwsh
+        timeout-minutes: 5
+        env:
+          GUARD_GHA_ACTUAL_SIGNED_SOURCE: '1'
+        run: |
+          $lines = @(& go test -count=1 -v -timeout 3m -run '^TestGHAGuardOfficialSourceArchiveReal$' . 2>&1)
+          $testExit = $LASTEXITCODE
+          $lines | ForEach-Object { Write-Output $_ }
+          if ($null -eq $testExit) { throw 'The public source archive test did not return an exit code.' }
+          if ($testExit -ne 0) { exit $testExit }
+          $output = [string]::Join([Environment]::NewLine, [string[]]$lines)
+          $runs = @([regex]::Matches($output, '(?m)^=== RUN[ \t]+(\S+)[ \t]*\r?$'))
+          $passes = @([regex]::Matches($output, '(?m)^--- PASS: (\S+) \([0-9]+(?:\.[0-9]+)?s\)\r?$'))
+          $skips = [regex]::Matches($output, '(?m)^[ \t]*--- SKIP:').Count
+          $failures = [regex]::Matches($output, '(?m)^[ \t]*--- FAIL:').Count
+          if ($runs.Count -ne 1 -or $runs[0].Groups[1].Value -cne 'TestGHAGuardOfficialSourceArchiveReal' -or $passes.Count -ne 1 -or $passes[0].Groups[1].Value -cne 'TestGHAGuardOfficialSourceArchiveReal' -or $skips -ne 0 -or $failures -ne 0) {
+            throw 'Expected exactly one passing public source archive test with no skips.'
+          }
+          Write-Output 'Public source archive: 1 run, 1 pass, 0 skips.'
       - name: Verify fixed signed-source evidence while retained
         if: runner.environment == 'github-hosted'
         working-directory: tools/guard-refresh-software-reader

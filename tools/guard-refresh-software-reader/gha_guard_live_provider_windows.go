@@ -122,16 +122,32 @@ func ghaGuardLiveAcquire(ctx context.Context,authority *ghaGuardEvidenceAuthorit
 // This fixed production bridge cannot manufacture the authority or bundle.
 // Only the actual Sigstore check and the same authority client can issue the
 // private candidate; neither test hooks nor diagnostics are wired here.
-func ghaGuardLiveOpen(ctx context.Context,bundle []byte) (*ghaGuardVerifiedCandidate,error) {
-    authority:=ghaGuardNormalEvidenceAuthority()
-    if authority==nil||authority.client==nil{return nil,errGHAGuardUnqualified}
+func ghaGuardLiveOpen(ctx context.Context,bundle []byte) (result *ghaGuardVerifiedCandidate,resultErr error) {
+    if ctx==nil||ctx.Err()!=nil{return nil,errGHAGuardUnqualified}
+    authority,authErr:=ghaGuardNormalEvidenceAuthority(ctx)
+    if authErr!=nil||authority==nil||authority.client==nil{return nil,errors.Join(errGHAGuardUnqualified,authErr)}
+    defer func(){
+        if closeErr:=ghaGuardCloseCredentialAuthority(authority,nil);closeErr!=nil {
+            if result!=nil {
+                cleanup,cancel:=context.WithTimeout(context.Background(),5*time.Second)
+                resultErr=errors.Join(resultErr,result.Close(),result.WaitClosed(cleanup));cancel()
+            }
+            result=nil;resultErr=errors.Join(errGHAGuardUnqualified,resultErr,closeErr)
+        }
+    }()
+    if bundle==nil {
+        var err error
+        bundle,err=ghaGuardFetchPinnedPublicBundle(ctx)
+        if err!=nil{return nil,errGHAGuardUnqualified}
+        defer clear(bundle)
+    }
     client:=authority.client
     material,err:=ghaGuardLiveAcquire(ctx,authority,bundle)
     if err!=nil{return nil,errGHAGuardUnqualified}
     if authority.client!=client {clear(material.archive);clear(material.bundle);clear(material.jobLog);return nil,errGHAGuardUnqualified}
     candidate,err:=ghaGuardConstructVerifiedCandidateWith(ctx,ghaGuardActualExpectation(),material,ghaGuardVerifyActualSignature,func(ctx context.Context,archive []byte,m ghaGuardManifest)error{
         if authority.client!=client{return errGHAGuardUnqualified}
-        err:=ghaGuardVerifyArchiveGitSourceWithClient(ctx,archive,m,client)
+        err:=ghaGuardVerifyArchiveGitSourceViaPublicArchiveWithClient(ctx,archive,m,client)
         if err!=nil||authority.client!=client{return errGHAGuardUnqualified}
         return nil
     })

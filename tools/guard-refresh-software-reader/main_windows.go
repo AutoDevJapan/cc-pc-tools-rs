@@ -77,9 +77,14 @@ func handlePath(handle syscall.Handle) (string, bool) {
 }
 
 func openPlain(path string, directory bool) (syscall.Handle, bool) {
+	handle, err := openPlainDetailed(path, directory)
+	return handle, err == nil
+}
+
+func openPlainDetailed(path string, directory bool) (syscall.Handle, error) {
 	ptr, err := syscall.UTF16PtrFromString(path)
 	if err != nil {
-		return 0, false
+		return 0, errUpdateObject
 	}
 	access, share, flags := uint32(syscall.GENERIC_READ), uint32(syscall.FILE_SHARE_READ), uint32(0x00200000)
 	if directory {
@@ -89,15 +94,14 @@ func openPlain(path string, directory bool) (syscall.Handle, bool) {
 	}
 	h, err := syscall.CreateFile(ptr, access, share, nil, syscall.OPEN_EXISTING, flags, 0)
 	if err != nil {
-		return 0, false
+		return 0, errUpdateObject
 	}
 	var info syscall.ByHandleFileInformation
 	actual, ok := handlePath(h)
 	if !ok || !strings.EqualFold(actual, filepath.Clean(path)) || syscall.GetFileInformationByHandle(h, &info) != nil || info.FileAttributes&syscall.FILE_ATTRIBUTE_REPARSE_POINT != 0 || (info.FileAttributes&syscall.FILE_ATTRIBUTE_DIRECTORY != 0) != directory || !directory && info.NumberOfLinks != 1 {
-		syscall.CloseHandle(h)
-		return 0, false
+		return 0, finishSoftwareAcquisition(errUpdateObject, &softwareOwnedHandle{handle:h})
 	}
-	return h, true
+	return h, nil
 }
 
 // Parents are retained without delete sharing before the child is opened.

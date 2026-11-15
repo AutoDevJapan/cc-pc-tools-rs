@@ -67,6 +67,7 @@ type askStrictJobCollector struct {
     members map[uint32]askStrictJobMember
     unknown bool
     faults *askStrictJobFaults
+    historyObservation *unslopHistoryCollectionObservation
 }
 
 func askStrictProcessCreation(kernel *syscall.LazyDLL,handle syscall.Handle,pid uint32) (uint64,bool) {
@@ -189,6 +190,13 @@ func (c *askStrictJobCollector) finish(kernel *syscall.LazyDLL,job uintptr,deadl
     rootMember,rootHeld:=c.members[c.root]
     if !rootHeld||rootMember.created==0||final.Total==0||uint64(final.Total)!=uint64(len(c.members))||signalled!=len(c.members) {c.unknown=true}
     if c.faults!=nil {c.faults.finalTotal=final.Total;c.faults.finalActive=final.Active;c.faults.finalHeld=len(c.members);c.faults.finalSignalled=signalled;c.faults.finalRootCreation=rootMember.created;c.faults.zeroObserved=zero;c.faults.finalQueryOK=ok!=0}
+    if c.historyObservation != nil {
+        *c.historyObservation = unslopHistoryCollectionObservation{
+            rootPID: c.root, rootCreation: rootMember.created,
+            observed: uint32(len(c.members)), signalled: uint32(signalled),
+            total: final.Total, totalKnown: ok != 0, collected: !c.unknown,
+        }
+    }
     return !c.unknown
 }
 
@@ -207,6 +215,12 @@ type askChildResult struct {
 	TimedOut, Reaped                bool
 	Started, Assigned, WaitVerified bool
 	Capture                         *askChildCaptureResult
+	CollectionReason                string
+	CollectionObserved, CollectionTotal uint32
+	CollectionSignalled             uint32
+	CollectionTotalKnown            bool
+	CollectionRootPID               uint32
+	CollectionRootCreation          uint64
 }
 
 // Start suspended, assign the exact process to an owned kill-on-close job, then
@@ -236,6 +250,11 @@ type askChildCaptureResult struct {
 	Stdout        []byte
 	Overflow      bool
 	Complete      bool
+	protocolReason string
+	protocolWritesComplete bool
+	protocolWriteFailed bool
+	protocolIOFailed bool
+	historyStdin unslopHistoryStdinFacts
 }
 
 type askCaptureOutput struct {
@@ -373,6 +392,8 @@ func (w *askReadyCapture) Write(p []byte) (int, error) {
 func askOwnedChildWithHandshake(ctx context.Context, executable string, onReady func([]byte) bool, args ...string) (result askChildResult) {
 	result.Exit = -1
 	strict, _ := ctx.Value(askStrictJobKey{}).(bool)
+	historyRequested := ctx.Value(unslopHistoryProtocolKey{}) != nil
+	strict = strict || historyRequested
 	var strictCollector *askStrictJobCollector
 	if strict {
 		faults, _ := ctx.Value(askStrictJobFaultKey{}).(*askStrictJobFaults)
@@ -383,6 +404,9 @@ func askOwnedChildWithHandshake(ctx context.Context, executable string, onReady 
 		return
 	}
 	var captured *askCaptureOutput
+	var history *unslopHistoryExchange
+	var historyStdin *unslopHistoryStdin
+	var historyFailure <-chan struct{}
 	var fixedInput []byte
 	if hasCapture {
 		result.Capture = &askChildCaptureResult{}
@@ -396,7 +420,19 @@ func askOwnedChildWithHandshake(ctx context.Context, executable string, onReady 
 			result.Capture.Stdout = captured.data[:captured.n]
 			result.Capture.Overflow = captured.overflow
 		}()
+		if historyRequested {
+			plan, valid := ctx.Value(unslopHistoryProtocolKey{}).(unslopHistoryProtocol)
+			if !valid || len(capture.Stdin) != 0 { result.Capture.protocolReason = "history_protocol_plan_invalid"; return }
+			var err error
+			history, err = newUnslopHistoryExchange(ctx, plan)
+			if err != nil { result.Capture.protocolReason = "history_protocol_plan_invalid"; return }
+			defer history.Close()
+			historyFailure = history.failed
+			strictCollector.historyObservation = new(unslopHistoryCollectionObservation)
+			defer func(){ publishUnslopHistoryCollection(&result, strictCollector.historyObservation) }()
+		}
 	}
+	if historyRequested && !hasCapture { return }
 	kernel := syscall.NewLazyDLL("kernel32.dll")
 	job, _, _ := kernel.NewProc("CreateJobObjectW").Call(0, 0)
 	if job == 0 {
@@ -449,7 +485,18 @@ func askOwnedChildWithHandshake(ctx context.Context, executable string, onReady 
 	compilerMode, _ := ctx.Value(compilerDiagnosticContext{}).(bool)
 	compilerMode = compilerMode && onReady == nil
 	if hasCapture {
-		cmd.Stdin = bytes.NewReader(fixedInput)
+		if history != nil {
+			var pipeErr error
+			historyStdin,pipeErr=prepareUnslopHistoryStdin(ctx,history)
+			if pipeErr!=nil {result.Capture.protocolReason="history_protocol_stdin_unavailable";return}
+			defer func(){
+				_ = historyStdin.Close()
+				result.Capture.historyStdin=historyStdin.facts()
+				stdin:=result.Capture.historyStdin
+				if stdin.CloseFailed||stdin.CloseAttempted&&!stdin.CloseCompleted||stdin.ReaderCloseFailed||stdin.CopyStarted&&(!stdin.CopyFinished||stdin.CopyFailed) {result.Capture.protocolIOFailed=true;result.Capture.Complete=false}
+			}()
+			cmd.Stdin=historyStdin.reader.file
+		} else { cmd.Stdin = bytes.NewReader(fixedInput) }
 	}
 	var compilerOut, compilerErr *compilerCapture
 	var captureErr *askCaptureDiagnostic
@@ -461,6 +508,7 @@ func askOwnedChildWithHandshake(ctx context.Context, executable string, onReady 
 	}
 	if hasCapture {
 		cmd.Stdout = captured
+		if history != nil { cmd.Stdout = &unslopHistoryCaptureOutput{capture: captured, exchange: history} }
 		if compilerErr == nil {
 			compilerErr = new(compilerCapture)
 			defer compilerErr.erase()
@@ -484,6 +532,7 @@ func askOwnedChildWithHandshake(ctx context.Context, executable string, onReady 
 		return
 	}
 	result.Started = true
+	if historyStdin!=nil {historyStdin.start()}
 	access := uint32(0x0100 | 0x0001 | 0x0800)
 	if strict { access |= syscall.SYNCHRONIZE | 0x1000 }
 	if hasCapture {
@@ -520,7 +569,11 @@ func askOwnedChildWithHandshake(ctx context.Context, executable string, onReady 
 			if creation == 0 || ctx.Err() != nil {
 				assigned = false
 			} else {
-				result.Capture.NativeProcess = &askNativeProcess{PID: uint32(cmd.Process.Pid), Creation: creation}
+				if history != nil {
+					member, held := strictCollector.members[strictCollector.root]
+					if !held || strictCollector.root != uint32(cmd.Process.Pid) || member.created != creation { assigned = false }
+				}
+				if assigned { result.Capture.NativeProcess = &askNativeProcess{PID: uint32(cmd.Process.Pid), Creation: creation} }
 			}
 		}
 		if assigned {
@@ -595,6 +648,9 @@ loop:
 		select {
 		case waitErr = <-waited:
 			break loop
+		case <-historyFailure:
+			historyFailure = nil
+			_ = cmd.Process.Kill()
 		case payload := <-func() <-chan []byte {
 			if ready != nil {
 				return ready.ready
@@ -615,6 +671,11 @@ loop:
 	result.TimedOut = ctx.Err() != nil
 	var exitError *exec.ExitError
 	result.WaitVerified = cmd.ProcessState != nil && (waitErr == nil || errors.As(waitErr, &exitError))
+	if history != nil {
+		// ProcessState records the root wait even when a protocol copier failed.
+		// Protocol/EOF/cancel remain separate required success conditions.
+		result.WaitVerified = cmd.ProcessState != nil && cmd.ProcessState.Exited() && cmd.ProcessState.Pid() == int(strictCollector.root)
+	}
 	if cmd.ProcessState != nil {
 		result.Exit = cmd.ProcessState.ExitCode()
 	}
@@ -654,7 +715,14 @@ loop:
 	}
 	}
 	if hasCapture {
-		result.Capture.Complete = assigned && result.WaitVerified && result.Reaped && !result.TimedOut && ctx.Err() == nil && !captured.overflow && captured.eof && captureErr.eof
+		if history != nil {
+			result.Capture.historyStdin = historyStdin.finish()
+			result.Capture.protocolReason = history.resultReason()
+			result.Capture.protocolWritesComplete = history.writesComplete()
+			result.Capture.protocolWriteFailed = history.writeDidFail()
+			result.Capture.protocolIOFailed = unslopHistoryIOFailed(waitErr, result.Capture.protocolWriteFailed, captured.eof, captureErr.eof, result.Capture.historyStdin)
+		}
+		result.Capture.Complete = assigned && result.WaitVerified && result.Reaped && !result.TimedOut && ctx.Err() == nil && !captured.overflow && captured.eof && captureErr.eof && (history == nil || result.Capture.protocolReason == "history_protocol_complete" && result.Capture.protocolWritesComplete && !result.Capture.protocolIOFailed)
 	}
 	if compilerMode && assigned && result.WaitVerified && result.Reaped && !result.TimedOut && result.Exit != 0 {
 		result.Diagnostic = compilerCause(compilerOut.data[:compilerOut.n], compilerErr.data[:compilerErr.n], compilerOut.truncated || compilerErr.truncated)

@@ -29,26 +29,63 @@ func ghaGuardLiveRedirectURL(raw string) (*url.URL,error) {
     return u,nil
 }
 
+// This phase is derived only from the fixed GitHub endpoint. It is reporting,
+// not authentication or a source of an allowed URL.
+func ghaGuardLiveHTTPPhase(endpoint string) string {
+    const base="https://api.github.com/repos/AutoDevJapan/cc-pc-tools-rs/actions/"
+    if strings.HasPrefix(endpoint,base+"jobs/")&&strings.HasSuffix(endpoint,"/logs"){return "job_log"}
+    if strings.HasPrefix(endpoint,base+"artifacts/")&&strings.HasSuffix(endpoint,"/zip"){return "artifact"}
+    return ""
+}
+
 // api is the same private authenticated authority used for metadata and Git
 // source verification; object is a separate credential-free downloader.
+// Existing callers retain the original direct error result.
 func ghaGuardLiveRedirected(ctx context.Context,api,object *http.Client,endpoint string,limit int64) ([]byte,error) {
+    raw,err:=ghaGuardLiveRedirectedDetailed(ctx,api,object,endpoint,limit)
+    if err!=nil{clear(raw);return nil,errGHAGuardUnqualified}
+    return raw,nil
+}
+
+func ghaGuardLiveRedirectedDetailed(ctx context.Context,api,object *http.Client,endpoint string,limit int64) ([]byte,error) {
     if ctx==nil||ctx.Err()!=nil||api==nil||object==nil||limit<1||limit>ghaGuardArchiveLimit||!strings.HasPrefix(endpoint,"https://api.github.com/repos/AutoDevJapan/cc-pc-tools-rs/actions/") {return nil,errGHAGuardUnqualified}
     req,err:=http.NewRequestWithContext(ctx,http.MethodGet,endpoint,nil);if err!=nil{return nil,errGHAGuardUnqualified}
     req.Header.Set("Accept","application/vnd.github+json")
     req.Header.Set("X-GitHub-Api-Version","2022-11-28")
     once:=*api;once.CheckRedirect=func(*http.Request,[]*http.Request)error{return http.ErrUseLastResponse}
+    phase:=ghaGuardLiveHTTPPhase(endpoint)
     response,err:=once.Do(req)
-    if err!=nil||response==nil||response.Body==nil {return nil,errGHAGuardUnqualified}
+    if err!=nil||response==nil||response.Body==nil {
+        var closeErr error;if response!=nil&&response.Body!=nil {closeErr=response.Body.Close()}
+        return nil,ghaGuardResponseFailure(errGHAGuardUnqualified,closeErr,ctx.Err())
+    }
+    if response.StatusCode!=http.StatusFound {
+        closeErr:=response.Body.Close()
+        if closeErr!=nil{return nil,errors.Join(ghaGuardHTTPFailure(phase,response.StatusCode),errGHAGuardResponseCleanup,ctx.Err())}
+        return nil,errors.Join(ghaGuardHTTPFailure(phase,response.StatusCode),ctx.Err())
+    }
     location:=response.Header.Get("Location");closeErr:=response.Body.Close()
-    if response.StatusCode!=http.StatusFound||closeErr!=nil||ctx.Err()!=nil{return nil,errGHAGuardUnqualified}
+    if closeErr!=nil{return nil,errors.Join(errGHAGuardUnqualified,errGHAGuardResponseCleanup,ctx.Err())}
+    if ctx.Err()!=nil{return nil,errors.Join(errGHAGuardUnqualified,ctx.Err())}
     target,err:=ghaGuardLiveRedirectURL(location);if err!=nil{return nil,errGHAGuardUnqualified}
     download,err:=http.NewRequestWithContext(ctx,http.MethodGet,target.String(),nil);if err!=nil{return nil,errGHAGuardUnqualified}
     noRedirect:=*object;noRedirect.Jar=nil;noRedirect.CheckRedirect=func(*http.Request,[]*http.Request)error{return http.ErrUseLastResponse}
     response,err=noRedirect.Do(download)
-    if err!=nil||response==nil||response.Body==nil {return nil,errGHAGuardUnqualified}
-    if response.StatusCode!=http.StatusOK {_=response.Body.Close();return nil,errGHAGuardUnqualified}
+    if err!=nil||response==nil||response.Body==nil {
+        var closeErr error;if response!=nil&&response.Body!=nil {closeErr=response.Body.Close()}
+        return nil,ghaGuardResponseFailure(errGHAGuardUnqualified,closeErr,ctx.Err())
+    }
+    if response.StatusCode!=http.StatusOK {
+        closeErr:=response.Body.Close()
+        if closeErr!=nil{return nil,errors.Join(ghaGuardHTTPFailure(phase+"_object",response.StatusCode),errGHAGuardResponseCleanup,ctx.Err())}
+        return nil,errors.Join(ghaGuardHTTPFailure(phase+"_object",response.StatusCode),ctx.Err())
+    }
     raw,readErr:=io.ReadAll(io.LimitReader(response.Body,limit+1));closeErr=response.Body.Close()
-    if readErr!=nil||closeErr!=nil||int64(len(raw))>limit||ctx.Err()!=nil {clear(raw);return nil,errGHAGuardUnqualified}
+    if readErr!=nil||closeErr!=nil||int64(len(raw))>limit||ctx.Err()!=nil {
+        clear(raw)
+        if closeErr!=nil{return nil,errors.Join(errGHAGuardUnqualified,errGHAGuardResponseCleanup,ctx.Err())}
+        return nil,errors.Join(errGHAGuardUnqualified,ctx.Err())
+    }
     return raw,nil
 }
 
@@ -80,24 +117,32 @@ func ghaGuardLiveCapture(archive []byte,pub ghaGuardPublicationRecord) (ghaGuard
 // candidate. The caller must be the code-owned transport and retain the
 // authenticated bundle; all partial buffers are erased on failure.
 func ghaGuardLiveAcquireWith(ctx context.Context,authority *ghaGuardEvidenceAuthority,object *http.Client,e ghaGuardMetadataExpectation,bundle []byte,attestationID string) (*ghaGuardAcquiredEvidence,error) {
+    material,err:=ghaGuardLiveAcquireWithDetailed(ctx,authority,object,e,bundle,attestationID)
+    if err!=nil{return nil,errGHAGuardUnqualified}
+    return material,nil
+}
+
+func ghaGuardLiveAcquireWithDetailed(ctx context.Context,authority *ghaGuardEvidenceAuthority,object *http.Client,e ghaGuardMetadataExpectation,bundle []byte,attestationID string) (*ghaGuardAcquiredEvidence,error) {
     if ctx==nil||ctx.Err()!=nil||authority==nil||authority.client==nil||object==nil||len(bundle)==0||len(bundle)>4<<20||attestationID=="" {return nil,errGHAGuardUnqualified}
     client:=authority.client
     bounded,cancel:=context.WithTimeout(ctx,2*time.Minute);defer cancel();ctx=bounded
     var workflow struct {ID int64;Path,State string}
-    if ghaGuardServerJSON(ctx,client,"https://api.github.com/repos/AutoDevJapan/cc-pc-tools-rs/actions/workflows/unattended-readiness.yml",&workflow)!=nil||workflow.ID<=0||workflow.Path!=e.WorkflowPath||workflow.State!="active"||(e.WorkflowID!=0&&e.WorkflowID!=workflow.ID){return nil,errGHAGuardUnqualified}
+    if err:=ghaGuardServerJSONDetailed(ctx,client,"https://api.github.com/repos/AutoDevJapan/cc-pc-tools-rs/actions/workflows/unattended-readiness.yml",&workflow);err!=nil{return nil,err}
+    if workflow.ID<=0||workflow.Path!=e.WorkflowPath||workflow.State!="active"||(e.WorkflowID!=0&&e.WorkflowID!=workflow.ID){return nil,errGHAGuardUnqualified}
     e.WorkflowID=workflow.ID
     jobURL:=fmt.Sprintf("https://api.github.com/repos/AutoDevJapan/cc-pc-tools-rs/actions/jobs/%d/logs",e.JobID)
-    log,err:=ghaGuardLiveRedirected(ctx,client,object,jobURL,8<<20);if err!=nil{return nil,errGHAGuardUnqualified}
+    log,err:=ghaGuardLiveRedirectedDetailed(ctx,client,object,jobURL,8<<20);if err!=nil{return nil,err}
     success:=false
     defer func(){if !success{clear(log)}}()
     pub,err:=ghaGuardPublicationFromLog(log)
     if err!=nil||pub.AttestationID!=attestationID{return nil,errGHAGuardUnqualified}
     binding:=ghaGuardCaptureBinding{RepositoryID:pub.RepositoryID,Source:pub.Source,ProducerRevision:pub.ProducerRevision,RunID:pub.RunID,RunAttempt:pub.RunAttempt,JobID:pub.JobID,CheckRunID:pub.CheckRunID,ArtifactID:pub.ArtifactID}
-    evidence,err:=ghaGuardFetchServerEvidence(ctx,client,e,binding,time.Now().UTC())
-    if err!=nil||!ghaGuardPublicationMatches(e,evidence.artifact,pub){return nil,errGHAGuardUnqualified}
+    evidence,err:=ghaGuardFetchServerEvidenceDetailed(ctx,client,e,binding,time.Now().UTC())
+    if err!=nil{return nil,err}
+    if evidence==nil||!ghaGuardPublicationMatches(e,evidence.artifact,pub){return nil,errGHAGuardUnqualified}
     archiveURL:=fmt.Sprintf("https://api.github.com/repos/AutoDevJapan/cc-pc-tools-rs/actions/artifacts/%d/zip",e.ArtifactID)
-    archive,err:=ghaGuardLiveRedirected(ctx,client,object,archiveURL,evidence.artifact.Size)
-    if err!=nil{return nil,errGHAGuardUnqualified}
+    archive,err:=ghaGuardLiveRedirectedDetailed(ctx,client,object,archiveURL,evidence.artifact.Size)
+    if err!=nil{return nil,err}
     defer func(){if !success{clear(archive)}}()
     if int64(len(archive))!=evidence.artifact.Size||digest(archive)!=pub.ArchiveSHA||ctx.Err()!=nil{return nil,errGHAGuardUnqualified}
     manifest,err:=ghaGuardLiveCapture(archive,pub);if err!=nil{return nil,errGHAGuardUnqualified}

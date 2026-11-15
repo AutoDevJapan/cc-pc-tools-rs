@@ -6,6 +6,7 @@ import (
     "bytes"
     "context"
     "encoding/json"
+    "errors"
     "fmt"
     "io"
     "net/http"
@@ -13,6 +14,42 @@ import (
     "sync"
     "time"
 )
+
+// Only a fixed phase and numeric HTTP status are retained. No URL,
+// response body, redirect location or credential enters this error.
+var errGHAGuardResponseCleanup = errors.New("guard_github_response_cleanup_failed")
+
+type ghaGuardHTTPStatusError struct { phase string; status int }
+func (e *ghaGuardHTTPStatusError) Error() string {
+    if e==nil {return "guard_github_http_unavailable"}
+    return fmt.Sprintf("guard_github_%s_http_%d",e.phase,e.status)
+}
+func ghaGuardHTTPFailure(phase string,status int) error {
+    switch phase {
+    case "credential_owner","authenticated_run","metadata","job_log","job_log_object","artifact","artifact_object","source_metadata":
+    default:return errGHAGuardUnqualified
+    }
+    if status<100||status>599{return errGHAGuardUnqualified}
+    return errors.Join(errGHAGuardUnqualified,&ghaGuardHTTPStatusError{phase:phase,status:status})
+}
+
+// Preserve close failures as a fixed marker without exposing the raw error.
+func ghaGuardResponseFailure(primary,closeErr,contextErr error) error {
+    if closeErr!=nil{return errors.Join(primary,errGHAGuardResponseCleanup,contextErr)}
+    return errors.Join(primary,contextErr)
+}
+
+// Never forward an injected callback error. Only this fixed source phase,
+// a close marker and context cancellation survive the detailed path.
+func ghaGuardSafeSourceFailure(failure,contextErr error) error {
+    primary:=error(errGHAGuardUnqualified)
+    var status *ghaGuardHTTPStatusError
+    if errors.As(failure,&status)&&status!=nil&&status.phase=="source_metadata" {
+        primary=ghaGuardHTTPFailure(status.phase,status.status)
+    }
+    if errors.Is(failure,errGHAGuardResponseCleanup) {return errors.Join(primary,errGHAGuardResponseCleanup,contextErr)}
+    return errors.Join(primary,contextErr)
+}
 
 // Server evidence alone is not a verifier or update authority. The candidate
 // still authenticates the owner, publication binding and actual attestation.
@@ -24,24 +61,50 @@ type ghaGuardServerEvidence struct {
     binding ghaGuardCaptureBinding
 }
 
+// Preserve the legacy direct sentinel result for existing callers.
 func ghaGuardServerJSON(ctx context.Context,client *http.Client,endpoint string,out any) error {
+    if err:=ghaGuardServerJSONDetailed(ctx,client,endpoint,out);err!=nil{return errGHAGuardUnqualified}
+    return nil
+}
+
+func ghaGuardServerJSONDetailed(ctx context.Context,client *http.Client,endpoint string,out any) error {
     if ctx==nil||ctx.Err()!=nil||client==nil||!strings.HasPrefix(endpoint,"https://api.github.com/repos/AutoDevJapan/cc-pc-tools-rs/actions/") {return errGHAGuardUnqualified}
     bounded,cancel:=context.WithTimeout(ctx,15*time.Second);defer cancel();ctx=bounded
     req,err:=http.NewRequestWithContext(ctx,http.MethodGet,endpoint,nil);if err!=nil{return errGHAGuardUnqualified}
     req.Header.Set("Accept","application/vnd.github+json");req.Header.Set("X-GitHub-Api-Version","2022-11-28")
     noRedirect:=*client;noRedirect.CheckRedirect=func(*http.Request,[]*http.Request)error{return errGHAGuardUnqualified}
     response,err:=noRedirect.Do(req)
-    if err!=nil||response==nil||response.Body==nil{return errGHAGuardUnqualified}
-    if response.StatusCode!=http.StatusOK||!ghaGuardSinglePageLink(response.Header) {_=response.Body.Close();return errGHAGuardUnqualified}
+    if err!=nil||response==nil||response.Body==nil {
+        var closeErr error;if response!=nil&&response.Body!=nil {closeErr=response.Body.Close()}
+        return ghaGuardResponseFailure(errGHAGuardUnqualified,closeErr,ctx.Err())
+    }
+    if response.StatusCode!=http.StatusOK {
+        closeErr:=response.Body.Close()
+        if closeErr!=nil{return errors.Join(ghaGuardHTTPFailure("metadata",response.StatusCode),errGHAGuardResponseCleanup,ctx.Err())}
+        return errors.Join(ghaGuardHTTPFailure("metadata",response.StatusCode),ctx.Err())
+    }
+    if !ghaGuardSinglePageLink(response.Header) {return ghaGuardResponseFailure(errGHAGuardUnqualified,response.Body.Close(),ctx.Err())}
     raw,readErr:=io.ReadAll(io.LimitReader(response.Body,2<<20+1));closeErr:=response.Body.Close()
-    if readErr!=nil||closeErr!=nil||len(raw)>2<<20||ctx.Err()!=nil {clear(raw);return errGHAGuardUnqualified}
+    if readErr!=nil||closeErr!=nil||len(raw)>2<<20||ctx.Err()!=nil {
+        clear(raw)
+        if closeErr!=nil{return errors.Join(errGHAGuardUnqualified,errGHAGuardResponseCleanup,ctx.Err())}
+        return errors.Join(errGHAGuardUnqualified,ctx.Err())
+    }
     defer clear(raw)
     dec:=json.NewDecoder(bytes.NewReader(raw))
     if dec.Decode(out)!=nil||dec.Decode(new(any))!=io.EOF{return errGHAGuardUnqualified}
     return nil
 }
 
+// The legacy entry retains its exact error result; the fresh owner calls the
+// detailed variant and never exposes a response body or request URL.
 func ghaGuardFetchServerEvidence(ctx context.Context,client *http.Client,e ghaGuardMetadataExpectation,binding ghaGuardCaptureBinding,now time.Time) (*ghaGuardServerEvidence,error) {
+    evidence,err:=ghaGuardFetchServerEvidenceDetailed(ctx,client,e,binding,now)
+    if err!=nil{return nil,errGHAGuardUnqualified}
+    return evidence,nil
+}
+
+func ghaGuardFetchServerEvidenceDetailed(ctx context.Context,client *http.Client,e ghaGuardMetadataExpectation,binding ghaGuardCaptureBinding,now time.Time) (*ghaGuardServerEvidence,error) {
     if e.RepositoryID!=1406818713||e.RunID<=0||e.RunAttempt<=0||e.JobID<=0||e.ArtifactID<=0 {return nil,errGHAGuardUnqualified}
     base:="https://api.github.com/repos/AutoDevJapan/cc-pc-tools-rs/actions"
     var runRaw struct {
@@ -54,7 +117,7 @@ func ghaGuardFetchServerEvidence(ctx context.Context,client *http.Client,e ghaGu
         HeadSHA string `json:"head_sha"`
         HeadBranch string `json:"head_branch"`
     }
-    if ghaGuardServerJSON(ctx,client,fmt.Sprintf("%s/runs/%d",base,e.RunID),&runRaw)!=nil{return nil,errGHAGuardUnqualified}
+    if err:=ghaGuardServerJSONDetailed(ctx,client,fmt.Sprintf("%s/runs/%d",base,e.RunID),&runRaw);err!=nil{return nil,err}
     run:=ghaGuardRun{RepositoryID:runRaw.Repository.ID,HeadRepositoryID:runRaw.HeadRepository.ID,HeadSHA:runRaw.HeadSHA,HeadBranch:runRaw.HeadBranch,WorkflowPath:runRaw.Path,WorkflowID:runRaw.WorkflowID,Event:runRaw.Event,RunID:runRaw.ID,RunAttempt:runRaw.Attempt,Status:runRaw.Status,Conclusion:runRaw.Conclusion}
     var jobs struct {
         Total int `json:"total_count"`
@@ -66,7 +129,8 @@ func ghaGuardFetchServerEvidence(ctx context.Context,client *http.Client,e ghaGu
             Steps []struct{Name,Status,Conclusion string;Number int `json:"number"`}
         } `json:"jobs"`
     }
-    if ghaGuardServerJSON(ctx,client,fmt.Sprintf("%s/runs/%d/attempts/%d/jobs?per_page=100",base,e.RunID,e.RunAttempt),&jobs)!=nil||jobs.Total!=len(jobs.Jobs)||len(jobs.Jobs)>100{return nil,errGHAGuardUnqualified}
+    if err:=ghaGuardServerJSONDetailed(ctx,client,fmt.Sprintf("%s/runs/%d/attempts/%d/jobs?per_page=100",base,e.RunID,e.RunAttempt),&jobs);err!=nil{return nil,err}
+    if jobs.Total!=len(jobs.Jobs)||len(jobs.Jobs)>100{return nil,errGHAGuardUnqualified}
     var job ghaGuardJob;matches:=0
     expectedCheck:=fmt.Sprintf("https://api.github.com/repos/AutoDevJapan/cc-pc-tools-rs/check-runs/%d",e.CheckRunID)
     for _,v:=range jobs.Jobs {
@@ -100,7 +164,8 @@ func ghaGuardFetchServerEvidence(ctx context.Context,client *http.Client,e ghaGu
             } `json:"workflow_run"`
         } `json:"artifacts"`
     }
-    if ghaGuardServerJSON(ctx,client,fmt.Sprintf("%s/runs/%d/artifacts?per_page=100",base,e.RunID),&artifacts)!=nil||artifacts.Total!=len(artifacts.Artifacts)||len(artifacts.Artifacts)>100{return nil,errGHAGuardUnqualified}
+    if err:=ghaGuardServerJSONDetailed(ctx,client,fmt.Sprintf("%s/runs/%d/artifacts?per_page=100",base,e.RunID),&artifacts);err!=nil{return nil,err}
+    if artifacts.Total!=len(artifacts.Artifacts)||len(artifacts.Artifacts)>100{return nil,errGHAGuardUnqualified}
     var artifact ghaGuardArtifact;matches=0
     for _,v:=range artifacts.Artifacts {
         if v.Name!=e.ArtifactName {continue}
@@ -161,6 +226,12 @@ func ghaGuardConstructVerifiedCandidate(ctx context.Context,e ghaGuardMetadataEx
 // verify is injected by package tests only. The normal constructor above fixes
 // this to in-process Sigstore verification, never a report or a caller bool.
 func ghaGuardConstructVerifiedCandidateWith(ctx context.Context,e ghaGuardMetadataExpectation,material *ghaGuardAcquiredEvidence,verifySignature func(context.Context,[]byte,[]byte,ghaGuardManifest)error,verifySource func(context.Context,[]byte,ghaGuardManifest)error) (*ghaGuardVerifiedCandidate,error) {
+    candidate,err:=ghaGuardConstructVerifiedCandidateWithDetailed(ctx,e,material,verifySignature,verifySource)
+    if err!=nil{return nil,errGHAGuardUnqualified}
+    return candidate,nil
+}
+
+func ghaGuardConstructVerifiedCandidateWithDetailed(ctx context.Context,e ghaGuardMetadataExpectation,material *ghaGuardAcquiredEvidence,verifySignature func(context.Context,[]byte,[]byte,ghaGuardManifest)error,verifySource func(context.Context,[]byte,ghaGuardManifest)error) (*ghaGuardVerifiedCandidate,error) {
     if material!=nil {defer clear(material.archive);defer clear(material.bundle);defer clear(material.jobLog)}
     if ctx==nil||ctx.Err()!=nil||material==nil||verifySignature==nil||verifySource==nil{return nil,errGHAGuardUnqualified}
     bounded,cancel:=context.WithTimeout(ctx,2*time.Minute);defer cancel();ctx=bounded
@@ -181,7 +252,8 @@ func ghaGuardConstructVerifiedCandidateWith(ctx context.Context,e ghaGuardMetada
     if err!=nil{return nil,errGHAGuardUnqualified}
     transferred:=false
     defer func(){if !transferred {clear(payload)}}()
-    if verifySource(ctx,material.archive,m)!=nil||ctx.Err()!=nil||digest(material.archive)!=archiveSHA||digest(payload)!=m.OutputSHA{return nil,errGHAGuardUnqualified}
+    if sourceErr:=verifySource(ctx,material.archive,m);sourceErr!=nil||ctx.Err()!=nil{return nil,ghaGuardSafeSourceFailure(sourceErr,ctx.Err())}
+    if digest(material.archive)!=archiveSHA||digest(payload)!=m.OutputSHA{return nil,errGHAGuardUnqualified}
     if verifySignature(ctx,material.bundle,payload,m)!=nil||ctx.Err()!=nil||digest(material.jobLog)!=logSHA||digest(material.bundle)!=bundleSHA||digest(material.archive)!=archiveSHA||digest(payload)!=m.OutputSHA{return nil,errGHAGuardUnqualified}
     afterPub,afterErr:=ghaGuardPublicationFromLog(material.jobLog)
     if afterErr!=nil||afterPub!=pub||!ghaGuardMetadataMatches(e,material.run,material.job,material.artifact,binding,time.Now().UTC())||!ghaGuardPublicationMatches(e,material.artifact,pub){return nil,errGHAGuardUnqualified}

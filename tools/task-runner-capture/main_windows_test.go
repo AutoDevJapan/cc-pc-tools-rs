@@ -202,3 +202,256 @@ func TestArtifactResultDoesNotIssueLocalAuthority(t *testing.T) {
 func TestCommandAcceptsNoCallerControlledInputs(t *testing.T) {
     if code:=run([]string{"--source","other"},io.Discard);code!=2{t.Fatal("caller source accepted")}
 }
+
+type captureJobsTrackedBody struct {
+	*bytes.Reader
+	closed bool
+}
+
+func (body *captureJobsTrackedBody) Close() error {
+	body.closed = true
+	return nil
+}
+
+func captureJobsConsumerFixture(t *testing.T, headers http.Header, document string) (int64, error) {
+	t.Helper()
+	body := &captureJobsTrackedBody{Reader: bytes.NewReader([]byte(document))}
+	calls := 0
+	client := &http.Client{Transport: roundTripFunc(func(request *http.Request) (*http.Response, error) {
+		calls++
+		if request.Method != http.MethodGet ||
+			request.URL.String() != "https://api.github.com/repos/AutoDevJapan/cc-pc-tools-rs/actions/runs/17/attempts/1/jobs?per_page=100" ||
+			request.Header.Get("Authorization") != "Bearer fixture-token" {
+			t.Fatal("consumer changed the fixed authenticated request")
+		}
+		return &http.Response{StatusCode: http.StatusOK, Header: headers, Body: body}, nil
+	})}
+	environment := captureEnv{workflowSource: strings.Repeat("a", 40), runID: 17, attempt: 1, checkRunID: 31}
+	id, err := resolveJobID(context.Background(), environment, "fixture-token", client)
+	if calls != 1 || !body.closed {
+		t.Fatal("consumer retried a page or did not close its response")
+	}
+	return id, err
+}
+
+func captureJobsOriginalDocument() (string, string) {
+	job := "{\"id\":23,\"run_id\":17,\"head_sha\":\"" + strings.Repeat("a", 40) +
+		"\",\"name\":\"Task runner software artifact\",\"status\":\"in_progress\"," +
+		"\"check_run_url\":\"https://api.github.com/repos/AutoDevJapan/cc-pc-tools-rs/check-runs/31\"}"
+	return "{\"total_count\":1,\"jobs\":[" + job + "]}", job
+}
+
+func TestResolveJobIDSinglePageNoticeAndLinkFailures(t *testing.T) {
+	document, _ := captureJobsOriginalDocument()
+	notice := "<https://docs.github.com/en/rest/about-the-rest-api/api-versions>; rel=\"deprecation\"; type=\"text/html\""
+	next := "<https://api.github.com/repos/AutoDevJapan/cc-pc-tools-rs/actions/runs/17/attempts/1/jobs?page=2>; rel=\"next\""
+	last := strings.Replace(next, "rel=\"next\"", "rel=\"last\"", 1)
+	for _, test := range []struct {
+		name    string
+		headers http.Header
+		allowed bool
+	}{
+		{"no-link", nil, true},
+		{"other-additive-header", http.Header{"X-Api-Notice": {"kept"}}, true},
+		{"deprecation", http.Header{"Link": {notice}}, true},
+		{"lowercase-header", http.Header{"link": {notice}}, true},
+		{"notice-whitespace", http.Header{"Link": {" \t" + notice + "\t "}}, true},
+		{"next", http.Header{"Link": {next}}, false},
+		{"last", http.Header{"Link": {last}}, false},
+		{"unknown-relation", http.Header{"Link": {strings.Replace(notice, "deprecation", "other", 1)}}, false},
+		{"unknown-host", http.Header{"Link": {strings.Replace(notice, "docs.github.com", "example.invalid", 1)}}, false},
+		{"other-media-type", http.Header{"Link": {strings.Replace(notice, "text/html", "application/json", 1)}}, false},
+		{"multiple-header-values", http.Header{"Link": {notice, notice}}, false},
+		{"case-alias-headers", http.Header{"Link": {notice}, "link": {notice}}, false},
+		{"mixed-pagination-values", http.Header{"Link": {notice, next}}, false},
+		{"mixed-pagination-comma", http.Header{"Link": {notice + ", " + next}}, false},
+		{"multiple-comma", http.Header{"Link": {notice + ", " + notice}}, false},
+		{"empty-field", http.Header{"Link": {""}}, false},
+		{"empty-header-values", http.Header{"Link": {}}, false},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+			id, err := captureJobsConsumerFixture(t, test.headers, document)
+			if test.allowed {
+				if err != nil || id != 23 {
+					t.Fatal("normal single-page response was rejected")
+				}
+			} else if err == nil || id != 0 {
+				t.Fatal("ambiguous or paginated response was accepted")
+			}
+		})
+	}
+}
+
+func TestResolveJobIDCriticalJSONNamesAndCardinality(t *testing.T) {
+	document, job := captureJobsOriginalDocument()
+	for _, positive := range []struct {
+		name string
+		raw  string
+	}{
+		{"normal", document},
+		{"additive-fields", "{\"future\":{\"nested\":[{\"id\":999,\"id\":998}],\"name\":null},\"total_count\":1,\"jobs\":[" +
+			strings.TrimSuffix(job, "}") + ",\"labels\":[\"hosted\"],\"runner_id\":42,\"extra\":{\"ID\":7}}]}"},
+		{"escaped-exact-critical-name", strings.Replace(document, "\"id\":", "\"\\u0069d\":", 1)},
+	} {
+		t.Run(positive.name, func(t *testing.T) {
+			if id, err := captureJobsConsumerFixture(t, nil, positive.raw); err != nil || id != 23 {
+				t.Fatal("normal critical fields with compatible additions were rejected")
+			}
+		})
+	}
+	for _, field := range []struct {
+		name, value string
+		envelope    bool
+	}{
+		{"total_count", "1", true},
+		{"jobs", "[" + job + "]", true},
+		{"id", "23", false},
+		{"run_id", "17", false},
+		{"head_sha", "\"" + strings.Repeat("a", 40) + "\"", false},
+		{"name", "\"Task runner software artifact\"", false},
+		{"status", "\"in_progress\"", false},
+		{"check_run_url", "\"https://api.github.com/repos/AutoDevJapan/cc-pc-tools-rs/check-runs/31\"", false},
+	} {
+		pair := "\"" + field.name + "\":" + field.value
+		container := job
+		if field.envelope {
+			container = document
+		}
+		if strings.Count(container, pair) != 1 {
+			t.Fatal("critical-field fixture is not an exact mutation")
+		}
+		early := "999"
+		if field.name == "jobs" {
+			early = "[]"
+		} else if field.name != "id" && field.name != "run_id" && field.name != "total_count" {
+			early = "\"earlier\""
+		}
+		escapedName := "\"\\u00" + strconv.FormatInt(int64(field.name[0]), 16) + field.name[1:] + "\""
+		for _, mutation := range []struct {
+			name, replacement string
+		}{
+			{"duplicate-different-first", "\"" + field.name + "\":" + early + "," + pair},
+			{"duplicate-identical", pair + "," + pair},
+			{"case-alias-only", "\"" + strings.ToUpper(field.name) + "\":" + field.value},
+			{"case-alias-before", "\"" + strings.ToUpper(field.name) + "\":" + early + "," + pair},
+			{"case-alias-after", pair + ",\"" + strings.ToUpper(field.name) + "\":" + early},
+			{"escaped-duplicate", escapedName + ":" + early + "," + pair},
+			{"null", "\"" + field.name + "\":null"},
+			{"wrong-type", "\"" + field.name + "\":{}"},
+		} {
+			t.Run(field.name+"/"+mutation.name, func(t *testing.T) {
+				changed := strings.Replace(container, pair, mutation.replacement, 1)
+				if changed == container {
+					t.Fatal("critical-field mutation did not change bytes")
+				}
+				input := changed
+				if !field.envelope {
+					input = "{\"total_count\":1,\"jobs\":[" + changed + "]}"
+				}
+				if id, err := captureJobsConsumerFixture(t, nil, input); err == nil || id != 0 {
+					t.Fatal("ambiguous critical response was accepted")
+				}
+			})
+		}
+		t.Run(field.name+"/missing", func(t *testing.T) {
+			var fields map[string]json.RawMessage
+			if json.Unmarshal([]byte(container), &fields) != nil {
+				t.Fatal("invalid fixture")
+			}
+			delete(fields, field.name)
+			changed, err := json.Marshal(fields)
+			if err != nil {
+				t.Fatal("fixture encode")
+			}
+			input := string(changed)
+			if !field.envelope {
+				input = "{\"total_count\":1,\"jobs\":[" + input + "]}"
+			}
+			if id, err := captureJobsConsumerFixture(t, nil, input); err == nil || id != 0 {
+				t.Fatal("missing mandatory field was accepted")
+			}
+		})
+	}
+	for _, bad := range []struct {
+		name, raw string
+	}{
+		{"duplicate-selected-job", "{\"total_count\":2,\"jobs\":[" + job + "," + job + "]}"},
+		{"trailing-document", document + "{}"},
+		{"null-envelope", "null"},
+		{"array-envelope", "[" + document + "]"},
+		{"null-job", "{\"total_count\":1,\"jobs\":[null]}"},
+		{"object-jobs", "{\"total_count\":1,\"jobs\":{}}"},
+		{"count-mismatch", strings.Replace(document, "\"total_count\":1", "\"total_count\":2", 1)},
+		{"too-many-jobs", "{\"total_count\":101,\"jobs\":[" + strings.TrimSuffix(strings.Repeat(job+",", 101), ",") + "]}"},
+	} {
+		t.Run(bad.name, func(t *testing.T) {
+			if id, err := captureJobsConsumerFixture(t, nil, bad.raw); err == nil || id != 0 {
+				t.Fatal("incomplete or ambiguous job list was accepted")
+			}
+		})
+	}
+}
+
+func TestResolveJobIDRejectsInvalidFieldsInNonselectedJobs(t *testing.T) {
+	_, selected := captureJobsOriginalDocument()
+	other := strings.Replace(selected, "\"id\":23", "\"id\":24", 1)
+	other = strings.Replace(other, "\"name\":\"Task runner software artifact\"", "\"name\":\"Other job\"", 1)
+	baseline := "{\"total_count\":2,\"jobs\":[" + other + "," + selected + "]}"
+	if id, err := captureJobsConsumerFixture(t, nil, baseline); err != nil || id != 23 {
+		t.Fatal("valid nonselected row changed the selected job")
+	}
+	for _, key := range []string{"id", "run_id", "head_sha", "name", "status", "check_run_url"} {
+		for _, remove := range []bool{false, true} {
+			name := key + "/null"
+			if remove {
+				name = key + "/missing"
+			}
+			t.Run(name, func(t *testing.T) {
+				var fields map[string]json.RawMessage
+				if json.Unmarshal([]byte(other), &fields) != nil {
+					t.Fatal("invalid nonselected-row fixture")
+				}
+				if remove {
+					delete(fields, key)
+				} else {
+					fields[key] = json.RawMessage("null")
+				}
+				changed, err := json.Marshal(fields)
+				if err != nil {
+					t.Fatal("nonselected-row encode")
+				}
+				document := "{\"total_count\":2,\"jobs\":[" + string(changed) + "," + selected + "]}"
+				if document == baseline || !json.Valid([]byte(document)) {
+					t.Fatal("nonselected-row mutation was vacuous or invalid JSON")
+				}
+				if id, err := captureJobsConsumerFixture(t, nil, document); err == nil || id != 0 {
+					t.Fatal("invalid critical field was hidden in an unselected row")
+				}
+			})
+		}
+	}
+}
+
+func TestResolveJobIDRejectsBeforeLossyStructProjection(t *testing.T) {
+	document, _ := captureJobsOriginalDocument()
+	for _, field := range []string{"id", "ID"} {
+		t.Run(field, func(t *testing.T) {
+			mutated := strings.Replace(document, "\"id\":23", "\""+field+"\":999,\"id\":23", 1)
+			if mutated == document || !json.Valid([]byte(mutated)) {
+				t.Fatal("projection counter was vacuous or invalid JSON")
+			}
+			var legacy struct {
+				Jobs []struct {
+					ID int64 `json:"id"`
+				} `json:"jobs"`
+			}
+			if json.Unmarshal([]byte(mutated), &legacy) != nil ||
+				len(legacy.Jobs) != 1 || legacy.Jobs[0].ID != 23 {
+				t.Fatal("counter did not reach the standard struct-overwrite boundary")
+			}
+			if id, err := captureJobsConsumerFixture(t, nil, mutated); err == nil || id != 0 {
+				t.Fatal("struct projection hid critical field ambiguity")
+			}
+		})
+	}
+}

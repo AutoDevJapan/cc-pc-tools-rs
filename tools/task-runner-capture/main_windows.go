@@ -300,6 +300,125 @@ func verifySourceTree(records []sourceRecord,tree,archive []byte,revision string
     if len(seen)!=len(expected){return errCapture};return nil
 }
 
+// This known API-version notice form does not imply another response page.
+// Header names are case-insensitive; repeated fields, pagination and other
+// link relations are not an authority to combine or select response pages.
+func captureJobsSinglePageHeaders(headers http.Header) bool {
+	links := 0
+	for name, values := range headers {
+		if !strings.EqualFold(name, "Link") {
+			continue
+		}
+		links++
+		if links != 1 || len(values) != 1 {
+			return false
+		}
+		parts := strings.Split(values[0], ";")
+		if len(parts) != 3 {
+			return false
+		}
+		if strings.Trim(parts[0], " \t") != "<https://docs.github.com/en/rest/about-the-rest-api/api-versions>" ||
+			strings.Trim(parts[1], " \t") != "rel=\"deprecation\"" ||
+			strings.Trim(parts[2], " \t") != "type=\"text/html\"" {
+			return false
+		}
+	}
+	return true
+}
+
+type captureJobEntry struct {
+	ID          int64
+	RunID       int64
+	HeadSHA     string
+	Name        string
+	Status      string
+	CheckRunURL string
+}
+
+type captureJobsPage struct {
+	Total int
+	Jobs  []captureJobEntry
+}
+
+// Check critical names before projecting them into typed values. Unknown API
+// additions remain opaque JSON and cannot alter the selected critical fields.
+func captureJobCriticalFields(raw []byte, names []string) (map[string]json.RawMessage, error) {
+	decoder := json.NewDecoder(bytes.NewReader(raw))
+	open, err := decoder.Token()
+	if err != nil || open != json.Delim('{') {
+		return nil, errCapture
+	}
+	fields := make(map[string]json.RawMessage, len(names))
+	for decoder.More() {
+		token, err := decoder.Token()
+		name, ok := token.(string)
+		if err != nil || !ok {
+			return nil, errCapture
+		}
+		var value json.RawMessage
+		if decoder.Decode(&value) != nil {
+			return nil, errCapture
+		}
+		for _, critical := range names {
+			if !strings.EqualFold(name, critical) {
+				continue
+			}
+			if name != critical {
+				return nil, errCapture
+			}
+			if _, duplicate := fields[critical]; duplicate {
+				return nil, errCapture
+			}
+			if bytes.Equal(bytes.TrimSpace(value), []byte("null")) {
+				return nil, errCapture
+			}
+			fields[critical] = value
+		}
+	}
+	close, err := decoder.Token()
+	if err != nil || close != json.Delim('}') ||
+		decoder.Decode(new(any)) != io.EOF || len(fields) != len(names) {
+		return nil, errCapture
+	}
+	return fields, nil
+}
+
+func decodeCaptureJobsPage(raw []byte) (captureJobsPage, error) {
+	var page captureJobsPage
+	if len(raw) > 2<<20 {
+		return page, errCapture
+	}
+	envelope, err := captureJobCriticalFields(raw, []string{"total_count", "jobs"})
+	if err != nil || json.Unmarshal(envelope["total_count"], &page.Total) != nil ||
+		page.Total < 0 || page.Total > 100 {
+		return captureJobsPage{}, errCapture
+	}
+	var entries []json.RawMessage
+	if json.Unmarshal(envelope["jobs"], &entries) != nil ||
+		page.Total != len(entries) || len(entries) > 100 {
+		return captureJobsPage{}, errCapture
+	}
+	for _, entry := range entries {
+		fields, err := captureJobCriticalFields(entry, []string{
+			"id", "run_id", "head_sha", "name", "status", "check_run_url",
+		})
+		if err != nil {
+			return captureJobsPage{}, errCapture
+		}
+		var job captureJobEntry
+		if json.Unmarshal(fields["id"], &job.ID) != nil ||
+			json.Unmarshal(fields["run_id"], &job.RunID) != nil ||
+			json.Unmarshal(fields["head_sha"], &job.HeadSHA) != nil ||
+			json.Unmarshal(fields["name"], &job.Name) != nil ||
+			json.Unmarshal(fields["status"], &job.Status) != nil ||
+			json.Unmarshal(fields["check_run_url"], &job.CheckRunURL) != nil {
+			return captureJobsPage{}, errCapture
+		}
+		page.Jobs = append(page.Jobs, job)
+	}
+	return page, nil
+}
+
 // resolveJobID uses the authenticated jobs API for this exact run attempt.
 // The workflow supplies its own check_run_id; a job name/key alone is not ID.
 func resolveJobID(ctx context.Context,e captureEnv,token string,client *http.Client) (int64,error) {
@@ -308,10 +427,9 @@ func resolveJobID(ctx context.Context,e captureEnv,token string,client *http.Cli
     req,err:=http.NewRequestWithContext(ctx,http.MethodGet,endpoint,nil);if err!=nil{return 0,errCapture}
     req.Header.Set("Authorization","Bearer "+token);req.Header.Set("Accept","application/vnd.github+json");req.Header.Set("X-GitHub-Api-Version","2022-11-28")
     response,err:=client.Do(req);if err!=nil{return 0,errCapture}
-    if response.StatusCode!=http.StatusOK||response.Header.Get("Link")!="" {_=response.Body.Close();return 0,errCapture}
+    if response.StatusCode!=http.StatusOK||!captureJobsSinglePageHeaders(response.Header) {_=response.Body.Close();return 0,errCapture}
     raw,err:=io.ReadAll(io.LimitReader(response.Body,2<<20+1));closeErr:=response.Body.Close();if err!=nil||closeErr!=nil||len(raw)>2<<20{return 0,errCapture};defer clear(raw)
-    var envelope struct{Total int `json:"total_count"`;Jobs []struct{ID int64 `json:"id"`;RunID int64 `json:"run_id"`;HeadSHA string `json:"head_sha"`;Name string `json:"name"`;Status string `json:"status"`;CheckRunURL string `json:"check_run_url"`} `json:"jobs"`}
-    dec:=json.NewDecoder(bytes.NewReader(raw));if dec.Decode(&envelope)!=nil||dec.Decode(new(any))!=io.EOF||envelope.Total!=len(envelope.Jobs)||len(envelope.Jobs)>100{return 0,errCapture}
+    envelope,err:=decodeCaptureJobsPage(raw);if err!=nil{return 0,errCapture}
     expected:=fmt.Sprintf("https://api.github.com/repos/AutoDevJapan/cc-pc-tools-rs/check-runs/%d",e.checkRunID)
     var id int64;matches:=0
     for _,job:=range envelope.Jobs {if job.RunID==e.runID&&job.HeadSHA==e.workflowSource&&job.Name=="Task runner software artifact"&&job.Status=="in_progress"&&job.CheckRunURL==expected&&job.ID>0 {id=job.ID;matches++}}

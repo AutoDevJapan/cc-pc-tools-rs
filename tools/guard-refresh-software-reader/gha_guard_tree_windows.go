@@ -129,7 +129,7 @@ func ghaGuardGitSubtree(entries []ghaGuardGitTreeEntry, name string) (string, er
     return "", errGHAGuardUnqualified
 }
 
-func ghaGuardVerifyGitSnapshot(ctx context.Context, client *http.Client, commitID, treeID string, records []ghaGuardSourceRecord) error {
+func ghaGuardVerifyGitTreeSnapshot(ctx context.Context, client *http.Client, commitID, treeID string, records []ghaGuardSourceRecord) error {
     if ctx == nil || ctx.Err() != nil || client == nil || !ghaGuardHex(commitID, 40) || !ghaGuardHex(treeID, 40) || len(records) == 0 || len(records) > 4096 { return errGHAGuardUnqualified }
     var repo struct { ID int64 }
     if ghaGuardGitJSON(ctx, client, ghaGuardGitAPI, &repo) != nil || repo.ID != 1406818713 { return errGHAGuardUnqualified }
@@ -180,7 +180,22 @@ func ghaGuardVerifyGitSnapshot(ctx context.Context, client *http.Client, commitI
         return nil
     }
     if walk(guardTree, "repair-guard", 0) != nil || walk(contractTree, "tools/civ6-ci-contract", 0) != nil || len(found) != len(expected) { return errGHAGuardUnqualified }
-    return ghaGuardVerifyGitBlobs(ctx, client, records)
+    return nil
+}
+
+// The existing per-blob path stays available and unchanged in meaning.
+func ghaGuardVerifyGitSnapshot(ctx context.Context, client *http.Client, commitID, treeID string, records []ghaGuardSourceRecord) error {
+    if ghaGuardVerifyGitTreeSnapshot(ctx,client,commitID,treeID,records)!=nil {return errGHAGuardUnqualified}
+    return ghaGuardVerifyGitBlobs(ctx,client,records)
+}
+
+// The alternate checks the same tree and every input from the fixed official archive.
+func ghaGuardVerifyGitSnapshotViaPublicArchive(ctx context.Context, client *http.Client, commitID, treeID string, records []ghaGuardSourceRecord) error {
+    if commitID!=ghaGuardSource || treeID!=ghaGuardSourceTree {return errGHAGuardUnqualified}
+    if ghaGuardVerifyGitTreeSnapshot(ctx,client,commitID,treeID,records)!=nil {return errGHAGuardUnqualified}
+    raw,err:=ghaGuardFetchPinnedSourceArchive(ctx);if err!=nil {return errGHAGuardUnqualified}
+    defer clear(raw)
+    return ghaGuardValidatePinnedSourceArchive(ctx,raw,records)
 }
 
 func ghaGuardVerifyGitBlobs(ctx context.Context, client *http.Client, records []ghaGuardSourceRecord) error {
@@ -220,31 +235,39 @@ func ghaGuardVerifyGitBlobs(ctx context.Context, client *http.Client, records []
 
 // The archive is already checked by the caller; its proof is independently
 // parsed and bound again before its selected inputs are compared with Git.
-func ghaGuardVerifyArchiveGitSource(ctx context.Context, archive []byte, manifest ghaGuardManifest) error {
+func ghaGuardVerifyArchiveGitSource(ctx context.Context, archive []byte, manifest ghaGuardManifest) (result error) {
     if ctx == nil || ctx.Err() != nil { return errGHAGuardUnqualified }
-    authority := ghaGuardNormalEvidenceAuthority()
-    if authority == nil || authority.client == nil { return errGHAGuardUnqualified }
+    authority,err := ghaGuardNormalEvidenceAuthority(ctx)
+    if err != nil || authority == nil || authority.client == nil { return errGHAGuardUnqualified }
+    defer func(){result=ghaGuardCloseCredentialAuthority(authority,result)}()
     return ghaGuardVerifyArchiveGitSourceWithClient(ctx, archive, manifest, authority.client)
 }
 
 // This explicit client form is a package-test seam, and does not mint authority.
-func ghaGuardVerifyArchiveGitSourceWithClient(ctx context.Context, archive []byte, manifest ghaGuardManifest, client *http.Client) error {
-    if ctx == nil || ctx.Err() != nil || client == nil || manifest.RepositoryID != 1406818713 || manifest.Source != ghaGuardSource || manifest.SourceTree != ghaGuardSourceTree || len(archive) == 0 || len(archive) > ghaGuardArchiveLimit { return errGHAGuardUnqualified }
-    z, err := zip.NewReader(bytes.NewReader(archive), int64(len(archive)))
-    if err != nil || len(z.File) != 3 { return errGHAGuardUnqualified }
+func ghaGuardArchiveSourceRecords(ctx context.Context, archive []byte, manifest ghaGuardManifest, client *http.Client) ([]ghaGuardSourceRecord,error) {
+    if ctx == nil || ctx.Err() != nil || client == nil || manifest.RepositoryID != 1406818713 || manifest.Source != ghaGuardSource || manifest.SourceTree != ghaGuardSourceTree || len(archive) == 0 || len(archive) > ghaGuardArchiveLimit { return nil,errGHAGuardUnqualified }
+    z,err:=zip.NewReader(bytes.NewReader(archive),int64(len(archive)))
+    if err!=nil || len(z.File)!=3 {return nil,errGHAGuardUnqualified}
     var target *zip.File
-    for _, f := range z.File { if f.Name == "source-proof.json" { if target != nil { return errGHAGuardUnqualified }; target = f } }
-    if target == nil || target.UncompressedSize64 > 8<<20 { return errGHAGuardUnqualified }
-    file, err := target.Open()
-    if err != nil { return errGHAGuardUnqualified }
-    raw, readErr := io.ReadAll(io.LimitReader(file, (8<<20)+1))
-    closeErr := file.Close()
-    if readErr != nil || closeErr != nil || len(raw) > 8<<20 || uint64(len(raw)) != target.UncompressedSize64 { clear(raw); return errGHAGuardUnqualified }
+    for _,f:=range z.File {if f.Name=="source-proof.json" {if target!=nil {return nil,errGHAGuardUnqualified};target=f}}
+    if target==nil || target.UncompressedSize64>8<<20 {return nil,errGHAGuardUnqualified}
+    file,err:=target.Open();if err!=nil {return nil,errGHAGuardUnqualified}
+    raw,readErr:=io.ReadAll(io.LimitReader(file,(8<<20)+1));closeErr:=file.Close()
+    if readErr!=nil || closeErr!=nil || len(raw)>8<<20 || uint64(len(raw))!=target.UncompressedSize64 {clear(raw);return nil,errGHAGuardUnqualified}
     defer clear(raw)
-    if ghaGuardValidateSourceProof(ctx, raw, manifest) != nil { return errGHAGuardUnqualified }
-    var proof ghaGuardSourceProof
-    if json.Unmarshal(raw, &proof) != nil { return errGHAGuardUnqualified }
+    if ghaGuardValidateSourceProof(ctx,raw,manifest)!=nil {return nil,errGHAGuardUnqualified}
+    var proof ghaGuardSourceProof;if json.Unmarshal(raw,&proof)!=nil {return nil,errGHAGuardUnqualified}
     var snapshot ghaGuardProofSnapshot
-    if json.Unmarshal(proof.Before, &snapshot) != nil || len(snapshot.Inputs) != 249 { return errGHAGuardUnqualified }
-    return ghaGuardVerifyGitSnapshot(ctx, client, ghaGuardSource, ghaGuardSourceTree, snapshot.Inputs)
+    if json.Unmarshal(proof.Before,&snapshot)!=nil || len(snapshot.Inputs)!=249 {return nil,errGHAGuardUnqualified}
+    return snapshot.Inputs,nil
+}
+
+func ghaGuardVerifyArchiveGitSourceWithClient(ctx context.Context, archive []byte, manifest ghaGuardManifest, client *http.Client) error {
+    records,err:=ghaGuardArchiveSourceRecords(ctx,archive,manifest,client);if err!=nil {return errGHAGuardUnqualified}
+    return ghaGuardVerifyGitSnapshot(ctx,client,ghaGuardSource,ghaGuardSourceTree,records)
+}
+
+func ghaGuardVerifyArchiveGitSourceViaPublicArchiveWithClient(ctx context.Context, archive []byte, manifest ghaGuardManifest, client *http.Client) error {
+    records,err:=ghaGuardArchiveSourceRecords(ctx,archive,manifest,client);if err!=nil {return errGHAGuardUnqualified}
+    return ghaGuardVerifyGitSnapshotViaPublicArchive(ctx,client,ghaGuardSource,ghaGuardSourceTree,records)
 }

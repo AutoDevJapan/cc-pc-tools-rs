@@ -122,6 +122,11 @@ func validate(r request) error {
 	if len(r.Args) == 0 || len(r.Args) > 128 {
 		return errors.New("argument count rejected")
 	}
+	clean, _, _, err := splitProjectionToolchainArgs(r.Args)
+	if err != nil {
+		return err
+	}
+	r.Args = clean
 	switch r.Args[0] {
 	case "test", "check", "clippy", "nextest", "fmt", "metadata", "--version":
 	default:
@@ -746,7 +751,309 @@ func dockerExecuteArgsForProfile(p normalProfile, mode, jobs, tests string, args
 	return append(a, args...)
 }
 
-func execute(args []string) int {
+
+const projectionRustRelease = "1.95.0"
+const projectionRustEnv = "CC_LINUX_CARGO_TOOLCHAIN"
+const projectionRustRequirement = "--ci-toolchain=1.95.0"
+const projectionRustObservation = "--ci-toolchain-versions=1.95.0"
+const projectionVersionLimit = 4096
+
+var errProjectionToolchain = errors.New("fixed Linux toolchain unavailable")
+var projectionReleasePattern = regexp.MustCompile(`^[0-9]+\.[0-9]+\.[0-9]+([-+][0-9A-Za-z.-]+)?$`)
+
+type projectionToolchainVersions struct {
+	Domain string `json:"domain"`
+	Cargo  string `json:"cargo_release"`
+	Rustc  string `json:"rustc_release"`
+}
+
+// Only these two closed markers exist. They add a requirement, never a grant,
+// and are removed only inside the admitted Cargo execution context.
+func splitProjectionToolchainArgs(args []string) ([]string, bool, bool, error) {
+	if len(args) == 0 {
+		return nil, false, false, errProjectionToolchain
+	}
+	clean := make([]string, 0, len(args))
+	required, observation, harness := false, false, false
+	for i, arg := range args {
+		if harness || arg == "--" {
+			harness = true
+			clean = append(clean, arg)
+			continue
+		}
+		if strings.HasPrefix(arg, "--ci-toolchain") {
+			if i == 0 || required || (args[0] != "metadata" && args[0] != "test") {
+				return nil, false, false, errProjectionToolchain
+			}
+			switch arg {
+			case projectionRustRequirement:
+				required = true
+			case projectionRustObservation:
+				if i != 1 || args[0] != "metadata" || len(args) != 2 {
+					return nil, false, false, errProjectionToolchain
+				}
+				required, observation = true, true
+			default:
+				return nil, false, false, errProjectionToolchain
+			}
+			continue
+		}
+		clean = append(clean, arg)
+	}
+	return clean, required, observation, nil
+}
+
+// This one fixed workflow requirement is encoded as an argument. No caller
+// environment, version, command path or credential crosses the host boundary.
+func projectionToolchainRequest(args []string, requirement string) ([]string, error) {
+	if requirement != "" && requirement != projectionRustRelease {
+		return nil, errProjectionToolchain
+	}
+	// The external closed probe maps to the normal metadata channel. An older
+	// frontend cannot accidentally pass this operation through as Cargo work.
+	if len(args) == 1 && args[0] == projectionRustObservation {
+		return []string{"metadata", projectionRustObservation}, nil
+	}
+	if requirement == "" {
+		return append([]string(nil), args...), nil
+	}
+	_, required, _, err := splitProjectionToolchainArgs(args)
+	if err != nil {
+		return nil, err
+	}
+	if required {
+		return append([]string(nil), args...), nil
+	}
+	if args[0] != "metadata" && args[0] != "test" {
+		return nil, errProjectionToolchain
+	}
+	out := []string{args[0], projectionRustRequirement}
+	return append(out, args[1:]...), nil
+}
+
+// Observation and the real Cargo child use this same cwd/environment builder.
+// The optional fixed policy can select an installed 1.95 toolchain, but cannot
+// install one or inherit RUSTC/RUSTUP/PATH overrides supplied by the runner.
+func projectionCargoCommand(args []string, jobs, tests string, required bool, scratch []string) *exec.Cmd {
+	c := exec.Command("/opt/rust/bin/cargo", args...)
+	c.Dir = "/work/cc-pc-tools-rs/cc-pc-tools-rs"
+	c.Env = []string{"HOME=/home/runner", "PATH=/opt/rust/bin:/usr/local/go/bin:/usr/local/bin:/usr/bin:/bin", "CARGO_HOME=/opt/rust", "RUSTUP_HOME=/opt/rustup", "CARGO_TARGET_DIR=/work/target", "CARGO_BUILD_JOBS=" + jobs, "RUST_TEST_THREADS=" + tests, "NEXTEST_TEST_THREADS=" + tests}
+	c.Env = append(c.Env, scratch...)
+	if required {
+		c.Env = append(c.Env, "RUSTUP_TOOLCHAIN="+projectionRustRelease, "RUSTUP_AUTO_INSTALL=0", "RUSTC=/opt/rust/bin/rustc")
+	}
+	return c
+}
+
+type projectionVersionOutput struct {
+	data     []byte
+	overflow bool
+}
+
+func (b *projectionVersionOutput) Write(p []byte) (int, error) {
+	n := len(p)
+	remaining := projectionVersionLimit - len(b.data)
+	if len(p) > remaining {
+		b.overflow = true
+		p = p[:remaining]
+	}
+	b.data = append(b.data, p...)
+	return n, nil // Continue draining after overflow, retaining at most 4096 bytes.
+}
+
+func runProjectionVersion(ctx context.Context, template *exec.Cmd) ([]byte, error) {
+	c := exec.CommandContext(ctx, template.Path, template.Args[1:]...)
+	c.Dir, c.Env = template.Dir, append([]string(nil), template.Env...)
+	group(c)
+	out := &projectionVersionOutput{}
+	c.Stdout, c.Stderr = out, io.Discard
+	c.WaitDelay = time.Second
+	err := c.Run()
+	if c.Process != nil {
+		killGroup(c)
+	}
+	if err != nil || ctx.Err() != nil || out.overflow || len(out.data) == 0 {
+		return nil, errProjectionToolchain
+	}
+	return append([]byte(nil), out.data...), nil
+}
+
+func projectionVersionRelease(raw []byte, tool string) (string, error) {
+	if len(raw) == 0 || len(raw) > projectionVersionLimit {
+		return "", errProjectionToolchain
+	}
+	lines := strings.Split(strings.TrimSpace(string(raw)), "\n")
+	header := strings.Fields(lines[0])
+	if len(header) < 2 || header[0] != tool || len(header[1]) > 64 || !projectionReleasePattern.MatchString(header[1]) {
+		return "", errProjectionToolchain
+	}
+	release, count := "", 0
+	for _, line := range lines {
+		if strings.HasPrefix(line, "release:") {
+			count++
+			release = strings.TrimSpace(strings.TrimPrefix(line, "release:"))
+		}
+	}
+	if count != 1 || release != header[1] {
+		return "", errProjectionToolchain
+	}
+	return release, nil
+}
+
+// The production runner is fixed below. The private execution seam lets tests
+// supply finite stdout/faults while checking the exact native command context.
+func observeProjectionToolchainWith(parent context.Context, template *exec.Cmd, run func(context.Context, *exec.Cmd) ([]byte, error)) (projectionToolchainVersions, error) {
+	result := projectionToolchainVersions{Domain: "cc-pc-tools-linux-toolchain-v1"}
+	if parent == nil || parent.Err() != nil {
+		return projectionToolchainVersions{}, errProjectionToolchain
+	}
+	ctx, cancel := context.WithTimeout(parent, 15*time.Second)
+	defer cancel()
+	for _, tool := range []string{"cargo", "rustc"} {
+		if ctx.Err() != nil {
+			return projectionToolchainVersions{}, errProjectionToolchain
+		}
+		c := exec.Command("/opt/rust/bin/"+tool, "--version", "--verbose")
+		c.Dir, c.Env = template.Dir, append([]string(nil), template.Env...)
+		raw, err := run(ctx, c)
+		if err != nil || ctx.Err() != nil {
+			return projectionToolchainVersions{}, errProjectionToolchain
+		}
+		release, err := projectionVersionRelease(raw, tool)
+		if err != nil {
+			return projectionToolchainVersions{}, err
+		}
+		if tool == "cargo" {
+			result.Cargo = release
+		} else {
+			result.Rustc = release
+		}
+	}
+	return result, nil
+}
+
+func checkProjectionToolchainWith(ctx context.Context, template *exec.Cmd, run func(context.Context, *exec.Cmd) ([]byte, error)) (projectionToolchainVersions, error) {
+	result, err := observeProjectionToolchainWith(ctx, template, run)
+	if err != nil || result.Cargo != projectionRustRelease || result.Rustc != projectionRustRelease {
+		return result, errProjectionToolchain
+	}
+	return result, nil
+}
+
+func writeProjectionVersions(out io.Writer, versions projectionToolchainVersions) error {
+	raw, err := json.Marshal(versions)
+	if err != nil {
+		return errProjectionToolchain
+	}
+	raw = append(raw, '\n')
+	n, err := out.Write(raw)
+	if err != nil || n != len(raw) {
+		return errProjectionToolchain
+	}
+	return nil
+}
+
+// Tests use the same command factory and this same execution boundary. Normal
+// CLI entry fixes both runners below; no callback or executable is an input.
+func executeProjectionCargo(ctx context.Context, args []string, jobs, tests string, scratch []string, out, diagnostic io.Writer, observe func(context.Context, *exec.Cmd) ([]byte, error), run func(context.Context, *exec.Cmd) int) int {
+	if ctx == nil || ctx.Err() != nil {
+		return 125
+	}
+	clean, required, observation, err := splitProjectionToolchainArgs(args)
+	if err != nil {
+		return 1
+	}
+	c := projectionCargoCommand(clean, jobs, tests, required, scratch)
+	if required {
+		versions, err := checkProjectionToolchainWith(ctx, c, observe)
+		if ctx.Err() != nil {
+			return 125
+		}
+		if err != nil {
+			if versions.Cargo != "" && versions.Rustc != "" {
+				fmt.Fprintf(diagnostic, "linux-toolchain-mismatch cargo=%s rustc=%s\n", versions.Cargo, versions.Rustc)
+			} else {
+				fmt.Fprintln(diagnostic, "linux-toolchain-unavailable")
+			}
+			return 1
+		}
+		if observation {
+			if writeProjectionVersions(out, versions) != nil {
+				return 1
+			}
+			if ctx.Err() != nil {
+				return 125
+			}
+			return 0
+		}
+		marker := "linux-toolchain-verified cargo=1.95.0 rustc=1.95.0\n"
+		if n, err := io.WriteString(diagnostic, marker); err != nil || n != len(marker) {
+			return 1
+		}
+	}
+	// A probe or marker write can finish concurrently with stdin EOF. The
+	// native runner also binds this same context before its actual Start.
+	if ctx.Err() != nil {
+		return 125
+	}
+	return run(ctx, c)
+}
+
+// The dedicated execute process owns this one stdin monitor for the whole
+// invocation. It is started before any version probe and joined on all exits.
+type projectionInvocation struct {
+	ctx       context.Context
+	cancel    context.CancelFunc
+	input     *os.File
+	done      chan struct{}
+	closeOnce sync.Once
+	closeErr  error
+}
+
+// execute runs in the fixed Linux container. Opening a pipe whose writer
+// already closed must not wait for a new writer before EOF can cancel us.
+const projectionLinuxNonblock = 0x800
+
+func openProjectionInvocationInput(input *os.File) (*os.File, error) {
+	if input == nil {
+		return nil, errProjectionToolchain
+	}
+	path := fmt.Sprintf("/proc/self/fd/%d", input.Fd())
+	return os.OpenFile(path, os.O_RDONLY|projectionLinuxNonblock, 0)
+}
+
+func beginProjectionInvocation(input *os.File) (*projectionInvocation, error) {
+	if input == nil {
+		return nil, errProjectionToolchain
+	}
+	// The owner receives only its dedicated pipe: Go Close cancels its read.
+	// Linux execute reopens stdin so its descriptor is runtime-pollable.
+	ctx, cancel := context.WithCancel(context.Background())
+	owner := &projectionInvocation{ctx: ctx, cancel: cancel, input: input, done: make(chan struct{})}
+	started := make(chan struct{})
+	go func() {
+		defer close(owner.done)
+		close(started)
+		_, _ = io.Copy(io.Discard, input)
+		cancel()
+	}()
+	<-started
+	return owner, nil
+}
+
+func (owner *projectionInvocation) Close() error {
+	owner.closeOnce.Do(func() {
+		owner.cancel()
+		owner.closeErr = owner.input.Close()
+		if errors.Is(owner.closeErr, os.ErrClosed) {
+			owner.closeErr = nil
+		}
+		<-owner.done
+	})
+	return owner.closeErr
+}
+
+func execute(args []string) (code int) {
 	if len(args) < 3 {
 		return 1
 	}
@@ -758,28 +1065,59 @@ func execute(args []string) int {
 	if e != nil || tests < 1 || tests > 10 {
 		return 1
 	}
-	c := exec.Command("/opt/rust/bin/cargo", args[2:]...)
-	group(c)
-	c.Dir = "/work/cc-pc-tools-rs/cc-pc-tools-rs"
-	c.Env = []string{"HOME=/home/runner", "PATH=/opt/rust/bin:/usr/local/go/bin:/usr/local/bin:/usr/bin:/bin", "CARGO_HOME=/opt/rust", "RUSTUP_HOME=/opt/rustup", "CARGO_TARGET_DIR=/work/target", "CARGO_BUILD_JOBS=" + args[0], "RUST_TEST_THREADS=" + args[1], "NEXTEST_TEST_THREADS=" + args[1]}
+	// Reopen this same Linux stdin pipe as an owned pollable descriptor.
+	// This does not read a pathname supplied by the caller.
+	input, err := openProjectionInvocationInput(os.Stdin)
+	if err != nil {
+		return 1
+	}
+	owner, err := beginProjectionInvocation(input)
+	if err != nil {
+		input.Close()
+		return 1
+	}
+	defer func() {
+		if owner.Close() != nil && code == 0 {
+			code = 1
+		}
+	}()
+	if owner.ctx.Err() != nil {
+		return 125
+	}
 	scratchEnv, err := cargoScratchEnv(os.Getenv("CC_LINUX_RUNNER_MODE"))
 	if err != nil {
 		return 1
 	}
-	c.Env = append(c.Env, scratchEnv...)
+	return executeProjectionCargo(owner.ctx, args[2:], args[0], args[1], scratchEnv, os.Stdout, os.Stderr, runProjectionVersion, executeCargoCommand)
+}
+
+func executeCargoCommand(ctx context.Context, template *exec.Cmd) int {
+	if ctx == nil || ctx.Err() != nil {
+		return 125
+	}
+	// CommandContext rechecks cancellation at Start; the select below owns
+	// process-group drain and Wait before the invocation monitor is released.
+	c := exec.CommandContext(ctx, template.Path, template.Args[1:]...)
+	c.Dir, c.Env = template.Dir, append([]string(nil), template.Env...)
+	group(c)
 	c.Stdout = os.Stdout
 	c.Stderr = os.Stderr
 	if c.Start() != nil {
+		if ctx.Err() != nil {
+			return 125
+		}
 		return 1
 	}
 	done := make(chan error, 1)
 	go func() { done <- c.Wait() }()
-	disconnected := make(chan struct{})
-	go func() { _, _ = io.Copy(io.Discard, os.Stdin); close(disconnected) }()
 	select {
 	case e := <-done:
-		return finishGroup(c, e)
-	case <-disconnected:
+		result := finishGroup(c, e)
+		if ctx.Err() != nil {
+			return 125
+		}
+		return result
+	case <-ctx.Done():
 		killGroup(c)
 		<-done
 		return 125
@@ -1225,7 +1563,12 @@ func main() {
 	if filepath.Base(os.Args[0]) == "cargo" {
 		dir, _ := os.Getwd()
 		r, _ := jobRequestFromEnv()
-		r.Args, r.Dir = args, dir
+		requiredArgs, err := projectionToolchainRequest(args, os.Getenv(projectionRustEnv))
+		if err != nil {
+			fmt.Fprintln(os.Stderr, "linux-toolchain-requirement-rejected")
+			os.Exit(1)
+		}
+		r.Args, r.Dir = requiredArgs, dir
 		os.Exit(rpc("/cargo", r))
 	}
 	if len(args) == 0 {

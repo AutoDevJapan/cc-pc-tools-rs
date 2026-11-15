@@ -1,5 +1,7 @@
 # 本人の依頼と質問用Taskメタデータの照合
 
+現在Taskと元入力の通常読取は[読取専用source照合](task-question-source-projection.md)を参照する。これは以下の用途資格を登録・代替しない。
+
 通常のTask照合は登録されたproject rootのguardを使う。
 rootが帰属未確認として保護されている場合に限り、本人の実依頼とTask作成の原記録を独立に照合し、
 一つの通常UI質問と、その本人回答の受領・配送に必要なTask/Repoメタデータを使える。

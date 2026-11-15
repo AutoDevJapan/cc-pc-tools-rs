@@ -56,6 +56,7 @@ func TestAskStrictOwnedJobCollection(t *testing.T) {
         wantReaped bool
     }{
         {"normal","normal",askStrictJobFaults{captureDiagnostics:true},true},
+        {"known-child","long",askStrictJobFaults{captureDiagnostics:true},true},
         {"query-failure-then-zero","normal",askStrictJobFaults{failListOnce:true},false},
         {"partial-list-then-zero","normal",askStrictJobFaults{partialListOnce:true},false},
         {"member-open-failure","long",askStrictJobFaults{failMemberOpenOnce:true},false},
@@ -74,6 +75,7 @@ func TestAskStrictOwnedJobCollection(t *testing.T) {
         ctx=context.WithValue(ctx,askStrictJobFaultKey{},&faults)
         var ready struct{PID int `json:"pid"`;ShortExited bool `json:"short_exited"`}
         var childHandle syscall.Handle
+        var childConfirmed bool
         var readyErr error
         result:=askOwnedChildWithHandshake(ctx,os.Args[0],func(raw []byte)bool{
             if json.Unmarshal(raw,&ready)!=nil {readyErr=fmt.Errorf("invalid owned ready");return false}
@@ -94,6 +96,7 @@ func TestAskStrictOwnedJobCollection(t *testing.T) {
             state,err:=syscall.WaitForSingleObject(childHandle,2000)
             closeErr:=syscall.CloseHandle(childHandle)
             if err!=nil||state!=syscall.WAIT_OBJECT_0||closeErr!=nil {t.Fatal("owned descendant not confirmed terminated")}
+            childConfirmed=true
         }
         if readyErr!=nil||!result.Started||!result.Assigned||!result.WaitVerified||result.TimedOut||result.Exit!=0 {
             t.Fatalf("owned root setup/wait failed: %v %+v",readyErr,result)
@@ -108,7 +111,14 @@ func TestAskStrictOwnedJobCollection(t *testing.T) {
         if !faults.zeroObserved||!faults.finalQueryOK||faults.finalActive!=0 {t.Fatal("native final active-zero was not observed")}
         switch tc.name {
         case "normal":
-            if faults.finalTotal!=1||faults.finalHeld!=1||faults.finalSignalled!=1||faults.finalRootCreation==0 {t.Fatal("root generation was not pinned and signalled")}
+            if !askStrictNormalFixtureEvidence(faults) {t.Fatal("root generation and complete collection not confirmed")}
+        case "known-child":
+            if ready.PID<=0||!childConfirmed||!askStrictNormalFixtureEvidence(faults) {t.Fatal("known owned child was not fully collected")}
+            pinned:=false
+            for _,member:=range faults.finalMembers {
+                if member.PID==uint32(ready.PID)&&!member.Root&&member.CreationNonZero {pinned=true;break}
+            }
+            if !pinned {t.Fatal("known child generation not present in bounded job evidence")}
         case "query-failure-then-zero":
             if !faults.listFaultSeen||faults.listCalls<2||faults.finalTotal<1 {t.Fatal("sticky query fault not exercised")}
         case "partial-list-then-zero":
@@ -168,4 +178,27 @@ func TestAskStrictJobDiagnosticsAreBounded(t *testing.T) {
     collector.faults=disabled
     collector.recordDiagnostic(nil,1,askStrictJobMember{created:1})
     if len(disabled.finalMembers)!=0||disabled.finalOmitted!=0||disabled.diagnosticOmittedOverflow{t.Fatal("disabled diagnostic recorded data")}
+}
+
+// An owned Job can contain multiple processes; each must be pinned and signalled.
+func askStrictNormalFixtureEvidence(f askStrictJobFaults) bool {
+    return f.finalTotal>0&&uint64(f.finalTotal)==uint64(f.finalHeld)&&f.finalHeld==f.finalSignalled&&f.finalRootCreation!=0
+}
+
+func TestAskStrictNormalFixtureEvidence(t *testing.T) {
+    cases:=[]struct{name string;total uint32;held,signalled int;root uint64;want bool}{
+        {"one",1,1,1,1,true},
+        {"two",2,2,2,1,true},
+        {"zero-total",0,0,0,1,false},
+        {"missing-held",2,1,1,1,false},
+        {"missing-signal",2,2,1,1,false},
+        {"extra-held",1,2,2,1,false},
+        {"extra-signal",1,1,2,1,false},
+        {"missing-root",2,2,2,0,false},
+        {"negative-held",1,-1,-1,1,false},
+    }
+    for _,tc:=range cases {t.Run(tc.name,func(t *testing.T){
+        got:=askStrictNormalFixtureEvidence(askStrictJobFaults{finalTotal:tc.total,finalHeld:tc.held,finalSignalled:tc.signalled,finalRootCreation:tc.root})
+        if got!=tc.want {t.Fatalf("fixture evidence: got %t want %t",got,tc.want)}
+    })}
 }

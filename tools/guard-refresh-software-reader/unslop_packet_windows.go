@@ -261,6 +261,7 @@ type unslopOriginInspection struct {
 	CompletedTurns         int    `json:"completed_turns"`
 	OriginalFilesQualified bool   `json:"original_files_qualified"`
 	BodyReads              int    `json:"body_reads"`
+	History                *unslopHistoryFacts `json:"history,omitempty"`
 }
 
 type unslopPurposeRuntime struct {
@@ -321,6 +322,7 @@ func inspectUnslopEvaluationOrigin(ctx context.Context, rpc unslopHistoryRPC, th
 		}
 		raw, e := rpc.Call(ctx, "thread/read", map[string]any{"threadId": thread, "includeTurns": false})
 		if e != nil {
+			projectUnslopHistoryFailure(&r,e)
 			return r
 		}
 		var page struct {
@@ -348,6 +350,7 @@ func inspectUnslopEvaluationOrigin(ctx context.Context, rpc unslopHistoryRPC, th
 			raw, e = rpc.Call(ctx, "thread/turns/list", p)
 			if e != nil || ctx.Err() != nil {
 				clear(raw)
+				projectUnslopHistoryFailure(&r,e)
 				return r
 			}
 			var turns struct {

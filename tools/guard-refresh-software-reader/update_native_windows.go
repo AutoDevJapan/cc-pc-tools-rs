@@ -26,9 +26,14 @@ var errUpdateObject = errors.New("software_object_unavailable")
 
 type nativeUpdateObject struct {
 	f       *os.File
+	leaf    *softwareOwnedFile
 	parents []syscall.Handle
 	raw     []byte
 	id      softwareIdentity
+	closeAttempted bool
+	closeError error
+	closeReport softwareCleanupReport
+	unconfirmedResources []io.Closer
 }
 
 func fileSoftwareIdentity(f *os.File) (softwareIdentity, error) {
@@ -39,12 +44,12 @@ func fileSoftwareIdentity(f *os.File) (softwareIdentity, error) {
 	return softwareIdentity{fmt.Sprint(info.VolumeSerialNumber), fmt.Sprint(uint64(info.FileIndexHigh)<<32 | uint64(info.FileIndexLow)), fmt.Sprint(uint64(info.CreationTime.HighDateTime)<<32 | uint64(info.CreationTime.LowDateTime))}, nil
 }
 
-func openUpdateObject(path string) (updateObject, error) {
+func openUpdateObject(path string) (object updateObject, resultErr error) {
 	o := &nativeUpdateObject{}
 	ok := false
 	defer func() {
 		if !ok {
-			o.Close()
+			resultErr = finishSoftwareAcquisition(resultErr, o)
 		}
 	}()
 	var parents []string
@@ -55,17 +60,19 @@ func openUpdateObject(path string) (updateObject, error) {
 		}
 	}
 	for i := len(parents) - 1; i >= 0; i-- {
-		h, good := openPlain(parents[i], true)
-		if !good {
-			return nil, errUpdateObject
+		h, err := openPlainDetailed(parents[i], true)
+		if err != nil {
+			return nil, err
 		}
 		o.parents = append(o.parents, h)
 	}
-	h, good := openPlain(path, false)
-	if !good {
-		return nil, errUpdateObject
+	h, err := openPlainDetailed(path, false)
+	if err != nil {
+		return nil, err
 	}
 	o.f = os.NewFile(uintptr(h), path)
+	o.leaf = newSoftwareOwnedFile(o.f)
+	if !o.leaf.identityKnown {return nil,errUpdateObject}
 	stat, e := o.f.Stat()
 	if e != nil || stat.Size() <= 0 || stat.Size() > 64<<20 {
 		return nil, errUpdateObject
@@ -86,21 +93,25 @@ func (o *nativeUpdateObject) Raw() []byte          { return o.raw }
 func (o *nativeUpdateObject) ID() softwareIdentity { return o.id }
 func (o *nativeUpdateObject) ACL() (string, error) { return updateFileACL(o.f) }
 func (o *nativeUpdateObject) Close() error {
+	if o.closeAttempted { return o.closeError }
+	o.closeAttempted = true
 	clear(o.raw)
 	o.raw = nil
-	var last error
-	if o.f != nil {
-		last = o.f.Close()
-		o.f = nil
+	resources := make([]io.Closer, 0, len(o.parents)+1)
+	for _, handle := range o.parents { resources = append(resources, &softwareOwnedHandle{handle:handle}) }
+	if o.leaf != nil { resources = append(resources, o.leaf) }
+	report := closeSoftwareOwnedResources(resources)
+	o.closeReport = report
+	if report.Failed != 0 {
+		o.closeError = &softwareCleanupError{report:report}
+		o.unconfirmedResources = resources
 	}
-	for i := len(o.parents) - 1; i >= 0; i-- {
-		if e := syscall.CloseHandle(o.parents[i]); e != nil {
-			last = e
-		}
-	}
+	o.f = nil
 	o.parents = nil
-	return last
+	return o.closeError
 }
+
+func (o *nativeUpdateObject) cleanupReport() softwareCleanupReport { return o.closeReport }
 
 func updateFileACL(f *os.File) (string, error) {
 	var sd uintptr

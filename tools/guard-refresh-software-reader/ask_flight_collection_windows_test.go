@@ -55,7 +55,7 @@ func TestAskStrictOwnedJobCollection(t *testing.T) {
         fault askStrictJobFaults
         wantReaped bool
     }{
-        {"normal","normal",askStrictJobFaults{},true},
+        {"normal","normal",askStrictJobFaults{captureDiagnostics:true},true},
         {"query-failure-then-zero","normal",askStrictJobFaults{failListOnce:true},false},
         {"partial-list-then-zero","normal",askStrictJobFaults{partialListOnce:true},false},
         {"member-open-failure","long",askStrictJobFaults{failMemberOpenOnce:true},false},
@@ -87,6 +87,9 @@ func TestAskStrictOwnedJobCollection(t *testing.T) {
             return true
         },"-test.run=^TestAskStrictJobOwnedHelper$")
         defer clear(result.Raw)
+        if tc.name=="normal" {
+            t.Logf("root generation diagnostic: total=%d held=%d signalled=%d root_creation_nonzero=%t active=%d zero=%t final_query=%t list_calls=%d shown=%d held_omitted=%d omitted_overflow=%t limit=%d members=%+v",faults.finalTotal,faults.finalHeld,faults.finalSignalled,faults.finalRootCreation!=0,faults.finalActive,faults.zeroObserved,faults.finalQueryOK,faults.listCalls,len(faults.finalMembers),faults.finalOmitted,faults.diagnosticOmittedOverflow,askStrictJobDiagnosticLimit,faults.finalMembers)
+        }
         if childHandle!=0 {
             state,err:=syscall.WaitForSingleObject(childHandle,2000)
             closeErr:=syscall.CloseHandle(childHandle)
@@ -145,4 +148,24 @@ func TestAskStrictJobRejectsUnboundRootBeforeResume(t *testing.T) {
             t.Fatal("root identity negative did not execute")
         }
     })}
+}
+
+func TestAskStrictJobDiagnosticsAreBounded(t *testing.T) {
+    faults:=&askStrictJobFaults{captureDiagnostics:true}
+    collector:=&askStrictJobCollector{root:1,faults:faults}
+    for i:=0;i<askStrictJobDiagnosticLimit+7;i++ {
+        collector.recordDiagnostic(nil,uint32(i+1),askStrictJobMember{created:1})
+    }
+    if len(faults.finalMembers)!=askStrictJobDiagnosticLimit||faults.finalOmitted!=7||
+        faults.diagnosticOmittedOverflow||!faults.finalMembers[0].Root||
+        faults.finalMembers[0].ImagePathClass!="unavailable"||collector.unknown||len(collector.members)!=0 {
+        t.Fatal("diagnostic bound or separation failed")
+    }
+    faults.finalOmitted=int(^uint(0)>>1)
+    collector.recordDiagnostic(nil,999,askStrictJobMember{created:1})
+    if !faults.diagnosticOmittedOverflow||faults.finalOmitted!=int(^uint(0)>>1){t.Fatal("omitted count overflow was not recorded")}
+    disabled:=&askStrictJobFaults{}
+    collector.faults=disabled
+    collector.recordDiagnostic(nil,1,askStrictJobMember{created:1})
+    if len(disabled.finalMembers)!=0||disabled.finalOmitted!=0||disabled.diagnosticOmittedOverflow{t.Fatal("disabled diagnostic recorded data")}
 }

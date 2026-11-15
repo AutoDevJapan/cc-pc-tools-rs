@@ -7,6 +7,7 @@ import (
     "context"
     "encoding/json"
     "errors"
+    "fmt"
     "strings"
     "testing"
 )
@@ -82,8 +83,8 @@ func TestGHAFreshInspectionPreservesCredentialReasonOnly(t *testing.T) {
         errGHAGuardCredentialUnauthorized:"guard_github_credential_unauthorized",
         errGHAGuardCredentialForbidden:"guard_github_credential_forbidden",
         errors.New("private detail"):"guard_target_artifact_unavailable",
-        &ghaFreshHTTPStatusError{phase:"runs",status:403}:"guard_fresh_public_http_403",
-        &ghaFreshHTTPStatusError{phase:"metadata",status:429}:"guard_fresh_public_http_429",
+        &ghaFreshHTTPStatusError{phase:"runs",status:403}:"guard_fresh_public_runs_http_403",
+        &ghaFreshHTTPStatusError{phase:"metadata",status:429}:"guard_fresh_public_metadata_http_429",
     } {
         if got:=ghaFreshAcquisitionReason(err);got!=want{t.Fatalf("reason %q != %q",got,want)}
     }
@@ -92,9 +93,9 @@ func TestGHAFreshInspectionPreservesCredentialReasonOnly(t *testing.T) {
     child:=askChildResult{Raw:raw,Exit:1,Started:true,Assigned:true,WaitVerified:true,Reaped:true}
     got:=ghaFreshInspectionFromChild(child)
     if got.Qualified||got.Reason!="guard_github_credential_not_found"||got.CurrentIdentity!=nil{t.Fatal("failure projection incorrect")}
-    failed.Reason="guard_fresh_public_http_403";child.Raw,_=json.Marshal(ghaFreshWorkerResult{guardTargetMetadataResult:failed,CredentialCleanupState:"unknown"})
-    if got=ghaFreshInspectionFromChild(child);got.Qualified||got.Reason!="guard_fresh_public_http_403"{t.Fatal("HTTP status lost")}
-    failed.Reason="guard_fresh_public_http_999";child.Raw,_=json.Marshal(ghaFreshWorkerResult{guardTargetMetadataResult:failed,CredentialCleanupState:"unknown"})
+    failed.Reason="guard_fresh_public_runs_http_403";child.Raw,_=json.Marshal(ghaFreshWorkerResult{guardTargetMetadataResult:failed,CredentialCleanupState:"unknown"})
+    if got=ghaFreshInspectionFromChild(child);got.Qualified||got.Reason!="guard_fresh_public_runs_http_403"{t.Fatal("HTTP status lost")}
+    failed.Reason="guard_fresh_public_runs_http_999";child.Raw,_=json.Marshal(ghaFreshWorkerResult{guardTargetMetadataResult:failed,CredentialCleanupState:"unknown"})
     if got=ghaFreshInspectionFromChild(child);got.Reason!="guard_target_worker_unqualified"{t.Fatal("invalid HTTP status accepted")}
 }
 
@@ -109,7 +110,7 @@ func TestGHAFreshInspectionPreservesCompositeFailureFlags(t *testing.T) {
         {"http-cancel","guard_github_job_log_http_401","unknown","guard_github_job_log_http_401",true,false,true,false},
         {"http-cleanup","guard_github_artifact_http_403","failed","guard_github_artifact_http_403",false,true,false,true},
         {"http-both","guard_github_metadata_http_429","failed","guard_github_metadata_http_429",true,true,true,true},
-        {"unknown-both","guard_fresh_public_http_999","failed","guard_target_worker_unqualified",true,true,true,true},
+        {"unknown-both","guard_fresh_public_runs_http_999","failed","guard_target_worker_unqualified",true,true,true,true},
         {"ordinary","guard_target_artifact_unavailable","unknown","guard_target_artifact_unavailable",true,true,true,true},
         {"cleanup-reason","guard_github_credential_cleanup_failed","failed","guard_github_credential_cleanup_failed",false,false,false,true},
     }
@@ -156,4 +157,40 @@ func TestGHAFreshStatusAndCleanupRemainSeparate(t *testing.T) {
     raw,err:=json.Marshal(result);if err!=nil{t.Fatal(err)}
     parent:=ghaFreshInspectionFromChild(askChildResult{Raw:raw,Exit:1,Started:true,Assigned:true,WaitVerified:true,Reaped:true})
     if parent.Qualified||parent.Reason!="guard_github_job_log_http_403"||!parent.Cancelled||!parent.CleanupFailed||parent.CredentialCleanupState!="failed"||!parent.WorkerReaped||!parent.WorkerResultObserved{t.Fatal("reaped parent lost child cleanup failure")}
+}
+
+func TestGHAFreshPublicHTTPPhasesReachParentDistinctly(t *testing.T) {
+    seen:=map[string]bool{}
+    for _,phase:=range []string{"runs","metadata","attestation"} {
+        for _,status:=range []int{403,429} {
+            name:=fmt.Sprintf("%s-%d",phase,status)
+            t.Run(name,func(t *testing.T){
+                failure:=errors.Join(errGHAGuardUnqualified,&ghaFreshHTTPStatusError{phase:phase,status:status},
+                    context.Canceled,errGHAGuardCredentialCleanup)
+                audit:=&ghaFreshCredentialAudit{state:"failed"}
+                worker:=ghaFreshInspectWith(context.Background(),audit,func(context.Context)(guardTargetArtifact,error){return nil,failure})
+                raw,err:=json.Marshal(worker);if err!=nil{t.Fatal(err)}
+                parent:=ghaFreshInspectionFromChild(askChildResult{Raw:raw,Exit:1,Started:true,Assigned:true,WaitVerified:true,Reaped:true})
+                want:=fmt.Sprintf("guard_fresh_public_%s_http_%d",phase,status)
+                if parent.Qualified||parent.Reason!=want||!parent.Cancelled||!parent.CleanupFailed||
+                    parent.CredentialCleanupState!="failed"||!parent.WorkerReaped||!parent.WorkerResultObserved||
+                    parent.DataAccessGranted||parent.SoftwareReplaceAllowed||parent.UpdatePerformed {
+                    t.Fatalf("public phase or separate failure state lost: %+v",parent)
+                }
+                if strings.Contains(string(raw),"https://")||strings.Contains(string(raw),"DO_NOT_RETURN"){t.Fatal("unsafe detail escaped")}
+                if seen[parent.Reason]{t.Fatal("different public phases collapsed")}
+                seen[parent.Reason]=true
+            })
+        }
+    }
+    for _,invalid:=range []ghaFreshHTTPStatusError{
+        {phase:"other",status:403},{phase:"https://secret.invalid",status:403},
+        {phase:"runs",status:99},{phase:"metadata",status:600},
+    } {
+        if got:=ghaFreshAcquisitionReason(&invalid);got!="guard_target_artifact_unavailable"||strings.Contains(got,"https://"){t.Fatal("unknown phase or status accepted")}
+    }
+    for _,invalid:=range []string{"guard_fresh_public_other_http_403","guard_fresh_public_runs_http_0403",
+        "guard_fresh_public_metadata_http_999","guard_fresh_public_http_403"} {
+        if ghaFreshHTTPReasonAllowed(invalid){t.Fatal("unknown public reason accepted")}
+    }
 }

@@ -47,7 +47,7 @@ func ghaFreshAcquisitionReason(err error) string {
     var status *ghaFreshHTTPStatusError
     if errors.As(err,&status)&&status!=nil&&status.status>=100&&status.status<=599&&
         (status.phase=="runs"||status.phase=="metadata"||status.phase=="attestation") {
-        return fmt.Sprintf("guard_fresh_public_http_%d",status.status)
+        return fmt.Sprintf("guard_fresh_public_%s_http_%d",status.phase,status.status)
     }
     switch {
     case errors.Is(err,context.Canceled),errors.Is(err,context.DeadlineExceeded):return "guard_target_cancelled"
@@ -65,7 +65,7 @@ func ghaFreshAcquisitionReason(err error) string {
 
 func ghaFreshHTTPReasonAllowed(value string) bool {
     prefixes:=[]string{
-        "guard_fresh_public_http_",
+        "guard_fresh_public_runs_http_","guard_fresh_public_metadata_http_","guard_fresh_public_attestation_http_",
         "guard_github_credential_owner_http_","guard_github_authenticated_run_http_",
         "guard_github_metadata_http_","guard_github_job_log_http_","guard_github_job_log_object_http_",
         "guard_github_artifact_http_","guard_github_artifact_object_http_","guard_github_source_metadata_http_",

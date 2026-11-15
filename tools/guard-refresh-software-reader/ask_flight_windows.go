@@ -37,6 +37,7 @@ type askJobAccounting struct {
 // Faults can only remove evidence and are package-private test controls.
 type askStrictJobKey struct{}
 type askStrictJobFaultKey struct{}
+const askStrictJobDiagnosticLimit = 16
 type askStrictJobFaults struct {
     failListOnce, partialListOnce, failMemberOpenOnce, failMembershipOnce, failRootIdentityOnce, failRootMembershipOnce, omitNonRoot, failWaitOnce bool
     listFaultSeen, partialSeen, openFaultSeen, membershipFaultSeen, rootIdentityFaultSeen, rootMembershipFaultSeen, waitFaultSeen bool
@@ -45,6 +46,18 @@ type askStrictJobFaults struct {
     finalHeld, finalSignalled int
     finalRootCreation uint64
     zeroObserved, finalQueryOK bool
+    captureDiagnostics bool
+    finalMembers []askStrictJobMemberDiagnostic
+    finalOmitted int
+    diagnosticOmittedOverflow bool
+}
+
+// Test-only output contains no image path or command line.
+type askStrictJobMemberDiagnostic struct {
+    PID uint32
+    Root bool
+    CreationNonZero bool
+    ImagePathClass string
 }
 
 type askStrictJobMember struct { handle syscall.Handle; created uint64 }
@@ -106,8 +119,40 @@ func (c *askStrictJobCollector) collect(kernel *syscall.LazyDLL,job uintptr) {
         }
         created,valid:=askStrictProcessCreation(kernel,handle,id)
         if !valid {if syscall.CloseHandle(handle)!=nil {c.unknown=true};c.unknown=true;continue}
-        c.members[id]=askStrictJobMember{handle:handle,created:created}
+        member:=askStrictJobMember{handle:handle,created:created}
+        c.members[id]=member
+        c.recordDiagnostic(kernel,id,member)
     }
+}
+
+// This diagnostic is called only when the owned test requests it, while the
+// member handle is first retained. It never returns the path or affects Reaped.
+func askStrictJobImagePathClass(kernel *syscall.LazyDLL,handle syscall.Handle) string {
+    if kernel==nil||handle==0{return "unavailable"}
+    var name [32768]uint16
+    defer clear(name[:])
+    size:=uint32(len(name))
+    proc:=kernel.NewProc("QueryFullProcessImageNameW")
+    if proc.Find()!=nil{return "unavailable"}
+    ok,_,_:=proc.Call(uintptr(handle),0,uintptr(unsafe.Pointer(&name[0])),uintptr(unsafe.Pointer(&size)))
+    if ok==0||size==0||size>uint32(len(name)){return "unavailable"}
+    executable,err:=os.Executable();if err!=nil{return "unavailable"}
+    if strings.EqualFold(syscall.UTF16ToString(name[:size]),executable){return "same_path"}
+    return "other_path"
+}
+
+// Diagnostic rows and image queries are capped; omission is not Job proof.
+func (c *askStrictJobCollector) recordDiagnostic(kernel *syscall.LazyDLL,pid uint32,member askStrictJobMember) {
+    if c==nil||c.faults==nil||!c.faults.captureDiagnostics{return}
+    if len(c.faults.finalMembers)>=askStrictJobDiagnosticLimit {
+        maxInt:=int(^uint(0)>>1)
+        if c.faults.finalOmitted==maxInt {c.faults.diagnosticOmittedOverflow=true} else {c.faults.finalOmitted++}
+        return
+    }
+    c.faults.finalMembers=append(c.faults.finalMembers,askStrictJobMemberDiagnostic{
+        PID:pid,Root:pid==c.root,CreationNonZero:member.created!=0,
+        ImagePathClass:askStrictJobImagePathClass(kernel,member.handle),
+    })
 }
 
 func (c *askStrictJobCollector) finish(kernel *syscall.LazyDLL,job uintptr,deadline time.Time,terminated,assigned,rootWaitVerified bool) bool {
@@ -461,7 +506,9 @@ func askOwnedChildWithHandshake(ctx context.Context, executable string, onReady 
 				strictCollector.faults.failRootMembershipOnce = false; strictCollector.faults.rootMembershipFaultSeen = true; belongs = 0
 			}
 			if !valid || memberOK == 0 || belongs == 0 { strictCollector.unknown = true; assigned = false }
-			strictCollector.members[strictCollector.root] = askStrictJobMember{handle: process, created: created}
+			member := askStrictJobMember{handle: process, created: created}
+			strictCollector.members[strictCollector.root] = member
+			strictCollector.recordDiagnostic(kernel, strictCollector.root, member)
 			retainedRoot = true
 		}
 		if assigned && hasCapture {

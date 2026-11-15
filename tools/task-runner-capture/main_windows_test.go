@@ -455,3 +455,66 @@ func TestResolveJobIDRejectsBeforeLossyStructProjection(t *testing.T) {
 		})
 	}
 }
+
+func TestResolveJobIDChecksEveryRowIDBeforeSelection(t *testing.T) {
+	_, selected := captureJobsOriginalDocument()
+	change := func(row, old, replacement string) string {
+		t.Helper()
+		if old == replacement || strings.Count(row, old) != 1 {
+			t.Fatal("row-identity fixture mutation was not exact")
+		}
+		changed := strings.Replace(row, old, replacement, 1)
+		if changed == row || !json.Valid([]byte(changed)) {
+			t.Fatal("row-identity fixture mutation was vacuous or invalid JSON")
+		}
+		return changed
+	}
+	otherSameID := change(selected, "\"name\":\"Task runner software artifact\"", "\"name\":\"Other job\"")
+	otherSameID = change(otherSameID, "check-runs/31", "check-runs/32")
+	other := change(otherSameID, "\"id\":23", "\"id\":24")
+	third := change(other, "\"id\":24", "\"id\":25")
+	conflictingOther := change(other, "\"name\":\"Other job\"", "\"name\":\"Another job\"")
+	conflictingOther = change(conflictingOther, "check-runs/32", "check-runs/33")
+	withAdditions := strings.TrimSuffix(selected, "}") + ",\"future\":{\"id\":23,\"id\":23},\"labels\":[\"hosted\"]}"
+	otherWithAdditions := strings.TrimSuffix(other, "}") + ",\"future\":{\"id\":23},\"runner_id\":null}"
+	for _, test := range []struct {
+		name    string
+		rows    []string
+		allowed bool
+	}{
+		{"one-selected-row", []string{selected}, true},
+		{"distinct-selected-first", []string{selected, other}, true},
+		{"distinct-selected-last", []string{other, selected}, true},
+		{"distinct-three-rows", []string{other, selected, third}, true},
+		{"positive-max-int64", []string{selected, change(other, "\"id\":24", "\"id\":9223372036854775807")}, true},
+		{"unknown-additive-fields", []string{withAdditions, otherWithAdditions}, true},
+		{"conflicting-selected-id-first", []string{selected, otherSameID}, false},
+		{"conflicting-selected-id-last", []string{otherSameID, selected}, false},
+		{"identical-selected-row", []string{selected, selected}, false},
+		{"identical-nonselected-row", []string{selected, other, other}, false},
+		{"conflicting-nonselected-id", []string{other, conflictingOther, selected}, false},
+		{"zero-nonselected-first", []string{change(other, "\"id\":24", "\"id\":0"), selected}, false},
+		{"zero-nonselected-last", []string{selected, change(other, "\"id\":24", "\"id\":0")}, false},
+		{"negative-nonselected-first", []string{change(other, "\"id\":24", "\"id\":-1"), selected}, false},
+		{"negative-nonselected-last", []string{selected, change(other, "\"id\":24", "\"id\":-1")}, false},
+		{"minimum-int64-nonselected", []string{selected, change(other, "\"id\":24", "\"id\":-9223372036854775808")}, false},
+		{"zero-selected", []string{change(selected, "\"id\":23", "\"id\":0"), other}, false},
+		{"negative-selected", []string{change(selected, "\"id\":23", "\"id\":-1"), other}, false},
+		{"overflow-nonselected", []string{selected, change(other, "\"id\":24", "\"id\":9223372036854775808")}, false},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+			document := "{\"total_count\":" + strconv.Itoa(len(test.rows)) + ",\"jobs\":[" + strings.Join(test.rows, ",") + "]}"
+			if !json.Valid([]byte(document)) {
+				t.Fatal("row-identity page fixture was invalid JSON")
+			}
+			id, err := captureJobsConsumerFixture(t, nil, document)
+			if test.allowed {
+				if err != nil || id != 23 {
+					t.Fatal("valid distinct job identities were rejected")
+				}
+			} else if err == nil || id != 0 {
+				t.Fatal("a nonpositive or reused page job identity was accepted")
+			}
+		})
+	}
+}

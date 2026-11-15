@@ -398,6 +398,8 @@ func decodeCaptureJobsPage(raw []byte) (captureJobsPage, error) {
 		page.Total != len(entries) || len(entries) > 100 {
 		return captureJobsPage{}, errCapture
 	}
+	// Every row belongs to one normalized page, including rows not selected below.
+	seenIDs := make(map[int64]struct{}, len(entries))
 	for _, entry := range entries {
 		fields, err := captureJobCriticalFields(entry, []string{
 			"id", "run_id", "head_sha", "name", "status", "check_run_url",
@@ -414,6 +416,13 @@ func decodeCaptureJobsPage(raw []byte) (captureJobsPage, error) {
 			json.Unmarshal(fields["check_run_url"], &job.CheckRunURL) != nil {
 			return captureJobsPage{}, errCapture
 		}
+		if job.ID <= 0 {
+			return captureJobsPage{}, errCapture
+		}
+		if _, duplicate := seenIDs[job.ID]; duplicate {
+			return captureJobsPage{}, errCapture
+		}
+		seenIDs[job.ID] = struct{}{}
 		page.Jobs = append(page.Jobs, job)
 	}
 	return page, nil

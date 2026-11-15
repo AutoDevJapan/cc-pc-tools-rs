@@ -42,6 +42,10 @@ func ghaGuardResponseFailure(primary,closeErr,contextErr error) error {
 // Never forward an injected callback error. Only this fixed source phase,
 // a close marker and context cancellation survive the detailed path.
 func ghaGuardSafeSourceFailure(failure,contextErr error) error {
+    // A nested bounded request can end before its parent context does.
+    // Preserve only the two fixed context sentinels, never the raw error.
+    if errors.Is(failure,context.Canceled){contextErr=errors.Join(contextErr,context.Canceled)}
+    if errors.Is(failure,context.DeadlineExceeded){contextErr=errors.Join(contextErr,context.DeadlineExceeded)}
     primary:=error(errGHAGuardUnqualified)
     var status *ghaGuardHTTPStatusError
     if errors.As(failure,&status)&&status!=nil&&status.phase=="source_metadata" {

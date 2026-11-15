@@ -230,7 +230,18 @@ func (s *ghaGuardCredentialSession) RoundTrip(req *http.Request) (*http.Response
     // The underlying transport may read clone until the response body closes.
     // Do not mutate the request; its header is reclaimed with the request.
     value=""
-    if err!=nil || resp==nil || resp.Body==nil {if resp!=nil&&resp.Body!=nil {_=resp.Body.Close()};release();return nil,errGHAGuardUnqualified}
+    if err!=nil || resp==nil || resp.Body==nil {
+        var closeErr,contextErr error
+        if resp!=nil&&resp.Body!=nil {closeErr=resp.Body.Close()}
+        if errors.Is(err,errGHAGuardResponseCleanup) {closeErr=errors.Join(closeErr,errGHAGuardResponseCleanup)}
+        if errors.Is(err,context.Canceled) {contextErr=errors.Join(contextErr,context.Canceled)}
+        if errors.Is(err,context.DeadlineExceeded) {contextErr=errors.Join(contextErr,context.DeadlineExceeded)}
+        if req.Context().Err()!=nil {contextErr=errors.Join(contextErr,req.Context().Err())}
+        if root.Err()!=nil {contextErr=errors.Join(contextErr,root.Err())}
+        release()
+        if closeErr==nil&&contextErr==nil{return nil,errGHAGuardUnqualified}
+        return nil,ghaGuardResponseFailure(errGHAGuardUnqualified,closeErr,contextErr)
+    }
     resp.Request=req;resp.Body=&ghaGuardCredentialBody{body:resp.Body,release:release}
     return resp,nil
 }

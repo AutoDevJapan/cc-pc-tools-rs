@@ -175,6 +175,9 @@ func run(args []string, out io.Writer, observe func() softwareObservation, opera
 	if len(args) == 1 && args[0] == ghaFreshInspectionFlag {
 		return runGHAFreshInspection(args, out)
 	}
+	if len(args) == 1 && args[0] == ghaFreshUpdateFlag {
+		return runGHAFreshUpdate(args, out)
+	}
 	if len(args) > 0 && (args[0] == ghaFreshWorkerFlag || args[0] == "--ask-software-worker" || args[0] == "--ask-software-inspection-worker" || args[0] == "--ask-build-worker" || args[0] == "--mp4-software-worker" || args[0] == "--mp4-inspection-worker" || args[0] == "--mp4-build-worker") {
 		return runAskWorker(args, out)
 	}

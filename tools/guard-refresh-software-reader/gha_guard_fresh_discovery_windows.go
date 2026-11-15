@@ -10,18 +10,24 @@ import (
     "fmt"
     "io"
     "net/http"
+    "sort"
     "strconv"
     "strings"
     "time"
 )
 
-// This fixed revision is the reviewed producer checkpoint for this proposal.
-// If main moves before dispatch, this source must be requalified.
-const ghaFreshProducerRevision = "5a28f6fa6d9845bc1cd6fe5352abbcda275bd099"
+// The reviewed anchor is a minimum ancestor, not a fabricated run revision.
+const ghaFreshProducerAnchor = "22ea37a850c6c2c85acbbc1f16fee449534caa65"
+const ghaFreshAnchorNotBefore = "2026-11-15T17:21:17Z"
 const ghaFreshWorkflowID int64 = 382798887
 const ghaFreshOwnerID int64 = 88025750
-const ghaFreshListingURL = "https://api.github.com/repos/AutoDevJapan/cc-pc-tools-rs/actions/workflows/382798887/runs?branch=main&event=workflow_dispatch&head_sha=5a28f6fa6d9845bc1cd6fe5352abbcda275bd099&per_page=100"
+const ghaFreshListingQuery = "branch=main&event=workflow_dispatch&created=%3E%3D2026-11-15&per_page=100"
+const ghaFreshListingURL = "https://api.github.com/repos/AutoDevJapan/cc-pc-tools-rs/actions/workflows/382798887/runs?"+ghaFreshListingQuery
+// GitHub caps filtered workflow-run searches at 1000 results. Reaching the
+// cap cannot establish completeness, so it remains an explicit failure.
+const ghaFreshListingMax = 999
 const ghaFreshListingLimit = 2 << 20
+var errGHAFreshExpiredArtifact = errors.New("guard_fresh_expired_artifact")
 
 // A bounded public HTTP status is an observation, never an authority.
 type ghaFreshHTTPStatusError struct { phase string; status int }
@@ -36,6 +42,7 @@ type ghaFreshRunHint struct {
     runID int64
     attempt int64
     producerRevision string
+    createdAt time.Time
 }
 
 func ghaFreshObject(raw []byte) (map[string]json.RawMessage,error) {
@@ -57,7 +64,7 @@ func ghaFreshObject(raw []byte) (map[string]json.RawMessage,error) {
 func ghaFreshInt(m map[string]json.RawMessage,key string) (int64,bool) {
     var value int64
     raw,ok:=m[key]
-    if !ok||len(raw)==0||json.Unmarshal(raw,&value)!=nil{return 0,false}
+    if !ok||len(raw)==0||bytes.Equal(bytes.TrimSpace(raw),[]byte("null"))||json.Unmarshal(raw,&value)!=nil{return 0,false}
     return value,true
 }
 
@@ -75,73 +82,134 @@ func ghaFreshNestedID(m map[string]json.RawMessage,key string,expected int64) bo
     return ok&&id==expected
 }
 
+// Preserve only fixed context sentinels, never transport error text.
+func ghaFreshContextFailure(ctx context.Context,failure error) error {
+    var result error
+    if ctx!=nil {result=ctx.Err()}
+    if errors.Is(failure,context.Canceled){result=errors.Join(result,context.Canceled)}
+    if errors.Is(failure,context.DeadlineExceeded){result=errors.Join(result,context.DeadlineExceeded)}
+    if errors.Is(failure,errGHAGuardResponseCleanup){result=errors.Join(result,errGHAGuardResponseCleanup)}
+    return result
+}
+
 // A unique matching successful run is a lookup hint only. Later code must
 // independently obtain the authenticated job, artifact, expiry and signature.
 func ghaFreshSelectRunHint(raw []byte) (ghaFreshRunHint,error) {
-    var none ghaFreshRunHint
-    envelope,err:=ghaFreshObject(raw);if err!=nil{return none,err}
-    total,ok:=ghaFreshInt(envelope,"total_count");if !ok||total!=1{return none,errGHAGuardUnqualified}
+    return ghaFreshSelectRunHintAt(raw,time.Now().UTC())
+}
+
+func ghaFreshSelectRunHintAt(raw []byte,now time.Time) (ghaFreshRunHint,error) {
+    values,err:=ghaFreshSelectRunHintsAt(raw,now)
+    if err!=nil||len(values)!=1{return ghaFreshRunHint{},errGHAGuardUnqualified}
+    return values[0],nil
+}
+
+// A single-page fixture remains bounded. The live reader below constructs all
+// fixed-workflow pages itself and never follows an untrusted Link target.
+func ghaFreshSelectRunHintsAt(raw []byte,now time.Time) ([]ghaFreshRunHint,error) {
+    envelope,err:=ghaFreshObject(raw);if err!=nil{return nil,errGHAGuardUnqualified}
+    total,ok:=ghaFreshInt(envelope,"total_count");if !ok||total<0||total>100{return nil,errGHAGuardUnqualified}
     var runs []json.RawMessage
     data,ok:=envelope["workflow_runs"]
-    if !ok||json.Unmarshal(data,&runs)!=nil||len(runs)!=1{return none,errGHAGuardUnqualified}
-    run,err:=ghaFreshObject(runs[0]);if err!=nil{return none,err}
-    runID,ok:=ghaFreshInt(run,"id");if !ok||runID<=0{return none,errGHAGuardUnqualified}
-    attempt,ok:=ghaFreshInt(run,"run_attempt");if !ok||attempt!=1{return none,errGHAGuardUnqualified}
-    workflow,ok:=ghaFreshInt(run,"workflow_id");if !ok||workflow!=ghaFreshWorkflowID{return none,errGHAGuardUnqualified}
-    for _,item:=range []struct{key,want string}{
-        {"head_sha",ghaFreshProducerRevision},
-        {"head_branch","main"},
-        {"path",".github/workflows/unattended-readiness.yml"},
-        {"event","workflow_dispatch"},
-        {"status","completed"},
-        {"conclusion","success"},
-    } {
-        value,ok:=ghaFreshString(run,item.key)
-        if !ok||value!=item.want{return none,errGHAGuardUnqualified}
-    }
-    for _,item:=range []struct{key string;id int64}{
-        {"repository",1406818713},{"head_repository",1406818713},
-        {"actor",ghaFreshOwnerID},{"triggering_actor",ghaFreshOwnerID},
-    } {
-        if !ghaFreshNestedID(run,item.key,item.id){return none,errGHAGuardUnqualified}
-    }
-    return ghaFreshRunHint{runID:runID,attempt:attempt,producerRevision:ghaFreshProducerRevision},nil
+    if !ok||json.Unmarshal(data,&runs)!=nil||int64(len(runs))!=total{return nil,errGHAGuardUnqualified}
+    return ghaFreshSelectRunsAt(runs,now,false)
 }
 
-// This bounded public lookup acquires only an untrusted hint. It does not read
-// WinCred, download a private job log or artifact, or create any authority.
-func ghaFreshReadRunHint(ctx context.Context,client *http.Client) (ghaFreshRunHint,error) {
-    var none ghaFreshRunHint
-    if ctx==nil||ctx.Err()!=nil||client==nil{return none,errGHAGuardUnqualified}
-    bounded,cancel:=context.WithTimeout(ctx,15*time.Second);defer cancel()
-    request,err:=http.NewRequestWithContext(bounded,http.MethodGet,ghaFreshListingURL,nil)
-    if err!=nil{return none,errGHAGuardUnqualified}
-    request.Header.Set("Accept","application/vnd.github+json")
-    request.Header.Set("X-GitHub-Api-Version","2022-11-28")
-    noRedirect:=*client
-    noRedirect.CheckRedirect=func(*http.Request,[]*http.Request)error{return http.ErrUseLastResponse}
-    response,err:=noRedirect.Do(request)
-    if err!=nil||response==nil||response.Body==nil {
-        var closeErr error;if response!=nil&&response.Body!=nil {closeErr=response.Body.Close()}
-        return none,ghaGuardResponseFailure(errGHAGuardUnqualified,closeErr,bounded.Err())
-    }
-    if response.StatusCode!=http.StatusOK {
-        closeErr:=response.Body.Close()
-        if response.StatusCode>=100&&response.StatusCode<=599 {
-            return none,ghaGuardResponseFailure(errors.Join(errGHAGuardUnqualified,&ghaFreshHTTPStatusError{phase:"runs",status:response.StatusCode}),closeErr,bounded.Err())
+func ghaFreshSelectRunsAt(runs []json.RawMessage,now time.Time,strictWorkflow bool) ([]ghaFreshRunHint,error) {
+    anchor,err:=time.Parse(time.RFC3339,ghaFreshAnchorNotBefore)
+    if err!=nil||now.IsZero()||len(runs)>ghaFreshListingMax{return nil,errGHAGuardUnqualified}
+    seen:=make(map[int64]bool,len(runs));var hints []ghaFreshRunHint
+    for _,rawRun:=range runs {
+        run,err:=ghaFreshObject(rawRun);if err!=nil{return nil,errGHAGuardUnqualified}
+        id,iok:=ghaFreshInt(run,"id");workflow,wok:=ghaFreshInt(run,"workflow_id")
+        if !iok||id<=0||seen[id]||!wok||workflow<=0{return nil,errGHAGuardUnqualified};seen[id]=true
+        if workflow!=ghaFreshWorkflowID{if strictWorkflow{return nil,errGHAGuardUnqualified};continue}
+        created,cok:=ghaFreshString(run,"created_at");when,terr:=time.Parse(time.RFC3339,created)
+        if !cok||terr!=nil||when.After(now){return nil,errGHAGuardUnqualified}
+        if when.Before(anchor){continue}
+        status,sok:=ghaFreshString(run,"status");if !sok||status!="completed"{return nil,errGHAGuardUnqualified}
+        conclusion,cok:=ghaFreshString(run,"conclusion");if !cok{return nil,errGHAGuardUnqualified}
+        if conclusion!="success"{continue}
+        attempt,aok:=ghaFreshInt(run,"run_attempt");head,hok:=ghaFreshString(run,"head_sha")
+        if !aok||attempt!=1||!hok||!ghaGuardHex(head,40){return nil,errGHAGuardUnqualified}
+        for _,item:=range []struct{key,want string}{
+            {"head_branch","main"},{"path",".github/workflows/unattended-readiness.yml"},{"event","workflow_dispatch"},
+        } {
+            value,ok:=ghaFreshString(run,item.key);if !ok||value!=item.want{return nil,errGHAGuardUnqualified}
         }
-        return none,ghaGuardResponseFailure(errGHAGuardUnqualified,closeErr,bounded.Err())
+        for _,item:=range []struct{key string;id int64}{
+            {"repository",1406818713},{"head_repository",1406818713},{"actor",ghaFreshOwnerID},{"triggering_actor",ghaFreshOwnerID},
+        } {
+            if !ghaFreshNestedID(run,item.key,item.id){return nil,errGHAGuardUnqualified}
+        }
+        hints=append(hints,ghaFreshRunHint{runID:id,attempt:attempt,producerRevision:head,createdAt:when.UTC()})
     }
-    if !ghaGuardSinglePageLink(response.Header) {
-        return none,ghaGuardResponseFailure(errGHAGuardUnqualified,response.Body.Close(),bounded.Err())
-    }
-    raw,readErr:=io.ReadAll(io.LimitReader(response.Body,ghaFreshListingLimit+1))
-    closeErr:=response.Body.Close()
-    defer clear(raw)
-    if readErr!=nil||closeErr!=nil||len(raw)>ghaFreshListingLimit||bounded.Err()!=nil{return none,ghaGuardResponseFailure(errGHAGuardUnqualified,closeErr,bounded.Err())}
-    return ghaFreshSelectRunHint(raw)
+    sort.Slice(hints,func(i,j int)bool{return hints[i].runID<hints[j].runID})
+    return hints,nil
 }
 
+// Fetch one explicitly constructed page. A complete response count and Link
+// relationship are checked; server-provided URLs are never followed.
+func ghaFreshReadRunsPage(ctx context.Context,client *http.Client,page int) ([]json.RawMessage,int64,error) {
+    if ctx==nil{return nil,0,errGHAGuardUnqualified}
+    if ctx.Err()!=nil||client==nil||page<1||page>10{return nil,0,errors.Join(errGHAGuardUnqualified,ctx.Err())}
+    endpoint:=ghaFreshListingURL;if page>1{endpoint+=fmt.Sprintf("&page=%d",page)}
+    request,err:=http.NewRequestWithContext(ctx,http.MethodGet,endpoint,nil);if err!=nil{return nil,0,errGHAGuardUnqualified}
+    request.Header.Set("Accept","application/vnd.github+json");request.Header.Set("X-GitHub-Api-Version","2022-11-28")
+    isolated:=*client;isolated.Jar=nil;isolated.CheckRedirect=func(*http.Request,[]*http.Request)error{return http.ErrUseLastResponse}
+    response,err:=isolated.Do(request)
+    if err!=nil||response==nil||response.Body==nil {var closeErr error;if response!=nil&&response.Body!=nil{closeErr=response.Body.Close()};return nil,0,errors.Join(ghaGuardResponseFailure(errGHAGuardUnqualified,closeErr,ctx.Err()),ghaFreshContextFailure(ctx,err))}
+    if response.StatusCode!=http.StatusOK {
+        closeErr:=response.Body.Close();primary:=error(errGHAGuardUnqualified)
+        if response.StatusCode>=100&&response.StatusCode<=599{primary=errors.Join(primary,&ghaFreshHTTPStatusError{phase:"runs",status:response.StatusCode})}
+        return nil,0,ghaGuardResponseFailure(primary,closeErr,ctx.Err())
+    }
+    raw,readErr:=io.ReadAll(io.LimitReader(response.Body,ghaFreshListingLimit+1));closeErr:=response.Body.Close();defer clear(raw)
+    if readErr!=nil||closeErr!=nil||len(raw)>ghaFreshListingLimit||ctx.Err()!=nil{return nil,0,errors.Join(ghaGuardResponseFailure(errGHAGuardUnqualified,closeErr,ctx.Err()),ghaFreshContextFailure(ctx,readErr))}
+    envelope,err:=ghaFreshObject(raw);if err!=nil{return nil,0,errGHAGuardUnqualified}
+    total,ok:=ghaFreshInt(envelope,"total_count");if !ok||total<0||total>ghaFreshListingMax{return nil,0,errGHAGuardUnqualified}
+    var runs []json.RawMessage;if json.Unmarshal(envelope["workflow_runs"],&runs)!=nil||len(runs)>100{return nil,0,errGHAGuardUnqualified}
+    pages:=int((total+99)/100);if pages==0{pages=1};if page>pages{return nil,0,errGHAGuardUnqualified}
+    expected:=int(total)-100*(page-1);if expected>100{expected=100};if expected<0||len(runs)!=expected{return nil,0,errGHAGuardUnqualified}
+    link:=response.Header.Get("Link");hasNext:=strings.Contains(link,`rel="next"`)
+    if (page<pages&&(!hasNext||link==""))||(page==pages&&hasNext)||(pages==1&&link!=""){return nil,0,errGHAGuardUnqualified}
+    return runs,total,nil
+}
+
+func ghaFreshReadRunHint(ctx context.Context,client *http.Client) (ghaFreshRunHint,error) {
+    return ghaFreshReadRunHintWith(ctx,client,client,time.Now().UTC())
+}
+
+// The listing client may be the existing scoped credential session; other
+// run preflights stay on the public client and cannot receive its token.
+func ghaFreshReadRunHintWith(ctx context.Context,listing,public *http.Client,now time.Time) (ghaFreshRunHint,error) {
+    var none ghaFreshRunHint
+    if ctx==nil{return none,errGHAGuardUnqualified}
+    if ctx.Err()!=nil||listing==nil||public==nil||now.IsZero(){return none,errors.Join(errGHAGuardUnqualified,ctx.Err())}
+    bounded,cancel:=context.WithTimeout(ctx,45*time.Second);defer cancel()
+    first,total,err:=ghaFreshReadRunsPage(bounded,listing,1);if err!=nil{return none,err}
+    pages:=int((total+99)/100);if pages==0{pages=1}
+    runs:=append([]json.RawMessage(nil),first...)
+    for page:=2;page<=pages;page++ {part,n,err:=ghaFreshReadRunsPage(bounded,listing,page);if err!=nil{return none,err};if n!=total{return none,errGHAGuardUnqualified};runs=append(runs,part...)}
+    hints,err:=ghaFreshSelectRunsAt(runs,now,true);if err!=nil||len(hints)==0||bounded.Err()!=nil{return none,errors.Join(errGHAGuardUnqualified,bounded.Err())}
+    if pages>1 {
+        var repeat []json.RawMessage
+        for page:=1;page<=pages;page++ {part,n,err:=ghaFreshReadRunsPage(bounded,listing,page);if err!=nil{return none,err};if n!=total{return none,errGHAGuardUnqualified};repeat=append(repeat,part...)}
+        again,err:=ghaFreshSelectRunsAt(repeat,now,true);if err!=nil||len(again)!=len(hints){return none,errGHAGuardUnqualified}
+        for i:=range hints {if hints[i]!=again[i]{return none,errGHAGuardUnqualified}}
+    }
+    if bounded.Err()!=nil{return none,errors.Join(errGHAGuardUnqualified,bounded.Err())}
+    if len(hints)==1{return hints[0],nil}
+    live:=0
+    for _,hint:=range hints {
+        _,preflightErr:=ghaFreshPublicPreflight(bounded,public,hint,now)
+        if errors.Is(preflightErr,errGHAFreshExpiredArtifact){continue}
+        if preflightErr!=nil{return none,errors.Join(preflightErr,bounded.Err())}
+        none=hint;live++
+    }
+    if live!=1||bounded.Err()!=nil{return ghaFreshRunHint{},errors.Join(errGHAGuardUnqualified,bounded.Err())}
+    return none,nil
+}
 
 // This locator is an untrusted public observation. It cannot issue an owned
 // candidate, authorize credential access by itself, or open a target.
@@ -161,7 +229,7 @@ const (
 )
 
 func ghaFreshHintShape(h ghaFreshRunHint) bool {
-    return h.runID>0&&h.attempt==1&&h.producerRevision==ghaFreshProducerRevision
+    return h.runID>0&&h.attempt==1&&ghaGuardHex(h.producerRevision,40)
 }
 
 // The endpoint is constructed only from one of three fixed operations and a
@@ -178,7 +246,8 @@ func ghaFreshResourceURL(kind ghaFreshResource,h ghaFreshRunHint) (string,error)
 }
 
 func ghaFreshReadResource(ctx context.Context,client *http.Client,kind ghaFreshResource,h ghaFreshRunHint) (map[string]json.RawMessage,error) {
-    if ctx==nil||ctx.Err()!=nil||client==nil{return nil,errGHAGuardUnqualified}
+    if ctx==nil{return nil,errGHAGuardUnqualified}
+    if ctx.Err()!=nil||client==nil{return nil,errors.Join(errGHAGuardUnqualified,ctx.Err())}
     endpoint,err:=ghaFreshResourceURL(kind,h);if err!=nil{return nil,err}
     bounded,cancel:=context.WithTimeout(ctx,15*time.Second);defer cancel()
     request,err:=http.NewRequestWithContext(bounded,http.MethodGet,endpoint,nil);if err!=nil{return nil,errGHAGuardUnqualified}
@@ -187,7 +256,7 @@ func ghaFreshReadResource(ctx context.Context,client *http.Client,kind ghaFreshR
     response,err:=noRedirect.Do(request)
     if err!=nil||response==nil||response.Body==nil {
         var closeErr error;if response!=nil&&response.Body!=nil {closeErr=response.Body.Close()}
-        return nil,ghaGuardResponseFailure(errGHAGuardUnqualified,closeErr,bounded.Err())
+        return nil,errors.Join(ghaGuardResponseFailure(errGHAGuardUnqualified,closeErr,bounded.Err()),ghaFreshContextFailure(bounded,err))
     }
     if response.StatusCode!=http.StatusOK {
         closeErr:=response.Body.Close()
@@ -199,7 +268,7 @@ func ghaFreshReadResource(ctx context.Context,client *http.Client,kind ghaFreshR
     }
     raw,readErr:=io.ReadAll(io.LimitReader(response.Body,ghaFreshListingLimit+1));closeErr:=response.Body.Close()
     defer clear(raw)
-    if readErr!=nil||closeErr!=nil||len(raw)>ghaFreshListingLimit||bounded.Err()!=nil{return nil,ghaGuardResponseFailure(errGHAGuardUnqualified,closeErr,bounded.Err())}
+    if readErr!=nil||closeErr!=nil||len(raw)>ghaFreshListingLimit||bounded.Err()!=nil{return nil,errors.Join(ghaGuardResponseFailure(errGHAGuardUnqualified,closeErr,bounded.Err()),ghaFreshContextFailure(bounded,readErr))}
     return ghaFreshObject(raw)
 }
 
@@ -262,7 +331,7 @@ func ghaFreshSelectArtifact(m map[string]json.RawMessage,h ghaFreshRunHint,jobID
     total,ok:=ghaFreshInt(m,"total_count");if !ok||now.IsZero()||jobID<=0{return none,errGHAGuardUnqualified}
     artifacts,ok:=ghaFreshArray(m,"artifacts");if !ok||total!=int64(len(artifacts)){return none,errGHAGuardUnqualified}
     expected:=fmt.Sprintf("guard-bootstrap-%d-%d-%d",h.runID,h.attempt,jobID)
-    matches:=0
+    matches:=0;expiredMatch:=false
     for _,raw:=range artifacts {
         artifact,err:=ghaFreshObject(raw);if err!=nil{return none,err}
         name,ok:=ghaFreshString(artifact,"name");if !ok{return none,errGHAGuardUnqualified}
@@ -271,27 +340,64 @@ func ghaFreshSelectArtifact(m map[string]json.RawMessage,h ghaFreshRunHint,jobID
         id,iok:=ghaFreshInt(artifact,"id");size,sok:=ghaFreshInt(artifact,"size_in_bytes")
         expired,eok:=ghaFreshBool(artifact,"expired");dig,dok:=ghaFreshString(artifact,"digest")
         var expiry time.Time
-        if !iok||id<=0||!sok||size<=0||size>ghaGuardArchiveLimit||!eok||expired||!dok||!strings.HasPrefix(dig,"sha256:")||!ghaGuardHex(strings.TrimPrefix(dig,"sha256:"),64)||json.Unmarshal(artifact["expires_at"],&expiry)!=nil||expiry.IsZero()||!expiry.After(now){return none,errGHAGuardUnqualified}
+        if !iok||id<=0||!sok||size<=0||size>ghaGuardArchiveLimit||!eok||!dok||!strings.HasPrefix(dig,"sha256:")||!ghaGuardHex(strings.TrimPrefix(dig,"sha256:"),64)||json.Unmarshal(artifact["expires_at"],&expiry)!=nil||expiry.IsZero(){return none,errGHAGuardUnqualified}
         workflow,err:=ghaFreshObject(artifact["workflow_run"]);if err!=nil{return none,err}
         run,rok:=ghaFreshInt(workflow,"id");repo,pok:=ghaFreshInt(workflow,"repository_id");headRepo,hok:=ghaFreshInt(workflow,"head_repository_id");revision,vok:=ghaFreshString(workflow,"head_sha")
         if !rok||run!=h.runID||!pok||repo!=1406818713||!hok||headRepo!=1406818713||!vok||revision!=h.producerRevision{return none,errGHAGuardUnqualified}
+        if expired||!expiry.After(now){expiredMatch=true;continue}
         none=ghaFreshPublicLocator{hint:h,jobID:jobID,artifactID:id,archiveBytes:size,archiveSHA:strings.TrimPrefix(dig,"sha256:"),expiresAt:expiry}
     }
     if matches!=1{return ghaFreshPublicLocator{},errGHAGuardUnqualified}
+    if expiredMatch{return ghaFreshPublicLocator{},errGHAFreshExpiredArtifact}
     return none,nil
+}
+
+// For this fixed reviewed workflow, the upload's one-day retention starts
+// no later than the successful job's authenticated completion. A completely
+// enumerated missing name is skippable only after that bound plus one minute.
+// An unknown, incomplete or newer missing result never becomes an expiry.
+func ghaFreshMissingPastRetention(jobs,artifacts map[string]json.RawMessage,h ghaFreshRunHint,jobID int64,now time.Time) bool {
+    if now.IsZero()||jobID<=0||h.createdAt.IsZero()||h.createdAt.After(now){return false}
+    total,ok:=ghaFreshInt(artifacts,"total_count");values,valid:=ghaFreshArray(artifacts,"artifacts")
+    if !ok||!valid||total!=int64(len(values)){return false}
+    expected:=fmt.Sprintf("guard-bootstrap-%d-%d-%d",h.runID,h.attempt,jobID)
+    seen:=map[int64]bool{}
+    for _,raw:=range values {
+        item,err:=ghaFreshObject(raw);if err!=nil{return false}
+        name,nok:=ghaFreshString(item,"name");id,iok:=ghaFreshInt(item,"id")
+        if !nok||name==""||name==expected||!iok||id<=0||seen[id]{return false};seen[id]=true
+    }
+    jobTotal,ok:=ghaFreshInt(jobs,"total_count");entries,valid:=ghaFreshArray(jobs,"jobs")
+    if !ok||!valid||jobTotal!=int64(len(entries)){return false}
+    found:=0;var completion time.Time
+    for _,raw:=range entries {
+        item,err:=ghaFreshObject(raw);if err!=nil{return false};id,ok:=ghaFreshInt(item,"id");if !ok{return false};if id!=jobID{continue}
+        found++;run,rok:=ghaFreshInt(item,"run_id");status,sok:=ghaFreshString(item,"status");conclusion,cok:=ghaFreshString(item,"conclusion");value,tok:=ghaFreshString(item,"completed_at");startValue,startOK:=ghaFreshString(item,"started_at")
+        if !rok||run!=h.runID||!sok||status!="completed"||!cok||conclusion!="success"||!tok||!startOK{return false}
+        completion,err=time.Parse(time.RFC3339Nano,value);if err!=nil||completion.IsZero()||completion.After(now){return false}
+        started,startErr:=time.Parse(time.RFC3339Nano,startValue);anchor,anchorErr:=time.Parse(time.RFC3339,ghaFreshAnchorNotBefore)
+        if startErr!=nil||anchorErr!=nil||h.createdAt.Before(anchor)||started.Before(h.createdAt)||completion.Before(started){return false}
+    }
+    return found==1&&!now.Before(completion.Add(24*time.Hour+time.Minute))
 }
 
 func ghaFreshPublicPreflight(ctx context.Context,client *http.Client,h ghaFreshRunHint,now time.Time) (ghaFreshPublicLocator,error) {
     var none ghaFreshPublicLocator
-    if ctx==nil||ctx.Err()!=nil||client==nil||!ghaFreshHintShape(h)||now.IsZero(){return none,errGHAGuardUnqualified}
+    if ctx==nil{return none,errGHAGuardUnqualified}
+    if ctx.Err()!=nil||client==nil||!ghaFreshHintShape(h)||now.IsZero(){return none,errors.Join(errGHAGuardUnqualified,ctx.Err())}
     workflow,err:=ghaFreshReadResource(ctx,client,ghaFreshWorkflowResource,h);if err!=nil{return none,err}
     id,iok:=ghaFreshInt(workflow,"id");path,pok:=ghaFreshString(workflow,"path");state,sok:=ghaFreshString(workflow,"state")
     if !iok||id!=ghaFreshWorkflowID||!pok||path!=".github/workflows/unattended-readiness.yml"||!sok||state!="active"{return none,errGHAGuardUnqualified}
     jobs,err:=ghaFreshReadResource(ctx,client,ghaFreshJobsResource,h);if err!=nil{return none,err}
     jobID,checkID,err:=ghaFreshSelectJob(jobs,h);if err!=nil{return none,err}
     artifacts,err:=ghaFreshReadResource(ctx,client,ghaFreshArtifactsResource,h);if err!=nil{return none,err}
-    loc,err:=ghaFreshSelectArtifact(artifacts,h,jobID,now);if err!=nil{return none,err}
+    loc,err:=ghaFreshSelectArtifact(artifacts,h,jobID,now)
+    if err!=nil {
+        if errors.Is(err,errGHAFreshExpiredArtifact){return none,err}
+        if ghaFreshMissingPastRetention(jobs,artifacts,h,jobID,now){return none,errGHAFreshExpiredArtifact}
+        return none,err
+    }
     loc.checkRunID=checkID
-    if ctx.Err()!=nil{return none,errGHAGuardUnqualified}
+    if ctx.Err()!=nil{return none,errors.Join(errGHAGuardUnqualified,ctx.Err())}
     return loc,nil
 }

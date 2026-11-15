@@ -28,6 +28,8 @@ var errGHAGuardCredentialAccessDenied = errors.New("guard_github_credential_acce
 var errGHAGuardCredentialUnauthorized = errors.New("guard_github_credential_unauthorized")
 var errGHAGuardCredentialForbidden = errors.New("guard_github_credential_forbidden")
 var errGHAGuardCredentialStatus = errors.New("guard_github_credential_http_status")
+// The secret is revoked before waiting; timeout still means cleanup is unverified.
+var errGHAGuardCredentialCleanup = errors.New("guard_github_credential_cleanup_failed")
 
 // Fixed expiry only rejects. Live GitHub metadata remains mandatory for admission.
 func ghaGuardFixedArtifactWindow(now time.Time) bool {
@@ -155,6 +157,8 @@ func ghaGuardCredentialOwnerJSON(raw []byte) bool {
 
 type ghaGuardCredentialSession struct {
     mu sync.Mutex
+    // Non-nil only for the code-owned fresh-generation acquisition.
+    fresh *ghaFreshPublicLocator
     secret []byte
     base http.RoundTripper
     root context.Context
@@ -210,7 +214,10 @@ func ghaGuardCredentialContext(original,root context.Context) (context.Context,f
 }
 
 func (s *ghaGuardCredentialSession) RoundTrip(req *http.Request) (*http.Response,error) {
-    if s==nil || !ghaGuardCredentialAllowed(req) || req.Context().Err()!=nil {return nil,errGHAGuardUnqualified}
+    if s==nil || req==nil || req.Context().Err()!=nil {return nil,errGHAGuardUnqualified}
+    if s.fresh==nil {
+        if !ghaGuardCredentialAllowed(req) {return nil,errGHAGuardUnqualified}
+    } else if !ghaFreshCredentialAllowed(req,*s.fresh,time.Now().UTC()) {return nil,errGHAGuardUnqualified}
     s.mu.Lock()
     if s.closed || len(s.secret)==0 || (!s.ready && req.URL.Path!="/user") {s.mu.Unlock();return nil,errGHAGuardUnqualified}
     s.active++;value:="Bearer "+string(s.secret);root:=s.root;base:=s.base;s.mu.Unlock()
@@ -229,36 +236,83 @@ func (s *ghaGuardCredentialSession) RoundTrip(req *http.Request) (*http.Response
 }
 
 func ghaGuardCloseCredentialAuthority(a *ghaGuardEvidenceAuthority,primary error) error {
-    if a==nil||a.credential==nil{return errors.Join(primary,errGHAGuardUnqualified)}
     ctx,cancel:=context.WithTimeout(context.Background(),5*time.Second);defer cancel()
-    return errors.Join(primary,a.credential.close(ctx))
+    return ghaGuardCloseCredentialAuthorityWithContext(a,primary,ctx)
+}
+
+// The explicit context is a cleanup test seam; it is never an authority input.
+type ghaFreshCredentialAudit struct { state string }
+
+func ghaGuardCloseCredentialAuthorityWithContext(a *ghaGuardEvidenceAuthority,primary error,ctx context.Context) error {
+    return ghaGuardCloseCredentialAuthorityObserved(a,primary,ctx,nil)
+}
+
+// Audit is reporting only and is set exclusively by the real close/drain call.
+func ghaGuardCloseCredentialAuthorityObserved(a *ghaGuardEvidenceAuthority,primary error,ctx context.Context,audit *ghaFreshCredentialAudit) error {
+    if a==nil||a.credential==nil||ctx==nil{return errors.Join(primary,errGHAGuardUnqualified)}
+    if err:=a.credential.close(ctx);err!=nil {
+        if audit!=nil {audit.state="failed"}
+        return errors.Join(primary,errGHAGuardUnqualified,errGHAGuardCredentialCleanup)
+    }
+    if audit!=nil {audit.state="completed"}
+    return errors.Join(primary,nil)
+}
+
+func ghaFreshCloseCredentialAuthority(a *ghaGuardEvidenceAuthority,primary error,audit *ghaFreshCredentialAudit) error {
+    ctx,cancel:=context.WithTimeout(context.Background(),5*time.Second);defer cancel()
+    return ghaGuardCloseCredentialAuthorityObserved(a,primary,ctx,audit)
 }
 
 // No caller token, URL, identity boolean or callback can issue this authority.
 // The uninterruptible Win32 call needs an outer process supervisor before use.
-func ghaGuardOpenWinCredAuthority(ctx context.Context) (out *ghaGuardEvidenceAuthority,resultErr error) {
+func ghaGuardOpenWinCredAuthority(ctx context.Context) (*ghaGuardEvidenceAuthority,error) {
+    return ghaGuardOpenWinCredAuthorityWithLocator(ctx,nil,nil)
+}
+
+// The in-process fixed-purpose flow treats this locator as untrusted.
+// Authentication, server metadata and signatures must still agree before use.
+func ghaFreshOpenWinCredAuthority(ctx context.Context,locator ghaFreshPublicLocator) (*ghaGuardEvidenceAuthority,error) {
+    return ghaFreshOpenWinCredAuthorityObserved(ctx,locator,nil)
+}
+
+func ghaFreshOpenWinCredAuthorityObserved(ctx context.Context,locator ghaFreshPublicLocator,audit *ghaFreshCredentialAudit) (*ghaGuardEvidenceAuthority,error) {
+    if audit!=nil {audit.state="unknown"}
+    if !ghaFreshLocatorValid(locator,time.Now().UTC()) {return nil,errors.Join(errGHAGuardUnqualified,errGHAGuardCredentialExpired)}
+    owned:=locator
+    return ghaGuardOpenWinCredAuthorityWithLocator(ctx,&owned,audit)
+}
+
+func ghaGuardOpenWinCredAuthorityWithLocator(ctx context.Context,locator *ghaFreshPublicLocator,audit *ghaFreshCredentialAudit) (out *ghaGuardEvidenceAuthority,resultErr error) {
     if ctx==nil||ctx.Err()!=nil{return nil,errGHAGuardUnqualified}
-    if !ghaGuardFixedArtifactWindow(time.Now()) {return nil,errors.Join(errGHAGuardUnqualified,errGHAGuardCredentialExpired)}
+    if locator==nil {
+        if !ghaGuardFixedArtifactWindow(time.Now()) {return nil,errors.Join(errGHAGuardUnqualified,errGHAGuardCredentialExpired)}
+    } else if !ghaFreshLocatorValid(*locator,time.Now().UTC()) {return nil,errors.Join(errGHAGuardUnqualified,errGHAGuardCredentialExpired)}
     secret,err:=ghaGuardReadFixedWinCredential()
     if err!=nil{return nil,errors.Join(errGHAGuardUnqualified,err)}
     root,cancel:=context.WithCancel(context.Background())
     transport:=&http.Transport{Proxy:nil,TLSHandshakeTimeout:10*time.Second,ResponseHeaderTimeout:15*time.Second,MaxResponseHeaderBytes:64<<10,TLSNextProto:make(map[string]func(string,*tls.Conn)http.RoundTripper)}
-    session:=&ghaGuardCredentialSession{secret:secret,base:transport,root:root,cancel:cancel,drain:make(chan struct{})}
+    session:=&ghaGuardCredentialSession{fresh:locator,secret:secret,base:transport,root:root,cancel:cancel,drain:make(chan struct{})}
     client:=&http.Client{Transport:session,Timeout:30*time.Second,CheckRedirect:func(*http.Request,[]*http.Request)error{return http.ErrUseLastResponse}}
     authority:=&ghaGuardEvidenceAuthority{client:client,credential:session}
     issued:=false
-    defer func(){if !issued {resultErr=ghaGuardCloseCredentialAuthority(authority,resultErr)}}()
+    defer func(){if !issued {resultErr=ghaFreshCloseCredentialAuthority(authority,resultErr,audit)}}()
     if ctx.Err()!=nil{return nil,errGHAGuardUnqualified}
     req,err:=http.NewRequestWithContext(ctx,http.MethodGet,"https://api.github.com/user",nil)
     if err!=nil{return nil,errGHAGuardUnqualified}
     req.Header.Set("Accept","application/vnd.github+json");req.Header.Set("X-GitHub-Api-Version","2022-11-28")
     response,err:=client.Do(req)
-    if err!=nil||response==nil||response.Body==nil{return nil,errGHAGuardUnqualified}
-    if statusErr:=ghaGuardCredentialStatusError(response.StatusCode);statusErr!=nil {_=response.Body.Close();return nil,errors.Join(errGHAGuardUnqualified,statusErr)}
+    if err!=nil||response==nil||response.Body==nil {
+        var closeErr error;if response!=nil&&response.Body!=nil {closeErr=response.Body.Close()}
+        return nil,ghaGuardResponseFailure(errGHAGuardUnqualified,closeErr,ctx.Err())
+    }
+    if statusErr:=ghaGuardCredentialStatusError(response.StatusCode);statusErr!=nil {
+        primary:=errors.Join(ghaGuardHTTPFailure("credential_owner",response.StatusCode),statusErr)
+        return nil,ghaGuardResponseFailure(primary,response.Body.Close(),ctx.Err())
+    }
     raw,readErr:=io.ReadAll(io.LimitReader(response.Body,(64<<10)+1));closeErr:=response.Body.Close()
     valid:=readErr==nil&&closeErr==nil&&ctx.Err()==nil&&ghaGuardCredentialOwnerJSON(raw)
     clear(raw)
-    if !valid{return nil,errors.Join(errGHAGuardUnqualified,errGHAGuardCredentialIdentity)}
+    if !valid{return nil,ghaGuardResponseFailure(errors.Join(errGHAGuardUnqualified,errGHAGuardCredentialIdentity),closeErr,ctx.Err())}
     session.mu.Lock();if session.closed {session.mu.Unlock();return nil,errGHAGuardUnqualified};session.ready=true;session.mu.Unlock()
     issued=true;return authority,nil
 }

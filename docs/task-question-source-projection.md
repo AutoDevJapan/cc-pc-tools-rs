@@ -22,6 +22,7 @@ unattended-runner.exe --inspect-task-question-source
 - source rootとTaskの登録rootは別に確認する。どちらかが保護対象・未確認ならmetadataを出さず固定stageで失敗する。source rootの成功をTaskや工具の資格へ貸さない。
 - 元入力は普通のguardが許すplainなregular fileだけを開く。元handleを保持してサイズ・hash・名前との同一性を再確認する。本文とdecisionは各128KiB、画像は10MiB以内のPNG/JPEGで、decisionの元Taskと `direction` を照合する。画像生成の証拠には変換しない。
 - metadataにはid/project/root/status、resume generation、worker job/generation、scheduler jobとsnapshot指紋だけを含む。未保存の担当値はnullで、保存済みの0や空文字とは区別する。
+- 各rowではIDだけを浅く検査し、大小文字を含む複数のID、無効な型、後勝ちの対象変更を拒否する。投影する文字列は元JSONの不正UTF-8や孤立surrogateを置換せず拒否し、正常なsurrogate pairと元からあるU+FFFDは保持する。非対象Taskのspec/note内部を検査するために範囲を広げない。
 - Taskは入力取得の前後で通常providerから再読する。世代、root、担当、状態や原rowが変わった場合は成功出力を作らない。2回目のTask読取後も同じ入力handleを再確認し、解放失敗時も成功にしない。
 - 出力は一度だけ書き、短書込・書込エラーは非0とする。部分出力へ成功やfallbackを追記しない。利用側はexit0の完全なJSONだけを観測結果として扱う。
 

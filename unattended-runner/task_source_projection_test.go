@@ -291,7 +291,7 @@ func TestTaskSourceProjectionInputGuardRevokedDuringProviderRead(t *testing.T) {
 }
 
 func TestTaskSourceProjectionRefusesBadInputAndStore(t *testing.T) {
-	for _, name := range []string{"missing_task", "duplicate_task", "duplicate_document", "wrong_decision", "changed_hash", "protected_input", "protected_source", "invalid_generation"} {
+	for _, name := range []string{"missing_task", "duplicate_task", "duplicate_document", "wrong_decision", "changed_hash", "protected_input", "protected_source", "invalid_generation", "invalid_project_root_type"} {
 		t.Run(name, func(t *testing.T) {
 			f := newTaskSourceFixture(t)
 			want := "task_unavailable"
@@ -326,6 +326,18 @@ func TestTaskSourceProjectionRefusesBadInputAndStore(t *testing.T) {
 			case "invalid_generation":
 				f.row["resume_generation"] = "3"
 				f.save(t, nil)
+			case "invalid_project_root_type":
+				b, readErr := os.ReadFile(f.store)
+				var document map[string]json.RawMessage
+				if readErr != nil || json.Unmarshal(b, &document) != nil {
+					t.Fatal("fixture store")
+				}
+				projects := bytes.TrimSpace(document["projects"])
+				document["projects"] = append(append([]byte(nil), projects[:len(projects)-1]...), []byte(`,"other":123}`)...)
+				b, marshalErr := json.Marshal(document)
+				if marshalErr != nil || os.WriteFile(f.store, b, 0600) != nil {
+					t.Fatal("fixture project types")
+				}
 			}
 			p, err := taskSourceProject(context.Background(), f.q, f.d)
 			taskSourceExpectFailure(t, p, err, want)
@@ -367,5 +379,213 @@ func TestTaskSourceProjectionCancelledBeforeLookup(t *testing.T) {
 	taskSourceExpectFailure(t, p, err, "invalid_input")
 	if f.reads != 0 {
 		t.Fatal("cancelled inspection reached provider")
+	}
+}
+
+func taskSourceWriteRawStore(t *testing.T, f *taskSourceFixture, selected []byte, others ...[]byte) {
+	t.Helper()
+	projects, err := json.Marshal(map[string]string{"owned": f.taskRoot})
+	if err != nil {
+		t.Fatal(err)
+	}
+	var raw bytes.Buffer
+	raw.WriteString(`{"projects":`)
+	raw.Write(projects)
+	raw.WriteString(`,"items":[`)
+	raw.Write(selected)
+	for _, other := range others {
+		raw.WriteByte(',')
+		raw.Write(other)
+	}
+	raw.WriteString(`]}`)
+	if err := os.WriteFile(f.store, raw.Bytes(), 0600); err != nil {
+		t.Fatal(err)
+	}
+}
+
+func TestTaskSourceProjectionStrictShallowRowIDs(t *testing.T) {
+	for _, rawID := range []string{
+		`{"id":42,"ID":99}`,
+		`{"ID":42,"id":99}`,
+		`{"id":99,"ID":42}`,
+		`{"ID":99,"id":42}`,
+		`{"id":42,"id":99}`,
+		`{"id":42,"\u0049\u0044":99}`,
+		`{"id":"99"}`,
+		`{"id":null}`,
+		`{"id":99.0}`,
+		`{"id":9.9e1}`,
+		`{"id":0}`,
+		`{"id":-1}`,
+		`{"id":18446744073709551616}`,
+		`{"project":"unrelated"}`,
+	} {
+		t.Run(rawID, func(t *testing.T) {
+			f := newTaskSourceFixture(t)
+			selected, err := json.Marshal(f.row)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if rawID == `{"id":42,"ID":99}` {
+				var oldHeader struct{ ID uint64 }
+				if err := json.Unmarshal([]byte(rawID), &oldHeader); err != nil || oldHeader.ID != 99 {
+					t.Fatal("old case-insensitive last-value contrast missed its boundary", err)
+				}
+			}
+			// A valid selected row must not hide an ambiguous or invalid ID in
+			// another row. This is the full provider/CLI input path, not just a
+			// unit call to the new ID helper.
+			taskSourceWriteRawStore(t, f, selected, []byte(rawID))
+			p, err := taskSourceProject(context.Background(), f.q, f.d)
+			taskSourceExpectFailure(t, p, err, "task_unavailable")
+		})
+	}
+}
+
+func TestTaskSourceProjectionLosslessMetadataStringFailures(t *testing.T) {
+	for _, member := range []string{"worker", "scheduler", "project", "status"} {
+		for _, bad := range []string{`"\uD800"`, `"\uDC00"`, `"\uD800x"`, "\"\xff\""} {
+			t.Run(member+bad, func(t *testing.T) {
+				f := newTaskSourceFixture(t)
+				selected, err := json.Marshal(f.row)
+				if err != nil {
+					t.Fatal(err)
+				}
+				needle, replacement := `"job":"original-job"`, `"job":`+bad
+				switch member {
+				case "project":
+					needle, replacement = `"project":"owned"`, `"project":`+bad
+				case "status":
+					needle, replacement = `"status":"doing"`, `"status":`+bad
+				}
+				if member == "worker" || member == "scheduler" {
+					// Marshal sorts scheduler before worker_receipt. Replace only
+					// the requested nested job, leaving the other valid and present.
+					key := `"worker_receipt":`
+					if member == "scheduler" {
+						key = `"scheduler":`
+					}
+					from := bytes.Index(selected, []byte(key))
+					if from < 0 {
+						t.Fatal("fixture nested key absent")
+					}
+					tail := bytes.Replace(selected[from:], []byte(needle), []byte(replacement), 1)
+					selected = append(append([]byte(nil), selected[:from]...), tail...)
+				} else {
+					selected = bytes.Replace(selected, []byte(needle), []byte(replacement), 1)
+				}
+				taskSourceWriteRawStore(t, f, selected)
+				p, err := taskSourceProject(context.Background(), f.q, f.d)
+				taskSourceExpectFailure(t, p, err, "task_unavailable")
+			})
+		}
+	}
+}
+
+func TestTaskSourceProjectionLosslessMetadataStringPositive(t *testing.T) {
+	for _, value := range []struct{ raw, expected string }{
+		{`"�"`, "�"},
+		{`"\ufffd"`, "�"},
+		{`"\uD83D\uDE00"`, "😀"},
+		{`"\\uD800"`, `\uD800`},
+	} {
+		t.Run(value.raw, func(t *testing.T) {
+			f := newTaskSourceFixture(t)
+			selected, err := json.Marshal(f.row)
+			if err != nil {
+				t.Fatal(err)
+			}
+			selected = bytes.ReplaceAll(selected, []byte(`"job":"original-job"`), []byte(`"job":`+value.raw))
+			taskSourceWriteRawStore(t, f, selected)
+			p, err := taskSourceProject(context.Background(), f.q, f.d)
+			if err != nil || p.Task == nil || p.Task.Worker.Job == nil || p.Task.SchedulerJob == nil ||
+				*p.Task.Worker.Job != value.expected || *p.Task.SchedulerJob != value.expected {
+				t.Fatal("valid string identity changed or rejected", err)
+			}
+		})
+	}
+}
+
+func TestTaskSourceProjectionSelectedRootRejectsLossyString(t *testing.T) {
+	for _, bad := range []string{`"\uD800"`, `"\uDC00"`, "\"\xff\""} {
+		t.Run(bad, func(t *testing.T) {
+			f := newTaskSourceFixture(t)
+			selected, err := json.Marshal(f.row)
+			if err != nil {
+				t.Fatal(err)
+			}
+			store := []byte(`{"projects":{"owned":` + bad + `},"items":[` + string(selected) + `]}`)
+			if err := os.WriteFile(f.store, store, 0600); err != nil {
+				t.Fatal(err)
+			}
+			if _, err := taskQuestionReadState(f.store, 42); err == nil {
+				t.Fatal("lossy selected root was accepted by the normal provider")
+			}
+		})
+	}
+}
+
+func TestTaskSourceProjectionLossyIdentityCannotMatchLiteralReplacement(t *testing.T) {
+	for _, member := range []string{"project", "project_key", "root"} {
+		t.Run(member, func(t *testing.T) {
+			f := newTaskSourceFixture(t)
+			project := "owned"
+			root := f.taskRoot
+			if member != "root" {
+				project = "owned�"
+				f.row["project"] = project
+			} else {
+				root = filepath.Join(f.root, "replacement-�")
+				if err := os.Mkdir(root, 0700); err != nil {
+					t.Fatal(err)
+				}
+			}
+			selected, err := json.Marshal(f.row)
+			if err != nil {
+				t.Fatal(err)
+			}
+			projects, err := json.Marshal(map[string]string{project: root})
+			if err != nil {
+				t.Fatal(err)
+			}
+			if member == "project" {
+				selected = bytes.Replace(selected, []byte("owned�"), []byte(`owned\uD800`), 1)
+			} else {
+				projects = bytes.Replace(projects, []byte("�"), []byte(`\uD800`), 1)
+			}
+			store := append([]byte(`{"projects":`), projects...)
+			store = append(store, []byte(`,"items":[`)...)
+			store = append(store, selected...)
+			store = append(store, []byte(`]}`)...)
+			// A normal decoder repairs these original bytes into an existing
+			// literal-U+FFFD registry key/path. That is precisely the identity
+			// change the selected-string boundary must refuse.
+			var legacy struct {
+				Projects map[string]string
+				Items    []struct{ Project string }
+			}
+			if err := json.Unmarshal(store, &legacy); err != nil || len(legacy.Items) != 1 || legacy.Projects[legacy.Items[0].Project] != root {
+				t.Fatal("legacy identity-repair contrast did not reach the intended value", err)
+			}
+			if err := os.WriteFile(f.store, store, 0600); err != nil {
+				t.Fatal(err)
+			}
+			p, err := taskSourceProject(context.Background(), f.q, f.d)
+			taskSourceExpectFailure(t, p, err, "task_unavailable")
+		})
+	}
+}
+
+func TestTaskSourceProjectionShallowIDLeavesOtherDuplicatesOpaque(t *testing.T) {
+	f := newTaskSourceFixture(t)
+	selected, err := json.Marshal(f.row)
+	if err != nil {
+		t.Fatal(err)
+	}
+	other := []byte(`{"id":99,"spec":{"key":1,"key":2},"note":"first","note":"second","spec":{"other":3}}`)
+	taskSourceWriteRawStore(t, f, selected, other)
+	p, err := taskSourceProject(context.Background(), f.q, f.d)
+	if err != nil || p.Task == nil || p.Task.ID != 42 {
+		t.Fatal("non-ID fields of another Task were interpreted", err)
 	}
 }

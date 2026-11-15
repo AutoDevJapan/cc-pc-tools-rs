@@ -7,8 +7,10 @@ import (
 	"io"
 	"path/filepath"
 	"regexp"
+	"strconv"
 	"strings"
 	"time"
+	"unicode/utf8"
 )
 
 func taskQuestionProduction() taskQuestionRegistry {
@@ -119,10 +121,115 @@ func taskQuestionStoreFields(raw []byte, fold bool) (map[string]json.RawMessage,
 	return fields, nil
 }
 
+// Decode only a consumed metadata string. encoding/json's replacement of
+// invalid UTF-8 or isolated UTF-16 surrogates must not change its identity.
+func taskQuestionJSONString(raw []byte) (string, error) {
+	raw = bytes.TrimSpace(raw)
+	if len(raw) < 2 || raw[0] != '"' || raw[len(raw)-1] != '"' || !utf8.Valid(raw) {
+		return "", errTaskQuestion
+	}
+	unit := func(at int) (uint16, bool) {
+		if at+4 > len(raw) { return 0, false }
+		var n uint16
+		for _, c := range raw[at:at+4] {
+			var v byte
+			switch {
+			case c >= '0' && c <= '9': v = c-'0'
+			case c >= 'a' && c <= 'f': v = c-'a'+10
+			case c >= 'A' && c <= 'F': v = c-'A'+10
+			default: return 0, false
+			}
+			n = n<<4 | uint16(v)
+		}
+		return n, true
+	}
+	for i := 1; i < len(raw)-1; {
+		if raw[i] != '\\' {
+			if raw[i] < 0x20 || raw[i] == '"' { return "", errTaskQuestion }
+			i++
+			continue
+		}
+		if i+1 >= len(raw)-1 { return "", errTaskQuestion }
+		switch raw[i+1] {
+		case '"', '\\', '/', 'b', 'f', 'n', 'r', 't':
+			i += 2
+		case 'u':
+			n, ok := unit(i+2)
+			if !ok { return "", errTaskQuestion }
+			if n >= 0xd800 && n <= 0xdbff {
+				if i+12 > len(raw)-1 || raw[i+6] != '\\' || raw[i+7] != 'u' { return "", errTaskQuestion }
+				low, valid := unit(i+8)
+				if !valid || low < 0xdc00 || low > 0xdfff { return "", errTaskQuestion }
+				i += 12
+			} else {
+				if n >= 0xdc00 && n <= 0xdfff { return "", errTaskQuestion }
+				i += 6
+			}
+		default:
+			return "", errTaskQuestion
+		}
+	}
+	var value string
+	if json.Unmarshal(raw, &value) != nil || !utf8.ValidString(value) { return "", errTaskQuestion }
+	return value, nil
+}
+
+// Inspect one member at this object level. Unknown values remain RawMessage:
+// this never interprets another Task's spec/note object or its duplicate keys.
+func taskQuestionObjectMember(raw []byte, wanted string, fold bool) (json.RawMessage, bool, error) {
+	d := json.NewDecoder(bytes.NewReader(raw))
+	start, err := d.Token()
+	if err != nil || start != json.Delim('{') { return nil, false, errTaskQuestion }
+	var selected json.RawMessage
+	found := false
+	for d.More() {
+		from := d.InputOffset()
+		token, err := d.Token()
+		key, ok := token.(string)
+		if err != nil || !ok { return nil, false, errTaskQuestion }
+		keyEnd := d.InputOffset()
+		matches := key == wanted || fold && strings.EqualFold(key, wanted)
+		if matches {
+			lexeme := raw[from:keyEnd]
+			quote := bytes.IndexByte(lexeme, '"')
+			if quote < 0 { return nil, false, errTaskQuestion }
+			strict, err := taskQuestionJSONString(lexeme[quote:])
+			if err != nil || strict != key || found { return nil, false, errTaskQuestion }
+		}
+		var value json.RawMessage
+		if d.Decode(&value) != nil { return nil, false, errTaskQuestion }
+		if matches { selected, found = value, true }
+	}
+	end, err := d.Token()
+	var tail json.RawMessage
+	if err != nil || end != json.Delim('}') || d.Decode(&tail) != io.EOF { return nil, false, errTaskQuestion }
+	return selected, found, nil
+}
+
+func taskQuestionRowID(raw []byte) (uint64, error) {
+	value, found, err := taskQuestionObjectMember(raw, "id", true)
+	value = bytes.TrimSpace(value)
+	if err != nil || !found || len(value) == 0 || value[0] < '1' || value[0] > '9' { return 0, errTaskQuestion }
+	for _, c := range value { if c < '0' || c > '9' { return 0, errTaskQuestion } }
+	id, err := strconv.ParseUint(string(value), 10, 64)
+	if err != nil || id == 0 { return 0, errTaskQuestion }
+	return id, nil
+}
+
+func taskQuestionOptionalString(raw []byte, member string) (*string, error) {
+	if len(raw) == 0 || bytes.Equal(bytes.TrimSpace(raw), []byte("null")) { return nil, nil }
+	value, found, err := taskQuestionObjectMember(raw, member, true)
+	if err != nil { return nil, errTaskQuestion }
+	if !found || bytes.Equal(bytes.TrimSpace(value), []byte("null")) { return nil, nil }
+	text, err := taskQuestionJSONString(value)
+	if err != nil { return nil, errTaskQuestion }
+	return &text, nil
+}
+
 func taskQuestionReadState(path string, id uint64) (taskQuestionState, error) {
 	var db struct {
 		Projects map[string]string
-		Items    []json.RawMessage
+		Items []json.RawMessage
 	}
 	var raw json.RawMessage
 	if readJSON(path, maxTodo, &raw) != nil {
@@ -141,11 +248,11 @@ func taskQuestionReadState(path string, id uint64) (taskQuestionState, error) {
 	}
 	var found json.RawMessage
 	for _, raw := range db.Items {
-		var header struct{ ID uint64 }
-		if json.Unmarshal(raw, &header) != nil {
+		rowID, err := taskQuestionRowID(raw)
+		if err != nil {
 			return taskQuestionState{}, errTaskQuestion
 		}
-		if header.ID == id {
+		if rowID == id {
 			if found != nil {
 				return taskQuestionState{}, errTaskQuestion
 			}
@@ -174,7 +281,14 @@ func taskQuestionReadState(path string, id uint64) (taskQuestionState, error) {
 	if (flags.Status != "doing" && flags.Status != "todo" && flags.Status != "block") || flags.Stopped || flags.OwnerStopped || flags.Cancelled || flags.Postponed || flags.Stop != "" || nonnull(flags.Decision) || nonnull(flags.Scheduler.Stop) || conversationActorHeld(found) {
 		return state, errTaskQuestion
 	}
-	state.Root = db.Projects[state.Project]
+	projectRaw, present, err := taskQuestionObjectMember(found, "project", true)
+	if err != nil || !present { return state, errTaskQuestion }
+	project, err := taskQuestionJSONString(projectRaw)
+	if err != nil || project != state.Project { return state, errTaskQuestion }
+	rootRaw, present, err := taskQuestionObjectMember(fields["projects"], project, false)
+	if err != nil || !present { return state, errTaskQuestion }
+	state.Root, err = taskQuestionJSONString(rootRaw)
+	if err != nil { return state, errTaskQuestion }
 	state.current = found
 	if !filepath.IsAbs(filepath.FromSlash(state.Root)) {
 		return state, errTaskQuestion

@@ -168,36 +168,45 @@ func (h *taskSourceHeldFile) recheck(ctx context.Context, guard func(context.Con
 }
 
 func taskSourceProjectState(s taskQuestionState, id uint64) (*taskSourceProjectedTask, error) {
-	var metadata struct {
-		Status           string                    `json:"status"`
-		ResumeGeneration *uint64                   `json:"resume_generation"`
-		Worker           taskSourceProjectedWorker `json:"worker_receipt"`
-		Scheduler        struct {
-			Job *string `json:"job"`
-		} `json:"scheduler"`
-	}
 	var unique map[string]json.RawMessage
 	if s.ID != id || s.Project == "" || strings.EqualFold(s.Project, "owner") || !filepath.IsAbs(filepath.FromSlash(s.Root)) ||
-		historyStrictJSON(s.current, &unique) != nil || json.Unmarshal(s.current, &metadata) != nil ||
-		(metadata.Status != "doing" && metadata.Status != "todo" && metadata.Status != "block") || len(s.Project) > 256 || len(s.Root) > 4096 ||
-		strings.ContainsAny(s.Project, "\r\n\x00") || strings.ContainsAny(s.Root, "\r\n\x00") {
+		!utf8.ValidString(s.Project) || !utf8.ValidString(s.Root) || len(s.Project) > 256 || len(s.Root) > 4096 ||
+		strings.ContainsAny(s.Project, "\r\n\x00") || strings.ContainsAny(s.Root, "\r\n\x00") || historyStrictJSON(s.current, &unique) != nil {
 		return nil, taskSourceProjectionFailure("task_unavailable")
 	}
-	for _, job := range []*string{metadata.Worker.Job, metadata.Scheduler.Job} {
-		if job != nil && (len(*job) > 256 || strings.ContainsAny(*job, "\r\n\x00")) {
-			return nil, taskSourceProjectionFailure("task_unavailable")
-		}
+	projectRaw, present, err := taskQuestionObjectMember(s.current, "project", true)
+	if err != nil || !present { return nil, taskSourceProjectionFailure("task_unavailable") }
+	project, err := taskQuestionJSONString(projectRaw)
+	if err != nil || project != s.Project { return nil, taskSourceProjectionFailure("task_unavailable") }
+	statusRaw, present, err := taskQuestionObjectMember(s.current, "status", true)
+	if err != nil || !present { return nil, taskSourceProjectionFailure("task_unavailable") }
+	status, err := taskQuestionJSONString(statusRaw)
+	if err != nil || (status != "doing" && status != "todo" && status != "block") { return nil, taskSourceProjectionFailure("task_unavailable") }
+	workerRaw, _, err := taskQuestionObjectMember(s.current, "worker_receipt", true)
+	if err != nil { return nil, taskSourceProjectionFailure("task_unavailable") }
+	workerJob, err := taskQuestionOptionalString(workerRaw, "job")
+	if err != nil { return nil, taskSourceProjectionFailure("task_unavailable") }
+	schedulerRaw, _, err := taskQuestionObjectMember(s.current, "scheduler", true)
+	if err != nil { return nil, taskSourceProjectionFailure("task_unavailable") }
+	schedulerJob, err := taskQuestionOptionalString(schedulerRaw, "job")
+	if err != nil { return nil, taskSourceProjectionFailure("task_unavailable") }
+	var numbers struct {
+		ResumeGeneration *uint64 `json:"resume_generation"`
+		Worker struct { Generation *uint64 `json:"generation"` } `json:"worker_receipt"`
 	}
-	p := &taskSourceProjectedTask{ID: s.ID, Project: s.Project, Root: s.Root, Status: metadata.Status, SnapshotSHA: bytesHash(s.current),
-		ResumeGeneration: metadata.ResumeGeneration, Worker: metadata.Worker, SchedulerJob: metadata.Scheduler.Job}
-	return p, nil
+	if json.Unmarshal(s.current, &numbers) != nil { return nil, taskSourceProjectionFailure("task_unavailable") }
+	for _, job := range []*string{workerJob, schedulerJob} {
+		if job != nil && (len(*job) > 256 || strings.ContainsAny(*job, "\r\n\x00")) { return nil, taskSourceProjectionFailure("task_unavailable") }
+	}
+	return &taskSourceProjectedTask{ID:s.ID, Project:project, Root:s.Root, Status:status, SnapshotSHA:bytesHash(s.current),
+		ResumeGeneration:numbers.ResumeGeneration, Worker:taskSourceProjectedWorker{Job:workerJob, Generation:numbers.Worker.Generation}, SchedulerJob:schedulerJob}, nil
 }
 
 // The normal provider and original input handles stay in this invocation. The
 // returned projection is an observation, never an issuer, media or send grant.
 func taskSourceProject(ctx context.Context, q taskSourceProjectionRequest, d taskSourceProjectionDependencies) (result taskSourceProjection, err error) {
 	result = taskSourceProjectionEmpty("unavailable")
-	if ctx == nil || ctx.Err() != nil || q.Todo == 0 || d.Task == nil || d.Guard == nil || !filepath.IsAbs(q.Root) {
+	if ctx == nil || ctx.Err() != nil || q.Todo == 0 || d.Task == nil || d.Guard == nil || !filepath.IsAbs(q.Root) || !utf8.ValidString(q.Root) {
 		return result, taskSourceProjectionFailure("invalid_input")
 	}
 	if !d.Guard(ctx, q.Root) {

@@ -1,8 +1,10 @@
 package main
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
+	"io"
 	"path/filepath"
 	"regexp"
 	"strings"
@@ -70,12 +72,71 @@ func taskQuestionUnattributed(raw string) bool {
 	return p.Client != nil && *p.Client && p.Unverified != nil && !*p.Unverified && p.Access != nil && !*p.Access && p.Policy == "owner-client-rule-20261027" && p.Basis == "owner_rule_unattributed_location" && p.Status == "protected" && len(p.Categories) == 1 && p.Categories[0] == "client_project"
 }
 
+// Check the store envelope and project keys without recursively interpreting
+// unrelated Tasks' spec/note values. Only the selected row receives the normal
+// Task parser and eligibility checks below.
+func taskQuestionStoreFields(raw []byte, fold bool) (map[string]json.RawMessage, error) {
+	d := json.NewDecoder(bytes.NewReader(raw))
+	start, err := d.Token()
+	if err != nil || start != json.Delim('{') {
+		return nil, errTaskQuestion
+	}
+	fields := map[string]json.RawMessage{}
+	seen := map[string]bool{}
+	for d.More() {
+		token, err := d.Token()
+		key, ok := token.(string)
+		if err != nil || !ok {
+			return nil, errTaskQuestion
+		}
+		normal := key
+		if fold {
+			normal = historyFoldJSONKey(key)
+		}
+		if seen[normal] {
+			return nil, errTaskQuestion
+		}
+		seen[normal] = true
+		if fold && strings.EqualFold(key, "projects") {
+			key = "projects"
+		} else if fold && strings.EqualFold(key, "items") {
+			key = "items"
+		}
+		var value json.RawMessage
+		if d.Decode(&value) != nil {
+			return nil, errTaskQuestion
+		}
+		fields[key] = value
+	}
+	end, err := d.Token()
+	if err != nil || end != json.Delim('}') {
+		return nil, errTaskQuestion
+	}
+	var tail json.RawMessage
+	if d.Decode(&tail) != io.EOF {
+		return nil, errTaskQuestion
+	}
+	return fields, nil
+}
+
 func taskQuestionReadState(path string, id uint64) (taskQuestionState, error) {
 	var db struct {
 		Projects map[string]string
 		Items    []json.RawMessage
 	}
-	if readJSON(path, maxTodo, &db) != nil {
+	var raw json.RawMessage
+	if readJSON(path, maxTodo, &raw) != nil {
+		return taskQuestionState{}, errTaskQuestion
+	}
+	defer clear(raw)
+	fields, err := taskQuestionStoreFields(raw, true)
+	if err != nil {
+		return taskQuestionState{}, errTaskQuestion
+	}
+	if _, err := taskQuestionStoreFields(fields["projects"], false); err != nil {
+		return taskQuestionState{}, errTaskQuestion
+	}
+	if json.Unmarshal(fields["projects"], &db.Projects) != nil || json.Unmarshal(fields["items"], &db.Items) != nil {
 		return taskQuestionState{}, errTaskQuestion
 	}
 	var found json.RawMessage

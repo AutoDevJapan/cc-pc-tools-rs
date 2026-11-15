@@ -981,6 +981,9 @@ func (r *Runner) recheckOriginBlocked(ctx context.Context, health *Health) {
 }
 
 func main() {
+	if len(os.Args) > 1 && os.Args[1] == "--inspect-task-question-source" {
+		os.Exit(taskSourceProjectionCLI(os.Args[2:], os.Stdout, taskSourceProjectionProduction()))
+	}
 	if len(os.Args) > 1 && (os.Args[1] == "--check-task-question-evidence" || os.Args[1] == "--register-task-question-evidence") {
 		os.Exit(taskQuestionCLI(os.Args[2:], os.Stdout, taskQuestionProduction(), os.Args[1] == "--register-task-question-evidence"))
 	}

@@ -108,8 +108,20 @@ jobs:
           if (Test-Path -LiteralPath $binary) { throw 'Windows runner test output already exists' }
           & go test -race -c -o $binary .
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-          $list = @(& $binary -test.list . 2>&1)
+          $list = @(& $binary '-test.list' '.' 2>&1)
           $listExit = $LASTEXITCODE
+          $listExitText = if ($null -eq $listExit) { 'unknown' } else { ([long]$listExit).ToString([Globalization.CultureInfo]::InvariantCulture) }
+          Write-Output ('UNATTENDED_WINDOWS_LIST exit={0} lines={1}' -f $listExitText,$list.Count)
+          if ($list.Count -gt 10000) { throw 'Windows runner native root output exceeds line bound' }
+          if ($null -eq $listExit -or $listExit -ne 0) {
+            $failureClass = 'startup_unclassified'
+            foreach ($item in $list) {
+              $line = [string]$item
+              if ($line -cmatch '^flag provided but not defined: -test(?:[.][a-z]+)?$') { $failureClass = 'test_flag_rejected' }
+              if ($line -cmatch '^FATAL: ThreadSanitizer:') { $failureClass = 'race_runtime_startup' }
+            }
+            Write-Output ('UNATTENDED_WINDOWS_LIST_FAILURE class={0}' -f $failureClass)
+          }
           if ($null -eq $listExit -or $listExit -ne 0) { throw 'Windows runner root list failed' }
           $names = [Collections.Generic.List[string]]::new()
           $seen = [Collections.Generic.HashSet[string]]::new([StringComparer]::Ordinal)
@@ -120,6 +132,7 @@ jobs:
             $names.Add($name)
           }
           if ($names.Count -lt 1 -or $names.Count -gt 10000) { throw 'Windows runner root inventory outside bounds' }
+          foreach ($name in $names) { Write-Output ('UNATTENDED_WINDOWS_LIST_ROOT ' + $name) }
           $completed = [Collections.Generic.HashSet[string]]::new([StringComparer]::Ordinal)
           $passed = 0
           $skipped = 0
@@ -129,9 +142,14 @@ jobs:
             $group = @($names.GetRange($offset, $count))
             $selection = '^(?:' + (($group | ForEach-Object { [regex]::Escape($_) }) -join '|') + ')$'
             if ($selection.Length -gt 26000) { throw 'Windows runner root selection exceeds command bound' }
-            $lines = @(& $binary -test.v -test.timeout=180s ('-test.run=' + $selection) 2>&1)
+            $lines = @(& $binary '-test.v' '-test.timeout=180s' ('-test.run=' + $selection) 2>&1)
             $testExit = $LASTEXITCODE
-            $lines | ForEach-Object { Write-Output $_ }
+            $exitText = if ($null -eq $testExit) { 'unknown' } else { ([long]$testExit).ToString([Globalization.CultureInfo]::InvariantCulture) }
+            Write-Output ('UNATTENDED_WINDOWS_PARTITION index={0} expected={1} exit={2}' -f $partitions,$group.Count,$exitText)
+            foreach ($item in $lines) {
+              $line = [string]$item
+              if ($line -cmatch '^(?:=== (?:RUN|PAUSE|CONT)[ \t]+[A-Za-z0-9_/.-]+[ \t]*|[ \t]*--- (?:PASS|SKIP|FAIL):[ \t]+[A-Za-z0-9_/.-]+[ \t]+\([0-9]+(?:[.][0-9]+)?s\)|PASS|FAIL)$') { Write-Output $line }
+            }
             if ($null -eq $testExit -or $testExit -ne 0) { throw 'Windows runner partition failed' }
             $output = [string]::Join([Environment]::NewLine, [string[]]$lines)
             $runs = @([regex]::Matches($output, '(?m)^=== RUN[ \t]+([^\s/]+)[ \t]*\r?$') | ForEach-Object { $_.Groups[1].Value })

@@ -1724,7 +1724,8 @@ func (prepared *civ880PreparedObservation) Close() error {
 	if prepared.stage!=nil{
 		// Keep the stage and parent until explicit Cleanup confirms the
 		// exact created namespace is gone; Close is not a cleanup shortcut.
-		prepared.stage.mu.Lock();mustKeep:=prepared.stage.rootAttempted&&!prepared.stage.rootCollision&&!prepared.stage.cleanupDone;ownsParent:=prepared.stage.parentOwned;prepared.stage.mu.Unlock()
+		prepared.stage.mu.Lock();mustKeep:=prepared.stage.rootAttempted&&!prepared.stage.rootCollision&&!prepared.stage.cleanupDone;ownsParent:=prepared.stage.parentOwned;closeUnknown:=prepared.stage.closeUnknown;prepared.stage.mu.Unlock()
+		if closeUnknown{return errors.Join(errCiv880StagePreserved,errCiv880CloseUnknown)}
 		if mustKeep{return errCiv880StagePreserved}
 		if err:=prepared.stage.Close();err!=nil{return err};prepared.stage=nil;if ownsParent{prepared.parent=nil}
 	}

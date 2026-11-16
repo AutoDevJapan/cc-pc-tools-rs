@@ -955,3 +955,31 @@ func TestCiv880ConsumedFileCloseFailureNeverClaimsALiveLease(t *testing.T){
 	if err:=civ880CloseFileOnce(&normal,&normalUnknown,func(value *os.File)error{return value.Close()});err!=nil||
 		normal!=nil||normalUnknown{t.Fatal("normal close was permanently disabled",err)}
 }
+
+func TestCiv880PreparedClosePreservesUnknownOutcomeAcrossWrappers(t *testing.T){
+	ctx,cancel:=context.WithTimeout(context.Background(),5*time.Second);defer cancel()
+	stage:=&civ880CreatedStage{closeUnknown:true,rootAttempted:true,rootCreated:true}
+	parent:=&civ880StageParent{}
+	prepared:=&civ880PreparedObservation{stage:stage,parent:parent}
+	for _,operation:=range []func()error{
+		func()error{return prepared.Cleanup(ctx)},
+		prepared.Close,
+		func()error{return prepared.Cleanup(ctx)},
+		prepared.Close,
+	}{
+		err:=operation()
+		if !errors.Is(err,errCiv880StagePreserved)||!errors.Is(err,errCiv880CloseUnknown)||
+			prepared.stage!=stage||prepared.parent!=parent||stage.closed||parent.closed{
+			t.Fatal("prepared wrapper hid unknown close outcome or lost ownership",err)
+		}
+	}
+	// A preserved namespace before any failed close remains a distinct state.
+	liveStage:=&civ880CreatedStage{rootAttempted:true}
+	live:=&civ880PreparedObservation{stage:liveStage}
+	if err:=live.Close();!errors.Is(err,errCiv880StagePreserved)||errors.Is(err,errCiv880CloseUnknown){
+		t.Fatal("retryable live state was conflated with consumed-close uncertainty",err)
+	}
+	normal:=&civ880PreparedObservation{}
+	if err:=normal.Cleanup(ctx);err!=nil{t.Fatal("normal empty cleanup refused",err)}
+	if err:=normal.Close();err!=nil{t.Fatal("normal close disabled",err)}
+}

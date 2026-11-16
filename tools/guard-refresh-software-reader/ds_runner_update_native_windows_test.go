@@ -34,6 +34,107 @@ func TestDSRunnerNativeOwnedPrepareRetainsBytesAndExactACL(t *testing.T){
     if raw,err:=os.ReadFile(paths[0]);err!=nil||string(raw)!="owned old"{t.Fatal("prepare changed target")};if raw,err:=os.ReadFile(paths[1]);err!=nil||string(raw)!="owned new"{t.Fatal("prepared stage missing")};if raw,err:=os.ReadFile(paths[2]);err!=nil||string(raw)!="owned old"{t.Fatal("backup missing")}
 }
 
+// The real owned descriptor is retained when the controlled free fails. The
+// fixture releases that allocation only after checking the session's facts.
+func TestDSRunnerNativeEnsureDescriptorFreeFailureRetainsCleanup(t *testing.T){
+    for _,mode:=range []string{"success","backup","stage"}{t.Run(mode,func(t *testing.T){
+        root:=physicalSoftwareFixture(t);paths:=[3]string{filepath.Join(root,"current.exe"),filepath.Join(root,"stage.exe"),filepath.Join(root,"before.exe")}
+        oldBytes,newBytes:=[]byte("owned predecessor"),[]byte("owned successor")
+        if err:=os.WriteFile(paths[0],oldBytes,0600);err!=nil{t.Fatal(err)}
+        ctx,cancel:=context.WithTimeout(context.Background(),10*time.Second);defer cancel()
+        permit:=&dsRunnerWorkerPermit{ctx:ctx};permit.self=permit;candidate:=dsRunnerFixtureCandidate(newBytes)
+        var held *dsRunnerNativeTarget
+        defer func(){
+            if held!=nil{if mode=="success"{if err:=held.Close();err!=nil{t.Error("clean session close",err)}}else if !errors.Is(held.Close(),errDSRunnerCleanup){t.Error("cleanup failure was not persistent")}}
+            if err:=candidate.Close();err!=nil{t.Error("candidate close",err)}
+            // This test owns the injected allocation; avoid leaking it in CI.
+            if held!=nil{for _,value:=range held.unreleased{if status,_,_:=updateLocalFree.Call(value);status!=0{t.Error("fixture allocation cleanup failed")}}}
+        }()
+        err:=candidate.with(ctx,func(payload []byte)error{
+            purpose:=dsRunnerRepairPurpose{candidate:candidate,pin:candidate.pin,permit:permit}
+            session,openErr:=dsRunnerOpenNativeTargetAt(ctx,purpose,paths);if openErr!=nil{return openErr}
+            var ok bool;held,ok=session.(*dsRunnerNativeTarget);if !ok{return errDSRunnerEvidence}
+            faults:=&dsRunnerACLTestFaults{};held.faults=faults
+            old,_,readErr:=held.Read(ctx,dsRunnerCurrent);if readErr!=nil{return readErr};defer clear(old)
+            if mode=="backup"{faults.denyEnsureFree=true}
+            backup,created,ensureErr:=held.Ensure(ctx,dsRunnerSaved,old)
+            if mode=="backup"{
+                if !created||!errors.Is(ensureErr,errDSRunnerCleanup)||backup.id.FileID==""||faults.ensureFreeCalls!=1||len(held.unreleased)!=1{return errors.New("backup free failure not retained")}
+            }else{
+                if ensureErr!=nil||!created||backup.id.FileID==""||faults.ensureFreeCalls!=1||len(held.unreleased)!=0{return errors.New("backup free positive control failed")}
+                if mode=="stage"{faults.denyEnsureFree=true}
+                stage,created,ensureErr:=held.Ensure(ctx,dsRunnerStaged,payload)
+                if mode=="stage"{if !created||!errors.Is(ensureErr,errDSRunnerCleanup)||stage.id.FileID==""||faults.ensureFreeCalls!=2||len(held.unreleased)!=1{return errors.New("stage free failure not retained")}}else if ensureErr!=nil||!created||stage.id.FileID==""||faults.ensureFreeCalls!=2||len(held.unreleased)!=0{return errors.New("stage free positive control failed")}
+            }
+            if mode!="success"{
+                if held.unreleased[0]==0{return errors.New("missing retained allocation")}
+                if !errors.Is(held.Close(),errDSRunnerCleanup)||!errors.Is(held.Close(),errDSRunnerCleanup)||len(held.unreleased)!=1||faults.ensureFreeCalls!=1&&mode=="backup"||faults.ensureFreeCalls!=2&&mode=="stage"{return errors.New("free failure was lost or retried")}
+            }
+            return nil
+        });if err!=nil{t.Fatal(err)}
+        if held!=nil{closeErr:=held.Close();if mode=="success"&&closeErr!=nil||mode!="success"&&!errors.Is(closeErr,errDSRunnerCleanup){t.Fatal("session close lost cleanup state")}}
+        if got,err:=os.ReadFile(paths[0]);err!=nil||string(got)!=string(oldBytes){t.Fatal("target changed during prepare")}
+        if got,err:=os.ReadFile(paths[2]);err!=nil||string(got)!=string(oldBytes){t.Fatal("created backup not retained")}
+        if mode=="backup"{if _,err:=os.Stat(paths[1]);!os.IsNotExist(err){t.Fatal("stage unexpectedly created")}}else if got,err:=os.ReadFile(paths[1]);err!=nil||string(got)!=string(newBytes){t.Fatal("created stage not retained")}
+    })}
+}
+
+// A primary Ensure failure after descriptor allocation must survive alongside
+// the independently injected free failure and must not create either leaf.
+func TestDSRunnerNativeEnsureKeepsPrimaryAndDescriptorFreeFailure(t *testing.T){
+    root:=physicalSoftwareFixture(t);paths:=[3]string{filepath.Join(root,"current.exe"),filepath.Join(root,"stage.exe"),filepath.Join(root,"before.exe")}
+    oldBytes:=[]byte("owned predecessor");if err:=os.WriteFile(paths[0],oldBytes,0600);err!=nil{t.Fatal(err)}
+    ctx,cancel:=context.WithTimeout(context.Background(),10*time.Second);defer cancel();permit:=&dsRunnerWorkerPermit{ctx:ctx};permit.self=permit
+    candidate:=dsRunnerFixtureCandidate([]byte("owned successor"));var held *dsRunnerNativeTarget
+    defer func(){
+        if held!=nil{if !errors.Is(held.Close(),errDSRunnerCleanup){t.Error("cleanup failure was not persistent")};for _,value:=range held.unreleased{if status,_,_:=updateLocalFree.Call(value);status!=0{t.Error("fixture allocation cleanup failed")}}}
+        if err:=candidate.Close();err!=nil{t.Error("candidate close",err)}
+    }()
+    err:=candidate.with(ctx,func(payload []byte)error{
+        purpose:=dsRunnerRepairPurpose{candidate:candidate,pin:candidate.pin,permit:permit};session,e:=dsRunnerOpenNativeTargetAt(ctx,purpose,paths);if e!=nil{return e}
+        var ok bool;held,ok=session.(*dsRunnerNativeTarget);if !ok{return errDSRunnerEvidence}
+        faults:=&dsRunnerACLTestFaults{denyEnsureFree:true,failEnsureAfterDescriptor:true};held.faults=faults
+        snapshot,created,e:=held.Ensure(ctx,dsRunnerSaved,oldBytes)
+        if created||snapshot.id.FileID!=""||!errors.Is(e,errDSRunnerEvidence)||!errors.Is(e,errDSRunnerCleanup)||faults.ensureFreeCalls!=1||len(held.unreleased)!=1||held.unreleased[0]==0{return errors.New("primary or cleanup failure lost")}
+        if !errors.Is(held.Close(),errDSRunnerCleanup)||!errors.Is(held.Close(),errDSRunnerCleanup)||faults.ensureFreeCalls!=1||len(held.unreleased)!=1{return errors.New("retained descriptor was lost or retried")}
+        return nil
+    });if err!=nil{t.Fatal(err)}
+    if got,err:=os.ReadFile(paths[0]);err!=nil||string(got)!=string(oldBytes){t.Fatal("primary failure changed target")}
+    for _,p:=range paths[1:]{if _,err:=os.Stat(p);!os.IsNotExist(err){t.Fatal("primary failure created a leaf")}}
+}
+
+// Verify the actual controller never reports success when either descriptor
+// free fails. No replacement occurs and the already-created leaves remain.
+func TestDSRunnerNativeEnsureFreeFailureRejectsControllerResult(t *testing.T){
+    for _,op:=range []string{"prepare","apply"}{for _,leaf:=range []string{"backup","stage"}{t.Run(op+"/"+leaf,func(t *testing.T){
+        root:=physicalSoftwareFixture(t);paths:=[3]string{filepath.Join(root,"current.exe"),filepath.Join(root,"stage.exe"),filepath.Join(root,"before.exe")}
+        oldBytes,newBytes:=[]byte("owned predecessor"),[]byte("owned successor")
+        if err:=os.WriteFile(paths[0],oldBytes,0600);err!=nil{t.Fatal(err)}
+        ctx,cancel:=context.WithTimeout(context.Background(),10*time.Second);defer cancel();permit:=&dsRunnerWorkerPermit{ctx:ctx};permit.self=permit
+        if leaf=="stage"{
+            initial:=dsRunnerMaintenanceAccess{acquire:func(context.Context)(*dsRunnerCandidate,error){return dsRunnerFixtureCandidate(newBytes),nil},open:func(ctx context.Context,p dsRunnerRepairPurpose)(dsRunnerTargetSession,error){return dsRunnerOpenNativeTargetAt(ctx,p,paths)}}
+            ready:=executeDSRunnerMaintenanceFor(ctx,"prepare",permit,initial,digest(oldBytes),int64(len(oldBytes)))
+            if !ready.Qualified||!ready.Prepared||ready.CleanupFailed{t.Fatal("existing-backup setup failed",ready.Reason)}
+            // Remove only this test-owned completed stage so the next Ensure
+            // exercises an existing backup followed by a fresh stage.
+            if err:=os.Remove(paths[1]);err!=nil{t.Fatal(err)}
+        }
+        faults:=&dsRunnerACLTestFaults{denyEnsureFree:true};var held *dsRunnerNativeTarget
+        access:=dsRunnerMaintenanceAccess{acquire:func(context.Context)(*dsRunnerCandidate,error){return dsRunnerFixtureCandidate(newBytes),nil},open:func(ctx context.Context,p dsRunnerRepairPurpose)(dsRunnerTargetSession,error){
+            session,err:=dsRunnerOpenNativeTargetAt(ctx,p,paths);if err!=nil{return session,err};n,ok:=session.(*dsRunnerNativeTarget);if !ok{return nil,errDSRunnerEvidence};held=n;n.faults=faults;return n,nil
+        }}
+        defer func(){if held!=nil{for _,value:=range held.unreleased{if status,_,_:=updateLocalFree.Call(value);status!=0{t.Error("fixture allocation cleanup failed")}}}}()
+        result:=executeDSRunnerMaintenanceFor(ctx,op,permit,access,digest(oldBytes),int64(len(oldBytes)))
+        if result.Qualified||result.Prepared||result.InstalledVerified||!result.CleanupFailed||result.CommitAttempted||result.UpdatePerformed||result.CommitOutcome!=dsRunnerCommitNotAttempted||result.Reason!="partial_prepare_preserved"{t.Fatal("cleanup failure was not reported",result.Reason)}
+        if held==nil||len(held.unreleased)!=1||held.unreleased[0]==0||faults.ensureFreeCalls!=1||!errors.Is(held.Close(),errDSRunnerCleanup){t.Fatal("failed descriptor not retained after controller close")}
+        if !dsRunnerWorkerResultValid(op,result){t.Fatal("cleanup failure result was not canonical")}
+        if leaf=="backup"{if result.Backup==nil||result.Stage!=nil||len(result.Created)!=1||result.Created[0]!=dsRunnerBackup{t.Fatal("backup snapshot or creation fact lost")}}else if result.Backup==nil||result.Stage==nil||len(result.Created)!=1||result.Created[0]!=dsRunnerStage{t.Fatal("stage snapshot or creation fact lost")}
+        if got,err:=os.ReadFile(paths[0]);err!=nil||string(got)!=string(oldBytes){t.Fatal("controller changed target")}
+        if got,err:=os.ReadFile(paths[2]);err!=nil||string(got)!=string(oldBytes){t.Fatal("controller lost backup")}
+        if leaf=="backup"{if _,err:=os.Stat(paths[1]);!os.IsNotExist(err){t.Fatal("controller unexpectedly created stage")}}else if got,err:=os.ReadFile(paths[1]);err!=nil||string(got)!=string(newBytes){t.Fatal("controller lost stage")}
+    })}}
+}
+
 // Test-only fixed categories. A joined error may originate from cleanup;
 // it does not independently identify ReplaceFileW as the failing operation.
 type dsRunnerNativeDiagnostic struct {
@@ -125,24 +226,22 @@ func TestDSRunnerNativeRejectedMetadataHandleIsReturnedOnlyWhenItsCloseFailed(t 
 
 // A regular owned fixture whose DACL starts without automatic inheritance.
 // The native update must restore the exact descriptor, not merely ignore it.
-func dsRunnerOwnedACLFixture(t *testing.T,path string,auto bool)string{
+func dsRunnerOwnedNonAutoFixture(t *testing.T,path string)string{
     t.Helper()
     ptr,err:=syscall.UTF16PtrFromString(path);if err!=nil{t.Fatal(err)}
     h,err:=syscall.CreateFile(ptr,0x60080,syscall.FILE_SHARE_READ|syscall.FILE_SHARE_DELETE,nil,syscall.OPEN_EXISTING,0x00200000,0);if err!=nil{t.Fatal("owned ACL fixture open",err)}
     var descriptor uintptr
     code,_,_:=updateGetSecurity.Call(uintptr(h),1,4,0,0,0,0,uintptr(unsafe.Pointer(&descriptor)))
     if code!=0||descriptor==0{_ = syscall.CloseHandle(h);t.Fatal("owned ACL fixture descriptor")}
-    bits:=uintptr(0);if auto{bits=0x0400}
-    ok,_,_:=updateAdvapi.NewProc("SetSecurityDescriptorControl").Call(descriptor,0x0400,bits)
+    ok,_,_:=updateAdvapi.NewProc("SetSecurityDescriptorControl").Call(descriptor,0x0400,0)
     status,_,_:=updateNTSetSecurity.Call(uintptr(h),4,descriptor)
     free,_,_:=updateLocalFree.Call(descriptor);closeErr:=syscall.CloseHandle(h)
     if ok==0||status!=0||free!=0||closeErr!=nil{t.Fatal("owned ACL fixture setup failed")}
     f,err:=dsRunnerOpenMetadata(path,false);if err!=nil{t.Fatal(err)}
     before,err:=updateFileACL(f);if closeErr:=f.Close();err!=nil||closeErr!=nil{t.Fatal("before descriptor unavailable")}
-    _,_,flags,_,valid:=dsRunnerSDDLParts(before);if !valid||strings.Contains(flags,"AI")!=auto{t.Fatal("owned ACL fixture inheritance mode mismatch")}
+    _,_,flags,_,valid:=dsRunnerSDDLParts(before);if !valid||strings.Contains(flags,"AI"){t.Fatal("fixture retained auto-inherited flag")}
     return before
 }
-func dsRunnerOwnedNonAutoFixture(t *testing.T,path string)string{return dsRunnerOwnedACLFixture(t,path,false)}
 
 func TestDSRunnerNativeOwnedApplyRestoresExactNonInheritedDACL(t *testing.T){
     root:=physicalSoftwareFixture(t);paths:=[3]string{filepath.Join(root,"current.exe"),filepath.Join(root,"stage.exe"),filepath.Join(root,"before.exe")}
@@ -167,13 +266,18 @@ func TestDSRunnerNativeOwnedApplySkipsExactACLSetter(t *testing.T){
     root:=physicalSoftwareFixture(t);paths:=[3]string{filepath.Join(root,"current.exe"),filepath.Join(root,"stage.exe"),filepath.Join(root,"before.exe")}
     oldBytes,newBytes:=[]byte("owned predecessor"),[]byte("owned successor")
     if err:=os.WriteFile(paths[0],oldBytes,0600);err!=nil{t.Fatal(err)}
-    before:=dsRunnerOwnedACLFixture(t,paths[0],true)
+    // Windows assigns a default descriptor inherited from this real parent.
+    // Observe it before applying; do not synthesize an inherited control bit.
+    f,err:=dsRunnerOpenMetadata(paths[0],false);if err!=nil{t.Fatal(err)}
+    before,err:=updateFileACL(f);closeErr:=f.Close()
+    if err!=nil||closeErr!=nil{t.Fatal("inherited descriptor unavailable")}
+    _,_,flags,_,valid:=dsRunnerSDDLParts(before);if !valid||!strings.Contains(flags,"AI"){t.Fatal("default fixture did not inherit an automatic DACL")}
     ctx,cancel:=context.WithTimeout(context.Background(),10*time.Second);defer cancel();permit:=&dsRunnerWorkerPermit{ctx:ctx};permit.self=permit
     faults:=&dsRunnerACLTestFaults{}
     access:=dsRunnerMaintenanceAccess{acquire:func(context.Context)(*dsRunnerCandidate,error){return dsRunnerFixtureCandidate(newBytes),nil},open:func(ctx context.Context,p dsRunnerRepairPurpose)(dsRunnerTargetSession,error){session,err:=dsRunnerOpenNativeTargetAt(ctx,p,paths);if err!=nil{return session,err};n,ok:=session.(*dsRunnerNativeTarget);if !ok{return nil,errDSRunnerEvidence};n.faults=faults;return n,nil}}
     result:=executeDSRunnerMaintenanceFor(ctx,"apply",permit,access,digest(oldBytes),int64(len(oldBytes)))
     if !result.Qualified||!result.UpdatePerformed||!result.InstalledVerified||result.CommitOutcome!=dsRunnerCommitConfirmed||faults.setterCalls!=0{t.Fatal("exact ACL control did not succeed without a setter",result.Reason)}
-    f,err:=dsRunnerOpenMetadata(paths[0],false);if err!=nil{t.Fatal(err)};after,err:=updateFileACL(f);closeErr:=f.Close()
+    f,err=dsRunnerOpenMetadata(paths[0],false);if err!=nil{t.Fatal(err)};after,err:=updateFileACL(f);closeErr=f.Close()
     if err!=nil||closeErr!=nil||after!=before{t.Fatal("exact ACL control changed the descriptor")}
     if raw,err:=os.ReadFile(paths[0]);err!=nil||string(raw)!=string(newBytes){t.Fatal("candidate bytes not installed")}
 }

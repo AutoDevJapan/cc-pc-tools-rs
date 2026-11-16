@@ -100,7 +100,7 @@ func(n *dsRunnerNativeTarget)Ensure(ctx context.Context,leaf dsRunnerLeaf,want [
     current,err:=n.metadata(ctx,dsRunnerCurrent);if err!=nil{return snapshot,false,err}
     existing,err:=n.metadata(ctx,leaf);if err==nil{raw,s,readErr:=n.Read(ctx,leaf);defer clear(raw);if readErr!=nil||s.acl!=current.snapshot.acl||digest(raw)!=digest(want)||len(raw)!=len(want){return snapshot,false,errDSRunnerCollision};_ = existing;return s,false,nil}
     if !errors.Is(err,syscall.ERROR_FILE_NOT_FOUND){return snapshot,false,errDSRunnerCollision}
-    sdText,err:=syscall.UTF16PtrFromString(current.snapshot.acl);if err!=nil{return snapshot,false,errDSRunnerEvidence};var sd uintptr;ok,_,_:=updateStringSD.Call(uintptr(unsafe.Pointer(sdText)),1,uintptr(unsafe.Pointer(&sd)),0);runtime.KeepAlive(sdText);if ok==0||sd==0{return snapshot,false,errDSRunnerEvidence};defer updateLocalFree.Call(sd)
+    sdText,err:=syscall.UTF16PtrFromString(current.snapshot.acl);if err!=nil{return snapshot,false,errDSRunnerEvidence};var sd uintptr;ok,_,_:=updateStringSD.Call(uintptr(unsafe.Pointer(sdText)),1,uintptr(unsafe.Pointer(&sd)),0);runtime.KeepAlive(sdText);if sd!=0{defer func(){resultErr=errors.Join(resultErr,n.freeEnsureSecurity(sd))}()};if ok==0||sd==0{return snapshot,false,errDSRunnerEvidence};if n.faults!=nil&&n.faults.failEnsureAfterDescriptor{return snapshot,false,errDSRunnerEvidence}
     sa:=syscall.SecurityAttributes{Length:uint32(unsafe.Sizeof(syscall.SecurityAttributes{})),SecurityDescriptor:sd};name,err:=syscall.UTF16PtrFromString(n.paths[leaf]);if err!=nil{return snapshot,false,errDSRunnerEvidence}
     h,err:=syscall.CreateFile(name,syscall.GENERIC_READ|syscall.GENERIC_WRITE|0xe0000,syscall.FILE_SHARE_READ,&sa,syscall.CREATE_NEW,0x00200000,0);if err!=nil{return snapshot,false,err};created=true;f:=os.NewFile(uintptr(h),n.paths[leaf]);closed:=false;defer func(){if !closed{resultErr=errors.Join(resultErr,n.closeOwned(f))}}()
     id,err:=dsRunnerKernelID(f,false);if err!=nil{return snapshot,created,err};actual,good:=handlePath(h);if !good||!sameCleanPath(actual,n.paths[leaf]){return snapshot,created,errDSRunnerEvidence}
@@ -121,11 +121,21 @@ func(n *dsRunnerNativeTarget)Recheck(ctx context.Context,leaf dsRunnerLeaf,want 
 // name (documented for a failed rename of the replacement). The result is
 // (false, error) without the not-attempted marker for every failure from the
 // call onward, and the caller records it as unconfirmed.
+// The Ensure descriptor is an owned LocalAlloc value. Negative controls can
+// simulate a failed free without releasing it; they cannot force success.
+func(n *dsRunnerNativeTarget)freeEnsureSecurity(value uintptr)error{
+    if value==0{return nil}
+    fail:=false;if n.faults!=nil{n.faults.ensureFreeCalls++;fail=n.faults.denyEnsureFree}
+    return n.freeSecurityWithFault(value,fail)
+}
+func(n *dsRunnerNativeTarget)freeSecurity(value uintptr)error{return n.freeSecurityWithFault(value,false)}
+func(n *dsRunnerNativeTarget)freeSecurityWithFault(value uintptr,fail bool)error{
+    if value==0{return nil}
+    status:=value;if !fail{status,_,_=updateLocalFree.Call(value)}
+    if status!=0{n.unreleased=append(n.unreleased,value);return errDSRunnerCleanup};return nil
+}
 // The descriptor belongs to the old held object. A null or invalid DACL is
 // never applied to the replacement. The returned allocation has one owner.
-func(n *dsRunnerNativeTarget)freeSecurity(value uintptr)error{
-    if value==0{return nil};if status,_,_:=updateLocalFree.Call(value);status!=0{n.unreleased=append(n.unreleased,value);return errDSRunnerCleanup};return nil
-}
 func(n *dsRunnerNativeTarget)captureDescriptor(file *os.File)(sd uintptr,owner,group uintptr,err error){
     if file==nil{return 0,0,0,errDSRunnerEvidence}
     defer func(){if err!=nil&&sd!=0{err=errors.Join(err,n.freeSecurity(sd))}}()
@@ -141,7 +151,7 @@ func(n *dsRunnerNativeTarget)captureDescriptor(file *os.File)(sd uintptr,owner,g
 
 // Internal negative controls only. The normal factory never sets faults.
 // No test flag can bypass a validation or force a success.
-type dsRunnerACLTestFaults struct{ownerMismatch,groupMismatch,identityMismatch,parentMismatch,bytesMismatch,denySet,postSetFailure bool;cancel context.CancelFunc;setterCalls int}
+type dsRunnerACLTestFaults struct{ownerMismatch,groupMismatch,identityMismatch,parentMismatch,bytesMismatch,denySet,postSetFailure,denyEnsureFree,failEnsureAfterDescriptor bool;cancel context.CancelFunc;setterCalls,ensureFreeCalls int}
 func(n *dsRunnerNativeTarget)Publish(ctx context.Context,current,stage,backup dsRunnerSnapshot)(committed bool,resultErr error){
     if !n.stageWrite{return false,errors.Join(errDSRunnerPublishNotAttempted,errDSRunnerEvidence)}
     if n.Recheck(ctx,dsRunnerCurrent,current)!=nil||n.Recheck(ctx,dsRunnerStaged,stage)!=nil||n.Recheck(ctx,dsRunnerSaved,backup)!=nil||ctx.Err()!=nil{return false,errors.Join(errDSRunnerPublishNotAttempted,errDSRunnerEvidence)}

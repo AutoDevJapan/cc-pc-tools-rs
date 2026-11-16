@@ -11,7 +11,9 @@ fn failed_log(f: &Fixture, ctx: &mut Context, id: &str) -> LogArgs {
 }
 
 fn target(f: &Fixture, ctx: &mut Context, id: &str) -> String {
-    core::s(&log(ctx, &f.log(id, "対応不要。既存の製品記録です。", false)).unwrap()["thread_id"]).to_owned()
+    // Request IDs are retry keys; distinct bodies create distinct fixture authorities.
+    let args = f.log(id, &format!("対応不要。既存の製品記録です。{id}"), false);
+    core::s(&log(ctx, &args).unwrap()["thread_id"]).to_owned()
 }
 
 /// The separate baseline snippet uses only the old public log entry.
@@ -156,16 +158,26 @@ fn existing_authorized_log_target_cannot_be_silently_retargeted() {
     let f=Fixture::new();let mut ctx=f.context();
     let old=target(&f,&mut ctx,"already-authorized");
     let new=target(&f,&mut ctx,"different-authorized");
+    assert_ne!(old, new, "fixture authorities must use distinct threads");
     let mut args=f.log("authorized-unsent","対応不要。保持する元記録です。",false);
-    args.thread=Some(old);
+    args.thread=Some(old.clone());
     let (request,_)=prepare_log(&mut ctx,&args).unwrap();
     let mut ledger=Ledger::load(&f.home).unwrap();
+    let old_receipt = ledger.receipt("already-authorized", "log:0").unwrap();
+    let new_receipt = ledger.receipt("different-authorized", "log:0").unwrap();
+    assert_eq!(old_receipt.thread_id, old);
+    assert_eq!(new_receipt.thread_id, new);
+    assert_ne!(old_receipt.message_id, new_receipt.message_id);
     reserve(&mut ledger,&f.home,&request).unwrap();
     ledger.append(&f.home,Event::Bot{request_id:request.request_id.clone(),author_id:BOT.into()}).unwrap();
+    assert_eq!(ledger.request(&request.request_id), Some(&request));
+    assert!(ledger.effect(&request.request_id, "log:0").is_none());
     let before=fs::read(f.home.join(LEDGER)).unwrap();
+    let posts = f.server.lock().unwrap().posts.len();
     args.thread=Some(new);
     assert!(log(&mut ctx,&args).unwrap_err().contains("already authorized"));
     assert_eq!(fs::read(f.home.join(LEDGER)).unwrap(),before);
+    assert_eq!(f.server.lock().unwrap().posts.len(), posts);
     f.unchanged();
 }
 

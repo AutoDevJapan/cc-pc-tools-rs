@@ -47,20 +47,24 @@ The `rustup.exe` pin is the vendor's published setup file for rustup 1.29.3
 to `rustup.exe` on installation, and its self update downloads exactly this
 archive path before replacing the binary, so the installed file is expected to
 be byte-identical; the provider decides only by comparing the held bytes.
-rustup records no publisher, and its `DisplayVersion` value can lag behind the
-file after a self update, so the installation context is the per-user key
-`Software\Microsoft\Windows\CurrentVersion\Uninstall\Rustup` with its exact
-`DisplayName`. A later rustup release changes the file, and the row then stays
-unknown until a reviewed source change pins the new release. The proxy names
-that rustup creates beside it (`cargo.exe`, `rustc.exe` and others) are separate
-objects, are not admitted by this row and keep their refusal.
+The official Windows installer records `DisplayName` and `DisplayVersion`,
+and its normal self-update updates `DisplayVersion`; it does not record a
+publisher. This provider deliberately uses only the exact `DisplayName` in
+`Software\Microsoft\Windows\CurrentVersion\Uninstall\Rustup` under the
+current-user hive as installation context. The held-file public pin determines
+the admitted release, independently of the registry's version string. A later
+rustup release changes those bytes and remains unknown until a reviewed source
+change pins the new release. Proxy paths receive no classification grant; the
+closed same-object inventory below only supports verification of canonical
+`rustup.exe`.
 
 Changing a version or expected hash requires a reviewed source change. There is
 no caller-supplied path, publisher, receipt, digest, JSON plan or general alias
 exception. The existing uninstall registration must also report the exact
-version and publisher; rustup, which records neither, uses the fixed value
-names described above. That registration supplies installation context only;
-the public-byte comparison supplies the independent content check.
+version and publisher for the machine-installed tools; the rustup row uses the
+fixed current-user `DisplayName` context described above. That registration
+supplies installation context only; the public-byte comparison supplies the
+independent content check.
 
 ## Validation and handle ownership
 
@@ -68,11 +72,34 @@ Legacy client exclusions, unresolved exclusions and suspected owner-card paths
 remain ahead of this provider. The provider checks every declared alias against
 those exclusions again. Ordinary files retain the existing single-link policy.
 
-Only Git's observed pair `cmd/git.exe` and `cmd/git-lfs.exe` is admitted as one
-object for this canonical operation. The secondary name does not acquire its
-own general classification grant. Both names must be the entire hardlink set,
-must have the same volume/file ID/creation identity and ACL, and must remain
-pinned with read sharing only. Other tools must each have exactly one name.
+Git's observed pair `cmd/git.exe` and `cmd/git-lfs.exe` is admitted as one
+object for its canonical operation. The secondary name does not acquire its own
+general classification grant, and the pair must be the entire hardlink set.
+The GitHub CLI, Go and Go formatter objects must each have exactly one name.
+
+The [official rustup 1.29.3 proxy lists](https://github.com/rust-lang/rustup/blob/1.29.3/src/lib.rs)
+and [installation procedure](https://github.com/rust-lang/rustup/blob/1.29.3/src/cli/self_update.rs)
+allow proxies to be symbolic links or, when necessary, hardlinks to canonical
+`rustup.exe`. The fixed same-object inventory consists of that canonical name
+and these thirteen optional names in its fixed installation directory:
+`rustc.exe`, `rustdoc.exe`, `cargo.exe`, `rust-lldb.exe`, `rust-gdb.exe`,
+`rust-gdbgui.exe`, `rls.exe`, `cargo-clippy.exe`, `clippy-driver.exe`,
+`cargo-miri.exe`, `rust-analyzer.exe`, `rustfmt.exe` and `cargo-fmt.exe`.
+A singleton, a subset of these proxies or the complete fourteen-name hardlink
+set can be observed. A symbolic link or unrelated existing proxy is not assumed
+to be a hardlink and is not opened by this inventory. Every name actually
+returned by the native hardlink enumeration must belong to the compiled set,
+the canonical name must be present, and no other alias is permitted.
+
+Each observed alias must pass the existing exclusions and be held with read
+sharing only before content is read. All held aliases must have the same
+volume/file ID/creation identity, ACL and trusted parent-chain proof; their link
+count must equal the complete observed inventory. The exact selected set must
+still match after the read, even if a changed set would also fit the permitted
+proxy names. Existing exclusions are checked again, and the final held-object
+state is rechecked after installation metadata. The fourteen-name bound follows
+the fixed release's complete set rather than a caller-selected limit. None of
+these optional proxy paths can select the rustup classification plan itself.
 No reparse-point ancestor or alternate final path is accepted.
 
 Every retained directory in the installation's parent chain also has its
@@ -135,13 +162,25 @@ Normal classification, diagnostics and
 
 PR733 `4df6e610151c1d3c6465fb49aeb2146162aec6a4` and the subsequent
 `8126e6d16275395be837fe56ee4ae4d41ce27119` passed their hosted Windows
-controller tests, vet and build. Those results apply to those inputs only.
-The current Open/Read cancellation correction has additional test source and
-requires its own fixed-input hosted verification. The local
-Git, Go and gofmt executables have not been used to manufacture a successful
-local result. No actual installed-executable qualification, update or normal
-consumer acceptance is claimed by either source-test result. Public archive
-verification remains separate from the unperformed installed-byte comparison.
+controller tests, vet and build. Those historical results apply to those inputs
+only. On 2026-11-16, fixed source
+[557537a12a4c85be5a14a85b29d32c2a3e1122a9](https://github.com/AutoDevJapan/cc-pc-tools-rs/commit/557537a12a4c85be5a14a85b29d32c2a3e1122a9)
+passed its [Windows verifier job](https://github.com/AutoDevJapan/cc-pc-tools-rs/actions/runs/43877356543/job/133333761017),
+including seventeen exact returned-REG_SZ helper cases and eight isolated
+volatile-HKCU cases through native Origin, with no failures or skips in those
+cases, followed by vet and build. Its [readiness workflow](https://github.com/AutoDevJapan/cc-pc-tools-rs/actions/runs/43877356543)
+completed with ten successful jobs and one conditional bootstrap job skipped;
+its [CodeQL workflow](https://github.com/AutoDevJapan/cc-pc-tools-rs/actions/runs/43877356532)
+completed with four successful jobs. A skipped job is not a successful execution.
+
+Those hosted results cover that fixed predecessor, including its strict
+registry comparison and descriptor-role rules. The subsequent closed rustup
+hardlink inventory change has additional controller test source and requires
+its own fixed-input hosted verification and independent review. No local Go
+compile, test, vet, build or actual installed-tool acceptance was performed for
+that change. The owned-file native enumeration/held-identity test is also only
+prepared source until the new fixed candidate runs. Public archive verification and synthetic or isolated-registry
+tests remain separate from the unperformed installed-byte comparison.
 
 The candidate must receive independent review and a Windows build/test through
 an already qualified normal producer. The installed guard must then be updated
@@ -152,11 +191,17 @@ distributed helper. If no such producer or qualified update input is presently
 available, that concrete dependency remains unresolved; a different executable
 path or another actor must not run a denied tool to manufacture the evidence.
 
-The `gofmt.exe` and `rustup.exe` rows and the descriptor rules above were added
-after those results. They share the synthetic controller tests with the other
-rows. Structural tests keep the Go rows on one registration and archive and the
-rustup row on one per-user installation, a pure test fixes the registry hive and
-value names each plan selects, and descriptor tests use structural copies of
-stock Windows, Program Files, user-profile and rustup descriptors with synthetic
-account identifiers. They have no hosted result, installed-byte comparison or
-distributed guard generation yet.
+Structural controller tests keep the Go rows on one registration and archive
+and the rustup row on one per-user installation. Prepared hardlink controls
+cover singleton, partial and complete official inventories; unknown names;
+changed sets; different identities, descriptors and parent proofs; exclusions
+before opening and after reading; cancellation and cleanup failure; and refusal
+to classify a proxy path as canonical rustup. The existing exact-REG_SZ tests
+and ancestor-role tests remain in the source. These prepared controls do not
+claim that the current PC has any particular hardlink layout or trusted ACL.
+
+Actual current executable acceptance, normal producer/distribution and
+same-installed-object readback remain incomplete. Representative use from both
+Codex and Claude Code is also required and has not been demonstrated here.
+Neither source tests nor a hosted build grants installed-tool or downstream
+product acceptance.

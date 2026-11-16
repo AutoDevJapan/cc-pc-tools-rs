@@ -22,11 +22,27 @@ type ownerInstalledToolPlan struct {
 	name, path, version, publisher, registry, archiveURL, archiveSHA, entry, sha string
 	size int64
 	aliases []string
+	// Optional names are an inventory of the canonical object, not extra
+	// classified paths. Only the compiled rustup row has optional names.
+	optionalAliases []string
 	// Per-user installers such as rustup record themselves under the current
 	// user hive with their own value names. Both choices are compiled into the
 	// plan; nothing is read from input.
 	userRegistry bool
 	originFields map[string]string
+}
+
+// rustup 1.29.3 may create any of these proxies as hardlinks instead of
+// symlinks. The names come from that release's TOOLS and DUP_TOOLS lists:
+// https://github.com/rust-lang/rustup/blob/1.29.3/src/lib.rs
+// They are admitted only as names of the canonical rustup object.
+const ownerInstalledToolMaxAliases = 14
+
+func ownerInstalledRustupHardlinkAliases() []string {
+	const directory = "C:/Users/makhmeto/.cargo/bin/"
+	names := []string{"rustc.exe", "rustdoc.exe", "cargo.exe", "rust-lldb.exe", "rust-gdb.exe", "rust-gdbgui.exe", "rls.exe", "cargo-clippy.exe", "clippy-driver.exe", "cargo-miri.exe", "rust-analyzer.exe", "rustfmt.exe", "cargo-fmt.exe"}
+	for i := range names { names[i] = directory + names[i] }
+	return names
 }
 
 func ownerInstalledToolPlans() []ownerInstalledToolPlan {
@@ -35,7 +51,7 @@ func ownerInstalledToolPlans() []ownerInstalledToolPlan {
 		{name:"gh",path:"C:/Program Files/GitHub CLI/gh.exe",version:"2.101.0",publisher:"GitHub, Inc.",registry:`SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\{05425DD6-E9FE-4AEE-B289-8B61429F042A}`,archiveURL:"https://github.com/cli/cli/releases/download/v2.101.0/gh_2.101.0_windows_amd64.zip",archiveSHA:"bc6c814367b193cd8e713611d61e36013c0ef843b8f516458fe3eda039192794",entry:"bin/gh.exe",sha:"df05089117a23889b3f6ea08d7644849afe7b6025647a09f33b45c71f1418f75",size:42755384,aliases:[]string{"C:/Program Files/GitHub CLI/gh.exe"}},
 		{name:"go",path:"C:/Program Files/Go/bin/go.exe",version:"1.27.0",publisher:"https://go.dev",registry:`SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\{649B7E21-BFFC-4209-925C-5736BBF28E54}`,archiveURL:"https://go.dev/dl/go1.27.0.windows-amd64.zip",archiveSHA:"f0c0a0d33ba94f4d2c5dbc887334ce678b21813504ddb3aafcb06e60a5a667c4",entry:"go/bin/go.exe",sha:"7d828191ba32519a9c9361789ab647486236ed45c660889196c7770a8ff1985c",size:17508352,aliases:[]string{"C:/Program Files/Go/bin/go.exe"}},
 		{name:"gofmt",path:"C:/Program Files/Go/bin/gofmt.exe",version:"1.27.0",publisher:"https://go.dev",registry:`SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\{649B7E21-BFFC-4209-925C-5736BBF28E54}`,archiveURL:"https://go.dev/dl/go1.27.0.windows-amd64.zip",archiveSHA:"f0c0a0d33ba94f4d2c5dbc887334ce678b21813504ddb3aafcb06e60a5a667c4",entry:"go/bin/gofmt.exe",sha:"e7252077f308fe8344091a168b24cb56d1366e7d8f5c64c2086ce17d262e3eef",size:3392000,aliases:[]string{"C:/Program Files/Go/bin/gofmt.exe"}},
-		{name:"rustup",path:"C:/Users/makhmeto/.cargo/bin/rustup.exe",version:"1.29.3",userRegistry:true,originFields:map[string]string{"DisplayName":"Rustup: the Rust toolchain installer"},registry:`Software\Microsoft\Windows\CurrentVersion\Uninstall\Rustup`,archiveURL:"https://static.rust-lang.org/rustup/archive/1.29.3/x86_64-pc-windows-msvc/rustup-init.exe",archiveSHA:"38027d51d69a5d05493627a0634dbea52d6cd793c8f072d2373d3f4163eec7db",entry:"rustup-init.exe",sha:"38027d51d69a5d05493627a0634dbea52d6cd793c8f072d2373d3f4163eec7db",size:12839424,aliases:[]string{"C:/Users/makhmeto/.cargo/bin/rustup.exe"}},
+		{name:"rustup",path:"C:/Users/makhmeto/.cargo/bin/rustup.exe",version:"1.29.3",userRegistry:true,originFields:map[string]string{"DisplayName":"Rustup: the Rust toolchain installer"},registry:`Software\Microsoft\Windows\CurrentVersion\Uninstall\Rustup`,archiveURL:"https://static.rust-lang.org/rustup/archive/1.29.3/x86_64-pc-windows-msvc/rustup-init.exe",archiveSHA:"38027d51d69a5d05493627a0634dbea52d6cd793c8f072d2373d3f4163eec7db",entry:"rustup-init.exe",sha:"38027d51d69a5d05493627a0634dbea52d6cd793c8f072d2373d3f4163eec7db",size:12839424,aliases:[]string{"C:/Users/makhmeto/.cargo/bin/rustup.exe"},optionalAliases:ownerInstalledRustupHardlinkAliases()},
 	}
 }
 
@@ -92,7 +108,7 @@ func ownerInstalledFailureVerdict(primary string,cancelled,cleanup bool) ownerPa
 	case "verified_installed_development_tool": primary="installed_tool"
 	case "installed_tool_cancelled": primary="installed_tool";cancelled=true
 	case "installed_tool_cleanup_failed": primary="installed_tool";cleanup=true
-	case "installed_tool_origin_unavailable","installed_tool_alias_mismatch","installed_tool_identity_unavailable","installed_tool_parent_untrusted","installed_tool_identity_mismatch","installed_tool_bytes_mismatch","installed_tool_identity_changed","installed_tool_alias_changed","installed_tool_origin_changed","installed_tool_read_failed":
+	case "installed_tool_origin_unavailable","installed_tool_alias_mismatch","installed_tool_identity_unavailable","installed_tool_parent_untrusted","installed_tool_identity_mismatch","installed_tool_bytes_mismatch","installed_tool_identity_changed","installed_tool_alias_changed","installed_tool_origin_changed","installed_tool_read_failed","existing_exclusion_unavailable":
 	default: primary="installed_tool_origin_unavailable"
 	}
 	if cancelled { primary+="_cancelled" }
@@ -117,7 +133,8 @@ func ownerInstalledToolWith(ctx context.Context, path string, access ownerInstal
 // a real installation; no public operation decodes a plan or digest.
 func ownerInstalledToolVerify(ctx context.Context, plan ownerInstalledToolPlan, access ownerInstalledToolAccess, legacy func(string) ownerLegacyState) (verdict ownerPathVerdict) {
 	verdict = ownerRuleUnknown("installed_tool_origin_unavailable")
-	if ctx == nil || access == nil || legacy == nil || len(plan.aliases)==0 || len(plan.aliases)>2 { return }
+	if ctx == nil || access == nil || legacy == nil { return }
+	if _, valid := ownerInstalledToolInventory(plan, plan.aliases); !valid { return }
 	cleanupFailed,cancelledFailure:=false,false
 	observeFailure:=func(err error) {
 		cleanupFailed=cleanupFailed || errors.Is(err,errOwnerInstalledToolCleanup)
@@ -141,16 +158,27 @@ func ownerInstalledToolVerify(ctx context.Context, plan ownerInstalledToolPlan, 
 		return
 	}
 	if ctx.Err()!=nil { return }
-	aliases, err := access.Aliases(ctx, plan.path)
+	observed, err := access.Aliases(ctx, plan.path)
 	observeFailure(err)
 	if err==errOwnerInstalledToolCleanup { return ownerRuleUnknown("installed_tool_cleanup_failed") }
-	if err != nil || !ownerInstalledToolAliases(aliases, plan.aliases) { return ownerRuleUnknown("installed_tool_alias_mismatch") }
+	aliases, inventoryOK := ownerInstalledToolInventory(plan, observed)
+	if err != nil || !inventoryOK { return ownerRuleUnknown("installed_tool_alias_mismatch") }
+	// Optional hardlink names must pass the same exclusions as the required
+	// names before any object or executable content is opened.
+	for _, alias := range aliases {
+		if ctx.Err()!=nil { return ownerRuleUnknown("installed_tool_cancelled") }
+		if ownerCardPath(alias) || ownerWindowsAlias(alias) { return }
+		switch legacy(alias) {
+		case ownerLegacyClient: return ownerRuleProtected("legacy_exclusion")
+		case ownerLegacyUnavailable: return ownerRuleUnknown("existing_exclusion_unavailable")
+		}
+	}
 	var leases []ownerInstalledToolLease
 	defer func() {
 		for i:=len(leases)-1;i>=0;i-- { if leases[i].Close()!=nil { cleanupFailed=true } }
 	}()
 	var states []ownerInstalledToolState
-	for _, alias := range plan.aliases {
+	for _, alias := range aliases {
 		if ctx.Err()!=nil { return ownerRuleUnknown("installed_tool_cancelled") }
 		lease, openErr := access.Open(ctx, alias)
 		if lease!=nil { leases=append(leases,lease) }
@@ -161,7 +189,7 @@ func ownerInstalledToolVerify(ctx context.Context, plan ownerInstalledToolPlan, 
 		state, stateErr := lease.State()
 		observeFailure(stateErr)
 		if stateErr==nil && (!state.parentsAllowed || state.parentProof=="") { return ownerRuleUnknown("installed_tool_parent_untrusted") }
-		if stateErr!=nil || state.id.volume==0 || state.id.file==0 || state.id.created==0 || state.size!=plan.size || state.links!=uint32(len(plan.aliases)) || state.acl=="" || !state.aclAllowed || !same(state.resolved,alias) {
+		if stateErr!=nil || state.id.volume==0 || state.id.file==0 || state.id.created==0 || state.size!=plan.size || state.links!=uint32(len(aliases)) || state.acl=="" || !state.aclAllowed || !same(state.resolved,alias) {
 			return ownerRuleUnknown("installed_tool_identity_mismatch")
 		}
 		if len(states)>0 && (states[0].id!=state.id || states[0].acl!=state.acl || states[0].parentProof!=state.parentProof) { return ownerRuleUnknown("installed_tool_identity_mismatch") }
@@ -184,7 +212,15 @@ func ownerInstalledToolVerify(ctx context.Context, plan ownerInstalledToolPlan, 
 	after, err := access.Aliases(ctx,plan.path)
 	observeFailure(err)
 	if err==errOwnerInstalledToolCleanup { return ownerRuleUnknown("installed_tool_cleanup_failed") }
-	if err!=nil || !ownerInstalledToolAliases(after,plan.aliases) { return ownerRuleUnknown("installed_tool_alias_changed") }
+	if err!=nil || !ownerInstalledToolAliases(after,aliases) { return ownerRuleUnknown("installed_tool_alias_changed") }
+	for _, alias := range aliases {
+		if ctx.Err()!=nil { return ownerRuleUnknown("installed_tool_cancelled") }
+		if ownerCardPath(alias) || ownerWindowsAlias(alias) { return }
+		switch legacy(alias) {
+		case ownerLegacyClient: return ownerRuleProtected("legacy_exclusion")
+		case ownerLegacyUnavailable: return ownerRuleUnknown("existing_exclusion_unavailable")
+		}
+	}
 	if err:=access.Origin(ctx,plan);err!=nil {
 		observeFailure(err)
 		if err==errOwnerInstalledToolCleanup { return ownerRuleUnknown("installed_tool_cleanup_failed") }
@@ -199,6 +235,23 @@ func ownerInstalledToolVerify(ctx context.Context, plan ownerInstalledToolPlan, 
 	}
 	if ctx.Err()!=nil { return ownerRuleUnknown("installed_tool_cancelled") }
 	return ownerRuleClear("verified_installed_development_tool")
+}
+
+// Select only observed names from the compiled inventory. Required names must
+// all exist; optional names may be symlinks or absent and are not assumed to be
+// hardlinks. The returned order is fixed by the plan, with the required name
+// first. The final observation must equal this selected set, not a new subset.
+func ownerInstalledToolInventory(plan ownerInstalledToolPlan, actual []string) ([]string, bool) {
+	if len(plan.aliases)==0 || len(plan.aliases)>2 || len(plan.aliases)+len(plan.optionalAliases)>ownerInstalledToolMaxAliases { return nil,false }
+	allowed:=append(append([]string(nil),plan.aliases...),plan.optionalAliases...)
+	if len(actual)<len(plan.aliases) || len(actual)>len(allowed) || !ownerInstalledToolAliases(allowed,allowed) || !ownerInstalledToolAliases(actual,actual) { return nil,false }
+	names:=make(map[string]bool,len(actual))
+	for _, name:=range actual { names[strings.ToLower(filepath.Clean(name))]=true }
+	for _, name:=range plan.aliases { if !names[strings.ToLower(filepath.Clean(name))] { return nil,false } }
+	var selected []string
+	for _, name:=range allowed { if names[strings.ToLower(filepath.Clean(name))] { selected=append(selected,name) } }
+	if len(selected)!=len(actual) { return nil,false }
+	return selected,true
 }
 
 func ownerInstalledToolAliases(actual, expected []string) bool {
@@ -271,7 +324,7 @@ func (ownerInstalledToolNative) Aliases(ctx context.Context, path string) (names
 		ok,_,_:=k.NewProc("FindClose").Call(h)
 		if ok==0 { ownerInstalledCloseResult(&failure,errOwnerInstalledTool);names=nil }
 	}()
-	for len(names)<8 && ctx.Err()==nil {
+	for len(names)<ownerInstalledToolMaxAliases && ctx.Err()==nil {
 		if n==0 || n>=uint32(len(buffer)) { return nil,errOwnerInstalledTool }
 		names=append(names,filepath.VolumeName(path)+syscall.UTF16ToString(buffer[:n]))
 		n=uint32(len(buffer))

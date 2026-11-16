@@ -10,6 +10,7 @@ import (
     "errors"
     "io"
     "net/http"
+    "net/http/httptrace"
     "os"
     "strconv"
     "strings"
@@ -85,8 +86,22 @@ func TestGHAGuardOfficialSourceArchiveReal(t *testing.T) {
     if len(records)!=249 {t.Fatal("wrong fixed input count")}
     ctx,cancel:=context.WithTimeout(context.Background(),110*time.Second);defer cancel()
     tr:=&http.Transport{Proxy:nil};defer tr.CloseIdleConnections()
-    client:=&http.Client{Transport:tr,Timeout:30*time.Second,CheckRedirect:func(*http.Request,[]*http.Request)error{return http.ErrUseLastResponse}}
-    if err:=ghaGuardVerifyGitSnapshotViaPublicArchive(ctx,client,ghaGuardSource,ghaGuardSourceTree,records);err!=nil {t.Fatal("official root or archive inputs mismatch")}
+    var apiRequests,apiNon200,apiTransportErrors,apiStatus atomic.Int64
+    var archiveDial atomic.Bool
+    trace:=&httptrace.ClientTrace{GetConn:func(hostPort string){if hostPort=="codeload.github.com:443" {archiveDial.Store(true)}}}
+    ctx=httptrace.WithClientTrace(ctx,trace)
+    observed:=ghaGuardTreeTestTransport(func(req *http.Request)(*http.Response,error){
+        apiRequests.Add(1)
+        response,err:=tr.RoundTrip(req)
+        if err!=nil {apiTransportErrors.Add(1)}
+        if response!=nil && response.StatusCode!=http.StatusOK {apiNon200.Add(1);apiStatus.Store(int64(response.StatusCode))}
+        return response,err
+    })
+    client:=&http.Client{Transport:observed,Timeout:30*time.Second,CheckRedirect:func(*http.Request,[]*http.Request)error{return http.ErrUseLastResponse}}
+    if err:=ghaGuardVerifyGitSnapshotViaPublicArchive(ctx,client,ghaGuardSource,ghaGuardSourceTree,records);err!=nil {
+        if apiNon200.Load()>0 {t.Fatalf("official root or archive inputs mismatch (api_requests=%d api_non_200=%d api_status=%d api_transport_errors=%d archive_dial=%t)",apiRequests.Load(),apiNon200.Load(),apiStatus.Load(),apiTransportErrors.Load(),archiveDial.Load())}
+        t.Fatalf("official root or archive inputs mismatch (api_requests=%d api_non_200=0 api_transport_errors=%d archive_dial=%t)",apiRequests.Load(),apiTransportErrors.Load(),archiveDial.Load())
+    }
 }
 
 func TestGHAGuardOfficialSourceArchiveTransport(t *testing.T) {

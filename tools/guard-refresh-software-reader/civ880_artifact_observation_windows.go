@@ -1285,8 +1285,8 @@ type civ880IOStatus struct { Status uintptr; Information uintptr }
 type civ880GenericMapping struct { Read,Write,Execute,All uint32 }
 var civ880DirectoryMapping=civ880GenericMapping{Read:0x00120089,Write:0x00120116,Execute:0x001200A0,All:0x001F01FF}
 
-type civ880NtCreateFailure struct { status uint32 }
-func (e *civ880NtCreateFailure) Error() string{return "civ880_nt_create_unqualified"}
+type civ880NtCreateFailure struct { status uint32; ioStatus uint32; information uintptr }
+func (e *civ880NtCreateFailure) Error() string{return fmt.Sprintf("civ880_nt_create_unqualified status=%08x io_status=%08x information=%d",e.status,e.ioStatus,e.information)}
 func (e *civ880NtCreateFailure) Unwrap() error{return errCiv880Observation}
 
 func civ880DefiniteNameCollision(handle syscall.Handle,err error) bool {
@@ -1295,17 +1295,23 @@ func civ880DefiniteNameCollision(handle syscall.Handle,err error) bool {
 }
 
 func civ880NtCreateNew(parent syscall.Handle, name string, directory bool, security uintptr) (syscall.Handle,error) {
+	access,attributes,options:=uint32(0xC0110000),uint32(0x80),uint32(0x60) // GENERIC_READ|WRITE|DELETE|SYNCHRONIZE
+	if directory{access=0x001700A3;attributes=0x10;options=0x21}
+	return civ880NtCreateRelative(parent,name,security,access,attributes,options)
+}
+
+// Internal native-call fixture seam. The normal creator above fixes its rights,
+// CREATE_NEW disposition and sharing. A test can reproduce the old sync mask.
+func civ880NtCreateRelative(parent syscall.Handle,name string,security uintptr,access,attributes,options uint32)(syscall.Handle,error){
 	if parent==0||name==""||strings.ContainsAny(name,"/\\:\x00")||name=="."||name==".."||unsafe.Sizeof(uintptr(0))!=8{return 0,errCiv880Observation}
 	wide,err:=syscall.UTF16FromString(name);if err!=nil||len(wide)<2||len(wide)>32767{return 0,errCiv880Observation}
 	nameValue:=civ880UnicodeString{Length:uint16((len(wide)-1)*2),MaximumLength:uint16(len(wide)*2),Buffer:&wide[0]}
 	attrs:=civ880ObjectAttributes{Length:uint32(unsafe.Sizeof(civ880ObjectAttributes{})),RootDirectory:parent,ObjectName:&nameValue,Attributes:0x40,SecurityDescriptor:security}
 	var handle syscall.Handle;var ioStatus civ880IOStatus
-	access,attributes,options:=uint32(0xC0010000),uint32(0x80),uint32(0x60) // GENERIC_READ|WRITE|DELETE; regular synchronous file
-	if directory{access=0x001700A3;attributes=0x10;options=0x21} // LIST|ADD_FILE|TRAVERSE|READ_ATTRIBUTES plus READ_CONTROL|WRITE_DAC|DELETE|SYNCHRONIZE
 	call:=syscall.NewLazyDLL("ntdll.dll").NewProc("NtCreateFile")
 	status,_,_:=call.Call(uintptr(unsafe.Pointer(&handle)),uintptr(access),uintptr(unsafe.Pointer(&attrs)),uintptr(unsafe.Pointer(&ioStatus)),0,uintptr(attributes),uintptr(syscall.FILE_SHARE_READ),2,uintptr(options),0,0)
 	runtime.KeepAlive(wide);runtime.KeepAlive(nameValue);runtime.KeepAlive(attrs);runtime.KeepAlive(ioStatus)
-	if uint32(status)!=0||uint32(ioStatus.Status)!=0||ioStatus.Information!=2||handle==0||handle==syscall.InvalidHandle{return handle,&civ880NtCreateFailure{status:uint32(status)}}
+	if uint32(status)!=0||uint32(ioStatus.Status)!=0||ioStatus.Information!=2||handle==0||handle==syscall.InvalidHandle{return handle,&civ880NtCreateFailure{status:uint32(status),ioStatus:uint32(ioStatus.Status),information:ioStatus.Information}}
 	return handle,nil
 }
 
@@ -1453,6 +1459,7 @@ func civ880CreateObservedStageNamed(ctx context.Context,parent *civ880StageParen
 func civ880CreateObservedStageWithHook(ctx context.Context,parent *civ880StageParent,product *civ880ObservedProduct,name string,hook func(int)error) (*civ880CreatedStage,error) {
 	stage:=&civ880CreatedStage{parent:parent}
 	stage.mu.Lock();defer stage.mu.Unlock()
+	fail:=func(phase string,cause error)(*civ880CreatedStage,error){return stage,fmt.Errorf("%w: stage=%s: %w",errCiv880Observation,phase,cause)}
 	if ctx==nil||ctx.Err()!=nil||parent==nil||product==nil||!civ880StageName(name){return stage,errCiv880Observation};if _,ok:=ctx.Deadline();!ok{return stage,errCiv880Observation}
 	parent.mu.Lock()
 	if parent.transferred||!parent.current(ctx){parent.mu.Unlock();return stage,errCiv880Observation}
@@ -1468,49 +1475,51 @@ func civ880CreateObservedStageWithHook(ctx context.Context,parent *civ880StagePa
 	parentFile:=parent.handles[len(parent.handles)-1];stage.rootPath=filepath.Join(parent.paths[len(parent.paths)-1],name)
 	stage.rootAttempted=true
 	h,err:=civ880NtCreateNew(syscall.Handle(parentFile.Fd()),name,true,stage.security)
-	if err!=nil{stage.rootCollision=civ880DefiniteNameCollision(h,err);stage.unknownCreate=!stage.rootCollision;if h!=0&&h!=syscall.InvalidHandle{stage.unwrapped=append(stage.unwrapped,h)};return stage,errCiv880Observation}
+	if err!=nil{stage.rootCollision=civ880DefiniteNameCollision(h,err);stage.unknownCreate=!stage.rootCollision;if h!=0&&h!=syscall.InvalidHandle{stage.unwrapped=append(stage.unwrapped,h)};return fail("root_create",err)}
 	stage.rootCreated=true
 	stage.root=os.NewFile(uintptr(h),stage.rootPath);if stage.root==nil{stage.unknownCreate=true;stage.unwrapped=append(stage.unwrapped,h);return stage,errCiv880Observation}
-	stage.rootID,err=civ880StageDirectoryIdentity(stage.root,stage.rootPath);if err!=nil{return stage,errCiv880Observation}
+	stage.rootID,err=civ880StageDirectoryIdentity(stage.root,stage.rootPath);if err!=nil{return fail("root_identity",err)}
 	var actualDescriptor uintptr
 	code,_,_:=updateGetSecurity.Call(stage.root.Fd(),1,4,0,0,0,0,uintptr(unsafe.Pointer(&actualDescriptor)))
 	if actualDescriptor!=0{stage.securityOther=append(stage.securityOther,actualDescriptor)}
-	if code!=0||actualDescriptor==0{return stage,errCiv880Observation}
+	if code!=0||actualDescriptor==0{return fail("root_security",fmt.Errorf("status=%d descriptor=%t",code,actualDescriptor!=0))}
 	// Compare against the OS-generated effective DACL for a directory created
 	// from this descriptor; Windows may add generic mappings/inheritance flags.
 	var generated uintptr
-	ok,_,_ = updateAdvapi.NewProc("CreatePrivateObjectSecurityEx").Call(0,stage.security,uintptr(unsafe.Pointer(&generated)),0,1,0,uintptr(token),uintptr(unsafe.Pointer(&civ880DirectoryMapping)))
+	ok,_,securityErr := updateAdvapi.NewProc("CreatePrivateObjectSecurityEx").Call(0,stage.security,uintptr(unsafe.Pointer(&generated)),0,1,0,uintptr(token),uintptr(unsafe.Pointer(&civ880DirectoryMapping)))
 	if generated!=0{stage.generatedSecurity=append(stage.generatedSecurity,generated)}
-	if ok==0||generated==0{return stage,errCiv880Observation}
-	expectedACL,_,err:=civ880DACLBytes(generated);if err!=nil{return stage,errCiv880Observation};defer clear(expectedACL)
-	actualACL,actualControl,err:=civ880DACLBytes(actualDescriptor);if err!=nil{return stage,errCiv880Observation};defer clear(actualACL)
-	if !bytes.Equal(expectedACL,actualACL)||actualControl&0x1000==0{return stage,errCiv880Observation}
-	stage.rootStamp,err=civ880ParentObservation(stage.root,stage.rootPath);if err!=nil||!parent.current(ctx){return stage,errCiv880Observation}
+	if ok==0||generated==0{return fail("root_expected_security",securityErr)}
+	expectedACL,_,err:=civ880DACLBytes(generated);if err!=nil{return fail("root_expected_dacl",err)};defer clear(expectedACL)
+	actualACL,actualControl,err:=civ880DACLBytes(actualDescriptor);if err!=nil{return fail("root_actual_dacl",err)};defer clear(actualACL)
+	if !bytes.Equal(expectedACL,actualACL)||actualControl&0x1000==0{return fail("root_dacl_comparison",fmt.Errorf("expected=%s actual=%s control=%04x",digest(expectedACL),digest(actualACL),actualControl))}
+	stage.rootStamp,err=civ880ParentObservation(stage.root,stage.rootPath);if err!=nil||!parent.current(ctx){return fail("root_parent_stamp",errors.Join(errCiv880Observation,err))}
 	seen:=map[softwareIdentity]bool{}
 	for i,spec:=range civ880RoleSpecs(){
 		fileData:=product.files[i];if ctx.Err()!=nil||fileData.Role!=spec.role||fileData.Name!=spec.filename||len(fileData.data)==0||digest(fileData.data)!=fileData.SHA{return stage,errCiv880Observation}
 		h,err:=civ880NtCreateNew(syscall.Handle(stage.root.Fd()),spec.filename,false,stage.security)
-		if err!=nil{stage.unknownCreate=true;if h!=0&&h!=syscall.InvalidHandle{stage.unwrapped=append(stage.unwrapped,h)};return stage,errCiv880Observation}
+		if err!=nil{stage.unknownCreate=true;if h!=0&&h!=syscall.InvalidHandle{stage.unwrapped=append(stage.unwrapped,h)};return fail(fmt.Sprintf("leaf_create_%d",i),err)}
 		filePath:=filepath.Join(stage.rootPath,spec.filename);file:=os.NewFile(uintptr(h),filePath);if file==nil{stage.unknownCreate=true;stage.unwrapped=append(stage.unwrapped,h);return stage,errCiv880Observation};stage.leaves[i]=file
 		actual,ok:=handlePath(h);id,identityErr:=fileSoftwareIdentity(file);acl,aclErr:=updateFileACL(file)
-		if !ok||!sameCleanPath(actual,filePath)||identityErr!=nil||seen[id]||aclErr!=nil||acl==""{return stage,errCiv880Observation}
+		if !ok||!sameCleanPath(actual,filePath)||identityErr!=nil||seen[id]||aclErr!=nil||acl==""{return fail(fmt.Sprintf("leaf_identity_acl_%d",i),errors.Join(errCiv880Observation,identityErr,aclErr))}
 		seen[id]=true;stage.ids[i]=id;stage.acls[i]=acl
-		if civ880CheckedWrite(ctx,file,fileData.data)!=nil||civ880CheckHeldBytes(ctx,file,fileData.data,fileData.SHA)!=nil{return stage,errCiv880Observation}
+		if err:=civ880CheckedWrite(ctx,file,fileData.data);err!=nil{return fail(fmt.Sprintf("leaf_write_%d",i),err)}
+		if err:=civ880CheckHeldBytes(ctx,file,fileData.data,fileData.SHA);err!=nil{return fail(fmt.Sprintf("leaf_readback_%d",i),err)}
 		if hook!=nil&&hook(i)!=nil{return stage,errCiv880Observation}
 	}
 	var fileTemplate uintptr
 	ok,_,_=updateAdvapi.NewProc("CreatePrivateObjectSecurityEx").Call(0,stage.security,uintptr(unsafe.Pointer(&fileTemplate)),0,0,0,uintptr(token),uintptr(unsafe.Pointer(&civ880DirectoryMapping)))
 	if fileTemplate!=0{stage.generatedSecurity=append(stage.generatedSecurity,fileTemplate)}
-	if ok==0||fileTemplate==0{return stage,errCiv880Observation}
+	if ok==0||fileTemplate==0{return fail("leaf_expected_security",errCiv880Observation)}
 	fileExpected,_,err:=civ880DACLBytes(fileTemplate);if err!=nil{return stage,errCiv880Observation};defer clear(fileExpected)
 	for i,file:=range stage.leaves {
 		var descriptor uintptr;code,_,_:=updateGetSecurity.Call(file.Fd(),1,4,0,0,0,0,uintptr(unsafe.Pointer(&descriptor)))
 		if descriptor!=0{stage.securityOther=append(stage.securityOther,descriptor)}
 		if code!=0||descriptor==0{return stage,errCiv880Observation}
-		descriptorACL,_,err:=civ880DACLBytes(descriptor);if err!=nil{return stage,errCiv880Observation};same:=bytes.Equal(descriptorACL,fileExpected);clear(descriptorACL);if !same{return stage,errCiv880Observation}
+		descriptorACL,_,err:=civ880DACLBytes(descriptor);if err!=nil{return stage,errCiv880Observation};same:=bytes.Equal(descriptorACL,fileExpected);clear(descriptorACL);if !same{return fail(fmt.Sprintf("leaf_dacl_comparison_%d",i),errCiv880Observation)}
 		id,err:=fileSoftwareIdentity(file);if err!=nil||id!=stage.ids[i]{return stage,errCiv880Observation};acl,err:=updateFileACL(file);if err!=nil||acl!=stage.acls[i]{return stage,errCiv880Observation}
 	}
-	stamp,err:=civ880ParentObservation(stage.root,stage.rootPath);if err!=nil||stamp!=stage.rootStamp||!parent.current(ctx)||!civ880StageInventory(ctx,stage.root){return stage,errCiv880Observation}
+	stamp,err:=civ880ParentObservation(stage.root,stage.rootPath);if err!=nil||stamp!=stage.rootStamp||!parent.current(ctx){return fail("final_parent_stamp",errors.Join(errCiv880Observation,err))}
+	if !civ880StageInventory(ctx,stage.root){return fail("final_held_inventory",errCiv880Observation)}
 	stage.complete=true;return stage,nil
 }
 

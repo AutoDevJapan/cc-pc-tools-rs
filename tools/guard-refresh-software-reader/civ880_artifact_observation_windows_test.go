@@ -983,3 +983,54 @@ func TestCiv880PreparedClosePreservesUnknownOutcomeAcrossWrappers(t *testing.T){
 	if err:=normal.Cleanup(ctx);err!=nil{t.Fatal("normal empty cleanup refused",err)}
 	if err:=normal.Close();err!=nil{t.Fatal("normal close disabled",err)}
 }
+
+func TestCiv880NativeSynchronousLeafRequiresExplicitSynchronize(t *testing.T){
+	ctx,cancel:=context.WithTimeout(context.Background(),10*time.Second);defer cancel()
+	parent,err:=civ880OpenStageParentAt(ctx,physicalSoftwareFixture(t))
+	if err!=nil{if parent!=nil{_ = parent.Close()};t.Fatal("native fixture parent",err)}
+	defer func(){if err:=parent.Close();err!=nil{t.Error("native fixture parent close",err)}}()
+	parentFile:=parent.handles[len(parent.handles)-1]
+	rootName:="civ880-00000000000000000000000000000004"
+	rootHandle,err:=civ880NtCreateNew(syscall.Handle(parentFile.Fd()),rootName,true,0)
+	if err!=nil{t.Fatal("native fixture directory",err)}
+	root:=os.NewFile(uintptr(rootHandle),filepath.Join(parentFile.Name(),rootName))
+	if root==nil{_ = syscall.CloseHandle(rootHandle);t.Fatal("native fixture directory wrapper")}
+	defer func(){
+		if err:=civ880Disposition(root);err!=nil{t.Error("native fixture directory disposition",err)}
+		if err:=root.Close();err!=nil{t.Error("native fixture directory close",err)}
+	}()
+	// The old regular-file mask used generic rights, which are not a substitute
+	// for an explicit SYNCHRONIZE bit when synchronous native I/O is requested.
+	legacy,legacyErr:=civ880NtCreateRelative(syscall.Handle(root.Fd()),"legacy-sync.bin",0,0xC0010000,0x80,0x60)
+	if legacyErr==nil||legacy!=0&&legacy!=syscall.InvalidHandle{
+		// A failed control must still reconcile only the handle it created.
+		file:=os.NewFile(uintptr(legacy),filepath.Join(root.Name(),"legacy-sync.bin"))
+		if file!=nil{_ = civ880Disposition(file);_ = file.Close()}else if legacy!=0&&legacy!=syscall.InvalidHandle{_ = syscall.CloseHandle(legacy)}
+		t.Fatal("old synchronous access mask unexpectedly created a file",legacyErr)
+	}
+	var failed *civ880NtCreateFailure
+	if !errors.As(legacyErr,&failed)||failed.status!=0xc000000d{
+		t.Fatal("old synchronous access mask did not reach native INVALID_PARAMETER",legacyErr)
+	}
+	if _,err:=os.Lstat(filepath.Join(root.Name(),"legacy-sync.bin"));!errors.Is(err,os.ErrNotExist){
+		t.Fatal("rejected old native call left a namespace entry",err)
+	}
+	current,err:=civ880NtCreateNew(syscall.Handle(root.Fd()),"current-sync.bin",false,0)
+	if err!=nil||current==0||current==syscall.InvalidHandle{t.Fatal("explicit synchronous access was rejected",err)}
+	file:=os.NewFile(uintptr(current),filepath.Join(root.Name(),"current-sync.bin"))
+	if file==nil{_ = syscall.CloseHandle(current);t.Fatal("current native file wrapper unavailable")}
+	defer func(){if file!=nil{_ = civ880Disposition(file);_ = file.Close()}}()
+	id,err:=fileSoftwareIdentity(file);if err!=nil||id.FileID==""{t.Fatal("same native file identity unavailable",err)}
+	raw:=[]byte("same-handle synchronous native write and readback")
+	if err:=civ880CheckedWrite(ctx,file,raw);err!=nil{t.Fatal("same native file write",err)}
+	if err:=civ880CheckHeldBytes(ctx,file,raw,digest(raw));err!=nil{t.Fatal("same native file readback",err)}
+	if contender,err:=os.OpenFile(file.Name(),os.O_WRONLY,0);!errors.Is(err,windows.ERROR_SHARING_VIOLATION){
+		if contender!=nil{_ = contender.Close()}
+		t.Fatal("synchronous repair relaxed write sharing",err)
+	}
+	if err:=civ880Disposition(file);err!=nil{t.Fatal("same native file disposition",err)}
+	unknown:=false
+	name:=file.Name()
+	if err:=civ880CloseOriginalFile(&file,&unknown);err!=nil||unknown{t.Fatal("same native file close",err)}
+	if _,err:=os.Lstat(name);!errors.Is(err,os.ErrNotExist){t.Fatal("same native file remained after marked close",err)}
+}

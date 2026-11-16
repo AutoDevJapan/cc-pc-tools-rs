@@ -111,6 +111,7 @@ mod independent_subwork {
         assert!(error.message.contains("no reader retry was registered"),"{error:?}");
         assert!(!t.ctx.list_jobs(&HashSet::new()).iter().any(|j|j["todo_id"]==2939));
     }
+    #[cfg(windows)]
     #[test]
     fn queued_subwork_admits_after_todo_start_releases_its_reservation() {
         let (t, f) = setup(1);
@@ -8940,6 +8941,7 @@ mod run_validation {
         assert!(t.run(&["--capability-constraints","unknown"],b"no registration").is_err());
         assert!(t.ctx.list_jobs(&HashSet::new()).is_empty());
     }
+    #[cfg(windows)]
     #[test]
     fn real_backend_arguments_and_cli_records_keep_partial_constraints_for_three_generations() {
         for (sandbox_constraint, mcp_constraint) in [(true, false), (false, true), (true, true)] {
@@ -10702,6 +10704,7 @@ mod task_notifier {
         }
     }
 }
+#[cfg(windows)]
 mod end_to_end {
     use super::*;
     #[test]

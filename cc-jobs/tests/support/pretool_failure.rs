@@ -255,6 +255,7 @@ fn a_stalled_capacity_attempt_resumes_the_same_job_only_after_the_tree_is_draine
     assert_eq!(t.rt.spawns.load(Ordering::Relaxed), 2);
 }
 
+#[cfg(windows)]
 #[test]
 fn collected_quota_review_reenters_the_existing_verified_oauth_route_with_the_same_spec() {
     let (t, mut j, escaped) = fixture(

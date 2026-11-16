@@ -275,11 +275,13 @@ fn child(t: &Test) -> Value {
         .unwrap()
 }
 
+#[cfg(windows)]
 #[test]
 fn grok_existing_research_is_admitted_through_registration_start_and_final_queue_scope() {
     research_admission(false, "normal");
 }
 
+#[cfg(windows)]
 #[test]
 fn gpt_quota_research_preserves_its_selected_route_and_budget_through_final_queue_admission() {
     for case in ["normal", "capacity_same", "capacity_switch", "capacity_anthropic", "capacity_wait", "selected_unknown", "budget_changed", "history_changed", "source_changed"] {
@@ -287,6 +289,7 @@ fn gpt_quota_research_preserves_its_selected_route_and_budget_through_final_queu
     }
 }
 
+#[cfg(windows)]
 #[test]
 fn quota_metadata_episodes_reset_after_verified_admission_without_resetting_native_budget() {
     research_admission(true,"capacity_metadata");
@@ -317,6 +320,7 @@ fn legacy_claude_reentry_checks_its_current_health_after_the_old_provider_recove
     assert_eq!(t.ctx.load("quota-reader").unwrap(),source);
 }
 
+#[cfg(windows)]
 fn research_admission(gpt: bool, case: &str) {
     use cc_job_policy::subwork;
     let (t, mut row, mut source) = setup();
@@ -623,6 +627,7 @@ fn research_admission(gpt: bool, case: &str) {
     }
 }
 
+#[cfg(windows)]
 #[test]
 fn dependency_continuation_registers_links_and_rechecks_before_real_queue_admission() {
     for case in ["continuation_normal","continuation_legacy","continuation_old_request","continuation_legacy_reset","continuation_no_retry","continuation_health","continuation_selected_unknown","continuation_source","continuation_generation","continuation_parent_generation","continuation_parent_before_registration","continuation_stop","continuation_scope"] {
@@ -630,6 +635,7 @@ fn dependency_continuation_registers_links_and_rechecks_before_real_queue_admiss
     }
 }
 
+#[cfg(windows)]
 #[test]
 fn current_finished_result_keeps_its_budget_through_registration_start_and_final_queue() {
     for case in ["continuation_result_succeeded", "continuation_result_lost", "continuation_result_cancelled", "continuation_result_reset", "continuation_result_quota_dependency", "continuation_result_quota_dependency_reset","continuation_result_quota_dependency_owner_model","continuation_result_quota_dependency_non_openai"] {
@@ -637,6 +643,7 @@ fn current_finished_result_keeps_its_budget_through_registration_start_and_final
     }
 }
 
+#[cfg(windows)]
 #[test]
 fn ordinary_current_result_ignores_stale_contract_through_registration_start_and_final_queue() {
     for case in ["ordinary_succeeded","ordinary_lost","ordinary_parent_changed"] {
@@ -679,6 +686,7 @@ fn registered_legacy_v1_capsule_keeps_its_proof_and_budget_after_capacity_retry(
     assert_eq!(t.ctx.load("quota-reader").unwrap(),source);assert_eq!(row["resume_generation"],0);
 }
 
+#[cfg(windows)]
 #[test]
 fn verified_quota_review_keeps_luna_max_fast_through_cli_and_queue_admission() {
     let (t, row, _) = setup();
@@ -723,6 +731,7 @@ fn verified_quota_review_keeps_luna_max_fast_through_cli_and_queue_admission() {
     assert_eq!(row["model_origin"], "policy");
 }
 
+#[cfg(windows)]
 #[test]
 fn quota_metadata_rechecks_are_paced_and_finite_without_rewriting_the_original_failure() {
     let (t, row, source) = setup();

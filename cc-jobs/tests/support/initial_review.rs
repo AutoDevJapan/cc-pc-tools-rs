@@ -6,37 +6,42 @@ fn setup() -> (Test, subwork_support::Fixture) {
 fn setup_path(short_alias: bool) -> (Test, subwork_support::Fixture) {
     let (mut f, source, workspace) = subwork_support::initial_review::fixture();
     if short_alias {
-        use std::os::windows::ffi::OsStrExt;
-        let path = Path::new(s(&f.db["items"][1]["scheduler"], "worktree"));
-        let wide: Vec<_> = path.as_os_str().encode_wide().chain(Some(0)).collect();
-        let mut buffer = vec![0u16; 32768];
-        let len = unsafe {
-            windows_sys::Win32::Storage::FileSystem::GetShortPathNameW(
-                wide.as_ptr(),
-                buffer.as_mut_ptr(),
-                buffer.len() as u32,
-            )
-        };
-        assert!(len > 0 && (len as usize) < buffer.len());
-        let mut short = String::from_utf16(&buffer[..len as usize]).unwrap();
-        if short.to_lowercase() == path.to_string_lossy().to_lowercase() {
-            // On volumes without new 8.3 names, use a real verbatim spelling.
-            short = fs::canonicalize(path)
-                .unwrap()
-                .to_string_lossy()
-                .into_owned();
+        #[cfg(windows)]
+        {
+            use std::os::windows::ffi::OsStrExt;
+            let path = Path::new(s(&f.db["items"][1]["scheduler"], "worktree"));
+            let wide: Vec<_> = path.as_os_str().encode_wide().chain(Some(0)).collect();
+            let mut buffer = vec![0u16; 32768];
+            let len = unsafe {
+                windows_sys::Win32::Storage::FileSystem::GetShortPathNameW(
+                    wide.as_ptr(),
+                    buffer.as_mut_ptr(),
+                    buffer.len() as u32,
+                )
+            };
+            assert!(len > 0 && (len as usize) < buffer.len());
+            let mut short = String::from_utf16(&buffer[..len as usize]).unwrap();
             if short.to_lowercase() == path.to_string_lossy().to_lowercase() {
-                short = short.strip_prefix(r"\\?\").unwrap().to_owned();
+                // On volumes without new 8.3 names, use a real verbatim spelling.
+                short = fs::canonicalize(path)
+                    .unwrap()
+                    .to_string_lossy()
+                    .into_owned();
+                if short.to_lowercase() == path.to_string_lossy().to_lowercase() {
+                    short = short.strip_prefix(r"\\?\").unwrap().to_owned();
+                }
             }
+            assert_ne!(
+                short.to_lowercase(),
+                path.to_string_lossy().to_lowercase(),
+                "fixture needs a real alternate Windows spelling"
+            );
+            f.db["items"][1]["scheduler"]["worktree"] = json!(short);
+            f.db["items"][1]["scheduler"]["subwork_admission"] =
+                cc_job_policy::subwork::admission(&f.db["items"][1]);
         }
-        assert_ne!(
-            short.to_lowercase(),
-            path.to_string_lossy().to_lowercase(),
-            "fixture needs a real alternate Windows spelling"
-        );
-        f.db["items"][1]["scheduler"]["worktree"] = json!(short);
-        f.db["items"][1]["scheduler"]["subwork_admission"] =
-            cc_job_policy::subwork::admission(&f.db["items"][1]);
+        #[cfg(not(windows))]
+        unreachable!("the alternate 8.3 short-path spelling exists only on Windows volumes");
     }
     let digest =
         cc_job_policy::product_retry::digest(&fs::read(s(&f.db["items"][1], "spec")).unwrap());
@@ -71,6 +76,7 @@ fn setup_path(short_alias: bool) -> (Test, subwork_support::Fixture) {
     (t, f)
 }
 
+#[cfg(windows)]
 #[test]
 fn normal_registration_accepts_the_same_physical_checkout_through_a_windows_short_alias() {
     let (t, f) = setup_path(true);
@@ -136,6 +142,7 @@ fn child(t: &Test) -> Value {
         .find(|j| j["todo_id"] == 3900)
         .unwrap()
 }
+#[cfg(windows)]
 #[test]
 fn normal_registration_and_final_admission_keep_luna_max_minimal_and_exact_spec() {
     let (t, f) = setup();

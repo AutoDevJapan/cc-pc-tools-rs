@@ -9,6 +9,8 @@ or adjacent configuration, credentials, source trees or other executables clear.
 | Git | `C:/Program Files/Git/cmd/git.exe` | Git for Windows 2.54.0.windows.1 |
 | GitHub CLI | `C:/Program Files/GitHub CLI/gh.exe` | GitHub CLI 2.101.0 |
 | Go | `C:/Program Files/Go/bin/go.exe` | Go 1.27.0, Windows amd64 |
+| Go formatter | `C:/Program Files/Go/bin/gofmt.exe` | Go 1.27.0, Windows amd64 |
+| rustup | `C:/Users/makhmeto/.cargo/bin/rustup.exe` | rustup 1.29.3, Windows x86_64 MSVC |
 
 The intended use is ordinary development of the existing owner repositories.
 The provider performs no command, update, login, purchase or signing operation.
@@ -19,7 +21,7 @@ previous operation-specific refusals remain independent conditions.
 
 ## Source of the fixed public bytes
 
-The three executable hashes are compiled into `owner_installed_tools_windows.go`.
+The five executable hashes are compiled into `owner_installed_tools_windows.go`.
 On 2026-11-14 the corresponding complete public archives were obtained over
 HTTPS, hashed, and the exact ZIP entry was hashed from those authenticated
 archive bytes. Installed executable contents were not used to manufacture the
@@ -30,11 +32,34 @@ expected digest. No vendor signature verification is claimed.
 | [MinGit 2.54.0 64-bit](https://github.com/git-for-windows/git/releases/tag/v2.54.0.windows.1) | `04f937e1f0918b17b9be6f2294cb2bb66e96e1d9832d1c298e2de088a1d0e668` | `cmd/git.exe` | `81ef35ae005ca9318018d18e3327578ce939fb99feaad6b2d7c8ab15f3de8db5` |
 | [GitHub CLI 2.101.0](https://github.com/cli/cli/releases/tag/v2.101.0) | `bc6c814367b193cd8e713611d61e36013c0ef843b8f516458fe3eda039192794` | `bin/gh.exe` | `df05089117a23889b3f6ea08d7644849afe7b6025647a09f33b45c71f1418f75` |
 | [Go 1.27.0 Windows amd64](https://go.dev/dl/) | `f0c0a0d33ba94f4d2c5dbc887334ce678b21813504ddb3aafcb06e60a5a667c4` | `go/bin/go.exe` | `7d828191ba32519a9c9361789ab647486236ed45c660889196c7770a8ff1985c` |
+| [Go 1.27.0 Windows amd64](https://go.dev/dl/) | `f0c0a0d33ba94f4d2c5dbc887334ce678b21813504ddb3aafcb06e60a5a667c4` | `go/bin/gofmt.exe` | `e7252077f308fe8344091a168b24cb56d1366e7d8f5c64c2086ce17d262e3eef` |
+| [rustup-init.exe 1.29.3](https://static.rust-lang.org/rustup/archive/1.29.3/x86_64-pc-windows-msvc/rustup-init.exe) | `38027d51d69a5d05493627a0634dbea52d6cd793c8f072d2373d3f4163eec7db` | the file itself | `38027d51d69a5d05493627a0634dbea52d6cd793c8f072d2373d3f4163eec7db` |
+
+The `gofmt.exe` pin comes from the same Go 1.27.0 archive as `go.exe`. The
+archive was downloaded again over HTTPS on 2026-11-16 and equals both the digest
+published by the vendor and the digest pinned for `go.exe`; the same ZIP reader
+reproduced the pinned `go.exe` entry digest before it hashed the `gofmt.exe`
+entry. Installed executables were not read to produce either value.
+
+The `rustup.exe` pin is the vendor's published setup file for rustup 1.29.3
+(12,839,424 bytes), downloaded over HTTPS on 2026-11-16. Its digest equals the
+`.sha256` file that the vendor publishes beside it. rustup copies the setup file
+to `rustup.exe` on installation, and its self update downloads exactly this
+archive path before replacing the binary, so the installed file is expected to
+be byte-identical; the provider decides only by comparing the held bytes.
+rustup records no publisher, and its `DisplayVersion` value can lag behind the
+file after a self update, so the installation context is the per-user key
+`Software\Microsoft\Windows\CurrentVersion\Uninstall\Rustup` with its exact
+`DisplayName`. A later rustup release changes the file, and the row then stays
+unknown until a reviewed source change pins the new release. The proxy names
+that rustup creates beside it (`cargo.exe`, `rustc.exe` and others) are separate
+objects, are not admitted by this row and keep their refusal.
 
 Changing a version or expected hash requires a reviewed source change. There is
 no caller-supplied path, publisher, receipt, digest, JSON plan or general alias
 exception. The existing uninstall registration must also report the exact
-version and publisher. That registration supplies installation context only;
+version and publisher; rustup, which records neither, uses the fixed value
+names described above. That registration supplies installation context only;
 the public-byte comparison supplies the independent content check.
 
 ## Validation and handle ownership
@@ -52,12 +77,29 @@ No reparse-point ancestor or alternate final path is accepted.
 
 Every retained directory in the installation's parent chain also has its
 identity, final name, owner and DACL checked from that same handle. Its proof
-is rechecked together with the leaf before returning. Effective add-file,
-add-directory, delete-child, delete and ACL/owner-change rights for untrusted
-principals prevent a clear result. An `INHERIT_ONLY` ACE is not effective on
+is rechecked together with the leaf before returning. For the directory that
+holds the executable, effective add-file, add-directory, delete-child, delete
+and ACL/owner-change rights for untrusted principals prevent a clear result,
+because a neighboring file could be loaded with the executable. For every
+higher ancestor only the rights that could remove, rename or re-own an existing
+component do: delete-child, delete, ACL or owner change, and generic write or
+all. Add-only entries, such as the Authenticated Users add-subdirectory entry of
+a stock system volume root or the add-file entry of a data volume root, cannot
+replace an existing component and are accepted there. Delete on a volume root
+cannot remove the root and is not counted. An `INHERIT_ONLY` ACE is not effective on
 the current object; each actual descendant and executable descriptor is checked
 separately, so an effective inherited write on the leaf still fails. Unknown
 descriptor forms remain unknown.
+
+Access masks are read from the descriptor text. Windows spells a mask with a
+two-letter name only when its bits match one exactly, and it uses the Directory
+Service names for single file-system bits: `CC` for read-data, `LC` for
+add-subdirectory and `DT` for delete-child. Stock volume roots and per-user
+tool trees contain such names. The nine Directory Service names (`CC`, `DC`,
+`LC`, `SW`, `RP`, `WP`, `DT`, `LO`, `CR`) and `FW` are recognized and keep their
+bit values as file-system rights, so `LC` in an allow entry for an untrusted
+principal is an add-subdirectory right. Any other name, in an allow or a deny
+entry, keeps the descriptor unknown.
 
 The controller verifies the installation registration, opens all fixed names,
 then reads a single bounded buffer from a held object. That exact buffer is
@@ -109,3 +151,12 @@ readback. A hosted compile without a retained output and provenance is not a
 distributed helper. If no such producer or qualified update input is presently
 available, that concrete dependency remains unresolved; a different executable
 path or another actor must not run a denied tool to manufacture the evidence.
+
+The `gofmt.exe` and `rustup.exe` rows and the descriptor rules above were added
+after those results. They share the synthetic controller tests with the other
+rows. Structural tests keep the Go rows on one registration and archive and the
+rustup row on one per-user installation, a pure test fixes the registry hive and
+value names each plan selects, and descriptor tests use structural copies of
+stock Windows, Program Files, user-profile and rustup descriptors with synthetic
+account identifiers. They have no hosted result, installed-byte comparison or
+distributed guard generation yet.

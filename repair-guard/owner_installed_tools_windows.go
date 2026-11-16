@@ -22,6 +22,11 @@ type ownerInstalledToolPlan struct {
 	name, path, version, publisher, registry, archiveURL, archiveSHA, entry, sha string
 	size int64
 	aliases []string
+	// Per-user installers such as rustup record themselves under the current
+	// user hive with their own value names. Both choices are compiled into the
+	// plan; nothing is read from input.
+	userRegistry bool
+	originFields map[string]string
 }
 
 func ownerInstalledToolPlans() []ownerInstalledToolPlan {
@@ -29,6 +34,8 @@ func ownerInstalledToolPlans() []ownerInstalledToolPlan {
 		{name:"git",path:"C:/Program Files/Git/cmd/git.exe",version:"2.54.0",publisher:"The Git Development Community",registry:`SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\Git_is1`,archiveURL:"https://github.com/git-for-windows/git/releases/download/v2.54.0.windows.1/MinGit-2.54.0-64-bit.zip",archiveSHA:"04f937e1f0918b17b9be6f2294cb2bb66e96e1d9832d1c298e2de088a1d0e668",entry:"cmd/git.exe",sha:"81ef35ae005ca9318018d18e3327578ce939fb99feaad6b2d7c8ab15f3de8db5",size:46480,aliases:[]string{"C:/Program Files/Git/cmd/git-lfs.exe","C:/Program Files/Git/cmd/git.exe"}},
 		{name:"gh",path:"C:/Program Files/GitHub CLI/gh.exe",version:"2.101.0",publisher:"GitHub, Inc.",registry:`SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\{05425DD6-E9FE-4AEE-B289-8B61429F042A}`,archiveURL:"https://github.com/cli/cli/releases/download/v2.101.0/gh_2.101.0_windows_amd64.zip",archiveSHA:"bc6c814367b193cd8e713611d61e36013c0ef843b8f516458fe3eda039192794",entry:"bin/gh.exe",sha:"df05089117a23889b3f6ea08d7644849afe7b6025647a09f33b45c71f1418f75",size:42755384,aliases:[]string{"C:/Program Files/GitHub CLI/gh.exe"}},
 		{name:"go",path:"C:/Program Files/Go/bin/go.exe",version:"1.27.0",publisher:"https://go.dev",registry:`SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\{649B7E21-BFFC-4209-925C-5736BBF28E54}`,archiveURL:"https://go.dev/dl/go1.27.0.windows-amd64.zip",archiveSHA:"f0c0a0d33ba94f4d2c5dbc887334ce678b21813504ddb3aafcb06e60a5a667c4",entry:"go/bin/go.exe",sha:"7d828191ba32519a9c9361789ab647486236ed45c660889196c7770a8ff1985c",size:17508352,aliases:[]string{"C:/Program Files/Go/bin/go.exe"}},
+		{name:"gofmt",path:"C:/Program Files/Go/bin/gofmt.exe",version:"1.27.0",publisher:"https://go.dev",registry:`SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\{649B7E21-BFFC-4209-925C-5736BBF28E54}`,archiveURL:"https://go.dev/dl/go1.27.0.windows-amd64.zip",archiveSHA:"f0c0a0d33ba94f4d2c5dbc887334ce678b21813504ddb3aafcb06e60a5a667c4",entry:"go/bin/gofmt.exe",sha:"e7252077f308fe8344091a168b24cb56d1366e7d8f5c64c2086ce17d262e3eef",size:3392000,aliases:[]string{"C:/Program Files/Go/bin/gofmt.exe"}},
+		{name:"rustup",path:"C:/Users/makhmeto/.cargo/bin/rustup.exe",version:"1.29.3",userRegistry:true,originFields:map[string]string{"DisplayName":"Rustup: the Rust toolchain installer"},registry:`Software\Microsoft\Windows\CurrentVersion\Uninstall\Rustup`,archiveURL:"https://static.rust-lang.org/rustup/archive/1.29.3/x86_64-pc-windows-msvc/rustup-init.exe",archiveSHA:"38027d51d69a5d05493627a0634dbea52d6cd793c8f072d2373d3f4163eec7db",entry:"rustup-init.exe",sha:"38027d51d69a5d05493627a0634dbea52d6cd793c8f072d2373d3f4163eec7db",size:12839424,aliases:[]string{"C:/Users/makhmeto/.cargo/bin/rustup.exe"}},
 	}
 }
 
@@ -209,14 +216,25 @@ func ownerInstalledToolAliases(actual, expected []string) bool {
 
 type ownerInstalledToolNative struct{}
 
+// System installers are identified by version and publisher in the machine
+// hive. A plan may instead name the current user hive and its own value names.
+func ownerInstalledToolOriginSpec(plan ownerInstalledToolPlan) (syscall.Handle,map[string]string) {
+	hive:=syscall.Handle(syscall.HKEY_LOCAL_MACHINE)
+	if plan.userRegistry { hive=syscall.Handle(syscall.HKEY_CURRENT_USER) }
+	fields:=map[string]string{"DisplayVersion":plan.version,"Publisher":plan.publisher}
+	if plan.originFields!=nil { fields=plan.originFields }
+	return hive,fields
+}
+
 func (ownerInstalledToolNative) Origin(ctx context.Context, plan ownerInstalledToolPlan) (failure error) {
 	if ctx.Err()!=nil { return ctx.Err() }
 	name,err:=syscall.UTF16PtrFromString(plan.registry)
 	if err!=nil { return errOwnerInstalledTool }
 	var key syscall.Handle
-	if syscall.RegOpenKeyEx(syscall.HKEY_LOCAL_MACHINE,name,0,syscall.KEY_QUERY_VALUE|0x0100,&key)!=nil { return errOwnerInstalledTool }
+	hive,fields:=ownerInstalledToolOriginSpec(plan)
+	if syscall.RegOpenKeyEx(hive,name,0,syscall.KEY_QUERY_VALUE|0x0100,&key)!=nil { return errOwnerInstalledTool }
 	defer func(){ownerInstalledCloseResult(&failure,syscall.RegCloseKey(key))}()
-	for field,want:=range map[string]string{"DisplayVersion":plan.version,"Publisher":plan.publisher} {
+	for field,want:=range fields {
 		if ctx.Err()!=nil { return ctx.Err() }
 		p,_:=syscall.UTF16PtrFromString(field)
 		var kind uint32
@@ -325,14 +343,14 @@ func ownerInstalledToolParents(parents []ownerInstalledToolParent,user string) (
 	if len(parents)==0 || len(parents)>64 { return "",false,errOwnerInstalledTool }
 	var proof strings.Builder
 	allowed:=true
-	for _,parent:=range parents {
+	for position,parent:=range parents {
 		if parent.file==nil { return "",false,errOwnerInstalledTool }
 		h:=syscall.Handle(parent.file.Fd())
 		var i syscall.ByHandleFileInformation
 		if syscall.GetFileInformationByHandle(h,&i)!=nil || i.FileAttributes&syscall.FILE_ATTRIBUTE_DIRECTORY==0 || i.FileAttributes&syscall.FILE_ATTRIBUTE_REPARSE_POINT!=0 { return "",false,errOwnerInstalledTool }
 		actual,err:=ownerHandlePath(h);if err!=nil || !same(actual,parent.path) { return "",false,errOwnerInstalledTool }
 		acl,err:=skillsUpdateSDDL(parent.file);if err!=nil { return "",false,errOwnerInstalledTool }
-		if !ownerInstalledToolACLMode(acl,user,true) { allowed=false }
+		if !ownerInstalledToolParentAllowed(acl,user,position==len(parents)-1,filepath.Dir(parent.path)==parent.path) { allowed=false }
 		// IDs, names and descriptors come from the retained parent objects.
 		for _,v:=range []uint64{uint64(i.VolumeSerialNumber),uint64(i.FileIndexHigh)<<32|uint64(i.FileIndexLow),uint64(i.CreationTime.HighDateTime)<<32|uint64(i.CreationTime.LowDateTime),uint64(i.FileAttributes)} { proof.WriteString(strconv.FormatUint(v,10));proof.WriteByte(':') }
 		name:=strings.ToLower(filepath.Clean(actual));proof.WriteString(strconv.Itoa(len(name)));proof.WriteByte(':');proof.WriteString(name);proof.WriteByte(':');proof.WriteString(hashBytes([]byte(acl)));proof.WriteByte(';')
@@ -369,6 +387,27 @@ func ownerInstalledToolACL(sddl, user string) bool {
 }
 
 func ownerInstalledToolACLMode(sddl, user string,directory bool) bool {
+	writes:=uint64(0x500d0116)
+	if directory { writes|=0x40 } // FILE_DELETE_CHILD, in addition to add/write/ACL rights.
+	return ownerInstalledToolACLWrites(sddl,user,writes)
+}
+
+// The directory that holds the executable keeps the strict rule above, because
+// a neighboring file could be loaded together with the executable. A higher
+// ancestor matters only for rights that could remove, rename or re-own an
+// existing path component: delete-child, delete, change-ACL, change-owner and
+// the generic write/all bits. Add-only entries, such as the Authenticated Users
+// add-subdirectory entry of a stock system volume root, cannot replace one.
+// Delete on a volume root cannot remove the root and is not counted there.
+func ownerInstalledToolParentAllowed(sddl, user string,installDirectory,volumeRoot bool) bool {
+	switch {
+	case installDirectory: return ownerInstalledToolACLMode(sddl,user,true)
+	case volumeRoot: return ownerInstalledToolACLWrites(sddl,user,0x500c0040)
+	}
+	return ownerInstalledToolACLWrites(sddl,user,0x500d0040)
+}
+
+func ownerInstalledToolACLWrites(sddl, user string,writes uint64) bool {
 	trusted:=func(sid string)bool{return sid=="BA" || sid=="SY" || user!="" && sid==user || sid=="S-1-5-80-956008885-3418522649-1831038044-1853292631-2271478464"}
 	if !strings.HasPrefix(sddl,"O:") { return false }
 	ownerEnd:=strings.Index(sddl,"G:");d:=strings.Index(sddl,"D:")
@@ -379,9 +418,11 @@ func ownerInstalledToolACLMode(sddl, user string,directory bool) bool {
 	flags:=dacl[:start]
 	for _,flag:=range []string{"AI","AR","P"}{flags=strings.ReplaceAll(flags,flag,"")}
 	if flags!="" { return false };dacl=dacl[start:]
-	writes:=uint64(0x500d0116)
-	if directory { writes|=0x40 } // FILE_DELETE_CHILD, in addition to add/write/ACL rights.
-	rights:=map[string]uint64{"FA":0x1f01ff,"FR":0x120089,"FX":0x1200a0,"GA":0x10000000,"GW":0x40000000,"GR":0x80000000,"GX":0x20000000,"RC":0x20000,"SD":0x10000,"WD":0x40000,"WO":0x80000}
+	// SDDL spells a mask with a two-letter name only when the bits match exactly,
+	// and it uses the Directory Service names for single file-system bits (CC is
+	// read-data, LC add-subdirectory, DT delete-child). The bits keep their
+	// file-system meaning here; any other name leaves the descriptor unknown.
+	rights:=map[string]uint64{"FA":0x1f01ff,"FR":0x120089,"FX":0x1200a0,"GA":0x10000000,"GW":0x40000000,"GR":0x80000000,"GX":0x20000000,"RC":0x20000,"SD":0x10000,"WD":0x40000,"WO":0x80000,"FW":0x120116,"CC":0x1,"DC":0x2,"LC":0x4,"SW":0x8,"RP":0x10,"WP":0x20,"DT":0x40,"LO":0x80,"CR":0x100}
 	aces:=0
 	for dacl!="" {
 		if dacl[0]!='(' { return false };end:=strings.IndexByte(dacl,')');if end<0 { return false }

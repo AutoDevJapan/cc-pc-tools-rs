@@ -8,6 +8,7 @@ import (
 	"io"
 	"path/filepath"
 	"strings"
+	"syscall"
 	"testing"
 )
 
@@ -311,6 +312,113 @@ func TestInstalledToolClosedPathsAndLegacyExclusions(t *testing.T) {
 		f:=newInstalledToolFixture("normal",func(){})
 		v:=ownerInstalledToolVerify(context.Background(),f.plan,f,func(string)ownerLegacyState{return state})
 		if v.AccessAllowed || f.originCalls!=0 || f.opens!=0 { t.Fatal("legacy exclusion bypassed") }
+	}
+}
+
+const (
+	installedToolTestUser="S-1-5-21-100-200-300-1001"
+	installedToolTestInstaller="S-1-5-80-956008885-3418522649-1831038044-1853292631-2271478464"
+)
+
+// Structural copies of descriptors read on a stock Windows PC and on a per-user
+// rustup installation. Account identifiers are synthetic.
+var installedToolStockDescriptors=map[string]string{
+	"system volume root":"O:"+installedToolTestInstaller+"G:"+installedToolTestInstaller+"D:PAI(A;;LC;;;AU)(A;OICIIO;SDGXGWGR;;;AU)(A;OICI;FA;;;SY)(A;OICI;FA;;;BA)(A;OICI;0x1200a9;;;BU)(A;;0x1000a1;;;S-1-15-3-65536-1-2-3-4-5-6-7-8)",
+	"data volume root":"O:SYG:SYD:(A;OICIIO;SDGXGWGR;;;AU)(A;;0x1301bf;;;AU)(A;;FA;;;SY)(A;OICIIO;GA;;;SY)(A;OICIIO;GA;;;BA)(A;;FA;;;BA)(A;;0x1200a9;;;BU)(A;OICIIO;GXGR;;;BU)",
+	"profile directory":"O:SYG:SYD:P(A;OICI;FA;;;SY)(A;OICI;FA;;;BA)(A;OICI;FA;;;"+installedToolTestUser+")(A;;0x100020;;;S-1-15-3-65536-1-2-3-4-5-6-7-8)",
+	"program files directory":"O:"+installedToolTestInstaller+"G:"+installedToolTestInstaller+"D:PAI(A;OICIIO;GA;;;CO)(A;OICIIO;GA;;;SY)(A;;0x1301bf;;;SY)(A;OICIIO;GA;;;BA)(A;;0x1301bf;;;BA)(A;OICIIO;GXGR;;;BU)(A;;0x1200a9;;;BU)(A;CIIO;GA;;;"+installedToolTestInstaller+")(A;;FA;;;"+installedToolTestInstaller+")(A;;0x1200a9;;;AC)(A;OICIIO;GXGR;;;AC)(A;;0x1200a9;;;S-1-15-2-2)(A;OICIIO;GXGR;;;S-1-15-2-2)",
+	"go install directory":"O:SYG:SYD:AI(A;ID;FA;;;"+installedToolTestInstaller+")(A;CIIOID;GA;;;"+installedToolTestInstaller+")(A;ID;FA;;;SY)(A;OICIIOID;GA;;;SY)(A;ID;FA;;;BA)(A;OICIIOID;GA;;;BA)(A;ID;0x1200a9;;;BU)(A;OICIIOID;GXGR;;;BU)(A;OICIIOID;GA;;;CO)(A;ID;0x1200a9;;;AC)(A;OICIIOID;GXGR;;;AC)(A;ID;0x1200a9;;;S-1-15-2-2)(A;OICIIOID;GXGR;;;S-1-15-2-2)",
+	"go executable":"O:SYG:SYD:AI(A;ID;FA;;;SY)(A;ID;FA;;;BA)(A;ID;0x1200a9;;;BU)(A;ID;0x1200a9;;;AC)(A;ID;0x1200a9;;;S-1-15-2-2)",
+	"user tool directory":"O:"+installedToolTestUser+"G:S-1-5-21-100-200-300-513D:AI(A;OICIID;0x1200a9;;;S-1-5-21-100-200-300-1003)(D;OICIID;CC;;;S-1-5-80-1-2-3-4-5)(A;OICIID;FA;;;SY)(A;OICIID;FA;;;BA)(A;OICIID;FA;;;"+installedToolTestUser+")",
+	"user tool executable":"O:"+installedToolTestUser+"G:S-1-5-21-100-200-300-513D:AI(A;ID;0x1200a9;;;S-1-5-21-100-200-300-1003)(D;ID;CC;;;S-1-5-80-1-2-3-4-5)(A;ID;FA;;;SY)(A;ID;FA;;;BA)(A;ID;FA;;;"+installedToolTestUser+")",
+}
+
+func TestInstalledToolGoFamilyPlansShareOneAuthenticatedArchive(t *testing.T) {
+	var goPlan,gofmtPlan ownerInstalledToolPlan
+	declared:=0
+	for _,plan:=range ownerInstalledToolPlans() {
+		switch plan.name {
+		case "go": goPlan=plan;declared++
+		case "gofmt": gofmtPlan=plan;declared++
+		}
+	}
+	if declared!=2 || goPlan.name=="" || gofmtPlan.name=="" { t.Fatal("go and gofmt must each be declared exactly once") }
+	if gofmtPlan.path!="C:/Program Files/Go/bin/gofmt.exe" || len(gofmtPlan.aliases)!=1 || gofmtPlan.aliases[0]!=gofmtPlan.path { t.Fatal("gofmt is not one fixed single-name installation") }
+	if gofmtPlan.version!=goPlan.version || gofmtPlan.publisher!=goPlan.publisher || gofmtPlan.registry!=goPlan.registry || gofmtPlan.archiveURL!=goPlan.archiveURL || gofmtPlan.archiveSHA!=goPlan.archiveSHA { t.Fatal("go family does not share one registration and one public archive") }
+	if goPlan.entry!="go/bin/go.exe" || gofmtPlan.entry!="go/bin/gofmt.exe" || gofmtPlan.sha==goPlan.sha || gofmtPlan.size==goPlan.size || len(gofmtPlan.sha)!=64 || gofmtPlan.size<=0 { t.Fatal("gofmt does not have its own public archive entry pin") }
+	if got,ok:=ownerInstalledToolPlanFor("C:/Program Files/Go/bin/gofmt.exe");!ok || got.name!="gofmt" { t.Fatal("gofmt installation was not delegated") }
+}
+
+func TestInstalledToolOriginSpecSelectsHiveAndValuesFromTheCompiledPlan(t *testing.T) {
+	hive,fields:=ownerInstalledToolOriginSpec(ownerInstalledToolPlan{version:"1.0",publisher:"Fixed publisher"})
+	if hive!=syscall.Handle(syscall.HKEY_LOCAL_MACHINE) || len(fields)!=2 || fields["DisplayVersion"]!="1.0" || fields["Publisher"]!="Fixed publisher" { t.Fatal("system installer origin changed") }
+	hive,fields=ownerInstalledToolOriginSpec(ownerInstalledToolPlan{userRegistry:true,originFields:map[string]string{"DisplayName":"Fixed display name"}})
+	if hive!=syscall.Handle(syscall.HKEY_CURRENT_USER) || len(fields)!=1 || fields["DisplayName"]!="Fixed display name" { t.Fatal("per-user installer origin was not selected from the plan") }
+}
+
+func TestInstalledToolRustupIsOneFixedUserInstallationOfTheReleasedSetupFile(t *testing.T) {
+	plan,ok:=ownerInstalledToolPlanFor("C:/Users/makhmeto/.cargo/bin/rustup.exe")
+	if !ok || plan.name!="rustup" || !plan.userRegistry || plan.originFields["DisplayName"]=="" || len(plan.aliases)!=1 || plan.aliases[0]!=plan.path { t.Fatal("rustup must be one fixed per-user single-name installation") }
+	if plan.archiveSHA!=plan.sha || len(plan.sha)!=64 || plan.size<=0 || !strings.HasPrefix(plan.archiveURL,"https://static.rust-lang.org/rustup/archive/"+plan.version+"/") { t.Fatal("rustup pin is not the released setup file of its own version") }
+	for _,neighbor:=range []string{"cargo","rustc","rustfmt","cargo-clippy","clippy-driver","rustdoc","cargo-fmt"} {
+		if _,granted:=ownerInstalledToolPlanFor("C:/Users/makhmeto/.cargo/bin/"+neighbor+".exe");granted { t.Fatal("proxy name gained a general grant",neighbor) }
+	}
+}
+
+func TestInstalledToolStockDescriptorsAreAcceptedInTheirRole(t *testing.T) {
+	user:=installedToolTestUser
+	for _,tc:=range []struct{name string;install,root,want bool}{
+		{"system volume root",false,true,true},
+		{"system volume root",true,true,false},
+		{"data volume root",false,true,true},
+		{"data volume root",false,false,false},
+		{"profile directory",false,false,true},
+		{"program files directory",false,false,true},
+		{"go install directory",true,false,true},
+		{"user tool directory",true,false,true},
+		{"user tool directory",false,false,true},
+	} {
+		sddl,known:=installedToolStockDescriptors[tc.name]
+		if !known { t.Fatal("missing descriptor",tc.name) }
+		if got:=ownerInstalledToolParentAllowed(sddl,user,tc.install,tc.root);got!=tc.want { t.Fatal("descriptor role changed",tc.name,tc.install,tc.root,got) }
+	}
+	for _,name:=range []string{"go executable","user tool executable"} {
+		if !ownerInstalledToolACL(installedToolStockDescriptors[name],user) { t.Fatal("stock executable descriptor rejected",name) }
+	}
+}
+
+func TestInstalledToolRightNamesKeepTheirFileSystemBitMeaning(t *testing.T) {
+	for _,tc:=range []struct{name,ace string;directory,want bool}{
+		{"write","(A;;FW;;;BU)",false,false},
+		{"read","(A;;FR;;;BU)",false,true},
+		{"read data by its directory service name","(A;;CC;;;BU)",false,true},
+		{"append data by its directory service name","(A;;LC;;;BU)",false,false},
+		{"delete child is meaningless on a file","(A;;DT;;;BU)",false,true},
+		{"delete child on a directory","(A;;DT;;;BU)",true,false},
+		{"add subdirectory on a directory","(A;;LC;;;BU)",true,false},
+		{"write extended attributes by its directory service name","(A;;RP;;;BU)",true,false},
+		{"deny entry with directory service names","(D;;CCLC;;;BU)",false,true},
+		{"unknown name","(A;;ZZ;;;BU)",false,false},
+		{"unknown name in a deny entry","(D;;ZZ;;;BU)",false,false},
+	} {
+		if got:=ownerInstalledToolACLMode("O:BAG:BAD:(A;;FA;;;BA)"+tc.ace,"",tc.directory);got!=tc.want { t.Fatal("right name semantics changed",tc.name,got) }
+	}
+}
+
+func TestInstalledToolAncestorsOnlyCountRightsThatCanReplaceAComponent(t *testing.T) {
+	for _,tc:=range []struct{rights string;install,root,want bool}{
+		{"0x40",false,false,false},{"0x10000",false,false,false},{"0x40000",false,false,false},{"0x80000",false,false,false},{"GW",false,false,false},{"GA",false,false,false},{"DT",false,false,false},
+		{"0x2",false,false,true},{"0x4",false,false,true},{"0x10",false,false,true},{"0x100",false,false,true},{"LC",false,false,true},{"CC",false,false,true},{"DC",false,false,true},
+		{"0x40",false,true,false},{"0x40000",false,true,false},{"0x80000",false,true,false},{"GW",false,true,false},{"DT",false,true,false},
+		{"0x10000",false,true,true},{"SD",false,true,true},{"0x2",false,true,true},{"LC",false,true,true},
+		{"0x2",true,false,false},{"LC",true,false,false},{"0x10000",true,false,false},{"0x40",true,false,false},
+	} {
+		sddl:="O:BAG:BAD:(A;;FA;;;BA)(A;;"+tc.rights+";;;AU)"
+		if got:=ownerInstalledToolParentAllowed(sddl,"",tc.install,tc.root);got!=tc.want { t.Fatal("ancestor rule changed",tc.rights,tc.install,tc.root,got) }
+	}
+	const trustedOnly="O:BAG:BAD:(A;;FA;;;SY)(A;;FA;;;BA)(A;;FRFX;;;BU)"
+	for _,role:=range [][2]bool{{false,false},{false,true},{true,false}} {
+		if !ownerInstalledToolParentAllowed(trustedOnly,"",role[0],role[1]) { t.Fatal("trusted directory rejected",role) }
 	}
 }
 

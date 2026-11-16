@@ -699,6 +699,8 @@ fn nested_jobs_limit(child: &BTreeMap<String, String>, cores: usize) -> usize {
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[cfg(target_os = "linux")]
+    use std::result::Result;
     fn args(items: &[&str]) -> Vec<String> {
         items.iter().map(|s| (*s).into()).collect()
     }

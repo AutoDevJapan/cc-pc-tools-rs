@@ -106,14 +106,17 @@ func ghaFreshBindDiscoveryLocator(a *ghaGuardEvidenceAuthority,l ghaFreshPublicL
 
 // Discovery, preflight and binding share the one owned credential session.
 func ghaFreshDiscoverOwned(ctx context.Context,a *ghaGuardEvidenceAuthority,now time.Time) (ghaFreshPublicLocator,error) {
-    return ghaFreshDiscoverOwnedWith(ctx,a,now,ghaFreshVerifiedRetentionSource)
+    return ghaFreshDiscoverOwnedCore(ctx,a,now,ghaFreshVerifiedRetentionSource,ghaFreshFixedRetentionIdentity)
 }
 
 // The verifier is a package-test seam; production passes the fixed contract.
 func ghaFreshDiscoverOwnedWith(ctx context.Context,a *ghaGuardEvidenceAuthority,now time.Time,verify func(context.Context,*http.Client,ghaFreshRunHint)error) (ghaFreshPublicLocator,error) {
+    return ghaFreshDiscoverOwnedCore(ctx,a,now,verify,nil)
+}
+func ghaFreshDiscoverOwnedCore(ctx context.Context,a *ghaGuardEvidenceAuthority,now time.Time,verify func(context.Context,*http.Client,ghaFreshRunHint)error,policy *ghaFreshRetentionIdentity) (ghaFreshPublicLocator,error) {
     var none ghaFreshPublicLocator
     if ctx==nil||ctx.Err()!=nil||a==nil||a.client==nil||a.credential==nil||a.client.Transport!=a.credential||verify==nil||now.IsZero(){return none,errGHAGuardUnqualified}
-    hint,err:=ghaFreshReadRunHintWithRetention(ctx,a.client,a.client,now,verify);if err!=nil{return none,err}
+    hint,err:=ghaFreshReadRunHintCore(ctx,a.client,a.client,now,verify,policy);if err!=nil{return none,err}
     loc,err:=ghaFreshPublicPreflightWithRetention(ctx,a.client,hint,now,verify);if err!=nil{return none,err}
     if err=ghaFreshBindDiscoveryLocator(a,loc);err!=nil{return none,err}
     return loc,nil

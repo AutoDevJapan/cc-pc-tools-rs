@@ -114,3 +114,35 @@ func TestGHAFreshCurrentFailureKeepsActualPhase(t *testing.T) {
         if parent.Reason!=expected||parent.CleanupFailed!=wantClose||parent.Cancelled!=wantCancel {t.Fatal("phase or cleanup/cancel lost",parent)}
     })}
 }
+
+// A source body can report an independent read error together with a control
+// or cleanup error. Project both fixed facts through the worker to its parent.
+func TestGHAFreshSourceReadJoinedFailuresReachParent(t *testing.T) {
+    tests:=[]struct{name string;err error;read,cancel,cleanup bool}{
+        {"read-and-deadline",errors.Join(io.ErrUnexpectedEOF,context.DeadlineExceeded),true,true,false},
+        {"read-and-cancel",fmt.Errorf("private-wrapper: %w",errors.Join(io.ErrUnexpectedEOF,context.Canceled)),true,true,false},
+        {"read-and-cleanup",errors.Join(io.ErrUnexpectedEOF,errGHAGuardResponseCleanup),true,false,true},
+        {"deadline-only",context.DeadlineExceeded,false,true,false},
+        {"cancel-only",context.Canceled,false,true,false},
+        {"eof-wrapped",fmt.Errorf("private-wrapper: %w",io.EOF),false,false,false},
+        {"eof-and-deadline",errors.Join(io.EOF,context.DeadlineExceeded),false,true,false},
+    }
+    for _,tc:=range tests {t.Run(tc.name,func(t *testing.T){
+        root,cancel:=context.WithCancel(context.Background());defer cancel();loc:=ghaFreshTestLocator()
+        base:=ghaFreshTestRoundTrip(func(*http.Request)(*http.Response,error){
+            return &http.Response{StatusCode:http.StatusOK,Header:make(http.Header),Body:&ghaV4SourceReadBody{failure:tc.err}},nil
+        })
+        session:=&ghaGuardCredentialSession{fresh:&loc,secret:[]byte("fictional"),base:base,root:root,cancel:cancel,ready:true,drain:make(chan struct{})}
+        t.Cleanup(func(){c,done:=context.WithTimeout(context.Background(),time.Second);defer done();if session.close(c)!=nil{t.Error("session cleanup")}})
+        tracked:=&ghaFreshSourceStatusTransport{base:session};client:=&http.Client{Transport:tracked}
+        response,err:=client.Get("https://api.github.com/repos/AutoDevJapan/cc-pc-tools-rs/git/trees/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa");if err!=nil{t.Fatal(err)}
+        _,_=io.ReadAll(response.Body);_=response.Body.Close()
+        if !tc.read&&!tc.cancel&&!tc.cleanup {if tracked.observedFailure(){t.Fatal("EOF marked as failure")};return}
+        failure:=ghaGuardSafeSourceFailure(tracked.sourceFailure(context.Background()),nil)
+        if errors.Is(failure,errGHAFreshSourceRead)!=tc.read {t.Fatal("source read fact lost")}
+        parent:=ghaV4ProjectFailure(t,failure)
+        if parent.Qualified||parent.Cancelled!=tc.cancel||parent.CleanupFailed!=tc.cleanup {t.Fatal("parent lost a failure fact",parent)}
+        if tc.read&&parent.Reason!="guard_github_source_read_failed" {t.Fatal("read cause lost",parent)}
+        if !tc.read&&tc.cancel&&parent.Reason!="guard_target_cancelled" {t.Fatal("control cause mislabeled",parent)}
+    })}
+}

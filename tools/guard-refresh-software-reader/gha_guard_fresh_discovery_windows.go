@@ -13,6 +13,7 @@ import (
     "sort"
     "strconv"
     "strings"
+    "sync"
     "time"
 )
 
@@ -64,6 +65,34 @@ type ghaFreshRunHint struct {
     producerRevision string
     createdAt time.Time
     superseded bool // a later run attempt makes attempt 1 a noncandidate
+}
+
+// These values are observations from the same fully parsed listing. The
+// identity is package-private and identifies a fixed verifier, not a grant.
+type ghaFreshRetentionIdentity struct{ marker byte }
+var ghaFreshFixedRetentionIdentity = &ghaFreshRetentionIdentity{}
+type ghaFreshGenerationObservation struct { attempt int64; conclusion string }
+type ghaFreshRetiredKey struct {
+    hint ghaFreshRunHint
+    observed ghaFreshGenerationObservation
+    policy *ghaFreshRetentionIdentity
+}
+
+// SelectRuns already validated these rows. Record the actual listing attempt,
+// including later attempts, so that 2 -> 3 cannot reuse attempt-2 evidence.
+func ghaFreshGenerationObservations(runs []json.RawMessage,hints []ghaFreshRunHint) (map[int64]ghaFreshGenerationObservation,error) {
+    wanted:=make(map[int64]bool,len(hints));for _,h:=range hints{wanted[h.runID]=true}
+    result:=make(map[int64]ghaFreshGenerationObservation,len(hints))
+    for _,raw:=range runs {
+        item,err:=ghaFreshObject(raw);if err!=nil{return nil,errGHAGuardUnqualified}
+        id,ok:=ghaFreshInt(item,"id");if !ok{return nil,errGHAGuardUnqualified};if !wanted[id]{continue}
+        attempt,aok:=ghaFreshInt(item,"run_attempt");conclusion,cok:=ghaFreshString(item,"conclusion")
+        if !aok||attempt<1||!cok{return nil,errGHAGuardUnqualified}
+        if _,exists:=result[id];exists{return nil,errGHAGuardUnqualified}
+        result[id]=ghaFreshGenerationObservation{attempt:attempt,conclusion:conclusion}
+    }
+    if len(result)!=len(hints){return nil,errGHAGuardUnqualified}
+    return result,nil
 }
 
 func ghaFreshObject(raw []byte) (map[string]json.RawMessage,error) {
@@ -197,6 +226,58 @@ func ghaFreshReadRunsPage(ctx context.Context,client *http.Client,page int) ([]j
     return runs,total,nil
 }
 
+// Reuse retired evidence only within the same owned credential flight and
+// the same internal verifier. A fresh listing is still mandatory on every pass.
+func ghaFreshRetiredSession(listing,preflight *http.Client,policy *ghaFreshRetentionIdentity) *ghaGuardCredentialSession {
+    if listing==nil||preflight==nil||policy==nil{return nil}
+    session,ok:=listing.Transport.(*ghaGuardCredentialSession)
+    if !ok||session==nil||preflight.Transport!=session{return nil}
+    session.mu.Lock();defer session.mu.Unlock()
+    if session.closed||!session.ready||len(session.secret)==0||session.root==nil||session.root.Err()!=nil{return nil}
+    return session
+}
+func ghaFreshRetiredSeen(s *ghaGuardCredentialSession,k ghaFreshRetiredKey,now time.Time) bool {
+    if s==nil||now.IsZero(){return false}
+    s.mu.Lock();defer s.mu.Unlock()
+    at,ok:=s.retired[k]
+    return ok&&!s.closed&&s.ready&&len(s.secret)>0&&s.root!=nil&&s.root.Err()==nil&&!at.IsZero()&&!now.Before(at)
+}
+func ghaFreshForgetRetired(s *ghaGuardCredentialSession) {
+    if s==nil{return};s.mu.Lock();clear(s.retired);s.retired=nil;s.mu.Unlock()
+}
+func ghaFreshRememberRetired(s *ghaGuardCredentialSession,entries map[ghaFreshRetiredKey]time.Time,ctx context.Context) error {
+    if s==nil{return nil}
+    s.mu.Lock();defer s.mu.Unlock()
+    if ctx==nil{return errGHAGuardUnqualified}
+    if ctx.Err()!=nil||s.closed||!s.ready||len(s.secret)==0||s.root==nil||s.root.Err()!=nil||len(entries)>ghaFreshListingMax{return errors.Join(errGHAGuardUnqualified,ctx.Err())}
+    // Replace only after a complete, unambiguous scan; no failed evidence is kept.
+    s.retired=entries
+    return nil
+}
+
+type ghaFreshProofAttempt struct { done chan struct{}; err error }
+type ghaFreshProofMemo struct {
+    mu sync.Mutex
+    pending map[string]*ghaFreshProofAttempt
+    verify func(context.Context,*http.Client,ghaFreshRunHint) error
+}
+// The production verifier checks only the exact workflow blob at a revision.
+// Coalesce concurrent checks for that same immutable revision during this scan.
+func (m *ghaFreshProofMemo) check(ctx context.Context,c *http.Client,h ghaFreshRunHint) error {
+    if m==nil||m.verify==nil||ctx==nil||ctx.Err()!=nil||!ghaFreshHintShape(h){return errGHAGuardUnqualified}
+    m.mu.Lock();a:=m.pending[h.producerRevision]
+    if a!=nil {
+        m.mu.Unlock()
+        select {case <-a.done:return a.err;case <-ctx.Done():return errors.Join(errGHAGuardUnqualified,ctx.Err())}
+    }
+    a=&ghaFreshProofAttempt{done:make(chan struct{})};m.pending[h.producerRevision]=a;m.mu.Unlock()
+    err:=m.verify(ctx,c,h);if ctx.Err()!=nil{err=errors.Join(err,ctx.Err())}
+    m.mu.Lock();a.err=err;if err!=nil{delete(m.pending,h.producerRevision)};close(a.done);m.mu.Unlock()
+    return err
+}
+
+type ghaFreshScanResult struct {checked,retired,cacheable bool;err error}
+
 func ghaFreshReadRunHint(ctx context.Context,client *http.Client) (ghaFreshRunHint,error) {
     return ghaFreshReadRunHintWith(ctx,client,client,time.Now().UTC())
 }
@@ -204,39 +285,87 @@ func ghaFreshReadRunHint(ctx context.Context,client *http.Client) (ghaFreshRunHi
 // The production listing and preflights use the same scoped credential
 // session. Test-only clients may exercise unauthenticated observations.
 func ghaFreshReadRunHintWith(ctx context.Context,listing,preflight *http.Client,now time.Time) (ghaFreshRunHint,error) {
-    return ghaFreshReadRunHintWithRetention(ctx,listing,preflight,now,ghaFreshVerifiedRetentionSource)
+    return ghaFreshReadRunHintCore(ctx,listing,preflight,now,ghaFreshVerifiedRetentionSource,ghaFreshFixedRetentionIdentity)
 }
 
-// The retention verifier is a package-only test seam.
+// The retention verifier is a package-only test seam. A custom verifier never
+// shares production's retired evidence or revision-level proof coalescing.
 func ghaFreshReadRunHintWithRetention(ctx context.Context,listing,preflight *http.Client,now time.Time,verify func(context.Context,*http.Client,ghaFreshRunHint) error) (ghaFreshRunHint,error) {
+    return ghaFreshReadRunHintCore(ctx,listing,preflight,now,verify,nil)
+}
+func ghaFreshReadRunHintCore(ctx context.Context,listing,preflight *http.Client,now time.Time,verify func(context.Context,*http.Client,ghaFreshRunHint) error,policy *ghaFreshRetentionIdentity) (ghaFreshRunHint,error) {
     var none ghaFreshRunHint
     if ctx==nil{return none,errGHAGuardUnqualified}
-    if ctx.Err()!=nil||listing==nil||preflight==nil||now.IsZero(){return none,errors.Join(errGHAGuardUnqualified,ctx.Err())}
+    if ctx.Err()!=nil||listing==nil||preflight==nil||verify==nil||now.IsZero(){return none,errors.Join(errGHAGuardUnqualified,ctx.Err())}
+    session:=ghaFreshRetiredSession(listing,preflight,policy);complete:=false
+    defer func(){if !complete{ghaFreshForgetRetired(session)}}()
     bounded,cancel:=context.WithTimeout(ctx,45*time.Second);defer cancel()
     first,total,err:=ghaFreshReadRunsPage(bounded,listing,1);if err!=nil{return none,err}
     pages:=int((total+99)/100);if pages==0{pages=1}
     runs:=append([]json.RawMessage(nil),first...)
     for page:=2;page<=pages;page++ {part,n,err:=ghaFreshReadRunsPage(bounded,listing,page);if err!=nil{return none,err};if n!=total{return none,errGHAGuardUnqualified};runs=append(runs,part...)}
     hints,err:=ghaFreshSelectRunsAt(runs,now,true);if err!=nil||len(hints)==0||bounded.Err()!=nil{return none,errors.Join(errGHAGuardUnqualified,bounded.Err())}
+    generations,err:=ghaFreshGenerationObservations(runs,hints);if err!=nil{return none,err}
     if pages>1 {
         var repeat []json.RawMessage
         for page:=1;page<=pages;page++ {part,n,err:=ghaFreshReadRunsPage(bounded,listing,page);if err!=nil{return none,err};if n!=total{return none,errGHAGuardUnqualified};repeat=append(repeat,part...)}
         again,err:=ghaFreshSelectRunsAt(repeat,now,true);if err!=nil||len(again)!=len(hints){return none,errGHAGuardUnqualified}
-        for i:=range hints {if hints[i]!=again[i]{return none,errGHAGuardUnqualified}}
+        other,err:=ghaFreshGenerationObservations(repeat,again);if err!=nil{return none,err}
+        for i:=range hints {if hints[i]!=again[i]||generations[hints[i].runID]!=other[again[i].runID]{return none,errGHAGuardUnqualified}}
     }
     if bounded.Err()!=nil{return none,errors.Join(errGHAGuardUnqualified,bounded.Err())}
     if err:=ghaFreshInstallDiscoveryScope(listing,hints);err!=nil{return none,err}
-    if len(hints)==1&&!hints[0].superseded{return hints[0],nil}
-    live:=0
-    for _,hint:=range hints {
-        _,preflightErr:=ghaFreshPublicPreflightWithRetention(bounded,preflight,hint,now,verify)
-        if errors.Is(preflightErr,errGHAFreshExpiredArtifact)||errors.Is(preflightErr,errGHAFreshNonCandidate){continue}
-        if preflightErr!=nil{return none,errors.Join(preflightErr,bounded.Err())}
-        if hint.superseded{return none,errGHAGuardUnqualified}
-        none=hint;live++
+    if len(hints)==1&&!hints[0].superseded{ghaFreshForgetRetired(session);complete=true;return hints[0],nil}
+
+    if session==nil {
+        // Preserve the existing package-test and non-owned-client path.
+        live:=0
+        for _,hint:=range hints {
+            _,e:=ghaFreshPublicPreflightWithRetention(bounded,preflight,hint,now,verify)
+            if e==errGHAFreshExpiredArtifact||e==errGHAFreshNonCandidate{continue}
+            if e!=nil{return none,errors.Join(e,bounded.Err())}
+            if hint.superseded{return none,errGHAGuardUnqualified};none=hint;live++
+        }
+        if live!=1||bounded.Err()!=nil{return ghaFreshRunHint{},errors.Join(errGHAGuardUnqualified,bounded.Err())}
+        complete=true;return none,nil
     }
-    if live!=1||bounded.Err()!=nil{return ghaFreshRunHint{},errors.Join(errGHAGuardUnqualified,bounded.Err())}
-    return none,nil
+    // All hints share this fixed workflow resource; reobserve it once per scan.
+    if err:=ghaFreshCheckWorkflow(bounded,preflight,hints[0]);err!=nil{return none,err}
+    outcomes:=make([]ghaFreshScanResult,len(hints));keys:=make([]ghaFreshRetiredKey,len(hints));var work []int
+    for i,h:=range hints {
+        keys[i]=ghaFreshRetiredKey{hint:h,observed:generations[h.runID],policy:policy}
+        if ghaFreshRetiredSeen(session,keys[i],now){outcomes[i]=ghaFreshScanResult{checked:true,retired:true,cacheable:true}} else {work=append(work,i)}
+    }
+    proof:=&ghaFreshProofMemo{pending:make(map[string]*ghaFreshProofAttempt),verify:verify}
+    jobs:=make(chan int);var wg sync.WaitGroup
+    workers:=len(work);if workers>8{workers=8}
+    for i:=0;i<workers;i++ {wg.Add(1);go func(){defer wg.Done();for index:=range jobs {
+        verified:=false
+        check:=func(ctx context.Context,c *http.Client,h ghaFreshRunHint)error {
+            err:=proof.check(ctx,c,h);if err==nil{verified=true};return err
+        }
+        _,e:=ghaFreshPreflightAfterWorkflow(bounded,preflight,hints[index],now,check)
+        retired:=e==errGHAFreshExpiredArtifact||e==errGHAFreshNonCandidate
+        // Only a missing artifact past the verified fixed one-day retention
+        // has reusable proof. Explicitly expired and failed jobs are re-read.
+        cacheable:=e==errGHAFreshExpiredArtifact&&verified
+        if retired{e=nil};outcomes[index]=ghaFreshScanResult{checked:true,retired:retired,cacheable:cacheable,err:e}
+    }}()}
+    feeding:=true
+    for _,i:=range work {select {case jobs<-i:case <-bounded.Done():feeding=false};if !feeding{break}}
+    close(jobs);wg.Wait()
+    live:=0;retired:=make(map[ghaFreshRetiredKey]time.Time);var failures error
+    for i,result:=range outcomes {
+        if !result.checked {failures=errors.Join(failures,errGHAGuardUnqualified);continue}
+        if result.err!=nil {failures=errors.Join(failures,result.err);continue}
+        if result.retired {if result.cacheable{retired[keys[i]]=now};continue}
+        if hints[i].superseded {failures=errors.Join(failures,errGHAGuardUnqualified);continue}
+        none=hints[i];live++
+    }
+    // All started workers are drained before reporting every observed failure.
+    if !feeding||failures!=nil||live!=1||bounded.Err()!=nil{return ghaFreshRunHint{},errors.Join(errGHAGuardUnqualified,failures,bounded.Err())}
+    if err:=ghaFreshRememberRetired(session,retired,bounded);err!=nil{return ghaFreshRunHint{},err}
+    complete=true;return none,nil
 }
 
 // This locator is an untrusted server observation. It cannot issue an owned
@@ -443,12 +572,23 @@ func ghaFreshPublicPreflight(ctx context.Context,client *http.Client,h ghaFreshR
 
 // The verifier parameter is a package-test seam; production always uses the fixed workflow contract.
 func ghaFreshPublicPreflightWithRetention(ctx context.Context,client *http.Client,h ghaFreshRunHint,now time.Time,verify func(context.Context,*http.Client,ghaFreshRunHint) error) (ghaFreshPublicLocator,error) {
+    if ctx==nil{return ghaFreshPublicLocator{},errGHAGuardUnqualified}
+    if ctx.Err()!=nil||client==nil||!ghaFreshHintShape(h)||now.IsZero(){return ghaFreshPublicLocator{},errors.Join(errGHAGuardUnqualified,ctx.Err())}
+    if err:=ghaFreshCheckWorkflow(ctx,client,h);err!=nil{return ghaFreshPublicLocator{},err}
+    return ghaFreshPreflightAfterWorkflow(ctx,client,h,now,verify)
+}
+func ghaFreshCheckWorkflow(ctx context.Context,client *http.Client,h ghaFreshRunHint) error {
+    if ctx==nil{return errGHAGuardUnqualified}
+    if ctx.Err()!=nil||client==nil||!ghaFreshHintShape(h){return errors.Join(errGHAGuardUnqualified,ctx.Err())}
+    workflow,err:=ghaFreshReadResource(ctx,client,ghaFreshWorkflowResource,h);if err!=nil{return err}
+    id,iok:=ghaFreshInt(workflow,"id");path,pok:=ghaFreshString(workflow,"path");state,sok:=ghaFreshString(workflow,"state")
+    if !iok||id!=ghaFreshWorkflowID||!pok||path!=".github/workflows/unattended-readiness.yml"||!sok||state!="active"{return errGHAGuardUnqualified}
+    return nil
+}
+func ghaFreshPreflightAfterWorkflow(ctx context.Context,client *http.Client,h ghaFreshRunHint,now time.Time,verify func(context.Context,*http.Client,ghaFreshRunHint) error) (ghaFreshPublicLocator,error) {
     var none ghaFreshPublicLocator
     if ctx==nil{return none,errGHAGuardUnqualified}
     if ctx.Err()!=nil||client==nil||!ghaFreshHintShape(h)||now.IsZero(){return none,errors.Join(errGHAGuardUnqualified,ctx.Err())}
-    workflow,err:=ghaFreshReadResource(ctx,client,ghaFreshWorkflowResource,h);if err!=nil{return none,err}
-    id,iok:=ghaFreshInt(workflow,"id");path,pok:=ghaFreshString(workflow,"path");state,sok:=ghaFreshString(workflow,"state")
-    if !iok||id!=ghaFreshWorkflowID||!pok||path!=".github/workflows/unattended-readiness.yml"||!sok||state!="active"{return none,errGHAGuardUnqualified}
     jobs,err:=ghaFreshReadResource(ctx,client,ghaFreshJobsResource,h);if err!=nil{return none,err}
     jobID,checkID,err:=ghaFreshSelectJob(jobs,h);if err!=nil {
         if ghaFreshFailedFirstAttempt(jobs,h){return none,errGHAFreshNonCandidate}

@@ -277,14 +277,48 @@ type ghaFreshSourceStatusBody struct {
     closeErr error
 }
 
+// Classify bounded error leaves separately. A joined context/cleanup marker
+// does not erase a distinct I/O failure, and pure control errors are not reads.
+// Only fixed facts escape; neither wrappers nor their messages are retained.
+type ghaFreshReadErrorFacts struct {deadline,canceled,cleanup,read bool}
+func ghaFreshClassifyReadError(err error) ghaFreshReadErrorFacts {
+    var facts ghaFreshReadErrorFacts
+    if err==nil{return facts}
+    pending:=[]error{err};visited:=0
+    for len(pending)>0 {
+        if visited>=128 {facts.read=true;break};visited++
+        item:=pending[len(pending)-1];pending=pending[:len(pending)-1]
+        if item==nil{continue}
+        if many,ok:=item.(interface{Unwrap() []error});ok {
+            children:=many.Unwrap();added:=false
+            for _,child:=range children {
+                if child==nil{continue}
+                if len(pending)>=128-visited {facts.read=true;break}
+                pending=append(pending,child);added=true
+            }
+            if !added{facts.read=true};continue
+        }
+        if one,ok:=item.(interface{Unwrap() error});ok {if child:=one.Unwrap();child!=nil {pending=append(pending,child);continue}}
+        switch {
+        case errors.Is(item,io.EOF):
+        case errors.Is(item,context.DeadlineExceeded):facts.deadline=true
+        case errors.Is(item,context.Canceled):facts.canceled=true
+        case errors.Is(item,errGHAGuardResponseCleanup):facts.cleanup=true
+        default:facts.read=true
+        }
+    }
+    return facts
+}
+
 func (b *ghaFreshSourceStatusBody) Read(p []byte)(int,error){
     n,err:=b.body.Read(p)
     if err!=nil {
+        facts:=ghaFreshClassifyReadError(err)
         b.owner.mu.Lock()
-        if errors.Is(err,context.DeadlineExceeded){b.owner.deadline=true}
-        if errors.Is(err,context.Canceled)&&(b.ctx==nil||b.ctx.Err()==nil){b.owner.canceled=true}
-        if errors.Is(err,errGHAGuardResponseCleanup){b.owner.closeFailed=true}
-        if err!=io.EOF&&!errors.Is(err,context.DeadlineExceeded)&&!errors.Is(err,context.Canceled)&&!errors.Is(err,errGHAGuardResponseCleanup){b.owner.readFailed=true}
+        if facts.deadline{b.owner.deadline=true}
+        if facts.canceled&&(b.ctx==nil||b.ctx.Err()==nil){b.owner.canceled=true}
+        if facts.cleanup{b.owner.closeFailed=true}
+        if facts.read{b.owner.readFailed=true}
         b.owner.mu.Unlock()
     }
     return n,err

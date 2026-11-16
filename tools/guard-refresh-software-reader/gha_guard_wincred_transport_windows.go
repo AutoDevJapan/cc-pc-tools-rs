@@ -160,6 +160,7 @@ type ghaGuardCredentialSession struct {
     // Non-nil only for the code-owned fresh-generation acquisition.
     fresh *ghaFreshPublicLocator
     discovery *ghaFreshDiscoveryScope
+    retired map[ghaFreshRetiredKey]time.Time
     secret []byte
     base http.RoundTripper
     root context.Context
@@ -179,7 +180,7 @@ func (s *ghaGuardCredentialSession) close(ctx context.Context) error {
     if s==nil||ctx==nil{return errGHAGuardUnqualified}
     s.mu.Lock()
     if !s.closed {
-        s.closed=true;clear(s.secret);s.secret=nil;s.cancel()
+        s.closed=true;clear(s.secret);s.secret=nil;clear(s.retired);s.retired=nil;s.cancel()
         if s.active==0 && !s.drained {s.drained=true;close(s.drain)}
     }
     done:=s.drain;s.mu.Unlock()

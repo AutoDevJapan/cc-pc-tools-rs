@@ -32,12 +32,56 @@ func TestDSRunnerNativeOwnedPrepareRetainsBytesAndExactACL(t *testing.T){
     if raw,err:=os.ReadFile(paths[0]);err!=nil||string(raw)!="owned old"{t.Fatal("prepare changed target")};if raw,err:=os.ReadFile(paths[1]);err!=nil||string(raw)!="owned new"{t.Fatal("prepared stage missing")};if raw,err:=os.ReadFile(paths[2]);err!=nil||string(raw)!="owned old"{t.Fatal("backup missing")}
 }
 
+// Test-only fixed categories. A joined error may originate from cleanup;
+// it does not independently identify ReplaceFileW as the failing operation.
+type dsRunnerNativeDiagnostic struct {
+    dsRunnerTargetSession
+    publish string
+    old, stage, post dsRunnerSnapshot
+    postRead, postOK bool
+}
+func(d *dsRunnerNativeDiagnostic) Publish(ctx context.Context,old,stage,backup dsRunnerSnapshot)(bool,error){
+    d.old,d.stage=old,stage
+    committed,err:=d.dsRunnerTargetSession.Publish(ctx,old,stage,backup)
+    switch {
+    case committed && err==nil: d.publish="success"
+    case committed: d.publish="success_post_error"
+    case errors.Is(err,errDSRunnerPublishNotAttempted): d.publish="not_attempted"
+    case errors.Is(err,syscall.Errno(32)): d.publish="joined_sharing_violation"
+    case errors.Is(err,syscall.Errno(5)): d.publish="joined_access_denied"
+    case errors.Is(err,syscall.Errno(2))||errors.Is(err,syscall.Errno(3)): d.publish="joined_not_found"
+    case errors.Is(err,syscall.Errno(1175)): d.publish="joined_remove_replaced_failed"
+    case errors.Is(err,syscall.Errno(1176)): d.publish="joined_move_replacement_failed"
+    case errors.Is(err,syscall.Errno(1177)): d.publish="joined_move_replacement_after_remove_failed"
+    default: d.publish="other_or_unknown"
+    }
+    return committed,err
+}
+func(d *dsRunnerNativeDiagnostic) Read(ctx context.Context,leaf dsRunnerLeaf)([]byte,dsRunnerSnapshot,error){
+    raw,snapshot,err:=d.dsRunnerTargetSession.Read(ctx,leaf)
+    if d.publish=="success"&&leaf==dsRunnerCurrent{d.postRead=true;if err==nil{d.postOK=true;d.post=snapshot}}
+    return raw,snapshot,err
+}
+
 func TestDSRunnerNativeOwnedApplyRechecksInstalledGeneration(t *testing.T){
     root:=physicalSoftwareFixture(t);paths:=[3]string{filepath.Join(root,"current.exe"),filepath.Join(root,"stage.exe"),filepath.Join(root,"before.exe")};oldBytes:=[]byte("owned predecessor");newBytes:=[]byte("owned successor");if err:=os.WriteFile(paths[0],oldBytes,0600);err!=nil{t.Fatal(err)}
     ctx,cancel:=context.WithTimeout(context.Background(),5*time.Second);defer cancel();permit:=&dsRunnerWorkerPermit{ctx:ctx};permit.self=permit
-    access:=dsRunnerMaintenanceAccess{acquire:func(context.Context)(*dsRunnerCandidate,error){return dsRunnerFixtureCandidate(newBytes),nil},open:func(ctx context.Context,p dsRunnerRepairPurpose)(dsRunnerTargetSession,error){return dsRunnerOpenNativeTargetAt(ctx,p,paths)}}
+    var diag *dsRunnerNativeDiagnostic
+    access:=dsRunnerMaintenanceAccess{acquire:func(context.Context)(*dsRunnerCandidate,error){return dsRunnerFixtureCandidate(newBytes),nil},open:func(ctx context.Context,p dsRunnerRepairPurpose)(dsRunnerTargetSession,error){
+        session,err:=dsRunnerOpenNativeTargetAt(ctx,p,paths);if err!=nil||session==nil{return session,err}
+        diag=&dsRunnerNativeDiagnostic{dsRunnerTargetSession:session,publish:"not_called"};return diag,nil
+    }}
     result:=executeDSRunnerMaintenanceFor(ctx,"apply",permit,access,digest(oldBytes),int64(len(oldBytes)))
-    if !result.Qualified||!result.UpdatePerformed||!result.InstalledVerified||result.CommitOutcome!=dsRunnerCommitConfirmed||result.Current==nil||result.Stage==nil||result.Backup==nil||result.Current.FileID!=result.Stage.FileID{t.Fatalf("owned native replacement did not complete: %s",result.Reason)}
+    if !result.Qualified||!result.UpdatePerformed||!result.InstalledVerified||result.CommitOutcome!=dsRunnerCommitConfirmed||result.Current==nil||result.Stage==nil||result.Backup==nil||result.Current.FileID!=result.Stage.FileID{
+        category:="not_opened";postRead,postOK,idMatch,createdMatch,aclMatch,parentMatch:=false,false,false,false,false,false
+        if diag!=nil{
+            category=diag.publish;postRead,postOK=diag.postRead,diag.postOK
+            if postOK{idMatch=diag.post.id.Volume==diag.stage.id.Volume&&diag.post.id.FileID==diag.stage.id.FileID;createdMatch=diag.post.id.Created==diag.old.id.Created;aclMatch=diag.post.acl==diag.old.acl;parentMatch=diag.post.parent==diag.old.parent}
+        }
+        createdStage,createdBackup:=false,false;for _,name:=range result.Created{if name==dsRunnerStage{createdStage=true};if name==dsRunnerBackup{createdBackup=true}}
+        currentStageID:=result.Current!=nil&&result.Stage!=nil&&result.Current.FileID==result.Stage.FileID
+        t.Fatalf("owned native replacement did not complete: reason=%s outcome=%s attempted=%t performed=%t cleanup_failed=%t created_count=%d created_stage=%t created_backup=%t current_present=%t stage_present=%t backup_present=%t current_stage_id_equal=%t publish=%s post_read=%t post_ok=%t post_stage_id_equal=%t post_old_creation_equal=%t post_old_acl_equal=%t post_old_parent_equal=%t",result.Reason,result.CommitOutcome,result.CommitAttempted,result.UpdatePerformed,result.CleanupFailed,len(result.Created),createdStage,createdBackup,result.Current!=nil,result.Stage!=nil,result.Backup!=nil,currentStageID,category,postRead,postOK,idMatch,createdMatch,aclMatch,parentMatch)
+    }
     if raw,err:=os.ReadFile(paths[0]);err!=nil||string(raw)!=string(newBytes){t.Fatal("installed bytes mismatch")};if raw,err:=os.ReadFile(paths[2]);err!=nil||string(raw)!=string(oldBytes){t.Fatal("backup mismatch")};if _,err:=os.Stat(paths[1]);!os.IsNotExist(err){t.Fatal("stage name did not move")}
     if result.DataAccessGranted||result.SourceAccessGranted||result.SendAllowed||result.SoftwareReplaceAllowed||result.NamespaceLeaseProved{t.Fatal("physical software result issued another authority")}
 }

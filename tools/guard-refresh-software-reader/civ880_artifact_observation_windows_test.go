@@ -1034,3 +1034,155 @@ func TestCiv880NativeSynchronousLeafRequiresExplicitSynchronize(t *testing.T){
 	if err:=civ880CloseOriginalFile(&file,&unknown);err!=nil||unknown{t.Fatal("same native file close",err)}
 	if _,err:=os.Lstat(name);!errors.Is(err,os.ErrNotExist){t.Fatal("same native file remained after marked close",err)}
 }
+
+// Fixture callbacks really close the test-owned descriptor, then return a
+// synthetic error to model its consumed-but-uncertain result. This does not
+// claim that Windows CloseHandle failed. Remaining live owners are separately
+// reconciled by the fixture after all retention assertions.
+type civ880CloseFailureFixture struct {
+	leaves [5]*os.File
+	parents []*os.File
+	root *os.File
+	unwrapped []syscall.Handle
+	fileNames map[*os.File]string
+	handleNames map[syscall.Handle]string
+	paths map[string]string
+	calls []string
+	fail string
+}
+
+func civ880NewCloseFailureFixture(t *testing.T,fail string) *civ880CloseFailureFixture {
+	t.Helper()
+	f:=&civ880CloseFailureFixture{fileNames:map[*os.File]string{},handleNames:map[syscall.Handle]string{},paths:map[string]string{},fail:fail}
+	directory:=physicalSoftwareFixture(t)
+	t.Cleanup(func(){
+		for file:=range f.fileNames {if err:=file.Close();err!=nil {t.Error("fixture live File reconciliation failed",err)};delete(f.fileNames,file)}
+		for handle:=range f.handleNames {if err:=syscall.CloseHandle(handle);err!=nil {t.Error("fixture live handle reconciliation failed",err)};delete(f.handleNames,handle)}
+	})
+	open:=func(name string)syscall.Handle {
+		path:=filepath.Join(directory,name+".txt");f.paths[name]=path
+		if err:=os.WriteFile(path,[]byte("owned close fixture"),0600);err!=nil {t.Fatal(err)}
+		p,err:=syscall.UTF16PtrFromString(path);if err!=nil {t.Fatal(err)}
+		h,err:=syscall.CreateFile(p,syscall.GENERIC_READ,syscall.FILE_SHARE_READ,nil,syscall.OPEN_EXISTING,0x00200000,0)
+		if err!=nil {t.Fatal("fixture no-write-sharing open failed",err)}
+		return h
+	}
+	wrap:=func(name string)*os.File {
+		h:=open(name);file:=os.NewFile(uintptr(h),f.paths[name])
+		if file==nil {if err:=syscall.CloseHandle(h);err!=nil {t.Error(err)};t.Fatal("fixture File wrapper failed")}
+		f.fileNames[file]=name;return file
+	}
+	for i:=range f.leaves {f.leaves[i]=wrap(fmt.Sprintf("leaf%d",i))}
+	f.parents=[]*os.File{wrap("parent0"),wrap("parent1")}
+	f.root=wrap("root")
+	for _,name:=range []string{"native0","native1"} {h:=open(name);f.unwrapped=append(f.unwrapped,h);f.handleNames[h]=name}
+	return f
+}
+
+func (f *civ880CloseFailureFixture) operations() civ880CloseOperations {
+	return civ880CloseOperations{
+		file:func(file *os.File)error {
+			name,live:=f.fileNames[file];if !live {return errors.New("fixture consumed File reused")}
+			f.calls=append(f.calls,name)
+			err:=file.Close();delete(f.fileNames,file)
+			if err!=nil {return err}
+			if name==f.fail {return errors.New("synthetic consumed File close result")}
+			return nil
+		},
+		handle:func(handle syscall.Handle)error {
+			name,live:=f.handleNames[handle];if !live {return errors.New("fixture consumed handle reused")}
+			f.calls=append(f.calls,name)
+			err:=syscall.CloseHandle(handle);delete(f.handleNames,handle)
+			if err!=nil {return err}
+			if name==f.fail {return errors.New("synthetic consumed native close result")}
+			return nil
+		},
+	}
+}
+
+func (f *civ880CloseFailureFixture) requireStillDeniesWrite(t *testing.T,name string) {
+	t.Helper()
+	p,err:=syscall.UTF16PtrFromString(f.paths[name]);if err!=nil {t.Fatal(err)}
+	h,err:=syscall.CreateFile(p,syscall.GENERIC_WRITE,syscall.FILE_SHARE_READ|syscall.FILE_SHARE_WRITE|syscall.FILE_SHARE_DELETE,nil,syscall.OPEN_EXISTING,0,0)
+	if err==nil {if closeErr:=syscall.CloseHandle(h);closeErr!=nil {t.Error(closeErr)};t.Fatal("retained fixture owner lost its write-sharing exclusion",name)}
+	if err!=syscall.Errno(32) {t.Fatal("write refusal was not the expected sharing violation",name,err)}
+}
+
+func TestCiv880CloseStopsAtFirstFailureAndRetainsOwners(t *testing.T) {
+	for _,kind:=range []string{"observation","stage"} {for _,failure:=range []string{"","leaf4","leaf2","native1"} {
+		label:=failure;if label=="" {label="normal"}
+		t.Run(kind+"/"+label,func(t *testing.T){
+			f:=civ880NewCloseFailureFixture(t,failure)
+			var close func()error
+			var unknown,closed *bool
+			var leaves *[5]*os.File
+			var natives []syscall.Handle
+			var stage *civ880CreatedStage
+			var observation *civ880HeldObservation
+			if kind=="observation" {
+				observation=&civ880HeldObservation{leaves:f.leaves,unwrapped:f.unwrapped,parents:f.parents}
+				close=func()error{return observation.closeWith(f.operations())};unknown=&observation.closeUnknown;closed=&observation.closed;leaves=&observation.leaves;natives=observation.unwrapped
+			} else {
+				// Synthetic post-cleanup/partial shape: ordinary Cleanup normally
+				// consumes leaves before Close. This directly tests common ownership.
+				stageParent:=&civ880StageParent{transferred:true};if failure!="" {stageParent.handles=f.parents}
+				stage=&civ880CreatedStage{leaves:f.leaves,unwrapped:f.unwrapped,root:f.root,cleanupDone:true,parentOwned:true,parent:stageParent}
+				close=func()error{return stage.closeWith(f.operations())};unknown=&stage.closeUnknown;closed=&stage.closed;leaves=&stage.leaves;natives=stage.unwrapped
+			}
+			err:=close()
+			want:=[]string{"leaf4","leaf3","leaf2","leaf1","leaf0","native1","native0"}
+			if failure!="" {for i,name:=range want {if name==failure {want=want[:i+1];break}}} else if kind=="observation" {want=append(want,"parent1","parent0")} else {want=append(want,"root")}
+			if strings.Join(f.calls,",")!=strings.Join(want,",") {t.Fatal("close continued after first failure or changed normal order",f.calls,want)}
+			if failure=="" {
+				for _,native:=range natives {if native!=0 {t.Fatal("normal close retained a native slot")}}
+				if observation!=nil {for _,parent:=range observation.parents {if parent!=nil {t.Fatal("normal close retained a parent")}}}
+				if err!=nil||*unknown||!*closed {t.Fatal("normal close did not finish",err)}
+				for _,leaf:=range leaves {if leaf!=nil {t.Fatal("normal close retained a leaf")}}
+				if stage!=nil&&(stage.parent!=nil||stage.parentOwned||stage.root!=nil) {t.Fatal("normal stage did not release its owners")}
+				if err:=close();err!=nil||len(f.calls)!=len(want) {t.Fatal("normal repeated close was not idempotent",err)}
+				return
+			}
+			if !errors.Is(err,errCiv880CloseUnknown)||!errors.Is(err,errCiv880Observation)||!*unknown||*closed {t.Fatal("failed close lost unknown ownership",err)}
+			if failure=="leaf4" {live:=0;for _,leaf:=range leaves {if leaf!=nil {live++}};if live!=4 {t.Fatal("first failure did not retain all four later leaves",live)}}
+			for i,leaf:=range leaves {
+				name:=fmt.Sprintf("leaf%d",i);wasCalled:=false;for _,called:=range f.calls {wasCalled=wasCalled||called==name}
+				if wasCalled {if leaf!=nil {t.Fatal("consumed wrapper retained as live",name)}} else {if leaf!=f.leaves[i]||leaf==nil {t.Fatal("later live wrapper was lost",name)};f.requireStillDeniesWrite(t,name)}
+			}
+			for i,h:=range natives {name:=fmt.Sprintf("native%d",i);wasCalled:=false;for _,called:=range f.calls {wasCalled=wasCalled||called==name};if wasCalled {if h!=0 {t.Fatal("consumed native value retained")}} else {if h==0 {t.Fatal("later native owner was lost")};f.requireStillDeniesWrite(t,name)}}
+			if observation!=nil {for i,parent:=range observation.parents {if parent!=f.parents[i] {t.Fatal("parent owner changed after leaf failure")};f.requireStillDeniesWrite(t,fmt.Sprintf("parent%d",i))}}
+			if stage!=nil {if stage.root!=f.root||stage.parent==nil||!stage.parentOwned||stage.parent.closed||len(stage.parent.handles)!=len(f.parents) {t.Fatal("stage root or parent lost after leaf failure")};f.requireStillDeniesWrite(t,"root");for i,parent:=range stage.parent.handles {if parent!=f.parents[i] {t.Fatal("stage parent handle ownership changed")};f.requireStillDeniesWrite(t,fmt.Sprintf("parent%d",i))}}
+			count:=len(f.calls)
+			if observation!=nil {if err:=observation.Close();!errors.Is(err,errCiv880CloseUnknown)||len(f.calls)!=count {t.Fatal("normal observation retry bypassed unknown state",err)}}
+			if stage!=nil {if err:=stage.Close();!errors.Is(err,errCiv880CloseUnknown)||len(f.calls)!=count {t.Fatal("normal stage retry bypassed unknown state",err)}}
+			if err:=close();!errors.Is(err,errCiv880CloseUnknown)||len(f.calls)!=count {t.Fatal("unknown close retried a consumed owner",err)}
+			if stage!=nil {
+				ctx,cancel:=context.WithTimeout(context.Background(),time.Second);defer cancel()
+				prepared:=&civ880PreparedObservation{stage:stage,parent:stage.parent}
+				for _,op:=range []func()error{func()error{return prepared.Cleanup(ctx)},prepared.Close} {if err:=op();!errors.Is(err,errCiv880CloseUnknown)||!errors.Is(err,errCiv880StagePreserved)||prepared.stage!=stage||prepared.parent!=stage.parent||len(f.calls)!=count {t.Fatal("prepared ownership or uncertainty disappeared",err)}}
+			}
+		})
+	} }
+}
+
+func TestCiv880StagePreservationDoesNotStartRelease(t *testing.T) {
+	f:=civ880NewCloseFailureFixture(t,"")
+	stage:=&civ880CreatedStage{rootAttempted:true,rootCreated:true,root:f.root,leaves:f.leaves,unwrapped:f.unwrapped,parentOwned:true,parent:&civ880StageParent{transferred:true}}
+	if err:=stage.closeWith(f.operations());!errors.Is(err,errCiv880StagePreserved)||len(f.calls)!=0||stage.closeUnknown||stage.closed {t.Fatal("unreconciled namespace reached close loop",err)}
+	for i:=range stage.leaves {f.requireStillDeniesWrite(t,fmt.Sprintf("leaf%d",i))}
+}
+
+func TestCiv880PartialUnwrappedCloseFailureKeepsStageParent(t *testing.T) {
+	f:=civ880NewCloseFailureFixture(t,"native1")
+	parent:=&civ880StageParent{transferred:true,handles:f.parents}
+	stage:=&civ880CreatedStage{unwrapped:f.unwrapped,parent:parent,parentOwned:true,rootCollision:true}
+	err:=stage.closeWith(f.operations())
+	if !errors.Is(err,errCiv880CloseUnknown)||!stage.closeUnknown||stage.closed||strings.Join(f.calls,",")!="native1" {t.Fatal("partial native release crossed its first failure",err,f.calls)}
+	if stage.unwrapped[1]!=0||stage.unwrapped[0]==0||stage.parent!=parent||!stage.parentOwned||parent.closed {t.Fatal("partial stage lost consumed/live ownership distinction")}
+	f.requireStillDeniesWrite(t,"native0")
+	for i:=range parent.handles {f.requireStillDeniesWrite(t,fmt.Sprintf("parent%d",i))}
+	ctx,cancel:=context.WithTimeout(context.Background(),time.Second);defer cancel()
+	prepared:=&civ880PreparedObservation{stage:stage,parent:parent}
+	for _,op:=range []func()error{stage.Close,func()error{return stage.Cleanup(ctx)},prepared.Close,func()error{return prepared.Cleanup(ctx)}} {
+		if err:=op();!errors.Is(err,errCiv880CloseUnknown)||prepared.stage!=stage||prepared.parent!=parent||len(f.calls)!=1 {t.Fatal("partial ownership retried a consumed handle",err)}
+	}
+}

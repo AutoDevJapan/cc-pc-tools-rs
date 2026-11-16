@@ -34,7 +34,7 @@ An event records what was true at its emission. It is not a current receipt or a
 
 The observation implementation can create an operation-owned child stage with the five outputs using the original CreateNew handles. It retains the parent namespace, file identities and ACL observations while inspecting the same bytes before and after consumption. It checks both file-backed function exports and bounded virtual data exports, which may reside in a zero-filled image section.
 
-The caller owns the returned prepared/stage object even on an error. Cancellation, uncertain creation, foreign entries and failed disposition retain the corresponding live objects for reconciliation. A failed Go `File.Close` consumes its wrapper even when the native outcome is unknown; the operation records that uncertainty and never re-queries or retries the old numeric handle. A retained report or pointer is not evidence of a live handle. `Cleanup` reconciles and removes only the exact objects created by this operation. `Close` releases those handles only after that cleanup is confirmed; an uncertain or foreign namespace remains recorded, and any still-confirmed live handles remain held. Directory inventory is read from the original held directory handle, so the owner keeps DELETE access without a conflicting path reopen. Releasing this operation's handles does not prove that every external native handle has drained.
+The caller owns the returned prepared/stage object even on an error. Cancellation, uncertain creation, foreign entries and failed disposition retain the corresponding live objects for reconciliation. A failed Go `File.Close` consumes its wrapper even when the native outcome is unknown; the operation records that uncertainty and never re-queries or retries the old numeric handle. The first failed close immediately stops that release pass. Its consumed slot is cleared and marked unknown; later leaf, unwrapped, root and parent owners are left unchanged. A later Close or Cleanup reports that unknown state without retrying the consumed wrapper or numeric handle. A retained report or pointer is not evidence of a live handle. `Cleanup` reconciles and removes only the exact objects created by this operation. `Close` releases those handles only after that cleanup is confirmed; an uncertain or foreign namespace remains recorded, and any still-confirmed live handles remain held. Directory inventory is read from the original held directory handle, so the owner keeps DELETE access without a conflicting path reopen. Releasing this operation's handles does not prove that every external native handle has drained.
 
 ## Normal connection
 
@@ -56,3 +56,15 @@ The tests include the two original v3 bins/dlls log records, fixed manifest-stre
 The product's same-revision CI and material inspection do not establish all native producer shutdown, OS and remote receive-generation closure, or a complete Session birth window. The normal product acceptance still requires 22 leaders, same-process real save/load cycles and save comparisons, both AI payment paths, unpaid-placement refusal, partial-payment multiplayer save/rejoin, the original full scenario and six save pairs, and formal spy neutralization followed by saved recovery without changing RNG results.
 
 For AI-operated entry points, Codex and Claude Code are both minimum supported hosts. Each must reach the same normal preflight purpose and representative result through its actual configured entry and authentication. Source, registration or a result from one host is not proof of both-host use. This host requirement does not change product inference-model requirements, execution permissions or target ownership.
+
+The close-loop regression controls use test-owned files and a bounded internal
+close seam. The seam actually closes a fixture descriptor, then returns a
+synthetic error to model consumed ownership; it is not evidence of an actual
+Windows close failure. The controls check normal release, first and middle leaf
+failures, unwrapped-handle failure, exact reverse release order, repeated-close
+refusal and preserved stage/prepared ownership. A separate write-open probe
+checks that the remaining fixture handles still deny write sharing. These are
+prepared test sources until they run on the final reader revision. The normally
+successful stage Cleanup already consumes its leaves, so a deliberately
+constructed post-cleanup stage with live leaves tests the common failure
+contract without claiming an observed ordinary-path stage failure.

@@ -1393,6 +1393,33 @@ func civ880CloseOriginalFile(file **os.File,unknown *bool)error{
 	return civ880CloseFileOnce(file,unknown,func(value *os.File)error{return value.Close()})
 }
 
+// The normal entry fixes native close operations. Tests can model a consumed
+// wrapper failure without changing process-wide callbacks or claiming an OS
+// failure. Stop at the first uncertainty so later known-live owners stay held.
+type civ880CloseOperations struct {
+	file func(*os.File) error
+	handle func(syscall.Handle) error
+}
+
+func civ880OriginalCloseOperations() civ880CloseOperations {
+	return civ880CloseOperations{file:func(file *os.File)error{return file.Close()},handle:syscall.CloseHandle}
+}
+
+func civ880CloseLeafOwners(leaves *[5]*os.File,unwrapped []syscall.Handle,unknown *bool,operations civ880CloseOperations) error {
+	if leaves==nil||unknown==nil||operations.file==nil||operations.handle==nil{return errCiv880Observation}
+	if *unknown{return errCiv880CloseUnknown}
+	for i:=len(leaves)-1;i>=0;i-- {
+		if leaves[i]!=nil {if err:=civ880CloseFileOnce(&leaves[i],unknown,operations.file);err!=nil{return errors.Join(errCiv880Observation,err)}}
+	}
+	for i:=len(unwrapped)-1;i>=0;i-- {
+		if unwrapped[i]!=0 {
+			value:=unwrapped[i];unwrapped[i]=0
+			if err:=operations.handle(value);err!=nil{*unknown=true;return errors.Join(errCiv880Observation,errCiv880CloseUnknown,err)}
+		}
+	}
+	return nil
+}
+
 func (parent *civ880StageParent) closeOwned(transferred bool) error {
 	if parent==nil{return nil};parent.mu.Lock();defer parent.mu.Unlock()
 	if parent.closed{return nil};if parent.closeUnknown{return errCiv880CloseUnknown};if parent.transferred!=transferred{return errCiv880Observation}
@@ -1526,13 +1553,14 @@ func civ880CreateObservedStageWithHook(ctx context.Context,parent *civ880StagePa
 // Close releases handles only after exact-object Cleanup has completed.
 // Partial, foreign or unknown namespaces stay held for owner reconciliation.
 func (stage *civ880CreatedStage) Close() error {
+	return stage.closeWith(civ880OriginalCloseOperations())
+}
+
+func (stage *civ880CreatedStage) closeWith(operations civ880CloseOperations) error {
 	if stage==nil{return nil};stage.mu.Lock();defer stage.mu.Unlock();if stage.closed{return nil};if stage.closeUnknown{return errCiv880CloseUnknown}
 	if stage.rootAttempted&&!stage.rootCollision&&!stage.cleanupDone{return errCiv880StagePreserved}
-	var failures []error
-	for i:=len(stage.leaves)-1;i>=0;i--{if stage.leaves[i]!=nil{if err:=civ880CloseOriginalFile(&stage.leaves[i],&stage.closeUnknown);err!=nil{failures=append(failures,err)}}}
-	for i:=len(stage.unwrapped)-1;i>=0;i--{if stage.unwrapped[i]!=0{value:=stage.unwrapped[i];stage.unwrapped[i]=0;if err:=syscall.CloseHandle(value);err!=nil{stage.closeUnknown=true;failures=append(failures,errors.Join(errCiv880CloseUnknown,err))}}}
-	if len(failures)>0{return errors.Join(append([]error{errCiv880Observation},failures...)...)}
-	if stage.root!=nil{if err:=civ880CloseOriginalFile(&stage.root,&stage.closeUnknown);err!=nil{return errors.Join(errCiv880Observation,err)}}
+	if err:=civ880CloseLeafOwners(&stage.leaves,stage.unwrapped,&stage.closeUnknown,operations);err!=nil{return err}
+	if stage.root!=nil{if err:=civ880CloseFileOnce(&stage.root,&stage.closeUnknown,operations.file);err!=nil{return errors.Join(errCiv880Observation,err)}}
 	for i:=len(stage.generatedSecurity)-1;i>=0;i--{if stage.generatedSecurity[i]!=0{ok,_,_:=updateAdvapi.NewProc("DestroyPrivateObjectSecurity").Call(uintptr(unsafe.Pointer(&stage.generatedSecurity[i])));if ok==0{return errCiv880Observation};stage.generatedSecurity[i]=0}}
 	for i:=len(stage.securityOther)-1;i>=0;i--{if stage.securityOther[i]!=0{if result,_,_:=updateLocalFree.Call(stage.securityOther[i]);result!=0{return errCiv880Observation};stage.securityOther[i]=0}}
 	if stage.security!=0{if result,_,_:=updateLocalFree.Call(stage.security);result!=0{return errCiv880Observation};stage.security=0}
@@ -1920,15 +1948,16 @@ func (stage *civ880CreatedStage) inspect(ctx context.Context,product *civ880Obse
 // A failed native close is recorded as unknown. Consumed Go File wrappers
 // are never re-queried/retried; other live owners remain for reconciliation.
 func (lease *civ880HeldObservation) Close() error {
+	return lease.closeWith(civ880OriginalCloseOperations())
+}
+
+func (lease *civ880HeldObservation) closeWith(operations civ880CloseOperations) error {
 	if lease==nil{return nil}
 	lease.mu.Lock();defer lease.mu.Unlock()
 	if lease.closed { return nil }
 	if lease.closeUnknown{return errCiv880CloseUnknown}
-	var failures []error
-	for i:=len(lease.leaves)-1;i>=0;i-- { if lease.leaves[i]!=nil { if err:=civ880CloseOriginalFile(&lease.leaves[i],&lease.closeUnknown);err!=nil { failures=append(failures,err) } } }
-	for i:=len(lease.unwrapped)-1;i>=0;i-- { if lease.unwrapped[i]!=0 { value:=lease.unwrapped[i];lease.unwrapped[i]=0;if err:=syscall.CloseHandle(value);err!=nil { lease.closeUnknown=true;failures=append(failures,errors.Join(errCiv880CloseUnknown,err)) } } }
-	if len(failures)>0 { return errors.Join(append([]error{errCiv880Observation},failures...)...) }
-	for i:=len(lease.parents)-1;i>=0;i-- { if lease.parents[i]!=nil { if err:=civ880CloseOriginalFile(&lease.parents[i],&lease.closeUnknown);err!=nil { return errors.Join(errCiv880Observation,err) } } }
+	if err:=civ880CloseLeafOwners(&lease.leaves,lease.unwrapped,&lease.closeUnknown,operations);err!=nil{return err}
+	for i:=len(lease.parents)-1;i>=0;i-- { if lease.parents[i]!=nil { if err:=civ880CloseFileOnce(&lease.parents[i],&lease.closeUnknown,operations.file);err!=nil { return errors.Join(errCiv880Observation,err) } } }
 	lease.closed=true
 	return nil
 }

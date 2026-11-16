@@ -1,23 +1,12 @@
 # Recovery metadata from the job manager
 
 Normal `status --job-id ID --json` keeps its existing fixed metadata output.
-An exact `--purpose` may request one of the assigned recovery projections:
+An exact `--purpose` may request one of the two assigned recovery projections:
 
 - `karaoke-1157-locators`: the stored absolute working directory, an existing
   result locator, and the original question identifier only when that original
   attribute is explicitly stored. A later question route is not evidence of
   original status. Missing or unverified values remain `null`.
-- `karaoke-1157-result-identity`: on Windows, the current byte length and
-  SHA-256 of the original job's bounded result file, with its locator and
-  `bodyReturned: false`. It returns exactly seven metadata fields and no working
-  directory, question identifier or result text. Windows holds the parent and
-  file handles while reading and rejects reparse points or multiple file links.
-  The internal read is limited to 65,536 bytes and its buffer is erased after
-  hashing. A missing, oversized or redirected result is rejected on this
-  supported platform; stored historical digests never replace current bytes.
-  On non-Windows platforms this new purpose returns `job projection purpose unavailable`
-  before opening any job metadata or result file. The existing locator and
-  Four launch-failure purposes retain their existing platform behavior.
 - `fourbros-1245-launch-failure`: a fixed failure category for the original
   failed launch, after validating its job/session/launch binding. It returns no
   command, diagnostic text, credentials, or source bodies. An absent or

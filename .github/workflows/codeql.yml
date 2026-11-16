@@ -125,7 +125,7 @@ jobs:
           fi
           cat "$scope_file"
           printf 'required=%s\n' "$required" >> "$GITHUB_OUTPUT"
-      - name: Run and confirm the two exact Linux projection cases
+      - name: Run and confirm Linux projection and cache boundary cases
         if: matrix.language == 'rust' && steps.linux_projection_scope.outputs.required == 'true'
         env:
           RUSTUP_TOOLCHAIN: '1.95.0'
@@ -165,3 +165,29 @@ jobs:
             grep -Eq '^test result: ok\. 1 passed; 0 failed; 0 ignored;' "$log"
           done
           test "$index" -eq 2
+          # Reuse the same target/profile and owned Cargo entry for the new
+          # semantic lib controls. The fixture helper is not a passing case.
+          lib_cases=(
+            cache::tests::windows_shared_maintenance_rejects_before_any_callback
+            cache::tests::ordinary_target_environment_and_finish_remain_available
+            cache::tests::read_only_budget_rejects_linked_roots_and_entries
+            cache::tests::only_missing_cache_metadata_counts_as_empty
+            cache::tests::dangling_cache_link_is_not_an_empty_cache
+            gate::tests::non_windows_public_gate_rejects_fixed_cache_before_io_and_execution
+          )
+          lib_index=0
+          for case in "${lib_cases[@]}"; do
+            lib_index=$((lib_index + 1))
+            log="$RUNNER_TEMP/cc-jobs-linux-cache-lib-$lib_index.log"
+            "${cargo_command[@]}" test --locked --target x86_64-unknown-linux-gnu -p cc-jobs --lib "$case" -- --exact --color never --test-threads=1 2>&1 | tee "$log"
+            if [[ "$CI_RUNNER_ENVIRONMENT" != github-hosted ]]; then
+              test "$(grep -Fxc -- 'linux-toolchain-verified cargo=1.95.0 rustc=1.95.0' "$log")" -eq 1
+            fi
+            test "$(grep -Fxc -- 'running 1 test' "$log")" -eq 1
+            test "$(grep -Fxc -- "test $case ... ok" "$log")" -eq 1
+            test "$(grep -Ec '^test result: ok\. 1 passed; 0 failed; 0 ignored; 0 measured; [0-9]+ filtered out; finished in [0-9.]+s$' "$log")" -eq 1
+            test "$(grep -Ec '^test result:' "$log")" -eq 1
+            printf 'linux-lib-case-confirmed=%s\n' "$case"
+          done
+          test "$lib_index" -eq 6
+          printf 'Linux cache/gate lib cases: %s passed; 0 ignored.\n' "$lib_index"

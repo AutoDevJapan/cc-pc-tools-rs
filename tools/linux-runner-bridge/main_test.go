@@ -10,6 +10,7 @@ import (
 	"net/http/httptest"
 	"os"
 	"os/exec"
+	"path/filepath"
 	"reflect"
 	"runtime"
 	"strings"
@@ -992,5 +993,72 @@ func TestProjectionInputAlreadyEOFDoesNotWaitForNewWriter(t *testing.T) {
 		}
 	case <-time.After(3*time.Second):
 		t.Fatal("stdin duplicate waited for a writer instead of observing EOF")
+	}
+}
+
+
+// Host admission remains stricter than Cargo's opaque harness tail. This
+// regression exercises the same validate -> execution-boundary ordering.
+func TestProjectionHostValidatedHarnessTailPreservedAtExecution(t *testing.T) {
+	tail := []string{"--", "--skip", "--ci-toolchain-legacy", projectionRustRequirement}
+	for _, required := range []bool{false, true} {
+		name := "legacy"
+		args := []string{"test"}
+		if required {
+			name = "required"
+			args = append(args, projectionRustRequirement)
+		}
+		t.Run(name, func(t *testing.T) {
+			args = append(args, tail...)
+			q := request{Dir: "/work/cc-pc-tools-rs/cc-pc-tools-rs", Args: args}
+			if err := validate(q); err != nil {
+				t.Fatal(err)
+			}
+			probes, executions := 0, 0
+			code := executeProjectionCargo(context.Background(), q.Args, "2", "3", nil, io.Discard, io.Discard,
+				func(_ context.Context, cmd *exec.Cmd) ([]byte, error) {
+					probes++
+					return projectionVersionFixture(filepath.Base(cmd.Path), projectionRustRelease), nil
+				},
+				func(_ context.Context, cmd *exec.Cmd) int {
+					executions++
+					expected := append([]string{"test"}, tail...)
+					if !reflect.DeepEqual(cmd.Args[1:], expected) {
+						t.Fatalf("host-accepted harness tail changed: %v", cmd.Args[1:])
+					}
+					return 7
+				})
+			expectedProbes := 0
+			if required {
+				expectedProbes = 2
+			}
+			if code != 7 || executions != 1 || probes != expectedProbes {
+				t.Fatal("host-accepted tail changed execution or version policy")
+			}
+		})
+	}
+	for _, value := range []string{"--config=other", "--target-dir=/tmp/other", "-C/tmp", "+nightly", "@other", "line\nbreak"} {
+		t.Run("host-reject-"+strings.ReplaceAll(value, "/", "_"), func(t *testing.T) {
+			args := []string{"test", projectionRustRequirement, "--", value}
+			q := request{Dir: "/work/cc-pc-tools-rs/cc-pc-tools-rs", Args: args}
+			// Passing this request into h.serve would otherwise reach real host
+			// tools. Count the boundary only after its same production validator.
+			probes, executions := 0, 0
+			err := validate(q)
+			if err == nil {
+				_ = executeProjectionCargo(context.Background(), q.Args, "2", "3", nil, io.Discard, io.Discard,
+					func(context.Context, *exec.Cmd) ([]byte, error) {
+						probes++
+						return nil, errProjectionToolchain
+					},
+					func(context.Context, *exec.Cmd) int {
+						executions++
+						return 0
+					})
+			}
+			if err == nil || probes != 0 || executions != 0 {
+				t.Fatal("host rejection crossed the probe or execution boundary")
+			}
+		})
 	}
 }

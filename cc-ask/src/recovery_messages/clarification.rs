@@ -43,6 +43,11 @@ fn hash(text: &str) -> String {
     format!("{:x}", Sha256::digest(text.as_bytes()))
 }
 
+/// Under the existing recovery message lock, retain every saved purpose.
+pub(super) fn has_saved_request(home: &Path, request_id: &str) -> Result<bool> {
+    Ok(Bindings::load(home)?.records.contains_key(request_id))
+}
+
 impl Binding {
     pub(super) fn read(path: &Path) -> Result<Self> {
         Ok(Self::read_with_hash(path)?.0)

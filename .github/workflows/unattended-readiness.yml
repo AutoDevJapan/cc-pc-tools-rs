@@ -137,11 +137,15 @@ jobs:
           $passed = 0
           $skipped = 0
           $partitions = 0
-          for ($offset = 0; $offset -lt $names.Count; $offset += 50) {
-            $count = [Math]::Min(50, $names.Count - $offset)
-            $group = @($names.GetRange($offset, $count))
+          $partitionCount = [int][Math]::Ceiling($names.Count / 50.0)
+          for ($partition = 0; $partition -lt $partitionCount; $partition++) {
+            $members = [Collections.Generic.List[string]]::new()
+            for ($index = $partition; $index -lt $names.Count; $index += $partitionCount) { $members.Add($names[$index]) }
+            $group = @($members.ToArray())
+            if ($group.Count -lt 1 -or $group.Count -gt 50) { throw 'Windows runner partition size invalid' }
             $selection = '^(?:' + (($group | ForEach-Object { [regex]::Escape($_) }) -join '|') + ')$'
             if ($selection.Length -gt 26000) { throw 'Windows runner root selection exceeds command bound' }
+            Write-Output ('UNATTENDED_WINDOWS_PARTITION_START index={0} expected={1} budget_seconds=180' -f $partitions,$group.Count)
             $lines = @(& $binary '-test.v' '-test.timeout=180s' ('-test.run=' + $selection) 2>&1)
             $testExit = $LASTEXITCODE
             $exitText = if ($null -eq $testExit) { 'unknown' } else { ([long]$testExit).ToString([Globalization.CultureInfo]::InvariantCulture) }
@@ -150,7 +154,20 @@ jobs:
               $line = [string]$item
               if ($line -cmatch '^(?:=== (?:RUN|PAUSE|CONT)[ \t]+[A-Za-z0-9_/.-]+[ \t]*|[ \t]*--- (?:PASS|SKIP|FAIL):[ \t]+[A-Za-z0-9_/.-]+[ \t]+\([0-9]+(?:[.][0-9]+)?s\)|PASS|FAIL)$') { Write-Output $line }
             }
-            if ($null -eq $testExit -or $testExit -ne 0) { throw 'Windows runner partition failed' }
+            if ($null -eq $testExit -or $testExit -ne 0) {
+              $sawTimeout = $false
+              $sawRace = $false
+              $sawTestFailure = $false
+              foreach ($item in $lines) {
+                $line = [string]$item
+                if ($line -cmatch '^panic: test timed out after [0-9hms.]+$') { $sawTimeout = $true }
+                if ($line -cmatch '^WARNING: DATA RACE') { $sawRace = $true }
+                if ($line -cmatch '^[ \t]*--- FAIL:') { $sawTestFailure = $true }
+              }
+              $failureClass = if ($sawTimeout) { 'partition_timeout' } elseif ($sawRace) { 'data_race' } elseif ($sawTestFailure) { 'test_assertion' } else { 'native_exit_unclassified' }
+              Write-Output ('UNATTENDED_WINDOWS_PARTITION_FAILURE index={0} class={1}' -f $partitions,$failureClass)
+              throw 'Windows runner partition failed'
+            }
             $output = [string]::Join([Environment]::NewLine, [string[]]$lines)
             $runs = @([regex]::Matches($output, '(?m)^=== RUN[ \t]+([^\s/]+)[ \t]*\r?$') | ForEach-Object { $_.Groups[1].Value })
             $passes = @([regex]::Matches($output, '(?m)^--- PASS:[ \t]+([^\s/]+)[ \t]+\(') | ForEach-Object { $_.Groups[1].Value })

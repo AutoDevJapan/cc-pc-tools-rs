@@ -21,6 +21,7 @@ import (
 	"syscall"
 	"testing"
 	"time"
+	"golang.org/x/sys/windows"
 )
 
 func civ880Fixture(t *testing.T) ([]map[string]any, civ880CargoPackageIDs, string) {
@@ -863,7 +864,7 @@ func TestCiv880CreatedDirectoryUsesHeldEnumerationWithoutRelaxingSharing(t *test
 	}()
 	// The legacy path opener must still conflict with our DELETE-bearing
 	// owner; the fix must not relax sharing or drop that owner.
-	if _,err:=os.ReadDir(stage.rootPath);!errors.Is(err,syscall.ERROR_SHARING_VIOLATION){
+	if _,err:=os.ReadDir(stage.rootPath);!errors.Is(err,windows.ERROR_SHARING_VIOLATION){
 		t.Fatal("expected path-reopen sharing conflict",err)
 	}
 	for i:=0;i<3;i++{
@@ -923,4 +924,34 @@ func TestCiv880CaptureErrorDoesNotReturnPartialSelectedRecords(t *testing.T) {
 	result,err:=civ880CaptureEvents(raw)
 	if err==nil {t.Fatal("malformed tail accepted")}
 	for _,event:=range result{if event.Schema!=""||event.Phase!=""||event.ExitCode!=nil{t.Fatal("partial selected records escaped with error")}}
+}
+
+func TestCiv880ConsumedFileCloseFailureNeverClaimsALiveLease(t *testing.T){
+	ctx,cancel:=context.WithTimeout(context.Background(),5*time.Second);defer cancel()
+	name:=filepath.Join(physicalSoftwareFixture(t),"owned-close.txt")
+	if err:=os.WriteFile(name,[]byte("owned"),0600);err!=nil{t.Fatal(err)}
+	file,err:=os.Open(name);if err!=nil{t.Fatal(err)}
+	calls:=0;unknown:=false
+	err=civ880CloseFileOnce(&file,&unknown,func(value *os.File)error{
+		calls++
+		// Model the Go contract: descriptor is consumed although the close
+		// result is an error. No OS CloseHandle failure is claimed here.
+		if err:=value.Close();err!=nil{return err}
+		return errors.New("synthetic consumed-descriptor close error")
+	})
+	if !errors.Is(err,errCiv880CloseUnknown)||file!=nil||!unknown||calls!=1{
+		t.Fatal("failed close retained a misleading live File pointer",err)
+	}
+	if err:=civ880CloseFileOnce(&file,&unknown,func(*os.File)error{calls++;return nil});
+		!errors.Is(err,errCiv880CloseUnknown)||calls!=1{
+		t.Fatal("consumed descriptor was retried or unknown result erased",err)
+	}
+	stage:=&civ880CreatedStage{closeUnknown:true,rootAttempted:true,rootCreated:true}
+	if err:=stage.Cleanup(ctx);!errors.Is(err,errCiv880CloseUnknown){t.Fatal("unknown close accepted as cleanup",err)}
+	if err:=stage.Close();!errors.Is(err,errCiv880CloseUnknown){t.Fatal("unknown close accepted as release",err)}
+	if stage.inspect(ctx,&civ880ObservedProduct{})==nil{t.Fatal("unknown close minted a readable stage")}
+	normal,err:=os.Open(name);if err!=nil{t.Fatal("independent ordinary file unavailable",err)}
+	normalUnknown:=false
+	if err:=civ880CloseFileOnce(&normal,&normalUnknown,func(value *os.File)error{return value.Close()});err!=nil||
+		normal!=nil||normalUnknown{t.Fatal("normal close was permanently disabled",err)}
 }

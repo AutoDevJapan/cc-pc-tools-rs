@@ -52,6 +52,7 @@ const (
 
 var errCiv880Observation = errors.New("civ880_observation_unqualified")
 var errCiv880StagePreserved = errors.New("civ880_stage_preserved_reconciliation_required")
+var errCiv880CloseUnknown = errors.New("civ880_close_outcome_unknown")
 
 type civ880CargoPackageIDs struct {
 	Autotest string
@@ -1270,6 +1271,7 @@ type civ880HeldObservation struct {
 	paths []string
 	leaves [5]*os.File
 	unwrapped []syscall.Handle
+	closeUnknown bool
 	closed bool
 }
 
@@ -1337,6 +1339,7 @@ type civ880StageParent struct {
 	stamps []string
 	unwrapped []syscall.Handle
 	transferred bool
+	closeUnknown bool
 	closed bool
 }
 
@@ -1360,16 +1363,35 @@ func civ880OpenStageParentAt(ctx context.Context,root string) (*civ880StageParen
 }
 
 func (parent *civ880StageParent) current(ctx context.Context) bool {
-	if parent==nil||parent.closed||ctx==nil||ctx.Err()!=nil||len(parent.handles)==0||len(parent.handles)!=len(parent.paths)||len(parent.stamps)!=len(parent.paths){return false}
+	if parent==nil||parent.closed||parent.closeUnknown||ctx==nil||ctx.Err()!=nil||len(parent.handles)==0||len(parent.handles)!=len(parent.paths)||len(parent.stamps)!=len(parent.paths){return false}
 	for i,file:=range parent.handles{stamp,err:=civ880ParentObservation(file,parent.paths[i]);if err!=nil||stamp!=parent.stamps[i]||ctx.Err()!=nil{return false}}
 	return true
 }
 
+
+// A Go File.Close attempt consumes its descriptor even when it returns an
+// error. The pointer is no longer proof of a live exact native handle.
+// Record only uncertainty; never re-query or retry that numeric handle.
+func civ880CloseFileOnce(file **os.File,unknown *bool,closeFile func(*os.File)error)error{
+	if file==nil||unknown==nil||closeFile==nil{return errCiv880Observation}
+	if *file==nil{if *unknown{return errCiv880CloseUnknown};return nil}
+	value:=*file
+	*file=nil
+	if err:=closeFile(value);err!=nil{
+		*unknown=true
+		return errors.Join(errCiv880CloseUnknown,err)
+	}
+	return nil
+}
+func civ880CloseOriginalFile(file **os.File,unknown *bool)error{
+	return civ880CloseFileOnce(file,unknown,func(value *os.File)error{return value.Close()})
+}
+
 func (parent *civ880StageParent) closeOwned(transferred bool) error {
 	if parent==nil{return nil};parent.mu.Lock();defer parent.mu.Unlock()
-	if parent.closed{return nil};if parent.transferred!=transferred{return errCiv880Observation}
-	for i:=len(parent.unwrapped)-1;i>=0;i--{if parent.unwrapped[i]!=0{if err:=syscall.CloseHandle(parent.unwrapped[i]);err!=nil{return errors.Join(errCiv880Observation,err)};parent.unwrapped[i]=0}}
-	for i:=len(parent.handles)-1;i>=0;i--{if parent.handles[i]!=nil{if err:=parent.handles[i].Close();err!=nil{return errors.Join(errCiv880Observation,err)};parent.handles[i]=nil}}
+	if parent.closed{return nil};if parent.closeUnknown{return errCiv880CloseUnknown};if parent.transferred!=transferred{return errCiv880Observation}
+	for i:=len(parent.unwrapped)-1;i>=0;i--{if parent.unwrapped[i]!=0{value:=parent.unwrapped[i];parent.unwrapped[i]=0;if err:=syscall.CloseHandle(value);err!=nil{parent.closeUnknown=true;return errors.Join(errCiv880CloseUnknown,err)}}}
+	for i:=len(parent.handles)-1;i>=0;i--{if parent.handles[i]!=nil{if err:=civ880CloseOriginalFile(&parent.handles[i],&parent.closeUnknown);err!=nil{return errors.Join(errCiv880Observation,err)}}}
 	parent.closed=true;return nil
 }
 
@@ -1396,6 +1418,7 @@ type civ880CreatedStage struct {
 	leafDeleteRequested [5]bool
 	rootDeleteRequested bool
 	cleanupStarted bool
+	closeUnknown bool
 	cleanupDone bool
 	complete bool
 	closed bool
@@ -1494,13 +1517,13 @@ func civ880CreateObservedStageWithHook(ctx context.Context,parent *civ880StagePa
 // Close releases handles only after exact-object Cleanup has completed.
 // Partial, foreign or unknown namespaces stay held for owner reconciliation.
 func (stage *civ880CreatedStage) Close() error {
-	if stage==nil{return nil};stage.mu.Lock();defer stage.mu.Unlock();if stage.closed{return nil}
+	if stage==nil{return nil};stage.mu.Lock();defer stage.mu.Unlock();if stage.closed{return nil};if stage.closeUnknown{return errCiv880CloseUnknown}
 	if stage.rootAttempted&&!stage.rootCollision&&!stage.cleanupDone{return errCiv880StagePreserved}
 	var failures []error
-	for i:=len(stage.leaves)-1;i>=0;i--{if stage.leaves[i]!=nil{if err:=stage.leaves[i].Close();err!=nil{failures=append(failures,err)}else{stage.leaves[i]=nil}}}
-	for i:=len(stage.unwrapped)-1;i>=0;i--{if stage.unwrapped[i]!=0{if err:=syscall.CloseHandle(stage.unwrapped[i]);err!=nil{failures=append(failures,err)}else{stage.unwrapped[i]=0}}}
+	for i:=len(stage.leaves)-1;i>=0;i--{if stage.leaves[i]!=nil{if err:=civ880CloseOriginalFile(&stage.leaves[i],&stage.closeUnknown);err!=nil{failures=append(failures,err)}}}
+	for i:=len(stage.unwrapped)-1;i>=0;i--{if stage.unwrapped[i]!=0{value:=stage.unwrapped[i];stage.unwrapped[i]=0;if err:=syscall.CloseHandle(value);err!=nil{stage.closeUnknown=true;failures=append(failures,errors.Join(errCiv880CloseUnknown,err))}}}
 	if len(failures)>0{return errors.Join(append([]error{errCiv880Observation},failures...)...)}
-	if stage.root!=nil{if err:=stage.root.Close();err!=nil{return errors.Join(errCiv880Observation,err)};stage.root=nil}
+	if stage.root!=nil{if err:=civ880CloseOriginalFile(&stage.root,&stage.closeUnknown);err!=nil{return errors.Join(errCiv880Observation,err)}}
 	for i:=len(stage.generatedSecurity)-1;i>=0;i--{if stage.generatedSecurity[i]!=0{ok,_,_:=updateAdvapi.NewProc("DestroyPrivateObjectSecurity").Call(uintptr(unsafe.Pointer(&stage.generatedSecurity[i])));if ok==0{return errCiv880Observation};stage.generatedSecurity[i]=0}}
 	for i:=len(stage.securityOther)-1;i>=0;i--{if stage.securityOther[i]!=0{if result,_,_:=updateLocalFree.Call(stage.securityOther[i]);result!=0{return errCiv880Observation};stage.securityOther[i]=0}}
 	if stage.security!=0{if result,_,_:=updateLocalFree.Call(stage.security);result!=0{return errCiv880Observation};stage.security=0}
@@ -1517,8 +1540,8 @@ func civ880Disposition(file *os.File) error {
 }
 
 // Cleanup applies deletion only to the exact handles obtained at FILE_CREATE;
-// it never reopens or unlinks a caller path. The stage and its parent remain
-// held on any unconfirmed outcome. A positive check for path absence follows
+// it never reopens or unlinks a caller path. Confirmed live handles remain
+// held on refusal; consumed-close uncertainty is recorded separately. A positive check for path absence follows
 // closing each delete-pending handle; another object's appearance is a refusal,
 // not permission to delete it.
 func (stage *civ880CreatedStage) Cleanup(ctx context.Context) error {
@@ -1529,7 +1552,7 @@ func (stage *civ880CreatedStage) Cleanup(ctx context.Context) error {
 func (stage *civ880CreatedStage) cleanupWithHook(ctx context.Context,hook func(string,int)error) error {
 	if stage==nil||ctx==nil||ctx.Err()!=nil{return errCiv880Observation};if _,ok:=ctx.Deadline();!ok{return errCiv880Observation}
 	stage.mu.Lock();defer stage.mu.Unlock()
-	if stage.cleanupDone{return nil};if stage.closed{return errCiv880Observation}
+	if stage.closeUnknown{return errors.Join(errCiv880StagePreserved,errCiv880CloseUnknown)};if stage.cleanupDone{return nil};if stage.closed{return errCiv880Observation}
 	if !stage.rootAttempted||stage.rootCollision {
 		if stage.rootCreated||stage.root!=nil||stage.unknownCreate{return errCiv880StagePreserved}
 		for _,leaf:=range stage.leaves{if leaf!=nil{return errCiv880StagePreserved}}
@@ -1541,14 +1564,14 @@ func (stage *civ880CreatedStage) cleanupWithHook(ctx context.Context,hook func(s
 		if stage.rootDeleteRequested{if _,err:=os.Lstat(stage.rootPath);errors.Is(err,os.ErrNotExist){stage.cleanupDone=true;return nil}}
 		return errCiv880StagePreserved
 	}
-	id,err:=civ880StageDirectoryIdentity(stage.root,stage.rootPath);if err!=nil||id!=stage.rootID||id.FileID==""||id.Volume==""{return errCiv880StagePreserved}
-	if stage.rootStamp!=""{stamp,err:=civ880ParentObservation(stage.root,stage.rootPath);if err!=nil||stamp!=stage.rootStamp{return errCiv880StagePreserved}}
 	if stage.rootDeleteRequested {
 		for _,leaf:=range stage.leaves{if leaf!=nil{return errCiv880StagePreserved}}
-		if err:=stage.root.Close();err!=nil{return errors.Join(errCiv880StagePreserved,err)};stage.root=nil
+		if err:=civ880CloseOriginalFile(&stage.root,&stage.closeUnknown);err!=nil{return errors.Join(errCiv880StagePreserved,err)}
 		if _,err:=os.Lstat(stage.rootPath);!errors.Is(err,os.ErrNotExist){return errCiv880StagePreserved}
 		stage.cleanupDone=true;return nil
 	}
+	id,err:=civ880StageDirectoryIdentity(stage.root,stage.rootPath);if err!=nil||id!=stage.rootID||id.FileID==""||id.Volume==""{return errCiv880StagePreserved}
+	if stage.rootStamp!=""{stamp,err:=civ880ParentObservation(stage.root,stage.rootPath);if err!=nil||stamp!=stage.rootStamp{return errCiv880StagePreserved}}
 	entries,err:=civ880StageEntries(ctx,stage.root);if err!=nil{return errCiv880StagePreserved}
 	expected:=map[string]int{};for i,spec:=range civ880RoleSpecs(){if stage.leaves[i]!=nil{expected[spec.filename]=i}}
 	seen:=map[string]bool{}
@@ -1556,14 +1579,20 @@ func (stage *civ880CreatedStage) cleanupWithHook(ctx context.Context,hook func(s
 	for name,i:=range expected{if !seen[name]&&!stage.leafDeleteRequested[i]{return errCiv880StagePreserved}}
 	for i:=len(stage.leaves)-1;i>=0;i-- {
 		file:=stage.leaves[i];if file==nil{continue};if ctx.Err()!=nil{return errCiv880StagePreserved}
-		current,err:=fileSoftwareIdentity(file);if err!=nil||current!=stage.ids[i]||current.FileID==""||current.Volume==""{return errCiv880StagePreserved}
-		if !stage.leafDeleteRequested[i]{if ctx.Err()!=nil{return errCiv880StagePreserved};if err:=civ880Disposition(file);err!=nil{return errCiv880StagePreserved};stage.leafDeleteRequested[i]=true;if hook!=nil&&hook("leaf_marked",i)!=nil{return errCiv880StagePreserved}}
-		if err:=file.Close();err!=nil{return errors.Join(errCiv880StagePreserved,err)};stage.leaves[i]=nil
+		if !stage.leafDeleteRequested[i]{
+			current,err:=fileSoftwareIdentity(file);if err!=nil||current!=stage.ids[i]||current.FileID==""||current.Volume==""{return errCiv880StagePreserved}
+			acl,err:=updateFileACL(file);if err!=nil||acl!=stage.acls[i]{return errCiv880StagePreserved}
+			if ctx.Err()!=nil{return errCiv880StagePreserved};if err:=civ880Disposition(file);err!=nil{return errCiv880StagePreserved}
+			stage.leafDeleteRequested[i]=true;if hook!=nil&&hook("leaf_marked",i)!=nil{return errCiv880StagePreserved}
+		}
+		// A successful disposition permits only close on this exact handle.
+		// Identity and ACL were checked before its persistent deletion mark.
+		if err:=civ880CloseOriginalFile(&stage.leaves[i],&stage.closeUnknown);err!=nil{return errors.Join(errCiv880StagePreserved,err)}
 		if _,err:=os.Lstat(filepath.Join(stage.rootPath,civ880RoleSpecs()[i].filename));!errors.Is(err,os.ErrNotExist){return errCiv880StagePreserved}
 	}
 	entries,err=civ880StageEntries(ctx,stage.root);if err!=nil||len(entries)!=0||!stage.parent.current(ctx){return errCiv880StagePreserved}
 	if !stage.rootDeleteRequested{if ctx.Err()!=nil{return errCiv880StagePreserved};if err:=civ880Disposition(stage.root);err!=nil{return errCiv880StagePreserved};stage.rootDeleteRequested=true;if hook!=nil&&hook("root_marked",-1)!=nil{return errCiv880StagePreserved}}
-	if err:=stage.root.Close();err!=nil{return errors.Join(errCiv880StagePreserved,err)};stage.root=nil
+	if err:=civ880CloseOriginalFile(&stage.root,&stage.closeUnknown);err!=nil{return errors.Join(errCiv880StagePreserved,err)}
 	if _,err:=os.Lstat(stage.rootPath);!errors.Is(err,os.ErrNotExist){return errCiv880StagePreserved}
 	stage.cleanupDone=true;return nil
 }
@@ -1687,7 +1716,8 @@ func (prepared *civ880PreparedObservation) observeReadOnly(ctx context.Context) 
 }
 
 // Close never deletes. A created namespace remains held until Cleanup has
-// reconciled it; failed closes retain their exact objects for the owner.
+// reconciled it. A failed Go File.Close consumes that wrapper; uncertainty
+// remains explicit and cannot be turned into a live-handle receipt.
 func (prepared *civ880PreparedObservation) Close() error {
 	if prepared==nil{return nil}
 	prepared.mu.Lock();defer prepared.mu.Unlock()
@@ -1797,7 +1827,7 @@ func civ880HeldInventory(root string) bool {
 func (lease *civ880HeldObservation) inspect(ctx context.Context, product *civ880ObservedProduct) error {
 	if lease==nil{return errCiv880Observation}
 	lease.mu.Lock();defer lease.mu.Unlock()
-	if lease.closed || product==nil || ctx==nil || ctx.Err()!=nil || len(lease.parents)==0 || len(lease.parents)!=len(lease.paths) { return errCiv880Observation }
+	if lease.closed || lease.closeUnknown || product==nil || ctx==nil || ctx.Err()!=nil || len(lease.parents)==0 || len(lease.parents)!=len(lease.paths) { return errCiv880Observation }
 	product.mu.Lock();defer product.mu.Unlock()
 	if product.closed{return errCiv880Observation}
 	if _,ok:=ctx.Deadline();!ok { return errCiv880Observation }
@@ -1862,7 +1892,7 @@ func civ880ObserveCreatedStageReadOnly(ctx context.Context,product *civ880Observ
 func (stage *civ880CreatedStage) inspect(ctx context.Context,product *civ880ObservedProduct) error {
 	if stage==nil||product==nil||ctx==nil||ctx.Err()!=nil{return errCiv880Observation};if _,ok:=ctx.Deadline();!ok{return errCiv880Observation}
 	stage.mu.Lock();defer stage.mu.Unlock();product.mu.Lock();defer product.mu.Unlock()
-	if stage.closed||stage.cleanupStarted||!stage.complete||stage.root==nil||stage.parent==nil||!stage.parentOwned||product.closed||!stage.parent.current(ctx){return errCiv880Observation}
+	if stage.closed||stage.closeUnknown||stage.cleanupStarted||!stage.complete||stage.root==nil||stage.parent==nil||!stage.parentOwned||product.closed||!stage.parent.current(ctx){return errCiv880Observation}
 	stamp,err:=civ880ParentObservation(stage.root,stage.rootPath);if err!=nil||stamp!=stage.rootStamp||!civ880StageInventory(ctx,stage.root){return errCiv880Observation}
 	for i,spec:=range civ880RoleSpecs(){
 		file:=stage.leaves[i];value:=product.files[i];if file==nil||value.Role!=spec.role||value.Name!=spec.filename{return errCiv880Observation}
@@ -1877,17 +1907,18 @@ func (stage *civ880CreatedStage) inspect(ctx context.Context,product *civ880Obse
 	return nil
 }
 
-// A close error leaves the corresponding handle referenced and the lease
-// unclosed so the owner can record and reconcile the uncertain resource.
+// A failed native close is recorded as unknown. Consumed Go File wrappers
+// are never re-queried/retried; other live owners remain for reconciliation.
 func (lease *civ880HeldObservation) Close() error {
 	if lease==nil{return nil}
 	lease.mu.Lock();defer lease.mu.Unlock()
 	if lease.closed { return nil }
+	if lease.closeUnknown{return errCiv880CloseUnknown}
 	var failures []error
-	for i:=len(lease.leaves)-1;i>=0;i-- { if lease.leaves[i]!=nil { if err:=lease.leaves[i].Close();err!=nil { failures=append(failures,err) } else { lease.leaves[i]=nil } } }
-	for i:=len(lease.unwrapped)-1;i>=0;i-- { if lease.unwrapped[i]!=0 { if err:=syscall.CloseHandle(lease.unwrapped[i]);err!=nil { failures=append(failures,err) } else { lease.unwrapped[i]=0 } } }
+	for i:=len(lease.leaves)-1;i>=0;i-- { if lease.leaves[i]!=nil { if err:=civ880CloseOriginalFile(&lease.leaves[i],&lease.closeUnknown);err!=nil { failures=append(failures,err) } } }
+	for i:=len(lease.unwrapped)-1;i>=0;i-- { if lease.unwrapped[i]!=0 { value:=lease.unwrapped[i];lease.unwrapped[i]=0;if err:=syscall.CloseHandle(value);err!=nil { lease.closeUnknown=true;failures=append(failures,errors.Join(errCiv880CloseUnknown,err)) } } }
 	if len(failures)>0 { return errors.Join(append([]error{errCiv880Observation},failures...)...) }
-	for i:=len(lease.parents)-1;i>=0;i-- { if lease.parents[i]!=nil { if err:=lease.parents[i].Close();err!=nil { return errors.Join(errCiv880Observation,err) } else { lease.parents[i]=nil } } }
+	for i:=len(lease.parents)-1;i>=0;i-- { if lease.parents[i]!=nil { if err:=civ880CloseOriginalFile(&lease.parents[i],&lease.closeUnknown);err!=nil { return errors.Join(errCiv880Observation,err) } } }
 	lease.closed=true
 	return nil
 }

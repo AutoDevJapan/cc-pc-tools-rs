@@ -1166,7 +1166,7 @@ impl Ledger {
 
     fn validate(&self) -> Result<()> {
         let mut requests = BTreeMap::new();
-        let mut aliases = BTreeMap::new();
+        let mut aliases: BTreeMap<String, &String> = BTreeMap::new();
         let mut bots: BTreeMap<String, String> = BTreeMap::new();
         let mut phases: BTreeMap<(String, String), &Effect> = BTreeMap::new();
         let mut posted = BTreeMap::new();

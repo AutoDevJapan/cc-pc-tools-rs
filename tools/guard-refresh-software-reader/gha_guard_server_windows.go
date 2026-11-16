@@ -26,7 +26,7 @@ func (e *ghaGuardHTTPStatusError) Error() string {
 }
 func ghaGuardHTTPFailure(phase string,status int) error {
     switch phase {
-    case "credential_owner","authenticated_run","metadata","job_log","job_log_object","artifact","artifact_object","source_metadata":
+    case "credential_owner","authenticated_run","authenticated_runs","authenticated_metadata","metadata","job_log","job_log_object","artifact","artifact_object","source_metadata":
     default:return errGHAGuardUnqualified
     }
     if status<100||status>599{return errGHAGuardUnqualified}
@@ -39,14 +39,24 @@ func ghaGuardResponseFailure(primary,closeErr,contextErr error) error {
     return errors.Join(primary,contextErr)
 }
 
-// Never forward an injected callback error. Only this fixed source phase,
-// a close marker and context cancellation survive the detailed path.
+// Never forward an injected callback error. Only allowlisted HTTP phases,
+// a source-read marker, close marker and context cancellation survive.
 func ghaGuardSafeSourceFailure(failure,contextErr error) error {
+    // A nested bounded request can end before its parent context does.
+    // Preserve only the two fixed context sentinels, never the raw error.
+    if errors.Is(failure,context.Canceled){contextErr=errors.Join(contextErr,context.Canceled)}
+    if errors.Is(failure,context.DeadlineExceeded){contextErr=errors.Join(contextErr,context.DeadlineExceeded)}
     primary:=error(errGHAGuardUnqualified)
     var status *ghaGuardHTTPStatusError
-    if errors.As(failure,&status)&&status!=nil&&status.phase=="source_metadata" {
+    if errors.As(failure,&status)&&status!=nil {
         primary=ghaGuardHTTPFailure(status.phase,status.status)
+    } else {
+        var public *ghaFreshHTTPStatusError
+        if errors.As(failure,&public)&&public!=nil&&public.status>=100&&public.status<=599 {
+            switch public.phase {case "runs","metadata","attestation":primary=errors.Join(primary,&ghaFreshHTTPStatusError{phase:public.phase,status:public.status})}
+        }
     }
+    if errors.Is(failure,errGHAFreshSourceRead) {primary=errors.Join(primary,errGHAFreshSourceRead)}
     if errors.Is(failure,errGHAGuardResponseCleanup) {return errors.Join(primary,errGHAGuardResponseCleanup,contextErr)}
     return errors.Join(primary,contextErr)
 }
@@ -76,7 +86,7 @@ func ghaGuardServerJSONDetailed(ctx context.Context,client *http.Client,endpoint
     response,err:=noRedirect.Do(req)
     if err!=nil||response==nil||response.Body==nil {
         var closeErr error;if response!=nil&&response.Body!=nil {closeErr=response.Body.Close()}
-        return ghaGuardResponseFailure(errGHAGuardUnqualified,closeErr,ctx.Err())
+        return errors.Join(ghaGuardResponseFailure(errGHAGuardUnqualified,closeErr,ctx.Err()),ghaFreshContextFailure(ctx,err))
     }
     if response.StatusCode!=http.StatusOK {
         closeErr:=response.Body.Close()
@@ -87,8 +97,7 @@ func ghaGuardServerJSONDetailed(ctx context.Context,client *http.Client,endpoint
     raw,readErr:=io.ReadAll(io.LimitReader(response.Body,2<<20+1));closeErr:=response.Body.Close()
     if readErr!=nil||closeErr!=nil||len(raw)>2<<20||ctx.Err()!=nil {
         clear(raw)
-        if closeErr!=nil{return errors.Join(errGHAGuardUnqualified,errGHAGuardResponseCleanup,ctx.Err())}
-        return errors.Join(errGHAGuardUnqualified,ctx.Err())
+        return errors.Join(ghaGuardResponseFailure(errGHAGuardUnqualified,closeErr,ctx.Err()),ghaFreshContextFailure(ctx,readErr))
     }
     defer clear(raw)
     dec:=json.NewDecoder(bytes.NewReader(raw))

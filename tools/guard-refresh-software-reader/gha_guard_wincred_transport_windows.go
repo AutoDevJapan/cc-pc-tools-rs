@@ -159,6 +159,8 @@ type ghaGuardCredentialSession struct {
     mu sync.Mutex
     // Non-nil only for the code-owned fresh-generation acquisition.
     fresh *ghaFreshPublicLocator
+    discovery *ghaFreshDiscoveryScope
+    retired map[ghaFreshRetiredKey]ghaFreshRetiredEvidence
     secret []byte
     base http.RoundTripper
     root context.Context
@@ -178,7 +180,7 @@ func (s *ghaGuardCredentialSession) close(ctx context.Context) error {
     if s==nil||ctx==nil{return errGHAGuardUnqualified}
     s.mu.Lock()
     if !s.closed {
-        s.closed=true;clear(s.secret);s.secret=nil;s.cancel()
+        s.closed=true;clear(s.secret);s.secret=nil;clear(s.retired);s.retired=nil;s.cancel()
         if s.active==0 && !s.drained {s.drained=true;close(s.drain)}
     }
     done:=s.drain;s.mu.Unlock()
@@ -198,7 +200,7 @@ func (b *ghaGuardCredentialBody) Close() error {
 }
 func (b *ghaGuardCredentialBody) Read(p []byte) (int,error) {
     n,err:=b.body.Read(p)
-    if err!=nil {if closeErr:=b.Close();err==io.EOF && closeErr!=nil {return n,closeErr}}
+    if err!=nil {if closeErr:=b.Close();err==io.EOF && closeErr!=nil {return n,errGHAGuardResponseCleanup}}
     return n,err
 }
 
@@ -214,23 +216,36 @@ func ghaGuardCredentialContext(original,root context.Context) (context.Context,f
 }
 
 func (s *ghaGuardCredentialSession) RoundTrip(req *http.Request) (*http.Response,error) {
-    if s==nil || req==nil || req.Context().Err()!=nil {return nil,errGHAGuardUnqualified}
-    if s.fresh==nil {
-        if !ghaGuardCredentialAllowed(req) {return nil,errGHAGuardUnqualified}
-    } else if !ghaFreshCredentialAllowed(req,*s.fresh,time.Now().UTC()) {return nil,errGHAGuardUnqualified}
+    if s==nil||req==nil||req.URL==nil{return nil,errGHAGuardUnqualified}
+    if req.Context().Err()!=nil{return nil,errors.Join(errGHAGuardUnqualified,req.Context().Err())}
     s.mu.Lock()
-    if s.closed || len(s.secret)==0 || (!s.ready && req.URL.Path!="/user") {s.mu.Unlock();return nil,errGHAGuardUnqualified}
+    allowed:=false
+    if s.fresh!=nil {allowed=ghaFreshCredentialAllowed(req,*s.fresh,time.Now().UTC())}
+    if !allowed&&s.discovery!=nil {allowed=s.discovery.allows(req)}
+    if s.fresh==nil&&s.discovery==nil {allowed=ghaGuardCredentialAllowed(req)}
+    if !allowed||s.closed||len(s.secret)==0||(!s.ready&&req.URL.Path!="/user") {s.mu.Unlock();return nil,errGHAGuardUnqualified}
     s.active++;value:="Bearer "+string(s.secret);root:=s.root;base:=s.base;s.mu.Unlock()
     clean,releaseContext:=ghaGuardCredentialContext(req.Context(),root)
     release:=func(){releaseContext();s.finish()}
-    if req.Context().Err()!=nil || root.Err()!=nil {release();return nil,errGHAGuardUnqualified}
+    if req.Context().Err()!=nil || root.Err()!=nil {release();return nil,errors.Join(errGHAGuardUnqualified,req.Context().Err(),root.Err())}
     clone:=req.Clone(clean);clone.Header=req.Header.Clone();if clone.Header==nil {clone.Header=make(http.Header)}
     clone.Header.Set("Authorization",value)
     resp,err:=base.RoundTrip(clone)
     // The underlying transport may read clone until the response body closes.
     // Do not mutate the request; its header is reclaimed with the request.
     value=""
-    if err!=nil || resp==nil || resp.Body==nil {if resp!=nil&&resp.Body!=nil {_=resp.Body.Close()};release();return nil,errGHAGuardUnqualified}
+    if err!=nil || resp==nil || resp.Body==nil {
+        var closeErr,contextErr error
+        if resp!=nil&&resp.Body!=nil {closeErr=resp.Body.Close()}
+        if errors.Is(err,errGHAGuardResponseCleanup) {closeErr=errors.Join(closeErr,errGHAGuardResponseCleanup)}
+        if errors.Is(err,context.Canceled) {contextErr=errors.Join(contextErr,context.Canceled)}
+        if errors.Is(err,context.DeadlineExceeded) {contextErr=errors.Join(contextErr,context.DeadlineExceeded)}
+        if req.Context().Err()!=nil {contextErr=errors.Join(contextErr,req.Context().Err())}
+        if root.Err()!=nil {contextErr=errors.Join(contextErr,root.Err())}
+        release()
+        if closeErr==nil&&contextErr==nil{return nil,errGHAGuardUnqualified}
+        return nil,ghaGuardResponseFailure(errGHAGuardUnqualified,closeErr,contextErr)
+    }
     resp.Request=req;resp.Body=&ghaGuardCredentialBody{body:resp.Body,release:release}
     return resp,nil
 }
@@ -282,16 +297,26 @@ func ghaFreshOpenWinCredAuthorityObserved(ctx context.Context,locator ghaFreshPu
     return ghaGuardOpenWinCredAuthorityWithLocator(ctx,&owned,audit)
 }
 
-func ghaGuardOpenWinCredAuthorityWithLocator(ctx context.Context,locator *ghaFreshPublicLocator,audit *ghaFreshCredentialAudit) (out *ghaGuardEvidenceAuthority,resultErr error) {
+func ghaGuardOpenWinCredAuthorityWithLocator(ctx context.Context,locator *ghaFreshPublicLocator,audit *ghaFreshCredentialAudit) (*ghaGuardEvidenceAuthority,error) {
+    return ghaGuardOpenWinCredAuthorityWithPurpose(ctx,locator,nil,audit)
+}
+
+// Discovery starts with only the fixed owner and workflow-list endpoints.
+func ghaFreshOpenWinCredDiscovery(ctx context.Context,audit *ghaFreshCredentialAudit) (*ghaGuardEvidenceAuthority,error) {
+    scope,err:=ghaFreshDiscoveryURLs(nil);if err!=nil{return nil,err}
+    return ghaGuardOpenWinCredAuthorityWithPurpose(ctx,nil,scope,audit)
+}
+
+func ghaGuardOpenWinCredAuthorityWithPurpose(ctx context.Context,locator *ghaFreshPublicLocator,discovery *ghaFreshDiscoveryScope,audit *ghaFreshCredentialAudit) (out *ghaGuardEvidenceAuthority,resultErr error) {
     if ctx==nil||ctx.Err()!=nil{return nil,errGHAGuardUnqualified}
-    if locator==nil {
+    if locator==nil&&discovery==nil {
         if !ghaGuardFixedArtifactWindow(time.Now()) {return nil,errors.Join(errGHAGuardUnqualified,errGHAGuardCredentialExpired)}
-    } else if !ghaFreshLocatorValid(*locator,time.Now().UTC()) {return nil,errors.Join(errGHAGuardUnqualified,errGHAGuardCredentialExpired)}
+    } else if locator!=nil&&!ghaFreshLocatorValid(*locator,time.Now().UTC()) {return nil,errors.Join(errGHAGuardUnqualified,errGHAGuardCredentialExpired)}
     secret,err:=ghaGuardReadFixedWinCredential()
     if err!=nil{return nil,errors.Join(errGHAGuardUnqualified,err)}
     root,cancel:=context.WithCancel(context.Background())
     transport:=&http.Transport{Proxy:nil,TLSHandshakeTimeout:10*time.Second,ResponseHeaderTimeout:15*time.Second,MaxResponseHeaderBytes:64<<10,TLSNextProto:make(map[string]func(string,*tls.Conn)http.RoundTripper)}
-    session:=&ghaGuardCredentialSession{fresh:locator,secret:secret,base:transport,root:root,cancel:cancel,drain:make(chan struct{})}
+    session:=&ghaGuardCredentialSession{fresh:locator,discovery:discovery,secret:secret,base:transport,root:root,cancel:cancel,drain:make(chan struct{})}
     client:=&http.Client{Transport:session,Timeout:30*time.Second,CheckRedirect:func(*http.Request,[]*http.Request)error{return http.ErrUseLastResponse}}
     authority:=&ghaGuardEvidenceAuthority{client:client,credential:session}
     issued:=false
@@ -303,7 +328,7 @@ func ghaGuardOpenWinCredAuthorityWithLocator(ctx context.Context,locator *ghaFre
     response,err:=client.Do(req)
     if err!=nil||response==nil||response.Body==nil {
         var closeErr error;if response!=nil&&response.Body!=nil {closeErr=response.Body.Close()}
-        return nil,ghaGuardResponseFailure(errGHAGuardUnqualified,closeErr,ctx.Err())
+        return nil,errors.Join(ghaGuardResponseFailure(errGHAGuardUnqualified,closeErr,ctx.Err()),ghaFreshContextFailure(ctx,err))
     }
     if statusErr:=ghaGuardCredentialStatusError(response.StatusCode);statusErr!=nil {
         primary:=errors.Join(ghaGuardHTTPFailure("credential_owner",response.StatusCode),statusErr)
@@ -312,7 +337,7 @@ func ghaGuardOpenWinCredAuthorityWithLocator(ctx context.Context,locator *ghaFre
     raw,readErr:=io.ReadAll(io.LimitReader(response.Body,(64<<10)+1));closeErr:=response.Body.Close()
     valid:=readErr==nil&&closeErr==nil&&ctx.Err()==nil&&ghaGuardCredentialOwnerJSON(raw)
     clear(raw)
-    if !valid{return nil,ghaGuardResponseFailure(errors.Join(errGHAGuardUnqualified,errGHAGuardCredentialIdentity),closeErr,ctx.Err())}
+    if !valid{return nil,errors.Join(ghaGuardResponseFailure(errors.Join(errGHAGuardUnqualified,errGHAGuardCredentialIdentity),closeErr,ctx.Err()),ghaFreshContextFailure(ctx,readErr))}
     session.mu.Lock();if session.closed {session.mu.Unlock();return nil,errGHAGuardUnqualified};session.ready=true;session.mu.Unlock()
     issued=true;return authority,nil
 }

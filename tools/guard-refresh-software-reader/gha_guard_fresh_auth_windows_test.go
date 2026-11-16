@@ -16,7 +16,7 @@ import (
 
 func ghaFreshTestLocator() ghaFreshPublicLocator {
     return ghaFreshPublicLocator{
-        hint:ghaFreshRunHint{runID:1201,attempt:1,producerRevision:ghaFreshProducerRevision},
+        hint:ghaFreshRunHint{runID:1201,attempt:1,producerRevision:ghaFreshTestRevision,createdAt:time.Date(2026,11,15,17,21,18,0,time.UTC)},
         jobID:2202,checkRunID:3303,artifactID:4404,
         archiveBytes:90,archiveSHA:strings.Repeat("a",64),
         expiresAt:time.Date(2099,1,1,0,0,0,0,time.UTC),
@@ -31,6 +31,10 @@ func TestGHAFreshCredentialBoundToExactGeneration(t *testing.T) {
         "https://api.github.com/user",
         base,base+"/actions/workflows/unattended-readiness.yml",
         base+"/actions/runs/1201",
+        ghaFreshListingURL,ghaFreshListingURL+"&page=2",
+        base+"/git/ref/heads/main",
+        base+"/git/commits/"+strings.Repeat("c",40),
+        base+"/compare/"+strings.Repeat("a",40)+"..."+strings.Repeat("b",40),
         base+"/actions/runs/1201/attempts/1/jobs?per_page=100",
         base+"/actions/runs/1201/artifacts?per_page=100",
         base+"/actions/jobs/2202/logs",
@@ -46,6 +50,12 @@ func TestGHAFreshCredentialBoundToExactGeneration(t *testing.T) {
         base+"/actions/runs/1202",
         base+"/actions/runs/1201/attempts/2/jobs?per_page=100",
         base+"/actions/runs/1201/artifacts?per_page=10",
+        ghaFreshListingURL+"&page=11",ghaFreshListingURL+"&page=02",ghaFreshListingURL+"&page=1",
+        strings.Replace(ghaFreshListingURL,"branch=main","branch=other",1),
+        strings.Replace(ghaFreshListingURL,"created=%3E%3D2026-11-15","created=%3E%3D2026-11-14",1),
+        base+"/git/ref/heads/other",
+        base+"/git/commits/"+strings.Repeat("z",40),
+        base+"/compare/"+strings.Repeat("a",40)+"..."+strings.Repeat("z",40),
         base+"/actions/jobs/2203/logs",
         base+"/actions/artifacts/4405/zip",
         base+"/actions/artifacts/4404/zip?token=bad",
@@ -63,8 +73,10 @@ func TestGHAFreshCredentialBoundToExactGeneration(t *testing.T) {
     if ghaFreshCredentialAllowed(req,loc,now){t.Fatal("non-GET accepted")}
     req.Method=http.MethodGet
     if ghaFreshCredentialAllowed(req,loc,loc.expiresAt){t.Fatal("expired generation accepted")}
-    other:=loc;other.hint.producerRevision=strings.Repeat("a",40)
-    if ghaFreshCredentialAllowed(req,other,now){t.Fatal("foreign producer accepted")}
+    other:=loc;other.hint.producerRevision=strings.Repeat("z",40)
+    if ghaFreshCredentialAllowed(req,other,now){t.Fatal("malformed producer accepted")}
+    other.hint.producerRevision=strings.Repeat("a",40)
+    if !ghaFreshCredentialAllowed(req,other,now){t.Fatal("well-shaped hint rejected before authenticated binding")}
 }
 
 func TestGHAFreshExpiredPreflightDoesNotReadCredential(t *testing.T) {
@@ -106,7 +118,7 @@ func TestGHAFreshManifestAndArtifactGenerationBinding(t *testing.T) {
     payload:=[]byte("synthetic")
     manifest:=ghaGuardManifest{
         RepositoryID:1406818713,Source:ghaGuardSource,SourceTree:ghaGuardSourceTree,
-        ProducerRevision:ghaFreshProducerRevision,RunID:loc.hint.runID,RunAttempt:1,
+        ProducerRevision:ghaFreshTestRevision,RunID:loc.hint.runID,RunAttempt:1,
         JobID:loc.jobID,CheckRunID:loc.checkRunID,OutputName:"guard.exe",
         OutputBytes:int64(len(payload)),OutputSHA:digest(payload),SourceManifestSHA:strings.Repeat("b",64),
     }
@@ -123,7 +135,7 @@ func TestGHAFreshManifestAndArtifactGenerationBinding(t *testing.T) {
         if ghaFreshManifestMatches(loc,v,payload,now){t.Fatal("mismatched manifest accepted")}
     }
     a:=ghaGuardArtifact{RepositoryID:1406818713,HeadRepositoryID:1406818713,
-        HeadSHA:ghaFreshProducerRevision,RunID:loc.hint.runID,ID:loc.artifactID,
+        HeadSHA:ghaFreshTestRevision,RunID:loc.hint.runID,ID:loc.artifactID,
         Size:loc.archiveBytes,Digest:"sha256:"+loc.archiveSHA,ExpiresAt:loc.expiresAt}
     if !ghaFreshArtifactMatches(loc,a,now){t.Fatal("consistent artifact rejected")}
     a.Digest="sha256:"+strings.Repeat("b",64)
@@ -265,7 +277,7 @@ func TestGHAFreshPostAuthStatusReachesParent(t *testing.T) {
         artifacts=strings.Replace(artifacts,"2026-11-16T12:00:00Z",expiry.Format(time.RFC3339),1)
         run:=strings.TrimSuffix(strings.TrimPrefix(ghaFreshTestGood,"{\"total_count\":1,\"workflow_runs\":["),"]}")
         pub:=ghaGuardPublicationRecord{Domain:"guard-gha-publication-v1",RepositoryID:1406818713,
-            Source:ghaGuardSource,SourceTree:ghaGuardSourceTree,ProducerRevision:ghaFreshProducerRevision,
+            Source:ghaGuardSource,SourceTree:ghaGuardSourceTree,ProducerRevision:ghaFreshTestRevision,
             RunID:hint.runID,RunAttempt:1,JobID:loc.jobID,CheckRunID:loc.checkRunID,ArtifactID:loc.artifactID,
             ArtifactName:"guard-bootstrap-12345-1-23456",ArchiveSHA:loc.archiveSHA,
             OutputSHA:strings.Repeat("b",64),CaptureSHA:strings.Repeat("c",64),
@@ -421,4 +433,51 @@ func TestGHAFreshDetailedSourceErrorPreservesLegacyEquality(t *testing.T) {
     parent:=ghaFreshInspectionFromChild(askChildResult{Raw:raw,Exit:1,Started:true,Assigned:true,WaitVerified:true,Reaped:true})
     if parent.Qualified||parent.Reason!="guard_github_source_metadata_http_429"||!parent.CleanupFailed||
         !parent.WorkerReaped||parent.CredentialCleanupState!="unknown"||strings.Contains(string(raw),"DO_NOT_RETURN"){t.Fatal("parent source failure lost")}
+}
+
+func TestGHAFreshObservedRevisionIsBoundAcrossLocatorAndManifest(t *testing.T) {
+    now:=time.Date(2026,11,16,0,0,0,0,time.UTC)
+    first:=ghaFreshTestLocator();second:=first
+    second.hint.producerRevision=strings.Repeat("d",40)
+    payload:=[]byte("owned fixture")
+    m:=ghaGuardManifest{RepositoryID:1406818713,Source:ghaGuardSource,SourceTree:ghaGuardSourceTree,
+        ProducerRevision:second.hint.producerRevision,RunID:second.hint.runID,RunAttempt:1,
+        JobID:second.jobID,CheckRunID:second.checkRunID,OutputName:"guard.exe",
+        OutputBytes:int64(len(payload)),OutputSHA:digest(payload),SourceManifestSHA:strings.Repeat("b",64)}
+    if !ghaFreshManifestMatches(second,m,payload,now) {t.Fatal("actual second revision lost")}
+    if ghaFreshManifestMatches(first,m,payload,now) {t.Fatal("manifest borrowed another revision")}
+    a:=ghaGuardArtifact{RepositoryID:1406818713,HeadRepositoryID:1406818713,HeadSHA:second.hint.producerRevision,
+        RunID:second.hint.runID,ID:second.artifactID,Size:second.archiveBytes,Digest:"sha256:"+second.archiveSHA,ExpiresAt:second.expiresAt}
+    if !ghaFreshArtifactMatches(second,a,now)||ghaFreshArtifactMatches(first,a,now) {t.Fatal("artifact revision was not bound")}
+    if ghaFreshVerifySignatureWithTrusted(context.Background(),nil,second,[]byte("{}"),payload,m)==nil {t.Fatal("unsigned material minted a candidate")}
+}
+
+// The same owned credential session reports only fixed transport, close and
+// context markers. It does not transfer the secret or a foreign endpoint.
+func TestGHAFreshCredentialPartialFailureIsSanitized(t *testing.T) {
+    for _,mode:=range []string{"generic","partial-close","deadline","cancel","http-403"} {t.Run(mode,func(t *testing.T){
+        loc:=ghaFreshTestLocator();root,cancel:=context.WithCancel(context.Background());defer cancel()
+        base:=ghaFreshTestRoundTrip(func(req *http.Request)(*http.Response,error){
+            if req.Header.Get("Authorization")!="Bearer synthetic-token"||req.URL.Host!="api.github.com" {t.Fatal("wrong session transport")}
+            switch mode {
+            case "generic":return nil,errors.New("sensitive transport detail")
+            case "partial-close":return &http.Response{StatusCode:200,Header:make(http.Header),Body:&ghaCurrentStatusCloseBody{Reader:strings.NewReader("x")}},errors.New("sensitive transport detail")
+            case "deadline":return nil,errors.Join(context.DeadlineExceeded,errors.New("sensitive transport detail"))
+            case "cancel":return nil,errors.Join(context.Canceled,errors.New("sensitive transport detail"))
+            default:return &http.Response{StatusCode:403,Header:make(http.Header),Body:io.NopCloser(strings.NewReader(""))},nil
+            }
+        })
+        session:=&ghaGuardCredentialSession{fresh:&loc,secret:[]byte("synthetic-token"),base:base,root:root,cancel:cancel,ready:true,drain:make(chan struct{})}
+        req,_:=http.NewRequest(http.MethodGet,ghaGuardGitAPI+"/git/ref/heads/main",nil)
+        resp,err:=session.RoundTrip(req)
+        if mode=="http-403" {if err!=nil||resp==nil||resp.StatusCode!=403{t.Fatal("HTTP response was hidden",err)};if resp.Body.Close()!=nil{t.Fatal("response close")}} else {
+            if resp!=nil||err==nil||!errors.Is(err,errGHAGuardUnqualified)||strings.Contains(err.Error(),"sensitive") {t.Fatal("raw failure leaked or response accepted",err)}
+            if mode=="generic"&&err!=errGHAGuardUnqualified {t.Fatal("legacy generic sentinel changed",err)}
+            if mode=="partial-close"&&!errors.Is(err,errGHAGuardResponseCleanup){t.Fatal("partial close lost",err)}
+            if mode=="deadline"&&!errors.Is(err,context.DeadlineExceeded){t.Fatal("deadline lost",err)}
+            if mode=="cancel"&&!errors.Is(err,context.Canceled){t.Fatal("cancel lost",err)}
+        }
+        if req.Header.Get("Authorization")!="" {t.Fatal("caller request modified")}
+        if err=session.close(context.Background());err!=nil||len(session.secret)!=0{t.Fatal("session not drained",err)}
+    })}
 }

@@ -332,10 +332,15 @@ func TestOwnedDriveCargoDoesNotDiscoverPhysicalAncestorConfiguration(t *testing.
 	settings["RUSTC_WRAPPER"] = ""
 	ctx = context.WithValue(ctx, askChildEnvironment{}, settings)
 	ctx = context.WithValue(ctx, askChildExactEnvironment{}, true)
-	result := askOwnedChildAt(ctx, drive+"\\", snapshotTestTool(t, "cargo"), "build", "--offline", "--manifest-path", filepath.Join(root, "project", "Cargo.toml"), "--target-dir", filepath.Join(root, "target"))
+	result := askOwnedChildAt(compilerContext(ctx), drive+"\\", snapshotTestTool(t, "cargo"), "build", "--offline", "--manifest-path", filepath.Join(root, "project", "Cargo.toml"), "--target-dir", filepath.Join(root, "target"))
 	defer clear(result.Raw)
 	if result.Exit != 0 || !result.Reaped {
-		t.Fatal("owned root Cargo build", result.Exit)
+		cause := "unavailable"
+		if result.Diagnostic != nil {
+			cause = result.Diagnostic.Cause
+		}
+		t.Fatalf("owned root Cargo build: exit=%d timed_out=%t started=%t assigned=%t wait_verified=%t reaped=%t cause=%s",
+			result.Exit, result.TimedOut, result.Started, result.Assigned, result.WaitVerified, result.Reaped, cause)
 	}
 	ran := askOwnedChild(ctx, filepath.Join(root, "target", "debug", "owned-root-view.exe"))
 	defer clear(ran.Raw)

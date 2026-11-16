@@ -3,13 +3,17 @@ package main
 import (
 	"bytes"
 	"context"
+	"crypto/rand"
+	"encoding/hex"
 	"encoding/json"
 	"errors"
 	"io"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"syscall"
 	"testing"
+	"unsafe"
 )
 
 type installedToolFixture struct {
@@ -584,4 +588,92 @@ func TestInstalledToolNativeOpenAndReadInitialCancellationDoNotTouchAPath(t *tes
 	if lease!=nil || err!=context.Canceled {t.Fatal("native Open initial cancellation lost or allocated a lease")}
 	raw,err:=(&ownerInstalledToolFile{}).Read(ctx,64)
 	if raw!=nil || err!=context.Canceled {t.Fatal("native Read initial cancellation lost before file validation")}
+}
+
+// Exercise REG_SZ bytes through the same validator called by native Origin.
+func TestInstalledToolRegistrySZExactReturnedValue(t *testing.T) {
+	encode:=func(words ...uint16) []byte {
+		out:=make([]byte,2*len(words))
+		for i,w:=range words {out[2*i]=byte(w);out[2*i+1]=byte(w>>8)}
+		return out
+	}
+	valid:=encode('w','a','n','t',0)
+	extraStorage:=append(append([]byte(nil),valid...),0x41,0)
+	cases:=[]struct {name string;kind uint32;data []byte;n uint32;want string;ok bool}{
+		{name:"exact",kind:syscall.REG_SZ,data:valid,n:uint32(len(valid)),want:"want",ok:true},
+		{name:"outside-returned-size",kind:syscall.REG_SZ,data:extraStorage,n:uint32(len(valid)),want:"want",ok:true},
+		{name:"empty-exact",kind:syscall.REG_SZ,data:encode(0),n:2,want:"",ok:true},
+		{name:"unicode-exact",kind:syscall.REG_SZ,data:encode(0x3042,0xd83d,0xde00,0),n:8,want:"あ😀",ok:true},
+		{name:"different-value",kind:syscall.REG_SZ,data:valid,n:uint32(len(valid)),want:"other"},
+		{name:"embedded-null-extra",kind:syscall.REG_SZ,data:encode('w','a','n','t',0,'x',0),n:14,want:"want"},
+		{name:"extra-terminator",kind:syscall.REG_SZ,data:encode('w','a','n','t',0,0),n:12,want:"want"},
+		{name:"embedded-null-same-length",kind:syscall.REG_SZ,data:encode('w',0,'n','t',0),n:10,want:"want"},
+		{name:"malformed-surrogate",kind:syscall.REG_SZ,data:encode(0xd800,0),n:4,want:"�"},
+		{name:"missing-terminator",kind:syscall.REG_SZ,data:encode('w','a','n','t'),n:8,want:"want"},
+		{name:"odd-returned-size",kind:syscall.REG_SZ,data:valid,n:9,want:"want"},
+		{name:"size-too-short",kind:syscall.REG_SZ,data:valid,n:1,want:"want"},
+		{name:"size-beyond-buffer",kind:syscall.REG_SZ,data:valid,n:12,want:"want"},
+		{name:"max-size-beyond-buffer",kind:syscall.REG_SZ,data:valid,n:^uint32(0),want:"want"},
+		{name:"empty-input",kind:syscall.REG_SZ,data:nil,n:0,want:""},
+		{name:"wrong-type",kind:syscall.REG_EXPAND_SZ,data:valid,n:uint32(len(valid)),want:"want"},
+		{name:"embedded-null-want",kind:syscall.REG_SZ,data:encode('w',0,'x',0),n:8,want:"w\x00x"},
+	}
+	for _,tc:=range cases {t.Run(tc.name,func(t *testing.T){
+		if got:=ownerInstalledToolRegistrySZEqual(tc.kind,tc.data,tc.n,tc.want);got!=tc.ok {t.Fatalf("REG_SZ decision = %t, want %t",got,tc.ok)}
+	})}
+}
+
+// Use a volatile, exclusively created HKCU key; no installed tool or existing
+// application registration is read or changed by this integration case.
+func TestInstalledToolNativeOriginRejectsMalformedRegistryStrings(t *testing.T) {
+	adv:=syscall.NewLazyDLL("advapi32.dll")
+	create:=adv.NewProc("RegCreateKeyExW");set:=adv.NewProc("RegSetValueExW");deleteKey:=adv.NewProc("RegDeleteKeyExW")
+	if create.Find()!=nil || set.Find()!=nil || deleteKey.Find()!=nil {t.Fatal("registry test APIs unavailable")}
+	var name string
+	var key syscall.Handle
+	for attempt:=0;attempt<8;attempt++ {
+		var id [16]byte
+		if _,err:=io.ReadFull(rand.Reader,id[:]);err!=nil {t.Fatal("registry test identity unavailable")}
+		name="Software\\ADJ-P3-REGSZ-"+hex.EncodeToString(id[:])
+		p,err:=syscall.UTF16PtrFromString(name);if err!=nil {t.Fatal(err)}
+		var disposition uint32
+		status,_,_:=create.Call(uintptr(syscall.HKEY_CURRENT_USER),uintptr(unsafe.Pointer(p)),0,0,1,
+			uintptr(syscall.KEY_QUERY_VALUE|syscall.KEY_SET_VALUE|0x0100),0,uintptr(unsafe.Pointer(&key)),uintptr(unsafe.Pointer(&disposition)))
+		runtime.KeepAlive(p)
+		if status!=0 {t.Fatalf("registry fixture creation failed: %d",status)}
+		if disposition==1 {break}
+		if closeErr:=syscall.RegCloseKey(key);closeErr!=nil {t.Fatal("collision handle close failed")}
+		if disposition!=2 {t.Fatal("unexpected registry key disposition")}
+		key=0
+	}
+	if key==0 {t.Fatal("unique registry test key unavailable")}
+	namep,err:=syscall.UTF16PtrFromString(name);if err!=nil {t.Fatal(err)}
+	t.Cleanup(func(){
+		if err:=syscall.RegCloseKey(key);err!=nil {t.Errorf("registry fixture handle close failed: %v",err)}
+		status,_,_:=deleteKey.Call(uintptr(syscall.HKEY_CURRENT_USER),uintptr(unsafe.Pointer(namep)),0x0100,0)
+		runtime.KeepAlive(namep)
+		if status!=0 {t.Errorf("registry fixture removal failed: %d",status)}
+	})
+	valuep,err:=syscall.UTF16PtrFromString("DisplayName");if err!=nil {t.Fatal(err)}
+	encode:=func(words ...uint16) []byte {out:=make([]byte,2*len(words));for i,w:=range words {out[2*i]=byte(w);out[2*i+1]=byte(w>>8)};return out}
+	cases:=[]struct{name string;kind uint32;data []byte;ok bool}{
+		{"normal",syscall.REG_SZ,encode('w','a','n','t',0),true},
+		{"mismatch",syscall.REG_SZ,encode('o','t','h','e','r',0),false},
+		{"embedded-null-extra",syscall.REG_SZ,encode('w','a','n','t',0,'x',0),false},
+		{"extra-null",syscall.REG_SZ,encode('w','a','n','t',0,0),false},
+		{"embedded-null-same-length",syscall.REG_SZ,encode('w',0,'n','t',0),false},
+		{"missing-null",syscall.REG_SZ,encode('w','a','n','t'),false},
+		{"odd-bytes",syscall.REG_SZ,append(encode('w','a','n','t'),0),false},
+		{"wrong-type",syscall.REG_EXPAND_SZ,encode('w','a','n','t',0),false},
+	}
+	plan:=ownerInstalledToolPlan{userRegistry:true,registry:name,originFields:map[string]string{"DisplayName":"want"}}
+	for _,tc:=range cases {t.Run(tc.name,func(t *testing.T){
+		if len(tc.data)==0 {t.Fatal("invalid registry fixture")}
+		status,_,_:=set.Call(uintptr(key),uintptr(unsafe.Pointer(valuep)),0,uintptr(tc.kind),uintptr(unsafe.Pointer(&tc.data[0])),uintptr(len(tc.data)))
+		runtime.KeepAlive(valuep);runtime.KeepAlive(tc.data)
+		if status!=0 {t.Fatalf("registry fixture write failed: %d",status)}
+		err:=(ownerInstalledToolNative{}).Origin(context.Background(),plan)
+		if tc.ok && err!=nil {t.Fatal("valid origin rejected",err)}
+		if !tc.ok && err!=errOwnerInstalledTool {t.Fatal("malformed origin did not fail closed",err)}
+	})}
 }

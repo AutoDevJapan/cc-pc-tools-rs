@@ -226,6 +226,18 @@ func ownerInstalledToolOriginSpec(plan ownerInstalledToolPlan) (syscall.Handle,m
 	return hive,fields
 }
 
+// Compare every UTF-16 code unit returned by the registry, including one
+// terminator. UTF16ToString alone would ignore data after an embedded NUL.
+func ownerInstalledToolRegistrySZEqual(kind uint32, data []byte, n uint32, want string) bool {
+	if kind!=syscall.REG_SZ || n<2 || uint64(n)>uint64(len(data)) || n%2!=0 { return false }
+	expected,err:=syscall.UTF16FromString(want)
+	if err!=nil || len(expected)!=int(n)/2 { return false }
+	for i,word:=range expected {
+		if word!=(uint16(data[2*i]) | uint16(data[2*i+1])<<8) { return false }
+	}
+	return true
+}
+
 func (ownerInstalledToolNative) Origin(ctx context.Context, plan ownerInstalledToolPlan) (failure error) {
 	if ctx.Err()!=nil { return ctx.Err() }
 	name,err:=syscall.UTF16PtrFromString(plan.registry)
@@ -240,9 +252,7 @@ func (ownerInstalledToolNative) Origin(ctx context.Context, plan ownerInstalledT
 		var kind uint32
 		var data [4096]byte
 		n:=uint32(len(data))
-		if syscall.RegQueryValueEx(key,p,nil,&kind,&data[0],&n)!=nil || kind!=syscall.REG_SZ || n<2 || n>uint32(len(data)) || n%2!=0 { return errOwnerInstalledTool }
-		words:=unsafe.Slice((*uint16)(unsafe.Pointer(&data[0])),int(n)/2)
-		if words[len(words)-1]!=0 || syscall.UTF16ToString(words)!=want { return errOwnerInstalledTool }
+		if syscall.RegQueryValueEx(key,p,nil,&kind,&data[0],&n)!=nil || !ownerInstalledToolRegistrySZEqual(kind,data[:],n,want) { return errOwnerInstalledTool }
 	}
 	if ctx.Err()!=nil { return ctx.Err() }
 	return nil

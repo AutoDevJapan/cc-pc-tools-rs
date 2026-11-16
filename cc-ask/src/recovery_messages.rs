@@ -32,6 +32,7 @@ mod pending_reconcile;
 mod program_question;
 pub use pending_reconcile::{reconcile_pending, ReconcilePendingArgs};
 mod source_reference;
+mod log_target;
 pub use source_reference::failure_report as ask_failure_report;
 const LEDGER: &str = "recovery-messages.json";
 const LOCK: &str = "recovery-messages.lock";
@@ -926,6 +927,14 @@ enum Event {
     OriginCorrected {
         request: Box<Request>,
     },
+    /// Retarget only an unposted ordinary log from an unqualified explicit thread
+    /// to a previously verified ordinary log in the same recovery destination.
+    LogTargetCorrected {
+        request: Box<Request>,
+        previous_fingerprint: String,
+        authority_request_id: String,
+        authority_phase: String,
+    },
     Alias {
         request_id: String,
         canonical_request_id: String,
@@ -1046,6 +1055,17 @@ impl Ledger {
         Ok(())
     }
 
+    fn current_requests(&self) -> BTreeMap<&str, &Request> {
+        let mut current = BTreeMap::new();
+        for event in &self.events {
+            if let Event::Intent { request } | Event::OriginCorrected { request }
+                | Event::LogTargetCorrected { request, .. } = event {
+                current.insert(request.request_id.as_str(), request.as_ref());
+            }
+        }
+        current
+    }
+
     fn request(&self, id: &str) -> Option<&Request> {
         let canonical = self
             .events
@@ -1061,6 +1081,7 @@ impl Ledger {
             .unwrap_or(id);
         self.events.iter().rev().find_map(|event| match event {
             Event::Intent { request } | Event::OriginCorrected { request }
+            | Event::LogTargetCorrected { request, .. }
                 if request.request_id == canonical =>
             {
                 Some(request.as_ref())
@@ -1226,6 +1247,43 @@ impl Ledger {
                         return Err(
                             "origin correction lacks the exact question/progress receipts".into(),
                         );
+                    }
+                    requests.insert(request.request_id.clone(), request);
+                }
+                Event::LogTargetCorrected { request, previous_fingerprint, authority_request_id, authority_phase } => {
+                    let prior = requests.get(&request.request_id).ok_or("log target correction has no original intent")?;
+                    if prior.fingerprint != *previous_fingerprint
+                        || !log_target::only_thread_changed(prior, request)?
+                        || phases.keys().any(|(id, _)| id == &request.request_id)
+                        || complete.contains_key(&request.request_id)
+                        || origin_repairs.contains_key(&request.request_id)
+                        || native_associations.contains_key(&request.request_id)
+                        || aliases.contains_key(&request.request_id)
+                        || aliases.values().any(|canonical| canonical.as_str() == request.request_id.as_str())
+                        || requests.iter().any(|(id, other)| id != &request.request_id && other.fingerprint == request.fingerprint) {
+                        return Err("normal log correction changed scope or follows a possible POST".into());
+                    }
+                    let (old, new) = log_target::threads(prior, request)?;
+                    let bot = bots.get(&request.request_id).ok_or("normal log correction has no original bot")?;
+                    let question_target = |thread: &str| verified.iter().any(|((_, phase), receipt)|
+                        phase == "question:0" && receipt.thread_id == thread);
+                    let known_old = !question_target(old) && verified.iter().any(|((id, phase), receipt)| {
+                        requests.get(id).is_some_and(|source| source.destination == request.destination)
+                            && (phase == "log:0" || phase == "progress") && receipt.thread_id == old
+                            && receipt.author_id == *bot
+                            && !phases.get(&(id.clone(), phase.clone())).is_some_and(|effect|
+                                effect.content.lines().any(|line|line.starts_with("-# owner-receipt:")))
+                    });
+                    let source = requests.get(authority_request_id).ok_or("log correction authority intent missing")?;
+                    let receipt = verified.get(&(authority_request_id.clone(), authority_phase.clone()))
+                        .ok_or("log correction authority is not verified")?;
+                    let owner_receipt = phases.get(&(authority_request_id.clone(),authority_phase.clone())).is_some_and(|effect|
+                        effect.content.lines().any(|line|line.starts_with("-# owner-receipt:")));
+                    if known_old || question_target(new) || owner_receipt || authority_request_id == &request.request_id
+                        || authority_phase != "log:0" || !matches!(source.operation, Kind::Log { .. })
+                        || source.destination != request.destination || receipt.thread_id != new
+                        || receipt.author_id != *bot || bots.get(authority_request_id) != Some(&receipt.author_id) {
+                        return Err("normal log correction lacks its independent ordinary log receipt".into());
                     }
                     requests.insert(request.request_id.clone(), request);
                 }
@@ -2005,7 +2063,7 @@ fn only_origin_changed(prior: &Request, incoming: &Request) -> Result<bool> {
     Ok(allowed == *incoming)
 }
 
-fn correct_unposted_origin(
+fn correct_unposted_link(
     ctx: &mut Context,
     ledger: &mut Ledger,
     incoming: &Request,
@@ -2021,6 +2079,10 @@ fn correct_unposted_origin(
     if prior.fingerprint == incoming.fingerprint {
         return Ok(());
     }
+    if matches!(incoming.operation, Kind::Log { .. }) {
+        return log_target::correct(ctx, ledger, &prior, incoming);
+    }
+    // Question origins remain a separate purpose; no log manufactures Ask fields.
     // Aliases and already reserved effects remain immutable. This is a linkage
     // correction before any submit, never a new question generation or scope.
     if !only_origin_changed(&prior, incoming)? {
@@ -2072,27 +2134,17 @@ fn reserve(ledger: &mut Ledger, home: &Path, incoming: &Request) -> Result<Reque
         }
         return Ok(existing.clone());
     }
-    let duplicate = ledger.events.iter().find_map(|event| {
-        let Event::Intent { request } = event else {
-            return None;
-        };
+    let current = ledger.current_requests();
+    let duplicate = current.values().find_map(|request| {
         let same = match (&incoming.operation, &request.operation) {
-            (
-                Kind::Ask {
-                    decision_identity: a,
-                    ..
-                },
-                Kind::Ask {
-                    decision_identity: b,
-                    ..
-                },
-            ) => incoming.destination == request.destination && a == b,
+            (Kind::Ask { decision_identity: a, .. }, Kind::Ask { decision_identity: b, .. }) =>
+                incoming.destination == request.destination && a == b,
             (Kind::Log { .. }, Kind::Log { .. }) => incoming.fingerprint == request.fingerprint,
             _ => false,
         };
-        same.then(|| ledger.request(&request.request_id).cloned())
-            .flatten()
+        same.then(|| (**request).clone())
     });
+    drop(current);
     if let Some(request) = duplicate {
         if incoming.send_before.is_some() && incoming.send_before != request.send_before {
             return Err("original question send deadline differs".into());
@@ -2948,6 +3000,11 @@ pub fn log(ctx: &mut Context, args: &LogArgs) -> Result<Value> {
     execute(ctx, incoming, &images)
 }
 
+/// Inspect one stored ordinary log without journal changes, HTTP or new sends.
+pub fn inspect_log(ctx: &mut Context, args: &LogArgs) -> Result<Value> {
+    log_target::inspect(ctx, args)
+}
+
 /// Deliver only the acknowledgement bound to one verified owner reply.
 pub fn log_acknowledgement(ctx: &mut Context, args: &LogArgs, manifest: &Path) -> Result<Value> {
     if args.notify || !args.attach.is_empty() || args.thread.is_none() {
@@ -3585,15 +3642,16 @@ fn execute_inner(
     if let Some(report) = different_question_images(ctx, &mut ledger, &incoming)? {
         return Ok(report);
     }
-    correct_unposted_origin(ctx, &mut ledger, &incoming)?;
+    correct_unposted_link(ctx, &mut ledger, &incoming)?;
+    let current = ledger.current_requests();
     let reused = ledger.request(&incoming.request_id).is_some()
-        || ledger.events.iter().any(|event| {
-            matches!(event, Event::Intent {request} if
+        || current.values().any(|request| {
             request.fingerprint == incoming.fingerprint
-            || matches!((&request.operation, &incoming.operation),
-                (Kind::Ask {decision_identity:a,..},Kind::Ask {decision_identity:b,..})
-                    if request.destination == incoming.destination && a == b))
+                || matches!((&request.operation, &incoming.operation),
+                    (Kind::Ask {decision_identity:a,..},Kind::Ask {decision_identity:b,..})
+                        if request.destination == incoming.destination && a == b)
         });
+    drop(current);
     if ledger.events.iter().any(|event| {
         matches!(event,
         Event::Intent { request: saved } if saved.native_evidence.is_some()
@@ -4790,6 +4848,10 @@ mod tests {
     }
     mod source_reference_tests {
         include!("recovery_messages/source_reference_tests.rs");
+    }
+
+    mod log_target_tests {
+        include!("recovery_messages/log_target_tests.rs");
     }
 
     mod pending_reconcile_tests {

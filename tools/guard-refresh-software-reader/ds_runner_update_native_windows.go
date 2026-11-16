@@ -177,7 +177,7 @@ func(n *dsRunnerNativeTarget)Publish(ctx context.Context,current,stage,backup ds
     body:=os.NewFile(uintptr(bodyHandle),n.paths[dsRunnerCurrent]);if body==nil{if e:=syscall.CloseHandle(bodyHandle);e!=nil{n.unreleased=append(n.unreleased,uintptr(bodyHandle));return true,errors.Join(errDSRunnerEvidence,errDSRunnerCleanup,e)};return true,errDSRunnerEvidence}
     bodyOwned:=true
     defer func(){if bodyOwned{resultErr=errors.Join(resultErr,n.closeOwned(body))}}()
-    actual,ok:=handlePath(bodyHandle);if !ok||!sameCleanPath(actual,n.paths[dsRunnerCurrent]){return true,errDSRunnerEvidence}
+    actual,pathOK:=handlePath(bodyHandle);if !pathOK||!sameCleanPath(actual,n.paths[dsRunnerCurrent]){return true,errDSRunnerEvidence}
     postID,err:=dsRunnerKernelID(body,false);if err!=nil||postID.Volume!=stage.id.Volume||postID.FileID!=stage.id.FileID||postID.Created!=current.id.Created{return true,errDSRunnerEvidence}
     heldID,err:=dsRunnerKernelID(restore,false);if err!=nil||heldID!=postID{return true,errDSRunnerEvidence}
     data,err:=io.ReadAll(io.LimitReader(body,32<<20+1));defer clear(data)

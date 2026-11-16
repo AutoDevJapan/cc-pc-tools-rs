@@ -118,7 +118,7 @@ func executeDSRunnerMaintenanceFor(ctx context.Context,op string,permit *dsRunne
     return
 }
 func performDSRunnerMaintenance(ctx context.Context,op string,permit *dsRunnerWorkerPermit)dsRunnerMaintenanceResult{
-    return executeDSRunnerMaintenance(ctx,op,permit,dsRunnerMaintenanceAccess{acquire:openNormalDSRunnerCandidate,open:openDSRunnerNativeTarget})
+    return executeDSRunnerMaintenance(ctx,op,permit,dsRunnerMaintenanceAccess{acquire:openNormalDSRunnerCandidate,open:func(ctx context.Context,p dsRunnerRepairPurpose)(dsRunnerTargetSession,error){return dsRunnerOpenNativeTargetMode(ctx,p,[3]string{dsRunnerTarget,dsRunnerStage,dsRunnerBackup},op=="apply")}})
 }
 func runDSRunnerMaintenanceWorker(args []string,out io.Writer)int{
     if len(args)!=2||args[0]!=dsRunnerWorkerFlag||!dsRunnerMaintenanceOperation(args[1])||!askWorkerParent(){return 2}

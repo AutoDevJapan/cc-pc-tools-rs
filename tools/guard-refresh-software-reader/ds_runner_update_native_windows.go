@@ -15,7 +15,7 @@ import (
 )
 
 type dsRunnerNativeObject struct{file,held *os.File;snapshot dsRunnerSnapshot;path,sealSHA string}
-type dsRunnerNativeTarget struct{purpose dsRunnerRepairPurpose;paths [3]string;parents []*os.File;parentIDs []softwareIdentity;parentACLs []string;objects map[dsRunnerLeaf]*dsRunnerNativeObject;unclosed []*os.File;mutex syscall.Handle;ownsMutex,closed,lockedThread bool;threadID uint32}
+type dsRunnerNativeTarget struct{purpose dsRunnerRepairPurpose;faults *dsRunnerACLTestFaults;paths [3]string;parents []*os.File;parentIDs []softwareIdentity;parentACLs []string;objects map[dsRunnerLeaf]*dsRunnerNativeObject;unclosed []*os.File;unreleased []uintptr;mutex syscall.Handle;ownsMutex,closed,lockedThread,stageWrite bool;threadID uint32}
 func dsRunnerKernelID(f *os.File,directory bool)(softwareIdentity,error){
     var info syscall.ByHandleFileInformation
     if f==nil||syscall.GetFileInformationByHandle(syscall.Handle(f.Fd()),&info)!=nil||info.FileAttributes&syscall.FILE_ATTRIBUTE_REPARSE_POINT!=0||(info.FileAttributes&syscall.FILE_ATTRIBUTE_DIRECTORY!=0)!=directory||!directory&&info.NumberOfLinks!=1{return softwareIdentity{},errDSRunnerEvidence}
@@ -39,11 +39,13 @@ func(n *dsRunnerNativeTarget)retain(f *os.File,closeErr error){
 }
 // Metadata handles do not request FILE_READ_DATA. Data opens happen only after
 // the private candidate plus fixed software-maintenance purpose is established.
-func dsRunnerOpenMetadata(path string,directory bool)(*os.File,error){
+func dsRunnerOpenMetadata(path string,directory bool)(*os.File,error){return dsRunnerOpenMetadataAccess(path,directory,false)}
+func dsRunnerOpenMetadataAccess(path string,directory,writeDACL bool)(*os.File,error){
     ptr,err:=syscall.UTF16PtrFromString(path);if err!=nil{return nil,errDSRunnerEvidence}
     share,flags:=uint32(syscall.FILE_SHARE_READ|syscall.FILE_SHARE_DELETE),uint32(0x00200000)
     if directory{share=syscall.FILE_SHARE_READ|syscall.FILE_SHARE_WRITE;flags|=0x02000000}
-    h,err:=syscall.CreateFile(ptr,0x80|0x20000,share,nil,syscall.OPEN_EXISTING,flags,0);if err!=nil{return nil,err}
+    access:=uint32(0x80|0x20000);if writeDACL&&!directory{access|=0x40000}
+    h,err:=syscall.CreateFile(ptr,access,share,nil,syscall.OPEN_EXISTING,flags,0);if err!=nil{return nil,err}
     f:=os.NewFile(uintptr(h),path);actual,ok:=handlePath(h)
     if !ok||!sameCleanPath(actual,path){return dsRunnerRejectOpened(f,errDSRunnerEvidence)};if _,err=dsRunnerKernelID(f,directory);err!=nil{return dsRunnerRejectOpened(f,err)};return f,nil
 }
@@ -54,12 +56,13 @@ func dsRunnerRejectOpened(f *os.File,primary error)(*os.File,error){
     return nil,primary
 }
 func openDSRunnerNativeTarget(ctx context.Context,purpose dsRunnerRepairPurpose)(dsRunnerTargetSession,error){
-    return dsRunnerOpenNativeTargetAt(ctx,purpose,[3]string{dsRunnerTarget,dsRunnerStage,dsRunnerBackup})
+    return dsRunnerOpenNativeTargetMode(ctx,purpose,[3]string{dsRunnerTarget,dsRunnerStage,dsRunnerBackup},true)
 }
-func dsRunnerOpenNativeTargetAt(ctx context.Context,purpose dsRunnerRepairPurpose,paths [3]string)(result dsRunnerTargetSession,resultErr error){
+func dsRunnerOpenNativeTargetAt(ctx context.Context,purpose dsRunnerRepairPurpose,paths [3]string)(result dsRunnerTargetSession,resultErr error){return dsRunnerOpenNativeTargetMode(ctx,purpose,paths,true)}
+func dsRunnerOpenNativeTargetMode(ctx context.Context,purpose dsRunnerRepairPurpose,paths [3]string,stageWrite bool)(result dsRunnerTargetSession,resultErr error){
     if ctx==nil||ctx.Err()!=nil||!dsRunnerPurposeValid(purpose){return nil,errDSRunnerEvidence}
     if !filepath.IsAbs(paths[0])||!sameParentPath(paths[0],paths[1])||!sameParentPath(paths[0],paths[2])||sameCleanPath(paths[1],paths[2]){return nil,errDSRunnerEvidence}
-    n:=&dsRunnerNativeTarget{purpose:purpose,paths:paths,objects:map[dsRunnerLeaf]*dsRunnerNativeObject{}};issued:=false
+    n:=&dsRunnerNativeTarget{purpose:purpose,paths:paths,stageWrite:stageWrite,objects:map[dsRunnerLeaf]*dsRunnerNativeObject{}};issued:=false
     defer func(){if !issued{resultErr=errors.Join(resultErr,n.Close())}}()
     runtime.LockOSThread();n.lockedThread=true;thread,_,_:=syscall.NewLazyDLL("kernel32.dll").NewProc("GetCurrentThreadId").Call();n.threadID=uint32(thread)
     name,_:=syscall.UTF16PtrFromString("Local\\AutoDevJapan.DSRunnerSoftwareMaintenance4431")
@@ -80,7 +83,7 @@ func(n *dsRunnerNativeTarget)observe(o *dsRunnerNativeObject)(dsRunnerSnapshot,e
 }
 func(n *dsRunnerNativeTarget)metadata(ctx context.Context,leaf dsRunnerLeaf)(*dsRunnerNativeObject,error){
     if !n.valid(ctx)||leaf>dsRunnerSaved{return nil,errDSRunnerEvidence};if o:=n.objects[leaf];o!=nil{actual,err:=n.observe(o);if err!=nil||actual!=o.snapshot{return nil,errDSRunnerEvidence};return o,nil}
-    f,err:=dsRunnerOpenMetadata(n.paths[leaf],false);if err!=nil{n.retain(f,err);return nil,err};o:=&dsRunnerNativeObject{file:f,path:n.paths[leaf]};snapshot,err:=n.observe(o);if err!=nil{return nil,errors.Join(err,n.closeOwned(f))};o.snapshot=snapshot;n.objects[leaf]=o;return o,nil
+    f,err:=dsRunnerOpenMetadataAccess(n.paths[leaf],false,leaf==dsRunnerStaged&&n.stageWrite);if err!=nil{n.retain(f,err);return nil,err};o:=&dsRunnerNativeObject{file:f,path:n.paths[leaf]};snapshot,err:=n.observe(o);if err!=nil{return nil,errors.Join(err,n.closeOwned(f))};o.snapshot=snapshot;n.objects[leaf]=o;return o,nil
 }
 func(n *dsRunnerNativeTarget)Read(ctx context.Context,leaf dsRunnerLeaf)(raw []byte,snapshot dsRunnerSnapshot,resultErr error){
     o,err:=n.metadata(ctx,leaf);if err!=nil{return nil,snapshot,err};snapshot=o.snapshot
@@ -118,21 +121,114 @@ func(n *dsRunnerNativeTarget)Recheck(ctx context.Context,leaf dsRunnerLeaf,want 
 // name (documented for a failed rename of the replacement). The result is
 // (false, error) without the not-attempted marker for every failure from the
 // call onward, and the caller records it as unconfirmed.
+// The descriptor belongs to the old held object. A null or invalid DACL is
+// never applied to the replacement. The returned allocation has one owner.
+func(n *dsRunnerNativeTarget)freeSecurity(value uintptr)error{
+    if value==0{return nil};if status,_,_:=updateLocalFree.Call(value);status!=0{n.unreleased=append(n.unreleased,value);return errDSRunnerCleanup};return nil
+}
+func(n *dsRunnerNativeTarget)captureDescriptor(file *os.File)(sd uintptr,owner,group uintptr,err error){
+    if file==nil{return 0,0,0,errDSRunnerEvidence}
+    defer func(){if err!=nil&&sd!=0{err=errors.Join(err,n.freeSecurity(sd))}}()
+    var dacl uintptr
+    code,_,_:=updateGetSecurity.Call(file.Fd(),1,7,uintptr(unsafe.Pointer(&owner)),uintptr(unsafe.Pointer(&group)),uintptr(unsafe.Pointer(&dacl)),0,uintptr(unsafe.Pointer(&sd)))
+    runtime.KeepAlive(file)
+    if code!=0||sd==0||owner==0||group==0||dacl==0{err=errDSRunnerEvidence;return}
+    valid,_,_:=updateAdvapi.NewProc("IsValidSecurityDescriptor").Call(sd);if valid==0{err=errDSRunnerEvidence;return}
+    valid,_,_=updateAdvapi.NewProc("IsValidAcl").Call(dacl);if valid==0{err=errDSRunnerEvidence;return}
+    size,_,_:=updateAdvapi.NewProc("GetSecurityDescriptorLength").Call(sd);if size==0||size>1<<20{err=errDSRunnerEvidence;return}
+    return
+}
+
+// Internal negative controls only. The normal factory never sets faults.
+// No test flag can bypass a validation or force a success.
+type dsRunnerACLTestFaults struct{ownerMismatch,groupMismatch,identityMismatch,parentMismatch,bytesMismatch,denySet,postSetFailure bool;cancel context.CancelFunc;setterCalls int}
 func(n *dsRunnerNativeTarget)Publish(ctx context.Context,current,stage,backup dsRunnerSnapshot)(committed bool,resultErr error){
+    if !n.stageWrite{return false,errors.Join(errDSRunnerPublishNotAttempted,errDSRunnerEvidence)}
     if n.Recheck(ctx,dsRunnerCurrent,current)!=nil||n.Recheck(ctx,dsRunnerStaged,stage)!=nil||n.Recheck(ctx,dsRunnerSaved,backup)!=nil||ctx.Err()!=nil{return false,errors.Join(errDSRunnerPublishNotAttempted,errDSRunnerEvidence)}
-    target,err:=syscall.UTF16PtrFromString(n.paths[dsRunnerCurrent]);if err!=nil{return false,errors.Join(errDSRunnerPublishNotAttempted,err)};replacement,err:=syscall.UTF16PtrFromString(n.paths[dsRunnerStaged]);if err!=nil{return false,errors.Join(errDSRunnerPublishNotAttempted,err)}
-    staged:=n.objects[dsRunnerStaged];if staged==nil||staged.held==nil{return false,errors.Join(errDSRunnerPublishNotAttempted,errDSRunnerEvidence)};if err=n.closeOwned(staged.held);err!=nil{staged.held=nil;return false,errors.Join(errDSRunnerPublishNotAttempted,err)};staged.held=nil
+    old:=n.objects[dsRunnerCurrent];staged:=n.objects[dsRunnerStaged]
+    if old==nil||old.file==nil||staged==nil||staged.file==nil||staged.held==nil{return false,errors.Join(errDSRunnerPublishNotAttempted,errDSRunnerEvidence)}
+    sd,owner,group,err:=n.captureDescriptor(old.file)
+    if err!=nil{return false,errors.Join(errDSRunnerPublishNotAttempted,err)}
+    defer func(){resultErr=errors.Join(resultErr,n.freeSecurity(sd))}()
+    if acl,e:=updateFileACL(old.file);e!=nil||acl!=current.acl||!n.parentsMatch()||!n.valid(ctx){return false,errors.Join(errDSRunnerPublishNotAttempted,errDSRunnerEvidence)}
+    var text *uint16;var textLen uint32
+    converted,_,_:=updateSDString.Call(sd,1,7,uintptr(unsafe.Pointer(&text)),uintptr(unsafe.Pointer(&textLen)))
+    if converted==0||text==nil||textLen==0||textLen>1<<20{if text!=nil{if e:=n.freeSecurity(uintptr(unsafe.Pointer(text)));e!=nil{return false,errors.Join(errDSRunnerPublishNotAttempted,errDSRunnerEvidence,e)}};return false,errors.Join(errDSRunnerPublishNotAttempted,errDSRunnerEvidence)}
+    capturedText:=syscall.UTF16ToString(unsafe.Slice(text,textLen))
+    if e:=n.freeSecurity(uintptr(unsafe.Pointer(text)));e!=nil{return false,errors.Join(errDSRunnerPublishNotAttempted,errDSRunnerEvidence,e)}
+    if capturedText!=current.acl{return false,errors.Join(errDSRunnerPublishNotAttempted,errDSRunnerEvidence)}
+    // The stage metadata is the original non-write-sharing handle acquired
+    // for this fixed purpose; it remains held across ReplaceFile.
+    restore:=staged.file
+    if id,e:=dsRunnerKernelID(restore,false);e!=nil||id!=stage.id{return false,errors.Join(errDSRunnerPublishNotAttempted,errDSRunnerEvidence)}
+    if acl,e:=updateFileACL(restore);e!=nil||acl!=stage.acl{return false,errors.Join(errDSRunnerPublishNotAttempted,errDSRunnerEvidence)}
+    if n.Recheck(ctx,dsRunnerCurrent,current)!=nil||n.Recheck(ctx,dsRunnerStaged,stage)!=nil||n.Recheck(ctx,dsRunnerSaved,backup)!=nil||!n.valid(ctx){return false,errors.Join(errDSRunnerPublishNotAttempted,errDSRunnerEvidence)}
+    target,err:=syscall.UTF16PtrFromString(n.paths[dsRunnerCurrent]);if err!=nil{return false,errors.Join(errDSRunnerPublishNotAttempted,err)}
+    replacement,err:=syscall.UTF16PtrFromString(n.paths[dsRunnerStaged]);if err!=nil{return false,errors.Join(errDSRunnerPublishNotAttempted,err)}
+    if err=n.closeOwned(staged.held);err!=nil{staged.held=nil;return false,errors.Join(errDSRunnerPublishNotAttempted,err)};staged.held=nil
     ok,_,callErr:=syscall.NewLazyDLL("kernel32.dll").NewProc("ReplaceFileW").Call(uintptr(unsafe.Pointer(target)),uintptr(unsafe.Pointer(replacement)),0,0,0,0);runtime.KeepAlive(target);runtime.KeepAlive(replacement);committed=ok!=0
-    for _,leaf:=range []dsRunnerLeaf{dsRunnerCurrent,dsRunnerStaged}{if o:=n.objects[leaf];o!=nil{if o.held!=nil{resultErr=errors.Join(resultErr,n.closeOwned(o.held));o.held=nil};resultErr=errors.Join(resultErr,n.closeOwned(o.file));delete(n.objects,leaf)}}
-    if !committed{return false,errors.Join(errDSRunnerEvidence,resultErr,callErr)};if resultErr!=nil||ctx.Err()!=nil{return true,errors.Join(errDSRunnerEvidence,resultErr,ctx.Err())};return true,nil
+    if !committed{return false,errors.Join(errDSRunnerEvidence,callErr)}
+    if n.faults!=nil&&n.faults.cancel!=nil{n.faults.cancel()}
+    if n.faults!=nil&&n.faults.identityMismatch{return true,errDSRunnerEvidence}
+    if !n.valid(ctx)||!n.parentsMatch()||n.faults!=nil&&n.faults.parentMismatch{return true,errDSRunnerEvidence}
+    ptr,err:=syscall.UTF16PtrFromString(n.paths[dsRunnerCurrent]);if err!=nil{return true,errDSRunnerEvidence}
+    bodyHandle,err:=syscall.CreateFile(ptr,syscall.GENERIC_READ|0x20000,syscall.FILE_SHARE_READ|syscall.FILE_SHARE_DELETE,nil,syscall.OPEN_EXISTING,0x00200000,0)
+    if err!=nil{return true,errDSRunnerEvidence}
+    body:=os.NewFile(uintptr(bodyHandle),n.paths[dsRunnerCurrent]);if body==nil{if e:=syscall.CloseHandle(bodyHandle);e!=nil{n.unreleased=append(n.unreleased,uintptr(bodyHandle));return true,errors.Join(errDSRunnerEvidence,errDSRunnerCleanup,e)};return true,errDSRunnerEvidence}
+    bodyOwned:=true
+    defer func(){if bodyOwned{resultErr=errors.Join(resultErr,n.closeOwned(body))}}()
+    actual,ok:=handlePath(bodyHandle);if !ok||!sameCleanPath(actual,n.paths[dsRunnerCurrent]){return true,errDSRunnerEvidence}
+    postID,err:=dsRunnerKernelID(body,false);if err!=nil||postID.Volume!=stage.id.Volume||postID.FileID!=stage.id.FileID||postID.Created!=current.id.Created{return true,errDSRunnerEvidence}
+    heldID,err:=dsRunnerKernelID(restore,false);if err!=nil||heldID!=postID{return true,errDSRunnerEvidence}
+    data,err:=io.ReadAll(io.LimitReader(body,32<<20+1));defer clear(data)
+    if err!=nil||int64(len(data))!=stage.size||digest(data)!=n.purpose.pin.OutputSHA||ctx.Err()!=nil||n.faults!=nil&&n.faults.bytesMismatch{return true,errDSRunnerEvidence}
+    postSD,postOwner,postGroup,err:=n.captureDescriptor(body);if err!=nil{return true,errDSRunnerEvidence}
+    defer func(){resultErr=errors.Join(resultErr,n.freeSecurity(postSD))}()
+    equal:=updateAdvapi.NewProc("EqualSid")
+    a,_,_:=equal.Call(owner,postOwner);b,_,_:=equal.Call(group,postGroup)
+    if a==0||b==0||!n.parentsMatch()||!n.valid(ctx)||n.faults!=nil&&(n.faults.ownerMismatch||n.faults.groupMismatch){return true,errDSRunnerEvidence}
+    postACL,err:=updateFileACL(body);if err!=nil{return true,errDSRunnerEvidence}
+    if postACL!=current.acl {
+        // Recheck the exact named, held object immediately before the only
+        // DACL write. The data handle continues to deny competing writers.
+        if id,e:=dsRunnerKernelID(body,false);e!=nil||id!=postID||!n.parentsMatch()||!n.valid(ctx){return true,errDSRunnerEvidence}
+        if name,good:=handlePath(syscall.Handle(body.Fd()));!good||!sameCleanPath(name,n.paths[dsRunnerCurrent]){return true,errDSRunnerEvidence}
+        var checkSD,checkOwner,checkGroup uintptr
+        status,_,_:=updateGetSecurity.Call(body.Fd(),1,3,uintptr(unsafe.Pointer(&checkOwner)),uintptr(unsafe.Pointer(&checkGroup)),0,0,uintptr(unsafe.Pointer(&checkSD)))
+        if status!=0||checkSD==0||checkOwner==0||checkGroup==0 {if checkSD!=0{if e:=n.freeSecurity(checkSD);e!=nil{return true,errors.Join(errDSRunnerEvidence,e)}};return true,errDSRunnerEvidence}
+        currentOwner,_,_:=equal.Call(owner,checkOwner);currentGroup,_,_:=equal.Call(group,checkGroup)
+        if e:=n.freeSecurity(checkSD);e!=nil{return true,errors.Join(errDSRunnerEvidence,e)}
+        if currentOwner==0||currentGroup==0{return true,errDSRunnerEvidence}
+        if acl,e:=updateFileACL(body);e!=nil||acl!=postACL||!n.parentsMatch()||!n.valid(ctx){return true,errDSRunnerEvidence}
+        if n.faults!=nil{n.faults.setterCalls++;if n.faults.denySet{return true,errDSRunnerEvidence}}
+        status,_,_=updateNTSetSecurity.Call(restore.Fd(),4,sd)
+        if status!=0{return true,errDSRunnerEvidence}
+        if n.faults!=nil&&n.faults.postSetFailure{return true,errors.Join(errDSRunnerEvidence,errDSRunnerCleanup)}
+    }
+    if acl,e:=updateFileACL(body);e!=nil||acl!=current.acl{return true,errDSRunnerEvidence}
+    finalSD,finalOwner,finalGroup,e:=n.captureDescriptor(body);if e!=nil{return true,e}
+    sameOwner,_,_:=equal.Call(owner,finalOwner);sameGroup,_,_:=equal.Call(group,finalGroup)
+    if e:=n.freeSecurity(finalSD);e!=nil{return true,errors.Join(errDSRunnerEvidence,e)}
+    if sameOwner==0||sameGroup==0{return true,errDSRunnerEvidence}
+    if id,e:=dsRunnerKernelID(body,false);e!=nil||id!=postID||!n.parentsMatch()||!n.valid(ctx){return true,errDSRunnerEvidence}
+    if name,good:=handlePath(syscall.Handle(body.Fd()));!good||!sameCleanPath(name,n.paths[dsRunnerCurrent]){return true,errDSRunnerEvidence}
+    if _,e:=body.Seek(0,io.SeekStart);e!=nil{return true,errDSRunnerEvidence}
+    again,e:=io.ReadAll(io.LimitReader(body,32<<20+1));defer clear(again)
+    if e!=nil||int64(len(again))!=stage.size||digest(again)!=n.purpose.pin.OutputSHA||ctx.Err()!=nil{return true,errDSRunnerEvidence}
+    // Keep the checked no-write-sharing body until the caller's ordinary
+    // post-commit readback completes. Only then may Close release it.
+    post:=&dsRunnerNativeObject{file:staged.file,held:body,path:n.paths[dsRunnerCurrent],snapshot:dsRunnerSnapshot{id:postID,parent:current.parent,acl:current.acl,size:stage.size},sealSHA:n.purpose.pin.OutputSHA}
+    if o:=n.objects[dsRunnerCurrent];o!=nil{if o.held!=nil{resultErr=errors.Join(resultErr,n.closeOwned(o.held));o.held=nil};resultErr=errors.Join(resultErr,n.closeOwned(o.file));delete(n.objects,dsRunnerCurrent)}
+    delete(n.objects,dsRunnerStaged);n.objects[dsRunnerCurrent]=post;bodyOwned=false
+    if resultErr!=nil{return true,errors.Join(errDSRunnerEvidence,resultErr)};return true,nil
 }
 func(n *dsRunnerNativeTarget)Close()(resultErr error){
-    if n==nil{return nil};if n.closed{if len(n.unclosed)>0||n.mutex!=0{return errDSRunnerCleanup};return nil};if n.lockedThread{thread,_,_:=syscall.NewLazyDLL("kernel32.dll").NewProc("GetCurrentThreadId").Call();if uint32(thread)!=n.threadID{return errDSRunnerCleanup}};n.closed=true
+    if n==nil{return nil};if n.closed{if len(n.unclosed)>0||len(n.unreleased)>0||n.mutex!=0{return errDSRunnerCleanup};return nil};if n.lockedThread{thread,_,_:=syscall.NewLazyDLL("kernel32.dll").NewProc("GetCurrentThreadId").Call();if uint32(thread)!=n.threadID{return errDSRunnerCleanup}};n.closed=true
     defer func(){if n.lockedThread{n.lockedThread=false;runtime.UnlockOSThread()}}()
     for leaf,o:=range n.objects{if o.held!=nil{resultErr=errors.Join(resultErr,n.closeOwned(o.held));o.held=nil};resultErr=errors.Join(resultErr,n.closeOwned(o.file));delete(n.objects,leaf)}
     for i:=len(n.parents)-1;i>=0;i--{resultErr=errors.Join(resultErr,n.closeOwned(n.parents[i]))};n.parents=nil
     // A file whose close failed earlier is still referenced here. Report it now even
     // when the operation that met the failure returned another error.
-    if len(n.unclosed)>0{resultErr=errors.Join(resultErr,errDSRunnerCleanup)}
+    if len(n.unclosed)>0||len(n.unreleased)>0{resultErr=errors.Join(resultErr,errDSRunnerCleanup)}
     if n.mutex!=0{if n.ownsMutex{ok,_,err:=syscall.NewLazyDLL("kernel32.dll").NewProc("ReleaseMutex").Call(uintptr(n.mutex));if ok==0{resultErr=errors.Join(resultErr,errDSRunnerCleanup,err)}};if e:=syscall.CloseHandle(n.mutex);e!=nil{resultErr=errors.Join(resultErr,errDSRunnerCleanup,e)}else{n.mutex=0};n.ownsMutex=false};return
 }

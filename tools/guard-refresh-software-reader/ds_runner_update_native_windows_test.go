@@ -8,8 +8,10 @@ import (
     "os"
     "path/filepath"
     "syscall"
+    "strings"
     "testing"
     "time"
+    "unsafe"
 )
 
 func TestDSRunnerNativeMetadataHandleHasNoReadDataAccess(t *testing.T){
@@ -119,4 +121,168 @@ func TestDSRunnerNativeRejectedMetadataHandleIsReturnedOnlyWhenItsCloseFailed(t 
     root:=physicalSoftwareFixture(t);path:=filepath.Join(root,"rejected.exe");if err:=os.WriteFile(path,[]byte("owned bytes"),0600);err!=nil{t.Fatal(err)}
     file,err:=dsRunnerOpenMetadata(path,false);if err!=nil{t.Fatal(err)}
     if f,err:=dsRunnerRejectOpened(file,errDSRunnerEvidence);f!=nil||!errors.Is(err,errDSRunnerEvidence)||errors.Is(err,errDSRunnerCleanup){t.Fatal("a rejected handle that closed cleanly was handed back or marked")}
+}
+
+// A regular owned fixture whose DACL starts without automatic inheritance.
+// The native update must restore the exact descriptor, not merely ignore it.
+func dsRunnerOwnedACLFixture(t *testing.T,path string,auto bool)string{
+    t.Helper()
+    ptr,err:=syscall.UTF16PtrFromString(path);if err!=nil{t.Fatal(err)}
+    h,err:=syscall.CreateFile(ptr,0x60080,syscall.FILE_SHARE_READ|syscall.FILE_SHARE_DELETE,nil,syscall.OPEN_EXISTING,0x00200000,0);if err!=nil{t.Fatal("owned ACL fixture open",err)}
+    var descriptor uintptr
+    code,_,_:=updateGetSecurity.Call(uintptr(h),1,4,0,0,0,0,uintptr(unsafe.Pointer(&descriptor)))
+    if code!=0||descriptor==0{_ = syscall.CloseHandle(h);t.Fatal("owned ACL fixture descriptor")}
+    bits:=uintptr(0);if auto{bits=0x0400}
+    ok,_,_:=updateAdvapi.NewProc("SetSecurityDescriptorControl").Call(descriptor,0x0400,bits)
+    status,_,_:=updateNTSetSecurity.Call(uintptr(h),4,descriptor)
+    free,_,_:=updateLocalFree.Call(descriptor);closeErr:=syscall.CloseHandle(h)
+    if ok==0||status!=0||free!=0||closeErr!=nil{t.Fatal("owned ACL fixture setup failed")}
+    f,err:=dsRunnerOpenMetadata(path,false);if err!=nil{t.Fatal(err)}
+    before,err:=updateFileACL(f);if closeErr:=f.Close();err!=nil||closeErr!=nil{t.Fatal("before descriptor unavailable")}
+    _,_,flags,_,valid:=dsRunnerSDDLParts(before);if !valid||strings.Contains(flags,"AI")!=auto{t.Fatal("owned ACL fixture inheritance mode mismatch")}
+    return before
+}
+func dsRunnerOwnedNonAutoFixture(t *testing.T,path string)string{return dsRunnerOwnedACLFixture(t,path,false)}
+
+func TestDSRunnerNativeOwnedApplyRestoresExactNonInheritedDACL(t *testing.T){
+    root:=physicalSoftwareFixture(t);paths:=[3]string{filepath.Join(root,"current.exe"),filepath.Join(root,"stage.exe"),filepath.Join(root,"before.exe")}
+    oldBytes,newBytes:=[]byte("owned predecessor"),[]byte("owned successor")
+    if err:=os.WriteFile(paths[0],oldBytes,0600);err!=nil{t.Fatal(err)}
+    before:=dsRunnerOwnedNonAutoFixture(t,paths[0])
+    ctx,cancel:=context.WithTimeout(context.Background(),10*time.Second);defer cancel();permit:=&dsRunnerWorkerPermit{ctx:ctx};permit.self=permit
+    faults:=&dsRunnerACLTestFaults{}
+    access:=dsRunnerMaintenanceAccess{acquire:func(context.Context)(*dsRunnerCandidate,error){return dsRunnerFixtureCandidate(newBytes),nil},open:func(ctx context.Context,p dsRunnerRepairPurpose)(dsRunnerTargetSession,error){session,err:=dsRunnerOpenNativeTargetAt(ctx,p,paths);if err!=nil{return session,err};n:=session.(*dsRunnerNativeTarget);n.faults=faults;return n,nil}}
+    result:=executeDSRunnerMaintenanceFor(ctx,"apply",permit,access,digest(oldBytes),int64(len(oldBytes)))
+    if !result.Qualified||!result.UpdatePerformed||!result.InstalledVerified||result.CommitOutcome!=dsRunnerCommitConfirmed{t.Fatal("non-inherited ACL update failed",result.Reason)}
+    if faults.setterCalls!=1{t.Fatal("non-inherited fixture did not exercise restoration")}
+    f,err:=dsRunnerOpenMetadata(paths[0],false);if err!=nil{t.Fatal(err)};after,err:=updateFileACL(f);closeErr:=f.Close()
+    if err!=nil||closeErr!=nil||after!=before{t.Fatal("exact original descriptor was not restored")}
+    if raw,err:=os.ReadFile(paths[0]);err!=nil||string(raw)!=string(newBytes){t.Fatal("candidate bytes not installed")}
+    if raw,err:=os.ReadFile(paths[2]);err!=nil||string(raw)!=string(oldBytes){t.Fatal("backup changed")}
+}
+
+// If the descriptor already matches after replacement, no DACL write is needed.
+// The assertions fail if this fixture did not actually exercise that branch.
+func TestDSRunnerNativeOwnedApplySkipsExactACLSetter(t *testing.T){
+    root:=physicalSoftwareFixture(t);paths:=[3]string{filepath.Join(root,"current.exe"),filepath.Join(root,"stage.exe"),filepath.Join(root,"before.exe")}
+    oldBytes,newBytes:=[]byte("owned predecessor"),[]byte("owned successor")
+    if err:=os.WriteFile(paths[0],oldBytes,0600);err!=nil{t.Fatal(err)}
+    before:=dsRunnerOwnedACLFixture(t,paths[0],true)
+    ctx,cancel:=context.WithTimeout(context.Background(),10*time.Second);defer cancel();permit:=&dsRunnerWorkerPermit{ctx:ctx};permit.self=permit
+    faults:=&dsRunnerACLTestFaults{}
+    access:=dsRunnerMaintenanceAccess{acquire:func(context.Context)(*dsRunnerCandidate,error){return dsRunnerFixtureCandidate(newBytes),nil},open:func(ctx context.Context,p dsRunnerRepairPurpose)(dsRunnerTargetSession,error){session,err:=dsRunnerOpenNativeTargetAt(ctx,p,paths);if err!=nil{return session,err};n,ok:=session.(*dsRunnerNativeTarget);if !ok{return nil,errDSRunnerEvidence};n.faults=faults;return n,nil}}
+    result:=executeDSRunnerMaintenanceFor(ctx,"apply",permit,access,digest(oldBytes),int64(len(oldBytes)))
+    if !result.Qualified||!result.UpdatePerformed||!result.InstalledVerified||result.CommitOutcome!=dsRunnerCommitConfirmed||faults.setterCalls!=0{t.Fatal("exact ACL control did not succeed without a setter",result.Reason)}
+    f,err:=dsRunnerOpenMetadata(paths[0],false);if err!=nil{t.Fatal(err)};after,err:=updateFileACL(f);closeErr:=f.Close()
+    if err!=nil||closeErr!=nil||after!=before{t.Fatal("exact ACL control changed the descriptor")}
+    if raw,err:=os.ReadFile(paths[0]);err!=nil||string(raw)!=string(newBytes){t.Fatal("candidate bytes not installed")}
+}
+
+// Negative controls only remove permission to proceed after a real owned-file
+// ReplaceFile success. They never supply candidate bytes or force success.
+func TestDSRunnerNativePostCommitRejectsUnsafeACLRestoration(t *testing.T){
+    for _,mode:=range []string{"owner","group","identity","parent","bytes","cancel"}{t.Run(mode,func(t *testing.T){
+        root:=physicalSoftwareFixture(t)
+        oldBytes,newBytes:=[]byte("owned predecessor"),[]byte("owned successor")
+        var controlACL string
+        // Run the real restoration first under the same directory and exact
+        // predecessor descriptor as the fault case. A skipped setter is a failed
+        // fixture, not a successful negative control.
+        for _,trial:=range []string{"control",mode}{
+            paths:=[3]string{filepath.Join(root,trial+"-current.exe"),filepath.Join(root,trial+"-stage.exe"),filepath.Join(root,trial+"-before.exe")}
+            if err:=os.WriteFile(paths[0],oldBytes,0600);err!=nil{t.Fatal(err)}
+            acl:=dsRunnerOwnedNonAutoFixture(t,paths[0]);if trial=="control"{controlACL=acl}else if acl!=controlACL{t.Fatal("fault and control fixtures have different descriptors")}
+            ctx,cancel:=context.WithTimeout(context.Background(),10*time.Second);defer cancel();permit:=&dsRunnerWorkerPermit{ctx:ctx};permit.self=permit
+            faults:=&dsRunnerACLTestFaults{}
+            switch trial{case "owner":faults.ownerMismatch=true;case "group":faults.groupMismatch=true;case "identity":faults.identityMismatch=true;case "parent":faults.parentMismatch=true;case "bytes":faults.bytesMismatch=true;case "cancel":faults.cancel=cancel}
+            access:=dsRunnerMaintenanceAccess{acquire:func(context.Context)(*dsRunnerCandidate,error){return dsRunnerFixtureCandidate(newBytes),nil},open:func(ctx context.Context,p dsRunnerRepairPurpose)(dsRunnerTargetSession,error){
+                session,err:=dsRunnerOpenNativeTargetAt(ctx,p,paths);if err!=nil{return session,err}
+                concrete,ok:=session.(*dsRunnerNativeTarget);if !ok{return nil,errDSRunnerEvidence};concrete.faults=faults;return concrete,nil
+            }}
+            result:=executeDSRunnerMaintenanceFor(ctx,"apply",permit,access,digest(oldBytes),int64(len(oldBytes)))
+            if trial=="control"{
+                if !result.Qualified||!result.InstalledVerified||!result.UpdatePerformed||result.CommitOutcome!=dsRunnerCommitConfirmed||faults.setterCalls!=1{t.Fatal("control did not perform one ACL restoration",mode,result.Reason)}
+            }else{
+                if !result.CommitAttempted||!result.UpdatePerformed||result.CommitOutcome!=dsRunnerCommitConfirmed||result.Qualified||result.InstalledVerified||result.Reason!="commit_outcome_requires_reconciliation"{t.Fatal("post-commit failure lost confirmed fact",mode,result.Reason)}
+                if faults.setterCalls!=0{t.Fatal("unsafe precondition reached ACL setter",mode)}
+            }
+            if got,err:=os.ReadFile(paths[2]);err!=nil||string(got)!=string(oldBytes){t.Fatal("backup not retained",mode,trial)}
+        }
+    })}
+}
+
+func TestDSRunnerRestoreMetadataAloneDoesNotReplaceBodyExclusion(t *testing.T){
+    root:=physicalSoftwareFixture(t);name:=filepath.Join(root,"owned.exe")
+    if err:=os.WriteFile(name,[]byte("owned"),0600);err!=nil{t.Fatal(err)}
+    meta,err:=dsRunnerOpenMetadataAccess(name,false,true);if err!=nil{t.Fatal("metadata with write DACL unavailable",err)};defer meta.Close()
+    ptr,err:=syscall.UTF16PtrFromString(name);if err!=nil{t.Fatal(err)}
+    bodyHandle,err:=syscall.CreateFile(ptr,syscall.GENERIC_READ|0x20000,syscall.FILE_SHARE_READ|syscall.FILE_SHARE_DELETE,nil,syscall.OPEN_EXISTING,0x00200000,0)
+    if err!=nil{t.Fatal("body open while metadata held",err)}
+    body:=os.NewFile(uintptr(bodyHandle),name);if body==nil{_ = syscall.CloseHandle(bodyHandle);t.Fatal("body wrapper unavailable")};defer body.Close()
+    other,err:=syscall.CreateFile(ptr,syscall.GENERIC_WRITE,syscall.FILE_SHARE_READ|syscall.FILE_SHARE_WRITE|syscall.FILE_SHARE_DELETE,nil,syscall.OPEN_EXISTING,0,0)
+    if err==nil{_ = syscall.CloseHandle(other);t.Fatal("body allowed a competing writer")}
+    if !errors.Is(err,syscall.Errno(32)){t.Fatal("competing writer was not blocked by sharing",err)}
+    a,err:=dsRunnerKernelID(meta,false);if err!=nil{t.Fatal(err)};b,err:=dsRunnerKernelID(body,false)
+    if err!=nil||a!=b{t.Fatal("metadata and body are different files")}
+}
+
+func TestDSRunnerNativePostCommitACLSetterFailureIsReconciled(t *testing.T){
+    root:=physicalSoftwareFixture(t);paths:=[3]string{filepath.Join(root,"current.exe"),filepath.Join(root,"stage.exe"),filepath.Join(root,"before.exe")}
+    oldBytes,newBytes:=[]byte("owned predecessor"),[]byte("owned successor")
+    if err:=os.WriteFile(paths[0],oldBytes,0600);err!=nil{t.Fatal(err)}
+    ptr,err:=syscall.UTF16PtrFromString(paths[0]);if err!=nil{t.Fatal(err)}
+    h,err:=syscall.CreateFile(ptr,0x60080,syscall.FILE_SHARE_READ|syscall.FILE_SHARE_DELETE,nil,syscall.OPEN_EXISTING,0x00200000,0);if err!=nil{t.Fatal("owned ACL fixture open",err)}
+    var descriptor uintptr
+    code,_,_:=updateGetSecurity.Call(uintptr(h),1,4,0,0,0,0,uintptr(unsafe.Pointer(&descriptor)))
+    if code!=0||descriptor==0{_ = syscall.CloseHandle(h);t.Fatal("owned ACL fixture descriptor")}
+    ok,_,_:=updateAdvapi.NewProc("SetSecurityDescriptorControl").Call(descriptor,0x0400,0)
+    status,_,_:=updateNTSetSecurity.Call(uintptr(h),4,descriptor)
+    free,_,_:=updateLocalFree.Call(descriptor);closeErr:=syscall.CloseHandle(h)
+    if ok==0||status!=0||free!=0||closeErr!=nil{t.Fatal("owned ACL fixture setup failed")}
+    f,err:=dsRunnerOpenMetadata(paths[0],false);if err!=nil{t.Fatal(err)}
+    before,err:=updateFileACL(f);if closeErr:=f.Close();err!=nil||closeErr!=nil{t.Fatal("before descriptor unavailable")}
+    _,_,flags,_,valid:=dsRunnerSDDLParts(before);if !valid||strings.Contains(flags,"AI"){t.Fatal("fixture retained auto-inherited flag")}
+    ctx,cancel:=context.WithTimeout(context.Background(),10*time.Second);defer cancel();permit:=&dsRunnerWorkerPermit{ctx:ctx};permit.self=permit
+    faults:=&dsRunnerACLTestFaults{denySet:true}
+    access:=dsRunnerMaintenanceAccess{acquire:func(context.Context)(*dsRunnerCandidate,error){return dsRunnerFixtureCandidate(newBytes),nil},open:func(ctx context.Context,p dsRunnerRepairPurpose)(dsRunnerTargetSession,error){session,err:=dsRunnerOpenNativeTargetAt(ctx,p,paths);if err!=nil{return session,err};n:=session.(*dsRunnerNativeTarget);n.faults=faults;return n,nil}}
+    result:=executeDSRunnerMaintenanceFor(ctx,"apply",permit,access,digest(oldBytes),int64(len(oldBytes)))
+    if result.Qualified||result.InstalledVerified||!result.UpdatePerformed||!result.CommitAttempted||result.CommitOutcome!=dsRunnerCommitConfirmed||result.Reason!="commit_outcome_requires_reconciliation"{t.Fatal("setter failure lost confirmed commit")}
+    if faults.setterCalls!=1{t.Fatal("fixture did not reach a single setter attempt")}
+    if raw,err:=os.ReadFile(paths[2]);err!=nil||string(raw)!=string(oldBytes){t.Fatal("backup changed")}
+}
+
+
+func TestDSRunnerNativeApplyWithoutDACLRightStopsBeforeReplacement(t *testing.T){
+    root:=physicalSoftwareFixture(t);paths:=[3]string{filepath.Join(root,"current.exe"),filepath.Join(root,"stage.exe"),filepath.Join(root,"before.exe")}
+    oldBytes,newBytes:=[]byte("owned predecessor"),[]byte("owned successor");if err:=os.WriteFile(paths[0],oldBytes,0600);err!=nil{t.Fatal(err)}
+    ctx,cancel:=context.WithTimeout(context.Background(),10*time.Second);defer cancel();permit:=&dsRunnerWorkerPermit{ctx:ctx};permit.self=permit
+    access:=dsRunnerMaintenanceAccess{acquire:func(context.Context)(*dsRunnerCandidate,error){return dsRunnerFixtureCandidate(newBytes),nil},open:func(ctx context.Context,p dsRunnerRepairPurpose)(dsRunnerTargetSession,error){return dsRunnerOpenNativeTargetMode(ctx,p,paths,false)}}
+    result:=executeDSRunnerMaintenanceFor(ctx,"apply",permit,access,digest(oldBytes),int64(len(oldBytes)))
+    if result.Qualified||result.InstalledVerified||result.CommitAttempted||result.UpdatePerformed||result.CommitOutcome!=dsRunnerCommitNotAttempted {t.Fatal("apply without DACL right attempted replacement")}
+    if got,err:=os.ReadFile(paths[0]);err!=nil||string(got)!=string(oldBytes){t.Fatal("predecessor changed")}
+}
+
+func TestDSRunnerNativePostCommitACLCleanupFailureIsReconciled(t *testing.T){
+    root:=physicalSoftwareFixture(t);paths:=[3]string{filepath.Join(root,"current.exe"),filepath.Join(root,"stage.exe"),filepath.Join(root,"before.exe")}
+    oldBytes,newBytes:=[]byte("owned predecessor"),[]byte("owned successor")
+    if err:=os.WriteFile(paths[0],oldBytes,0600);err!=nil{t.Fatal(err)}
+    ptr,err:=syscall.UTF16PtrFromString(paths[0]);if err!=nil{t.Fatal(err)}
+    h,err:=syscall.CreateFile(ptr,0x60080,syscall.FILE_SHARE_READ|syscall.FILE_SHARE_DELETE,nil,syscall.OPEN_EXISTING,0x00200000,0);if err!=nil{t.Fatal("owned ACL fixture open",err)}
+    var descriptor uintptr
+    code,_,_:=updateGetSecurity.Call(uintptr(h),1,4,0,0,0,0,uintptr(unsafe.Pointer(&descriptor)))
+    if code!=0||descriptor==0{_ = syscall.CloseHandle(h);t.Fatal("owned ACL fixture descriptor")}
+    ok,_,_:=updateAdvapi.NewProc("SetSecurityDescriptorControl").Call(descriptor,0x0400,0)
+    status,_,_:=updateNTSetSecurity.Call(uintptr(h),4,descriptor)
+    free,_,_:=updateLocalFree.Call(descriptor);closeErr:=syscall.CloseHandle(h)
+    if ok==0||status!=0||free!=0||closeErr!=nil{t.Fatal("owned ACL fixture setup failed")}
+    f,err:=dsRunnerOpenMetadata(paths[0],false);if err!=nil{t.Fatal(err)}
+    before,err:=updateFileACL(f);if closeErr:=f.Close();err!=nil||closeErr!=nil{t.Fatal("before descriptor unavailable")}
+    _,_,flags,_,valid:=dsRunnerSDDLParts(before);if !valid||strings.Contains(flags,"AI"){t.Fatal("fixture retained auto-inherited flag")}
+    ctx,cancel:=context.WithTimeout(context.Background(),10*time.Second);defer cancel();permit:=&dsRunnerWorkerPermit{ctx:ctx};permit.self=permit
+    faults:=&dsRunnerACLTestFaults{postSetFailure:true}
+    access:=dsRunnerMaintenanceAccess{acquire:func(context.Context)(*dsRunnerCandidate,error){return dsRunnerFixtureCandidate(newBytes),nil},open:func(ctx context.Context,p dsRunnerRepairPurpose)(dsRunnerTargetSession,error){session,err:=dsRunnerOpenNativeTargetAt(ctx,p,paths);if err!=nil{return session,err};n:=session.(*dsRunnerNativeTarget);n.faults=faults;return n,nil}}
+    result:=executeDSRunnerMaintenanceFor(ctx,"apply",permit,access,digest(oldBytes),int64(len(oldBytes)))
+    if result.Qualified||result.InstalledVerified||!result.UpdatePerformed||!result.CommitAttempted||result.CommitOutcome!=dsRunnerCommitConfirmed||!result.CleanupFailed||result.Reason!="commit_outcome_requires_reconciliation"{t.Fatal("post-set cleanup failure lost confirmed commit")}
+    if faults.setterCalls!=1{t.Fatal("fixture did not reach a single setter attempt")}
+    if raw,err:=os.ReadFile(paths[2]);err!=nil||string(raw)!=string(oldBytes){t.Fatal("backup changed")}
 }

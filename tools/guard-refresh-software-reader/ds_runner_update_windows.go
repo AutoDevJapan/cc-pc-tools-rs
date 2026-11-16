@@ -92,7 +92,7 @@ func executeDSRunnerMaintenanceFor(ctx context.Context,op string,permit *dsRunne
     r=dsRunnerMaintenanceResult{Domain:dsRunnerMaintenanceDomain,Operation:op,Reason:"qualification_unavailable",CommitOutcome:dsRunnerCommitNotAttempted}
     if ctx==nil||ctx.Err()!=nil||!dsRunnerMaintenanceOperation(op)||permit==nil||permit.self!=permit||permit.ctx!=ctx||access.acquire==nil||op!="capture"&&access.open==nil{return}
     candidate,err:=access.acquire(ctx)
-    if candidate!=nil{defer func(){closeErr:=candidate.Close();cleanup,cancel:=context.WithTimeout(context.Background(),5*time.Second);defer cancel();waitErr:=candidate.waitClosed(cleanup);if closeErr!=nil||waitErr!=nil{r.Qualified=false;r.Prepared=false;r.InstalledVerified=false;r.CleanupFailed=true;if r.Reason=="verified_no_write"||r.Reason=="prepared_verified_fixed_leaves"||r.Reason=="installed_rechecked"||r.Reason=="already_installed_verified"{r.Reason="cleanup_unknown"}}}()}
+    if candidate!=nil{defer func(){closeErr:=candidate.Close();cleanup,cancel:=context.WithTimeout(context.Background(),5*time.Second);defer cancel();waitErr:=candidate.waitClosed(cleanup);if closeErr!=nil||waitErr!=nil{r.Qualified=false;r.Prepared=false;r.InstalledVerified=false;r.CleanupFailed=true;if r.Reason=="authenticated_capture_verified_no_target_access"||r.Reason=="verified_no_write"||r.Reason=="prepared_verified_fixed_leaves"||r.Reason=="installed_rechecked"||r.Reason=="already_installed_verified"{r.Reason="cleanup_unknown"}}}()}
     if err!=nil||candidate==nil{r.CleanupFailed=dsRunnerCleanupFact(err);return}
     err=candidate.with(ctx,func(payload []byte)(innerErr error){
         purpose:=dsRunnerRepairPurpose{candidate:candidate,pin:candidate.pin,permit:permit};if !dsRunnerPurposeValid(purpose){return errDSRunnerEvidence}
@@ -124,20 +124,33 @@ func runDSRunnerMaintenanceWorker(args []string,out io.Writer)int{
     if len(args)!=2||args[0]!=dsRunnerWorkerFlag||!dsRunnerMaintenanceOperation(args[1])||!askWorkerParent(){return 2}
     ctx,cancel:=context.WithTimeout(context.Background(),3*time.Minute);defer cancel();permit:=&dsRunnerWorkerPermit{ctx:ctx};permit.self=permit
     r:=performDSRunnerMaintenance(ctx,args[1],permit);permit.self=nil
+    if r.CandidateSHA!=""&&r.CandidateSHA!=dsRunnerAdmittedCapture.OutputSHA{return 1}
     return dsRunnerWorkerExit(args[1],r,writeDSRunnerMaintenanceResult(out,r))
 }
 // Exit zero means a qualified result whose operation reached its goal. Any other
 // written result is a failure that still carries its facts to the caller.
 func dsRunnerWorkerExit(op string,r dsRunnerMaintenanceResult,wrote bool)int{
-    if !wrote||!r.Qualified||op=="prepare"&&!r.Prepared&&!r.InstalledVerified||op=="apply"&&!r.InstalledVerified{return 1}
+    if !wrote||!dsRunnerResultSuccess(op,r){return 1}
     return 0
 }
-func runDSRunnerMaintenance(args []string,out io.Writer)int{return runDSRunnerMaintenanceWith(args,out,askOwnedChild)}
+// Normal calls accept only the compiled capture digest. This check carries no
+// authority: the worker independently authenticates the actual source bytes.
+func dsRunnerFixedCandidateHashMatches(raw []byte)bool{
+    var r dsRunnerMaintenanceResult
+    return dsRunnerCanonical(bytesTrimDSRunner(raw),&r,64<<10)==nil&&(r.CandidateSHA==""||r.CandidateSHA==dsRunnerAdmittedCapture.OutputSHA)
+}
+func runDSRunnerMaintenance(args []string,out io.Writer)int{
+    return runDSRunnerMaintenanceWith(args,out,func(ctx context.Context,exe string,args ...string)askChildResult{
+        r:=askOwnedChild(ctx,exe,args...)
+        if !dsRunnerFixedCandidateHashMatches(r.Raw){clear(r.Raw);r.Raw=nil}
+        return r
+    })
+}
 func runDSRunnerMaintenanceWith(args []string,out io.Writer,launch func(context.Context,string,...string)askChildResult)int{
     if launch==nil{return 2}
     if len(args)!=1{return 2};op:="";switch args[0]{case "--verify-ds-runner-capture":op="capture";case "--verify-ds-runner-update":op="verify";case "--prepare-ds-runner-update":op="prepare";case "--apply-ds-runner-update":op="apply";default:return 2}
     exe,err:=os.Executable();if err!=nil{return 1};ctx,cancel:=context.WithTimeout(context.Background(),3*time.Minute+10*time.Second);defer cancel()
-    child:=launch(ctx,exe,dsRunnerWorkerFlag,op);defer clear(child.Raw)
+    child:=launch(context.WithValue(ctx,askResultCompleteKey{},true),exe,dsRunnerWorkerFlag,op);defer clear(child.Raw)
     r,observed:=dsRunnerObserveWorker(op,child)
     if !observed{r=dsRunnerUnknownResult(op,child.Reaped)}
     if !writeDSRunnerMaintenanceResult(out,r)||!observed||child.Exit!=0{return 1}
@@ -148,7 +161,7 @@ func runDSRunnerMaintenanceWith(args []string,out io.Writer,launch func(context.
 // exactly one canonical record with internally consistent facts. The facts of a
 // failed worker are forwarded as they are; they never become a success.
 func dsRunnerObserveWorker(op string,child askChildResult)(r dsRunnerMaintenanceResult,observed bool){
-    if !child.Started||!child.Assigned||!child.WaitVerified||!child.Reaped||child.TimedOut||child.Exit!=0&&child.Exit!=1{return}
+    if !child.Started||!child.Assigned||!child.WaitVerified||!child.Reaped||!child.ResultStdoutComplete||!child.ResultStderrComplete||child.TimedOut||child.Exit!=0&&child.Exit!=1{return}
     var worker dsRunnerMaintenanceResult
     if dsRunnerCanonical(bytesTrimDSRunner(child.Raw),&worker,64<<10)!=nil||!dsRunnerWorkerResultValid(op,worker){return}
     if dsRunnerWorkerExit(op,worker,true)!=child.Exit||child.Exit==0&&!dsRunnerResultSuccess(op,worker){return}
@@ -156,12 +169,16 @@ func dsRunnerObserveWorker(op string,child askChildResult)(r dsRunnerMaintenance
     return worker,true
 }
 func dsRunnerResultSuccess(op string,r dsRunnerMaintenanceResult)bool{
-    return r.Qualified&&!r.CleanupFailed&&r.CommitOutcome!=dsRunnerCommitUnconfirmed&&(op!="prepare"||r.Prepared||r.InstalledVerified)&&(op!="apply"||r.InstalledVerified)
+    if !dsRunnerWorkerResultValid(op,r){return false}
+    switch r.Reason{
+    case "authenticated_capture_verified_no_target_access","already_installed_verified","verified_no_write","prepared_verified_fixed_leaves","installed_rechecked":return true
+    }
+    return false
 }
-// The worker never claims a reap, a grant or the unknown outcome, and only
-// reports fixed reasons, fixed created names, digests and numeric identities.
+// The worker never claims a reap, grant, or unknown outcome. Its reason and
+// result fields must describe one reachable operation state before forwarding.
 func dsRunnerWorkerResultValid(op string,r dsRunnerMaintenanceResult)bool{
-    if r.Domain!=dsRunnerMaintenanceDomain||r.Operation!=op||r.Reaped||r.SoftwareReplaceAllowed||r.DataAccessGranted||r.SourceAccessGranted||r.SendAllowed||r.NamespaceLeaseProved||!dsRunnerReasonKnown(r.Reason){return false}
+    if !dsRunnerMaintenanceOperation(op)||r.Domain!=dsRunnerMaintenanceDomain||r.Operation!=op||r.Reaped||r.SoftwareReplaceAllowed||r.DataAccessGranted||r.SourceAccessGranted||r.SendAllowed||r.NamespaceLeaseProved{return false}
     switch r.CommitOutcome{
     case dsRunnerCommitNotAttempted:
     case dsRunnerCommitConfirmed,dsRunnerCommitUnconfirmed:if op!="apply"{return false}
@@ -172,11 +189,44 @@ func dsRunnerWorkerResultValid(op string,r dsRunnerMaintenanceResult)bool{
     seen:=map[string]bool{}
     for _,created:=range r.Created{if created!=dsRunnerBackup&&created!=dsRunnerStage||seen[created]{return false};seen[created]=true}
     for _,id:=range []*softwareIdentity{r.Current,r.Stage,r.Backup}{if id!=nil&&!(dsRunnerDecimal(id.Volume)&&dsRunnerDecimal(id.FileID)&&dsRunnerDecimal(id.Created)){return false}}
-    return true
-}
-func dsRunnerReasonKnown(reason string)bool{
-    switch reason{
-    case "qualification_unavailable","cleanup_unknown","authenticated_capture_verified_no_target_access","already_installed_verified","verified_no_write","prepared_verified_fixed_leaves","installed_rechecked","fixed_leaf_collision_preserved","commit_outcome_requires_reconciliation","partial_prepare_preserved":return true
+    // A snapshot and its ACL digest are recorded together. Any target leaf
+    // observation occurs only after the candidate and current were recorded.
+    if (r.Current==nil)!=(r.ACLSHA=="")||r.Current!=nil&&r.CandidateSHA==""{return false}
+    if (r.Stage!=nil||r.Backup!=nil||len(r.Created)>0)&&r.Current==nil{return false}
+    if r.Stage!=nil&&r.Backup==nil&&!seen[dsRunnerStage]{return false}
+    if seen[dsRunnerStage]&&!seen[dsRunnerBackup]&&r.Backup==nil{return false}
+    if len(r.Created)==2&&(r.Created[0]!=dsRunnerBackup||r.Created[1]!=dsRunnerStage){return false}
+    if op=="capture"&&(r.Current!=nil||r.Stage!=nil||r.Backup!=nil||len(r.Created)!=0){return false}
+    if op=="verify"&&(r.Stage!=nil||r.Backup!=nil||len(r.Created)!=0){return false}
+    if r.CommitOutcome!=dsRunnerCommitNotAttempted&&(r.Current==nil||r.Stage==nil||r.Backup==nil){return false}
+    noCommit:=r.CommitOutcome==dsRunnerCommitNotAttempted
+    fixedTarget:=r.Current!=nil&&r.ACLSHA!=""&&r.CandidateSHA!=""
+    fixedLeaves:=fixedTarget&&r.Stage!=nil&&r.Backup!=nil
+    switch r.Reason{
+    case "authenticated_capture_verified_no_target_access":
+        return op=="capture"&&r.Qualified&&!r.Prepared&&!r.InstalledVerified&&!r.CleanupFailed&&noCommit&&r.CandidateSHA!=""
+    case "already_installed_verified":
+        return op!="capture"&&r.Qualified&&!r.Prepared&&r.InstalledVerified&&!r.CleanupFailed&&noCommit&&fixedTarget&&r.Stage==nil&&r.Backup==nil&&len(r.Created)==0
+    case "verified_no_write":
+        return op=="verify"&&r.Qualified&&!r.Prepared&&!r.InstalledVerified&&!r.CleanupFailed&&noCommit&&fixedTarget
+    case "prepared_verified_fixed_leaves":
+        return op=="prepare"&&r.Qualified&&r.Prepared&&!r.InstalledVerified&&!r.CleanupFailed&&noCommit&&fixedLeaves
+    case "installed_rechecked":
+        return op=="apply"&&r.Qualified&&r.Prepared&&r.InstalledVerified&&!r.CleanupFailed&&r.CommitOutcome==dsRunnerCommitConfirmed&&fixedLeaves&&r.Current.Volume==r.Stage.Volume&&r.Current.FileID==r.Stage.FileID
+    case "cleanup_unknown":
+        if r.Qualified||r.Prepared||r.InstalledVerified||!r.CleanupFailed{return false}
+        if op=="capture"{return noCommit&&r.CandidateSHA!=""}
+        if op=="apply"&&r.CommitOutcome==dsRunnerCommitConfirmed{return fixedLeaves}
+        if !noCommit||!fixedTarget{return false}
+        return op=="prepare"&&fixedLeaves||op!="prepare"&&r.Stage==nil&&r.Backup==nil
+    case "qualification_unavailable":
+        return !r.Qualified&&!r.Prepared&&!r.InstalledVerified&&noCommit&&len(r.Created)==0&&(op!="capture"||r.CandidateSHA=="")
+    case "fixed_leaf_collision_preserved":
+        return (op=="prepare"||op=="apply")&&!r.Qualified&&!r.Prepared&&!r.InstalledVerified&&noCommit&&fixedTarget
+    case "partial_prepare_preserved":
+        return (op=="prepare"||op=="apply")&&!r.Qualified&&!r.Prepared&&!r.InstalledVerified&&noCommit&&fixedTarget&&len(r.Created)>0
+    case "commit_outcome_requires_reconciliation":
+        return op=="apply"&&!r.Qualified&&!r.Prepared&&!r.InstalledVerified&&r.CommitOutcome!=dsRunnerCommitNotAttempted&&fixedLeaves
     }
     return false
 }

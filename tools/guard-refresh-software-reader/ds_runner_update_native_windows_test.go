@@ -77,6 +77,7 @@ func TestDSRunnerNativeOwnedApplyRechecksInstalledGeneration(t *testing.T){
         if diag!=nil{
             category=diag.publish;postRead,postOK=diag.postRead,diag.postOK
             if postOK{idMatch=diag.post.id.Volume==diag.stage.id.Volume&&diag.post.id.FileID==diag.stage.id.FileID;createdMatch=diag.post.id.Created==diag.old.id.Created;aclMatch=diag.post.acl==diag.old.acl;parentMatch=diag.post.parent==diag.old.parent}
+            if postOK&&!aclMatch{t.Log(dsRunnerACLDiagnostic(diag.old.acl,diag.post.acl))}
         }
         createdStage,createdBackup:=false,false;for _,name:=range result.Created{if name==dsRunnerStage{createdStage=true};if name==dsRunnerBackup{createdBackup=true}}
         currentStageID:=result.Current!=nil&&result.Stage!=nil&&result.Current.FileID==result.Stage.FileID

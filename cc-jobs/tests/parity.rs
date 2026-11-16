@@ -12949,6 +12949,7 @@ mod additional_compatibility {
         );
         assert_eq!(t.ctx.session_file(&j), Some(path));
     }
+    #[cfg(windows)]
     #[test]
     fn msvcrt_byte_lock_and_rust_lock_exclude_each_other_without_changing_file() {
         #[link(name = "msvcrt")]

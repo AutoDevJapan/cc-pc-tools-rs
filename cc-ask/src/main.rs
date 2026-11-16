@@ -32,7 +32,8 @@ enum Commands {
         /// Bind a silent read receipt to one exact standalone owner post version.
         #[arg(long)]
         owner_post_receipt_file: Option<PathBuf>,
-        #[arg(long, requires = "clarification_file_or_acknowledgement_file")]
+        /// Inspect the stored ordinary log or its supplied purpose binding; never posts.
+        #[arg(long)]
         check_only: bool,
     },
     /// Create one new owner decision and its separate silent progress post.
@@ -435,6 +436,9 @@ fn run(command: Commands) -> Result<()> {
                 (Some(path), None, None) => {
                     cc_ask::recovery_messages::log_clarification(&mut ctx, &args, &path)?
                 }
+                (None, None, None) if check_only => {
+                    cc_ask::recovery_messages::inspect_log(&mut ctx, &args)?
+                }
                 (None, None, None) => cc_ask::recovery_messages::log(&mut ctx, &args)?,
                 _ => return Err("one recovery purpose binding is required".into()),
             };
@@ -812,7 +816,11 @@ mod tests {
         assert!(Cli::try_parse_from(args).is_ok());
         let mut invalid = base.to_vec();
         invalid.push("--check-only");
-        assert!(Cli::try_parse_from(invalid).is_err());
+        let ordinary = Cli::try_parse_from(invalid).unwrap();
+        assert!(matches!(ordinary.command, Commands::RecoveryLog {
+            check_only: true, clarification_file: None, acknowledgement_file: None,
+            owner_post_receipt_file: None, ..
+        }));
         let mut mixed = base.to_vec();
         mixed.extend([
             "--acknowledgement-file",

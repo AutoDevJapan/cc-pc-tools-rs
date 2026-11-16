@@ -412,3 +412,48 @@ fn owner_receipt_cannot_reopen_explicitly_closed_question_but_can_recover_old_ef
     );
     assert_eq!(other.server.lock().unwrap().posts.len(), posts);
 }
+
+
+#[test]
+fn pinned_owner_acknowledgement_cannot_be_retargeted_without_proof() {
+    let f = Fixture::new();
+    let mut ctx = f.context();
+    let ordinary = log(
+        &mut ctx,
+        &f.log("ordinary-ack-target", "対応不要。通常の別記録です。", false),
+    )
+    .unwrap();
+    let (mut args, proof, _) = receipt_case(&f, &mut ctx);
+    let binding = acknowledgement::Binding::read(&proof).unwrap();
+    let (request, _) = prepare_log(&mut ctx, &args).unwrap();
+    let mut ledger = Ledger::load(&f.home).unwrap();
+    let mut api = RecoveryApi::inspect(&mut ctx, &mut ledger, &request).unwrap();
+    acknowledgement::authorize(&mut api, &ledger, &f.home, &request, &binding, true, false)
+        .unwrap();
+    drop(api);
+    assert!(acknowledgement::has_saved_request(&f.home, &args.request_id).unwrap());
+    assert!(ledger.effect(&args.request_id, "log:0").is_none());
+    let ledger_before = fs::read(f.home.join(LEDGER)).unwrap();
+    let journal_path = f.home.join("recovery-owner-acknowledgements.json");
+    let purpose_before = fs::read(&journal_path).unwrap();
+    let (posts, calls) = {
+        let server = f.server.lock().unwrap();
+        (server.posts.len(), server.calls.len())
+    };
+    args.thread = Some(core::s(&ordinary["thread_id"]).to_owned());
+    let error = log(&mut ctx, &args).unwrap_err();
+    assert!(error.contains("purpose-bound"), "{error}");
+    let calls_after_denial = f.server.lock().unwrap().calls.len();
+    let status = inspect_log(&mut ctx, &args).unwrap();
+    assert_eq!(status["purpose_bound"], true);
+    assert_eq!(status["retarget_eligible"], false);
+    assert_eq!(status["possible_post"], false);
+    assert_eq!(fs::read(f.home.join(LEDGER)).unwrap(), ledger_before);
+    assert_eq!(fs::read(&journal_path).unwrap(), purpose_before);
+    let server = f.server.lock().unwrap();
+    assert_eq!(server.posts.len(), posts);
+    assert_eq!(server.calls.len(), calls_after_denial);
+    assert!(server.calls.iter().skip(calls).all(|(method, _, _)| method.as_str() == "GET"));
+    drop(server);
+    f.unchanged();
+}

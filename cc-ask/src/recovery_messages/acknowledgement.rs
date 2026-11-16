@@ -69,6 +69,11 @@ fn hash(value: &str) -> String {
     format!("{:x}", Sha256::digest(value.as_bytes()))
 }
 
+/// Under the existing recovery message lock, retain every saved purpose.
+pub(super) fn has_saved_request(home: &Path, request_id: &str) -> Result<bool> {
+    Ok(Journal::load(home)?.records.contains_key(request_id))
+}
+
 impl Binding {
     pub(super) fn retained_owner_post(home: &Path, request: &Request) -> Result<Option<Self>> {
         if !matches!(request.operation, Kind::Log { .. }) || !home.join(FILE).exists() {

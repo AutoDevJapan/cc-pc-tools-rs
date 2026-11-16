@@ -711,6 +711,7 @@ func (f *installedToolHardlinkFixture) Aliases(context.Context,string) ([]string
 		case "reordered": for i,j:=0,len(names)-1;i<j;i,j=i+1,j-1 {names[i],names[j]=names[j],names[i]}
 		case "changed": names[len(names)-1]="C:/Users/makhmeto/.cargo/bin/not-official.exe"
 		case "allowed-replacement": names[len(names)-1]="C:/Users/makhmeto/.cargo/bin/rustdoc.exe"
+		case "duplicate-replacement": names[len(names)-1]=names[0]
 		case "removed": names=names[:len(names)-1]
 		case "added": names=append(names,"C:/Users/makhmeto/.cargo/bin/rustc.exe")
 		}
@@ -788,8 +789,11 @@ func TestInstalledRustupHardlinkControllerKeepsIdentityAndWholeFlight(t *testing
 	for _,layout:=range []struct{name string;names []string}{
 		{"singleton",plan.aliases},{"partial",[]string{plan.path,plan.optionalAliases[2]}},{"complete",all},
 	} {
-		for _,mode:=range []string{"normal","reordered","changed","allowed-replacement","removed","added","different-id","different-created","different-acl","untrusted-acl","metadata-error","different-parent","untrusted-parent","wrong-final-name","wrong-link-count","late-id","late-acl","late-parent","open-error","cancel-open","close-error","cancel-close","cancel-close-error"} {
-			if len(layout.names)==1 && (mode=="changed" || mode=="allowed-replacement" || mode=="removed" || mode=="different-id" || mode=="different-created" || mode=="different-acl" || mode=="untrusted-acl" || mode=="metadata-error" || mode=="different-parent" || mode=="untrusted-parent" || mode=="wrong-final-name" || mode=="wrong-link-count" || mode=="late-id" || mode=="late-acl" || mode=="late-parent" || mode=="open-error" || mode=="cancel-open") {continue}
+		for _,mode:=range []string{"normal","reordered","changed","allowed-replacement","duplicate-replacement","removed","added","different-id","different-created","different-acl","untrusted-acl","metadata-error","different-parent","untrusted-parent","wrong-final-name","wrong-link-count","late-id","late-acl","late-parent","open-error","cancel-open","close-error","cancel-close","cancel-close-error"} {
+			if len(layout.names)==1 && (mode=="changed" || mode=="allowed-replacement" || mode=="duplicate-replacement" || mode=="removed" || mode=="different-id" || mode=="different-created" || mode=="different-acl" || mode=="untrusted-acl" || mode=="metadata-error" || mode=="different-parent" || mode=="untrusted-parent" || mode=="wrong-final-name" || mode=="wrong-link-count" || mode=="late-id" || mode=="late-acl" || mode=="late-parent" || mode=="open-error" || mode=="cancel-open") {continue}
+			// A complete allowed set has no different equal-size legal subset.
+			// Keep that case only for partial; duplicate replacement is separate.
+			if layout.name=="complete" && mode=="allowed-replacement" {continue}
 			t.Run(layout.name+"/"+mode,func(t *testing.T){
 				ctx,cancel:=context.WithCancel(context.Background());defer cancel()
 				f:=newInstalledToolHardlinkFixture(layout.names,mode,cancel)
@@ -798,7 +802,7 @@ func TestInstalledRustupHardlinkControllerKeepsIdentityAndWholeFlight(t *testing
 				if v.AccessAllowed!=wantClear {t.Fatal("hardlink controller result changed",v.Basis,wantClear)}
 				if wantClear && (v.Basis!="verified_installed_development_tool" || f.reads!=1 || f.opens!=len(layout.names) || f.aliasCalls!=2 || f.originCalls!=2) {t.Fatal("normal hardlink flight incomplete")}
 				if strings.HasPrefix(mode,"different-") || mode=="untrusted-acl" || mode=="metadata-error" || mode=="untrusted-parent" || mode=="wrong-final-name" || mode=="wrong-link-count" || mode=="open-error" || mode=="cancel-open" {if f.reads!=0 {t.Fatal("invalid hardlink reached executable body")}}
-				if mode=="changed" || mode=="allowed-replacement" || mode=="removed" || mode=="added" {if v.Basis!="installed_tool_alias_changed" {t.Fatal("a later different allowed subset was accepted",v.Basis)}}
+				if mode=="changed" || mode=="allowed-replacement" || mode=="duplicate-replacement" || mode=="removed" || mode=="added" {if v.Basis!="installed_tool_alias_changed" {t.Fatal("a later different allowed subset was accepted",v.Basis)}}
 				if strings.HasPrefix(mode,"late-") && v.Basis!="installed_tool_identity_changed" {t.Fatal("held hardlink changed after its read",v.Basis)}
 				if mode=="close-error" && v.Basis!="installed_tool_cleanup_failed" || mode=="cancel-close-error" && v.Basis!="installed_tool_cancelled_cleanup_failed" || mode=="cancel-close" && v.Basis!="installed_tool_cancelled" {t.Fatal("late cleanup/cancel facts lost",v.Basis)}
 				for i,lease:=range f.leases {wantClose:=0;if i<f.opens {wantClose=1};if lease.closed!=wantClose {t.Fatal("hardlink lease close count changed",i,lease.closed,wantClose)}}
@@ -867,11 +871,25 @@ func TestInstalledRustupLateUnknownExclusionRetainsCleanupAndCancelFacts(t *test
 	}
 }
 
+// t.TempDir may inherit a short-name or reparse spelling from the runner's
+// temp location. Resolve only this test-owned directory and prove object
+// identity before constructing the fixed-name fixture. Production aliases keep
+// their strict canonical-path rule.
+func installedToolPhysicalFixture(t *testing.T, directory string) string {
+	t.Helper()
+	resolved,err:=ownerPhysicalPath(directory)
+	if err!=nil {t.Fatal("owned fixture physical directory unavailable")}
+	before,firstErr:=os.Stat(directory);after,secondErr:=os.Stat(resolved)
+	if firstErr!=nil||secondErr!=nil||!before.IsDir()||!after.IsDir()||!os.SameFile(before,after) {t.Fatal("owned fixture physical directory identity mismatch")}
+	return resolved
+}
+
 // Only test-created objects are used. This verifies native enumeration and
 // same-held identities without declaring the hosted runner's unrelated parent
 // ACLs trusted. The real controller's acceptance/failure cases are above.
 func TestInstalledRustupNativeOwnedHardlinkInventory(t *testing.T) {
-	directory:=t.TempDir()
+	temporary:=t.TempDir()
+	directory:=installedToolPhysicalFixture(t,temporary)
 	canonical:=filepath.Join(directory,"rustup.exe")
 	raw:=bytes.Repeat([]byte{'a'},128);copy(raw,[]byte("MZ"))
 	if err:=os.WriteFile(canonical,raw,0600);err!=nil {t.Fatal("owned hardlink fixture creation failed",err)}
@@ -883,7 +901,14 @@ func TestInstalledRustupNativeOwnedHardlinkInventory(t *testing.T) {
 		names,err:=access.Aliases(ctx,canonical)
 		if err!=nil || len(names)!=wantNames {t.Fatal("native exact hardlink enumeration failed",len(names),wantNames,err)}
 		selected,ok:=ownerInstalledToolInventory(plan,names)
-		if !ok || len(selected)!=wantNames || selected[0]!=canonical {t.Fatal("native names did not select fixed inventory")}
+		if wantNames==1 {
+			priorPlan:=plan;priorPlan.path=filepath.Join(temporary,"rustup.exe");priorPlan.aliases=[]string{priorPlan.path};priorPlan.optionalAliases=nil
+			_,priorOK:=ownerInstalledToolInventory(priorPlan,names)
+			if !same(temporary,directory) && priorOK {t.Fatal("production inventory accepted a different physical spelling")}
+			t.Logf("native inventory spelling: phase=%d same_physical_spelling=%t prior_selection=%t current_selection=%t",wantNames,same(temporary,directory),priorOK,ok)
+		}
+		canonicalFirst:=len(selected)>0 && selected[0]==canonical
+		if !ok || len(selected)!=wantNames || !canonicalFirst {t.Fatalf("native inventory selection: phase=%d enumerated=%d selected=%d accepted=%t canonical_first=%t",wantNames,len(names),len(selected),ok,canonicalFirst)}
 		var leases []ownerInstalledToolLease
 		defer func(){for i:=len(leases)-1;i>=0;i-- {if err:=leases[i].Close();err!=nil {t.Error("owned native lease close failed",err)}}}()
 		var first ownerInstalledToolState
@@ -898,6 +923,7 @@ func TestInstalledRustupNativeOwnedHardlinkInventory(t *testing.T) {
 		read,err:=leases[0].Read(ctx,plan.size);defer clear(read)
 		if err!=nil || !bytes.Equal(read,raw) {t.Fatal("owned native held bytes changed",err)}
 		for i,lease:=range leases {state,err:=lease.State();if err!=nil || state.id!=first.id || state.acl!=first.acl || state.parentProof!=first.parentProof || !same(state.resolved,selected[i]) {t.Fatal("owned native state changed after read",err)}}
+		t.Logf("native inventory phase: expected=%d matched=true held_read=true",wantNames)
 	}
 	check(1)
 	for i,name:=range plan.optionalAliases {
@@ -908,6 +934,7 @@ func TestInstalledRustupNativeOwnedHardlinkInventory(t *testing.T) {
 	extra:=filepath.Join(directory,"not-official.exe")
 	if err:=os.Link(canonical,extra);err!=nil {t.Fatal("owned extra hardlink creation failed",err)}
 	if names,err:=access.Aliases(ctx,canonical);err==nil || len(names)!=0 {t.Fatal("native inventory admitted a fifteenth name")}
+	t.Log("native inventory phase: expected=15 refused=true")
 }
 
 // This regression uses only the old controller's plan and access seam, so its
@@ -943,4 +970,27 @@ func (l *installedToolRegressionHardlinkLease) Read(_ context.Context,n int64) (
 	if n!=f.plan.size || f.opens!=len(f.names) {return nil,errOwnerInstalledTool}
 	f.returned=[]byte("MZ synthetic public development tool")
 	return f.returned,nil
+}
+
+func TestInstalledRustupFixtureResolvesOnlyItsOwnPhysicalDirectory(t *testing.T) {
+	long:=t.TempDir()
+	physical:=installedToolPhysicalFixture(t,long)
+	other:=t.TempDir()
+	left,err:=os.Stat(long);if err!=nil {t.Fatal("owned fixture stat failed")}
+	right,err:=os.Stat(other);if err!=nil||os.SameFile(left,right) {t.Fatal("independent fixture identity was not different")}
+	if got:=installedToolPhysicalFixture(t,physical);!same(got,physical) {t.Fatal("physical fixture spelling was not stable")}
+	// This explicit short-name request is a test-owned control, not a way for
+	// the production provider to accept an alternative executable path.
+	p,err:=syscall.UTF16PtrFromString(long);if err!=nil {t.Fatal("owned short-name input unavailable")}
+	var short [32768]uint16
+	n,_,_:=syscall.NewLazyDLL("kernel32.dll").NewProc("GetShortPathNameW").Call(uintptr(unsafe.Pointer(p)),uintptr(unsafe.Pointer(&short[0])),uintptr(len(short)))
+	runtime.KeepAlive(p)
+	if n==0||n>=uintptr(len(short)) {t.Fatal("owned short-name metadata unavailable")}
+	spelling:=syscall.UTF16ToString(short[:n])
+	shortInfo,err:=os.Stat(spelling);if err!=nil||!os.SameFile(left,shortInfo) {t.Fatal("owned short spelling refers to another object")}
+	if got:=installedToolPhysicalFixture(t,spelling);!same(got,physical) {t.Fatal("owned short spelling did not resolve to the same physical directory")}
+	plan:=ownerInstalledToolPlan{path:filepath.Join(physical,"rustup.exe"),aliases:[]string{filepath.Join(physical,"rustup.exe")}}
+	if _,ok:=ownerInstalledToolInventory(plan,[]string{filepath.Join(physical,"rustup.exe")});!ok {t.Fatal("physical fixture inventory positive rejected")}
+	if !same(spelling,physical) {if _,ok:=ownerInstalledToolInventory(plan,[]string{filepath.Join(spelling,"rustup.exe")});ok {t.Fatal("fixture conversion weakened strict production inventory")}}
+	t.Logf("owned fixture spelling control: short_differs=%t physical_changed=%t",!same(long,spelling),!same(long,physical))
 }

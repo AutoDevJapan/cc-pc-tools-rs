@@ -175,11 +175,22 @@ completed with four successful jobs. A skipped job is not a successful execution
 
 Those hosted results cover that fixed predecessor, including its strict
 registry comparison and descriptor-role rules. The subsequent closed rustup
-hardlink inventory change has additional controller test source and requires
-its own fixed-input hosted verification and independent review. No local Go
-compile, test, vet, build or actual installed-tool acceptance was performed for
-that change. The owned-file native enumeration/held-identity test is also only
-prepared source until the new fixed candidate runs. Public archive verification and synthetic or isolated-registry
+hardlink inventory first ran in source
+[3eecbc740791ad23bef70383df5b79fd0d959628](https://github.com/AutoDevJapan/cc-pc-tools-rs/commit/3eecbc740791ad23bef70383df5b79fd0d959628)
+on 2026-11-16. That [Windows verifier job](https://github.com/AutoDevJapan/cc-pc-tools-rs/actions/runs/43890157033/job/133378856560)
+compiled and passed seven of the eight new roots, but the native owned-hardlink
+inventory test failed during name selection. Its phase and physical temp-path
+spelling were not printed, so the exact historical cause is not established;
+vet and build after that test were not reached. Those seven passes do not make
+the native test or whole candidate successful.
+
+The fixture correction resolves only its own temporary directory, proves that
+the original and resolved names refer to the same object, and records fixed
+phase/count/boolean diagnostics without printing paths. Production path and
+alias rules remain unchanged. A separate owned long/short-name control and the
+new fixed-source verification remain unexecuted until the next candidate runs.
+No local Go compile, test, vet, build or installed-tool acceptance was performed
+for these changes. Public archive verification and synthetic or isolated-registry
 tests remain separate from the unperformed installed-byte comparison.
 
 The candidate must receive independent review and a Windows build/test through

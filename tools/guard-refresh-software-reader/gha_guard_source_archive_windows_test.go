@@ -85,9 +85,12 @@ func (a *ghaGuardArchiveCIAuth) RoundTrip(req *http.Request) (*http.Response,err
     if a==nil || a.base==nil || !ghaGuardCredentialBytesValid([]byte(a.token)) || req==nil || req.URL==nil || req.Method!=http.MethodGet || (req.Body!=nil && req.Body!=http.NoBody) {return nil,errGHAGuardUnqualified}
     u:=req.URL
     if u.Scheme!="https" || u.Host!="api.github.com" || u.User!=nil || u.Opaque!="" || u.Fragment!="" || u.RawPath!="" || u.ForceQuery || u.RawQuery!="" || (req.Host!="" && req.Host!="api.github.com") {return nil,errGHAGuardUnqualified}
+    seenHeaders:=map[string]bool{}
     for name,values:=range req.Header {
-        if len(values)!=1 {return nil,errGHAGuardUnqualified}
-        switch strings.ToLower(name) {
+        key:=strings.ToLower(name)
+        if len(values)!=1 || seenHeaders[key] {return nil,errGHAGuardUnqualified}
+        seenHeaders[key]=true
+        switch key {
         case "accept":
             if values[0]!="application/vnd.github+json" {return nil,errGHAGuardUnqualified}
         case "x-github-api-version":
@@ -143,6 +146,11 @@ func TestGHAGuardArchiveCIAuthBoundary(t *testing.T) {
     }
     duplicateHeader,_:=http.NewRequest(http.MethodGet,ghaGuardGitAPI,nil);duplicateHeader.Header.Add("Accept","application/vnd.github+json");duplicateHeader.Header.Add("Accept","application/vnd.github+json");duplicateHeader.Header.Set("X-GitHub-Api-Version","2022-11-28")
     if resp,err:=tr.RoundTrip(duplicateHeader);err==nil||resp!=nil {t.Fatal("duplicate header accepted")}
+    for _,name:=range []string{"accept","x-github-api-version"} {
+        req,_:=http.NewRequest(http.MethodGet,ghaGuardGitAPI,nil);req.Header.Set("Accept","application/vnd.github+json");req.Header.Set("X-GitHub-Api-Version","2022-11-28")
+        req.Header[name]=[]string{req.Header.Get(name)}
+        if resp,err:=tr.RoundTrip(req);err==nil||resp!=nil {t.Fatal("case-folded duplicate header accepted")}
+    }
     wrongHost,_:=http.NewRequest(http.MethodGet,ghaGuardGitAPI,nil);wrongHost.Header.Set("Accept","application/vnd.github+json");wrongHost.Header.Set("X-GitHub-Api-Version","2022-11-28");wrongHost.Host="example.test"
     if resp,err:=tr.RoundTrip(wrongHost);err==nil||resp!=nil {t.Fatal("host override accepted")}
     withBody,_:=http.NewRequest(http.MethodGet,ghaGuardGitAPI,strings.NewReader("x"));withBody.Header.Set("Accept","application/vnd.github+json");withBody.Header.Set("X-GitHub-Api-Version","2022-11-28")

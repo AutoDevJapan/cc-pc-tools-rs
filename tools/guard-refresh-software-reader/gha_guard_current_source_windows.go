@@ -251,12 +251,24 @@ func ghaFreshSameLocator(a,b ghaFreshPublicLocator) bool {
 }
 
 func ghaFreshCheckHintGeneration(ctx context.Context,public,authenticated *http.Client,g ghaGuardGeneration,expected ghaFreshPublicLocator) error {
+    return ghaFreshCheckHintGenerationAt(ctx,public,authenticated,g,expected,ghaFreshFinalBoundary)
+}
+func ghaFreshCheckHintGenerationAt(ctx context.Context,public,authenticated *http.Client,g ghaGuardGeneration,expected ghaFreshPublicLocator,boundary ghaFreshDiscoveryBoundary) error {
+    return ghaFreshCheckHintGenerationAtClock(ctx,public,authenticated,g,expected,boundary,time.Now)
+}
+// The clock seam is package-test only; production always supplies time.Now.
+func ghaFreshCheckHintGenerationAtClock(ctx context.Context,public,authenticated *http.Client,g ghaGuardGeneration,expected ghaFreshPublicLocator,boundary ghaFreshDiscoveryBoundary,clock func()time.Time) error {
     if ctx==nil{return errGHAGuardUnqualified}
-    if ctx.Err()!=nil||public==nil||authenticated==nil{return errors.Join(errGHAGuardUnqualified,ctx.Err())}
-    h,err:=ghaFreshReadRunHintWith(ctx,authenticated,authenticated,time.Now().UTC())
+    if ctx.Err()!=nil||public==nil||authenticated==nil||clock==nil{return errors.Join(errGHAGuardUnqualified,ctx.Err())}
+    var h ghaFreshRunHint;var err error
+    switch boundary {
+    case ghaFreshObserveBoundary:h,err=ghaFreshReadRunHintEarlyWith(ctx,authenticated,authenticated,clock().UTC())
+    case ghaFreshFinalBoundary:h,err=ghaFreshReadRunHintWith(ctx,authenticated,authenticated,clock().UTC())
+    default:return errGHAGuardUnqualified
+    }
     if err!=nil{return ghaFreshSafeCurrentFailure(ctx,err)}
     if h.runID!=g.RunID||h.attempt!=int64(g.RunAttempt)||h.producerRevision!=g.ProducerRevision{return errGHAGuardUnqualified}
-    observed,err:=ghaFreshPublicPreflight(ctx,authenticated,h,time.Now().UTC())
+    observed,err:=ghaFreshPublicPreflight(ctx,authenticated,h,clock().UTC())
     if err!=nil{return ghaFreshSafeCurrentFailure(ctx,err)}
     if !ghaFreshSameLocator(observed,expected)||observed.jobID!=g.JobID||observed.checkRunID!=g.CheckRunID||observed.artifactID!=g.ArtifactID||ctx.Err()!=nil{return errors.Join(errGHAGuardUnqualified,ctx.Err())}
     return nil
@@ -287,18 +299,26 @@ func ghaFreshVerifyCurrentArchiveInputs(ctx context.Context,public *http.Client,
 }
 
 func ghaFreshVerifyCurrentArchiveInputsWith(ctx context.Context,public *http.Client,a *ghaGuardEvidenceAuthority,archive []byte,m ghaGuardManifest,policy ghaFreshProducerContract) error {
+    return ghaFreshVerifyCurrentArchiveInputsAt(ctx,public,a,archive,m,policy,ghaFreshFinalBoundary)
+}
+// This verification is followed by the mandatory final generation check in
+// the fixed candidate constructor; it does not itself issue a candidate.
+func ghaFreshVerifyCurrentArchiveInputsDuringAcquisition(ctx context.Context,public *http.Client,a *ghaGuardEvidenceAuthority,archive []byte,m ghaGuardManifest) error {
+    return ghaFreshVerifyCurrentArchiveInputsAt(ctx,public,a,archive,m,ghaFreshFixedProducerContract(),ghaFreshObserveBoundary)
+}
+func ghaFreshVerifyCurrentArchiveInputsAt(ctx context.Context,public *http.Client,a *ghaGuardEvidenceAuthority,archive []byte,m ghaGuardManifest,policy ghaFreshProducerContract,boundary ghaFreshDiscoveryBoundary) error {
     if ctx==nil{return errGHAGuardUnqualified}
     if ctx.Err()!=nil||public==nil||a==nil||a.credential==nil{return errors.Join(errGHAGuardUnqualified,ctx.Err())}
     a.credential.mu.Lock();var locator ghaFreshPublicLocator;if a.credential.fresh!=nil{locator=*a.credential.fresh};a.credential.mu.Unlock()
     g:=ghaGuardGeneration{Source:m.Source,SourceTree:m.SourceTree,ProducerRevision:m.ProducerRevision,RunID:m.RunID,RunAttempt:m.RunAttempt,JobID:m.JobID,CheckRunID:m.CheckRunID,ArtifactID:locator.artifactID,OutputSHA:m.OutputSHA,ProofSHA:m.SourceManifestSHA}
     if m.Domain!="guard-gha-capture-v1"||m.RepositoryID!=1406818713||m.OutputName!="guard.exe"||m.OutputBytes<=0||m.OutputBytes>ghaGuardPayloadLimit||!ghaFreshAuthorityMatches(a,g){return errGHAGuardUnqualified}
-    if err:=ghaFreshCheckHintGeneration(ctx,public,a.client,g,locator);err!=nil{return ghaFreshSafeCurrentFailure(ctx,err)}
+    if err:=ghaFreshCheckHintGenerationAt(ctx,public,a.client,g,locator,ghaFreshObserveBoundary);err!=nil{return ghaFreshSafeCurrentFailure(ctx,err)}
     records,err:=ghaGuardArchiveSourceRecords(ctx,archive,m,public)
     if err!=nil{return ghaFreshSafeCurrentFailure(ctx,err)}
     defer clear(records)
     if err=ghaFreshVerifyCurrentRecordsWith(ctx,a.client,a.client,records,g.ProducerRevision,policy);err!=nil{return ghaFreshSafeCurrentFailure(ctx,err)}
     if !ghaFreshAuthorityMatches(a,g){return errGHAGuardUnqualified}
-    if err=ghaFreshCheckHintGeneration(ctx,public,a.client,g,locator);err!=nil{return ghaFreshSafeCurrentFailure(ctx,err)}
+    if err=ghaFreshCheckHintGenerationAt(ctx,public,a.client,g,locator,boundary);err!=nil{return ghaFreshSafeCurrentFailure(ctx,err)}
     return nil
 }
 
@@ -387,7 +407,7 @@ func (p *ghaFreshCurrentInputs) recheckBorrowed(ctx context.Context,a *guardTarg
     p.mu.Unlock()
     defer clear(records)
     if !ghaFreshAuthorityHasLocator(authority,locator){return errGHAGuardUnqualified}
-    if err:=ghaFreshCheckHintGeneration(ctx,public,authority.client,g,locator);err!=nil{return ghaFreshSafeCurrentFailure(ctx,err)}
+    if err:=ghaFreshCheckHintGenerationAt(ctx,public,authority.client,g,locator,ghaFreshObserveBoundary);err!=nil{return ghaFreshSafeCurrentFailure(ctx,err)}
     sum,err:=ghaFreshRecordsSHA(records)
     if err!=nil||sum!=expected{return errGHAGuardUnqualified}
     if err=ghaFreshVerifyCurrentRecordsWith(ctx,authority.client,authority.client,records,g.ProducerRevision,policy);err!=nil{return ghaFreshSafeCurrentFailure(ctx,err)}

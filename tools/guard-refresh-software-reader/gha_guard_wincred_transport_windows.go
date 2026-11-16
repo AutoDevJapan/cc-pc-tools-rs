@@ -160,7 +160,7 @@ type ghaGuardCredentialSession struct {
     // Non-nil only for the code-owned fresh-generation acquisition.
     fresh *ghaFreshPublicLocator
     discovery *ghaFreshDiscoveryScope
-    retired map[ghaFreshRetiredKey]time.Time
+    retired map[ghaFreshRetiredKey]ghaFreshRetiredEvidence
     secret []byte
     base http.RoundTripper
     root context.Context

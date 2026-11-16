@@ -3,6 +3,7 @@
 package main
 
 import (
+    "bytes"
     "context"
     "encoding/json"
     "errors"
@@ -141,8 +142,51 @@ func TestGHAFreshSourceReadJoinedFailuresReachParent(t *testing.T) {
         failure:=ghaGuardSafeSourceFailure(tracked.sourceFailure(context.Background()),nil)
         if errors.Is(failure,errGHAFreshSourceRead)!=tc.read {t.Fatal("source read fact lost")}
         parent:=ghaV4ProjectFailure(t,failure)
-        if parent.Qualified||parent.Cancelled!=tc.cancel||parent.CleanupFailed!=tc.cleanup {t.Fatal("parent lost a failure fact",parent)}
+        if parent.Qualified||parent.Cancelled!=tc.cancel||parent.CleanupFailed!=tc.cleanup||parent.SourceReadFailed!=tc.read {t.Fatal("parent lost a failure fact",parent)}
         if tc.read&&parent.Reason!="guard_github_source_read_failed" {t.Fatal("read cause lost",parent)}
         if !tc.read&&tc.cancel&&parent.Reason!="guard_target_cancelled" {t.Fatal("control cause mislabeled",parent)}
     })}
+}
+
+// A legacy consumer recognizes the unchanged worker shape when the optional
+// read fact is absent. The fact never contains an error message or path.
+type ghaLegacyInspectionWorker struct {
+    guardTargetMetadataResult
+    CredentialCleanupState string `json:"credential_cleanup_state"`
+}
+func TestGHAFreshWorkerParentIndependentReadFact(t *testing.T) {
+    cases:=[]struct{name string;failure error;reason string;read,cancel,cleanup bool}{
+        {"status-only",ghaGuardHTTPFailure("source_metadata",http.StatusForbidden),"guard_github_source_metadata_http_403",false,false,false},
+        {"read-only",errors.Join(errGHAFreshSourceRead,errors.New("private-raw-detail")),"guard_github_source_read_failed",true,false,false},
+        {"cancel-only",context.Canceled,"guard_target_cancelled",false,true,false},
+        {"mixed",errors.Join(ghaGuardHTTPFailure("source_metadata",http.StatusForbidden),errGHAFreshSourceRead,context.Canceled,errGHAGuardResponseCleanup,errors.New("private-raw-detail")),"guard_github_source_metadata_http_403",true,true,true},
+    }
+    for _,tc:=range cases {t.Run(tc.name,func(t *testing.T){
+        safe:=ghaGuardSafeSourceFailure(ghaFreshSafeCurrentFailure(context.Background(),tc.failure),nil)
+        worker:=ghaFreshInspectWith(context.Background(),&ghaFreshCredentialAudit{state:"completed"},func(context.Context)(guardTargetArtifact,error){return nil,safe})
+        raw,err:=json.Marshal(worker);if err!=nil{t.Fatal(err)};if strings.Contains(string(raw),"private-raw-detail"){t.Fatal("raw error leaked")}
+        var fields map[string]json.RawMessage;if json.Unmarshal(raw,&fields)!=nil{t.Fatal("worker JSON")};_,present:=fields["source_read_failed"]
+        if present!=tc.read||worker.SourceReadFailed!=tc.read{t.Fatal("worker read fact missing or fabricated")}
+        var old ghaLegacyInspectionWorker;if json.Unmarshal(raw,&old)!=nil{t.Fatal("legacy permissive consumer rejected result")}
+        if !tc.read {dec:=json.NewDecoder(bytes.NewReader(raw));dec.DisallowUnknownFields();if dec.Decode(&old)!=nil||dec.Decode(new(any))!=io.EOF{t.Fatal("old strict consumer rejected unchanged shape")}}
+        parent:=ghaFreshInspectionFromChild(askChildResult{Started:true,Assigned:true,WaitVerified:true,Reaped:true,Exit:1,Raw:raw})
+        if parent.Qualified||!parent.WorkerResultObserved||parent.Reason!=tc.reason||parent.SourceReadFailed!=tc.read||parent.Cancelled!=tc.cancel||parent.CleanupFailed!=tc.cleanup{t.Fatal("parent lost fixed facts",parent)}
+        encoded,err:=json.Marshal(parent);if err!=nil||strings.Contains(string(encoded),"private-raw-detail"){t.Fatal("parent leaked raw error")}
+        var projected map[string]json.RawMessage;if json.Unmarshal(encoded,&projected)!=nil{t.Fatal("parent JSON")};_,present=projected["source_read_failed"];if present!=tc.read{t.Fatal("parent optional fact mismatch")}
+    })}
+}
+
+func TestGHAFreshLegacyReadReasonAndSuccessContradiction(t *testing.T) {
+    legacy:=ghaLegacyInspectionWorker{guardTargetMetadataResult:guardTargetMetadataResult{Domain:guardTargetUpdateDomain,Reason:"guard_github_source_read_failed"},CredentialCleanupState:"completed"}
+    raw,err:=json.Marshal(legacy);if err!=nil{t.Fatal(err)}
+    parent:=ghaFreshInspectionFromChild(askChildResult{Started:true,Assigned:true,WaitVerified:true,Reaped:true,Exit:1,Raw:raw})
+    if !parent.WorkerResultObserved||!parent.SourceReadFailed||parent.Qualified{t.Fatal("legacy fixed read reason lost")}
+    good:=ghaFreshWorkerResult{guardTargetMetadataResult:guardTargetMetadataResult{Qualified:true,Reason:"verified_guard_target_metadata",Domain:guardTargetUpdateDomain,MetadataObserved:true,CurrentIdentity:&softwareIdentity{Volume:"1",FileID:"2",Created:"3"},ACLHash:strings.Repeat("a",64),ParentProof:strings.Repeat("b",64),Bytes:1},CredentialCleanupState:"completed"}
+    raw,err=json.Marshal(good);if err!=nil{t.Fatal(err)}
+    child:=askChildResult{Started:true,Assigned:true,WaitVerified:true,Reaped:true,Exit:0,Raw:raw}
+    if _,ok:=ghaFreshDecodeInspection(child);!ok{t.Fatal("valid legacy-shaped success rejected")}
+    if strings.Contains(string(raw),"source_read_failed"){t.Fatal("false fact changed legacy success shape")}
+    good.SourceReadFailed=true;raw,err=json.Marshal(good);if err!=nil{t.Fatal(err)};child.Raw=raw
+    if _,ok:=ghaFreshDecodeInspection(child);ok{t.Fatal("read failure accepted as success")}
+    if got:=ghaFreshInspectionFromChild(child);got.Qualified{t.Fatal("contradictory worker granted success")}
 }

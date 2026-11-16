@@ -51,6 +51,7 @@ func ghaFreshHTTPObservedFailure(client *http.Client,phase string,status int) er
             switch phase {case "runs":return ghaGuardHTTPFailure("authenticated_runs",status);case "metadata":return ghaGuardHTTPFailure("authenticated_metadata",status)}
             return errGHAGuardUnqualified
         case *ghaFreshSourceStatusTransport:if t==nil{return errGHAGuardUnqualified};transport=t.base
+        case *ghaFreshScanTransport:if t==nil{return errGHAGuardUnqualified};transport=t.base
         default:return errors.Join(errGHAGuardUnqualified,&ghaFreshHTTPStatusError{phase:phase,status:status})
         }
     }
@@ -76,6 +77,31 @@ type ghaFreshRetiredKey struct {
     hint ghaFreshRunHint
     observed ghaFreshGenerationObservation
     policy *ghaFreshRetentionIdentity
+}
+
+// An observation is only reusable inside its owned session. Explicit expiry
+// retains the exact artifact identity so the final boundary can detect a
+// deletion/replacement; missing evidence is backed by the fixed source proof.
+type ghaFreshRetiredKind uint8
+const (ghaFreshRetiredMissing ghaFreshRetiredKind = iota+1;ghaFreshRetiredExpired)
+type ghaFreshRetiredEvidence struct {
+    observedAt time.Time
+    kind ghaFreshRetiredKind
+    jobID,checkID,artifactID,archiveBytes int64
+    archiveSHA string
+    expiresAt time.Time
+    expired bool
+}
+func (e ghaFreshRetiredEvidence) valid(now time.Time) bool {
+    if now.IsZero()||e.observedAt.IsZero()||now.Before(e.observedAt)||e.jobID<=0||e.checkID<=0{return false}
+    switch e.kind {
+    case ghaFreshRetiredMissing:return e.artifactID==0&&e.archiveBytes==0&&e.archiveSHA==""&&e.expiresAt.IsZero()&&!e.expired
+    case ghaFreshRetiredExpired:return e.artifactID>0&&e.archiveBytes>0&&e.archiveBytes<=ghaGuardArchiveLimit&&ghaGuardHex(e.archiveSHA,64)&&!e.expiresAt.IsZero()&&(e.expired||!e.expiresAt.After(e.observedAt))
+    default:return false
+    }
+}
+func (e ghaFreshRetiredEvidence) sameIdentity(other ghaFreshRetiredEvidence) bool {
+    return e.kind==other.kind&&e.jobID==other.jobID&&e.checkID==other.checkID&&e.artifactID==other.artifactID&&e.archiveBytes==other.archiveBytes&&e.archiveSHA==other.archiveSHA&&e.expiresAt.Equal(other.expiresAt)&&(!e.expired||other.expired)
 }
 
 // SelectRuns already validated these rows. Record the actual listing attempt,
@@ -236,20 +262,23 @@ func ghaFreshRetiredSession(listing,preflight *http.Client,policy *ghaFreshReten
     if session.closed||!session.ready||len(session.secret)==0||session.root==nil||session.root.Err()!=nil{return nil}
     return session
 }
-func ghaFreshRetiredSeen(s *ghaGuardCredentialSession,k ghaFreshRetiredKey,now time.Time) bool {
-    if s==nil||now.IsZero(){return false}
+func ghaFreshRetiredSeen(s *ghaGuardCredentialSession,k ghaFreshRetiredKey,now time.Time) (ghaFreshRetiredEvidence,bool) {
+    var none ghaFreshRetiredEvidence
+    if s==nil||now.IsZero(){return none,false}
     s.mu.Lock();defer s.mu.Unlock()
-    at,ok:=s.retired[k]
-    return ok&&!s.closed&&s.ready&&len(s.secret)>0&&s.root!=nil&&s.root.Err()==nil&&!at.IsZero()&&!now.Before(at)
+    e,ok:=s.retired[k]
+    if !ok||s.closed||!s.ready||len(s.secret)==0||s.root==nil||s.root.Err()!=nil||!e.valid(now){return none,false}
+    return e,true
 }
 func ghaFreshForgetRetired(s *ghaGuardCredentialSession) {
     if s==nil{return};s.mu.Lock();clear(s.retired);s.retired=nil;s.mu.Unlock()
 }
-func ghaFreshRememberRetired(s *ghaGuardCredentialSession,entries map[ghaFreshRetiredKey]time.Time,ctx context.Context) error {
+func ghaFreshRememberRetired(s *ghaGuardCredentialSession,entries map[ghaFreshRetiredKey]ghaFreshRetiredEvidence,ctx context.Context) error {
     if s==nil{return nil}
     s.mu.Lock();defer s.mu.Unlock()
     if ctx==nil{return errGHAGuardUnqualified}
     if ctx.Err()!=nil||s.closed||!s.ready||len(s.secret)==0||s.root==nil||s.root.Err()!=nil||len(entries)>ghaFreshListingMax{return errors.Join(errGHAGuardUnqualified,ctx.Err())}
+    for key,evidence:=range entries {if key.policy==nil||!ghaFreshHintShape(key.hint)||key.observed.attempt<1||key.observed.conclusion==""||!evidence.valid(evidence.observedAt){return errGHAGuardUnqualified}}
     // Replace only after a complete, unambiguous scan; no failed evidence is kept.
     s.retired=entries
     return nil
@@ -276,7 +305,55 @@ func (m *ghaFreshProofMemo) check(ctx context.Context,c *http.Client,h ghaFreshR
     return err
 }
 
-type ghaFreshScanResult struct {checked,retired,cacheable bool;err error}
+type ghaFreshScanResult struct {checked,retired,cacheable bool;evidence ghaFreshRetiredEvidence;err error}
+
+// Claim and fatal observation share one lock. A result already claimed may
+// finish and close its responses, but no new hint is claimed after stop.
+type ghaFreshScanQueue struct {
+    mu sync.Mutex
+    work []int
+    cursor,live int
+    outcomes []ghaFreshScanResult
+    stopped chan struct{}
+    fatal error
+}
+func (q *ghaFreshScanQueue) stopLocked(err error) {
+    if err!=nil&&q.fatal==nil {q.fatal=err;close(q.stopped)}
+}
+func (q *ghaFreshScanQueue) stop(err error) {
+    q.mu.Lock();defer q.mu.Unlock();q.stopLocked(err)
+}
+func (q *ghaFreshScanQueue) take(ctx context.Context)(int,bool) {
+    q.mu.Lock();defer q.mu.Unlock()
+    if ctx==nil||ctx.Err()!=nil||q.fatal!=nil||q.cursor>=len(q.work){return 0,false}
+    index:=q.work[q.cursor];q.cursor++;return index,true
+}
+func (q *ghaFreshScanQueue) finish(index int,result ghaFreshScanResult) {
+    q.mu.Lock();defer q.mu.Unlock();q.outcomes[index]=result
+    if result.err!=nil {q.stopLocked(result.err);return}
+    if !result.retired {q.live++;if q.live>1{q.stopLocked(errGHAGuardUnqualified)}}
+}
+func ghaFreshRunScanWorkers(ctx context.Context,q *ghaFreshScanQueue,visit func(int)ghaFreshScanResult) {
+    workers:=len(q.work);if workers>8{workers=8};var wg sync.WaitGroup
+    for i:=0;i<workers;i++ {wg.Add(1);go func(){defer wg.Done();for {
+        index,ok:=q.take(ctx);if !ok{return};q.finish(index,visit(index))
+    }}()};wg.Wait()
+}
+
+// Stop on a fatal HTTP observation before a slow response Close can let a
+// different worker claim another hint. The same owned transport still handles
+// the request and each started worker retains its response and cleanup facts.
+type ghaFreshScanTransport struct {base http.RoundTripper;queue *ghaFreshScanQueue}
+func (t *ghaFreshScanTransport) RoundTrip(req *http.Request)(*http.Response,error) {
+    if t==nil||t.base==nil||t.queue==nil{return nil,errGHAGuardUnqualified}
+    response,err:=t.base.RoundTrip(req)
+    if response!=nil&&response.StatusCode!=http.StatusOK {
+        owner:=&http.Client{Transport:t.base}
+        t.queue.stop(ghaFreshHTTPObservedFailure(owner,"metadata",response.StatusCode))
+    }
+    if err!=nil{t.queue.stop(err)} else if response==nil{t.queue.stop(errGHAGuardUnqualified)}
+    return response,err
+}
 
 func ghaFreshReadRunHint(ctx context.Context,client *http.Client) (ghaFreshRunHint,error) {
     return ghaFreshReadRunHintWith(ctx,client,client,time.Now().UTC())
@@ -284,8 +361,15 @@ func ghaFreshReadRunHint(ctx context.Context,client *http.Client) (ghaFreshRunHi
 
 // The production listing and preflights use the same scoped credential
 // session. Test-only clients may exercise unauthenticated observations.
+type ghaFreshDiscoveryBoundary uint8
+const (ghaFreshObserveBoundary ghaFreshDiscoveryBoundary=iota+1;ghaFreshFinalBoundary)
+// The default is strong. Only fixed intermediate acquisition callers may use
+// Observe; final candidate and handoff boundaries revalidate cached evidence.
 func ghaFreshReadRunHintWith(ctx context.Context,listing,preflight *http.Client,now time.Time) (ghaFreshRunHint,error) {
-    return ghaFreshReadRunHintCore(ctx,listing,preflight,now,ghaFreshVerifiedRetentionSource,ghaFreshFixedRetentionIdentity)
+    return ghaFreshReadRunHintAt(ctx,listing,preflight,now,ghaFreshVerifiedRetentionSource,ghaFreshFixedRetentionIdentity,ghaFreshFinalBoundary)
+}
+func ghaFreshReadRunHintEarlyWith(ctx context.Context,listing,preflight *http.Client,now time.Time) (ghaFreshRunHint,error) {
+    return ghaFreshReadRunHintAt(ctx,listing,preflight,now,ghaFreshVerifiedRetentionSource,ghaFreshFixedRetentionIdentity,ghaFreshObserveBoundary)
 }
 
 // The retention verifier is a package-only test seam. A custom verifier never
@@ -294,11 +378,14 @@ func ghaFreshReadRunHintWithRetention(ctx context.Context,listing,preflight *htt
     return ghaFreshReadRunHintCore(ctx,listing,preflight,now,verify,nil)
 }
 func ghaFreshReadRunHintCore(ctx context.Context,listing,preflight *http.Client,now time.Time,verify func(context.Context,*http.Client,ghaFreshRunHint) error,policy *ghaFreshRetentionIdentity) (ghaFreshRunHint,error) {
+    return ghaFreshReadRunHintAt(ctx,listing,preflight,now,verify,policy,ghaFreshObserveBoundary)
+}
+func ghaFreshReadRunHintAt(ctx context.Context,listing,preflight *http.Client,now time.Time,verify func(context.Context,*http.Client,ghaFreshRunHint) error,policy *ghaFreshRetentionIdentity,boundary ghaFreshDiscoveryBoundary) (ghaFreshRunHint,error) {
     var none ghaFreshRunHint
-    if ctx==nil{return none,errGHAGuardUnqualified}
-    if ctx.Err()!=nil||listing==nil||preflight==nil||verify==nil||now.IsZero(){return none,errors.Join(errGHAGuardUnqualified,ctx.Err())}
     session:=ghaFreshRetiredSession(listing,preflight,policy);complete:=false
     defer func(){if !complete{ghaFreshForgetRetired(session)}}()
+    if ctx==nil{return none,errGHAGuardUnqualified}
+    if ctx.Err()!=nil||listing==nil||preflight==nil||verify==nil||now.IsZero()||(boundary!=ghaFreshObserveBoundary&&boundary!=ghaFreshFinalBoundary){return none,errors.Join(errGHAGuardUnqualified,ctx.Err())}
     bounded,cancel:=context.WithTimeout(ctx,45*time.Second);defer cancel()
     first,total,err:=ghaFreshReadRunsPage(bounded,listing,1);if err!=nil{return none,err}
     pages:=int((total+99)/100);if pages==0{pages=1}
@@ -331,39 +418,37 @@ func ghaFreshReadRunHintCore(ctx context.Context,listing,preflight *http.Client,
     }
     // All hints share this fixed workflow resource; reobserve it once per scan.
     if err:=ghaFreshCheckWorkflow(bounded,preflight,hints[0]);err!=nil{return none,err}
-    outcomes:=make([]ghaFreshScanResult,len(hints));keys:=make([]ghaFreshRetiredKey,len(hints));var work []int
+    outcomes:=make([]ghaFreshScanResult,len(hints));keys:=make([]ghaFreshRetiredKey,len(hints));prior:=make([]ghaFreshRetiredEvidence,len(hints));revalidate:=make([]bool,len(hints));var work []int
     for i,h:=range hints {
         keys[i]=ghaFreshRetiredKey{hint:h,observed:generations[h.runID],policy:policy}
-        if ghaFreshRetiredSeen(session,keys[i],now){outcomes[i]=ghaFreshScanResult{checked:true,retired:true,cacheable:true}} else {work=append(work,i)}
+        if evidence,ok:=ghaFreshRetiredSeen(session,keys[i],now);ok {
+            if boundary==ghaFreshFinalBoundary {prior[i]=evidence;revalidate[i]=true;work=append(work,i)} else {outcomes[i]=ghaFreshScanResult{checked:true,retired:true,cacheable:true,evidence:evidence}}
+        } else {work=append(work,i)}
     }
     proof:=&ghaFreshProofMemo{pending:make(map[string]*ghaFreshProofAttempt),verify:verify}
-    jobs:=make(chan int);var wg sync.WaitGroup
-    workers:=len(work);if workers>8{workers=8}
-    for i:=0;i<workers;i++ {wg.Add(1);go func(){defer wg.Done();for index:=range jobs {
-        verified:=false
-        check:=func(ctx context.Context,c *http.Client,h ghaFreshRunHint)error {
-            err:=proof.check(ctx,c,h);if err==nil{verified=true};return err
+    queue:=&ghaFreshScanQueue{work:work,outcomes:outcomes,stopped:make(chan struct{})}
+    scanClient:=*preflight;scanClient.Transport=&ghaFreshScanTransport{base:preflight.Transport,queue:queue}
+    ghaFreshRunScanWorkers(bounded,queue,func(index int)ghaFreshScanResult {
+        if revalidate[index] {
+            evidence,err:=ghaFreshRevalidateRetired(bounded,&scanClient,hints[index],prior[index],now,proof.check)
+            return ghaFreshScanResult{checked:true,retired:err==nil,cacheable:err==nil,evidence:evidence,err:err}
         }
-        _,e:=ghaFreshPreflightAfterWorkflow(bounded,preflight,hints[index],now,check)
+        _,evidence,e:=ghaFreshPreflightWithEvidenceAt(bounded,&scanClient,hints[index],now,proof.check,boundary)
         retired:=e==errGHAFreshExpiredArtifact||e==errGHAFreshNonCandidate
-        // Only a missing artifact past the verified fixed one-day retention
-        // has reusable proof. Explicitly expired and failed jobs are re-read.
-        cacheable:=e==errGHAFreshExpiredArtifact&&verified
-        if retired{e=nil};outcomes[index]=ghaFreshScanResult{checked:true,retired:retired,cacheable:cacheable,err:e}
-    }}()}
-    feeding:=true
-    for _,i:=range work {select {case jobs<-i:case <-bounded.Done():feeding=false};if !feeding{break}}
-    close(jobs);wg.Wait()
-    live:=0;retired:=make(map[ghaFreshRetiredKey]time.Time);var failures error
+        cacheable:=retired&&evidence.valid(now)
+        if retired{e=nil} else if e==nil&&hints[index].superseded{e=errGHAGuardUnqualified}
+        return ghaFreshScanResult{checked:true,retired:retired,cacheable:cacheable,evidence:evidence,err:e}
+    })
+    live:=0;retired:=make(map[ghaFreshRetiredKey]ghaFreshRetiredEvidence);failures:=queue.fatal;unstarted:=false
     for i,result:=range outcomes {
-        if !result.checked {failures=errors.Join(failures,errGHAGuardUnqualified);continue}
+        if !result.checked {unstarted=true;continue}
         if result.err!=nil {failures=errors.Join(failures,result.err);continue}
-        if result.retired {if result.cacheable{retired[keys[i]]=now};continue}
+        if result.retired {if result.cacheable{retired[keys[i]]=result.evidence};continue}
         if hints[i].superseded {failures=errors.Join(failures,errGHAGuardUnqualified);continue}
         none=hints[i];live++
     }
     // All started workers are drained before reporting every observed failure.
-    if !feeding||failures!=nil||live!=1||bounded.Err()!=nil{return ghaFreshRunHint{},errors.Join(errGHAGuardUnqualified,failures,bounded.Err())}
+    if unstarted||failures!=nil||live!=1||bounded.Err()!=nil{return ghaFreshRunHint{},errors.Join(errGHAGuardUnqualified,failures,bounded.Err())}
     if err:=ghaFreshRememberRetired(session,retired,bounded);err!=nil{return ghaFreshRunHint{},err}
     complete=true;return none,nil
 }
@@ -539,20 +624,65 @@ func ghaFreshSelectArtifact(m map[string]json.RawMessage,h ghaFreshRunHint,jobID
     return none,nil
 }
 
-// This is only the timing and completeness predicate. The caller must also
-// verify the exact run revision contains the reviewed one-day workflow before
-// a missing artifact can be classified as expired.
-func ghaFreshMissingPastRetention(jobs,artifacts map[string]json.RawMessage,h ghaFreshRunHint,jobID int64,now time.Time) bool {
-    if now.IsZero()||jobID<=0||h.createdAt.IsZero()||h.createdAt.After(now){return false}
+// Validate the complete artifact page before retaining a positive expired
+// observation; final revalidation still requires the same immutable tuple.
+func ghaFreshExplicitRetiredEvidence(artifacts map[string]json.RawMessage,h ghaFreshRunHint,jobID,checkID int64,now time.Time) (ghaFreshRetiredEvidence,bool) {
+    var none ghaFreshRetiredEvidence
+    total,ok:=ghaFreshInt(artifacts,"total_count");values,valid:=ghaFreshArray(artifacts,"artifacts")
+    if !ok||!valid||total!=int64(len(values))||jobID<=0||checkID<=0||now.IsZero(){return ghaFreshRetiredEvidence{},false}
+    expected:=fmt.Sprintf("guard-bootstrap-%d-%d-%d",h.runID,h.attempt,jobID)
+    seen:=map[int64]bool{};found:=0
+    for _,raw:=range values {
+        item,err:=ghaFreshObject(raw);if err!=nil{return ghaFreshRetiredEvidence{},false}
+        name,nok:=ghaFreshString(item,"name");id,iok:=ghaFreshInt(item,"id")
+        if !nok||name==""||!iok||id<=0||seen[id]{return ghaFreshRetiredEvidence{},false};seen[id]=true
+        if name!=expected{continue};found++
+        size,sok:=ghaFreshInt(item,"size_in_bytes");expired,eok:=ghaFreshBool(item,"expired");dig,dok:=ghaFreshString(item,"digest")
+        var expiry time.Time;workflow,werr:=ghaFreshObject(item["workflow_run"])
+        if !sok||size<=0||size>ghaGuardArchiveLimit||!eok||!dok||!strings.HasPrefix(dig,"sha256:")||!ghaGuardHex(strings.TrimPrefix(dig,"sha256:"),64)||json.Unmarshal(item["expires_at"],&expiry)!=nil||expiry.IsZero()||(!expired&&expiry.After(now))||werr!=nil{return ghaFreshRetiredEvidence{},false}
+        run,rok:=ghaFreshInt(workflow,"id");repo,pok:=ghaFreshInt(workflow,"repository_id");headRepo,hok:=ghaFreshInt(workflow,"head_repository_id");revision,vok:=ghaFreshString(workflow,"head_sha")
+        if !rok||run!=h.runID||!pok||repo!=1406818713||!hok||headRepo!=1406818713||!vok||revision!=h.producerRevision{return ghaFreshRetiredEvidence{},false}
+        none=ghaFreshRetiredEvidence{observedAt:now,kind:ghaFreshRetiredExpired,jobID:jobID,checkID:checkID,artifactID:id,archiveBytes:size,archiveSHA:strings.TrimPrefix(dig,"sha256:"),expiresAt:expiry,expired:expired}
+    }
+    if found!=1||!none.valid(now){return ghaFreshRetiredEvidence{},false}
+    return none,true
+}
+func ghaFreshArtifactsMissing(artifacts map[string]json.RawMessage,h ghaFreshRunHint,jobID int64) bool {
+    if jobID<=0{return false}
     total,ok:=ghaFreshInt(artifacts,"total_count");values,valid:=ghaFreshArray(artifacts,"artifacts")
     if !ok||!valid||total!=int64(len(values)){return false}
-    expected:=fmt.Sprintf("guard-bootstrap-%d-%d-%d",h.runID,h.attempt,jobID)
-    seen:=map[int64]bool{}
+    expected:=fmt.Sprintf("guard-bootstrap-%d-%d-%d",h.runID,h.attempt,jobID);seen:=map[int64]bool{}
     for _,raw:=range values {
         item,err:=ghaFreshObject(raw);if err!=nil{return false}
         name,nok:=ghaFreshString(item,"name");id,iok:=ghaFreshInt(item,"id")
         if !nok||name==""||name==expected||!iok||id<=0||seen[id]{return false};seen[id]=true
     }
+    return true
+}
+
+// At the final boundary, any canonical artifact name in this run/attempt's
+// reserved namespace invalidates an earlier missing observation, even if its
+// job ID differs from the initially observed producer job.
+func ghaFreshArtifactsStillMissing(artifacts map[string]json.RawMessage,h ghaFreshRunHint,jobID int64) bool {
+    if !ghaFreshArtifactsMissing(artifacts,h,jobID){return false}
+    values,ok:=ghaFreshArray(artifacts,"artifacts");if !ok{return false}
+    prefix:=fmt.Sprintf("guard-bootstrap-%d-%d-",h.runID,h.attempt)
+    for _,raw:=range values {
+        item,err:=ghaFreshObject(raw);if err!=nil{return false};name,ok:=ghaFreshString(item,"name");if !ok{return false}
+        if strings.HasPrefix(name,prefix) {
+            suffix:=strings.TrimPrefix(name,prefix);id,err:=strconv.ParseInt(suffix,10,64)
+            if err==nil&&id>0&&strconv.FormatInt(id,10)==suffix{return false}
+        }
+    }
+    return true
+}
+
+// This is only the timing and completeness predicate. The caller must also
+// verify the exact run revision contains the reviewed one-day workflow before
+// a missing artifact can be classified as expired.
+func ghaFreshMissingPastRetention(jobs,artifacts map[string]json.RawMessage,h ghaFreshRunHint,jobID int64,now time.Time) bool {
+    if now.IsZero()||jobID<=0||h.createdAt.IsZero()||h.createdAt.After(now){return false}
+    if !ghaFreshArtifactsMissing(artifacts,h,jobID){return false}
     entries,valid:=ghaFreshJobPage(jobs,h);if !valid{return false}
     found:=0;var completion time.Time
     for _,raw:=range entries {
@@ -585,27 +715,62 @@ func ghaFreshCheckWorkflow(ctx context.Context,client *http.Client,h ghaFreshRun
     if !iok||id!=ghaFreshWorkflowID||!pok||path!=".github/workflows/unattended-readiness.yml"||!sok||state!="active"{return errGHAGuardUnqualified}
     return nil
 }
-func ghaFreshPreflightAfterWorkflow(ctx context.Context,client *http.Client,h ghaFreshRunHint,now time.Time,verify func(context.Context,*http.Client,ghaFreshRunHint) error) (ghaFreshPublicLocator,error) {
-    var none ghaFreshPublicLocator
+// A strong boundary re-observes every cached retirement before it can feed
+// a final candidate. Missing and explicit-expired evidence use distinct proofs.
+func ghaFreshRevalidateRetired(ctx context.Context,client *http.Client,h ghaFreshRunHint,prior ghaFreshRetiredEvidence,now time.Time,verify func(context.Context,*http.Client,ghaFreshRunHint)error) (ghaFreshRetiredEvidence,error) {
+    var none ghaFreshRetiredEvidence
     if ctx==nil{return none,errGHAGuardUnqualified}
-    if ctx.Err()!=nil||client==nil||!ghaFreshHintShape(h)||now.IsZero(){return none,errors.Join(errGHAGuardUnqualified,ctx.Err())}
-    jobs,err:=ghaFreshReadResource(ctx,client,ghaFreshJobsResource,h);if err!=nil{return none,err}
-    jobID,checkID,err:=ghaFreshSelectJob(jobs,h);if err!=nil {
-        if ghaFreshFailedFirstAttempt(jobs,h){return none,errGHAFreshNonCandidate}
-        return none,err
+    if ctx.Err()!=nil||client==nil||!prior.valid(now){return none,errors.Join(errGHAGuardUnqualified,ctx.Err())}
+    switch prior.kind {
+    case ghaFreshRetiredMissing:
+        artifacts,err:=ghaFreshReadResource(ctx,client,ghaFreshArtifactsResource,h);if err!=nil{return none,err}
+        if !ghaFreshArtifactsStillMissing(artifacts,h,prior.jobID)||ctx.Err()!=nil{return none,errors.Join(errGHAGuardUnqualified,ctx.Err())}
+        prior.observedAt=now;return prior,nil
+    case ghaFreshRetiredExpired:
+        _,current,err:=ghaFreshPreflightWithEvidence(ctx,client,h,now,verify)
+        if err!=errGHAFreshExpiredArtifact||!current.valid(now)||!prior.sameIdentity(current)||ctx.Err()!=nil{return none,errors.Join(errGHAGuardUnqualified,err,ctx.Err())}
+        return current,nil
+    default:return none,errGHAGuardUnqualified
     }
-    artifacts,err:=ghaFreshReadResource(ctx,client,ghaFreshArtifactsResource,h);if err!=nil{return none,err}
+}
+
+func ghaFreshPreflightAfterWorkflow(ctx context.Context,client *http.Client,h ghaFreshRunHint,now time.Time,verify func(context.Context,*http.Client,ghaFreshRunHint) error) (ghaFreshPublicLocator,error) {
+    loc,_,err:=ghaFreshPreflightWithEvidence(ctx,client,h,now,verify)
+    return loc,err
+}
+// The default is the strong final boundary. Only the fixed acquisition's
+// intermediate scan can request the observation boundary.
+func ghaFreshPreflightWithEvidence(ctx context.Context,client *http.Client,h ghaFreshRunHint,now time.Time,verify func(context.Context,*http.Client,ghaFreshRunHint) error) (ghaFreshPublicLocator,ghaFreshRetiredEvidence,error) {
+    return ghaFreshPreflightWithEvidenceAt(ctx,client,h,now,verify,ghaFreshFinalBoundary)
+}
+func ghaFreshPreflightWithEvidenceAt(ctx context.Context,client *http.Client,h ghaFreshRunHint,now time.Time,verify func(context.Context,*http.Client,ghaFreshRunHint) error,boundary ghaFreshDiscoveryBoundary) (ghaFreshPublicLocator,ghaFreshRetiredEvidence,error) {
+    var none ghaFreshPublicLocator;var noEvidence ghaFreshRetiredEvidence
+    if ctx==nil{return none,noEvidence,errGHAGuardUnqualified}
+    if ctx.Err()!=nil||client==nil||!ghaFreshHintShape(h)||now.IsZero()||(boundary!=ghaFreshObserveBoundary&&boundary!=ghaFreshFinalBoundary){return none,noEvidence,errors.Join(errGHAGuardUnqualified,ctx.Err())}
+    jobs,err:=ghaFreshReadResource(ctx,client,ghaFreshJobsResource,h);if err!=nil{return none,noEvidence,err}
+    jobID,checkID,err:=ghaFreshSelectJob(jobs,h);if err!=nil {
+        if ghaFreshFailedFirstAttempt(jobs,h){return none,noEvidence,errGHAFreshNonCandidate}
+        return none,noEvidence,err
+    }
+    artifacts,err:=ghaFreshReadResource(ctx,client,ghaFreshArtifactsResource,h);if err!=nil{return none,noEvidence,err}
     loc,err:=ghaFreshSelectArtifact(artifacts,h,jobID,now)
     if err!=nil {
-        if errors.Is(err,errGHAFreshExpiredArtifact){return none,err}
-        if ghaFreshMissingPastRetention(jobs,artifacts,h,jobID,now) {
-            if verify==nil{return none,errGHAGuardUnqualified}
-            if proofErr:=verify(ctx,client,h);proofErr!=nil{return none,proofErr}
-            return none,errGHAFreshExpiredArtifact
+        if err==errGHAFreshExpiredArtifact {
+            evidence,valid:=ghaFreshExplicitRetiredEvidence(artifacts,h,jobID,checkID,now)
+            if !valid{return none,noEvidence,errGHAGuardUnqualified}
+            return none,evidence,err
         }
-        return none,err
+        if ghaFreshMissingPastRetention(jobs,artifacts,h,jobID,now) {
+            if boundary==ghaFreshFinalBoundary&&!ghaFreshArtifactsStillMissing(artifacts,h,jobID){return none,noEvidence,errGHAGuardUnqualified}
+            if verify==nil{return none,noEvidence,errGHAGuardUnqualified}
+            if proofErr:=verify(ctx,client,h);proofErr!=nil{return none,noEvidence,proofErr}
+            if ctx.Err()!=nil{return none,noEvidence,errors.Join(errGHAGuardUnqualified,ctx.Err())}
+            evidence:=ghaFreshRetiredEvidence{observedAt:now,kind:ghaFreshRetiredMissing,jobID:jobID,checkID:checkID}
+            return none,evidence,errGHAFreshExpiredArtifact
+        }
+        return none,noEvidence,err
     }
     loc.checkRunID=checkID
-    if ctx.Err()!=nil{return none,errors.Join(errGHAGuardUnqualified,ctx.Err())}
-    return loc,nil
+    if ctx.Err()!=nil{return none,noEvidence,errors.Join(errGHAGuardUnqualified,ctx.Err())}
+    return loc,noEvidence,nil
 }

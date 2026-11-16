@@ -387,7 +387,7 @@ func (b *ghaCurrentStatusErrorReadBody) Close() error{return nil}
 // Exercise new current-source HTTP/cleanup/cancel facts through the existing
 // bounded worker and parent projection, not as an authority or live request.
 func TestGHAFreshCurrentSourceFailureReachesParent(t *testing.T) {
-    for _,mode:=range []string{"http-403","http-429","http-403-close","close","cancel","inner-deadline","inner-cancel","read-deadline","read-cancel","blob-403","blob-403-close","blob-close"} {t.Run(mode,func(t *testing.T){
+    for _,mode:=range []string{"http-403","http-429","http-403-close","close","cancel","inner-deadline","inner-cancel","read-deadline","read-cancel","read-pure-deadline","read-pure-cancel","read-cleanup","read-cleanup-cancel","blob-403","blob-403-close","blob-close"} {t.Run(mode,func(t *testing.T){
         f:=ghaCurrentTestFixtureFor(t,"unrelated-main");base:=f.client.Transport
         ctx,cancel:=context.WithCancel(context.Background());defer cancel()
         client:=&http.Client{Transport:ghaGuardTreeTestTransport(func(r *http.Request)(*http.Response,error){
@@ -398,7 +398,16 @@ func TestGHAFreshCurrentSourceFailureReachesParent(t *testing.T) {
                 if mode=="cancel" {cancel();return nil,context.Canceled}
                 if mode=="inner-deadline" {return nil,errors.Join(context.DeadlineExceeded,errors.New("sensitive-marker-must-not-escape"))}
                 if mode=="inner-cancel" {return nil,errors.Join(context.Canceled,errors.New("sensitive-marker-must-not-escape"))}
-                if mode=="read-deadline"||mode=="read-cancel" {cause:=error(context.DeadlineExceeded);if mode=="read-cancel"{cause=context.Canceled};return &http.Response{StatusCode:200,Header:make(http.Header),Body:&ghaCurrentStatusErrorReadBody{err:errors.Join(cause,errors.New("sensitive-marker-must-not-escape"))},Request:r},nil}
+                var readErr error
+                switch mode {
+                case "read-deadline":readErr=errors.Join(context.DeadlineExceeded,errors.New("sensitive-marker-must-not-escape"))
+                case "read-cancel":readErr=errors.Join(context.Canceled,errors.New("sensitive-marker-must-not-escape"))
+                case "read-pure-deadline":readErr=context.DeadlineExceeded
+                case "read-pure-cancel":readErr=context.Canceled
+                case "read-cleanup":readErr=errors.Join(io.ErrUnexpectedEOF,errGHAGuardResponseCleanup)
+                case "read-cleanup-cancel":readErr=errors.Join(io.ErrUnexpectedEOF,errGHAGuardResponseCleanup,context.Canceled,errors.New("sensitive-marker-must-not-escape"))
+                }
+                if readErr!=nil{return &http.Response{StatusCode:200,Header:make(http.Header),Body:&ghaCurrentStatusErrorReadBody{err:readErr},Request:r},nil}
                 if mode=="http-403"||mode=="http-429"||mode=="http-403-close"||mode=="blob-403"||mode=="blob-403-close" {
                     status:=403;if mode=="http-429"{status=429}
                     var body io.ReadCloser=io.NopCloser(strings.NewReader("sensitive-marker-must-not-escape"))
@@ -417,16 +426,23 @@ func TestGHAFreshCurrentSourceFailureReachesParent(t *testing.T) {
         if mode=="http-403"||mode=="http-403-close"||mode=="blob-403"||mode=="blob-403-close"{expected="guard_github_source_metadata_http_403"}
         if mode=="http-429"{expected="guard_github_source_metadata_http_429"}
         if mode=="close"||mode=="blob-close"{expected="guard_github_response_cleanup_failed"}
+        wantRead:=mode=="read-deadline"||mode=="read-cancel"||mode=="read-cleanup"||mode=="read-cleanup-cancel"
+        if wantRead{expected="guard_github_source_read_failed"}
         safe:=ghaGuardSafeSourceFailure(ghaFreshSafeCurrentFailure(ctx,err),ctx.Err())
+        if wantRead&&!errors.Is(safe,errGHAFreshSourceRead){t.Fatal("independent read failure lost")}
+        if (mode=="read-pure-deadline"||mode=="read-pure-cancel")&&errors.Is(safe,errGHAFreshSourceRead){t.Fatal("pure context failure mislabeled as read")}
+        if (mode=="read-deadline"||mode=="read-pure-deadline")&&!errors.Is(safe,context.DeadlineExceeded){t.Fatal("deadline leaf lost")}
+        if (mode=="read-cancel"||mode=="read-pure-cancel"||mode=="read-cleanup-cancel")&&!errors.Is(safe,context.Canceled){t.Fatal("cancel leaf lost")}
+        if (mode=="read-cleanup"||mode=="read-cleanup-cancel")&&!errors.Is(safe,errGHAGuardResponseCleanup){t.Fatal("cleanup leaf lost")}
         if got:=ghaFreshAcquisitionReason(safe);got!=expected{t.Fatalf("status lost: %s / %v",got,safe)}
         audit:=&ghaFreshCredentialAudit{state:"completed"}
         worker:=ghaFreshInspectWith(context.Background(),audit,func(context.Context)(guardTargetArtifact,error){return nil,safe})
         raw,marshalErr:=json.Marshal(worker);if marshalErr!=nil{t.Fatal(marshalErr)}
         child:=askChildResult{Started:true,Assigned:true,WaitVerified:true,Reaped:true,Exit:1,Raw:raw}
         parent:=ghaFreshInspectionFromChild(child);encoded,_:=json.Marshal(parent)
-        if parent.Reason!=expected||parent.Qualified||!parent.WorkerResultObserved||strings.Contains(string(encoded),"sensitive-marker") {t.Fatal("parent projection lost or leaked evidence",string(encoded))}
-        if (mode=="close"||mode=="blob-close"||mode=="http-403-close"||mode=="blob-403-close")&&!parent.CleanupFailed {t.Fatal("close failure lost")}
-        if (mode=="cancel"||mode=="inner-deadline"||mode=="inner-cancel"||mode=="read-deadline"||mode=="read-cancel")&&!parent.Cancelled {t.Fatal("cancel lost")}
+        if parent.Reason!=expected||parent.Qualified||!parent.WorkerResultObserved||parent.SourceReadFailed!=wantRead||strings.Contains(string(encoded),"sensitive-marker") {t.Fatal("parent projection lost or leaked evidence",string(encoded))}
+        if (mode=="close"||mode=="blob-close"||mode=="http-403-close"||mode=="blob-403-close"||mode=="read-cleanup"||mode=="read-cleanup-cancel")&&!parent.CleanupFailed {t.Fatal("close failure lost")}
+        if (mode=="cancel"||mode=="inner-deadline"||mode=="inner-cancel"||mode=="read-deadline"||mode=="read-cancel"||mode=="read-pure-deadline"||mode=="read-pure-cancel"||mode=="read-cleanup-cancel")&&!parent.Cancelled {t.Fatal("cancel lost")}
     })}
 }
 
@@ -568,4 +584,14 @@ func TestGHAFreshSourceFailurePreservesAllFixedFacts(t *testing.T) {
     rawChild,_:=json.Marshal(worker)
     parent:=ghaFreshInspectionFromChild(askChildResult{Started:true,Assigned:true,WaitVerified:true,Reaped:true,Exit:1,Raw:rawChild})
     if parent.Qualified||!parent.Cancelled||!parent.CleanupFailed||parent.Reason!="guard_github_source_metadata_http_429"{t.Fatal("combined parent facts lost",parent)}
+}
+
+// An observed HTTP status remains the primary reason, while independent read,
+// cancellation and cleanup facts survive sanitization and parent projection.
+func TestGHAFreshCurrentMixedStatusAndReadFacts(t *testing.T) {
+    failure:=errors.Join(ghaGuardHTTPFailure("source_metadata",http.StatusForbidden),errGHAFreshSourceRead,context.Canceled,errGHAGuardResponseCleanup,errors.New("sensitive-marker-must-not-escape"))
+    safe:=ghaGuardSafeSourceFailure(ghaFreshSafeCurrentFailure(context.Background(),failure),nil)
+    if !errors.Is(safe,errGHAFreshSourceRead)||!errors.Is(safe,context.Canceled)||!errors.Is(safe,errGHAGuardResponseCleanup) {t.Fatal("independent facts lost")}
+    parent:=ghaV4ProjectFailure(t,safe);encoded,err:=json.Marshal(parent);if err!=nil{t.Fatal(err)}
+    if parent.Reason!="guard_github_source_metadata_http_403"||parent.Qualified||!parent.Cancelled||!parent.CleanupFailed||!parent.SourceReadFailed||strings.Contains(string(encoded),"sensitive-marker") {t.Fatal("mixed status projection lost or leaked facts",string(encoded))}
 }

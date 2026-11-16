@@ -462,7 +462,7 @@ func ghaFreshAcquireFromAuthorityCaptured(ctx context.Context,authority *ghaGuar
         func(c context.Context,a []byte,m ghaGuardManifest)error{
             if authority.client!=client{return errGHAGuardUnqualified}
             if err:=ghaFreshVerifySourceWithStatus(c,authority,client,a,m);err!=nil{return err}
-            if err:=ghaFreshVerifyCurrentArchiveInputs(c,public,authority,a,m);err!=nil{return err}
+            if err:=ghaFreshVerifyCurrentArchiveInputsDuringAcquisition(c,public,authority,a,m);err!=nil{return err}
             if capture!=nil {return capture.Hold(a,m)}
             return nil
         })

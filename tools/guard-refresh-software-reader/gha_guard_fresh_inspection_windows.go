@@ -23,11 +23,13 @@ const ghaFreshWorkerFlag="--fresh-guard-inspection-worker"
 type ghaFreshWorkerResult struct {
     guardTargetMetadataResult
     CredentialCleanupState string `json:"credential_cleanup_state"`
+    SourceReadFailed bool `json:"source_read_failed,omitempty"`
 }
 
 type ghaFreshInspectionResult struct {
     guardTargetMetadataResult
     CredentialCleanupState string `json:"credential_cleanup_state"`
+    SourceReadFailed bool `json:"source_read_failed,omitempty"`
     WorkerResultObserved bool `json:"worker_result_observed"`
     WorkerStarted bool `json:"worker_started"`
     WorkerAssigned bool `json:"worker_assigned"`
@@ -95,6 +97,8 @@ func ghaFreshInspectWith(ctx context.Context,audit *ghaFreshCredentialAudit,acqu
     })
     state:="unknown"
     if audit!=nil&&(audit.state=="completed"||audit.state=="failed"){state=audit.state}
+    sourceReadFailed:=errors.Is(acquisition,errGHAFreshSourceRead)
+    if sourceReadFailed&&result.Qualified {result.Qualified=false;result.Reason=ghaFreshAcquisitionReason(acquisition)}
     if errors.Is(acquisition,context.Canceled)||errors.Is(acquisition,context.DeadlineExceeded){result.Cancelled=true}
     if errors.Is(acquisition,errGHAGuardCredentialCleanup)||errors.Is(acquisition,errGHAGuardResponseCleanup)||state=="failed" {
         result.CleanupFailed=true
@@ -107,7 +111,7 @@ func ghaFreshInspectWith(ctx context.Context,audit *ghaFreshCredentialAudit,acqu
         result.Qualified=false
         result.Reason="guard_github_credential_cleanup_unobserved"
     }
-    return ghaFreshWorkerResult{guardTargetMetadataResult:result,CredentialCleanupState:state}
+    return ghaFreshWorkerResult{guardTargetMetadataResult:result,CredentialCleanupState:state,SourceReadFailed:sourceReadFailed}
 }
 
 // Called only after the existing inherited-pipe and exact-parent worker check.
@@ -151,7 +155,7 @@ func ghaFreshDecodeInspection(child askChildResult) (ghaFreshWorkerResult,bool) 
         !ghaFreshPositiveDecimal(id.Volume)||!ghaFreshPositiveDecimal(id.FileID)||
         !ghaFreshPositiveDecimal(id.Created)||!ghaGuardHex(result.ACLHash,64)||
         !ghaGuardHex(result.ParentProof,64)||result.Bytes<=0||result.Bytes>64<<20||
-        result.Cancelled||result.CleanupFailed||result.SoftwareReplaceAllowed||
+        result.Cancelled||result.CleanupFailed||result.SourceReadFailed||result.SoftwareReplaceAllowed||
         result.DataAccessGranted||result.UpdatePerformed||result.CredentialCleanupState!="completed" {
         return ghaFreshWorkerResult{},false
     }
@@ -185,6 +189,7 @@ func ghaFreshInspectionFromChild(child askChildResult) ghaFreshInspectionResult 
     if value,ok:=ghaFreshDecodeInspection(child);ok {
         failure.guardTargetMetadataResult=value.guardTargetMetadataResult
         failure.CredentialCleanupState=value.CredentialCleanupState
+        failure.SourceReadFailed=value.SourceReadFailed
         failure.WorkerResultObserved=true
         return failure
     }
@@ -199,6 +204,8 @@ func ghaFreshInspectionFromChild(child askChildResult) ghaFreshInspectionResult 
                 if value.CredentialCleanupState!="unknown"&&value.CredentialCleanupState!="completed"&&value.CredentialCleanupState!="failed" {return failure}
                 failure.WorkerResultObserved=true
                 failure.CredentialCleanupState=value.CredentialCleanupState
+                // A legacy worker may supply only the fixed read-failure reason.
+                failure.SourceReadFailed=value.SourceReadFailed||value.Reason=="guard_github_source_read_failed"
                 failure.Cancelled=value.Cancelled
                 failure.CleanupFailed=value.CleanupFailed||value.CredentialCleanupState=="failed"
                 switch value.Reason {

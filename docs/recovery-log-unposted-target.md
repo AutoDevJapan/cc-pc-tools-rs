@@ -7,7 +7,9 @@
 
 新版の同じ recovery-log に --check-only を付けると、proof-file無しの通常Logに限り
 保存済みIntentの種別・旧thread・入力hash・alias・durable effect件数・訂正候補性を返す。
-既存のledger/lockを要求し、通常OSロックを保持して読み、journalへの追記、HTTP、通知、起動をしない。
+既存のledger/lockをファイル作成なしで開き、通常の送信と同じ排他ロックを待たずに取得して読む。
+ledger/lockの欠落・置換・変更・不正内容は空状態や成功へ変換せず、状態不明のエラーとして返す。
+この経路は新規作成、journalへの追記、HTTP、通知、起動をしない。
 本文・token/configや全履歴を出力しない。inspection_only は配送や将来送信の資格ではない。
 ライブthreadの確認は normal send 時にもう一度行う。
 clarification/acknowledgement/owner-postのpurpose-bound checkは従来のproofを保持する。

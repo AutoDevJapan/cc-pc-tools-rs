@@ -241,3 +241,189 @@ fn saved_question_purpose_cannot_be_stripped_for_ordinary_target_repair() {
     assert_eq!(inspection["retarget_eligible"],false);
     f.unchanged();
 }
+
+
+#[derive(Clone, Copy, Debug)]
+enum Damage {
+    Remove,
+    Directory,
+    ReplaceSame,
+    ReplaceChanged,
+}
+
+fn inspection_case(id: &str) -> (Fixture, Context, LogArgs) {
+    let f = Fixture::new();
+    let mut ctx = f.context();
+    let thread = target(&f, &mut ctx, "inspection-existing-target");
+    let mut args = failed_log(&f, &mut ctx, id);
+    args.thread = Some(thread);
+    (f, ctx, args)
+}
+
+fn inspection_storage_view(home: &Path) -> BTreeMap<String, (bool, u64, Option<Vec<u8>>)> {
+    fs::read_dir(home)
+        .unwrap()
+        .map(|entry| {
+            let entry = entry.unwrap();
+            let name = entry.file_name().to_string_lossy().into_owned();
+            let metadata = entry.metadata().unwrap();
+            // The observer must not read the byte-range locked lock file.
+            let body = (metadata.is_file() && name != LOCK)
+                .then(|| fs::read(entry.path()).unwrap());
+            (name, (metadata.is_file(), metadata.len(), body))
+        })
+        .collect()
+}
+
+fn prepare_replacement(home: &Path, name: &str, damage: Damage) {
+    if matches!(damage, Damage::ReplaceSame | Damage::ReplaceChanged) {
+        let mut bytes = fs::read(home.join(name)).unwrap();
+        if matches!(damage, Damage::ReplaceChanged) {
+            bytes.push(b'\n');
+        }
+        fs::write(home.join("inspection-replacement"), bytes).unwrap();
+    }
+}
+
+fn damage_storage(home: &Path, name: &str, damage: Damage) {
+    let path = home.join(name);
+    match damage {
+        Damage::Remove => fs::remove_file(path).unwrap(),
+        Damage::Directory => {
+            fs::remove_file(&path).unwrap();
+            fs::create_dir(path).unwrap();
+        }
+        Damage::ReplaceSame | Damage::ReplaceChanged => {
+            fs::rename(home.join("inspection-replacement"), path).unwrap();
+        }
+    }
+}
+
+#[test]
+fn inspection_never_recreates_files_lost_before_open() {
+    for (name, damage) in [
+        (LOCK, Damage::Remove),
+        (LEDGER, Damage::Remove),
+        (LOCK, Damage::Directory),
+        (LEDGER, Damage::Directory),
+    ] {
+        let (f, mut ctx, args) = inspection_case("inspection-before-open");
+        let calls = f.server.lock().unwrap().calls.len();
+        let mut mutated = None;
+        let result = log_target::inspect_at(&mut ctx, &args, |stage| {
+            if stage == log_target::InspectStage::BeforeOpen {
+                damage_storage(&f.home, name, damage);
+                mutated = Some(inspection_storage_view(&f.home));
+            }
+            Ok(())
+        });
+        let mutated = mutated.expect("inspection seam reached");
+        let error = result.unwrap_err();
+        assert!(error.contains("inspection"), "{name} {damage:?}: {error}");
+        assert_eq!(inspection_storage_view(&f.home), mutated, "{name} {damage:?}");
+        assert_eq!(f.server.lock().unwrap().calls.len(), calls);
+        f.unchanged();
+    }
+}
+
+#[test]
+fn inspection_rejects_storage_lost_or_replaced_after_it_opened_the_files() {
+    let scenarios = [
+        (log_target::InspectStage::Opened, LOCK, Damage::Remove),
+        (log_target::InspectStage::Opened, LOCK, Damage::ReplaceSame),
+        (log_target::InspectStage::Locked, LOCK, Damage::Remove),
+        (log_target::InspectStage::Locked, LOCK, Damage::ReplaceSame),
+        (log_target::InspectStage::Loaded, LOCK, Damage::Remove),
+        (log_target::InspectStage::Loaded, LOCK, Damage::ReplaceSame),
+        (log_target::InspectStage::Locked, LEDGER, Damage::Remove),
+        (log_target::InspectStage::Locked, LEDGER, Damage::Directory),
+        (log_target::InspectStage::Loaded, LEDGER, Damage::Remove),
+        (log_target::InspectStage::Loaded, LEDGER, Damage::ReplaceChanged),
+    ];
+    for (stage, name, damage) in scenarios {
+        let (f, mut ctx, args) = inspection_case("inspection-after-open");
+        prepare_replacement(&f.home, name, damage);
+        let calls = f.server.lock().unwrap().calls.len();
+        let mut mutated = None;
+        let result = log_target::inspect_at(&mut ctx, &args, |at| {
+            if at == stage {
+                damage_storage(&f.home, name, damage);
+                mutated = Some(inspection_storage_view(&f.home));
+            }
+            Ok(())
+        });
+        let mutated = mutated.expect("inspection seam reached");
+        let error = result.unwrap_err();
+        assert!(error.contains("inspection"), "{stage:?} {name} {damage:?}: {error}");
+        assert_eq!(
+            inspection_storage_view(&f.home),
+            mutated,
+            "{stage:?} {name} {damage:?}"
+        );
+        assert_eq!(f.server.lock().unwrap().calls.len(), calls);
+        f.unchanged();
+    }
+}
+
+#[test]
+fn inspection_reports_the_same_state_when_the_ledger_object_has_identical_bytes() {
+    let (f, mut ctx, args) = inspection_case("inspection-same-state");
+    prepare_replacement(&f.home, LEDGER, Damage::ReplaceSame);
+    let calls = f.server.lock().unwrap().calls.len();
+    let mut replaced = false;
+    let status = log_target::inspect_at(&mut ctx, &args, |stage| {
+        if stage == log_target::InspectStage::Loaded {
+            damage_storage(&f.home, LEDGER, Damage::ReplaceSame);
+            replaced = true;
+        }
+        Ok(())
+    })
+    .unwrap();
+    assert!(replaced);
+    assert_eq!(status["intent_exists"], true);
+    assert_eq!(status["possible_post"], false);
+    assert_eq!(status["retarget_eligible"], true);
+    assert_eq!(f.server.lock().unwrap().calls.len(), calls);
+    f.unchanged();
+}
+
+#[test]
+fn inspection_respects_the_sender_lock_and_releases_its_own_lock() {
+    let (f, mut ctx, args) = inspection_case("inspection-lock-compatibility");
+    let before = inspection_storage_view(&f.home);
+    let calls = f.server.lock().unwrap().calls.len();
+    let sender = ByteLock::acquire(&f.home.join(LOCK), Duration::ZERO).unwrap();
+    let error = inspect_log(&mut ctx, &args).unwrap_err();
+    assert!(error.contains("lock"), "{error}");
+    drop(sender);
+    assert_eq!(inspection_storage_view(&f.home), before);
+    let status = inspect_log(&mut ctx, &args).unwrap();
+    assert_eq!(status["intent_exists"], true);
+    assert_eq!(status["possible_post"], false);
+    assert_eq!(status["retarget_eligible"], true);
+    let sender = ByteLock::acquire(&f.home.join(LOCK), Duration::ZERO).unwrap();
+    drop(sender);
+    assert_eq!(inspection_storage_view(&f.home), before);
+    assert_eq!(f.server.lock().unwrap().calls.len(), calls);
+    f.unchanged();
+}
+
+#[test]
+fn inspection_does_not_treat_invalid_existing_bytes_as_an_empty_ledger() {
+    let (f, mut ctx, args) = inspection_case("inspection-strict-decode");
+    let calls = f.server.lock().unwrap().calls.len();
+    let mut mutated = None;
+    let result = log_target::inspect_at(&mut ctx, &args, |stage| {
+        if stage == log_target::InspectStage::Locked {
+            fs::write(f.home.join(LEDGER), b"").unwrap();
+            mutated = Some(inspection_storage_view(&f.home));
+        }
+        Ok(())
+    });
+    let mutated = mutated.expect("inspection seam reached");
+    let error = result.unwrap_err();
+    assert!(error.contains("malformed"), "{error}");
+    assert_eq!(inspection_storage_view(&f.home), mutated);
+    assert_eq!(f.server.lock().unwrap().calls.len(), calls);
+    f.unchanged();
+}

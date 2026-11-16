@@ -105,23 +105,87 @@ pub(super) fn correct(ctx: &mut Context, ledger: &mut Ledger, prior: &Request, i
     ledger.append(&home, event)
 }
 
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub(super) enum InspectStage {
+    BeforeOpen,
+    Opened,
+    Locked,
+    Loaded,
+}
+
+/// Releases the inspection lock explicitly before the handle is closed.
+struct InspectLock(fs::File);
+
+impl Drop for InspectLock {
+    fn drop(&mut self) {
+        let _ = self.0.unlock();
+    }
+}
+
+/// Open an already existing recovery file. This never creates storage.
+fn open_existing(path: &Path, writable: bool) -> Result<fs::File> {
+    let file = fs::OpenOptions::new()
+        .read(true)
+        .write(writable)
+        .create(false)
+        .open(path)
+        .map_err(|_| "normal log inspection requires existing recovery files")?;
+    if !file.metadata().is_ok_and(|metadata| metadata.is_file()) {
+        return Err("normal log inspection requires regular recovery files".into());
+    }
+    Ok(file)
+}
+
+/// A held exclusive lock conflicts with every other handle to the same file.
+/// A removed, recreated or replaced lock path therefore cannot pass as the held lock.
+fn lock_path_is_held(path: &Path) -> Result<()> {
+    let current = open_existing(path, true)?;
+    match current.try_lock() {
+        Err(fs::TryLockError::WouldBlock) => Ok(()),
+        Ok(()) => {
+            let _ = current.unlock();
+            Err("normal log inspection storage changed; state is unknown".into())
+        }
+        Err(fs::TryLockError::Error(_)) => {
+            Err("normal log inspection lock identity is unavailable".into())
+        }
+    }
+}
+
 /// Read metadata for this exact ordinary log only. Never append an intent,
 /// reserve a message, call HTTP or dispatch work. Returned booleans are observations,
 /// not a capability for a later send: normal delivery rechecks under the same lock.
 pub(super) fn inspect(ctx: &mut Context, args: &LogArgs) -> Result<Value> {
+    inspect_at(ctx, args, |_| Ok(()))
+}
+
+// The private callback makes storage transitions deterministic in tests; it is not a CLI hook.
+pub(super) fn inspect_at(
+    ctx: &mut Context,
+    args: &LogArgs,
+    mut at: impl FnMut(InspectStage) -> Result<()>,
+) -> Result<Value> {
     if args.notify || !args.attach.is_empty() || args.thread.is_none() {
         return Err("normal log inspection requires a silent text-only explicit target".into());
     }
     let (incoming, _) = prepare_log(ctx, args)?;
     let home = ctx.here.clone();
     ensure_storage(&home)?;
-    for name in [LEDGER, LOCK] {
-        if !fs::symlink_metadata(home.join(name)).is_ok_and(|m| m.is_file() && !m.file_type().is_symlink()) {
-            return Err("normal log inspection requires existing recovery files".into());
-        }
-    }
-    let _lock = ByteLock::acquire(&home.join(LOCK), Duration::ZERO)?;
-    let ledger = Ledger::load(&home)?;
+    let lock_path = home.join(LOCK);
+    let ledger_path = home.join(LEDGER);
+    at(InspectStage::BeforeOpen)?;
+    // Inspection must not create the lock or interpret a missing ledger as empty.
+    let lock_file = open_existing(&lock_path, true)?;
+    at(InspectStage::Opened)?;
+    lock_file
+        .try_lock()
+        .map_err(|_| "normal log inspection lock is busy or unavailable")?;
+    let _lock = InspectLock(lock_file);
+    at(InspectStage::Locked)?;
+    lock_path_is_held(&lock_path)?;
+    let bytes = read_bounded(open_existing(&ledger_path, false)?, LEDGER_BYTES)?;
+    let ledger = Ledger::decode(&bytes)?;
+    at(InspectStage::Loaded)?;
     let prior = ledger.request(&incoming.request_id);
     let bound_purpose = purpose_bound(&home, &incoming.request_id)?;
     let alias = prior.is_some_and(|p| p.request_id != incoming.request_id);
@@ -140,6 +204,10 @@ pub(super) fn inspect(ctx: &mut Context, args: &LogArgs) -> Result<Value> {
     };
     let effect_count = prior.map(|p| ledger.events.iter().filter(|event|
         matches!(event, Event::Pending { request_id, .. } if request_id == &p.request_id)).count()).unwrap_or(0);
+    lock_path_is_held(&lock_path)?;
+    if read_bounded(open_existing(&ledger_path, false)?, LEDGER_BYTES)? != bytes {
+        return Err("normal log inspection storage changed; state is unknown".into());
+    }
     Ok(json!({
         "domain":DOMAIN,"request_id":incoming.request_id,"delivery":"inspection_only","check_only":true,
         "ledger_written":false,"transport":"not_invoked_by_inspection","approval":"not_inferred",

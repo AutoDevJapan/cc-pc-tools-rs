@@ -1013,7 +1013,11 @@ impl Ledger {
             }
             Err(_) => return Err("recovery ledger cannot be read".into()),
         };
-        let ledger: Self = serde_json::from_slice(&bytes)
+        Self::decode(&bytes)
+    }
+
+    fn decode(bytes: &[u8]) -> Result<Self> {
+        let ledger: Self = serde_json::from_slice(bytes)
             .map_err(|_| "recovery ledger is malformed; never treated as empty")?;
         if ledger.domain != DOMAIN || ledger.version != 1 {
             return Err("recovery ledger domain/version differs".into());

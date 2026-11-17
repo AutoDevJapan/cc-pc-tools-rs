@@ -7,6 +7,7 @@ import (
     "errors"
     "os"
     "path/filepath"
+    "runtime"
     "syscall"
     "strings"
     "testing"
@@ -260,26 +261,83 @@ func TestDSRunnerNativeOwnedApplyRestoresExactNonInheritedDACL(t *testing.T){
     if raw,err:=os.ReadFile(paths[2]);err!=nil||string(raw)!=string(oldBytes){t.Fatal("backup changed")}
 }
 
+// Fixed facts about a descriptor: never its text, SIDs, ACEs or paths.
+type dsRunnerACLShapeFacts struct{valid,auto,protected bool;aces,inherited int}
+func dsRunnerACLShape(sddl string)dsRunnerACLShapeFacts{
+    _,_,flags,list,ok:=dsRunnerSDDLParts(sddl)
+    facts:=dsRunnerACLShapeFacts{valid:ok,auto:strings.Contains(flags,"AI"),protected:strings.Contains(flags,"P")}
+    for _,ace:=range strings.Split(strings.Trim(list,"()"),")("){
+        if ace==""{continue}
+        facts.aces++
+        if fields:=strings.Split(ace,";");len(fields)>1&&strings.Contains(fields[1],"ID"){facts.inherited++}
+    }
+    return facts
+}
+
+// On the hosted runner a new file carries inherited ACEs without the
+// automatic-inheritance control bit (observed: control 0x8004 with three
+// inherited ACEs). Replacing such a file changes its descriptor, which the
+// restoration tests above exercise with one setter call. This fixture asks the
+// OS inheritance engine to process the held file's own DACL. The bit is
+// observed afterwards, never set by the test, and the fixture fails instead of
+// skipping.
+func dsRunnerOwnedAutoInheritedFixture(t *testing.T,path string)string{
+    t.Helper()
+    f,err:=dsRunnerOpenMetadataAccess(path,false,true);if err!=nil{t.Fatal("auto-inherited fixture open",err)}
+    var dacl,descriptor uintptr
+    code,_,_:=updateGetSecurity.Call(f.Fd(),1,4,0,0,uintptr(unsafe.Pointer(&dacl)),0,uintptr(unsafe.Pointer(&descriptor)))
+    if code!=0||dacl==0||descriptor==0{_ = f.Close();t.Fatal("auto-inherited fixture DACL unavailable")}
+    status,_,_:=updateSetSecurity.Call(f.Fd(),1,4|0x20000000,0,0,dacl,0)
+    free,_,_:=updateLocalFree.Call(descriptor);closeErr:=f.Close()
+    if status!=0||free!=0||closeErr!=nil{t.Fatal("auto-inherited fixture setup failed")}
+    f,err=dsRunnerOpenMetadata(path,false);if err!=nil{t.Fatal(err)}
+    acl,err:=updateFileACL(f);closeErr=f.Close()
+    if err!=nil||closeErr!=nil{t.Fatal("auto-inherited fixture descriptor unavailable")}
+    facts:=dsRunnerACLShape(acl)
+    if !facts.valid||!facts.auto||facts.protected||facts.aces==0||facts.inherited!=facts.aces{t.Fatalf("OS inheritance did not produce an inherited-only auto-inherited DACL: %+v",facts)}
+    t.Logf("auto-inherited fixture facts: %+v",facts)
+    return acl
+}
+
+// The replacement API, not the product, decides what happens to a descriptor.
+// Observe it on throwaway files first, so that a fixture which Windows rewrites
+// on replacement fails here with fixed facts instead of inside the product.
+func TestDSRunnerReplaceFileKeepsEngineAutoInheritedDescriptor(t *testing.T){
+    root:=physicalSoftwareFixture(t)
+    current,stage:=filepath.Join(root,"observe-current.exe"),filepath.Join(root,"observe-stage.exe")
+    for _,path:=range []string{current,stage}{if err:=os.WriteFile(path,[]byte("owned bytes"),0600);err!=nil{t.Fatal(err)}}
+    before:=dsRunnerOwnedAutoInheritedFixture(t,current)
+    if staged:=dsRunnerOwnedAutoInheritedFixture(t,stage);staged!=before{t.Fatalf("one directory produced two engine descriptors: current=%+v stage=%+v",dsRunnerACLShape(before),dsRunnerACLShape(staged))}
+    target,err:=syscall.UTF16PtrFromString(current);if err!=nil{t.Fatal(err)}
+    replacement,err:=syscall.UTF16PtrFromString(stage);if err!=nil{t.Fatal(err)}
+    ok,_,callErr:=syscall.NewLazyDLL("kernel32.dll").NewProc("ReplaceFileW").Call(uintptr(unsafe.Pointer(target)),uintptr(unsafe.Pointer(replacement)),0,0,0,0);runtime.KeepAlive(target);runtime.KeepAlive(replacement)
+    if ok==0{t.Fatal("ReplaceFileW did not replace the throwaway file",callErr)}
+    f,err:=dsRunnerOpenMetadata(current,false);if err!=nil{t.Fatal(err)}
+    after,err:=updateFileACL(f);closeErr:=f.Close()
+    if err!=nil||closeErr!=nil{t.Fatal("descriptor after replacement unavailable")}
+    if after!=before{t.Fatalf("replacement rewrote the engine descriptor: before=%+v after=%+v",dsRunnerACLShape(before),dsRunnerACLShape(after))}
+    t.Logf("ReplaceFileW kept the engine descriptor: %+v",dsRunnerACLShape(after))
+}
+
 // If the descriptor already matches after replacement, no DACL write is needed.
-// The assertions fail if this fixture did not actually exercise that branch.
+// The fixture is the inheritance engine's own output, and the assertions fail if
+// this branch was not actually exercised: a skipped setter leaves the exact
+// descriptor in place and the setter counter at zero.
 func TestDSRunnerNativeOwnedApplySkipsExactACLSetter(t *testing.T){
     root:=physicalSoftwareFixture(t);paths:=[3]string{filepath.Join(root,"current.exe"),filepath.Join(root,"stage.exe"),filepath.Join(root,"before.exe")}
     oldBytes,newBytes:=[]byte("owned predecessor"),[]byte("owned successor")
     if err:=os.WriteFile(paths[0],oldBytes,0600);err!=nil{t.Fatal(err)}
-    // Windows assigns a default descriptor inherited from this real parent.
-    // Observe it before applying; do not synthesize an inherited control bit.
-    f,err:=dsRunnerOpenMetadata(paths[0],false);if err!=nil{t.Fatal(err)}
-    before,err:=updateFileACL(f);closeErr:=f.Close()
-    if err!=nil||closeErr!=nil{t.Fatal("inherited descriptor unavailable")}
-    _,_,flags,_,valid:=dsRunnerSDDLParts(before);if !valid||!strings.Contains(flags,"AI"){t.Fatal("default fixture did not inherit an automatic DACL")}
+    before:=dsRunnerOwnedAutoInheritedFixture(t,paths[0])
     ctx,cancel:=context.WithTimeout(context.Background(),10*time.Second);defer cancel();permit:=&dsRunnerWorkerPermit{ctx:ctx};permit.self=permit
     faults:=&dsRunnerACLTestFaults{}
     access:=dsRunnerMaintenanceAccess{acquire:func(context.Context)(*dsRunnerCandidate,error){return dsRunnerFixtureCandidate(newBytes),nil},open:func(ctx context.Context,p dsRunnerRepairPurpose)(dsRunnerTargetSession,error){session,err:=dsRunnerOpenNativeTargetAt(ctx,p,paths);if err!=nil{return session,err};n,ok:=session.(*dsRunnerNativeTarget);if !ok{return nil,errDSRunnerEvidence};n.faults=faults;return n,nil}}
     result:=executeDSRunnerMaintenanceFor(ctx,"apply",permit,access,digest(oldBytes),int64(len(oldBytes)))
-    if !result.Qualified||!result.UpdatePerformed||!result.InstalledVerified||result.CommitOutcome!=dsRunnerCommitConfirmed||faults.setterCalls!=0{t.Fatal("exact ACL control did not succeed without a setter",result.Reason)}
-    f,err=dsRunnerOpenMetadata(paths[0],false);if err!=nil{t.Fatal(err)};after,err:=updateFileACL(f);closeErr=f.Close()
-    if err!=nil||closeErr!=nil||after!=before{t.Fatal("exact ACL control changed the descriptor")}
+    if !result.Qualified||!result.UpdatePerformed||!result.InstalledVerified||result.CommitOutcome!=dsRunnerCommitConfirmed||faults.setterCalls!=0{t.Fatalf("exact ACL control did not succeed without a setter: qualified=%t performed=%t installed=%t setter_calls=%d reason=%v",result.Qualified,result.UpdatePerformed,result.InstalledVerified,faults.setterCalls,result.Reason)}
+    f,err:=dsRunnerOpenMetadata(paths[0],false);if err!=nil{t.Fatal(err)}
+    after,err:=updateFileACL(f);closeErr:=f.Close()
+    if err!=nil||closeErr!=nil||after!=before{t.Fatalf("exact ACL control changed the descriptor: before=%+v after=%+v",dsRunnerACLShape(before),dsRunnerACLShape(after))}
     if raw,err:=os.ReadFile(paths[0]);err!=nil||string(raw)!=string(newBytes){t.Fatal("candidate bytes not installed")}
+    t.Logf("exact ACL control skipped the setter: setter_calls=%d facts=%+v",faults.setterCalls,dsRunnerACLShape(after))
 }
 
 // Negative controls only remove permission to proceed after a real owned-file

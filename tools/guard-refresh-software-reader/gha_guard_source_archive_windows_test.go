@@ -11,6 +11,7 @@ import (
     "io"
     "net/http"
     "net/http/httptrace"
+    "net/url"
     "os"
     "strconv"
     "strings"
@@ -76,6 +77,105 @@ func TestGHAGuardPinnedSourceArchive(t *testing.T) {
     t.Run("wrong-record-blob",func(t *testing.T){bad:=append([]ghaGuardSourceRecord(nil),records...);bad[0].Blob=ghaGuardGitObjectID("blob",[]byte("wrong"));if ghaGuardValidatePinnedSourceArchive(context.Background(),valid,bad)==nil {t.Fatal("wrong Git blob accepted")}})
 }
 
+// Test-only authentication is confined to the fixed read-only source endpoints.
+// The codeload archive uses a separate unauthenticated transport.
+type ghaGuardArchiveCIAuth struct { base http.RoundTripper; token string }
+
+func (a *ghaGuardArchiveCIAuth) RoundTrip(req *http.Request) (*http.Response,error) {
+    if a==nil || a.base==nil || !ghaGuardCredentialBytesValid([]byte(a.token)) || req==nil || req.URL==nil || req.Method!=http.MethodGet || (req.Body!=nil && req.Body!=http.NoBody) {return nil,errGHAGuardUnqualified}
+    u:=req.URL
+    if u.Scheme!="https" || u.Host!="api.github.com" || u.User!=nil || u.Opaque!="" || u.Fragment!="" || u.RawPath!="" || u.ForceQuery || u.RawQuery!="" || (req.Host!="" && req.Host!="api.github.com") {return nil,errGHAGuardUnqualified}
+    seenHeaders:=map[string]bool{}
+    for name,values:=range req.Header {
+        key:=strings.ToLower(name)
+        if len(values)!=1 || seenHeaders[key] {return nil,errGHAGuardUnqualified}
+        seenHeaders[key]=true
+        switch key {
+        case "accept":
+            if values[0]!="application/vnd.github+json" {return nil,errGHAGuardUnqualified}
+        case "x-github-api-version":
+            if values[0]!="2022-11-28" {return nil,errGHAGuardUnqualified}
+        default:return nil,errGHAGuardUnqualified
+        }
+    }
+    const root="/repos/AutoDevJapan/cc-pc-tools-rs"
+    valid:=u.Path==root || u.Path==root+"/git/commits/"+ghaGuardSource
+    if strings.HasPrefix(u.Path,root+"/git/trees/") {valid=ghaGuardHex(strings.TrimPrefix(u.Path,root+"/git/trees/"),40)}
+    if !valid {return nil,errGHAGuardUnqualified}
+    if req.Header.Get("Accept")!="application/vnd.github+json" || req.Header.Get("X-GitHub-Api-Version")!="2022-11-28" {return nil,errGHAGuardUnqualified}
+    next:=req.Clone(req.Context());next.Header=req.Header.Clone();if next.Header==nil {next.Header=make(http.Header)}
+    next.Header.Set("Authorization","Bearer "+a.token)
+    response,err:=a.base.RoundTrip(next)
+    if response!=nil {response.Request=req}
+    return response,err
+}
+
+// Fixed bounded fields only; never log remote text, URL, token, or error body.
+func ghaGuardArchiveRateRemaining(h http.Header) string {
+    values:=h.Values("X-RateLimit-Remaining");if len(values)!=1{return "unknown"}
+    s:=values[0];if len(s)==0 || len(s)>9{return "unknown"}
+    allZero:=true;for _,r:=range s {if r<'0'||r>'9' {return "unknown"};if r!='0' {allZero=false}}
+    if allZero {return "zero"};return "nonzero"
+}
+
+func TestGHAGuardArchiveCIAuthBoundary(t *testing.T) {
+    const secret="synthetic-token"
+    requests:=[]string{ghaGuardGitAPI,ghaGuardGitAPI+"/git/commits/"+ghaGuardSource,ghaGuardGitAPI+"/git/trees/"+strings.Repeat("a",40)}
+    calls:=0
+    base:=ghaGuardTreeTestTransport(func(r *http.Request)(*http.Response,error){
+        calls++
+        if r.Header.Get("Authorization")!="Bearer "+secret {t.Fatal("expected scoped authorization")}
+        return &http.Response{StatusCode:http.StatusOK,Header:http.Header{},Body:io.NopCloser(strings.NewReader("{}")),Request:r},nil
+    })
+    tr:=&ghaGuardArchiveCIAuth{base:base,token:secret}
+    for _,raw:=range requests {
+        req,err:=http.NewRequest(http.MethodGet,raw,nil);if err!=nil {t.Fatal(err)}
+        req.Header.Set("Accept","application/vnd.github+json");req.Header.Set("X-GitHub-Api-Version","2022-11-28")
+        resp,err:=tr.RoundTrip(req);if err!=nil||resp==nil {t.Fatal("eligible request failed")}
+        if resp.Request.Header.Get("Authorization")!="" {t.Fatal("response retained authorization")}
+        if resp.Body.Close()!=nil {t.Fatal("body close failed")}
+    }
+    for _,raw:=range []string{"https://codeload.github.com/AutoDevJapan/cc-pc-tools-rs/tar.gz/"+ghaGuardSource,ghaGuardGitAPI+"/git/trees/"+strings.Repeat("g",40),ghaGuardGitAPI+"/git/blobs/"+strings.Repeat("a",40),ghaGuardGitAPI+"?x=1",ghaGuardGitAPI+"/git/commits/"+strings.Repeat("a",40),"http://api.github.com/repos/AutoDevJapan/cc-pc-tools-rs", "https://api.github.com:443/repos/AutoDevJapan/cc-pc-tools-rs", "https://user@api.github.com/repos/AutoDevJapan/cc-pc-tools-rs",ghaGuardGitAPI+"#fragment","https://example.test/",ghaGuardGitAPI+"/actions/runs/1"} {
+        req,err:=http.NewRequest(http.MethodGet,raw,nil);if err!=nil {t.Fatal(err)}
+        req.Header.Set("Accept","application/vnd.github+json");req.Header.Set("X-GitHub-Api-Version","2022-11-28")
+        if resp,err:=tr.RoundTrip(req);err==nil||resp!=nil {t.Fatal("unexpected destination accepted")}
+    }
+    for _,name:=range []string{"Authorization","Cookie","Proxy-Authorization","Cookie2","Host","X-Forwarded-Host","X-HTTP-Method-Override"} {
+        req,_:=http.NewRequest(http.MethodGet,ghaGuardGitAPI,nil);req.Header.Set("Accept","application/vnd.github+json");req.Header.Set("X-GitHub-Api-Version","2022-11-28");req.Header.Set(name,"synthetic")
+        if resp,err:=tr.RoundTrip(req);err==nil||resp!=nil {t.Fatal("extra header accepted")}
+    }
+    duplicateHeader,_:=http.NewRequest(http.MethodGet,ghaGuardGitAPI,nil);duplicateHeader.Header.Add("Accept","application/vnd.github+json");duplicateHeader.Header.Add("Accept","application/vnd.github+json");duplicateHeader.Header.Set("X-GitHub-Api-Version","2022-11-28")
+    if resp,err:=tr.RoundTrip(duplicateHeader);err==nil||resp!=nil {t.Fatal("duplicate header accepted")}
+    for _,name:=range []string{"accept","x-github-api-version"} {
+        req,_:=http.NewRequest(http.MethodGet,ghaGuardGitAPI,nil);req.Header.Set("Accept","application/vnd.github+json");req.Header.Set("X-GitHub-Api-Version","2022-11-28")
+        req.Header[name]=[]string{req.Header.Get(name)}
+        if resp,err:=tr.RoundTrip(req);err==nil||resp!=nil {t.Fatal("case-folded duplicate header accepted")}
+    }
+    wrongHost,_:=http.NewRequest(http.MethodGet,ghaGuardGitAPI,nil);wrongHost.Header.Set("Accept","application/vnd.github+json");wrongHost.Header.Set("X-GitHub-Api-Version","2022-11-28");wrongHost.Host="example.test"
+    if resp,err:=tr.RoundTrip(wrongHost);err==nil||resp!=nil {t.Fatal("host override accepted")}
+    withBody,_:=http.NewRequest(http.MethodGet,ghaGuardGitAPI,strings.NewReader("x"));withBody.Header.Set("Accept","application/vnd.github+json");withBody.Header.Set("X-GitHub-Api-Version","2022-11-28")
+    if resp,err:=tr.RoundTrip(withBody);err==nil||resp!=nil {t.Fatal("body accepted")}
+    post,_:=http.NewRequest(http.MethodPost,ghaGuardGitAPI,nil);post.Header.Set("Accept","application/vnd.github+json");post.Header.Set("X-GitHub-Api-Version","2022-11-28");if _,err:=tr.RoundTrip(post);err==nil {t.Fatal("write method accepted")}
+    forged,_:=http.NewRequest(http.MethodGet,ghaGuardGitAPI,nil);forged.Header.Set("Accept","application/vnd.github+json");forged.Header.Set("X-GitHub-Api-Version","2022-11-28");forged.Header.Set("Authorization","Bearer another");if _,err:=tr.RoundTrip(forged);err==nil {t.Fatal("caller authorization accepted")}
+    noToken:=&ghaGuardArchiveCIAuth{base:base};valid,_:=http.NewRequest(http.MethodGet,ghaGuardGitAPI,nil);valid.Header.Set("Accept","application/vnd.github+json");valid.Header.Set("X-GitHub-Api-Version","2022-11-28");if _,err:=noToken.RoundTrip(valid);err==nil {t.Fatal("missing token accepted")}
+    dirty,_:=url.Parse(ghaGuardGitAPI);dirty.ForceQuery=true;dirtyHeader:=make(http.Header);dirtyHeader.Set("Accept","application/vnd.github+json");dirtyHeader.Set("X-GitHub-Api-Version","2022-11-28");if _,err:=tr.RoundTrip(&http.Request{Method:http.MethodGet,URL:dirty,Header:dirtyHeader});err==nil {t.Fatal("empty query accepted")}
+    if calls!=len(requests) {t.Fatal("invalid request reached transport")}
+    client:=&http.Client{Transport:tr,CheckRedirect:func(*http.Request,[]*http.Request) error{return http.ErrUseLastResponse}}
+    redirectBase:=ghaGuardTreeTestTransport(func(r *http.Request)(*http.Response,error){
+        calls++;return &http.Response{StatusCode:http.StatusFound,Header:http.Header{"Location":[]string{"https://codeload.github.com/should-not-receive-token"}},Body:io.NopCloser(strings.NewReader("")),Request:r},nil
+    })
+    tr.base=redirectBase
+    redirectReq,_:=http.NewRequest(http.MethodGet,ghaGuardGitAPI,nil);redirectReq.Header.Set("Accept","application/vnd.github+json");redirectReq.Header.Set("X-GitHub-Api-Version","2022-11-28")
+    response,err:=client.Do(redirectReq);if err!=nil||response==nil||response.StatusCode!=http.StatusFound||calls!=len(requests)+1 {t.Fatal("redirect was followed or hidden")}
+    if response.Body.Close()!=nil {t.Fatal("redirect close failed")}
+    tr.base=base
+    for _,tc:=range []struct{value,want string}{{"0","zero"},{"000","zero"},{"12","nonzero"},{"","unknown"},{"1\nsecret","unknown"},{"1234567890","unknown"}} {
+        h:=http.Header{};if tc.value!="" {h.Set("X-RateLimit-Remaining",tc.value)}
+        if got:=ghaGuardArchiveRateRemaining(h);got!=tc.want {t.Fatal("unexpected rate category")}
+    }
+    duplicate:=http.Header{};duplicate.Add("X-RateLimit-Remaining","0");duplicate.Add("X-RateLimit-Remaining","1");if ghaGuardArchiveRateRemaining(duplicate)!="unknown" {t.Fatal("ambiguous rate category")}
+}
+
 // This positive uses the production public fetch and fixed source fixture.
 // It proves archive input equivalence, not issuer or installed authority.
 func TestGHAGuardOfficialSourceArchiveReal(t *testing.T) {
@@ -86,20 +186,27 @@ func TestGHAGuardOfficialSourceArchiveReal(t *testing.T) {
     if len(records)!=249 {t.Fatal("wrong fixed input count")}
     ctx,cancel:=context.WithTimeout(context.Background(),110*time.Second);defer cancel()
     tr:=&http.Transport{Proxy:nil};defer tr.CloseIdleConnections()
+    token:=os.Getenv("GH_TOKEN");if token=="" {t.Fatal("Actions source read token unavailable")}
+    auth:=&ghaGuardArchiveCIAuth{base:tr,token:token}
     var apiRequests,apiNon200,apiTransportErrors,apiStatus atomic.Int64
+    var apiRate atomic.Int64
+    var apiFirstFailure atomic.Bool
     var archiveDial atomic.Bool
     trace:=&httptrace.ClientTrace{GetConn:func(hostPort string){if hostPort=="codeload.github.com:443" {archiveDial.Store(true)}}}
     ctx=httptrace.WithClientTrace(ctx,trace)
     observed:=ghaGuardTreeTestTransport(func(req *http.Request)(*http.Response,error){
         apiRequests.Add(1)
-        response,err:=tr.RoundTrip(req)
+        response,err:=auth.RoundTrip(req)
         if err!=nil {apiTransportErrors.Add(1)}
-        if response!=nil && response.StatusCode!=http.StatusOK {apiNon200.Add(1);apiStatus.Store(int64(response.StatusCode))}
+        if response!=nil && response.StatusCode!=http.StatusOK {
+            apiNon200.Add(1)
+            if apiFirstFailure.CompareAndSwap(false,true) {apiStatus.Store(int64(response.StatusCode));switch ghaGuardArchiveRateRemaining(response.Header) {case "zero":apiRate.Store(1);case "nonzero":apiRate.Store(2);default:apiRate.Store(3)}}
+        }
         return response,err
     })
     client:=&http.Client{Transport:observed,Timeout:30*time.Second,CheckRedirect:func(*http.Request,[]*http.Request)error{return http.ErrUseLastResponse}}
     if err:=ghaGuardVerifyGitSnapshotViaPublicArchive(ctx,client,ghaGuardSource,ghaGuardSourceTree,records);err!=nil {
-        if apiNon200.Load()>0 {t.Fatalf("official root or archive inputs mismatch (api_requests=%d api_non_200=%d api_status=%d api_transport_errors=%d archive_dial=%t)",apiRequests.Load(),apiNon200.Load(),apiStatus.Load(),apiTransportErrors.Load(),archiveDial.Load())}
+        if apiNon200.Load()>0 {rate:="unknown";if apiRate.Load()==1 {rate="zero"} else if apiRate.Load()==2 {rate="nonzero"};t.Fatalf("official root or archive inputs mismatch (api_requests=%d api_non_200=%d api_first_failure_status=%d api_first_failure_rate_remaining=%s api_transport_errors=%d archive_dial=%t)",apiRequests.Load(),apiNon200.Load(),apiStatus.Load(),rate,apiTransportErrors.Load(),archiveDial.Load())}
         t.Fatalf("official root or archive inputs mismatch (api_requests=%d api_non_200=0 api_transport_errors=%d archive_dial=%t)",apiRequests.Load(),apiTransportErrors.Load(),archiveDial.Load())
     }
 }

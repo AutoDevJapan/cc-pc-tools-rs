@@ -255,6 +255,7 @@ jobs:
         timeout-minutes: 5
         env:
           GUARD_GHA_ACTUAL_SIGNED_SOURCE: '1'
+          GH_TOKEN: ${{ github.token }}
         run: |
           $lines = @(& go test -count=1 -v -timeout 3m -run '^TestGHAGuardOfficialSourceArchiveReal$' . 2>&1)
           $testExit = $LASTEXITCODE

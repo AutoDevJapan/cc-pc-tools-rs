@@ -31,18 +31,25 @@ type ownerRefreshFailure struct {
 func ownerRefreshFailureName(repository string) string {
 	return "failed-" + hashBytes([]byte(strings.ToLower(repository)+"\n"+hashBytes(ownerDepartmentCatalog))) + ".dpapi"
 }
-func ownerRefreshCooling(home, repository string, now time.Time) bool {
+func ownerRefreshCooldownStart(home, repository string, now time.Time) (int64, bool) {
 	path := filepath.Join(home, ownerRefreshFailureName(repository))
 	if !currentPlain(path, false) {
-		return false
+		return 0, false
 	}
 	sealed, err := readBounded(path, 8192)
 	if err != nil {
-		return false
+		return 0, false
 	}
 	plain, ok := ownerIdentityDPAPI(sealed, false)
 	var f ownerRefreshFailure
-	return ok && json.Unmarshal(plain, &f) == nil && f.Domain == "owner-source-refresh-failure-v1" && strings.EqualFold(f.Repository, repository) && f.Catalog == hashBytes(ownerDepartmentCatalog) && f.Failed <= now.Unix() && now.Unix()-f.Failed < 300
+	if !ok || json.Unmarshal(plain, &f) != nil || f.Domain != "owner-source-refresh-failure-v1" || !strings.EqualFold(f.Repository, repository) || f.Catalog != hashBytes(ownerDepartmentCatalog) || f.Failed > now.Unix() || now.Unix()-f.Failed >= 300 {
+		return 0, false
+	}
+	return f.Failed, true
+}
+func ownerRefreshCooling(home, repository string, now time.Time) bool {
+	_, cooling := ownerRefreshCooldownStart(home, repository, now)
+	return cooling
 }
 func ownerReadRefreshClaim(home string) (ownerRefreshClaim, bool) {
 	var c ownerRefreshClaim
@@ -118,6 +125,7 @@ func ownerReapRefreshClaim(home string, now time.Time) bool {
 	// A vanished helper must not restart every 20 seconds. This is request
 	// throttling only: neither a stale claim nor its timestamp grants access.
 	if _, ok := ownerOriginRepository("https://github.com/" + claim.Repository); ok && claim.Catalog == hashBytes(ownerDepartmentCatalog) {
+		ownerRecordRefreshCause(home, claim.Repository, now.Unix(), ownerRefreshKindHelperUnfinished, "", -1, 0)
 		_ = ownerWriteSealed(home, ownerRefreshFailureName(claim.Repository), ownerRefreshFailure{"owner-source-refresh-failure-v1", claim.Repository, claim.Catalog, now.Unix()})
 	}
 	return true
@@ -169,7 +177,9 @@ func ownerRequestIdentityRefresh(path, repository string) {
 	cmd := exec.Command(executable, "--refresh-owner-source", path, "--refresh-request", c.ID)
 	cmd.SysProcAttr = &syscall.SysProcAttr{HideWindow: true, CreationFlags: 0x08000000}
 	if cmd.Start() != nil {
-		_ = ownerWriteSealed(ownerIdentityHome, ownerRefreshFailureName(repository), ownerRefreshFailure{"owner-source-refresh-failure-v1", repository, c.Catalog, time.Now().Unix()})
+		failed := time.Now().Unix()
+		ownerRecordRefreshCause(ownerIdentityHome, repository, failed, ownerRefreshKindHelperStartFailed, "", -1, 0)
+		_ = ownerWriteSealed(ownerIdentityHome, ownerRefreshFailureName(repository), ownerRefreshFailure{"owner-source-refresh-failure-v1", repository, c.Catalog, failed})
 		_ = ownerDropRefreshClaim(ownerIdentityHome, c.ID, time.Now())
 		return
 	}
@@ -223,6 +233,7 @@ func ownerRefreshIdentityRequestContextWith(parent context.Context, path, reques
 		defer unlock()
 		if ownerRefreshCooling(home, repo, now()) {
 			detail.cooling = true
+			detail.cooldown = ownerRefreshCooldownCause(home, repo, now())
 			id, name, owner, ok := ownerCachedIdentityAt(ctx, repo, home, now, func(context.Context, string) (int64, string, string, bool) { return 0, "", "", false })
 			identityReady = identityReady || ok
 			identityOK = ok
@@ -237,7 +248,9 @@ func ownerRefreshIdentityRequestContextWith(parent context.Context, path, reques
 		identityReady = identityReady || ok
 		identityOK = ok
 		if !ok && attempted {
-			_ = ownerWriteSealed(home, ownerRefreshFailureName(repo), ownerRefreshFailure{"owner-source-refresh-failure-v1", repo, hashBytes(ownerDepartmentCatalog), now().Unix()})
+			failed := now()
+			ownerRecordRefreshCause(home, repo, failed.Unix(), ownerRefreshKindFetchFailed, ownerRefreshProject(ctx, detail, false, failed).Stage, ownerRefreshExit(detail), detail.http)
+			_ = ownerWriteSealed(home, ownerRefreshFailureName(repo), ownerRefreshFailure{"owner-source-refresh-failure-v1", repo, hashBytes(ownerDepartmentCatalog), failed.Unix()})
 		}
 		return id, name, owner, ok
 	}, plain: currentPlain, denied: legacyMatch, membership: ownerDepartmentMembership}

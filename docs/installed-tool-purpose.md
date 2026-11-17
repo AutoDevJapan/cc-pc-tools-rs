@@ -58,6 +58,12 @@ change pins the new release. Proxy paths receive no classification grant; the
 closed same-object inventory below only supports verification of canonical
 `rustup.exe`.
 
+The per-user rustup row qualifies only while the guard runs as the account that
+owns that profile, because its installation context is read from that account's
+current-user hive and its token SID is the trusted user; under any other
+account, such as a service or a broker, the origin or owner check fails closed
+and the row stays unknown.
+
 Changing a version or expected hash requires a reviewed source change. There is
 no caller-supplied path, publisher, receipt, digest, JSON plan or general alias
 exception. The existing uninstall registration must also report the exact
@@ -142,6 +148,11 @@ prevents a clear result. The two-second context bounds controller loops but
 cannot forcibly interrupt a synchronous Windows kernel call. Returning clear
 does not keep handles across a later caller's process launch and does not claim
 an all-time filesystem transaction.
+
+For the per-user rustup row a clear result attests the held bytes at the time of
+the check only: any process of the profile owner account can replace the
+executable or the user-owned directories above it, so the descriptor rules give
+no later-integrity argument there as they do for the machine-installed rows.
 
 Registry, hardlink-search, token and file/parent-handle closes are accounted for
 separately from the operation which used them. Internal wrapped errors retain

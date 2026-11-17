@@ -49,3 +49,32 @@ func TestDSRunnerCandidateSuccessAndCloseAreDistinct(t *testing.T){
     if c.waitClosed(context.Background())==nil{t.Fatal("borrow completion was treated as close")};if c.Close()!=nil||c.Close()!=nil||c.waitClosed(context.Background())!=nil{t.Fatal("idempotent close")}
 }
 func TestDSRunnerGitBlobUsesGitObjectHeader(t *testing.T){if dsRunnerGitBlob([]byte("test\n"))!="9daeafb9864cf43055ae93beb0afd6c7d144bfa4"{t.Fatal("Git blob object header is not exact")}}
+func TestDSRunnerRetiredCaptureIsNeverAdmittedAgain(t *testing.T){
+    if len(dsRunnerRetiredCaptures)!=dsRunnerCaptureGeneration-1{t.Fatal("an earlier generation is missing from the retired record")}
+    admitted:=dsRunnerAdmittedCapture
+    if !dsRunnerPinValid(admitted)||dsRunnerPinRetired(admitted){t.Fatal("the admitted generation is not a usable tuple")}
+    for index,retired:=range dsRunnerRetiredCaptures{
+        if retired.Generation!=index+1{t.Fatal("retired generations are not numbered in order")}
+        if _,err:=time.Parse(time.RFC3339,retired.ExpiredAt);err!=nil{t.Fatal("the retirement time is not recorded")}
+        if !dsRunnerPinFormed(retired.Pin){t.Fatal("the retired tuple is incomplete, so rejecting it would prove nothing")}
+        if !dsRunnerPinRetired(retired.Pin)||dsRunnerPinValid(retired.Pin){t.Fatal("a retired capture became valid again")}
+        reuse:=map[string]func(*dsRunnerCapturePin){
+            "run":func(p *dsRunnerCapturePin){p.RunID=retired.Pin.RunID},
+            "job":func(p *dsRunnerCapturePin){p.JobID=retired.Pin.JobID},
+            "check-run":func(p *dsRunnerCapturePin){p.CheckRunID=retired.Pin.CheckRunID},
+            "artifact":func(p *dsRunnerCapturePin){p.ArtifactID=retired.Pin.ArtifactID},
+            "archive":func(p *dsRunnerCapturePin){p.ArchiveSHA=retired.Pin.ArchiveSHA},
+            "attestation":func(p *dsRunnerCapturePin){p.AttestationID=retired.Pin.AttestationID},
+        }
+        for name,apply:=range reuse{t.Run(name,func(t *testing.T){
+            mixed:=admitted;apply(&mixed)
+            if mixed==admitted{t.Fatal("the mixed tuple was not changed")}
+            if !dsRunnerPinFormed(mixed){t.Fatal("the mixed tuple is incomplete, so retirement did not reject it")}
+            if dsRunnerPinValid(mixed){t.Fatal("a tuple reusing one retired identity was accepted")}
+        })}
+        t.Run("output-digest-alone",func(t *testing.T){
+            same:=admitted;same.OutputSHA=retired.Pin.OutputSHA
+            if !dsRunnerPinValid(same){t.Fatal("sharing only the retired output digest retired a new capture")}
+        })
+    }
+}

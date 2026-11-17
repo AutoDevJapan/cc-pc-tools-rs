@@ -249,7 +249,7 @@ jobs:
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
           go build -trimpath .
           exit $LASTEXITCODE
-      - name: Verify the first formal Task runner artifact while retained
+      - name: Verify the second formal Task runner artifact while retained
         if: runner.environment == 'github-hosted'
         working-directory: tools/guard-refresh-software-reader
         shell: pwsh
@@ -258,7 +258,7 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           $ErrorActionPreference = 'Stop'
-          $expiry = [DateTimeOffset]::Parse('2026-11-17T00:12:39Z')
+          $expiry = [DateTimeOffset]::Parse('2026-11-18T03:16:58Z')
           if (($expiry - [DateTimeOffset]::UtcNow) -lt [TimeSpan]::FromMinutes(10)) {
             Write-Output 'DS_RUNNER_H1_NOT_EXECUTED=retention_window'
             Write-Output 'The actual H1 acceptance did not run, so this step fails instead of reporting a pass.'

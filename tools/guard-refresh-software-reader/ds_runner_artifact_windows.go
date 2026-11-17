@@ -27,30 +27,64 @@ const dsRunnerModule = "github.com/AutoDevJapan/cc-pc-tools-rs/unattended-runner
 var errDSRunnerEvidence = errors.New("ds_runner_capture_unqualified")
 var errDSRunnerCleanup = errors.New("ds_runner_cleanup_failed")
 
-// Expected first formal capture bytes, not an issuer or an installed grant.
+// Capture generations. A generation is one formal capture of the fixed runner source.
+// Its hosted artifact has a fixed retention, so a generation is admitted for a limited time.
+// Generation 1 expired at 2026-11-17T00:12:39Z. It is retired: its tuple stays below as a
+// record only, and every consumer rejects it. Generation 2 is the capture admitted now;
+// the next capture becomes generation 3.
+// These are expected capture bytes, not an issuer or an installed grant.
 // The authenticated/cryptographic constructor still verifies all material.
 // No CLI/JSON/env can replace this tuple or select another receipt.
+const dsRunnerCaptureGeneration = 2
 type dsRunnerCapturePin struct {
     Producer string
     WorkflowID, RunID, JobID, CheckRunID, ArtifactID int64
     Attempt int
     ArchiveSHA, OutputSHA, CaptureSHA, ProofSHA, BundleSHA, AttestationID string
 }
-var dsRunnerAdmittedCapture = dsRunnerCapturePin{
-    Producer:"1d5c06f36e63f723ed0ad099efbbeff8f27b2b28",
-    WorkflowID:419451709,RunID:43778902807,JobID:133011394642,CheckRunID:133011394642,ArtifactID:14187089175,Attempt:1,
-    ArchiveSHA:"f831289951ee48c5c98fe1d7559d1c879bb2b0e6e6295bfb786890449e069a8d",
-    OutputSHA:"3b64239e3c154187a1f81e2afbff70ce6ca041d7b54532d3f09a81f3983fad95",
-    CaptureSHA:"7c0f585c3b5b3482e960914363d2407f23792cbfbe035b5be95a074ed3d841ed",
-    ProofSHA:"550176dcbf25f5b407e1bf0b05068350fc25feba2ac1acdc734ae91fc0c5f17a",
-    BundleSHA:"5192d66e050efdbf33078587b91fd69a3f07868ef8d63fc5cd8d77ff7d63e5f3",AttestationID:"67916323",
+type dsRunnerRetiredCapture struct {
+    Generation int
+    ExpiredAt string
+    Pin dsRunnerCapturePin
 }
-func dsRunnerPinValid(p dsRunnerCapturePin) bool {
+var dsRunnerRetiredCaptures = []dsRunnerRetiredCapture{
+    {Generation:1,ExpiredAt:"2026-11-17T00:12:39Z",Pin:dsRunnerCapturePin{
+        Producer:"1d5c06f36e63f723ed0ad099efbbeff8f27b2b28",
+        WorkflowID:419451709,RunID:43778902807,JobID:133011394642,CheckRunID:133011394642,ArtifactID:14187089175,Attempt:1,
+        ArchiveSHA:"f831289951ee48c5c98fe1d7559d1c879bb2b0e6e6295bfb786890449e069a8d",
+        OutputSHA:"3b64239e3c154187a1f81e2afbff70ce6ca041d7b54532d3f09a81f3983fad95",
+        CaptureSHA:"7c0f585c3b5b3482e960914363d2407f23792cbfbe035b5be95a074ed3d841ed",
+        ProofSHA:"550176dcbf25f5b407e1bf0b05068350fc25feba2ac1acdc734ae91fc0c5f17a",
+        BundleSHA:"5192d66e050efdbf33078587b91fd69a3f07868ef8d63fc5cd8d77ff7d63e5f3",AttestationID:"67916323",
+    }},
+}
+var dsRunnerAdmittedCapture = dsRunnerCapturePin{
+    Producer:"800f4c82d68394c1d844a35ad3c1c49133c7bbe8",
+    WorkflowID:419451709,RunID:44008886976,JobID:133790798206,CheckRunID:133790798206,ArtifactID:14296275534,Attempt:1,
+    ArchiveSHA:"9a075932fd9197157bc0bede94704a93b0ac902dfbf596e7d81b4d14c2a477df",
+    OutputSHA:"3b64239e3c154187a1f81e2afbff70ce6ca041d7b54532d3f09a81f3983fad95",
+    CaptureSHA:"ad88a46f131a01f50671fa11100b784f63425f1b2ccbb02020ae4f9187a8647c",
+    ProofSHA:"8b45c02298028a114876d34c2ef6d1f33f578dbead3f2cfa272d3ad1c7cb8a4c",
+    BundleSHA:"38470f1a09aa3f33466554e6ae42c8a18eddbb79b3b01739187c472de50bfe64",AttestationID:"68439001",
+}
+// A pin is retired when it reuses any run-specific identity of a retired capture, even if its
+// other fields were changed. The output digest is not compared: generation 2 built the same
+// executable as generation 1 from the same fixed source, so a new capture may legitimately
+// carry a retired output digest.
+func dsRunnerPinRetired(p dsRunnerCapturePin) bool {
+    for _,r:=range dsRunnerRetiredCaptures{
+        q:=r.Pin
+        if p.RunID==q.RunID||p.JobID==q.JobID||p.CheckRunID==q.CheckRunID||p.ArtifactID==q.ArtifactID||p.ArchiveSHA==q.ArchiveSHA||p.AttestationID==q.AttestationID{return true}
+    }
+    return false
+}
+func dsRunnerPinFormed(p dsRunnerCapturePin) bool {
     if !ghaGuardHex(p.Producer,40)||p.WorkflowID<1||p.RunID<1||p.JobID<1||p.CheckRunID<1||p.ArtifactID<1||p.Attempt!=1||p.AttestationID==""||len(p.AttestationID)>128{return false}
     for _,v:=range []string{p.ArchiveSHA,p.OutputSHA,p.CaptureSHA,p.ProofSHA,p.BundleSHA}{if !ghaGuardHex(v,64){return false}}
     for _,r:=range p.AttestationID{if !(r>='0'&&r<='9'||r>='A'&&r<='Z'||r>='a'&&r<='z'||r=='_'||r=='-'){return false}}
     return true
 }
+func dsRunnerPinValid(p dsRunnerCapturePin) bool {return dsRunnerPinFormed(p)&&!dsRunnerPinRetired(p)}
 
 type dsRunnerManifest struct {
     Domain string `json:"domain"`

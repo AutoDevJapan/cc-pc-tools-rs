@@ -208,12 +208,37 @@ func (c *askStrictJobCollector) closeAll() bool {
     return ok
 }
 
+// Fixed, bounded pipe collection for ordinary worker results. Both streams
+// must reach EOF; a non-zero process exit cannot mask a copier error.
+type askResultStream struct {
+    output askGitOutput
+    eof, readFailed, overflow, drained bool
+}
+func newAskResultStream() *askResultStream { return &askResultStream{output:askGitOutput{limit:65536}} }
+func (s *askResultStream) Write(p []byte)(int,error){
+    n,err:=s.output.Write(p)
+    if err!=nil||n!=len(p){s.overflow=true;return n,err}
+    return n,nil
+}
+func (s *askResultStream) ReadFrom(r io.Reader)(total int64,err error){
+    defer func(){s.drained=true}()
+    var scratch [32768]byte;defer clear(scratch[:])
+    for {
+        n,readErr:=r.Read(scratch[:])
+        if n>0 {written,writeErr:=s.Write(scratch[:n]);total+=int64(written);if writeErr!=nil{return total,writeErr};if written!=n{s.overflow=true;return total,io.ErrShortWrite}}
+        if readErr==io.EOF{s.eof=true;return total,nil}
+        if readErr!=nil{s.readFailed=true;return total,readErr}
+    }
+}
+func (s *askResultStream) complete()bool{return s!=nil&&s.drained&&s.eof&&!s.readFailed&&!s.overflow}
+
 type askChildResult struct {
 	Raw                             []byte
 	Diagnostic                      *compilerDiagnostic
 	Exit                            int
 	TimedOut, Reaped                bool
 	Started, Assigned, WaitVerified bool
+	ResultStdoutComplete, ResultStderrComplete bool
 	Capture                         *askChildCaptureResult
 	CollectionReason                string
 	CollectionObserved, CollectionTotal uint32
@@ -229,6 +254,8 @@ type askChildResult struct {
 func askOwnedChild(ctx context.Context, executable string, args ...string) (result askChildResult) {
 	return askOwnedChildWithHandshake(ctx, executable, nil, args...)
 }
+
+type askResultCompleteKey struct{}
 
 type askChildWorkingDirectory struct{}
 type askChildEnvironment struct{}
@@ -482,6 +509,8 @@ func askOwnedChildWithHandshake(ctx context.Context, executable string, onReady 
 	errOut := askGitOutput{limit: 65536}
 	cmd.Stdout = &out
 	cmd.Stderr = &errOut
+	resultOut,resultErr := newAskResultStream(),newAskResultStream()
+	completeResult, _ := ctx.Value(askResultCompleteKey{}).(bool)
 	compilerMode, _ := ctx.Value(compilerDiagnosticContext{}).(bool)
 	compilerMode = compilerMode && onReady == nil
 	if hasCapture {
@@ -528,6 +557,7 @@ func askOwnedChildWithHandshake(ctx context.Context, executable string, onReady 
 		}
 		defer input.Close()
 	}
+	if completeResult && !compilerMode && !hasCapture && onReady == nil { cmd.Stdout,cmd.Stderr=resultOut,resultErr }
 	if cmd.Start() != nil {
 		return
 	}
@@ -727,7 +757,13 @@ loop:
 	if compilerMode && assigned && result.WaitVerified && result.Reaped && !result.TimedOut && result.Exit != 0 {
 		result.Diagnostic = compilerCause(compilerOut.data[:compilerOut.n], compilerErr.data[:compilerErr.n], compilerOut.truncated || compilerErr.truncated)
 	}
-	if !compilerMode && !hasCapture && assigned && result.WaitVerified && result.Reaped && !result.TimedOut && (waitErr == nil || result.Exit == 1) && errOut.Len() == 0 {
+	if completeResult && !compilerMode && !hasCapture && ready==nil {
+		result.ResultStdoutComplete,result.ResultStderrComplete=resultOut.complete(),resultErr.complete()
+		if assigned&&result.WaitVerified&&result.Reaped&&!result.TimedOut&&(waitErr==nil||result.Exit==1)&&result.ResultStdoutComplete&&result.ResultStderrComplete&&resultErr.output.Len()==0 {
+			result.Raw=append([]byte(nil),resultOut.output.Bytes()...)
+		}
+	}
+	if !compilerMode && !hasCapture && (!completeResult||ready!=nil) && assigned && result.WaitVerified && result.Reaped && !result.TimedOut && (waitErr == nil || result.Exit == 1) && errOut.Len() == 0 {
 		if ready != nil {
 			out.Buffer = ready.Buffer
 			if out.Len() == 0 && result.Exit != 0 {
@@ -736,6 +772,8 @@ loop:
 		}
 		result.Raw = append([]byte(nil), out.Bytes()...)
 	}
+	clear(resultOut.output.Bytes())
+	clear(resultErr.output.Bytes())
 	clear(out.Bytes())
 	if ready != nil {
 		clear(ready.first)

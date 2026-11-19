@@ -41,8 +41,9 @@ lookup or expose paths, repository names or error text.
 
 `scrub391 --refresh-owner-source <absolute-path> --diagnostic` reports the stage
 `cooldown_no_valid_identity`, without a network lookup, while a recent failed or
-unfinished refresh keeps the repository in its 300 second cooldown. When a cause
-is known, that output also carries a `cooldown` object with fixed fields only:
+unfinished refresh keeps the repository in its 300 second cooldown. While the
+cooldown applies, that output also carries a `cooldown` object with fixed fields
+only, unless the omission rule below applies:
 
 - `kind`: `fetch_failed`, `helper_unfinished`, `helper_start_failed` or
   `unknown`. `fetch_failed` covers every failure after a fetch attempt began, so

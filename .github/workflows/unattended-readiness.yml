@@ -93,12 +93,98 @@ jobs:
           if (-not $todoPath -or -not $fixturePath) { throw 'Native acceptance artifacts are missing' }
           "CC_CONVERSATION_TODO_BINARY=$todoPath" >> $env:GITHUB_ENV
           "CC_CONVERSATION_SCHEDULER_FIXTURE=$fixturePath" >> $env:GITHUB_ENV
-      # Hosted Windows exhausted the package-wide 180s budget in different
-      # existing tests (one only 7s into its real timing checks, another at 0s).
-      # Retain every case and real deadline check with finite package headroom.
-      # Windows also runs the real CLI/scheduler roundtrips instead of skipping
-      # them; keep a finite package budget for those additional process fixtures.
-      - run: go test -race -timeout ${{ matrix.module == 'unattended-runner' && (matrix.os == 'Windows' && '600s' || '180s') || '120s' }} ./...
+      # Windows uses one compiled race binary and disjoint serial root groups.
+      # A package-wide timer previously expired while a 21-second positive
+      # helper was only four seconds old. Keep its real deadlines unchanged.
+      - name: Test every Windows runner root with bounded serial partitions
+        if: matrix.os == 'Windows' && matrix.module == 'unattended-runner'
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $packages = @(& go list ./...)
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          if ($packages.Count -ne 1 -or $packages[0] -cne 'github.com/AutoDevJapan/cc-pc-tools-rs/unattended-runner') { throw 'Windows runner package inventory changed' }
+          $binary = Join-Path $env:RUNNER_TEMP 'unattended-runner-race.test.exe'
+          if (Test-Path -LiteralPath $binary) { throw 'Windows runner test output already exists' }
+          & go test -race -c -o $binary .
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          $list = @(& $binary '-test.list' '.' 2>&1)
+          $listExit = $LASTEXITCODE
+          $listExitText = if ($null -eq $listExit) { 'unknown' } else { ([long]$listExit).ToString([Globalization.CultureInfo]::InvariantCulture) }
+          Write-Output ('UNATTENDED_WINDOWS_LIST exit={0} lines={1}' -f $listExitText,$list.Count)
+          if ($list.Count -gt 10000) { throw 'Windows runner native root output exceeds line bound' }
+          if ($null -eq $listExit -or $listExit -ne 0) {
+            $failureClass = 'startup_unclassified'
+            foreach ($item in $list) {
+              $line = [string]$item
+              if ($line -cmatch '^flag provided but not defined: -test(?:[.][a-z]+)?$') { $failureClass = 'test_flag_rejected' }
+              if ($line -cmatch '^FATAL: ThreadSanitizer:') { $failureClass = 'race_runtime_startup' }
+            }
+            Write-Output ('UNATTENDED_WINDOWS_LIST_FAILURE class={0}' -f $failureClass)
+          }
+          if ($null -eq $listExit -or $listExit -ne 0) { throw 'Windows runner root list failed' }
+          $names = [Collections.Generic.List[string]]::new()
+          $seen = [Collections.Generic.HashSet[string]]::new([StringComparer]::Ordinal)
+          foreach ($line in $list) {
+            $name = [string]$line
+            if ($name -cmatch '^Benchmark[A-Za-z0-9_]*$') { continue }
+            if ($name.Length -gt 512 -or $name -cnotmatch '^(?:Test|Fuzz|Example)[A-Za-z0-9_]*$' -or -not $seen.Add($name)) { throw 'Windows runner root inventory invalid or repeated' }
+            $names.Add($name)
+          }
+          if ($names.Count -lt 1 -or $names.Count -gt 10000) { throw 'Windows runner root inventory outside bounds' }
+          foreach ($name in $names) { Write-Output ('UNATTENDED_WINDOWS_LIST_ROOT ' + $name) }
+          $completed = [Collections.Generic.HashSet[string]]::new([StringComparer]::Ordinal)
+          $passed = 0
+          $skipped = 0
+          $partitions = 0
+          $partitionCount = [int][Math]::Ceiling($names.Count / 50.0)
+          for ($partition = 0; $partition -lt $partitionCount; $partition++) {
+            $members = [Collections.Generic.List[string]]::new()
+            for ($index = $partition; $index -lt $names.Count; $index += $partitionCount) { $members.Add($names[$index]) }
+            $group = @($members.ToArray())
+            if ($group.Count -lt 1 -or $group.Count -gt 50) { throw 'Windows runner partition size invalid' }
+            $selection = '^(?:' + (($group | ForEach-Object { [regex]::Escape($_) }) -join '|') + ')$'
+            if ($selection.Length -gt 26000) { throw 'Windows runner root selection exceeds command bound' }
+            Write-Output ('UNATTENDED_WINDOWS_PARTITION_START index={0} expected={1} budget_seconds=180' -f $partitions,$group.Count)
+            $lines = @(& $binary '-test.v' '-test.timeout=180s' ('-test.run=' + $selection) 2>&1)
+            $testExit = $LASTEXITCODE
+            $exitText = if ($null -eq $testExit) { 'unknown' } else { ([long]$testExit).ToString([Globalization.CultureInfo]::InvariantCulture) }
+            Write-Output ('UNATTENDED_WINDOWS_PARTITION index={0} expected={1} exit={2}' -f $partitions,$group.Count,$exitText)
+            foreach ($item in $lines) {
+              $line = [string]$item
+              if ($line -cmatch '^(?:=== (?:RUN|PAUSE|CONT)[ \t]+[A-Za-z0-9_/.-]+[ \t]*|[ \t]*--- (?:PASS|SKIP|FAIL):[ \t]+[A-Za-z0-9_/.-]+[ \t]+\([0-9]+(?:[.][0-9]+)?s\)|PASS|FAIL)$') { Write-Output $line }
+            }
+            if ($null -eq $testExit -or $testExit -ne 0) {
+              $sawTimeout = $false
+              $sawRace = $false
+              $sawTestFailure = $false
+              foreach ($item in $lines) {
+                $line = [string]$item
+                if ($line -cmatch '^panic: test timed out after [0-9hms.]+$') { $sawTimeout = $true }
+                if ($line -cmatch '^WARNING: DATA RACE') { $sawRace = $true }
+                if ($line -cmatch '^[ \t]*--- FAIL:') { $sawTestFailure = $true }
+              }
+              $failureClass = if ($sawTimeout) { 'partition_timeout' } elseif ($sawRace) { 'data_race' } elseif ($sawTestFailure) { 'test_assertion' } else { 'native_exit_unclassified' }
+              Write-Output ('UNATTENDED_WINDOWS_PARTITION_FAILURE index={0} class={1}' -f $partitions,$failureClass)
+              throw 'Windows runner partition failed'
+            }
+            $output = [string]::Join([Environment]::NewLine, [string[]]$lines)
+            $runs = @([regex]::Matches($output, '(?m)^=== RUN[ \t]+([^\s/]+)[ \t]*\r?$') | ForEach-Object { $_.Groups[1].Value })
+            $passes = @([regex]::Matches($output, '(?m)^--- PASS:[ \t]+([^\s/]+)[ \t]+\(') | ForEach-Object { $_.Groups[1].Value })
+            $skips = @([regex]::Matches($output, '(?m)^--- SKIP:[ \t]+([^\s/]+)[ \t]+\(') | ForEach-Object { $_.Groups[1].Value })
+            if ([regex]::IsMatch($output, '(?m)^[ \t]*--- FAIL:|^panic:|^WARNING: DATA RACE')) { throw 'Windows runner partition emitted a failure' }
+            if ($runs.Count -ne $group.Count -or $passes.Count + $skips.Count -ne $group.Count) { throw 'Windows runner partition omitted or added a root' }
+            foreach ($name in $group) {
+              if (@($runs | Where-Object { $_ -ceq $name }).Count -ne 1 -or @($passes + $skips | Where-Object { $_ -ceq $name }).Count -ne 1 -or -not $completed.Add($name)) { throw 'Windows runner root completion is missing or repeated' }
+            }
+            $passed += $passes.Count
+            $skipped += $skips.Count
+            $partitions++
+          }
+          if ($completed.Count -ne $names.Count) { throw 'Windows runner all-root reconciliation failed' }
+          Write-Output ('UNATTENDED_WINDOWS_ROOTS listed={0} passed={1} skipped={2} partitions={3}; skipped roots are not passed acceptance' -f $names.Count,$passed,$skipped,$partitions)
+      - if: matrix.os != 'Windows' || matrix.module != 'unattended-runner'
+        run: go test -race -timeout ${{ matrix.module == 'unattended-runner' && '180s' || '120s' }} ./...
       - run: go vet ./...
       - run: go build -trimpath .
   repair-guard:

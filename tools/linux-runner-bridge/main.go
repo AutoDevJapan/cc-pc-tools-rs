@@ -866,13 +866,7 @@ func runProjectionVersion(ctx context.Context, template *exec.Cmd) ([]byte, erro
 	c.Dir, c.Env = template.Dir, append([]string(nil), template.Env...)
 	group(c)
 	out := &projectionVersionOutput{}
-	c.Stdout, c.Stderr = out, io.Discard
-	c.WaitDelay = time.Second
-	err := c.Run()
-	if c.Process != nil {
-		killGroup(c)
-	}
-	if err != nil || ctx.Err() != nil || out.overflow || len(out.data) == 0 {
+	if err := runCaptured(ctx, c, out, time.Second); err != nil || ctx.Err() != nil || out.overflow || len(out.data) == 0 {
 		return nil, errProjectionToolchain
 	}
 	return append([]byte(nil), out.data...), nil
@@ -1095,7 +1089,7 @@ func executeCargoCommand(ctx context.Context, template *exec.Cmd) int {
 	if ctx == nil || ctx.Err() != nil {
 		return 125
 	}
-	// CommandContext rechecks cancellation at Start; the select below owns
+	// CommandContext rechecks cancellation at Start; superviseGroup below owns
 	// process-group drain and Wait before the invocation monitor is released.
 	c := exec.CommandContext(ctx, template.Path, template.Args[1:]...)
 	c.Dir, c.Env = template.Dir, append([]string(nil), template.Env...)
@@ -1108,27 +1102,21 @@ func executeCargoCommand(ctx context.Context, template *exec.Cmd) int {
 		}
 		return 1
 	}
-	done := make(chan error, 1)
-	go func() { done <- c.Wait() }()
-	select {
-	case e := <-done:
-		result := finishGroup(c, e)
-		if ctx.Err() != nil {
-			return 125
-		}
-		return result
-	case <-ctx.Done():
-		killGroup(c)
-		<-done
+	// Successful Cargo can also leave a background descendant. Every exit, not
+	// just cancellation, must drain it before releasing the host target. The
+	// leader is reaped only after the group has been signalled and drained.
+	waitErr, cleanupErr := superviseGroup(ctx, c, 3*time.Second, 15*time.Second)
+	if ctx.Err() != nil {
 		return 125
 	}
-}
-
-func finishGroup(c *exec.Cmd, result error) int {
-	// Successful Cargo can also leave a background descendant. Every exit,
-	// not just cancellation, must drain it before releasing the host target.
-	killGroup(c)
-	return exitCode(result)
+	if code := exitCode(waitErr); code != 0 {
+		return code
+	}
+	if cleanupErr != nil {
+		fmt.Fprintf(os.Stderr, "linux process group drain was not proven: %v\n", cleanupErr)
+		return 1
+	}
+	return 0
 }
 
 func rpc(path string, q request) int {

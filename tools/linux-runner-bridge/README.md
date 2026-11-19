@@ -199,10 +199,24 @@ confirms kernel process-group absence before returning to the Windows gate.
 Successful leader exits also drain any background descendants before returning
 the original exit result. If force-kill exceeds its deadline, one diagnostic
 reports that the target remains occupied.
-The direct child is waited concurrently, and init reaps orphaned descendants.
-Unreaped zombies and unknown states retain the lock past the force-kill deadline;
-a process-list snapshot is never authority to release it. Descendants deliberately
-escaping the group with `setsid` are outside this process-group contract.
+A command's process-group number is used only while this process still owns it.
+The supervisor observes the group leader's exit without reaping it (`waitid`
+with `WNOWAIT`), signals the group only during that window, and reaps the leader
+last, so the kernel cannot have given the number to an unrelated process when a
+signal is sent. Before every signal the leader must still be an unreaped direct
+child that leads its own group. Otherwise no group is signalled, only the direct
+child is terminated and reaped, and the refusal is reported separately from the
+command's own exit result. After the reap the number is only probed with signal 0,
+which delivers nothing, until the kernel reports the group absent. The Cargo
+version probes, the Cargo command, and the normal-mode cycle command all use it.
+A version probe whose output a descendant still holds open one second after the
+probe exited is rejected, exactly as with the former `WaitDelay`. Its group is
+drained afterwards, and that cleanup never turns the rejection into a success.
+Init reaps orphaned descendants. Unreaped zombies and unknown states retain the
+lock past the force-kill deadline; a process-list snapshot only decides when the
+leader is reaped and is never authority to release the target. Descendants
+deliberately escaping the group with `setsid` are outside this process-group
+contract.
 
 The runner uses non-root UID 1001, drops all Linux capabilities, enables
 `no-new-privileges`, and has no GPU devices, Docker socket, host bind mount,

@@ -379,6 +379,9 @@ func runGuardCLI(args []string, stdout, stderr io.Writer, currentVerifier func(i
 }
 
 func runGuardCLIWithRefresh(args []string, stdout, stderr io.Writer, currentVerifier func(int) object, refresh func(string, string, bool) (bool, ownerRefreshDiagnostic)) int {
+	if handled, code := runUnslopSavedProjectCLI(args, stdout); handled {
+		return code
+	}
 	if classificationDiagnosticFlagPresent(args) {
 		return runClassificationDiagnosticCLI(args, stdout, stderr, classifyOwnerPathTraced)
 	}

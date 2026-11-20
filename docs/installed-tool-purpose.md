@@ -13,6 +13,8 @@ or adjacent configuration, credentials, source trees or other executables clear.
 | rustup | `C:/Users/makhmeto/.cargo/bin/rustup.exe` | rustup 1.29.3, Windows x86_64 MSVC |
 | Node.js | `C:/Users/makhmeto/AppData/Roaming/fnm/node-versions/v22.21.0/installation/node.exe` | Node.js 22.21.0, Windows x64 |
 | Claude Code | `C:/Users/makhmeto/.local/bin/claude.exe` | Claude Code 2.1.310 through 2.1.329, Windows x64 (eighteen releases) |
+| Bun | `C:/Users/makhmeto/.bun/bin/bun.exe` | Bun 1.4.4, Windows x64 |
+| bunx | `C:/Users/makhmeto/.bun/bin/bunx.exe` | Bun 1.4.4, Windows x64; the hardlink of `bun.exe` that Bun creates |
 
 The intended use is ordinary development of the existing owner repositories.
 The provider performs no command, update, login, purchase or signing operation.
@@ -28,8 +30,8 @@ On 2026-11-14 the corresponding complete public archives were obtained over
 HTTPS, hashed, and the exact ZIP entry was hashed from those authenticated
 archive bytes. Installed executable contents were not used to manufacture the
 expected digest. No vendor signature verification is claimed for these five
-rows; the two rows without an installer registration are described in their own
-section below.
+rows; the rows without an installer registration (Node.js, Claude Code and Bun)
+are described in their own section below.
 
 | Archive | SHA-256 | ZIP entry | Executable SHA-256 |
 | --- | --- | --- | --- |
@@ -81,7 +83,12 @@ independent content check.
 Claude Code's native installer and an fnm-extracted Node.js archive are not
 documented to write an uninstall registration (the vendor's uninstall steps for
 Claude Code remove only files and directories), so the registry observations of
-the rows above have nothing to rely on for them. These two rows are marked
+the rows above have nothing to rely on for them. Bun's PowerShell installer does
+write a current-user uninstall entry named `Bun`, which holds a display name, the
+install location, an icon path and an uninstall command but neither a version nor
+a publisher; the installer skips even that entry when it is told not to register
+the installation, and an archive extracted by hand writes none. The Bun rows
+therefore read no registry value either. These four rows are marked
 `noRegistration` in the compiled table. Such a plan skips only the two registry
 observations. Every
 other control in this document is unchanged: the exclusions, the closed alias
@@ -100,6 +107,7 @@ compiled read bound of 512 MiB; the largest pinned release is about 384 MB.
 | --- | --- | --- |
 | Node.js 22.21.0 | `C:/Users/makhmeto/AppData/Roaming/fnm/node-versions/v22.21.0/installation/node.exe` | [`node-v22.21.0-win-x64.zip`](https://nodejs.org/dist/v22.21.0/node-v22.21.0-win-x64.zip), SHA-256 `84d31df6571c3c7156707265bf51e2a021656fa1584bf6f4486b792dcde54d7d`; ZIP entry `node-v22.21.0-win-x64/node.exe`, SHA-256 `47cd67453da180a39cdf5daedb89862667b8e627e60c116607874633450cd30d`, 85,766,656 bytes |
 | Claude Code 2.1.310 through 2.1.329 | `C:/Users/makhmeto/.local/bin/claude.exe` | the `win32-x64` entry of each signed release manifest, for example [2.1.329](https://downloads.claude.ai/claude-code-releases/2.1.329/manifest.json); eighteen releases |
+| Bun 1.4.4 | `C:/Users/makhmeto/.bun/bin/bun.exe` and `C:/Users/makhmeto/.bun/bin/bunx.exe` | [`bun-windows-x64.zip`](https://github.com/oven-sh/bun/releases/download/bun-v1.4.4/bun-windows-x64.zip), SHA-256 `cd2c0fccc78f3ede1f50ca827a15f063eda13d4d150a3d0674f4f6e323d864a5`; ZIP entry `bun-windows-x64/bun.exe`, SHA-256 `cb1d8e6564e655e49d30cead359750a1cbbd12f42651caa4b62244d7bd93c244`, 115,281,496 bytes |
 
 Node.js. The `SHASUMS256.txt` of release v22.21.0 lists the archive and the
 standalone `win-x64/node.exe`. On 2026-11-20 its detached Ed25519 signature was
@@ -124,6 +132,36 @@ streamed through SHA-256 without being stored: its digest equals the signed
 checksum and its length is the signed size of 384,179,872 bytes. The installed
 `claude.exe` was not read to produce any value.
 
+Bun. The release `bun-v1.4.4` lists its archives in `SHASUMS256.txt`, which the
+vendor signs as an OpenPGP cleartext message (`SHASUMS256.txt.asc`, Ed25519,
+issuer fingerprint `F3DCC08A8572C0749B3E18888EAB4D40A7B22B59`, user ID
+`Robobun <robobun@oven.sh>`). The vendor's own Docker image build
+(`dockerhub/debian/Dockerfile` at the release tag) imports a public key block that
+the file carries and verifies this list against the fingerprint with
+`gpg --assert-signer`; the key was not compared with a second independent source.
+On 2026-11-20 the signature was verified over the canonical text with an
+independent OpenPGP verifier; one flipped byte fails that check, and the text
+under the signature equals the downloaded list. The x64 archive was downloaded
+over HTTPS and equals the listed digest, and the `bun.exe` entry inflated from it
+equals the compiled digest and size. The x64-baseline archive of the same release
+lists its own digest and holds a byte-identical `bun.exe`, so the pin does not
+depend on which of the two archives the installer chose for a CPU. The installed
+`bun.exe` and `bunx.exe` were not read to produce any value.
+
+Two Bun names. The installer extracts the archive into the per-user bin
+directory, moves `bun.exe` there and runs `bun.exe completions`. That command
+deletes any `bunx.exe` and `bunx.cmd` beside the running executable and makes
+`bunx.exe` a hardlink of it; it writes a `bunx.cmd` script only where the
+hardlink cannot be made. The two Bun rows therefore pin the same bytes, and each
+requires the same exact hardlink set of two names, `bun.exe` and `bunx.exe`, with
+one volume, file identity, creation time, descriptor and parent proof. Each name
+is classified by its own row. Any other layout is refused as
+`installed_tool_alias_mismatch`, for example a `bunx.cmd` script in place of the
+link, a separate `bunx.exe` that is not a hardlink of `bun.exe`, or a third
+hardlink name. An installation below another `BUN_INSTALL` directory is a
+different path and is not declared. A release other than 1.4.4, such as one that
+`bun upgrade` installs, stays unknown until a reviewed source change pins it.
+
 Several releases of one path. The vendor published 28 signed Claude Code
 releases between 2026-10-14 and 2026-11-19 and the native installer updates
 itself, so the path carries one plan per pinned release, in table order. Each
@@ -136,8 +174,9 @@ reported as `installed_tool_bytes_mismatch`, ahead of the size mismatches
 no release is refused before any byte is read, so the extra plans cost only
 handle opens. One deadline covers the path: two seconds for registered rows,
 otherwise the largest budget its plans declare (30 seconds for Claude Code, 20
-seconds for Node.js). The routing predicate of the policy only asks whether the
-path is declared, which does not depend on how many releases are pinned.
+seconds for Node.js and for Bun). The routing predicate of the policy only asks
+whether the path is declared, which does not depend on how many releases are
+pinned.
 
 Reading a refusal for these rows. The controller reaches the refusals in this
 order. It enumerates the hardlink names of the file before it opens anything. If
@@ -156,11 +195,12 @@ from the plan; a release outside the table is the usual cause, a descriptor that
 the ACL rule rejects is another. `installed_tool_bytes_mismatch` means the size
 equals a pinned release and the digest does not.
 
-A release outside the table, such as a Claude Code release newer than 2.1.329,
-stays unknown until a reviewed source change pins it. Nothing in this change
-disables the vendor's updater or alters any setting of the owner. Both rows lie
-in the profile of the account that runs the guard, so, as for rustup, a clear
-result attests the held bytes at the time of the check only.
+A release outside the table, such as a Claude Code release newer than 2.1.329 or
+a Bun release other than 1.4.4, stays unknown until a reviewed source change pins
+it. Nothing in this change disables the vendor's updater or alters any setting of
+the owner. All of these rows lie in the profile of the account that runs the
+guard, so, as for rustup, a clear result attests the held bytes at the time of
+the check only.
 
 Codex. No Codex row is declared. The Microsoft Store package keeps its version in
 its installation path and changes it with every update, so an exact-path row would
@@ -179,6 +219,11 @@ Git's observed pair `cmd/git.exe` and `cmd/git-lfs.exe` is admitted as one
 object for its canonical operation. The secondary name does not acquire its own
 general classification grant, and the pair must be the entire hardlink set.
 The GitHub CLI, Go and Go formatter objects must each have exactly one name.
+
+The two Bun names, `bun.exe` and `bunx.exe`, are likewise one object that must be
+the entire hardlink set. Unlike Git's secondary name, each of them is declared by
+a row of its own and so has its own classification grant, and both rows require
+both names.
 
 The [official rustup 1.29.3 proxy lists](https://github.com/rust-lang/rustup/blob/1.29.3/src/lib.rs)
 and [installation procedure](https://github.com/rust-lang/rustup/blob/1.29.3/src/cli/self_update.rs)
@@ -332,6 +377,16 @@ vendor-signed documents as described above, but no installed `claude.exe` or
 equal a pinned release, whether the installed `claude.exe` has other hardlinks (an
 extra name makes the closed inventory refuse it), and which Node.js executable
 each host starts for its tool children.
+
+The Bun rows and their tests are prepared source in the same sense. Their author
+did not compile or run them, so their first compile and test is the hosted
+Windows verifier of the commit that adds them. The pins were checked offline
+against the vendor-signed checksum list as described above, but no installed
+`bun.exe` or `bunx.exe` was read, hashed or started. Unknown remain whether the
+installed files equal release 1.4.4, whether they are exactly the hardlink pair of
+two names that the installer makes, which Bun executable each host starts
+(including one below another `BUN_INSTALL` directory), and whether the 20-second
+budget suffices for the cold read of 115 MB, which was not measured.
 
 Actual current executable acceptance, normal producer/distribution and
 same-installed-object readback remain incomplete. Representative use from both

@@ -984,13 +984,23 @@ func TestGuardCaptureAttestationActual(t *testing.T) {
 	selected,peDiagnostic,err := guardCaptureSelectDetailed(ctx,trusted,peEntries,p,false)
 	report.PESelection=&peDiagnostic
 	guardCaptureLogSelection(t,"pe",peDiagnostic)
-	if err != nil { report.Reason="pe_signature_rejected";t.Fatal("guard_capture_stage=pe_signature") }
+	if err != nil {
+		if peDiagnostic.Stage == "bundle_digest" {
+			if guardCapturePreserveVerifiedUnbound(dir,"pe",&peDiagnostic)!=nil { t.Log("guard_capture_unbound subject=pe preservation_failed") }
+			t.Logf("guard_capture_unbound subject=pe preserved=%t accepted=false",peDiagnostic.VerifiedUnboundPreserved)
+		}
+		report.Reason="pe_signature_rejected";t.Fatal("guard_capture_stage=pe_signature")
+	}
 	proofEntries,err := client.listing(ctx,p.ProofSHA)
 	if err != nil { report.Reason="proof_listing_unavailable";t.Fatal("guard_capture_stage=proof_listing") }
 	selectedProof,proofDiagnostic,err := guardCaptureSelectDetailed(ctx,trusted,proofEntries,p,true)
 	report.ProofSelection=&proofDiagnostic
 	guardCaptureLogSelection(t,"proof",proofDiagnostic)
 	if err != nil || !bytes.Equal(selected.Raw,selectedProof.Raw) {
+		if err != nil && proofDiagnostic.Stage == "bundle_digest" {
+			if guardCapturePreserveVerifiedUnbound(dir,"proof",&proofDiagnostic)!=nil { t.Log("guard_capture_unbound subject=proof preservation_failed") }
+			t.Logf("guard_capture_unbound subject=proof preserved=%t accepted=false",proofDiagnostic.VerifiedUnboundPreserved)
+		}
 		report.Reason="subjects_not_same_verified_bundle";t.Fatal("guard_capture_stage=same_bundle")
 	}
 	report.SignatureChecked=true
@@ -1475,8 +1485,12 @@ func TestGuardCaptureTwoSubjectCryptographicRehearsal(t *testing.T) {
 		}
 	}
 	entries:=[]matrixEntry{{RepositoryID:guardCaptureRepoID,BundleURL:"https://fixture.blob.core.windows.net/rehearsal.json.sn",Bundle:raw}}
-	if _,err:=guardCaptureSelect(ctx,trusted,entries,p,false);err!=nil{t.Fatal("rehearsal_selector_positive_failed")}
-	if _,err:=guardCaptureSelect(ctx,trusted,entries,p,true);err!=nil{t.Fatal("rehearsal_second_subject_selector_failed")}
+	for _,proofSubject:=range []bool{false,true}{
+		_,detail,err:=guardCaptureSelectDetailed(ctx,trusted,entries,p,proofSubject)
+		if err!=nil||detail.Stage!="bound"||detail.Entries!=1||detail.RepositoryEntries!=1||detail.VerifiedEntries!=1||len(detail.Rejections)!=0||detail.ObservedBundleBytes!=0||detail.ObservedBundleSHA256!=""||detail.VerifiedUnboundPreserved||len(detail.verifiedUnbound)!=0{
+			t.Fatal("rehearsal_selector_diagnostic_positive_failed")
+		}
+	}
 	if _,err:=guardCaptureSelect(ctx,trusted,append(entries,entries[0]),p,false);err==nil{t.Fatal("rehearsal_duplicate_verified_entries_accepted")}
 	if _,err:=guardCaptureSelect(ctx,trusted,nil,p,false);err==nil{t.Fatal("rehearsal_zero_verified_entries_accepted")}
 	policy:=guardCapturePolicy(p,false)
@@ -2077,6 +2091,10 @@ type guardCaptureSelectionDiagnostic struct {
 	RepositoryEntries int `json:"repository_entries"`
 	VerifiedEntries int `json:"verified_entries"`
 	Rejections map[string]int `json:"rejections"`
+	ObservedBundleBytes int `json:"observed_bundle_bytes,omitempty"`
+	ObservedBundleSHA256 string `json:"observed_bundle_sha256,omitempty"`
+	VerifiedUnboundPreserved bool `json:"verified_unbound_preserved,omitempty"`
+	verifiedUnbound []byte
 }
 
 func guardCaptureVerificationCategory(err error) string {
@@ -2177,6 +2195,11 @@ func guardCaptureSelectDetailed(ctx context.Context, trusted trustedMaterial, en
 		return matrixOutcome{}, diagnostic, errGuardCapture
 	}
 	diagnostic.Stage = guardCaptureSelectedBinding(selected, entries[selected.Index].BundleURL, p)
+	if diagnostic.Stage == "bundle_digest" {
+		diagnostic.ObservedBundleBytes = len(selected.Raw)
+		diagnostic.ObservedBundleSHA256 = guardCaptureHash(selected.Raw)
+		diagnostic.verifiedUnbound = selected.Raw
+	}
 	if diagnostic.Stage != "bound" {
 		return matrixOutcome{}, diagnostic, errGuardCapture
 	}
@@ -2249,23 +2272,136 @@ func TestGuardCaptureSelectionBindingDiagnostics(t *testing.T) {
 
 func TestGuardCaptureSelectionFailureDiagnosticDoesNotAccept(t *testing.T) {
 	p := guardCaptureTestPin()
-	for name, entries := range map[string][]matrixEntry{
-		"empty": nil,
-		"other_repository": {{RepositoryID: 1, Bundle: []byte("{}")}},
-		"structure": {{RepositoryID: guardCaptureRepoID, Bundle: []byte("{}")}},
-		"encoding": {{RepositoryID: guardCaptureRepoID, Bundle: []byte("not json")}},
+	for name, c := range map[string]struct {
+		entries []matrixEntry
+		stage string
+		repositoryEntries int
+		rejections map[string]int
+	}{
+		"empty": {nil, "selection_zero", 0, map[string]int{}},
+		"other_repository": {[]matrixEntry{{RepositoryID: 1, Bundle: []byte("{}")}},
+			"selection_zero", 0, map[string]int{"other_repository": 1}},
+		"structure": {[]matrixEntry{{RepositoryID: guardCaptureRepoID, Bundle: []byte("{}")}},
+			"selection_zero", 1, map[string]int{"bundle_structure": 1}},
+		"encoding": {[]matrixEntry{{RepositoryID: guardCaptureRepoID, Bundle: []byte("not json")}},
+			"bundle_encoding", 0, map[string]int{}},
 	} {
 		t.Run(name, func(t *testing.T) {
-			_, detail, err := guardCaptureSelectDetailed(context.Background(), nil, entries, p, false)
+			_, detail, err := guardCaptureSelectDetailed(context.Background(), nil, c.entries, p, false)
 			if err == nil || detail.VerifiedEntries != 0 || detail.Stage == "bound" {
 				t.Fatal("selection_failure_diagnostic_became_acceptance")
 			}
+			if detail.Stage != c.stage || detail.Entries != len(c.entries) ||
+				detail.RepositoryEntries != c.repositoryEntries || !reflect.DeepEqual(detail.Rejections, c.rejections) ||
+				detail.ObservedBundleBytes != 0 || detail.ObservedBundleSHA256 != "" ||
+				detail.VerifiedUnboundPreserved || len(detail.verifiedUnbound) != 0 {
+				t.Fatal("selection_failure_diagnostic_incomplete_or_incorrect")
+			}
 			report := guardCaptureReport{Reason: "pe_signature_rejected", PESelection: &detail}
 			encoded, encodeErr := json.Marshal(report)
-			if encodeErr != nil || bytes.Contains(encoded, []byte("arbitrary private detail")) ||
+			if encodeErr != nil || report.Passed || report.SignatureChecked || report.UpdateAuthorized ||
+				bytes.Contains(encoded, []byte("arbitrary private detail")) ||
 				bytes.Contains(encoded, []byte("not json")) || bytes.Contains(encoded, []byte("blob.core.windows.net")) {
-				t.Fatal("selection_diagnostic_exposes_input")
+				t.Fatal("selection_diagnostic_exposes_input_or_accepts")
 			}
 		})
+	}
+}
+
+// Retain only a single cryptographically verified, statement-checked selection
+// that failed the pinned bundle digest. This is diagnostic evidence, never an
+// accepted bundle, an alternate hash or an update capability.
+func guardCapturePreserveVerifiedUnbound(dir, subject string, d *guardCaptureSelectionDiagnostic) error {
+	if d == nil || d.Stage != "bundle_digest" || d.VerifiedEntries != 1 ||
+		len(d.verifiedUnbound) == 0 || int64(len(d.verifiedUnbound)) > guardCaptureMaxJSON ||
+		d.ObservedBundleBytes != len(d.verifiedUnbound) ||
+		d.ObservedBundleSHA256 != guardCaptureHash(d.verifiedUnbound) {
+		return errGuardCapture
+	}
+	name := ""
+	switch subject {
+	case "pe":
+		name = "guard-capture-pe-verified-unbound-bundle.json"
+	case "proof":
+		name = "guard-capture-proof-verified-unbound-bundle.json"
+	default:
+		return errGuardCapture
+	}
+	defer func() {
+		clear(d.verifiedUnbound)
+		d.verifiedUnbound = nil
+	}()
+	if err := guardCaptureWrite(dir, name, d.verifiedUnbound); err != nil {
+		return err
+	}
+	d.VerifiedUnboundPreserved = true
+	return nil
+}
+
+func TestGuardCaptureVerifiedUnboundRetention(t *testing.T) {
+	for _, name := range []string{"pe", "proof", "unverified", "wrong_stage", "wrong_bytes", "wrong_digest", "unknown_subject", "collision", "oversize"} {
+		t.Run(name, func(t *testing.T) {
+			dir := t.TempDir()
+			raw := []byte("synthetic verified-unbound retention fixture")
+			if name == "oversize" {
+				raw = bytes.Repeat([]byte{'x'}, int(guardCaptureMaxJSON)+1)
+			}
+			d := guardCaptureSelectionDiagnostic{
+				Stage: "bundle_digest", VerifiedEntries: 1,
+				ObservedBundleBytes: len(raw), ObservedBundleSHA256: guardCaptureHash(raw),
+				verifiedUnbound: append([]byte(nil), raw...),
+			}
+			subject := "pe"
+			if name == "proof" {
+				subject = "proof"
+			}
+			fileName := "guard-capture-" + subject + "-verified-unbound-bundle.json"
+			switch name {
+			case "unverified":
+				d.VerifiedEntries = 0
+			case "wrong_stage":
+				d.Stage = "selection_zero"
+			case "wrong_bytes":
+				d.ObservedBundleBytes++
+			case "wrong_digest":
+				d.ObservedBundleSHA256 = strings.Repeat("0", 64)
+			case "unknown_subject":
+				subject = "../untrusted"
+			case "collision":
+				if guardCaptureWrite(dir, fileName, []byte("previous evidence")) != nil {
+					t.Fatal("unbound_collision_fixture_failed")
+				}
+			}
+			err := guardCapturePreserveVerifiedUnbound(dir, subject, &d)
+			filePath := filepath.Join(dir, fileName)
+			if name == "pe" || name == "proof" {
+				got, readErr := os.ReadFile(filePath)
+				if err != nil || readErr != nil || !bytes.Equal(got, raw) ||
+					!d.VerifiedUnboundPreserved || d.verifiedUnbound != nil {
+					t.Fatal("verified_unbound_same_buffer_not_preserved")
+				}
+				report := guardCaptureReport{Reason: "pe_signature_rejected", PESelection: &d}
+				encoded, encodeErr := json.Marshal(report)
+				if encodeErr != nil || report.Passed || report.SignatureChecked || report.UpdateAuthorized ||
+					bytes.Contains(encoded, raw) || !bytes.Contains(encoded, []byte(d.ObservedBundleSHA256)) {
+					t.Fatal("unbound_retention_became_acceptance_or_exposed_body")
+				}
+				return
+			}
+			if err == nil || d.VerifiedUnboundPreserved {
+				t.Fatal("ineligible_unbound_evidence_was_preserved")
+			}
+			if name == "collision" {
+				got, readErr := os.ReadFile(filePath)
+				if readErr != nil || string(got) != "previous evidence" {
+					t.Fatal("unbound_collision_changed_prior_evidence")
+				}
+			} else if _, statErr := os.Stat(filePath); !errors.Is(statErr, os.ErrNotExist) {
+				t.Fatal("ineligible_unbound_evidence_created_file")
+			}
+		})
+	}
+	if guardCapturePreserveVerifiedUnbound(t.TempDir(), "pe", nil) == nil {
+		t.Fatal("nil_unbound_diagnostic_accepted")
 	}
 }

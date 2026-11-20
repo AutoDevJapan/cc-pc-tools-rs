@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"io"
 	"os"
 	"path/filepath"
 	"strings"
@@ -267,10 +268,114 @@ func TestUnslopProjectResolverMalformedRegistrationIsNotAQualifiedSnapshot(t *te
 		`{"projects":{},"items":[{"id":4431}]`,
 	} {
 		f := newUnslopProjectFixture(t)
+		f.read(t)
 		if os.WriteFile(f.store, []byte(data), 0600) != nil { t.Fatal("cannot write malformed owned fixture") }
 		if _, _, ok := readUnslopSavedProject(context.Background(), f.store, func(string) bool { return false }); ok {
 			t.Fatal("malformed registration issued a snapshot")
 		}
+	}
+}
+
+func TestUnslopProjectResolverCLIValidRequestsAndOutcomes(t *testing.T) {
+	f := newUnslopProjectFixture(t)
+	snapshot, record := f.read(t)
+	positive := resolveUnslopProjectSnapshot(context.Background(), "", snapshot, record, f.access, f.config)
+	assertUnslopProjectResult(t, positive, "unslop_project_resolved", true)
+	refusal := unslopProjectRefusal("unslop_project_identity_unavailable")
+	revision := strings.Repeat("a", 64)
+	for _, tc := range []struct {
+		name string
+		args []string
+		expected string
+		result unslopSavedProjectResult
+		code int
+	}{
+		{"flag-only-success", []string{"--resolve-unslop-saved-project"}, "", positive, 0},
+		{"expected-revision-success", []string{"--resolve-unslop-saved-project", "--association-revision", revision}, revision, positive, 0},
+		{"flag-only-refusal", []string{"--resolve-unslop-saved-project"}, "", refusal, 1},
+		{"expected-revision-refusal", []string{"--resolve-unslop-saved-project", "--association-revision", revision}, revision, refusal, 1},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			var output bytes.Buffer
+			calls := 0
+			handled, code := runUnslopSavedProjectCLIWithResolver(tc.args, &output, func(ctx context.Context, expected string) unslopSavedProjectResult {
+				calls++
+				if ctx == nil || ctx.Err() != nil || expected != tc.expected {
+					t.Fatal("CLI did not forward its valid request to the resolver")
+				}
+				return tc.result
+			})
+			if !handled || code != tc.code || calls != 1 {
+				t.Fatal("CLI did not preserve the resolver call count or exit status")
+			}
+			var result unslopSavedProjectResult
+			decoder := json.NewDecoder(&output)
+			if decoder.Decode(&result) != nil || result != tc.result {
+				t.Fatal("CLI changed the resolver's JSON outcome")
+			}
+			var extra any
+			if decoder.Decode(&extra) != io.EOF {
+				t.Fatal("CLI returned more than one JSON result")
+			}
+			assertUnslopProjectResult(t, result, tc.result.Reason, tc.result.Qualified)
+		})
+	}
+}
+
+type unslopProjectFailingWriter struct { calls int }
+
+func (w *unslopProjectFailingWriter) Write([]byte) (int, error) {
+	w.calls++
+	return 0, io.ErrClosedPipe
+}
+
+func TestUnslopProjectResolverCLIOutputFailureIsNotSuccess(t *testing.T) {
+	f := newUnslopProjectFixture(t)
+	snapshot, record := f.read(t)
+	positive := resolveUnslopProjectSnapshot(context.Background(), "", snapshot, record, f.access, f.config)
+	assertUnslopProjectResult(t, positive, "unslop_project_resolved", true)
+	for _, result := range []unslopSavedProjectResult{positive, unslopProjectRefusal("unslop_project_source_unavailable")} {
+		output := &unslopProjectFailingWriter{}
+		calls := 0
+		handled, code := runUnslopSavedProjectCLIWithResolver([]string{"--resolve-unslop-saved-project"}, output, func(context.Context, string) unslopSavedProjectResult {
+			calls++
+			return result
+		})
+		if !handled || code != 2 || calls != 1 || output.calls != 1 {
+			t.Fatal("failed output was reported as a completed CLI outcome")
+		}
+	}
+}
+
+func TestUnslopProjectResolverCLIInvalidRequestDoesNotCallResolver(t *testing.T) {
+	for _, tc := range []struct {
+		name string
+		args []string
+		handled bool
+	}{
+		{"other-operation", []string{"--guard-path", "C:/ignored"}, false},
+		{"bad-revision", []string{"--resolve-unslop-saved-project", "--association-revision", "PRIVATE_TOKEN_CANARY"}, true},
+		{"uppercase-revision", []string{"--resolve-unslop-saved-project", "--association-revision", strings.Repeat("A", 64)}, true},
+		{"extra-authority-input", []string{"--resolve-unslop-saved-project", "--qualified", "true"}, true},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			var output bytes.Buffer
+			calls := 0
+			handled, code := runUnslopSavedProjectCLIWithResolver(tc.args, &output, func(context.Context, string) unslopSavedProjectResult {
+				calls++
+				return unslopProjectRefusal("unslop_project_resolved")
+			})
+			if handled != tc.handled || calls != 0 {
+				t.Fatal("unaccepted request reached a resolver")
+			}
+			if !tc.handled {
+				if code != 0 || output.Len() != 0 { t.Fatal("unrelated CLI operation was changed") }
+				return
+			}
+			var result unslopSavedProjectResult
+			if code != 2 || json.Unmarshal(output.Bytes(), &result) != nil { t.Fatal("invalid request was not a fixed refusal") }
+			assertUnslopProjectResult(t, result, "unslop_project_invalid_request", false)
+		})
 	}
 }
 

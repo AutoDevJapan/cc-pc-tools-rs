@@ -8,7 +8,7 @@ scrub391.exe --resolve-unslop-saved-project
 scrub391.exe --resolve-unslop-saved-project --association-revision <前回の64桁revision>
 ```
 
-成功時は終了コード0、未確認・不一致・入力不正は2で、JSONを1件返します。
+成功時は終了コード0、未確認・不一致による拒否は1、入力不正・出力失敗は2です（出力できた場合はJSONを1件返します）。
 既存の `--guard-path` やmasked一覧の応答は変えません。
 resolverの呼出し箇所を含めてレビュー・CI・正式反映するまで、この入口をinstalled版で利用できるとは扱いません。
 

@@ -193,6 +193,12 @@ func resolveUnslopProjectSnapshot(ctx context.Context, expectedRevision string, 
 
 // The proposed main hunk calls this before the existing guard dispatcher.
 func runUnslopSavedProjectCLI(args []string, output io.Writer) (bool, int) {
+	return runUnslopSavedProjectCLIWithResolver(args, output, resolveUnslopSavedProject)
+}
+
+// Only the fixed wrapper above is exposed by the CLI. The resolver argument is
+// an internal test seam; no command-line input can select a provider or authority.
+func runUnslopSavedProjectCLIWithResolver(args []string, output io.Writer, resolve func(context.Context, string) unslopSavedProjectResult) (bool, int) {
 	present := false
 	for _, arg := range args {
 		present = present || arg == "--resolve-unslop-saved-project" || strings.HasPrefix(arg, "--resolve-unslop-saved-project=")
@@ -206,14 +212,16 @@ func runUnslopSavedProjectCLI(args []string, output io.Writer) (bool, int) {
 		expected, valid = args[2], unslopProjectRevisionArgument(args[2])
 	}
 	result := unslopProjectRefusal("unslop_project_invalid_request")
+	code := 2
 	if valid {
-		result = resolveUnslopSavedProject(context.Background(), expected)
+		result = resolve(context.Background(), expected)
+		code = 1
+		if result.Qualified {
+			code = 0
+		}
 	}
 	if json.NewEncoder(output).Encode(result) != nil {
 		return true, 2
 	}
-	if result.Qualified {
-		return true, 0
-	}
-	return true, 2
+	return true, code
 }

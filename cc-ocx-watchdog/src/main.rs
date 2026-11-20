@@ -2,7 +2,9 @@
 
 #[cfg(windows)]
 mod runtime {
-    use cc_ocx_watchdog::windows::{MutexGuard, Process, TerminationOutcome, discover};
+    use cc_ocx_watchdog::windows::{
+        MutexGuard, Process, TerminationOutcome, discover, listener_when_unopenable,
+    };
     use cc_ocx_watchdog::{
         Config, FailureStreak, Identity, hidden_command, probe, run_bounded, unresponsive,
     };
@@ -159,16 +161,20 @@ mod runtime {
             && last_kill.is_none_or(|at| at.elapsed() >= Duration::from_millis(config.cooldown_ms))
     }
     fn inspect(config: &Config) -> Result<(), String> {
-        let process = discover(config)?.ok_or("no_listener")?;
+        let timeout = Duration::from_millis(config.timeout_ms);
         let started = Instant::now();
-        probe(
-            config.port,
-            Duration::from_millis(config.timeout_ms),
-            process.identity.pid,
-        )?;
+        let (identity, pid) = match discover(config) {
+            Ok(process) => {
+                let process = process.ok_or("no_listener")?;
+                (Some(process.identity), process.identity.pid)
+            }
+            // The same rule as the watch loop: the answer needs only the listener's pid.
+            Err(error) => (None, listener_when_unopenable(config, &error).ok_or(error)?),
+        };
+        probe(config.port, timeout, pid)?;
         println!(
             "{}",
-            json!({"identity":process.identity,"healthy":true,"probe_ms":started.elapsed().as_millis()})
+            json!({"identity":identity,"healthy":true,"observation_kind":if identity.is_some() {"process_handle"} else {"health_only"},"probe_ms":started.elapsed().as_millis()})
         );
         Ok(())
     }
@@ -211,13 +217,31 @@ mod runtime {
                 }
             }
             let started = Instant::now();
-            let outcome = match current.as_ref() {
-                Some(process) => probe(
+            // The health answer needs the listener's pid, not a process handle. When the process
+            // cannot be opened (`open_process`; the error does not say why), measure the answer
+            // anyway; only termination is unavailable without a handle.
+            let unopenable = discovery_error
+                .as_deref()
+                .and_then(|error| listener_when_unopenable(config, error));
+            let outcome = match (current.as_ref(), unopenable) {
+                (Some(process), _) => probe(
                     config.port,
                     Duration::from_millis(config.timeout_ms),
                     process.identity.pid,
                 ),
-                None => Err(discovery_error.unwrap_or_else(|| "no_listener".into())),
+                (None, Some(pid)) => {
+                    probe(config.port, Duration::from_millis(config.timeout_ms), pid)
+                }
+                (None, None) => Err(discovery_error.unwrap_or_else(|| "no_listener".into())),
+            };
+            // How this round was observed: through the owned process handle, from the port's
+            // answer alone (`open_process`), or not at all (see `error`).
+            let observation_kind = if current.is_some() {
+                "process_handle"
+            } else if unopenable.is_some() {
+                "health_only"
+            } else {
+                "none"
             };
             let identity = current.as_ref().map(|p| p.identity);
             let healthy = outcome.is_ok();
@@ -230,7 +254,7 @@ mod runtime {
             let state = json!({"at":chrono::Local::now().to_rfc3339(),"watchdog_pid":std::process::id(),"identity":identity,
                 "healthy":healthy,"failures":streak.failures(),"eligible":can_kill,"probe_ms":started.elapsed().as_millis(),
                 "error":outcome.as_ref().err(),"metrics":current.as_ref().and_then(|p| p.metrics()),
-                "observation_write_failures":observations.failures});
+                "observation_kind":observation_kind,"observation_write_failures":observations.failures});
             // Status readers or scanners may briefly deny atomic replacement. Observation
             // writes must not disable health checks; kill intent remains durable/mandatory.
             observations.publish(config, state.clone());
@@ -238,7 +262,8 @@ mod runtime {
                 observations.record(config, json!({"kind":"sample","status":state}));
                 last_sample = Instant::now();
             }
-            if healthy {
+            // Only an incarnation whose owner was proven can settle or cancel a recovery record.
+            if healthy && identity.is_some() {
                 let mut changed = false;
                 // An intent journaled before a crashed/rejected kill must not resurrect
                 // an intentionally stopped service later. The original healthy incarnation

@@ -468,7 +468,7 @@ func TestGuardSoftwareOwnedChildStreamBoundary(t *testing.T) {
 			ctx = context.WithValue(ctx, askChildEnvironment{}, map[string]string{fixtureEnv: tc.name})
 			child := askOwnedChild(ctx, executable, "-test.run=^TestGuardSoftwareOwnedChildStreamBoundary$")
 			defer clear(child.Raw)
-			if !child.Started || !child.Assigned || child.TimedOut || child.Exit != tc.wantExit || len(child.Raw) != tc.wantBytes {
+			if !child.Started || !child.Assigned || !child.WaitVerified || !child.Reaped || child.TimedOut || child.Exit != tc.wantExit || len(child.Raw) != tc.wantBytes {
 				t.Fatal("owned worker stream outcome differs from bounded/silent policy")
 			}
 			if tc.complete {

@@ -835,6 +835,9 @@ func runAskWorker(args []string, out io.Writer) int {
 	if len(args) == 1 && args[0] == ghaFreshWorkerFlag {
 		return runGHAFreshInspectionWorker(args, out)
 	}
+	if len(args) == 1 && args[0] == guardSoftwareWorkerFlag {
+		return runGuardSoftwareWorker(args, out)
+	}
 	if (len(args) == 2 || len(args) == 3) && args[0] == "--mp4-build-worker" {
 		build, ok := mp4BuildPlan(args[1])
 		if !ok {

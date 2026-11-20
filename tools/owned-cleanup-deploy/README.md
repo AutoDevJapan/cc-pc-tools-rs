@@ -99,3 +99,9 @@ byte countだけに依存していたため、後続memoryの内容によって�
 検出した。UTF-16終端NULを明示してFileNameLengthのbyte countからだけ除外する
 修正でGreen。公式の[FILE_RENAME_INFO定義](https://learn.microsoft.com/en-us/windows/win32/api/winbase/ns-winbase-file_rename_info)
 のFileName説明と照合した。後続memoryの内容に依存する処理を残していない。
+
+## Watchdog distribution candidate
+
+[Watchdog distribution](WATCHDOG.md) describes the separate fixed-target candidate.
+Its normal origin, build and resident issuers remain unavailable; it performs no
+installed update. Existing cleanup update modes are unchanged.

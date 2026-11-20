@@ -70,3 +70,6 @@ jobs:
       - name: Vet the finite owned software update
         working-directory: tools/owned-cleanup-deploy
         run: go vet ./...
+      - name: Build the finite owned software update
+        working-directory: tools/owned-cleanup-deploy
+        run: go build -trimpath .

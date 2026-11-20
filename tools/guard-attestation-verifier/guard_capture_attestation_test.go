@@ -996,7 +996,7 @@ func TestGuardCaptureAttestationActual(t *testing.T) {
 	selectedProof,proofDiagnostic,err := guardCaptureSelectDetailed(ctx,trusted,proofEntries,p,true)
 	report.ProofSelection=&proofDiagnostic
 	guardCaptureLogSelection(t,"proof",proofDiagnostic)
-	if err != nil || !bytes.Equal(selected.Raw,selectedProof.Raw) {
+	if err != nil || !guardCaptureSameSeedRepresentation(selected.Raw,selectedProof.Raw,p) {
 		if err != nil && proofDiagnostic.Stage == "bundle_digest" {
 			if guardCapturePreserveVerifiedUnbound(dir,"proof",&proofDiagnostic)!=nil { t.Log("guard_capture_unbound subject=proof preservation_failed") }
 			t.Logf("guard_capture_unbound subject=proof preserved=%t accepted=false",proofDiagnostic.VerifiedUnboundPreserved)
@@ -1048,7 +1048,12 @@ func TestGuardCaptureAttestationActual(t *testing.T) {
 	matrixAssertRejected(t,err,true,[]string{"expected"})
 	report.Controls["old_rehearsal_not_new_capture"]=true
 	if t.Failed(){report.Reason="crypto_control_failed";return}
-	if guardCaptureWrite(dir,"guard-capture-bundle.json",selected.Raw)!=nil {t.Fatal("guard_capture_stage=preserve_bundle")}
+	seedRepresentation,seedErr:=guardCaptureSeedRepresentation(selected.Raw,p)
+	if seedErr!=nil {t.Fatal("guard_capture_stage=seed_binding")}
+	for name,raw:=range map[string][]byte{"guard-capture-bundle.json":selected.Raw,
+		"guard-capture-proof-bundle.json":selectedProof.Raw,"guard-capture-seed-representation.json":seedRepresentation} {
+		if guardCaptureWrite(dir,name,raw)!=nil {t.Fatal("guard_capture_stage=preserve_bundle")}
+	}
 	if len(publication)>0&&guardCaptureWrite(dir,"guard-capture-publication.json",publication)!=nil {t.Fatal("guard_capture_stage=preserve_publication")}
 
 	if server.Artifact.Expired||!time.Now().UTC().Before(expires) {
@@ -1487,7 +1492,7 @@ func TestGuardCaptureTwoSubjectCryptographicRehearsal(t *testing.T) {
 	entries:=[]matrixEntry{{RepositoryID:guardCaptureRepoID,BundleURL:"https://fixture.blob.core.windows.net/rehearsal.json.sn",Bundle:raw}}
 	for _,proofSubject:=range []bool{false,true}{
 		_,detail,err:=guardCaptureSelectDetailed(ctx,trusted,entries,p,proofSubject)
-		if err!=nil||detail.Stage!="bound"||detail.Entries!=1||detail.RepositoryEntries!=1||detail.VerifiedEntries!=1||len(detail.Rejections)!=0||detail.ObservedBundleBytes!=0||detail.ObservedBundleSHA256!=""||detail.VerifiedUnboundPreserved||len(detail.verifiedUnbound)!=0{
+		if err!=nil||detail.Stage!="bound"||detail.Entries!=1||detail.RepositoryEntries!=1||detail.VerifiedEntries!=1||len(detail.Rejections)!=0||detail.ObservedBundleBytes!=0||detail.ObservedBundleSHA256!=""||detail.VerifiedUnboundPreserved||len(detail.verifiedUnbound)!=0||detail.Binding==nil||*detail.Binding!=(guardCaptureBindingDiagnostic{true,true,true,true}){
 			t.Fatal("rehearsal_selector_diagnostic_positive_failed")
 		}
 	}
@@ -2094,6 +2099,7 @@ type guardCaptureSelectionDiagnostic struct {
 	ObservedBundleBytes int `json:"observed_bundle_bytes,omitempty"`
 	ObservedBundleSHA256 string `json:"observed_bundle_sha256,omitempty"`
 	VerifiedUnboundPreserved bool `json:"verified_unbound_preserved,omitempty"`
+	Binding *guardCaptureBindingDiagnostic `json:"binding,omitempty"`
 	verifiedUnbound []byte
 }
 
@@ -2134,20 +2140,114 @@ func guardCaptureVerificationCategory(err error) string {
 	return "verification_other"
 }
 
-func guardCaptureSelectedBinding(selected matrixOutcome, rawURL string, p guardCapturePin) string {
-	if int64(len(selected.Raw)) != p.BundleBytes {
-		return "bundle_size"
+
+// Only the direct verificationMaterial member order may be projected back to
+// the retained seed. Values stay as exact RawMessage spans; this is not JSON
+// semantic equivalence or a general canonicalization algorithm.
+type guardCaptureRawMember struct {
+	name string
+	value []byte
+	start, end int
+}
+
+func guardCaptureRawObject(raw []byte) ([]guardCaptureRawMember, error) {
+	if len(raw) == 0 || int64(len(raw)) > guardCaptureMaxJSON { return nil, errGuardCapture }
+	var compact bytes.Buffer
+	if json.Compact(&compact, raw) != nil || !bytes.Equal(compact.Bytes(), raw) { return nil, errGuardCapture }
+	check := json.NewDecoder(bytes.NewReader(raw))
+	check.UseNumber()
+	if guardCaptureJSONValue(check, 0) != nil || check.Decode(new(any)) != io.EOF { return nil, errGuardCapture }
+	dec := json.NewDecoder(bytes.NewReader(raw))
+	first, err := dec.Token()
+	if err != nil || first != json.Delim('{') { return nil, errGuardCapture }
+	var members []guardCaptureRawMember
+	for dec.More() {
+		keyStart := int(dec.InputOffset())
+		if keyStart < len(raw) && raw[keyStart] == ',' { keyStart++ }
+		keyToken, keyErr := dec.Token()
+		key, ok := keyToken.(string)
+		keyEnd := int(dec.InputOffset())
+		if keyErr != nil || !ok || keyStart >= keyEnd || keyEnd >= len(raw) || raw[keyEnd] != ':' ||
+			!bytes.Equal(raw[keyStart:keyEnd], []byte("\""+key+"\"")) { return nil, errGuardCapture }
+		var value json.RawMessage
+		if dec.Decode(&value) != nil { return nil, errGuardCapture }
+		end := int(dec.InputOffset())
+		start := keyEnd+1
+		if start >= end || end > len(raw) || !bytes.Equal(raw[start:end], value) { return nil, errGuardCapture }
+		members = append(members, guardCaptureRawMember{key, raw[start:end], start, end})
 	}
-	if guardCaptureHash(selected.Raw) != p.BundleSHA {
-		return "bundle_digest"
+	last, err := dec.Token()
+	if err != nil || last != json.Delim('}') || dec.Decode(new(any)) != io.EOF { return nil, errGuardCapture }
+	return members, nil
+}
+
+func guardCaptureSeedRepresentation(raw []byte, p guardCapturePin) ([]byte, error) {
+	if len(raw) == 0 || int64(len(raw)) > guardCaptureMaxJSON || int64(len(raw)) != p.BundleBytes { return nil, errGuardCapture }
+	if guardCaptureHash(raw) == p.BundleSHA { return raw, nil }
+	root, err := guardCaptureRawObject(raw)
+	if err != nil || len(root) != 3 || root[0].name != "mediaType" ||
+		root[1].name != "verificationMaterial" || root[2].name != "dsseEnvelope" { return nil, errGuardCapture }
+	vm, err := guardCaptureRawObject(root[1].value)
+	if err != nil || len(vm) != 3 || vm[0].name != "tlogEntries" ||
+		vm[1].name != "timestampVerificationData" || vm[2].name != "certificate" { return nil, errGuardCapture }
+	want := []string{"certificate", "tlogEntries", "timestampVerificationData"}
+	values := make(map[string][]byte, len(vm))
+	for _, m := range vm { values[m.name] = m.value }
+	if len(values["certificate"]) == 0 || values["certificate"][0] != '{' ||
+		len(values["tlogEntries"]) == 0 || values["tlogEntries"][0] != '[' ||
+		len(values["timestampVerificationData"]) == 0 || values["timestampVerificationData"][0] != '{' { return nil, errGuardCapture }
+	var ordered bytes.Buffer
+	ordered.WriteByte('{')
+	for i, key := range want {
+		value, ok := values[key]
+		if !ok { return nil, errGuardCapture }
+		if i != 0 { ordered.WriteByte(',') }
+		ordered.WriteByte('"'); ordered.WriteString(key); ordered.WriteString("\":")
+		ordered.Write(value)
 	}
-	if selected.LogIndex != p.RekorIndex {
-		return "rekor_index"
+	ordered.WriteByte('}')
+	if ordered.Len() != len(root[1].value) { return nil, errGuardCapture }
+	restored := make([]byte, 0, len(raw))
+	restored = append(restored, raw[:root[1].start]...)
+	restored = append(restored, ordered.Bytes()...)
+	restored = append(restored, raw[root[1].end:]...)
+	if int64(len(restored)) != p.BundleBytes || guardCaptureHash(restored) != p.BundleSHA { return nil, errGuardCapture }
+	return restored, nil
+}
+
+type guardCaptureBindingDiagnostic struct {
+	BundleSizeMatch bool `json:"bundle_size_match"`
+	SeedRepresentationMatch bool `json:"seed_representation_match"`
+	RekorIndexMatch bool `json:"rekor_index_match"`
+	AttestationRecordMatch bool `json:"attestation_record_match"`
+}
+
+func guardCaptureBindingFacts(selected matrixOutcome, rawURL string, p guardCapturePin) guardCaptureBindingDiagnostic {
+	_, err := guardCaptureSeedRepresentation(selected.Raw, p)
+	return guardCaptureBindingDiagnostic{
+		BundleSizeMatch: int64(len(selected.Raw)) == p.BundleBytes,
+		SeedRepresentationMatch: err == nil,
+		RekorIndexMatch: selected.LogIndex == p.RekorIndex,
+		AttestationRecordMatch: guardCaptureBundleID(rawURL, p.AttestationID),
 	}
-	if !guardCaptureBundleID(rawURL, p.AttestationID) {
-		return "attestation_record"
-	}
+}
+
+func guardCaptureBindingStage(f guardCaptureBindingDiagnostic) string {
+	if !f.BundleSizeMatch { return "bundle_size" }
+	if !f.SeedRepresentationMatch { return "bundle_digest" }
+	if !f.RekorIndexMatch { return "rekor_index" }
+	if !f.AttestationRecordMatch { return "attestation_record" }
 	return "bound"
+}
+
+func guardCaptureSelectedBinding(selected matrixOutcome, rawURL string, p guardCapturePin) string {
+	return guardCaptureBindingStage(guardCaptureBindingFacts(selected, rawURL, p))
+}
+
+func guardCaptureSameSeedRepresentation(left, right []byte, p guardCapturePin) bool {
+	leftSeed, leftErr := guardCaptureSeedRepresentation(left, p)
+	rightSeed, rightErr := guardCaptureSeedRepresentation(right, p)
+	return leftErr == nil && rightErr == nil && bytes.Equal(leftSeed, rightSeed)
 }
 
 func guardCaptureSelectDetailed(ctx context.Context, trusted trustedMaterial, entries []matrixEntry, p guardCapturePin, proof bool) (matrixOutcome, guardCaptureSelectionDiagnostic, error) {
@@ -2194,7 +2294,9 @@ func guardCaptureSelectDetailed(ctx context.Context, trusted trustedMaterial, en
 		}
 		return matrixOutcome{}, diagnostic, errGuardCapture
 	}
-	diagnostic.Stage = guardCaptureSelectedBinding(selected, entries[selected.Index].BundleURL, p)
+	binding := guardCaptureBindingFacts(selected, entries[selected.Index].BundleURL, p)
+	diagnostic.Binding = &binding
+	diagnostic.Stage = guardCaptureBindingStage(binding)
 	if diagnostic.Stage == "bundle_digest" {
 		diagnostic.ObservedBundleBytes = len(selected.Raw)
 		diagnostic.ObservedBundleSHA256 = guardCaptureHash(selected.Raw)
@@ -2211,6 +2313,10 @@ func guardCaptureLogSelection(t *testing.T, subject string, d guardCaptureSelect
 	// The subject labels are fixed at the two call sites below.
 	t.Logf("guard_capture_selection subject=%s stage=%s entries=%d repository_entries=%d verified_entries=%d",
 		subject, d.Stage, d.Entries, d.RepositoryEntries, d.VerifiedEntries)
+	if d.Binding != nil {
+		t.Logf("guard_capture_binding subject=%s bundle_size_match=%t seed_representation_match=%t rekor_index_match=%t attestation_record_match=%t",
+			subject,d.Binding.BundleSizeMatch,d.Binding.SeedRepresentationMatch,d.Binding.RekorIndexMatch,d.Binding.AttestationRecordMatch)
+	}
 	for _, category := range []string{"other_repository", "bundle_structure", "verification_input", "transparency_log",
 		"observer_timestamp", "certificate_chain", "certificate_sct", "identity", "statement_decode", "signature_content",
 		"signature_verifier", "bundle_version", "subject_digest", "signature", "verification_other", "verified_statement_or_time"} {
@@ -2294,7 +2400,7 @@ func TestGuardCaptureSelectionFailureDiagnosticDoesNotAccept(t *testing.T) {
 			if detail.Stage != c.stage || detail.Entries != len(c.entries) ||
 				detail.RepositoryEntries != c.repositoryEntries || !reflect.DeepEqual(detail.Rejections, c.rejections) ||
 				detail.ObservedBundleBytes != 0 || detail.ObservedBundleSHA256 != "" ||
-				detail.VerifiedUnboundPreserved || len(detail.verifiedUnbound) != 0 {
+				detail.VerifiedUnboundPreserved || len(detail.verifiedUnbound) != 0 || detail.Binding != nil {
 				t.Fatal("selection_failure_diagnostic_incomplete_or_incorrect")
 			}
 			report := guardCaptureReport{Reason: "pe_signature_rejected", PESelection: &detail}
@@ -2404,4 +2510,146 @@ func TestGuardCaptureVerifiedUnboundRetention(t *testing.T) {
 	if guardCapturePreserveVerifiedUnbound(t.TempDir(), "pe", nil) == nil {
 		t.Fatal("nil_unbound_diagnostic_accepted")
 	}
+}
+
+// Parser/binding data only; this fixture has no signature or verification authority.
+func guardCaptureRepresentationFixture() ([]byte, []byte) {
+	certificate := `{"rawBytes":"Q0VSVA=="}`
+	tlog := `[{"logIndex":"4023990479","integratedTime":1.0,"canonicalizedBody":"Ym9keQ=="}]`
+	timestamp := `{"rfc3161Timestamps":[]}`
+	envelope := `{"payloadType":"application/vnd.in-toto+json","payload":"YWJ\u006a","signatures":[{"sig":"c2ln","keyid":""}]}`
+	seed := []byte(`{"mediaType":"fixture/v0","verificationMaterial":{"certificate":`+certificate+
+		`,"tlogEntries":`+tlog+`,"timestampVerificationData":`+timestamp+`},"dsseEnvelope":`+envelope+`}`)
+	live := []byte(`{"mediaType":"fixture/v0","verificationMaterial":{"tlogEntries":`+tlog+
+		`,"timestampVerificationData":`+timestamp+`,"certificate":`+certificate+`},"dsseEnvelope":`+envelope+`}`)
+	return seed, live
+}
+
+func TestGuardCaptureSeedRepresentationPreservesRawMaterial(t *testing.T) {
+	seed, live := guardCaptureRepresentationFixture()
+	p := guardCaptureTestPin()
+	p.BundleBytes, p.BundleSHA = int64(len(seed)), guardCaptureHash(seed)
+	for name, raw := range map[string][]byte{"seed_exact":seed,"api_vm_order":live} {
+		t.Run(name, func(t *testing.T) {
+			before := append([]byte(nil), raw...)
+			restored, err := guardCaptureSeedRepresentation(raw, p)
+			if err != nil || !bytes.Equal(restored, seed) || !bytes.Equal(raw, before) { t.Fatal("seed_projection_positive_failed") }
+			if !guardCaptureSameSeedRepresentation(seed, raw, p) { t.Fatal("same_seed_projection_rejected") }
+		})
+	}
+	for name, edit := range map[string]func(string)string{
+		"payload":func(s string)string{return strings.Replace(s,`YWJ\u006a`,`YWJ\u006b`,1)},
+		"signature":func(s string)string{return strings.Replace(s,"c2ln","c2lo",1)},
+		"certificate":func(s string)string{return strings.Replace(s,"Q0VSVA==","Q0VSVB==",1)},
+		"tlog_body":func(s string)string{return strings.Replace(s,"Ym9keQ==","Ym9keR==",1)},
+		"tlog_number":func(s string)string{return strings.Replace(s,"1.0","2.0",1)},
+		"number_spelling":func(s string)string{return strings.Replace(s,"1.0","1e0",1)},
+		"string_spelling":func(s string)string{return strings.Replace(s,`\u006a`,`\u006A`,1)},
+		"nested_order":func(s string)string{return strings.Replace(s,`"sig":"c2ln","keyid":""`,`"keyid":"","sig":"c2ln"`,1)},
+		"root_order":func(s string)string{return "{"+strings.TrimSuffix(strings.TrimPrefix(s,`{"mediaType":"fixture/v0",`),"}")+`,"mediaType":"fixture/v0"}`},
+		"unknown_vm":func(s string)string{return strings.Replace(s,`"certificate":`,`"extra":0,"certificate":`,1)},
+		"unknown_same_length":func(s string)string{return strings.Replace(s,`"certificate":`,`"certificatE":`,1)},
+		"missing_vm":func(s string)string{return strings.Replace(s,`,"certificate":{"rawBytes":"Q0VSVA=="}`,"",1)},
+		"wrong_vm_type":func(s string)string{return strings.Replace(s,`{"rawBytes":"Q0VSVA=="}`,`["rawBytes","Q0VSVA=="]`,1)},
+		"other_direct_order":func(s string)string{return strings.Replace(s,`"timestampVerificationData":{"rfc3161Timestamps":[]},"certificate":{"rawBytes":"Q0VSVA=="}`,`"certificate":{"rawBytes":"Q0VSVA=="},"timestampVerificationData":{"rfc3161Timestamps":[]}`,1)},
+		"duplicate_vm":func(s string)string{return strings.Replace(s,`"certificate":`,`"certificate":{},"certificate":`,1)},
+		"casefold_vm":func(s string)string{return strings.Replace(s,`"certificate":`,`"Certificate":{},"certificate":`,1)},
+		"escaped_key":func(s string)string{return strings.Replace(s,`"certificate":`,`"\u0063ertificate":`,1)},
+		"tail":func(s string)string{return s+"{}"},
+		"whitespace_not_compact":func(s string)string{return " "+s},
+		"invalid":func(s string)string{return s[:len(s)-1]},
+	} {
+		t.Run(name, func(t *testing.T) {
+			changed := []byte(edit(string(live)))
+			if bytes.Equal(changed, live) { t.Fatal("ineffective_representation_negative") }
+			if _, err := guardCaptureSeedRepresentation(changed, p); err == nil { t.Fatal("changed_raw_material_accepted") }
+			if guardCaptureSameSeedRepresentation(live,changed,p) { t.Fatal("different_seed_material_accepted") }
+		})
+	}
+
+	certificate:=`{"rawBytes":"Q0VSVA=="}`
+	tlog:=`[{"logIndex":"4023990479","integratedTime":1.0,"canonicalizedBody":"Ym9keQ=="}]`
+	timestamp:=`{"rfc3161Timestamps":[]}`
+	members:=[]string{`"certificate":`+certificate,`"tlogEntries":`+tlog,`"timestampVerificationData":`+timestamp}
+	liveRoot,readErr:=guardCaptureRawObject(live)
+	if readErr!=nil||len(liveRoot)!=3{t.Fatal("permutation_fixture_invalid")}
+	for i,order:=range [][]int{{0,2,1},{1,0,2},{2,0,1},{2,1,0}} {
+		t.Run(fmt.Sprintf("unsupported_order_%d",i),func(t *testing.T){
+			vm:=[]byte("{"+members[order[0]]+","+members[order[1]]+","+members[order[2]]+"}")
+			changed:=append(append(append([]byte(nil),live[:liveRoot[1].start]...),vm...),live[liveRoot[1].end:]...)
+			if len(changed)!=len(seed)||bytes.Equal(changed,live)||bytes.Equal(changed,seed){t.Fatal("ineffective_order_negative")}
+			if _,err:=guardCaptureSeedRepresentation(changed,p);err==nil{t.Fatal("unsupported_vm_order_accepted")}
+		})
+	}
+	wrong := p; wrong.BundleSHA = strings.Repeat("0",64)
+	if _,err:=guardCaptureSeedRepresentation(live,wrong);err==nil {t.Fatal("caller_hash_without_seed_accepted")}
+	selected := matrixOutcome{Raw:live,LogIndex:p.RekorIndex}
+	if guardCaptureSelectedBinding(selected,"https://fixture.blob.core.windows.net/"+p.AttestationID+".json.sn",p)!="bound" {t.Fatal("projected_binding_rejected")}
+}
+
+func TestGuardCaptureRawObjectRejectsAmbiguity(t *testing.T) {
+	for name, raw := range map[string]string{
+		"duplicate":`{"a":1,"a":2}`,
+		"casefold":`{"a":1,"A":2}`,
+		"escaped_key":`{"\u0061":1}`,
+		"nested_duplicate":`{"a":{"b":1,"b":2}}`,
+		"tail":`{"a":1}{}`,
+		"nonobject":`[]`,
+		"invalid":`{"a":}`,
+		"depth":strings.Repeat("[",66)+"0"+strings.Repeat("]",66),
+	} {
+		t.Run(name,func(t *testing.T){if _,err:=guardCaptureRawObject([]byte(raw));err==nil{t.Fatal("ambiguous_raw_object_accepted")}})
+	}
+	raw := []byte(`{"a":9007199254740993,"b":"\\u0061","c":{"rawBytes":"Q0VSVA=="}}`)
+	members,err:=guardCaptureRawObject(raw)
+	if err!=nil||len(members)!=3||string(members[0].value)!="9007199254740993"||string(members[1].value)!=`"\\u0061"`||
+		string(members[2].value)!=`{"rawBytes":"Q0VSVA=="}`{t.Fatal("raw_value_spans_not_preserved")}
+}
+
+func TestGuardCaptureBindingChecksAreIndependent(t *testing.T) {
+	seed,live:=guardCaptureRepresentationFixture()
+	p:=guardCaptureTestPin();p.BundleBytes,p.BundleSHA=int64(len(seed)),guardCaptureHash(seed)
+	for name, c:=range map[string]struct{raw []byte; index string; url string;want guardCaptureBindingDiagnostic;stage string}{
+		"all_true":{live,p.RekorIndex,"https://fixture.blob.core.windows.net/"+p.AttestationID+".json.sn",guardCaptureBindingDiagnostic{true,true,true,true},"bound"},
+		"digest_only":{bytes.Replace(live,[]byte("c2ln"),[]byte("c2lo"),1),p.RekorIndex,"https://fixture.blob.core.windows.net/"+p.AttestationID+".json.sn",guardCaptureBindingDiagnostic{true,false,true,true},"bundle_digest"},
+		"digest_and_index":{bytes.Replace(live,[]byte("c2ln"),[]byte("c2lo"),1),p.RekorIndex+"0","https://fixture.blob.core.windows.net/"+p.AttestationID+".json.sn",guardCaptureBindingDiagnostic{true,false,false,true},"bundle_digest"},
+		"digest_and_record":{bytes.Replace(live,[]byte("c2ln"),[]byte("c2lo"),1),p.RekorIndex,"https://fixture.blob.core.windows.net/other.json.sn",guardCaptureBindingDiagnostic{true,false,true,false},"bundle_digest"},
+		"all_false":{[]byte("{}"),p.RekorIndex+"0","https://fixture.blob.core.windows.net/other.json.sn",guardCaptureBindingDiagnostic{false,false,false,false},"bundle_size"},
+	} {
+		t.Run(name,func(t *testing.T){
+			selected:=matrixOutcome{Raw:c.raw,LogIndex:c.index}
+			got:=guardCaptureBindingFacts(selected,c.url,p)
+			if got!=c.want||guardCaptureBindingStage(got)!=c.stage{t.Fatal("binding_facts_short_circuited_or_incorrect")}
+			d:=guardCaptureSelectionDiagnostic{Stage:c.stage,Binding:&got}
+			report:=guardCaptureReport{PESelection:&d}
+			encoded,err:=json.Marshal(report)
+			if err!=nil||report.Passed||report.UpdateAuthorized||bytes.Contains(encoded,c.raw)||bytes.Contains(encoded,[]byte(c.url)){t.Fatal("binding_facts_granted_or_exposed_input")}
+			for key,want:=range map[string]bool{"bundle_size_match":c.want.BundleSizeMatch,"seed_representation_match":c.want.SeedRepresentationMatch,"rekor_index_match":c.want.RekorIndexMatch,"attestation_record_match":c.want.AttestationRecordMatch}{
+				if !bytes.Contains(encoded,[]byte(fmt.Sprintf("%q:%t",key,want))){t.Fatal("binding_fact_not_serialized")}
+			}
+		})
+	}
+}
+
+// Public hosted diagnostic bytes from the same fixed capture, not a verifier result.
+func TestGuardCaptureRetainedLiveRepresentationMatchesSeedPin(t *testing.T) {
+	raw:=[]byte(`{"mediaType":"application/vnd.dev.sigstore.bundle.v0.3+json","verificationMaterial":{"tlogEntries":[{"logIndex":"4023990479","logId":{"keyId":"wNI9atQGlz+VWfO6LRygH4QUfY/8W4RFwiT5i5WRgB0="},"kindVersion":{"kind":"dsse","version":"0.0.1"},"integratedTime":"1795173556","inclusionPromise":{"signedEntryTimestamp":"MEUCIGlXQcpNSRASflF6+09FK5nIxFzVmG2q3Rl/YclVzaKnAiEAmCw33wLwDfgTsQynDKdsECp+DhdLvOINzhu04SZCf5U="},"inclusionProof":{"logIndex":"3902086217","rootHash":"Ovag7dTikNgXHz9jhU1BIUeAbBRXst1Tq6uLy/hPfT8=","treeSize":"3902086223","hashes":["NL379pjJi7EwVdq0Q/eUDwB+Uc1o8KQY/qFhyUHQAjs=","qIMiqzprhoZBapctDWau9rX0tqroqebtwZ7G3J8APSg=","mVQFCru5QnB3FYYYvXpZ0Y8WhB6QpxR0odbMbb7AaN4=","Vrk/ETv8MiL/5tALP1NoX7p+JYj8yrtU17N74Ns72qo=","siD+aw8+fImlBIcCHxkSNSiBC+UZpMn0fdKeQQMX4hI=","XjQ/urXfhdBveFqLn0r+LGnqYUbEDtBXxOaAZIyivQ0=","pV31HEAxz2yjRgmqShks9jtbOdLjFvQXPri86OeZiHQ=","226ZxtCzkCbMrL6oUeehXQ2TkGMgnS2lU6IqrjSI5y4=","TjfjRmgxdQIq1L+RcZmf8x6T3EVddeiKg4DM5d1X8Ks=","zg6onwKXIBaa9MXMOObR1FahT1U7IDutCqv2BGQPDMc=","TkKgr5bFMXLxX0gcNTmH5fNaDfGP7sVqKcdaCKNfNJY=","bpivoC31PB5djfiSn6cC5GXF2dPZuOJdVxDafoiGndU=","XYkf+Vk9hVBebwq5KRpgAFIE2Jk4aAgO1jFr22tSd4k=","k0+Z1T6dI0Tgluh54oO/hnxtuoW22MqFIjVTPYeUJGU=","1DaDKzrCNNBhmSdY5vFjz+NpAmxmYfYEgBCdPLrMP1A=","xH/DCseLHr9eKoYT8qsORZK7zVdEGYWHuVtsVrD95wY="],"checkpoint":{"envelope":"rekor.sigstore.dev - 1193050959916656506\n3902086223\nOvag7dTikNgXHz9jhU1BIUeAbBRXst1Tq6uLy/hPfT8=\n\n— rekor.sigstore.dev wNI9ajBEAiBs6bZOYVVaARvtAkg3YmzB19jwSazooviqWfsjLV0ypQIgJEOg9a8yvD1qmgl+nhVeGgd0bay0PYrno/XJAQiK8B0=\n"}},"canonicalizedBody":"eyJhcGlWZXJzaW9uIjoiMC4wLjEiLCJraW5kIjoiZHNzZSIsInNwZWMiOnsiZW52ZWxvcGVIYXNoIjp7ImFsZ29yaXRobSI6InNoYTI1NiIsInZhbHVlIjoiOGUwMWFkM2I2YjZkMzQwNjA0NjlmYWFhZDA4OTE2ZWIyNDFhZjZhNzdjOGZiNDU5ZmM0YTczZGRiOGJhMDRiNyJ9LCJwYXlsb2FkSGFzaCI6eyJhbGdvcml0aG0iOiJzaGEyNTYiLCJ2YWx1ZSI6IjVkODM0YjMzNmEzODhjNDY2ZmY1MzQzZjM3NWFhNjM4OTRhN2QxN2M1OGFhNWYzODNlNWVlNjdlN2Q4ZDNkMWMifSwic2lnbmF0dXJlcyI6W3sic2lnbmF0dXJlIjoiTUVVQ0lCWHIvSzNsblZNTnNnaUNDVDF5TWwyTXFWY2JmYnpmbVJwR1F1cFZUU1QrQWlFQXJ3bGtsWjVlbkwwU1ZJRFB1dkJvSWJxSUprVjNCSmd1UlVOY0JCVXhNQmc9IiwidmVyaWZpZXIiOiJMUzB0TFMxQ1JVZEpUaUJEUlZKVVNVWkpRMEZVUlMwdExTMHRDazFKU1Voa1ZFTkRRblo1WjBGM1NVSkJaMGxWVWxCelRuQjFiRkpHTTBabGFEVmxhM0Z5V2tKblZURkdRbWxuZDBObldVbExiMXBKZW1vd1JVRjNUWGNLVG5wRlZrMUNUVWRCTVZWRlEyaE5UV015Ykc1ak0xSjJZMjFWZFZwSFZqSk5ValIzU0VGWlJGWlJVVVJGZUZaNllWZGtlbVJIT1hsYVV6RndZbTVTYkFwamJURnNXa2RzYUdSSFZYZElhR05PVFdwWmVFMVVTWGROVkVWNFQxUkZNbGRvWTA1TmFsbDRUVlJKZDAxVVJYbFBWRVV5VjJwQlFVMUdhM2RGZDFsSUNrdHZXa2w2YWpCRFFWRlpTVXR2V2tsNmFqQkVRVkZqUkZGblFVVm5aMFJrV2t0bFMyaDBPVzFRUm5GbFNHWXllRUk1YUhKaE5EUlVUWGhrUm5kbWNuQUtWMGg2ZGs1SGNVUnBVa05RYVRoNk9HUlZWMlY2TkdoUFpFWkNTR2t5WjI1Q1RsSk1Xa1ZWYlZsSVZrUjNXbFZZT0RaUFEwSm9jM2RuWjFsWVRVRTBSd3BCTVZWa1JIZEZRaTkzVVVWQmQwbElaMFJCVkVKblRsWklVMVZGUkVSQlMwSm5aM0pDWjBWR1FsRmpSRUY2UVdaQ1owNVdTRk5OUlVkRVFWZG5RbFJtQ2pBcmJsQldhVkZTYkhadGJ6SlBhMjlXWVV4SFRHaG9hMUI2UWpOQ1owNVdTRkpGUWtGbU9FVmlWRUp5YUcxc2IyUklVbmRqZW05MlRESmtjR1JIYURFS1dXazFhbUl5TUhaUldGWXdZakJTYkdScmNHaGpSMFoxVERKT2FreFlRbXBNV0ZKMllqSjRla3hZU25wTWVUVnVZVmhTYjJSWFNYWmtNamw1WVRKYWN3cGlNMlI2VEROV2RWbFlVakJhVnpWcldsZFJkR050Vm1oYVIyeDFXbGhPZWt4dWJIUmlSVUo1V2xkYWVrd3lhR3haVjFKNlRESXhhR0ZYTkhkUFVWbExDa3QzV1VKQ1FVZEVkbnBCUWtGUlVYSmhTRkl3WTBoTk5reDVPVEJpTW5Sc1ltazFhRmt6VW5CaU1qVjZURzFrY0dSSGFERlpibFo2V2xoS2FtSXlOVEFLV2xjMU1FeHRUblppVkVGbVFtZHZja0puUlVWQldVOHZUVUZGUTBKQ1JqTmlNMHB5V20xNGRtUXhPV3RoV0U1M1dWaFNhbUZFUVRKQ1oyOXlRbWRGUlFwQldVOHZUVUZGUkVKRFozZFBWMFYzV2tkVk1VNHlUVEJQVkU1c1RqSk5OVTV0UlhoYWJVbDRUVlJOZWsxRVdUUmFSRTVzVFcxRk5FMXFVVEpQUkVFeUNrMURaMGREYVhOSFFWRlJRbWMzT0hkQlVWRkZSMnhXZFZsWVVqQmFWelZyV2xkUloyTnRWbWhhUjJ4MVdsaE9la2xJVW5aaU1uaDZUVU5yUjBOcGMwY0tRVkZSUW1jM09IZEJVVlZGUnpCR01XUkhPVVZhV0ZwTFdWaENhR0pwT1dwWmVURjNXWGt4TUdJeU9YTmplVEY1WTNwQlpFSm5iM0pDWjBWRlFWbFBMd3BOUVVWSFFrRTVlVnBYV25wTU1taHNXVmRTZWt3eU1XaGhWelIzVDNkWlMwdDNXVUpDUVVkRWRucEJRa05CVVhSRVEzUnZaRWhTZDJONmIzWk1NMUoyQ21FeVZuVk1iVVpxWkVkc2RtSnVUWFZhTW13d1lVaFdhV1JZVG14amJVNTJZbTVTYkdKdVVYVlpNamwwVFVoclIwTnBjMGRCVVZGQ1p6YzRkMEZSYTBVS1lYZDRjR0ZJVWpCalNFMDJUSGs1Ym1GWVVtOWtWMGwxV1RJNWRFd3dSakZrUnpsRldsaGFTMWxZUW1oaWFUbHFXWGt4ZDFsNU1UQmlNamx6WTNreGVRcGplVGgxV2pKc01HRklWbWxNTTJSMlkyMTBiV0pIT1ROamVUa3hZbTFHTUdSSFZuVmFSMVpyVEZoS2JGbFhVbkJpYlZaNlkzazFOV0pYZUVGamJWWnRDbU41T1c5YVYwWnJZM2s1ZEZsWGJIVk5SR2RIUTJselIwRlJVVUpuTnpoM1FWRnZSVXRuZDI5TlJHeG9UVWRTYkU1VVpHcE9SR3Q2V2xSa2FrOVVXbWdLVFZkYWFVMVVSWHBOZWtFeVQwZFJlbHBVU21oUFJFa3dUbXBuZDA1cVFXUkNaMjl5UW1kRlJVRlpUeTlOUVVWTVFrRTRUVVJYWkhCa1IyZ3hXV2t4YndwaU0wNHdXbGRSZDFCbldVdExkMWxDUWtGSFJIWjZRVUpFUVZGM1JFTTFiMlJJVW5kamVtOTJUREprY0dSSGFERlphVFZxWWpJd2RsRllWakJpTUZKc0NtUnJjR2hqUjBaMVRESk9ha3hZUW1wTVdGSjJZako0ZWt4WVNucE5SR2RIUTJselIwRlJVVUpuTnpoM1FWRXdSVXRuZDI5TlJHeG9UVWRTYkU1VVpHb0tUa1JyZWxwVVpHcFBWRnBvVFZkYWFVMVVSWHBOZWtFeVQwZFJlbHBVU21oUFJFa3dUbXBuZDA1cVFXWkNaMjl5UW1kRlJVRlpUeTlOUVVWUFFrSkZUUXBFTTBwc1dtNU5kbUZIVm1oYVNFMTJZbGRHY0dKcVFXRkNaMjl5UW1kRlJVRlpUeTlOUVVWUVFrRjNUVU5xUlRCTlJGazBUVlJuTTAxVVRYZE1kMWxMQ2t0M1dVSkNRVWRFZG5wQlFrVkJVV2hFUWpsdlpFaFNkMk42YjNaTU1tUndaRWRvTVZscE5XcGlNakIyVVZoV01HSXdVbXhrYTNCb1kwZEdkVTFDYTBjS1EybHpSMEZSVVVKbk56aDNRVkpGUlVOM2QwcE5hbEV5VDBSTk1FOVVaM3BOU0d0SFEybHpSMEZSVVVKbk56aDNRVkpKUldGM2VIQmhTRkl3WTBoTk5ncE1lVGx1WVZoU2IyUlhTWFZaTWpsMFREQkdNV1JIT1VWYVdGcExXVmhDYUdKcE9XcFplVEYzV1hreE1HSXlPWE5qZVRGNVkzazRkVm95YkRCaFNGWnBDa3d6WkhaamJYUnRZa2M1TTJONU9URmliVVl3WkVkV2RWcEhWbXRNV0Vwc1dWZFNjR0p0Vm5wamVUVTFZbGQ0UVdOdFZtMWplVGx2V2xkR2EyTjVPWFFLV1Zkc2RVMUVaMGREYVhOSFFWRlJRbWMzT0hkQlVrMUZTMmQzYjAxRWJHaE5SMUpzVGxSa2FrNUVhM3BhVkdScVQxUmFhRTFYV21sTlZFVjZUWHBCTWdwUFIxRjZXbFJLYUU5RVNUQk9hbWQzVG1wQmFFSm5iM0pDWjBWRlFWbFBMMDFCUlZWQ1FrMU5SVmhrZG1OdGRHMWlSemt6V0RKU2NHTXpRbWhrUjA1dkNrMUhTVWREYVhOSFFWRlJRbWMzT0hkQlVsVkZWa0Y0VTJGSVVqQmpTRTAyVEhrNWJtRllVbTlrVjBsMVdUSTVkRXd3UmpGa1J6bEZXbGhhUzFsWVFtZ0tZbWs1YWxsNU1YZFplVEV3WWpJNWMyTjVNWGxqZVRsb1dUTlNjR0l5TlhwTU0wb3hZbTVOZGs1RVVUTk5hbGt3VDBSSk1rMUVRWFpaV0ZJd1dsY3hkd3BrU0UxMlRWUkJWMEpuYjNKQ1owVkZRVmxQTDAxQlJWZENRV2ROUW01Q01WbHRlSEJaZWtKYVFtZHZja0puUlVWQldVOHZUVUZGV1VKRmMwMVRXRXBzQ21OSE9EWlJXRll3WWpCU2JHUnJjR2hqUjBaMVVVUkpNRTVxWjNwT1JHczBUWGs1YWxsNU1YZFplVEV3WWpJNWMyTjVNWGxqTUVGNFRrUkJNazlFUlRRS1RucEZlazl1U214YWFuQjVXbGRhZWt3eWFHeFpWMUo2VERJeGFHRlhOSGRuV1c5SFEybHpSMEZSVVVJeGJtdERRa0ZKUldaQlVqWkJTR2RCWkdkRVpBcFFWRUp4ZUhOalVrMXRUVnBJYUhsYVducGpRMjlyY0dWMVRqUTRjbVlyU0dsdVMwRk1lVzUxYW1kQlFVRmhTRFJ5Y1VoblFVRkJSVUYzUWtoTlJWVkRDa2xSUkhkaFRqSkZRa3c0VTBVNGFESlJRbTFzS3k4MWQwOHdhVkUzYVhsdFJUaFNibVZhY0RKUmQxWnJaVkZKWjA5WGRrMVFaVnBhYTJJMGNTOVRPRElLZVhjM1R6WjVUblZZYkhrMFEwOWtUekV4TlZocmQwcHZjbVJCZDBObldVbExiMXBKZW1vd1JVRjNUVVJhZDBGM1drRkpkMWhhTm1oVk1EWXhNbXR1TUFwaVFYVlNla3RwVldnMlNEQjRVRTl0V2xac09DczNkVXh5VUZReWNWQnpSblZhYTFKdWJtNTVWbEY0TmxwQ1VVOU1ZbWxGUVdwQmIzbHBhMUZqZURCbENtWTBjazB4YzFvdldIZzNRa1pDZEZBM1JrZ3JjWEZ4Y2tsWlUyTk9iaTlRT0V0VVdGcFRTbUZNTlM4MFNtNXZVV2wyZWtOalFqZzlDaTB0TFMwdFJVNUVJRU5GVWxSSlJrbERRVlJGTFMwdExTMEsifV19fQ=="}],"timestampVerificationData":{},"certificate":{"rawBytes":"MIIHdTCCBvygAwIBAgIURPsNpulRF3Feh5ekqrZBgU1FBigwCgYIKoZIzj0EAwMwNzEVMBMGA1UEChMMc2lnc3RvcmUuZGV2MR4wHAYDVQQDExVzaWdzdG9yZS1pbnRlcm1lZGlhdGUwHhcNMjYxMTIwMTExOTE2WhcNMjYxMTIwMTEyOTE2WjAAMFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEggDdZKeKht9mPFqeHf2xB9hra44TMxdFwfrpWHzvNGqDiRCPi8z8dUWez4hOdFBHi2gnBNRLZEUmYHVDwZUX86OCBhswggYXMA4GA1UdDwEB/wQEAwIHgDATBgNVHSUEDDAKBggrBgEFBQcDAzAfBgNVHSMEGDAWgBTf0+nPViQRlvmo2OkoVaLGLhhkPzB3BgNVHREBAf8EbTBrhmlodHRwczovL2dpdGh1Yi5jb20vQXV0b0RldkphcGFuL2NjLXBjLXRvb2xzLXJzLy5naXRodWIvd29ya2Zsb3dzL3VuYXR0ZW5kZWQtcmVhZGluZXNzLnltbEByZWZzL2hlYWRzL21haW4wOQYKKwYBBAGDvzABAQQraHR0cHM6Ly90b2tlbi5hY3Rpb25zLmdpdGh1YnVzZXJjb250ZW50LmNvbTAfBgorBgEEAYO/MAECBBF3b3JrZmxvd19kaXNwYXRjaDA2BgorBgEEAYO/MAEDBCgwOWEwZGU1N2M0OTNlN2M5NmExZmIxMTMzMDY4ZDNlMmE4MjQ2ODA2MCgGCisGAQQBg78wAQQEGlVuYXR0ZW5kZWQgcmVhZGluZXNzIHRvb2xzMCkGCisGAQQBg78wAQUEG0F1dG9EZXZKYXBhbi9jYy1wYy10b29scy1yczAdBgorBgEEAYO/MAEGBA9yZWZzL2hlYWRzL21haW4wOwYKKwYBBAGDvzABCAQtDCtodHRwczovL3Rva2VuLmFjdGlvbnMuZ2l0aHVidXNlcmNvbnRlbnQuY29tMHkGCisGAQQBg78wAQkEawxpaHR0cHM6Ly9naXRodWIuY29tL0F1dG9EZXZKYXBhbi9jYy1wYy10b29scy1ycy8uZ2l0aHViL3dvcmtmbG93cy91bmF0dGVuZGVkLXJlYWRpbmVzcy55bWxAcmVmcy9oZWFkcy9tYWluMDgGCisGAQQBg78wAQoEKgwoMDlhMGRlNTdjNDkzZTdjOTZhMWZiMTEzMzA2OGQzZTJhODI0NjgwNjAdBgorBgEEAYO/MAELBA8MDWdpdGh1Yi1ob3N0ZWQwPgYKKwYBBAGDvzABDAQwDC5odHRwczovL2dpdGh1Yi5jb20vQXV0b0RldkphcGFuL2NjLXBjLXRvb2xzLXJzMDgGCisGAQQBg78wAQ0EKgwoMDlhMGRlNTdjNDkzZTdjOTZhMWZiMTEzMzA2OGQzZTJhODI0NjgwNjAfBgorBgEEAYO/MAEOBBEMD3JlZnMvaGVhZHMvbWFpbjAaBgorBgEEAYO/MAEPBAwMCjE0MDY4MTg3MTMwLwYKKwYBBAGDvzABEAQhDB9odHRwczovL2dpdGh1Yi5jb20vQXV0b0RldkphcGFuMBkGCisGAQQBg78wAREECwwJMjQ2ODM0OTgzMHkGCisGAQQBg78wARIEawxpaHR0cHM6Ly9naXRodWIuY29tL0F1dG9EZXZKYXBhbi9jYy1wYy10b29scy1ycy8uZ2l0aHViL3dvcmtmbG93cy91bmF0dGVuZGVkLXJlYWRpbmVzcy55bWxAcmVmcy9oZWFkcy9tYWluMDgGCisGAQQBg78wARMEKgwoMDlhMGRlNTdjNDkzZTdjOTZhMWZiMTEzMzA2OGQzZTJhODI0NjgwNjAhBgorBgEEAYO/MAEUBBMMEXdvcmtmbG93X2Rpc3BhdGNoMGIGCisGAQQBg78wARUEVAxSaHR0cHM6Ly9naXRodWIuY29tL0F1dG9EZXZKYXBhbi9jYy1wYy10b29scy1ycy9hY3Rpb25zL3J1bnMvNDQ3MjY0ODI2MDAvYXR0ZW1wdHMvMTAWBgorBgEEAYO/MAEWBAgMBnB1YmxpYzBZBgorBgEEAYO/MAEYBEsMSXJlcG86QXV0b0RldkphcGFuQDI0NjgzNDk4My9jYy1wYy10b29scy1yc0AxNDA2ODE4NzEzOnJlZjpyZWZzL2hlYWRzL21haW4wgYoGCisGAQQB1nkCBAIEfAR6AHgAdgDdPTBqxscRMmMZHhyZZzcCokpeuN48rf+HinKALynujgAAAaH4rqHgAAAEAwBHMEUCIQDwaN2EBL8SE8h2QBml+/5wO0iQ7iymE8RneZp2QwVkeQIgOWvMPeZZkb4q/S82yw7O6yNuXly4COdO115XkwJordAwCgYIKoZIzj0EAwMDZwAwZAIwXZ6hU0612kn0bAuRzKiUh6H0xPOmZVl8+7uLrPT2qPsFuZkRnnnyVQx6ZBQOLbiEAjAoyikQcx0ef4rM1sZ/Xx7BFBtP7FH+qqqrIYScNn/P8KTXZSJaL5/4JnoQivzCcB8="}},"dsseEnvelope":{"payload":"eyJfdHlwZSI6Imh0dHBzOi8vaW4tdG90by5pby9TdGF0ZW1lbnQvdjEiLCJzdWJqZWN0IjpbeyJuYW1lIjoiZ3VhcmQuZXhlIiwiZGlnZXN0Ijp7InNoYTI1NiI6IjljNDMxYzU4MjQ0YTIyMmMwYTRiNmJmOGZkMjQ0OWVlMGY1OWExYjc2NTNiZjM0MzkzZTRhODkwY2UzYTM1ODkifX0seyJuYW1lIjoic291cmNlLXByb29mLmpzb24iLCJkaWdlc3QiOnsic2hhMjU2IjoiMTNiNzA0Nzc4M2EzM2NkMzQ2Zjc4ZDlhMDQ5NmE4OWFlZWUyYTk3NzRiZjlmOWQ5MjAxMjQ3YmFjZjljYzMxMiJ9fV0sInByZWRpY2F0ZVR5cGUiOiJodHRwczovL3Nsc2EuZGV2L3Byb3ZlbmFuY2UvdjEiLCJwcmVkaWNhdGUiOnsiYnVpbGREZWZpbml0aW9uIjp7ImJ1aWxkVHlwZSI6Imh0dHBzOi8vYWN0aW9ucy5naXRodWIuaW8vYnVpbGR0eXBlcy93b3JrZmxvdy92MSIsImV4dGVybmFsUGFyYW1ldGVycyI6eyJ3b3JrZmxvdyI6eyJyZWYiOiJyZWZzL2hlYWRzL21haW4iLCJyZXBvc2l0b3J5IjoiaHR0cHM6Ly9naXRodWIuY29tL0F1dG9EZXZKYXBhbi9jYy1wYy10b29scy1ycyIsInBhdGgiOiIuZ2l0aHViL3dvcmtmbG93cy91bmF0dGVuZGVkLXJlYWRpbmVzcy55bWwifX0sImludGVybmFsUGFyYW1ldGVycyI6eyJnaXRodWIiOnsiZXZlbnRfbmFtZSI6IndvcmtmbG93X2Rpc3BhdGNoIiwicmVwb3NpdG9yeV9pZCI6IjE0MDY4MTg3MTMiLCJyZXBvc2l0b3J5X293bmVyX2lkIjoiMjQ2ODM0OTgzIiwicnVubmVyX2Vudmlyb25tZW50IjoiZ2l0aHViLWhvc3RlZCJ9fSwicmVzb2x2ZWREZXBlbmRlbmNpZXMiOlt7InVyaSI6ImdpdCtodHRwczovL2dpdGh1Yi5jb20vQXV0b0RldkphcGFuL2NjLXBjLXRvb2xzLXJzQHJlZnMvaGVhZHMvbWFpbiIsImRpZ2VzdCI6eyJnaXRDb21taXQiOiIwOWEwZGU1N2M0OTNlN2M5NmExZmIxMTMzMDY4ZDNlMmE4MjQ2ODA2In19XX0sInJ1bkRldGFpbHMiOnsiYnVpbGRlciI6eyJpZCI6Imh0dHBzOi8vZ2l0aHViLmNvbS9BdXRvRGV2SmFwYW4vY2MtcGMtdG9vbHMtcnMvLmdpdGh1Yi93b3JrZmxvd3MvdW5hdHRlbmRlZC1yZWFkaW5lc3MueW1sQHJlZnMvaGVhZHMvbWFpbiJ9LCJtZXRhZGF0YSI6eyJpbnZvY2F0aW9uSWQiOiJodHRwczovL2dpdGh1Yi5jb20vQXV0b0RldkphcGFuL2NjLXBjLXRvb2xzLXJzL2FjdGlvbnMvcnVucy80NDcyNjQ4MjYwMC9hdHRlbXB0cy8xIn19fX0=","payloadType":"application/vnd.in-toto+json","signatures":[{"sig":"MEUCIBXr/K3lnVMNsgiCCT1yMl2MqVcbfbzfmRpGQupVTST+AiEArwlklZ5enL0SVIDPuvBoIbqIJkV3BJguRUNcBBUxMBg="}]}}`)
+	if int64(len(raw))!=11231||guardCaptureHash(raw)!="7053712e67c573649755595edb137af7aa6e7cacbc16e490d1bcc568e8dcab2f"{t.Fatal("retained_live_fixture_changed")}
+	p:=guardCaptureNext
+	if p.BundleBytes!=11231||p.BundleSHA!="e7834c6fc21c5bed1d17507c929c7bc25f8c6c7322226383b26d5a037b9d0771"{t.Fatal("original_seed_pin_changed")}
+	restored,err:=guardCaptureSeedRepresentation(raw,p)
+	if err!=nil||int64(len(restored))!=p.BundleBytes||guardCaptureHash(restored)!=p.BundleSHA {t.Fatal("retained_live_seed_binding_failed")}
+	root,err:=guardCaptureRawObject(restored)
+	if err!=nil||len(root)!=3{t.Fatal("retained_seed_structure_changed")}
+	vm,err:=guardCaptureRawObject(root[1].value)
+	if err!=nil||len(vm)!=3{t.Fatal("retained_seed_material_changed")}
+	order:=[]int{1,2,0}
+	var back bytes.Buffer;back.WriteByte('{')
+	for i,j:=range order {
+		if i!=0 {back.WriteByte(',')}
+		back.WriteByte('"');back.WriteString(vm[j].name);back.WriteString("\":");back.Write(vm[j].value)
+	}
+	back.WriteByte('}')
+	roundtrip:=append(append(append([]byte(nil),restored[:root[1].start]...),back.Bytes()...),restored[root[1].end:]...)
+	if !bytes.Equal(roundtrip,raw){t.Fatal("retained_live_roundtrip_changed_raw_material")}
 }

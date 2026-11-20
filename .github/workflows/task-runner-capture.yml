@@ -174,7 +174,7 @@ jobs:
             ${{ steps.runner_capture.outputs.artifact-directory }}/capture.json
             ${{ steps.runner_capture.outputs.artifact-directory }}/source-proof.json
           if-no-files-found: error
-          retention-days: 1
+          retention-days: 7
           compression-level: 0
           overwrite: false
           include-hidden-files: false

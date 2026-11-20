@@ -26,12 +26,14 @@ import (
     "github.com/sigstore/sigstore-go/pkg/verify"
 )
 
-// Exact original producer files must remain unchanged at the admitted run
+// The producer files must carry exactly these reviewed blobs at the admitted run
 // revision; being a descendant of a reviewed commit alone is insufficient.
+// The workflow and README differ from the first reviewed text only in the
+// retention of the capture artifact (seven days instead of one).
 type dsRunnerProducerFile struct{Path,Blob string}
 var dsRunnerProducerFiles = []dsRunnerProducerFile{
-    {".github/workflows/task-runner-capture.yml","dbdb8e6b569ac8503801103e10d115523577aa8e"},
-    {"tools/task-runner-capture/README.md","2b684c79ddfb6ab019399a7673c55965ffa9fe31"},
+    {".github/workflows/task-runner-capture.yml","3df46a044078fc0ad5cb189e042c1b7f00c81384"},
+    {"tools/task-runner-capture/README.md","bb7c4f6120146fd93ddd3a0b3a0695217ef52e17"},
     {"tools/task-runner-capture/go.mod","d1acf495f8a291b2d8f84708e17082ace7c14671"},
     {"tools/task-runner-capture/main_windows.go","aac49589adaefd3a8f8269950e341b41ff67d9fa"},
     {"tools/task-runner-capture/main_windows_test.go","d502c679cb98644e0ee1e02a12403de2858ff294"},
@@ -92,8 +94,14 @@ func dsRunnerResponseError(primary,closeErr,contextErr error)error{
 // primary evidence failure. Raw transport errors never leave this layer.
 func dsRunnerCleanupFact(err error)bool{return errors.Is(err,errDSRunnerCleanup)||errors.Is(err,errGHAGuardResponseCleanup)}
 func dsRunnerEvidenceFailure(err error)error{
-    if dsRunnerCleanupFact(err){return errors.Join(errDSRunnerEvidence,errDSRunnerCleanup)}
-    return errDSRunnerEvidence
+    failure:=error(errDSRunnerEvidence)
+    if dsRunnerCleanupFact(err){failure=errors.Join(errDSRunnerEvidence,errDSRunnerCleanup)}
+    // Only the fixed reason and the context's own end are kept; raw errors never are.
+    var typed *dsRunnerFailureError
+    if errors.As(err,&typed)&&typed!=nil{failure=errors.Join(failure,typed)}
+    if errors.Is(err,context.DeadlineExceeded){failure=errors.Join(failure,context.DeadlineExceeded)}
+    if errors.Is(err,context.Canceled){failure=errors.Join(failure,context.Canceled)}
+    return failure
 }
 func dsRunnerFailureOr(failure error)error{
     if failure!=nil{return failure}
@@ -106,7 +114,7 @@ func dsRunnerServerFetch(ctx context.Context,client *http.Client,endpoint string
 type dsRunnerAuthority struct{session *dsRunnerCredential;client *http.Client;pin dsRunnerCapturePin}
 func openDSRunnerAuthority(ctx context.Context,p dsRunnerCapturePin)(result *dsRunnerAuthority,err error){
     if ctx==nil||ctx.Err()!=nil||!dsRunnerPinValid(p){return nil,errDSRunnerEvidence}
-    secret,err:=ghaGuardReadFixedWinCredential();if err!=nil{return nil,errors.Join(errDSRunnerEvidence,err)}
+    secret,err:=ghaGuardReadFixedWinCredential();if err!=nil{return nil,errors.Join(errDSRunnerEvidence,err,dsRunnerCredentialFailure(err))}
     owned,cancel:=context.WithCancel(context.Background())
     transport:=&http.Transport{Proxy:nil,TLSHandshakeTimeout:10*time.Second,ResponseHeaderTimeout:15*time.Second,MaxResponseHeaderBytes:64<<10,TLSNextProto:make(map[string]func(string,*tls.Conn)http.RoundTripper)}
     session:=&dsRunnerCredential{secret:secret,base:transport,pin:p,root:owned,cancel:cancel,done:make(chan struct{})}
@@ -114,7 +122,8 @@ func openDSRunnerAuthority(ctx context.Context,p dsRunnerCapturePin)(result *dsR
     issued:=false;defer func(){if !issued{cleanup,c:=context.WithTimeout(context.Background(),5*time.Second);defer c();err=errors.Join(err,session.Close(cleanup))}}()
     raw,err:=dsRunnerHTTPBytes(ctx,client,"https://api.github.com/user",64<<10)
     if err!=nil{return nil,err};valid:=ghaGuardCredentialOwnerJSON(raw);clear(raw)
-    if !valid||ctx.Err()!=nil{return nil,errDSRunnerEvidence}
+    if ctx.Err()!=nil{return nil,errors.Join(errDSRunnerEvidence,ctx.Err())}
+    if !valid{return nil,dsRunnerEvidenceReason("owner","mismatch")}
     session.mu.Lock();session.ready=true;session.mu.Unlock()
     result=&dsRunnerAuthority{session:session,client:client,pin:p};issued=true;return result,nil
 }
@@ -122,16 +131,23 @@ func dsRunnerHTTPBytes(ctx context.Context,client *http.Client,endpoint string,l
     if ctx==nil||ctx.Err()!=nil||client==nil||limit<1||limit>64<<20{return nil,errDSRunnerEvidence}
     request,err:=http.NewRequestWithContext(ctx,http.MethodGet,endpoint,nil);if err!=nil{return nil,errDSRunnerEvidence}
     request.Header.Set("Accept","application/vnd.github+json");request.Header.Set("X-GitHub-Api-Version","2022-11-28")
+    phase:=dsRunnerEndpointPhase(endpoint)
     isolated:=*client;isolated.CheckRedirect=func(*http.Request,[]*http.Request)error{return http.ErrUseLastResponse}
     response,err:=isolated.Do(request)
-    if err!=nil||response==nil||response.Body==nil{var closeErr error;if response!=nil&&response.Body!=nil{closeErr=response.Body.Close()};return nil,dsRunnerResponseError(errDSRunnerEvidence,closeErr,ctx.Err())}
-    if response.StatusCode!=http.StatusOK||!ghaGuardSinglePageLink(response.Header){return nil,dsRunnerResponseError(errDSRunnerEvidence,response.Body.Close(),ctx.Err())}
+    if err!=nil||response==nil||response.Body==nil{var closeErr error;if response!=nil&&response.Body!=nil{closeErr=response.Body.Close()};return nil,dsRunnerResponseError(dsRunnerEvidenceReason(phase,"unavailable"),closeErr,ctx.Err())}
+    if response.StatusCode!=http.StatusOK{return nil,dsRunnerResponseError(dsRunnerHTTPEvidence(phase,response.StatusCode),response.Body.Close(),ctx.Err())}
+    if !ghaGuardSinglePageLink(response.Header){return nil,dsRunnerResponseError(dsRunnerEvidenceReason(phase,"paginated"),response.Body.Close(),ctx.Err())}
     raw,readErr:=io.ReadAll(io.LimitReader(response.Body,limit+1));closeErr:=response.Body.Close()
-    if readErr!=nil||closeErr!=nil||int64(len(raw))>limit||ctx.Err()!=nil{clear(raw);return nil,dsRunnerResponseError(errDSRunnerEvidence,closeErr,ctx.Err())};return raw,nil
+    if readErr!=nil||closeErr!=nil||int64(len(raw))>limit||ctx.Err()!=nil{
+        kind:="unavailable";if readErr==nil&&closeErr==nil&&int64(len(raw))>limit{kind="too_large"}
+        clear(raw);return nil,dsRunnerResponseError(dsRunnerEvidenceReason(phase,kind),closeErr,ctx.Err())
+    }
+    return raw,nil
 }
 func dsRunnerServerJSON(ctx context.Context,client *http.Client,endpoint string,out any)error{
     raw,err:=dsRunnerHTTPBytes(ctx,client,endpoint,2<<20);if err!=nil{return err};defer clear(raw)
-    return dsRunnerDecodeServerJSON(raw,out)
+    if dsRunnerDecodeServerJSON(raw,out)!=nil{return dsRunnerEvidenceReason(dsRunnerEndpointPhase(endpoint),"malformed")}
+    return nil
 }
 // Server documents allow extra API fields, but never duplicate/case-folded keys
 // in any nested object. Producer-owned JSON uses stricter canonical decoding.
@@ -150,19 +166,23 @@ func dsRunnerUniqueKeys(raw []byte)error{
 func dsRunnerVerifyProducerSource(ctx context.Context,client *http.Client,p dsRunnerCapturePin)error{
     var failure error
     var comparison struct{Status string;Base struct{SHA string} `json:"base_commit"`;MergeBase struct{SHA string} `json:"merge_base_commit"`}
-    if !dsRunnerServerFetch(ctx,client,dsRunnerAPI+"/compare/"+dsRunnerApprovedProducer+"..."+p.Producer,&comparison,&failure)||(comparison.Status!="ahead"&&comparison.Status!="identical")||comparison.Base.SHA!=dsRunnerApprovedProducer||comparison.MergeBase.SHA!=dsRunnerApprovedProducer{return dsRunnerFailureOr(failure)}
+    if !dsRunnerServerFetch(ctx,client,dsRunnerAPI+"/compare/"+dsRunnerApprovedProducer+"..."+p.Producer,&comparison,&failure){return dsRunnerFailureOr(failure)}
+    if (comparison.Status!="ahead"&&comparison.Status!="identical")||comparison.Base.SHA!=dsRunnerApprovedProducer||comparison.MergeBase.SHA!=dsRunnerApprovedProducer{return dsRunnerEvidenceReason("producer_compare","mismatch")}
     for _,file:=range dsRunnerProducerFiles{
         var content struct{Type,SHA,Encoding,Content string;Size int64}
-        if !dsRunnerServerFetch(ctx,client,dsRunnerAPI+"/contents/"+file.Path+"?ref="+p.Producer,&content,&failure)||content.Type!="file"||content.SHA!=file.Blob||content.Encoding!="base64"||content.Size<1||content.Size>64<<10{return dsRunnerFailureOr(failure)}
-        raw,err:=base64.StdEncoding.DecodeString(strings.ReplaceAll(content.Content,"\n",""));if err!=nil{return errDSRunnerEvidence}
-        valid:=int64(len(raw))==content.Size&&dsRunnerGitBlob(raw)==file.Blob;clear(raw);if !valid{return errDSRunnerEvidence}
+        if !dsRunnerServerFetch(ctx,client,dsRunnerAPI+"/contents/"+file.Path+"?ref="+p.Producer,&content,&failure){return dsRunnerFailureOr(failure)}
+        if content.Type!="file"||content.SHA!=file.Blob||content.Encoding!="base64"||content.Size<1||content.Size>64<<10{return dsRunnerEvidenceReason("producer_file","mismatch")}
+        raw,err:=base64.StdEncoding.DecodeString(strings.ReplaceAll(content.Content,"\n",""));if err!=nil{return dsRunnerEvidenceReason("producer_file","malformed")}
+        valid:=int64(len(raw))==content.Size&&dsRunnerGitBlob(raw)==file.Blob;clear(raw);if !valid{return dsRunnerEvidenceReason("producer_file","mismatch")}
     }
     var commit struct{SHA string;Tree struct{SHA string}}
-    if !dsRunnerServerFetch(ctx,client,dsRunnerAPI+"/git/commits/"+dsRunnerSource,&commit,&failure)||commit.SHA!=dsRunnerSource||commit.Tree.SHA!=dsRunnerSourceTree{return dsRunnerFailureOr(failure)}
+    if !dsRunnerServerFetch(ctx,client,dsRunnerAPI+"/git/commits/"+dsRunnerSource,&commit,&failure){return dsRunnerFailureOr(failure)}
+    if commit.SHA!=dsRunnerSource||commit.Tree.SHA!=dsRunnerSourceTree{return dsRunnerEvidenceReason("source_commit","mismatch")}
     var tree struct{SHA string;Truncated bool;Tree []struct{Path,Mode,Type,SHA string;Size int64}}
-    if !dsRunnerServerFetch(ctx,client,dsRunnerAPI+"/git/trees/"+dsRunnerModuleTree,&tree,&failure)||tree.SHA!=dsRunnerModuleTree||tree.Truncated||len(tree.Tree)!=len(dsRunnerInputPins){return dsRunnerFailureOr(failure)}
+    if !dsRunnerServerFetch(ctx,client,dsRunnerAPI+"/git/trees/"+dsRunnerModuleTree,&tree,&failure){return dsRunnerFailureOr(failure)}
+    if tree.SHA!=dsRunnerModuleTree||tree.Truncated||len(tree.Tree)!=len(dsRunnerInputPins){return dsRunnerEvidenceReason("source_tree","mismatch")}
     expected:=map[string]dsRunnerInputPin{};for _,pin:=range dsRunnerInputPins{expected[strings.TrimPrefix(pin.Path,"unattended-runner/")]=pin}
-    seen:=map[string]bool{};for _,file:=range tree.Tree{pin,ok:=expected[file.Path];if !ok||seen[file.Path]||file.Type!="blob"||file.Mode!="100644"||file.SHA!=pin.Blob||file.Size!=pin.Size{return errDSRunnerEvidence};seen[file.Path]=true}
+    seen:=map[string]bool{};for _,file:=range tree.Tree{pin,ok:=expected[file.Path];if !ok||seen[file.Path]||file.Type!="blob"||file.Mode!="100644"||file.SHA!=pin.Blob||file.Size!=pin.Size{return dsRunnerEvidenceReason("source_tree","mismatch")};seen[file.Path]=true}
     return nil
 }
 type dsRunnerPublication struct {
@@ -203,26 +223,31 @@ func dsRunnerServerMatches(ctx context.Context,client *http.Client,p dsRunnerCap
     var failure error
     if !dsRunnerPinValid(p)||ctx==nil||ctx.Err()!=nil||now.IsZero(){return 0,errDSRunnerEvidence}
     var repo struct{ID int64;FullName string `json:"full_name"`;Private,Archived bool}
-    if !dsRunnerServerFetch(ctx,client,dsRunnerAPI,&repo,&failure)||repo.ID!=1406818713||repo.FullName!="AutoDevJapan/cc-pc-tools-rs"||repo.Private||repo.Archived{return 0,dsRunnerFailureOr(failure)}
+    if !dsRunnerServerFetch(ctx,client,dsRunnerAPI,&repo,&failure){return 0,dsRunnerFailureOr(failure)}
+    if repo.ID!=1406818713||repo.FullName!="AutoDevJapan/cc-pc-tools-rs"||repo.Private||repo.Archived{return 0,dsRunnerEvidenceReason("repository","mismatch")}
     var wf struct{ID int64;Path,State string}
-    if !dsRunnerServerFetch(ctx,client,dsRunnerAPI+"/actions/workflows/task-runner-capture.yml",&wf,&failure)||wf.ID!=p.WorkflowID||wf.Path!=dsRunnerWorkflow||wf.State!="active"{return 0,dsRunnerFailureOr(failure)}
+    if !dsRunnerServerFetch(ctx,client,dsRunnerAPI+"/actions/workflows/task-runner-capture.yml",&wf,&failure){return 0,dsRunnerFailureOr(failure)}
+    if wf.ID!=p.WorkflowID||wf.Path!=dsRunnerWorkflow||wf.State!="active"{return 0,dsRunnerEvidenceReason("workflow","mismatch")}
     // Head repository and actor keys are explicit; API snake_case is not inferred.
     var head struct{ID int64;Attempt int `json:"run_attempt"`;Event,Path,Status,Conclusion string;WorkflowID int64 `json:"workflow_id"`;HeadSHA string `json:"head_sha"`;HeadBranch string `json:"head_branch"`;Repository struct{ID int64} `json:"repository"`;HeadRepository struct{ID int64} `json:"head_repository"`;Actor struct{ID int64;Login string} `json:"actor"`;TriggeringActor struct{ID int64;Login string} `json:"triggering_actor"`}
-    if !dsRunnerServerFetch(ctx,client,fmt.Sprintf("%s/actions/runs/%d",dsRunnerAPI,p.RunID),&head,&failure)||head.ID!=p.RunID||head.Attempt!=1||head.Event!="workflow_dispatch"||head.Path!=dsRunnerWorkflow||head.WorkflowID!=p.WorkflowID||head.HeadSHA!=p.Producer||head.HeadBranch!="main"||head.Status!="completed"||head.Conclusion!="success"||head.Repository.ID!=1406818713||head.HeadRepository.ID!=1406818713||head.Actor.ID!=88025750||!strings.EqualFold(head.Actor.Login,"mashfromband")||head.TriggeringActor.ID!=88025750||!strings.EqualFold(head.TriggeringActor.Login,"mashfromband"){return 0,dsRunnerFailureOr(failure)}
+    if !dsRunnerServerFetch(ctx,client,fmt.Sprintf("%s/actions/runs/%d",dsRunnerAPI,p.RunID),&head,&failure){return 0,dsRunnerFailureOr(failure)}
+    if head.ID!=p.RunID||head.Attempt!=1||head.Event!="workflow_dispatch"||head.Path!=dsRunnerWorkflow||head.WorkflowID!=p.WorkflowID||head.HeadSHA!=p.Producer||head.HeadBranch!="main"||head.Status!="completed"||head.Conclusion!="success"||head.Repository.ID!=1406818713||head.HeadRepository.ID!=1406818713||head.Actor.ID!=88025750||!strings.EqualFold(head.Actor.Login,"mashfromband")||head.TriggeringActor.ID!=88025750||!strings.EqualFold(head.TriggeringActor.Login,"mashfromband"){return 0,dsRunnerEvidenceReason("run","mismatch")}
     var jobs struct{Total int `json:"total_count"`;Jobs []struct{ID int64;RunID int64 `json:"run_id"`;HeadSHA string `json:"head_sha"`;CheckRunURL string `json:"check_run_url"`;Name,Status,Conclusion string;Steps []struct{Name,Status,Conclusion string;Number int}}}
-    if !dsRunnerServerFetch(ctx,client,fmt.Sprintf("%s/actions/runs/%d/attempts/1/jobs?per_page=100",dsRunnerAPI,p.RunID),&jobs,&failure)||jobs.Total!=len(jobs.Jobs)||jobs.Total>100{return 0,dsRunnerFailureOr(failure)}
+    if !dsRunnerServerFetch(ctx,client,fmt.Sprintf("%s/actions/runs/%d/attempts/1/jobs?per_page=100",dsRunnerAPI,p.RunID),&jobs,&failure){return 0,dsRunnerFailureOr(failure)}
+    if jobs.Total!=len(jobs.Jobs)||jobs.Total>100{return 0,dsRunnerEvidenceReason("jobs","mismatch")}
     matches:=0
     order:=[]string{"Capture the fixed runner build","Check the exact captured files","Attest the runner and source evidence","Upload the fixed runner capture","Record the server-assigned capture artifact"}
     jobIDs:=map[int64]bool{}
-    for _,job:=range jobs.Jobs{if job.ID<1||jobIDs[job.ID]{return 0,errDSRunnerEvidence};jobIDs[job.ID]=true;if job.Name!="Task runner software artifact"{continue};matches++;if job.ID!=p.JobID||job.RunID!=p.RunID||job.HeadSHA!=p.Producer||job.CheckRunURL!=fmt.Sprintf("%s/check-runs/%d",dsRunnerAPI,p.CheckRunID)||job.Status!="completed"||job.Conclusion!="success"{return 0,errDSRunnerEvidence}
-        next,last:=0,0;for _,step:=range job.Steps{needed:=false;for _,name:=range order{if name==step.Name{needed=true}};if !needed{continue};if next>=len(order)||step.Name!=order[next]||step.Number<=last||step.Status!="completed"||step.Conclusion!="success"{return 0,errDSRunnerEvidence};last=step.Number;next++};if next!=len(order){return 0,errDSRunnerEvidence}}
-    if matches!=1{return 0,errDSRunnerEvidence}
+    for _,job:=range jobs.Jobs{if job.ID<1||jobIDs[job.ID]{return 0,dsRunnerEvidenceReason("jobs","mismatch")};jobIDs[job.ID]=true;if job.Name!="Task runner software artifact"{continue};matches++;if job.ID!=p.JobID||job.RunID!=p.RunID||job.HeadSHA!=p.Producer||job.CheckRunURL!=fmt.Sprintf("%s/check-runs/%d",dsRunnerAPI,p.CheckRunID)||job.Status!="completed"||job.Conclusion!="success"{return 0,dsRunnerEvidenceReason("jobs","mismatch")}
+        next,last:=0,0;for _,step:=range job.Steps{needed:=false;for _,name:=range order{if name==step.Name{needed=true}};if !needed{continue};if next>=len(order)||step.Name!=order[next]||step.Number<=last||step.Status!="completed"||step.Conclusion!="success"{return 0,dsRunnerEvidenceReason("jobs","mismatch")};last=step.Number;next++};if next!=len(order){return 0,dsRunnerEvidenceReason("jobs","mismatch")}}
+    if matches!=1{return 0,dsRunnerEvidenceReason("jobs","mismatch")}
     var artifacts struct{Total int `json:"total_count"`;Artifacts []struct{ID int64;Name,Digest string;Expired bool;Size int64 `json:"size_in_bytes"`;Expires time.Time `json:"expires_at"`;WorkflowRun struct{ID int64;RepositoryID int64 `json:"repository_id"`;HeadRepositoryID int64 `json:"head_repository_id"`;HeadSHA string `json:"head_sha"`} `json:"workflow_run"`}}
-    if !dsRunnerServerFetch(ctx,client,fmt.Sprintf("%s/actions/runs/%d/artifacts?per_page=100",dsRunnerAPI,p.RunID),&artifacts,&failure)||artifacts.Total!=len(artifacts.Artifacts)||artifacts.Total>100{return 0,dsRunnerFailureOr(failure)}
+    if !dsRunnerServerFetch(ctx,client,fmt.Sprintf("%s/actions/runs/%d/artifacts?per_page=100",dsRunnerAPI,p.RunID),&artifacts,&failure){return 0,dsRunnerFailureOr(failure)}
+    if artifacts.Total!=len(artifacts.Artifacts)||artifacts.Total>100{return 0,dsRunnerEvidenceReason("artifacts","mismatch")}
     matches=0;var size int64
     artifactIDs:=map[int64]bool{}
-    for _,a:=range artifacts.Artifacts{if a.ID<1||artifactIDs[a.ID]{return 0,errDSRunnerEvidence};artifactIDs[a.ID]=true;if a.Name!=dsRunnerArtifactName(p){continue};matches++;if a.ID!=p.ArtifactID||a.Digest!="sha256:"+p.ArchiveSHA||a.Expired||!a.Expires.After(now)||a.Size<1||a.Size>64<<20||a.WorkflowRun.ID!=p.RunID||a.WorkflowRun.RepositoryID!=1406818713||a.WorkflowRun.HeadRepositoryID!=1406818713||a.WorkflowRun.HeadSHA!=p.Producer{return 0,errDSRunnerEvidence};size=a.Size}
-    if matches!=1{return 0,errDSRunnerEvidence};return size,nil
+    for _,a:=range artifacts.Artifacts{if a.ID<1||artifactIDs[a.ID]{return 0,dsRunnerEvidenceReason("artifacts","mismatch")};artifactIDs[a.ID]=true;if a.Name!=dsRunnerArtifactName(p){continue};matches++;if a.ID!=p.ArtifactID||a.Digest!="sha256:"+p.ArchiveSHA||a.Size<1||a.Size>64<<20||a.WorkflowRun.ID!=p.RunID||a.WorkflowRun.RepositoryID!=1406818713||a.WorkflowRun.HeadRepositoryID!=1406818713||a.WorkflowRun.HeadSHA!=p.Producer{return 0,dsRunnerEvidenceReason("artifacts","mismatch")};if a.Expired||!a.Expires.After(now){return 0,dsRunnerEvidenceReason("artifacts","expired")};size=a.Size}
+    if matches==0{return 0,dsRunnerEvidenceReason("artifacts","absent")};if matches!=1{return 0,dsRunnerEvidenceReason("artifacts","mismatch")};return size,nil
 }
 func dsRunnerVerifySignedSubjects(ctx context.Context,trusted root.TrustedMaterial,raw []byte,p dsRunnerCapturePin)error{
     if ctx==nil||ctx.Err()!=nil||trusted==nil||!dsRunnerPinValid(p)||len(raw)==0||len(raw)>4<<20||digest(raw)!=p.BundleSHA{return errDSRunnerEvidence}
@@ -237,28 +262,40 @@ func dsRunnerVerifySignedSubjects(ctx context.Context,trusted root.TrustedMateri
     for _,sha:=range []string{p.OutputSHA,p.ProofSHA,p.CaptureSHA}{value,e:=hex.DecodeString(sha);if e!=nil{return errDSRunnerEvidence};result,e:=verifier.Verify(&signed,verify.NewPolicy(verify.WithArtifactDigest("sha256",value),verify.WithCertificateIdentity(identity)));if e!=nil{return errors.Join(errDSRunnerEvidence,e)};if result==nil||result.Statement==nil||result.Signature==nil||result.Signature.Certificate==nil||result.Statement.GetType()!="https://in-toto.io/Statement/v1"||result.Statement.GetPredicateType()!="https://slsa.dev/provenance/v1"{return errDSRunnerEvidence};subjects:=result.Statement.GetSubject();if len(subjects)!=3{return errDSRunnerEvidence};seen:=map[string]bool{};for _,subject:=range subjects{if subject==nil||seen[subject.GetName()]||expected[subject.GetName()]==""||len(subject.GetDigest())!=1||subject.GetDigest()["sha256"]!=expected[subject.GetName()]{return errDSRunnerEvidence};seen[subject.GetName()]=true}}
     if ctx.Err()!=nil{return errors.Join(errDSRunnerEvidence,ctx.Err())};return nil
 }
-func openNormalDSRunnerCandidate(ctx context.Context)(candidate *dsRunnerCandidate,resultErr error){
+// The normal opener reads the owner credential. The parameter is a package-private
+// seam: owned tests run the fixed evidence flow against synthetic or hosted server
+// data through it. It supplies no pin, path, hash or permission, and the pin is
+// still validated before any request.
+type dsRunnerAuthorityOpener func(context.Context,dsRunnerCapturePin)(*dsRunnerAuthority,error)
+func openNormalDSRunnerCandidate(ctx context.Context)(*dsRunnerCandidate,error){
+    return openDSRunnerCandidateWith(ctx,dsRunnerAdmittedCapture,openDSRunnerAuthority)
+}
+func openDSRunnerCandidateWith(ctx context.Context,p dsRunnerCapturePin,open dsRunnerAuthorityOpener)(candidate *dsRunnerCandidate,resultErr error){
     if ctx==nil||ctx.Err()!=nil{return nil,errDSRunnerEvidence}
-    p:=dsRunnerAdmittedCapture
-    if !dsRunnerPinValid(p){return nil,errors.New("ds_runner_capture_not_bound")}
+    if open==nil||!dsRunnerPinValid(p){return nil,dsRunnerFailure("ds_runner_capture_not_bound")}
     bounded,cancel:=context.WithTimeout(ctx,2*time.Minute);defer cancel();ctx=bounded
-    authority,err:=openDSRunnerAuthority(ctx,p);if err!=nil{return nil,err}
+    // The end of the flight's own context is reported next to the stage that saw it.
+    defer func(){if resultErr!=nil&&ctx.Err()!=nil{resultErr=errors.Join(resultErr,ctx.Err())}}()
+    authority,err:=open(ctx,p);if err!=nil{return nil,err}
+    if authority==nil||authority.session==nil||authority.client==nil{return nil,errDSRunnerEvidence}
     defer func(){cleanup,c:=context.WithTimeout(context.Background(),5*time.Second);defer c();if e:=authority.session.Close(cleanup);e!=nil{if candidate!=nil{_=candidate.Close();candidate=nil};resultErr=errors.Join(resultErr,errDSRunnerCleanup,e)}}()
     client:=authority.client
     if err=dsRunnerVerifyProducerSource(ctx,client,p);err!=nil{return nil,err}
     size,err:=dsRunnerServerMatches(ctx,client,p,time.Now().UTC());if err!=nil{return nil,err}
     objectTransport:=&http.Transport{Proxy:nil,TLSHandshakeTimeout:10*time.Second,ResponseHeaderTimeout:15*time.Second};defer objectTransport.CloseIdleConnections()
     object:=&http.Client{Transport:objectTransport,Timeout:30*time.Second}
-    log,err:=ghaGuardLiveRedirectedDetailed(ctx,client,object,fmt.Sprintf("%s/actions/jobs/%d/logs",dsRunnerAPI,p.JobID),8<<20);if err!=nil{return nil,err};defer clear(log)
-    if dsRunnerPublicationFromLog(log,p)!=nil{return nil,errDSRunnerEvidence}
-    archive,err:=ghaGuardLiveRedirectedDetailed(ctx,client,object,fmt.Sprintf("%s/actions/artifacts/%d/zip",dsRunnerAPI,p.ArtifactID),size);if err!=nil{return nil,err};defer clear(archive)
-    if int64(len(archive))!=size{return nil,errDSRunnerEvidence}
-    held,err:=dsRunnerReadArchive(ctx,archive,p);if err!=nil{return nil,err};defer held.erase()
+    log,err:=ghaGuardLiveRedirectedDetailed(ctx,client,object,fmt.Sprintf("%s/actions/jobs/%d/logs",dsRunnerAPI,p.JobID),8<<20);if err!=nil{return nil,dsRunnerLiveFailure("job_log",err)};defer clear(log)
+    if dsRunnerPublicationFromLog(log,p)!=nil{return nil,dsRunnerEvidenceReason("job_log","mismatch")}
+    archive,err:=ghaGuardLiveRedirectedDetailed(ctx,client,object,fmt.Sprintf("%s/actions/artifacts/%d/zip",dsRunnerAPI,p.ArtifactID),size);if err!=nil{return nil,dsRunnerLiveFailure("artifact",err)};defer clear(archive)
+    if int64(len(archive))!=size{return nil,dsRunnerEvidenceReason("artifact","mismatch")}
+    held,err:=dsRunnerReadArchive(ctx,archive,p);if err!=nil{return nil,errors.Join(err,dsRunnerPhaseFailure("archive","mismatch"))};defer held.erase()
     attestation,err:=dsRunnerHTTPBytes(ctx,client,dsRunnerAPI+"/attestations/sha256:"+p.OutputSHA+"?per_page=100",8<<20);if err!=nil{return nil,err};defer clear(attestation)
-    rawBundle,err:=ghaFreshBundleFromJSON(attestation,ghaGuardPublicationRecord{OutputSHA:p.OutputSHA,AttestationID:p.AttestationID});if err!=nil{return nil,errDSRunnerEvidence};defer clear(rawBundle)
+    rawBundle,err:=ghaFreshBundleFromJSON(attestation,ghaGuardPublicationRecord{OutputSHA:p.OutputSHA,AttestationID:p.AttestationID});if err!=nil{return nil,dsRunnerEvidenceReason("attestation","mismatch")};defer clear(rawBundle)
     opts:=tuf.DefaultOptions().WithDisableLocalCache().WithContext(ctx).WithFetcher(ghaGuardNewTUFRequestFetcher(ctx,object))
-    trusted,err:=root.FetchTrustedRootWithOptions(opts);if err!=nil||dsRunnerVerifySignedSubjects(ctx,trusted,rawBundle,p)!=nil{return nil,errDSRunnerEvidence}
-    afterSize,err:=dsRunnerServerMatches(ctx,client,p,time.Now().UTC());if err!=nil{return nil,err};if afterSize!=size||ctx.Err()!=nil||authority.client!=client||digest(archive)!=p.ArchiveSHA||digest(held.payload)!=p.OutputSHA{return nil,errDSRunnerEvidence}
+    trusted,err:=root.FetchTrustedRootWithOptions(opts);if err!=nil{return nil,dsRunnerEvidenceReason("trust_root","unavailable")}
+    if dsRunnerVerifySignedSubjects(ctx,trusted,rawBundle,p)!=nil{return nil,dsRunnerEvidenceReason("signature","mismatch")}
+    afterSize,err:=dsRunnerServerMatches(ctx,client,p,time.Now().UTC());if err!=nil{return nil,err}
+    if afterSize!=size||ctx.Err()!=nil||authority.client!=client||digest(archive)!=p.ArchiveSHA||digest(held.payload)!=p.OutputSHA{return nil,dsRunnerEvidenceReason("recheck","mismatch")}
     candidate=&dsRunnerCandidate{issuer:&dsRunnerIssuer{token:1},pin:p,raw:held.payload};candidate.self=candidate;held.payload=nil
     return candidate,nil
 }

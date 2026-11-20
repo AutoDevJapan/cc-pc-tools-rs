@@ -21,7 +21,15 @@ import (
 const dsRunnerSource = "ea56c94fc2820dc349316d15bea38b7f1ae85595"
 const dsRunnerSourceTree = "f9c9fce316d22f86517b7d766b7056ea0516fa29"
 const dsRunnerModuleTree = "d0d012463d11faec2b57efffc80e8c13366dd3fd"
-const dsRunnerApprovedProducer = "2d32d8c83b1462e950f377bdcaa1177107ca25d8"
+// The reviewed main commit that the producer revision of a capture must descend
+// from. The producer files are checked at the producer revision itself (see
+// dsRunnerProducerFiles), not at this base. The workflow and README pins name the
+// seven-day retention text, which lands after this base, so the producer revision
+// of a capture is a main commit that contains that change. The compare answer is
+// read whole and its size grows with every commit between the base and the
+// producer revision, about 28 KB per commit against a 2 MiB limit, so move the
+// base forward in a reviewed change before the answer nears the limit.
+const dsRunnerApprovedProducer = "95c1004e0017cb9d8d3b16f93daa72706eaccca1"
 const dsRunnerWorkflow = ".github/workflows/task-runner-capture.yml"
 const dsRunnerModule = "github.com/AutoDevJapan/cc-pc-tools-rs/unattended-runner"
 var errDSRunnerEvidence = errors.New("ds_runner_capture_unqualified")
@@ -31,7 +39,11 @@ var errDSRunnerCleanup = errors.New("ds_runner_cleanup_failed")
 // Its hosted artifact has a fixed retention, so a generation is admitted for a limited time.
 // Generation 1 expired at 2026-11-17T00:12:39Z. It is retired: its tuple stays below as a
 // record only, and every consumer rejects it. Generation 2 is the capture admitted now;
-// the next capture becomes generation 3.
+// the next capture becomes generation 3. Generation 2 expired at 2026-11-18T03:16:58Z:
+// until the reviewed pins of generation 3 replace it, every maintenance command stops at
+// the artifact list. GitHub drops an expired artifact from the run's list, so the reason
+// is ds_runner_artifacts_absent; a list that still shows it as expired gives
+// ds_runner_artifacts_expired.
 // These are expected capture bytes, not an issuer or an installed grant.
 // The authenticated/cryptographic constructor still verifies all material.
 // No CLI/JSON/env can replace this tuple or select another receipt.

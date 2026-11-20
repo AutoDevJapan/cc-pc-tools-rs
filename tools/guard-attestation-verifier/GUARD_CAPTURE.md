@@ -145,3 +145,43 @@ Workflow changes have two stages: first add actions:read and these three files
 to the verifier input inventory, and give the combined tests a sufficient
 finite budget; then add the actual opt-in only with issuance. The existing
 one-day upload retention and two attestation subjects remain unchanged.
+
+
+## Retained seed bundle
+
+The bootstrap job retains the official attest action's bundle-path in a
+separate artifact named guard-bootstrap-bundle-<run>-<attempt>-<job>.
+It uploads only that generated file, using the same pinned upload action,
+one-day retention, no compression and no overwrite. A missing file fails
+the job. This does not build or sign anything a second time.
+
+The capture artifact remains exactly three entries; the signed subjects remain
+guard.exe and source-proof.json. The bundle artifact is seed evidence, not a
+third subject, a new permission or a replacement for signature verification.
+
+Before issuing the data pin:
+
+1. Bind the successful seed-upload step and the artifact metadata to the exact
+   run, attempt, job and producer revision. The derived artifact name alone is
+   insufficient. Record its server ID, archive digest, size and expiry.
+2. Download that artifact through the normal authenticated artifact endpoint.
+   Consume the returned file reference's download URL unchanged, with a finite
+   deadline, no redirects and an archive byte bound. Match the same buffer's
+   length and SHA-256 to the server metadata before reading its contents.
+3. Require exactly one regular member, attestation.json, within the bundle
+   limit. Retain the original bytes and their hash. Compute the pin's
+   BundleBytes and BundleSHA from JSON.Compact bytes, preserving key order,
+   number spellings and string escapes. Read RekorIndex as an untrusted input
+   and compare it with the exact job's action log.
+4. Bind the statement's two subject digests to the same capture artifact and
+   publication record. Populate only the reviewed data pin and enable the
+   actual check with the one-line workflow change.
+5. Require the existing hosted verifier to select and verify that same compact
+   bundle from both public subject listings, then validate the payload,
+   source closure and build information. Seed collection alone is not success.
+
+The publication record schema is unchanged: it has the attestation ID and the
+capture artifact digests, but no bundle byte length, bundle digest or log index.
+Those values are measured from the retained seed and confirmed by the later
+cryptographic check. Both artifacts must be retained locally through the normal
+source-qualified receipt before their original one-day lifetime ends.

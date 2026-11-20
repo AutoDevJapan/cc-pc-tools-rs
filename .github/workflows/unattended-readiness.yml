@@ -486,6 +486,17 @@ jobs:
             ${{ steps.guard_capture.outputs.artifact-directory }}/source-proof.json
           push-to-registry: false
           create-storage-record: false
+      - name: Retain the guard attestation seed bundle
+        id: guard_bundle_upload
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: guard-bootstrap-bundle-${{ github.run_id }}-${{ github.run_attempt }}-${{ steps.guard_capture.outputs.job-id }}
+          path: ${{ steps.guard_attest.outputs.bundle-path }}
+          if-no-files-found: error
+          retention-days: 1
+          compression-level: 0
+          overwrite: false
+          include-hidden-files: false
       - name: Upload the fixed guard capture
         id: guard_upload
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4

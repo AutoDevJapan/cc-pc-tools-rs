@@ -1597,3 +1597,486 @@ func TestGuardCaptureURLOnlyListingIsBoundedAndTokenless(t *testing.T) {
 		})
 	}
 }
+
+
+// The following controls run the real metadata/source client methods against
+// owned in-memory transports. They never issue a capture or trust fixture data.
+type guardCaptureS1Fixture struct {
+	pin guardCapturePin
+	proof guardCaptureProof
+	server guardCaptureServer
+	sourceTree guardCaptureTree
+	producerTree guardCaptureTree
+	archive []byte
+	relationStatus string
+	relationBase string
+	relationMergeBase string
+	jobs []guardCaptureJob
+	jobTotal int
+	archiveURL string
+}
+
+func guardCaptureS1FixtureFor(t *testing.T) guardCaptureS1Fixture {
+	t.Helper()
+	p, raw, capture := guardCaptureTestProof()
+	proof, err := guardCaptureProofCheck(raw, capture, p)
+	if err != nil {
+		t.Fatal("s1_proof_fixture")
+	}
+	tree, known := guardCaptureTestTree(proof.Before.Inputs)
+	p.SourceTree = tree.SHA
+	p.RepairTree = known["repair-guard"].SHA
+	p.ContractTree = known["tools/civ6-ci-contract"].SHA
+	var gitTree bytes.Buffer
+	for _, input := range proof.Before.Inputs {
+		_, _ = fmt.Fprintf(&gitTree, "100644 blob %s\t%s%c", input.Blob, input.Path, byte(0))
+	}
+	proof.Before.SourceTree = p.SourceTree
+	proof.Before.SourceTreeBefore = p.SourceTree
+	proof.Before.GitTreeSHA = guardCaptureHash(gitTree.Bytes())
+	proof.After = proof.Before
+
+	producerInputs := append([]guardCaptureInput(nil), proof.Before.Inputs...)
+	for _, name := range []string{guardCaptureWorkflow, "tools/guard-gha-capture/main.go"} {
+		body := []byte(name)
+		input := guardCaptureInput{name, int64(len(body)), guardCaptureHash(body), guardCaptureBlob(body)}
+		producerInputs = append(producerInputs, input)
+		if name == guardCaptureWorkflow {
+			p.WorkflowBlob = input.Blob
+		} else {
+			p.HelperBlob = input.Blob
+		}
+	}
+	producerTree, _ := guardCaptureTestTree(producerInputs)
+	proofRaw := guardCaptureS1JSON(t, proof)
+	p.ProofBytes, p.ProofSHA = int64(len(proofRaw)), guardCaptureHash(proofRaw)
+	capture = guardCaptureS1JSON(t, guardCaptureManifest{
+		"guard-gha-capture-v1", guardCaptureRepoID, p.Source, p.SourceTree,
+		p.Producer, p.RunID, p.Attempt, p.JobID, p.CheckRunID, p.ProofSHA,
+		proof.Before.ObservationSHA, proof.Before.CommandSHA, proof.Before.ImageSHA,
+		"guard.exe", p.PEBytes, p.PESHA,
+	})
+	p.CaptureBytes, p.CaptureSHA = int64(len(capture)), guardCaptureHash(capture)
+	if _, err = guardCaptureProofCheck(proofRaw, capture, p); err != nil {
+		t.Fatal("s1_rebound_fixture_proof_rejected")
+	}
+	server := guardCaptureTestServer(p)
+	return guardCaptureS1Fixture{
+		pin: p, proof: proof, server: server, sourceTree: tree, producerTree: producerTree,
+		archive: guardCaptureTestTar(t, proof.Before.Inputs, false),
+		relationStatus: "ahead", relationBase: p.Source, relationMergeBase: p.Source,
+		jobs: []guardCaptureJob{server.Job}, jobTotal: 1,
+		archiveURL: "https://codeload.github.com/" + guardCaptureRepo + "/legacy.tar.gz/" + p.Source,
+	}
+}
+
+func guardCaptureS1JSON(t *testing.T, value any) []byte {
+	t.Helper()
+	raw, err := json.Marshal(value)
+	if err != nil {
+		t.Fatal("s1_fixture_encode")
+	}
+	return raw
+}
+
+func guardCaptureS1Client(t *testing.T, fixture guardCaptureS1Fixture) (guardCaptureHTTP, *[]string) {
+	t.Helper()
+	p := fixture.pin
+	commit := func(id, tree string) map[string]any {
+		return map[string]any{"sha": id, "tree": map[string]string{"sha": tree}}
+	}
+	apiBodies := map[string][]byte{
+		fmt.Sprintf("%s/actions/runs/%d/attempts/%d", guardCaptureAPI, p.RunID, p.Attempt): guardCaptureS1JSON(t, fixture.server.Run),
+		fmt.Sprintf("%s/actions/jobs/%d", guardCaptureAPI, p.JobID): guardCaptureS1JSON(t, fixture.server.Job),
+		fmt.Sprintf("%s/actions/artifacts/%d", guardCaptureAPI, p.ArtifactID): guardCaptureS1JSON(t, fixture.server.Artifact),
+		fmt.Sprintf("%s/actions/runs/%d/attempts/%d/jobs?per_page=100", guardCaptureAPI, p.RunID, p.Attempt):
+			guardCaptureS1JSON(t, map[string]any{"total_count": fixture.jobTotal, "jobs": fixture.jobs}),
+		guardCaptureAPI + "/git/commits/" + p.Source: guardCaptureS1JSON(t, commit(p.Source, p.SourceTree)),
+		guardCaptureAPI + "/git/trees/" + p.SourceTree + "?recursive=1": guardCaptureS1JSON(t, fixture.sourceTree),
+		guardCaptureAPI + "/git/commits/" + p.Producer: guardCaptureS1JSON(t, commit(p.Producer, fixture.producerTree.SHA)),
+		guardCaptureAPI + "/git/trees/" + fixture.producerTree.SHA + "?recursive=1": guardCaptureS1JSON(t, fixture.producerTree),
+		guardCaptureAPI + "/compare/" + p.Source + "..." + p.Producer: guardCaptureS1JSON(t, map[string]any{
+			"status": fixture.relationStatus,
+			"base_commit": map[string]string{"sha": fixture.relationBase},
+			"merge_base_commit": map[string]string{"sha": fixture.relationMergeBase},
+		}),
+	}
+	calls := []string{}
+	noRedirect := func(*http.Request, []*http.Request) error { return http.ErrUseLastResponse }
+	api := guardCaptureRoundTrip(func(req *http.Request) (*http.Response, error) {
+		calls = append(calls, "api:"+req.URL.String())
+		if req.Method != http.MethodGet || req.Header.Get("Authorization") != "Bearer s1-fixture-token" ||
+			req.URL.Host != "api.github.com" || req.Header.Get("Cookie") != "" {
+			t.Fatal("s1_api_request_boundary")
+		}
+		if req.URL.String() == guardCaptureAPI+"/tarball/"+p.Source {
+			return &http.Response{StatusCode: http.StatusFound, Header: http.Header{"Location": {fixture.archiveURL}},
+				Body: io.NopCloser(strings.NewReader(""))}, nil
+		}
+		body, ok := apiBodies[req.URL.String()]
+		if !ok {
+			t.Fatal("s1_unexpected_api_request")
+		}
+		return &http.Response{StatusCode: http.StatusOK, Header: http.Header{},
+			Body: io.NopCloser(bytes.NewReader(body))}, nil
+	})
+	object := guardCaptureRoundTrip(func(req *http.Request) (*http.Response, error) {
+		calls = append(calls, "object:"+req.URL.String())
+		if req.Method != http.MethodGet || req.URL.String() != fixture.archiveURL ||
+			req.Header.Get("Authorization") != "" || req.Header.Get("Cookie") != "" || req.Header.Get("Accept") != "" {
+			t.Fatal("s1_object_request_boundary")
+		}
+		return &http.Response{StatusCode: http.StatusOK, Header: http.Header{},
+			Body: io.NopCloser(bytes.NewReader(fixture.archive))}, nil
+	})
+	return guardCaptureHTTP{
+		api: &http.Client{Transport: api, CheckRedirect: noRedirect},
+		object: &http.Client{Transport: object, CheckRedirect: noRedirect},
+		token: "s1-fixture-token",
+	}, &calls
+}
+
+func TestGuardCaptureS1HTTPIntegration(t *testing.T) {
+	cases := []struct {
+		name string
+		stage string
+		edit func(*guardCaptureS1Fixture)
+	}{
+		{"normal", "", func(*guardCaptureS1Fixture) {}},
+		{"jobs_total_count", "server", func(f *guardCaptureS1Fixture) { f.jobTotal++ }},
+		{"job_listing_not_single_job", "server", func(f *guardCaptureS1Fixture) { f.jobs[0].RunnerID++ }},
+		{"job_missing_from_attempt", "server", func(f *guardCaptureS1Fixture) { f.jobs[0].ID++ }},
+		{"job_duplicated_in_attempt", "server", func(f *guardCaptureS1Fixture) { f.jobs = append(f.jobs, f.jobs[0]); f.jobTotal = 2 }},
+		{"compare_not_ahead", "source", func(f *guardCaptureS1Fixture) { f.relationStatus = "diverged" }},
+		{"compare_wrong_base", "source", func(f *guardCaptureS1Fixture) { f.relationBase = f.pin.Producer }},
+		{"compare_wrong_merge_base", "source", func(f *guardCaptureS1Fixture) { f.relationMergeBase = f.pin.Producer }},
+		{"producer_workflow_blob", "source", func(f *guardCaptureS1Fixture) { f.pin.WorkflowBlob = strings.Repeat("0", 40) }},
+		{"producer_helper_blob", "source", func(f *guardCaptureS1Fixture) { f.pin.HelperBlob = strings.Repeat("0", 40) }},
+		{"git_tree_digest", "source", func(f *guardCaptureS1Fixture) { f.proof.Before.GitTreeSHA = strings.Repeat("0", 64) }},
+		{"source_tree_entries", "source", func(f *guardCaptureS1Fixture) { f.sourceTree.Truncated = true }},
+		{"source_archive_changed", "source", func(f *guardCaptureS1Fixture) { f.archive = guardCaptureTestTar(t, f.proof.Before.Inputs, true) }},
+		{"source_redirect_other_repository", "source", func(f *guardCaptureS1Fixture) { f.archiveURL = "https://codeload.github.com/Other/Repo/archive" }},
+	}
+	for _, c := range cases {
+		t.Run(c.name, func(t *testing.T) {
+			fixture := guardCaptureS1FixtureFor(t)
+			c.edit(&fixture)
+			client, calls := guardCaptureS1Client(t, fixture)
+			got, err := client.server(context.Background(), fixture.pin)
+			if c.stage == "server" {
+				if err == nil {
+					t.Fatal("s1_invalid_server_chain_accepted")
+				}
+				return
+			}
+			if err != nil || !reflect.DeepEqual(got, fixture.server) {
+				t.Fatal("s1_valid_server_chain_rejected")
+			}
+			err = client.source(context.Background(), fixture.pin, fixture.proof)
+			if c.stage == "source" {
+				if err == nil {
+					t.Fatal("s1_invalid_source_chain_accepted")
+				}
+				return
+			}
+			if err != nil {
+				t.Fatal("s1_valid_source_chain_rejected")
+			}
+			want := []string{
+				fmt.Sprintf("api:%s/actions/runs/%d/attempts/%d", guardCaptureAPI, fixture.pin.RunID, fixture.pin.Attempt),
+				fmt.Sprintf("api:%s/actions/jobs/%d", guardCaptureAPI, fixture.pin.JobID),
+				fmt.Sprintf("api:%s/actions/artifacts/%d", guardCaptureAPI, fixture.pin.ArtifactID),
+				fmt.Sprintf("api:%s/actions/runs/%d/attempts/%d/jobs?per_page=100", guardCaptureAPI, fixture.pin.RunID, fixture.pin.Attempt),
+				"api:" + guardCaptureAPI + "/git/commits/" + fixture.pin.Source,
+				"api:" + guardCaptureAPI + "/git/trees/" + fixture.pin.SourceTree + "?recursive=1",
+				"api:" + guardCaptureAPI + "/tarball/" + fixture.pin.Source,
+				"object:" + fixture.archiveURL,
+				"api:" + guardCaptureAPI + "/git/commits/" + fixture.pin.Producer,
+				"api:" + guardCaptureAPI + "/git/trees/" + fixture.producerTree.SHA + "?recursive=1",
+				"api:" + guardCaptureAPI + "/compare/" + fixture.pin.Source + "..." + fixture.pin.Producer,
+			}
+			if !reflect.DeepEqual(*calls, want) {
+				t.Fatal("s1_full_chain_not_observed")
+			}
+		})
+	}
+}
+
+func TestGuardCaptureS1GraphInventory(t *testing.T) {
+	inputs := map[string]bool{
+		"repair-guard/main.go": true,
+		"repair-guard/assets/catalog.json": true,
+		"repair-guard/object.syso": true,
+		"tools/civ6-ci-contract/check.go": true,
+		"tools/civ6-ci-contract/data.json": true,
+		"tools/civ6-ci-contract/object.syso": true,
+	}
+	packages := []guardCaptureGraphPackage{
+		{ImportPath: "cc/civ6-ci-contract", GoFiles: []string{"check.go"}, EmbedFiles: []string{"data.json"}, SysoFiles: []string{"object.syso"}},
+		{ImportPath: guardCaptureModule, GoFiles: []string{"main.go"}, EmbedFiles: []string{"assets/catalog.json"}, SysoFiles: []string{"object.syso"}},
+	}
+	good := guardCaptureS1JSON(t, packages)
+	if guardCaptureGraph(good, inputs) != nil {
+		t.Fatal("s1_graph_inventory_positive_rejected")
+	}
+	for _, module := range []int{0, 1} {
+		for _, field := range []string{"GoFiles", "EmbedFiles", "SysoFiles"} {
+			for _, bad := range []string{"absent.go", "../outside.go", "dir\\file.go"} {
+				name := fmt.Sprintf("module_%d/%s/%s", module, field, strings.ReplaceAll(bad, "/", "_"))
+				t.Run(name, func(t *testing.T) {
+					var changed []guardCaptureGraphPackage
+					if json.Unmarshal(good, &changed) != nil {
+						t.Fatal("s1_graph_fixture_decode")
+					}
+					switch field {
+					case "GoFiles":
+						changed[module].GoFiles = []string{bad}
+					case "EmbedFiles":
+						changed[module].EmbedFiles = []string{bad}
+					case "SysoFiles":
+						changed[module].SysoFiles = []string{bad}
+					}
+					if guardCaptureGraph(guardCaptureS1JSON(t, changed), inputs) == nil {
+						t.Fatal("s1_graph_outside_or_malformed_input_accepted")
+					}
+				})
+			}
+		}
+	}
+}
+
+func TestGuardCaptureS1SourceURLBoundary(t *testing.T) {
+	for _, raw := range []string{
+		"https://codeload.github.com/AutoDevJapan/cc-pc-tools-rs/legacy.tar.gz/fixed",
+		"https://codeload.github.com:443/AutoDevJapan/cc-pc-tools-rs/tar.gz/fixed",
+	} {
+		if !guardCaptureObjectURL(raw, true) {
+			t.Fatal("s1_fixed_source_url_rejected")
+		}
+	}
+	for name, raw := range map[string]string{
+		"other_host": "https://codeload.github.com.evil.invalid/AutoDevJapan/cc-pc-tools-rs/tar.gz/fixed",
+		"other_repo": "https://codeload.github.com/AutoDevJapan/another-repo/tar.gz/fixed",
+		"prefix_only": "https://codeload.github.com/AutoDevJapan/cc-pc-tools-rs-extra/tar.gz/fixed",
+		"http": "http://codeload.github.com/AutoDevJapan/cc-pc-tools-rs/tar.gz/fixed",
+		"port": "https://codeload.github.com:444/AutoDevJapan/cc-pc-tools-rs/tar.gz/fixed",
+		"userinfo": "https://user@codeload.github.com/AutoDevJapan/cc-pc-tools-rs/tar.gz/fixed",
+		"fragment": "https://codeload.github.com/AutoDevJapan/cc-pc-tools-rs/tar.gz/fixed#fragment",
+	} {
+		t.Run(name, func(t *testing.T) {
+			if guardCaptureObjectURL(raw, true) {
+				t.Fatal("s1_invalid_source_url_accepted")
+			}
+		})
+	}
+}
+
+type guardCaptureS1ZIPMember struct {
+	name string
+	body []byte
+	mode os.FileMode
+}
+
+func guardCaptureS1ZIP(t *testing.T, members []guardCaptureS1ZIPMember) []byte {
+	t.Helper()
+	var output bytes.Buffer
+	writer := zip.NewWriter(&output)
+	for _, member := range members {
+		header := zip.FileHeader{Name: member.name, Method: zip.Store}
+		header.SetMode(member.mode)
+		file, err := writer.CreateHeader(&header)
+		if err != nil {
+			t.Fatal("s1_zip_header")
+		}
+		if _, err = file.Write(member.body); err != nil {
+			t.Fatal("s1_zip_body")
+		}
+	}
+	if writer.Close() != nil {
+		t.Fatal("s1_zip_close")
+	}
+	return output.Bytes()
+}
+
+func TestGuardCaptureS1ZIPAbnormalMembers(t *testing.T) {
+	p := guardCaptureTestPin()
+	members := []guardCaptureS1ZIPMember{
+		{"guard.exe", []byte("fixturePE"), 0600},
+		{"source-proof.json", []byte("{}"), 0600},
+		{"capture.json", []byte("{}"), 0600},
+	}
+	p.PEBytes, p.PESHA = int64(len(members[0].body)), guardCaptureHash(members[0].body)
+	p.ProofBytes, p.ProofSHA = 2, guardCaptureHash(members[1].body)
+	p.CaptureBytes, p.CaptureSHA = 2, guardCaptureHash(members[2].body)
+	for _, name := range []string{"normal", "encrypted", "directory", "symlink", "declared_size", "extra_member"} {
+		t.Run(name, func(t *testing.T) {
+			changed := append([]guardCaptureS1ZIPMember(nil), members...)
+			switch name {
+			case "directory":
+				changed[0].mode = os.ModeDir | 0700
+			case "symlink":
+				changed[0].mode = os.ModeSymlink | 0600
+			case "extra_member":
+				changed = append(changed, guardCaptureS1ZIPMember{"extra.json", []byte("{}"), 0600})
+			}
+			raw := guardCaptureS1ZIP(t, changed)
+			edits := 0
+			if name == "encrypted" || name == "declared_size" {
+				for i := 0; i+46 <= len(raw); i++ {
+					switch {
+					case name == "encrypted" && bytes.Equal(raw[i:i+4], []byte{'P', 'K', 3, 4}):
+						raw[i+6] |= 1
+						edits++
+					case bytes.Equal(raw[i:i+4], []byte{'P', 'K', 1, 2}):
+						if name == "encrypted" {
+							raw[i+8] |= 1
+						} else {
+							raw[i+24]++
+						}
+						edits++
+					}
+				}
+				wantEdits := 3
+				if name == "encrypted" {
+					wantEdits = 6
+				}
+				if edits != wantEdits {
+					t.Fatal("s1_zip_fault_not_applied_to_exact_inventory")
+				}
+			}
+			current := p
+			current.ArchiveBytes, current.ArchiveSHA = int64(len(raw)), guardCaptureHash(raw)
+			got, err := guardCaptureReadZIP(raw, current)
+			if name == "normal" {
+				if err != nil || !bytes.Equal(got.PE, members[0].body) {
+					t.Fatal("s1_zip_positive_rejected")
+				}
+			} else if err == nil {
+				t.Fatal("s1_abnormal_zip_accepted")
+			}
+		})
+	}
+}
+
+func guardCaptureS1Tar(t *testing.T, inputs []guardCaptureInput, fault string) []byte {
+	t.Helper()
+	var plain bytes.Buffer
+	writer := tar.NewWriter(&plain)
+	for i, input := range inputs {
+		body := []byte(input.Path)
+		header := tar.Header{Name: "fixture-root/" + input.Path, Mode: 0600, Typeflag: tar.TypeReg, Size: int64(len(body))}
+		if i == 0 {
+			switch fault {
+			case "symlink":
+				header.Typeflag, header.Size, header.Linkname, body = tar.TypeSymlink, 0, "elsewhere", nil
+			case "hardlink":
+				header.Typeflag, header.Size, header.Linkname, body = tar.TypeLink, 0, "elsewhere", nil
+			case "header_size":
+				header.Size++
+				body = append(body, 'x')
+			}
+		}
+		if i == 1 && fault == "prefix" {
+			header.Name = "different-root/" + input.Path
+		}
+		if writer.WriteHeader(&header) != nil {
+			t.Fatal("s1_tar_header")
+		}
+		if _, err := writer.Write(body); err != nil {
+			t.Fatal("s1_tar_body")
+		}
+	}
+	if writer.Close() != nil {
+		t.Fatal("s1_tar_close")
+	}
+	expanded := plain.Bytes()
+	if fault == "truncated_body" {
+		// A valid tar header advertises the original file size; the stream ends
+		// before that first body is complete. gzip remains well formed.
+		expanded = expanded[:512+len(inputs[0].Path)-1]
+	}
+	var compressed bytes.Buffer
+	gz := gzip.NewWriter(&compressed)
+	if _, err := gz.Write(expanded); err != nil {
+		t.Fatal("s1_gzip_body")
+	}
+	if gz.Close() != nil {
+		t.Fatal("s1_gzip_close")
+	}
+	return compressed.Bytes()
+}
+
+func TestGuardCaptureS1TarAbnormalMembers(t *testing.T) {
+	p, raw, capture := guardCaptureTestProof()
+	proof, err := guardCaptureProofCheck(raw, capture, p)
+	if err != nil {
+		t.Fatal("s1_tar_proof_fixture")
+	}
+	for _, fault := range []string{"normal", "symlink", "hardlink", "prefix", "header_size", "truncated_body"} {
+		t.Run(fault, func(t *testing.T) {
+			err := guardCaptureSourceArchive(guardCaptureS1Tar(t, proof.Before.Inputs, fault), proof.Before.Inputs)
+			if fault == "normal" {
+				if err != nil {
+					t.Fatal("s1_tar_positive_rejected")
+				}
+			} else if err == nil {
+				t.Fatal("s1_abnormal_tar_accepted")
+			}
+		})
+	}
+}
+
+func TestGuardCaptureS1ServerMetadataFields(t *testing.T) {
+	p := guardCaptureTestPin()
+	base := guardCaptureTestServer(p)
+	clone := func() guardCaptureServer {
+		raw := guardCaptureS1JSON(t, base)
+		var out guardCaptureServer
+		if json.Unmarshal(raw, &out) != nil {
+			t.Fatal("s1_server_fixture_decode")
+		}
+		return out
+	}
+	if guardCaptureServerCheck(base, p) != nil {
+		t.Fatal("s1_server_metadata_positive_rejected")
+	}
+	edits := map[string]func(*guardCaptureServer){
+		"run_attempt": func(s *guardCaptureServer) { s.Run.Attempt++ },
+		"run_branch": func(s *guardCaptureServer) { s.Run.Branch = "other" },
+		"run_workflow_path": func(s *guardCaptureServer) { s.Run.Path = ".github/workflows/other.yml" },
+		"run_status": func(s *guardCaptureServer) { s.Run.Status = "in_progress" },
+		"run_conclusion": func(s *guardCaptureServer) { s.Run.Conclusion = "failure" },
+		"run_repository_name": func(s *guardCaptureServer) { s.Run.Repository.FullName = "Other/Repository" },
+		"run_private": func(s *guardCaptureServer) { s.Run.Repository.Private = true },
+		"run_head_repository": func(s *guardCaptureServer) { s.Run.HeadRepository.ID++ },
+		"job_run": func(s *guardCaptureServer) { s.Job.RunID++ },
+		"job_head": func(s *guardCaptureServer) { s.Job.HeadSHA = p.Source },
+		"job_name": func(s *guardCaptureServer) { s.Job.Name = "other job" },
+		"job_status": func(s *guardCaptureServer) { s.Job.Status = "queued" },
+		"job_conclusion": func(s *guardCaptureServer) { s.Job.Conclusion = "cancelled" },
+		"job_started": func(s *guardCaptureServer) { s.Job.Started = "2026-01-01T00:00:01Z" },
+		"job_completed": func(s *guardCaptureServer) { s.Job.Completed = "2026-01-01T00:09:59Z" },
+		"job_runner": func(s *guardCaptureServer) { s.Job.RunnerID = 0 },
+		"artifact_name": func(s *guardCaptureServer) { s.Artifact.Name += "-other" },
+		"artifact_size": func(s *guardCaptureServer) { s.Artifact.Bytes++ },
+		"artifact_created": func(s *guardCaptureServer) { s.Artifact.Created = "2026-01-01T00:08:59Z" },
+		"artifact_expires": func(s *guardCaptureServer) { s.Artifact.Expires = "2026-01-02T00:08:59Z" },
+		"artifact_repository": func(s *guardCaptureServer) { s.Artifact.Run.RepositoryID++ },
+		"artifact_head_repository": func(s *guardCaptureServer) { s.Artifact.Run.HeadRepositoryID++ },
+		"artifact_branch": func(s *guardCaptureServer) { s.Artifact.Run.Branch = "other" },
+		"step_missing": func(s *guardCaptureServer) { s.Job.Steps = s.Job.Steps[:4] },
+		"step_in_progress": func(s *guardCaptureServer) { s.Job.Steps[1].Status = "in_progress" },
+		"step_number_swapped": func(s *guardCaptureServer) {
+			s.Job.Steps[0].Number, s.Job.Steps[1].Number = s.Job.Steps[1].Number, s.Job.Steps[0].Number
+		},
+	}
+	for name, edit := range edits {
+		t.Run(name, func(t *testing.T) {
+			current := clone()
+			edit(&current)
+			if guardCaptureServerCheck(current, p) == nil {
+				t.Fatal("s1_single_metadata_mismatch_accepted")
+			}
+		})
+	}
+}

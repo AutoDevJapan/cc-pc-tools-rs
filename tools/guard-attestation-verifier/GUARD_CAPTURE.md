@@ -234,7 +234,7 @@ may a differing digest use this limited byte projection:
 
 Both subject policies still verify their own received API bytes. They must
 project to byte-identical pinned seed bytes. The result's bundle_sha256 is the
-received PE representation hash; pin.bundle_sha256 remains the seed hash.
+received PE representation hash; pin.BundleSHA remains the seed hash.
 Preservation writes guard-capture-bundle.json for the PE listing,
 guard-capture-proof-bundle.json for the proof listing and
 guard-capture-seed-representation.json for the reconstructed pinned bytes.

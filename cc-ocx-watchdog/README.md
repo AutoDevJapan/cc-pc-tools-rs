@@ -14,6 +14,8 @@ Rustで、同じWindowsプロセスの `/healthz` が20秒以内に応答しな�
 
 `inspect` は所有確認と健康検査を読み取りだけで実行し、PID・起動時刻・健康状態・検査時間だけを出力します。監視の状態や復旧記録を書かず、稼働中の監視と並行して配置前の確認に使えます。
 
+プロキシが監視より高い権限（管理者トークン）で動いていて `OpenProcess` が拒否される場合も、ポートの待受PIDで `/healthz` を検査し、応答の `service` と `pid` を照合して `healthy` を実測値で記録します。このときプロセスハンドルがないため、`identity` と `metrics` は `null`、`eligible` は `false`、`process_handle` は `false` になり、プロセスの終了と再起動は行いません。`healthy:true` はポートの応答の確認であり、プロセスの実行ファイルまで検証したことを意味しません。`inspect` も同じ場合に `identity:null` と `process_handle:false` を出力します。
+
 ```powershell
 cargo test --locked --manifest-path cc-ocx-watchdog/Cargo.toml
 cargo clippy --locked --manifest-path cc-ocx-watchdog/Cargo.toml --all-targets -- -D warnings

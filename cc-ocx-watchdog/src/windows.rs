@@ -332,6 +332,17 @@ pub fn discover(config: &Config) -> Result<Option<Process>, String> {
     Ok(Some(process))
 }
 
+/// The proxy's own health answer needs the listener's pid, not a handle to its process.
+/// `open_process` means the listener runs with rights that this account cannot open, for
+/// example an elevated token while this watchdog runs as a restricted medium-integrity child.
+/// Health can still be measured from the pid; termination stays unavailable without a handle.
+pub fn listener_when_unopenable(config: &Config, error: &str) -> Option<u32> {
+    if error != "open_process" {
+        return None;
+    }
+    listener_pid(config.port).ok().flatten()
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -373,5 +384,64 @@ mod tests {
             sid.chars()
                 .all(|c| c.is_ascii_digit() || c == 'S' || c == '-')
         );
+    }
+    fn fixture_config(port: u16) -> Config {
+        Config {
+            home: "C:\\fixture\\home".into(),
+            expected_exe: "C:\\fixture\\bun.exe".into(),
+            expected_cli: None,
+            port,
+            task: "fixture".into(),
+            log_dir: "C:\\fixture\\log".into(),
+            discord_exe: None,
+            timeout_ms: 1_000,
+            interval_ms: 1_000,
+            startup_grace_ms: 0,
+            cooldown_ms: 0,
+        }
+    }
+    #[test]
+    fn only_open_process_falls_back_to_the_listener_pid() {
+        let socket = std::net::TcpListener::bind((std::net::Ipv4Addr::LOCALHOST, 0)).unwrap();
+        let config = fixture_config(socket.local_addr().unwrap().port());
+        assert_eq!(
+            listener_when_unopenable(&config, "open_process"),
+            Some(std::process::id())
+        );
+        for other in [
+            "process_path",
+            "unexpected_executable",
+            "listener_changed",
+            "tcp_table_churn",
+            "",
+        ] {
+            assert_eq!(listener_when_unopenable(&config, other), None, "{other}");
+        }
+        drop(socket);
+        assert_eq!(listener_when_unopenable(&config, "open_process"), None);
+    }
+    #[test]
+    fn answer_of_an_unopenable_listener_is_checked_against_its_pid() {
+        use std::io::{Read, Write};
+        let socket = std::net::TcpListener::bind((std::net::Ipv4Addr::LOCALHOST, 0)).unwrap();
+        let port = socket.local_addr().unwrap().port();
+        let config = fixture_config(port);
+        let pid = std::process::id();
+        let server = std::thread::spawn(move || {
+            for _ in 0..2 {
+                let (mut stream, _) = socket.accept().unwrap();
+                let mut request = [0u8; 1024];
+                assert!(stream.read(&mut request).unwrap() > 0);
+                let body = format!("{{\"service\":\"opencodex\",\"status\":\"ok\",\"pid\":{pid}}}");
+                stream
+                    .write_all(format!("HTTP/1.0 200 OK\r\n\r\n{body}").as_bytes())
+                    .unwrap();
+            }
+        });
+        let listener = listener_when_unopenable(&config, "open_process").unwrap();
+        assert_eq!(listener, pid);
+        assert!(crate::probe(port, std::time::Duration::from_secs(2), listener).is_ok());
+        assert!(crate::probe(port, std::time::Duration::from_secs(2), listener + 1).is_err());
+        server.join().unwrap();
     }
 }

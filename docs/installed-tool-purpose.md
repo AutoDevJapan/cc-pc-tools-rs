@@ -11,6 +11,8 @@ or adjacent configuration, credentials, source trees or other executables clear.
 | Go | `C:/Program Files/Go/bin/go.exe` | Go 1.27.0, Windows amd64 |
 | Go formatter | `C:/Program Files/Go/bin/gofmt.exe` | Go 1.27.0, Windows amd64 |
 | rustup | `C:/Users/makhmeto/.cargo/bin/rustup.exe` | rustup 1.29.3, Windows x86_64 MSVC |
+| Node.js | `C:/Users/makhmeto/AppData/Roaming/fnm/node-versions/v22.21.0/installation/node.exe` | Node.js 22.21.0, Windows x64 |
+| Claude Code | `C:/Users/makhmeto/.local/bin/claude.exe` | Claude Code 2.1.310 through 2.1.329, Windows x64 (eighteen releases) |
 
 The intended use is ordinary development of the existing owner repositories.
 The provider performs no command, update, login, purchase or signing operation.
@@ -21,11 +23,13 @@ previous operation-specific refusals remain independent conditions.
 
 ## Source of the fixed public bytes
 
-The five executable hashes are compiled into `owner_installed_tools_windows.go`.
+The hashes of the first five rows are compiled into `owner_installed_tools_windows.go`.
 On 2026-11-14 the corresponding complete public archives were obtained over
 HTTPS, hashed, and the exact ZIP entry was hashed from those authenticated
 archive bytes. Installed executable contents were not used to manufacture the
-expected digest. No vendor signature verification is claimed.
+expected digest. No vendor signature verification is claimed for these five
+rows; the two rows without an installer registration are described in their own
+section below.
 
 | Archive | SHA-256 | ZIP entry | Executable SHA-256 |
 | --- | --- | --- | --- |
@@ -71,6 +75,99 @@ version and publisher for the machine-installed tools; the rustup row uses the
 fixed current-user `DisplayName` context described above. That registration
 supplies installation context only; the public-byte comparison supplies the
 independent content check.
+
+## Rows without an installer registration
+
+Claude Code's native installer and an fnm-extracted Node.js archive are not
+documented to write an uninstall registration (the vendor's uninstall steps for
+Claude Code remove only files and directories), so the registry observations of
+the rows above have nothing to rely on for them. These two rows are marked
+`noRegistration` in the compiled table. Such a plan skips only the two registry
+observations. Every
+other control in this document is unchanged: the exclusions, the closed alias
+inventory, the read-sharing opens, the identity, size, link-count, ACL and
+parent-chain proof, the single bounded read hashed against the public pin, and
+the rechecks after the read. The content authority is the held-byte comparison
+with the vendor pin, as for every other row; registry text was never authority.
+
+A plan is refused before any object is opened unless it has one of two compiled
+shapes. A registered plan declares no budget. A registration-free plan names no
+registry value, publisher or user hive, and it declares a time budget of at most
+one minute. Either shape needs a positive content size within the single
+compiled read bound of 512 MiB; the largest pinned release is about 384 MB.
+
+| Executable | Fixed installation | Public pin |
+| --- | --- | --- |
+| Node.js 22.21.0 | `C:/Users/makhmeto/AppData/Roaming/fnm/node-versions/v22.21.0/installation/node.exe` | [`node-v22.21.0-win-x64.zip`](https://nodejs.org/dist/v22.21.0/node-v22.21.0-win-x64.zip), SHA-256 `84d31df6571c3c7156707265bf51e2a021656fa1584bf6f4486b792dcde54d7d`; ZIP entry `node-v22.21.0-win-x64/node.exe`, SHA-256 `47cd67453da180a39cdf5daedb89862667b8e627e60c116607874633450cd30d`, 85,766,656 bytes |
+| Claude Code 2.1.310 through 2.1.329 | `C:/Users/makhmeto/.local/bin/claude.exe` | the `win32-x64` entry of each signed release manifest, for example [2.1.329](https://downloads.claude.ai/claude-code-releases/2.1.329/manifest.json); eighteen releases |
+
+Node.js. The `SHASUMS256.txt` of release v22.21.0 lists the archive and the
+standalone `win-x64/node.exe`. On 2026-11-20 its detached Ed25519 signature was
+verified with an independent OpenPGP verifier against the release key
+`5BE8A3F6C8A5C01D106C0AD820B1A390B168D356`; the key file comes from the
+`nodejs/release-keys` repository and the fingerprint is listed in the Node.js
+README. One flipped byte of the list fails that check. The archive was downloaded
+over HTTPS and equals the listed digest, and the `node.exe` entry streamed from
+it equals the listed value.
+
+Claude Code. Every release publishes `manifest.json` with a detached OpenPGP
+signature `manifest.json.sig` made with the Claude Code release signing key whose
+primary fingerprint is `31ddde24ddfab679f42d7bd2baa929ff1a7ecace`, the
+fingerprint printed on the vendor's [setup page](https://code.claude.com/docs/en/setup).
+On 2026-11-20 the manifests of the eighteen releases 2.1.310 through 2.1.329
+were verified against that key with the same independent verifier; one flipped
+manifest byte fails. Releases 2.1.313 and 2.1.320 have no manifest under that
+prefix. For each release the compiled `sha` and `size` are the manifest's
+`win32-x64` checksum and size, and `archiveSHA` is the SHA-256 of the signed
+manifest file. The vendor binary of 2.1.329 was also downloaded over HTTPS and
+streamed through SHA-256 without being stored: its digest equals the signed
+checksum and its length is the signed size of 384,179,872 bytes. The installed
+`claude.exe` was not read to produce any value.
+
+Several releases of one path. The vendor published 28 signed Claude Code
+releases between 2026-10-14 and 2026-11-19 and the native installer updates
+itself, so the path carries one plan per pinned release, in table order. Each
+plan is judged by the complete controller and the first clear result wins. A
+protected exclusion, a cancellation or a failed cleanup does not depend on the
+release and ends the search at once. Any other refusal is ranked by how far the
+held object got: a release whose size matched and whose bytes did not is
+reported as `installed_tool_bytes_mismatch`, ahead of the size mismatches
+(`installed_tool_identity_mismatch`) of the other releases. A size that matches
+no release is refused before any byte is read, so the extra plans cost only
+handle opens. One deadline covers the path: two seconds for registered rows,
+otherwise the largest budget its plans declare (30 seconds for Claude Code, 20
+seconds for Node.js). The routing predicate of the policy only asks whether the
+path is declared, which does not depend on how many releases are pinned.
+
+Reading a refusal for these rows. The controller reaches the refusals in this
+order. It enumerates the hardlink names of the file before it opens anything. If
+that enumeration fails, because the file or one of its ancestors is absent or the
+call is refused, or if it returns names that are not exactly the plan's
+inventory, for example a hardlink name the plan does not list, the result is
+`installed_tool_alias_mismatch`. Only after the enumeration succeeded can opening
+an ancestor directory or the file fail with `installed_tool_identity_unavailable`:
+the access is denied, the file is in use, or an ancestor is a reparse point or
+does not resolve to its compiled name. `installed_tool_parent_untrusted` means
+that the owner or descriptor of an ancestor directory fails the rule for its role:
+an untrusted owner, replacement rights for another principal or a form the rule
+does not recognize. `installed_tool_identity_mismatch`
+means the size, link count, descriptor or final name of the held file differs
+from the plan; a release outside the table is the usual cause, a descriptor that
+the ACL rule rejects is another. `installed_tool_bytes_mismatch` means the size
+equals a pinned release and the digest does not.
+
+A release outside the table, such as a Claude Code release newer than 2.1.329,
+stays unknown until a reviewed source change pins it. Nothing in this change
+disables the vendor's updater or alters any setting of the owner. Both rows lie
+in the profile of the account that runs the guard, so, as for rustup, a clear
+result attests the held bytes at the time of the check only.
+
+Codex. No Codex row is declared. The Microsoft Store package keeps its version in
+its installation path and changes it with every update, so an exact-path row would
+go stale; no vendor digest of the packaged executable is pinned here, and a digest
+taken from the installed file would be the self-attestation these rows exclude. A
+row would need a path rule by package family or an origin check that understands
+the package registration, which is a separate capability and decision.
 
 ## Validation and handle ownership
 
@@ -140,11 +237,14 @@ hashed against the public pin. The controller rechecks full identities, size,
 link counts, final names, ACLs, alias inventory and installation metadata before
 returning. The owner may be SYSTEM, Administrators, the current user or
 TrustedInstaller; write-capable allow entries for other principals are rejected.
-Unknown ACL forms fail closed. No ACL or executable is changed.
+Unknown ACL forms fail closed. No ACL or executable is changed. For the
+registration-free rows described earlier, both registration steps above are absent
+and every other step applies unchanged.
 
 All opened files and ancestor handles are closed once, including failure paths;
 all retained content buffers are cleared. A close failure or cancellation
-prevents a clear result. The two-second context bounds controller loops but
+prevents a clear result. The context of a classification (two seconds for the registered rows, the
+largest declared budget of the path otherwise) bounds controller loops but
 cannot forcibly interrupt a synchronous Windows kernel call. Returning clear
 does not keep handles across a later caller's process launch and does not claim
 an all-time filesystem transaction.
@@ -221,6 +321,17 @@ before opening and after reading; cancellation and cleanup failure; and refusal
 to classify a proxy path as canonical rustup. The existing exact-REG_SZ tests
 and ancestor-role tests remain in the source. These prepared controls do not
 claim that the current PC has any particular hardlink layout or trusted ACL.
+
+The registration-free rows, the selection among several pinned releases of one
+path, the per-path time budget and the larger read bound are prepared source and
+tests. Their author did not compile or run them: no Go compile, test, vet or
+build was performed, so their first compile and test is the hosted Windows
+verifier of the commit that adds them. The pins were checked offline against
+vendor-signed documents as described above, but no installed `claude.exe` or
+`node.exe` was read, hashed or started. Unknown remain whether the installed files
+equal a pinned release, whether the installed `claude.exe` has other hardlinks (an
+extra name makes the closed inventory refuse it), and which Node.js executable
+each host starts for its tool children.
 
 Actual current executable acceptance, normal producer/distribution and
 same-installed-object readback remain incomplete. Representative use from both

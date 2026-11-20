@@ -14,6 +14,7 @@ import (
 	"strings"
 	"syscall"
 	"testing"
+	"time"
 	"unsafe"
 )
 
@@ -307,7 +308,9 @@ func TestInstalledToolNormalTraceAndExplicitFalseSharePolicy(t *testing.T) {
 
 func TestInstalledToolClosedPathsAndLegacyExclusions(t *testing.T) {
 	for _,plan:=range ownerInstalledToolPlans() {
-		if got,ok:=ownerInstalledToolPlanFor(plan.path);!ok || got.sha!=plan.sha || len(got.archiveSHA)!=64 || got.size<=0 { t.Fatal("incomplete compiled vendor pin") }
+		declared:=false
+		for _,got:=range ownerInstalledToolPlansFor(plan.path) { if got.sha==plan.sha && got.size==plan.size && len(got.archiveSHA)==64 { declared=true } }
+		if !declared || plan.size<=0 { t.Fatal("incomplete compiled vendor pin") }
 		for _,bad:=range []string{filepath.Dir(plan.path),plan.path+".bak",plan.path+":stream",filepath.Join(filepath.Dir(plan.path),"config.json")} {
 			if _,ok:=ownerInstalledToolPlanFor(bad);ok { t.Fatal("neighbor or data path admitted") }
 		}
@@ -993,4 +996,222 @@ func TestInstalledRustupFixtureResolvesOnlyItsOwnPhysicalDirectory(t *testing.T)
 	if _,ok:=ownerInstalledToolInventory(plan,[]string{filepath.Join(physical,"rustup.exe")});!ok {t.Fatal("physical fixture inventory positive rejected")}
 	if !same(spelling,physical) {if _,ok:=ownerInstalledToolInventory(plan,[]string{filepath.Join(spelling,"rustup.exe")});ok {t.Fatal("fixture conversion weakened strict production inventory")}}
 	t.Logf("owned fixture spelling control: short_differs=%t physical_changed=%t",!same(long,spelling),!same(long,physical))
+}
+
+// A single held object that every Open observes again, so that the repeated
+// controller flights of several pinned releases of one path can be exercised.
+type installedToolHeldObject struct {
+	path string
+	data []byte
+	state ownerInstalledToolState
+	closeError error
+	opens, reads, closes, originCalls int
+}
+
+func newInstalledToolHeldObject(path string, data []byte) *installedToolHeldObject {
+	return &installedToolHeldObject{path:path,data:data,state:ownerInstalledToolState{id:ownerInstalledToolIdentity{1,2,3},size:int64(len(data)),links:1,acl:"known-acl",resolved:path,aclAllowed:true,parentProof:"known-parent-chain",parentsAllowed:true}}
+}
+
+func (o *installedToolHeldObject) Origin(context.Context,ownerInstalledToolPlan) error { o.originCalls++;return nil }
+func (o *installedToolHeldObject) Aliases(context.Context,string) ([]string,error) { return []string{o.path},nil }
+func (o *installedToolHeldObject) Open(_ context.Context,path string) (ownerInstalledToolLease,error) {
+	if !same(path,o.path) { return nil,errors.New("unexpected path") }
+	o.opens++
+	return &installedToolHeldLease{owner:o},nil
+}
+
+type installedToolHeldLease struct { owner *installedToolHeldObject }
+func (l *installedToolHeldLease) State() (ownerInstalledToolState,error) { return l.owner.state,nil }
+func (l *installedToolHeldLease) Read(_ context.Context,n int64) ([]byte,error) {
+	l.owner.reads++
+	if n!=int64(len(l.owner.data)) { return nil,errors.New("read size differs from the held object") }
+	return append([]byte(nil),l.owner.data...),nil
+}
+func (l *installedToolHeldLease) Close() error { l.owner.closes++;return l.owner.closeError }
+
+func installedToolReleasePlan(path string, data []byte) ownerInstalledToolPlan {
+	return ownerInstalledToolPlan{name:"synthetic",path:path,version:"1",noRegistration:true,budget:time.Second,sha:hashBytes(data),size:int64(len(data)),aliases:[]string{path}}
+}
+
+// Every control other than the two registry observations still applies to a
+// registration-free plan. The registry-only faults of the shared fixture have no
+// observation left to fail, and every other fault must still refuse.
+func TestInstalledToolNoRegistrationPlanSkipsOnlyTheRegistryObservations(t *testing.T) {
+	registryOnly:=map[string]bool{"origin":true,"publisher":true,"version":true,"late-origin":true,"late-origin-mutates-acl":true,"cancel-origin":true,"origin-close":true,"late-origin-close":true}
+	cases:=[]string{"normal","origin","publisher","version","list-error","alias-extra","alias-missing","alias-duplicate","late-alias","late-origin","late-origin-mutates-acl","open-error","state-error","identity","created","missing-id","resolved","links","length","acl-policy","alias-acl","late-id","late-acl","bytes","short","read-error","cancel-before","cancel-origin","cancel-open","cancel-read","cancel-close","close-error","cancel-and-close-error","parent-acl","parent-missing","late-parent-acl","late-parent-id","origin-close","late-origin-close","alias-close","late-alias-close"}
+	for _,mode:=range cases {
+		t.Run(mode,func(t *testing.T){
+			ctx,cancel:=context.WithCancel(context.Background());defer cancel()
+			f:=newInstalledToolFixture(mode,cancel)
+			f.plan.publisher="";f.plan.noRegistration=true;f.plan.budget=time.Second
+			if mode=="cancel-before" { cancel() }
+			v:=ownerInstalledToolVerify(ctx,f.plan,f,func(string)ownerLegacyState{return ownerLegacyClear})
+			want:=mode=="normal" || registryOnly[mode]
+			if v.AccessAllowed!=want { t.Fatal("a registration-free plan changed a filesystem control",mode,v.Basis) }
+			if f.originCalls!=0 { t.Fatal("registry was observed for a plan without registration",mode) }
+			if want && (v.Basis!="verified_installed_development_tool" || f.reads!=1 || f.aliasCalls!=2 || f.opens!=len(f.leases)) { t.Fatal("registration-free verification stages missing",mode) }
+			for i,lease:=range f.leases { wantClose:=0;if i<f.opens { wantClose=1 };if lease.closed!=wantClose { t.Fatal("resource not closed exactly once",mode,i,lease.closed) } }
+			for _,b:=range f.returned { if b!=0 { t.Fatal("verified or failed buffer retained after classification",mode) } }
+		})
+	}
+}
+
+func TestInstalledToolMalformedPlansAreRefusedBeforeAnyObjectIsOpened(t *testing.T) {
+	free:=func(p *ownerInstalledToolPlan){p.noRegistration=true;p.publisher="";p.budget=time.Second}
+	for _,tc:=range []struct{name string;edit func(*ownerInstalledToolPlan)}{
+		{"registry value beside no registration",func(p *ownerInstalledToolPlan){free(p);p.registry="Fixed registry key"}},
+		{"publisher beside no registration",func(p *ownerInstalledToolPlan){free(p);p.publisher="Fixed public publisher"}},
+		{"user hive beside no registration",func(p *ownerInstalledToolPlan){free(p);p.userRegistry=true}},
+		{"origin fields beside no registration",func(p *ownerInstalledToolPlan){free(p);p.originFields=map[string]string{"DisplayName":"Fixed display name"}}},
+		{"no registration without a budget",func(p *ownerInstalledToolPlan){free(p);p.budget=0}},
+		{"no registration with a negative budget",func(p *ownerInstalledToolPlan){free(p);p.budget=-time.Second}},
+		{"no registration with an unbounded budget",func(p *ownerInstalledToolPlan){free(p);p.budget=ownerInstalledToolMaxBudget+time.Nanosecond}},
+		{"registered plan with a budget",func(p *ownerInstalledToolPlan){p.budget=time.Second}},
+		{"empty content",func(p *ownerInstalledToolPlan){free(p);p.size=0}},
+		{"negative content size",func(p *ownerInstalledToolPlan){free(p);p.size=-1}},
+		{"content beyond the read bound",func(p *ownerInstalledToolPlan){free(p);p.size=ownerInstalledToolMaxRead+1}},
+	} {
+		t.Run(tc.name,func(t *testing.T){
+			f:=newInstalledToolFixture("normal",func(){})
+			tc.edit(&f.plan)
+			v:=ownerInstalledToolVerify(context.Background(),f.plan,f,func(string)ownerLegacyState{return ownerLegacyClear})
+			if v.AccessAllowed || v.Basis!="installed_tool_origin_unavailable" || f.originCalls!=0 || f.aliasCalls!=0 || f.opens!=0 || f.reads!=0 { t.Fatal("malformed plan reached an installed object",v.Basis) }
+		})
+	}
+}
+
+func TestInstalledToolPlanTableIsWellFormed(t *testing.T) {
+	hex64:=func(s string) bool {
+		if len(s)!=64 { return false }
+		for _,c:=range s { if !(c>='0' && c<='9' || c>='a' && c<='f') { return false } }
+		return true
+	}
+	seen:=map[string]bool{}
+	for _,plan:=range ownerInstalledToolPlans() {
+		key:=strings.ToLower(filepath.Clean(plan.path))+"|"+plan.sha
+		if seen[key] { t.Fatal("the same pin is declared twice",plan.name,plan.version) }
+		seen[key]=true
+		if !ownerInstalledToolPlanValid(plan) { t.Fatal("compiled plan is malformed",plan.name,plan.version) }
+		if !hex64(plan.sha) || !hex64(plan.archiveSHA) || !strings.HasPrefix(plan.archiveURL,"https://") || plan.entry=="" || plan.version=="" || plan.name=="" { t.Fatal("incomplete compiled vendor pin",plan.name,plan.version) }
+		if !plan.noRegistration && plan.registry=="" { t.Fatal("registered plan names no registration",plan.name) }
+		if plan.size>ownerInstalledToolMaxRead { t.Fatal("pinned release exceeds the read bound",plan.name,plan.version) }
+		// The deadline and the routing of a path cannot depend on which release is held.
+		for _,other:=range ownerInstalledToolPlansFor(plan.path) {
+			if other.name!=plan.name || other.noRegistration!=plan.noRegistration || other.budget!=plan.budget || len(other.optionalAliases)!=len(plan.optionalAliases) || !ownerInstalledToolAliases(other.aliases,plan.aliases) { t.Fatal("plans of one path disagree about their shape",plan.name,plan.version) }
+		}
+	}
+}
+
+func TestInstalledToolPlansForKeepsTableOrderAndEveryDeclaredPathRoutesOnce(t *testing.T) {
+	declared:=[]string{"C:/Program Files/Git/cmd/git.exe","C:/Program Files/GitHub CLI/gh.exe","C:/Program Files/Go/bin/go.exe","C:/Program Files/Go/bin/gofmt.exe","C:/Users/makhmeto/.cargo/bin/rustup.exe","C:/Users/makhmeto/AppData/Roaming/fnm/node-versions/v22.21.0/installation/node.exe","C:/Users/makhmeto/.local/bin/claude.exe"}
+	for _,path:=range declared {
+		plans:=ownerInstalledToolPlansFor(path)
+		got,ok:=ownerInstalledToolPlanFor(path)
+		var first ownerInstalledToolPlan
+		for _,plan:=range ownerInstalledToolPlans() { if same(plan.path,path) { first=plan;break } }
+		if len(plans)==0 || !ok || first.sha=="" || got.sha!=first.sha || plans[0].sha!=first.sha || got.name!=first.name { t.Fatal("a fixed installation lost its plan or its routing",path) }
+		if upper:=ownerInstalledToolPlansFor(strings.ToUpper(path));len(upper)!=len(plans) { t.Fatal("path comparison became case sensitive",path) }
+		calls,physical:=0,0
+		v:=ownerPolicyClassify(path,ownerPolicyAccess{
+			legacy:func(string)ownerLegacyState{return ownerLegacyClear},
+			physical:func(string)(string,error){physical++;return "",errors.New("generic path used")},
+			installed:func(string)ownerPathVerdict{calls++;return ownerRuleClear("verified_installed_development_tool")},
+		})
+		if !v.AccessAllowed || calls!=1 || physical!=0 { t.Fatal("declared path is not routed to the installed-tool provider exactly once",path) }
+	}
+	if len(ownerInstalledToolPlansFor(declared[len(declared)-1]))<2 { t.Fatal("Claude Code pins a single release only") }
+	for _,plan:=range ownerInstalledToolPlans() {
+		if plan.noRegistration && plan.name!="claude" && plan.name!="node" { t.Fatal("a registration-free row was added without review",plan.name) }
+	}
+}
+
+func TestInstalledToolHostRowsAreVendorManifestAndChecksumPins(t *testing.T) {
+	versions:=map[string]bool{}
+	for _,plan:=range ownerInstalledToolPlansFor("C:/Users/makhmeto/.local/bin/claude.exe") {
+		if versions[plan.version] { t.Fatal("a Claude Code release is pinned twice",plan.version) }
+		versions[plan.version]=true
+		if plan.name!="claude" || !plan.noRegistration || len(plan.aliases)!=1 || len(plan.optionalAliases)!=0 || plan.entry!="platforms.win32-x64" || plan.archiveURL!="https://downloads.claude.ai/claude-code-releases/"+plan.version+"/manifest.json" { t.Fatal("Claude Code row shape changed",plan.version) }
+	}
+	node:=ownerInstalledToolPlansFor("C:/Users/makhmeto/AppData/Roaming/fnm/node-versions/v22.21.0/installation/node.exe")
+	if len(node)!=1 || node[0].name!="node" || !node[0].noRegistration || node[0].version!="22.21.0" || node[0].archiveURL!="https://nodejs.org/dist/v"+node[0].version+"/node-v"+node[0].version+"-win-x64.zip" || node[0].entry!="node-v22.21.0-win-x64/node.exe" || len(node[0].aliases)!=1 || len(node[0].optionalAliases)!=0 { t.Fatal("Node.js row shape changed") }
+}
+
+func TestInstalledToolSeveralReleasesOfOnePathAreEachJudgedByTheCompleteController(t *testing.T) {
+	path:="C:/fixed/bin/tool.exe"
+	one,two,three:=[]byte("MZ synthetic release one"),[]byte("MZ synthetic release number two"),[]byte("MZ synthetic release 3")
+	plans:=[]ownerInstalledToolPlan{installedToolReleasePlan(path,one),installedToolReleasePlan(path,two),installedToolReleasePlan(path,three)}
+	legacyClear:=func(string)ownerLegacyState{return ownerLegacyClear}
+
+	held:=newInstalledToolHeldObject(path,two)
+	v:=ownerInstalledToolVerifyAny(context.Background(),plans,held,legacyClear)
+	if !v.AccessAllowed || v.Basis!="verified_installed_development_tool" || held.opens!=2 || held.reads!=1 || held.closes!=2 || held.originCalls!=0 { t.Fatal("matching later release was not admitted by exactly one complete flight",v.Basis,held.opens,held.reads) }
+
+	other:=append([]byte(nil),two...);other[3]^=1
+	held=newInstalledToolHeldObject(path,other)
+	v=ownerInstalledToolVerifyAny(context.Background(),plans,held,legacyClear)
+	if v.AccessAllowed || v.Basis!="installed_tool_bytes_mismatch" || held.opens!=3 || held.reads!=1 || held.closes!=3 { t.Fatal("size-matching release was hidden behind the size mismatches of the others",v.Basis,held.opens,held.reads) }
+
+	held=newInstalledToolHeldObject(path,[]byte("MZ a release nobody pinned"))
+	v=ownerInstalledToolVerifyAny(context.Background(),plans,held,legacyClear)
+	if v.AccessAllowed || v.Basis!="installed_tool_identity_mismatch" || held.opens!=3 || held.reads!=0 || held.closes!=3 { t.Fatal("an unpinned release was admitted or misreported",v.Basis,held.opens,held.reads) }
+
+	held=newInstalledToolHeldObject(path,two);calls:=0
+	v=ownerInstalledToolVerifyAny(context.Background(),plans,held,func(string)ownerLegacyState{calls++;return ownerLegacyClient})
+	if v.AccessAllowed || v.Status!="protected" || v.Basis!="legacy_exclusion" || calls!=1 || held.opens!=0 { t.Fatal("a pin-independent exclusion did not end the search",v.Basis,calls,held.opens) }
+
+	ctx,cancel:=context.WithCancel(context.Background());cancel()
+	held=newInstalledToolHeldObject(path,two)
+	v=ownerInstalledToolVerifyAny(ctx,plans,held,legacyClear)
+	if v.AccessAllowed || v.Basis!="installed_tool_cancelled" || held.opens!=0 { t.Fatal("cancellation was erased by a later pin",v.Basis,held.opens) }
+
+	held=newInstalledToolHeldObject(path,two);held.closeError=errors.New("private cleanup text")
+	v=ownerInstalledToolVerifyAny(context.Background(),plans,held,legacyClear)
+	if v.AccessAllowed || v.Basis!="installed_tool_identity_mismatch_cleanup_failed" || held.opens!=1 || strings.Contains(v.Basis,"private") { t.Fatal("a failed cleanup of one pin was hidden by a later pin",v.Basis,held.opens) }
+
+	v=ownerInstalledToolVerifyAny(context.Background(),nil,newInstalledToolHeldObject(path,two),legacyClear)
+	if v.AccessAllowed || v.Basis!="installed_tool_not_declared" { t.Fatal("an empty plan list was not refused",v.Basis) }
+}
+
+func TestInstalledToolClaudeRowsRefuseAnUnpinnedReleaseAfterEveryPinWasTried(t *testing.T) {
+	path:="C:/Users/makhmeto/.local/bin/claude.exe"
+	plans:=ownerInstalledToolPlansFor(path)
+	if len(plans)<2 { t.Fatal("Claude Code pins a single release only") }
+	held:=newInstalledToolHeldObject(path,[]byte("MZ a release nobody pinned"))
+	v:=ownerInstalledToolWith(context.Background(),path,held,func(string)ownerLegacyState{return ownerLegacyClear})
+	if v.AccessAllowed || v.Basis!="installed_tool_identity_mismatch" || held.opens!=len(plans) || held.reads!=0 || held.closes!=held.opens || held.originCalls!=0 { t.Fatal("an unpinned executable was admitted or not judged against every pin",v.Basis,held.opens,len(plans)) }
+	v=ownerInstalledToolWith(context.Background(),"C:/Users/makhmeto/.local/bin/other.exe",held,func(string)ownerLegacyState{return ownerLegacyClear})
+	if v.AccessAllowed || v.Basis!="installed_tool_not_declared" || held.opens!=len(plans) { t.Fatal("a neighbor of a fixed installation was judged",v.Basis) }
+}
+
+func TestInstalledToolEveryControllerRefusalHasARank(t *testing.T) {
+	for _,mode:=range []string{"origin","list-error","alias-extra","open-error","state-error","identity","links","length","bytes","short","read-error","parent-acl","late-id","late-alias","late-origin"} {
+		ctx,cancel:=context.WithCancel(context.Background())
+		f:=newInstalledToolFixture(mode,cancel)
+		v:=ownerInstalledToolVerify(ctx,f.plan,f,func(string)ownerLegacyState{return ownerLegacyClear})
+		cancel()
+		if v.AccessAllowed || ownerInstalledToolRefusalRank(v.Basis)==0 { t.Fatal("controller refusal is not ranked",mode,v.Basis) }
+	}
+}
+
+func TestInstalledToolBudgetExtendsTheDefaultOnlyWithinTheCompiledBound(t *testing.T) {
+	if got:=ownerInstalledToolBudget(nil);got!=ownerInstalledToolDefaultBudget { t.Fatal("empty plan list lost the default budget",got) }
+	large:=ownerInstalledToolPlan{budget:30*time.Second}
+	for _,tc:=range []struct{name string;plans []ownerInstalledToolPlan;want time.Duration}{
+		{"below the default",[]ownerInstalledToolPlan{{budget:time.Millisecond}},ownerInstalledToolDefaultBudget},
+		{"declared",[]ownerInstalledToolPlan{large},30*time.Second},
+		{"largest of several",[]ownerInstalledToolPlan{{budget:5*time.Second},large,{budget:10*time.Second}},30*time.Second},
+		{"above the bound is ignored",[]ownerInstalledToolPlan{{budget:ownerInstalledToolMaxBudget+time.Second}},ownerInstalledToolDefaultBudget},
+		{"at the bound",[]ownerInstalledToolPlan{{budget:ownerInstalledToolMaxBudget}},ownerInstalledToolMaxBudget},
+	} { if got:=ownerInstalledToolBudget(tc.plans);got!=tc.want { t.Fatal("budget selection changed",tc.name,got) } }
+	for _,plan:=range ownerInstalledToolPlans() {
+		want:=ownerInstalledToolDefaultBudget;if plan.noRegistration { want=plan.budget }
+		if got:=ownerInstalledToolBudget(ownerInstalledToolPlansFor(plan.path));got!=want { t.Fatal("compiled path budget differs from its plans",plan.name,got,want) }
+	}
+}
+
+func TestInstalledToolReadBoundIsRefusedBeforeAnyAllocation(t *testing.T) {
+	for _,size:=range []int64{0,-1,ownerInstalledToolMaxRead+1} {
+		raw,err:=ownerInstalledToolRead(context.Background(),bytes.NewReader(nil),size)
+		if raw!=nil || err!=errOwnerInstalledTool { t.Fatal("size outside the compiled bound reached the allocation",size) }
+	}
 }

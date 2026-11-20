@@ -16,8 +16,9 @@ import (
 )
 
 // These admissions identify public release bytes already independently
-// obtained from the vendor archives. Registry display strings alone are not
-// authority, and this table admits no directories, arguments or caller hashes.
+// obtained from the vendor archives, or published in a vendor-signed manifest
+// or checksum list. Registry display strings alone are not authority, and this
+// table admits no directories, arguments or caller hashes.
 type ownerInstalledToolPlan struct {
 	name, path, version, publisher, registry, archiveURL, archiveSHA, entry, sha string
 	size int64
@@ -30,6 +31,15 @@ type ownerInstalledToolPlan struct {
 	// plan; nothing is read from input.
 	userRegistry bool
 	originFields map[string]string
+	// A registration-free plan belongs to an executable whose installer writes no
+	// uninstall registration (the Claude Code native installer, an fnm-extracted
+	// Node archive). It is decided by the compiled public pin and by every
+	// filesystem control; only the two registry observations are skipped. It names
+	// no registry value, publisher or user hive, and it declares a budget.
+	noRegistration bool
+	// budget bounds one classification of the plan's path. Zero selects the short
+	// default of the registered rows; large pinned executables declare their own.
+	budget time.Duration
 }
 
 // rustup 1.29.3 may create any of these proxies as hardlinks instead of
@@ -37,6 +47,15 @@ type ownerInstalledToolPlan struct {
 // https://github.com/rust-lang/rustup/blob/1.29.3/src/lib.rs
 // They are admitted only as names of the canonical rustup object.
 const ownerInstalledToolMaxAliases = 14
+
+// Every expected size is compiled in and never read from input. The largest
+// pinned release (Claude Code, about 384 MB) must fit; ownerInstalledToolRead
+// refuses any size above this single bound before it allocates.
+const (
+	ownerInstalledToolMaxRead = 512 << 20
+	ownerInstalledToolDefaultBudget = 2 * time.Second
+	ownerInstalledToolMaxBudget = time.Minute
+)
 
 func ownerInstalledRustupHardlinkAliases() []string {
 	const directory = "C:/Users/makhmeto/.cargo/bin/"
@@ -46,19 +65,65 @@ func ownerInstalledRustupHardlinkAliases() []string {
 }
 
 func ownerInstalledToolPlans() []ownerInstalledToolPlan {
-	return []ownerInstalledToolPlan{
+	plans := []ownerInstalledToolPlan{
 		{name:"git",path:"C:/Program Files/Git/cmd/git.exe",version:"2.54.0",publisher:"The Git Development Community",registry:`SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\Git_is1`,archiveURL:"https://github.com/git-for-windows/git/releases/download/v2.54.0.windows.1/MinGit-2.54.0-64-bit.zip",archiveSHA:"04f937e1f0918b17b9be6f2294cb2bb66e96e1d9832d1c298e2de088a1d0e668",entry:"cmd/git.exe",sha:"81ef35ae005ca9318018d18e3327578ce939fb99feaad6b2d7c8ab15f3de8db5",size:46480,aliases:[]string{"C:/Program Files/Git/cmd/git-lfs.exe","C:/Program Files/Git/cmd/git.exe"}},
 		{name:"gh",path:"C:/Program Files/GitHub CLI/gh.exe",version:"2.101.0",publisher:"GitHub, Inc.",registry:`SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\{05425DD6-E9FE-4AEE-B289-8B61429F042A}`,archiveURL:"https://github.com/cli/cli/releases/download/v2.101.0/gh_2.101.0_windows_amd64.zip",archiveSHA:"bc6c814367b193cd8e713611d61e36013c0ef843b8f516458fe3eda039192794",entry:"bin/gh.exe",sha:"df05089117a23889b3f6ea08d7644849afe7b6025647a09f33b45c71f1418f75",size:42755384,aliases:[]string{"C:/Program Files/GitHub CLI/gh.exe"}},
 		{name:"go",path:"C:/Program Files/Go/bin/go.exe",version:"1.27.0",publisher:"https://go.dev",registry:`SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\{649B7E21-BFFC-4209-925C-5736BBF28E54}`,archiveURL:"https://go.dev/dl/go1.27.0.windows-amd64.zip",archiveSHA:"f0c0a0d33ba94f4d2c5dbc887334ce678b21813504ddb3aafcb06e60a5a667c4",entry:"go/bin/go.exe",sha:"7d828191ba32519a9c9361789ab647486236ed45c660889196c7770a8ff1985c",size:17508352,aliases:[]string{"C:/Program Files/Go/bin/go.exe"}},
 		{name:"gofmt",path:"C:/Program Files/Go/bin/gofmt.exe",version:"1.27.0",publisher:"https://go.dev",registry:`SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\{649B7E21-BFFC-4209-925C-5736BBF28E54}`,archiveURL:"https://go.dev/dl/go1.27.0.windows-amd64.zip",archiveSHA:"f0c0a0d33ba94f4d2c5dbc887334ce678b21813504ddb3aafcb06e60a5a667c4",entry:"go/bin/gofmt.exe",sha:"e7252077f308fe8344091a168b24cb56d1366e7d8f5c64c2086ce17d262e3eef",size:3392000,aliases:[]string{"C:/Program Files/Go/bin/gofmt.exe"}},
 		{name:"rustup",path:"C:/Users/makhmeto/.cargo/bin/rustup.exe",version:"1.29.3",userRegistry:true,originFields:map[string]string{"DisplayName":"Rustup: the Rust toolchain installer"},registry:`Software\Microsoft\Windows\CurrentVersion\Uninstall\Rustup`,archiveURL:"https://static.rust-lang.org/rustup/archive/1.29.3/x86_64-pc-windows-msvc/rustup-init.exe",archiveSHA:"38027d51d69a5d05493627a0634dbea52d6cd793c8f072d2373d3f4163eec7db",entry:"rustup-init.exe",sha:"38027d51d69a5d05493627a0634dbea52d6cd793c8f072d2373d3f4163eec7db",size:12839424,aliases:[]string{"C:/Users/makhmeto/.cargo/bin/rustup.exe"},optionalAliases:ownerInstalledRustupHardlinkAliases()},
+		{name:"node",path:"C:/Users/makhmeto/AppData/Roaming/fnm/node-versions/v22.21.0/installation/node.exe",version:"22.21.0",noRegistration:true,budget:20*time.Second,archiveURL:"https://nodejs.org/dist/v22.21.0/node-v22.21.0-win-x64.zip",archiveSHA:"84d31df6571c3c7156707265bf51e2a021656fa1584bf6f4486b792dcde54d7d",entry:"node-v22.21.0-win-x64/node.exe",sha:"47cd67453da180a39cdf5daedb89862667b8e627e60c116607874633450cd30d",size:85766656,aliases:[]string{"C:/Users/makhmeto/AppData/Roaming/fnm/node-versions/v22.21.0/installation/node.exe"}},
+	}
+	return append(plans, ownerInstalledClaudePlans()...)
+}
+
+// Claude Code's native installer places one self-contained executable below the
+// user's .local directory and writes no uninstall registration. Every release
+// has a manifest signed with Anthropic's release key; the compiled digest and
+// size are that manifest's win32-x64 entry, and archiveSHA is the digest of the
+// signed manifest bytes. The installed file is admitted only while it equals one
+// of these released files, so a newer release stays unknown until a reviewed
+// change pins it.
+func ownerInstalledClaudePlan(version, manifest, sha string, size int64) ownerInstalledToolPlan {
+	const path = "C:/Users/makhmeto/.local/bin/claude.exe"
+	return ownerInstalledToolPlan{name:"claude",path:path,version:version,noRegistration:true,budget:30*time.Second,archiveURL:"https://downloads.claude.ai/claude-code-releases/"+version+"/manifest.json",archiveSHA:manifest,entry:"platforms.win32-x64",sha:sha,size:size,aliases:[]string{path}}
+}
+
+func ownerInstalledClaudePlans() []ownerInstalledToolPlan {
+	return []ownerInstalledToolPlan{
+		ownerInstalledClaudePlan("2.1.310","895e85ce24c3df3fdb77ac1006bdb2b66f1c42dd557000e65ced1e4aad847e74","f9a3920634ae3b961ee92c2eb58d0051f5f8852b120983d0a4f57b6a5efeba61",296791712),
+		ownerInstalledClaudePlan("2.1.311","d456e7293d621e6e09dd73b1d2a112bef62dae08d1ee44c1065356e64da65c0d","966f4b2ce962298f5dee6a942e8c47c8f97392e69e728e622319a98b259c0680",298870432),
+		ownerInstalledClaudePlan("2.1.312","f9bc2d099665e498cbc4123f81f2220852c3a75ee118c0081ef83f42f165aec9","6099672ebe5dcb518b67d1d32dde1e3360bc6bee1dae7f8d28a69c49acc7c865",298690208),
+		ownerInstalledClaudePlan("2.1.314","ded1c9a0a47ae65dc03165b0fab7b0bbd4aadd55de20b53c9f994308552d623d","66e00df32e6981f686a91f67287fcc86e6e1b80ba4973a7b7c4aa43c59986cfa",301388448),
+		ownerInstalledClaudePlan("2.1.315","7abee26292714236414ec4a4296686cd65951594ccec8cbd20dcfd8960ff6794","df57be6478a5bd6d5f5a0aa352729804aabff655339a3fa991b1ad8aae00b1e1",335468192),
+		ownerInstalledClaudePlan("2.1.316","ac9d8bb6a65febbccf9e65bde2e3e4298b8d6974e96f559fbf1d740891a747db","e896a9d8da519353a49bf69ca4a695ba7e09067752687c675b3969041e632d52",335469216),
+		ownerInstalledClaudePlan("2.1.317","2337b6f8d99d893d2c9f12761b124bf64e80823a566464d44767e4ca595ee2b7","26b01ec22df2c17ac7f5703aa547d36706e8d58412136ced0344a8ced4d86038",338187936),
+		ownerInstalledClaudePlan("2.1.318","608425e4ad6b6513a43c281c170d0bdd71b2d30bbf0df09df9b1a2e8c448df07","b9aa5b08dc2cc46ea77d334dce792d1b8fdbb3a43bb290efdebdc905b1181082",342408352),
+		ownerInstalledClaudePlan("2.1.319","e5ddfc17fd4745e7b5a6ccff7ccc1e119f323726c4b585c544cd9b5a6b1752e5","2e055732c9d03d22700d9046251a8370b673607bfcc9e4d16a1b0e8fb1345cbd",344807072),
+		ownerInstalledClaudePlan("2.1.321","d073d63928081951b871b35780d7abc83c26fa9b8b97f1ace64fc90d4591d325","e6dae5fc45902b15751f2591a02f51760351c4788c5fd8291b3f1443d40c13a4",346487456),
+		ownerInstalledClaudePlan("2.1.322","05d2eff648bb528c1479c719bb8eca9a759657631e285d03aaf37fe779173f1c","345996b4bdbae21d817f750fae2f34cbf8d81224a5444c78136091d121beb298",346496160),
+		ownerInstalledClaudePlan("2.1.323","6bc7a4857751e4a2d8257bcbd3ff9e817ca13f5defcee4b9c51d7d12741f820d","5064e6e0572dca86257363ca04d48653eef20ef27f1bd04b504ed7199ed3fd13",367634080),
+		ownerInstalledClaudePlan("2.1.324","7e4d3f343603f341fd3fffb45d9c762afd35a5966adc622d8eeb80aa1e00b2d5","06465fda1b2df163eb14f7d279dc93c504c183706709d395d826868724daf816",373058208),
+		ownerInstalledClaudePlan("2.1.325","919cc577ed98b12e00154f8bd925df23bbf2eb2b56ec29a09c78ee85f65725f3","87e0cb6ae0f4775da388cd3043f4d8097ef961dcddbf55fe90bc61ffc3f57a30",372461728),
+		ownerInstalledClaudePlan("2.1.326","883e153b05d4a34e4225cdc90d692e4415ed4e46b26434b6430f128b6b8beb1e","44e85ac6d3e36b924a0d631d3f69c13a6907491115d71e97c8eb6160c82b2aed",378067616),
+		ownerInstalledClaudePlan("2.1.327","9d2eb8df972ef777fde7e580266169ba8d7c8d4336cd5bcecaee4432e2e92f58","d6c8075bfb3b87f1c1254e64b6c35dadc628d21e75930ae51e47047b3f05a4a2",379536544),
+		ownerInstalledClaudePlan("2.1.328","b94760a7ad96de4998334fd15149d6d9df5fa964c94b6990edf402f8a7562ca8","551d573567b46ce78aba1b20beb20ac2494f5f8adffd1b41dfd269a96e1d9839",379651744),
+		ownerInstalledClaudePlan("2.1.329","7d2293210d31ab8af6ee0c3f7bbef503ea96ab2115f7fbcfc9382f84a6240742","527162bb4578e3dc36319fa913a530d5dc1f752115a6a4fd139981702bf282d0",384179872),
 	}
 }
 
-func ownerInstalledToolPlanFor(path string) (ownerInstalledToolPlan, bool) {
+// Several releases of one executable may be pinned for the same path, in table
+// order. The policy only asks whether a path is declared, and the first plan of
+// a path answers that, so routing does not depend on how many releases are pinned.
+func ownerInstalledToolPlansFor(path string) []ownerInstalledToolPlan {
+	var plans []ownerInstalledToolPlan
 	for _, plan := range ownerInstalledToolPlans() {
-		if same(path, plan.path) { return plan, true }
+		if same(path, plan.path) { plans = append(plans, plan) }
 	}
+	return plans
+}
+
+func ownerInstalledToolPlanFor(path string) (ownerInstalledToolPlan, bool) {
+	if plans := ownerInstalledToolPlansFor(path); len(plans) > 0 { return plans[0], true }
 	return ownerInstalledToolPlan{}, false
 }
 
@@ -116,16 +181,79 @@ func ownerInstalledFailureVerdict(primary string,cancelled,cleanup bool) ownerPa
 	return ownerRuleUnknown(primary)
 }
 
+// One deadline bounds every pinned release of the path: the short default, or
+// the largest budget those plans declare.
+func ownerInstalledToolBudget(plans []ownerInstalledToolPlan) time.Duration {
+	budget := ownerInstalledToolDefaultBudget
+	for _, plan := range plans {
+		if plan.budget > budget && plan.budget <= ownerInstalledToolMaxBudget { budget = plan.budget }
+	}
+	return budget
+}
+
 func ownerInstalledToolClassification(path string) (verdict ownerPathVerdict) {
-	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), ownerInstalledToolBudget(ownerInstalledToolPlansFor(path)))
 	defer cancel()
 	return ownerInstalledToolWith(ctx, path, ownerInstalledToolNative{}, ownerLegacyProtection)
 }
 
 func ownerInstalledToolWith(ctx context.Context, path string, access ownerInstalledToolAccess, legacy func(string) ownerLegacyState) (verdict ownerPathVerdict) {
-	plan, fixed := ownerInstalledToolPlanFor(path)
-	if !fixed { return ownerRuleUnknown("installed_tool_not_declared") }
-	return ownerInstalledToolVerify(ctx,plan,access,legacy)
+	plans := ownerInstalledToolPlansFor(path)
+	if len(plans) == 0 { return ownerRuleUnknown("installed_tool_not_declared") }
+	return ownerInstalledToolVerifyAny(ctx,plans,access,legacy)
+}
+
+// The refusals of the controller below, in the order a held object can first
+// reach them. A later position means the held object matched more of that plan.
+var ownerInstalledToolRefusalOrder = []string{
+	"installed_tool_origin_unavailable",
+	"existing_exclusion_unavailable",
+	"installed_tool_alias_mismatch",
+	"installed_tool_identity_unavailable",
+	"installed_tool_parent_untrusted",
+	"installed_tool_identity_mismatch",
+	"installed_tool_read_failed",
+	"installed_tool_bytes_mismatch",
+	"installed_tool_identity_changed",
+	"installed_tool_alias_changed",
+	"installed_tool_origin_changed",
+}
+
+func ownerInstalledToolRefusalRank(basis string) int {
+	for i, known := range ownerInstalledToolRefusalOrder {
+		if basis == known { return i + 1 }
+	}
+	return 0
+}
+
+// Several releases of one executable may be pinned for the same path. Each pin
+// is judged by the complete controller; the first clear verdict wins. A
+// protected exclusion, a cancellation and a cleanup failure do not depend on the
+// pin, so they end the search at once and can never be replaced by a later pin.
+// Any other refusal is ranked by how far the held object got through the
+// controller, so a release whose size matched and whose bytes did not is
+// reported ahead of the early size mismatches of the other releases.
+func ownerInstalledToolVerifyAny(ctx context.Context, plans []ownerInstalledToolPlan, access ownerInstalledToolAccess, legacy func(string) ownerLegacyState) (verdict ownerPathVerdict) {
+	verdict = ownerRuleUnknown("installed_tool_not_declared")
+	best := -1
+	for _, plan := range plans {
+		got := ownerInstalledToolVerify(ctx,plan,access,legacy)
+		if got.AccessAllowed || got.Status == "protected" || strings.Contains(got.Basis,"_cancelled") || strings.Contains(got.Basis,"_cleanup_failed") { return got }
+		if rank := ownerInstalledToolRefusalRank(got.Basis); rank > best { verdict, best = got, rank }
+	}
+	return verdict
+}
+
+// A plan is either registered or registration-free. It is refused before any
+// object is opened when the two shapes are mixed, when its content size is not
+// positive and within the single compiled read bound, or when its budget is
+// negative, above the bound, set on a registered plan or missing from a
+// registration-free one.
+func ownerInstalledToolPlanValid(plan ownerInstalledToolPlan) bool {
+	if _, valid := ownerInstalledToolInventory(plan, plan.aliases); !valid { return false }
+	if plan.size <= 0 || plan.size > ownerInstalledToolMaxRead || plan.budget < 0 || plan.budget > ownerInstalledToolMaxBudget { return false }
+	if !plan.noRegistration { return plan.budget == 0 }
+	return plan.registry == "" && plan.publisher == "" && !plan.userRegistry && plan.originFields == nil && plan.budget > 0
 }
 
 // The normal caller always obtains plan from the closed table above. A test
@@ -134,7 +262,7 @@ func ownerInstalledToolWith(ctx context.Context, path string, access ownerInstal
 func ownerInstalledToolVerify(ctx context.Context, plan ownerInstalledToolPlan, access ownerInstalledToolAccess, legacy func(string) ownerLegacyState) (verdict ownerPathVerdict) {
 	verdict = ownerRuleUnknown("installed_tool_origin_unavailable")
 	if ctx == nil || access == nil || legacy == nil { return }
-	if _, valid := ownerInstalledToolInventory(plan, plan.aliases); !valid { return }
+	if !ownerInstalledToolPlanValid(plan) { return }
 	cleanupFailed,cancelledFailure:=false,false
 	observeFailure:=func(err error) {
 		cleanupFailed=cleanupFailed || errors.Is(err,errOwnerInstalledToolCleanup)
@@ -152,10 +280,12 @@ func ownerInstalledToolVerify(ctx context.Context, plan ownerInstalledToolPlan, 
 		case ownerLegacyUnavailable: return ownerRuleUnknown("existing_exclusion_unavailable")
 		}
 	}
-	if err:=access.Origin(ctx, plan);err!=nil {
-		observeFailure(err)
-		if err==errOwnerInstalledToolCleanup { return ownerRuleUnknown("installed_tool_cleanup_failed") }
-		return
+	if !plan.noRegistration {
+		if err:=access.Origin(ctx, plan);err!=nil {
+			observeFailure(err)
+			if err==errOwnerInstalledToolCleanup { return ownerRuleUnknown("installed_tool_cleanup_failed") }
+			return
+		}
 	}
 	if ctx.Err()!=nil { return }
 	observed, err := access.Aliases(ctx, plan.path)
@@ -221,10 +351,12 @@ func ownerInstalledToolVerify(ctx context.Context, plan ownerInstalledToolPlan, 
 		case ownerLegacyUnavailable: return ownerRuleUnknown("existing_exclusion_unavailable")
 		}
 	}
-	if err:=access.Origin(ctx,plan);err!=nil {
-		observeFailure(err)
-		if err==errOwnerInstalledToolCleanup { return ownerRuleUnknown("installed_tool_cleanup_failed") }
-		return ownerRuleUnknown("installed_tool_origin_changed")
+	if !plan.noRegistration {
+		if err:=access.Origin(ctx,plan);err!=nil {
+			observeFailure(err)
+			if err==errOwnerInstalledToolCleanup { return ownerRuleUnknown("installed_tool_cleanup_failed") }
+			return ownerRuleUnknown("installed_tool_origin_changed")
+		}
 	}
 	// Registry/alias observations are not an atomic filesystem transaction.
 	// Recheck the actual held objects after those observations as well.
@@ -431,7 +563,7 @@ func (f *ownerInstalledToolFile) Read(ctx context.Context,size int64) ([]byte,er
 // already-held file; only tests substitute a deterministic ReaderAt.
 func ownerInstalledToolRead(ctx context.Context,reader io.ReaderAt,size int64) (raw []byte,failure error) {
 	if err:=ctx.Err();err!=nil { return nil,err }
-	if reader==nil || size<=0 || size>64<<20 { return nil,errOwnerInstalledTool }
+	if reader==nil || size<=0 || size>ownerInstalledToolMaxRead { return nil,errOwnerInstalledTool }
 	raw=make([]byte,int(size))
 	defer func(){if failure!=nil { clear(raw);raw=nil }}()
 	for offset:=0;offset<len(raw); {

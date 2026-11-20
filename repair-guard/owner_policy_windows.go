@@ -147,6 +147,9 @@ type ownerPolicyAccess struct {
 	physical     func(string) (string, error)
 	organization func(string) ownerPathVerdict
 	installed    func(string) ownerPathVerdict
+	// sharedSkills verifies only the owner's fixed shared-Skills agent links. It
+	// never denies: an unhandled result leaves the generic identity rule intact.
+	sharedSkills func(string, ownerSharedSkillsEnv) (ownerPathVerdict, bool)
 }
 
 // Normal and diagnostic classification share the complete provider set.
@@ -154,7 +157,7 @@ func ownerNormalPolicyAccess(organization func(string) ownerPathVerdict) ownerPo
 	return ownerPolicyAccess{
 		legacy: ownerLegacyProtection, repair: repairPathAllowed,
 		source: ownerRegisteredSource, physical: ownerRulePhysicalPath, organization: organization,
-		installed: ownerInstalledToolClassification,
+		installed: ownerInstalledToolClassification, sharedSkills: ownerSharedSkillsLinkClassification,
 	}
 }
 
@@ -178,6 +181,23 @@ func ownerPolicyClassify(path string, access ownerPolicyAccess) ownerPathVerdict
 		if legacy==ownerLegacyUnavailable { return ownerRuleUnknown("existing_exclusion_unavailable") }
 		if ownerCardPath(path) || ownerWindowsAlias(path) { return ownerRuleUnknown("windows_alias_or_exclusion_unavailable") }
 		return access.installed(path)
+	}
+	// The owner's fixed shared-Skills layout has its own identity contract: each
+	// agent Skills directory is a junction to the one central store. The provider
+	// can only replace an otherwise unverifiable link path by the classification
+	// of its exact central target. Any doubt returns unhandled and leaves the
+	// generic physical-identity rule below unchanged.
+	if access.sharedSkills != nil && access.legacy != nil && access.physical != nil {
+		inner := access
+		inner.sharedSkills = nil
+		env := ownerSharedSkillsEnv{
+			legacy:   access.legacy,
+			physical: access.physical,
+			classify: func(target string) ownerPathVerdict { return ownerPolicyClassify(target, inner) },
+		}
+		if verdict, handled := access.sharedSkills(path, env); handled {
+			return verdict
+		}
 	}
 	// Check lexical and resolved names before admitting any source/receipt.
 	paths := []string{path}

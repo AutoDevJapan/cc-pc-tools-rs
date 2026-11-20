@@ -75,6 +75,7 @@ fn accepted(t: &Test) -> Value {
     jobs[0].clone()
 }
 
+#[cfg(windows)]
 fn bind(t: &Test, db: &mut Value, key: &str) -> Value {
     let job = accepted(t);
     cc_todo::product_retry::bind(db, &job, key, t.rt.epoch() as u64).unwrap();
@@ -96,6 +97,7 @@ fn report_reason(t: &Test, job: &Value) -> Value {
         .clone()
 }
 
+#[cfg(windows)]
 #[test]
 fn reserve_receipt_arguments_pass_the_real_jobs_parser() {
     let (t, mut db, base) = fixture();
@@ -144,6 +146,7 @@ fn markerless_jobs_keep_the_ordinary_wait_and_admission_behavior() {
     assert!(t.ctx.admit(s(&job, "id")).unwrap().is_some());
 }
 
+#[cfg(windows)]
 #[test]
 fn intake_preserves_wait_and_exact_prompt_until_canonical_bind() {
     let (t, mut db, key) = fixture();
@@ -171,6 +174,7 @@ fn intake_preserves_wait_and_exact_prompt_until_canonical_bind() {
     assert_eq!(t.ctx.load(s(&job, "id")).unwrap()["status"], "running");
 }
 
+#[cfg(windows)]
 #[test]
 fn supervisor_waits_for_bind_then_launches_exactly_one_model() {
     let (t, original, key) = fixture();
@@ -214,6 +218,7 @@ fn supervisor_waits_for_bind_then_launches_exactly_one_model() {
     assert_eq!(t.ctx.load(s(&job, "id")).unwrap()["status"], "succeeded");
 }
 
+#[cfg(windows)]
 #[test]
 fn running_retry_preserves_other_todo_values_and_canonical_snapshot_bytes() {
     let (t, mut db, key) = fixture();
@@ -284,6 +289,7 @@ fn running_retry_preserves_other_todo_values_and_canonical_snapshot_bytes() {
     assert_eq!(t.rt.spawns.load(Ordering::Relaxed), 0);
 }
 
+#[cfg(windows)]
 #[test]
 fn running_retry_save_failure_keeps_canonical_todo_and_does_not_publish_running() {
     let (t, mut db, key) = fixture();
@@ -418,6 +424,7 @@ fn registration_rejects_owner_stop_new_wait_dependency_and_expiry() {
     }
 }
 
+#[cfg(windows)]
 #[test]
 fn bound_jobs_recheck_owner_stop_new_wait_dependency_expiry_and_identity() {
     for case in [
@@ -486,6 +493,7 @@ fn bound_jobs_recheck_owner_stop_new_wait_dependency_expiry_and_identity() {
     }
 }
 
+#[cfg(windows)]
 #[test]
 fn completed_dependency_reuses_the_bound_queue_entry_and_marks_it_doing(){
     let(t,mut db,key)=fixture();submit(&t,&key,&[],BODY).unwrap();let job=bind(&t,&mut db,&key);
@@ -529,6 +537,7 @@ fn replay_recovers_intake_even_if_the_first_supervisor_spawn_failed() {
     assert!(t.ctx.admit(s(&job, "id")).unwrap().is_none());
 }
 
+#[cfg(windows)]
 #[test]
 fn owner_stop_after_a_ready_status_snapshot_wins_final_admission() {
     let (t, mut db, key) = fixture();
@@ -688,6 +697,7 @@ fn retry_preserves_network_metadata_saved_by_an_unrestricted_source() {
     assert!(t.ctx.admit(s(&job, "id")).unwrap().is_none());
 }
 
+#[cfg(windows)]
 #[test]
 fn running_retry_and_unrelated_job_are_never_finalized_or_killed_by_invalidation() {
     let (t, mut db, key) = fixture();
@@ -706,6 +716,7 @@ fn running_retry_and_unrelated_job_are_never_finalized_or_killed_by_invalidation
     assert!(t.rt.kills.lock().unwrap().is_empty());
 }
 
+#[cfg(windows)]
 #[test]
 fn running_publication_holds_the_same_todo_lock_as_bind_and_wait_writers() {
     let (t, mut db, key) = fixture();

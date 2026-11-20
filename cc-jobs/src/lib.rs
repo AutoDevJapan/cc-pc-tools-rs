@@ -5,6 +5,8 @@
 pub mod adaptive;
 pub mod boundary;
 pub mod cache;
+// Fixed shared-volume ownership stamps and reclamation use Win32 identities.
+#[cfg(windows)]
 mod cache_history;
 pub mod capacity;
 pub mod cli;

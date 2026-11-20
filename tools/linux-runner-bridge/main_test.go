@@ -1,10 +1,17 @@
 package main
 
 import (
+	"bytes"
+	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
 	"net/http/httptest"
 	"os"
+	"os/exec"
+	"path/filepath"
+	"reflect"
 	"runtime"
 	"strings"
 	"testing"
@@ -458,5 +465,600 @@ func TestJobIdentity(t *testing.T) {
 		if h.authorize(q) == nil {
 			t.Fatal("unexpected authorized job")
 		}
+	}
+}
+
+
+func projectionVersionFixture(tool, release string) []byte {
+	return []byte(fmt.Sprintf("%s %s (abcdef012 2026-01-01)\nrelease: %s\nhost: x86_64-unknown-linux-gnu\n", tool, release, release))
+}
+
+func TestProjectionToolchainClosedArguments(t *testing.T) {
+	for _, tc := range []struct {
+		name string
+		args []string
+		required, observation bool
+		valid bool
+	}{
+		{"legacy", []string{"check", "--locked"}, false, false, true},
+		{"metadata", []string{"metadata", projectionRustRequirement, "--locked"}, true, false, true},
+		{"test", []string{"test", projectionRustRequirement, "-p", "cc-jobs"}, true, false, true},
+		{"clamped", []string{"test", "--jobs=2", projectionRustRequirement, "--", "--test-threads=1"}, true, false, true},
+		{"observe", []string{"metadata", projectionRustObservation}, true, true, true},
+		{"other-version", []string{"metadata", "--ci-toolchain=1.90.0"}, false, false, false},
+		{"unknown", []string{"metadata", "--ci-toolchain-other"}, false, false, false},
+		{"duplicate", []string{"metadata", projectionRustRequirement, projectionRustRequirement}, false, false, false},
+		{"harness", []string{"test", "--", projectionRustRequirement}, false, false, true},
+		{"opaque-skip", []string{"test", "--", "--skip", "--ci-toolchain-legacy"}, false, false, true},
+		{"required-opaque-skip", []string{"test", projectionRustRequirement, "--", "--skip", "--ci-toolchain-legacy"}, true, false, true},
+		{"extra-observe", []string{"metadata", projectionRustObservation, "--locked"}, false, false, false},
+		{"wrong-command", []string{"clippy", projectionRustRequirement}, false, false, false},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			clean, required, observation, err := splitProjectionToolchainArgs(tc.args)
+			if (err == nil) != tc.valid {
+				t.Fatalf("valid=%v error=%v", tc.valid, err)
+			}
+			if !tc.valid { return }
+			if required != tc.required || observation != tc.observation {
+				t.Fatalf("policy changed: %v %v", required, observation)
+			}
+			for _, arg := range clean {
+				if arg == "--" { break }
+				if strings.HasPrefix(arg, "--ci-toolchain") { t.Fatal("internal marker reached Cargo options") }
+			}
+			if err := validate(request{Dir: "/work/cc-pc-tools-rs/cc-pc-tools-rs", Args: tc.args}); err != nil {
+				t.Fatal(err)
+			}
+		})
+	}
+}
+
+func TestProjectionToolchainRequestOnlyAddsFixedRestriction(t *testing.T) {
+	original := []string{"metadata", "--locked", "--no-deps", "--format-version", "1"}
+	got, err := projectionToolchainRequest(original, projectionRustRelease)
+	if err != nil || !reflect.DeepEqual(got, append([]string{"metadata", projectionRustRequirement}, original[1:]...)) {
+		t.Fatalf("fixed request=%v %v", got, err)
+	}
+	if original[1] != "--locked" { t.Fatal("caller arguments mutated") }
+	for _, wrong := range []string{"true", "1.90.0", "1.95.0\n", "/other/path"} {
+		if _, err := projectionToolchainRequest(original, wrong); err == nil {
+			t.Fatalf("accepted arbitrary requirement %q", wrong)
+		}
+	}
+	for _, args := range [][]string{{"check", "--locked"}, {"--version"}} {
+		got, err := projectionToolchainRequest(args, "")
+		if err != nil || !reflect.DeepEqual(got, args) { t.Fatal("legacy request changed") }
+	}
+	external, err := projectionToolchainRequest([]string{projectionRustObservation}, projectionRustRelease)
+	if err != nil || !reflect.DeepEqual(external, []string{"metadata", projectionRustObservation}) { t.Fatal("external probe not bound to updated frontend") }
+	probe := []string{"metadata", projectionRustObservation}
+	got, err = projectionToolchainRequest(probe, projectionRustRelease)
+	if err != nil || !reflect.DeepEqual(got, probe) { t.Fatal("probe marker duplicated") }
+}
+
+func TestProjectionCargoUsesClosedExecutionContext(t *testing.T) {
+	t.Setenv("PATH", "/wrong/ambient")
+	t.Setenv("RUSTUP_TOOLCHAIN", "1.90.0")
+	t.Setenv("RUSTC", "/wrong/rustc")
+	t.Setenv("RUSTC_WRAPPER", "/wrong/wrapper")
+	cmd := projectionCargoCommand([]string{"test", "--locked"}, "2", "3", true, []string{"TMPDIR=/owned/scratch"})
+	if cmd.Path != "/opt/rust/bin/cargo" || cmd.Dir != "/work/cc-pc-tools-rs/cc-pc-tools-rs" {
+		t.Fatal("ambient executable or workspace was selected")
+	}
+	env := strings.Join(cmd.Env, "\n")
+	for _, expected := range []string{"CARGO_BUILD_JOBS=2", "RUST_TEST_THREADS=3", "RUSTUP_TOOLCHAIN=1.95.0", "RUSTUP_AUTO_INSTALL=0", "RUSTC=/opt/rust/bin/rustc", "TMPDIR=/owned/scratch"} {
+		if !strings.Contains(env, expected) { t.Fatalf("missing fixed context %s", expected) }
+	}
+	if strings.Contains(env, "/wrong/") { t.Fatal("ambient environment crossed execution boundary") }
+	legacy := projectionCargoCommand([]string{"check"}, "1", "1", false, nil)
+	if strings.Contains(strings.Join(legacy.Env, "\n"), "RUSTUP_TOOLCHAIN=") {
+		t.Fatal("ordinary Cargo acquired a new version requirement")
+	}
+}
+
+func TestProjectionVersionsUseTheActualCargoContext(t *testing.T) {
+	template := projectionCargoCommand([]string{"test", "--locked"}, "2", "3", true, []string{"TMPDIR=/owned/scratch"})
+	before := append([]string(nil), template.Env...)
+	var paths []string
+	result, err := checkProjectionToolchainWith(context.Background(), template, func(ctx context.Context, cmd *exec.Cmd) ([]byte, error) {
+		if ctx.Err() != nil || cmd.Dir != template.Dir || !reflect.DeepEqual(cmd.Env, before) {
+			t.Fatal("probe and real execution context differ")
+		}
+		if !reflect.DeepEqual(cmd.Args[1:], []string{"--version", "--verbose"}) {
+			t.Fatal("probe accepted command arguments")
+		}
+		paths = append(paths, cmd.Path)
+		tool := "cargo"
+		if cmd.Path == "/opt/rust/bin/rustc" { tool = "rustc" } else if cmd.Path != "/opt/rust/bin/cargo" { t.Fatal("unexpected executable") }
+		cmd.Env[0] = "HOME=/mutated-test-copy"
+		return projectionVersionFixture(tool, projectionRustRelease), nil
+	})
+	if err != nil || result.Cargo != projectionRustRelease || result.Rustc != projectionRustRelease {
+		t.Fatalf("fixed versions rejected: %v %v", result, err)
+	}
+	if !reflect.DeepEqual(paths, []string{"/opt/rust/bin/cargo", "/opt/rust/bin/rustc"}) || !reflect.DeepEqual(template.Env, before) {
+		t.Fatal("probe changed native command identity/context")
+	}
+}
+
+func TestProjectionVersionsRejectOldIncompleteAndFailedInputs(t *testing.T) {
+	for _, tc := range []struct{name, cargo, rustc string; invalid string}{
+		{"cargo190", "1.90.0", "1.95.0", ""},
+		{"rustc190", "1.95.0", "1.90.0", ""},
+		{"nightly", "1.95.0-nightly", "1.95.0", ""},
+		{"missing", "1.95.0", "1.95.0", "missing"},
+		{"empty", "1.95.0", "1.95.0", "empty"},
+		{"duplicate", "1.95.0", "1.95.0", "duplicate"},
+		{"mixed", "1.95.0", "1.95.0", "mixed"},
+		{"oversize", "1.95.0", "1.95.0", "oversize"},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			template := projectionCargoCommand([]string{"test"}, "1", "1", true, nil)
+			_, err := checkProjectionToolchainWith(context.Background(), template, func(_ context.Context, cmd *exec.Cmd) ([]byte, error) {
+				if tc.invalid == "missing" { return nil, os.ErrNotExist }
+				tool, release := "cargo", tc.cargo
+				if cmd.Path == "/opt/rust/bin/rustc" { tool, release = "rustc", tc.rustc }
+				raw := projectionVersionFixture(tool, release)
+				switch tc.invalid {
+				case "empty": raw = nil
+				case "duplicate": raw = append(raw, []byte("release: 1.95.0\n")...)
+				case "mixed": raw = []byte(tool+" 1.95.0 (abcdef012 2026-01-01)\nrelease: 1.90.0\n")
+				case "oversize": raw = append(raw, bytes.Repeat([]byte{'S'}, projectionVersionLimit)...)
+				}
+				return raw, nil
+			})
+			if err == nil { t.Fatal("unqualified toolchain accepted") }
+		})
+	}
+}
+
+func TestProjectionExecutionRechecksBeforeActualChild(t *testing.T) {
+	version := projectionRustRelease
+	observed, started := 0, 0
+	read := func(_ context.Context, cmd *exec.Cmd) ([]byte, error) {
+		observed++
+		tool := "cargo"
+		if cmd.Path == "/opt/rust/bin/rustc" { tool = "rustc" }
+		return projectionVersionFixture(tool, version), nil
+	}
+	run := func(_ context.Context, cmd *exec.Cmd) int {
+		started++
+		if strings.Contains(strings.Join(cmd.Args, "\n"), "--ci-toolchain") { t.Fatal("marker passed to real Cargo") }
+		return 0
+	}
+	var out, diagnostic bytes.Buffer
+	if code := executeProjectionCargo(context.Background(), []string{"metadata", projectionRustObservation}, "1", "1", nil, &out, &diagnostic, read, run); code != 0 || started != 0 {
+		t.Fatal("metadata probe started Cargo work or failed")
+	}
+	if observed != 2 { t.Fatal("both tools were not observed") }
+	version = "1.90.0"
+	out.Reset(); diagnostic.Reset()
+	code := executeProjectionCargo(context.Background(), []string{"test", projectionRustRequirement, "-p", "cc-jobs"}, "2", "3", nil, &out, &diagnostic, read, run)
+	if code == 0 || started != 0 || out.Len() != 0 || !strings.Contains(diagnostic.String(), "linux-toolchain-mismatch") {
+		t.Fatal("old probe receipt authorized a later wrong-version child")
+	}
+	version = projectionRustRelease
+	diagnostic.Reset()
+	if code := executeProjectionCargo(context.Background(), []string{"test", projectionRustRequirement, "-p", "cc-jobs"}, "2", "3", nil, &out, &diagnostic, read, run); code != 0 || started != 1 {
+		t.Fatal("fixed toolchain did not reach the real execution boundary")
+	}
+	if !strings.Contains(diagnostic.String(), "linux-toolchain-verified cargo=1.95.0 rustc=1.95.0") {
+		t.Fatal("required child acknowledgement missing")
+	}
+}
+
+func TestProjectionLegacyCargoDoesNotAcquireNewProbe(t *testing.T) {
+	calls := 0
+	code := executeProjectionCargo(context.Background(), []string{"check", "--locked"}, "2", "3", nil, io.Discard, io.Discard,
+		func(context.Context, *exec.Cmd) ([]byte, error) { t.Fatal("legacy Cargo was probed"); return nil, os.ErrInvalid },
+		func(context.Context, *exec.Cmd) int { calls++; return 7 })
+	if code != 7 || calls != 1 { t.Fatal("legacy result or execution changed") }
+}
+
+func TestProjectionVersionCaptureBoundedAndDrainable(t *testing.T) {
+	var output projectionVersionOutput
+	input := bytes.Repeat([]byte{'S'}, projectionVersionLimit+1)
+	if n, err := output.Write(input); n != len(input) || err != nil || !output.overflow || len(output.data) != projectionVersionLimit {
+		t.Fatal("capture did not bound retained bytes while draining")
+	}
+	if n, err := output.Write([]byte("later")); n != 5 || err != nil || len(output.data) != projectionVersionLimit {
+		t.Fatal("overflow stopped draining")
+	}
+}
+
+type projectionShortWriter struct{}
+func (projectionShortWriter) Write(p []byte) (int, error) {
+	if len(p) == 0 { return 0, nil }
+	return len(p)-1, nil
+}
+
+func TestProjectionVersionMetadataIsClosedAndChecksShortWrites(t *testing.T) {
+	result := projectionToolchainVersions{Domain:"cc-pc-tools-linux-toolchain-v1", Cargo:projectionRustRelease, Rustc:projectionRustRelease}
+	if writeProjectionVersions(projectionShortWriter{}, result) == nil { t.Fatal("short metadata write accepted") }
+	var output bytes.Buffer
+	if err := writeProjectionVersions(&output, result); err != nil { t.Fatal(err) }
+	var value map[string]string
+	if json.Unmarshal(output.Bytes(), &value) != nil || len(value) != 3 || value["domain"] != result.Domain || value["cargo_release"] != result.Cargo || value["rustc_release"] != result.Rustc {
+		t.Fatal("metadata schema changed")
+	}
+}
+
+func TestProjectionVersionChild(t *testing.T) {
+	mode := os.Getenv("CC_BRIDGE_VERSION_FIXTURE")
+	if mode == "" { t.Skip("owned version-capture child only") }
+	switch mode {
+	case "ok":
+		fmt.Print(string(projectionVersionFixture("cargo", projectionRustRelease)))
+		os.Exit(0)
+	case "oversize":
+		fmt.Print(strings.Repeat("S", projectionVersionLimit+1))
+		os.Exit(0)
+	case "failed":
+		fmt.Print(string(projectionVersionFixture("cargo", projectionRustRelease)))
+		os.Exit(7)
+	case "wait":
+		time.Sleep(30*time.Second)
+		os.Exit(0)
+	}
+	os.Exit(8)
+}
+
+func TestProjectionVersionActualCaptureControls(t *testing.T) {
+	exe, err := os.Executable()
+	if err != nil { t.Fatal(err) }
+	for _, mode := range []string{"ok", "oversize", "failed", "wait", "missing"} {
+		t.Run(mode, func(t *testing.T) {
+			path := exe
+			if mode == "missing" { path = t.TempDir()+"/missing-version-tool" }
+			template := exec.Command(path, "-test.run=^TestProjectionVersionChild$")
+			template.Dir = t.TempDir()
+			template.Env = append(os.Environ(), "CC_BRIDGE_VERSION_FIXTURE="+mode)
+			deadline := 10*time.Second
+			if mode == "wait" { deadline = 30*time.Millisecond }
+			ctx, cancel := context.WithTimeout(context.Background(), deadline)
+			defer cancel()
+			raw, err := runProjectionVersion(ctx, template)
+			if mode == "ok" {
+				if err != nil { t.Fatal(err) }
+				if _, err := projectionVersionRelease(raw, "cargo"); err != nil { t.Fatal(err) }
+			} else if err == nil || len(raw) != 0 {
+				t.Fatal("failed/incomplete native capture was accepted")
+			}
+		})
+	}
+}
+
+func TestProjectionMarkerShortWriteDoesNotStartChild(t *testing.T) {
+	started := 0
+	code := executeProjectionCargo(context.Background(), []string{"test", projectionRustRequirement}, "1", "1", nil, io.Discard, projectionShortWriter{}, func(_ context.Context, cmd *exec.Cmd) ([]byte, error) {
+		tool := "cargo"
+		if cmd.Path == "/opt/rust/bin/rustc" { tool = "rustc" }
+		return projectionVersionFixture(tool, projectionRustRelease), nil
+	}, func(context.Context, *exec.Cmd) int { started++; return 0 })
+	if code == 0 || started != 0 { t.Fatal("incomplete child acknowledgement accepted") }
+}
+
+
+func projectionInvocationFixture(t *testing.T) (*projectionInvocation, *os.File) {
+	t.Helper()
+	read, write, err := os.Pipe()
+	if err != nil {
+		t.Fatal(err)
+	}
+	owner, err := beginProjectionInvocation(read)
+	if err != nil {
+		read.Close()
+		write.Close()
+		t.Fatal(err)
+	}
+	t.Cleanup(func() {
+		write.Close()
+		if err := owner.Close(); err != nil {
+			t.Error(err)
+		}
+	})
+	return owner, write
+}
+
+func projectionCloseInvocationInput(t *testing.T, owner *projectionInvocation, write *os.File) {
+	t.Helper()
+	if err := write.Close(); err != nil {
+		t.Fatal(err)
+	}
+	select {
+	case <-owner.ctx.Done():
+	case <-time.After(3 * time.Second):
+		t.Fatal("owned stdin EOF was not observed before the next invocation stage")
+	}
+}
+
+func TestProjectionInvocationPositiveOwnsBothProbesMarkerAndChild(t *testing.T) {
+	owner, _ := projectionInvocationFixture(t)
+	probes, starts := 0, 0
+	var diagnostic bytes.Buffer
+	code := executeProjectionCargo(owner.ctx, []string{"test", projectionRustRequirement}, "2", "3", nil, io.Discard, &diagnostic,
+		func(probeCtx context.Context, cmd *exec.Cmd) ([]byte, error) {
+			probes++
+			if owner.ctx.Err() != nil || probeCtx.Err() != nil {
+				t.Fatal("normal invocation was cancelled")
+			}
+			tool := "cargo"
+			if cmd.Path == "/opt/rust/bin/rustc" {
+				tool = "rustc"
+			}
+			return projectionVersionFixture(tool, projectionRustRelease), nil
+		},
+		func(childCtx context.Context, cmd *exec.Cmd) int {
+			starts++
+			if childCtx != owner.ctx || childCtx.Err() != nil {
+				t.Fatal("actual child lost the invocation context")
+			}
+			if cmd.Dir != "/work/cc-pc-tools-rs/cc-pc-tools-rs" {
+				t.Fatal("actual child moved to another workspace")
+			}
+			return 0
+		})
+	if code != 0 || probes != 2 || starts != 1 {
+		t.Fatalf("normal path code=%d probes=%d starts=%d", code, probes, starts)
+	}
+	if diagnostic.String() != "linux-toolchain-verified cargo=1.95.0 rustc=1.95.0\n" {
+		t.Fatal("normal invocation did not emit exactly one bounded marker")
+	}
+}
+
+func TestProjectionInvocationEOFDuringEachProbeStopsBeforeNextStage(t *testing.T) {
+	for _, during := range []int{1, 2} {
+		t.Run(fmt.Sprintf("probe%d", during), func(t *testing.T) {
+			owner, write := projectionInvocationFixture(t)
+			probes, starts := 0, 0
+			var diagnostic bytes.Buffer
+			code := executeProjectionCargo(owner.ctx, []string{"test", projectionRustRequirement}, "2", "3", nil, io.Discard, &diagnostic,
+				func(probeCtx context.Context, cmd *exec.Cmd) ([]byte, error) {
+					probes++
+					if probes == during {
+						projectionCloseInvocationInput(t, owner, write)
+						select {
+						case <-probeCtx.Done():
+						case <-time.After(3*time.Second):
+							t.Fatal("version probe was detached from stdin cancellation")
+						}
+					}
+					tool := "cargo"
+					if cmd.Path == "/opt/rust/bin/rustc" {
+						tool = "rustc"
+					}
+					// A successful version result cannot hide the invocation EOF.
+					return projectionVersionFixture(tool, projectionRustRelease), nil
+				},
+				func(context.Context, *exec.Cmd) int {
+					starts++
+					return 0
+				})
+			if code != 125 || probes != during || starts != 0 || diagnostic.Len() != 0 {
+				t.Fatalf("cancel window accepted code=%d probes=%d starts=%d diagnostic=%q", code, probes, starts, diagnostic.String())
+			}
+		})
+	}
+}
+
+type projectionEOFMarkerWriter struct {
+	t *testing.T
+	owner *projectionInvocation
+	write *os.File
+	writes int
+}
+
+func (w *projectionEOFMarkerWriter) Write(p []byte) (int, error) {
+	w.writes++
+	projectionCloseInvocationInput(w.t, w.owner, w.write)
+	return len(p), nil
+}
+
+func TestProjectionInvocationEOFAfterProbesDoesNotStartActualChild(t *testing.T) {
+	owner, write := projectionInvocationFixture(t)
+	probes, starts := 0, 0
+	marker := &projectionEOFMarkerWriter{t:t, owner:owner, write:write}
+	code := executeProjectionCargo(owner.ctx, []string{"test", projectionRustRequirement}, "2", "3", nil, io.Discard, marker,
+		func(probeCtx context.Context, cmd *exec.Cmd) ([]byte, error) {
+			probes++
+			if probeCtx.Err() != nil {
+				t.Fatal("probe cancelled before the injected EOF")
+			}
+			tool := "cargo"
+			if cmd.Path == "/opt/rust/bin/rustc" {
+				tool = "rustc"
+			}
+			return projectionVersionFixture(tool, projectionRustRelease), nil
+		},
+		func(context.Context, *exec.Cmd) int {
+			starts++
+			return 0
+		})
+	if code != 125 || probes != 2 || marker.writes != 1 || starts != 0 {
+		t.Fatalf("post-probe cancellation accepted code=%d probes=%d markers=%d starts=%d", code, probes, marker.writes, starts)
+	}
+}
+
+func TestProjectionInvocationAlreadyCancelledStartsNothing(t *testing.T) {
+	ctx, cancel := context.WithCancel(context.Background())
+	cancel()
+	probes, starts := 0, 0
+	code := executeProjectionCargo(ctx, []string{"test", projectionRustRequirement}, "1", "1", nil, io.Discard, io.Discard,
+		func(context.Context, *exec.Cmd) ([]byte, error) {
+			probes++
+			return nil, os.ErrInvalid
+		},
+		func(context.Context, *exec.Cmd) int {
+			starts++
+			return 0
+		})
+	if code != 125 || probes != 0 || starts != 0 {
+		t.Fatal("cancelled invocation began new work")
+	}
+}
+
+func TestProjectionInvocationClosesAndJoinsWatcherOnce(t *testing.T) {
+	owner, _ := projectionInvocationFixture(t)
+	closeDone := make(chan error, 2)
+	go func() { closeDone <- owner.Close() }()
+	go func() { closeDone <- owner.Close() }()
+	for i:=0; i<2; i++ {
+		select {
+		case err := <-closeDone:
+			if err != nil { t.Fatal(err) }
+		case <-time.After(3*time.Second):
+			t.Fatal("invocation watcher was not joined")
+		}
+	}
+	select {
+	case <-owner.done:
+	default:
+		t.Fatal("Close returned before watcher termination")
+	}
+	if owner.ctx.Err() == nil {
+		t.Fatal("Close did not invalidate invocation")
+	}
+}
+
+func TestProjectionActualRunnerRejectsCancelledStart(t *testing.T) {
+	ctx, cancel := context.WithCancel(context.Background())
+	cancel()
+	path := t.TempDir()+"/missing-child"
+	if code := executeCargoCommand(ctx, exec.Command(path)); code != 125 {
+		t.Fatalf("native Start ignored prior cancellation: %d", code)
+	}
+}
+
+func TestProjectionHarnessTailRemainsOpaqueAtActualBoundary(t *testing.T) {
+	tail := []string{"--", "--skip", "--ci-toolchain-legacy", projectionRustRequirement}
+	for _, required := range []bool{false, true} {
+		name := "legacy"
+		args := []string{"test"}
+		if required {
+			name = "required"
+			args = append(args, projectionRustRequirement)
+		}
+		t.Run(name, func(t *testing.T) {
+			args = append(args, tail...)
+			probes, starts := 0, 0
+			code := executeProjectionCargo(context.Background(), args, "2", "3", nil, io.Discard, io.Discard,
+				func(_ context.Context, cmd *exec.Cmd) ([]byte, error) {
+					probes++
+					tool := "cargo"
+					if cmd.Path == "/opt/rust/bin/rustc" { tool = "rustc" }
+					return projectionVersionFixture(tool, projectionRustRelease), nil
+				},
+				func(_ context.Context, cmd *exec.Cmd) int {
+					starts++
+					expected := append([]string{"test"}, tail...)
+					if !reflect.DeepEqual(cmd.Args[1:], expected) {
+						t.Fatalf("harness data changed: %v", cmd.Args)
+					}
+					return 7
+				})
+			wantProbes := 0
+			if required { wantProbes = 2 }
+			if code != 7 || starts != 1 || probes != wantProbes {
+				t.Fatal("opaque harness values changed acceptance or execution count")
+			}
+		})
+	}
+}
+
+func TestProjectionInputAlreadyEOFDoesNotWaitForNewWriter(t *testing.T) {
+	if runtime.GOOS != "linux" {
+		t.Skip("fixed Linux execute descriptor boundary")
+	}
+	read, write, err := os.Pipe()
+	if err != nil { t.Fatal(err) }
+	defer read.Close()
+	if err := write.Close(); err != nil { t.Fatal(err) }
+	type openedInput struct { input *os.File; err error }
+	result := make(chan openedInput, 1)
+	go func() {
+		input, err := openProjectionInvocationInput(read)
+		result <- openedInput{input, err}
+	}()
+	select {
+	case opened := <-result:
+		if opened.err != nil { t.Fatal(opened.err) }
+		owner, err := beginProjectionInvocation(opened.input)
+		if err != nil { opened.input.Close(); t.Fatal(err) }
+		defer owner.Close()
+		select {
+		case <-owner.ctx.Done():
+		case <-time.After(3*time.Second):
+			t.Fatal("pre-existing EOF was not delivered to the invocation")
+		}
+	case <-time.After(3*time.Second):
+		t.Fatal("stdin duplicate waited for a writer instead of observing EOF")
+	}
+}
+
+
+// Host admission remains stricter than Cargo's opaque harness tail. This
+// regression exercises the same validate -> execution-boundary ordering.
+func TestProjectionHostValidatedHarnessTailPreservedAtExecution(t *testing.T) {
+	tail := []string{"--", "--skip", "--ci-toolchain-legacy", projectionRustRequirement}
+	for _, required := range []bool{false, true} {
+		name := "legacy"
+		args := []string{"test"}
+		if required {
+			name = "required"
+			args = append(args, projectionRustRequirement)
+		}
+		t.Run(name, func(t *testing.T) {
+			args = append(args, tail...)
+			q := request{Dir: "/work/cc-pc-tools-rs/cc-pc-tools-rs", Args: args}
+			if err := validate(q); err != nil {
+				t.Fatal(err)
+			}
+			probes, executions := 0, 0
+			code := executeProjectionCargo(context.Background(), q.Args, "2", "3", nil, io.Discard, io.Discard,
+				func(_ context.Context, cmd *exec.Cmd) ([]byte, error) {
+					probes++
+					return projectionVersionFixture(filepath.Base(cmd.Path), projectionRustRelease), nil
+				},
+				func(_ context.Context, cmd *exec.Cmd) int {
+					executions++
+					expected := append([]string{"test"}, tail...)
+					if !reflect.DeepEqual(cmd.Args[1:], expected) {
+						t.Fatalf("host-accepted harness tail changed: %v", cmd.Args[1:])
+					}
+					return 7
+				})
+			expectedProbes := 0
+			if required {
+				expectedProbes = 2
+			}
+			if code != 7 || executions != 1 || probes != expectedProbes {
+				t.Fatal("host-accepted tail changed execution or version policy")
+			}
+		})
+	}
+	for _, value := range []string{"--config=other", "--target-dir=/tmp/other", "-C/tmp", "+nightly", "@other", "line\nbreak"} {
+		t.Run("host-reject-"+strings.ReplaceAll(value, "/", "_"), func(t *testing.T) {
+			args := []string{"test", projectionRustRequirement, "--", value}
+			q := request{Dir: "/work/cc-pc-tools-rs/cc-pc-tools-rs", Args: args}
+			// Passing this request into h.serve would otherwise reach real host
+			// tools. Count the boundary only after its same production validator.
+			probes, executions := 0, 0
+			err := validate(q)
+			if err == nil {
+				_ = executeProjectionCargo(context.Background(), q.Args, "2", "3", nil, io.Discard, io.Discard,
+					func(context.Context, *exec.Cmd) ([]byte, error) {
+						probes++
+						return nil, errProjectionToolchain
+					},
+					func(context.Context, *exec.Cmd) int {
+						executions++
+						return 0
+					})
+			}
+			if err == nil || probes != 0 || executions != 0 {
+				t.Fatal("host rejection crossed the probe or execution boundary")
+			}
+		})
 	}
 }

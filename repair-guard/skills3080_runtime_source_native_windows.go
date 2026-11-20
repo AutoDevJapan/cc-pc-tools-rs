@@ -424,8 +424,11 @@ func skillsRuntimeSourceNativeProjection(input io.Reader, thread, cwd, parentJob
 			continue
 		}
 		prepared, err := time.Parse(time.RFC3339Nano, candidate.PreparedAt)
+		// Runtime path identity and the original command's exact spelling are
+		// separate checks. Re-rendering with the OS spelling loses the declared
+		// workdir and can also accept a declaration changed after the call.
 		if matched || !skillsRuntimeSourcePreparationShape(candidate) || candidate.Task != task || candidate.SpecSHA != specSHA || candidate.Writer.Job != parentJob || !same(candidate.Writer.Workspace, cwd) || candidate.CallID != p.CallID ||
-			result["request_sha256"] != candidate.RequestSHA || !skillsRuntimeSourceInvocation(origin.Input, candidate.RequestPath, cwd, "--prepare-skills3080-runtime-source") ||
+			result["request_sha256"] != candidate.RequestSHA || !skillsRuntimeSourceInvocation(origin.Input, candidate.RequestPath, candidate.Writer.Workspace, "--prepare-skills3080-runtime-source") ||
 			err != nil || prepared.Before(origin.At) || at.Before(prepared) || at.After(generation) {
 			return out, false
 		}

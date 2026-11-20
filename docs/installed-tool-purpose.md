@@ -78,10 +78,12 @@ independent content check.
 
 ## Rows without an installer registration
 
-Claude Code's native installer and an fnm-extracted Node.js archive write no
-uninstall registration, so the registry observations of the rows above have
-nothing to read for them. These two rows are marked `noRegistration` in the
-compiled table. Such a plan skips only the two registry observations. Every
+Claude Code's native installer and an fnm-extracted Node.js archive are not
+documented to write an uninstall registration (the vendor's uninstall steps for
+Claude Code remove only files and directories), so the registry observations of
+the rows above have nothing to rely on for them. These two rows are marked
+`noRegistration` in the compiled table. Such a plan skips only the two registry
+observations. Every
 other control in this document is unchanged: the exclusions, the closed alias
 inventory, the read-sharing opens, the identity, size, link-count, ACL and
 parent-chain proof, the single bounded read hashed against the public pin, and
@@ -137,11 +139,18 @@ otherwise the largest budget its plans declare (30 seconds for Claude Code, 20
 seconds for Node.js). The routing predicate of the policy only asks whether the
 path is declared, which does not depend on how many releases are pinned.
 
-Reading a refusal for these rows. `installed_tool_identity_unavailable` means the
-file or one of its ancestors could not be opened, because it is absent, denied
-or in use. `installed_tool_alias_mismatch` means the file has a hardlink name that the
-plan does not list. `installed_tool_parent_untrusted` means an ancestor descriptor
-grants replacement rights to another principal. `installed_tool_identity_mismatch`
+Reading a refusal for these rows. The controller reaches the refusals in this
+order. It enumerates the hardlink names of the file before it opens anything. If
+that enumeration fails, because the file or one of its ancestors is absent or the
+call is refused, or if it returns names that are not exactly the plan's
+inventory, for example a hardlink name the plan does not list, the result is
+`installed_tool_alias_mismatch`. Only after the enumeration succeeded can opening
+an ancestor directory or the file fail with `installed_tool_identity_unavailable`:
+the access is denied, the file is in use, or an ancestor is a reparse point or
+does not resolve to its compiled name. `installed_tool_parent_untrusted` means
+that the owner or descriptor of an ancestor directory fails the rule for its role:
+an untrusted owner, replacement rights for another principal or a form the rule
+does not recognize. `installed_tool_identity_mismatch`
 means the size, link count, descriptor or final name of the held file differs
 from the plan; a release outside the table is the usual cause, a descriptor that
 the ACL rule rejects is another. `installed_tool_bytes_mismatch` means the size
@@ -228,7 +237,9 @@ hashed against the public pin. The controller rechecks full identities, size,
 link counts, final names, ACLs, alias inventory and installation metadata before
 returning. The owner may be SYSTEM, Administrators, the current user or
 TrustedInstaller; write-capable allow entries for other principals are rejected.
-Unknown ACL forms fail closed. No ACL or executable is changed.
+Unknown ACL forms fail closed. No ACL or executable is changed. For the
+registration-free rows described earlier, both registration steps above are absent
+and every other step applies unchanged.
 
 All opened files and ancestor handles are closed once, including failure paths;
 all retained content buffers are cleared. A close failure or cancellation

@@ -384,7 +384,7 @@ jobs:
           GIT_CONFIG_KEY_1: core.eol
           GIT_CONFIG_VALUE_1: lf
         with:
-          ref: ccf6abba01e2b57dbe0086cf10bcfbb3b4409eb4
+          ref: c1adc362778aae5270ceacea1214b9d17940589e
           path: guard-source
           fetch-depth: 0
           persist-credentials: false
@@ -484,8 +484,8 @@ jobs:
           $result = [ordered]@{
             domain = 'guard-gha-publication-v1'
             repository_id = [long]$env:GITHUB_REPOSITORY_ID
-            source = 'ccf6abba01e2b57dbe0086cf10bcfbb3b4409eb4'
-            source_tree = 'cc93cf08b34800d672f5d61510743932c94f1856'
+            source = 'c1adc362778aae5270ceacea1214b9d17940589e'
+            source_tree = '2137e3ff923aa680041d82f642d881305efd0e98'
             producer_revision = $env:GITHUB_SHA
             run_id = [long]$env:GITHUB_RUN_ID
             run_attempt = [int]$env:GITHUB_RUN_ATTEMPT

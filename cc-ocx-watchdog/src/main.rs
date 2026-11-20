@@ -174,7 +174,7 @@ mod runtime {
         probe(config.port, timeout, pid)?;
         println!(
             "{}",
-            json!({"identity":identity,"healthy":true,"process_handle":identity.is_some(),"probe_ms":started.elapsed().as_millis()})
+            json!({"identity":identity,"healthy":true,"observation_kind":if identity.is_some() {"process_handle"} else {"health_only"},"probe_ms":started.elapsed().as_millis()})
         );
         Ok(())
     }
@@ -234,6 +234,15 @@ mod runtime {
                 }
                 (None, None) => Err(discovery_error.unwrap_or_else(|| "no_listener".into())),
             };
+            // How this round was observed: through the owned process handle, from the port's
+            // answer alone (`open_process`), or not at all (see `error`).
+            let observation_kind = if current.is_some() {
+                "process_handle"
+            } else if unopenable.is_some() {
+                "health_only"
+            } else {
+                "none"
+            };
             let identity = current.as_ref().map(|p| p.identity);
             let healthy = outcome.is_ok();
             let can_kill = current
@@ -245,7 +254,7 @@ mod runtime {
             let state = json!({"at":chrono::Local::now().to_rfc3339(),"watchdog_pid":std::process::id(),"identity":identity,
                 "healthy":healthy,"failures":streak.failures(),"eligible":can_kill,"probe_ms":started.elapsed().as_millis(),
                 "error":outcome.as_ref().err(),"metrics":current.as_ref().and_then(|p| p.metrics()),
-                "process_handle":current.is_some(),"observation_write_failures":observations.failures});
+                "observation_kind":observation_kind,"observation_write_failures":observations.failures});
             // Status readers or scanners may briefly deny atomic replacement. Observation
             // writes must not disable health checks; kill intent remains durable/mandatory.
             observations.publish(config, state.clone());
@@ -253,6 +262,7 @@ mod runtime {
                 observations.record(config, json!({"kind":"sample","status":state}));
                 last_sample = Instant::now();
             }
+            // Only an incarnation whose owner was proven can settle or cancel a recovery record.
             if healthy && identity.is_some() {
                 let mut changed = false;
                 // An intent journaled before a crashed/rejected kill must not resurrect

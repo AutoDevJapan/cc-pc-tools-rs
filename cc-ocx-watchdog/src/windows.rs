@@ -332,10 +332,13 @@ pub fn discover(config: &Config) -> Result<Option<Process>, String> {
     Ok(Some(process))
 }
 
-/// The proxy's own health answer needs the listener's pid, not a handle to its process.
-/// `open_process` means the listener runs with rights that this account cannot open, for
-/// example an elevated token while this watchdog runs as a restricted medium-integrity child.
-/// Health can still be measured from the pid; termination stays unavailable without a handle.
+/// The proxy's health answer needs the listener's pid, not a handle to its process.
+/// `open_process` means this account could not open the listener's process with the access the
+/// watchdog asks for, which includes termination. One cause is a listener that outranks this
+/// account, such as an elevated token under a restricted medium-integrity watchdog; the error
+/// does not say which. The pid from the TCP table only checks the answer. It is never opened or
+/// terminated here, so health is measured while termination stays unavailable. Every other
+/// discovery error returns `None`.
 pub fn listener_when_unopenable(config: &Config, error: &str) -> Option<u32> {
     if error != "open_process" {
         return None;
@@ -443,5 +446,14 @@ mod tests {
         assert!(crate::probe(port, std::time::Duration::from_secs(2), listener).is_ok());
         assert!(crate::probe(port, std::time::Duration::from_secs(2), listener + 1).is_err());
         server.join().unwrap();
+    }
+    #[test]
+    fn a_health_answer_without_a_handle_never_arms_termination() {
+        // Health measured from the port alone has no identity, so failures never accumulate.
+        let mut streak = crate::FailureStreak::default();
+        for _ in 0..10 {
+            assert!(!streak.observe(None, false, true));
+            assert_eq!(streak.failures(), 0);
+        }
     }
 }

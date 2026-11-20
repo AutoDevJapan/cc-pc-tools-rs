@@ -14,8 +14,6 @@ Rustで、同じWindowsプロセスの `/healthz` が20秒以内に応答しな�
 
 `inspect` は所有確認と健康検査を読み取りだけで実行し、PID・起動時刻・健康状態・検査時間だけを出力します。監視の状態や復旧記録を書かず、稼働中の監視と並行して配置前の確認に使えます。
 
-プロキシが監視より高い権限（管理者トークン）で動いていて `OpenProcess` が拒否される場合も、ポートの待受PIDで `/healthz` を検査し、応答の `service` と `pid` を照合して `healthy` を実測値で記録します。このときプロセスハンドルがないため、`identity` と `metrics` は `null`、`eligible` は `false`、`process_handle` は `false` になり、プロセスの終了と再起動は行いません。`healthy:true` はポートの応答の確認であり、プロセスの実行ファイルまで検証したことを意味しません。`inspect` も同じ場合に `identity:null` と `process_handle:false` を出力します。
-
 ```powershell
 cargo test --locked --manifest-path cc-ocx-watchdog/Cargo.toml
 cargo clippy --locked --manifest-path cc-ocx-watchdog/Cargo.toml --all-targets -- -D warnings
@@ -25,6 +23,20 @@ cargo build --release --locked --manifest-path cc-ocx-watchdog/Cargo.toml --bin 
 別モデルのレビューでMustがなくなってから、実行ファイルを `D:/CC/Tools/ocx-health-watchdog/ocx_health_watchdog.exe` に配置します。`install` はログオン時の定期タスク `CC-OcxHealthWatchdog` を登録して起動します。タスクは同一アカウントの権限で動き、1分ごとの起動も登録します。動作中は追加の起動を無視し、監視が終了していた場合に再開します。監視を意図的に止め続けるときはタスクを無効にします。releaseバイナリはWindowsのGUIサブシステムを指定するため、コンソール窓を作りません。子プロセスは `CREATE_NO_WINDOW` で起動します。
 
 `check` は1回だけ検査し、検査結果を保存します。監視が既に動いている場合は多重起動を拒否するので、状態確認には `status.json` を読みます。`watch --config <絶対パス>` では隔離検査用の設定を読み込みます。設定は `Config` の全フィールドを持つJSONです。配布する既定値は20秒・10秒間隔・起動猶予120秒・終了間隔120秒です。
+
+## 権限が足りずプロセスを開けない場合
+
+`OpenProcess` が拒否される（`open_process`）と、監視はプロセスの実行ファイル・起動時刻・所有記録を確認できません。たとえばプロキシが監視アカウントより高い権限で動いている場合です。この場合に限り、OSのTCP表が示す待受PIDに対して `/healthz` を検査し、結果を `healthy` に実測値で記録します。応答の `service` と `pid` は、その待受PIDと照合します。この照合は古い応答や別プロセスの応答を見分けるためのものです。待受PIDは応答の照合にだけ使い、終了の対象にしません。`open_process` 以外の確認失敗は、従来どおり不健康として扱います。
+
+次の3つの事実は別々に記録します。応答が正常でも、所有を確認できたことや終了してよいことは意味しません。
+
+| 事実 | 状態の項目 | ハンドルを開けない場合 |
+| --- | --- | --- |
+| 応答の実測 | `healthy`、`error` | ポートの応答だけで決まります |
+| 所有の確認（実行ファイル・起動時刻・所有記録） | `identity`、`metrics`、`observation_kind` | `identity` と `metrics` は `null`、`observation_kind` は `health_only` になります |
+| 終了の可否 | `eligible` | `false`。失敗回数は数えず、終了も再起動も行いません |
+
+`observation_kind` は、その回の観測が `process_handle`（保持したハンドルで所有を確認した）、`health_only`（ポートの応答だけを確認した）、`none`（観測できなかった。理由は `error`）のどれかを示します。`healthy:true` と `health_only` の組み合わせは、ポートの応答の確認であり、実行ファイルの確認ではありません。所有を確認できていない間は、復旧記録の確定（`restart_confirmed`）と復旧意図の取消も進めません。監視は応答の異常を記録するだけで、停止したプロキシの終了と復旧は行いません。`inspect` も同じ場合に `identity:null` と `observation_kind:"health_only"` を出力します。
 
 ## 記録
 

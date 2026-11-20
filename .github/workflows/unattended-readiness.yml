@@ -567,7 +567,7 @@ jobs:
           $ErrorActionPreference = 'Stop'
           $destination = Join-Path $env:RUNNER_TEMP ('guard-attestation-diagnostic/' + $env:GITHUB_RUN_ID + '/' + $env:GITHUB_RUN_ATTEMPT)
           New-Item -ItemType Directory -Path $destination -ErrorAction Stop | Out-Null
-          $inputNames = @('main.go', 'main_test.go', 'actual_attestation_test.go', 'fixture_driver.go', 'go.mod', 'go.sum', 'README.md', 'actual-attestation.sigstore.json')
+          $inputNames = @('main.go', 'main_test.go', 'actual_attestation_test.go', 'fixture_driver.go', 'go.mod', 'go.sum', 'README.md', 'actual-attestation.sigstore.json', 'matrix_attestation_test.go', 'MATRIX.md')
           $before = @($inputNames | ForEach-Object {
             $bytes = [IO.File]::ReadAllBytes((Join-Path (Get-Location).Path $_))
             [ordered]@{ path = $_; bytes = $bytes.Length; sha256 = [Convert]::ToHexString([Security.Cryptography.SHA256]::HashData($bytes)).ToLowerInvariant() }
@@ -607,6 +607,9 @@ jobs:
           [IO.File]::AppendAllText($env:GITHUB_ENV, 'GUARD_ATTESTATION_DIAGNOSTIC_DIR=' + $destination + [Environment]::NewLine)
       - name: Test signature, tuple and failure controls
         timeout-minutes: 4
+        env:
+          MATRIX_MAIN_ATTESTATION_ACTUAL: '1'
+          GH_TOKEN: ${{ github.token }}
         run: |
           go test -mod=readonly -count=1 -v -timeout 3m .
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }

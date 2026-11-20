@@ -30,8 +30,14 @@ import (
 
 const repositoryID = "1406818713"
 const jobKey = "guard-bootstrap"
-const guardSource = "80c4ed5cbd864585f4894c6286d3d5c92194c1f5"
-const guardTree = "84437789dfbe1bf1d56e4b96698b5c8da4a3dfb7"
+const guardSource = "ccf6abba01e2b57dbe0086cf10bcfbb3b4409eb4"
+const guardTree = "cc93cf08b34800d672f5d61510743932c94f1856"
+// Verify-only pins of the same reviewed guard source: the trees of its two
+// module directories and the number of selected inputs. They are checked and
+// never written into capture.json, source-proof.json or the publication record.
+const guardRepairTree = "dc187ab893fec5d92f2f5caeabb2cf0d235b916c"
+const guardContractTree = "7278e7e373d0c65ee7446ad54223e85b3fab565f"
+const guardInputCount = 253
 const sourceLimit = 8 << 20
 const totalLimit = 64 << 20
 
@@ -332,6 +338,16 @@ func validGuardPE(raw []byte) bool {
     return bytes.Equal(raw[off:off+4],[]byte{'P','E',0,0})&&binary.LittleEndian.Uint16(raw[off+4:off+6])==0x8664
 }
 
+// moduleTreesMatch reports whether read returns the pinned tree object of each
+// module directory of the reviewed guard source. A read error or any other value
+// is a mismatch.
+func moduleTreesMatch(read func(dir string)(string,error)) bool {
+    for _,pin:=range []struct{dir,tree string}{{"repair-guard",guardRepairTree},{"tools/civ6-ci-contract",guardContractTree}} {
+        got,err:=read(pin.dir);if err!=nil||got!=pin.tree{return false}
+    }
+    return true
+}
+
 // Each phase is independently recaptured from the fixed checkout. Observed
 // runner/toolchain values are evidence, not complete local execution authority.
 func collectBefore(ctx context.Context,e captureEnv) (captureBefore,error) {
@@ -339,10 +355,18 @@ func collectBefore(ctx context.Context,e captureEnv) (captureBefore,error) {
     producer,err:=runFixed(ctx,e.workspace,"git","rev-parse","HEAD");if err!=nil||strings.TrimSpace(string(producer))!=e.workflowSource{return zero,errCapture}
     head,err:=runFixed(ctx,e.guardRoot,"git","rev-parse","HEAD");if err!=nil||strings.TrimSpace(string(head))!=guardSource{return zero,errCapture}
     treeID,err:=runFixed(ctx,e.guardRoot,"git","rev-parse","HEAD^{tree}");if err!=nil||strings.TrimSpace(string(treeID))!=guardTree{return zero,errCapture}
+    // The fixed guard source and the producer revision must hold the same two
+    // reviewed module trees, so a guard source older than the repository's current
+    // guard modules is refused before anything is built.
+    for _,checkout:=range []string{e.guardRoot,e.workspace} {
+        readTree:=func(dir string)(string,error){object,readErr:=runFixed(ctx,checkout,"git","rev-parse","HEAD:"+dir);return strings.TrimSpace(string(object)),readErr}
+        if !moduleTreesMatch(readTree) {return zero,errCapture}
+    }
     if _,err=runFixed(ctx,e.workspace,"git","merge-base","--is-ancestor",guardSource,e.workflowSource);err!=nil{return zero,errCapture}
     status,err:=runFixed(ctx,e.guardRoot,"git","status","--porcelain=v1","--untracked-files=all","--","repair-guard","tools/civ6-ci-contract");if err!=nil||len(bytesTrimSpace(status))!=0{return zero,errCapture}
     producerStatus,err:=runFixed(ctx,e.workspace,"git","status","--porcelain=v1","--untracked-files=all","--","tools/guard-gha-capture",".github/workflows/unattended-readiness.yml");if err!=nil||len(bytesTrimSpace(producerStatus))!=0{return zero,errCapture}
     inventory,err:=captureInventory(e.guardRoot);if err!=nil{return zero,err}
+    if len(inventory)!=guardInputCount{return zero,errCapture}
     tree,err:=runFixed(ctx,e.guardRoot,"git","ls-tree","-r","-z",guardSource,"--","repair-guard","tools/civ6-ci-contract");if err!=nil{return zero,errCapture}
     archive,err:=runFixed(ctx,e.guardRoot,"git","archive","--format=tar",guardSource,"--","repair-guard","tools/civ6-ci-contract");if err!=nil{return zero,errCapture}
     if verifySourceTree(inventory,tree,archive,guardSource)!=nil{return zero,errCapture}

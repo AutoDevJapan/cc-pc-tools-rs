@@ -249,6 +249,44 @@ jobs:
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
           go build -trimpath .
           exit $LASTEXITCODE
+      # The artifact of the third formal capture is retained until 2026-11-27T03:34:21Z.
+      # Within ten minutes of that time this step fails instead of skipping. It is removed
+      # in the change that retires generation 3. The step of generation 2 was removed in
+      # dfc3e950 (2026-11-17T04:41:53Z), when its run was recorded and about 22.6 hours
+      # before its artifact expired, not after that deadline.
+      - name: Verify the third formal Task runner artifact while retained
+        if: runner.environment == 'github-hosted'
+        working-directory: tools/guard-refresh-software-reader
+        shell: pwsh
+        timeout-minutes: 5
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $expiry = [DateTimeOffset]::Parse('2026-11-27T03:34:21Z')
+          if (($expiry - [DateTimeOffset]::UtcNow) -lt [TimeSpan]::FromMinutes(10)) {
+            Write-Output 'DS_RUNNER_H1_NOT_EXECUTED=retention_window'
+            Write-Output 'The actual H1 acceptance did not run, so this step fails instead of reporting a pass.'
+            exit 1
+          }
+          $lines = @(& go test -mod=readonly -count=1 -v -timeout 3m -tags ds_runner_h1_acceptance -run '^TestDSRunnerH1ActualBytesAndSigstore$' . 2>&1)
+          $testExit = $LASTEXITCODE
+          $lines | ForEach-Object { Write-Output $_ }
+          if ($null -eq $testExit) { throw 'The actual H1 test did not return an exit code.' }
+          if ($testExit -ne 0) { exit $testExit }
+          $output = [string]::Join([Environment]::NewLine, [string[]]$lines)
+          $root = 'TestDSRunnerH1ActualBytesAndSigstore'
+          $expected = @($root, "$root/proof-compiler-exit", "$root/proof-after-differs", "$root/payload-subject-mismatch", "$root/signature-byte-mutated", "$root/nil-root", "$root/cancelled", "$root/wrong-producer")
+          $runs = @([regex]::Matches($output, '(?m)^[ \t]*=== RUN[ \t]+(\S+)[ \t]*\r?$'))
+          $passes = @([regex]::Matches($output, '(?m)^[ \t]*--- PASS:[ \t]+(\S+)[ \t]+\([0-9]+(?:\.[0-9]+)?s\)\r?$'))
+          $skips = [regex]::Matches($output, '(?m)^[ \t]*--- SKIP:').Count
+          $failures = [regex]::Matches($output, '(?m)^[ \t]*--- FAIL:').Count
+          if ($runs.Count -ne $expected.Count -or $passes.Count -ne $expected.Count -or $skips -ne 0 -or $failures -ne 0) { throw 'Actual H1 positive and seven controls did not all run and pass.' }
+          foreach ($name in $expected) {
+            if (@($runs | Where-Object { $_.Groups[1].Value -ceq $name }).Count -ne 1 -or @($passes | Where-Object { $_.Groups[1].Value -ceq $name }).Count -ne 1) { throw 'A required actual H1 control is missing or duplicated.' }
+          }
+          if ($output -notmatch 'DS_RUNNER_H1_ACTUAL=payload_proof_signature_root_SCT_tlog_verified; runtime_candidate=not_issued; installed=not_tested') { throw 'Actual H1 completion marker missing.' }
+          Write-Output 'DS_RUNNER_H1_ACCEPTANCE=generation_3_1_positive_7_negative_pass; normal_owner_issuer=not_tested; installed=not_tested'
       - name: Verify the fixed public source archive
         working-directory: tools/guard-refresh-software-reader
         shell: pwsh

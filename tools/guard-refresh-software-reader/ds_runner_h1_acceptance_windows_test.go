@@ -26,7 +26,7 @@ func dsRunnerH1Material(t *testing.T,name string,limit int64,expected string)[]b
 }
 func TestDSRunnerH1ActualBytesAndSigstore(t *testing.T){
     p:=dsRunnerAdmittedCapture
-    if p.RunID!=44008886976||p.ArtifactID!=14296275534||p.Producer!="800f4c82d68394c1d844a35ad3c1c49133c7bbe8"{t.Fatal("test not bound to the generation 2 H1")}
+    if p.RunID!=44668468992||p.ArtifactID!=14598363233||p.Producer!="2afd2669e43d356d997e027ffdeb8a7d63d2b6b2"{t.Fatal("test not bound to the generation 3 H1")}
     archive,signed:=dsRunnerH1ActualMaterials(t,p)
     ctx,cancel:=context.WithTimeout(context.Background(),2*time.Minute);defer cancel()
     held,err:=dsRunnerReadArchive(ctx,archive,p);if err!=nil{t.Fatalf("actual ZIP/proof/PE not accepted: %v",err)};defer held.erase()
@@ -46,6 +46,9 @@ func TestDSRunnerH1ActualBytesAndSigstore(t *testing.T){
 
 // Hosted acquisition is fixture data only. It does not call the normal
 // constructor, verify the owner credential, or issue a runtime candidate.
+// The archive and the attestation list are both read with the job token, because
+// an unauthenticated API request was refused (HTTP 403) in a hosted job of this
+// repository, which says nothing about the captured bytes.
 func dsRunnerH1ActualMaterials(t *testing.T,p dsRunnerCapturePin)([]byte,[]byte){
     t.Helper()
     if os.Getenv("DS_RUNNER_H1_ZIP")!=""||os.Getenv("DS_RUNNER_H1_BUNDLE")!=""{return dsRunnerH1Material(t,"DS_RUNNER_H1_ZIP",64<<20,p.ArchiveSHA),dsRunnerH1Material(t,"DS_RUNNER_H1_BUNDLE",4<<20,p.BundleSHA)}
@@ -56,7 +59,7 @@ func dsRunnerH1ActualMaterials(t *testing.T,p dsRunnerCapturePin)([]byte,[]byte)
     session:=&dsRunnerCredential{secret:[]byte(os.Getenv("GH_TOKEN")),base:apiTransport,pin:p,root:owned,cancel:stop,ready:true,done:make(chan struct{})}
     defer func(){cleanup,c:=context.WithTimeout(context.Background(),5*time.Second);defer c();if err:=session.Close(cleanup);err!=nil{t.Error("hosted fixture credential cleanup failed")}}()
     api:=&http.Client{Transport:session,Timeout:30*time.Second,CheckRedirect:func(*http.Request,[]*http.Request)error{return http.ErrUseLastResponse}};object:=&http.Client{Transport:objectTransport,Timeout:30*time.Second}
-    archive,err:=ghaGuardLiveRedirectedDetailed(ctx,api,object,dsRunnerAPI+"/actions/artifacts/"+strconv.FormatInt(p.ArtifactID,10)+"/zip",64<<20);if err!=nil||len(archive)!=14472201||digest(archive)!=p.ArchiveSHA{clear(archive);t.Fatal("generation 2 H1 ZIP fixture acquisition failed")};t.Cleanup(func(){clear(archive)})
-    document,err:=dsRunnerHTTPBytes(ctx,object,dsRunnerAPI+"/attestations/sha256:"+p.OutputSHA+"?per_page=100",8<<20);if err!=nil{t.Fatal("actual public H1 bundle response unavailable")};defer clear(document)
-    signed,err:=ghaFreshBundleFromJSON(document,ghaGuardPublicationRecord{OutputSHA:p.OutputSHA,AttestationID:p.AttestationID});if err!=nil||len(signed)!=11442||digest(signed)!=p.BundleSHA{clear(signed);t.Fatal("actual public H1 bundle bytes changed")};t.Cleanup(func(){clear(signed)});return archive,signed
+    archive,err:=ghaGuardLiveRedirectedDetailed(ctx,api,object,dsRunnerAPI+"/actions/artifacts/"+strconv.FormatInt(p.ArtifactID,10)+"/zip",64<<20);if err!=nil||len(archive)!=14472201||digest(archive)!=p.ArchiveSHA{clear(archive);t.Fatal("generation 3 H1 ZIP fixture acquisition failed")};t.Cleanup(func(){clear(archive)})
+    document,err:=dsRunnerHTTPBytes(ctx,api,dsRunnerAPI+"/attestations/sha256:"+p.OutputSHA+"?per_page=100",8<<20);if err!=nil{t.Fatal("actual public H1 bundle response unavailable")};defer clear(document)
+    signed,err:=ghaFreshBundleFromJSON(document,ghaGuardPublicationRecord{OutputSHA:p.OutputSHA,AttestationID:p.AttestationID});if err!=nil||len(signed)!=11579||digest(signed)!=p.BundleSHA{clear(signed);t.Fatal("actual public H1 bundle bytes changed")};t.Cleanup(func(){clear(signed)});return archive,signed
 }

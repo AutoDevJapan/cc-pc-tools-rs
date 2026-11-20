@@ -193,6 +193,11 @@ fn normal_quota_inventory(rt: &(impl Runtime+?Sized), _unstarted: bool, prefligh
 }
 
 pub trait Runtime: Send + Sync {
+    /// Existing normal software provider must issue an actual launcher capability.
+    /// Source-path classification alone does not implement executable admission.
+    fn native_origin_launcher(&self)->io::Result<crate::native_export::NormalOriginLauncher>{
+        Err(io::Error::new(io::ErrorKind::Unsupported,"normal readonly software admission unavailable"))
+    }
     fn initial_review_inventory(&self) -> Value {normal_quota_inventory(self,true,true)}
     fn initial_review_workspace(&self, _row: &Value) -> Value {Value::Null}
     fn initial_review_spec(&self, row: &Value) -> io::Result<Vec<u8>> {
@@ -414,6 +419,9 @@ pub trait Runtime: Send + Sync {
     }
     fn call(&self, call: Call) -> io::Result<Reply>;
     fn spawn(&self, spec: &Spawn) -> io::Result<Box<dyn Running>>;
+    fn spawn_native_capture(&self,_spec:&Spawn)->io::Result<Box<dyn Running>> {
+        Err(io::Error::new(io::ErrorKind::Unsupported,"native capture requires a real normal child"))
+    }
     fn spawn_supervisor(&self, exe: &Path, root: &Path, dir: &Path, jid: &str) -> io::Result<bool>;
     fn spawn_supervisor_identified(
         &self,
@@ -509,6 +517,10 @@ pub struct Spawn {
     pub flags: u32,
 }
 pub trait Running: Send {
+    #[cfg(windows)]
+    fn close_owned_process(self:Box<Self>)->io::Result<()> {Err(io::Error::new(io::ErrorKind::Unsupported,"native process owner unavailable"))}
+    #[cfg(windows)]
+    fn native_child_mut(&mut self)->Option<&mut Child>{None}
     fn pid(&self) -> u32;
     fn stdout(&mut self) -> Option<Box<dyn Read + Send>>;
     fn stderr(&mut self) -> Option<Box<dyn Read + Send>>;
@@ -516,6 +528,10 @@ pub trait Running: Send {
     fn kill(&mut self) -> io::Result<()>;
 }
 impl Running for Child {
+    #[cfg(windows)]
+    fn close_owned_process(self:Box<Self>)->io::Result<()> {crate::native_export::close_owned_child(*self)}
+    #[cfg(windows)]
+    fn native_child_mut(&mut self)->Option<&mut Child>{Some(self)}
     fn pid(&self) -> u32 {
         self.id()
     }
@@ -729,6 +745,15 @@ impl Runtime for System {
             .env_clear()
             .envs(&spec.env);
         Ok(Box::new(c.spawn()?))
+    }
+    fn spawn_native_capture(&self,spec:&Spawn)->io::Result<Box<dyn Running>> {
+        // This is the same normal executable, argv, cwd and environment. The
+        // producer owns a pipe so the frozen actual input can be recorded.
+        let mut command=hidden_command(&spec.argv[0]);
+        command.args(&spec.argv[1..]).stdin(Stdio::piped()).stdout(Stdio::piped()).stderr(Stdio::piped())
+            .current_dir(&spec.cwd).env_clear().envs(&spec.env);
+        #[cfg(windows)]{use std::os::windows::process::CommandExt;command.creation_flags(spec.flags|0x4);}
+        Ok(Box::new(command.spawn()?))
     }
     /// Start the supervisor outside the caller's job object. Returns False if that was refused.
     fn spawn_supervisor(&self, exe: &Path, root: &Path, dir: &Path, jid: &str) -> io::Result<bool> {
@@ -1077,9 +1102,18 @@ fn lock_byte(_f: &File, _unlock: bool) -> io::Result<()> {
 
 pub type SharedRuntime = Arc<dyn Runtime>;
 /// A TextIO-style stdout/stderr writer. Python translates LF to CRLF on Windows.
+
+thread_local! {static NATIVE_RAW_OUTPUT:std::cell::Cell<bool>=const {std::cell::Cell::new(false)};}
+pub(crate) struct NativeRawOutput(bool);
+pub(crate) fn native_raw_output()->NativeRawOutput {
+    NativeRawOutput(NATIVE_RAW_OUTPUT.with(|value|value.replace(true)))
+}
+impl Drop for NativeRawOutput {fn drop(&mut self){NATIVE_RAW_OUTPUT.with(|value|value.set(self.0));}}
+
 pub struct TextWriter<W: Write>(pub W);
 impl<W: Write> Write for TextWriter<W> {
     fn write(&mut self, bytes: &[u8]) -> io::Result<usize> {
+        if NATIVE_RAW_OUTPUT.with(std::cell::Cell::get){return self.0.write(bytes);}
         #[cfg(windows)]
         {
             let mut b = Vec::with_capacity(bytes.len());

@@ -11,6 +11,8 @@ pub mod cli;
 pub mod context_rotation;
 pub mod events;
 mod execution;
+mod native_export;
+pub use native_export::NormalOriginLauncher;
 mod finished_review;
 mod finished_work_handoff;
 mod finite_research;

@@ -111,7 +111,18 @@ mod native {
             .encode_utf16()
             .collect()
     }
+    impl ProcessTreeScope {
+        pub(crate) fn borrowed_job(&self)->std::os::windows::io::BorrowedHandle<'_> {
+            unsafe {std::os::windows::io::BorrowedHandle::borrow_raw(self._job.0 as _)}
+        }
+    }
     pub fn contain_current_process(pid: u32, created: u64) -> io::Result<ProcessTreeScope> {
+        contain_current_process_mode(pid,created,false)
+    }
+    pub(crate) fn contain_capture_process(pid:u32,created:u64)->io::Result<ProcessTreeScope>{
+        contain_current_process_mode(pid,created,true)
+    }
+    fn contain_current_process_mode(pid: u32, created: u64,capture:bool) -> io::Result<ProcessTreeScope> {
         if pid != unsafe { GetCurrentProcessId() } {
             return Err(io::Error::other("process tree root is not the caller"));
         }
@@ -144,7 +155,7 @@ mod native {
         // Keep ordinary descendants contained while allowing explicit nested
         // `codex_jobs run` launches to retain their existing breakaway behavior.
         let mut limits: JOBOBJECT_EXTENDED_LIMIT_INFORMATION = unsafe { std::mem::zeroed() };
-        limits.BasicLimitInformation.LimitFlags = JOB_OBJECT_LIMIT_BREAKAWAY_OK;
+        limits.BasicLimitInformation.LimitFlags = if capture {0} else {JOB_OBJECT_LIMIT_BREAKAWAY_OK};
         if unsafe {
             SetInformationJobObject(
                 job.0,
@@ -1742,6 +1753,12 @@ pub use native::{
     ProcessTreeScope, contain_current_process, idle_agent, recover, stop_tree, stop_tree_in_job,
     supervisor,
 };
+
+
+pub(crate) fn contain_for_evidence(pid:u32,created:u64,capture:bool)->io::Result<ProcessTreeScope>{
+    #[cfg(windows)] {if capture{native::contain_capture_process(pid,created)}else{contain_current_process(pid,created)}}
+    #[cfg(not(windows))] {if capture{Err(io::Error::new(io::ErrorKind::Unsupported,"native evidence Job requires Windows"))}else{contain_current_process(pid,created)}}
+}
 
 #[cfg(not(windows))]
 pub struct ProcessTreeScope;

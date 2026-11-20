@@ -33,11 +33,11 @@ type ownerInstalledToolPlan struct {
 	originFields map[string]string
 	// A registration-free plan belongs to an executable that is decided by its
 	// compiled public pin alone: the Claude Code native installer and an
-	// fnm-extracted Node archive write no uninstall registration, and the entry
-	// that the installer of Bun writes holds neither a version nor a publisher. It
-	// is decided by the compiled public pin and by every filesystem control; only
-	// the two registry observations are skipped. It names no registry value,
-	// publisher or user hive, and it declares a budget.
+	// fnm-extracted Node archive write no uninstall registration, and Bun lies
+	// inside an npm package directory, where no installer registration is relied
+	// on. It is decided by the compiled public pin and by every filesystem
+	// control; only the two registry observations are skipped. It names no
+	// registry value, publisher or user hive, and it declares a budget.
 	noRegistration bool
 	// budget bounds one classification of the plan's path. Zero selects the short
 	// default of the registered rows; large pinned executables declare their own.
@@ -114,21 +114,24 @@ func ownerInstalledClaudePlans() []ownerInstalledToolPlan {
 	}
 }
 
-// Bun's PowerShell installer extracts the release archive into the per-user bin
-// directory and runs bun.exe completions, which makes bunx.exe a hardlink of the
-// running bun.exe in the same directory; only where that link cannot be made does
-// it write a bunx.cmd script instead. Both names therefore hold the bytes of the
-// archive's bun.exe. Each name is a row of its own and each row requires the
-// exact two-name hardlink set, so a script, a stale separate copy or a third name
-// is refused. The uninstall entry that the installer writes under the current
-// user's hive holds neither a version nor a publisher, so these rows are
-// registration-free and decided by the compiled pin alone. archiveSHA is the
-// digest that the vendor's signed SHASUMS256.txt lists for the x64 archive; the
-// baseline archive of the same release holds a byte-identical bun.exe. A release
-// outside the table, for example one that bun upgrade installs, stays unknown
-// until a reviewed change pins it.
+// Bun is declared at the copy that the OpenCodex npm package carries. That
+// package depends on the npm package bun 1.4.4, whose postinstall script moves
+// the vendor executable of the platform package @oven/bun-windows-x64 1.4.4 over
+// the placeholder bin/bun.exe and then makes bin/bunx.exe a hardlink of it,
+// copying the file instead only where the link fails. The normal layout is one
+// file with two names. Each name is a row of its own and each row requires the
+// exact two-name hardlink set, so the separate copies of the fallback, the
+// placeholder files or a third name are refused. These rows are registration-free
+// and decided by the compiled pin alone. archiveSHA is the digest that the
+// vendor's signed SHASUMS256.txt lists for the release archive whose bun.exe
+// entry is the pinned executable; the npm platform package carries the same
+// executable. Only these two paths are declared: a Bun that the PowerShell
+// installer puts in the user's .bun directory, a Bun on PATH and the npm shims
+// are not. A release outside the table stays unknown until a reviewed change pins
+// it.
 func ownerInstalledBunPlan(version, archiveSHA, sha string, size int64) []ownerInstalledToolPlan {
-	const bun, bunx = "C:/Users/makhmeto/.bun/bin/bun.exe", "C:/Users/makhmeto/.bun/bin/bunx.exe"
+	const directory = "C:/Users/makhmeto/AppData/Roaming/npm/node_modules/@bitkyc08/opencodex/node_modules/bun/bin/"
+	const bun, bunx = directory + "bun.exe", directory + "bunx.exe"
 	row := func(name, path string, aliases ...string) ownerInstalledToolPlan {
 		return ownerInstalledToolPlan{name:name,path:path,version:version,noRegistration:true,budget:20*time.Second,archiveURL:"https://github.com/oven-sh/bun/releases/download/bun-v"+version+"/bun-windows-x64.zip",archiveSHA:archiveSHA,entry:"bun-windows-x64/bun.exe",sha:sha,size:size,aliases:aliases}
 	}

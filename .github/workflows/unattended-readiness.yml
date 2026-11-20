@@ -486,6 +486,17 @@ jobs:
             ${{ steps.guard_capture.outputs.artifact-directory }}/source-proof.json
           push-to-registry: false
           create-storage-record: false
+      - name: Retain the guard attestation seed bundle
+        id: guard_bundle_upload
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: guard-bootstrap-bundle-${{ github.run_id }}-${{ github.run_attempt }}-${{ steps.guard_capture.outputs.job-id }}
+          path: ${{ steps.guard_attest.outputs.bundle-path }}
+          if-no-files-found: error
+          retention-days: 1
+          compression-level: 0
+          overwrite: false
+          include-hidden-files: false
       - name: Upload the fixed guard capture
         id: guard_upload
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
@@ -548,6 +559,7 @@ jobs:
     timeout-minutes: 15
     permissions:
       contents: read
+      actions: read
     defaults:
       run:
         working-directory: tools/guard-attestation-verifier
@@ -605,7 +617,7 @@ jobs:
           $ErrorActionPreference = 'Stop'
           $destination = Join-Path $env:RUNNER_TEMP ('guard-attestation-diagnostic/' + $env:GITHUB_RUN_ID + '/' + $env:GITHUB_RUN_ATTEMPT)
           New-Item -ItemType Directory -Path $destination -ErrorAction Stop | Out-Null
-          $inputNames = @('main.go', 'main_test.go', 'actual_attestation_test.go', 'fixture_driver.go', 'go.mod', 'go.sum', 'README.md', 'actual-attestation.sigstore.json', 'matrix_attestation_test.go', 'MATRIX.md')
+          $inputNames = @('main.go', 'main_test.go', 'actual_attestation_test.go', 'fixture_driver.go', 'go.mod', 'go.sum', 'README.md', 'actual-attestation.sigstore.json', 'matrix_attestation_test.go', 'MATRIX.md', 'guard_capture_pin_test.go', 'guard_capture_attestation_test.go', 'GUARD_CAPTURE.md')
           $before = @($inputNames | ForEach-Object {
             $bytes = [IO.File]::ReadAllBytes((Join-Path (Get-Location).Path $_))
             [ordered]@{ path = $_; bytes = $bytes.Length; sha256 = [Convert]::ToHexString([Security.Cryptography.SHA256]::HashData($bytes)).ToLowerInvariant() }
@@ -644,12 +656,12 @@ jobs:
           [IO.File]::WriteAllText((Join-Path $destination 'lock-manifest.json'), $json, [Text.UTF8Encoding]::new($false))
           [IO.File]::AppendAllText($env:GITHUB_ENV, 'GUARD_ATTESTATION_DIAGNOSTIC_DIR=' + $destination + [Environment]::NewLine)
       - name: Test signature, tuple and failure controls
-        timeout-minutes: 4
+        timeout-minutes: 11
         env:
           MATRIX_MAIN_ATTESTATION_ACTUAL: '1'
           GH_TOKEN: ${{ github.token }}
         run: |
-          go test -mod=readonly -count=1 -v -timeout 3m .
+          go test -mod=readonly -count=1 -v -timeout 10m .
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
           go vet -mod=readonly .
           exit $LASTEXITCODE

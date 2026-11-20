@@ -151,8 +151,19 @@ The installed `bun.exe` and `bunx.exe` were not read to produce any value.
 
 The nested copy and its two names. The OpenCodex npm package depends on the npm
 package `bun` at exactly 1.4.4 and so carries its own copy under its
-`node_modules` directory; this copy is the Bun that the installed OpenCodex
-launcher starts. The `bun` package ships the placeholder files `bin/bun.exe` and
+`node_modules` directory. That copy is the default Bun of the package launcher,
+not the only one the launcher can start. In the published release 2.100.5
+(registry `dist.shasum` `b7abe128b7822c7a0c465690cd680c0c21cd5585`) the launcher
+`bin/ocx.mjs` (93,016 bytes, SHA-256
+`239207d843190256231376634ae8cec09c7b8e1ae7e1dbaf4e08135492a29bab`) chooses in
+this order: the executable that the environment variable `OPENCODEX_BUN_PATH`
+names, when that file is at least 1,000,000 bytes; the bundled copy, after one
+run of the `bun` package's `install.js` if the copy is still a placeholder; and,
+only when the bundled copy stays unusable, a Bun on PATH of the same major
+release and not older than the pinned 1.4.4 that passes two probes. The two Bun
+rows declare the bundled copy only. They do not show which Bun a given OpenCodex
+process selected, and the installed `ocx.mjs` was not read to produce this
+description. The `bun` package ships the placeholder files `bin/bun.exe` and
 `bin/bunx.exe`. Its postinstall script `install.js` obtains the platform package
 `@oven/bun-windows-x64` 1.4.4, moves that package's `bin/bun.exe` over the
 placeholder `bin/bun.exe` and then makes `bin/bunx.exe` a hardlink of it: it
@@ -392,9 +403,10 @@ Windows verifier of the commit that adds them. The pins were checked offline
 against the vendor-signed checksum list as described above, but no installed
 `bun.exe` or `bunx.exe` was read, hashed or started. Unknown remain whether the
 installed files equal release 1.4.4, whether they are the hardlink pair of two
-names that `install.js` makes (and not the two copies of its fallback), whether
-each host starts this copy, and whether the 20-second budget suffices for the
-cold read of 115 MB, which was not measured.
+names that `install.js` makes (and not the two copies of its fallback), which of
+the launcher's three sources (the override variable, this copy or a Bun on PATH)
+an OpenCodex start on each host selects, and whether the 20-second budget
+suffices for the cold read of 115 MB, which was not measured.
 
 Actual current executable acceptance, normal producer/distribution and
 same-installed-object readback remain incomplete. Representative use from both

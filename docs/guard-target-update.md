@@ -19,10 +19,9 @@ target and generation before metadata is opened. Both adapters need review
 together with their real issuer. Interfaces in this slice are internal seams
 for owned tests, not a general qualification mechanism.
 
-The current normal factories return fixed unavailable errors. The public
-dispatcher is unchanged, and no normal runtime calls the new inspection entry.
-There is no successful issuance, target open, installation or tool recovery
-claim.
+The metadata-only operation and its normal factories remain separate from
+the fixed software inspection connection below. The public fresh metadata
+inspection already uses the existing supervised worker.
 
 ## Held metadata boundary
 
@@ -53,8 +52,7 @@ returns; a later prepare cannot reuse its JSON as current qualification.
 ## Connection still required
 
 The remaining source integration must bind an actual verified artifact to a
-reviewed fixed-target purpose lease. The actual current target remains
-protected, and its current ID/ACL has not been obtained by this author.
+reviewed fixed-target purpose lease.
 Historical old hashes or identities are not substituted for that observation.
 
 A prepare/replace operation must retain the current target and candidate
@@ -78,7 +76,77 @@ cleanup, redacted output, normal fixed failure and an owned Windows
 metadata-only handle. Tests use synthetic issuer fixtures; they do not issue
 genuine production capabilities.
 
-Local Go, gofmt, compilation and tests have not run. The Windows fixture is
-prepared source, not evidence of actual installed-target access or a universal
-filesystem guarantee. The existing B producer candidate and its review/CI
-results are separate inputs; this slice is not silently included in them.
+## Fixed software inspection connection
+
+The separate `--inspect-fresh-guard-software` command inspects only the
+compiled Guard software target. It reuses the inherited-pipe/exact-parent
+worker gate and the existing assigned, waited and reaped Windows job
+supervisor. It does not change the metadata-only command or add a caller
+path, digest, trust root, update flag or arbitrary file reader.
+
+The software-purpose constructor receives only the genuine private
+`guardTargetCandidate` adapter and binds that wrapper, its owned source
+candidate and its complete source generation. Opening the software is
+allowed once and only during the same candidate's live payload borrow.
+A copied purpose, closed/revoked generation, interface-only fixture,
+another artifact, missing/partial acquisition or cancelled operation is
+rejected. A serialized report is never an input authority.
+
+Parent and metadata-only leaf handles remain held while a separate body
+handle is opened for `GENERIC_READ | READ_CONTROL` with read sharing
+only. Neither handle is released to reopen the other. Both handles and the
+first and second metadata observations must have the same volume/file/creation identity,
+size, owner/group/DACL descriptor and parent proof. Neither writes nor
+delete sharing are requested. From that same held read handle, the command
+reads at most the observed size plus one byte, verifies exact size and the
+existing strict installed Guard SHA/build module/revision/dirty-state/OS/
+architecture pin, then reobserves the same held metadata before returning.
+The old SHA constant is a comparison policy; it is not a newly observed
+current SHA. A different installed generation is rejected, rather than
+being authorized by its self-reported digest.
+
+The result returns only a verified observed SHA/revision, held file
+identity, size, ACL digest and parent-proof digest after every acquired
+lease, purpose and artifact is closed. Raw bytes, raw ACLs and private
+error strings are not returned. Failed or cancelled inspection never
+publishes a usable software SHA. Software replace, general data access
+and update-performed remain false. A later normal update must reacquire
+and validate its actual held target; JSON from this command does not
+replace that check.
+
+This source is a fixed, purpose-bound software-read implementation for
+normal qualification. It is not permission to execute a currently
+protected installed target through an alternate route. It must first
+pass independent source review, necessary tests and normal deployment/
+qualification. The fresh candidate's authenticated source and artifact binding
+must also be current; a successful standalone verifier report or a
+local path/hash/boolean cannot construct the private candidate.
+
+## Pre-update reader execution is a separate edge
+
+The new software-inspection source does not solve its own launch qualification.
+The existing Guard-reader producer's source-pin-zero output is a rehearsal and
+cannot be the final reader. Its normal final capture binds a reviewed reader
+revision, module tree, exact source inventory, job, archive and three attested
+subjects; that artifact proof still does not by itself authorize local launch.
+
+The existing ask/MP4 software-build producers, official CI runner receipt and
+installed vendor-tool rows have different compiled purpose and path contracts.
+They do not provide a general receipt or same-hash launch API for this new
+reader. The inspected public dispatcher has no normal final-reader launch
+consumer.
+
+Consequently, deploying a new Guard as a prerequisite to execute the reader
+needed to observe that same old Guard would be circular. Before local use, the
+normal provider must independently complete the exact final-reader artifact
+acceptance and a purpose-qualified, same-held-executable launch edge that works
+under the pre-update Guard. That edge must retain the original producer and
+source lineage and verify actual physical identity and cleanup; it cannot be
+a caller boolean, predicted digest, unrelated old purpose, alias, or a general
+bootstrap exception. Until that real edge is supplied, this implementation
+remains source-only and is not a reason to open a currently protected target
+through a different tool or actor.
+
+The same-current target observation produced by this command is not an update
+permit. The eventual fixed update still reopens and checks its own actual old
+target, owner/group/DACL and candidate generation.

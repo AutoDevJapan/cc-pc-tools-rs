@@ -612,6 +612,10 @@ func run(apply bool) ([]map[string]any, error) {
 	return rows, nil
 }
 func main() {
+	if len(os.Args) == 2 && (os.Args[1] == "--watchdog-build" || os.Args[1] == "--watchdog-check" || os.Args[1] == "--watchdog-apply") {
+		os.Exit(watchdogCommand(os.Args[1]))
+		return
+	}
 	if len(os.Args) == 2 && (os.Args[1] == "--completed-build-check" || os.Args[1] == "--completed-build-apply") {
 		completedBuildMain(os.Args[1] == "--completed-build-apply")
 		return

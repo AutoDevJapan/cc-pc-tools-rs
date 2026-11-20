@@ -176,7 +176,11 @@ func resolveUnslopProjectSnapshot(ctx context.Context, expectedRevision string, 
 	if ctx.Err() != nil {
 		return unslopProjectRefusal("unslop_project_deadline")
 	}
-	if !snapshot.current() {
+	snapshotCurrent := snapshot.current()
+	if ctx.Err() != nil {
+		return unslopProjectRefusal("unslop_project_deadline")
+	}
+	if !snapshotCurrent {
 		return unslopProjectRefusal("unslop_project_snapshot_changed")
 	}
 	if expectedRevision != "" && expectedRevision != revision {

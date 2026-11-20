@@ -18,11 +18,15 @@ type unslopProjectFixture struct {
 
 func newUnslopProjectFixture(t *testing.T) unslopProjectFixture {
 	t.Helper()
-	root := t.TempDir()
-	if err := os.Mkdir(filepath.Join(root, ".git"), 0700); err != nil {
+	base, err := physical(currentShortFixture(t))
+	if err != nil {
+		t.Fatal("cannot resolve owned fixture directory")
+	}
+	root := filepath.Join(base, "source")
+	if err := os.MkdirAll(filepath.Join(root, ".git"), 0700); err != nil {
 		t.Fatal("cannot create owned repository fixture")
 	}
-	f := unslopProjectFixture{store: filepath.Join(t.TempDir(), "store.json"), root: root, key: "writer-fixture"}
+	f := unslopProjectFixture{store: filepath.Join(base, "store.json"), root: root, key: "writer-fixture"}
 	f.access = ownerSourceAccess{
 		git: func(_ string, args ...string) (string, bool) {
 			if strings.Join(args, " ") == "remote get-url origin" {
@@ -267,5 +271,48 @@ func TestUnslopProjectResolverMalformedRegistrationIsNotAQualifiedSnapshot(t *te
 		if _, _, ok := readUnslopSavedProject(context.Background(), f.store, func(string) bool { return false }); ok {
 			t.Fatal("malformed registration issued a snapshot")
 		}
+	}
+}
+
+func TestUnslopProjectResolverCancellationDuringFinalSnapshot(t *testing.T) {
+	for _, tc := range []struct {
+		name string
+		cancelFinal, denyFinal bool
+		reason string
+		qualified bool
+	}{
+		{"normal-final", false, false, "unslop_project_resolved", true},
+		{"cancel-during-valid-final", true, false, "unslop_project_deadline", false},
+		{"changed-final-without-cancel", false, true, "unslop_project_snapshot_changed", false},
+		{"cancel-during-changed-final", true, true, "unslop_project_deadline", false},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			f := newUnslopProjectFixture(t)
+			snapshot, record := f.read(t)
+			positive := resolveUnslopProjectSnapshot(context.Background(), "", snapshot, record, f.access, f.config)
+			assertUnslopProjectResult(t, positive, "unslop_project_resolved", true)
+			ctx, cancel := context.WithCancel(context.Background())
+			defer cancel()
+			snapshot.ctx = ctx
+			checks := 0
+			snapshot.denied = func(string) bool {
+				checks++
+				if checks == 2 {
+					// current() has already checked its context. Cancellation here
+					// must still win before the resolver publishes the association.
+					if tc.cancelFinal { cancel() }
+					return tc.denyFinal
+				}
+				return false
+			}
+			result := resolveUnslopProjectSnapshot(ctx, positive.AssociationRevision, snapshot, record, f.access, f.config)
+			if checks != 2 || (ctx.Err() != nil) != tc.cancelFinal {
+				t.Fatal("final snapshot cancellation control was not reached exactly once")
+			}
+			assertUnslopProjectResult(t, result, tc.reason, tc.qualified)
+			if tc.qualified && result != positive {
+				t.Fatal("normal final snapshot changed the saved association")
+			}
+		})
 	}
 }

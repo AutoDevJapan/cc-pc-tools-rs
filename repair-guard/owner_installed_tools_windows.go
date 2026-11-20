@@ -31,11 +31,13 @@ type ownerInstalledToolPlan struct {
 	// plan; nothing is read from input.
 	userRegistry bool
 	originFields map[string]string
-	// A registration-free plan belongs to an executable whose installer writes no
-	// uninstall registration (the Claude Code native installer, an fnm-extracted
-	// Node archive). It is decided by the compiled public pin and by every
-	// filesystem control; only the two registry observations are skipped. It names
-	// no registry value, publisher or user hive, and it declares a budget.
+	// A registration-free plan belongs to an executable that is decided by its
+	// compiled public pin alone: the Claude Code native installer and an
+	// fnm-extracted Node archive write no uninstall registration, and Bun lies
+	// inside an npm package directory, where no installer registration is relied
+	// on. It is decided by the compiled public pin and by every filesystem
+	// control; only the two registry observations are skipped. It names no
+	// registry value, publisher or user hive, and it declares a budget.
 	noRegistration bool
 	// budget bounds one classification of the plan's path. Zero selects the short
 	// default of the registered rows; large pinned executables declare their own.
@@ -73,7 +75,8 @@ func ownerInstalledToolPlans() []ownerInstalledToolPlan {
 		{name:"rustup",path:"C:/Users/makhmeto/.cargo/bin/rustup.exe",version:"1.29.3",userRegistry:true,originFields:map[string]string{"DisplayName":"Rustup: the Rust toolchain installer"},registry:`Software\Microsoft\Windows\CurrentVersion\Uninstall\Rustup`,archiveURL:"https://static.rust-lang.org/rustup/archive/1.29.3/x86_64-pc-windows-msvc/rustup-init.exe",archiveSHA:"38027d51d69a5d05493627a0634dbea52d6cd793c8f072d2373d3f4163eec7db",entry:"rustup-init.exe",sha:"38027d51d69a5d05493627a0634dbea52d6cd793c8f072d2373d3f4163eec7db",size:12839424,aliases:[]string{"C:/Users/makhmeto/.cargo/bin/rustup.exe"},optionalAliases:ownerInstalledRustupHardlinkAliases()},
 		{name:"node",path:"C:/Users/makhmeto/AppData/Roaming/fnm/node-versions/v22.21.0/installation/node.exe",version:"22.21.0",noRegistration:true,budget:20*time.Second,archiveURL:"https://nodejs.org/dist/v22.21.0/node-v22.21.0-win-x64.zip",archiveSHA:"84d31df6571c3c7156707265bf51e2a021656fa1584bf6f4486b792dcde54d7d",entry:"node-v22.21.0-win-x64/node.exe",sha:"47cd67453da180a39cdf5daedb89862667b8e627e60c116607874633450cd30d",size:85766656,aliases:[]string{"C:/Users/makhmeto/AppData/Roaming/fnm/node-versions/v22.21.0/installation/node.exe"}},
 	}
-	return append(plans, ownerInstalledClaudePlans()...)
+	plans = append(plans, ownerInstalledClaudePlans()...)
+	return append(plans, ownerInstalledBunPlans()...)
 }
 
 // Claude Code's native installer places one self-contained executable below the
@@ -109,6 +112,34 @@ func ownerInstalledClaudePlans() []ownerInstalledToolPlan {
 		ownerInstalledClaudePlan("2.1.328","b94760a7ad96de4998334fd15149d6d9df5fa964c94b6990edf402f8a7562ca8","551d573567b46ce78aba1b20beb20ac2494f5f8adffd1b41dfd269a96e1d9839",379651744),
 		ownerInstalledClaudePlan("2.1.329","7d2293210d31ab8af6ee0c3f7bbef503ea96ab2115f7fbcfc9382f84a6240742","527162bb4578e3dc36319fa913a530d5dc1f752115a6a4fd139981702bf282d0",384179872),
 	}
+}
+
+// Bun is declared at the copy that the OpenCodex npm package carries. That
+// package depends on the npm package bun 1.4.4, whose postinstall script moves
+// the vendor executable of the platform package @oven/bun-windows-x64 1.4.4 over
+// the placeholder bin/bun.exe and then makes bin/bunx.exe a hardlink of it,
+// copying the file instead only where the link fails. The normal layout is one
+// file with two names. Each name is a row of its own and each row requires the
+// exact two-name hardlink set, so the separate copies of the fallback, the
+// placeholder files or a third name are refused. These rows are registration-free
+// and decided by the compiled pin alone. archiveSHA is the digest that the
+// vendor's signed SHASUMS256.txt lists for the release archive whose bun.exe
+// entry is the pinned executable; the npm platform package carries the same
+// executable. Only these two paths are declared: a Bun that the PowerShell
+// installer puts in the user's .bun directory, a Bun on PATH and the npm shims
+// are not. A release outside the table stays unknown until a reviewed change pins
+// it.
+func ownerInstalledBunPlan(version, archiveSHA, sha string, size int64) []ownerInstalledToolPlan {
+	const directory = "C:/Users/makhmeto/AppData/Roaming/npm/node_modules/@bitkyc08/opencodex/node_modules/bun/bin/"
+	const bun, bunx = directory + "bun.exe", directory + "bunx.exe"
+	row := func(name, path string, aliases ...string) ownerInstalledToolPlan {
+		return ownerInstalledToolPlan{name:name,path:path,version:version,noRegistration:true,budget:20*time.Second,archiveURL:"https://github.com/oven-sh/bun/releases/download/bun-v"+version+"/bun-windows-x64.zip",archiveSHA:archiveSHA,entry:"bun-windows-x64/bun.exe",sha:sha,size:size,aliases:aliases}
+	}
+	return []ownerInstalledToolPlan{row("bun",bun,bun,bunx),row("bunx",bunx,bunx,bun)}
+}
+
+func ownerInstalledBunPlans() []ownerInstalledToolPlan {
+	return ownerInstalledBunPlan("1.4.4","cd2c0fccc78f3ede1f50ca827a15f063eda13d4d150a3d0674f4f6e323d864a5","cb1d8e6564e655e49d30cead359750a1cbbd12f42651caa4b62244d7bd93c244",115281496)
 }
 
 // Several releases of one executable may be pinned for the same path, in table

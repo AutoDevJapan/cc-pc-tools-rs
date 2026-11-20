@@ -1103,7 +1103,7 @@ func TestInstalledToolPlanTableIsWellFormed(t *testing.T) {
 }
 
 func TestInstalledToolPlansForKeepsTableOrderAndEveryDeclaredPathRoutesOnce(t *testing.T) {
-	declared:=[]string{"C:/Program Files/Git/cmd/git.exe","C:/Program Files/GitHub CLI/gh.exe","C:/Program Files/Go/bin/go.exe","C:/Program Files/Go/bin/gofmt.exe","C:/Users/makhmeto/.cargo/bin/rustup.exe","C:/Users/makhmeto/AppData/Roaming/fnm/node-versions/v22.21.0/installation/node.exe","C:/Users/makhmeto/.local/bin/claude.exe"}
+	declared:=[]string{"C:/Program Files/Git/cmd/git.exe","C:/Program Files/GitHub CLI/gh.exe","C:/Program Files/Go/bin/go.exe","C:/Program Files/Go/bin/gofmt.exe","C:/Users/makhmeto/.cargo/bin/rustup.exe","C:/Users/makhmeto/AppData/Roaming/fnm/node-versions/v22.21.0/installation/node.exe","C:/Users/makhmeto/AppData/Roaming/npm/node_modules/@bitkyc08/opencodex/node_modules/bun/bin/bun.exe","C:/Users/makhmeto/AppData/Roaming/npm/node_modules/@bitkyc08/opencodex/node_modules/bun/bin/bunx.exe","C:/Users/makhmeto/.local/bin/claude.exe"}
 	for _,path:=range declared {
 		plans:=ownerInstalledToolPlansFor(path)
 		got,ok:=ownerInstalledToolPlanFor(path)
@@ -1121,7 +1121,7 @@ func TestInstalledToolPlansForKeepsTableOrderAndEveryDeclaredPathRoutesOnce(t *t
 	}
 	if len(ownerInstalledToolPlansFor(declared[len(declared)-1]))<2 { t.Fatal("Claude Code pins a single release only") }
 	for _,plan:=range ownerInstalledToolPlans() {
-		if plan.noRegistration && plan.name!="claude" && plan.name!="node" { t.Fatal("a registration-free row was added without review",plan.name) }
+		if plan.noRegistration && plan.name!="claude" && plan.name!="node" && plan.name!="bun" && plan.name!="bunx" { t.Fatal("a registration-free row was added without review",plan.name) }
 	}
 }
 
@@ -1181,6 +1181,129 @@ func TestInstalledToolClaudeRowsRefuseAnUnpinnedReleaseAfterEveryPinWasTried(t *
 	if v.AccessAllowed || v.Basis!="installed_tool_identity_mismatch" || held.opens!=len(plans) || held.reads!=0 || held.closes!=held.opens || held.originCalls!=0 { t.Fatal("an unpinned executable was admitted or not judged against every pin",v.Basis,held.opens,len(plans)) }
 	v=ownerInstalledToolWith(context.Background(),"C:/Users/makhmeto/.local/bin/other.exe",held,func(string)ownerLegacyState{return ownerLegacyClear})
 	if v.AccessAllowed || v.Basis!="installed_tool_not_declared" || held.opens!=len(plans) { t.Fatal("a neighbor of a fixed installation was judged",v.Basis) }
+}
+
+// bunx.exe is a hardlink of bun.exe, so the two names are two rows of one release.
+// This is the part of the vendor's signed SHASUMS256.txt of release bun-v1.4.4 that
+// names its two Windows x64 archives. It ties the archive digest of the rows to the
+// file name that their URL ends with, independently of the compiled table.
+const installedToolBunSignedListing = "cd2c0fccc78f3ede1f50ca827a15f063eda13d4d150a3d0674f4f6e323d864a5  bun-windows-x64.zip\n0f20ce6674d4f2dbcc8c5d59fdf99f7ba45f8c3b367e0f5781cbfa30a1c78d99  bun-windows-x64-baseline.zip\n"
+
+func installedToolBunListedDigest(name string) string {
+	for _,line:=range strings.Split(installedToolBunSignedListing,"\n") {
+		if fields:=strings.Fields(line);len(fields)==2 && fields[1]==name { return fields[0] }
+	}
+	return ""
+}
+
+// The only place the Bun rows declare: the copy that the OpenCodex npm package carries
+// inside its own node_modules directory.
+const installedToolBunDirectory = "C:/Users/makhmeto/AppData/Roaming/npm/node_modules/@bitkyc08/opencodex/node_modules/bun/bin/"
+
+func TestInstalledToolBunRowsAreOneSignedReleaseAndOneExactHardlinkPair(t *testing.T) {
+	const directory=installedToolBunDirectory
+	bun,bunx:=directory+"bun.exe",directory+"bunx.exe"
+	var plans []ownerInstalledToolPlan
+	for _,plan:=range ownerInstalledToolPlans() { if plan.name=="bun" || plan.name=="bunx" { plans=append(plans,plan) } }
+	if len(plans)!=2 || plans[0].name!="bun" || plans[0].path!=bun || plans[1].name!="bunx" || plans[1].path!=bunx { t.Fatal("Bun must be declared as one bun.exe row and one bunx.exe row") }
+	for _,plan:=range plans {
+		if !ownerInstalledToolPlanValid(plan) || plan.version!="1.4.4" || !plan.noRegistration || plan.budget!=20*time.Second || plan.registry!="" || plan.publisher!="" || plan.userRegistry || plan.originFields!=nil || len(plan.optionalAliases)!=0 { t.Fatal("Bun row shape changed",plan.name) }
+		if len(plan.aliases)!=2 || plan.aliases[0]!=plan.path || !ownerInstalledToolAliases(plan.aliases,[]string{bun,bunx}) { t.Fatal("a Bun row is not the exact two-name inventory",plan.name) }
+	}
+	first,second:=plans[0],plans[1]
+	if first.version!=second.version || first.archiveURL!=second.archiveURL || first.archiveSHA!=second.archiveSHA || first.entry!=second.entry || first.sha!=second.sha || first.size!=second.size { t.Fatal("bun.exe and its hardlink bunx.exe must pin the same bytes") }
+	if first.archiveURL!="https://github.com/oven-sh/bun/releases/download/bun-v1.4.4/bun-windows-x64.zip" || first.entry!="bun-windows-x64/bun.exe" || first.size!=115281496 { t.Fatal("Bun pin is not the x64 archive entry of release 1.4.4") }
+	archive:=first.archiveURL[strings.LastIndex(first.archiveURL,"/")+1:]
+	if listed:=installedToolBunListedDigest(archive);listed=="" || listed!=first.archiveSHA { t.Fatal("the archive digest is not the digest the vendor lists for the archive the URL names",archive) }
+	// The listing tells the archives of one release apart, so the check above is not vacuous.
+	if baseline:=installedToolBunListedDigest("bun-windows-x64-baseline.zip");baseline=="" || baseline==first.archiveSHA || installedToolBunListedDigest("bun-darwin-x64.zip")!="" { t.Fatal("the vendor listing does not discriminate the archives") }
+	// Only the two names of the nested copy are declared. Neither the scripts and
+	// placeholders around them, nor the other files of the package, the platform
+	// package, the launcher, a Bun that the PowerShell installer puts in .bun, a Bun
+	// on PATH or the npm shims are.
+	const npm="C:/Users/makhmeto/AppData/Roaming/npm/"
+	const opencodex=npm+"node_modules/@bitkyc08/opencodex/"
+	for _,bad:=range []string{
+		directory+"bunx.cmd",directory+"bun",directory+"bun.cmd",directory+"bun-profile.exe",directory+"bun.exe.bak",directory+"bunx.exe:stream",strings.TrimSuffix(directory,"/"),
+		opencodex+"node_modules/bun/bun.exe",opencodex+"node_modules/bun/install.js",opencodex+"node_modules/bun/package.json",opencodex+"node_modules/@oven/bun-windows-x64/bin/bun.exe",opencodex+"bin/ocx.mjs",
+		npm+"bun.cmd",npm+"bun.ps1",npm+"bun",npm+"bunx.cmd",npm+"node_modules/bun/bin/bun.exe",
+		"C:/Users/makhmeto/.bun/bin/bun.exe","C:/Users/makhmeto/.bun/bin/bunx.exe",
+	} {
+		if _,ok:=ownerInstalledToolPlanFor(bad);ok { t.Fatal("a neighbor of the nested Bun copy was declared",bad) }
+	}
+}
+
+// The compiled shape, names and budget of a real Bun row with synthetic content,
+// so that no installed or downloaded executable is needed.
+func newInstalledToolBunFixture(path,mode string,cancel context.CancelFunc) *installedToolFixture {
+	plan,ok:=ownerInstalledToolPlanFor(path)
+	if !ok { panic("fixed Bun plan missing") }
+	f:=newInstalledToolFixture(mode,cancel)
+	plan.sha=f.plan.sha;plan.size=f.plan.size
+	f.plan=plan;f.leases=nil
+	for i,name:=range plan.aliases {
+		f.leases=append(f.leases,&installedToolFixtureLease{owner:f,index:i,state:ownerInstalledToolState{id:ownerInstalledToolIdentity{1,2,3},size:plan.size,links:uint32(len(plan.aliases)),acl:"known-acl",resolved:name,aclAllowed:true,parentProof:"known-parent-chain",parentsAllowed:true}})
+	}
+	return f
+}
+
+// Both rows are judged by the complete controller: the exact pair of names with one
+// identity, descriptor and parent proof, the descriptor and ancestor rules, the single
+// bounded read and the rechecks. Only the two registry observations are absent. The
+// mode alias-missing is the copy fallback of the package's install.js seen from either
+// name (each separate copy lists only itself), alias-extra and alias-duplicate are a
+// third or a repeated hardlink name, and links is a link count that is not two.
+func TestInstalledToolBunRowsJudgeTheExactHardlinkPairWithEveryControl(t *testing.T) {
+	registryOnly:=map[string]bool{"origin":true,"publisher":true,"version":true,"late-origin":true,"late-origin-mutates-acl":true,"cancel-origin":true,"origin-close":true,"late-origin-close":true}
+	want:=map[string]string{
+		"list-error":"installed_tool_alias_mismatch","alias-extra":"installed_tool_alias_mismatch","alias-missing":"installed_tool_alias_mismatch","alias-duplicate":"installed_tool_alias_mismatch","late-alias":"installed_tool_alias_changed",
+		"open-error":"installed_tool_identity_unavailable",
+		"state-error":"installed_tool_identity_mismatch","identity":"installed_tool_identity_mismatch","created":"installed_tool_identity_mismatch","missing-id":"installed_tool_identity_mismatch","resolved":"installed_tool_identity_mismatch","links":"installed_tool_identity_mismatch","length":"installed_tool_identity_mismatch","acl-policy":"installed_tool_identity_mismatch","alias-acl":"installed_tool_identity_mismatch",
+		"parent-acl":"installed_tool_parent_untrusted","parent-missing":"installed_tool_parent_untrusted",
+		"bytes":"installed_tool_bytes_mismatch","short":"installed_tool_bytes_mismatch","read-error":"installed_tool_read_failed",
+		"late-id":"installed_tool_identity_changed","late-acl":"installed_tool_identity_changed","late-parent-acl":"installed_tool_identity_changed","late-parent-id":"installed_tool_identity_changed",
+	}
+	modes:=[]string{"normal","origin","publisher","version","list-error","alias-extra","alias-missing","alias-duplicate","late-alias","late-origin","late-origin-mutates-acl","open-error","state-error","identity","created","missing-id","resolved","links","length","acl-policy","alias-acl","late-id","late-acl","bytes","short","read-error","cancel-before","cancel-origin","cancel-open","cancel-read","cancel-close","close-error","cancel-and-close-error","parent-acl","parent-missing","late-parent-acl","late-parent-id","origin-close","late-origin-close","alias-close","late-alias-close"}
+	for _,path:=range []string{installedToolBunDirectory+"bun.exe",installedToolBunDirectory+"bunx.exe"} {
+		for _,mode:=range modes {
+			t.Run(filepath.Base(path)+"/"+mode,func(t *testing.T){
+				ctx,cancel:=context.WithCancel(context.Background());defer cancel()
+				f:=newInstalledToolBunFixture(path,mode,cancel)
+				if mode=="cancel-before" { cancel() }
+				v:=ownerInstalledToolVerify(ctx,f.plan,f,func(string)ownerLegacyState{return ownerLegacyClear})
+				admitted:=mode=="normal" || registryOnly[mode]
+				if v.AccessAllowed!=admitted { t.Fatal("a Bun row changed a control",mode,v.Basis) }
+				if f.originCalls!=0 { t.Fatal("registry was observed for a Bun row",mode) }
+				if admitted && (v.Basis!="verified_installed_development_tool" || f.reads!=1 || f.aliasCalls!=2 || f.opens!=2) { t.Fatal("Bun verification stages missing",mode) }
+				basis,known:=want[mode]
+				if known && v.Basis!=basis { t.Fatal("Bun refusal changed",mode,v.Basis,basis) }
+				if basis=="installed_tool_alias_mismatch" && (f.opens!=0 || f.reads!=0) { t.Fatal("a wrong name set reached an installed object",mode) }
+				if (basis=="installed_tool_identity_mismatch" || basis=="installed_tool_parent_untrusted" || basis=="installed_tool_identity_unavailable") && f.reads!=0 { t.Fatal("an unproven object reached executable content",mode) }
+				for i,lease:=range f.leases { wantClose:=0;if i<f.opens { wantClose=1 };if lease.closed!=wantClose { t.Fatal("resource not closed exactly once",mode,i,lease.closed) } }
+				for _,b:=range f.returned { if b!=0 { t.Fatal("buffer retained after classification",mode) } }
+			})
+		}
+	}
+}
+
+// The compiled size of the real pin, not the fixture's, is the first filter: a file of
+// another size is refused before any byte is read, and a file whose metadata claims the
+// compiled size is still compared by content. 450 is the size of the placeholder that
+// the bun package ships under both names until its postinstall script has replaced it.
+func TestInstalledToolBunRowsRefuseAnyOtherSizeBeforeReadingBytes(t *testing.T) {
+	for _,path:=range []string{installedToolBunDirectory+"bun.exe",installedToolBunDirectory+"bunx.exe"} {
+		plan,ok:=ownerInstalledToolPlanFor(path)
+		if !ok || plan.size!=115281496 { t.Fatal("compiled Bun size changed",path) }
+		for _,size:=range []int64{1,450,plan.size-1,plan.size,plan.size+1} {
+			f:=newInstalledToolBunFixture(path,"normal",func(){})
+			f.plan=plan
+			for _,lease:=range f.leases { lease.state.size=size }
+			v:=ownerInstalledToolVerify(context.Background(),f.plan,f,func(string)ownerLegacyState{return ownerLegacyClear})
+			wantBasis,wantReads:="installed_tool_identity_mismatch",0
+			if size==plan.size { wantBasis,wantReads="installed_tool_bytes_mismatch",1 }
+			if v.AccessAllowed || v.Basis!=wantBasis || f.reads!=wantReads { t.Fatal("size of a Bun executable was not judged against the compiled pin",path,size,v.Basis) }
+		}
+	}
 }
 
 func TestInstalledToolEveryControllerRefusalHasARank(t *testing.T) {

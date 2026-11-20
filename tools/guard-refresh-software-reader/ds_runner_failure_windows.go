@@ -12,8 +12,10 @@ import (
 // A failure reason says where a maintenance run stopped, so that the first real
 // runs are not blind. It is one token from the fixed vocabulary below: the stage
 // that stopped and, for a server answer, its numeric HTTP status. It never
-// carries a URL, response text, credential, path or raw error. No admission,
-// update or retry decision reads it, and a qualified record cannot carry one.
+// carries a URL, response text, credential, path or raw error. No success,
+// admission, update or retry decision depends on its value, and a qualified
+// record cannot carry one. Its form is still checked: a worker record whose
+// reason is outside the vocabulary or misplaced is not forwarded.
 type dsRunnerFailureError struct{reason string}
 
 func (e *dsRunnerFailureError) Error() string {

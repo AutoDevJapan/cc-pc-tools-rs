@@ -318,3 +318,47 @@ func TestDSRunnerOuterForwardsFailureReasonFromRealChild(t *testing.T){
     if code!=1||json.Unmarshal(out.Bytes(),&r)!=nil{t.Fatal("outer exit code or result record is wrong")}
     if !r.Reaped||r.Qualified||r.Reason!="qualification_unavailable"||r.FailureReason!="ds_runner_run_mismatch"||r.CommitOutcome!=dsRunnerCommitNotAttempted{t.Fatal("the worker's failure reason did not survive the owned child and the canonical record")}
 }
+
+// A producer that is not ahead of the approved base is refused at the producer
+// comparison, before any request about the run, its jobs or its artifacts. The
+// compiled pin is used as it is; only the answers of the server are synthetic.
+func TestDSRunnerProducerBehindTheApprovedBaseStopsBeforeTheArtifactList(t *testing.T){
+    pin:=dsRunnerAdmittedCapture
+    comparePath:="/repos/AutoDevJapan/cc-pc-tools-rs/compare/"+dsRunnerApprovedProducer+"..."+pin.Producer
+    firstFile:="/repos/AutoDevJapan/cc-pc-tools-rs/contents/"+dsRunnerProducerFiles[0].Path
+    compare:=func(status,mergeBase string)string{return `{"status":"`+status+`","base_commit":{"sha":"`+dsRunnerApprovedProducer+`"},"merge_base_commit":{"sha":"`+mergeBase+`"}}`}
+    run:=func(document string)(string,[]string){
+        var paths []string
+        open:=func(_ context.Context,p dsRunnerCapturePin)(*dsRunnerAuthority,error){
+            root,cancel:=context.WithCancel(context.Background())
+            session:=&dsRunnerCredential{secret:[]byte("synthetic"),pin:p,root:root,cancel:cancel,ready:true,done:make(chan struct{})}
+            client:=&http.Client{Transport:dsRunnerFixtureTransport(func(r *http.Request)(*http.Response,error){
+                paths=append(paths,r.URL.Path)
+                status,body:=404,"{}"
+                if r.URL.Path==comparePath{status,body=200,document}
+                return &http.Response{StatusCode:status,Header:make(http.Header),Body:&dsRunnerFixtureBody{Reader:bytes.NewReader([]byte(body))}},nil
+            })}
+            return &dsRunnerAuthority{session:session,client:client,pin:p},nil
+        }
+        candidate,err:=openDSRunnerCandidateWith(context.Background(),pin,open)
+        if candidate!=nil||err==nil||!errors.Is(err,errDSRunnerEvidence)||errors.Is(err,errDSRunnerCleanup){t.Fatal("a stopped constructor issued a candidate, no error or a cleanup fact")}
+        return dsRunnerFailureReason(err),paths
+    }
+    reason,paths:=run(compare("behind",pin.Producer))
+    if reason!="ds_runner_producer_compare_mismatch"{t.Fatalf("a producer behind the approved base was reported as %q",reason)}
+    if len(paths)!=1||paths[0]!=comparePath{t.Fatalf("the constructor went past the producer comparison: %q",paths)}
+    reason,paths=run(compare("ahead",dsRunnerApprovedProducer))
+    if reason!="ds_runner_producer_file_http_404"{t.Fatalf("a producer ahead of the approved base was reported as %q",reason)}
+    if len(paths)!=2||paths[0]!=comparePath||paths[1]!=firstFile{t.Fatalf("the constructor did not move on to the producer files: %q",paths)}
+}
+
+// The session of an authority is closed on every path out of the constructor,
+// including an authority that carries no client.
+func TestDSRunnerCandidateConstructorClosesTheSessionOfAnAuthorityWithoutClient(t *testing.T){
+    owned,cancel:=context.WithCancel(context.Background());defer cancel()
+    session:=&dsRunnerCredential{secret:[]byte("synthetic"),pin:dsRunnerAdmittedCapture,root:owned,cancel:cancel,ready:true,done:make(chan struct{})}
+    open:=func(_ context.Context,p dsRunnerCapturePin)(*dsRunnerAuthority,error){return &dsRunnerAuthority{session:session,pin:p},nil}
+    candidate,err:=openDSRunnerCandidateWith(context.Background(),dsRunnerAdmittedCapture,open)
+    if candidate!=nil||err==nil||!errors.Is(err,errDSRunnerEvidence)||errors.Is(err,errDSRunnerCleanup){t.Fatal("an authority without a client issued a candidate, no error or a cleanup fact")}
+    if owned.Err()==nil{t.Fatal("the session of an authority without a client was left open")}
+}

@@ -26,9 +26,10 @@ const dsRunnerModuleTree = "d0d012463d11faec2b57efffc80e8c13366dd3fd"
 // dsRunnerProducerFiles), not at this base. The workflow and README pins name the
 // seven-day retention text, which lands after this base, so the producer revision
 // of a capture is a main commit that contains that change. The compare answer is
-// read whole and its size grows with every commit between the base and the
-// producer revision, about 28 KB per commit against a 2 MiB limit, so move the
-// base forward in a reviewed change before the answer nears the limit.
+// read whole. Its size depends on how much content changed between the base and
+// the producer revision, not on the number of commits (one measurement was 38
+// commits and about 1.08 MB), and the limit is 2 MiB, so move the base forward in
+// a reviewed change before the answer nears the limit.
 const dsRunnerApprovedProducer = "95c1004e0017cb9d8d3b16f93daa72706eaccca1"
 const dsRunnerWorkflow = ".github/workflows/task-runner-capture.yml"
 const dsRunnerModule = "github.com/AutoDevJapan/cc-pc-tools-rs/unattended-runner"
@@ -40,10 +41,15 @@ var errDSRunnerCleanup = errors.New("ds_runner_cleanup_failed")
 // Generation 1 expired at 2026-11-17T00:12:39Z. It is retired: its tuple stays below as a
 // record only, and every consumer rejects it. Generation 2 is the capture admitted now;
 // the next capture becomes generation 3. Generation 2 expired at 2026-11-18T03:16:58Z:
-// until the reviewed pins of generation 3 replace it, every maintenance command stops at
-// the artifact list. GitHub drops an expired artifact from the run's list, so the reason
-// is ds_runner_artifacts_absent; a list that still shows it as expired gives
-// ds_runner_artifacts_expired.
+// until the reviewed pins of generation 3 replace it, every maintenance command fails
+// closed. Its producer revision is an ancestor of the approved producer, so a run that
+// gets as far as the producer comparison stops there with
+// ds_runner_producer_compare_mismatch, before any request about the run or its
+// artifacts; a run without the owner credential, or whose owner check fails, stops
+// earlier. The artifact reasons belong to a capture whose producer descends from the
+// approved producer: GitHub drops an expired artifact from the run's list, so the
+// reason is ds_runner_artifacts_absent, and a list that still shows it as expired
+// gives ds_runner_artifacts_expired.
 // These are expected capture bytes, not an issuer or an installed grant.
 // The authenticated/cryptographic constructor still verifies all material.
 // No CLI/JSON/env can replace this tuple or select another receipt.

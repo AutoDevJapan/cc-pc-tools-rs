@@ -265,7 +265,9 @@ func dsRunnerVerifySignedSubjects(ctx context.Context,trusted root.TrustedMateri
 // The normal opener reads the owner credential. The parameter is a package-private
 // seam: owned tests run the fixed evidence flow against synthetic or hosted server
 // data through it. It supplies no pin, path, hash or permission, and the pin is
-// still validated before any request.
+// still validated before any request. openNormalDSRunnerCandidate is the only
+// caller outside tests; another caller would need a reviewed source change and
+// would still meet every check below.
 type dsRunnerAuthorityOpener func(context.Context,dsRunnerCapturePin)(*dsRunnerAuthority,error)
 func openNormalDSRunnerCandidate(ctx context.Context)(*dsRunnerCandidate,error){
     return openDSRunnerCandidateWith(ctx,dsRunnerAdmittedCapture,openDSRunnerAuthority)
@@ -277,8 +279,10 @@ func openDSRunnerCandidateWith(ctx context.Context,p dsRunnerCapturePin,open dsR
     // The end of the flight's own context is reported next to the stage that saw it.
     defer func(){if resultErr!=nil&&ctx.Err()!=nil{resultErr=errors.Join(resultErr,ctx.Err())}}()
     authority,err:=open(ctx,p);if err!=nil{return nil,err}
-    if authority==nil||authority.session==nil||authority.client==nil{return nil,errDSRunnerEvidence}
+    if authority==nil||authority.session==nil{return nil,errDSRunnerEvidence}
+    // From here on the session is closed on every path, including an authority without a client.
     defer func(){cleanup,c:=context.WithTimeout(context.Background(),5*time.Second);defer c();if e:=authority.session.Close(cleanup);e!=nil{if candidate!=nil{_=candidate.Close();candidate=nil};resultErr=errors.Join(resultErr,errDSRunnerCleanup,e)}}()
+    if authority.client==nil{return nil,errDSRunnerEvidence}
     client:=authority.client
     if err=dsRunnerVerifyProducerSource(ctx,client,p);err!=nil{return nil,err}
     size,err:=dsRunnerServerMatches(ctx,client,p,time.Now().UTC());if err!=nil{return nil,err}

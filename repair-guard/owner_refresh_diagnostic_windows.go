@@ -15,6 +15,10 @@ type ownerRefreshDiagnostic struct {
 	CLIExit                   *int   `json:"cli_exit,omitempty"`
 	Timeout                   bool   `json:"timeout"`
 	DurationMS                int64  `json:"duration_ms"`
+
+	// Cooldown names the fixed cause shared by the failure markers that still
+	// apply to the failed identities. It is left out when their causes differ.
+	Cooldown *ownerRefreshCooldownDiagnostic `json:"cooldown,omitempty"`
 }
 type ownerRefreshObservation struct {
 	claimValid, binding, cooling, attempted, fetched, validated, saved, timeout bool
@@ -25,6 +29,8 @@ type ownerRefreshObservation struct {
 	failureStage                                                                string
 	cliExitMixed                                                                bool
 	lockUnavailable                                                             bool
+	cooldown                                                                    *ownerRefreshCooldown
+	cooldownMixed                                                               bool
 }
 
 func (o *ownerRefreshObservation) includeIdentity(detail *ownerRefreshObservation, success bool) {
@@ -42,12 +48,39 @@ func (o *ownerRefreshObservation) includeIdentity(detail *ownerRefreshObservatio
 	}
 	if !success {
 		o.identityFailed = true
+		// A served identity never explains the failure, even while its own failure
+		// marker applies, so only failed identities contribute a cause.
+		o.includeCooldown(detail.cooldown)
 		stage := ownerRefreshProject(context.Background(), detail, false, time.Now()).Stage
 		if o.failureStage == "" {
 			o.failureStage = stage
 		} else if o.failureStage != stage {
 			o.failureStage = "multiple_identity_failures"
 		}
+	}
+}
+
+// includeCooldown merges the cause of one failed identity into the object that
+// the diagnostic reports. Failures of the same fixed cause (kind, stage,
+// cli_exit and http) agree and report the newest age, the time since the latest
+// failure: every contributing cooldown has ended 300 seconds after it. Any
+// other cause leaves the object out, because one cause cannot name them all.
+func (o *ownerRefreshObservation) includeCooldown(cause *ownerRefreshCooldown) {
+	if cause == nil || o.cooldownMixed {
+		return
+	}
+	if o.cooldown == nil {
+		copied := *cause
+		o.cooldown = &copied
+		return
+	}
+	if !o.cooldown.sameCause(*cause) {
+		o.cooldown = nil
+		o.cooldownMixed = true
+		return
+	}
+	if cause.AgeSeconds < o.cooldown.AgeSeconds {
+		o.cooldown.AgeSeconds = cause.AgeSeconds
 	}
 }
 
@@ -87,6 +120,9 @@ func ownerRefreshProject(ctx context.Context, o *ownerRefreshObservation, succes
 		r.Stage = "identity_persistence_failed"
 	default:
 		r.Stage = "identity_binding_failed"
+	}
+	if o.cooldown != nil && (r.Stage == "cooldown_no_valid_identity" || r.IdentityFailure == "cooldown_no_valid_identity") {
+		r.Cooldown = ownerRefreshCooldownProject(o.cooldown)
 	}
 	return r
 }

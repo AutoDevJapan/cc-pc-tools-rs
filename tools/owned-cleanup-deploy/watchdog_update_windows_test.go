@@ -254,7 +254,7 @@ func TestWatchdogUnconfirmedRetireIsNotNoChangeOrGuessingRollback(t *testing.T) 
 }
 
 func TestWatchdogHealthOnlyCannotSupplyOwnershipOrTermination(t *testing.T) {
-	for _,kind:=range []string{"normal","proxy-identity","metrics","eligible","failures","wrong-pid","same-pid","old-pid-unknown","stale","too-short","too-late","write-fail","event","image","own-proof","early-start"} {
+	for _,kind:=range []string{"normal","proxy-identity","metrics","eligible","failures","wrong-pid","same-pid","old-pid-unknown","stale","too-short","too-late","write-fail","event","image","own-proof","early-start","unhealthy","wrong-kind","error-present","duplicate-time","short-span"} {
 		t.Run(kind,func(t *testing.T){
 			id:=watchdogTestID();v:=watchdogTestObservation(id)
 			switch kind {
@@ -273,6 +273,11 @@ func TestWatchdogHealthOnlyCannotSupplyOwnershipOrTermination(t *testing.T) {
 			case "image":v.OwnImage.File++
 			case "own-proof":v.OwnInstanceVerified=false
 			case "early-start":v.Started=v.Published.Add(-time.Second)
+			case "unhealthy":v.Samples[0].Healthy=false
+			case "wrong-kind":v.Samples[0].ObservationKind="unexpected"
+			case "error-present":v.Samples[0].ErrorPresent=true
+			case "duplicate-time":v.Samples[1].At=v.Samples[0].At
+			case "short-span":for i:=range v.Samples{v.Samples[i].At=v.Started.Add(time.Duration(i)*5*time.Second)}
 			}
 			if v.valid(id)!=(kind=="normal") {t.Fatal("observation boundary")}
 		})

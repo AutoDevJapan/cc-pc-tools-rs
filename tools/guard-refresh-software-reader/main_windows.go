@@ -162,6 +162,12 @@ func observeInstalledGuard() softwareObservation {
 }
 
 func run(args []string, out io.Writer, observe func() softwareObservation, operations ...updateOperations) int {
+	if len(args) > 0 && args[0] == dsRunnerWorkerFlag {
+		return runDSRunnerMaintenanceWorker(args, out)
+	}
+	if len(args) == 1 && (args[0] == "--verify-ds-runner-capture" || args[0] == "--verify-ds-runner-update" || args[0] == "--prepare-ds-runner-update" || args[0] == "--apply-ds-runner-update") {
+		return runDSRunnerMaintenance(args, out)
+	}
 	if len(args) == 1 && (args[0] == "--export-mp4-ask-software" || args[0] == "--export-mp4-runner-software") {
 		kind := "ask"
 		if args[0] == "--export-mp4-runner-software" {

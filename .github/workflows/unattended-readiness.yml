@@ -659,6 +659,7 @@ jobs:
         timeout-minutes: 11
         env:
           MATRIX_MAIN_ATTESTATION_ACTUAL: '1'
+          GUARD_CAPTURE_ATTESTATION_ACTUAL: '1'
           GH_TOKEN: ${{ github.token }}
         run: |
           go test -mod=readonly -count=1 -v -timeout 10m .

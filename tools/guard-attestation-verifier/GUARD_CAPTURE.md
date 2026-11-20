@@ -6,12 +6,27 @@ The normal runtime verifier remains unchanged.
 
 ## State and sequence
 
-The next artifact tuple is **not issued**. The source pin is the reviewed commit
+The data-only tuple is **issued** for formal run
+[44726482600, attempt 1](https://github.com/AutoDevJapan/cc-pc-tools-rs/actions/runs/44726482600),
+job 136255100998. The fixed guard source M is
 c1adc362778aae5270ceacea1214b9d17940589e, root tree
 2137e3ff923aa680041d82f642d881305efd0e98, with the repair module tree
 4a9e710eadbdb78e3842bb88361d9b5ce68b238e, contract module tree
 7278e7e373d0c65ee7446ad54223e85b3fab565f and 253 selected inputs.
-The producer/workflow revision is a separate, future main commit.
+The actual producer D is 09a0de57c493e7c96a1fb1133068d3e2a8246806,
+root tree fefabdb394fd97ad779df1a59662c7fc798f4e4e. M and D are separate
+revisions and have different root trees; their two selected module trees agree.
+
+The one formal capture completed successfully and both artifacts were received.
+The data pin has Issued=true and the actual opt-in is enabled. Neither fact is
+cryptographic acceptance. The first actual verification at candidate
+4ce180879ecf7211ccb0e039b80ab166080bead6, verifier run 44729013923,
+failed at pe_signature, with all checked flags false and controls=0.
+The exact cause remains unconfirmed; fixed diagnostic categories distinguish
+verification, statement/time, selection and bundle-byte binding failures.
+There has been no installed update or acceptance from either host.
+
+The sequence separates preparation, factual issuance and actual verification:
 
 1. Review the three new files and run the offline controls plus the old public
    bundle's explicitly labelled cryptographic rehearsal in the hosted verifier.

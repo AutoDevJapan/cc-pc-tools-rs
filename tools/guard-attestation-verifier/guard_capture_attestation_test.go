@@ -844,27 +844,8 @@ func guardCaptureBundleID(rawURL string, id string) bool {
 }
 
 func guardCaptureSelect(ctx context.Context, trusted trustedMaterial, entries []matrixEntry, p guardCapturePin, proof bool) (matrixOutcome, error) {
-	policy := guardCapturePolicy(p, proof)
-	var outcomes []matrixOutcome
-	for i, e := range entries {
-		o := matrixOutcome{Index:i, RepoMatch:e.RepositoryID == guardCaptureRepoID, Err:errGuardCapture}
-		var compact bytes.Buffer
-		if json.Compact(&compact, e.Bundle) != nil { return matrixOutcome{},errGuardCapture }
-		o.Raw = append([]byte(nil), compact.Bytes()...)
-		if o.RepoMatch && guardCaptureBundleStructure(o.Raw)==nil {
-			o.Verified,o.Err = matrixVerify(ctx,trusted,o.Raw,policy)
-			if o.Err == nil { o.Err = guardCaptureStatement(o.Verified,p) }
-		}
-		o.LogIndex,o.SAN = matrixBundleFacts(o.Raw)
-		o.URLTail = matrixURLTail(e.BundleURL)
-		outcomes = append(outcomes,o)
-	}
-	selected, err := matrixSelectExactlyOne(outcomes)
-	if err != nil || int64(len(selected.Raw)) != p.BundleBytes || guardCaptureHash(selected.Raw) != p.BundleSHA ||
-		selected.LogIndex != p.RekorIndex || !guardCaptureBundleID(entries[selected.Index].BundleURL,p.AttestationID) {
-		return matrixOutcome{}, errGuardCapture
-	}
-	return selected,nil
+	selected, _, err := guardCaptureSelectDetailed(ctx, trusted, entries, p, proof)
+	return selected, err
 }
 
 func (c guardCaptureHTTP) listing(ctx context.Context, digest string) ([]matrixEntry,error) {
@@ -941,6 +922,8 @@ type guardCaptureReport struct {
 	BundleSHA string `json:"bundle_sha256"`
 	PublicationSHA string `json:"publication_sha256"`
 	Controls map[string]bool `json:"controls"`
+	PESelection *guardCaptureSelectionDiagnostic `json:"pe_selection,omitempty"`
+	ProofSelection *guardCaptureSelectionDiagnostic `json:"proof_selection,omitempty"`
 }
 
 func guardCaptureWrite(dir,name string,raw []byte) error {
@@ -998,11 +981,15 @@ func TestGuardCaptureAttestationActual(t *testing.T) {
 	if err != nil { report.Reason="trusted_root_unavailable";t.Fatal("guard_capture_stage=root") }
 	peEntries,err := client.listing(ctx,p.PESHA)
 	if err != nil { report.Reason="pe_listing_unavailable";t.Fatal("guard_capture_stage=pe_listing") }
-	selected,err := guardCaptureSelect(ctx,trusted,peEntries,p,false)
+	selected,peDiagnostic,err := guardCaptureSelectDetailed(ctx,trusted,peEntries,p,false)
+	report.PESelection=&peDiagnostic
+	guardCaptureLogSelection(t,"pe",peDiagnostic)
 	if err != nil { report.Reason="pe_signature_rejected";t.Fatal("guard_capture_stage=pe_signature") }
 	proofEntries,err := client.listing(ctx,p.ProofSHA)
 	if err != nil { report.Reason="proof_listing_unavailable";t.Fatal("guard_capture_stage=proof_listing") }
-	selectedProof,err := guardCaptureSelect(ctx,trusted,proofEntries,p,true)
+	selectedProof,proofDiagnostic,err := guardCaptureSelectDetailed(ctx,trusted,proofEntries,p,true)
+	report.ProofSelection=&proofDiagnostic
+	guardCaptureLogSelection(t,"proof",proofDiagnostic)
 	if err != nil || !bytes.Equal(selected.Raw,selectedProof.Raw) {
 		report.Reason="subjects_not_same_verified_bundle";t.Fatal("guard_capture_stage=same_bundle")
 	}
@@ -2076,6 +2063,208 @@ func TestGuardCaptureS1ServerMetadataFields(t *testing.T) {
 			edit(&current)
 			if guardCaptureServerCheck(current, p) == nil {
 				t.Fatal("s1_single_metadata_mismatch_accepted")
+			}
+		})
+	}
+}
+
+
+// Fixed diagnostic categories only. Library error text, URLs and input bodies
+// are never returned or printed by the guard capture failure report.
+type guardCaptureSelectionDiagnostic struct {
+	Stage string `json:"stage"`
+	Entries int `json:"entries"`
+	RepositoryEntries int `json:"repository_entries"`
+	VerifiedEntries int `json:"verified_entries"`
+	Rejections map[string]int `json:"rejections"`
+}
+
+func guardCaptureVerificationCategory(err error) string {
+	if err == nil {
+		return "verified"
+	}
+	if matrixIdentityRejected(err) {
+		return "identity"
+	}
+	if errors.Is(err, errMatrixInput) {
+		return "verification_input"
+	}
+	// These are fixed prefixes from the locked sigstore-go verifier. Unknown
+	// errors keep their own category; no free-form suffix is ever retained.
+	message := err.Error()
+	for _, c := range []struct{ prefix, category string }{
+		{"failed to verify log inclusion:", "transparency_log"},
+		{"failed to verify timestamps:", "observer_timestamp"},
+		{"failed to verify leaf certificate:", "certificate_chain"},
+		{"failed to verify signed certificate timestamp:", "certificate_sct"},
+		{"failed to verify certificate identity:", "identity"},
+		{"failed to fetch envelope statement:", "statement_decode"},
+		{"failed to fetch signature content:", "signature_content"},
+		{"failed to get signature verifier:", "signature_verifier"},
+		{"failed to fetch entity version:", "bundle_version"},
+	} {
+		if strings.Contains(message, c.prefix) {
+			return c.category
+		}
+	}
+	if strings.Contains(message, "failed to verify signature:") {
+		if strings.Contains(message, "does not match any digest in statement") {
+			return "subject_digest"
+		}
+		return "signature"
+	}
+	return "verification_other"
+}
+
+func guardCaptureSelectedBinding(selected matrixOutcome, rawURL string, p guardCapturePin) string {
+	if int64(len(selected.Raw)) != p.BundleBytes {
+		return "bundle_size"
+	}
+	if guardCaptureHash(selected.Raw) != p.BundleSHA {
+		return "bundle_digest"
+	}
+	if selected.LogIndex != p.RekorIndex {
+		return "rekor_index"
+	}
+	if !guardCaptureBundleID(rawURL, p.AttestationID) {
+		return "attestation_record"
+	}
+	return "bound"
+}
+
+func guardCaptureSelectDetailed(ctx context.Context, trusted trustedMaterial, entries []matrixEntry, p guardCapturePin, proof bool) (matrixOutcome, guardCaptureSelectionDiagnostic, error) {
+	diagnostic := guardCaptureSelectionDiagnostic{Stage: "selection_not_completed", Entries: len(entries), Rejections: map[string]int{}}
+	policy := guardCapturePolicy(p, proof)
+	var outcomes []matrixOutcome
+	for i, e := range entries {
+		o := matrixOutcome{Index: i, RepoMatch: e.RepositoryID == guardCaptureRepoID, Err: errGuardCapture}
+		var compact bytes.Buffer
+		if json.Compact(&compact, e.Bundle) != nil {
+			diagnostic.Stage = "bundle_encoding"
+			return matrixOutcome{}, diagnostic, errGuardCapture
+		}
+		o.Raw = append([]byte(nil), compact.Bytes()...)
+		category := "other_repository"
+		if o.RepoMatch {
+			diagnostic.RepositoryEntries++
+			category = "bundle_structure"
+			if guardCaptureBundleStructure(o.Raw) == nil {
+				o.Verified, o.Err = matrixVerify(ctx, trusted, o.Raw, policy)
+				category = guardCaptureVerificationCategory(o.Err)
+				if o.Err == nil {
+					o.Err = guardCaptureStatement(o.Verified, p)
+					if o.Err != nil {
+						category = "verified_statement_or_time"
+					}
+				}
+			}
+		}
+		if o.RepoMatch && o.Err == nil {
+			diagnostic.VerifiedEntries++
+		} else {
+			diagnostic.Rejections[category]++
+		}
+		o.LogIndex, o.SAN = matrixBundleFacts(o.Raw)
+		o.URLTail = matrixURLTail(e.BundleURL)
+		outcomes = append(outcomes, o)
+	}
+	selected, err := matrixSelectExactlyOne(outcomes)
+	if err != nil {
+		diagnostic.Stage = "selection_zero"
+		if diagnostic.VerifiedEntries > 1 {
+			diagnostic.Stage = "selection_multiple"
+		}
+		return matrixOutcome{}, diagnostic, errGuardCapture
+	}
+	diagnostic.Stage = guardCaptureSelectedBinding(selected, entries[selected.Index].BundleURL, p)
+	if diagnostic.Stage != "bound" {
+		return matrixOutcome{}, diagnostic, errGuardCapture
+	}
+	return selected, diagnostic, nil
+}
+
+func guardCaptureLogSelection(t *testing.T, subject string, d guardCaptureSelectionDiagnostic) {
+	t.Helper()
+	// The subject labels are fixed at the two call sites below.
+	t.Logf("guard_capture_selection subject=%s stage=%s entries=%d repository_entries=%d verified_entries=%d",
+		subject, d.Stage, d.Entries, d.RepositoryEntries, d.VerifiedEntries)
+	for _, category := range []string{"other_repository", "bundle_structure", "verification_input", "transparency_log",
+		"observer_timestamp", "certificate_chain", "certificate_sct", "identity", "statement_decode", "signature_content",
+		"signature_verifier", "bundle_version", "subject_digest", "signature", "verification_other", "verified_statement_or_time"} {
+		if count := d.Rejections[category]; count != 0 {
+			t.Logf("guard_capture_rejection subject=%s category=%s count=%d", subject, category, count)
+		}
+	}
+}
+
+func TestGuardCaptureSelectionDiagnosticCategories(t *testing.T) {
+	for name, c := range map[string]struct{ err error; want string }{
+		"nil": {nil, "verified"},
+		"invalid_input": {errMatrixInput, "verification_input"},
+		"log": {errors.New("failed to verify log inclusion: private detail"), "transparency_log"},
+		"timestamp": {errors.New("failed to verify timestamps: private detail"), "observer_timestamp"},
+		"chain": {errors.New("failed to verify leaf certificate: private detail"), "certificate_chain"},
+		"sct": {errors.New("failed to verify signed certificate timestamp: private detail"), "certificate_sct"},
+		"identity": {errors.New("failed to verify certificate identity: private detail"), "identity"},
+		"statement": {errors.New("failed to fetch envelope statement: private detail"), "statement_decode"},
+		"signature_content": {errors.New("failed to fetch signature content: private detail"), "signature_content"},
+		"signature_verifier": {errors.New("failed to get signature verifier: private detail"), "signature_verifier"},
+		"version": {errors.New("failed to fetch entity version: private detail"), "bundle_version"},
+		"digest": {errors.New("failed to verify signature: digest does not match any digest in statement"), "subject_digest"},
+		"signature": {errors.New("failed to verify signature: private detail"), "signature"},
+		"unknown": {errors.New("arbitrary private detail"), "verification_other"},
+	} {
+		t.Run(name, func(t *testing.T) {
+			if got := guardCaptureVerificationCategory(c.err); got != c.want {
+				t.Fatal("selection_diagnostic_category_mismatch")
+			}
+		})
+	}
+}
+
+func TestGuardCaptureSelectionBindingDiagnostics(t *testing.T) {
+	p := guardCaptureTestPin()
+	raw := []byte("binding fixture only")
+	p.BundleBytes, p.BundleSHA = int64(len(raw)), guardCaptureHash(raw)
+	selected := matrixOutcome{Raw: raw, LogIndex: p.RekorIndex}
+	u := "https://fixture.blob.core.windows.net/" + p.AttestationID + ".json.sn"
+	if guardCaptureSelectedBinding(selected, u, p) != "bound" {
+		t.Fatal("selection_binding_positive_rejected")
+	}
+	for name, edit := range map[string]func(*guardCapturePin){
+		"bundle_size": func(p *guardCapturePin) { p.BundleBytes++ },
+		"bundle_digest": func(p *guardCapturePin) { p.BundleSHA = strings.Repeat("0", 64) },
+		"rekor_index": func(p *guardCapturePin) { p.RekorIndex += "0" },
+		"attestation_record": func(p *guardCapturePin) { p.AttestationID += "0" },
+	} {
+		t.Run(name, func(t *testing.T) {
+			current := p
+			edit(&current)
+			if guardCaptureSelectedBinding(selected, u, current) != name {
+				t.Fatal("selection_binding_failure_not_distinguished")
+			}
+		})
+	}
+}
+
+func TestGuardCaptureSelectionFailureDiagnosticDoesNotAccept(t *testing.T) {
+	p := guardCaptureTestPin()
+	for name, entries := range map[string][]matrixEntry{
+		"empty": nil,
+		"other_repository": {{RepositoryID: 1, Bundle: []byte("{}")}},
+		"structure": {{RepositoryID: guardCaptureRepoID, Bundle: []byte("{}")}},
+		"encoding": {{RepositoryID: guardCaptureRepoID, Bundle: []byte("not json")}},
+	} {
+		t.Run(name, func(t *testing.T) {
+			_, detail, err := guardCaptureSelectDetailed(context.Background(), nil, entries, p, false)
+			if err == nil || detail.VerifiedEntries != 0 || detail.Stage == "bound" {
+				t.Fatal("selection_failure_diagnostic_became_acceptance")
+			}
+			report := guardCaptureReport{Reason: "pe_signature_rejected", PESelection: &detail}
+			encoded, encodeErr := json.Marshal(report)
+			if encodeErr != nil || bytes.Contains(encoded, []byte("arbitrary private detail")) ||
+				bytes.Contains(encoded, []byte("not json")) || bytes.Contains(encoded, []byte("blob.core.windows.net")) {
+				t.Fatal("selection_diagnostic_exposes_input")
 			}
 		})
 	}

@@ -4,16 +4,20 @@ This producer builds the reviewed Guard refresh reader once on a GitHub-hosted
 Windows runner and captures the evidence for that single build. It accepts no
 source path, revision, payload hash, destination or authorization argument.
 
-The reader is the Go module `tools/guard-refresh-software-reader`. Generation 0
+The reader is the Go module `tools/guard-refresh-software-reader`. Source pin 0
 is a rehearsal: it fixes the module as it exists on main
 `95c1004e0017cb9d8d3b16f93daa72706eaccca1`, repository tree
 `047674bc84f483d12702ebd0d3332f45e2984390` and module tree
 `4f188fbc69396af166f06a74af03df9d502afc3f`. It exercises the hosted build,
 the evidence files, the attestation and the acceptance steps below before the
-final reader source exists. A later generation changes only `readerSource`,
-`readerTree`, `readerModuleTree` and `readerInputCount` in
-`main_windows.go`, the checkout `ref` and the three source literals of the
-publication record in the workflow, and this paragraph.
+final reader source exists. A source pin names a version of this fixed source;
+it is not the generation of any consumer's formal capture. Every record carries
+`source_pin` and `source_pin_rehearsal`, two constants of the reviewed source
+that no input can change, and the result of pin 0 is never the reader. A later
+pin changes only `sourcePin`, `sourcePinRehearsal`, `readerSource`, `readerTree`,
+`readerModuleTree` and `readerInputCount` in `main_windows.go`, the checkout
+`ref`, the source and pin literals of the publication record in the workflow,
+and this paragraph.
 
 All 111 tracked files of the module are compared with their Git blobs and
 archive content before and after the build. The selected Go package graph is
@@ -22,7 +26,9 @@ whose zip and `go.mod` checksums are locked by the module's own `go.sum` are
 accepted: the lock is read from the inventoried file, no replacement is
 allowed, and the module list embedded in the linked executable must equal the
 captured graph, version by version and checksum by checksum. Source inventory
-and compiler/toolchain observations are distinct evidence.
+and compiler/toolchain observations are distinct evidence. A graph without a
+locked third-party module, or a module without `go.sum`, is rejected; the module
+of source pin 0 has locked third-party modules.
 
 The dedicated workflow validates this helper on Windows for pull requests that
 change its source. A single manual dispatch on the default branch builds the
@@ -63,8 +69,9 @@ executes nothing:
 3. The archive holds exactly `guard-refresh-software-reader.exe`,
    `capture.json` and `source-proof.json`. Their SHA-256 values equal the
    publication record in the job summary, `capture.json` repeats the source,
-   tree, module tree and producer revision of that record, and the source
-   commit is the reviewed commit the caller expects.
+   tree, module tree, source pin, rehearsal flag and producer revision of that
+   record, the source commit is the reviewed commit the caller expects, and
+   `source_pin_rehearsal` is false.
 4. An attestation exists for the digest of each of the three files and its
    subjects name them. This is a data check; the Sigstore signature is not
    verified by this producer. The acceptance record must say whether another
@@ -75,6 +82,16 @@ run, job, artifact and attestation identifiers. Acceptance grants no update,
 data access, send or source-quiescence authority; the reader still validates
 the signed artifacts it is given, the current target identity and ACL, and the
 same-parent stage and backup before any replacement.
+
+A record whose `source_pin_rehearsal` is true (source pin 0) is a rehearsal. It
+is never the reader, and nothing of it substitutes for the final source or for
+the tool and host acceptance below. What is accepted is decided only by the pin
+the consumer itself holds for the run, job, artifact and digest; no field of the
+artifact grants or withdraws it.
+
+The artifact expires seven days after the upload. The acceptance record keeps
+the three files and the attestation bundle, and a consumer takes the expiry from
+the server's `expires_at` of the artifact, not from a one-day assumption.
 
 ## Hosts
 

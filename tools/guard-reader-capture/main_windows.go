@@ -34,14 +34,22 @@ const repositoryID = "1406818713"
 const jobKey = "guard-reader-capture"
 const jobName = "Guard reader software artifact"
 
-// Generation 0 (rehearsal): the reader module as it exists on main 95c1004e.
-// A later generation replaces only the next four values, the checkout ref and
-// the three source literals of the publication record in the workflow, and the
-// README paragraph; the module path, directory and limits stay fixed.
+// Source pin 0 (rehearsal): the reader module as it exists on main 95c1004e.
+// A later pin replaces only the next four values, the two pin constants below,
+// the checkout ref, the source and pin literals of the publication record in the
+// workflow, and the README paragraph; the module path, directory and limits stay
+// fixed. A source pin names a version of the fixed source. It is not the
+// generation of any consumer's formal capture.
 const readerSource = "95c1004e0017cb9d8d3b16f93daa72706eaccca1"
 const readerTree = "047674bc84f483d12702ebd0d3332f45e2984390"
 const readerModuleTree = "4f188fbc69396af166f06a74af03df9d502afc3f"
 const readerInputCount = 111
+
+// Both values are written into capture.json, source-proof.json and the
+// publication record. They are constants of the reviewed source and no input
+// can change them. Pin 0 is a rehearsal whose result is never the reader.
+const sourcePin = 0
+const sourcePinRehearsal = true
 
 const readerModulePath = "github.com/AutoDevJapan/cc-pc-tools-rs/tools/guard-refresh-software-reader"
 const readerModuleDirectory = "tools/guard-refresh-software-reader"
@@ -89,6 +97,25 @@ func tailOf(err error,diagnostic []byte) string {
     }
     if len(diagnostic)>1024{diagnostic=diagnostic[len(diagnostic)-1024:]}
     return strings.TrimSpace(note+"\n"+printable(diagnostic))
+}
+
+// A hosted runner may treat a line of step output that starts with its command
+// marker (possibly after blanks) as a workflow command. Whether it does so for
+// an error stream was not measured; every printed line of the tail therefore
+// gets a fixed prefix, so no line of child output can start such a command.
+const tailLinePrefix = "tail| "
+
+func prefixedTail(tail string) string {
+    lines:=strings.Split(tail,"\n")
+    for i,line:=range lines{lines[i]=tailLinePrefix+line}
+    return strings.Join(lines,"\n")
+}
+
+// reportFailure is what the command prints on failure: the fixed marker and,
+// for a failed child command, the prefixed tail.
+func reportFailure(w io.Writer,err error) {
+    fmt.Fprintln(w,err)
+    if failureTail!=""{fmt.Fprintln(w,prefixedTail(failureTail))}
 }
 
 type captureEnv struct {
@@ -200,13 +227,32 @@ func writeExclusive(name string,raw []byte) error {
     return errors.Join(writeErr,closeErr)
 }
 
-func runFixed(ctx context.Context,dir,exe string,args ...string)([]byte,error) {
+// childParentNames are the names, besides PATH, whose value a git or go child
+// takes from the parent environment. Nothing else of the parent reaches a child:
+// not the job token, not the OIDC request variables, not any GITHUB_ or ACTIONS_
+// name, and not a Go or Git setting that the fixed values below replace.
+var childParentNames = []string{"SYSTEMROOT","WINDIR","TEMP","TMP","USERPROFILE","HOME","PROGRAMDATA","PROGRAMFILES","PROGRAMFILES(X86)","LOCALAPPDATA","APPDATA"}
+
+// childEnvironment is the whole environment of every git and go child. The
+// parent is a lookup so that a test can run this same code against a parent
+// that holds tokens.
+func childEnvironment(parent func(string)string) []string {
+    env:=[]string{"GIT_TERMINAL_PROMPT=0","GOOS=windows","GOARCH=amd64","GOPROXY=https://proxy.golang.org","GOSUMDB=sum.golang.org"}
+    if value:=parent("PATH");value!="" {env=append(env,"PATH="+value)}
+    for _,key:=range childParentNames {if value:=parent(key);value!="" {env=append(env,key+"="+value)}}
+    return append(env,"GOWORK=off","GOTOOLCHAIN=local","GOFLAGS=","GOENV=off","CGO_ENABLED=0","GIT_CONFIG_NOSYSTEM=1","GIT_CONFIG_GLOBAL=NUL","GIT_NO_REPLACE_OBJECTS=1")
+}
+
+// fixedCommand is the only place that builds a git or go child command.
+func fixedCommand(ctx context.Context,dir,exe string,args ...string) *exec.Cmd {
     cmd:=exec.CommandContext(ctx,exe,args...);cmd.Dir=dir
-    cmd.Env=append(cmd.Env,"GIT_TERMINAL_PROMPT=0","GOOS=windows","GOARCH=amd64","GOPROXY=https://proxy.golang.org","GOSUMDB=sum.golang.org")
-    if path:=os.Getenv("PATH");path!="" {cmd.Env=append(cmd.Env,"PATH="+path)}
-    for _,key:=range []string{"SYSTEMROOT","WINDIR","TEMP","TMP","USERPROFILE","HOME","PROGRAMDATA","PROGRAMFILES","PROGRAMFILES(X86)","LOCALAPPDATA","APPDATA"} {if value:=os.Getenv(key);value!="" {cmd.Env=append(cmd.Env,key+"="+value)}}
-    cmd.Env=append(cmd.Env,"GOWORK=off","GOTOOLCHAIN=local","GOFLAGS=","GOENV=off","CGO_ENABLED=0","GIT_CONFIG_NOSYSTEM=1","GIT_CONFIG_GLOBAL=NUL","GIT_NO_REPLACE_OBJECTS=1")
+    cmd.Env=childEnvironment(os.Getenv)
     cmd.WaitDelay=2*time.Second
+    return cmd
+}
+
+func runFixed(ctx context.Context,dir,exe string,args ...string)([]byte,error) {
+    cmd:=fixedCommand(ctx,dir,exe,args...)
     var out,diagnostic boundedOutput;out.limit=128<<20;diagnostic.limit=1<<20
     cmd.Stdout=&out;cmd.Stderr=&diagnostic
     err:=cmd.Run()
@@ -230,6 +276,8 @@ type finalManifest struct {
     Source string `json:"source"`
     SourceTree string `json:"source_tree"`
     ModuleTree string `json:"module_tree"`
+    SourcePin int `json:"source_pin"`
+    SourcePinRehearsal bool `json:"source_pin_rehearsal"`
     ProducerRevision string `json:"producer_revision"`
     RunID int64 `json:"run_id"`
     RunAttempt int `json:"run_attempt"`
@@ -249,9 +297,19 @@ type finalManifest struct {
 }
 type sourceProof struct {
     Domain string `json:"domain"`
+    SourcePin int `json:"source_pin"`
+    SourcePinRehearsal bool `json:"source_pin_rehearsal"`
     Before captureBefore `json:"before"`
     After captureBefore `json:"after"`
     CompilerExit int `json:"compiler_exit"`
+}
+
+func newSourceProof(first,second captureBefore) sourceProof {
+    return sourceProof{Domain:"guard-reader-gha-source-proof-v1",SourcePin:sourcePin,SourcePinRehearsal:sourcePinRehearsal,Before:first,After:second,CompilerExit:0}
+}
+
+func newFinalManifest(e captureEnv,jobID int64,first captureBefore,proofSHA,outputSHA string,outputBytes int64) finalManifest {
+    return finalManifest{Domain:"guard-reader-gha-capture-v1",RepositoryID:1406818713,Source:readerSource,SourceTree:readerTree,ModuleTree:readerModuleTree,SourcePin:sourcePin,SourcePinRehearsal:sourcePinRehearsal,ProducerRevision:e.workflowSource,RunID:e.runID,RunAttempt:e.attempt,JobID:jobID,CheckRunID:e.checkRunID,SourceManifestSHA:proofSHA,RunnerToolchainSHA:first.RunnerToolchainObservationSHA,CompileCommandSHA:first.CompileCommandSHA,RunnerImageSHA:first.RunnerImageSHA,OutputName:executableName,OutputBytes:outputBytes,OutputSHA:outputSHA}
 }
 
 func before(ctx context.Context,e captureEnv,out io.Writer) error {
@@ -296,10 +354,10 @@ func before(ctx context.Context,e captureEnv,out io.Writer) error {
     if afterJob!=jobID{return fail()}
     afterInventory,err:=captureInventory(e.readerRoot);if err!=nil{return inner(err)}
     if !reflect.DeepEqual(first.Inputs,afterInventory){return fail()}
-    proof,err:=json.Marshal(sourceProof{Domain:"guard-reader-gha-source-proof-v1",Before:first,After:second,CompilerExit:0});if err!=nil||len(proof)>8<<20{return fail()}
+    proof,err:=json.Marshal(newSourceProof(first,second));if err!=nil||len(proof)>8<<20{return fail()}
     proofSHA:=hashBytes(proof);if err=writeExclusive(filepath.Join(dir,"source-proof.json"),proof);err!=nil{return fail()}
     checkProof,err:=os.ReadFile(filepath.Join(dir,"source-proof.json"));if err!=nil||!bytes.Equal(checkProof,proof){return fail()}
-    manifest:=finalManifest{Domain:"guard-reader-gha-capture-v1",RepositoryID:1406818713,Source:readerSource,SourceTree:readerTree,ModuleTree:readerModuleTree,ProducerRevision:e.workflowSource,RunID:e.runID,RunAttempt:e.attempt,JobID:jobID,CheckRunID:e.checkRunID,SourceManifestSHA:proofSHA,RunnerToolchainSHA:first.RunnerToolchainObservationSHA,CompileCommandSHA:first.CompileCommandSHA,RunnerImageSHA:first.RunnerImageSHA,OutputName:executableName,OutputBytes:outputBytes,OutputSHA:outputSHA}
+    manifest:=newFinalManifest(e,jobID,first,proofSHA,outputSHA,outputBytes)
     capture,err:=json.Marshal(manifest);if err!=nil||len(capture)>64<<10{return fail()}
     if ctx.Err()!=nil{return fail()}
     if err=writeExclusive(filepath.Join(dir,"capture.json"),capture);err!=nil{return fail()}
@@ -321,7 +379,7 @@ func run(args []string,out io.Writer) int {
     env,err:=parseCaptureEnvironment(os.Getenv);if err!=nil{fmt.Fprintln(os.Stderr,err);return 1}
     parent,stop:=signal.NotifyContext(context.Background(),os.Interrupt);defer stop()
     ctx,cancel:=context.WithTimeout(parent,14*time.Minute);defer cancel()
-    if err=before(ctx,env,out);err!=nil{fmt.Fprintln(os.Stderr,err);if failureTail!=""{fmt.Fprintln(os.Stderr,failureTail)};return 1}
+    if err=before(ctx,env,out);err!=nil{reportFailure(os.Stderr,err);return 1}
     return 0
 }
 func main(){os.Exit(run(os.Args[1:],os.Stdout))}

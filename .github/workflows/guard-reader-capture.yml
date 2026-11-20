@@ -203,6 +203,8 @@ jobs:
             source = '95c1004e0017cb9d8d3b16f93daa72706eaccca1'
             source_tree = '047674bc84f483d12702ebd0d3332f45e2984390'
             source_module_tree = '4f188fbc69396af166f06a74af03df9d502afc3f'
+            source_pin = 0
+            source_pin_rehearsal = $true
             producer_revision = $env:GITHUB_SHA
             run_id = [long]$env:GITHUB_RUN_ID
             run_attempt = [int]$env:GITHUB_RUN_ATTEMPT

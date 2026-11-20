@@ -109,6 +109,7 @@ func TestGraphAcceptsOnlyLockedThirdPartyModules(t *testing.T) {
         "application assembly":func(g []graphPackage)[]graphPackage{g[2].SFiles=[]string{"extra.s"};return g},
         "application syso":func(g []graphPackage)[]graphPackage{g[2].SysoFiles=[]string{"extra.syso"};return g},
         "application embed":func(g []graphPackage)[]graphPackage{g[2].EmbedFiles=[]string{"extra.bin"};return g},
+        "application module not main":func(g []graphPackage)[]graphPackage{g[2].Module.Main=false;return g},
     }
     for name,change:=range cases {t.Run(name,func(t *testing.T) {
         if _,err:=checkGraphInputs(graphBytes(t,change(readerGraph())),graphRecords(),readerLock());err==nil {t.Fatal("uncaptured or unlocked input accepted")}
@@ -622,4 +623,145 @@ func TestResolveJobIDChecksEveryRowIDBeforeSelection(t *testing.T) {
 			}
 		})
 	}
+}
+
+// The hosted job's own environment holds tokens that a git or go child must
+// never see. These samples stand for them: the real child environment is built
+// by the same function and is checked against such a parent.
+func hostedParentEnvironment() map[string]string {
+    return map[string]string{
+        "PATH":"C:\\hosted\\bin", "SYSTEMROOT":"C:\\Windows", "WINDIR":"C:\\Windows",
+        "TEMP":"C:\\hosted\\temp", "TMP":"C:\\hosted\\temp", "USERPROFILE":"C:\\Users\\runner", "HOME":"C:\\Users\\runner",
+        "PROGRAMDATA":"C:\\ProgramData", "PROGRAMFILES":"C:\\Program Files", "PROGRAMFILES(X86)":"C:\\Program Files (x86)",
+        "LOCALAPPDATA":"C:\\Users\\runner\\AppData\\Local", "APPDATA":"C:\\Users\\runner\\AppData\\Roaming",
+        "GH_TOKEN":"sample-job-token", "GITHUB_TOKEN":"sample-github-token",
+        "ACTIONS_ID_TOKEN_REQUEST_TOKEN":"sample-oidc-request-token", "ACTIONS_ID_TOKEN_REQUEST_URL":"https://oidc.sample.invalid/",
+        "ACTIONS_RUNTIME_TOKEN":"sample-runtime-token", "GITHUB_OUTPUT":"C:\\hosted\\output", "GITHUB_STEP_SUMMARY":"C:\\hosted\\summary",
+        "GOPROXY":"https://parent-proxy.sample.invalid", "GOSUMDB":"off", "GOFLAGS":"-mod=mod", "GOENV":"C:\\hosted\\go.env",
+        "GOTOOLCHAIN":"auto", "GOWORK":"C:\\hosted\\go.work", "CGO_ENABLED":"1", "GIT_CONFIG_GLOBAL":"C:\\hosted\\gitconfig", "GIT_TERMINAL_PROMPT":"1",
+    }
+}
+
+// checkChildEnvironment names the first way an environment differs from the
+// fixed allowlist: a malformed or repeated name, a fixed value that changed or
+// is missing, a name that is neither fixed nor allowlisted, an allowlisted value
+// that is not the parent's, a dropped allowlisted name, or any sample secret or
+// parent override of the hosted job inside a value.
+func checkChildEnvironment(env []string,parent map[string]string) error {
+    fixed:=map[string]string{"GIT_TERMINAL_PROMPT":"0","GOOS":"windows","GOARCH":"amd64","GOPROXY":"https://proxy.golang.org","GOSUMDB":"sum.golang.org","GOWORK":"off","GOTOOLCHAIN":"local","GOFLAGS":"","GOENV":"off","CGO_ENABLED":"0","GIT_CONFIG_NOSYSTEM":"1","GIT_CONFIG_GLOBAL":"NUL","GIT_NO_REPLACE_OBJECTS":"1"}
+    allowed:=map[string]bool{"PATH":true}
+    for _,name:=range childParentNames {allowed[name]=true}
+    got:=map[string]string{}
+    for _,entry:=range env {
+        name,value,found:=strings.Cut(entry,"=")
+        if !found||name=="" {return errors.New("malformed entry")}
+        if _,repeated:=got[name];repeated {return errors.New("repeated name "+name)}
+        got[name]=value
+    }
+    for name,want:=range fixed {if value,ok:=got[name];!ok||value!=want {return errors.New("fixed value changed "+name)}}
+    for name,value:=range got {
+        if _,isFixed:=fixed[name];isFixed {continue}
+        if !allowed[name] {return errors.New("name not allowed "+name)}
+        if value!=parent[name] {return errors.New("allowlisted value changed "+name)}
+    }
+    for name:=range allowed {if _,ok:=got[name];!ok&&parent[name]!="" {return errors.New("allowlisted name dropped "+name)}}
+    for _,secret:=range []string{"sample-job-token","sample-github-token","sample-oidc-request-token","oidc.sample.invalid","sample-runtime-token","parent-proxy.sample.invalid"} {
+        for name,value:=range got {if strings.Contains(value,secret) {return errors.New("a parent value reached "+name)}}
+    }
+    return nil
+}
+
+func TestChildEnvironmentIsTheFixedAllowlist(t *testing.T) {
+    parent:=hostedParentEnvironment()
+    env:=childEnvironment(func(name string)string{return parent[name]})
+    if err:=checkChildEnvironment(env,parent);err!=nil {t.Fatal(err)}
+    bare:=childEnvironment(func(string)string{return ""})
+    if err:=checkChildEnvironment(bare,map[string]string{});err!=nil||len(bare)!=13 {t.Fatalf("fixed environment of a bare parent: %v, %d entries",err,len(bare))}
+}
+
+// Each mutant is a way the child environment could leak or drift; the check
+// must reject every one, so a passing check on the real function means something.
+func TestChildEnvironmentCheckDetectsLeaksAndDrift(t *testing.T) {
+    parent:=hostedParentEnvironment()
+    good:=func() []string {return childEnvironment(func(name string)string{return parent[name]})}
+    without:=func(env []string,name string) []string {
+        out:=[]string{}
+        for _,entry:=range env {if !strings.HasPrefix(entry,name+"=") {out=append(out,entry)}}
+        return out
+    }
+    mutants:=map[string]func([]string)[]string{
+        "job token added":func(env []string)[]string{return append(env,"GH_TOKEN="+parent["GH_TOKEN"])},
+        "github token added":func(env []string)[]string{return append(env,"GITHUB_TOKEN="+parent["GITHUB_TOKEN"])},
+        "oidc request token added":func(env []string)[]string{return append(env,"ACTIONS_ID_TOKEN_REQUEST_TOKEN="+parent["ACTIONS_ID_TOKEN_REQUEST_TOKEN"])},
+        "runtime token added":func(env []string)[]string{return append(env,"ACTIONS_RUNTIME_TOKEN="+parent["ACTIONS_RUNTIME_TOKEN"])},
+        "other job variable added":func(env []string)[]string{return append(env,"GITHUB_OUTPUT="+parent["GITHUB_OUTPUT"])},
+        "whole parent environment":func(env []string)[]string{
+            all:=[]string{}
+            for name,value:=range parent {all=append(all,name+"="+value)}
+            return all
+        },
+        "parent GOFLAGS wins":func(env []string)[]string{return append(without(env,"GOFLAGS"),"GOFLAGS="+parent["GOFLAGS"])},
+        "parent GOPROXY wins":func(env []string)[]string{return append(without(env,"GOPROXY"),"GOPROXY="+parent["GOPROXY"])},
+        "parent GOSUMDB wins":func(env []string)[]string{return append(without(env,"GOSUMDB"),"GOSUMDB="+parent["GOSUMDB"])},
+        "parent GOTOOLCHAIN wins":func(env []string)[]string{return append(without(env,"GOTOOLCHAIN"),"GOTOOLCHAIN="+parent["GOTOOLCHAIN"])},
+        "fixed value dropped":func(env []string)[]string{return without(env,"GOENV")},
+        "allowlisted name dropped":func(env []string)[]string{return without(env,"APPDATA")},
+        "allowlisted value changed":func(env []string)[]string{return append(without(env,"HOME"),"HOME=C:\\other")},
+        "name repeated":func(env []string)[]string{return append(env,"PATH=C:\\other")},
+        "name not allowed":func(env []string)[]string{return append(env,"GOPATH=C:\\hosted\\go")},
+        "malformed entry":func(env []string)[]string{return append(env,"NOEQUALSIGN")},
+    }
+    for name,mutate:=range mutants {t.Run(name,func(t *testing.T) {
+        if err:=checkChildEnvironment(mutate(good()),parent);err==nil {t.Fatal("changed child environment accepted")}
+    })}
+}
+
+// The command that runFixed starts is built by fixedCommand from the real
+// parent environment, which here holds sample tokens.
+func TestFixedCommandIsBuiltFromTheChildEnvironment(t *testing.T) {
+    t.Setenv("GH_TOKEN","sample-job-token")
+    t.Setenv("GITHUB_TOKEN","sample-github-token")
+    t.Setenv("ACTIONS_ID_TOKEN_REQUEST_TOKEN","sample-oidc-request-token")
+    t.Setenv("ACTIONS_RUNTIME_TOKEN","sample-runtime-token")
+    t.Setenv("GOPROXY","https://parent-proxy.sample.invalid")
+    t.Setenv("GOFLAGS","-mod=mod")
+    dir:=t.TempDir()
+    cmd:=fixedCommand(context.Background(),dir,filepath.Join(dir,"not-started.exe"),"version")
+    if cmd.Dir!=dir||len(cmd.Args)!=2||cmd.Args[1]!="version" {t.Fatal("fixed command lost its directory or arguments")}
+    if strings.Join(cmd.Env,"\x00")!=strings.Join(childEnvironment(os.Getenv),"\x00") {t.Fatal("the command does not carry childEnvironment")}
+    parent:=map[string]string{}
+    for _,name:=range append([]string{"PATH"},childParentNames...) {parent[name]=os.Getenv(name)}
+    if err:=checkChildEnvironment(cmd.Env,parent);err!=nil {t.Fatal(err)}
+}
+
+func TestPrintedFailureCannotStartAWorkflowCommand(t *testing.T) {
+    old:=failureTail;defer func(){failureTail=old}()
+    failureTail=tailOf(errors.New("::error::from the failed command"),[]byte("::stop-commands::token\n##[error]annotation\n  ::add-mask::value\nplain line\n::set-output name=x::y"))
+    commandLike:=func(line string) bool {
+        trimmed:=strings.TrimLeft(line," \t")
+        return strings.HasPrefix(trimmed,"::")||strings.HasPrefix(trimmed,"##[")
+    }
+    risky:=0
+    for _,line:=range strings.Split(failureTail,"\n") {if commandLike(line) {risky++}}
+    if risky!=5 {t.Fatalf("the control tail has %d command-like lines",risky)}
+    var out bytes.Buffer
+    reportFailure(&out,fail())
+    lines:=strings.Split(strings.TrimSuffix(out.String(),"\n"),"\n")
+    if len(lines)!=strings.Count(failureTail,"\n")+2 {t.Fatalf("printed %d lines",len(lines))}
+    if !regexp.MustCompile("^guard_reader_capture_unavailable@[1-9][0-9]*$").MatchString(lines[0]) {t.Fatal("the failure marker changed")}
+    for _,line:=range lines[1:] {if !strings.HasPrefix(line,tailLinePrefix)||commandLike(line) {t.Fatalf("a printed tail line can start a workflow command: %q",line)}}
+}
+
+func TestEveryRecordCarriesTheFixedSourcePin(t *testing.T) {
+    if sourcePin<0||sourcePinRehearsal!=(sourcePin==0) {t.Fatal("only source pin 0 is a rehearsal")}
+    e:=captureEnv{workflowSource:strings.Repeat("a",40),runID:1,checkRunID:2,attempt:1}
+    manifest:=newFinalManifest(e,3,captureBefore{},strings.Repeat("b",64),strings.Repeat("c",64),4096)
+    records:=map[string]any{"capture":manifest,"source proof":newSourceProof(captureBefore{},captureBefore{})}
+    for name,record:=range records {
+        raw,err:=json.Marshal(record);if err!=nil {t.Fatal(err)}
+        var got map[string]any;if json.Unmarshal(raw,&got)!=nil {t.Fatal("record decode",name)}
+        if pin,ok:=got["source_pin"].(float64);!ok||pin!=float64(sourcePin) {t.Fatalf("%s lost the source pin",name)}
+        if flag,ok:=got["source_pin_rehearsal"].(bool);!ok||flag!=sourcePinRehearsal {t.Fatalf("%s lost the rehearsal flag",name)}
+    }
+    if manifest.Source!=readerSource||manifest.SourceTree!=readerTree||manifest.ModuleTree!=readerModuleTree||manifest.ProducerRevision!=e.workflowSource||manifest.JobID!=3||manifest.OutputBytes!=4096 {t.Fatal("capture record does not carry the fixed source and the job")}
 }
